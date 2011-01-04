@@ -18,6 +18,7 @@
 #include "Path.h"
 #include "FixedPointTypes.h"
 #include <wx/config.h>
+#include <wx/gdicmn.h>
 
 // --------------------------------------------------------------------------------------
 //  IniInterface (abstract base class) 
@@ -48,9 +49,9 @@ public:
 	virtual bool IsLoading() const=0;
 	bool IsSaving() const { return !IsLoading(); }
 
-	virtual void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxString() )=0;
-	virtual void Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue=wxDirName() )=0;
-	virtual void Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue=wxFileName() )=0;
+	virtual void Entry( const wxString& var, wxString& value, const wxString defvalue=wxString() )=0;
+	virtual void Entry( const wxString& var, wxDirName& value, const wxDirName defvalue=wxDirName() )=0;
+	virtual void Entry( const wxString& var, wxFileName& value, const wxFileName defvalue=wxFileName() )=0;
 	virtual void Entry( const wxString& var, int& value, const int defvalue=0 )=0;
 	virtual void Entry( const wxString& var, uint& value, const uint defvalue=0 )=0;
 	virtual void Entry( const wxString& var, bool& value, const bool defvalue=false )=0;
@@ -59,11 +60,11 @@ public:
 	virtual bool EntryBitBool( const wxString& var, bool value, const bool defvalue=false )=0;
 	virtual int  EntryBitfield( const wxString& var, int value, const int defvalue=0 )=0;
 
-	virtual void Entry( const wxString& var, Fixed100& value, const Fixed100& defvalue=Fixed100() )=0;
+	virtual void Entry( const wxString& var, Fixed100& value, const Fixed100 defvalue=Fixed100() )=0;
 
-	virtual void Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue=wxDefaultPosition )=0;
-	virtual void Entry( const wxString& var, wxSize& value, const wxSize& defvalue=wxDefaultSize )=0;
-	virtual void Entry( const wxString& var, wxRect& value, const wxRect& defvalue=wxDefaultRect )=0;
+	virtual void Entry( const wxString& var, wxPoint& value, const wxPoint defvalue=wxDefaultPosition )=0;
+	virtual void Entry( const wxString& var, wxSize& value, const wxSize defvalue=wxDefaultSize )=0;
+	virtual void Entry( const wxString& var, wxRect& value, const wxRect defvalue=wxDefaultRect )=0;
 
 	template< typename T >
 	void EnumEntry( const wxString& var, T& value, const wxChar* const* enumArray=NULL, const T defvalue=(T)0 )
@@ -111,9 +112,9 @@ public:
 
 	bool IsLoading() const { return true; }
 
-	void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxEmptyString );
-	void Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue=wxDirName() );
-	void Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue=wxFileName() );
+	void Entry( const wxString& var, wxString& value, const wxString defvalue=wxEmptyString );
+	void Entry( const wxString& var, wxDirName& value, const wxDirName defvalue=wxDirName() );
+	void Entry( const wxString& var, wxFileName& value, const wxFileName defvalue=wxFileName() );
 	void Entry( const wxString& var, int& value, const int defvalue=0 );
 	void Entry( const wxString& var, uint& value, const uint defvalue=0 );
 	void Entry( const wxString& var, bool& value, const bool defvalue=false );
@@ -121,11 +122,11 @@ public:
 	bool EntryBitBool( const wxString& var, bool value, const bool defvalue=false );
 	int  EntryBitfield( const wxString& var, int value, const int defvalue=0 );
 
-	void Entry( const wxString& var, Fixed100& value, const Fixed100& defvalue=Fixed100() );
+	void Entry( const wxString& var, Fixed100& value, const Fixed100 defvalue=Fixed100() );
 
-	void Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue=wxDefaultPosition );
-	void Entry( const wxString& var, wxSize& value, const wxSize& defvalue=wxDefaultSize );
-	void Entry( const wxString& var, wxRect& value, const wxRect& defvalue=wxDefaultRect );
+	void Entry( const wxString& var, wxPoint& value, const wxPoint defvalue=wxDefaultPosition );
+	void Entry( const wxString& var, wxSize& value, const wxSize defvalue=wxDefaultSize );
+	void Entry( const wxString& var, wxRect& value, const wxRect defvalue=wxDefaultRect );
 
 protected:
 	void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue );
@@ -149,9 +150,9 @@ public:
 
 	bool IsLoading() const { return false; }
 
-	void Entry( const wxString& var, wxString& value, const wxString& defvalue=wxString() );
-	void Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue=wxDirName() );
-	void Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue=wxFileName() );
+	void Entry( const wxString& var, wxString& value, const wxString defvalue=wxString() );
+	void Entry( const wxString& var, wxDirName& value, const wxDirName defvalue=wxDirName() );
+	void Entry( const wxString& var, wxFileName& value, const wxFileName defvalue=wxFileName() );
 	void Entry( const wxString& var, int& value, const int defvalue=0 );
 	void Entry( const wxString& var, uint& value, const uint defvalue=0 );
 	void Entry( const wxString& var, bool& value, const bool defvalue=false );
@@ -159,11 +160,11 @@ public:
 	bool EntryBitBool( const wxString& var, bool value, const bool defvalue=false );
 	int  EntryBitfield( const wxString& var, int value, const int defvalue=0 );
 
-	void Entry( const wxString& var, Fixed100& value, const Fixed100& defvalue=Fixed100() );
+	void Entry( const wxString& var, Fixed100& value, const Fixed100 defvalue=Fixed100() );
 
-	void Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue=wxDefaultPosition );
-	void Entry( const wxString& var, wxSize& value, const wxSize& defvalue=wxDefaultSize );
-	void Entry( const wxString& var, wxRect& value, const wxRect& defvalue=wxDefaultRect );
+	void Entry( const wxString& var, wxPoint& value, const wxPoint defvalue=wxDefaultPosition );
+	void Entry( const wxString& var, wxSize& value, const wxSize defvalue=wxDefaultSize );
+	void Entry( const wxString& var, wxRect& value, const wxRect defvalue=wxDefaultRect );
 
 protected:
 	void _EnumEntry( const wxString& var, int& value, const wxChar* const* enumArray, int defvalue );
@@ -173,9 +174,9 @@ protected:
 // GCC Note: wxT() macro is required when using string token pasting.  For some reason L generates
 // syntax errors. >_<
 //
-#define IniEntry( varname )		ini.Entry( wxT(#varname), varname, defaults.varname )
-#define IniBitfield( varname )	varname = ini.EntryBitfield( wxT(#varname), varname, defaults.varname )
-#define IniBitBool( varname )	varname = ini.EntryBitBool( wxT(#varname), !!varname, defaults.varname )
+#define IniEntry( varname )		ini.Entry( wxT(#varname), varname, varname )
+#define IniBitfield( varname )	varname = ini.EntryBitfield( wxT(#varname), varname, varname )
+#define IniBitBool( varname )	varname = ini.EntryBitBool( wxT(#varname), !!varname, varname )
 
-#define IniBitfieldEx( varname, textname )	varname = ini.EntryBitfield( wxT(textname), varname, defaults.varname )
-#define IniBitBoolEx( varname, textname )	varname = ini.EntryBitBool( wxT(textname), !!varname, defaults.varname )
+#define IniBitfieldEx( varname, textname )	varname = ini.EntryBitfield( wxT(textname), varname, varname )
+#define IniBitBoolEx( varname, textname )	varname = ini.EntryBitBool( wxT(textname), !!varname, varname )

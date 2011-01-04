@@ -437,15 +437,14 @@ void AppConfig::LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash )
 // ------------------------------------------------------------------------
 void AppConfig::LoadSaveMemcards( IniInterface& ini )
 {
-	AppConfig defaults;
 	ScopedIniGroup path( ini, L"MemoryCards" );
 
 	for( uint slot=0; slot<2; ++slot )
 	{
-		ini.Entry( wxsFormat( L"Slot%u_Enable", slot+1 ),
-			Mcd[slot].Enabled, defaults.Mcd[slot].Enabled );
-		ini.Entry( wxsFormat( L"Slot%u_Filename", slot+1 ),
-			Mcd[slot].Filename, defaults.Mcd[slot].Filename );
+		ini.Entry( pxsFmt( L"Slot%u_Enable", slot+1 ),
+			Mcd[slot].Enabled, Mcd[slot].Enabled );
+		ini.Entry( pxsFmt( L"Slot%u_Filename", slot+1 ),
+			Mcd[slot].Filename, Mcd[slot].Filename );
 	}
 
 	for( uint slot=2; slot<8; ++slot )
@@ -453,24 +452,22 @@ void AppConfig::LoadSaveMemcards( IniInterface& ini )
 		int mtport = FileMcd_GetMtapPort(slot)+1;
 		int mtslot = FileMcd_GetMtapSlot(slot)+1;
 
-		ini.Entry( wxsFormat( L"Multitap%u_Slot%u_Enable", mtport, mtslot ),
-			Mcd[slot].Enabled, defaults.Mcd[slot].Enabled );
-		ini.Entry( wxsFormat( L"Multitap%u_Slot%u_Filename", mtport, mtslot ),
-			Mcd[slot].Filename, defaults.Mcd[slot].Filename );
+		ini.Entry( pxsFmt( L"Multitap%u_Slot%u_Enable", mtport, mtslot ),
+			Mcd[slot].Enabled, Mcd[slot].Enabled );
+		ini.Entry( pxsFmt( L"Multitap%u_Slot%u_Filename", mtport, mtslot ),
+			Mcd[slot].Filename, Mcd[slot].Filename );
 	}
 }
 
 void AppConfig::LoadSaveRootItems( IniInterface& ini )
 {
-	AppConfig defaults;
-
 	IniEntry( MainGuiPosition );
 	IniEntry( SysSettingsTabName );
 	IniEntry( McdSettingsTabName );
 	IniEntry( ComponentsTabName );
 	IniEntry( AppSettingsTabName );
 	IniEntry( GameDatabaseTabName );
-	ini.EnumEntry( L"LanguageId", LanguageId, NULL, defaults.LanguageId );
+	ini.EnumEntry( L"LanguageId", LanguageId, NULL, LanguageId );
 	IniEntry( LanguageCode );
 	IniEntry( RecentIsoCount );
 	IniEntry( DeskTheme );
@@ -488,7 +485,7 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( McdCompressNTFS );
 	#endif
 
-	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, defaults.CdvdSource );
+	ini.EnumEntry( L"CdvdSource", CdvdSource, CDVD_SourceLabels, CdvdSource );
 }
 
 // ------------------------------------------------------------------------
@@ -528,7 +525,6 @@ AppConfig::ConsoleLogOptions::ConsoleLogOptions()
 
 void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* logger )
 {
-	ConsoleLogOptions defaults;
 	ScopedIniGroup path( ini, logger );
 
 	IniEntry( Visible );
@@ -566,7 +562,6 @@ AppConfig::FolderOptions::FolderOptions()
 
 void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 {
-	FolderOptions defaults;
 	ScopedIniGroup path( ini, L"Folders" );
 
 	if( ini.IsSaving() )
@@ -662,7 +657,6 @@ void AppConfig::GSWindowOptions::SanityCheck()
 void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 {
 	ScopedIniGroup path( ini, L"GSWindow" );
-	GSWindowOptions defaults;
 
 	IniEntry( CloseOnEsc );
 	IniEntry( DefaultToFullscreen );
@@ -682,7 +676,7 @@ void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 		L"16:9",
 	};
 
-	ini.EnumEntry( L"AspectRatio", AspectRatio, AspectRatioNames, defaults.AspectRatio );
+	ini.EnumEntry( L"AspectRatio", AspectRatio, AspectRatioNames, AspectRatio );
 
 	if( ini.IsLoading() ) SanityCheck();
 }
@@ -710,7 +704,6 @@ void AppConfig::FramerateOptions::SanityCheck()
 void AppConfig::FramerateOptions::LoadSave( IniInterface& ini )
 {
 	ScopedIniGroup path( ini, L"Framerate" );
-	FramerateOptions defaults;
 
 	IniEntry( NominalScalar );
 	IniEntry( TurboScalar );
@@ -864,6 +857,8 @@ void AppLoadSettings()
 	AppIniLoader loader;
 	ConLog_LoadSaveSettings( loader );
 	SysTraceLog_LoadSaveSettings( loader );
+
+	g_Conf = new AppConfig();
 	g_Conf->LoadSave( loader );
 
 	if( !wxFile::Exists( g_Conf->CurrentIso ) )

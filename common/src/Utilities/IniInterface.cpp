@@ -94,7 +94,7 @@ IniLoader::IniLoader() : IniInterface() {}
 IniLoader::~IniLoader() throw() {}
 
 
-void IniLoader::Entry( const wxString& var, wxString& value, const wxString& defvalue )
+void IniLoader::Entry( const wxString& var, wxString& value, const wxString defvalue )
 {
 	if( m_Config )
 		m_Config->Read( var, &value, defvalue );
@@ -102,7 +102,7 @@ void IniLoader::Entry( const wxString& var, wxString& value, const wxString& def
 		value = defvalue;
 }
 
-void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue )
+void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName defvalue )
 {
 	wxString dest;
 	if( m_Config ) m_Config->Read( var, &dest, wxEmptyString );
@@ -113,7 +113,7 @@ void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName& d
 		value = dest;
 }
 
-void IniLoader::Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue )
+void IniLoader::Entry( const wxString& var, wxFileName& value, const wxFileName defvalue )
 {
 	wxString dest( defvalue.GetFullPath() );
 	if( m_Config ) m_Config->Read( var, &dest, defvalue.GetFullPath() );
@@ -159,7 +159,7 @@ int IniLoader::EntryBitfield( const wxString& var, int value, const int defvalue
 	return result;
 }
 
-void IniLoader::Entry( const wxString& var, Fixed100& value, const Fixed100& defvalue )
+void IniLoader::Entry( const wxString& var, Fixed100& value, const Fixed100 defvalue )
 {
 	// Note: the "easy" way would be to convert to double and load/save that, but floating point
 	// has way too much rounding error so we really need to do things out manually.. >_<
@@ -169,7 +169,7 @@ void IniLoader::Entry( const wxString& var, Fixed100& value, const Fixed100& def
 	value = Fixed100::FromString( readval, value );
 }
 
-void IniLoader::Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue )
+void IniLoader::Entry( const wxString& var, wxPoint& value, const wxPoint defvalue )
 {
 	if( !m_Config )
 	{
@@ -178,7 +178,7 @@ void IniLoader::Entry( const wxString& var, wxPoint& value, const wxPoint& defva
 	TryParse( value, m_Config->Read( var, ToString( defvalue ) ), defvalue );
 }
 
-void IniLoader::Entry( const wxString& var, wxSize& value, const wxSize& defvalue )
+void IniLoader::Entry( const wxString& var, wxSize& value, const wxSize defvalue )
 {
 	if( !m_Config )
 	{
@@ -187,7 +187,7 @@ void IniLoader::Entry( const wxString& var, wxSize& value, const wxSize& defvalu
 	TryParse( value, m_Config->Read( var, ToString( defvalue ) ), defvalue );
 }
 
-void IniLoader::Entry( const wxString& var, wxRect& value, const wxRect& defvalue )
+void IniLoader::Entry( const wxString& var, wxRect& value, const wxRect defvalue )
 {
 	if( !m_Config )
 	{
@@ -243,13 +243,13 @@ IniSaver::IniSaver( wxConfigBase* config ) : IniInterface( config ) { }
 IniSaver::IniSaver() : IniInterface() {}
 IniSaver::~IniSaver() {}
 
-void IniSaver::Entry( const wxString& var, wxString& value, const wxString& defvalue )
+void IniSaver::Entry( const wxString& var, wxString& value, const wxString defvalue )
 {
 	if( !m_Config ) return;
 	m_Config->Write( var, value );
 }
 
-void IniSaver::Entry( const wxString& var, wxDirName& value, const wxDirName& defvalue )
+void IniSaver::Entry( const wxString& var, wxDirName& value, const wxDirName defvalue )
 {
 	if( !m_Config ) return;
 
@@ -259,7 +259,7 @@ void IniSaver::Entry( const wxString& var, wxDirName& value, const wxDirName& de
 		m_Config->Write( var, value.ToString() );
 }
 
-void IniSaver::Entry( const wxString& var, wxFileName& value, const wxFileName& defvalue )
+void IniSaver::Entry( const wxString& var, wxFileName& value, const wxFileName defvalue )
 {
 	if( !m_Config ) return;
 	m_Config->Write( var, value.GetFullPath() );
@@ -295,7 +295,7 @@ int IniSaver::EntryBitfield( const wxString& var, int value, const int defvalue 
 	return value;
 }
 
-void IniSaver::Entry( const wxString& var, Fixed100& value, const Fixed100& defvalue )
+void IniSaver::Entry( const wxString& var, Fixed100& value, const Fixed100 defvalue )
 {
 	if( !m_Config ) return;
 
@@ -305,19 +305,19 @@ void IniSaver::Entry( const wxString& var, Fixed100& value, const Fixed100& defv
 	m_Config->Write( var, value.ToString() );
 }
 
-void IniSaver::Entry( const wxString& var, wxPoint& value, const wxPoint& defvalue )
+void IniSaver::Entry( const wxString& var, wxPoint& value, const wxPoint defvalue )
 {
 	if( !m_Config ) return;
 	m_Config->Write( var, ToString( value ) );
 }
 
-void IniSaver::Entry( const wxString& var, wxSize& value, const wxSize& defvalue )
+void IniSaver::Entry( const wxString& var, wxSize& value, const wxSize defvalue )
 {
 	if( !m_Config ) return;
 	m_Config->Write( var, ToString( value ) );
 }
 
-void IniSaver::Entry( const wxString& var, wxRect& value, const wxRect& defvalue )
+void IniSaver::Entry( const wxString& var, wxRect& value, const wxRect defvalue )
 {
 	if( !m_Config ) return;
 	m_Config->Write( var, ToString( value ) );
