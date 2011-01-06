@@ -23,6 +23,8 @@
 
 #include <wx/utils.h>
 
+static const KeyAcceleratorCode FULLSCREEN_TOGGLE_ACCELERATOR_GSPANEL=KeyAcceleratorCode( WXK_RETURN ).Alt();
+
 void GSPanel::InitDefaultAccelerators()
 {
 	// Note!  These don't really work yet due to some hacks to get things working for
@@ -52,7 +54,7 @@ void GSPanel::InitDefaultAccelerators()
 	m_Accels->Map( AAC( WXK_F11 ),				"Sys_FreezeGS" );
 	m_Accels->Map( AAC( WXK_F12 ),				"Sys_RecordingToggle" );
 
-	m_Accels->Map( AAC( WXK_RETURN ).Alt(),		"FullscreenToggle" );
+	m_Accels->Map( FULLSCREEN_TOGGLE_ACCELERATOR_GSPANEL,		"FullscreenToggle" );
 }
 
 GSPanel::GSPanel( wxWindow* parent )
@@ -93,6 +95,7 @@ GSPanel::GSPanel( wxWindow* parent )
 	Connect(wxEVT_RIGHT_UP,			wxMouseEventHandler	(GSPanel::OnShowMouse));
 	Connect(wxEVT_MOTION,			wxMouseEventHandler	(GSPanel::OnShowMouse));
 	Connect(wxEVT_LEFT_DCLICK,		wxMouseEventHandler	(GSPanel::OnShowMouse));
+	Connect(wxEVT_LEFT_DCLICK,		wxMouseEventHandler	(GSPanel::OnLeftDclick));
 	Connect(wxEVT_MIDDLE_DCLICK,	wxMouseEventHandler	(GSPanel::OnShowMouse));
 	Connect(wxEVT_RIGHT_DCLICK,		wxMouseEventHandler	(GSPanel::OnShowMouse));
 	Connect(wxEVT_MOUSEWHEEL,		wxMouseEventHandler	(GSPanel::OnShowMouse));
@@ -191,14 +194,19 @@ void GSPanel::OnKeyDown( wxKeyEvent& evt )
 	DirectKeyCommand( evt );
 }
 
-void GSPanel::DirectKeyCommand( wxKeyEvent& evt )
+void GSPanel::DirectKeyCommand( const KeyAcceleratorCode& kac )
 {
 	const GlobalCommandDescriptor* cmd = NULL;
-	m_Accels->TryGetValue( KeyAcceleratorCode( evt ).val32, cmd );
+	m_Accels->TryGetValue( kac.val32, cmd );
 	if( cmd == NULL ) return;
 
 	DbgCon.WriteLn( "(gsFrame) Invoking command: %s", cmd->Id );
 	cmd->Invoke();
+}
+
+void GSPanel::DirectKeyCommand( wxKeyEvent& evt )
+{
+	DirectKeyCommand(KeyAcceleratorCode( evt ));
 }
 
 void GSPanel::OnFocus( wxFocusEvent& evt )
@@ -233,11 +241,20 @@ void GSPanel::AppStatusEvent_OnSettingsApplied()
 	Show( !EmuConfig.GS.DisableOutput );
 }
 
+void GSPanel::OnLeftDclick(wxMouseEvent& evt)
+{
+	Console.WriteLn("GSPanel::OnDoubleClick: Invoking Fullscreen-Toggle accelerator.");
+	DirectKeyCommand(FULLSCREEN_TOGGLE_ACCELERATOR_GSPANEL);
+}
+
+
+
 // --------------------------------------------------------------------------------------
 //  GSFrame Implementation
 // --------------------------------------------------------------------------------------
 
 static const uint TitleBarUpdateMs = 333;
+
 
 GSFrame::GSFrame(wxWindow* parent, const wxString& title)
 	: wxFrame(parent, wxID_ANY, title,
@@ -304,6 +321,8 @@ bool GSFrame::ShowFullScreen(bool show, long style)
 	
 	return retval;
 }
+
+
 
 wxStaticText* GSFrame::GetLabel_OutputDisabled() const
 {
