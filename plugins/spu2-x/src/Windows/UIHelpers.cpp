@@ -29,7 +29,7 @@ HRESULT GUIDFromString(const char *str, LPGUID guid)
 
 	struct T{	// this is a hack because for some reason sscanf writes too much :/
 		GUID g;
-		int k;
+		int k; // << not used but still needed as of January 6th, 2011
 	} t;
 
 	int r = sscanf_s(str,"{%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x}",
@@ -83,7 +83,7 @@ BOOL DoHandleScrollMessage( HWND hwndDisplay, WPARAM wParam, LPARAM lParam )
 {
 	int wmId    = LOWORD(wParam);
 	int wmEvent = HIWORD(wParam);
-	static char temp[64];
+	
 	switch(wmId)
 	{
 		//case TB_ENDTRACK:

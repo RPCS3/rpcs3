@@ -371,7 +371,7 @@ extern HWND hDebugDialog;
 
 static BOOL CALLBACK DebugProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 {
-	int wmId,wmEvent;
+	int wmId;
 
 	switch(uMsg)
 	{
@@ -385,7 +385,6 @@ static BOOL CALLBACK DebugProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 		case WM_COMMAND:
 			wmId    = LOWORD(wParam);
-			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{

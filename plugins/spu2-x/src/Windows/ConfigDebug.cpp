@@ -177,7 +177,7 @@ void EnableControls( HWND hWnd )
 
 static BOOL CALLBACK DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 {
-	int wmId,wmEvent;
+	int wmId;
 	//wchar_t temp[384]={0};
 
 	switch(uMsg)
@@ -211,7 +211,6 @@ static BOOL CALLBACK DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
 		case WM_COMMAND:
 			wmId    = LOWORD(wParam);
-			wmEvent = HIWORD(wParam);
 			// Parse the menu selections:
 			switch (wmId)
 			{

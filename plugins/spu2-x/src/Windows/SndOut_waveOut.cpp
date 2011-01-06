@@ -205,7 +205,6 @@ private:
 	static BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 	{
 		int wmId,wmEvent;
-		int tSel=0;
 
 		switch(uMsg)
 		{

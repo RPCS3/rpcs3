@@ -449,18 +449,9 @@ __forceinline void TimeUpdate(u32 cClocks)
 	}
 }
 
-static u16 mask = 0xFFFF;
-
 __forceinline void UpdateSpdifMode()
 {
 	int OPM=PlayMode;
-	u16 last = 0;
-
-	if(mask&Spdif.Out)
-	{
-		last = mask & Spdif.Out;
-		mask=mask&(~Spdif.Out);
-	}
 
 	if(Spdif.Out&0x4) // use 24/32bit PCM data streaming
 	{
