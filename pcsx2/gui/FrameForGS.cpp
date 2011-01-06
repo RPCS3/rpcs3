@@ -243,8 +243,9 @@ void GSPanel::AppStatusEvent_OnSettingsApplied()
 
 void GSPanel::OnLeftDclick(wxMouseEvent& evt)
 {
-	Console.WriteLn("GSPanel::OnDoubleClick: Invoking Fullscreen-Toggle accelerator.");
-	DirectKeyCommand(FULLSCREEN_TOGGLE_ACCELERATOR_GSPANEL);
+	//need to add a config option for users which use mouse input. Till then, this feature is disabled.
+	//Console.WriteLn("GSPanel::OnDoubleClick: Invoking Fullscreen-Toggle accelerator.");
+	//DirectKeyCommand(FULLSCREEN_TOGGLE_ACCELERATOR_GSPANEL);
 }
 
 
