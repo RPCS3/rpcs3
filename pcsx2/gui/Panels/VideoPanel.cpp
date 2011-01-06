@@ -125,6 +125,12 @@ void Panels::FramelimiterPanel::AppStatusEvent_OnSettingsApplied()
 
 	m_text_BaseNtsc		->SetValue( gsconf.FramerateNTSC.ToString() );
 	m_text_BasePal		->SetValue( gsconf.FrameratePAL.ToString() );
+
+	m_spin_NominalPct->Enable(!g_Conf->EnablePresets);
+	m_spin_TurboPct->Enable(!g_Conf->EnablePresets);
+	m_spin_SlomoPct->Enable(!g_Conf->EnablePresets);
+	m_text_BaseNtsc->Enable(!g_Conf->EnablePresets);
+	m_text_BasePal->Enable(!g_Conf->EnablePresets);
 }
 
 void Panels::FramelimiterPanel::Apply()
@@ -247,6 +253,8 @@ void Panels::FrameSkipPanel::AppStatusEvent_OnSettingsApplied()
 
 	m_spin_FramesToDraw	->SetValue( gsconf.FramesToDraw );
 	m_spin_FramesToSkip	->SetValue( gsconf.FramesToSkip );
+
+	this->Enable(!g_Conf->EnablePresets);
 }
 
 void Panels::FrameSkipPanel::Apply()
@@ -352,4 +360,7 @@ void Panels::VideoPanel::AppStatusEvent_OnSettingsApplied()
 {
 	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.GS.SynchronousMTGS );
 	m_check_DisableOutput->SetValue( g_Conf->EmuOptions.GS.DisableOutput );
+
+	m_check_SynchronousGS->Enable(!g_Conf->EnablePresets);
+	m_check_DisableOutput->Enable(!g_Conf->EnablePresets);
 }

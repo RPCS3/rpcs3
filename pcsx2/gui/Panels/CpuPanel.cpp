@@ -174,7 +174,7 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	*this	+= new AdvancedOptionsFPU( this )	| StdExpand();
 
 	*this	+= 12;
-	*this	+= new wxButton( this, wxID_DEFAULT, _("Restore Defaults") ) | StdButton();
+	*this	+=  new wxButton( this, wxID_DEFAULT, _("Restore Defaults"))  | StdButton();
 
 	Connect( wxID_DEFAULT, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CpuPanelEE::OnRestoreDefaults ) );
 }
@@ -245,6 +245,11 @@ void Panels::CpuPanelEE::AppStatusEvent_OnSettingsApplied()
 	const Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
 	m_panel_RecEE->SetSelection( (int)recOps.EnableEE );
 	m_panel_RecIOP->SetSelection( (int)recOps.EnableIOP );
+
+	m_panel_RecEE->Enable(!g_Conf->EnablePresets);
+	m_panel_RecIOP->Enable(!g_Conf->EnablePresets);
+
+	this->Enable(!g_Conf->EnablePresets);
 }
 
 void Panels::CpuPanelEE::OnRestoreDefaults(wxCommandEvent &evt)
@@ -290,6 +295,10 @@ void Panels::CpuPanelVU::AppStatusEvent_OnSettingsApplied()
 		m_panel_VU1->SetSelection( recOps.EnableVU1 ? 1 : 0 );
 	else
 		m_panel_VU1->SetSelection( recOps.EnableVU1 ? 2 : 0 );
+
+	this->Enable(!g_Conf->EnablePresets);
+	m_panel_VU0->Enable(!g_Conf->EnablePresets);
+	m_panel_VU1->Enable(!g_Conf->EnablePresets);
 }
 
 void Panels::CpuPanelVU::OnRestoreDefaults(wxCommandEvent &evt)
@@ -341,6 +350,8 @@ void Panels::AdvancedOptionsFPU::AppStatusEvent_OnSettingsApplied()
 	else if( recOps.fpuExtraOverflow )	m_ClampModePanel->SetSelection( 2 );
 	else if( recOps.fpuOverflow )		m_ClampModePanel->SetSelection( 1 );
 	else								m_ClampModePanel->SetSelection( 0 );
+
+	this->Enable(!g_Conf->EnablePresets);
 }
 
 void Panels::AdvancedOptionsVU::Apply()
@@ -374,5 +385,7 @@ void Panels::AdvancedOptionsVU::AppStatusEvent_OnSettingsApplied()
 	else if( recOps.vuExtraOverflow )	m_ClampModePanel->SetSelection( 2 );
 	else if( recOps.vuOverflow )		m_ClampModePanel->SetSelection( 1 );
 	else								m_ClampModePanel->SetSelection( 0 );
+
+	this->Enable(!g_Conf->EnablePresets);
 }
 

@@ -87,6 +87,14 @@ namespace Dialogs
 
 	protected:
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->SysSettingsTabName; }
+
+		pxCheckBox*		m_check_presets;
+		wxSlider*		m_slider_presets;
+		pxStaticText*	m_msg_preset;
+		void AddPresetsControl();
+		void Preset_Scroll(wxScrollEvent &event);
+		void Presets_Toggled(wxCommandEvent &event);
+
 	};
 
 	// --------------------------------------------------------------------------------------

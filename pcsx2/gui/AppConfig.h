@@ -231,6 +231,16 @@ public:
 	bool		EnableSpeedHacks;
 	bool		EnableGameFixes;
 
+	// Presets try to prevent users from overwhelming when they want to change settings (usually to make a game run faster).
+    // The presets allow to modify the balance between emulation accuracy and emulation speed using a pseudo-linear control.
+    // It's pseudo since there's no way to arrange groups of all of pcsx2's settings such that each next group makes it slighty faster and slightly less compatiible for all games.
+    //However, By carefully selecting these preset config groups, it's hopefully possible to achieve this goal for a reasonable percentage (hopefully above 50%) of the games.
+    //when presets are enabled, the user has practically no control over the emulation settings, and can only choose the preset to use.
+
+	// The next 2 vars enable/disable presets alltogether, and select/reflect current preset, respectively.
+	bool		EnablePresets;
+	int			PresetIndex;
+
 	wxString				CurrentIso;
 	wxString				CurrentELF;
 	CDVD_SourceType			CdvdSource;
@@ -265,6 +275,10 @@ public:
 	void LoadSave( IniInterface& ini );
 	void LoadSaveRootItems( IniInterface& ini );
 	void LoadSaveMemcards( IniInterface& ini );
+
+	static int GeMaxPresetIndex();
+	bool       IsOkApplyPreset(int n);
+
 };
 
 extern void AppLoadSettings();

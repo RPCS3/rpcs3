@@ -138,7 +138,7 @@ void Dialogs::BaseConfigurationDialog::AddOkCancel( wxSizer* sizer )
 	wxBitmapButton& screenshotButton( *new wxBitmapButton( this, wxID_SAVE, EmbeddedImage<res_ButtonIcon_Camera>().Get() ) );
 	screenshotButton.SetToolTip( _("Saves a snapshot of this settings panel to a PNG file.") );
 
-	*m_extraButtonSizer += screenshotButton;
+	*m_extraButtonSizer += screenshotButton|pxMiddle;
 }
 
 Dialogs::BaseConfigurationDialog::~BaseConfigurationDialog() throw()

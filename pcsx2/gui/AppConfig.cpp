@@ -378,6 +378,9 @@ AppConfig::AppConfig()
 	EnableSpeedHacks	= false;
 	EnableGameFixes		= false;
 
+	EnablePresets		= false;
+	PresetIndex			= 0;
+
 	CdvdSource			= CDVDsrc_Iso;
 
 	// To be moved to FileMemoryCard pluign (someday)
@@ -480,6 +483,9 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 
 	IniEntry( EnableSpeedHacks );
 	IniEntry( EnableGameFixes );
+
+	IniEntry( EnablePresets );
+	IniEntry( PresetIndex );
 	
 	#ifdef __WXMSW__
 	IniEntry( McdCompressNTFS );
@@ -507,7 +513,12 @@ void AppConfig::LoadSave( IniInterface& ini )
 
 	EmuOptions.LoadSave( ini );
 	if( ini.IsLoading() )
+	{
 		EmuOptions.GS.LimitScalar = Framerate.NominalScalar;
+		if (EnablePresets){
+			IsOkApplyPreset(PresetIndex);
+		}
+	}
 
 	ini.Flush();
 }
@@ -712,6 +723,94 @@ void AppConfig::FramerateOptions::LoadSave( IniInterface& ini )
 	IniEntry( SkipOnLimit );
 	IniEntry( SkipOnTurbo );
 }
+
+int AppConfig::GeMaxPresetIndex()
+{
+	return 5;
+}
+
+bool AppConfig::IsOkApplyPreset(int n)
+{
+	if (n < 0 || n > GeMaxPresetIndex() )
+	{
+		Console.WriteLn("Warning: ApplyPreset(%d): index too big, Aborting.", n);
+		return false;
+	}
+
+	Console.WriteLn("Applying Preset %d ...", n);
+
+	AppConfig    default_AppConfig;
+	Pcsx2Config	 default_Pcsx2Config;
+
+	Pcsx2Config  original_Pcsx2Config = EmuOptions;
+	EmuOptions = default_Pcsx2Config;	//reset EmuOptions.
+
+	//restore the original Pcsx2Config settings which we don't want to override with the application default dettings.
+	//The ugly part of this is that while most panels are entirely disabled from manual tweaking when a preset is used,
+	//  the options that are not overriden by presets need to be manually excluded from disabling.
+	//  So the Gui panels need to have intimate knowledge of this exclusion list. Bahh..
+	EmuOptions.EnableCheats			= original_Pcsx2Config.EnableCheats;
+	EmuOptions.GS.FrameLimitEnable	= original_Pcsx2Config.GS.FrameLimitEnable;
+	EmuOptions.BackupSavestate		= original_Pcsx2Config.BackupSavestate;
+
+	//Make sure these options are forced as a base even if in the future they default to other values.
+	//Also, as with the exclusions list, the gui needs to know what sections are affected by presets
+	//  such that it can disable them from manual tweaking when a preset is used. This includes most panels BTW.
+	EnableSpeedHacks			=false;
+	EnableGameFixes				=false;
+	EmuOptions.EnablePatches	=true;
+
+	//Note that AppConfig was not reset, so if we need some default options for it, we need to set them.
+	this->Framerate = default_AppConfig.Framerate;
+
+	//Actual application of current preset.
+	//The presets themselves probably need some voodoo tuning to be reasonably useful.
+
+	bool vuUsed=false, eeUsed=false, hacksUsed=false;//used to prevent application of specific lower preset values on fallthrough.
+	switch (n){	//currently implemented such that any preset also applies all lower presets, with few exceptions.
+
+		case 5 :	//Set VU cycle steal to 2 clicks (maximum-1)
+					vuUsed?0:(vuUsed=true, EmuOptions.Speedhacks.VUCycleSteal = 2);
+		
+		case 4 :	//set EE cyclerate to 2 clicks (maximum)
+					eeUsed?0:(eeUsed=true, EmuOptions.Speedhacks.EECycleRate = 2);
+
+		case 3 :	//Set VU cycle steal to 1 click, enable (m)vuBlockHack, set clamp mode to 'none' for both EE/VU
+					vuUsed?0:(vuUsed=true, EmuOptions.Speedhacks.VUCycleSteal = 1);
+					EmuOptions.Speedhacks.vuBlockHack=true;
+					EmuOptions.Cpu.Recompiler.fpuOverflow=
+						EmuOptions.Cpu.Recompiler.fpuExtraOverflow=
+						EmuOptions.Cpu.Recompiler.fpuFullMode=
+						EmuOptions.Cpu.Recompiler.vuOverflow=
+						EmuOptions.Cpu.Recompiler.vuExtraOverflow=
+						EmuOptions.Cpu.Recompiler.vuSignOverflow=false; //Clamp mode to 'none' for both EE and VU
+
+		//best balanced hacks combo?
+		case 2 :	//enable EE timing hack, set EE cyclerate to 1 click, enable mvu flag hack
+					eeUsed?0:(eeUsed=true, EmuOptions.Speedhacks.EECycleRate  = 1);
+					EnableGameFixes=true;
+					EmuOptions.Gamefixes.EETimingHack=true;
+					hacksUsed?0:(hacksUsed=true, EmuOptions.Speedhacks.vuFlagHack=true);
+
+		case 1 :	//Apply recommended speed hacks (which are individually "ckecked" by default) without mvu flag hack.
+					EnableSpeedHacks = true;
+					hacksUsed?0:(hacksUsed=true, EmuOptions.Speedhacks.vuFlagHack=false);
+
+		case 0 :	//default application config. + untick all individual speed hacks to make it visually clear none is used.
+					hacksUsed?0:(hacksUsed=true, EmuOptions.Speedhacks.bitset=0);
+					
+		
+					break;
+		default:	Console.WriteLn("Developer Warning: Preset #%d is not implemented. (--> Using application default).", n);
+	}
+
+
+	EnablePresets=true;
+	PresetIndex=n;
+
+	return true;
+}
+
 
 wxFileConfig* OpenFileConfig( const wxString& filename )
 {

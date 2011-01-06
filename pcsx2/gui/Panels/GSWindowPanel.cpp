@@ -123,6 +123,8 @@ void Panels::GSWindowSettingsPanel::AppStatusEvent_OnSettingsApplied()
 
 	m_text_WindowWidth	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetWidth() ) );
 	m_text_WindowHeight	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetHeight() ) );
+
+	m_check_VsyncEnable->Enable(!g_Conf->EnablePresets);
 }
 
 void Panels::GSWindowSettingsPanel::Apply()

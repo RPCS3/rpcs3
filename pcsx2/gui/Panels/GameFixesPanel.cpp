@@ -127,7 +127,7 @@ void Panels::GameFixesPanel::Apply()
 void Panels::GameFixesPanel::EnableStuff()
 {
     for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
-    	m_checkbox[i]->Enable(m_check_Enable->GetValue());
+    	m_checkbox[i]->Enable(m_check_Enable->GetValue() && !g_Conf->EnablePresets);
 }
 
 void Panels::GameFixesPanel::OnEnable_Toggled( wxCommandEvent& evt )
@@ -140,5 +140,10 @@ void Panels::GameFixesPanel::AppStatusEvent_OnSettingsApplied()
 {
 	const Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
 	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
-		m_checkbox[i]->SetValue( opts.Get((GamefixId)i) );
+		m_checkbox[i]->SetValue( opts.Get((GamefixId)i) );//apply the use/don't-use fix values
+	
+	m_check_Enable->SetValue( g_Conf->EnableGameFixes );//main gamefixes checkbox
+	EnableStuff();// enable/disable the all the fixes controls according to the main one
+	
+	this->Enable(!g_Conf->EnablePresets);
 }
