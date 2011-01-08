@@ -27,7 +27,7 @@ using namespace pxSizerFlags;
 // --------------------------------------------------------------------------------------
 
 Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
-	: BaseApplicableConfigPanel( parent )
+	: BaseApplicableConfigPanel_SpecificConfig( parent )
 {
 	SetMinWidth( 280 );
 
@@ -113,9 +113,14 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 
 void Panels::FramelimiterPanel::AppStatusEvent_OnSettingsApplied()
 {
-	const AppConfig::GSWindowOptions& appwin( g_Conf->GSWindow );
-	const AppConfig::FramerateOptions& appfps( g_Conf->Framerate );
-	const Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
+    ApplyConfigToGui( *g_Conf );
+}
+
+void Panels::FramelimiterPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+{
+	const AppConfig::GSWindowOptions& appwin( configToApply.GSWindow );
+	const AppConfig::FramerateOptions& appfps( configToApply.Framerate );
+	const Pcsx2Config::GSOptions& gsconf( configToApply.EmuOptions.GS );
 
 	m_check_LimiterDisable->SetValue( !gsconf.FrameLimitEnable );
 
@@ -126,11 +131,11 @@ void Panels::FramelimiterPanel::AppStatusEvent_OnSettingsApplied()
 	m_text_BaseNtsc		->SetValue( gsconf.FramerateNTSC.ToString() );
 	m_text_BasePal		->SetValue( gsconf.FrameratePAL.ToString() );
 
-	m_spin_NominalPct->Enable(!g_Conf->EnablePresets);
-	m_spin_TurboPct->Enable(!g_Conf->EnablePresets);
-	m_spin_SlomoPct->Enable(!g_Conf->EnablePresets);
-	m_text_BaseNtsc->Enable(!g_Conf->EnablePresets);
-	m_text_BasePal->Enable(!g_Conf->EnablePresets);
+	m_spin_NominalPct   ->Enable(!configToApply.EnablePresets);
+	m_spin_TurboPct     ->Enable(!configToApply.EnablePresets);
+	m_spin_SlomoPct     ->Enable(!configToApply.EnablePresets);
+	m_text_BaseNtsc     ->Enable(!configToApply.EnablePresets);
+	m_text_BasePal      ->Enable(!configToApply.EnablePresets);
 }
 
 void Panels::FramelimiterPanel::Apply()
@@ -166,7 +171,7 @@ void Panels::FramelimiterPanel::Apply()
 // --------------------------------------------------------------------------------------
 
 Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
-	: BaseApplicableConfigPanel( parent )
+	: BaseApplicableConfigPanel_SpecificConfig( parent )
 {
 	SetMinWidth( 280 );
 	/*m_check_EnableSkipOnTurbo = new pxCheckBox( this, _("Use Frameskip for Turbo") );
@@ -243,8 +248,13 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 
 void Panels::FrameSkipPanel::AppStatusEvent_OnSettingsApplied()
 {
-	const AppConfig::FramerateOptions& appfps( g_Conf->Framerate );
-	const Pcsx2Config::GSOptions& gsconf( g_Conf->EmuOptions.GS );
+    ApplyConfigToGui( *g_Conf );
+}
+
+void Panels::FrameSkipPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+{
+	const AppConfig::FramerateOptions& appfps( configToApply.Framerate );
+	const Pcsx2Config::GSOptions& gsconf( configToApply.EmuOptions.GS );
 
 	//m_check_EnableSkip		->SetValue( !appfps.SkipOnLimit );
 	//m_check_EnableSkipOnTurbo	->SetValue( !appfps.SkipOnTurbo );
@@ -254,8 +264,9 @@ void Panels::FrameSkipPanel::AppStatusEvent_OnSettingsApplied()
 	m_spin_FramesToDraw	->SetValue( gsconf.FramesToDraw );
 	m_spin_FramesToSkip	->SetValue( gsconf.FramesToSkip );
 
-	this->Enable(!g_Conf->EnablePresets);
+	this->Enable(!configToApply.EnablePresets);
 }
+
 
 void Panels::FrameSkipPanel::Apply()
 {
@@ -291,7 +302,7 @@ void Panels::FrameSkipPanel::Apply()
 // --------------------------------------------------------------------------------------
 
 Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
-	BaseApplicableConfigPanel( parent )
+	BaseApplicableConfigPanel_SpecificConfig( parent )
 {
 	wxPanelWithHelpers* left	= new wxPanelWithHelpers( this, wxVERTICAL );
 	wxPanelWithHelpers* right	= new wxPanelWithHelpers( this, wxVERTICAL );
@@ -317,22 +328,22 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	//GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );
 	//winpan->AddFrame(_("Display/Window"));
 
-	FrameSkipPanel* span = new FrameSkipPanel( right );
-	span->AddFrame(_("Frame Skipping"));
+	m_span = new FrameSkipPanel( right );
+	m_span->AddFrame(_("Frame Skipping"));
 
-	FramelimiterPanel* fpan = new FramelimiterPanel( left );
-	fpan->AddFrame(_("Framelimiter"));
+	m_fpan = new FramelimiterPanel( left );
+	m_fpan->AddFrame(_("Framelimiter"));
 
 	wxFlexGridSizer* s_table = new wxFlexGridSizer( 2 );
 	s_table->AddGrowableCol( 0, 1 );
 	s_table->AddGrowableCol( 1, 1 );
 
-	*right		+= span		| pxExpand;
+	*right		+= m_span		| pxExpand;
 	*right		+= 5;
 	*right		+= m_check_SynchronousGS;
 	*right		+= m_check_DisableOutput;
 
-	*left		+= fpan		| pxExpand;
+	*left		+= m_fpan		| pxExpand;
 	*left		+= 5;
 
 	*s_table	+= left		| StdExpand();
@@ -358,9 +369,21 @@ void Panels::VideoPanel::Apply()
 
 void Panels::VideoPanel::AppStatusEvent_OnSettingsApplied()
 {
-	m_check_SynchronousGS->SetValue( g_Conf->EmuOptions.GS.SynchronousMTGS );
-	m_check_DisableOutput->SetValue( g_Conf->EmuOptions.GS.DisableOutput );
-
-	m_check_SynchronousGS->Enable(!g_Conf->EnablePresets);
-	m_check_DisableOutput->Enable(!g_Conf->EnablePresets);
+    ApplyConfigToGui(*g_Conf);
 }
+
+void Panels::VideoPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate ){
+	
+	m_check_SynchronousGS->SetValue( configToApply.EmuOptions.GS.SynchronousMTGS );
+	m_check_DisableOutput->SetValue( configToApply.EmuOptions.GS.DisableOutput );
+
+	m_check_SynchronousGS->Enable(!configToApply.EnablePresets);
+	m_check_DisableOutput->Enable(!configToApply.EnablePresets);
+
+    if( manuallyPropagate )
+    {
+        m_span->ApplyConfigToGui( configToApply, true );
+        m_fpan->ApplyConfigToGui( configToApply, true );
+    }
+}
+

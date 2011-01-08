@@ -729,6 +729,20 @@ int AppConfig::GeMaxPresetIndex()
 	return 5;
 }
 
+bool AppConfig::isOkGetPresetTextAndColor(int n, wxString& label, wxColor& c){
+	switch(n){
+		case 0: label=pxE("!Panel:", L"1 - Safest");		c=wxColor(L"Forest GREEN"); break;
+		case 1: label=pxE("!Panel:", L"2 - Safe (faster)");	c=wxColor(L"Dark Green"); break;
+		case 2: label=pxE("!Panel:", L"3 - Balanced");			c=wxColor(L"Blue");break;
+		case 3: label=pxE("!Panel:", L"4 - Aggressive");		c=wxColor(L"Purple"); break;
+		case 4: label=pxE("!Panel:", L"5 - Aggressive plus");	c=wxColor(L"Orange"); break;
+		case 5: label=pxE("!Panel:", L"6 - Mostly Harmful");	c=wxColor(L"Red");break;
+		default: return false;
+	}
+	return true;
+}
+
+
 bool AppConfig::IsOkApplyPreset(int n)
 {
 	if (n < 0 || n > GeMaxPresetIndex() )
@@ -757,6 +771,7 @@ bool AppConfig::IsOkApplyPreset(int n)
 	//Also, as with the exclusions list, the gui needs to know what sections are affected by presets
 	//  such that it can disable them from manual tweaking when a preset is used. This includes most panels BTW.
 	EnableSpeedHacks			=false;
+    EmuOptions.Speedhacks.bitset=0; //Turn off individual hacks to make it visually clear they're not used
 	EnableGameFixes				=false;
 	EmuOptions.EnablePatches	=true;
 
@@ -766,7 +781,7 @@ bool AppConfig::IsOkApplyPreset(int n)
 	//Actual application of current preset.
 	//The presets themselves probably need some voodoo tuning to be reasonably useful.
 
-	bool vuUsed=false, eeUsed=false, hacksUsed=false;//used to prevent application of specific lower preset values on fallthrough.
+	bool vuUsed=false, eeUsed=false;//used to prevent application of specific lower preset values on fallthrough.
 	switch (n){	//currently implemented such that any preset also applies all lower presets, with few exceptions.
 
 		case 5 :	//Set VU cycle steal to 2 clicks (maximum-1)
@@ -775,29 +790,29 @@ bool AppConfig::IsOkApplyPreset(int n)
 		case 4 :	//set EE cyclerate to 2 clicks (maximum)
 					eeUsed?0:(eeUsed=true, EmuOptions.Speedhacks.EECycleRate = 2);
 
-		case 3 :	//Set VU cycle steal to 1 click, enable (m)vuBlockHack, set clamp mode to 'none' for both EE/VU
+		case 3 :	//Set VU cycle steal to 1 click, enable (m)vuBlockHack, set VU clamp mode to 'none'
 					vuUsed?0:(vuUsed=true, EmuOptions.Speedhacks.VUCycleSteal = 1);
 					EmuOptions.Speedhacks.vuBlockHack=true;
-					EmuOptions.Cpu.Recompiler.fpuOverflow=
-						EmuOptions.Cpu.Recompiler.fpuExtraOverflow=
-						EmuOptions.Cpu.Recompiler.fpuFullMode=
-						EmuOptions.Cpu.Recompiler.vuOverflow=
-						EmuOptions.Cpu.Recompiler.vuExtraOverflow=
-						EmuOptions.Cpu.Recompiler.vuSignOverflow=false; //Clamp mode to 'none' for both EE and VU
+					//EmuOptions.Cpu.Recompiler.fpuOverflow=
+					//EmuOptions.Cpu.Recompiler.fpuExtraOverflow=
+					//EmuOptions.Cpu.Recompiler.fpuFullMode=  //EE clamp mode to 'None' : Better default for presets
+					EmuOptions.Cpu.Recompiler.vuOverflow=
+					EmuOptions.Cpu.Recompiler.vuExtraOverflow=
+					EmuOptions.Cpu.Recompiler.vuSignOverflow=false; //VU Clamp mode to 'none'
 
 		//best balanced hacks combo?
 		case 2 :	//enable EE timing hack, set EE cyclerate to 1 click, enable mvu flag hack
 					eeUsed?0:(eeUsed=true, EmuOptions.Speedhacks.EECycleRate  = 1);
-					EnableGameFixes=true;
-					EmuOptions.Gamefixes.EETimingHack=true;
-					hacksUsed?0:(hacksUsed=true, EmuOptions.Speedhacks.vuFlagHack=true);
+					EnableGameFixes = true;
+					EmuOptions.Gamefixes.EETimingHack = true;
+                    EmuOptions.Speedhacks.vuFlagHack = true;
 
 		case 1 :	//Apply recommended speed hacks (which are individually "ckecked" by default) without mvu flag hack.
 					EnableSpeedHacks = true;
-					hacksUsed?0:(hacksUsed=true, EmuOptions.Speedhacks.vuFlagHack=false);
+                    EmuOptions.Speedhacks.IntcStat = true;
+                    EmuOptions.Speedhacks.WaitLoop = true;
 
-		case 0 :	//default application config. + untick all individual speed hacks to make it visually clear none is used.
-					hacksUsed?0:(hacksUsed=true, EmuOptions.Speedhacks.bitset=0);
+		case 0 :	//default application config. + all individual speed hacks unticked to make it visually clear none is used.
 					
 		
 					break;

@@ -23,7 +23,7 @@ using namespace pxSizerFlags;
 // --------------------------------------------------------------------------------------
 
 Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
-	: BaseApplicableConfigPanel( parent )
+	: BaseApplicableConfigPanel_SpecificConfig( parent )
 {
 	const wxString aspect_ratio_labels[] =
 	{
@@ -110,7 +110,12 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 
 void Panels::GSWindowSettingsPanel::AppStatusEvent_OnSettingsApplied()
 {
-	const AppConfig::GSWindowOptions& conf( g_Conf->GSWindow );
+    ApplyConfigToGui( *g_Conf );
+}
+
+void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+{
+	const AppConfig::GSWindowOptions& conf( configToApply.GSWindow );
 
 	m_check_CloseGS		->SetValue( conf.CloseOnEsc );
 	m_check_Fullscreen	->SetValue( conf.DefaultToFullscreen );
@@ -119,12 +124,12 @@ void Panels::GSWindowSettingsPanel::AppStatusEvent_OnSettingsApplied()
 
 	m_combo_AspectRatio	->SetSelection( (int)conf.AspectRatio );
 
-	m_check_VsyncEnable	->SetValue( g_Conf->EmuOptions.GS.VsyncEnable );
+	m_check_VsyncEnable	->SetValue( configToApply.EmuOptions.GS.VsyncEnable );
 
 	m_text_WindowWidth	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetWidth() ) );
 	m_text_WindowHeight	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetHeight() ) );
 
-	m_check_VsyncEnable->Enable(!g_Conf->EnablePresets);
+	m_check_VsyncEnable->Enable(!configToApply.EnablePresets);
 }
 
 void Panels::GSWindowSettingsPanel::Apply()

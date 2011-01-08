@@ -276,8 +276,9 @@ public:
 	void LoadSaveRootItems( IniInterface& ini );
 	void LoadSaveMemcards( IniInterface& ini );
 
-	static int GeMaxPresetIndex();
-	bool       IsOkApplyPreset(int n);
+	static int  GeMaxPresetIndex();
+    static bool isOkGetPresetTextAndColor(int n, wxString& label, wxColor& c);
+	bool        IsOkApplyPreset(int n);
 
 };
 

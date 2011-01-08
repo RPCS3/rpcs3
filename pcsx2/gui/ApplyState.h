@@ -201,6 +201,22 @@ protected:
 	virtual void OnSettingsApplied( wxCommandEvent& evt );
 };
 
+class BaseApplicableConfigPanel_SpecificConfig : public BaseApplicableConfigPanel
+{
+    //This class only differs from BaseApplicableConfigPanel by systematically allowing the gui to be updated
+    //from a specific config (used by the presets system to trash not g_Conf in case the user pressed "Cancel").
+    //Every panel that the Presets affect should be derived from this and not from BaseApplicableConfigPanel.
+    //
+    //Multiple inheritance would have been better (also for cases of non BaseApplicableConfigPanel which are effected by presets),
+    //but multiple inheritance sucks. So, subclass.
+    //NOTE: because ApplyConfigToGui is called manually and not via an event, it must consider manuallyPropagate and call sub panels.
+public:
+	BaseApplicableConfigPanel_SpecificConfig( wxWindow* parent, wxOrientation orient=wxVERTICAL );
+	BaseApplicableConfigPanel_SpecificConfig( wxWindow* parent, wxOrientation orient, const wxString& staticLabel );
+
+	virtual void ApplyConfigToGui(AppConfig& configToApply, bool manuallyPropagate=false)=0;
+};
+
 class ApplicableWizardPage : public wxWizardPageSimple, public IApplyState
 {
 	DECLARE_DYNAMIC_CLASS_NO_COPY(ApplicableWizardPage)

@@ -20,7 +20,7 @@
 using namespace pxSizerFlags;
 
 Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
-	: BaseApplicableConfigPanel( parent )
+	: BaseApplicableConfigPanel_SpecificConfig( parent )
 {
 	wxStaticBoxSizer& groupSizer = *new wxStaticBoxSizer( wxVERTICAL, this, _("Gamefixes") );
 
@@ -124,26 +124,35 @@ void Panels::GameFixesPanel::Apply()
 	wxGetApp().Overrides.ApplyCustomGamefixes = false;
 }
 
-void Panels::GameFixesPanel::EnableStuff()
+void Panels::GameFixesPanel::EnableStuff( AppConfig* configToUse )
 {
+    if( !configToUse ) configToUse = g_Conf;
     for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
-    	m_checkbox[i]->Enable(m_check_Enable->GetValue() && !g_Conf->EnablePresets);
+    	m_checkbox[i]->Enable(m_check_Enable->GetValue() && !configToUse->EnablePresets);
 }
 
 void Panels::GameFixesPanel::OnEnable_Toggled( wxCommandEvent& evt )
 {
-	EnableStuff();
+    AppConfig tmp=*g_Conf;
+    tmp.EnablePresets=false; //if clicked, button was enabled, so not using a preset --> let EnableStuff work
+
+    EnableStuff( &tmp );
 	evt.Skip();
 }
 
 void Panels::GameFixesPanel::AppStatusEvent_OnSettingsApplied()
 {
-	const Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
+    ApplyConfigToGui( *g_Conf );
+}
+
+void Panels::GameFixesPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+{
+	const Pcsx2Config::GamefixOptions& opts( configToApply.EmuOptions.Gamefixes );
 	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
 		m_checkbox[i]->SetValue( opts.Get((GamefixId)i) );//apply the use/don't-use fix values
 	
-	m_check_Enable->SetValue( g_Conf->EnableGameFixes );//main gamefixes checkbox
-	EnableStuff();// enable/disable the all the fixes controls according to the main one
+	m_check_Enable->SetValue( configToApply.EnableGameFixes );//main gamefixes checkbox
+	EnableStuff( &configToApply );// enable/disable the all the fixes controls according to the main one
 	
-	this->Enable(!g_Conf->EnablePresets);
+	this->Enable(!configToApply.EnablePresets);
 }

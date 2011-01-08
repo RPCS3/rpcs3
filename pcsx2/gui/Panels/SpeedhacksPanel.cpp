@@ -89,7 +89,7 @@ void Panels::SpeedHacksPanel::SetVUcycleSliderMsg()
 }
 
 Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
-	: BaseApplicableConfigPanel( parent )
+ : BaseApplicableConfigPanel_SpecificConfig( parent )
 {
 	const wxSizerFlags sliderFlags( wxSizerFlags().Border( wxLEFT | wxRIGHT, 8 ).Expand() );
 
@@ -274,8 +274,11 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	Connect( wxID_DEFAULT,					wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( SpeedHacksPanel::Defaults_Click ) );
 }
 
-void Panels::SpeedHacksPanel::EnableStuff()
+void Panels::SpeedHacksPanel::EnableStuff( AppConfig* configToUse )
 {
+    //Console.WriteLn("SpeedHacksPanel::EnableStuff: Using %s", configToUse?"Object":"NULL");
+    if( !configToUse ) configToUse = g_Conf;
+    //Console.WriteLn("SpeedHacksPanel::EnableStuff: EnabledPresets: %s", configToUse->EnablePresets?"true":"false");
 	wxSizerItemList& items( s_table->GetChildren() );
 
 	wxSizerItemList::iterator it	= items.begin();
@@ -283,19 +286,21 @@ void Panels::SpeedHacksPanel::EnableStuff()
 
 	while( it != end )
 	{
-		(*it)->GetWindow()->Enable( m_check_Enable->GetValue() && !g_Conf->EnablePresets);
+		(*it)->GetWindow()->Enable( m_check_Enable->GetValue() && !configToUse->EnablePresets);
 		++it;
 	}
 }
 
 void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied()
 {
-	AppStatusEvent_OnSettingsApplied( g_Conf->EmuOptions.Speedhacks );
+    //Console.WriteLn("SpeedHacksPanel::AppStatusEvent_OnSettingsApplied()");
+	ApplyConfigToGui( *g_Conf );
 }
 
-void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied( const Pcsx2Config::SpeedhackOptions& opts )
+void Panels::SpeedHacksPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
 {
-	const bool enabled = g_Conf->EnableSpeedHacks;
+	const bool enabled = configToApply.EnableSpeedHacks;
+    Pcsx2Config::SpeedhackOptions& opts=configToApply.EmuOptions.Speedhacks;
 
 	m_check_Enable		->SetValue( !!enabled );
 
@@ -312,12 +317,16 @@ void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied( const Pcsx2Confi
 	m_check_waitloop	->SetValue(opts.WaitLoop);
 	m_check_fastCDVD	->SetValue(opts.fastCDVD);
 
-	EnableStuff();
+	EnableStuff( &configToApply );
 
 	// Layout necessary to ensure changed slider text gets re-aligned properly
 	Layout();
-	this->Enable(!g_Conf->EnablePresets);
+
+    //Console.WriteLn("SpeedHacksPanel::ApplyConfigToGui: EnabledPresets: %s", configToApply.EnablePresets?"true":"false");
+
+    this->Enable(!configToApply.EnablePresets);
 }
+
 
 void Panels::SpeedHacksPanel::Apply()
 {
@@ -342,13 +351,18 @@ void Panels::SpeedHacksPanel::Apply()
 
 void Panels::SpeedHacksPanel::OnEnable_Toggled( wxCommandEvent& evt )
 {
-	EnableStuff();
+    AppConfig tmp=*g_Conf;
+    tmp.EnablePresets=false; //if clicked, button was enabled, so not using a preset --> let EnableStuff work
+
+    EnableStuff( &tmp );
 	evt.Skip();
 }
 
 void Panels::SpeedHacksPanel::Defaults_Click( wxCommandEvent& evt )
 {
-	AppStatusEvent_OnSettingsApplied( Pcsx2Config::SpeedhackOptions() );
+    AppConfig currentConfigWithHacksReset = *g_Conf;
+    currentConfigWithHacksReset.EmuOptions.Speedhacks = Pcsx2Config::SpeedhackOptions();
+    ApplyConfigToGui( currentConfigWithHacksReset );
 	evt.Skip();
 }
 

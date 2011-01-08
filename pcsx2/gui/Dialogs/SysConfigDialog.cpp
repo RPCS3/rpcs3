@@ -65,19 +65,44 @@ static void CheckPluginsOverrides()
 	pxIssueConfirmation( dialog, MsgButtons().OK(), L"Dialog.ComponentsConfig.Overrides" );
 }
 
-bool isOkGetPresetTextAndColor(int n, wxString& label, wxColor& c){
-	switch(n){
-		case 0: label=pxE("!Panel:", L"1 - Safest");		c=wxColor(L"Forest GREEN"); break;
-		case 1: label=pxE("!Panel:", L"2 - Safe (faster)");	c=wxColor(L"Dark Green"); break;
-		case 2: label=pxE("!Panel:", L"3 - Balanced");			c=wxColor(L"Blue");break;
-		case 3: label=pxE("!Panel:", L"4 - Aggressive");		c=wxColor(L"Purple"); break;
-		case 4: label=pxE("!Panel:", L"5 - Aggressive plus");	c=wxColor(L"Orange"); break;
-		case 5: label=pxE("!Panel:", L"6 - Mostly Harmful");	c=wxColor(L"Red");break;
-		default: return false;
-	}
-	return true;
-}
+//Current behavior when unchecking 'Presets' is to keep the GUI settings at the last preset (even if not applied).
+//
+//Alternative GUI behavior is that when 'Preset' is unchecked,
+//  the GUI settings return to the last applied settings.
+//  This allows the user to keep tweaking his "personal' settings and toggling 'Presets' for comparison,
+//  or start tweaking from a specific preset by clicking Apply before unchecking 'Presets'
+//  However, I think it's more confusing. Uncomment the next line to use the alternative behavior.
+//#define PRESETS_USE_APPLIED_CONFIG_ON_UNCHECK
+void Dialogs::SysConfigDialog::UpdateGuiForPreset ( int presetIndex, bool presetsEnabled )
+{
+    AppConfig preset = *g_Conf;
+    preset.IsOkApplyPreset(presetIndex);
+    preset.EnablePresets=presetsEnabled;//override IsOkApplyPreset to actual required state
 
+ 	if( m_listbook ){
+        //Console.WriteLn("Applying config to Gui: preset #%d, presets enabled: %s", presetIndex, presetsEnabled?"true":"false");
+ 		size_t pages = m_labels.GetCount();
+        for( size_t i=0; i<pages; ++i ){
+            bool origPresetsEnabled = g_Conf->EnablePresets;
+            if( !presetsEnabled )
+                g_Conf->EnablePresets = false; // unly used when PRESETS_USE_APPLIED_CONFIG_WHEN_UNCHECKED is NOT defined
+
+ 			(
+ 				(BaseApplicableConfigPanel_SpecificConfig*)(m_listbook->GetPage(i))
+
+#ifdef PRESETS_USE_APPLIED_CONFIG_ON_UNCHECK
+             )->ApplyConfigToGui( presetsEnabled?preset:*g_Conf, true );
+            //Console.WriteLn("SysConfigDialog::UpdateGuiForPreset: Using object: %s", presetsEnabled?"preset":"*g_Conf");
+#else
+             )->ApplyConfigToGui( preset, true );
+            //Console.WriteLn("SysConfigDialog::UpdateGuiForPreset: Using object: %s", "preset");
+#endif
+            g_Conf->EnablePresets = origPresetsEnabled;
+        }
+
+    }
+
+}
 
 void Dialogs::SysConfigDialog::AddPresetsControl()
 {
@@ -102,13 +127,20 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 		pxE( "!Notice:Tooltip",
 				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
 				L"Known important game fixes ('Patches') will be applied automatically.\n\n"
+//This creates nested macros = not working. Un/comment manually if needed.
+//#ifdef PRESETS_USE_APPLIED_CONFIG_ON_UNCHECK
+//				L"--> Uncheck to modify settings manually."
+//              L"If you want to manually modify with a preset as a base, apply this preset, then uncheck."
+//#else
 				L"--> Uncheck to modify settings manually (with current preset as base)"
+//#endif
 			)
 	);
-	m_check_presets->SetValue(g_Conf->EnablePresets);
+	m_check_presets->SetValue(!!g_Conf->EnablePresets);
+    //Console.WriteLn("--> SysConfigDialog::AddPresetsControl: EnablePresets: %s", g_Conf->EnablePresets?"true":"false");
 
 	wxString l; wxColor c(wxColour( L"Red" ));
-	isOkGetPresetTextAndColor(g_Conf->PresetIndex, l, c);
+    AppConfig::isOkGetPresetTextAndColor(g_Conf->PresetIndex, l, c);
 	m_msg_preset = new pxStaticText(this, l, wxALIGN_LEFT);
 	m_msg_preset->Enable(g_Conf->EnablePresets);
 	m_msg_preset->SetForegroundColour( c );
@@ -130,36 +162,37 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 	Connect( m_check_presets->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( Dialogs::SysConfigDialog::Presets_Toggled ) );
 }
 
+
+
 void Dialogs::SysConfigDialog::Presets_Toggled(wxCommandEvent &event)
 {
-	g_Conf->EnablePresets = m_check_presets->IsChecked();
-	m_slider_presets->Enable(g_Conf->EnablePresets);
-	m_msg_preset->Enable(g_Conf->EnablePresets);
+	m_slider_presets->Enable( m_check_presets->IsChecked() );
+	m_msg_preset->Enable( m_check_presets->IsChecked() );
+    UpdateGuiForPreset( m_slider_presets->GetValue(), m_check_presets->IsChecked() );
 
-	if (g_Conf->EnablePresets)
-		g_Conf->IsOkApplyPreset(g_Conf->PresetIndex);
-
-	sApp.DispatchEvent( AppStatus_SettingsApplied );
-	event.Skip();
+    event.Skip();
 }
 
 
 void Dialogs::SysConfigDialog::Preset_Scroll(wxScrollEvent &event)
 {	
-	if (m_slider_presets->GetValue() == g_Conf->PresetIndex)
-		return;
-
 	wxString pl;
 	wxColor c;
-	isOkGetPresetTextAndColor(m_slider_presets->GetValue(), pl, c);
+    AppConfig::isOkGetPresetTextAndColor(m_slider_presets->GetValue(), pl, c);
 	m_msg_preset->SetLabel(pl);
 	m_msg_preset->SetForegroundColour( c );
 
-	g_Conf->IsOkApplyPreset(m_slider_presets->GetValue());
-
-	sApp.DispatchEvent( AppStatus_SettingsApplied );
+    UpdateGuiForPreset( m_slider_presets->GetValue(), m_check_presets->IsChecked() );
 	event.Skip();
 }
+
+void Dialogs::SysConfigDialog::Apply()
+{
+    //Console.WriteLn("Applying preset to to g_Conf: Preset index: %d, EnablePresets: %s", (int)m_slider_presets->GetValue(), m_check_presets->IsChecked()?"true":"false");
+	g_Conf->EnablePresets   = m_check_presets->IsChecked();
+    g_Conf->PresetIndex     = m_slider_presets->GetValue();
+}
+
 
 Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	: BaseConfigurationDialog( parent, AddAppName(_("Emulation Settings - %s")), 580 )
@@ -172,7 +205,7 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	AddPage<CpuPanelEE>				( pxL("EE/IOP"),		cfgid.Cpu );
 	AddPage<CpuPanelVU>				( pxL("VUs"),			cfgid.Cpu );
 	AddPage<VideoPanel>				( pxL("GS"),			cfgid.Cpu );
-	AddPage<GSWindowSettingsPanel>	( pxL("GS Window"),	cfgid.Video );
+	AddPage<GSWindowSettingsPanel>	( pxL("GS Window"),	    cfgid.Video );
 	AddPage<SpeedHacksPanel>		( pxL("Speedhacks"),	cfgid.Speedhacks );
 	AddPage<GameFixesPanel>			( pxL("Game Fixes"),	cfgid.Gamefixes );
 
