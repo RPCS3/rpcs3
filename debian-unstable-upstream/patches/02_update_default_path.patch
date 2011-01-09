@@ -2,11 +2,11 @@ Debian policy.
 This patch updates default plugin path and config path.
 It also updates the pcsx2 game db path and shaders data path.
 AppInit.cpp:93 could be probably updated
-Index: pcsx2.snapshot-3369/pcsx2/gui/AppConfig.cpp
+Index: pcsx2.snapshot-4169/pcsx2/gui/AppConfig.cpp
 ===================================================================
---- pcsx2.snapshot-3369.orig/pcsx2/gui/AppConfig.cpp
-+++ pcsx2.snapshot-3369/pcsx2/gui/AppConfig.cpp
-@@ -162,7 +162,8 @@
+--- pcsx2.snapshot-4169.orig/pcsx2/gui/AppConfig.cpp
++++ pcsx2.snapshot-4169/pcsx2/gui/AppConfig.cpp
+@@ -143,7 +143,8 @@
  
  	wxDirName GetPlugins()
  	{
@@ -16,35 +16,47 @@ Index: pcsx2.snapshot-3369/pcsx2/gui/AppConfig.cpp
  	}
  
  	wxDirName GetSettings()
-Index: pcsx2.snapshot-3369/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
+Index: pcsx2.snapshot-4169/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
 ===================================================================
---- pcsx2.snapshot-3369.orig/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
-+++ pcsx2.snapshot-3369/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
-@@ -347,17 +347,12 @@
- 	assert(hShaderGlob != NULL);
- 	s_lpShaderResources = (u8*)LockResource(hShaderGlob);
- #	else // not _WIN32
--	FILE* fres = fopen("ps2hw.dat", "rb");
-+	FILE* fres = fopen("/usr/share/games/pcsx2/shaders/ps2hw.dat", "rb");
+--- pcsx2.snapshot-4169.orig/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
++++ pcsx2.snapshot-4169/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
+@@ -291,18 +291,23 @@
  
+ __forceinline bool LoadShadersFromDat()
+ {
+-	FILE* fres = fopen("ps2hw.dat", "rb");
+ 
++    // First try an absolute location for linux distribution
++    FILE* fres = fopen("/usr/share/games/pcsx2/shaders/ps2hw.dat", "rb");
  	if (fres == NULL)
- 	{
+-	{
 -		fres = fopen("plugins/ps2hw.dat", "rb");
--
++    {
++        fres = fopen("ps2hw.dat", "rb");
++        if (fres == NULL)
++        {
++            fres = fopen("plugins/ps2hw.dat", "rb");
+ 
 -		if (fres == NULL)
 -		{
 -			ZZLog::Error_Log("Cannot find ps2hw.dat in working directory. Exiting.");
 -			return false;
 -		}
-+        ZZLog::Error_Log("Cannot find ps2hw.dat in working directory. Exiting.");
-+        return false;
- 	}
+-	}
++            if (fres == NULL)
++            {
++                ZZLog::Error_Log("Cannot find ps2hw.dat in working directory. Exiting.");
++                return false;
++            }
++        }
++    }
  
  	fseek(fres, 0, SEEK_END);
-Index: pcsx2.snapshot-3369/pcsx2/gui/AppGameDatabase.h
+ 
+Index: pcsx2.snapshot-4169/pcsx2/gui/AppGameDatabase.h
 ===================================================================
---- pcsx2.snapshot-3369.orig/pcsx2/gui/AppGameDatabase.h
-+++ pcsx2.snapshot-3369/pcsx2/gui/AppGameDatabase.h
+--- pcsx2.snapshot-4169.orig/pcsx2/gui/AppGameDatabase.h
++++ pcsx2.snapshot-4169/pcsx2/gui/AppGameDatabase.h
 @@ -51,8 +51,8 @@
  		Console.WriteLn( "(GameDB) Unloading..." );
  	}
