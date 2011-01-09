@@ -374,13 +374,15 @@ inline bool CreateOpenShadersFile()
 // Read all extensions name and fill mapGLExtensions
 inline bool CreateFillExtensionsMap()
 {
+
+//	This seems to cause crashes on some systems, so I'm temporarily reverting to the old version.
+#if 0
 	string temp("");
 	int max_ext = 0;
 	glGetIntegerv(GL_NUM_EXTENSIONS, &max_ext);
 	
 	PFNGLGETSTRINGIPROC glGetStringi = 0;
 	glGetStringi = (PFNGLGETSTRINGIPROC)wglGetProcAddress("glGetStringi");
-
 	for (GLint i = 0; i < max_ext; i++)
 	{
 		string extension((const char*)glGetStringi(GL_EXTENSIONS, i));
@@ -395,6 +397,36 @@ inline bool CreateFillExtensionsMap()
 	ZZLog::Log("%d supported OpenGL Extensions: %s\n", max_ext, temp.c_str());
 #endif
 	ZZLog::Debug_Log("%d supported OpenGL Extensions: %s\n", max_ext, temp.c_str());
+	
+#else
+	const char* ptoken = (const char*)glGetString(GL_EXTENSIONS);
+	
+#ifndef _DEBUG
+	ZZLog::Log("Supported OpenGL Extensions: %s\n", ptoken);
+#endif
+	ZZLog::Debug_Log("Supported OpenGL Extensions:\n%s\n", ptoken);
+	
+	if (ptoken == NULL) return false;
+
+	const char* pend = NULL;
+	while (ptoken != NULL)
+	{
+		pend = strchr(ptoken, ' ');
+		
+		 if (pend != NULL)
+		 {
+			mapGLExtensions[string(ptoken, pend-ptoken)];
+		 }
+		 else
+		 {
+			mapGLExtensions[string(ptoken)];
+			break;
+		 }
+
+		 ptoken = pend;
+		 while (*ptoken == ' ') ++ptoken;
+	}
+#endif
 
 	return true;
 }
