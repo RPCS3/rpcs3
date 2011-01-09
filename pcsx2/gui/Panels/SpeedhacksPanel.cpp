@@ -360,8 +360,10 @@ void Panels::SpeedHacksPanel::OnEnable_Toggled( wxCommandEvent& evt )
 
 void Panels::SpeedHacksPanel::Defaults_Click( wxCommandEvent& evt )
 {
+    //Can only get here presets are disabled at the GUI (= the 'Defaults' button is enabled).
     AppConfig currentConfigWithHacksReset = *g_Conf;
     currentConfigWithHacksReset.EmuOptions.Speedhacks = Pcsx2Config::SpeedhackOptions();
+    currentConfigWithHacksReset.EnablePresets=false;//speed hacks gui depends on preset, apply it as if presets are disabled
     ApplyConfigToGui( currentConfigWithHacksReset );
 	evt.Skip();
 }
