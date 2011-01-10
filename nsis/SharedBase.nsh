@@ -71,7 +71,7 @@ InstallDir "$PROGRAMFILES\PCSX2 ${APP_VERSION}"
 
 ; Registry key to check for directory (so if you install again, it will 
 ; overwrite the old one automatically)
-InstallDirRegKey ${INSTDIR_REG_ROOT} "Software\PCSX2" "Install_Dir_${APP_VERSION}"
+InstallDirRegKey ${INSTDIR_REG_ROOT} "Software\PCSX2\${APP_VERSION}" "Install_Dir"
 
 ; These defines are dependent on NSIS vars assigned above.
 

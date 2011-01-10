@@ -235,15 +235,16 @@ Dialogs::ComponentsConfigDialog::ComponentsConfigDialog(wxWindow* parent)
 		wxGetApp().PostMethod( CheckPluginsOverrides );
 }
 
+
 Dialogs::InterfaceConfigDialog::InterfaceConfigDialog(wxWindow *parent)
-	: BaseConfigurationDialog( parent, AddAppName(_("Language Selector - %s")), 400 )
+	: BaseConfigurationDialog( parent, AddAppName(_("Appearance/Themes - %s")), 400 )
 {
 	ScopedBusyCursor busy( Cursor_ReallyBusy );
 
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	AddPage<StandardPathsPanel>		( pxL("Appearance"),	cfgid.Appearance );
+	AddPage<AppearanceThemesPanel>	( pxL("Appearance"),	cfgid.Appearance );
 	AddPage<StandardPathsPanel>		( pxL("Folders"),		cfgid.Paths );
 
 	AddListbook();
@@ -251,4 +252,26 @@ Dialogs::InterfaceConfigDialog::InterfaceConfigDialog(wxWindow *parent)
 
 	//*this += new Panels::LanguageSelectionPanel( this ) | pxCenter;
 	//wxDialogWithHelpers::AddOkCancel( NULL, false );
+}
+
+// ------------------------------------------------------------------------
+Panels::AppearanceThemesPanel::AppearanceThemesPanel( wxWindow* parent )
+	: BaseApplicableConfigPanel( parent )
+{
+
+}
+
+AppearanceThemesPanel::~AppearanceThemesPanel() throw()
+{
+
+}
+
+void AppearanceThemesPanel::Apply()
+{
+
+}
+
+void AppearanceThemesPanel::AppStatusEvent_OnSettingsApplied()
+{
+
 }

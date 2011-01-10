@@ -20,8 +20,9 @@
 
 #define g_MaxPath 255			// 255 is safer with antiquated Win32 ASCII APIs.
 
-//////////////////////////////////////////////////////////////////////////////////////////
-//
+// --------------------------------------------------------------------------------------
+//  wxDirName
+// --------------------------------------------------------------------------------------
 class wxDirName : protected wxFileName
 {
 public:
@@ -103,6 +104,7 @@ public:
 	wxFileName operator+( const wxFileName& right ) const	{ return Combine( right ); }
 	wxDirName operator+( const wxDirName& right )  const	{ return Combine( right ); }
 	wxFileName operator+( const wxString& right )  const	{ return Combine( wxFileName(right) ); }
+	wxFileName operator+( const char* right )  const		{ return Combine( wxFileName(fromUTF8(right)) ); }
 
 	bool operator==(const wxDirName& filename) const { return SameAs(filename); }
 	bool operator!=(const wxDirName& filename) const { return !SameAs(filename); }

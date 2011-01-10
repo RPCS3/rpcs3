@@ -19,6 +19,7 @@
 !include "SharedBase.nsh"
 
 ; Reserve features for improved performance with solid archiving.
+File C:\Users\Jake\Documents\devpcsx2\trunk\nsis\SharedBase.nsh
 ;  (uncomment if we add our own install options ini files)
 ;!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
 ;!insertmacro MUI_RESERVEFILE_LANGDLL

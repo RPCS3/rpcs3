@@ -17,7 +17,6 @@
 #include "App.h"
 #include "ConfigurationPanels.h"
 
-#include "Utilities/ScopedPtr.h"
 #include "ps2/BiosTools.h"
 
 #include <wx/dir.h>
@@ -29,6 +28,18 @@ using namespace pxSizerFlags;
 // =====================================================================================================
 //  BaseSelectorPanel
 // =====================================================================================================
+// This base class provides event hookups and virtual functions for enumerating items in a folder.
+// The most important feature of this base panel is that enumeration is done when the panel is first
+// *shown*, not when it is created.  This functionality allows the panel to work either as a stand alone
+// dialog, a child of a complex tabbed dialog, and as a member of a wxWizard!
+//
+// In addition, this panel automatically intercepts and responds to DIRPICKER messages, so that your
+// panel may provide a dir picker to the user.
+//
+// [TODO] : wxWidgets 2.9.1 provides a class for watching directory contents changes.  When PCSX2 is
+// upgraded to wx2.9/3.0, it should incorporate such functionality into this base class.  (for now
+// we just provide the user with a "refresh" button).
+//
 Panels::BaseSelectorPanel::BaseSelectorPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel( parent, wxVERTICAL )
 {

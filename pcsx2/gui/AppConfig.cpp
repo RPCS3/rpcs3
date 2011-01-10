@@ -107,7 +107,6 @@ namespace PathDefs
 		switch( mode )
 		{
 			case DocsFolder_User:	return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), pxGetAppName() );
-			//case DocsFolder_CWD:	return (wxDirName)wxGetCwd();
 			case DocsFolder_Custom: return CustomDocumentsFolder;
 
 			jNO_DEFAULT
@@ -146,14 +145,14 @@ namespace PathDefs
 		return AppRoot() + Base::Plugins();
 	}
 
-	wxDirName GetSettings()
-	{
-		return GetDocuments() + Base::Settings();
-	}
-
 	wxDirName GetThemes()
 	{
 		return AppRoot() + Base::Themes();
+	}
+
+	wxDirName GetSettings()
+	{
+		return GetDocuments() + Base::Settings();
 	}
 
 	wxDirName GetLogs()
@@ -167,6 +166,7 @@ namespace PathDefs
 		{
 			case FolderId_Plugins:		return GetPlugins();
 			case FolderId_Settings:		return GetSettings();
+			case FolderId_Themes:		return GetThemes();
 			case FolderId_Bios:			return GetBios();
 			case FolderId_Snapshots:	return GetSnapshots();
 			case FolderId_Savestates:	return GetSavestates();
@@ -185,8 +185,9 @@ wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx )
 {
 	switch( folderidx )
 	{
-		case FolderId_Plugins:		return Plugins;
+		case FolderId_Plugins:		return PluginsFolder;
 		case FolderId_Settings:		return SettingsFolder;
+		case FolderId_Themes:		return ThemesFolder;
 		case FolderId_Bios:			return Bios;
 		case FolderId_Snapshots:	return Snapshots;
 		case FolderId_Savestates:	return Savestates;
@@ -197,7 +198,7 @@ wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx )
 
 		jNO_DEFAULT
 	}
-	return Plugins;		// unreachable, but suppresses warnings.
+	return PluginsFolder;		// unreachable, but suppresses warnings.
 }
 
 const wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx ) const
@@ -209,8 +210,9 @@ bool AppConfig::FolderOptions::IsDefault( FoldersEnum_t folderidx ) const
 {
 	switch( folderidx )
 	{
-		case FolderId_Plugins:		return UseDefaultPlugins;
+		case FolderId_Plugins:		return UseDefaultPluginsFolder;
 		case FolderId_Settings:		return UseDefaultSettingsFolder;
+		case FolderId_Themes:		return UseDefaultThemesFolder;
 		case FolderId_Bios:			return UseDefaultBios;
 		case FolderId_Snapshots:	return UseDefaultSnapshots;
 		case FolderId_Savestates:	return UseDefaultSavestates;
@@ -229,13 +231,18 @@ void AppConfig::FolderOptions::Set( FoldersEnum_t folderidx, const wxString& src
 	switch( folderidx )
 	{
 		case FolderId_Plugins:
-			Plugins = src;
-			UseDefaultPlugins = useDefault;
+			PluginsFolder = src;
+			UseDefaultPluginsFolder = useDefault;
 		break;
 
 		case FolderId_Settings:
 			SettingsFolder = src;
 			UseDefaultSettingsFolder = useDefault;
+		break;
+
+		case FolderId_Themes:
+			ThemesFolder = src;
+			UseDefaultThemesFolder = useDefault;
 		break;
 
 		case FolderId_Bios:
@@ -276,10 +283,18 @@ void AppConfig::FolderOptions::Set( FoldersEnum_t folderidx, const wxString& src
 // --------------------------------------------------------------------------------------
 namespace FilenameDefs
 {
-	wxFileName GetConfig()
+	wxFileName GetUiConfig()
 	{
-		// TODO : ini extension on Win32 is normal.  Linux ini filename default might differ
-		// from this?  like pcsx2_conf or something ... ?
+		// FIXME? ini extension on Win32 is normal.  Linux ini filename default might differ
+		// from this?  like pcsx2_conf or something ... ? --air
+
+		return pxGetAppName() + L".ini";
+	}
+
+	wxFileName GetVmConfig()
+	{
+		// FIXME? ini extension on Win32 is normal.  Linux ini filename default might differ
+		// from this?  like pcsx2_conf or something ... ? --air
 
 		return pxGetAppName() + L".ini";
 	}
@@ -316,7 +331,7 @@ namespace FilenameDefs
 
 wxString AppConfig::FullpathTo( PluginsEnum_t pluginidx ) const
 {
-	return Path::Combine( Folders.Plugins, BaseFilenames[pluginidx] );
+	return Path::Combine( PluginsFolder, BaseFilenames[pluginidx] );
 }
 
 // returns true if the filenames are quite absolutely the equivalent.  Works for all
@@ -332,7 +347,7 @@ bool AppConfig::FullpathMatchTest( PluginsEnum_t pluginId, const wxString& cmpto
 
 wxDirName GetLogFolder()
 {
-	return UseDefaultLogs ? PathDefs::GetLogs() : Logs;
+	return UseDefaultLogFolder ? PathDefs::GetLogs() : LogFolder;
 }
 
 wxDirName GetSettingsFolder()
@@ -343,9 +358,15 @@ wxDirName GetSettingsFolder()
 	return UseDefaultSettingsFolder ? PathDefs::GetSettings() : SettingsFolder;
 }
 
-wxString GetSettingsFilename()
+wxString GetVmSettingsFilename()
 {
-	wxFileName fname( wxGetApp().Overrides.SettingsFile.IsOk() ? wxGetApp().Overrides.SettingsFile : FilenameDefs::GetConfig() );
+	wxFileName fname( wxGetApp().Overrides.VmSettingsFile.IsOk() ? wxGetApp().Overrides.VmSettingsFile : FilenameDefs::GetVmConfig() );
+	return GetSettingsFolder().Combine( fname ).GetFullPath();
+}
+
+wxString GetUiSettingsFilename()
+{
+	wxFileName fname( FilenameDefs::GetUiConfig() );
 	return GetSettingsFolder().Combine( fname ).GetFullPath();
 }
 
@@ -392,47 +413,26 @@ AppConfig::AppConfig()
 }
 
 // ------------------------------------------------------------------------
-void AppConfig::LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash )
+void App_LoadSaveInstallSettings( IniInterface& ini )
 {
-	ScopedIniGroup path( ini, cwdhash );
-
-	// timestamping would be useful if we want to auto-purge unused entries after
-	// a period of time.  Dunno if it's needed.
-
-	/*wxString timestamp_now( wxsFormat( L"%s %s",
-		wxDateTime::Now().FormatISODate().c_str(), wxDateTime::Now().FormatISOTime().c_str() )
-	);
-
-	ini.GetConfig().Write( L"Timestamp", timestamp_now );*/
-
 	static const wxChar* DocsFolderModeNames[] =
 	{
 		L"User",
 		L"Custom",
 	};
 
-	if( ini.IsLoading() )
-	{
-		// HACK!  When I removed the CWD option, the option became the cause of bad
-		// crashes.  This detects presence of CWD, and replaces it with a custom mode
-		// that points to the CWD.
-		//
-		// The ini contents are rewritten and the CWD is removed.  So after 0.9.7 is released,
-		// this code is ok to be deleted/removed. :)  --air
-		
-		wxString oldmode( ini.GetConfig().Read( L"DocumentsFolderMode", L"User" ) );
-		if( oldmode == L"CWD")
-		{
-			ini.GetConfig().Write( L"DocumentsFolderMode", L"Custom" );
-			ini.GetConfig().Write( L"CustomDocumentsFolder", Path::Normalize(wxGetCwd()) );
-		}
-	}
-
 	ini.EnumEntry( L"DocumentsFolderMode",	DocsFolderMode,	DocsFolderModeNames, DocsFolder_User );
 
 	ini.Entry( L"UseDefaultSettingsFolder", UseDefaultSettingsFolder,	true );
 	ini.Entry( L"CustomDocumentsFolder",	CustomDocumentsFolder,		(wxDirName)Path::Normalize(wxGetCwd()) );
 	ini.Entry( L"SettingsFolder",			SettingsFolder,				PathDefs::GetSettings() );
+
+	// "Install_Dir" conforms to the NSIS standard install directory key name.
+	// Attempt to load plugins and themes based on the Install Folder.
+
+	ini.Entry( L"Install_Dir",				InstallFolder,				(wxDirName)wxStandardPaths::Get().GetExecutablePath() );
+	ini.Entry( L"PluginsFolder",			PluginsFolder,				InstallFolder + PathDefs::Base::Plugins() );
+	ini.Entry( L"ThemesFolder",				ThemesFolder,				InstallFolder + PathDefs::Base::Themes() );
 
 	ini.Flush();
 }
@@ -508,18 +508,6 @@ void AppConfig::LoadSave( IniInterface& ini )
 	GSWindow		.LoadSave( ini );
 	Framerate		.LoadSave( ini );
 
-	// Load Emulation options and apply some defaults overtop saved items, which are regulated
-	// by the PCSX2 UI.
-
-	EmuOptions.LoadSave( ini );
-	if( ini.IsLoading() )
-	{
-		EmuOptions.GS.LimitScalar = Framerate.NominalScalar;
-		if (EnablePresets){
-			IsOkApplyPreset(PresetIndex);
-		}
-	}
-
 	ini.Flush();
 }
 
@@ -548,7 +536,6 @@ void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* lo
 
 void AppConfig::FolderOptions::ApplyDefaults()
 {
-	if( UseDefaultPlugins )		Plugins		= PathDefs::GetPlugins();
 	if( UseDefaultBios )		Bios		= PathDefs::GetBios();
 	if( UseDefaultSnapshots )	Snapshots	= PathDefs::GetSnapshots();
 	if( UseDefaultSavestates )	Savestates	= PathDefs::GetSavestates();
@@ -558,8 +545,7 @@ void AppConfig::FolderOptions::ApplyDefaults()
 
 // ------------------------------------------------------------------------
 AppConfig::FolderOptions::FolderOptions()
-	: Plugins		( PathDefs::GetPlugins() )
-	, Bios			( PathDefs::GetBios() )
+	: Bios			( PathDefs::GetBios() )
 	, Snapshots		( PathDefs::GetSnapshots() )
 	, Savestates	( PathDefs::GetSavestates() )
 	, MemoryCards	( PathDefs::GetMemoryCards() )
@@ -580,15 +566,12 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 		ApplyDefaults();
 	}
 
-	IniBitBool( UseDefaultPlugins );
-	IniBitBool( UseDefaultSettings );
 	IniBitBool( UseDefaultBios );
 	IniBitBool( UseDefaultSnapshots );
 	IniBitBool( UseDefaultSavestates );
 	IniBitBool( UseDefaultMemoryCards );
 	IniBitBool( UseDefaultLogs );
 
-	IniEntry( Plugins );
 	IniEntry( Bios );
 	IniEntry( Snapshots );
 	IniEntry( Savestates );
@@ -602,11 +585,8 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	{
 		ApplyDefaults();
 
-		//if( DocsFolderMode != DocsFolder_CWD )
-		{
-			for( int i=0; i<FolderId_COUNT; ++i )
-				operator[]( (FoldersEnum_t)i ).Normalize();
-		}
+		for( int i=0; i<FolderId_COUNT; ++i )
+			operator[]( (FoldersEnum_t)i ).Normalize();
 	}
 }
 
@@ -857,29 +837,37 @@ void RelocateLogfile()
 }
 
 // Parameters:
-//   overwrite - this option forces the current settings to overwrite any existing settings that might
-//      be saved to the configured ini/settings folder.
+//   overwrite - this option forces the current settings to overwrite any existing settings
+//      that might be saved to the configured ini/settings folder.
+//
+// Notes:
+//   The overwrite option applies to PCSX2 options only.  Plugin option behavior will depend
+//   on the plugins.
 //
 void AppConfig_OnChangedSettingsFolder( bool overwrite )
 {
-	//if( DocsFolderMode != DocsFolder_CWD )
-		PathDefs::GetDocuments().Mkdir();
-
+	PathDefs::GetDocuments().Mkdir();
 	GetSettingsFolder().Mkdir();
 
-	const wxString iniFilename( GetSettingsFilename() );
+	const wxString iniFilename( GetUiSettingsFilename() );
 
 	if( overwrite )
 	{
 		if( wxFileExists( iniFilename ) && !wxRemoveFile( iniFilename ) )
 			throw Exception::AccessDenied(iniFilename)
 				.SetBothMsgs(pxL("Failed to overwrite existing settings file; permission was denied."));
+
+		const wxString vmIniFilename( GetVmSettingsFilename() );
+
+		if( wxFileExists( vmIniFilename ) && !wxRemoveFile( vmIniFilename ) )
+			throw Exception::AccessDenied(vmIniFilename)
+				.SetBothMsgs(pxL("Failed to overwrite existing settings file; permission was denied."));
 	}
 
 	// Bind into wxConfigBase to allow wx to use our config internally, and delete whatever
 	// comes out (cleans up prev config, if one).
 	delete wxConfigBase::Set( OpenFileConfig( iniFilename ) );
-	GetAppConfig()->SetRecordDefaults();
+	GetAppConfig()->SetRecordDefaults(true);
 
 	if( !overwrite )
 		AppLoadSettings();
@@ -978,6 +966,20 @@ void AppLoadSettings()
 	if( !wxFile::Exists( g_Conf->CurrentIso ) )
 		g_Conf->CurrentIso.clear();
 
+	// Load virtual machine options and apply some defaults overtop saved items, which
+	// are regulated by the PCSX2 UI.
+
+	{
+		ScopedPtr<wxFileConfig> vmini( OpenFileConfig( GetVmSettingsFilename() ) );
+		IniLoader vmloader( vmini );
+		g_Conf->EmuOptions.LoadSave( vmloader );
+		g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.NominalScalar;
+
+		if (g_Conf->EnablePresets){
+			g_Conf->IsOkApplyPreset(g_Conf->PresetIndex);
+		}
+	}
+
 	sApp.DispatchEvent( loader );
 }
 
@@ -1007,6 +1009,15 @@ void AppSaveSettings()
 	g_Conf->LoadSave( saver );
 	ConLog_LoadSaveSettings( saver );
 	SysTraceLog_LoadSaveSettings( saver );
+
+	// Save virtual machine items.
+
+	{
+		ScopedPtr<wxFileConfig> vmini( OpenFileConfig( GetVmSettingsFilename() ) );
+		IniSaver vmsaver( vmini );
+		g_Conf->EmuOptions.LoadSave( vmsaver );
+	}
+
 	sApp.DispatchEvent( saver );
 }
 

@@ -42,13 +42,6 @@ DEFINE_EVENT_TYPE( pxEvt_LogicalVsync );
 
 DEFINE_EVENT_TYPE( pxEvt_ThreadTaskTimeout_SysExec );
 
-DocsModeType			DocsFolderMode = DocsFolder_User;
-wxDirName				SettingsFolder;
-wxDirName				CustomDocumentsFolder;
-bool					UseDefaultSettingsFolder = true;
-wxDirName               Logs;
-bool					UseDefaultLogs = true;
-
 ScopedPtr<AppConfig>	g_Conf;
 
 template<typename DialogType>

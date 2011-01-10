@@ -1902,6 +1902,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\gui\AppUserMode.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\gui\ConsoleLogger.cpp"
 				>
 			</File>
@@ -2638,6 +2642,10 @@
 				</File>
 				<File
 					RelativePath="..\..\gui\Panels\SpeedhacksPanel.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\gui\Panels\ThemeSelectorPanel.cpp"
 					>
 				</File>
 				<File

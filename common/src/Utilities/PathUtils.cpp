@@ -80,13 +80,9 @@ void wxDirName::Rmdir()
 
 bool wxDirName::Mkdir()
 {
+	// wxWidgets recurses directory creation for us.
+
 	if( Exists() ) return true;
-
-	// Recursively create child directories as needed:
-	wxDirName recurse( *this );
-	recurse.RemoveLastDir();
-	if( !recurse.Mkdir() ) return false;
-
 	return wxFileName::Mkdir();
 }
 

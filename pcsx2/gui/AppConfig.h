@@ -21,20 +21,26 @@
 
 enum DocsModeType
 {
-	// uses /home/user or /cwd for the program data
+	// uses /home/user or /cwd for the program data.  This is the default mode and is the most
+	// friendly to modern computing security requirements; as it isolates all file modification
+	// to a zone of the hard drive that has granted write permissions to the user.
 	DocsFolder_User,
 	
-	// uses the current working directory for program data
-	//DocsFolder_CWD,
-	
-	// uses a custom location for program data
+	// uses a custom location for program data. Typically the custom folder is either the
+	// absolute or relative location of the program -- absolute is preferred because it is
+	// considered more secure by MSW standards, due to DLL search rules.
+	//
+	// To enable PCSX2's "portable" mode, use this setting and specify "." for the custom
+	// documents folder.
 	DocsFolder_Custom,
 };
 
 namespace PathDefs
 {
-	// complete pathnames are returned by these functions
-	// For 99% of all code, you should use these.
+	// complete pathnames are returned by these functions.
+	// These are used for initial default values when first configuring PCSX2, or when the
+	// user checks "Use Default paths" option provided on most path selectors.  These are not
+	// used otherwise, in favor of the user-configurable specifications in the ini files.
 
     extern wxDirName GetUserLocalDataDir();
 	extern wxDirName GetDocuments();
@@ -43,15 +49,23 @@ namespace PathDefs
 }
 
 extern DocsModeType		DocsFolderMode;				// 
-extern wxDirName		SettingsFolder;				// dictates where the settings folder comes from, *if* UseDefaultSettingsFolder is FALSE.
-extern wxDirName		CustomDocumentsFolder;		// allows the specification of a custom home folder for PCSX2 documents files.
-extern bool				UseDefaultSettingsFolder;	// when TRUE, pcsx2 derives the settings folder from the UseAdminMode
-extern wxDirName		Logs;
-extern bool			    UseDefaultLogs;
+extern bool				UseDefaultSettingsFolder;	// when TRUE, pcsx2 derives the settings folder from the DocsFolderMode
+extern bool			    UseDefaultLogFolder;
+extern bool				UseDefaultPluginsFolder;
+extern bool				UseDefaultThemesFolder;
 
-wxDirName GetSettingsFolder();
-wxString  GetSettingsFilename();
-wxDirName GetLogFolder();
+extern wxDirName		CustomDocumentsFolder;		// allows the specification of a custom home folder for PCSX2 documents files.
+extern wxDirName		SettingsFolder;				// dictates where the settings folder comes from, *if* UseDefaultSettingsFolder is FALSE.
+extern wxDirName		LogFolder;
+
+extern wxDirName		InstallFolder;
+extern wxDirName		PluginsFolder;
+extern wxDirName		ThemesFolder;
+
+extern wxDirName GetSettingsFolder();
+extern wxString  GetVmSettingsFilename();
+extern wxString  GetUiSettingsFilename();
+extern wxDirName GetLogFolder();
 
 enum AspectRatioType
 {
@@ -93,8 +107,6 @@ public:
 	{
 		BITFIELD32()
 			bool
-				UseDefaultPlugins:1,
-				UseDefaultSettings:1,
 				UseDefaultBios:1,
 				UseDefaultSnapshots:1,
 				UseDefaultSavestates:1,
@@ -103,7 +115,6 @@ public:
 		BITFIELD_END
 
 		wxDirName
-			Plugins,
 			Bios,
 			Snapshots,
 			Savestates,
@@ -269,8 +280,6 @@ public:
 	wxString FullpathTo( PluginsEnum_t pluginId ) const;
 
 	bool FullpathMatchTest( PluginsEnum_t pluginId, const wxString& cmpto ) const;
-	
-	void LoadSaveUserMode( IniInterface& ini, const wxString& cwdhash );
 
 	void LoadSave( IniInterface& ini );
 	void LoadSaveRootItems( IniInterface& ini );
@@ -285,6 +294,8 @@ public:
 extern void AppLoadSettings();
 extern void AppSaveSettings();
 extern void AppApplySettings( const AppConfig* oldconf=NULL );
+
+extern void App_LoadSaveInstallSettings( IniInterface& ini );
 
 extern void ConLog_LoadSaveSettings( IniInterface& ini );
 extern void SysTraceLog_LoadSaveSettings( IniInterface& ini );

@@ -77,6 +77,11 @@ public:
 		return m_ptr;
 	}
 
+	// Swaps two pointers between likened scoped pointer types.  This method is useful for
+	// situations where you need to create a new object with a complex initializer that can
+	// throw exceptions -- and thusly should be disposed if the initialization fails.  Use
+	// SwapPtr to assign the new object into the persistent ScopedPtr instance, and have
+	// the old object assigned to the local-scope ScopedPtr instance.
 	void SwapPtr(ScopedPtr& other)
 	{
 		T * const tmp = other.m_ptr;

@@ -22,15 +22,16 @@ using namespace pxSizerFlags;
 
 static const int BetweenFolderSpace = 5;
 
-// ------------------------------------------------------------------------
 Panels::BasePathsPanel::BasePathsPanel( wxWindow* parent )
 	: wxPanelWithHelpers( parent, wxVERTICAL )
 {
 }
 
-// ------------------------------------------------------------------------
-Panels::StandardPathsPanel::StandardPathsPanel( wxWindow* parent ) :
-	BasePathsPanel( parent )
+// --------------------------------------------------------------------------------------
+//  Panels::StandardPathsPanel  (implementations)
+// --------------------------------------------------------------------------------------
+Panels::StandardPathsPanel::StandardPathsPanel( wxWindow* parent )
+	: BasePathsPanel( parent )
 {
 	*this += BetweenFolderSpace;
 	*this += (new DirPickerPanel( this, FolderId_Savestates,

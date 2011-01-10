@@ -309,7 +309,7 @@ class CommandlineOverrides
 public:
 	AppConfig::FilenameOptions	Filenames;
 	wxDirName		SettingsFolder;
-	wxFileName		SettingsFile;
+	wxFileName		VmSettingsFile;
 
 	bool			DisableSpeedhacks;
 
@@ -342,7 +342,7 @@ public:
 
 	bool HasSettingsOverride() const
 	{
-		return SettingsFolder.IsOk() || SettingsFile.IsOk();
+		return SettingsFolder.IsOk() || VmSettingsFile.IsOk();
 	}
 
 	bool HasPluginsOverride() const
@@ -539,6 +539,8 @@ public:
 	void CleanupResources();
 	void WipeUserModeSettings();
 	void ReadUserModeSettings();
+	bool TestForPortableInstall();
+	bool TestUserPermissionsRights( const wxDirName& testFolder, wxString& createFailedStr, wxString& accessFailedStr );
 
 	bool HasPendingSaves() const;
 	void StartPendingSave();

@@ -20,7 +20,6 @@
 #include "MSWstuff.h"
 
 #include "Utilities/IniInterface.h"
-#include "Utilities/HashMap.h"
 #include "DebugTools/Debug.h"
 #include "Dialogs/ModalPopups.h"
 
@@ -55,142 +54,6 @@ static void CpuCheckSSE2()
 	g_Conf->EmuOptions.Cpu.Recompiler.EnableVU1	= false;
 }
 
-void Pcsx2App::WipeUserModeSettings()
-{
-	wxDirName usrlocaldir = PathDefs::GetUserLocalDataDir();
-	if( !usrlocaldir.Exists() ) return;
-
-	wxString cwd( Path::Normalize( wxGetCwd() ) );
-#ifdef __WXMSW__
-	cwd.MakeLower();
-#endif
-	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length()*sizeof(wxChar) );
-
-	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
-	usermodefile.SetPath( usrlocaldir.ToString() );
-	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
-
-	FastFormatUnicode groupname;
-	groupname.Write( L"CWD.%08x", hashres );
-	Console.WriteLn( "(UserModeSettings) Removing entry:" );
-	Console.Indent().WriteLn( L"Path: %s\nHash:%s", cwd.c_str(), groupname.c_str() );
-	conf_usermode->DeleteGroup( groupname );
-}
-
-static void DoFirstTimeWizard()
-{
-	// first time startup, so give the user the choice of user mode:
-	while(true)
-	{
-		// PCSX2's FTWizard allows improptu restarting of the wizard without cancellation.  This is 
-		// typically used to change the user's language selection.
-
-		FirstTimeWizard wiz( NULL );
-		if( wiz.RunWizard( wiz.GetUsermodePage() ) ) break;
-		if (wiz.GetReturnCode() != pxID_RestartWizard)
-			throw Exception::StartupAborted( L"User canceled FirstTime Wizard." );
-
-		Console.WriteLn( Color_StrongBlack, "Restarting First Time Wizard!" );
-	}
-}
-
-// User mode settings can't be stored in the CWD for two reasons:
-//   (a) the user may not have permission to do so (most obvious)
-//   (b) it would result in sloppy usermode.ini found all over a hard drive if people runs the
-//       exe from many locations (ugh).
-//
-// So better to use the registry on Win32 and a "default ini location" config file under Linux,
-// and store the usermode settings for the CWD based on the CWD's hash.
-//
-void Pcsx2App::ReadUserModeSettings()
-{
-	wxDirName usrlocaldir = PathDefs::GetUserLocalDataDir();
-	if( !usrlocaldir.Exists() )
-	{
-		Console.WriteLn( L"Creating UserLocalData folder: " + usrlocaldir.ToString() );
-		usrlocaldir.Mkdir();
-	}
-
-	wxString cwd( Path::Normalize( wxGetCwd() ) );
-#ifdef __WXMSW__
-	cwd.MakeLower();
-#endif
-
-	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length()*sizeof(wxChar) );
-
-	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
-	usermodefile.SetPath( usrlocaldir.ToString() );
-	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
-
-	FastFormatUnicode groupname;
-	groupname.Write( L"CWD.%08x", hashres );
-
-	bool hasGroup = conf_usermode->HasGroup( groupname );
-	bool forceWiz = Startup.ForceWizard || !hasGroup;
-	
-	if( !forceWiz )
-	{
-		conf_usermode->SetPath( groupname );
-		forceWiz = !conf_usermode->HasEntry( L"DocumentsFolderMode" );
-		conf_usermode->SetPath( L".." );
-	}
-
-	if( forceWiz )
-	{
-		// Beta Warning!
-		#if 0
-		if( !hasGroup )
-		{
-			wxDialogWithHelpers beta( NULL, _fmt("Welcome to %s %u.%u.%u (r%u)", pxGetAppName().c_str(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo, SVN_REV ));
-			beta.SetMinWidth(480);
-
-			beta += beta.Heading(
-				L"PCSX2 0.9.7 is a work-in-progress.  We are in the middle of major rewrites of the user interface, and some parts "
-				L"of the program have *NOT* been re-implemented yet.  Options will be missing or disabled.  Horrible crashes might be present.  Enjoy!"
-			);
-			beta += StdPadding*2;
-			beta += new wxButton( &beta, wxID_OK ) | StdCenter();
-			beta.ShowModal();
-		}
-		#endif
-	
-		DoFirstTimeWizard();
-
-		// Save user's new settings
-		IniSaver saver( *conf_usermode );
-		g_Conf->LoadSaveUserMode( saver, groupname );
-		AppConfig_OnChangedSettingsFolder( true );
-		AppSaveSettings();
-	}
-	else
-	{
-		// usermode.ini exists and is populated with valid data -- assume User Documents mode,
-		// unless the ini explicitly specifies otherwise.
-
-		DocsFolderMode = DocsFolder_User;
-
-		IniLoader loader( *conf_usermode );
-		g_Conf->LoadSaveUserMode( loader, groupname );
-
-		if( !wxFile::Exists( GetSettingsFilename() ) )
-		{
-			// user wiped their pcsx2.ini -- needs a reconfiguration via wizard!
-
-			DoFirstTimeWizard();
-
-			// Save user's new settings
-			IniSaver saver( *conf_usermode );
-			g_Conf->LoadSaveUserMode( saver, groupname );
-			AppConfig_OnChangedSettingsFolder( true );
-			AppSaveSettings();
-		}
-	}
-	
-	// force unload plugins loaded by the wizard.  If we don't do this the recompilers might
-	// fail to allocate the memory they need to function.
-	UnloadPlugins();
-}
-
 void Pcsx2App::DetectCpuAndUserMode()
 {
 	AffinityAssert_AllowFrom_MainUI();
@@ -208,7 +71,11 @@ void Pcsx2App::DetectCpuAndUserMode()
 			.SetUserMsg(_("SSE extensions are not available.  PCSX2 requires a cpu that supports the SSE instruction set."));
 	}
 
-	ReadUserModeSettings();
+	if (!TestForPortableInstall())
+	{
+		ReadUserModeSettings();	
+	}
+
 	AppConfig_OnChangedSettingsFolder();
 }
 
@@ -286,14 +153,14 @@ void Pcsx2App::AllocateCoreStuffs()
 			
 			wxDialogWithHelpers exconf( NULL, _("PCSX2 Recompiler Error(s)") );
 
-			exconf += 12;
-			exconf += exconf.Heading( pxE( "!Notice:RecompilerInit:Header",
-				L"Warning: Some of the configured PS2 recompilers failed to initialize and have been disabled:" )
-			);
-
 			wxTextCtrl* scrollableTextArea = new wxTextCtrl(
 				&exconf, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 				wxTE_READONLY | wxTE_MULTILINE | wxTE_WORDWRAP
+			);
+
+			exconf += 12;
+			exconf += exconf.Heading( pxE( "!Notice:RecompilerInit:Header",
+				L"Warning: Some of the configured PS2 recompilers failed to initialize and have been disabled:" )
 			);
 
 			exconf += 6;
@@ -414,7 +281,7 @@ bool Pcsx2App::ParseOverrides( wxCmdLineParser& parser )
 	if (parser.Found( L"cfg", &dest ) && !dest.IsEmpty())
 	{
 		Console.Warning( L"Config file override: " + dest );
-		Overrides.SettingsFile = dest;
+		Overrides.VmSettingsFile = dest;
 	}
 
 	Overrides.DisableSpeedhacks = parser.Found(L"nohacks");
