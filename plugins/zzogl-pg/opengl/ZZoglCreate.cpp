@@ -396,6 +396,7 @@ inline bool CreateFillExtensionsMap()
         ZZLog::Error_Log("glGetStringi opengl 3 interface not supported, fallback to opengl 2");
 
         const char* ptoken = (const char*)glGetString(GL_EXTENSIONS);
+        all_ext = string(ptoken); // save the string to print a nice debug message
 
         if (ptoken == NULL) return false;
 
@@ -419,7 +420,6 @@ inline bool CreateFillExtensionsMap()
             ptoken = pend;
             while (*ptoken == ' ') ++ptoken;
         }
-        all_ext = string(ptoken);
     }
 
 
