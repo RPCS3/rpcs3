@@ -110,7 +110,7 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL /*| wxSL_AUTOTICKS | wxSL_LABELS */);
 
 	m_slider_presets->SetToolTip(
-		pxE( "!Notice:Tooltip",
+        pxE( "!Notice:Tooltip:Presets:Slider",
 				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
 				L"Known important game fixes ('Patches') will be applied automatically.\n\n"
 				L"Presets info:\n"
@@ -124,7 +124,7 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 
 	m_check_presets = new pxCheckBox( this, pxE("!Panel:", L"Preset:"), 0);
 	m_check_presets->SetToolTip(
-		pxE( "!Notice:Tooltip",
+        pxE( "!Notice:Tooltip:Presets:Checkbox",
 				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
 				L"Known important game fixes ('Patches') will be applied automatically.\n\n"
 //This creates nested macros = not working. Un/comment manually if needed.
@@ -157,8 +157,8 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 	*m_extraButtonSizer += 5;
 	*m_extraButtonSizer += *m_msg_preset	 | pxMiddle;
 
-	Connect( m_slider_presets->GetId(),	wxEVT_SCROLL_THUMBTRACK, wxScrollEventHandler( Dialogs::SysConfigDialog::Preset_Scroll ) );
-	Connect( m_slider_presets->GetId(),	wxEVT_SCROLL_CHANGED,    wxScrollEventHandler( Dialogs::SysConfigDialog::Preset_Scroll ) );
+    Connect( m_slider_presets->GetId(),	wxEVT_SCROLL_THUMBTRACK,    wxScrollEventHandler( Dialogs::SysConfigDialog::Preset_Scroll ) );
+	Connect( m_slider_presets->GetId(),	wxEVT_SCROLL_CHANGED,       wxScrollEventHandler( Dialogs::SysConfigDialog::Preset_Scroll ) );
 	Connect( m_check_presets->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( Dialogs::SysConfigDialog::Presets_Toggled ) );
 }
 

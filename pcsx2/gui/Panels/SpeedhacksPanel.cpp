@@ -268,8 +268,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	Connect( wxEVT_SCROLL_TOP,		wxScrollEventHandler( SpeedHacksPanel::Slider_Click ) );
 	Connect( wxEVT_SCROLL_BOTTOM,	wxScrollEventHandler( SpeedHacksPanel::Slider_Click ) );
 
-	Connect( m_slider_eecycle->GetId(),		wxEVT_SCROLL_THUMBTRACK, wxScrollEventHandler( SpeedHacksPanel::EECycleRate_Scroll ) );
-	Connect( m_slider_vustealer->GetId(),	wxEVT_SCROLL_THUMBTRACK, wxScrollEventHandler( SpeedHacksPanel::VUCycleRate_Scroll ) );
+	Connect( m_slider_eecycle->GetId(),		wxEVT_SCROLL_CHANGED, wxScrollEventHandler( SpeedHacksPanel::EECycleRate_Scroll ) );
+	Connect( m_slider_vustealer->GetId(),	wxEVT_SCROLL_CHANGED, wxScrollEventHandler( SpeedHacksPanel::VUCycleRate_Scroll ) );
 	Connect( m_check_Enable->GetId(),		wxEVT_COMMAND_CHECKBOX_CLICKED,	wxCommandEventHandler( SpeedHacksPanel::OnEnable_Toggled ) );
 	Connect( wxID_DEFAULT,					wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( SpeedHacksPanel::Defaults_Click ) );
 }

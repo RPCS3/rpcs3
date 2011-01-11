@@ -710,16 +710,22 @@ int AppConfig::GeMaxPresetIndex()
 }
 
 bool AppConfig::isOkGetPresetTextAndColor(int n, wxString& label, wxColor& c){
-	switch(n){
-		case 0: label=pxE("!Panel:", L"1 - Safest");		c=wxColor(L"Forest GREEN"); break;
-		case 1: label=pxE("!Panel:", L"2 - Safe (faster)");	c=wxColor(L"Dark Green"); break;
-		case 2: label=pxE("!Panel:", L"3 - Balanced");			c=wxColor(L"Blue");break;
-		case 3: label=pxE("!Panel:", L"4 - Aggressive");		c=wxColor(L"Purple"); break;
-		case 4: label=pxE("!Panel:", L"5 - Aggressive plus");	c=wxColor(L"Orange"); break;
-		case 5: label=pxE("!Panel:", L"6 - Mostly Harmful");	c=wxColor(L"Red");break;
-		default: return false;
-	}
-	return true;
+    static const wxString presetNamesAndColors[][2]=
+    {
+        { pxE("!Panel:Presets:Name:1", L"Safest"),          L"Forest GREEN" },
+        { pxE("!Panel:Presets:Name:2", L"Safe (faster)"),   L"Dark Green" },
+        { pxE("!Panel:Presets:Name:3", L"Balanced"),        L"Blue" },
+        { pxE("!Panel:Presets:Name:4", L"Aggressive"),      L"Purple" },
+        { pxE("!Panel:Presets:Name:5", L"Aggressive plus"), L"Orange"},
+        { pxE("!Panel:Presets:Name:6", L"Mostly Harmful"),  L"Red" }
+    };
+    if ( n<0 || n>GeMaxPresetIndex() )
+        return false;
+
+    label = wxString::Format(L"%d - ", n) + presetNamesAndColors[n][0];
+    c     = wxColor(presetNamesAndColors[n][1]);
+
+    return true;
 }
 
 
