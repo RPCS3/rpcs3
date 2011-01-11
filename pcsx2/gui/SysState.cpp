@@ -430,6 +430,12 @@ protected:
 		if (!woot->IsOk())
 			throw Exception::CannotCreateStream(tempfile);
 
+		// Scheduler hint (yield) -- creating and saving the file is low priority compared to
+		// the emulator/vm thread.  Sleeping the executor thread briefly before doing file
+		// transactions should help reduce overhead. --air
+
+		Yield(4);
+
 		// Write the version and screenshot:
 		ScopedPtr<pxOutputStream> out( new pxOutputStream(tempfile, new wxZipOutputStream(woot)) );
 		wxZipOutputStream* gzfp = (wxZipOutputStream*)out->GetWxStreamBase();
