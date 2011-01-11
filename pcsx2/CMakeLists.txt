@@ -280,6 +280,7 @@ set(pcsx2GuiSources
 	gui/AppCoreThread.cpp
 	gui/AppEventSources.cpp
 	gui/AppGameDatabase.cpp
+	gui/AppUserMode.cpp
 	gui/AppInit.cpp
 	gui/AppMain.cpp
 	gui/AppRes.cpp
@@ -291,6 +292,7 @@ set(pcsx2GuiSources
 	gui/Dialogs/AssertionDialog.cpp
 	gui/Panels/BaseApplicableConfigPanel.cpp
 	gui/Panels/MemoryCardListView.cpp
+	gui/Panels/ThemeSelectorPanel.cpp
 	gui/Dialogs/BaseConfigurationDialog.cpp
 	gui/Dialogs/BiosSelectorDialog.cpp
 	gui/Dialogs/ConfirmationDialogs.cpp

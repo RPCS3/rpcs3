@@ -20,7 +20,10 @@
 #include "Dialogs/ModalPopups.h"
 
 #include <wx/stdpaths.h>
+
+#ifdef __WXMSW__
 #include "wx/msw/regconf.h"
+#endif
 
 DocsModeType			DocsFolderMode = DocsFolder_User;
 bool					UseDefaultSettingsFolder = true;
@@ -291,7 +294,7 @@ void Pcsx2App::ReadUserModeSettings()
 
 	wxFileName usermodefile( GetAppName() + L"-reg.ini" );
 	usermodefile.SetPath( usrlocaldir.ToString() );
-	conf_install = OpenFileConfig( usermodefile.GetFullPath() )
+	conf_install = OpenFileConfig( usermodefile.GetFullPath() );
 #endif
 
 	conf_install->SetRecordDefaults(false);

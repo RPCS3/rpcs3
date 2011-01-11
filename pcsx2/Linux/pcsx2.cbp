@@ -417,6 +417,7 @@
 		<Unit filename="../gui/AppMain.cpp" />
 		<Unit filename="../gui/AppRes.cpp" />
 		<Unit filename="../gui/AppSaveStates.h" />
+		<Unit filename="../gui/AppUserMode.cpp" />
 		<Unit filename="../gui/ApplyState.h" />
 		<Unit filename="../gui/ConsoleLogger.cpp" />
 		<Unit filename="../gui/ConsoleLogger.h" />
@@ -481,6 +482,7 @@
 		<Unit filename="../gui/Panels/PathsPanel.cpp" />
 		<Unit filename="../gui/Panels/PluginSelectorPanel.cpp" />
 		<Unit filename="../gui/Panels/SpeedhacksPanel.cpp" />
+		<Unit filename="../gui/Panels/ThemeSelectorPanel.cpp" />
 		<Unit filename="../gui/Panels/VideoPanel.cpp" />
 		<Unit filename="../gui/RecentIsoList.cpp" />
 		<Unit filename="../gui/RecentIsoList.h" />
