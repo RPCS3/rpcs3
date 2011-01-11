@@ -175,6 +175,8 @@ public:
 		bool		IsMaximized;
 		bool		IsFullscreen;
 
+        bool        IsToggleFullscreenOnDoubleClick;
+
 		GSWindowOptions();
 
 		void LoadSave( IniInterface& conf );

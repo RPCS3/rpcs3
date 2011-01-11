@@ -624,6 +624,8 @@ AppConfig::GSWindowOptions::GSWindowOptions()
 	WindowPos				= wxDefaultPosition;
 	IsMaximized				= false;
 	IsFullscreen			= false;
+
+    IsToggleFullscreenOnDoubleClick = true;
 }
 
 void AppConfig::GSWindowOptions::SanityCheck()
@@ -659,6 +661,8 @@ void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 	IniEntry( WindowPos );
 	IniEntry( IsMaximized );
 	IniEntry( IsFullscreen );
+
+    IniEntry( IsToggleFullscreenOnDoubleClick );
 
 	static const wxChar* AspectRatioNames[] =
 	{

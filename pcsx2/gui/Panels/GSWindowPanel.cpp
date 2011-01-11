@@ -46,6 +46,7 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	m_check_CloseGS		= new pxCheckBox( this, _("Hide window on suspend") );
 	m_check_Fullscreen	= new pxCheckBox( this, _("Default to fullscreen mode on open") );
 	m_check_VsyncEnable	= new pxCheckBox( this, _("Wait for vsync on refresh") );
+    m_check_DclickFullscreen = new pxCheckBox( this, _("Double-click Toggles Full-Screen mode") );
 	m_check_ExclusiveFS = new pxCheckBox( this, _("Use exclusive fullscreen mode (if available)") );
 
 	m_check_VsyncEnable->SetToolTip( pxEt( "!ContextTip:Window:Vsync",
@@ -98,6 +99,8 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	*this += new wxStaticLine( this )	| StdExpand();
 
 	*this += m_check_Fullscreen;
+    *this += m_check_DclickFullscreen;;
+
 	*this += m_check_ExclusiveFS;
 	*this += m_check_VsyncEnable;
 
@@ -126,6 +129,8 @@ void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, 
 
 	m_check_VsyncEnable	->SetValue( configToApply.EmuOptions.GS.VsyncEnable );
 
+    m_check_DclickFullscreen ->SetValue ( conf.IsToggleFullscreenOnDoubleClick );
+
 	m_text_WindowWidth	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetWidth() ) );
 	m_text_WindowHeight	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetHeight() ) );
 
@@ -145,6 +150,8 @@ void Panels::GSWindowSettingsPanel::Apply()
 	appconf.AspectRatio		= (AspectRatioType)m_combo_AspectRatio->GetSelection();
 
 	gsconf.VsyncEnable		= m_check_VsyncEnable->GetValue();
+
+    appconf.IsToggleFullscreenOnDoubleClick = m_check_DclickFullscreen->GetValue();
 
 	long xr, yr;
 
