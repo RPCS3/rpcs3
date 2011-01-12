@@ -272,6 +272,7 @@ class StartupOptions
 public:
 	bool			ForceWizard;
 	bool			ForceConsole;
+	bool			PortableMode;
 
 	// Disables the fast boot option when auto-running games.  This option only applies
 	// if SysAutoRun is also true.
@@ -290,8 +291,9 @@ public:
 	StartupOptions()
 	{
 		ForceWizard				= false;
-		NoFastBoot				= false;
 		ForceConsole			= false;
+		PortableMode			= false;
+		NoFastBoot				= false;
 		SysAutoRun				= false;
 		CdvdSource				= CDVDsrc_NoDisc;
 	}
@@ -538,9 +540,11 @@ public:
 	void CleanupRestartable();
 	void CleanupResources();
 	void WipeUserModeSettings();
-	void ReadUserModeSettings();
-	bool TestForPortableInstall();
 	bool TestUserPermissionsRights( const wxDirName& testFolder, wxString& createFailedStr, wxString& accessFailedStr );
+	void EstablishAppUserMode();
+
+	wxConfigBase* ReadUserModeSettings();
+	wxConfigBase* TestForPortableInstall();
 
 	bool HasPendingSaves() const;
 	void StartPendingSave();

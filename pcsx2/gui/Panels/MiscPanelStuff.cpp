@@ -124,11 +124,11 @@ Panels::LanguageSelectionPanel::LanguageSelectionPanel( wxWindow* parent )
 	wxButton* applyButton = new wxButton( this, pxID_RestartWizard, _("Apply") );
 	applyButton->SetToolTip(_("Make this language my default right now!"));
 
-	*this	+= Label(_("Select a language:")) | pxMiddle;
 	*this	+= 5;
 	*this	+= m_picker | pxSizerFlags::StdSpace();
 	*this	+= 5;
 	*this	+= applyButton | pxSizerFlags::StdSpace();
+	*this	+= 5;
 
 	Connect( pxID_RestartWizard,	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( LanguageSelectionPanel::OnApplyLanguage_Clicked ) );
 

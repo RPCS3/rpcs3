@@ -71,12 +71,12 @@ void Pcsx2App::DetectCpuAndUserMode()
 			.SetUserMsg(_("SSE extensions are not available.  PCSX2 requires a cpu that supports the SSE instruction set."));
 	}
 
-	if (!TestForPortableInstall())
-	{
-		ReadUserModeSettings();	
-	}
+	EstablishAppUserMode();
 
-	AppConfig_OnChangedSettingsFolder();
+	// force unload plugins loaded by the wizard.  If we don't do this the recompilers might
+	// fail to allocate the memory they need to function.
+	ShutdownPlugins();
+	UnloadPlugins();
 }
 
 void Pcsx2App::OpenMainFrame()
@@ -252,6 +252,7 @@ void Pcsx2App::OnInitCmdLine( wxCmdLineParser& parser )
 	parser.AddOption( wxEmptyString,L"cfgpath",		_("changes the configuration file path"), wxCMD_LINE_VAL_STRING );
 	parser.AddOption( wxEmptyString,L"cfg",			_("specifies the PCSX2 configuration file to use"), wxCMD_LINE_VAL_STRING );
 	parser.AddSwitch( wxEmptyString,L"forcewiz",	AddAppName(_("forces %s to start the First-time Wizard")) );
+	parser.AddSwitch( wxEmptyString,L"portable",	_("enables portable mode operation (requires admin/root access)") );
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
 		parser.AddOption( wxEmptyString, pi->GetShortname().Lower(),
@@ -344,6 +345,7 @@ bool Pcsx2App::OnCmdLineParsed( wxCmdLineParser& parser )
 
 	Startup.NoFastBoot		= parser.Found(L"fullboot");
 	Startup.ForceWizard		= parser.Found(L"forcewiz");
+	Startup.PortableMode	= parser.Found(L"portable");
 
 	if( parser.GetParamCount() >= 1 )
 	{

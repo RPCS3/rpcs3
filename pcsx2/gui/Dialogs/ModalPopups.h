@@ -26,28 +26,11 @@ class FirstTimeWizard : public wxWizard
 	typedef wxWizard _parent;
 
 protected:
-	class UsermodePage : public ApplicableWizardPage
-	{
-	protected:
-		Panels::DirPickerPanel*			m_dirpick_settings;
-		Panels::LanguageSelectionPanel*	m_panel_LangSel;
-		Panels::DocsFolderPickerPanel*	m_panel_UserSel;
+	wxWizardPageSimple&		m_page_intro;
+	wxWizardPageSimple&		m_page_plugins;
+	wxWizardPageSimple&		m_page_bios;
 
-	public:
-		UsermodePage( wxWizard* parent );
-		virtual ~UsermodePage() throw() { }
-		bool PrepForApply();
-
-	protected:
-		void OnUsermodeChanged( wxCommandEvent& evt );
-		void OnCustomDirChanged( wxCommandEvent& evt );
-	};
-
-protected:
-	UsermodePage&		m_page_usermode;
-	wxWizardPageSimple& m_page_plugins;
-	wxWizardPageSimple& m_page_bios;
-
+	wxPanelWithHelpers&				m_panel_Intro;
 	Panels::PluginSelectorPanel&	m_panel_PluginSel;
 	Panels::BiosSelectorPanel&		m_panel_BiosSel;
 
@@ -55,8 +38,7 @@ public:
 	FirstTimeWizard( wxWindow* parent );
 	virtual ~FirstTimeWizard() throw();
 
-	wxWizardPage *GetUsermodePage() const { return &m_page_usermode; }
-	wxWizardPage *GetPostUsermodePage() const { return &m_page_plugins; }
+	wxWizardPage *GetFirstPage() const { return &m_page_intro; }
 
 	void ForceEnumPlugins()
 	{

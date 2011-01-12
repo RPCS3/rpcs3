@@ -430,7 +430,7 @@ void App_LoadSaveInstallSettings( IniInterface& ini )
 	// "Install_Dir" conforms to the NSIS standard install directory key name.
 	// Attempt to load plugins and themes based on the Install Folder.
 
-	ini.Entry( L"Install_Dir",				InstallFolder,				(wxDirName)wxStandardPaths::Get().GetExecutablePath() );
+	ini.Entry( L"Install_Dir",				InstallFolder,				(wxDirName)(wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath()) );
 	ini.Entry( L"PluginsFolder",			PluginsFolder,				InstallFolder + PathDefs::Base::Plugins() );
 	ini.Entry( L"ThemesFolder",				ThemesFolder,				InstallFolder + PathDefs::Base::Themes() );
 

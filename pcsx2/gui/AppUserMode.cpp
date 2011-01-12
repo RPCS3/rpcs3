@@ -130,17 +130,20 @@ bool Pcsx2App::TestUserPermissionsRights( const wxDirName& testFolder, wxString&
 // Portable installation mode is typically enabled via the presence of an INI file in the
 // same directory that PCSX2 is installed to.
 //
-bool Pcsx2App::TestForPortableInstall()
+wxConfigBase* Pcsx2App::TestForPortableInstall()
 {
 	UserLocalDataMode = UserLocalFolder_System;
 
 	const wxFileName portableIniFile( GetPortableIniPath() );
 	const wxDirName portableDocsFolder( portableIniFile.GetPath() );
 
-	if (portableIniFile.FileExists())
+	if (Startup.PortableMode || portableIniFile.FileExists())
 	{
 		wxString FilenameStr = portableIniFile.GetFullPath();
-		Console.WriteLn( L"(UserMode) Found portable install ini @ %s", FilenameStr.c_str() );
+		if (Startup.PortableMode)
+			Console.WriteLn( L"(UserMode) Portable mode requested via commandline switch!" );
+		else
+			Console.WriteLn( L"(UserMode) Found portable install ini @ %s", FilenameStr.c_str() );
 
 		// Just because the portable ini file exists doesn't mean we can actually run in portable
 		// mode.  In order to determine our read/write permissions to the PCSX2, we must try to
@@ -148,7 +151,6 @@ bool Pcsx2App::TestForPortableInstall()
 
 		ScopedPtr<wxFileConfig> conf_portable( OpenFileConfig( portableIniFile.GetFullPath() ) );
 		conf_portable->SetRecordDefaults(false);
-		wxString iniFolder = conf_portable->Read( L"IniFolder", wxGetCwd() );
 
 		while( true )
 		{
@@ -190,7 +192,7 @@ bool Pcsx2App::TestForPortableInstall()
 				
 				case pxID_CUSTOM:
 					// Pretend like the portable ini was never found!
-					return false;
+					return NULL;
 			}
 
 		}
@@ -199,10 +201,10 @@ bool Pcsx2App::TestForPortableInstall()
 		// able to run error-free!
 
 		UserLocalDataMode = UserLocalFolder_Portable;
-		return true;
+		return conf_portable.DetachPtr();
 	}
 	
-	return false;
+	return NULL;
 }
 
 // Removes both portable ini and user local ini entry conforming to this instance of PCSX2.
@@ -250,11 +252,11 @@ static void DoFirstTimeWizard()
 	// first time startup, so give the user the choice of user mode:
 	while(true)
 	{
-		// PCSX2's FTWizard allows improptu restarting of the wizard without cancellation.  This is 
-		// typically used to change the user's language selection.
+		// PCSX2's FTWizard allows improptu restarting of the wizard without cancellation.
+		// This is typically used to change the user's language selection.
 
 		FirstTimeWizard wiz( NULL );
-		if( wiz.RunWizard( wiz.GetUsermodePage() ) ) break;
+		if( wiz.RunWizard( wiz.GetFirstPage() ) ) break;
 		if (wiz.GetReturnCode() != pxID_RestartWizard)
 			throw Exception::StartupAborted( L"User canceled FirstTime Wizard." );
 
@@ -262,7 +264,7 @@ static void DoFirstTimeWizard()
 	}
 }
 
-void Pcsx2App::ReadUserModeSettings()
+wxConfigBase* Pcsx2App::ReadUserModeSettings()
 {
 	// Implementation Notes:
 	//
@@ -271,13 +273,8 @@ void Pcsx2App::ReadUserModeSettings()
 	// the old system (CWD-based ini file mess) in favor of a system that simply stores
 	// most core application-level settings in the registry.
 
-	// [TODO] : wxWidgets 2.8 does not yet support the Windows Vista/7 APPDATA feature (which 
-	//  resolves to c:\programdata\ on standard installs).  I'm too lazy to write our own
-	//  register code to uncover the value of CSLID_APPDATA, so until we upgrade wx, we'll
-	//  just store the configuration files in the user local data directory instead.
-
 	ScopedPtr<wxConfigBase> conf_install;
-	
+
 #ifdef __WXMSW__
 	conf_install = new wxRegConfig();
 #else
@@ -297,38 +294,33 @@ void Pcsx2App::ReadUserModeSettings()
 	conf_install = OpenFileConfig( usermodefile.GetFullPath() );
 #endif
 
+	return conf_install.DetachPtr();
+}
+
+
+void Pcsx2App::EstablishAppUserMode()
+{
+	ScopedPtr<wxConfigBase> conf_install;
+
+	conf_install = TestForPortableInstall();
+	if (!conf_install)
+		conf_install = ReadUserModeSettings();	
+
 	conf_install->SetRecordDefaults(false);
+
+	//  Run the First Time Wizard!
+	// ----------------------------
+	// Wizard is only run once.  The status of the wizard having been run is stored in
+	// the installation ini file, which can be either the portable install (useful for admins)
+	// or the registry/user local documents position.
 
 	bool runWiz;
 	conf_install->Read( L"RunWizard", &runWiz, true );
 
-	if( !Startup.ForceWizard && !runWiz )
-	{
-		IniLoader loader( conf_install );
-		App_LoadSaveInstallSettings( loader );
-		return;
-	}
+	IniLoader loader( conf_install );
+	App_LoadSaveInstallSettings( loader );
 
-	// ----------------------------
-	//  Run the First Time Wizard!
-	// ----------------------------
-	
-	// Beta Warning!
-	#if 0
-	if( !hasGroup )
-	{
-		wxDialogWithHelpers beta( NULL, _fmt("Welcome to %s %u.%u.%u (r%u)", pxGetAppName().c_str(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo, SVN_REV ));
-		beta.SetMinWidth(480);
-
-		beta += beta.Heading(
-			L"PCSX2 0.9.7 is a work-in-progress.  We are in the middle of major rewrites of the user interface, and some parts "
-			L"of the program have *NOT* been re-implemented yet.  Options will be missing or disabled.  Horrible crashes might be present.  Enjoy!"
-		);
-		beta += StdPadding*2;
-		beta += new wxButton( &beta, wxID_OK ) | StdCenter();
-		beta.ShowModal();
-	}
-	#endif
+	if( !Startup.ForceWizard && !runWiz ) return;
 
 	DoFirstTimeWizard();
 
@@ -340,9 +332,5 @@ void Pcsx2App::ReadUserModeSettings()
 
 	// Wizard completed successfully, so let's not torture the user with this crap again!
 	conf_install->Write( L"RunWizard", false );
-
-	// force unload plugins loaded by the wizard.  If we don't do this the recompilers might
-	// fail to allocate the memory they need to function.
-	ShutdownPlugins();
-	UnloadPlugins();
 }
+
