@@ -434,7 +434,7 @@ protected:
 		// the emulator/vm thread.  Sleeping the executor thread briefly before doing file
 		// transactions should help reduce overhead. --air
 
-		Yield(4);
+		pxYield(4);
 
 		// Write the version and screenshot:
 		ScopedPtr<pxOutputStream> out( new pxOutputStream(tempfile, new wxZipOutputStream(woot)) );

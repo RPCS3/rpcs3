@@ -37,13 +37,15 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 		wxDefaultPosition, wxDefaultSize, wxBORDER_SUNKEN
 	)
 {
+	// [TODO] : About box should be upgraded to use scrollable read-only text boxes.
+	
 	static const wxString LabelAuthors = fromUTF8(
 		"Arcum42, Refraction, drk||raziel, cottonvibes, gigaherz, "
-		"rama, Jake.Stine, saqib, Tmkk, pseudonym"
+		"rama, Jake.Stine, saqib, pseudonym, gregory.hainaut"
 		"\n\n"
 		"Previous versions: Alexey silinov, Aumatt, "
 		"Florin, goldfinger, Linuzappz, loser, "
-		"Nachbrenner, shadow, Zerofrog"
+		"Nachbrenner, shadow, Zerofrog, tmkk"
 		"\n\n"
 		"Betatesting: Bositman, ChaosCode, "
 		"CKemu, crushtest, GeneralPlot, "
@@ -53,7 +55,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 	);
 
 	static const wxString LabelGreets = fromUTF8(
-		"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu), gregory (linux distros)"
+		"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu), n1ckname (compilation guides)"
 		"\n\n"
 		"Plugin Specialists: ChickenLiver (Lilypad), Efp (efp), "
 		"Gabest (Gsdx, Cdvdolio, Xpad),  Zeydlitz (ZZogl)"
