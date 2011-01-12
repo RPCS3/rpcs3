@@ -40,7 +40,7 @@ const wxChar* Panels::SpeedHacksPanel::GetEEcycleSliderMsg( int val )
 			);
 
 		default:
-            break;
+			break;
 	}
 
 	return L"Unreachable Warning Suppressor!!";
@@ -71,8 +71,8 @@ const wxChar* Panels::SpeedHacksPanel::GetVUcycleSliderMsg( int val )
 				L"3 - Maximum VU Cycle Stealing.  Usefulness is limited, as this will cause flickering "
 				L"visuals or slowdown in most games."
 			);
-        default:
-            break;
+		default:
+			break;
 	}
 
 	return L"Unreachable Warning Suppressor!!";
@@ -276,9 +276,9 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 void Panels::SpeedHacksPanel::EnableStuff( AppConfig* configToUse )
 {
-    //Console.WriteLn("SpeedHacksPanel::EnableStuff: Using %s", configToUse?"Object":"NULL");
-    if( !configToUse ) configToUse = g_Conf;
-    //Console.WriteLn("SpeedHacksPanel::EnableStuff: EnabledPresets: %s", configToUse->EnablePresets?"true":"false");
+	//Console.WriteLn("SpeedHacksPanel::EnableStuff: Using %s", configToUse?"Object":"NULL");
+	if( !configToUse ) configToUse = g_Conf;
+	//Console.WriteLn("SpeedHacksPanel::EnableStuff: EnabledPresets: %s", configToUse->EnablePresets?"true":"false");
 	wxSizerItemList& items( s_table->GetChildren() );
 
 	wxSizerItemList::iterator it	= items.begin();
@@ -293,14 +293,14 @@ void Panels::SpeedHacksPanel::EnableStuff( AppConfig* configToUse )
 
 void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied()
 {
-    //Console.WriteLn("SpeedHacksPanel::AppStatusEvent_OnSettingsApplied()");
+	//Console.WriteLn("SpeedHacksPanel::AppStatusEvent_OnSettingsApplied()");
 	ApplyConfigToGui( *g_Conf );
 }
 
 void Panels::SpeedHacksPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
 {
 	const bool enabled = configToApply.EnableSpeedHacks;
-    Pcsx2Config::SpeedhackOptions& opts=configToApply.EmuOptions.Speedhacks;
+	Pcsx2Config::SpeedhackOptions& opts=configToApply.EmuOptions.Speedhacks;
 
 	m_check_Enable		->SetValue( !!enabled );
 
@@ -322,9 +322,9 @@ void Panels::SpeedHacksPanel::ApplyConfigToGui( AppConfig& configToApply, bool m
 	// Layout necessary to ensure changed slider text gets re-aligned properly
 	Layout();
 
-    //Console.WriteLn("SpeedHacksPanel::ApplyConfigToGui: EnabledPresets: %s", configToApply.EnablePresets?"true":"false");
+	//Console.WriteLn("SpeedHacksPanel::ApplyConfigToGui: EnabledPresets: %s", configToApply.EnablePresets?"true":"false");
 
-    this->Enable(!configToApply.EnablePresets);
+	this->Enable(!configToApply.EnablePresets);
 }
 
 
@@ -351,20 +351,20 @@ void Panels::SpeedHacksPanel::Apply()
 
 void Panels::SpeedHacksPanel::OnEnable_Toggled( wxCommandEvent& evt )
 {
-    AppConfig tmp=*g_Conf;
-    tmp.EnablePresets=false; //if clicked, button was enabled, so not using a preset --> let EnableStuff work
+	AppConfig tmp=*g_Conf;
+	tmp.EnablePresets=false; //if clicked, button was enabled, so not using a preset --> let EnableStuff work
 
-    EnableStuff( &tmp );
+	EnableStuff( &tmp );
 	evt.Skip();
 }
 
 void Panels::SpeedHacksPanel::Defaults_Click( wxCommandEvent& evt )
 {
-    //Can only get here presets are disabled at the GUI (= the 'Defaults' button is enabled).
-    AppConfig currentConfigWithHacksReset = *g_Conf;
-    currentConfigWithHacksReset.EmuOptions.Speedhacks = Pcsx2Config::SpeedhackOptions();
-    currentConfigWithHacksReset.EnablePresets=false;//speed hacks gui depends on preset, apply it as if presets are disabled
-    ApplyConfigToGui( currentConfigWithHacksReset );
+	//Can only get here presets are disabled at the GUI (= the 'Defaults' button is enabled).
+	AppConfig currentConfigWithHacksReset = *g_Conf;
+	currentConfigWithHacksReset.EmuOptions.Speedhacks = Pcsx2Config::SpeedhackOptions();
+	currentConfigWithHacksReset.EnablePresets=false;//speed hacks gui depends on preset, apply it as if presets are disabled
+	ApplyConfigToGui( currentConfigWithHacksReset );
 	evt.Skip();
 }
 
@@ -394,12 +394,12 @@ void Panels::SpeedHacksPanel::Slider_Click(wxScrollEvent &event) {
 
 void Panels::SpeedHacksPanel::EECycleRate_Scroll(wxScrollEvent &event)
 {
-    SetEEcycleSliderMsg();
+	SetEEcycleSliderMsg();
 	event.Skip();
 }
 
 void Panels::SpeedHacksPanel::VUCycleRate_Scroll(wxScrollEvent &event)
 {
-    SetVUcycleSliderMsg();
+	SetVUcycleSliderMsg();
 	event.Skip();
 }

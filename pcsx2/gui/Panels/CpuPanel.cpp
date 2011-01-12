@@ -237,7 +237,7 @@ void Panels::CpuPanelEE::Apply()
 
 void Panels::CpuPanelEE::AppStatusEvent_OnSettingsApplied()
 {
-    ApplyConfigToGui( *g_Conf );
+	ApplyConfigToGui( *g_Conf );
 }
 
 void Panels::CpuPanelEE::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate ){
@@ -255,10 +255,10 @@ void Panels::CpuPanelEE::ApplyConfigToGui( AppConfig& configToApply, bool manual
 
 	this->Enable(!configToApply.EnablePresets);
 
-    if( manuallyPropagate )
-    {
-        m_advancedOptsFpu->ApplyConfigToGui( configToApply, true );
-    }
+	if( manuallyPropagate )
+	{
+		m_advancedOptsFpu->ApplyConfigToGui( configToApply, true );
+	}
 }
 
 void Panels::CpuPanelEE::OnRestoreDefaults(wxCommandEvent &evt)
@@ -285,7 +285,7 @@ void Panels::CpuPanelVU::Apply()
 
 void Panels::CpuPanelVU::AppStatusEvent_OnSettingsApplied()
 {
-    ApplyConfigToGui( *g_Conf );
+	ApplyConfigToGui( *g_Conf );
 }
 
 void Panels::CpuPanelVU::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
@@ -314,10 +314,10 @@ void Panels::CpuPanelVU::ApplyConfigToGui( AppConfig& configToApply, bool manual
 	m_panel_VU0->Enable(!configToApply.EnablePresets);
 	m_panel_VU1->Enable(!configToApply.EnablePresets);
 
-    if ( manuallyPropagate )
-    {
-        m_advancedOptsVu->ApplyConfigToGui( configToApply, true );
-    }
+	if ( manuallyPropagate )
+	{
+		m_advancedOptsVu->ApplyConfigToGui( configToApply, true );
+	}
 }
 
 
@@ -358,7 +358,7 @@ void Panels::AdvancedOptionsFPU::Apply()
 
 void Panels::AdvancedOptionsFPU::AppStatusEvent_OnSettingsApplied()
 {
-    ApplyConfigToGui( *g_Conf );
+	ApplyConfigToGui( *g_Conf );
 }
 
 void Panels::AdvancedOptionsFPU::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
@@ -398,7 +398,7 @@ void Panels::AdvancedOptionsVU::Apply()
 
 void Panels::AdvancedOptionsVU::AppStatusEvent_OnSettingsApplied()
 {
-    ApplyConfigToGui( *g_Conf );
+	ApplyConfigToGui( *g_Conf );
 }
 
 void Panels::AdvancedOptionsVU::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )

@@ -33,10 +33,10 @@ wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid ) const
 {
 	wxMenu* mnuSubstates = new wxMenu();
 
-    for (int i = 0; i < 10; i++)
-    {
-        mnuSubstates->Append( baseid+i+1, wxsFormat(L"Slot %d", i) );
-    }
+	for (int i = 0; i < 10; i++)
+	{
+		mnuSubstates->Append( baseid+i+1, wxsFormat(L"Slot %d", i) );
+	}
 	mnuSubstates->AppendSeparator();
 	mnuSubstates->Append( baseid - 1,	_("Other...") );
 	return mnuSubstates;
@@ -200,9 +200,9 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Boot_CDVD2,			Menu_BootCdvd2_Click );
 	ConnectMenu( MenuId_Boot_ELF,			Menu_OpenELF_Click );
 	ConnectMenu( MenuId_IsoBrowse,			Menu_IsoBrowse_Click );
-	ConnectMenu( MenuId_EnablePatches,      Menu_EnablePatches_Click );
-	ConnectMenu( MenuId_EnableCheats,       Menu_EnableCheats_Click );
-	ConnectMenu( MenuId_EnableHostFs,       Menu_EnableHostFs_Click );
+	ConnectMenu( MenuId_EnablePatches,		Menu_EnablePatches_Click );
+	ConnectMenu( MenuId_EnableCheats,		Menu_EnableCheats_Click );
+	ConnectMenu( MenuId_EnableHostFs,		Menu_EnableHostFs_Click );
 	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
 	ConnectMenu( MenuId_Sys_SuspendResume,	Menu_SuspendResume_Click );
@@ -211,11 +211,11 @@ void MainEmuFrame::ConnectMenus()
 
 	ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
 
-    ConnectMenuRange(MenuId_State_Load01+1, 10, Menu_LoadStates_Click);
+	ConnectMenuRange(MenuId_State_Load01+1, 10, Menu_LoadStates_Click);
 
 	ConnectMenu( MenuId_State_SaveOther,	Menu_SaveStateOther_Click );
 
-    ConnectMenuRange(MenuId_State_Save01+1, 10, Menu_SaveStates_Click);
+	ConnectMenuRange(MenuId_State_Save01+1, 10, Menu_SaveStates_Click);
 
 	ConnectMenu( MenuId_Debug_Open,			Menu_Debug_Open_Click );
 	ConnectMenu( MenuId_Debug_MemoryDump,	Menu_Debug_MemoryDump_Click );
@@ -296,7 +296,7 @@ static int GetPluginMenuId_Name( PluginsEnum_t pid )
 
 // ------------------------------------------------------------------------
 MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
-    : wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) )
+	: wxFrame(parent, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~(wxMAXIMIZE_BOX | wxRESIZE_BORDER) )
 
 	, m_statusbar( *CreateStatusBar(2, 0) )
 	, m_background( this, wxID_ANY, wxGetApp().GetLogoBitmap() )
@@ -442,7 +442,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	//m_menuCDVD.Append( MenuId_SkipBiosToggle,_("Enable BOOT2 injection"),
 	//	_("Skips PS2 splash screens when booting from Iso or DVD media"), wxITEM_CHECK );
 
-    // ------------------------------------------------------------------------
+	// ------------------------------------------------------------------------
 
 	m_menuConfig.Append(MenuId_Config_SysSettings,	_("Emulation &Settings") );
 	m_menuConfig.Append(MenuId_Config_McdSettings,	_("&Memory cards") );
@@ -646,7 +646,7 @@ void MainEmuFrame::ApplySettings()
 	menubar.Check( MenuId_EnablePatches, g_Conf->EmuOptions.EnablePatches );
 	menubar.Check( MenuId_EnableCheats,  g_Conf->EmuOptions.EnableCheats );
 	menubar.Check( MenuId_EnableHostFs,  g_Conf->EmuOptions.HostFs );
-	menubar.Check( MenuId_CDVD_Info,     g_Conf->EmuOptions.CdvdVerboseReads );
+	menubar.Check( MenuId_CDVD_Info,	 g_Conf->EmuOptions.CdvdVerboseReads );
 #ifdef __LINUX__
 	menubar.Check( MenuId_Console_Stdio, g_Conf->EmuOptions.ConsoleToStdio );
 #endif

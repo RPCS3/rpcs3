@@ -80,7 +80,7 @@ void pxLogConsole::DoLog( wxLogLevel level, const wxChar *szString, time_t t )
 		case wxLOG_Warning:
 			Console.Warning( L"[wx] %s", szString );
 		break;
-    }
+	}
 }
 
 
@@ -107,17 +107,17 @@ void ConsoleTestThread::ExecuteTaskInThread()
 //
 static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 {
-    filename = wxSaveFileSelector(L"log", L"txt", L"log.txt", parent);
-    if ( !filename ) return false; // canceled
+	filename = wxSaveFileSelector(L"log", L"txt", L"log.txt", parent);
+	if ( !filename ) return false; // canceled
 
-    if( wxFile::Exists(filename) )
-    {
-        bool bAppend = false;
-        wxString strMsg;
-        strMsg.Printf(L"Append log to file '%s' (choosing [No] will overwrite it)?",
-                      filename.c_str());
+	if( wxFile::Exists(filename) )
+	{
+		bool bAppend = false;
+		wxString strMsg;
+		strMsg.Printf(L"Append log to file '%s' (choosing [No] will overwrite it)?",
+						filename.c_str());
 
-        switch ( Msgbox::ShowModal( _("Save log question"), strMsg, MsgButtons().YesNo().Cancel() ) )
+		switch ( Msgbox::ShowModal( _("Save log question"), strMsg, MsgButtons().YesNo().Cancel() ) )
 		{
 			case wxID_YES:
 				bAppend = true;
@@ -132,12 +132,12 @@ static bool OpenLogFile(wxFile& file, wxString& filename, wxWindow *parent)
 
 			default:
 				pxFailDev( "invalid message box return value" );
-        }
+		}
 
 		return ( bAppend ) ?
 			file.Open(filename, wxFile::write_append) :
-            file.Create(filename, true /* overwrite */);
-    }
+			file.Create(filename, true /* overwrite */);
+	}
 
 	return file.Create(filename);
 }
@@ -188,7 +188,7 @@ void ConsoleLogFrame::ColorArray::Create( int fontsize )
 	new (&m_table[Color_StrongBlue])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
 	new (&m_table[Color_StrongMagenta])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
 	new (&m_table[Color_StrongOrange])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
-    new (&m_table[Color_StrongGray])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
+	new (&m_table[Color_StrongGray])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
 
 	new (&m_table[Color_StrongCyan])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
 	new (&m_table[Color_StrongYellow])	wxTextAttr( wxNullColour, wxNullColour, fixedB );
@@ -745,20 +745,20 @@ void ConsoleLogFrame::OnClose( wxCommandEvent& event )
 
 void ConsoleLogFrame::OnSave(wxCommandEvent& WXUNUSED(event))
 {
-    wxString filename;
-    wxFile file;
-    bool rc = OpenLogFile( file, filename, this );
-    if ( !rc )
-    {
-        // canceled
-        return;
-    }
+	wxString filename;
+	wxFile file;
+	bool rc = OpenLogFile( file, filename, this );
+	if ( !rc )
+	{
+		// canceled
+		return;
+	}
 
-    // retrieve text and save it
-    // -------------------------
-    int nLines = m_TextCtrl.GetNumberOfLines();
-    for ( int nLine = 0; nLine < nLines; nLine++ )
-    {
+	// retrieve text and save it
+	// -------------------------
+	int nLines = m_TextCtrl.GetNumberOfLines();
+	for ( int nLine = 0; nLine < nLines; nLine++ )
+	{
 		if( !file.Write(m_TextCtrl.GetLineText(nLine) + wxTextFile::GetEOL()) )
 		{
 			wxLogError( L"Can't save log contents to file." );
@@ -769,7 +769,7 @@ void ConsoleLogFrame::OnSave(wxCommandEvent& WXUNUSED(event))
 
 void ConsoleLogFrame::OnClear(wxCommandEvent& WXUNUSED(event))
 {
-    m_TextCtrl.Clear();
+	m_TextCtrl.Clear();
 }
 
 void ConsoleLogFrame::OnToggleSource( wxCommandEvent& evt )
@@ -1022,16 +1022,16 @@ static void __concall ConsoleToFile_DoWriteLn( const wxString& fmt )
 
 static void __concall ConsoleToFile_SetTitle( const wxString& title )
 {
-    ConsoleWriter_Stdout.SetTitle(title);
+	ConsoleWriter_Stdout.SetTitle(title);
 }
 
 static void __concall ConsoleToFile_DoSetColor( ConsoleColors color )
 {
-    ConsoleWriter_Stdout.DoSetColor(color);
+	ConsoleWriter_Stdout.DoSetColor(color);
 }
 
 extern const IConsoleWriter	ConsoleWriter_File;
-const IConsoleWriter    ConsoleWriter_File =
+const IConsoleWriter	ConsoleWriter_File =
 {
 	ConsoleToFile_DoWrite,
 	ConsoleToFile_DoWriteLn,
@@ -1055,7 +1055,7 @@ Mutex& Pcsx2App::GetProgramLogLock()
 template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_SetTitle( const wxString& title )
 {
-    secondary.SetTitle(title);
+	secondary.SetTitle(title);
 	wxCommandEvent evt( pxEvt_SetTitleText );
 	evt.SetString( title );
 	wxGetApp().ProgramLog_PostEvent( evt );
@@ -1064,7 +1064,7 @@ static void __concall ConsoleToWindow_SetTitle( const wxString& title )
 template< const IConsoleWriter& secondary >
 static void __concall ConsoleToWindow_DoSetColor( ConsoleColors color )
 {
-    secondary.DoSetColor(color);
+	secondary.DoSetColor(color);
 }
 
 template< const IConsoleWriter& secondary >

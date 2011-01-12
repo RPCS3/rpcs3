@@ -713,21 +713,22 @@ int AppConfig::GeMaxPresetIndex()
 	return 5;
 }
 
-bool AppConfig::isOkGetPresetTextAndColor(int n, wxString& label, wxColor& c){
-    static const wxString presetNamesAndColors[][2]=
-    {
-        { pxE("!Panel:Presets:Name:1", L"Safest"),          L"Forest GREEN" },
-        { pxE("!Panel:Presets:Name:2", L"Safe (faster)"),   L"Dark Green" },
-        { pxE("!Panel:Presets:Name:3", L"Balanced"),        L"Blue" },
-        { pxE("!Panel:Presets:Name:4", L"Aggressive"),      L"Purple" },
-        { pxE("!Panel:Presets:Name:5", L"Aggressive plus"), L"Orange"},
-        { pxE("!Panel:Presets:Name:6", L"Mostly Harmful"),  L"Red" }
-    };
-    if ( n<0 || n>GeMaxPresetIndex() )
-        return false;
+bool AppConfig::isOkGetPresetTextAndColor( int n, wxString& label, wxColor& c )
+{
+	static const wxString presetNamesAndColors[][2] =
+	{
+		{ pxE("!Panel:Presets:Name:1", L"Safest"),			L"Forest GREEN" },
+		{ pxE("!Panel:Presets:Name:2", L"Safe (faster)"),	L"Dark Green" },
+		{ pxE("!Panel:Presets:Name:3", L"Balanced"),		L"Blue" },
+		{ pxE("!Panel:Presets:Name:4", L"Aggressive"),		L"Purple" },
+		{ pxE("!Panel:Presets:Name:5", L"Aggressive plus"),	L"Orange"},
+		{ pxE("!Panel:Presets:Name:6", L"Mostly Harmful"),	L"Red" }
+	};
+	if( n<0 || n>GeMaxPresetIndex() )
+		return false;
 
-    label = wxString::Format(L"%d - ", n) + presetNamesAndColors[n][0];
-    c     = wxColor(presetNamesAndColors[n][1]);
+	label = wxString::Format(L"%d - ", n) + presetNamesAndColors[n][0];
+	c	  = wxColor(presetNamesAndColors[n][1]);
 
     return true;
 }
@@ -795,12 +796,12 @@ bool AppConfig::IsOkApplyPreset(int n)
 					eeUsed?0:(eeUsed=true, EmuOptions.Speedhacks.EECycleRate  = 1);
 					EnableGameFixes = true;
 					EmuOptions.Gamefixes.EETimingHack = true;
-                    EmuOptions.Speedhacks.vuFlagHack = true;
+					EmuOptions.Speedhacks.vuFlagHack = true;
 
 		case 1 :	//Apply recommended speed hacks (which are individually "ckecked" by default) without mvu flag hack.
 					EnableSpeedHacks = true;
-                    EmuOptions.Speedhacks.IntcStat = true;
-                    EmuOptions.Speedhacks.WaitLoop = true;
+					EmuOptions.Speedhacks.IntcStat = true;
+					EmuOptions.Speedhacks.WaitLoop = true;
 
 		case 0 :	//default application config. + all individual speed hacks unticked to make it visually clear none is used.
 					

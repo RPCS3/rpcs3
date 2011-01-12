@@ -42,7 +42,7 @@ namespace PathDefs
 	// user checks "Use Default paths" option provided on most path selectors.  These are not
 	// used otherwise, in favor of the user-configurable specifications in the ini files.
 
-    extern wxDirName GetUserLocalDataDir();
+	extern wxDirName GetUserLocalDataDir();
 	extern wxDirName GetDocuments();
 	extern wxDirName GetDocuments( DocsModeType mode );
 	extern wxDirName GetThemes();
@@ -50,7 +50,7 @@ namespace PathDefs
 
 extern DocsModeType		DocsFolderMode;				// 
 extern bool				UseDefaultSettingsFolder;	// when TRUE, pcsx2 derives the settings folder from the DocsFolderMode
-extern bool			    UseDefaultLogFolder;
+extern bool				UseDefaultLogFolder;
 extern bool				UseDefaultPluginsFolder;
 extern bool				UseDefaultThemesFolder;
 
@@ -175,7 +175,7 @@ public:
 		bool		IsMaximized;
 		bool		IsFullscreen;
 
-        bool        IsToggleFullscreenOnDoubleClick;
+		bool		IsToggleFullscreenOnDoubleClick;
 
 		GSWindowOptions();
 
@@ -245,10 +245,10 @@ public:
 	bool		EnableGameFixes;
 
 	// Presets try to prevent users from overwhelming when they want to change settings (usually to make a game run faster).
-    // The presets allow to modify the balance between emulation accuracy and emulation speed using a pseudo-linear control.
-    // It's pseudo since there's no way to arrange groups of all of pcsx2's settings such that each next group makes it slighty faster and slightly less compatiible for all games.
-    //However, By carefully selecting these preset config groups, it's hopefully possible to achieve this goal for a reasonable percentage (hopefully above 50%) of the games.
-    //when presets are enabled, the user has practically no control over the emulation settings, and can only choose the preset to use.
+	// The presets allow to modify the balance between emulation accuracy and emulation speed using a pseudo-linear control.
+	// It's pseudo since there's no way to arrange groups of all of pcsx2's settings such that each next group makes it slighty faster and slightly less compatiible for all games.
+	//However, By carefully selecting these preset config groups, it's hopefully possible to achieve this goal for a reasonable percentage (hopefully above 50%) of the games.
+	//when presets are enabled, the user has practically no control over the emulation settings, and can only choose the preset to use.
 
 	// The next 2 vars enable/disable presets alltogether, and select/reflect current preset, respectively.
 	bool		EnablePresets;

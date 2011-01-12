@@ -152,7 +152,7 @@ namespace Panels
 		virtual ~AdvancedOptionsFPU() throw() { }
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
-        void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
+		void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
 	};
 
 	class AdvancedOptionsVU : public BaseAdvancedCpuOptions
@@ -162,19 +162,19 @@ namespace Panels
 		virtual ~AdvancedOptionsVU() throw() { }
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
-        void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
+		void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
 
 	};
 
-    // --------------------------------------------------------------------------------------
+	// --------------------------------------------------------------------------------------
 	//  CpuPanelEE / CpuPanelVU : Actual Panels
 	// --------------------------------------------------------------------------------------
 	class CpuPanelEE : public BaseApplicableConfigPanel_SpecificConfig
 	{
 	protected:
-		pxRadioPanel*	    m_panel_RecEE;
-		pxRadioPanel*	    m_panel_RecIOP;
-        AdvancedOptionsFPU* m_advancedOptsFpu;
+		pxRadioPanel*		m_panel_RecEE;
+		pxRadioPanel*		m_panel_RecIOP;
+		AdvancedOptionsFPU*	m_advancedOptsFpu;
 
 	public:
 		CpuPanelEE( wxWindow* parent );
@@ -182,7 +182,7 @@ namespace Panels
 
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
-        void ApplyConfigToGui(AppConfig& configToApply, bool manuallyPropagate=false);
+		void ApplyConfigToGui(AppConfig& configToApply, bool manuallyPropagate=false);
 
 	protected:
 		void OnRestoreDefaults( wxCommandEvent& evt );
@@ -191,9 +191,9 @@ namespace Panels
 	class CpuPanelVU : public BaseApplicableConfigPanel_SpecificConfig
 	{
 	protected:
-		pxRadioPanel*	    m_panel_VU0;
-		pxRadioPanel*	    m_panel_VU1;
-        Panels::AdvancedOptionsVU*  m_advancedOptsVu;
+		pxRadioPanel*				m_panel_VU0;
+		pxRadioPanel*				m_panel_VU1;
+		Panels::AdvancedOptionsVU*	m_advancedOptsVu;
 
 	public:
 		CpuPanelVU( wxWindow* parent );
@@ -201,7 +201,7 @@ namespace Panels
 
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
-        void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
+		void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
 
 	protected:
 		void OnRestoreDefaults( wxCommandEvent& evt );
@@ -226,7 +226,7 @@ namespace Panels
 
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
-        void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
+		void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -253,7 +253,7 @@ namespace Panels
 
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
-        void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
+		void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -270,7 +270,7 @@ namespace Panels
 		pxCheckBox*		m_check_Fullscreen;
 		pxCheckBox*		m_check_ExclusiveFS;
 		pxCheckBox*		m_check_HideMouse;
-        pxCheckBox*     m_check_DclickFullscreen;
+		pxCheckBox*		m_check_DclickFullscreen;
 
 		wxTextCtrl*		m_text_WindowWidth;
 		wxTextCtrl*		m_text_WindowHeight;
@@ -280,23 +280,23 @@ namespace Panels
 		virtual ~GSWindowSettingsPanel() throw() {}
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
-        void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
+		void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
 	};
 
 	class VideoPanel : public BaseApplicableConfigPanel_SpecificConfig
 	{
 	protected:
-		pxCheckBox*		    m_check_SynchronousGS;
-		pxCheckBox*		    m_check_DisableOutput;
-        FrameSkipPanel*     m_span;
-	    FramelimiterPanel*  m_fpan;
+		pxCheckBox*			m_check_SynchronousGS;
+		pxCheckBox*			m_check_DisableOutput;
+		FrameSkipPanel*		m_span;
+		FramelimiterPanel*	m_fpan;
 
 	public:
 		VideoPanel( wxWindow* parent );
 		virtual ~VideoPanel() throw() {}
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
-        void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
+		void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
 
 	protected:
 		void OnOpenWindowSettings( wxCommandEvent& evt );
@@ -362,7 +362,7 @@ namespace Panels
 		void OnEnable_Toggled( wxCommandEvent& evt );
 		void Apply();
 		void AppStatusEvent_OnSettingsApplied();
-        void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
+		void ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate=false );
 	};
 
 	// --------------------------------------------------------------------------------------

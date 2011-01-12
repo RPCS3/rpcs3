@@ -75,32 +75,32 @@ static void CheckPluginsOverrides()
 //#define PRESETS_USE_APPLIED_CONFIG_ON_UNCHECK
 void Dialogs::SysConfigDialog::UpdateGuiForPreset ( int presetIndex, bool presetsEnabled )
 {
-    AppConfig preset = *g_Conf;
-    preset.IsOkApplyPreset(presetIndex);
-    preset.EnablePresets=presetsEnabled;//override IsOkApplyPreset to actual required state
+	AppConfig preset = *g_Conf;
+	preset.IsOkApplyPreset(presetIndex);
+	preset.EnablePresets=presetsEnabled;//override IsOkApplyPreset to actual required state
 
  	if( m_listbook ){
-        //Console.WriteLn("Applying config to Gui: preset #%d, presets enabled: %s", presetIndex, presetsEnabled?"true":"false");
+		//Console.WriteLn("Applying config to Gui: preset #%d, presets enabled: %s", presetIndex, presetsEnabled?"true":"false");
  		size_t pages = m_labels.GetCount();
-        for( size_t i=0; i<pages; ++i ){
-            bool origPresetsEnabled = g_Conf->EnablePresets;
-            if( !presetsEnabled )
-                g_Conf->EnablePresets = false; // unly used when PRESETS_USE_APPLIED_CONFIG_WHEN_UNCHECKED is NOT defined
+		for( size_t i=0; i<pages; ++i ){
+			bool origPresetsEnabled = g_Conf->EnablePresets;
+			if( !presetsEnabled )
+				g_Conf->EnablePresets = false; // unly used when PRESETS_USE_APPLIED_CONFIG_WHEN_UNCHECKED is NOT defined
 
  			(
  				(BaseApplicableConfigPanel_SpecificConfig*)(m_listbook->GetPage(i))
 
 #ifdef PRESETS_USE_APPLIED_CONFIG_ON_UNCHECK
-             )->ApplyConfigToGui( presetsEnabled?preset:*g_Conf, true );
-            //Console.WriteLn("SysConfigDialog::UpdateGuiForPreset: Using object: %s", presetsEnabled?"preset":"*g_Conf");
+			)->ApplyConfigToGui( presetsEnabled?preset:*g_Conf, true );
+			//Console.WriteLn("SysConfigDialog::UpdateGuiForPreset: Using object: %s", presetsEnabled?"preset":"*g_Conf");
 #else
-             )->ApplyConfigToGui( preset, true );
-            //Console.WriteLn("SysConfigDialog::UpdateGuiForPreset: Using object: %s", "preset");
+			)->ApplyConfigToGui( preset, true );
+			//Console.WriteLn("SysConfigDialog::UpdateGuiForPreset: Using object: %s", "preset");
 #endif
-            g_Conf->EnablePresets = origPresetsEnabled;
-        }
+			g_Conf->EnablePresets = origPresetsEnabled;
+		}
 
-    }
+	}
 
 }
 
@@ -110,7 +110,7 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL /*| wxSL_AUTOTICKS | wxSL_LABELS */);
 
 	m_slider_presets->SetToolTip(
-        pxE( "!Notice:Tooltip:Presets:Slider",
+		pxE( "!Notice:Tooltip:Presets:Slider",
 				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
 				L"Known important game fixes ('Patches') will be applied automatically.\n\n"
 				L"Presets info:\n"
@@ -124,7 +124,7 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 
 	m_check_presets = new pxCheckBox( this, pxE("!Panel:", L"Preset:"), 0);
 	m_check_presets->SetToolTip(
-        pxE( "!Notice:Tooltip:Presets:Checkbox",
+		pxE( "!Notice:Tooltip:Presets:Checkbox",
 				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
 				L"Known important game fixes ('Patches') will be applied automatically.\n\n"
 //This creates nested macros = not working. Un/comment manually if needed.
@@ -137,10 +137,10 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 			)
 	);
 	m_check_presets->SetValue(!!g_Conf->EnablePresets);
-    //Console.WriteLn("--> SysConfigDialog::AddPresetsControl: EnablePresets: %s", g_Conf->EnablePresets?"true":"false");
+	//Console.WriteLn("--> SysConfigDialog::AddPresetsControl: EnablePresets: %s", g_Conf->EnablePresets?"true":"false");
 
 	wxString l; wxColor c(wxColour( L"Red" ));
-    AppConfig::isOkGetPresetTextAndColor(g_Conf->PresetIndex, l, c);
+	AppConfig::isOkGetPresetTextAndColor(g_Conf->PresetIndex, l, c);
 	m_msg_preset = new pxStaticText(this, l, wxALIGN_LEFT);
 	m_msg_preset->Enable(g_Conf->EnablePresets);
 	m_msg_preset->SetForegroundColour( c );
@@ -157,9 +157,9 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 	*m_extraButtonSizer += 5;
 	*m_extraButtonSizer += *m_msg_preset	 | pxMiddle;
 
-    Connect( m_slider_presets->GetId(),	wxEVT_SCROLL_THUMBTRACK,    wxScrollEventHandler( Dialogs::SysConfigDialog::Preset_Scroll ) );
-	Connect( m_slider_presets->GetId(),	wxEVT_SCROLL_CHANGED,       wxScrollEventHandler( Dialogs::SysConfigDialog::Preset_Scroll ) );
-	Connect( m_check_presets->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( Dialogs::SysConfigDialog::Presets_Toggled ) );
+	Connect( m_slider_presets->GetId(),	wxEVT_SCROLL_THUMBTRACK,		wxScrollEventHandler( Dialogs::SysConfigDialog::Preset_Scroll ) );
+	Connect( m_slider_presets->GetId(),	wxEVT_SCROLL_CHANGED,			wxScrollEventHandler( Dialogs::SysConfigDialog::Preset_Scroll ) );
+	Connect( m_check_presets->GetId(), 	wxEVT_COMMAND_CHECKBOX_CLICKED,	wxCommandEventHandler( Dialogs::SysConfigDialog::Presets_Toggled ) );
 }
 
 
@@ -168,9 +168,9 @@ void Dialogs::SysConfigDialog::Presets_Toggled(wxCommandEvent &event)
 {
 	m_slider_presets->Enable( m_check_presets->IsChecked() );
 	m_msg_preset->Enable( m_check_presets->IsChecked() );
-    UpdateGuiForPreset( m_slider_presets->GetValue(), m_check_presets->IsChecked() );
+	UpdateGuiForPreset( m_slider_presets->GetValue(), m_check_presets->IsChecked() );
 
-    event.Skip();
+	event.Skip();
 }
 
 
@@ -178,19 +178,19 @@ void Dialogs::SysConfigDialog::Preset_Scroll(wxScrollEvent &event)
 {	
 	wxString pl;
 	wxColor c;
-    AppConfig::isOkGetPresetTextAndColor(m_slider_presets->GetValue(), pl, c);
+	AppConfig::isOkGetPresetTextAndColor(m_slider_presets->GetValue(), pl, c);
 	m_msg_preset->SetLabel(pl);
 	m_msg_preset->SetForegroundColour( c );
 
-    UpdateGuiForPreset( m_slider_presets->GetValue(), m_check_presets->IsChecked() );
+	UpdateGuiForPreset( m_slider_presets->GetValue(), m_check_presets->IsChecked() );
 	event.Skip();
 }
 
 void Dialogs::SysConfigDialog::Apply()
 {
-    //Console.WriteLn("Applying preset to to g_Conf: Preset index: %d, EnablePresets: %s", (int)m_slider_presets->GetValue(), m_check_presets->IsChecked()?"true":"false");
-	g_Conf->EnablePresets   = m_check_presets->IsChecked();
-    g_Conf->PresetIndex     = m_slider_presets->GetValue();
+	//Console.WriteLn("Applying preset to to g_Conf: Preset index: %d, EnablePresets: %s", (int)m_slider_presets->GetValue(), m_check_presets->IsChecked()?"true":"false");
+	g_Conf->EnablePresets	= m_check_presets->IsChecked();
+	g_Conf->PresetIndex		= m_slider_presets->GetValue();
 }
 
 
@@ -205,7 +205,7 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	AddPage<CpuPanelEE>				( pxL("EE/IOP"),		cfgid.Cpu );
 	AddPage<CpuPanelVU>				( pxL("VUs"),			cfgid.Cpu );
 	AddPage<VideoPanel>				( pxL("GS"),			cfgid.Cpu );
-	AddPage<GSWindowSettingsPanel>	( pxL("GS Window"),	    cfgid.Video );
+	AddPage<GSWindowSettingsPanel>	( pxL("GS Window"),		cfgid.Video );
 	AddPage<SpeedHacksPanel>		( pxL("Speedhacks"),	cfgid.Speedhacks );
 	AddPage<GameFixesPanel>			( pxL("Game Fixes"),	cfgid.Gamefixes );
 

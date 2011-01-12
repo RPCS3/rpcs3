@@ -439,7 +439,7 @@ void Pcsx2App::LogicalVsync()
 	// Only call PADupdate here if we're using GSopen2.  Legacy GSopen plugins have the
 	// GS window belonging to the MTGS thread.
 	if( (PADupdate != NULL) && (GSopen2 != NULL) && (wxGetApp().GetGsFramePtr() != NULL) )
- 		PADupdate(0);
+		PADupdate(0);
 
 	while( const keyEvent* ev = PADkeyEvent() )
 	{

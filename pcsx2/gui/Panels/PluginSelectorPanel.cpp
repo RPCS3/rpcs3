@@ -80,9 +80,9 @@ protected:
 	wxString			m_plugpath;
 	wxDynamicLibrary	m_plugin;
 
-	_PS2EgetLibType     m_GetLibType;
-	_PS2EgetLibName     m_GetLibName;
-	_PS2EgetLibVersion2 m_GetLibVersion2;
+	_PS2EgetLibType		m_GetLibType;
+	_PS2EgetLibName		m_GetLibName;
+	_PS2EgetLibVersion2	m_GetLibVersion2;
 
 	u32 m_type;
 

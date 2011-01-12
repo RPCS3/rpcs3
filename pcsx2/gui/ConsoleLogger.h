@@ -54,10 +54,10 @@ extern PipeRedirectionBase* NewPipeRedir( FILE* stdstream );
 class pxLogConsole : public wxLog
 {
 public:
-    pxLogConsole() {}
+	pxLogConsole() {}
 
 protected:
-    virtual void DoLog(wxLogLevel level, const wxChar *szString, time_t t);
+	virtual void DoLog(wxLogLevel level, const wxChar *szString, time_t t);
 };
 
 

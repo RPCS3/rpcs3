@@ -95,7 +95,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 	m_check_Enable = new pxCheckBox( this, _("Enable game fixes"),
 		pxE( "!Panel:Gamefixes:Compat Warning",
 			L"Gamefixes can fix wrong emulation in some games. However "
-            L"it can cause compatibility or performance issues in other games.  You "
+			L"it can cause compatibility or performance issues in other games.  You "
 			L"will need to turn off fixes manually when changing games."
 		)
 	);
@@ -117,7 +117,7 @@ void Panels::GameFixesPanel::Apply()
 	g_Conf->EnableGameFixes = m_check_Enable->GetValue();
 
 	Pcsx2Config::GamefixOptions& opts( g_Conf->EmuOptions.Gamefixes );
-    for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
+	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
 		opts.Set((GamefixId)i, m_checkbox[i]->GetValue());
 
 	// make sure the user's command line specifications are disabled (if present).
@@ -126,23 +126,23 @@ void Panels::GameFixesPanel::Apply()
 
 void Panels::GameFixesPanel::EnableStuff( AppConfig* configToUse )
 {
-    if( !configToUse ) configToUse = g_Conf;
-    for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
-    	m_checkbox[i]->Enable(m_check_Enable->GetValue() && !configToUse->EnablePresets);
+	if( !configToUse ) configToUse = g_Conf;
+	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)
+		m_checkbox[i]->Enable(m_check_Enable->GetValue() && !configToUse->EnablePresets);
 }
 
 void Panels::GameFixesPanel::OnEnable_Toggled( wxCommandEvent& evt )
 {
-    AppConfig tmp=*g_Conf;
-    tmp.EnablePresets=false; //if clicked, button was enabled, so not using a preset --> let EnableStuff work
+	AppConfig tmp=*g_Conf;
+	tmp.EnablePresets=false; //if clicked, button was enabled, so not using a preset --> let EnableStuff work
 
-    EnableStuff( &tmp );
+	EnableStuff( &tmp );
 	evt.Skip();
 }
 
 void Panels::GameFixesPanel::AppStatusEvent_OnSettingsApplied()
 {
-    ApplyConfigToGui( *g_Conf );
+	ApplyConfigToGui( *g_Conf );
 }
 
 void Panels::GameFixesPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )

@@ -113,7 +113,7 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 
 void Panels::FramelimiterPanel::AppStatusEvent_OnSettingsApplied()
 {
-    ApplyConfigToGui( *g_Conf );
+	ApplyConfigToGui( *g_Conf );
 }
 
 void Panels::FramelimiterPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
@@ -131,11 +131,11 @@ void Panels::FramelimiterPanel::ApplyConfigToGui( AppConfig& configToApply, bool
 	m_text_BaseNtsc		->SetValue( gsconf.FramerateNTSC.ToString() );
 	m_text_BasePal		->SetValue( gsconf.FrameratePAL.ToString() );
 
-	m_spin_NominalPct   ->Enable(!configToApply.EnablePresets);
-	m_spin_TurboPct     ->Enable(!configToApply.EnablePresets);
-	m_spin_SlomoPct     ->Enable(!configToApply.EnablePresets);
-	m_text_BaseNtsc     ->Enable(!configToApply.EnablePresets);
-	m_text_BasePal      ->Enable(!configToApply.EnablePresets);
+	m_spin_NominalPct	->Enable(!configToApply.EnablePresets);
+	m_spin_TurboPct		->Enable(!configToApply.EnablePresets);
+	m_spin_SlomoPct		->Enable(!configToApply.EnablePresets);
+	m_text_BaseNtsc		->Enable(!configToApply.EnablePresets);
+	m_text_BasePal		->Enable(!configToApply.EnablePresets);
 }
 
 void Panels::FramelimiterPanel::Apply()
@@ -248,7 +248,7 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 
 void Panels::FrameSkipPanel::AppStatusEvent_OnSettingsApplied()
 {
-    ApplyConfigToGui( *g_Conf );
+	ApplyConfigToGui( *g_Conf );
 }
 
 void Panels::FrameSkipPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
@@ -369,7 +369,7 @@ void Panels::VideoPanel::Apply()
 
 void Panels::VideoPanel::AppStatusEvent_OnSettingsApplied()
 {
-    ApplyConfigToGui(*g_Conf);
+	ApplyConfigToGui(*g_Conf);
 }
 
 void Panels::VideoPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate ){
@@ -380,10 +380,10 @@ void Panels::VideoPanel::ApplyConfigToGui( AppConfig& configToApply, bool manual
 	m_check_SynchronousGS->Enable(!configToApply.EnablePresets);
 	m_check_DisableOutput->Enable(!configToApply.EnablePresets);
 
-    if( manuallyPropagate )
-    {
-        m_span->ApplyConfigToGui( configToApply, true );
-        m_fpan->ApplyConfigToGui( configToApply, true );
-    }
+	if( manuallyPropagate )
+	{
+		m_span->ApplyConfigToGui( configToApply, true );
+		m_fpan->ApplyConfigToGui( configToApply, true );
+	}
 }
 

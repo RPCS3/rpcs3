@@ -243,8 +243,8 @@ void GSPanel::AppStatusEvent_OnSettingsApplied()
 
 void GSPanel::OnLeftDclick(wxMouseEvent& evt)
 {
-    if( !g_Conf->GSWindow.IsToggleFullscreenOnDoubleClick )
-        return;
+	if( !g_Conf->GSWindow.IsToggleFullscreenOnDoubleClick )
+		return;
 
 	Console.WriteLn("GSPanel::OnDoubleClick: Invoking Fullscreen-Toggle accelerator.");
 	DirectKeyCommand(FULLSCREEN_TOGGLE_ACCELERATOR_GSPANEL);
