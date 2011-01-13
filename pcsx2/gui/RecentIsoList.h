@@ -60,7 +60,7 @@ protected:
 	void OnChangedSelection( wxCommandEvent& evt );
 	void LoadListFrom( IniInterface& ini );
 
-	void AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& ini );
+	void AppStatusEvent_OnUiSettingsLoadSave( const AppSettingsEventInfo& ini );
 	void AppStatusEvent_OnSettingsApplied();
 };
 

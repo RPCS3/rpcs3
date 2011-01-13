@@ -439,8 +439,6 @@ Panels::PluginSelectorPanel::PluginSelectorPanel( wxWindow* parent )
 	Connect( wxEVT_COMMAND_COMBOBOX_SELECTED,	wxCommandEventHandler( PluginSelectorPanel::OnPluginSelected ) );
 
 	Connect( ButtonId_Configure, wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PluginSelectorPanel::OnConfigure_Clicked ) );
-
-	AppStatusEvent_OnSettingsApplied();
 }
 
 Panels::PluginSelectorPanel::~PluginSelectorPanel() throw()
@@ -455,7 +453,7 @@ void Panels::PluginSelectorPanel::AppStatusEvent_OnSettingsApplied()
 
 static wxString GetApplyFailedMsg()
 {
-	return wxsFormat( pxE( "!Notice:PluginSelector:ApplyFailed",
+	return pxsFmt( pxE( "!Notice:PluginSelector:ApplyFailed",
 		L"All plugins must have valid selections for %s to run.  If you are unable to make "
 		L"a valid selection due to missing plugins or an incomplete install of %s, then "
 		L"press cancel to close the Configuration panel."

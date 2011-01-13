@@ -22,8 +22,8 @@ template class EventSource< IEventListener_CoreThread >;
 template class EventSource< IEventListener_Plugins >;
 template class EventSource< IEventListener_AppStatus >;
 
-AppSettingsEventInfo::AppSettingsEventInfo( IniInterface& ini )
-	: AppEventInfo( ini.IsSaving() ? AppStatus_SettingsSaved : AppStatus_SettingsLoaded )
+AppSettingsEventInfo::AppSettingsEventInfo( IniInterface& ini, AppEventType evt_type )
+	: AppEventInfo( evt_type )
 	, m_ini( ini )
 {
 }
@@ -95,13 +95,24 @@ void IEventListener_AppStatus::DispatchEvent( const AppEventInfo& evtinfo )
 {
 	switch( evtinfo.evt_type )
 	{
-		case AppStatus_SettingsLoaded:
-		case AppStatus_SettingsSaved:
-			AppStatusEvent_OnSettingsLoadSave( (const AppSettingsEventInfo&)evtinfo );
+		case AppStatus_UiSettingsLoaded:
+		case AppStatus_UiSettingsSaved:
+			AppStatusEvent_OnUiSettingsLoadSave( (const AppSettingsEventInfo&)evtinfo );
 		break;
 
-		case AppStatus_SettingsApplied:	AppStatusEvent_OnSettingsApplied();	break;
-		case AppStatus_Exiting:			AppStatusEvent_OnExit();			break;
+		case AppStatus_VmSettingsLoaded:
+		case AppStatus_VmSettingsSaved:
+			AppStatusEvent_OnVmSettingsLoadSave( (const AppSettingsEventInfo&)evtinfo );
+		break;
+
+		case AppStatus_SettingsApplied:
+			AppStatusEvent_OnSettingsApplied();
+		break;
+
+
+		case AppStatus_Exiting:
+			AppStatusEvent_OnExit();
+		break;
 	}
 }
 
@@ -146,10 +157,16 @@ void Pcsx2App::DispatchEvent( CoreThreadStatus evt )
 	CoreThread.RethrowException();
 }
 
-void Pcsx2App::DispatchEvent( IniInterface& ini )
+void Pcsx2App::DispatchUiSettingsEvent( IniInterface& ini )
 {
 	if( !AffinityAssert_AllowFrom_MainUI() ) return;
-	m_evtsrc_AppStatus.Dispatch( AppSettingsEventInfo( ini ) );
+	m_evtsrc_AppStatus.Dispatch( AppSettingsEventInfo( ini, ini.IsSaving() ? AppStatus_UiSettingsSaved : AppStatus_UiSettingsLoaded ) );
+}
+
+void Pcsx2App::DispatchVmSettingsEvent( IniInterface& ini )
+{
+	if( !AffinityAssert_AllowFrom_MainUI() ) return;
+	m_evtsrc_AppStatus.Dispatch( AppSettingsEventInfo( ini, ini.IsSaving() ? AppStatus_VmSettingsSaved : AppStatus_VmSettingsLoaded ) );
 }
 
 

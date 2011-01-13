@@ -298,6 +298,8 @@ extern void AppSaveSettings();
 extern void AppApplySettings( const AppConfig* oldconf=NULL );
 
 extern void App_LoadSaveInstallSettings( IniInterface& ini );
+extern void App_SaveInstallSettings( wxConfigBase* ini );
+extern void App_LoadInstallSettings( wxConfigBase* ini );
 
 extern void ConLog_LoadSaveSettings( IniInterface& ini );
 extern void SysTraceLog_LoadSaveSettings( IniInterface& ini );

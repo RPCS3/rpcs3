@@ -74,7 +74,8 @@ void BaseApplicableDialog::Init()
 void BaseApplicableDialog::OnSettingsApplied( wxCommandEvent& evt )
 {
 	evt.Skip();
-	if( evt.GetId() == GetId() ) AppStatusEvent_OnSettingsApplied();
+	if( evt.GetId() == GetId() )
+		AppStatusEvent_OnSettingsApplied();
 }
 
 

@@ -30,8 +30,11 @@ enum CoreThreadStatus
 
 enum AppEventType
 {
-	AppStatus_SettingsLoaded,
-	AppStatus_SettingsSaved,
+	AppStatus_UiSettingsLoaded,
+	AppStatus_UiSettingsSaved,
+	AppStatus_VmSettingsLoaded,
+	AppStatus_VmSettingsSaved,
+
 	AppStatus_SettingsApplied,
 	AppStatus_Exiting
 };
@@ -41,9 +44,9 @@ enum PluginEventType
 	CorePlugins_Loaded,
 	CorePlugins_Init,
 	CorePlugins_Opening,		// dispatched prior to plugins being opened
-	CorePlugins_Opened,		// dispatched after plugins are opened
+	CorePlugins_Opened,			// dispatched after plugins are opened
 	CorePlugins_Closing,		// dispatched prior to plugins being closed
-	CorePlugins_Closed,		// dispatched after plugins are closed
+	CorePlugins_Closed,			// dispatched after plugins are closed
 	CorePlugins_Shutdown,
 	CorePlugins_Unloaded,
 };
@@ -62,7 +65,7 @@ struct AppSettingsEventInfo : AppEventInfo
 {
 	IniInterface&	m_ini;
 
-	AppSettingsEventInfo( IniInterface&	ini );
+	AppSettingsEventInfo( IniInterface&	ini, AppEventType evt_type );
 
 	IniInterface& GetIni() const
 	{
@@ -143,7 +146,9 @@ public:
 	virtual void DispatchEvent( const AppEventInfo& evtinfo );
 
 protected:
-	virtual void AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& evtinfo ) {}
+	virtual void AppStatusEvent_OnUiSettingsLoadSave( const AppSettingsEventInfo& evtinfo ) {}
+	virtual void AppStatusEvent_OnVmSettingsLoadSave( const AppSettingsEventInfo& evtinfo ) {}
+
 	virtual void AppStatusEvent_OnSettingsApplied() {}
 	virtual void AppStatusEvent_OnExit() {}
 };
@@ -189,7 +194,7 @@ public:
 	virtual ~EventListenerHelper_CoreThread() throw() {}
 
 protected:
-	void OnCoreThread_Indeterminate()	{ Owner.OnCoreThread_Indeterminate(); }
+	void CoreThread_OnIndeterminate()	{ Owner.OnCoreThread_Indeterminate(); }
 	void CoreThread_OnStarted()			{ Owner.OnCoreThread_Started(); }
 	void CoreThread_OnResumed()			{ Owner.OnCoreThread_Resumed(); }
 	void CoreThread_OnSuspended()		{ Owner.OnCoreThread_Suspended(); }
@@ -245,7 +250,8 @@ public:
 	virtual ~EventListenerHelper_AppStatus() throw() {}
 
 protected:
-	virtual void AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& evtinfo ) { Owner.AppStatusEvent_OnSettingsLoadSave( evtinfo ); }
+	virtual void AppStatusEvent_OnUiSettingsLoadSave( const AppSettingsEventInfo& evtinfo ) { Owner.AppStatusEvent_OnUiSettingsLoadSave( evtinfo ); }
+	virtual void AppStatusEvent_OnVmSettingsLoadSave( const AppSettingsEventInfo& evtinfo ) { Owner.AppStatusEvent_OnVmSettingsLoadSave( evtinfo ); }
 	virtual void AppStatusEvent_OnSettingsApplied() { Owner.AppStatusEvent_OnSettingsApplied(); }
 	virtual void AppStatusEvent_OnExit() { Owner.AppStatusEvent_OnExit(); }
 };

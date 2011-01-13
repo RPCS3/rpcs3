@@ -285,18 +285,12 @@ namespace FilenameDefs
 {
 	wxFileName GetUiConfig()
 	{
-		// FIXME? ini extension on Win32 is normal.  Linux ini filename default might differ
-		// from this?  like pcsx2_conf or something ... ? --air
-
-		return pxGetAppName() + L".ini";
+		return pxGetAppName() + L"_ui.ini";
 	}
 
 	wxFileName GetVmConfig()
 	{
-		// FIXME? ini extension on Win32 is normal.  Linux ini filename default might differ
-		// from this?  like pcsx2_conf or something ... ? --air
-
-		return pxGetAppName() + L".ini";
+		return pxGetAppName() + L"_vm.ini";
 	}
 
 	wxFileName GetUsermodeConfig()
@@ -435,6 +429,18 @@ void App_LoadSaveInstallSettings( IniInterface& ini )
 	ini.Entry( L"ThemesFolder",				ThemesFolder,				InstallFolder + PathDefs::Base::Themes() );
 
 	ini.Flush();
+}
+
+void App_LoadInstallSettings( wxConfigBase* ini )
+{
+	IniLoader loader( ini );
+	App_LoadSaveInstallSettings( loader );
+}
+
+void App_SaveInstallSettings( wxConfigBase* ini )
+{
+	IniSaver saver( ini );
+	App_LoadSaveInstallSettings( saver );
 }
 
 // ------------------------------------------------------------------------
@@ -962,11 +968,8 @@ AppIniLoader::AppIniLoader()
 {
 }
 
-
-void AppLoadSettings()
+static void LoadUiSettings()
 {
-	if( wxGetApp().Rpc_TryInvoke(AppLoadSettings) ) return;
-
 	AppIniLoader loader;
 	ConLog_LoadSaveSettings( loader );
 	SysTraceLog_LoadSaveSettings( loader );
@@ -977,21 +980,56 @@ void AppLoadSettings()
 	if( !wxFile::Exists( g_Conf->CurrentIso ) )
 		g_Conf->CurrentIso.clear();
 
+	sApp.DispatchUiSettingsEvent( loader );
+}
+
+static void LoadVmSettings()
+{
 	// Load virtual machine options and apply some defaults overtop saved items, which
 	// are regulated by the PCSX2 UI.
 
-	{
-		ScopedPtr<wxFileConfig> vmini( OpenFileConfig( GetVmSettingsFilename() ) );
-		IniLoader vmloader( vmini );
-		g_Conf->EmuOptions.LoadSave( vmloader );
-		g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.NominalScalar;
+	ScopedPtr<wxFileConfig> vmini( OpenFileConfig( GetVmSettingsFilename() ) );
+	IniLoader vmloader( vmini );
+	g_Conf->EmuOptions.LoadSave( vmloader );
+	g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.NominalScalar;
 
-		if (g_Conf->EnablePresets){
-			g_Conf->IsOkApplyPreset(g_Conf->PresetIndex);
-		}
+	if (g_Conf->EnablePresets){
+		g_Conf->IsOkApplyPreset(g_Conf->PresetIndex);
 	}
 
-	sApp.DispatchEvent( loader );
+	sApp.DispatchVmSettingsEvent( vmloader );
+}
+
+void AppLoadSettings()
+{
+	if( wxGetApp().Rpc_TryInvoke(AppLoadSettings) ) return;
+
+	LoadUiSettings();
+	LoadVmSettings();
+}
+
+static void SaveUiSettings()
+{	
+	if( !wxFile::Exists( g_Conf->CurrentIso ) )
+		g_Conf->CurrentIso.clear();
+
+	sApp.GetRecentIsoManager().Add( g_Conf->CurrentIso );
+
+	AppIniSaver saver;
+	g_Conf->LoadSave( saver );
+	ConLog_LoadSaveSettings( saver );
+	SysTraceLog_LoadSaveSettings( saver );
+
+	sApp.DispatchUiSettingsEvent( saver );
+}
+
+static void SaveVmSettings()
+{
+	ScopedPtr<wxFileConfig> vmini( OpenFileConfig( GetVmSettingsFilename() ) );
+	IniSaver vmsaver( vmini );
+	g_Conf->EmuOptions.LoadSave( vmsaver );
+
+	sApp.DispatchVmSettingsEvent( vmsaver );
 }
 
 void AppSaveSettings()
@@ -1009,28 +1047,12 @@ void AppSaveSettings()
 		return;
 	}
 
-	if( !wxFile::Exists( g_Conf->CurrentIso ) )
-		g_Conf->CurrentIso.clear();
-
-	sApp.GetRecentIsoManager().Add( g_Conf->CurrentIso );
+	SaveUiSettings();
+	SaveVmSettings();
 
 	AtomicExchange( isPosted, false );
-
-	AppIniSaver saver;
-	g_Conf->LoadSave( saver );
-	ConLog_LoadSaveSettings( saver );
-	SysTraceLog_LoadSaveSettings( saver );
-
-	// Save virtual machine items.
-
-	{
-		ScopedPtr<wxFileConfig> vmini( OpenFileConfig( GetVmSettingsFilename() ) );
-		IniSaver vmsaver( vmini );
-		g_Conf->EmuOptions.LoadSave( vmsaver );
-	}
-
-	sApp.DispatchEvent( saver );
 }
+
 
 // Returns the current application configuration file.  This is preferred over using
 // wxConfigBase::GetAppConfig(), since it defaults to *not* creating a config file

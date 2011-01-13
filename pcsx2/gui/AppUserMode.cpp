@@ -317,16 +317,14 @@ void Pcsx2App::EstablishAppUserMode()
 	bool runWiz;
 	conf_install->Read( L"RunWizard", &runWiz, true );
 
-	IniLoader loader( conf_install );
-	App_LoadSaveInstallSettings( loader );
+	App_LoadInstallSettings( conf_install );
 
 	if( !Startup.ForceWizard && !runWiz ) return;
 
 	DoFirstTimeWizard();
 
 	// Save user's new settings
-	IniSaver saver( *conf_install );
-	App_LoadSaveInstallSettings( saver );
+	App_SaveInstallSettings( conf_install );
 	AppConfig_OnChangedSettingsFolder( true );
 	AppSaveSettings();
 

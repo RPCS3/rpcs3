@@ -274,11 +274,6 @@ void MainEmuFrame::DispatchEvent( const CoreThreadStatus& status )
 	ApplyCoreStatus();
 }
 
-void MainEmuFrame::AppStatusEvent_OnSettingsLoadSave()
-{
-	// nothing to do here right now.
-}
-
 void MainEmuFrame::AppStatusEvent_OnSettingsApplied()
 {
 	ApplySettings();

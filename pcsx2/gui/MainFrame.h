@@ -132,7 +132,6 @@ protected:
 
 	virtual void DispatchEvent( const PluginEventType& plugin_evt );
 	virtual void DispatchEvent( const CoreThreadStatus& status );
-	virtual void AppStatusEvent_OnSettingsLoadSave();
 	virtual void AppStatusEvent_OnSettingsApplied();
 
 public:

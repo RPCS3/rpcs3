@@ -613,7 +613,7 @@ void Pcsx2App::CleanupOnExit()
 void Pcsx2App::CleanupResources()
 {
 	ScopedBusyCursor cursor( Cursor_ReallyBusy );
-	delete wxConfigBase::Set( NULL );
+	//delete wxConfigBase::Set( NULL );
 
 	while( wxGetLocale() != NULL )
 		delete wxGetLocale();

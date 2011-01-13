@@ -186,7 +186,7 @@ void RecentIsoManager::AppStatusEvent_OnSettingsApplied()
 	// TODO : Implement application of Recent Iso List "maximum" history option
 }
 
-void RecentIsoManager::AppStatusEvent_OnSettingsLoadSave( const AppSettingsEventInfo& evt )
+void RecentIsoManager::AppStatusEvent_OnUiSettingsLoadSave( const AppSettingsEventInfo& evt )
 {
 	IniInterface& ini( evt.GetIni() );
 

@@ -71,7 +71,7 @@ namespace Panels
 Panels::FirstTimeIntroPanel::FirstTimeIntroPanel( wxWindow* parent )
 	: wxPanelWithHelpers( parent, wxVERTICAL )
 {
-	SetMinWidth( 640 );
+	SetMinWidth( 600 );
 
 	FastFormatUnicode faqFile;
 	faqFile.Write( L"file:///%s/Docs/PCSX2 FAQ %u.%u.%u.pdf",
@@ -81,9 +81,10 @@ Panels::FirstTimeIntroPanel::FirstTimeIntroPanel( wxWindow* parent )
 	wxStaticBoxSizer& langSel	= *new wxStaticBoxSizer( wxVERTICAL, this, _("Language selector") );
 
 	langSel += new Panels::LanguageSelectionPanel( this ) | StdCenter();
-	langSel += Label(_("Change this only if you need to.\nThe system default should be fine for most operating systems."));
+	langSel += Heading(_("Change the language only if you need to.\nThe system default should be fine for most operating systems."));
+	langSel += 8;
 
-	*this += langSel | StdCenter();
+	*this += langSel | StdExpand();
 	*this += GetCharHeight() * 2;
 
 	*this += Heading(AddAppName(L"Welcome to %s!")).Bold();
@@ -101,11 +102,11 @@ Panels::FirstTimeIntroPanel::FirstTimeIntroPanel( wxWindow* parent )
 
 	*this	+= new wxHyperlinkCtrl( this, wxID_ANY,
 		_("Configuration Guides (online)"), L"http://www.pcsx2.net/guide.php"
-	) | pxProportion(1).Center().Border( wxALL, 5 );
+	) | pxCenter.Border( wxALL, 5 );
 		
 	*this	+= new wxHyperlinkCtrl( this, wxID_ANY,
 		_("Readme / FAQ (Offline/PDF)"), faqFile.c_str()
-	) | pxProportion(1).Center().Border( wxALL, 5 );
+	) | pxCenter.Border( wxALL, 5 );
 
 }
 

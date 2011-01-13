@@ -394,9 +394,8 @@ void Pcsx2Config::Load( const wxString& srcfile )
 {
 	//m_IsLoaded = true;
 
-	// Note: Extra parenthesis resolves "I think this is a function" issues with C++.
 	wxFileConfig cfg( srcfile );
-	IniLoader loader( (IniLoader( cfg )) );
+	IniLoader loader( cfg );
 	LoadSave( loader );
 }
 
@@ -405,6 +404,6 @@ void Pcsx2Config::Save( const wxString& dstfile )
 	//if( !m_IsLoaded ) return;
 
 	wxFileConfig cfg( dstfile );
-	IniSaver saver( (IniSaver( cfg )) );
+	IniSaver saver( cfg );
 	LoadSave( saver );
 }
