@@ -319,7 +319,11 @@ void Pcsx2App::EstablishAppUserMode()
 
 	App_LoadInstallSettings( conf_install );
 
-	if( !Startup.ForceWizard && !runWiz ) return;
+	if( !Startup.ForceWizard && !runWiz )
+	{
+		AppConfig_OnChangedSettingsFolder( false );
+		return;
+	}
 
 	DoFirstTimeWizard();
 
