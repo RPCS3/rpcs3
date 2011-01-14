@@ -79,7 +79,7 @@ namespace GSDumpGUI
                 GSDXWrapper wrap = new GSDXWrapper();
                 foreach (var itm in File)
                 {
-                    if (GSDXWrapper.IsValidGSDX(itm))
+                    try
                     {
                         wrap.Load(itm);
 
@@ -88,7 +88,7 @@ namespace GSDumpGUI
                         
                         wrap.Unload();
                     }
-                    else
+                    catch (InvalidGSPlugin)
                     {
                         txtIntLog.Text += "Failed to load \"" + itm + "\". Is it really a GSDX DLL?" + Environment.NewLine;
                     }

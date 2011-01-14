@@ -25,6 +25,11 @@ namespace GSDumpGUI
     public delegate IntPtr PSEgetLibName();
     public delegate void GSinit();
 
+    public class InvalidGSPlugin : Exception
+    {
+        public InvalidGSPlugin(string reason) : base(reason) {}
+    }
+
     public class GSDXWrapper
     {
         static public bool DumpTooOld = false;
@@ -60,101 +65,77 @@ namespace GSDumpGUI
         public AutoResetEvent ExternalEvent;
         public int RunTo;
 
-        static public Boolean IsValidGSDX(String DLL)
-        {
-            NativeMethods.SetErrorMode(0x8007);
-            Boolean Ris = true;
-
-            Directory.SetCurrentDirectory(Path.GetDirectoryName(DLL));
-            IntPtr hmod = NativeMethods.LoadLibrary(DLL);
-            if (hmod.ToInt64() > 0)
-            {
-                IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PS2EgetLibName");
-                IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
-
-                IntPtr funcaddrGIF = NativeMethods.GetProcAddress(hmod, "GSgifTransfer");
-                IntPtr funcaddrVSync = NativeMethods.GetProcAddress(hmod, "GSvsync");
-                IntPtr funcaddrSetBaseMem = NativeMethods.GetProcAddress(hmod, "GSsetBaseMem");
-                IntPtr funcaddrOpen = NativeMethods.GetProcAddress(hmod, "GSopen");
-                IntPtr funcaddrSetCRC = NativeMethods.GetProcAddress(hmod, "GSsetGameCRC");
-                IntPtr funcaddrClose = NativeMethods.GetProcAddress(hmod, "GSclose");
-                IntPtr funcaddrShutdown = NativeMethods.GetProcAddress(hmod, "GSshutdown");
-                IntPtr funcaddrFreeze = NativeMethods.GetProcAddress(hmod, "GSfreeze");
-                IntPtr funcaddrGSreadFIFO2 = NativeMethods.GetProcAddress(hmod, "GSreadFIFO2");
-                IntPtr funcaddrinit = NativeMethods.GetProcAddress(hmod, "GSinit");
-
-                NativeMethods.FreeLibrary(hmod);
-                if (!((funcaddrConfig.ToInt64() > 0) && (funcaddrLibName.ToInt64() > 0) && (funcaddrGIF.ToInt64() > 0)))
-                {
-                    Int32 id = NativeMethods.GetLastError();
-                    System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "log.txt", DLL + " failed to load. Error " + id + Environment.NewLine);
-                    Ris = false;
-                }
-            }
-            else
-            {
-                Int32 id = NativeMethods.GetLastError();
-                System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "log.txt", DLL + " failed to load. Error " + id + Environment.NewLine);
-                Ris = false;
-            }
-
-            NativeMethods.SetErrorMode(0x0000);
-            return Ris;
-        }
-
         public void Load(String DLL)
         {
             this.DLL = DLL;
             NativeMethods.SetErrorMode(0x8007);
 
-            if (!IsValidGSDX(DLL))
-                throw new Exception("Invalid GSDX DLL");
-
             if (Loaded)
                 Unload();
 
-            Loaded = true;
-            Directory.SetCurrentDirectory(Path.GetDirectoryName(DLL));
-            IntPtr hmod = NativeMethods.LoadLibrary(DLL);
-            if (hmod.ToInt64() > 0)
+            string dir = DLL;
+            while (true)
             {
-                IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PS2EgetLibName");
-                IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
+                dir = Path.GetDirectoryName(dir);
+                if (dir == null)
+                    break;
+                Directory.SetCurrentDirectory(dir);
+                IntPtr hmod = NativeMethods.LoadLibrary(DLL);
+                if (hmod.ToInt64() > 0)
+                {
+                    DLLAddr = hmod;
 
-                IntPtr funcaddrGIF = NativeMethods.GetProcAddress(hmod, "GSgifTransfer");
-                IntPtr funcaddrGIF1 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer1");
-                IntPtr funcaddrGIF2 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer2");
-                IntPtr funcaddrGIF3 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer3");
-                IntPtr funcaddrVSync = NativeMethods.GetProcAddress(hmod, "GSvsync");
-                IntPtr funcaddrSetBaseMem = NativeMethods.GetProcAddress(hmod, "GSsetBaseMem");
-                IntPtr funcaddrGSReset = NativeMethods.GetProcAddress(hmod, "GSreset");
-                IntPtr funcaddrOpen = NativeMethods.GetProcAddress(hmod, "GSopen");
-                IntPtr funcaddrSetCRC = NativeMethods.GetProcAddress(hmod, "GSsetGameCRC");
-                IntPtr funcaddrClose = NativeMethods.GetProcAddress(hmod, "GSclose");
-                IntPtr funcaddrShutdown = NativeMethods.GetProcAddress(hmod, "GSshutdown");
-                IntPtr funcaddrFreeze = NativeMethods.GetProcAddress(hmod, "GSfreeze");
-                IntPtr funcaddrGSreadFIFO2 = NativeMethods.GetProcAddress(hmod, "GSreadFIFO2");
-                IntPtr funcaddrinit = NativeMethods.GetProcAddress(hmod, "GSinit");
+                    IntPtr funcaddrLibName = NativeMethods.GetProcAddress(hmod, "PS2EgetLibName");
+                    IntPtr funcaddrConfig = NativeMethods.GetProcAddress(hmod, "GSconfigure");
 
-                gsConfigure = (GSConfigure)Marshal.GetDelegateForFunctionPointer(funcaddrConfig, typeof(GSConfigure));
-                PsegetLibName = (PSEgetLibName)Marshal.GetDelegateForFunctionPointer(funcaddrLibName, typeof(PSEgetLibName));
+                    IntPtr funcaddrGIF = NativeMethods.GetProcAddress(hmod, "GSgifTransfer");
+                    IntPtr funcaddrGIF1 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer1");
+                    IntPtr funcaddrGIF2 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer2");
+                    IntPtr funcaddrGIF3 = NativeMethods.GetProcAddress(hmod, "GSgifTransfer3");
+                    IntPtr funcaddrVSync = NativeMethods.GetProcAddress(hmod, "GSvsync");
+                    IntPtr funcaddrSetBaseMem = NativeMethods.GetProcAddress(hmod, "GSsetBaseMem");
+                    IntPtr funcaddrGSReset = NativeMethods.GetProcAddress(hmod, "GSreset");
+                    IntPtr funcaddrOpen = NativeMethods.GetProcAddress(hmod, "GSopen");
+                    IntPtr funcaddrSetCRC = NativeMethods.GetProcAddress(hmod, "GSsetGameCRC");
+                    IntPtr funcaddrClose = NativeMethods.GetProcAddress(hmod, "GSclose");
+                    IntPtr funcaddrShutdown = NativeMethods.GetProcAddress(hmod, "GSshutdown");
+                    IntPtr funcaddrFreeze = NativeMethods.GetProcAddress(hmod, "GSfreeze");
+                    IntPtr funcaddrGSreadFIFO2 = NativeMethods.GetProcAddress(hmod, "GSreadFIFO2");
+                    IntPtr funcaddrinit = NativeMethods.GetProcAddress(hmod, "GSinit");
 
-                this.GSgifTransfer = (GSgifTransfer)Marshal.GetDelegateForFunctionPointer(funcaddrGIF, typeof(GSgifTransfer));
-                this.GSgifTransfer1 = (GSgifTransfer1)Marshal.GetDelegateForFunctionPointer(funcaddrGIF1, typeof(GSgifTransfer1));
-                this.GSgifTransfer2 = (GSgifTransfer2)Marshal.GetDelegateForFunctionPointer(funcaddrGIF2, typeof(GSgifTransfer2));
-                this.GSgifTransfer3 = (GSgifTransfer3)Marshal.GetDelegateForFunctionPointer(funcaddrGIF3, typeof(GSgifTransfer3));
-                this.GSVSync = (GSVSync)Marshal.GetDelegateForFunctionPointer(funcaddrVSync, typeof(GSVSync));
-                this.GSsetBaseMem = (GSsetBaseMem)Marshal.GetDelegateForFunctionPointer(funcaddrSetBaseMem, typeof(GSsetBaseMem));
-                this.GSopen = (GSopen)Marshal.GetDelegateForFunctionPointer(funcaddrOpen, typeof(GSopen));
-                this.GSsetGameCRC = (GSsetGameCRC)Marshal.GetDelegateForFunctionPointer(funcaddrSetCRC, typeof(GSsetGameCRC));
-                this.GSclose = (GSclose)Marshal.GetDelegateForFunctionPointer(funcaddrClose, typeof(GSclose));
-                this.GSshutdown = (GSshutdown)Marshal.GetDelegateForFunctionPointer(funcaddrShutdown, typeof(GSshutdown));
-                this.GSfreeze = (GSfreeze)Marshal.GetDelegateForFunctionPointer(funcaddrFreeze, typeof(GSfreeze));
-                this.GSreset = (GSreset)Marshal.GetDelegateForFunctionPointer(funcaddrGSReset, typeof(GSreset));
-                this.GSreadFIFO2 = (GSreadFIFO2)Marshal.GetDelegateForFunctionPointer(funcaddrGSreadFIFO2, typeof(GSreadFIFO2));
-                this.GSinit = (GSinit)Marshal.GetDelegateForFunctionPointer(funcaddrinit, typeof(GSinit));
+                    if (!((funcaddrConfig.ToInt64() > 0) && (funcaddrLibName.ToInt64() > 0) && (funcaddrGIF.ToInt64() > 0)))
+                    {
+                        break;
+                    }
 
-                DLLAddr = hmod;
+                    gsConfigure = (GSConfigure)Marshal.GetDelegateForFunctionPointer(funcaddrConfig, typeof(GSConfigure));
+                    PsegetLibName = (PSEgetLibName)Marshal.GetDelegateForFunctionPointer(funcaddrLibName, typeof(PSEgetLibName));
+
+                    this.GSgifTransfer = (GSgifTransfer)Marshal.GetDelegateForFunctionPointer(funcaddrGIF, typeof(GSgifTransfer));
+                    this.GSgifTransfer1 = (GSgifTransfer1)Marshal.GetDelegateForFunctionPointer(funcaddrGIF1, typeof(GSgifTransfer1));
+                    this.GSgifTransfer2 = (GSgifTransfer2)Marshal.GetDelegateForFunctionPointer(funcaddrGIF2, typeof(GSgifTransfer2));
+                    this.GSgifTransfer3 = (GSgifTransfer3)Marshal.GetDelegateForFunctionPointer(funcaddrGIF3, typeof(GSgifTransfer3));
+                    this.GSVSync = (GSVSync)Marshal.GetDelegateForFunctionPointer(funcaddrVSync, typeof(GSVSync));
+                    this.GSsetBaseMem = (GSsetBaseMem)Marshal.GetDelegateForFunctionPointer(funcaddrSetBaseMem, typeof(GSsetBaseMem));
+                    this.GSopen = (GSopen)Marshal.GetDelegateForFunctionPointer(funcaddrOpen, typeof(GSopen));
+                    this.GSsetGameCRC = (GSsetGameCRC)Marshal.GetDelegateForFunctionPointer(funcaddrSetCRC, typeof(GSsetGameCRC));
+                    this.GSclose = (GSclose)Marshal.GetDelegateForFunctionPointer(funcaddrClose, typeof(GSclose));
+                    this.GSshutdown = (GSshutdown)Marshal.GetDelegateForFunctionPointer(funcaddrShutdown, typeof(GSshutdown));
+                    this.GSfreeze = (GSfreeze)Marshal.GetDelegateForFunctionPointer(funcaddrFreeze, typeof(GSfreeze));
+                    this.GSreset = (GSreset)Marshal.GetDelegateForFunctionPointer(funcaddrGSReset, typeof(GSreset));
+                    this.GSreadFIFO2 = (GSreadFIFO2)Marshal.GetDelegateForFunctionPointer(funcaddrGSreadFIFO2, typeof(GSreadFIFO2));
+                    this.GSinit = (GSinit)Marshal.GetDelegateForFunctionPointer(funcaddrinit, typeof(GSinit));
+
+                    Loaded = true;
+                }
+            }
+            if (!Loaded)
+            {
+                Exception lasterror = Marshal.GetExceptionForHR(Marshal.GetHRForLastWin32Error());
+                System.IO.File.AppendAllText(AppDomain.CurrentDomain.BaseDirectory + "log.txt", DLL + " failed to load. Error " + lasterror.ToString() + Environment.NewLine);
+                NativeMethods.SetErrorMode(0x0000);
+                Unload();
+                throw new InvalidGSPlugin(lasterror.ToString());
             }
             NativeMethods.SetErrorMode(0x0000);
         }
