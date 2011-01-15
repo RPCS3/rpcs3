@@ -20,7 +20,6 @@
 					<Add library="../../../../deps/debug/libsoundtouch-dbg.a" />
 					<Add library="../../../../deps/debug/libx86emitter.a" />
 					<Add library="../../../../deps/debug/libUtilities.a" />
-					<Add library="../../../../deps/debug/liba52.a" />
 				</Linker>
 			</Target>
 			<Target title="Release">
@@ -36,7 +35,6 @@
 					<Add library="../../../../deps/libsoundtouch.a" />
 					<Add library="../../../../deps/release/libx86emitter.a" />
 					<Add library="../../../../deps/release/libUtilities.a" />
-					<Add library="../../../../deps/release/liba52.a" />
 				</Linker>
 			</Target>
 		</Build>
@@ -61,7 +59,6 @@
 			<Add directory="../../../../common/include/Utilities" />
 			<Add directory="../../../../common/src" />
 			<Add directory="../../../../common/src/Utilities" />
-			<Add directory="../../../../3rdparty/liba52" />
 			<Add directory="../../../../3rdparty/soundtouch_linux_include" />
 		</Compiler>
 		<Linker>
