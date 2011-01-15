@@ -155,13 +155,13 @@ void UpdateDebugDialog()
 				static wchar_t t[1024];
 
 				swprintf_s(t,L"%06x",vc.StartA);
-				TextOut(hdc,IX+4,IY+3,t,6);
+				TextOut(hdc,IX+4,IY+4,t,6);
 
 				swprintf_s(t,L"%06x",vc.NextA);
-				TextOut(hdc,IX+4,IY+16,t,6);
+				TextOut(hdc,IX+4,IY+18,t,6);
 
 				swprintf_s(t,L"%06x",vc.LoopStartA);
-				TextOut(hdc,IX+4,IY+29,t,6);
+				TextOut(hdc,IX+4,IY+32,t,6);
 
 				vcd.displayPeak = 0;
 
@@ -175,7 +175,7 @@ void UpdateDebugDialog()
 
 			// top now: 400
 			int JX = 8 + c * 256;
-			int JY = 578;
+			int JY = 584;
 
 			SetDCBrushColor(hdc,RGB(  0,  0,  0));
 			SetDCPenColor(hdc,RGB(  255,  128,  32));
@@ -186,23 +186,23 @@ void UpdateDebugDialog()
 			SetTextColor(hdc,RGB(255,255,255));
 			SetBkColor  (hdc,RGB(  0,  0,  0));
 
-			TextOut(hdc,JX+4,JY+ 3,L"REVB",4);
-			TextOut(hdc,JX+4,JY+16,L"IRQE",4);
-			TextOut(hdc,JX+4,JY+29,L"ADMA",4);
+			TextOut(hdc,JX+4,JY+ 4,L"REVB",4);
+			TextOut(hdc,JX+4,JY+18,L"IRQE",4);
+			TextOut(hdc,JX+4,JY+32,L"ADMA",4);
 
 			SetDCBrushColor(hdc,RGB(  0,255,  0));
 
 			if(cx.FxEnable)
 			{
-				FillRectangle(hdc,JX+40,JY+3,10,10);
+				FillRectangle(hdc,JX+40,JY+4,10,10);
 			}
 			if(cx.IRQEnable)
 			{
-				FillRectangle(hdc,JX+40,JY+16,10,10);
+				FillRectangle(hdc,JX+40,JY+18,10,10);
 			}
 			if(cx.AutoDMACtrl != 0)
 			{
-				FillRectangle(hdc,JX+40,JY+29,10,10);
+				FillRectangle(hdc,JX+40,JY+32,10,10);
 
 				for(int j=0;j<64;j++)
 				{

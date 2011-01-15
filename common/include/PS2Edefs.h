@@ -17,11 +17,11 @@
 #define __PS2EDEFS_H__
 
 // Global enable/disable flag, disables all the parts if off
-//#define ENABLE_NEW_IOPDMA
+#define ENABLE_NEW_IOPDMA
 
 // Parts of the dmac, each one can be turned on independently
 #ifdef ENABLE_NEW_IOPDMA
-//#define ENABLE_NEW_IOPDMA_SPU2 /* working */
+#define ENABLE_NEW_IOPDMA_SPU2 /* working */
 //#define ENABLE_NEW_IOPDMA_SIO  /* working */
 //#define ENABLE_NEW_IOPDMA_CDVD /* NOT IMPLEMENTED */
 //#define ENABLE_NEW_IOPDMA_SIF  /* NOT IMPLEMENTED */
