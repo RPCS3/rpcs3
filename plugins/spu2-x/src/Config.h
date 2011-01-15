@@ -34,6 +34,7 @@ extern bool _WaveLog;
 extern bool _CoresDump;
 extern bool _MemDump;
 extern bool _RegDump;
+extern bool _visual_debug_enabled;
 
 static __forceinline bool MsgToConsole()	{ return _MsgToConsole & DebugEnabled; }
 
@@ -51,6 +52,7 @@ static __forceinline bool WaveLog()			{ return _WaveLog & DebugEnabled; }
 static __forceinline bool CoresDump()		{ return _CoresDump & DebugEnabled; }
 static __forceinline bool MemDump()			{ return _MemDump & DebugEnabled; }
 static __forceinline bool RegDump()			{ return _RegDump & DebugEnabled; }
+static __forceinline bool VisualDebug()		{ return _visual_debug_enabled & DebugEnabled; }
 
 extern wxString AccessLogFileName;
 extern wxString DMA4LogFileName;

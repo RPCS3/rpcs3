@@ -55,6 +55,8 @@
 #define IDC_USE_HARDWARE                1062
 #define IDC_COMBO1                      1063
 #define IDC_SYNCHMODE                   1064
+#define IDC_DEBUG_OTHERS                1065
+#define IDC_DEBUG_VISUAL                1066
 
 // Next default values for new objects
 //
@@ -62,7 +64,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        119
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1065
+#define _APS_NEXT_CONTROL_VALUE         1067
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

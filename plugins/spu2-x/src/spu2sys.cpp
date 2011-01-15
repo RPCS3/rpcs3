@@ -369,9 +369,8 @@ __forceinline void TimeUpdate(u32 cClocks)
 		lClocks = cClocks - dClocks;
 	}
 
-	// Uncomment for a visual debug display showing all core's activity!
-	// Also need to uncomment a few lines in SPU2open
-	//UpdateDebugDialog();
+	// Visual debug display showing all core's activity! Disabled via #define on release builds.
+	UpdateDebugDialog();
 
 	if( SynchMode == 1 ) // AsyncMix on
 		SndBuffer::UpdateTempoChangeAsyncMixing();

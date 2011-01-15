@@ -37,6 +37,8 @@ bool _CoresDump=false;
 bool _MemDump=false;
 bool _RegDump=false;
 
+bool _visual_debug_enabled=false;
+
 // this is set true if PCSX2 invokes the SetLogDir callback, which tells SPU2-X to use that over
 // the configured crap in the ini file.
 static bool LogLocationSetByPcsx2 = false;
@@ -100,6 +102,8 @@ void ReadSettings()
 	_MemDump     = CfgReadBool(Section, L"Dump_Memory",0);
 	_RegDump     = CfgReadBool(Section, L"Dump_Regs",0);
 
+	_visual_debug_enabled = CfgReadBool(Section, L"Visual_Debug_Enabled",0);
+
 	CfgReadStr(Section,L"Logs_Folder", CfgLogsFolder, L"logs");
 	CfgReadStr(Section,L"Dumps_Folder",CfgDumpsFolder,L"logs");
 
@@ -139,6 +143,8 @@ void WriteSettings()
 	CfgWriteBool(Section,L"Dump_Memory",_MemDump);
 	CfgWriteBool(Section,L"Dump_Regs",  _RegDump);
 
+	CfgWriteBool(Section,L"Visual_Debug_Enabled", _visual_debug_enabled);
+
 	// None of the logs strings are changable via GUI, so no point in bothering to
 	// write them back out.
 	CfgWriteStr(Section,L"Logs_Folder", CfgLogsFolder);
@@ -173,6 +179,7 @@ void EnableControls( HWND hWnd )
 	ENABLE_CONTROL(IDC_DUMPCORE,DebugEnabled);
 	ENABLE_CONTROL(IDC_DUMPMEM, DebugEnabled);
 	ENABLE_CONTROL(IDC_DUMPREGS,DebugEnabled);
+	ENABLE_CONTROL(IDC_DEBUG_VISUAL, IsDevBuild ? DebugEnabled : false);
 }
 
 static BOOL CALLBACK DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
@@ -204,6 +211,7 @@ static BOOL CALLBACK DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			SET_CHECK(IDC_DUMPCORE,_CoresDump);
 			SET_CHECK(IDC_DUMPMEM, _MemDump);
 			SET_CHECK(IDC_DUMPREGS,_RegDump);
+			SET_CHECK(IDC_DEBUG_VISUAL,_visual_debug_enabled);
 
 			ShowWindow( GetDlgItem( hWnd, IDC_MSG_PUBLIC_BUILD ), !IsDevBuild );
 		}
@@ -241,6 +249,7 @@ static BOOL CALLBACK DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 				HANDLE_CHECK(IDC_DUMPCORE,_CoresDump);
 				HANDLE_CHECK(IDC_DUMPMEM, _MemDump);
 				HANDLE_CHECK(IDC_DUMPREGS,_RegDump);
+				HANDLE_CHECK(IDC_DEBUG_VISUAL,_visual_debug_enabled);
 				default:
 					return FALSE;
 			}

@@ -53,7 +53,7 @@ void UpdateDebugDialog()
 	if(!debugDialogOpen) return;
 
 	lCount++;
-	if(lCount>=(SampleRate/100))
+	if(lCount>=(SampleRate/50))
 	{
 		HDC hdc = GetDC(hDebugDialog);
 
@@ -150,5 +150,10 @@ void UpdateDebugDialog()
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+}
+#else
+void UpdateDebugDialog()
+{
+	// Release mode. Nothing to do
 }
 #endif

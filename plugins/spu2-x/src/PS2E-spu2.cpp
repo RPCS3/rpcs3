@@ -417,13 +417,22 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 	else
 		gsWindowHandle = 0;
 
-	// uncomment for a visual debug display showing all core's activity!
-	/*if(debugDialogOpen==0)
+#ifdef PCSX2_DEVBUILD // Define may not be needed but not tested yet. Better make sure.
+	if( IsDevBuild && VisualDebug() ) 
 	{
-		hDebugDialog = CreateDialogParam(hInstance,MAKEINTRESOURCE(IDD_DEBUG),0,DebugProc,0);
-		ShowWindow(hDebugDialog,SW_SHOWNORMAL);
-		debugDialogOpen=1;
-	}*/
+		if(debugDialogOpen==0)
+		{
+			hDebugDialog = CreateDialogParam(hInstance,MAKEINTRESOURCE(IDD_DEBUG),0,DebugProc,0);
+			ShowWindow(hDebugDialog,SW_SHOWNORMAL);
+			debugDialogOpen=1;
+		}
+	}
+	else if(debugDialogOpen) 
+	{
+		DestroyWindow(hDebugDialog);
+		debugDialogOpen=0;
+	}
+#endif
 
 	IsOpened = true;
 	lClocks  = (cyclePtr!=NULL) ? *cyclePtr : 0;

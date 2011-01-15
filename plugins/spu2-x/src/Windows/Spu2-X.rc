@@ -80,12 +80,12 @@ BEGIN
     COMBOBOX        IDC_SYNCHMODE,163,103,134,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
 END
 
-IDD_DEBUG DIALOGEX 0, 0, 326, 525
+IDD_DEBUG DIALOGEX 0, 0, 306, 551
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "SPU2-X Debug"
 FONT 9, "Lucida Console", 400, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "Close",IDOK,269,504,50,14
+    DEFPUSHBUTTON   "Close",IDOK,249,530,50,14
 END
 
 IDD_DSOUND DIALOGEX 0, 0, 196, 218
@@ -157,13 +157,13 @@ BEGIN
     PUSHBUTTON      "Reset Defaults",IDC_RESET_DEFAULTS,61,62,82,12
 END
 
-IDD_CONFIG_DEBUG DIALOGEX 0, 0, 292, 154
+IDD_CONFIG_DEBUG DIALOGEX 0, 0, 292, 239
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "SPU2-X Debugging Options"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,190,135,46,14
-    PUSHBUTTON      "Cancel",IDCANCEL,241,135,46,14
+    DEFPUSHBUTTON   "OK",IDOK,190,220,46,14
+    PUSHBUTTON      "Cancel",IDCANCEL,241,220,46,14
     GROUPBOX        "",IDC_STATIC,5,5,135,93
     GROUPBOX        "Logfile-only Logs",IDC_STATIC,151,5,136,53
     GROUPBOX        "Dumps (on close)",IDC_STATIC,151,60,135,54
@@ -180,7 +180,9 @@ BEGIN
     CHECKBOX        "Log Register/DMA Actions",IDC_LOGREGS,159,18,101,10,WS_GROUP | NOT WS_TABSTOP
     CHECKBOX        "Log DMA Writes",IDC_LOGDMA,159,31,68,10,NOT WS_TABSTOP
     CHECKBOX        "Log Audio Output",IDC_LOGWAVE,159,44,71,10,NOT WS_TABSTOP
-    LTEXT           "Note: This is a non-devel build.  For performance reasons, some logging options are disabled; and only available in devel/debug builds.",IDC_MSG_PUBLIC_BUILD,9,118,174,30
+    LTEXT           "Note: This is a non-devel build.  For performance reasons, some logging options are disabled; and only available in devel/debug builds.",IDC_MSG_PUBLIC_BUILD,9,187,174,30
+    GROUPBOX        "Others",IDC_DEBUG_OTHERS,5,104,135,68
+    CONTROL         "Show Core Activity",IDC_DEBUG_VISUAL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,116,90,11
 END
 
 
@@ -209,9 +211,9 @@ BEGIN
     IDD_DEBUG, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 319
+        RIGHTMARGIN, 299
         TOPMARGIN, 7
-        BOTTOMMARGIN, 518
+        BOTTOMMARGIN, 544
     END
 
     IDD_DSOUND, DIALOG
@@ -251,7 +253,7 @@ BEGIN
         LEFTMARGIN, 5
         RIGHTMARGIN, 287
         TOPMARGIN, 5
-        BOTTOMMARGIN, 149
+        BOTTOMMARGIN, 234
     END
 END
 #endif    // APSTUDIO_INVOKED

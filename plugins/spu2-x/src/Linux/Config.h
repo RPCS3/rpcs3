@@ -39,6 +39,7 @@ extern bool _WaveLog;
 extern bool _CoresDump;
 extern bool _MemDump;
 extern bool _RegDump;
+extern bool _visual_debug_enabled;
 
 /*static __forceinline bool MsgToConsole() { return _MsgToConsole & DebugEnabled; }
 
