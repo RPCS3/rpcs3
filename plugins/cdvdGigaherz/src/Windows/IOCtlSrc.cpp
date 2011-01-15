@@ -585,25 +585,11 @@ s32 IOCtlSrc::ReadSectors2048(u32 sector, u32 count, char *buffer)
 
 	if(ReadFile(device,buffer,2048*count,&size,NULL)==0)
 	{
-		if(count == 1)
-			return -1;
-
-		int acount = count/2;
-		int bcount = count-acount;
-
-		int errors = 0;
-		if(ReadSectors2048(sector,acount,buffer) < 0)
-			errors++;
-
-		if(ReadSectors2048(sector+acount,bcount,buffer+2048*acount) < 0)
-			errors++;
-
-		return (errors==2)?-1:0;
+		return -1;
 	}
 
 	if(size!=(2048*count))
 	{
-		printf(" **** CDVD ERROR: ReadFile did not read all bytes! **** \n");
 		return -1;
 	}
 
