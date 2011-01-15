@@ -211,6 +211,9 @@ struct V_CoreDebug
 	V_VoiceDebug Voices[24];
 // Last Transfer Size
 	u32 lastsize;
+
+	s32 admaWaveformL[0x100];
+	s32 admaWaveformR[0x100];
 };
 
 // Debug tracking information - 24 voices and 2 cores.

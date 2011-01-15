@@ -9,7 +9,6 @@
 //
 #include "svnrev.h"
 #include "afxresmw.h"
-
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -80,12 +79,12 @@ BEGIN
     COMBOBOX        IDC_SYNCHMODE,163,103,134,30,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
 END
 
-IDD_DEBUG DIALOGEX 0, 0, 306, 551
+IDD_DEBUG DIALOGEX 0, 0, 303, 443
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "SPU2-X Debug"
 FONT 9, "Lucida Console", 400, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "Close",IDOK,249,530,50,14
+    DEFPUSHBUTTON   "Close",IDOK,246,421,50,14
 END
 
 IDD_DSOUND DIALOGEX 0, 0, 196, 218
@@ -102,7 +101,8 @@ BEGIN
     CTEXT           "8  (80 ms latency)",IDC_LATENCY_LABEL,44,123,95,11
     LTEXT           "The options above are useful for compatibility with older and/or buggy sound drivers ONLY, and should not be checked unless you experience sound problems (such as crackly audio or silence).",IDC_STATIC,16,68,175,38
     CONTROL         "Disable Global Focus",IDC_GLOBALFOCUS_DISABLE,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,4,38,140,10
-    CONTROL         "Use a crappy alternate buffering mode",IDC_USE_HARDWARE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,4,53,140,10
+    CONTROL         "Use a crappy alternate buffering mode",IDC_USE_HARDWARE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,4,53,140,10
     GROUPBOX        "Output Buffers",IDC_STATIC,4,111,185,79
 END
 
@@ -211,9 +211,9 @@ BEGIN
     IDD_DEBUG, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 299
+        RIGHTMARGIN, 296
         TOPMARGIN, 7
-        BOTTOMMARGIN, 544
+        BOTTOMMARGIN, 435
     END
 
     IDD_DSOUND, DIALOG

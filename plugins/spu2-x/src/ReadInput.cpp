@@ -126,6 +126,11 @@ StereoOut32 V_Core::ReadInput()
 		);
 	}
 
+#ifdef PCSX2_DEVBUILD
+	DebugCores[Index].admaWaveformL[InputPosRead%0x100]=retval.Left;
+	DebugCores[Index].admaWaveformR[InputPosRead%0x100]=retval.Right;
+#endif
+
 	InputPosRead++;
 	if( (InputPosRead==0x100) || (InputPosRead>=0x200) )
 	{

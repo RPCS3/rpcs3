@@ -59,7 +59,7 @@ void UpdateDebugDialog()
 
 		if(!hf)
 		{
-			hf = CreateFont( 8, 0, 0, 0, 0, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+			hf = CreateFont( 12, 0, 0, 0, 0, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 				DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Lucida Console" );
 		}
 
@@ -69,12 +69,17 @@ void UpdateDebugDialog()
 
 		for(int c=0;c<2;c++)
 		{
+			V_Core& cx(Cores[c]);
+			V_CoreDebug& cd(DebugCores[c]);
+
 			for(int v=0;v<24;v++)
 			{
-				int IX = 8+256*c;
-				int IY = 8+ 32*v;
-				V_Voice& vc(Cores[c].Voices[v]);
-				V_VoiceDebug& vcd( DebugCores[c].Voices[v] );
+				int cc = c*2 + (v/12);
+				int vv = v % 12;
+				int IX = 8+128*cc;
+				int IY = 8+ 48*vv;
+				V_Voice& vc(cx.Voices[v]);
+				V_VoiceDebug& vcd(cd.Voices[v] );
 
 				SetDCBrushColor(hdc,RGB(  0,  0,  0));
 				if((vc.ADSR.Phase>0)&&(vc.ADSR.Phase<6))
@@ -94,27 +99,55 @@ void UpdateDebugDialog()
 					}
 				}*/
 
-				FillRectangle(hdc,IX,IY,252,30);
+				FillRectangle(hdc,IX,IY,124,46);
 
 				SetDCPenColor(hdc,RGB(  255,  128,  32));
 
-				DrawRectangle(hdc,IX,IY,252,30);
+				DrawRectangle(hdc,IX,IY,124,46);
 
-				SetDCBrushColor  (hdc,RGB(  0,255,  0));
+				SetDCBrushColor(hdc,RGB(  0,255,  0));
 
-				int vl = abs(((vc.Volume.Left.Value >> 16) * 24) >> 15);
-				int vr = abs(((vc.Volume.Right.Value >> 16) * 24) >> 15);
+				int vl = abs(((vc.Volume.Left.Value >> 16) * 38) >> 15);
+				int vr = abs(((vc.Volume.Right.Value >> 16) * 38) >> 15);
 
-				FillRectangle(hdc,IX+38,IY+26 - vl, 4, vl);
-				FillRectangle(hdc,IX+42,IY+26 - vr, 4, vr);
+				FillRectangle(hdc,IX+58,IY+42 - vl, 4, vl);
+				FillRectangle(hdc,IX+62,IY+42 - vr, 4, vr);
 
-				int adsr = (vc.ADSR.Value>>16) * 24 / 32768;
+				int adsr = ((vc.ADSR.Value>>16) * 38) / 32768;
 
-				FillRectangle(hdc,IX+48,IY+26 - adsr, 4, adsr);
+				FillRectangle(hdc,IX+66,IY+42 - adsr, 4, adsr);
 
-				int peak = vcd.displayPeak * 24 / 32768;
+				int peak = (vcd.displayPeak * 38) / 32768;
 
-				FillRectangle(hdc,IX+56,IY+26 - peak, 4, peak);
+				if(vcd.displayPeak >= 32700) // leave a little bit of margin
+				{
+					SetDCBrushColor(hdc,RGB(  255, 0,  0));
+				}
+
+				FillRectangle(hdc,IX+70,IY+42 - peak, 4, peak);
+
+				if(vc.ADSR.Value>0)
+				{
+					if(vc.SBuffer)
+					for(int i=0;i<28;i++)
+					{
+						int val = ((int)vc.SBuffer[i] * 20) / 32768;
+
+						int y=0;
+
+						if(val>0)
+						{
+							y=val;
+						}
+						else
+							val=-val;
+		
+						if(val!=0)
+						{
+							FillRectangle(hdc,IX+90+i,IY+24-y, 1, val);
+						}
+					}
+				}
 
 				SetTextColor(hdc,RGB(  0,255,  0));
 				SetBkColor  (hdc,RGB(  0,  0,  0));
@@ -125,10 +158,10 @@ void UpdateDebugDialog()
 				TextOut(hdc,IX+4,IY+3,t,6);
 
 				swprintf_s(t,L"%06x",vc.NextA);
-				TextOut(hdc,IX+4,IY+12,t,6);
+				TextOut(hdc,IX+4,IY+16,t,6);
 
 				swprintf_s(t,L"%06x",vc.LoopStartA);
-				TextOut(hdc,IX+4,IY+21,t,6);
+				TextOut(hdc,IX+4,IY+29,t,6);
 
 				vcd.displayPeak = 0;
 
@@ -139,7 +172,74 @@ void UpdateDebugDialog()
 					vcd.lastSetStartA = vc.StartA;
 				}
 			}
+
+			// top now: 400
+			int JX = 8 + c * 256;
+			int JY = 578;
+
+			SetDCBrushColor(hdc,RGB(  0,  0,  0));
+			SetDCPenColor(hdc,RGB(  255,  128,  32));
+
+			FillRectangle(hdc,JX,JY,252,46);
+			DrawRectangle(hdc,JX,JY,252,46);
+
+			SetTextColor(hdc,RGB(255,255,255));
+			SetBkColor  (hdc,RGB(  0,  0,  0));
+
+			TextOut(hdc,JX+4,JY+ 3,L"REVB",4);
+			TextOut(hdc,JX+4,JY+16,L"IRQE",4);
+			TextOut(hdc,JX+4,JY+29,L"ADMA",4);
+
+			SetDCBrushColor(hdc,RGB(  0,255,  0));
+
+			if(cx.FxEnable)
+			{
+				FillRectangle(hdc,JX+40,JY+3,10,10);
+			}
+			if(cx.IRQEnable)
+			{
+				FillRectangle(hdc,JX+40,JY+16,10,10);
+			}
+			if(cx.AutoDMACtrl != 0)
+			{
+				FillRectangle(hdc,JX+40,JY+29,10,10);
+
+				for(int j=0;j<64;j++)
+				{
+					int i=j*256/64;
+					int val = (cd.admaWaveformL[i] * 20) / 32768;
+					int y=0;
+
+					if(val>0)
+						y=val;
+					else
+						val=-val;
+
+					if(val!=0)
+					{
+						FillRectangle(hdc,JX+60+j,JY+24-y, 1, val);
+					}
+				}
+
+				for(int j=0;j<64;j++)
+				{
+					int i=j*256/64;
+					int val = (cd.admaWaveformR[i] * 20) / 32768;
+					int y=0;
+
+					if(val>0)
+						y=val;
+					else
+						val=-val;
+
+					if(val!=0)
+					{
+						FillRectangle(hdc,JX+136+j,JY+24-y, 1, val);
+					}
+				}
+			}
 		}
+
 		ReleaseDC(hDebugDialog,hdc);
 		lCount=0;
 	}
