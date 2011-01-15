@@ -40,25 +40,11 @@ wxDirName				InstallFolder;
 wxDirName				PluginsFolder;
 wxDirName				ThemesFolder;
 
-enum UserLocalDataType
-{
-	// Use the system defined user local data folder (typically an area outside the user's
-	// documents folder, but within user read/write permissions zoning; such that it does not
-	// clutter user document space).
-	UserLocalFolder_System,
-
-	// Uses the directory containing PCSX2.exe, or the current working directory (if the PCSX2
-	// directory could not be determined).  This is considered 'portable' mode, and is typically
-	// detected by PCSX2 on application startup, by looking for a pcsx2_portable.ini file in
-	// said locations.
-	UserLocalFolder_Portable,
-};
-
 // The UserLocalData folder can be redefined depending on whether or not PCSX2 is in
 // "portable install" mode or not.  when PCSX2 has been configured for portable install, the
 // UserLocalData folder is the current working directory.
 //
-static UserLocalDataType		UserLocalDataMode;
+UserLocalDataType		UserLocalDataMode;
 
 static wxFileName GetPortableIniPath()
 {
@@ -197,10 +183,12 @@ wxConfigBase* Pcsx2App::TestForPortableInstall()
 
 		}
 	
-		// Success -- all user-based folders have write access.  PCSX2 should be
-		// able to run error-free!
+		// Success -- all user-based folders have write access.  PCSX2 should be able to run error-free!
+		// Force-set the custom documents mode, and set the 
 
 		UserLocalDataMode = UserLocalFolder_Portable;
+		DocsFolderMode = DocsFolder_Custom;
+		CustomDocumentsFolder = portableDocsFolder;
 		return conf_portable.DetachPtr();
 	}
 	
@@ -223,28 +211,12 @@ void Pcsx2App::WipeUserModeSettings()
 			wxRemoveFile(portableIniFile.GetFullPath());
 	}
 	
-	// Remove the user-local ini entry conforming to this instance of PCSX2.
+	// Remove the app-local / registry entry conforming to this instance of PCSX2.
 	// Remove this regardless if PCSX2 is in portable mode, since otherwise these settings
 	// would be used when the user restarts PCSX2, and that might be undesirable.
 
-	wxDirName usrlocaldir = PathDefs::GetUserLocalDataDir();
-	if( !usrlocaldir.Exists() ) return;
-
-	wxString cwd( Path::Normalize( wxGetCwd() ) );
-#ifdef __WXMSW__
-	cwd.MakeLower();
-#endif
-	u32 hashres = HashTools::Hash( (char*)cwd.c_str(), cwd.Length()*sizeof(wxChar) );
-
-	wxFileName usermodefile( FilenameDefs::GetUsermodeConfig() );
-	usermodefile.SetPath( usrlocaldir.ToString() );
-	ScopedPtr<wxFileConfig> conf_usermode( OpenFileConfig( usermodefile.GetFullPath() ) );
-
-	FastFormatUnicode groupname;
-	groupname.Write( L"CWD.%08x", hashres );
-	Console.WriteLn( "(UserMode) Removing entry:" );
-	Console.Indent().WriteLn( L"Path: %s\nHash:%s", cwd.c_str(), groupname.c_str() );
-	conf_usermode->DeleteGroup( groupname );
+	ScopedPtr<wxConfigBase> conf_install( OpenInstallSettingsFile() );
+	conf_install->DeleteEntry(L"RunWizard");
 }
 
 static void DoFirstTimeWizard()
@@ -264,7 +236,7 @@ static void DoFirstTimeWizard()
 	}
 }
 
-wxConfigBase* Pcsx2App::ReadUserModeSettings()
+wxConfigBase* Pcsx2App::OpenInstallSettingsFile()
 {
 	// Implementation Notes:
 	//
@@ -304,7 +276,7 @@ void Pcsx2App::EstablishAppUserMode()
 
 	conf_install = TestForPortableInstall();
 	if (!conf_install)
-		conf_install = ReadUserModeSettings();	
+		conf_install = OpenInstallSettingsFile();	
 
 	conf_install->SetRecordDefaults(false);
 

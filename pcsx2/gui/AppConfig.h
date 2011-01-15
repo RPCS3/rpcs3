@@ -67,6 +67,22 @@ extern wxString  GetVmSettingsFilename();
 extern wxString  GetUiSettingsFilename();
 extern wxDirName GetLogFolder();
 
+enum UserLocalDataType
+{
+	// Use the system defined user local data folder (typically an area outside the user's
+	// documents folder, but within user read/write permissions zoning; such that it does not
+	// clutter user document space).
+	UserLocalFolder_System,
+
+	// Uses the directory containing PCSX2.exe, or the current working directory (if the PCSX2
+	// directory could not be determined).  This is considered 'portable' mode, and is typically
+	// detected by PCSX2 on application startup, by looking for a pcsx2_portable.ini file in
+	// said locations.
+	UserLocalFolder_Portable,
+};
+
+extern UserLocalDataType	UserLocalDataMode;
+
 enum AspectRatioType
 {
 	AspectRatio_Stretch,

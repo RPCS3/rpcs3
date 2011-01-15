@@ -90,8 +90,24 @@ namespace PathDefs
 	// sub folder, in which case the approot will become "..")
 	const wxDirName& AppRoot()
 	{
-		static const wxDirName retval( L"." );
-		return retval;
+		AffinityAssert_AllowFrom_MainUI();
+
+		if (UserLocalDataMode == UserLocalFolder_System)
+		{
+			static const wxDirName cwdCache( (wxDirName)Path::Normalize(wxGetCwd()) );
+			return cwdCache;
+		}
+		else if (UserLocalDataMode == UserLocalFolder_Portable)
+		{
+			static const wxDirName appCache( (wxDirName)
+				wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath() );
+			return appCache;
+		}
+		else
+			pxFail( "Unimplemented user local folder mode encountered." );
+		
+		static const wxDirName dotFail(L".");
+		return dotFail;
 	}
 
     // Specifies the main configuration folder.
@@ -415,10 +431,11 @@ void App_LoadSaveInstallSettings( IniInterface& ini )
 		L"Custom",
 	};
 
-	ini.EnumEntry( L"DocumentsFolderMode",	DocsFolderMode,	DocsFolderModeNames, DocsFolder_User );
+	ini.EnumEntry( L"DocumentsFolderMode",	DocsFolderMode,	DocsFolderModeNames, (UserLocalDataMode == UserLocalFolder_System) ? DocsFolder_User : DocsFolder_Custom);
+
+	ini.Entry( L"CustomDocumentsFolder",	CustomDocumentsFolder,		PathDefs::AppRoot() );
 
 	ini.Entry( L"UseDefaultSettingsFolder", UseDefaultSettingsFolder,	true );
-	ini.Entry( L"CustomDocumentsFolder",	CustomDocumentsFolder,		(wxDirName)Path::Normalize(wxGetCwd()) );
 	ini.Entry( L"SettingsFolder",			SettingsFolder,				PathDefs::GetSettings() );
 
 	// "Install_Dir" conforms to the NSIS standard install directory key name.

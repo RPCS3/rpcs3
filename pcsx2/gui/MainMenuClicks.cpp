@@ -95,6 +95,8 @@ static void WipeSettings()
 	wxGetApp().GetRecentIsoManager().Clear();
 	g_Conf = new AppConfig();
 	sMainFrame.RemoveCdvdMenu();
+
+	sApp.WipeUserModeSettings();
 }
 
 void MainEmuFrame::RemoveCdvdMenu()

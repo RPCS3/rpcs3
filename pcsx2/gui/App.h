@@ -544,7 +544,7 @@ public:
 	bool TestUserPermissionsRights( const wxDirName& testFolder, wxString& createFailedStr, wxString& accessFailedStr );
 	void EstablishAppUserMode();
 
-	wxConfigBase* ReadUserModeSettings();
+	wxConfigBase* OpenInstallSettingsFile();
 	wxConfigBase* TestForPortableInstall();
 
 	bool HasPendingSaves() const;
