@@ -521,7 +521,10 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 	}
 
 	if( IsDevBuild )
+	{
 		DebugCores[Index].lastsize = bytesLeft;
+		DebugCores[Index].dmaFlag = 1;
+	}
 
 	TSA &= ~7;
 
@@ -530,7 +533,6 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 	if(adma_enable)
 	{
 		TSA&=0x1fff;
-		//Console.Error("* SPU2-X: AutoDMA transfers not supported yet! (core %d)\n", Index);
 
 		if(MsgAutoDMA() && DmaStarting) ConLog("* SPU2-X: DMA%c AutoDMA Transfer of %d bytes to %x (%02x %x %04x).\n",
 			GetDmaIndexChar(), bytesLeft<<1, TSA, DMABits, AutoDMACtrl, (~Regs.ATTR)&0x7fff);

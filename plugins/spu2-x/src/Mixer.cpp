@@ -85,13 +85,13 @@ static void __forceinline XA_decode_block(s16* buffer, const s16* block, s32& pr
 	for(; blockbytes<=blockend; ++blockbytes)
 	{
 		s32 data	= ((*blockbytes)<<28) & 0xF0000000;
-		s32 pcm		= (data >> shift) + (((pred1*prev1)+(pred2*prev2)) >> 6);
+		s32 pcm		= (data >> shift) + (((pred1*prev1)+(pred2*prev2)+32) >> 6);
 
 		Clampify( pcm, -0x8000, 0x7fff );
 		*(buffer++) = pcm;
 
 		data		= ((*blockbytes)<<24) & 0xF0000000;
-		s32 pcm2	= (data >> shift) + (((pred1*pcm)+(pred2*prev1)) >> 6);
+		s32 pcm2	= (data >> shift) + (((pred1*pcm)+(pred2*prev1)+32) >> 6);
 
 		Clampify( pcm2, -0x8000, 0x7fff );
 		*(buffer++) = pcm2;
