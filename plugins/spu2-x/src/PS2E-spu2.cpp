@@ -417,6 +417,7 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 	else
 		gsWindowHandle = 0;
 
+#ifdef _MSC_VER
 #ifdef PCSX2_DEVBUILD // Define may not be needed but not tested yet. Better make sure.
 	if( IsDevBuild && VisualDebug() ) 
 	{
@@ -432,6 +433,7 @@ EXPORT_C_(s32) SPU2open(void *pDsp)
 		DestroyWindow(hDebugDialog);
 		debugDialogOpen=0;
 	}
+#endif
 #endif
 
 	IsOpened = true;

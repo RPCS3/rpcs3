@@ -471,6 +471,9 @@ public:
 	// Loads settings from the INI file for this driver
 	virtual void ReadSettings()=0;
 
+	// Set output API for this driver
+	virtual void SetApiSettings(wxString api) =0;
+
 	// Saves settings to the INI file for this driver
 	virtual void WriteSettings() const=0;
 

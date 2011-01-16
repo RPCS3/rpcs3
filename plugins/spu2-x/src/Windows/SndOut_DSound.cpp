@@ -463,6 +463,10 @@ public:
 		Clampify( m_NumBuffers, (u8)3, (u8)8 );
 	}
 
+	void SetApiSettings(wxString api)
+	{
+	}
+
 	void WriteSettings() const
 	{
 		CfgWriteStr( L"DSOUNDOUT", L"Device", m_Device.empty() ? L"default" : m_Device );

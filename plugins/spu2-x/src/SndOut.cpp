@@ -74,6 +74,10 @@ public:
 	{
 	}
 
+	void SetApiSettings(wxString api)
+	{
+	}
+
 	void WriteSettings() const
 	{
 	}
