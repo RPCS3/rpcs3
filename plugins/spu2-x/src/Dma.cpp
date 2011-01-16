@@ -274,7 +274,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 
 			if ((Cores[i].IRQEnable && (Cores[i].IRQA >= TSA)) || (Cores[i].IRQA < TDA))
 			{
-				ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
+				//ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
 				SetIrqCall(i);
 			}
 		}
@@ -302,7 +302,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 
 			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
 			{
-				ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
+				//ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
 				SetIrqCall(i);
 			}
 		}
@@ -403,7 +403,10 @@ void V_Core::DoDMAwrite(u16* pMem, u32 size)
 	}
 
 	if( IsDevBuild )
+	{
 		DebugCores[Index].lastsize = size;
+		DebugCores[Index].dmaFlag = 2;
+	}
 
 	TSA &= ~7;
 

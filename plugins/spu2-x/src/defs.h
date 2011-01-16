@@ -212,8 +212,12 @@ struct V_CoreDebug
 // Last Transfer Size
 	u32 lastsize;
 
+	// draw adma waveform in the visual debugger
 	s32 admaWaveformL[0x100];
 	s32 admaWaveformR[0x100];
+
+	// Enabled when a dma write starts, disabled when the visual debugger showed it once
+	s32 dmaFlag;
 };
 
 // Debug tracking information - 24 voices and 2 cores.

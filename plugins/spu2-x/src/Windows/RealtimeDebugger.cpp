@@ -53,7 +53,7 @@ void UpdateDebugDialog()
 	if(!debugDialogOpen) return;
 
 	lCount++;
-	if(lCount>=(SampleRate/50))
+	if(lCount>=(SampleRate/100)) // Increase to SampleRate/200 for smooth display.
 	{
 		HDC hdc = GetDC(hDebugDialog);
 
@@ -152,7 +152,7 @@ void UpdateDebugDialog()
 				SetTextColor(hdc,RGB(  0,255,  0));
 				SetBkColor  (hdc,RGB(  0,  0,  0));
 
-				static wchar_t t[1024];
+				static wchar_t t[256];
 
 				swprintf_s(t,L"%06x",vc.StartA);
 				TextOut(hdc,IX+4,IY+4,t,6);
@@ -180,8 +180,8 @@ void UpdateDebugDialog()
 			SetDCBrushColor(hdc,RGB(  0,  0,  0));
 			SetDCPenColor(hdc,RGB(  255,  128,  32));
 
-			FillRectangle(hdc,JX,JY,252,46);
-			DrawRectangle(hdc,JX,JY,252,46);
+			FillRectangle(hdc,JX,JY,252,60);
+			DrawRectangle(hdc,JX,JY,252,60);
 
 			SetTextColor(hdc,RGB(255,255,255));
 			SetBkColor  (hdc,RGB(  0,  0,  0));
@@ -189,8 +189,11 @@ void UpdateDebugDialog()
 			TextOut(hdc,JX+4,JY+ 4,L"REVB",4);
 			TextOut(hdc,JX+4,JY+18,L"IRQE",4);
 			TextOut(hdc,JX+4,JY+32,L"ADMA",4);
+			static wchar_t t[256];
+			swprintf_s(t,L"DMA%s",c==0 ? "4" : "7");
+			TextOut(hdc,JX+4,JY+46,t, 4);
 
-			SetDCBrushColor(hdc,RGB(  0,255,  0));
+			SetDCBrushColor(hdc,RGB(  255,0,  0));
 
 			if(cx.FxEnable)
 			{
@@ -207,7 +210,7 @@ void UpdateDebugDialog()
 				for(int j=0;j<64;j++)
 				{
 					int i=j*256/64;
-					int val = (cd.admaWaveformL[i] * 20) / 32768;
+					int val = (cd.admaWaveformL[i] * 26) / 32768;
 					int y=0;
 
 					if(val>0)
@@ -217,14 +220,14 @@ void UpdateDebugDialog()
 
 					if(val!=0)
 					{
-						FillRectangle(hdc,JX+60+j,JY+24-y, 1, val);
+						FillRectangle(hdc,JX+60+j,JY+30-y, 1, val);
 					}
 				}
 
 				for(int j=0;j<64;j++)
 				{
 					int i=j*256/64;
-					int val = (cd.admaWaveformR[i] * 20) / 32768;
+					int val = (cd.admaWaveformR[i] * 26) / 32768;
 					int y=0;
 
 					if(val>0)
@@ -234,9 +237,18 @@ void UpdateDebugDialog()
 
 					if(val!=0)
 					{
-						FillRectangle(hdc,JX+136+j,JY+24-y, 1, val);
+						FillRectangle(hdc,JX+136+j,JY+30-y, 1, val);
 					}
 				}
+			}
+			if(cd.dmaFlag > 0) // So it shows x times this is called, since dmas are so fast
+			{
+				static wchar_t t[256];
+				swprintf_s(t,L"size = %d",cd.lastsize);
+				
+				TextOut(hdc,JX+64,JY+46,t,wcslen(t));
+				FillRectangle(hdc,JX+40,JY+46,10,10);
+				cd.dmaFlag--;
 			}
 		}
 

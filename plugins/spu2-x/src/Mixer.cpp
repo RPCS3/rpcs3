@@ -112,8 +112,8 @@ static void __forceinline IncrementNextA(V_Core& thiscore, uint voiceidx)
 	{
 		if( Cores[i].IRQEnable && (vc.NextA==Cores[i].IRQA ) )
 		{
-			if( IsDevBuild )
-				ConLog(" * SPU2 Core %d: IRQ Called (IRQA (%05X) passed; voice %d).\n", i, Cores[i].IRQA, thiscore.Index * 24 + voiceidx);
+			//if( IsDevBuild )
+			//	ConLog(" * SPU2 Core %d: IRQ Called (IRQA (%05X) passed; voice %d).\n", i, Cores[i].IRQA, thiscore.Index * 24 + voiceidx);
 
 			SetIrqCall(i);
 		}
