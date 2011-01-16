@@ -370,7 +370,9 @@ __forceinline void TimeUpdate(u32 cClocks)
 	}
 
 	// Visual debug display showing all core's activity! Disabled via #define on release builds.
+#ifdef __WIN32__
 	UpdateDebugDialog();
+#endif
 
 	if( SynchMode == 1 ) // AsyncMix on
 		SndBuffer::UpdateTempoChangeAsyncMixing();
