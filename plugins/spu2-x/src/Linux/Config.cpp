@@ -72,6 +72,13 @@ void ReadSettings()
 	CfgReadStr( L"OUTPUT", L"Output_Module", temp, PortaudioOut->GetIdent() );
 	OutputModule = FindOutputModuleById( temp.c_str() );// find the driver index of this module
 
+	// find current API
+	CfgReadStr( L"PORTAUDIO", L"HostApi", temp, L"ALSA" );
+	OutputAPI = -1;
+	if (temp == L"ALSA") OutputAPI = 0;
+	if (temp == L"OSS")  OutputAPI = 1;
+	if (temp == L"JACK") OutputAPI = 2;
+
 	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 300);
 	SynchMode = CfgReadInt( L"OUTPUT", L"Synch_Mode", 0);
 
