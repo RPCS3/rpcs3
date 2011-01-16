@@ -859,7 +859,8 @@ __forceinline void Mix()
 		#endif
 		{
 			Out = Apply_Dealias_Filter ( Out );
-			Out = Apply_Frequency_Response_Filter ( Out );
+			// Frequency response filter needs to be tuned. Currently emphasizes the highs too much.
+			//Out = Apply_Frequency_Response_Filter ( Out );
 		}
 
 		// Final Clamp!
