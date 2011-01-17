@@ -1,0 +1,150 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PCSX2 0.9.7\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2010-12-26 09:58-0500\n"
+"PO-Revision-Date: 2011-01-06 05:53+0800\n"
+"Last-Translator: 呆丸北拜\n"
+"Language-Team: pcsx2fan\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxE_dev;pxDt\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: F:\\PCSX2_0.9.7_GUI_翻譯\\SRC_4152\\\n"
+"X-Poedit-Language: Chinese\n"
+"X-Poedit-Country: TAIWAN\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: pcsx2/SourceLog.cpp:96
+msgid "Dumps detailed information for PS2 executables (ELFs)."
+msgstr "擷取 PS2 執行檔（ELF）的詳細資訊"
+
+#: pcsx2/SourceLog.cpp:101
+msgid "Logs manual protection, split blocks, and other things that might impact performance."
+msgstr "記錄手動保護、分塊，以及其他可能影響效能的東西。"
+
+#: pcsx2/SourceLog.cpp:106
+msgid "Shows the game developer's logging text (EE processor)"
+msgstr "顯示遊戲開發人員的日誌（EE processor）"
+
+#: pcsx2/SourceLog.cpp:111
+msgid "Shows the game developer's logging text (IOP processor)"
+msgstr "顯示遊戲開發人員的日誌（IOP processor）"
+
+#: pcsx2/SourceLog.cpp:116
+msgid "Shows DECI2 debugging logs (EE processor)"
+msgstr "顯示 DECI2 偵錯日誌（EE processor）"
+
+#: pcsx2/SourceLog.cpp:145
+msgid "SYSCALL and DECI2 activity."
+msgstr "SYSCALL 和 DECI2 的活動。"
+
+#: pcsx2/SourceLog.cpp:151
+msgid "Direct memory accesses to unknown or unmapped EE memory space."
+msgstr "直接記憶體存取至未知或未映射的 EE 記憶體空間。"
+
+#: pcsx2/SourceLog.cpp:157
+#: pcsx2/SourceLog.cpp:270
+msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
+msgstr "執行核心指令集的反組譯（不包含 COP 和 CACHE）。"
+
+#: pcsx2/SourceLog.cpp:163
+msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
+msgstr "COP0 指令集的反組譯（MMU、cpu 和 dma 的狀態，以及其他）。"
+
+#: pcsx2/SourceLog.cpp:169
+msgid "Disasm of the EE's floating point unit (FPU) only."
+msgstr "僅 EE 浮點運算器的反組譯。"
+
+#: pcsx2/SourceLog.cpp:175
+msgid "Disasm of the EE's VU0macro co-processor instructions."
+msgstr "EE 的 VU0macro 輔助處理器指令集的反組譯。"
+
+#: pcsx2/SourceLog.cpp:181
+msgid "Execution of EE cache instructions."
+msgstr "EE 快取指令集的執行。"
+
+#: pcsx2/SourceLog.cpp:187
+msgid "All known hardware register accesses (very slow!); not including sub filter options below."
+msgstr "所有已知的硬體暫存器存取（非常慢！）；不包括下面的分項選項。"
+
+#: pcsx2/SourceLog.cpp:193
+#: pcsx2/SourceLog.cpp:288
+msgid "Logs only unknown, unmapped, or unimplemented register accesses."
+msgstr "僅記錄未知、未映射，或未實現的暫存器存取。"
+
+#: pcsx2/SourceLog.cpp:199
+#: pcsx2/SourceLog.cpp:294
+msgid "Logs only DMA-related registers."
+msgstr "僅記錄 DMA 相關的暫存器。"
+
+#: pcsx2/SourceLog.cpp:205
+msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
+msgstr "IPU 活動：硬體暫存器、解碼操作、DMA 狀態，以及其他。"
+
+#: pcsx2/SourceLog.cpp:211
+msgid "All GIFtag parse activity; path index, tag type, etc."
+msgstr "全部 GIFtag 解析活動；路徑索引，標籤類型，以及其他。"
+
+#: pcsx2/SourceLog.cpp:217
+msgid "All VIFcode processing; command, tag style, interrupts."
+msgstr "全部 VIFcode 處理；命令，標籤風格，中斷。"
+
+#: pcsx2/SourceLog.cpp:223
+msgid "Scratchpad's MFIFO activity."
+msgstr "便條式暫存的 MFIFO 活動。"
+
+#: pcsx2/SourceLog.cpp:229
+msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
+msgstr "實際的資料傳輸日誌、匯流排正確的仲裁、停頓，以及其他。"
+
+#: pcsx2/SourceLog.cpp:235
+msgid "Tracks all EE counters events and some counter register activity."
+msgstr "追蹤全部 EE 計數器事件以及一些計數器暫存器活動。"
+
+#: pcsx2/SourceLog.cpp:241
+msgid "Dumps various VIF and VIFcode processing data."
+msgstr "擷取各種各樣的 VIF 和 VIFcode 處理資料。"
+
+#: pcsx2/SourceLog.cpp:247
+msgid "Dumps various GIF and GIFtag parsing data."
+msgstr "擷取各種各樣的 GIF 和 GIFtag 解析資料。"
+
+#: pcsx2/SourceLog.cpp:258
+msgid "SYSCALL and IRX activity."
+msgstr "SYSCALL 和 IRX 的活動。"
+
+#: pcsx2/SourceLog.cpp:264
+msgid "Direct memory accesses to unknown or unmapped IOP memory space."
+msgstr "直接記憶體存取至未知或未映射的 IOP 記憶體空間。"
+
+#: pcsx2/SourceLog.cpp:276
+msgid "Disasm of the IOP's GPU co-processor instructions."
+msgstr "IOP 的 GPU 輔助處理器指令集的反組譯。"
+
+#: pcsx2/SourceLog.cpp:282
+msgid "All known hardware register accesses, not including the sub-filters below."
+msgstr "所有已知的硬體暫存器存取，不包括下面的分項。"
+
+#: pcsx2/SourceLog.cpp:300
+msgid "Memorycard reads, writes, erases, terminators, and other processing."
+msgstr "記憶卡的讀取、寫入、清除、終結者，以及其他處理。"
+
+#: pcsx2/SourceLog.cpp:306
+msgid "Gamepad activity on the SIO."
+msgstr "SIO 上的遊戲手把活動。"
+
+#: pcsx2/SourceLog.cpp:312
+msgid "Actual DMA event processing and data transfer logs."
+msgstr "實際的直接記憶體存取事件處理和資料傳輸日誌。"
+
+#: pcsx2/SourceLog.cpp:318
+msgid "Tracks all IOP counters events and some counter register activity."
+msgstr "追蹤全部 IOP 計數器事件以及一些計數器暫存器活動。"
+
+#: pcsx2/SourceLog.cpp:324
+msgid "Detailed logging of CDVD hardware."
+msgstr "CDVD 硬體的詳細日誌紀錄。"
+

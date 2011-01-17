@@ -1,0 +1,184 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PCSX2 0.9.7\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2010-12-26 10:01-0500\n"
+"PO-Revision-Date: 2010-12-28 13:40+0300\n"
+"Last-Translator: Kein <kein-of@yandex.ru>\n"
+"Language-Team: Kein <kein-of@yandex.ru>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxEt\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: g:\\Internet\\SVN\\PCSX2\\\n"
+"X-Poedit-Language: Russian\n"
+"X-Poedit-Country: RUSSIAN FEDERATION\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: pcsx2/MTGS.cpp:809
+msgid "The MTGS thread has become unresponsive while waiting for the GS plugin to open."
+msgstr "Связь с MTGS-потоком была потеряна в период ожидания открытия GS-плагина."
+
+#: pcsx2/PluginManager.cpp:1329
+msgid "Internal Memorycard Plugin failed to initialize."
+msgstr "Ошибка инициализации встроенного плагина карт памяти."
+
+#: pcsx2/gui/ExecutorThread.cpp:40
+msgid "Logs events as they are passed to the PS2 virtual machine."
+msgstr "Отображает события которые отправляются вирутальной машине PS2."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:151
+msgid "!ContextTip:ChangingNTFS"
+msgstr "Режим NTFS-компрессии может быть изменен в любой момент времени через свойства файла Проводника Windows."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:48
+msgid "!ContextTip:Folders:Settings"
+msgstr "Папка, где PCSX2 будет хранить свои настройки, в том числе и настройки большинства плагинов (некоторые устаревшие плагины могут игнорировать данную опцию)."
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:118
+msgid "!ContextTip:DirPicker:UseDefault"
+msgstr "Активируйте данную опцию, если желаете чтобы PCSX2 создавала соответствующие папки относительно пути указанному в настройках пользовательского режима."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr ""
+"Актуален для следующих игр:\n"
+"* Digital Devil Saga (исправляет видеозаставки и вылеты)\n"
+"* SSX (исправляет графические ошибки и вылеты)\n"
+"* Resident Evil: Dead Aim (исправляет неправильные текстуры)"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+msgid "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr ""
+"Актуален для следующих игр:\n"
+"* Bleach Blade Battler\n"
+"* Growlanser II and III\n"
+"* Wizardry\""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:51
+msgid "!ContextTip:Window:Vsync"
+msgstr "Устраняет \"излом\" изображения при активной смене картинки на экране, однако сия роскошь чревата общим понижением производительности. Актуально лишь при использовании полноэкранного режима и лишь в связке с теми видео-плагинами, которые его поддерживают."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:56
+msgid "!ContextTip:Window:HideMouse"
+msgstr "По умолчанию, курсор мыши скрывается после 2-ух секунд бездействия. Данная опция моментально скрывает курсор мыши в видеоокне. Удобно, если вы используете управление мышью в игре."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:62
+msgid "!ContextTip:Window:Fullscreen"
+msgstr "Автоматически переводит видеоокно в полный режим при запуске игры. Впрочем, вы всегда можете выйти из данного режима с помощью комбинации ALT+ENTER."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:67
+msgid "!ContextTip:Window:FullscreenExclusive"
+msgstr "Эксклюзивный полноэкранный режим немного улучшает качество видеоряда на старых CRT-мониторах и немного ускоряет отображение кадров на старых видеокартах. Однако, ввиду его особенностей, может приводить к утчекам памяти и вылетам при частой его активации/деактивации (alt+enter)."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:72
+msgid "!ContextTip:Window:HideGS"
+msgstr "Скрывает видеоокно при установке паузы или нажатии ESC."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:39
+msgid "!ContextTip:Folders:Savestates"
+msgstr "Папка, куда PCSX2 будет записывать ваши быстрые сохранения."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:49
+msgid "!ContextTip:Folders:Snapshots"
+msgstr "Папка, куда PCSX2 будет сохранять ваши скриншоты. Форма, размер и стиль скриншотов зависят от используемого плагина."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:59
+msgid "!ContextTip:Folders:Logs"
+msgstr "Данная папка предназначена для сохранения логов и дампов PCSX2. Последние версии плагинов так же используют данную директорию для  сохранения разной отладочной информации."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
+msgid "!Panel:Speedhacks:EECycleX1"
+msgstr "1 - Стандартное значение скорости работы виртуального процессора PS2 (нет прироста скорости)."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
+msgid "!Panel:Speedhacks:EECycleX2"
+msgstr "2 - понижает цикл работы EE примерно на 33%. Неплохое ускорение для большинства игр, без потери совместимости."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
+msgid "!Panel:Speedhacks:EECycleX3"
+msgstr "3 - понижает цикл работы EE примерно на 50%. Хорошее ускорение, чревато возможным заиканием звука."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+msgid "!Panel:Speedhacks:VUCycleStealOff"
+msgstr "0 - VU Cycle Stealing отключен. Наиболее безопасная опция в плане совместимости."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
+msgid "!Panel:Speedhacks:VUCycleSteal1"
+msgstr "1 - среднее значение VU Cycle Stealing. Может повлиять на совместимость, но при этом ускоряет некоторые игры."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
+msgid "!Panel:Speedhacks:VUCycleSteal2"
+msgstr "2 - высокое значение VU Cycle Stealing. Наверняка скажется на совместимости, окупается неплохим ускорением эмуляции."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
+msgid "!Panel:Speedhacks:VUCycleSteal3"
+msgstr "1 - максимальное значение VU Cycle Stealing. В этом режиме будет проявляться множество графических багов."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
+msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+msgstr "Позволяет последовательно понизить цикл работы EmotionEngine процессора эмулируемой машины и тем самым ускорить игры, которые не полностью используют аппаратные ресурсы PS2."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
+msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+msgstr "Позволяет настроить количество циклов, \"воруемых\" VU-юнитом у EmotionEngine. Более высокое значение хака увеличивает количество циклов, которые будут \"позаимствованы\" у EE для обработки микропрограмм VU."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+msgid "!ContextTip:Speedhacks:vuFlagHack"
+msgstr "Обновляет флаги состояния только на тех блоках, которые будут читать данные флаги (вместо постоянного обновления всех блоков). Вполне безопасный хак, SuperVU-рекомпилятор делает нечто подобное по-умолчанию."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
+msgid "!ContextTip:Speedhacks:vuBlockHack"
+msgstr "Предугадывает, какие блоки микропрограмм не будут читать данные флагов в обозримом будущем. Неизвестно, провоцирует ли это какие-либо проблемы в каких-либо играх, посему, данный хак можно считать безопасным."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+msgid "!ContextTip:Speedhacks:vuMinMax"
+msgstr "Использует SSEx-инструкции для Min/Max-операции с плавающей точкой, вместо дополнительных Min/Max-операций при просчете логики. \"Ломает\" Gran Turismo 4 и Tekken 5. Возможно что-то еще."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:202
+msgid "!ContextTip:Speedhacks:INTC"
+msgstr "Данный хак лучше всего применять для игр которые используют регистрацию статуса INTC при ожидании вертикального синхроимпульса. В основном это RPG, не использующие 3D. Все остальные игры либо не получат никакого ускорения, либо оно будет чрезвычайно мало."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
+msgid "!ContextTip:Speedhacks:BIFC0"
+msgstr ""
+"Изначально нацеленный на пустые циклы EE-рекомпилятора по адресу ядра 0x81FC0,\n"
+"данный хак пытается определить циклы, результат работы которых\n"
+"(после каждой последующей итерации) никак не скажется на текущем состоянии машины\n"
+"до тех пор, пока запланированое событие не запустит эмуляцию другого юнита. После\n"
+"первой итерации таких \"пустых\" циклов, мы просто переходим к следующему событию или\n"
+"вообще к концу процессорного интервала."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:214
+msgid "!ContextTip:Speedhacks:fastCDVD"
+msgstr "Для получения списка игр, которые испытывают проблемы при использовании данного хака, вы можете обратитьcя к списку совмесимости HDLoader'а (смотрите по \"mode1\" и \"slow DVD\")."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:37
+msgid "!ContextTip:Framelimiter:Disable"
+msgstr "Отключение лимита кадров отключит так же и Turbo-/Slowmotion-режимы."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
+msgid "!ContextTip:GS:SyncMTGS"
+msgstr "Включайте данную опцию только в том случае, если вы думаете что синхронизация потоков MTGS приводит к вылетам или графическим артефактам."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:303
+msgid "!ContextTip:GS:DisableOutput"
+msgstr ""
+"Отключает обработку всех GS-данных, тем самым убирая возможный замедляющий фактор при замерах производительность остальных компонентов эмулятора. Идеально для использования в комбинации с быстрыми сохранениями: выберите нужную сцену в игре, сохранитесь, включите данную опцию и загрузите быстрое сохранение.\n"
+"\n"
+"Примечание: данная опция применяется \"на лету\", однако ее последующее отключение в реальном времени чревато появлением графического мусора в игре. "
+
+#: common/src/Utilities/ThreadTools.cpp:41
+msgid "Threading activity: start, detach, sync, deletion, etc."
+msgstr "Потоковая акивность: start, detach, sync, deletion, и т.д."
+
+#: common/src/Utilities/wxAppWithHelpers.cpp:36
+msgid "Includes idle event processing and some other uncommon event usages."
+msgstr "Включает в себя обработку событий ожидания и других редко используемых событий."
+
+#: common/include/Utilities/Exceptions.h:187
+msgid "No reason given."
+msgstr "Причина неизвестна."
+

@@ -1,0 +1,152 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PCSX2 0.9.7\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2010-12-29 11:44+0800\n"
+"PO-Revision-Date: 2010-12-29 11:44+0800\n"
+"Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxEt\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: trunk\\\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:151
+msgid "!ContextTip:ChangingNTFS"
+msgstr "NTFS 压缩可以随时使用 Windows 资源管理器中的文件属性更改。"
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:48
+msgid "!ContextTip:Folders:Settings"
+msgstr "这是 PCSX2 保存您的设置选项的文件夹，包括大多数插件生成的设置选项 (此选项对于一些旧的插件可能无效)。"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:118
+msgid "!ContextTip:DirPicker:UseDefault"
+msgstr "选中时此文件夹将自动反映当前 PCSX2 用户设置选项相关的默认值。"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr ""
+"已知影响以下游戏:\n"
+" * 数码恶魔传说 (修正 CG 及崩溃问题)\n"
+" * 极限滑雪 (修正图像错误及崩溃问题)\n"
+" * 生化危机: 死亡目标 (导致纹理混乱)"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+msgid "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr ""
+"已知对以下游戏有效:\n"
+" * 死神刀刃战士\n"
+" * 梦幻骑士 2 和 3\n"
+" * 巫术"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:51
+msgid "!ContextTip:Window:Vsync"
+msgstr "垂直同步可以消除花屏但通常对性能有较大影响。通常仅应用于全屏幕模式，且不一定对所有的 GS 插件都有效。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:56
+msgid "!ContextTip:Window:HideMouse"
+msgstr "选中此项强制 GS 窗口中不显示鼠标光标。在使用鼠标控制游戏时比较有用。默认状态鼠标在 2 秒不活动后隐藏。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:62
+msgid "!ContextTip:Window:Fullscreen"
+msgstr "启动或恢复模拟时自动切换至全屏。您可以使用 Alt+Enter 随时切换全屏或窗口模式。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:67
+msgid "!ContextTip:Window:FullscreenExclusive"
+msgstr "独占全屏模式可能在旧的 CRT 显示器上效果较好，对一些旧显卡速度较快。但通常可能在进入或退出全屏模式时导致内存泄露或随机崩溃。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:72
+msgid "!ContextTip:Window:HideGS"
+msgstr "在按 ESC 或挂起模拟器时彻底关闭 GS 窗口。"
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:39
+msgid "!ContextTip:Folders:Savestates"
+msgstr "此文件夹是 PCSX2 保存即时存档的位置；即时存档可使用菜单/工具栏或 F1/F3 (保存/读取) 使用。"
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:49
+msgid "!ContextTip:Folders:Snapshots"
+msgstr "此文件夹是 PCSX2 保存截图的位置。实际截图格式和风格对于不同的 GS 插件可能不同。"
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:59
+msgid "!ContextTip:Folders:Logs"
+msgstr "此文件夹是 PCSX2 保存日志记录和诊断转储的位置。大多数插件也将使用此文件夹，但是一些旧的插件可能会忽略它。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
+msgid "!Panel:Speedhacks:EECycleX1"
+msgstr "1 - 默认周期频率。完全重现 PS2 实机情感引擎的实际速度。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
+msgid "!Panel:Speedhacks:EECycleX2"
+msgstr "2 - 将 EE 周期频率减少约 33%。对大多数游戏有轻微提速效果，兼容性较高。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
+msgid "!Panel:Speedhacks:EECycleX3"
+msgstr "3 - 将 EE 周期频率减少约 50%。中等提速效果，但将导致很多 CG 动画中的音频出现间断。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+msgid "!Panel:Speedhacks:VUCycleStealOff"
+msgstr "0 - 禁用 VU 周期挪用。兼容性最高!"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
+msgid "!Panel:Speedhacks:VUCycleSteal1"
+msgstr "1 - 轻微 VU 周期挪用。兼容性较低，但对大多数游戏有一定的提速效果。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
+msgid "!Panel:Speedhacks:VUCycleSteal2"
+msgstr "2 - 中等 VU 周期挪用。兼容性更低，但对一些游戏有较大的提速效果。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
+msgid "!Panel:Speedhacks:VUCycleSteal3"
+msgstr "3 - 最大的 VU 周期挪用。对大多数游戏将造成图像闪烁或速度拖慢，用途有限。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
+msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+msgstr "提高此数值可减少情感引擎的 R5900 CPU 的时钟速度，通常对于未完全使用 PS2 实机硬件全部潜能的游戏有较大提速效果。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
+msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+msgstr "此选项控制 VU 单元从情感引擎挪用的时钟周期数目。较高数值将增加各个被游戏执行的 VU 微程序从 EE 挪用的周期数目。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+msgid "!ContextTip:Speedhacks:vuFlagHack"
+msgstr "仅在标志位被读取时更新，而不是总是更新。此选项通常是安全的，Super VU 默认会以相似的方式处理。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
+msgid "!ContextTip:Speedhacks:vuBlockHack"
+msgstr "假定未来的块不需要旧的标志实例数据。这应该是安全的。是否导致游戏出现问题仍然未知。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+msgid "!ContextTip:Speedhacks:vuMinMax"
+msgstr "使用 SSE 的浮点最大值/最小值操作来代替自定义的最大值/最小值过程。已经导致 GT 赛车和铁拳 5 出现问题。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:202
+msgid "!ContextTip:Speedhacks:INTC"
+msgstr "此 hack 对于使用 INTC 状态寄存器来等待垂直同步的游戏效果较好，包括一些主要的 3D RPG 游戏。对于不使用此方法的游戏没有提速效果。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
+msgid "!ContextTip:Speedhacks:BIFC0"
+msgstr "主要针对于位置内核地址 0x81FC0 的 EE 空闲循环，此 hack 试图检测循环体在一个另外的模拟单元计划的事件处理过程之前不保证产生相同结果的循环。在一次循环体执行之后，将下一事件的时间或处理器的时间片结束时间 (孰早) 做出更新。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:214
+msgid "!ContextTip:Speedhacks:fastCDVD"
+msgstr "请参看 HDLoader 兼容性列表以获取启用此项会出现问题的游戏列表。(通常标记为需要 'mode 1' 或 '慢速 DVD')"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:37
+msgid "!ContextTip:Framelimiter:Disable"
+msgstr "注意: 如限帧被禁用，快速模式和慢动作模式将不可用。"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
+msgid "!ContextTip:GS:SyncMTGS"
+msgstr "如您认为 MTGS 线程同步导致崩溃或图像错误，请启用此项。"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:303
+msgid "!ContextTip:GS:DisableOutput"
+msgstr ""
+"禁用全部由 MTGS 线程或 GPU 开销导致的测试信息。此选项可与即时存档配合使用: 在理想的场景中存档，启用此选项，读档。\n"
+"\n"
+"警告: 此选项可以即时启用但通常不能即时关闭 (通常会导致图像损坏)。"
+
