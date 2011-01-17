@@ -34,7 +34,7 @@ static void CheckHacksOverrides()
 
 	wxDialogWithHelpers dialog( wxFindWindowByName( L"Dialog:" + Dialogs::SysConfigDialog::GetNameStatic() ), _("Config Overrides Warning") );
 	
-	dialog += dialog.Text( pxE("!Panel:HasHacksOverrides",
+	dialog += dialog.Text( pxEt("!Panel:HasHacksOverrides",
 		L"Warning!  You are running PCSX2 with command line options that override your configured settings.  "
 		L"These command line options will not be reflected in the Settings dialog, and will be disabled "
 		L"if you apply any changes here."
@@ -54,7 +54,7 @@ static void CheckPluginsOverrides()
 
 	wxDialogWithHelpers dialog( NULL, _("Components Overrides Warning") );
 	
-	dialog += dialog.Text( pxE("!Panel:HasPluginsOverrides",
+	dialog += dialog.Text( pxEt("!Panel:HasPluginsOverrides",
 		L"Warning!  You are running PCSX2 with command line options that override your configured plugin and/or folder settings.  "
 		L"These command line options will not be reflected in the settings dialog, and will be disabled "
 		L"when you apply settings changes here."
@@ -110,7 +110,7 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL /*| wxSL_AUTOTICKS | wxSL_LABELS */);
 
 	m_slider_presets->SetToolTip(
-		pxE( "!Notice:Tooltip:Presets:Slider",
+		pxEt( "!Notice:Tooltip:Presets:Slider",
 				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
 				L"Known important game fixes ('Patches') will be applied automatically.\n\n"
 				L"Presets info:\n"
@@ -122,9 +122,9 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 	);
 	m_slider_presets->Enable(g_Conf->EnablePresets);
 
-	m_check_presets = new pxCheckBox( this, pxE("!Panel:", L"Preset:"), 0);
+	m_check_presets = new pxCheckBox( this, _("Preset:"), 0);
 	m_check_presets->SetToolTip(
-		pxE( "!Notice:Tooltip:Presets:Checkbox",
+		pxEt( "!Notice:Tooltip:Presets:Checkbox",
 				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
 				L"Known important game fixes ('Patches') will be applied automatically.\n\n"
 //This creates nested macros = not working. Un/comment manually if needed.
