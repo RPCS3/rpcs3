@@ -738,19 +738,19 @@ int AppConfig::GeMaxPresetIndex()
 
 bool AppConfig::isOkGetPresetTextAndColor( int n, wxString& label, wxColor& c )
 {
-	static const wxString presetNamesAndColors[][2] =
+	const wxString presetNamesAndColors[][2] =
 	{
-		{ pxE("!Panel:Presets:Name:1", L"Safest"),			L"Forest GREEN" },
-		{ pxE("!Panel:Presets:Name:2", L"Safe (faster)"),	L"Dark Green" },
-		{ pxE("!Panel:Presets:Name:3", L"Balanced"),		L"Blue" },
-		{ pxE("!Panel:Presets:Name:4", L"Aggressive"),		L"Purple" },
-		{ pxE("!Panel:Presets:Name:5", L"Aggressive plus"),	L"Orange"},
-		{ pxE("!Panel:Presets:Name:6", L"Mostly Harmful"),	L"Red" }
+		{ _t("Safest"),				L"Forest GREEN" },
+		{ _t("Safe (faster)"),		L"Dark Green" },
+		{ _t("Balanced"),			L"Blue" },
+		{ _t("Aggressive"),			L"Purple" },
+		{ _t("Aggressive plus"),	L"Orange"},
+		{ _t("Mostly Harmful"),		L"Red" }
 	};
 	if( n<0 || n>GeMaxPresetIndex() )
 		return false;
 
-	label = wxString::Format(L"%d - ", n+1) + presetNamesAndColors[n][0];
+	label = wxsFormat(L"%d - ", n+1) + presetNamesAndColors[n][0];
 	c	  = wxColor(presetNamesAndColors[n][1]);
 
     return true;
