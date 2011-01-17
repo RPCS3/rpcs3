@@ -750,7 +750,7 @@ bool AppConfig::isOkGetPresetTextAndColor( int n, wxString& label, wxColor& c )
 	if( n<0 || n>GeMaxPresetIndex() )
 		return false;
 
-	label = wxString::Format(L"%d - ", n) + presetNamesAndColors[n][0];
+	label = wxString::Format(L"%d - ", n+1) + presetNamesAndColors[n][0];
 	c	  = wxColor(presetNamesAndColors[n][1]);
 
     return true;
