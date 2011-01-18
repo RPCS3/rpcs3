@@ -109,7 +109,6 @@ void IEventListener_AppStatus::DispatchEvent( const AppEventInfo& evtinfo )
 			AppStatusEvent_OnSettingsApplied();
 		break;
 
-
 		case AppStatus_Exiting:
 			AppStatusEvent_OnExit();
 		break;

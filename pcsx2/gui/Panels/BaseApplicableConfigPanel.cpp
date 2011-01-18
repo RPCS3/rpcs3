@@ -199,12 +199,12 @@ void BaseApplicableConfigPanel::OnSettingsApplied( wxCommandEvent& evt )
 void BaseApplicableConfigPanel::AppStatusEvent_OnSettingsApplied() {}
 
 BaseApplicableConfigPanel_SpecificConfig::BaseApplicableConfigPanel_SpecificConfig(wxWindow* parent, wxOrientation orient)
-: BaseApplicableConfigPanel( parent, orient)
+	: BaseApplicableConfigPanel( parent, orient )
 {
 }
 
 BaseApplicableConfigPanel_SpecificConfig::BaseApplicableConfigPanel_SpecificConfig(wxWindow* parent, wxOrientation orient, const wxString& staticLabel )
-: BaseApplicableConfigPanel( parent, orient, staticLabel)
+	: BaseApplicableConfigPanel( parent, orient, staticLabel )
 {
 }
 

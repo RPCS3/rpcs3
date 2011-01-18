@@ -44,6 +44,7 @@ namespace Dialogs
 	protected:
 		wxListbook*			m_listbook;
 		wxArrayString		m_labels;
+		bool				m_allowApplyActivation;
 
 	public:
 		virtual ~BaseConfigurationDialog() throw();
@@ -58,6 +59,8 @@ namespace Dialogs
 
 		template< typename T >
 		void AddPage( const wxChar* label, int iconid );
+
+		void AllowApplyActivation( bool allow=true );
 
 	protected:
 		void OnSettingsApplied( wxCommandEvent& evt );

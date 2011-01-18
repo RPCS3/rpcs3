@@ -42,6 +42,54 @@ using namespace Panels;
 	static const int s_orient = wxBK_LEFT;
 #endif
 
+class ScopedOkButtonDisabler
+{
+protected:
+	Dialogs::BaseConfigurationDialog* m_parent;
+
+	wxWindow* m_apply;
+	wxWindow* m_ok;
+	wxWindow* m_cancel;
+
+public:
+	ScopedOkButtonDisabler( Dialogs::BaseConfigurationDialog* parent )
+	{
+		m_parent = parent;
+		m_parent->AllowApplyActivation( false );
+		
+		m_apply		= m_parent->FindWindow( wxID_APPLY );
+		m_ok		= m_parent->FindWindow( wxID_OK );
+		m_cancel	= m_parent->FindWindow( wxID_CANCEL );
+
+		if (m_apply)	m_apply	->Disable();
+		if (m_ok)		m_ok	->Disable();
+		if (m_cancel)	m_cancel->Disable();
+	}
+
+	// Use this to prevent the Apply button from being re-enabled.
+	void DetachApply()
+	{
+		m_apply = NULL;
+	}
+
+	void DetachAll()
+	{
+		m_apply = m_ok = m_cancel = NULL;
+	}
+	
+	virtual ~ScopedOkButtonDisabler() throw()
+	{
+		if (m_apply)	m_apply	->Enable();
+		if (m_ok)		m_ok	->Enable();
+		if (m_cancel)	m_cancel->Enable();
+
+		m_parent->AllowApplyActivation( true );
+	}
+};
+
+// --------------------------------------------------------------------------------------
+//  BaseApplicableDialog  (implementations)
+// --------------------------------------------------------------------------------------
 IMPLEMENT_DYNAMIC_CLASS(BaseApplicableDialog, wxDialogWithHelpers)
 
 BaseApplicableDialog::BaseApplicableDialog( wxWindow* parent, const wxString& title, const pxDialogCreationFlags& cflags )
@@ -86,7 +134,8 @@ Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, con
 	: _parent( parent, title )
 {
 	SetMinWidth( idealWidth );
-	m_listbook		= NULL;
+	m_listbook = NULL;
+	m_allowApplyActivation = true;
 	
 	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( BaseConfigurationDialog::OnOk_Click ) );
 	Connect( wxID_CANCEL,	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( BaseConfigurationDialog::OnCancel_Click ) );
@@ -170,7 +219,8 @@ void Dialogs::BaseConfigurationDialog::SomethingChanged()
 void Dialogs::BaseConfigurationDialog::OnSomethingChanged( wxCommandEvent& evt )
 {
 	evt.Skip();
-	if( (evt.GetId() != wxID_OK) && (evt.GetId() != wxID_CANCEL) && (evt.GetId() != wxID_APPLY) )
+	if (!m_allowApplyActivation) return;
+	if ((evt.GetId() != wxID_OK) && (evt.GetId() != wxID_CANCEL) && (evt.GetId() != wxID_APPLY))
 		SomethingChanged();
 }
 
@@ -181,44 +231,11 @@ void Dialogs::BaseConfigurationDialog::OnCloseWindow( wxCloseEvent& evt )
 	evt.Skip();
 }
 
-class ScopedOkButtonDisabler
+
+void Dialogs::BaseConfigurationDialog::AllowApplyActivation( bool allow )
 {
-protected:
-	wxWindow* m_apply;
-	wxWindow* m_ok;
-	wxWindow* m_cancel;
-
-public:
-	ScopedOkButtonDisabler( wxWindow* parent )
-	{
-		m_apply		= parent->FindWindow( wxID_APPLY );
-		m_ok		= parent->FindWindow( wxID_OK );
-		m_cancel	= parent->FindWindow( wxID_CANCEL );
-
-		if (m_apply)	m_apply	->Disable();
-		if (m_ok)		m_ok	->Disable();
-		if (m_cancel)	m_cancel->Disable();
-	}
-
-	// Use this to prevent the Apply buton from being re-enabled.
-	//avih: Does this work?? As far as I know Apply is always enabled...
-	void DetachApply()
-	{
-		m_apply = NULL;
-	}
-
-	void DetachAll()
-	{
-		m_apply = m_ok = m_cancel = NULL;
-	}
-	
-	virtual ~ScopedOkButtonDisabler() throw()
-	{
-		if (m_apply)	m_apply	->Enable();
-		if (m_ok)		m_ok	->Enable();
-		if (m_cancel)	m_cancel->Enable();
-	}
-};
+	m_allowApplyActivation = allow;
+}
 
 void Dialogs::BaseConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 {
