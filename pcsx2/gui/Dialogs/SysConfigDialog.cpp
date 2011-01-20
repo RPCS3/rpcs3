@@ -65,48 +65,44 @@ static void CheckPluginsOverrides()
 	pxIssueConfirmation( dialog, MsgButtons().OK(), L"Dialog.ComponentsConfig.Overrides" );
 }
 
-//Current behavior when unchecking 'Presets' is to keep the GUI settings at the last preset (even if not applied).
+//Behavior when unchecking 'Presets' is to keep the GUI settings at the last preset (even if not yet applied).
 //
-//Alternative GUI behavior is that when 'Preset' is unchecked,
-//  the GUI settings return to the last applied settings.
-//  This allows the user to keep tweaking his "personal' settings and toggling 'Presets' for comparison,
-//  or start tweaking from a specific preset by clicking Apply before unchecking 'Presets'
-//  However, I think it's more confusing. Uncomment the next line to use the alternative behavior.
-//#define PRESETS_USE_APPLIED_CONFIG_ON_UNCHECK
+//Alternative possible behavior when unchecking 'Presets' (currently not implemented) is to set the GUI to
+//	the last applied settings. If such behavior is to be implemented, g_Conf->EnablePresets should be set to
+//	false before it's applied to the GUI and then restored to it's original state such that the GUI reflects
+//	g_Conf's settings as if it doesn't force presets. (if a settings which has presets enable is applied to the
+//	GUI then most of the GUI is disabled).
 void Dialogs::SysConfigDialog::UpdateGuiForPreset ( int presetIndex, bool presetsEnabled )
 {
+ 	if( !m_listbook )
+		return;
+
+	//Console.WriteLn("Applying config to Gui: preset #%d, presets enabled: %s", presetIndex, presetsEnabled?"true":"false");
+
 	AppConfig preset = *g_Conf;
-	preset.IsOkApplyPreset(presetIndex);
-	preset.EnablePresets=presetsEnabled;//override IsOkApplyPreset to actual required state
-
- 	if( m_listbook ){
-		//Console.WriteLn("Applying config to Gui: preset #%d, presets enabled: %s", presetIndex, presetsEnabled?"true":"false");
- 		size_t pages = m_labels.GetCount();
-		for( size_t i=0; i<pages; ++i ){
-			bool origPresetsEnabled = g_Conf->EnablePresets;
-			if( !presetsEnabled )
-				g_Conf->EnablePresets = false; // unly used when PRESETS_USE_APPLIED_CONFIG_WHEN_UNCHECKED is NOT defined
-
- 			(
- 				(BaseApplicableConfigPanel_SpecificConfig*)(m_listbook->GetPage(i))
-
-#ifdef PRESETS_USE_APPLIED_CONFIG_ON_UNCHECK
-			)->ApplyConfigToGui( presetsEnabled?preset:*g_Conf, true );
-			//Console.WriteLn("SysConfigDialog::UpdateGuiForPreset: Using object: %s", presetsEnabled?"preset":"*g_Conf");
-#else
-			)->ApplyConfigToGui( preset, true );
-			//Console.WriteLn("SysConfigDialog::UpdateGuiForPreset: Using object: %s", "preset");
-#endif
-			g_Conf->EnablePresets = origPresetsEnabled;
+	preset.IsOkApplyPreset( presetIndex );	//apply a preset to a copy of g_Conf.
+	preset.EnablePresets = presetsEnabled;	//override IsOkApplyPreset (which always applies/enabled) to actual required state
+	
+	size_t pages = m_labels.GetCount();
+	for( size_t i=0; i<pages; ++i )
+	{
+		//NOTE: We should only apply the preset to panels of class BaseApplicableConfigPanel_SpecificConfig
+		//      which supports it, and BaseApplicableConfigPanel implements IsSpecificConfig() as lame RTTI to detect it.
+		//		However, the panels in general (m_listbook->GetPage(i)) are of type wxNotebookPage which doesn't
+		//		support IsSpecificConfig(), so the panels (pages) that SysConfigDialog holds must be of class
+		//		BaseApplicableConfigPanel or derived, and not of the parent class wxNotebookPage.
+		if ( ((BaseApplicableConfigPanel*)(m_listbook->GetPage(i)))->IsSpecificConfig() )
+		{
+			((BaseApplicableConfigPanel_SpecificConfig*)(m_listbook->GetPage(i)))
+				->ApplyConfigToGui( preset, true );
 		}
-
 	}
-
+	
 }
 
 void Dialogs::SysConfigDialog::AddPresetsControl()
 {
-	m_slider_presets = new wxSlider( this, wxID_ANY, g_Conf->PresetIndex, 0, AppConfig::GeMaxPresetIndex(),
+	m_slider_presets = new wxSlider( this, wxID_ANY, g_Conf->PresetIndex, 0, AppConfig::GetMaxPresetIndex(),
 		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL /*| wxSL_AUTOTICKS | wxSL_LABELS */);
 
 	m_slider_presets->SetToolTip(
@@ -202,6 +198,8 @@ Dialogs::SysConfigDialog::SysConfigDialog(wxWindow* parent)
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
+	//NOTE: all pages which are added to SysConfigDialog must be of class BaseApplicableConfigPanel or derived.
+	//		see comment inside UpdateGuiForPreset implementation for more info.
 	AddPage<CpuPanelEE>				( pxL("EE/IOP"),		cfgid.Cpu );
 	AddPage<CpuPanelVU>				( pxL("VUs"),			cfgid.Cpu );
 	AddPage<VideoPanel>				( pxL("GS"),			cfgid.Cpu );

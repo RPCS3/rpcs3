@@ -198,6 +198,8 @@ public:
 	virtual void AppStatusEvent_OnVmSettingsLoadSave( const AppSettingsEventInfo& ) {}
 	virtual void AppStatusEvent_OnExit() {}
 
+	virtual bool IsSpecificConfig(){return false;} //lame RTTI
+
 protected:
 	virtual void OnSettingsApplied( wxCommandEvent& evt );
 };
@@ -212,6 +214,7 @@ class BaseApplicableConfigPanel_SpecificConfig : public BaseApplicableConfigPane
     //but multiple inheritance sucks. So, subclass.
     //NOTE: because ApplyConfigToGui is called manually and not via an event, it must consider manuallyPropagate and call sub panels.
 public:
+	virtual bool IsSpecificConfig(){return true;};
 	BaseApplicableConfigPanel_SpecificConfig( wxWindow* parent, wxOrientation orient=wxVERTICAL );
 	BaseApplicableConfigPanel_SpecificConfig( wxWindow* parent, wxOrientation orient, const wxString& staticLabel );
 

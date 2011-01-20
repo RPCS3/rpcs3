@@ -122,7 +122,8 @@ void Panels::FramelimiterPanel::ApplyConfigToGui( AppConfig& configToApply, bool
 	const AppConfig::FramerateOptions& appfps( configToApply.Framerate );
 	const Pcsx2Config::GSOptions& gsconf( configToApply.EmuOptions.GS );
 
-	m_check_LimiterDisable->SetValue( !gsconf.FrameLimitEnable );
+	if( !manuallyPropagate )	//Presets don't control this: only change if config doesn't come from preset.
+		m_check_LimiterDisable->SetValue( !gsconf.FrameLimitEnable );
 
 	m_spin_NominalPct	->SetValue( appfps.NominalScalar.Raw );
 	m_spin_TurboPct		->SetValue( appfps.TurboScalar.Raw );

@@ -303,7 +303,7 @@ public:
 	void LoadSaveRootItems( IniInterface& ini );
 	void LoadSaveMemcards( IniInterface& ini );
 
-	static int  GeMaxPresetIndex();
+	static int  GetMaxPresetIndex();
     static bool isOkGetPresetTextAndColor(int n, wxString& label, wxColor& c);
 	bool        IsOkApplyPreset(int n);
 

@@ -120,19 +120,22 @@ void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, 
 {
 	const AppConfig::GSWindowOptions& conf( configToApply.GSWindow );
 
-	m_check_CloseGS		->SetValue( conf.CloseOnEsc );
-	m_check_Fullscreen	->SetValue( conf.DefaultToFullscreen );
-	m_check_HideMouse	->SetValue( conf.AlwaysHideMouse );
-	m_check_SizeLock	->SetValue( conf.DisableResizeBorders );
+	if( !manuallyPropagate )	//Presets don't control these: only change if config doesn't come from preset.
+	{
+		m_check_CloseGS		->SetValue( conf.CloseOnEsc );
+		m_check_Fullscreen	->SetValue( conf.DefaultToFullscreen );
+		m_check_HideMouse	->SetValue( conf.AlwaysHideMouse );
+		m_check_SizeLock	->SetValue( conf.DisableResizeBorders );
 
-	m_combo_AspectRatio	->SetSelection( (int)conf.AspectRatio );
+		m_combo_AspectRatio	->SetSelection( (int)conf.AspectRatio );
 
-	m_check_VsyncEnable	->SetValue( configToApply.EmuOptions.GS.VsyncEnable );
+		m_check_VsyncEnable	->SetValue( configToApply.EmuOptions.GS.VsyncEnable );
 
-	m_check_DclickFullscreen ->SetValue ( conf.IsToggleFullscreenOnDoubleClick );
+		m_check_DclickFullscreen ->SetValue ( conf.IsToggleFullscreenOnDoubleClick );
 
-	m_text_WindowWidth	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetWidth() ) );
-	m_text_WindowHeight	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetHeight() ) );
+		m_text_WindowWidth	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetWidth() ) );
+		m_text_WindowHeight	->SetValue( wxsFormat( L"%d", conf.WindowSize.GetHeight() ) );
+	}
 
 	m_check_VsyncEnable->Enable(!configToApply.EnablePresets);
 }

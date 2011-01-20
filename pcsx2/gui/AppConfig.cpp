@@ -731,7 +731,7 @@ void AppConfig::FramerateOptions::LoadSave( IniInterface& ini )
 	IniEntry( SkipOnTurbo );
 }
 
-int AppConfig::GeMaxPresetIndex()
+int AppConfig::GetMaxPresetIndex()
 {
 	return 5;
 }
@@ -747,7 +747,7 @@ bool AppConfig::isOkGetPresetTextAndColor( int n, wxString& label, wxColor& c )
 		{ _t("Aggressive plus"),	L"Orange"},
 		{ _t("Mostly Harmful"),		L"Red" }
 	};
-	if( n<0 || n>GeMaxPresetIndex() )
+	if( n<0 || n>GetMaxPresetIndex() )
 		return false;
 
 	label = wxsFormat(L"%d - ", n+1) + presetNamesAndColors[n][0];
@@ -757,43 +757,54 @@ bool AppConfig::isOkGetPresetTextAndColor( int n, wxString& label, wxColor& c )
 }
 
 
+//Apply one of several (currently 6) configuration subsets.
+//The scope of the subset which each preset controlls is hardcoded here.
 bool AppConfig::IsOkApplyPreset(int n)
 {
-	if (n < 0 || n > GeMaxPresetIndex() )
+	if (n < 0 || n > GetMaxPresetIndex() )
 	{
-		Console.WriteLn("Warning: ApplyPreset(%d): index too big, Aborting.", n);
+		Console.WriteLn("DEV Warning: ApplyPreset(%d): index out of range, Aborting.", n);
 		return false;
 	}
 
 	Console.WriteLn("Applying Preset %d ...", n);
 
-	AppConfig    default_AppConfig;
-	Pcsx2Config	 default_Pcsx2Config;
+	//Have some original and default values at hand to be used later.
+	Pcsx2Config::GSOptions  original_GS = EmuOptions.GS;
+	AppConfig				default_AppConfig;
+	Pcsx2Config				default_Pcsx2Config;
 
-	Pcsx2Config  original_Pcsx2Config = EmuOptions;
-	EmuOptions = default_Pcsx2Config;	//reset EmuOptions.
 
-	//restore the original Pcsx2Config settings which we don't want to override with the application default dettings.
-	//The ugly part of this is that while most panels are entirely disabled from manual tweaking when a preset is used,
-	//  the options that are not overriden by presets need to be manually excluded from disabling.
-	//  So the Gui panels need to have intimate knowledge of this exclusion list. Bahh..
-	EmuOptions.EnableCheats			= original_Pcsx2Config.EnableCheats;
-	EmuOptions.GS.FrameLimitEnable	= original_Pcsx2Config.GS.FrameLimitEnable;
-	EmuOptions.BackupSavestate		= original_Pcsx2Config.BackupSavestate;
+	//  NOTE:	Because the system currently only supports passing of an entire AppConfig to the GUI panels to apply,
+	//			the GUI panels should be aware of the settings which the presets control, such that when presets are used:
+	//			1. The panels should prevent manual modifications (by graying out) of settings which the presets control.
+	//			2. The panels should not apply values which the presets don't control.
+	//			Currently controlled by the presets:
+	//			- AppConfig:	Framerate, EnableSpeedHacks, EnableGameFixes.
+	//			- EmuOptions:	Cpu, Gamefixes, SpeedHacks, EnablePatches, GS (except FrameLimitEnable).
+	//
+	//			This essentially currently covers all the options on all the panels except for framelimiter which isn't
+	//			controlled by the presets, and almost the entire GSWindow panel which also isn't controlled by presets
+	//			(however, vsync IS controlled by the presets).
 
-	//Make sure these options are forced as a base even if in the future they default to other values.
-	//Also, as with the exclusions list, the gui needs to know what sections are affected by presets
-	//  such that it can disable them from manual tweaking when a preset is used. This includes most panels BTW.
-	EnableSpeedHacks			=false;
-    EmuOptions.Speedhacks.bitset=0; //Turn off individual hacks to make it visually clear they're not used
-	EnableGameFixes				=false;
-	EmuOptions.EnablePatches	=true;
 
-	//Note that AppConfig was not reset, so if we need some default options for it, we need to set them.
-	this->Framerate = default_AppConfig.Framerate;
+	//Force some settings as a (current) base for all presets.
 
-	//Actual application of current preset.
-	//The presets themselves probably need some voodoo tuning to be reasonably useful.
+	Framerate			= default_AppConfig.Framerate;
+	EnableSpeedHacks	= false;
+	EnableGameFixes		= false;
+
+	EmuOptions.EnablePatches		= true;
+	EmuOptions.GS					= default_Pcsx2Config.GS;
+	EmuOptions.GS.FrameLimitEnable	= original_GS.FrameLimitEnable;	//although GS is reset, frameLimiter isn't touched.
+	EmuOptions.Cpu					= default_Pcsx2Config.Cpu;
+	EmuOptions.Gamefixes			= default_Pcsx2Config.Gamefixes;
+	EmuOptions.Speedhacks			= default_Pcsx2Config.Speedhacks;
+	EmuOptions.Speedhacks.bitset	= 0; //Turn off individual hacks to make it visually clear they're not used.
+
+
+	//Actual application of current preset over the base settings which all presets use (mostly pcsx2's default values).
+	//The presets themselves might need some voodoo tuning to be even more useful. Currently they mostly modify Speedhacks.
 
 	bool vuUsed=false, eeUsed=false;//used to prevent application of specific lower preset values on fallthrough.
 	switch (n){	//currently implemented such that any preset also applies all lower presets, with few exceptions.
@@ -806,27 +817,24 @@ bool AppConfig::IsOkApplyPreset(int n)
 
 		case 3 :	//Set VU cycle steal to 1 click, enable (m)vuBlockHack, set VU clamp mode to 'none'
 					vuUsed?0:(vuUsed=true, EmuOptions.Speedhacks.VUCycleSteal = 1);
-					EmuOptions.Speedhacks.vuBlockHack=true;
-					//EmuOptions.Cpu.Recompiler.fpuOverflow=
-					//EmuOptions.Cpu.Recompiler.fpuExtraOverflow=
-					//EmuOptions.Cpu.Recompiler.fpuFullMode=  //EE clamp mode to 'None' : Better default for presets
-					EmuOptions.Cpu.Recompiler.vuOverflow=
-					EmuOptions.Cpu.Recompiler.vuExtraOverflow=
-					EmuOptions.Cpu.Recompiler.vuSignOverflow=false; //VU Clamp mode to 'none'
+					EmuOptions.Speedhacks.vuBlockHack		  = true;
+					EmuOptions.Cpu.Recompiler.vuOverflow	  =
+					EmuOptions.Cpu.Recompiler.vuExtraOverflow =
+					EmuOptions.Cpu.Recompiler.vuSignOverflow = false; //VU Clamp mode to 'none'
 
 		//best balanced hacks combo?
-		case 2 :	//enable EE timing hack, set EE cyclerate to 1 click, enable mvu flag hack
-					eeUsed?0:(eeUsed=true, EmuOptions.Speedhacks.EECycleRate  = 1);
+		case 2 :	//enable mvu flag hack, enable EE timing hack, set EE cyclerate to 1 click.
+					eeUsed?0:(eeUsed=true, EmuOptions.Speedhacks.EECycleRate = 1);
 					EnableGameFixes = true;
 					EmuOptions.Gamefixes.EETimingHack = true;
 					EmuOptions.Speedhacks.vuFlagHack = true;
 
-		case 1 :	//Apply recommended speed hacks (which are individually "ckecked" by default) without mvu flag hack.
+		case 1 :	//Recommended speed hacks without mvu flag hack.
 					EnableSpeedHacks = true;
 					EmuOptions.Speedhacks.IntcStat = true;
 					EmuOptions.Speedhacks.WaitLoop = true;
 
-		case 0 :	//default application config. + all individual speed hacks unticked to make it visually clear none is used.
+		case 0 :	//Base preset: Mostly pcsx2's defaults.
 					
 		
 					break;
