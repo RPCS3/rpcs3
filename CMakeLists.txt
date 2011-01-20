@@ -42,6 +42,11 @@ include_directories(${PROJECT_SOURCE_DIR}/common/include
 					${PROJECT_SOURCE_DIR}/common/include/Utilities
 					${PROJECT_SOURCE_DIR}/common/include/x86emitter)
 
+# make the translation
+if(EXISTS "${PROJECT_SOURCE_DIR}/locales")
+    add_subdirectory(locales)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/locales")
+
 # make 3rdParty
 if(EXISTS "${PROJECT_SOURCE_DIR}/3rdparty")
     add_subdirectory(3rdparty)

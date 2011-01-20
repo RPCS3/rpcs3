@@ -28,6 +28,7 @@ endif(Linux)
 ## Use cmake package to find module
 find_package(ALSA)
 find_package(BZip2)
+find_package(Gettext) # translation tool
 find_package(JPEG)
 find_package(OpenGL)
 # Tell cmake that we use SDL as a library and not as an application
