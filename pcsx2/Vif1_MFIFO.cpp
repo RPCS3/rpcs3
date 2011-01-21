@@ -124,7 +124,7 @@ static __fi void mfifo_VIF1chain()
 	if (vif1ch.madr >= dmacRegs.rbor.ADDR &&
 	        vif1ch.madr <= (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
 	{		
-		if(vif1ch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge VIF1");
+		//if(vif1ch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge VIF1");
 		
 		vif1ch.madr = qwctag(vif1ch.madr);
 		mfifoVIF1rbTransfer();
@@ -281,16 +281,6 @@ void vifMFIFOInterrupt()
 
 	//Simulated GS transfer time done, clear the flags
 	
-	if (vif1.cmd) 
-	{
-		if(vif1.done == true && vif1ch.qwc == 0)	vif1Regs.stat.VPS = VPS_WAITING;
-	}
-	else		 
-	{
-		vif1Regs.stat.VPS = VPS_IDLE;
-	}
-
-	
 	if (vif1.irq && vif1.tag.size == 0)
 	{
 		SPR_LOG("VIF MFIFO Code Interrupt detected");
@@ -302,8 +292,22 @@ void vifMFIFOInterrupt()
 		{
 			/*vif1Regs.stat.FQC = 0; // FQC=0
 			vif1ch.chcr.STR = false;*/
-			if((vif1ch.qwc > 0 || !vif1.done) && !(vif1.inprogress & 0x10)) return;
+			if((vif1ch.qwc > 0 || !vif1.done) && !(vif1.inprogress & 0x10))
+			{
+				VIF_LOG("VIF1 MFIFO Stalled");
+				return;
+			}
 		}
+	}
+
+	//Mirroring change to VIF0
+	if (vif1.cmd) 
+	{
+		if(vif1.done == true && vif1ch.qwc == 0)	vif1Regs.stat.VPS = VPS_WAITING;
+	}
+	else		 
+	{
+		vif1Regs.stat.VPS = VPS_IDLE;
 	}
 
 	if(vif1.inprogress & 0x10)

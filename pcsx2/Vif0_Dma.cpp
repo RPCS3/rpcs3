@@ -163,8 +163,30 @@ __fi void vif0Interrupt()
 
 	g_vifCycles = 0;
 
+	vif0Regs.stat.FQC = min(vif0ch.qwc, (u16)8);
+
 	if (!(vif0ch.chcr.STR)) Console.WriteLn("vif0 running when CHCR == %x", vif0ch.chcr._u32);
 
+	if (vif0.irq && vif0.tag.size == 0)
+	{
+		vif0Regs.stat.INT = true;
+		hwIntcIrq(VIF0intc);
+		--vif0.irq;
+		if (vif0Regs.stat.test(VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
+		{
+			//vif0Regs.stat.FQC = 0;
+
+			// One game doesn't like vif stalling at end, can't remember what. Spiderman isn't keen on it tho
+			//vif0ch.chcr.STR = false;
+			if(vif0ch.qwc > 0 || !vif0.done)	
+			{
+				VIF_LOG("VIF0 Stalled");
+				return;
+			}
+		}
+	}
+
+	//Must go after the Stall, incase it's still in progress, GTC africa likes to see it still transferring.
 	if (vif0.cmd) 
 	{
 		if(vif0.done == true && vif0ch.qwc == 0)	vif0Regs.stat.VPS = VPS_WAITING;
@@ -174,24 +196,10 @@ __fi void vif0Interrupt()
 		vif0Regs.stat.VPS = VPS_IDLE;
 	}
 
-	if (vif0.irq && vif0.tag.size == 0)
-	{
-		vif0Regs.stat.INT = true;
-		hwIntcIrq(VIF0intc);
-		--vif0.irq;
-		if (vif0Regs.stat.test(VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS))
-		{
-			vif0Regs.stat.FQC = 0;
-
-			// One game doesn't like vif stalling at end, can't remember what. Spiderman isn't keen on it tho
-			//vif0ch.chcr.STR = false;
-			if(vif0ch.qwc > 0 || !vif0.done)	return;
-		}
-	}
-
 	if (vif0.inprogress & 0x1)
 	{
 		_VIF0chain();
+		vif0Regs.stat.FQC = min(vif0ch.qwc, (u16)8);
 		CPU_INT(DMAC_VIF0, g_vifCycles);
 		return;
 	}
@@ -206,7 +214,7 @@ __fi void vif0Interrupt()
 		}
 
 		if ((vif0.inprogress & 0x1) == 0) vif0SetupTransfer();
-
+		vif0Regs.stat.FQC = min(vif0ch.qwc, (u16)8);
 		CPU_INT(DMAC_VIF0, g_vifCycles);
 		return;
 	}

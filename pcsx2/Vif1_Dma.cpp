@@ -373,17 +373,9 @@ __fi void vif1Interrupt()
 	
 	if (!vif1ch.chcr.STR) Console.WriteLn("Vif1 running when CHCR == %x", vif1ch.chcr._u32);
 
-	if (vif1.cmd) 
-	{
-		if (vif1.done && (vif1ch.qwc == 0)) vif1Regs.stat.VPS = VPS_WAITING;
-	}
-	else		 
-	{
-		vif1Regs.stat.VPS = VPS_IDLE;
-	}
-
 	if (vif1.irq && vif1.tag.size == 0)
 	{
+		VIF_LOG("VIF IRQ Firing");
 		vif1Regs.stat.INT = true;
 		hwIntcIrq(VIF1intc);
 		--vif1.irq;
@@ -393,8 +385,22 @@ __fi void vif1Interrupt()
 
 			//NFSHPS stalls when the whole packet has gone across (it stalls in the last 32bit cmd)
 			//In this case VIF will end
-			if(vif1ch.qwc > 0 || !vif1.done)	return;
+			if(vif1ch.qwc > 0 || !vif1.done)	
+			{
+				VIF_LOG("VIF1 Stalled");
+				return;
+			}
 		}
+	}
+
+	//Mirroring change to VIF0
+	if (vif1.cmd) 
+	{
+		if (vif1.done && (vif1ch.qwc == 0)) vif1Regs.stat.VPS = VPS_WAITING;
+	}
+	else		 
+	{
+		vif1Regs.stat.VPS = VPS_IDLE;
 	}
 
 	if (vif1.inprogress & 0x1)
