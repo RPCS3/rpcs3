@@ -182,12 +182,18 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 			if (++vCL == blockSize) vCL = 0;
 		}
 		else if (isFill) {
+			//Filling doesn't need anything fancy, it's pretty much a normal write, just doesnt increment the source.
 			//DevCon.WriteLn("filling mode!");
-			VifUnpackSSE_Dynarec fill( VifUnpackSSE_Dynarec::FillingWrite( *this ) );
-			fill.xUnpack(upkNum);
-			fill.xMovDest();
+			xUnpack(upkNum);
+			xMovDest();
 
 			dstIndirect += 16;
+
+			if( IsUnmaskedOp() ) {
+				++destReg;
+				++workReg;
+			}
+
 			vNum--;
 			if (++vCL == blockSize) vCL = 0;
 		}
