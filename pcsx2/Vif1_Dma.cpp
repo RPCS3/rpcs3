@@ -385,6 +385,7 @@ __fi void vif1Interrupt()
 
 			//NFSHPS stalls when the whole packet has gone across (it stalls in the last 32bit cmd)
 			//In this case VIF will end
+			vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);
 			if(vif1ch.qwc > 0 || !vif1.done)	
 			{
 				VIF_LOG("VIF1 Stalled");
@@ -446,6 +447,8 @@ __fi void vif1Interrupt()
 		//Reverse fifo has finished and nothing is left, so lets clear the outputting flag
 		gifRegs.stat.OPH = false;
 	}
+
+	if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
 
 	vif1ch.chcr.STR = false;
 	vif1.vifstalled = false;

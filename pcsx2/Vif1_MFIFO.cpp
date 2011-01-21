@@ -169,7 +169,8 @@ void mfifoVIF1transfer(int qwc)
 				CPU_INT(DMAC_MFIFO_VIF, 4);
 			}
 
-			vif1Regs.stat.FQC = 0x10; // FQC=16
+			//Apparently this is bad, i guess so, the data is going to memory rather than the FIFO
+			//vif1Regs.stat.FQC = 0x10; // FQC=16
 		}
 		vif1.inprogress &= ~0x10;
 
@@ -292,6 +293,7 @@ void vifMFIFOInterrupt()
 		{
 			/*vif1Regs.stat.FQC = 0; // FQC=0
 			vif1ch.chcr.STR = false;*/
+			vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);
 			if((vif1ch.qwc > 0 || !vif1.done) && !(vif1.inprogress & 0x10))
 			{
 				VIF_LOG("VIF1 MFIFO Stalled");
@@ -330,11 +332,13 @@ void vifMFIFOInterrupt()
 				}
 				
                 mfifoVIF1transfer(0);
+				vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);
 				
 			case 1: //Transfer data
 				mfifo_VIF1chain();
 				//Sanity check! making sure we always have non-zero values
 				CPU_INT(DMAC_MFIFO_VIF, (g_vifCycles == 0 ? 4 : g_vifCycles) );	
+				vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);
 				return;
 		}
 		return;
@@ -343,6 +347,7 @@ void vifMFIFOInterrupt()
 	vif1.vifstalled = false;
 	vif1.done = 1;
 	g_vifCycles = 0;
+	vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);
 	vif1ch.chcr.STR = false;
 	hwDmacIrq(DMAC_VIF1);
 	VIF_LOG("vif mfifo dma end");

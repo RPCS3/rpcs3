@@ -178,6 +178,7 @@ __fi void vif0Interrupt()
 
 			// One game doesn't like vif stalling at end, can't remember what. Spiderman isn't keen on it tho
 			//vif0ch.chcr.STR = false;
+			vif0Regs.stat.FQC = min((u16)0x8, vif0ch.qwc);
 			if(vif0ch.qwc > 0 || !vif0.done)	
 			{
 				VIF_LOG("VIF0 Stalled");
@@ -231,6 +232,7 @@ __fi void vif0Interrupt()
 #endif
 
 	vif0ch.chcr.STR = false;
+	vif0Regs.stat.FQC = min((u16)0x8, vif0ch.qwc);
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF0);
 	vif0Regs.stat.FQC = 0;
