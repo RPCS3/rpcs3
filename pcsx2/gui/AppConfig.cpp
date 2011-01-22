@@ -918,6 +918,7 @@ void AppConfig_OnChangedSettingsFolder( bool overwrite )
 		AppLoadSettings();
 
 	AppApplySettings();
+	AppSaveSettings();//Make sure both ini files are created if needed.
 }
 
 // --------------------------------------------------------------------------------------
