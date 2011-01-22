@@ -30,6 +30,7 @@ build-stamp:
 		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		-DCMAKE_BUILD_STRIP=FALSE \
 		-DFORCE_INTERNAL_SOUNDTOUCH=FALSE \
+		-DL10N_PORTABLE=FALSE \
 		-DUSER_CMAKE_C_FLAGS:STRING="$(USER_CFLAGS)" \
 		-DUSER_CMAKE_CXX_FLAGS:STRING="$(USER_CXXFLAGS)"
 	$(MAKE) $(MAKEFLAGS)
@@ -64,6 +65,8 @@ clean:
 	rm -f pcsx2/svnrev.h
 	# Restore orig makefile
 	for makefile_orig in `find ./ -name "Makefile.orig"` ; do [ -f $${makefile_orig} ] && mv $${makefile_orig} `echo $${makefile_orig} | sed -e 's/.orig//'` ; done
+	# do not know who create this file....
+	rm -f install_manifest.txt
 
 	dh_clean
 
@@ -80,6 +83,6 @@ override_dh_auto_build:
 	# Do nothing
 
 %:
-	dh $@ --parallel
+	dh $@
 
 .PHONY: build clean install
