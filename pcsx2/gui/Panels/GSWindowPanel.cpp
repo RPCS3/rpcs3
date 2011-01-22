@@ -116,11 +116,11 @@ void Panels::GSWindowSettingsPanel::AppStatusEvent_OnSettingsApplied()
 	ApplyConfigToGui( *g_Conf );
 }
 
-void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, int flags )
 {
 	const AppConfig::GSWindowOptions& conf( configToApply.GSWindow );
 
-	if( !manuallyPropagate )	//Presets don't control these: only change if config doesn't come from preset.
+	if( !(flags & AppConfig::APPLY_FLAG_FROM_PRESET) )	//Presets don't control these: only change if config doesn't come from preset.
 	{
 		m_check_CloseGS		->SetValue( conf.CloseOnEsc );
 		m_check_Fullscreen	->SetValue( conf.DefaultToFullscreen );

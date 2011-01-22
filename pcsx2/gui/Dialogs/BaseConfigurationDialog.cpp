@@ -257,8 +257,8 @@ void Dialogs::BaseConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 {
 	ScopedOkButtonDisabler disabler(this);
 
-	//if current instance also holds settings that need application. Apply it.
-	//Currently only used by SysConfigDialog, which applies the preset.
+	//if current instance also holds settings that need application, Apply them.
+	//Currently only used by SysConfigDialog, which applies the preset and derivatives (menu system).
 	//Needs to come before actual panels Apply since they enable/disable themselves upon Preset state,
 	//  so the preset needs to be applied first.
 	Apply();

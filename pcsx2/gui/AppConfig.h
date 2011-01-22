@@ -305,7 +305,12 @@ public:
 
 	static int  GetMaxPresetIndex();
     static bool isOkGetPresetTextAndColor(int n, wxString& label, wxColor& c);
+	
 	bool        IsOkApplyPreset(int n);
+	//flags to allow manual application of settings to GUI entities. Used by the presets system.
+	static const int APPLY_FLAG_MANUALLY_PROPAGATE	= 0x01;
+	static const int APPLY_FLAG_FROM_PRESET			= 0x02;
+
 
 };
 

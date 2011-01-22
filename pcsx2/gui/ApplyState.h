@@ -218,7 +218,8 @@ public:
 	BaseApplicableConfigPanel_SpecificConfig( wxWindow* parent, wxOrientation orient=wxVERTICAL );
 	BaseApplicableConfigPanel_SpecificConfig( wxWindow* parent, wxOrientation orient, const wxString& staticLabel );
 
-	virtual void ApplyConfigToGui(AppConfig& configToApply, bool manuallyPropagate=false)=0;
+	//possible flags are: AppConfig: APPLY_FLAG_MANUALLY_PROPAGATE and APPLY_FLAG_IS_FROM_PRESET
+	virtual void ApplyConfigToGui(AppConfig& configToApply, int flags=0)=0;
 };
 
 class ApplicableWizardPage : public wxWizardPageSimple, public IApplyState

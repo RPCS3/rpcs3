@@ -240,7 +240,7 @@ void Panels::CpuPanelEE::AppStatusEvent_OnSettingsApplied()
 	ApplyConfigToGui( *g_Conf );
 }
 
-void Panels::CpuPanelEE::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate ){
+void Panels::CpuPanelEE::ApplyConfigToGui( AppConfig& configToApply, int flags ){
 	m_panel_RecEE->Enable( x86caps.hasStreamingSIMD2Extensions );
 
 	// IOP rec should work fine on any CPU. :D
@@ -255,7 +255,7 @@ void Panels::CpuPanelEE::ApplyConfigToGui( AppConfig& configToApply, bool manual
 
 	this->Enable(!configToApply.EnablePresets);
 
-	if( manuallyPropagate )
+	if( flags & AppConfig::APPLY_FLAG_MANUALLY_PROPAGATE )
 	{
 		m_advancedOptsFpu->ApplyConfigToGui( configToApply, true );
 	}
@@ -288,7 +288,7 @@ void Panels::CpuPanelVU::AppStatusEvent_OnSettingsApplied()
 	ApplyConfigToGui( *g_Conf );
 }
 
-void Panels::CpuPanelVU::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+void Panels::CpuPanelVU::ApplyConfigToGui( AppConfig& configToApply, int flags )
 {
 	m_panel_VU0->Enable( x86caps.hasStreamingSIMD2Extensions );
 	m_panel_VU1->Enable( x86caps.hasStreamingSIMD2Extensions );
@@ -314,7 +314,7 @@ void Panels::CpuPanelVU::ApplyConfigToGui( AppConfig& configToApply, bool manual
 	m_panel_VU0->Enable(!configToApply.EnablePresets);
 	m_panel_VU1->Enable(!configToApply.EnablePresets);
 
-	if ( manuallyPropagate )
+	if ( flags & AppConfig::APPLY_FLAG_MANUALLY_PROPAGATE )
 	{
 		m_advancedOptsVu->ApplyConfigToGui( configToApply, true );
 	}
@@ -361,7 +361,7 @@ void Panels::AdvancedOptionsFPU::AppStatusEvent_OnSettingsApplied()
 	ApplyConfigToGui( *g_Conf );
 }
 
-void Panels::AdvancedOptionsFPU::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+void Panels::AdvancedOptionsFPU::ApplyConfigToGui( AppConfig& configToApply, int flags )
 {
 	const Pcsx2Config::CpuOptions& cpuOps( configToApply.EmuOptions.Cpu );
 	const Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
@@ -401,7 +401,7 @@ void Panels::AdvancedOptionsVU::AppStatusEvent_OnSettingsApplied()
 	ApplyConfigToGui( *g_Conf );
 }
 
-void Panels::AdvancedOptionsVU::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+void Panels::AdvancedOptionsVU::ApplyConfigToGui( AppConfig& configToApply, int flags )
 {
 	const Pcsx2Config::CpuOptions& cpuOps( configToApply.EmuOptions.Cpu );
 	const Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );

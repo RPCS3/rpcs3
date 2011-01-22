@@ -775,10 +775,10 @@ bool AppConfig::IsOkApplyPreset(int n)
 	Pcsx2Config				default_Pcsx2Config;
 
 
-	//  NOTE:	Because the system currently only supports passing of an entire AppConfig to the GUI panels to apply,
-	//			the GUI panels should be aware of the settings which the presets control, such that when presets are used:
-	//			1. The panels should prevent manual modifications (by graying out) of settings which the presets control.
-	//			2. The panels should not apply values which the presets don't control.
+	//  NOTE:	Because the system currently only supports passing of an entire AppConfig to the GUI panels/menus to apply/reflect,
+	//			the GUI entities should be aware of the settings which the presets control, such that when presets are used:
+	//			1. The panels/entities should prevent manual modifications (by graying out) of settings which the presets control.
+	//			2. The panels should not apply values which the presets don't control if the value is initiated by a preset.
 	//			Currently controlled by the presets:
 	//			- AppConfig:	Framerate, EnableSpeedHacks, EnableGameFixes.
 	//			- EmuOptions:	Cpu, Gamefixes, SpeedHacks, EnablePatches, GS (except FrameLimitEnable).
@@ -786,6 +786,9 @@ bool AppConfig::IsOkApplyPreset(int n)
 	//			This essentially currently covers all the options on all the panels except for framelimiter which isn't
 	//			controlled by the presets, and almost the entire GSWindow panel which also isn't controlled by presets
 	//			(however, vsync IS controlled by the presets).
+	//
+	//			So, if changing the scope of the presets (making them affect more or less values), the relevant GUI entities
+	//			shoulld me modified to support it.
 
 
 	//Force some settings as a (current) base for all presets.

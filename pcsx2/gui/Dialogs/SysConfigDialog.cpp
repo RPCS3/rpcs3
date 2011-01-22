@@ -83,6 +83,7 @@ void Dialogs::SysConfigDialog::UpdateGuiForPreset ( int presetIndex, bool preset
 	preset.IsOkApplyPreset( presetIndex );	//apply a preset to a copy of g_Conf.
 	preset.EnablePresets = presetsEnabled;	//override IsOkApplyPreset (which always applies/enabled) to actual required state
 	
+	//update the config panels of SysConfigDialog to reflect the preset.
 	size_t pages = m_labels.GetCount();
 	for( size_t i=0; i<pages; ++i )
 	{
@@ -94,7 +95,7 @@ void Dialogs::SysConfigDialog::UpdateGuiForPreset ( int presetIndex, bool preset
 		if ( ((BaseApplicableConfigPanel*)(m_listbook->GetPage(i)))->IsSpecificConfig() )
 		{
 			((BaseApplicableConfigPanel_SpecificConfig*)(m_listbook->GetPage(i)))
-				->ApplyConfigToGui( preset, true );
+				->ApplyConfigToGui( preset, AppConfig::APPLY_FLAG_FROM_PRESET | AppConfig::APPLY_FLAG_MANUALLY_PROPAGATE );
 		}
 	}
 	
@@ -182,6 +183,9 @@ void Dialogs::SysConfigDialog::Preset_Scroll(wxScrollEvent &event)
 	event.Skip();
 }
 
+//Write the values SysConfigDialog holds (preset index and enabled) to g_Conf.
+//Make the main menu system write the presets values it holds to g_Conf (preset may have affected the gui without changing g_Conf)
+//The panels will write themselves to g_Conf on apply (AFTER this function) and will also trigger a global OnSettingsApplied.
 void Dialogs::SysConfigDialog::Apply()
 {
 	//Console.WriteLn("Applying preset to to g_Conf: Preset index: %d, EnablePresets: %s", (int)m_slider_presets->GetValue(), m_check_presets->IsChecked()?"true":"false");

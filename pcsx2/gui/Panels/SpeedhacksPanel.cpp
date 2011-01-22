@@ -297,7 +297,7 @@ void Panels::SpeedHacksPanel::AppStatusEvent_OnSettingsApplied()
 	ApplyConfigToGui( *g_Conf );
 }
 
-void Panels::SpeedHacksPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+void Panels::SpeedHacksPanel::ApplyConfigToGui( AppConfig& configToApply, int flags )
 {
 	const bool enabled = configToApply.EnableSpeedHacks;
 	Pcsx2Config::SpeedhackOptions& opts=configToApply.EmuOptions.Speedhacks;

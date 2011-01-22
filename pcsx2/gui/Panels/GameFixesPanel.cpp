@@ -145,7 +145,7 @@ void Panels::GameFixesPanel::AppStatusEvent_OnSettingsApplied()
 	ApplyConfigToGui( *g_Conf );
 }
 
-void Panels::GameFixesPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+void Panels::GameFixesPanel::ApplyConfigToGui( AppConfig& configToApply, int flags )
 {
 	const Pcsx2Config::GamefixOptions& opts( configToApply.EmuOptions.Gamefixes );
 	for (GamefixId i=GamefixId_FIRST; i < pxEnumEnd; ++i)

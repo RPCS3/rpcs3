@@ -116,13 +116,13 @@ void Panels::FramelimiterPanel::AppStatusEvent_OnSettingsApplied()
 	ApplyConfigToGui( *g_Conf );
 }
 
-void Panels::FramelimiterPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+void Panels::FramelimiterPanel::ApplyConfigToGui( AppConfig& configToApply, int flags )
 {
 	const AppConfig::GSWindowOptions& appwin( configToApply.GSWindow );
 	const AppConfig::FramerateOptions& appfps( configToApply.Framerate );
 	const Pcsx2Config::GSOptions& gsconf( configToApply.EmuOptions.GS );
 
-	if( !manuallyPropagate )	//Presets don't control this: only change if config doesn't come from preset.
+	if( ! (flags & AppConfig::APPLY_FLAG_FROM_PRESET) )	//Presets don't control this: only change if config doesn't come from preset.
 		m_check_LimiterDisable->SetValue( !gsconf.FrameLimitEnable );
 
 	m_spin_NominalPct	->SetValue( appfps.NominalScalar.Raw );
@@ -252,7 +252,7 @@ void Panels::FrameSkipPanel::AppStatusEvent_OnSettingsApplied()
 	ApplyConfigToGui( *g_Conf );
 }
 
-void Panels::FrameSkipPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate )
+void Panels::FrameSkipPanel::ApplyConfigToGui( AppConfig& configToApply, int flags )
 {
 	const AppConfig::FramerateOptions& appfps( configToApply.Framerate );
 	const Pcsx2Config::GSOptions& gsconf( configToApply.EmuOptions.GS );
@@ -373,7 +373,7 @@ void Panels::VideoPanel::AppStatusEvent_OnSettingsApplied()
 	ApplyConfigToGui(*g_Conf);
 }
 
-void Panels::VideoPanel::ApplyConfigToGui( AppConfig& configToApply, bool manuallyPropagate ){
+void Panels::VideoPanel::ApplyConfigToGui( AppConfig& configToApply, int flags ){
 	
 	m_check_SynchronousGS->SetValue( configToApply.EmuOptions.GS.SynchronousMTGS );
 	m_check_DisableOutput->SetValue( configToApply.EmuOptions.GS.DisableOutput );
@@ -381,7 +381,7 @@ void Panels::VideoPanel::ApplyConfigToGui( AppConfig& configToApply, bool manual
 	m_check_SynchronousGS->Enable(!configToApply.EnablePresets);
 	m_check_DisableOutput->Enable(!configToApply.EnablePresets);
 
-	if( manuallyPropagate )
+	if( flags & AppConfig::APPLY_FLAG_MANUALLY_PROPAGATE )
 	{
 		m_span->ApplyConfigToGui( configToApply, true );
 		m_fpan->ApplyConfigToGui( configToApply, true );
