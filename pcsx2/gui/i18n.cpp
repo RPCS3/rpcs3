@@ -245,3 +245,15 @@ bool i18n_SetLanguage( wxLanguage wxLangId, const wxString& langCode )
 	locale.DetachPtr();
 	return true;
 }
+
+// This method sets the lookup path to search l10n files
+void i18n_SetLanguagePath()
+{
+	// default location for windows
+	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
+	// additional location for linux
+#ifdef __LINUX__
+	wxLocale::AddCatalogLookupPathPrefix( PathDefs::GetLangs().ToString() );
+#endif
+
+}

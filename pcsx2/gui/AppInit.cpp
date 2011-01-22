@@ -423,7 +423,7 @@ bool Pcsx2App::OnInit()
 	if( !_parent::OnInit() ) return false;
 	Console.WriteLn("Command line parsed!");
 
-	wxLocale::AddCatalogLookupPathPrefix( wxGetCwd() );
+	i18n_SetLanguagePath();
 
 #define pxAppMethodEventHandler(func) \
 	(wxObjectEventFunction)(wxEventFunction)wxStaticCastEvent(pxInvokeAppMethodEventFunction, &func )

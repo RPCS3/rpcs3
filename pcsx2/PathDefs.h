@@ -29,6 +29,7 @@ enum FoldersEnum_t
 	FolderId_Savestates,
 	FolderId_MemoryCards,
 	FolderId_Logs,
+	FolderId_Langs,
 
 	FolderId_Documents,
 
@@ -56,6 +57,7 @@ namespace PathDefs
 	extern wxDirName GetMemoryCards();
 	extern wxDirName GetSettings();
 	extern wxDirName GetLogs();
+	extern wxDirName GetLangs();
 
 	extern wxDirName Get( FoldersEnum_t folderidx );
 
@@ -71,6 +73,7 @@ namespace PathDefs
 		extern const wxDirName& Themes();
 		extern const wxDirName& Logs();
 		extern const wxDirName& Dumps();
+		extern const wxDirName& Langs();
 	}
 }
 

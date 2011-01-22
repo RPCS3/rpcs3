@@ -72,6 +72,12 @@ namespace PathDefs
 			return retval;
 		}
 
+		const wxDirName& Langs()
+		{
+			static const wxDirName retval( L"Langs" );
+			return retval;
+		}
+
 		const wxDirName& Dumps()
 		{
 			static const wxDirName retval( L"dumps" );
@@ -176,6 +182,11 @@ namespace PathDefs
 		return GetDocuments() + Base::Logs();
 	}
 
+	wxDirName GetLangs()
+	{
+		return GetDocuments() + Base::Langs();
+	}
+
 	wxDirName Get( FoldersEnum_t folderidx )
 	{
 		switch( folderidx )
@@ -188,6 +199,7 @@ namespace PathDefs
 			case FolderId_Savestates:	return GetSavestates();
 			case FolderId_MemoryCards:	return GetMemoryCards();
 			case FolderId_Logs:			return GetLogs();
+			case FolderId_Langs:		return GetLangs();
 
 			case FolderId_Documents:	return CustomDocumentsFolder;
 
