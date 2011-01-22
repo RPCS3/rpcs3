@@ -221,6 +221,7 @@ wxDirName& AppConfig::FolderOptions::operator[]( FoldersEnum_t folderidx )
 		case FolderId_Savestates:	return Savestates;
 		case FolderId_MemoryCards:	return MemoryCards;
 		case FolderId_Logs:			return Logs;
+		case FolderId_Langs:		return Langs;
 
 		case FolderId_Documents:	return CustomDocumentsFolder;
 
@@ -246,6 +247,7 @@ bool AppConfig::FolderOptions::IsDefault( FoldersEnum_t folderidx ) const
 		case FolderId_Savestates:	return UseDefaultSavestates;
 		case FolderId_MemoryCards:	return UseDefaultMemoryCards;
 		case FolderId_Logs:			return UseDefaultLogs;
+		case FolderId_Langs:		return UseDefaultLangs;
 
 		case FolderId_Documents:	return false;
 
@@ -296,6 +298,11 @@ void AppConfig::FolderOptions::Set( FoldersEnum_t folderidx, const wxString& src
 		case FolderId_Logs:
 			Logs = src;
 			UseDefaultLogs = useDefault;
+		break;
+
+		case FolderId_Langs:
+			Langs = src;
+			UseDefaultLangs = useDefault;
 		break;
 
 		case FolderId_Documents:
@@ -576,6 +583,7 @@ void AppConfig::FolderOptions::ApplyDefaults()
 	if( UseDefaultSavestates )	Savestates	= PathDefs::GetSavestates();
 	if( UseDefaultMemoryCards )	MemoryCards	= PathDefs::GetMemoryCards();
 	if( UseDefaultLogs )		Logs		= PathDefs::GetLogs();
+	if( UseDefaultLangs )		Langs		= PathDefs::GetLangs();
 }
 
 // ------------------------------------------------------------------------
@@ -584,6 +592,7 @@ AppConfig::FolderOptions::FolderOptions()
 	, Snapshots		( PathDefs::GetSnapshots() )
 	, Savestates	( PathDefs::GetSavestates() )
 	, MemoryCards	( PathDefs::GetMemoryCards() )
+	, Langs			( PathDefs::GetLangs() )
 	, Logs			( PathDefs::GetLogs() )
 
 	, RunIso( PathDefs::GetDocuments() )			// raw default is always the Documents folder.
@@ -606,12 +615,14 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniBitBool( UseDefaultSavestates );
 	IniBitBool( UseDefaultMemoryCards );
 	IniBitBool( UseDefaultLogs );
+	IniBitBool( UseDefaultLangs );
 
 	IniEntry( Bios );
 	IniEntry( Snapshots );
 	IniEntry( Savestates );
 	IniEntry( MemoryCards );
 	IniEntry( Logs );
+	IniEntry( Langs );
 
 	IniEntry( RunIso );
 	IniEntry( RunELF );

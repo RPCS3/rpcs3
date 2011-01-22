@@ -127,7 +127,8 @@ public:
 				UseDefaultSnapshots:1,
 				UseDefaultSavestates:1,
 				UseDefaultMemoryCards:1,
-				UseDefaultLogs:1;
+				UseDefaultLogs:1,
+				UseDefaultLangs:1;
 		BITFIELD_END
 
 		wxDirName
@@ -135,6 +136,7 @@ public:
 			Snapshots,
 			Savestates,
 			MemoryCards,
+			Langs,
 			Logs;
 
 		wxDirName RunIso;		// last used location for Iso loading.
