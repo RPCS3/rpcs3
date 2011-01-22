@@ -184,7 +184,7 @@ namespace PathDefs
 
 	wxDirName GetLangs()
 	{
-		return GetDocuments() + Base::Langs();
+		return AppRoot() + Base::Langs();
 	}
 
 	wxDirName Get( FoldersEnum_t folderidx )
