@@ -5,6 +5,8 @@
 # Use all         internal lib: -DFORCE_INTERNAL_ALL=TRUE
 # Use soundtouch  internal lib: -DFORCE_INTERNAL_SOUNDTOUCH=TRUE
 # Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
+### Miscellaneous
+# Select install dir of l10n  : -DL10N_PORTABLE=TRUE(bin/Langs)|FALSE(FHS, /usr...)
 ### Add some flags to the build process
 # control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
 # control C++ flags           : -DUSER_CMAKE_CXX_FLAGS="cxxflags"
@@ -131,3 +133,11 @@ endif(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
 if(NOT DEFINED FORCE_INTERNAL_ZLIB)
     set(FORCE_INTERNAL_ZLIB FALSE)
 endif(NOT DEFINED FORCE_INTERNAL_ZLIB)
+
+#-------------------------------------------------------------------------------
+# Select library system vs 3rdparty
+#-------------------------------------------------------------------------------
+if(NOT DEFINED L10N_PORTABLE)
+    set(L10N_PORTABLE TRUE)
+    message(STATUS "Install localization file in bin/Langs by default")
+endif(NOT DEFINED L10N_PORTABLE)
