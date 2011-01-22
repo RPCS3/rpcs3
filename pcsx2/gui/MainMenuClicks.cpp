@@ -29,15 +29,6 @@
 
 using namespace Dialogs;
 
-void MainEmuFrame::SaveEmuOptions()
-{
-    if (wxConfigBase* conf = GetAppConfig())
-	{
-		IniSaver saver(*conf);
-		g_Conf->EmuOptions.LoadSave(saver);
-	}
-}
-
 void MainEmuFrame::Menu_SysSettings_Click(wxCommandEvent &event)
 {
 	AppOpenDialog<SysConfigDialog>( this );
@@ -409,7 +400,7 @@ void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent& )
 	g_Conf->EmuOptions.MultitapPort0_Enabled = GetMenuBar()->IsChecked( MenuId_Config_Multitap0Toggle );
 	g_Conf->EmuOptions.MultitapPort1_Enabled = GetMenuBar()->IsChecked( MenuId_Config_Multitap1Toggle );
 	AppApplySettings();
-	SaveEmuOptions();
+	AppSaveSettings();
 
 	//evt.Skip();
 }
@@ -417,19 +408,19 @@ void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent& )
 void MainEmuFrame::Menu_EnablePatches_Click( wxCommandEvent& )
 {
 	g_Conf->EmuOptions.EnablePatches = GetMenuBar()->IsChecked( MenuId_EnablePatches );
-    SaveEmuOptions();
+    AppSaveSettings();
 }
 
 void MainEmuFrame::Menu_EnableCheats_Click( wxCommandEvent& )
 {
 	g_Conf->EmuOptions.EnableCheats  = GetMenuBar()->IsChecked( MenuId_EnableCheats );
-    SaveEmuOptions();
+    AppSaveSettings();
 }
 
 void MainEmuFrame::Menu_EnableHostFs_Click( wxCommandEvent& )
 {
 	g_Conf->EmuOptions.HostFs = GetMenuBar()->IsChecked( MenuId_EnableHostFs );
-    SaveEmuOptions();
+    AppSaveSettings();
 }
 
 void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent&)
@@ -555,14 +546,14 @@ void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
 void MainEmuFrame::Menu_ShowConsole_Stdio(wxCommandEvent &event)
 {
 	g_Conf->EmuOptions.ConsoleToStdio = GetMenuBar()->IsChecked( MenuId_Console_Stdio );
-	SaveEmuOptions();
+	AppSaveSettings();
 }
 
 void MainEmuFrame::Menu_PrintCDVD_Info(wxCommandEvent &event)
 {
 	g_Conf->EmuOptions.CdvdVerboseReads = GetMenuBar()->IsChecked( MenuId_CDVD_Info );
 	const_cast<Pcsx2Config&>(EmuConfig).CdvdVerboseReads = g_Conf->EmuOptions.CdvdVerboseReads;		// read-only in core thread, so it's safe to modify.
-	SaveEmuOptions();
+	AppSaveSettings();
 }
 
 void MainEmuFrame::Menu_ShowAboutBox(wxCommandEvent &event)

@@ -152,7 +152,6 @@ protected:
 
 	void ApplySettings();
 	void ApplyCoreStatus();
-	void SaveEmuOptions();
 
 	void InitLogBoxPosition( AppConfig::ConsoleLogOptions& conf );
 
