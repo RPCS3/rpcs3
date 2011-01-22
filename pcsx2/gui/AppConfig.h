@@ -307,10 +307,16 @@ public:
     static bool isOkGetPresetTextAndColor(int n, wxString& label, wxColor& c);
 	
 	bool        IsOkApplyPreset(int n);
-	//flags to allow manual application of settings to GUI entities. Used by the presets system.
-	static const int APPLY_FLAG_MANUALLY_PROPAGATE	= 0x01;
-	static const int APPLY_FLAG_FROM_PRESET			= 0x02;
 
+
+	//The next 2 flags are used with ApplyConfigToGui which the presets system use:
+	
+	//Indicates that the scope is only for preset-related items.
+	static const int APPLY_FLAG_FROM_PRESET			= 0x01;
+
+	//Indicates that the change should manually propagate to sub items because it's called directly and not as an event.
+	//Currently used by some panels which contain sub-panels which are affected by presets.
+	static const int APPLY_FLAG_MANUALLY_PROPAGATE	= 0x02;
 
 };
 

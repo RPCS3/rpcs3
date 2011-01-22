@@ -241,6 +241,7 @@ void Dialogs::BaseConfigurationDialog::OnOk_Click( wxCommandEvent& evt )
 {
 	ScopedOkButtonDisabler disabler(this);
 
+	//same as for OnApply_Click
 	Apply();
 
 	if( m_ApplyState.ApplyAll() )
@@ -257,7 +258,7 @@ void Dialogs::BaseConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 {
 	ScopedOkButtonDisabler disabler(this);
 
-	//if current instance also holds settings that need application, Apply them.
+	//if current instance also holds settings that need to be applied, apply them.
 	//Currently only used by SysConfigDialog, which applies the preset and derivatives (menu system).
 	//Needs to come before actual panels Apply since they enable/disable themselves upon Preset state,
 	//  so the preset needs to be applied first.
@@ -270,8 +271,12 @@ void Dialogs::BaseConfigurationDialog::OnApply_Click( wxCommandEvent& evt )
 	AppSaveSettings();
 }
 
+//avih: FIXME: ? for some reason, this OnCancel_Click is called twice when clicking cancel or closing the dialog (Jake's code?).
 void Dialogs::BaseConfigurationDialog::OnCancel_Click( wxCommandEvent& evt )
 {
+	//same as for Ok/Apply: let SysConfigDialog clean-up the presets and derivatives (menu system) if needed.
+	Cancel();
+
 	evt.Skip();
 	if( m_listbook ) GetConfSettingsTabName() = m_labels[m_listbook->GetSelection()];
 }

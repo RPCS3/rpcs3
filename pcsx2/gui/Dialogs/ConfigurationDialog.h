@@ -77,6 +77,7 @@ namespace Dialogs
 		virtual wxString& GetConfSettingsTabName() const=0;
 
 		virtual void Apply() {};
+		virtual void Cancel() {};
 	};
 
 	// --------------------------------------------------------------------------------------
@@ -90,6 +91,7 @@ namespace Dialogs
 		static wxString GetNameStatic() { return L"CoreSettings"; }
 		wxString GetDialogName() const { return GetNameStatic(); }
    		void Apply();
+		void Cancel();
 
 	protected:
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->SysSettingsTabName; }

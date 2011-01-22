@@ -779,7 +779,7 @@ bool AppConfig::IsOkApplyPreset(int n)
 		return false;
 	}
 
-	Console.WriteLn("Applying Preset %d ...", n);
+	//Console.WriteLn("Applying Preset %d ...", n);
 
 	//Have some original and default values at hand to be used later.
 	Pcsx2Config::GSOptions  original_GS = EmuOptions.GS;
@@ -800,7 +800,7 @@ bool AppConfig::IsOkApplyPreset(int n)
 	//			(however, vsync IS controlled by the presets).
 	//
 	//			So, if changing the scope of the presets (making them affect more or less values), the relevant GUI entities
-	//			shoulld me modified to support it.
+	//			should me modified to support it.
 
 
 	//Force some settings as a (current) base for all presets.
@@ -1087,6 +1087,8 @@ void AppSaveSettings()
 
 		return;
 	}
+
+	Console.WriteLn("Saving ini files...");
 
 	SaveUiSettings();
 	SaveVmSettings();
