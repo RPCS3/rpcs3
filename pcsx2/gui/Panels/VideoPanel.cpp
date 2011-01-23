@@ -129,8 +129,8 @@ void Panels::FramelimiterPanel::ApplyConfigToGui( AppConfig& configToApply, int 
 	m_spin_TurboPct		->SetValue( appfps.TurboScalar.Raw );
 	m_spin_SlomoPct		->SetValue( appfps.SlomoScalar.Raw );
 
-	m_text_BaseNtsc		->SetValue( gsconf.FramerateNTSC.ToString() );
-	m_text_BasePal		->SetValue( gsconf.FrameratePAL.ToString() );
+	m_text_BaseNtsc		->ChangeValue( gsconf.FramerateNTSC.ToString() );
+	m_text_BasePal		->ChangeValue( gsconf.FrameratePAL.ToString() );
 
 	m_spin_NominalPct	->Enable(!configToApply.EnablePresets);
 	m_spin_TurboPct		->Enable(!configToApply.EnablePresets);
