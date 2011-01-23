@@ -281,7 +281,8 @@ Dialogs::InterfaceConfigDialog::InterfaceConfigDialog(wxWindow *parent)
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	AddPage<AppearanceThemesPanel>	( pxL("Appearance"),	cfgid.Appearance );
+	// The panel is empty.  Only create it in debug mode --greg
+	if (IsDebugBuild) AddPage<AppearanceThemesPanel>	( pxL("Appearance"),	cfgid.Appearance );
 	AddPage<StandardPathsPanel>		( pxL("Folders"),		cfgid.Paths );
 
 	AddListbook();
