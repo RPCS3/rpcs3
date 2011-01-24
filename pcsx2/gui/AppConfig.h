@@ -76,8 +76,8 @@ enum UserLocalDataType
 
 	// Uses the directory containing PCSX2.exe, or the current working directory (if the PCSX2
 	// directory could not be determined).  This is considered 'portable' mode, and is typically
-	// detected by PCSX2 on application startup, by looking for a pcsx2_portable.ini file in
-	// said locations.
+	// detected by PCSX2 on application startup, by looking for a file simply called "portable_install" 
+	// (no file extension) in said locations.
 	UserLocalFolder_Portable,
 };
 
