@@ -55,7 +55,7 @@ void Hle_SetElfPath(const char* elfFileName)
 
 	if(!pos1) // if pos1 is NULL, then pos2 was not > pos1, so it must also be NULL
 	{
-		Console.Warning("HLE Warning: ELF does not have a path!!\n");
+		Console.WriteLn("HLE Notice: ELF does not have a path.\n");
 
 		// use %CD%/host/
 		getcwd(HostRoot,1000); // save the other 23 chars to append /host/ :P
