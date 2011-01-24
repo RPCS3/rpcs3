@@ -50,7 +50,7 @@ void GSPanel::InitDefaultAccelerators()
 	m_Accels->Map( AAC( WXK_F8 ).Shift().Cmd(),	"Sys_TakeSnapshot");
 	m_Accels->Map( AAC( WXK_F9 ),				"Sys_RenderswitchToggle");
 
-	//m_Accels->Map( AAC( WXK_F10 ),				"Sys_LoggingToggle" );
+	m_Accels->Map( AAC( WXK_F10 ),				"Sys_LoggingToggle" );
 	m_Accels->Map( AAC( WXK_F11 ),				"Sys_FreezeGS" );
 	m_Accels->Map( AAC( WXK_F12 ),				"Sys_RecordingToggle" );
 

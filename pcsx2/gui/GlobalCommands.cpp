@@ -84,20 +84,44 @@ namespace Implementations
 			g_LimiterMode = Limit_Turbo;
 			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.TurboScalar;
 			Console.WriteLn("(FrameLimiter) Turbo + FrameLimit ENABLED." );
+			if ( g_Conf->Framerate.SkipOnTurbo == true) 
+				g_Conf->EmuOptions.GS.FrameSkipEnable = true;
+			else
+				g_Conf->EmuOptions.GS.FrameSkipEnable = false;
 		}
 		else if( g_LimiterMode == Limit_Turbo )
 		{
 			GSsetVsync( g_Conf->EmuOptions.GS.VsyncEnable );
 			g_LimiterMode = Limit_Nominal;
 			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.NominalScalar;
-			Console.WriteLn("(FrameLimiter) Turbo DISABLED." );
+			
+			if ( g_Conf->Framerate.SkipOnLimit == true) 
+			{
+				Console.WriteLn("(FrameLimiter) Turbo DISABLED. Frameskip ENABLED" );
+				g_Conf->EmuOptions.GS.FrameSkipEnable = true;
+			}
+			else
+			{
+				Console.WriteLn("(FrameLimiter) Turbo DISABLED." );
+				g_Conf->EmuOptions.GS.FrameSkipEnable = false;
+			}
 		}
 		else
 		{
 			GSsetVsync( false );
 			g_LimiterMode = Limit_Turbo;
 			g_Conf->EmuOptions.GS.LimitScalar = g_Conf->Framerate.TurboScalar;
-			Console.WriteLn("(FrameLimiter) Turbo ENABLED." );
+			
+			if ( g_Conf->Framerate.SkipOnTurbo == true)
+			{
+				Console.WriteLn("(FrameLimiter) Turbo + Frameskip ENABLED." );
+				g_Conf->EmuOptions.GS.FrameSkipEnable = true;
+			}
+			else
+			{
+				Console.WriteLn("(FrameLimiter) Turbo ENABLED." );
+				g_Conf->EmuOptions.GS.FrameSkipEnable = false;
+			}
 		}
 		pauser.AllowResume();
 	}
@@ -167,9 +191,10 @@ namespace Implementations
 		// --arcum42
 
 		// FIXME: Some of the trace logs will require recompiler resets to be activated properly.
-		//  But since those haven't been implemented yet, no point in implementing that here either.
+#ifdef PCSX2_DEVBUILD		
 		SetTraceConfig().Enabled = !EmuConfig.Trace.Enabled;
 		GSprintf(10, const_cast<char*>(EmuConfig.Trace.Enabled ? "Logging Enabled." : "Logging Disabled."));
+#endif
 	}
 
 	void Sys_FreezeGS()
