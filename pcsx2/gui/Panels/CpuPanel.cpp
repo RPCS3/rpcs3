@@ -24,9 +24,6 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow* parent )
 	wxStaticBoxSizer*	s_round( new wxStaticBoxSizer( wxVERTICAL, this, _("Round Mode") ) );
 	wxStaticBoxSizer*	s_clamp( new wxStaticBoxSizer( wxVERTICAL, this, _("Clamping Mode") ) );
 
-	m_Option_FTZ		= new pxCheckBox( this, _("Flush to Zero") );
-	m_Option_DAZ		= new pxCheckBox( this, _("Denormals are Zero") );
-
 	const RadioPanelItem RoundModeChoices[] =
 	{
 		RadioPanelItem(_("Nearest")),
@@ -55,27 +52,16 @@ Panels::BaseAdvancedCpuOptions::BaseAdvancedCpuOptions( wxWindow* parent )
 
 	wxFlexGridSizer& grid = *new wxFlexGridSizer( 4 );
 
-	// Clever proportions selected for a fairly nice spacing, with the third
-	// column serving as a buffer between static box and a pair of checkboxes.
+	// Clever proportions selected for a fairly nice spacing.
 
-	grid.AddGrowableCol( 0, 17 );
-	grid.AddGrowableCol( 1, 22 );
-	grid.AddGrowableCol( 2, 1 );
-	grid.AddGrowableCol( 3, 19 );
-
-	wxBoxSizer& s_daz( *new wxBoxSizer( wxVERTICAL ) );
-	s_daz	+= 12;
-	s_daz	+= m_Option_FTZ;
-	s_daz	+= m_Option_DAZ;
-	s_daz	+= 4;
+	grid.AddGrowableCol( 0, 22 ); // round mode box size
+	grid.AddGrowableCol( 1, 22 ); // clamp mode box size
 
 	*s_round+= m_RoundModePanel		| StdExpand();
 	*s_clamp+= m_ClampModePanel		| StdExpand();
 
 	grid	+= s_round				| SubGroup();
 	grid	+= s_clamp				| SubGroup();
-	grid	+= new wxBoxSizer( wxVERTICAL );		// spacer column!
-	grid	+= &s_daz				| pxExpand;
 
 	*this	+= grid					| StdExpand();
 }
@@ -90,9 +76,6 @@ void Panels::BaseAdvancedCpuOptions::RestoreDefaults()
 {
 	m_RoundModePanel->SetSelection( 3 );		// Roundmode chop
 	m_ClampModePanel->SetSelection( 1 );		// clamp mode normal
-
-	m_Option_DAZ->SetValue(true);
-	m_Option_FTZ->SetValue(true);
 }
 
 Panels::AdvancedOptionsFPU::AdvancedOptionsFPU( wxWindow* parent )
@@ -125,6 +108,10 @@ Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow* parent )
 Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	: BaseApplicableConfigPanel_SpecificConfig( parent )
 {
+	*this	+= Text( pxE( "!Panel:EE/IOP:Heading",
+		L"Notice: Most games are fine with the default options. ")
+	) | StdExpand();
+
 	const RadioPanelItem tbl_CpuTypes_EE[] =
 	{
 		RadioPanelItem(_("Interpreter"))
@@ -170,6 +157,9 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	s_recs	+= s_iop			| SubGroup();
 
 	*this	+= &s_recs							| StdExpand();
+	// move following line down so EE and VU panels look more uniform. 
+	// Use an empty Label (std expanded) so it work with custom font sizes, too.
+	*this	+= Label(_(""))  | StdExpand();
 	*this	+= new wxStaticLine( this )			| pxExpand.Border(wxALL, 18);
 	*this	+= (m_advancedOptsFpu = new AdvancedOptionsFPU( this ))	| StdExpand();
 
@@ -182,6 +172,10 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 	: BaseApplicableConfigPanel_SpecificConfig( parent )
 {
+	*this	+= Text( pxE( "!Panel:VUs:Heading",
+		L"Notice: Most games are fine with the default options. ")
+	) | StdExpand();
+
 	const RadioPanelItem tbl_CpuTypes_VU[] =
 	{
 		RadioPanelItem(_("Interpreter"))
@@ -335,8 +329,8 @@ void Panels::CpuPanelVU::OnRestoreDefaults(wxCommandEvent &evt)
 void Panels::BaseAdvancedCpuOptions::ApplyRoundmode( SSE_MXCSR& mxcsr )
 {
 	mxcsr.RoundingControl	= m_RoundModePanel->GetSelection();
-	mxcsr.DenormalsAreZero	= m_Option_DAZ->GetValue();
-	mxcsr.FlushToZero		= m_Option_FTZ->GetValue();
+	mxcsr.DenormalsAreZero	= 1;
+	mxcsr.FlushToZero		= 1;
 }
 
 void Panels::AdvancedOptionsFPU::Apply()
@@ -365,9 +359,6 @@ void Panels::AdvancedOptionsFPU::ApplyConfigToGui( AppConfig& configToApply, int
 {
 	const Pcsx2Config::CpuOptions& cpuOps( configToApply.EmuOptions.Cpu );
 	const Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
-
-	m_Option_FTZ->SetValue( cpuOps.sseMXCSR.FlushToZero );
-	m_Option_DAZ->SetValue( cpuOps.sseMXCSR.DenormalsAreZero );
 
 	m_RoundModePanel->SetSelection( cpuOps.sseMXCSR.RoundingControl );
 
@@ -405,9 +396,6 @@ void Panels::AdvancedOptionsVU::ApplyConfigToGui( AppConfig& configToApply, int 
 {
 	const Pcsx2Config::CpuOptions& cpuOps( configToApply.EmuOptions.Cpu );
 	const Pcsx2Config::RecompilerOptions& recOps( cpuOps.Recompiler );
-
-	m_Option_FTZ->SetValue( cpuOps.sseVUMXCSR.FlushToZero );
-	m_Option_DAZ->SetValue( cpuOps.sseVUMXCSR.DenormalsAreZero );
 
 	m_RoundModePanel->SetSelection( cpuOps.sseVUMXCSR.RoundingControl );
 

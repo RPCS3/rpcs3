@@ -128,9 +128,6 @@ namespace Panels
 		pxRadioPanel*	m_RoundModePanel;
 		pxRadioPanel*	m_ClampModePanel;
 
-		pxCheckBox*		m_Option_FTZ;
-		pxCheckBox*		m_Option_DAZ;
-
 	public:
 		BaseAdvancedCpuOptions( wxWindow* parent );
 		virtual ~BaseAdvancedCpuOptions() throw() { }
@@ -215,8 +212,6 @@ namespace Panels
 	protected:
 		wxSpinCtrl*		m_spin_FramesToSkip;
 		wxSpinCtrl*		m_spin_FramesToDraw;
-		//pxCheckBox*		m_check_EnableSkip;
-		//pxCheckBox*		m_check_EnableSkipOnTurbo;
 
 		pxRadioPanel*	m_radio_SkipMode;
 
