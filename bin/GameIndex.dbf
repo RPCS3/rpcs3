@@ -148,6 +148,7 @@ Name   = Ico
 Region = NTSC-U
 Compat = 5
 eeClampMode = 2 // Otherwise freezes in various spots, check full intro
+vuClampMode = 2	// Otherwise camera gets stuck off the player in various spots.
 ---------------------------------------------
 Serial = SCUS-97114
 Name   = NBA ShootOut 2001
@@ -306,6 +307,7 @@ Name   = Ico [Demo]
 Region = NTSC-U
 Compat = 5
 eeClampMode = 2 // Otherwise freezes in various spots, check full intro
+vuClampMode = 2	// Otherwise camera gets stuck off the player in various spots.
 ---------------------------------------------
 Serial = SCUS-97160
 Name   = Extermination [Demo]
@@ -10940,6 +10942,7 @@ Name   = Ico
 Region = NTSC-Unk
 Compat = 5
 eeClampMode = 2 // Otherwise freezes in various spots, check full intro
+vuClampMode = 2	// Otherwise camera gets stuck off the player in various spots.
 ---------------------------------------------
 Serial = SCAJ-20100
 Name   = Tenchu Kurenai
@@ -11438,6 +11441,7 @@ Name   = Ico [PlayStation2 Big Hit Series]
 Region = NTSC-K
 Compat = 5
 eeClampMode = 2 // Otherwise freezes in various spots, check full intro
+vuClampMode = 2	// Otherwise camera gets stuck off the player in various spots.
 ---------------------------------------------
 Serial = SCKA-20029
 Name   = Gran Turismo Concept 2002 Tokyo-Seoul [PlayStation 2 Big Hit Series]
@@ -11612,6 +11616,7 @@ Name   = Ico
 Region = NTSC-J
 Compat = 5
 eeClampMode = 2 // Otherwise freezes in various spots, check full intro
+vuClampMode = 2	// Otherwise camera gets stuck off the player in various spots.
 ---------------------------------------------
 Serial = SCPS-11004
 Name   = Bikkuri Mouse
@@ -12266,6 +12271,7 @@ Name   = Ico [PlayStation 2 The Best]
 Region = NTSC-J
 Compat = 5
 eeClampMode = 2 // Otherwise freezes in various spots, check full intro
+vuClampMode = 2	// Otherwise camera gets stuck off the player in various spots.
 ---------------------------------------------
 Serial = SCPS-19104
 Name   = Pipo Saru 2001 [PlayStation 2 The Best]
@@ -12280,6 +12286,7 @@ Name   = Ico [PlayStation 2 The Best]
 Region = NTSC-J
 Compat = 5
 eeClampMode = 2 // Otherwise freezes in various spots, check full intro
+vuClampMode = 2	// Otherwise camera gets stuck off the player in various spots.
 ---------------------------------------------
 Serial = SCPS-19152
 Name   = Saru Get You! 2 [PlayStation 2 The Best]
@@ -12538,6 +12545,7 @@ Name   = Ico
 Region = NTSC-J
 Compat = 5
 eeClampMode = 2 // Otherwise freezes in various spots, check full intro
+vuClampMode = 2	// Otherwise camera gets stuck off the player in various spots.
 ---------------------------------------------
 Serial = SCPS-55002
 Name   = Zero
@@ -28384,6 +28392,7 @@ Name   = Ico
 Region = PAL-M5
 Compat = 5
 eeClampMode = 2 // Otherwise freezes in various spots, check full intro
+vuClampMode = 2	// Otherwise camera gets stuck off the player in various spots.
 ---------------------------------------------
 Serial = SCES-50781
 Name   = Destruction Derby Arena [Beta, Promo, & Full Retail]
