@@ -722,27 +722,30 @@ inline void FlushDecodeClut(VB& curvb, GLuint& ptexclut)
 {
 	glGenTextures(1, &ptexclut);
 	glBindTexture(GL_TEXTURE_2D, ptexclut);
-	vector<char> data(PSMT_ISHALF_STORAGE(curvb.tex0) ? 512 : 1024);
 
 	if (ptexclut != 0)
 	{
 		int clutsize;
 		int entries = PSMT_IS8CLUT(curvb.tex0.psm) ? 256 : 16;
 
-		if (curvb.tex0.csm && curvb.tex0.csa)
-			ZZLog::Debug_Log("ERROR, csm1.");
+		if (curvb.tex0.csm && curvb.tex0.csa) ZZLog::Debug_Log("ERROR, csm1.");
 
 		if (PSMT_IS32BIT(curvb.tex0.cpsm)) {
+			__aligned16 u32 data[256];
 			clutsize = min(entries, 256 - curvb.tex0.csa * 16) * 4;
-		    ClutBuffer_to_Array<u32>((u32*)&data[0], curvb.tex0.csa, clutsize);
+
+			ClutBuffer_to_Array<u32>((u32*)data, curvb.tex0.csa, clutsize);
+
+			Texture2D(4, 256, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
         } else {
+			__aligned16 u16 data[256];
 			clutsize = min(entries, 512 - curvb.tex0.csa * 16) * 2;
-		    ClutBuffer_to_Array<u16>((u16*)&data[0], curvb.tex0.csa, clutsize);
+
+			ClutBuffer_to_Array<u16>((u16*)data, curvb.tex0.csa, clutsize);
+
+			Texture2D(4, 256, 1, GL_RGBA, GL_UNSIGNED_SHORT_5_5_5_1, data);
         }
 
-		GLenum tempType = PSMT_ISHALF_STORAGE(curvb.tex0) ? GL_UNSIGNED_SHORT_5_5_5_1 : GL_UNSIGNED_BYTE;
-		Texture2D(4, 256, 1, GL_RGBA, tempType, &data[0]);
-		
 		s_vecTempTextures.push_back(ptexclut);
 
 		if (g_bSaveTex) SaveTexture("clut.tga", GL_TEXTURE_2D, ptexclut, 256, 1);

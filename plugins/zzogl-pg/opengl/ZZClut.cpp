@@ -502,8 +502,8 @@ template <>
     u16* clut = (u16*)GetClutBufferAddress<u32>(csa); // Keep aligned version for sse2
 
     // which side to copy
-    u32 clutsize_right;
-    u32 clutsize_left;
+    s32 clutsize_right;
+    s32 clutsize_left;
     if (csa < 16) {
         clutsize_right = min(clutsize, (16-csa)*64);
         clutsize_left = clutsize - clutsize_right;
@@ -582,7 +582,7 @@ template <>
 #else
         // Note +1 because we change higher 16 bits
         for(int i = 0; i < 16; ++i)
-            dst[i] = clut[2*i];
+            dst[i] = clut[2*i+1];
 #endif
 
         dst += 16;
