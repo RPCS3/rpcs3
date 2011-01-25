@@ -51,7 +51,7 @@ static wxFileName GetPortableIniPath()
 	wxString programFullPath = wxStandardPaths::Get().GetExecutablePath();
 	wxDirName programDir( wxFileName(programFullPath).GetPath() );
 
-	return programDir + "portable_install";
+	return programDir + "pcsx2_portable.ini";
 }
 
 static wxString GetMsg_PortableModeRights()
