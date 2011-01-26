@@ -544,6 +544,11 @@ static __fi bool mfifoGIFchain()
 	//	if(gifch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge GIF");
 		if (!mfifoGIFrbTransfer()) ret = false;
 		if(QWCinGIFMFIFO(gifch.madr) == 0) gifstate |= GIF_STATE_EMPTY;
+
+		//Make sure we wrap the addresses, dont want it being stuck outside the ring when reading from the ring!
+		gifch.madr = dmacRegs.rbor.ADDR + (gifch.madr & dmacRegs.rbsr.RMSK);
+		gifch.tadr = dmacRegs.rbor.ADDR + (gifch.tadr & dmacRegs.rbsr.RMSK); //Check this too, tadr can suffer the same issue.
+
 		return ret;
 
 	}
