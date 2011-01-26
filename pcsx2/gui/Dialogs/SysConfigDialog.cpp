@@ -264,6 +264,7 @@ Dialogs::ComponentsConfigDialog::ComponentsConfigDialog(wxWindow* parent)
 
 	AddPage<PluginSelectorPanel>	( pxL("Plugins"),		cfgid.Plugins );
 	AddPage<BiosSelectorPanel>		( pxL("BIOS"),			cfgid.Cpu );
+	AddPage<StandardPathsPanel>		( pxL("Folders"),		cfgid.Paths );
 
 	AddListbook();
 	AddOkCancel();
@@ -281,9 +282,7 @@ Dialogs::InterfaceConfigDialog::InterfaceConfigDialog(wxWindow *parent)
 	CreateListbook( wxGetApp().GetImgList_Config() );
 	const AppImageIds::ConfigIds& cfgid( wxGetApp().GetImgId().Config );
 
-	// The panel is empty.  Only create it in debug mode --greg
-	if (IsDebugBuild) AddPage<AppearanceThemesPanel>	( pxL("Appearance"),	cfgid.Appearance );
-	AddPage<StandardPathsPanel>		( pxL("Folders"),		cfgid.Paths );
+	AddPage<AppearanceThemesPanel>	( pxL("Appearance"),	cfgid.Appearance );
 
 	AddListbook();
 	AddOkCancel();
