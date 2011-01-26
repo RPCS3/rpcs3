@@ -141,7 +141,7 @@ void hwDmacIrq(int n)
 
 void FireMFIFOEmpty()
 {
-	SPR_LOG("VIF MFIFO Data Empty");
+	SPR_LOG("MFIFO Data Empty");
 	hwDmacIrq(DMAC_MFIFO_EMPTY);
 
 	if (dmacRegs.ctrl.MFD == MFD_VIF1) vif1Regs.stat.FQC = 0;

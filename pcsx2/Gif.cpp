@@ -575,11 +575,14 @@ void mfifoGIFtransfer(int qwc)
 
 	if(qwc > 0 )
 	{
-		if ((gifstate & GIF_STATE_EMPTY) && !(cpuRegs.interrupt & (1<<DMAC_MFIFO_GIF)))
+		if ((gifstate & GIF_STATE_EMPTY))
 		{
-			if(gifch.chcr.STR == true)CPU_INT(DMAC_MFIFO_GIF, 4);
-			gifstate &= ~GIF_STATE_EMPTY;
+			if(gifch.chcr.STR == true && !(cpuRegs.interrupt & (1<<DMAC_MFIFO_GIF)))
+				CPU_INT(DMAC_MFIFO_GIF, 4);
+
+			gifstate &= ~GIF_STATE_EMPTY;			
 		}
+		
 		gifRegs.stat.FQC = 16;
 		return;
 	}
