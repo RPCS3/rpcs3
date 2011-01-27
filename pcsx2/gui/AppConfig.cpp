@@ -1093,7 +1093,7 @@ void AppSaveSettings()
 
 	if( !wxThread::IsMain() )
 	{
-		if( AtomicExchange(isPosted, true) )
+		if( !AtomicExchange(isPosted, true) )
 			wxGetApp().PostIdleMethod( AppSaveSettings );
 
 		return;
