@@ -3,6 +3,7 @@
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30128.1</_ProjectFileVersion>
     <LinkIncremental>false</LinkIncremental>
+    <TargetName>$(ProjectName)-$(SSEtype)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

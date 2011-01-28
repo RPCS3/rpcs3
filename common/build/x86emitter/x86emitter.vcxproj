@@ -111,7 +111,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\x86emitter\simd.cpp" />
-    <ClCompile Include="..\..\src\x86emitter\tools.cpp" />
     <ClCompile Include="..\..\src\x86emitter\x86emitter.cpp" />
     <ClCompile Include="..\..\src\x86emitter\LnxCpuDetect.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>

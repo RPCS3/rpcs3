@@ -61,13 +61,7 @@
     <ClInclude Include="..\Config.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ConvertUTF.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\Global.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\utf8.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\spu2replay.h">
@@ -92,9 +86,6 @@
       <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
     </ClInclude>
     <ClInclude Include="..\3rdparty\liba52\attributes.h">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClInclude>
-    <ClInclude Include="..\3rdparty\liba52\bitstream.h">
       <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
     </ClInclude>
     <ClInclude Include="..\3rdparty\liba52\mm_accel.h">
@@ -147,13 +138,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\ConvertUTF.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\PrecompiledHeader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\utf8.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\debug.cpp">
@@ -191,24 +176,6 @@
     </ClCompile>
     <ClCompile Include="..\SndOut_Portaudio.cpp">
       <Filter>Source Files\Sound Output\Crossplatform</Filter>
-    </ClCompile>
-    <ClCompile Include="..\decoder.cpp">
-      <Filter>Source Files\decoder</Filter>
-    </ClCompile>
-    <ClCompile Include="..\3rdparty\liba52\bit_allocate.c">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClCompile>
-    <ClCompile Include="..\3rdparty\liba52\bitstream.c">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClCompile>
-    <ClCompile Include="..\3rdparty\liba52\downmix.c">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClCompile>
-    <ClCompile Include="..\3rdparty\liba52\imdct.c">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
-    </ClCompile>
-    <ClCompile Include="..\3rdparty\liba52\parse.c">
-      <Filter>Source Files\decoder\ac3%28a/52%29</Filter>
     </ClCompile>
     <ClCompile Include="..\dma.cpp">
       <Filter>Source Files\SPU2</Filter>

@@ -57,9 +57,6 @@
     <ClCompile Include="..\..\src\x86emitter\simd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\x86emitter\tools.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\x86emitter\x86emitter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

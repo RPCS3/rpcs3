@@ -399,12 +399,22 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\GameDatabase.cpp" />
+    <ClCompile Include="..\..\gui\AppGameDatabase.cpp" />
+    <ClCompile Include="..\..\gui\AppUserMode.cpp" />
+    <ClCompile Include="..\..\gui\Dialogs\GameDatabaseDialog.cpp" />
+    <ClCompile Include="..\..\gui\Dialogs\McdConfigDialog.cpp" />
+    <ClCompile Include="..\..\gui\Panels\GameDatabasePanel.cpp" />
+    <ClCompile Include="..\..\gui\Panels\MemoryCardListView.cpp" />
+    <ClCompile Include="..\..\IPU\IPUdma.cpp" />
     <ClCompile Include="..\..\Patch.cpp" />
+    <ClCompile Include="..\..\Patch_Memory.cpp" />
     <ClCompile Include="..\..\PrecompiledHeader.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\ps2\LegacyDmac.cpp" />
     <ClCompile Include="..\..\ShiftJisToUnicode.cpp" />
     <ClCompile Include="..\..\Utilities\FileUtils.cpp" />
     <ClCompile Include="..\..\Dump.cpp" />
@@ -497,7 +507,6 @@
     <ClCompile Include="..\..\IopMem.cpp" />
     <ClCompile Include="IopSif.cpp" />
     <ClCompile Include="..\..\IopSio2.cpp" />
-    <ClCompile Include="..\..\pcsx2hostfs.cpp" />
     <ClCompile Include="..\..\R3000A.cpp" />
     <ClCompile Include="..\..\R3000AInterpreter.cpp" />
     <ClCompile Include="..\..\R3000AOpcodeTables.cpp" />
@@ -511,8 +520,6 @@
     <ClCompile Include="..\..\CDVD\CDVD.cpp" />
     <ClCompile Include="..\..\CDVD\CDVDaccess.cpp" />
     <ClCompile Include="..\..\CDVD\CDVDisoReader.cpp" />
-    <ClCompile Include="..\..\CDVD\IsoFileTools.cpp" />
-    <ClCompile Include="..\..\IPU\coroutine.cpp" />
     <ClCompile Include="..\..\Ipu\IPU.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </PrecompiledHeader>
@@ -597,7 +604,6 @@
     <ClCompile Include="..\..\gui\FrameForGS.cpp" />
     <ClCompile Include="..\..\gui\GlobalCommands.cpp" />
     <ClCompile Include="..\..\gui\i18n.cpp" />
-    <ClCompile Include="..\..\gui\IniInterface.cpp" />
     <ClCompile Include="..\..\gui\IsoDropTarget.cpp" />
     <ClCompile Include="..\..\gui\MainFrame.cpp" />
     <ClCompile Include="..\..\gui\MainMenuClicks.cpp" />
@@ -608,7 +614,6 @@
     <ClCompile Include="..\..\gui\RecentIsoList.cpp" />
     <ClCompile Include="..\..\gui\UpdateUI.cpp" />
     <ClCompile Include="..\..\gui\Dialogs\AboutBoxDialog.cpp" />
-    <ClCompile Include="..\..\gui\AdvancedDialog.cpp" />
     <ClCompile Include="..\..\gui\Dialogs\AssertionDialog.cpp" />
     <ClCompile Include="..\..\gui\Dialogs\BaseConfigurationDialog.cpp" />
     <ClCompile Include="..\..\gui\Dialogs\BiosSelectorDialog.cpp" />
@@ -629,7 +634,6 @@
     <ClCompile Include="..\..\gui\Panels\GSWindowPanel.cpp" />
     <ClCompile Include="..\..\gui\Panels\LogOptionsPanels.cpp" />
     <ClCompile Include="..\..\gui\Panels\MemoryCardListPanel.cpp" />
-    <ClCompile Include="..\..\gui\Panels\MemoryCardsPanel.cpp" />
     <ClCompile Include="..\..\gui\Panels\MiscPanelStuff.cpp" />
     <ClCompile Include="..\..\gui\Panels\PathsPanel.cpp" />
     <ClCompile Include="..\..\gui\Panels\PluginSelectorPanel.cpp" />
@@ -667,7 +671,12 @@
     <ClCompile Include="..\..\ZipTools\thread_lzma.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\GameDatabase.h" />
+    <ClInclude Include="..\..\gui\AppGameDatabase.h" />
+    <ClInclude Include="..\..\gui\Panels\MemoryCardPanels.h" />
+    <ClInclude Include="..\..\IPU\IPUdma.h" />
     <ClInclude Include="..\..\Patch.h" />
+    <ClInclude Include="..\..\Patch_Obsolete.h" />
     <ClInclude Include="..\..\PrecompiledHeader.h" />
     <ClInclude Include="..\..\Utilities\AsciiFile.h" />
     <ClInclude Include="..\..\StringUtils.h" />
@@ -744,8 +753,6 @@
     <ClInclude Include="..\..\CDVD\CDVD_internal.h" />
     <ClInclude Include="..\..\CDVD\CDVDaccess.h" />
     <ClInclude Include="..\..\CDVD\CDVDisoReader.h" />
-    <ClInclude Include="..\..\CDVD\IsoFileTools.h" />
-    <ClInclude Include="..\..\IPU\coroutine.h" />
     <ClInclude Include="..\..\Ipu\IPU.h" />
     <ClInclude Include="..\..\Ipu\IPU_Fifo.h" />
     <ClInclude Include="..\..\Ipu\yuv2rgb.h" />
@@ -800,7 +807,6 @@
     <ClInclude Include="..\..\CDVD\IsoFS\IsoFS.h" />
     <ClInclude Include="..\..\CDVD\IsoFS\IsoFSCDVD.h" />
     <ClInclude Include="..\..\CDVD\IsoFS\SectorSource.h" />
-    <ClInclude Include="..\..\gui\AdvancedDialog.h" />
     <ClInclude Include="..\..\gui\Dialogs\ConfigurationDialog.h" />
     <ClInclude Include="..\..\gui\Dialogs\LogOptionsDialog.h" />
     <ClInclude Include="..\..\gui\Dialogs\ModalPopups.h" />

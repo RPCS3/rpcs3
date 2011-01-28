@@ -64,30 +64,24 @@
   <ItemGroup>
     <CustomBuild Include="..\..\include\wx\msw\genrcdefs.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Creating ..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cl /EP /nologo "%(FullPath)" &gt; "..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"
-</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cl /EP /nologo "%(FullPath)" &gt; "..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h;%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">Creating ..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">cl /EP /nologo "%(FullPath)" &gt; "..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"
-</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">cl /EP /nologo "%(FullPath)" &gt; "..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h;%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Creating ..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cl /EP /nologo "%(FullPath)" &gt; "..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"
-</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cl /EP /nologo "%(FullPath)" &gt; "..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\lib\vc_lib\mswd\wx\msw\rcdefs.h;%(Outputs)</Outputs>
     </CustomBuild>
-    <CustomBuild Include="..\..\include\wx\msw\setup.h">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Creating ..\..\lib\vc_lib\mswd\wx\setup.h</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy "%(FullPath)" ..\..\lib\vc_lib\mswd\wx\setup.h
-</Command>
+    <CustomBuild Include="..\..\include\msvc\wx\setup.h">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Creating ..\..\lib\vc_lib\mswd\wx\setup.h (%(FullPath))</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">copy "%(FullPath)" ..\..\lib\vc_lib\mswd\wx\setup.h</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\lib\vc_lib\mswd\wx\setup.h;%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">Creating ..\..\lib\vc_lib\msw\wx\setup.h</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">copy "%(FullPath)" ..\..\lib\vc_lib\msw\wx\setup.h
-</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">copy "%(FullPath)" ..\..\lib\vc_lib\msw\wx\setup.h</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">..\..\lib\vc_lib\msw\wx\setup.h;%(Outputs)</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Creating ..\..\lib\vc_lib\msw\wx\setup.h</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">copy "%(FullPath)" ..\..\lib\vc_lib\msw\wx\setup.h
-</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">copy "%(FullPath)" ..\..\lib\vc_lib\msw\wx\setup.h</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\lib\vc_lib\msw\wx\setup.h;%(Outputs)</Outputs>
     </CustomBuild>
     <ClInclude Include="..\..\include\wx\setup.h" />

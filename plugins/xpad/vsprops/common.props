@@ -16,9 +16,9 @@
       <DisableSpecificWarnings>4995;4324;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>d3d10.lib;d3dx10.lib;d3d9.lib;d3dx9.lib;ddraw.lib;dxguid.lib;winmm.lib;strmiids.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d10.lib;d3dx10.lib;d3d9.lib;d3dx9.lib;dxguid.lib;winmm.lib;strmiids.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>..\..\bin\plugins\$(ProjectName).dll</OutputFile>
-      <DelayLoadDLLs>d3d9.dll;d3dx9_40.dll;d3d10.dll;d3dx10_40.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
+      <DelayLoadDLLs>d3d9.dll;d3dx9_43.dll;d3d10.dll;d3dx10_43.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>

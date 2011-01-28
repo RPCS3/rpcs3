@@ -194,5 +194,11 @@ typedef signed long long int64;
 
 #endif
 
+#if _M_SSE >= 0x500
+
+	#include <immintrin.h>
+
+#endif
+
 #undef min
 #undef max
