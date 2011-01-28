@@ -419,8 +419,10 @@ typedef double PaTime;
 
  paUInt8 is an unsigned 8 bit format where 128 is considered "ground"
 
- The paNonInterleaved flag indicates that a multichannel buffer is passed
- as a set of non-interleaved pointers.
+ The paNonInterleaved flag indicates that audio data is passed as an array 
+ of pointers to separate buffers, one buffer for each channel. Usually,
+ when this flag is not used, audio data is passed as a single buffer with
+ all channels interleaved.
 
  @see Pa_OpenStream, Pa_OpenDefaultStream, PaDeviceInfo
  @see paFloat32, paInt16, paInt32, paInt24, paInt8
@@ -437,7 +439,7 @@ typedef unsigned long PaSampleFormat;
 #define paUInt8          ((PaSampleFormat) 0x00000020) /**< @see PaSampleFormat */
 #define paCustomFormat   ((PaSampleFormat) 0x00010000)/**< @see PaSampleFormat */
 
-#define paNonInterleaved ((PaSampleFormat) 0x80000000)
+#define paNonInterleaved ((PaSampleFormat) 0x80000000) /**< @see PaSampleFormat */
 
 /** A structure providing information and capabilities of PortAudio devices.
  Devices may support input, output or both input and output.
@@ -704,8 +706,12 @@ typedef enum PaStreamCallbackResult
  They consume, process or generate audio in response to requests from an
  active PortAudio stream.
      
- @param input and @param output are arrays of interleaved samples,
- the format, packing and number of channels used by the buffers are
+ @param input and @param output are either arrays of interleaved samples or;
+ if non-interleaved samples were requested using the paNonInterleaved sample 
+ format flag, an array of buffer pointers, one non-interleaved buffer for 
+ each channel.
+
+ The format, packing and number of channels used by the buffers are
  determined by parameters to Pa_OpenStream().
      
  @param frameCount The number of sample frames to be processed by
@@ -1040,9 +1046,9 @@ double Pa_GetStreamCpuLoad( PaStream* stream );
  @param buffer A pointer to a buffer of sample frames. The buffer contains
  samples in the format specified by the inputParameters->sampleFormat field
  used to open the stream, and the number of channels specified by
- inputParameters->numChannels. If non-interleaved samples were requested,
- buffer is a pointer to the first element of an array of non-interleaved
- buffer pointers, one for each channel.
+ inputParameters->numChannels. If non-interleaved samples were requested using
+ the paNonInterleaved sample format flag, buffer is a pointer to the first element 
+ of an array of buffer pointers, one non-interleaved buffer for each channel.
 
  @param frames The number of frames to be read into buffer. This parameter
  is not constrained to a specific range, however high performance applications
@@ -1066,9 +1072,9 @@ PaError Pa_ReadStream( PaStream* stream,
  @param buffer A pointer to a buffer of sample frames. The buffer contains
  samples in the format specified by the outputParameters->sampleFormat field
  used to open the stream, and the number of channels specified by
- outputParameters->numChannels. If non-interleaved samples were requested,
- buffer is a pointer to the first element of an array of non-interleaved
- buffer pointers, one for each channel.
+ outputParameters->numChannels. If non-interleaved samples were requested using
+ the paNonInterleaved sample format flag, buffer is a pointer to the first element 
+ of an array of buffer pointers, one non-interleaved buffer for each channel.
 
  @param frames The number of frames to be written from buffer. This parameter
  is not constrained to a specific range, however high performance applications

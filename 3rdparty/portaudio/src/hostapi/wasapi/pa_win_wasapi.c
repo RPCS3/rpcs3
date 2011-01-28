@@ -46,6 +46,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <process.h>
+#include <assert.h>
 #include <mmsystem.h>
 #include <mmreg.h>  // must be before other Wasapi headers
 #if defined(_MSC_VER) && (_MSC_VER >= 1400)
@@ -376,6 +377,21 @@ typedef struct
 PaWasapiHostApiRepresentation;
 
 // ------------------------------------------------------------------------------------------
+/* PaWasapiAudioClientParams - audio client parameters */
+typedef struct PaWasapiAudioClientParams
+{
+	PaWasapiDeviceInfo *device_info;
+	PaStreamParameters  stream_params;
+	PaWasapiStreamInfo  wasapi_params;
+	UINT32              frames_per_buffer;
+	double              sample_rate;
+	BOOL                blocking;
+	BOOL                full_duplex;
+	BOOL                wow64_workaround;
+}
+PaWasapiAudioClientParams;
+
+// ------------------------------------------------------------------------------------------
 /* PaWasapiStream - a stream data structure specifically for this implementation */
 typedef struct PaWasapiSubStream
 {
@@ -389,6 +405,7 @@ typedef struct PaWasapiSubStream
 	AUDCLNT_SHAREMODE    shareMode;
 	UINT32               streamFlags; // AUDCLNT_STREAMFLAGS_EVENTCALLBACK, ...
 	UINT32               flags;
+	PaWasapiAudioClientParams params; //!< parameters
 
 	// Buffers
 	UINT32               buffers;			//!< number of buffers used (from host side)
@@ -472,6 +489,7 @@ PaWasapiStream;
 // Local stream methods
 static void _OnStreamStop(PaWasapiStream *stream);
 static void _FinishStream(PaWasapiStream *stream);
+static void _CleanupStream(PaWasapiStream *stream);
 
 // Local statics
 static volatile BOOL  g_WasapiCOMInit    = FALSE;
@@ -631,13 +649,13 @@ static UINT32 ALIGN_BWD(UINT32 v, UINT32 align)
 
 // ------------------------------------------------------------------------------------------
 // Aligns 'v' forward
-/*static UINT32 ALIGN_FWD(UINT32 v, UINT32 align)
+static UINT32 ALIGN_FWD(UINT32 v, UINT32 align)
 {
 	UINT32 remainder = (align ? (v % align) : 0);
 	if (remainder == 0)
 		return v;
 	return v + (align - remainder);
-}*/
+}
 
 // ------------------------------------------------------------------------------------------
 // Aligns WASAPI buffer to 128 byte packet boundary. HD Audio will fail to play if buffer
@@ -653,6 +671,11 @@ static UINT32 AlignFramesPerBuffer(UINT32 nFrames, UINT32 nSamplesPerSec, UINT32
 
 	// align to packet size
 	frame_bytes  = pAlignFunc(frame_bytes, HDA_PACKET_SIZE); // use ALIGN_FWD if bigger but safer period is more desired
+
+	// atlest 1 frame must be available
+	if (frame_bytes < HDA_PACKET_SIZE)
+		frame_bytes = HDA_PACKET_SIZE;
+
 	nFrames      = frame_bytes / nBlockAlign;
 	packets      = frame_bytes / HDA_PACKET_SIZE;
 
@@ -675,6 +698,19 @@ static UINT32 GetFramesSleepTime(UINT32 nFrames, UINT32 nSamplesPerSec)
 	// Calculate the actual duration of the allocated buffer.
 	nDuration = (REFERENCE_TIME)((double)REFTIMES_PER_SEC * nFrames / nSamplesPerSec);
 	return (UINT32)(nDuration/REFTIMES_PER_MILLISEC/2);
+}
+
+// ------------------------------------------------------------------------------------------
+static UINT32 GetFramesSleepTimeMicroseconds(UINT32 nFrames, UINT32 nSamplesPerSec)
+{
+	REFERENCE_TIME nDuration;
+	if (nSamplesPerSec == 0)
+		return 0;
+#define REFTIMES_PER_SEC  10000000
+#define REFTIMES_PER_MILLISEC  10000
+	// Calculate the actual duration of the allocated buffer.
+	nDuration = (REFERENCE_TIME)((double)REFTIMES_PER_SEC * nFrames / nSamplesPerSec);
+	return (UINT32)(nDuration/10/2);
 }
 
 // ------------------------------------------------------------------------------------------
@@ -814,7 +850,7 @@ static BOOL UseWOW64Workaround()
 }
 
 // ------------------------------------------------------------------------------------------
-typedef enum EMixerDir { MIX_DIR__1TO2, MIX_DIR__2TO1 } EMixerDir;
+typedef enum EMixerDir { MIX_DIR__1TO2, MIX_DIR__2TO1, MIX_DIR__2TO1_L } EMixerDir;
 
 // ------------------------------------------------------------------------------------------
 #define _WASAPI_MONO_TO_STEREO_MIXER_1_TO_2(TYPE)\
@@ -829,13 +865,46 @@ typedef enum EMixerDir { MIX_DIR__1TO2, MIX_DIR__2TO1 } EMixerDir;
 	}
 
 // ------------------------------------------------------------------------------------------
-#define _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1(TYPE)\
+#define _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_FLT32(TYPE)\
 	TYPE * __restrict to   = (TYPE *)__to;\
 	TYPE * __restrict from = (TYPE *)__from;\
 	TYPE * __restrict end  = to + count;\
 	while (to != end)\
 	{\
 		*to ++ = (TYPE)((float)(from[0] + from[1]) * 0.5f);\
+		from += 2;\
+	}
+
+// ------------------------------------------------------------------------------------------
+#define _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_INT32(TYPE)\
+	TYPE * __restrict to   = (TYPE *)__to;\
+	TYPE * __restrict from = (TYPE *)__from;\
+	TYPE * __restrict end  = to + count;\
+	while (to != end)\
+	{\
+		*to ++ = (TYPE)(((INT32)from[0] + (INT32)from[1]) >> 1);\
+		from += 2;\
+	}
+
+// ------------------------------------------------------------------------------------------
+#define _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_INT64(TYPE)\
+	TYPE * __restrict to   = (TYPE *)__to;\
+	TYPE * __restrict from = (TYPE *)__from;\
+	TYPE * __restrict end  = to + count;\
+	while (to != end)\
+	{\
+		*to ++ = (TYPE)(((INT64)from[0] + (INT64)from[1]) >> 1);\
+		from += 2;\
+	}
+
+// ------------------------------------------------------------------------------------------
+#define _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_L(TYPE)\
+	TYPE * __restrict to   = (TYPE *)__to;\
+	TYPE * __restrict from = (TYPE *)__from;\
+	TYPE * __restrict end  = to + count;\
+	while (to != end)\
+	{\
+		*to ++ = from[0];\
 		from += 2;\
 	}
 
@@ -847,11 +916,18 @@ static void _MixMonoToStereo_1TO2_32(void *__to, void *__from, UINT32 count) { _
 static void _MixMonoToStereo_1TO2_32f(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_1_TO_2(float); }
 
 // ------------------------------------------------------------------------------------------
-static void _MixMonoToStereo_2TO1_8(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1(BYTE); }
-static void _MixMonoToStereo_2TO1_16(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1(short); }
-static void _MixMonoToStereo_2TO1_24(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1(int); /* !!! int24 data is contained in 32-bit containers*/ }
-static void _MixMonoToStereo_2TO1_32(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1(int); }
-static void _MixMonoToStereo_2TO1_32f(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1(float); }
+static void _MixMonoToStereo_2TO1_8(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_INT32(BYTE); }
+static void _MixMonoToStereo_2TO1_16(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_INT32(short); }
+static void _MixMonoToStereo_2TO1_24(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_INT32(int); /* !!! int24 data is contained in 32-bit containers*/ }
+static void _MixMonoToStereo_2TO1_32(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_INT64(int); }
+static void _MixMonoToStereo_2TO1_32f(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_FLT32(float); }
+
+// ------------------------------------------------------------------------------------------
+static void _MixMonoToStereo_2TO1_8_L(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_L(BYTE); }
+static void _MixMonoToStereo_2TO1_16_L(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_L(short); }
+static void _MixMonoToStereo_2TO1_24_L(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_L(int); /* !!! int24 data is contained in 32-bit containers*/ }
+static void _MixMonoToStereo_2TO1_32_L(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_L(int); }
+static void _MixMonoToStereo_2TO1_32f_L(void *__to, void *__from, UINT32 count) { _WASAPI_MONO_TO_STEREO_MIXER_2_TO_1_L(float); }
 
 // ------------------------------------------------------------------------------------------
 static MixMonoToStereoF _GetMonoToStereoMixer(PaSampleFormat format, EMixerDir dir)
@@ -877,6 +953,17 @@ static MixMonoToStereoF _GetMonoToStereoMixer(PaSampleFormat format, EMixerDir d
 		case paInt24:	return _MixMonoToStereo_2TO1_24;
 		case paInt32:	return _MixMonoToStereo_2TO1_32;
 		case paFloat32: return _MixMonoToStereo_2TO1_32f;
+		}
+		break;
+
+	case MIX_DIR__2TO1_L:
+		switch (format & ~paNonInterleaved)
+		{
+		case paUInt8:	return _MixMonoToStereo_2TO1_8_L;
+		case paInt16:	return _MixMonoToStereo_2TO1_16_L;
+		case paInt24:	return _MixMonoToStereo_2TO1_24_L;
+		case paInt32:	return _MixMonoToStereo_2TO1_32_L;
+		case paFloat32: return _MixMonoToStereo_2TO1_32f_L;
 		}
 		break;
 	}
@@ -1371,20 +1458,20 @@ static void LogWAVEFORMATEXTENSIBLE(const WAVEFORMATEXTENSIBLE *in)
 	{
 	case WAVE_FORMAT_EXTENSIBLE: {
 
-		PRINT(("wFormatTag=WAVE_FORMAT_EXTENSIBLE\n"));
+		PRINT(("wFormatTag     =WAVE_FORMAT_EXTENSIBLE\n"));
 
 		if (IsEqualGUID(&in->SubFormat, &pa_KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
 		{
-			PRINT(("SubFormat=KSDATAFORMAT_SUBTYPE_IEEE_FLOAT\n"));
+			PRINT(("SubFormat      =KSDATAFORMAT_SUBTYPE_IEEE_FLOAT\n"));
 		}
 		else
 		if (IsEqualGUID(&in->SubFormat, &pa_KSDATAFORMAT_SUBTYPE_PCM))
 		{
-			PRINT(("SubFormat=KSDATAFORMAT_SUBTYPE_PCM\n"));
+			PRINT(("SubFormat      =KSDATAFORMAT_SUBTYPE_PCM\n"));
 		}
 		else
 		{
-			PRINT(("SubFormat=CUSTOM GUID{%d:%d:%d:%d%d%d%d%d%d%d%d}\n",
+			PRINT(("SubFormat      =CUSTOM GUID{%d:%d:%d:%d%d%d%d%d%d%d%d}\n",
 										in->SubFormat.Data1,
 										in->SubFormat.Data2,
 										in->SubFormat.Data3,
@@ -1397,14 +1484,15 @@ static void LogWAVEFORMATEXTENSIBLE(const WAVEFORMATEXTENSIBLE *in)
 										(int)in->SubFormat.Data4[6],
 										(int)in->SubFormat.Data4[7]));
 		}
-		PRINT(("Samples.wValidBitsPerSample=%d\n",  in->Samples.wValidBitsPerSample));
+		PRINT(("Samples.wValidBitsPerSample =%d\n",  in->Samples.wValidBitsPerSample));
 		PRINT(("dwChannelMask  =0x%X\n",in->dwChannelMask));
 
 		break; }
 
-	case WAVE_FORMAT_PCM:        PRINT(("wFormatTag=WAVE_FORMAT_PCM\n")); break;
-	case WAVE_FORMAT_IEEE_FLOAT: PRINT(("wFormatTag=WAVE_FORMAT_IEEE_FLOAT\n")); break;
-	default : PRINT(("wFormatTag=UNKNOWN(%d)\n",old->wFormatTag)); break;
+	case WAVE_FORMAT_PCM:        PRINT(("wFormatTag     =WAVE_FORMAT_PCM\n")); break;
+	case WAVE_FORMAT_IEEE_FLOAT: PRINT(("wFormatTag     =WAVE_FORMAT_IEEE_FLOAT\n")); break;
+	default: 
+		PRINT(("wFormatTag     =UNKNOWN(%d)\n",old->wFormatTag)); break;
 	}
 
 	PRINT(("nChannels      =%d\n",old->nChannels));
@@ -1487,14 +1575,14 @@ static PaError MakeWaveFormatFromParams(WAVEFORMATEXTENSIBLE *wavex, const PaStr
     old->nBlockAlign     = (old->nChannels * (old->wBitsPerSample/8));
     old->nAvgBytesPerSec = (old->nSamplesPerSec * old->nBlockAlign);
 
-    //WAVEFORMATEX
-    /*if ((params->channelCount <= 2) && ((bitsPerSample == 16) || (bitsPerSample == 8)))
+    // WAVEFORMATEX
+    if ((params->channelCount <= 2) && ((bitsPerSample == 16) || (bitsPerSample == 8)))
 	{
         old->cbSize		= 0;
         old->wFormatTag	= WAVE_FORMAT_PCM;
     }
-    //WAVEFORMATEXTENSIBLE
-    else*/
+    // WAVEFORMATEXTENSIBLE
+    else
 	{
         old->wFormatTag = WAVE_FORMAT_EXTENSIBLE;
         old->cbSize		= sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX);
@@ -1517,10 +1605,26 @@ static PaError MakeWaveFormatFromParams(WAVEFORMATEXTENSIBLE *wavex, const PaStr
 			{
 			case 1:  wavex->dwChannelMask = KSAUDIO_SPEAKER_MONO; break;
 			case 2:  wavex->dwChannelMask = KSAUDIO_SPEAKER_STEREO; break;
+			case 3:  wavex->dwChannelMask = KSAUDIO_SPEAKER_STEREO|SPEAKER_LOW_FREQUENCY; break;
 			case 4:  wavex->dwChannelMask = KSAUDIO_SPEAKER_QUAD; break;
+			case 5:  wavex->dwChannelMask = KSAUDIO_SPEAKER_QUAD|SPEAKER_LOW_FREQUENCY; break;
+#ifdef KSAUDIO_SPEAKER_5POINT1_SURROUND
+			case 6:  wavex->dwChannelMask = KSAUDIO_SPEAKER_5POINT1_SURROUND; break;
+#else
 			case 6:  wavex->dwChannelMask = KSAUDIO_SPEAKER_5POINT1; break;
+#endif
+#ifdef KSAUDIO_SPEAKER_5POINT1_SURROUND
+			case 7:  wavex->dwChannelMask = KSAUDIO_SPEAKER_5POINT1_SURROUND|SPEAKER_BACK_CENTER; break;
+#else
+			case 7:  wavex->dwChannelMask = KSAUDIO_SPEAKER_5POINT1|SPEAKER_BACK_CENTER; break;
+#endif	
+#ifdef KSAUDIO_SPEAKER_7POINT1_SURROUND
+			case 8:  wavex->dwChannelMask = KSAUDIO_SPEAKER_7POINT1_SURROUND; break;
+#else
 			case 8:  wavex->dwChannelMask = KSAUDIO_SPEAKER_7POINT1; break;
-			default: wavex->dwChannelMask = 0; break;
+#endif
+
+			default: wavex->dwChannelMask = 0;
 			}
 		}
 	}
@@ -1591,8 +1695,8 @@ static PaError GetClosestFormat(IAudioClient *myClient, double sampleRate,
 	   to 24-bit for user-space. The bug concerns Vista, if Windows 7 supports 24-bits for Input
 	   please report to PortAudio developers to exclude Windows 7.
 	*/
-	if ((params.sampleFormat == paInt24) && (output == FALSE))
-		params.sampleFormat = paFloat32;
+	/*if ((params.sampleFormat == paInt24) && (output == FALSE))
+		params.sampleFormat = paFloat32;*/ // <<< The silence was due to missing Int32_To_Int24_Dither implementation
 
     MakeWaveFormatFromParams(outWavex, &params, sampleRate);
 
@@ -1919,14 +2023,21 @@ static void _CalculateAlignedPeriod(PaWasapiSubStream *pSub, UINT32 *nFramesPerL
 }
 
 // ------------------------------------------------------------------------------------------
-static HRESULT CreateAudioClient(PaWasapiStream *pStream, PaWasapiSubStream *pSub,
-	PaWasapiDeviceInfo *pInfo, const PaStreamParameters *params, UINT32 framesPerLatency,
-	double sampleRate, BOOL blocking, BOOL output, BOOL fullDuplex, PaError *pa_error)
+static HRESULT CreateAudioClient(PaWasapiStream *pStream, PaWasapiSubStream *pSub, BOOL output, PaError *pa_error)
 {
 	PaError error;
     HRESULT hr;
+
+	const PaWasapiDeviceInfo *pInfo  = pSub->params.device_info;
+	const PaStreamParameters *params = &pSub->params.stream_params;
+	UINT32 framesPerLatency          = pSub->params.frames_per_buffer;
+	double sampleRate                = pSub->params.sample_rate;
+	BOOL blocking                    = pSub->params.blocking;
+	BOOL fullDuplex                  = pSub->params.full_duplex;
+
 	const UINT32 userFramesPerBuffer = framesPerLatency;
     IAudioClient *audioClient	     = NULL;
+
 
 	// Validate parameters
     if (!pSub || !pInfo || !params)
@@ -1955,14 +2066,14 @@ static HRESULT CreateAudioClient(PaWasapiStream *pStream, PaWasapiSubStream *pSu
 	// Check for Mono <<>> Stereo workaround
 	if ((params->channelCount == 1) && (pSub->wavex.Format.nChannels == 2))
 	{
-		if (blocking)
+		/*if (blocking)
 		{
 			LogHostError(hr = AUDCLNT_E_UNSUPPORTED_FORMAT);
 			goto done; // fail, blocking mode not supported
-		}
+		}*/
 
 		// select mixer
-		pSub->monoMixer = _GetMonoToStereoMixer(WaveToPaFormat(&pSub->wavex), (pInfo->flow == eRender ? MIX_DIR__1TO2 : MIX_DIR__2TO1));
+		pSub->monoMixer = _GetMonoToStereoMixer(WaveToPaFormat(&pSub->wavex), (pInfo->flow == eRender ? MIX_DIR__1TO2 : MIX_DIR__2TO1_L));
 		if (pSub->monoMixer == NULL)
 		{
 			LogHostError(hr = AUDCLNT_E_UNSUPPORTED_FORMAT);
@@ -2036,7 +2147,7 @@ static HRESULT CreateAudioClient(PaWasapiStream *pStream, PaWasapiSubStream *pSu
 			pSub->period = pInfo->MinimumDevicePeriod;
 			// Recalculate aligned period
 			framesPerLatency = MakeFramesFromHns(pSub->period, pSub->wavex.Format.nSamplesPerSec);
-			_CalculateAlignedPeriod(pSub, &framesPerLatency, ALIGN_BWD);
+			_CalculateAlignedPeriod(pSub, &framesPerLatency, ALIGN_FWD);
 		}
 	}
 
@@ -2194,14 +2305,14 @@ static HRESULT CreateAudioClient(PaWasapiStream *pStream, PaWasapiSubStream *pSu
 		// Check for Mono >> Stereo workaround
 		if ((params->channelCount == 1) && (pSub->wavex.Format.nChannels == 2))
 		{
-			if (blocking)
+			/*if (blocking)
 			{
 				LogHostError(hr = AUDCLNT_E_UNSUPPORTED_FORMAT);
 				goto done; // fail, blocking mode not supported
-			}
+			}*/
 
 			// Select mixer
-			pSub->monoMixer = _GetMonoToStereoMixer(WaveToPaFormat(&pSub->wavex), (pInfo->flow == eRender ? MIX_DIR__1TO2 : MIX_DIR__2TO1));
+			pSub->monoMixer = _GetMonoToStereoMixer(WaveToPaFormat(&pSub->wavex), (pInfo->flow == eRender ? MIX_DIR__1TO2 : MIX_DIR__2TO1_L));
 			if (pSub->monoMixer == NULL)
 			{
 				LogHostError(hr = AUDCLNT_E_UNSUPPORTED_FORMAT);
@@ -2251,6 +2362,150 @@ done:
 }
 
 // ------------------------------------------------------------------------------------------
+static PaError ActivateAudioClientOutput(PaWasapiStream *stream)
+{
+	HRESULT hr;
+	PaError result;
+
+	UINT32 maxBufferSize   = 0;
+	PaTime buffer_latency  = 0;
+	UINT32 framesPerBuffer = stream->out.params.frames_per_buffer;
+
+	// Create Audio client
+	hr = CreateAudioClient(stream, &stream->out, TRUE, &result);
+    if (hr != S_OK)
+	{
+		LogPaError(result = paInvalidDevice);
+		goto error;
+    }
+	LogWAVEFORMATEXTENSIBLE(&stream->out.wavex);
+
+	// Activate volume
+	stream->outVol = NULL;
+    /*hr = info->device->Activate(
+        __uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL,
+        (void**)&stream->outVol);
+    if (hr != S_OK)
+        return paInvalidDevice;*/
+
+    // Get max possible buffer size to check if it is not less than that we request
+    hr = IAudioClient_GetBufferSize(stream->out.client, &maxBufferSize);
+    if (hr != S_OK)
+	{
+		LogHostError(hr);
+		LogPaError(result = paInvalidDevice);
+		goto error;
+	}
+
+    // Correct buffer to max size if it maxed out result of GetBufferSize
+	stream->out.bufferSize = maxBufferSize;
+
+	// Get interface latency (actually uneeded as we calculate latency from the size
+	// of maxBufferSize).
+    hr = IAudioClient_GetStreamLatency(stream->out.client, &stream->out.device_latency);
+    if (hr != S_OK)
+	{
+		LogHostError(hr);
+		LogPaError(result = paInvalidDevice);
+		goto error;
+	}
+	//stream->out.latency_seconds = nano100ToSeconds(stream->out.device_latency);
+
+    // Number of frames that are required at each period
+	stream->out.framesPerHostCallback = maxBufferSize;
+
+	// Calculate frames per single buffer, if buffers > 1 then always framesPerBuffer
+	stream->out.framesPerBuffer =
+		(stream->out.userBufferAndHostMatch ? stream->out.framesPerHostCallback : framesPerBuffer);
+
+	// Calculate buffer latency
+	buffer_latency = (PaTime)maxBufferSize / stream->out.wavex.Format.nSamplesPerSec;
+
+	// Append buffer latency to interface latency in shared mode (see GetStreamLatency notes)
+	stream->out.latency_seconds = buffer_latency;
+
+	PRINT(("WASAPI::OpenStream(output): framesPerUser[ %d ] framesPerHost[ %d ] latency[ %.02fms ] exclusive[ %s ] wow64_fix[ %s ] mode[ %s ]\n", (UINT32)framesPerBuffer, (UINT32)stream->out.framesPerHostCallback, (float)(stream->out.latency_seconds*1000.0f), (stream->out.shareMode == AUDCLNT_SHAREMODE_EXCLUSIVE ? "YES" : "NO"), (stream->out.params.wow64_workaround ? "YES" : "NO"), (stream->out.streamFlags & AUDCLNT_STREAMFLAGS_EVENTCALLBACK ? "EVENT" : "POLL")));
+
+	return paNoError;
+
+error:
+
+	return result;
+}
+
+// ------------------------------------------------------------------------------------------
+static PaError ActivateAudioClientInput(PaWasapiStream *stream)
+{
+	HRESULT hr;
+	PaError result;
+
+	UINT32 maxBufferSize   = 0;
+	PaTime buffer_latency  = 0;
+	UINT32 framesPerBuffer = stream->out.params.frames_per_buffer;
+
+	// Create Audio client
+	hr = CreateAudioClient(stream, &stream->in, FALSE, &result);
+    if (hr != S_OK)
+	{
+		LogPaError(result = paInvalidDevice);
+		goto error;
+    }
+	LogWAVEFORMATEXTENSIBLE(&stream->in.wavex);
+
+	// Create volume mgr
+	stream->inVol = NULL;
+    /*hr = info->device->Activate(
+        __uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL,
+        (void**)&stream->inVol);
+    if (hr != S_OK)
+        return paInvalidDevice;*/
+
+    // Get max possible buffer size to check if it is not less than that we request
+    hr = IAudioClient_GetBufferSize(stream->in.client, &maxBufferSize);
+    if (hr != S_OK)
+	{
+		LogHostError(hr);
+		LogPaError(result = paInvalidDevice);
+		goto error;
+	}
+
+    // Correct buffer to max size if it maxed out result of GetBufferSize
+	stream->in.bufferSize = maxBufferSize;
+
+	// Get interface latency (actually uneeded as we calculate latency from the size
+	// of maxBufferSize).
+    hr = IAudioClient_GetStreamLatency(stream->in.client, &stream->in.device_latency);
+    if (hr != S_OK)
+	{
+		LogHostError(hr);
+		LogPaError(result = paInvalidDevice);
+		goto error;
+	}
+	//stream->in.latency_seconds = nano100ToSeconds(stream->in.device_latency);
+
+    // Number of frames that are required at each period
+	stream->in.framesPerHostCallback = maxBufferSize;
+
+	// Calculate frames per single buffer, if buffers > 1 then always framesPerBuffer
+	stream->in.framesPerBuffer =
+		(stream->in.userBufferAndHostMatch ? stream->in.framesPerHostCallback : framesPerBuffer);
+
+	// Calculate buffer latency
+	buffer_latency = (PaTime)maxBufferSize / stream->in.wavex.Format.nSamplesPerSec;
+
+	// Append buffer latency to interface latency in shared mode (see GetStreamLatency notes)
+	stream->in.latency_seconds = buffer_latency;
+
+	PRINT(("WASAPI::OpenStream(input): framesPerUser[ %d ] framesPerHost[ %d ] latency[ %.02fms ] exclusive[ %s ] wow64_fix[ %s ] mode[ %s ]\n", (UINT32)framesPerBuffer, (UINT32)stream->in.framesPerHostCallback, (float)(stream->in.latency_seconds*1000.0f), (stream->in.shareMode == AUDCLNT_SHAREMODE_EXCLUSIVE ? "YES" : "NO"), (stream->in.params.wow64_workaround ? "YES" : "NO"), (stream->in.streamFlags & AUDCLNT_STREAMFLAGS_EVENTCALLBACK ? "EVENT" : "POLL")));
+
+	return paNoError;
+
+error:
+
+	return result;
+}
+
+// ------------------------------------------------------------------------------------------
 static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                            PaStream** s,
                            const PaStreamParameters *inputParameters,
@@ -2270,8 +2525,6 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     PaSampleFormat hostInputSampleFormat, hostOutputSampleFormat;
 	PaWasapiStreamInfo *inputStreamInfo = NULL, *outputStreamInfo = NULL;
 	PaWasapiDeviceInfo *info = NULL;
-	UINT32 maxBufferSize;
-	PaTime buffer_latency;
 	ULONG framesPerHostCallback;
 	PaUtilHostBufferSizeMode bufferMode;
 	const BOOL fullDuplex = ((inputParameters != NULL) && (outputParameters != NULL));
@@ -2358,26 +2611,30 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 		if (fullDuplex)
 			stream->in.streamFlags = 0; // polling interface is implemented for full-duplex mode also
 
-		// Create Audio client
-		hr = CreateAudioClient(stream, &stream->in, info, inputParameters, framesPerBuffer/*framesPerLatency*/,
-			sampleRate, (streamCallback == NULL), FALSE, fullDuplex, &result);
+		// Fill parameters for Audio Client creation
+		stream->in.params.device_info       = info;
+		stream->in.params.stream_params     = (*inputParameters);
+		if (inputStreamInfo != NULL)
+		{
+			stream->in.params.wasapi_params = (*inputStreamInfo);
+			stream->in.params.stream_params.hostApiSpecificStreamInfo = &stream->in.params.wasapi_params;
+		}
+		stream->in.params.frames_per_buffer = framesPerBuffer;
+		stream->in.params.sample_rate       = sampleRate;
+		stream->in.params.blocking          = (streamCallback == NULL);
+		stream->in.params.full_duplex       = fullDuplex;
+		stream->in.params.wow64_workaround  = paWasapi->useWOW64Workaround;
+
+		// Create and activate audio client
+		hr = ActivateAudioClientInput(stream);
         if (hr != S_OK)
 		{
 			LogPaError(result = paInvalidDevice);
 			goto error;
         }
-		LogWAVEFORMATEXTENSIBLE(&stream->in.wavex);
 
 		// Get closest format
         hostInputSampleFormat = PaUtil_SelectClosestAvailableFormat( WaveToPaFormat(&stream->in.wavex), inputSampleFormat );
-
-		// Create volume mgr
-		stream->inVol = NULL;
-        /*hr = info->device->Activate(
-            __uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL,
-            (void**)&stream->inVol);
-        if (hr != S_OK)
-            return paInvalidDevice;*/
 
         // Set user-side custom host processor
         if ((inputStreamInfo != NULL) &&
@@ -2386,44 +2643,6 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
             stream->hostProcessOverrideInput.processor = inputStreamInfo->hostProcessorInput;
             stream->hostProcessOverrideInput.userData = userData;
         }
-
-        // Get max possible buffer size to check if it is not less than that we request
-        hr = IAudioClient_GetBufferSize(stream->in.client, &maxBufferSize);
-        if (hr != S_OK)
-		{
-			LogHostError(hr);
- 			LogPaError(result = paInvalidDevice);
-			goto error;
-		}
-
-        // Correct buffer to max size if it maxed out result of GetBufferSize
-		stream->in.bufferSize = maxBufferSize;
-
-		// Get interface latency (actually uneeded as we calculate latency from the size
-		// of maxBufferSize).
-        hr = IAudioClient_GetStreamLatency(stream->in.client, &stream->in.device_latency);
-        if (hr != S_OK)
-		{
-			LogHostError(hr);
- 			LogPaError(result = paInvalidDevice);
-			goto error;
-		}
-		//stream->in.latency_seconds = nano100ToSeconds(stream->in.device_latency);
-
-        // Number of frames that are required at each period
-		stream->in.framesPerHostCallback = maxBufferSize;
-
-		// Calculate frames per single buffer, if buffers > 1 then always framesPerBuffer
-		stream->in.framesPerBuffer =
-			(stream->in.userBufferAndHostMatch ? stream->in.framesPerHostCallback : framesPerBuffer);
-
-		// Calculate buffer latency
-		buffer_latency = (PaTime)maxBufferSize / stream->in.wavex.Format.nSamplesPerSec;
-
-		// Append buffer latency to interface latency in shared mode (see GetStreamLatency notes)
-		stream->in.latency_seconds += buffer_latency;
-
-		PRINT(("WASAPI::OpenStream(input): framesPerUser[ %d ] framesPerHost[ %d ] latency[ %.02fms ] exclusive[ %s ] wow64_fix[ %s ] mode[ %s ]\n", (UINT32)framesPerBuffer, (UINT32)stream->in.framesPerHostCallback, (float)(stream->in.latency_seconds*1000.0f), (stream->in.shareMode == AUDCLNT_SHAREMODE_EXCLUSIVE ? "YES" : "NO"), (paWasapi->useWOW64Workaround ? "YES" : "NO"), (stream->in.streamFlags & AUDCLNT_STREAMFLAGS_EVENTCALLBACK ? "EVENT" : "POLL")));
 	}
     else
     {
@@ -2472,72 +2691,38 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 		if (fullDuplex)
 			stream->out.streamFlags = 0; // polling interface is implemented for full-duplex mode also
 
-		// Create Audio client
-		hr = CreateAudioClient(stream, &stream->out, info, outputParameters, framesPerBuffer/*framesPerLatency*/,
-			sampleRate, (streamCallback == NULL), TRUE, fullDuplex, &result);
+		// Fill parameters for Audio Client creation
+		stream->out.params.device_info       = info;
+		stream->out.params.stream_params     = (*outputParameters);
+		if (inputStreamInfo != NULL)
+		{
+			stream->out.params.wasapi_params = (*outputStreamInfo);
+			stream->out.params.stream_params.hostApiSpecificStreamInfo = &stream->out.params.wasapi_params;
+		}
+		stream->out.params.frames_per_buffer = framesPerBuffer;
+		stream->out.params.sample_rate       = sampleRate;
+		stream->out.params.blocking          = (streamCallback == NULL);
+		stream->out.params.full_duplex       = fullDuplex;
+		stream->out.params.wow64_workaround  = paWasapi->useWOW64Workaround;
+
+		// Create and activate audio client
+		hr = ActivateAudioClientOutput(stream);
         if (hr != S_OK)
 		{
 			LogPaError(result = paInvalidDevice);
 			goto error;
         }
-		LogWAVEFORMATEXTENSIBLE(&stream->out.wavex);
 
-        // Get closest format
+		// Get closest format
         hostOutputSampleFormat = PaUtil_SelectClosestAvailableFormat( WaveToPaFormat(&stream->out.wavex), outputSampleFormat );
 
-		// Activate volume
-		stream->outVol = NULL;
-        /*hr = info->device->Activate(
-            __uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, NULL,
-            (void**)&stream->outVol);
-        if (hr != S_OK)
-            return paInvalidDevice;*/
-
-       // Set user-side custom host processor
+        // Set user-side custom host processor
         if ((outputStreamInfo != NULL) &&
             (outputStreamInfo->flags & paWinWasapiRedirectHostProcessor))
         {
             stream->hostProcessOverrideOutput.processor = outputStreamInfo->hostProcessorOutput;
             stream->hostProcessOverrideOutput.userData = userData;
         }
-
-        // Get max possible buffer size to check if it is not less than that we request
-        hr = IAudioClient_GetBufferSize(stream->out.client, &maxBufferSize);
-        if (hr != S_OK)
-		{
-			LogHostError(hr);
- 			LogPaError(result = paInvalidDevice);
-			goto error;
-		}
-
-        // Correct buffer to max size if it maxed out result of GetBufferSize
-		stream->out.bufferSize = maxBufferSize;
-
-		// Get interface latency (actually uneeded as we calculate latency from the size
-		// of maxBufferSize).
-        hr = IAudioClient_GetStreamLatency(stream->out.client, &stream->out.device_latency);
-        if (hr != S_OK)
-		{
-			LogHostError(hr);
- 			LogPaError(result = paInvalidDevice);
-			goto error;
-		}
-		//stream->out.latency_seconds = nano100ToSeconds(stream->out.device_latency);
-
-        // Number of frames that are required at each period
-		stream->out.framesPerHostCallback = maxBufferSize;
-
-		// Calculate frames per single buffer, if buffers > 1 then always framesPerBuffer
-		stream->out.framesPerBuffer =
-			(stream->out.userBufferAndHostMatch ? stream->out.framesPerHostCallback : framesPerBuffer);
-
-		// Calculate buffer latency
-		buffer_latency = (PaTime)maxBufferSize / stream->out.wavex.Format.nSamplesPerSec;
-
-		// Append buffer latency to interface latency in shared mode (see GetStreamLatency notes)
-		stream->out.latency_seconds += buffer_latency;
-
-		PRINT(("WASAPI::OpenStream(output): framesPerUser[ %d ] framesPerHost[ %d ] latency[ %.02fms ] exclusive[ %s ] wow64_fix[ %s ] mode[ %s ]\n", (UINT32)framesPerBuffer, (UINT32)stream->out.framesPerHostCallback, (float)(stream->out.latency_seconds*1000.0f), (stream->out.shareMode == AUDCLNT_SHAREMODE_EXCLUSIVE ? "YES" : "NO"), (paWasapi->useWOW64Workaround ? "YES" : "NO"), (stream->out.streamFlags & AUDCLNT_STREAMFLAGS_EVENTCALLBACK ? "EVENT" : "POLL")));
 	}
     else
     {
@@ -2695,12 +2880,7 @@ static PaError CloseStream( PaStream* s )
 	CloseHandle(stream->event[S_INPUT]);
 	CloseHandle(stream->event[S_OUTPUT]);
 
-    SAFE_CLOSE(stream->hThread);
-	SAFE_CLOSE(stream->hThreadStart);
-	SAFE_CLOSE(stream->hThreadExit);
-	SAFE_CLOSE(stream->hCloseRequest);
-	SAFE_CLOSE(stream->hBlockingOpStreamRD);
-	SAFE_CLOSE(stream->hBlockingOpStreamWR);
+	_CleanupStream(stream);
 
 	free(stream->in.monoBuffer);
 	free(stream->out.monoBuffer);
@@ -2723,6 +2903,9 @@ static PaError StartStream( PaStream *s )
 		return paStreamIsNotStopped;
 
     PaUtil_ResetBufferProcessor(&stream->bufferProcessor);
+
+	// Cleanup handles (may be necessary if stream was stopped by itself due to error)
+	_CleanupStream(stream);
 
 	// Create close event
 	stream->hCloseRequest = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -2824,6 +3007,15 @@ static void _FinishStream(PaWasapiStream *stream)
 		_OnStreamStop(stream);
 	}
 
+	// Cleanup handles
+	_CleanupStream(stream);
+
+    stream->running = FALSE;
+}
+
+// ------------------------------------------------------------------------------------------
+static void _CleanupStream(PaWasapiStream *stream)
+{
 	// Close thread handles to allow restart
 	SAFE_CLOSE(stream->hThread);
 	SAFE_CLOSE(stream->hThreadStart);
@@ -2831,8 +3023,6 @@ static void _FinishStream(PaWasapiStream *stream)
 	SAFE_CLOSE(stream->hCloseRequest);
 	SAFE_CLOSE(stream->hBlockingOpStreamRD);
 	SAFE_CLOSE(stream->hBlockingOpStreamWR);
-
-    stream->running = FALSE;
 }
 
 // ------------------------------------------------------------------------------------------
@@ -3661,10 +3851,8 @@ static HRESULT ProcessOutputBuffer(PaWasapiStream *stream, PaWasapiHostProcessor
 	// Process data
 	if (stream->out.monoMixer != NULL)
 	{
-#define __DIV_8(v)  ((v) >> 3) //!< (v / 8)
-
 		// expand buffer (one way only for better performancedue to no calls to realloc)
-		UINT32 mono_frames_size = frames * __DIV_8(stream->out.wavex.Format.wBitsPerSample);
+		UINT32 mono_frames_size = frames * (stream->out.wavex.Format.wBitsPerSample / 8);
 		if (mono_frames_size > stream->out.monoBufferSize)
 			stream->out.monoBuffer = realloc(stream->out.monoBuffer, (stream->out.monoBufferSize = mono_frames_size));
 
@@ -3673,8 +3861,6 @@ static HRESULT ProcessOutputBuffer(PaWasapiStream *stream, PaWasapiHostProcessor
 
 		// mix 1 to 2 channels
 		stream->out.monoMixer(data, stream->out.monoBuffer, frames);
-
-#undef __DIV_8
 	}
 	else
 	{
@@ -3699,14 +3885,17 @@ static HRESULT ProcessInputBuffer(PaWasapiStream *stream, PaWasapiHostProcessor 
 	for (;;)
 	{
 		// Check if blocking call must be interrupted
-		if (WaitForSingleObject(stream->hCloseRequest, 1) != WAIT_TIMEOUT)
+		if (WaitForSingleObject(stream->hCloseRequest, 0) != WAIT_TIMEOUT)
 			break;
 
 		// Get the available data in the shared buffer.
 		if ((hr = IAudioCaptureClient_GetBuffer(stream->cclient, &data, &frames, &flags, NULL, NULL)) != S_OK)
 		{
 			if (hr == AUDCLNT_S_BUFFER_EMPTY)
+			{
+				hr = S_OK;
 				break; // capture buffer exhausted
+			}
 
 			return LogHostError(hr);
 			break;
@@ -3719,10 +3908,8 @@ static HRESULT ProcessInputBuffer(PaWasapiStream *stream, PaWasapiHostProcessor 
 		// Process data
 		if (stream->in.monoMixer != NULL)
 		{
-#define __DIV_8(v)  ((v) >> 3) //!< (v / 8)
-
 			// expand buffer (one way only for better performancedue to no calls to realloc)
-			UINT32 mono_frames_size = frames * __DIV_8(stream->in.wavex.Format.wBitsPerSample);
+			UINT32 mono_frames_size = frames * (stream->in.wavex.Format.wBitsPerSample / 8);
 			if (mono_frames_size > stream->in.monoBufferSize)
 				stream->in.monoBuffer = realloc(stream->in.monoBuffer, (stream->in.monoBufferSize = mono_frames_size));
 
@@ -3731,8 +3918,6 @@ static HRESULT ProcessInputBuffer(PaWasapiStream *stream, PaWasapiHostProcessor 
 
 			// process
 			processor[S_INPUT].processor((BYTE *)stream->in.monoBuffer, frames, NULL, 0, processor[S_INPUT].userData);
-
-#undef __DIV_8
 		}
 		else
 		{
@@ -3742,6 +3927,8 @@ static HRESULT ProcessInputBuffer(PaWasapiStream *stream, PaWasapiHostProcessor 
 		// Release buffer
 		if ((hr = IAudioCaptureClient_ReleaseBuffer(stream->cclient, frames)) != S_OK)
 			return LogHostError(hr);
+
+		break;
 	}
 
 	return hr;
@@ -3764,6 +3951,10 @@ void _OnStreamStop(PaWasapiStream *stream)
 		PaWasapi_ThreadPriorityRevert(stream->hAvTask);
 		stream->hAvTask = NULL;
 	}
+
+	// Release Render/Capture clients (if Exclusive mode was used it will release devices to other applications)
+    SAFE_RELEASE(stream->cclient);
+    SAFE_RELEASE(stream->rclient);
 
     // Notify
     if (stream->streamRepresentation.streamFinishedCallback != NULL)
@@ -3893,8 +4084,8 @@ PA_THREAD_FUNC ProcThreadEvent(void *param)
 	// Processing Loop
 	for (;;)
     {
-	    // 2 sec timeout
-        dwResult = WaitForMultipleObjects(S_COUNT, stream->event, bWaitAllEvents, 10000);
+	    // 10 sec timeout (on timeout stream will auto-stop when processed by WAIT_TIMEOUT case)
+        dwResult = WaitForMultipleObjects(S_COUNT, stream->event, bWaitAllEvents, 10*1000);
 
 		// Check for close event (after wait for buffers to avoid any calls to user
 		// callback when hCloseRequest was set)
@@ -3911,24 +4102,30 @@ PA_THREAD_FUNC ProcThreadEvent(void *param)
 
 		// Input stream
 		case WAIT_OBJECT_0 + S_INPUT: {
+
             if (stream->cclient == NULL)
                 break;
+
 			if ((hr = ProcessInputBuffer(stream, processor)) != S_OK)
 			{
 				LogHostError(hr);
 				goto thread_error;
 			}
+
 			break; }
 
 		// Output stream
 		case WAIT_OBJECT_0 + S_OUTPUT: {
+
             if (stream->rclient == NULL)
                 break;
+
 			if ((hr = ProcessOutputBuffer(stream, processor, stream->out.framesPerBuffer)) != S_OK)
 			{
 				LogHostError(hr);
 				goto thread_error;
 			}
+
 			break; }
 		}
 	}
@@ -3977,6 +4174,46 @@ static HRESULT PollGetOutputFramesAvailable(PaWasapiStream *stream, UINT32 *avai
 }
 
 // ------------------------------------------------------------------------------------------
+/*! \class ThreadSleepScheduler
+           Allows to emulate thread sleep of less than 1 millisecond under Windows. Scheduler
+		   calculates number of times the thread must run untill next sleep of 1 millisecond.
+		   It does not make thread sleeping for real number of microseconds but rather controls
+		   how many of imaginary microseconds the thread task can allow thread to sleep.
+*/
+typedef struct ThreadIdleScheduler
+{
+	UINT32 m_idle_microseconds; //!< number of microseconds to sleep
+	UINT32 m_next_sleep;        //!< next sleep round
+	UINT32 m_i;					//!< current round iterator position
+	UINT32 m_resolution;		//!< resolution in number of milliseconds
+}
+ThreadIdleScheduler;
+//! Setup scheduler.
+static void ThreadIdleScheduler_Setup(ThreadIdleScheduler *sched, UINT32 resolution, UINT32 microseconds)
+{
+	assert(microseconds != 0);
+	assert(resolution != 0);
+	assert((resolution * 1000) >= microseconds);
+
+	memset(sched, 0, sizeof(*sched));
+
+	sched->m_idle_microseconds = microseconds;
+	sched->m_resolution         = resolution;
+	sched->m_next_sleep         = (resolution * 1000) / microseconds;
+}
+//! Iterate and check if can sleep.
+static UINT32 ThreadIdleScheduler_NextSleep(ThreadIdleScheduler *sched)
+{
+	// advance and check if thread can sleep
+	if (++ sched->m_i == sched->m_next_sleep)
+	{
+		sched->m_i = 0;
+		return sched->m_resolution;
+	}
+	return 0;
+}
+
+// ------------------------------------------------------------------------------------------
 PA_THREAD_FUNC ProcThreadPoll(void *param)
 {
     PaWasapiHostProcessor processor[S_COUNT];
@@ -3984,6 +4221,7 @@ PA_THREAD_FUNC ProcThreadPoll(void *param)
     PaWasapiStream *stream = (PaWasapiStream *)param;
 	PaWasapiHostProcessor defaultProcessor;
 	INT32 i;
+	ThreadIdleScheduler scheduler;
 
 	// Calculate the actual duration of the allocated buffer.
 	DWORD sleep_ms     = 0;
@@ -4004,9 +4242,24 @@ PA_THREAD_FUNC ProcThreadPoll(void *param)
 	{
 		sleep_ms = (sleep_ms_in ? sleep_ms_in : sleep_ms_out);
 	}
-	// Make sure not 0
+	// Make sure not 0, othervise use ThreadIdleScheduler
 	if (sleep_ms == 0)
-		sleep_ms = 1;
+	{
+		sleep_ms_in  = GetFramesSleepTimeMicroseconds(stream->bufferProcessor.framesPerUserBuffer, stream->in.wavex.Format.nSamplesPerSec);
+		sleep_ms_out = GetFramesSleepTimeMicroseconds(stream->bufferProcessor.framesPerUserBuffer, stream->out.wavex.Format.nSamplesPerSec);
+
+		// Choose smallest
+		if ((sleep_ms_in != 0) && (sleep_ms_out != 0))
+			sleep_ms = min(sleep_ms_in, sleep_ms_out);
+		else
+		{
+			sleep_ms = (sleep_ms_in ? sleep_ms_in : sleep_ms_out);
+		}
+
+		// Setup thread sleep scheduler
+		ThreadIdleScheduler_Setup(&scheduler, 1, sleep_ms/* microseconds here */);
+		sleep_ms = 0;
+	}
 
     // Setup data processors
     defaultProcessor.processor = WaspiHostProcessingLoop;
@@ -4093,8 +4346,15 @@ PA_THREAD_FUNC ProcThreadPoll(void *param)
 	if (!PA_WASAPI__IS_FULLDUPLEX(stream))
 	{
 		// Processing Loop
-		while (WaitForSingleObject(stream->hCloseRequest, sleep_ms) == WAIT_TIMEOUT)
+		UINT32 next_sleep = sleep_ms;
+		while (WaitForSingleObject(stream->hCloseRequest, next_sleep) == WAIT_TIMEOUT)
 		{
+			// Get next sleep time
+			if (sleep_ms == 0)
+			{
+				next_sleep = ThreadIdleScheduler_NextSleep(&scheduler);
+			}
+
 			for (i = 0; i < S_COUNT; ++i)
 			{
 				// Process S_INPUT/S_OUTPUT
@@ -4102,13 +4362,16 @@ PA_THREAD_FUNC ProcThreadPoll(void *param)
 				{
 				// Input stream
 				case S_INPUT: {
+
 					if (stream->cclient == NULL)
 						break;
+
 					if ((hr = ProcessInputBuffer(stream, processor)) != S_OK)
 					{
 						LogHostError(hr);
 						goto thread_error;
 					}
+
 					break; }
 
 				// Output stream
@@ -4198,9 +4461,7 @@ PA_THREAD_FUNC ProcThreadPoll(void *param)
 					// convert output mono
 					if (stream->out.monoMixer)
 					{
-						#define __DIV_8(v)  ((v) >> 3) //!< (v / 8)
-						UINT32 mono_frames_size = o_processed * __DIV_8(stream->out.wavex.Format.wBitsPerSample);
-						#undef __DIV_8
+						UINT32 mono_frames_size = o_processed * (stream->out.wavex.Format.wBitsPerSample / 8);
 						// expand buffer (one way only for better performance due to no calls to realloc)
 						if (mono_frames_size > stream->out.monoBufferSize)
 						{
@@ -4219,9 +4480,7 @@ PA_THREAD_FUNC ProcThreadPoll(void *param)
 					// convert input mono
 					if (stream->in.monoMixer)
 					{
-						#define __DIV_8(v)  ((v) >> 3) //!< (v / 8)
-						UINT32 mono_frames_size = i_processed * __DIV_8(stream->in.wavex.Format.wBitsPerSample);
-						#undef __DIV_8
+						UINT32 mono_frames_size = i_processed * (stream->in.wavex.Format.wBitsPerSample / 8);
 						// expand buffer (one way only for better performance due to no calls to realloc)
 						if (mono_frames_size > stream->in.monoBufferSize)
 						{
@@ -4267,8 +4526,8 @@ PA_THREAD_FUNC ProcThreadPoll(void *param)
 		}
 #else
 		// Processing Loop
-		//sleep_ms = 1;
-		while (WaitForSingleObject(stream->hCloseRequest, sleep_ms) == WAIT_TIMEOUT)
+		UINT32 next_sleep = sleep_ms;
+		while (WaitForSingleObject(stream->hCloseRequest, next_sleep) == WAIT_TIMEOUT)
 		{
 			UINT32 i_frames = 0, i_processed = 0;
 			BYTE *i_data = NULL, *o_data = NULL, *o_data_host = NULL;
@@ -4279,6 +4538,12 @@ PA_THREAD_FUNC ProcThreadPoll(void *param)
 			// going below 1 msec resolution, switching between 1 ms and no waiting
 			//if (stream->in.shareMode == AUDCLNT_SHAREMODE_EXCLUSIVE)
 			//	sleep_ms = !sleep_ms;
+
+			// Get next sleep time
+			if (sleep_ms == 0)
+			{
+				next_sleep = ThreadIdleScheduler_NextSleep(&scheduler);
+			}
 
 			// get available frames
 			if ((hr = PollGetOutputFramesAvailable(stream, &o_frames)) != S_OK)
@@ -4318,9 +4583,7 @@ PA_THREAD_FUNC ProcThreadPoll(void *param)
 						// convert output mono
 						if (stream->out.monoMixer)
 						{
-							#define __DIV_8(v)  ((v) >> 3) //!< (v / 8)
-							UINT32 mono_frames_size = o_processed * __DIV_8(stream->out.wavex.Format.wBitsPerSample);
-							#undef __DIV_8
+							UINT32 mono_frames_size = o_processed * (stream->out.wavex.Format.wBitsPerSample / 8);
 							// expand buffer (one way only for better performance due to no calls to realloc)
 							if (mono_frames_size > stream->out.monoBufferSize)
 							{
@@ -4339,9 +4602,7 @@ PA_THREAD_FUNC ProcThreadPoll(void *param)
 						// convert input mono
 						if (stream->in.monoMixer)
 						{
-							#define __DIV_8(v)  ((v) >> 3) //!< (v / 8)
-							UINT32 mono_frames_size = i_processed * __DIV_8(stream->in.wavex.Format.wBitsPerSample);
-							#undef __DIV_8
+							UINT32 mono_frames_size = i_processed * (stream->in.wavex.Format.wBitsPerSample / 8);
 							// expand buffer (one way only for better performance due to no calls to realloc)
 							if (mono_frames_size > stream->in.monoBufferSize)
 							{
@@ -4407,11 +4668,11 @@ thread_end:
 	// Process stop
 	_OnStreamStop(stream);
 
-	// Notify: thread exited
-	SetEvent(stream->hThreadExit);
-
 	// Notify: not running
 	stream->running = FALSE;
+
+	// Notify: thread exited
+	SetEvent(stream->hThreadExit);
 
 	return 0;
 

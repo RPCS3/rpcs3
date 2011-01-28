@@ -246,8 +246,8 @@ long computeRingBufferSize( const PaStreamParameters *inputParameters,
    long ringSize;
    int index;
    int i;
-   double latencyTimesChannelCount ;
-   long framesPerBufferTimesChannelCount ;
+   double latency ;
+   long framesPerBuffer ;
 
    VVDBUG(( "computeRingBufferSize()\n" ));
 
@@ -255,33 +255,25 @@ long computeRingBufferSize( const PaStreamParameters *inputParameters,
 
    if( outputParameters && inputParameters )
    {
-      latencyTimesChannelCount = MAX(
-           inputParameters->suggestedLatency * inputParameters->channelCount,
-           outputParameters->suggestedLatency * outputParameters->channelCount );
-      framesPerBufferTimesChannelCount = MAX(
-           inputFramesPerBuffer * inputParameters->channelCount,
-           outputFramesPerBuffer * outputParameters->channelCount );
+      latency = MAX( inputParameters->suggestedLatency, outputParameters->suggestedLatency );
+      framesPerBuffer = MAX( inputFramesPerBuffer, outputFramesPerBuffer );
    } 
    else if( outputParameters )
    {
-      latencyTimesChannelCount
-                = outputParameters->suggestedLatency * outputParameters->channelCount;
-      framesPerBufferTimesChannelCount
-                = outputFramesPerBuffer * outputParameters->channelCount;
+      latency = outputParameters->suggestedLatency;
+      framesPerBuffer = outputFramesPerBuffer ;
    }
    else /* we have inputParameters  */
    {
-      latencyTimesChannelCount
-                = inputParameters->suggestedLatency * inputParameters->channelCount;
-      framesPerBufferTimesChannelCount
-                = inputFramesPerBuffer * inputParameters->channelCount;
+      latency = inputParameters->suggestedLatency;
+      framesPerBuffer = inputFramesPerBuffer ;
    }
 
-   ringSize = (long) ( latencyTimesChannelCount * sampleRate * 2 + .5);
-   VDBUG( ( "suggested latency * channelCount: %d\n", (int) (latencyTimesChannelCount*sampleRate) ) );
-   if( ringSize < framesPerBufferTimesChannelCount * 3 )
-      ringSize = framesPerBufferTimesChannelCount * 3 ;
-   VDBUG(("framesPerBuffer*channelCount:%d\n",(int)framesPerBufferTimesChannelCount));
+   ringSize = (long) ( latency * sampleRate * 2 + .5);
+   VDBUG( ( "suggested latency : %d\n", (int) (latency*sampleRate) ) );
+   if( ringSize < framesPerBuffer * 3 )
+      ringSize = framesPerBuffer * 3 ;
+   VDBUG(("framesPerBuffer:%d\n",(int)framesPerBuffer));
    VDBUG(("Ringbuffer size (1): %d\n", (int)ringSize ));
 
    /* make sure it's at least 4 */
@@ -660,10 +652,10 @@ OSStatus xrunCallback(
 
          if( isInput ) {
             if( stream->inputDevice == inDevice )
-               OSAtomicOr32( paInputOverflow, (uint32_t *)&(stream->xrunFlags) );
+               OSAtomicOr32( paInputOverflow, &stream->xrunFlags );
          } else {
             if( stream->outputDevice == inDevice )
-               OSAtomicOr32( paOutputUnderflow, (uint32_t *)&(stream->xrunFlags) );
+               OSAtomicOr32( paOutputUnderflow, &stream->xrunFlags );
          }
       }
 

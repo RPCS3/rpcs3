@@ -1611,7 +1611,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 
 
           /*now, we need to allocate memory for the ring buffer*/
-          data = calloc( ringSize, szfl );
+          data = calloc( ringSize, szfl*inputParameters->channelCount );
           if( !data )
           {
              result = paInsufficientMemory;
@@ -1619,20 +1619,11 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
           }
 
           /* now we can initialize the ring buffer */
-          //FIXME: element size whould probably be szfl*inputchan
-          //       but that will require some work all over the
-          //       place to patch up. szfl may be sufficient and would
-          //       be way easier to handle, but it seems clear from the
-          //       discussion that buffer processor compatibility
-          //       requires szfl*inputchan.
-          //       See revision 1346 and discussion:
-          //       http://techweb.rfa.org/pipermail/portaudio/2008-February/008295.html
-          PaUtil_InitializeRingBuffer( &stream->inputRingBuffer,
-                                   1, ringSize*szfl, data ) ;
+          PaUtil_InitializeRingBuffer( &stream->inputRingBuffer, szfl*inputParameters->channelCount, ringSize, data ) ;
           /* advance the read point a little, so we are reading from the
              middle of the buffer */
           if( stream->outputUnit )
-             PaUtil_AdvanceRingBufferWriteIndex( &stream->inputRingBuffer, ringSize*szfl / RING_BUFFER_ADVANCE_DENOMINATOR );
+             PaUtil_AdvanceRingBufferWriteIndex( &stream->inputRingBuffer, ringSize / RING_BUFFER_ADVANCE_DENOMINATOR );
        }
     }
 
@@ -1797,12 +1788,14 @@ static OSStatus ringBufferIOProc( AudioConverterRef inAudioConverter,
       return RING_BUFFER_EMPTY;
    }
    assert(sizeof(UInt32) == sizeof(ring_buffer_size_t));
+   assert( ( (*ioDataSize) / rb->elementSizeBytes ) * rb->elementSizeBytes == (*ioDataSize) ) ;
+   (*ioDataSize) /= rb->elementSizeBytes ;
    PaUtil_GetRingBufferReadRegions( rb, *ioDataSize,
                                     outData, (ring_buffer_size_t *)ioDataSize, 
                                     &dummyData, &dummySize );
-      
    assert( *ioDataSize );
    PaUtil_AdvanceRingBufferReadIndex( rb, *ioDataSize );
+   (*ioDataSize) *= rb->elementSizeBytes ;
 
    return noErr;
 }
@@ -2056,10 +2049,10 @@ static OSStatus AudioIOProc( void *inRefCon,
             void *data1, *data2;
             ring_buffer_size_t size1, size2;
             PaUtil_GetRingBufferReadRegions( &stream->inputRingBuffer,
-                                             inChan*frames*flsz,
+                                             frames,
                                              &data1, &size1,
                                              &data2, &size2 );
-            if( size1 / ( flsz * inChan ) == frames ) {
+            if( size1 == frames ) {
                /* simplest case: all in first buffer */
                PaUtil_SetInputFrameCount( &(stream->bufferProcessor), frames );
                PaUtil_SetInterleavedInputChannels( &(stream->bufferProcessor),
@@ -2070,7 +2063,7 @@ static OSStatus AudioIOProc( void *inRefCon,
                     PaUtil_EndBufferProcessing( &(stream->bufferProcessor),
                                                 &callbackResult );
                PaUtil_AdvanceRingBufferReadIndex(&stream->inputRingBuffer, size1 );
-            } else if( ( size1 + size2 ) / ( flsz * inChan ) < frames ) {
+            } else if( size1 + size2 < frames ) {
                /*we underflowed. take what data we can, zero the rest.*/
                unsigned char data[frames*inChan*flsz];
                if( size1 )
@@ -2093,14 +2086,12 @@ static OSStatus AudioIOProc( void *inRefCon,
                stream->xrunFlags |= paInputUnderflow;
             } else {
                /*we got all the data, but split between buffers*/
-               PaUtil_SetInputFrameCount( &(stream->bufferProcessor),
-                                          size1 / ( flsz * inChan ) );
+               PaUtil_SetInputFrameCount( &(stream->bufferProcessor), size1 );
                PaUtil_SetInterleavedInputChannels( &(stream->bufferProcessor),
                                    0,
                                    data1,
                                    inChan );
-               PaUtil_Set2ndInputFrameCount( &(stream->bufferProcessor),
-                                             size2 / ( flsz * inChan ) );
+               PaUtil_Set2ndInputFrameCount( &(stream->bufferProcessor), size2 );
                PaUtil_Set2ndInterleavedInputChannels( &(stream->bufferProcessor),
                                    0,
                                    data2,
@@ -2150,7 +2141,7 @@ static OSStatus AudioIOProc( void *inRefCon,
          bytesIn = sizeof( float ) * inNumberFrames * chan;
          bytesOut = PaUtil_WriteRingBuffer( &stream->inputRingBuffer,
                                             stream->inputAudioBufferList.mBuffers[0].mData,
-                                            bytesIn );
+                                            inNumberFrames );
          if( bytesIn != bytesOut )
             stream->xrunFlags |= paInputOverflow ;
       }

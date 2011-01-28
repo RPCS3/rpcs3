@@ -98,13 +98,13 @@ typedef struct PaUtilRingBuffer
     char  *buffer;    /**< Pointer to the buffer containing the actual data. */
 }PaUtilRingBuffer;
 
-/** Initialize Ring Buffer.
+/** Initialize Ring Buffer to empty state ready to have elements written to it.
 
  @param rbuf The ring buffer.
 
  @param elementSizeBytes The size of a single data element in bytes.
 
- @param elementCount The number of elements in the buffer (must be power of 2).
+ @param elementCount The number of elements in the buffer (must be a power of 2).
 
  @param dataPtr A pointer to a previously allocated area where the data
  will be maintained.  It must be elementCount*elementSizeBytes long.
@@ -113,7 +113,7 @@ typedef struct PaUtilRingBuffer
 */
 ring_buffer_size_t PaUtil_InitializeRingBuffer( PaUtilRingBuffer *rbuf, ring_buffer_size_t elementSizeBytes, ring_buffer_size_t elementCount, void *dataPtr );
 
-/** Clear buffer. Should only be called when buffer is NOT being read.
+/** Reset buffer to empty. Should only be called when buffer is NOT being read or written.
 
  @param rbuf The ring buffer.
 */
@@ -193,7 +193,7 @@ ring_buffer_size_t PaUtil_GetRingBufferWriteRegions( PaUtilRingBuffer *rbuf, rin
 */
 ring_buffer_size_t PaUtil_AdvanceRingBufferWriteIndex( PaUtilRingBuffer *rbuf, ring_buffer_size_t elementCount );
 
-/** Get address of region(s) from which we can write data.
+/** Get address of region(s) from which we can read data.
 
  @param rbuf The ring buffer.
 

@@ -363,6 +363,8 @@ case "${host_os}" in
 esac
 CFLAGS="$CFLAGS $THREAD_CFLAGS"
 
+test "$enable_shared" != "yes" && SHARED_FLAGS=""
+
 if test "$enable_cxx" = "yes"; then
    AC_CONFIG_SUBDIRS([bindings/cpp])
    ENABLE_CXX_TRUE=""

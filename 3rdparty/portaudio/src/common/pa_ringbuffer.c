@@ -91,7 +91,7 @@ ring_buffer_size_t PaUtil_GetRingBufferWriteAvailable( PaUtilRingBuffer *rbuf )
 }
 
 /***************************************************************************
-** Clear buffer. Should only be called when buffer is NOT being read. */
+** Clear buffer. Should only be called when buffer is NOT being read or written. */
 void PaUtil_FlushRingBuffer( PaUtilRingBuffer *rbuf )
 {
     rbuf->writeIndex = rbuf->readIndex = 0;

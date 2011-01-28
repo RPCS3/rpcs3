@@ -1,38 +1,27 @@
 /* doxygen index page */
 /** @mainpage
 
-PortAudio is an open-source cross-platform ‘C’ library for audio input
-and output. It is designed to simplify the porting of audio applications
-between various platforms, and also to simplify the development of audio
-software in general by hiding the complexities of device interfacing.
+PortAudio is a cross-platform, open-source C language library for real-time audio input and output. The library provides functions that allow your software to acquire and output real-time audio streams from your computer's hardware audio interfaces. It is designed to simplify writing cross-platform audio applications, and also to simplify the development of audio software in general by hiding the complexities of dealing directly with each native audio API. PortAudio is used to implement sound recording, editing and mixing applications, software synthesizers, effects processors, music players, internet telephony applications, software defined radios and more. Supported platforms include MS Windows, Mac OS X and Linux. Third-party language bindings make it possible to call PortAudio from other programming languages including C++, C#, Python, PureBasic, FreePascal and Lazarus.
 
 See the PortAudio website for further information http://www.portaudio.com
 
-This documentation pertains to PortAudio V19, API version 2.0 which is
-currently under development. API version 2.0 differs in a number of ways from
-previous versions, please consult the enhancement proposals for further details:
-http://www.portaudio.com/docs/proposals/index.html
+Read the @ref api_overview for a top-down view of the PortAudio API, its capabilities, functions and data structures. The documentation for PortAudio's main header file portaudio.h details the individual data types and functions that make up the API.
 
-This documentation is under construction. Things you might be interested in
-include:
-
-- The PortAudio API 2.0, as documented in portaudio.h
-
-- Tutorials for the V19 API, currently housed on the PortAudio Wiki:
+To get started writing code check out the tutorials on the PortAudio Wiki:
 http://www.portaudio.com/trac/wiki/TutorialDir/TutorialStart
 
-- Implementation status is documented here:
-http://www.portaudio.com/docs/proposals/status.html
+This documentation covers the current API version: PortAudio V19, API version 2.0. API 2.0 differs in a number of ways from previous versions (most often encountered in PortAudio V18), please consult the enhancement proposals for details of what was added/changed for V19:
+http://www.portaudio.com/docs/proposals/index.html
+
+
+You might also be interested in:
 
 - @ref srcguide
 
 - The @ref License
 
-
-If you're interested in contributing to PortAudio, you may be interested in:
-
-- The doxygen generated <a href="todo.html">TODO List</a>. Feel free to pick an item off TODO list 
-and fix/implement it. You may want to enquire about status on the PortAudio mailing list first.
+- Our mailing list for users and developers:
+http://music.columbia.edu/mailman/listinfo/portaudio/
 
 - Our issue tracking system:
 http://www.portaudio.com/trac
@@ -40,5 +29,6 @@ http://www.portaudio.com/trac
 - Coding guidelines:
 http://www.portaudio.com/docs/proposals/014-StyleGuide.html
 
+If you're interested in helping out with PortAudio development, you may be interested in the doxygen generated <a href="todo.html">TODO List</a>. Feel free to pick an item off TODO list and fix/implement it. You may want to enquire about status on the PortAudio mailing list first.
 
 */

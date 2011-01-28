@@ -22,6 +22,7 @@ CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src/common -I$(top_srcdir)/src/
 LIBS = @LIBS@
 AR = @AR@
 RANLIB = @RANLIB@
+SHELL = @SHELL@
 LIBTOOL = @LIBTOOL@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
@@ -132,7 +133,6 @@ SRC_DIRS = \
 	src/hostapi/wasapi \
 	src/hostapi/wdmks \
 	src/hostapi/wmme \
-	src/os/mac_osx \
 	src/os/unix \
 	src/os/win
 
