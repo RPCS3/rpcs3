@@ -151,6 +151,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CustomBuild Include="..\..\gui\Resources\ConfigIcon_Appearance.png">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cmd.exe /c "%(RootDir)%(Directory)\bin2cpp.cmd" %(Filename)%(Extension)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">cmd.exe /c "%(RootDir)%(Directory)\bin2cpp.cmd" %(Filename)%(Extension)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cmd.exe /c "%(RootDir)%(Directory)\bin2cpp.cmd" %(Filename)%(Extension)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(RootDir)%(Directory)\%(Filename).h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(RootDir)%(Directory)\%(Filename).h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(RootDir)%(Directory)\%(Filename).h</Outputs>
+    </CustomBuild>
     <None Include="..\..\Utilities\folderdesc.txt" />
     <None Include="..\..\Docs\ChangeLog.txt" />
     <None Include="..\..\Docs\devblog.txt" />

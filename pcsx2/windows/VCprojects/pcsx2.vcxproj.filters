@@ -1261,5 +1261,8 @@
     <CustomBuild Include="..\..\gui\Resources\Dualshock.jpg">
       <Filter>AppHost\Resources</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\..\gui\Resources\ConfigIcon_Appearance.png">
+      <Filter>AppHost\Resources</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>
