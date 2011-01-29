@@ -119,7 +119,7 @@ Priority: optional
 # Warning amd64 need additional ia32libs
 Architecture: all
 Depends: ${misc:Depends}
-Conflicts: pcsx2-plugins-dbg
+Conflicts: pcsx2-l10n
 Description: Languages package for PCSX2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
  .

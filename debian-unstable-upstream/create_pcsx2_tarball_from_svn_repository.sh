@@ -80,7 +80,7 @@ echo "Downloading pcsx2 source revision ${SVN_CO_VERSION}"
 mkdir -p $ROOT_DIR;
 (cd $ROOT_DIR; 
     get_svn_file CMakeLists.txt;
-    get_svn_dir bin common cmake pcsx2 tools;
+    get_svn_dir bin common cmake locales pcsx2 tools;
     get_svn_dir debian-unstable-upstream;
 echo "Done")
 

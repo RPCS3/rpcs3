@@ -1,28 +1,13 @@
-need libsoundtouch v1.5
-
 * policy bin2cpp tool ??
     May be we could pregenerate the file in the upstream tar ball!!
 
 * copyright and doc stuff
     Lots of work to do here....
-
-    # only a stub
-    plugins/zzogl-pg/opengl/memcpy_amd.cpp: UNKNOWN
-
-    # need zerofrog confirmation of gpl v2
-    plugins/zzogl-pg/opengl/zpipe.h: *No copyright* UNKNOWN
-    plugins/zzogl-pg/opengl/shaders.sh: *No copyright* UNKNOWN
-    plugins/zzogl-pg/opengl/common.h: *No copyright* UNKNOWN
-    plugins/zzogl-pg/opengl/ZeroGSShaders/zpipe.h: *No copyright* UNKNOWN
-    plugins/zzogl-pg/opengl/ZeroGSShaders/zerogsshaders.cpp: *No copyright* UNKNOWN
-    plugins/zzogl-pg/opengl/ZeroGSShaders/zerogsshaders.h: *No copyright* UNKNOWN
-    plugins/zzogl-pg/opengl/ZeroGSShaders/zpipe.cpp: *No copyright* UNKNOWN
-    plugins/zzogl-pg/opengl/zerogsmath.h: *No copyright* UNKNOWN
-    plugins/zzogl-pg/opengl/zpipe.cpp: *No copyright* UNKNOWN
+    * need to add copyrigh info in Cmake file
 
 ## 64 bit
-nvidia-cg-toolkit: propably need a special package for 32 bits version
-ia32-libs: add libportaudio, libsoundtouch, libglew
+nvidia-cg-toolkit: replace it with GLSL
+ia32-libs: add libportaudio, libglew
 ia32-libs: add .so symlink for compilation
 ia32-libs-gtk: add libwxbase2.8 and libwxgtk2.8 (warning a architecture dependant include file (in -dev package) is also needed)
 ia32-libs-gtk: add .so symlink for compilation

@@ -3,8 +3,6 @@
 
 * This version has some major modifications against the default upstream version. 
     -> documents are stored in $XDG_CONFIG_HOME instead of $HOME/pcsx2
-    -> some features were removed so it could compile against libsound 1.3.
-    Pcsx2 needs at least soundtouch 1.5.
 
 * This package is highly experimental.
 
