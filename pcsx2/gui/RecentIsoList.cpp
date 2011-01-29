@@ -61,6 +61,16 @@ void RecentIsoManager::OnChangedSelection( wxCommandEvent& evt )
 		return;
 	}
 
+	// Actually there is no change on the selection so the event can be skip
+	// Note: It also avoids a deadlock which appears when the core thread is already paused
+	// and ScopedCoreThreadPopup try to stop the thread (GSOpen1 code path)
+	if( (g_Conf->CdvdSource == CDVDsrc_Iso) && (m_Items[i].Filename == g_Conf->CurrentIso) )
+	{
+		evt.Skip();
+		return;
+	}
+
+
 	m_cursel = i;
 
 	ScopedCoreThreadPopup stopped_core;
