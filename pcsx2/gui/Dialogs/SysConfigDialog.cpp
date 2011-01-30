@@ -129,6 +129,7 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 {
 	m_slider_presets = new wxSlider( this, wxID_ANY, g_Conf->PresetIndex, 0, AppConfig::GetMaxPresetIndex(),
 		wxDefaultPosition, wxDefaultSize, wxHORIZONTAL /*| wxSL_AUTOTICKS | wxSL_LABELS */);
+	m_slider_presets->SetMinSize(wxSize(100,25));
 
 	m_slider_presets->SetToolTip(
 		pxEt( "!Notice:Tooltip:Presets:Slider",
