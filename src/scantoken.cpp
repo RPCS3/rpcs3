@@ -238,7 +238,7 @@ namespace YAML
 		alias = (indicator == Keys::Alias);
 
 		// now eat the content
-		while(Exp::AlphaNumeric().Matches(INPUT))
+		while(INPUT && Exp::Anchor().Matches(INPUT))
 			name += INPUT.get();
 
 		// we need to have read SOMETHING!

@@ -472,7 +472,7 @@ namespace Test
 		
 		bool AliasAsSimpleKey()
 		{
-			std::string input = "- &a b\n- *a: c";
+			std::string input = "- &a b\n- *a : c";
 			
 			std::stringstream stream(input);
 			YAML::Parser parser(stream);

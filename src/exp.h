@@ -112,6 +112,10 @@ namespace YAML
 			static const RegEx e = RegEx('#');
 			return e;
 		}
+		inline const RegEx& Anchor() {
+			static const RegEx e = !(RegEx("[]{},", REGEX_OR) || BlankOrBreak());
+			return e;
+		}
 		inline const RegEx& AnchorEnd() {
 			static const RegEx e = RegEx("?:,]}%@`", REGEX_OR) || BlankOrBreak();
 			return e;
