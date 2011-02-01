@@ -389,7 +389,7 @@ __fi bool dmacWrite32( u32 mem, mem32_t& value )
 		//Which causes a CPCOND0 to fail.
 		icase(DMAC_FAKESTAT)
 		{
-			DevCon.Warning("Midway fixup addr=%x writing %x for DMA_STAT", mem, value);
+			//DevCon.Warning("Midway fixup addr=%x writing %x for DMA_STAT", mem, value);
 			HW_LOG("Midways own DMAC_STAT Write 32bit %x", value);
 
 			// lower 16 bits: clear on 1
@@ -434,7 +434,7 @@ __fi bool dmacWrite32( u32 mem, mem32_t& value )
 	{	
 		if((psHu32(mem & ~0xff) & 0x100) && dmacRegs.ctrl.DMAE && !psHu8(DMAC_ENABLER+2)) 
 		{
-			DevCon.Warning("Write to DMA addr %x while STR is busy! Ignoring", mem);
+			//DevCon.Warning("Write to DMA addr %x while STR is busy! Ignoring", mem);
 			return false;
 		}
 	}

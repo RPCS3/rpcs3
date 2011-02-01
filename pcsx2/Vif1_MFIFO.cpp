@@ -261,17 +261,23 @@ void vifMFIFOInterrupt()
 		return;
 	}
 
-	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs.stat.APATH == GIF_APATH2)
+	if(GSTransferStatus.PTH2 == PENDINGSTOP_MODE)
 	{
 		GSTransferStatus.PTH2 = STOPPED_MODE;
-		if(gifRegs.stat.DIR == 0)gifRegs.stat.OPH = false;
-		gifRegs.stat.APATH = GIF_APATH_IDLE;
-		if(gifRegs.stat.P1Q) gsPath1Interrupt();
-		/*gifRegs.stat.APATH = GIF_APATH_IDLE;
-		if(gifRegs.stat.DIR == 0)gifRegs.stat.OPH = false;*/
+
+		if(gifRegs.stat.APATH == GIF_APATH2)
+		{
+			if(gifRegs.stat.DIR == 0)gifRegs.stat.OPH = false;
+			gifRegs.stat.APATH = GIF_APATH_IDLE;
+			if(gifRegs.stat.P1Q) gsPath1Interrupt();
+		}
 	}
 
-	if (schedulepath3msk & 0x10) Vif1MskPath3();
+	if (schedulepath3msk & 0x10) 
+	{
+		MSKPATH3_LOG("Scheduled Path3 Mask Firing on MFIFO VIF");
+		Vif1MskPath3();
+	}
 
 	if(vif1ch.chcr.DIR && CheckPath2GIF(DMAC_MFIFO_VIF) == false) 
 	{

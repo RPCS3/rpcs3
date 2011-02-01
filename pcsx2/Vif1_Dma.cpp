@@ -258,7 +258,7 @@ bool CheckPath2GIF(EE_EventType channel)
 	{
 		if( vif1.GifWaitState == 0 ) //DIRECT/HL Check
 		{
-			if(GSTransferStatus.PTH3 < IDLE_MODE || gifRegs.stat.P1Q)
+			if(GSTransferStatus.PTH3 < STOPPED_MODE || gifRegs.stat.P1Q)
 			{
 				if(gifRegs.stat.IMT && GSTransferStatus.PTH3 <= IMAGE_MODE && (vif1.cmd & 0x7f) == 0x50 && gifRegs.stat.P1Q == false)
 				{
@@ -285,19 +285,18 @@ bool CheckPath2GIF(EE_EventType channel)
 				return false;
 			}
 
-			if (GSTransferStatus.PTH3 < IDLE_MODE)
+			if (GSTransferStatus.PTH3 < STOPPED_MODE)
 			{
-				//DevCon.Warning("VIF1-11 stall P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs.stat.P1Q, gifRegs.stat.P2Q, gifRegs.stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
+			//DevCon.Warning("VIF1-11 stall P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs.stat.P1Q, gifRegs.stat.P2Q, gifRegs.stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
 				//DevCon.Warning("PTH3 %x P1Q %x P3Q %x IP3 %x", GSTransferStatus.PTH3, gifRegs.stat.P1Q, gifRegs.stat.P3Q, gifRegs.stat.IP3 );
-				CPU_INT(channel, 8);
+				CPU_INT(channel, 128);
 				return false;
 			}
-			else
-			{
-				vif1Regs.stat.VGW = false;
-			}
+			
+			vif1Regs.stat.VGW = false;
+			
 		}
-		else if( vif1.GifWaitState == 3 ) // Else we're flushing path3 :), but of course waiting for the microprogram to finish
+		else if( vif1.GifWaitState == 3 ) // Any futher GIF transfers are paused.
 		{
 			if (gifRegs.ctrl.PSE)
 			{
@@ -305,10 +304,9 @@ bool CheckPath2GIF(EE_EventType channel)
 				CPU_INT(channel, 128);
 				return false;
 			}
-			else
-			{
-				vif1Regs.stat.VGW = false;
-			}
+
+			vif1Regs.stat.VGW = false;
+			
 		}
 		else //Normal Flush
 		{
@@ -318,18 +316,18 @@ bool CheckPath2GIF(EE_EventType channel)
 				CPU_INT(channel, 128);
 				return false;
 			}
-			else
-			{
-				vif1Regs.stat.VGW = false;
-			}
+				
+			vif1Regs.stat.VGW = false;
 		}
 	}
+
 	if(SIGNAL_IMR_Pending == true && (vif1.cmd & 0x7e) == 0x50)
 	{
 		//DevCon.Warning("Path 2 Paused");
 		CPU_INT(channel, 128);
 		return false;
 	}
+
 	return true;
 }
 __fi void vif1Interrupt()
@@ -338,19 +336,24 @@ __fi void vif1Interrupt()
 
 	g_vifCycles = 0;
 
-	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs.stat.APATH == GIF_APATH2)
-	{
-		gifRegs.stat.OPH = false;
-		gifRegs.stat.APATH = GIF_APATH_IDLE;
-		if(gifRegs.stat.P1Q) gsPath1Interrupt();
-	}
-
 	if (schedulepath3msk & 0x10) 
 	{
+		MSKPATH3_LOG("Scheduled Path3 Mask Firing");
 		Vif1MskPath3();
-		CPU_INT(DMAC_VIF1, 8);
-		return;
 	}
+
+	if(GSTransferStatus.PTH2 == PENDINGSTOP_MODE)
+	{
+		GSTransferStatus.PTH2 = STOPPED_MODE;
+
+		if(gifRegs.stat.APATH == GIF_APATH2)
+		{
+			if(gifRegs.stat.DIR == 0)gifRegs.stat.OPH = false;
+			gifRegs.stat.APATH = GIF_APATH_IDLE;
+			if(gifRegs.stat.P1Q) gsPath1Interrupt();
+		}
+	}
+
 	//Some games (Fahrenheit being one) start vif first, let it loop through blankness while it sets MFIFO mode, so we need to check it here.
 	if (dmacRegs.ctrl.MFD == MFD_VIF1)
 	{

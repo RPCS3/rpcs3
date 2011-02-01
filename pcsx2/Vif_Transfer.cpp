@@ -74,14 +74,14 @@ _vifT void vifTransferLoop(u32* &data) {
 
 	u32& pSize = vifX.vifpacketsize;
 	int  iBit  = vifX.cmd >> 7;
-
+	
 	vifXRegs.stat.VPS |= VPS_TRANSFERRING;
 	vifXRegs.stat.ER1  = false;
 
 	while (pSize > 0 && !vifX.vifstalled) {
 
 		if(!vifX.cmd) { // Get new VifCode
-			vifX.lastcmd = (vifXRegs.code >> 24) & 0x7f;
+			
 			vifXRegs.code = data[0];
 			vifX.cmd	   = data[0] >> 24;
 			iBit		   = data[0] >> 31;
@@ -95,6 +95,7 @@ _vifT void vifTransferLoop(u32* &data) {
 
 			vifCmdHandler[idx][vifX.cmd & 0x7f](0, data);
 			data++; pSize--;
+			vifX.lastcmd = (vifXRegs.code >> 24) & 0x7f;
 			if (analyzeIbit<idx>(data, iBit)) break;
 			continue;
 		}

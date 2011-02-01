@@ -275,6 +275,7 @@ struct SysTraceLogPack
 		SysTraceLog_EE				Memory;
 		SysTraceLog_EE				GIFtag;
 		SysTraceLog_VIFcode			VIFcode;
+		SysTraceLog_EE      		MSKPATH3;
 
 		SysTraceLog_EE_Disasm		R5900;
 		SysTraceLog_EE_Disasm		COP0;
@@ -371,6 +372,7 @@ extern void __Log( const char* fmt, ... );
 #define VIF_LOG			macTrace(EE.VIF)
 #define SPR_LOG			macTrace(EE.SPR)
 #define GIF_LOG			macTrace(EE.GIF)
+#define MSKPATH3_LOG	macTrace(EE.MSKPATH3)
 #define EECNT_LOG		macTrace(EE.Counters)
 #define VifCodeLog		macTrace(EE.VIFcode)
 #define GifTagLog		macTrace(EE.GIFtag)

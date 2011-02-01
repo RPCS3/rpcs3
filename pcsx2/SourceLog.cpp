@@ -218,6 +218,12 @@ TLD_EE_VIFcode = {
 	"VIF"
 },
 
+TLD_EE_MSKPATH3 = {
+	L"MSKPATH3",	L"MSKPATH3",
+	pxDt("All processing involved in Path3 Masking"),
+	"MSKPATH3"
+},
+
 TLD_EE_SPR = {
 	L"MFIFO",		L"Scratchpad MFIFO",
 	pxDt("Scratchpad's MFIFO activity."),
@@ -335,6 +341,7 @@ SysTraceLogPack::EE_PACK::EE_PACK()
 	, Memory	(&TLD_EE_Memory)
 	, GIFtag	(&TLD_EE_GIFtag)
 	, VIFcode	(&TLD_EE_VIFcode)
+	, MSKPATH3	(&TLD_EE_MSKPATH3)
 
 	, R5900		(&TLD_EE_R5900)
 	, COP0		(&TLD_EE_COP0)

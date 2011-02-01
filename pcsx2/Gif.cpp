@@ -53,7 +53,7 @@ void gsPath1Interrupt()
 
 	
 
-	if((gifRegs.stat.APATH <= GIF_APATH1 || (gifRegs.stat.IP3 == true && gifRegs.stat.APATH == GIF_APATH3)) && Path1WritePos > 0 && !gifRegs.stat.PSE && SIGNAL_IMR_Pending == false)
+	if((gifRegs.stat.APATH <= GIF_APATH1 || (gifRegs.stat.IP3 == true)) && Path1WritePos > 0 && !gifRegs.stat.PSE && SIGNAL_IMR_Pending == false)
 	{
 		gifRegs.stat.P1Q = false;
 
@@ -89,6 +89,11 @@ void gsPath1Interrupt()
 	else
 	{
 		if(gifRegs.stat.PSE) DevCon.Warning("Path1 paused by GIF_CTRL");
+		if(gifRegs.stat.P1Q == false && Path1ReadPos != Path1WritePos)
+		{
+			DevCon.Warning("Wa's Goin on ere then?");
+			gifRegs.stat.P1Q = true;
+		}
 		//DevCon.Warning("Looping??? IP3 %x APATH %x OPH %x", gifRegs.stat.IP3, gifRegs.stat.APATH, gifRegs.stat.OPH);
 		//if(!(cpuRegs.interrupt & (1<<28)) && Path1WritePos > 0)CPU_INT(28, 128);
 	}
@@ -115,12 +120,16 @@ __fi void gsInterrupt()
 		return;
 	}
 
-	if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE && gifRegs.stat.APATH == GIF_APATH3 )
-	{
-		gifRegs.stat.OPH = false;
+	if(GSTransferStatus.PTH3 == PENDINGSTOP_MODE)
+	{		
 		GSTransferStatus.PTH3 = STOPPED_MODE;
-		gifRegs.stat.APATH = GIF_APATH_IDLE;
-		if(gifRegs.stat.P1Q) gsPath1Interrupt();
+
+		if(gifRegs.stat.APATH == GIF_APATH3) 
+		{
+			gifRegs.stat.APATH = GIF_APATH_IDLE;
+			gifRegs.stat.OPH = false;
+			if(gifRegs.stat.P1Q) gsPath1Interrupt();
+		}		
 	}
 	
 
@@ -239,7 +248,7 @@ static __fi tDMA_TAG* ReadTag2()
 
 bool CheckPaths(int Channel)
 {
-	if(GSTransferStatus.PTH3 <= IMAGE_MODE && gifRegs.mode.IMT)
+	if((GSTransferStatus.PTH3 == IMAGE_MODE && gifRegs.mode.IMT) || GSTransferStatus.PTH3 == WAITING_MODE)
 	{
 		if((gifRegs.stat.P1Q == true || gifRegs.stat.P2Q == true) || (gifRegs.stat.APATH > GIF_APATH_IDLE && gifRegs.stat.APATH < GIF_APATH3))
 		{
@@ -253,13 +262,14 @@ bool CheckPaths(int Channel)
 			}
 		}
 	}
-	else if((GSTransferStatus.PTH3 == IDLE_MODE)|| (GSTransferStatus.PTH3 == STOPPED_MODE))
+	else if(GSTransferStatus.PTH3 == STOPPED_MODE)
 	{
 		//This should cover both scenarios, as DIRECTHL doesn't gain priority when image mode is running (PENDINGIMAGE_MODE == fininshed).
-		if((gifRegs.stat.P1Q == true || gifRegs.stat.P2Q == true) || (gifRegs.stat.APATH > GIF_APATH_IDLE && gifRegs.stat.APATH < GIF_APATH3))
+		if((gifRegs.stat.P1Q == true || gifRegs.stat.P2Q == true) || (gifRegs.stat.APATH > GIF_APATH_IDLE && gifRegs.stat.APATH < GIF_APATH3) || vif1Regs.stat.VGW == true)
 		{
 			//DevCon.Warning("GIF Stall 2 P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs.stat.P1Q, gifRegs.stat.P2Q, gifRegs.stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
 			gifRegs.stat.IP3 = true;
+			if(gifRegs.stat.P1Q) gsPath1Interrupt();
 			CPU_INT(DMAC_GIF, 16);
 			return false;
 		}
@@ -297,86 +307,9 @@ void GIFdma()
 		gifch.qwc = 0;
 	}
 
-	clearFIFOstuff(true);
-	gifRegs.stat.FQC = min((u16)0x10, gifch.qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // APATH=3]
-
 	
-	if (vif1Regs.mskpath3 || gifRegs.mode.M3R)
-	{
-		if (gifch.qwc == 0)
-		{
-			if ((gifch.chcr.MOD == CHAIN_MODE) && gifch.chcr.STR)
-			{
-				//DevCon.Warning("GIF Reading Tag Masked MSK = %x", vif1Regs.mskpath3);
-			    ptag = ReadTag();
-				gifRegs.stat.FQC = min((u16)0x10, gifch.qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // APATH=3]
-				if (ptag == NULL) return;
-				GIF_LOG("PTH3 MASK gifdmaChain %8.8x_%8.8x size=%d, id=%d, addr=%lx tadr=%lx", ptag[1]._u32, ptag[0]._u32, gifch.qwc, ptag->ID, gifch.madr, gifch.tadr);
-
-				//Check TIE bit of CHCR and IRQ bit of tag
-				if (checkTieBit(ptag))  GIF_LOG("PATH3 MSK dmaIrq Set");
-			}
-		}
-		
-
-		if (GSTransferStatus.PTH3 == IDLE_MODE)
-		{
-			GIF_LOG("PTH3 MASK Paused by VIF QWC %x", gifch.qwc);
-			
-			//DevCon.Warning("GIF Paused by Mask MSK = %x", vif1Regs.mskpath3);
-			
-			if(gifch.qwc == 0) gsInterrupt();
-			else gifRegs.stat.set_flags(GIF_STAT_P3Q);
-			return;
-		}
-		
-
-	 	
-		gifRegs.stat.FQC = min((u16)0x10, gifch.qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // APATH=3]
-		//Check with Path3 masking games
-		if (gifch.qwc > 0) {
-			gifRegs.stat.set_flags(GIF_STAT_P3Q);
-			if(CheckPaths(DMAC_GIF) == false) return;
-			gifRegs.stat.clear_flags(GIF_STAT_P3Q);
-			GIF_LOG("PTH3 MASK Transferring");
-			GIFchain();			
-			/*if(GSTransferStatus.PTH3 == PENDINGSTOP_MODE && gifRegs.stat.APATH == GIF_APATH_IDLE) 
-			{
-				GSTransferStatus.PTH3 = STOPPED_MODE;
-			}*/
-		}//else DevCon.WriteLn("GIFdma() case 1, but qwc = 0!"); //Don't do 0 GIFchain and then return
-		CPU_INT(DMAC_GIF, gscycles);	
-		return;
-		
-	}
 	
-	// Transfer Dn_QWC from Dn_MADR to GIF
-	if ((gifch.chcr.MOD == NORMAL_MODE) || (gifch.qwc > 0)) // Normal Mode
-	{
-
-		if ((dmacRegs.ctrl.STD == STD_GIF) && (gifch.chcr.MOD == NORMAL_MODE))
-		{
-			//Console.WriteLn("DMA Stall Control on GIF normal");
-		}
-		gifRegs.stat.FQC = min((u16)0x10, gifch.qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // APATH=3]
-		//Check with Path3 masking games
-		//DevCon.Warning("GIF Transferring Normal/ChainQWC MSK = %x", vif1Regs.mskpath3);
-		
-		
-		
-		if (gifch.qwc > 0) {
-			gifRegs.stat.set_flags(GIF_STAT_P3Q);
-			if(CheckPaths(DMAC_GIF) == false) return;
-			gifRegs.stat.clear_flags(GIF_STAT_P3Q);
-			GIFchain();	//Transfers the data set by the switch
-			CPU_INT(DMAC_GIF, gscycles);
-			return;
-		} else DevCon.Warning("GIF Normalmode or QWC going to invalid case? CHCR %x", gifch.chcr._u32);
-
-		//else DevCon.WriteLn("GIFdma() case 2, but qwc = 0!"); //Don't do 0 GIFchain and then return, fixes Dual Hearts
-	}
-
-	if ((gifch.chcr.MOD == CHAIN_MODE) && (!gspath3done)) // Chain Mode
+	if ((gifch.chcr.MOD == CHAIN_MODE) && (!gspath3done) && gifch.qwc == 0) // Chain Mode
 	{
         ptag = ReadTag();
         if (ptag == NULL) return;
@@ -392,12 +325,7 @@ void GIFdma()
 				// We really need to test this. Pay attention to prevcycles, as it used to trigger GIFchains in the code above. (rama)
 				//Console.WriteLn("GS Stall Control start Source = %x, Drain = %x\n MADR = %x, STADR = %x", (psHu32(0xe000) >> 4) & 0x3, (psHu32(0xe000) >> 6) & 0x3,gifch.madr, psHu32(DMAC_STADR));
 				prevcycles = gscycles;
-				//gifch.tadr -= 16;
-				// Quake III revolution wants to see tadr move.
-				// Simple Media System (homebrew) as well.
-				// -16 also seems right (it shifts the bg image right if anything else).
 				gifch.tadr -= 16;
-				// Next line also needs to be here, according to ref
 				gifch.qwc = 0;
 				hwDmacIrq(DMAC_STALL_SIS);
 				CPU_INT(DMAC_GIF, gscycles);
@@ -407,11 +335,38 @@ void GIFdma()
 		}
 
 		checkTieBit(ptag);
-		/*if(gifch.qwc == 0)
+	}
+
+	clearFIFOstuff(true);
+	gifRegs.stat.FQC = min((u16)0x10, gifch.qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // APATH=3]
+
+	if (vif1Regs.mskpath3 || gifRegs.mode.M3R)
+	{	
+		if (GSTransferStatus.PTH3 == STOPPED_MODE)
 		{
-			gsInterrupt();
+			MSKPATH3_LOG("Path3 Paused by VIF QWC %x", gifch.qwc);
+			
+			if(gifch.qwc == 0) CPU_INT(DMAC_GIF, 4);
+			else gifRegs.stat.set_flags(GIF_STAT_P3Q);
 			return;
-		}*/
+		}
+	}
+
+	// Transfer Dn_QWC from Dn_MADR to GIF
+	if (gifch.qwc > 0) // Normal Mode
+	{
+		gifRegs.stat.FQC = min((u16)0x10, gifch.qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // APATH=3]
+
+		gifRegs.stat.set_flags(GIF_STAT_P3Q);
+
+		if(CheckPaths(DMAC_GIF) == false) 
+			return;
+
+		gifRegs.stat.clear_flags(GIF_STAT_P3Q);
+
+		GIFchain();	//Transfers the data set by the switch
+		CPU_INT(DMAC_GIF, gscycles);
+		return;
 	}
 
 	prevcycles = 0;
@@ -626,6 +581,19 @@ void mfifoGIFtransfer(int qwc)
 		if (QWCinGIFMFIFO(gifch.tadr) == 0) gifstate |= GIF_STATE_EMPTY;
 	 }	
 
+	if (vif1Regs.mskpath3 || gifRegs.mode.M3R)
+	{	
+		if ((gifch.qwc == 0) && (gifstate & GIF_STATE_DONE)) gifstate |= GIF_STATE_STALL;
+
+		if (GSTransferStatus.PTH3 == STOPPED_MODE)
+		{
+			DevCon.Warning("GIFMFIFO PTH3 MASK Paused by VIF QWC %x");
+			
+			MSKPATH3_LOG("Path3 Paused by VIF Idling");
+			gifRegs.stat.set_flags(GIF_STAT_P3Q);
+			return;
+		}
+	}
 	if (!mfifoGIFchain())
 	{
 		Console.WriteLn("GIF dmaChain error size=%d, madr=%lx, tadr=%lx", gifch.qwc, gifch.madr, gifch.tadr);
@@ -656,12 +624,16 @@ void gifMFIFOInterrupt()
 		return;
 	}
 
-	if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE && gifRegs.stat.APATH == GIF_APATH3 )
-	{
-		gifRegs.stat.OPH = false;
+	if(GSTransferStatus.PTH3 == PENDINGSTOP_MODE)
+	{		
 		GSTransferStatus.PTH3 = STOPPED_MODE;
-		gifRegs.stat.APATH = GIF_APATH_IDLE;
-		if(gifRegs.stat.P1Q) gsPath1Interrupt();
+
+		if(gifRegs.stat.APATH == GIF_APATH3) 
+		{
+			gifRegs.stat.APATH = GIF_APATH_IDLE;
+			gifRegs.stat.OPH = false;
+			if(gifRegs.stat.P1Q) gsPath1Interrupt();
+		}		
 	}
 
 	if((gifstate & GIF_STATE_EMPTY))

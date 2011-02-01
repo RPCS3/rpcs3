@@ -90,15 +90,22 @@ void Vif1MskPath3() {
 
 	if (!vif1Regs.mskpath3)
 	{
+		MSKPATH3_LOG("Disabling Path3 Mask");
 		//if(GSTransferStatus.PTH3 > TRANSFER_MODE && gif->chcr.STR) GSTransferStatus.PTH3 = TRANSFER_MODE;
 		//DevCon.Warning("Mask off");
 		//if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE) GSTransferStatus.PTH3 = IDLE_MODE;
 		if(gifRegs.stat.P3Q) 
 		{
+			MSKPATH3_LOG("Path3 Waiting to Transfer, triggering");
 			gsInterrupt();//gsInterrupt();
 		}
 	
-	}// else if(!gif->chcr.STR && GSTransferStatus.PTH3 == IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;//else DevCon.Warning("Mask on");
+	} 
+	else 
+	{
+		MSKPATH3_LOG("Path3 Mask Enabled");
+	}
+	// else if(!gif->chcr.STR && GSTransferStatus.PTH3 == IDLE_MODE) GSTransferStatus.PTH3 = STOPPED_MODE;//else DevCon.Warning("Mask on");
 
 	schedulepath3msk = 0;
 }
@@ -137,7 +144,7 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 	pass2 {
 		vif1Only();
 
-		if (GSTransferStatus.PTH3 < IDLE_MODE || gifRegs.stat.P1Q == true)
+		if (GSTransferStatus.PTH3 < STOPPED_MODE || gifRegs.stat.P1Q == true)
 		{
 			if(gifRegs.stat.APATH == GIF_APATH2 || ((GSTransferStatus.PTH3 <= IMAGE_MODE && gifRegs.stat.IMT && (vif1.cmd & 0x7f) == 0x50)) && gifRegs.stat.P1Q == false)
 			{
@@ -264,10 +271,10 @@ vifOp(vifCode_FlushA) {
 	pass1 {
 		vifFlush(idx);
 		// Gif is already transferring so wait for it.
-		if (gifRegs.stat.P1Q || GSTransferStatus.PTH3 <= PENDINGSTOP_MODE) {
+		if (gifRegs.stat.P1Q || GSTransferStatus.PTH3 < STOPPED_MODE) {
 			//DevCon.Warning("VIF FlushA Wait MSK = %x", vif1Regs.mskpath3);
 			//
-			
+			MSKPATH3_LOG("Waiting for Path3 to Flush");
 			//DevCon.WriteLn("FlushA path3 Wait! PTH3 MD %x STR %x", GSTransferStatus.PTH3, gif->chcr.STR);
 			vif1Regs.stat.VGW = true;
 			vifX.GifWaitState  = 1;
@@ -376,17 +383,15 @@ vifOp(vifCode_MSCNT) {
 // ToDo: FixMe
 vifOp(vifCode_MskPath3) {
 	vif1Only();
-	pass1 {
-		//I Hate the timing sensitivity of this stuff
-		if (vif1ch.chcr.STR && vif1.lastcmd != 0x13) {
-			schedulepath3msk = 0x10 | ((vif1Regs.code >> 15) & 0x1);			
-		}
-		else 
-		{
-			schedulepath3msk = (vif1Regs.code >> 15) & 0x1;
-			Vif1MskPath3();
-		}
-		if(vif1ch.chcr.STR)vif1.vifstalled = true;
+	pass1 {		
+		MSKPATH3_LOG("Direct MSKPATH3");
+
+		schedulepath3msk = 0x10 | (vif1Regs.code >> 15) & 0x1;
+
+
+		if(vif1ch.chcr.STR && vif1.lastcmd != 0x13)vif1.vifstalled = true;
+		else Vif1MskPath3();
+
 		vif1.cmd = 0;
 	}
 	pass3 { VifCodeLog("MskPath3"); }

@@ -138,6 +138,7 @@ static SysTraceLog * const traceLogList[] =
 	&SysTrace.EE.IPU,
 	&SysTrace.EE.GIFtag,
 	&SysTrace.EE.VIFcode,
+	&SysTrace.EE.MSKPATH3,
 
 	&SysTrace.EE.DMAC,
 	&SysTrace.EE.Counters,
