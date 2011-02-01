@@ -128,10 +128,15 @@ void __fastcall WriteFIFO_GIF(const mem128_t *value)
 	GetMTGS().PrepDataPacket(GIF_PATH_3, 1);
 	GIFPath_CopyTag( GIF_PATH_3, value, 1 );
 	GetMTGS().SendDataPacket();
-	if(GSTransferStatus.PTH3 == STOPPED_MODE && gifRegs.stat.APATH == GIF_APATH3 )
+
+	if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE )
 	{
-		if(gifRegs.stat.DIR == 0)gifRegs.stat.OPH = false;
-		gifRegs.stat.APATH = GIF_APATH_IDLE;
-		if(gifRegs.stat.P1Q) gsPath1Interrupt();
+		GSTransferStatus.PTH3 = STOPPED_MODE;
+		if(gifRegs.stat.APATH == GIF_APATH3)
+		{
+			if(gifRegs.stat.DIR == 0)gifRegs.stat.OPH = false;
+			gifRegs.stat.APATH = GIF_APATH_IDLE;
+			if(gifRegs.stat.P1Q) gsPath1Interrupt();
+		}
 	}
 }

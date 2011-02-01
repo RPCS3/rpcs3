@@ -144,9 +144,11 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 	pass2 {
 		vif1Only();
 
+		//Only check if Path 1 or 3 are busy, else we dont care :D
 		if (GSTransferStatus.PTH3 < STOPPED_MODE || gifRegs.stat.P1Q == true)
 		{
-			if(gifRegs.stat.APATH == GIF_APATH2 || ((GSTransferStatus.PTH3 <= IMAGE_MODE && gifRegs.stat.IMT && (vif1.cmd & 0x7f) == 0x50)) && gifRegs.stat.P1Q == false)
+			//If currently transferring PATH2, or GIF is in image mode (or waiting) and we are using DIRECT command and path1 isnt waiting 
+			if(gifRegs.stat.APATH == GIF_APATH2 || ((GSTransferStatus.PTH3 <= IMAGE_MODE && (vif1.cmd & 0x7f) == 0x50) && gifRegs.stat.P1Q == false))
 			{
 				//Do nothing, allow it
 				vif1Regs.stat.VGW = false;
@@ -154,6 +156,7 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 			}
 			else
 			{
+				//Using Direct/HL while Path3 is busy or Path 1 is busy
 				//DevCon.Warning("Stall DIRECT/HL %x P3 %x APATH %x P1Q %x", vif1.cmd, GSTransferStatus.PTH3, gifRegs.stat.APATH, gifRegs.stat.P1Q);
 				vif1Regs.stat.VGW = true; // PATH3 is in image mode (DIRECTHL), or busy (BOTH no IMT)
 				vif1.GifWaitState = 0;

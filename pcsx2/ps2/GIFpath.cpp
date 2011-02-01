@@ -660,11 +660,10 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 						else GSTransferStatus.PTH3 = TRANSFER_MODE;
 						break;
 				}
-				
-			}	
+				gifRegs.stat.OPH = true;
+				gifRegs.stat.APATH = pathidx + 1;	
+			}			
 			
-			gifRegs.stat.OPH = true;
-			gifRegs.stat.APATH = pathidx + 1;	
 			
 
 			if(nloop == 0 && tag.EOP) 
@@ -919,7 +918,8 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 				GSTransferStatus.PTH2 = WAITING_MODE;
 				break;
 			case GIF_PATH_3:
-				if(GSTransferStatus.PTH3 < STOPPED_MODE) GSTransferStatus.PTH3 = WAITING_MODE;
+				//Required, if GIF_FIFO writes NOP to GIF Tag it can leave it set waiting which causes VIF FlushA to fail
+				if(GSTransferStatus.PTH3 < PENDINGSTOP_MODE) GSTransferStatus.PTH3 = WAITING_MODE;
 				break;	
 		}
 	}
