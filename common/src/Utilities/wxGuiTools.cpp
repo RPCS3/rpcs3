@@ -421,7 +421,7 @@ pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString&
 			{
 				if (!no_break_before(*p))
 				{
-					if (p == lineStart || no_break_after(*(p-1)))
+					if (p == lineStart || !no_break_after(*(p-1)))
 						lastSpace = p;
 				}
 			}
@@ -446,6 +446,10 @@ pxTextWrapperBase& pxTextWrapperBase::Wrap( const wxWindow& win, const wxString&
                     // go back to the last word of this line which we didn't
                     // output yet
                     p = lastSpace;
+
+					if ( *p != L' ' )
+                       p--;
+
                 }
             }
             //else: no wrapping at all or impossible to wrap

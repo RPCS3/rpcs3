@@ -1,148 +1,150 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-01-27 15:28+0800\n"
-"PO-Revision-Date: 2011-01-27 15:28+0800\n"
-"Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
-"Language-Team: \n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2010-12-26 09:58-0500\n"
+"PO-Revision-Date: 2011-01-19 15:21+0200\n"
+"Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
+"Language-Team: PyramidHead <atiamar@hotmail.com>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-KeywordsList: pxE_dev;pxDt\n"
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: trunk\\\n"
+"X-Poedit-Language: Turkish\n"
+"X-Poedit-Country: TURKEY\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
 #: pcsx2/SourceLog.cpp:96
 msgid "Dumps detailed information for PS2 executables (ELFs)."
-msgstr "转储 PS2 可执行文件 (ELF) 的详细信息。"
+msgstr "PS2 ELF dosyalarını ayrıntılı olarak günlükle."
 
 #: pcsx2/SourceLog.cpp:101
 msgid "Logs manual protection, split blocks, and other things that might impact performance."
-msgstr "记录手动保护、分割块以及其它可能影响性能的东西。"
+msgstr "Manual koruma, blok ayırma ve diğer performansı etkileyecek zamazingoları günlükler."
 
 #: pcsx2/SourceLog.cpp:106
 msgid "Shows the game developer's logging text (EE processor)"
-msgstr "显示游戏开发者的日志记录文本 (EE 处理器)"
+msgstr "Oyun üreticisinin günlükleme dosyasını gösterir (EE işlemcisi)"
 
 #: pcsx2/SourceLog.cpp:111
 msgid "Shows the game developer's logging text (IOP processor)"
-msgstr "显示游戏开发者的日志记录文本 (IOP 处理器)"
+msgstr "Oyun üreticisinin günlükleme dosyasını gösterir (IOP işlemcisi)"
 
 #: pcsx2/SourceLog.cpp:116
 msgid "Shows DECI2 debugging logs (EE processor)"
-msgstr "显示 DECI2 调试日志记录 (EE 处理器)"
+msgstr "DECI2 test günlükleri (EE işlemcisi)"
 
 #: pcsx2/SourceLog.cpp:145
 msgid "SYSCALL and DECI2 activity."
-msgstr "SYSCALL 及 DECI2 活动。"
+msgstr "SYSCALL ve DECI2 etkinliği."
 
 #: pcsx2/SourceLog.cpp:151
 msgid "Direct memory accesses to unknown or unmapped EE memory space."
-msgstr "到未知或未映射的内存空间的直接内存访问。"
+msgstr "Bilinmeyen ya da belirtilmemiş EE hafıza konumuna doğrudan erişim."
 
 #: pcsx2/SourceLog.cpp:157
 #: pcsx2/SourceLog.cpp:270
 msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
-msgstr "反汇编执行核心指令 (除了 COP 指令及 CACHE 指令)。"
+msgstr "Yürütme yönergelerinin ayrımı (COPs ve CACHE hariç)"
 
 #: pcsx2/SourceLog.cpp:163
 msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
-msgstr "反汇编 COP0 指令 (MMU，CPU/DMA 状态，等等)。"
+msgstr "COP0 yönergelerinin ayrımı (MMU, işlemci ve dma durumları vb)."
 
 #: pcsx2/SourceLog.cpp:169
 msgid "Disasm of the EE's floating point unit (FPU) only."
-msgstr "仅反汇编 EE 浮点运算单元 (FPU)。"
+msgstr "EE'nin FPU ayrımı."
 
 #: pcsx2/SourceLog.cpp:175
 msgid "Disasm of the EE's VU0macro co-processor instructions."
-msgstr "反汇编 EE VU0macro 协处理器指令。"
+msgstr "EE'nin VU0macro işlemci yönergelerinin ayrımı."
 
 #: pcsx2/SourceLog.cpp:181
 msgid "Execution of EE cache instructions."
-msgstr "EE 缓存指令的执行。"
+msgstr "EE önbellek yönergelerinin yürütülmesi."
 
 #: pcsx2/SourceLog.cpp:187
 msgid "All known hardware register accesses (very slow!); not including sub filter options below."
-msgstr "全部已知硬件寄存器访问 (很慢!)；不包括以下子过滤器选项。"
+msgstr "Altta belirtilen filtreler hariç tüm bilinen donanım erişimleri (ÇOK YAVAŞ!)."
 
 #: pcsx2/SourceLog.cpp:193
 #: pcsx2/SourceLog.cpp:288
 msgid "Logs only unknown, unmapped, or unimplemented register accesses."
-msgstr "仅记录未知、未映射或未实现的寄存器访问。"
+msgstr "Yalnızca bilinmeyen, ayarlanmamış ve düzenlenmemiş erişim girdilerini günlükler."
 
 #: pcsx2/SourceLog.cpp:199
 #: pcsx2/SourceLog.cpp:294
 msgid "Logs only DMA-related registers."
-msgstr "仅记录 DMA 相关寄存器。"
+msgstr "Yalnızca DMA ile ilgili girişleri günlükler."
 
 #: pcsx2/SourceLog.cpp:205
 msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
-msgstr "IPU 活动: 硬件寄存器、解码操作、DMA 状态等等。"
+msgstr "IPU etkinliği: donanım erişimleri, çözümleme işlemleri, DMA durumu vb..."
 
 #: pcsx2/SourceLog.cpp:211
 msgid "All GIFtag parse activity; path index, tag type, etc."
-msgstr "全部 GIF 标签解析活动；路径索引、标签类型，等等。"
+msgstr "Tüm GIFtag etkinliği; klasör indeksleme, etiket türü vb..."
 
 #: pcsx2/SourceLog.cpp:217
 msgid "All VIFcode processing; command, tag style, interrupts."
-msgstr "全部 VIF 代码处理；命令、标签风格、中断。"
+msgstr "Tüm VIFcode işlemleri; komutlar, tag türü, hatalar."
 
 #: pcsx2/SourceLog.cpp:223
 msgid "Scratchpad's MFIFO activity."
-msgstr "暂存器的 MFIFO 活动。"
+msgstr "Scratchpad'in MFIFO etkinliği."
 
 #: pcsx2/SourceLog.cpp:229
 msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
-msgstr "实际的数据传输日志、总线权限仲裁、总线阻塞等等。"
+msgstr "Dosya transfer günlükleri, beklemeler vb."
 
 #: pcsx2/SourceLog.cpp:235
 msgid "Tracks all EE counters events and some counter register activity."
-msgstr "跟踪所有的 EE 计数器事件和一些计数器寄存器活动。"
+msgstr "Tüm EE sayaç olaylarını ve bazı girdi etkinliklerini izler."
 
 #: pcsx2/SourceLog.cpp:241
 msgid "Dumps various VIF and VIFcode processing data."
-msgstr "转储各种 VIF 和 VIF 代码处理数据。"
+msgstr "Çeşitli VIF ve VIFcode işlemlerini yığınlar."
 
 #: pcsx2/SourceLog.cpp:247
 msgid "Dumps various GIF and GIFtag parsing data."
-msgstr "转储各种 GIF 和 GIF 标签解析数据。"
+msgstr "Çeşitlli GIF ve GIFtag verilerini yığınlar."
 
 #: pcsx2/SourceLog.cpp:258
 msgid "SYSCALL and IRX activity."
-msgstr "SYSCALL 及 IRX 活动。"
+msgstr "SYSCALL ve IRX etkinliği."
 
 #: pcsx2/SourceLog.cpp:264
 msgid "Direct memory accesses to unknown or unmapped IOP memory space."
-msgstr "到未知或未映射的内存空间的直接内存访问。"
+msgstr "Bilinmeyen ya da belirtilmemiş IOP hafıza konumuna doğrudan erişim."
 
 #: pcsx2/SourceLog.cpp:276
 msgid "Disasm of the IOP's GPU co-processor instructions."
-msgstr "反汇编 IOP GPU 协处理器指令。"
+msgstr "IOS'nin GPU işlemcili yönergelerininin ayrımı."
 
 #: pcsx2/SourceLog.cpp:282
 msgid "All known hardware register accesses, not including the sub-filters below."
-msgstr "全部已知硬件寄存器访问，不包括以下子过滤器。"
+msgstr "Alttaki filtreleri içermeyen tüm bilinen donanım erişimleri."
 
 #: pcsx2/SourceLog.cpp:300
 msgid "Memorycard reads, writes, erases, terminators, and other processing."
-msgstr "记忆卡读取、写入、擦除、终止符，及其它操作。"
+msgstr "Hafıza kartı okumaları, yazmaları, silmeleri ve diğer işlemler."
 
 #: pcsx2/SourceLog.cpp:306
 msgid "Gamepad activity on the SIO."
-msgstr "SIO 上的手柄活动。"
+msgstr "SIO'daki oyun kolu etkinliği."
 
 #: pcsx2/SourceLog.cpp:312
 msgid "Actual DMA event processing and data transfer logs."
-msgstr "实际的 DMA 事件处理及数据传输日志。"
+msgstr "DMA olay işlemi ve dosya transfer günlükleri."
 
 #: pcsx2/SourceLog.cpp:318
 msgid "Tracks all IOP counters events and some counter register activity."
-msgstr "跟踪所有 IOP 计数器事件和一些计数器寄存器活动。"
+msgstr "Tüm IOP sayaç olaylarını ve diğer sayaç girdisi etkinliklerini izler."
 
 #: pcsx2/SourceLog.cpp:324
 msgid "Detailed logging of CDVD hardware."
-msgstr "详细记录 CDVD 硬件信息。"
+msgstr "CDVD donanımının detaylı günlüklemesi."
 

@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-12-29 11:44+0800\n"
-"PO-Revision-Date: 2010-12-29 11:44+0800\n"
+"POT-Creation-Date: 2011-01-27 15:29+0800\n"
+"PO-Revision-Date: 2011-01-27 15:29+0800\n"
 "Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -19,9 +19,37 @@ msgstr ""
 msgid "!ContextTip:ChangingNTFS"
 msgstr "NTFS 压缩可以随时使用 Windows 资源管理器中的文件属性更改。"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:48
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
 msgid "!ContextTip:Folders:Settings"
 msgstr "这是 PCSX2 保存您的设置选项的文件夹，包括大多数插件生成的设置选项 (此选项对于一些旧的插件可能无效)。"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid "!Panel:HasHacksOverrides"
+msgstr "警告! 您正在使用命令行选项运行 PCSX2，这将覆盖您已配置的设定。这些命令行选项将不会在设置对话框中反映，且如果您更改了任何选项的话命令行选项将失效。"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr "警告! 您正在使用命令行选项运行 PCSX2，这将覆盖您已配置的插件或文件夹设定。这些命令行选项将不会在设置对话框中反映，且如果您更改了任何选项的话命令行选项将失效。"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:134
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+"预置将影响速度 Hack、一些重编译器选项及一些已经可提升速度的游戏特殊修补。\n"
+"已知的游戏特殊修补 (\"补丁\") 将自动被应用。\n"
+"\n"
+"预置信息:\n"
+"1 -    模拟精确度最高，但速度最低。\n"
+"3 --> 试图平衡速度及兼容性。\n"
+"4 -    一些更多的 Hack。\n"
+"6 -    过多 Hack，有可能拖慢大多数游戏的速度。"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:148
+msgid "!Notice:Tooltip:Presets:Checkbox"
+msgstr ""
+"预置将影响速度 Hack、一些重编译器选项及一些已经可提升速度的游戏特殊修补。\n"
+"已知的游戏特殊修补 (\"补丁\") 将自动被应用。\n"
+"\n"
+"--> 取消此项可手动修改设置 (基于当前预置)"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:118
 msgid "!ContextTip:DirPicker:UseDefault"
@@ -43,35 +71,35 @@ msgstr ""
 " * 梦幻骑士 2 和 3\n"
 " * 巫术"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:51
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:52
 msgid "!ContextTip:Window:Vsync"
 msgstr "垂直同步可以消除花屏但通常对性能有较大影响。通常仅应用于全屏幕模式，且不一定对所有的 GS 插件都有效。"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:56
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:57
 msgid "!ContextTip:Window:HideMouse"
 msgstr "选中此项强制 GS 窗口中不显示鼠标光标。在使用鼠标控制游戏时比较有用。默认状态鼠标在 2 秒不活动后隐藏。"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:62
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
 msgid "!ContextTip:Window:Fullscreen"
 msgstr "启动或恢复模拟时自动切换至全屏。您可以使用 Alt+Enter 随时切换全屏或窗口模式。"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:67
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
 msgid "!ContextTip:Window:FullscreenExclusive"
 msgstr "独占全屏模式可能在旧的 CRT 显示器上效果较好，对一些旧显卡速度较快。但通常可能在进入或退出全屏模式时导致内存泄露或随机崩溃。"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:72
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:73
 msgid "!ContextTip:Window:HideGS"
 msgstr "在按 ESC 或挂起模拟器时彻底关闭 GS 窗口。"
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:39
+#: pcsx2/gui/Panels/PathsPanel.cpp:40
 msgid "!ContextTip:Folders:Savestates"
 msgstr "此文件夹是 PCSX2 保存即时存档的位置；即时存档可使用菜单/工具栏或 F1/F3 (保存/读取) 使用。"
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:49
+#: pcsx2/gui/Panels/PathsPanel.cpp:50
 msgid "!ContextTip:Folders:Snapshots"
 msgstr "此文件夹是 PCSX2 保存截图的位置。实际截图格式和风格对于不同的 GS 插件可能不同。"
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:59
+#: pcsx2/gui/Panels/PathsPanel.cpp:60
 msgid "!ContextTip:Folders:Logs"
 msgstr "此文件夹是 PCSX2 保存日志记录和诊断转储的位置。大多数插件也将使用此文件夹，但是一些旧的插件可能会忽略它。"
 
@@ -139,11 +167,11 @@ msgstr "请参看 HDLoader 兼容性列表以获取启用此项会出现问题�
 msgid "!ContextTip:Framelimiter:Disable"
 msgstr "注意: 如限帧被禁用，快速模式和慢动作模式将不可用。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr "如您认为 MTGS 线程同步导致崩溃或图像错误，请启用此项。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:303
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 "禁用全部由 MTGS 线程或 GPU 开销导致的测试信息。此选项可与即时存档配合使用: 在理想的场景中存档，启用此选项，读档。\n"

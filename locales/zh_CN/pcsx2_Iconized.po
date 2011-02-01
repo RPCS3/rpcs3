@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-12-29 11:44+0800\n"
-"PO-Revision-Date: 2010-12-29 11:44+0800\n"
+"POT-Creation-Date: 2011-01-27 15:28+0800\n"
+"PO-Revision-Date: 2011-01-27 15:29+0800\n"
 "Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
@@ -31,34 +31,38 @@ msgstr "您的系统没有足够的资源运行 PCSX2。可能是由于交换文
 msgid "!Notice:PsxDisc"
 msgstr "PCSX2 不支持 Playstation 1 游戏。如果您想模拟 PS1 游戏请下载一个 PS1 模拟器，如 ePSXe 或 PCSX。"
 
-#: pcsx2/gui/AppInit.cpp:44
+#: pcsx2/gui/AppInit.cpp:43
 msgid "!Notice:Startup:NoSSE2"
 msgstr "警告: 您的计算机不支持 SSE2。PCSX2 重编译器及插件需要 SSE2 才可以运行。很多选项将会不可用且模拟速度将会*非常*慢。"
 
-#: pcsx2/gui/AppInit.cpp:290
+#: pcsx2/gui/AppInit.cpp:162
 msgid "!Notice:RecompilerInit:Header"
 msgstr "警告: 部分已配置的 PS2 重编译器初始化失败且已被禁用。"
 
-#: pcsx2/gui/AppInit.cpp:344
+#: pcsx2/gui/AppInit.cpp:211
 msgid "!Notice:RecompilerInit:Footer"
 msgstr "注意: 重编译器对 PCSX2 非必需，但是它们通常可大大提升模拟速度。如错误已解决，您可能要手动重新启用以上列出的重编译器。"
 
-#: pcsx2/gui/AppMain.cpp:483
+#: pcsx2/gui/AppMain.cpp:476
 msgid "!Notice:BiosDumpRequired"
 msgstr "PCSX2 需要一个 PS2 BIOS 才可以运行。由于法律问题，您必须从一台属于您的 PS2 实机中取得一个 BIOS 文件。请参考常见问题及教程以获取进一步的说明。"
 
-#: pcsx2/gui/AppMain.cpp:566
+#: pcsx2/gui/AppMain.cpp:559
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr ""
 "\"忽略\": 继续等待进程响应。\n"
 "\"取消\": 尝试取消进程。\n"
 "\"终止\": 立即退出 PCSX2。"
 
+#: pcsx2/gui/AppUserMode.cpp:59
+msgid "!Error:PortableModeRights"
+msgstr "请确保这些文件夹已被建立且您的用户账户对它们有写入权限 -- 或使用管理员权限重新运行 PCSX2 (可以使 PCSX2 能够自动建立必要的文件夹)。如果您没有此计算机的管理员权限，您需要切换至用户文件模式 (单击下面的按钮)。"
+
 #: pcsx2/gui/IsoDropTarget.cpp:28
 msgid "!Notice:ConfirmSysReset"
 msgstr "此动作将复位当前的 PS2 虚拟机状态；当前进度将丢失。是否确认?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:112
+#: pcsx2/gui/MainMenuClicks.cpp:106
 msgid "!Notice:DeleteSettings"
 msgstr ""
 "此命令将清除 %s 的设置且允许您重新运行首次运行向导。您需要在此操作完成后重新启动 %s。\n"
@@ -71,15 +75,15 @@ msgstr ""
 msgid "!Notice:Mcd:HasBeenDisabled"
 msgstr "%d 插槽上的记忆卡已自动被禁用。您可以随时在主菜单上的配置:记忆卡中改正问题并重新启用记忆卡。"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:53
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
 msgid "!Panel:Folders:Settings"
 msgstr "您可以指定一个您的 PCSX2 设置选项所在位置。如果此位置包含已有的 PCSX2 设置，您可以选择导入或覆盖它们。"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:109
-msgid "!Notice:DocsFolderFileConflict"
-msgstr "PCSX2 无法在请求的位置创建文档文件夹。路径名可能是一个已存在的文件名。删除对应文件或更改文档位置并重试。"
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
+msgid "!Wizard:Welcome"
+msgstr "此向导将引导您配置插件、记忆卡及 BIOS。如果您是第一次运行 %s，建议您先查看自述文件及配置说明。"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:152
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
 msgid "!Wizard:Bios:Tutorial"
 msgstr "PCSX2 需要一个合法的 PS2 BIOS 副本来运行游戏。使用非法复制或下载的副本为侵权行为。您必须从您自己的 Playstation 2 实机中取得 BIOS。"
 
@@ -102,17 +106,17 @@ msgstr "以强制游戏在读取即时存档后重新检索记忆卡内容的方
 msgid "!Panel:StuckThread:Heading"
 msgstr "线程 '%d' 没有响应。它可能出现死锁，或可能仅仅是运行得*非常*慢。"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:37
-msgid "!Panel:HasHacksOverrides"
-msgstr "警告! 您正在使用命令行选项运行 PCSX2 来覆盖您已配置的选项。这些命令行选项将不会在设置对话框中被反映，如果您在设置对话框中更改了相应选项，命令行选项将被禁用。"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:57
-msgid "!Panel:HasPluginsOverrides"
-msgstr "警告! 您正在使用命令行选项运行 PCSX2 来覆盖您已配置的插件或文件夹设置。这些命令行选项将不会在设置对话框中被反映，如果您在设置对话框中更改了相应选项，命令行选项将被禁用。"
-
-#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:126
+#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:137
 msgid "!Notice:BIOS:InvalidSelection"
 msgstr "请选择一个合法的 BIOS。如果您不能作出合法的选择请单击取消来关闭配置面板。"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:111
+msgid "!Panel:EE/IOP:Heading"
+msgstr "注: 大多数游戏使用默认选项即可。"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:175
+msgid "!Panel:VUs:Heading"
+msgstr "注: 大多数游戏使用默认选项即可。"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:63
 msgid "!Notice:DirPicker:CreatePath"
@@ -149,7 +153,7 @@ msgstr ""
 "\n"
 "是否确认应用这些设置?"
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:458
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:456
 msgid "!Notice:PluginSelector:ApplyFailed"
 msgstr "要运行 %s，所有插件必须有合法选择。如果由于插件缺失或不完整的安装您不能做出合法选择，请单击取消关闭配置面板。"
 
@@ -157,11 +161,7 @@ msgstr "要运行 %s，所有插件必须有合法选择。如果由于插件缺
 msgid "!Panel:Speedhacks:Overview"
 msgstr "速度 Hack 通常可以提升模拟速度，但也可能导致错误、声音问题或虚帧。如模拟有问题请先尝试禁用此面板。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:106
-msgid "!Panel:Framelimiter:Heading"
-msgstr "内置限帧器可调整虚拟机的速度。调整以上相对于默认相应地区帧率 (也可以在上面调整) 的百分比数值。"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:230
+#: pcsx2/gui/Panels/VideoPanel.cpp:223
 msgid "!Panel:Frameskip:Heading"
 msgstr "注意: 由于 PS2 硬件设计，不可以准确跳帧。启用此选项可能在某些游戏中导致严重图像错误。"
 
@@ -173,3 +173,24 @@ msgstr "内存溢出 (一点点): SuperVU 重编译器无法保留所需的指�
 msgid "!Notice:VirtualMemoryMap"
 msgstr "没有足够的虚拟内存可用，或所需的虚拟内存映射已经被其它进程、服务或 DLL 保留。"
 
+#~ msgid "!Panel:Framelimiter:Heading"
+#~ msgstr ""
+#~ "内置限帧器可调整虚拟机的速度。调整以上相对于默认相应地区帧率 (也可以在上面"
+#~ "调整) 的百分比数值。"
+
+#~ msgid "!Notice:DocsFolderFileConflict"
+#~ msgstr ""
+#~ "PCSX2 无法在请求的位置创建文档文件夹。路径名可能是一个已存在的文件名。删除"
+#~ "对应文件或更改文档位置并重试。"
+
+#~ msgid "!Panel:HasHacksOverrides"
+#~ msgstr ""
+#~ "警告! 您正在使用命令行选项运行 PCSX2 来覆盖您已配置的选项。这些命令行选项"
+#~ "将不会在设置对话框中被反映，如果您在设置对话框中更改了相应选项，命令行选项"
+#~ "将被禁用。"
+
+#~ msgid "!Panel:HasPluginsOverrides"
+#~ msgstr ""
+#~ "警告! 您正在使用命令行选项运行 PCSX2 来覆盖您已配置的插件或文件夹设置。这"
+#~ "些命令行选项将不会在设置对话框中被反映，如果您在设置对话框中更改了相应选"
+#~ "项，命令行选项将被禁用。"

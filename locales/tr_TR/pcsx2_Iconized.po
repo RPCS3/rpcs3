@@ -1,0 +1,163 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PCSX2 0.9.7\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2010-12-26 10:02-0500\n"
+"PO-Revision-Date: 2011-01-19 15:15+0200\n"
+"Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
+"Language-Team: PyramidHead <atiamar@hotmail.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxE;pxExpandMsg\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: trunk\\\n"
+"X-Poedit-Language: Turkish\n"
+"X-Poedit-Country: TURKEY\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: pcsx2/System.cpp:114
+msgid "!Notice:Recompiler:VirtualMemoryAlloc"
+msgstr "!Notice:Recompiler:VirtualMemoryAlloc"
+
+#: pcsx2/System.cpp:346
+msgid "!Notice:EmuCore::MemoryForVM"
+msgstr "!Notice:EmuCore::MemoryForVM"
+
+#: pcsx2/vtlb.cpp:588
+msgid "!Notice:HostVmReserve"
+msgstr "!Notice:HostVmReserve"
+
+#: pcsx2/CDVD/CDVD.cpp:385
+msgid "!Notice:PsxDisc"
+msgstr "!Notice:PsxDisc"
+
+#: pcsx2/gui/AppInit.cpp:44
+msgid "!Notice:Startup:NoSSE2"
+msgstr "!Notice:Startup:NoSSE2"
+
+#: pcsx2/gui/AppInit.cpp:290
+msgid "!Notice:RecompilerInit:Header"
+msgstr "!Notice:RecompilerInit:Header"
+
+#: pcsx2/gui/AppInit.cpp:344
+msgid "!Notice:RecompilerInit:Footer"
+msgstr "!Notice:RecompilerInit:Footer"
+
+#: pcsx2/gui/AppMain.cpp:483
+msgid "!Notice:BiosDumpRequired"
+msgstr "!Notice:BiosDumpRequired"
+
+#: pcsx2/gui/AppMain.cpp:567
+msgid "!Notice Error:Thread Deadlock Actions"
+msgstr "!Notice Error:Thread Deadlock Actions"
+
+#: pcsx2/gui/IsoDropTarget.cpp:28
+msgid "!Notice:ConfirmSysReset"
+msgstr "!Notice:ConfirmSysReset"
+
+#: pcsx2/gui/MainMenuClicks.cpp:112
+msgid "!Notice:DeleteSettings"
+msgstr "!Notice:DeleteSettings"
+
+#: pcsx2/gui/MemoryCardFile.cpp:77
+msgid "!Notice:Mcd:HasBeenDisabled"
+msgstr "!Notice:Mcd:HasBeenDisabled"
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:53
+msgid "!Panel:Folders:Settings"
+msgstr "!Panel:Folders:Settings"
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:109
+msgid "!Notice:DocsFolderFileConflict"
+msgstr "!Notice:DocsFolderFileConflict"
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:152
+msgid "!Wizard:Bios:Tutorial"
+msgstr "!Wizard:Bios:Tutorial"
+
+#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
+msgid "!Notice:ImportExistingSettings"
+msgstr "!Notice:ImportExistingSettings"
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
+msgid "!Panel:Mcd:NtfsCompress"
+msgstr "!Panel:Mcd:NtfsCompress"
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
+msgid "!Panel:Mcd:EnableEjection"
+msgstr "!Panel:Mcd:EnableEjection"
+
+#: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
+msgid "!Panel:StuckThread:Heading"
+msgstr "!Panel:StuckThread:Heading"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:37
+msgid "!Panel:HasHacksOverrides"
+msgstr "!Panel:HasHacksOverrides"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:57
+msgid "!Panel:HasPluginsOverrides"
+msgstr "!Panel:HasPluginsOverrides"
+
+#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:126
+msgid "!Notice:BIOS:InvalidSelection"
+msgstr "!Notice:BIOS:InvalidSelection"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:63
+msgid "!Notice:DirPicker:CreatePath"
+msgstr "!Notice:DirPicker:CreatePath"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+msgid "!Panel:Gamefixes:Compat Warning"
+msgstr "!Panel:Gamefixes:Compat Warning"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:365
+msgid "!Notice:Mcd:Overwrite"
+msgstr "!Notice:Mcd:Overwrite"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:379
+msgid "!Notice:Mcd:Copy Failed"
+msgstr "!Notice:Mcd:Copy Failed"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:585
+msgid "!Notice:Mcd:Delete"
+msgstr "!Notice:Mcd:Delete"
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+msgid "!Panel:Usermode:Explained"
+msgstr "!Panel:Usermode:Explained"
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:41
+msgid "!Panel:Usermode:Warning"
+msgstr "!Panel:Usermode:Warning"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+msgid "!Notice:PluginSelector:ConfirmShutdown"
+msgstr "!Notice:PluginSelector:ConfirmShutdown"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:458
+msgid "!Notice:PluginSelector:ApplyFailed"
+msgstr "!Notice:PluginSelector:ApplyFailed"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
+msgid "!Panel:Speedhacks:Overview"
+msgstr "!Panel:Speedhacks:Overview"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:106
+msgid "!Panel:Framelimiter:Heading"
+msgstr "!Panel:Framelimiter:Heading"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:230
+msgid "!Panel:Frameskip:Heading"
+msgstr "!Panel:Frameskip:Heading"
+
+#: pcsx2/x86/sVU_zerorec.cpp:362
+msgid "!Notice:superVU:VirtualMemoryAlloc"
+msgstr "!Notice:superVU:VirtualMemoryAlloc"
+
+#: common/src/Utilities/Exceptions.cpp:254
+msgid "!Notice:VirtualMemoryMap"
+msgstr "!Notice:VirtualMemoryMap"
+
