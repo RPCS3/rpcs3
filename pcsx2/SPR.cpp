@@ -67,19 +67,31 @@ int  _SPR0chain()
 			hwMFIFOWrite(spr0ch.madr, &psSu128(spr0ch.sadr), spr0ch.qwc);
 			spr0ch.madr += spr0ch.qwc << 4;
 			spr0ch.madr = dmacRegs.rbor.ADDR + (spr0ch.madr & dmacRegs.rbsr.RMSK);
+			spr0ch.sadr += spr0ch.qwc << 4;
+			spr0ch.qwc = 0;
 			break;
 
 		case NO_MFD:
 		case MFD_RESERVED:
-			memcpy_qwc(pMem, &psSu128(spr0ch.sadr), spr0ch.qwc);
+			int partialqwc = 0;
+			//Taking an arbitary small value for games which like to check the QWC/MADR instead of STR, so get most of
+			//the cycle delay out of the way before the end.
+			if(spr0ch.qwc > 1) partialqwc = spr0ch.qwc - 1;
+			else partialqwc = spr0ch.qwc;
+			memcpy_qwc(pMem, &psSu128(spr0ch.sadr), partialqwc);
 
 			// clear VU mem also!
-			TestClearVUs(spr0ch.madr, spr0ch.qwc << 2); // Wtf is going on here? AFAIK, only VIF should affect VU micromem (cottonvibes)
-			spr0ch.madr += spr0ch.qwc << 4;
+			TestClearVUs(spr0ch.madr, partialqwc << 2); // Wtf is going on here? AFAIK, only VIF should affect VU micromem (cottonvibes)
+
+			spr0ch.madr += partialqwc << 4;
+			spr0ch.sadr += partialqwc << 4;
+			spr0ch.qwc -= partialqwc;
+
+			return (partialqwc);
 			break;
 	}
 
-	spr0ch.sadr += spr0ch.qwc << 4;
+	
 
 	return (spr0ch.qwc); // bus is 1/2 the ee speed
 }
@@ -87,7 +99,6 @@ int  _SPR0chain()
 __fi void SPR0chain()
 {
 	CPU_INT(DMAC_FROM_SPR, _SPR0chain() * BIAS);
-	spr0ch.qwc = 0;
 }
 
 void _SPR0interleave()
@@ -287,18 +298,24 @@ int  _SPR1chain()
 
 	pMem = SPRdmaGetAddr(spr1ch.madr, false);
 	if (pMem == NULL) return -1;
+	int partialqwc = 0;
+	//Taking an arbitary small value for games which like to check the QWC/MADR instead of STR, so get most of
+	//the cycle delay out of the way before the end.
+	if(spr1ch.qwc > 1) partialqwc = spr1ch.qwc - 1;
+	else partialqwc = spr1ch.qwc;
 
-	SPR1transfer(pMem, spr1ch.qwc);
-	spr1ch.madr += spr1ch.qwc * 16;
+	SPR1transfer(pMem, partialqwc);
+	spr1ch.madr += partialqwc * 16;
+	spr1ch.qwc -= partialqwc;
+
 	hwDmacSrcTadrInc(spr1ch);
 
-	return (spr1ch.qwc);
+	return (partialqwc);
 }
 
 __fi void SPR1chain()
 {
 	CPU_INT(DMAC_TO_SPR, _SPR1chain() * BIAS);
-	spr1ch.qwc = 0;
 }
 
 void _SPR1interleave()
