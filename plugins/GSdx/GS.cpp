@@ -600,26 +600,26 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 				case 0:
 					if(buff.size() < 0x4000) buff.resize(0x4000);
 					addr = 0x4000 - size;
-					fread(buff.data() + addr, size, 1, fp);
-					GSgifTransfer1(buff.data(), addr);
+					fread(&buff[addr], size, 1, fp);
+					GSgifTransfer1(&buff[0], addr);
 					break;
 
 				case 1:
 					if(buff.size() < size) buff.resize(size);
-					fread(buff.data(), size, 1, fp);
-					GSgifTransfer2(buff.data(), size / 16);
+					fread(&buff[0], size, 1, fp);
+					GSgifTransfer2(&buff[0], size / 16);
 					break;
 
 				case 2:
 					if(buff.size() < size) buff.resize(size);
-					fread(buff.data(), size, 1, fp);
-					GSgifTransfer3(buff.data(), size / 16);
+					fread(&buff[0], size, 1, fp);
+					GSgifTransfer3(&buff[0], size / 16);
 					break;
 
 				case 3:
 					if(buff.size() < size) buff.resize(size);
-					fread(buff.data(), size, 1, fp);
-					GSgifTransfer(buff.data(), size / 16);
+					fread(&buff[0], size, 1, fp);
+					GSgifTransfer(&buff[0], size / 16);
 					break;
 				}
 
