@@ -29,18 +29,20 @@
 // Using a spinning finish on the main (MTGS) thread is apparently a big win still, over trying
 // to wait out all the pending m_finished semaphores.  It leaves one spinwait in the rasterizer,
 // but that's still worlds better than 2-6 spinning threads like before.
-#define UseSpinningFinish		1
+
+#define UseSpinningFinish
 
 // Set this to 1 to remove a lot of non-const div/modulus ops from the rasterization process.
 // Might likely be a measurable speedup but limits threading to 1, 2, 4, and 8 threads.
 // note by rama: Speedup is around 5% on average.
-#define UseConstThreadCount		0
 
-#if UseConstThreadCount
+// #define UseConstThreadCount
+
+#ifdef UseConstThreadCount
 	// ThreadsConst - const number of threads.  User-configured threads (in GSdx panel) must match
 	// this value if UseConstThreadCount is enabled. [yeah, it's hacky for now]
 	static const int ThreadsConst = 2;
-	static const int ThreadMaskConst = ThreadsConst-1;
+	static const int ThreadMaskConst = ThreadsConst - 1;
 #endif
 
 GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads)
@@ -57,11 +59,15 @@ GSRasterizer::~GSRasterizer()
 
 __forceinline bool GSRasterizer::IsOneOfMyScanlines(int scanline) const
 {
-#if UseConstThreadCount
-	return (ThreadMaskConst==0) || ((scanline & ThreadMaskConst) == m_id);
-#else
+	#ifdef UseConstThreadCount
+
+	return ThreadMaskConst == 0 || (scanline & ThreadMaskConst) == m_id;
+
+	#else
+
 	return (scanline % m_threads) == m_id;
-#endif
+
+	#endif
 }
 
 void GSRasterizer::Draw(const GSRasterizerData* data)
@@ -871,7 +877,7 @@ void GSRasterizerMT::ThreadProc()
 {
 	// _mm_setcsr(MXCSR);
 
-	while( true )
+	while(true)
 	{
 		sem_wait(&m_semaphore);
 
@@ -879,10 +885,15 @@ void GSRasterizerMT::ThreadProc()
 
 		__super::Draw(m_data);
 
-		if( UseSpinningFinish )
-			_interlockedbittestandreset( &m_sync, m_id );
-		else
-			sem_post(&m_finished);
+		#ifdef UseSpinningFinish
+		
+		_interlockedbittestandreset(&m_sync, m_id);
+		
+		#else
+		
+		sem_post(&m_finished);
+		
+		#endif
 	}
 
 	sem_post(&m_stopped);
@@ -917,33 +928,36 @@ void GSRasterizerList::Draw(const GSRasterizerData* data)
 
 	m_sync = m_syncstart;
 
-	for(unsigned i=1; i<size(); ++i)
+	for(size_t i = 1; i < size(); i++)
 	{
 		(*this)[i]->Draw(data);
 	}
 
 	(*this)[0]->Draw(data);
 
-	if( UseSpinningFinish )
+	#ifdef UseSpinningFinish
+
+	while(m_sync) _mm_pause();
+
+	#else
+
+	for(size_t i = 1; i < size(); i++)
 	{
-		while(m_sync) _mm_pause();
+		sem_wait(&m_finished);
 	}
-	else
-	{
-		for(unsigned i=1; i<size(); ++i )
-			sem_wait(&m_finished);
-	}
+
+	#endif
 
 	m_stats.ticks = __rdtsc() - start;
 
-	for(unsigned i=0; i<size(); ++i)
+	for(size_t i = 0; i < size(); i++)
 	{
 		GSRasterizerStats s;
 
 		(*this)[i]->GetStats(s);
 
 		m_stats.pixels += s.pixels;
-		m_stats.prims = max(m_stats.prims, s.prims);
+		m_stats.prims = std::max<int>(m_stats.prims, s.prims);
 	}
 }
 

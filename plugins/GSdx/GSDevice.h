@@ -46,7 +46,7 @@ struct InterlaceConstantBuffer
 
 #pragma pack(pop)
 
-class GSDevice : public GSAlignedClass<16>
+class GSDevice : public GSAlignedClass<32>
 {
 	list<GSTexture*> m_pool;
 
@@ -66,7 +66,7 @@ protected:
 	struct {size_t stride, start, count, limit;} m_vertices;
 	uint32 m_msaa;
 	DXGI_SAMPLE_DESC m_msaa_desc;
-	unsigned m_frame; // for ageing the pool
+	unsigned int m_frame; // for ageing the pool
 
 	virtual GSTexture* Create(int type, int w, int h, bool msaa, int format) = 0;
 

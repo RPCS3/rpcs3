@@ -68,7 +68,8 @@ void GSCaptureDlg::OnInit()
 
 	ComboBoxAppend(IDC_CODECS, "Uncompressed", 0, true);
 
-	CoInitialize(0);
+	CoInitialize(0); // this is obviously wrong here, each thread should call this on start, and where is CoUninitalize?
+
 	BeginEnumSysDev(CLSID_VideoCompressorCategory, moniker)
 	{
 		Codec c;
@@ -195,6 +196,7 @@ bool GSCaptureDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		if (ris != 2)
 		{
 			wstring s = wstring(c.DisplayName.m_str);
+
 			theApp.SetConfig("CaptureVideoCodecDisplayName", string(s.begin(), s.end()).c_str());
 		}
 		else

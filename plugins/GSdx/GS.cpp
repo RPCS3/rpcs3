@@ -153,7 +153,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 {
 	GSDevice* dev = NULL;
 
-	if( renderer == -1 )
+	if(renderer == -1)
 	{
 		renderer = theApp.GetConfig("renderer", 0);
 	}
@@ -167,6 +167,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 			// GSopen call then they'll get corrupted graphics, but that's not my problem.
 
 			delete s_gs;
+
 			s_gs = NULL;
 		}
 
@@ -178,20 +179,25 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 		case 12: case 13: new GSDeviceNull(); break;
 		}
 
-		if( !dev ) return -1;
+		if(!dev) return -1;
 
-		if( !s_gs )
+		if(!s_gs)
 		{
 			switch(renderer)
 			{
 			default:
-			case 0: s_gs = new GSRendererDX9(); break;
-			case 3: s_gs = new GSRendererDX11(); break;
+			case 0: 
+				s_gs = new GSRendererDX9(); 
+				break;
+			case 3: 
+				s_gs = new GSRendererDX11(); 
+				break;
 			case 2: case 5: case 8: case 11: case 13:
-				s_gs = new GSRendererNull(); break;
-
+				s_gs = new GSRendererNull(); 
+				break;
 			case 1: case 4: case 7: case 10: case 12:
-				s_gs = new GSRendererSW(); break;
+				s_gs = new GSRendererSW(); 
+				break;
 			}
 
 			s_renderer = renderer;
@@ -519,72 +525,6 @@ EXPORT_C GSsetFrameLimit(int limit)
 
 #ifdef _WINDOWS
 
-// Returns false if the window's been closed or an invalid packet was encountered.
-static __forceinline bool LoopDatPacket_Thingamajig(HWND hWnd, uint8 (&regs)[0x2000], vector<uint8>& buff, FILE* fp, long start)
-{
-	switch(fgetc(fp))
-	{
-	case EOF:
-		fseek(fp, start, 0);
-		return !!IsWindowVisible(hWnd);
-
-	case 0:
-	{
-		uint32 index = fgetc(fp);
-		uint32 size;
-
-		fread(&size, 4, 1, fp);
-
-		switch(index)
-		{
-		case 0:
-		{
-			if(buff.size() < 0x4000) buff.resize(0x4000);
-			uint32 addr = 0x4000 - size;
-			fread(&buff[0] + addr, size, 1, fp);
-			GSgifTransfer1(&buff[0], addr);
-		}
-		break;
-
-		case 1:
-			if(buff.size() < size) buff.resize(size);
-			fread(&buff[0], size, 1, fp);
-			GSgifTransfer2(&buff[0], size / 16);
-		break;
-
-		case 2:
-			if(buff.size() < size) buff.resize(size);
-			fread(&buff[0], size, 1, fp);
-			GSgifTransfer3(&buff[0], size / 16);
-		break;
-		}
-	}
-	break;
-
-	case 1:
-		GSvsync(fgetc(fp));
-		return !!IsWindowVisible(hWnd);
-
-	case 2:
-	{
-		uint32 size;
-		fread(&size, 4, 1, fp);
-		if(buff.size() < size) buff.resize(size);
-		GSreadFIFO2(&buff[0], size / 16);
-	}
-	break;
-
-	case 3:
-		fread(regs, 0x2000, 1, fp);
-	break;
-
-	default:
-		return false;
-	}
-
-	return true;
-}
-
 // lpszCmdLine:
 //   First parameter is the renderer.
 //   Second parameter is the gs file to load and run.
@@ -634,7 +574,73 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 
 		GSvsync(1);
 
-		while( LoopDatPacket_Thingamajig(hWnd, regs, buff, fp, start) ) ;
+		bool exit = false;
+
+		while(!exit)
+		{
+			uint32 index;
+			uint32 size;
+			uint32 addr;
+
+			int pos;
+
+			switch(fgetc(fp))
+			{
+			case EOF:
+				fseek(fp, start, 0);
+				exit = !IsWindowVisible(hWnd);
+				break;
+
+			case 0:
+				index = fgetc(fp);
+				fread(&size, 4, 1, fp);
+
+				switch(index)
+				{
+				case 0:
+					if(buff.size() < 0x4000) buff.resize(0x4000);
+					addr = 0x4000 - size;
+					fread(buff.data() + addr, size, 1, fp);
+					GSgifTransfer1(buff.data(), addr);
+					break;
+
+				case 1:
+					if(buff.size() < size) buff.resize(size);
+					fread(buff.data(), size, 1, fp);
+					GSgifTransfer2(buff.data(), size / 16);
+					break;
+
+				case 2:
+					if(buff.size() < size) buff.resize(size);
+					fread(buff.data(), size, 1, fp);
+					GSgifTransfer3(buff.data(), size / 16);
+					break;
+
+				case 3:
+					if(buff.size() < size) buff.resize(size);
+					fread(buff.data(), size, 1, fp);
+					GSgifTransfer(buff.data(), size / 16);
+					break;
+				}
+
+				break;
+
+			case 1:
+				GSvsync(fgetc(fp));
+				exit = !IsWindowVisible(hWnd);
+				break;
+
+			case 2:
+				fread(&size, 4, 1, fp);
+				if(buff.size() < size) buff.resize(size);
+				GSreadFIFO2(&buff[0], size / 16);
+				break;
+
+			case 3:
+				fread(regs, 0x2000, 1, fp);
+				break;
+			}
+		}
 
 		GSclose();
 		GSshutdown();
@@ -672,7 +678,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 			{PSM_PSMZ16S, "16ZS"},
 		};
 
-		uint8* ptr = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
+		uint8* ptr = (uint8*)_aligned_malloc(1024 * 1024 * 4, 32);
 
 		for(int i = 0; i < 1024 * 1024 * 4; i++) ptr[i] = (uint8)i;
 
@@ -809,7 +815,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 	{
 		GSLocalMemory mem;
 
-		uint8* ptr = (uint8*)_aligned_malloc(1024 * 1024 * 4, 16);
+		uint8* ptr = (uint8*)_aligned_malloc(1024 * 1024 * 4, 32);
 
 		for(int i = 0; i < 1024 * 1024 * 4; i++) ptr[i] = (uint8)i;
 

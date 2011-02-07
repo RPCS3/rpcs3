@@ -145,8 +145,11 @@ void GSDevice::Recycle(GSTexture* t)
 	if(t)
 	{
 		t->last_frame_used = m_frame;
+
 		m_pool.push_front(t);
+		
 		//printf("%d\n",m_pool.size());
+		
 		while(m_pool.size() > 300)
 		{
 			delete m_pool.back();
@@ -159,9 +162,11 @@ void GSDevice::Recycle(GSTexture* t)
 void GSDevice::AgePool()
 {
 	m_frame++;
-	while (m_pool.size() > 20 && m_frame - m_pool.back()->last_frame_used > 10)
+
+	while(m_pool.size() > 20 && m_frame - m_pool.back()->last_frame_used > 10)
 	{
 		delete m_pool.back();
+
 		m_pool.pop_back();
 	}
 }

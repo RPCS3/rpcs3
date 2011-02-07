@@ -137,6 +137,7 @@ void GSDevice11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 	}
 
 	VSSetShader(i->second.vs, m_vs_cb);
+
 	IASetInputLayout(i->second.il);
 }
 

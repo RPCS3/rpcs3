@@ -229,8 +229,10 @@ bool GSDevice11::Create(GSWnd* wnd)
 		}
 	}
 
-	if (m_msaa_desc.Count == 1)
+	if(m_msaa_desc.Count == 1)
+	{
 		m_msaa = 0;
+	}
 
 	// convert
 
@@ -378,7 +380,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	if(m_wnd->IsManaged())
 	{
-		SetExclusive( !theApp.GetConfig("windowed", 1) );
+		SetExclusive(!theApp.GetConfig("windowed", 1));
 	}
 
 	return true;
@@ -392,11 +394,14 @@ bool GSDevice11::Reset(int w, int h)
 	if(m_swapchain)
 	{
 		DXGI_SWAP_CHAIN_DESC scd;
+		
 		memset(&scd, 0, sizeof(scd));
+
 		m_swapchain->GetDesc(&scd);
 		m_swapchain->ResizeBuffers(scd.BufferCount, w, h, scd.BufferDesc.Format, 0);
 
 		CComPtr<ID3D11Texture2D> backbuffer;
+
 		if(FAILED(m_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbuffer)))
 		{
 			return false;
@@ -422,9 +427,12 @@ void GSDevice11::SetExclusive(bool isExcl)
 	m_swapchain->ResizeTarget(&desc);
 	*/
 
-	HRESULT hr = m_swapchain->SetFullscreenState( isExcl, NULL );
+	HRESULT hr = m_swapchain->SetFullscreenState(isExcl, NULL);
+
 	if(hr == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
+	{
 		fprintf(stderr, "(GSdx10) SetExclusive(%s) failed; request unavailable.", isExcl ? "true" : "false");
+	}
 }
 
 void GSDevice11::Flip()
@@ -885,10 +893,13 @@ void GSDevice11::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 void GSDevice11::PSSetShaderResource(int i, GSTexture* sr)
 {
 	ID3D11ShaderResourceView* srv = NULL;
-	if (sr) srv = *(GSTexture11*)sr;
 
-	if (m_state.ps_srv[i] != srv) {
+	if(sr) srv = *(GSTexture11*)sr;
+
+	if(m_state.ps_srv[i] != srv) 
+	{
 		m_state.ps_srv[i] = srv;
+
 		m_srv_changed = true;
 	}
 }
@@ -914,13 +925,17 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 		m_ctx->PSSetShader(ps, NULL, 0);
 	}
 
-	if (m_srv_changed) {
+	if (m_srv_changed)
+	{
 		m_ctx->PSSetShaderResources(0, 3, m_state.ps_srv);
+	
 		m_srv_changed = false;
 	}
 
-	if (m_ss_changed) {
+	if(m_ss_changed) 
+	{
 		m_ctx->PSSetSamplers(0, 3, m_state.ps_ss);
+	
 		m_ss_changed = false;
 	}
 
@@ -982,8 +997,8 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 
 		vp.TopLeftX = 0;
 		vp.TopLeftY = 0;
-		vp.Width = (FLOAT)rt->GetWidth();
-		vp.Height = (FLOAT)rt->GetHeight();
+		vp.Width = (float)rt->GetWidth();
+		vp.Height = (float)rt->GetHeight();
 		vp.MinDepth = 0.0f;
 		vp.MaxDepth = 1.0f;
 

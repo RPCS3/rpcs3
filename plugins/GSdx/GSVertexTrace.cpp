@@ -120,8 +120,8 @@ void GSVertexTrace::Update(const GSVertexHW11* v, int count, GS_PRIM_CLASS primc
 
 using namespace Xbyak;
 
-GSVertexTrace::CGSW::CGSW(uint32 key, void* ptr, size_t maxsize)
-	: CodeGenerator(maxsize, ptr)
+GSVertexTrace::CGSW::CGSW(uint32 key, void* code, size_t maxsize)
+	: CodeGenerator(maxsize, code)
 {
 	#if _M_AMD64
 	#error TODO
@@ -161,10 +161,10 @@ GSVertexTrace::CGSW::CGSW(uint32 key, void* ptr, size_t maxsize)
 	static const float fmin = -FLT_MAX;
 	static const float fmax = FLT_MAX;
 
-	movss(xmm0, xmmword[&fmax]);
+	movss(xmm0, ptr[&fmax]);
 	shufps(xmm0, xmm0, _MM_SHUFFLE(0, 0, 0, 0));
 
-	movss(xmm1, xmmword[&fmin]);
+	movss(xmm1, ptr[&fmin]);
 	shufps(xmm1, xmm1, _MM_SHUFFLE(0, 0, 0, 0));
 
 	if(color)
@@ -202,7 +202,7 @@ L("loop");
 
 	if(tme && !fst && primclass == GS_SPRITE_CLASS)
 	{
-		movaps(xmm1, xmmword[edx + 1 * sizeof(GSVertexSW) + 32]);
+		movaps(xmm1, ptr[edx + 1 * sizeof(GSVertexSW) + 32]);
 		shufps(xmm1, xmm1, _MM_SHUFFLE(2, 2, 2, 2));
 	}
 
@@ -213,7 +213,7 @@ L("loop");
 			// min.c = min.c.minv(v[i + j].c);
 			// max.c = max.c.maxv(v[i + j].c);
 
-			movaps(xmm0, xmmword[edx + j * sizeof(GSVertexSW)]);
+			movaps(xmm0, ptr[edx + j * sizeof(GSVertexSW)]);
 
 			minps(xmm2, xmm0);
 			maxps(xmm3, xmm0);
@@ -222,7 +222,7 @@ L("loop");
 		// min.p = min.p.minv(v[i + j].p);
 		// max.p = max.p.maxv(v[i + j].p);
 
-		movaps(xmm0, xmmword[edx + j * sizeof(GSVertexSW) + 16]);
+		movaps(xmm0, ptr[edx + j * sizeof(GSVertexSW) + 16]);
 
 		minps(xmm4, xmm0);
 		maxps(xmm5, xmm0);
@@ -232,7 +232,7 @@ L("loop");
 			// min.t = min.t.minv(v[i + j].t);
 			// max.t = max.t.maxv(v[i + j].t);
 
-			movaps(xmm0, xmmword[edx + j * sizeof(GSVertexSW) + 32]);
+			movaps(xmm0, ptr[edx + j * sizeof(GSVertexSW) + 32]);
 
 			if(!fst)
 			{
@@ -265,27 +265,27 @@ L("loop");
 	{
 		cvttps2dq(xmm2, xmm2);
 		psrld(xmm2, 7);
-		movaps(xmmword[eax], xmm2);
+		movaps(ptr[eax], xmm2);
 
 		cvttps2dq(xmm3, xmm3);
 		psrld(xmm3, 7);
-		movaps(xmmword[edx], xmm3);
+		movaps(ptr[edx], xmm3);
 	}
 
-	movaps(xmmword[eax + 16], xmm4);
-	movaps(xmmword[edx + 16], xmm5);
+	movaps(ptr[eax + 16], xmm4);
+	movaps(ptr[edx + 16], xmm5);
 
 	if(tme)
 	{
-		movaps(xmmword[eax + 32], xmm6);
-		movaps(xmmword[edx + 32], xmm7);
+		movaps(ptr[eax + 32], xmm6);
+		movaps(ptr[edx + 32], xmm7);
 	}
 
 	ret();
 }
 
-GSVertexTrace::CGHW9::CGHW9(uint32 key, void* ptr, size_t maxsize)
-	: CodeGenerator(maxsize, ptr)
+GSVertexTrace::CGHW9::CGHW9(uint32 key, void* code, size_t maxsize)
+	: CodeGenerator(maxsize, code)
 {
 	#if _M_AMD64
 	#error TODO
@@ -327,10 +327,10 @@ GSVertexTrace::CGHW9::CGHW9(uint32 key, void* ptr, size_t maxsize)
 	static const float fmin = -FLT_MAX;
 	static const float fmax = FLT_MAX;
 
-	movss(xmm0, xmmword[&fmax]);
+	movss(xmm0, ptr[&fmax]);
 	shufps(xmm0, xmm0, _MM_SHUFFLE(0, 0, 0, 0));
 
-	movss(xmm1, xmmword[&fmin]);
+	movss(xmm1, ptr[&fmin]);
 	shufps(xmm1, xmm1, _MM_SHUFFLE(0, 0, 0, 0));
 
 	if(color)
@@ -368,7 +368,7 @@ L("loop");
 
 	if(tme && !fst && primclass == GS_SPRITE_CLASS)
 	{
-		movaps(xmm1, xmmword[edx + 5 * sizeof(GSVertexHW9) + 16]);
+		movaps(xmm1, ptr[edx + 5 * sizeof(GSVertexHW9) + 16]);
 		shufps(xmm1, xmm1, _MM_SHUFFLE(3, 3, 3, 3));
 	}
 
@@ -377,7 +377,7 @@ L("loop");
 		// min.p = min.p.minv(v[i + j].p);
 		// max.p = max.p.maxv(v[i + j].p);
 
-		movaps(xmm0, xmmword[edx + j * sizeof(GSVertexHW9) + 16]);
+		movaps(xmm0, ptr[edx + j * sizeof(GSVertexHW9) + 16]);
 
 		minps(xmm4, xmm0);
 		maxps(xmm5, xmm0);
@@ -390,7 +390,7 @@ L("loop");
 
 		if(color && (iip || j == n - 1) || tme)
 		{
-			movaps(xmm0, xmmword[edx + j * sizeof(GSVertexHW9)]);
+			movaps(xmm0, ptr[edx + j * sizeof(GSVertexHW9)]);
 		}
 
 		if(color && (iip || j == n - 1))
@@ -455,15 +455,15 @@ L("loop");
 			punpcklwd(xmm3, xmm0);
 		}
 
-		movaps(xmmword[eax], xmm2);
-		movaps(xmmword[edx], xmm3);
+		movaps(ptr[eax], xmm2);
+		movaps(ptr[edx], xmm3);
 	}
 
 	// m_min.p = pmin;
 	// m_max.p = pmax;
 
-	movaps(xmmword[eax + 16], xmm4);
-	movaps(xmmword[edx + 16], xmm5);
+	movaps(ptr[eax + 16], xmm4);
+	movaps(ptr[edx + 16], xmm5);
 
 	if(tme)
 	{
@@ -473,15 +473,15 @@ L("loop");
 		shufps(xmm6, xmm4, _MM_SHUFFLE(3, 3, 1, 0));
 		shufps(xmm7, xmm5, _MM_SHUFFLE(3, 3, 1, 0));
 
-		movaps(xmmword[eax + 32], xmm6);
-		movaps(xmmword[edx + 32], xmm7);
+		movaps(ptr[eax + 32], xmm6);
+		movaps(ptr[edx + 32], xmm7);
 	}
 
 	ret();
 }
 
-GSVertexTrace::CGHW11::CGHW11(uint32 key, void* ptr, size_t maxsize)
-	: CodeGenerator(maxsize, ptr)
+GSVertexTrace::CGHW11::CGHW11(uint32 key, void* code, size_t maxsize)
+	: CodeGenerator(maxsize, code)
 {
 	#if _M_AMD64
 	#error TODO
@@ -521,10 +521,10 @@ GSVertexTrace::CGHW11::CGHW11(uint32 key, void* ptr, size_t maxsize)
 	static const float fmin = -FLT_MAX;
 	static const float fmax = FLT_MAX;
 
-	movss(xmm0, xmmword[&fmax]);
+	movss(xmm0, ptr[&fmax]);
 	shufps(xmm0, xmm0, _MM_SHUFFLE(0, 0, 0, 0));
 
-	movss(xmm1, xmmword[&fmin]);
+	movss(xmm1, ptr[&fmin]);
 	shufps(xmm1, xmm1, _MM_SHUFFLE(0, 0, 0, 0));
 
 	if(color)
@@ -564,7 +564,7 @@ L("loop");
 	{
 		if(color && (iip || j == n - 1) || tme)
 		{
-			movaps(xmm0, xmmword[edx + j * sizeof(GSVertexHW11)]);
+			movaps(xmm0, ptr[edx + j * sizeof(GSVertexHW11)]);
 		}
 
 		if(color && (iip || j == n - 1))
@@ -593,7 +593,7 @@ L("loop");
 			maxps(xmm7, xmm0);
 		}
 
-		movdqa(xmm0, xmmword[edx + j * sizeof(GSVertexHW11) + 16]);
+		movdqa(xmm0, ptr[edx + j * sizeof(GSVertexHW11) + 16]);
 
 		if(m_cpu.has(util::Cpu::tSSE41))
 		{
@@ -648,8 +648,8 @@ L("loop");
 			punpcklwd(xmm3, xmm0);
 		}
 
-		movaps(xmmword[eax], xmm2);
-		movaps(xmmword[edx], xmm3);
+		movaps(ptr[eax], xmm2);
+		movaps(ptr[edx], xmm3);
 	}
 
 	// m_min.p = pmin.xyww();
@@ -658,16 +658,16 @@ L("loop");
 	shufps(xmm4, xmm4, _MM_SHUFFLE(3, 3, 1, 0));
 	shufps(xmm5, xmm5, _MM_SHUFFLE(3, 3, 1, 0));
 
-	movaps(xmmword[eax + 16], xmm4);
-	movaps(xmmword[edx + 16], xmm5);
+	movaps(ptr[eax + 16], xmm4);
+	movaps(ptr[edx + 16], xmm5);
 
 	if(tme)
 	{
 		// m_min.t = tmin;
 		// m_max.t = tmax;
 
-		movaps(xmmword[eax + 32], xmm6);
-		movaps(xmmword[edx + 32], xmm7);
+		movaps(ptr[eax + 32], xmm6);
+		movaps(ptr[edx + 32], xmm7);
 	}
 
 	ret();

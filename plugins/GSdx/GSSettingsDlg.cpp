@@ -88,7 +88,9 @@ void GSSettingsDlg::OnInit()
 		ComboBoxAppend(IDC_RESOLUTION, "Please select...", (LPARAM)&m_modes.back(), true);
 
 		CComPtr<IDirect3D9> d3d;
+
 		d3d.Attach(Direct3DCreate9(D3D_SDK_VERSION));
+		
 		if(d3d)
 		{
 			uint32 w = theApp.GetConfig("ModeWidth", 0);
@@ -151,10 +153,13 @@ void GSSettingsDlg::OnInit()
 	SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_SETRANGE, 0, MAKELPARAM(8192, 256));
 	SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("resy", 1024), 0));
 
-	int r=theApp.GetConfig("Renderer", 0);
-	if (r>=0 && r<=2){//DX9
+	int r = theApp.GetConfig("Renderer", 0);
+
+	if(r >= 0 && r <= 2) // DX9
+	{
 		GSDevice9::ForceValidMsaaConfig();
-		m_lastValidMsaa=theApp.GetConfig("msaa", 0);
+
+		m_lastValidMsaa = theApp.GetConfig("msaa", 0);
 	}
 
 	SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETRANGE, 0, MAKELPARAM(16, 0));

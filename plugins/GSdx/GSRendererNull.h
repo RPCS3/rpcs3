@@ -43,10 +43,7 @@ public:
 		InitVertexKick<GSRendererNull>();
 	}
 
-	virtual ~GSRendererNull() {}
-
-	template<uint32 prim>
-	void DrawingKick( bool skip ) {}
-
-	void DoVertexKick() {}
+	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip)
+	{
+	}
 };

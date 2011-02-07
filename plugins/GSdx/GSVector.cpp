@@ -27,26 +27,6 @@ const GSVector4 GSVector4::m_ps4567(4.0f, 5.0f, 6.0f, 7.0f);
 const GSVector4 GSVector4::m_x3f800000(_mm_castsi128_ps(_mm_set1_epi32(0x3f800000)));
 const GSVector4 GSVector4::m_x4b000000(_mm_castsi128_ps(_mm_set1_epi32(0x4b000000)));
 
-GSVector4i::GSVector4i(const GSVector4& v)
-{
-	m = _mm_cvttps_epi32(v);
-}
-
-GSVector4::GSVector4(const GSVector4i& v)
-{
-	m = _mm_cvtepi32_ps(v);
-}
-
-GSVector4i GSVector4i::cast(const GSVector4& v)
-{
-	return GSVector4i(_mm_castps_si128(v.m));
-}
-
-GSVector4 GSVector4::cast(const GSVector4i& v)
-{
-	return GSVector4(_mm_castsi128_ps(v.m));
-}
-
 GSVector4i GSVector4i::fit(int arx, int ary) const
 {
 	GSVector4i r = *this;

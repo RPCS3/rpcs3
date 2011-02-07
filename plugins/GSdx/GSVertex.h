@@ -28,7 +28,7 @@
 
 #pragma pack(push, 1)
 
-__aligned16 struct GSVertex
+__aligned32 struct GSVertex
 {
 	union
 	{

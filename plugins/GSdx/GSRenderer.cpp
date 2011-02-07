@@ -24,7 +24,7 @@
 
 GSRenderer::GSRenderer()
 	: GSState()
-	, m_tex_buff( (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 16) )
+	, m_tex_buff((uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32))
 	, m_vt(this)
 	, m_dev(NULL)
 	, m_shader(0)
@@ -61,9 +61,10 @@ GSRenderer::~GSRenderer()
 		m_dev->Reset(1, 1, GSDevice::Windowed);
 	}*/
 
-	_aligned_free( m_tex_buff );
+	_aligned_free(m_tex_buff);
 
 	delete m_dev;
+
 	DeleteCriticalSection(&m_pGSsetTitle_Crit);
 }
 
@@ -220,13 +221,6 @@ bool GSRenderer::Merge(int field)
 			r.bottom = r.top + y;
 		}
 
-		// Breaks the blur filter, and actually makes games blurry again.
-		// This might have to do with earlier changes to device size detection.
-		/*if(blurdetected && i == 1)
-		{
-			r += GSVector4i(0, 1).xyxy();
-		}*/
-
 		GSVector4 scale = GSVector4(tex[i]->GetScale()).xyxy();
 
 		src[i] = GSVector4(r) * scale / GSVector4(tex[i]->GetSize()).xyxy();
@@ -380,8 +374,8 @@ void GSRenderer::VSync(int field)
 
 			EnterCriticalSection(&m_pGSsetTitle_Crit);
 
-			strncpy(m_GStitleInfoBuffer, s.c_str(), ArraySize(m_GStitleInfoBuffer)-1);
-			m_GStitleInfoBuffer[sizeof(m_GStitleInfoBuffer)-1] = 0;// make sure null terminated even if text overflows
+			strncpy(m_GStitleInfoBuffer, s.c_str(), countof(m_GStitleInfoBuffer) - 1);
+			m_GStitleInfoBuffer[sizeof(m_GStitleInfoBuffer) - 1] = 0;// make sure null terminated even if text overflows
 
 			LeaveCriticalSection(&m_pGSsetTitle_Crit);
 		}

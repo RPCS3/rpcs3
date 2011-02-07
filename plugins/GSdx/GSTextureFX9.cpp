@@ -69,7 +69,7 @@ void GSDevice9::SetupIA(const void* vertices, int count, int prim)
 
 void GSDevice9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
-	hash_map< uint32, GSVertexShader9 >::const_iterator i = m_vs.find(sel);
+	hash_map<uint32, GSVertexShader9>::const_iterator i = m_vs.find(sel);
 
 	if(i == m_vs.end())
 	{
@@ -110,6 +110,7 @@ void GSDevice9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 	}
 
 	VSSetShader(i->second.vs, (const float*)cb, sizeof(*cb) / sizeof(GSVector4));
+
 	IASetInputLayout(i->second.il);
 }
 

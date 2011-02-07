@@ -30,7 +30,7 @@
 #include "pthread.h"
 #include "semaphore.h"
 
-__aligned16 class GSRasterizerData
+__aligned32 class GSRasterizerData
 {
 public:
 	GSVector4i scissor;
@@ -50,7 +50,7 @@ public:
 	virtual void PrintStats() = 0;
 };
 
-class IDrawScanline : public GSAlignedClass<16>
+class IDrawScanline : public GSAlignedClass<32>
 {
 public:
 	typedef void (__fastcall *DrawScanlineStaticPtr)(int right, int left, int top, const GSVertexSW& v);
@@ -153,9 +153,11 @@ public:
 		push_back(new GSRasterizer(new DS(parent, 0), 0, threads));
 
 		m_syncstart = 0;
+
 		for(int i = 1; i < threads; i++)
 		{
 			push_back(new GSRasterizerMT(new DS(parent, i), i, threads, m_finished, m_sync));
+
 			_interlockedbittestandset(&m_syncstart, i);
 		}
 	}

@@ -31,7 +31,6 @@ GSDevice9::GSDevice9()
 
 	memset(&m_pp, 0, sizeof(m_pp));
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
-
 	memset(&m_state, 0, sizeof(m_state));
 
 	m_state.bf = 0xffffffff;
@@ -39,81 +38,109 @@ GSDevice9::GSDevice9()
 
 GSDevice9::~GSDevice9()
 {
-	for_each(m_mskfix.begin(), m_mskfix.end(), delete_second());
-
 	for_each(m_om_bs.begin(), m_om_bs.end(), delete_second());
 	for_each(m_om_dss.begin(), m_om_dss.end(), delete_second());
 	for_each(m_ps_ss.begin(), m_ps_ss.end(), delete_second());
+	for_each(m_mskfix.begin(), m_mskfix.end(), delete_second());
 
 	if(m_state.vs_cb) _aligned_free(m_state.vs_cb);
 	if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
 }
 
+// if supported and null != msaa_desc, msaa_desc will contain requested Count and Quality
 
-//if supported and null!=msaa_desc,  msaa_desc will contain requested Count and Quality
-static bool IsMsaaSupported(CComPtr<IDirect3D9>& d3d, D3DFORMAT depth_format, uint msaaCount, OUT DXGI_SAMPLE_DESC* msaa_desc=NULL){
+static bool IsMsaaSupported(IDirect3D9* d3d, D3DFORMAT depth_format, uint msaaCount, DXGI_SAMPLE_DESC* msaa_desc = NULL)
+{
+	if(msaaCount > 16) return false;
+
 	D3DCAPS9 d3dcaps;
 
-	if (msaaCount>16) return false;
-
 	memset(&d3dcaps, 0, sizeof(d3dcaps));
+
 	d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &d3dcaps);
 
 	DWORD quality[2] = {0, 0};
 
-	if(SUCCEEDED(d3d->CheckDeviceMultiSampleType(d3dcaps.AdapterOrdinal, d3dcaps.DeviceType, D3DFMT_A8R8G8B8, TRUE, (D3DMULTISAMPLE_TYPE)msaaCount, &quality[0])) && quality[0] >0
-	&& SUCCEEDED(d3d->CheckDeviceMultiSampleType(d3dcaps.AdapterOrdinal, d3dcaps.DeviceType, depth_format, TRUE, (D3DMULTISAMPLE_TYPE)msaaCount, &quality[1])) && quality[1] >0
-	){
-		if (msaa_desc){
-			msaa_desc->Count	= msaaCount;
-			msaa_desc->Quality	= std::min<DWORD>(quality[0] - 1, quality[1] - 1);
+	if(SUCCEEDED(d3d->CheckDeviceMultiSampleType(d3dcaps.AdapterOrdinal, d3dcaps.DeviceType, D3DFMT_A8R8G8B8, TRUE, (D3DMULTISAMPLE_TYPE)msaaCount, &quality[0])) && quality[0] > 0
+	&& SUCCEEDED(d3d->CheckDeviceMultiSampleType(d3dcaps.AdapterOrdinal, d3dcaps.DeviceType, depth_format, TRUE, (D3DMULTISAMPLE_TYPE)msaaCount, &quality[1])) && quality[1] > 0)
+	{
+		if(msaa_desc)
+		{
+			msaa_desc->Count = msaaCount;
+			msaa_desc->Quality = std::min<DWORD>(quality[0] - 1, quality[1] - 1);
 		}
+
 		return true;
 	}
 
 	return false;
 }
 
-static bool TestDepthFormat(CComPtr<IDirect3D9> &d3d, D3DFORMAT format)
+static bool TestDepthFormat(IDirect3D9* d3d, D3DFORMAT format)
 {
-	if (FAILED(d3d->CheckDeviceFormat(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, format)))
+	if(FAILED(d3d->CheckDeviceFormat(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, format)))
+	{
 		return false;
-	if (FAILED(d3d->CheckDepthStencilMatch(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DFMT_X8R8G8B8, format)))
+	}
+
+	if(FAILED(d3d->CheckDepthStencilMatch(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DFMT_X8R8G8B8, format)))
+	{
 		return false;
+	}
+
 	return true;
 }
 
+static D3DFORMAT BestD3dFormat(IDirect3D9* d3d, int msaaCount = 0, DXGI_SAMPLE_DESC* msaa_desc = NULL)
+{
+	// In descending order of preference
 
-//In descending order of preference
-static D3DFORMAT s_DX9formatsToSearch[]={D3DFMT_D32, D3DFMT_D32F_LOCKABLE, D3DFMT_D24S8};
+	static D3DFORMAT fmts[] = 
+	{
+		D3DFMT_D32, 
+		D3DFMT_D32F_LOCKABLE, 
+		D3DFMT_D24S8
+	};
 
-static D3DFORMAT BestD3dFormat(CComPtr<IDirect3D9>& d3d, int msaaCount=0, OUT DXGI_SAMPLE_DESC* msaa_desc=NULL){
-	if(!d3d) return D3DFMT_UNKNOWN;
-	if (1==msaaCount) msaaCount=0;
+	if(1 == msaaCount) msaaCount = 0;
 
-	for (int i=0; i<sizeof(s_DX9formatsToSearch); i++)
-		if (TestDepthFormat(d3d, s_DX9formatsToSearch[i]) && (!msaaCount || IsMsaaSupported(d3d, s_DX9formatsToSearch[i], msaaCount, msaa_desc)))
-			return s_DX9formatsToSearch[i];
+	for(int i = 0; i < sizeof(fmts); i++)
+	{
+		if(TestDepthFormat(d3d, fmts[i]) && (!msaaCount || IsMsaaSupported(d3d, fmts[i], msaaCount, msaa_desc)))
+		{
+			return fmts[i];
+		}
+	}
 
 	return D3DFMT_UNKNOWN;
 }
 
-//return: 32, 24, or 0 if not supported. if 1==msaa, considered as msaa=0
-uint GSDevice9::GetMaxDepth(uint msaa=0){
+// return: 32, 24, or 0 if not supported. if 1==msaa, considered as msaa=0
+
+uint GSDevice9::GetMaxDepth(uint msaa = 0)
+{
 	CComPtr<IDirect3D9> d3d;
+
 	d3d.Attach(Direct3DCreate9(D3D_SDK_VERSION));
 
-	D3DFORMAT f=BestD3dFormat(d3d, msaa);
-	switch (f){
-		case D3DFMT_D32: case D3DFMT_D32F_LOCKABLE:	return 32;
-		case D3DFMT_D24S8:							return 24;
+	switch(BestD3dFormat(d3d, msaa))
+	{
+		case D3DFMT_D32: 
+		case D3DFMT_D32F_LOCKABLE:
+			return 32;
+		case D3DFMT_D24S8:
+			return 24;
 	}
+
 	return 0;
 }
 
-void GSDevice9::ForceValidMsaaConfig(){
-		if (0==GetMaxDepth(theApp.GetConfig("msaa", 0)))
-				theApp.SetConfig("msaa", 0);//replace invalid msaa value in ini file with 0.
+void GSDevice9::ForceValidMsaaConfig()
+{
+	if(0 == GetMaxDepth(theApp.GetConfig("msaa", 0)))
+	{
+		theApp.SetConfig("msaa", 0); // replace invalid msaa value in ini file with 0.
+	}
 };
 
 bool GSDevice9::Create(GSWnd* wnd)
@@ -128,17 +155,26 @@ bool GSDevice9::Create(GSWnd* wnd)
 	m_d3d.Attach(Direct3DCreate9(D3D_SDK_VERSION));
 
 	if(!m_d3d) return false;
+
 	ForceValidMsaaConfig();
-	//Get best format/depth for msaa. Assumption is that if the resulting depth is 24 instead of possible 32,
-	//                                the user was already warned when she selected it. (Lower res z buffer without warning is unacceptable).
-	m_depth_format=BestD3dFormat(m_d3d, m_msaa, &m_msaa_desc);
-	if (D3DFMT_UNKNOWN == m_depth_format){
-		//can't find a format with requested msaa, try without.
-		m_depth_format = BestD3dFormat(m_d3d, 0);
-		if (D3DFMT_UNKNOWN == m_depth_format)
-			return false;
+	
+	// Get best format/depth for msaa. Assumption is that if the resulting depth is 24 instead of possible 32,
+	// the user was already warned when she selected it. (Lower res z buffer without warning is unacceptable).
+	
+	m_depth_format = BestD3dFormat(m_d3d, m_msaa, &m_msaa_desc);
+	
+	if(D3DFMT_UNKNOWN == m_depth_format)
+	{
+		// can't find a format with requested msaa, try without.
 		
-		m_msaa=0;
+		m_depth_format = BestD3dFormat(m_d3d, 0);
+		
+		if(D3DFMT_UNKNOWN == m_depth_format)
+		{
+			return false;
+		}
+
+		m_msaa = 0;
 	}
 
 	memset(&m_d3dcaps, 0, sizeof(m_d3dcaps));
@@ -179,7 +215,6 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 		return false;
 	}
-
 
 	if(!Reset(1, 1))
 	{
@@ -274,7 +309,8 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 void GSDevice9::SetVsync(bool enable)
 {
-	if( m_vsync == enable ) return;
+	if(m_vsync == enable) return;
+
 	__super::SetVsync(enable);
 
 	// Clever trick:  Delete the backbuffer, so that the next Present will fail and
@@ -282,6 +318,7 @@ void GSDevice9::SetVsync(bool enable)
 	// vsync settings. :)
 
 	delete m_backbuffer;
+
 	m_backbuffer = NULL;
 }
 
@@ -293,6 +330,7 @@ bool GSDevice9::Reset(int w, int h)
 	HRESULT hr;
 
 	int mode = (!m_wnd->IsManaged() || theApp.GetConfig("windowed", 1)) ? Windowed : Fullscreen;
+
 	if(mode == DontCare)
 	{
 		mode = m_pp.Windowed ? Windowed : Fullscreen;
@@ -707,11 +745,11 @@ void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, c
 
 	IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
 	IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
+	IASetInputLayout(m_convert.il);
 
 	// vs
 
 	VSSetShader(m_convert.vs, NULL, 0);
-	IASetInputLayout(m_convert.il);
 
 	// ps
 
@@ -904,7 +942,7 @@ void GSDevice9::VSSetShader(IDirect3DVertexShader9* vs, const float* vs_cb, int 
 			{
 				if(m_state.vs_cb) _aligned_free(m_state.vs_cb);
 
-				m_state.vs_cb = (float*)_aligned_malloc(size, 16);
+				m_state.vs_cb = (float*)_aligned_malloc(size, 32);
 			}
 
 			m_state.vs_cb_len = vs_cb_len;
@@ -926,10 +964,13 @@ void GSDevice9::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 void GSDevice9::PSSetShaderResource(int i, GSTexture* sr)
 {
 	IDirect3DTexture9* srv = NULL;
-	if (sr) srv = *(GSTexture9*)sr;
 
-	if (m_state.ps_srvs[i] != srv) {
+	if(sr) srv = *(GSTexture9*)sr;
+
+	if(m_state.ps_srvs[i] != srv) 
+	{
 		m_state.ps_srvs[i] = srv;
+	
 		m_dev->SetTexture(i, srv);
 	}
 }
@@ -953,7 +994,7 @@ void GSDevice9::PSSetShader(IDirect3DPixelShader9* ps, const float* ps_cb, int p
 			{
 				if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
 
-				m_state.ps_cb = (float*)_aligned_malloc(size, 16);
+				m_state.ps_cb = (float*)_aligned_malloc(size, 32);
 			}
 
 			m_state.ps_cb_len = ps_cb_len;

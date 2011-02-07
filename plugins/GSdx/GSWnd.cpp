@@ -174,6 +174,7 @@ GSVector4i GSWnd::GetClientRect()
 
 // Returns FALSE if the window has no title, or if th window title is under the strict
 // management of the emulator.
+
 bool GSWnd::SetWindowText(const char* title)
 {
 	if( !m_IsManaged ) return false;

@@ -31,7 +31,7 @@
 
 class GSState;
 
-__aligned16 class GSVertexTrace
+__aligned32 class GSVertexTrace
 {
 	struct Vertex {GSVector4i c; GSVector4 p, t;};
 	struct VertexAlpha {int min, max; bool valid;};
@@ -41,14 +41,14 @@ __aligned16 class GSVertexTrace
 	class CGSW : public Xbyak::CodeGenerator
 	{
 	public:
-		CGSW(uint32 key, void* ptr, size_t maxsize);
+		CGSW(uint32 key, void* code, size_t maxsize);
 	};
 
 	class GSVertexTraceMapSW : public GSCodeGeneratorFunctionMap<CGSW, uint32, VertexTracePtr>
 	{
 	public:
 		GSVertexTraceMapSW() : GSCodeGeneratorFunctionMap("VertexTraceSW") {}
-		CGSW* Create(uint32 key, void* ptr, size_t maxsize) {return new CGSW(key, ptr, maxsize);}
+		CGSW* Create(uint32 key, void* code, size_t maxsize) {return new CGSW(key, code, maxsize);}
 	};
 
 	class CGHW9 : public Xbyak::CodeGenerator
@@ -63,7 +63,7 @@ __aligned16 class GSVertexTrace
 	{
 	public:
 		GSVertexTraceMapHW9() : GSCodeGeneratorFunctionMap("VertexTraceHW9") {}
-		CGHW9* Create(uint32 key, void* ptr, size_t maxsize) {return new CGHW9(key, ptr, maxsize);}
+		CGHW9* Create(uint32 key, void* code, size_t maxsize) {return new CGHW9(key, code, maxsize);}
 	};
 
 	class CGHW11 : public Xbyak::CodeGenerator
@@ -78,7 +78,7 @@ __aligned16 class GSVertexTrace
 	{
 	public:
 		GSVertexTraceMapHW11() : GSCodeGeneratorFunctionMap("VertexTraceHW11") {}
-		CGHW11* Create(uint32 key, void* ptr, size_t maxsize) {return new CGHW11(key, ptr, maxsize);}
+		CGHW11* Create(uint32 key, void* code, size_t maxsize) {return new CGHW11(key, code, maxsize);}
 	};
 
 	GSVertexTraceMapSW m_map_sw;

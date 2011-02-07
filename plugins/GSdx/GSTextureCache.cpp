@@ -836,11 +836,11 @@ GSTextureCache::Source::Source(GSRenderer* r)
 {
 	memset(m_valid, 0, sizeof(m_valid));
 
-	m_clut = (uint32*)_aligned_malloc(256 * sizeof(uint32), 16);
+	m_clut = (uint32*)_aligned_malloc(256 * sizeof(uint32), 32);
 
 	memset(m_clut, 0, sizeof(m_clut));
 
-	m_write.rect = (GSVector4i*)_aligned_malloc(3 * sizeof(GSVector4i), 16);
+	m_write.rect = (GSVector4i*)_aligned_malloc(3 * sizeof(GSVector4i), 32);
 	m_write.count = 0;
 }
 
@@ -1082,7 +1082,7 @@ void GSTextureCache::Target::Update()
 			}
 			else
 			{
-				static uint8* buff = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 16);
+				static uint8* buff = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 32);
 
 				int pitch = ((w + 3) & ~3) * 4;
 

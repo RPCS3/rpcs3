@@ -253,7 +253,7 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 
 	if(m_buff == NULL)
 	{
-		m_buff = _aligned_malloc(tw * th * sizeof(uint32), 16);
+		m_buff = _aligned_malloc(tw * th * sizeof(uint32), 32);
 
 		if(m_buff == NULL)
 		{

@@ -67,10 +67,10 @@ class GSDrawScanlineCodeGenerator : public CodeGenerator
 	void mix16(const Xmm& a, const Xmm& b, const Xmm& temp);
 	void clamp16(const Xmm& a, const Xmm& temp);
 	void alltrue();
-	void blend8(const Xmm& a, const Xmm& b);
 	void blend(const Xmm& a, const Xmm& b, const Xmm& mask);
-	void blend8r(const Xmm& b, const Xmm& a);
 	void blendr(const Xmm& b, const Xmm& a, const Xmm& mask);
+	void blend8(const Xmm& a, const Xmm& b);
+	void blend8r(const Xmm& b, const Xmm& a);
 
 public:
 	GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, uint64 key, void* ptr, size_t maxsize);

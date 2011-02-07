@@ -23,11 +23,15 @@
 
 #include "GSVector.h"
 
-__aligned16 union GSVertexSW
+__aligned32 union GSVertexSW
 {
 	struct {GSVector4 c, p, t;};
 	struct {GSVector4 v[3];};
 	struct {float f[12];};
+
+	#if _M_SSE >= 0x500
+	struct {GSVector8 cp, t_;};
+	#endif
 
 	GSVertexSW() {}
 	GSVertexSW(const GSVertexSW& v) {*this = v;}
@@ -213,4 +217,3 @@ __forceinline GSVertexSW operator / (const GSVertexSW& v, float f)
 	v0.t = v.t / vf;
 	return v0;
 }
-

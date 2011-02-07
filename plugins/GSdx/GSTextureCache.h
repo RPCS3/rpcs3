@@ -39,7 +39,7 @@ public:
 		FMT_8,
 	};
 
-	class Surface : public GSAlignedClass<16>
+	class Surface : public GSAlignedClass<32>
 	{
 	protected:
 		GSRenderer* m_renderer;

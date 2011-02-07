@@ -193,6 +193,7 @@ static const int __pagesize	= PCSX2_PAGESIZE;
 
 #	define __aligned(alig)	__declspec(align(alig))
 #	define __aligned16		__declspec(align(16))
+#	define __aligned32		__declspec(align(32))
 #	define __pagealigned	__declspec(align(PCSX2_PAGESIZE))
 
 	// Deprecated; use __align instead.

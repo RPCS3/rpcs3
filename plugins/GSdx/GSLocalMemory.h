@@ -39,7 +39,7 @@ struct GSOffset
 
 	struct
 	{
-		int row[2048]; // yn (n = 0 1 2 ...)
+		int row[4096]; // yn (n = 0 1 2 ...) NOTE: this wraps around above 2048, only transfers should address the upper half (dark cloud 2 inventing)
 		int* col[8]; // rowOffset*
 	} pixel;
 
@@ -116,14 +116,14 @@ protected:
 	static uint32 pageOffset8[32][64][128];
 	static uint32 pageOffset4[32][128][128];
 
-	static int rowOffset32[2048];
-	static int rowOffset32Z[2048];
-	static int rowOffset16[2048];
-	static int rowOffset16S[2048];
-	static int rowOffset16Z[2048];
-	static int rowOffset16SZ[2048];
-	static int rowOffset8[2][2048];
-	static int rowOffset4[2][2048];
+	static int rowOffset32[4096];
+	static int rowOffset32Z[4096];
+	static int rowOffset16[4096];
+	static int rowOffset16S[4096];
+	static int rowOffset16Z[4096];
+	static int rowOffset16SZ[4096];
+	static int rowOffset8[2][4096];
+	static int rowOffset4[2][4096];
 
 	static short blockOffset32[256];
 	static short blockOffset32Z[256];

@@ -249,7 +249,9 @@ public:
 		ps_sel.clr1 = om_bsel.IsCLR1();
 		ps_sel.fba = context->FBA.FBA;
 		ps_sel.aout = context->FRAME.PSM == PSM_PSMCT16 || context->FRAME.PSM == PSM_PSMCT16S || (context->FRAME.FBMSK & 0xff000000) == 0x7f000000 ? 1 : 0;
+		
 		if (UserHacks_AlphaHack) ps_sel.aout = 1;
+
 		if(PRIM->FGE)
 		{
 			ps_sel.fog = 1;

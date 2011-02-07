@@ -158,12 +158,13 @@ protected:
 	void GrowVertexBuffer()
 	{
 		m_maxcount = max(10000, m_maxcount * 3/2);
-		m_vertices = (Vertex*)_aligned_realloc(m_vertices, sizeof(Vertex) * m_maxcount, 16);
+		m_vertices = (Vertex*)_aligned_realloc(m_vertices, sizeof(Vertex) * m_maxcount, 32);
 		m_maxcount -= 100;
 	}
 
 	// Returns a pointer to the drawing vertex. Can return NULL!
-	template<uint32 prim> __fi Vertex* BaseDrawingKick(int& count)
+
+	template<uint32 prim> __forceinline Vertex* DrawingKick(bool skip, int& count)
 	{
 		switch(prim)
 		{
@@ -237,7 +238,7 @@ protected:
 			__assume(0);
 		}
 
-		return v;
+		return !skip ? v : NULL;
 	}
 
 	virtual void Draw() = 0;

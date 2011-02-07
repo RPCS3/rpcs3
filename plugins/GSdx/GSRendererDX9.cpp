@@ -57,11 +57,9 @@ bool GSRendererDX9::CreateDevice(GSDevice* dev)
 	return true;
 }
 
-void GSRendererDX9::DoVertexKick()
+template<uint32 prim, uint32 tme, uint32 fst> 
+void GSRendererDX9::VertexKick(bool skip)
 {
-	const bool tme = PRIM->TME;
-	const bool fst = PRIM->FST;
-
 	GSVertexHW9& dst = m_vl.AddTail();
 
 	dst.p = GSVector4(((GSVector4i)m_v.XYZ).upl16());
@@ -142,92 +140,90 @@ void GSRendererDX9::DoVertexKick()
 
 	dst.c0 = m_v.RGBAQ.u32[0];
 	dst.c1 = m_v.FOG.u32[1];
-}
 
-template< uint32 prim >
-void GSRendererDX9::DrawingKick( bool skip )
-{
-	int count;
+	//
 
 	// BaseDrawingKick can never return NULL here because the DrawingKick function
 	// tables route to DrawingKickNull for GS_INVLALID prim types (and that's the only
 	// condition where this function would return NULL).
 
-	GSVertexHW9* v = BaseDrawingKick<prim>(count);
-	if (skip || !v) return;
-
-	GSVector4 scissor = m_context->scissor.dx9;
-
-	GSVector4 pmin, pmax;
-
-	switch(prim)
+	int count = 0;
+	
+	if(GSVertexHW9* v = DrawingKick<prim>(skip, count))
 	{
-	case GS_POINTLIST:
-		pmin = v[0].p;
-		pmax = v[0].p;
-		break;
-	case GS_LINELIST:
-	case GS_LINESTRIP:
-	case GS_SPRITE:
-		pmin = v[0].p.min(v[1].p);
-		pmax = v[0].p.max(v[1].p);
-		break;
-	case GS_TRIANGLELIST:
-	case GS_TRIANGLESTRIP:
-	case GS_TRIANGLEFAN:
-		pmin = v[0].p.min(v[1].p).min(v[2].p);
-		pmax = v[0].p.max(v[1].p).max(v[2].p);
-		break;
+		GSVector4 scissor = m_context->scissor.dx9;
+
+		GSVector4 pmin, pmax;
+
+		switch(prim)
+		{
+		case GS_POINTLIST:
+			pmin = v[0].p;
+			pmax = v[0].p;
+			break;
+		case GS_LINELIST:
+		case GS_LINESTRIP:
+		case GS_SPRITE:
+			pmin = v[0].p.min(v[1].p);
+			pmax = v[0].p.max(v[1].p);
+			break;
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+			pmin = v[0].p.min(v[1].p).min(v[2].p);
+			pmax = v[0].p.max(v[1].p).max(v[2].p);
+			break;
+		}
+
+		GSVector4 test = (pmax < scissor) | (pmin > scissor.zwxy());
+
+		switch(prim)
+		{
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+		case GS_SPRITE:
+			test |= pmin == pmax;
+			break;
+		}
+
+		if(test.mask() & 3)
+		{
+			return;
+		}
+
+		switch(prim)
+		{
+		case GS_POINTLIST:
+			break;
+		case GS_LINELIST:
+		case GS_LINESTRIP:
+			if(PRIM->IIP == 0) {v[0].c0 = v[1].c0;}
+			break;
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+			if(PRIM->IIP == 0) {v[0].c0 = v[1].c0 = v[2].c0;}
+			break;
+		case GS_SPRITE:
+			if(PRIM->IIP == 0) {v[0].c0 = v[1].c0;}
+			v[0].p.z = v[1].p.z;
+			v[0].p.w = v[1].p.w;
+			v[0].c1 = v[1].c1;
+			v[2] = v[1];
+			v[3] = v[1];
+			v[1].p.y = v[0].p.y;
+			v[1].t.y = v[0].t.y;
+			v[2].p.x = v[0].p.x;
+			v[2].t.x = v[0].t.x;
+			v[4] = v[1];
+			v[5] = v[2];
+			count += 4;
+			break;
+		}
+
+		m_count += count;
 	}
-
-	GSVector4 test = (pmax < scissor) | (pmin > scissor.zwxy());
-
-	switch(prim)
-	{
-	case GS_TRIANGLELIST:
-	case GS_TRIANGLESTRIP:
-	case GS_TRIANGLEFAN:
-	case GS_SPRITE:
-		test |= pmin == pmax;
-		break;
-	}
-
-	if(test.mask() & 3)
-	{
-		return;
-	}
-
-	switch(prim)
-	{
-	case GS_POINTLIST:
-		break;
-	case GS_LINELIST:
-	case GS_LINESTRIP:
-		if(PRIM->IIP == 0) {v[0].c0 = v[1].c0;}
-		break;
-	case GS_TRIANGLELIST:
-	case GS_TRIANGLESTRIP:
-	case GS_TRIANGLEFAN:
-		if(PRIM->IIP == 0) {v[0].c0 = v[1].c0 = v[2].c0;}
-		break;
-	case GS_SPRITE:
-		if(PRIM->IIP == 0) {v[0].c0 = v[1].c0;}
-		v[0].p.z = v[1].p.z;
-		v[0].p.w = v[1].p.w;
-		v[0].c1 = v[1].c1;
-		v[2] = v[1];
-		v[3] = v[1];
-		v[1].p.y = v[0].p.y;
-		v[1].t.y = v[0].t.y;
-		v[2].p.x = v[0].p.x;
-		v[2].t.x = v[0].t.x;
-		v[4] = v[1];
-		v[5] = v[2];
-		count += 4;
-		break;
-	}
-
-	m_count += count;
 }
 
 void GSRendererDX9::Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
