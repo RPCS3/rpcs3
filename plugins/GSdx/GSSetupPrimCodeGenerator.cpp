@@ -157,8 +157,7 @@ void GSSetupPrimCodeGenerator::Depth()
 
 					static const float half = 0.5f;
 
-					vmovss(xmm1, dword[&half]);
-					vshufps(xmm1, xmm1, _MM_SHUFFLE(0, 0, 0, 0));
+					vbroadcastss(xmm1, dword[&half]);
 					vmulps(xmm1, xmm0);
 					vcvttps2dq(xmm1, xmm1);
 					vpslld(xmm1, 1);

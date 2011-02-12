@@ -30,6 +30,7 @@
 
 #ifdef _MSC_VER
 #	include <intrin.h>
+extern "C" unsigned __int64 __xgetbv(int);
 #else
 #	include <intrin_x86.h>
 #endif

@@ -24,12 +24,11 @@
 #include "StdAfx.h"
 #include "GSRasterizer.h"
 
-#include "pthread.h"
-
 // Using a spinning finish on the main (MTGS) thread is apparently a big win still, over trying
 // to wait out all the pending m_finished semaphores.  It leaves one spinwait in the rasterizer,
 // but that's still worlds better than 2-6 spinning threads like before.
 
+//
 #define UseSpinningFinish
 
 // Set this to 1 to remove a lot of non-const div/modulus ops from the rasterization process.
@@ -65,7 +64,7 @@ __forceinline bool GSRasterizer::IsOneOfMyScanlines(int scanline) const
 
 	#else
 
-	return (scanline % m_threads) == m_id;
+	return m_threads == 1 || (scanline % m_threads) == m_id;
 
 	#endif
 }
@@ -845,79 +844,90 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 
 //
 
-GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, int id, int threads, sem_t& finished, volatile long& sync)
+GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, int id, int threads, HANDLE ready, volatile long& sync)
 	: GSRasterizer(ds, id, threads)
-	, m_finished(finished)
+	, m_ready(ready)
 	, m_sync(sync)
-	, m_exit(false)
 	, m_data(NULL)
 {
-	sem_init(&m_semaphore, false, 0);
-	sem_init(&m_stopped, false, 0);
+	m_exit = CreateEvent(NULL, FALSE, FALSE, NULL);
+	m_draw = CreateEvent(NULL, FALSE, FALSE, NULL);
+
 	CreateThread();
 }
 
 GSRasterizerMT::~GSRasterizerMT()
 {
-	m_exit = true;
-	sem_post(&m_semaphore);
-	sem_wait(&m_stopped);
+	SetEvent(m_exit);
 
-	sem_destroy(&m_semaphore);
-	sem_destroy(&m_stopped);
+	CloseThread();
+
+	DeleteObject(m_exit);
+	DeleteObject(m_draw);
 }
 
 void GSRasterizerMT::Draw(const GSRasterizerData* data)
 {
 	m_data = data;
-	sem_post(&m_semaphore);
+
+	SetEvent(m_draw);
 }
 
 void GSRasterizerMT::ThreadProc()
 {
 	// _mm_setcsr(MXCSR);
 
+	HANDLE events[] = {m_exit, m_draw};
+
 	while(true)
 	{
-		sem_wait(&m_semaphore);
+		switch(WaitForMultipleObjects(countof(events), events, FALSE, INFINITE))
+		{
+		case WAIT_OBJECT_0 + 0: // exit
 
-		if(m_exit) break;
+			return;
+			
+		case WAIT_OBJECT_0 + 1: // draw
+			
+			__super::Draw(m_data);
 
-		__super::Draw(m_data);
+			#ifdef UseSpinningFinish
 
-		#ifdef UseSpinningFinish
-		
-		_interlockedbittestandreset(&m_sync, m_id);
-		
-		#else
-		
-		sem_post(&m_finished);
-		
-		#endif
+			_interlockedbittestandreset(&m_sync, m_id);
+
+			#else
+
+			SetEvent(m_ready);
+
+			#endif
+
+			break;
+		}
 	}
 
-	sem_post(&m_stopped);
+	ASSERT(0);
 }
 
 //
 
 GSRasterizerList::GSRasterizerList()
 {
-	m_threadcount = 0;
-	sem_init(&m_finished, false, 0);
 }
 
 GSRasterizerList::~GSRasterizerList()
 {
 	FreeRasterizers();
-	sem_destroy(&m_finished);
 }
 
 void GSRasterizerList::FreeRasterizers()
 {
-	for(unsigned i=0; i<size(); ++i) delete (*this)[i];
+	for(size_t i = 0; i < size(); i++) delete (*this)[i];
 
 	clear();
+
+	for(size_t i = 0; i < m_ready.size(); i++) CloseHandle(m_ready[i]);
+
+	m_ready.clear();
 }
 
 void GSRasterizerList::Draw(const GSRasterizerData* data)
@@ -927,12 +937,12 @@ void GSRasterizerList::Draw(const GSRasterizerData* data)
 	int64 start = __rdtsc();
 
 	m_sync = m_syncstart;
-
+	
 	for(size_t i = 1; i < size(); i++)
 	{
 		(*this)[i]->Draw(data);
 	}
-
+	
 	(*this)[0]->Draw(data);
 
 	#ifdef UseSpinningFinish
@@ -941,10 +951,7 @@ void GSRasterizerList::Draw(const GSRasterizerData* data)
 
 	#else
 
-	for(size_t i = 1; i < size(); i++)
-	{
-		sem_wait(&m_finished);
-	}
+	WaitForMultipleObjects(m_ready.size(), &m_ready[0], TRUE, INFINITE);
 
 	#endif
 

@@ -67,5 +67,7 @@ void GSCodeBuffer::ReleaseBuffer(size_t size)
 
 	m_pos = ((m_pos + size) + 15) & ~15;
 
+	ASSERT(m_pos < m_blocksize);
+
 	m_reserved = 0;
 }

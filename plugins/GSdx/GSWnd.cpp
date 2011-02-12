@@ -42,13 +42,13 @@ LRESULT CALLBACK GSWnd::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 	{
 		wnd = (GSWnd*)((LPCREATESTRUCT)lParam)->lpCreateParams;
 
-		SetWindowLongPtr(hWnd, GWL_USERDATA, (LONG_PTR)wnd);
+		SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)wnd);
 
 		wnd->m_hWnd = hWnd;
 	}
 	else
 	{
-		wnd = (GSWnd*)GetWindowLongPtr(hWnd, GWL_USERDATA);
+		wnd = (GSWnd*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	}
 
 	if(wnd == NULL)

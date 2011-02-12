@@ -212,7 +212,6 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -224,8 +223,6 @@
     <Import Project="vsprops\common.props" />
     <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\release.props" />
-    <Import Project="..\..\common\vsprops\3rdpartyDeps.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release AVX|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -234,8 +231,6 @@
     <Import Project="vsprops\common.props" />
     <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\release.props" />
-    <Import Project="..\..\common\vsprops\3rdpartyDeps.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug SSE4|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -244,8 +239,6 @@
     <Import Project="vsprops\common.props" />
     <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\debug.props" />
-    <Import Project="..\..\common\vsprops\3rdpartyDeps.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug AVX|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -254,8 +247,6 @@
     <Import Project="vsprops\common.props" />
     <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\debug.props" />
-    <Import Project="..\..\common\vsprops\3rdpartyDeps.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug SSSE3|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -264,8 +255,6 @@
     <Import Project="vsprops\common.props" />
     <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\debug.props" />
-    <Import Project="..\..\common\vsprops\3rdpartyDeps.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release SSSE3|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -274,8 +263,6 @@
     <Import Project="vsprops\common.props" />
     <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\release.props" />
-    <Import Project="..\..\common\vsprops\3rdpartyDeps.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -284,8 +271,6 @@
     <Import Project="vsprops\common.props" />
     <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\devel.props" />
-    <Import Project="..\..\common\vsprops\3rdpartyDeps.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release SSE2|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -294,8 +279,6 @@
     <Import Project="vsprops\common.props" />
     <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\release.props" />
-    <Import Project="..\..\common\vsprops\3rdpartyDeps.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -304,76 +287,79 @@
     <Import Project="vsprops\common.props" />
     <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\debug.props" />
-    <Import Project="..\..\common\vsprops\3rdpartyDeps.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Template|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="vsprops\common.props" />
-    <Import Project="vsprops\release.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="vsprops\common.props" />
-    <Import Project="vsprops\debug.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release SSE4|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="vsprops\ProjectRootDir.props" />
     <Import Project="vsprops\sse4.props" />
     <Import Project="vsprops\common.props" />
+    <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\release.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release AVX|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="vsprops\sse4.props" />
+    <Import Project="vsprops\ProjectRootDir.props" />
+    <Import Project="vsprops\avx.props" />
     <Import Project="vsprops\common.props" />
+    <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\release.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug SSE4|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="vsprops\ProjectRootDir.props" />
     <Import Project="vsprops\sse4.props" />
     <Import Project="vsprops\common.props" />
+    <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\debug.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug AVX|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="vsprops\sse4.props" />
+    <Import Project="vsprops\ProjectRootDir.props" />
+    <Import Project="vsprops\avx.props" />
     <Import Project="vsprops\common.props" />
+    <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\debug.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug SSSE3|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="vsprops\ProjectRootDir.props" />
     <Import Project="vsprops\ssse3.props" />
     <Import Project="vsprops\common.props" />
+    <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\debug.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release SSSE3|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="vsprops\ProjectRootDir.props" />
     <Import Project="vsprops\ssse3.props" />
     <Import Project="vsprops\common.props" />
+    <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\release.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release SSE2|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="vsprops\ProjectRootDir.props" />
+    <Import Project="vsprops\sse2.props" />
     <Import Project="vsprops\common.props" />
+    <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\release.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="vsprops\ProjectRootDir.props" />
+    <Import Project="vsprops\sse2.props" />
     <Import Project="vsprops\common.props" />
+    <Import Project="..\..\common\vsprops\BaseProperties.props" />
     <Import Project="vsprops\debug.props" />
-    <Import Project="..\..\common\vsprops\pthreads.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
@@ -702,6 +688,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="GPU.cpp" />
+    <ClCompile Include="GPUDrawScanline.cpp" />
+    <ClCompile Include="GPUDrawScanlineCodeGenerator.cpp" />
+    <ClCompile Include="GPULocalMemory.cpp" />
+    <ClCompile Include="GPURenderer.cpp" />
+    <ClCompile Include="GPURendererSW.cpp" />
+    <ClCompile Include="GPUSettingsDlg.cpp" />
+    <ClCompile Include="GPUSetupPrimCodeGenerator.cpp" />
+    <ClCompile Include="GPUState.cpp" />
     <ClCompile Include="GS.cpp">
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release SSE4|Win32'">AssemblyAndSourceCode</AssemblerOutput>
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release AVX|Win32'">AssemblyAndSourceCode</AssemblerOutput>
@@ -1746,6 +1741,18 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GPU.h" />
+    <ClInclude Include="GPUDrawingEnvironment.h" />
+    <ClInclude Include="GPUDrawScanline.h" />
+    <ClInclude Include="GPUDrawScanlineCodeGenerator.h" />
+    <ClInclude Include="GPULocalMemory.h" />
+    <ClInclude Include="GPURenderer.h" />
+    <ClInclude Include="GPURendererSW.h" />
+    <ClInclude Include="GPUScanlineEnvironment.h" />
+    <ClInclude Include="GPUSettingsDlg.h" />
+    <ClInclude Include="GPUSetupPrimCodeGenerator.h" />
+    <ClInclude Include="GPUState.h" />
+    <ClInclude Include="GPUVertex.h" />
     <ClInclude Include="GS.h" />
     <ClInclude Include="GSAlignedClass.h" />
     <ClInclude Include="GSBlock.h" />
@@ -1852,16 +1859,6 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GSdx.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\3rdparty\w32pthreads\pthreads.vcxproj">
-      <Project>{26511268-2902-4997-8421-ecd7055f9e28}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-    <ProjectReference Include="..\..\3rdparty\w32pthreads\pthreads_lib.vcxproj">
-      <Project>{7e9b2be7-cec3-4f14-847b-0ab8d562fb86}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

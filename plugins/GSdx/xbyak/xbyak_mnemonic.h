@@ -1,4 +1,4 @@
-const char *getVersionString() const { return "2.99"; }
+const char *getVersionString() const { return "2.991"; }
 void packssdw(const Mmx& mmx, const Operand& op) { opMMX(mmx, op, 0x6B); }
 void packsswb(const Mmx& mmx, const Operand& op) { opMMX(mmx, op, 0x63); }
 void packuswb(const Mmx& mmx, const Operand& op) { opMMX(mmx, op, 0x67); }
@@ -943,7 +943,7 @@ void vldmxcsr(const Address& addr) { opAVX_X_X_XM(xm2, xm0, addr, MM_0F, 0xAE, f
 void vstmxcsr(const Address& addr) { opAVX_X_X_XM(xm3, xm0, addr, MM_0F, 0xAE, false, -1); }
 void vmaskmovdqu(const Xmm& x1, const Xmm& x2) { opAVX_X_X_XM(x1, xm0, x2, MM_0F | PP_66, 0xF7, false, -1); }
 void vpextrb(const Operand& op, const Xmm& x, uint8 imm) { if (!op.isREG(i32e) && !op.isMEM()) throw ERR_BAD_COMBINATION; opAVX_X_X_XM(x, xm0, cvtReg(op, !op.isMEM(), Operand::XMM), MM_0F3A | PP_66, 0x14, false); db(imm); }
-void vpextrw(const Reg& r, const Xmm& x, uint8 imm) { opAVX_X_X_XM(x, xm0, Xmm(r.getIdx()), MM_0F | PP_66, 0xC5, false); db(imm); }
+void vpextrw(const Reg& r, const Xmm& x, uint8 imm) { opAVX_X_X_XM(Xmm(r.getIdx()), xm0, x, MM_0F | PP_66, 0xC5, false, r.isBit(64) ? 1 : 0); db(imm); }
 void vpextrw(const Address& addr, const Xmm& x, uint8 imm) { opAVX_X_X_XM(x, xm0, addr, MM_0F3A | PP_66, 0x15, false); db(imm); }
 void vpextrd(const Operand& op, const Xmm& x, uint8 imm) { if (!op.isREG(32) && !op.isMEM()) throw ERR_BAD_COMBINATION; opAVX_X_X_XM(x, xm0, cvtReg(op, !op.isMEM(), Operand::XMM), MM_0F3A | PP_66, 0x16, false, 0); db(imm); }
 void vpinsrb(const Xmm& x1, const Xmm& x2, const Operand& op, uint8 imm) { if (!op.isREG(32) && !op.isMEM()) throw ERR_BAD_COMBINATION; opAVX_X_X_XM(x1, x2, cvtReg(op, !op.isMEM(), Operand::XMM), MM_0F3A | PP_66, 0x20, false); db(imm); }

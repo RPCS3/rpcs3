@@ -300,9 +300,11 @@ void GSSettingsDlg::UpdateControls()
 
 	bool allowHacks = !!theApp.GetConfig("allowHacks", 0);
 
-	int scaling=1;//in case reading the combo doesn't work, enable the custom res control anyway
-	if (ComboBoxGetSelData(IDC_UPSCALE_MULTIPLIER, i)){
-		scaling=(int)i;
+	int scaling = 1; // in case reading the combo doesn't work, enable the custom res control anyway
+
+	if(ComboBoxGetSelData(IDC_UPSCALE_MULTIPLIER, i))
+	{
+		scaling = (int)i;
 	}
 
 	if(ComboBoxGetSelData(IDC_RENDERER, i))
@@ -310,26 +312,23 @@ void GSSettingsDlg::UpdateControls()
 		bool dx9 = i >= 0 && i <= 2;
 		bool dx10 = i >= 3 && i <= 5;
 		bool dx11 = i >= 6 && i <= 8;
-		bool ogl = i >= 9 && i <= 12;
-		bool hw = i == 0 || i == 3 || i == 6 || i == 9;
-		bool sw = i == 1 || i == 4 || i == 7 || i == 10;
+		bool hw = i == 0 || i == 3 || i == 6;
+		bool sw = i == 1 || i == 4 || i == 7;
 		bool native = !!IsDlgButtonChecked(m_hWnd, IDC_NATIVERES);
 
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), dx9 ? SW_SHOW : SW_HIDE);
-		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO10), dx10 ? SW_SHOW : SW_HIDE);
-		// TODO: ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO11), dx11 ? SW_SHOW : SW_HIDE);
-		// TODO: ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO_OGL), ogl ? SW_SHOW : SW_HIDE);
+		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO11), dx10 ? SW_SHOW : SW_HIDE);
 
 		EnableWindow(GetDlgItem(m_hWnd, IDC_WINDOWED), dx9);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX), hw && !native && scaling==1);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX_EDIT), hw && !native && scaling==1);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY), hw && !native && scaling==1);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY_EDIT), hw && !native && scaling==1);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX), hw && !native && scaling == 1);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX_EDIT), hw && !native && scaling == 1);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY), hw && !native && scaling == 1);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY_EDIT), hw && !native && scaling == 1);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_UPSCALE_MULTIPLIER), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_NATIVERES), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FILTER), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_PALTEX), hw);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_LOGZ), dx9 && hw && GSDevice9::GetMaxDepth(m_lastValidMsaa)<32);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_LOGZ), dx9 && hw && GSDevice9::GetMaxDepth(m_lastValidMsaa) < 32);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FBA), dx9 && hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_AA1), sw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS_EDIT), sw);
@@ -337,16 +336,16 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAA), hw);
 
-		//ShowWindow(GetDlgItem(m_hWnd, IDC_USERHACKS), allowHacks && hw)?SW_SHOW:SW_HIDE;  //Don't disable the "Hacks" frame
-		ShowWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), allowHacks && hw)?SW_SHOW:SW_HIDE;
-		ShowWindow(GetDlgItem(m_hWnd, IDC_MSAA), allowHacks && hw)?SW_SHOW:SW_HIDE;
-		ShowWindow(GetDlgItem(m_hWnd, IDC_STATIC_TEXT_HWAA), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		//ShowWindow(GetDlgItem(m_hWnd, IDC_USERHACKS), allowHacks && hw) ? SW_SHOW : SW_HIDE;  //Don't disable the "Hacks" frame
+		ShowWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), allowHacks && hw) ? SW_SHOW : SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_MSAA), allowHacks && hw) ? SW_SHOW : SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_STATIC_TEXT_HWAA), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 		
-		ShowWindow(GetDlgItem(m_hWnd, IDC_ALPHAHACK), allowHacks && hw)?SW_SHOW:SW_HIDE;
-		ShowWindow(GetDlgItem(m_hWnd, IDC_OFFSETHACK), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_ALPHAHACK), allowHacks && hw) ? SW_SHOW : SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_OFFSETHACK), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 		
-		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACKEDIT), allowHacks && hw)?SW_SHOW:SW_HIDE;
-		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), allowHacks && hw)?SW_SHOW:SW_HIDE;
-		ShowWindow(GetDlgItem(m_hWnd, IDC_STATIC_TEXT_SKIPDRAW), allowHacks && hw)?SW_SHOW:SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACKEDIT), allowHacks && hw) ? SW_SHOW : SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), allowHacks && hw) ? SW_SHOW : SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_STATIC_TEXT_SKIPDRAW), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 	}
 }

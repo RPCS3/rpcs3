@@ -28,7 +28,7 @@
 #define IDB_LOGO10                      2022
 #define IDC_FBA                         2023
 #define IDC_LOGO9                       2024
-#define IDC_LOGO10                      2025
+#define IDC_LOGO11                      2025
 #define IDD_CAPTURE                     2026
 #define IDD_GPUCONFIG                   2027
 #define IDC_BLUR                        2028

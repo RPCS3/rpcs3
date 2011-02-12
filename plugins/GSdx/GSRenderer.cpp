@@ -70,11 +70,7 @@ GSRenderer::~GSRenderer()
 
 bool GSRenderer::CreateWnd(const string& title, int w, int h)
 {
-	if(!m_wnd.Create(title.c_str(), w, h))
-	{
-		return false;
-	}
-	return true;
+	return m_wnd.Create(title.c_str(), w, h);
 }
 
 bool GSRenderer::CreateDevice(GSDevice* dev)
@@ -88,7 +84,7 @@ bool GSRenderer::CreateDevice(GSDevice* dev)
 	}
 
 	m_dev = dev;
-	m_dev->SetVsync( m_vsync && m_framelimit );
+	m_dev->SetVsync(m_vsync && m_framelimit);
 
 	return true;
 }

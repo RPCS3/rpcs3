@@ -98,7 +98,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	{
 		m_env.tex = p->tex;
 		m_env.clut = p->clut;
-		m_env.tw = p->tw;
+		// m_env.tw = p->tw;
 
 		unsigned short tw = (unsigned short)(1 << context->TEX0.TW);
 		unsigned short th = (unsigned short)(1 << context->TEX0.TH);

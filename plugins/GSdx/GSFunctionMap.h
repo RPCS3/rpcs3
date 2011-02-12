@@ -155,7 +155,6 @@ public:
 template<class CG, class KEY, class VALUE>
 class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
 {
-	uint32 m_id;
 	string m_name;
 	hash_map<uint64, CG*> m_cgmap;
 	GSCodeBuffer m_cb;
@@ -167,8 +166,7 @@ protected:
 
 public:
 	GSCodeGeneratorFunctionMap(const char* name)
-		: m_id(0x100000)
-		, m_name(name)
+		: m_name(name)
 	{
 	}
 
@@ -195,24 +193,29 @@ public:
 
 			ASSERT(cg);
 
+			ASSERT(cg->getSize() < MAX_SIZE);
+			
 			m_cb.ReleaseBuffer(cg->getSize());
 
 			m_cgmap[key] = cg;
 
 			// vtune method registration
+			
+			if(iJIT_IsProfilingActive())
+			{
+				string name = format("%s<%016I64x>()", m_name.c_str(), (uint64)key);
 
-			string name = format("%s<%016I64x>()", m_name.c_str(), (uint64)key);
+				iJIT_Method_Load ml;
 
-			iJIT_Method_Load ml;
+				memset(&ml, 0, sizeof(ml));
 
-			memset(&ml, 0, sizeof(ml));
+				ml.method_id = iJIT_GetNewMethodID();
+				ml.method_name = (char*)name.c_str();
+				ml.method_load_address = (void*)cg->getCode();
+				ml.method_size = (unsigned int)cg->getSize();
 
-			ml.method_id = m_id++;
-			ml.method_name = (char*)name.c_str();
-			ml.method_load_address = (void*)cg->getCode();
-			ml.method_size = cg->getSize();
-
-			iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &ml);
+				iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &ml);
+			}
 		}
 
 		return (VALUE)cg->getCode();

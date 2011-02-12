@@ -373,7 +373,9 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 
 			p.tex = t->m_buff;
 			p.clut = m_mem.m_clut;
-			p.tw = t->m_tw;
+			// p.tw = t->m_tw;
+
+			p.sel.tw = t->m_tw - 3;
 		}
 
 		p.sel.fge = PRIM->FGE;

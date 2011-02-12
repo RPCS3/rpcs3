@@ -27,9 +27,6 @@
 #include "GSThread.h"
 #include "GSAlignedClass.h"
 
-#include "pthread.h"
-#include "semaphore.h"
-
 __aligned32 class GSRasterizerData
 {
 public:
@@ -112,17 +109,16 @@ public:
 class GSRasterizerMT : public GSRasterizer, private GSThread
 {
 protected:
-	sem_t& m_finished;
 	volatile long& m_sync;
-	sem_t m_semaphore;
-	sem_t m_stopped;
-	bool m_exit;
+	HANDLE m_exit;
+	HANDLE m_draw;
+	HANDLE m_ready;
 	const GSRasterizerData* m_data;
 
 	void ThreadProc();
 
 public:
-	GSRasterizerMT(IDrawScanline* ds, int id, int threads, sem_t& finished, volatile long& sync);
+	GSRasterizerMT(IDrawScanline* ds, int id, int threads, HANDLE ready, volatile long& sync);
 	virtual ~GSRasterizerMT();
 
 	// IRasterizer
@@ -133,8 +129,7 @@ public:
 class GSRasterizerList : protected vector<IRasterizer*>, public IRasterizer
 {
 protected:
-	int m_threadcount;
-	sem_t m_finished;
+	std::vector<HANDLE> m_ready;
 	volatile long m_sync;
 	long m_syncstart;
 	GSRasterizerStats m_stats;
@@ -148,7 +143,7 @@ public:
 	{
 		FreeRasterizers();
 
-		threads = max(threads, 1); // TODO: min(threads, number of cpu cores)
+		threads = std::max<int>(threads, 1); // TODO: min(threads, number of cpu cores)
 
 		push_back(new GSRasterizer(new DS(parent, 0), 0, threads));
 
@@ -156,7 +151,11 @@ public:
 
 		for(int i = 1; i < threads; i++)
 		{
-			push_back(new GSRasterizerMT(new DS(parent, i), i, threads, m_finished, m_sync));
+			HANDLE ready = CreateEvent(NULL, FALSE, FALSE, NULL);
+
+			push_back(new GSRasterizerMT(new DS(parent, i), i, threads, ready, m_sync));
+
+			m_ready.push_back(ready);
 
 			_interlockedbittestandset(&m_syncstart, i);
 		}

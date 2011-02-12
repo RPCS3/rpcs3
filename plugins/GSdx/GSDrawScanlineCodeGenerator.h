@@ -47,18 +47,20 @@ class GSDrawScanlineCodeGenerator : public CodeGenerator
 	void Wrap(const Xmm& uv0);
 	void Wrap(const Xmm& uv0, const Xmm& uv1);
 	void AlphaTFX();
+	void ReadMask();
 	void TestAlpha();
 	void ColorTFX();
 	void Fog();
 	void ReadFrame();
 	void TestDestAlpha();
+	void WriteMask();
 	void WriteZBuf();
 	void AlphaBlend();
 	void WriteFrame(int params);
 
 	void ReadPixel(const Xmm& dst, const Reg32& addr);
-	void WritePixel(const Xmm& src, const Xmm& temp, const Reg32& addr, const Reg8& mask, bool fast, int psm);
-	void WritePixel(const Xmm& src, const Xmm& temp, const Reg32& addr, uint8 i, int psm);
+	void WritePixel(const Xmm& src, const Reg32& addr, const Reg8& mask, bool fast, int psm, int fz);
+	void WritePixel(const Xmm& src, const Reg32& addr, uint8 i, int psm);
 	void ReadTexel(const Xmm& dst, const Xmm& addr, const Xmm& temp1, const Xmm& temp2);
 	void ReadTexel(const Xmm& dst, const Xmm& addr, uint8 i);
 

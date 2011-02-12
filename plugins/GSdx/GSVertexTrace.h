@@ -40,6 +40,8 @@ __aligned32 class GSVertexTrace
 
 	class CGSW : public Xbyak::CodeGenerator
 	{
+		Xbyak::util::Cpu m_cpu;
+
 	public:
 		CGSW(uint32 key, void* code, size_t maxsize);
 	};

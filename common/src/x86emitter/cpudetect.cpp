@@ -258,6 +258,15 @@ void x86capabilities::Identify()
 	hasSupplementalStreamingSIMD3Extensions		= ( Flags2 >> 9 ) & 1; //ssse3
 	hasStreamingSIMD4Extensions					= ( Flags2 >> 19 ) & 1; //sse4.1
 	hasStreamingSIMD4Extensions2				= ( Flags2 >> 20 ) & 1; //sse4.2
+	
+	if((Flags2 >> 27) & 1) // OSXSAVE
+	{
+		if((__xgetbv(0) & 6) == 6) // XFEATURE_ENABLED_MASK[2:1] = ‘11b’ (XMM state and YMM state are enabled by OS).
+		{
+			hasAVX								= ( Flags2 >> 28 ) & 1; //avx
+			hasFMA								= ( Flags2 >> 12 ) & 1; //fma
+		}
+	}
 
 	// Ones only for AMDs:
 	hasMultimediaExtensionsExt					= ( EFlags >> 22 ) & 1; //mmx2

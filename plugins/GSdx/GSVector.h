@@ -2948,7 +2948,7 @@ public:
 
 	__forceinline explicit GSVector8i(__m128i m)
 	{
-		this->m = _mm256_insertf128_si256(_mm256_insertf128_si256(zero(), m, 0), m, 1);
+		this->m = zero().insert<0>(m).insert<1>(m);
 	}
 
 	__forceinline explicit GSVector8i(__m256i m)
@@ -2970,7 +2970,7 @@ public:
 
 	__forceinline void operator = (__m128i m)
 	{
-		this->m = _mm256_insertf128_si256(_mm256_insertf128_si256(zero(), m, 0), m, 1);
+		this->m = zero().insert<0>(m).insert<1>(m);
 	}
 
 	__forceinline void operator = (__m256i m)
@@ -2986,6 +2986,16 @@ public:
 	static GSVector8i cast(const GSVector8& v);
 
 	// TODO
+
+	template<int i> __forceinline GSVector4i extract() const
+	{
+		return GSVector4i(_mm256_extractf128_si256(m, i));
+	}
+
+	template<int i> __forceinline GSVector8i insert(__m128i m) const
+	{
+		return GSVector8i(_mm256_insertf128_si256(this->m, m, i));
+	}
 
 	__forceinline static GSVector8i zero()
 	{
@@ -3044,7 +3054,7 @@ public:
 
 	__forceinline GSVector8(__m128 m0, __m128 m1)
 	{
-		m = _mm256_insertf128_ps(_mm256_insertf128_ps(zero(), m0, 0), m1, 1);
+		m = zero().insert<0>(m0).insert<1>(m1);
 	}
 
 	__forceinline GSVector8(const GSVector8& v)
@@ -3059,7 +3069,7 @@ public:
 
 	__forceinline explicit GSVector8(__m128 m)
 	{
-		this->m = _mm256_insertf128_ps(_mm256_insertf128_ps(zero(), m, 0), m, 1);
+		this->m = zero().insert<0>(m).insert<1>(m);
 	}
 
 	__forceinline explicit GSVector8(__m256 m)
@@ -3081,7 +3091,7 @@ public:
 
 	__forceinline void operator = (__m128 m)
 	{
-		this->m = _mm256_insertf128_ps(_mm256_insertf128_ps(zero(), m, 0), m, 1);
+		this->m = zero().insert<0>(m).insert<1>(m);
 	}
 
 	__forceinline void operator = (__m256 m)
@@ -3164,6 +3174,16 @@ public:
 
 	// TODO
 
+	__forceinline GSVector8 l2h() const
+	{
+		return insert<1>(extract<0>());
+	}
+
+	__forceinline GSVector8 h2l() const
+	{
+		return insert<0>(extract<1>());
+	}
+
 	__forceinline GSVector8 andnot(const GSVector8& v) const
 	{
 		return GSVector8(_mm256_andnot_ps(v.m, m));
@@ -3189,11 +3209,24 @@ public:
 		return GSVector4(_mm256_extractf128_ps(m, i));
 	}
 
-	// TODO: insert
+	template<int i> __forceinline GSVector8 insert(__m128 m) const
+	{
+		return GSVector8(_mm256_insertf128_ps(this->m, m, i));
+	}
 
 	__forceinline static GSVector8 zero()
 	{
 		return GSVector8(_mm256_setzero_ps());
+	}
+
+	__forceinline static void zeroupper()
+	{
+		_mm256_zeroupper();
+	}
+
+	__forceinline static void zeroall()
+	{
+		_mm256_zeroall();
 	}
 
 	__forceinline static GSVector8 xffffffff()

@@ -35,6 +35,8 @@ GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& 
 
 	m_sel.key = key;
 
+	// ret(8);
+
 	Generate();
 }
 
@@ -104,30 +106,7 @@ L("loop");
 	// xmm6 = ga
 	// xmm7 = test
 
-	if(m_cpu.has(util::Cpu::tAVX))
-	{
-		if(m_sel.fwrite)
-		{
-			vmovdqa(xmm3, ptr[&m_env.fm]);
-		}
-
-		if(m_sel.zwrite)
-		{
-			vmovdqa(xmm4, ptr[&m_env.zm]);
-		}
-	}
-	else
-	{
-		if(m_sel.fwrite)
-		{
-			movdqa(xmm3, ptr[&m_env.fm]);
-		}
-
-		if(m_sel.zwrite)
-		{
-			movdqa(xmm4, ptr[&m_env.zm]);
-		}
-	}
+	ReadMask();
 
 	// ecx = steps
 	// esi = fzbr
@@ -192,85 +171,18 @@ L("loop");
 
 	TestDestAlpha();
 
-	if(m_cpu.has(util::Cpu::tAVX))
-	{
-		// fm |= test;
-		// zm |= test;
+	// ecx = steps
+	// esi = fzbr
+	// edi = fzbc
+	// ebp = za
+	// xmm2 = fd
+	// xmm3 = fm
+	// xmm4 = zm
+	// xmm5 = rb
+	// xmm6 = ga
+	// xmm7 = test
 
-		if(m_sel.fwrite)
-		{
-			vpor(xmm3, xmm7);
-		}
-
-		if(m_sel.zwrite)
-		{
-			vpor(xmm4, xmm7);
-		}
-
-		// int fzm = ~(fm == GSVector4i::xffffffff()).ps32(zm == GSVector4i::xffffffff()).mask();
-
-		vpcmpeqd(xmm1, xmm1);
-
-		if(m_sel.fwrite && m_sel.zwrite)
-		{
-			vpcmpeqd(xmm0, xmm1, xmm4);
-			vpcmpeqd(xmm1, xmm3);
-			vpackssdw(xmm1, xmm0);
-		}
-		else if(m_sel.fwrite)
-		{
-			vpcmpeqd(xmm1, xmm3);
-			vpackssdw(xmm1, xmm1);
-		}
-		else if(m_sel.zwrite)
-		{
-			vpcmpeqd(xmm1, xmm4);
-			vpackssdw(xmm1, xmm1);
-		}
-
-		vpmovmskb(edx, xmm1);
-		not(edx);
-	}
-	else
-	{
-		// fm |= test;
-		// zm |= test;
-
-		if(m_sel.fwrite)
-		{
-			por(xmm3, xmm7);
-		}
-
-		if(m_sel.zwrite)
-		{
-			por(xmm4, xmm7);
-		}
-
-		// int fzm = ~(fm == GSVector4i::xffffffff()).ps32(zm == GSVector4i::xffffffff()).mask();
-
-		pcmpeqd(xmm1, xmm1);
-
-		if(m_sel.fwrite && m_sel.zwrite)
-		{
-			movdqa(xmm0, xmm1);
-			pcmpeqd(xmm1, xmm3);
-			pcmpeqd(xmm0, xmm4);
-			packssdw(xmm1, xmm0);
-		}
-		else if(m_sel.fwrite)
-		{
-			pcmpeqd(xmm1, xmm3);
-			packssdw(xmm1, xmm1);
-		}
-		else if(m_sel.zwrite)
-		{
-			pcmpeqd(xmm1, xmm4);
-			packssdw(xmm1, xmm1);
-		}
-
-		pmovmskb(edx, xmm1);
-		not(edx);
-	}
+	WriteMask();
 
 	// ebx = fa
 	// ecx = steps
@@ -328,6 +240,8 @@ L("step");
 	}
 
 L("exit");
+
+	// vzeroupper();
 
 	pop(ebp);
 	pop(edi);
@@ -622,9 +536,6 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 			if(m_sel.edge || m_sel.tfx != TFX_NONE)
 			{
 				movaps(xmm4, ptr[ebx + 32]); // v.t
-
-				//vbroadcastf128(ymm4, ptr[ebx + 32]); // v.t
-				//vzeroupper();
 			}
 
 			if(m_sel.edge)
@@ -1288,14 +1199,14 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// GSVector4i y0 = uv0.uph16() << tw;
 
 		vpxor(xmm0, xmm0);
-		vmovd(xmm1, ptr[&m_env.tw]);
+		//vmovd(xmm1, ptr[&m_env.tw]);
 
 		vpunpcklwd(xmm4, xmm2, xmm0);
 		vpunpckhwd(xmm2, xmm2, xmm0);
-		vpslld(xmm2, xmm1);
+		vpslld(xmm2, m_sel.tw + 3); // xmm1);
 
 		// xmm0 = 0
-		// xmm1 = tw
+		// xmm1 = free // tw
 		// xmm2 = y0
 		// xmm3 = uv1 (ltf)
 		// xmm4 = x0
@@ -1309,7 +1220,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 			vpunpcklwd(xmm6, xmm3, xmm0);
 			vpunpckhwd(xmm3, xmm3, xmm0);
-			vpslld(xmm3, xmm1);
+			vpslld(xmm3, m_sel.tw + 3); // xmm1);
 
 			// xmm2 = y0
 			// xmm3 = y1
@@ -1547,15 +1458,15 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// GSVector4i x0 = uv0.upl16();
 
 		pxor(xmm0, xmm0);
-		movd(xmm1, ptr[&m_env.tw]);
+		// movd(xmm1, ptr[&m_env.tw]);
 
 		movdqa(xmm4, xmm2);
 		punpckhwd(xmm2, xmm0);
 		punpcklwd(xmm4, xmm0);
-		pslld(xmm2, xmm1);
+		pslld(xmm2, m_sel.tw + 3); // xmm1);
 
 		// xmm0 = 0
-		// xmm1 = tw
+		// xmm1 = free // tw
 		// xmm2 = y0
 		// xmm3 = uv1 (ltf)
 		// xmm4 = x0
@@ -1570,7 +1481,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 			movdqa(xmm6, xmm3);
 			punpckhwd(xmm3, xmm0);
 			punpcklwd(xmm6, xmm0);
-			pslld(xmm3, xmm1);
+			pslld(xmm3, m_sel.tw + 3); // xmm1);
 
 			// xmm2 = y0
 			// xmm3 = y1
@@ -2345,6 +2256,34 @@ void GSDrawScanlineCodeGenerator::AlphaTFX()
 	}
 }
 
+void GSDrawScanlineCodeGenerator::ReadMask()
+{
+	if(m_cpu.has(util::Cpu::tAVX))
+	{
+		if(m_sel.fwrite)
+		{
+			vmovdqa(xmm3, ptr[&m_env.fm]);
+		}
+
+		if(m_sel.zwrite)
+		{
+			vmovdqa(xmm4, ptr[&m_env.zm]);
+		}
+	}
+	else
+	{
+		if(m_sel.fwrite)
+		{
+			movdqa(xmm3, ptr[&m_env.fm]);
+		}
+
+		if(m_sel.zwrite)
+		{
+			movdqa(xmm4, ptr[&m_env.zm]);
+		}
+	}
+}
+
 void GSDrawScanlineCodeGenerator::TestAlpha()
 {
 	switch(m_sel.afail)
@@ -2794,6 +2733,91 @@ void GSDrawScanlineCodeGenerator::TestDestAlpha()
 	alltrue();
 }
 
+void GSDrawScanlineCodeGenerator::WriteMask()
+{
+	if(m_cpu.has(util::Cpu::tAVX))
+	{
+		// fm |= test;
+		// zm |= test;
+
+		if(m_sel.fwrite)
+		{
+			vpor(xmm3, xmm7);
+		}
+
+		if(m_sel.zwrite)
+		{
+			vpor(xmm4, xmm7);
+		}
+
+		// int fzm = ~(fm == GSVector4i::xffffffff()).ps32(zm == GSVector4i::xffffffff()).mask();
+
+		vpcmpeqd(xmm1, xmm1);
+
+		if(m_sel.fwrite && m_sel.zwrite)
+		{
+			vpcmpeqd(xmm0, xmm1, xmm4);
+			vpcmpeqd(xmm1, xmm3);
+			vpackssdw(xmm1, xmm0);
+		}
+		else if(m_sel.fwrite)
+		{
+			vpcmpeqd(xmm1, xmm3);
+			vpackssdw(xmm1, xmm1);
+		}
+		else if(m_sel.zwrite)
+		{
+			vpcmpeqd(xmm1, xmm4);
+			vpackssdw(xmm1, xmm1);
+		}
+		
+		vpmovmskb(edx, xmm1);
+
+		not(edx);
+	}
+	else
+	{
+		// fm |= test;
+		// zm |= test;
+
+		if(m_sel.fwrite)
+		{
+			por(xmm3, xmm7);
+		}
+
+		if(m_sel.zwrite)
+		{
+			por(xmm4, xmm7);
+		}
+
+		// int fzm = ~(fm == GSVector4i::xffffffff()).ps32(zm == GSVector4i::xffffffff()).mask();
+
+		pcmpeqd(xmm1, xmm1);
+
+		if(m_sel.fwrite && m_sel.zwrite)
+		{
+			movdqa(xmm0, xmm1);
+			pcmpeqd(xmm1, xmm3);
+			pcmpeqd(xmm0, xmm4);
+			packssdw(xmm1, xmm0);
+		}
+		else if(m_sel.fwrite)
+		{
+			pcmpeqd(xmm1, xmm3);
+			packssdw(xmm1, xmm1);
+		}
+		else if(m_sel.zwrite)
+		{
+			pcmpeqd(xmm1, xmm4);
+			packssdw(xmm1, xmm1);
+		}
+
+		pmovmskb(edx, xmm1);
+
+		not(edx);
+	}
+}
+
 void GSDrawScanlineCodeGenerator::WriteZBuf()
 {
 	if(!m_sel.zwrite)
@@ -2828,7 +2852,7 @@ void GSDrawScanlineCodeGenerator::WriteZBuf()
 		}
 	}
 
-	WritePixel(xmm1, xmm0, ebp, dh, fast, m_sel.zpsm);
+	WritePixel(xmm1, ebp, dh, fast, m_sel.zpsm, 1);
 }
 
 void GSDrawScanlineCodeGenerator::AlphaBlend()
@@ -3444,7 +3468,7 @@ void GSDrawScanlineCodeGenerator::WriteFrame(int params)
 
 	bool fast = m_sel.rfb && m_sel.fpsm < 2;
 
-	WritePixel(xmm5, xmm0, ebx, dl, fast, m_sel.fpsm);
+	WritePixel(xmm5, ebx, dl, fast, m_sel.fpsm, 0);
 }
 
 void GSDrawScanlineCodeGenerator::ReadPixel(const Xmm& dst, const Reg32& addr)
@@ -3461,7 +3485,7 @@ void GSDrawScanlineCodeGenerator::ReadPixel(const Xmm& dst, const Reg32& addr)
 	}
 }
 
-void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Xmm& temp, const Reg32& addr, const Reg8& mask, bool fast, int psm)
+void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, const Reg8& mask, bool fast, int psm, int fz)
 {
 	if(fast)
 	{
@@ -3504,27 +3528,27 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Xmm& temp, co
 
 		test(mask, 0x03);
 		je("@f");
-		WritePixel(src, temp, addr, 0, psm);
+		WritePixel(src, addr, 0, psm);
 		L("@@");
 
 		test(mask, 0x0c);
 		je("@f");
-		WritePixel(src, temp, addr, 1, psm);
+		WritePixel(src, addr, 1, psm);
 		L("@@");
 
 		test(mask, 0x30);
 		je("@f");
-		WritePixel(src, temp, addr, 2, psm);
+		WritePixel(src, addr, 2, psm);
 		L("@@");
 
 		test(mask, 0xc0);
 		je("@f");
-		WritePixel(src, temp, addr, 3, psm);
+		WritePixel(src, addr, 3, psm);
 		L("@@");
 	}
 }
 
-void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Xmm& temp, const Reg32& addr, uint8 i, int psm)
+void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, uint8 i, int psm)
 {
 	static const int offsets[4] = {0, 2, 8, 10};
 
@@ -3546,7 +3570,7 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Xmm& temp, co
 			xor(dst, eax);
 			break;
 		case 2:
-			pextrw(eax, src, i * 2); // vpextrw is broken in xbyak 2.99
+			vpextrw(eax, src, i * 2);
 			mov(dst, ax);
 			break;
 		}
@@ -3578,11 +3602,11 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Xmm& temp, co
 		{
 		case 0:
 			if(i == 0) movd(dst, src);
-			else {pshufd(temp, src, _MM_SHUFFLE(i, i, i, i)); movd(dst, temp);}
+			else {pshufd(xmm0, src, _MM_SHUFFLE(i, i, i, i)); movd(dst, xmm0);}
 			break;
 		case 1:
 			if(i == 0) movd(eax, src);
-			else {pshufd(temp, src, _MM_SHUFFLE(i, i, i, i)); movd(eax, temp);}
+			else {pshufd(xmm0, src, _MM_SHUFFLE(i, i, i, i)); movd(eax, xmm0);}
 			xor(eax, dst);
 			and(eax, 0xffffff);
 			xor(dst, eax);

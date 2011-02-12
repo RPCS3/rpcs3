@@ -63,6 +63,8 @@ union GSScanlineSelector
 		uint32 dthe:1; // 45
 		uint32 sprite:1; // 46
 		uint32 edge:1; // 47
+
+		uint32 tw:3; // 48 (encodes values between 3 -> 10, texture cache makes sure it is at least 3)
 	};
 
 	struct
@@ -106,7 +108,7 @@ __aligned32 struct GSScanlineParam
 	void* vm;
 	const void* tex;
 	const uint32* clut;
-	uint32 tw;
+	//uint32 tw;
 
 	GSOffset* fbo;
 	GSOffset* zbo;
@@ -120,7 +122,7 @@ __aligned32 struct GSScanlineEnvironment
 	void* vm;
 	const void* tex;
 	const uint32* clut;
-	uint32 tw;
+	//uint32 tw;
 
 	int* fbr;
 	int* zbr;

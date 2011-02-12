@@ -42,7 +42,7 @@ INT_PTR CALLBACK GSDialog::DialogProc(HWND hWnd, UINT message, WPARAM wParam, LP
 	if(message == WM_INITDIALOG)
 	{
 		dlg = (GSDialog*)lParam;
-		SetWindowLongPtr(hWnd, GWL_USERDATA, (LONG_PTR)dlg);
+		SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)dlg);
 		dlg->m_hWnd = hWnd;
 
 		MONITORINFO mi;
@@ -62,7 +62,7 @@ INT_PTR CALLBACK GSDialog::DialogProc(HWND hWnd, UINT message, WPARAM wParam, LP
 		return true;
 	}
 
-	dlg = (GSDialog*)GetWindowLongPtr(hWnd, GWL_USERDATA);
+	dlg = (GSDialog*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 
 	return dlg != NULL ? dlg->OnMessage(message, wParam, lParam) : FALSE;
 }

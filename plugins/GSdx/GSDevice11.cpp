@@ -830,9 +830,10 @@ void GSDevice11::IASetVertexBuffer(ID3D11Buffer* vb, size_t stride)
 		m_state.vb = vb;
 		m_state.vb_stride = stride;
 
+		uint32 stride2 = stride;
 		uint32 offset = 0;
 
-		m_ctx->IASetVertexBuffers(0, 1, &vb, &stride, &offset);
+		m_ctx->IASetVertexBuffers(0, 1, &vb, &stride2, &offset);
 	}
 }
 

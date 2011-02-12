@@ -44,6 +44,10 @@
 	#endif
 #endif
 
+#ifdef _MSC_VER
+extern "C" unsigned __int64 __xgetbv(int);
+#endif
+
 namespace Xbyak { namespace util {
 
 /**
@@ -62,6 +66,16 @@ public:
 		__cpuid(reinterpret_cast<int*>(data), eaxIn);
 #else
 		__cpuid(eaxIn, data[0], data[1], data[2], data[3]);
+#endif
+	}
+	static inline uint64 getXfeature()
+	{
+#ifdef _MSC_VER
+		return __xgetbv(0);
+#else
+		unsigned int eax, edx;
+		__asm__ volatile("xgetbv" : "=a"(eax), "=d"(edx) : "c"(0));
+		return ((uint64)edx << 32) | eax;
 #endif
 	}
 	enum Type {
@@ -121,12 +135,16 @@ public:
 		if (data[2] & (1U << 25)) type_ |= tAESNI;
 		if (data[2] & (1U << 1)) type_ |= tPCLMULQDQ;
 		if (data[2] & (1U << 27)) type_ |= tOSXSACE;
-#if _M_SSE >= 0x500
-		// QQQ
-		// should check XFEATURE_ENABLED_MASK[2:1] = '11b' by xgetvb
-		if (data[2] & (1U << 28)) type_ |= tAVX;
-		if (data[2] & (1U << 12)) type_ |= tFMA;
-#endif
+
+		if (type_ & tOSXSACE) {
+			// check XFEATURE_ENABLED_MASK[2:1] = '11b'
+			uint64 bv = getXfeature();
+			if ((bv & 6) == 6) {
+				if (data[2] & (1U << 28)) type_ |= tAVX;
+				if (data[2] & (1U << 12)) type_ |= tFMA;
+			}
+		}
+
 		if (data[3] & (1U << 15)) type_ |= tCMOV;
 		if (data[3] & (1U << 23)) type_ |= tMMX;
 		if (data[3] & (1U << 25)) type_ |= tMMX2 | tSSE;

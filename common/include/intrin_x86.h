@@ -836,6 +836,13 @@ static __inline__ __attribute__((always_inline)) void __cpuid(int CPUInfo[], con
 	__asm__ __volatile__("cpuid" : "=a" (CPUInfo[0]), "=b" (CPUInfo[1]), "=c" (CPUInfo[2]), "=d" (CPUInfo[3]) : "a" (InfoType));
 }
 
+static __inline__ __attribute__((always_inline)) unsigned long long __xgetbv(unsigned int index)
+{
+	unsigned int eax, edx;
+	__asm__ __volatile__("xgetbv" : "=a"(eax), "=d"(edx) : "c"(index));
+	return ((unsigned long long)edx << 32) | eax;
+}
+
 static __inline__ __attribute__((always_inline)) unsigned long long __rdtsc(void)
 {
 	unsigned long long retval;

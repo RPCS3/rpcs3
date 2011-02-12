@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1250"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="GSdx"
 	ProjectGUID="{18E42F6F-3A62-41EE-B42F-79366C4F1E95}"
 	RootNamespace="GSdx"
@@ -22,7 +22,7 @@
 		<Configuration
 			Name="Debug SSE2|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse2.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\sse2.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -88,7 +88,7 @@
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="0"
@@ -150,9 +150,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release SSE2|Win32"
-			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops;.\vsprops\sse2.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\sse2.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -218,7 +217,7 @@
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -281,7 +280,7 @@
 		<Configuration
 			Name="Release SSSE3|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\ssse3.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -347,7 +346,7 @@
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\ssse3.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -410,7 +409,7 @@
 		<Configuration
 			Name="Debug SSSE3|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\ssse3.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -476,7 +475,7 @@
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\ssse3.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\ssse3.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -538,7 +537,7 @@
 		<Configuration
 			Name="Debug SSE4|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse4.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\sse4.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -604,7 +603,7 @@
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops;.\vsprops\sse4.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\sse4.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -667,7 +666,7 @@
 		<Configuration
 			Name="Release SSE4|Win32"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\sse4.vsprops;.\vsprops\ProjectRootDir.vsprops;..\..\common\vsprops\3rdpartyDeps.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\sse4.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="0"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -733,7 +732,7 @@
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;.\vsprops\sse4.vsprops;..\..\common\vsprops\pthreads.vsprops"
+			InheritedPropertySheets=".\vsprops\ProjectRootDir.vsprops;.\vsprops\sse4.vsprops;.\vsprops\common.vsprops;..\..\common\vsprops\BaseProperties.vsprops;.\vsprops\release.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -858,7 +857,6 @@
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\debug.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			>
@@ -924,7 +922,6 @@
 			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets="..\..\common\vsprops\pthreads.vsprops"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -984,7 +981,6 @@
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
-			InheritedPropertySheets=".\vsprops\common.vsprops;.\vsprops\release.vsprops;..\..\common\vsprops\pthreads.vsprops"
 			UseOfMFC="1"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -1055,6 +1051,42 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File
+				RelativePath=".\GPU.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUDrawScanline.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUDrawScanlineCodeGenerator.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GPULocalMemory.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GPURenderer.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GPURendererSW.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUSettingsDlg.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUSetupPrimCodeGenerator.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUState.cpp"
+				>
+			</File>
 			<File
 				RelativePath=".\GS.cpp"
 				>
@@ -1557,6 +1589,54 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\GPU.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUDrawingEnvironment.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUDrawScanline.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUDrawScanlineCodeGenerator.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPULocalMemory.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPURenderer.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPURendererSW.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUScanlineEnvironment.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUSettingsDlg.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUSetupPrimCodeGenerator.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUState.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GPUVertex.h"
+				>
+			</File>
 			<File
 				RelativePath=".\GS.h"
 				>
