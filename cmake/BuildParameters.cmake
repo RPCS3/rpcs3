@@ -11,6 +11,7 @@
 # control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
 # control C++ flags           : -DUSER_CMAKE_CXX_FLAGS="cxxflags"
 # control link flags          : -DUSER_CMAKE_LD_FLAGS="ldflags"
+# Special mode to ease package: -DPACKAGE_MODE=TRUE
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -113,6 +114,13 @@ if(DEFINED USER_CMAKE_CXX_FLAGS)
 endif(DEFINED USER_CMAKE_CXX_FLAGS)
 # Use some default machine flags
 string(STRIP "${CMAKE_CXX_FLAGS} -m32 -msse -msse2 -march=i686 -pthread" CMAKE_CXX_FLAGS)
+
+#-------------------------------------------------------------------------------
+# By default use the standard compilation mode
+#-------------------------------------------------------------------------------
+if(NOT DEFINED PACKAGE_MODE)
+    set(PACKAGE_MODE FALSE)
+endif(NOT DEFINED PACKAGE_MODE)
 
 #-------------------------------------------------------------------------------
 # Select library system vs 3rdparty

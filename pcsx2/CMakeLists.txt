@@ -69,33 +69,29 @@ set(OptimizationFlags
 
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-	
-	# executable name
-	set(Output pcsx2-dbg)
-	
-	# add defines
+    set(Output pcsx2-dbg)
+
 	add_definitions(${CommonFlags} ${DebugFlags} -DPCSX2_DEVBUILD -DPCSX2_DEBUG -DWX_PRECOMP)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
-
-	# executable name
 	set(Output pcsx2-dev)
-	
-	# add defines
+
 	add_definitions(${CommonFlags} ${OptimizationFlags} -DPCSX2_DEVBUILD -DWX_PRECOMP -DNDEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
-
-	# executable name
 	set(Output pcsx2)
-	
-	# add defines
+
 	add_definitions(${CommonFlags} ${OptimizationFlags} -DWX_PRECOMP -DNDEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
+
+# In package mode always use pcsx2
+if(PACKAGE_MODE)
+    set(Output pcsx2)
+endif(PACKAGE_MODE)
 
 # you must have both svn client executable and a source that contains svn metadata
 if(Subversion_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.svn")

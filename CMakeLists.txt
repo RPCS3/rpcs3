@@ -9,15 +9,18 @@ set(TOP_CMAKE_WAS_SOURCED TRUE)
 
 # Print a clear message that 64bits is not supported
 # It would avoid compilation failure later.
-if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-    message(FATAL_ERROR "
-    PCSX2 does not support 64bits environment. Please install a 32bits chroot or a 32bits OS.
-    PCSX2 have neither no plan to support the 64bits architecture in the future.
-    It will need a complete rewrite of the core emulator and a lots of time
-    
-    However when linux distribution will support properly multi-arch package, it will 
-    be at least possible to easily compile and install PCSX2 witout too much hassle (the chroot environment)")
-endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
+# Note: disable the failure in package mode
+if(NOT PACKAGE_MODE)
+    if(CMAKE_SIZEOF_VOID_P MATCHES "8")
+        message(FATAL_ERROR "
+        PCSX2 does not support 64bits environment. Please install a 32bits chroot or a 32bits OS.
+        PCSX2 have neither no plan to support the 64bits architecture in the future.
+        It will need a complete rewrite of the core emulator and a lots of time
+
+        However when linux distribution will support properly multi-arch package, it will
+        be at least possible to easily compile and install PCSX2 witout too much hassle (the chroot environment)")
+    endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
+endif(NOT PACKAGE_MODE)
 
 
 # set module path
