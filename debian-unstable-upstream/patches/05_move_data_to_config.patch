@@ -1,3 +1,4 @@
+By default, move all users datas into XDG_CONFIG_DIR
 Index: pcsx2.snapshot-3369/pcsx2/gui/AppConfig.cpp
 ===================================================================
 --- pcsx2.snapshot-3369.orig/pcsx2/gui/AppConfig.cpp

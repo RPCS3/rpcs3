@@ -1,12 +1,11 @@
 Debian policy.
-This patch updates default plugin path and config path.
-It also updates the pcsx2 game db path and shaders data path.
-AppInit.cpp:93 could be probably updated
-Index: pcsx2.snapshot-4169/pcsx2/gui/AppConfig.cpp
+This patch updates default plugin path, game db path.
+It also updates shaders data path.
+Index: pcsx2.snapshot-4292/pcsx2/gui/AppConfig.cpp
 ===================================================================
---- pcsx2.snapshot-4169.orig/pcsx2/gui/AppConfig.cpp
-+++ pcsx2.snapshot-4169/pcsx2/gui/AppConfig.cpp
-@@ -143,7 +143,8 @@
+--- pcsx2.snapshot-4292.orig/pcsx2/gui/AppConfig.cpp
++++ pcsx2.snapshot-4292/pcsx2/gui/AppConfig.cpp
+@@ -164,7 +164,8 @@
  
  	wxDirName GetPlugins()
  	{
@@ -15,11 +14,11 @@ Index: pcsx2.snapshot-4169/pcsx2/gui/AppConfig.cpp
 +		return wxDirName( L"/usr/lib/games/pcsx2" ) + Base::Plugins();
  	}
  
- 	wxDirName GetSettings()
-Index: pcsx2.snapshot-4169/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
+ 	wxDirName GetThemes()
+Index: pcsx2.snapshot-4292/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
 ===================================================================
---- pcsx2.snapshot-4169.orig/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
-+++ pcsx2.snapshot-4169/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
+--- pcsx2.snapshot-4292.orig/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
++++ pcsx2.snapshot-4292/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
 @@ -291,18 +291,23 @@
  
  __forceinline bool LoadShadersFromDat()
@@ -53,10 +52,10 @@ Index: pcsx2.snapshot-4169/plugins/zzogl-pg/opengl/ZZoglCreate.cpp
  
  	fseek(fres, 0, SEEK_END);
  
-Index: pcsx2.snapshot-4169/pcsx2/gui/AppGameDatabase.h
+Index: pcsx2.snapshot-4292/pcsx2/gui/AppGameDatabase.h
 ===================================================================
---- pcsx2.snapshot-4169.orig/pcsx2/gui/AppGameDatabase.h
-+++ pcsx2.snapshot-4169/pcsx2/gui/AppGameDatabase.h
+--- pcsx2.snapshot-4292.orig/pcsx2/gui/AppGameDatabase.h
++++ pcsx2.snapshot-4292/pcsx2/gui/AppGameDatabase.h
 @@ -51,8 +51,8 @@
  		Console.WriteLn( "(GameDB) Unloading..." );
  	}
