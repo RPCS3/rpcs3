@@ -149,13 +149,7 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 		pxEt( "!Notice:Tooltip:Presets:Checkbox",
 				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
 				L"Known important game fixes ('Patches') will be applied automatically.\n\n"
-//This creates nested macros = not working. Un/comment manually if needed.
-//#ifdef PRESETS_USE_APPLIED_CONFIG_ON_UNCHECK
-//				L"--> Uncheck to modify settings manually."
-//              L"If you want to manually modify with a preset as a base, apply this preset, then uncheck."
-//#else
 				L"--> Uncheck to modify settings manually (with current preset as base)"
-//#endif
 			)
 	);
 	m_check_presets->SetValue(!!g_Conf->EnablePresets);

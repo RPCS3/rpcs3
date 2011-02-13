@@ -67,21 +67,24 @@ extern wxString  GetVmSettingsFilename();
 extern wxString  GetUiSettingsFilename();
 extern wxDirName GetLogFolder();
 
-enum UserLocalDataType
+enum InstallationModeType
 {
-	// Use the system defined user local data folder (typically an area outside the user's
-	// documents folder, but within user read/write permissions zoning; such that it does not
-	// clutter user document space).
-	UserLocalFolder_System,
+	// Use the user defined folder selections.  These can be anywhere on a user's hard drive,
+	// though by default the binaries (plugins, themes) are located in Install_Dir (registered
+	// by the installer), and the user files (screenshots, inis) are in the user's documents
+	// folder.  All folders are changable within the GUI.
+	InstallMode_Registered,
 
-	// Uses the directory containing PCSX2.exe, or the current working directory (if the PCSX2
-	// directory could not be determined).  This is considered 'portable' mode, and is typically
-	// detected by PCSX2 on application startup, by looking for a pcsx2_portable.ini file in 
-	// said locations.
-	UserLocalFolder_Portable,
+	// In this mode, both Install_Dir and UserDocuments folders default the directory containing
+	// PCSX2.exe, or the current working directory (if the PCSX2 directory could not be determined).
+	// Folders cannot be changed from within the gui, however the fixed defaults can be manually
+	// specified in the portable.ini by power users/devs.
+	//
+	// This mode is typically enabled by the presence of a 'portable.ini' in the folder.
+	InstallMode_Portable,
 };
 
-extern UserLocalDataType	UserLocalDataMode;
+extern InstallationModeType	InstallationMode;
 
 enum AspectRatioType
 {

@@ -41,7 +41,8 @@ Panels::ThemeSelectorPanel::ThemeSelectorPanel( wxWindow* parent )
 	m_ComboBox->SetFont( wxFont( m_ComboBox->GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );
 	m_ComboBox->SetMinSize( wxSize( wxDefaultCoord, std::max( m_ComboBox->GetMinSize().GetHeight(), 96 ) ) );
 
-	m_FolderPicker->SetStaticDesc( _("Click the Browse button to select a different folder containing PCSX2 visual themes.") );
+	if (InstallationMode != InstallMode_Portable)
+		m_FolderPicker->SetStaticDesc( _("Click the Browse button to select a different folder containing PCSX2 visual themes.") );
 
 	wxButton* refreshButton = new wxButton( this, wxID_ANY, _("Refresh list") );
 

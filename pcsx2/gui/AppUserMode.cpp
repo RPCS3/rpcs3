@@ -44,14 +44,14 @@ wxDirName				ThemesFolder;
 // "portable install" mode or not.  when PCSX2 has been configured for portable install, the
 // UserLocalData folder is the current working directory.
 //
-UserLocalDataType		UserLocalDataMode;
+InstallationModeType		InstallationMode;
 
 static wxFileName GetPortableIniPath()
 {
 	wxString programFullPath = wxStandardPaths::Get().GetExecutablePath();
 	wxDirName programDir( wxFileName(programFullPath).GetPath() );
 
-	return programDir + "pcsx2_portable.ini";
+	return programDir + "portable.ini";
 }
 
 static wxString GetMsg_PortableModeRights()
@@ -118,7 +118,7 @@ bool Pcsx2App::TestUserPermissionsRights( const wxDirName& testFolder, wxString&
 //
 wxConfigBase* Pcsx2App::TestForPortableInstall()
 {
-	UserLocalDataMode = UserLocalFolder_System;
+	InstallationMode = InstallMode_Registered;
 
 	const wxFileName portableIniFile( GetPortableIniPath() );
 	const wxDirName portableDocsFolder( portableIniFile.GetPath() );
@@ -186,7 +186,7 @@ wxConfigBase* Pcsx2App::TestForPortableInstall()
 		// Success -- all user-based folders have write access.  PCSX2 should be able to run error-free!
 		// Force-set the custom documents mode, and set the 
 
-		UserLocalDataMode = UserLocalFolder_Portable;
+		InstallationMode = InstallMode_Portable;
 		DocsFolderMode = DocsFolder_Custom;
 		CustomDocumentsFolder = portableDocsFolder;
 		return conf_portable.DetachPtr();
@@ -198,7 +198,7 @@ wxConfigBase* Pcsx2App::TestForPortableInstall()
 // Removes both portable ini and user local ini entry conforming to this instance of PCSX2.
 void Pcsx2App::WipeUserModeSettings()
 {	
-	if (UserLocalDataMode == UserLocalFolder_Portable)
+	if (InstallationMode == InstallMode_Portable)
 	{
 		// Remove the user local portable ini definition (if possible).
 		// If the user does not have admin rights to the PCSX2 folder, removing the file may fail.

@@ -98,12 +98,12 @@ namespace PathDefs
 	{
 		AffinityAssert_AllowFrom_MainUI();
 
-		if (UserLocalDataMode == UserLocalFolder_System)
+		if (InstallationMode == InstallMode_Registered)
 		{
 			static const wxDirName cwdCache( (wxDirName)Path::Normalize(wxGetCwd()) );
 			return cwdCache;
 		}
-		else if (UserLocalDataMode == UserLocalFolder_Portable)
+		else if (InstallationMode == InstallMode_Portable)
 		{
 			static const wxDirName appCache( (wxDirName)
 				wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath() );
@@ -444,13 +444,23 @@ AppConfig::AppConfig()
 // ------------------------------------------------------------------------
 void App_LoadSaveInstallSettings( IniInterface& ini )
 {
+	// Portable installs of PCSX2 should not save any of the following information to
+	// the INI file.  Only the Run First Time Wizard option is saved, and that's done
+	// from EstablishAppUserMode code.  All other options have assumed (fixed) defaults in
+	// portable mode which cannot be changed/saved.
+
+	// Note: Settins are still *loaded* from portable.ini, in case the user wants to do
+	// low-level overrides of the default behavior of portable mode installs.
+
+	if (ini.IsSaving() && (InstallationMode == InstallMode_Portable)) return;
+
 	static const wxChar* DocsFolderModeNames[] =
 	{
 		L"User",
 		L"Custom",
 	};
 
-	ini.EnumEntry( L"DocumentsFolderMode",	DocsFolderMode,	DocsFolderModeNames, (UserLocalDataMode == UserLocalFolder_System) ? DocsFolder_User : DocsFolder_Custom);
+	ini.EnumEntry( L"DocumentsFolderMode",	DocsFolderMode,	DocsFolderModeNames, (InstallationMode == InstallMode_Registered) ? DocsFolder_User : DocsFolder_Custom);
 
 	ini.Entry( L"CustomDocumentsFolder",	CustomDocumentsFolder,		PathDefs::AppRoot() );
 

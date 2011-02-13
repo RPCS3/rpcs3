@@ -107,7 +107,8 @@ Panels::BiosSelectorPanel::BiosSelectorPanel( wxWindow* parent )
 	m_ComboBox->SetFont( wxFont( m_ComboBox->GetFont().GetPointSize()+1, wxFONTFAMILY_MODERN, wxNORMAL, wxNORMAL, false, L"Lucida Console" ) );
 	m_ComboBox->SetMinSize( wxSize( wxDefaultCoord, std::max( m_ComboBox->GetMinSize().GetHeight(), 96 ) ) );
 	
-	m_FolderPicker->SetStaticDesc( _("Click the Browse button to select a different folder where PCSX2 will look for PS2 BIOS roms.") );
+	if (InstallationMode != InstallMode_Portable)
+		m_FolderPicker->SetStaticDesc( _("Click the Browse button to select a different folder where PCSX2 will look for PS2 BIOS roms.") );
 
 	wxButton* refreshButton = new wxButton( this, wxID_ANY, _("Refresh list") );
 

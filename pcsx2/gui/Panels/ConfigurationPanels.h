@@ -44,6 +44,8 @@ namespace Panels
 		FoldersEnum_t		m_FolderId;
 		wxDirPickerCtrl*	m_pickerCtrl;
 		pxCheckBox*			m_checkCtrl;
+		wxTextCtrl*			m_textCtrl;
+		wxButton*			b_explore;
 
 	public:
 		DirPickerPanel( wxWindow* parent, FoldersEnum_t folderid, const wxString& label, const wxString& dialogLabel );
@@ -68,6 +70,8 @@ namespace Panels
 
 	protected:
 		void Init( FoldersEnum_t folderid, const wxString& dialogLabel, bool isCompact );
+		void InitForPortableMode( const wxString& normalized );
+		void InitForRegisteredMode( const wxString& normalized, const wxString& dialogLabel, bool isCompact );
 
 		void UseDefaultPath_Click( wxCommandEvent &event );
 		void Explore_Click( wxCommandEvent &event );
