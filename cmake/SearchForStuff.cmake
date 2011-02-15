@@ -37,6 +37,8 @@ find_package(SDL)
 find_package(Subversion)
 # The requierement of wxWidgets is checked in SelectPcsx2Plugins module
 # Does not requier the module (allow to compile non-wx plugins)
+# Force the unicode build (the variable is only supported on cmake 2.8.3 and above)
+set(wxWidgets_CONFIG_OPTIONS "--unicode=yes")
 find_package(wxWidgets COMPONENTS base core adv)
 if(NOT FORCE_INTERNAL_ZLIB)
     find_package(ZLIB)
