@@ -16,7 +16,7 @@ current_script=$0
 PWD_old=$PWD
 
 # Go to the script directory
-chdir `dirname $current_script`
+cd `dirname $current_script`
 if [ -e pcsx2 ] ; then
     ./pcsx2
 else
@@ -27,4 +27,4 @@ else
 fi
 
 # Go back to the old directory
-chdir $PWD_old
+cd $PWD_old
