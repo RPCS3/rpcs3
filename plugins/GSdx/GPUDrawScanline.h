@@ -33,25 +33,8 @@ class GPUDrawScanline : public IDrawScanline
 
 	//
 
-	class GPUSetupPrimMap : public GSCodeGeneratorFunctionMap<GPUSetupPrimCodeGenerator, uint32, SetupPrimStaticPtr>
-	{
-		GPUScanlineEnvironment& m_env;
-
-	public:
-		GPUSetupPrimMap(GPUScanlineEnvironment& env);
-		GPUSetupPrimCodeGenerator* Create(uint32 key, void* ptr, size_t maxsize);
-	} m_sp;
-
-	//
-
-	class GPUDrawScanlineMap : public GSCodeGeneratorFunctionMap<GPUDrawScanlineCodeGenerator, uint32, DrawScanlineStaticPtr>
-	{
-		GPUScanlineEnvironment& m_env;
-
-	public:
-		GPUDrawScanlineMap(GPUScanlineEnvironment& env);
-		GPUDrawScanlineCodeGenerator* Create(uint32 key, void* ptr, size_t maxsize);
-	} m_ds;
+	GSCodeGeneratorFunctionMap<GPUSetupPrimCodeGenerator, uint32, SetupPrimPtr> m_sp_map;
+	GSCodeGeneratorFunctionMap<GPUDrawScanlineCodeGenerator, uint32, DrawScanlinePtr> m_ds_map;
 
 protected:
 	GPUState* m_state;
@@ -63,7 +46,7 @@ public:
 
 	// IDrawScanline
 
-	void BeginDraw(const GSRasterizerData* data, Functions* f);
+	void BeginDraw(const GSRasterizerData* data);
 	void EndDraw(const GSRasterizerStats& stats);
-	void PrintStats() {m_ds.PrintStats();}
+	void PrintStats() {m_ds_map.PrintStats();}
 };

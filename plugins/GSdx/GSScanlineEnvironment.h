@@ -108,7 +108,6 @@ __aligned32 struct GSScanlineParam
 	void* vm;
 	const void* tex;
 	const uint32* clut;
-	//uint32 tw;
 
 	GSOffset* fbo;
 	GSOffset* zbo;
@@ -122,7 +121,6 @@ __aligned32 struct GSScanlineEnvironment
 	void* vm;
 	const void* tex;
 	const uint32* clut;
-	//uint32 tw;
 
 	int* fbr;
 	int* zbr;

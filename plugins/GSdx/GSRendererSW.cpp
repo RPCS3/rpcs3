@@ -180,13 +180,6 @@ void GSRendererSW::Draw()
 
 	m_rl.Draw(&data);
 
-	GSRasterizerStats stats;
-
-	m_rl.GetStats(stats);
-
-	m_perfmon.Put(GSPerfMon::Prim, stats.prims);
-	m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
-
 	GSVector4i r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(data.scissor);
 
 	if(p.fm != 0xffffffff)
@@ -198,6 +191,18 @@ void GSRendererSW::Draw()
 	{
 		m_tc->InvalidateVideoMem(m_context->offset.zb, r);
 	}
+
+	// By only syncing here we can do the two InvalidateVideoMem calls free if the other threads finish 
+	// their drawings later than this one (they usually do because they start on an event).
+
+	m_rl.Sync(); 
+	
+	GSRasterizerStats stats;
+
+	m_rl.GetStats(stats);
+
+	m_perfmon.Put(GSPerfMon::Prim, stats.prims);
+	m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
 
 	if(s_dump)
 	{
@@ -373,7 +378,6 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 
 			p.tex = t->m_buff;
 			p.clut = m_mem.m_clut;
-			// p.tw = t->m_tw;
 
 			p.sel.tw = t->m_tw - 3;
 		}

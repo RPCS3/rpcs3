@@ -25,9 +25,9 @@
 #include "StdAfx.h"
 #include "GSDrawScanlineCodeGenerator.h"
 
-GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(GSScanlineEnvironment& env, uint64 key, void* ptr, size_t maxsize)
-	: CodeGenerator(maxsize, ptr)
-	, m_env(env)
+GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(void* param, uint64 key, void* code, size_t maxsize)
+	: GSCodeGenerator(code, maxsize)
+	, m_env(*(GSScanlineEnvironment*)param)
 {
 	#if _M_AMD64
 	#error TODO
@@ -385,8 +385,7 @@ void GSDrawScanlineCodeGenerator::Init(int params)
 					{
 						if(m_sel.ltf)
 						{
-							vmovdqa(xmm4, xmm3);
-							vpshuflw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
+							vpshuflw(xmm4, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
 							vpshufhw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
 							vpsrlw(xmm4, 1);
 							vmovdqa(ptr[&m_env.temp.vf], xmm4);
@@ -1136,6 +1135,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 				mov(eax, 0x8000);
 				vmovd(xmm4, eax);
 				vpshufd(xmm4, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
+
 				vpsubd(xmm2, xmm4);
 				vpsubd(xmm3, xmm4);
 			}
@@ -1199,18 +1199,16 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// GSVector4i y0 = uv0.uph16() << tw;
 
 		vpxor(xmm0, xmm0);
-		//vmovd(xmm1, ptr[&m_env.tw]);
 
 		vpunpcklwd(xmm4, xmm2, xmm0);
 		vpunpckhwd(xmm2, xmm2, xmm0);
-		vpslld(xmm2, m_sel.tw + 3); // xmm1);
+		vpslld(xmm2, m_sel.tw + 3);
 
 		// xmm0 = 0
-		// xmm1 = free // tw
 		// xmm2 = y0
 		// xmm3 = uv1 (ltf)
 		// xmm4 = x0
-		// xmm5, xmm6 = free
+		// xmm1, xmm5, xmm6 = free
 		// xmm7 = used
 
 		if(m_sel.ltf)
@@ -1220,7 +1218,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 			vpunpcklwd(xmm6, xmm3, xmm0);
 			vpunpckhwd(xmm3, xmm3, xmm0);
-			vpslld(xmm3, m_sel.tw + 3); // xmm1);
+			vpslld(xmm3, m_sel.tw + 3);
 
 			// xmm2 = y0
 			// xmm3 = y1
@@ -1392,6 +1390,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 				mov(eax, 0x8000);
 				movd(xmm4, eax);
 				pshufd(xmm4, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
+
 				psubd(xmm2, xmm4);
 				psubd(xmm3, xmm4);
 			}
@@ -1458,19 +1457,17 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// GSVector4i x0 = uv0.upl16();
 
 		pxor(xmm0, xmm0);
-		// movd(xmm1, ptr[&m_env.tw]);
 
 		movdqa(xmm4, xmm2);
 		punpckhwd(xmm2, xmm0);
 		punpcklwd(xmm4, xmm0);
-		pslld(xmm2, m_sel.tw + 3); // xmm1);
+		pslld(xmm2, m_sel.tw + 3);
 
 		// xmm0 = 0
-		// xmm1 = free // tw
 		// xmm2 = y0
 		// xmm3 = uv1 (ltf)
 		// xmm4 = x0
-		// xmm5, xmm6 = free
+		// xmm1, xmm5, xmm6 = free
 		// xmm7 = used
 
 		if(m_sel.ltf)
@@ -1481,7 +1478,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 			movdqa(xmm6, xmm3);
 			punpckhwd(xmm3, xmm0);
 			punpcklwd(xmm6, xmm0);
-			pslld(xmm3, m_sel.tw + 3); // xmm1);
+			pslld(xmm3, m_sel.tw + 3);
 
 			// xmm2 = y0
 			// xmm3 = y1
@@ -3475,7 +3472,7 @@ void GSDrawScanlineCodeGenerator::ReadPixel(const Xmm& dst, const Reg32& addr)
 {
 	if(m_cpu.has(util::Cpu::tAVX))
 	{
-		movq(dst, qword[addr * 2 + (size_t)m_env.vm]);
+		vmovq(dst, qword[addr * 2 + (size_t)m_env.vm]);
 		vmovhps(dst, qword[addr * 2 + (size_t)m_env.vm + 8 * 2]);
 	}
 	else
@@ -3496,7 +3493,7 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, 
 		{
 			test(mask, 0x0f);
 			je("@f");
-			movq(qword[addr * 2 + (size_t)m_env.vm], src);
+			vmovq(qword[addr * 2 + (size_t)m_env.vm], src);
 			L("@@");
 
 			test(mask, 0xf0);
@@ -3548,11 +3545,11 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, 
 	}
 }
 
+static const int s_offsets[4] = {0, 2, 8, 10};
+
 void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, uint8 i, int psm)
 {
-	static const int offsets[4] = {0, 2, 8, 10};
-
-	Address dst = ptr[addr * 2 + (size_t)m_env.vm + offsets[i] * 2];
+	Address dst = ptr[addr * 2 + (size_t)m_env.vm + s_offsets[i] * 2];
 
 	if(m_cpu.has(util::Cpu::tAVX))
 	{

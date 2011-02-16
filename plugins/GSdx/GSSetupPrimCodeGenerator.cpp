@@ -24,9 +24,11 @@
 #include "StdAfx.h"
 #include "GSSetupPrimCodeGenerator.h"
 
-GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, uint64 key, void* ptr, size_t maxsize)
-	: CodeGenerator(maxsize, ptr)
-	, m_env(env)
+using namespace Xbyak;
+
+GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(void* param, uint64 key, void* code, size_t maxsize)
+	: GSCodeGenerator(code, maxsize)
+	, m_env(*(GSScanlineEnvironment*)param)
 {
 	m_sel.key = key;
 
@@ -79,7 +81,7 @@ void GSSetupPrimCodeGenerator::Depth()
 	{
 		if(!m_sel.sprite)
 		{
-			// GSVector4 t = dscan.p;
+			// GSVector4 p = dscan.p;
 
 			vmovaps(xmm0, ptr[edx + 16]);
 
@@ -184,7 +186,7 @@ void GSSetupPrimCodeGenerator::Depth()
 	{
 		if(!m_sel.sprite)
 		{
-			// GSVector4 t = dscan.p;
+			// GSVector4 p = dscan.p;
 
 			movaps(xmm0, ptr[edx + 16]);
 

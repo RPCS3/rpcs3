@@ -22,18 +22,13 @@
 #pragma once
 
 #include "GSScanlineEnvironment.h"
-#include "xbyak/xbyak.h"
-#include "xbyak/xbyak_util.h"
+#include "GSFunctionMap.h"
 
-using namespace Xbyak;
-
-class GSSetupPrimCodeGenerator : public CodeGenerator
+class GSSetupPrimCodeGenerator : public GSCodeGenerator
 {
 	void operator = (const GSSetupPrimCodeGenerator&);
 
 	static const GSVector4 m_shift[5];
-
-	util::Cpu m_cpu;
 
 	GSScanlineEnvironment& m_env;
 	GSScanlineSelector m_sel;
@@ -47,5 +42,5 @@ class GSSetupPrimCodeGenerator : public CodeGenerator
 	void Color();
 
 public:
-	GSSetupPrimCodeGenerator(GSScanlineEnvironment& env, uint64 key, void* ptr, size_t maxsize);
+	GSSetupPrimCodeGenerator(void* param, uint64 key, void* code, size_t maxsize);
 };

@@ -22,19 +22,16 @@
 #pragma once
 
 #include "GPUScanlineEnvironment.h"
-#include "xbyak/xbyak.h"
-#include "xbyak/xbyak_util.h"
+#include "GSFunctionMap.h"
 
 using namespace Xbyak;
 
-class GPUDrawScanlineCodeGenerator : public CodeGenerator
+class GPUDrawScanlineCodeGenerator : public GSCodeGenerator
 {
 	void operator = (const GPUDrawScanlineCodeGenerator&);
 
 	static const GSVector4i m_test[8];
 	static const uint16 m_dither[4][16];
-
-	util::Cpu m_cpu;
 
 	GPUScanlineEnvironment& m_env;
 
@@ -58,5 +55,5 @@ class GPUDrawScanlineCodeGenerator : public CodeGenerator
 	void blend(const Xmm& a, const Xmm& b, const Xmm& mask);
 
 public:
-	GPUDrawScanlineCodeGenerator(GPUScanlineEnvironment& env, void* ptr, size_t maxsize);
+	GPUDrawScanlineCodeGenerator(void* param, uint32 key, void* code, size_t maxsize);
 };

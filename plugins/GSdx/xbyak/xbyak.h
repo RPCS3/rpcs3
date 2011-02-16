@@ -1079,6 +1079,8 @@ public:
 	const Reg8 al, cl, dl, bl, ah, ch, dh, bh;
 	const AddressFrame ptr, byte, word, dword, qword;
 	const Fpu st0, st1, st2, st3, st4, st5, st6, st7;
+	const Xmm* xmTbl[16];
+	const Ymm* ymTbl[16];
 #ifdef XBYAK64
 	const Reg64 rax, rcx, rdx, rbx, rsp, rbp, rsi, rdi, r8, r9, r10, r11, r12, r13, r14, r15;
 	const Reg32 r8d, r9d, r10d, r11d, r12d, r13d, r14d, r15d;
@@ -1444,18 +1446,6 @@ public:
 	const Operand& cvtReg(const Operand& op, bool cvt, Operand::Kind kind) const
 	{
 		if (!cvt) return op;
-		static const Xmm* xmTbl[] = {
-			&xm0, &xm1, &xm2, &xm3, &xm4, &xm5, &xm6, &xm7,
-#ifdef XBYAK64
-			&xm8, &xm9, &xm10, &xm11, &xm12, &xm13, &xm14, &xm15
-#endif
-		};
-		static const Ymm* ymTbl[] = {
-			&ym0, &ym1, &ym2, &ym3, &ym4, &ym5, &ym6, &ym7,
-#ifdef XBYAK64
-			&ym8, &ym9, &ym10, &ym11, &ym12, &ym13, &ym14, &ym15
-#endif
-		};
 		return (kind == Operand::XMM) ? *xmTbl[op.getIdx()] : *ymTbl[op.getIdx()];
 	}
 	// support (x, x/m, imm), (y, y/m, imm)
@@ -1490,6 +1480,17 @@ public:
 		, rip()
 #endif
 	{
+		xmTbl[0] = &xm0; xmTbl[1] = &xm1; xmTbl[2] = &xm2; xmTbl[3] = &xm3;
+		xmTbl[4] = &xm4; xmTbl[5] = &xm5; xmTbl[6] = &xm6; xmTbl[7] = &xm7;
+		ymTbl[0] = &ym0; ymTbl[1] = &ym1; ymTbl[2] = &ym2; ymTbl[3] = &ym3;
+		ymTbl[4] = &ym4; ymTbl[5] = &ym5; ymTbl[6] = &ym6; ymTbl[7] = &ym7;
+#ifdef XBYAK64
+		xmTbl[8] = &xm8; xmTbl[9] = &xm9; xmTbl[10] = &xm10; xmTbl[11] = &xm11;
+		xmTbl[12] = &xm12; xmTbl[13] = &xm13; xmTbl[14] = &xm14; xmTbl[15] = &xm15;
+		ymTbl[8] = &ym8; ymTbl[9] = &ym9; ymTbl[10] = &ym10; ymTbl[11] = &ym11;
+		ymTbl[12] = &ym12; ymTbl[13] = &ym13; ymTbl[14] = &ym14; ymTbl[15] = &ym15;
+#endif
+
 		label_.set(this);
 	}
 	bool hasUndefinedLabel() const { return label_.hasUndefinedLabel(); }

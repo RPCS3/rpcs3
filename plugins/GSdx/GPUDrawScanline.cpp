@@ -25,8 +25,8 @@
 GPUDrawScanline::GPUDrawScanline(GPUState* state, int id)
 	: m_state(state)
 	, m_id(id)
-	, m_sp(m_env)
-	, m_ds(m_env)
+	, m_sp_map("GPUSetupPrim", &m_env)
+	, m_ds_map("GPUDrawScanline", &m_env)
 {
 }
 
@@ -34,7 +34,7 @@ GPUDrawScanline::~GPUDrawScanline()
 {
 }
 
-void GPUDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
+void GPUDrawScanline::BeginDraw(const GSRasterizerData* data)
 {
 	GPUDrawingEnvironment& env = m_state->m_env;
 
@@ -69,9 +69,11 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	//
 
-	f->ssl = m_ds[m_env.sel];
+	m_ds = m_ds_map[m_env.sel];
 
-	f->sr = NULL; // TODO
+	m_de = NULL;
+
+	m_dr = NULL; // TODO
 
 	// doesn't need all bits => less functions generated
 
@@ -84,36 +86,10 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	sel.twin = m_env.sel.twin;
 	sel.sprite = m_env.sel.sprite;
 
-	f->ssp = m_sp[sel];
+	m_sp = m_sp_map[sel];
 }
 
 void GPUDrawScanline::EndDraw(const GSRasterizerStats& stats)
 {
-	m_ds.UpdateStats(stats, m_state->m_perfmon.GetFrame());
-}
-
-//
-
-GPUDrawScanline::GPUSetupPrimMap::GPUSetupPrimMap(GPUScanlineEnvironment& env)
-	: GSCodeGeneratorFunctionMap("GPUSetupPrim")
-	, m_env(env)
-{
-}
-
-GPUSetupPrimCodeGenerator* GPUDrawScanline::GPUSetupPrimMap::Create(uint32 key, void* ptr, size_t maxsize)
-{
-	return new GPUSetupPrimCodeGenerator(m_env, ptr, maxsize);
-}
-
-//
-
-GPUDrawScanline::GPUDrawScanlineMap::GPUDrawScanlineMap(GPUScanlineEnvironment& env)
-	: GSCodeGeneratorFunctionMap("GPUDrawScanline")
-	, m_env(env)
-{
-}
-
-GPUDrawScanlineCodeGenerator* GPUDrawScanline::GPUDrawScanlineMap::Create(uint32 key, void* ptr, size_t maxsize)
-{
-	return new GPUDrawScanlineCodeGenerator(m_env, ptr, maxsize);
+	m_ds_map.UpdateStats(stats, m_state->m_perfmon.GetFrame());
 }

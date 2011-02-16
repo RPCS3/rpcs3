@@ -26,8 +26,14 @@
 #include "GSUtil.h"
 #include "GSState.h"
 
+static const float s_fmin = -FLT_MAX;
+static const float s_fmax = FLT_MAX;
+
 GSVertexTrace::GSVertexTrace(const GSState* state)
 	: m_state(state)
+	, m_map_sw("VertexTraceSW", NULL)
+	, m_map_hw9("VertexTraceHW9", NULL)
+	, m_map_hw11("VertexTraceHW11", NULL)
 {
 }
 
@@ -120,8 +126,8 @@ void GSVertexTrace::Update(const GSVertexHW11* v, int count, GS_PRIM_CLASS primc
 
 using namespace Xbyak;
 
-GSVertexTrace::CGSW::CGSW(uint32 key, void* code, size_t maxsize)
-	: CodeGenerator(maxsize, code)
+GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxsize)
+	: GSCodeGenerator(code, maxsize)
 {
 	#if _M_AMD64
 	#error TODO
@@ -158,16 +164,13 @@ GSVertexTrace::CGSW::CGSW(uint32 key, void* code, size_t maxsize)
 
 	//
 
-	static const float fmin = -FLT_MAX;
-	static const float fmax = FLT_MAX;
-
 	if(m_cpu.has(util::Cpu::tAVX))
 	{
 		// min.p = FLT_MAX;
 		// max.p = -FLT_MAX;
 
-		vbroadcastss(xmm4, ptr[&fmax]);
-		vbroadcastss(xmm5, ptr[&fmin]);
+		vbroadcastss(xmm4, ptr[&s_fmax]);
+		vbroadcastss(xmm5, ptr[&s_fmin]);
 
 		if(color)
 		{
@@ -282,8 +285,8 @@ GSVertexTrace::CGSW::CGSW(uint32 key, void* code, size_t maxsize)
 		// min.p = FLT_MAX;
 		// max.p = -FLT_MAX;
 
-		movss(xmm4, ptr[&fmax]);
-		movss(xmm5, ptr[&fmin]);
+		movss(xmm4, ptr[&s_fmax]);
+		movss(xmm5, ptr[&s_fmin]);
 
 		shufps(xmm4, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
 		shufps(xmm5, xmm5, _MM_SHUFFLE(0, 0, 0, 0));
@@ -400,8 +403,8 @@ GSVertexTrace::CGSW::CGSW(uint32 key, void* code, size_t maxsize)
 	ret();
 }
 
-GSVertexTrace::CGHW9::CGHW9(uint32 key, void* code, size_t maxsize)
-	: CodeGenerator(maxsize, code)
+GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t maxsize)
+	: GSCodeGenerator(code, maxsize)
 {
 	#if _M_AMD64
 	#error TODO
@@ -440,16 +443,13 @@ GSVertexTrace::CGHW9::CGHW9(uint32 key, void* code, size_t maxsize)
 
 	//
 
-	static const float fmin = -FLT_MAX;
-	static const float fmax = FLT_MAX;
-
 	if(m_cpu.has(util::Cpu::tAVX))
 	{
 		// min.p = FLT_MAX;
 		// max.p = -FLT_MAX;
 
-		vbroadcastss(xmm4, ptr[&fmax]);
-		vbroadcastss(xmm5, ptr[&fmin]);
+		vbroadcastss(xmm4, ptr[&s_fmax]);
+		vbroadcastss(xmm5, ptr[&s_fmin]);
 
 		if(color)
 		{
@@ -593,8 +593,8 @@ GSVertexTrace::CGHW9::CGHW9(uint32 key, void* code, size_t maxsize)
 		// min.p = FLT_MAX;
 		// max.p = -FLT_MAX;
 
-		movss(xmm4, ptr[&fmax]);
-		movss(xmm5, ptr[&fmin]);
+		movss(xmm4, ptr[&s_fmax]);
+		movss(xmm5, ptr[&s_fmin]);
 
 		shufps(xmm4, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
 		shufps(xmm5, xmm5, _MM_SHUFFLE(0, 0, 0, 0));
@@ -741,8 +741,8 @@ GSVertexTrace::CGHW9::CGHW9(uint32 key, void* code, size_t maxsize)
 	ret();
 }
 
-GSVertexTrace::CGHW11::CGHW11(uint32 key, void* code, size_t maxsize)
-	: CodeGenerator(maxsize, code)
+GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t maxsize)
+	: GSCodeGenerator(code, maxsize)
 {
 	#if _M_AMD64
 	#error TODO
@@ -779,16 +779,13 @@ GSVertexTrace::CGHW11::CGHW11(uint32 key, void* code, size_t maxsize)
 
 	//
 
-	static const float fmin = -FLT_MAX;
-	static const float fmax = FLT_MAX;
-
 	if(m_cpu.has(util::Cpu::tAVX))
 	{
 		// min.p = FLT_MAX;
 		// max.p = -FLT_MAX;
 
-		vbroadcastss(xmm4, ptr[&fmax]);
-		vbroadcastss(xmm5, ptr[&fmin]);
+		vbroadcastss(xmm4, ptr[&s_fmax]);
+		vbroadcastss(xmm5, ptr[&s_fmin]);
 
 		if(color)
 		{
@@ -931,8 +928,8 @@ GSVertexTrace::CGHW11::CGHW11(uint32 key, void* code, size_t maxsize)
 		// min.p = FLT_MAX;
 		// max.p = -FLT_MAX;
 
-		movss(xmm4, ptr[&fmax]);
-		movss(xmm5, ptr[&fmin]);
+		movss(xmm4, ptr[&s_fmax]);
+		movss(xmm5, ptr[&s_fmin]);
 
 		shufps(xmm4, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
 		shufps(xmm5, xmm5, _MM_SHUFFLE(0, 0, 0, 0));

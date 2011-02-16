@@ -26,8 +26,6 @@
 #include "GSVertexSW.h"
 #include "GSVertexHW.h"
 #include "GSFunctionMap.h"
-#include "xbyak/xbyak.h"
-#include "xbyak/xbyak_util.h"
 
 class GSState;
 
@@ -38,54 +36,27 @@ __aligned32 class GSVertexTrace
 
 	typedef void (*VertexTracePtr)(const void* v, int count, Vertex& min, Vertex& max);
 
-	class CGSW : public Xbyak::CodeGenerator
-	{
-		Xbyak::util::Cpu m_cpu;
-
-	public:
-		CGSW(uint32 key, void* code, size_t maxsize);
-	};
-
-	class GSVertexTraceMapSW : public GSCodeGeneratorFunctionMap<CGSW, uint32, VertexTracePtr>
+	class CGSW : public GSCodeGenerator
 	{
 	public:
-		GSVertexTraceMapSW() : GSCodeGeneratorFunctionMap("VertexTraceSW") {}
-		CGSW* Create(uint32 key, void* code, size_t maxsize) {return new CGSW(key, code, maxsize);}
+		CGSW(const void* param, uint32 key, void* code, size_t maxsize);
 	};
 
-	class CGHW9 : public Xbyak::CodeGenerator
-	{
-		Xbyak::util::Cpu m_cpu;
-
-	public:
-		CGHW9(uint32 key, void* ptr, size_t maxsize);
-	};
-
-	class GSVertexTraceMapHW9 : public GSCodeGeneratorFunctionMap<CGHW9, uint32, VertexTracePtr>
+	class CGHW9 : public GSCodeGenerator
 	{
 	public:
-		GSVertexTraceMapHW9() : GSCodeGeneratorFunctionMap("VertexTraceHW9") {}
-		CGHW9* Create(uint32 key, void* code, size_t maxsize) {return new CGHW9(key, code, maxsize);}
+		CGHW9(const void* param, uint32 key, void* code, size_t maxsize);
 	};
 
-	class CGHW11 : public Xbyak::CodeGenerator
-	{
-		Xbyak::util::Cpu m_cpu;
-
-	public:
-		CGHW11(uint32 key, void* ptr, size_t maxsize);
-	};
-
-	class GSVertexTraceMapHW11 : public GSCodeGeneratorFunctionMap<CGHW11, uint32, VertexTracePtr>
+	class CGHW11 : public GSCodeGenerator
 	{
 	public:
-		GSVertexTraceMapHW11() : GSCodeGeneratorFunctionMap("VertexTraceHW11") {}
-		CGHW11* Create(uint32 key, void* code, size_t maxsize) {return new CGHW11(key, code, maxsize);}
+		CGHW11(const void* param, uint32 key, void* code, size_t maxsize);
 	};
 
-	GSVertexTraceMapSW m_map_sw;
-	GSVertexTraceMapHW9 m_map_hw9;
-	GSVertexTraceMapHW11 m_map_hw11;
+	GSCodeGeneratorFunctionMap<CGSW, uint32, VertexTracePtr> m_map_sw;
+	GSCodeGeneratorFunctionMap<CGHW9, uint32, VertexTracePtr> m_map_hw9;
+	GSCodeGeneratorFunctionMap<CGHW11, uint32, VertexTracePtr> m_map_hw11;
 
 	uint32 Hash(GS_PRIM_CLASS primclass);
 

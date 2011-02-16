@@ -32,34 +32,13 @@ class GSDrawScanline : public IDrawScanline
 	GSScanlineEnvironment m_env;
 	GSScanlineSelector m_sel;
 
-	//
+	GSCodeGeneratorFunctionMap<GSSetupPrimCodeGenerator, uint64, SetupPrimPtr> m_sp_map;
+	GSCodeGeneratorFunctionMap<GSDrawScanlineCodeGenerator, uint64, DrawScanlinePtr> m_ds_map;
 
-	class GSSetupPrimMap : public GSCodeGeneratorFunctionMap<GSSetupPrimCodeGenerator, uint64, SetupPrimStaticPtr>
-	{
-		GSScanlineEnvironment& m_env;
-
-	public:
-		GSSetupPrimMap(GSScanlineEnvironment& env);
-		GSSetupPrimCodeGenerator* Create(uint64 key, void* ptr, size_t maxsize);
-	} m_sp;
-
-	//
-
-	class GSDrawScanlineMap : public GSCodeGeneratorFunctionMap<GSDrawScanlineCodeGenerator, uint64, DrawScanlineStaticPtr>
-	{
-		GSScanlineEnvironment& m_env;
-
-	public:
-		GSDrawScanlineMap(GSScanlineEnvironment& env);
-		GSDrawScanlineCodeGenerator* Create(uint64 key, void* ptr, size_t maxsize);
-	} m_ds;
-
-	//
-
-	void DrawSolidRect(const GSVector4i& r, const GSVertexSW& v);
+	void DrawRect(const GSVector4i& r, const GSVertexSW& v);
 
 	template<class T, bool masked>
-	void DrawSolidRectT(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m);
+	void DrawRectT(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m);
 
 	template<class T, bool masked>
 	__forceinline void FillRect(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m);
@@ -77,7 +56,7 @@ public:
 
 	// IDrawScanline
 
-	void BeginDraw(const GSRasterizerData* data, Functions* f);
+	void BeginDraw(const GSRasterizerData* data);
 	void EndDraw(const GSRasterizerStats& stats);
-	void PrintStats() {m_ds.PrintStats();}
+	void PrintStats() {m_ds_map.PrintStats();}
 };

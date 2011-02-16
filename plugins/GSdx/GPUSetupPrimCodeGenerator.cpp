@@ -25,9 +25,11 @@
 #include "GSVertexSW.h"
 #include "GPUSetupPrimCodeGenerator.h"
 
-GPUSetupPrimCodeGenerator::GPUSetupPrimCodeGenerator(GPUScanlineEnvironment& env, void* ptr, size_t maxsize)
-	: CodeGenerator(maxsize, ptr)
-	, m_env(env)
+using namespace Xbyak;
+
+GPUSetupPrimCodeGenerator::GPUSetupPrimCodeGenerator(void* param, uint32 key, void* code, size_t maxsize)
+	: GSCodeGenerator(code, maxsize)
+	, m_env(*(GPUScanlineEnvironment*)param)
 {
 	#if _M_AMD64
 	#error TODO

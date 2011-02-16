@@ -22,23 +22,18 @@
 #pragma once
 
 #include "GPUScanlineEnvironment.h"
-#include "xbyak/xbyak.h"
-#include "xbyak/xbyak_util.h"
+#include "GSFunctionMap.h"
 
-using namespace Xbyak;
-
-class GPUSetupPrimCodeGenerator : public CodeGenerator
+class GPUSetupPrimCodeGenerator : public GSCodeGenerator
 {
 	void operator = (const GPUSetupPrimCodeGenerator&);
 
 	static const GSVector4 m_shift[3];
-
-	util::Cpu m_cpu;
 
 	GPUScanlineEnvironment& m_env;
 
 	void Generate();
 
 public:
-	GPUSetupPrimCodeGenerator(GPUScanlineEnvironment& env, void* ptr, size_t maxsize);
+	GPUSetupPrimCodeGenerator(void* param, uint32 key, void* code, size_t maxsize);
 };

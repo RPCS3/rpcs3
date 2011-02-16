@@ -36,6 +36,36 @@ public:
 	int count;
 	const void* param;
 };
+	
+class IDrawScanline : public GSAlignedClass<32>
+{
+public:
+	typedef void (__fastcall *SetupPrimPtr)(const GSVertexSW* vertices, const GSVertexSW& dscan);
+	typedef void (__fastcall *DrawScanlinePtr)(int right, int left, int top, const GSVertexSW& scan);
+	typedef void (IDrawScanline::*DrawRectPtr)(const GSVector4i& r, const GSVertexSW& v); // TODO: jit
+
+protected:
+	SetupPrimPtr m_sp;
+	DrawScanlinePtr m_ds;
+	DrawScanlinePtr m_de;
+	DrawRectPtr m_dr;
+
+public:
+	IDrawScanline() : m_sp(NULL), m_ds(NULL), m_de(NULL), m_dr(NULL) {}
+	virtual ~IDrawScanline() {}
+
+	virtual void BeginDraw(const GSRasterizerData* data) = 0;
+	virtual void EndDraw(const GSRasterizerStats& stats) = 0;
+	virtual void PrintStats() = 0;
+
+	__forceinline void SetupPrim(const GSVertexSW* v, const GSVertexSW& dscan) {m_sp(v, dscan);}
+	__forceinline void DrawScanline(int right, int left, int top, const GSVertexSW& scan) {m_ds(right, left, top, scan);}
+	__forceinline void DrawEdge(int right, int left, int top, const GSVertexSW& scan) {m_de(right, left, top, scan);}
+	__forceinline void DrawRect(const GSVector4i& r, const GSVertexSW& v) {(this->*m_dr)(r, v);}
+
+	__forceinline bool IsEdge() const {return m_de != NULL;}
+	__forceinline bool IsRect() const {return m_dr != NULL;}
+};
 
 class IRasterizer
 {
@@ -47,33 +77,10 @@ public:
 	virtual void PrintStats() = 0;
 };
 
-class IDrawScanline : public GSAlignedClass<32>
-{
-public:
-	typedef void (__fastcall *DrawScanlineStaticPtr)(int right, int left, int top, const GSVertexSW& v);
-	typedef void (__fastcall *SetupPrimStaticPtr)(const GSVertexSW* vertices, const GSVertexSW& dscan);
-	typedef void (IDrawScanline::*DrawSolidRectPtr)(const GSVector4i& r, const GSVertexSW& v);
-
-	struct Functions
-	{
-		DrawScanlineStaticPtr ssl;
-		DrawScanlineStaticPtr ssle;
-		SetupPrimStaticPtr ssp;
-		DrawSolidRectPtr sr; // TODO
-	};
-
-	virtual ~IDrawScanline() {}
-
-	virtual void BeginDraw(const GSRasterizerData* data, Functions* dsf) = 0;
-	virtual void EndDraw(const GSRasterizerStats& stats) = 0;
-	virtual void PrintStats() = 0;
-};
-
 class GSRasterizer : public IRasterizer
 {
 protected:
 	IDrawScanline* m_ds;
-	IDrawScanline::Functions m_dsf;
 	int m_id;
 	int m_threads;
 	GSRasterizerStats m_stats;
@@ -81,7 +88,7 @@ protected:
 	void DrawPoint(const GSVertexSW* v, const GSVector4i& scissor);
 	void DrawLine(const GSVertexSW* v, const GSVector4i& scissor);
 	void DrawTriangle(const GSVertexSW* v, const GSVector4i& scissor);
-	void DrawTriangleEdge(const GSVertexSW* v, const GSVector4i& scissor);
+	void DrawEdge(const GSVertexSW* v, const GSVector4i& scissor);
 	void DrawSprite(const GSVertexSW* v, const GSVector4i& scissor);
 
 	void DrawTriangleTop(GSVertexSW* v, const GSVector4i& scissor);
@@ -133,6 +140,8 @@ protected:
 	volatile long m_sync;
 	long m_syncstart;
 	GSRasterizerStats m_stats;
+	int64 m_start;
+
 	void FreeRasterizers();
 
 public:
@@ -145,9 +154,9 @@ public:
 
 		threads = std::max<int>(threads, 1); // TODO: min(threads, number of cpu cores)
 
-		push_back(new GSRasterizer(new DS(parent, 0), 0, threads));
-
 		m_syncstart = 0;
+
+		push_back(new GSRasterizer(new DS(parent, 0), 0, threads));
 
 		for(int i = 1; i < threads; i++)
 		{
@@ -160,6 +169,8 @@ public:
 			_interlockedbittestandset(&m_syncstart, i);
 		}
 	}
+
+	void Sync();
 
 	// IRasterizer
 

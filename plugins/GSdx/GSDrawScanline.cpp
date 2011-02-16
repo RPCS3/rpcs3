@@ -26,8 +26,8 @@
 GSDrawScanline::GSDrawScanline(GSState* state, int id)
 	: m_state(state)
 	, m_id(id)
-	, m_sp(m_env)
-	, m_ds(m_env)
+	, m_sp_map("GSSetupPrim", &m_env)
+	, m_ds_map("GSDrawScanline", &m_env)
 {
 	memset(&m_env, 0, sizeof(m_env));
 }
@@ -36,7 +36,7 @@ GSDrawScanline::~GSDrawScanline()
 {
 }
 
-void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
+void GSDrawScanline::BeginDraw(const GSRasterizerData* data)
 {
 	GSDrawingEnvironment& env = m_state->m_env;
 	GSDrawingContext* context = m_state->m_context;
@@ -98,7 +98,6 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	{
 		m_env.tex = p->tex;
 		m_env.clut = p->clut;
-		// m_env.tw = p->tw;
 
 		unsigned short tw = (unsigned short)(1 << context->TEX0.TW);
 		unsigned short th = (unsigned short)(1 << context->TEX0.TH);
@@ -163,7 +162,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 
 	//
 
-	f->ssl = m_ds[m_sel];
+	m_ds = m_ds_map[m_sel];
 
 	if(m_sel.aa1)// && (m_state->m_perfmon.GetFrame() & 0x40))
 	{
@@ -173,12 +172,20 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 		sel.zwrite = 0;
 		sel.edge = 1;
 
-		f->ssle = m_ds[sel];
+		m_de = m_ds_map[sel];
+	}
+	else
+	{
+		m_de = NULL;
 	}
 
 	if(m_sel.IsSolidRect())
 	{
-		f->sr = (DrawSolidRectPtr)&GSDrawScanline::DrawSolidRect;
+		m_dr = (DrawRectPtr)&GSDrawScanline::DrawRect;
+	}
+	else
+	{
+		m_dr = NULL;
 	}
 
 	// doesn't need all bits => less functions generated
@@ -197,15 +204,15 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data, Functions* f)
 	sel.zb = m_sel.zb;
 	sel.zoverflow = m_sel.zoverflow;
 
-	f->ssp = m_sp[sel];
+	m_sp = m_sp_map[sel];
 }
 
 void GSDrawScanline::EndDraw(const GSRasterizerStats& stats)
 {
-	m_ds.UpdateStats(stats, m_state->m_perfmon.GetFrame());
+	m_ds_map.UpdateStats(stats, m_state->m_perfmon.GetFrame());
 }
 
-void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
+void GSDrawScanline::DrawRect(const GSVector4i& r, const GSVertexSW& v)
 {
 	ASSERT(r.y >= 0);
 	ASSERT(r.w >= 0);
@@ -224,22 +231,22 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 		{
 			if(m == 0)
 			{
-				DrawSolidRectT<uint32, false>(m_env.zbr, m_env.zbc, r, z, m);
+				DrawRectT<uint32, false>(m_env.zbr, m_env.zbc, r, z, m);
 			}
 			else
 			{
-				DrawSolidRectT<uint32, true>(m_env.zbr, m_env.zbc, r, z, m);
+				DrawRectT<uint32, true>(m_env.zbr, m_env.zbc, r, z, m);
 			}
 		}
 		else
 		{
 			if(m == 0)
 			{
-				DrawSolidRectT<uint16, false>(m_env.zbr, m_env.zbc, r, z, m);
+				DrawRectT<uint16, false>(m_env.zbr, m_env.zbc, r, z, m);
 			}
 			else
 			{
-				DrawSolidRectT<uint16, true>(m_env.zbr, m_env.zbc, r, z, m);
+				DrawRectT<uint16, true>(m_env.zbr, m_env.zbc, r, z, m);
 			}
 		}
 	}
@@ -259,11 +266,11 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 		{
 			if(m == 0)
 			{
-				DrawSolidRectT<uint32, false>(m_env.fbr, m_env.fbc, r, c, m);
+				DrawRectT<uint32, false>(m_env.fbr, m_env.fbc, r, c, m);
 			}
 			else
 			{
-				DrawSolidRectT<uint32, true>(m_env.fbr, m_env.fbc, r, c, m);
+				DrawRectT<uint32, true>(m_env.fbr, m_env.fbc, r, c, m);
 			}
 		}
 		else
@@ -272,18 +279,18 @@ void GSDrawScanline::DrawSolidRect(const GSVector4i& r, const GSVertexSW& v)
 
 			if(m == 0)
 			{
-				DrawSolidRectT<uint16, false>(m_env.fbr, m_env.fbc, r, c, m);
+				DrawRectT<uint16, false>(m_env.fbr, m_env.fbc, r, c, m);
 			}
 			else
 			{
-				DrawSolidRectT<uint16, true>(m_env.fbr, m_env.fbc, r, c, m);
+				DrawRectT<uint16, true>(m_env.fbr, m_env.fbc, r, c, m);
 			}
 		}
 	}
 }
 
 template<class T, bool masked>
-void GSDrawScanline::DrawSolidRectT(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m)
+void GSDrawScanline::DrawRectT(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m)
 {
 	if(m == 0xffffffff) return;
 
@@ -357,30 +364,4 @@ void GSDrawScanline::FillBlock(const int* RESTRICT row, const int* RESTRICT col,
 			}
 		}
 	}
-}
-
-//
-
-GSDrawScanline::GSSetupPrimMap::GSSetupPrimMap(GSScanlineEnvironment& env)
-	: GSCodeGeneratorFunctionMap("GSSetupPrim")
-	, m_env(env)
-{
-}
-
-GSSetupPrimCodeGenerator* GSDrawScanline::GSSetupPrimMap::Create(uint64 key, void* ptr, size_t maxsize)
-{
-	return new GSSetupPrimCodeGenerator(m_env, key, ptr, maxsize);
-}
-
-//
-
-GSDrawScanline::GSDrawScanlineMap::GSDrawScanlineMap(GSScanlineEnvironment& env)
-	: GSCodeGeneratorFunctionMap("GSDrawScanline")
-	, m_env(env)
-{
-}
-
-GSDrawScanlineCodeGenerator* GSDrawScanline::GSDrawScanlineMap::Create(uint64 key, void* ptr, size_t maxsize)
-{
-	return new GSDrawScanlineCodeGenerator(m_env, key, ptr, maxsize);
 }

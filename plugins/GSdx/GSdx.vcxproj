@@ -720,7 +720,9 @@
     <ClCompile Include="GSDeviceNull.cpp" />
     <ClCompile Include="GSDialog.cpp" />
     <ClCompile Include="GSDirtyRect.cpp" />
-    <ClCompile Include="GSDrawScanline.cpp" />
+    <ClCompile Include="GSDrawScanline.cpp">
+      <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release AVX|Win32'">AssemblyAndSourceCode</AssemblerOutput>
+    </ClCompile>
     <ClCompile Include="GSDrawScanlineCodeGenerator.cpp" />
     <ClCompile Include="GSDump.cpp" />
     <ClCompile Include="GSdx.cpp">

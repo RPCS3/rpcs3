@@ -23,6 +23,8 @@
 
 #include "GS.h"
 #include "GSCodeBuffer.h"
+#include "xbyak/xbyak.h"
+#include "xbyak/xbyak_util.h"
 
 struct GSRasterizerStats
 {
@@ -128,6 +130,8 @@ public:
 			}
 		}
 
+		printf("GS stats\n");
+
 		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
 			KEY key = i->first;
@@ -139,7 +143,7 @@ public:
 				int64 tpf = p->frames > 0 ? p->ticks / p->frames : 0;
 				int64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
 
-				printf("[%012I64x]%c %6.2f%% | %5.2f%% | f %4I64d | p %10I64d | tpp %4I64d | tpf %9I64d | ppf %7I64d\n",
+				printf("[%016I64x]%c %6.2f%% | %5.2f%% | f %4I64d | p %10I64d | tpp %4I64d | tpf %9I64d | ppf %7I64d\n",
 					(uint64)key, m_map.find(key) == m_map.end() ? '*' : ' ',
 					(float)(tpf * 10000 / 50000000) / 100,
 					(float)(tpf * 10000 / ttpf) / 100,
@@ -150,54 +154,58 @@ public:
 	}
 };
 
+class GSCodeGenerator : public Xbyak::CodeGenerator
+{
+protected:
+	Xbyak::util::Cpu m_cpu;
+
+public:
+	GSCodeGenerator(void* code, size_t maxsize)
+		: Xbyak::CodeGenerator(maxsize, code)
+	{
+	}
+};
+
 #include "vtune/JITProfiling.h"
 
 template<class CG, class KEY, class VALUE>
 class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
 {
 	string m_name;
-	hash_map<uint64, CG*> m_cgmap;
+	void* m_param;
+	hash_map<uint64, VALUE> m_cgmap;
 	GSCodeBuffer m_cb;
 
 	enum {MAX_SIZE = 4096};
 
-protected:
-	virtual CG* Create(KEY key, void* ptr, size_t maxsize = MAX_SIZE) = 0;
-
 public:
-	GSCodeGeneratorFunctionMap(const char* name)
+	GSCodeGeneratorFunctionMap(const char* name, void* param)
 		: m_name(name)
+		, m_param(param)
 	{
-	}
-
-	virtual ~GSCodeGeneratorFunctionMap()
-	{
-		for_each(m_cgmap.begin(), m_cgmap.end(), delete_second());
 	}
 
 	VALUE GetDefaultFunction(KEY key)
 	{
-		CG* cg = NULL;
+		VALUE ret = NULL;
 
-		hash_map<uint64, CG*>::iterator i = m_cgmap.find(key);
+		hash_map<uint64, VALUE>::iterator i = m_cgmap.find(key);
 
 		if(i != m_cgmap.end())
 		{
-			cg = i->second;
+			ret = i->second;
 		}
 		else
 		{
-			void* ptr = m_cb.GetBuffer(MAX_SIZE);
-
-			cg = Create(key, ptr, MAX_SIZE);
-
-			ASSERT(cg);
+			CG* cg = new CG(m_param, key, m_cb.GetBuffer(MAX_SIZE), MAX_SIZE);
 
 			ASSERT(cg->getSize() < MAX_SIZE);
 			
 			m_cb.ReleaseBuffer(cg->getSize());
 
-			m_cgmap[key] = cg;
+			ret = (VALUE)cg->getCode();
+
+			m_cgmap[key] = ret;
 
 			// vtune method registration
 			
@@ -216,8 +224,10 @@ public:
 
 				iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &ml);
 			}
+
+			delete cg;
 		}
 
-		return (VALUE)cg->getCode();
+		return ret;
 	}
 };
