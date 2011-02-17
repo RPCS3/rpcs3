@@ -363,7 +363,7 @@ EXPORT_C GSvsync(int field)
 {
 #ifdef _WINDOWS
 
-	if( s_gs->m_wnd.IsManaged() )
+	if(s_gs->m_wnd.IsManaged())
 	{
 		MSG msg;
 
@@ -375,6 +375,7 @@ EXPORT_C GSvsync(int field)
 			DispatchMessage(&msg);
 		}
 	}
+
 #endif
 
 	s_gs->VSync(field);
@@ -384,7 +385,7 @@ EXPORT_C_(uint32) GSmakeSnapshot(char* path)
 {
 	string s(path);
 
-	if(s.back() != '\\')
+	if(!s.empty() && s[s.length() - 1] != '\\')
 	{
 		s = s + "\\";
 	}

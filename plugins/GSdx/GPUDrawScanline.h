@@ -29,18 +29,19 @@
 
 class GPUDrawScanline : public IDrawScanline
 {
+	GPUScanlineGlobalData m_global;
 	GPUScanlineLocalData m_local;
 
 	GSCodeGeneratorFunctionMap<GPUSetupPrimCodeGenerator, uint32, SetupPrimPtr> m_sp_map;
 	GSCodeGeneratorFunctionMap<GPUDrawScanlineCodeGenerator, uint32, DrawScanlinePtr> m_ds_map;
 
 public:
-	GPUDrawScanline(const GPUScanlineGlobalData* gd);
+	GPUDrawScanline();
 	virtual ~GPUDrawScanline();
 
 	// IDrawScanline
 
-	void BeginDraw(const GSRasterizerData* data);
+	void BeginDraw(const void* param);
 	void EndDraw(const GSRasterizerStats& stats, uint64 frame);
 	void PrintStats() {m_ds_map.PrintStats();}
 };

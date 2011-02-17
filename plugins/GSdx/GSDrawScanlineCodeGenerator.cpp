@@ -1844,26 +1844,10 @@ void GSDrawScanlineCodeGenerator::Wrap(const Xmm& uv0, const Xmm& uv1)
 
 			// clamp.blend8(repeat, m_local.gd->t.mask);
 
-			if(m_cpu.has(util::Cpu::tSSE41))
-			{
-				vmovdqa(xmm0, ptr[&m_local.gd->t.mask]);
+			vmovdqa(xmm0, ptr[&m_local.gd->t.mask]);
 
-				vpblendvb(uv0, xmm1, xmm0);
-				vpblendvb(uv1, xmm6, xmm0);
-			}
-			else
-			{
-				vmovdqa(xmm0, ptr[&m_local.gd->t.invmask]);
-				vmovdqa(xmm4, xmm0);
-
-				vpand(uv0, xmm0);
-				vpandn(xmm0, xmm1);
-				vpor(uv0, xmm0);
-
-				vpand(uv1, xmm4);
-				vpandn(xmm4, xmm6);
-				vpor(uv1, xmm4);
-			}
+			vpblendvb(uv0, xmm1, xmm0);
+			vpblendvb(uv1, xmm6, xmm0);
 		}
 	}
 	else

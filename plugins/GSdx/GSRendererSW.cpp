@@ -31,7 +31,7 @@ GSRendererSW::GSRendererSW(int threads)
 
 	memset(m_texture, 0, sizeof(m_texture));
 
-	m_rl.Create<GSDrawScanline, GSScanlineGlobalData>(threads);
+	m_rl.Create<GSDrawScanline>(threads);
 
 	InitVertexKick<GSRendererSW>();
 }
@@ -179,9 +179,9 @@ void GSRendererSW::Draw()
 	data.frame = m_perfmon.GetFrame();
 	data.param = &gd;
 
-	m_rl.Draw(&data);
-
 	GSVector4i r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(data.scissor);
+
+	m_rl.Draw(&data, r.width(), r.height());
 
 	if(gd.sel.fwrite)
 	{

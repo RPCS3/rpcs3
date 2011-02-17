@@ -46,10 +46,14 @@
 	static const int ThreadMaskConst = ThreadsConst - 1;
 #endif
 
-GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads)
+// align threads to page height (1 << 5)
+
+#define THREAD_HEIGHT 5
+
+GSRasterizer::GSRasterizer(IDrawScanline* ds)
 	: m_ds(ds)
-	, m_id(id)
-	, m_threads(threads)
+	, m_id(0)
+	, m_threads(1)
 {
 }
 
@@ -66,14 +70,14 @@ __forceinline bool GSRasterizer::IsOneOfMyScanlines(int scanline) const
 
 	#else
 
-	return m_threads == 1 || (scanline % m_threads) == m_id;
+	return m_threads == 1 || ((scanline >> THREAD_HEIGHT) % m_threads) == m_id;
 
 	#endif
 }
 
 void GSRasterizer::Draw(const GSRasterizerData* data)
 {
-	m_ds->BeginDraw(data);
+	m_ds->BeginDraw(data->param);
 
 	const GSVector4i scissor = data->scissor;
 	const GSVertexSW* vertices = data->vertices;
@@ -841,8 +845,8 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 
 //
 
-GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, int id, int threads, HANDLE ready, volatile long& sync)
-	: GSRasterizer(ds, id, threads)
+GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, HANDLE ready, volatile long& sync)
+	: GSRasterizer(ds)
 	, m_ready(ready)
 	, m_sync(sync)
 	, m_data(NULL)
@@ -859,8 +863,8 @@ GSRasterizerMT::~GSRasterizerMT()
 
 	CloseThread();
 
-	DeleteObject(m_exit);
-	DeleteObject(m_draw);
+	CloseHandle(m_exit);
+	CloseHandle(m_draw);
 }
 
 void GSRasterizerMT::Draw(const GSRasterizerData* data)
@@ -909,8 +913,6 @@ void GSRasterizerMT::ThreadProc()
 
 GSRasterizerList::GSRasterizerList()
 	: m_sync(0)
-	, m_syncstart(0)
-	, m_param(NULL)
 {
 }
 
@@ -919,8 +921,6 @@ GSRasterizerList::~GSRasterizerList()
 	for(size_t i = 0; i < size(); i++) delete (*this)[i];
 
 	for(size_t i = 0; i < m_ready.size(); i++) CloseHandle(m_ready[i]);
-
-	if(m_param) _aligned_free(m_param);
 }
 
 void GSRasterizerList::Sync()
@@ -931,13 +931,16 @@ void GSRasterizerList::Sync()
 
 	#else
 
-	WaitForMultipleObjects(m_ready.size(), &m_ready[0], TRUE, INFINITE);
+	if(m_threads > 1)
+	{
+		WaitForMultipleObjects(m_threads - 1, &m_ready[0], TRUE, INFINITE);
+	}
 
 	#endif
 
 	m_stats.ticks = __rdtsc() - m_start;
 
-	for(size_t i = 0; i < size(); i++)
+	for(int i = 0; i < m_threads; i++)
 	{
 		GSRasterizerStats s;
 
@@ -948,20 +951,33 @@ void GSRasterizerList::Sync()
 	}
 }
 
-void GSRasterizerList::Draw(const GSRasterizerData* data)
+void GSRasterizerList::Draw(const GSRasterizerData* data, int width, int height)
 {
 	m_stats.Reset();
 
-	memcpy(m_param, data->param, m_param_size);
-
 	m_start = __rdtsc();
 
-	m_sync = m_syncstart;
+	m_threads = std::min<int>(1 + (height >> THREAD_HEIGHT), size());
 
-	for(size_t i = 1; i < size(); i++)
+	#ifdef UseSpinningFinish
+
+	m_sync = 0;
+
+	for(int i = 1; i < m_threads; i++)
 	{
+		m_sync |= 1 << i;
+	}
+
+	#endif
+
+	for(int i = 1; i < m_threads; i++)
+	{
+		(*this)[i]->SetThreadId(i, m_threads);
+
 		(*this)[i]->Draw(data);
 	}
+
+	(*this)[0]->SetThreadId(0, m_threads);
 
 	(*this)[0]->Draw(data);
 }

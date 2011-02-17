@@ -27,7 +27,7 @@ GPURendererSW::GPURendererSW(GSDevice* dev, int threads)
 	: GPURendererT(dev)
 	, m_texture(NULL)
 {
-	m_rl.Create<GPUDrawScanline, GPUScanlineGlobalData>(threads);
+	m_rl.Create<GPUDrawScanline>(threads);
 }
 
 GPURendererSW::~GPURendererSW()
@@ -129,31 +129,29 @@ void GPURendererSW::Draw()
 	default: __assume(0);
 	}
 
-	m_rl.Draw(&data);
+	// TODO: VertexTrace
 
-	// TODO
+	GSVector4 tl(+1e10f);
+	GSVector4 br(-1e10f);
 
+	for(int i = 0, j = m_count; i < j; i++)
 	{
-		GSVector4 tl(+1e10f);
-		GSVector4 br(-1e10f);
+		GSVector4 p = m_vertices[i].p;
 
-		for(int i = 0, j = m_count; i < j; i++)
-		{
-			GSVector4 p = m_vertices[i].p;
-
-			tl = tl.min(p);
-			br = br.max(p);
-		}
-
-		GSVector4i r = GSVector4i(tl.xyxy(br)).rintersect(data.scissor);
-
-		r.left >>= m_scale.x;
-		r.top >>= m_scale.y;
-		r.right >>= m_scale.x;
-		r.bottom >>= m_scale.y;
-
-		Invalidate(r);
+		tl = tl.min(p);
+		br = br.max(p);
 	}
+
+	GSVector4i r = GSVector4i(tl.xyxy(br)).rintersect(data.scissor);
+
+	r.left >>= m_scale.x;
+	r.top >>= m_scale.y;
+	r.right >>= m_scale.x;
+	r.bottom >>= m_scale.y;
+
+	m_rl.Draw(&data, r.width(), r.height());
+
+	Invalidate(r);
 
 	m_rl.Sync(); 
 

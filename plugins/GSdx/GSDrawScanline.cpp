@@ -23,28 +23,30 @@
 #include "GSDrawScanline.h"
 #include "GSTextureCacheSW.h"
 
-GSDrawScanline::GSDrawScanline(GSScanlineGlobalData* gd)
+GSDrawScanline::GSDrawScanline()
 	: m_sp_map("GSSetupPrim", &m_local)
 	, m_ds_map("GSDrawScanline", &m_local)
 {
 	memset(&m_local, 0, sizeof(m_local));
 
-	m_local.gd = gd;
+	m_local.gd = &m_global;
 }
 
 GSDrawScanline::~GSDrawScanline()
 {
 }
 
-void GSDrawScanline::BeginDraw(const GSRasterizerData* data)
+void GSDrawScanline::BeginDraw(const void* param)
 {
-	m_ds = m_ds_map[m_local.gd->sel];
+	memcpy(&m_global, param, sizeof(m_global));
 
-	if(m_local.gd->sel.aa1)// && (m_state->m_perfmon.GetFrame() & 0x40))
+	m_ds = m_ds_map[m_global.sel];
+
+	if(m_global.sel.aa1)
 	{
 		GSScanlineSelector sel;
 
-		sel.key = m_local.gd->sel.key;
+		sel.key = m_global.sel.key;
 		sel.zwrite = 0;
 		sel.edge = 1;
 
@@ -55,7 +57,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data)
 		m_de = NULL;
 	}
 
-	if(m_local.gd->sel.IsSolidRect())
+	if(m_global.sel.IsSolidRect())
 	{
 		m_dr = (DrawRectPtr)&GSDrawScanline::DrawRect;
 	}
@@ -70,15 +72,15 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data)
 
 	sel.key = 0;
 
-	sel.iip = m_local.gd->sel.iip;
-	sel.tfx = m_local.gd->sel.tfx;
-	sel.tcc = m_local.gd->sel.tcc;
-	sel.fst = m_local.gd->sel.fst;
-	sel.fge = m_local.gd->sel.fge;
-	sel.sprite = m_local.gd->sel.sprite;
-	sel.fb = m_local.gd->sel.fb;
-	sel.zb = m_local.gd->sel.zb;
-	sel.zoverflow = m_local.gd->sel.zoverflow;
+	sel.iip = m_global.sel.iip;
+	sel.tfx = m_global.sel.tfx;
+	sel.tcc = m_global.sel.tcc;
+	sel.fst = m_global.sel.fst;
+	sel.fge = m_global.sel.fge;
+	sel.sprite = m_global.sel.sprite;
+	sel.fb = m_global.sel.fb;
+	sel.zb = m_global.sel.zb;
+	sel.zoverflow = m_global.sel.zoverflow;
 
 	m_sp = m_sp_map[sel];
 }
@@ -97,16 +99,16 @@ void GSDrawScanline::DrawRect(const GSVector4i& r, const GSVertexSW& v)
 
 	uint32 m;
 
-	m = m_local.gd->zm.u32[0];
+	m = m_global.zm.u32[0];
 
 	if(m != 0xffffffff)
 	{
-		const int* zbr = m_local.gd->zbr;
-		const int* zbc = m_local.gd->zbc;
+		const int* zbr = m_global.zbr;
+		const int* zbc = m_global.zbc;
 
 		uint32 z = (uint32)v.p.z;
 
-		if(m_local.gd->sel.zpsm != 2)
+		if(m_global.sel.zpsm != 2)
 		{
 			if(m == 0)
 			{
@@ -130,21 +132,21 @@ void GSDrawScanline::DrawRect(const GSVector4i& r, const GSVertexSW& v)
 		}
 	}
 
-	m = m_local.gd->fm.u32[0];
+	m = m_global.fm.u32[0];
 
 	if(m != 0xffffffff)
 	{
-		const int* fbr = m_local.gd->fbr;
-		const int* fbc = m_local.gd->fbc;
+		const int* fbr = m_global.fbr;
+		const int* fbc = m_global.fbc;
 
 		uint32 c = (GSVector4i(v.c) >> 7).rgba32();
 
-		if(m_local.gd->sel.fba)
+		if(m_global.sel.fba)
 		{
 			c |= 0x80000000;
 		}
 
-		if(m_local.gd->sel.fpsm != 2)
+		if(m_global.sel.fpsm != 2)
 		{
 			if(m == 0)
 			{
@@ -213,7 +215,7 @@ void GSDrawScanline::FillRect(const int* RESTRICT row, const int* RESTRICT col, 
 {
 	if(r.x >= r.z) return;
 
-	T* vm = (T*)m_local.gd->vm;
+	T* vm = (T*)m_global.vm;
 
 	for(int y = r.y; y < r.w; y++)
 	{
@@ -231,7 +233,7 @@ void GSDrawScanline::FillBlock(const int* RESTRICT row, const int* RESTRICT col,
 {
 	if(r.x >= r.z) return;
 
-	T* vm = (T*)m_local.gd->vm;
+	T* vm = (T*)m_global.vm;
 
 	for(int y = r.y; y < r.w; y += 8)
 	{

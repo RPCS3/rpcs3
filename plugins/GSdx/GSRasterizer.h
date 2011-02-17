@@ -55,7 +55,7 @@ public:
 	IDrawScanline() : m_sp(NULL), m_ds(NULL), m_de(NULL), m_dr(NULL) {}
 	virtual ~IDrawScanline() {}
 
-	virtual void BeginDraw(const GSRasterizerData* data) = 0;
+	virtual void BeginDraw(const void* param) = 0;
 	virtual void EndDraw(const GSRasterizerStats& stats, uint64 frame) = 0;
 	virtual void PrintStats() = 0;
 
@@ -76,6 +76,7 @@ public:
 	virtual void Draw(const GSRasterizerData* data) = 0;
 	virtual void GetStats(GSRasterizerStats& stats) = 0;
 	virtual void PrintStats() = 0;
+	virtual void SetThreadId(int id, int threads) = 0;
 };
 
 class GSRasterizer : public IRasterizer
@@ -104,7 +105,7 @@ protected:
 	inline bool IsOneOfMyScanlines(int scanline) const;
 
 public:
-	GSRasterizer(IDrawScanline* ds, int id = 0, int threads = 0);
+	GSRasterizer(IDrawScanline* ds);
 	virtual ~GSRasterizer();
 
 	// IRasterizer
@@ -112,6 +113,7 @@ public:
 	void Draw(const GSRasterizerData* data);
 	void GetStats(GSRasterizerStats& stats);
 	void PrintStats() {m_ds->PrintStats();}
+	void SetThreadId(int id, int threads) {m_id = id; m_threads = threads;}
 };
 
 class GSRasterizerMT : public GSRasterizer, private GSThread
@@ -126,7 +128,7 @@ protected:
 	void ThreadProc();
 
 public:
-	GSRasterizerMT(IDrawScanline* ds, int id, int threads, HANDLE ready, volatile long& sync);
+	GSRasterizerMT(IDrawScanline* ds, HANDLE ready, volatile long& sync);
 	virtual ~GSRasterizerMT();
 
 	// IRasterizer
@@ -134,49 +136,38 @@ public:
 	void Draw(const GSRasterizerData* data);
 };
 
-class GSRasterizerList : protected vector<IRasterizer*>, public IRasterizer
+class GSRasterizerList : protected vector<IRasterizer*>
 {
 protected:
 	std::vector<HANDLE> m_ready;
 	volatile long m_sync;
-	long m_syncstart;
 	GSRasterizerStats m_stats;
 	int64 m_start;
-	void* m_param;
-	size_t m_param_size;
+	int m_threads;
 
 public:
 	GSRasterizerList();
 	virtual ~GSRasterizerList();
 
-	template<class DS, class PARAM> void Create(int threads)
+	template<class DS> void Create(int threads)
 	{
 		threads = std::max<int>(threads, 1); // TODO: min(threads, number of cpu cores)
 
-		m_param = _aligned_malloc(sizeof(PARAM), 32);
-		m_param_size = sizeof(PARAM);
-
-		m_syncstart = 0;
-
-		push_back(new GSRasterizer(new DS((PARAM*)m_param), 0, threads));
+		push_back(new GSRasterizer(new DS()));
 
 		for(int i = 1; i < threads; i++)
 		{
 			HANDLE ready = CreateEvent(NULL, FALSE, TRUE, NULL);
 
-			push_back(new GSRasterizerMT(new DS((PARAM*)m_param), i, threads, ready, m_sync));
+			push_back(new GSRasterizerMT(new DS(), ready, m_sync));
 
 			m_ready.push_back(ready);
-
-			_interlockedbittestandset(&m_syncstart, i);
 		}
 	}
 
 	void Sync();
 
-	// IRasterizer
-
-	void Draw(const GSRasterizerData* data);
+	void Draw(const GSRasterizerData* data, int width, int height);
 	void GetStats(GSRasterizerStats& stats);
 	void PrintStats();
 };

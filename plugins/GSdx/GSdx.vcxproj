@@ -760,7 +760,9 @@
     </ClCompile>
     <ClCompile Include="GSRendererHW.cpp" />
     <ClCompile Include="GSRendererNull.cpp" />
-    <ClCompile Include="GSRendererSW.cpp" />
+    <ClCompile Include="GSRendererSW.cpp">
+      <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release AVX|Win32'">AssemblyAndSourceCode</AssemblerOutput>
+    </ClCompile>
     <ClCompile Include="GSSetting.cpp" />
     <ClCompile Include="GSSettingsDlg.cpp" />
     <ClCompile Include="GSSetupPrimCodeGenerator.cpp" />

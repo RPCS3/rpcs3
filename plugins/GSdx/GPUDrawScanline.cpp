@@ -22,39 +22,41 @@
 #include "StdAfx.h"
 #include "GPUDrawScanline.h"
 
-GPUDrawScanline::GPUDrawScanline(const GPUScanlineGlobalData* gd)
+GPUDrawScanline::GPUDrawScanline()
 	: m_sp_map("GPUSetupPrim", &m_local)
 	, m_ds_map("GPUDrawScanline", &m_local)
 {
 	memset(&m_local, 0, sizeof(m_local));
 
-	m_local.gd = gd;
+	m_local.gd = &m_global;
 }
 
 GPUDrawScanline::~GPUDrawScanline()
 {
 }
 
-void GPUDrawScanline::BeginDraw(const GSRasterizerData* data)
+void GPUDrawScanline::BeginDraw(const void* param)
 {
-	if(m_local.gd->sel.tme && m_local.gd->sel.twin)
+	memcpy(&m_global, param, sizeof(m_global));
+
+	if(m_global.sel.tme && m_global.sel.twin)
 	{
 		uint32 u, v;
 
-		u = ~(m_local.gd->twin.x << 3) & 0xff; // TWW
-		v = ~(m_local.gd->twin.y << 3) & 0xff; // TWH
+		u = ~(m_global.twin.x << 3) & 0xff; // TWW
+		v = ~(m_global.twin.y << 3) & 0xff; // TWH
 
 		m_local.twin[0].u = GSVector4i((u << 16) | u);
 		m_local.twin[0].v = GSVector4i((v << 16) | v);
 
-		u = m_local.gd->twin.z << 3; // TWX
-		v = m_local.gd->twin.w << 3; // TWY
+		u = m_global.twin.z << 3; // TWX
+		v = m_global.twin.w << 3; // TWY
 			
 		m_local.twin[1].u = GSVector4i((u << 16) | u) & ~m_local.twin[0].u;
 		m_local.twin[1].v = GSVector4i((v << 16) | v) & ~m_local.twin[0].v;
 	}
 
-	m_ds = m_ds_map[m_local.gd->sel];
+	m_ds = m_ds_map[m_global.sel];
 
 	m_de = NULL;
 
@@ -66,10 +68,10 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data)
 
 	sel.key = 0;
 
-	sel.iip = m_local.gd->sel.iip;
-	sel.tfx = m_local.gd->sel.tfx;
-	sel.twin = m_local.gd->sel.twin;
-	sel.sprite = m_local.gd->sel.sprite;
+	sel.iip = m_global.sel.iip;
+	sel.tfx = m_global.sel.tfx;
+	sel.twin = m_global.sel.twin;
+	sel.sprite = m_global.sel.sprite;
 
 	m_sp = m_sp_map[sel];
 }
