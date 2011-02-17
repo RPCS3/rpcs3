@@ -525,8 +525,11 @@ void _IsoPart::Read( void* dest, size_t size )
 	// must always use the explicit check against the number of bytes read to determine
 	// end-of-stream conditions.
 
+	// Throwing exceptions here ends emulation. 
+	// We should let the game decide what to do with missing data though.
 	if ((size_t)handle->LastRead() < size)
-		throw Exception::EndOfStream( filename );
+		Console.Warning( "ISO read problem (Bad game rip?)" );
+		//throw Exception::EndOfStream( filename );
 }
 
 void _IsoPart::Seek(wxFileOffset pos, wxSeekMode mode)

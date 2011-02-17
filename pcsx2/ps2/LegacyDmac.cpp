@@ -344,6 +344,7 @@ __fi bool dmacWrite32( u32 mem, mem32_t& value )
 		icase(D7_CHCR) // dma7 - sif2
 		{
 			DMA_LOG("SIF2dma EXECUTE, value=0x%x", value);
+			DevCon.Warning("SIF2 DMA call");
 			DmaExec(dmaSIF2, mem, value);
 			return false;
 		}

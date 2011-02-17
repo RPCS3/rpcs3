@@ -305,8 +305,8 @@ void GSFrame::OnCloseWindow(wxCloseEvent& evt)
 
 bool GSFrame::ShowFullScreen(bool show, long style)
 {
-	if( show != IsFullScreen() )
-		Console.WriteLn( Color_StrongMagenta, "(gsFrame) Switching to %s mode...", show ? "Fullscreen" : "Windowed" );
+	/*if( show != IsFullScreen() )
+		Console.WriteLn( Color_StrongMagenta, "(gsFrame) Switching to %s mode...", show ? "Fullscreen" : "Windowed" );*/
 
 	if( g_Conf->GSWindow.IsFullscreen != show )
 	{

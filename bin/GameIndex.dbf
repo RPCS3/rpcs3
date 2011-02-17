@@ -9438,6 +9438,7 @@ Compat = 2
 Serial = SLUS-21788
 Name   = Ar Tonelico 2 - Melody Of Metafalica
 Region = NTSC-U
+eeRoundMode = 0 // Fixes "Fall through floor" bug when aproaching chests
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-21789
