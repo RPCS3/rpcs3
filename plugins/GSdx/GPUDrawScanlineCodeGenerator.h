@@ -33,11 +33,12 @@ class GPUDrawScanlineCodeGenerator : public GSCodeGenerator
 	static const GSVector4i m_test[8];
 	static const uint16 m_dither[4][16];
 
-	GPUScanlineEnvironment& m_env;
+	GPUScanlineSelector m_sel;
+	GPUScanlineLocalData& m_local;
 
 	void Generate();
 
-	void Init(int params);
+	void Init();
 	void Step();
 	void TestMask();
 	void SampleTexture();

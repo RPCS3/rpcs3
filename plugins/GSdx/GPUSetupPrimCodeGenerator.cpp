@@ -29,22 +29,24 @@ using namespace Xbyak;
 
 GPUSetupPrimCodeGenerator::GPUSetupPrimCodeGenerator(void* param, uint32 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)
-	, m_env(*(GPUScanlineEnvironment*)param)
+	, m_local(*(GPUScanlineLocalData*)param)
 {
 	#if _M_AMD64
 	#error TODO
 	#endif
+
+	m_sel.key = key;
 
 	Generate();
 }
 
 void GPUSetupPrimCodeGenerator::Generate()
 {
-	if(m_env.sel.tme && !m_env.sel.twin)
+	if(m_sel.tme && !m_sel.twin)
 	{
 		pcmpeqd(xmm0, xmm0);
 
-		if(m_env.sel.sprite)
+		if(m_sel.sprite)
 		{
 			// t = (GSVector4i(vertices[1].t) >> 8) - GSVector4i::x00000001();
 
@@ -59,30 +61,30 @@ void GPUSetupPrimCodeGenerator::Generate()
 			packssdw(xmm1, xmm1);
 			punpcklwd(xmm1, xmm1);
 
-			// m_env.twin[2].u = t.xxxx();
-			// m_env.twin[2].v = t.yyyy();
+			// m_local.twin[2].u = t.xxxx();
+			// m_local.twin[2].v = t.yyyy();
 
 			pshufd(xmm2, xmm1, _MM_SHUFFLE(0, 0, 0, 0));
 			pshufd(xmm3, xmm1, _MM_SHUFFLE(1, 1, 1, 1));
 
-			movdqa(ptr[&m_env.twin[2].u], xmm2);
-			movdqa(ptr[&m_env.twin[2].v], xmm3);
+			movdqa(ptr[&m_local.twin[2].u], xmm2);
+			movdqa(ptr[&m_local.twin[2].v], xmm3);
 		}
 		else
 		{
 			// TODO: not really needed
 
-			// m_env.twin[2].u = GSVector4i::x00ff();
-			// m_env.twin[2].v = GSVector4i::x00ff();
+			// m_local.twin[2].u = GSVector4i::x00ff();
+			// m_local.twin[2].v = GSVector4i::x00ff();
 
 			psrlw(xmm0, 8);
 
-			movdqa(ptr[&m_env.twin[2].u], xmm0);
-			movdqa(ptr[&m_env.twin[2].v], xmm0);
+			movdqa(ptr[&m_local.twin[2].u], xmm0);
+			movdqa(ptr[&m_local.twin[2].v], xmm0);
 		}
 	}
 
-	if(m_env.sel.tme || m_env.sel.iip && m_env.sel.tfx != 3)
+	if(m_sel.tme || m_sel.iip && m_sel.tfx != 3)
 	{
 		for(int i = 0; i < 3; i++)
 		{
@@ -105,21 +107,21 @@ void GPUSetupPrimCodeGenerator::Generate()
 		cvttps2dq(xmm2, xmm2);
 		packssdw(xmm1, xmm2);
 
-		if(m_env.sel.tme)
+		if(m_sel.tme)
 		{
-			// m_env.d8.st = dtc8.upl16(dtc8);
+			// m_local.d8.st = dtc8.upl16(dtc8);
 
 			movdqa(xmm0, xmm1);
 			punpcklwd(xmm0, xmm0);
-			movdqa(ptr[&m_env.d8.st], xmm0);
+			movdqa(ptr[&m_local.d8.st], xmm0);
 		}
 
-		if(m_env.sel.iip && m_env.sel.tfx != 3)
+		if(m_sel.iip && m_sel.tfx != 3)
 		{
-			// m_env.d8.c = dtc8.uph16(dtc8);
+			// m_local.d8.c = dtc8.uph16(dtc8);
 
 			punpckhwd(xmm1, xmm1);
-			movdqa(ptr[&m_env.d8.c], xmm1);
+			movdqa(ptr[&m_local.d8.c], xmm1);
 		}
 
 		// xmm3 = dt
@@ -128,7 +130,7 @@ void GPUSetupPrimCodeGenerator::Generate()
 		// xmm7 = ps4567
 		// xmm0, xmm1, xmm2, xmm5 = free
 
-		if(m_env.sel.tme)
+		if(m_sel.tme)
 		{
 			// GSVector4 dtx = dt.xxxx();
 			// GSVector4 dty = dt.yyyy();
@@ -137,7 +139,7 @@ void GPUSetupPrimCodeGenerator::Generate()
 			shufps(xmm3, xmm3, _MM_SHUFFLE(0, 0, 0, 0));
 			shufps(xmm0, xmm0, _MM_SHUFFLE(1, 1, 1, 1));
 
-			// m_env.d.s = GSVector4i(dtx * ps0123).ps32(GSVector4i(dtx * ps4567));
+			// m_local.d.s = GSVector4i(dtx * ps0123).ps32(GSVector4i(dtx * ps4567));
 
 			movaps(xmm1, xmm3);
 			mulps(xmm3, xmm6);
@@ -145,9 +147,9 @@ void GPUSetupPrimCodeGenerator::Generate()
 			cvttps2dq(xmm3, xmm3);
 			cvttps2dq(xmm1, xmm1);
 			packssdw(xmm3, xmm1);
-			movdqa(ptr[&m_env.d.s], xmm3);
+			movdqa(ptr[&m_local.d.s], xmm3);
 
-			// m_env.d.t = GSVector4i(dty * ps0123).ps32(GSVector4i(dty * ps4567));
+			// m_local.d.t = GSVector4i(dty * ps0123).ps32(GSVector4i(dty * ps4567));
 
 			movaps(xmm1, xmm0);
 			mulps(xmm0, xmm6);
@@ -155,7 +157,7 @@ void GPUSetupPrimCodeGenerator::Generate()
 			cvttps2dq(xmm0, xmm0);
 			cvttps2dq(xmm1, xmm1);
 			packssdw(xmm0, xmm1);
-			movdqa(ptr[&m_env.d.t], xmm0);
+			movdqa(ptr[&m_local.d.t], xmm0);
 		}
 
 		// xmm4 = dc
@@ -163,7 +165,7 @@ void GPUSetupPrimCodeGenerator::Generate()
 		// xmm7 = ps4567
 		// xmm0, xmm1, zmm2, xmm3, xmm5 = free
 
-		if(m_env.sel.iip && m_env.sel.tfx != 3)
+		if(m_sel.iip && m_sel.tfx != 3)
 		{
 			// GSVector4 dcx = dc.xxxx();
 			// GSVector4 dcy = dc.yyyy();
@@ -175,7 +177,7 @@ void GPUSetupPrimCodeGenerator::Generate()
 			shufps(xmm0, xmm0, _MM_SHUFFLE(1, 1, 1, 1));
 			shufps(xmm1, xmm1, _MM_SHUFFLE(2, 2, 2, 2));
 
-			// m_env.d.r = GSVector4i(dcx * ps0123).ps32(GSVector4i(dcx * ps4567));
+			// m_local.d.r = GSVector4i(dcx * ps0123).ps32(GSVector4i(dcx * ps4567));
 
 			movaps(xmm2, xmm4);
 			mulps(xmm4, xmm6);
@@ -183,9 +185,9 @@ void GPUSetupPrimCodeGenerator::Generate()
 			cvttps2dq(xmm4, xmm4);
 			cvttps2dq(xmm2, xmm2);
 			packssdw(xmm4, xmm2);
-			movdqa(ptr[&m_env.d.r], xmm4);
+			movdqa(ptr[&m_local.d.r], xmm4);
 
-			// m_env.d.g = GSVector4i(dcy * ps0123).ps32(GSVector4i(dcy * ps4567));
+			// m_local.d.g = GSVector4i(dcy * ps0123).ps32(GSVector4i(dcy * ps4567));
 
 			movaps(xmm2, xmm0);
 			mulps(xmm0, xmm6);
@@ -193,9 +195,9 @@ void GPUSetupPrimCodeGenerator::Generate()
 			cvttps2dq(xmm0, xmm0);
 			cvttps2dq(xmm2, xmm2);
 			packssdw(xmm0, xmm2);
-			movdqa(ptr[&m_env.d.g], xmm0);
+			movdqa(ptr[&m_local.d.g], xmm0);
 
-			// m_env.d.b = GSVector4i(dcz * ps0123).ps32(GSVector4i(dcz * ps4567));
+			// m_local.d.b = GSVector4i(dcz * ps0123).ps32(GSVector4i(dcz * ps4567));
 
 			movaps(xmm2, xmm1);
 			mulps(xmm1, xmm6);
@@ -203,7 +205,7 @@ void GPUSetupPrimCodeGenerator::Generate()
 			cvttps2dq(xmm1, xmm1);
 			cvttps2dq(xmm2, xmm2);
 			packssdw(xmm1, xmm2);
-			movdqa(ptr[&m_env.d.b], xmm1);
+			movdqa(ptr[&m_local.d.b], xmm1);
 		}
 	}
 

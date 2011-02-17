@@ -32,12 +32,12 @@ class GSDrawScanlineCodeGenerator : public GSCodeGenerator
 
 	static const GSVector4i m_test[8];
 
-	GSScanlineEnvironment& m_env;
 	GSScanlineSelector m_sel;
+	GSScanlineLocalData& m_local;
 
 	void Generate();
 
-	void Init(int params);
+	void Init();
 	void Step();
 	void TestZ(const Xmm& temp1, const Xmm& temp2);
 	void SampleTexture();
@@ -53,7 +53,7 @@ class GSDrawScanlineCodeGenerator : public GSCodeGenerator
 	void WriteMask();
 	void WriteZBuf();
 	void AlphaBlend();
-	void WriteFrame(int params);
+	void WriteFrame();
 
 	void ReadPixel(const Xmm& dst, const Reg32& addr);
 	void WritePixel(const Xmm& src, const Reg32& addr, const Reg8& mask, bool fast, int psm, int fz);

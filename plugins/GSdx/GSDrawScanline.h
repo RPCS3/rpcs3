@@ -29,8 +29,7 @@
 
 class GSDrawScanline : public IDrawScanline
 {
-	GSScanlineEnvironment m_env;
-	GSScanlineSelector m_sel;
+	GSScanlineLocalData m_local;
 
 	GSCodeGeneratorFunctionMap<GSSetupPrimCodeGenerator, uint64, SetupPrimPtr> m_sp_map;
 	GSCodeGeneratorFunctionMap<GSDrawScanlineCodeGenerator, uint64, DrawScanlinePtr> m_ds_map;
@@ -46,17 +45,13 @@ class GSDrawScanline : public IDrawScanline
 	template<class T, bool masked>
 	__forceinline void FillBlock(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m);
 
-protected:
-	GSState* m_state;
-	int m_id;
-
 public:
-	GSDrawScanline(GSState* state, int id);
+	GSDrawScanline(GSScanlineGlobalData* gd);
 	virtual ~GSDrawScanline();
 
 	// IDrawScanline
 
 	void BeginDraw(const GSRasterizerData* data);
-	void EndDraw(const GSRasterizerStats& stats);
+	void EndDraw(const GSRasterizerStats& stats, uint64 frame);
 	void PrintStats() {m_ds_map.PrintStats();}
 };

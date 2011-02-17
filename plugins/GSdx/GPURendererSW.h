@@ -36,6 +36,6 @@ protected:
 	void Draw();
 
 public:
-	GPURendererSW(GSDevice* dev);
+	GPURendererSW(GSDevice* dev, int threads);
 	virtual ~GPURendererSW();
 };

@@ -93,12 +93,13 @@ EXPORT_C_(int32) GPUopen(HWND hWnd)
 	}
 
 	int renderer = theApp.GetConfig("Renderer", 1);
+	int threads = theApp.GetConfig("swthreads", 1);
 
 	switch(renderer)
 	{
 	default: 
-	case 0: s_gpu = new GPURendererSW(new GSDevice9()); break;
-	case 1: s_gpu = new GPURendererSW(new GSDevice11()); break;
+	case 0: s_gpu = new GPURendererSW(new GSDevice9(), threads); break;
+	case 1: s_gpu = new GPURendererSW(new GSDevice11(), threads); break;
 	// TODO: case 3: s_gpu = new GPURendererNull(new GSDeviceNull()); break;
 	}
 

@@ -22,12 +22,13 @@
 #include "StdAfx.h"
 #include "GPUDrawScanline.h"
 
-GPUDrawScanline::GPUDrawScanline(GPUState* state, int id)
-	: m_state(state)
-	, m_id(id)
-	, m_sp_map("GPUSetupPrim", &m_env)
-	, m_ds_map("GPUDrawScanline", &m_env)
+GPUDrawScanline::GPUDrawScanline(const GPUScanlineGlobalData* gd)
+	: m_sp_map("GPUSetupPrim", &m_local)
+	, m_ds_map("GPUDrawScanline", &m_local)
 {
+	memset(&m_local, 0, sizeof(m_local));
+
+	m_local.gd = gd;
 }
 
 GPUDrawScanline::~GPUDrawScanline()
@@ -36,40 +37,24 @@ GPUDrawScanline::~GPUDrawScanline()
 
 void GPUDrawScanline::BeginDraw(const GSRasterizerData* data)
 {
-	GPUDrawingEnvironment& env = m_state->m_env;
-
-	const GPUScanlineParam* p = (const GPUScanlineParam*)data->param;
-
-	m_env.sel = p->sel;
-
-	m_env.vm = m_state->m_mem.GetPixelAddress(0, 0);
-
-	if(m_env.sel.tme)
+	if(m_local.gd->sel.twin)
 	{
-		m_env.tex = p->tex;
-		m_env.clut = p->clut;
+		uint32 u, v;
 
-		if(m_env.sel.twin)
-		{
-			uint32 u, v;
+		u = ~(m_local.gd->twin.x << 3) & 0xff; // TWW
+		v = ~(m_local.gd->twin.y << 3) & 0xff; // TWH
 
-			u = ~(env.TWIN.TWW << 3) & 0xff;
-			v = ~(env.TWIN.TWH << 3) & 0xff;
+		m_local.twin[0].u = GSVector4i((u << 16) | u);
+		m_local.twin[0].v = GSVector4i((v << 16) | v);
 
-			m_env.twin[0].u = GSVector4i((u << 16) | u);
-			m_env.twin[0].v = GSVector4i((v << 16) | v);
-
-			u = env.TWIN.TWX << 3;
-			v = env.TWIN.TWY << 3;
+		u = m_local.gd->twin.z << 3; // TWX
+		v = m_local.gd->twin.y << 3; // TWY
 			
-			m_env.twin[1].u = GSVector4i((u << 16) | u) & ~m_env.twin[0].u;
-			m_env.twin[1].v = GSVector4i((v << 16) | v) & ~m_env.twin[0].v;
-		}
+		m_local.twin[1].u = GSVector4i((u << 16) | u) & ~m_local.twin[0].u;
+		m_local.twin[1].v = GSVector4i((v << 16) | v) & ~m_local.twin[0].v;
 	}
 
-	//
-
-	m_ds = m_ds_map[m_env.sel];
+	m_ds = m_ds_map[m_local.gd->sel];
 
 	m_de = NULL;
 
@@ -81,15 +66,15 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data)
 
 	sel.key = 0;
 
-	sel.iip = m_env.sel.iip;
-	sel.tfx = m_env.sel.tfx;
-	sel.twin = m_env.sel.twin;
-	sel.sprite = m_env.sel.sprite;
+	sel.iip = m_local.gd->sel.iip;
+	sel.tfx = m_local.gd->sel.tfx;
+	sel.twin = m_local.gd->sel.twin;
+	sel.sprite = m_local.gd->sel.sprite;
 
 	m_sp = m_sp_map[sel];
 }
 
-void GPUDrawScanline::EndDraw(const GSRasterizerStats& stats)
+void GPUDrawScanline::EndDraw(const GSRasterizerStats& stats, uint64 frame)
 {
-	m_ds_map.UpdateStats(stats, m_state->m_perfmon.GetFrame());
+	m_ds_map.UpdateStats(stats, frame);
 }

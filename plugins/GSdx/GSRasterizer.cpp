@@ -110,7 +110,7 @@ void GSRasterizer::Draw(const GSRasterizerData* data)
 
 	m_stats.ticks = __rdtsc() - start;
 
-	m_ds->EndDraw(m_stats);
+	m_ds->EndDraw(m_stats, data->frame);
 }
 
 void GSRasterizer::GetStats(GSRasterizerStats& stats)
@@ -908,23 +908,19 @@ void GSRasterizerMT::ThreadProc()
 //
 
 GSRasterizerList::GSRasterizerList()
+	: m_sync(0)
+	, m_syncstart(0)
+	, m_param(NULL)
 {
 }
 
 GSRasterizerList::~GSRasterizerList()
 {
-	FreeRasterizers();
-}
-
-void GSRasterizerList::FreeRasterizers()
-{
 	for(size_t i = 0; i < size(); i++) delete (*this)[i];
-
-	clear();
 
 	for(size_t i = 0; i < m_ready.size(); i++) CloseHandle(m_ready[i]);
 
-	m_ready.clear();
+	if(m_param) _aligned_free(m_param);
 }
 
 void GSRasterizerList::Sync()
@@ -955,6 +951,8 @@ void GSRasterizerList::Sync()
 void GSRasterizerList::Draw(const GSRasterizerData* data)
 {
 	m_stats.Reset();
+
+	memcpy(m_param, data->param, m_param_size);
 
 	m_start = __rdtsc();
 

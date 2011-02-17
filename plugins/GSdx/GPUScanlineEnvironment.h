@@ -53,29 +53,26 @@ union GPUScanlineSelector
 
 	uint32 key;
 
-	operator uint32() {return key;}
+	operator uint32() const {return key;}
 };
 
-__declspec(align(16)) struct GPUScanlineParam
-{
-	GPUScanlineSelector sel;
-
-	const void* tex;
-	const uint16* clut;
-};
-
-__declspec(align(16)) struct GPUScanlineEnvironment
+__aligned32 struct GPUScanlineGlobalData
 {
 	GPUScanlineSelector sel;
 
 	void* vm;
 	const void* tex;
 	const uint16* clut;
+	GSVector4i twin; // TWW, TWH, TWX, TWY
+};
 
-	// GSVector4i md; // similar to gs fba
+__aligned32 struct GPUScanlineLocalData
+{
+	const GPUScanlineGlobalData* gd;
 
 	struct {GSVector4i u, v;} twin[3];
 	struct {GSVector4i s, t, r, g, b, _pad[3];} d;
 	struct {GSVector4i st, c;} d8;
+
 	struct {GSVector4i s, t, r, b, g, uf, vf, dither, fd, test;} temp;
 };

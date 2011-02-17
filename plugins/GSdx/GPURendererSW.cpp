@@ -23,11 +23,11 @@
 #include "GPURendererSW.h"
 #include "GSdx.h"
 
-GPURendererSW::GPURendererSW(GSDevice* dev)
+GPURendererSW::GPURendererSW(GSDevice* dev, int threads)
 	: GPURendererT(dev)
 	, m_texture(NULL)
 {
-	m_rl.Create<GPUDrawScanline>(this, theApp.GetConfig("swthreads", 1));
+	m_rl.Create<GPUDrawScanline, GPUScanlineGlobalData>(threads);
 }
 
 GPURendererSW::~GPURendererSW()
@@ -70,39 +70,42 @@ void GPURendererSW::Draw()
 
 	//
 
-	GPUScanlineParam p;
+	GPUScanlineGlobalData gd;
 
-	p.sel.key = 0;
-	p.sel.iip = env.PRIM.IIP;
-	p.sel.me = env.STATUS.ME;
+	gd.sel.key = 0;
+	gd.sel.iip = env.PRIM.IIP;
+	gd.sel.me = env.STATUS.ME;
 
 	if(env.PRIM.ABE)
 	{
-		p.sel.abe = env.PRIM.ABE;
-		p.sel.abr = env.STATUS.ABR;
+		gd.sel.abe = env.PRIM.ABE;
+		gd.sel.abr = env.STATUS.ABR;
 	}
 
-	p.sel.tge = env.PRIM.TGE;
+	gd.sel.tge = env.PRIM.TGE;
 
 	if(env.PRIM.TME)
 	{
-		p.sel.tme = env.PRIM.TME;
-		p.sel.tlu = env.STATUS.TP < 2;
-		p.sel.twin = (env.TWIN.u32 & 0xfffff) != 0;
-		p.sel.ltf = m_filter == 1 && env.PRIM.TYPE == GPU_POLYGON || m_filter == 2 ? 1 : 0;
+		gd.sel.tme = env.PRIM.TME;
+		gd.sel.tlu = env.STATUS.TP < 2;
+		gd.sel.twin = (env.TWIN.u32 & 0xfffff) != 0;
+		gd.sel.ltf = m_filter == 1 && env.PRIM.TYPE == GPU_POLYGON || m_filter == 2 ? 1 : 0;
 
 		const void* t = m_mem.GetTexture(env.STATUS.TP, env.STATUS.TX, env.STATUS.TY);
 
 		if(!t) {ASSERT(0); return;}
 
-		p.tex = t;
-		p.clut = m_mem.GetCLUT(env.STATUS.TP, env.CLUT.X, env.CLUT.Y);
+		gd.tex = t;
+		gd.clut = m_mem.GetCLUT(env.STATUS.TP, env.CLUT.X, env.CLUT.Y);
+		gd.twin = GSVector4i(env.TWIN.TWW, env.TWIN.TWH, env.TWIN.TWX, env.TWIN.TWY);
 	}
 
-	p.sel.dtd = m_dither ? env.STATUS.DTD : 0;
-	p.sel.md = env.STATUS.MD;
-	p.sel.sprite = env.PRIM.TYPE == GPU_SPRITE;
-	p.sel.scalex = m_mem.GetScale().x;
+	gd.sel.dtd = m_dither ? env.STATUS.DTD : 0;
+	gd.sel.md = env.STATUS.MD;
+	gd.sel.sprite = env.PRIM.TYPE == GPU_SPRITE;
+	gd.sel.scalex = m_mem.GetScale().x;
+
+	gd.vm = m_mem.GetPixelAddress(0, 0);
 
 	//
 
@@ -110,7 +113,8 @@ void GPURendererSW::Draw()
 
 	data.vertices = m_vertices;
 	data.count = m_count;
-	data.param = &p;
+	data.frame = m_perfmon.GetFrame();
+	data.param = &gd;
 
 	data.scissor.left = (int)m_env.DRAREATL.X << m_scale.x;
 	data.scissor.top = (int)m_env.DRAREATL.Y << m_scale.y;
@@ -126,14 +130,6 @@ void GPURendererSW::Draw()
 	}
 
 	m_rl.Draw(&data);
-
-	GSRasterizerStats stats;
-
-	m_rl.GetStats(stats);
-
-	m_perfmon.Put(GSPerfMon::Draw, 1);
-	m_perfmon.Put(GSPerfMon::Prim, stats.prims);
-	m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels); 
 
 	// TODO
 
@@ -158,6 +154,16 @@ void GPURendererSW::Draw()
 
 		Invalidate(r);
 	}
+
+	m_rl.Sync(); 
+
+	GSRasterizerStats stats;
+
+	m_rl.GetStats(stats);
+
+	m_perfmon.Put(GSPerfMon::Draw, 1);
+	m_perfmon.Put(GSPerfMon::Prim, stats.prims);
+	m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels); 
 }
 
 void GPURendererSW::VertexKick()

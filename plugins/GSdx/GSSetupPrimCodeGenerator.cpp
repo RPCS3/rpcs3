@@ -28,18 +28,18 @@ using namespace Xbyak;
 
 GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(void* param, uint64 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)
-	, m_env(*(GSScanlineEnvironment*)param)
+	, m_local(*(GSScanlineLocalData*)param)
 {
+	#if _M_AMD64
+	#error TODO
+	#endif
+
 	m_sel.key = key;
 
 	m_en.z = m_sel.zb ? 1 : 0;
 	m_en.f = m_sel.fb && m_sel.fge ? 1 : 0;
 	m_en.t = m_sel.fb && m_sel.tfx != TFX_NONE ? 1 : 0;
 	m_en.c = m_sel.fb && !(m_sel.tfx == TFX_DECAL && m_sel.tcc) ? 1 : 0;
-
-	#if _M_AMD64
-	#error TODO
-	#endif
 
 	Generate();
 }
@@ -91,23 +91,23 @@ void GSSetupPrimCodeGenerator::Depth()
 
 				vshufps(xmm1, xmm0, xmm0, _MM_SHUFFLE(3, 3, 3, 3));
 
-				// m_env.d4.f = GSVector4i(df * 4.0f).xxzzlh();
+				// m_local.d4.f = GSVector4i(df * 4.0f).xxzzlh();
 
 				vmulps(xmm2, xmm1, xmm3);
 				vcvttps2dq(xmm2, xmm2);
 				vpshuflw(xmm2, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 				vpshufhw(xmm2, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
-				vmovdqa(ptr[&m_env.d4.f], xmm2);
+				vmovdqa(ptr[&m_local.d4.f], xmm2);
 
 				for(int i = 0; i < 4; i++)
 				{
-					// m_env.d[i].f = GSVector4i(df * m_shift[i]).xxzzlh();
+					// m_local.d[i].f = GSVector4i(df * m_shift[i]).xxzzlh();
 
 					vmulps(xmm2, xmm1, Xmm(4 + i));
 					vcvttps2dq(xmm2, xmm2);
 					vpshuflw(xmm2, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 					vpshufhw(xmm2, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
-					vmovdqa(ptr[&m_env.d[i].f], xmm2);
+					vmovdqa(ptr[&m_local.d[i].f], xmm2);
 				}
 			}
 
@@ -117,17 +117,17 @@ void GSSetupPrimCodeGenerator::Depth()
 
 				vshufps(xmm0, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
 
-				// m_env.d4.z = dz * 4.0f;
+				// m_local.d4.z = dz * 4.0f;
 
 				vmulps(xmm1, xmm0, xmm3);
-				vmovdqa(ptr[&m_env.d4.z], xmm1);
+				vmovdqa(ptr[&m_local.d4.z], xmm1);
 
 				for(int i = 0; i < 4; i++)
 				{
-					// m_env.d[i].z = dz * m_shift[i];
+					// m_local.d[i].z = dz * m_shift[i];
 
 					vmulps(xmm1, xmm0, Xmm(4 + i));
-					vmovdqa(ptr[&m_env.d[i].z], xmm1);
+					vmovdqa(ptr[&m_local.d[i].z], xmm1);
 				}
 			}
 		}
@@ -139,12 +139,12 @@ void GSSetupPrimCodeGenerator::Depth()
 
 			if(m_en.f)
 			{
-				// m_env.p.f = GSVector4i(p).zzzzh().zzzz();
+				// m_local.p.f = GSVector4i(p).zzzzh().zzzz();
 
 				vcvttps2dq(xmm1, xmm0);
 				vpshufhw(xmm1, xmm1, _MM_SHUFFLE(2, 2, 2, 2));
 				vpshufd(xmm1, xmm1, _MM_SHUFFLE(2, 2, 2, 2));
-				vmovdqa(ptr[&m_env.p.f], xmm1);
+				vmovdqa(ptr[&m_local.p.f], xmm1);
 			}
 
 			if(m_en.z)
@@ -155,7 +155,7 @@ void GSSetupPrimCodeGenerator::Depth()
 
 				if(m_sel.zoverflow)
 				{
-					// m_env.p.z = (GSVector4i(z * 0.5f) << 1) | (GSVector4i(z) & GSVector4i::x00000001());
+					// m_local.p.z = (GSVector4i(z * 0.5f) << 1) | (GSVector4i(z) & GSVector4i::x00000001());
 
 					static const float half = 0.5f;
 
@@ -173,12 +173,12 @@ void GSSetupPrimCodeGenerator::Depth()
 				}
 				else
 				{
-					// m_env.p.z = GSVector4i(z);
+					// m_local.p.z = GSVector4i(z);
 
 					vcvttps2dq(xmm0, xmm0);
 				}
 
-				vmovdqa(ptr[&m_env.p.z], xmm0);
+				vmovdqa(ptr[&m_local.p.z], xmm0);
 			}
 		}
 	}
@@ -197,25 +197,25 @@ void GSSetupPrimCodeGenerator::Depth()
 				movaps(xmm1, xmm0);
 				shufps(xmm1, xmm1, _MM_SHUFFLE(3, 3, 3, 3));
 
-				// m_env.d4.f = GSVector4i(df * 4.0f).xxzzlh();
+				// m_local.d4.f = GSVector4i(df * 4.0f).xxzzlh();
 
 				movaps(xmm2, xmm1);
 				mulps(xmm2, xmm3);
 				cvttps2dq(xmm2, xmm2);
 				pshuflw(xmm2, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 				pshufhw(xmm2, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
-				movdqa(ptr[&m_env.d4.f], xmm2);
+				movdqa(ptr[&m_local.d4.f], xmm2);
 
 				for(int i = 0; i < 4; i++)
 				{
-					// m_env.d[i].f = GSVector4i(df * m_shift[i]).xxzzlh();
+					// m_local.d[i].f = GSVector4i(df * m_shift[i]).xxzzlh();
 
 					movaps(xmm2, xmm1);
 					mulps(xmm2, Xmm(4 + i));
 					cvttps2dq(xmm2, xmm2);
 					pshuflw(xmm2, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 					pshufhw(xmm2, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
-					movdqa(ptr[&m_env.d[i].f], xmm2);
+					movdqa(ptr[&m_local.d[i].f], xmm2);
 				}
 			}
 
@@ -225,19 +225,19 @@ void GSSetupPrimCodeGenerator::Depth()
 
 				shufps(xmm0, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
 
-				// m_env.d4.z = dz * 4.0f;
+				// m_local.d4.z = dz * 4.0f;
 
 				movaps(xmm1, xmm0);
 				mulps(xmm1, xmm3);
-				movdqa(ptr[&m_env.d4.z], xmm1);
+				movdqa(ptr[&m_local.d4.z], xmm1);
 
 				for(int i = 0; i < 4; i++)
 				{
-					// m_env.d[i].z = dz * m_shift[i];
+					// m_local.d[i].z = dz * m_shift[i];
 
 					movaps(xmm1, xmm0);
 					mulps(xmm1, Xmm(4 + i));
-					movdqa(ptr[&m_env.d[i].z], xmm1);
+					movdqa(ptr[&m_local.d[i].z], xmm1);
 				}
 			}
 		}
@@ -249,12 +249,12 @@ void GSSetupPrimCodeGenerator::Depth()
 
 			if(m_en.f)
 			{
-				// m_env.p.f = GSVector4i(p).zzzzh().zzzz();
+				// m_local.p.f = GSVector4i(p).zzzzh().zzzz();
 
 				cvttps2dq(xmm1, xmm0);
 				pshufhw(xmm1, xmm1, _MM_SHUFFLE(2, 2, 2, 2));
 				pshufd(xmm1, xmm1, _MM_SHUFFLE(2, 2, 2, 2));
-				movdqa(ptr[&m_env.p.f], xmm1);
+				movdqa(ptr[&m_local.p.f], xmm1);
 			}
 
 			if(m_en.z)
@@ -265,7 +265,7 @@ void GSSetupPrimCodeGenerator::Depth()
 
 				if(m_sel.zoverflow)
 				{
-					// m_env.p.z = (GSVector4i(z * 0.5f) << 1) | (GSVector4i(z) & GSVector4i::x00000001());
+					// m_local.p.z = (GSVector4i(z * 0.5f) << 1) | (GSVector4i(z) & GSVector4i::x00000001());
 
 					static const float half = 0.5f;
 
@@ -284,12 +284,12 @@ void GSSetupPrimCodeGenerator::Depth()
 				}
 				else
 				{
-					// m_env.p.z = GSVector4i(z);
+					// m_local.p.z = GSVector4i(z);
 
 					cvttps2dq(xmm0, xmm0);
 				}
 
-				movdqa(ptr[&m_env.p.z], xmm0);
+				movdqa(ptr[&m_local.p.z], xmm0);
 			}
 		}
 	}
@@ -312,16 +312,16 @@ void GSSetupPrimCodeGenerator::Texture()
 
 		if(m_sel.fst)
 		{
-			// m_env.d4.st = GSVector4i(t * 4.0f);
+			// m_local.d4.st = GSVector4i(t * 4.0f);
 
 			vcvttps2dq(xmm1, xmm1);
-			vmovdqa(ptr[&m_env.d4.st], xmm1);
+			vmovdqa(ptr[&m_local.d4.st], xmm1);
 		}
 		else
 		{
-			// m_env.d4.stq = t * 4.0f;
+			// m_local.d4.stq = t * 4.0f;
 
-			vmovaps(ptr[&m_env.d4.stq], xmm1);
+			vmovaps(ptr[&m_local.d4.stq], xmm1);
 		}
 
 		for(int j = 0, k = m_sel.fst ? 2 : 3; j < k; j++)
@@ -340,25 +340,25 @@ void GSSetupPrimCodeGenerator::Texture()
 
 				if(m_sel.fst)
 				{
-					// m_env.d[i].si/ti = GSVector4i(v);
+					// m_local.d[i].si/ti = GSVector4i(v);
 
 					vcvttps2dq(xmm2, xmm2);
 
 					switch(j)
 					{
-					case 0: vmovdqa(ptr[&m_env.d[i].si], xmm2); break;
-					case 1: vmovdqa(ptr[&m_env.d[i].ti], xmm2); break;
+					case 0: vmovdqa(ptr[&m_local.d[i].si], xmm2); break;
+					case 1: vmovdqa(ptr[&m_local.d[i].ti], xmm2); break;
 					}
 				}
 				else
 				{
-					// m_env.d[i].s/t/q = v;
+					// m_local.d[i].s/t/q = v;
 
 					switch(j)
 					{
-					case 0: vmovaps(ptr[&m_env.d[i].s], xmm2); break;
-					case 1: vmovaps(ptr[&m_env.d[i].t], xmm2); break;
-					case 2: vmovaps(ptr[&m_env.d[i].q], xmm2); break;
+					case 0: vmovaps(ptr[&m_local.d[i].s], xmm2); break;
+					case 1: vmovaps(ptr[&m_local.d[i].t], xmm2); break;
+					case 2: vmovaps(ptr[&m_local.d[i].q], xmm2); break;
 					}
 				}
 			}
@@ -375,16 +375,16 @@ void GSSetupPrimCodeGenerator::Texture()
 
 		if(m_sel.fst)
 		{
-			// m_env.d4.st = GSVector4i(t * 4.0f);
+			// m_local.d4.st = GSVector4i(t * 4.0f);
 
 			cvttps2dq(xmm1, xmm1);
-			movdqa(ptr[&m_env.d4.st], xmm1);
+			movdqa(ptr[&m_local.d4.st], xmm1);
 		}
 		else
 		{
-			// m_env.d4.stq = t * 4.0f;
+			// m_local.d4.stq = t * 4.0f;
 
-			movaps(ptr[&m_env.d4.stq], xmm1);
+			movaps(ptr[&m_local.d4.stq], xmm1);
 		}
 
 		for(int j = 0, k = m_sel.fst ? 2 : 3; j < k; j++)
@@ -405,25 +405,25 @@ void GSSetupPrimCodeGenerator::Texture()
 
 				if(m_sel.fst)
 				{
-					// m_env.d[i].si/ti = GSVector4i(v);
+					// m_local.d[i].si/ti = GSVector4i(v);
 
 					cvttps2dq(xmm2, xmm2);
 
 					switch(j)
 					{
-					case 0: movdqa(ptr[&m_env.d[i].si], xmm2); break;
-					case 1: movdqa(ptr[&m_env.d[i].ti], xmm2); break;
+					case 0: movdqa(ptr[&m_local.d[i].si], xmm2); break;
+					case 1: movdqa(ptr[&m_local.d[i].ti], xmm2); break;
 					}
 				}
 				else
 				{
-					// m_env.d[i].s/t/q = v;
+					// m_local.d[i].s/t/q = v;
 
 					switch(j)
 					{
-					case 0: movaps(ptr[&m_env.d[i].s], xmm2); break;
-					case 1: movaps(ptr[&m_env.d[i].t], xmm2); break;
-					case 2: movaps(ptr[&m_env.d[i].q], xmm2); break;
+					case 0: movaps(ptr[&m_local.d[i].s], xmm2); break;
+					case 1: movaps(ptr[&m_local.d[i].t], xmm2); break;
+					case 2: movaps(ptr[&m_local.d[i].q], xmm2); break;
 					}
 				}
 			}
@@ -446,13 +446,13 @@ void GSSetupPrimCodeGenerator::Color()
 
 			vmovaps(xmm0, ptr[edx]);
 
-			// m_env.d4.c = GSVector4i(c * 4.0f).xzyw().ps32();
+			// m_local.d4.c = GSVector4i(c * 4.0f).xzyw().ps32();
 
 			vmulps(xmm1, xmm0, xmm3);
 			vcvttps2dq(xmm1, xmm1);
 			vpshufd(xmm1, xmm1, _MM_SHUFFLE(3, 1, 2, 0));
 			vpackssdw(xmm1, xmm1);
-			vmovdqa(ptr[&m_env.d4.c], xmm1);
+			vmovdqa(ptr[&m_local.d4.c], xmm1);
 
 			// xmm3 is not needed anymore
 
@@ -476,10 +476,10 @@ void GSSetupPrimCodeGenerator::Color()
 				vcvttps2dq(xmm1, xmm1);
 				vpackssdw(xmm1, xmm1);
 
-				// m_env.d[i].rb = r.upl16(b);
+				// m_local.d[i].rb = r.upl16(b);
 
 				vpunpcklwd(xmm0, xmm1);
-				vmovdqa(ptr[&m_env.d[i].rb], xmm0);
+				vmovdqa(ptr[&m_local.d[i].rb], xmm0);
 			}
 
 			// GSVector4 c = dscan.c;
@@ -506,10 +506,10 @@ void GSSetupPrimCodeGenerator::Color()
 				vcvttps2dq(xmm1, xmm1);
 				vpackssdw(xmm1, xmm1);
 
-				// m_env.d[i].ga = g.upl16(a);
+				// m_local.d[i].ga = g.upl16(a);
 
 				vpunpcklwd(xmm0, xmm1);
-				vmovdqa(ptr[&m_env.d[i].ga], xmm0);
+				vmovdqa(ptr[&m_local.d[i].ga], xmm0);
 			}
 		}
 		else
@@ -530,14 +530,14 @@ void GSSetupPrimCodeGenerator::Color()
 				vpsrlw(xmm0, 7);
 			}
 
-			// m_env.c.rb = c.xxxx();
-			// m_env.c.ga = c.zzzz();
+			// m_local.c.rb = c.xxxx();
+			// m_local.c.ga = c.zzzz();
 
 			vpshufd(xmm1, xmm0, _MM_SHUFFLE(0, 0, 0, 0));
 			vpshufd(xmm2, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
 
-			vmovdqa(ptr[&m_env.c.rb], xmm1);
-			vmovdqa(ptr[&m_env.c.ga], xmm2);
+			vmovdqa(ptr[&m_local.c.rb], xmm1);
+			vmovdqa(ptr[&m_local.c.ga], xmm2);
 		}
 	}
 	else
@@ -549,14 +549,14 @@ void GSSetupPrimCodeGenerator::Color()
 			movaps(xmm0, ptr[edx]);
 			movaps(xmm1, xmm0);
 
-			// m_env.d4.c = GSVector4i(c * 4.0f).xzyw().ps32();
+			// m_local.d4.c = GSVector4i(c * 4.0f).xzyw().ps32();
 
 			movaps(xmm2, xmm0);
 			mulps(xmm2, xmm3);
 			cvttps2dq(xmm2, xmm2);
 			pshufd(xmm2, xmm2, _MM_SHUFFLE(3, 1, 2, 0));
 			packssdw(xmm2, xmm2);
-			movdqa(ptr[&m_env.d4.c], xmm2);
+			movdqa(ptr[&m_local.d4.c], xmm2);
 
 			// xmm3 is not needed anymore
 
@@ -582,10 +582,10 @@ void GSSetupPrimCodeGenerator::Color()
 				cvttps2dq(xmm3, xmm3);
 				packssdw(xmm3, xmm3);
 
-				// m_env.d[i].rb = r.upl16(b);
+				// m_local.d[i].rb = r.upl16(b);
 
 				punpcklwd(xmm2, xmm3);
-				movdqa(ptr[&m_env.d[i].rb], xmm2);
+				movdqa(ptr[&m_local.d[i].rb], xmm2);
 			}
 
 			// GSVector4 c = dscan.c;
@@ -615,10 +615,10 @@ void GSSetupPrimCodeGenerator::Color()
 				cvttps2dq(xmm3, xmm3);
 				packssdw(xmm3, xmm3);
 
-				// m_env.d[i].ga = g.upl16(a);
+				// m_local.d[i].ga = g.upl16(a);
 
 				punpcklwd(xmm2, xmm3);
-				movdqa(ptr[&m_env.d[i].ga], xmm2);
+				movdqa(ptr[&m_local.d[i].ga], xmm2);
 			}
 		}
 		else
@@ -640,14 +640,14 @@ void GSSetupPrimCodeGenerator::Color()
 				psrlw(xmm0, 7);
 			}
 
-			// m_env.c.rb = c.xxxx();
-			// m_env.c.ga = c.zzzz();
+			// m_local.c.rb = c.xxxx();
+			// m_local.c.ga = c.zzzz();
 
 			pshufd(xmm1, xmm0, _MM_SHUFFLE(0, 0, 0, 0));
 			pshufd(xmm2, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
 
-			movdqa(ptr[&m_env.c.rb], xmm1);
-			movdqa(ptr[&m_env.c.ga], xmm2);
+			movdqa(ptr[&m_local.c.rb], xmm1);
+			movdqa(ptr[&m_local.c.ga], xmm2);
 		}
 	}
 }

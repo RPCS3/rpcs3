@@ -149,13 +149,18 @@ EXPORT_C GSclose()
 	s_gs->m_wnd.Detach();
 }
 
-static INT32 _GSopen(void* dsp, char* title, int renderer)
+static INT32 _GSopen(void* dsp, char* title, int renderer, int threads = -1)
 {
 	GSDevice* dev = NULL;
 
 	if(renderer == -1)
 	{
 		renderer = theApp.GetConfig("renderer", 0);
+	}
+
+	if(threads == -1)
+	{
+		threads = theApp.GetConfig("swthreads", 1);
 	}
 
 	try
@@ -196,20 +201,21 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 				s_gs = new GSRendererNull(); 
 				break;
 			case 1: case 4: case 7: case 10: case 12:
-				s_gs = new GSRendererSW(); 
+				s_gs = new GSRendererSW(threads); 
 				break;
 			}
 
 			s_renderer = renderer;
 		}
 	}
-	catch( std::exception& ex )
+	catch(std::exception& ex)
 	{
 		// Allowing std exceptions to escape the scope of the plugin callstack could
 		// be problematic, because of differing typeids between DLL and EXE compilations.
 		// ('new' could throw std::alloc)
 
-		printf( "GSdx error: Exception caught in GSopen: %s", ex.what() );
+		printf("GSdx error: Exception caught in GSopen: %s", ex.what());
+
 		return -1;
 	}
 
@@ -218,7 +224,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 	s_gs->SetVsync(s_vsync);
 	s_gs->SetFrameLimit(s_framelimit);
 
-	if( *(HWND*)dsp == NULL )
+	if(*(HWND*)dsp == NULL)
 	{
 		// old-style API expects us to create and manage our own window:
 
@@ -232,21 +238,23 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 		}
 
 		s_gs->m_wnd.Show();
+
 		*(HWND*)dsp = (HWND)s_gs->m_wnd.GetHandle();
 	}
 	else
 	{
-		s_gs->SetMultithreaded( true );
-		s_gs->m_wnd.Attach( *(HWND*)dsp, false );
+		s_gs->SetMultithreaded(true);
+		s_gs->m_wnd.Attach(*(HWND*)dsp, false);
 	}
 
-	if( !s_gs->CreateDevice(dev) )
+	if(!s_gs->CreateDevice(dev))
 	{
 		// This probably means the user has DX11 configured with a video card that is only DX9
 		// compliant.  Cound mean drivr issues of some sort also, but to be sure, that's the most
 		// common cause of device creation errors. :)  --air
 
 		GSclose();
+
 		return -1;
 	}
 
@@ -255,17 +263,18 @@ static INT32 _GSopen(void* dsp, char* title, int renderer)
 	return 0;
 }
 
-EXPORT_C_(INT32) GSopen2( void* dsp, INT32 flags )
+EXPORT_C_(INT32) GSopen2(void* dsp, INT32 flags)
 {
 	int renderer = theApp.GetConfig("renderer", 0);
-	if( flags & 4 )
+
+	if(flags & 4)
 	{
-		if (isdx11avail)	renderer = 4; //dx11 sw
-		else				renderer = 1; //dx9 sw
+		renderer = isdx11avail ? 4 : 1; // dx11 / dx9 sw
 	}
 
-	INT32 retval = _GSopen( dsp, NULL, renderer );
-	s_gs->SetAspectRatio(0);		// PCSX2 manages the aspect ratios
+	INT32 retval = _GSopen(dsp, NULL, renderer);
+
+	s_gs->SetAspectRatio(0);	 // PCSX2 manages the aspect ratios
 
 	return retval;
 }
@@ -275,18 +284,21 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 	int renderer;
 
 	// Legacy GUI expects to acquire vsync from the configuration files.
+
 	s_vsync = !!theApp.GetConfig("vsync", 0);
 
 	if(mt == 2)
 	{
 		// pcsx2 sent a switch renderer request
-		if (isdx11avail)	renderer = 4; //dx11 sw
-		else				renderer = 1; //dx9 sw
+
+		renderer = isdx11avail ? 4 : 1; // dx11 / dx9 sw
+
 		mt = 1;
 	}
 	else
 	{
 		// normal init
+
 		renderer = theApp.GetConfig("renderer", 0);
 	}
 
@@ -294,9 +306,9 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 
 	int retval = _GSopen(dsp, title, renderer);
 
-	if( retval == 0 && s_gs )
+	if(retval == 0 && s_gs)
 	{
-		s_gs->SetMultithreaded( !!mt );
+		s_gs->SetMultithreaded(!!mt);
 	}
 
 	return retval;
@@ -370,10 +382,14 @@ EXPORT_C GSvsync(int field)
 
 EXPORT_C_(uint32) GSmakeSnapshot(char* path)
 {
-	string str = string(path);
-	if (str[str.length() - 1] != '\\')
-		str = str + "\\";
-	return s_gs->MakeSnapshot(str + "gsdx");
+	string s(path);
+
+	if(s.back() != '\\')
+	{
+		s = s + "\\";
+	}
+
+	return s_gs->MakeSnapshot(s + "gsdx");
 }
 
 EXPORT_C GSkeyEvent(GSKeyEventData* e)
@@ -401,13 +417,14 @@ EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 
 EXPORT_C GSconfigure()
 {
-	if( !GSUtil::CheckSSE() ) return;
+	if(!GSUtil::CheckSSE()) return;
 
-	if( GSSettingsDlg( s_IsGsOpen2 ).DoModal() == IDOK )
+	if(GSSettingsDlg(s_IsGsOpen2).DoModal() == IDOK)
 	{
-		if( s_gs != NULL && s_gs->m_wnd.IsManaged() )
+		if(s_gs != NULL && s_gs->m_wnd.IsManaged())
 		{
 			// Legacy apps like gsdxgui expect this...
+
 			GSshutdown();
 		}
 	}
@@ -427,7 +444,9 @@ EXPORT_C_(INT32) GStest()
 	if(!GSUtil::CheckDirectX())
 	{
 		if(SUCCEEDED(s_hr))
+		{
 			::CoUninitialize();
+		}
 
 		s_hr = E_FAIL;
 
@@ -435,7 +454,9 @@ EXPORT_C_(INT32) GStest()
 	}
 
 	if(SUCCEEDED(s_hr))
+	{
 		::CoUninitialize();
+	}
 
 	s_hr = E_FAIL;
 
@@ -451,7 +472,8 @@ EXPORT_C GSabout()
 EXPORT_C GSirqCallback(void (*irq)())
 {
 	s_irq = irq;
-	if( s_gs )
+
+	if(s_gs)
 	{
 		s_gs->SetIrqCallback(s_irq);
 	}
@@ -462,9 +484,13 @@ EXPORT_C_(int) GSsetupRecording(int start, void* data)
 	if(!s_gs) return 0;
 
 	if(start & 1)
+	{
 		s_gs->BeginCapture();
+	}
 	else
+	{
 		s_gs->EndCapture();
+	}
 
 	return 1;
 }
@@ -486,13 +512,15 @@ EXPORT_C GSgetLastTag(uint32* tag)
 
 EXPORT_C GSgetTitleInfo2(char* dest, size_t length)
 {
-	if (!s_gs->m_GStitleInfoBuffer[0])
+	if(!s_gs->m_GStitleInfoBuffer[0])
+	{
 		strcpy(dest, "GSdx");
+	}
 	else
 	{
 		EnterCriticalSection(&s_gs->m_pGSsetTitle_Crit);
-		snprintf(dest, length-1, "GSdx | %s", s_gs->m_GStitleInfoBuffer);
-		dest[length-1] = 0;		// just in case!
+		snprintf(dest, length - 1, "GSdx | %s", s_gs->m_GStitleInfoBuffer);
+		dest[length - 1] = 0; // just in case!
 		LeaveCriticalSection(&s_gs->m_pGSsetTitle_Crit);
 	}
 }
@@ -505,22 +533,31 @@ EXPORT_C GSsetFrameSkip(int frameskip)
 EXPORT_C GSsetVsync(int enabled)
 {
 	s_vsync = !!enabled;
-	if( s_gs )
+
+	if(s_gs)
+	{
 		s_gs->SetVsync(s_vsync);
+	}
 }
 
 EXPORT_C GSsetExclusive(int enabled)
 {
 	s_exclusive = !!enabled;
-	if( s_gs )
+
+	if(s_gs)
+	{
 		s_gs->SetVsync(s_vsync);
+	}
 }
 
 EXPORT_C GSsetFrameLimit(int limit)
 {
 	s_framelimit = !!limit;
-	if( s_gs )
+
+	if(s_gs)
+	{
 		s_gs->SetFrameLimit(s_framelimit);
+	}
 }
 
 #ifdef _WINDOWS
@@ -595,6 +632,7 @@ public:
 // lpszCmdLine:
 //   First parameter is the renderer.
 //   Second parameter is the gs file to load and run.
+
 EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 {
 	int renderer = -1;

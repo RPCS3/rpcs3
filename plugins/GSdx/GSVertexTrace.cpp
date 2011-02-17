@@ -126,14 +126,18 @@ void GSVertexTrace::Update(const GSVertexHW11* v, int count, GS_PRIM_CLASS primc
 
 using namespace Xbyak;
 
+static const int _args = 0;
+static const int _v = _args + 4;
+static const int _count = _args + 8;
+static const int _min = _args + 12;
+static const int _max = _args + 16;
+
 GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)
 {
 	#if _M_AMD64
 	#error TODO
 	#endif
-
-	const int params = 0;
 
 	uint32 primclass = (key >> 0) & 3;
 	uint32 iip = (key >> 2) & 1;
@@ -156,11 +160,6 @@ GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxs
 		n = 3;
 		break;
 	}
-
-	const int _v = params + 4;
-	const int _count = params + 8;
-	const int _min = params + 12;
-	const int _max = params + 16;
 
 	//
 
@@ -410,8 +409,6 @@ GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t ma
 	#error TODO
 	#endif
 
-	const int params = 0;
-
 	uint32 primclass = (key >> 0) & 3;
 	uint32 iip = (key >> 2) & 1;
 	uint32 tme = (key >> 3) & 1;
@@ -435,11 +432,6 @@ GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t ma
 		n = 6;
 		break;
 	}
-
-	const int _v = params + 4;
-	const int _count = params + 8;
-	const int _min = params + 12;
-	const int _max = params + 16;
 
 	//
 
@@ -748,8 +740,6 @@ GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t 
 	#error TODO
 	#endif
 
-	const int params = 0;
-
 	uint32 primclass = (key >> 0) & 3;
 	uint32 iip = (key >> 2) & 1;
 	uint32 tme = (key >> 3) & 1;
@@ -771,11 +761,6 @@ GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t 
 		n = 3;
 		break;
 	}
-
-	const int _v = params + 4;
-	const int _count = params + 8;
-	const int _min = params + 12;
-	const int _max = params + 16;
 
 	//
 

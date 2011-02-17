@@ -29,7 +29,7 @@
 #include "GSUtil.h"
 #include "GSPerfMon.h"
 
-class GPUState : public GSAlignedClass<16>
+class GPUState : public GSAlignedClass<32>
 {
 	typedef void (GPUState::*GPUStatusCommandHandler)(GPUReg* r);
 

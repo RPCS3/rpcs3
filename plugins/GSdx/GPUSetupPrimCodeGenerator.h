@@ -30,7 +30,8 @@ class GPUSetupPrimCodeGenerator : public GSCodeGenerator
 
 	static const GSVector4 m_shift[3];
 
-	GPUScanlineEnvironment& m_env;
+	GPUScanlineSelector m_sel;
+	GPUScanlineLocalData& m_local;
 
 	void Generate();
 

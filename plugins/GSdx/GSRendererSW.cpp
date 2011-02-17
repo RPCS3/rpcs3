@@ -24,14 +24,14 @@
 
 const GSVector4 g_pos_scale(1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
 
-GSRendererSW::GSRendererSW()
+GSRendererSW::GSRendererSW(int threads)
 	: GSRendererT()
 {
 	m_tc = new GSTextureCacheSW(this);
 
 	memset(m_texture, 0, sizeof(m_texture));
 
-	m_rl.Create<GSDrawScanline>(this, theApp.GetConfig("swthreads", 1));
+	m_rl.Create<GSDrawScanline, GSScanlineGlobalData>(threads);
 
 	InitVertexKick<GSRendererSW>();
 }
@@ -128,11 +128,11 @@ void GSRendererSW::Draw()
 		m_dump.Object(m_vertices, m_count, m_vt.m_primclass);
 	}
 
-	GSScanlineParam p;
+	GSScanlineGlobalData gd;
 
-	GetScanlineParam(p, m_vt.m_primclass);
+	GetScanlineGlobalData(gd);
 
-	if((p.fm & p.zm) == 0xffffffff)
+	if(!gd.sel.fwrite && !gd.sel.zwrite)
 	{
 		return;
 	}
@@ -176,18 +176,19 @@ void GSRendererSW::Draw()
 	data.primclass = m_vt.m_primclass;
 	data.vertices = m_vertices;
 	data.count = m_count;
-	data.param = &p;
+	data.frame = m_perfmon.GetFrame();
+	data.param = &gd;
 
 	m_rl.Draw(&data);
 
 	GSVector4i r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(data.scissor);
 
-	if(p.fm != 0xffffffff)
+	if(gd.sel.fwrite)
 	{
 		m_tc->InvalidateVideoMem(m_context->offset.fb, r);
 	}
 
-	if(p.zm != 0xffffffff)
+	if(gd.sel.zwrite)
 	{
 		m_tc->InvalidateVideoMem(m_context->offset.zb, r);
 	}
@@ -230,7 +231,7 @@ void GSRendererSW::Draw()
 	if(0)//stats.ticks > 5000000)
 	{
 		printf("* [%I64d | %012I64x] ticks %I64d prims %d (%d) pixels %d (%d)\n",
-			m_perfmon.GetFrame(), p.sel.key,
+			m_perfmon.GetFrame(), gd.sel.key,
 			stats.ticks,
 			stats.prims, stats.prims > 0 ? (int)(stats.ticks / stats.prims) : -1,
 			stats.pixels, stats.pixels > 0 ? (int)(stats.ticks / stats.pixels) : -1);
@@ -242,33 +243,38 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 	m_tc->InvalidateVideoMem(m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM), r);
 }
 
-void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
+void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 {
 	const GSDrawingEnvironment& env = m_env;
 	const GSDrawingContext* context = m_context;
+	const GS_PRIM_CLASS primclass = m_vt.m_primclass;
 
-	p.vm = m_mem.m_vm8;
+	gd.vm = m_mem.m_vm8;
+	gd.dimx = env.dimx;
 
-	p.fbo = context->offset.fb;
-	p.zbo = context->offset.zb;
-	p.fzbo = context->offset.fzb;
+	gd.fbr = context->offset.fb->pixel.row;
+	gd.zbr = context->offset.zb->pixel.row;
+	gd.fbc = context->offset.fb->pixel.col[0];
+	gd.zbc = context->offset.zb->pixel.col[0];
+	gd.fzbr = context->offset.fzb->row;
+	gd.fzbc = context->offset.fzb->col;
 
-	p.sel.key = 0;
+	gd.sel.key = 0;
 
-	p.sel.fpsm = 3;
-	p.sel.zpsm = 3;
-	p.sel.atst = ATST_ALWAYS;
-	p.sel.tfx = TFX_NONE;
-	p.sel.ababcd = 255;
-	p.sel.sprite = primclass == GS_SPRITE_CLASS ? 1 : 0;
+	gd.sel.fpsm = 3;
+	gd.sel.zpsm = 3;
+	gd.sel.atst = ATST_ALWAYS;
+	gd.sel.tfx = TFX_NONE;
+	gd.sel.ababcd = 255;
+	gd.sel.sprite = primclass == GS_SPRITE_CLASS ? 1 : 0;
 
-	p.fm = context->FRAME.FBMSK;
-	p.zm = context->ZBUF.ZMSK || context->TEST.ZTE == 0 ? 0xffffffff : 0;
+	uint32 fm = context->FRAME.FBMSK;
+	uint32 zm = context->ZBUF.ZMSK || context->TEST.ZTE == 0 ? 0xffffffff : 0;
 
 	if(context->TEST.ZTE && context->TEST.ZTST == ZTST_NEVER)
 	{
-		p.fm = 0xffffffff;
-		p.zm = 0xffffffff;
+		fm = 0xffffffff;
+		zm = 0xffffffff;
 	}
 
 	if(PRIM->TME)
@@ -278,46 +284,60 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 
 	if(context->TEST.ATE)
 	{
-		if(!TryAlphaTest(p.fm, p.zm))
+		if(!TryAlphaTest(fm, zm))
 		{
-			p.sel.atst = context->TEST.ATST;
-			p.sel.afail = context->TEST.AFAIL;
+			gd.sel.atst = context->TEST.ATST;
+			gd.sel.afail = context->TEST.AFAIL;
+
+			gd.aref = GSVector4i((int)context->TEST.AREF);
+
+			switch(gd.sel.atst)
+			{
+			case ATST_LESS:
+				gd.sel.atst = ATST_LEQUAL;
+				gd.aref -= GSVector4i::x00000001();
+				break;
+			case ATST_GREATER:
+				gd.sel.atst = ATST_GEQUAL;
+				gd.aref += GSVector4i::x00000001();
+				break;
+			}
 		}
 	}
 
-	bool fwrite = p.fm != 0xffffffff;
-	bool ftest = p.sel.atst != ATST_ALWAYS || context->TEST.DATE && context->FRAME.PSM != PSM_PSMCT24;
+	bool fwrite = fm != 0xffffffff;
+	bool ftest = gd.sel.atst != ATST_ALWAYS || context->TEST.DATE && context->FRAME.PSM != PSM_PSMCT24;
 
-	p.sel.fwrite = fwrite;
-	p.sel.ftest = ftest;
+	gd.sel.fwrite = fwrite;
+	gd.sel.ftest = ftest;
 
 	if(fwrite || ftest)
 	{
-		p.sel.fpsm = GSLocalMemory::m_psm[context->FRAME.PSM].fmt;
+		gd.sel.fpsm = GSLocalMemory::m_psm[context->FRAME.PSM].fmt;
 
 		if((primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS) && m_vt.m_eq.rgba != 0xffff)
 		{
-			p.sel.iip = PRIM->IIP;
+			gd.sel.iip = PRIM->IIP;
 		}
 
 		if(PRIM->TME)
 		{
-			p.sel.tfx = context->TEX0.TFX;
-			p.sel.tcc = context->TEX0.TCC;
-			p.sel.fst = PRIM->FST;
-			p.sel.ltf = IsLinear();
-			p.sel.tlu = GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0;
-			p.sel.wms = context->CLAMP.WMS;
-			p.sel.wmt = context->CLAMP.WMT;
+			gd.sel.tfx = context->TEX0.TFX;
+			gd.sel.tcc = context->TEX0.TCC;
+			gd.sel.fst = PRIM->FST;
+			gd.sel.ltf = IsLinear();
+			gd.sel.tlu = GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0;
+			gd.sel.wms = context->CLAMP.WMS;
+			gd.sel.wmt = context->CLAMP.WMT;
 
-			if(p.sel.tfx == TFX_MODULATE && p.sel.tcc && m_vt.m_eq.rgba == 0xffff && m_vt.m_min.c.eq(GSVector4i(128)))
+			if(gd.sel.tfx == TFX_MODULATE && gd.sel.tcc && m_vt.m_eq.rgba == 0xffff && m_vt.m_min.c.eq(GSVector4i(128)))
 			{
 				// modulate does not do anything when vertex color is 0x80
 
-				p.sel.tfx = TFX_DECAL;
+				gd.sel.tfx = TFX_DECAL;
 			}
 
-			if(p.sel.fst == 0)
+			if(gd.sel.fst == 0)
 			{
 				// skip per pixel division if q is constant
 
@@ -325,7 +345,7 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 
 				if(m_vt.m_eq.q)
 				{
-					p.sel.fst = 1;
+					gd.sel.fst = 1;
 
 					if(v[0].t.z != 1.0f)
 					{
@@ -339,7 +359,7 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 				}
 				else if(primclass == GS_SPRITE_CLASS)
 				{
-					p.sel.fst = 1;
+					gd.sel.fst = 1;
 
 					for(int i = 0, j = m_count; i < j; i += 2)
 					{
@@ -351,11 +371,11 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 				}
 			}
 
-			if(p.sel.ltf)
+			if(gd.sel.ltf)
 			{
 				GSVector4 half(0x8000, 0x8000);
 
-				if(p.sel.fst)
+				if(gd.sel.fst)
 				{
 					// if q is constant we can do the half pel shift for bilinear sampling on the vertices
 
@@ -370,68 +390,160 @@ void GSRendererSW::GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass)
 
 			GSVector4i r;
 
-			GetTextureMinMax(r, p.sel.ltf);
+			GetTextureMinMax(r, gd.sel.ltf);
 
 			const GSTextureCacheSW::GSTexture* t = m_tc->Lookup(context->TEX0, env.TEXA, r);
 
 			if(!t) {ASSERT(0); return;}
 
-			p.tex = t->m_buff;
-			p.clut = m_mem.m_clut;
+			gd.tex = t->m_buff;
+			gd.clut = m_mem.m_clut;
 
-			p.sel.tw = t->m_tw - 3;
+			gd.sel.tw = t->m_tw - 3;
+
+			uint16 tw = (uint16)(1 << context->TEX0.TW);
+			uint16 th = (uint16)(1 << context->TEX0.TH);
+
+			switch(context->CLAMP.WMS)
+			{
+			case CLAMP_REPEAT:
+				gd.t.min.u16[0] = tw - 1;
+				gd.t.max.u16[0] = 0;
+				gd.t.mask.u32[0] = 0xffffffff;
+				break;
+			case CLAMP_CLAMP:
+				gd.t.min.u16[0] = 0;
+				gd.t.max.u16[0] = tw - 1;
+				gd.t.mask.u32[0] = 0;
+				break;
+			case CLAMP_REGION_CLAMP:
+				gd.t.min.u16[0] = std::min<int>(context->CLAMP.MINU, tw - 1);
+				gd.t.max.u16[0] = std::min<int>(context->CLAMP.MAXU, tw - 1);
+				gd.t.mask.u32[0] = 0;
+				break;
+			case CLAMP_REGION_REPEAT:
+				gd.t.min.u16[0] = context->CLAMP.MINU;
+				gd.t.max.u16[0] = context->CLAMP.MAXU;
+				gd.t.mask.u32[0] = 0xffffffff;
+				break;
+			default:
+				__assume(0);
+			}
+
+			switch(context->CLAMP.WMT)
+			{
+			case CLAMP_REPEAT:
+				gd.t.min.u16[4] = th - 1;
+				gd.t.max.u16[4] = 0;
+				gd.t.mask.u32[2] = 0xffffffff;
+				break;
+			case CLAMP_CLAMP:
+				gd.t.min.u16[4] = 0;
+				gd.t.max.u16[4] = th - 1;
+				gd.t.mask.u32[2] = 0;
+				break;
+			case CLAMP_REGION_CLAMP:
+				gd.t.min.u16[4] = std::min<int>(context->CLAMP.MINV, th - 1);
+				gd.t.max.u16[4] = std::min<int>(context->CLAMP.MAXV, th - 1); // ffx anima summon scene, when the anchor appears (th = 256, maxv > 256)
+				gd.t.mask.u32[2] = 0;
+				break;
+			case CLAMP_REGION_REPEAT:
+				gd.t.min.u16[4] = context->CLAMP.MINV;
+				gd.t.max.u16[4] = context->CLAMP.MAXV;
+				gd.t.mask.u32[2] = 0xffffffff;
+				break;
+			default:
+				__assume(0);
+			}
+
+			gd.t.min = gd.t.min.xxxxlh();
+			gd.t.max = gd.t.max.xxxxlh();
+			gd.t.mask = gd.t.mask.xxzz();
+			gd.t.invmask = ~gd.t.mask;
 		}
 
-		p.sel.fge = PRIM->FGE;
+		if(PRIM->FGE)
+		{
+			gd.sel.fge = 1;
+
+			gd.frb = GSVector4i((int)env.FOGCOL.u32[0] & 0x00ff00ff);
+			gd.fga = GSVector4i((int)(env.FOGCOL.u32[0] >> 8) & 0x00ff00ff);
+		}
 
 		if(context->FRAME.PSM != PSM_PSMCT24)
 		{
-			p.sel.date = context->TEST.DATE;
-			p.sel.datm = context->TEST.DATM;
+			gd.sel.date = context->TEST.DATE;
+			gd.sel.datm = context->TEST.DATM;
 		}
 
 		if(!IsOpaque())
 		{
-			p.sel.abe = PRIM->ABE;
-			p.sel.ababcd = context->ALPHA.u32[0];
+			gd.sel.abe = PRIM->ABE;
+			gd.sel.ababcd = context->ALPHA.u32[0];
 
 			if(env.PABE.PABE)
 			{
-				p.sel.pabe = 1;
+				gd.sel.pabe = 1;
 			}
 
 			if(m_aa1 && PRIM->AA1 && (primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS))
 			{
-				p.sel.aa1 = 1;
+				gd.sel.aa1 = 1;
 			}
+
+			gd.afix = GSVector4i((int)context->ALPHA.FIX << 7).xxzzlh();
 		}
 
-		if(p.sel.date
-		|| p.sel.aba == 1 || p.sel.abb == 1 || p.sel.abc == 1 || p.sel.abd == 1
-		|| p.sel.atst != ATST_ALWAYS && p.sel.afail == AFAIL_RGB_ONLY
-		|| p.sel.fpsm == 0 && p.fm != 0 && p.fm != 0xffffffff
-		|| p.sel.fpsm == 1 && (p.fm & 0x00ffffff) != 0 && (p.fm & 0x00ffffff) != 0x00ffffff
-		|| p.sel.fpsm == 2 && (p.fm & 0x80f8f8f8) != 0 && (p.fm & 0x80f8f8f8) != 0x80f8f8f8)
+		if(gd.sel.date
+		|| gd.sel.aba == 1 || gd.sel.abb == 1 || gd.sel.abc == 1 || gd.sel.abd == 1
+		|| gd.sel.atst != ATST_ALWAYS && gd.sel.afail == AFAIL_RGB_ONLY
+		|| gd.sel.fpsm == 0 && fm != 0 && fm != 0xffffffff
+		|| gd.sel.fpsm == 1 && (fm & 0x00ffffff) != 0 && (fm & 0x00ffffff) != 0x00ffffff
+		|| gd.sel.fpsm == 2 && (fm & 0x80f8f8f8) != 0 && (fm & 0x80f8f8f8) != 0x80f8f8f8)
 		{
-			p.sel.rfb = 1;
+			gd.sel.rfb = 1;
 		}
 
-		p.sel.colclamp = env.COLCLAMP.CLAMP;
-		p.sel.fba = context->FBA.FBA;
-		p.sel.dthe = env.DTHE.DTHE;
+		gd.sel.colclamp = env.COLCLAMP.CLAMP;
+		gd.sel.fba = context->FBA.FBA;
+		gd.sel.dthe = env.DTHE.DTHE;
 	}
 
-	bool zwrite = p.zm != 0xffffffff;
+	bool zwrite = zm != 0xffffffff;
 	bool ztest = context->TEST.ZTE && context->TEST.ZTST > ZTST_ALWAYS;
 
-	p.sel.zwrite = zwrite;
-	p.sel.ztest = ztest;
+	gd.sel.zwrite = zwrite;
+	gd.sel.ztest = ztest;
 
 	if(zwrite || ztest)
 	{
-		p.sel.zpsm = GSLocalMemory::m_psm[context->ZBUF.PSM].fmt;
-		p.sel.ztst = ztest ? context->TEST.ZTST : ZTST_ALWAYS;
-		p.sel.zoverflow = GSVector4i(m_vt.m_max.p).z == 0x80000000;
+		gd.sel.zpsm = GSLocalMemory::m_psm[context->ZBUF.PSM].fmt;
+		gd.sel.ztst = ztest ? context->TEST.ZTST : ZTST_ALWAYS;
+		gd.sel.zoverflow = GSVector4i(m_vt.m_max.p).z == 0x80000000;
+	}
+
+	gd.fm = GSVector4i(fm);
+	gd.zm = GSVector4i(zm);
+
+	if(gd.sel.fpsm == 1)
+	{
+		gd.fm |= GSVector4i::xff000000();
+	}
+	else if(gd.sel.fpsm == 2)
+	{
+		GSVector4i rb = gd.fm & 0x00f800f8;
+		GSVector4i ga = gd.fm & 0x8000f800;
+
+		gd.fm = (ga >> 16) | (rb >> 9) | (ga >> 6) | (rb >> 3) | GSVector4i::xffff0000();
+	}
+
+	if(gd.sel.zpsm == 1)
+	{
+		gd.zm |= GSVector4i::xff000000();
+	}
+	else if(gd.sel.zpsm == 2)
+	{
+		gd.zm |= GSVector4i::xffff0000();
 	}
 }
 

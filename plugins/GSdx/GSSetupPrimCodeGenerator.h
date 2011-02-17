@@ -30,8 +30,8 @@ class GSSetupPrimCodeGenerator : public GSCodeGenerator
 
 	static const GSVector4 m_shift[5];
 
-	GSScanlineEnvironment& m_env;
 	GSScanlineSelector m_sel;
+	GSScanlineLocalData& m_local;
 
 	struct {uint32 z:1, f:1, t:1, c:1;} m_en;
 

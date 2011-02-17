@@ -24,13 +24,19 @@
 #include "StdAfx.h"
 #include "GPUDrawScanlineCodeGenerator.h"
 
+static const int _args = 8;
+static const int _top = _args + 4;
+static const int _v = _args + 8;
+
 GPUDrawScanlineCodeGenerator::GPUDrawScanlineCodeGenerator(void* param, uint32 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)
-	, m_env(*(GPUScanlineEnvironment*)param)
+	, m_local(*(GPUScanlineLocalData*)param)
 {
 	#if _M_AMD64
 	#error TODO
 	#endif
+
+	m_sel.key = key;
 
 	Generate();
 }
@@ -40,9 +46,7 @@ void GPUDrawScanlineCodeGenerator::Generate()
 	push(esi);
 	push(edi);
 
-	const int params = 8;
-
-	Init(params);
+	Init();
 
 	align(16);
 
@@ -112,26 +116,23 @@ L("exit");
 	ret(8);
 }
 
-void GPUDrawScanlineCodeGenerator::Init(int params)
+void GPUDrawScanlineCodeGenerator::Init()
 {
-	const int _top = params + 4;
-	const int _v = params + 8;
-
 	mov(eax, dword[esp + _top]);
 
-	// uint16* fb = &m_env.vm[(top << (10 + m_env.sel.scalex)) + left];
+	// uint16* fb = &m_local.vm[(top << (10 + m_sel.scalex)) + left];
 
 	mov(edi, eax);
-	shl(edi, 10 + m_env.sel.scalex);
+	shl(edi, 10 + m_sel.scalex);
 	add(edi, edx);
-	lea(edi, ptr[edi * 2 + (size_t)m_env.vm]);
+	lea(edi, ptr[edi * 2 + (size_t)m_local.gd->vm]);
 
 	// int steps = right - left - 8;
 
 	sub(ecx, edx);
 	sub(ecx, 8);
 
-	if(m_env.sel.dtd)
+	if(m_sel.dtd)
 	{
 		// dither = GSVector4i::load<false>(&s_dither[top & 3][left & 3]);
 
@@ -140,48 +141,48 @@ void GPUDrawScanlineCodeGenerator::Init(int params)
 		and(edx, 3);
 		shl(edx, 1);
 		movdqu(xmm0, ptr[eax + edx + (size_t)m_dither]);
-		movdqa(ptr[&m_env.temp.dither], xmm0);
+		movdqa(ptr[&m_local.temp.dither], xmm0);
 	}
 
 	mov(edx, dword[esp + _v]);
 
-	if(m_env.sel.tme)
+	if(m_sel.tme)
 	{
-		mov(esi, dword[&m_env.tex]);
+		mov(esi, dword[&m_local.gd->tex]);
 
 		// GSVector4i vt = GSVector4i(v.t).xxzzl();
 
 		cvttps2dq(xmm4, ptr[edx + 32]);
 		pshuflw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
 
-		// s = vt.xxxx().add16(m_env.d.s);
-		// t = vt.yyyy().add16(m_env.d.t);
+		// s = vt.xxxx().add16(m_local.d.s);
+		// t = vt.yyyy().add16(m_local.d.t);
 
 		pshufd(xmm2, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
 		pshufd(xmm3, xmm4, _MM_SHUFFLE(1, 1, 1, 1));
 
-		paddw(xmm2, ptr[&m_env.d.s]);
+		paddw(xmm2, ptr[&m_local.d.s]);
 		
-		if(!m_env.sel.sprite)
+		if(!m_sel.sprite)
 		{
-			paddw(xmm3, ptr[&m_env.d.t]); 
+			paddw(xmm3, ptr[&m_local.d.t]); 
 		}
 		else
 		{
-			if(m_env.sel.ltf)
+			if(m_sel.ltf)
 			{
 				movdqa(xmm0, xmm3);
 				psllw(xmm0, 8);
 				psrlw(xmm0, 1);
-				movdqa(ptr[&m_env.temp.vf], xmm0);
+				movdqa(ptr[&m_local.temp.vf], xmm0);
 			}
 		}
 
-		movdqa(ptr[&m_env.temp.s], xmm2);
-		movdqa(ptr[&m_env.temp.t], xmm3);
+		movdqa(ptr[&m_local.temp.s], xmm2);
+		movdqa(ptr[&m_local.temp.t], xmm3);
 	}
 
-	if(m_env.sel.tfx != 3) // != decal
+	if(m_sel.tfx != 3) // != decal
 	{
 		// GSVector4i vc = GSVector4i(v.c).xxzzlh();
 
@@ -197,20 +198,20 @@ void GPUDrawScanlineCodeGenerator::Init(int params)
 		pshufd(xmm5, xmm6, _MM_SHUFFLE(1, 1, 1, 1));
 		pshufd(xmm6, xmm6, _MM_SHUFFLE(2, 2, 2, 2));
 
-		if(m_env.sel.iip)
+		if(m_sel.iip)
 		{
-			// r = r.add16(m_env.d.r);
-			// g = g.add16(m_env.d.g);
-			// b = b.add16(m_env.d.b);
+			// r = r.add16(m_local.d.r);
+			// g = g.add16(m_local.d.g);
+			// b = b.add16(m_local.d.b);
 
-			paddw(xmm4, ptr[&m_env.d.r]);
-			paddw(xmm5, ptr[&m_env.d.g]);
-			paddw(xmm6, ptr[&m_env.d.b]);
+			paddw(xmm4, ptr[&m_local.d.r]);
+			paddw(xmm5, ptr[&m_local.d.g]);
+			paddw(xmm6, ptr[&m_local.d.b]);
 		}
 
-		movdqa(ptr[&m_env.temp.r], xmm4);
-		movdqa(ptr[&m_env.temp.g], xmm5);
-		movdqa(ptr[&m_env.temp.b], xmm6);
+		movdqa(ptr[&m_local.temp.r], xmm4);
+		movdqa(ptr[&m_local.temp.g], xmm5);
+		movdqa(ptr[&m_local.temp.b], xmm6);
 	}
 }
 
@@ -224,62 +225,62 @@ void GPUDrawScanlineCodeGenerator::Step()
 
 	add(edi, 8 * sizeof(uint16));
 
-	if(m_env.sel.tme)
+	if(m_sel.tme)
 	{
-		// GSVector4i st = m_env.d8.st;
+		// GSVector4i st = m_local.d8.st;
 
-		movdqa(xmm4, ptr[&m_env.d8.st]);
+		movdqa(xmm4, ptr[&m_local.d8.st]);
 
 		// s = s.add16(st.xxxx());
 		// t = t.add16(st.yyyy());
 
 		pshufd(xmm2, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
-		paddw(xmm2, ptr[&m_env.temp.s]);
-		movdqa(ptr[&m_env.temp.s], xmm2);
+		paddw(xmm2, ptr[&m_local.temp.s]);
+		movdqa(ptr[&m_local.temp.s], xmm2);
 
 		// TODO: if(!sprite) ... else reload t
 
 		pshufd(xmm3, xmm4, _MM_SHUFFLE(1, 1, 1, 1));
-		paddw(xmm3, ptr[&m_env.temp.t]);
-		movdqa(ptr[&m_env.temp.t], xmm3);
+		paddw(xmm3, ptr[&m_local.temp.t]);
+		movdqa(ptr[&m_local.temp.t], xmm3);
 	}
 
-	if(m_env.sel.tfx != 3) // != decal
+	if(m_sel.tfx != 3) // != decal
 	{
-		if(m_env.sel.iip)
+		if(m_sel.iip)
 		{
-			// GSVector4i c = m_env.d8.c;
+			// GSVector4i c = m_local.d8.c;
 
 			// r = r.add16(c.xxxx());
 			// g = g.add16(c.yyyy());
 			// b = b.add16(c.zzzz());
 
-			movdqa(xmm6, ptr[&m_env.d8.c]);
+			movdqa(xmm6, ptr[&m_local.d8.c]);
 
 			pshufd(xmm4, xmm6, _MM_SHUFFLE(0, 0, 0, 0));
 			pshufd(xmm5, xmm6, _MM_SHUFFLE(1, 1, 1, 1));
 			pshufd(xmm6, xmm6, _MM_SHUFFLE(2, 2, 2, 2));
 
-			paddw(xmm4, ptr[&m_env.temp.r]);
-			paddw(xmm5, ptr[&m_env.temp.g]);
-			paddw(xmm6, ptr[&m_env.temp.b]);
+			paddw(xmm4, ptr[&m_local.temp.r]);
+			paddw(xmm5, ptr[&m_local.temp.g]);
+			paddw(xmm6, ptr[&m_local.temp.b]);
 
-			movdqa(ptr[&m_env.temp.r], xmm4);
-			movdqa(ptr[&m_env.temp.g], xmm5);
-			movdqa(ptr[&m_env.temp.b], xmm6);
+			movdqa(ptr[&m_local.temp.r], xmm4);
+			movdqa(ptr[&m_local.temp.g], xmm5);
+			movdqa(ptr[&m_local.temp.b], xmm6);
 		}
 		else
 		{
-			movdqa(xmm4, ptr[&m_env.temp.r]);
-			movdqa(xmm5, ptr[&m_env.temp.g]);
-			movdqa(xmm6, ptr[&m_env.temp.b]);
+			movdqa(xmm4, ptr[&m_local.temp.r]);
+			movdqa(xmm5, ptr[&m_local.temp.g]);
+			movdqa(xmm6, ptr[&m_local.temp.b]);
 		}
 	}
 }
 
 void GPUDrawScanlineCodeGenerator::TestMask()
 {
-	if(!m_env.sel.me)
+	if(!m_sel.me)
 	{
 		return;
 	}
@@ -295,7 +296,7 @@ void GPUDrawScanlineCodeGenerator::TestMask()
 
 void GPUDrawScanlineCodeGenerator::SampleTexture()
 {
-	if(!m_env.sel.tme)
+	if(!m_sel.tme)
 	{
 		return;		
 	}
@@ -306,7 +307,7 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 	// xmm0, xmm4, xmm5, xmm6 = free
 	// xmm1 = used
 
-	if(m_env.sel.ltf)
+	if(m_sel.ltf)
 	{
 		// GSVector4i u = s.sub16(GSVector4i(0x00200020)); // - 0.125f
 		// GSVector4i v = t.sub16(GSVector4i(0x00200020)); // - 0.125f
@@ -324,14 +325,14 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		movdqa(xmm0, xmm2);
 		psllw(xmm0, 8);
 		psrlw(xmm0, 1);
-		movdqa(ptr[&m_env.temp.uf], xmm0);
+		movdqa(ptr[&m_local.temp.uf], xmm0);
 
-		if(!m_env.sel.sprite)
+		if(!m_sel.sprite)
 		{
 			movdqa(xmm0, xmm3);
 			psllw(xmm0, 8);
 			psrlw(xmm0, 1);
-			movdqa(ptr[&m_env.temp.vf], xmm0);
+			movdqa(ptr[&m_local.temp.vf], xmm0);
 		}
 	}
 
@@ -347,7 +348,7 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 	// xmm0, xmm4, xmm5, xmm6 = free
 	// xmm1 = used
 
-	if(m_env.sel.ltf)
+	if(m_sel.ltf)
 	{
 		// GSVector4i u1 = u0.add16(GSVector4i::x0001());
 		// GSVector4i v1 = v0.add16(GSVector4i::x0001());
@@ -360,23 +361,23 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		paddw(xmm4, xmm0);
 		paddw(xmm5, xmm0);
 
-		if(m_env.sel.twin)
+		if(m_sel.twin)
 		{
-			// u0 = (u0 & m_env.twin[0].u).add16(m_env.twin[1].u);
-			// v0 = (v0 & m_env.twin[0].v).add16(m_env.twin[1].v);
-			// u1 = (u1 & m_env.twin[0].u).add16(m_env.twin[1].u);
-			// v1 = (v1 & m_env.twin[0].v).add16(m_env.twin[1].v);
+			// u0 = (u0 & m_local.twin[0].u).add16(m_local.twin[1].u);
+			// v0 = (v0 & m_local.twin[0].v).add16(m_local.twin[1].v);
+			// u1 = (u1 & m_local.twin[0].u).add16(m_local.twin[1].u);
+			// v1 = (v1 & m_local.twin[0].v).add16(m_local.twin[1].v);
 
-			movdqa(xmm0, ptr[&m_env.twin[0].u]);
-			movdqa(xmm6, ptr[&m_env.twin[1].u]);
+			movdqa(xmm0, ptr[&m_local.twin[0].u]);
+			movdqa(xmm6, ptr[&m_local.twin[1].u]);
 
 			pand(xmm2, xmm0);
 			paddw(xmm2, xmm6);
 			pand(xmm4, xmm0);
 			paddw(xmm4, xmm6);
 
-			movdqa(xmm0, ptr[&m_env.twin[0].v]);
-			movdqa(xmm6, ptr[&m_env.twin[1].v]);
+			movdqa(xmm0, ptr[&m_local.twin[0].v]);
+			movdqa(xmm6, ptr[&m_local.twin[1].v]);
 
 			pand(xmm3, xmm0);
 			paddw(xmm3, xmm6);
@@ -385,15 +386,15 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		}
 		else
 		{
-			// u0 = u0.min_i16(m_env.twin[2].u);
-			// v0 = v0.min_i16(m_env.twin[2].v);
-			// u1 = u1.min_i16(m_env.twin[2].u);
-			// v1 = v1.min_i16(m_env.twin[2].v);
+			// u0 = u0.min_i16(m_local.twin[2].u);
+			// v0 = v0.min_i16(m_local.twin[2].v);
+			// u1 = u1.min_i16(m_local.twin[2].u);
+			// v1 = v1.min_i16(m_local.twin[2].v);
 
 			// TODO: if(!sprite) clamp16 else:
 
-			movdqa(xmm0, ptr[&m_env.twin[2].u]);
-			movdqa(xmm6, ptr[&m_env.twin[2].v]);
+			movdqa(xmm0, ptr[&m_local.twin[2].u]);
+			movdqa(xmm6, ptr[&m_local.twin[2].v]);
 
 			pminsw(xmm2, xmm0);
 			pminsw(xmm3, xmm6);
@@ -447,8 +448,8 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		
 		// spill (TODO)
 
-		movdqa(ptr[&m_env.temp.fd], xmm1);
-		movdqa(ptr[&m_env.temp.test], xmm7);
+		movdqa(ptr[&m_local.temp.fd], xmm1);
+		movdqa(ptr[&m_local.temp.test], xmm7);
 
 		// xmm2 = c00
 		// xmm4 = c01
@@ -464,7 +465,7 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		psllw(xmm0, 11);
 		psrlw(xmm0, 8);
 
-		lerp16<0>(xmm0, xmm1, ptr[&m_env.temp.uf]);
+		lerp16<0>(xmm0, xmm1, ptr[&m_local.temp.uf]);
 
 		movdqa(xmm6, xmm2);
 		psllw(xmm6, 6);
@@ -476,7 +477,7 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		psrlw(xmm1, 11);
 		psllw(xmm1, 3);
 
-		lerp16<0>(xmm1, xmm6, ptr[&m_env.temp.uf]);
+		lerp16<0>(xmm1, xmm6, ptr[&m_local.temp.uf]);
 
 		movdqa(xmm7, xmm2);
 		psllw(xmm7, 1);
@@ -488,14 +489,14 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		psrlw(xmm6, 11);
 		psllw(xmm6, 3);
 
-		lerp16<0>(xmm6, xmm7, ptr[&m_env.temp.uf]);
+		lerp16<0>(xmm6, xmm7, ptr[&m_local.temp.uf]);
 
 		psraw(xmm2, 15);
 		psrlw(xmm2, 8);
 		psraw(xmm4, 15);
 		psrlw(xmm4, 8);
 
-		lerp16<0>(xmm4, xmm2, ptr[&m_env.temp.uf]);
+		lerp16<0>(xmm4, xmm2, ptr[&m_local.temp.uf]);
 
 		// xmm0 = r00
 		// xmm1 = g00
@@ -513,8 +514,8 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		psllw(xmm2, 11);
 		psrlw(xmm2, 8);
 
-		lerp16<0>(xmm2, xmm7, ptr[&m_env.temp.uf]);
-		lerp16<0>(xmm2, xmm0, ptr[&m_env.temp.vf]);
+		lerp16<0>(xmm2, xmm7, ptr[&m_local.temp.uf]);
+		lerp16<0>(xmm2, xmm0, ptr[&m_local.temp.vf]);
 
 		// xmm2 = r
 		// xmm1 = g00
@@ -534,8 +535,8 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		psrlw(xmm0, 11);
 		psllw(xmm0, 3);
 
-		lerp16<0>(xmm0, xmm7, ptr[&m_env.temp.uf]);
-		lerp16<0>(xmm0, xmm1, ptr[&m_env.temp.vf]);
+		lerp16<0>(xmm0, xmm7, ptr[&m_local.temp.uf]);
+		lerp16<0>(xmm0, xmm1, ptr[&m_local.temp.vf]);
 
 		// xmm2 = r
 		// xmm0 = g
@@ -555,8 +556,8 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		psrlw(xmm1, 11);
 		psllw(xmm1, 3);
 
-		lerp16<0>(xmm1, xmm7, ptr[&m_env.temp.uf]);
-		lerp16<0>(xmm1, xmm6, ptr[&m_env.temp.vf]);
+		lerp16<0>(xmm1, xmm7, ptr[&m_local.temp.uf]);
+		lerp16<0>(xmm1, xmm6, ptr[&m_local.temp.vf]);
 
 		// xmm2 = r
 		// xmm0 = g
@@ -571,8 +572,8 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		psraw(xmm5, 15);
 		psrlw(xmm5, 8);
 
-		lerp16<0>(xmm5, xmm3, ptr[&m_env.temp.uf]);
-		lerp16<0>(xmm5, xmm4, ptr[&m_env.temp.vf]);
+		lerp16<0>(xmm5, xmm3, ptr[&m_local.temp.uf]);
+		lerp16<0>(xmm5, xmm4, ptr[&m_local.temp.vf]);
 
 		// xmm2 = r
 		// xmm0 = g
@@ -588,7 +589,7 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 
 		// reload test
 
-		movdqa(xmm7, ptr[&m_env.temp.test]);
+		movdqa(xmm7, ptr[&m_local.temp.test]);
 
 		// xmm4 = r
 		// xmm5 = g
@@ -615,29 +616,29 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 
 		// reload fd
 
-		movdqa(xmm1, ptr[&m_env.temp.fd]);
+		movdqa(xmm1, ptr[&m_local.temp.fd]);
 	}
 	else
 	{
-		if(m_env.sel.twin)
+		if(m_sel.twin)
 		{
-			// u = (u & m_env.twin[0].u).add16(m_env.twin[1].u);
-			// v = (v & m_env.twin[0].v).add16(m_env.twin[1].v);
+			// u = (u & m_local.twin[0].u).add16(m_local.twin[1].u);
+			// v = (v & m_local.twin[0].v).add16(m_local.twin[1].v);
 
-			pand(xmm2, ptr[&m_env.twin[0].u]);
-			paddw(xmm2, ptr[&m_env.twin[1].u]);
-			pand(xmm3, ptr[&m_env.twin[0].v]);
-			paddw(xmm3, ptr[&m_env.twin[1].v]);
+			pand(xmm2, ptr[&m_local.twin[0].u]);
+			paddw(xmm2, ptr[&m_local.twin[1].u]);
+			pand(xmm3, ptr[&m_local.twin[0].v]);
+			paddw(xmm3, ptr[&m_local.twin[1].v]);
 		}
 		else
 		{
-			// u = u.min_i16(m_env.twin[2].u);
-			// v = v.min_i16(m_env.twin[2].v);
+			// u = u.min_i16(m_local.twin[2].u);
+			// v = v.min_i16(m_local.twin[2].v);
 
 			// TODO: if(!sprite) clamp16 else:
 
-			pminsw(xmm2, ptr[&m_env.twin[2].u]);
-			pminsw(xmm3, ptr[&m_env.twin[2].v]);
+			pminsw(xmm2, ptr[&m_local.twin[2].u]);
+			pminsw(xmm3, ptr[&m_local.twin[2].v]);
 		}
 
 		// xmm2 = u
@@ -696,7 +697,7 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 
 void GPUDrawScanlineCodeGenerator::ColorTFX()
 {
-	switch(m_env.sel.tfx)
+	switch(m_sel.tfx)
 	{
 	case 0: // none (tfx = 0)
 	case 1: // none (tfx = tge)
@@ -713,11 +714,11 @@ void GPUDrawScanlineCodeGenerator::ColorTFX()
 		// c[2] = c[2].modulate16<1>(b).clamp8();
 		pcmpeqd(xmm0, xmm0);
 		psrlw(xmm0, 8);
-		modulate16<1>(xmm4, ptr[&m_env.temp.r]);
+		modulate16<1>(xmm4, ptr[&m_local.temp.r]);
 		pminsw(xmm4, xmm0);
-		modulate16<1>(xmm5, ptr[&m_env.temp.g]);
+		modulate16<1>(xmm5, ptr[&m_local.temp.g]);
 		pminsw(xmm5, xmm0);
-		modulate16<1>(xmm6, ptr[&m_env.temp.b]);
+		modulate16<1>(xmm6, ptr[&m_local.temp.b]);
 		pminsw(xmm6, xmm0);
 		break;
 	case 3: // decal (tfx = tme)
@@ -727,7 +728,7 @@ void GPUDrawScanlineCodeGenerator::ColorTFX()
 
 void GPUDrawScanlineCodeGenerator::AlphaBlend()
 {
-	if(!m_env.sel.abe)
+	if(!m_sel.abe)
 	{
 		return;
 	}
@@ -748,7 +749,7 @@ void GPUDrawScanlineCodeGenerator::AlphaBlend()
 	pand(xmm2, xmm0);
 	psllw(xmm2, 3);
 
-	switch(m_env.sel.abr)
+	switch(m_sel.abr)
 	{
 	case 0:
 		// r = r.avg8(c[0]);
@@ -770,7 +771,7 @@ void GPUDrawScanlineCodeGenerator::AlphaBlend()
 		break;
 	}
 
-	if(m_env.sel.tme)
+	if(m_sel.tme)
 	{
 		movdqa(xmm0, xmm3);
 		blend8(xmm4, xmm2);
@@ -789,7 +790,7 @@ void GPUDrawScanlineCodeGenerator::AlphaBlend()
 	pand(xmm2, xmm0);
 	psrlw(xmm2, 2);
 
-	switch(m_env.sel.abr)
+	switch(m_sel.abr)
 	{
 	case 0:
 		// g = g.avg8(c[2]);
@@ -811,7 +812,7 @@ void GPUDrawScanlineCodeGenerator::AlphaBlend()
 		break;
 	}
 
-	if(m_env.sel.tme)
+	if(m_sel.tme)
 	{
 		movdqa(xmm0, xmm3);
 		blend8(xmm5, xmm2);
@@ -830,7 +831,7 @@ void GPUDrawScanlineCodeGenerator::AlphaBlend()
 	pand(xmm2, xmm0);
 	psrlw(xmm2, 7);
 
-	switch(m_env.sel.abr)
+	switch(m_sel.abr)
 	{
 	case 0:
 		// b = b.avg8(c[2]);
@@ -852,7 +853,7 @@ void GPUDrawScanlineCodeGenerator::AlphaBlend()
 		break;
 	}
 
-	if(m_env.sel.tme)
+	if(m_sel.tme)
 	{
 		movdqa(xmm0, xmm3);
 		blend8(xmm6, xmm2);
@@ -865,7 +866,7 @@ void GPUDrawScanlineCodeGenerator::AlphaBlend()
 
 void GPUDrawScanlineCodeGenerator::Dither()
 {
-	if(!m_env.sel.dtd)
+	if(!m_sel.dtd)
 	{
 		return;
 	}
@@ -874,7 +875,7 @@ void GPUDrawScanlineCodeGenerator::Dither()
 	// c[1] = c[1].addus8(dither);
 	// c[2] = c[2].addus8(dither);
 
-	movdqa(xmm0, ptr[&m_env.temp.dither]);
+	movdqa(xmm0, ptr[&m_local.temp.dither]);
 
 	paddusb(xmm4, xmm0);
 	paddusb(xmm5, xmm0);
@@ -883,11 +884,11 @@ void GPUDrawScanlineCodeGenerator::Dither()
 
 void GPUDrawScanlineCodeGenerator::WriteFrame()
 {
-	// GSVector4i fs = r | g | b | (m_env.sel.md ? GSVector4i(0x80008000) : m_env.sel.tme ? a : 0);
+	// GSVector4i fs = r | g | b | (m_sel.md ? GSVector4i(0x80008000) : m_sel.tme ? a : 0);
 
 	pcmpeqd(xmm0, xmm0);
 	
-	if(m_env.sel.md || m_env.sel.tme) 
+	if(m_sel.md || m_sel.tme) 
 	{
 		movdqa(xmm2, xmm0); 
 		psllw(xmm2, 15);
@@ -916,13 +917,13 @@ void GPUDrawScanlineCodeGenerator::WriteFrame()
 	psllw(xmm6, 7);
 	por(xmm4, xmm6);
 
-	if(m_env.sel.md)
+	if(m_sel.md)
 	{
 		// GSVector4i a = GSVector4i(0x80008000);
 
 		por(xmm4, xmm2);
 	}
-	else if(m_env.sel.tme)
+	else if(m_sel.tme)
 	{
 		// GSVector4i a = (c[3] << 8) & 0x80008000;
 
@@ -950,9 +951,9 @@ void GPUDrawScanlineCodeGenerator::ReadTexel(const Xmm& dst, const Xmm& addr)
 	{
 		pextrw(eax, addr, (uint8)i);
 
-		if(m_env.sel.tlu) movzx(eax, byte[esi + eax]);
+		if(m_sel.tlu) movzx(eax, byte[esi + eax]);
 
-		const Address& src = m_env.sel.tlu ? ptr[eax * 2 + (size_t)m_env.clut] : ptr[esi + eax * 2];
+		const Address& src = m_sel.tlu ? ptr[eax * 2 + (size_t)m_local.gd->clut] : ptr[esi + eax * 2];
 
 		if(i == 0) movd(dst, src);
 		else pinsrw(dst, src, (uint8)i);

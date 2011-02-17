@@ -41,10 +41,10 @@ protected:
 	void Draw();
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 
-	void GetScanlineParam(GSScanlineParam& p, GS_PRIM_CLASS primclass);
+	void GetScanlineGlobalData(GSScanlineGlobalData& gd);
 
 public:
-	GSRendererSW();
+	GSRendererSW(int threads);
 	virtual ~GSRendererSW();
 
 	template<uint32 prim, uint32 tme, uint32 fst> 

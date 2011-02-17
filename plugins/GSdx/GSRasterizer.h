@@ -34,6 +34,7 @@ public:
 	GS_PRIM_CLASS primclass;
 	const GSVertexSW* vertices;
 	int count;
+	uint64 frame;
 	const void* param;
 };
 	
@@ -55,7 +56,7 @@ public:
 	virtual ~IDrawScanline() {}
 
 	virtual void BeginDraw(const GSRasterizerData* data) = 0;
-	virtual void EndDraw(const GSRasterizerStats& stats) = 0;
+	virtual void EndDraw(const GSRasterizerStats& stats, uint64 frame) = 0;
 	virtual void PrintStats() = 0;
 
 	__forceinline void SetupPrim(const GSVertexSW* v, const GSVertexSW& dscan) {m_sp(v, dscan);}
@@ -141,28 +142,29 @@ protected:
 	long m_syncstart;
 	GSRasterizerStats m_stats;
 	int64 m_start;
-
-	void FreeRasterizers();
+	void* m_param;
+	size_t m_param_size;
 
 public:
 	GSRasterizerList();
 	virtual ~GSRasterizerList();
 
-	template<class DS, class T> void Create(T* parent, int threads)
+	template<class DS, class PARAM> void Create(int threads)
 	{
-		FreeRasterizers();
-
 		threads = std::max<int>(threads, 1); // TODO: min(threads, number of cpu cores)
+
+		m_param = _aligned_malloc(sizeof(PARAM), 32);
+		m_param_size = sizeof(PARAM);
 
 		m_syncstart = 0;
 
-		push_back(new GSRasterizer(new DS(parent, 0), 0, threads));
+		push_back(new GSRasterizer(new DS((PARAM*)m_param), 0, threads));
 
 		for(int i = 1; i < threads; i++)
 		{
-			HANDLE ready = CreateEvent(NULL, FALSE, FALSE, NULL);
+			HANDLE ready = CreateEvent(NULL, FALSE, TRUE, NULL);
 
-			push_back(new GSRasterizerMT(new DS(parent, i), i, threads, ready, m_sync));
+			push_back(new GSRasterizerMT(new DS((PARAM*)m_param), i, threads, ready, m_sync));
 
 			m_ready.push_back(ready);
 
