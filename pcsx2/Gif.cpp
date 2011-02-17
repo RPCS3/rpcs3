@@ -248,7 +248,7 @@ static __fi tDMA_TAG* ReadTag2()
 
 bool CheckPaths(int Channel)
 {
-	if((GSTransferStatus.PTH3 == IMAGE_MODE && gifRegs.mode.IMT) || GSTransferStatus.PTH3 == WAITING_MODE)
+	if((GSTransferStatus.PTH3 == IMAGE_MODE && gifRegs.mode.IMT) /*|| GSTransferStatus.PTH3 == WAITING_MODE*/)
 	{
 		if((gifRegs.stat.P1Q == true || gifRegs.stat.P2Q == true) || (gifRegs.stat.APATH > GIF_APATH_IDLE && gifRegs.stat.APATH < GIF_APATH3))
 		{

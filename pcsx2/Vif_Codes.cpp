@@ -97,7 +97,7 @@ void Vif1MskPath3() {
 		if(gifRegs.stat.P3Q) 
 		{
 			MSKPATH3_LOG("Path3 Waiting to Transfer, triggering");
-			gsInterrupt();//gsInterrupt();
+			gsInterrupt();
 		}
 	
 	} 
