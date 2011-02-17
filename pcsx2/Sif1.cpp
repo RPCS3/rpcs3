@@ -126,6 +126,7 @@ static __fi bool ProcessEETag()
 
 		case TAG_REF:
 		case TAG_REFS:
+			if(ptag->ID == TAG_REFS && dmacRegs.ctrl.STD == STD_SIF1) DevCon.Warning("SIF1 Drain Stall Control not implemented");
 			sif1dma.madr = ptag[1]._u32;
 			sif1dma.tadr += 16;
 			break;

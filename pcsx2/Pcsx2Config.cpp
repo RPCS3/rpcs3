@@ -88,6 +88,7 @@ Pcsx2Config::RecompilerOptions::RecompilerOptions()
 	// All recs are enabled by default.
 
 	EnableEE	= true;
+	EnableEECache = false;
 	EnableIOP	= true;
 	EnableVU0	= true;
 	EnableVU1	= true;
@@ -145,6 +146,7 @@ void Pcsx2Config::RecompilerOptions::LoadSave( IniInterface& ini )
 
 	IniBitBool( EnableEE );
 	IniBitBool( EnableIOP );
+	IniBitBool( EnableEECache );
 	IniBitBool( EnableVU0 );
 	IniBitBool( EnableVU1 );
 

@@ -18,9 +18,13 @@
 
 #include "Common.h"
 
-struct _u8bit_128 {
-	u8	_8[16];
 
+union _u8bit_128
+{
+	u8 _u8[16];
+	u16 _u16[8];
+	u32 _u32[4];
+	u64	_u64[2];
 };
 
 struct u8bit_128 {
@@ -38,19 +42,11 @@ extern _cacheS pCache[64];
 void writeCache8(u32 mem, u8 value);
 void writeCache16(u32 mem, u16 value);
 void writeCache32(u32 mem, u32 value);
-void writeCache64(u32 mem, u64 value);
-void writeCache128(u32 mem, u64 *value);
-u8  *readCache(u32 mem);
-
-// Fixme - these two functions do nothing, and the cache code relies on these two functions.
-static __fi u32 getMemR(s32 mem)
-{
-	return 0;//memLUTR[mem >> 12];
-}
-
-static __fi u32 getMemW(s32 mem)
-{
-	return 0;//memLUTW[mem>>12];
-}
+void writeCache64(u32 mem, const u64 value);
+void writeCache128(u32 mem, const mem128_t* value);
+u8 readCache8(u32 mem);
+u16 readCache16(u32 mem);
+u32 readCache32(u32 mem);
+u64 readCache64(u32 mem);
 
 #endif /* __CACHE_H__ */

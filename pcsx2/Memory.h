@@ -19,7 +19,6 @@
 #include <signal.h>
 #endif
 
-//#define ENABLECACHE
 #include "vtlb.h"
 
 #include <xmmintrin.h>

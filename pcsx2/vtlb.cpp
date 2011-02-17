@@ -33,6 +33,7 @@
 #include "Common.h"
 #include "vtlb.h"
 #include "COP0.h"
+#include "Cache.h"
 #include "R5900Exceptions.h"
 
 #include "Utilities/MemsetFast.inl"
@@ -55,7 +56,29 @@ static vtlbHandler UnmappedVirtHandler1;
 static vtlbHandler UnmappedPhyHandler0;
 static vtlbHandler UnmappedPhyHandler1;
 
+__inline int CheckCache(u32 addr)
+{
+	u32 mask;
 
+	if(((cpuRegs.CP0.n.Config >> 16) & 0x1) == 0) 
+	{
+		//DevCon.Warning("Data Cache Disabled! %x", cpuRegs.CP0.n.Config);
+		return false;//
+	}
+
+	for(int i = 1; i < 48; i++)
+	{
+		if (((tlb[i].EntryLo1 & 0x38) >> 3) == 0x3 || ((tlb[i].EntryLo0 & 0x38) >> 3) == 0x3) {
+			mask  = tlb[i].PageMask;
+			
+			if ((addr >= tlb[i].PFN0) && (addr <= tlb[i].PFN0 + mask)) {
+				//DevCon.Warning("Yay! Cache check cache addr=%x, mask=%x, addr+mask=%x, VPN2=%x", addr, mask, (addr & mask), tlb[i].VPN2); 
+				return true;
+			}
+		}
+	}
+	return false;
+}
 // --------------------------------------------------------------------------------------
 // Interpreter Implementations of VTLB Memory Operations.
 // --------------------------------------------------------------------------------------
@@ -69,7 +92,30 @@ DataType __fastcall vtlb_memRead(u32 addr)
 	s32 ppf=addr+vmv;
 
 	if (!(ppf<0))
+	{
+		if (!CHECK_EEREC) 
+		{
+			if(CHECK_CACHE && CheckCache(addr)) 
+			{
+				switch( DataSize )
+				{
+					case 8: 
+						return readCache8(addr);
+						break;
+					case 16: 
+						return readCache16(addr);
+						break;
+					case 32: 
+						return readCache32(addr);
+						break;
+
+					jNO_DEFAULT;
+				}
+			}
+		}
+
 		return *reinterpret_cast<DataType*>(ppf);
+	}
 
 	//has to: translate, find function, call function
 	u32 hand=(u8)vmv;
@@ -79,9 +125,15 @@ DataType __fastcall vtlb_memRead(u32 addr)
 
 	switch( DataSize )
 	{
-		case 8: return ((vtlbMemR8FP*)vtlbdata.RWFT[0][0][hand])(paddr);
-		case 16: return ((vtlbMemR16FP*)vtlbdata.RWFT[1][0][hand])(paddr);
-		case 32: return ((vtlbMemR32FP*)vtlbdata.RWFT[2][0][hand])(paddr);
+		case 8: 
+			
+			return ((vtlbMemR8FP*)vtlbdata.RWFT[0][0][hand])(paddr);
+		case 16: 
+			
+			return ((vtlbMemR16FP*)vtlbdata.RWFT[1][0][hand])(paddr);
+		case 32: 
+			
+			return ((vtlbMemR32FP*)vtlbdata.RWFT[2][0][hand])(paddr);
 
 		jNO_DEFAULT;
 	}
@@ -96,6 +148,14 @@ void __fastcall vtlb_memRead64(u32 mem, mem64_t *out)
 
 	if (!(ppf<0))
 	{
+		if (!CHECK_EEREC) {
+			if(CHECK_CACHE && CheckCache(mem)) 
+			{
+				*out = readCache64(mem);
+				return;
+			}
+		}
+
 		*out = *(mem64_t*)ppf;
 	}
 	else
@@ -115,6 +175,16 @@ void __fastcall vtlb_memRead128(u32 mem, mem128_t *out)
 
 	if (!(ppf<0))
 	{
+		if (!CHECK_EEREC) 
+		{
+			if(CHECK_CACHE && CheckCache(mem)) 
+			{
+				out->lo = readCache64(mem);
+				out->hi = readCache64(mem+8);
+				return;
+			}
+		}
+
 		CopyQWC(out,(void*)ppf);
 	}
 	else
@@ -136,7 +206,26 @@ void __fastcall vtlb_memWrite(u32 addr, DataType data)
 	u32 vmv=vtlbdata.vmap[addr>>VTLB_PAGE_BITS];
 	s32 ppf=addr+vmv;
 	if (!(ppf<0))
-	{
+	{		
+		if (!CHECK_EEREC) 
+		{
+			if(CHECK_CACHE && CheckCache(addr)) 
+			{
+				switch( DataSize )
+				{
+				case 8: 
+					writeCache8(addr, data);
+					return;
+				case 16:
+					writeCache16(addr, data);
+					return;
+				case 32:
+					writeCache32(addr, data);
+					return;
+				}
+			}
+		}
+
 		*reinterpret_cast<DataType*>(ppf)=data;
 	}
 	else
@@ -148,9 +237,12 @@ void __fastcall vtlb_memWrite(u32 addr, DataType data)
 
 		switch( DataSize )
 		{
-			case 8: return ((vtlbMemW8FP*)vtlbdata.RWFT[0][1][hand])(paddr, (u8)data);
-			case 16: return ((vtlbMemW16FP*)vtlbdata.RWFT[1][1][hand])(paddr, (u16)data);
-			case 32: return ((vtlbMemW32FP*)vtlbdata.RWFT[2][1][hand])(paddr, (u32)data);
+			case 8: 
+				return ((vtlbMemW8FP*)vtlbdata.RWFT[0][1][hand])(paddr, (u8)data);
+			case 16: 
+				return ((vtlbMemW16FP*)vtlbdata.RWFT[1][1][hand])(paddr, (u16)data);
+			case 32: 				
+				return ((vtlbMemW32FP*)vtlbdata.RWFT[2][1][hand])(paddr, (u32)data);
 
 			jNO_DEFAULT;
 		}
@@ -162,7 +254,16 @@ void __fastcall vtlb_memWrite64(u32 mem, const mem64_t* value)
 	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
 	s32 ppf=mem+vmv;
 	if (!(ppf<0))
-	{
+	{		
+		if (!CHECK_EEREC) 
+		{
+			if(CHECK_CACHE && CheckCache(mem)) 
+			{
+				writeCache64(mem, *value);
+				return;
+			}
+		}
+
 		*(mem64_t*)ppf = *value;
 	}
 	else
@@ -182,6 +283,15 @@ void __fastcall vtlb_memWrite128(u32 mem, const mem128_t *value)
 	s32 ppf=mem+vmv;
 	if (!(ppf<0))
 	{
+		if (!CHECK_EEREC) 
+		{
+			if(CHECK_CACHE && CheckCache(mem)) 
+			{
+				writeCache128(mem, value);
+				return;
+			}
+		}
+
 		CopyQWC((void*)ppf, value);
 	}
 	else

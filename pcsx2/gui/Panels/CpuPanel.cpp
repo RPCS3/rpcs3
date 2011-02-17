@@ -151,15 +151,18 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	wxStaticBoxSizer& s_iop	( *new wxStaticBoxSizer( wxVERTICAL, this, L"IOP" ) );
 
 	s_ee	+= m_panel_RecEE	| StdExpand();
+	s_ee   += m_check_EECacheEnable = new pxCheckBox( this, _("Enable EE Cache - Interpreter Only! (Slower)") );
 	s_iop	+= m_panel_RecIOP	| StdExpand();
 
 	s_recs	+= s_ee				| SubGroup();
 	s_recs	+= s_iop			| SubGroup();
 
+	
 	*this	+= &s_recs							| StdExpand();
+	
 	// move following line down so EE and VU panels look more uniform. 
 	// Use an empty Label (std expanded) so it work with custom font sizes, too.
-	*this	+= Label(_(""))  | StdExpand();
+	//*this	+= Label(_(""))  | StdExpand();
 	*this	+= new wxStaticLine( this )			| pxExpand.Border(wxALL, 18);
 	*this	+= (m_advancedOptsFpu = new AdvancedOptionsFPU( this ))	| StdExpand();
 
@@ -225,8 +228,9 @@ Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 void Panels::CpuPanelEE::Apply()
 {
 	Pcsx2Config::RecompilerOptions& recOps( g_Conf->EmuOptions.Cpu.Recompiler );
-	recOps.EnableEE		= !!m_panel_RecEE->GetSelection();
-	recOps.EnableIOP	= !!m_panel_RecIOP->GetSelection();
+	recOps.EnableEE		  = !!m_panel_RecEE->GetSelection();
+	recOps.EnableIOP	  = !!m_panel_RecIOP->GetSelection();
+	recOps.EnableEECache  = m_check_EECacheEnable	->GetValue();
 }
 
 void Panels::CpuPanelEE::AppStatusEvent_OnSettingsApplied()
@@ -246,6 +250,8 @@ void Panels::CpuPanelEE::ApplyConfigToGui( AppConfig& configToApply, int flags )
 
 	m_panel_RecEE->Enable(!configToApply.EnablePresets);
 	m_panel_RecIOP->Enable(!configToApply.EnablePresets);
+
+	m_check_EECacheEnable ->SetValue(recOps.EnableEECache);
 
 	this->Enable(!configToApply.EnablePresets);
 

@@ -44,105 +44,6 @@ void __fastcall WriteCP0Status(u32 value) {
     cpuSetNextEventDelta(4);
 }
 
-void MapTLB(int i)
-{
-	u32 mask, addr;
-	u32 saddr, eaddr;
-
-	DevCon.WriteLn("MAP TLB %d: 0x%08X-> [0x%08X 0x%08X] S=0x%08X G=%d ASID=%d Mask=0x%03X",
-		i, tlb[i].VPN2, tlb[i].PFN0, tlb[i].PFN1, tlb[i].S, tlb[i].G, tlb[i].ASID, tlb[i].Mask);
-
-	if (tlb[i].S)
-	{
-		vtlb_VMapBuffer(tlb[i].VPN2, eeMem->Scratch, Ps2MemSize::Scratch);
-	}
-
-	if (tlb[i].VPN2 == 0x70000000) return; //uh uhh right ...
-	if (tlb[i].EntryLo0 & 0x2) {
-		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
-		saddr = tlb[i].VPN2 >> 12;
-		eaddr = saddr + tlb[i].Mask + 1;
-
-		for (addr=saddr; addr<eaddr; addr++) {
-			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
-				memSetPageAddr(addr << 12, tlb[i].PFN0 + ((addr - saddr) << 12));
-				Cpu->Clear(addr << 12, 0x400);
-			}
-		}
-	}
-
-	if (tlb[i].EntryLo1 & 0x2) {
-		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
-		saddr = (tlb[i].VPN2 >> 12) + tlb[i].Mask + 1;
-		eaddr = saddr + tlb[i].Mask + 1;
-
-		for (addr=saddr; addr<eaddr; addr++) {
-			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
-				memSetPageAddr(addr << 12, tlb[i].PFN1 + ((addr - saddr) << 12));
-				Cpu->Clear(addr << 12, 0x400);
-			}
-		}
-	}
-}
-
-void UnmapTLB(int i)
-{
-	//Console.WriteLn("Clear TLB %d: %08x-> [%08x %08x] S=%d G=%d ASID=%d Mask= %03X", i,tlb[i].VPN2,tlb[i].PFN0,tlb[i].PFN1,tlb[i].S,tlb[i].G,tlb[i].ASID,tlb[i].Mask);
-	u32 mask, addr;
-	u32 saddr, eaddr;
-
-	if (tlb[i].S)
-	{
-		vtlb_VMapUnmap(tlb[i].VPN2,0x4000);
-		return;
-	}
-
-	if (tlb[i].EntryLo0 & 0x2)
-	{
-		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
-		saddr = tlb[i].VPN2 >> 12;
-		eaddr = saddr + tlb[i].Mask + 1;
-	//	Console.WriteLn("Clear TLB: %08x ~ %08x",saddr,eaddr-1);
-		for (addr=saddr; addr<eaddr; addr++) {
-			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
-				memClearPageAddr(addr << 12);
-				Cpu->Clear(addr << 12, 0x400);
-			}
-		}
-	}
-
-	if (tlb[i].EntryLo1 & 0x2) {
-		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
-		saddr = (tlb[i].VPN2 >> 12) + tlb[i].Mask + 1;
-		eaddr = saddr + tlb[i].Mask + 1;
-	//	Console.WriteLn("Clear TLB: %08x ~ %08x",saddr,eaddr-1);
-		for (addr=saddr; addr<eaddr; addr++) {
-			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
-				memClearPageAddr(addr << 12);
-				Cpu->Clear(addr << 12, 0x400);
-			}
-		}
-	}
-}
-
-void WriteTLB(int i)
-{
-	tlb[i].PageMask = cpuRegs.CP0.n.PageMask;
-	tlb[i].EntryHi = cpuRegs.CP0.n.EntryHi;
-	tlb[i].EntryLo0 = cpuRegs.CP0.n.EntryLo0;
-	tlb[i].EntryLo1 = cpuRegs.CP0.n.EntryLo1;
-
-	tlb[i].Mask = (cpuRegs.CP0.n.PageMask >> 13) & 0xfff;
-	tlb[i].nMask = (~tlb[i].Mask) & 0xfff;
-	tlb[i].VPN2 = ((cpuRegs.CP0.n.EntryHi >> 13) & (~tlb[i].Mask)) << 13;
-	tlb[i].ASID = cpuRegs.CP0.n.EntryHi & 0xfff;
-	tlb[i].G = cpuRegs.CP0.n.EntryLo0 & cpuRegs.CP0.n.EntryLo1 & 0x1;
-	tlb[i].PFN0 = (((cpuRegs.CP0.n.EntryLo0 >> 6) & 0xFFFFF) & (~tlb[i].Mask)) << 12;
-	tlb[i].PFN1 = (((cpuRegs.CP0.n.EntryLo1 >> 6) & 0xFFFFF) & (~tlb[i].Mask)) << 12;
-	tlb[i].S = cpuRegs.CP0.n.EntryLo0&0x80000000;
-
-	MapTLB(i);
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Performance Counters Update Stuff!
@@ -325,10 +226,186 @@ __fi void COP0_UpdatePCCR()
 //////////////////////////////////////////////////////////////////////////////////////////
 //
 
+
+void MapTLB(int i)
+{
+	u32 mask, addr;
+	u32 saddr, eaddr;
+
+	DevCon.WriteLn("MAP TLB %d: 0x%08X-> [0x%08X 0x%08X] S=0x%08X G=%d ASID=%d Mask=0x%03X EntryLo0 PFN=%x EntryLo0 Cache=%x EntryLo1 PFN=%x EntryLo1 Cache=%x VPN2=%x",
+		i, tlb[i].VPN2, tlb[i].PFN0, tlb[i].PFN1, tlb[i].S, tlb[i].G, tlb[i].ASID, tlb[i].Mask, tlb[i].EntryLo0 >> 6, (tlb[i].EntryLo0 & 0x38) >> 3, tlb[i].EntryLo1 >> 6, (tlb[i].EntryLo1 & 0x38) >> 3, tlb[i].VPN2);
+
+	if (tlb[i].S)
+	{
+		vtlb_VMapBuffer(tlb[i].VPN2, eeMem->Scratch, Ps2MemSize::Scratch);
+	}
+
+	if (tlb[i].VPN2 == 0x70000000) return; //uh uhh right ...
+	if (tlb[i].EntryLo0 & 0x2) {
+		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
+		saddr = tlb[i].VPN2 >> 12;
+		eaddr = saddr + tlb[i].Mask + 1;
+
+		for (addr=saddr; addr<eaddr; addr++) {
+			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
+				memSetPageAddr(addr << 12, tlb[i].PFN0 + ((addr - saddr) << 12));
+				Cpu->Clear(addr << 12, 0x400);
+			}
+		}
+	}
+
+	if (tlb[i].EntryLo1 & 0x2) {
+		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
+		saddr = (tlb[i].VPN2 >> 12) + tlb[i].Mask + 1;
+		eaddr = saddr + tlb[i].Mask + 1;
+
+		for (addr=saddr; addr<eaddr; addr++) {
+			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
+				memSetPageAddr(addr << 12, tlb[i].PFN1 + ((addr - saddr) << 12));
+				Cpu->Clear(addr << 12, 0x400);
+			}
+		}
+	}
+}
+
+void UnmapTLB(int i)
+{
+	//Console.WriteLn("Clear TLB %d: %08x-> [%08x %08x] S=%d G=%d ASID=%d Mask= %03X", i,tlb[i].VPN2,tlb[i].PFN0,tlb[i].PFN1,tlb[i].S,tlb[i].G,tlb[i].ASID,tlb[i].Mask);
+	u32 mask, addr;
+	u32 saddr, eaddr;
+
+	if (tlb[i].S)
+	{
+		vtlb_VMapUnmap(tlb[i].VPN2,0x4000);
+		return;
+	}
+
+	if (tlb[i].EntryLo0 & 0x2)
+	{
+		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
+		saddr = tlb[i].VPN2 >> 12;
+		eaddr = saddr + tlb[i].Mask + 1;
+	//	Console.WriteLn("Clear TLB: %08x ~ %08x",saddr,eaddr-1);
+		for (addr=saddr; addr<eaddr; addr++) {
+			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
+				memClearPageAddr(addr << 12);
+				Cpu->Clear(addr << 12, 0x400);
+			}
+		}
+	}
+
+	if (tlb[i].EntryLo1 & 0x2) {
+		mask  = ((~tlb[i].Mask) << 1) & 0xfffff;
+		saddr = (tlb[i].VPN2 >> 12) + tlb[i].Mask + 1;
+		eaddr = saddr + tlb[i].Mask + 1;
+	//	Console.WriteLn("Clear TLB: %08x ~ %08x",saddr,eaddr-1);
+		for (addr=saddr; addr<eaddr; addr++) {
+			if ((addr & mask) == ((tlb[i].VPN2 >> 12) & mask)) { //match
+				memClearPageAddr(addr << 12);
+				Cpu->Clear(addr << 12, 0x400);
+			}
+		}
+	}
+}
+
+void WriteTLB(int i)
+{
+	tlb[i].PageMask = cpuRegs.CP0.n.PageMask;
+	tlb[i].EntryHi = cpuRegs.CP0.n.EntryHi;
+	tlb[i].EntryLo0 = cpuRegs.CP0.n.EntryLo0;
+	tlb[i].EntryLo1 = cpuRegs.CP0.n.EntryLo1;
+
+	tlb[i].Mask = (cpuRegs.CP0.n.PageMask >> 13) & 0xfff;
+	tlb[i].nMask = (~tlb[i].Mask) & 0xfff;
+	tlb[i].VPN2 = ((cpuRegs.CP0.n.EntryHi >> 13) & (~tlb[i].Mask)) << 13;
+	tlb[i].ASID = cpuRegs.CP0.n.EntryHi & 0xfff;
+	tlb[i].G = cpuRegs.CP0.n.EntryLo0 & cpuRegs.CP0.n.EntryLo1 & 0x1;
+	tlb[i].PFN0 = (((cpuRegs.CP0.n.EntryLo0 >> 6) & 0xFFFFF) & (~tlb[i].Mask)) << 12;
+	tlb[i].PFN1 = (((cpuRegs.CP0.n.EntryLo1 >> 6) & 0xFFFFF) & (~tlb[i].Mask)) << 12;
+	tlb[i].S = cpuRegs.CP0.n.EntryLo0&0x80000000;
+
+	MapTLB(i);
+}
+
 namespace R5900 {
 namespace Interpreter {
 namespace OpcodeImpl {
 namespace COP0 {
+
+	void TLBR() {
+DevCon.Warning("COP0_TLBR %d:%x,%x,%x,%x\n",
+			cpuRegs.CP0.n.Random,   cpuRegs.CP0.n.PageMask, cpuRegs.CP0.n.EntryHi,
+			cpuRegs.CP0.n.EntryLo0, cpuRegs.CP0.n.EntryLo1);
+
+	int i = cpuRegs.CP0.n.Index&0x1f;
+
+	cpuRegs.CP0.n.PageMask = tlb[i].PageMask;
+	cpuRegs.CP0.n.EntryHi = tlb[i].EntryHi&~(tlb[i].PageMask|0x1f00);
+	cpuRegs.CP0.n.EntryLo0 = (tlb[i].EntryLo0&~1)|((tlb[i].EntryHi>>12)&1);
+	cpuRegs.CP0.n.EntryLo1 =(tlb[i].EntryLo1&~1)|((tlb[i].EntryHi>>12)&1);
+}
+
+void TLBWI() {
+	int j = cpuRegs.CP0.n.Index & 0x3f;
+
+	//if (j > 48) return;
+
+DevCon.Warning("COP0_TLBWI %d:%x,%x,%x,%x\n",
+			cpuRegs.CP0.n.Index,    cpuRegs.CP0.n.PageMask, cpuRegs.CP0.n.EntryHi,
+			cpuRegs.CP0.n.EntryLo0, cpuRegs.CP0.n.EntryLo1);
+
+	UnmapTLB(j);
+	tlb[j].PageMask = cpuRegs.CP0.n.PageMask;
+	tlb[j].EntryHi = cpuRegs.CP0.n.EntryHi;
+	tlb[j].EntryLo0 = cpuRegs.CP0.n.EntryLo0;
+	tlb[j].EntryLo1 = cpuRegs.CP0.n.EntryLo1;
+	WriteTLB(j);
+}
+
+void TLBWR() {
+	int j = cpuRegs.CP0.n.Random & 0x3f;
+
+	//if (j > 48) return;
+
+DevCon.Warning("COP0_TLBWR %d:%x,%x,%x,%x\n",
+			cpuRegs.CP0.n.Random,   cpuRegs.CP0.n.PageMask, cpuRegs.CP0.n.EntryHi,
+			cpuRegs.CP0.n.EntryLo0, cpuRegs.CP0.n.EntryLo1);
+
+	//if (j > 48) return;
+
+	UnmapTLB(j);
+	tlb[j].PageMask = cpuRegs.CP0.n.PageMask;
+	tlb[j].EntryHi = cpuRegs.CP0.n.EntryHi;
+	tlb[j].EntryLo0 = cpuRegs.CP0.n.EntryLo0;
+	tlb[j].EntryLo1 = cpuRegs.CP0.n.EntryLo1;
+	WriteTLB(j);
+}
+
+void TLBP() {
+	int i;
+
+	union {
+		struct {
+			u32 VPN2:19;
+			u32 VPN2X:2;
+			u32 G:3;
+			u32 ASID:8;
+		} s;
+		u32 u;
+	} EntryHi32;
+
+	EntryHi32.u = cpuRegs.CP0.n.EntryHi;
+
+	cpuRegs.CP0.n.Index=0xFFFFFFFF;
+	for(i=0;i<48;i++){
+		if (tlb[i].VPN2 == ((~tlb[i].Mask) & (EntryHi32.s.VPN2))
+		&& ((tlb[i].G&1) || ((tlb[i].ASID & 0xff) == EntryHi32.s.ASID))) {
+			cpuRegs.CP0.n.Index = i;
+			break;
+		}
+	}
+	 if(cpuRegs.CP0.n.Index == 0xFFFFFFFF) cpuRegs.CP0.n.Index = 0x80000000;
+}
 
 void MFC0()
 {
@@ -458,74 +535,6 @@ void BC0TL() {
 		intDoBranch(_BranchTarget_);
 	else
 		cpuRegs.pc+= 4;
-}
-
-void TLBR() {
-/*	CPU_LOG("COP0_TLBR %d:%x,%x,%x,%x\n",
-			cpuRegs.CP0.n.Random,   cpuRegs.CP0.n.PageMask, cpuRegs.CP0.n.EntryHi,
-			cpuRegs.CP0.n.EntryLo0, cpuRegs.CP0.n.EntryLo1);*/
-
-	int i = cpuRegs.CP0.n.Index&0x1f;
-
-	cpuRegs.CP0.n.PageMask = tlb[i].PageMask;
-	cpuRegs.CP0.n.EntryHi = tlb[i].EntryHi&~(tlb[i].PageMask|0x1f00);
-	cpuRegs.CP0.n.EntryLo0 = (tlb[i].EntryLo0&~1)|((tlb[i].EntryHi>>12)&1);
-	cpuRegs.CP0.n.EntryLo1 =(tlb[i].EntryLo1&~1)|((tlb[i].EntryHi>>12)&1);
-}
-
-void TLBWI() {
-	int j = cpuRegs.CP0.n.Index & 0x3f;
-
-	if (j > 48) return;
-
-/*	CPU_LOG("COP0_TLBWI %d:%x,%x,%x,%x\n",
-			cpuRegs.CP0.n.Index,    cpuRegs.CP0.n.PageMask, cpuRegs.CP0.n.EntryHi,
-			cpuRegs.CP0.n.EntryLo0, cpuRegs.CP0.n.EntryLo1);*/
-
-	UnmapTLB(j);
-	WriteTLB(j);
-}
-
-void TLBWR() {
-	int j = cpuRegs.CP0.n.Random & 0x3f;
-
-	if (j > 48) return;
-
-/*	CPU_LOG("COP0_TLBWR %d:%x,%x,%x,%x\n",
-			cpuRegs.CP0.n.Random,   cpuRegs.CP0.n.PageMask, cpuRegs.CP0.n.EntryHi,
-			cpuRegs.CP0.n.EntryLo0, cpuRegs.CP0.n.EntryLo1);*/
-
-//	if( !bExecBIOS )
-//		__Log("TLBWR %d\n", j);
-
-	UnmapTLB(j);
-	WriteTLB(j);
-}
-
-void TLBP() {
-	int i;
-
-	union {
-		struct {
-			u32 VPN2:19;
-			u32 VPN2X:2;
-			u32 G:3;
-			u32 ASID:8;
-		} s;
-		u32 u;
-	} EntryHi32;
-
-	EntryHi32.u = cpuRegs.CP0.n.EntryHi;
-
-	cpuRegs.CP0.n.Index=0xFFFFFFFF;
-	for(i=0;i<48;i++){
-		if (tlb[i].VPN2 == ((~tlb[i].Mask) & (EntryHi32.s.VPN2))
-		&& ((tlb[i].G&1) || ((tlb[i].ASID & 0xff) == EntryHi32.s.ASID))) {
-			cpuRegs.CP0.n.Index = i;
-			break;
-		}
-	}
-	 if(cpuRegs.CP0.n.Index == 0xFFFFFFFF) cpuRegs.CP0.n.Index = 0x80000000;
 }
 
 void ERET() {

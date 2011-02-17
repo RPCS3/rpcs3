@@ -105,7 +105,7 @@ static __fi bool ProcessEETag()
 		case TAG_CNT:	break;
 
 		case TAG_CNTS:
-			if (dmacRegs.ctrl.STS != NO_STS)
+			if (dmacRegs.ctrl.STS == STS_SIF0)
 				dmacRegs.stadr.ADDR = sif0dma.madr + (sif0dma.qwc * 16);
 			break;
 

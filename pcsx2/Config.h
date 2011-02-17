@@ -223,6 +223,8 @@ struct Pcsx2Config
 				StackFrameChecks:1,
 				PreBlockCheckEE	:1,
 				PreBlockCheckIOP:1;
+			bool
+				EnableEECache   :1;
 		BITFIELD_END
 
 		RecompilerOptions();
@@ -467,6 +469,7 @@ TraceLogFilters&				SetTraceConfig();
 #define CHECK_MICROVU0				(EmuConfig.Cpu.Recompiler.UseMicroVU0)
 #define CHECK_MICROVU1				(EmuConfig.Cpu.Recompiler.UseMicroVU1)
 #define CHECK_EEREC					(EmuConfig.Cpu.Recompiler.EnableEE && GetCpuProviders().IsRecAvailable_EE())
+#define CHECK_CACHE					(EmuConfig.Cpu.Recompiler.EnableEECache)
 #define CHECK_IOPREC				(EmuConfig.Cpu.Recompiler.EnableIOP && GetCpuProviders().IsRecAvailable_IOP())
 
 //------------ SPECIAL GAME FIXES!!! ---------------

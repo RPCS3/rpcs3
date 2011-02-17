@@ -175,6 +175,7 @@ namespace Panels
 	protected:
 		pxRadioPanel*		m_panel_RecEE;
 		pxRadioPanel*		m_panel_RecIOP;
+		pxCheckBox*			m_check_EECacheEnable;
 		AdvancedOptionsFPU*	m_advancedOptsFpu;
 
 	public:

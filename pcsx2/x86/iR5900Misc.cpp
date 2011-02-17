@@ -197,7 +197,7 @@ void recMTSAH( void )
 	**********************************************************/
 
 	// Suikoden 3 uses it a lot
-	void recCACHE()
+	void recCACHE() //Interpreter only!
 	{
 	   //MOV32ItoM( (uptr)&cpuRegs.code, (u32)cpuRegs.code );
 	   //MOV32ItoM( (uptr)&cpuRegs.pc, (u32)pc );
