@@ -37,7 +37,7 @@ GPUDrawScanline::~GPUDrawScanline()
 
 void GPUDrawScanline::BeginDraw(const GSRasterizerData* data)
 {
-	if(m_local.gd->sel.twin)
+	if(m_local.gd->sel.tme && m_local.gd->sel.twin)
 	{
 		uint32 u, v;
 
@@ -48,7 +48,7 @@ void GPUDrawScanline::BeginDraw(const GSRasterizerData* data)
 		m_local.twin[0].v = GSVector4i((v << 16) | v);
 
 		u = m_local.gd->twin.z << 3; // TWX
-		v = m_local.gd->twin.y << 3; // TWY
+		v = m_local.gd->twin.w << 3; // TWY
 			
 		m_local.twin[1].u = GSVector4i((u << 16) | u) & ~m_local.twin[0].u;
 		m_local.twin[1].v = GSVector4i((v << 16) | v) & ~m_local.twin[0].v;
