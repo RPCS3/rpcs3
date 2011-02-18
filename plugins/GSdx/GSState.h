@@ -149,6 +149,7 @@ protected:
 		InitVertexKick2(T, GS_LINELIST) \
 		InitVertexKick2(T, GS_LINESTRIP) \
 		InitVertexKick2(T, GS_TRIANGLELIST) \
+		InitVertexKick2(T, GS_TRIANGLESTRIP) \
 		InitVertexKick2(T, GS_TRIANGLEFAN) \
 		InitVertexKick2(T, GS_SPRITE) \
 		InitVertexKick2(T, GS_INVALID) \

@@ -7,12 +7,12 @@
 	<Tool
 		Name="VCCLCompilerTool"
 		EnableIntrinsicFunctions="true"
-		PreprocessorDefinitions="WIN32;_WINDOWS;_WIN32_WINNT=0x500;GLEW_STATIC"
+		PreprocessorDefinitions="WIN32;_WINDOWS;_WIN32_WINNT=0x500"
 		FloatingPointModel="2"
 		RuntimeTypeInfo="false"
 		WarningLevel="4"
 		DebugInformationFormat="3"
-		DisableSpecificWarnings="4995;4324"
+		DisableSpecificWarnings="4996;4995;4324;4100;4101;4201;4556"
 	/>
 	<Tool
 		Name="VCLinkerTool"

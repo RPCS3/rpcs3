@@ -375,8 +375,6 @@ void GSRenderer::VSync(int field)
 
 			LeaveCriticalSection(&m_pGSsetTitle_Crit);
 		}
-
-		
 	}
 	else
 	{

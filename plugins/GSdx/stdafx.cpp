@@ -44,7 +44,7 @@ string format(const char* fmt, ...)
 
 void* pcsx2_aligned_malloc(size_t size, size_t alignment)
 {
-	assert(alignment <= 0x8000);
+	ASSERT(alignment <= 0x8000);
 	uptr r = (uptr)malloc(size + --alignment + 2);
 	uptr o = (r + 2 + alignment) & ~(uptr)alignment;
 	if (!r) return NULL;

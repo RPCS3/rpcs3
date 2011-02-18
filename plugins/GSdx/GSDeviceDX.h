@@ -262,22 +262,19 @@ public:
 
 	#pragma pack(pop)
 
+protected:
+
+	struct {D3D_FEATURE_LEVEL level; string model, vs, gs, ps;} m_shader;
+	uint32 m_msaa;
+	DXGI_SAMPLE_DESC m_msaa_desc;
+
+	GSTexture* Fetch(int type, int w, int h, bool msaa, int format);
+
 public:
-	GSDeviceDX() {};
-	virtual ~GSDeviceDX() {}
+	GSDeviceDX();
+	virtual ~GSDeviceDX();
 
-	virtual bool Create(GSWnd* wnd)
-	{
-		return __super::Create( wnd );
-	}
-
-	virtual bool Reset(int w, int h)
-	{
-		return __super::Reset( w, h );
-	}
-
-	//virtual void Present(const GSVector4i& r, int shader);
-	//virtual void Flip() {}
+	bool SetFeatureLevel(D3D_FEATURE_LEVEL level, bool compat_mode);
 
 	virtual void SetupIA(const void* vertices, int count, int prim) = 0;
 	virtual void SetupVS(VSSelector sel, const VSConstantBuffer* cb) = 0;
@@ -285,8 +282,30 @@ public:
 	virtual void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel) = 0;
 	virtual void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix) = 0;
 
-	virtual void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVertices)[4], bool datm)=0;
+	virtual void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm) = 0;
 
 	virtual bool HasStencil() = 0;
 	virtual bool HasDepth32() = 0;
+
+	template<class T> void PrepareShaderMacro(vector<T>& dst, const T* src)
+	{
+		dst.clear();
+
+		while(src && src->Definition && src->Name)
+		{
+			dst.push_back(*src++);
+		}
+
+		T m;
+
+		m.Name = "SHADER_MODEL";
+		m.Definition = m_shader.model.c_str();
+
+		dst.push_back(m);
+
+		m.Name = NULL;
+		m.Definition = NULL;
+
+		dst.push_back(m);
+	}
 };

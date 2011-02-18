@@ -717,6 +717,7 @@
     <ClCompile Include="GSDevice.cpp" />
     <ClCompile Include="GSDevice11.cpp" />
     <ClCompile Include="GSDevice9.cpp" />
+    <ClCompile Include="GSDeviceDX.cpp" />
     <ClCompile Include="GSDeviceNull.cpp" />
     <ClCompile Include="GSDialog.cpp" />
     <ClCompile Include="GSDirtyRect.cpp" />

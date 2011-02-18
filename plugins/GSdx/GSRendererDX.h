@@ -53,32 +53,26 @@ public:
 	{
 	}
 
-	bool CreateDevice(GSDevice* dev)
-	{
-		if(!__super::CreateDevice(dev))
-			return false;
-
-		return true;
-	}
-
-	__forceinline void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 	{
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
 
 		const GSVector2i& rtsize = rt->GetSize();
 		const GSVector2& rtscale = rt->GetScale();
+
 		bool DATE = m_context->TEST.DATE && context->FRAME.PSM != PSM_PSMCT24;
 
 		GSTexture *rtcopy = NULL;
 
-		assert(m_dev != NULL);
+		ASSERT(m_dev != NULL);
 
-		GSDeviceDX& dev = (GSDeviceDX&)*m_dev;
+		GSDeviceDX* dev = (GSDeviceDX*)m_dev;
 
 		if(DATE)
 		{
-			if (dev.HasStencil()) {
+			if(dev->HasStencil())
+			{
 				GSVector4 s = GSVector4(rtscale.x / rtsize.x, rtscale.y / rtsize.y);
 				GSVector4 o = GSVector4(-1.0f, 1.0f);
 
@@ -93,17 +87,21 @@ public:
 					{GSVector4(dst.z, -dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
 				};
 
-				dev.SetupDATE(rt, ds, vertices, m_context->TEST.DATM);
-			} else {
-				rtcopy = m_dev->CreateRenderTarget(rtsize.x, rtsize.y, false, rt->GetFormat());
+				dev->SetupDATE(rt, ds, vertices, m_context->TEST.DATM);
+			}
+			else
+			{
+				rtcopy = dev->CreateRenderTarget(rtsize.x, rtsize.y, false, rt->GetFormat());
+
 				// I'll use VertexTrace when I consider it more trustworthy
-				m_dev->CopyRect(rt, rtcopy, GSVector4i(rtsize).zwxy());
+
+				dev->CopyRect(rt, rtcopy, GSVector4i(rtsize).zwxy());
 			}
 		}
 
 		//
 
-		dev.BeginScene();
+		dev->BeginScene();
 
 		// om
 
@@ -160,12 +158,13 @@ public:
 
 		vs_sel.tme = PRIM->TME;
 		vs_sel.fst = PRIM->FST;
-		vs_sel.logz = dev.HasDepth32() ? 0 : m_logz ? 1 : 0;
+		vs_sel.logz = dev->HasDepth32() ? 0 : m_logz ? 1 : 0;
 		vs_sel.rtcopy = !!rtcopy;
 
 		// The real GS appears to do no masking based on the Z buffer format and writing larger Z values
 		// than the buffer supports seems to be an error condition on the real GS, causing it to crash.
 		// We are probably receiving bad coordinates from VU1 in these cases.
+
 		if(om_dssel.ztst >= ZTST_ALWAYS && om_dssel.zwe)
 		{
 			if(context->ZBUF.PSM == PSM_PSMZ24)
@@ -210,10 +209,12 @@ public:
 		//
 		//The resulting shifted output aligns better with common blending / corona / blurring effects,
 		//but introduces a few bad pixels on the edges.
-		if (rt->LikelyOffset == true)
+
+		if(rt->LikelyOffset)
 		{
-			//DX9 has pixelcenter set to 0.0, so give it some value here
-			if (m_pixelcenter.x == 0 && m_pixelcenter.y == 0) { ox2 = -0.0003f; oy2 = -0.0003f; }
+			// DX9 has pixelcenter set to 0.0, so give it some value here
+
+			if(m_pixelcenter.x == 0 && m_pixelcenter.y == 0) { ox2 = -0.0003f; oy2 = -0.0003f; }
 		
 			ox2 *= rt->OffsetHack_modx;
 			oy2 *= rt->OffsetHack_mody;
@@ -221,6 +222,7 @@ public:
 
 		vs_cb.VertexScale  = GSVector4(sx, -sy, ldexpf(1, -32), 0.0f);
 		vs_cb.VertexOffset = GSVector4(ox * sx + ox2 + 1, -(oy * sy + oy2 + 1), 0.0f, -1.0f);
+
 		// gs
 
 		GSDeviceDX::GSSelector gs_sel;
@@ -236,13 +238,18 @@ public:
 
 		if(DATE)
 		{
-			if (dev.HasStencil())
+			if(dev->HasStencil())
+			{
 				om_dssel.date = 1;
+			}
 			else
+			{
 				ps_sel.date = 1 + context->TEST.DATM;
+			}
 		}
 
-		if (env.COLCLAMP.CLAMP == 0) {
+		if(env.COLCLAMP.CLAMP == 0)
+		{
 			ps_sel.colclip = 1;
 		}
 
@@ -250,7 +257,7 @@ public:
 		ps_sel.fba = context->FBA.FBA;
 		ps_sel.aout = context->FRAME.PSM == PSM_PSMCT16 || context->FRAME.PSM == PSM_PSMCT16S || (context->FRAME.FBMSK & 0xff000000) == 0x7f000000 ? 1 : 0;
 		
-		if (UserHacks_AlphaHack) ps_sel.aout = 1;
+		if(UserHacks_AlphaHack) ps_sel.aout = 1;
 
 		if(PRIM->FGE)
 		{
@@ -331,26 +338,26 @@ public:
 
 		GSVector4i scissor = GSVector4i(GSVector4(rtscale).xyxy() * context->scissor.in).rintersect(GSVector4i(rtsize).zwxy());
 
-		dev.OMSetRenderTargets(rt, ds, &scissor);
-		dev.PSSetShaderResource(0, tex ? tex->m_texture : NULL);
-		dev.PSSetShaderResource(1, tex ? tex->m_palette : NULL);
-		dev.PSSetShaderResource(2, rtcopy);
+		dev->OMSetRenderTargets(rt, ds, &scissor);
+		dev->PSSetShaderResource(0, tex ? tex->m_texture : NULL);
+		dev->PSSetShaderResource(1, tex ? tex->m_palette : NULL);
+		dev->PSSetShaderResource(2, rtcopy);
 
 		uint8 afix = context->ALPHA.FIX;
 
-		dev.SetupOM(om_dssel, om_bsel, afix);
-		dev.SetupIA(m_vertices, m_count, m_topology);
-		dev.SetupVS(vs_sel, &vs_cb);
-		dev.SetupGS(gs_sel);
-		dev.SetupPS(ps_sel, &ps_cb, ps_ssel);
+		dev->SetupOM(om_dssel, om_bsel, afix);
+		dev->SetupIA(m_vertices, m_count, m_topology);
+		dev->SetupVS(vs_sel, &vs_cb);
+		dev->SetupGS(gs_sel);
+		dev->SetupPS(ps_sel, &ps_cb, ps_ssel);
 
 		// draw
 
 		if(context->TEST.DoFirstPass())
 		{
-			dev.DrawPrimitive();
+			dev->DrawPrimitive();
 
-			if (env.COLCLAMP.CLAMP == 0)
+			if(env.COLCLAMP.CLAMP == 0)
 			{
 				GSDeviceDX::OMBlendSelector om_bselneg(om_bsel);
 				GSDeviceDX::PSSelector ps_selneg(ps_sel);
@@ -358,10 +365,10 @@ public:
 				om_bselneg.negative = 1;
 				ps_selneg.colclip = 2;
 
-				dev.SetupOM(om_dssel, om_bselneg, afix);
-				dev.SetupPS(ps_selneg, &ps_cb, ps_ssel);
+				dev->SetupOM(om_dssel, om_bselneg, afix);
+				dev->SetupPS(ps_selneg, &ps_cb, ps_ssel);
 
-				dev.DrawPrimitive();
+				dev->DrawPrimitive();
 			}
 		}
 
@@ -386,7 +393,7 @@ public:
 				break;
 			}
 
-			dev.SetupPS(ps_sel, &ps_cb, ps_ssel);
+			dev->SetupPS(ps_sel, &ps_cb, ps_ssel);
 
 			bool z = om_dssel.zwe;
 			bool r = om_bsel.wr;
@@ -411,11 +418,11 @@ public:
 				om_bsel.wb = b;
 				om_bsel.wa = a;
 
-				dev.SetupOM(om_dssel, om_bsel, afix);
+				dev->SetupOM(om_dssel, om_bsel, afix);
 
-				dev.DrawPrimitive();
+				dev->DrawPrimitive();
 
-				if (env.COLCLAMP.CLAMP == 0)
+				if(env.COLCLAMP.CLAMP == 0)
 				{
 					GSDeviceDX::OMBlendSelector om_bselneg(om_bsel);
 					GSDeviceDX::PSSelector ps_selneg(ps_sel);
@@ -423,17 +430,17 @@ public:
 					om_bselneg.negative = 1;
 					ps_selneg.colclip = 2;
 
-					dev.SetupOM(om_dssel, om_bselneg, afix);
-					dev.SetupPS(ps_selneg, &ps_cb, ps_ssel);
+					dev->SetupOM(om_dssel, om_bselneg, afix);
+					dev->SetupPS(ps_selneg, &ps_cb, ps_ssel);
 
-					dev.DrawPrimitive();
+					dev->DrawPrimitive();
 				}
 			}
 		}
 
-		dev.EndScene();
+		dev->EndScene();
 
-		m_dev->Recycle(rtcopy);
+		dev->Recycle(rtcopy);
 
 		if(om_dssel.fba) UpdateFBA(rt);
 	}

@@ -1156,6 +1156,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSDeviceDX.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSDeviceNull.cpp"
 				>
 			</File>

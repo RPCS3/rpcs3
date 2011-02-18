@@ -800,7 +800,7 @@ void GSDevice9::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linea
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], (const float*)&cb, 1, linear);
 }
 
-void GSDevice9::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVertices)[4], bool datm)
+void GSDevice9::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm)
 {
 	const GSVector2i& size = rt->GetSize();
 
@@ -820,7 +820,7 @@ void GSDevice9::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVe
 
 		// ia
 
-		IASetVertexBuffer(iaVertices, sizeof(iaVertices[0]), countof(iaVertices));
+		IASetVertexBuffer(vertices, sizeof(vertices[0]), 4);
 		IASetPrimitiveTopology(D3DPT_TRIANGLESTRIP);
 
 		// vs

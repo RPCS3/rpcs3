@@ -276,6 +276,9 @@
     <ClCompile Include="GPUState.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSDeviceDX.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GS.h">

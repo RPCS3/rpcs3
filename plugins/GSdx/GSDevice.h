@@ -52,8 +52,6 @@ class GSDevice : public GSAlignedClass<32>
 {
 	list<GSTexture*> m_pool;
 
-	GSTexture* Fetch(int type, int w, int h, bool msaa, int format);
-
 protected:
 	GSWnd* m_wnd;
 	bool m_vsync;
@@ -64,13 +62,11 @@ protected:
 	GSTexture* m_blend;
 	GSTexture* m_1x1;
 	GSTexture* m_current;
-	struct {D3D_FEATURE_LEVEL level; string model, vs, gs, ps;} m_shader;
 	struct {size_t stride, start, count, limit;} m_vertices;
-	uint32 m_msaa;
-	DXGI_SAMPLE_DESC m_msaa_desc;
 	unsigned int m_frame; // for ageing the pool
 
 	virtual GSTexture* Create(int type, int w, int h, bool msaa, int format) = 0;
+	virtual GSTexture* Fetch(int type, int w, int h, bool msaa, int format);
 
 	virtual void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c) = 0;
 	virtual void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset) = 0;
@@ -125,30 +121,6 @@ public:
 	bool ResizeTexture(GSTexture** t, int w, int h);
 
 	bool IsRBSwapped() {return m_rbswapped;}
-
-	template<class T> void PrepareShaderMacro(vector<T>& dst, const T* src)
-	{
-		dst.clear();
-
-		while(src && src->Definition && src->Name)
-		{
-			dst.push_back(*src++);
-		}
-
-		T m;
-
-		m.Name = "SHADER_MODEL";
-		m.Definition = m_shader.model.c_str();
-
-		dst.push_back(m);
-
-		m.Name = NULL;
-		m.Definition = NULL;
-
-		dst.push_back(m);
-	}
-
-	bool SetFeatureLevel(D3D_FEATURE_LEVEL level, bool compat_mode); // TODO: GSDeviceDX
 
 	void AgePool();
 };

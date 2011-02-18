@@ -136,7 +136,7 @@ public: // TODO
 		Direct3DBlendState9 bs;
 	} m_date;
 
-	void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1 (&iaVertices)[4], bool datm);
+	void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm);
 
 	// Shaders...
 
