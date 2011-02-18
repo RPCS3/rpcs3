@@ -239,7 +239,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer, int threads = -1)
 
 		s_gs->m_wnd.Show();
 
-		*(HWND*)dsp = (HWND)s_gs->m_wnd.GetHandle();
+		*(HWND*)dsp = s_gs->m_wnd.GetHandle();
 	}
 	else
 	{

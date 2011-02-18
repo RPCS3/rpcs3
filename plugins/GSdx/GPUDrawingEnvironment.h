@@ -25,7 +25,7 @@
 
 #pragma pack(push, 1)
 
-__aligned32 class GPUDrawingEnvironment
+__aligned(class, 32) GPUDrawingEnvironment
 {
 public:
 	GPURegSTATUS STATUS;

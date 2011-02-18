@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -90,7 +90,7 @@ protected:
 
 	void Dump(const string& s, uint32 TP, const GSVector4i& r, int inc = true)
 	{
-		//if(m_perfmon.GetFrame() < 1000) 
+		//if(m_perfmon.GetFrame() < 1000)
 		//if((m_env.TWIN.u32 & 0xfffff) == 0)
 		//if(!m_env.STATUS.ME && !m_env.STATUS.MD)
 			return;
@@ -103,7 +103,9 @@ protected:
 #ifdef DEBUG
 		dir = 2;
 #endif
-		m_mem.SaveBMP(format("c:\\temp%d\\%04d_%s.bmp", dir, s_n, s), r, TP, m_env.CLUT.X, m_env.CLUT.Y);
+        string path = format("c:\\temp%d\\%04d_%s.bmp", dir, s_n, s.c_str());
+
+		m_mem.SaveBMP(path, r, TP, m_env.CLUT.X, m_env.CLUT.Y);
 	}
 
 	void Dump(const string& s, int inc = true)

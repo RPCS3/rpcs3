@@ -49,7 +49,7 @@ GSDevice9::~GSDevice9()
 
 // if supported and null != msaa_desc, msaa_desc will contain requested Count and Quality
 
-static bool IsMsaaSupported(IDirect3D9* d3d, D3DFORMAT depth_format, uint msaaCount, DXGI_SAMPLE_DESC* msaa_desc = NULL)
+static bool IsMsaaSupported(IDirect3D9* d3d, D3DFORMAT depth_format, uint32 msaaCount, DXGI_SAMPLE_DESC* msaa_desc = NULL)
 {
 	if(msaaCount > 16) return false;
 
@@ -117,7 +117,7 @@ static D3DFORMAT BestD3dFormat(IDirect3D9* d3d, int msaaCount = 0, DXGI_SAMPLE_D
 
 // return: 32, 24, or 0 if not supported. if 1==msaa, considered as msaa=0
 
-uint GSDevice9::GetMaxDepth(uint msaa = 0)
+uint32 GSDevice9::GetMaxDepth(uint32 msaa = 0)
 {
 	CComPtr<IDirect3D9> d3d;
 
@@ -376,7 +376,7 @@ bool GSDevice9::Reset(int w, int h)
 	memset(&m_pp, 0, sizeof(m_pp));
 
 	m_pp.Windowed = TRUE;
-	m_pp.hDeviceWindow = (HWND)m_wnd->GetHandle();
+	m_pp.hDeviceWindow = m_wnd->GetHandle();
 	m_pp.SwapEffect = D3DSWAPEFFECT_FLIP;
 	m_pp.BackBufferFormat = D3DFMT_X8R8G8B8;
 	m_pp.BackBufferWidth = 1;
@@ -408,7 +408,7 @@ bool GSDevice9::Reset(int w, int h)
 			flags |= D3DCREATE_PUREDEVICE;
 		}
 
-		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, (HWND)m_wnd->GetHandle(), flags, &m_pp, &m_dev);
+		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, m_wnd->GetHandle(), flags, &m_pp, &m_dev);
 
 		if(FAILED(hr)) return false;
 	}

@@ -28,22 +28,12 @@
 
 #pragma pack(push, 1)
 
-__aligned32 struct GSVertex
+__aligned(struct, 32) GSVertex
 {
-	union
-	{
-		struct
-		{
-			GIFRegST ST;
-			GIFRegRGBAQ RGBAQ;
-			GIFRegXYZ XYZ;
-			GIFRegFOG FOG;
-		};
-
-		struct {GSVector4i vi[2];};
-		struct {GSVector4 vf[2];};
-	};
-
+	GIFRegST ST;
+	GIFRegRGBAQ RGBAQ;
+	GIFRegXYZ XYZ;
+	GIFRegFOG FOG;
 	GIFRegUV UV;
 
 	GSVertex() {memset(this, 0, sizeof(*this));}

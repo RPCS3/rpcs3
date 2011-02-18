@@ -27,7 +27,7 @@
 GSRendererDX11::GSRendererDX11()
 	: GSRendererDX<GSVertexHW11>(new GSTextureCache11(this), GSVector2(-0.5f, -0.5f))
 {
-	InitVertexKick<GSRendererDX11>();
+	InitVertexKick(GSRendererDX11);
 }
 
 bool GSRendererDX11::CreateDevice(GSDevice* dev)
@@ -43,8 +43,7 @@ void GSRendererDX11::VertexKick(bool skip)
 {
 	GSVertexHW11& dst = m_vl.AddTail();
 
-	dst.vi[0] = m_v.vi[0];
-	dst.vi[1] = m_v.vi[1];
+	dst = *(GSVertexHW11*)&m_v;
 
 #ifdef USE_UPSCALE_HACKS
 
@@ -99,7 +98,7 @@ void GSRendererDX11::VertexKick(bool skip)
 		dst.ST.S = (float)m_v.UV.U - Uadjust;
 		dst.ST.T = (float)m_v.UV.V - Vadjust;
 	}
-	else if (tme)
+	else if(tme)
 	{
 		// Wip :p
 		//dst.XYZ.X += 5;

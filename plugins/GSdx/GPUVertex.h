@@ -26,7 +26,7 @@
 
 #pragma pack(push, 1)
 
-__aligned32 struct GPUVertex
+__aligned(struct, 32) GPUVertex
 {
 	union
 	{

@@ -815,7 +815,7 @@ union
 	};
 };
 REG_END2
-	__forceinline bool IsRepeating() {return ((uint32)1 << TW) > (TBW << 6);}
+	__forceinline bool IsRepeating() {return (1 << TW) > (int)(TBW << 6);}
 REG_END2
 
 REG64_(GIFReg, TEX1)
@@ -1078,7 +1078,7 @@ REG128_SET(GIFPackedReg)
 	GIFPackedNOP	NOP;
 REG_SET_END
 
-__aligned32 struct GIFPath
+__aligned(struct, 32) GIFPath
 {
 	GIFTag tag;
 	uint32 reg;

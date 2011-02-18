@@ -357,17 +357,29 @@ void GSDevice11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uin
 
 			// SRC* -> SRC1*
 			// Yes, this casting mess really is needed.  I want to go back to C
-			if (bd.RenderTarget[0].SrcBlend >= 3 && bd.RenderTarget[0].SrcBlend <= 6)
+
+			if(bd.RenderTarget[0].SrcBlend >= 3 && bd.RenderTarget[0].SrcBlend <= 6)
+			{
 				bd.RenderTarget[0].SrcBlend = (D3D11_BLEND)((int)bd.RenderTarget[0].SrcBlend + 13);
-			if (bd.RenderTarget[0].DestBlend >= 3 && bd.RenderTarget[0].DestBlend <= 6)
+			}
+
+			if(bd.RenderTarget[0].DestBlend >= 3 && bd.RenderTarget[0].DestBlend <= 6)
+			{
 				bd.RenderTarget[0].DestBlend = (D3D11_BLEND)((int)bd.RenderTarget[0].DestBlend + 13);
+			}
 
 			// Not very good but I don't wanna write another 81 row table
-			if (bsel.negative) {
-				if (bd.RenderTarget[0].BlendOp == D3D11_BLEND_OP_ADD)
+
+			if(bsel.negative)
+			{
+				if(bd.RenderTarget[0].BlendOp == D3D11_BLEND_OP_ADD)
+				{
 					bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_REV_SUBTRACT;
-				else if (bd.RenderTarget[0].BlendOp == D3D11_BLEND_OP_REV_SUBTRACT)
+				}
+				else if(bd.RenderTarget[0].BlendOp == D3D11_BLEND_OP_REV_SUBTRACT)
+				{
 					bd.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+				}
 				else
 					; // god knows, best just not to mess with it for now
 			}

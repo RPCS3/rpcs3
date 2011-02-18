@@ -41,8 +41,9 @@ extern const uint8 clutTableT16I4[16];
 struct D3D9Blend
 {
 	int bogus;
-	D3DBLENDOP op;
-	D3DBLEND src, dst;
+	int op;
+	int src;
+	int dst;
 };
 
 extern const D3D9Blend blendMapD3D9[3*3*3*3];

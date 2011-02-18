@@ -101,7 +101,7 @@ union GSScanlineSelector
 	}
 };
 
-__aligned32 struct GSScanlineGlobalData // per batch variables, this is like a pixel shader constant buffer
+__aligned(struct, 32) GSScanlineGlobalData // per batch variables, this is like a pixel shader constant buffer
 {
 	GSScanlineSelector sel;
 
@@ -129,7 +129,7 @@ __aligned32 struct GSScanlineGlobalData // per batch variables, this is like a p
 	GSVector4i frb, fga;
 };
 
-__aligned32 struct GSScanlineLocalData // per prim variables, each thread has its own
+__aligned(struct, 32) GSScanlineLocalData // per prim variables, each thread has its own
 {
 	const GSScanlineGlobalData* gd;
 

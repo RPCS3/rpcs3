@@ -628,7 +628,7 @@ void GSLocalMemory::WriteImageLeftRight(int l, int r, int y, int h, const uint8*
 template<int psm, int bsx, int bsy, int trbpp>
 void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, const uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF)
 {
-	__aligned32 uint8 buff[64]; // merge buffer for one column
+	__aligned(uint8, 32) buff[64]; // merge buffer for one column
 
 	uint32 bp = BITBLTBUF.DBP;
 	uint32 bw = BITBLTBUF.DBW;
@@ -1438,7 +1438,7 @@ void GSLocalMemory::ReadTexture24(const GSOffset* RESTRICT o, const GSVector4i& 
 
 void GSLocalMemory::ReadTexture16(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
 {
-	__aligned32 uint16 block[16 * 8];
+	__aligned(uint16, 32) block[16 * 8];
 
 	FOREACH_BLOCK_START(r, 16, 8, 32)
 	{
@@ -1451,7 +1451,7 @@ void GSLocalMemory::ReadTexture16(const GSOffset* RESTRICT o, const GSVector4i& 
 
 void GSLocalMemory::ReadTexture16S(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
 {
-	__aligned32 uint16 block[16 * 8];
+	__aligned(uint16, 32) block[16 * 8];
 
 	FOREACH_BLOCK_START(r, 16, 8, 32)
 	{
@@ -1548,7 +1548,7 @@ void GSLocalMemory::ReadTexture24Z(const GSOffset* RESTRICT o, const GSVector4i&
 
 void GSLocalMemory::ReadTexture16Z(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
 {
-	__aligned32 uint16 block[16 * 8];
+	__aligned(uint16, 32) block[16 * 8];
 
 	FOREACH_BLOCK_START(r, 16, 8, 32)
 	{
@@ -1561,7 +1561,7 @@ void GSLocalMemory::ReadTexture16Z(const GSOffset* RESTRICT o, const GSVector4i&
 
 void GSLocalMemory::ReadTexture16SZ(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
 {
-	__aligned32 uint16 block[16 * 8];
+	__aligned(uint16, 32) block[16 * 8];
 
 	FOREACH_BLOCK_START(r, 16, 8, 32)
 	{
@@ -1597,7 +1597,7 @@ void GSLocalMemory::ReadTextureBlock24(uint32 bp, uint8* dst, int dstpitch, cons
 
 void GSLocalMemory::ReadTextureBlock16(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
 {
-	__aligned32 uint16 block[16 * 8];
+	__aligned(uint16, 32) block[16 * 8];
 
 	ReadBlock16<true>(BlockPtr(bp), (uint8*)block, sizeof(block) / 8);
 
@@ -1606,7 +1606,7 @@ void GSLocalMemory::ReadTextureBlock16(uint32 bp, uint8* dst, int dstpitch, cons
 
 void GSLocalMemory::ReadTextureBlock16S(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
 {
-	__aligned32 uint16 block[16 * 8];
+	__aligned(uint16, 32) block[16 * 8];
 
 	ReadBlock16<true>(BlockPtr(bp), (uint8*)block, sizeof(block) / 8);
 
@@ -1671,7 +1671,7 @@ void GSLocalMemory::ReadTextureBlock24Z(uint32 bp, uint8* dst, int dstpitch, con
 
 void GSLocalMemory::ReadTextureBlock16Z(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
 {
-	__aligned32 uint16 block[16 * 8];
+	__aligned(uint16, 32) block[16 * 8];
 
 	ReadBlock16<true>(BlockPtr(bp), (uint8*)block, sizeof(block) / 8);
 
@@ -1680,7 +1680,7 @@ void GSLocalMemory::ReadTextureBlock16Z(uint32 bp, uint8* dst, int dstpitch, con
 
 void GSLocalMemory::ReadTextureBlock16SZ(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
 {
-	__aligned32 uint16 block[16 * 8];
+	__aligned(uint16, 32) block[16 * 8];
 
 	ReadBlock16<true>(BlockPtr(bp), (uint8*)block, sizeof(block) / 8);
 
@@ -1851,7 +1851,7 @@ void GSLocalMemory::ReadTextureBlock4HHP(uint32 bp, uint8* dst, int dstpitch, co
 
 //
 
-HRESULT GSLocalMemory::SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 psm, int w, int h)
+bool GSLocalMemory::SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 psm, int w, int h)
 {
 	int pitch = w * 4;
 	int size = pitch * h;

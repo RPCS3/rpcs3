@@ -23,15 +23,9 @@
 
 #include "GSVector.h"
 
-__aligned32 union GSVertexSW
+__aligned(struct, 32) GSVertexSW
 {
-	struct {GSVector4 c, p, t;};
-	struct {GSVector4 v[3];};
-	struct {float f[12];};
-
-	#if _M_SSE >= 0x500
-	struct {GSVector8 cp, t_;};
-	#endif
+	GSVector4 c, p, t;
 
 	GSVertexSW() {}
 	GSVertexSW(const GSVertexSW& v) {*this = v;}

@@ -174,9 +174,12 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 	if(m_renderer->CanUpscale())
 	{
 		int multiplier = m_renderer->upscale_Multiplier();
+
 		if (multiplier > 1) //it's limited to a maximum of 4 on reading the config
 		{
+
 #if 0 //#ifdef USE_UPSCALE_HACKS //not happy with this yet..
+
 			float x = 1.0f;
 			float y = 1.0f;
 
@@ -187,14 +190,14 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 				case 4: x = 3.875f; y = 3.875f; break; // not helping much
 				default: __assume(0);
 			}
-			dst->m_texture->SetScale( GSVector2(x, y) );
+
+			dst->m_texture->SetScale(GSVector2::_(x, y));
 #else
-			dst->m_texture->SetScale( GSVector2((float)multiplier, (float)multiplier) );
+			dst->m_texture->SetScale(GSVector2((float)multiplier, (float)multiplier));
 #endif
 		}
 		else
 		{
-
 			GSVector4i fr = m_renderer->GetFrameRect();
 
 			int ww = (int)(fr.left + m_renderer->GetDisplayRect().width());
@@ -205,7 +208,8 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 				hh *= 2;
 			}
 
-			//This vp2 fix doesn't work most of the time
+			// This vp2 fix doesn't work most of the time
+
 			if(hh < 512 && m_renderer->m_context->SCISSOR.SCAY1 == 511) // vp2
 			{
 				hh = 512;

@@ -25,9 +25,10 @@
 
 class GSWnd
 {
-	HWND m_hWnd;
-	bool m_IsManaged;		// set true when we're attached to a 3rdparty window that's amanged by the emulator
+	bool m_IsManaged; // set true when we're attached to a 3rdparty window that's amanged by the emulator
 	bool m_HasFrame;
+
+	HWND m_hWnd;
 
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	virtual LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
@@ -37,11 +38,11 @@ public:
 	virtual ~GSWnd();
 
 	bool Create(const string& title, int w, int h);
-	bool Attach(HWND hWnd, bool isManaged=true);
+	bool Attach(HWND hWnd, bool isManaged = true);
 	void Detach();
 	bool IsManaged() const { return m_IsManaged; }
 
-	void* GetHandle() {return m_hWnd;}
+	HWND GetHandle() {return m_hWnd;}
 
 	GSVector4i GetClientRect();
 

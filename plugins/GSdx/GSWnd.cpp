@@ -23,6 +23,8 @@
 #include "GSdx.h"
 #include "GSWnd.h"
 
+#ifdef _WINDOWS
+
 GSWnd::GSWnd()
 	: m_hWnd(NULL)
 	, m_IsManaged(true)
@@ -159,6 +161,7 @@ void GSWnd::Detach()
 		// that means its big, ugly, and in the way.
 		DestroyWindow(m_hWnd);
 	}
+
 	m_hWnd = NULL;
 	m_IsManaged = true;
 }
@@ -177,7 +180,7 @@ GSVector4i GSWnd::GetClientRect()
 
 bool GSWnd::SetWindowText(const char* title)
 {
-	if( !m_IsManaged ) return false;
+	if(!m_IsManaged) return false;
 
 	::SetWindowText(m_hWnd, title);
 
@@ -186,7 +189,7 @@ bool GSWnd::SetWindowText(const char* title)
 
 void GSWnd::Show()
 {
-	if( !m_IsManaged ) return;
+	if(!m_IsManaged) return;
 
 	//SetWindowPos(&wndTop, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
 
@@ -199,14 +202,14 @@ void GSWnd::Show()
 
 void GSWnd::Hide()
 {
-	if( !m_IsManaged ) return;
+	if(!m_IsManaged) return;
 
 	ShowWindow(m_hWnd, SW_HIDE);
 }
 
 void GSWnd::HideFrame()
 {
-	if( !m_IsManaged ) return;
+	if(!m_IsManaged) return;
 
 	SetWindowLong(m_hWnd, GWL_STYLE, GetWindowLong(m_hWnd, GWL_STYLE) & ~(WS_CAPTION|WS_THICKFRAME));
 
@@ -216,3 +219,5 @@ void GSWnd::HideFrame()
 
 	m_HasFrame = false;
 }
+
+#endif

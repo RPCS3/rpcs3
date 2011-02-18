@@ -27,7 +27,7 @@
 #include "GSThread.h"
 #include "GSAlignedClass.h"
 
-__aligned32 class GSRasterizerData
+__aligned(class, 32) GSRasterizerData
 {
 public:
 	GSVector4i scissor;

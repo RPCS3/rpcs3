@@ -74,7 +74,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 						int y = ((int)m_vertices[i].p.y - oy) >> 4;
 
 						// video[y * 448 + x] = m_vertices[i].c0;
-						video[(y << 8) + (y << 7) + (y << 6) + x] = m_vertices[i].c0;
+						video[(y << 8) + (y << 7) + (y << 6) + x] = m_vertices[i]._c0();
 					}
 
 					return false;
@@ -140,9 +140,9 @@ class GSRendererHW : public GSRendererT<Vertex>
 
 		for(int i = 0, j = m_count; i < j; i++)
 		{
-			if(m_vertices[i].r == 0 && m_vertices[i].g != 0 && m_vertices[i].b != 0)
+			if(m_vertices[i]._r() == 0 && m_vertices[i]._g() != 0 && m_vertices[i]._b() != 0)
 			{
-				m_vertices[i].r = (m_vertices[i].g + m_vertices[i].b) / 2;
+				m_vertices[i]._r() = (m_vertices[i]._g() + m_vertices[i]._b()) / 2;
 			}
 		}
 
@@ -257,9 +257,11 @@ class GSRendererHW : public GSRendererT<Vertex>
 				{
 					for(int i = 0; i < 16; i++)
 					{
-						m_vertices[i].a = m_vertices[i].a >= 0x80 ? 0xff : m_vertices[i].a * 2;
+						uint8 a = m_vertices[i]._a();
 
-						m_mem.WritePixel32(i & 7, i >> 3, m_vertices[i].c0, FBP, FBW);
+						m_vertices[i]._a() = a >= 0x80 ? 0xff : a * 2;
+
+						m_mem.WritePixel32(i & 7, i >> 3, m_vertices[i]._c0(), FBP, FBW);
 					}
 
 					m_mem.m_clut.Invalidate();
@@ -270,9 +272,11 @@ class GSRendererHW : public GSRendererT<Vertex>
 				{
 					for(int i = 0; i < 256; i++)
 					{
-						m_vertices[i].a = m_vertices[i].a >= 0x80 ? 0xff : m_vertices[i].a * 2;
+						uint8 a = m_vertices[i]._a();
+						
+						m_vertices[i]._a() = a >= 0x80 ? 0xff : a * 2;
 
-						m_mem.WritePixel32(i & 15, i >> 4, m_vertices[i].c0, FBP, FBW);
+						m_mem.WritePixel32(i & 15, i >> 4, m_vertices[i]._c0(), FBP, FBW);
 					}
 
 					m_mem.m_clut.Invalidate();

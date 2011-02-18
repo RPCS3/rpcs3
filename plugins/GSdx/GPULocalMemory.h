@@ -82,5 +82,3 @@ public:
 
 	void SaveBMP(const string& path, const GSVector4i& r, int tp, int cx, int cy);
 };
-
-#pragma warning(default: 4244)

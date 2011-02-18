@@ -28,20 +28,22 @@
 
 #pragma pack(push, 1)
 
-struct MergeConstantBuffer
+class MergeConstantBuffer
 {
+public:
 	GSVector4 BGColor;
 
-	struct MergeConstantBuffer() {memset(this, 0, sizeof(*this));}
+	MergeConstantBuffer() {memset(this, 0, sizeof(*this));}
 };
 
-struct InterlaceConstantBuffer
+class InterlaceConstantBuffer
 {
+public:
 	GSVector2 ZrH;
 	float hH;
 	float _pad[1];
 
-	struct InterlaceConstantBuffer() {memset(this, 0, sizeof(*this));}
+	InterlaceConstantBuffer() {memset(this, 0, sizeof(*this));}
 };
 
 #pragma pack(pop)

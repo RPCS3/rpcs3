@@ -4,8 +4,6 @@
 
 #pragma once
 
-#pragma warning(disable: 4996 4995 4324 4100 4101 4201)
-
 #ifdef _WINDOWS
 
 // The following macros define the minimum required platform.  The minimum required platform
@@ -44,6 +42,7 @@
 
 // stdc
 
+#include <stdio.h>
 #include <math.h>
 #include <time.h>
 
@@ -52,18 +51,53 @@
 #include <vector>
 #include <list>
 #include <map>
-#include <hash_map>
-#include <hash_set>
 #include <algorithm>
 
 // Let's take advantage of the work that's already been done on making things cross-platform by bringing this in.
 
-#include "Pcsx2Defs.h"
+//#include "Pcsx2Defs.h"
+
+#ifdef _MSC_VER
+
+#define __aligned(t, n) __declspec(align(n)) t
+
+#else
+
+// --------------------------------------------------------------------------------------
+//  GCC / Intel Compilers Section
+// --------------------------------------------------------------------------------------
+
+#define __aligned(t, n) t __attribute__((aligned(n)))
+#define __assume(cond)	((void)0)	// GCC has no equivalent for __assume
+
+// Inlining note: GCC needs ((unused)) attributes defined on inlined functions to suppress
+// warnings when a static inlined function isn't used in the scope of a single file (which
+// happens *by design* like all the friggen time >_<)
+
+//#	define __fastcall		__attribute__((fastcall))
+#	ifdef NDEBUG
+#		define __forceinline	__attribute__((always_inline,unused))
+#	else
+#		define __forceinline	__attribute__((unused))
+#	endif
+#endif
 
 using namespace std;
 
-#ifdef _WINDOWS
+#ifdef _MSC_VER
+
+#include <hash_map>
+#include <hash_set>
+
 using namespace stdext;
+
+#else
+
+#include <ext/hash_map>
+#include <ext/hash_set>
+
+using namespace __gnu_cxx;
+
 #endif
 
 extern string format(const char* fmt, ...);
@@ -93,7 +127,7 @@ typedef signed long long int64;
 #define EXPORT_C extern "C" __declspec(dllexport) void __stdcall
 #define EXPORT_C_(type) extern "C" __declspec(dllexport) type __stdcall
 
-#define ALIGN_STACK(n) __aligned(n) int __dummy;
+#define ALIGN_STACK(n) __aligned(int, n) __dummy;
 
 #ifndef RESTRICT
 	#ifdef __INTEL_COMPILER
@@ -154,7 +188,7 @@ typedef signed long long int64;
 
 	#define MXCSR (_MM_DENORMALS_ARE_ZERO | _MM_MASK_MASK | _MM_ROUND_NEAREST | _MM_FLUSH_ZERO_ON)
 
-	#if _MSC_VER < 1500
+	#if defined(_MSC_VER) && _MSC_VER < 1500
 
 	__forceinline __m128i _mm_castps_si128(__m128 a) {return *(__m128i*)&a;}
 	__forceinline __m128 _mm_castsi128_ps(__m128i a) {return *(__m128*)&a;}
@@ -203,3 +237,10 @@ typedef signed long long int64;
 
 #undef min
 #undef max
+
+#if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
+
+extern void* _aligned_malloc(size_t size, size_t alignment);
+extern void _aligned_free(void* p);
+
+#endif

@@ -32,7 +32,7 @@ public:
 #ifdef _WINDOWS
  	HMODULE GetModuleHandle();
 #else
-    void *GetModuleHandle();
+    void* GetModuleHandle();
 #endif
 
 	string GetConfig(const char* entry, const char* value);

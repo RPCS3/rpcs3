@@ -26,37 +26,28 @@
 
 #pragma pack(push, 1)
 
-__aligned32 union GSVertexHW9
+__aligned(struct, 32) GSVertexHW9
 {
-	struct
-	{
-		union
-		{
-			struct
-			{
-				GSVector4 t;
-			};
+	GSVector4 t; 
+	GSVector4 p;
 
-			struct
-			{
-				uint32 _pad[2];
-				union {struct {uint8 r, g, b, a;}; uint32 c0;};
-				union {struct {uint8 ta0, ta1, res, f;}; uint32 c1;};
-			};
-		};
+	// t.z = union {struct {uint8 r, g, b, a;}; uint32 c0;};
+	// t.w = union {struct {uint8 ta0, ta1, res, f;}; uint32 c1;}
 
-		GSVector4 p;
-	};
+	GSVertexHW9& operator = (GSVertexHW9& v) {t = v.t; p = v.p; return *this;}
 
-	struct {GSVector4i vi[2];};
-	struct {GSVector4 vf[2];};
+	float& _q() {return p.w;}
 
-	GSVertexHW9& operator = (GSVertexHW9& v) {vi[0] = v.vi[0]; vi[1] = v.vi[1]; return *this;}
+	uint8& _r() {return t.u8[8];}
+	uint8& _g() {return t.u8[9];}
+	uint8& _b() {return t.u8[10];}
+	uint8& _a() {return t.u8[11];}
 
-	float GetQ() {return p.w;}
+	uint32& _c0() {return t.u32[2];}
+	uint32& _c1() {return t.u32[3];}
 };
 
-__aligned32 union GSVertexHW11
+__aligned(union, 32) GSVertexHW11
 {
 	struct
 	{
@@ -85,12 +76,26 @@ __aligned32 union GSVertexHW11
 		};
 	};
 
-	struct {GSVector4i vi[2];};
-	struct {GSVector4 vf[2];};
+	GSVertexHW11& operator = (GSVertexHW11& v) 
+	{
+		GSVector4i* RESTRICT src = (GSVector4i*)&v;
+		GSVector4i* RESTRICT dst = (GSVector4i*)this;
 
-	GSVertexHW11& operator = (GSVertexHW11& v) {vi[0] = v.vi[0]; vi[1] = v.vi[1]; return *this;}
+		dst[0] = src[0];
+		dst[1] = src[1];
+		
+		return *this;
+	}
 
-	float GetQ() {return q;}
+	float& _q() {return q;}
+
+	uint8& _r() {return r;}
+	uint8& _g() {return g;}
+	uint8& _b() {return b;}
+	uint8& _a() {return a;}
+
+	uint32& _c0() {return c0;}
+	uint32& _c1() {return c1;}
 };
 
 #pragma pack(pop)

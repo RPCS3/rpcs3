@@ -5,7 +5,7 @@
 	utility class and functions for Xbyak
 	@note this header is UNDER CONSTRUCTION!
 */
-#include "xbyak/xbyak.h"
+#include "xbyak.h"
 
 #ifdef _WIN32
 	#if (_MSC_VER < 1400) && defined(XBYAK32)

@@ -173,19 +173,25 @@ void GSSettingsDlg::OnInit()
 
 bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 {
-	if(id == IDC_MSAAEDIT && code == EN_CHANGE)//validate and possibly warn user when changing msaa
-	{//post change
+	if(id == IDC_MSAAEDIT && code == EN_CHANGE) // validate and possibly warn user when changing msaa
+	{
+		//post change
+
 		bool dx9 = false;
 		INT_PTR i;
+
 		if(ComboBoxGetSelData(IDC_RENDERER, i))
+		{
 			dx9 = i >= 0 && i <= 2;
+		}
 
-		if (dx9){
+		if(dx9)
+		{
+			uint32 requestedMsaa = (int)SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_GETPOS, 0, 0); // valid from OnCommand?
+			uint32 derivedDepth = GSDevice9::GetMaxDepth(requestedMsaa);
 
-			uint requestedMsaa= (int)SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_GETPOS, 0, 0);//valid from OnCommand?
-			uint derivedDepth=GSDevice9::GetMaxDepth(requestedMsaa);
-
-			if (derivedDepth==0){
+			if(derivedDepth == 0)
+			{
 				//FIXME: Ugly UI: HW AA is currently a uint spinbox but usually only some values are supported (e.g. only 2/4/8 or a similar set).
 				//       Better solution would be to use a drop-down with only valid msaa values such that we don't need this. Maybe some day.
 				//       Known bad behavior: When manually deleting a HW AA value to put another instead (e.g. 2 -> delete -> 4)
@@ -194,27 +200,42 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 				//							 z bits than 0, even if it's not different than the previous value (i.e. 2 in our example) z bits.
 				
 				//Find valid msaa values, regardless of derived z buffer bits
-				string supportedAa="";
-				for (int i=2; i<=16; i++)
-					if (GSDevice9::GetMaxDepth(i)){
-						if (supportedAa.length()) supportedAa+="/";
+
+				string supportedAa = "";
+				
+				for(int i = 2; i <= 16; i++)
+				{
+					if(GSDevice9::GetMaxDepth(i))
+					{
+						if(supportedAa.length()) supportedAa += "/";
+
 						supportedAa += format("%d", i);
 					}
+				}
 				
-				if (!supportedAa.length())
+				if(!supportedAa.length())
+				{
 					supportedAa="None";
+				}
 
-				string s=format("AA=%d is not supported.\nSupported AA values: %s.", (int)requestedMsaa, supportedAa.c_str());
-				MessageBox(hWnd, s.c_str(),"Warning", MB_OK|MB_ICONWARNING);
-				SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETPOS, 0, requestedMsaa=m_lastValidMsaa);//revert value from inside OnCommand? is this OK?
-					
-			} else if (derivedDepth < GSDevice9::GetMaxDepth(m_lastValidMsaa)){
-				string s=format("AA=%d will force GSdx to degrade Z buffer\nfrom 32 to 24 bit, which will probably cause glitches\n(changing 'Logarithmic Z' might help some).\n\nContinue?", (int)requestedMsaa);
-				//s+= format("\nlastMsaa=%d, lastDepth=%d, newMsaa=%d, newDepth=%d", (int)m_lastValidMsaa, (int)GSDevice9::GetMaxDepth(m_lastValidMsaa), (int)requestedMsaa, (int)GSDevice9::GetMaxDepth(requestedMsaa));
-				if (IDOK!=MessageBox(hWnd, s.c_str(), "Warning", MB_OKCANCEL|MB_ICONWARNING))
-					SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETPOS, 0, requestedMsaa=m_lastValidMsaa);//revert value from inside OnCommand? is this OK?
+				string s = format("AA=%d is not supported.\nSupported AA values: %s.", (int)requestedMsaa, supportedAa.c_str());
 
+				MessageBox(hWnd, s.c_str(),"Warning", MB_OK | MB_ICONWARNING);
+
+				SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETPOS, 0, requestedMsaa = m_lastValidMsaa); // revert value from inside OnCommand? is this OK?
 			}
+			else if(derivedDepth < GSDevice9::GetMaxDepth(m_lastValidMsaa))
+			{
+				string s = format("AA=%d will force GSdx to degrade Z buffer\nfrom 32 to 24 bit, which will probably cause glitches\n(changing 'Logarithmic Z' might help some).\n\nContinue?", (int)requestedMsaa);
+
+				//s+= format("\nlastMsaa=%d, lastDepth=%d, newMsaa=%d, newDepth=%d", (int)m_lastValidMsaa, (int)GSDevice9::GetMaxDepth(m_lastValidMsaa), (int)requestedMsaa, (int)GSDevice9::GetMaxDepth(requestedMsaa));
+
+				if(IDOK != MessageBox(hWnd, s.c_str(), "Warning", MB_OKCANCEL|MB_ICONWARNING))
+				{
+					SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETPOS, 0, requestedMsaa=m_lastValidMsaa); // revert value from inside OnCommand? is this OK?
+				}
+			}
+
 			m_lastValidMsaa=requestedMsaa;
 
 			UpdateControls();

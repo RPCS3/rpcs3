@@ -85,24 +85,12 @@
 		<Unit filename="GSCrc.h" />
 		<Unit filename="GSDevice.cpp" />
 		<Unit filename="GSDevice.h" />
-		<Unit filename="GSDevice10.cpp">
-			<Option compile="0" />
-			<Option link="0" />
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="GSDevice10.h" />
 		<Unit filename="GSDevice11.cpp">
 			<Option compile="0" />
 			<Option link="0" />
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
 		<Unit filename="GSDevice11.h" />
-		<Unit filename="GSDevice7.cpp">
-			<Option compile="0" />
-			<Option link="0" />
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="GSDevice7.h" />
 		<Unit filename="GSDevice9.cpp">
 			<Option compile="0" />
 			<Option link="0" />
@@ -112,8 +100,6 @@
 		<Unit filename="GSDeviceDX.h" />
 		<Unit filename="GSDeviceNull.cpp" />
 		<Unit filename="GSDeviceNull.h" />
-		<Unit filename="GSDeviceOGL.cpp" />
-		<Unit filename="GSDeviceOGL.h" />
 		<Unit filename="GSDialog.cpp" />
 		<Unit filename="GSDialog.h" />
 		<Unit filename="GSDirtyRect.cpp" />
@@ -138,8 +124,6 @@
 		<Unit filename="GSRenderer.h" />
 		<Unit filename="GSRendererDX.cpp" />
 		<Unit filename="GSRendererDX.h" />
-		<Unit filename="GSRendererDX10.cpp" />
-		<Unit filename="GSRendererDX10.h" />
 		<Unit filename="GSRendererDX11.cpp" />
 		<Unit filename="GSRendererDX11.h" />
 		<Unit filename="GSRendererDX9.cpp" />
@@ -148,8 +132,6 @@
 		<Unit filename="GSRendererHW.h" />
 		<Unit filename="GSRendererNull.cpp" />
 		<Unit filename="GSRendererNull.h" />
-		<Unit filename="GSRendererOGL.cpp" />
-		<Unit filename="GSRendererOGL.h" />
 		<Unit filename="GSRendererSW.cpp" />
 		<Unit filename="GSRendererSW.h" />
 		<Unit filename="GSScanlineEnvironment.h" />
@@ -165,11 +147,9 @@
 		<Unit filename="GSTables.h" />
 		<Unit filename="GSTexture.cpp" />
 		<Unit filename="GSTexture.h" />
-		<Unit filename="GSTexture10.cpp" />
 		<Unit filename="GSTexture10.h" />
 		<Unit filename="GSTexture11.cpp" />
 		<Unit filename="GSTexture11.h" />
-		<Unit filename="GSTexture7.cpp" />
 		<Unit filename="GSTexture7.h" />
 		<Unit filename="GSTexture9.cpp" />
 		<Unit filename="GSTexture9.h" />
@@ -181,18 +161,13 @@
 		<Unit filename="GSTextureCache11.h" />
 		<Unit filename="GSTextureCache9.cpp" />
 		<Unit filename="GSTextureCache9.h" />
-		<Unit filename="GSTextureCacheOGL.cpp" />
-		<Unit filename="GSTextureCacheOGL.h" />
 		<Unit filename="GSTextureCacheSW.cpp" />
 		<Unit filename="GSTextureCacheSW.h" />
 		<Unit filename="GSTextureFX.cpp" />
-		<Unit filename="GSTextureFX10.cpp" />
 		<Unit filename="GSTextureFX11.cpp" />
 		<Unit filename="GSTextureFX9.cpp" />
 		<Unit filename="GSTextureNull.cpp" />
 		<Unit filename="GSTextureNull.h" />
-		<Unit filename="GSTextureOGL.cpp" />
-		<Unit filename="GSTextureOGL.h" />
 		<Unit filename="GSThread.cpp" />
 		<Unit filename="GSThread.h" />
 		<Unit filename="GSUtil.cpp" />

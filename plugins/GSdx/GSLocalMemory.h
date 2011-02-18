@@ -21,8 +21,6 @@
 
 #pragma once
 
-#pragma warning(disable: 4100) // warning C4100: 'TEXA' : unreferenced formal parameter
-
 #include "GS.h"
 #include "GSTables.h"
 #include "GSVector.h"
@@ -72,31 +70,25 @@ public:
 	typedef void (GSLocalMemory::*readTexture)(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
 	typedef void (GSLocalMemory::*readTextureBlock)(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 
-	typedef union
+	__aligned(struct, 128) psm_t
 	{
-		struct
-		{
-			pixelAddress pa, bn;
-			readPixel rp;
-			readPixelAddr rpa;
-			writePixel wp;
-			writePixelAddr wpa;
-			readTexel rt;
-			readTexelAddr rta;
-			writeFrameAddr wfa;
-			writeImage wi;
-			readImage ri;
-			readTexture rtx, rtxP;
-			readTextureBlock rtxb, rtxbP;
-			uint16 bpp, trbpp, pal, fmt;
-			GSVector2i bs, pgs;
-			int* rowOffset[8];
-			short* blockOffset;
-		};
-
-		uint8 dummy[128];
-
-	} psm_t;
+		pixelAddress pa, bn;
+		readPixel rp;
+		readPixelAddr rpa;
+		writePixel wp;
+		writePixelAddr wpa;
+		readTexel rt;
+		readTexelAddr rta;
+		writeFrameAddr wfa;
+		writeImage wi;
+		readImage ri;
+		readTexture rtx, rtxP;
+		readTextureBlock rtxb, rtxbP;
+		uint16 bpp, trbpp, pal, fmt;
+		GSVector2i bs, pgs;
+		int* rowOffset[8];
+		short* blockOffset;
+	};
 
 	static psm_t m_psm[64];
 
@@ -891,7 +883,6 @@ public:
 
 	//
 
-	HRESULT SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 psm, int w, int h);
+	bool SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 psm, int w, int h);
 };
 
-#pragma warning(default: 4244)

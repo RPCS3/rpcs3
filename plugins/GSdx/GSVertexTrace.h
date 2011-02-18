@@ -29,7 +29,7 @@
 
 class GSState;
 
-__aligned32 class GSVertexTrace
+__aligned(class, 32) GSVertexTrace
 {
 	struct Vertex {GSVector4i c; GSVector4 p, t;};
 	struct VertexAlpha {int min, max; bool valid;};

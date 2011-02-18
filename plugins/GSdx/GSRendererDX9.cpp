@@ -27,7 +27,7 @@
 GSRendererDX9::GSRendererDX9()
 	: GSRendererDX<GSVertexHW9>(new GSTextureCache9(this))
 {
-	InitVertexKick<GSRendererDX9>();
+	InitVertexKick(GSRendererDX9);
 }
 
 bool GSRendererDX9::CreateDevice(GSDevice* dev)
@@ -60,18 +60,20 @@ bool GSRendererDX9::CreateDevice(GSDevice* dev)
 template<uint32 prim, uint32 tme, uint32 fst> 
 void GSRendererDX9::VertexKick(bool skip)
 {
-	GSVertexHW9& dst = m_vl.AddTail();
-
-	dst.p = GSVector4(((GSVector4i)m_v.XYZ).upl16());
+	GSVector4 p = GSVector4(((GSVector4i)m_v.XYZ).upl16());
 
 	if(tme && !fst)
 	{
-		dst.p = dst.p.xyxy(GSVector4((float)m_v.XYZ.Z, m_v.RGBAQ.Q));
+		p = p.xyxy(GSVector4((float)m_v.XYZ.Z, m_v.RGBAQ.Q));
 	}
 	else
 	{
-		dst.p = dst.p.xyxy(GSVector4::load((float)m_v.XYZ.Z));
+		p = p.xyxy(GSVector4::load((float)m_v.XYZ.Z));
 	}
+
+	GSVertexHW9& dst = m_vl.AddTail();
+
+	dst.p = p;
 
 	int Uadjust = 0;
 	int Vadjust = 0;
@@ -138,8 +140,8 @@ void GSRendererDX9::VertexKick(bool skip)
 		}
 	}
 
-	dst.c0 = m_v.RGBAQ.u32[0];
-	dst.c1 = m_v.FOG.u32[1];
+	dst._c0() = m_v.RGBAQ.u32[0];
+	dst._c1() = m_v.FOG.u32[1];
 
 	//
 
@@ -198,18 +200,18 @@ void GSRendererDX9::VertexKick(bool skip)
 			break;
 		case GS_LINELIST:
 		case GS_LINESTRIP:
-			if(PRIM->IIP == 0) {v[0].c0 = v[1].c0;}
+			if(PRIM->IIP == 0) {v[0]._c0() = v[1]._c0();}
 			break;
 		case GS_TRIANGLELIST:
 		case GS_TRIANGLESTRIP:
 		case GS_TRIANGLEFAN:
-			if(PRIM->IIP == 0) {v[0].c0 = v[1].c0 = v[2].c0;}
+			if(PRIM->IIP == 0) {v[0]._c0() = v[1]._c0() = v[2]._c0();}
 			break;
 		case GS_SPRITE:
-			if(PRIM->IIP == 0) {v[0].c0 = v[1].c0;}
+			if(PRIM->IIP == 0) {v[0]._c0() = v[1]._c0();}
 			v[0].p.z = v[1].p.z;
 			v[0].p.w = v[1].p.w;
-			v[0].c1 = v[1].c1;
+			v[0]._c1() = v[1]._c1();
 			v[2] = v[1];
 			v[3] = v[1];
 			v[1].p.y = v[0].p.y;

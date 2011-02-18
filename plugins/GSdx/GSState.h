@@ -39,7 +39,7 @@
 class GSState : public GSAlignedClass<32>
 {
 	typedef void (GSState::*GIFPackedRegHandler)(const GIFPackedReg* r);
-	
+
 	GIFPackedRegHandler m_fpGIFPackedRegHandlers[16];
 
 	void GIFPackedRegHandlerNull(const GIFPackedReg* r);
@@ -56,7 +56,7 @@ class GSState : public GSAlignedClass<32>
 
 	GIFRegHandler m_fpGIFRegHandlers[256];
 
-	void ApplyTEX0(uint i, GIFRegTEX0& TEX0);
+	void ApplyTEX0(int i, GIFRegTEX0& TEX0);
 	void ApplyPRIM(const GIFRegPRIM& PRIM);
 
 	void GIFRegHandlerNull(const GIFReg* r);
@@ -135,48 +135,23 @@ protected:
 	VertexKickPtr m_vk[8][2][2];
 	VertexKickPtr m_vkf;
 
-	template<class T> void InitVertexKick()
-	{
-		m_vk[GS_POINTLIST][0][0] = (VertexKickPtr)&T::VertexKick<GS_POINTLIST, 0, 0>;
-		m_vk[GS_POINTLIST][0][1] = (VertexKickPtr)&T::VertexKick<GS_POINTLIST, 0, 0>;
-		m_vk[GS_POINTLIST][1][0] = (VertexKickPtr)&T::VertexKick<GS_POINTLIST, 1, 0>;
-		m_vk[GS_POINTLIST][1][1] = (VertexKickPtr)&T::VertexKick<GS_POINTLIST, 1, 1>;
+	#define InitVertexKick3(T, P, N, M) \
+		m_vk[P][N][M] = (VertexKickPtr)&T::VertexKick<P, N, M>;
 
-		m_vk[GS_LINELIST][0][0] = (VertexKickPtr)&T::VertexKick<GS_LINELIST, 0, 0>;
-		m_vk[GS_LINELIST][0][1] = (VertexKickPtr)&T::VertexKick<GS_LINELIST, 0, 0>;
-		m_vk[GS_LINELIST][1][0] = (VertexKickPtr)&T::VertexKick<GS_LINELIST, 1, 0>;
-		m_vk[GS_LINELIST][1][1] = (VertexKickPtr)&T::VertexKick<GS_LINELIST, 1, 1>;
+	#define InitVertexKick2(T, P) \
+		InitVertexKick3(T, P, 0, 0) \
+		InitVertexKick3(T, P, 0, 1) \
+		InitVertexKick3(T, P, 1, 0) \
+		InitVertexKick3(T, P, 1, 1) \
 
-		m_vk[GS_LINESTRIP][0][0] = (VertexKickPtr)&T::VertexKick<GS_LINESTRIP, 0, 0>;
-		m_vk[GS_LINESTRIP][0][1] = (VertexKickPtr)&T::VertexKick<GS_LINESTRIP, 0, 0>;
-		m_vk[GS_LINESTRIP][1][0] = (VertexKickPtr)&T::VertexKick<GS_LINESTRIP, 1, 0>;
-		m_vk[GS_LINESTRIP][1][1] = (VertexKickPtr)&T::VertexKick<GS_LINESTRIP, 1, 1>;
-
-		m_vk[GS_TRIANGLELIST][0][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLELIST, 0, 0>;
-		m_vk[GS_TRIANGLELIST][0][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLELIST, 0, 0>;
-		m_vk[GS_TRIANGLELIST][1][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLELIST, 1, 0>;
-		m_vk[GS_TRIANGLELIST][1][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLELIST, 1, 1>;
-
-		m_vk[GS_TRIANGLESTRIP][0][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLESTRIP, 0, 0>;
-		m_vk[GS_TRIANGLESTRIP][0][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLESTRIP, 0, 0>;
-		m_vk[GS_TRIANGLESTRIP][1][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLESTRIP, 1, 0>;
-		m_vk[GS_TRIANGLESTRIP][1][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLESTRIP, 1, 1>;
-
-		m_vk[GS_TRIANGLEFAN][0][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLEFAN, 0, 0>;
-		m_vk[GS_TRIANGLEFAN][0][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLEFAN, 0, 0>;
-		m_vk[GS_TRIANGLEFAN][1][0] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLEFAN, 1, 0>;
-		m_vk[GS_TRIANGLEFAN][1][1] = (VertexKickPtr)&T::VertexKick<GS_TRIANGLEFAN, 1, 1>;
-
-		m_vk[GS_SPRITE][0][0] = (VertexKickPtr)&T::VertexKick<GS_SPRITE, 0, 0>;
-		m_vk[GS_SPRITE][0][1] = (VertexKickPtr)&T::VertexKick<GS_SPRITE, 0, 0>;
-		m_vk[GS_SPRITE][1][0] = (VertexKickPtr)&T::VertexKick<GS_SPRITE, 1, 0>;
-		m_vk[GS_SPRITE][1][1] = (VertexKickPtr)&T::VertexKick<GS_SPRITE, 1, 1>;
-
-		m_vk[GS_INVALID][0][0] = &GSState::VertexKickNull;
-		m_vk[GS_INVALID][0][1] = &GSState::VertexKickNull;
-		m_vk[GS_INVALID][1][0] = &GSState::VertexKickNull;
-		m_vk[GS_INVALID][1][1] = &GSState::VertexKickNull;
-	}
+	#define InitVertexKick(T) \
+		InitVertexKick2(T, GS_POINTLIST) \
+		InitVertexKick2(T, GS_LINELIST) \
+		InitVertexKick2(T, GS_LINESTRIP) \
+		InitVertexKick2(T, GS_TRIANGLELIST) \
+		InitVertexKick2(T, GS_TRIANGLEFAN) \
+		InitVertexKick2(T, GS_SPRITE) \
+		InitVertexKick2(T, GS_INVALID) \
 
 	void UpdateVertexKick()
 	{

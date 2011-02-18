@@ -25,13 +25,14 @@
 #include "svnrev.h"
 #include "xbyak/xbyak_util.h"
 
-static struct GSUtilMaps
+static class GSUtilMaps
 {
+public:
 	uint8 PrimClassField[8];
 	uint32 CompatibleBitsField[64][2];
 	uint32 SharedBitsField[64][2];
 
-	struct GSUtilMaps()
+	GSUtilMaps()
 	{
 		PrimClassField[GS_POINTLIST] = GS_POINT_CLASS;
 		PrimClassField[GS_LINELIST] = GS_LINE_CLASS;
@@ -167,7 +168,9 @@ bool GSUtil::CheckSSE()
 	Xbyak::util::Cpu cpu;
 	Xbyak::util::Cpu::Type type;
 
-	#if _M_SSE >= 0x402
+	#if _M_SSE >= 0x500
+	type = Xbyak::util::Cpu::tAVX;
+	#elif _M_SSE >= 0x402
 	type = Xbyak::util::Cpu::tSSE42;
 	#elif _M_SSE >= 0x401
 	type = Xbyak::util::Cpu::tSSE41;
@@ -217,7 +220,9 @@ char* GSUtil::GetLibName()
 	sl.push_back(format("MSVC %d.%02d", _MSC_VER / 100, _MSC_VER % 100));
 	#endif
 
-	#if _M_SSE >= 0x402
+	#if _M_SSE >= 0x500
+	sl.push_back("AVX");
+	#elif _M_SSE >= 0x402
 	sl.push_back("SSE42");
 	#elif _M_SSE >= 0x401
 	sl.push_back("SSE41");

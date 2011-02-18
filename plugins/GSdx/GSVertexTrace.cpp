@@ -19,8 +19,6 @@
  *
  */
 
-#pragma once
-
 #include "stdafx.h"
 #include "GSVertexTrace.h"
 #include "GSUtil.h"

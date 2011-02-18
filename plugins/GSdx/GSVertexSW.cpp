@@ -19,7 +19,5 @@
  *
  */
 
-#pragma once
-
 #include "stdafx.h"
 #include "GSVertexSW.h"

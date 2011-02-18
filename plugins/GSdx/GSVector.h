@@ -43,7 +43,7 @@ typedef GSVector2T<int> GSVector2i;
 
 class GSVector4;
 
-__aligned16 class GSVector4i
+__aligned(class, 16) GSVector4i
 {
 public:
 	union
@@ -734,12 +734,7 @@ public:
 
 	template<int i> __forceinline GSVector4i srl() const
 	{
-		#pragma warning(push)
-		#pragma warning(disable: 4556)
-
 		return GSVector4i(_mm_srli_si128(m, i));
-
-		#pragma warning(pop)
 	}
 
 	template<int i> __forceinline GSVector4i srl(const GSVector4i& v)
@@ -761,12 +756,7 @@ public:
 
 	template<int i> __forceinline GSVector4i sll() const
 	{
-		#pragma warning(push)
-		#pragma warning(disable: 4556)
-
 		return GSVector4i(_mm_slli_si128(m, i));
-
-		#pragma warning(pop)
 	}
 
 	__forceinline GSVector4i sra16(int i) const
@@ -2253,7 +2243,7 @@ public:
 	__forceinline static GSVector4i xfffe(const GSVector4i& v) {return xffffffff(v).sll16( 1);}
 };
 
-__aligned16 class GSVector4
+__aligned(class, 16) GSVector4
 {
 public:
 	union
@@ -2633,7 +2623,7 @@ public:
 
 	template<bool aligned> __forceinline static GSVector4 load(const void* p)
 	{
-		return GSVector4(aligned ? _mm_load_ps((__m128*)p) : _mm_loadu_ps((__m128*)p));
+		return GSVector4(aligned ? _mm_load_ps((const float*)p) : _mm_loadu_ps((const float*)p));
 	}
 
 	__forceinline static void storel(void* p, const GSVector4& v)
@@ -2643,8 +2633,8 @@ public:
 
 	template<bool aligned> __forceinline static void store(void* p, const GSVector4& v)
 	{
-		if(aligned) _mm_store_ps((__m128*)p, v.m);
-		else _mm_storeu_ps((__m128*)p, v.m);
+		if(aligned) _mm_store_ps((float*)p, v.m);
+		else _mm_storeu_ps((float*)p, v.m);
 	}
 
 	__forceinline static void expand(const GSVector4i& v, GSVector4& a, GSVector4& b, GSVector4& c, GSVector4& d)
@@ -2902,7 +2892,7 @@ __forceinline GSVector4 GSVector4::cast(const GSVector4i& v)
 
 class GSVector8;
 
-__aligned32 class GSVector8i
+__aligned(class, 32) GSVector8i
 {
 public:
 	union
@@ -3016,7 +3006,7 @@ public:
 	}
 };
 
-__aligned32 class GSVector8
+__aligned(class, 32) GSVector8
 {
 public:
 	union

@@ -27,15 +27,15 @@
 //#define DISABLE_DATE
 
 GSState::GSState()
-	: m_mt(false)
+	: m_version(6)
+	, m_mt(false)
 	, m_irq(NULL)
-	, m_regs(NULL)
-	, m_crc(0)
-	, m_options(0)
 	, m_path3hack(0)
+	, m_regs(NULL)
 	, m_q(1.0f)
 	, m_vprim(1)
-	, m_version(6)
+	, m_crc(0)
+	, m_options(0)
 	, m_frameskip(0)
 {
 	m_sssize = 0;
@@ -142,7 +142,7 @@ void GSState::SetFrameSkip(int skip)
 	m_frameskip = skip;
 
 	if(skip)
-	{		
+	{
 		m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerNOP;
 		m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerNOP;
 		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = &GSState::GIFPackedRegHandlerNOP;
@@ -166,11 +166,11 @@ void GSState::SetFrameSkip(int skip)
 	{
 		m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerXYZF2;
 		m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerXYZ2;
-		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = (GIFPackedRegHandler)&GSState::GIFRegHandlerCLAMP<0>;
-		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = (GIFPackedRegHandler)&GSState::GIFRegHandlerCLAMP<1>;
+		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<0>;
+		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<1>;
 		m_fpGIFPackedRegHandlers[GIF_REG_FOG] = &GSState::GIFPackedRegHandlerFOG;
-		m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = (GIFPackedRegHandler)&GSState::GIFRegHandlerXYZF3;
-		m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = (GIFPackedRegHandler)&GSState::GIFRegHandlerXYZ3;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerXYZF3;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerXYZ3;
 
 		m_fpGIFRegHandlers[GIF_A_D_REG_PRIM] = &GSState::GIFRegHandlerPRIM;
 		m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GSState::GIFRegHandlerRGBAQ;
@@ -202,28 +202,28 @@ void GSState::Reset()
 
 void GSState::ResetHandlers()
 {
-	for(int i = 0; i < countof(m_fpGIFPackedRegHandlers); i++)
+	for(size_t i = 0; i < countof(m_fpGIFPackedRegHandlers); i++)
 	{
 		m_fpGIFPackedRegHandlers[i] = &GSState::GIFPackedRegHandlerNull;
 	}
 
-	m_fpGIFPackedRegHandlers[GIF_REG_PRIM] = (GIFPackedRegHandler)&GSState::GIFRegHandlerPRIM;
+	m_fpGIFPackedRegHandlers[GIF_REG_PRIM] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerPRIM;
 	m_fpGIFPackedRegHandlers[GIF_REG_RGBA] = &GSState::GIFPackedRegHandlerRGBA;
 	m_fpGIFPackedRegHandlers[GIF_REG_STQ] = &GSState::GIFPackedRegHandlerSTQ;
 	m_fpGIFPackedRegHandlers[GIF_REG_UV] = &GSState::GIFPackedRegHandlerUV;
 	m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerXYZF2;
 	m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerXYZ2;
-	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_1] = (GIFPackedRegHandler)&GSState::GIFRegHandlerTEX0<0>;
-	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_2] = (GIFPackedRegHandler)&GSState::GIFRegHandlerTEX0<1>;
-	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = (GIFPackedRegHandler)&GSState::GIFRegHandlerCLAMP<0>;
-	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = (GIFPackedRegHandler)&GSState::GIFRegHandlerCLAMP<1>;
+	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_1] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerTEX0<0>;
+	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_2] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerTEX0<1>;
+	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<0>;
+	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<1>;
 	m_fpGIFPackedRegHandlers[GIF_REG_FOG] = &GSState::GIFPackedRegHandlerFOG;
-	m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = (GIFPackedRegHandler)&GSState::GIFRegHandlerXYZF3;
-	m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = (GIFPackedRegHandler)&GSState::GIFRegHandlerXYZ3;
+	m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerXYZF3;
+	m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerXYZ3;
 	m_fpGIFPackedRegHandlers[GIF_REG_A_D] = &GSState::GIFPackedRegHandlerA_D;
 	m_fpGIFPackedRegHandlers[GIF_REG_NOP] = &GSState::GIFPackedRegHandlerNOP;
-	
-	for(int i = 0; i < countof(m_fpGIFRegHandlers); i++)
+
+	for(size_t i = 0; i < countof(m_fpGIFRegHandlers); i++)
 	{
 		m_fpGIFRegHandlers[i] = &GSState::GIFRegHandlerNull;
 	}
@@ -548,7 +548,7 @@ void GSState::GIFRegHandlerXYZ2(const GIFReg* r)
 	VertexKick(false);
 }
 
-void GSState::ApplyTEX0(uint i, GIFRegTEX0& TEX0)
+void GSState::ApplyTEX0(int i, GIFRegTEX0& TEX0)
 {
 	// even if TEX0 did not change, a new palette may have been uploaded and will overwrite the currently queued for drawing
 
@@ -586,7 +586,7 @@ template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* r)
 	if(TEX0.TW > 10) TEX0.TW = 10;
 	if(TEX0.TH > 10) TEX0.TH = 10;
 
-	ApplyTEX0( i, TEX0 );
+	ApplyTEX0(i, TEX0);
 }
 
 template<int i> void GSState::GIFRegHandlerCLAMP(const GIFReg* r)
@@ -649,8 +649,8 @@ template<int i> void GSState::GIFRegHandlerTEX2(const GIFReg* r)
 	//    CLD, CSA, CSM, CPSM, CBP, PSM.
 	// It ignores these fields (uses existing values in the context):
 	//    TFX, TCC, TH, TW, TBW, and TBP0
-	
-	uint64 mask = 0xFFFFFFE003F00000ui64; // TEX2 bits
+
+	uint64 mask = 0xFFFFFFE003F00000ull; // TEX2 bits
 	GIFRegTEX0 TEX0;
 	TEX0.u64 = (m_env.CTXT[i].TEX0.u64 & ~mask) | (r->u64 & mask);
 
@@ -1362,7 +1362,7 @@ void GSState::SoftReset(uint32 mask)
 		memset(&m_path[0], 0, sizeof(GIFPath));
 		memset(&m_path[3], 0, sizeof(GIFPath));
 	}
-	
+
 	if(mask & 2) memset(&m_path[1], 0, sizeof(GIFPath));
 	if(mask & 4) memset(&m_path[2], 0, sizeof(GIFPath));
 
@@ -1637,7 +1637,7 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 	WriteState(data, &m_tr.y);
 	WriteState(data, m_mem.m_vm8, m_mem.m_vmsize);
 
-	for(int i = 0; i < countof(m_path); i++)
+	for(size_t i = 0; i < countof(m_path); i++)
 	{
 		m_path[i].tag.NREG = m_path[i].nreg;
 		m_path[i].tag.NLOOP = m_path[i].nloop;
@@ -1671,7 +1671,8 @@ int GSState::Defrost(const GSFreezeData* fd)
 
 	if(version > m_version)
 	{
-		fprintf(stderr, "GSdx: Savestate version is incompatible.  Load aborted.\n" );
+		printf("GSdx: Savestate version is incompatible.  Load aborted.\n" );
+
 		return -1;
 	}
 
@@ -1732,7 +1733,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 
 	m_tr.total = 0; // TODO: restore transfer state
 
-	for(int i = 0; i < countof(m_path); i++)
+	for(size_t i = 0; i < countof(m_path); i++)
 	{
 		ReadState(&m_path[i].tag, data);
 		ReadState(&m_path[i].reg, data);
@@ -1750,7 +1751,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 
 	m_env.UpdateDIMX();
 
-	for(int i = 0; i < 2; i++)
+	for(size_t i = 0; i < 2; i++)
 	{
 		m_env.CTXT[i].UpdateScissor();
 
@@ -2436,7 +2437,7 @@ bool GSC_HauntingGround(const GSFrameInfo& fi, int& skip)
 		else if(fi.TME && fi.FBP == fi.TBP0 && fi.TBP0 == 0x3000 && fi.FBMSK == 0xFFFFFF &&
 			GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
 		{
-			skip = 1; 
+			skip = 1;
 		}
 	}
 

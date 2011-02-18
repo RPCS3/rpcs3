@@ -27,13 +27,13 @@ const GSVector4 g_pos_scale(1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
 GSRendererSW::GSRendererSW(int threads)
 	: GSRendererT()
 {
+	InitVertexKick(GSRendererSW);
+
 	m_tc = new GSTextureCacheSW(this);
 
 	memset(m_texture, 0, sizeof(m_texture));
 
 	m_rl.Create<GSDrawScanline>(threads);
-
-	InitVertexKick<GSRendererSW>();
 }
 
 GSRendererSW::~GSRendererSW()
@@ -193,11 +193,11 @@ void GSRendererSW::Draw()
 		m_tc->InvalidateVideoMem(m_context->offset.zb, r);
 	}
 
-	// By only syncing here we can do the two InvalidateVideoMem calls free if the other threads finish 
+	// By only syncing here we can do the two InvalidateVideoMem calls free if the other threads finish
 	// their drawings later than this one (they usually do because they start on an event).
 
-	m_rl.Sync(); 
-	
+	m_rl.Sync();
+
 	GSRasterizerStats stats;
 
 	m_rl.GetStats(stats);
@@ -547,13 +547,13 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 	}
 }
 
-template<uint32 prim, uint32 tme, uint32 fst> 
+template<uint32 prim, uint32 tme, uint32 fst>
 void GSRendererSW::VertexKick(bool skip)
 {
 	const GSDrawingContext* context = m_context;
 
 	GSVector4i xy = GSVector4i::load((int)m_v.XYZ.u32[0]);
-	
+
 	xy = xy.insert16<3>(m_v.FOG.F);
 	xy = xy.upl16();
 	xy -= context->XYOFFSET;
@@ -590,7 +590,7 @@ void GSRendererSW::VertexKick(bool skip)
 	dst.p.z = (float)min(m_v.XYZ.Z, 0xffffff00); // max value which can survive the uint32 => float => uint32 conversion
 
 	int count = 0;
-	
+
 	if(GSVertexSW* v = DrawingKick<prim>(skip, count))
 	{
 if(!m_dump)
@@ -641,7 +641,7 @@ if(!m_dump)
 			test |= tmp == tmp.yxwz();
 			break;
 		}
-		
+
 		if(test.mask() & 3)
 		{
 			return;
