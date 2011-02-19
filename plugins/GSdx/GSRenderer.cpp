@@ -386,13 +386,13 @@ void GSRenderer::VSync(int field)
 
 	if(!m_snapshot.empty())
 	{
-	    bool shift = false;
+		bool shift = false;
 
-	    #ifdef _WINDOWS
+		#ifdef _WINDOWS
 
-	    shift = !!(::GetAsyncKeyState(VK_SHIFT) & 0x8000);
+		shift = !!(::GetAsyncKeyState(VK_SHIFT) & 0x8000);
 
-	    #endif
+		#endif
 
 		if(!m_dump && shift)
 		{

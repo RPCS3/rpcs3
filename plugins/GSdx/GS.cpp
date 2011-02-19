@@ -58,7 +58,7 @@ EXPORT_C_(uint32) PS2EgetLibType()
 	return PS2E_LT_GS;
 }
 
-EXPORT_C_(char*) PS2EgetLibName()
+EXPORT_C_(const char*) PS2EgetLibName()
 {
 	return GSUtil::GetLibName();
 }
@@ -194,12 +194,12 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 		case 0: case 1: case 2: dev = new GSDevice9(); break;
 		case 3: case 4: case 5: dev = new GSDevice11(); break;
 		#endif
-		case 12: case 13: new GSDeviceNull(); break;
+		case 12: case 13: dev = new GSDeviceNull(); break;
 		}
 
 		if(dev == NULL)
 		{
-            return -1;
+			return -1;
 		}
 
 		if(s_gs == NULL)
@@ -214,10 +214,10 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			case 3:
 				s_gs = new GSRendererDX11();
 				break;
+			#endif
 			case 1: case 4: case 7: case 10: case 12:
 				s_gs = new GSRendererSW(threads);
 				break;
-			#endif
 			case 2: case 5: case 8: case 11: case 13:
 				s_gs = new GSRendererNull();
 				break;
@@ -290,7 +290,7 @@ EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 	if(flags & 4)
 	{
 #ifdef _WINDOWS
-        renderer = s_isdx11avail ? 4 : 1; // dx11 / dx9 sw
+		renderer = s_isdx11avail ? 4 : 1; // dx11 / dx9 sw
 #endif
 	}
 
@@ -541,6 +541,8 @@ EXPORT_C GSgetLastTag(uint32* tag)
 EXPORT_C GSgetTitleInfo2(char* dest, size_t length)
 {
 	string s = "GSdx";
+
+	if(s_gs != NULL) // TODO: this gets called from a different thread concurrently with GSOpen (on linux)
 
 	if(s_gs->m_GStitleInfoBuffer[0])
 	{

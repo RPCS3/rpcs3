@@ -22,56 +22,69 @@
 #include "stdafx.h"
 #include "GS.h"
 #include "GSUtil.h"
-//#include "svnrev.h"
 #include "xbyak/xbyak_util.h"
 
+#ifdef _WINDOWS
+#include "svnrev.h"
+#else
 #define SVN_REV 0
 #define SVN_MODS 0
+#endif
 
-char* GSUtil::GetLibName()
+const char* GSUtil::GetLibName()
 {
+	// TODO: critsec
+
 	static string str;
 
-	str = format("GSdx %d", SVN_REV);
-
-	if(SVN_MODS) str += "m";
-
-	#if _M_AMD64
-	str += " 64-bit";
-	#endif
-
-	list<string> sl;
-
-	// TODO: linux (gcc)
-
-	#ifdef __INTEL_COMPILER
-	sl.push_back(format("Intel C++ %d.%02d", __INTEL_COMPILER / 100, __INTEL_COMPILER % 100));
-	#elif _MSC_VER
-	sl.push_back(format("MSVC %d.%02d", _MSC_VER / 100, _MSC_VER % 100));
-	#endif
-
-	#if _M_SSE >= 0x500
-	sl.push_back("AVX");
-	#elif _M_SSE >= 0x402
-	sl.push_back("SSE42");
-	#elif _M_SSE >= 0x401
-	sl.push_back("SSE41");
-	#elif _M_SSE >= 0x301
-	sl.push_back("SSSE3");
-	#elif _M_SSE >= 0x200
-	sl.push_back("SSE2");
-	#elif _M_SSE >= 0x100
-	sl.push_back("SSE");
-	#endif
-
-	for(list<string>::iterator i = sl.begin(); i != sl.end(); )
+	if(str.empty())
 	{
-		if(i == sl.begin()) str += " (";
-		str += *i;
-		str += ++i != sl.end() ? ", " : ")";
+		str = "GSdx";
+
+		#ifdef _WINDOWS
+		str += format(" %d", SVN_REV);
+		if(SVN_MODS) str += "m";
+		#endif
+
+		#if _M_AMD64
+		str += " 64-bit";
+		#endif
+
+		list<string> sl;
+
+		// TODO: linux (gcc)
+
+		#ifdef __INTEL_COMPILER
+		sl.push_back(format("Intel C++ %d.%02d", __INTEL_COMPILER / 100, __INTEL_COMPILER % 100));
+		#elif _MSC_VER
+		sl.push_back(format("MSVC %d.%02d", _MSC_VER / 100, _MSC_VER % 100));
+		#elif __GNUC__
+		sl.push_back(format("GCC %d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__));
+		#endif
+
+		#if _M_SSE >= 0x500
+		sl.push_back("AVX");
+		#elif _M_SSE >= 0x402
+		sl.push_back("SSE42");
+		#elif _M_SSE >= 0x401
+		sl.push_back("SSE41");
+		#elif _M_SSE >= 0x301
+		sl.push_back("SSSE3");
+		#elif _M_SSE >= 0x200
+		sl.push_back("SSE2");
+		#elif _M_SSE >= 0x100
+		sl.push_back("SSE");
+		#endif
+
+		for(list<string>::iterator i = sl.begin(); i != sl.end(); )
+		{
+			if(i == sl.begin()) str += " (";
+			str += *i;
+			str += ++i != sl.end() ? ", " : ")";
+		}
 	}
 
-	return (char*)str.c_str();
+	return str.c_str();
 }
 
 static class GSUtilMaps

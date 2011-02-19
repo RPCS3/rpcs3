@@ -26,7 +26,7 @@
 class GSUtil
 {
 public:
-	static char* GetLibName();
+	static const char* GetLibName();
 
 	static GS_PRIM_CLASS GetPrimClass(uint32 prim);
 

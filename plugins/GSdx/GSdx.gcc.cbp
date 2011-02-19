@@ -7,10 +7,12 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="bin/Debug/libGSdx" prefix_auto="1" extension_auto="1" />
+				<Option output="../../bin/plugins/libGSdx" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../../bin" />
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
+				<Option host_application="../../pcsx2/bin/pcsx2" />
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>
@@ -18,10 +20,12 @@
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="bin/Release/libGSdx" prefix_auto="1" extension_auto="1" />
+				<Option output="../../bin/plugins/libGSdx" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../../bin" />
 				<Option object_output="obj/Release/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
+				<Option host_application="../../pcsx2/bin/pcsx2" />
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>
@@ -30,10 +34,15 @@
 			</Target>
 		</Build>
 		<Compiler>
-			<Add option="-march=pentium4" />
 			<Add option="-fno-operator-names" />
+			<Add option="-msse2" />
+			<Add option="-m32" />
+			<Add option="-mpreferred-stack-boundary=2" />
 			<Add option="-D_LINUX" />
 		</Compiler>
+		<Linker>
+			<Add option="-lpthread" />
+		</Linker>
 		<Unit filename="GPU.cpp" />
 		<Unit filename="GPU.h" />
 		<Unit filename="GPUDrawScanline.cpp" />
@@ -139,7 +148,11 @@
 			<envvars />
 			<code_completion />
 			<lib_finder disable_auto="1" />
-			<debugger />
+			<debugger>
+				<remote_debugging>
+					<options conn_type="0" serial_baud="115200" additional_cmds_before="handle SIGSEGV nostop" />
+				</remote_debugging>
+			</debugger>
 		</Extensions>
 	</Project>
 </CodeBlocks_project_file>

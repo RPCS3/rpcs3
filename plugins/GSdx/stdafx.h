@@ -104,8 +104,8 @@ using namespace stdext;
 
     #ifdef __GNUC__
 
-        // #define __forceinline __attribute__((always_inline,unused))
-        #define __forceinline __inline__ __attribute__((__always_inline__,__gnu_inline__))
+        #define __forceinline __inline__ __attribute__((always_inline,unused))
+        // #define __forceinline __inline__ __attribute__((__always_inline__,__gnu_inline__))
         #define __assume(c) ((void)0)
 
     #endif
@@ -156,7 +156,7 @@ typedef signed long long int64;
 
 #endif
 
-#if defined(_DEBUG) && defined(_MSC_VER)
+#if defined(_DEBUG) //&& defined(_MSC_VER)
 
 	#include <assert.h>
 	#define ASSERT assert

@@ -44,7 +44,7 @@ EXPORT_C_(uint32) PSEgetLibType()
 	return PSE_LT_GPU;
 }
 
-EXPORT_C_(char*) PSEgetLibName()
+EXPORT_C_(const char*) PSEgetLibName()
 {
 	return GSUtil::GetLibName();
 }
