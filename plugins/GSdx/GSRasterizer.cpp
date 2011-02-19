@@ -24,15 +24,6 @@
 #include "stdafx.h"
 #include "GSRasterizer.h"
 
-// Using a spinning finish on the main (MTGS) thread is apparently a big win still, over trying
-// to wait out all the pending m_finished semaphores.  It leaves one spinwait in the rasterizer,
-// but that's still worlds better than 2-6 spinning threads like before.
-
-// NOTE: spinning: 100-500 ticks, waiting: 1000-5000 ticks
-
-//
-#define UseSpinningFinish
-
 // Set this to 1 to remove a lot of non-const div/modulus ops from the rasterization process.
 // Might likely be a measurable speedup but limits threading to 1, 2, 4, and 8 threads.
 // note by rama: Speedup is around 5% on average.
@@ -45,8 +36,6 @@
 	static const int ThreadsConst = 2;
 	static const int ThreadMaskConst = ThreadsConst - 1;
 #endif
-
-// align threads to page height (1 << 5)
 
 #define THREAD_HEIGHT 5
 
@@ -62,7 +51,7 @@ GSRasterizer::~GSRasterizer()
 	delete m_ds;
 }
 
-__forceinline bool GSRasterizer::IsOneOfMyScanlines(int scanline) const
+bool GSRasterizer::IsOneOfMyScanlines(int scanline) const
 {
 	#ifdef UseConstThreadCount
 

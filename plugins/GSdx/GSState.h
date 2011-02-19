@@ -136,7 +136,7 @@ protected:
 	VertexKickPtr m_vkf;
 
 	#define InitVertexKick3(T, P, N, M) \
-		m_vk[P][N][M] = (VertexKickPtr)&T::VertexKick<P, N, M>;
+		m_vk[P][N][M] = (VertexKickPtr)(void (T::*)(bool))&T::VertexKick<P, N, M>;
 
 	#define InitVertexKick2(T, P) \
 		InitVertexKick3(T, P, 0, 0) \

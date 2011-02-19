@@ -1021,7 +1021,7 @@ const GSVector4i GPUDrawScanlineCodeGenerator::m_test[8] =
 	GSVector4i::zero(),
 };
 
-__declspec(align(16)) const uint16 GPUDrawScanlineCodeGenerator::m_dither[4][16] =
+__aligned(const uint16, 32) GPUDrawScanlineCodeGenerator::m_dither[4][16] =
 {
 	{7, 0, 6, 1, 7, 0, 6, 1, 7, 0, 6, 1, 7, 0, 6, 1},
 	{2, 5, 3, 4, 2, 5, 3, 4, 2, 5, 3, 4, 2, 5, 3, 4},

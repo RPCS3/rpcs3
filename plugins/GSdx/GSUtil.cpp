@@ -22,8 +22,11 @@
 #include "stdafx.h"
 #include "GS.h"
 #include "GSUtil.h"
-#include "svnrev.h"
+//#include "svnrev.h"
 #include "xbyak/xbyak_util.h"
+
+#define SVN_REV 0
+#define SVN_MODS 0
 
 char* GSUtil::GetLibName()
 {

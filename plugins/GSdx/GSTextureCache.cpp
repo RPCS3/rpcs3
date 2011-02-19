@@ -821,7 +821,7 @@ GSTextureCache::Surface::Surface(GSRenderer* r)
 	, m_texture(NULL)
 	, m_age(0)
 {
-	m_TEX0.TBP0 = (uint32)~0;
+	m_TEX0.TBP0 = 0x3fff;
 }
 
 GSTextureCache::Surface::~Surface()

@@ -26,7 +26,6 @@
 #include "GSState.h"
 #include "GSVertexTrace.h"
 #include "GSVertexList.h"
-//#include "GSSettingsDlg.h"
 #include "GSCapture.h"
 
 class GSRenderer : public GSState

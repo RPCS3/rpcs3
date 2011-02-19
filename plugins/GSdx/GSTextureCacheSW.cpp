@@ -114,7 +114,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 	if(!t->Update(TEX0, TEXA, r))
 	{
-		printf("!@#$%\n"); // memory allocation may fail if the game is too hungry
+		printf("!@#$\n"); // memory allocation may fail if the game is too hungry
 
 		RemoveAt(t);
 

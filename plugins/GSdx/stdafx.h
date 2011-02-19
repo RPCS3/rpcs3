@@ -102,6 +102,14 @@ using namespace stdext;
     #define EXPORT_C_(type) extern "C" type
     #define EXPORT_C EXPORT_C_(void)
 
+    #ifdef __GNUC__
+
+        // #define __forceinline __attribute__((always_inline,unused))
+        #define __forceinline __inline__ __attribute__((__always_inline__,__gnu_inline__))
+        #define __assume(c) ((void)0)
+
+    #endif
+
 #endif
 
 extern string format(const char* fmt, ...);
@@ -278,6 +286,23 @@ __forceinline unsigned char _interlockedbittestandreset(volatile long* a, const 
     __asm__("lock; btrl %[b], %[a]; setb %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
     return retval;
 }
+
+#ifdef __GNUC__
+
+__forceinline unsigned long long __rdtsc()
+{
+    #if defined(__amd64__) || defined(__x86_64__)
+    unsigned long long low, high;
+    __asm__ __volatile__("rdtsc" : "=a"(low), "=d"(high));
+    return low | (high << 32);
+    #else
+    unsigned long long retval;
+    __asm__ __volatile__("rdtsc" : "=A"(retval));
+    return retval;
+    #endif
+}
+
+#endif
 
 #endif
 
