@@ -70,6 +70,7 @@ public:
 #else
 
 #include <pthread.h>
+#include <semaphore.h>
 
 class GSThread
 {
@@ -116,47 +117,14 @@ public:
 class GSAutoResetEvent
 {
 protected:
-    pthread_mutexattr_t m_mutex_attr;
-    pthread_mutex_t m_mutex;
-    pthread_cond_t m_cond;
-    pthread_condattr_t m_cond_attr;
+    sem_t m_sem;
 
 public:
-    GSAutoResetEvent()
-    {
-        pthread_mutexattr_settype(&m_mutex_attr, PTHREAD_MUTEX_FAST_NP);
-        pthread_mutex_init(&m_mutex, &m_mutex_attr);
-        pthread_condattr_init(&m_cond_attr);
-        pthread_cond_init(&m_cond, &m_cond_attr);
-    }
+    GSAutoResetEvent() {sem_init(&m_sem, 0, 0);}
+    ~GSAutoResetEvent() {sem_destroy(&m_sem);}
 
-    ~GSAutoResetEvent()
-    {
-        pthread_mutex_destroy(&m_mutex);
-        pthread_mutexattr_destroy(&m_mutex_attr);
-        pthread_cond_destroy(&m_cond);
-        pthread_condattr_destroy(&m_cond_attr);
-    }
-
-    void Set()
-    {
-        int ret;
-
-        pthread_mutex_lock(&m_mutex);
-        pthread_cond_signal(&m_cond);
-        pthread_mutex_unlock(&m_mutex);
-    }
-
-    bool Wait()
-    {
-        int ret;
-
-        pthread_mutex_lock(&m_mutex);
-        ret = pthread_cond_wait(&m_cond, &m_mutex);
-        pthread_mutex_unlock(&m_mutex);
-
-        return ret == 0;
-    }
+    void Set() {sem_post(&m_sem);}
+    bool Wait() {return sem_wait(&m_sem) == 0;}
 };
 
 #endif

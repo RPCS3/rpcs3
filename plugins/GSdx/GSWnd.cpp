@@ -194,6 +194,8 @@ GSVector4i GSWnd::GetClientRect()
 
     r = GSVector4i::zero();
 
+    // TODO: linux
+
 #endif
 
 	return r;
@@ -225,13 +227,13 @@ void GSWnd::Show()
 
 #ifdef _WINDOWS
 
-	//SetWindowPos(&wndTop, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
+    HWND hWnd = (HWND)m_hWnd;
 
-	SetForegroundWindow((HWND)m_hWnd);
+	SetForegroundWindow(hWnd);
 
-	ShowWindow((HWND)m_hWnd, SW_SHOWNORMAL);
+	ShowWindow(hWnd, SW_SHOWNORMAL);
 
-	UpdateWindow((HWND)m_hWnd);
+	UpdateWindow(hWnd);
 
 #else
 

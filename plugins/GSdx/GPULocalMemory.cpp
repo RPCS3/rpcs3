@@ -28,6 +28,10 @@ const GSVector4i GPULocalMemory::m_xxbx(0x00007c00);
 const GSVector4i GPULocalMemory::m_xgxx(0x000003e0);
 const GSVector4i GPULocalMemory::m_rxxx(0x0000001f);
 
+#define VM_SIZE ((1 << (12 + 11)) * sizeof(uint16))
+#define VM_ALLOC_SIZE (VM_SIZE * 2)
+#define TEX_ALLOC_SIZE (256 * 256 * (1 + 1 + 4) * 32)
+
 GPULocalMemory::GPULocalMemory()
 {
 	m_scale.x = std::min<int>(std::max<int>(theApp.GetConfig("scale_x", 0), 0), 2);
@@ -35,9 +39,9 @@ GPULocalMemory::GPULocalMemory()
 
 	//
 
-	int size = (1 << (12 + 11)) * sizeof(uint16);
+	int size = VM_SIZE;
 
-	m_vm = (uint16*)vmalloc(size * 2, false);
+	m_vm = (uint16*)vmalloc(VM_ALLOC_SIZE, false);
 
 	memset(m_vm, 0, size);
 
@@ -48,7 +52,7 @@ GPULocalMemory::GPULocalMemory()
 
 	//
 
-	size = 256 * 256 * (1 + 1 + 4) * 32;
+	size = TEX_ALLOC_SIZE;
 
 	m_texture.buff[0] = (uint8*)vmalloc(size, false);
 	m_texture.buff[1] = m_texture.buff[0] + 256 * 256 * 32;
@@ -78,9 +82,9 @@ GPULocalMemory::GPULocalMemory()
 
 GPULocalMemory::~GPULocalMemory()
 {
-	vmfree(m_vm);
+	vmfree(m_vm, VM_ALLOC_SIZE);
 
-	vmfree(m_texture.buff[0]);
+	vmfree(m_texture.buff[0], TEX_ALLOC_SIZE);
 }
 
 const uint16* GPULocalMemory::GetCLUT(int tp, int cx, int cy)

@@ -15,7 +15,6 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-g" />
-					<Add option="-fno-operator-names" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
@@ -32,6 +31,7 @@
 		</Build>
 		<Compiler>
 			<Add option="-march=pentium4" />
+			<Add option="-fno-operator-names" />
 			<Add option="-D_LINUX" />
 		</Compiler>
 		<Unit filename="GPU.cpp" />

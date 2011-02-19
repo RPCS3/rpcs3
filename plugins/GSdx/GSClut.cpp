@@ -23,10 +23,12 @@
 #include "GSClut.h"
 #include "GSLocalMemory.h"
 
+#define CLUT_ALLOC_SIZE (2 * 4096)
+
 GSClut::GSClut(GSLocalMemory* mem)
 	: m_mem(mem)
 {
-	uint8* p = (uint8*)vmalloc(2 * 4096, false);
+	uint8* p = (uint8*)vmalloc(CLUT_ALLOC_SIZE, false);
 
 	m_clut = (uint16*)&p[0]; // 1k + 1k for buffer overruns (sfex: PSM == PSM_PSMT8, CPSM == PSM_PSMCT32, CSA != 0)
 	m_buff32 = (uint32*)&p[2048]; // 1k
@@ -88,7 +90,7 @@ GSClut::GSClut(GSLocalMemory* mem)
 
 GSClut::~GSClut()
 {
-	vmfree(m_clut);
+	vmfree(m_clut, CLUT_ALLOC_SIZE);
 }
 
 void GSClut::Invalidate()

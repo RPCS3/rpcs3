@@ -307,4 +307,4 @@ __forceinline unsigned long long __rdtsc()
 #endif
 
 extern void* vmalloc(size_t size, bool code);
-extern void vmfree(void* ptr);
+extern void vmfree(void* ptr, size_t size);

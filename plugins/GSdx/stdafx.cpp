@@ -38,25 +38,48 @@ string format(const char* fmt, ...)
 	return s;
 }
 
+#ifdef _WINDOWS
+
 void* vmalloc(size_t size, bool code)
 {
-#ifdef _WINDOWS
     return VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, code ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE);
-#else
-    // TODO: linux
-    return malloc(size);
-#endif
 }
 
-void vmfree(void* ptr)
+void vmfree(void* ptr, size_t size)
 {
-#ifdef _WINDOWS
-    VirtualFree(ptr, 0, MEM_RELEASE);
-#else
-    // TODO: linux
-    free(ptr);
-#endif
+    VirtualFree(ptr, size, MEM_RELEASE);
 }
+
+#else
+
+#include <sys/mman.h>
+
+void* vmalloc(size_t size, bool code)
+{
+    size_t mask = getpagesize() - 1;
+
+    size = (size + mask) & ~mask;
+
+    int flags = PROT_READ | PROT_WRITE;
+
+    if(code)
+    {
+        flags |= PROT_EXEC;
+    }
+
+    return mmap(NULL, size, flags, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+}
+
+void vmfree(void* ptr, size_t size)
+{
+    size_t mask = getpagesize() - 1;
+
+    size = (size + mask) & ~mask;
+
+    munmap(ptr, size);
+}
+
+#endif
 
 #if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
 

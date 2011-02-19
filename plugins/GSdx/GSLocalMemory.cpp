@@ -442,7 +442,7 @@ GSLocalMemory::GSLocalMemory()
 
 GSLocalMemory::~GSLocalMemory()
 {
-	vmfree(m_vm8);
+	vmfree(m_vm8, m_vmsize * 2);
 
 	for_each(m_omap.begin(), m_omap.end(), aligned_free_second());
 	for_each(m_po4map.begin(), m_po4map.end(), aligned_free_second());
