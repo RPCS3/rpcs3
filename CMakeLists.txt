@@ -22,6 +22,13 @@ if(NOT PACKAGE_MODE)
     endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
 endif(NOT PACKAGE_MODE)
 
+# 64 bits specific configuration
+if(CMAKE_SIZEOF_VOID_P MATCHES "8")
+    # Do not search library in /usr/lib64
+    SET_PROPERTY(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS OFF)
+    # Probably useless but it will not harm
+    SET_PROPERTY(GLOBAL PROPERTY COMPILE_DEFINITIONS "-m32")
+endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
 
 # set module path
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
