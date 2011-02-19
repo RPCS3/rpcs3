@@ -24,10 +24,8 @@
 
 bool GSDeviceNull::Create(GSWnd* wnd)
 {
-	if(!__super::Create(wnd))
-	{
+	if(!GSDevice::Create(wnd))
 		return false;
-	}
 
 	Reset(1, 1);
 
@@ -36,7 +34,7 @@ bool GSDeviceNull::Create(GSWnd* wnd)
 
 bool GSDeviceNull::Reset(int w, int h)
 {
-	if(!__super::Reset(w, h))
+	if(!GSDevice::Reset(w, h))
 		return false;
 
 	return true;

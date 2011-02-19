@@ -19,13 +19,19 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSThread.h"
 
 GSThread::GSThread()
-	: m_ThreadId(0)
-	, m_hThread(NULL)
 {
+    #ifdef _WINDOWS
+
+	m_ThreadId = 0;
+	m_hThread = NULL;
+
+    #else
+
+    #endif
 }
 
 GSThread::~GSThread()
@@ -33,20 +39,46 @@ GSThread::~GSThread()
 	CloseThread();
 }
 
-DWORD WINAPI GSThread::StaticThreadProc(LPVOID lpParam)
+#ifdef _WINDOWS
+
+DWORD WINAPI GSThread::StaticThreadProc(void* lpParam)
 {
 	((GSThread*)lpParam)->ThreadProc();
 
 	return 0;
 }
 
+#else
+
+void* GSThread::StaticThreadProc(void* param)
+{
+	((GSThread*)param)->ThreadProc();
+
+	pthread_exit(NULL);
+
+	return NULL;
+}
+
+#endif
+
 void GSThread::CreateThread()
 {
-	m_hThread = ::CreateThread(NULL, 0, StaticThreadProc, (LPVOID)this, 0, &m_ThreadId);
+    #ifdef _WINDOWS
+
+	m_hThread = ::CreateThread(NULL, 0, StaticThreadProc, (void*)this, 0, &m_ThreadId);
+
+	#else
+
+    pthread_attr_init(&m_thread_attr);
+    pthread_create(&m_thread, &m_thread_attr, StaticThreadProc, (void*)this);
+
+	#endif
 }
 
 void GSThread::CloseThread()
 {
+    #ifdef _WINDOWS
+
 	if(m_hThread != NULL)
 	{
 		if(WaitForSingleObject(m_hThread, 5000) != WAIT_OBJECT_0)
@@ -59,5 +91,14 @@ void GSThread::CloseThread()
 		m_hThread = NULL;
 		m_ThreadId = 0;
 	}
+
+    #else
+
+    void* ret = NULL;
+
+    pthread_join(m_thread, &ret);
+    pthread_attr_destroy(&m_thread_attr);
+
+    #endif
 }
 

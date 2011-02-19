@@ -37,7 +37,7 @@ public:
 	uint64 frame;
 	const void* param;
 };
-	
+
 class IDrawScanline : public GSAlignedClass<32>
 {
 public:
@@ -120,15 +120,13 @@ class GSRasterizerMT : public GSRasterizer, private GSThread
 {
 protected:
 	volatile long& m_sync;
-	HANDLE m_exit;
-	HANDLE m_draw;
-	HANDLE m_ready;
+	GSAutoResetEvent m_draw;
 	const GSRasterizerData* m_data;
 
 	void ThreadProc();
 
 public:
-	GSRasterizerMT(IDrawScanline* ds, HANDLE ready, volatile long& sync);
+	GSRasterizerMT(IDrawScanline* ds, volatile long& sync);
 	virtual ~GSRasterizerMT();
 
 	// IRasterizer
@@ -139,7 +137,6 @@ public:
 class GSRasterizerList : protected vector<IRasterizer*>
 {
 protected:
-	std::vector<HANDLE> m_ready;
 	volatile long m_sync;
 	GSRasterizerStats m_stats;
 	int64 m_start;
@@ -157,11 +154,7 @@ public:
 
 		for(int i = 1; i < threads; i++)
 		{
-			HANDLE ready = CreateEvent(NULL, FALSE, TRUE, NULL);
-
-			push_back(new GSRasterizerMT(new DS(), ready, m_sync));
-
-			m_ready.push_back(ready);
+			push_back(new GSRasterizerMT(new DS(), m_sync));
 		}
 	}
 

@@ -24,7 +24,7 @@ string format(const char* fmt, ...)
 
 		memset(buffer, 0, length + 1);
 
-		result = _vsnprintf(buffer, length, fmt, args);
+		result = vsnprintf(buffer, length, fmt, args);
 
 		length *= 2;
 	}
@@ -38,24 +38,44 @@ string format(const char* fmt, ...)
 	return s;
 }
 
+void* vmalloc(size_t size, bool code)
+{
+#ifdef _WINDOWS
+    return VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, code ? PAGE_EXECUTE_READWRITE : PAGE_READWRITE);
+#else
+    // TODO: linux
+    return malloc(size);
+#endif
+}
+
+void vmfree(void* ptr)
+{
+#ifdef _WINDOWS
+    VirtualFree(ptr, 0, MEM_RELEASE);
+#else
+    // TODO: linux
+    free(ptr);
+#endif
+}
+
 #if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
 
 // declare linux equivalents (alignment must be power of 2 (1,2,4...2^15)
 
-void* pcsx2_aligned_malloc(size_t size, size_t alignment)
+void* _aligned_malloc(size_t size, size_t alignment)
 {
 	ASSERT(alignment <= 0x8000);
-	uptr r = (uptr)malloc(size + --alignment + 2);
-	uptr o = (r + 2 + alignment) & ~(uptr)alignment;
-	if (!r) return NULL;
-	((u16*)o)[-1] = (u16)(o-r);
+	size_t r = (size_t)malloc(size + --alignment + 2);
+	size_t o = (r + 2 + alignment) & ~(size_t)alignment;
+	if(!r) return NULL;
+	((uint16*)o)[-1] = (uint16)(o-r);
 	return (void*)o;
 }
 
-void pcsx2_aligned_free(void* p)
+void _aligned_free(void* p)
 {
-	if (!p) return;
-	free((void*)((uptr)p-((u16*)p)[-1]));
+	if(!p) return;
+	free((void*)((size_t)p-((uint16*)p)[-1]));
 }
 
 #endif

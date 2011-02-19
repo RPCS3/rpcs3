@@ -123,24 +123,26 @@ void GSDialog::SetTextAsInt(UINT id, int i)
 	SetText(id, buff);
 }
 
-void GSDialog::ComboBoxInit(UINT id, const GSSetting* settings, int count, uint32 selid, uint32 maxid)
+void GSDialog::ComboBoxInit(UINT id, const vector<GSSetting>& settings, uint32 selid, uint32 maxid)
 {
 	HWND hWnd = GetDlgItem(m_hWnd, id);
 
 	SendMessage(hWnd, CB_RESETCONTENT, 0, 0);
 
-	for(int i = 0; i < count; i++)
+	for(int i = 0; i < settings.size(); i++)
 	{
-		if(settings[i].id <= maxid)
-		{
-			string str(settings[i].name);
+		const GSSetting& s = settings[i];
 
-			if(!settings[i].note.empty())
+		if(s.id <= maxid)
+		{
+			string str(s.name);
+
+			if(!s.note.empty())
 			{
-				str = str + " (" + settings[i].note + ")";
+				str = str + " (" + s.note + ")";
 			}
 
-			ComboBoxAppend(id, str.c_str(), (LPARAM)settings[i].id, settings[i].id == selid);
+			ComboBoxAppend(id, str.c_str(), (LPARAM)s.id, s.id == selid);
 		}
 	}
 }

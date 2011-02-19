@@ -416,9 +416,6 @@
     <ClInclude Include="GSTextureCacheSW.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GSTextureFX11.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="GSTextureNull.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -75,7 +75,7 @@ public:
 	{
 		m_active = NULL;
 
-		hash_map<KEY, ActivePtr*>::iterator i = m_map_active.find(key);
+		typename hash_map<KEY, ActivePtr*>::iterator i = m_map_active.find(key);
 
 		if(i != m_map_active.end())
 		{
@@ -83,7 +83,7 @@ public:
 		}
 		else
 		{
-			hash_map<KEY, VALUE>::iterator i = m_map.find(key);
+			typename hash_map<KEY, VALUE>::iterator i = m_map.find(key);
 
 			ActivePtr* p = new ActivePtr();
 
@@ -120,7 +120,9 @@ public:
 	{
 		int64 ttpf = 0;
 
-		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
+		typename hash_map<KEY, ActivePtr*>::iterator i;
+
+		for(i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
 			ActivePtr* p = i->second;
 
@@ -132,7 +134,7 @@ public:
 
 		printf("GS stats\n");
 
-		for(hash_map<KEY, ActivePtr*>::iterator i = m_map_active.begin(); i != m_map_active.end(); i++)
+		for(i = m_map_active.begin(); i != m_map_active.end(); i++)
 		{
 			KEY key = i->first;
 			ActivePtr* p = i->second;
@@ -143,7 +145,7 @@ public:
 				int64 tpf = p->frames > 0 ? p->ticks / p->frames : 0;
 				int64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
 
-				printf("[%016I64x]%c %6.2f%% | %5.2f%% | f %4I64d | p %10I64d | tpp %4I64d | tpf %9I64d | ppf %7I64d\n",
+				printf("[%016llx]%c %6.2f%% | %5.2f%% | f %4lld | p %10lld | tpp %4lld | tpf %9lld | ppf %7lld\n",
 					(uint64)key, m_map.find(key) == m_map.end() ? '*' : ' ',
 					(float)(tpf * 10000 / 50000000) / 100,
 					(float)(tpf * 10000 / ttpf) / 100,
@@ -166,7 +168,11 @@ public:
 	}
 };
 
+#ifdef _WINDOWS
+
 #include "vtune/JITProfiling.h"
+
+#endif
 
 template<class CG, class KEY, class VALUE>
 class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
@@ -189,7 +195,7 @@ public:
 	{
 		VALUE ret = NULL;
 
-		hash_map<uint64, VALUE>::iterator i = m_cgmap.find(key);
+		typename hash_map<uint64, VALUE>::iterator i = m_cgmap.find(key);
 
 		if(i != m_cgmap.end())
 		{
@@ -200,18 +206,20 @@ public:
 			CG* cg = new CG(m_param, key, m_cb.GetBuffer(MAX_SIZE), MAX_SIZE);
 
 			ASSERT(cg->getSize() < MAX_SIZE);
-			
+
 			m_cb.ReleaseBuffer(cg->getSize());
 
 			ret = (VALUE)cg->getCode();
 
 			m_cgmap[key] = ret;
 
+            #ifdef _WINDOWS
+
 			// vtune method registration
-			
+
 			if(iJIT_IsProfilingActive())
 			{
-				string name = format("%s<%016I64x>()", m_name.c_str(), (uint64)key);
+				string name = format("%s<%016llx>()", m_name.c_str(), (uint64)key);
 
 				iJIT_Method_Load ml;
 
@@ -224,6 +232,8 @@ public:
 
 				iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &ml);
 			}
+
+            #endif
 
 			delete cg;
 		}

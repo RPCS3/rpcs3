@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,22 +6,22 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
 
 // TODO: x64
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GPUDrawScanlineCodeGenerator.h"
 
 static const int _args = 8;
@@ -98,7 +98,7 @@ L("loop");
 	WriteFrame();
 
 L("step");
-	
+
 	// if(steps <= 0) break;
 
 	test(ecx, ecx);
@@ -162,10 +162,10 @@ void GPUDrawScanlineCodeGenerator::Init()
 		pshufd(xmm3, xmm4, _MM_SHUFFLE(1, 1, 1, 1));
 
 		paddw(xmm2, ptr[&m_local.d.s]);
-		
+
 		if(!m_sel.sprite)
 		{
-			paddw(xmm3, ptr[&m_local.d.t]); 
+			paddw(xmm3, ptr[&m_local.d.t]);
 		}
 		else
 		{
@@ -298,7 +298,7 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 {
 	if(!m_sel.tme)
 	{
-		return;		
+		return;
 	}
 
 	// xmm2 = s
@@ -445,7 +445,7 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		// xmm7 = test
 		// xmm0, xmm6 = free
 		// xmm1 = used
-		
+
 		// spill (TODO)
 
 		movdqa(ptr[&m_local.temp.fd], xmm1);
@@ -887,13 +887,13 @@ void GPUDrawScanlineCodeGenerator::WriteFrame()
 	// GSVector4i fs = r | g | b | (m_sel.md ? GSVector4i(0x80008000) : m_sel.tme ? a : 0);
 
 	pcmpeqd(xmm0, xmm0);
-	
-	if(m_sel.md || m_sel.tme) 
+
+	if(m_sel.md || m_sel.tme)
 	{
-		movdqa(xmm2, xmm0); 
+		movdqa(xmm2, xmm0);
 		psllw(xmm2, 15);
 	}
-	
+
 	psrlw(xmm0, 11);
 	psllw(xmm0, 3);
 
@@ -960,7 +960,7 @@ void GPUDrawScanlineCodeGenerator::ReadTexel(const Xmm& dst, const Xmm& addr)
 	}
 }
 
-template<int shift> 
+template<int shift>
 void GPUDrawScanlineCodeGenerator::modulate16(const Xmm& a, const Operand& f)
 {
 	if(shift == 0 && m_cpu.has(util::Cpu::tSSSE3))
@@ -974,7 +974,7 @@ void GPUDrawScanlineCodeGenerator::modulate16(const Xmm& a, const Operand& f)
 	}
 }
 
-template<int shift> 
+template<int shift>
 void GPUDrawScanlineCodeGenerator::lerp16(const Xmm& a, const Xmm& b, const Operand& f)
 {
 	psubw(a, b);
@@ -1009,7 +1009,7 @@ void GPUDrawScanlineCodeGenerator::blend(const Xmm& a, const Xmm& b, const Xmm& 
 	movdqa(a, b);
 }
 
-const GSVector4i GPUDrawScanlineCodeGenerator::m_test[8] = 
+const GSVector4i GPUDrawScanlineCodeGenerator::m_test[8] =
 {
 	GSVector4i(0xffff0000, 0xffffffff, 0xffffffff, 0xffffffff),
 	GSVector4i(0x00000000, 0xffffffff, 0xffffffff, 0xffffffff),
@@ -1021,10 +1021,10 @@ const GSVector4i GPUDrawScanlineCodeGenerator::m_test[8] =
 	GSVector4i::zero(),
 };
 
-__declspec(align(16)) const uint16 GPUDrawScanlineCodeGenerator::m_dither[4][16] = 
+__declspec(align(16)) const uint16 GPUDrawScanlineCodeGenerator::m_dither[4][16] =
 {
 	{7, 0, 6, 1, 7, 0, 6, 1, 7, 0, 6, 1, 7, 0, 6, 1},
-	{2, 5, 3, 4, 2, 5, 3, 4, 2, 5, 3, 4, 2, 5, 3, 4}, 
-	{1, 6, 0, 7, 1, 6, 0, 7, 1, 6, 0, 7, 1, 6, 0, 7}, 
-	{4, 3, 5, 2, 4, 3, 5, 2, 4, 3, 5, 2, 4, 3, 5, 2}, 
+	{2, 5, 3, 4, 2, 5, 3, 4, 2, 5, 3, 4, 2, 5, 3, 4},
+	{1, 6, 0, 7, 1, 6, 0, 7, 1, 6, 0, 7, 1, 6, 0, 7},
+	{4, 3, 5, 2, 4, 3, 5, 2, 4, 3, 5, 2, 4, 3, 5, 2},
 };

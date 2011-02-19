@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,20 +6,20 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
- 
-#include "StdAfx.h"
+
+#include "stdafx.h"
 #include "GPULocalMemory.h"
 #include "GSdx.h"
 
@@ -30,14 +30,14 @@ const GSVector4i GPULocalMemory::m_rxxx(0x0000001f);
 
 GPULocalMemory::GPULocalMemory()
 {
-	m_scale.x = min(max(theApp.GetConfig("scale_x", 0), 0), 2);
-	m_scale.y = min(max(theApp.GetConfig("scale_y", 0), 0), 2);
+	m_scale.x = std::min<int>(std::max<int>(theApp.GetConfig("scale_x", 0), 0), 2);
+	m_scale.y = std::min<int>(std::max<int>(theApp.GetConfig("scale_y", 0), 0), 2);
 
 	//
 
 	int size = (1 << (12 + 11)) * sizeof(uint16);
 
-	m_vm = (uint16*)VirtualAlloc(NULL, size * 2, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	m_vm = (uint16*)vmalloc(size * 2, false);
 
 	memset(m_vm, 0, size);
 
@@ -50,7 +50,7 @@ GPULocalMemory::GPULocalMemory()
 
 	size = 256 * 256 * (1 + 1 + 4) * 32;
 
-	m_texture.buff[0] = (uint8*)VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	m_texture.buff[0] = (uint8*)vmalloc(size, false);
 	m_texture.buff[1] = m_texture.buff[0] + 256 * 256 * 32;
 	m_texture.buff[2] = m_texture.buff[1] + 256 * 256 * 32;
 
@@ -78,9 +78,9 @@ GPULocalMemory::GPULocalMemory()
 
 GPULocalMemory::~GPULocalMemory()
 {
-	VirtualFree(m_vm, 0, MEM_RELEASE);
+	vmfree(m_vm);
 
-	VirtualFree(m_texture.buff[0], 0, MEM_RELEASE);
+	vmfree(m_texture.buff[0]);
 }
 
 const uint16* GPULocalMemory::GetCLUT(int tp, int cx, int cy)
@@ -128,11 +128,11 @@ const uint16* GPULocalMemory::GetCLUT(int tp, int cx, int cy)
 				}
 			}
 		}
-		else 
+		else
 		{
 			ASSERT(0);
 		}
-		
+
 		m_clut.tp = tp;
 		m_clut.cx = cx;
 		m_clut.cy = cy;
@@ -161,16 +161,16 @@ const void* GPULocalMemory::GetTexture(int tp, int tx, int ty)
 
 		switch(tp)
 		{
-		case 0: 
-			ReadPage4(tx, ty, (uint8*)buff); 
+		case 0:
+			ReadPage4(tx, ty, (uint8*)buff);
 			bpp = 4;
 			break;
-		case 1: 
+		case 1:
 			ReadPage8(tx, ty, (uint8*)buff);
 			bpp = 8;
 			break;
-		case 2: 
-		case 3: 
+		case 2:
+		case 3:
 			ReadPage16(tx, ty, (uint16*)buff);
 			bpp = 16;
 		default:
@@ -571,8 +571,10 @@ void GPULocalMemory::Expand24(const uint16* RESTRICT src, uint32* RESTRICT dst, 
 
 void GPULocalMemory::SaveBMP(const string& path, const GSVector4i& r2, int tp, int cx, int cy)
 {
+    #ifdef _WINDOWS
+
 	GSVector4i r;
-	
+
 	r.left = r2.left << m_scale.x;
 	r.top = r2.top << m_scale.y;
 	r.right = r2.right << m_scale.x;
@@ -593,7 +595,7 @@ void GPULocalMemory::SaveBMP(const string& path, const GSVector4i& r2, int tp, i
         bih.biCompression = BI_RGB;
         bih.biSizeImage = bih.biWidth * bih.biHeight * 4;
 
-		BITMAPFILEHEADER bfh;
+        BITMAPFILEHEADER bfh;
 		memset(&bfh, 0, sizeof(bfh));
 		bfh.bfType = 'MB';
 		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
@@ -623,7 +625,7 @@ void GPULocalMemory::SaveBMP(const string& path, const GSVector4i& r2, int tp, i
 				}
 
 				break;
-				
+
 			case 1: // 8 bpp
 
 				for(int i = 0, k = r.width(); i < k; i++)
@@ -664,4 +666,10 @@ void GPULocalMemory::SaveBMP(const string& path, const GSVector4i& r2, int tp, i
 
 		fclose(fp);
 	}
+
+	#else
+
+	// TODO: linux
+
+	#endif
 }

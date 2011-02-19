@@ -19,11 +19,9 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSdx.h"
 #include "GSWnd.h"
-
-#ifdef _WINDOWS
 
 GSWnd::GSWnd()
 	: m_hWnd(NULL)
@@ -35,6 +33,8 @@ GSWnd::GSWnd()
 GSWnd::~GSWnd()
 {
 }
+
+#ifdef _WINDOWS
 
 LRESULT CALLBACK GSWnd::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -79,11 +79,15 @@ LRESULT GSWnd::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 
-	return DefWindowProc(m_hWnd, message, wParam, lParam);
+	return DefWindowProc((HWND)m_hWnd, message, wParam, lParam);
 }
+
+#endif
 
 bool GSWnd::Create(const string& title, int w, int h)
 {
+#ifdef _WINDOWS
+
 	if(m_hWnd) return true;
 
 	WNDCLASS wc;
@@ -135,15 +139,18 @@ bool GSWnd::Create(const string& title, int w, int h)
 
 	m_hWnd = CreateWindow(wc.lpszClassName, title.c_str(), style, r.left, r.top, r.width(), r.height(), NULL, NULL, wc.hInstance, (LPVOID)this);
 
-	if(!m_hWnd)
-	{
-		return false;
-	}
+    return m_hWnd != NULL;
 
-	return true;
+#else
+
+    // TODO: linux
+
+    return false;
+
+#endif
 }
 
-bool GSWnd::Attach(HWND hWnd, bool isManaged)
+bool GSWnd::Attach(void* hWnd, bool isManaged)
 {
 	// TODO: subclass
 
@@ -159,7 +166,16 @@ void GSWnd::Detach()
 	{
 		// close the window, since it's under GSdx care.  It's not taking messages anyway, and
 		// that means its big, ugly, and in the way.
-		DestroyWindow(m_hWnd);
+
+#ifdef _WINDOWS
+
+		DestroyWindow((HWND)m_hWnd);
+
+#else
+
+        // TODO: linux
+
+#endif
 	}
 
 	m_hWnd = NULL;
@@ -170,7 +186,15 @@ GSVector4i GSWnd::GetClientRect()
 {
 	GSVector4i r;
 
-	::GetClientRect(m_hWnd, r);
+#ifdef _WINDOWS
+
+	::GetClientRect((HWND)m_hWnd, r);
+
+#else
+
+    r = GSVector4i::zero();
+
+#endif
 
 	return r;
 }
@@ -182,7 +206,15 @@ bool GSWnd::SetWindowText(const char* title)
 {
 	if(!m_IsManaged) return false;
 
-	::SetWindowText(m_hWnd, title);
+#ifdef _WINDOWS
+
+	::SetWindowText((HWND)m_hWnd, title);
+
+#else
+
+    // TODO: linux
+
+#endif
 
 	return m_HasFrame;
 }
@@ -191,33 +223,57 @@ void GSWnd::Show()
 {
 	if(!m_IsManaged) return;
 
+#ifdef _WINDOWS
+
 	//SetWindowPos(&wndTop, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
 
-	SetForegroundWindow(m_hWnd);
+	SetForegroundWindow((HWND)m_hWnd);
 
-	ShowWindow(m_hWnd, SW_SHOWNORMAL);
+	ShowWindow((HWND)m_hWnd, SW_SHOWNORMAL);
 
-	UpdateWindow(m_hWnd);
+	UpdateWindow((HWND)m_hWnd);
+
+#else
+
+    // TODO: linux
+
+#endif
 }
 
 void GSWnd::Hide()
 {
 	if(!m_IsManaged) return;
 
-	ShowWindow(m_hWnd, SW_HIDE);
+#ifdef _WINDOWS
+
+	ShowWindow((HWND)m_hWnd, SW_HIDE);
+
+#else
+
+    // TODO: linux
+
+#endif
 }
 
 void GSWnd::HideFrame()
 {
 	if(!m_IsManaged) return;
 
-	SetWindowLong(m_hWnd, GWL_STYLE, GetWindowLong(m_hWnd, GWL_STYLE) & ~(WS_CAPTION|WS_THICKFRAME));
+#ifdef _WINDOWS
 
-	SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+	HWND hWnd = (HWND)m_hWnd;
 
-	SetMenu(m_hWnd, NULL);
+	SetWindowLong(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE) & ~(WS_CAPTION|WS_THICKFRAME));
+
+	SetWindowPos(hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+
+	SetMenu(hWnd, NULL);
+
+#else
+
+    // TODO: linux
+
+#endif
 
 	m_HasFrame = false;
 }
-
-#endif

@@ -1803,7 +1803,6 @@
     <ClInclude Include="GSTextureCache11.h" />
     <ClInclude Include="GSTextureCache9.h" />
     <ClInclude Include="GSTextureCacheSW.h" />
-    <ClInclude Include="GSTextureFX11.h" />
     <ClInclude Include="GSTextureNull.h" />
     <ClInclude Include="GSThread.h" />
     <ClInclude Include="GSUtil.h" />

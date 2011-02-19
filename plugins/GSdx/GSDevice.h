@@ -85,10 +85,11 @@ public:
 	virtual void Present(const GSVector4i& r, int shader);
 	virtual void Flip() {}
 
+	virtual void SetVSync(bool enable) {m_vsync = enable;}
+
 	virtual void BeginScene() {}
 	virtual void DrawPrimitive() {};
 	virtual void EndScene();
-	virtual void SetVsync(bool enable) { m_vsync = enable; }
 
 	virtual void ClearRenderTarget(GSTexture* t, const GSVector4& c) {}
 	virtual void ClearRenderTarget(GSTexture* t, uint32 c) {}

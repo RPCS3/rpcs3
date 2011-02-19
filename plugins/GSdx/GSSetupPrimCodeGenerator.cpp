@@ -21,7 +21,7 @@
 
 // TODO: x64
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSSetupPrimCodeGenerator.h"
 
 using namespace Xbyak;

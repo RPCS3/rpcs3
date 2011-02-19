@@ -43,60 +43,64 @@
 // stdc
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <math.h>
+#include <float.h>
 #include <time.h>
+#include <limits.h>
 
 #include <cstring>
 #include <string>
 #include <vector>
 #include <list>
 #include <map>
+#include <set>
 #include <algorithm>
-
-// Let's take advantage of the work that's already been done on making things cross-platform by bringing this in.
-
-//#include "Pcsx2Defs.h"
-
-#ifdef _MSC_VER
-
-#define __aligned(t, n) __declspec(align(n)) t
-
-#else
-
-// --------------------------------------------------------------------------------------
-//  GCC / Intel Compilers Section
-// --------------------------------------------------------------------------------------
-
-#define __aligned(t, n) t __attribute__((aligned(n)))
-#define __assume(cond)	((void)0)	// GCC has no equivalent for __assume
-
-// Inlining note: GCC needs ((unused)) attributes defined on inlined functions to suppress
-// warnings when a static inlined function isn't used in the scope of a single file (which
-// happens *by design* like all the friggen time >_<)
-
-//#	define __fastcall		__attribute__((fastcall))
-#	ifdef NDEBUG
-#		define __forceinline	__attribute__((always_inline,unused))
-#	else
-#		define __forceinline	__attribute__((unused))
-#	endif
-#endif
 
 using namespace std;
 
-#ifdef _MSC_VER
+#ifdef _WINDOWS
 
 #include <hash_map>
 #include <hash_set>
 
 using namespace stdext;
 
+#define vsnprintf _vsnprintf
+#define snprintf _snprintf
+
+#define DIRECTORY_SEPARATOR '\\'
+
 #else
 
-#include <ext/hash_map>
-#include <ext/hash_set>
+#define _BACKWARD_BACKWARD_WARNING_H
 
-using namespace __gnu_cxx;
+#define hash_map map
+#define hash_set set
+
+//#include <ext/hash_map>
+//#include <ext/hash_set>
+
+//using namespace __gnu_cxx;
+
+#define DIRECTORY_SEPARATOR '/'
+
+#endif
+
+#ifdef _MSC_VER
+
+    #define __aligned(t, n) __declspec(align(n)) t
+
+    #define EXPORT_C_(type) extern "C" __declspec(dllexport) type __stdcall
+    #define EXPORT_C EXPORT_C_(void)
+
+#else
+
+    #define __aligned(t, n) t __attribute__((aligned(n)))
+    #define __fastcall __attribute__((fastcall))
+
+    #define EXPORT_C_(type) extern "C" type
+    #define EXPORT_C EXPORT_C_(void)
 
 #endif
 
@@ -124,30 +128,41 @@ typedef signed long long int64;
 
 #define countof(a) (sizeof(a) / sizeof(a[0]))
 
-#define EXPORT_C extern "C" __declspec(dllexport) void __stdcall
-#define EXPORT_C_(type) extern "C" __declspec(dllexport) type __stdcall
-
 #define ALIGN_STACK(n) __aligned(int, n) __dummy;
 
 #ifndef RESTRICT
-	#ifdef __INTEL_COMPILER
-		#define RESTRICT restrict
-	#elif _MSC_VER >= 1400 // TODO: gcc
-		#define RESTRICT __restrict
-	#else
-		#define RESTRICT
-	#endif
+
+    #ifdef __INTEL_COMPILER
+
+        #define RESTRICT restrict
+
+    #elif _MSC_VER >= 1400 // TODO: gcc
+
+        #define RESTRICT __restrict
+
+    #else
+
+        #define RESTRICT
+
+    #endif
+
 #endif
 
 #if defined(_DEBUG) && defined(_MSC_VER)
+
 	#include <assert.h>
 	#define ASSERT assert
+
 #else
+
 	#define ASSERT(exp) ((void)0)
+
 #endif
 
 #ifdef __x86_64__
+
 	#define _M_AMD64
+
 #endif
 
 #ifdef _WINDOWS
@@ -163,7 +178,7 @@ typedef signed long long int64;
 
 #define USE_UPSCALE_HACKS // Hacks intended to fix upscaling / rendering glitches in HW renderers
 
-// dxsdk beta missing these:
+// dxsdk is missing these:
 #define D3D11_SHADER_MACRO D3D10_SHADER_MACRO
 #define ID3D11Blob ID3D10Blob
 
@@ -237,10 +252,34 @@ typedef signed long long int64;
 
 #undef min
 #undef max
+#undef abs
 
-#if !defined(_MSC_VER) && !defined(HAVE_ALIGNED_MALLOC)
+#if !defined(_MSC_VER)
+
+#if !defined(HAVE_ALIGNED_MALLOC)
 
 extern void* _aligned_malloc(size_t size, size_t alignment);
 extern void _aligned_free(void* p);
 
 #endif
+
+// http://svn.reactos.org/svn/reactos/trunk/reactos/include/crt/mingw32/intrin_x86.h?view=markup
+// - the other intrin_x86.h of pcsx2 is not up to date, its _interlockedbittestandreset simply does not work.
+
+__forceinline unsigned char _BitScanForward(unsigned long* const Index, const unsigned long Mask)
+{
+    __asm__("bsfl %[Mask], %[Index]" : [Index] "=r" (*Index) : [Mask] "mr" (Mask));
+    return Mask ? 1 : 0;
+}
+
+__forceinline unsigned char _interlockedbittestandreset(volatile long* a, const long b)
+{
+    unsigned char retval;
+    __asm__("lock; btrl %[b], %[a]; setb %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
+    return retval;
+}
+
+#endif
+
+extern void* vmalloc(size_t size, bool code);
+extern void vmfree(void* ptr);

@@ -88,41 +88,52 @@ void GSRendererDX9::VertexKick(bool skip)
 
 			int Udiff = 0;
 			int Vdiff = 0;
-			int multiplier = upscale_Multiplier();
 
-			if (multiplier > 1) {
+			int multiplier = GetUpscaleMultiplier();
 
+			if(multiplier > 1)
+			{
 				Udiff = m_v.UV.U & 4095;
 				Vdiff = m_v.UV.V & 4095;
-				if (Udiff != 0){
+
+				if(Udiff != 0)
+				{
 					if		(Udiff >= 4080)	{/*printf("U+ %d %d\n", Udiff, m_v.UV.U);*/  Uadjust = -1; }
 					else if (Udiff <= 16)	{/*printf("U- %d %d\n", Udiff, m_v.UV.U);*/  Uadjust = 1; }
 				}
-				if (Vdiff != 0){
+				
+				if(Vdiff != 0)
+				{
 					if		(Vdiff >= 4080)	{/*printf("V+ %d %d\n", Vdiff, m_v.UV.V);*/  Vadjust = -1; }
 					else if	(Vdiff <= 16)	{/*printf("V- %d %d\n", Vdiff, m_v.UV.V);*/  Vadjust = 1; }
 				}
 
 				Udiff = m_v.UV.U & 255;
 				Vdiff = m_v.UV.V & 255;
-				if (Udiff != 0){
+
+				if(Udiff != 0)
+				{
 					if		(Udiff >= 248)	{ Uadjust = -1;	}
 					else if (Udiff <= 8)	{ Uadjust = 1; }
 				}
 
-				if (Vdiff != 0){
+				if(Vdiff != 0)
+				{
 					if		(Vdiff >= 248)	{ Vadjust = -1;	}
 					else if	(Vdiff <= 8)	{ Vadjust = 1; }
 				}
 
 				Udiff = m_v.UV.U & 15;
 				Vdiff = m_v.UV.V & 15;
-				if (Udiff != 0){
+
+				if(Udiff != 0)
+				{
 					if		(Udiff >= 15)	{ Uadjust = -1; }
 					else if (Udiff <= 1)	{ Uadjust = 1; }
 				}
 
-				if (Vdiff != 0){
+				if(Vdiff != 0)
+				{
 					if		(Vdiff >= 15)	{ Vadjust = -1; }
 					else if	(Vdiff <= 1)	{ Vadjust = 1; }
 				}
@@ -132,7 +143,6 @@ void GSRendererDX9::VertexKick(bool skip)
 			dst.t.y -= (float) Vadjust;
 
 			#endif
-
 		}
 		else
 		{

@@ -19,7 +19,7 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSVector.h"
 
 const GSVector4 GSVector4::m_ps0123(0.0f, 1.0f, 2.0f, 3.0f);

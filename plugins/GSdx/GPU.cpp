@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -23,13 +23,20 @@
 #include "GSdx.h"
 #include "GSUtil.h"
 #include "GPURendererSW.h"
+#include "GSDeviceNull.h"
+
+#ifdef _WINDOWS
+
+#include "GPUSettingsDlg.h"
 #include "GSDevice9.h"
 #include "GSDevice11.h"
-#include "GPUSettingsDlg.h"
+
+static HRESULT s_hr = E_FAIL;
+
+#endif
 
 #define PSE_LT_GPU 2
 
-static HRESULT s_hr = E_FAIL;
 static GPURenderer* s_gpu = NULL;
 
 EXPORT_C_(uint32) PSEgetLibType()
@@ -62,9 +69,11 @@ EXPORT_C_(int32) GPUshutdown()
 
 EXPORT_C_(int32) GPUclose()
 {
-	delete s_gpu; 
-	
+	delete s_gpu;
+
 	s_gpu = NULL;
+
+#ifdef _WINDOWS
 
 	if(SUCCEEDED(s_hr))
 	{
@@ -73,12 +82,21 @@ EXPORT_C_(int32) GPUclose()
 		s_hr = E_FAIL;
 	}
 
+#endif
+
 	return 0;
 }
 
-EXPORT_C_(int32) GPUopen(HWND hWnd)
+EXPORT_C_(int32) GPUopen(void* hWnd)
 {
 	GPUclose();
+
+	if(!GSUtil::CheckSSE())
+	{
+		return -1;
+	}
+
+#ifdef _WINDOWS
 
 	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
@@ -87,20 +105,20 @@ EXPORT_C_(int32) GPUopen(HWND hWnd)
 		return -1;
 	}
 
-	if(!GSUtil::CheckSSE())
-	{
-		return -1;
-	}
+#endif
 
 	int renderer = theApp.GetConfig("Renderer", 1);
 	int threads = theApp.GetConfig("swthreads", 1);
 
 	switch(renderer)
 	{
-	default: 
+	default:
+	#ifdef _WINDOWS
 	case 0: s_gpu = new GPURendererSW(new GSDevice9(), threads); break;
 	case 1: s_gpu = new GPURendererSW(new GSDevice11(), threads); break;
-	// TODO: case 3: s_gpu = new GPURendererNull(new GSDeviceNull()); break;
+	#endif
+	case 2: s_gpu = new GPURendererSW(new GSDeviceNull(), threads); break;
+	//case 3: s_gpu = new GPURendererNull(new GSDeviceNull()); break;
 	}
 
 	if(!s_gpu->Create(hWnd))
@@ -115,6 +133,8 @@ EXPORT_C_(int32) GPUopen(HWND hWnd)
 
 EXPORT_C_(int32) GPUconfigure()
 {
+#ifdef _WINDOWS
+
 	GPUSettingsDlg dlg;
 
 	if(IDOK == dlg.DoModal())
@@ -122,6 +142,12 @@ EXPORT_C_(int32) GPUconfigure()
 		GPUshutdown();
 		GPUinit();
 	}
+
+#else
+
+    // TODO: linux
+
+#endif
 
 	return 0;
 }
@@ -178,13 +204,13 @@ EXPORT_C_(uint32) GPUdmaChain(const uint8* mem, uint32 addr)
 
 	do
 	{
-		if(addr == last[1] || addr == last[2]) 
+		if(addr == last[1] || addr == last[2])
 		{
 			break;
 		}
 
 		(addr < last[0] ? last[1] : last[2]) = addr;
-		
+
 		last[0] = addr;
 
 		uint8 size = mem[addr + 3];
@@ -255,14 +281,14 @@ EXPORT_C_(int32) GPUfreeze(uint32 type, GPUFreezeData* data)
 	else if(type == 2)
 	{
 		int slot = *(int*)data + 1;
-		
+
 		if(slot < 1 || slot > 9)
 		{
 			return 0;
 		}
 
 		// TODO
-		
+
 		return 1;
 	}
 

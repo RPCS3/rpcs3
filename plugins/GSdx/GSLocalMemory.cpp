@@ -24,7 +24,7 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSLocalMemory.h"
 
 #define ASSERT_BLOCK(r, w, h) \
@@ -83,7 +83,7 @@ GSLocalMemory::psm_t GSLocalMemory::m_psm[64];
 GSLocalMemory::GSLocalMemory()
 	: m_clut(this)
 {
-	m_vm8 = (uint8*)VirtualAlloc(NULL, m_vmsize * 2, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	m_vm8 = (uint8*)vmalloc(m_vmsize * 2, false);
 
 	memset(m_vm8, 0, m_vmsize);
 
@@ -442,7 +442,7 @@ GSLocalMemory::GSLocalMemory()
 
 GSLocalMemory::~GSLocalMemory()
 {
-	VirtualFree(m_vm8, 0, MEM_RELEASE);
+	vmfree(m_vm8);
 
 	for_each(m_omap.begin(), m_omap.end(), aligned_free_second());
 	for_each(m_po4map.begin(), m_po4map.end(), aligned_free_second());
@@ -705,7 +705,7 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, const uint8*
 
 		if(h2 > 0)
 		{
-			if(((DWORD_PTR)&src[l * trbpp >> 3] & 15) == 0 && (srcpitch & 15) == 0)
+			if(((size_t)&src[l * trbpp >> 3] & 15) == 0 && (srcpitch & 15) == 0)
 			{
 				WriteImageColumn<psm, bsx, bsy, true>(l, r, y, h2, src, srcpitch, BITBLTBUF);
 			}
@@ -846,7 +846,7 @@ void GSLocalMemory::WriteImage(int& tx, int& ty, const uint8* src, int len, GIFR
 
 				if(h2 > 0)
 				{
-					if(((DWORD_PTR)&s[la * trbpp >> 3] & 15) == 0 && (srcpitch & 15) == 0)
+					if(((size_t)&s[la * trbpp >> 3] & 15) == 0 && (srcpitch & 15) == 0)
 					{
 						WriteImageBlock<psm, bsx, bsy, true>(la, ra, ty, h2, s, srcpitch, BITBLTBUF);
 					}
@@ -1708,7 +1708,7 @@ void GSLocalMemory::ReadTexture(const GSOffset* RESTRICT o, const GSVector4i& r,
 
 		GSVector4i cr = r.ralign<GSVector4i::Inside>(psm.bs);
 
-		bool aligned = ((DWORD_PTR)(dst + (cr.left - r.left) * sizeof(uint32)) & 0xf) == 0;
+		bool aligned = ((size_t)(dst + (cr.left - r.left) * sizeof(uint32)) & 0xf) == 0;
 
 		if(cr.rempty() || !aligned)
 		{
@@ -1851,8 +1851,10 @@ void GSLocalMemory::ReadTextureBlock4HHP(uint32 bp, uint8* dst, int dstpitch, co
 
 //
 
-bool GSLocalMemory::SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 psm, int w, int h)
+void GSLocalMemory::SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 psm, int w, int h)
 {
+    #ifdef _WINDOWS
+
 	int pitch = w * 4;
 	int size = pitch * h;
 	void* bits = _aligned_malloc(size, 32);
@@ -1903,7 +1905,11 @@ bool GSLocalMemory::SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 psm, 
 		fclose(fp);
 	}
 
-	::_aligned_free(bits);
+	_aligned_free(bits);
 
-	return true;
+    #else
+
+	// TODO: linux
+
+    #endif
 }

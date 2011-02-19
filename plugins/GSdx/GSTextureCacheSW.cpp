@@ -19,7 +19,7 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSTextureCacheSW.h"
 
 GSTextureCacheSW::GSTextureCacheSW(GSState* state)

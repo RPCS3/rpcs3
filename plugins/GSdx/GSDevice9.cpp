@@ -307,21 +307,6 @@ bool GSDevice9::Create(GSWnd* wnd)
 	return true;
 }
 
-void GSDevice9::SetVsync(bool enable)
-{
-	if(m_vsync == enable) return;
-
-	__super::SetVsync(enable);
-
-	// Clever trick:  Delete the backbuffer, so that the next Present will fail and
-	// cause a DXDevice9::Reset call, which re-creates the backbuffer with current
-	// vsync settings. :)
-
-	delete m_backbuffer;
-
-	m_backbuffer = NULL;
-}
-
 bool GSDevice9::Reset(int w, int h)
 {
 	if(!__super::Reset(w, h))
@@ -376,7 +361,7 @@ bool GSDevice9::Reset(int w, int h)
 	memset(&m_pp, 0, sizeof(m_pp));
 
 	m_pp.Windowed = TRUE;
-	m_pp.hDeviceWindow = m_wnd->GetHandle();
+	m_pp.hDeviceWindow = (HWND)m_wnd->GetHandle();
 	m_pp.SwapEffect = D3DSWAPEFFECT_FLIP;
 	m_pp.BackBufferFormat = D3DFMT_X8R8G8B8;
 	m_pp.BackBufferWidth = 1;
@@ -408,7 +393,7 @@ bool GSDevice9::Reset(int w, int h)
 			flags |= D3DCREATE_PUREDEVICE;
 		}
 
-		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, m_wnd->GetHandle(), flags, &m_pp, &m_dev);
+		hr = m_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, (HWND)m_wnd->GetHandle(), flags, &m_pp, &m_dev);
 
 		if(FAILED(hr)) return false;
 	}
@@ -493,6 +478,21 @@ void GSDevice9::Flip()
 	{
 		m_lost = true;
 	}
+}
+
+void GSDevice9::SetVSync(bool enable)
+{
+	if(m_vsync == enable) return;
+
+	__super::SetVSync(enable);
+
+	// Clever trick:  Delete the backbuffer, so that the next Present will fail and
+	// cause a DXDevice9::Reset call, which re-creates the backbuffer with current
+	// vsync settings. :)
+
+	delete m_backbuffer;
+
+	m_backbuffer = NULL;
 }
 
 void GSDevice9::BeginScene()

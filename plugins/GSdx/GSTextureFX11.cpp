@@ -348,9 +348,9 @@ void GSDevice11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uin
 		{
 			int i = ((bsel.a * 3 + bsel.b) * 3 + bsel.c) * 3 + bsel.d;
 
-			bd.RenderTarget[0].BlendOp = (D3D11_BLEND_OP)blendMapD3D9[i].op;
-			bd.RenderTarget[0].SrcBlend = (D3D11_BLEND)blendMapD3D9[i].src;
-			bd.RenderTarget[0].DestBlend = (D3D11_BLEND)blendMapD3D9[i].dst;
+			bd.RenderTarget[0].BlendOp = (D3D11_BLEND_OP)m_blendMapD3D9[i].op;
+			bd.RenderTarget[0].SrcBlend = (D3D11_BLEND)m_blendMapD3D9[i].src;
+			bd.RenderTarget[0].DestBlend = (D3D11_BLEND)m_blendMapD3D9[i].dst;
 			bd.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 			bd.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
 			bd.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
@@ -384,15 +384,15 @@ void GSDevice11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uin
 					; // god knows, best just not to mess with it for now
 			}
 
-			if(blendMapD3D9[i].bogus == 1)
+			if(m_blendMapD3D9[i].bogus == 1)
 			{
 				(bsel.a == 0 ? bd.RenderTarget[0].SrcBlend : bd.RenderTarget[0].DestBlend) = D3D11_BLEND_ONE;
 
 				const string afixstr = format("%d >> 7", afix);
 				const char *col[3] = {"Cs", "Cd", "0"};
 				const char *alpha[3] = {"As", "Ad", afixstr.c_str()};
-				printf("Impossible blend for D3D: (%s - %s) * %s + %s\n",
-					col[bsel.a], col[bsel.b], alpha[bsel.c], col[bsel.d]);
+				
+				printf("Impossible blend for D3D: (%s - %s) * %s + %s\n", col[bsel.a], col[bsel.b], alpha[bsel.c], col[bsel.d]);
 			}
 		}
 

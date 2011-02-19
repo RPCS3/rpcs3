@@ -36,10 +36,4 @@ protected:
 
 public:
 	GPUSettingsDlg();
-
-	static GSSetting g_renderers[];
-	static GSSetting g_filter[];
-	static GSSetting g_dithering[];
-	static GSSetting g_aspectratio[];
-	static GSSetting g_scale[];
 };

@@ -72,9 +72,10 @@ public:
 		int m_fmt;
 		bool m_target;
 		bool m_complete;
+		uint8* m_temp;
 
 	public:
-		explicit Source(GSRenderer* r);
+		Source(GSRenderer* r, uint8* temp);
 		virtual ~Source();
 
 		virtual void Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect);
@@ -94,12 +95,9 @@ public:
 		virtual void Update();
 	};
 
-protected:
-	GSRenderer* m_renderer;
-	bool m_paltex;
-
-	struct SourceMap
+	class SourceMap
 	{
+	public:
 		hash_set<Source*> m_surfaces;
 		list<Source*> m_map[MAX_PAGES];
 		uint32 m_pages[16];
@@ -110,10 +108,14 @@ protected:
 		void Add(Source* s, const GIFRegTEX0& TEX0, const GSOffset* o);
 		void RemoveAll();
 		void RemoveAt(Source* s);
+	};
 
-	} m_src;
-
+protected:
+	GSRenderer* m_renderer;
+	SourceMap m_src;
 	list<Target*> m_dst[2];
+	bool m_paltex;
+	uint8* m_temp;
 
 	virtual Source* CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* t = NULL);
 	virtual Target* CreateTarget(const GIFRegTEX0& TEX0, int w, int h, int type);

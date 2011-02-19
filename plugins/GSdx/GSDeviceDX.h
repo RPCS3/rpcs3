@@ -260,10 +260,12 @@ public:
 		}
 	};
 
+	struct D3D9Blend {int bogus, op, src, dst;};
+	static const D3D9Blend m_blendMapD3D9[3*3*3*3];
+
 	#pragma pack(pop)
 
 protected:
-
 	struct {D3D_FEATURE_LEVEL level; string model, vs, gs, ps;} m_shader;
 	uint32 m_msaa;
 	DXGI_SAMPLE_DESC m_msaa_desc;

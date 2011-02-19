@@ -21,7 +21,7 @@
 
 // TODO: JIT Draw* (flags: depth, texture, color (+iip), scissor)
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSRasterizer.h"
 
 // Using a spinning finish on the main (MTGS) thread is apparently a big win still, over trying
@@ -845,68 +845,36 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 
 //
 
-GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, HANDLE ready, volatile long& sync)
+GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, volatile long& sync)
 	: GSRasterizer(ds)
-	, m_ready(ready)
 	, m_sync(sync)
 	, m_data(NULL)
 {
-	m_exit = CreateEvent(NULL, FALSE, FALSE, NULL);
-	m_draw = CreateEvent(NULL, FALSE, FALSE, NULL);
-
 	CreateThread();
 }
 
 GSRasterizerMT::~GSRasterizerMT()
 {
-	SetEvent(m_exit);
+    Draw(NULL);
 
 	CloseThread();
-
-	CloseHandle(m_exit);
-	CloseHandle(m_draw);
 }
 
 void GSRasterizerMT::Draw(const GSRasterizerData* data)
 {
 	m_data = data;
 
-	SetEvent(m_draw);
+	m_draw.Set();
 }
 
 void GSRasterizerMT::ThreadProc()
 {
-	// _mm_setcsr(MXCSR);
-
-	HANDLE events[] = {m_exit, m_draw};
-
-	while(true)
+	while(m_draw.Wait() && m_data != NULL)
 	{
-		switch(WaitForMultipleObjects(countof(events), events, FALSE, INFINITE))
-		{
-		case WAIT_OBJECT_0 + 0: // exit
+		GSRasterizer::Draw(m_data);
 
-			return;
-			
-		case WAIT_OBJECT_0 + 1: // draw
-
-			__super::Draw(m_data);
-
-			#ifdef UseSpinningFinish
-
-			_interlockedbittestandreset(&m_sync, m_id);
-
-			#else
-
-			SetEvent(m_ready);
-
-			#endif
-
-			break;
-		}
+        _interlockedbittestandreset(&m_sync, m_id);
 	}
-
-	ASSERT(0);
 }
 
 //
@@ -919,24 +887,11 @@ GSRasterizerList::GSRasterizerList()
 GSRasterizerList::~GSRasterizerList()
 {
 	for(size_t i = 0; i < size(); i++) delete (*this)[i];
-
-	for(size_t i = 0; i < m_ready.size(); i++) CloseHandle(m_ready[i]);
 }
 
 void GSRasterizerList::Sync()
 {
-	#ifdef UseSpinningFinish
-
 	while(m_sync) _mm_pause();
-
-	#else
-
-	if(m_threads > 1)
-	{
-		WaitForMultipleObjects(m_threads - 1, &m_ready[0], TRUE, INFINITE);
-	}
-
-	#endif
 
 	m_stats.ticks = __rdtsc() - m_start;
 
@@ -959,8 +914,6 @@ void GSRasterizerList::Draw(const GSRasterizerData* data, int width, int height)
 
 	m_threads = std::min<int>(1 + (height >> THREAD_HEIGHT), size());
 
-	#ifdef UseSpinningFinish
-
 	m_sync = 0;
 
 	for(int i = 1; i < m_threads; i++)
@@ -968,17 +921,13 @@ void GSRasterizerList::Draw(const GSRasterizerData* data, int width, int height)
 		m_sync |= 1 << i;
 	}
 
-	#endif
-
 	for(int i = 1; i < m_threads; i++)
 	{
 		(*this)[i]->SetThreadId(i, m_threads);
-
 		(*this)[i]->Draw(data);
 	}
 
 	(*this)[0]->SetThreadId(0, m_threads);
-
 	(*this)[0]->Draw(data);
 }
 

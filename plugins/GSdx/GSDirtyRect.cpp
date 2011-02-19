@@ -19,7 +19,7 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSDirtyRect.h"
 
 GSDirtyRect::GSDirtyRect()
@@ -47,10 +47,10 @@ GSVector4i GSDirtyRect::GetDirtyRect(const GIFRegTEX0& TEX0)
 	{
 		GSVector2i dst = GSLocalMemory::m_psm[TEX0.PSM].bs;
 
-		r.left = MulDiv(left, dst.x, src.x);
-		r.top = MulDiv(top, dst.y, src.y);
-		r.right = MulDiv(right, dst.x, src.x);
-		r.bottom = MulDiv(bottom, dst.y, src.y);
+		r.left = left * dst.x / src.x;
+		r.top = top * dst.y / src.y;
+		r.right = right * dst.x / src.x;
+		r.bottom = bottom * dst.y / src.y;
 	}
 	else
 	{

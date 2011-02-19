@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -40,25 +40,29 @@ protected:
 	virtual void ResetDevice() {}
 	virtual GSTexture* GetOutput() = 0;
 
+    #ifdef _WINDOWS
+
 	HWND m_hWnd;
 	WNDPROC m_wndproc;
 	static map<HWND, GPURenderer*> m_wnd2gpu;
-	GSWnd m_wnd;
 
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-
 	LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
+
+	#endif
+
+	GSWnd m_wnd;
 
 public:
 	GPURenderer(GSDevice* dev);
 	virtual ~GPURenderer();
 
-	virtual bool Create(HWND hWnd);
+	virtual bool Create(void* hWnd);
 	virtual void VSync();
 	virtual bool MakeSnapshot(const string& path);
 };
 
-template<class Vertex> 
+template<class Vertex>
 class GPURendererT : public GPURenderer
 {
 protected:
@@ -72,7 +76,7 @@ protected:
 		m_count = 0;
 		m_vl.RemoveAll();
 
-		__super::Reset();
+		GPURenderer::Reset();
 	}
 
 	void ResetPrim()
@@ -80,7 +84,7 @@ protected:
 		m_vl.RemoveAll();
 	}
 
-	void FlushPrim() 
+	void FlushPrim()
 	{
 		if(m_count > 0)
 		{
@@ -110,8 +114,10 @@ protected:
 
 	void GrowVertexBuffer()
 	{
+	    if(m_vertices != NULL) _aligned_free(m_vertices);
+
 		m_maxcount = max(10000, m_maxcount * 3/2);
-		m_vertices = (Vertex*)_aligned_realloc(m_vertices, sizeof(Vertex) * m_maxcount, 16);
+		m_vertices = (Vertex*)_aligned_malloc(sizeof(Vertex) * m_maxcount, 16);
 		m_maxcount -= 100;
 	}
 

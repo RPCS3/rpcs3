@@ -19,12 +19,11 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSRenderer.h"
 
 GSRenderer::GSRenderer()
 	: GSState()
-	, m_tex_buff((uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32))
 	, m_vt(this)
 	, m_dev(NULL)
 	, m_shader(0)
@@ -35,23 +34,13 @@ GSRenderer::GSRenderer()
 	m_aspectratio = theApp.GetConfig("aspectratio", 1);
 	m_filter = theApp.GetConfig("filter", 1);
 	m_vsync = !!theApp.GetConfig("vsync", 0);
-	m_nativeres = !!theApp.GetConfig("nativeres", 0);
-
-	m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", 1);
-	if(m_nativeres) m_upscale_multiplier = 1;
-	else if (m_upscale_multiplier > 6) m_upscale_multiplier = 1;
-
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
-
-	if(m_nativeres) m_filter = 2;
 
 	s_n = 0;
 	s_dump = !!theApp.GetConfig("dump", 0);
 	s_save = !!theApp.GetConfig("save", 0);
 	s_savez = !!theApp.GetConfig("savez", 0);
 	s_saven = theApp.GetConfig("saven", 0);
-
-	InitializeCriticalSection(&m_pGSsetTitle_Crit);
 }
 
 GSRenderer::~GSRenderer()
@@ -61,11 +50,7 @@ GSRenderer::~GSRenderer()
 		m_dev->Reset(1, 1, GSDevice::Windowed);
 	}*/
 
-	_aligned_free(m_tex_buff);
-
 	delete m_dev;
-
-	DeleteCriticalSection(&m_pGSsetTitle_Crit);
 }
 
 bool GSRenderer::CreateWnd(const string& title, int w, int h)
@@ -84,9 +69,18 @@ bool GSRenderer::CreateDevice(GSDevice* dev)
 	}
 
 	m_dev = dev;
-	m_dev->SetVsync(m_vsync && m_framelimit);
+	m_dev->SetVSync(m_vsync && m_framelimit);
 
 	return true;
+}
+
+void GSRenderer::ResetDevice()
+{
+    InvalidateTextureCache();
+
+    ResetPrim();
+
+    if(m_dev) m_dev->Reset(1, 1);
 }
 
 bool GSRenderer::Merge(int field)
@@ -270,15 +264,16 @@ bool GSRenderer::Merge(int field)
 void GSRenderer::SetFrameLimit(bool limit)
 {
 	m_framelimit = limit;
-	if( m_dev ) m_dev->SetVsync(m_vsync && m_framelimit);
+
+	if(m_dev) m_dev->SetVSync(m_vsync && m_framelimit);
 }
 
-void GSRenderer::SetVsync(bool enabled)
+void GSRenderer::SetVSync(bool enabled)
 {
 	m_vsync = enabled;
-	if( m_dev ) m_dev->SetVsync(m_vsync);
-}
 
+	if(m_dev) m_dev->SetVSync(m_vsync);
+}
 
 void GSRenderer::VSync(int field)
 {
@@ -320,11 +315,11 @@ void GSRenderer::VSync(int field)
 		{//GSdx owns the window's title, be verbose.
 			string s2 = m_regs->SMODE2.INT ? (string("Interlaced ") + (m_regs->SMODE2.FFMD ? "(frame)" : "(field)")) : "Progressive";
 			s = format(
-				"%I64d | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f",
+				"%lld | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f",
 				m_perfmon.GetFrame(), r.width(), r.height(), fps, (int)(100.0 * fps / GetFPS()),
 				s2.c_str(),
-				GSSettingsDlg::g_interlace[m_interlace].name.c_str(),
-				GSSettingsDlg::g_aspectratio[m_aspectratio].name.c_str(),
+				theApp.m_gs_interlace[m_interlace].name.c_str(),
+				theApp.m_gs_aspectratio[m_aspectratio].name.c_str(),
 				(int)m_perfmon.Get(GSPerfMon::Quad),
 				(int)m_perfmon.Get(GSPerfMon::Prim),
 				(int)m_perfmon.Get(GSPerfMon::Draw),
@@ -343,14 +338,10 @@ void GSRenderer::VSync(int field)
 		}
 		else
 		{
-			//Satisfy PCSX2's request for title info: minimal verbosity due to more external title text
-			s = format(
-				"%dx%d | %s",
-				r.width(), r.height(),
-				GSSettingsDlg::g_interlace[m_interlace].name.c_str()
-			);
-		}
+			// Satisfy PCSX2's request for title info: minimal verbosity due to more external title text
 
+			s = format("%dx%d | %s", r.width(), r.height(), theApp.m_gs_interlace[m_interlace].name.c_str());
+		}
 
 		if(m_capture.IsCapturing())
 		{
@@ -368,12 +359,11 @@ void GSRenderer::VSync(int field)
 			// be noticeable).  Besides, these locks are extremely short -- overhead of conditional
 			// is way more expensive than just waiting for the CriticalSection in 1 of 10,000,000 tries. --air
 
-			EnterCriticalSection(&m_pGSsetTitle_Crit);
+			GSAutoLock lock(&m_pGSsetTitle_Crit);
 
 			strncpy(m_GStitleInfoBuffer, s.c_str(), countof(m_GStitleInfoBuffer) - 1);
-			m_GStitleInfoBuffer[sizeof(m_GStitleInfoBuffer) - 1] = 0;// make sure null terminated even if text overflows
 
-			LeaveCriticalSection(&m_pGSsetTitle_Crit);
+			m_GStitleInfoBuffer[sizeof(m_GStitleInfoBuffer) - 1] = 0; // make sure null terminated even if text overflows
 		}
 	}
 	else
@@ -396,7 +386,15 @@ void GSRenderer::VSync(int field)
 
 	if(!m_snapshot.empty())
 	{
-		if(!m_dump && (::GetAsyncKeyState(VK_SHIFT) & 0x8000))
+	    bool shift = false;
+
+	    #ifdef _WINDOWS
+
+	    shift = !!(::GetAsyncKeyState(VK_SHIFT) & 0x8000);
+
+	    #endif
+
+		if(!m_dump && shift)
 		{
 			GSFreezeData fd;
 			fd.size = 0;
@@ -421,7 +419,15 @@ void GSRenderer::VSync(int field)
 	{
 		if(m_dump)
 		{
-			m_dump.VSync(field, !(::GetAsyncKeyState(VK_CONTROL) & 0x8000), m_regs);
+            bool control = false;
+
+            #ifdef _WINDOWS
+
+            control = !!(::GetAsyncKeyState(VK_CONTROL) & 0x8000);
+
+            #endif
+
+	    	m_dump.VSync(field, !control, m_regs);
 		}
 	}
 
@@ -481,7 +487,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 {
 	if(e->type == KEYPRESS)
 	{
-		// TODO: linux
+	    #ifdef _WINDOWS
 
 		int step = (::GetAsyncKeyState(VK_SHIFT) & 0x8000) ? -1 : 1;
 
@@ -500,6 +506,12 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			m_aa1 = !m_aa1;
 			return;
 		}
+
+		#else
+
+		// TODO: linux
+
+		#endif
 	}
 }
 
@@ -782,8 +794,10 @@ bool GSRenderer::IsLinear()
 	{
 		return mmag;
 	}
+
 	// if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
-	// Fixme : Why should Q be bogus?
+	// Fixme : Why should Q be bogus? (it used to be - Gabest)
+
 	if(!TEX1.LCM && !PRIM->FST)
 	{
 		float K = (float)TEX1.K / 16;
@@ -791,8 +805,8 @@ bool GSRenderer::IsLinear()
 
 		// TODO: abs(Qmin) may not be <= abs(Qmax), check the sign
 
-		float LODmin = K + log(1.0f / abs(m_vt.m_max.t.z)) * f;
-		float LODmax = K + log(1.0f / abs(m_vt.m_min.t.z)) * f;
+		float LODmin = K + log(1.0f / fabs(m_vt.m_max.t.z)) * f;
+		float LODmax = K + log(1.0f / fabs(m_vt.m_min.t.z)) * f;
 
 		return LODmax <= 0 ? mmag : LODmin > 0 ? mmin : mmag || mmin;
 	}

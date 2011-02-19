@@ -19,7 +19,7 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSCodeBuffer.h"
 
 GSCodeBuffer::GSCodeBuffer(size_t blocksize)
@@ -34,7 +34,7 @@ GSCodeBuffer::~GSCodeBuffer()
 {
 	for(list<void*>::iterator i = m_buffers.begin(); i != m_buffers.end(); i++)
 	{
-		VirtualFree(*i, 0, MEM_RELEASE);
+		vmfree(*i);
 	}
 }
 
@@ -47,7 +47,7 @@ void* GSCodeBuffer::GetBuffer(size_t size)
 
 	if(m_ptr == NULL || m_pos + size > m_blocksize)
 	{
-		m_ptr = (uint8*)VirtualAlloc(NULL, m_blocksize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		m_ptr = (uint8*)vmalloc(m_blocksize, true);
 
 		m_pos = 0;
 

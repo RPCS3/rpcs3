@@ -21,18 +21,20 @@
 
 #pragma once
 
+#include "GSSetting.h"
+
 class GSdxApp
 {
-	static std::string m_ini;
-	static const char* m_section;
+	std::string m_ini;
+	std::string m_section;
 
 public:
 	GSdxApp();
 
+    void* GetModuleHandlePtr();
+
 #ifdef _WINDOWS
- 	HMODULE GetModuleHandle();
-#else
-    void* GetModuleHandle();
+ 	HMODULE GetModuleHandle() {return (HMODULE)GetModuleHandlePtr();}
 #endif
 
 	string GetConfig(const char* entry, const char* value);
@@ -41,6 +43,17 @@ public:
 	void SetConfig(const char* entry, int value);
 
 	void SetConfigDir(const char* dir);
+
+	vector<GSSetting> m_gs_renderers;
+	vector<GSSetting> m_gs_interlace;
+	vector<GSSetting> m_gs_aspectratio;
+	vector<GSSetting> m_gs_upscale_multiplier;
+
+	vector<GSSetting> m_gpu_renderers;
+	vector<GSSetting> m_gpu_filter;
+	vector<GSSetting> m_gpu_dithering;
+	vector<GSSetting> m_gpu_aspectratio;
+	vector<GSSetting> m_gpu_scale;
 };
 
 extern GSdxApp theApp;

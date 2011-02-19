@@ -20,20 +20,30 @@
  */
 
 #include "stdafx.h"
+#include "GSdx.h"
 #include "GSUtil.h"
-#include "GSRendererDX9.h"
-#include "GSRendererDX11.h"
 #include "GSRendererSW.h"
 #include "GSRendererNull.h"
+#include "GSDeviceNull.h"
+
+#ifdef _WINDOWS
+
+#include "GSRendererDX9.h"
+#include "GSRendererDX11.h"
+#include "GSDevice9.h"
+#include "GSDevice11.h"
 #include "GSSettingsDlg.h"
 
+static HRESULT s_hr = E_FAIL;
+static bool s_isdx11avail = false; // set on GSinit
+
+#endif
 
 #define PS2E_LT_GS 0x01
 #define PS2E_GS_VERSION 0x0006
 #define PS2E_X86 0x01   // 32 bit
 #define PS2E_X86_64 0x02   // 64 bit
 
-static HRESULT s_hr = E_FAIL;
 static GSRenderer* s_gs = NULL;
 static void (*s_irq)() = NULL;
 static uint8* s_basemem = NULL;
@@ -41,9 +51,7 @@ static int s_renderer = -1;
 static bool s_framelimit = true;
 static bool s_vsync = false;
 static bool s_exclusive = true;
-
-static bool s_IsGsOpen2 = false;		// boolean to remove some stuff from the config panel in new PCSX2's/
-static bool isdx11avail = false;		// set on GSinit
+static bool s_isgsopen2 = false; // boolean to remove some stuff from the config panel in new PCSX2's/
 
 EXPORT_C_(uint32) PS2EgetLibType()
 {
@@ -65,24 +73,29 @@ EXPORT_C_(uint32) PS2EgetLibVersion2(uint32 type)
 
 EXPORT_C_(void) PS2EsetEmuVersion(const char* emuId, uint32 version)
 {
-	s_IsGsOpen2 = true;
+	s_isgsopen2 = true;
 }
 
 EXPORT_C_(uint32) PS2EgetCpuPlatform()
 {
 #if _M_AMD64
+
 	return PS2E_X86_64;
+
 #else
+
 	return PS2E_X86;
+
 #endif
 }
 
 EXPORT_C GSsetBaseMem(uint8* mem)
 {
 	s_basemem = mem;
-	if( s_gs )
+
+	if(s_gs)
 	{
-		s_gs->SetRegsMem( s_basemem );
+		s_gs->SetRegsMem(s_basemem);
 	}
 }
 
@@ -91,7 +104,7 @@ EXPORT_C GSsetSettingsDir(const char* dir)
 	theApp.SetConfigDir(dir);
 }
 
-EXPORT_C_(INT32) GSinit()
+EXPORT_C_(int) GSinit()
 {
 	if(!GSUtil::CheckSSE())
 	{
@@ -100,8 +113,6 @@ EXPORT_C_(INT32) GSinit()
 
 #ifdef _WINDOWS
 
-	//_CrtSetBreakAlloc( 1273 );
-
 	s_hr = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
 	if(!GSUtil::CheckDirectX())
@@ -109,7 +120,7 @@ EXPORT_C_(INT32) GSinit()
 		return -1;
 	}
 
-	isdx11avail = GSUtil::IsDirect3D11Available();
+	s_isdx11avail = GSUtil::IsDirect3D11Available();
 
 #endif
 
@@ -121,10 +132,9 @@ EXPORT_C GSshutdown()
 	delete s_gs;
 
 	s_gs = NULL;
+
 	s_renderer = -1;
 
-	GSUtil::UnloadDynamicLibraries();
-	
 #ifdef _WINDOWS
 
 	if(SUCCEEDED(s_hr))
@@ -139,17 +149,18 @@ EXPORT_C GSshutdown()
 
 EXPORT_C GSclose()
 {
-	if( !s_gs ) return;
+	if(s_gs == NULL) return;
 
 	s_gs->ResetDevice();
 
 	delete s_gs->m_dev;
+
 	s_gs->m_dev = NULL;
 
 	s_gs->m_wnd.Detach();
 }
 
-static INT32 _GSopen(void* dsp, char* title, int renderer, int threads = -1)
+static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 {
 	GSDevice* dev = NULL;
 
@@ -165,7 +176,7 @@ static INT32 _GSopen(void* dsp, char* title, int renderer, int threads = -1)
 
 	try
 	{
-		if (s_renderer != renderer)
+		if(s_renderer != renderer)
 		{
 			// Emulator has made a render change request, which requires a completely
 			// new s_gs -- if the emu doesn't save/restore the GS state across this
@@ -179,29 +190,36 @@ static INT32 _GSopen(void* dsp, char* title, int renderer, int threads = -1)
 		switch(renderer)
 		{
 		default:
+		#ifdef _WINDOWS
 		case 0: case 1: case 2: dev = new GSDevice9(); break;
 		case 3: case 4: case 5: dev = new GSDevice11(); break;
+		#endif
 		case 12: case 13: new GSDeviceNull(); break;
 		}
 
-		if(!dev) return -1;
+		if(dev == NULL)
+		{
+            return -1;
+		}
 
-		if(!s_gs)
+		if(s_gs == NULL)
 		{
 			switch(renderer)
 			{
 			default:
-			case 0: 
-				s_gs = new GSRendererDX9(); 
+			#ifdef _WINDOWS
+			case 0:
+				s_gs = new GSRendererDX9();
 				break;
-			case 3: 
-				s_gs = new GSRendererDX11(); 
-				break;
-			case 2: case 5: case 8: case 11: case 13:
-				s_gs = new GSRendererNull(); 
+			case 3:
+				s_gs = new GSRendererDX11();
 				break;
 			case 1: case 4: case 7: case 10: case 12:
-				s_gs = new GSRendererSW(threads); 
+				s_gs = new GSRendererSW(threads);
+				break;
+			#endif
+			case 2: case 5: case 8: case 11: case 13:
+				s_gs = new GSRendererNull();
 				break;
 			}
 
@@ -221,10 +239,10 @@ static INT32 _GSopen(void* dsp, char* title, int renderer, int threads = -1)
 
 	s_gs->SetRegsMem(s_basemem);
 	s_gs->SetIrqCallback(s_irq);
-	s_gs->SetVsync(s_vsync);
+	s_gs->SetVSync(s_vsync);
 	s_gs->SetFrameLimit(s_framelimit);
 
-	if(*(HWND*)dsp == NULL)
+	if(*dsp == NULL)
 	{
 		// old-style API expects us to create and manage our own window:
 
@@ -234,17 +252,19 @@ static INT32 _GSopen(void* dsp, char* title, int renderer, int threads = -1)
 		if(!s_gs->CreateWnd(title, w, h))
 		{
 			GSclose();
+
 			return -1;
 		}
 
 		s_gs->m_wnd.Show();
 
-		*(HWND*)dsp = s_gs->m_wnd.GetHandle();
+		*dsp = s_gs->m_wnd.GetHandle();
 	}
 	else
 	{
 		s_gs->SetMultithreaded(true);
-		s_gs->m_wnd.Attach(*(HWND*)dsp, false);
+
+		s_gs->m_wnd.Attach(*dsp, false);
 	}
 
 	if(!s_gs->CreateDevice(dev))
@@ -263,23 +283,25 @@ static INT32 _GSopen(void* dsp, char* title, int renderer, int threads = -1)
 	return 0;
 }
 
-EXPORT_C_(INT32) GSopen2(void* dsp, INT32 flags)
+EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 {
 	int renderer = theApp.GetConfig("renderer", 0);
 
 	if(flags & 4)
 	{
-		renderer = isdx11avail ? 4 : 1; // dx11 / dx9 sw
+#ifdef _WINDOWS
+        renderer = s_isdx11avail ? 4 : 1; // dx11 / dx9 sw
+#endif
 	}
 
-	INT32 retval = _GSopen(dsp, NULL, renderer);
+	int retval = _GSopen(dsp, NULL, renderer);
 
 	s_gs->SetAspectRatio(0);	 // PCSX2 manages the aspect ratios
 
 	return retval;
 }
 
-EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
+EXPORT_C_(int) GSopen(void** dsp, char* title, int mt)
 {
 	int renderer;
 
@@ -291,7 +313,9 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 	{
 		// pcsx2 sent a switch renderer request
 
-		renderer = isdx11avail ? 4 : 1; // dx11 / dx9 sw
+#ifdef _WINDOWS
+		renderer = s_isdx11avail ? 4 : 1; // dx11 / dx9 sw
+#endif
 
 		mt = 1;
 	}
@@ -302,7 +326,7 @@ EXPORT_C_(INT32) GSopen(void* dsp, char* title, int mt)
 		renderer = theApp.GetConfig("renderer", 0);
 	}
 
-	*(HWND*)dsp = NULL;
+	*dsp = NULL;
 
 	int retval = _GSopen(dsp, title, renderer);
 
@@ -385,9 +409,9 @@ EXPORT_C_(uint32) GSmakeSnapshot(char* path)
 {
 	string s(path);
 
-	if(!s.empty() && s[s.length() - 1] != '\\')
+	if(!s.empty() && s[s.length() - 1] != DIRECTORY_SEPARATOR)
 	{
-		s = s + "\\";
+		s = s + DIRECTORY_SEPARATOR;
 	}
 
 	return s_gs->MakeSnapshot(s + "gsdx");
@@ -420,7 +444,9 @@ EXPORT_C GSconfigure()
 {
 	if(!GSUtil::CheckSSE()) return;
 
-	if(GSSettingsDlg(s_IsGsOpen2).DoModal() == IDOK)
+#ifdef _WINDOWS
+
+	if(GSSettingsDlg(s_isgsopen2).DoModal() == IDOK)
 	{
 		if(s_gs != NULL && s_gs->m_wnd.IsManaged())
 		{
@@ -429,9 +455,15 @@ EXPORT_C GSconfigure()
 			GSshutdown();
 		}
 	}
+
+#else
+
+    // TODO: linux
+
+#endif
 }
 
-EXPORT_C_(INT32) GStest()
+EXPORT_C_(int) GStest()
 {
 	if(!GSUtil::CheckSSE())
 	{
@@ -482,7 +514,7 @@ EXPORT_C GSirqCallback(void (*irq)())
 
 EXPORT_C_(int) GSsetupRecording(int start, void* data)
 {
-	if(!s_gs) return 0;
+	if(s_gs == NULL) return 0;
 
 	if(start & 1)
 	{
@@ -506,24 +538,23 @@ EXPORT_C GSgetLastTag(uint32* tag)
 	s_gs->GetLastTag(tag);
 }
 
-
-#ifdef _MSC_VER
-#define snprintf _snprintf
-#endif
-
 EXPORT_C GSgetTitleInfo2(char* dest, size_t length)
 {
-	if(!s_gs->m_GStitleInfoBuffer[0])
+	string s = "GSdx";
+
+	if(s_gs->m_GStitleInfoBuffer[0])
 	{
-		strcpy(dest, "GSdx");
+		GSAutoLock lock(&s_gs->m_pGSsetTitle_Crit);
+
+		string s = format("GSdx | %s", s_gs->m_GStitleInfoBuffer);
+
+		if(s.size() > length - 1)
+		{
+			s = s.substr(0, length - 1);
+		}
 	}
-	else
-	{
-		EnterCriticalSection(&s_gs->m_pGSsetTitle_Crit);
-		snprintf(dest, length - 1, "GSdx | %s", s_gs->m_GStitleInfoBuffer);
-		dest[length - 1] = 0; // just in case!
-		LeaveCriticalSection(&s_gs->m_pGSsetTitle_Crit);
-	}
+
+	strcpy(dest, s.c_str());
 }
 
 EXPORT_C GSsetFrameSkip(int frameskip)
@@ -537,7 +568,7 @@ EXPORT_C GSsetVsync(int enabled)
 
 	if(s_gs)
 	{
-		s_gs->SetVsync(s_vsync);
+		s_gs->SetVSync(s_vsync);
 	}
 }
 
@@ -547,7 +578,7 @@ EXPORT_C GSsetExclusive(int enabled)
 
 	if(s_gs)
 	{
-		s_gs->SetVsync(s_vsync);
+		s_gs->SetVSync(s_vsync);
 	}
 }
 
@@ -588,7 +619,7 @@ public:
 	{
 		if(m_console == NULL)
 		{
-			CONSOLE_SCREEN_BUFFER_INFO csbiInfo; 
+			CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
 
 			AllocConsole();
 
@@ -623,8 +654,8 @@ public:
 	{
 		if(m_console != NULL)
 		{
-			FreeConsole(); 
-		
+			FreeConsole();
+
 			m_console = NULL;
 		}
 	}
@@ -663,7 +694,8 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 		s_vsync = !!theApp.GetConfig("vsync", 0);
 
 		HWND hWnd = NULL;
-		_GSopen(&hWnd, "", renderer);
+
+		_GSopen((void**)&hWnd, "", renderer);
 
 		uint32 crc;
 		fread(&crc, 4, 1, fp);

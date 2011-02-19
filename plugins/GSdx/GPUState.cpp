@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,15 +6,15 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
@@ -38,7 +38,7 @@ GPUState::GPUState()
 	m_fpGPUStatusCommandHandlers[0x03] = &GPUState::SCH_DisplayEnable;
 	m_fpGPUStatusCommandHandlers[0x04] = &GPUState::SCH_DMASetup;
 	m_fpGPUStatusCommandHandlers[0x05] = &GPUState::SCH_StartOfDisplayArea;
-	m_fpGPUStatusCommandHandlers[0x06] = &GPUState::SCH_HorizontalDisplayRange;	
+	m_fpGPUStatusCommandHandlers[0x06] = &GPUState::SCH_HorizontalDisplayRange;
 	m_fpGPUStatusCommandHandlers[0x07] = &GPUState::SCH_VerticalDisplayRange;
 	m_fpGPUStatusCommandHandlers[0x08] = &GPUState::SCH_DisplayMode;
 	m_fpGPUStatusCommandHandlers[0x10] = &GPUState::SCH_GPUInfo;
@@ -81,21 +81,21 @@ void GPUState::SetPrim(GPUReg* r)
 	}
 
 	GPURegPRIM PRIM = r->PRIM;
-	
+
 	PRIM.VTX = 0;
 
 	switch(r->PRIM.TYPE)
 	{
-	case GPU_POLYGON: 
+	case GPU_POLYGON:
 		PRIM.u32 = (r->PRIM.u32 & 0xF7000000) | 3; // TYPE IIP TME ABE TGE
 		break;
-	case GPU_LINE: 
+	case GPU_LINE:
 		PRIM.u32 = (r->PRIM.u32 & 0xF2000000) | 2; // TYPE IIP ABE
 		PRIM.TGE = 1; // ?
-		break; 
-	case GPU_SPRITE: 
+		break;
+	case GPU_SPRITE:
 		PRIM.u32 = (r->PRIM.u32 & 0xE7000000) | 2; // TYPE TME ABE TGE
-		break; 
+		break;
 	}
 
 	if(m_env.PRIM.u32 != PRIM.u32)
@@ -200,7 +200,7 @@ void GPUState::WriteStatus(uint32 status)
 
 	m_status[b] = status;
 
-	(this->*m_fpGPUStatusCommandHandlers[b])((GPUReg*)&status);	
+	(this->*m_fpGPUStatusCommandHandlers[b])((GPUReg*)&status);
 }
 
 uint32 GPUState::ReadStatus()
@@ -292,30 +292,30 @@ void GPUState::SCH_GPUInfo(GPUReg* r)
 
 	switch(r->GPUINFO.PARAM)
 	{
-	case 0x2: 
-		value = m_env.TWIN.u32; 
+	case 0x2:
+		value = m_env.TWIN.u32;
 		break;
 	case 0x0:
 	case 0x1:
-	case 0x3: 
-		value = m_env.DRAREATL.u32; 
+	case 0x3:
+		value = m_env.DRAREATL.u32;
 		break;
-	case 0x4: 
-		value = m_env.DRAREABR.u32; 
+	case 0x4:
+		value = m_env.DRAREABR.u32;
 		break;
-	case 0x5: 
-	case 0x6: 
-		value = m_env.DROFF.u32; 
+	case 0x5:
+	case 0x6:
+		value = m_env.DROFF.u32;
 		break;
-	case 0x7: 
-		value = 2; 
+	case 0x7:
+		value = 2;
 		break;
-	case 0x8: 
-	case 0xf: 
+	case 0x8:
+	case 0xf:
 		value = 0xBFC03720; // ?
 		break;
-	default: 
-		ASSERT(0); 
+	default:
+		ASSERT(0);
 		break;
 	}
 
@@ -337,7 +337,7 @@ int GPUState::PH_Command(GPUReg* r, int size)
 		return 1;
 
 	case 2: // fillrect
-	
+
 		if(size < 3) return 0;
 
 		Flush();
@@ -375,7 +375,7 @@ int GPUState::PH_Polygon(GPUReg* r, int size)
 
 	if(r[0].POLYGON.TME) required += vertices;
 
-	if(r[0].POLYGON.IIP) required += vertices - 1;	
+	if(r[0].POLYGON.IIP) required += vertices - 1;
 
 	if(size < required) return 0;
 
@@ -401,7 +401,7 @@ int GPUState::PH_Polygon(GPUReg* r, int size)
 		if(j == 0 || r[0].POLYGON.IIP) i++;
 
 		v[j].XY = r[i++].XY;
-		
+
 		if(r[0].POLYGON.TME)
 		{
 			v[j].UV.X = r[i].UV.U;
@@ -507,7 +507,7 @@ int GPUState::PH_Sprite(GPUReg* r, int size)
 	m_v.RGB = r[i++].RGB;
 
 	m_v.XY = r[i++].XY;
-	
+
 	if(r[0].SPRITE.TME)
 	{
 		m_v.UV.X = r[i].UV.U;
@@ -647,7 +647,7 @@ int GPUState::PH_Environment(GPUReg* r, int size)
 
 		return 1;
 
-	case 2: // texture window setting 
+	case 2: // texture window setting
 
 		m_env.TWIN = r->TWIN;
 
@@ -705,7 +705,9 @@ void GPUState::Buffer::Reserve(int size)
 	{
 		maxbytes = (maxbytes + size + 1023) & ~1023;
 
-		buff = (uint8*)_aligned_realloc(buff, maxbytes, 16);
+        if(buff != NULL) _aligned_free(buff);
+
+		buff = (uint8*)_aligned_malloc(maxbytes, 16);
 	}
 }
 

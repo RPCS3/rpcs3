@@ -174,7 +174,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 	//scd.BufferDesc.RefreshRate.Numerator = 60;
 	//scd.BufferDesc.RefreshRate.Denominator = 1;
 	scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	scd.OutputWindow = m_wnd->GetHandle();
+	scd.OutputWindow = (HWND)m_wnd->GetHandle();
 	scd.SampleDesc.Count = 1;
 	scd.SampleDesc.Quality = 0;
 

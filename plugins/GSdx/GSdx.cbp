@@ -4,47 +4,37 @@
 	<Project>
 		<Option title="GSdx" />
 		<Option pch_mode="2" />
-		<Option compiler="gcc" />
+		<Option compiler="icc" />
 		<Build>
-			<Target title="Debug SSE2 Linux">
-				<Option output="bin/Debug/GSdx" prefix_auto="1" extension_auto="1" />
+			<Target title="Debug">
+				<Option output="bin/Debug/libGSdx" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Debug/" />
-				<Option type="1" />
-				<Option compiler="gcc" />
-				<Compiler>
-					<Add option="-g" />
-				</Compiler>
+				<Option type="3" />
+				<Option compiler="icc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
 			</Target>
-			<Target title="Release SSE2 Linux">
-				<Option output="bin/Release/GSdx" prefix_auto="1" extension_auto="1" />
+			<Target title="Release">
+				<Option output="bin/Release/libGSdx" prefix_auto="1" extension_auto="1" />
 				<Option object_output="obj/Release/" />
-				<Option type="1" />
-				<Option compiler="gcc" />
+				<Option type="3" />
+				<Option compiler="icc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
 				<Compiler>
+					<Add option="-Ob2" />
 					<Add option="-O2" />
 				</Compiler>
-				<Linker>
-					<Add option="-s" />
-					<Add library="Cg" />
-				</Linker>
 			</Target>
-			<Environment>
-				<Variable name="SvnRootDir" value="../../" />
-			</Environment>
 		</Build>
 		<Compiler>
+			<Add option="-fno-operator-names" />
+			<Add option="-Zp16" />
+			<Add option="-fno-rtti" />
+			<Add option="-restrict" />
+			<Add option="-msse2" />
 			<Add option="-Wall" />
-			<Add option="-Wno-format" />
-			<Add option="-Wno-unused-parameter" />
-			<Add option="-Wno-unused-value" />
-			<Add option="-Wunused-variable" />
-			<Add option="-fno-guess-branch-probability" />
-			<Add option="-fno-dse" />
-			<Add option="-fno-tree-dse" />
-			<Add option="-fno-strict-aliasing" />
-			<Add option="-pipe -msse -msse2" />
-			<Add option="-m32" />
-			<Add directory="$(SvnRootDir)/common/include" />
+			<Add option="-D_LINUX" />
 		</Compiler>
 		<Unit filename="GPU.cpp" />
 		<Unit filename="GPU.h" />
@@ -60,8 +50,6 @@
 		<Unit filename="GPURendererSW.cpp" />
 		<Unit filename="GPURendererSW.h" />
 		<Unit filename="GPUScanlineEnvironment.h" />
-		<Unit filename="GPUSettingsDlg.cpp" />
-		<Unit filename="GPUSettingsDlg.h" />
 		<Unit filename="GPUSetupPrimCodeGenerator.cpp" />
 		<Unit filename="GPUSetupPrimCodeGenerator.h" />
 		<Unit filename="GPUState.cpp" />
@@ -75,8 +63,6 @@
 		<Unit filename="GSBlock.h" />
 		<Unit filename="GSCapture.cpp" />
 		<Unit filename="GSCapture.h" />
-		<Unit filename="GSCaptureDlg.cpp" />
-		<Unit filename="GSCaptureDlg.h" />
 		<Unit filename="GSClut.cpp" />
 		<Unit filename="GSClut.h" />
 		<Unit filename="GSCodeBuffer.cpp" />
@@ -85,23 +71,8 @@
 		<Unit filename="GSCrc.h" />
 		<Unit filename="GSDevice.cpp" />
 		<Unit filename="GSDevice.h" />
-		<Unit filename="GSDevice11.cpp">
-			<Option compile="0" />
-			<Option link="0" />
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="GSDevice11.h" />
-		<Unit filename="GSDevice9.cpp">
-			<Option compile="0" />
-			<Option link="0" />
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="GSDevice9.h" />
-		<Unit filename="GSDeviceDX.h" />
 		<Unit filename="GSDeviceNull.cpp" />
 		<Unit filename="GSDeviceNull.h" />
-		<Unit filename="GSDialog.cpp" />
-		<Unit filename="GSDialog.h" />
 		<Unit filename="GSDirtyRect.cpp" />
 		<Unit filename="GSDirtyRect.h" />
 		<Unit filename="GSDrawScanline.cpp" />
@@ -122,14 +93,6 @@
 		<Unit filename="GSRasterizer.h" />
 		<Unit filename="GSRenderer.cpp" />
 		<Unit filename="GSRenderer.h" />
-		<Unit filename="GSRendererDX.cpp" />
-		<Unit filename="GSRendererDX.h" />
-		<Unit filename="GSRendererDX11.cpp" />
-		<Unit filename="GSRendererDX11.h" />
-		<Unit filename="GSRendererDX9.cpp" />
-		<Unit filename="GSRendererDX9.h" />
-		<Unit filename="GSRendererHW.cpp" />
-		<Unit filename="GSRendererHW.h" />
 		<Unit filename="GSRendererNull.cpp" />
 		<Unit filename="GSRendererNull.h" />
 		<Unit filename="GSRendererSW.cpp" />
@@ -137,8 +100,6 @@
 		<Unit filename="GSScanlineEnvironment.h" />
 		<Unit filename="GSSetting.cpp" />
 		<Unit filename="GSSetting.h" />
-		<Unit filename="GSSettingsDlg.cpp" />
-		<Unit filename="GSSettingsDlg.h" />
 		<Unit filename="GSSetupPrimCodeGenerator.cpp" />
 		<Unit filename="GSSetupPrimCodeGenerator.h" />
 		<Unit filename="GSState.cpp" />
@@ -147,25 +108,10 @@
 		<Unit filename="GSTables.h" />
 		<Unit filename="GSTexture.cpp" />
 		<Unit filename="GSTexture.h" />
-		<Unit filename="GSTexture10.h" />
-		<Unit filename="GSTexture11.cpp" />
-		<Unit filename="GSTexture11.h" />
-		<Unit filename="GSTexture7.h" />
-		<Unit filename="GSTexture9.cpp" />
-		<Unit filename="GSTexture9.h" />
 		<Unit filename="GSTextureCache.cpp" />
 		<Unit filename="GSTextureCache.h" />
-		<Unit filename="GSTextureCache10.cpp" />
-		<Unit filename="GSTextureCache10.h" />
-		<Unit filename="GSTextureCache11.cpp" />
-		<Unit filename="GSTextureCache11.h" />
-		<Unit filename="GSTextureCache9.cpp" />
-		<Unit filename="GSTextureCache9.h" />
 		<Unit filename="GSTextureCacheSW.cpp" />
 		<Unit filename="GSTextureCacheSW.h" />
-		<Unit filename="GSTextureFX.cpp" />
-		<Unit filename="GSTextureFX11.cpp" />
-		<Unit filename="GSTextureFX9.cpp" />
 		<Unit filename="GSTextureNull.cpp" />
 		<Unit filename="GSTextureNull.h" />
 		<Unit filename="GSThread.cpp" />
@@ -176,9 +122,7 @@
 		<Unit filename="GSVector.h" />
 		<Unit filename="GSVertex.h" />
 		<Unit filename="GSVertexHW.h" />
-		<Unit filename="GSVertexList.cpp" />
 		<Unit filename="GSVertexList.h" />
-		<Unit filename="GSVertexSW.cpp" />
 		<Unit filename="GSVertexSW.h" />
 		<Unit filename="GSVertexTrace.cpp" />
 		<Unit filename="GSVertexTrace.h" />
@@ -186,11 +130,17 @@
 		<Unit filename="GSWnd.h" />
 		<Unit filename="GSdx.cpp" />
 		<Unit filename="GSdx.h" />
-		<Unit filename="resource.h" />
 		<Unit filename="stdafx.cpp" />
 		<Unit filename="stdafx.h" />
+		<Unit filename="svnrev.h" />
+		<Unit filename="xbyak/xbyak.h" />
+		<Unit filename="xbyak/xbyak_bin2hex.h" />
+		<Unit filename="xbyak/xbyak_mnemonic.h" />
+		<Unit filename="xbyak/xbyak_util.h" />
 		<Extensions>
+			<envvars />
 			<code_completion />
+			<lib_finder disable_auto="1" />
 			<debugger />
 		</Extensions>
 	</Project>

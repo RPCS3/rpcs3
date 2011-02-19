@@ -31,6 +31,7 @@ protected:
 	GSRasterizerList m_rl;
 	GSTextureCacheSW* m_tc;
 	GSTexture* m_texture[2];
+	uint8* m_output;
 	bool m_reset;
 
 	void Reset();

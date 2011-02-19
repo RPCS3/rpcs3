@@ -26,4 +26,12 @@ struct GSSetting
 	uint32 id;
 	std::string name;
 	std::string note;
+
+
+	GSSetting(uint32 id, const char* name, const char* note)
+	{
+		this->id = id;
+		this->name = name;
+		this->note = note;
+	}
 };

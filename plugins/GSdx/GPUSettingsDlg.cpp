@@ -25,44 +25,6 @@
 #include "GPUSettingsDlg.h"
 #include "resource.h"
 
-GSSetting GPUSettingsDlg::g_renderers[] =
-{
-	{0, "Direct3D9 (Software)", ""},
-	{1, "Direct3D11 (Software)", ""},
-//	{2, "Null (Null)", ""},
-};
-
-GSSetting GPUSettingsDlg::g_filter[] =
-{
-	{0, "Nearest", ""},
-	{1, "Bilinear (polygons only)", ""},
-	{2, "Bilinear", ""},
-};
-
-GSSetting GPUSettingsDlg::g_dithering[] =
-{
-	{0, "Disabled", ""},
-	{1, "Auto", ""},
-};
-
-GSSetting GPUSettingsDlg::g_aspectratio[] =
-{
-	{0, "Stretch", ""},
-	{1, "4:3", ""},
-	{2, "16:9", ""},
-};
-
-GSSetting GPUSettingsDlg::g_scale[] =
-{
-	{0 | (0 << 2), "H x 1 - V x 1", ""},
-	{1 | (0 << 2), "H x 2 - V x 1", ""},
-	{0 | (1 << 2), "H x 1 - V x 2", ""},
-	{1 | (1 << 2), "H x 2 - V x 2", ""},
-	{2 | (1 << 2), "H x 4 - V x 2", ""},
-	{1 | (2 << 2), "H x 2 - V x 4", ""},
-	{2 | (2 << 2), "H x 4 - V x 4", ""},
-};
-
 GPUSettingsDlg::GPUSettingsDlg()
 	: GSDialog(IDD_GPUCONFIG)
 {
@@ -103,18 +65,11 @@ void GPUSettingsDlg::OnInit()
 		}
 	}
 
-	vector<GSSetting> renderers;
-
-	for(size_t i = 0; i < countof(g_renderers); i++)
-	{
-		renderers.push_back(g_renderers[i]);
-	}
-
-	ComboBoxInit(IDC_RENDERER, &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
-	ComboBoxInit(IDC_FILTER, g_filter, countof(g_filter), theApp.GetConfig("filter", 0));
-	ComboBoxInit(IDC_DITHERING, g_dithering, countof(g_dithering), theApp.GetConfig("dithering", 1));
-	ComboBoxInit(IDC_ASPECTRATIO, g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
-	ComboBoxInit(IDC_SCALE, g_scale, countof(g_scale), theApp.GetConfig("scale_x", 0) | (theApp.GetConfig("scale_y", 0) << 2));
+	ComboBoxInit(IDC_RENDERER, theApp.m_gpu_renderers, theApp.GetConfig("Renderer", 0));
+	ComboBoxInit(IDC_FILTER, theApp.m_gpu_filter, theApp.GetConfig("filter", 0));
+	ComboBoxInit(IDC_DITHERING, theApp.m_gpu_dithering, theApp.GetConfig("dithering", 1));
+	ComboBoxInit(IDC_ASPECTRATIO, theApp.m_gpu_aspectratio, theApp.GetConfig("AspectRatio", 1));
+	ComboBoxInit(IDC_SCALE, theApp.m_gpu_scale, theApp.GetConfig("scale_x", 0) | (theApp.GetConfig("scale_y", 0) << 2));
 
 	CheckDlgButton(m_hWnd, IDC_WINDOWED, theApp.GetConfig("windowed", 1));
 

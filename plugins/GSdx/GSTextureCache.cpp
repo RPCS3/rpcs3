@@ -19,19 +19,24 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSTextureCache.h"
 
 GSTextureCache::GSTextureCache(GSRenderer* r)
 	: m_renderer(r)
 {
 	m_paltex = !!theApp.GetConfig("paltex", 0);
+
+	m_temp = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32);
+
 	UserHacks_HalfPixelOffset = !!theApp.GetConfig("UserHacks_HalfPixelOffset", 0);
 }
 
 GSTextureCache::~GSTextureCache()
 {
 	RemoveAll();
+
+	_aligned_free(m_temp);
 }
 
 void GSTextureCache::RemoveAll()
@@ -173,9 +178,9 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 
 	if(m_renderer->CanUpscale())
 	{
-		int multiplier = m_renderer->upscale_Multiplier();
+		int multiplier = m_renderer->GetUpscaleMultiplier();
 
-		if (multiplier > 1) //it's limited to a maximum of 4 on reading the config
+		if(multiplier > 1) // it's limited to a maximum of 4 on reading the config
 		{
 
 #if 0 //#ifdef USE_UPSCALE_HACKS //not happy with this yet..
@@ -523,7 +528,7 @@ void GSTextureCache::IncAge()
 //Fixme: Several issues in here. Not handling depth stencil, pitch conversion doesnt work.
 GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* dst)
 {
-	Source* src = new Source(m_renderer);
+	Source* src = new Source(m_renderer, m_temp);
 
 	src->m_TEX0 = TEX0;
 	src->m_TEXA = TEXA;
@@ -660,7 +665,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		}
 
 		GSVector4 sr(0, 0, w, h);
-		
+
 		GSTexture* st = src->m_texture ? src->m_texture : dst->m_texture;
 		GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
 
@@ -736,12 +741,13 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 		// Offset hack. Can be enabled via GSdx options.
 		// The offset will be used in Draw().
+
 		float modx = 0.0f;
 		float mody = 0.0f;
-		if (UserHacks_HalfPixelOffset && hack)
+
+		if(UserHacks_HalfPixelOffset && hack)
 		{
-			int multiplier = m_renderer->upscale_Multiplier();
-			switch (multiplier)
+			switch(m_renderer->GetUpscaleMultiplier())
 			{
 			case 2:  modx = 2.2f; mody = 2.2f; dst->m_texture->LikelyOffset = true;  break;
 			case 3:  modx = 3.1f; mody = 3.1f; dst->m_texture->LikelyOffset = true;  break;
@@ -751,9 +757,9 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			default: modx = 0.0f; mody = 0.0f; dst->m_texture->LikelyOffset = false; break;
 			}
 		}
+
 		dst->m_texture->OffsetHack_modx = modx;
 		dst->m_texture->OffsetHack_mody = mody;
-
 	}
 
 	if(src->m_texture == NULL)
@@ -830,13 +836,14 @@ void GSTextureCache::Surface::Update()
 
 // GSTextureCache::Source
 
-GSTextureCache::Source::Source(GSRenderer* r)
+GSTextureCache::Source::Source(GSRenderer* r, uint8* temp)
 	: Surface(r)
 	, m_palette(NULL)
 	, m_initpalette(true)
 	, m_fmt(0)
 	, m_target(false)
 	, m_complete(false)
+	, m_temp(temp)
 {
 	memset(m_valid, 0, sizeof(m_valid));
 
@@ -859,7 +866,7 @@ GSTextureCache::Source::~Source()
 
 void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect)
 {
-	__super::Update();
+	Surface::Update();
 
 	if(m_complete || m_target)
 	{
@@ -1000,7 +1007,7 @@ void GSTextureCache::Source::Flush(uint32 count)
 		rtx = psm.rtxP;
 	}
 
-	uint8* buff = m_renderer->GetTextureBufferLock();
+	uint8* buff = m_temp;
 
 	for(uint32 i = 0; i < count; i++)
 	{
@@ -1031,11 +1038,9 @@ void GSTextureCache::Source::Flush(uint32 count)
 		}
 	}
 
-	m_renderer->ReleaseTextureBufferLock();
-
 	if(count < m_write.count)
 	{
-		memcpy(m_write.rect[0], &m_write.rect[count], (m_write.count - count) * sizeof(m_write.rect[0]));
+		memcpy(&m_write.rect[0], &m_write.rect[count], (m_write.count - count) * sizeof(m_write.rect[0]));
 	}
 
 	m_write.count -= count;
@@ -1053,7 +1058,7 @@ GSTextureCache::Target::Target(GSRenderer* r)
 
 void GSTextureCache::Target::Update()
 {
-	__super::Update();
+	Surface::Update();
 
 	// FIXME: the union of the rects may also update wrong parts of the render target (but a lot faster :)
 

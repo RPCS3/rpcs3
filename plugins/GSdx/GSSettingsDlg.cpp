@@ -23,49 +23,9 @@
 #include "GSdx.h"
 #include "GSSettingsDlg.h"
 #include "GSUtil.h"
-#include "resource.h"
-
 #include "GSDevice9.h"
-
-GSSetting GSSettingsDlg::g_renderers[] =
-{
-	{0, "Direct3D9 (Hardware)", ""},
-	{1, "Direct3D9 (Software)", ""},
-	{2, "Direct3D9 (Null)", ""},
-	{3, "Direct3D%d    ", "Hardware"},
-	{4, "Direct3D%d    ", "Software"},
-	{5, "Direct3D%d    ", "Null"},
-	{12, "Null (Software)", ""},
-	{13, "Null (Null)", ""},
-};
-
-GSSetting GSSettingsDlg::g_interlace[] =
-{
-	{0, "None", ""},
-	{1, "Weave tff", "saw-tooth"},
-	{2, "Weave bff", "saw-tooth"},
-	{3, "Bob tff", "use blend if shaking"},
-	{4, "Bob bff", "use blend if shaking"},
-	{5, "Blend tff", "slight blur, 1/2 fps"},
-	{6, "Blend bff", "slight blur, 1/2 fps"},
-};
-
-GSSetting GSSettingsDlg::g_aspectratio[] =
-{
-	{0, "Stretch", ""},
-	{1, "4:3", ""},
-	{2, "16:9", ""},
-};
-
-GSSetting GSSettingsDlg::g_upscale_multiplier[] =
-{
-	{1, "Custom", ""},
-	{2, "2x Native", ""},
-	{3, "3x Native", ""},
-	{4, "4x Native", ""},
-	{5, "5x Native", ""},
-	{6, "6x Native", ""},
-};
+#include "GSDevice11.h"
+#include "resource.h"
 
 GSSettingsDlg::GSSettingsDlg( bool isOpen2 )
 	: GSDialog(isOpen2 ? IDD_CONFIG2 : IDD_CONFIG)
@@ -117,21 +77,24 @@ void GSSettingsDlg::OnInit()
 
 	vector<GSSetting> renderers;
 
-	for(size_t i = 0; i < countof(g_renderers); i++)
+	for(size_t i = 0; i < theApp.m_gs_renderers.size(); i++)
 	{
+		GSSetting r = theApp.m_gs_renderers[i];
+
 		if(i >= 3 && i <= 5)
 		{
 			if(!isdx11avail_config) continue;
-			g_renderers[i].name = std::string("Direct3D") + (GSUtil::HasD3D11Features() ? "11" : "10");
+
+			r.name = std::string("Direct3D") + (GSUtil::HasD3D11Features() ? "11" : "10");
 		}
 
-		renderers.push_back(g_renderers[i]);
+		renderers.push_back(r);
 	}
 
-	ComboBoxInit(IDC_RENDERER, &renderers[0], renderers.size(), theApp.GetConfig("Renderer", 0));
-	ComboBoxInit(IDC_INTERLACE, g_interlace, countof(g_interlace), theApp.GetConfig("Interlace", 0));
-	ComboBoxInit(IDC_ASPECTRATIO, g_aspectratio, countof(g_aspectratio), theApp.GetConfig("AspectRatio", 1));
-	ComboBoxInit(IDC_UPSCALE_MULTIPLIER, g_upscale_multiplier, countof(g_upscale_multiplier), theApp.GetConfig("upscale_multiplier", 1));
+	ComboBoxInit(IDC_RENDERER, renderers, theApp.GetConfig("Renderer", 0));
+	ComboBoxInit(IDC_INTERLACE, theApp.m_gs_interlace, theApp.GetConfig("Interlace", 0));
+	ComboBoxInit(IDC_ASPECTRATIO, theApp.m_gs_aspectratio, theApp.GetConfig("AspectRatio", 1));
+	ComboBoxInit(IDC_UPSCALE_MULTIPLIER, theApp.m_gs_upscale_multiplier, theApp.GetConfig("upscale_multiplier", 1));
 
 	CheckDlgButton(m_hWnd, IDC_WINDOWED, theApp.GetConfig("windowed", 1));
 	CheckDlgButton(m_hWnd, IDC_FILTER, theApp.GetConfig("filter", 2));

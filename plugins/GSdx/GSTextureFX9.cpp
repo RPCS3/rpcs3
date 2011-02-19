@@ -284,9 +284,9 @@ void GSDevice9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint
 		{
 			int i = ((bsel.a * 3 + bsel.b) * 3 + bsel.c) * 3 + bsel.d;
 
-			bs->BlendOp = (D3DBLENDOP)blendMapD3D9[i].op;
-			bs->SrcBlend = (D3DBLEND)blendMapD3D9[i].src;
-			bs->DestBlend = (D3DBLEND)blendMapD3D9[i].dst;
+			bs->BlendOp = (D3DBLENDOP)m_blendMapD3D9[i].op;
+			bs->SrcBlend = (D3DBLEND)m_blendMapD3D9[i].src;
+			bs->DestBlend = (D3DBLEND)m_blendMapD3D9[i].dst;
 			bs->BlendOpAlpha = D3DBLENDOP_ADD;
 			bs->SrcBlendAlpha = D3DBLEND_ONE;
 			bs->DestBlendAlpha = D3DBLEND_ZERO;
@@ -307,7 +307,7 @@ void GSDevice9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint
 					; // god knows, best just not to mess with it for now
 			}
 
-			if(blendMapD3D9[i].bogus == 1)
+			if(m_blendMapD3D9[i].bogus == 1)
 			{
 				(bsel.a == 0 ? bs->SrcBlend : bs->DestBlend) = D3DBLEND_ONE;
 

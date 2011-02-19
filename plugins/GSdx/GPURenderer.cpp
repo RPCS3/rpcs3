@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,66 +6,82 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GPURenderer.h"
 #include "GSdx.h"
 
+#ifdef _WINDOWS
+
 map<HWND, GPURenderer*> GPURenderer::m_wnd2gpu;
+
+#endif
 
 GPURenderer::GPURenderer(GSDevice* dev)
 	: m_dev(dev)
-	, m_hWnd(NULL)
-	, m_wndproc(NULL)
 {
 	m_filter = theApp.GetConfig("filter", 0);
 	m_dither = theApp.GetConfig("dithering", 1);
 	m_aspectratio = theApp.GetConfig("AspectRatio", 1);
 	m_vsync = !!theApp.GetConfig("vsync", 0);
 	m_scale = m_mem.GetScale();
+
+	#ifdef _WINDOWS
+
+	m_hWnd = NULL;
+	m_wndproc = NULL;
+
+	#endif
 }
 
 GPURenderer::~GPURenderer()
 {
+    #ifdef _WINDOWS
+
 	if(m_wndproc)
 	{
 		SetWindowLongPtr(m_hWnd, GWLP_WNDPROC, (LONG_PTR)m_wndproc);
 
 		m_wnd2gpu.erase(m_hWnd);
 	}
+
+	#endif
 }
 
-bool GPURenderer::Create(HWND hWnd)
+bool GPURenderer::Create(void* hWnd)
 {
+    #ifdef _WINDOWS
+
 	// TODO: move subclassing inside GSWnd::Attach
 
-	m_hWnd = hWnd;
+	m_hWnd = (HWND)hWnd;
 
-	m_wndproc = (WNDPROC)GetWindowLongPtr(hWnd, GWLP_WNDPROC);
-	SetWindowLongPtr(hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
+	m_wndproc = (WNDPROC)GetWindowLongPtr(m_hWnd, GWLP_WNDPROC);
+
+	SetWindowLongPtr(m_hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
 
 	if(!m_wnd.Attach(m_hWnd))
 	{
 		return false;
 	}
 
-	m_wnd2gpu[hWnd] = this;
+	m_wnd2gpu[m_hWnd] = this;
 
-	DWORD style = GetWindowLong(hWnd, GWL_STYLE);
-	style |= WS_OVERLAPPEDWINDOW;
-	SetWindowLong(hWnd, GWL_STYLE, style);
+	SetWindowLong(m_hWnd, GWL_STYLE, GetWindowLong(m_hWnd, GWL_STYLE) | WS_OVERLAPPEDWINDOW);
+
+	#endif
 
 	m_wnd.Show();
 
@@ -74,7 +90,7 @@ bool GPURenderer::Create(HWND hWnd)
 		return false;
 	}
 
-	m_dev->SetVsync(m_vsync);
+	m_dev->SetVSync(m_vsync);
 
 	Reset();
 
@@ -111,7 +127,11 @@ void GPURenderer::VSync()
 
 	// m_env.STATUS.LCF = ~m_env.STATUS.LCF; // ?
 
+	#ifdef _WINDOWS
+
 	if(!IsWindow(m_hWnd)) return;
+
+	#endif
 
 	Flush();
 
@@ -127,7 +147,7 @@ void GPURenderer::VSync()
 		ResetDevice();
 	}
 
-	// osd 
+	// osd
 
 	if((m_perfmon.GetFrame() & 0x1f) == 0)
 	{
@@ -141,7 +161,7 @@ void GPURenderer::VSync()
 		int h = r.height() << m_scale.y;
 
 		string s = format(
-			"%I64d | %d x %d | %.2f fps (%d%%) | %d/%d | %d%% CPU | %.2f | %.2f", 
+			"%lld | %d x %d | %.2f fps (%d%%) | %d/%d | %d%% CPU | %.2f | %.2f",
 			m_perfmon.GetFrame(), w, h, fps, (int)(100.0 * fps / m_env.GetFPS()),
 			(int)m_perfmon.Get(GSPerfMon::Prim),
 			(int)m_perfmon.Get(GSPerfMon::Draw),
@@ -157,12 +177,10 @@ void GPURenderer::VSync()
 			s = format("%s | %.2f mpps", s.c_str(), fps * fillrate / (1024 * 1024));
 		}
 
-		SetWindowText(m_hWnd, s.c_str());
+        m_wnd.SetWindowText(s.c_str());
 	}
 
-	GSVector4i r;
-	
-	GetClientRect(m_hWnd, r);
+	GSVector4i r = m_wnd.GetClientRect();
 
 	m_dev->Present(r.fit(m_aspectratio), 0);
 }
@@ -185,6 +203,8 @@ bool GPURenderer::MakeSnapshot(const string& path)
 
 	return false;
 }
+
+#ifdef _WINDOWS
 
 LRESULT CALLBACK GPURenderer::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -221,3 +241,4 @@ LRESULT GPURenderer::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 	return CallWindowProc(m_wndproc, m_hWnd, message, wParam, lParam);
 }
 
+#endif

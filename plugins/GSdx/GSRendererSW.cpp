@@ -19,13 +19,12 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSRendererSW.h"
 
 const GSVector4 g_pos_scale(1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
 
 GSRendererSW::GSRendererSW(int threads)
-	: GSRendererT()
 {
 	InitVertexKick(GSRendererSW);
 
@@ -34,6 +33,8 @@ GSRendererSW::GSRendererSW(int threads)
 	memset(m_texture, 0, sizeof(m_texture));
 
 	m_rl.Create<GSDrawScanline>(threads);
+
+	m_output = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32);
 }
 
 GSRendererSW::~GSRendererSW()
@@ -44,6 +45,8 @@ GSRendererSW::~GSRendererSW()
 	{
 		delete m_texture[i];
 	}
+
+	_aligned_free(m_output);
 }
 
 void GSRendererSW::Reset()
@@ -53,12 +56,12 @@ void GSRendererSW::Reset()
 
 	m_reset = true;
 
-	__super::Reset();
+	GSRendererT<GSVertexSW>::Reset();
 }
 
 void GSRendererSW::VSync(int field)
 {
-	__super::VSync(field);
+	GSRendererT<GSVertexSW>::VSync(field);
 
 	m_tc->IncAge();
 
@@ -93,29 +96,25 @@ GSTexture* GSRendererSW::GetOutput(int i)
 
 	if(m_dev->ResizeTexture(&m_texture[i], w, h))
 	{
-		uint8* buff = GetTextureBufferLock();
-
 		static int pitch = 1024 * 4;
 
 		GSVector4i r(0, 0, w, h);
 
 		const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[DISPFB.PSM];
 
-		(m_mem.*psm.rtx)(m_mem.GetOffset(DISPFB.Block(), DISPFB.FBW, DISPFB.PSM), r.ralign<GSVector4i::Outside>(psm.bs), buff, pitch, m_env.TEXA);
+		(m_mem.*psm.rtx)(m_mem.GetOffset(DISPFB.Block(), DISPFB.FBW, DISPFB.PSM), r.ralign<GSVector4i::Outside>(psm.bs), m_output, pitch, m_env.TEXA);
 
-		m_texture[i]->Update(r, buff, pitch);
+		m_texture[i]->Update(r, m_output, pitch);
 
 		if(s_dump)
 		{
 			if(s_save && s_n >= s_saven)
 			{
-				m_texture[i]->Save(format("c:\\temp1\\_%05d_f%I64d_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)DISPFB.Block(), (int)DISPFB.PSM));
+				m_texture[i]->Save(format("c:\\temp1\\_%05d_f%lld_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)DISPFB.Block(), (int)DISPFB.PSM));
 			}
 
 			s_n++;
 		}
-
-		ReleaseTextureBufferLock();
 	}
 
 	return m_texture[i];
@@ -145,7 +144,7 @@ void GSRendererSW::Draw()
 
 		if(s_save && s_n >= s_saven && PRIM->TME)
 		{
-			s = format("c:\\temp1\\_%05d_f%I64d_tex_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
+			s = format("c:\\temp1\\_%05d_f%ll_tex_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
 
 			m_mem.SaveBMP(s, m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM, 1 << m_context->TEX0.TW, 1 << m_context->TEX0.TH);
 		}
@@ -154,14 +153,14 @@ void GSRendererSW::Draw()
 
 		if(s_save && s_n >= s_saven)
 		{
-			s = format("c:\\temp1\\_%05d_f%I64d_rt0_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
+			s = format("c:\\temp1\\_%05d_f%lld_rt0_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
 
 			m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);//GetFrameSize(1).cy);
 		}
 
 		if(s_savez && s_n >= s_saven)
 		{
-			s = format("c:\\temp1\\_%05d_f%I64d_rz0_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
+			s = format("c:\\temp1\\_%05d_f%lld_rz0_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
 
 			m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
 		}
@@ -213,14 +212,14 @@ void GSRendererSW::Draw()
 
 		if(s_save && s_n >= s_saven)
 		{
-			s = format("c:\\temp1\\_%05d_f%I64d_rt1_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
+			s = format("c:\\temp1\\_%05d_f%lld_rt1_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
 
 			m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);//GetFrameSize(1).cy);
 		}
 
 		if(s_savez && s_n >= s_saven)
 		{
-			s = format("c:\\temp1\\_%05d_f%I64d_rz1_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
+			s = format("c:\\temp1\\_%05d_f%lld_rz1_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
 
 			m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
 		}
@@ -230,7 +229,7 @@ void GSRendererSW::Draw()
 
 	if(0)//stats.ticks > 5000000)
 	{
-		printf("* [%I64d | %012I64x] ticks %I64d prims %d (%d) pixels %d (%d)\n",
+		printf("* [%lld | %012llx] ticks %lld prims %d (%d) pixels %d (%d)\n",
 			m_perfmon.GetFrame(), gd.sel.key,
 			stats.ticks,
 			stats.prims, stats.prims > 0 ? (int)(stats.ticks / stats.prims) : -1,

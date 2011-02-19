@@ -22,7 +22,7 @@
 // TODO: x64 (use the extra regs to avoid spills of zs, zd, uf, vf, rb, ga and keep a few constants in the last two like aref or afix)
 // TODO: for edges doing 4 pixels is wasteful (needed memory access * 4)
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSDrawScanlineCodeGenerator.h"
 
 static const int _args = 16;
@@ -722,7 +722,7 @@ void GSDrawScanlineCodeGenerator::Step()
 					// q += stq.zzzz();
 
 					vmovaps(xmm4, ptr[&m_local.d4.stq]);
-				
+
 					vshufps(xmm2, xmm4, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
 					vshufps(xmm3, xmm4, xmm4, _MM_SHUFFLE(1, 1, 1, 1));
 					vshufps(xmm4, xmm4, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
@@ -2750,7 +2750,7 @@ void GSDrawScanlineCodeGenerator::WriteMask()
 			vpcmpeqd(xmm1, xmm4);
 			vpackssdw(xmm1, xmm1);
 		}
-		
+
 		vpmovmskb(edx, xmm1);
 
 		not(edx);

@@ -25,6 +25,52 @@
 #include "svnrev.h"
 #include "xbyak/xbyak_util.h"
 
+char* GSUtil::GetLibName()
+{
+	static string str;
+
+	str = format("GSdx %d", SVN_REV);
+
+	if(SVN_MODS) str += "m";
+
+	#if _M_AMD64
+	str += " 64-bit";
+	#endif
+
+	list<string> sl;
+
+	// TODO: linux (gcc)
+
+	#ifdef __INTEL_COMPILER
+	sl.push_back(format("Intel C++ %d.%02d", __INTEL_COMPILER / 100, __INTEL_COMPILER % 100));
+	#elif _MSC_VER
+	sl.push_back(format("MSVC %d.%02d", _MSC_VER / 100, _MSC_VER % 100));
+	#endif
+
+	#if _M_SSE >= 0x500
+	sl.push_back("AVX");
+	#elif _M_SSE >= 0x402
+	sl.push_back("SSE42");
+	#elif _M_SSE >= 0x401
+	sl.push_back("SSE41");
+	#elif _M_SSE >= 0x301
+	sl.push_back("SSSE3");
+	#elif _M_SSE >= 0x200
+	sl.push_back("SSE2");
+	#elif _M_SSE >= 0x100
+	sl.push_back("SSE");
+	#endif
+
+	for(list<string>::iterator i = sl.begin(); i != sl.end(); )
+	{
+		if(i == sl.begin()) str += " (";
+		str += *i;
+		str += ++i != sl.end() ? ", " : ")";
+	}
+
+	return (char*)str.c_str();
+}
+
 static class GSUtilMaps
 {
 public:
@@ -99,6 +145,35 @@ bool GSUtil::HasCompatibleBits(uint32 spsm, uint32 dpsm)
 	return (s_maps.CompatibleBitsField[spsm][dpsm >> 5] & (1 << (dpsm & 0x1f))) != 0;
 }
 
+bool GSUtil::CheckSSE()
+{
+	Xbyak::util::Cpu cpu;
+	Xbyak::util::Cpu::Type type;
+
+	#if _M_SSE >= 0x500
+	type = Xbyak::util::Cpu::tAVX;
+	#elif _M_SSE >= 0x402
+	type = Xbyak::util::Cpu::tSSE42;
+	#elif _M_SSE >= 0x401
+	type = Xbyak::util::Cpu::tSSE41;
+	#elif _M_SSE >= 0x301
+	type = Xbyak::util::Cpu::tSSSE3;
+	#elif _M_SSE >= 0x200
+	type = Xbyak::util::Cpu::tSSE2;
+	#endif
+
+	if(!cpu.has(type))
+	{
+		fprintf(stderr, "This CPU does not support SSE %d.%02d", _M_SSE >> 8, _M_SSE & 0xff);
+
+		return false;
+	}
+
+	return true;
+}
+
+#ifdef _WINDOWS
+
 bool GSUtil::CheckDirectX()
 {
 	OSVERSIONINFOEX version;
@@ -163,83 +238,4 @@ bool GSUtil::CheckDirectX()
 	return true;
 }
 
-bool GSUtil::CheckSSE()
-{
-	Xbyak::util::Cpu cpu;
-	Xbyak::util::Cpu::Type type;
-
-	#if _M_SSE >= 0x500
-	type = Xbyak::util::Cpu::tAVX;
-	#elif _M_SSE >= 0x402
-	type = Xbyak::util::Cpu::tSSE42;
-	#elif _M_SSE >= 0x401
-	type = Xbyak::util::Cpu::tSSE41;
-	#elif _M_SSE >= 0x301
-	type = Xbyak::util::Cpu::tSSSE3;
-	#elif _M_SSE >= 0x200
-	type = Xbyak::util::Cpu::tSSE2;
-	#endif
-
-	if(!cpu.has(type))
-	{
-		string s = format("This CPU does not support SSE %d.%02d", _M_SSE >> 8, _M_SSE & 0xff);
-
-		MessageBox(GetActiveWindow(), s.c_str(), "GSdx", MB_OK);
-
-		return false;
-	}
-
-	return true;
-}
-
-typedef IDirect3D9* (WINAPI * LPDIRECT3DCREATE9) (UINT);
-
-static HMODULE				s_hModD3D9 = NULL;
-static LPDIRECT3DCREATE9	s_DynamicDirect3DCreate9 = NULL;
-
-
-char* GSUtil::GetLibName()
-{
-	static string str;
-
-	str = format("GSdx %d", SVN_REV);
-
-	if(SVN_MODS) str += "m";
-
-	#if _M_AMD64
-	str += " 64-bit";
-	#endif
-
-	list<string> sl;
-
-	// TODO: gcc
-
-	#ifdef __INTEL_COMPILER
-	sl.push_back(format("Intel C++ %d.%02d", __INTEL_COMPILER / 100, __INTEL_COMPILER % 100));
-	#elif _MSC_VER
-	sl.push_back(format("MSVC %d.%02d", _MSC_VER / 100, _MSC_VER % 100));
-	#endif
-
-	#if _M_SSE >= 0x500
-	sl.push_back("AVX");
-	#elif _M_SSE >= 0x402
-	sl.push_back("SSE42");
-	#elif _M_SSE >= 0x401
-	sl.push_back("SSE41");
-	#elif _M_SSE >= 0x301
-	sl.push_back("SSSE3");
-	#elif _M_SSE >= 0x200
-	sl.push_back("SSE2");
-	#elif _M_SSE >= 0x100
-	sl.push_back("SSE");
-	#endif
-
-	for(list<string>::iterator i = sl.begin(); i != sl.end(); )
-	{
-		if(i == sl.begin()) str += " (";
-		str += *i;
-		str += ++i != sl.end() ? ", " : ")";
-	}
-
-	return (char*)str.c_str();
-}
+#endif

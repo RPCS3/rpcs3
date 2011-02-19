@@ -19,7 +19,7 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSdx.h"
 #include "GSDevice.h"
 
@@ -137,9 +137,9 @@ void GSDevice::Recycle(GSTexture* t)
 		t->last_frame_used = m_frame;
 
 		m_pool.push_front(t);
-		
+
 		//printf("%d\n",m_pool.size());
-		
+
 		while(m_pool.size() > 300)
 		{
 			delete m_pool.back();
@@ -240,6 +240,7 @@ void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 	if(!m_weavebob || !(m_weavebob->GetSize() == ds))
 	{
 		delete m_weavebob;
+
 		m_weavebob = CreateRenderTarget(ds.x, ds.y, false);
 	}
 
@@ -256,6 +257,7 @@ void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 			if(!m_blend || !(m_blend->GetSize() == ds))
 			{
 				delete m_blend;
+
 				m_blend = CreateRenderTarget(ds.x, ds.y, false);
 			}
 

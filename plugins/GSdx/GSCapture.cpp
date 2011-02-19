@@ -19,9 +19,10 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSCapture.h"
-#include "GSVector.h"
+
+#ifdef _WINDOWS
 
 //
 // GSSource
@@ -335,20 +336,6 @@ public:
 	}
 };
 
-//
-// GSCapture
-//
-
-GSCapture::GSCapture()
-	: m_capturing(false)
-{
-}
-
-GSCapture::~GSCapture()
-{
-	EndCapture();
-}
-
 #define BeginEnumPins(pBaseFilter, pEnumPins, pPin) \
 	{CComPtr<IEnumPins> pEnumPins; \
 	if(pBaseFilter && SUCCEEDED(pBaseFilter->EnumPins(&pEnumPins))) \
@@ -378,13 +365,31 @@ static IPin* GetFirstPin(IBaseFilter* pBF, PIN_DIRECTION dir)
 	return(NULL);
 }
 
+#endif
+
+//
+// GSCapture
+//
+
+GSCapture::GSCapture()
+	: m_capturing(false)
+{
+}
+
+GSCapture::~GSCapture()
+{
+	EndCapture();
+}
+
 bool GSCapture::BeginCapture(int fps)
 {
-	CAutoLock cAutoLock(this);
+	GSAutoLock lock(this);
 
 	ASSERT(fps != 0);
 
 	EndCapture();
+
+#ifdef _WINDOWS
 
 	GSCaptureDlg dlg;
 
@@ -464,6 +469,8 @@ bool GSCapture::BeginCapture(int fps)
 
 	CComQIPtr<IGSSource>(m_src)->DeliverNewSegment();
 
+#endif
+
 	m_capturing = true;
 
 	return true;
@@ -471,7 +478,7 @@ bool GSCapture::BeginCapture(int fps)
 
 bool GSCapture::DeliverFrame(const void* bits, int pitch, bool rgba)
 {
-	CAutoLock cAutoLock(this);
+	GSAutoLock lock(this);
 
 	if(bits == NULL || pitch == 0)
 	{
@@ -480,6 +487,8 @@ bool GSCapture::DeliverFrame(const void* bits, int pitch, bool rgba)
 		return false;
 	}
 
+#ifdef _WINDOWS
+
 	if(m_src)
 	{
 		CComQIPtr<IGSSource>(m_src)->DeliverFrame(bits, pitch, rgba);
@@ -487,12 +496,16 @@ bool GSCapture::DeliverFrame(const void* bits, int pitch, bool rgba)
 		return true;
 	}
 
+#endif
+
 	return false;
 }
 
 bool GSCapture::EndCapture()
 {
-	CAutoLock cAutoLock(this);
+	GSAutoLock lock(this);
+
+#ifdef _WINDOWS
 
 	if(m_src)
 	{
@@ -507,6 +520,8 @@ bool GSCapture::EndCapture()
 
 		m_graph = NULL;
 	}
+
+#endif
 
 	m_capturing = false;
 

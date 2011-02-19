@@ -19,14 +19,14 @@
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GSClut.h"
 #include "GSLocalMemory.h"
 
 GSClut::GSClut(GSLocalMemory* mem)
 	: m_mem(mem)
 {
-	uint8* p = (uint8*)VirtualAlloc(NULL, 2 * 4096, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	uint8* p = (uint8*)vmalloc(2 * 4096, false);
 
 	m_clut = (uint16*)&p[0]; // 1k + 1k for buffer overruns (sfex: PSM == PSM_PSMT8, CPSM == PSM_PSMCT32, CSA != 0)
 	m_buff32 = (uint32*)&p[2048]; // 1k
@@ -88,7 +88,7 @@ GSClut::GSClut(GSLocalMemory* mem)
 
 GSClut::~GSClut()
 {
-	VirtualFree(m_clut, 0, MEM_RELEASE);
+	vmfree(m_clut);
 }
 
 void GSClut::Invalidate()

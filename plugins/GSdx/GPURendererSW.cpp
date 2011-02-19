@@ -1,4 +1,4 @@
-/* 
+/*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -6,36 +6,40 @@
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation; either version 2, or (at your option)
  *  any later version.
- *   
+ *
  *  This Program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU General Public License for more details.
- *   
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA. 
+ *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "GPURendererSW.h"
-#include "GSdx.h"
+//#include "GSdx.h"
 
 GPURendererSW::GPURendererSW(GSDevice* dev, int threads)
-	: GPURendererT(dev)
+	: GPURendererT<GSVertexSW>(dev)
 	, m_texture(NULL)
 {
+	m_output = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 16);
+
 	m_rl.Create<GPUDrawScanline>(threads);
 }
 
 GPURendererSW::~GPURendererSW()
 {
 	delete m_texture;
+
+	_aligned_free(m_output);
 }
 
-void GPURendererSW::ResetDevice() 
+void GPURendererSW::ResetDevice()
 {
 	delete m_texture;
 
@@ -53,12 +57,9 @@ GSTexture* GPURendererSW::GetOutput()
 
 	if(m_dev->ResizeTexture(&m_texture, r.width(), r.height()))
 	{
-		// TODO
-		static uint32* buff = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 16);
+		m_mem.ReadFrame32(r, m_output, !!m_env.STATUS.ISRGB24);
 
-		m_mem.ReadFrame32(r, buff, !!m_env.STATUS.ISRGB24);
-
-		m_texture->Update(r.rsize(), buff, m_mem.GetWidth() * sizeof(uint32));
+		m_texture->Update(r.rsize(), m_output, m_mem.GetWidth() * sizeof(uint32));
 	}
 
 	return m_texture;
@@ -153,7 +154,7 @@ void GPURendererSW::Draw()
 
 	Invalidate(r);
 
-	m_rl.Sync(); 
+	m_rl.Sync();
 
 	GSRasterizerStats stats;
 
@@ -161,7 +162,7 @@ void GPURendererSW::Draw()
 
 	m_perfmon.Put(GSPerfMon::Draw, 1);
 	m_perfmon.Put(GSPerfMon::Prim, stats.prims);
-	m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels); 
+	m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
 }
 
 void GPURendererSW::VertexKick()
@@ -184,7 +185,7 @@ void GPURendererSW::VertexKick()
 	dst.c = GSVector4(GSVector4i::load((int)m_v.RGB.u32).u8to32() << 7);
 
 	int count = 0;
-	
+
 	if(GSVertexSW* v = DrawingKick(count))
 	{
 		// TODO
