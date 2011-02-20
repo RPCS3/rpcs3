@@ -52,9 +52,9 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/FWnull" AND FWnull)
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/FWnull" AND FWnull)
 
 # make GSdx
-#if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/GSdx" AND GSdx)
-#	add_subdirectory(GSdx)
-#endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/GSdx" AND GSdx)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/GSdx" AND GSdx)
+	add_subdirectory(GSdx)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/GSdx" AND GSdx)
 
 # make GSnull
 if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/GSnull" AND GSnull)
