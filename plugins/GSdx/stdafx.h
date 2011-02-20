@@ -37,6 +37,14 @@
 #include <commdlg.h>
 #include <shellapi.h>
 #include <atlbase.h>
+#include <d3d11.h>
+#include <d3dx11.h>
+#include <d3d9.h>
+#include <d3dx9.h>
+
+#define D3DCOLORWRITEENABLE_RGBA (D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA)
+#define D3D11_SHADER_MACRO D3D10_SHADER_MACRO
+#define ID3D11Blob ID3D10Blob
 
 #endif
 
@@ -173,25 +181,6 @@ typedef signed long long int64;
 
 #endif
 
-#ifdef _WINDOWS
-
-// directx
-
-#include <d3d11.h>
-#include <d3dx11.h>
-#include <d3d9.h>
-#include <d3dx9.h>
-
-#define D3DCOLORWRITEENABLE_RGBA (D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_GREEN | D3DCOLORWRITEENABLE_BLUE | D3DCOLORWRITEENABLE_ALPHA)
-
-#define USE_UPSCALE_HACKS // Hacks intended to fix upscaling / rendering glitches in HW renderers
-
-// dxsdk is missing these:
-#define D3D11_SHADER_MACRO D3D10_SHADER_MACRO
-#define ID3D11Blob ID3D10Blob
-
-#endif
-
 // sse
 
 #if !defined(_M_SSE) && (!defined(_WINDOWS) || defined(_M_AMD64) || defined(_M_IX86_FP) && _M_IX86_FP >= 2)
@@ -315,3 +304,6 @@ __forceinline unsigned long long __rdtsc()
 
 extern void* vmalloc(size_t size, bool code);
 extern void vmfree(void* ptr, size_t size);
+
+#define USE_UPSCALE_HACKS // Hacks intended to fix upscaling / rendering glitches in HW renderers
+

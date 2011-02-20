@@ -22,6 +22,10 @@
 #include "stdafx.h"
 #include "GSDeviceSW.h"
 
+GSDeviceSW::GSDeviceSW()
+{
+}
+
 bool GSDeviceSW::Create(GSWnd* wnd)
 {
 	if(!GSDevice::Create(wnd))
@@ -37,11 +41,14 @@ bool GSDeviceSW::Reset(int w, int h)
 	if(!GSDevice::Reset(w, h))
 		return false;
 
+	m_backbuffer = new GSTextureSW(GSTexture::RenderTarget, w, h);
+
 	return true;
 }
 
 void GSDeviceSW::Flip()
 {
+	// TODO: derived class should present m_backbuffer here
 }
 
 GSTexture* GSDeviceSW::Create(int type, int w, int h, bool msaa, int format)
@@ -68,7 +75,7 @@ void GSDeviceSW::EndScene()
 
 void GSDeviceSW::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
-	Clear(t, c.rgba32());
+	Clear(t, (c * 255 + 0.5f).rgba32());
 }
 
 void GSDeviceSW::ClearRenderTarget(GSTexture* t, uint32 c)
@@ -88,24 +95,31 @@ void GSDeviceSW::ClearStencil(GSTexture* t, uint8 c)
 
 GSTexture* GSDeviceSW::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format)
 {
-	// TODO
+	GSTexture* dst = CreateOffscreen(w, h, format);
 
-	return NULL;
+	if(dst != NULL)
+	{
+		CopyRect(src, dst, GSVector4i(0, 0, w, h));
+	}
+
+	return dst;
 }
 
 void GSDeviceSW::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 {
-	// TODO
-}
+	GSTexture::GSMap m;
 
-void GSDeviceSW::StretchRect(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
-{
-	// TODO
+	if(st->Map(m, &r))
+	{
+		dt->Update(r, m.bits, m.pitch);
+
+		st->Unmap();
+	}
 }
 
 void GSDeviceSW::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
 {
-	// TODO
+	// TODO: only used to stretch m_current to m_backbuffer, no blending needed (yet) 
 }
 
 void GSDeviceSW::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
@@ -127,18 +141,40 @@ void GSDeviceSW::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 
 void GSDeviceSW::DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c)
 {
-	// TODO
+	ClearRenderTarget(dt, c);
+
+	if(st[1] && !slbg)
+	{
+		// TODO: copy (StretchRect)
+	}
+
+	if(st[0])
+	{
+		// TODO: blend
+		//
+		// mmod 0 => alpha = min(st[0].a * 2, 1)
+		// mmod 1 => alpha = c.a 
+	}
 }
 
 void GSDeviceSW::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset)
 {
+	GSVector4 s = GSVector4(dt->GetSize());
+
+	GSVector4 sr(0, 0, 1, 1);
+	GSVector4 dr(0.0f, yoffset, s.x, s.y + yoffset);
+
 	// TODO
+	// 
+	// shader 0/1 => copy even/odd lines
+	// shader 2 => blend lines (1:2:1 filter)
+	// shader 3 => copy all lines (StretchRect)
 }
 
 void GSDeviceSW::Clear(GSTexture* t, uint32 c)
 {
-	int h = t->GetHeight();
 	int w = t->GetWidth();
+	int h = t->GetHeight();
 
 	GSTexture::GSMap m;
 
@@ -146,13 +182,16 @@ void GSDeviceSW::Clear(GSTexture* t, uint32 c)
 	{
 		GSVector4i v((int)c);
 
-		uint8* p = m.bits;
+		w >>= 2;
 
-		for(int j = 0; j < h; j++, p += m.pitch)
+		for(int j = 0; j < h; j++, m.bits += m.pitch)
 		{
-			for(int i = 0; i < w; i += 4)
+			GSVector4i* RESTRICT dst = (GSVector4i*)m.bits;
+
+			for(int i = 0; i < w; i += 2)
 			{
-				*(GSVector4i*)&p[i] = v;
+				dst[i + 0] = v;
+				dst[i + 1] = v;
 			}
 		}
 

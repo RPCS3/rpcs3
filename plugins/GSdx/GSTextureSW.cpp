@@ -63,11 +63,13 @@ bool GSTextureSW::Update(const GSVector4i& r, const void* data, int pitch)
 
 bool GSTextureSW::Map(GSMap& m, const GSVector4i* r)
 {
-	if(m_data != NULL && r->left >= 0 && r->right <= m_size.x && r->top >= 0 && r->bottom <= m_size.y)
+	GSVector4i r2 = r != NULL ? *r : GSVector4i(0, 0, m_size.x, m_size.y);
+
+	if(m_data != NULL && r2.left >= 0 && r2.right <= m_size.x && r2.top >= 0 && r2.bottom <= m_size.y)
 	{
 		if(!_interlockedbittestandset(&m_mapped, 0))
 		{
-			m.bits = (uint8*)m_data + ((m_pitch * r->top + r->left) << 2);
+			m.bits = (uint8*)m_data + ((m_pitch * r2.top + r2.left) << 2);
 			m.pitch = m_pitch;
 
 			return true;

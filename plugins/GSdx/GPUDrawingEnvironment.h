@@ -23,8 +23,6 @@
 
 #include "GPU.h"
 
-#pragma pack(push, 1)
-
 __aligned(class, 32) GPUDrawingEnvironment
 {
 public:
@@ -75,5 +73,3 @@ public:
 		return STATUS.ISPAL ? 50 : 60;
 	}
 };
-
-#pragma pack(pop)

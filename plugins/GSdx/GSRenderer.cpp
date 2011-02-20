@@ -245,6 +245,13 @@ bool GSRenderer::Merge(int field)
 
 	if(tex[0] || tex[1])
 	{
+		if(tex[0] == tex[1] && !slbg && (src[0] == src[1] & dst[0] == dst[1]).alltrue())
+		{
+			// the two outputs are identical, skip drawing one of them (the one that is alpha blended)
+
+			tex[0] = NULL;
+		}
+
 		GSVector4 c = GSVector4((int)m_regs->BGCOLOR.R, (int)m_regs->BGCOLOR.G, (int)m_regs->BGCOLOR.B, (int)m_regs->PMODE.ALP) / 255;
 
 		m_dev->Merge(tex, src, dst, fs, slbg, mmod, c);

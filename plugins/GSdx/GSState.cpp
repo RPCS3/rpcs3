@@ -1503,7 +1503,7 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 						// This can't happen; downloads can not be started or performed as part of
 						// a GIFtag operation.  They're an entirely separate process that can only be
 						// done through the ReverseFIFO transfer (aka ReadFIFO). --air
-						ASSERT(false);
+						ASSERT(0);
 						//Read(mem, len * 16);
 						break;
 					case 2:
@@ -1548,7 +1548,7 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 		{
 			if(m_mt)
 			{
-				// Hackfix for BIOS, which sends an incomplete packek when it does an XGKICK without
+				// Hackfix for BIOS, which sends an incomplete packet when it does an XGKICK without
 				// having an EOP specified anywhere in VU1 memory.  Needed until PCSX2 is fixed t
 				// handle it more properly (ie, without looping infinitely).
 
@@ -1556,8 +1556,9 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 			}
 			else
 			{
-				// Unused in 0.9.7 and above, but  might as well keep this for now; allows GSdx
+				// Unused in 0.9.7 and above, but might as well keep this for now; allows GSdx
 				// to work with legacy editions of PCSX2.
+
 				Transfer<0>(mem - 0x4000, 0x4000 / 16);
 			}
 		}
