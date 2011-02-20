@@ -47,7 +47,7 @@ void* vmalloc(size_t size, bool code)
 
 void vmfree(void* ptr, size_t size)
 {
-    VirtualFree(ptr, size, MEM_RELEASE);
+    VirtualFree(ptr, 0, MEM_RELEASE);
 }
 
 #else

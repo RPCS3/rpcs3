@@ -355,7 +355,7 @@ void GSRenderer::VSync(int field)
 			s += " | Recording...";
 		}
 
-		if (m_wnd.IsManaged())
+		if(m_wnd.IsManaged())
 		{
 			m_wnd.SetWindowText(s.c_str());
 		}

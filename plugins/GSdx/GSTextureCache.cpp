@@ -783,7 +783,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 GSTextureCache::Target* GSTextureCache::CreateTarget(const GIFRegTEX0& TEX0, int w, int h, int type)
 {
-	Target* t = new Target(m_renderer);
+	Target* t = new Target(m_renderer, m_temp);
 
 	t->m_TEX0 = TEX0;
 
@@ -816,8 +816,9 @@ GSTextureCache::Target* GSTextureCache::CreateTarget(const GIFRegTEX0& TEX0, int
 
 // GSTextureCache::Surface
 
-GSTextureCache::Surface::Surface(GSRenderer* r)
+GSTextureCache::Surface::Surface(GSRenderer* r, uint8* temp)
 	: m_renderer(r)
+	, m_temp(temp)
 	, m_texture(NULL)
 	, m_age(0)
 {
@@ -837,13 +838,12 @@ void GSTextureCache::Surface::Update()
 // GSTextureCache::Source
 
 GSTextureCache::Source::Source(GSRenderer* r, uint8* temp)
-	: Surface(r)
+	: Surface(r, temp)
 	, m_palette(NULL)
 	, m_initpalette(true)
 	, m_fmt(0)
 	, m_target(false)
 	, m_complete(false)
-	, m_temp(temp)
 {
 	memset(m_valid, 0, sizeof(m_valid));
 
@@ -1048,8 +1048,8 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 // GSTextureCache::Target
 
-GSTextureCache::Target::Target(GSRenderer* r)
-	: Surface(r)
+GSTextureCache::Target::Target(GSRenderer* r, uint8* temp)
+	: Surface(r, temp)
 	, m_type(-1)
 	, m_used(false)
 {
@@ -1091,13 +1091,11 @@ void GSTextureCache::Target::Update()
 			}
 			else
 			{
-				static uint8* buff = (uint8*)::_aligned_malloc(1024 * 1024 * 4, 32);
-
 				int pitch = ((w + 3) & ~3) * 4;
 
-				m_renderer->m_mem.ReadTexture(o, r, buff, pitch, TEXA);
+				m_renderer->m_mem.ReadTexture(o, r, m_temp, pitch, TEXA);
 
-				t->Update(r.rsize(), buff, pitch);
+				t->Update(r.rsize(), m_temp, pitch);
 			}
 
 			// m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, w * h * 4);

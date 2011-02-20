@@ -49,9 +49,10 @@ public:
 		GIFRegTEX0 m_TEX0;
 		GIFRegTEXA m_TEXA;
 		int m_age;
+		uint8* m_temp;
 
 	public:
-		explicit Surface(GSRenderer* r);
+		Surface(GSRenderer* r, uint8* temp);
 		virtual ~Surface();
 
 		virtual void Update();
@@ -72,7 +73,6 @@ public:
 		int m_fmt;
 		bool m_target;
 		bool m_complete;
-		uint8* m_temp;
 
 	public:
 		Source(GSRenderer* r, uint8* temp);
@@ -90,7 +90,7 @@ public:
 		GSVector4i m_valid;
 
 	public:
-		explicit Target(GSRenderer* r);
+		Target(GSRenderer* r, uint8* temp);
 
 		virtual void Update();
 	};
