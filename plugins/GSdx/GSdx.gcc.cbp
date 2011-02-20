@@ -82,6 +82,8 @@
 		<Unit filename="GSDevice.h" />
 		<Unit filename="GSDeviceNull.cpp" />
 		<Unit filename="GSDeviceNull.h" />
+		<Unit filename="GSDeviceSW.cpp" />
+		<Unit filename="GSDeviceSW.h" />
 		<Unit filename="GSDirtyRect.cpp" />
 		<Unit filename="GSDirtyRect.h" />
 		<Unit filename="GSDrawScanline.cpp" />
@@ -124,6 +126,8 @@
 		<Unit filename="GSTextureCacheSW.h" />
 		<Unit filename="GSTextureNull.cpp" />
 		<Unit filename="GSTextureNull.h" />
+		<Unit filename="GSTextureSW.cpp" />
+		<Unit filename="GSTextureSW.h" />
 		<Unit filename="GSThread.cpp" />
 		<Unit filename="GSThread.h" />
 		<Unit filename="GSUtil.cpp" />

@@ -63,8 +63,6 @@ bool GSTextureSW::Update(const GSVector4i& r, const void* data, int pitch)
 
 bool GSTextureSW::Map(GSMap& m, const GSVector4i* r)
 {
-	HRESULT hr;
-
 	if(m_data != NULL && r->left >= 0 && r->right <= m_size.x && r->top >= 0 && r->bottom <= m_size.y)
 	{
 		if(!_interlockedbittestandset(&m_mapped, 0))
@@ -112,6 +110,8 @@ struct BITMAPINFOHEADER
 	uint32 biClrImportant;
 };
 
+#define BI_RGB 0
+
 #pragma pack(pop)
 
 #endif
@@ -126,19 +126,23 @@ bool GSTextureSW::Save(const string& fn, bool dds)
 
 		memset(&bih, 0, sizeof(bih));
 
-        bih.biSize = sizeof(bih);
-        bih.biWidth = m_size.x;
-        bih.biHeight = m_size.y;
-        bih.biPlanes = 1;
-        bih.biBitCount = 32;
-        bih.biCompression = BI_RGB;
-        bih.biSizeImage = m_size.x * m_size.y << 2;
+		bih.biSize = sizeof(bih);
+		bih.biWidth = m_size.x;
+		bih.biHeight = m_size.y;
+		bih.biPlanes = 1;
+		bih.biBitCount = 32;
+		bih.biCompression = BI_RGB;
+		bih.biSizeImage = m_size.x * m_size.y << 2;
 
 		BITMAPFILEHEADER bfh;
 
 		memset(&bfh, 0, sizeof(bfh));
-		
-		bfh.bfType = 'MB';
+
+		uint8* bfType = (uint8*)bfh.bfType;
+
+		// bfh.bfType = 'MB';
+		bfType[0] = 0x42;
+		bfType[1] = 0x4d;
 		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
 		bfh.bfSize = bfh.bfOffBits + bih.biSizeImage;
 		bfh.bfReserved1 = bfh.bfReserved2 = 0;

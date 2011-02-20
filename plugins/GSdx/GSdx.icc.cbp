@@ -13,6 +13,10 @@
 				<Option compiler="icc" />
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O0" />
+					<Add option="-g" />
+				</Compiler>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/libGSdx" prefix_auto="1" extension_auto="1" />
@@ -22,7 +26,7 @@
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>
-					<Add option="-Ob2" />
+					<Add option="-msse2" />
 					<Add option="-O2" />
 				</Compiler>
 			</Target>
@@ -73,6 +77,8 @@
 		<Unit filename="GSDevice.h" />
 		<Unit filename="GSDeviceNull.cpp" />
 		<Unit filename="GSDeviceNull.h" />
+		<Unit filename="GSDeviceSW.cpp" />
+		<Unit filename="GSDeviceSW.h" />
 		<Unit filename="GSDirtyRect.cpp" />
 		<Unit filename="GSDirtyRect.h" />
 		<Unit filename="GSDrawScanline.cpp" />
@@ -114,6 +120,8 @@
 		<Unit filename="GSTextureCacheSW.h" />
 		<Unit filename="GSTextureNull.cpp" />
 		<Unit filename="GSTextureNull.h" />
+		<Unit filename="GSTextureSW.cpp" />
+		<Unit filename="GSTextureSW.h" />
 		<Unit filename="GSThread.cpp" />
 		<Unit filename="GSThread.h" />
 		<Unit filename="GSUtil.cpp" />
