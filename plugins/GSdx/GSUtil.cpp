@@ -198,17 +198,11 @@ bool GSUtil::CheckDirectX()
 
 	if(GetVersionEx((OSVERSIONINFO*)&version))
 	{
-		printf("Windows %d.%d.%d",
-			version.dwMajorVersion,
-			version.dwMinorVersion,
-			version.dwBuildNumber);
+		printf("Windows %d.%d.%d", version.dwMajorVersion, version.dwMinorVersion, version.dwBuildNumber);
 
 		if(version.wServicePackMajor > 0)
 		{
-			printf(" (%s %d.%d)",
-				version.szCSDVersion,
-				version.wServicePackMajor,
-				version.wServicePackMinor);
+			printf(" (%s %d.%d)", version.szCSDVersion, version.wServicePackMajor, version.wServicePackMinor);
 		}
 
 		printf("\n");
@@ -252,6 +246,125 @@ bool GSUtil::CheckDirectX()
 	}
 
 	return true;
+}
+
+// ---------------------------------------------------------------------------------
+//  DX11 Detection (includes DXGI detection and dynamic library method bindings)
+// ---------------------------------------------------------------------------------
+//  Code 'Borrowed' from Microsoft's DXGI sources -- Modified to suit our needs. --air
+
+typedef HRESULT (WINAPI * FNPTR_CREATEDXGIFACTORY)(REFIID, void**);
+
+typedef HRESULT (WINAPI * FNPTR_D3D11CREATEDEVICEANDSWAPCHAIN) (
+	__in   IDXGIAdapter *pAdapter,
+	__in   D3D_DRIVER_TYPE DriverType,
+	__in   HMODULE Software,
+	__in   UINT Flags,
+	__in   const D3D_FEATURE_LEVEL *pFeatureLevels,
+	__in   UINT FeatureLevels,
+	__in   UINT SDKVersion,
+	__in   const DXGI_SWAP_CHAIN_DESC *pSwapChainDesc,
+	__out  IDXGISwapChain **ppSwapChain,
+	__out  ID3D11Device **ppDevice,
+	__out  D3D_FEATURE_LEVEL *pFeatureLevel,
+	__out  ID3D11DeviceContext **ppImmediateContext
+);
+
+static HMODULE					s_hModD3D11 = NULL;
+static PFN_D3D11_CREATE_DEVICE	s_DynamicD3D11CreateDevice = NULL;
+static HMODULE					s_hModDXGI = NULL;
+static FNPTR_CREATEDXGIFACTORY	s_DynamicCreateDXGIFactory = NULL;
+static long						s_D3D11Checked = 0;
+static D3D_FEATURE_LEVEL		s_D3D11Level = (D3D_FEATURE_LEVEL)0;
+
+static bool DXUTDelayLoadDXGI()
+{
+	if(s_DynamicD3D11CreateDevice == NULL)
+	{
+		s_hModDXGI = LoadLibrary("dxgi.dll");
+
+		if(s_hModDXGI)
+		{
+			s_DynamicCreateDXGIFactory = (FNPTR_CREATEDXGIFACTORY)GetProcAddress(s_hModDXGI, "CreateDXGIFactory");
+		}
+
+		// If DXGI isn't installed then this system isn't even capable of DX11 support; so no point
+		// in checking for DX11 DLLs.
+			
+		if(s_DynamicCreateDXGIFactory == NULL) 
+		{
+			return false;
+		}
+
+		s_hModD3D11 = LoadLibrary("d3d11.dll");
+		
+		if(s_hModD3D11 == NULL) 
+		{
+			s_hModD3D11 = LoadLibrary("d3d11_beta.dll");
+		}
+
+		if(s_hModD3D11 != NULL)
+		{
+			s_DynamicD3D11CreateDevice	= (PFN_D3D11_CREATE_DEVICE)GetProcAddress(s_hModD3D11, "D3D11CreateDevice");
+		}
+
+		if(s_DynamicD3D11CreateDevice == NULL)
+		{
+			return false;
+		}
+	}
+
+	CComPtr<IDXGIFactory> f;
+
+	return s_DynamicCreateDXGIFactory(__uuidof(IDXGIFactory), (LPVOID*)&f) == S_OK && f != NULL;
+}
+
+bool GSUtil::CheckDirect3D11Level(D3D_FEATURE_LEVEL& level)
+{
+	level = (D3D_FEATURE_LEVEL)0;
+
+	if(!_bittestandset(&s_D3D11Checked, 0)) // thread safety...
+	{
+		if(!DXUTDelayLoadDXGI())
+		{
+			UnloadDynamicLibraries();
+
+			return false;
+		}
+		
+		const D3D_FEATURE_LEVEL levels[] =
+		{
+			D3D_FEATURE_LEVEL_11_0,
+			D3D_FEATURE_LEVEL_10_1,
+			D3D_FEATURE_LEVEL_10_0,
+			D3D_FEATURE_LEVEL_9_3,
+			D3D_FEATURE_LEVEL_9_2,
+			D3D_FEATURE_LEVEL_9_1,
+		};
+
+		CComPtr<ID3D11Device> dev;
+		CComPtr<ID3D11DeviceContext> ctx;
+
+		HRESULT hr = s_DynamicD3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_SINGLETHREADED, levels, countof(levels), D3D11_SDK_VERSION, &dev, &level, &ctx);
+
+		s_D3D11Level = level;
+	}
+
+	level = s_D3D11Level;
+
+	return level >= D3D_FEATURE_LEVEL_11_0;
+}
+
+void GSUtil::UnloadDynamicLibraries()
+{
+	s_DynamicD3D11CreateDevice = NULL;
+	s_DynamicCreateDXGIFactory = NULL;
+
+	if(s_hModD3D11) FreeLibrary(s_hModD3D11);
+	if(s_hModDXGI) FreeLibrary(s_hModDXGI);
+
+	s_hModD3D11 = NULL;
+	s_hModDXGI = NULL;
 }
 
 #endif

@@ -27,12 +27,12 @@
 #include "GSDevice11.h"
 #include "resource.h"
 
-GSSettingsDlg::GSSettingsDlg( bool isOpen2 )
+GSSettingsDlg::GSSettingsDlg(bool isOpen2)
 	: GSDialog(isOpen2 ? IDD_CONFIG2 : IDD_CONFIG)
 	, m_IsOpen2(isOpen2)
 {
 }
-bool allowHacks = false;
+
 void GSSettingsDlg::OnInit()
 {
 	__super::OnInit();
@@ -73,7 +73,9 @@ void GSSettingsDlg::OnInit()
 		}
 	}
 
-	bool isdx11avail_config = GSUtil::IsDirect3D11Available();
+	D3D_FEATURE_LEVEL level;
+
+	GSUtil::CheckDirect3D11Level(level);
 
 	vector<GSSetting> renderers;
 
@@ -83,9 +85,9 @@ void GSSettingsDlg::OnInit()
 
 		if(i >= 3 && i <= 5)
 		{
-			if(!isdx11avail_config) continue;
+			if(level < D3D_FEATURE_LEVEL_10_0) continue;
 
-			r.name = std::string("Direct3D") + (GSUtil::HasD3D11Features() ? "11" : "10");
+			r.name = std::string("Direct3D") + (level >= D3D_FEATURE_LEVEL_11_0 ? "11" : "10");
 		}
 
 		renderers.push_back(r);
@@ -141,6 +143,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		//post change
 
 		bool dx9 = false;
+
 		INT_PTR i;
 
 		if(ComboBoxGetSelData(IDC_RENDERER, i))
@@ -178,7 +181,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 				
 				if(!supportedAa.length())
 				{
-					supportedAa="None";
+					supportedAa = "None";
 				}
 
 				string s = format("AA=%d is not supported.\nSupported AA values: %s.", (int)requestedMsaa, supportedAa.c_str());
@@ -199,7 +202,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 				}
 			}
 
-			m_lastValidMsaa=requestedMsaa;
+			m_lastValidMsaa = requestedMsaa;
 
 			UpdateControls();
 		}
@@ -269,9 +272,6 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		theApp.SetConfig("UserHacks_AlphaHack", (int)IsDlgButtonChecked(m_hWnd, IDC_ALPHAHACK));
 		theApp.SetConfig("UserHacks_HalfPixelOffset", (int)IsDlgButtonChecked(m_hWnd, IDC_OFFSETHACK));
 		theApp.SetConfig("UserHacks_SkipDraw", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_GETPOS, 0, 0));
-
-		bool allowHacks = !!theApp.GetConfig("allowHacks", 0);
-		theApp.SetConfig("allowHacks", allowHacks);
 	}
 
 	return __super::OnCommand(hWnd, id, code);

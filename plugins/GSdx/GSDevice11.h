@@ -24,24 +24,6 @@
 #include "GSDeviceDX.h"
 #include "GSTexture11.h"
 
-typedef HRESULT     (WINAPI * FnPtr_CreateDXGIFactory)(REFIID, void ** );
-
-typedef HRESULT  (WINAPI * FnPtr_D3D11CreateDeviceAndSwapChain) (
-	__in   IDXGIAdapter *pAdapter,
-	__in   D3D_DRIVER_TYPE DriverType,
-	__in   HMODULE Software,
-	__in   UINT Flags,
-	__in   const D3D_FEATURE_LEVEL *pFeatureLevels,
-	__in   UINT FeatureLevels,
-	__in   UINT SDKVersion,
-	__in   const DXGI_SWAP_CHAIN_DESC *pSwapChainDesc,
-	__out  IDXGISwapChain **ppSwapChain,
-	__out  ID3D11Device **ppDevice,
-	__out  D3D_FEATURE_LEVEL *pFeatureLevel,
-	__out  ID3D11DeviceContext **ppImmediateContext
-);
-
-
 struct GSVertexShader11
 {
 	CComPtr<ID3D11VertexShader> vs;

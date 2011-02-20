@@ -35,10 +35,11 @@
 #include "GSSettingsDlg.h"
 
 static HRESULT s_hr = E_FAIL;
-static bool s_isdx11avail = false; // set on GSinit
 
 #else
+
 extern bool RunLinuxDialog();
+
 #endif
 
 #define PS2E_LT_GS 0x01
@@ -121,8 +122,6 @@ EXPORT_C_(int) GSinit()
 	{
 		return -1;
 	}
-
-	s_isdx11avail = GSUtil::IsDirect3D11Available();
 
 #endif
 
@@ -280,8 +279,6 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 		return -1;
 	}
 
-	// if(mt) _mm_setcsr(MXCSR);
-
 	return 0;
 }
 
@@ -292,7 +289,11 @@ EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 	if(flags & 4)
 	{
 #ifdef _WINDOWS
-		renderer = s_isdx11avail ? 4 : 1; // dx11 / dx9 sw
+
+		D3D_FEATURE_LEVEL level;
+		
+		renderer = GSUtil::CheckDirect3D11Level(level) && level >= D3D_FEATURE_LEVEL_10_0 ? 4 : 1; // dx11 / dx9 sw
+
 #endif
 	}
 
@@ -316,7 +317,11 @@ EXPORT_C_(int) GSopen(void** dsp, char* title, int mt)
 		// pcsx2 sent a switch renderer request
 
 #ifdef _WINDOWS
-		renderer = s_isdx11avail ? 4 : 1; // dx11 / dx9 sw
+
+		D3D_FEATURE_LEVEL level;
+		
+		renderer = GSUtil::CheckDirect3D11Level(level) && level >= D3D_FEATURE_LEVEL_10_0 ? 4 : 1; // dx11 / dx9 sw
+
 #endif
 
 		mt = 1;

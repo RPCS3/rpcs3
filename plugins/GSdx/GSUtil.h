@@ -39,14 +39,8 @@ public:
 #ifdef _WINDOWS
 
 	static bool CheckDirectX();
+	static bool CheckDirect3D11Level(D3D_FEATURE_LEVEL& level);
 	static void UnloadDynamicLibraries();
-
-	// These should probably be located more closely to their respective DX9/DX11 driver files,
-	// and not here in GSUtil (which should be DirectX independent, generally speaking) --air
-
-	static void* GetDX9Proc( const char* methodname );
-	static bool IsDirect3D11Available();
-	static bool HasD3D11Features();
 
 #endif
 };
