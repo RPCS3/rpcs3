@@ -80,5 +80,5 @@ public:
 	void Expand16(const uint16* RESTRICT src, uint32* RESTRICT dst, int pixels);
 	void Expand24(const uint16* RESTRICT src, uint32* RESTRICT dst, int pixels);
 
-	void SaveBMP(const string& path, const GSVector4i& r, int tp, int cx, int cy);
+	void SaveBMP(const string& fn, const GSVector4i& r, int tp, int cx, int cy);
 };

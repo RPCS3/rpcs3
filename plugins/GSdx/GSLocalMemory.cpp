@@ -1851,10 +1851,10 @@ void GSLocalMemory::ReadTextureBlock4HHP(uint32 bp, uint8* dst, int dstpitch, co
 
 //
 
+#include "GSTextureSW.h"
+
 void GSLocalMemory::SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 psm, int w, int h)
 {
-    #ifdef _WINDOWS
-
 	int pitch = w * 4;
 	int size = pitch * h;
 	void* bits = _aligned_malloc(size, 32);
@@ -1875,41 +1875,20 @@ void GSLocalMemory::SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 psm, 
 
 	uint8* p = (uint8*)bits;
 
-	for(int j = h-1; j >= 0; j--, p += pitch)
-		for(int i = 0; i < w; i++)
-			((uint32*)p)[i] = (this->*rp)(i, j, TEX0.TBP0, TEX0.TBW);
-
-	if(FILE* fp = fopen(fn.c_str(), "wb"))
+	for(int j = 0; j < h; j++, p += pitch)
 	{
-		BITMAPINFOHEADER bih;
-		memset(&bih, 0, sizeof(bih));
-        bih.biSize = sizeof(bih);
-        bih.biWidth = w;
-        bih.biHeight = h;
-        bih.biPlanes = 1;
-        bih.biBitCount = 32;
-        bih.biCompression = BI_RGB;
-        bih.biSizeImage = size;
+		for(int i = 0; i < w; i++)
+		{
+			((uint32*)p)[i] = (this->*rp)(i, j, TEX0.TBP0, TEX0.TBW);
+		}
+	}
 
-		BITMAPFILEHEADER bfh;
-		memset(&bfh, 0, sizeof(bfh));
-		bfh.bfType = 'MB';
-		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
-		bfh.bfSize = bfh.bfOffBits + size;
-		bfh.bfReserved1 = bfh.bfReserved2 = 0;
+	GSTextureSW t(GSTexture::Offscreen, w, h);
 
-		fwrite(&bfh, 1, sizeof(bfh), fp);
-		fwrite(&bih, 1, sizeof(bih), fp);
-		fwrite(bits, 1, size, fp);
-
-		fclose(fp);
+	if(t.Update(GSVector4i(0, 0, w, h), bits, pitch))
+	{
+		t.Save(fn);
 	}
 
 	_aligned_free(bits);
-
-    #else
-
-	// TODO: linux
-
-    #endif
 }

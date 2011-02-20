@@ -129,7 +129,7 @@ void GSDialog::ComboBoxInit(UINT id, const vector<GSSetting>& settings, uint32 s
 
 	SendMessage(hWnd, CB_RESETCONTENT, 0, 0);
 
-	for(int i = 0; i < settings.size(); i++)
+	for(size_t i = 0; i < settings.size(); i++)
 	{
 		const GSSetting& s = settings[i];
 

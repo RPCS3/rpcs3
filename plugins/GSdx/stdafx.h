@@ -287,6 +287,13 @@ __forceinline unsigned char _interlockedbittestandreset(volatile long* a, const 
     return retval;
 }
 
+__forceinline unsigned char _interlockedbittestandset(volatile long* a, const long b)
+{
+	unsigned char retval;
+	__asm__("lock; btsl %[b], %[a]; setc %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
+	return retval;
+}
+
 #ifdef __GNUC__
 
 __forceinline unsigned long long __rdtsc()

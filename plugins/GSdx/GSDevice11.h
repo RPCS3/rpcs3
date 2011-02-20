@@ -121,12 +121,13 @@ public: // TODO
 	VSConstantBuffer m_vs_cb_cache;
 	PSConstantBuffer m_ps_cb_cache;
 
+	bool CreateTextureFX();
+
 public:
 	GSDevice11();
 	virtual ~GSDevice11();
 
 	bool Create(GSWnd* wnd);
-	bool CreateTextureFX();
 	bool Reset(int w, int h);
 	void Flip();
 

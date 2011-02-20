@@ -1164,6 +1164,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSDeviceSW.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSDialog.cpp"
 				>
 			</File>
@@ -1436,6 +1440,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSTextureSW.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSThread.cpp"
 				>
 			</File>
@@ -1694,6 +1702,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSDeviceSW.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSDialog.h"
 				>
 			</File>
@@ -1827,6 +1839,10 @@
 			</File>
 			<File
 				RelativePath=".\GSTextureNull.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSTextureSW.h"
 				>
 			</File>
 			<File

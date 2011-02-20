@@ -283,7 +283,7 @@ static bool DXUTDelayLoadDXGI()
 	{
 		s_hModDXGI = LoadLibrary("dxgi.dll");
 
-		if(s_hModDXGI)
+		if(s_hModDXGI != NULL)
 		{
 			s_DynamicCreateDXGIFactory = (FNPTR_CREATEDXGIFACTORY)GetProcAddress(s_hModDXGI, "CreateDXGIFactory");
 		}
@@ -321,9 +321,11 @@ static bool DXUTDelayLoadDXGI()
 
 bool GSUtil::CheckDirect3D11Level(D3D_FEATURE_LEVEL& level)
 {
+	HRESULT hr;
+
 	level = (D3D_FEATURE_LEVEL)0;
 
-	if(!_bittestandset(&s_D3D11Checked, 0)) // thread safety...
+	if(!_interlockedbittestandset(&s_D3D11Checked, 0)) // thread safety...
 	{
 		if(!DXUTDelayLoadDXGI())
 		{
@@ -345,14 +347,14 @@ bool GSUtil::CheckDirect3D11Level(D3D_FEATURE_LEVEL& level)
 		CComPtr<ID3D11Device> dev;
 		CComPtr<ID3D11DeviceContext> ctx;
 
-		HRESULT hr = s_DynamicD3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_SINGLETHREADED, levels, countof(levels), D3D11_SDK_VERSION, &dev, &level, &ctx);
+		hr = s_DynamicD3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_SINGLETHREADED, levels, countof(levels), D3D11_SDK_VERSION, &dev, &level, &ctx);
 
 		s_D3D11Level = level;
 	}
 
 	level = s_D3D11Level;
 
-	return level >= D3D_FEATURE_LEVEL_11_0;
+	return SUCCEEDED(hr) && level >= D3D_FEATURE_LEVEL_9_1;
 }
 
 void GSUtil::UnloadDynamicLibraries()

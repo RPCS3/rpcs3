@@ -573,10 +573,10 @@ void GPULocalMemory::Expand24(const uint16* RESTRICT src, uint32* RESTRICT dst, 
 	}
 }
 
-void GPULocalMemory::SaveBMP(const string& path, const GSVector4i& r2, int tp, int cx, int cy)
-{
-    #ifdef _WINDOWS
+#include "GSTextureSW.h"
 
+void GPULocalMemory::SaveBMP(const string& fn, const GSVector4i& r2, int tp, int cx, int cy)
+{
 	GSVector4i r;
 
 	r.left = r2.left << m_scale.x;
@@ -587,36 +587,23 @@ void GPULocalMemory::SaveBMP(const string& path, const GSVector4i& r2, int tp, i
 	r.left &= ~1;
 	r.right &= ~1;
 
-	if(FILE* fp = fopen(path.c_str(), "wb"))
+	GSTextureSW t(GSTexture::Offscreen, r.width(), r.height());
+
+	GSTexture::GSMap m;
+
+	if(t.Map(m, NULL))
 	{
-		BITMAPINFOHEADER bih;
-		memset(&bih, 0, sizeof(bih));
-        bih.biSize = sizeof(bih);
-		bih.biWidth = r.width();
-		bih.biHeight = r.height();
-        bih.biPlanes = 1;
-        bih.biBitCount = 32;
-        bih.biCompression = BI_RGB;
-        bih.biSizeImage = bih.biWidth * bih.biHeight * 4;
-
-        BITMAPFILEHEADER bfh;
-		memset(&bfh, 0, sizeof(bfh));
-		bfh.bfType = 'MB';
-		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
-		bfh.bfSize = bfh.bfOffBits + bih.biSizeImage;
-		bfh.bfReserved1 = bfh.bfReserved2 = 0;
-
-		fwrite(&bfh, 1, sizeof(bfh), fp);
-		fwrite(&bih, 1, sizeof(bih), fp);
-
 		int pitch = GetWidth();
 
-		uint16* buff = (uint16*)_aligned_malloc(pitch * sizeof(WORD), 16);
-		uint32* buff32 = (uint32*)_aligned_malloc(pitch * sizeof(uint32), 16);
-		uint16* src = GetPixelAddress(r.left, r.bottom - 1);
-		const uint16* clut = GetCLUT(tp, cx, cy);
+		const uint16* RESTRICT src = GetPixelAddress(r.left, r.top);
+		const uint16* RESTRICT clut = GetCLUT(tp, cx, cy);
 
-		for(int j = r.bottom - 1; j >= r.top; j--, src -= pitch)
+		uint8* RESTRICT dst = m.bits;
+
+		uint16* RESTRICT buff = (uint16*)_aligned_malloc(pitch * sizeof(uint16), 32);
+		uint32* RESTRICT buff32 = (uint32*)_aligned_malloc(pitch * sizeof(uint32), 32);
+
+		for(int j = r.top; j < r.bottom; j++, src += pitch, dst += m.pitch)
 		{
 			switch(tp)
 			{
@@ -662,18 +649,14 @@ void GPULocalMemory::SaveBMP(const string& path, const GSVector4i& r2, int tp, i
 				buff32[i] = (buff32[i] & 0xff00ff00) | ((buff32[i] & 0x00ff0000) >> 16) | ((buff32[i] & 0x000000ff) << 16);
 			}
 
-			fwrite(buff32, 1, r.width() * 4, fp);
+			memcpy(dst, buff32, r.width() << 2);
 		}
 
 		_aligned_free(buff);
 		_aligned_free(buff32);
 
-		fclose(fp);
+		t.Unmap();
+
+		t.Save(fn);
 	}
-
-	#else
-
-	// TODO: linux
-
-	#endif
 }
