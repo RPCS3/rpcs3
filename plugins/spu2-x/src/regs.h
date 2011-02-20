@@ -78,8 +78,8 @@
 #define R_ACC_SRC_C1     0x0318
 #define R_ACC_SRC_D0     0x031C
 #define R_ACC_SRC_D1     0x0320
-#define R_IIR_SRC_B0     0x0324
-#define R_IIR_SRC_B1     0x0328
+#define R_IIR_SRC_B0     0x0324		// Some sources have R_IIR_SRC_B0 and R_IIR_SRC_B1 swapped ><
+#define R_IIR_SRC_B1     0x0328		// Assume a typo in the docs and B0 is actually at 324, B1 at 328 in the HW.
 #define R_MIX_DEST_A0    0x032C
 #define R_MIX_DEST_A1    0x0330
 #define R_MIX_DEST_B0    0x0334

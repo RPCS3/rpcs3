@@ -27,7 +27,7 @@ static const int LATENCY_MAX = 750;
 static const int LATENCY_MIN = 50;
 
 // MIXING
-int Interpolation = 1;
+int Interpolation = 4;
 /* values:
 		0: no interpolation (use nearest)
 		1. linear interpolation
@@ -59,7 +59,7 @@ int numSpeakers = 0;
 
 void ReadSettings()
 {
-	Interpolation = CfgReadInt( L"MIXING",L"Interpolation", 1 );
+	Interpolation = CfgReadInt( L"MIXING",L"Interpolation", 4 );
 	ReverbBoost = CfgReadInt( L"MIXING",L"Reverb_Boost", 0 );
 
 	SynchMode = CfgReadInt( L"OUTPUT", L"Synch_Mode", 0);
@@ -143,10 +143,10 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 		{
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_RESETCONTENT,0,0 );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"0 - Nearest (fastest/bad quality)" );
-			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"1 - Linear (simple/nice)" );
-			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"2 - Cubic (slower/good highs)" );
-			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"3 - Hermite (slower/better highs)" );
-			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"4 - Catmull-Rom (slow/hq)" );
+			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"1 - Linear (simple/okay sound)" );
+			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"2 - Cubic (artificial highs)" );
+			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"3 - Hermite (better highs)" );
+			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_ADDSTRING,0,(LPARAM) L"4 - Catmull-Rom (PS2-like/slow)" );
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_SETCURSEL,Interpolation,0 );
 
 			SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_RESETCONTENT,0,0 );

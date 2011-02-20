@@ -932,7 +932,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			{
 				// When we have exact cycle update info from the Pcsx2 IOP unit, then use
 				// the more accurate delayed initialization system.
-				ConLog( "* SPU2-X: Runtime core%d reset\n", core );
+				ConLog( "* SPU2-X: Core%d reset bit set\n", core );
 
 				// Async mixing can cause a scheduled reset to happen untimely, ff12 hates it and dies.
 				// So do the next best thing and reset the core directly.
@@ -944,6 +944,7 @@ static void __fastcall RegWrite_Core( u16 value )
 				else
 				{
 					thiscore.Reset(thiscore.Index);
+					return;
 				}
 			}
 
