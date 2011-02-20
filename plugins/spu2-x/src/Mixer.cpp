@@ -113,7 +113,7 @@ static void __forceinline IncrementNextA(V_Core& thiscore, uint voiceidx)
 		if( Cores[i].IRQEnable && (vc.NextA==Cores[i].IRQA ) )
 		{
 			//if( IsDevBuild )
-			//	ConLog(" * SPU2 Core %d: IRQ Called (IRQA (%05X) passed; voice %d).\n", i, Cores[i].IRQA, thiscore.Index * 24 + voiceidx);
+			//	ConLog(" * SPU2 Core %d: IRQ Requested (IRQA (%05X) passed; voice %d).\n", i, Cores[i].IRQA, thiscore.Index * 24 + voiceidx);
 
 			SetIrqCall(i);
 		}
@@ -353,7 +353,6 @@ static __forceinline void CalculateADSR( V_Core& thiscore, uint voiceidx )
 			if(MsgVoiceOff()) ConLog("* SPU2-X: Voice Off by ADSR: %d \n", voiceidx);
 		}
 		vc.Stop();
-		thiscore.Regs.ENDX |= (1 << voiceidx);
 	}
 
 	jASSUME( vc.ADSR.Value >= 0 );	// ADSR should never be negative...
@@ -858,9 +857,9 @@ __forceinline void Mix()
 		if(postprocess_filter_enabled)
 		#endif
 		{
-			Out = Apply_Dealias_Filter ( Out );
-			// Frequency response filter needs to be tuned. Currently emphasizes the highs too much.
-			//Out = Apply_Frequency_Response_Filter ( Out );
+			// Dealias filter emphasizes the highs too much.
+			//Out = Apply_Dealias_Filter ( Out );
+			Out = Apply_Frequency_Response_Filter ( Out );
 		}
 
 		// Final Clamp!
