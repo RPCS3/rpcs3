@@ -39,6 +39,7 @@
 			<Add option="-msse2" />
 			<Add option="-m32" />
 			<Add option="-mpreferred-stack-boundary=2" />
+			<Add option="-mfpmath=sse" />
 			<Add option="-D_LINUX" />
 		</Compiler>
 		<Linker>

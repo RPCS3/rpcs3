@@ -24,8 +24,6 @@
 #include "GS.h"
 #include "GSLocalMemory.h"
 
-#pragma pack(push, 1)
-
 __aligned(class, 32) GSDrawingContext
 {
 public:
@@ -121,5 +119,3 @@ public:
 		return ZBUF.ZMSK == 0 && TEST.ZTE != 0; // ZTE == 0 is bug on the real hardware, write is blocked then
 	}
 };
-
-#pragma pack(pop)
