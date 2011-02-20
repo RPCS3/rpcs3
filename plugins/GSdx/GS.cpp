@@ -37,6 +37,8 @@
 static HRESULT s_hr = E_FAIL;
 static bool s_isdx11avail = false; // set on GSinit
 
+#else
+extern bool RunLinuxDialog();
 #endif
 
 #define PS2E_LT_GS 0x01
@@ -460,6 +462,13 @@ EXPORT_C GSconfigure()
 
     // TODO: linux
 
+	if (RunLinuxDialog())
+	{
+		if(s_gs != NULL && s_gs->m_wnd.IsManaged())
+		{
+			GSshutdown();
+		}
+	}
 #endif
 }
 

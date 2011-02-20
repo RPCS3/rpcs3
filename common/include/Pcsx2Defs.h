@@ -225,6 +225,7 @@ static const int __pagesize	= PCSX2_PAGESIZE;
 
 #	define __aligned(alig)	__attribute__((aligned(alig)))
 #	define __aligned16		__attribute__((aligned(16)))
+#	define __aligned32		__attribute__((aligned(32)))
 #	define __pagealigned	__attribute__((aligned(PCSX2_PAGESIZE)))
 	// Deprecated; use __align instead.
 #	define PCSX2_ALIGNED(alig,x) x __attribute((aligned(alig)))

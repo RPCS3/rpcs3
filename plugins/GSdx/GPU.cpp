@@ -146,7 +146,6 @@ EXPORT_C_(int32) GPUconfigure()
 #else
 
     // TODO: linux
-
 #endif
 
 	return 0;

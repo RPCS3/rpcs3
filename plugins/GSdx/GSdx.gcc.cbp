@@ -34,6 +34,7 @@
 			</Target>
 		</Build>
 		<Compiler>
+			<Add option="`pkg-config gtk+-2.0 --cflags`" />
 			<Add option="-fno-operator-names" />
 			<Add option="-msse2" />
 			<Add option="-m32" />
@@ -92,6 +93,7 @@
 		<Unit filename="GSDump.h" />
 		<Unit filename="GSFunctionMap.cpp" />
 		<Unit filename="GSFunctionMap.h" />
+		<Unit filename="GSLinuxDialog.cpp" />
 		<Unit filename="GSLocalMemory.cpp" />
 		<Unit filename="GSLocalMemory.h" />
 		<Unit filename="GSPerfMon.cpp" />
