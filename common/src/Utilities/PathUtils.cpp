@@ -82,8 +82,13 @@ bool wxDirName::Mkdir()
 {
 	// wxWidgets recurses directory creation for us.
 
+	// only exist in wx2.9 and above
+#ifndef wxS_DIR_DEFAULT
+#define wxS_DIR_DEFAULT 0777
+#endif
+
 	if( Exists() ) return true;
-	return wxFileName::Mkdir();
+	return wxFileName::Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
 }
 
 
