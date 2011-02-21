@@ -564,7 +564,7 @@ EXPORT_C GSgetTitleInfo2(char* dest, size_t length)
 	{
 		GSAutoLock lock(&s_gs->m_pGSsetTitle_Crit);
 
-		string s = format("GSdx | %s", s_gs->m_GStitleInfoBuffer);
+		s = format("GSdx | %s", s_gs->m_GStitleInfoBuffer);
 
 		if(s.size() > length - 1)
 		{
