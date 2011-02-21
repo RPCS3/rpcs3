@@ -117,15 +117,6 @@ void Panels::DirPickerPanel::Init( FoldersEnum_t folderid, const wxString& dialo
 		// The default path is invalid... What should we do here? hmm..
 	}
 
-#ifndef __WXGTK__
-	// GTK+ : The wx implementation of Explore isn't reliable, so let's not even put the
-	// button on the dialogs for now.
-
-	b_explore = new wxButton( this, wxID_ANY, _("Open in Explorer") );
-	pxSetToolTip( b_explore, _("Open an explorer window to this folder.") );
-	Connect( b_explore->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( DirPickerPanel::Explore_Click ) );
-#endif
-
 	if (InstallationMode == InstallMode_Portable)
 		InitForPortableMode(normalized);
 	else
