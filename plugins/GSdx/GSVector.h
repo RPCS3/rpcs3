@@ -903,6 +903,11 @@ public:
 
 	#endif
 
+	GSVector4i madd(const GSVector4i& v) const
+	{
+		return GSVector4i(_mm_madd_epi16(m, v.m));
+	}
+
 	template<int shift> __forceinline GSVector4i lerp16(const GSVector4i& a, const GSVector4i& f) const
 	{
 		// (a - this) * f << shift + this

@@ -68,7 +68,7 @@ protected:
 	virtual GSTexture* Create(int type, int w, int h, bool msaa, int format) = 0;
 	virtual GSTexture* Fetch(int type, int w, int h, bool msaa, int format);
 
-	virtual void DoMerge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, GSTexture* dt, bool slbg, bool mmod, const GSVector4& c) = 0;
+	virtual void DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c) = 0;
 	virtual void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset) = 0;
 
 public:

@@ -218,7 +218,7 @@ void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVec
 			}
 		}
 
-		DoMerge(tex, sr, dr, m_merge, slbg, mmod, c);
+		DoMerge(tex, sr, m_merge, dr, slbg, mmod, c);
 
 		for(int i = 0; i < countof(tex); i++)
 		{

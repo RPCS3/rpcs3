@@ -140,7 +140,7 @@ bool GSTextureSW::Save(const string& fn, bool dds)
 
 		memset(&bfh, 0, sizeof(bfh));
 
-		uint8* bfType = (uint8*)bfh.bfType;
+		uint8* bfType = (uint8*)&bfh.bfType;
 
 		// bfh.bfType = 'MB';
 		bfType[0] = 0x42;
