@@ -363,9 +363,9 @@ public:
 			if( dest.IsPresent && dest.IsFormatted )
 			{
 				pxsFmt( pxE( "!Notice:Mcd:Overwrite", 
-					L"This will copy the contents of the memory card in slot %u over the memory card in slot %u. "
-					L"All data on the target slot will be lost.  Are you sure?" ), 
-					src.Slot, dest.Slot
+					L"This will copy the entire contents of the memory card in slot %u to the memory card in slot %u. "
+					L"All data on the memory card in slot %u will be lost.  Are you sure?" ), 
+					src.Slot, dest.Slot, dest.Slot
 				);
 
 				//if( !Msgbox::OkCancel(  ) )

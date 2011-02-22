@@ -457,7 +457,7 @@ static wxString GetApplyFailedMsg()
 	return pxsFmt( pxE( "!Notice:PluginSelector:ApplyFailed",
 		L"All plugins must have valid selections for %s to run.  If you are unable to make "
 		L"a valid selection due to missing plugins or an incomplete install of %s, then "
-		L"press cancel to close the Configuration panel."
+		L"press Cancel to close the Configuration panel."
 	), pxGetAppName().c_str(), pxGetAppName().c_str() );
 }
 
