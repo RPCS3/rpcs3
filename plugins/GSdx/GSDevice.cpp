@@ -99,10 +99,15 @@ void GSDevice::Present(const GSVector4i& r, int shader)
 	{
 		static int s_shader[3] = {0, 5, 6}; // FIXME
 
-		StretchRect(m_current, m_backbuffer, GSVector4(r), s_shader[shader]);
+		Present(m_current, m_backbuffer, GSVector4(r), s_shader[shader]);
 	}
 
 	Flip();
+}
+
+void GSDevice::Present(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader)
+{
+	StretchRect(st, dt, dr, shader);
 }
 
 GSTexture* GSDevice::Fetch(int type, int w, int h, bool msaa, int format)

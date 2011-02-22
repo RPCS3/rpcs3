@@ -195,7 +195,7 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 		#ifdef _WINDOWS
 		case 0: case 1: case 2: dev = new GSDevice9(); break;
 		case 3: case 4: case 5: dev = new GSDevice11(); break;
-		// case 3: case 4: case 5: dev = new GSDeviceSW(); break;
+		// case 3: case 4: case 5: dev = new GSDeviceSDL(); break;
 		#endif
 		case 12: case 13: dev = new GSDeviceNull(); break;
 		}

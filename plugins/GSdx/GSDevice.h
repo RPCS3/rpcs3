@@ -83,6 +83,7 @@ public:
 	virtual bool Reset(int w, int h);
 	virtual bool IsLost(bool update = false) {return false;}
 	virtual void Present(const GSVector4i& r, int shader);
+	virtual void Present(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader = 0);
 	virtual void Flip() {}
 
 	virtual void SetVSync(bool enable) {m_vsync = enable;}
