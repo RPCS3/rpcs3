@@ -35,14 +35,14 @@ GSDeviceDX::~GSDeviceDX()
 {
 }
 
-GSTexture* GSDeviceDX::Fetch(int type, int w, int h, bool msaa, int format)
+GSTexture* GSDeviceDX::FetchSurface(int type, int w, int h, bool msaa, int format)
 {
 	if(m_msaa < 2)
 	{
 		msaa = false;
 	}
 
-	return __super::Fetch(type, w, h, msaa, format);
+	return __super::FetchSurface(type, w, h, msaa, format);
 }
 
 bool GSDeviceDX::SetFeatureLevel(D3D_FEATURE_LEVEL level, bool compat_mode)

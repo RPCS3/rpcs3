@@ -110,7 +110,7 @@ void GSDevice::Present(GSTexture* st, GSTexture* dt, const GSVector4& dr, int sh
 	StretchRect(st, dt, dr, shader);
 }
 
-GSTexture* GSDevice::Fetch(int type, int w, int h, bool msaa, int format)
+GSTexture* GSDevice::FetchSurface(int type, int w, int h, bool msaa, int format)
 {
 	GSVector2i size(w, h);
 
@@ -126,7 +126,7 @@ GSTexture* GSDevice::Fetch(int type, int w, int h, bool msaa, int format)
 		}
 	}
 
-	return Create(type, w, h, msaa, format);
+	return CreateSurface(type, w, h, msaa, format);
 }
 
 void GSDevice::EndScene()
@@ -168,22 +168,22 @@ void GSDevice::AgePool()
 
 GSTexture* GSDevice::CreateRenderTarget(int w, int h, bool msaa, int format)
 {
-	return Fetch(GSTexture::RenderTarget, w, h, msaa, format);
+	return FetchSurface(GSTexture::RenderTarget, w, h, msaa, format);
 }
 
 GSTexture* GSDevice::CreateDepthStencil(int w, int h, bool msaa, int format)
 {
-	return Fetch(GSTexture::DepthStencil, w, h, msaa, format);
+	return FetchSurface(GSTexture::DepthStencil, w, h, msaa, format);
 }
 
 GSTexture* GSDevice::CreateTexture(int w, int h, int format)
 {
-	return Fetch(GSTexture::Texture, w, h, false, format);
+	return FetchSurface(GSTexture::Texture, w, h, false, format);
 }
 
 GSTexture* GSDevice::CreateOffscreen(int w, int h, int format)
 {
-	return Fetch(GSTexture::Offscreen, w, h, false, format);
+	return FetchSurface(GSTexture::Offscreen, w, h, false, format);
 }
 
 void GSDevice::StretchRect(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
