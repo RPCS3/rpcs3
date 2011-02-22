@@ -37,7 +37,7 @@ static u16 QWCinVIFMFIFO(u32 DrainADDR)
 	u32 ret;
 	
 
-	SPR_LOG("VIF MFIFO Requesting %x QWC from the MFIFO Base %x, SPR MADR %x Drain %x", vif1ch.qwc, dmacRegs.rbor.ADDR, spr0ch.madr, DrainADDR);
+	SPR_LOG("VIF MFIFO Requesting %x QWC from the MFIFO Base %x MFIFO Top %x, SPR MADR %x Drain %x", vif1ch.qwc, dmacRegs.rbor.ADDR, dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16, spr0ch.madr, DrainADDR);
 	//Calculate what we have in the fifo.
 	if(DrainADDR <= spr0ch.madr)
 	{
@@ -166,7 +166,7 @@ void mfifoVIF1transfer(int qwc)
 			if(vif1ch.chcr.STR == true && !(cpuRegs.interrupt & (1<<DMAC_MFIFO_VIF)))
 			{
 				SPR_LOG("Data Added, Resuming");
-				CPU_INT(DMAC_MFIFO_VIF, 4);
+				CPU_INT(DMAC_MFIFO_VIF, 16);
 			}
 
 			//Apparently this is bad, i guess so, the data is going to memory rather than the FIFO

@@ -50,7 +50,7 @@ static void TestClearVUs(u32 madr, u32 size)
 int  _SPR0chain()
 {
 	tDMA_TAG *pMem;
-
+	int partialqwc = 0;
 	if (spr0ch.qwc == 0) return 0;
 	pMem = SPRdmaGetAddr(spr0ch.madr, true);
 	if (pMem == NULL) return -1;
@@ -59,21 +59,24 @@ int  _SPR0chain()
 	{
 		case MFD_VIF1:
 		case MFD_GIF:
+			if(spr0ch.qwc > 1) partialqwc = spr0ch.qwc - 1;
+			else partialqwc = spr0ch.qwc;
+
 			if ((spr0ch.madr & ~dmacRegs.rbsr.RMSK) != dmacRegs.rbor.ADDR)
 				Console.WriteLn("SPR MFIFO Write outside MFIFO area");
 			else
-				mfifotransferred += spr0ch.qwc;
+				mfifotransferred += partialqwc;
 
-			hwMFIFOWrite(spr0ch.madr, &psSu128(spr0ch.sadr), spr0ch.qwc);
-			spr0ch.madr += spr0ch.qwc << 4;
+			hwMFIFOWrite(spr0ch.madr, &psSu128(spr0ch.sadr), partialqwc);
+			spr0ch.madr += partialqwc << 4;
 			spr0ch.madr = dmacRegs.rbor.ADDR + (spr0ch.madr & dmacRegs.rbsr.RMSK);
-			spr0ch.sadr += spr0ch.qwc << 4;
-			spr0ch.qwc = 0;
+			spr0ch.sadr += partialqwc << 4;
+			spr0ch.qwc -= partialqwc;
 			break;
 
 		case NO_MFD:
 		case MFD_RESERVED:
-			int partialqwc = 0;
+			
 			//Taking an arbitary small value for games which like to check the QWC/MADR instead of STR, so get most of
 			//the cycle delay out of the way before the end.
 			if(spr0ch.qwc > 1) partialqwc = spr0ch.qwc - 1;
@@ -87,13 +90,12 @@ int  _SPR0chain()
 			spr0ch.sadr += partialqwc << 4;
 			spr0ch.qwc -= partialqwc;
 
-			return (partialqwc);
 			break;
 	}
 
 	
 
-	return (spr0ch.qwc); // bus is 1/2 the ee speed
+	return (partialqwc); // bus is 1/2 the ee speed
 }
 
 __fi void SPR0chain()
