@@ -65,8 +65,18 @@ bool GSDeviceSDL::Create(GSWnd* wnd)
 		m_init = true;
 	}
 
+	#if 1 //def _WINDOWS
+
 	m_window = SDL_CreateWindowFrom(wnd->GetHandle());
-	
+
+	#else
+
+	// TODO: linux sould use wnd->GetHandle() too
+
+	m_window = SDL_CreateWindow("GSdx", 0, 0, 640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+
+	#endif
+
 	if(m_window == NULL)
 	{
 		return false;
@@ -96,14 +106,14 @@ bool GSDeviceSDL::Reset(int w, int h)
 		m_renderer = NULL;
 	}
 
-	m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED); // SDL_RENDERER_PRESENTVSYNC 
+	m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED); // SDL_RENDERER_PRESENTVSYNC
 
 	return m_renderer != NULL;
 }
 
 void GSDeviceSDL::Present(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader)
 {
-	ASSERT(dt == m_backbuffer); // ignore m_backbuffer 
+	ASSERT(dt == m_backbuffer); // ignore m_backbuffer
 
 	GSVector2i size = st->GetSize();
 

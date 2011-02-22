@@ -7,23 +7,24 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="SDL-1" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../deps/debug/libSDL-1.3" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="" />
 				<Option object_output="obj/Debug/" />
-				<Option type="3" />
+				<Option type="2" />
 				<Option compiler="gcc" />
 				<Option createDefFile="1" />
-				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-Wall" />
+					<Add option="-g" />
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="SDL-1" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../deps/release/libSDL-1.3" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="" />
 				<Option object_output="obj/Release/" />
-				<Option type="3" />
+				<Option type="2" />
 				<Option compiler="gcc" />
 				<Option createDefFile="1" />
-				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-Wall" />
@@ -326,7 +327,7 @@
 		<Unit filename="../src/libm/s_sin.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="../src/loadso/dummy/SDL_sysloadso.c">
+		<Unit filename="../src/loadso/dlopen/SDL_sysloadso.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../src/main/beos/SDL_BeApp.h" />
@@ -659,6 +660,7 @@
 		<Extensions>
 			<code_completion />
 			<debugger />
+			<envvars />
 		</Extensions>
 	</Project>
 </CodeBlocks_project_file>

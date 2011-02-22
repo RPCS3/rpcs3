@@ -26,7 +26,7 @@
 
 class GSDeviceSW : public GSDevice
 {
-	GSTexture* Create(int type, int w, int h, bool msaa, int format);
+	GSTexture* CreateSurface(int type, int w, int h, bool msaa, int format);
 
 	void DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c);
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
@@ -59,3 +59,4 @@ public:
 	void PSSetShaderResource(int i, GSTexture* sr);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
 };
+

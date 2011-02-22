@@ -270,7 +270,7 @@ protected:
 	uint32 m_msaa;
 	DXGI_SAMPLE_DESC m_msaa_desc;
 
-	GSTexture* Fetch(int type, int w, int h, bool msaa, int format);
+	GSTexture* FetchSurface(int type, int w, int h, bool msaa, int format);
 
 public:
 	GSDeviceDX();
@@ -311,3 +311,4 @@ public:
 		dst.push_back(m);
 	}
 };
+

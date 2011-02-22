@@ -18,6 +18,9 @@
 				<Compiler>
 					<Add option="-g" />
 				</Compiler>
+				<Linker>
+					<Add library="../../deps/debug/libSDL-1.3.a" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="../../bin/plugins/libGSdx" prefix_auto="1" extension_auto="1" />
@@ -31,6 +34,9 @@
 				<Compiler>
 					<Add option="-O2" />
 				</Compiler>
+				<Linker>
+					<Add library="../../deps/release/libSDL-1.3.a" />
+				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
@@ -82,6 +88,8 @@
 		<Unit filename="GSDevice.h" />
 		<Unit filename="GSDeviceNull.cpp" />
 		<Unit filename="GSDeviceNull.h" />
+		<Unit filename="GSDeviceSDL.cpp" />
+		<Unit filename="GSDeviceSDL.h" />
 		<Unit filename="GSDeviceSW.cpp" />
 		<Unit filename="GSDeviceSW.h" />
 		<Unit filename="GSDirtyRect.cpp" />

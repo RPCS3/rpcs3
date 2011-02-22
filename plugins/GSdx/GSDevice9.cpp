@@ -95,10 +95,10 @@ static D3DFORMAT BestD3dFormat(IDirect3D9* d3d, int msaaCount = 0, DXGI_SAMPLE_D
 {
 	// In descending order of preference
 
-	static D3DFORMAT fmts[] = 
+	static D3DFORMAT fmts[] =
 	{
-		D3DFMT_D32, 
-		D3DFMT_D32F_LOCKABLE, 
+		D3DFMT_D32,
+		D3DFMT_D32F_LOCKABLE,
 		D3DFMT_D24S8
 	};
 
@@ -125,7 +125,7 @@ uint32 GSDevice9::GetMaxDepth(uint32 msaa = 0)
 
 	switch(BestD3dFormat(d3d, msaa))
 	{
-		case D3DFMT_D32: 
+		case D3DFMT_D32:
 		case D3DFMT_D32F_LOCKABLE:
 			return 32;
 		case D3DFMT_D24S8:
@@ -157,18 +157,18 @@ bool GSDevice9::Create(GSWnd* wnd)
 	if(!m_d3d) return false;
 
 	ForceValidMsaaConfig();
-	
+
 	// Get best format/depth for msaa. Assumption is that if the resulting depth is 24 instead of possible 32,
 	// the user was already warned when she selected it. (Lower res z buffer without warning is unacceptable).
-	
+
 	m_depth_format = BestD3dFormat(m_d3d, m_msaa, &m_msaa_desc);
-	
+
 	if(D3DFMT_UNKNOWN == m_depth_format)
 	{
 		// can't find a format with requested msaa, try without.
-		
+
 		m_depth_format = BestD3dFormat(m_d3d, 0);
-		
+
 		if(D3DFMT_UNKNOWN == m_depth_format)
 		{
 			return false;
@@ -566,7 +566,7 @@ void GSDevice9::ClearStencil(GSTexture* t, uint8 c)
 	m_dev->SetDepthStencilSurface(dssurface);
 }
 
-GSTexture* GSDevice9::Create(int type, int w, int h, bool msaa, int format)
+GSTexture* GSDevice9::CreateSurface(int type, int w, int h, bool msaa, int format)
 {
 	HRESULT hr;
 
@@ -967,10 +967,10 @@ void GSDevice9::PSSetShaderResource(int i, GSTexture* sr)
 
 	if(sr) srv = *(GSTexture9*)sr;
 
-	if(m_state.ps_srvs[i] != srv) 
+	if(m_state.ps_srvs[i] != srv)
 	{
 		m_state.ps_srvs[i] = srv;
-	
+
 		m_dev->SetTexture(i, srv);
 	}
 }
@@ -1200,3 +1200,4 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 
 	return S_OK;
 }
+

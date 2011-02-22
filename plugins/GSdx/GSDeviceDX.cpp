@@ -35,14 +35,14 @@ GSDeviceDX::~GSDeviceDX()
 {
 }
 
-GSTexture* GSDeviceDX::Fetch(int type, int w, int h, bool msaa, int format)
+GSTexture* GSDeviceDX::FetchSurface(int type, int w, int h, bool msaa, int format)
 {
 	if(m_msaa < 2)
 	{
 		msaa = false;
 	}
 
-	return __super::Fetch(type, w, h, msaa, format);
+	return __super::FetchSurface(type, w, h, msaa, format);
 }
 
 bool GSDeviceDX::SetFeatureLevel(D3D_FEATURE_LEVEL level, bool compat_mode)
@@ -186,3 +186,4 @@ const GSDeviceDX::D3D9Blend GSDeviceDX::m_blendMapD3D9[3*3*3*3] =
 	{0, D3DBLENDOP_ADD, D3DBLEND_ZERO, D3DBLEND_ONE},						// 2221: (0  -  0)*F  + Cd ==> Cd
 	{0, D3DBLENDOP_ADD, D3DBLEND_ZERO, D3DBLEND_ZERO},						// 2222: (0  -  0)*F  +  0 ==> 0
 };
+

@@ -292,7 +292,7 @@ bool GSDevice11::Reset(int w, int h)
 	if(m_swapchain)
 	{
 		DXGI_SWAP_CHAIN_DESC scd;
-		
+
 		memset(&scd, 0, sizeof(scd));
 
 		m_swapchain->GetDesc(&scd);
@@ -365,7 +365,7 @@ void GSDevice11::ClearStencil(GSTexture* t, uint8 c)
 	m_ctx->ClearDepthStencilView(*(GSTexture11*)t, D3D11_CLEAR_STENCIL, 0, c);
 }
 
-GSTexture* GSDevice11::Create(int type, int w, int h, bool msaa, int format)
+GSTexture* GSDevice11::CreateSurface(int type, int w, int h, bool msaa, int format)
 {
 	HRESULT hr;
 
@@ -795,7 +795,7 @@ void GSDevice11::PSSetShaderResource(int i, GSTexture* sr)
 
 	if(sr) srv = *(GSTexture11*)sr;
 
-	if(m_state.ps_srv[i] != srv) 
+	if(m_state.ps_srv[i] != srv)
 	{
 		m_state.ps_srv[i] = srv;
 
@@ -827,14 +827,14 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 	if (m_srv_changed)
 	{
 		m_ctx->PSSetShaderResources(0, 3, m_state.ps_srv);
-	
+
 		m_srv_changed = false;
 	}
 
-	if(m_ss_changed) 
+	if(m_ss_changed)
 	{
 		m_ctx->PSSetSamplers(0, 3, m_state.ps_ss);
-	
+
 		m_ss_changed = false;
 	}
 
@@ -996,7 +996,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 	CComPtr<ID3D11Blob> shader, error;
 
     hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.ps.c_str(), 0, 0, NULL, &shader, &error, NULL);
-	
+
 	if(error)
 	{
 		printf("%s\n", (const char*)error->GetBufferPointer());
@@ -1016,3 +1016,4 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 
 	return hr;
 }
+
