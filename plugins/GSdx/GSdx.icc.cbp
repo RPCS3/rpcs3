@@ -77,8 +77,6 @@
 		<Unit filename="GSDevice.h" />
 		<Unit filename="GSDeviceNull.cpp" />
 		<Unit filename="GSDeviceNull.h" />
-		<Unit filename="GSDeviceSDL.cpp" />
-		<Unit filename="GSDeviceSDL.h" />
 		<Unit filename="GSDeviceSW.cpp" />
 		<Unit filename="GSDeviceSW.h" />
 		<Unit filename="GSDirtyRect.cpp" />

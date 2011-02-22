@@ -48,7 +48,7 @@ bool GSDeviceSW::Reset(int w, int h)
 	return true;
 }
 
-GSTexture* GSDeviceSW::CreateSurface(int type, int w, int h, bool msaa, int format)
+GSTexture* GSDeviceSW::Create(int type, int w, int h, bool msaa, int format)
 {
 	if(format != 0) return false; // there is only one format
 
@@ -80,12 +80,12 @@ void GSDeviceSW::ClearRenderTarget(GSTexture* t, uint32 c)
 	Clear(t, c);
 }
 
-void GSDeviceSW::ClearDepth(GSTexture* t, float c)
+void GSDeviceSW::ClearDepth(GSTexture* t, float c) 
 {
 	Clear(t, *(uint32*)&c);
 }
 
-void GSDeviceSW::ClearStencil(GSTexture* t, uint8 c)
+void GSDeviceSW::ClearStencil(GSTexture* t, uint8 c) 
 {
 	Clear(t, c);
 }
@@ -245,7 +245,7 @@ template<class SHADER> static void StretchRect(GSTexture* st, const GSVector4& s
 
 	// TODO: clipping may not be that necessary knowing we don't address outside (except the linear filter +1 pixel)
 
-	GSVector4i uvmax = GSVector4i((ssize.x - 1) << 16, (ssize.y - 1) << 16).xxyy();
+	GSVector4i uvmax = GSVector4i((ssize.x - 1) << 16, (ssize.y - 1) << 16).xxyy(); 
 
 	GSVector4i v = uv;
 
@@ -258,7 +258,7 @@ template<class SHADER> static void StretchRect(GSTexture* st, const GSVector4& s
 
 			int v0 = vi.extract16<5>();
 			int v1 = vi.extract16<7>();
-
+			
 			uint32* RESTRICT src0 = (uint32*)&sm.bits[v0 * sm.pitch];
 			uint32* RESTRICT src1 = (uint32*)&sm.bits[v1 * sm.pitch];
 			uint32* RESTRICT dst = (uint32*)dm.bits;
@@ -370,7 +370,7 @@ void GSDeviceSW::DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVecto
 		}
 		else
 		{
-			// alpha = c.a
+			// alpha = c.a 
 
 			ShaderFactorBlend s((uint32)(int)(c.a * 255));
 
