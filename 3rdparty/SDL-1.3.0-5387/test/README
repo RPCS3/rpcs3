@@ -1,0 +1,41 @@
+
+These are test programs for the SDL library:
+
+	checkkeys	Watch the key events to check the keyboard
+	graywin		Display a gray gradient and center mouse on spacebar
+	loopwave	Audio test -- loop playing a WAV file
+	testalpha	Display an alpha faded icon -- paint with mouse
+	testaudioinfo	Lists audio device capabilities
+	testbitmap	Test displaying 1-bit bitmaps
+	testblitspeed	Tests performance of SDL's blitters and converters.
+	testcdrom	Sample audio CD control program
+	testcursor	Tests custom mouse cursor
+	testdyngl	Tests dynamically loading OpenGL library
+	testerror	Tests multi-threaded error handling
+	testfile	Tests RWops layer
+	testgamma	Tests video device gamma ramp
+	testgl		A very simple example of using OpenGL with SDL
+	testgl2		An even simpler example using the SDL 1.3 API
+	testhread	Hacked up test of multi-threading
+	testiconv	Tests international string conversion
+	testjoystick	List joysticks and watch joystick events
+	testkeys	List the available keyboard keys
+	testloadso	Tests the loadable library layer
+	testlock	Hacked up test of multi-threading and locking
+	testmultiaudio	Tests using several audio devices
+	testoverlay	Tests the software/hardware overlay functionality.
+	testoverlay2	Tests the overlay flickering/scaling during playback.
+	testpalette	Tests palette color cycling
+	testplatform	Tests types, endianness and cpu capabilities
+	testsem		Tests SDL's semaphore implementation
+	testshape	Tests shaped windows
+	testsprite	Example of fast sprite movement on the screen
+	testsprite2	Improved version of testsprite
+	testtimer	Test the timer facilities
+	testver		Check the version and dynamic loading and endianness
+	testvidinfo	Show the pixel format of the display and perfom the benchmark
+	testwin		Display a BMP image at various depths
+	testwm		Test window manager -- title, icon, events
+	testwm2		Improved version of testwm
+	threadwin	Test multi-threaded event handling
+	torturethread	Simple test for thread creation/destruction

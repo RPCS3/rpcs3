@@ -1,0 +1,174 @@
+================================================================================
+Simple DirectMedia Layer for Android
+================================================================================
+
+Requirements:
+
+Android SDK
+http://developer.android.com/sdk/index.html
+
+Android NDK r4 or later
+http://developer.android.com/sdk/ndk/index.html
+
+
+================================================================================
+ How the port works
+================================================================================
+
+- Android applications are Java-based, optionally with parts written in C
+- As SDL apps are C-based, we use a small Java shim that uses JNI to talk to 
+the SDL library
+- This means that your application C code must be placed inside an android 
+Java project, along with some C support code that communicates with Java
+- This eventually produces a standard Android .apk package
+
+The Android Java code implements an "activity" and can be found in:
+android-project/src/org/libsdl/app/SDLActivity.java
+
+The Java code loads your game code, the SDL shared library, and
+dispatches to native functions implemented in the SDL library:
+src/SDL_android.cpp
+
+Your project must include some glue code that starts your main() routine:
+src/main/android/SDL_android_main.cpp
+
+
+================================================================================
+ Building an app
+================================================================================
+
+Instructions:
+1. Copy the android-project directory wherever you want to keep your projects and rename it to the name of your project.
+2. Move this SDL directory into the <project>/jni directory
+3. Place your application source files in the <project>/jni/src directory
+4. Edit <project>/jni/src/Android.mk to include your source files
+5. Run 'ndk-build' (a script provided by the NDK). This compiles the C source
+
+If you want to use the Eclipse IDE, skip to the Eclipse section below.
+
+6. Edit <project>/local.properties to point to the Android SDK directory
+7. Run 'ant debug' in android/project. This compiles the .java and eventually 
+creates a .apk with the native code embedded
+8. 'ant install' will push the apk to the device or emulator (if connected)
+
+Here's an explanation of the files in the Android project, so you can customize them:
+
+android-project/
+	AndroidManifest.xml	- package manifest, do not modify
+	build.properties	- empty
+	build.xml		- build description file, used by ant
+	default.properties	- holds the ABI for the application, currently android-4 which corresponds to the Android 1.6 system image
+	local.properties	- holds the SDK path, you should change this to the path to your SDK
+	jni/			- directory holding native code
+	jni/Android.mk		- Android makefile that includes all subdirectories
+	jni/SDL/		- directory holding the SDL library files
+	jni/SDL/Android.mk	- Android makefile for creating the SDL shared library
+	jni/src/		- directory holding your C/C++ source
+	jni/src/Android.mk	- Android makefile that you should customize to include your source code and any library references
+	res/			- directory holding resources for your application
+	res/drawable-*		- directories holding icons for different phone hardware
+	res/layout/main.xml	- place holder for the main screen layout, overridden by the SDL video output
+	res/values/strings.xml	- strings used in your application, including the application name shown on the phone.
+	src/org/libsdl/app/SDLActivity.java	- the Java class handling the initialization and binding to SDL.  Be very careful changing this, as the SDL library relies on this implementation.
+
+
+================================================================================
+ Additional documentation
+================================================================================
+
+The documentation in the NDK docs directory is very helpful in understanding the build process and how to work with native code on the Android platform.
+
+The best place to start is with docs/OVERVIEW.TXT
+
+
+================================================================================
+ Using Eclipse
+================================================================================
+
+First make sure that you've installed Eclipse and the Android extensions as described here:
+	http://developer.android.com/sdk/eclipse-adt.html
+
+Once you've copied the SDL android project and customized it, you can create an Eclipse project from it:
+ * File -> New -> Other
+ * Select the Android -> Android Project wizard and click Next
+ * Enter the name you'd like your project to have
+ * Select "Create project from existing source" and browse for your project directory
+ * Make sure the Build Target is set to Android 1.6
+ * Click Finish
+
+
+================================================================================
+ Loading files and resources
+================================================================================
+
+NEED CONTENT
+
+
+================================================================================
+ Troubleshooting
+================================================================================
+
+You can create and run an emulator from the Eclipse IDE:
+ * Window -> Android SDK and AVD Manager
+
+You can see if adb can see any devices with the following command:
+	adb devices
+
+You can see the output of log messages on the default device with:
+	adb logcat
+
+You can push files to the device with:
+	adb push local_file remote_path_and_file
+
+You can push files to the SD Card at /sdcard, for example:
+	adb push moose.dat /sdcard/moose.dat
+
+You can see the files on the SD card with a shell command:
+	adb shell ls /sdcard/
+
+You can start a command shell on the default device with:
+	adb shell
+
+You can do a clean build with the following commands:
+	ndk-build clean
+	ndk-build
+
+You can see the complete command line that ndk-build is using by passing V=1 on the command line:
+	ndk-build V=1
+
+If your application crashes in native code, you can use addr2line to convert the addresses in the stack trace to lines in your code.
+
+For example, if your crash looks like this:
+I/DEBUG   (   31): signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), fault addr 400085d0
+I/DEBUG   (   31):  r0 00000000  r1 00001000  r2 00000003  r3 400085d4
+I/DEBUG   (   31):  r4 400085d0  r5 40008000  r6 afd41504  r7 436c6a7c
+I/DEBUG   (   31):  r8 436c6b30  r9 435c6fb0  10 435c6f9c  fp 4168d82c
+I/DEBUG   (   31):  ip 8346aff0  sp 436c6a60  lr afd1c8ff  pc afd1c902  cpsr 60000030
+I/DEBUG   (   31):          #00  pc 0001c902  /system/lib/libc.so
+I/DEBUG   (   31):          #01  pc 0001ccf6  /system/lib/libc.so
+I/DEBUG   (   31):          #02  pc 000014bc  /data/data/org.libsdl.app/lib/libmain.so
+I/DEBUG   (   31):          #03  pc 00001506  /data/data/org.libsdl.app/lib/libmain.so
+
+You can see that there's a crash in the C library being called from the main code.  I run addr2line with the debug version of my code:
+	arm-eabi-addr2line -C -f -e obj/local/armeabi/libmain.so
+and then paste in the number after "pc" in the call stack, from the line that I care about:
+000014bc
+
+I get output from addr2line showing that it's in the quit function, in testspriteminimal.c, on line 23.
+
+You can add logging to your code to help show what's happening:
+
+#include <android/log.h>
+
+	__android_log_print(ANDROID_LOG_INFO, "foo", "Something happened! x = %d", x);
+
+If you need to build without optimization turned on, you can create a file called "Application.mk" in the jni directory, with the following line in it:
+APP_OPTIM := debug
+
+
+================================================================================
+ Known issues
+================================================================================
+
+- SDL audio (although it's mostly written, just not working properly yet)
+- TODO. I'm sure there's a bunch more stuff I haven't thought of 

@@ -1,0 +1,55 @@
+
+Project files for embedded Visual C++ 3.0, 4.0 and 
+Visual Studio 2005 can be found in VisualCE.zip
+
+SDL supports GAPI and WinDib output for Windows CE.
+
+GAPI driver supports:
+
+- all possible WinCE devices (Pocket PC, Smartphones, HPC)
+  with different orientations of video memory and resolutions.
+- 4, 8 and 16 bpp devices
+- special handling of 8bpp on 8bpp devices
+- VGA mode, you can even switch between VGA and GAPI in runtime
+  (between 240x320 and 480x640 for example). On VGA devices you can
+  use either GAPI or VGA.
+- Landscape mode and automatic rotation of buttons and stylus coordinates.
+  To enable landscape mode make width of video screen bigger than height.
+  For example: 
+    SDL_SetVideoMode(320,240,16,SDL_FULLSCREEN)
+- WM2005
+- SDL_ListModes
+
+NOTE:
+There are several SDL features not available in the WinCE port of SDL.
+
+- DirectX is not yet available
+- Semaphores are not available
+- Joystick support is not available
+- CD-ROM control is not available
+
+In addition, there are several features that run in "degraded" mode:
+
+Preprocessor Symbol		Effect
+===================		=================================
+
+SDL_systimer.c:
+USE_GETTICKCOUNT		Less accurate values for SDL time functions
+USE_SETTIMER			Use only a single marginally accurate timer
+
+SDL_syswm.c:
+DISABLE_ICON_SUPPORT		Can't set the runtime window icon
+
+SDL_sysmouse.c:
+USE_STATIC_CURSOR		Only the arrow cursor is available
+
+SDL_sysevents.c:
+NO_GETKEYBOARDSTATE		Can't get modifier state on keyboard focus
+
+SDL_dibevents.c:
+NO_GETKEYBOARDSTATE		Very limited keycode translation
+
+SDL_dibvideo.c:
+NO_GETDIBITS			Can't distinguish between 15 bpp and 16 bpp
+NO_CHANGEDISPLAYSETTINGS	No fullscreen support
+NO_GAMMA_SUPPORT		Gamma correction not available

@@ -1,0 +1,13 @@
+
+SDL on BeOS R5
+==============
+
+You can build SDL on BeOS like any other GNU style package.
+e.g. ./configure && make && make install
+By default it is installed in /boot/develop/tools/gnupro/{bin,lib,etc.}
+
+Once you install SDL, you need to copy libSDL.so to /boot/home/config/lib,
+so it can be found by the dynamic linker.
+
+Enjoy!
+	Sam Lantinga				(slouken@libsdl.org)

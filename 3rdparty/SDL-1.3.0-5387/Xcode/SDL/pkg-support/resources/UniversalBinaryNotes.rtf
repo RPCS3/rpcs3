@@ -1,0 +1,150 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1038\cocoasubrtf110
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 LucidaGrande;\f2\fmodern\fcharset0 Courier-Oblique;
+}
+{\colortbl;\red255\green255\blue255;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat1\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid1\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid1}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}}
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+
+\f0\b\fs24 \cf0 64-bit Universal Binary Notes:\
+
+\b0 \
+SDL 1.2.14 is our first release with Snow Leopard on the market. In order to make SDL compile and run in 64-bit, we had to remove code that depended on deprecated Mac APIs and move over to more modern Mac APIs.\
+\
+In addition, Apple has stopped shipping gcc 3.3 and the 10.3 SDK.\
+\
+Because of all these combined factors, we have made the decision to make Mac OS X 10.4 the new minimum requirement for SDL.\
+\
+Our official SDL.framework is compiled as a 3-way Universal Binary (64-bit Intel, 32-bit Intel, 32-bit PowerPC.)\
+\
+Certain APIs that SDL relies on were not made 64-bit ready by Apple until 10.6. This means even though 10.5 had preliminary 64-bit support, SDL will not compile or run correctly in 64-bit mode on 10.5. So there are two fallout items from this.\
+\
+First, you can only compile 64-bit code on Snow Leopard or greater (which removes the possibility of 64-bit PowerPC). \
+\
+Second, this presents a corner-case where if you have a 64-bit Intel executable in your Universal binary and try to run on 10.5 on an 64-bit Intel Mac, it will launch and crash. To force 10.5 to use the 32-bit version instead of the 64-bit, you should set the LaunchServices key, LSMinimumSystemVersionByArchitecture, in your application's Info.plist. Our SDL/Xcode templates for Snow Leopard already set this up for you.\
+\
+\
+One additional fallout item is we had to remove the SDL Custom Cocoa Xcode template project. It depended on NSQuickTimeView which was deprecated and removed from the SDL codebase. It may still be possible to recreate the behavior that this template demonstrated, but we would need a volunteer to investigate this.\
+\
+\
+\
+In addition, the SDL satellite projects were affected by the 64-bit transition.\
+\
+- SDL_mixer depended on legacy Quicktime for midi playback support. We had to disable midi. (Recall that we also disabled MP3 support awhile back because we never got SMPEG working during the Tiger/Intel transition.) To fix this, we would need a native Core Audio backend for SDL_mixer.\
+\
+- Since we have changed the baseline to 10.4, we took this opportunity to switch SDL_image over to a new native ImageIO based backend. This makes the binary about 10x smaller, greatly simplifies our maintenance requirements and build process as we no longer have to maintain build systems for 3rd party dependencies, and gives us access to more image formats.\
+\
+- The static library target for SDL_ttf no longer works because we no longer have access to a libfreetype.a. We have been relying on Apple's supplied libfreetype.a, but they stopped shipping a static version starting in 10.5 which means we have no static 64-bit version. But since 10.4 is our new baseline, all these systems should have libfreetype.dylib installed, so it shouldn't be much of a problem to use SDL_ttf as a dynamic library which dynamically links to libfreetype.\
+\
+\
+-Eric Wing 2009-09-23\
+
+\b \
+\
+\
+\
+Universal Binary Notes: (historical, somewhat obsolete)\
+
+\b0 \
+Below is an overview of what we had to do to build Universal Binaries for SDL (and satellites). The document is provided to help others understand what the heck we had to do to get this to work so they know (and don't break) any settings we have set to accomplish this. It also describes areas of problems for those who might attempt to fix them after us.\
+\
+\
+It turns out that developing a Universal Binary for SDL was a painful process, but not for the typical reasons affecting most other developers. SDL is already platform clean and has an Xcode project which are usually the two biggest obstacles. (The only real code bug we had to fix was in SDL_mixer, but that was due to a Quicktime issue so we can blame the Quicktime authors.)\
+\
+But developing a Universal Binary was painful to us for several reasons:\
+\
+\pard\tx220\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li720\fi-720\ql\qnatural\pardirnatural
+\ls1\ilvl0\cf0 {\listtext	\'95	}SDL must retain compatibility with 10.2 (Jaguar)\
+\
+{\listtext	\'95	}SDL has processor specific optimizations (Altivec, MMX/SSE)\
+\
+{\listtext	\'95	}The SDL satellites (SDL_mixer, SDL_image, SDL_ttf) have 3rd party dependencies  which we currently statically link against. All of these dependencies needed to be updated/recompiled with the same above constraints.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+\cf0 \
+For retaining compatibility with 10.2, we have experimentally determined that there is no reliable way to use gcc 4.0.x to compile a binary that works under Jaguar. With the gcc 4.0 that shipped in Xcode 2.1, libgcc_s was automatically linked against. This library does not exist on systems prior to 10.3.9. After filing a bug report, Apple removed this automatic linking in gcc 4.0.1 which shipped with Xcode 2.2, but we discovered that we suffered from undefined symbols to things in the printf family library. (They seem to be new symbols related to printing long doubles, etc.)\
+\
+So to accomplish our compatibility goals, we had to find and exploit some lesser known features of Xcode that allow us to specify architecture specific build flags found here:\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+{\field{\*\fldinst{HYPERLINK "http://developer.apple.com/documentation/DeveloperTools/Conceptual/XcodeUserGuide/Contents/Resources/en.lproj/05_07_bs_building_product/chapter_33_section_6.html#//apple_ref/doc/uid/TP40002693-SW3"}}{\fldrslt \cf0 http://developer.apple.com/documentation/DeveloperTools/Conceptual/XcodeUserGuide/Contents/Resources/en.lproj/05_07_bs_building_product/chapter_33_section_6.html#//apple_ref/doc/uid/TP40002693-SW3}}\
+\
+The first and most important of these is the 
+\f1 GCC_VERSION flag which lets us set gcc 3.3 for PowerPC and gcc 4.0 for Intel.\
+\
+But we also needed to verify other options such as the deployment target and SDK. Experimentally, we found that the Deployment target did very little for us except retain prebinding. Setting it to anything less than 10.4 allows for prebinding to remain active.\
+\
+For the SDK's, we found that Apple does link against different versions of system components. But experimentally, we discovered we could still link to the 10.4u SDK and things would still work on Jaguar. Ideally we should probably link to the 10.2.8 SDK for PowerPC. But in reality, most people don't install the 10.2.8 SDK on their system (it is not a default component) so we didn't want to confuse people as setting this would likely cause people's compile to fail the first time they try and they would have to understand the reason for this. We did leave the architecture specific SDKROOT option set explicitly to make it easy to change in case we need to.\
+\
+For the Altivec and MMX/SSE options, we had to use architecture specific build flags. Furthermore, to use SSE, we also had to include the assembly code. This caused us problems because there is no easy way to tell Xcode to use files only for a specific architecture. So the PowerPC side got confused on the .asm files and would fail to compile. \
+\
+Pushing forward, we ignored PPC for the moment to see if we could at least build an optimized x86 build and then use lipo manually to merge the results. We encountered additional problems. First the alignment needed to be changed for reasons outside my knowledge base. We changed all instances of .align 16 to .align 8. This seemed to fix the compile problems. But at the linking stage, we got errors such as:\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\li640\fi-640\ql\qnatural\pardirnatural
+
+\f2\i\fs22 \cf0 ld: /Users/ewing/DEVELOPMENT/CODETEST/UniversalBinarySDL/SDL12/Xcode/SDL/build/SDL.build/Deployment/Framework.build/Objects-normal/i386/SDL_yuv_mmx.o has local relocation entries in non-writable section (__TEXT,__text)\
+/usr/bin/libtool: internal link edit command failed\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
+
+\f1\i0\fs24 \cf0 \
+Our belief is that the assembly code is not position independent and thus will not work for us. We double checked for any OS X gcc flags that control position independence, but everything seemed to be in order. As such, we cannot compile MMX/SSE optimizations until they are rewritten, preferably without the nasm requirement to accommodate the dual PPC/x86 Xcode limitations.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+\cf0 \
+So for now, we have unchecked (checkbox) the assembly specific files in the Xcode project and have removed the -DUSE_ASMBLIT flag from OTHER_CFLAGS_i386. To reactivate this stuff, you will need to recheck the boxes and re-add the flag.\
+\
+The files are\
+SDL_mixer_MMX.c/h\
+The files under hermes\
+and SDL_yuv_mmx.c\
+\
+\
+\
+For the SDL satellites, it was more of the same. The painful part was that the 3rd library dependencies needed to be rebuilt. (Some of our libraries were out of date, so this was an opportunity to update them.) But this meant changing those build systems as well. \
+\
+These are the versions I used:\
+libpng-1.2.8\
+libjpeg-6b\
+libogg-1.1.3\
+libvorbis-1.1.2\
+smpeg cvs\
+\
+We found that Apple already had a libfreetype in the 10.4u SDK so we just used that one which seemed to work. (For the record, the question did come up of why we statically link against this when it seems to be a standard component on Panther and Tiger. We double checked, and it did not seem to be in Jaguar. So that's why.)\
+\
+The old libpng turned out to be from the 1.0.x branch so we needed to replace all the headers we had as well. Updating to the 1.2.x branch didn't seem to cause any problems we could detect.\
+\
+libpng and libjpeg lack an Xcode project so we mucked with their build system to produce Universal Binaries. But since we needed PPC to be compiled with 3.3 and Intel to be compiled with 4.0, it ended up that we built multiple times changing the compiler, and then using lipo to strip and combine the binaries.\
+\
+libogg/libvorbis did contain Xcode projects, but didn't build static libraries so we had to add that. We also discovered that not building with gcc 3.3 caused us addition missing symbol runtime problems with float versions of math functions (sinf, sqrtf, etc).\
+\
+It seems that once upon a time, the SDL_mixer framework supported MP3's via SMPEG, but this disappeared at some point. I don't know why or how this happened. But I also don't know how SMPEG was ever used with the framework as there was no preexisting infrastructure as with the other libraries. So I have attempted to correct this oversight, however, the SMPEG framework itself has MMX code which has also turned out to be problematic. I am getting compiler errors of "
+\f2\i\fs22 Unknown pseudo-op:"
+\f1\i0\fs24 for 
+\f2\i\fs22 .type 
+\f1\i0\fs24 and 
+\f2\i\fs22 .size. 
+\f1\i0\fs24 \
+So SMPEG is currently compiled without MMX optimizations.\
+\
+\
+\
+\
+Addendum: \
+2006-03-06:\
+The main SDL code base (not the satellites) have undergone an overhaul. The required platform specific defines have been moved out of the build system into platform specific header files (SDL_config_*.h). This allows us to simplify the Xcode projects somewhat, but we still must maintain the architecture specific build options to invoke gcc 3.3 to maintain our mandated 10.2 compatibilty requirement.\
+\
+Also it appears that the MMX/SSE code has been rewritten as well so that the obstacles we faced in compiling in these optimizations are no longer problems. The binaries we produce should now contain the processor specific optimizations. (Remember this note only applies to SDL and not the satellites, such as SMPEG.)\
+\
+\
+\
+Contributers:\
+Eric Wing (Xcode projects, 3rd party dependencies, documentation)\
+Christian Walther (10.2.8 and 10.3.9 testing/verification)\
+Ryan Gordon (converted C++ code in SDL/OSX code base to pure C)\
+Martin Storsj\'f6 (libgcc_s testing/verification)\
+Stephane Marchesin (MMX/SSE code expert)\
+\
+\
+\
+\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+
+\f0 \cf0 \
+}

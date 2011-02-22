@@ -1,0 +1,5 @@
+This package installs documentation and Project Builder stationary for the SDL framework.
+
+The SDL documentation is installed into /Developer/Documentation/SDL.
+
+The SDL Mac OS X Readme is installed into your home directory.

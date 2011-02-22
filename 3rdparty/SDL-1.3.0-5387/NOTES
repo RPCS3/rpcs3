@@ -1,0 +1,172 @@
+
+Sam - Mon Aug  6 23:02:37 PDT 2007
+------
+Add color modulation to blitting
+Blit convert format X -> format Y (needed for texture upload)
+Blit copy / blend / modulate format X -> format X (needed for software renderer)
+
+Create full software renderer for framebuffer interfaces.
+
+Create texture for surface, keep surface around as pixel source, allow
+copying / blending / modulating from surface to display (automatically
+generate texture?)
+
+At that point, should anyone be using anything besides textures for display?
+
+IRC - Mon Aug  6 23:50:44 PDT 2007
+-----
+[11:07pm] icculus: so we're clear, "textures" replace "surfaces" from 1.2 when you want to get stuff to the screen? So you have a definitely point where it stops being pixels in memory and starts being an object on the graphics card?
+[11:07pm] icculus: Upload once, blit many
+[11:07pm] icculus: something like that?
+[11:07pm] slouken: That's the idea, yes
+[11:07pm] icculus: ok, just making sure
+[11:08pm] slouken: Many drivers retain the "texture" as a surface and blit to opaque bits which then get copied into a framebuffer.
+[11:08pm] slouken: retain -> would retain
+[11:08pm] icculus: yeah, I figured
+[11:08pm] slouken: That's why the features for surface blitting need to match the features for texture display.
+[11:08pm] icculus: But it gives an abstraction where the app has to make a conscious action: the upload is slow, but then the blit is fast.
+[11:09pm] icculus: This couldn't just map to LockSurface, though?
+[11:09pm] slouken: Yes, exactly.  I wasn't sure whether to make that clear, e.g. can you display any surface, and automatically generate a texture (if necessary)?
+[11:09pm] slouken: If not, it simplifies the framebuffer case.
+[11:10pm] slouken: But even the framebuffer case will probably still want to convert the bits to the optimal format.
+[11:10pm] slouken: And at that point, the non-optimal bits can be thrown away.
+[11:11pm] slouken: e.g. SDL_DisplayFormat()
+[11:10pm] icculus: oh, that's a good point.
+[11:10pm] icculus: hmm
+[11:11pm] icculus: yeah, okay
+[11:11pm] icculus: I was thinking about if the separation is really necessary, or if LockSurface would imply a texture creation (and you just have much more strict locking requirements than most 1.2 targets had)
+[11:11pm] slouken: That's also why I separated the conversion blits from the copy / blend / modulate blits.
+[11:12pm] icculus: But I like that the app has to be conscious of when that's happening
+[11:12pm] slouken: Yeah, I was really leaning towards making it implicit, but the memory savings is pretty significant for artwork.
+[11:12pm] icculus: SDL_compat can wrap the difference for people that can't get their head around it.
+[11:13pm] icculus: At the performance cost, that can be a totally external layer that manages it like 1.2's locking.
+[11:13pm] slouken: Well, SDL_compat is entirely software on top of a single texture that represents the screen.
+[11:14pm] slouken: Yeah, that's the way it's implemented right now.
+[11:14pm] slouken: a HWSURFACE is one that is backed by a texture, and lock/unlock is used to synchronize the bits.
+[11:14pm] slouken: I'm not sure if that's worth keeping though, if SDL_compat is software only.
+[11:15pm] slouken: It would minimize code migration though.
+[11:15pm] icculus: yeah
+[11:15pm] icculus: I expect SDL_compat to be a complete cesspool
+[11:15pm] icculus: just a black box that no one touches or looks at more than necessary
+[11:15pm] slouken: more or less, but it's actually pretty clean right now... I think as a side effect of the new API being pretty clean.
+[11:15pm] slouken: I'm just unsure how much to use texture vs HWSURFACE
+[11:16pm] icculus: Besides, you'd be surprised how quickly you can get people to move if you flag functions as deprecated so that GCC bitches when you use them.
+[11:16pm] slouken:
+[11:16pm] icculus: how much to use texture vs HWSURFACE in 1.3, or in SDL_compat?
+[11:16pm] slouken: in 1.3
+[11:17pm] icculus: Pick one or the other, I would say.
+[11:17pm] icculus: I don't think it's good to confuse people with both terms
+[11:17pm] slouken: yeah
+[11:17pm] icculus: Everything is software until it's a texture.
+[11:17pm] slouken: I'm just not sure which
+[11:17pm] slouken: that's certainly cleanest.
+[11:18pm] slouken: and what's currently implemented
+[11:18pm] slouken: Let's think through the migration process...
+[11:18pm] icculus: Plus dropping the term HWSURFACE gets the point across that a) this isn't 1.2 and b) this is probably going to a 3D api that you should be using anyhow.
+[11:18pm] • slouken nods
+[11:18pm] icculus: I mean, "texture" is what every API calls these things
+[11:18pm] slouken: Yep
+[11:19pm] slouken: So let's work through a migration case...
+[11:19pm] icculus: ok
+[11:19pm] slouken: FooBall loads a big background and a bunch of sprites.  They are png, loaded into SDL_Surface with SDL_image, then converted with SDL_DisplayFormat()
+[11:20pm] slouken: Then the background is blitted every frame and the sprites are blended on top.
+[11:20pm] slouken: In the compat case:
+[11:21pm] slouken: SDL_SetVideoMode() creates a single lockable texture for the display.  DisplayFormat() converts the bits into the optimal format, all blitting is done in software, and SDL_UpdateRects() pushes the bits into the texture and the texture is rendered.
+[11:21pm] slouken: In the 1.3 case:
+[11:22pm] slouken: The background and sprites are converted to textures using SDL_CreateTextureFromSurface(), and the appropriate blending flags are set.  Each frame copies the textures into place and then the display is presented.
+[11:23pm] slouken: compat is software only, 1.3 can be 3D accelerated.
+[11:23pm] icculus: wait, why does all blitting have to be done in software in the SDL_compat case?
+[11:23pm] icculus: I don't understand why SDL_compat can't move things between surfaces and textures at Lock/Unlock time
+[11:24pm] slouken: Because by default the screen isn't created with HWSURFACE, since apps expect to be able to munge the bits.  Therefore, the blits to it have to be done locally.
+[11:24pm] icculus: And all the surfaces are flagged HWSURFACE, so ->pixels is NULL until locked.
+[11:24pm] icculus: oh
+[11:24pm] icculus: It wasn't possible to have a HWSURFACE screen?
+[11:25pm] slouken: Yes, it was, just nobody did it because alpha blending needs to read from video memory, and poking pixels across the bus is slow.
+[11:25pm] slouken: Even in 1.3, the Xlib case needs to be software renderer if you want to do any alpha blending.
+[11:26pm] icculus: But arguably there's no reason that can't all be HWSURFACE (that is, they need to get moved to a texture, even if that's still a software renderer on the backend)
+[11:26pm] icculus: That sounds like it's only a problem when an app touches SDL_GetVideoSurface()->pixels without checking if they should lock it.
+[11:26pm] icculus: Which might be quite common
+[11:27pm] slouken: Yep, in 1.2 the app was able to specify it, and most explicitly don't because it's either not available or bad for alpha blending and direct pixel poking.
+[11:27pm] icculus: hmm.
+[11:28pm] slouken: You see why I've been going round and round for months on this?
+[11:28pm] icculus: Well, we're talking about a compatibility layer; if it's going to crash without LockSurface() on the screen, make them lock it. If that makes it slow, so be it.
+[11:29pm] icculus: The options are make small changes and take a performance hit, or make bigger changes and get a big performance win.
+[11:29pm] icculus: (if touching the framebuffer directly, that is)
+[11:29pm] slouken: Well, at that point it's a compatibility layer, why not just leave it software?  (devil's advocate here)
+[11:29pm] icculus: That's a good point.
+[11:30pm] slouken: Unless we leave everything surfaces to get the best of both worlds... 
+[11:30pm] • slouken gets dizzy
+[11:30pm] icculus: From a technical elegance viewpoint, I can see a good mapping between HWSURFACE and textures, but realistically, you want to motivate people to move away from old APIs.
+[11:31pm] slouken: Yeah probably.  There's a certain attraction to retaining the SDL_Surface usage even for hardware surfaces, simply because of code reuse.  You don't have to have separate code for your software composition and your rendering.  You also get to keep your old image loading code, etc.
+[11:31pm] icculus: man, this really is a pain in the ass, I see what you mean.  
+[11:32pm] slouken: Yeah. 
+[11:32pm] icculus: hmm, let me think on this awhile.
+[11:32pm] slouken: On the other hand, separating the Texture API for rendering is clearer and allows extension in the future.
+[11:32pm] slouken: We could potentially allow you to create a software renderer pointed at an SDL surface....
+[11:32pm] slouken: Hmmm
+[11:33pm] icculus: well, that's what you have now for something like Doom
+[11:33pm] icculus: you render to a shadow surface, and throw a hail-mary with SDL_Flip()
+[11:34pm] slouken: Yep.  I mean a 1.3 "renderer" with an SDL_Surface or another texture as the target.
+[11:34pm] icculus: More or less, that doesn't change. The only important thing there is not generating a new texture every time, but being able to discard what's currently in it for a fresh upload.
+[11:34pm] slouken: Yep
+[11:34pm] icculus: oh, I see
+[11:35pm] icculus: render-to-surface  
+[11:35pm] slouken: lol
+[11:35pm] slouken: yeah
+[11:36pm] slouken: So... where to draw the line with surface vs texture...
+[11:37pm] icculus: I don't know, I would think that basically you want to get out of surfaces as fast as possible
+[11:37pm] icculus: (disregarding SDL_compat for the moment)
+[11:37pm] slouken: Yeah, I think so.
+[11:37pm] slouken: Load the bits up, throw them into a texture, and go
+[11:37pm] icculus: And basically all you really need for that is an "upload" function.
+[11:38pm] slouken: Yep
+[11:38pm] icculus: I'd even be inclined to not allow "Locking," so there's no readback.
+[11:38pm] icculus: well, I'm sure that would cause a fight
+[11:38pm] • slouken thinks
+[11:40pm] slouken: Let me see where I use SDL_LockTexture() right now.
+[11:42pm] slouken: The only time that's useful is to avoid a buffer copy when you're already writing the bits in the correct format.
+[11:42pm] slouken: e.g. lock -> software render into bits -> unlock (upload)
+[11:43pm] slouken: that may already be taken care of by the upload though.
+[11:43pm] slouken: e.g. software render into bits -> upload
+[11:44pm] slouken: Oh yeah, there's probably a memory copy of the bits though, so it's:  upload = copy into cached bits, copy cached bits to video memory as needed.  In that case if you lock to get access to the cached bits directly that's a win.
+[11:44pm] icculus: ah, okay
+[11:47pm] icculus: I don't know, my head hurts.  
+[11:47pm] slouken: Yeah, mine too. 
+[11:47pm] slouken: I was pretty happy with the current setup until I noticed that it's really hard to write a framebuffer driver right now.
+[11:49pm] slouken: I think maybe if I clean that up and separate conversion blit and copy / blend / modulate blit, then it may work pretty cleanly.
+[11:49pm] icculus: yeah
+
+[11:54pm] slouken: So recapping... SDL_Surface is only used for loading and app composition.
+[11:55pm] slouken: SDL surface blitting is enhanced to maintain parity with the renderer features, since it's used as the core of the software renderer.
+[11:56pm] slouken: The software renderer is adapted to be a standalone module targeting either an SDL_Surface or an SDL_Texture.
+[11:56pm] slouken: SDL_HWSURFACE goes away
+[11:57pm] slouken: Anything I'm missing?
+[11:58pm] icculus: no, sounds good
+[11:58pm] slouken: This means we have the new 1.3 texture API pretty much as it stands.
+[11:59pm] slouken: Right?
+[11:59pm] icculus: yeah, I think so
+
+[12:00am] slouken: I was trying to see if it was possible to make a pluggable blit API, but I was going insane with trying to figure out how to make it fast.
+[12:01am] slouken: If it were software only I could just say, write your own and register it here, but you'd have to maintain parity with the OpenGL and Direct3D renderers as well.
+[12:01am] slouken: At that point you might as well be working in surfaces and uploading to texture. 
+[12:02am] icculus: yeah
+
+TODO
+----
+Change textures to static/streaming.  Static textures are not lockable,
+streaming textures are lockable and may have system memory pixels available.
+SDL_compat will use a streaming video texture, and will never be HWSURFACE,
+but may be PREALLOC, if system memory pixels are available.
+*** DONE Thu Aug 16 14:18:42 PDT 2007
+
+The software renderer will be abstracted so the surface management can be
+used by any renderer that provides functions to copy surfaces to the window.
+
+Blitters...
+----
+Copy blit and fill rect are optimized with MMX and SSE now.
+
+Here are the pieces we still need:
+- Merging SDL texture capabilities into the SDL surface system
+- Generic fallback blitter architecture
+- Custom fast path blitters

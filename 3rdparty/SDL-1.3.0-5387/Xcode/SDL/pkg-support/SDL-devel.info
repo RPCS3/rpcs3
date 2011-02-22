@@ -1,0 +1,15 @@
+Title SDL 1.2.9
+Version 1
+Description SDL Library for Mac OS X (http://www.libsdl.org)
+DefaultLocation /Developer/Documentation/SDL
+Diskname (null)
+DeleteWarning 
+NeedsAuthorization YES
+DisableStop NO
+UseUserMask YES
+Application NO
+Relocatable NO
+Required NO
+InstallOnly NO
+RequiresReboot NO
+InstallFat NO

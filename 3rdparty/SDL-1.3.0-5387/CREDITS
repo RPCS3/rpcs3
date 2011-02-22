@@ -1,0 +1,73 @@
+
+Simple DirectMedia Layer CREDITS
+Thanks to everyone who made this possible, including:
+
+* Cliff Matthews, for giving me a reason to start this project. :)
+ -- Executor rocks!  *grin*
+
+* The Linux Fund, C Magazine, Educational Technology Resources Inc.,
+  Gareth Noyce, Jesse Pavel, Keith Kitchin, Jeremy Horvath, Thomas Nicholson,
+  Hans-Peter Gygax, the Eternal Lands Development Team, Lars Brubaker,
+  and Phoenix Kokido for financial contributions
+
+* Edgar "bobbens" Simo for his force feedback API development during the
+  Google Summer of Code 2008
+
+* Aaron Wishnick for his work on audio resampling and pitch shifting during
+  the Google Summer of Code 2008
+
+* Holmes Futrell for port of SDL to the iPhone and iPod Touch during the
+  Google Summer of Code 2008
+
+* Darren Alton for port of SDL to the Nintendo DS during the Google Summer
+  of Code 2008
+
+* Szymon "Wilku" Wilczek for adding support for multiple mice and tablets
+  during the Google Summer of Code 2008
+
+* Marty Leisner, Andrew, Will, Edgar Simo, Donny Viszneki, Andrea Mazzoleni,
+  Dmytro Bogovych, and Couriersud for helping find SDL 1.3 bugs in the great
+  SDL Bug Hunt of January 2009!
+
+* Donny Viszneki for helping fix SDL 1.3 bugs in the great SDL Bug Hunt of
+  January 2009!
+
+* Luke Benstead for OpenGL 3.0 support
+
+* Gaëtan de Menten for writing the PHP and SQL behind the SDL website
+
+* Tim Jones for the new look of the SDL website
+
+* Ryan Gordon for helping everybody out and keeping the dream alive. :)
+
+* Mattias Engdegård, for help with the Solaris port and lots of other help
+
+* Eric Wing, Max Horn, and Darrell Walisser for unflagging work on the Mac OS X port
+
+* David Carré, for the Pandora port
+
+* Couriersud for the DirectFB driver
+
+* Jon Atkins for SDL_image, SDL_mixer and SDL_net documentation
+
+* Arne Claus, for the 2004 winning SDL logo,
+  and Shandy Brown, Jac, Alex Lyman, Mikkel Gjoel, #Guy, Jonas Hartmann,
+  Daniel Liljeberg,  Ronald Sowa, DocD, Pekka Jaervinen, Patrick Avella,
+  Erkki Kontilla, Levon Gavalian, Hal Emerich, David Wiktorsson,
+  S. Schury and F. Hufsky, Ciska de Ruyver, Shredweat, Tyler Montbriand,
+  Martin Andersson, Merlyn Wysard, Fernando Ibanez, David Miller,
+  Andre Bommele, lovesby.com, Francisco Camenforte Torres, and David Igreja
+  for other logo entries.
+
+* Bob Pendleton and David Olofson for being long time contributors to
+  the SDL mailing list.
+
+* Everybody at Loki Software, Inc. for their great contributions!
+
+ And a big hand to everyone else who gave me appreciation, advice,
+ and suggestions, especially the good folks on the SDL mailing list.
+
+THANKS! :)
+
+  -- Sam Lantinga			<slouken@libsdl.org>
+

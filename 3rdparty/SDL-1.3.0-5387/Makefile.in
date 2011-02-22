@@ -1,0 +1,225 @@
+# Makefile to build and install the SDL library
+
+top_builddir = .
+srcdir  = @srcdir@
+objects = build
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+bindir	= @bindir@
+libdir  = @libdir@
+includedir = @includedir@
+datarootdir = @datarootdir@
+datadir	= @datadir@
+auxdir	= @ac_aux_dir@
+distpath = $(srcdir)/..
+distdir = SDL-@SDL_VERSION@
+distfile = $(distdir).tar.gz
+
+@SET_MAKE@
+SHELL	= @SHELL@
+CC      = @CC@
+INCLUDE = @INCLUDE@
+CFLAGS  = @BUILD_CFLAGS@
+EXTRA_CFLAGS = @EXTRA_CFLAGS@
+LDFLAGS = @BUILD_LDFLAGS@
+EXTRA_LDFLAGS = @EXTRA_LDFLAGS@
+LIBTOOL = @LIBTOOL@
+INSTALL = @INSTALL@
+NASM	= @NASM@ @NASMFLAGS@
+AR	= @AR@
+RANLIB	= @RANLIB@
+WINDRES	= @WINDRES@
+
+TARGET  = libSDL.la
+OBJECTS = @OBJECTS@
+VERSION_OBJECTS = @VERSION_OBJECTS@
+
+SDLMAIN_TARGET = libSDLmain.a
+SDLMAIN_OBJECTS = @SDLMAIN_OBJECTS@
+
+DIST = acinclude Android.mk autogen.sh Borland.html Borland.zip BUGS build-scripts configure configure.in COPYING CREDITS include INSTALL Makefile.minimal Makefile.in README* sdl-config.in sdl.m4 sdl.pc.in SDL.spec SDL.spec.in src test TODO VisualC.html VisualC VisualCE Watcom-Win32.zip WhatsNew Xcode Xcode-iPhoneOS
+
+HDRS = \
+	SDL.h \
+	SDL_assert.h \
+	SDL_atomic.h \
+	SDL_audio.h \
+	SDL_blendmode.h \
+	SDL_clipboard.h \
+	SDL_compat.h \
+	SDL_cpuinfo.h \
+	SDL_endian.h \
+	SDL_error.h \
+	SDL_events.h \
+	SDL_gesture.h \
+	SDL_haptic.h \
+	SDL_hints.h \
+	SDL_input.h \
+	SDL_joystick.h \
+	SDL_keyboard.h \
+	SDL_keycode.h \
+	SDL_loadso.h \
+	SDL_log.h \
+	SDL_main.h \
+	SDL_mouse.h \
+	SDL_mutex.h \
+	SDL_name.h \
+	SDL_opengl.h \
+	SDL_opengles.h \
+	SDL_pixels.h \
+	SDL_platform.h \
+	SDL_power.h \
+	SDL_quit.h \
+	SDL_rect.h \
+	SDL_render.h \
+	SDL_rwops.h \
+	SDL_scancode.h \
+	SDL_shape.h \
+	SDL_stdinc.h \
+	SDL_surface.h \
+	SDL_syswm.h \
+	SDL_thread.h \
+	SDL_timer.h \
+	SDL_touch.h \
+	SDL_types.h \
+	SDL_version.h \
+	SDL_video.h \
+	begin_code.h \
+	close_code.h
+
+LT_AGE      = @LT_AGE@
+LT_CURRENT  = @LT_CURRENT@
+LT_RELEASE  = @LT_RELEASE@
+LT_REVISION = @LT_REVISION@
+LT_LDFLAGS  = -no-undefined -rpath $(DESTDIR)$(libdir) -release $(LT_RELEASE) -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+
+all: $(srcdir)/configure Makefile $(objects) $(objects)/$(TARGET) $(objects)/$(SDLMAIN_TARGET)
+
+$(srcdir)/configure: $(srcdir)/configure.in
+	@echo "Warning, configure.in is out of date"
+	#(cd $(srcdir) && sh autogen.sh && sh configure)
+	@sleep 3
+
+Makefile: $(srcdir)/Makefile.in
+	$(SHELL) config.status $@
+
+Makefile.in:;
+
+$(objects):
+	$(SHELL) $(auxdir)/mkinstalldirs $@
+
+update-revision:
+	$(SHELL) $(auxdir)/updaterev.sh
+
+.PHONY: all update-revision install install-bin install-hdrs install-lib install-data uninstall uninstall-bin uninstall-hdrs uninstall-lib uninstall-data clean distclean dist $(OBJECTS:.lo=.d)
+
+$(objects)/$(TARGET): $(OBJECTS) $(VERSION_OBJECTS)
+	$(LIBTOOL) --mode=link $(CC) -o $@ $(OBJECTS) $(VERSION_OBJECTS) $(LDFLAGS) $(EXTRA_LDFLAGS) $(LT_LDFLAGS)
+
+$(objects)/$(SDLMAIN_TARGET): $(SDLMAIN_OBJECTS)
+	$(AR) cru $@ $(SDLMAIN_OBJECTS)
+	$(RANLIB) $@
+
+install: all install-bin install-hdrs install-lib install-data
+install-bin:
+	$(SHELL) $(auxdir)/mkinstalldirs $(DESTDIR)$(bindir)
+	$(INSTALL) -m 755 sdl-config $(DESTDIR)$(bindir)/sdl-config
+install-hdrs: update-revision
+	$(SHELL) $(auxdir)/mkinstalldirs $(DESTDIR)$(includedir)/SDL
+	for file in $(HDRS); do \
+	    $(INSTALL) -m 644 $(srcdir)/include/$$file $(DESTDIR)$(includedir)/SDL/$$file; \
+	done
+	$(INSTALL) -m 644 include/SDL_config.h $(DESTDIR)$(includedir)/SDL/SDL_config.h
+	if test -f include/SDL_revision.h; then \
+	    $(INSTALL) -m 644 include/SDL_revision.h $(DESTDIR)$(includedir)/SDL/SDL_revision.h; \
+	else \
+	    $(INSTALL) -m 644 $(srcdir)/include/SDL_revision.h $(DESTDIR)$(includedir)/SDL/SDL_revision.h; \
+	fi
+
+install-lib: $(objects) $(objects)/$(TARGET) $(objects)/$(SDLMAIN_TARGET)
+	$(SHELL) $(auxdir)/mkinstalldirs $(DESTDIR)$(libdir)
+	$(LIBTOOL) --mode=install $(INSTALL) $(objects)/$(TARGET) $(DESTDIR)$(libdir)/$(TARGET)
+	$(INSTALL) -m 644 $(objects)/$(SDLMAIN_TARGET) $(DESTDIR)$(libdir)/$(SDLMAIN_TARGET)
+	$(RANLIB) $(DESTDIR)$(libdir)/$(SDLMAIN_TARGET)
+install-data:
+	$(SHELL) $(auxdir)/mkinstalldirs $(DESTDIR)$(datadir)/aclocal
+	$(INSTALL) -m 644 $(srcdir)/sdl.m4 $(DESTDIR)$(datadir)/aclocal/sdl.m4
+	$(SHELL) $(auxdir)/mkinstalldirs $(DESTDIR)$(libdir)/pkgconfig
+	$(INSTALL) -m 644 sdl.pc $(DESTDIR)$(libdir)/pkgconfig
+
+uninstall: uninstall-bin uninstall-hdrs uninstall-lib uninstall-data
+uninstall-bin:
+	rm -f $(DESTDIR)$(bindir)/sdl-config
+uninstall-hdrs:
+	for file in $(HDRS); do \
+	    rm -f $(DESTDIR)$(includedir)/SDL/$$file; \
+	done
+	rm -f $(DESTDIR)$(includedir)/SDL/SDL_config.h
+	rm -f $(DESTDIR)$(includedir)/SDL/SDL_revision.h
+	-rmdir $(DESTDIR)$(includedir)/SDL
+uninstall-lib:
+	$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(libdir)/$(TARGET)
+	rm -f $(DESTDIR)$(libdir)/$(SDLMAIN_TARGET)
+uninstall-data:
+	rm -f $(DESTDIR)$(datadir)/aclocal/sdl.m4
+	rm -f $(DESTDIR)$(libdir)/pkgconfig/sdl.pc
+
+clean:
+	rm -rf $(objects)
+	if test -f test/Makefile; then (cd test; $(MAKE) $@); fi
+
+distclean: clean
+	rm -f Makefile Makefile.rules sdl-config
+	rm -f SDL.qpg
+	rm -f config.status config.cache config.log libtool
+	rm -rf $(srcdir)/autom4te*
+	find $(srcdir) \( \
+	    -name '*~' -o \
+	    -name '*.bak' -o \
+	    -name '*.old' -o \
+	    -name '*.rej' -o \
+	    -name '*.orig' -o \
+	    -name '.#*' \) \
+	    -exec rm -f {} \;
+	if test -f test/Makefile; then (cd test; $(MAKE) $@); fi
+
+dist $(distfile):
+	$(SHELL) $(auxdir)/mkinstalldirs $(distdir)
+	tar cf - $(DIST) | (cd $(distdir); tar xf -)
+	find $(distdir) \( \
+	    -name '*~' -o \
+	    -name '*.bak' -o \
+	    -name '*.old' -o \
+	    -name '*.rej' -o \
+	    -name '*.orig' -o \
+	    -name '.#*' \) \
+	    -exec rm -f {} \;
+	if test -f $(distdir)/test/Makefile; then (cd $(distdir)/test && make distclean); fi
+	tar cvf - $(distdir) | gzip --best >$(distfile)
+	rm -rf $(distdir)
+
+rpm: $(distfile)
+	rpmbuild -ta $?
+
+# Run indent on the source to standardize coding style
+indent:
+	@echo "Running indent... modified files:"
+	@cd $(srcdir) && \
+	find . \( \
+	    -name '*.h' -o \
+	    -name '*.c' -o \
+	    -name '*.cc' \) \
+	    -print | fgrep -v ./Xcode | \
+	while read file; do \
+	    indent "$$file" -o "$$file.indent"; \
+	    if cmp "$$file" "$$file.indent" >/dev/null; then \
+	        rm -f "$$file.indent"; \
+	    else \
+	        echo "$$file"; \
+	        mv -f "$$file.indent" "$$file"; \
+	    fi; \
+	done
+
+# Run indent and then commit modified files
+commit: indent
+	hg commit

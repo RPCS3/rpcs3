@@ -1,0 +1,101 @@
+===========================================================================
+System Specific Notes
+===========================================================================
+Linux:
+The linux touch system is currently based off event streams, and proc/bus/devices. The active user must be given permissions to read /dev/input/TOUCHDEVICE, where TOUCHDEVICE is the event stream for your device. Currently only Wacom tablets are supported. If you have an unsupported tablet contact me at jim.tla+sdl_touch@gmail.com and I will help you get support for it.
+
+Mac: 
+The Mac and Iphone API's are pretty. If your touch device supports them then you'll be fine. If it doesn't, then there isn't much we can do.
+
+iPhone: 
+Works out of box.
+
+Windows:
+Unfortunately there is no windows support as of yet. Support for Windows 7 is planned, but we currently have no way to test. If you have a Windows 7 WM_TOUCH supported device, and are willing to help test please contact me at jim.tla+sdl_touch@gmail.com
+
+===========================================================================
+Events
+===========================================================================
+SDL_FINGERDOWN:
+Sent when a finger (or stylus) is placed on a touch device.
+Fields:
+event.tfinger.touchId  - the Id of the touch device.
+event.tfinger.fingerId - the Id of the finger which just went down.
+event.tfinger.x        - the x coordinate of the touch (0..touch.xres)
+event.tfinger.y        - the y coordinate of the touch (0..touch.yres)
+event.tfinger.pressure - the pressure of the touch (0..touch.pressureres)
+
+SDL_FINGERMOTION:
+Sent when a finger (or stylus) is moved on the touch device.
+Fields:
+Same as FINGERDOWN but with additional:
+event.tfginer.dx       - change in x coordinate during this motion event.
+event.tfginer.dy       - change in y coordinate during this motion event.
+
+SDL_FINGERMOTION:
+Sent when a finger (or stylus) is lifted from the touch device.
+Fields:
+Same as FINGERDOWN.
+
+
+===========================================================================
+Functions
+===========================================================================
+SDL provides the ability to access the underlying Touch and Finger structures.
+These structures should _never_ be modified.
+
+The following functions are included from SDL_Touch.h
+
+To get a SDL_Touch device call SDL_GetTouch(touchId). 
+This returns an SDL_Touch*. 
+IMPORTANT: If the touch has been removed, or there is no touch with the given ID, SDL_GetTouch will return null. Be sure to check for this!
+
+An SDL_Touch has the following fields:
+>xres,yres,pressures:
+	The resolution at which x,y, and pressure values are reported. Currently these will always be equal to 2^15, but this may not always be the case. 
+
+>pressure_max, pressure_min, x_max, x_min, y_max, y_min
+	Which give, respectively, the maximum and minumum values that the touch digitizer can return for pressure, x coordiniate, and y coordinate AS REPORTED BY THE OPERATING SYSTEM.
+On Mac/iPhone systems _max will always be 0, and _min will always be 1. 
+
+>native_xres,native_yres,native_pressureres:
+	The native resolution of the touch device AS REPORTED BY THE OPERATING SYSTEM.
+On Mac/iPhone systems these will always be 1.
+
+>num_fingers:
+	The number of fingers currently down on the device.
+
+>fingers:
+	An array of pointers to the fingers which are on the device.
+
+
+The most common reason to access a touch device is to normalize inputs. This would be accomplished by code like the following:
+
+      SDL_Touch* inTouch = SDL_GetTouch(event.tfinger.touchId);
+      if(inTouch == NULL) continue; //The touch has been removed
+
+      float x = ((float)event.tfinger.x)/inTouch->xres;
+      float y = ((float)event.tfinger.y)/inTouch->yres;
+
+
+
+To get an SDL_Finger, call SDL_GetFinger(touch,fingerId), where touch is a pointer to an SDL_Touch device, and fingerId is the id of the requested finger.
+This returns an SDL_Finger*, or null if the finger does not exist, or has been removed.
+An SDL_Finger is guaranteed to be persistent for the duration of a touch, but it will be de-allocated as soon as the finger is removed. This occurs when the SDL_FINGERUP event is _added_ to the event queue, and thus _before_ the FINGERUP event is polled. 
+As a result, be very careful to check for null return values.
+
+An SDL_Finger has the following fields:
+>x,y,pressure:
+	The current coordinates of the touch.
+>xdelta,ydelta: 
+	The change in position resulting from the last finger motion.
+>last_x, last_y, last_pressure:
+	 The previous coordinates of the touch.
+
+===========================================================================
+Notes
+===========================================================================
+For a complete example see test/testgesture.c
+
+Please direct questions/comments to:
+   jim.tla+sdl_touch@gmail.com

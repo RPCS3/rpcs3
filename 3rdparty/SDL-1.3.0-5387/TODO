@@ -1,0 +1,42 @@
+Eli Gottlieb's checklist for the GSOC shaped windows project.  Dated July 9, 2010.
+1. Enable proper linking of the X11 implementation and test it.
+--> Find the place in the build system for platform-specific linking flags.  STATUS: DONE
+--> Add a linker flag to bring in libXext.a. STATUS: DONE.
+2. Build the Win32 implementation of shaped-windows functionality.
+--> Add driver functions to the SDL_ShapeDriver in the Win32 driver's SDL_DisplayDevice at the proper point in the code.  STATUS: CHECK.
+--> Add a hook in the Windows resize-window code to call Win32_ResizeWindowShape().  STATUS: CHECK.
+--> Get the Windows code to build and run properly.  STATUS: IN PROGRESS.
+3. Enable building the testeyes program.
+--> Reprogram it to use the latest shaped-windows API.  STATUS: CHECK.
+--> Get it, along with the rest of the test suite in my branch, building successfully.  STATUS: DONE.
+--> Debug testeyes and the platform-specific shaped-window implementations in tandem.  STATUS: IN PROGRESS.
+4. Implement the SDL shaped-windows API for Mac OS X using Cocoa.  STATUS: IN PROGRESS
+--> Locate (once more) the API documentation for shaped windows under Cocoa.  STATUS: NEARLY FINISHED.
+--> Design and encode a version of SDL_ShapeData for Cocoa.  STATUS: IN PROGRESS.
+--> Write Cocoa_CreateShaper().  STATUS: MOSTLY DONE, AFAIK.
+--> Write Cocoa_ResizeWindowShape().  STATUS: DONE, AFAIK.
+--> Write Cocoa_SetWindowShape().  STATUS: IN PROGRESS.
+--> If necessary, implement functionality adjunct to SDL_CalculateShapeBitmap() for Cocoa usage.
+5. Use testeyes to debug all implementations. STATUS: SPRINT + 2.
+--> Debug Cocoa implementation.
+--> Debug Win32 implementation.
+--> Debug X11 implementation (again).
+
+1.3 release checklist:
+ * http://wiki.libsdl.org/moin.cgi/Roadmap
+
+ * See why windows are being rearranged.  Is the shield window not up?
+ * Make sure you can create and show a fullscreen window in one step
+ * Figure out how to handle OpenGL context lost on Mac OS X (does it happen?)
+ * Write automated test case for multi-draw APIs
+ * Make sure you can build SDL without the renderer to slim it down a bunch
+ * Implement assertion code on iPhone
+ * Add __WINDOWS__ in addition to __WIN32__
+
+ * Check 1.2 revisions:
+	3554 - Need to resolve semantics for locking keys on different platforms
+	4874 - Do we want screen rotation?  At what level?
+	4974 - Windows file code needs to convert UTF-8 to Unicode, but we don't need to tap dance for Windows 95/98
+	4484, 4485 - Verify that SDL's Windows keyboard handling works correctly
+	4865 - See if this is still needed (mouse coordinate clamping)
+	4866 - See if this is still needed (blocking window repositioning)

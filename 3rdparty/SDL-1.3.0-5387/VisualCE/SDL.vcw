@@ -1,0 +1,116 @@
+Microsoft eMbedded Visual Tools Workspace File, Format Version 3.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "loopwave"=.\loopwave\loopwave.vcp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name SDL
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name SDLmain
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "SDL"=.\SDL\SDL.VCP - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "SDLmain"=.\SDLmain\SDLmain.vcp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name SDL
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "testtimer"=.\testtimer\testtimer.vcp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name SDL
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name SDLmain
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "testalpha"=.\testalpha\testalpha.vcp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name SDL
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name SDLmain
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "testwin"=.\testwin\testwin.vcp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name SDL
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name SDLmain
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+

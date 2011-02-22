@@ -1,0 +1,59 @@
+
+
+   SDL Automated Testing Framework User Documentation
+   by Edgar Simo Serra
+
+
+
+   Abstract
+
+   The SDL Automated Testing Framework, hereby after called SDL_AT, is a meant
+to test the SDL code for regressions and other possible failures. It can also
+be used to display what your SDL set up supports.
+
+
+
+   Basics
+
+   The main way to use the framework is to compile it and run it, that can be
+done with the following command:
+
+  $> make test
+  
+  It should then display something like:
+
+  Platform : All tests successful (2)
+  SDL_RWops : All tests successful (5)
+  SDL_Surface : All tests successful (6)
+  Rendering with x11 driver : All tests successful (4)
+
+  Indicating that all tests were successful. If however a test fails output it
+will report the failure to stderr indicating where and why it happened. This
+output can then be sent to the developers so they can attempt to fix the
+problem.
+
+
+
+   Advanced
+
+   By passing the "-h" or "--help" parameter to testsdl you can get an overview
+of all the possible options you can set to furthur tweak the testing. A sample
+of the options would be the following:
+
+   Usage: ./testsdl [OPTIONS]
+   Options are:
+      -m, --manual    enables tests that require user interaction
+      --noplatform    do not run the platform tests
+      --norwops       do not run the rwops tests
+      --nosurface     do not run the surface tests
+      --norender      do not run the render tests
+      -v, --verbose   increases verbosity level by 1 for each -v
+      -q, --quiet     only displays errors
+      -h, --help      display this message and exit
+
+
+  
+  Developers
+
+  See SDL_at.h for developer information.
+

@@ -1,0 +1,12 @@
+{
+	FilesToRename = {
+		"SDLApp_Prefix.pch" = "ÇPROJECTNAMEÈ_Prefix.pch";
+	};
+	FilesToMacroExpand = (
+		"ÇPROJECTNAMEÈ_Prefix.pch",
+		"Info.plist",
+		"English.lproj/InfoPlist.strings",
+		"main.c",
+	);
+	Description = "This project builds an SDL-based application with Cocoa menus.";
+}

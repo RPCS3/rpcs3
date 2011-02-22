@@ -1,0 +1,139 @@
+
+Using SDL 1.3 under Windows with the OpenWatcom compiler
+
+====================================================
+
+Prerequisites
+-------------
+
+I have done the port under Windows XP Professional with SP2 installed.
+Windows 2000 should also be working. I'm not so sure about ancient Windows NT,
+since only DirectX 3 is available there. Building should be possible,
+but running the compiled applications will probalbly fail with
+SDL_VIDEODRIVER=directx. The windib driver should work, though.
+
+To compile and use the SDL with Open Watcom you will need the following:
+- Open Watcom compiler. I used version 1.8. The environment variables
+  PATH, WATCOM and INCLUDE need to be set appropriately - please consult
+  the OpenWatcom documentation and instructions given during the
+  installation of the compiler.
+  My setup looks like this in owvars.bat:
+    set WATCOM=C:\dev\ow18
+    set INCLUDE=%WATCOM%\h;%WATCOM%\h\nt
+    set PATH=%PATH%;%WATCOM%\binnt;%WATCOM%\binw
+- A recent DirectX SDK. The library needs D3d9.h so at leat the
+  directx 9 sdk is to be used. I used DirectX 10 SDK from August 2009
+  taken directly from the microsoft site.
+- The SDL 1.3 sources from Subversion
+- The file Watcom-Win32.zip (now available in Subversion)
+
+
+Building the Library
+--------------------
+
+1) In the SDL base directory extract the archive Watcom-Win32.zip. This
+   creates a subdirectory named 'watcom'.
+2) The makefile expects the environment variable DXDIR to be set to the
+   base directory of a DirectX SDK. I have tried the August 2009
+   DirectX SDK from Microsoft
+   You can also edit the makefile directly and hard code your path to
+   the SDK on your system.
+   I have this in my setup:
+     set DXDIR=..\dx10
+3) Enter the watcom directory and run
+     wmake sdl
+4) All tests from the test directory are working and can be built by
+   running
+     wmake tests
+
+Notes:
+
+ The makefile offers some options to tweak the way the library is built.
+ You have at your disposal the option to build a static (default)
+ library, or a DLL (with tgt=dll). You can also choose whether to build
+ a Release (default) or a Debug version (with build=debug) of the tests
+ and library. Please consult the usage comment at the top of the
+ makefile for usage instructions.
+
+ If you specify a test target (i.e. 'wmake tests' for all tests, or
+ selected targets like 'wmake testgl testvidinfo testoverlay2'), the
+ tests are always freshly compiled and linked. This is done to
+ minimise hassle when switching between library versions (static vs.
+ DLL), because they require subtly different options.
+ Also, the test executables are put directly into the test directory,
+ so they can find their data files. The clean target of the makefile
+ removes the test executables and the SDL.dll file from the test
+ directory.
+
+ To use the library in your own projects with Open Watcom, you can use
+ the way the tests are built as base of your own build environment.
+
+ The library can also be built with the stack calling convention of the
+ compiler (-6s instead of -6r).
+
+Test applications
+-----------------
+$FixME: which test works ? which one compiles ?
+
+I've tried to make all tests work. The following table gives an overview
+of the current status.
+
+ Testname        Status
+~~~~~~~~~~~~~~~ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+checkkeys       +
+graywin         +
+loopwave        +
+testalpha       +
+testbitmap      +
+testdyngl       +
+testerror       +
+testfile        +
+testgamma       +
+testgl          +
+testhread       +
+testiconv       - (all failed)
+testkeys        +
+testlock        +
+testoverlay     + (needs 'set SDL_VIDEODRIVER=directx')
+testoverlay2    + (needs 'set SDL_VIDEODRIVER=directx')
+testpalette     +
+testplatform    +
+testsem         +
+testsprite      +
+testtimer       +
+testver         +
+testvidinfo     +
+testwin         ? (fading doesn't seem right)
+testwm          +
+torturethread   +
+testcdrom       +
+testjoystick    not tested
+threadwin       +
+testcursor      +
+
+
+TODO
+----
+
+There is room for further improvement:
+- Test joystick functionality.
+- Investigate fading issue in 'testwin' test.
+- Fix the UTF-8 support.
+- Adapt the makefile/object file list to support more target systems
+- Use "#pragma aux" syntax for the CPU info functions.
+
+
+Questions and Comments
+----------------------
+
+Please direct any questions or comments to me:
+
+        ow_sdl [at] digitalfantasy [dot] it
+
+The original porting to the open watcom compiler was made by
+Marc Peter <mailto:macpete@gmx.de>
+
+   Happy Coding!
+
+   Daniele Forghieri
+

@@ -1,0 +1,19 @@
+================================================================================
+Simple DirectMedia Layer for Nintendo DS
+================================================================================
+
+-Requirements-
+The devkitpro SDK available at http://devkitpro.org.
+Read the information at http://devkitpro.org/wiki/Getting_Started/devkitARM
+The necessary packages are devkitARM, libnds and default arm7.
+
+-Building SDL-
+After setting the devkitpro environment, type:
+  make -f Makefile.ds
+
+This will compile and install the library and headers into the proper libnds directories.
+Additionnaly it will compile the general test, that you can run either on the DS or with desmume:
+  desmume test/nds-test-progs/general/general.nds
+
+
+Note that the port is very basic and incomplete.
