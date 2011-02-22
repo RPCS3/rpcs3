@@ -72,14 +72,16 @@ GSdxApp::GSdxApp()
 	m_ini = "inis/GSdx.ini";
 	m_section = "Settings";
 
-	m_gs_renderers.push_back(GSSetting(0, "Direct3D9 (Hardware)", ""));
-	m_gs_renderers.push_back(GSSetting(1, "Direct3D9 (Software)", ""));
-	m_gs_renderers.push_back(GSSetting(2, "Direct3D9 (Null)", ""));
+	m_gs_renderers.push_back(GSSetting(0, "Direct3D9", "Hardware"));
+	m_gs_renderers.push_back(GSSetting(1, "Direct3D9", "Software"));
+	m_gs_renderers.push_back(GSSetting(2, "Direct3D9", "Null"));
 	m_gs_renderers.push_back(GSSetting(3, "Direct3D%d    ", "Hardware"));
 	m_gs_renderers.push_back(GSSetting(4, "Direct3D%d    ", "Software"));
 	m_gs_renderers.push_back(GSSetting(5, "Direct3D%d    ", "Null"));
-	m_gs_renderers.push_back(GSSetting(12, "Null (Software)", ""));
-	m_gs_renderers.push_back(GSSetting(13, "Null (Null)", ""));
+	m_gs_renderers.push_back(GSSetting(7, "SDL 1.3", "Software"));
+	m_gs_renderers.push_back(GSSetting(8, "SDL 1.3", "Null"));
+	m_gs_renderers.push_back(GSSetting(10, "Null", "Software"));
+	m_gs_renderers.push_back(GSSetting(11, "Null", "Null"));
 
 	m_gs_interlace.push_back(GSSetting(0, "None", ""));
 	m_gs_interlace.push_back(GSSetting(1, "Weave tff", "saw-tooth"));
@@ -102,8 +104,9 @@ GSdxApp::GSdxApp()
 
 	m_gpu_renderers.push_back(GSSetting(0, "Direct3D9 (Software)", ""));
 	m_gpu_renderers.push_back(GSSetting(1, "Direct3D11 (Software)", ""));
-	m_gpu_renderers.push_back(GSSetting(2, "Null (Software)", ""));
-	//m_gpu_renderers.push_back(GSSetting(3, "Null (Null)", ""));
+	m_gpu_renderers.push_back(GSSetting(2, "SDL 1.3 (Software)", ""));
+	m_gpu_renderers.push_back(GSSetting(3, "Null (Software)", ""));
+	//m_gpu_renderers.push_back(GSSetting(4, "Null (Null)", ""));
 
 	m_gpu_filter.push_back(GSSetting(0, "Nearest", ""));
 	m_gpu_filter.push_back(GSSetting(1, "Bilinear (polygons only)", ""));

@@ -719,6 +719,7 @@
     <ClCompile Include="GSDevice9.cpp" />
     <ClCompile Include="GSDeviceDX.cpp" />
     <ClCompile Include="GSDeviceNull.cpp" />
+    <ClCompile Include="GSDeviceSDL.cpp" />
     <ClCompile Include="GSDeviceSW.cpp" />
     <ClCompile Include="GSDialog.cpp" />
     <ClCompile Include="GSDirtyRect.cpp" />
@@ -1773,6 +1774,7 @@
     <ClInclude Include="GSDevice9.h" />
     <ClInclude Include="GSDeviceDX.h" />
     <ClInclude Include="GSDeviceNull.h" />
+    <ClInclude Include="GSDeviceSDL.h" />
     <ClInclude Include="GSDeviceSW.h" />
     <ClInclude Include="GSDialog.h" />
     <ClInclude Include="GSDirtyRect.h" />
@@ -1867,6 +1869,16 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GSdx.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\3rdparty\SDL-1.3.0-5387\VisualC\SDL\SDL_VS2010.vcxproj">
+      <Project>{81ce8daf-ebb2-4761-8e45-b71abcca8c68}</Project>
+      <Private>false</Private>
+      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

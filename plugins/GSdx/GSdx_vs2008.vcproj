@@ -6,7 +6,7 @@
 	ProjectGUID="{18E42F6F-3A62-41EE-B42F-79366C4F1E95}"
 	RootNamespace="GSdx"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="0"
+	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform
@@ -1044,6 +1044,11 @@
 		</Configuration>
 	</Configurations>
 	<References>
+		<ProjectReference
+			ReferencedProjectIdentifier="{81CE8DAF-EBB2-4761-8E45-B71ABCCA8C68}"
+			CopyLocal="false"
+			RelativePathToProject=".\3rdparty\SDL-1.3.0-5387\VisualC\SDL\SDL_VS2008.vcproj"
+		/>
 	</References>
 	<Files>
 		<Filter
@@ -1161,6 +1166,10 @@
 			</File>
 			<File
 				RelativePath=".\GSDeviceNull.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GSDeviceSDL.cpp"
 				>
 			</File>
 			<File
@@ -1699,6 +1708,10 @@
 			</File>
 			<File
 				RelativePath=".\GSDeviceNull.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSDeviceSDL.h"
 				>
 			</File>
 			<File

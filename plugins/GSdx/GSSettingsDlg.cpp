@@ -293,15 +293,14 @@ void GSSettingsDlg::UpdateControls()
 
 	if(ComboBoxGetSelData(IDC_RENDERER, i))
 	{
-		bool dx9 = i >= 0 && i <= 2;
-		bool dx10 = i >= 3 && i <= 5;
-		bool dx11 = i >= 6 && i <= 8;
-		bool hw = i == 0 || i == 3 || i == 6;
-		bool sw = i == 1 || i == 4 || i == 7;
+		bool dx9 = (i / 3) == 0;
+		bool dx11 = (i / 3) == 1;
+		bool hw = (i % 3) == 0;
+		bool sw = (i % 3) == 1;
 		bool native = !!IsDlgButtonChecked(m_hWnd, IDC_NATIVERES);
 
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), dx9 ? SW_SHOW : SW_HIDE);
-		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO11), dx10 ? SW_SHOW : SW_HIDE);
+		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO11), dx11 ? SW_SHOW : SW_HIDE);
 
 		EnableWindow(GetDlgItem(m_hWnd, IDC_WINDOWED), dx9);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESX), hw && !native && scaling == 1);

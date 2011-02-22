@@ -139,7 +139,7 @@ void GPUSettingsDlg::UpdateControls()
 	{
 		bool dx9 = i == 0;
 		bool dx11 = i == 1;
-		bool sw = i >= 0 && i <= 1;
+		bool sw = i >= 0 && i <= 2;
 
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO9), dx9 ? SW_SHOW : SW_HIDE);
 		ShowWindow(GetDlgItem(m_hWnd, IDC_LOGO11), dx11 ? SW_SHOW : SW_HIDE);

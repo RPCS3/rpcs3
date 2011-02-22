@@ -38,7 +38,6 @@ public:
 
 	bool Create(GSWnd* wnd);
 	bool Reset(int w, int h);
-	void Flip();
 
 	// drawing may be routed through here, the software renderers use the rasterizer directly now
 
@@ -60,29 +59,3 @@ public:
 	void PSSetShaderResource(int i, GSTexture* sr);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
 };
-
-// WIP
-
-// #include "../../3rdparty/SDL/include/SDL.h"
-
-#ifdef _SDL_H
-
-#pragma comment(lib, "../../3rdparty/SDL/SDL.lib")
-
-class GSDeviceSDL : public GSDeviceSW
-{
-    SDL_Window* m_window;
-    SDL_Renderer* m_renderer;
-    SDL_Texture* m_texture;
-
-public:
-	GSDeviceSDL();
-	virtual ~GSDeviceSDL();
-
-	bool Create(GSWnd* wnd);
-	bool Reset(int w, int h);
-	void Present(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader = 0);
-	void Flip();
-};
-
-#endif

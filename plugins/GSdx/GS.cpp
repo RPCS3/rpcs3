@@ -24,7 +24,7 @@
 #include "GSUtil.h"
 #include "GSRendererSW.h"
 #include "GSRendererNull.h"
-#include "GSDeviceSW.h"
+#include "GSDeviceSDL.h"
 #include "GSDeviceNull.h"
 
 #ifdef _WINDOWS
@@ -189,15 +189,15 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			s_gs = NULL;
 		}
 
-		switch(renderer)
+		switch(renderer / 3)
 		{
 		default:
 		#ifdef _WINDOWS
-		case 0: case 1: case 2: dev = new GSDevice9(); break;
-		case 3: case 4: case 5: dev = new GSDevice11(); break;
-		// case 3: case 4: case 5: dev = new GSDeviceSDL(); break;
+		case 0: dev = new GSDevice9(); break;
+		case 1: dev = new GSDevice11(); break;
 		#endif
-		case 12: case 13: dev = new GSDeviceNull(); break;
+		case 2: dev = new GSDeviceSDL(); break;
+		case 3: dev = new GSDeviceNull(); break;
 		}
 
 		if(dev == NULL)
@@ -207,21 +207,18 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 
 		if(s_gs == NULL)
 		{
-			switch(renderer)
+			switch(renderer % 3)
 			{
 			default:
 			#ifdef _WINDOWS
 			case 0:
-				s_gs = new GSRendererDX9();
-				break;
-			case 3:
-				s_gs = new GSRendererDX11();
+				s_gs = (renderer / 3) == 0 ? (GSRenderer*)new GSRendererDX9() : (GSRenderer*)new GSRendererDX11();
 				break;
 			#endif
-			case 1: case 4: case 7: case 10: case 12:
+			case 1:
 				s_gs = new GSRendererSW(threads);
 				break;
-			case 2: case 5: case 8: case 11: case 13:
+			case 2:
 				s_gs = new GSRendererNull();
 				break;
 			}
