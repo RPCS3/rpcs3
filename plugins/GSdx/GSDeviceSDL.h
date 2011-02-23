@@ -32,6 +32,18 @@ class GSDeviceSDL : public GSDeviceSW
 	SDL_Renderer* m_renderer;
 	SDL_Texture* m_texture;
 
+	class GSDummyTexture : public GSTexture
+	{
+	public:
+		GSDummyTexture(int w, int h) {m_size.x = w; m_size.y = h; }
+		virtual ~GSDummyTexture() {}
+
+		virtual bool Update(const GSVector4i& r, const void* data, int pitch) {return false;}
+		virtual bool Map(GSMap& m, const GSVector4i* r = NULL) {return false;}
+		virtual void Unmap() {}
+		virtual bool Save(const string& fn, bool dds = false) {return false;}
+	};
+
 public:
 	GSDeviceSDL();
 	virtual ~GSDeviceSDL();

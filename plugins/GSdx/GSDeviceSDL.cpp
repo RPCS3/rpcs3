@@ -92,6 +92,10 @@ bool GSDeviceSDL::Reset(int w, int h)
 		return false;
 	}
 
+	delete m_backbuffer;
+
+	m_backbuffer = new GSDummyTexture(w, h);
+
 	if(m_texture != NULL)
 	{
 		SDL_DestroyTexture(m_texture);
