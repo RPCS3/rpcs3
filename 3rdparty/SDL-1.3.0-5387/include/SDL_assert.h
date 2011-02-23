@@ -25,25 +25,6 @@
 
 #include "SDL_config.h"
 
-#include "begin_code.h"
-/* Set up for C function definitions, even when using C++ */
-#ifdef __cplusplus
-/* *INDENT-OFF* */
-extern "C" {
-/* *INDENT-ON* */
-#endif
-
-#ifndef SDL_ASSERT_LEVEL
-#ifdef SDL_DEFAULT_ASSERT_LEVEL
-#define SDL_ASSERT_LEVEL SDL_DEFAULT_ASSERT_LEVEL
-#elif defined(_DEBUG) || defined(DEBUG) || \
-      (defined(__GNUC__) && !defined(__OPTIMIZE__))
-#define SDL_ASSERT_LEVEL 2
-#else
-#define SDL_ASSERT_LEVEL 1
-#endif
-#endif /* SDL_ASSERT_LEVEL */
-
 /*
 These are macros and not first class functions so that the debugger breaks
 on the assertion line and not in some random guts of SDL, and so each
@@ -62,6 +43,25 @@ assert can have unique static variables associated with it.
     /* How do we trigger breakpoints on this platform? */
     #define SDL_TriggerBreakpoint()
 #endif
+
+#include "begin_code.h"
+/* Set up for C function definitions, even when using C++ */
+#ifdef __cplusplus
+/* *INDENT-OFF* */
+extern "C" {
+/* *INDENT-ON* */
+#endif
+
+#ifndef SDL_ASSERT_LEVEL
+#ifdef SDL_DEFAULT_ASSERT_LEVEL
+#define SDL_ASSERT_LEVEL SDL_DEFAULT_ASSERT_LEVEL
+#elif defined(_DEBUG) || defined(DEBUG) || \
+      (defined(__GNUC__) && !defined(__OPTIMIZE__))
+#define SDL_ASSERT_LEVEL 2
+#else
+#define SDL_ASSERT_LEVEL 1
+#endif
+#endif /* SDL_ASSERT_LEVEL */
 
 #if (__STDC_VERSION__ >= 199901L) /* C99 supports __func__ as a standard. */
 #   define SDL_FUNCTION __func__
