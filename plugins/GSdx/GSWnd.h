@@ -27,7 +27,7 @@
 
 class GSWnd
 {
-	void* m_hWnd;
+	HWND m_hWnd;
 
 	bool m_managed; // set true when we're attached to a 3rdparty window that's amanged by the emulator
 	bool m_frame;

@@ -142,7 +142,7 @@ bool GSWnd::Attach(void* handle, bool managed)
 {
 	// TODO: subclass
 
-	m_hWnd = hWnd;
+	m_hWnd = (HWND)handle;
 	m_managed = managed;
 
 	return true;
