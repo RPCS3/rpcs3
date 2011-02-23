@@ -39,6 +39,9 @@ static HRESULT s_hr = E_FAIL;
 
 #else
 
+#include <gtk/gtk.h>
+#include <gdk/gdkx.h>
+
 extern bool RunLinuxDialog();
 
 #endif
@@ -75,10 +78,14 @@ EXPORT_C_(uint32) PS2EgetLibVersion2(uint32 type)
 	return (build << 0) | (revision << 8) | (PS2E_GS_VERSION << 16) | (PLUGIN_VERSION << 24);
 }
 
+#ifdef _WINDOWS
+
 EXPORT_C_(void) PS2EsetEmuVersion(const char* emuId, uint32 version)
 {
 	s_isgsopen2 = true;
 }
+
+#endif
 
 EXPORT_C_(uint32) PS2EgetCpuPlatform()
 {
@@ -258,7 +265,7 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 
 		s_gs->m_wnd.Show();
 
-		*dsp = s_gs->m_wnd.GetHandle();
+		*dsp = s_gs->m_wnd.GetDisplay();
 	}
 	else
 	{
@@ -281,19 +288,17 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 	return 0;
 }
 
+#ifdef _WINDOWS
+
 EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 {
 	int renderer = theApp.GetConfig("renderer", 0);
 
 	if(flags & 4)
 	{
-#ifdef _WINDOWS
-
 		D3D_FEATURE_LEVEL level;
-		
-		renderer = GSUtil::CheckDirect3D11Level(level) && level >= D3D_FEATURE_LEVEL_10_0 ? 4 : 1; // dx11 / dx9 sw
 
-#endif
+		renderer = GSUtil::CheckDirect3D11Level(level) && level >= D3D_FEATURE_LEVEL_10_0 ? 4 : 1; // dx11 / dx9 sw
 	}
 
 	int retval = _GSopen(dsp, NULL, renderer);
@@ -303,8 +308,18 @@ EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 	return retval;
 }
 
+#endif
+
 EXPORT_C_(int) GSopen(void** dsp, char* title, int mt)
 {
+	/*
+	if(!XInitThreads()) return -1;
+
+	Display* display = XOpenDisplay(0);
+
+	XCloseDisplay(display);
+	*/
+
 	int renderer;
 
 	// Legacy GUI expects to acquire vsync from the configuration files.
@@ -318,7 +333,7 @@ EXPORT_C_(int) GSopen(void** dsp, char* title, int mt)
 #ifdef _WINDOWS
 
 		D3D_FEATURE_LEVEL level;
-		
+
 		renderer = GSUtil::CheckDirect3D11Level(level) && level >= D3D_FEATURE_LEVEL_10_0 ? 4 : 1; // dx11 / dx9 sw
 
 #endif

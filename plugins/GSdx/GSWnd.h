@@ -23,37 +23,67 @@
 
 #include "GSVector.h"
 
+#ifdef _WINDOWS
+
 class GSWnd
 {
-	bool m_IsManaged; // set true when we're attached to a 3rdparty window that's amanged by the emulator
-	bool m_HasFrame;
-
 	void* m_hWnd;
 
-	#ifdef _WINDOWS
+	bool m_managed; // set true when we're attached to a 3rdparty window that's amanged by the emulator
+	bool m_frame;
 
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 	virtual LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
-
-    #endif
 
 public:
 	GSWnd();
 	virtual ~GSWnd();
 
 	bool Create(const string& title, int w, int h);
-	bool Attach(void* hWnd, bool isManaged = true);
+	bool Attach(void* handle, bool managed = true);
 	void Detach();
-	bool IsManaged() const { return m_IsManaged; }
+	bool IsManaged() const {return m_managed;}
 
+	void* GetDisplay() {return m_hWnd;}
 	void* GetHandle() {return m_hWnd;}
-
 	GSVector4i GetClientRect();
-
 	bool SetWindowText(const char* title);
 
 	void Show();
 	void Hide();
-
 	void HideFrame();
 };
+
+#else
+
+#include <X11/Xlib.h>
+
+class GSWnd
+{
+	Display* m_display;
+	Window m_window;
+
+	bool m_managed; // set true when we're attached to a 3rdparty window that's amanged by the emulator
+	bool m_frame;
+
+public:
+	GSWnd();
+	virtual ~GSWnd();
+
+	bool Create(const string& title, int w, int h);
+	bool Attach(void* handle, bool managed = true) {return false;}
+	void Detach() {}
+	bool IsManaged() const {return m_managed;}
+
+	Display* GetDisplay() {return m_display;}
+	void* GetHandle() {return (void*)m_window;}
+	GSVector4i GetClientRect();
+	bool SetWindowText(const char* title);
+
+	void Show();
+	void Hide();
+	void HideFrame();
+};
+
+#endif
+

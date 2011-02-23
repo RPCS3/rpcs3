@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option host_application="../../pcsx2/bin/pcsx2" />
+				<Option host_application="../../pcsx2/bin/pcsx2-dbg" />
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>

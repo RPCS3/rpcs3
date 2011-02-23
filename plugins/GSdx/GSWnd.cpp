@@ -23,18 +23,18 @@
 #include "GSdx.h"
 #include "GSWnd.h"
 
+#ifdef _WINDOWS
+
 GSWnd::GSWnd()
 	: m_hWnd(NULL)
-	, m_IsManaged(true)
-	, m_HasFrame(true)
+	, m_managed(false)
+	, m_frame(true)
 {
 }
 
 GSWnd::~GSWnd()
 {
 }
-
-#ifdef _WINDOWS
 
 LRESULT CALLBACK GSWnd::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -82,13 +82,9 @@ LRESULT GSWnd::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 	return DefWindowProc((HWND)m_hWnd, message, wParam, lParam);
 }
 
-#endif
-
 bool GSWnd::Create(const string& title, int w, int h)
 {
-#ifdef _WINDOWS
-
-	if(m_hWnd) return true;
+	if(m_hWnd) return false;
 
 	WNDCLASS wc;
 
@@ -139,64 +135,38 @@ bool GSWnd::Create(const string& title, int w, int h)
 
 	m_hWnd = CreateWindow(wc.lpszClassName, title.c_str(), style, r.left, r.top, r.width(), r.height(), NULL, NULL, wc.hInstance, (LPVOID)this);
 
-    return m_hWnd != NULL;
-
-#else
-
-    // TODO: linux
-
-    return false;
-
-#endif
+	return m_hWnd != NULL;
 }
 
-bool GSWnd::Attach(void* hWnd, bool isManaged)
+bool GSWnd::Attach(void* handle, bool managed)
 {
 	// TODO: subclass
 
 	m_hWnd = hWnd;
-	m_IsManaged = isManaged;
+	m_managed = managed;
 
 	return true;
 }
 
 void GSWnd::Detach()
 {
-	if(m_hWnd && m_IsManaged)
+	if(m_hWnd && m_managed)
 	{
 		// close the window, since it's under GSdx care.  It's not taking messages anyway, and
 		// that means its big, ugly, and in the way.
 
-#ifdef _WINDOWS
-
-		DestroyWindow((HWND)m_hWnd);
-
-#else
-
-        // TODO: linux
-
-#endif
+		DestroyWindow(m_hWnd);
 	}
 
 	m_hWnd = NULL;
-	m_IsManaged = true;
+	m_managed = false;
 }
 
 GSVector4i GSWnd::GetClientRect()
 {
 	GSVector4i r;
 
-#ifdef _WINDOWS
-
-	::GetClientRect((HWND)m_hWnd, r);
-
-#else
-
-    r = GSVector4i::zero();
-
-    // TODO: linux
-
-#endif
+	::GetClientRect(m_hWnd, r);
 
 	return r;
 }
@@ -206,76 +176,129 @@ GSVector4i GSWnd::GetClientRect()
 
 bool GSWnd::SetWindowText(const char* title)
 {
-	if(!m_IsManaged) return false;
+	if(!m_managed) return false;
 
-#ifdef _WINDOWS
+	::SetWindowText(m_hWnd, title);
 
-	::SetWindowText((HWND)m_hWnd, title);
-
-#else
-
-    // TODO: linux
-
-#endif
-
-	return m_HasFrame;
+	return m_frame;
 }
 
 void GSWnd::Show()
 {
-	if(!m_IsManaged) return;
+	if(!m_managed) return;
 
-#ifdef _WINDOWS
-
-    HWND hWnd = (HWND)m_hWnd;
-
-	SetForegroundWindow(hWnd);
-
-	ShowWindow(hWnd, SW_SHOWNORMAL);
-
-	UpdateWindow(hWnd);
-
-#else
-
-    // TODO: linux
-
-#endif
+	SetForegroundWindow(m_hWnd);
+	ShowWindow(m_hWnd, SW_SHOWNORMAL);
+	UpdateWindow(m_hWnd);
 }
 
 void GSWnd::Hide()
 {
-	if(!m_IsManaged) return;
+	if(!m_managed) return;
 
-#ifdef _WINDOWS
-
-	ShowWindow((HWND)m_hWnd, SW_HIDE);
-
-#else
-
-    // TODO: linux
-
-#endif
+	ShowWindow(m_hWnd, SW_HIDE);
 }
 
 void GSWnd::HideFrame()
 {
-	if(!m_IsManaged) return;
+	if(!m_managed) return;
 
-#ifdef _WINDOWS
+	SetWindowLong(m_hWnd, GWL_STYLE, GetWindowLong(m_hWnd, GWL_STYLE) & ~(WS_CAPTION|WS_THICKFRAME));
+	SetWindowPos(m_hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+	SetMenu(m_hWnd, NULL);
 
-	HWND hWnd = (HWND)m_hWnd;
-
-	SetWindowLong(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE) & ~(WS_CAPTION|WS_THICKFRAME));
-
-	SetWindowPos(hWnd, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
-
-	SetMenu(hWnd, NULL);
+	m_frame = false;
+}
 
 #else
 
-    // TODO: linux
+GSWnd::GSWnd()
+	: m_display(NULL)
+	, m_window(0)
+	, m_managed(false)
+	, m_frame(true)
+{
+}
+
+GSWnd::~GSWnd()
+{
+	if(m_display != NULL)
+	{
+		if(m_window != 0)
+		{
+			XDestroyWindow(m_display, m_window);
+		}
+
+		XCloseDisplay(m_display);
+	}
+}
+
+bool GSWnd::Create(const string& title, int w, int h)
+{
+	if(m_display != NULL) return false;
+
+	if(!XInitThreads()) return false;
+
+	m_display = XOpenDisplay(0);
+
+	if(m_display == NULL) return false;
+
+	m_window = XCreateSimpleWindow(m_display, RootWindow(m_display, 0), 0, 0, 640, 480, 0, BlackPixel(m_display, 0), BlackPixel(m_display, 0));
+
+	XFlush(m_display);
+
+	return true;
+}
+
+GSVector4i GSWnd::GetClientRect()
+{
+	int x, y;
+	unsigned int w, h;
+	unsigned int border, depth;
+	Window root;
+
+	XLockDisplay(m_display);
+	XGetGeometry(m_display, m_window, &root, &x, &y, &w, &h, &border, &depth);
+	XUnlockDisplay(m_display);
+
+	return GSVector4i(0, 0, w, h);
+}
+
+// Returns FALSE if the window has no title, or if th window title is under the strict
+// management of the emulator.
+
+bool GSWnd::SetWindowText(const char* title)
+{
+	if(!m_managed) return false;
+
+	// TODO
+
+	return m_frame;
+}
+
+void GSWnd::Show()
+{
+	if(!m_managed) return;
+
+	XMapWindow(m_display, m_window);
+	XFlush(m_display);
+}
+
+void GSWnd::Hide()
+{
+	if(!m_managed) return;
+
+	XUnmapWindow(m_display, m_window);
+	XFlush(m_display);
+}
+
+void GSWnd::HideFrame()
+{
+	if(!m_managed) return;
+
+	// TODO
+
+	m_frame = false;
+}
 
 #endif
-
-	m_HasFrame = false;
-}

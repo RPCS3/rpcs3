@@ -26,7 +26,7 @@ class CRC
 public:
 	enum Title
 	{
-		None,
+		NoTitle,
 		MetalSlug6,
 		TomoyoAfter,
 		Clannad,
@@ -86,7 +86,7 @@ public:
 
 	enum Region
 	{
-		Unknown,
+		NoRegion,
 		US,
 		EU,
 		JP,

@@ -35,7 +35,7 @@ protected:
 public:
 	struct GSMap {uint8* bits; int pitch;};
 
-	enum {None, RenderTarget, DepthStencil, Texture, Offscreen};
+	enum {RenderTarget = 1, DepthStencil, Texture, Offscreen};
 
 public:
 	GSTexture();

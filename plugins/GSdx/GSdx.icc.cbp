@@ -17,6 +17,9 @@
 					<Add option="-O0" />
 					<Add option="-g" />
 				</Compiler>
+				<Linker>
+					<Add library="../../deps/debug/libSDL-1.3.a" />
+				</Linker>
 			</Target>
 			<Target title="Release">
 				<Option output="bin/Release/libGSdx" prefix_auto="1" extension_auto="1" />
@@ -29,6 +32,9 @@
 					<Add option="-msse2" />
 					<Add option="-O2" />
 				</Compiler>
+				<Linker>
+					<Add library="../../deps/release/libSDL-1.3.a" />
+				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
