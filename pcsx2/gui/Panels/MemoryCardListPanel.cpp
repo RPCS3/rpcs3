@@ -400,7 +400,7 @@ public:
 			{
 				wxFileName tempname;
 				tempname.AssignTempFileName( basepath.ToString() ); 
-
+				//Console.Warning( "srcExists && destExists" );
 				// Neat trick to handle errors.
 				result = result && wxRenameFile( srcfile.GetFullPath(), tempname.GetFullPath(), true );
 				result = result && wxRenameFile( destfile.GetFullPath(), srcfile.GetFullPath(), false );
@@ -408,10 +408,12 @@ public:
 			}
 			else if( destExists )
 			{
+				//Console.Warning( "destExists" );
 				result = wxRenameFile( destfile.GetFullPath(), srcfile.GetFullPath() );
 			}
 			else if( srcExists )
 			{
+				//Console.Warning( "srcExists" );
 				result = wxRenameFile( srcfile.GetFullPath(), destfile.GetFullPath() );
 			}
 			
@@ -577,7 +579,7 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 
 	if( m_Cards[slot].IsPresent )
 	{
-		wxWindowID result = wxID_YES;
+		bool result = true;
 		if( m_Cards[slot].IsFormatted )
 		{
 			wxString content;
@@ -591,8 +593,9 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 			result = Msgbox::YesNo( content, _("Delete memory card?") );
 		}
 
-		if( result == wxID_YES )
+		if( result )
 		{
+			//Console.Warning( "Overwriting whatever was here" );
 			wxFileName fullpath( m_FolderPicker->GetPath() + g_Conf->Mcd[slot].Filename.GetFullName() );
 			wxRemoveFile( fullpath.GetFullPath() );
 		}
