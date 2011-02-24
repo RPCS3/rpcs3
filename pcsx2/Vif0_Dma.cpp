@@ -236,6 +236,7 @@ __fi void vif0Interrupt()
 	g_vifCycles = 0;
 	hwDmacIrq(DMAC_VIF0);
 	vif0Regs.stat.FQC = 0;
+	DMA_LOG("VIF0 DMA End");
 }
 
 void dmaVIF0()

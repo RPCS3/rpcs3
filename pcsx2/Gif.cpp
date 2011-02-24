@@ -166,7 +166,7 @@ __fi void gsInterrupt()
 	gifRegs.stat.clear_flags(GIF_STAT_FQC);
 	clearFIFOstuff(false);
 	hwDmacIrq(DMAC_GIF);
-	//DevCon.Warning("GIF DMA end");
+	DMA_LOG("GIF DMA End");
 }
 
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
@@ -683,7 +683,7 @@ void gifMFIFOInterrupt()
 	gifch.chcr.STR = false;
 	gifstate = GIF_STATE_READY;
 	hwDmacIrq(DMAC_GIF);
-	GIF_LOG("gifMFIFO End");
+	DMA_LOG("GIF MFIFO DMA End");
 	clearFIFOstuff(false);
 }
 

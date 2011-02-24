@@ -281,7 +281,7 @@ static __fi void Sif1End()
 	psHu32(SBUS_F240) &= ~0x40;
 	psHu32(SBUS_F240) &= ~0x4000;
 
-	SIF_LOG("SIF1 DMA end...");
+	DMA_LOG("SIF1 DMA End");
 }
 
 // Transfer EE to IOP, putting data in the fifo as an intermediate step.

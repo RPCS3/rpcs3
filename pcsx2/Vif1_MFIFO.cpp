@@ -356,7 +356,7 @@ void vifMFIFOInterrupt()
 	vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);
 	vif1ch.chcr.STR = false;
 	hwDmacIrq(DMAC_VIF1);
-	VIF_LOG("vif mfifo dma end");
+	DMA_LOG("VIF1 MFIFO DMA End");
 
 	vif1Regs.stat.FQC = 0;
 }

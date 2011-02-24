@@ -264,6 +264,7 @@ void SPRFROMinterrupt()
 
 	spr0ch.chcr.STR = false;
 	hwDmacIrq(DMAC_FROM_SPR);
+	DMA_LOG("SPR0 DMA End");
 }
 
 void dmaSPR0()   // fromSPR
@@ -317,7 +318,15 @@ int  _SPR1chain()
 
 __fi void SPR1chain()
 {
-	CPU_INT(DMAC_TO_SPR, _SPR1chain() * BIAS);
+	if(!CHECK_IPUWAITHACK) 
+	{
+		CPU_INT(DMAC_TO_SPR, _SPR1chain() * BIAS);
+	}
+	else 
+	{
+		 _SPR1chain();
+		CPU_INT(DMAC_TO_SPR, 8);
+	}
 }
 
 void _SPR1interleave()
@@ -444,7 +453,7 @@ void SPRTOinterrupt()
 		return;
 	}
 
-	SPR_LOG("SPR1 End");
+	DMA_LOG("SPR1 DMA End");
 	spr1ch.chcr.STR = false;
 	hwDmacIrq(DMAC_TO_SPR);
 }

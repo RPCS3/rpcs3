@@ -152,7 +152,6 @@ int IPU1dma()
 	int totalqwc = 0;
 
 	//We need to make sure GIF has flushed before sending IPU data, it seems to REALLY screw FFX videos
-    //if(!WaitGSPaths()) return totalqwc;
 
 	if(ipu1dma.chcr.STR == false || IPU1Status.DMAMode == 2)
 	{
@@ -169,11 +168,6 @@ int IPU1dma()
 	{
 		case DMA_MODE_NORMAL:
 			{
-				if(!WaitGSPaths())
-				{ // legacy WaitGSPaths() for now
-					IPU_INT_TO(32); //Give it a short wait.
-					return totalqwc;
-				}
 				IPU_LOG("Processing Normal QWC left %x Finished %d In Progress %d", ipu1dma.qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
 				if(IPU1Status.InProgress == true) totalqwc += IPU1chain();
 			}
@@ -183,11 +177,6 @@ int IPU1dma()
 			{
 				if(IPU1Status.InProgress == true) //No transfer is ready to go so we need to set one up
 				{
-					if(!WaitGSPaths())
-					{ // legacy WaitGSPaths() for now
-						IPU_INT_TO(32); //Give it a short wait.
-						return totalqwc;
-					}
 					IPU_LOG("Processing Chain QWC left %x Finished %d In Progress %d", ipu1dma.qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
 					totalqwc += IPU1chain();
 					//Set the TADR forward
@@ -263,12 +252,6 @@ int IPU1dma()
 					if (ipu1dma.chcr.TIE && ptag->IRQ) //Tag Interrupt is set, so schedule the end/interrupt
 						IPU1Status.DMAFinished = true;
 
-
-					if(!WaitGSPaths() && ipu1dma.qwc > 0)
-					{ // legacy WaitGSPaths() for now
-						IPU_INT_TO(32); //Give it a short wait.
-						return totalqwc;
-					}
 					IPU_LOG("Processing Start Chain QWC left %x Finished %d In Progress %d", ipu1dma.qwc, IPU1Status.DMAFinished, IPU1Status.InProgress);
 					totalqwc += IPU1chain();
 					//Set the TADR forward
@@ -490,6 +473,7 @@ void ipu0Interrupt()
 
 	ipu0dma.chcr.STR = false;
 	hwDmacIrq(DMAC_FROM_IPU);
+	DMA_LOG("IPU0 DMA End");
 }
 
 IPU_FORCEINLINE void ipu1Interrupt()
@@ -502,7 +486,7 @@ IPU_FORCEINLINE void ipu1Interrupt()
 		return;
 	}
 
-	IPU_LOG("ipu1 finish %x:", cpuRegs.cycle);
+	DMA_LOG("IPU1 DMA End");
 	ipu1dma.chcr.STR = false;
 	IPU1Status.DMAMode = 2;
 	hwDmacIrq(DMAC_TO_IPU);

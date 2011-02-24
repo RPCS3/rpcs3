@@ -457,7 +457,7 @@ __fi void vif1Interrupt()
 	vif1.vifstalled = false;
 	g_vifCycles = 0;
 	g_vu1Cycles = 0;
-	VIF_LOG("VIF1 End");
+	DMA_LOG("VIF1 DMA End");
 	hwDmacIrq(DMAC_VIF1);
 
 }
