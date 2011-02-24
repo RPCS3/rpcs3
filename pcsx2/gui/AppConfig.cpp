@@ -861,8 +861,9 @@ bool AppConfig::IsOkApplyPreset(int n)
 		//best balanced hacks combo?
 		case 2 :	//enable mvu flag hack, enable EE timing hack, set EE cyclerate to 1 click.
 					eeUsed?0:(eeUsed=true, EmuOptions.Speedhacks.EECycleRate = 1);
-					EnableGameFixes = true;
-					EmuOptions.Gamefixes.EETimingHack = true;
+					// EE timing hack appears to break the BIOS text and cause slowdowns in a few titles.
+					//EnableGameFixes = true;
+					//EmuOptions.Gamefixes.EETimingHack = true;
 					EmuOptions.Speedhacks.vuFlagHack = true;
 
 		case 1 :	//Recommended speed hacks without mvu flag hack.
