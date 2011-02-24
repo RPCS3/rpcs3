@@ -53,7 +53,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 	D3D11_BUFFER_DESC bd;
 	D3D11_SAMPLER_DESC sd;
 	D3D11_DEPTH_STENCIL_DESC dsd;
-    D3D11_RASTERIZER_DESC rd;
+	D3D11_RASTERIZER_DESC rd;
 	D3D11_BLEND_DESC bsd;
 
 	memset(&scd, 0, sizeof(scd));
@@ -164,11 +164,11 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	memset(&bd, 0, sizeof(bd));
 
-    bd.ByteWidth = sizeof(MergeConstantBuffer);
-    bd.Usage = D3D11_USAGE_DEFAULT;
-    bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	bd.ByteWidth = sizeof(MergeConstantBuffer);
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
-    hr = m_dev->CreateBuffer(&bd, NULL, &m_merge.cb);
+	hr = m_dev->CreateBuffer(&bd, NULL, &m_merge.cb);
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 	{
@@ -192,11 +192,11 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	memset(&bd, 0, sizeof(bd));
 
-    bd.ByteWidth = sizeof(InterlaceConstantBuffer);
-    bd.Usage = D3D11_USAGE_DEFAULT;
-    bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	bd.ByteWidth = sizeof(InterlaceConstantBuffer);
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 
-    hr = m_dev->CreateBuffer(&bd, NULL, &m_interlace.cb);
+	hr = m_dev->CreateBuffer(&bd, NULL, &m_interlace.cb);
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 	{
@@ -278,7 +278,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	if(m_wnd->IsManaged())
 	{
-		SetExclusive(!theApp.GetConfig("windowed", 1));
+		SetExclusive(!!theApp.GetConfig("windowed", 1));
 	}
 
 	return true;

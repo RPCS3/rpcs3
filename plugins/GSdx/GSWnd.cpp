@@ -212,6 +212,7 @@ void GSWnd::HideFrame()
 
 #else
 
+/*
 GSWnd::GSWnd()
 	: m_display(NULL)
 	, m_window(0)
@@ -271,7 +272,15 @@ bool GSWnd::SetWindowText(const char* title)
 {
 	if(!m_managed) return false;
 
-	// TODO
+        XTextProperty p;
+
+        p.value = (unsigned char*)title;
+        p.encoding = XA_STRING;
+        p.format = 8;
+        p.nitems = strlen(title);
+
+        XSetWMName(m_display, m_window, &p);
+        XFlush(m_display);
 
 	return m_frame;
 }
@@ -299,6 +308,77 @@ void GSWnd::HideFrame()
 	// TODO
 
 	m_frame = false;
+}
+*/
+
+GSWnd::GSWnd()
+	: m_window(NULL)
+{
+}
+
+GSWnd::~GSWnd()
+{
+	if(m_window != NULL)
+	{
+		SDL_DestroyWindow(m_window);
+	}
+}
+
+bool GSWnd::Create(const string& title, int w, int h)
+{
+	if(m_window != NULL) return false;
+
+	if(w <= 0 || h <= 0) {w = 640; h = 480;}
+
+	m_window = SDL_CreateWindow(title.c_str(), 100, 100, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+
+	return true;
+}
+
+Display* GSWnd::GetDisplay()
+{
+	SDL_SysWMinfo wminfo;
+
+	memset(&wminfo, 0, sizeof(wminfo));
+
+	wminfo.version.major = SDL_MAJOR_VERSION;
+	wminfo.version.minor = SDL_MINOR_VERSION;
+
+	SDL_GetWindowWMInfo(m_window, &wminfo);
+
+	return wminfo.subsystem == SDL_SYSWM_X11 ? wminfo.info.x11.display : NULL;
+}
+
+GSVector4i GSWnd::GetClientRect()
+{
+	// TODO
+
+	return GSVector4i(0, 0, 640, 480);
+}
+
+// Returns FALSE if the window has no title, or if th window title is under the strict
+// management of the emulator.
+
+bool GSWnd::SetWindowText(const char* title)
+{
+	SDL_SetWindowTitle(m_window, title);
+
+	return true;
+}
+
+void GSWnd::Show()
+{
+	SDL_ShowWindow(m_window);
+}
+
+void GSWnd::Hide()
+{
+	SDL_HideWindow(m_window);
+}
+
+void GSWnd::HideFrame()
+{
+	// TODO
 }
 
 #endif

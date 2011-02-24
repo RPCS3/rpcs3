@@ -41,7 +41,7 @@ void GSPerfMon::Put(counter_t c, double val)
 
 		if(m_lastframe != 0)
 		{
-			m_counters[c] += now - m_lastframe;
+			m_counters[c] += (now - m_lastframe) * 1000 / CLOCKS_PER_SEC;
 		}
 
 		m_lastframe = now;

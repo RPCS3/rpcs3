@@ -55,32 +55,7 @@ GSDeviceSDL::~GSDeviceSDL()
 
 bool GSDeviceSDL::Create(GSWnd* wnd)
 {
-	if(!SDL_WasInit(SDL_INIT_VIDEO))
-	{
-		if(SDL_Init(SDL_INIT_VIDEO) < 0) // ok here?
-		{
-			return false;
-		}
-
-		m_init = true;
-	}
-
-	#if 1 //def _WINDOWS
-
-	m_window = SDL_CreateWindowFrom(wnd->GetHandle());
-
-	#else
-
-	// TODO: linux sould use wnd->GetHandle() too
-
-	m_window = SDL_CreateWindow("GSdx", 0, 0, 640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-
-	#endif
-
-	if(m_window == NULL)
-	{
-		return false;
-	}
+	m_window = (SDL_Window*)wnd->GetHandle();
 
 	return GSDeviceSW::Create(wnd);
 }
@@ -116,6 +91,9 @@ bool GSDeviceSDL::Reset(int w, int h)
 	{
 		return false;
 	}
+
+	SDL_RenderClear(m_renderer);
+	SDL_RenderPresent(m_renderer);
 
 	m_format = SDL_PIXELFORMAT_ARGB8888;
 
@@ -181,22 +159,40 @@ void GSDeviceSDL::Present(GSTexture* st, GSTexture* dt, const GSVector4& dr, int
 
 			if(m_format == SDL_PIXELFORMAT_ARGB8888)
 			{
-				for(int j = s.y; j > 0; j--, sm.bits += sm.pitch, dm.bits += dm.pitch)
+				if(((int)dm.bits & 15) == 0 && (dm.pitch & 15) == 0)
 				{
-					GSVector4i* RESTRICT src = (GSVector4i*)sm.bits;
-					GSVector4i* RESTRICT dst = (GSVector4i*)dm.bits;
-
-					for(int i = s.x >> 2; i > 0; i--, dst++, src++)
+					for(int j = s.y; j > 0; j--, sm.bits += sm.pitch, dm.bits += dm.pitch)
 					{
-						*dst = ((*src & 0x00ff0000) >> 16) | ((*src & 0x000000ff) << 16) | (*src & 0x0000ff00);
+						GSVector4i* RESTRICT src = (GSVector4i*)sm.bits;
+						GSVector4i* RESTRICT dst = (GSVector4i*)dm.bits;
+
+						for(int i = s.x >> 2; i > 0; i--, dst++, src++)
+						{
+							*dst = ((*src & 0x00ff0000) >> 16) | ((*src & 0x000000ff) << 16) | (*src & 0x0000ff00);
+						}
+
+						uint32* RESTRICT src2 = (uint32*)src;
+						uint32* RESTRICT dst2 = (uint32*)dst;
+
+						for(int i = s.x & 3; i > 0; i--, dst2++, src2++)
+						{
+							*dst2 = ((*src2 & 0x00ff0000) >> 16) | ((*src2 & 0x000000ff) << 16) | (*src2 & 0x0000ff00);
+						}
 					}
+				}
+				else
+				{
+					// VirtualBox/Ubuntu does not return an aligned pointer
 
-					uint32* RESTRICT src2 = (uint32*)src;
-					uint32* RESTRICT dst2 = (uint32*)dst;
-
-					for(int i = s.x & 3; i > 0; i--)
+					for(int j = s.y; j > 0; j--, sm.bits += sm.pitch, dm.bits += dm.pitch)
 					{
-						*dst2 = ((*src2 & 0x00ff0000) >> 16) | ((*src2 & 0x000000ff) << 16) | (*src2 & 0x0000ff00);
+						uint32* RESTRICT src = (uint32*)sm.bits;
+						uint32* RESTRICT dst = (uint32*)dm.bits;
+
+						for(int i = s.x; i > 0; i--, dst++, src++)
+						{
+							*dst = ((*src & 0x00ff0000) >> 16) | ((*src & 0x000000ff) << 16) | (*src & 0x0000ff00);
+						}
 					}
 				}
 			}

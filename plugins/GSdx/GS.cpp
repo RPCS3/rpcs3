@@ -131,6 +131,16 @@ EXPORT_C_(int) GSinit()
 		return -1;
 	}
 
+#else
+
+	if(!SDL_WasInit(SDL_INIT_VIDEO))
+	{
+		if(SDL_Init(SDL_INIT_VIDEO) < 0)
+		{
+			return -1;
+		}
+	}
+
 #endif
 
 	return 0;
@@ -152,6 +162,10 @@ EXPORT_C GSshutdown()
 
 		s_hr = E_FAIL;
 	}
+
+#else
+
+	SDL_Quit();
 
 #endif
 }
@@ -296,9 +310,11 @@ EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 
 	if(flags & 4)
 	{
+#ifdef _WINDOWS
 		D3D_FEATURE_LEVEL level;
 
 		renderer = GSUtil::CheckDirect3D11Level(level) && level >= D3D_FEATURE_LEVEL_10_0 ? 4 : 1; // dx11 / dx9 sw
+#endif
 	}
 
 	int retval = _GSopen(dsp, NULL, renderer);

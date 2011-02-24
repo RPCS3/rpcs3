@@ -12,7 +12,7 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="3" />
 				<Option compiler="gcc" />
-				<Option host_application="../../pcsx2/bin/pcsx2-dbg" />
+				<Option host_application="../../pcsx2/bin/pcsx2" />
 				<Option createDefFile="1" />
 				<Option createStaticLib="1" />
 				<Compiler>
@@ -154,7 +154,6 @@
 		<Unit filename="GSdx.h" />
 		<Unit filename="stdafx.cpp" />
 		<Unit filename="stdafx.h" />
-		<Unit filename="svnrev.h" />
 		<Unit filename="xbyak/xbyak.h" />
 		<Unit filename="xbyak/xbyak_bin2hex.h" />
 		<Unit filename="xbyak/xbyak_mnemonic.h" />

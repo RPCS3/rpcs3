@@ -319,8 +319,11 @@ void GSRenderer::VSync(int field)
 #else
 		if (m_wnd.IsManaged())
 #endif
-		{//GSdx owns the window's title, be verbose.
+		{
+			//GSdx owns the window's title, be verbose.
+
 			string s2 = m_regs->SMODE2.INT ? (string("Interlaced ") + (m_regs->SMODE2.FFMD ? "(frame)" : "(field)")) : "Progressive";
+
 			s = format(
 				"%lld | %d x %d | %.2f fps (%d%%) | %s - %s | %s | %d/%d/%d | %d%% CPU | %.2f | %.2f",
 				m_perfmon.GetFrame(), r.width(), r.height(), fps, (int)(100.0 * fps / GetFPS()),

@@ -55,8 +55,10 @@ public:
 };
 
 #else
-
+/*
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Xutil.h>
 
 class GSWnd
 {
@@ -84,6 +86,32 @@ public:
 	void Hide();
 	void HideFrame();
 };
+*/
+#include <X11/Xlib.h>
+#include "../../3rdparty/SDL-1.3.0-5387/include/SDL.h"
+#include "../../3rdparty/SDL-1.3.0-5387/include/SDL_syswm.h"
+
+class GSWnd
+{
+	SDL_Window* m_window;
+
+public:
+	GSWnd();
+	virtual ~GSWnd();
+
+	bool Create(const string& title, int w, int h);
+	bool Attach(void* handle, bool managed = true) {return false;}
+	void Detach() {}
+	bool IsManaged() const {return true;}
+
+	Display* GetDisplay();
+	void* GetHandle() {return m_window;}
+	GSVector4i GetClientRect();
+	bool SetWindowText(const char* title);
+
+	void Show();
+	void Hide();
+	void HideFrame();
+};
 
 #endif
-
