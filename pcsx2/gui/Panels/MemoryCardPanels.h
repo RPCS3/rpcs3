@@ -68,9 +68,7 @@ class IMcdList
 public:
 	virtual void RefreshMcds() const=0;
 	virtual int GetLength() const=0;
-	virtual const McdListItem& GetCard( int idx ) const=0;
 	virtual McdListItem& GetCard( int idx )=0;
-
 	virtual wxDirName GetMcdPath() const=0;
 };
 
@@ -82,7 +80,7 @@ class BaseMcdListView : public wxListView
 	typedef wxListView _parent;
 
 protected:
-	const IMcdList*		m_CardProvider;
+	IMcdList*		m_CardProvider;
 
 	// specifies the target of a drag&drop operation
 	int					m_TargetedItem;
@@ -101,7 +99,7 @@ public:
 	virtual void LoadSaveColumns( IniInterface& ini );
 	virtual const ListViewColumnInfo& GetDefaultColumnInfo( uint idx ) const=0;
 
-	virtual const IMcdList& GetMcdProvider() const;
+	virtual IMcdList& GetMcdProvider();
 	virtual void SetTargetedItem( int sel );
 };
 
@@ -201,7 +199,6 @@ namespace Panels
 		// Interface Implementation for IMcdList
 		virtual int GetLength() const;
 
-		virtual const McdListItem& GetCard( int idx ) const;
 		virtual McdListItem& GetCard( int idx );
 
 	protected:

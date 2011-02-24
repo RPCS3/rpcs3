@@ -34,7 +34,7 @@ void BaseMcdListView::SetMcdProvider( IMcdList* face )
 	SetCardCount( m_CardProvider ? m_CardProvider->GetLength() : 0 );
 }
 
-const IMcdList& BaseMcdListView::GetMcdProvider() const
+IMcdList& BaseMcdListView::GetMcdProvider()
 {
 	pxAssume( m_CardProvider );
 	return *m_CardProvider;
@@ -106,9 +106,9 @@ const ListViewColumnInfo& MemoryCardListView_Simple::GetDefaultColumnInfo( uint 
 		{ L"Status",		96,		wxLIST_FORMAT_CENTER	},
 		{ L"Size",			72,		wxLIST_FORMAT_LEFT		},
 		{ L"Formatted",		96,		wxLIST_FORMAT_CENTER	},
-		{ L"Modified",		120,	wxLIST_FORMAT_LEFT		},
-		{ L"Created",		120,	wxLIST_FORMAT_LEFT		},
-		{ L"Filename",		256,	wxLIST_FORMAT_LEFT		},
+		{ L"Modified",		96,		wxLIST_FORMAT_LEFT		},
+		{ L"Created",		96,		wxLIST_FORMAT_LEFT		},
+		{ L"Filename",		216,	wxLIST_FORMAT_LEFT		},
 	};
 
 	pxAssumeDev( idx < ArraySize(columns), "ListView column index is out of bounds." );

@@ -346,7 +346,7 @@ public:
 		return result;
 	}
 	
-	virtual wxDragResult OnDropMcd( const McdListItem& src, const McdListItem& dest, wxDragResult def )
+	virtual wxDragResult OnDropMcd( McdListItem& src, McdListItem& dest, wxDragResult def )
 	{
 		if( src.Slot == dest.Slot ) return wxDragNone;
 		if( !pxAssert( (src.Slot >= 0) && (dest.Slot >= 0) ) ) return wxDragNone;
@@ -355,21 +355,26 @@ public:
 		wxFileName srcfile( basepath + g_Conf->Mcd[src.Slot].Filename );
 		wxFileName destfile( basepath + g_Conf->Mcd[dest.Slot].Filename );
 
+		bool result = true;
+
 		if( wxDragCopy == def )
 		{
 			// user is force invoking copy mode, which means we need to check the destination
 			// and prompt if it looks valuable (formatted).
-
 			if( dest.IsPresent && dest.IsFormatted )
 			{
-				pxsFmt( pxE( "!Notice:Mcd:Overwrite", 
+				wxString content;
+				content.Printf(
+					pxE( "!Notice:Mcd:Overwrite", 
 					L"This will copy the entire contents of the memory card in slot %u to the memory card in slot %u. "
 					L"All data on the memory card in slot %u will be lost.  Are you sure?" ), 
 					src.Slot, dest.Slot, dest.Slot
 				);
 
-				//if( !Msgbox::OkCancel(  ) )
-				//	return wxDragNone;
+				result = Msgbox::YesNo( content, _("Overwrite memory card?") );
+				
+				if (!result)
+					return wxDragNone;
 			}
 			
 			ScopedBusyCursor doh( Cursor_ReallyBusy );
@@ -386,6 +391,9 @@ public:
 				Msgbox::Alert( heading + L"\n\n" + content, _("Copy failed!") );
 				return wxDragNone;
 			}
+
+			// Destination memcard isEnabled state is the same now as the source's
+			dest.IsEnabled = src.IsEnabled;
 		}
 		else if( wxDragMove == def )
 		{
@@ -394,13 +402,11 @@ public:
 			const bool srcExists( srcfile.FileExists() );
 			const bool destExists( destfile.FileExists() );
 
-			bool result = true;
-
 			if( destExists && srcExists) 
 			{
 				wxFileName tempname;
 				tempname.AssignTempFileName( basepath.ToString() ); 
-				//Console.Warning( "srcExists && destExists" );
+				
 				// Neat trick to handle errors.
 				result = result && wxRenameFile( srcfile.GetFullPath(), tempname.GetFullPath(), true );
 				result = result && wxRenameFile( destfile.GetFullPath(), srcfile.GetFullPath(), false );
@@ -408,15 +414,18 @@ public:
 			}
 			else if( destExists )
 			{
-				//Console.Warning( "destExists" );
 				result = wxRenameFile( destfile.GetFullPath(), srcfile.GetFullPath() );
 			}
 			else if( srcExists )
 			{
-				//Console.Warning( "srcExists" );
 				result = wxRenameFile( srcfile.GetFullPath(), destfile.GetFullPath() );
 			}
 			
+			// Swap isEnabled state since both files got exchanged
+			bool temp = dest.IsEnabled;
+			dest.IsEnabled = src.IsEnabled;
+			src.IsEnabled = temp;
+
 			if( !result )
 			{
 				// TODO : Popup an error to the user.
@@ -449,7 +458,7 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 	m_MultitapEnabled[1] = false;
 
 	m_listview = new MemoryCardListView_Simple(this);
-	m_listview->SetMinSize(wxSize(m_listview->GetMinWidth(), m_listview->GetCharHeight() * 8));
+	m_listview->SetMinSize(wxSize(m_listview->GetMinWidth(), m_listview->GetCharHeight() * 10));
 	m_listview->SetDropTarget( new McdDropTarget(m_listview) );
 
 	m_button_Create	= new wxButton(this, wxID_ANY, _("Create"));
@@ -595,7 +604,6 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 
 		if( result )
 		{
-			//Console.Warning( "Overwriting whatever was here" );
 			wxFileName fullpath( m_FolderPicker->GetPath() + g_Conf->Mcd[slot].Filename.GetFullName() );
 			wxRemoveFile( fullpath.GetFullPath() );
 		}
@@ -691,11 +699,6 @@ int Panels::MemoryCardListPanel_Simple::GetLength() const
 	if( m_MultitapEnabled[0] ) baselen += 3;
 	if( m_MultitapEnabled[1] ) baselen += 3;
 	return baselen;
-}
-
-const McdListItem& Panels::MemoryCardListPanel_Simple::GetCard( int idx ) const
-{
-	return m_Cards[idx];
 }
 
 McdListItem& Panels::MemoryCardListPanel_Simple::GetCard( int idx )
