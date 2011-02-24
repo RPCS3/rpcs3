@@ -200,23 +200,21 @@ void Pcsx2App::WipeUserModeSettings()
 {	
 	if (InstallationMode == InstallMode_Portable)
 	{
-		// Remove the user local portable ini definition (if possible).
-		// If the user does not have admin rights to the PCSX2 folder, removing the file may fail.
+		// Reset RunWizard so the FTWizard is run again on next PCSX2 start.
+		// If the user does not have admin rights to the PCSX2 folder, writing to the file may fail.
 		// PCSX2 does checks for admin rights on start-up if the file is found, though,
 		// so there should (in theory) be no sane way for this to error if we're running
 		// in portable mode.
-
 		wxFileName portableIniFile( GetPortableIniPath() );
-		if (portableIniFile.FileExists())
-			wxRemoveFile(portableIniFile.GetFullPath());
+		ScopedPtr<wxFileConfig> conf_portable( OpenFileConfig( portableIniFile.GetFullPath() ) );
+		conf_portable->Write( L"RunWizard", true );
 	}
-	
-	// Remove the app-local / registry entry conforming to this instance of PCSX2.
-	// Remove this regardless if PCSX2 is in portable mode, since otherwise these settings
-	// would be used when the user restarts PCSX2, and that might be undesirable.
-
-	ScopedPtr<wxConfigBase> conf_install( OpenInstallSettingsFile() );
-	conf_install->DeleteEntry(L"RunWizard");
+	else 
+	{
+		// Remove the app-local / registry entry conforming to this instance of PCSX2.
+		ScopedPtr<wxConfigBase> conf_install( OpenInstallSettingsFile() );
+		conf_install->DeleteEntry(L"RunWizard");
+	}
 }
 
 static void DoFirstTimeWizard()
