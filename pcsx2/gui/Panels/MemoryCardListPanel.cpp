@@ -368,7 +368,7 @@ public:
 					pxE( "!Notice:Mcd:Overwrite", 
 					L"This will copy the entire contents of the memory card in slot %u to the memory card in slot %u. "
 					L"All data on the memory card in slot %u will be lost.  Are you sure?" ), 
-					src.Slot, dest.Slot, dest.Slot
+					src.Slot+1, dest.Slot+1, dest.Slot+1
 				);
 
 				result = Msgbox::YesNo( content, _("Overwrite memory card?") );
@@ -383,7 +383,7 @@ public:
 				wxString heading;
 				heading.Printf( pxE( "!Notice:Mcd:Copy Failed", 
 					L"Error!  Could not copy the memory card into slot %u.  The destination file is in use." ),
-					dest.Slot
+					dest.Slot+1
 				);
 				
 				wxString content;
@@ -596,7 +596,7 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 				pxE( "!Notice:Mcd:Delete",
 					L"You are about to delete the formatted memory card in slot %u. "
 					L"All data on this card will be lost!  Are you absolutely and quite positively sure?"
-				), slot
+				), slot+1
 			);
 
 			result = Msgbox::YesNo( content, _("Delete memory card?") );
