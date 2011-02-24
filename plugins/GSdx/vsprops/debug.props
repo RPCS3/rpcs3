@@ -2,7 +2,7 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30128.1</_ProjectFileVersion>
-    <TargetName>$(ProjectName)-$(SSEtype)-dbg</TargetName>
+    <TargetName>$(ProjectName)$(PlatformArchitecture)-$(SSEtype)-dbg</TargetName>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup>

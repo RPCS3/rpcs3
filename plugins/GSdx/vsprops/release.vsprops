@@ -19,6 +19,7 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
+		OutputFile="$(OutDir)\$(ProjectName)-$(SSEtype).dll"
 		LinkIncremental="1"
 		OptimizeReferences="2"
 		EnableCOMDATFolding="2"

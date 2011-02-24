@@ -112,7 +112,28 @@ bool GSDeviceSDL::Reset(int w, int h)
 
 	m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED); // SDL_RENDERER_PRESENTVSYNC
 
-	return m_renderer != NULL;
+	if(m_renderer == NULL)
+	{
+		return false;
+	}
+
+	m_format = SDL_PIXELFORMAT_ARGB8888;
+
+	SDL_RendererInfo info;
+
+	memset(&info, 0, sizeof(info));
+
+	SDL_GetRendererInfo(m_renderer, &info);
+
+	for(uint32 i = 0; i < info.num_texture_formats; i++)
+	{
+		if(info.texture_formats[i] == SDL_PIXELFORMAT_ABGR8888)
+		{
+			m_format = SDL_PIXELFORMAT_ABGR8888;
+		}
+	}
+
+	return true;
 }
 
 void GSDeviceSDL::Present(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader)
@@ -142,7 +163,7 @@ void GSDeviceSDL::Present(GSTexture* st, GSTexture* dt, const GSVector4& dr, int
 
 	if(m_texture == NULL)
 	{
-		m_texture = SDL_CreateTexture(m_renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, size.x, size.y);
+		m_texture = SDL_CreateTexture(m_renderer, m_format, SDL_TEXTUREACCESS_STREAMING, size.x, size.y);
 	}
 
 	if(m_texture == NULL)
@@ -158,9 +179,33 @@ void GSDeviceSDL::Present(GSTexture* st, GSTexture* dt, const GSVector4& dr, int
 		{
 			GSVector2i s = st->GetSize();
 
-			for(int j = s.y; j > 0; j--, sm.bits += sm.pitch, dm.bits += dm.pitch)
+			if(m_format == SDL_PIXELFORMAT_ARGB8888)
 			{
-				memcpy(dm.bits, sm.bits, s.x * 4);
+				for(int j = s.y; j > 0; j--, sm.bits += sm.pitch, dm.bits += dm.pitch)
+				{
+					GSVector4i* RESTRICT src = (GSVector4i*)sm.bits;
+					GSVector4i* RESTRICT dst = (GSVector4i*)dm.bits;
+
+					for(int i = s.x >> 2; i > 0; i--, dst++, src++)
+					{
+						*dst = ((*src & 0x00ff0000) >> 16) | ((*src & 0x000000ff) << 16) | (*src & 0x0000ff00);
+					}
+
+					uint32* RESTRICT src2 = (uint32*)src;
+					uint32* RESTRICT dst2 = (uint32*)dst;
+
+					for(int i = s.x & 3; i > 0; i--)
+					{
+						*dst2 = ((*src2 & 0x00ff0000) >> 16) | ((*src2 & 0x000000ff) << 16) | (*src2 & 0x0000ff00);
+					}
+				}
+			}
+			else
+			{
+				for(int j = s.y; j > 0; j--, sm.bits += sm.pitch, dm.bits += dm.pitch)
+				{
+					memcpy(dm.bits, sm.bits, s.x * 4);
+				}
 			}
 
 			st->Unmap();

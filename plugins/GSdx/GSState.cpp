@@ -508,6 +508,8 @@ __forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
 
 void GSState::GIFRegHandlerPRIM(const GIFReg* r)
 {
+	ALIGN_STACK(32);
+
 	ApplyPRIM(r->PRIM);
 }
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="windows-1250"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="x86"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		PreprocessorDefinitions="_WIN32"
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		AdditionalLibraryDirectories="&quot;$(DXSDK_DIR)Lib\x86&quot;;&quot;$(ProjectDir)vtune\x86&quot;"
+		TargetMachine="1"
+	/>
+</VisualStudioPropertySheet>

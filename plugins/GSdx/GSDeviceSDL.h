@@ -31,6 +31,7 @@ class GSDeviceSDL : public GSDeviceSW
 	SDL_Window* m_window;
 	SDL_Renderer* m_renderer;
 	SDL_Texture* m_texture;
+	int m_format;
 
 	class GSDummyTexture : public GSTexture
 	{

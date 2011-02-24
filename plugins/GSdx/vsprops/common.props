@@ -2,11 +2,13 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30128.1</_ProjectFileVersion>
+    <OutDir>$(SolutionDir)bin\$(PcsxSubsection)\</OutDir>
+    <IntDir>$(PlatformName)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;_WINDOWS;_WIN32_WINNT=0x500;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;_WIN32_WINNT=0x500;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FloatingPointModel>Fast</FloatingPointModel>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <WarningLevel>Level4</WarningLevel>
@@ -17,8 +19,6 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>JITProfiling.lib;d3d11.lib;d3dx11.lib;d3d10_1.lib;d3dx10.lib;d3d9.lib;d3dx9.lib;dxguid.lib;winmm.lib;strmiids.lib;xinput.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)$(ProjectName)-$(SSEtype).dll</OutputFile>
-      <AdditionalLibraryDirectories>$(DXSDK_DIR)Lib\x86;./vtune;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>d3d9.dll;d3dx9_43.dll;d3d11.dll;d3dx11_43.dll;%(DelayLoadDLLs)</DelayLoadDLLs>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>

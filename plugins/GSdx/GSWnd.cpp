@@ -27,7 +27,7 @@
 
 GSWnd::GSWnd()
 	: m_hWnd(NULL)
-	, m_managed(false)
+	, m_managed(true)
 	, m_frame(true)
 {
 }
@@ -159,7 +159,7 @@ void GSWnd::Detach()
 	}
 
 	m_hWnd = NULL;
-	m_managed = false;
+	m_managed = true;
 }
 
 GSVector4i GSWnd::GetClientRect()
@@ -215,7 +215,7 @@ void GSWnd::HideFrame()
 GSWnd::GSWnd()
 	: m_display(NULL)
 	, m_window(0)
-	, m_managed(false)
+	, m_managed(true)
 	, m_frame(true)
 {
 }

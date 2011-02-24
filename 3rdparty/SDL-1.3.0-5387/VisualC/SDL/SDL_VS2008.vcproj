@@ -57,7 +57,6 @@
 				BufferSecurityCheck="false"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
 				CompileAs="0"
 			/>
@@ -76,7 +75,6 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="msimg32.lib winmm.lib imm32.lib version.lib"
 				SuppressStartupBanner="true"
-				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 			/>
@@ -104,7 +102,7 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\bin"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC70.vsprops"
@@ -140,7 +138,7 @@
 				BufferSecurityCheck="false"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				Detect64BitPortabilityProblems="false"
+				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="3"
 				CompileAs="0"
 			/>
@@ -158,9 +156,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msimg32.lib winmm.lib imm32.lib version.lib"
-				OutputFile="$(IntDir)\SDL.dll"
 				SuppressStartupBanner="true"
-				IgnoreAllDefaultLibraries="true"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="17"
@@ -229,7 +225,6 @@
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				Detect64BitPortabilityProblems="false"
 				CompileAs="0"
 			/>
 			<Tool
@@ -247,8 +242,9 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="msimg32.lib winmm.lib imm32.lib version.lib"
 				SuppressStartupBanner="true"
-				IgnoreAllDefaultLibraries="true"
 				SubSystem="2"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -274,7 +270,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)\bin"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC70.vsprops"
@@ -313,7 +309,7 @@
 				EnableFunctionLevelLinking="true"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				Detect64BitPortabilityProblems="false"
+				Detect64BitPortabilityProblems="true"
 				CompileAs="0"
 			/>
 			<Tool
@@ -330,10 +326,10 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="msimg32.lib winmm.lib imm32.lib version.lib"
-				OutputFile="$(IntDir)\SDL.dll"
 				SuppressStartupBanner="true"
-				IgnoreAllDefaultLibraries="true"
 				SubSystem="2"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
 				TargetMachine="17"
 			/>
 			<Tool

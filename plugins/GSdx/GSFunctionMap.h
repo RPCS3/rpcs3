@@ -217,7 +217,7 @@ public:
 
 			// vtune method registration
 
-			if(iJIT_IsProfilingActive())
+			// if(iJIT_IsProfilingActive()) // always > 0
 			{
 				string name = format("%s<%016llx>()", m_name.c_str(), (uint64)key);
 
