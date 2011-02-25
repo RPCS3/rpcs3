@@ -2,10 +2,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2010-12-26 09:58-0500\n"
+"POT-Creation-Date: 2011-02-25 18:54+0100\n"
 "PO-Revision-Date: 2010-12-28 13:54+0300\n"
 "Last-Translator: Kein <kein-of@yandex.ru>\n"
 "Language-Team: \n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -17,11 +18,17 @@ msgstr ""
 
 #: pcsx2/SourceLog.cpp:96
 msgid "Dumps detailed information for PS2 executables (ELFs)."
-msgstr "Отображает детальную информацию касательно исполняемых файлов PS2 (ELF-файлах)."
+msgstr ""
+"Отображает детальную информацию касательно исполняемых файлов PS2 (ELF-"
+"файлах)."
 
 #: pcsx2/SourceLog.cpp:101
-msgid "Logs manual protection, split blocks, and other things that might impact performance."
-msgstr "Отображает информацию о manual protection, split blocks, и других источниках, которые могут влиять на производительность."
+msgid ""
+"Logs manual protection, split blocks, and other things that might impact "
+"performance."
+msgstr ""
+"Отображает информацию о manual protection, split blocks, и других "
+"источниках, которые могут влиять на производительность."
 
 #: pcsx2/SourceLog.cpp:106
 msgid "Shows the game developer's logging text (EE processor)"
@@ -43,8 +50,7 @@ msgstr ""
 msgid "Direct memory accesses to unknown or unmapped EE memory space."
 msgstr ""
 
-#: pcsx2/SourceLog.cpp:157
-#: pcsx2/SourceLog.cpp:270
+#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
 msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
 msgstr ""
 
@@ -65,16 +71,16 @@ msgid "Execution of EE cache instructions."
 msgstr ""
 
 #: pcsx2/SourceLog.cpp:187
-msgid "All known hardware register accesses (very slow!); not including sub filter options below."
+msgid ""
+"All known hardware register accesses (very slow!); not including sub filter "
+"options below."
 msgstr ""
 
-#: pcsx2/SourceLog.cpp:193
-#: pcsx2/SourceLog.cpp:288
+#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
 msgid "Logs only unknown, unmapped, or unimplemented register accesses."
 msgstr ""
 
-#: pcsx2/SourceLog.cpp:199
-#: pcsx2/SourceLog.cpp:294
+#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
 msgid "Logs only DMA-related registers."
 msgstr ""
 
@@ -91,58 +97,62 @@ msgid "All VIFcode processing; command, tag style, interrupts."
 msgstr ""
 
 #: pcsx2/SourceLog.cpp:223
-msgid "Scratchpad's MFIFO activity."
+msgid "All processing involved in Path3 Masking"
 msgstr ""
 
 #: pcsx2/SourceLog.cpp:229
-msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
+msgid "Scratchpad's MFIFO activity."
 msgstr ""
 
 #: pcsx2/SourceLog.cpp:235
-msgid "Tracks all EE counters events and some counter register activity."
+msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
 msgstr ""
 
 #: pcsx2/SourceLog.cpp:241
-msgid "Dumps various VIF and VIFcode processing data."
+msgid "Tracks all EE counters events and some counter register activity."
 msgstr ""
 
 #: pcsx2/SourceLog.cpp:247
+msgid "Dumps various VIF and VIFcode processing data."
+msgstr ""
+
+#: pcsx2/SourceLog.cpp:253
 msgid "Dumps various GIF and GIFtag parsing data."
 msgstr ""
 
-#: pcsx2/SourceLog.cpp:258
+#: pcsx2/SourceLog.cpp:264
 msgid "SYSCALL and IRX activity."
 msgstr ""
 
-#: pcsx2/SourceLog.cpp:264
+#: pcsx2/SourceLog.cpp:270
 msgid "Direct memory accesses to unknown or unmapped IOP memory space."
 msgstr ""
 
-#: pcsx2/SourceLog.cpp:276
+#: pcsx2/SourceLog.cpp:282
 msgid "Disasm of the IOP's GPU co-processor instructions."
 msgstr ""
 
-#: pcsx2/SourceLog.cpp:282
-msgid "All known hardware register accesses, not including the sub-filters below."
-msgstr ""
-
-#: pcsx2/SourceLog.cpp:300
-msgid "Memorycard reads, writes, erases, terminators, and other processing."
+#: pcsx2/SourceLog.cpp:288
+msgid ""
+"All known hardware register accesses, not including the sub-filters below."
 msgstr ""
 
 #: pcsx2/SourceLog.cpp:306
-msgid "Gamepad activity on the SIO."
+msgid "Memorycard reads, writes, erases, terminators, and other processing."
 msgstr ""
 
 #: pcsx2/SourceLog.cpp:312
-msgid "Actual DMA event processing and data transfer logs."
+msgid "Gamepad activity on the SIO."
 msgstr ""
 
 #: pcsx2/SourceLog.cpp:318
-msgid "Tracks all IOP counters events and some counter register activity."
+msgid "Actual DMA event processing and data transfer logs."
 msgstr ""
 
 #: pcsx2/SourceLog.cpp:324
+msgid "Tracks all IOP counters events and some counter register activity."
+msgstr ""
+
+#: pcsx2/SourceLog.cpp:330
 msgid "Detailed logging of CDVD hardware."
 msgstr "Выводит в лог детальную информацию о CDVD-системе."
-

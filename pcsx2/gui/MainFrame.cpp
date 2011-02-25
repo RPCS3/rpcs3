@@ -35,7 +35,7 @@ wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid ) const
 
 	for (int i = 0; i < 10; i++)
 	{
-		mnuSubstates->Append( baseid+i+1, wxsFormat(L"Slot %d", i) );
+		mnuSubstates->Append( baseid+i+1, wxsFormat(_("Slot %d"), i) );
 	}
 	mnuSubstates->AppendSeparator();
 	mnuSubstates->Append( baseid - 1,	_("Other...") );
@@ -620,12 +620,12 @@ void MainEmuFrame::ApplyCoreStatus()
 		if( vm )
 		{
 			cdvd2->SetText(_("Reboot CDVD (fast)"));
-			cdvd2->SetHelp(_("Reboot using BOOT2 injection (skips splash screens)"));
+			cdvd2->SetHelp(_("Reboot using fast BOOT (skips splash screens)"));
 		}
 		else
 		{
 			cdvd2->SetText(_("Boot CDVD (fast)"));
-			cdvd2->SetHelp(_("Use BOOT2 injection to skip PS2 startup and splash screens"));
+			cdvd2->SetHelp(_("Use fast boot to skip PS2 startup and splash screens"));
 		}
 	}
 

@@ -131,7 +131,7 @@ SysConsoleLogPack::SysConsoleLogPack()
 static const SysTraceLogDescriptor
 TLD_SIF = {
 	L"SIF",			L"SIF (EE <-> IOP)",
-	pxDt(""),
+	L"",
 	"SIF"
 };
 

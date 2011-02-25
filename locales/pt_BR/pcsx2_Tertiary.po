@@ -1,15 +1,15 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-01-17 23:26-0300\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2011-02-25 18:54+0100\n"
 "PO-Revision-Date: 2011-01-17 23:26-0300\n"
 "Last-Translator: Rafael <Rafael.f.f1@gmail.com>\n"
 "Language-Team: \n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: \n"
 "X-Poedit-KeywordsList: pxEt;pxLt\n"
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: trunk\\\n"
@@ -19,55 +19,198 @@ msgstr ""
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
+#: common/include/Utilities/Exceptions.h:187
+msgid "No reason given."
+msgstr "Nenhuma razão dada."
+
+#: common/src/Utilities/ThreadTools.cpp:41
+msgid "Threading activity: start, detach, sync, deletion, etc."
+msgstr ""
+"Manipulação de threads: iniciar, desanexar, sincronizar, exclusão, etc."
+
+#: common/src/Utilities/wxAppWithHelpers.cpp:36
+msgid "Includes idle event processing and some other uncommon event usages."
+msgstr ""
+"Inclui eventos ociosos de processamento e alguns outros usos de eventos "
+"incomuns."
+
 #: pcsx2/MTGS.cpp:809
-msgid "The MTGS thread has become unresponsive while waiting for the GS plugin to open."
+msgid ""
+"The MTGS thread has become unresponsive while waiting for the GS plugin to "
+"open."
 msgstr "A thread MTGS não está respondendo enquanto espera o plugin GS abrir."
 
 #: pcsx2/PluginManager.cpp:1329
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr "Plugin the Cartão de Memória Interno falhou em inicializar."
 
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "Registra eventos assim que eles são passados para a máquina virtual do PS2."
+#: pcsx2/gui/AppConfig.cpp:776
+msgid "Safest"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:777
+msgid "Safe (faster)"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:778
+msgid "Balanced"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:779
+msgid "Aggressive"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:780
+msgid "Aggressive plus"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:781
+msgid "Mostly Harmful"
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:412
+msgid "Fits a lot of log in a microcosmically small area."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:414
+msgid "It's what I use (the programmer guy)."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:416
+msgid "Its nice and readable."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:418
+msgid "In case you have a really high res display."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:422
+msgid "Default soft-tone color scheme."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:423
+msgid ""
+"Classic black color scheme for people who enjoy having text seared into "
+"their optic nerves."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:427
+msgid ""
+"When checked the log window will be visible over other foreground windows."
+msgstr ""
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:151
 msgid "!ContextTip:ChangingNTFS"
-msgstr "Compressão NTFS pode ser alterada manualmente a qualquer tempo usando as propriedades do arquivo no Windows Explorer."
+msgstr ""
+"Compressão NTFS pode ser alterada manualmente a qualquer tempo usando as "
+"propriedades do arquivo no Windows Explorer."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:164
+msgid ""
+"Always use this option if you want the safest and surest memory card "
+"behavior."
+msgstr ""
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:168
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:172
+msgid "16 and 32 MB cards have roughly the same compatibility factor."
+msgstr ""
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:176
+msgid ""
+"Use at your own risk.  Erratic memory card behavior is possible (though "
+"unlikely)."
+msgstr ""
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
 msgid "!ContextTip:Folders:Settings"
-msgstr "Essa é a pasta onde PCSX2 salva as configurações, incluindo as configurações geradas pela maioria dos plug-ins (alguns plug-ins antigos podem não respeitar esse valor)."
+msgstr ""
+"Essa é a pasta onde PCSX2 salva as configurações, incluindo as configurações "
+"geradas pela maioria dos plug-ins (alguns plug-ins antigos podem não "
+"respeitar esse valor)."
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:37
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
 msgid "!Panel:HasHacksOverrides"
-msgstr "Aviso! Você está rodando PCSX2 com opções de linha de comando que substituem suas configurações armazenadas. Essas opções de linha de comando não vão refletir na tela de Configurações, e vão ser desativadas se você aplicar qualquer alteração aqui."
+msgstr ""
+"Aviso! Você está rodando PCSX2 com opções de linha de comando que substituem "
+"suas configurações armazenadas. Essas opções de linha de comando não vão "
+"refletir na tela de Configurações, e vão ser desativadas se você aplicar "
+"qualquer alteração aqui."
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:57
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
 msgid "!Panel:HasPluginsOverrides"
-msgstr "Aviso! Você está rodando PCSX2 com opções de linha de comando que substituem as configurações de seu plug-in e/ou diretório. Essas opções de linha de comando não vão refletir na tela de Configurações, e vão ser desativadas quando você aplicar qualquer alteração aqui."
+msgstr ""
+"Aviso! Você está rodando PCSX2 com opções de linha de comando que substituem "
+"as configurações de seu plug-in e/ou diretório. Essas opções de linha de "
+"comando não vão refletir na tela de Configurações, e vão ser desativadas "
+"quando você aplicar qualquer alteração aqui."
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:113
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
 msgid "!Notice:Tooltip:Presets:Slider"
 msgstr ""
-"As Pré-Definições aplicam hacks de velocidade, opções de alguns recompiladores e algumas reparações de jogos conhecidas por impulsionar a velocidade. Reparações de jogos ('Patches') conhecidos como importantes serão aplicados automaticamente.\n"
+"As Pré-Definições aplicam hacks de velocidade, opções de alguns "
+"recompiladores e algumas reparações de jogos conhecidas por impulsionar a "
+"velocidade. Reparações de jogos ('Patches') conhecidos como importantes "
+"serão aplicados automaticamente.\n"
 "\n"
 "Informações das Pré-Definições:\n"
 "1 -     A emulação mais precisa, mas também a mais lenta.\n"
 "3 --> Tenta balancear velocidade com compatibilidade.\n"
 "4 -     Alguns hacks mais agressivos.\n"
-"6 -     Hacks demais, o que provavelmente vai deixar a maioria dos jogos lentos.\""
+"6 -     Hacks demais, o que provavelmente vai deixar a maioria dos jogos "
+"lentos.\""
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:127
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
 msgid "!Notice:Tooltip:Presets:Checkbox"
 msgstr ""
-"As Pré-Definições aplicam hacks de velocidade, opções de alguns recompiladores e algumas reparações de jogos conhecidas por impulsionar a velocidade. Reparações de jogos ('Patches') conhecidas como importantes serão aplicadas automaticamente.\n"
+"As Pré-Definições aplicam hacks de velocidade, opções de alguns "
+"recompiladores e algumas reparações de jogos conhecidas por impulsionar a "
+"velocidade. Reparações de jogos ('Patches') conhecidas como importantes "
+"serão aplicadas automaticamente.\n"
 "\n"
-"--> Desmarque para modifcar configurações manualmente (com base na pré-definição selecionada)"
+"--> Desmarque para modifcar configurações manualmente (com base na pré-"
+"definição selecionada)"
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:118
+#: pcsx2/gui/ExecutorThread.cpp:40
+msgid "Logs events as they are passed to the PS2 virtual machine."
+msgstr ""
+"Registra eventos assim que eles são passados para a máquina virtual do PS2."
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:156
 msgid "!ContextTip:DirPicker:UseDefault"
-msgstr "Quando marcado essa pasta vai refletir automaticamente a associação automática com a configuração de modo usuário do PCSX2."
+msgstr ""
+"Quando marcado essa pasta vai refletir automaticamente a associação "
+"automática com a configuração de modo usuário do PCSX2."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:52
+msgid "!ContextTip:Window:Vsync"
+msgstr ""
+"Vsync elimina ranhuras na tela, mas tipicamente ataca em muito a performance."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:57
+msgid "!ContextTip:Window:HideMouse"
+msgstr ""
+"Marque para forçar a ocultação do cursor do mouse dentro da janela do GS; "
+"útil se usando o mouse como dispositivo de controle primário para jogar. Por "
+"padrão o mouse se auto-oculta após 2 segundos de inatividade."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Fullscreen"
+msgstr ""
+"Ativa alteração automática para tela cheia quando iniciando ou resumindo "
+"emulação."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:FullscreenExclusive"
+msgstr ""
+"Mode Exclusivo Tela Cheia pode ficar melhor em CRTs mais velhos e pode ficar "
+"um pouco mais rápido em placas de vídeo antigas."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:73
+msgid "!ContextTip:Window:HideGS"
+msgstr ""
+"Fecha completamente a normalmente grande e volumosa janela do GS quando "
+"pressionado ESC ou suspendido o emulador."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:67
 msgid "!ContextTip:Gamefixes:EE Timing Hack"
@@ -85,49 +228,43 @@ msgstr ""
 " * Growlanser II e III\n"
 " * Wizardry"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:52
-msgid "!ContextTip:Window:Vsync"
-msgstr "Vsync elimina ranhuras na tela, mas tipicamente ataca em muito a performance."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:57
-msgid "!ContextTip:Window:HideMouse"
-msgstr "Marque para forçar a ocultação do cursor do mouse dentro da janela do GS; útil se usando o mouse como dispositivo de controle primário para jogar. Por padrão o mouse se auto-oculta após 2 segundos de inatividade."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
-msgid "!ContextTip:Window:Fullscreen"
-msgstr "Ativa alteração automática para tela cheia quando iniciando ou resumindo emulação."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
-msgid "!ContextTip:Window:FullscreenExclusive"
-msgstr "Mode Exclusivo Tela Cheia pode ficar melhor em CRTs mais velhos e pode ficar um pouco mais rápido em placas de vídeo antigas."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:73
-msgid "!ContextTip:Window:HideGS"
-msgstr "Fecha completamente a normalmente grande e volumosa janela do GS quando pressionado ESC ou suspendido o emulador."
-
 #: pcsx2/gui/Panels/PathsPanel.cpp:40
 msgid "!ContextTip:Folders:Savestates"
-msgstr "Essa pasta é onde PCSX2 salva os savestates; os quais são salvados tanto usando menus/barras de ferramentas, ou pressionando F1/F3 (carregar/salvar)."
+msgstr ""
+"Essa pasta é onde PCSX2 salva os savestates; os quais são salvados tanto "
+"usando menus/barras de ferramentas, ou pressionando F1/F3 (carregar/salvar)."
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:50
 msgid "!ContextTip:Folders:Snapshots"
-msgstr "Essa pasta é onde PCSX2 salva as capturas de tela. O formato e estilo real da imagem de captura de tela pode variar dependendo do plug-in de GS está sendo usado."
+msgstr ""
+"Essa pasta é onde PCSX2 salva as capturas de tela. O formato e estilo real "
+"da imagem de captura de tela pode variar dependendo do plug-in de GS está "
+"sendo usado."
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:60
 msgid "!ContextTip:Folders:Logs"
-msgstr "Essa pasta é onde PCSX2 salva seus arquivos de log e de extração para diagnóstico. A maioria dos plug-ins vão também aderir a essa pasta, mas alguns plug-ins antigos podem acabar por ignorar."
+msgstr ""
+"Essa pasta é onde PCSX2 salva seus arquivos de log e de extração para "
+"diagnóstico. A maioria dos plug-ins vão também aderir a essa pasta, mas "
+"alguns plug-ins antigos podem acabar por ignorar."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
 msgid "!Panel:Speedhacks:EECycleX1"
-msgstr "1 - Frequência de ciclo normal. Isso quase corresponde com a real velocidade de uma EmotionEngine real de PS2."
+msgstr ""
+"1 - Frequência de ciclo normal. Isso quase corresponde com a real velocidade "
+"de uma EmotionEngine real de PS2."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
 msgid "!Panel:Speedhacks:EECycleX2"
-msgstr "2 - Reduz a frequência de ciclo do EE em mais ou menos 33%. Aceleração suave para a maioria dos jogos com alta compatibilidade."
+msgstr ""
+"2 - Reduz a frequência de ciclo do EE em mais ou menos 33%. Aceleração suave "
+"para a maioria dos jogos com alta compatibilidade."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
 msgid "!Panel:Speedhacks:EECycleX3"
-msgstr "3 - Reduz a frequência de ciclo do EE em mais ou menos 55%. Aceleração moderada, mas *vai* causar falhas de áudio em muitos FMVs."
+msgstr ""
+"3 - Reduz a frequência de ciclo do EE em mais ou menos 55%. Aceleração "
+"moderada, mas *vai* causar falhas de áudio em muitos FMVs."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
 msgid "!Panel:Speedhacks:VUCycleStealOff"
@@ -135,72 +272,119 @@ msgstr "0 - Desativa Roubo de Ciclo do VU. Configuração mais compatível!"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
 msgid "!Panel:Speedhacks:VUCycleSteal1"
-msgstr "1 - Suave Roubo de Ciclo do VU. Menor compatibilidade, mas é alguma aceleração para maioria dos jogos."
+msgstr ""
+"1 - Suave Roubo de Ciclo do VU. Menor compatibilidade, mas é alguma "
+"aceleração para maioria dos jogos."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
 msgid "!Panel:Speedhacks:VUCycleSteal2"
-msgstr "2 - Moderado Roubo de Ciclo de VU. Ainda menor compatibilidade, mas a aceleração é significante em alguns jogos."
+msgstr ""
+"2 - Moderado Roubo de Ciclo de VU. Ainda menor compatibilidade, mas a "
+"aceleração é significante em alguns jogos."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
 msgid "!Panel:Speedhacks:VUCycleSteal3"
-msgstr "3 - Máximo de Roubo de Ciclo de VU. Utilidade é limitada, uma vez que isso pode causar oscilações visuais ou desaceleração na maioria dos jogos."
+msgstr ""
+"3 - Máximo de Roubo de Ciclo de VU. Utilidade é limitada, uma vez que isso "
+"pode causar oscilações visuais ou desaceleração na maioria dos jogos."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
 msgid "!ContextTip:Speedhacks:EECycleRate Slider"
-msgstr "Definir valores mais altos nesse slider reduz efetivamente a velocidade de clock da CPU núcleo R5900 da EmotionEngine e normalmente traz grande aceleração para jogos que falham em utilizar todo potencial do hardware de PS real."
+msgstr ""
+"Definir valores mais altos nesse slider reduz efetivamente a velocidade de "
+"clock da CPU núcleo R5900 da EmotionEngine e normalmente traz grande "
+"aceleração para jogos que falham em utilizar todo potencial do hardware de "
+"PS real."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
 msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
-msgstr "Esse slider controla a quantidade de ciclos que a unidade VU rouba da EmotionEngine. Maiores valores aumentam o número de ciclos roubados do EE para cada micro-programa VU que o jogo roda."
+msgstr ""
+"Esse slider controla a quantidade de ciclos que a unidade VU rouba da "
+"EmotionEngine. Maiores valores aumentam o número de ciclos roubados do EE "
+"para cada micro-programa VU que o jogo roda."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
 msgid "!ContextTip:Speedhacks:vuFlagHack"
-msgstr "Atualiza Sinalizadores de Estado somente nos blocos que vão ler eles, ao contrário de de o tempo todo. Isso é seguro na maioria do tempo, e o Super VU faz coisa semelhante por padrão."
+msgstr ""
+"Atualiza Sinalizadores de Estado somente nos blocos que vão ler eles, ao "
+"contrário de de o tempo todo. Isso é seguro na maioria do tempo, e o Super "
+"VU faz coisa semelhante por padrão."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
 msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr "Presume que num futuro bem distante os blocos não vão precisar dos dados de instâncias de sinalizadores antigos. Isso pode ser bem seguro. Não se sabe se isso quebra algum jogo..."
+msgstr ""
+"Presume que num futuro bem distante os blocos não vão precisar dos dados de "
+"instâncias de sinalizadores antigos. Isso pode ser bem seguro. Não se sabe "
+"se isso quebra algum jogo..."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
 msgid "!ContextTip:Speedhacks:vuMinMax"
-msgstr "Usa o Min/Máx de Operações com Pontos Flutuantes do SSE ao invés de rotinas de Min/Máx de lógica personalizadas. Sabe-se que quebra Gran Turismo 4, Tekken 5."
+msgstr ""
+"Usa o Min/Máx de Operações com Pontos Flutuantes do SSE ao invés de rotinas "
+"de Min/Máx de lógica personalizadas. Sabe-se que quebra Gran Turismo 4, "
+"Tekken 5."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:202
 msgid "!ContextTip:Speedhacks:INTC"
-msgstr "Esse hack funciona melhor para jogos que usam o registrador de INTC Status para esperar por vsyncs, o qual inclui primariamente títulos de RPG não-3D. Jogos que não usam esse método de vsync vão aproveitar um pouco ou nada de aceleração desse hack."
+msgstr ""
+"Esse hack funciona melhor para jogos que usam o registrador de INTC Status "
+"para esperar por vsyncs, o qual inclui primariamente títulos de RPG não-3D. "
+"Jogos que não usam esse método de vsync vão aproveitar um pouco ou nada de "
+"aceleração desse hack."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:BIFC0"
-msgstr "Mirando primariamente o loop ocioso do EE no endereço 0x81Fc0 no kernel, esse hack tenta detectar loops cujo conteúdo garantidamente resulta no mesmo estado da máquina para toda iteração até que um evento agendado dispare emulação de outra unidade. Depois de uma interação desses loops, nós avançamos para a vez do evento seguinte ou o fim da fatia de tempo do processador, seja qual for que vier a ocorrer primeiro."
+msgstr ""
+"Mirando primariamente o loop ocioso do EE no endereço 0x81Fc0 no kernel, "
+"esse hack tenta detectar loops cujo conteúdo garantidamente resulta no mesmo "
+"estado da máquina para toda iteração até que um evento agendado dispare "
+"emulação de outra unidade. Depois de uma interação desses loops, nós "
+"avançamos para a vez do evento seguinte ou o fim da fatia de tempo do "
+"processador, seja qual for que vier a ocorrer primeiro."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:214
 msgid "!ContextTip:Speedhacks:fastCDVD"
-msgstr "Verifica lista de compatibilidade de HDLoader para jogos conhecidos que tenham problemas com isso. (Muitas vezes marcado por precisar de 'modo 1' ou 'DVD lento')"
+msgstr ""
+"Verifica lista de compatibilidade de HDLoader para jogos conhecidos que "
+"tenham problemas com isso. (Muitas vezes marcado por precisar de 'modo 1' ou "
+"'DVD lento')"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:37
 msgid "!ContextTip:Framelimiter:Disable"
-msgstr "Note que quando o Limitador de Frames está desabilitado, os modos Turbo e Câmera Lenta também não vão estar disponíveis."
+msgstr ""
+"Note que quando o Limitador de Frames está desabilitado, os modos Turbo e "
+"Câmera Lenta também não vão estar disponíveis."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:318
+#: pcsx2/gui/Panels/VideoPanel.cpp:162
+msgid ""
+"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
+"valid floating point numerics."
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:295
+msgid ""
+"For troubleshooting potential bugs in the MTGS only, as it is potentially "
+"very slow."
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
+msgid ""
+"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+"components."
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
 msgid "!ContextTip:GS:SyncMTGS"
-msgstr "Habilite isso se você achar que a sincronização da thread MTGS está causando travamentos ou erros gráficos."
+msgstr ""
+"Habilite isso se você achar que a sincronização da thread MTGS está causando "
+"travamentos ou erros gráficos."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:322
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
-"Remove qualquer ruído padrão causado pela sobrecarga da thread MTGS ou da GPU. Essa opção é melhor usada em conjunto com savestates: armazene o estado em uma cena ideal, habilite essa opção e recarregue o savestate.\n"
+"Remove qualquer ruído padrão causado pela sobrecarga da thread MTGS ou da "
+"GPU. Essa opção é melhor usada em conjunto com savestates: armazene o estado "
+"em uma cena ideal, habilite essa opção e recarregue o savestate.\n"
 "\n"
-"Aviso: Essa opção pode ser ativada durante o jogo, mas normalmente não pode ser desativada durante o jogo (o vídeo normalmente ficará estragado)"
-
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "Manipulação de threads: iniciar, desanexar, sincronizar, exclusão, etc."
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr "Inclui eventos ociosos de processamento e alguns outros usos de eventos incomuns."
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr "Nenhuma razão dada."
-
+"Aviso: Essa opção pode ser ativada durante o jogo, mas normalmente não pode "
+"ser desativada durante o jogo (o vídeo normalmente ficará estragado)"

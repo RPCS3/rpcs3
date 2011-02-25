@@ -2,10 +2,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2010-12-26 10:02-0500\n"
+"POT-Creation-Date: 2011-02-25 18:54+0100\n"
 "PO-Revision-Date: 2011-01-19 15:15+0200\n"
 "Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
 "Language-Team: PyramidHead <atiamar@hotmail.com>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -17,63 +18,55 @@ msgstr ""
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
-#: pcsx2/System.cpp:114
-msgid "!Notice:Recompiler:VirtualMemoryAlloc"
-msgstr "!Notice:Recompiler:VirtualMemoryAlloc"
-
-#: pcsx2/System.cpp:346
-msgid "!Notice:EmuCore::MemoryForVM"
-msgstr "!Notice:EmuCore::MemoryForVM"
-
-#: pcsx2/vtlb.cpp:588
-msgid "!Notice:HostVmReserve"
-msgstr "!Notice:HostVmReserve"
+#: common/src/Utilities/Exceptions.cpp:254
+msgid "!Notice:VirtualMemoryMap"
+msgstr "!Notice:VirtualMemoryMap"
 
 #: pcsx2/CDVD/CDVD.cpp:385
 msgid "!Notice:PsxDisc"
 msgstr "!Notice:PsxDisc"
 
-#: pcsx2/gui/AppInit.cpp:44
+#: pcsx2/System.cpp:114
+msgid "!Notice:Recompiler:VirtualMemoryAlloc"
+msgstr "!Notice:Recompiler:VirtualMemoryAlloc"
+
+#: pcsx2/System.cpp:348
+msgid "!Notice:EmuCore::MemoryForVM"
+msgstr "!Notice:EmuCore::MemoryForVM"
+
+#: pcsx2/gui/AppInit.cpp:43
 msgid "!Notice:Startup:NoSSE2"
 msgstr "!Notice:Startup:NoSSE2"
 
-#: pcsx2/gui/AppInit.cpp:290
+#: pcsx2/gui/AppInit.cpp:162
 msgid "!Notice:RecompilerInit:Header"
 msgstr "!Notice:RecompilerInit:Header"
 
-#: pcsx2/gui/AppInit.cpp:344
+#: pcsx2/gui/AppInit.cpp:211
 msgid "!Notice:RecompilerInit:Footer"
 msgstr "!Notice:RecompilerInit:Footer"
 
-#: pcsx2/gui/AppMain.cpp:483
+#: pcsx2/gui/AppMain.cpp:476
 msgid "!Notice:BiosDumpRequired"
 msgstr "!Notice:BiosDumpRequired"
 
-#: pcsx2/gui/AppMain.cpp:567
+#: pcsx2/gui/AppMain.cpp:559
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr "!Notice Error:Thread Deadlock Actions"
 
-#: pcsx2/gui/IsoDropTarget.cpp:28
-msgid "!Notice:ConfirmSysReset"
-msgstr "!Notice:ConfirmSysReset"
+#: pcsx2/gui/AppUserMode.cpp:59
+msgid "!Error:PortableModeRights"
+msgstr ""
 
-#: pcsx2/gui/MainMenuClicks.cpp:112
-msgid "!Notice:DeleteSettings"
-msgstr "!Notice:DeleteSettings"
-
-#: pcsx2/gui/MemoryCardFile.cpp:77
-msgid "!Notice:Mcd:HasBeenDisabled"
-msgstr "!Notice:Mcd:HasBeenDisabled"
-
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:53
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
 msgid "!Panel:Folders:Settings"
 msgstr "!Panel:Folders:Settings"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:109
-msgid "!Notice:DocsFolderFileConflict"
-msgstr "!Notice:DocsFolderFileConflict"
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
+msgid "!Wizard:Welcome"
+msgstr ""
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:152
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
 msgid "!Wizard:Bios:Tutorial"
 msgstr "!Wizard:Bios:Tutorial"
 
@@ -93,19 +86,33 @@ msgstr "!Panel:Mcd:EnableEjection"
 msgid "!Panel:StuckThread:Heading"
 msgstr "!Panel:StuckThread:Heading"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:37
-msgid "!Panel:HasHacksOverrides"
-msgstr "!Panel:HasHacksOverrides"
+#: pcsx2/gui/IsoDropTarget.cpp:28
+msgid "!Notice:ConfirmSysReset"
+msgstr "!Notice:ConfirmSysReset"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:57
-msgid "!Panel:HasPluginsOverrides"
-msgstr "!Panel:HasPluginsOverrides"
+#: pcsx2/gui/MainMenuClicks.cpp:106
+msgid "!Notice:DeleteSettings"
+msgstr "!Notice:DeleteSettings"
 
-#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:126
+#: pcsx2/gui/MemoryCardFile.cpp:77
+msgid "!Notice:Mcd:HasBeenDisabled"
+msgstr "!Notice:Mcd:HasBeenDisabled"
+
+#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
 msgid "!Notice:BIOS:InvalidSelection"
 msgstr "!Notice:BIOS:InvalidSelection"
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:63
+#: pcsx2/gui/Panels/CpuPanel.cpp:111
+#, fuzzy
+msgid "!Panel:EE/IOP:Heading"
+msgstr "!Panel:Frameskip:Heading"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:178
+#, fuzzy
+msgid "!Panel:VUs:Heading"
+msgstr "!Panel:Frameskip:Heading"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:69
 msgid "!Notice:DirPicker:CreatePath"
 msgstr "!Notice:DirPicker:CreatePath"
 
@@ -113,15 +120,15 @@ msgstr "!Notice:DirPicker:CreatePath"
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr "!Panel:Gamefixes:Compat Warning"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:365
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:368
 msgid "!Notice:Mcd:Overwrite"
 msgstr "!Notice:Mcd:Overwrite"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:379
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:384
 msgid "!Notice:Mcd:Copy Failed"
 msgstr "!Notice:Mcd:Copy Failed"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:585
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:596
 msgid "!Notice:Mcd:Delete"
 msgstr "!Notice:Mcd:Delete"
 
@@ -137,7 +144,7 @@ msgstr "!Panel:Usermode:Warning"
 msgid "!Notice:PluginSelector:ConfirmShutdown"
 msgstr "!Notice:PluginSelector:ConfirmShutdown"
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:458
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
 msgid "!Notice:PluginSelector:ApplyFailed"
 msgstr "!Notice:PluginSelector:ApplyFailed"
 
@@ -145,19 +152,26 @@ msgstr "!Notice:PluginSelector:ApplyFailed"
 msgid "!Panel:Speedhacks:Overview"
 msgstr "!Panel:Speedhacks:Overview"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:106
-msgid "!Panel:Framelimiter:Heading"
-msgstr "!Panel:Framelimiter:Heading"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:230
+#: pcsx2/gui/Panels/VideoPanel.cpp:223
 msgid "!Panel:Frameskip:Heading"
 msgstr "!Panel:Frameskip:Heading"
+
+#: pcsx2/vtlb.cpp:698
+msgid "!Notice:HostVmReserve"
+msgstr "!Notice:HostVmReserve"
 
 #: pcsx2/x86/sVU_zerorec.cpp:362
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr "!Notice:superVU:VirtualMemoryAlloc"
 
-#: common/src/Utilities/Exceptions.cpp:254
-msgid "!Notice:VirtualMemoryMap"
-msgstr "!Notice:VirtualMemoryMap"
+#~ msgid "!Notice:DocsFolderFileConflict"
+#~ msgstr "!Notice:DocsFolderFileConflict"
 
+#~ msgid "!Panel:HasHacksOverrides"
+#~ msgstr "!Panel:HasHacksOverrides"
+
+#~ msgid "!Panel:HasPluginsOverrides"
+#~ msgstr "!Panel:HasPluginsOverrides"
+
+#~ msgid "!Panel:Framelimiter:Heading"
+#~ msgstr "!Panel:Framelimiter:Heading"

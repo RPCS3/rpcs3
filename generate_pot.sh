@@ -33,6 +33,7 @@ GENERAL_OPTION="--sort-by-file --no-wrap \
 ######################################################################
 [ ! -e pcsx2 ] && echo "pcsx2 directory not present" && return 1;
 [ ! -e common ] && echo "common directory not present" && return 1;
+[ ! -e locales ] && echo "locales directory not present" && return 1;
 
 # Build a list of all input files
 input_files=""
@@ -48,31 +49,61 @@ done
 ######################################################################
 # Generate the pot
 ######################################################################
-MAIN_FILE=locales/templates/pcsx2_Main.pot
-MAIN_KEY=_
+MAIN_POT=locales/templates/pcsx2_Main.pot
+MAIN_KEY1=_
+MAIN_KEY2=pxL
 
-DEV_FILE=locales/templates/pcsx2_Devel.pot
-DEV_KEY1=pxE_dev
+DEV_POT=locales/templates/pcsx2_Devel.pot
+DEV_KEY1=_d
 DEV_KEY2=pxDt
 
-ICO_FILE=locales/templates/pcsx2_Iconized.pot
-ICO_KEY=pxE
+ICO_POT=locales/templates/pcsx2_Iconized.pot
+ICO_KEY1=pxE
 
-TER_FILE=locales/templates/pcsx2_Tertiary.pot
-TER_KEY=pxEt
+TER_POT=locales/templates/pcsx2_Tertiary.pot
+TER_KEY1=_t
+TER_KEY2=pxLt
+TER_KEY3=pxEt
 
-echo "Generate $MAIN_FILE"
-xgettext --keyword=$MAIN_KEY $GENERAL_OPTION $input_files --output=$MAIN_FILE
-sed --in-place $MAIN_FILE --expression=s/charset=CHARSET/charset=UTF-8/
+echo "Generate $MAIN_POT"
+xgettext --keyword=$MAIN_KEY1 --keyword=$MAIN_KEY2 $GENERAL_OPTION $input_files --output=$MAIN_POT
+sed --in-place $MAIN_POT --expression=s/charset=CHARSET/charset=UTF-8/
 
-echo "Generate $DEV_FILE"
-xgettext --keyword=$DEV_KEY1 --keyword=$DEV_KEY2  $GENERAL_OPTION $input_files --output=$DEV_FILE
-sed --in-place $DEV_FILE --expression=s/charset=CHARSET/charset=UTF-8/
+echo "Generate $DEV_POT"
+xgettext --keyword=$DEV_KEY1 --keyword=$DEV_KEY2 $GENERAL_OPTION $input_files --output=$DEV_POT
+sed --in-place $DEV_POT --expression=s/charset=CHARSET/charset=UTF-8/
 
-echo "Generate $ICO_FILE"
-xgettext --keyword=$ICO_KEY  $GENERAL_OPTION $input_files --output=$ICO_FILE
-sed --in-place $ICO_FILE --expression=s/charset=CHARSET/charset=UTF-8/
+echo "Generate $ICO_POT"
+xgettext --keyword=$ICO_KEY1 $GENERAL_OPTION $input_files --output=$ICO_POT
+sed --in-place $ICO_POT --expression=s/charset=CHARSET/charset=UTF-8/
 
-echo "Generate $TER_FILE"
-xgettext --keyword=$TER_KEY  $GENERAL_OPTION $input_files --output=$TER_FILE
-sed --in-place $TER_FILE --expression=s/charset=CHARSET/charset=UTF-8/
+echo "Generate $TER_POT"
+xgettext --keyword=$TER_KEY1 --keyword=$TER_KEY2 --keyword=$TER_KEY3 $GENERAL_OPTION $input_files --output=$TER_POT
+sed --in-place $TER_POT --expression=s/charset=CHARSET/charset=UTF-8/
+
+######################################################################
+# Automatically align the .po to the new pot file
+######################################################################
+echo "Update pcsx2_Main.po files"
+for po_file in `find ./locales -iname pcsx2_Main.po`
+do
+    msgmerge --update $po_file $MAIN_POT
+done
+
+echo "Update pcsx2_Devel.po files"
+for po_file in `find ./locales -iname pcsx2_Devel.po`
+do
+    msgmerge --update $po_file $DEV_POT
+done
+
+echo "Update pcsx2_Iconized.po files"
+for po_file in `find ./locales -iname pcsx2_Iconized.po`
+do
+    msgmerge --update $po_file $ICO_POT
+done
+
+echo "Update pcsx2_Tertiary.po files"
+for po_file in `find ./locales -iname pcsx2_Tertiary.po`
+do
+    msgmerge --update $po_file $TER_POT
+done

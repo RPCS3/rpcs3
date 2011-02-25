@@ -679,9 +679,12 @@ Pcsx2App::Pcsx2App()
 		_("&Cancel");
 		_("&Apply");
 		_("&Next >");
-		_("&Back >");
+		_("< &Back");
 		_("&Back");
 		_("&Finish");
+		_("&Yes");
+		_("&No");
+		_("Browse");
 
 		_("&Save");
 		_("Save &As...");

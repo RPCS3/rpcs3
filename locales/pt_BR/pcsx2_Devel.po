@@ -1,15 +1,15 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-01-17 23:26-0300\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2011-02-25 18:54+0100\n"
 "PO-Revision-Date: 2011-01-17 23:26-0300\n"
 "Last-Translator: Rafael <Rafael.f.f1@gmail.com>\n"
 "Language-Team: \n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: \n"
 "X-Poedit-KeywordsList: pxE_dev;pxDt;_t\n"
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: trunk\\\n"
@@ -24,8 +24,12 @@ msgid "Dumps detailed information for PS2 executables (ELFs)."
 msgstr "Extrai informação detalhada de executáveis (ELFs) de PS2."
 
 #: pcsx2/SourceLog.cpp:101
-msgid "Logs manual protection, split blocks, and other things that might impact performance."
-msgstr "Registra logs de proteção manual, blocos separados e outras coisas que podem impactar na performance."
+msgid ""
+"Logs manual protection, split blocks, and other things that might impact "
+"performance."
+msgstr ""
+"Registra logs de proteção manual, blocos separados e outras coisas que podem "
+"impactar na performance."
 
 #: pcsx2/SourceLog.cpp:106
 msgid "Shows the game developer's logging text (EE processor)"
@@ -45,12 +49,14 @@ msgstr "Atividade de SYSCALL e DECI2"
 
 #: pcsx2/SourceLog.cpp:151
 msgid "Direct memory accesses to unknown or unmapped EE memory space."
-msgstr "Acesso direto a memória para espaço de memória EE desconhecido ou não mapeado."
+msgstr ""
+"Acesso direto a memória para espaço de memória EE desconhecido ou não "
+"mapeado."
 
-#: pcsx2/SourceLog.cpp:157
-#: pcsx2/SourceLog.cpp:270
+#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
 msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
-msgstr "Desmontagem das instruções do núcleo de execução (excluindo COPs e CACHE)."
+msgstr ""
+"Desmontagem das instruções do núcleo de execução (excluindo COPs e CACHE)."
 
 #: pcsx2/SourceLog.cpp:163
 msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
@@ -69,163 +75,198 @@ msgid "Execution of EE cache instructions."
 msgstr "Execução das instruções de cache do EE."
 
 #: pcsx2/SourceLog.cpp:187
-msgid "All known hardware register accesses (very slow!); not including sub filter options below."
-msgstr "Acessos a todos registradores de hardware (muito lento!); não inclusas opções de sub-filtros abaixo."
+msgid ""
+"All known hardware register accesses (very slow!); not including sub filter "
+"options below."
+msgstr ""
+"Acessos a todos registradores de hardware (muito lento!); não inclusas "
+"opções de sub-filtros abaixo."
 
-#: pcsx2/SourceLog.cpp:193
-#: pcsx2/SourceLog.cpp:288
+#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
 msgid "Logs only unknown, unmapped, or unimplemented register accesses."
-msgstr "Registra somente acessos não conhecidos, não mapeados ou não implementados de registradores."
+msgstr ""
+"Registra somente acessos não conhecidos, não mapeados ou não implementados "
+"de registradores."
 
-#: pcsx2/SourceLog.cpp:199
-#: pcsx2/SourceLog.cpp:294
+#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
 msgid "Logs only DMA-related registers."
 msgstr "Registra somente registradores relacionados a DMA."
 
 #: pcsx2/SourceLog.cpp:205
 msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
-msgstr "Atividade IPU: registradores de hardware, operações de decodificação, status de DMA, etc."
+msgstr ""
+"Atividade IPU: registradores de hardware, operações de decodificação, status "
+"de DMA, etc."
 
 #: pcsx2/SourceLog.cpp:211
 msgid "All GIFtag parse activity; path index, tag type, etc."
-msgstr "Todas atividade de análise do GIFtag; índice de caminho, tipo de tag, etc."
+msgstr ""
+"Todas atividade de análise do GIFtag; índice de caminho, tipo de tag, etc."
 
 #: pcsx2/SourceLog.cpp:217
 msgid "All VIFcode processing; command, tag style, interrupts."
 msgstr "Todo processamento de VIFcode; comando, estilo de tag, interrupções."
 
 #: pcsx2/SourceLog.cpp:223
+msgid "All processing involved in Path3 Masking"
+msgstr ""
+
+#: pcsx2/SourceLog.cpp:229
 msgid "Scratchpad's MFIFO activity."
 msgstr "Atividade MFIFO do Bloco de Rascunho."
 
-#: pcsx2/SourceLog.cpp:229
-msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
-msgstr "Logs de transferência de dados real, arbitragem de direito de via, obstruções, etc."
-
 #: pcsx2/SourceLog.cpp:235
-msgid "Tracks all EE counters events and some counter register activity."
-msgstr "Rastreia todos eventos de contadores de EE e algumas atividades de registradores de contador."
+msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
+msgstr ""
+"Logs de transferência de dados real, arbitragem de direito de via, "
+"obstruções, etc."
 
 #: pcsx2/SourceLog.cpp:241
+msgid "Tracks all EE counters events and some counter register activity."
+msgstr ""
+"Rastreia todos eventos de contadores de EE e algumas atividades de "
+"registradores de contador."
+
+#: pcsx2/SourceLog.cpp:247
 msgid "Dumps various VIF and VIFcode processing data."
 msgstr "Extrai vários dados de processamento de VIF e VIFcode."
 
-#: pcsx2/SourceLog.cpp:247
+#: pcsx2/SourceLog.cpp:253
 msgid "Dumps various GIF and GIFtag parsing data."
 msgstr "Extrai vários dados de análise de GIF e GIFtag."
 
-#: pcsx2/SourceLog.cpp:258
+#: pcsx2/SourceLog.cpp:264
 msgid "SYSCALL and IRX activity."
 msgstr "Atividade SYSCALL e IRX."
 
-#: pcsx2/SourceLog.cpp:264
+#: pcsx2/SourceLog.cpp:270
 msgid "Direct memory accesses to unknown or unmapped IOP memory space."
-msgstr "Acessos direto a memória para espaço de memória IOP não conhecido ou não mapeado."
+msgstr ""
+"Acessos direto a memória para espaço de memória IOP não conhecido ou não "
+"mapeado."
 
-#: pcsx2/SourceLog.cpp:276
+#: pcsx2/SourceLog.cpp:282
 msgid "Disasm of the IOP's GPU co-processor instructions."
 msgstr "Desmontagem das instruções do co-processador GPU do IOP."
 
-#: pcsx2/SourceLog.cpp:282
-msgid "All known hardware register accesses, not including the sub-filters below."
-msgstr "Acessos a todos registradores de hardware conhecidos, não incluso os sub-filtros abaixo."
-
-#: pcsx2/SourceLog.cpp:300
-msgid "Memorycard reads, writes, erases, terminators, and other processing."
-msgstr "Leituras, escritas, exclusão, exterminadores e outros processamentos de cartão de memória."
+#: pcsx2/SourceLog.cpp:288
+msgid ""
+"All known hardware register accesses, not including the sub-filters below."
+msgstr ""
+"Acessos a todos registradores de hardware conhecidos, não incluso os sub-"
+"filtros abaixo."
 
 #: pcsx2/SourceLog.cpp:306
+msgid "Memorycard reads, writes, erases, terminators, and other processing."
+msgstr ""
+"Leituras, escritas, exclusão, exterminadores e outros processamentos de "
+"cartão de memória."
+
+#: pcsx2/SourceLog.cpp:312
 msgid "Gamepad activity on the SIO."
 msgstr "Atividade do gamepad no SIO."
 
-#: pcsx2/SourceLog.cpp:312
-msgid "Actual DMA event processing and data transfer logs."
-msgstr "Registro de atuais processamento de eventos DMA e transferência de dados."
-
 #: pcsx2/SourceLog.cpp:318
-msgid "Tracks all IOP counters events and some counter register activity."
-msgstr "Rastreia todos eventos dos contadores IOP e algumas atividades dos registrador de contador."
+msgid "Actual DMA event processing and data transfer logs."
+msgstr ""
+"Registro de atuais processamento de eventos DMA e transferência de dados."
 
 #: pcsx2/SourceLog.cpp:324
+msgid "Tracks all IOP counters events and some counter register activity."
+msgstr ""
+"Rastreia todos eventos dos contadores IOP e algumas atividades dos "
+"registrador de contador."
+
+#: pcsx2/SourceLog.cpp:330
 msgid "Detailed logging of CDVD hardware."
 msgstr "Registro log detalhado do hardware de CDVD."
 
-#: pcsx2/gui/AppConfig.cpp:743
-msgid "Safest"
-msgstr "Mais seguro"
+#~ msgid "Safest"
+#~ msgstr "Mais seguro"
 
-#: pcsx2/gui/AppConfig.cpp:744
-msgid "Safe (faster)"
-msgstr "Seguro (mais rápido)"
+#~ msgid "Safe (faster)"
+#~ msgstr "Seguro (mais rápido)"
 
-#: pcsx2/gui/AppConfig.cpp:745
-msgid "Balanced"
-msgstr "Balanceado"
+#~ msgid "Balanced"
+#~ msgstr "Balanceado"
 
-#: pcsx2/gui/AppConfig.cpp:746
-msgid "Aggressive"
-msgstr "Agressivo"
+#~ msgid "Aggressive"
+#~ msgstr "Agressivo"
 
-#: pcsx2/gui/AppConfig.cpp:747
-msgid "Aggressive plus"
-msgstr "Agressivo plus"
+#~ msgid "Aggressive plus"
+#~ msgstr "Agressivo plus"
 
-#: pcsx2/gui/AppConfig.cpp:748
-msgid "Mostly Harmful"
-msgstr "Principalmente prejudicial"
+#~ msgid "Mostly Harmful"
+#~ msgstr "Principalmente prejudicial"
 
-#: pcsx2/gui/ConsoleLogger.cpp:412
-msgid "Fits a lot of log in a microcosmically small area."
-msgstr "Armazena um muito conteúdo de log em uma área microscopicamente pequena."
+#~ msgid "Fits a lot of log in a microcosmically small area."
+#~ msgstr ""
+#~ "Armazena um muito conteúdo de log em uma área microscopicamente pequena."
 
-#: pcsx2/gui/ConsoleLogger.cpp:414
-msgid "It's what I use (the programmer guy)."
-msgstr "É o que eu uso (o programador)."
+#~ msgid "It's what I use (the programmer guy)."
+#~ msgstr "É o que eu uso (o programador)."
 
-#: pcsx2/gui/ConsoleLogger.cpp:416
-msgid "Its nice and readable."
-msgstr "É bom e legível."
+#~ msgid "Its nice and readable."
+#~ msgstr "É bom e legível."
 
-#: pcsx2/gui/ConsoleLogger.cpp:418
-msgid "In case you have a really high res display."
-msgstr "Para o caso de você ter um monitor de realmente alta resolução."
+#~ msgid "In case you have a really high res display."
+#~ msgstr "Para o caso de você ter um monitor de realmente alta resolução."
 
-#: pcsx2/gui/ConsoleLogger.cpp:422
-msgid "Default soft-tone color scheme."
-msgstr "Esquema padrão de cores em tons suaves."
+#~ msgid "Default soft-tone color scheme."
+#~ msgstr "Esquema padrão de cores em tons suaves."
 
-#: pcsx2/gui/ConsoleLogger.cpp:423
-msgid "Classic black color scheme for people who enjoy having text seared into their optic nerves."
-msgstr "Clássico esquema de cor preta para pessoas que gostam de ter texto cauterizado nos seus nervos ópticos."
+#~ msgid ""
+#~ "Classic black color scheme for people who enjoy having text seared into "
+#~ "their optic nerves."
+#~ msgstr ""
+#~ "Clássico esquema de cor preta para pessoas que gostam de ter texto "
+#~ "cauterizado nos seus nervos ópticos."
 
-#: pcsx2/gui/ConsoleLogger.cpp:427
-msgid "When checked the log window will be visible over other foreground windows."
-msgstr "Quando marcado, a janela de registro estará visível sobre outras janelas de primeiro plano."
+#~ msgid ""
+#~ "When checked the log window will be visible over other foreground windows."
+#~ msgstr ""
+#~ "Quando marcado, a janela de registro estará visível sobre outras janelas "
+#~ "de primeiro plano."
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:164
-msgid "Always use this option if you want the safest and surest memory card behavior."
-msgstr "Sempre use essa opção caso você queira o mais seguro e certo dos comportamentos de cartão de memória."
+#~ msgid ""
+#~ "Always use this option if you want the safest and surest memory card "
+#~ "behavior."
+#~ msgstr ""
+#~ "Sempre use essa opção caso você queira o mais seguro e certo dos "
+#~ "comportamentos de cartão de memória."
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:168
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:172
-msgid "16 and 32 MB cards have roughly the same compatibility factor."
-msgstr "Cartões de 16 e 32 MB têm aproximadamente o mesmo fator de compatibilidade."
+#~ msgid "16 and 32 MB cards have roughly the same compatibility factor."
+#~ msgstr ""
+#~ "Cartões de 16 e 32 MB têm aproximadamente o mesmo fator de "
+#~ "compatibilidade."
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:176
-msgid "Use at your own risk.  Erratic memory card behavior is possible (though unlikely)."
-msgstr "Use por sua conta e risco. É possível que ocorra algum comportamento irregular do cartão de memória (apesar de ser improvável)."
+#~ msgid ""
+#~ "Use at your own risk.  Erratic memory card behavior is possible (though "
+#~ "unlikely)."
+#~ msgstr ""
+#~ "Use por sua conta e risco. É possível que ocorra algum comportamento "
+#~ "irregular do cartão de memória (apesar de ser improvável)."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:163
-msgid "Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics."
-msgstr "Erro enquanto analisava as configurações de taxas de Frame de ou NTSC ou PAL. As configurações devem ser pontos flutuantes númericos válidos."
+#~ msgid ""
+#~ "Error while parsing either NTSC or PAL framerate settings.  Settings must "
+#~ "be valid floating point numerics."
+#~ msgstr ""
+#~ "Erro enquanto analisava as configurações de taxas de Frame de ou NTSC ou "
+#~ "PAL. As configurações devem ser pontos flutuantes númericos válidos."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:311
-msgid "For troubleshooting potential bugs in the MTGS only, as it is potentially very slow."
-msgstr "Para solucionar problemas de bugs em potencial no MTGS somente, uma vez que esse é potencialmente muito lento."
+#~ msgid ""
+#~ "For troubleshooting potential bugs in the MTGS only, as it is potentially "
+#~ "very slow."
+#~ msgstr ""
+#~ "Para solucionar problemas de bugs em potencial no MTGS somente, uma vez "
+#~ "que esse é potencialmente muito lento."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:315
-msgid "Completely disables all GS plugin activity; ideal for benchmarking EEcore components."
-msgstr "Desabilita completamente toda atividade do plug-in de GS; ideal para avaliar a performance dos componentes centrais do EE."
+#~ msgid ""
+#~ "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+#~ "components."
+#~ msgstr ""
+#~ "Desabilita completamente toda atividade do plug-in de GS; ideal para "
+#~ "avaliar a performance dos componentes centrais do EE."
 
 #~ msgid ""
 #~ "The MTGS thread has become unresponsive while waiting for the GS plugin "

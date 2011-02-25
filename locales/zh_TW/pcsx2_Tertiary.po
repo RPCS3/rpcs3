@@ -2,10 +2,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2010-12-26 10:01-0500\n"
+"POT-Creation-Date: 2011-02-25 18:54+0100\n"
 "PO-Revision-Date: 2011-01-06 06:02+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -17,31 +18,166 @@ msgstr ""
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
+#: common/include/Utilities/Exceptions.h:187
+msgid "No reason given."
+msgstr "未給出原因。"
+
+#: common/src/Utilities/ThreadTools.cpp:41
+msgid "Threading activity: start, detach, sync, deletion, etc."
+msgstr "執行緒的活動：開始、分離、同步、刪除，以及其他。"
+
+#: common/src/Utilities/wxAppWithHelpers.cpp:36
+msgid "Includes idle event processing and some other uncommon event usages."
+msgstr "包含閒置的事件處理和一些其他不尋常的事件使用。"
+
 #: pcsx2/MTGS.cpp:809
-msgid "The MTGS thread has become unresponsive while waiting for the GS plugin to open."
+msgid ""
+"The MTGS thread has become unresponsive while waiting for the GS plugin to "
+"open."
 msgstr "當等候圖形插件開啟時，多執行緒圖形模式的執行緒停止回應。"
 
 #: pcsx2/PluginManager.cpp:1329
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr "初始化內部記憶卡插件失敗。"
 
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "隨著事件傳遞給 PS2 虛擬機，記錄事件。"
+#: pcsx2/gui/AppConfig.cpp:776
+msgid "Safest"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:777
+msgid "Safe (faster)"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:778
+msgid "Balanced"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:779
+msgid "Aggressive"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:780
+msgid "Aggressive plus"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:781
+msgid "Mostly Harmful"
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:412
+msgid "Fits a lot of log in a microcosmically small area."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:414
+msgid "It's what I use (the programmer guy)."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:416
+msgid "Its nice and readable."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:418
+msgid "In case you have a really high res display."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:422
+msgid "Default soft-tone color scheme."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:423
+msgid ""
+"Classic black color scheme for people who enjoy having text seared into "
+"their optic nerves."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:427
+msgid ""
+"When checked the log window will be visible over other foreground windows."
+msgstr ""
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:151
 msgid "!ContextTip:ChangingNTFS"
-msgstr "NTFS 壓縮能夠在任何時候手動變更，透過從檔案總管使用右鍵選單的「內容」選項。"
+msgstr ""
+"NTFS 壓縮能夠在任何時候手動變更，透過從檔案總管使用右鍵選單的「內容」選項。"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:48
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:164
+msgid ""
+"Always use this option if you want the safest and surest memory card "
+"behavior."
+msgstr ""
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:168
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:172
+msgid "16 and 32 MB cards have roughly the same compatibility factor."
+msgstr ""
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:176
+msgid ""
+"Use at your own risk.  Erratic memory card behavior is possible (though "
+"unlikely)."
+msgstr ""
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
 msgid "!ContextTip:Folders:Settings"
 msgstr ""
 "PCSX2 用這個資料夾儲存您的設定，包括大多數插件的設定。\n"
 "（一些較老的插件可能不將設定儲存在這個資料夾裡面）"
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:118
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid "!Panel:HasHacksOverrides"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+msgid "!Notice:Tooltip:Presets:Checkbox"
+msgstr ""
+
+#: pcsx2/gui/ExecutorThread.cpp:40
+msgid "Logs events as they are passed to the PS2 virtual machine."
+msgstr "隨著事件傳遞給 PS2 虛擬機，記錄事件。"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:156
 msgid "!ContextTip:DirPicker:UseDefault"
-msgstr "當勾選時，此資料夾將會自動反映與 PCSX2 當前的使用者設定所關聯的預設值。"
+msgstr ""
+"當勾選時，此資料夾將會自動反映與 PCSX2 當前的使用者設定所關聯的預設值。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:52
+msgid "!ContextTip:Window:Vsync"
+msgstr ""
+"垂直同步消除遊戲畫面出現斷層（Screen tearing），但是效能大幅損失。\n"
+"通常僅用於全螢幕模式，恐怕不是在所有的圖形插件中都能工作。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:57
+msgid "!ContextTip:Window:HideMouse"
+msgstr ""
+"當勾選時，強行令滑鼠指標在遊戲視窗中不可見；\n"
+"對於使用滑鼠作為遊戲中主要的控制裝置，是有用的。\n"
+"預設，滑鼠指標在 2 秒非活動之後自動隱藏。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Fullscreen"
+msgstr ""
+"當開始或恢復模擬時，自動切換至全螢幕模式。\n"
+"您仍能使用 Alt + Enter，在視窗模式和全螢幕模式之間隨時切換。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:FullscreenExclusive"
+msgstr ""
+"可能在 CRT 螢幕上，畫面看起來更好；可能在老舊的顯示卡中，速度稍微快一些。\n"
+"但會導致當視窗模式和全螢幕模式之間切換時，記憶體洩漏或模擬器隨機當掉。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:73
+msgid "!ContextTip:Window:HideGS"
+msgstr ""
+"當按 ESC 或透過選單「檔案 -> 暫停遊戲」暫停模擬器的模擬時，\n"
+"暫時徹底關閉又大又笨重的遊戲視窗。"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:67
 msgid "!ContextTip:Gamefixes:EE Timing Hack"
@@ -59,50 +195,19 @@ msgstr ""
 " * 夢幻騎士（Growlancer）II 和 III\n"
 " * 巫術（Wizardry）"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:51
-msgid "!ContextTip:Window:Vsync"
-msgstr ""
-"垂直同步消除遊戲畫面出現斷層（Screen tearing），但是效能大幅損失。\n"
-"通常僅用於全螢幕模式，恐怕不是在所有的圖形插件中都能工作。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:56
-msgid "!ContextTip:Window:HideMouse"
-msgstr ""
-"當勾選時，強行令滑鼠指標在遊戲視窗中不可見；\n"
-"對於使用滑鼠作為遊戲中主要的控制裝置，是有用的。\n"
-"預設，滑鼠指標在 2 秒非活動之後自動隱藏。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:62
-msgid "!ContextTip:Window:Fullscreen"
-msgstr ""
-"當開始或恢復模擬時，自動切換至全螢幕模式。\n"
-"您仍能使用 Alt + Enter，在視窗模式和全螢幕模式之間隨時切換。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:67
-msgid "!ContextTip:Window:FullscreenExclusive"
-msgstr ""
-"可能在 CRT 螢幕上，畫面看起來更好；可能在老舊的顯示卡中，速度稍微快一些。\n"
-"但會導致當視窗模式和全螢幕模式之間切換時，記憶體洩漏或模擬器隨機當掉。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:72
-msgid "!ContextTip:Window:HideGS"
-msgstr ""
-"當按 ESC 或透過選單「檔案 -> 暫停遊戲」暫停模擬器的模擬時，\n"
-"暫時徹底關閉又大又笨重的遊戲視窗。"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:39
+#: pcsx2/gui/Panels/PathsPanel.cpp:40
 msgid "!ContextTip:Folders:Savestates"
 msgstr ""
 "PCSX2 用這個資料夾儲存即時存檔；\n"
 "即時存檔透過「選單 / 工具列」寫入，或熱鍵 F1 / F3（寫檔 / 讀檔）。"
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:49
+#: pcsx2/gui/Panels/PathsPanel.cpp:50
 msgid "!ContextTip:Folders:Snapshots"
 msgstr ""
 "PCSX2 用這個資料夾儲存遊戲擷圖。\n"
 "取決於所使用的圖形插件，實際的圖片格式可能不同。"
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:59
+#: pcsx2/gui/Panels/PathsPanel.cpp:60
 msgid "!ContextTip:Folders:Logs"
 msgstr ""
 "PCSX2 用這個資料夾儲存日誌和用於診斷的轉存。\n"
@@ -208,28 +313,36 @@ msgstr ""
 msgid "!ContextTip:Framelimiter:Disable"
 msgstr "注意：當畫框限制停用時，渦輪加速和慢動作無法使用。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid "!ContextTip:GS:SyncMTGS"
-msgstr "啟用這個選項，若您認為多執行緒圖形模式執行緒的同步正在導致模擬器當掉或圖形錯誤。"
+#: pcsx2/gui/Panels/VideoPanel.cpp:162
+msgid ""
+"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
+"valid floating point numerics."
+msgstr ""
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:303
+#: pcsx2/gui/Panels/VideoPanel.cpp:295
+msgid ""
+"For troubleshooting potential bugs in the MTGS only, as it is potentially "
+"very slow."
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
+msgid ""
+"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+"components."
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
+msgid "!ContextTip:GS:SyncMTGS"
+msgstr ""
+"啟用這個選項，若您認為多執行緒圖形模式執行緒的同步正在導致模擬器當掉或圖形錯"
+"誤。"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 "移除任何由多執行緒圖形模式的執行緒過載或 GPU 過載引起的效能測試產生的噪音。\n"
 "這個選項最好是和即時存檔配合使用：\n"
 "在一個理想的畫面儲存即時存檔，啟用這個選項，再讀取即時存檔。\n"
 "\n"
-"警告：這個選項在遊戲運行時啟用即可生效，但無法在遊戲運行時停用（圖像變得垃圾）。"
-
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "執行緒的活動：開始、分離、同步、刪除，以及其他。"
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr "包含閒置的事件處理和一些其他不尋常的事件使用。"
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr "未給出原因。"
-
+"警告：這個選項在遊戲運行時啟用即可生效，但無法在遊戲運行時停用（圖像變得垃"
+"圾）。"

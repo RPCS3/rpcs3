@@ -367,7 +367,7 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 
 		m_combobox[pid] = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
 
-		m_configbutton[pid] = new wxButton( this, ButtonId_Configure, L"Configure..." );
+		m_configbutton[pid] = new wxButton( this, ButtonId_Configure, _("Configure...") );
 		m_configbutton[pid]->SetClientData( (void*)(int)pid );
 
 		s_plugin	+= Label( pi->GetShortname() )	| pxBorder( wxTOP | wxLEFT, 2 );

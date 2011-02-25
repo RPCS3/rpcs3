@@ -84,19 +84,19 @@ __declspec(naked) void __fastcall memcpy_amd_(void *dest, const void *src, size_
 	cmp		eax, TINY_BLOCK_COPY
 	jb		$memcpy_ic_3	; tiny? skip mmx copy
 
-	cmp		eax, 32*1024		; don't align between 32k-64k because
+	cmp		eax, 32*1024		; dont align between 32k-64k because
 	jbe		$memcpy_do_align	;  it appears to be slower
 	cmp		eax, 64*1024
 	jbe		$memcpy_align_done
 
 $memcpy_do_align:
-	mov		eax, 8			; a trick that's faster than rep movsb...
+	mov		eax, 8			; a trick that s faster than rep movsb...
 	sub		eax, edi		; align destination to qword
 	and		eax, 111b		; get the low bits
 	sub		ecx, eax		; update copy count
 	neg		eax				; set up to jump into the array
 	add		eax, offset $memcpy_align_done
-	jmp		eax				; jump to array of movsb's
+	jmp		eax				; jump to array of movsb s
 
 align 4
 	movsb
@@ -153,7 +153,7 @@ $memcpy_ic_3:
 	and		eax, 1111b		; only look at the "remainder" bits
 	neg		eax				; set up to jump into the array
 	add		eax, offset $memcpy_last_few
-	jmp		eax				; jump to array of movsd's
+	jmp		eax				; jump to array of movsd s
 
 $memcpy_uc_test:
 	or		eax, eax		; tail end of block prefetch will jump here
@@ -216,9 +216,9 @@ align 16
 	movsd
 	movsd
 
-$memcpy_last_few:		; dword aligned from before movsd's
+$memcpy_last_few:		; dword aligned from before movsd s
 	and		ecx, 11b	; the last few cows must come home
-	jz		$memcpy_final	; no more, let's leave
+	jz		$memcpy_final	; no more, let s leave
 	rep		movsb		; the last 1, 2, or 3 bytes
 
 $memcpy_final:

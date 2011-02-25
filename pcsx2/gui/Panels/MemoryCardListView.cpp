@@ -102,13 +102,13 @@ const ListViewColumnInfo& MemoryCardListView_Simple::GetDefaultColumnInfo( uint 
 {
 	static const ListViewColumnInfo columns[] =
 	{
-		{ L"Slot",			48,		wxLIST_FORMAT_CENTER	},
-		{ L"Status",		96,		wxLIST_FORMAT_CENTER	},
-		{ L"Size",			72,		wxLIST_FORMAT_LEFT		},
-		{ L"Formatted",		96,		wxLIST_FORMAT_CENTER	},
-		{ L"Modified",		96,		wxLIST_FORMAT_LEFT		},
-		{ L"Created",		96,		wxLIST_FORMAT_LEFT		},
-		{ L"Filename",		216,	wxLIST_FORMAT_LEFT		},
+		{ _("Slot")      , 48  , wxLIST_FORMAT_CENTER	},
+		{ _("Status")    , 96  , wxLIST_FORMAT_CENTER	},
+		{ _("Size")      , 72  , wxLIST_FORMAT_LEFT		},
+		{ _("Formatted") , 96  , wxLIST_FORMAT_CENTER	},
+		{ _("Modified")  , 120 , wxLIST_FORMAT_LEFT		},
+		{ _("Created")   , 120 , wxLIST_FORMAT_LEFT		},
+		{ _("Filename")  , 256 , wxLIST_FORMAT_LEFT		},
 	};
 
 	pxAssumeDev( idx < ArraySize(columns), "ListView column index is out of bounds." );

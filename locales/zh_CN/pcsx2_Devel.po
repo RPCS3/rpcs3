@@ -1,11 +1,12 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-01-27 15:28+0800\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2011-02-25 18:54+0100\n"
 "PO-Revision-Date: 2011-01-27 15:28+0800\n"
 "Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
 "Language-Team: \n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -20,7 +21,9 @@ msgid "Dumps detailed information for PS2 executables (ELFs)."
 msgstr "转储 PS2 可执行文件 (ELF) 的详细信息。"
 
 #: pcsx2/SourceLog.cpp:101
-msgid "Logs manual protection, split blocks, and other things that might impact performance."
+msgid ""
+"Logs manual protection, split blocks, and other things that might impact "
+"performance."
 msgstr "记录手动保护、分割块以及其它可能影响性能的东西。"
 
 #: pcsx2/SourceLog.cpp:106
@@ -43,8 +46,7 @@ msgstr "SYSCALL 及 DECI2 活动。"
 msgid "Direct memory accesses to unknown or unmapped EE memory space."
 msgstr "到未知或未映射的内存空间的直接内存访问。"
 
-#: pcsx2/SourceLog.cpp:157
-#: pcsx2/SourceLog.cpp:270
+#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
 msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
 msgstr "反汇编执行核心指令 (除了 COP 指令及 CACHE 指令)。"
 
@@ -65,16 +67,16 @@ msgid "Execution of EE cache instructions."
 msgstr "EE 缓存指令的执行。"
 
 #: pcsx2/SourceLog.cpp:187
-msgid "All known hardware register accesses (very slow!); not including sub filter options below."
+msgid ""
+"All known hardware register accesses (very slow!); not including sub filter "
+"options below."
 msgstr "全部已知硬件寄存器访问 (很慢!)；不包括以下子过滤器选项。"
 
-#: pcsx2/SourceLog.cpp:193
-#: pcsx2/SourceLog.cpp:288
+#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
 msgid "Logs only unknown, unmapped, or unimplemented register accesses."
 msgstr "仅记录未知、未映射或未实现的寄存器访问。"
 
-#: pcsx2/SourceLog.cpp:199
-#: pcsx2/SourceLog.cpp:294
+#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
 msgid "Logs only DMA-related registers."
 msgstr "仅记录 DMA 相关寄存器。"
 
@@ -91,58 +93,62 @@ msgid "All VIFcode processing; command, tag style, interrupts."
 msgstr "全部 VIF 代码处理；命令、标签风格、中断。"
 
 #: pcsx2/SourceLog.cpp:223
+msgid "All processing involved in Path3 Masking"
+msgstr ""
+
+#: pcsx2/SourceLog.cpp:229
 msgid "Scratchpad's MFIFO activity."
 msgstr "暂存器的 MFIFO 活动。"
 
-#: pcsx2/SourceLog.cpp:229
+#: pcsx2/SourceLog.cpp:235
 msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
 msgstr "实际的数据传输日志、总线权限仲裁、总线阻塞等等。"
 
-#: pcsx2/SourceLog.cpp:235
+#: pcsx2/SourceLog.cpp:241
 msgid "Tracks all EE counters events and some counter register activity."
 msgstr "跟踪所有的 EE 计数器事件和一些计数器寄存器活动。"
 
-#: pcsx2/SourceLog.cpp:241
+#: pcsx2/SourceLog.cpp:247
 msgid "Dumps various VIF and VIFcode processing data."
 msgstr "转储各种 VIF 和 VIF 代码处理数据。"
 
-#: pcsx2/SourceLog.cpp:247
+#: pcsx2/SourceLog.cpp:253
 msgid "Dumps various GIF and GIFtag parsing data."
 msgstr "转储各种 GIF 和 GIF 标签解析数据。"
 
-#: pcsx2/SourceLog.cpp:258
+#: pcsx2/SourceLog.cpp:264
 msgid "SYSCALL and IRX activity."
 msgstr "SYSCALL 及 IRX 活动。"
 
-#: pcsx2/SourceLog.cpp:264
+#: pcsx2/SourceLog.cpp:270
 msgid "Direct memory accesses to unknown or unmapped IOP memory space."
 msgstr "到未知或未映射的内存空间的直接内存访问。"
 
-#: pcsx2/SourceLog.cpp:276
+#: pcsx2/SourceLog.cpp:282
 msgid "Disasm of the IOP's GPU co-processor instructions."
 msgstr "反汇编 IOP GPU 协处理器指令。"
 
-#: pcsx2/SourceLog.cpp:282
-msgid "All known hardware register accesses, not including the sub-filters below."
+#: pcsx2/SourceLog.cpp:288
+msgid ""
+"All known hardware register accesses, not including the sub-filters below."
 msgstr "全部已知硬件寄存器访问，不包括以下子过滤器。"
 
-#: pcsx2/SourceLog.cpp:300
+#: pcsx2/SourceLog.cpp:306
 msgid "Memorycard reads, writes, erases, terminators, and other processing."
 msgstr "记忆卡读取、写入、擦除、终止符，及其它操作。"
 
-#: pcsx2/SourceLog.cpp:306
+#: pcsx2/SourceLog.cpp:312
 msgid "Gamepad activity on the SIO."
 msgstr "SIO 上的手柄活动。"
 
-#: pcsx2/SourceLog.cpp:312
+#: pcsx2/SourceLog.cpp:318
 msgid "Actual DMA event processing and data transfer logs."
 msgstr "实际的 DMA 事件处理及数据传输日志。"
 
-#: pcsx2/SourceLog.cpp:318
+#: pcsx2/SourceLog.cpp:324
 msgid "Tracks all IOP counters events and some counter register activity."
 msgstr "跟踪所有 IOP 计数器事件和一些计数器寄存器活动。"
 
-#: pcsx2/SourceLog.cpp:324
+#: pcsx2/SourceLog.cpp:330
 msgid "Detailed logging of CDVD hardware."
 msgstr "详细记录 CDVD 硬件信息。"
-

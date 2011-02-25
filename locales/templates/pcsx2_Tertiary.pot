@@ -1,19 +1,33 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR PCSX2_Dev_Team
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2010-12-26 10:01-0500\n"
-"PO-Revision-Date: 2010-12-26 10:01-0500\n"
-"Last-Translator: Jake Stine <jake.stine@gmail.com>\n"
-"Language-Team: \n"
+"POT-Creation-Date: 2011-02-25 19:05+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Poedit-KeywordsList: pxEt;pxLt\n"
-"X-Poedit-SourceCharset: utf-8\n"
-"X-Poedit-Basepath: trunk\\\n"
-"X-Poedit-SearchPath-0: pcsx2\n"
-"X-Poedit-SearchPath-1: common\n"
+
+#: common/include/Utilities/Exceptions.h:187
+msgid "No reason given."
+msgstr ""
+
+#: common/src/Utilities/ThreadTools.cpp:41
+msgid "Threading activity: start, detach, sync, deletion, etc."
+msgstr ""
+
+#: common/src/Utilities/wxAppWithHelpers.cpp:36
+msgid "Includes idle event processing and some other uncommon event usages."
+msgstr ""
 
 #: pcsx2/MTGS.cpp:809
 msgid "The MTGS thread has become unresponsive while waiting for the GS plugin to open."
@@ -23,20 +37,121 @@ msgstr ""
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr ""
 
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
+#: pcsx2/gui/AppConfig.cpp:776
+msgid "Safest"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:777
+msgid "Safe (faster)"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:778
+msgid "Balanced"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:779
+msgid "Aggressive"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:780
+msgid "Aggressive plus"
+msgstr ""
+
+#: pcsx2/gui/AppConfig.cpp:781
+msgid "Mostly Harmful"
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:412
+msgid "Fits a lot of log in a microcosmically small area."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:414
+msgid "It's what I use (the programmer guy)."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:416
+msgid "Its nice and readable."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:418
+msgid "In case you have a really high res display."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:422
+msgid "Default soft-tone color scheme."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:423
+msgid "Classic black color scheme for people who enjoy having text seared into their optic nerves."
+msgstr ""
+
+#: pcsx2/gui/ConsoleLogger.cpp:427
+msgid "When checked the log window will be visible over other foreground windows."
 msgstr ""
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:151
 msgid "!ContextTip:ChangingNTFS"
 msgstr ""
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:48
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:164
+msgid "Always use this option if you want the safest and surest memory card behavior."
+msgstr ""
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:168
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:172
+msgid "16 and 32 MB cards have roughly the same compatibility factor."
+msgstr ""
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:176
+msgid "Use at your own risk.  Erratic memory card behavior is possible (though unlikely)."
+msgstr ""
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
 msgid "!ContextTip:Folders:Settings"
 msgstr ""
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:118
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid "!Panel:HasHacksOverrides"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+msgid "!Notice:Tooltip:Presets:Checkbox"
+msgstr ""
+
+#: pcsx2/gui/ExecutorThread.cpp:40
+msgid "Logs events as they are passed to the PS2 virtual machine."
+msgstr ""
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:156
 msgid "!ContextTip:DirPicker:UseDefault"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:52
+msgid "!ContextTip:Window:Vsync"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:57
+msgid "!ContextTip:Window:HideMouse"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Fullscreen"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:FullscreenExclusive"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:73
+msgid "!ContextTip:Window:HideGS"
 msgstr ""
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:67
@@ -47,35 +162,15 @@ msgstr ""
 msgid "!ContextTip:Gamefixes:OPH Flag hack"
 msgstr ""
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:51
-msgid "!ContextTip:Window:Vsync"
-msgstr ""
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:56
-msgid "!ContextTip:Window:HideMouse"
-msgstr ""
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:62
-msgid "!ContextTip:Window:Fullscreen"
-msgstr ""
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:67
-msgid "!ContextTip:Window:FullscreenExclusive"
-msgstr ""
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:72
-msgid "!ContextTip:Window:HideGS"
-msgstr ""
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:39
+#: pcsx2/gui/Panels/PathsPanel.cpp:40
 msgid "!ContextTip:Folders:Savestates"
 msgstr ""
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:49
+#: pcsx2/gui/Panels/PathsPanel.cpp:50
 msgid "!ContextTip:Folders:Snapshots"
 msgstr ""
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:59
+#: pcsx2/gui/Panels/PathsPanel.cpp:60
 msgid "!ContextTip:Folders:Logs"
 msgstr ""
 
@@ -143,23 +238,22 @@ msgstr ""
 msgid "!ContextTip:Framelimiter:Disable"
 msgstr ""
 
+#: pcsx2/gui/Panels/VideoPanel.cpp:162
+msgid "Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics."
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:295
+msgid "For troubleshooting potential bugs in the MTGS only, as it is potentially very slow."
+msgstr ""
+
 #: pcsx2/gui/Panels/VideoPanel.cpp:299
+msgid "Completely disables all GS plugin activity; ideal for benchmarking EEcore components."
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr ""
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:303
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
-
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr ""
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr ""
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr ""
-

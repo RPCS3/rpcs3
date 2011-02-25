@@ -39,7 +39,7 @@ Panels::StandardPathsPanel::StandardPathsPanel( wxWindow* parent )
 		_("Select folder for Savestates") ))->
 		SetToolTip( pxEt( "!ContextTip:Folders:Savestates",
 			L"This folder is where PCSX2 records savestates; which are recorded either by using "
-			L"menus/toolbars, or by pressing F1/F3 (load/save)."
+			L"menus/toolbars, or by pressing F1/F3 (save/load)."
 		)
 	) | SubGroup();
 
