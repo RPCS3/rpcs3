@@ -278,7 +278,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	if(m_wnd->IsManaged())
 	{
-		SetExclusive(!!theApp.GetConfig("windowed", 1));
+		SetExclusive(!theApp.GetConfig("windowed", 1));
 	}
 
 	return true;

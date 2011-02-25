@@ -23,7 +23,7 @@
 #include "GSDeviceSDL.h"
 
 GSDeviceSDL::GSDeviceSDL()
-	: m_init(false)
+	: m_free_window(false)
 	, m_window(NULL)
 	, m_renderer(NULL)
 	, m_texture(NULL)
@@ -42,20 +42,24 @@ GSDeviceSDL::~GSDeviceSDL()
 		SDL_DestroyRenderer(m_renderer);
 	}
 
-	if(m_window != NULL)
+	if(m_window != NULL && m_free_window)
 	{
 		SDL_DestroyWindow(m_window);
-	}
-
-	if(m_init)
-	{
-		SDL_Quit();
 	}
 }
 
 bool GSDeviceSDL::Create(GSWnd* wnd)
 {
 	m_window = (SDL_Window*)wnd->GetHandle();
+
+	if(m_window == wnd->GetDisplay())
+	{
+		// HACK: no SDL window
+
+		m_window = SDL_CreateWindowFrom(wnd->GetHandle());
+
+		m_free_window = true;
+	}
 
 	return GSDeviceSW::Create(wnd);
 }

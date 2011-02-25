@@ -26,8 +26,7 @@
 
 class GSDeviceSDL : public GSDeviceSW
 {
-	bool m_init;
-
+	bool m_free_window;
 	SDL_Window* m_window;
 	SDL_Renderer* m_renderer;
 	SDL_Texture* m_texture;

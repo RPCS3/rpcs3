@@ -131,7 +131,7 @@ EXPORT_C_(int) GSinit()
 		return -1;
 	}
 
-#else
+#endif
 
 	if(!SDL_WasInit(SDL_INIT_VIDEO))
 	{
@@ -140,8 +140,6 @@ EXPORT_C_(int) GSinit()
 			return -1;
 		}
 	}
-
-#endif
 
 	return 0;
 }
@@ -154,6 +152,8 @@ EXPORT_C GSshutdown()
 
 	s_renderer = -1;
 
+	SDL_Quit();
+
 #ifdef _WINDOWS
 
 	if(SUCCEEDED(s_hr))
@@ -162,10 +162,6 @@ EXPORT_C GSshutdown()
 
 		s_hr = E_FAIL;
 	}
-
-#else
-
-	SDL_Quit();
 
 #endif
 }
