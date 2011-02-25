@@ -118,6 +118,8 @@ else(OPENGL_FOUND AND X11_FOUND)
     message(STATUS "Skip build of GSdx: miss some dependencies")
     message(STATUS "${msg_dep_gsdx}")
 endif(OPENGL_FOUND AND X11_FOUND)
+# FIXME: for the moment disable gsdx. I will enable it when sdl is supported on cmake
+set(GSdx FALSE)
 #---------------------------------------
 
 #---------------------------------------
