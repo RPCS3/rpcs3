@@ -95,7 +95,8 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	: BaseConfigurationDialog( parent, _("MemoryCard Manager"), 600 )
 {
 	m_panel_mcdlist	= new MemoryCardListPanel_Simple( this );
-	
+	m_needs_suspending = false;
+
 	// [TODO] : Plan here is to add an advanced tab which gives the user the ability
 	// to configure the names of each memory card slot.
 
@@ -128,6 +129,18 @@ void Dialogs::McdConfigDialog::OnMultitapClicked( wxCommandEvent& evt )
 
 bool Dialogs::McdConfigDialog::Show( bool show )
 {
+	// Suspend the emulation before any file operations on the memory cards can be done.
+	if( show && CoreThread.IsRunning() )
+	{
+		m_needs_suspending = true;
+		CoreThread.Suspend();
+	}
+	else if( !show && m_needs_suspending == true )
+	{
+		m_needs_suspending = false;
+		CoreThread.Resume();
+	}
+
 	if( show && m_panel_mcdlist )
 		m_panel_mcdlist->OnShown();
 
