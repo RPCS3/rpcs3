@@ -99,14 +99,15 @@ void NTFS_CompressFile( const wxString& file, bool compressStatus )
 		DWORD bytesReturned = 0;
 		DWORD compressMode = compressStatus ? COMPRESSION_FORMAT_DEFAULT : COMPRESSION_FORMAT_NONE;
 
-		BOOL result = DeviceIoControl(
+		/*BOOL result = */DeviceIoControl(
 			bloated_crap, FSCTL_SET_COMPRESSION,
 			&compressMode, 2, NULL, 0,
 			&bytesReturned, NULL
 		);
 
-		if( !result )
-			StreamException_LogLastError( file, L"NTFS Compress Notice" );
+		// No need to see this every time on my exFAT drive (rama)
+		//if( !result )
+		//	StreamException_LogLastError( file, L"NTFS Compress Notice" );
 
 		CloseHandle( bloated_crap );
 	}

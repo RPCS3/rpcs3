@@ -87,7 +87,7 @@ Panels::FirstTimeIntroPanel::FirstTimeIntroPanel( wxWindow* parent )
 	*this += langSel | StdExpand();
 	*this += GetCharHeight() * 2;
 
-	*this += Heading(AddAppName(L"Welcome to %s!")).Bold();
+	*this += Heading(_("Welcome to PCSX2!")).Bold() | StdExpand();
 	*this += GetCharHeight();
 
 	*this += Heading(AddAppName(

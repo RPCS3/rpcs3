@@ -362,8 +362,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	int m_statusbar_widths[] = { (int)(backsize.GetWidth()*0.73), (int)(backsize.GetWidth()*0.25) };
 	m_statusbar.SetStatusWidths(2, m_statusbar_widths);
-	m_statusbar.SetStatusText( L"The Status is Good!", 0);
-	m_statusbar.SetStatusText( wxEmptyString, 1);
+	//m_statusbar.SetStatusText( L"The Status is Good!", 0);
+	m_statusbar.SetStatusText( wxEmptyString, 0);
 
 	wxBoxSizer& joe( *new wxBoxSizer( wxVERTICAL ) );
 	joe.Add( &m_background );
