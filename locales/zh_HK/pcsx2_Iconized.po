@@ -1,0 +1,281 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: PCSX2 0.9.7\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2011-02-25 18:54+0100\n"
+"PO-Revision-Date: 2011-01-22 08:43+0800\n"
+"Last-Translator: 呆丸北拜\n"
+"Language-Team: pcsx2fan\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxE;pxExpandMsg\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: F:\\PCSX2_0.9.7_GUI_翻譯\\SRC_4152\\\n"
+"X-Poedit-Language: Chinese\n"
+"X-Poedit-Country: TAIWAN\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: common/src/Utilities/Exceptions.cpp:254
+msgid "!Notice:VirtualMemoryMap"
+msgstr ""
+"可用的虛擬記憶體不足，\n"
+"或必備的虛擬記憶體映射已經被其他處理程序、服務，或 DLL 保留。"
+
+#: pcsx2/CDVD/CDVD.cpp:385
+msgid "!Notice:PsxDisc"
+msgstr ""
+"PCSX2 不支援 Playstation 遊戲光碟。\n"
+"若您想要模擬 PS 遊戲，您必須下載 PS 模擬器，譬如 ePSXe 或 PCSX。"
+
+#: pcsx2/System.cpp:114
+msgid "!Notice:Recompiler:VirtualMemoryAlloc"
+msgstr ""
+"反編譯裝置無法保留內部快取所要求的相接的記憶體。\n"
+"此錯誤可能由低水平的虛擬記憶體資源引起，譬如分頁檔案小或沒有分頁檔案，\n"
+"或由另一個獨占大量記憶體的程式引起。\n"
+"您也可以嘗試減少 PCSX2 全部反編譯裝置的預設快取大小，位於 Host 設定。"
+
+#: pcsx2/System.cpp:348
+msgid "!Notice:EmuCore::MemoryForVM"
+msgstr ""
+"PCSX2 無法分配 PS2 虛擬機需要的記憶體。\n"
+"關閉一些獨占記憶體的背景工作並再次嘗試。"
+
+#: pcsx2/gui/AppInit.cpp:43
+msgid "!Notice:Startup:NoSSE2"
+msgstr ""
+"警告：您的電腦不支援 SSE2，許多 PCSX2 的反編譯裝置和插件需要 SSE2。\n"
+"您可供調整的模擬器選項將會受到限制，並且遊戲速度會「非常」慢。"
+
+#: pcsx2/gui/AppInit.cpp:162
+msgid "!Notice:RecompilerInit:Header"
+msgstr "警告：某些指定的 PS2 反編譯裝置初始化失敗，並且被停用："
+
+#: pcsx2/gui/AppInit.cpp:211
+msgid "!Notice:RecompilerInit:Footer"
+msgstr ""
+"注意：反編譯裝置並非執行 PCSX2 所必須的，但反編譯裝置大幅提升遊戲速度。\n"
+"若錯誤已經解決，您可能必須手動重新啟用上面列出的反編譯裝置。"
+
+#: pcsx2/gui/AppMain.cpp:476
+msgid "!Notice:BiosDumpRequired"
+msgstr ""
+"PCSX2 需要 PS2 BIOS 才能運行遊戲。\n"
+"出於法律上的原因，\n"
+"您「必須」從您自己的 PS2 真實遊戲主機獲取 BIOS\n"
+"（借的 PS2 不算）。\n"
+"進一步的說明請洽 FAQ 和指南。"
+
+#: pcsx2/gui/AppMain.cpp:559
+msgid "!Notice Error:Thread Deadlock Actions"
+msgstr ""
+"【忽略】繼續等待執行緒回應。\n"
+"【取消】嘗試取消執行緒。\n"
+"【終止】立即退出 PCSX2。"
+
+#: pcsx2/gui/AppUserMode.cpp:59
+msgid "!Error:PortableModeRights"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
+msgid "!Panel:Folders:Settings"
+msgstr ""
+"您可以在這裡指定一個位置用來儲存 PCSX2 的設定檔。\n"
+"若指定的位置包含已經存在的 PCSX2 設定檔，您將會被問及匯入或覆寫現存的設定。"
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
+msgid "!Wizard:Welcome"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
+msgid "!Wizard:Bios:Tutorial"
+msgstr ""
+"為了運行遊戲，PCSX2 要求一份「合法」的 PS2 BIOS 拷貝。\n"
+"您不能使用一份從朋友或網路借來的 PS2 BIOS 拷貝。\n"
+"您必須從您「自己」的 Playstation 2 遊戲主機擷取 BIOS。"
+
+#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
+msgid "!Notice:ImportExistingSettings"
+msgstr ""
+"在指定的設定檔資料夾發現已經存在的 %s 設定檔。\n"
+"您想要匯入其中的設定，或以 %s 的預設設定覆寫設定檔？\n"
+"\n"
+"（或按【取消】選擇一個不同的設定檔資料夾）"
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
+msgid "!Panel:Mcd:NtfsCompress"
+msgstr ""
+"NTFS 壓縮是內建的，速度快，而且完全可靠；\n"
+"在記憶卡的壓縮上，表現非常好。（強烈推薦）"
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
+msgid "!Panel:Mcd:EnableEjection"
+msgstr ""
+"讀取即時存檔之後，透過強行讓遊戲重新索引記憶卡的內容，避免記憶卡損壞。\n"
+"可能無法和所有遊戲都相容（已知「吉他英雄」不相容）。"
+
+#: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
+msgid "!Panel:StuckThread:Heading"
+msgstr ""
+"執行緒【%s】停止回應。\n"
+"可能是死當，或可能僅僅是執行速度「極」慢。"
+
+#: pcsx2/gui/IsoDropTarget.cpp:28
+msgid "!Notice:ConfirmSysReset"
+msgstr ""
+"重置當前的 PS2 虛擬機狀態；\n"
+"所有當前的遊戲進展將會丟失。您確定嗎？"
+
+#: pcsx2/gui/MainMenuClicks.cpp:106
+msgid "!Notice:DeleteSettings"
+msgstr ""
+"清除 %s 的設定，並且允許您重新執行首次執行精靈。\n"
+"本操作完成之後，您需要手動重新啟動 %s。\n"
+"\n"
+"警告！！按【確定】刪除 %s 的全部設定，並會強行關閉 PCSX2，丟失任何當前的遊戲"
+"進展。您真的確定嗎？\n"
+"\n"
+"（注意：各個插件自身的設定不受影響）"
+
+#: pcsx2/gui/MemoryCardFile.cpp:77
+msgid "!Notice:Mcd:HasBeenDisabled"
+msgstr ""
+"插槽 %d 的記憶卡已經被自動停用。\n"
+"您可以在任何時候，透過「PCSX2 主選單 => 設定 => 記憶卡」糾正這一問題並重新啟"
+"用記憶卡。"
+
+#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
+msgid "!Notice:BIOS:InvalidSelection"
+msgstr ""
+"請選擇一個有效的 BIOS。\n"
+"若您無法作出有效的選擇，那就按【取消】關閉設定視窗。"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:111
+#, fuzzy
+msgid "!Panel:EE/IOP:Heading"
+msgstr ""
+"注意：\n"
+"由於 PS2 的硬體設計，精確的跳框是不可能的。\n"
+"啟用跳框將導致一些遊戲出現嚴重的圖形錯誤。"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:178
+#, fuzzy
+msgid "!Panel:VUs:Heading"
+msgstr ""
+"注意：\n"
+"由於 PS2 的硬體設計，精確的跳框是不可能的。\n"
+"啟用跳框將導致一些遊戲出現嚴重的圖形錯誤。"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:69
+msgid "!Notice:DirPicker:CreatePath"
+msgstr "指定的路徑 / 資料夾不存在。您想要新增嗎？"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+msgid "!Panel:Gamefixes:Compat Warning"
+msgstr ""
+"遊戲修正能夠修復在一些遊戲裡不正確的模擬。但會引起其他遊戲出現相容性或效能問"
+"題。\n"
+"若變更所玩的遊戲，您需要手動關閉已啟用的遊戲修正。"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:368
+msgid "!Notice:Mcd:Overwrite"
+msgstr ""
+"複製插槽 %u 的記憶卡內容，覆寫插槽 %u 的記憶卡。\n"
+"目標插槽記憶卡的全部資料將會丟失。您確定嗎？"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:384
+msgid "!Notice:Mcd:Copy Failed"
+msgstr "錯誤！無法複製記憶卡至插槽 %u。目標檔案使用中。"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:596
+msgid "!Notice:Mcd:Delete"
+msgstr ""
+"您即將刪除 %u 插槽已格式化的記憶卡。\n"
+"該記憶卡的全部資料將會丟失！您真的確定嗎？"
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+msgid "!Panel:Usermode:Explained"
+msgstr ""
+"請選擇您首選的預設位置，用於儲存下列 PCSX2 使用者層級的檔案。\n"
+"（包括：記憶卡、遊戲擷圖、設定檔、即時存檔）\n"
+"這些資料夾位置能夠在任何時候透過核心設定視窗覆寫。"
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:41
+msgid "!Panel:Usermode:Warning"
+msgstr ""
+"您能夠在這裡變更首選的預設位置，用於儲存 PCSX2 使用者層級的檔案。\n"
+"（包括：記憶卡、遊戲擷圖、設定檔、即時存檔）\n"
+"本選項僅影響被設定為使用安裝時預設值的標準路徑。"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+msgid "!Notice:PluginSelector:ConfirmShutdown"
+msgstr ""
+"警告！更換插件要求 PS2 虛擬機徹底關閉並重新啟動。\n"
+"PCSX2 會嘗試儲存並還原目前的遊戲狀態，\n"
+"但如果新選的插件不相容，遊戲狀態的還原可能會失敗，並丟失目前的遊戲進展。\n"
+"\n"
+"您確定您想要現在套用變更嗎？"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
+msgid "!Notice:PluginSelector:ApplyFailed"
+msgstr ""
+"為了運行 %s，全部插件都必須具備有效的選擇。\n"
+"若由於插件丟失或 %s 未能完整安裝，令您無法作出有效的選擇，\n"
+"那就按【取消】關閉設定視窗。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
+msgid "!Panel:Speedhacks:Overview"
+msgstr ""
+"速度駭客通常會提升遊戲速度，但可能導致遊戲出現小毛病、破損的聲音、錯誤的 FPS "
+"顯示。\n"
+"當遊戲出現問題時，首先停用速度駭客。"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:223
+msgid "!Panel:Frameskip:Heading"
+msgstr ""
+"注意：\n"
+"由於 PS2 的硬體設計，精確的跳框是不可能的。\n"
+"啟用跳框將導致一些遊戲出現嚴重的圖形錯誤。"
+
+#: pcsx2/vtlb.cpp:698
+msgid "!Notice:HostVmReserve"
+msgstr ""
+"您的系統虛擬資源過低，以致 PCSX2 無法運行。\n"
+"可能由分頁檔案小或沒有分頁檔案引起，\n"
+"或由其他獨占資源的程式引起。"
+
+#: pcsx2/x86/sVU_zerorec.cpp:362
+msgid "!Notice:superVU:VirtualMemoryAlloc"
+msgstr ""
+"幾乎是 Out of Memory：\n"
+"SuperVU 無法留住所需要的指定的記憶體範圍，SuperVU 不可用。\n"
+"這不是嚴重的錯誤，因為 SuperVU 是過時的。無論如何，您應該使用 microVU 代"
+"替。：）"
+
+#~ msgid "!Notice:DocsFolderFileConflict"
+#~ msgstr ""
+#~ "PCSX2 無法在所要求的位置，建立檔案資料夾。\n"
+#~ "路徑名稱和現有的檔案相匹配。\n"
+#~ "刪除現有的檔案，或變更儲存位置，然後再重試。"
+
+#~ msgid "!Panel:HasHacksOverrides"
+#~ msgstr ""
+#~ "警告！您正在從覆寫現有設定的命令列選項執行 PCSX2。\n"
+#~ "這些命令列選項不會反映到設定視窗中，並且會被停用。\n"
+#~ "如果您在這裡套用任何變更。"
+
+#~ msgid "!Panel:HasPluginsOverrides"
+#~ msgstr ""
+#~ "警告！您正在從覆寫現有插件 / 資料夾設定的命令列選項執行 PCSX2。\n"
+#~ "這些命令列選項不會反映到設定視窗中，並且會被停用。\n"
+#~ "當您在這裡套用變更時。"
+
+#~ msgid "!Panel:Framelimiter:Heading"
+#~ msgstr ""
+#~ "內部的畫框限制裝置控制 PS2 虛擬機的速度。\n"
+#~ "以百分數表示的可供調整的數值，\n"
+#~ "基於同樣也可以調整的\n"
+#~ "NTSC 和 PAL 區域的預設 FPS。"
