@@ -571,7 +571,8 @@ void SysExecEvent_SaveSinglePlugin::InvokeEvent()
 			Console.WriteLn( Color_Green, L"Recovering single plugin: " + tbl_PluginInfo[m_pid].GetShortname() );
 			memLoadingState load( plugstore );
 			GetCorePlugins().Freeze( m_pid, load );
-			GetCorePlugins().Close( m_pid );		// hack for stupid GS plugins.
+			// GS plugin suspend / resume hack. Removed in r4363, hopefully never to return :p
+			//GetCorePlugins().Close( m_pid );		// hack for stupid GS plugins.
 		}
 	}
 
