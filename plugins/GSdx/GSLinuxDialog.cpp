@@ -48,7 +48,7 @@ bool RunLinuxDialog()
 	GtkWidget *render_label, *render_combo_box;
 	GtkWidget *interlace_label, *interlace_combo_box;
 	GtkWidget *aspect_label, *aspect_combo_box;
-	GtkWidget *texture_check, *log_check, *an_8_bit_check, *alpha_check, *aa_check, *win_check;
+	GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check, *win_check;
 	int return_value;
 
 	/* Create the widgets */
@@ -136,27 +136,27 @@ bool RunLinuxDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), aspect_combo_box);
 
 
-	texture_check = gtk_check_button_new_with_label("Texture Filtering");
-	log_check = gtk_check_button_new_with_label("Logarithmic Z");
-	an_8_bit_check = gtk_check_button_new_with_label("Allow 8 bit textures");
-	alpha_check = gtk_check_button_new_with_label("Alpha correction (FBA)");
+	filter_check = gtk_check_button_new_with_label("Texture Filtering");
+	logz_check = gtk_check_button_new_with_label("Logarithmic Z");
+	paltex_check = gtk_check_button_new_with_label("Allow 8 bit textures");
+	fba_check = gtk_check_button_new_with_label("Alpha correction (FBA)");
 	aa_check = gtk_check_button_new_with_label("Edge anti-aliasing");
 	win_check = gtk_check_button_new_with_label("Disable Effects Processing");
 
-	gtk_container_add(GTK_CONTAINER(main_box), texture_check);
-	gtk_container_add(GTK_CONTAINER(main_box), log_check);
-	gtk_container_add(GTK_CONTAINER(main_box), an_8_bit_check);
-	gtk_container_add(GTK_CONTAINER(main_box), alpha_check);
+	gtk_container_add(GTK_CONTAINER(main_box), filter_check);
+	gtk_container_add(GTK_CONTAINER(main_box), logz_check);
+	gtk_container_add(GTK_CONTAINER(main_box), paltex_check);
+	gtk_container_add(GTK_CONTAINER(main_box), fba_check);
 	gtk_container_add(GTK_CONTAINER(main_box), aa_check);
 	gtk_container_add(GTK_CONTAINER(main_box), win_check);
 
-	// These should be set to their actual values, not false.
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(texture_check), false);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(log_check), false);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(an_8_bit_check), false);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(alpha_check), false);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(aa_check), false);
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(win_check), false);
+	// Filter should be 3 states, not 2.
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(filter_check), theApp.GetConfig("filter", 1));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(logz_check), theApp.GetConfig("logz", 1));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(paltex_check), theApp.GetConfig("paltex", 0));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fba_check), theApp.GetConfig("fba", 1));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(aa_check), theApp.GetConfig("aa1", 0));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(win_check), theApp.GetConfig("windowed", 1));
 
 	gtk_container_add (GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_frame);
 	gtk_widget_show_all (dialog);
@@ -179,16 +179,14 @@ bool RunLinuxDialog()
 
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(aspect_combo_box)) != -1)
 			aspect = gtk_combo_box_get_active(GTK_COMBO_BOX(aspect_combo_box));
-
-
-		texture = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(texture_check));
-		log = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(log_check));
-		8_bit = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(an_8_bit_check));
-		alpha = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(alpha_check));
-		aa = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(aa_check));
-		windowed = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win_check));
-
 		#endif
+
+        theApp.SetConfig("filter", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(filter_check)));
+        theApp.SetConfig("logz", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(logz_check)));
+        theApp.SetConfig("paltex", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(paltex_check)));
+        theApp.SetConfig("fba", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fba_check)));
+        theApp.SetConfig("aa1", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(aa_check)));
+        theApp.SetConfig("windowed", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win_check)));
 
 		gtk_widget_destroy (dialog);
 
