@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="PcsxBaseProperties"
-	OutputDirectory="G:\PCSX2\$(PcsxSubsection)"
+	OutputDirectory="$(SolutionDir)\bin\$(PcsxSubsection)"
 	IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 	DeleteExtensionsOnClean="*.bsc;*.idb;*.sbr;*.res;*.pch;*.pdb;*.obj;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;*.pgc;*.pgd;*.meta;$(TargetPath)"
 	>
