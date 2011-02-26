@@ -237,7 +237,7 @@ protected:
                                             const wxString& wildcard)
     {
         return new wxFilePickerWidget(parent, wxID_ANY,
-                                      wxFilePickerWidgetLabel,
+                                      wxGetTranslation(wxFilePickerWidgetLabel),
                                       path, message, wildcard,
                                       wxDefaultPosition, wxDefaultSize,
                                       GetPickerStyle(GetWindowStyle()));
@@ -326,7 +326,7 @@ protected:
                                             const wxString& message,
                                             const wxString& WXUNUSED(wildcard))
     {
-        return new wxDirPickerWidget(parent, wxID_ANY, wxDirPickerWidgetLabel,
+        return new wxDirPickerWidget(parent, wxID_ANY, wxGetTranslation(wxDirPickerWidgetLabel),
                                      path, message,
                                      wxDefaultPosition, wxDefaultSize,
                                      GetPickerStyle(GetWindowStyle()));
