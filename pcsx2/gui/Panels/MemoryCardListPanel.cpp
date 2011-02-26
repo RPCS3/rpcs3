@@ -189,8 +189,6 @@ void Panels::BaseMcdListPanel::Apply()
 {
 	// Save column widths to the configuration file.  Since these are used *only* by this
 	// dialog, we use a direct local ini save approach, instead of going through g_conf.
-	uint colcnt = m_listview->GetColumnCount();
-
 	if (m_listview)
 	{
 		IniSaver saver;
@@ -660,7 +658,7 @@ void Panels::MemoryCardListPanel_Simple::OnListDrag(wxListEvent& evt)
 	
 	wxDropSource dragSource( m_listview );
 	dragSource.SetData( my_data );
-	wxDragResult result = dragSource.DoDragDrop( wxDrag_AllowMove );
+	/*wxDragResult result = */dragSource.DoDragDrop( wxDrag_AllowMove );
 }
 
 void Panels::MemoryCardListPanel_Simple::OnListSelectionChanged(wxListEvent& evt)

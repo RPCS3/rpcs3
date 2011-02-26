@@ -181,6 +181,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="G:\PCSX2\plugins\$(ProjectName)-$(SSEtype).dll"
 				AdditionalLibraryDirectories=""
 				ModuleDefinitionFile=".\GSdx.def"
 			/>
@@ -678,6 +679,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="G:\PCSX2\plugins\$(ProjectName)-$(SSEtype).dll"
 				AdditionalLibraryDirectories=""
 				ModuleDefinitionFile=".\GSdx.def"
 			/>

@@ -232,7 +232,7 @@ void MapTLB(int i)
 	u32 mask, addr;
 	u32 saddr, eaddr;
 
-	DevCon.WriteLn("MAP TLB %d: 0x%08X-> [0x%08X 0x%08X] S=0x%08X G=%d ASID=%d Mask=0x%03X EntryLo0 PFN=%x EntryLo0 Cache=%x EntryLo1 PFN=%x EntryLo1 Cache=%x VPN2=%x",
+	DbgCon.WriteLn("MAP TLB %d: 0x%08X-> [0x%08X 0x%08X] S=0x%08X G=%d ASID=%d Mask=0x%03X EntryLo0 PFN=%x EntryLo0 Cache=%x EntryLo1 PFN=%x EntryLo1 Cache=%x VPN2=%x",
 		i, tlb[i].VPN2, tlb[i].PFN0, tlb[i].PFN1, tlb[i].S, tlb[i].G, tlb[i].ASID, tlb[i].Mask, tlb[i].EntryLo0 >> 6, (tlb[i].EntryLo0 & 0x38) >> 3, tlb[i].EntryLo1 >> 6, (tlb[i].EntryLo1 & 0x38) >> 3, tlb[i].VPN2);
 
 	if (tlb[i].S)
@@ -350,7 +350,7 @@ void TLBWI() {
 
 	//if (j > 48) return;
 
-DevCon.Warning("COP0_TLBWI %d:%x,%x,%x,%x\n",
+DbgCon.Warning("COP0_TLBWI %d:%x,%x,%x,%x\n",
 			cpuRegs.CP0.n.Index,    cpuRegs.CP0.n.PageMask, cpuRegs.CP0.n.EntryHi,
 			cpuRegs.CP0.n.EntryLo0, cpuRegs.CP0.n.EntryLo1);
 

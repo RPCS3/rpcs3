@@ -115,7 +115,7 @@ void inifile_command(bool isCheat, const wxString& cmd)
 	// would make more sense... --air
     if (set.rvalue.IsEmpty()) set.rvalue = set.lvalue;
 
-	int code = PatchTableExecute(set, isCheat ? commands_cheat : commands_patch);
+	/*int code = */PatchTableExecute(set, isCheat ? commands_cheat : commands_patch);
 }
 
 // This routine receives a string containing patches, trims it,

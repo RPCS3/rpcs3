@@ -228,8 +228,6 @@ protected:
 
 GameDatabaseListView& GameDatabaseListView::SortBy( GameDataColumnId column )
 {
-	wxArrayString::CompareFunction cmpfunc = NULL;
-
 	const bool isDescending = false;
 
 	wxArrayString::iterator begin	= m_GamesInView.begin();

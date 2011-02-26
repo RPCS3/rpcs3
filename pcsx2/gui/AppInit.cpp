@@ -99,7 +99,7 @@ void Pcsx2App::OpenProgramLog()
 {
 	if( AppRpc_TryInvokeAsync( &Pcsx2App::OpenProgramLog ) ) return;
 
-	if( ConsoleLogFrame* frame = GetProgramLog() )
+	if( /*ConsoleLogFrame* frame =*/ GetProgramLog() )
 	{
 		//pxAssume( );
 		return;

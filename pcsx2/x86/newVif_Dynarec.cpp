@@ -209,7 +209,6 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 
 _vifT static __fi u8* dVifsetVUptr(uint cl, uint wl, bool isFill) {
 	vifStruct& vif			= GetVifX;
-	VIFregisters& vifRegs	= vifXRegs;
 	const VURegs& VU		= vuRegs[idx];
 	const uint vuMemLimit	= idx ? 0x4000 : 0x1000;
 
