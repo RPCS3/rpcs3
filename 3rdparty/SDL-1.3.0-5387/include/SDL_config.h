@@ -30,18 +30,20 @@
  *
  *  SDL_config.h for any platform that doesn't build using the configure system.
  */
- 
+
 /* Add any platform that doesn't build using the configure system. */
 #if defined(__WIN32__)
 #include "SDL_config_windows.h"
 #elif defined(__MACOSX__)
 #include "SDL_config_macosx.h"
-#elif defined(__IPHONEOS__) 
+#elif defined(__IPHONEOS__)
 #include "SDL_config_iphoneos.h"
 #elif defined(__ANDROID__)
 #include "SDL_config_android.h"
 #elif defined(__NINTENDODS__)
 #include "SDL_config_nintendods.h"
+#elif defined(__LINUX__)
+#include "SDL_config_linux.h"
 #else
 #include "SDL_config_minimal.h"
 #endif /* platform config */

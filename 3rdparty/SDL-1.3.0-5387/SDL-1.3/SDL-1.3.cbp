@@ -60,6 +60,7 @@
 		<Unit filename="../include/SDL_clipboard.h" />
 		<Unit filename="../include/SDL_compat.h" />
 		<Unit filename="../include/SDL_config.h" />
+		<Unit filename="../include/SDL_config_linux.h" />
 		<Unit filename="../include/SDL_copying.h" />
 		<Unit filename="../include/SDL_cpuinfo.h" />
 		<Unit filename="../include/SDL_endian.h" />
