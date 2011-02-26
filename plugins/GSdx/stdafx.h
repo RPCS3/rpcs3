@@ -112,6 +112,7 @@ using namespace stdext;
 
     #ifdef __GNUC__
 
+        #include "assert.h"
         #define __forceinline __inline__ __attribute__((always_inline,unused))
         // #define __forceinline __inline__ __attribute__((__always_inline__,__gnu_inline__))
         #define __assume(c) ((void)0)

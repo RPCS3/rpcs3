@@ -7,7 +7,7 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="../../../deps/debug/libSDL-1.3" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../deps/debug/libSDL-1.3.a" prefix_auto="0" extension_auto="0" />
 				<Option working_dir="" />
 				<Option object_output="obj/Debug/" />
 				<Option type="2" />
@@ -19,7 +19,7 @@
 				</Compiler>
 			</Target>
 			<Target title="Release">
-				<Option output="../../../deps/release/libSDL-1.3" prefix_auto="1" extension_auto="1" />
+				<Option output="../../../deps/release/libSDL-1.3.a" prefix_auto="0" extension_auto="0" />
 				<Option working_dir="" />
 				<Option object_output="obj/Release/" />
 				<Option type="2" />
