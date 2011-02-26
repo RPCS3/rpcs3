@@ -1,0 +1,186 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2011-02-26 22:39+0100\n"
+"PO-Revision-Date: 2011-02-26 22:39+0100\n"
+"Last-Translator: \n"
+"Language-Team: PCSX2\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxEt;pxLt\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: C:\\new trunk!\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: pcsx2/MTGS.cpp:809
+msgid "The MTGS thread has become unresponsive while waiting for the GS plugin to open."
+msgstr ""
+
+#: pcsx2/PluginManager.cpp:1329
+msgid "Internal Memorycard Plugin failed to initialize."
+msgstr ""
+
+#: pcsx2/gui/ExecutorThread.cpp:40
+msgid "Logs events as they are passed to the PS2 virtual machine."
+msgstr ""
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:151
+msgid "!ContextTip:ChangingNTFS"
+msgstr "Die NTFS Komprimierung kann jederzeit via Windows Explorer geändert werden."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+msgid "!ContextTip:Folders:Settings"
+msgstr "PCSX2 und Plugins werden versuchen ihre Einstellungen in diesen Ordner zu schreiben. Einige (ältere) Plugins könnten dies jedoch nicht unterstützen."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid "!Panel:HasHacksOverrides"
+msgstr "Achtung! PCSX2 läuft mit Kommandozeilenparametern, welche die hier zu tätigenden Einstellungen übergehen. Solltest du hier Änderungen vornehmen, werden diese Kommandozeilenparameter ignoriert."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr "Achtung! PCSX2 läuft mit Kommandozeilenparametern, welche die hier einzustellenden Plugins und Ordner übergehen. Solltest du hier Änderungen vornehmen, werden diese Kommandozeilenparameter ignoriert."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+"Preset info: \n"
+" 1 - Akkurat aber langsam \n"
+" 3 - Balance zwischen Geschwindigkeit und Kompatibilität \n"
+" 4 - Etwas aggressivere Hacks \n"
+" 6 - Viele Hacks, wird Spiele verlangsamen"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+msgid "!Notice:Tooltip:Presets:Checkbox"
+msgstr "Presets erleichtern dir die Konfiguration, indem sie passende Einstellungen zur gewünschten Geschwindigkeitsstufe wählen. Höhere Stufen aktivieren mehr Hacks und sind daher nicht mit allen Spielen kompatibel."
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:156
+msgid "!ContextTip:DirPicker:UseDefault"
+msgstr "Nutzt das Standardverzeichnis des gewählten Installationsmodus."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr "Ändert das wichtige Timing für alle DMA Komponenten auf einen festen, schnellen Wert. Hat diversen Einfluss auf die Kompatibilität."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+msgid "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr "Veraltet"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:52
+msgid "!ContextTip:Window:Vsync"
+msgstr "VSync ist eine Grafikoption, die versucht Jidder und Tearing zu vermeiden. Sie setzt voraus, dass das Spiel mit voller Geschwindigkeit läuft, was selten zu 100% der Fall ist. Es wird nicht empfohlen, VSync zu aktivieren."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:57
+msgid "!ContextTip:Window:HideMouse"
+msgstr "Versteckt den Mauscursor."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Fullscreen"
+msgstr "Kann auch während der Emulation mit ALT+ENTER erreicht werden."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:FullscreenExclusive"
+msgstr "Versucht das GS Plugin in den exklusiven Vollbildmodus zu versetzen. Einige Treibereinstellungen (VSync) funktionieren damit besser."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:73
+msgid "!ContextTip:Window:HideGS"
+msgstr "Versteckt das GS Fenster wenn man mit ESC die Emulation pausiert."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:40
+msgid "!ContextTip:Folders:Savestates"
+msgstr "In diesen Ordner wird PCSX2 versuchen Savestates zu schreiben. States können bei vielen Spielen schnell recht viel Platz beanspruchen!"
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:50
+msgid "!ContextTip:Folders:Snapshots"
+msgstr "In diesen Ordner werden PCSX2 und Plugins versuchen Screenshots zu schreiben."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:60
+msgid "!ContextTip:Folders:Logs"
+msgstr "In diesen Ordner werden PCSX2 und Plugins versuchen Logdateien zu schreiben."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
+msgid "!Panel:Speedhacks:EECycleX1"
+msgstr "Deaktiviert"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
+msgid "!Panel:Speedhacks:EECycleX2"
+msgstr "Stufe 2."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
+msgid "!Panel:Speedhacks:EECycleX3"
+msgstr "Stufe 3."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+msgid "!Panel:Speedhacks:VUCycleStealOff"
+msgstr "Kein Cycle Steal."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
+msgid "!Panel:Speedhacks:VUCycleSteal1"
+msgstr "Stufe 1."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
+msgid "!Panel:Speedhacks:VUCycleSteal2"
+msgstr "Stufe 2."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
+msgid "!Panel:Speedhacks:VUCycleSteal3"
+msgstr "Stufe 3."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
+msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+msgstr "Erhöhen dieses Wertes untertaktet die virtuelle PS2 CPU (Emotion Engine). Daher läuft die Emulation etwas schneller aber viele Spiele laufen stockend."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
+msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+msgstr "\"Stiehlt\" der PS2 CPU einige Zyklen bei jeder VU Programmausführung. Geschwindigkeitsgewinn bei reduzierter Kompatibilität."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+msgid "!ContextTip:Speedhacks:vuFlagHack"
+msgstr "Lässt einige VU Statusflags aus. Sicher."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
+msgid "!ContextTip:Speedhacks:vuBlockHack"
+msgstr "Kann die Geschwindigkeit leicht erhöhen. In FFX kontraproduktiv!"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+msgid "!ContextTip:Speedhacks:vuMinMax"
+msgstr "Funktioniert nicht mit Gran Turismo 4 oder Tekken 5."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:202
+msgid "!ContextTip:Speedhacks:INTC"
+msgstr "Kann gefahrlos aktiviert werden."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
+msgid "!ContextTip:Speedhacks:BIFC0"
+msgstr "Kann gefahrlos aktiviert werden."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:214
+msgid "!ContextTip:Speedhacks:fastCDVD"
+msgstr "Einige Spiele erwarten ein standardkonformes (langsam lesendes) DVD Laufwerk. Diese können dann hängenbleiben."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:37
+msgid "!ContextTip:Framelimiter:Disable"
+msgstr "Deaktiviert den Framelimiter. Das Spiel läuft so schnell wie es dein Rechner ermöglicht."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
+msgid "!ContextTip:GS:SyncMTGS"
+msgstr "Nur für das Debugging aktivieren. Sehr langsam."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
+msgid "!ContextTip:GS:DisableOutput"
+msgstr "Entfernt störende Faktoren von der Grafikkarte oder Treiberproblemen. Nur für PCSX2 Benchmarks interressant."
+
+#: common/src/Utilities/ThreadTools.cpp:41
+msgid "Threading activity: start, detach, sync, deletion, etc."
+msgstr ""
+
+#: common/src/Utilities/wxAppWithHelpers.cpp:36
+msgid "Includes idle event processing and some other uncommon event usages."
+msgstr ""
+
+#: common/include/Utilities/Exceptions.h:187
+msgid "No reason given."
+msgstr ""
+
