@@ -56,7 +56,7 @@ static wxFileName GetPortableIniPath()
 
 static wxString GetMsg_PortableModeRights()
 {
-	return pxE( "!Error:PortableModeRights",
+	return pxE( "!Notice:PortableModeRights",
 		L"Please ensure that these folders are created and that your user account is granted "
 		L"write permissions to them -- or re-run PCSX2 with elevated (administrator) rights, which "
 		L"should grant PCSX2 the ability to create the necessary folders itself.  If you "
@@ -177,7 +177,12 @@ wxConfigBase* Pcsx2App::TestForPortableInstall()
 				break;
 				
 				case pxID_CUSTOM:
-					// Pretend like the portable ini was never found!
+					wxDialogWithHelpers dialog2( NULL, AddAppName(_("%s is switching to local install mode.")) );
+					dialog2 += dialog2.Heading( _("Try to remove the file called \"portable.ini\" from your installation directory manually." ) );
+					dialog2 += 6;
+					pxIssueConfirmation( dialog2, MsgButtons().OK() );
+					conf_portable.DetachPtr(); // Not sure but can't hurt
+					
 					return NULL;
 			}
 

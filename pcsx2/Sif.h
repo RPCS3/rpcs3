@@ -42,7 +42,7 @@ struct sifFifo
 	s32 writePos;
 	s32 size;
 
-	s32 free()
+	s32 sif_free()
 	{
 		return FIFO_SIF_W - size;
 	}

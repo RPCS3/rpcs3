@@ -38,7 +38,7 @@ static __fi bool WriteEEtoFifo()
 	// There's some data ready to transfer into the fifo..
 
 	SIF_LOG("Sif 1: Write EE to Fifo");
-	const int writeSize = min((s32)sif1dma.qwc, sif1.fifo.free() >> 2);
+	const int writeSize = min((s32)sif1dma.qwc, sif1.fifo.sif_free() >> 2);
 
 	tDMA_TAG *ptag;
 
@@ -242,7 +242,7 @@ static __fi void HandleEETransfer()
 	}
 	else
 	{
-		if (sif1.fifo.free() > 0)
+		if (sif1.fifo.sif_free() > 0)
 		{
 			WriteEEtoFifo();
 		}
@@ -297,7 +297,7 @@ __fi void SIF1Dma()
 
 		if (sif1.ee.busy)
 		{
-			if(sif1.fifo.free() > 0 || (sif1.ee.end == true && sif1dma.qwc == 0)) 
+			if(sif1.fifo.sif_free() > 0 || (sif1.ee.end == true && sif1dma.qwc == 0)) 
 			{
 				BusyCheck++;
 				HandleEETransfer();

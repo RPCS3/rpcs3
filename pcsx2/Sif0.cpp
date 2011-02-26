@@ -65,7 +65,7 @@ static __fi bool WriteFifoToEE()
 static __fi bool WriteIOPtoFifo()
 {
 	// There's some data ready to transfer into the fifo..
-	const int writeSize = min(sif0.iop.counter, sif0.fifo.free());
+	const int writeSize = min(sif0.iop.counter, sif0.fifo.sif_free());
 
 	SIF_LOG("Write IOP to Fifo: +++++++++++ %lX of %lX", writeSize, sif0.iop.counter);
 
@@ -276,7 +276,7 @@ static __fi void HandleIOPTransfer()
 	else
 	{
 		// Write IOP to Fifo.
-		if (sif0.fifo.free() > 0)
+		if (sif0.fifo.sif_free() > 0)
 		{
 			WriteIOPtoFifo();
 		}
@@ -304,7 +304,7 @@ __fi void SIF0Dma()
 
 		if (sif0.iop.busy)
 		{
-			if(sif0.fifo.free() > 0 || (sif0.iop.end == true && sif0.iop.counter == 0)) 
+			if(sif0.fifo.sif_free() > 0 || (sif0.iop.end == true && sif0.iop.counter == 0)) 
 			{
 				BusyCheck++;
 				HandleIOPTransfer();

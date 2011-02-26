@@ -1110,7 +1110,7 @@ void AppSaveSettings()
 		return;
 	}
 
-	Console.WriteLn("Saving ini files...");
+	//Console.WriteLn("Saving ini files...");
 
 	SaveUiSettings();
 	SaveVmSettings();
