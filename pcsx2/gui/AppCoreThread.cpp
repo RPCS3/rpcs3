@@ -625,7 +625,8 @@ ScopedCoreThreadClose::ScopedCoreThreadClose()
 	
 	if( !PostToSysExec(new SysExecEvent_CoreThreadClose()) )
 	{
-		if( !(m_alreadyStopped = CoreThread.IsClosed()) )
+		m_alreadyStopped = CoreThread.IsClosed();
+		if ( !m_alreadyStopped )
 			CoreThread.Suspend();
 	}
 
@@ -651,7 +652,8 @@ ScopedCoreThreadPause::ScopedCoreThreadPause( BaseSysExecEvent_ScopedCore* abuse
 	if( !abuse_me ) abuse_me = new SysExecEvent_CoreThreadPause();
 	if( !PostToSysExec( abuse_me ) )
 	{
-		if( !(m_alreadyStopped = CoreThread.IsPaused()) )
+		m_alreadyStopped = CoreThread.IsPaused();
+		if( !m_alreadyStopped )
 			CoreThread.Pause();
 	}
 

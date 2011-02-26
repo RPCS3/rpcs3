@@ -103,8 +103,8 @@ int getFreeCache(u32 mem, int mode, int * way ) {
 
 void writeCache8(u32 mem, u8 value) {
 	int i, number;
-	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
-	s32 ppf=(mem+vmv) & ~0x3f;
+	//u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+	//s32 ppf=(mem+vmv) & ~0x3f;
 	i = getFreeCache(mem,1,&number);
 	CACHE_LOG("writeCache8 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 	pCache[i].tag[number] |= DIRTY_FLAG;	// Set Dirty Bit if mode == write
@@ -113,8 +113,8 @@ void writeCache8(u32 mem, u8 value) {
 
 void writeCache16(u32 mem, u16 value) {
 	int i, number;
-	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
-	s32 ppf=(mem+vmv) & ~0x3f;
+	//u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+	//s32 ppf=(mem+vmv) & ~0x3f;
 	i = getFreeCache(mem,1,&number);
 	CACHE_LOG("writeCache16 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 	pCache[i].tag[number] |= DIRTY_FLAG;	// Set Dirty Bit if mode == write
@@ -123,8 +123,8 @@ void writeCache16(u32 mem, u16 value) {
 
 void writeCache32(u32 mem, u32 value) {
 	int i, number;
-	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
-	s32 ppf=(mem+vmv) & ~0x3f;
+	//u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+	//s32 ppf=(mem+vmv) & ~0x3f;
 	i = getFreeCache(mem,1,&number);
 	CACHE_LOG("writeCache32 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 	pCache[i].tag[number] |= DIRTY_FLAG;	// Set Dirty Bit if mode == write
@@ -133,8 +133,8 @@ void writeCache32(u32 mem, u32 value) {
 
 void writeCache64(u32 mem, const u64 value) {
 	int i, number;
-	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
-	s32 ppf=(mem+vmv) & ~0x3f;
+	//u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+	//s32 ppf=(mem+vmv) & ~0x3f;
 	i = getFreeCache(mem,1,&number);
 	CACHE_LOG("writeCache64 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 	pCache[i].tag[number] |= DIRTY_FLAG;	// Set Dirty Bit if mode == write
@@ -143,8 +143,8 @@ void writeCache64(u32 mem, const u64 value) {
 
 void writeCache128(u32 mem, const mem128_t* value){
 	int i, number;
-	u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
-	s32 ppf=(mem+vmv) & ~0x3f;
+	//u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+	//s32 ppf=(mem+vmv) & ~0x3f;
 	i = getFreeCache(mem,1,&number);
 	CACHE_LOG("writeCache128 %8.8x adding to %d way %x tag %x vallo = %x_%x valhi = %x_%x", mem, i, number, pCache[i].tag[number], value->lo, value->hi);
 	pCache[i].tag[number] |= DIRTY_FLAG;	// Set Dirty Bit if mode == write

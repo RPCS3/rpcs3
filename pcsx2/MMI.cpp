@@ -614,7 +614,7 @@ __fi void  _PADDSB(int n)
 
 	if (sTemp16 > 0x7F)
 		cpuRegs.GPR.r[_Rd_].UC[n] = 0x7F;
-	else if (sTemp16 < (s16)0xff80)
+	else if (sTemp16 < /*(s16)0xff80*/(s16)-128) // be sure
 		cpuRegs.GPR.r[_Rd_].UC[n] = 0x80;
 	else
 		cpuRegs.GPR.r[_Rd_].UC[n] = (s8)sTemp16;
@@ -635,7 +635,7 @@ static __fi void _PSUBSB( u8 n )
 
 	if (sTemp16 >= 0x7F)
 		cpuRegs.GPR.r[_Rd_].UC[n] = 0x7F;
-	else if (sTemp16 <= (s16)0xff80)
+	else if (sTemp16 < /*(s16)0xff80*/(s16)-128) // be sure
 		cpuRegs.GPR.r[_Rd_].UC[n] = 0x80;
 	else
 		cpuRegs.GPR.r[_Rd_].UC[n] = (s8)sTemp16;

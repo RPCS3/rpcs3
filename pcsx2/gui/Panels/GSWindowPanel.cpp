@@ -156,7 +156,7 @@ void Panels::GSWindowSettingsPanel::Apply()
 
 	appconf.IsToggleFullscreenOnDoubleClick = m_check_DclickFullscreen->GetValue();
 
-	long xr, yr;
+	long xr, yr = 1;
 
 	if( !m_text_WindowWidth->GetValue().ToLong( &xr ) || !m_text_WindowHeight->GetValue().ToLong( &yr ) )
 		throw Exception::CannotApplySettings( this )
