@@ -62,6 +62,8 @@ set(GSdxSources
     GSCodeBuffer.cpp
     GSCrc.cpp
     GSDevice.cpp
+    GSDeviceSDL.cpp
+	GSDeviceSW.cpp
     GSDeviceNull.cpp
     GSDirtyRect.cpp
     GSDrawScanline.cpp
@@ -83,6 +85,7 @@ set(GSdxSources
     GSTextureCache.cpp
     GSTextureCacheSW.cpp
     GSTextureNull.cpp
+	GSTextureSW.cpp
     GSThread.cpp
     GSUtil.cpp
     GSVector.cpp
@@ -167,6 +170,9 @@ set_target_properties(${Output} PROPERTIES
 
 # link target with X11
 target_link_libraries(${Output} ${X11_LIBRARIES})
+
+# link target with SDL
+target_link_libraries(${Output} ${SDL_LIBRARY})
 
 # User flags options
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

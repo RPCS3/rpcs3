@@ -5,6 +5,7 @@
 # Use all         internal lib: -DFORCE_INTERNAL_ALL=TRUE
 # Use soundtouch  internal lib: -DFORCE_INTERNAL_SOUNDTOUCH=TRUE
 # Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
+# Use sdl1.3      internal lib: -DFORCE_INTERNAL_SDL=TRUE # Not supported yet
 ### Miscellaneous
 # Select install dir of l10n  : -DL10N_PORTABLE=TRUE(bin/Langs)|FALSE(FHS, /usr...)
 ### Add some flags to the build process
@@ -128,6 +129,7 @@ endif(NOT DEFINED PACKAGE_MODE)
 if(FORCE_INTERNAL_ALL)
     set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
     set(FORCE_INTERNAL_ZLIB TRUE)
+    set(FORCE_INTERNAL_SDL TRUE)
 endif(FORCE_INTERNAL_ALL)
 
 if(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
@@ -141,6 +143,12 @@ endif(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
 if(NOT DEFINED FORCE_INTERNAL_ZLIB)
     set(FORCE_INTERNAL_ZLIB FALSE)
 endif(NOT DEFINED FORCE_INTERNAL_ZLIB)
+
+# Keep external sdl for the moment
+set(FORCE_INTERNAL_SDL FALSE)
+# if(NOT DEFINED FORCE_INTERNAL_SDL)
+#     set(FORCE_INTERNAL_SDL FALSE)
+# endif(NOT DEFINED FORCE_INTERNAL_SDL)
 
 #-------------------------------------------------------------------------------
 # Select library system vs 3rdparty

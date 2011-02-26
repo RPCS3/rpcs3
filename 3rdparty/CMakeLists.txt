@@ -15,3 +15,8 @@ endif(projectZLIB)
 if(projectSoundTouch)
 	add_subdirectory(SoundTouch)
 endif(projectSoundTouch)
+
+# build project sdl
+if(projectSDL)
+    add_subdirectory(SDL-1.3.0-5387)
+endif(projectSDL)
