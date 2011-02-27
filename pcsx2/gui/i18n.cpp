@@ -167,6 +167,7 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 			return wxLANGUAGE_CHINESE_TRADITIONAL;
 		case wxLANGUAGE_CHINESE_SINGAPORE:
 			return wxLANGUAGE_CHINESE_SIMPLIFIED;
+		default: break;
 	}
 	return wxLangId;
 }
