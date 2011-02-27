@@ -94,7 +94,9 @@ public:
 
 	static const int m_vmsize = 1024 * 1024 * 4;
 
-	union {uint8* m_vm8; uint16* m_vm16; uint32* m_vm32;};
+	uint8* m_vm8; 
+	uint16* m_vm16; 
+	uint32* m_vm32;
 
 	GSClut m_clut;
 

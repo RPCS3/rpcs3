@@ -84,6 +84,8 @@ GSLocalMemory::GSLocalMemory()
 	: m_clut(this)
 {
 	m_vm8 = (uint8*)vmalloc(m_vmsize * 2, false);
+	m_vm16 = (uint16*)m_vm8;
+	m_vm32 = (uint32*)m_vm8;
 
 	memset(m_vm8, 0, m_vmsize);
 
