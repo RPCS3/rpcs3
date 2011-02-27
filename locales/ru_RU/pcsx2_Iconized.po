@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-25 18:54+0100\n"
+"POT-Creation-Date: 2011-02-27 10:09+0100\n"
 "PO-Revision-Date: 2010-12-28 13:54+0300\n"
 "Last-Translator: Kein <kein-of@yandex.ru>\n"
 "Language-Team: Kein <kein-of@yandex.ru>\n"
@@ -83,7 +83,7 @@ msgstr ""
 "желаете закрыть поток.Выберите 'Выход' если хотите завершить работу PCSX2."
 
 #: pcsx2/gui/AppUserMode.cpp:59
-msgid "!Error:PortableModeRights"
+msgid "!Notice:PortableModeRights"
 msgstr ""
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
@@ -196,20 +196,20 @@ msgstr ""
 "однако почти всегда вызывают ошибки и проблемы в других. При смене игры вам "
 "необходимо отключить хаки вручную (если какие-либо их них были включены)."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:368
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:366
 msgid "!Notice:Mcd:Overwrite"
 msgstr ""
 "Данная операция скопирует информацию карты памяти из слота %u на карту "
 "памяти в слоте %u. Все данные второй карты памяти будут потеряны. Вы уверены "
 "что хотите продолжить?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:384
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:382
 msgid "!Notice:Mcd:Copy Failed"
 msgstr ""
 "Ошибка! Невозможно скопировать выбранную карту памяти в слот %u. Указанный "
 "файл уже используется."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:596
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:594
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 "Вы действительно хотите удалить отформатированную карту памяти в слоте %u? "

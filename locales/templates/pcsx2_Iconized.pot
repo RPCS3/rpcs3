@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-25 19:05+0100\n"
+"POT-Creation-Date: 2011-02-27 10:09+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -54,7 +54,7 @@ msgid "!Notice Error:Thread Deadlock Actions"
 msgstr ""
 
 #: pcsx2/gui/AppUserMode.cpp:59
-msgid "!Error:PortableModeRights"
+msgid "!Notice:PortableModeRights"
 msgstr ""
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
@@ -117,15 +117,15 @@ msgstr ""
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:368
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:366
 msgid "!Notice:Mcd:Overwrite"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:384
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:382
 msgid "!Notice:Mcd:Copy Failed"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:596
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:594
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-25 18:54+0100\n"
+"POT-Creation-Date: 2011-02-27 10:09+0100\n"
 "PO-Revision-Date: 2011-01-22 08:43+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
@@ -77,7 +77,7 @@ msgstr ""
 "【終止】立即退出 PCSX2。"
 
 #: pcsx2/gui/AppUserMode.cpp:59
-msgid "!Error:PortableModeRights"
+msgid "!Notice:PortableModeRights"
 msgstr ""
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
@@ -180,17 +180,17 @@ msgstr ""
 "題。\n"
 "若變更所玩的遊戲，您需要手動關閉已啟用的遊戲修正。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:368
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:366
 msgid "!Notice:Mcd:Overwrite"
 msgstr ""
 "複製插槽 %u 的記憶卡內容，覆寫插槽 %u 的記憶卡。\n"
 "目標插槽記憶卡的全部資料將會丟失。您確定嗎？"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:384
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:382
 msgid "!Notice:Mcd:Copy Failed"
 msgstr "錯誤！無法複製記憶卡至插槽 %u。目標檔案使用中。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:596
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:594
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 "您即將刪除 %u 插槽已格式化的記憶卡。\n"

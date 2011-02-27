@@ -1,11 +1,12 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-02-26 22:23+0100\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2011-02-27 10:09+0100\n"
 "PO-Revision-Date: 2011-02-26 22:29+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -15,69 +16,88 @@ msgstr ""
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
-#: pcsx2/System.cpp:114
-msgid "!Notice:Recompiler:VirtualMemoryAlloc"
-msgstr "Der Recompiler konnte nicht genug virtuellen Speicher allokieren. Versuche PCSX2 etwas mehr Speicher zu gewähren indem du nicht benötigte Programme beendest."
-
-#: pcsx2/System.cpp:348
-msgid "!Notice:EmuCore::MemoryForVM"
-msgstr "Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher wird von anderen Programmen / DLLs belegt."
-
-#: pcsx2/vtlb.cpp:698
-msgid "!Notice:HostVmReserve"
-msgstr "Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher wird von anderen Programmen / DLLs belegt."
+#: common/src/Utilities/Exceptions.cpp:254
+msgid "!Notice:VirtualMemoryMap"
+msgstr ""
+"Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher "
+"wird von anderen Programmen / DLLs belegt."
 
 #: pcsx2/CDVD/CDVD.cpp:385
 msgid "!Notice:PsxDisc"
 msgstr "PlayStation 1 (PSX) Spiele werden von PCSX2 noch nicht unterstützt!"
 
+#: pcsx2/System.cpp:114
+msgid "!Notice:Recompiler:VirtualMemoryAlloc"
+msgstr ""
+"Der Recompiler konnte nicht genug virtuellen Speicher allokieren. Versuche "
+"PCSX2 etwas mehr Speicher zu gewähren indem du nicht benötigte Programme "
+"beendest."
+
+#: pcsx2/System.cpp:348
+msgid "!Notice:EmuCore::MemoryForVM"
+msgstr ""
+"Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher "
+"wird von anderen Programmen / DLLs belegt."
+
 #: pcsx2/gui/AppInit.cpp:43
 msgid "!Notice:Startup:NoSSE2"
-msgstr "Dein Prozessor unterstützt kein SSE2. Viele Plugins werden nicht funktionieren und die Emulation wird sehr langsam sein."
+msgstr ""
+"Dein Prozessor unterstützt kein SSE2. Viele Plugins werden nicht "
+"funktionieren und die Emulation wird sehr langsam sein."
 
 #: pcsx2/gui/AppInit.cpp:162
 msgid "!Notice:RecompilerInit:Header"
-msgstr "Einige der PCSX2 Recompiler konnten nicht starten und wurden deaktiviert:"
+msgstr ""
+"Einige der PCSX2 Recompiler konnten nicht starten und wurden deaktiviert:"
 
 #: pcsx2/gui/AppInit.cpp:211
 msgid "!Notice:RecompilerInit:Footer"
-msgstr "Recompiler werden zwar nicht unbedingt von PCSX2 benötigt, sie sind aber wichtig um akzeptable FPS Raten zu erreichen. Du kannst versuchen die Recompiler über die Konfigurationseinstellungen zu reaktivieren."
+msgstr ""
+"Recompiler werden zwar nicht unbedingt von PCSX2 benötigt, sie sind aber "
+"wichtig um akzeptable FPS Raten zu erreichen. Du kannst versuchen die "
+"Recompiler über die Konfigurationseinstellungen zu reaktivieren."
 
 #: pcsx2/gui/AppMain.cpp:476
 msgid "!Notice:BiosDumpRequired"
-msgstr "PCSX2 benötigt ein PS2 BIOS Abbild. Da Sony den BIOS Code lizenziert hat dürfen wir dieses nicht mit PCSX2 vertreiben. Du musst daher das BIOS Abbild deiner eigenen PS2 benutzen! Näheres dazu in der FAQ."
+msgstr ""
+"PCSX2 benötigt ein PS2 BIOS Abbild. Da Sony den BIOS Code lizenziert hat "
+"dürfen wir dieses nicht mit PCSX2 vertreiben. Du musst daher das BIOS Abbild "
+"deiner eigenen PS2 benutzen! Näheres dazu in der FAQ."
 
 #: pcsx2/gui/AppMain.cpp:559
 msgid "!Notice Error:Thread Deadlock Actions"
-msgstr "Ignorieren um weiter auf den Thread zu warten.Abbrechen um den Thread zu beenden.Beenden um PCSX2 komplett zu schließen."
+msgstr ""
+"Ignorieren um weiter auf den Thread zu warten.Abbrechen um den Thread zu "
+"beenden.Beenden um PCSX2 komplett zu schließen."
 
 #: pcsx2/gui/AppUserMode.cpp:59
 msgid "!Notice:PortableModeRights"
-msgstr "Stelle  bitte sicher das diese Ordner erstellt wurden und das dein Benutzeraccount Schreibrechte hat. Alternativ kannst du versuchen PCSX2 mit Administratorrechten zu starten. Das sollte es ermöglichen die benötigten Ordner zu erstellen. Falls du keine dieser Möglichkeiten hast, solltest du in den normalen Installationsmodus wechseln (klicke den folgenden Button)."
-
-#: pcsx2/gui/IsoDropTarget.cpp:28
-msgid "!Notice:ConfirmSysReset"
-msgstr "Diese Option wird die virtuelle PS2 resetten. Bist du dir sicher?"
-
-#: pcsx2/gui/MainMenuClicks.cpp:106
-msgid "!Notice:DeleteSettings"
-msgstr "Diese Option löscht alle %s Einstellungen und ermöglicht das erneute Ausführen des Konfigurationshelfers. %s muss dazu neu gestartet werden.Alle %s Einstellungen gehen verloren. Bist du dir sicher?"
-
-#: pcsx2/gui/MemoryCardFile.cpp:77
-msgid "!Notice:Mcd:HasBeenDisabled"
-msgstr "Die Memory Card in Slot %d wurde automatisch deaktiviert. Du kannst dieses Problem via Konfiguration > Memory Card beheben."
+msgstr ""
+"Stelle  bitte sicher das diese Ordner erstellt wurden und das dein "
+"Benutzeraccount Schreibrechte hat. Alternativ kannst du versuchen PCSX2 mit "
+"Administratorrechten zu starten. Das sollte es ermöglichen die benötigten "
+"Ordner zu erstellen. Falls du keine dieser Möglichkeiten hast, solltest du "
+"in den normalen Installationsmodus wechseln (klicke den folgenden Button)."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
 msgid "!Panel:Folders:Settings"
-msgstr "Du kannst hier optional ein Verzeichnis angeben, in dem PCSX2 seine Konfiguration speichern wird. Sind dort bereits Einstellungen vorhanden, wird PCSX2 dir anbieten, diese zu importieren."
+msgstr ""
+"Du kannst hier optional ein Verzeichnis angeben, in dem PCSX2 seine "
+"Konfiguration speichern wird. Sind dort bereits Einstellungen vorhanden, "
+"wird PCSX2 dir anbieten, diese zu importieren."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
 msgid "!Wizard:Welcome"
-msgstr "Der Konfigurationshelfer nimmt die Grundeinstellungen für %s vor. Es werden Plugins, das BIOS Abbild und Memory Cards konfiguriert."
+msgstr ""
+"Der Konfigurationshelfer nimmt die Grundeinstellungen für %s vor. Es werden "
+"Plugins, das BIOS Abbild und Memory Cards konfiguriert."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
 msgid "!Wizard:Bios:Tutorial"
-msgstr "PCSX2 benötigt ein PS2 BIOS Abbild. Da Sony den BIOS Code lizenziert hat dürfen wir dieses nicht mit PCSX2 vertreiben. Du musst daher das BIOS Abbild deiner eigenen PS2 benutzen! Näheres dazu in der FAQ."
+msgstr ""
+"PCSX2 benötigt ein PS2 BIOS Abbild. Da Sony den BIOS Code lizenziert hat "
+"dürfen wir dieses nicht mit PCSX2 vertreiben. Du musst daher das BIOS Abbild "
+"deiner eigenen PS2 benutzen! Näheres dazu in der FAQ."
 
 #: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
 msgid "!Notice:ImportExistingSettings"
@@ -91,11 +111,32 @@ msgstr "Schnelle und sichere Komprimierung der Memory Cards. Empfohlen."
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
 msgid "!Panel:Mcd:EnableEjection"
-msgstr "Inkompatibel mit Guitar Hero und Spielen, die es nicht ermöglichen mehrmals nach einer Memory Card zu suchen."
+msgstr ""
+"Inkompatibel mit Guitar Hero und Spielen, die es nicht ermöglichen mehrmals "
+"nach einer Memory Card zu suchen."
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
 msgid "!Panel:StuckThread:Heading"
-msgstr "Der Thread antwortet nicht. Er könnte festgefroren sein, oder aber sehr langsam reagieren."
+msgstr ""
+"Der Thread antwortet nicht. Er könnte festgefroren sein, oder aber sehr "
+"langsam reagieren."
+
+#: pcsx2/gui/IsoDropTarget.cpp:28
+msgid "!Notice:ConfirmSysReset"
+msgstr "Diese Option wird die virtuelle PS2 resetten. Bist du dir sicher?"
+
+#: pcsx2/gui/MainMenuClicks.cpp:106
+msgid "!Notice:DeleteSettings"
+msgstr ""
+"Diese Option löscht alle %s Einstellungen und ermöglicht das erneute "
+"Ausführen des Konfigurationshelfers. %s muss dazu neu gestartet werden.Alle "
+"%s Einstellungen gehen verloren. Bist du dir sicher?"
+
+#: pcsx2/gui/MemoryCardFile.cpp:77
+msgid "!Notice:Mcd:HasBeenDisabled"
+msgstr ""
+"Die Memory Card in Slot %d wurde automatisch deaktiviert. Du kannst dieses "
+"Problem via Konfiguration > Memory Card beheben."
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
 msgid "!Notice:BIOS:InvalidSelection"
@@ -117,11 +158,15 @@ msgstr "Das angegebene Verzeichnis existiert nicht. Möchtest du es erstellen?"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:96
 msgid "!Panel:Gamefixes:Compat Warning"
-msgstr "Spielefixes können spezifische, bekannte Fehler in einigen Spielen beheben. Sie sollten aber nur für diese Spiele aktiviert werden."
+msgstr ""
+"Spielefixes können spezifische, bekannte Fehler in einigen Spielen beheben. "
+"Sie sollten aber nur für diese Spiele aktiviert werden."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:366
 msgid "!Notice:Mcd:Overwrite"
-msgstr "Hiermit wird die Memory Card in Slot %u überschrieben. Bist du dir absolut sicher?"
+msgstr ""
+"Hiermit wird die Memory Card in Slot %u überschrieben. Bist du dir absolut "
+"sicher?"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:382
 msgid "!Notice:Mcd:Copy Failed"
@@ -129,7 +174,9 @@ msgstr "Konnte die Memory Card nicht kopieren. Die Zieldatei ist in Benutzung."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:594
 msgid "!Notice:Mcd:Delete"
-msgstr "Hiermit wird die komplette Memory Card in Slot %u gelöscht. Bist du dir absolut sicher?"
+msgstr ""
+"Hiermit wird die komplette Memory Card in Slot %u gelöscht. Bist du dir "
+"absolut sicher?"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
 msgid "!Panel:Usermode:Explained"
@@ -142,29 +189,44 @@ msgstr "Du kannst den Standardordner für PCSX2 und Plugins hier einstellen."
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
 msgid "!Notice:PluginSelector:ConfirmShutdown"
 msgstr ""
-"Warnung: Die Plugins zur Laufzeit zu verändern erfordert ein komplettes Reinitialisieren der Plugins und der Recompiler. PCSX2 wird versuchen alles korrekt wiederherzustellen, dies ist jedoch nicht ganz sicher. \n"
+"Warnung: Die Plugins zur Laufzeit zu verändern erfordert ein komplettes "
+"Reinitialisieren der Plugins und der Recompiler. PCSX2 wird versuchen alles "
+"korrekt wiederherzustellen, dies ist jedoch nicht ganz sicher. \n"
 "\n"
 "Bist du dir sicher das du die Änderung jetzt anwenden möchtest?"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
 msgid "!Notice:PluginSelector:ApplyFailed"
-msgstr "Alle Plugins müssen korrekt eingestellt sein, ansonsten kann PCSX2 nicht funktionieren. Falls du keine gültige Konfiguration erstellen kannst, drücke Abbrechen."
+msgstr ""
+"Alle Plugins müssen korrekt eingestellt sein, ansonsten kann PCSX2 nicht "
+"funktionieren. Falls du keine gültige Konfiguration erstellen kannst, drücke "
+"Abbrechen."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
 msgid "!Panel:Speedhacks:Overview"
-msgstr "Speedhacks verbessern die FPS Leistung der Emulation auf deinem PC indem sie Abkürzungen nehmen oder die PS2 Hardware untertakten. Sie können Emulationsprobleme auslösen, daher empfehlen wir bei Fehlern zuerst die Speedhacks zu deaktivieren!"
+msgstr ""
+"Speedhacks verbessern die FPS Leistung der Emulation auf deinem PC indem sie "
+"Abkürzungen nehmen oder die PS2 Hardware untertakten. Sie können "
+"Emulationsprobleme auslösen, daher empfehlen wir bei Fehlern zuerst die "
+"Speedhacks zu deaktivieren!"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:223
 msgid "!Panel:Frameskip:Heading"
-msgstr "Aufgrund des spezifischen Designs der PS2 ist ein akkurates Frameskipping nicht möglich. Versuche die Werte anzupassen oder benutze Speedhacks."
+msgstr ""
+"Aufgrund des spezifischen Designs der PS2 ist ein akkurates Frameskipping "
+"nicht möglich. Versuche die Werte anzupassen oder benutze Speedhacks."
+
+#: pcsx2/vtlb.cpp:698
+msgid "!Notice:HostVmReserve"
+msgstr ""
+"Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher "
+"wird von anderen Programmen / DLLs belegt."
 
 #: pcsx2/x86/sVU_zerorec.cpp:362
 msgid "!Notice:superVU:VirtualMemoryAlloc"
-msgstr "Der SuperVU Recompiler konnte nicht genügend virtuellen Speicher allokieren. Versuche es mit microVU!"
-
-#: common/src/Utilities/Exceptions.cpp:254
-msgid "!Notice:VirtualMemoryMap"
-msgstr "Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher wird von anderen Programmen / DLLs belegt."
+msgstr ""
+"Der SuperVU Recompiler konnte nicht genügend virtuellen Speicher allokieren. "
+"Versuche es mit microVU!"
 
 #~ msgid "!Tooltip:Info"
 #~ msgstr "Status: Gut"

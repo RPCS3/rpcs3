@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-25 18:54+0100\n"
+"POT-Creation-Date: 2011-02-27 10:09+0100\n"
 "PO-Revision-Date: 2011-01-06 10:24+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
@@ -84,9 +84,10 @@ msgid "Cannot load ELF binary image.  The file may be corrupt or incomplete."
 msgstr "無法載入 ELF 檔案。檔案可能損壞或不完整。"
 
 #: pcsx2/Elfheader.cpp:268
+#, fuzzy
 msgid ""
 "If loading from an ISO image, this error may be caused by an unsupported ISO "
-"image type or bug in PCSX2 ISO image support."
+"image type or a bug in PCSX2 ISO image support."
 msgstr ""
 "如果是從光碟映像檔讀取檔案，\n"
 "那麼這個錯誤可能由未支援的光碟映像檔類型引起，\n"
@@ -437,6 +438,17 @@ msgstr ""
 msgid "Switch to User Documents Mode"
 msgstr "我的文件（推薦）"
 
+#: pcsx2/gui/AppUserMode.cpp:180
+#, c-format
+msgid "%s is switching to local install mode."
+msgstr ""
+
+#: pcsx2/gui/AppUserMode.cpp:181
+msgid ""
+"Try to remove the file called \"portable.ini\" from your installation "
+"directory manually."
+msgstr ""
+
 #: pcsx2/gui/ApplyState.h:55
 msgid "Cannot apply new settings, one of the settings is invalid."
 msgstr "無法套用新的設定，其中有無效的設定。"
@@ -604,8 +616,8 @@ msgstr "新增記憶卡"
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:60
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:74
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:271
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:464
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:511
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:462
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:509
 msgid "Create"
 msgstr "新增"
 
@@ -679,6 +691,10 @@ msgid ""
 "The system default should be fine for most operating systems."
 msgstr ""
 
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:90
+msgid "Welcome to PCSX2!"
+msgstr ""
+
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:104
 msgid "Configuration Guides (online)"
 msgstr ""
@@ -730,7 +746,7 @@ msgstr "在手把插槽 %u 啟用手把擴充器"
 msgid "MemoryCard Manager"
 msgstr "管理記憶卡"
 
-#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:102
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:103
 msgid "Drag items over other items in the list to swap or copy memory cards."
 msgstr ""
 "在記憶卡列表中，將一個記憶卡拖曳到其他記憶卡的上面，以更換或複製記憶卡。"
@@ -1027,7 +1043,7 @@ msgstr "記憶卡"
 msgid "&Plugin/BIOS Selector"
 msgstr "插件 / BIOS"
 
-#: pcsx2/gui/MainFrame.cpp:445 pcsx2/gui/Panels/GameDatabasePanel.cpp:348
+#: pcsx2/gui/MainFrame.cpp:445 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
 msgid "Game Database Editor"
 msgstr "遊戲資料庫編輯器"
 
@@ -1521,11 +1537,11 @@ msgid ""
 ">_<"
 msgstr "無效的視窗維度：【自訂視窗大小】的數值必須是整數！ ＞＿＜"
 
-#: pcsx2/gui/Panels/GameDatabasePanel.cpp:336
+#: pcsx2/gui/Panels/GameDatabasePanel.cpp:334
 msgid "Search"
 msgstr "搜尋"
 
-#: pcsx2/gui/Panels/GameDatabasePanel.cpp:370
+#: pcsx2/gui/Panels/GameDatabasePanel.cpp:368
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:25
 msgid "Gamefixes"
 msgstr "遊戲修正"
@@ -1620,65 +1636,65 @@ msgstr ""
 msgid "Select folder with PS2 memory cards"
 msgstr "選擇含有 PS2 記憶卡的資料夾"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:374
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:372
 #, fuzzy
 msgid "Overwrite memory card?"
 msgstr "刪除記憶卡？"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:391
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:389
 msgid "Copy failed!"
 msgstr "複製失敗！"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:465
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:463
 msgid "Mount"
 msgstr "掛載"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:511
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:681
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:509
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:679
 msgid "Delete"
 msgstr "刪除"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:514
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:512
 msgid "Deletes the existing memory card from disk (all contents are lost)."
 msgstr "刪除所選擇的記憶卡（失去所有遊戲存檔）"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:515
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:513
 msgid "Creates a new memory card in the empty slot."
 msgstr "於空插槽新增一個新的記憶卡。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:519
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:682
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:517
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:680
 msgid "Disable"
 msgstr "停用"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:519
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:682
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:517
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:680
 msgid "Enable"
 msgstr "啟用"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:522
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:520
 msgid ""
 "Disables the selected memory card, so that it will not be seen by games or "
 "BIOS."
 msgstr "停用所選擇的記憶卡，遊戲或 BIOS 中就看不到該記憶卡。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:523
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:521
 msgid "Mounts the selected memory card, so that games can see it again."
 msgstr "掛載所選擇的記憶卡，遊戲中能夠再次看到該記憶卡。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:602
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:600
 msgid "Delete memory card?"
 msgstr "刪除記憶卡？"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:681
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:679
 msgid "Create new..."
 msgstr "新增"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:683
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:681
 msgid "Relocate file..."
 msgstr "遷移檔案"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:688
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:686
 msgid "Refresh List"
 msgstr "重新載入列表"
 

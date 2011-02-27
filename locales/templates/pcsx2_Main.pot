@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-25 19:05+0100\n"
+"POT-Creation-Date: 2011-02-27 10:09+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -74,7 +74,7 @@ msgid "Cannot load ELF binary image.  The file may be corrupt or incomplete."
 msgstr ""
 
 #: pcsx2/Elfheader.cpp:268
-msgid "If loading from an ISO image, this error may be caused by an unsupported ISO image type or bug in PCSX2 ISO image support."
+msgid "If loading from an ISO image, this error may be caused by an unsupported ISO image type or a bug in PCSX2 ISO image support."
 msgstr ""
 
 #: pcsx2/PluginManager.cpp:692
@@ -385,6 +385,15 @@ msgstr ""
 msgid "Switch to User Documents Mode"
 msgstr ""
 
+#: pcsx2/gui/AppUserMode.cpp:180
+#, c-format
+msgid "%s is switching to local install mode."
+msgstr ""
+
+#: pcsx2/gui/AppUserMode.cpp:181
+msgid "Try to remove the file called \"portable.ini\" from your installation directory manually."
+msgstr ""
+
 #: pcsx2/gui/ApplyState.h:55
 msgid "Cannot apply new settings, one of the settings is invalid."
 msgstr ""
@@ -547,8 +556,8 @@ msgstr ""
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:60
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:74
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:271
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:464
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:511
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:462
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:509
 msgid "Create"
 msgstr ""
 
@@ -616,6 +625,10 @@ msgid ""
 "The system default should be fine for most operating systems."
 msgstr ""
 
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:90
+msgid "Welcome to PCSX2!"
+msgstr ""
+
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:104
 msgid "Configuration Guides (online)"
 msgstr ""
@@ -667,7 +680,7 @@ msgstr ""
 msgid "MemoryCard Manager"
 msgstr ""
 
-#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:102
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:103
 msgid "Drag items over other items in the list to swap or copy memory cards."
 msgstr ""
 
@@ -958,7 +971,7 @@ msgstr ""
 msgid "&Plugin/BIOS Selector"
 msgstr ""
 
-#: pcsx2/gui/MainFrame.cpp:445 pcsx2/gui/Panels/GameDatabasePanel.cpp:348
+#: pcsx2/gui/MainFrame.cpp:445 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
 msgid "Game Database Editor"
 msgstr ""
 
@@ -1421,11 +1434,11 @@ msgstr ""
 msgid "Invalid window dimensions specified: Size cannot contain non-numeric digits! >_<"
 msgstr ""
 
-#: pcsx2/gui/Panels/GameDatabasePanel.cpp:336
+#: pcsx2/gui/Panels/GameDatabasePanel.cpp:334
 msgid "Search"
 msgstr ""
 
-#: pcsx2/gui/Panels/GameDatabasePanel.cpp:370
+#: pcsx2/gui/Panels/GameDatabasePanel.cpp:368
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:25
 msgid "Gamefixes"
 msgstr ""
@@ -1502,62 +1515,62 @@ msgstr ""
 msgid "Select folder with PS2 memory cards"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:374
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:372
 msgid "Overwrite memory card?"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:391
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:389
 msgid "Copy failed!"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:465
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:463
 msgid "Mount"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:511
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:681
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:509
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:679
 msgid "Delete"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:514
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:512
 msgid "Deletes the existing memory card from disk (all contents are lost)."
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:515
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:513
 msgid "Creates a new memory card in the empty slot."
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:519
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:682
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:517
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:680
 msgid "Disable"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:519
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:682
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:517
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:680
 msgid "Enable"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:522
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:520
 msgid "Disables the selected memory card, so that it will not be seen by games or BIOS."
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:523
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:521
 msgid "Mounts the selected memory card, so that games can see it again."
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:602
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:600
 msgid "Delete memory card?"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:681
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:679
 msgid "Create new..."
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:683
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:681
 msgid "Relocate file..."
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:688
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:686
 msgid "Refresh List"
 msgstr ""
 

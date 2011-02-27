@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-25 18:54+0100\n"
+"POT-Creation-Date: 2011-02-27 10:09+0100\n"
 "PO-Revision-Date: 2011-01-17 23:26-0300\n"
 "Last-Translator: Rafael <Rafael.f.f1@gmail.com>\n"
 "Language-Team: \n"
@@ -87,7 +87,8 @@ msgstr ""
 "\"Terminar\" para finalizar PCSX2 imediatamente."
 
 #: pcsx2/gui/AppUserMode.cpp:59
-msgid "!Error:PortableModeRights"
+#, fuzzy
+msgid "!Notice:PortableModeRights"
 msgstr ""
 "Por favor certifique-se que essas pastas sejam criadas e que sua conta de "
 "usuário possui permissões de escrita a elas -- ou rode novamente o PCSX2 com "
@@ -205,20 +206,20 @@ msgstr ""
 "causar problemas de compatibilidade ou performance em outros games. Você vai "
 "precisar desativar manualmente os fixes."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:368
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:366
 msgid "!Notice:Mcd:Overwrite"
 msgstr ""
 "Isso vai copiar o conteúdo do cartão de memória no conector %u para o cartão "
 "de memória no conector %u. Todos dados no conector destinatário serão "
 "perdidos. Você tem certeza?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:384
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:382
 msgid "!Notice:Mcd:Copy Failed"
 msgstr ""
 "Erro! Não foi possível copiar o cartão de memória para o conector %u. O "
 "arquivo destinatário está em uso."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:596
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:594
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 "Você está para excluir o cartão de memória formatado no conector %u. Todos "
