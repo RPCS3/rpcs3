@@ -145,7 +145,7 @@ public:
 				int64 tpf = p->frames > 0 ? p->ticks / p->frames : 0;
 				int64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
 
-				printf("[%016llx]%c %6.2f%% | %5.2f%% | f %4lld | p %10lld | tpp %4lld | tpf %9lld | ppf %7lld\n",
+				printf("[%014llx]%c %6.2f%% | %5.2f%% | f %4lld | p %10lld | tpp %4lld | tpf %9lld | ppf %7lld\n",
 					(uint64)key, m_map.find(key) == m_map.end() ? '*' : ' ',
 					(float)(tpf * 10000 / 50000000) / 100,
 					(float)(tpf * 10000 / ttpf) / 100,
@@ -160,6 +160,9 @@ class GSCodeGenerator : public Xbyak::CodeGenerator
 {
 protected:
 	Xbyak::util::Cpu m_cpu;
+
+	void enter(uint32 size, bool align);
+	void leave();
 
 public:
 	GSCodeGenerator(void* code, size_t maxsize)

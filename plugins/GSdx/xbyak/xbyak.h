@@ -1040,6 +1040,13 @@ private:
 		bool cond = reg.isREG() && (reg.getBit() > op.getBit());
 		opModRM(reg, op, cond && op.isREG(), cond && op.isMEM(), 0x0F, code | w);
 	}
+	#ifdef XBYAK64
+	void opMovsxd(const Reg& reg, const Operand& op)
+	{
+		bool cond = reg.isREG() && (reg.getBit() > op.getBit());
+		opModRM(reg, op, cond && op.isREG(), cond && op.isMEM(), 0x63);
+	}
+	#endif
 	void opFpuMem(const Address& addr, uint8 m16, uint8 m32, uint8 m64, uint8 ext, uint8 m64ext)
 	{
 		if (addr.is64bitDisp()) throw ERR_CANT_USE_64BIT_DISP;

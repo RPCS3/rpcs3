@@ -22,3 +22,36 @@
 #include "stdafx.h"
 #include "GSFunctionMap.h"
 
+void GSCodeGenerator::enter(uint32 size, bool align)
+{
+	#ifdef _M_AMD64
+
+	push(r15);
+	mov(r15, rsp);
+	if(size > 0) sub(rsp, size);
+	if(align) and(rsp, 0xfffffffffffffff0);
+
+	#else
+
+	push(ebp);
+	mov(ebp, esp);
+	if(size > 0) sub(esp, size);
+	if(align) and(esp, 0xfffffff0);
+
+	#endif
+}
+
+void GSCodeGenerator::leave()
+{
+	#ifdef _M_AMD64
+
+	mov(rsp, r15);
+	pop(r15);
+
+	#else
+
+	mov(esp, ebp);
+	pop(ebp);
+
+	#endif
+}

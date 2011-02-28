@@ -2271,6 +2271,7 @@ public:
 
 	static const GSVector4 m_ps0123;
 	static const GSVector4 m_ps4567;
+	static const GSVector4 m_half;
 
 	static const GSVector4 m_x3f800000;
 	static const GSVector4 m_x4b000000;

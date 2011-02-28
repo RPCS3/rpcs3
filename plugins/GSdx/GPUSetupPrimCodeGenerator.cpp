@@ -32,7 +32,7 @@ GPUSetupPrimCodeGenerator::GPUSetupPrimCodeGenerator(void* param, uint32 key, vo
 	, m_local(*(GPUScanlineLocalData*)param)
 {
 	#if _M_AMD64
-	#error TODO
+	//#error TODO
 	#endif
 
 	m_sel.key = key;

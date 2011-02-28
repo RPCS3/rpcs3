@@ -34,7 +34,7 @@ __aligned(class, 32) GSVertexTrace
 	struct Vertex {GSVector4i c; GSVector4 p, t;};
 	struct VertexAlpha {int min, max; bool valid;};
 
-	typedef void (*VertexTracePtr)(const void* v, int count, Vertex& min, Vertex& max);
+	typedef void (*VertexTracePtr)(int count, const void* v, Vertex& min, Vertex& max);
 
 	class CGSW : public GSCodeGenerator
 	{
@@ -61,6 +61,8 @@ __aligned(class, 32) GSVertexTrace
 	uint32 Hash(GS_PRIM_CLASS primclass);
 
 	const GSState* m_state;
+
+	static const GSVector4 s_minmax;
 
 public:
 	GS_PRIM_CLASS m_primclass;
