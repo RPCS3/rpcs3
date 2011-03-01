@@ -8,8 +8,6 @@ set(CommonFlags
     -DHAVE_LINUX_VERSION_H
     -D_REENTRANT 
     -D__LINUX__
-    -MMD
-    -MT
 	-pthread
     -mmmx
     -msse
@@ -116,7 +114,7 @@ set(SDL_sources
    "${SDL_ROOT}/src/SDL_log.c"
 
    #c/atomic:
-   "${SDL_ROOT}/src/atomic/SDL_atomic.c"
+   # "${SDL_ROOT}/src/atomic/SDL_atomic.c"
    "${SDL_ROOT}/src/atomic/SDL_spinlock.c"
 
    #c/audio:
@@ -289,12 +287,12 @@ set(SDL_sources
    "${SDL_ROOT}/src/render/software/SDL_drawpoint.h"
    "${SDL_ROOT}/src/render/software/SDL_render_sw.c"
    "${SDL_ROOT}/src/render/software/SDL_render_sw_c.h"
-   "${SDL_ROOT}/src/thread/generic/SDL_syscond.c"
-   "${SDL_ROOT}/src/thread/generic/SDL_sysmutex.c"
-   "${SDL_ROOT}/src/thread/generic/SDL_sysmutex_c.h"
-   "${SDL_ROOT}/src/thread/generic/SDL_syssem.c"
-   "${SDL_ROOT}/src/thread/generic/SDL_systhread.c"
-   "${SDL_ROOT}/src/thread/generic/SDL_systhread_c.h"
+   # "${SDL_ROOT}/src/thread/generic/SDL_syscond.c"
+   # "${SDL_ROOT}/src/thread/generic/SDL_sysmutex.c"
+   # "${SDL_ROOT}/src/thread/generic/SDL_sysmutex_c.h"
+   # "${SDL_ROOT}/src/thread/generic/SDL_syssem.c"
+   # "${SDL_ROOT}/src/thread/generic/SDL_systhread.c"
+   # "${SDL_ROOT}/src/thread/generic/SDL_systhread_c.h"
    "${SDL_ROOT}/src/thread/pthread/SDL_syscond.c"
    "${SDL_ROOT}/src/thread/pthread/SDL_sysmutex.c"
    "${SDL_ROOT}/src/thread/pthread/SDL_sysmutex_c.h"
@@ -303,7 +301,7 @@ set(SDL_sources
    "${SDL_ROOT}/src/thread/pthread/SDL_systhread_c.h"
    "${SDL_ROOT}/src/timer/dummy/SDL_systimer.c"
    "${SDL_ROOT}/src/timer/unix/SDL_systimer.c"
-   "${SDL_ROOT}/src/timer/wince/SDL_systimer.c"
+   # "${SDL_ROOT}/src/timer/wince/SDL_systimer.c"
    # "${SDL_ROOT}/src/video/directfb/SDL_DirectFB_dyn.c"
    # "${SDL_ROOT}/src/video/directfb/SDL_DirectFB_dyn.h"
    # "${SDL_ROOT}/src/video/directfb/SDL_DirectFB_events.c"
@@ -393,9 +391,6 @@ set(SDL_sources
 #include_directories( ${SDL_ROOT}/include /usr/include/kde/artsc /usr/include/directfb)
 
 add_library(${Output} STATIC ${SDL_sources} )
-
-# Link against opengl
-# target_link_libraries(${Output} ${OPENGL_LIBRARIES})
 
 # User flags options
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

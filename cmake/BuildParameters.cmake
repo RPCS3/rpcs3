@@ -144,11 +144,9 @@ if(NOT DEFINED FORCE_INTERNAL_ZLIB)
     set(FORCE_INTERNAL_ZLIB FALSE)
 endif(NOT DEFINED FORCE_INTERNAL_ZLIB)
 
-# Keep external sdl for the moment
-set(FORCE_INTERNAL_SDL FALSE)
-# if(NOT DEFINED FORCE_INTERNAL_SDL)
-#     set(FORCE_INTERNAL_SDL FALSE)
-# endif(NOT DEFINED FORCE_INTERNAL_SDL)
+if(NOT DEFINED FORCE_INTERNAL_SDL)
+    set(FORCE_INTERNAL_SDL FALSE)
+endif(NOT DEFINED FORCE_INTERNAL_SDL)
 
 #-------------------------------------------------------------------------------
 # Select library system vs 3rdparty

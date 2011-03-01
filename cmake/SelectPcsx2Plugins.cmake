@@ -168,6 +168,8 @@ set(PadNull TRUE)
 #---------------------------------------
 # requires: -SDL
 #---------------------------------------
+# FIXME: internal sdl does not like X11 input with dynamic feature (SDL_VIDEO_DRIVER_X11_DYNAMIC_XINPUT)
+if(NOT FORCE_INTERNAL_SDL)
 if(SDL_FOUND)
 	set(onepad TRUE)
 else(SDL_FOUND)
@@ -175,6 +177,9 @@ else(SDL_FOUND)
     message(STATUS "Skip build of onepad: miss some dependencies")
     message(STATUS "${msg_dep_onepad}")
 endif(SDL_FOUND)
+else(NOT FORCE_INTERNAL_SDL)
+    message(STATUS "Skip build of onepad not compatible with internal SDL")
+endif(NOT FORCE_INTERNAL_SDL)
 #---------------------------------------
 
 #---------------------------------------
@@ -182,6 +187,8 @@ endif(SDL_FOUND)
 #---------------------------------------
 # requires: -SDL
 #---------------------------------------
+# FIXME: internal sdl does not like X11 input with dynamic feature (SDL_VIDEO_DRIVER_X11_DYNAMIC_XINPUT)
+if(NOT FORCE_INTERNAL_SDL)
 if(SDL_FOUND)
 	set(zeropad TRUE)
 else(SDL_FOUND)
@@ -189,6 +196,9 @@ else(SDL_FOUND)
     message(STATUS "Skip build of zeropad: miss some dependencies")
     message(STATUS "${msg_dep_zeropad}")
 endif(SDL_FOUND)
+else(NOT FORCE_INTERNAL_SDL)
+    message(STATUS "Skip build of zeropad not compatible with internal SDL")
+endif(NOT FORCE_INTERNAL_SDL)
 #---------------------------------------
 
 #---------------------------------------
