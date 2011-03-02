@@ -5,11 +5,11 @@
 #pragma once
 #endif
 
+#include "yaml-cpp/mark.h"
 #include <string>
 
 namespace YAML
 {
-  struct Mark;
   class Parser;
   
   // GraphBuilderInterface
