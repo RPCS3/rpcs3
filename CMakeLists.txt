@@ -106,7 +106,14 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	endif()
 
 	### Project stuff
+	if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+		set(CMAKE_BUILD_TYPE Release)
+	endif()
 	set(GCC_EXTRA_OPTIONS "")
+	#
+	set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+	set(CMAKE_CXX_FLAGS_DEBUG "-g")
 	#
 	set(FLAG_TESTED "-Wextra")
 	check_cxx_compiler_flag(${FLAG_TESTED} FLAG_WEXTRA)
@@ -114,7 +121,16 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 		set(GCC_EXTRA_OPTIONS "${GCC_EXTRA_OPTIONS} ${FLAG_TESTED}")
 	endif()
 	#
-	set(CMAKE_CXX_FLAGS "-O2 -Wall ${GCC_EXTRA_OPTIONS} -pedantic -Wno-long-long ${CMAKE_CXX_FLAGS}")
+	set(CMAKE_CXX_FLAGS "-Wall ${GCC_EXTRA_OPTIONS} -pedantic -Wno-long-long ${CMAKE_CXX_FLAGS}")
+	#
+	add_custom_target(debuggable $(MAKE) clean
+		COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Debug ${CMAKE_SOURCE_DIR}
+		COMMENT "Adjusting settings for debug compilation"
+		VERBATIM)
+	add_custom_target(releasable $(MAKE) clean
+		COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Release ${CMAKE_SOURCE_DIR}
+		COMMENT "Adjusting settings for release compilation"
+		VERBATIM)
 endif()
 
 # Microsoft VisualC++ specialities
