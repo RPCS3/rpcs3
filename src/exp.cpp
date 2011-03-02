@@ -107,7 +107,7 @@ namespace YAML
 			}
 
 			std::stringstream msg;
-			throw ParserException(in.mark(), ErrorMsg::INVALID_ESCAPE + ch);
+			throw ParserException(in.mark(), std::string(ErrorMsg::INVALID_ESCAPE) + ch);
 		}
 	}
 }

@@ -669,21 +669,21 @@ namespace Test
 			try {
 				doc["bad key"];
 			} catch(const YAML::Exception& e) {
-				if(e.msg != YAML::ErrorMsg::KEY_NOT_FOUND + ": bad key")
+				if(e.msg != std::string(YAML::ErrorMsg::KEY_NOT_FOUND) + ": bad key")
 					throw;
 			}
 
 			try {
 				doc[5];
 			} catch(const YAML::Exception& e) {
-				if(e.msg != YAML::ErrorMsg::KEY_NOT_FOUND + ": 5")
+				if(e.msg != std::string(YAML::ErrorMsg::KEY_NOT_FOUND) + ": 5")
 					throw;
 			}
 
 			try {
 				doc[2.5];
 			} catch(const YAML::Exception& e) {
-				if(e.msg != YAML::ErrorMsg::KEY_NOT_FOUND + ": 2.5")
+				if(e.msg != std::string(YAML::ErrorMsg::KEY_NOT_FOUND) + ": 2.5")
 					throw;
 			}
 

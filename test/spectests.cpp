@@ -888,7 +888,7 @@ namespace Test {
 				YAML::Node doc;
 				parser.GetNextDocument(doc);
 			} catch(const YAML::ParserException& e) {
-				YAML_ASSERT(e.msg == YAML::ErrorMsg::INVALID_ESCAPE + "c");
+				YAML_ASSERT(e.msg == std::string(YAML::ErrorMsg::INVALID_ESCAPE) + "c");
 				return true;
 			}
 			
