@@ -271,6 +271,7 @@ namespace YAML
 			case IndentMarker::NONE: assert(false); break;
 		}
 		assert(false);
+		throw std::runtime_error("yaml-cpp: internal error, invalid indent type");
 	}
 
 	// PushIndentTo

@@ -2,6 +2,7 @@
 #include "directives.h"
 #include "token.h"
 #include <cassert>
+#include <stdexcept>
 
 namespace YAML
 {
@@ -45,6 +46,7 @@ namespace YAML
 			default:
 				assert(false);
 		}
+		throw std::runtime_error("yaml-cpp: internal error, bad tag type");
 	}
 }
 

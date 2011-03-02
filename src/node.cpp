@@ -25,8 +25,9 @@ namespace YAML
 		return *pNode1 < *pNode2;
 	}
 
-	Node::Node(): m_type(CT_NONE), m_pContent(0), m_alias(false), m_pIdentity(this), m_referenced(false)
+	Node::Node(): m_type(CT_NONE), m_pContent(0), m_alias(false), m_referenced(false)
 	{
+		m_pIdentity = this;
 	}
 
 	Node::~Node()
