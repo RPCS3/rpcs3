@@ -54,9 +54,9 @@ option(MSVC_STHREADED_RT "MSVC: Build with single-threaded static runtime libs (
 ###
 ### Sources, headers, directories and libs
 ###
-file(GLOB sources "src/[a-zA-Z]*.cpp")
-file(GLOB public_headers "include/yaml-cpp/[a-zA-Z]*.h")
-file(GLOB private_headers "src/[a-zA-Z]*.h")
+file(GLOB_RECURSE sources "src/[a-zA-Z]*.cpp")
+file(GLOB_RECURSE public_headers "include/yaml-cpp/[a-zA-Z]*.h")
+file(GLOB_RECURSE private_headers "src/[a-zA-Z]*.h")
 
 if(VERBOSE)
 	message(STATUS "sources: ${sources}")
