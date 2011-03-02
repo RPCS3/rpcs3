@@ -19,12 +19,12 @@
  *
  */
 
-#error TODO
-
 #include "stdafx.h"
 #include "GSDrawScanlineCodeGenerator.h"
 
 #if _M_SSE < 0x500 && (defined(_M_AMD64) || defined(_WIN64))
+
+#error TODO
 
 void GSDrawScanlineCodeGenerator::Generate()
 {

@@ -50,15 +50,19 @@ GSDeviceSDL::~GSDeviceSDL()
 
 bool GSDeviceSDL::Create(GSWnd* wnd)
 {
-	m_window = (SDL_Window*)wnd->GetHandle();
+	void* handle = wnd->GetHandle();
 
-	if(m_window == wnd->GetDisplay())
+	if(handle == wnd->GetDisplay())
 	{
 		// HACK: no SDL window
 
-		m_window = SDL_CreateWindowFrom(wnd->GetHandle());
+		m_window = SDL_CreateWindowFrom(handle);
 
 		m_free_window = true;
+	}
+	else
+	{
+		m_window = (SDL_Window*)handle;
 	}
 
 	return GSDeviceSW::Create(wnd);

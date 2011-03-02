@@ -98,6 +98,10 @@
 		<Unit filename="GSDrawScanline.h" />
 		<Unit filename="GSDrawScanlineCodeGenerator.cpp" />
 		<Unit filename="GSDrawScanlineCodeGenerator.h" />
+		<Unit filename="GSDrawScanlineCodeGenerator.x64.avx.cpp" />
+		<Unit filename="GSDrawScanlineCodeGenerator.x64.cpp" />
+		<Unit filename="GSDrawScanlineCodeGenerator.x86.avx.cpp" />
+		<Unit filename="GSDrawScanlineCodeGenerator.x86.cpp" />
 		<Unit filename="GSDrawingContext.h" />
 		<Unit filename="GSDrawingEnvironment.h" />
 		<Unit filename="GSDump.cpp" />
@@ -122,6 +126,10 @@
 		<Unit filename="GSSetting.h" />
 		<Unit filename="GSSetupPrimCodeGenerator.cpp" />
 		<Unit filename="GSSetupPrimCodeGenerator.h" />
+		<Unit filename="GSSetupPrimCodeGenerator.x64.avx.cpp" />
+		<Unit filename="GSSetupPrimCodeGenerator.x64.cpp" />
+		<Unit filename="GSSetupPrimCodeGenerator.x86.avx.cpp" />
+		<Unit filename="GSSetupPrimCodeGenerator.x86.cpp" />
 		<Unit filename="GSState.cpp" />
 		<Unit filename="GSState.h" />
 		<Unit filename="GSTables.cpp" />
@@ -148,6 +156,10 @@
 		<Unit filename="GSVertexSW.h" />
 		<Unit filename="GSVertexTrace.cpp" />
 		<Unit filename="GSVertexTrace.h" />
+		<Unit filename="GSVertexTrace.x64.avx.cpp" />
+		<Unit filename="GSVertexTrace.x64.cpp" />
+		<Unit filename="GSVertexTrace.x86.avx.cpp" />
+		<Unit filename="GSVertexTrace.x86.cpp" />
 		<Unit filename="GSWnd.cpp" />
 		<Unit filename="GSWnd.h" />
 		<Unit filename="GSdx.cpp" />
