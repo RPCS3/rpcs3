@@ -741,6 +741,41 @@ namespace Test
 			out << YAML::EndMap;
 			desiredOutput = "---\napple: \":\"\nbanana: \":\"";
 		}
+		
+		void BoolFormatting(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginSeq;
+			out << YAML::TrueFalseBool << YAML::UpperCase << true;
+			out << YAML::TrueFalseBool << YAML::CamelCase << true;
+			out << YAML::TrueFalseBool << YAML::LowerCase << true;
+			out << YAML::TrueFalseBool << YAML::UpperCase << false;
+			out << YAML::TrueFalseBool << YAML::CamelCase << false;
+			out << YAML::TrueFalseBool << YAML::LowerCase << false;
+			out << YAML::YesNoBool << YAML::UpperCase << true;
+			out << YAML::YesNoBool << YAML::CamelCase << true;
+			out << YAML::YesNoBool << YAML::LowerCase << true;
+			out << YAML::YesNoBool << YAML::UpperCase << false;
+			out << YAML::YesNoBool << YAML::CamelCase << false;
+			out << YAML::YesNoBool << YAML::LowerCase << false;
+			out << YAML::OnOffBool << YAML::UpperCase << true;
+			out << YAML::OnOffBool << YAML::CamelCase << true;
+			out << YAML::OnOffBool << YAML::LowerCase << true;
+			out << YAML::OnOffBool << YAML::UpperCase << false;
+			out << YAML::OnOffBool << YAML::CamelCase << false;
+			out << YAML::OnOffBool << YAML::LowerCase << false;
+			out << YAML::ShortBool << YAML::UpperCase << true;
+			out << YAML::ShortBool << YAML::CamelCase << true;
+			out << YAML::ShortBool << YAML::LowerCase << true;
+			out << YAML::ShortBool << YAML::UpperCase << false;
+			out << YAML::ShortBool << YAML::CamelCase << false;
+			out << YAML::ShortBool << YAML::LowerCase << false;
+			out << YAML::EndSeq;
+			desiredOutput =
+			"---\n- TRUE\n- True\n- true\n- FALSE\n- False\n- false\n"
+			"- YES\n- Yes\n- yes\n- NO\n- No\n- no\n"
+			"- ON\n- On\n- on\n- OFF\n- Off\n- off\n"
+			"- Y\n- Y\n- y\n- N\n- N\n- n";
+		}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
@@ -933,6 +968,7 @@ namespace Test
 		RunEmitterTest(&Emitter::EmptyBinary, "empty binary", passed, total);
 		RunEmitterTest(&Emitter::ColonAtEndOfScalar, "colon at end of scalar", passed, total);
 		RunEmitterTest(&Emitter::ColonAsScalar, "colon as scalar", passed, total);
+		RunEmitterTest(&Emitter::BoolFormatting, "bool formatting", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);

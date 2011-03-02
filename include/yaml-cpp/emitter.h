@@ -85,6 +85,7 @@ namespace YAML
 		void EmitKindTag();
 		void EmitTag(bool verbatim, const _Tag& tag);
 		
+		const char *ComputeFullBoolName(bool b) const;
 		bool CanEmitNewline() const;
 		
 	private:

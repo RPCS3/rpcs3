@@ -606,12 +606,45 @@ namespace YAML
 		PostAtomicWrite();
 	}
 
-	namespace {
-		struct BoolName { std::string trueName, falseName; };
-		struct BoolFormatNames { BoolName upper, lower, camel; };
-		struct BoolTypes { BoolFormatNames yesNo, trueFalse, onOff; };
+	const char *Emitter::ComputeFullBoolName(bool b) const
+	{
+		const EMITTER_MANIP mainFmt = (m_pState->GetBoolLengthFormat() == ShortBool ? YesNoBool : m_pState->GetBoolFormat());
+		const EMITTER_MANIP caseFmt = m_pState->GetBoolCaseFormat();
+		switch(mainFmt) {
+			case YesNoBool:
+				switch(caseFmt) {
+					case UpperCase:
+						return b ? "YES" : "NO";
+					case CamelCase:
+						return b ? "Yes" : "No";
+					case LowerCase: // fall through to default
+					default:
+						return b ? "yes" : "no";
+				}
+			case OnOffBool:
+				switch(caseFmt) {
+					case UpperCase:
+						return b ? "ON" : "OFF";
+					case CamelCase:
+						return b ? "On" : "Off";
+					case LowerCase: // fall through to default
+					default:
+						return b ? "on" : "off";
+				}
+			case TrueFalseBool: // fall through to default
+			default:
+				switch(caseFmt) {
+					case UpperCase:
+						return b ? "TRUE" : "FALSE";
+					case CamelCase:
+						return b ? "True" : "False";
+					case LowerCase: // fall through to default
+					default:
+						return b ? "true" : "false";
+				}
+		}
 	}
-	
+
 	Emitter& Emitter::Write(bool b)
 	{
 		if(!good())
@@ -619,30 +652,13 @@ namespace YAML
 		
 		PreAtomicWrite();
 		EmitSeparationIfNecessary();
-		
-		// set up all possible bools to write
-		static const BoolTypes boolTypes = {
-			{ { "YES", "NO" }, { "yes", "no" }, { "Yes", "No" } },
-			{ { "TRUE", "FALSE" }, { "true", "false" }, { "True", "False" } },
-			{ { "ON", "OFF" }, { "on", "off" }, { "On", "Off" } }
-		};
-
-		// select the right one
-		EMITTER_MANIP boolFmt = m_pState->GetBoolFormat();
-		EMITTER_MANIP boolLengthFmt = m_pState->GetBoolLengthFormat();
-		EMITTER_MANIP boolCaseFmt = m_pState->GetBoolCaseFormat();
-		
-		const BoolFormatNames& fmtNames = (boolFmt == YesNoBool ? boolTypes.yesNo : boolFmt == TrueFalseBool ? boolTypes.trueFalse : boolTypes.onOff);
-		const BoolName& boolName = (boolCaseFmt == UpperCase ? fmtNames.upper : boolCaseFmt == LowerCase ? fmtNames.lower : fmtNames.camel);
-		const std::string& name = (b ? boolName.trueName : boolName.falseName);
-		
-		// and say it!
-		// TODO: should we disallow writing OnOffBool with ShortBool? (it'll just print "o" for both, which is silly)
-		if(boolLengthFmt == ShortBool)
+	
+		const char *name = ComputeFullBoolName(b);
+		if(m_pState->GetBoolLengthFormat() == ShortBool)
 			m_stream << name[0];
 		else
 			m_stream << name;
-		
+
 		PostAtomicWrite();
 		return *this;
 	}
