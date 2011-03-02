@@ -9,14 +9,13 @@ if(PORTAUDIO_INCLUDE_DIR AND PORTAUDIO_LIBRARIES)
     set(PORTAUDIO_FIND_QUIETLY TRUE)
 endif(PORTAUDIO_INCLUDE_DIR AND PORTAUDIO_LIBRARIES)
 
-# include dir
-find_path(PORTAUDIO_INCLUDE_DIR portaudio.h)
+# Search both portaudio.h and pa_linux_alsa.h to ensure the user gets
+# the include of the V2 API (V1 have only portaudio.h)
+find_path(PORTAUDIO_INCLUDE_DIR NAMES portaudio.h pa_linux_alsa.h)
 
 # finally the library itself
 find_library(libPortAudio NAMES portaudio)
-# Seems to run OK without libportaudiocpp so do not pull additional dependency
-# find_library(libPortAudioCpp NAMES portaudiocpp)
-# set(PORTAUDIO_LIBRARIES ${libPortAudio} ${libPortAudioCpp})
+# Run OK without libportaudiocpp so do not pull additional dependency
 set(PORTAUDIO_LIBRARIES ${libPortAudio})
 
 # handle the QUIETLY and REQUIRED arguments and set PORTAUDIO_FOUND to TRUE if 

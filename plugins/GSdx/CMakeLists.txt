@@ -68,6 +68,10 @@ set(GSdxSources
     GSDirtyRect.cpp
     GSDrawScanline.cpp
     GSDrawScanlineCodeGenerator.cpp
+    GSDrawScanlineCodeGenerator.x86.avx.cpp
+    GSDrawScanlineCodeGenerator.x64.cpp
+    GSDrawScanlineCodeGenerator.x86.cpp
+    GSDrawScanlineCodeGenerator.x64.avx.cpp
     GSDump.cpp
     GSFunctionMap.cpp
     GSLinuxDialog.cpp
@@ -79,6 +83,10 @@ set(GSdxSources
     GSRendererSW.cpp
     GSSetting.cpp
     GSSetupPrimCodeGenerator.cpp
+    GSSetupPrimCodeGenerator.x86.avx.cpp
+    GSSetupPrimCodeGenerator.x64.avx.cpp
+    GSSetupPrimCodeGenerator.x86.cpp
+    GSSetupPrimCodeGenerator.x64.cpp
     GSState.cpp
     GSTables.cpp
     GSTexture.cpp
@@ -90,6 +98,10 @@ set(GSdxSources
     GSUtil.cpp
     GSVector.cpp
     GSVertexTrace.cpp
+    GSVertexTrace.x64.avx.cpp
+    GSVertexTrace.x86.cpp
+    GSVertexTrace.x86.avx.cpp
+    GSVertexTrace.x64.cpp
     GSWnd.cpp
     GSdx.cpp
     stdafx.cpp
