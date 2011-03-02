@@ -613,36 +613,32 @@ namespace YAML
 		switch(mainFmt) {
 			case YesNoBool:
 				switch(caseFmt) {
-					case UpperCase:
-						return b ? "YES" : "NO";
-					case CamelCase:
-						return b ? "Yes" : "No";
-					case LowerCase: // fall through to default
-					default:
-						return b ? "yes" : "no";
+					case UpperCase: return b ? "YES" : "NO";
+					case CamelCase: return b ? "Yes" : "No";
+					case LowerCase: return b ? "yes" : "no";
+					default: break;
 				}
+				break;
 			case OnOffBool:
 				switch(caseFmt) {
-					case UpperCase:
-						return b ? "ON" : "OFF";
-					case CamelCase:
-						return b ? "On" : "Off";
-					case LowerCase: // fall through to default
-					default:
-						return b ? "on" : "off";
+					case UpperCase: return b ? "ON" : "OFF";
+					case CamelCase: return b ? "On" : "Off";
+					case LowerCase: return b ? "on" : "off";
+					default: break;
 				}
-			case TrueFalseBool: // fall through to default
-			default:
+				break;
+			case TrueFalseBool:
 				switch(caseFmt) {
-					case UpperCase:
-						return b ? "TRUE" : "FALSE";
-					case CamelCase:
-						return b ? "True" : "False";
-					case LowerCase: // fall through to default
-					default:
-						return b ? "true" : "false";
+					case UpperCase: return b ? "TRUE" : "FALSE";
+					case CamelCase: return b ? "True" : "False";
+					case LowerCase: return b ? "true" : "false";
+					default: break;
 				}
+				break;
+			default:
+				break;
 		}
+		return b ? "y" : "n"; // should never get here, but it can't hurt to give these answers
 	}
 
 	Emitter& Emitter::Write(bool b)
