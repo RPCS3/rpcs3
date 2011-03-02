@@ -605,6 +605,12 @@ namespace YAML
 		m_stream << str.str();
 		PostAtomicWrite();
 	}
+
+	namespace {
+		struct BoolName { std::string trueName, falseName; };
+		struct BoolFormatNames { BoolName upper, lower, camel; };
+		struct BoolTypes { BoolFormatNames yesNo, trueFalse, onOff; };
+	}
 	
 	Emitter& Emitter::Write(bool b)
 	{
@@ -615,10 +621,6 @@ namespace YAML
 		EmitSeparationIfNecessary();
 		
 		// set up all possible bools to write
-		struct BoolName { std::string trueName, falseName; };
-		struct BoolFormatNames { BoolName upper, lower, camel; };
-		struct BoolTypes { BoolFormatNames yesNo, trueFalse, onOff; };
-		
 		static const BoolTypes boolTypes = {
 			{ { "YES", "NO" }, { "yes", "no" }, { "Yes", "No" } },
 			{ { "TRUE", "FALSE" }, { "true", "false" }, { "True", "False" } },
