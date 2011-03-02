@@ -17,8 +17,13 @@ namespace YAML
 	template <> struct is_numeric <unsigned long int> { enum { value = true }; };
 	template <> struct is_numeric <short int> { enum { value = true }; };
 	template <> struct is_numeric <unsigned short int> { enum { value = true }; };
+#if defined(_MSC_VER) && (_MSC_VER < 1310)
+	template <> struct is_numeric <__int64> { enum { value = true }; };
+	template <> struct is_numeric <unsigned __int64> { enum { value = true }; };
+#else
 	template <> struct is_numeric <long long> { enum { value = true }; };
 	template <> struct is_numeric <unsigned long long> { enum { value = true }; };
+#endif
 	template <> struct is_numeric <float> { enum { value = true }; };
 	template <> struct is_numeric <double> { enum { value = true }; };
 	template <> struct is_numeric <long double> { enum { value = true }; };
