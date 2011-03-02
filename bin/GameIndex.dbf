@@ -88,6 +88,14 @@ Serial = PBPX-95517
 Name   = Network Adapter Start-Up Disc
 Region = NTSC-U
 ---------------------------------------------
+Serial = SCUS-90174
+Name   = Toy Story 3 (PlayStation 2 Bundle)
+Region = NTSC-U
+---------------------------------------------
+Serial = SCUS-94346
+Name   = Singstar Latino
+Region = NTSC-U
+---------------------------------------------
 Serial = SCUS-97097
 Name   = Network Adapter Start-Up Disc
 Region = NTSC-U
@@ -1537,6 +1545,10 @@ Serial = SCUS-97557
 Name   = Kiosk Demo Disc Q2-Q3 2006
 Region = NTSC-U
 ---------------------------------------------
+Serial = SCUS-97558
+Name   = Jak and Daxter: The Lost Frontier
+Region = NTSC-U
+---------------------------------------------
 Serial = SCUS-97560
 Name   = SOCOM - U.S. Navy SEALs - Combined Assault [Demo]
 Region = NTSC-U
@@ -1572,6 +1584,10 @@ Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97583
 Name   = MLB '08 - The Show
+Region = NTSC-U
+---------------------------------------------
+Serial = SCUS-97584
+Name   = Syphon Filter: Logan's Shadow
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97589
@@ -1649,6 +1665,10 @@ Serial = SCUS-97622
 Name   = SingStar 80's [with Microphone]
 Region = NTSC-U
 ---------------------------------------------
+Serial = SCUS-97623
+Name   = Secret Agent Clank
+Region = NTSC-U
+---------------------------------------------
 Serial = SCUS-97627
 Name   = Singstar Pop Volume 2
 Region = NTSC-U
@@ -1680,10 +1700,30 @@ Name   = Singstar Abba
 Region = NTSC-U
 Compat = 3
 ---------------------------------------------
+Serial = SCUS-97643
+Name   = Singstar Queen
+Region = NTSC-U
+---------------------------------------------
+Serial = SCUS-97644
+Name   = MLB '09: The Show
+Region = NTSC-U
+---------------------------------------------
 Serial = SCUS-97651
 Name   = Singstar Country
 Region = NTSC-U
 Compat = 3
+---------------------------------------------
+Serial = SCUS-97653
+Name   = MLB '10: The Show
+Region = NTSC-U
+---------------------------------------------
+Serial = SCUS-97654
+Name   = MotorStorm Arctic Edge
+Region = NTSC-U
+---------------------------------------------
+Serial = SCUS-97660
+Name   = Singstar Latino
+Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97869
 Name   = Amplitude P.O.D. [Demo]
@@ -9364,7 +9404,7 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-21769
-Name   = Yazuka 2
+Name   = Yakuza 2
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
@@ -9382,6 +9422,10 @@ Serial = SLUS-21772
 Name   = Tiger Woods PGA Tour '09
 Region = NTSC-U
 Compat = 4
+---------------------------------------------
+Serial = SLUS-21773
+Name   = PDC World Championship Darts 2008
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21774
 Name   = Dynasty Warriors 6
@@ -9456,6 +9500,14 @@ Name   = DT Carnage
 Region = NTSC-U
 Compat = 2
 ---------------------------------------------
+Serial = SLUS-21794
+Name   = Go, Diego, Go!: Great Dinosaur Rescue
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21795
+Name   = Totally Spies! Totally Party
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21797
 Name   = Tak - Guardians Of Gross
 Region = NTSC-U
@@ -9501,10 +9553,18 @@ Name   = Monster Jam - Urban Assault
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
+Serial = SLUS-21808
+Name   = Harry Potter and the Half-Blood Prince
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21809
 Name   = Backyard Football 2009
 Region = NTSC-U
 Compat = 5
+---------------------------------------------
+Serial = SLUS-21810
+Name   = WWE SmackDown vs. Raw 2009
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21811
 Name   = MotoGP 08
@@ -9525,6 +9585,10 @@ Serial = SLUS-21814
 Name   = Disney - Think Fast
 Region = NTSC-U
 Compat = 2
+---------------------------------------------
+Serial = SLUS-21815
+Name   = Ben 10: Alien Force
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21816
 Name   = King Of Fighters 98 - Ultimate Match
@@ -9551,6 +9615,10 @@ Name   = Legend Of Spyro - Dawn Of The Dragon
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
+Serial = SLUS-21821
+Name   = Pro Evolution Soccer 2009
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21822
 Name   = Spiderman - Web Of Shadows
 Region = NTSC-U
@@ -9566,6 +9634,10 @@ Serial = SLUS-21826
 Name   = Disney - Sing It
 Region = NTSC-U
 Compat = 2
+---------------------------------------------
+Serial = SLUS-21827
+Name   = PopStar Guitar
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21830
 Name   = Rock Band Track Pack - Volume 2
@@ -9597,6 +9669,10 @@ Name   = Monster Lab
 Region = NTSC-U
 Compat = 1
 ---------------------------------------------
+Serial = SLUS-21839
+Name   = Ski and Shoot
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21840
 Name   = Madagascar - Escape 2 Africa
 Region = NTSC-U
@@ -9622,6 +9698,10 @@ Name   = Bolt
 Region = NTSC-U
 Compat = 2
 ---------------------------------------------
+Serial = SLUS-21845
+Name   = Shin Megami Tensei: Devil Summoner 2: Raidou Kuzunoha vs. King Abaddon
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21846
 Name   = Sonic Unleashed
 Region = NTSC-U
@@ -9638,10 +9718,18 @@ Name   = Rock Band Track Pack - AC/DC Live
 Region = NTSC-U
 Compat = 3
 ---------------------------------------------
+Serial = SLUS-21849
+Name   = Winter Sports 2: The Next Challenge
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21850
 Name   = Baja 1000
 Region = NTSC-U
 Compat = 5
+---------------------------------------------
+Serial = SLUS-21851
+Name   = NCAA Basketball '09
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21852
 Name   = Tale Of Despereaux, The
@@ -9663,15 +9751,31 @@ Name   = NPPL Championship Paintball 2009
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
+Serial = SLUS-21857
+Name   = Short Track Racing: Trading Paint
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21858
 Name   = Tomb Raider Underworld
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
+Serial = SLUS-21860
+Name   = The Bigs 2
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21861
+Name   = Disney Sing It! High School Musical 3: Senior Year
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21862
 Name   = Naruto Shippuden - Ultimate Ninja 4
 Region = NTSC-U
 Compat = 4
+---------------------------------------------
+Serial = SLUS-21863
+Name   = Suzuki TT Superbikes: Real Road Racing Championship
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21864
 Name   = Disney Pixar - Up
@@ -9688,20 +9792,52 @@ Name   = Guitar Hero - Smash Hits
 Region = NTSC-U
 Compat = 3
 ---------------------------------------------
+Serial = SLUS-21867
+Name   = Guitar Hero: Van Halen
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21868
 Name   = Nobunagas Ambition - Iron Triangle
 Region = NTSC-U
 Compat = 5
+---------------------------------------------
+Serial = SLUS-21869
+Name   = Trivial Pursuit
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21870
 Name   = Monsters VS Aliens
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
+Serial = SLUS-21871
+Name   = Major League Baseball 2K9
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21872
+Name   = Pimp my Ride - Street Racing
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21873
 Name   = Dynasty Warriors - Gundam 2
 Region = NTSC-U
 Compat = 5
+---------------------------------------------
+Serial = SLUS-21874
+Name   = Jelly Belly: Ballistic Beans
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21875
+Name   = M&Ms Adventure
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21876
+Name   = Rock Band Track Pack: Classic Rock
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21877
+Name   = Tiger Woods PGA Tour 10
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21878
 Name   = Ice Age 3 - Dawn of the Dinosaurs
@@ -9728,25 +9864,105 @@ Name   = Ghostbusters
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
+Serial = SLUS-21883
+Name   = Cars Race-O-Rama
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21884
+Name   = Backyard Baseball '10
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21885
+Name   = Indiana Jones and the Staff of Kings
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21886
 Name   = G.I. Joe: The Rise of Cobra
 Region = NTSC-U
 Compat = 5
+---------------------------------------------
+Serial = SLUS-21888
+Name   = Rock Band Country Track Pack
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21889
+Name   = Rock Band Metal Track Pack
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21890
 Name   = Mana Khemia 2 : Fall Of Alchemy
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
+Serial = SLUS-21891
+Name   = G-Force
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21892
+Name   = NCAA Football 10
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21893
+Name   = Madden NFL 10
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21895
+Name   = Astro Boy: The Video Game
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21896
 Name   = The Secret Saturdays: Beasts of the 5th Sun
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
+Serial = SLUS-21898
+Name   = Band Hero
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21899
 Name   = Silent Hill - Shattered Memories
 Region = NTSC-U
 Compat = 5
+---------------------------------------------
+Serial = SLUS-21900
+Name   = Scooby-Doo! First Frights
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21901
+Name   = WWE SmackDown vs. Raw 2010
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21902
+Name   = Bakugan Battle Brawlers
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21904
+Name   = Teenage Mutant Ninja Turtles: Smash-Up
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21905
+Name   = FIFA Soccer 10
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21907
+Name   = Jurassic: The Hunted
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21908
+Name   = NBA 2K10
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21909
+Name   = DJ Hero
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21910
+Name   = Marvel Super Hero Squad
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21913
+Name   = Star Wars The Clone Wars: Republic Heroes
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21914
 Name   = NHL 2K10
@@ -9758,24 +9974,68 @@ Name   = The Lord of the Rings: Aragorn's Quest
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
+Serial = SLUS-21917
+Name   = Dance Dance Revolution X2 (Bundle)
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21918
 Name   = Pro Evolution Soccer 2010
 Region = NTSC-U
 Compat = 5
+---------------------------------------------
+Serial = SLUS-21919
+Name   = Backyard Football 2010
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21921
 Name   = Ben 10: Alien Force - Vilgax Attacks
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
+Serial = SLUS-21923
+Name   = Dora the Explorer: Dora Saves the Crystal Kingdom
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21926
+Name   = Ni Hao, Kai-Lan: Super Game Day
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21927
 Name   = Sakura Wars: So Long, My Love [English - Disc 1]
 Region = NTSC-U
 ---------------------------------------------
+Serial = SLUS-21928
+Name   = Scooby-Doo! and the Spooky Swamp
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21929
+Name   = Major League Baseball 2K10
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21930
-Name   = Sakura Wars: So Long, My Love
+Name   = Sakura Wars: So Long, My Love [Japanese - Disc 2]
 Region = NTSC-U
 Compat = 5
+---------------------------------------------
+Serial = SLUS-21931
+Name   = Toy Story 3
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21932
+Name   = NCAA Football 11
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21933
+Name   = Despicable Me
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21934
+Name   = Rapala Pro Bass Fishing 2010
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21935
+Name   = Cabela's North American Adventures
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21936
 Name   = NBA 2K11
@@ -9788,6 +10048,14 @@ Region = NTSC-U
 Compat = 5
 vuClampMode = 3			//shows the crowd in the back
 ---------------------------------------------
+Serial = SLUS-21938
+Name   = Ben 10 Ultimate Alien: Cosmic Destruction
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-21939
+Name   = WWE SmackDown vs. Raw 2011
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21941
 Name   = FIFA Soccer 11
 Region = NTSC-U
@@ -9797,6 +10065,22 @@ Serial = SLUS-21942
 Name   = Pro Evolution Soccer 2011
 Region = NTSC-U
 Compat = 5
+---------------------------------------------
+Serial = SLUS-21944
+Name   = Dora's Big Birthday Adventure
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-27029
+Name   = Disney Sing It [Bundle]
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-27030
+Name   = High School Musical 3: Senior Year DANCE! [w/Mat]
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-27034
+Name   = Disney Sing It! High School Musical 3: Senior Year
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-28002
 Name   = Red Faction [Trade Demo]
@@ -11854,7 +12138,7 @@ Region = NTSC-J
 Serial = SCPS-15025
 Name   = Saru Get You 2
 Region = NTSC-J
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SCPS-15026
 Name   = Boku no Natsuyasumi 2
@@ -13397,6 +13681,10 @@ Serial = SLKA-35003
 Name   = Sakura Taisen - Atsuki Chishioni
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLPM-55005
+Name   = Mana Khemia 2: Ochita Gakuen to Renkinjutsushi Tachi
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPM-55096
 Name   = ThunderForce VI
 Region = NTSC-J
@@ -13413,10 +13701,54 @@ Region = NTSC-J
 Compat = 5
 eeRoundMode = 0
 ---------------------------------------------
+Serial = SLPM-55114
+Name   = Mana Khemia 2: Ochita Gakuen to Renkinjutsushi Tachi
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55122
+Name   = Sengoku Musou 2
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55127
+Name   = Need for Speed - Undercover
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55131
+Name   = World Soccer Winning Eleven 2009
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55148
+Name   = 007: Nagusame no Houshuu
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPM-55184
 Name   = Melty Blood - Actress Again
 Region = NTSC-J
 Compat = 5
+---------------------------------------------
+Serial = SLPM-55226
+Name   = FIFA 10: World Class Soccer
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55244
+Name   = Need for Speed - Undercover [EA:SY! 1980]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55251
+Name   = WWE SmackDown vs. Raw 2009
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55271
+Name   = FIFA 10: World Class Soccer (EA:SY! 1980)
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55276
+Name   = World Soccer Winning Eleven 2011
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55280
+Name   = The King of Fighters '98 Ultimate Match
+Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-60251
 Name   = Devil May Cry 3 [Trial Version]
@@ -14727,7 +15059,7 @@ Region = NTSC-J
 Serial = SLPM-62466
 Name   = Zooo [Superlite 2000 Series]
 Region = NTSC-J
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-62467
 Name   = Simple 2000 Series Vol.18 - Love Aerobics
@@ -15925,7 +16257,7 @@ Region = NTSC-J
 Serial = SLPM-65019
 Name   = Zone of Enders
 Region = NTSC-J
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-65020
 Name   = ParaPara Paradise
@@ -21685,6 +22017,14 @@ Serial = SLPM-66678
 Name   = Final Fantasy X-2 - International + Last Mission [Ultimate Hits]
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPM-66679
+Name   = Devil Summoner: Kuzunoha Raidou tai Abaddon Ou [Plus]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-66683
+Name   = Devil Summoner: Kuzunoha Raidou tai Abaddon Ou
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPM-66685
 Name   = Seaman 2 - Peking Genjin Ikusei Kit
 Region = NTSC-J
@@ -22718,6 +23058,7 @@ Region = NTSC-J
 Serial = SLPM-66964
 Name   = Guilty Gear XX - Accent Core Plus [Append Edition]
 Region = NTSC-J
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-66965
 Name   = Guilty Gear XX - Accent Core Plus
@@ -23138,6 +23479,22 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-74259
 Name   = Odin Sphere [PlayStation 2 the Best]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-74265
+Name   = Nobunaga no Yabou: Kakushin [PlayStation 2 the Best]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-74276
+Name   = Sangoku Musou 2 [PlayStation 2 the Best]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-74278
+Name   = Persona 4 [PlayStation 2 the Best]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-74286
+Name   = Shin Sangoku Musou 5 Special [PlayStation 2 the Best]
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-74301
@@ -27430,6 +27787,10 @@ Serial = SLPS-25838
 Name   = Taiheiyou no Arashi - Senkan Yamato, Akatsuki ni Shutsugekisu
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPS-25839
+Name   = Samurai Spirits: Rokuban Shoubu [NeoGeo Online Collection Vol. 12]
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPS-25840
 Name   = Guitar Hero III - Legends of Rock [with Guitar]
 Region = NTSC-J
@@ -27545,10 +27906,30 @@ Serial = SLPS-25869
 Name   = CR Shinseiki Evangelion - Shito, Futatabi
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPS-25905
+Name   = Dragon Ball Z: Infinite World
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPS-25914
 Name   = Kidou Senshi Gundam: Giren no Yabou - Axis no Kyoui V
 Region = NTSC-J
 FpuNegDivHack = 1
+---------------------------------------------
+Serial = SLPS-25927
+Name   = Tomb Raider Underworld
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPS-25930
+Name   = Major League Baseball 2K9
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPS-25934
+Name   = Samurai Spirits: Rokuban Shoubu [NeoGeo Online Collection the Best]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPS-25935
+Name   = The King of Fighters '98 Ultimate Match (NeoGeo Online Collection the Best)
+Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-25944
 Name   = Kamen Rider Climax Heroes
@@ -27870,6 +28251,10 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-73258
 Name   = Kenka Banchou 2 - Full Throttle [PlayStation 2 the Best]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPS-73263
+Name   = Ar tonelico II: Sekai ni Hibiku Shoujo Tachi no Metafalica [PlayStation 2 the Best]
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-73401
@@ -36343,7 +36728,7 @@ Region = PAL-E
 Compat = 5
 ---------------------------------------------
 Serial = SLES-53399
-Name   = Yazuka Fury
+Name   = Yakuza Fury
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53403
@@ -37829,7 +38214,7 @@ Name   = Jaws Unleashed
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-54171
-Name   = Yazuka
+Name   = Yakuza
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
@@ -38629,6 +39014,10 @@ Name   = Dragonball Z Budokai Tenkaichi 3
 Region = PAL-E
 Compat = 5
 ---------------------------------------------
+Serial = SLES-54953
+Name   = Totally Spies! Totally Party
+Region = PAL-Unk
+---------------------------------------------
 Serial = SLES-54975
 Name   = George Of The Jungle
 Region = PAL-E
@@ -38659,25 +39048,53 @@ Name   = TNA Impact
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55169
+Name   = Monster Lab
+Region = PAL-Unk
+---------------------------------------------
 Serial = SLES-55198
 Name   = Iron Man
 Region = PAL-Unk
 Compat = 5
+---------------------------------------------
+Serial = SLES-55249
+Name   = Harry Potter and the Half-Blood Prince
+Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-55266
 Name   = MotoGP 08
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55329
+Name   = Shrek's Carnival Craze
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55342
+Name   = Hasbro Family Game Night
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55345
+Name   = James Bond: Quantum of Solace
+Region = PAL-Unk
+---------------------------------------------
 Serial = SLES-55347
 Name   = Dragonball Z Infinite World
 Region = PAL-E
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55349
+Name   = Need For Speed - Undercover
+Region = PAL-Unk
+---------------------------------------------
 Serial = SLES-55352
 Name   = Need For Speed - Undercover
 Region = PAL-Unk
 Compat = 5
+---------------------------------------------
+Serial = SLES-55373
+Name   = The King of Fighters Collection: The Orochi Saga
+Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-55380
 Name   = Sonic Unleashed
@@ -38689,15 +39106,47 @@ Name   = Warriors Orochi 2
 Region = PAL-E
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55406
+Name   = Pro Evolution Soccer 2009
+Region = PAL-Unk
+---------------------------------------------
 Serial = SLES-55442
 Name   = Tomb Raider Underworld
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55444
+Name   = Ar tonelico II: Melody of Metafalica
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55453
+Name   = Singstar Queen
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55457
+Name   = AC/DC LIVE: Rock Band Track Pack
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55459
+Name   = Jelly Belly: Ballistic Beans
+Region = PAL-Unk
+---------------------------------------------
 Serial = SLES-55470
 Name   = Coraline
 Region = PAL-E
 Compat = 3
+---------------------------------------------
+Serial = SLES-55474
+Name   = Shin Megami Tensei: Persona 4
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55494
+Name   = X-Men Origins: Wolverine
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55496
+Name   = Secret Agent Clank
+Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-55509
 Name   = Music Maker - Rockstar
@@ -38708,6 +39157,18 @@ Serial = SLES-55571
 Name   = Ghostbusters
 Region = PAL-E
 Compat = 4
+---------------------------------------------
+Serial = SLES-55573
+Name   = MotorStorm Arctic Edge
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55585
+Name   = FIFA 10
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55636
+Name   = Pro Evolution Soccer 2011
+Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-82001
 Name   = Summoner
