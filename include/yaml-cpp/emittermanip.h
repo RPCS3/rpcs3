@@ -41,6 +41,10 @@ namespace YAML
 		Hex,
 		Oct,
 		
+		// document manipulators
+		BeginDoc,
+		EndDoc,
+		
 		// sequence manipulators
 		BeginSeq,
 		EndSeq,

@@ -776,6 +776,28 @@ namespace Test
 			"- ON\n- On\n- on\n- OFF\n- Off\n- off\n"
 			"- Y\n- Y\n- y\n- N\n- N\n- n";
 		}
+		
+		void DocStartAndEnd(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginDoc;
+			out << YAML::BeginSeq << 1 << 2 << 3 << YAML::EndSeq;
+			out << YAML::BeginDoc;
+			out << "Hi there!";
+			out << YAML::EndDoc;
+			out << YAML::EndDoc;
+			out << YAML::EndDoc;
+			out << YAML::BeginDoc;
+			out << YAML::VerbatimTag("foo") << "bar";
+			desiredOutput = "---\n- 1\n- 2\n- 3\n---\nHi there!\n...\n...\n...\n---\n!<foo> bar";
+		}
+		
+		void ImplicitDocStart(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << "Hi";
+			out << "Bye";
+			out << "Oops";
+			desiredOutput = "Hi\n---\nBye\n---\nOops";
+		}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
@@ -870,6 +892,7 @@ namespace Test
 			std::string desiredOutput;
 			test(out, desiredOutput);
 			std::string output = out.c_str();
+			std::string lastError = out.GetLastError();
 
 			if(output == desiredOutput) {
 				try {
@@ -888,6 +911,8 @@ namespace Test
 				std::cout << output << "<<<\n";
 				std::cout << "Desired output:\n";
 				std::cout << desiredOutput << "<<<\n";				
+				if(!out.good())
+					std::cout << "Emitter error: " << lastError << "\n";
 			}
 			total++;
 		}
@@ -978,6 +1003,8 @@ namespace Test
 		RunEmitterTest(&Emitter::ColonAtEndOfScalar, "colon at end of scalar", passed, total);
 		RunEmitterTest(&Emitter::ColonAsScalar, "colon as scalar", passed, total);
 		RunEmitterTest(&Emitter::BoolFormatting, "bool formatting", passed, total);
+		RunEmitterTest(&Emitter::DocStartAndEnd, "doc start and end", passed, total);
+		RunEmitterTest(&Emitter::ImplicitDocStart, "implicit doc start", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);

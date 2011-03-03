@@ -75,6 +75,8 @@ namespace YAML
 		void PostAtomicWrite();
 		void EmitSeparationIfNecessary();
 		
+		void EmitBeginDoc();
+		void EmitEndDoc();
 		void EmitBeginSeq();
 		void EmitEndSeq();
 		void EmitBeginMap();

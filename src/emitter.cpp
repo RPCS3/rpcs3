@@ -102,6 +102,12 @@ namespace YAML
 			return *this;
 		
 		switch(value) {
+			case BeginDoc:
+				EmitBeginDoc();
+				break;
+			case EndDoc:
+				EmitEndDoc();
+				break;
 			case BeginSeq:
 				EmitBeginSeq();
 				break;
@@ -157,8 +163,8 @@ namespace YAML
 			case ES_WRITING_DOC:
 				return true;
 			case ES_DONE_WITH_DOC:
-				m_pState->SetError("Write called on finished document");
-				return true;
+				EmitBeginDoc();
+				return false;
 				
 				// block sequence
 			case ES_WAITING_FOR_BLOCK_SEQ_ENTRY:
@@ -320,6 +326,47 @@ namespace YAML
 		m_pState->UnsetSeparation();
 	}
 	
+	// EmitBeginDoc
+	void Emitter::EmitBeginDoc()
+	{
+		if(!good())
+			return;
+		
+		EMITTER_STATE curState = m_pState->GetCurState();
+		if(curState != ES_WAITING_FOR_DOC && curState != ES_WRITING_DOC && curState != ES_DONE_WITH_DOC) {
+			m_pState->SetError("Unexpected begin document");
+			return;
+		}
+		
+		if(curState == ES_WRITING_DOC || curState == ES_DONE_WITH_DOC)
+			m_stream << '\n';		
+		m_stream << "---\n";
+
+		m_pState->UnsetSeparation();
+		m_pState->SwitchState(ES_WAITING_FOR_DOC);
+	}
+	
+	// EmitEndDoc
+	void Emitter::EmitEndDoc()
+	{
+		if(!good())
+			return;
+
+		
+		EMITTER_STATE curState = m_pState->GetCurState();
+		if(curState != ES_WAITING_FOR_DOC && curState != ES_WRITING_DOC && curState != ES_DONE_WITH_DOC) {
+			m_pState->SetError("Unexpected end document");
+			return;
+		}
+		
+		if(curState == ES_WRITING_DOC || curState == ES_DONE_WITH_DOC)
+			m_stream << '\n';		
+		m_stream << "...\n";
+		
+		m_pState->UnsetSeparation();
+		m_pState->SwitchState(ES_WAITING_FOR_DOC);
+	}
+
 	// EmitBeginSeq
 	void Emitter::EmitBeginSeq()
 	{
