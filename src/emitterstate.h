@@ -103,9 +103,12 @@ namespace YAML
 		void StartLongKey();
 		void StartSimpleKey();
 
-		bool RequiresSeparation() const { return m_requiresSeparation; }
-		void RequireSeparation() { m_requiresSeparation = true; }
-		void UnsetSeparation() { m_requiresSeparation = false; }
+		bool RequiresSoftSeparation() const { return m_requiresSoftSeparation; }
+		bool RequiresHardSeparation() const { return m_requiresHardSeparation; }
+		void RequireSoftSeparation() { m_requiresSoftSeparation = true; }
+		void RequireHardSeparation() { m_requiresSoftSeparation = true; m_requiresHardSeparation = true; }
+		void ForceHardSeparation() { m_requiresSoftSeparation = false; }
+		void UnsetSeparation() { m_requiresSoftSeparation = false; m_requiresHardSeparation = false; }
 
 		void ClearModifiedSettings();
 
@@ -184,7 +187,8 @@ namespace YAML
 		
 		std::stack <Group *> m_groups;
 		unsigned m_curIndent;
-		bool m_requiresSeparation;
+		bool m_requiresSoftSeparation;
+		bool m_requiresHardSeparation;
 	};
 
 	template <typename T>

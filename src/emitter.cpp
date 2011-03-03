@@ -153,16 +153,19 @@ namespace YAML
 				// document-level
 			case ES_WAITING_FOR_DOC:
 				m_stream << "---";
-				m_pState->RequireSeparation();
+				m_pState->RequireSoftSeparation();
 				m_pState->SwitchState(ES_WRITING_DOC);
 				return true;
 			case ES_WRITING_DOC:
+				return true;
+			case ES_DONE_WITH_DOC:
+				m_pState->SetError("Write called on finished document");
 				return true;
 				
 				// block sequence
 			case ES_WAITING_FOR_BLOCK_SEQ_ENTRY:
 				m_stream << IndentTo(curIndent) << "-";
-				m_pState->RequireSeparation();
+				m_pState->RequireSoftSeparation();
 				m_pState->SwitchState(ES_WRITING_BLOCK_SEQ_ENTRY);
 				return true;
 			case ES_WRITING_BLOCK_SEQ_ENTRY:
@@ -180,7 +183,7 @@ namespace YAML
 				return true;
 			case ES_DONE_WITH_FLOW_SEQ_ENTRY:
 				m_stream << ',';
-				m_pState->RequireSeparation();
+				m_pState->RequireSoftSeparation();
 				m_pState->SwitchState(ES_WAITING_FOR_FLOW_SEQ_ENTRY);
 				return false;
 				
@@ -191,7 +194,7 @@ namespace YAML
 			case ES_WAITING_FOR_BLOCK_MAP_KEY:
 				if(m_pState->CurrentlyInLongKey()) {
 					m_stream << IndentTo(curIndent) << '?';
-					m_pState->RequireSeparation();
+					m_pState->RequireSoftSeparation();
 				}
 				m_pState->SwitchState(ES_WRITING_BLOCK_MAP_KEY);
 				return true;
@@ -218,7 +221,7 @@ namespace YAML
 				if(m_pState->CurrentlyInLongKey()) {
 					EmitSeparationIfNecessary();
 					m_stream << '?';
-					m_pState->RequireSeparation();
+					m_pState->RequireSoftSeparation();
 				}
 				return true;
 			case ES_WRITING_FLOW_MAP_KEY:
@@ -228,7 +231,7 @@ namespace YAML
 				return true;
 			case ES_WAITING_FOR_FLOW_MAP_VALUE:
 				m_stream << ':';
-				m_pState->RequireSeparation();
+				m_pState->RequireSoftSeparation();
 				m_pState->SwitchState(ES_WRITING_FLOW_MAP_VALUE);
 				return true;
 			case ES_WRITING_FLOW_MAP_VALUE:
@@ -284,7 +287,7 @@ namespace YAML
 			case ES_WRITING_BLOCK_MAP_KEY:
 				if(!m_pState->CurrentlyInLongKey()) {
 					m_stream << ':';
-					m_pState->RequireSeparation();
+					m_pState->RequireSoftSeparation();
 				}
 				m_pState->SwitchState(ES_DONE_WITH_BLOCK_MAP_KEY);
 				break;
@@ -312,8 +315,10 @@ namespace YAML
 		if(!good())
 			return;
 		
-		if(m_pState->RequiresSeparation())
+		if(m_pState->RequiresSoftSeparation())
 			m_stream << ' ';
+		else if(m_pState->RequiresHardSeparation())
+			m_stream << '\n';
 		m_pState->UnsetSeparation();
 	}
 	
@@ -403,8 +408,10 @@ namespace YAML
 			   curState == ES_WRITING_BLOCK_MAP_KEY || curState == ES_WRITING_BLOCK_MAP_VALUE ||
 			   curState == ES_WRITING_DOC
 			) {
-				m_stream << "\n";
-				m_pState->UnsetSeparation();
+				if(m_pState->RequiresHardSeparation() || curState != ES_WRITING_BLOCK_SEQ_ENTRY) {
+					m_stream << "\n";
+					m_pState->UnsetSeparation();
+				}
 			}
 			m_pState->PushState(ES_WAITING_FOR_BLOCK_MAP_ENTRY);
 		} else if(flowType == Flow) {
@@ -469,11 +476,12 @@ namespace YAML
 				m_stream << '\n';
 			unsigned curIndent = m_pState->GetCurIndent();
 			m_stream << IndentTo(curIndent);
+			m_pState->UnsetSeparation();
 			m_pState->SwitchState(ES_WAITING_FOR_BLOCK_MAP_KEY);
 		} else if(flowType == FT_FLOW) {
 			if(curState == ES_DONE_WITH_FLOW_MAP_VALUE) {
 				m_stream << ',';
-				m_pState->RequireSeparation();
+				m_pState->RequireSoftSeparation();
 			}
 			m_pState->SwitchState(ES_WAITING_FOR_FLOW_MAP_KEY);
 		} else
@@ -503,7 +511,7 @@ namespace YAML
 				m_stream << '\n';
 				m_stream << IndentTo(m_pState->GetCurIndent());
 				m_stream << ':';
-				m_pState->RequireSeparation();
+				m_pState->RequireSoftSeparation();
 			}
 			m_pState->SwitchState(ES_WAITING_FOR_BLOCK_MAP_VALUE);
 		} else if(flowType == FT_FLOW) {
@@ -518,8 +526,10 @@ namespace YAML
 		if(!good())
 			return;
 
-		if(CanEmitNewline())
+		if(CanEmitNewline()) {
 			m_stream << '\n';
+			m_pState->UnsetSeparation();
+		}
 	}
 
 	bool Emitter::CanEmitNewline() const
@@ -685,7 +695,7 @@ namespace YAML
 			m_pState->SetError(ErrorMsg::INVALID_ANCHOR);
 			return *this;
 		}
-		m_pState->RequireSeparation();
+		m_pState->RequireHardSeparation();
 		// Note: no PostAtomicWrite() because we need another value for this node
 		return *this;
 	}
@@ -711,7 +721,7 @@ namespace YAML
 			return *this;
 		}
 		
-		m_pState->RequireSeparation();
+		m_pState->RequireHardSeparation();
 		// Note: no PostAtomicWrite() because we need another value for this node
 		return *this;
 	}

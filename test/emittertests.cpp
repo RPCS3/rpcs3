@@ -103,7 +103,7 @@ namespace Test
 			out << "item 2";
 			out << YAML::EndSeq;
 			
-			desiredOutput = "---\n- item 1\n-\n  pens: 8\n  pencils: 14\n- item 2";
+			desiredOutput = "---\n- item 1\n- pens: 8\n  pencils: 14\n- item 2";
 		}
 
 		void NestedBlockMap(YAML::Emitter& out, std::string& desiredOutput) {
@@ -451,7 +451,7 @@ namespace Test
 			out << YAML::Value << YAML::Alias("id001");
 			out << YAML::EndMap;
 			
-			desiredOutput = "---\nreceipt: Oz-Ware Purchase Invoice\ndate: 2007-08-06\ncustomer:\n  given: Dorothy\n  family: Gale\nitems:\n  -\n    part_no: A4786\n    descrip: Water Bucket (Filled)\n    price: 1.47\n    quantity: 4\n  -\n    part_no: E1628\n    descrip: High Heeled \"Ruby\" Slippers\n    price: 100.27\n    quantity: 1\nbill-to: &id001\n  street: |\n    123 Tornado Alley\n    Suite 16\n  city: East Westville\n  state: KS\nship-to: *id001";
+			desiredOutput = "---\nreceipt: Oz-Ware Purchase Invoice\ndate: 2007-08-06\ncustomer:\n  given: Dorothy\n  family: Gale\nitems:\n  - part_no: A4786\n    descrip: Water Bucket (Filled)\n    price: 1.47\n    quantity: 4\n  - part_no: E1628\n    descrip: High Heeled \"Ruby\" Slippers\n    price: 100.27\n    quantity: 1\nbill-to: &id001\n  street: |\n    123 Tornado Alley\n    Suite 16\n  city: East Westville\n  state: KS\nship-to: *id001";
 		}
 
 		void STLContainers(YAML::Emitter& out, std::string& desiredOutput)
@@ -471,7 +471,7 @@ namespace Test
 			out << ages;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "---\n- [2, 3, 5, 7, 11, 13]\n-\n  Daniel: 26\n  Jesse: 24";
+			desiredOutput = "---\n- [2, 3, 5, 7, 11, 13]\n- Daniel: 26\n  Jesse: 24";
 		}
 
 		void SimpleComment(YAML::Emitter& out, std::string& desiredOutput)
@@ -514,7 +514,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "---\n-\n    key 1: value 1\n    key 2:\n        - a\n        - b\n        - c";
+			desiredOutput = "---\n-   key 1: value 1\n    key 2:\n        - a\n        - b\n        - c";
 		}
 
 		void SimpleGlobalSettings(YAML::Emitter& out, std::string& desiredOutput)
@@ -529,7 +529,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "---\n-\n    ? key 1\n    : value 1\n    ? key 2\n    : [a, b, c]";
+			desiredOutput = "---\n-   ? key 1\n    : value 1\n    ? key 2\n    : [a, b, c]";
 		}
 		
 		void ComplexGlobalSettings(YAML::Emitter& out, std::string& desiredOutput)
@@ -548,7 +548,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "---\n-\n  key 1: value 1\n  key 2: [a, b, c]\n-\n  ? [1, 2]\n  :\n    a: b";
+			desiredOutput = "---\n- key 1: value 1\n  key 2: [a, b, c]\n- ? [1, 2]\n  :\n    a: b";
 		}
 
 		void Null(YAML::Emitter& out, std::string& desiredOutput)
@@ -561,7 +561,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "---\n- ~\n-\n  null value: ~\n  ~: null key";
+			desiredOutput = "---\n- ~\n- null value: ~\n  ~: null key";
 		}
 		
 		void EscapedUnicode(YAML::Emitter& out, std::string& desiredOutput)
@@ -606,7 +606,7 @@ namespace Test
 			out << Foo(3, "goodbye");
 			out << YAML::EndSeq;
 			
-			desiredOutput = "---\n-\n  x: 5\n  bar: hello\n-\n  x: 3\n  bar: goodbye";
+			desiredOutput = "---\n- x: 5\n  bar: hello\n- x: 3\n  bar: goodbye";
 		}
 		
 		void UserTypeInContainer(YAML::Emitter& out, std::string& desiredOutput)
@@ -616,7 +616,7 @@ namespace Test
 			fv.push_back(Foo(3, "goodbye"));
 			out << fv;
 			
-			desiredOutput = "---\n-\n  x: 5\n  bar: hello\n-\n  x: 3\n  bar: goodbye";
+			desiredOutput = "---\n- x: 5\n  bar: hello\n- x: 3\n  bar: goodbye";
 		}
 		
 		template <typename T>
@@ -649,7 +649,7 @@ namespace Test
 			out << bar << baz;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "---\n-\n  x: 5\n  bar: hello\n- ~";
+			desiredOutput = "---\n- x: 5\n  bar: hello\n- ~";
 		}
 		
 		void NewlineAtEnd(YAML::Emitter& out, std::string& desiredOutput)
@@ -706,7 +706,7 @@ namespace Test
 			out << YAML::LongKey << YAML::Key << "f" << YAML::Newline << YAML::Value << "foo";
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
-			desiredOutput = "---\n- a\n\n-\n  - b\n  - c\n\n\n-\n\n  d: e\n  ? f\n\n  : foo";
+			desiredOutput = "---\n- a\n\n-\n  - b\n  - c\n\n\n-\n  d: e\n  ? f\n\n  : foo";
 		}
 		
 		void Binary(YAML::Emitter& out, std::string& desiredOutput)

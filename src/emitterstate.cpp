@@ -3,7 +3,7 @@
 
 namespace YAML
 {
-	EmitterState::EmitterState(): m_isGood(true), m_curIndent(0), m_requiresSeparation(false)
+	EmitterState::EmitterState(): m_isGood(true), m_curIndent(0), m_requiresSoftSeparation(false), m_requiresHardSeparation(false)
 	{
 		// start up
 		m_stateStack.push(ES_WAITING_FOR_DOC);
