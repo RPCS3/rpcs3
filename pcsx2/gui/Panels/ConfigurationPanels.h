@@ -267,6 +267,7 @@ namespace Panels
 		pxCheckBox*		m_check_CloseGS;
 		pxCheckBox*		m_check_SizeLock;
 		pxCheckBox*		m_check_VsyncEnable;
+		pxCheckBox*		m_check_ManagedVsync;
 		pxCheckBox*		m_check_Fullscreen;
 		pxCheckBox*		m_check_ExclusiveFS;
 		pxCheckBox*		m_check_HideMouse;
