@@ -6,6 +6,7 @@
 #endif
 
 
+#include "ptr_stack.h"
 #include "setting.h"
 #include "yaml-cpp/emittermanip.h"
 #include <cassert>
@@ -155,19 +156,19 @@ namespace YAML
 		std::string m_lastError;
 		
 		// other state
-		std::stack <EMITTER_STATE> m_stateStack;
+		std::stack<EMITTER_STATE> m_stateStack;
 		
-		Setting <EMITTER_MANIP> m_charset;
-		Setting <EMITTER_MANIP> m_strFmt;
-		Setting <EMITTER_MANIP> m_boolFmt;
-		Setting <EMITTER_MANIP> m_boolLengthFmt;
-		Setting <EMITTER_MANIP> m_boolCaseFmt;
-		Setting <EMITTER_MANIP> m_intFmt;
-		Setting <unsigned> m_indent;
-		Setting <unsigned> m_preCommentIndent, m_postCommentIndent;
-		Setting <EMITTER_MANIP> m_seqFmt;
-		Setting <EMITTER_MANIP> m_mapFmt;
-		Setting <EMITTER_MANIP> m_mapKeyFmt;
+		Setting<EMITTER_MANIP> m_charset;
+		Setting<EMITTER_MANIP> m_strFmt;
+		Setting<EMITTER_MANIP> m_boolFmt;
+		Setting<EMITTER_MANIP> m_boolLengthFmt;
+		Setting<EMITTER_MANIP> m_boolCaseFmt;
+		Setting<EMITTER_MANIP> m_intFmt;
+		Setting<unsigned> m_indent;
+		Setting<unsigned> m_preCommentIndent, m_postCommentIndent;
+		Setting<EMITTER_MANIP> m_seqFmt;
+		Setting<EMITTER_MANIP> m_mapFmt;
+		Setting<EMITTER_MANIP> m_mapKeyFmt;
 		
 		SettingChanges m_modifiedSettings;
 		SettingChanges m_globalModifiedSettings;
@@ -182,10 +183,8 @@ namespace YAML
 			
 			SettingChanges modifiedSettings;
 		};
-		
-		std::auto_ptr <Group> _PopGroup();
-		
-		std::stack <Group *> m_groups;
+
+		ptr_stack<Group> m_groups;
 		unsigned m_curIndent;
 		bool m_requiresSoftSeparation;
 		bool m_requiresHardSeparation;

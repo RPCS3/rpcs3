@@ -35,6 +35,7 @@ public:
 		return t;
 	}
 	T& top() { return *m_data.back(); }
+	const T& top() const { return *m_data.back(); }
 	
 private:
 	std::vector<T*> m_data;

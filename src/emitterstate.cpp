@@ -25,18 +25,6 @@ namespace YAML
 	
 	EmitterState::~EmitterState()
 	{
-		while(!m_groups.empty())
-			_PopGroup();
-	}
-	
-	std::auto_ptr <EmitterState::Group> EmitterState::_PopGroup()
-	{
-		if(m_groups.empty())
-			return std::auto_ptr <Group> (0);
-		
-		std::auto_ptr <Group> pGroup(m_groups.top());
-		m_groups.pop();
-		return pGroup;
 	}
 
 	// SetLocalValue
@@ -57,10 +45,10 @@ namespace YAML
 	
 	void EmitterState::BeginGroup(GROUP_TYPE type)
 	{
-		unsigned lastIndent = (m_groups.empty() ? 0 : m_groups.top()->indent);
+		unsigned lastIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
 		m_curIndent += lastIndent;
 		
-		std::auto_ptr <Group> pGroup(new Group(type));
+		std::auto_ptr<Group> pGroup(new Group(type));
 		
 		// transfer settings (which last until this group is done)
 		pGroup->modifiedSettings = m_modifiedSettings;
@@ -70,7 +58,7 @@ namespace YAML
 		pGroup->indent = GetIndent();
 		pGroup->usingLongKey = (GetMapKeyFormat() == LongKey ? true : false);
 
-		m_groups.push(pGroup.release());
+		m_groups.push(pGroup);
 	}
 	
 	void EmitterState::EndGroup(GROUP_TYPE type)
@@ -80,13 +68,13 @@ namespace YAML
 		
 		// get rid of the current group
 		{
-			std::auto_ptr <Group> pFinishedGroup = _PopGroup();
+			std::auto_ptr<Group> pFinishedGroup = m_groups.pop();
 			if(pFinishedGroup->type != type)
 				return SetError(ErrorMsg::UNMATCHED_GROUP_TAG);
 		}
 
 		// reset old settings
-		unsigned lastIndent = (m_groups.empty() ? 0 : m_groups.top()->indent);
+		unsigned lastIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
 		assert(m_curIndent >= lastIndent);
 		m_curIndent -= lastIndent;
 		
@@ -100,7 +88,7 @@ namespace YAML
 		if(m_groups.empty())
 			return GT_NONE;
 		
-		return m_groups.top()->type;
+		return m_groups.top().type;
 	}
 	
 	FLOW_TYPE EmitterState::GetCurGroupFlowType() const
@@ -108,26 +96,26 @@ namespace YAML
 		if(m_groups.empty())
 			return FT_NONE;
 		
-		return (m_groups.top()->flow == Flow ? FT_FLOW : FT_BLOCK);
+		return (m_groups.top().flow == Flow ? FT_FLOW : FT_BLOCK);
 	}
 	
 	bool EmitterState::CurrentlyInLongKey()
 	{
 		if(m_groups.empty())
 			return false;
-		return m_groups.top()->usingLongKey;
+		return m_groups.top().usingLongKey;
 	}
 	
 	void EmitterState::StartLongKey()
 	{
 		if(!m_groups.empty())
-			m_groups.top()->usingLongKey = true;
+			m_groups.top().usingLongKey = true;
 	}
 	
 	void EmitterState::StartSimpleKey()
 	{
 		if(!m_groups.empty())
-			m_groups.top()->usingLongKey = false;
+			m_groups.top().usingLongKey = false;
 	}
 
 	void EmitterState::ClearModifiedSettings()
