@@ -2155,8 +2155,8 @@ namespace Test {
 		RunSpecTest(&Spec::BlockIndentationHeader, "8.2", "Block Indentation Header", passed, total);
 		RunSpecTest(&Spec::InvalidBlockScalarIndentationIndicators, "8.3", "Invalid Block Scalar Indentation Indicators", passed, total);
 		RunSpecTest(&Spec::ChompingFinalLineBreak, "8.4", "Chomping Final Line Break", passed, total);
-		RunSpecTest(&Spec::ChompingTrailingLines, "8.4", "Chomping Trailing Lines", passed, total);
-		RunSpecTest(&Spec::EmptyScalarChomping, "8.4", "Empty Scalar Chomping", passed, total);
+		RunSpecTest(&Spec::ChompingTrailingLines, "8.5", "Chomping Trailing Lines", passed, total);
+		RunSpecTest(&Spec::EmptyScalarChomping, "8.6", "Empty Scalar Chomping", passed, total);
 
 		std::cout << "Spec tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

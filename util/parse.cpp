@@ -34,15 +34,8 @@ public:
 	virtual void OnMapEnd() {}
 };
 
-int main(int argc, char **argv)
+void parse(std::istream& input)
 {
-	Params p = ParseArgs(argc, argv);
-
-	std::ifstream fin;
-	if(argc > 1)
-		fin.open(argv[1]);
-	
-	std::istream& input = (argc > 1 ? fin : std::cin);
 	try {
 		YAML::Parser parser(input);
 		YAML::Node doc;
@@ -55,5 +48,19 @@ int main(int argc, char **argv)
 	} catch(const YAML::Exception& e) {
 		std::cerr << e.what() << "\n";
 	}
+}
+
+int main(int argc, char **argv)
+{
+	Params p = ParseArgs(argc, argv);
+
+	if(argc > 1) {
+		std::ifstream fin;
+		fin.open(argv[1]);
+		parse(fin);
+	} else {
+		parse(std::cin);
+	}
+
 	return 0;
 }
