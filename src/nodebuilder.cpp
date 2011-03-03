@@ -1,7 +1,6 @@
 #include "nodebuilder.h"
 #include "yaml-cpp/mark.h"
 #include "yaml-cpp/node.h"
-#include "yaml-cpp/nodeproperties.h"
 #include <cassert>
 
 namespace YAML
@@ -25,32 +24,32 @@ namespace YAML
 		assert(m_finished);
 	}
 
-	void NodeBuilder::OnNull(const std::string& tag, anchor_t anchor)
+	void NodeBuilder::OnNull(const Mark& mark, anchor_t anchor)
 	{
 		Node& node = Push(anchor);
-		node.InitNull(tag);
+		node.Init(NodeType::Null, mark, "");
 		Pop();
 	}
 
-	void NodeBuilder::OnAlias(const Mark& mark, anchor_t anchor)
+	void NodeBuilder::OnAlias(const Mark& /*mark*/, anchor_t anchor)
 	{
-		Node& node = Push();
-		node.InitAlias(mark, *m_anchors[anchor]);
-		Pop();
+		Node& node = *m_anchors[anchor];
+		Insert(node);
+		node.MarkAsAliased();
 	}
 
 	void NodeBuilder::OnScalar(const Mark& mark, const std::string& tag, anchor_t anchor, const std::string& value)
 	{
 		Node& node = Push(anchor);
-		node.Init(CT_SCALAR, mark, tag);
-		node.SetData(value);
+		node.Init(NodeType::Scalar, mark, tag);
+		node.SetScalarData(value);
 		Pop();
 	}
 
 	void NodeBuilder::OnSequenceStart(const Mark& mark, const std::string& tag, anchor_t anchor)
 	{
 		Node& node = Push(anchor);
-		node.Init(CT_SEQUENCE, mark, tag);
+		node.Init(NodeType::Sequence, mark, tag);
 	}
 
 	void NodeBuilder::OnSequenceEnd()
@@ -61,7 +60,7 @@ namespace YAML
 	void NodeBuilder::OnMapStart(const Mark& mark, const std::string& tag, anchor_t anchor)
 	{
 		Node& node = Push(anchor);
-		node.Init(CT_MAP, mark, tag);
+		node.Init(NodeType::Map, mark, tag);
 		m_didPushKey.push(false);
 	}
 
@@ -85,14 +84,14 @@ namespace YAML
 			return m_root;
 		}
 		
-		std::auto_ptr<Node> pNode(new Node);
-		m_stack.push(pNode);
-		return m_stack.top();
+		Node& node = m_root.CreateNode();
+		m_stack.push(&node);
+		return node;
 	}
 	
 	Node& NodeBuilder::Top()
 	{
-		return m_stack.empty() ? m_root : m_stack.top();
+		return m_stack.empty() ? m_root : *m_stack.top();
 	}
 	
 	void NodeBuilder::Pop()
@@ -103,36 +102,40 @@ namespace YAML
 			return;
 		}
 		
-		std::auto_ptr<Node> pNode = m_stack.pop();
-		Insert(pNode);
+		Node& node = *m_stack.top();
+		m_stack.pop();
+		Insert(node);
 	}
 	
-	void NodeBuilder::Insert(std::auto_ptr<Node> pNode)
+	void NodeBuilder::Insert(Node& node)
 	{
-		Node& node = Top();
-		switch(node.GetType()) {
-			case CT_SEQUENCE:
-				node.Append(pNode);
+		Node& curTop = Top();
+		switch(curTop.Type()) {
+			case NodeType::Null:
+			case NodeType::Scalar:
+				assert(false);
 				break;
-			case CT_MAP:
+			case NodeType::Sequence:
+				curTop.Append(node);
+				break;
+			case NodeType::Map:
 				assert(!m_didPushKey.empty());
 				if(m_didPushKey.top()) {
 					assert(!m_pendingKeys.empty());
 
-					std::auto_ptr<Node> pKey = m_pendingKeys.pop();
-					node.Insert(pKey, pNode);
+					Node& key = *m_pendingKeys.top();
+					m_pendingKeys.pop();
+					curTop.Insert(key, node);
 					m_didPushKey.top() = false;
 				} else {
-					m_pendingKeys.push(pNode);
+					m_pendingKeys.push(&node);
 					m_didPushKey.top() = true;
 				}
 				break;
-			default:
-				assert(false);
 		}
 	}
 
-	void NodeBuilder::RegisterAnchor(anchor_t anchor, const Node& node)
+	void NodeBuilder::RegisterAnchor(anchor_t anchor, Node& node)
 	{
 		if(anchor) {
 			assert(anchor == m_anchors.size());

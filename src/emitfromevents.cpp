@@ -26,12 +26,11 @@ namespace YAML
 	{
 	}
 	
-	void EmitFromEvents::OnNull(const std::string& tag, anchor_t anchor)
+	void EmitFromEvents::OnNull(const Mark&, anchor_t anchor)
 	{
 		BeginNode();
-		EmitProps(tag, anchor);
-		if(tag.empty())
-			m_emitter << Null;
+		EmitProps("", anchor);
+		m_emitter << Null;
 	}
 	
 	void EmitFromEvents::OnAlias(const Mark&, anchor_t anchor)

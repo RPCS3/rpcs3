@@ -6,7 +6,7 @@
 #endif
 
 
-#include "ltnode.h"
+#include "yaml-cpp/ltnode.h"
 #include <vector>
 #include <map>
 

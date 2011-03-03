@@ -48,7 +48,7 @@ namespace YAML
 	{
 		// an empty node *is* a possibility
 		if(m_scanner.empty()) {
-			eventHandler.OnNull("", NullAnchor);
+			eventHandler.OnNull(Mark::null(), NullAnchor);
 			return;
 		}
 		
@@ -112,7 +112,10 @@ namespace YAML
 				break;
 		}
 		
-		eventHandler.OnNull(tag, anchor);
+		if(tag == "?")
+			eventHandler.OnNull(mark, anchor);
+		else
+			eventHandler.OnScalar(mark, tag, anchor, "");
 	}
 	
 	void SingleDocParser::HandleSequence(EventHandler& eventHandler)
@@ -147,7 +150,7 @@ namespace YAML
 			if(!m_scanner.empty()) {
 				const Token& token = m_scanner.peek();
 				if(token.type == Token::BLOCK_ENTRY || token.type == Token::BLOCK_SEQ_END) {
-					eventHandler.OnNull("", NullAnchor);
+					eventHandler.OnNull(token.mark, NullAnchor);
 					continue;
 				}
 			}
@@ -224,7 +227,7 @@ namespace YAML
 				m_scanner.pop();
 				HandleNode(eventHandler);
 			} else {
-				eventHandler.OnNull("", NullAnchor);
+				eventHandler.OnNull(token.mark, NullAnchor);
 			}
 			
 			// now grab value (optional)
@@ -232,7 +235,7 @@ namespace YAML
 				m_scanner.pop();
 				HandleNode(eventHandler);
 			} else {
-				eventHandler.OnNull("", NullAnchor);
+				eventHandler.OnNull(token.mark, NullAnchor);
 			}
 		}
 		
@@ -261,7 +264,7 @@ namespace YAML
 				m_scanner.pop();
 				HandleNode(eventHandler);
 			} else {
-				eventHandler.OnNull("", NullAnchor);
+				eventHandler.OnNull(token.mark, NullAnchor);
 			}
 			
 			// now grab value (optional)
@@ -269,7 +272,7 @@ namespace YAML
 				m_scanner.pop();
 				HandleNode(eventHandler);
 			} else {
-				eventHandler.OnNull("", NullAnchor);
+				eventHandler.OnNull(token.mark, NullAnchor);
 			}
 			
 			// now eat the separator (or could be a map end, which we ignore - but if it's neither, then it's a bad node)
@@ -289,6 +292,7 @@ namespace YAML
 		m_pCollectionStack->PushCollectionType(CollectionType::CompactMap);
 		
 		// grab key
+		Mark mark = m_scanner.peek().mark;
 		m_scanner.pop();
 		HandleNode(eventHandler);
 		
@@ -297,7 +301,7 @@ namespace YAML
 			m_scanner.pop();
 			HandleNode(eventHandler);
 		} else {
-			eventHandler.OnNull("", NullAnchor);
+			eventHandler.OnNull(mark, NullAnchor);
 		}
 		
 		m_pCollectionStack->PopCollectionType(CollectionType::CompactMap);
@@ -309,7 +313,7 @@ namespace YAML
 		m_pCollectionStack->PushCollectionType(CollectionType::CompactMap);
 		
 		// null key
-		eventHandler.OnNull("", NullAnchor);
+		eventHandler.OnNull(m_scanner.peek().mark, NullAnchor);
 		
 		// grab value
 		m_scanner.pop();

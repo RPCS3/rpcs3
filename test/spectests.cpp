@@ -481,16 +481,16 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["not-date"].GetTag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc["not-date"].Tag() == "tag:yaml.org,2002:str");
 			YAML_ASSERT(doc["not-date"] == "2002-04-28");
-			YAML_ASSERT(doc["picture"].GetTag() == "tag:yaml.org,2002:binary");
+			YAML_ASSERT(doc["picture"].Tag() == "tag:yaml.org,2002:binary");
 			YAML_ASSERT(doc["picture"] ==
 				"R0lGODlhDAAMAIQAAP//9/X\n"
 				"17unp5WZmZgAAAOfn515eXv\n"
 				"Pz7Y6OjuDg4J+fn5OTk6enp\n"
 				"56enmleECcgggoBADs=\n"
 			);
-			YAML_ASSERT(doc["application specific tag"].GetTag() == "!something");
+			YAML_ASSERT(doc["application specific tag"].Tag() == "!something");
 			YAML_ASSERT(doc["application specific tag"] ==
 				"The semantics of the tag\n"
 				"above may be different for\n"
@@ -519,15 +519,15 @@ namespace Test {
 				"  text: Pretty vector drawing.";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc.GetTag() == "tag:clarkevans.com,2002:shape");
+			YAML_ASSERT(doc.Tag() == "tag:clarkevans.com,2002:shape");
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc[0].GetTag() == "tag:clarkevans.com,2002:circle");
+			YAML_ASSERT(doc[0].Tag() == "tag:clarkevans.com,2002:circle");
 			YAML_ASSERT(doc[0].size() == 2);
 			YAML_ASSERT(doc[0]["center"].size() == 2);
 			YAML_ASSERT(doc[0]["center"]["x"] == 73);
 			YAML_ASSERT(doc[0]["center"]["y"] == 129);
 			YAML_ASSERT(doc[0]["radius"] == 7);
-			YAML_ASSERT(doc[1].GetTag() == "tag:clarkevans.com,2002:line");
+			YAML_ASSERT(doc[1].Tag() == "tag:clarkevans.com,2002:line");
 			YAML_ASSERT(doc[1].size() == 2);
 			YAML_ASSERT(doc[1]["start"].size() == 2);
 			YAML_ASSERT(doc[1]["start"]["x"] == 73);
@@ -535,7 +535,7 @@ namespace Test {
 			YAML_ASSERT(doc[1]["finish"].size() == 2);
 			YAML_ASSERT(doc[1]["finish"]["x"] == 89);
 			YAML_ASSERT(doc[1]["finish"]["y"] == 102);
-			YAML_ASSERT(doc[2].GetTag() == "tag:clarkevans.com,2002:label");
+			YAML_ASSERT(doc[2].Tag() == "tag:clarkevans.com,2002:label");
 			YAML_ASSERT(doc[2].size() == 3);
 			YAML_ASSERT(doc[2]["start"].size() == 2);
 			YAML_ASSERT(doc[2]["start"]["x"] == 73);
@@ -558,7 +558,7 @@ namespace Test {
 				"? Ken Griffey";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc.GetTag() == "tag:yaml.org,2002:set");
+			YAML_ASSERT(doc.Tag() == "tag:yaml.org,2002:set");
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(IsNull(doc["Mark McGwire"]));
 			YAML_ASSERT(IsNull(doc["Sammy Sosa"]));
@@ -579,7 +579,7 @@ namespace Test {
 				"- Ken Griffey: 58";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc.GetTag() == "tag:yaml.org,2002:omap");
+			YAML_ASSERT(doc.Tag() == "tag:yaml.org,2002:omap");
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0].size() == 1);
 			YAML_ASSERT(doc[0]["Mark McGwire"] == 65);
@@ -625,7 +625,7 @@ namespace Test {
 				"    Billsmer @ 338-4338.";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc.GetTag() == "tag:clarkevans.com,2002:invoice");
+			YAML_ASSERT(doc.Tag() == "tag:clarkevans.com,2002:invoice");
 			YAML_ASSERT(doc.size() == 8);
 			YAML_ASSERT(doc["invoice"] == 34843);
 			YAML_ASSERT(doc["date"] == "2001-01-23");
@@ -1185,7 +1185,7 @@ namespace Test {
 				"!yaml!str \"foo\"";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc.GetTag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc.Tag() == "tag:yaml.org,2002:str");
 			YAML_ASSERT(doc == "foo");
 			return true;
 		}
@@ -1223,11 +1223,11 @@ namespace Test {
 				"!foo \"bar\"";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc.GetTag() == "!foo");
+			YAML_ASSERT(doc.Tag() == "!foo");
 			YAML_ASSERT(doc == "bar");
 
 			PARSE_NEXT(doc);
-			YAML_ASSERT(doc.GetTag() == "tag:example.com,2000:app/foo");
+			YAML_ASSERT(doc.Tag() == "tag:example.com,2000:app/foo");
 			YAML_ASSERT(doc == "bar");
 			return true;
 		}
@@ -1241,7 +1241,7 @@ namespace Test {
 				"!!int 1 - 3 # Interval, not integer";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc.GetTag() == "tag:example.com,2000:app/int");
+			YAML_ASSERT(doc.Tag() == "tag:example.com,2000:app/int");
 			YAML_ASSERT(doc == "1 - 3");
 			return true;
 		}
@@ -1255,7 +1255,7 @@ namespace Test {
 				"!e!foo \"bar\"";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc.GetTag() == "tag:example.com,2000:app/foo");
+			YAML_ASSERT(doc.Tag() == "tag:example.com,2000:app/foo");
 			YAML_ASSERT(doc == "bar");
 			return true;
 		}
@@ -1273,11 +1273,11 @@ namespace Test {
 				"!m!light green";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc.GetTag() == "!my-light");
+			YAML_ASSERT(doc.Tag() == "!my-light");
 			YAML_ASSERT(doc == "fluorescent");
 			
 			PARSE_NEXT(doc);
-			YAML_ASSERT(doc.GetTag() == "!my-light");
+			YAML_ASSERT(doc.Tag() == "!my-light");
 			YAML_ASSERT(doc == "green");
 			return true;
 		}
@@ -1292,7 +1292,7 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
-			YAML_ASSERT(doc[0].GetTag() == "tag:example.com,2000:app/foo");
+			YAML_ASSERT(doc[0].Tag() == "tag:example.com,2000:app/foo");
 			YAML_ASSERT(doc[0] == "bar");
 			return true;
 		}
@@ -1309,8 +1309,8 @@ namespace Test {
 			YAML_ASSERT(doc.size() == 2);
 			for(YAML::Iterator it=doc.begin();it!=doc.end();++it) {
 				if(it.first() == "foo") {
-					YAML_ASSERT(it.first().GetTag() == "tag:yaml.org,2002:str");
-					YAML_ASSERT(it.second().GetTag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it.first().Tag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it.second().Tag() == "tag:yaml.org,2002:str");
 					YAML_ASSERT(it.second() == "bar");
 				} else if(it.first() == "baz") {
 					YAML_ASSERT(it.second() == "foo");
@@ -1331,9 +1331,9 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			for(YAML::Iterator it=doc.begin();it!=doc.end();++it) {
-				YAML_ASSERT(it.first().GetTag() == "tag:yaml.org,2002:str");
+				YAML_ASSERT(it.first().Tag() == "tag:yaml.org,2002:str");
 				YAML_ASSERT(it.first() == "foo");
-				YAML_ASSERT(it.second().GetTag() == "!bar");
+				YAML_ASSERT(it.second().Tag() == "!bar");
 				YAML_ASSERT(it.second() == "baz");
 			}
 			return true;
@@ -1362,11 +1362,11 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc[0].GetTag() == "!local");
+			YAML_ASSERT(doc[0].Tag() == "!local");
 			YAML_ASSERT(doc[0] == "foo");
-			YAML_ASSERT(doc[1].GetTag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc[1].Tag() == "tag:yaml.org,2002:str");
 			YAML_ASSERT(doc[1] == "bar");
-			YAML_ASSERT(doc[2].GetTag() == "tag:example.com,2000:app/tag%21");
+			YAML_ASSERT(doc[2].Tag() == "tag:example.com,2000:app/tag%21");
 			YAML_ASSERT(doc[2] == "baz");
 			return true;
 		}
@@ -1462,10 +1462,10 @@ namespace Test {
 			YAML_ASSERT(doc.size() == 2);
 			for(YAML::Iterator it=doc.begin();it!=doc.end();++it) {
 				if(it.first() == "foo") {
-					YAML_ASSERT(it.second().GetTag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it.second().Tag() == "tag:yaml.org,2002:str");
 					YAML_ASSERT(it.second() == "");
 				} else if(it.first() == "") {
-					YAML_ASSERT(it.first().GetTag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it.first().Tag() == "tag:yaml.org,2002:str");
 					YAML_ASSERT(it.second() == "bar");
 				} else
 					return "  unexpected key";
@@ -1862,12 +1862,12 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 5);
-			YAML_ASSERT(doc[0].GetTag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc[0].Tag() == "tag:yaml.org,2002:str");
 			YAML_ASSERT(doc[0] == "a");
 			YAML_ASSERT(doc[1] == 'b');
 			YAML_ASSERT(doc[2] == "c");
 			YAML_ASSERT(doc[3] == "c");
-			YAML_ASSERT(doc[4].GetTag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc[4].Tag() == "tag:yaml.org,2002:str");
 			YAML_ASSERT(doc[4] == "");
 			return true;
 		}

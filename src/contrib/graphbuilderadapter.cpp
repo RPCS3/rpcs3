@@ -4,10 +4,10 @@ namespace YAML
 {
   int GraphBuilderAdapter::ContainerFrame::sequenceMarker;
   
-  void GraphBuilderAdapter::OnNull(const std::string& tag, anchor_t anchor)
+  void GraphBuilderAdapter::OnNull(const Mark& mark, anchor_t anchor)
   {
     void *pParent = GetCurrentParent();
-    void *pNode = m_builder.NewNull(tag, pParent);
+    void *pNode = m_builder.NewNull(mark, pParent);
     RegisterAnchor(anchor, pNode);
     
     DispositionNode(pNode);

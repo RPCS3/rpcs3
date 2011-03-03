@@ -5,6 +5,7 @@
 #pragma once
 #endif
 
+#include <memory>
 
 namespace YAML
 {
@@ -15,7 +16,7 @@ namespace YAML
 	{
 	public:
 		Iterator();
-		Iterator(IterPriv *pData);
+		Iterator(std::auto_ptr<IterPriv> pData);
 		Iterator(const Iterator& rhs);
 		~Iterator();
 
@@ -31,7 +32,7 @@ namespace YAML
 		friend bool operator != (const Iterator& it, const Iterator& jt);
 
 	private:
-		IterPriv *m_pData;
+		std::auto_ptr<IterPriv> m_pData;
 	};
 }
 

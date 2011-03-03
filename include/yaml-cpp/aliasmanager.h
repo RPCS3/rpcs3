@@ -18,18 +18,12 @@ namespace YAML
 		AliasManager();
 		
 		void RegisterReference(const Node& node);
-		
-		const Node *LookupReference(const Node& node) const;
 		anchor_t LookupAnchor(const Node& node) const;
 		
 	private:
-		const Node *_LookupReference(const Node& oldIdentity) const;
 		anchor_t _CreateNewAnchor();
 		
 	private:
-		typedef std::map<const Node*, const Node*> NodeByNode;
-		NodeByNode m_newIdentityByOldIdentity;
-		
 		typedef std::map<const Node*, anchor_t> AnchorByIdentity;
 		AnchorByIdentity m_anchorByIdentity;
 		

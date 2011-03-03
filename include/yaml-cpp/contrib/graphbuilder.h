@@ -20,7 +20,7 @@ namespace YAML
   {
   public:
     // Create and return a new node with a null value.
-    virtual void *NewNull(const std::string& tag, void *pParentNode) = 0;
+    virtual void *NewNull(const Mark& mark, void *pParentNode) = 0;
     
     // Create and return a new node with the given tag and value.
     virtual void *NewScalar(const Mark& mark, const std::string& tag, void *pParentNode, const std::string& value) = 0;
@@ -74,8 +74,8 @@ namespace YAML
     
     GraphBuilderInterface& AsBuilderInterface() {return *this;}
     
-    virtual void *NewNull(const std::string& tag, void* pParentNode) {
-      return CheckType<Node>(m_impl.NewNull(tag, AsNode(pParentNode)));
+    virtual void *NewNull(const Mark& mark, void* pParentNode) {
+      return CheckType<Node>(m_impl.NewNull(mark, AsNode(pParentNode)));
     }
     
     virtual void *NewScalar(const Mark& mark, const std::string& tag, void *pParentNode, const std::string& value) {

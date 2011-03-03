@@ -7,6 +7,7 @@
 
 
 #include "yaml-cpp/nodeutil.h"
+#include <cassert>
 
 namespace YAML
 {
@@ -31,14 +32,17 @@ namespace YAML
 	
 	template <typename T>
 	inline const Node *Node::FindValue(const T& key) const {
-		switch(GetType()) {
-			case CT_MAP:
-				return FindValueForKey(key);
-			case CT_SEQUENCE:
+		switch(m_type) {
+			case NodeType::Null:
+			case NodeType::Scalar:
+				throw BadDereference();
+			case NodeType::Sequence:
 				return FindFromNodeAtIndex(*this, key);
-			default:
-				return 0;
+			case NodeType::Map:
+				return FindValueForKey(key);
 		}
+		assert(false);
+		throw BadDereference();
 	}
 	
 	template <typename T>
@@ -56,14 +60,9 @@ namespace YAML
 	
 	template <typename T>
 	inline const Node& Node::GetValue(const T& key) const {
-		if(!m_pContent)
-			throw BadDereference();
-		
-		const Node *pValue = FindValue(key);
-		if(!pValue)
-			throw MakeTypedKeyNotFound(m_mark, key);
-
-		return *pValue;
+		if(const Node *pValue = FindValue(key))
+			return *pValue;
+		throw MakeTypedKeyNotFound(m_mark, key);
 	}
 	
 	template <typename T>

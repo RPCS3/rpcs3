@@ -23,7 +23,7 @@ public:
 	virtual void OnDocumentStart(const YAML::Mark&) {}
 	virtual void OnDocumentEnd() {}
 	
-	virtual void OnNull(const std::string&, YAML::anchor_t) {}
+	virtual void OnNull(const YAML::Mark&, YAML::anchor_t) {}
 	virtual void OnAlias(const YAML::Mark&, YAML::anchor_t) {}
 	virtual void OnScalar(const YAML::Mark&, const std::string&, YAML::anchor_t, const std::string&) {}
 	

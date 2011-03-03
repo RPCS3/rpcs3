@@ -698,7 +698,7 @@ namespace Test
 			YAML::Node doc;
 			parser.GetNextDocument(doc);
 			
-			if(doc["a"] != 1)
+			if(doc["a"] != 4)
 				return false;
 			if(doc["b"] != 2)
 				return false;
@@ -729,10 +729,10 @@ namespace Test
 		
 		bool ExpectedTagValue(YAML::Node& node, const char* tag)
 		{
-			if(node.GetTag() == tag)
+			if(node.Tag() == tag)
 			  return true;
 			
-			throw TagMismatch(node.GetTag(), tag);
+			throw TagMismatch(node.Tag(), tag);
 		}
 		
 		bool DefaultPlainScalarTag()
