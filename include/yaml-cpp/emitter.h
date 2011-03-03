@@ -116,6 +116,7 @@ namespace YAML
 		EmitSeparationIfNecessary();
 		
 		std::stringstream str;
+		str.precision(15);
 		str << value;
 		m_stream << str.str();
 		
