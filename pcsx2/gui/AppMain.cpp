@@ -437,14 +437,14 @@ void Pcsx2App::LogicalVsync()
 
 	FpsManager.DoFrame();
 	
-	if (EmuConfig.GS.ManagedVsync)
+	if (EmuConfig.GS.ManagedVsync && EmuConfig.GS.VsyncEnable)
 	{
+		static bool last_enabled = true; // Avoids locking it in some scenarios
+		static int too_slow = 0;
+		static int fast_enough = 0;
+
 		if ( g_LimiterMode == Limit_Nominal && EmuConfig.GS.VsyncEnable && g_Conf->EmuOptions.GS.FrameLimitEnable )
 		{
-			static bool last_enabled = 0;
-			static int too_slow = 0;
-			static int fast_enough = 0;
-
 			float fps = (float)FpsManager.GetFramerate();
 			
 			if( gsRegionMode == Region_NTSC )
@@ -491,7 +491,12 @@ void Pcsx2App::LogicalVsync()
 			}
 		}
 		else
+		{
+			last_enabled = true; // Avoids locking it in some scenarios
+			too_slow = 0;
+			fast_enough = 0;
 			GSsetVsync( 0 );
+		}
 	}
 	// Only call PADupdate here if we're using GSopen2.  Legacy GSopen plugins have the
 	// GS window belonging to the MTGS thread.
