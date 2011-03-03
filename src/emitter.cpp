@@ -152,8 +152,6 @@ namespace YAML
 		switch(curState) {
 				// document-level
 			case ES_WAITING_FOR_DOC:
-				m_stream << "---";
-				m_pState->RequireSoftSeparation();
 				m_pState->SwitchState(ES_WRITING_DOC);
 				return true;
 			case ES_WRITING_DOC:
@@ -340,8 +338,10 @@ namespace YAML
 			   curState == ES_WRITING_BLOCK_MAP_KEY || curState == ES_WRITING_BLOCK_MAP_VALUE ||
 			   curState == ES_WRITING_DOC
 			) {
-				m_stream << "\n";
-				m_pState->UnsetSeparation();
+				if(m_pState->RequiresHardSeparation() || curState != ES_WRITING_DOC) {
+					m_stream << "\n";
+					m_pState->UnsetSeparation();
+				}
 			}
 			m_pState->PushState(ES_WAITING_FOR_BLOCK_SEQ_ENTRY);
 		} else if(flowType == Flow) {
@@ -408,7 +408,7 @@ namespace YAML
 			   curState == ES_WRITING_BLOCK_MAP_KEY || curState == ES_WRITING_BLOCK_MAP_VALUE ||
 			   curState == ES_WRITING_DOC
 			) {
-				if(m_pState->RequiresHardSeparation() || curState != ES_WRITING_BLOCK_SEQ_ENTRY) {
+				if(m_pState->RequiresHardSeparation() || (curState != ES_WRITING_DOC && curState != ES_WRITING_BLOCK_SEQ_ENTRY)) {
 					m_stream << "\n";
 					m_pState->UnsetSeparation();
 				}
