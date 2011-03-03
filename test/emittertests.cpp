@@ -872,7 +872,16 @@ namespace Test
 			std::string output = out.c_str();
 
 			if(output == desiredOutput) {
-				passed++;
+				try {
+					std::stringstream stream(output);
+					YAML::Parser parser;
+					YAML::Node node;
+					parser.GetNextDocument(node);
+					passed++;
+				} catch(const YAML::Exception& e) {
+					std::cout << "Emitter test failed: " << name << "\n";
+					std::cout << "Parsing output error: " << e.what() << "\n";
+				}
 			} else {
 				std::cout << "Emitter test failed: " << name << "\n";
 				std::cout << "Output:\n";
