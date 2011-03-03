@@ -14,9 +14,6 @@ namespace YAML
 
 	Scanner::~Scanner()
 	{
-		for(unsigned i=0;i<m_indentRefs.size();i++)
-			delete m_indentRefs[i];
-		m_indentRefs.clear();
 	}
 
 	// empty
@@ -237,9 +234,9 @@ namespace YAML
 	{
 		m_startedStream = true;
 		m_simpleKeyAllowed = true;
-		IndentMarker *pIndent = new IndentMarker(-1, IndentMarker::NONE);
+		std::auto_ptr<IndentMarker> pIndent(new IndentMarker(-1, IndentMarker::NONE));
 		m_indentRefs.push_back(pIndent);
-		m_indents.push(pIndent);
+		m_indents.push(&m_indentRefs.back());
 	}
 
 	// EndStream
@@ -299,8 +296,8 @@ namespace YAML
 
 		// and then the indent
 		m_indents.push(&indent);
-		m_indentRefs.push_back(pIndent.release());
-		return m_indentRefs.back();
+		m_indentRefs.push_back(pIndent);
+		return &m_indentRefs.back();
 	}
 
 	// PopIndentToHere
