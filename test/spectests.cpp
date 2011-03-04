@@ -2054,6 +2054,269 @@ namespace Test {
 			YAML_ASSERT(doc["keep"] == "\n");
 			return true;
 		}
+		
+		// 8.7
+		TEST LiteralScalar()
+		{
+			std::string input =
+				"|\n"
+				" literal\n"
+				" \ttext\n"
+				"\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc == "literal\n\ttext\n");
+			return true;
+		}
+		
+		// 8.8
+		TEST LiteralContent()
+		{
+			std::string input =
+				"|\n"
+				" \n"
+				"  \n"
+				"  literal\n"
+				"   \n"
+				"  \n"
+				"  text\n"
+				"\n"
+				" # Comment\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc == "\n\nliteral\n \n\ntext\n");
+			return true;
+		}
+		
+		// 8.9
+		TEST FoldedScalar()
+		{
+			std::string input =
+				">\n"
+				" folded\n"
+				" text\n"
+				"\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc == "folded text\n");
+			return true;
+		}
+		
+		// 8.10
+		TEST FoldedLines()
+		{
+			std::string input =
+				">\n"
+				"\n"
+				" folded\n"
+				" line\n"
+				"\n"
+				" next\n"
+				" line\n"
+				"   * bullet\n"
+				"\n"
+				"   * list\n"
+				"   * lines\n"
+				"\n"
+				" last\n"
+				" line\n"
+				"\n"
+				"# Comment\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc == "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
+			return true;
+		}
+		
+		// 8.11
+		TEST MoreIndentedLines()
+		{
+			return true; // same as 8.10
+		}
+		
+		// 8.12
+		TEST EmptySeparationLines()
+		{
+			return true; // same as 8.10
+		}
+		
+		// 8.13
+		TEST FinalEmptyLines()
+		{
+			return true; // same as 8.10
+		}
+		
+		// 8.14
+		TEST BlockSequence()
+		{
+			std::string input =
+				"block sequence:\n"
+				"  - one\n"
+				"  - two : three\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["block sequence"].size() == 2);
+			YAML_ASSERT(doc["block sequence"][0] == "one");
+			YAML_ASSERT(doc["block sequence"][1].size() == 1);
+			YAML_ASSERT(doc["block sequence"][1]["two"] == "three");
+			return true;
+		}
+		
+		// 8.15
+		TEST BlockSequenceEntryTypes()
+		{
+			std::string input =
+				"- # Empty\n"
+				"- |\n"
+				" block node\n"
+				"- - one # Compact\n"
+				"  - two # sequence\n"
+				"- one: two # Compact mapping\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(YAML::IsNull(doc[0]));
+			YAML_ASSERT(doc[1] == "block node\n");
+			YAML_ASSERT(doc[2].size() == 2);
+			YAML_ASSERT(doc[2][0] == "one");
+			YAML_ASSERT(doc[2][1] == "two");
+			YAML_ASSERT(doc[3].size() == 1);
+			YAML_ASSERT(doc[3]["one"] == "two");
+			return true;
+		}
+		
+		// 8.16
+		TEST BlockMappings()
+		{
+			std::string input =
+				"block mapping:\n"
+				" key: value\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["block mapping"].size() == 1);
+			YAML_ASSERT(doc["block mapping"]["key"] == "value");
+			return true;
+		}
+		
+		// 8.17
+		TEST ExplicitBlockMappingEntries()
+		{
+			std::string input =
+				"? explicit key # Empty value\n"
+				"? |\n"
+				"  block key\n"
+				": - one # Explicit compact\n"
+				"  - two # block value\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(IsNull(doc["explicit key"]));
+			YAML_ASSERT(doc["block key\n"].size() == 2);
+			YAML_ASSERT(doc["block key\n"][0] == "one");
+			YAML_ASSERT(doc["block key\n"][1] == "two");
+			return true;
+		}
+		
+		// 8.18
+		TEST ImplicitBlockMappingEntries()
+		{
+			std::string input =
+				"plain key: in-line value\n"
+				":  # Both empty\n"
+				"\"quoted key\":\n"
+				"- entry\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["plain key"] == "in-line value");
+			YAML_ASSERT(IsNull(doc[YAML::Null]));
+			YAML_ASSERT(doc["quoted key"].size() == 1);
+			YAML_ASSERT(doc["quoted key"][0] == "entry");
+			return true;
+		}
+		
+		// 8.19
+		TEST CompactBlockMappings()
+		{
+			std::string input =
+				"- sun: yellow\n"
+				"- ? earth: blue\n"
+				"  : moon: white\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0]["sun"] == "yellow");
+			YAML_ASSERT(doc[1].size() == 1);
+			std::map<std::string, std::string> key;
+			key["earth"] = "blue";
+			YAML_ASSERT(doc[1][key].size() == 1);
+			YAML_ASSERT(doc[1][key]["moon"] == "white");
+			return true;
+		}
+		
+		// 8.20
+		TEST BlockNodeTypes()
+		{
+			std::string input =
+				"-\n"
+				"  \"flow in block\"\n"
+				"- >\n"
+				" Block scalar\n"
+				"- !!map # Block collection\n"
+				"  foo : bar\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0] == "flow in block");
+			YAML_ASSERT(doc[1] == "Block scalar\n");
+			YAML_ASSERT(doc[2].size() == 1);
+			YAML_ASSERT(doc[2]["foo"] == "bar");
+			return true;
+		}
+		
+		// 8.21
+		TEST BlockScalarNodes()
+		{
+			std::string input =
+				"literal: |2\n"
+				"  value\n"
+				"folded:\n"
+				"   !foo\n"
+				"  >1\n"
+				" value\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["literal"] == "value");
+			YAML_ASSERT(doc["folded"] == "value");
+			YAML_ASSERT(doc["folded"].Tag() == "!foo");
+			return true;
+		}
+		
+		// 8.22
+		TEST BlockCollectionNodes()
+		{
+			std::string input =
+				"sequence: !!seq\n"
+				"- entry\n"
+				"- !!seq\n"
+				" - nested\n"
+				"mapping: !!map\n"
+				" foo: bar\n";
+			
+			PARSE(doc, input);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["sequence"].size() == 2);
+			YAML_ASSERT(doc["sequence"][0] == "entry");
+			YAML_ASSERT(doc["sequence"][1].size() == 1);
+			YAML_ASSERT(doc["sequence"][1][0] == "nested");
+			YAML_ASSERT(doc["mapping"].size() == 1);
+			YAML_ASSERT(doc["mapping"]["foo"] == "bar");
+			return true;
+		}
 	}
 
 	bool RunSpecTests()
@@ -2157,6 +2420,22 @@ namespace Test {
 		RunSpecTest(&Spec::ChompingFinalLineBreak, "8.4", "Chomping Final Line Break", passed, total);
 		RunSpecTest(&Spec::ChompingTrailingLines, "8.5", "Chomping Trailing Lines", passed, total);
 		RunSpecTest(&Spec::EmptyScalarChomping, "8.6", "Empty Scalar Chomping", passed, total);
+		RunSpecTest(&Spec::LiteralScalar, "8.7", "Literal Scalar", passed, total);
+		RunSpecTest(&Spec::LiteralContent, "8.8", "Literal Content", passed, total);
+		RunSpecTest(&Spec::FoldedScalar, "8.9", "Folded Scalar", passed, total);
+		RunSpecTest(&Spec::FoldedLines, "8.10", "Folded Lines", passed, total);
+		RunSpecTest(&Spec::MoreIndentedLines, "8.11", "More Indented Lines", passed, total);
+		RunSpecTest(&Spec::EmptySeparationLines, "8.12", "Empty Separation Lines", passed, total);
+		RunSpecTest(&Spec::FinalEmptyLines, "8.13", "Final Empty Lines", passed, total);
+		RunSpecTest(&Spec::BlockSequence, "8.14", "Block Sequence", passed, total);
+		RunSpecTest(&Spec::BlockSequenceEntryTypes, "8.15", "Block Sequence Entry Types", passed, total);
+		RunSpecTest(&Spec::BlockMappings, "8.16", "Block Mappings", passed, total);
+		RunSpecTest(&Spec::ExplicitBlockMappingEntries, "8.17", "Explicit Block Mapping Entries", passed, total);
+		RunSpecTest(&Spec::ImplicitBlockMappingEntries, "8.18", "Implicit Block Mapping Entries", passed, total);
+		RunSpecTest(&Spec::CompactBlockMappings, "8.19", "Compact Block Mappings", passed, total);
+		RunSpecTest(&Spec::BlockNodeTypes, "8.20", "Block Node Types", passed, total);
+		RunSpecTest(&Spec::BlockScalarNodes, "8.21", "Block Scalar Nodes", passed, total);
+		RunSpecTest(&Spec::BlockCollectionNodes, "8.22", "Block Collection Nodes", passed, total);
 
 		std::cout << "Spec tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
