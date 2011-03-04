@@ -143,7 +143,7 @@ namespace YAML
 						
 						if(!nextEmptyLine && foldedNewlineCount > 0) {
 							scalar += std::string(foldedNewlineCount - 1, '\n');
-							if(foldedNewlineStartedMoreIndented || nextMoreIndented)
+							if(foldedNewlineStartedMoreIndented || nextMoreIndented | !foundNonEmptyLine)
 								scalar += "\n";
 							foldedNewlineCount = 0;
 						}
@@ -175,12 +175,23 @@ namespace YAML
 				scalar.erase(pos + 1);
 		}
 
-		if(params.chomp == STRIP || params.chomp == CLIP) {
-			std::size_t pos = scalar.find_last_not_of('\n');
-			if(params.chomp == CLIP && pos + 1 < scalar.size())
-				scalar.erase(pos + 2);
-			else if(params.chomp == STRIP && pos < scalar.size())
-				scalar.erase(pos + 1);
+		switch(params.chomp) {
+			case CLIP: {
+				const std::size_t pos = scalar.find_last_not_of('\n');
+				if(pos == std::string::npos)
+					scalar.erase();
+				else if(pos + 1 < scalar.size())
+					scalar.erase(pos + 2);
+			} break;
+			case STRIP: {
+				const std::size_t pos = scalar.find_last_not_of('\n');
+				if(pos == std::string::npos)
+					scalar.erase();
+				else if(pos < scalar.size())
+					scalar.erase(pos + 1);
+			} break;
+			default:
+				break;
 		}
 
 		return scalar;
