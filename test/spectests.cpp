@@ -1916,7 +1916,7 @@ namespace Test {
 			YAML_ASSERT(doc[0] == "detected\n");
 			YAML_ASSERT(doc[1] == "\n\n# detected\n");
 			YAML_ASSERT(doc[2] == " explicit\n");
-			YAML_ASSERT(doc[3] == "\t detected\n");
+			YAML_ASSERT(doc[3] == "\t\ndetected\n");
 			return true;
 		}
 		
