@@ -156,7 +156,7 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 {
 	// if some translations are provided, do not change the language
 	LangPackList dummy_lang;
-	bool valid_stat;
+	bool valid_stat = false;
 	i18n_DoPackageCheck(wxLangId, dummy_lang, valid_stat);
 	if (valid_stat) return wxLangId;
 
@@ -193,10 +193,12 @@ bool i18n_SetLanguage( wxLanguage wxLangId, const wxString& langCode )
 {
 	const wxLanguageInfo* info = wxLocale::GetLanguageInfo(wxLangId);
 
-	// Check if you can load a similar language
-	wxLanguage LangId_fallback = i18n_FallbackToAnotherLang((wxLanguage)info->Language);
-	if (LangId_fallback != (wxLanguage)info->Language)
-		info = wxLocale::GetLanguageInfo(LangId_fallback);
+	// Check if you can load a similar language in case the current one is not yet provided
+	if (info) {
+		wxLanguage LangId_fallback = i18n_FallbackToAnotherLang((wxLanguage)info->Language);
+		if (LangId_fallback != (wxLanguage)info->Language)
+			info = wxLocale::GetLanguageInfo(LangId_fallback);
+	}
 
 	// note: language canonical name mismatch probably means wxWidgets version changed since 
 	// the user's ini file was provided.  Missing/invalid ID probably means the same thing.

@@ -39,30 +39,31 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 {
 	// [TODO] : About box should be upgraded to use scrollable read-only text boxes.
 	
-	static const wxString LabelAuthors = fromUTF8(
-		"Arcum42, Refraction, drk||raziel, cottonvibes, gigaherz, "
-		"rama, Jake.Stine, saqib, pseudonym, gregory.hainaut"
-		"\n\n"
-		"Previous versions: Alexey silinov, Aumatt, "
-		"Florin, goldfinger, Linuzappz, loser, "
-		"Nachbrenner, shadow, Zerofrog, tmkk"
-		"\n\n"
-		"Betatesting: Bositman, ChaosCode, "
-		"CKemu, crushtest, GeneralPlot, "
-		"Krakatos, Parotaku, Rudy_X"
-		"\n\n"
-		"Webmasters: CKemu, Falcon4ever"
-	);
+	wxString LabelAuthors = wxsFormat(
+		L"Arcum42, Refraction, drk||raziel, cottonvibes, gigaherz, "
+		L"rama, Jake.Stine, saqib, pseudonym, gregory.hainaut"
+		L"\n\n"
+		L"%s: Alexey silinov, Aumatt, "
+		L"Florin, goldfinger, Linuzappz, loser, "
+		L"Nachbrenner, shadow, Zerofrog, tmkk"
+		L"\n\n"
+		L"%s: Bositman, ChaosCode, "
+		L"CKemu, crushtest, GeneralPlot, "
+		L"Krakatos, Parotaku, Rudy_X"
+		L"\n\n"
+		L"%s: CKemu, Falcon4ever",
+		_("Previous versions"), _("Betatesting"), _("Webmasters"));
 
-	static const wxString LabelGreets = fromUTF8(
-		"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu), n1ckname (compilation guides)"
-		"\n\n"
-		"Plugin Specialists: ChickenLiver (Lilypad), Efp (efp), "
-		"Gabest (Gsdx, Cdvdolio, Xpad),  Zeydlitz (ZZogl)"
-		"\n\n"
-		"Special thanks to: black_wd, Belmont, BGome, _Demo_, Dreamtime, "
-		"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87, Athos"
-	);
+
+	wxString LabelGreets = wxsFormat( 
+		L"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu), n1ckname (compilation guides)"
+		L"\n\n"
+			L"%s: ChickenLiver (Lilypad), Efp (efp), "
+		L"Gabest (Gsdx, Cdvdolio, Xpad),  Zeydlitz (ZZogl)"
+		L"\n\n"
+			L"%s: black_wd, Belmont, BGome, _Demo_, Dreamtime, "
+			L"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87, Athos",
+			_("Plugin Specialists"), _("Special thanks to"));
 
 	// This sizer holds text of the authors and a logo!
 	wxFlexGridSizer& AuthLogoSizer = *new wxFlexGridSizer( 2, 0, StdPadding );
@@ -78,9 +79,9 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 	pxStaticText& label_auth	= Text( LabelAuthors ).SetMinWidth(240);
 	pxStaticText& label_greets	= Text( LabelGreets ).SetMinWidth(200);
 
-	aboutUs		+= Heading(L"Developers").Bold()	| StdExpand();
+	aboutUs		+= Heading(_("Developers")).Bold()	| StdExpand();
 	aboutUs		+= label_auth						| StdExpand();
-	contribs	+= Heading(L"Contributors").Bold()	| StdExpand();
+	contribs	+= Heading(_("Contributors")).Bold()	| StdExpand();
 	contribs	+= label_greets						| StdExpand();
 
 	AuthLogoSizer	+= aboutUs		| StdExpand();
