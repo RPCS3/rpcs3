@@ -1097,6 +1097,19 @@ static void SaveVmSettings()
 	sApp.DispatchVmSettingsEvent( vmsaver );
 }
 
+static void SaveRegSettings()
+{
+	ScopedPtr<wxConfigBase> conf_install;
+
+	if (InstallationMode == InstallMode_Portable) return;
+
+	// sApp. macro cannot be use because you need the return value of OpenInstallSettingsFile method
+	if( Pcsx2App* __app_ = (Pcsx2App*)wxApp::GetInstance() ) conf_install = (*__app_).OpenInstallSettingsFile();
+	conf_install->SetRecordDefaults(false);
+
+	App_SaveInstallSettings( conf_install );
+}
+
 void AppSaveSettings()
 {
 	// If multiple SaveSettings messages are requested, we want to ignore most of them.
@@ -1116,6 +1129,7 @@ void AppSaveSettings()
 
 	SaveUiSettings();
 	SaveVmSettings();
+	SaveRegSettings(); // save register because of PluginsFolder change
 
 	AtomicExchange( isPosted, false );
 }
