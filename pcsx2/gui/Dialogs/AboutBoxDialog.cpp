@@ -107,7 +107,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 	) | pxProportion(1).Center().Border( wxALL, 3 );
 
 	*this	+= ContribSizer											| StdExpand();
-	*this	+= new wxButton( this, wxID_OK, L"I've seen enough")	| StdCenter();
+	*this	+= new wxButton( this, wxID_OK, _("I've seen enough"))	| StdCenter();
 
 	int bestHeight = GetBestSize().GetHeight();
 	if( bestHeight < 400 ) bestHeight = 400;
