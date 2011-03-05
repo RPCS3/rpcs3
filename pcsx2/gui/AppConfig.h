@@ -50,13 +50,11 @@ namespace PathDefs
 
 extern DocsModeType		DocsFolderMode;				// 
 extern bool				UseDefaultSettingsFolder;	// when TRUE, pcsx2 derives the settings folder from the DocsFolderMode
-extern bool				UseDefaultLogFolder;
 extern bool				UseDefaultPluginsFolder;
 extern bool				UseDefaultThemesFolder;
 
 extern wxDirName		CustomDocumentsFolder;		// allows the specification of a custom home folder for PCSX2 documents files.
 extern wxDirName		SettingsFolder;				// dictates where the settings folder comes from, *if* UseDefaultSettingsFolder is FALSE.
-extern wxDirName		LogFolder;
 
 extern wxDirName		InstallFolder;
 extern wxDirName		PluginsFolder;

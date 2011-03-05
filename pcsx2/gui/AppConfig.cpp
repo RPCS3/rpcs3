@@ -376,7 +376,7 @@ bool AppConfig::FullpathMatchTest( PluginsEnum_t pluginId, const wxString& cmpto
 
 wxDirName GetLogFolder()
 {
-	return UseDefaultLogFolder ? PathDefs::GetLogs() : LogFolder;
+	return g_Conf->Folders.IsDefault( FolderId_Logs ) ? PathDefs::Get(FolderId_Logs) : g_Conf->Folders[FolderId_Logs];
 }
 
 wxDirName GetSettingsFolder()
@@ -588,12 +588,13 @@ void AppConfig::ConsoleLogOptions::LoadSave( IniInterface& ini, const wxChar* lo
 
 void AppConfig::FolderOptions::ApplyDefaults()
 {
-	if( UseDefaultBios )		Bios		= PathDefs::GetBios();
-	if( UseDefaultSnapshots )	Snapshots	= PathDefs::GetSnapshots();
-	if( UseDefaultSavestates )	Savestates	= PathDefs::GetSavestates();
-	if( UseDefaultMemoryCards )	MemoryCards	= PathDefs::GetMemoryCards();
-	if( UseDefaultLogs )		Logs		= PathDefs::GetLogs();
-	if( UseDefaultLangs )		Langs		= PathDefs::GetLangs();
+	if( UseDefaultBios )		Bios		  = PathDefs::GetBios();
+	if( UseDefaultSnapshots )	Snapshots	  = PathDefs::GetSnapshots();
+	if( UseDefaultSavestates )	Savestates	  = PathDefs::GetSavestates();
+	if( UseDefaultMemoryCards )	MemoryCards	  = PathDefs::GetMemoryCards();
+	if( UseDefaultLogs )		Logs		  = PathDefs::GetLogs();
+	if( UseDefaultLangs )		Langs		  = PathDefs::GetLangs();
+	if( UseDefaultPluginsFolder)PluginsFolder = PathDefs::GetPlugins();
 }
 
 // ------------------------------------------------------------------------
@@ -626,6 +627,7 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniBitBool( UseDefaultMemoryCards );
 	IniBitBool( UseDefaultLogs );
 	IniBitBool( UseDefaultLangs );
+	IniBitBool( UseDefaultPluginsFolder );
 
 	IniEntry( Bios );
 	IniEntry( Snapshots );

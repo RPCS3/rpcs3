@@ -27,14 +27,12 @@
 
 DocsModeType			DocsFolderMode = DocsFolder_User;
 bool					UseDefaultSettingsFolder = true;
-bool					UseDefaultLogFolder = true;
 bool					UseDefaultPluginsFolder = true;
 bool					UseDefaultThemesFolder = true;
 
 
 wxDirName				CustomDocumentsFolder;
 wxDirName				SettingsFolder;
-wxDirName               LogFolder;
 
 wxDirName				InstallFolder;
 wxDirName				PluginsFolder;
