@@ -3,10 +3,9 @@ msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2011-02-27 10:09+0100\n"
-"PO-Revision-Date: 2011-01-19 15:15+0200\n"
+"PO-Revision-Date: 2011-03-06 02:27+0200\n"
 "Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
 "Language-Team: PyramidHead <atiamar@hotmail.com>\n"
-"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -56,7 +55,7 @@ msgstr "!Notice Error:Thread Deadlock Actions"
 
 #: pcsx2/gui/AppUserMode.cpp:59
 msgid "!Notice:PortableModeRights"
-msgstr ""
+msgstr "!Notice:PortableModeRights"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
 msgid "!Panel:Folders:Settings"
@@ -64,7 +63,7 @@ msgstr "!Panel:Folders:Settings"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
 msgid "!Wizard:Welcome"
-msgstr ""
+msgstr "!Wizard:Welcome"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
 msgid "!Wizard:Bios:Tutorial"
@@ -103,14 +102,12 @@ msgid "!Notice:BIOS:InvalidSelection"
 msgstr "!Notice:BIOS:InvalidSelection"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:111
-#, fuzzy
 msgid "!Panel:EE/IOP:Heading"
-msgstr "!Panel:Frameskip:Heading"
+msgstr "!Panel:EE/IOP:Heading"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:178
-#, fuzzy
 msgid "!Panel:VUs:Heading"
-msgstr "!Panel:Frameskip:Heading"
+msgstr "!Panel:VUs:Heading"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:69
 msgid "!Notice:DirPicker:CreatePath"
