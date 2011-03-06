@@ -79,7 +79,16 @@ void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
 
 	if (!s_bSDLInit)
 	{
+#if SDL_VERSION_ATLEAST(1,3,0)
+		// SDL in 3rdparty wrap X11 call. In order to get x11 symbols loaded
+		// video must be loaded too.
+		// Example of X11 symbol are XAutoRepeatOn/XAutoRepeatOff
+		// Just to play it safe I separate 1.2 and 1.3 but I think it will be 
+		// fine in 1.2 too -- greg
+		if (SDL_Init(SDL_INIT_JOYSTICK|SDL_INIT_VIDEO) < 0) return;
+#else
 		if (SDL_Init(SDL_INIT_JOYSTICK) < 0) return;
+#endif
 		SDL_JoystickEventState(SDL_QUERY);
 		s_bSDLInit = true;
 	}
