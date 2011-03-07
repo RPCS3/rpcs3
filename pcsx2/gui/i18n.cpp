@@ -256,7 +256,7 @@ bool i18n_SetLanguage( wxLanguage wxLangId, const wxString& langCode )
 		L"pcsx2_Iconized",
 		L"pcsx2_Tertiary",
 #ifdef PCSX2_DEVBUILD
-		L"pcsx2_devel"
+		L"pcsx2_Devel"
 #endif
 	};
 	
