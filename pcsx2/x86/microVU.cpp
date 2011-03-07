@@ -128,7 +128,9 @@ void microVU::reset() {
 	x86SetPtr(dispCache);
 	mVUdispatcherA(this);
 	mVUdispatcherB(this);
-		mVUemitSearch();
+	mVUdispatcherC(this);
+	mVUdispatcherD(this);
+	mVUemitSearch();
 
 	// Clear All Program Data
 	//memset(&prog, 0, sizeof(prog));
@@ -410,4 +412,11 @@ void recMicroVU0::SetCacheReserve( uint reserveInMegs ) const {
 void recMicroVU1::SetCacheReserve( uint reserveInMegs ) const {
 	DevCon.WriteLn("microVU1: Upping cache size [%dmb]", reserveInMegs);
 	microVU1.cacheSize = min(reserveInMegs, mVUcacheMaxReserve);
+}
+
+void recMicroVU1::ResumeXGkick() {
+	pxAssert(m_Reserved); // please allocate me first! :|
+
+	if(!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
+	((mVUrecCallXG)microVU1.startFunctXG)();
 }

@@ -151,6 +151,11 @@ public:
 	virtual void ExecuteBlock(bool startUp=0);
 
 	static void __fastcall ExecuteBlockJIT(BaseVUmicroCPU* cpu);
+
+	// VU1 sometimes needs to break execution on XGkick Path1 transfers if
+	// there is another gif path 2/3 transfer already taking place.
+	// Use this method to resume execution of VU1.
+	virtual void ResumeXGkick() {}
 };
 
 
@@ -194,6 +199,7 @@ public:
 	void Step();
 	void Execute(u32 cycles);
 	void Clear(u32 addr, u32 size) {}
+	void ResumeXGkick() {}
 
 	uint GetCacheReserve() const { return 0; }
 	void SetCacheReserve( uint reserveInMegs ) const {}
@@ -238,6 +244,7 @@ public:
 	void Execute(u32 cycles);
 	void Clear(u32 addr, u32 size);
 	void Vsync() throw();
+	void ResumeXGkick();
 
 	uint GetCacheReserve() const;
 	void SetCacheReserve( uint reserveInMegs ) const;
@@ -278,6 +285,7 @@ public:
 	void Reset();
 	void Execute(u32 cycles);
 	void Clear(u32 Addr, u32 Size);
+	void ResumeXGkick() { Console.Warning("ResumeXGkick() Not implemented!"); }
 
 	uint GetCacheReserve() const;
 	void SetCacheReserve( uint reserveInMegs ) const;
