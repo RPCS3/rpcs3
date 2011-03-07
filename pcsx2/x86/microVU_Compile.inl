@@ -330,7 +330,7 @@ __fi bool doEarlyExit(microVU* mVU) {
 
 // Saves Pipeline State for resuming from early exits
 static __fi void mVUsavePipelineState(microVU* mVU) {
-	u32* lpS = (u32*)&mVU->prog.lpState.vi15;
+	u32* lpS = (u32*)&mVU->prog.lpState;
 	for (int i = 0; i < (sizeof(microRegInfo)-4)/4; i++, lpS++) {
 		xMOV(ptr32[lpS], lpS[0]);
 	}

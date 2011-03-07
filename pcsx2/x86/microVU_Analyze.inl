@@ -291,7 +291,10 @@ __ri void mVUanalyzeSflag(mV, int It) {
 		mVUsFlagHack = 0; // Don't Optimize Out Status Flags for this block
 		mVUinfo.swapOps = 1;
 		flagSet(mVU, 0);
-		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 1; }
+		if (mVUcount < 4) {
+			if (!(mVUpBlock->pState.needExactMatch & 1)) // The only time this should happen is on the first program block
+				DevCon.WriteLn(Color_Green, "microVU%d: pState's sFlag Info was expected to be set [%04x]", getIndex, xPC);
+		}
 	}
 }
 
@@ -312,7 +315,10 @@ __ri void mVUanalyzeMflag(mV, int Is, int It) {
 	else {
 		mVUinfo.swapOps = 1;
 		flagSet(mVU, 1);
-		if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 2; }
+		if (mVUcount < 4) { 
+			if (!(mVUpBlock->pState.needExactMatch & 2)) // The only time this should happen is on the first program block
+				DevCon.WriteLn(Color_Green, "microVU%d: pState's mFlag Info was expected to be set [%04x]", getIndex, xPC);
+		}
 	}
 }
 
@@ -323,7 +329,10 @@ __ri void mVUanalyzeMflag(mV, int Is, int It) {
 __fi void mVUanalyzeCflag(mV, int It) {
 	mVUinfo.swapOps = 1;
 	mVUlow.readFlags = 1;
-	if (mVUcount < 4) { mVUpBlock->pState.needExactMatch |= 4; }
+	if (mVUcount < 4) { 
+		if (!(mVUpBlock->pState.needExactMatch & 4)) // The only time this should happen is on the first program block
+			DevCon.WriteLn(Color_Green, "microVU%d: pState's cFlag Info was expected to be set [%04x]", getIndex, xPC);
+	}
 	analyzeVIreg2(It, mVUlow.VI_write, 1);
 }
 
