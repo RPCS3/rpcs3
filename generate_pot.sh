@@ -82,6 +82,23 @@ xgettext --keyword=$TER_KEY1 --keyword=$TER_KEY2 --keyword=$TER_KEY3 $GENERAL_OP
 sed --in-place $TER_POT --expression=s/charset=CHARSET/charset=UTF-8/
 
 ######################################################################
+# Add poedit metadata
+# It eases poedit for translators
+######################################################################
+# Metadata example
+# "X-Poedit-KeywordsList: pxE_dev;pxDt\n"
+# "X-Poedit-SourceCharset: utf-8\n"
+# "X-Poedit-Basepath: trunk\\\n"
+# "X-Poedit-SearchPath-0: pcsx2\n"
+# "X-Poedit-SearchPath-1: common\n"
+# Normally "...Content-Transfer-Encoding..." is the end of the header. Use it as anchor to place poedit metadata after
+COMMON_META="\"X-Poedit-SourceCharset: utf-8\\\n\"\n\"X-Poedit-Basepath: trunk\\\\\\\\\\\n\"\n\"X-Poedit-SearchPath-0: pcsx2\\\n\"\n\"X-Poedit-SearchPath-1: common\\\n\""
+sed --in-place $MAIN_POT --expression=s/'\"Content-Transfer-Encoding: 8bit\\n\"'/"\"Content-Transfer-Encoding: 8bit\\\n\"\n\"X-Poedit-KeywordsList: ${MAIN_KEY1};${MAIN_KEY2}\\\n\"\n${COMMON_META}"/
+sed --in-place $DEV_POT --expression=s/'\"Content-Transfer-Encoding: 8bit\\n\"'/"\"Content-Transfer-Encoding: 8bit\\\n\"\n\"X-Poedit-KeywordsList: ${DEV_KEY1};${DEV_KEY2}\\\n\"\n${COMMON_META}"/
+sed --in-place $ICO_POT --expression=s/'\"Content-Transfer-Encoding: 8bit\\n\"'/"\"Content-Transfer-Encoding: 8bit\\\n\"\n\"X-Poedit-KeywordsList: ${ICO_KEY1}\\\n\"\n${COMMON_META}"/
+sed --in-place $TER_POT --expression=s/'\"Content-Transfer-Encoding: 8bit\\n\"'/"\"Content-Transfer-Encoding: 8bit\\\n\"\n\"X-Poedit-KeywordsList: ${TER_KEY1};${TER_KEY2};${TER_KEY3}\\\n\"\n${COMMON_META}"/
+
+######################################################################
 # Automatically align the .po to the new pot file
 ######################################################################
 echo "Update pcsx2_Main.po files"
