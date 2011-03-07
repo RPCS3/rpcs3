@@ -38,31 +38,43 @@ struct microBlockLink {
 
 class microBlockManager {
 private:
-	microBlockLink* blockList;
-	microBlockLink* blockEnd;
-	int listI;
+	microBlockLink* qBlockList, *qBlockEnd; // Quick Search
+	microBlockLink* fBlockList, *fBlockEnd; // Full  Search
+	int qListI, fListI;
 
 public:
 	microBlockManager() {
-		listI = 0;
-		blockEnd = blockList = NULL;
+		qListI = fListI = 0;
+		qBlockEnd = qBlockList = NULL;
+		fBlockEnd = fBlockList = NULL;
 	}
 	~microBlockManager() { reset(); }
 	void reset() {
-		for(microBlockLink* linkI = blockList; linkI != NULL; ) {
+		for(microBlockLink* linkI = qBlockList; linkI != NULL; ) {
 			microBlockLink* freeI = linkI;
 			safe_delete_array(linkI->block.jumpCache);
 			linkI = linkI->next;
 			_aligned_free(freeI);
 		}
-		listI = 0;
-		blockEnd = blockList = NULL;
+		for(microBlockLink* linkI = fBlockList; linkI != NULL; ) {
+			microBlockLink* freeI = linkI;
+			safe_delete_array(linkI->block.jumpCache);
+			linkI = linkI->next;
+			_aligned_free(freeI);
+		}
+		qListI = fListI = 0;
+		qBlockEnd = qBlockList = NULL;
+		fBlockEnd = fBlockList = NULL;
 	};
 	microBlock* add(microBlock* pBlock) {
 		microBlock* thisBlock = search(&pBlock->pState);
 		if (!thisBlock) {
-			listI++;
-			microBlockLink* newBlock  = (microBlockLink*)_aligned_malloc(sizeof(microBlockLink), 16);
+			u8  fullCmp = pBlock->pState.needExactMatch;
+			if (fullCmp) fListI++; else qListI++;
+
+			microBlockLink*& blockList = fullCmp ? fBlockList : qBlockList;
+			microBlockLink*& blockEnd  = fullCmp ? fBlockEnd  : qBlockEnd;
+			microBlockLink*  newBlock  = (microBlockLink*)_aligned_malloc(sizeof(microBlockLink), 16);
 			newBlock->block.jumpCache = NULL;
 			newBlock->next = NULL;
 
@@ -81,13 +93,13 @@ public:
 	}
 	__ri microBlock* search(microRegInfo* pState) {
 		if (pState->needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
-			for (microBlockLink* linkI = blockList; linkI != NULL; linkI = linkI->next) {
+			for(microBlockLink* linkI = fBlockList; linkI != NULL; linkI = linkI->next) {
 				if (mVUquickSearch((void*)pState, (void*)&linkI->block.pState, sizeof(microRegInfo)))
 					return &linkI->block;
 			}
 		}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
-			for (microBlockLink* linkI = blockList; linkI != NULL; linkI = linkI->next) {
+			for(microBlockLink* linkI = qBlockList; linkI != NULL; linkI = linkI->next) {
 				if (doConstProp && (linkI->block.pState.vi15 != pState->vi15)) continue;
 				if (linkI->block.pState.quick32[0] != pState->quick32[0]) continue;
 				if (linkI->block.pState.quick32[1] != pState->quick32[1]) continue;
@@ -96,9 +108,10 @@ public:
 		}
 		return NULL;
 	}
-	void printInfo(int pc) {
+	void printInfo(int pc, bool printQuick) {
+		int listI = printQuick ? qListI : fListI;
 		if (listI < 7) return;
-		microBlockLink* linkI = blockList;
+		microBlockLink* linkI = printQuick ? qBlockList : fBlockList;
 		for (int i = 0; i <= listI; i++) {
 			u32 viCRC = 0, vfCRC = 0, crc = 0, z = sizeof(microRegInfo)/4;
 			for (u32 j = 0; j < 4;  j++) viCRC -= ((u32*)linkI->block.pState.VI)[j];
@@ -269,3 +282,12 @@ extern void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles);
 // recCall Function Pointer
 typedef void (__fastcall *mVUrecCall)(u32, u32);
 
+template<typename T>
+void makeUnique(T& v) { // Removes Duplicates
+	v.erase(unique(v.begin(), v.end()), v.end());
+}
+
+template<typename T>
+void sortVector(T& v) {
+	sort(v.begin(), v.end());
+}

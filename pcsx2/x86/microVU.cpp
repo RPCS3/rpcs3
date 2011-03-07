@@ -240,6 +240,40 @@ _mVUt __fi void mVUcacheProg(microProgram& prog) {
 	mVUdumpProg(prog);
 }
 
+// Generate Hash for partial program based on compiled ranges...
+_mVUt __fi u64 mVUrangesHash(microProgram& prog) {
+	microVU* mVU = mVUx;
+	u32 hash[2] = {0, 0};
+	deque<microRange>::const_iterator it(prog.ranges->begin());
+	for ( ; it != prog.ranges->end(); ++it) {
+		if((it[0].start<0)||(it[0].end<0))  { DevCon.Error("microVU%d: Negative Range![%d][%d]", mVU->index, it[0].start, it[0].end); }
+		for(int i = it[0].start/4; i < it[0].end/4; i++) {
+			hash[0] -= prog.data[i];
+			hash[1] ^= prog.data[i];
+		}
+	}
+	return *(u64*)hash;
+}
+
+// Prints the ratio of unique programs to total programs
+_mVUt __fi void mVUprintUniqueRatio() {
+	microVU* mVU = mVUx;
+	vector<u64> v;
+	for(u32 pc = 0; pc < mProgSize/2; pc++) {
+		microProgramList* list = mVU->prog.prog[pc];
+		if (!list) continue;
+		deque<microProgram*>::iterator it(list->begin());
+		for ( ; it != list->end(); ++it) {
+			v.push_back(mVUrangesHash<vuIndex>(*it[0]));
+		}
+	}
+	u32 total = v.size();
+	sortVector(v);
+	makeUnique(v);
+	if (!total) return;
+	DevCon.WriteLn("%d / %d [%3.1f%%]", v.size(), total, 100.-(double)v.size()/(double)total*100.);
+}
+
 // Compare partial program by only checking compiled ranges...
 _mVUt __fi bool mVUcmpPartial(microProgram& prog) {
 	microVU* mVU = mVUx;
@@ -291,6 +325,7 @@ _mVUt __fi void* mVUsearchProg(u32 startPC, uptr pState) {
 		quick.block			= mVU->prog.cur->block[startPC/8];
 		quick.prog			= mVU->prog.cur;
 		list->push_front(mVU->prog.cur);
+		//mVUprintUniqueRatio<vuIndex>();
 		return entryPoint;
 	}
 	// If list.quick, then we've already found and recompiled the program ;)
@@ -361,22 +396,18 @@ void recMicroVU1::Clear(u32 addr, u32 size) {
 	mVUclear(&microVU1, addr, size);
 }
 
-uint recMicroVU0::GetCacheReserve() const
-{
+uint recMicroVU0::GetCacheReserve() const {
 	return microVU0.cacheSize;
 }
-uint recMicroVU1::GetCacheReserve() const
-{
+uint recMicroVU1::GetCacheReserve() const {
 	return microVU1.cacheSize;
 }
 
-void recMicroVU0::SetCacheReserve( uint reserveInMegs ) const
-{
+void recMicroVU0::SetCacheReserve( uint reserveInMegs ) const {
 	DevCon.WriteLn("microVU0: Upping cache size [%dmb]", reserveInMegs);
 	microVU0.cacheSize = min(reserveInMegs, mVUcacheMaxReserve);
 }
-void recMicroVU1::SetCacheReserve( uint reserveInMegs ) const
-{
+void recMicroVU1::SetCacheReserve( uint reserveInMegs ) const {
 	DevCon.WriteLn("microVU1: Upping cache size [%dmb]", reserveInMegs);
 	microVU1.cacheSize = min(reserveInMegs, mVUcacheMaxReserve);
 }
