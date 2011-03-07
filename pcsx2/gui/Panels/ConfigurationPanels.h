@@ -269,7 +269,16 @@ namespace Panels
 		pxCheckBox*		m_check_VsyncEnable;
 		pxCheckBox*		m_check_ManagedVsync;
 		pxCheckBox*		m_check_Fullscreen;
-		pxCheckBox*		m_check_ExclusiveFS;
+
+		//Exclusive mode is currently not used (true for svn r4399).
+		//PCSX2 has partial infrastructure for it:
+		//  - The plugin APIs have GSsetExclusive.
+		//  - GSdx seem to support it (it supports the API and has implementation), but I don't know if it ever got called.
+		//  - BUT, the configuration (AppConfig, and specifically GSWindowOptions) do NOT seem to have a place to store this value,
+		//         and PCSX2's code doesn't seem to use this API anywhere. So, no exclusive mode for now.
+		//           - avih
+		//pxCheckBox*		m_check_ExclusiveFS;
+
 		pxCheckBox*		m_check_HideMouse;
 		pxCheckBox*		m_check_DclickFullscreen;
 

@@ -48,7 +48,7 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	m_check_VsyncEnable	= new pxCheckBox( this, _("Wait for Vsync on refresh") );
 	m_check_ManagedVsync = new pxCheckBox( this, _("Dynamically toggle Vsync depending on frame rate (read tooltip!)") );
 	m_check_DclickFullscreen = new pxCheckBox( this, _("Double-click toggles fullscreen mode") );
-	m_check_ExclusiveFS = new pxCheckBox( this, _("Use exclusive fullscreen mode (if available)") );
+	//m_check_ExclusiveFS = new pxCheckBox( this, _("Use exclusive fullscreen mode (if available)") );
 
 	m_check_VsyncEnable->SetToolTip( pxEt( "!ContextTip:Window:Vsync",
 		L"Vsync eliminates screen tearing but typically has a big performance hit. "
@@ -74,11 +74,12 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 		L"You can still toggle fullscreen display at any time using alt-enter."
 	) );
 
+/*
 	m_check_ExclusiveFS->SetToolTip( pxEt( "!ContextTip:Window:FullscreenExclusive",
 		L"Fullscreen Exclusive Mode may look better on older CRTs and might be a little faster on older video cards, "
 		L"but typically can lead to memory leaks or random crashes when entering/leaving fullscreen mode."
 	) );
-
+*/
 	m_check_CloseGS->SetToolTip( pxEt( "!ContextTip:Window:HideGS",
 		L"Completely closes the often large and bulky GS window when pressing "
 		L"ESC or suspending the emulator."
@@ -109,7 +110,8 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 
 	*this += m_check_Fullscreen;
 	*this += m_check_DclickFullscreen;;
-	*this += m_check_ExclusiveFS;
+
+	//*this += m_check_ExclusiveFS;
 	*this += new wxStaticLine( this )	| StdExpand();
 
 	*this += m_check_VsyncEnable;
@@ -131,7 +133,7 @@ void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, 
 {
 	const AppConfig::GSWindowOptions& conf( configToApply.GSWindow );
 
-	if( !(flags & AppConfig::APPLY_FLAG_FROM_PRESET) )	//Presets don't control these: only change if config doesn't come from preset.
+	if( !(flags & AppConfig::APPLY_FLAG_FROM_PRESET) )	//Presets don't control any value at this config panel
 	{
 		m_check_CloseGS		->SetValue( conf.CloseOnEsc );
 		m_check_Fullscreen	->SetValue( conf.DefaultToFullscreen );
@@ -148,9 +150,6 @@ void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, 
 		m_text_WindowWidth	->ChangeValue( wxsFormat( L"%d", conf.WindowSize.GetWidth() ) );
 		m_text_WindowHeight	->ChangeValue( wxsFormat( L"%d", conf.WindowSize.GetHeight() ) );
 	}
-
-	m_check_VsyncEnable->Enable(!configToApply.EnablePresets);
-	m_check_ManagedVsync->Enable(!configToApply.EnablePresets);
 }
 
 void Panels::GSWindowSettingsPanel::Apply()

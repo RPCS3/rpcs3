@@ -809,18 +809,16 @@ bool AppConfig::IsOkApplyPreset(int n)
 	AppConfig				default_AppConfig;
 	Pcsx2Config				default_Pcsx2Config;
 
-
 	//  NOTE:	Because the system currently only supports passing of an entire AppConfig to the GUI panels/menus to apply/reflect,
 	//			the GUI entities should be aware of the settings which the presets control, such that when presets are used:
 	//			1. The panels/entities should prevent manual modifications (by graying out) of settings which the presets control.
 	//			2. The panels should not apply values which the presets don't control if the value is initiated by a preset.
 	//			Currently controlled by the presets:
 	//			- AppConfig:	Framerate, EnableSpeedHacks, EnableGameFixes.
-	//			- EmuOptions:	Cpu, Gamefixes, SpeedHacks, EnablePatches, GS (except FrameLimitEnable).
+	//			- EmuOptions:	Cpu, Gamefixes, SpeedHacks, EnablePatches, GS (except for FrameLimitEnable, VsyncEnable and ManagedVsync).
 	//
 	//			This essentially currently covers all the options on all the panels except for framelimiter which isn't
-	//			controlled by the presets, and almost the entire GSWindow panel which also isn't controlled by presets
-	//			(however, vsync IS controlled by the presets).
+	//			controlled by the presets, and the entire GSWindow panel which also isn't controlled by presets
 	//
 	//			So, if changing the scope of the presets (making them affect more or less values), the relevant GUI entities
 	//			should me modified to support it.
@@ -834,7 +832,10 @@ bool AppConfig::IsOkApplyPreset(int n)
 
 	EmuOptions.EnablePatches		= true;
 	EmuOptions.GS					= default_Pcsx2Config.GS;
-	EmuOptions.GS.FrameLimitEnable	= original_GS.FrameLimitEnable;	//although GS is reset, frameLimiter isn't touched.
+	EmuOptions.GS.FrameLimitEnable	= original_GS.FrameLimitEnable;	//Frame limiter, vsync and ,managed-vsync are not modified by presets
+	EmuOptions.GS.VsyncEnable		= original_GS.VsyncEnable;
+	EmuOptions.GS.ManagedVsync		= original_GS.ManagedVsync;
+	
 	EmuOptions.Cpu					= default_Pcsx2Config.Cpu;
 	EmuOptions.Gamefixes			= default_Pcsx2Config.Gamefixes;
 	EmuOptions.Speedhacks			= default_Pcsx2Config.Speedhacks;
