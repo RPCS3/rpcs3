@@ -28,8 +28,9 @@ extern wxString GetMsg_IsoImageChanged();
 // selecting another iso would be undesirable).
 
 
-RecentIsoManager::RecentIsoManager( wxMenu* menu )
+RecentIsoManager::RecentIsoManager( wxMenu* menu, int firstIdForMenuItems_or_wxID_ANY )
 	: m_Menu( menu )
+	, m_firstIdForMenuItems_or_wxID_ANY ( firstIdForMenuItems_or_wxID_ANY )
 	, m_MaxLength( g_Conf->RecentIsoCount )
 {
 	m_cursel	= 0;
@@ -160,11 +161,17 @@ void RecentIsoManager::Add( const wxString& src )
 	}
 }
 
+//id here is the position index at the list of recent ISOs
 void RecentIsoManager::InsertIntoMenu( int id )
 {
 	if( m_Menu == NULL ) return;
 	RecentItem& curitem( m_Items[id] );
-	curitem.ItemPtr = m_Menu->Append( wxID_ANY, Path::GetFilename(curitem.Filename), curitem.Filename, wxITEM_RADIO );
+	
+	int wxid=wxID_ANY;
+	if (this->m_firstIdForMenuItems_or_wxID_ANY != wxID_ANY)
+		wxid = this->m_firstIdForMenuItems_or_wxID_ANY + id;
+
+	curitem.ItemPtr = m_Menu->Append( wxid, Path::GetFilename(curitem.Filename), curitem.Filename, wxITEM_RADIO );
 
 	if( m_cursel == id )
 		curitem.ItemPtr->Check();

@@ -44,10 +44,12 @@ protected:
 	uint		m_MaxLength;
 	int			m_cursel;
 
+	int m_firstIdForMenuItems_or_wxID_ANY;
+
 	wxMenuItem* m_Separator;
 
 public:
-	RecentIsoManager( wxMenu* menu );
+	RecentIsoManager( wxMenu* menu , int firstIdForMenuItems_or_wxID_ANY );
 	virtual ~RecentIsoManager() throw();
 
 	void RemoveAllFromMenu();
@@ -73,7 +75,7 @@ struct RecentIsoList
 	ScopedPtr<RecentIsoManager>		Manager;
 	ScopedPtr<wxMenu>				Menu;
 
-	RecentIsoList();
+	RecentIsoList(int firstIdForMenuItems_or_wxID_ANY);
 	virtual ~RecentIsoList() throw() { }
 };
 

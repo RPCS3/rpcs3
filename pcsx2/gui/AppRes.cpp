@@ -66,11 +66,11 @@ const wxImage& LoadImageAny(
 	return dest = onFail.Get();
 }
 
-RecentIsoList::RecentIsoList()
+RecentIsoList::RecentIsoList(int firstIdForMenuItems_or_wxID_ANY)
 {
 	Menu = new wxMenu();
 	Menu->Append( MenuId_IsoBrowse, _("Browse..."), _("Browse for an Iso that is not in your recent history.") );
-	Manager = new RecentIsoManager( Menu );
+	Manager = new RecentIsoManager( Menu, firstIdForMenuItems_or_wxID_ANY );
 }
 
 pxAppResources::pxAppResources()
@@ -81,13 +81,13 @@ pxAppResources::~pxAppResources() throw() {}
 
 wxMenu& Pcsx2App::GetRecentIsoMenu()
 {
-	if (!m_RecentIsoList) m_RecentIsoList = new RecentIsoList();
+	if (!m_RecentIsoList) m_RecentIsoList = new RecentIsoList( MenuId_RecentIsos_reservedStart );
 	return *m_RecentIsoList->Menu;
 }
 
 RecentIsoManager& Pcsx2App::GetRecentIsoManager()
 {
-	if (!m_RecentIsoList) m_RecentIsoList = new RecentIsoList();
+	if (!m_RecentIsoList) m_RecentIsoList = new RecentIsoList( MenuId_RecentIsos_reservedStart );
 	return *m_RecentIsoList->Manager;
 }
 
