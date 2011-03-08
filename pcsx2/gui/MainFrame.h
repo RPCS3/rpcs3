@@ -174,6 +174,7 @@ protected:
 	void Menu_ResetAllSettings_Click(wxCommandEvent &event);
 
 	void Menu_IsoBrowse_Click(wxCommandEvent &event);
+	void Menu_EnableBackupStates_Click(wxCommandEvent &event);
 	void Menu_EnablePatches_Click(wxCommandEvent &event);
 	void Menu_EnableCheats_Click(wxCommandEvent &event);
 	void Menu_EnableHostFs_Click(wxCommandEvent &event);
@@ -194,7 +195,7 @@ protected:
 
 	void Menu_ConfigPlugin_Click(wxCommandEvent &event);
 
-	void Menu_MultitapToggle_Click(wxCommandEvent &event);
+	//void Menu_MultitapToggle_Click(wxCommandEvent &event);
 
 	void Menu_Debug_Open_Click(wxCommandEvent &event);
 	void Menu_Debug_MemoryDump_Click(wxCommandEvent &event);

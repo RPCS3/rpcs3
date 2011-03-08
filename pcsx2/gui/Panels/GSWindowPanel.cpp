@@ -133,8 +133,8 @@ void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, 
 {
 	const AppConfig::GSWindowOptions& conf( configToApply.GSWindow );
 
-	if( !(flags & AppConfig::APPLY_FLAG_FROM_PRESET) )	//Presets don't control any value at this config panel
-	{
+	if( !(flags & AppConfig::APPLY_FLAG_FROM_PRESET) )	
+	{//Presets don't control these values
 		m_check_CloseGS		->SetValue( conf.CloseOnEsc );
 		m_check_Fullscreen	->SetValue( conf.DefaultToFullscreen );
 		m_check_HideMouse	->SetValue( conf.AlwaysHideMouse );
@@ -142,14 +142,17 @@ void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, 
 
 		m_combo_AspectRatio	->SetSelection( (int)conf.AspectRatio );
 
-		m_check_VsyncEnable	->SetValue( configToApply.EmuOptions.GS.VsyncEnable );
-		m_check_ManagedVsync->SetValue( configToApply.EmuOptions.GS.ManagedVsync );
-
 		m_check_DclickFullscreen ->SetValue ( conf.IsToggleFullscreenOnDoubleClick );
 
 		m_text_WindowWidth	->ChangeValue( wxsFormat( L"%d", conf.WindowSize.GetWidth() ) );
 		m_text_WindowHeight	->ChangeValue( wxsFormat( L"%d", conf.WindowSize.GetHeight() ) );
 	}
+
+	m_check_VsyncEnable->SetValue( configToApply.EmuOptions.GS.VsyncEnable );
+	m_check_VsyncEnable->Enable  ( !configToApply.EnablePresets );//grayed-out when presets are enabled
+
+	m_check_ManagedVsync->SetValue( configToApply.EmuOptions.GS.ManagedVsync );
+	m_check_ManagedVsync->Enable  ( !configToApply.EnablePresets );//grayed-out when presets are enabled
 }
 
 void Panels::GSWindowSettingsPanel::Apply()

@@ -395,6 +395,7 @@ void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 	AppSaveSettings();		// save the new iso selection; update menus!
 }
 
+/*//now only available at the memory card manager.
 void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent& )
 {
 	g_Conf->EmuOptions.MultitapPort0_Enabled = GetMenuBar()->IsChecked( MenuId_Config_Multitap0Toggle );
@@ -403,6 +404,19 @@ void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent& )
 	AppSaveSettings();
 
 	//evt.Skip();
+}
+*/
+
+void MainEmuFrame::Menu_EnableBackupStates_Click( wxCommandEvent& )
+{
+	g_Conf->EmuOptions.BackupSavestate = GetMenuBar()->IsChecked( MenuId_EnableBackupStates );
+	
+	//without the next line, after toggling this menu-checkbox, the change only applies from the 2nd save and onwards
+	//  (1st save after the toggle keeps the old pre-toggle value)..
+	//  wonder what that means for all the other menu checkboxes which only use AppSaveSettings... (avih)
+	AppApplySettings();
+    
+	AppSaveSettings();
 }
 
 void MainEmuFrame::Menu_EnablePatches_Click( wxCommandEvent& )

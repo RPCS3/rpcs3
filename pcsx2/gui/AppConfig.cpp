@@ -832,9 +832,9 @@ bool AppConfig::IsOkApplyPreset(int n)
 
 	EmuOptions.EnablePatches		= true;
 	EmuOptions.GS					= default_Pcsx2Config.GS;
-	EmuOptions.GS.FrameLimitEnable	= original_GS.FrameLimitEnable;	//Frame limiter, vsync and ,managed-vsync are not modified by presets
-	EmuOptions.GS.VsyncEnable		= original_GS.VsyncEnable;
-	EmuOptions.GS.ManagedVsync		= original_GS.ManagedVsync;
+	EmuOptions.GS.FrameLimitEnable	= original_GS.FrameLimitEnable;	//Frame limiter is not modified by presets
+	//EmuOptions.GS.VsyncEnable		= original_GS.VsyncEnable;
+	//EmuOptions.GS.ManagedVsync		= original_GS.ManagedVsync;
 	
 	EmuOptions.Cpu					= default_Pcsx2Config.Cpu;
 	EmuOptions.Gamefixes			= default_Pcsx2Config.Gamefixes;

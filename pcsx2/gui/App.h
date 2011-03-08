@@ -91,7 +91,7 @@ enum MenuIdentifiers
 	MenuId_Boot_CDVD,
 	MenuId_Boot_CDVD2,
 	MenuId_Boot_ELF,
-	MenuId_Boot_Recent,			// Menu populated with recent source bootings
+	//MenuId_Boot_Recent,			// Menu populated with recent source bootings
 
 
 	MenuId_Sys_SuspendResume,	// suspends/resumes active emulation, retains plugin states
@@ -99,6 +99,7 @@ enum MenuIdentifiers
 	MenuId_Sys_Shutdown,		// Closes virtual machine, shuts down plugins, wipes states.
 	MenuId_Sys_LoadStates,		// Opens load states submenu
 	MenuId_Sys_SaveStates,		// Opens save states submenu
+	MenuId_EnableBackupStates,	// Checkbox to enable/disables savestates backup
 	MenuId_EnablePatches,
 	MenuId_EnableCheats,
 	MenuId_EnableHostFs,
@@ -130,8 +131,8 @@ enum MenuIdentifiers
 	MenuId_Config_DEV9,
 	MenuId_Config_Patches,
 
-	MenuId_Config_Multitap0Toggle,
-	MenuId_Config_Multitap1Toggle,
+	//MenuId_Config_Multitap0Toggle,
+	//MenuId_Config_Multitap1Toggle,
 
 	// Plugin Sections
 	// ---------------

@@ -228,7 +228,9 @@ namespace Panels
 	protected:
 		pxCheckBox*		m_check_Multitap[2];
 		pxCheckBox*		m_check_Ejection;
-		pxCheckBox*		m_check_SavestateBackup;
+
+		//moved to the system menu, just below "Save State"
+		//pxCheckBox*		m_check_SavestateBackup;
 
 	public:
 		McdConfigPanel_Toggles( wxWindow* parent );
@@ -242,5 +244,6 @@ namespace Panels
 
 };
 
+//avih: is the first one used??
 extern bool EnumerateMemoryCard( McdListItem& dest, const wxFileName& filename );
 //extern bool EnumerateMemoryCard( SimpleMcdItem& dest, const wxFileName& filename );
