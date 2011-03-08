@@ -28,7 +28,6 @@
 #include "GSVertex.h"
 #include "GSVertexList.h"
 #include "GSUtil.h"
-#include "GSDirtyRect.h"
 #include "GSPerfMon.h"
 #include "GSVector.h"
 #include "GSDevice.h"
@@ -208,7 +207,6 @@ public:
 	virtual void ResetPrim() = 0;
 	virtual void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r) {}
 	virtual void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r) {}
-	virtual void InvalidateTextureCache() {}
 
 	void Move();
 	void Write(const uint8* mem, int len);

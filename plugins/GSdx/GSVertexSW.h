@@ -23,15 +23,15 @@
 
 #include "GSVector.h"
 
-__aligned(struct, 32) GSVertexSW
+__aligned(struct, 16) GSVertexSW
 {
 	GSVector4 c, p, t;
 
 	GSVertexSW() {}
 	GSVertexSW(const GSVertexSW& v) {*this = v;}
 
-	void operator = (const GSVertexSW& v) {c = v.c; p = v.p; t = v.t;}
-	void operator += (const GSVertexSW& v) {c += v.c; p += v.p; t += v.t;}
+	__forceinline void operator = (const GSVertexSW& v) {c = v.c; p = v.p; t = v.t;}
+	__forceinline void operator += (const GSVertexSW& v) {c += v.c; p += v.p; t += v.t;}
 
 	friend GSVertexSW operator + (const GSVertexSW& v1, const GSVertexSW& v2);
 	friend GSVertexSW operator - (const GSVertexSW& v1, const GSVertexSW& v2);

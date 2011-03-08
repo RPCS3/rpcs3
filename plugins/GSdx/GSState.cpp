@@ -196,8 +196,6 @@ void GSState::Reset()
 	m_env.Reset();
 
 	m_context = &m_env.CTXT[0];
-
-	InvalidateTextureCache();
 }
 
 void GSState::ResetHandlers()
@@ -770,8 +768,6 @@ void GSState::GIFRegHandlerFOGCOL(const GIFReg* r)
 void GSState::GIFRegHandlerTEXFLUSH(const GIFReg* r)
 {
 	// TRACE(_T("TEXFLUSH\n"));
-
-	// InvalidateTextureCache();
 }
 
 template<int i> void GSState::GIFRegHandlerSCISSOR(const GIFReg* r)
@@ -903,6 +899,7 @@ template<int i> void GSState::GIFRegHandlerFRAME(const GIFReg* r)
 template<int i> void GSState::GIFRegHandlerZBUF(const GIFReg* r)
 {
 	GIFRegZBUF ZBUF = r->ZBUF;
+
 	if(ZBUF.u32[0] == 0)
 	{
 		// during startup all regs are cleared to 0 (by the bios or something), so we mask z until this register becomes valid
@@ -1396,9 +1393,6 @@ template void GSState::Transfer<3>(const uint8* mem, uint32 size);
 
 template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 {
-	// [TODO] make me into a template parameter... I think.  --air
-	static const bool FrameSkipIt = false;
-
 	GSPerfMonAutoTimer pmat(m_perfmon);
 
 	const uint8* start = mem;
@@ -1420,7 +1414,7 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 
 				// ASSERT(!(path.tag.PRE && path.tag.FLG == GIF_FLG_REGLIST)); // kingdom hearts
 
-				if(path.tag.PRE && (path.tag.FLG == GIF_FLG_PACKED) && !FrameSkipIt)
+				if(path.tag.PRE && path.tag.FLG == GIF_FLG_PACKED)
 				{
 					GIFRegPRIM r;
 					r.u64 = path.tag.PRIM;
@@ -1551,7 +1545,7 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 			if(m_mt)
 			{
 				// Hackfix for BIOS, which sends an incomplete packet when it does an XGKICK without
-				// having an EOP specified anywhere in VU1 memory.  Needed until PCSX2 is fixed t
+				// having an EOP specified anywhere in VU1 memory.  Needed until PCSX2 is fixed to
 				// handle it more properly (ie, without looping infinitely).
 
 				path.nloop = 0;
@@ -1802,7 +1796,7 @@ bool GSState::GSTransferBuffer::Update(int tw, int th, int bpp, int& len)
 	if(total == 0)
 	{
 		start = end = 0;
-		total = min((tw * bpp >> 3) * th, 1024 * 1024 * 4);
+		total = std::min<int>((tw * bpp >> 3) * th, 1024 * 1024 * 4);
 		overflow = false;
 	}
 

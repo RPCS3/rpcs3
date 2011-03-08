@@ -273,12 +273,12 @@ void GSDrawScanlineCodeGenerator::Init()
 
 	mov(esi, dword[esp + _top]);
 	lea(esi, ptr[esi * 8]);
-	add(esi, dword[&m_local.gd->fzbr]);
+	add(esi, ptr[&m_local.gd->fzbr]);
 
 	// GSVector2i* fza_offset = &m_local.gd->fzbc[left >> 2];
 
 	lea(edi, ptr[ebx * 2]);
-	add(edi, dword[&m_local.gd->fzbc]);
+	add(edi, ptr[&m_local.gd->fzbc]);
 
 	if(!m_sel.sprite && (m_sel.fwrite && m_sel.fge || m_sel.zb) || m_sel.fb && (m_sel.edge || m_sel.tfx != TFX_NONE || m_sel.iip))
 	{
@@ -585,8 +585,8 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 
 	// int za = fza_base.y + fza_offset->y;
 
-	mov(ebp, dword[esi + 4]);
-	add(ebp, dword[edi + 4]);
+	mov(ebp, ptr[esi + 4]);
+	add(ebp, ptr[edi + 4]);
 
 	// GSVector4i zs = zi;
 
@@ -682,7 +682,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		return;
 	}
 
-	mov(ebx, dword[&m_local.gd->tex]);
+	mov(ebx, ptr[&m_local.gd->tex]);
 
 	// ebx = tex
 
@@ -1446,8 +1446,8 @@ void GSDrawScanlineCodeGenerator::ReadFrame()
 
 	// int fa = fza_base.x + fza_offset->x;
 
-	mov(ebx, dword[esi]);
-	add(ebx, dword[edi]);
+	mov(ebx, ptr[esi]);
+	add(ebx, ptr[edi]);
 
 	if(!m_sel.rfb)
 	{
@@ -1805,7 +1805,7 @@ void GSDrawScanlineCodeGenerator::WriteFrame()
 
 	if(m_sel.fpsm == 2 && m_sel.dthe)
 	{
-		mov(eax, dword[esp + _top]);
+		mov(eax, ptr[esp + _top]);
 		and(eax, 3);
 		shl(eax, 5);
 		vpaddw(xmm5, ptr[eax + (size_t)&m_local.gd->dimx[0]]);

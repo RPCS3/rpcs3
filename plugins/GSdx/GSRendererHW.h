@@ -484,13 +484,10 @@ protected:
 		}
 	}
 
-	void InvalidateTextureCache()
-	{
-		m_tc->RemoveAll();
-	}
-
 	void ResetDevice()
 	{
+		m_tc->RemoveAll();
+
 		__super::ResetDevice();
 	}
 

@@ -372,11 +372,11 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 			if(gd.sel.ltf)
 			{
-				GSVector4 half(0x8000, 0x8000);
-
 				if(gd.sel.fst)
 				{
 					// if q is constant we can do the half pel shift for bilinear sampling on the vertices
+
+					GSVector4 half(0x8000, 0x8000);
 
 					GSVertexSW* v = m_vertices;
 

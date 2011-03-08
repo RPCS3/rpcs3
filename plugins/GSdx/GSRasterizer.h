@@ -59,7 +59,7 @@ public:
 	virtual void EndDraw(const GSRasterizerStats& stats, uint64 frame) = 0;
 	virtual void PrintStats() = 0;
 
-	__forceinline void SetupPrim(const GSVertexSW* v, const GSVertexSW& dscan) {m_sp(v, dscan);}
+	__forceinline void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan) {m_sp(vertices, dscan);}
 	__forceinline void DrawScanline(int right, int left, int top, const GSVertexSW& scan) {m_ds(right, left, top, scan);}
 	__forceinline void DrawEdge(int right, int left, int top, const GSVertexSW& scan) {m_de(right, left, top, scan);}
 	__forceinline void DrawRect(const GSVector4i& r, const GSVertexSW& v) {(this->*m_dr)(r, v);}
@@ -79,30 +79,33 @@ public:
 	virtual void SetThreadId(int id, int threads) = 0;
 };
 
-class GSRasterizer : public IRasterizer
+__aligned(class, 32) GSRasterizer : public GSAlignedClass<32>, public IRasterizer
 {
+	struct GSScanline {GSVertexSW scan; GSVector4i p;};
+
 protected:
 	IDrawScanline* m_ds;
 	int m_id;
 	int m_threads;
 	GSRasterizerStats m_stats;
+	GSVector4i m_scissor;
+	GSVector4 m_fscissor;
+	struct {GSScanline* buff; int count;} m_edge;
 
-	void DrawPoint(const GSVertexSW* v, const GSVector4i& scissor);
-	void DrawLine(const GSVertexSW* v, const GSVector4i& scissor);
-	void DrawTriangle(const GSVertexSW* v, const GSVector4i& scissor);
-	void DrawEdge(const GSVertexSW* v, const GSVector4i& scissor);
-	void DrawSprite(const GSVertexSW* v, const GSVector4i& scissor);
+	void DrawPoint(const GSVertexSW* v);
+	void DrawLine(const GSVertexSW* v);
+	void DrawTriangle(const GSVertexSW* v);
+	void DrawSprite(const GSVertexSW* v);
+	void DrawEdge(const GSVertexSW* v);
 
-	void DrawTriangleTop(GSVertexSW* v, const GSVector4i& scissor);
-	void DrawTriangleBottom(GSVertexSW* v, const GSVector4i& scissor);
-	void DrawTriangleTopBottom(GSVertexSW* v, const GSVector4i& scissor);
+	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& l, const GSVertexSW& dl, const GSVertexSW& dscan);
 
-	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& l, const GSVertexSW& dl, GSVector4& r, const GSVector4& dr, const GSVertexSW& dscan, const GSVector4& scissor);
-	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& l, const GSVertexSW& dl, const GSVertexSW& dscan, const GSVector4& scissor);
+	void DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, int orientation, int side);
 
-	void DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, const GSVector4i& scissor, int orientation, int side);
+	__forceinline bool IsOneOfMyScanlines(int scanline) const;
 
-	inline bool IsOneOfMyScanlines(int scanline) const;
+	void Flush();
+	void FlushEdge();
 
 public:
 	GSRasterizer(IDrawScanline* ds);

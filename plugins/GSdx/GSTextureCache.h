@@ -22,6 +22,7 @@
 #pragma once
 
 #include "GSRenderer.h"
+#include "GSDirtyRect.h"
 
 class GSTextureCache
 {

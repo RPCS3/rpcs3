@@ -139,7 +139,7 @@ protected:
 	{
 		if(m_vertices != NULL) _aligned_free(m_vertices);
 
-		m_maxcount = max(10000, m_maxcount * 3/2);
+		m_maxcount = std::max<int>(10000, m_maxcount * 3 / 2);
 		m_vertices = (Vertex*)_aligned_malloc(sizeof(Vertex) * m_maxcount, 32);
 		m_maxcount -= 100;
 	}

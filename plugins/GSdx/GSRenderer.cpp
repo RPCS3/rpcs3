@@ -76,8 +76,6 @@ bool GSRenderer::CreateDevice(GSDevice* dev)
 
 void GSRenderer::ResetDevice()
 {
-    InvalidateTextureCache();
-
     ResetPrim();
 
     if(m_dev) m_dev->Reset(1, 1);

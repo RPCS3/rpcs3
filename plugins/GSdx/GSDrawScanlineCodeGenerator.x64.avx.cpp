@@ -379,8 +379,8 @@ void GSDrawScanlineCodeGenerator::Init()
 			}
 			else
 			{
-				vmovdqa(xmm13, ptr[&m_local.c.rb]);
-				vmovdqa(xmm14, ptr[&m_local.c.ga]);
+				vmovdqa(xmm13, ptr[r11 + offsetof(GSScanlineLocalData, c.rb)]);
+				vmovdqa(xmm14, ptr[r11 + offsetof(GSScanlineLocalData, c.ga)]);
 			}
 		}
 	}
