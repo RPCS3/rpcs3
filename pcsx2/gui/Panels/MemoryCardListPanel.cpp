@@ -69,6 +69,7 @@ bool EnumerateMemoryCard( McdListItem& dest, const wxFileName& filename )
 	return true;
 }
 
+//avih: unused??
 static int EnumerateMemoryCards( McdList& dest, const wxArrayString& files )
 {
 	int pushed = 0;
@@ -200,7 +201,7 @@ void Panels::BaseMcdListPanel::Apply()
 void Panels::BaseMcdListPanel::AppStatusEvent_OnSettingsApplied()
 {
 	if( (m_MultitapEnabled[0] != g_Conf->EmuOptions.MultitapPort0_Enabled) ||
-		(m_MultitapEnabled[0] != g_Conf->EmuOptions.MultitapPort0_Enabled) )
+		(m_MultitapEnabled[1] != g_Conf->EmuOptions.MultitapPort1_Enabled) )
 	{
 		m_MultitapEnabled[0] = g_Conf->EmuOptions.MultitapPort0_Enabled;
 		m_MultitapEnabled[1] = g_Conf->EmuOptions.MultitapPort1_Enabled;
@@ -456,7 +457,7 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 	m_MultitapEnabled[1] = false;
 
 	m_listview = new MemoryCardListView_Simple(this);
-	m_listview->SetMinSize(wxSize(m_listview->GetMinWidth(), m_listview->GetCharHeight() * 10));
+	m_listview->SetMinSize(wxSize(m_listview->GetMinWidth(), m_listview->GetCharHeight() * 13));
 	m_listview->SetDropTarget( new McdDropTarget(m_listview) );
 
 	m_button_Create	= new wxButton(this, wxID_ANY, _("Create"));
@@ -472,6 +473,9 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 	*s_leftside_buttons	+= 2;
 	*s_leftside_buttons	+= m_button_Mount;
 	//*s_leftside_buttons	+= 2;
+
+	parent->SetWindowStyle(parent->GetWindowStyle() | wxRESIZE_BORDER);
+
 
 	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_BEGIN_DRAG,		wxListEventHandler(MemoryCardListPanel_Simple::OnListDrag));
 	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_SELECTED,	wxListEventHandler(MemoryCardListPanel_Simple::OnListSelectionChanged));
@@ -701,5 +705,57 @@ int Panels::MemoryCardListPanel_Simple::GetLength() const
 
 McdListItem& Panels::MemoryCardListPanel_Simple::GetCard( int idx )
 {
-	return m_Cards[idx];
+	//calculate actual card slot (targetSlot) from list-view index (idx).
+
+	//card slots are fixed as sollows:
+	// slot 0: mcd1 (= MT1 slot 1)
+	// slot 1: mcd2 (= MT2 slot 1)
+	// slots 2,3,4: MT1 slots 2,3,4
+	// slots 5,6,7: MT2 slots 2,3,4
+	//
+	//however, the list-view doesn't show MT slots when this MT is disabled,
+	//  so the view-index should "shift" to point at the real card slot.
+
+	int targetSlot=-1;
+
+	//this list-view arrangement is mostly kept aligned with the slots indexes, and only takes care
+	//  of the case where MT1 is disabled (hence the MT2 slots "move backwards" 3 places on the view-index)
+	if (!m_MultitapEnabled[0] && idx>=2)
+	{
+		//we got an MT2 slot.
+		assert(idx < 5);
+		targetSlot = idx+3;
+	}
+	else
+	{
+		targetSlot=idx;//identical view-index and card slot.
+	}
+
+
+/* //alternative arrangement of list-view:
+	//mcd1(=MT1 slot 1)
+	//[MT1 slots 2,3,4 if MT1 is enabled]
+	//mcd2(=MT2 slot 1)
+	//[MT2 slots 2,3,4 if MT2 is enabled]
+
+	if (m_MultitapEnabled[0]){
+		//MT1 enabled:
+		if (1<=idx && idx<=3){//MT1 slots 2/3/4 move one place backwards
+			targetSlot=idx+1;
+		}else if (idx==4){//mcd2 (=MT2 slot 1) moves 3 places forward
+			targetSlot=1;
+		} else {//mcd1 keeps it's pos as first, MT2 slots keep their pos at the end of the list.
+			targetSlot=idx;
+		}
+	} else {
+		//MT1 disabled: mcd1 and mcd2 stay put, MT2 slots 2,3,4 come next (move backwards 3 places)
+		if (2<=idx && idx<=4)
+			targetSlot=idx+3;
+		else
+			targetSlot=idx;
+	}
+*/
+
+	assert(targetSlot>=0);
+	return m_Cards[targetSlot];
 }

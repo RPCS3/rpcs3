@@ -102,13 +102,13 @@ const ListViewColumnInfo& MemoryCardListView_Simple::GetDefaultColumnInfo( uint 
 {
 	static const ListViewColumnInfo columns[] =
 	{
-		{ _("Slot")      , 48  , wxLIST_FORMAT_CENTER	},
-		{ _("Status")    , 96  , wxLIST_FORMAT_CENTER	},
-		{ _("Size")      , 72  , wxLIST_FORMAT_LEFT		},
-		{ _("Formatted") , 96  , wxLIST_FORMAT_CENTER	},
-		{ _("Modified")  , 120 , wxLIST_FORMAT_LEFT		},
-		{ _("Created")   , 120 , wxLIST_FORMAT_LEFT		},
-		{ _("Filename")  , 256 , wxLIST_FORMAT_LEFT		},
+		{ _("PS2 Location")	, 140 , wxLIST_FORMAT_CENTER	},
+		{ _("Status")		, 96  , wxLIST_FORMAT_CENTER	},
+		{ _("Size")			, 72  , wxLIST_FORMAT_LEFT		},
+		{ _("Formatted")	, 96  , wxLIST_FORMAT_CENTER	},
+		{ _("Modified")		, 120 , wxLIST_FORMAT_LEFT		},
+		{ _("Created")		, 120 , wxLIST_FORMAT_LEFT		},
+		{ _("Filename")		, 256 , wxLIST_FORMAT_LEFT		},
 	};
 
 	pxAssumeDev( idx < ArraySize(columns), "ListView column index is out of bounds." );
@@ -127,12 +127,22 @@ void MemoryCardListView_Simple::SetCardCount( int length )
 wxString MemoryCardListView_Simple::OnGetItemText(long item, long column) const
 {
 	if( !m_CardProvider ) return _parent::OnGetItemText(item, column);
-
 	const McdListItem& it( m_CardProvider->GetCard(item) );
 
 	switch( column )
 	{
-		case McdColS_PortSlot:		return pxsFmt( L"%u", item+1);
+//		case McdColS_PortSlot:		return pxsFmt( L"%u", item+1);
+		case McdColS_PortSlot:		{
+			wxString desc=_("");
+			if (!it.IsMultitapSlot()){
+				return pxsFmt(L"Card-%u or Multitap-%u-Slot-1", it.GetMtapPort()+1, it.GetMtapPort()+1);
+			} else {
+				return pxsFmt(L"              Multitap-%u-Slot-%u", it.GetMtapPort()+1, it.GetMtapSlot()+1);
+			}
+			wxString d2=pxsFmt(L"MT=%s, MTP=%u, MTS=%u", (it.IsMultitapSlot()?_("true"):_("false")), it.GetMtapPort(), (it.IsMultitapSlot()?it.GetMtapSlot():999));
+				return desc;
+				return pxsFmt( L"", item+1);
+			}
 		case McdColS_Status:		return it.IsPresent ? ( it.IsEnabled ? _("Enabled") : _("Disabled")) : _("Missing");
 		case McdColS_Size:			return it.IsPresent ? pxsFmt( L"%u MB", it.SizeInMB ) : (wxString)_("N/A");
 		case McdColS_Formatted:		return it.IsFormatted ? _("Yes") : _("No");
