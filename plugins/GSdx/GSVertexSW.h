@@ -25,10 +25,10 @@
 
 __aligned(struct, 16) GSVertexSW
 {
-	GSVector4 c, p, t;
+	GSVector4 p, t, c;
 
-	GSVertexSW() {}
-	GSVertexSW(const GSVertexSW& v) {*this = v;}
+	__forceinline GSVertexSW() {}
+	__forceinline GSVertexSW(const GSVertexSW& v) {*this = v;}
 
 	__forceinline void operator = (const GSVertexSW& v) {c = v.c; p = v.p; t = v.t;}
 	__forceinline void operator += (const GSVertexSW& v) {c += v.c; p += v.p; t += v.t;}
@@ -37,8 +37,6 @@ __aligned(struct, 16) GSVertexSW
 	friend GSVertexSW operator - (const GSVertexSW& v1, const GSVertexSW& v2);
 	friend GSVertexSW operator * (const GSVertexSW& v, const GSVector4& vv);
 	friend GSVertexSW operator / (const GSVertexSW& v, const GSVector4& vv);
-	friend GSVertexSW operator * (const GSVertexSW& v, float f);
-	friend GSVertexSW operator / (const GSVertexSW& v, float f);
 
 	static bool IsQuad(const GSVertexSW* v, int& tl, int& br)
 	{
@@ -192,22 +190,3 @@ __forceinline GSVertexSW operator / (const GSVertexSW& v, const GSVector4& vv)
 	return v0;
 }
 
-__forceinline GSVertexSW operator * (const GSVertexSW& v, float f)
-{
-	GSVertexSW v0;
-	GSVector4 vf(f);
-	v0.c = v.c * vf;
-	v0.p = v.p * vf;
-	v0.t = v.t * vf;
-	return v0;
-}
-
-__forceinline GSVertexSW operator / (const GSVertexSW& v, float f)
-{
-	GSVertexSW v0;
-	GSVector4 vf(f);
-	v0.c = v.c / vf;
-	v0.p = v.p / vf;
-	v0.t = v.t / vf;
-	return v0;
-}

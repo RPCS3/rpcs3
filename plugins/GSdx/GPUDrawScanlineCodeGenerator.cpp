@@ -23,6 +23,7 @@
 
 #include "stdafx.h"
 #include "GPUDrawScanlineCodeGenerator.h"
+#include "GSVertexSW.h"
 
 static const int _args = 8;
 static const int _top = _args + 4;
@@ -152,7 +153,7 @@ void GPUDrawScanlineCodeGenerator::Init()
 
 		// GSVector4i vt = GSVector4i(v.t).xxzzl();
 
-		cvttps2dq(xmm4, ptr[edx + 32]);
+		cvttps2dq(xmm4, ptr[edx + offsetof(GSVertexSW, t)]);
 		pshuflw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
 
 		// s = vt.xxxx().add16(m_local.d.s);
@@ -186,7 +187,7 @@ void GPUDrawScanlineCodeGenerator::Init()
 	{
 		// GSVector4i vc = GSVector4i(v.c).xxzzlh();
 
-		cvttps2dq(xmm6, ptr[edx]);
+		cvttps2dq(xmm6, ptr[edx + offsetof(GSVertexSW, c)]);
 		pshuflw(xmm6, xmm6, _MM_SHUFFLE(2, 2, 0, 0));
 		pshufhw(xmm6, xmm6, _MM_SHUFFLE(2, 2, 0, 0));
 

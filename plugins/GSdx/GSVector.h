@@ -3030,6 +3030,8 @@ public:
 		uint32 u32[8];
 		uint64 u64[4];
 		__m256 m;
+
+		// TODO: _M_SSE < 0x500 => union {__m128 m0, m1;}; and replace each function with a pair of 128 bit intructions
 	};
 
 	__forceinline GSVector8()
@@ -3050,7 +3052,7 @@ public:
 
 	__forceinline GSVector8(__m128 m0, __m128 m1)
 	{
-		m = zero().insert<0>(m0).insert<1>(m1);
+		m = _mm256_permute2f128_ps(_mm256_castps128_ps256(m0), _mm256_castps128_ps256(m1), 0x20);
 	}
 
 	__forceinline GSVector8(const GSVector8& v)
@@ -3065,7 +3067,8 @@ public:
 
 	__forceinline explicit GSVector8(__m128 m)
 	{
-		this->m = zero().insert<0>(m).insert<1>(m);
+		this->m = _mm256_castps128_ps256(m);
+		this->m = _mm256_permute2f128_ps(this->m, this->m, 0);
 	}
 
 	__forceinline explicit GSVector8(__m256 m)
@@ -3087,7 +3090,8 @@ public:
 
 	__forceinline void operator = (__m128 m)
 	{
-		this->m = zero().insert<0>(m).insert<1>(m);
+		this->m = _mm256_castps128_ps256(m);
+		this->m = _mm256_permute2f128_ps(this->m, this->m, 0);
 	}
 
 	__forceinline void operator = (__m256 m)
@@ -3104,7 +3108,7 @@ public:
 
 	__forceinline GSVector8 abs() const
 	{
-		return *this & cast(GSVector8i(GSVector4i::x7fffffff()));
+		return *this & cast(GSVector8i(GSVector4i::x7fffffff())); // TODO: add GSVector8 consts
 	}
 
 	__forceinline GSVector8 neg() const
@@ -3143,17 +3147,27 @@ public:
 
 	// TODO
 
+	__forceinline GSVector8 min(const GSVector8& a) const
+	{
+		return GSVector8(_mm256_min_ps(m, a));
+	}
+
+	__forceinline GSVector8 max(const GSVector8& a) const
+	{
+		return GSVector8(_mm256_max_ps(m, a));
+	}
+
 	__forceinline GSVector8 blend8(const GSVector8& a, const GSVector8& mask)  const
 	{
 		return GSVector8(_mm256_blendv_ps(m, a, mask));
 	}
 
-	__forceinline GSVector8 upl32(const GSVector8& a) const
+	__forceinline GSVector8 upl(const GSVector8& a) const
 	{
 		return GSVector8(_mm256_unpacklo_ps(m, a));
 	}
 
-	__forceinline GSVector8 uph32(const GSVector8& a) const
+	__forceinline GSVector8 uph(const GSVector8& a) const
 	{
 		return GSVector8(_mm256_unpackhi_ps(m, a));
 	}
@@ -3391,6 +3405,23 @@ public:
 	{
 		return GSVector8(_mm256_cmp_ps(v1, v2, _CMP_LE_OQ));
 	}
+
+	#define VECTOR8_PERMUTE_2(xs, xn, ys, yn) \
+		__forceinline GSVector8 xs##ys() const {return GSVector8(_mm256_permute2f128_ps(m, m, xn | (yn << 4)));} \
+		__forceinline GSVector8 xs##ys(const GSVector8& v) const {return GSVector8(_mm256_permute2f128_ps(m, v.m, xn | (yn << 4)));} \
+
+	#define VECTOR8_PERMUTE_1(xs, xn) \
+		VECTOR8_PERMUTE_2(xs, xn, x, 0) \
+		VECTOR8_PERMUTE_2(xs, xn, y, 1) \
+		VECTOR8_PERMUTE_2(xs, xn, z, 2) \
+		VECTOR8_PERMUTE_2(xs, xn, w, 3) \
+		VECTOR8_PERMUTE_2(xs, xn, _, 8) \
+
+	VECTOR8_PERMUTE_1(x, 0)
+	VECTOR8_PERMUTE_1(y, 1)
+	VECTOR8_PERMUTE_1(z, 2)
+	VECTOR8_PERMUTE_1(w, 3)
+	VECTOR8_PERMUTE_1(_, 8)
 
 	#define VECTOR8_SHUFFLE_4(xs, xn, ys, yn, zs, zn, ws, wn) \
 		__forceinline GSVector8 xs##ys##zs##ws() const {return GSVector8(_mm256_permute_ps(m, _MM_SHUFFLE(wn, zn, yn, xn)));} \

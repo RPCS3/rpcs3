@@ -21,6 +21,7 @@
 
 #include "stdafx.h"
 #include "GSDrawScanlineCodeGenerator.h"
+#include "GSVertexSW.h"
 
 #if _M_SSE < 0x500 && !(defined(_M_AMD64) || defined(_WIN64))
 
@@ -293,7 +294,7 @@ void GSDrawScanlineCodeGenerator::Init()
 	{
 		if(m_sel.fwrite && m_sel.fge || m_sel.zb)
 		{
-			movaps(xmm0, ptr[ebx + 16]); // v.p
+			movaps(xmm0, ptr[ebx + offsetof(GSVertexSW, p)]); // v.p
 
 			if(m_sel.fwrite && m_sel.fge)
 			{
@@ -330,7 +331,7 @@ void GSDrawScanlineCodeGenerator::Init()
 	{
 		if(m_sel.edge || m_sel.tfx != TFX_NONE)
 		{
-			movaps(xmm4, ptr[ebx + 32]); // v.t
+			movaps(xmm4, ptr[ebx + offsetof(GSVertexSW, t)]); // v.t
 		}
 
 		if(m_sel.edge)
@@ -410,7 +411,7 @@ void GSDrawScanlineCodeGenerator::Init()
 			{
 				// GSVector4i vc = GSVector4i(v.c);
 
-				cvttps2dq(xmm6, ptr[ebx]); // v.c
+				cvttps2dq(xmm6, ptr[ebx + offsetof(GSVertexSW, c)]); // v.c
 
 				// vc = vc.upl16(vc.zwxy());
 

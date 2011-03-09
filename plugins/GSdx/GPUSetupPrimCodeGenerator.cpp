@@ -22,8 +22,8 @@
 // TODO: x64
 
 #include "stdafx.h"
-#include "GSVertexSW.h"
 #include "GPUSetupPrimCodeGenerator.h"
+#include "GSVertexSW.h"
 
 using namespace Xbyak;
 
@@ -50,7 +50,7 @@ void GPUSetupPrimCodeGenerator::Generate()
 		{
 			// t = (GSVector4i(vertices[1].t) >> 8) - GSVector4i::x00000001();
 
-			cvttps2dq(xmm1, ptr[ecx + sizeof(GSVertexSW) * 1 + 32]);
+			cvttps2dq(xmm1, ptr[ecx + sizeof(GSVertexSW) * 1 + offsetof(GSVertexSW, t)]);
 			psrld(xmm1, 8);
 			psrld(xmm0, 31);
 			psubd(xmm1, xmm0);
@@ -94,8 +94,8 @@ void GPUSetupPrimCodeGenerator::Generate()
 		// GSVector4 dt = dscan.t;
 		// GSVector4 dc = dscan.c;
 
-		movaps(xmm4, ptr[edx]);
-		movaps(xmm3, ptr[edx + 32]);
+		movaps(xmm4, ptr[edx + offsetof(GSVertexSW, c)]);
+		movaps(xmm3, ptr[edx + offsetof(GSVertexSW, t)]);
 
 		// GSVector4i dtc8 = GSVector4i(dt * 8.0f).ps32(GSVector4i(dc * 8.0f));
 

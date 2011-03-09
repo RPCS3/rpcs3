@@ -81,8 +81,6 @@ public:
 
 __aligned(class, 32) GSRasterizer : public GSAlignedClass<32>, public IRasterizer
 {
-	struct GSScanline {GSVertexSW scan; GSVector4i p;};
-
 protected:
 	IDrawScanline* m_ds;
 	int m_id;
@@ -90,7 +88,7 @@ protected:
 	GSRasterizerStats m_stats;
 	GSVector4i m_scissor;
 	GSVector4 m_fscissor;
-	struct {GSScanline* buff; int count;} m_edge;
+	struct {GSVertexSW* buff; int count;} m_edge;
 
 	void DrawPoint(const GSVertexSW* v);
 	void DrawLine(const GSVertexSW* v);
@@ -104,8 +102,7 @@ protected:
 
 	__forceinline bool IsOneOfMyScanlines(int scanline) const;
 
-	void Flush();
-	void FlushEdge();
+	__forceinline void Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bool edge = false);
 
 public:
 	GSRasterizer(IDrawScanline* ds);

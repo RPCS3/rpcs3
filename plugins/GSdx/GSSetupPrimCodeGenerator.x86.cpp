@@ -21,6 +21,7 @@
 
 #include "stdafx.h"
 #include "GSSetupPrimCodeGenerator.h"
+#include "GSVertexSW.h"
 
 #if _M_SSE < 0x500 && !(defined(_M_AMD64) || defined(_WIN64))
 
@@ -56,7 +57,7 @@ void GSSetupPrimCodeGenerator::Depth()
 	{
 		// GSVector4 p = dscan.p;
 
-		movaps(xmm0, ptr[edx + 16]);
+		movaps(xmm0, ptr[edx + offsetof(GSVertexSW, p)]);
 
 		if(m_en.f)
 		{
@@ -113,7 +114,7 @@ void GSSetupPrimCodeGenerator::Depth()
 	{
 		// GSVector4 p = vertices[0].p;
 
-		movaps(xmm0, ptr[ecx + 16]);
+		movaps(xmm0, ptr[ecx + offsetof(GSVertexSW, p)]);
 
 		if(m_en.f)
 		{
@@ -168,7 +169,7 @@ void GSSetupPrimCodeGenerator::Texture()
 
 	// GSVector4 t = dscan.t;
 
-	movaps(xmm0, ptr[edx + 32]);
+	movaps(xmm0, ptr[edx + offsetof(GSVertexSW, t)]);
 
 	movaps(xmm1, xmm0);
 	mulps(xmm1, xmm3);
@@ -241,7 +242,7 @@ void GSSetupPrimCodeGenerator::Color()
 	{
 		// GSVector4 c = dscan.c;
 
-		movaps(xmm0, ptr[edx]);
+		movaps(xmm0, ptr[edx + offsetof(GSVertexSW, c)]);
 		movaps(xmm1, xmm0);
 
 		// m_local.d4.c = GSVector4i(c * 4.0f).xzyw().ps32();
@@ -285,7 +286,7 @@ void GSSetupPrimCodeGenerator::Color()
 
 		// GSVector4 c = dscan.c;
 
-		movaps(xmm0, ptr[edx]); // not enough regs, have to reload it
+		movaps(xmm0, ptr[edx + offsetof(GSVertexSW, c)]); // not enough regs, have to reload it
 		movaps(xmm1, xmm0);
 
 		// GSVector4 dg = c.yyyy();
@@ -320,7 +321,7 @@ void GSSetupPrimCodeGenerator::Color()
 	{
 		// GSVector4i c = GSVector4i(vertices[0].c);
 
-		movaps(xmm0, ptr[ecx]);
+		movaps(xmm0, ptr[ecx + offsetof(GSVertexSW, c)]);
 		cvttps2dq(xmm0, xmm0);
 
 		// c = c.upl16(c.zwxy());

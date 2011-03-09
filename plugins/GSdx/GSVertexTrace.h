@@ -31,9 +31,11 @@ class GSState;
 
 __aligned(class, 32) GSVertexTrace
 {
+public:
 	struct Vertex {GSVector4i c; GSVector4 p, t;};
 	struct VertexAlpha {int min, max; bool valid;};
 
+private:
 	typedef void (*VertexTracePtr)(int count, const void* v, Vertex& min, Vertex& max);
 
 	class CGSW : public GSCodeGenerator
