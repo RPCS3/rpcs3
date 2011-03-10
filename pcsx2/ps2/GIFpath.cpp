@@ -804,7 +804,9 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 					GifTagLog("IMAGE Mode EOP %x", tag.EOP);
 					if(pathidx == GIF_PATH_3 && gifRegs.stat.IMT)
 					{
-						int len = aMin((int)nloop, 8);
+						//Size or Nloop can be smaller, before we enforce a maximum packet size of 8, we need to know which is true.
+						int len = aMin(size, nloop);
+						len = aMin(len, 8);
 						MemCopy_WrappedDest( pMem128, RingBuffer.m_Ring, ringpos, RingBufferSize, len );
 
 						pMem128 += len;
