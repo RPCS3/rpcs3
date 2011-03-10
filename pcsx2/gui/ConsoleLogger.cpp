@@ -288,6 +288,7 @@ enum MenuIDs_t
 	MenuId_LogSource_EnableAll = 0x30,
 	MenuId_LogSource_DisableAll,
 	MenuId_LogSource_Devel,
+	MenuId_LogSource_CDVD_Info,
 
 	MenuId_LogSource_Start = 0x100
 };
@@ -436,6 +437,8 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	// Source Selection/Toggle menu
 
 	menuSources.Append( MenuId_LogSource_Devel, _("Dev/Verbose"), _("Shows PCSX2 developer logs"), wxITEM_CHECK );
+	menuSources.Append( MenuId_LogSource_CDVD_Info, _("CDVD reads"), _("Shows disk read activity"), wxITEM_CHECK );
+	
 	menuSources.AppendSeparator();
 
 	uint srcnt = ArraySize(ConLogSources);
@@ -474,6 +477,7 @@ ConsoleLogFrame::ConsoleLogFrame( MainEmuFrame *parent, const wxString& title, A
 	Connect( MenuId_ColorScheme_Light,	MenuId_ColorScheme_Dark,	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnToggleTheme ) );
 
 	Connect( MenuId_LogSource_Devel,		wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnToggleSource ) );
+	Connect( MenuId_LogSource_CDVD_Info,	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnToggleCDVDInfo ) );
 	Connect( MenuId_LogSource_EnableAll,	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnEnableAllLogging ) );
 	Connect( MenuId_LogSource_DisableAll,	wxEVT_COMMAND_MENU_SELECTED,	wxCommandEventHandler( ConsoleLogFrame::OnDisableAllLogging ) );
 
@@ -541,6 +545,9 @@ void ConsoleLogFrame::OnLoggingChanged()
 
 	if( wxMenuItem* item = GetMenuBar()->FindItem(MenuId_LogSource_Devel) )
 		item->Check( DevConWriterEnabled );
+
+	if( wxMenuItem* item = GetMenuBar()->FindItem(MenuId_LogSource_CDVD_Info) )
+		item->Check( g_Conf->EmuOptions.CdvdVerboseReads );
 
 	uint srcnt = ArraySize(ConLogSources);
 	for (uint i=0; i<srcnt; ++i)
@@ -770,6 +777,22 @@ void ConsoleLogFrame::OnSave(wxCommandEvent& WXUNUSED(event))
 void ConsoleLogFrame::OnClear(wxCommandEvent& WXUNUSED(event))
 {
 	m_TextCtrl.Clear();
+}
+
+void ConsoleLogFrame::OnToggleCDVDInfo( wxCommandEvent& evt )
+{
+	evt.Skip();
+
+	if (!GetMenuBar()) return;
+
+	if (evt.GetId() == MenuId_LogSource_CDVD_Info)
+	{
+		if( wxMenuItem* item = GetMenuBar()->FindItem(evt.GetId()) )
+		{
+			g_Conf->EmuOptions.CdvdVerboseReads = item->IsChecked();
+			const_cast<Pcsx2Config&>(EmuConfig).CdvdVerboseReads = g_Conf->EmuOptions.CdvdVerboseReads;		// read-only in core thread, so it's safe to modify.
+		}
+	}
 }
 
 void ConsoleLogFrame::OnToggleSource( wxCommandEvent& evt )

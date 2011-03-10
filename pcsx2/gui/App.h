@@ -151,7 +151,6 @@ enum MenuIdentifiers
 	MenuId_Profiler,			// Enable profiler
 	MenuId_Console,				// Enable console
 	MenuId_Console_Stdio,		// Enable Stdio
-	MenuId_CDVD_Info,
 
 	// Debug Subsection
 	MenuId_Debug_Open,			// opens the debugger window / starts a debug session

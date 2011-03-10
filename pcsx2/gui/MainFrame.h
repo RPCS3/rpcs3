@@ -203,7 +203,6 @@ protected:
 
 	void Menu_ShowConsole(wxCommandEvent &event);
 	void Menu_ShowConsole_Stdio(wxCommandEvent &event);
-	void Menu_PrintCDVD_Info(wxCommandEvent &event);
 	void Menu_ShowAboutBox(wxCommandEvent &event);
 
 	void _DoBootCdvd();

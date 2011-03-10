@@ -224,7 +224,6 @@ void MainEmuFrame::ConnectMenus()
 
 	ConnectMenu( MenuId_Console,			Menu_ShowConsole );
 	ConnectMenu( MenuId_Console_Stdio,		Menu_ShowConsole_Stdio );
-	ConnectMenu( MenuId_CDVD_Info,			Menu_PrintCDVD_Info );
 
 	ConnectMenu( MenuId_About,				Menu_ShowAboutBox );
 }
@@ -484,7 +483,6 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	//m_menuMisc.Append(41, "Patch Browser...", wxEmptyString, wxITEM_NORMAL);
 	//m_menuMisc.Append(42, "Patch Finder...", wxEmptyString, wxITEM_NORMAL);
 
-	m_menuMisc.Append(MenuId_CDVD_Info, _("Print CDVD Info"), wxEmptyString, wxITEM_CHECK);
 	m_menuMisc.AppendSeparator();
 
 	//Todo:
@@ -656,7 +654,6 @@ void MainEmuFrame::ApplyConfigToGui(AppConfig& configToApply, int flags)
 		menubar.Check( MenuId_EnableBackupStates, configToApply.EmuOptions.BackupSavestate );
 		menubar.Check( MenuId_EnableCheats,  configToApply.EmuOptions.EnableCheats );
 		menubar.Check( MenuId_EnableHostFs,  configToApply.EmuOptions.HostFs );
-		menubar.Check( MenuId_CDVD_Info,	 configToApply.EmuOptions.CdvdVerboseReads );
 #ifdef __LINUX__
 		menubar.Check( MenuId_Console_Stdio, configToApply.EmuOptions.ConsoleToStdio );
 #endif

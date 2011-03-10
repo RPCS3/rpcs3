@@ -246,6 +246,7 @@ protected:
 	void OnToggleTheme(wxCommandEvent& event);
 	void OnFontSize(wxCommandEvent& event);
 	void OnToggleSource(wxCommandEvent& event);
+	void OnToggleCDVDInfo(wxCommandEvent& event);
 
 	virtual void OnCloseWindow(wxCloseEvent& event);
 

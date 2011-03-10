@@ -563,13 +563,6 @@ void MainEmuFrame::Menu_ShowConsole_Stdio(wxCommandEvent &event)
 	AppSaveSettings();
 }
 
-void MainEmuFrame::Menu_PrintCDVD_Info(wxCommandEvent &event)
-{
-	g_Conf->EmuOptions.CdvdVerboseReads = GetMenuBar()->IsChecked( MenuId_CDVD_Info );
-	const_cast<Pcsx2Config&>(EmuConfig).CdvdVerboseReads = g_Conf->EmuOptions.CdvdVerboseReads;		// read-only in core thread, so it's safe to modify.
-	AppSaveSettings();
-}
-
 void MainEmuFrame::Menu_ShowAboutBox(wxCommandEvent &event)
 {
 	AppOpenDialog<AboutBoxDialog>( this );
