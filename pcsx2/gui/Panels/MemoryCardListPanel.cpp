@@ -43,7 +43,7 @@ static bool IsMcdFormatted( wxFFile& fhand )
 	return memcmp( formatted_string, dest, fmtstrlen ) == 0;
 }
 
-bool EnumerateMemoryCard( McdListItem& dest, const wxFileName& filename )
+bool EnumerateMemoryCard( McdSlotItem& dest, const wxFileName& filename )
 {
 	dest.IsFormatted	= false;
 	dest.IsPresent		= false;
@@ -69,7 +69,8 @@ bool EnumerateMemoryCard( McdListItem& dest, const wxFileName& filename )
 	return true;
 }
 
-//avih: unused??
+//avih: unused
+/*
 static int EnumerateMemoryCards( McdList& dest, const wxArrayString& files )
 {
 	int pushed = 0;
@@ -77,7 +78,7 @@ static int EnumerateMemoryCards( McdList& dest, const wxArrayString& files )
 	for( size_t i=0; i<files.GetCount(); ++i )
 	{
 		ConsoleIndentScope con_indent;
-		McdListItem mcdItem;
+		McdSlotItem mcdItem;
 		if( EnumerateMemoryCard(mcdItem, files[i]) )
 		{
 			dest.push_back( mcdItem );
@@ -91,28 +92,28 @@ static int EnumerateMemoryCards( McdList& dest, const wxArrayString& files )
 
 	return pushed;
 }
-
+*/
 // --------------------------------------------------------------------------------------
 //  McdListItem  (implementations)
 // --------------------------------------------------------------------------------------
-bool McdListItem::IsMultitapSlot() const
+bool McdSlotItem::IsMultitapSlot() const
 {
 	return FileMcd_IsMultitapSlot(Slot);
 }
 
-uint McdListItem::GetMtapPort() const
+uint McdSlotItem::GetMtapPort() const
 {
 	return FileMcd_GetMtapPort(Slot);
 }
 
-uint McdListItem::GetMtapSlot() const
+uint McdSlotItem::GetMtapSlot() const
 {
 	return FileMcd_GetMtapSlot(Slot);
 }
 
 // Compares two cards -- If this equality comparison is used on items where
 // no filename is specified, then the check will include port and slot.
-bool McdListItem::operator==( const McdListItem& right ) const
+bool McdSlotItem::operator==( const McdSlotItem& right ) const
 {
 	bool fileEqu;
 
@@ -127,7 +128,7 @@ bool McdListItem::operator==( const McdListItem& right ) const
 		OpEqu(DateCreated)	&& OpEqu(DateModified);
 }
 
-bool McdListItem::operator!=( const McdListItem& right ) const
+bool McdSlotItem::operator!=( const McdSlotItem& right ) const
 {
 	return operator==( right );
 }
@@ -218,19 +219,19 @@ class WXDLLEXPORT McdDataObject : public wxDataObjectSimple
 	DECLARE_NO_COPY_CLASS(McdDataObject)
 
 protected:
-	int  m_slot;
+	int  m_viewIndex;
 
 public:
-	McdDataObject(int slot = -1)
+	McdDataObject(int viewIndex = -1)
 		: wxDataObjectSimple( wxDF_PRIVATE )
 	{
-		m_slot = slot;
+		m_viewIndex = viewIndex;
 	}
 	
-	uint GetSlot() const
+	uint GetViewIndex() const
 	{
-		pxAssumeDev( m_slot >= 0, "memory card Index is uninitialized (invalid drag&drop object state)" );
-		return (uint)m_slot;
+		pxAssumeDev( m_viewIndex >= 0, "memory card Index is uninitialized (invalid drag&drop object state)" );
+		return (uint)m_viewIndex;
 	}
 
 	size_t GetDataSize() const
@@ -240,7 +241,7 @@ public:
 
 	bool GetDataHere(void *buf) const
 	{
-		*(u32*)buf = GetSlot();
+		*(u32*)buf = GetViewIndex();
 		return true;
 	}
 
@@ -248,8 +249,8 @@ public:
 	{
 		if( !pxAssertDev( len == sizeof(u32), "Data length mismatch on memory card drag&drop operation." ) ) return false;
 		
-		m_slot = *(u32*)buf;
-		return ( (uint)m_slot < 8 );		// sanity check (unsigned, so that -1 also is invalid) :)
+		m_viewIndex = *(u32*)buf;
+		return ( (uint)m_viewIndex < 8 );		// sanity check (unsigned, so that -1 also is invalid) :)
 	}
 
 	// Must provide overloads to avoid hiding them (and warnings about it)
@@ -296,10 +297,10 @@ public:
 	virtual wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult def)
 	{
 		int flags = 0;
-		int idx = m_listview->HitTest( wxPoint(x,y), flags);
-		m_listview->SetTargetedItem( idx );
+		int viewIndex = m_listview->HitTest( wxPoint(x,y), flags);
+		m_listview->SetTargetedItem( viewIndex );
 
-		if( wxNOT_FOUND == idx ) return wxDragNone;
+		if( wxNOT_FOUND == viewIndex ) return wxDragNone;
 
 		return def;
 	}
@@ -315,8 +316,8 @@ public:
 	virtual bool OnDrop(wxCoord x, wxCoord y)
 	{
 		int flags = 0;
-		int idx = m_listview->HitTest( wxPoint(x,y), flags);
-		return ( wxNOT_FOUND != idx );
+		int viewIndex = m_listview->HitTest( wxPoint(x,y), flags);
+		return ( wxNOT_FOUND != viewIndex );
 	}
 
 	// may be called *only* from inside OnData() and will fill m_dataObject
@@ -324,28 +325,32 @@ public:
 	virtual wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult def)
 	{
 		m_listview->SetTargetedItem( wxNOT_FOUND );
-
 		int flags = 0;
-		int idx = m_listview->HitTest( wxPoint(x,y), flags);
-		if( wxNOT_FOUND == idx ) return wxDragNone;
 
-		if ( !GetData() ) return wxDragNone;
+		int destViewIndex = m_listview->HitTest( wxPoint(x,y), flags);
+		if( wxNOT_FOUND == destViewIndex )
+			return wxDragNone;
+
+		if ( !GetData() )
+			return wxDragNone;
 
 		McdDataObject *dobj = (McdDataObject *)m_dataObject;
+		int sourceViewIndex = dobj->GetViewIndex();
 
 		wxDragResult result = OnDropMcd(
-			m_listview->GetMcdProvider().GetCard(dobj->GetSlot()),
-			m_listview->GetMcdProvider().GetCard(idx),
+			m_listview->GetMcdProvider().GetCardForViewIndex( sourceViewIndex ),
+			m_listview->GetMcdProvider().GetCardForViewIndex( destViewIndex ),
 			def
 		);
 
-		if( wxDragNone == result ) return wxDragNone;
-		m_listview->GetMcdProvider().RefreshMcds();
+		if( wxDragNone == result )
+			return wxDragNone;
 
+		m_listview->GetMcdProvider().RefreshMcds();
 		return result;
 	}
 	
-	virtual wxDragResult OnDropMcd( McdListItem& src, McdListItem& dest, wxDragResult def )
+	virtual wxDragResult OnDropMcd( McdSlotItem& src, McdSlotItem& dest, wxDragResult def )
 	{
 		if( src.Slot == dest.Slot ) return wxDragNone;
 		if( !pxAssert( (src.Slot >= 0) && (dest.Slot >= 0) ) ) return wxDragNone;
@@ -365,9 +370,11 @@ public:
 				wxString content;
 				content.Printf(
 					pxE( "!Notice:Mcd:Overwrite", 
-					L"This will copy the entire contents of the memory card in slot %u to the memory card in slot %u. "
-					L"All data on the memory card in slot %u will be lost.  Are you sure?" ), 
-					src.Slot+1, dest.Slot+1, dest.Slot+1
+					L"This will copy the entire contents of the memory card file '%s' (=slot %u) to the memory card file '%s' (=slot %u). "
+					L"All previous data on the memory card file '%s' will be lost.  Are you sure?" ), 
+					src.Filename.GetFullName().c_str(),  src.Slot,
+					dest.Filename.GetFullName().c_str(), dest.Slot,
+					dest.Filename.GetFullName().c_str(), dest.Slot
 				);
 
 				result = Msgbox::YesNo( content, _("Overwrite memory card?") );
@@ -381,8 +388,8 @@ public:
 			{
 				wxString heading;
 				heading.Printf( pxE( "!Notice:Mcd:Copy Failed", 
-					L"Error!  Could not copy the memory card into slot %u.  The destination file is in use." ),
-					dest.Slot+1
+					L"Error!  Could not copy the memory card into file '%s' (=slot %u).  The destination file is in use." ),//xxx
+					dest.Filename.GetFullName().c_str(), dest.Slot
 				);
 				
 				wxString content;
@@ -507,7 +514,7 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
 		return;
 	}
 
-	const McdListItem& item( m_Cards[sel] );
+	const McdSlotItem& item( GetCardForViewIndex(sel) );
 
 	m_button_Create->Enable();
 	m_button_Create->SetLabel( item.IsPresent ? _("Delete") : _("Create") );
@@ -585,20 +592,23 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 {
 	ScopedCoreThreadClose closed_core;
 
-	const int slot = m_listview->GetFirstSelected();
-	if( wxNOT_FOUND == slot ) return;
+	const int selectedViewIndex = m_listview->GetFirstSelected();
+	if( wxNOT_FOUND == selectedViewIndex ) return;
 
-	if( m_Cards[slot].IsPresent )
+	McdSlotItem& card( GetCardForViewIndex(selectedViewIndex) );
+
+	if( card.IsPresent )
 	{
 		bool result = true;
-		if( m_Cards[slot].IsFormatted )
+		if( card.IsFormatted )
 		{
 			wxString content;
 			content.Printf(
 				pxE( "!Notice:Mcd:Delete",
-					L"You are about to delete the formatted memory card in slot %u. "
+					L"You are about to delete the formatted memory card file '%s' (=slot %u). "
 					L"All data on this card will be lost!  Are you absolutely and quite positively sure?"
-				), slot+1
+					), card.Filename.GetFullName().c_str()
+					,  card.Slot
 			);
 
 			result = Msgbox::YesNo( content, _("Delete memory card?") );
@@ -606,14 +616,14 @@ void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
 
 		if( result )
 		{
-			wxFileName fullpath( m_FolderPicker->GetPath() + g_Conf->Mcd[slot].Filename.GetFullName() );
+			wxFileName fullpath( m_FolderPicker->GetPath() + g_Conf->Mcd[GetSlotIndexForViewIndex( selectedViewIndex )].Filename.GetFullName() );
 			wxRemoveFile( fullpath.GetFullPath() );
 		}
 	}
 	else
 	{
-		wxWindowID result = Dialogs::CreateMemoryCardDialog( this, slot, m_FolderPicker->GetPath() ).ShowModal();
-		m_Cards[slot].IsEnabled = (result != wxID_CANCEL);
+		wxWindowID result = Dialogs::CreateMemoryCardDialog( this, GetSlotIndexForViewIndex( selectedViewIndex ), m_FolderPicker->GetPath() ).ShowModal();
+		card.IsEnabled = (result != wxID_CANCEL);
 	}
 
 	RefreshSelections();
@@ -629,11 +639,13 @@ void Panels::MemoryCardListPanel_Simple::OnMountCard(wxCommandEvent& evt)
 {
 	evt.Skip();
 
-	const int slot = m_listview->GetFirstSelected();
-	if( wxNOT_FOUND == slot ) return;
+	const int selectedViewIndex = m_listview->GetFirstSelected();
+	if( wxNOT_FOUND == selectedViewIndex ) return;
+	
+	McdSlotItem& card( GetCardForViewIndex(selectedViewIndex) );
 
-	m_Cards[slot].IsEnabled = !m_Cards[slot].IsEnabled;
-	m_listview->RefreshItem(slot);
+	card.IsEnabled = !card.IsEnabled;
+	m_listview->RefreshItem(selectedViewIndex);
 	UpdateUI();
 }
 
@@ -655,10 +667,10 @@ void Panels::MemoryCardListPanel_Simple::OnRelocateCard(wxCommandEvent& evt)
 
 void Panels::MemoryCardListPanel_Simple::OnListDrag(wxListEvent& evt)
 {
-	int selection = m_listview->GetFirstSelected();
+	int selectionViewIndex = m_listview->GetFirstSelected();
 
-	if( selection < 0 ) return;
-	McdDataObject my_data( selection );
+	if( selectionViewIndex < 0 ) return;
+	McdDataObject my_data( selectionViewIndex );
 	
 	wxDropSource dragSource( m_listview );
 	dragSource.SetData( my_data );
@@ -678,10 +690,10 @@ void Panels::MemoryCardListPanel_Simple::OnOpenItemContextMenu(wxListEvent& evt)
 	
 	if( idx != wxNOT_FOUND )
 	{
-		const McdListItem& item( m_Cards[idx] );
+		const McdSlotItem& card( GetCardForViewIndex(idx) );
 
-		junk->Append( McdMenuId_Create,		item.IsPresent ? _("Delete")	: _("Create new...") );
-		junk->Append( McdMenuId_Mount,		item.IsEnabled ? _("Disable")	: _("Enable") );
+		junk->Append( McdMenuId_Create,		card.IsPresent ? _("Delete")	: _("Create new...") );
+		junk->Append( McdMenuId_Mount,		card.IsEnabled ? _("Disable")	: _("Enable") );
 		junk->Append( McdMenuId_Relocate,	_("Relocate file...") );
 
 		junk->AppendSeparator();
@@ -703,32 +715,34 @@ int Panels::MemoryCardListPanel_Simple::GetLength() const
 	return baselen;
 }
 
-McdListItem& Panels::MemoryCardListPanel_Simple::GetCard( int idx )
+
+//Translates a list-view index (idx) to a memory card slot.
+//This method effectively defines the arrangement of the card slots at the list view.
+//The internal card slots array is fixed as sollows:
+// slot 0: mcd1 (= MT1 slot 1)
+// slot 1: mcd2 (= MT2 slot 1)
+// slots 2,3,4: MT1 slots 2,3,4
+// slots 5,6,7: MT2 slots 2,3,4
+//
+//however, the list-view doesn't show MT slots when this MT is disabled,
+//  so the view-index should "shift" to point at the real card slot.
+//While we're at it, we can alternatively enforce any other arrangment of the view by
+//  using any other set of 'view-index-to-card-slot' translating that we'd like.
+int Panels::MemoryCardListPanel_Simple::GetSlotIndexForViewIndex( int listViewIndex )
 {
-	//calculate actual card slot (targetSlot) from list-view index (idx).
-
-	//card slots are fixed as sollows:
-	// slot 0: mcd1 (= MT1 slot 1)
-	// slot 1: mcd2 (= MT2 slot 1)
-	// slots 2,3,4: MT1 slots 2,3,4
-	// slots 5,6,7: MT2 slots 2,3,4
-	//
-	//however, the list-view doesn't show MT slots when this MT is disabled,
-	//  so the view-index should "shift" to point at the real card slot.
-
 	int targetSlot=-1;
 
 	//this list-view arrangement is mostly kept aligned with the slots indexes, and only takes care
-	//  of the case where MT1 is disabled (hence the MT2 slots "move backwards" 3 places on the view-index)
-	if (!m_MultitapEnabled[0] && idx>=2)
+	//  of the case where MT1 is disabled (hence the MT2 slots 2,3,4 "move backwards" 3 places on the view-index)
+	if (!m_MultitapEnabled[0] && listViewIndex>=2)
 	{
 		//we got an MT2 slot.
-		assert(idx < 5);
-		targetSlot = idx+3;
+		assert(listViewIndex < 5);
+		targetSlot = listViewIndex+3;
 	}
 	else
 	{
-		targetSlot=idx;//identical view-index and card slot.
+		targetSlot=listViewIndex;//identical view-index and card slot.
 	}
 
 
@@ -740,22 +754,29 @@ McdListItem& Panels::MemoryCardListPanel_Simple::GetCard( int idx )
 
 	if (m_MultitapEnabled[0]){
 		//MT1 enabled:
-		if (1<=idx && idx<=3){//MT1 slots 2/3/4 move one place backwards
-			targetSlot=idx+1;
-		}else if (idx==4){//mcd2 (=MT2 slot 1) moves 3 places forward
+		if (1<=listViewIndex && idx<=3){//MT1 slots 2/3/4 move one place backwards
+			targetSlot=listViewIndex+1;
+		}else if (listViewIndex==4){//mcd2 (=MT2 slot 1) moves 3 places forward
 			targetSlot=1;
 		} else {//mcd1 keeps it's pos as first, MT2 slots keep their pos at the end of the list.
-			targetSlot=idx;
+			targetSlot=listViewIndex;
 		}
 	} else {
 		//MT1 disabled: mcd1 and mcd2 stay put, MT2 slots 2,3,4 come next (move backwards 3 places)
-		if (2<=idx && idx<=4)
-			targetSlot=idx+3;
+		if (2<=listViewIndex && listViewIndex<=4)
+			targetSlot=listViewIndex+3;
 		else
-			targetSlot=idx;
+			targetSlot=listViewIndex;
 	}
 */
 
 	assert(targetSlot>=0);
-	return m_Cards[targetSlot];
+	return targetSlot;
+}
+
+
+McdSlotItem& Panels::MemoryCardListPanel_Simple::GetCardForViewIndex( int idx )
+{
+	int slot = GetSlotIndexForViewIndex( idx );
+	return m_Cards[slot];
 }

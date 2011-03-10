@@ -118,7 +118,7 @@ bool FileMcd_IsMultitapSlot( uint slot )
 {
 	return (slot > 1);
 }
-
+/*
 wxFileName FileMcd_GetSimpleName(uint slot)
 {
 	if( FileMcd_IsMultitapSlot(slot) )
@@ -126,7 +126,7 @@ wxFileName FileMcd_GetSimpleName(uint slot)
 	else
 		return g_Conf->Folders.MemoryCards + wxsFormat( L"Mcd%03u.ps2", slot+1 );
 }
-
+*/
 wxString FileMcd_GetDefaultName(uint slot)
 {
 	if( FileMcd_IsMultitapSlot(slot) )

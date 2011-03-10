@@ -127,22 +127,16 @@ void MemoryCardListView_Simple::SetCardCount( int length )
 wxString MemoryCardListView_Simple::OnGetItemText(long item, long column) const
 {
 	if( !m_CardProvider ) return _parent::OnGetItemText(item, column);
-	const McdListItem& it( m_CardProvider->GetCard(item) );
+	const McdSlotItem& it( m_CardProvider->GetCardForViewIndex(item) );
 
 	switch( column )
 	{
 //		case McdColS_PortSlot:		return pxsFmt( L"%u", item+1);
-		case McdColS_PortSlot:		{
-			wxString desc=_("");
-			if (!it.IsMultitapSlot()){
-				return pxsFmt(L"Card-%u or Multitap-%u-Slot-1", it.GetMtapPort()+1, it.GetMtapPort()+1);
-			} else {
-				return pxsFmt(L"              Multitap-%u-Slot-%u", it.GetMtapPort()+1, it.GetMtapSlot()+1);
-			}
-			wxString d2=pxsFmt(L"MT=%s, MTP=%u, MTS=%u", (it.IsMultitapSlot()?_("true"):_("false")), it.GetMtapPort(), (it.IsMultitapSlot()?it.GetMtapSlot():999));
-				return desc;
-				return pxsFmt( L"", item+1);
-			}
+		case McdColS_PortSlot:
+			if (!it.IsMultitapSlot())
+				return pxsFmt(L"Port-%u or Multitap-%u-Port-1", it.GetMtapPort()+1, it.GetMtapPort()+1);
+			return pxsFmt(L"              Multitap-%u-Port-%u", it.GetMtapPort()+1, it.GetMtapSlot()+1);
+
 		case McdColS_Status:		return it.IsPresent ? ( it.IsEnabled ? _("Enabled") : _("Disabled")) : _("Missing");
 		case McdColS_Size:			return it.IsPresent ? pxsFmt( L"%u MB", it.SizeInMB ) : (wxString)_("N/A");
 		case McdColS_Formatted:		return it.IsFormatted ? _("Yes") : _("No");
@@ -187,7 +181,7 @@ wxListItemAttr* MemoryCardListView_Simple::OnGetItemAttr(long item) const
 	//m_targeted.SetBackgroundColour( wxColour(L"Yellow") );
 
 	if( !m_CardProvider ) return _parent::OnGetItemAttr(item);
-	const McdListItem& it( m_CardProvider->GetCard(item) );
+	const McdSlotItem& it( m_CardProvider->GetCardForViewIndex(item) );
 
 	m_ItemAttr = wxListItemAttr();		// Wipe it clean!
 

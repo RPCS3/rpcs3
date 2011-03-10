@@ -30,7 +30,7 @@ struct ListViewColumnInfo
 // --------------------------------------------------------------------------------------
 //  McdListItem / IMcdList
 // --------------------------------------------------------------------------------------
-struct McdListItem
+struct McdSlotItem
 {
 	bool		IsPresent;
 	bool		IsEnabled;
@@ -44,7 +44,7 @@ struct McdListItem
 
 	wxFileName	Filename;		// full pathname (optional)
 
-	McdListItem()
+	McdSlotItem()
 	{
 		//Port = -1;
 		Slot		= -1;
@@ -57,18 +57,19 @@ struct McdListItem
 	uint GetMtapPort() const;
 	uint GetMtapSlot() const;
 
-	bool operator==( const McdListItem& right ) const;
-	bool operator!=( const McdListItem& right ) const;
+	bool operator==( const McdSlotItem& right ) const;
+	bool operator!=( const McdSlotItem& right ) const;
 };
 
-typedef std::vector<McdListItem> McdList;
+typedef std::vector<McdSlotItem> McdList;
 
 class IMcdList
 {
 public:
 	virtual void RefreshMcds() const=0;
 	virtual int GetLength() const=0;
-	virtual McdListItem& GetCard( int idx )=0;
+	virtual McdSlotItem& GetCardForViewIndex( int idx )=0;
+	virtual int GetSlotIndexForViewIndex( int listViewIndex )=0;
 	virtual wxDirName GetMcdPath() const=0;
 };
 
@@ -182,7 +183,7 @@ namespace Panels
 		typedef BaseMcdListPanel _parent;
 
 	protected:
-		McdListItem		m_Cards[8]; 
+		McdSlotItem		m_Cards[8]; 
 		
 		// Doubles as Create and Delete buttons
 		wxButton*		m_button_Create;
@@ -199,7 +200,8 @@ namespace Panels
 		// Interface Implementation for IMcdList
 		virtual int GetLength() const;
 
-		virtual McdListItem& GetCard( int idx );
+		virtual McdSlotItem& GetCardForViewIndex( int idx );
+		virtual int GetSlotIndexForViewIndex( int viewIndex );
 
 	protected:
 		void OnCreateCard(wxCommandEvent& evt);
@@ -245,5 +247,5 @@ namespace Panels
 };
 
 //avih: is the first one used??
-extern bool EnumerateMemoryCard( McdListItem& dest, const wxFileName& filename );
+extern bool EnumerateMemoryCard( McdSlotItem& dest, const wxFileName& filename );
 //extern bool EnumerateMemoryCard( SimpleMcdItem& dest, const wxFileName& filename );
