@@ -173,6 +173,73 @@ void SndBuffer::_InitFail()
 	mods[OutputModule]->Init();
 }
 
+// Note: When using with 32 bit output buffers, the user of this function is responsible
+// for shifting the values to where they need to be manually.  The fixed point depth of
+// the sample output is determined by the SndOutVolumeShift, which is the number of bits
+// to shift right to get a 16 bit result.
+template<typename T> void SndBuffer::ReadSamples(T* bData)
+{
+	int nSamples = SndOutPacketSize;
+
+	// Problem:
+	//  If the SPU2 gets even the least bit out of sync with the SndOut device,
+	//  the readpos of the circular buffer will overtake the writepos,
+	//  leading to a prolonged period of hopscotching read/write accesses (ie,
+	//  lots of staticy crap sound for several seconds).
+	//
+	// Fix:
+	//  If the read position overtakes the write position, abort the
+	//  transfer immediately and force the SndOut driver to wait until
+	//  the read buffer has filled up again before proceeding.
+	//  This will cause one brief hiccup that can never exceed the user's
+	//  set buffer length in duration.
+
+	int quietSamples;
+	if( CheckUnderrunStatus( nSamples, quietSamples ) )
+	{
+		jASSUME( nSamples <= SndOutPacketSize );
+
+		// [Air] [TODO]: This loop is probably a candidate for SSE2 optimization.
+
+		const int endPos = m_rpos + nSamples;
+		const int secondCopyLen = endPos - m_size;
+		const StereoOut32* rposbuffer = &m_buffer[m_rpos];
+
+		m_data -= nSamples;
+
+		if( secondCopyLen > 0 )
+		{
+			nSamples -= secondCopyLen;
+			for( int i=0; i<secondCopyLen; i++ )
+				bData[nSamples+i].ResampleFrom( m_buffer[i] );
+			m_rpos = secondCopyLen;
+		}
+		else
+			m_rpos += nSamples;
+
+		for( int i=0; i<nSamples; i++ )
+			bData[i].ResampleFrom( rposbuffer[i] );
+	}
+
+	// If quietSamples != 0 it means we have an underrun...
+	// Let's just dull out some silence, because that's usually the least
+	// painful way of dealing with underruns:
+	memset( bData, 0, quietSamples * sizeof(T) );
+}
+
+template void SndBuffer::ReadSamples(StereoOut16*);
+template void SndBuffer::ReadSamples(StereoOut32*);
+//template void SndBuffer::ReadSamples(StereoOutFloat*);
+template void SndBuffer::ReadSamples(Stereo21Out16*);
+template void SndBuffer::ReadSamples(StereoQuadOut16*);
+template void SndBuffer::ReadSamples(Stereo41Out16*);
+template void SndBuffer::ReadSamples(Stereo51Out16*);
+template void SndBuffer::ReadSamples(Stereo51Out16DplII*);
+template void SndBuffer::ReadSamples(Stereo71Out16*);
+//template void SndBuffer::ReadSamples(Stereo21Out32*);
+//template void SndBuffer::ReadSamples(Stereo41Out32*);
+//template void SndBuffer::ReadSamples(Stereo51Out32*);
+
 void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)
 {
 	int free = m_size-m_data;
