@@ -377,8 +377,6 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 			{
 				int level = (int)(m_vt.m_lod.x + 0.5f);
 
-				// FIXME: onimusa 3
-
 				level = std::min<int>(level, context->TEX1.MXL); 
 				level = std::min<int>(level, 6);
 
