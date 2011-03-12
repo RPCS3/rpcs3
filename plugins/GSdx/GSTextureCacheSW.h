@@ -30,6 +30,7 @@ public:
 	{
 	public:
 		GSState* m_state;
+		const GSOffset* m_offset;
 		GIFRegTEX0 m_TEX0;
 		GIFRegTEXA m_TEXA;
 		void* m_buff;
@@ -38,7 +39,7 @@ public:
 		uint32 m_age;
 		bool m_complete;
 
-		explicit GSTexture(GSState* state);
+		explicit GSTexture(GSState* state, const GSOffset* offset);
 		virtual ~GSTexture();
 
 		bool Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);

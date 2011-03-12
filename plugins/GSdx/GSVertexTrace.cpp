@@ -48,6 +48,52 @@ uint32 GSVertexTrace::Hash(GS_PRIM_CLASS primclass)
 	return hash;
 }
 
+void GSVertexTrace::UpdateLOD()
+{
+	if(!m_state->PRIM->TME) return;
+
+	const GIFRegTEX1& TEX1 = m_state->m_context->TEX1;
+
+	m_filter.mmag = TEX1.IsMagLinear();
+	m_filter.mmin = TEX1.IsMinLinear();
+
+	if(TEX1.MXL == 0) // MXL == 0 => MMIN ignored, tested it on ps2
+	{
+		m_filter.linear = m_filter.mmag;
+
+		return;
+	}
+
+	float K = (float)TEX1.K / 16;
+
+	if(TEX1.LCM == 0) // && m_state->PRIM->FST == 0 // if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
+	{
+		// LOD = log2(1/|Q|) * (1 << L) + K
+
+		GSVector4::storel(&m_lod, m_max.t.uph(m_min.t).log2(2).neg() * (float)(1 << TEX1.L) + K);
+
+		if(m_lod.x > m_lod.y) {float tmp = m_lod.x; m_lod.x = m_lod.x; m_lod.y = tmp;}
+	}
+	else
+	{
+		m_lod.x = K;
+		m_lod.y = K;
+	}
+
+	if(m_lod.y <= 0)
+	{
+		m_filter.linear = m_filter.mmag;
+	}
+	else if(m_lod.x > 0)
+	{
+		m_filter.linear = m_filter.mmin;
+	}
+	else
+	{
+		m_filter.linear = m_filter.mmag | m_filter.mmin;
+	}
+}
+
 void GSVertexTrace::Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass)
 {
 	m_map_sw[Hash(primclass)](count, v, m_min, m_max);
@@ -55,6 +101,8 @@ void GSVertexTrace::Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primcla
 	m_eq.value = (m_min.c == m_max.c).mask() | ((m_min.p == m_max.p).mask() << 16) | ((m_min.t == m_max.t).mask() << 20);
 
 	m_alpha.valid = false;
+
+	UpdateLOD();
 }
 
 void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primclass)
@@ -87,6 +135,8 @@ void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primcl
 	m_eq.value = (m_min.c == m_max.c).mask() | ((m_min.p == m_max.p).mask() << 16) | ((m_min.t == m_max.t).mask() << 20);
 
 	m_alpha.valid = false;
+
+	UpdateLOD();
 }
 
 void GSVertexTrace::Update(const GSVertexHW11* v, int count, GS_PRIM_CLASS primclass)
@@ -119,4 +169,7 @@ void GSVertexTrace::Update(const GSVertexHW11* v, int count, GS_PRIM_CLASS primc
 	m_eq.value = (m_min.c == m_max.c).mask() | ((m_min.p == m_max.p).mask() << 16) | ((m_min.t == m_max.t).mask() << 20);
 
 	m_alpha.valid = false;
+
+	UpdateLOD();
 }
+

@@ -189,7 +189,7 @@ void GSDrawScanline::DrawRectT(const int* RESTRICT row, const int* RESTRICT col,
 
 	color = color.andnot(mask);
 
-	GSVector4i br = r.ralign<GSVector4i::Inside>(GSVector2i(8 * 4 / sizeof(T), 8));
+	GSVector4i br = r.ralign<Align_Inside>(GSVector2i(8 * 4 / sizeof(T), 8));
 
 	if(!br.rempty())
 	{

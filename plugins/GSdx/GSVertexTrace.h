@@ -32,7 +32,7 @@ class GSState;
 __aligned(class, 32) GSVertexTrace
 {
 public:
-	struct Vertex {GSVector4i c; GSVector4 p, t;};
+	struct Vertex {GSVector4i c; GSVector4 p, t;}; // t.xy * 0x10000
 	struct VertexAlpha {int min, max; bool valid;};
 
 private:
@@ -60,16 +60,23 @@ private:
 	GSCodeGeneratorFunctionMap<CGHW9, uint32, VertexTracePtr> m_map_hw9;
 	GSCodeGeneratorFunctionMap<CGHW11, uint32, VertexTracePtr> m_map_hw11;
 
+	const GSState* m_state;
+
 	uint32 Hash(GS_PRIM_CLASS primclass);
 
-	const GSState* m_state;
+	void UpdateLOD();
 
 	static const GSVector4 s_minmax;
 
 public:
 	GS_PRIM_CLASS m_primclass;
-	Vertex m_min, m_max; // t.xy * 0x10000
-	VertexAlpha m_alpha; // source alpha range after tfx, GSRenderer::GetAlphaMinMax() updates it
+
+	Vertex m_min;
+	Vertex m_max;
+
+	// source alpha range after tfx, GSRenderer::GetAlphaMinMax() updates it
+
+	VertexAlpha m_alpha; 
 
 	union
 	{
@@ -78,10 +85,19 @@ public:
 		struct {uint32 rgba:16, xyzf:4, stq:4;};
 	} m_eq;
 
+	union 
+	{
+		struct {uint32 mmag:1, mmin:1, linear:1;};
+	} m_filter;
+
+	GSVector2 m_lod; // x = min, y = max
+
 	GSVertexTrace(const GSState* state);
 
 	void Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass);
 	void Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primclass);
 	void Update(const GSVertexHW11* v, int count, GS_PRIM_CLASS primclass);
 	void Update(const GSVertexNull* v, int count, GS_PRIM_CLASS primclass) {}
+
+	bool IsLinear() const {return m_filter.linear;}
 };

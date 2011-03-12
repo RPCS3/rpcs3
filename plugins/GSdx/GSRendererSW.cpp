@@ -102,7 +102,7 @@ GSTexture* GSRendererSW::GetOutput(int i)
 
 		const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[DISPFB.PSM];
 
-		(m_mem.*psm.rtx)(m_mem.GetOffset(DISPFB.Block(), DISPFB.FBW, DISPFB.PSM), r.ralign<GSVector4i::Outside>(psm.bs), m_output, pitch, m_env.TEXA);
+		(m_mem.*psm.rtx)(m_mem.GetOffset(DISPFB.Block(), DISPFB.FBW, DISPFB.PSM), r.ralign<Align_Outside>(psm.bs), m_output, pitch, m_env.TEXA);
 
 		m_texture[i]->Update(r, m_output, pitch);
 
@@ -136,7 +136,7 @@ void GSRendererSW::Draw()
 		return;
 	}
 
-	if(s_dump)
+	if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
 	{
 		uint64 frame = m_perfmon.GetFrame();
 
@@ -204,7 +204,7 @@ void GSRendererSW::Draw()
 	m_perfmon.Put(GSPerfMon::Prim, stats.prims);
 	m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
 
-	if(s_dump)
+	if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
 	{
 		uint64 frame = m_perfmon.GetFrame();
 
@@ -324,7 +324,7 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 			gd.sel.tfx = context->TEX0.TFX;
 			gd.sel.tcc = context->TEX0.TCC;
 			gd.sel.fst = PRIM->FST;
-			gd.sel.ltf = IsLinear();
+			gd.sel.ltf = m_vt.IsLinear();
 			gd.sel.tlu = GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0;
 			gd.sel.wms = context->CLAMP.WMS;
 			gd.sel.wmt = context->CLAMP.WMT;
@@ -370,6 +370,134 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				}
 			}
 
+			GIFRegTEX0 MIP_TEX0 = context->TEX0;
+			GIFRegCLAMP MIP_CLAMP = context->CLAMP;
+
+			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
+			{
+				int level = (int)(m_vt.m_lod.x + 0.5f);
+
+				// FIXME: onimusa 3
+
+				level = std::min<int>(level, context->TEX1.MXL); 
+				level = std::min<int>(level, 6);
+
+				if(level > 0)
+				{
+					// printf("lvl %d\n", level);
+
+					switch(level)
+					{
+					case 1: 
+						MIP_TEX0.TBP0 = context->MIPTBP1.TBP1; 
+						MIP_TEX0.TBW = context->MIPTBP1.TBW1; 
+						break;
+					case 2: 
+						MIP_TEX0.TBP0 = context->MIPTBP1.TBP2; 
+						MIP_TEX0.TBW = context->MIPTBP1.TBW2; 
+						break;
+					case 3: 
+						MIP_TEX0.TBP0 = context->MIPTBP1.TBP3; 
+						MIP_TEX0.TBW = context->MIPTBP1.TBW3; 
+						break;
+					case 4: 
+						MIP_TEX0.TBP0 = context->MIPTBP2.TBP4; 
+						MIP_TEX0.TBW = context->MIPTBP2.TBW4; 
+						break;
+					case 5: 
+						MIP_TEX0.TBP0 = context->MIPTBP2.TBP5; 
+						MIP_TEX0.TBW = context->MIPTBP2.TBW5; 
+						break;
+					case 6: 
+						MIP_TEX0.TBP0 = context->MIPTBP2.TBP6; 
+						MIP_TEX0.TBW = context->MIPTBP2.TBW6; 
+						break;
+					default:
+						__assume(0);
+					}
+
+					ASSERT(MIP_TEX0.TBP0 != 0 && MIP_TEX0.TBW != 0);
+				
+					int tw = (int)MIP_TEX0.TW - level;
+					int th = (int)MIP_TEX0.TH - level;
+
+					switch(context->TEX1.MMIN)
+					{
+					case 2: case 3: // point (min size 1)
+						tw = std::max<int>(tw, 0);
+						th = std::max<int>(th, 0);
+						break; 
+					case 4: case 5: // linear (min size 8)
+						tw = std::max<int>(tw, 3);
+						th = std::max<int>(th, 3);
+						break; 
+					default:
+						__assume(0);
+					}
+
+					// scale down the texture coordinates, including vertex trace
+
+					GSVector4 scale = GSVector4(1.0f) / GSVector4(1 << ((int)MIP_TEX0.TW - tw), 1 << ((int)MIP_TEX0.TH - th), 1, 1);
+
+					GSVertexSW* v = m_vertices;
+
+					for(int i = 0, j = m_count; i < j; i++)
+					{
+						v[i].t *= scale;
+					}
+
+					m_vt.m_min.t *= scale;
+					m_vt.m_max.t *= scale;
+
+					MIP_TEX0.TW = (uint32)tw;
+					MIP_TEX0.TH = (uint32)th;
+
+					// this shift is done even for repeat modes
+
+					MIP_CLAMP.MINU >>= level;
+					MIP_CLAMP.MAXU >>= level;
+					MIP_CLAMP.MINV >>= level;
+					MIP_CLAMP.MAXV >>= level;
+/*
+					printf("%d%d%d%d%d L %d K %03x %.2f lod %.2f %.2f q %f %f\n", 
+						m_context->TEX1.MXL, 
+						m_context->TEX1.MMAG,
+						m_context->TEX1.MMIN,
+						PRIM->FST,
+						m_context->TEX1.LCM,
+						m_context->TEX1.L,
+						m_context->TEX1.K,
+						(float)m_context->TEX1.K / 16,
+						m_context->TEX1.MXL > 0 ? m_vt.m_lod.x : 0, 
+						m_context->TEX1.MXL > 0 ? m_vt.m_lod.y : 0,
+						1.0f / m_vt.m_min.t.z,
+						1.0f / m_vt.m_max.t.z);
+*/
+					if(s_dump)
+					{
+						uint64 frame = m_perfmon.GetFrame();
+
+						string s;
+
+						if(s_save && s_n >= s_saven)
+						{
+							s = format("c:\\temp1\\_%05d_f%lld_tex_%05x_%d_(%d%d%d%d%d %.2f %.2f).bmp", 
+								s_n, frame, (int)MIP_TEX0.TBP0, (int)MIP_TEX0.PSM,
+								m_context->TEX1.MXL, 
+								m_context->TEX1.MMAG,
+								m_vt.m_filter.mmag, 
+								m_context->TEX1.MMIN,
+								m_vt.m_filter.mmin, 
+								m_context->TEX1.MXL > 0 ? m_vt.m_lod.x : 0, 
+								m_context->TEX1.MXL > 0 ? m_vt.m_lod.y : 0
+								);
+
+							m_mem.SaveBMP(s, MIP_TEX0.TBP0, MIP_TEX0.TBW, MIP_TEX0.PSM, 1 << MIP_TEX0.TW, 1 << MIP_TEX0.TH);
+						}
+					}
+				}
+			}
+
 			if(gd.sel.ltf)
 			{
 				if(gd.sel.fst)
@@ -389,9 +517,9 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 			GSVector4i r;
 
-			GetTextureMinMax(r, gd.sel.ltf);
+			GetTextureMinMax(r, MIP_TEX0, MIP_CLAMP, gd.sel.ltf);
 
-			const GSTextureCacheSW::GSTexture* t = m_tc->Lookup(context->TEX0, env.TEXA, r);
+			const GSTextureCacheSW::GSTexture* t = m_tc->Lookup(MIP_TEX0, env.TEXA, r);
 
 			if(!t) {ASSERT(0); return;}
 
@@ -400,10 +528,10 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 			gd.sel.tw = t->m_tw - 3;
 
-			uint16 tw = (uint16)(1 << context->TEX0.TW);
-			uint16 th = (uint16)(1 << context->TEX0.TH);
+			uint16 tw = (uint16)(1 << MIP_TEX0.TW);
+			uint16 th = (uint16)(1 << MIP_TEX0.TH);
 
-			switch(context->CLAMP.WMS)
+			switch(MIP_CLAMP.WMS)
 			{
 			case CLAMP_REPEAT:
 				gd.t.min.u16[0] = tw - 1;
@@ -416,20 +544,20 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				gd.t.mask.u32[0] = 0;
 				break;
 			case CLAMP_REGION_CLAMP:
-				gd.t.min.u16[0] = std::min<int>(context->CLAMP.MINU, tw - 1);
-				gd.t.max.u16[0] = std::min<int>(context->CLAMP.MAXU, tw - 1);
+				gd.t.min.u16[0] = std::min<int>(MIP_CLAMP.MINU, tw - 1);
+				gd.t.max.u16[0] = std::min<int>(MIP_CLAMP.MAXU, tw - 1);
 				gd.t.mask.u32[0] = 0;
 				break;
 			case CLAMP_REGION_REPEAT:
-				gd.t.min.u16[0] = context->CLAMP.MINU;
-				gd.t.max.u16[0] = context->CLAMP.MAXU;
+				gd.t.min.u16[0] = MIP_CLAMP.MINU;
+				gd.t.max.u16[0] = MIP_CLAMP.MAXU;
 				gd.t.mask.u32[0] = 0xffffffff;
 				break;
 			default:
 				__assume(0);
 			}
 
-			switch(context->CLAMP.WMT)
+			switch(MIP_CLAMP.WMT)
 			{
 			case CLAMP_REPEAT:
 				gd.t.min.u16[4] = th - 1;
@@ -442,13 +570,13 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				gd.t.mask.u32[2] = 0;
 				break;
 			case CLAMP_REGION_CLAMP:
-				gd.t.min.u16[4] = std::min<int>(context->CLAMP.MINV, th - 1);
-				gd.t.max.u16[4] = std::min<int>(context->CLAMP.MAXV, th - 1); // ffx anima summon scene, when the anchor appears (th = 256, maxv > 256)
+				gd.t.min.u16[4] = std::min<int>(MIP_CLAMP.MINV, th - 1);
+				gd.t.max.u16[4] = std::min<int>(MIP_CLAMP.MAXV, th - 1); // ffx anima summon scene, when the anchor appears (th = 256, maxv > 256)
 				gd.t.mask.u32[2] = 0;
 				break;
 			case CLAMP_REGION_REPEAT:
-				gd.t.min.u16[4] = context->CLAMP.MINV;
-				gd.t.max.u16[4] = context->CLAMP.MAXV;
+				gd.t.min.u16[4] = MIP_CLAMP.MINV;
+				gd.t.max.u16[4] = MIP_CLAMP.MAXV;
 				gd.t.mask.u32[2] = 0xffffffff;
 				break;
 			default:

@@ -107,7 +107,7 @@ using namespace stdext;
     #define __aligned(t, n) t __attribute__((aligned(n)))
     #define __fastcall __attribute__((fastcall))
 
-    #define EXPORT_C_(type) extern "C" type
+    #define EXPORT_C_(type) extern "C" __attribute__((stdcall,externally_visible,visibility("default"))) type
     #define EXPORT_C EXPORT_C_(void)
 
     #ifdef __GNUC__

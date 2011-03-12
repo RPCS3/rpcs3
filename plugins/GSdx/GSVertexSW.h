@@ -30,13 +30,73 @@ __aligned(struct, 16) GSVertexSW
 	__forceinline GSVertexSW() {}
 	__forceinline GSVertexSW(const GSVertexSW& v) {*this = v;}
 
-	__forceinline void operator = (const GSVertexSW& v) {c = v.c; p = v.p; t = v.t;}
-	__forceinline void operator += (const GSVertexSW& v) {c += v.c; p += v.p; t += v.t;}
+	__forceinline static GSVertexSW zero()
+	{
+		GSVertexSW v;
 
-	friend GSVertexSW operator + (const GSVertexSW& v1, const GSVertexSW& v2);
-	friend GSVertexSW operator - (const GSVertexSW& v1, const GSVertexSW& v2);
-	friend GSVertexSW operator * (const GSVertexSW& v, const GSVector4& vv);
-	friend GSVertexSW operator / (const GSVertexSW& v, const GSVector4& vv);
+		v.p = GSVector4::zero();
+		v.t = GSVector4::zero();
+		v.c = GSVector4::zero();
+
+		return v;
+	}
+	__forceinline void operator = (const GSVertexSW& v) 
+	{
+		p = v.p; 
+		t = v.t;
+		c = v.c; 
+	}
+	
+	__forceinline void operator += (const GSVertexSW& v) 
+	{
+		p += v.p; 
+		t += v.t;
+		c += v.c; 
+	}
+
+	__forceinline friend GSVertexSW operator + (const GSVertexSW& a, const GSVertexSW& b)
+	{
+		GSVertexSW v;
+
+		v.p = a.p + b.p;
+		v.t = a.t + b.t;
+		v.c = a.c + b.c;
+
+		return v;
+	}
+
+	__forceinline friend GSVertexSW operator - (const GSVertexSW& a, const GSVertexSW& b)
+	{
+		GSVertexSW v;
+
+		v.p = a.p - b.p;
+		v.t = a.t - b.t;
+		v.c = a.c - b.c;
+
+		return v;
+	}
+
+	__forceinline friend GSVertexSW operator * (const GSVertexSW& a, const GSVector4& b)
+	{
+		GSVertexSW v;
+
+		v.p = a.p * b;
+		v.t = a.t * b;
+		v.c = a.c * b;
+
+		return v;
+	}
+
+	__forceinline friend GSVertexSW operator / (const GSVertexSW& a, const GSVector4& b)
+	{
+		GSVertexSW v;
+
+		v.p = a.p / b;
+		v.t = a.t / b;
+		v.c = a.c / b;
+
+		return v;
+	}
 
 	static bool IsQuad(const GSVertexSW* v, int& tl, int& br)
 	{
@@ -122,6 +182,25 @@ __aligned(struct, 16) GSVertexSW
 
 		br = i;
 
+		#if _M_SSE >= 0x500
+
+		{
+			// p.z, p.w, t.z, t.w, c.x, c.y, c.z, c.w
+
+			GSVector8 v0 = GSVector8(v[0].p.zwzw(v[0].t), v[0].c);
+			GSVector8 v1 = GSVector8(v[1].p.zwzw(v[1].t), v[1].c);
+			GSVector8 v2 = GSVector8(v[2].p.zwzw(v[2].t), v[2].c);
+			GSVector8 v3 = GSVector8(v[3].p.zwzw(v[3].t), v[3].c);
+			GSVector8 v4 = GSVector8(v[4].p.zwzw(v[4].t), v[4].c);
+			GSVector8 v5 = GSVector8(v[5].p.zwzw(v[5].t), v[5].c);
+
+			GSVector8 test = ((v0 == v1) & (v0 == v2)) & ((v0 == v3) & (v0 == v4)) & (v0 == v5);
+
+			return test.alltrue();
+		}
+		
+		#else
+
 		v0 = v[0].p.zwzw(v[0].t);
 		v1 = v[1].p.zwzw(v[1].t);
 		v2 = v[2].p.zwzw(v[2].t);
@@ -151,42 +230,7 @@ __aligned(struct, 16) GSVertexSW
 		}
 
 		return true;
+
+		#endif
 	}
 };
-
-__forceinline GSVertexSW operator + (const GSVertexSW& v1, const GSVertexSW& v2)
-{
-	GSVertexSW v0;
-	v0.c = v1.c + v2.c;
-	v0.p = v1.p + v2.p;
-	v0.t = v1.t + v2.t;
-	return v0;
-}
-
-__forceinline GSVertexSW operator - (const GSVertexSW& v1, const GSVertexSW& v2)
-{
-	GSVertexSW v0;
-	v0.c = v1.c - v2.c;
-	v0.p = v1.p - v2.p;
-	v0.t = v1.t - v2.t;
-	return v0;
-}
-
-__forceinline GSVertexSW operator * (const GSVertexSW& v, const GSVector4& vv)
-{
-	GSVertexSW v0;
-	v0.c = v.c * vv;
-	v0.p = v.p * vv;
-	v0.t = v.t * vv;
-	return v0;
-}
-
-__forceinline GSVertexSW operator / (const GSVertexSW& v, const GSVector4& vv)
-{
-	GSVertexSW v0;
-	v0.c = v.c / vv;
-	v0.p = v.p / vv;
-	v0.t = v.t / vv;
-	return v0;
-}
-

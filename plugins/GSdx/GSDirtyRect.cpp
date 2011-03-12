@@ -54,7 +54,7 @@ GSVector4i GSDirtyRect::GetDirtyRect(const GIFRegTEX0& TEX0)
 	}
 	else
 	{
-		r = GSVector4i(left, top, right, bottom).ralign<GSVector4i::Outside>(src);
+		r = GSVector4i(left, top, right, bottom).ralign<Align_Outside>(src);
 	}
 
 	return r;
@@ -77,7 +77,7 @@ GSVector4i GSDirtyRectList::GetDirtyRectAndClear(const GIFRegTEX0& TEX0, const G
 
 		GSVector2i bs = GSLocalMemory::m_psm[TEX0.PSM].bs;
 
-		return r.ralign<GSVector4i::Outside>(bs).rintersect(GSVector4i(0, 0, size.x, size.y));
+		return r.ralign<Align_Outside>(bs).rintersect(GSVector4i(0, 0, size.x, size.y));
 	}
 
 	return GSVector4i::zero();

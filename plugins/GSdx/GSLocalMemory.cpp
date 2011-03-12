@@ -1708,7 +1708,7 @@ void GSLocalMemory::ReadTexture(const GSOffset* RESTRICT o, const GSVector4i& r,
 		TEX0.TBW = o->bw;
 		TEX0.PSM = o->psm;
 
-		GSVector4i cr = r.ralign<GSVector4i::Inside>(psm.bs);
+		GSVector4i cr = r.ralign<Align_Inside>(psm.bs);
 
 		bool aligned = ((size_t)(dst + (cr.left - r.left) * sizeof(uint32)) & 0xf) == 0;
 

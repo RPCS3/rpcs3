@@ -35,6 +35,7 @@ GSRenderer::GSRenderer()
 	m_filter = theApp.GetConfig("filter", 1);
 	m_vsync = !!theApp.GetConfig("vsync", 0);
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
+	m_mipmap = !!theApp.GetConfig("mipmap", 1);
 
 	s_n = 0;
 	s_dump = !!theApp.GetConfig("dump", 0);
@@ -513,6 +514,9 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 		case VK_DELETE:
 			m_aa1 = !m_aa1;
 			return;
+		case VK_INSERT:
+			m_mipmap = !m_mipmap;
+			return;
 		}
 
 		#else
@@ -523,25 +527,23 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 	}
 }
 
-void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
+void GSRenderer::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFRegCLAMP& CLAMP, bool linear)
 {
-	const GSDrawingContext* context = m_context;
-
-	int tw = context->TEX0.TW;
-	int th = context->TEX0.TH;
+	int tw = TEX0.TW;
+	int th = TEX0.TH;
 
 	int w = 1 << tw;
 	int h = 1 << th;
 
 	GSVector4i tr(0, 0, w, h);
 
-	int wms = context->CLAMP.WMS;
-	int wmt = context->CLAMP.WMT;
+	int wms = CLAMP.WMS;
+	int wmt = CLAMP.WMT;
 
-	int minu = (int)context->CLAMP.MINU;
-	int minv = (int)context->CLAMP.MINV;
-	int maxu = (int)context->CLAMP.MAXU;
-	int maxv = (int)context->CLAMP.MAXV;
+	int minu = (int)CLAMP.MINU;
+	int minv = (int)CLAMP.MINV;
+	int maxu = (int)CLAMP.MAXU;
+	int maxv = (int)CLAMP.MAXV;
 
 	GSVector4i vr = tr;
 
@@ -619,7 +621,7 @@ void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
 			if(vr.x < uv.x) vr.x = uv.x;
 			if(vr.z > uv.z + 1) vr.z = uv.z + 1;
 			break;
-		case CLAMP_REGION_REPEAT: // TODO
+		case CLAMP_REGION_REPEAT:
 			break;
 		default:
 			__assume(0);
@@ -635,9 +637,7 @@ void GSRenderer::GetTextureMinMax(GSVector4i& r, bool linear)
 			if(vr.y < uv.y) vr.y = uv.y;
 			if(vr.w > uv.w + 1) vr.w = uv.w + 1;
 			break;
-		case CLAMP_REGION_REPEAT: // TODO
-			//Xenosaga 2 and 3 use it
-			//printf("gsdx: CLAMP_REGION_REPEAT not implemented, please report\n");
+		case CLAMP_REGION_REPEAT:
 			break;
 		default:
 			__assume(0);
@@ -789,39 +789,6 @@ bool GSRenderer::TryAlphaTest(uint32& fm, uint32& zm)
 	}
 
 	return true;
-}
-
-bool GSRenderer::IsLinear()
-{
-	const GIFRegTEX1& TEX1 = m_context->TEX1;
-
-	bool mmin = TEX1.IsMinLinear();
-	bool mmag = TEX1.IsMagLinear();
-
-	if(mmag == mmin || TEX1.MXL == 0) // MXL == 0 => MMIN ignored, tested it on ps2
-	{
-		return mmag;
-	}
-
-	// if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
-	// Fixme : Why should Q be bogus? (it used to be - Gabest)
-
-	if(!TEX1.LCM && !PRIM->FST)
-	{
-		float K = (float)TEX1.K / 16;
-		float f = (float)(1 << TEX1.L) / log(2.0f);
-
-		// TODO: abs(Qmin) may not be <= abs(Qmax), check the sign
-
-		float LODmin = K + log(1.0f / fabs(m_vt.m_max.t.z)) * f;
-		float LODmax = K + log(1.0f / fabs(m_vt.m_min.t.z)) * f;
-
-		return LODmax <= 0 ? mmag : LODmin > 0 ? mmin : mmag || mmin;
-	}
-	else
-	{
-		return TEX1.K <= 0 ? mmag : TEX1.K > 0 ? mmin : mmag || mmin;
-	}
 }
 
 bool GSRenderer::IsOpaque()

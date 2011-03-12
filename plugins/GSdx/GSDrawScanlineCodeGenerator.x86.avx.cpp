@@ -252,10 +252,9 @@ void GSDrawScanlineCodeGenerator::Init()
 
 	sub(ebx, edx);
 
-	// int steps = right - left - 4;
+	// int steps = pixels + skip - 4;
 
-	sub(ecx, ebx);
-	sub(ecx, 4);
+	lea(ecx, ptr[ecx + edx - 4]);
 
 	// GSVector4i test = m_test[skip] | m_test[7 + (steps & (steps >> 31))];
 
@@ -552,6 +551,12 @@ void GSDrawScanlineCodeGenerator::Step()
 
 				vpaddw(xmm5, ptr[&m_local.temp.rb]);
 				vpaddw(xmm6, ptr[&m_local.temp.ga]);
+
+				// FIXME: color may underflow and roll over at the end of the line, if decreasing
+
+				vpxor(xmm7, xmm7);
+				vpmaxsw(xmm5, xmm7);
+				vpmaxsw(xmm6, xmm7);
 
 				vmovdqa(ptr[&m_local.temp.rb], xmm5);
 				vmovdqa(ptr[&m_local.temp.ga], xmm6);

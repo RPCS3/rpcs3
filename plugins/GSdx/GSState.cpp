@@ -587,6 +587,47 @@ template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* r)
 	if(TEX0.TH > 10) TEX0.TH = 10;
 
 	ApplyTEX0(i, TEX0);
+
+	if(m_env.CTXT[i].TEX1.MTBA)
+	{
+		uint32 bpp = GSLocalMemory::m_psm[TEX0.PSM].bpp;
+
+		uint32 tbp = TEX0.TBP0;
+		uint32 tbw = TEX0.TBW;
+		uint32 th = TEX0.TH;
+
+		if(th >= 3)
+		{
+			tbp += (((tbw << 6) * (1 << th) * bpp >> 3) + 255) >> 8;
+			tbw = std::max<uint32>(tbw >> 1, 1);
+			th--;
+
+			m_env.CTXT[i].MIPTBP1.TBP1 = tbp;
+			m_env.CTXT[i].MIPTBP1.TBW1 = tbw;
+
+			tbp += (((tbw << 6) * (1 << th) * bpp >> 3) + 255) >> 8;
+			tbw = std::max<uint32>(tbw >> 1, 1);
+			th--;
+
+			m_env.CTXT[i].MIPTBP1.TBP2 = tbp;
+			m_env.CTXT[i].MIPTBP1.TBW2 = tbw;
+
+			tbp += (((tbw << 6) * (1 << th) * bpp >> 3) + 255) >> 8;
+			tbw = std::max<uint32>(tbw >> 1, 1);
+			th--;
+
+			m_env.CTXT[i].MIPTBP1.TBP3 = tbp;
+			m_env.CTXT[i].MIPTBP1.TBW3 = tbw;
+
+			// NOTE: TEX1.MXL must not be automatically set to 3 here
+		}
+		else
+		{
+			ASSERT(0);
+		}
+
+		// printf("MTBA\n");
+	}
 }
 
 template<int i> void GSState::GIFRegHandlerCLAMP(const GIFReg* r)

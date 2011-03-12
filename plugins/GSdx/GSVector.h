@@ -3,7 +3,21 @@
 
 #pragma once
 
-// NOTE: x64 version of the _mm_set_* functions are terrible, first they store components into memory then reload in one piece (VS2008 SP1)
+enum Align_Mode 
+{
+	Align_Outside, 
+	Align_Inside, 
+	Align_NegInf, 
+	Align_PosInf
+};
+
+enum Round_Mode 
+{
+	Round_NearestInt = 8, 
+	Round_NegInf = 9, 
+	Round_PosInf = 10, 
+	Round_Truncate = 11
+};
 
 #pragma pack(push, 1)
 
@@ -196,8 +210,6 @@ public:
 		return sat_i32(a);
 	}
 
-	enum RoundMode {Outside, Inside, NegInf, PosInf};
-
 	template<int mode> __forceinline GSVector4i ralign(const GSVector2i& a) const
 	{
 		// a must be 1 << n
@@ -208,10 +220,10 @@ public:
 
 		switch(mode)
 		{
-		case Inside: v = *this + mask; break;
-		case Outside: v = *this + mask.zwxy(); break;
-		case NegInf: v = *this; break;
-		case PosInf: v = *this + mask.zwzw(); break;
+		case Align_Inside: v = *this + mask; break;
+		case Align_Outside: v = *this + mask.zwxy(); break;
+		case Align_NegInf: v = *this; break;
+		case Align_PosInf: v = *this + mask.zwzw(); break;
 		default: ASSERT(0); break;
 		}
 
@@ -1029,15 +1041,19 @@ public:
 
 	__forceinline bool alltrue() const
 	{
-		return _mm_movemask_epi8(m) == 0xffff;
+		return mask() == 0xffff;
 	}
 
 	__forceinline bool allfalse() const
 	{
 		#if _M_SSE >= 0x401
+
 		return _mm_testz_si128(m, m) != 0;
+
 		#else
-		return _mm_movemask_epi8(m) == 0;
+
+		return mask() == 0;
+
 		#endif
 	}
 
@@ -1053,9 +1069,13 @@ public:
 	template<int i> __forceinline int extract8() const
 	{
 		#if _M_SSE >= 0x401
+
 		return _mm_extract_epi8(m, i);
+
 		#else
+
 		return (int)u8[i];
+
 		#endif
 	}
 
@@ -1081,10 +1101,15 @@ public:
 	template<int i> __forceinline int extract32() const
 	{
 		if(i == 0) return GSVector4i::store(*this);
+
 		#if _M_SSE >= 0x401
+
 		return _mm_extract_epi32(m, i);
+
 		#else
+
 		return i32[i];
+
 		#endif
 	}
 
@@ -1102,10 +1127,15 @@ public:
 	template<int i> __forceinline int64 extract64() const
 	{
 		if(i == 0) return GSVector4i::storeq(*this);
+
 		#if _M_SSE >= 0x401
+
 		return _mm_extract_epi64(m, i);
+
 		#else
+
 		return i64[i];
+
 		#endif
 	}
 
@@ -2388,8 +2418,6 @@ public:
 		return (v + v) - (v * v) * *this;
 	}
 
-	enum RoundMode {NearestInt = 8, NegInf = 9, PosInf = 10, Truncate = 11};
-
 	template<int mode> __forceinline GSVector4 round() const
 	{
 		#if _M_SSE >= 0x401
@@ -2404,17 +2432,17 @@ public:
 
 		b = a + b - b;
 
-		if((mode & 7) == (NegInf & 7))
+		if((mode & 7) == (Round_NegInf & 7))
 		{
 			return b - ((a < b) & m_x3f800000);
 		}
 
-		if((mode & 7) == (PosInf & 7))
+		if((mode & 7) == (Round_PosInf & 7))
 		{
 			return b + ((a > b) & m_x3f800000);
 		}
 
-		ASSERT((mode & 7) == (NearestInt & 7)); // other modes aren't implemented
+		ASSERT((mode & 7) == (Round_NearestInt & 7)); // other modes aren't implemented
 
 		return b;
 
@@ -2423,12 +2451,62 @@ public:
 
 	__forceinline GSVector4 floor() const
 	{
-		return round<NegInf>();
+		return round<Round_NegInf>();
 	}
 
 	__forceinline GSVector4 ceil() const
 	{
-		return round<PosInf>();
+		return round<Round_PosInf>();
+	}
+
+	// http://jrfonseca.blogspot.com/2008/09/fast-sse2-pow-tables-or-polynomials.html
+
+	#define LOG_POLY0(x, c0) GSVector4(c0)
+	#define LOG_POLY1(x, c0, c1) ((LOG_POLY0(x, c1) * x) + GSVector4(c0))
+	#define LOG_POLY2(x, c0, c1, c2) ((LOG_POLY1(x, c1, c2) * x) + GSVector4(c0))
+	#define LOG_POLY3(x, c0, c1, c2, c3) ((LOG_POLY2(x, c1, c2, c3) * x) + GSVector4(c0))
+	#define LOG_POLY4(x, c0, c1, c2, c3, c4) ((LOG_POLY3(x, c1, c2, c3, c4) * x) + GSVector4(c0))
+	#define LOG_POLY5(x, c0, c1, c2, c3, c4, c5) ((LOG_POLY4(x, c1, c2, c3, c4, c5) * x) + GSVector4(c0))
+
+	__forceinline GSVector4 log2(int precision = 5) const
+	{
+		// NOTE: sign bit ignored, safe to pass negative numbers
+
+		GSVector4i exp = GSVector4i::xff000000() >> 1;
+		GSVector4i mant = GSVector4i::x007fffff();
+		GSVector4 one(1.0f);
+
+		GSVector4i i = GSVector4i::cast(*this);
+
+		GSVector4 e = GSVector4(((i & exp) >> 23) - GSVector4i::x0000007f());
+		GSVector4 m = GSVector4::cast(i & mant) | one;
+
+		GSVector4 p;
+
+		// Minimax polynomial fit of log2(x)/(x - 1), for x in range [1, 2[
+
+		switch(precision)
+		{
+		case 3:
+			p = LOG_POLY2(m, 2.28330284476918490682f, -1.04913055217340124191f, 0.204446009836232697516f);
+			break;
+		case 4:
+			p = LOG_POLY3(m, 2.61761038894603480148f, -1.75647175389045657003f, 0.688243882994381274313f, -0.107254423828329604454f);
+			break;
+		default:
+		case 5:
+			p = LOG_POLY4(m, 2.8882704548164776201f, -2.52074962577807006663f, 1.48116647521213171641f, -0.465725644288844778798f, 0.0596515482674574969533f);
+			break;
+		case 6:
+			p = LOG_POLY5(m, 3.1157899f, -3.3241990f, 2.5988452f, -1.2315303f,  3.1821337e-1f, -3.4436006e-2f);
+			break;
+		}
+
+		// This effectively increases the polynomial degree by one, but ensures that log2(1) == 0
+		
+		p = p * (m - one);
+
+		return p + e;
 	}
 
 	__forceinline GSVector4 mod2x(const GSVector4& f, const int scale = 256) const
@@ -2528,7 +2606,7 @@ public:
 		return GSVector4(_mm_max_ps(m, a));
 	}
 
-	__forceinline GSVector4 blend8(const GSVector4& a, const GSVector4& mask)  const
+	__forceinline GSVector4 blend32(const GSVector4& a, const GSVector4& mask)  const
 	{
 		#if _M_SSE >= 0x401
 
@@ -2573,16 +2651,19 @@ public:
 
 	__forceinline bool alltrue() const
 	{
-		return _mm_movemask_ps(m) == 0xf;
+		return mask() == 0xf;
 	}
 
 	__forceinline bool allfalse() const
 	{
 		#if _M_SSE >= 0x401
-		__m128i a = _mm_castps_si128(m);
-		return _mm_testz_si128(a, a) != 0;
+
+		return _mm_testz_ps(m, m) != 0;
+
 		#else
-		return _mm_movemask_ps(m) == 0;
+
+		return mask() == 0;
+
 		#endif
 	}
 
@@ -2591,9 +2672,13 @@ public:
 	template<int i> __forceinline int extract() const
 	{
 		#if _M_SSE >= 0x401
+
 		return _mm_extract_ps(m, i);
+
 		#else
+
 		return i32[i];
+
 		#endif
 	}
 
@@ -2861,8 +2946,6 @@ public:
 		VECTOR4_SHUFFLE_3(xs, xn, ys, yn, w, 3) \
 
 	#define VECTOR4_SHUFFLE_1(xs, xn) \
-		__forceinline GSVector4 xs##4() const {return GSVector4(_mm_shuffle_ps(m, m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
-		__forceinline GSVector4 xs##4(const GSVector4& v) const {return GSVector4(_mm_shuffle_ps(m, v.m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
 		VECTOR4_SHUFFLE_2(xs, xn, x, 0) \
 		VECTOR4_SHUFFLE_2(xs, xn, y, 1) \
 		VECTOR4_SHUFFLE_2(xs, xn, z, 2) \
@@ -2894,8 +2977,6 @@ __forceinline GSVector4 GSVector4::cast(const GSVector4i& v)
 	return GSVector4(_mm_castsi128_ps(v.m));
 }
 
-#if _M_SSE >= 0x500
-
 class GSVector8;
 
 __aligned(class, 32) GSVector8i
@@ -2915,16 +2996,25 @@ public:
 		uint16 u16[16];
 		uint32 u32[8];
 		uint64 u64[4];
+		#if _M_SSE >= 0x500
 		__m256i m;
+		__m128i m0, m1;
+		#else
+		__m128i m[2];
+		#endif
 	};
 
-	__forceinline GSVector8i()
-	{
-	}
+	__forceinline GSVector8i() {}
+
+	__forceinline explicit GSVector8i(const GSVector8& v);
+
+	static GSVector8i cast(const GSVector8& v);
+
+	#if _M_SSE >= 0x500
 
 	__forceinline GSVector8i(int x0, int y0, int z0, int w0, int x1, int y1, int z1, int w1)
 	{
-		m = _mm256_set_epi32(w0, z0, y0, x0, w0, z0, y0, x0);
+		m = _mm256_set_epi32(w1, z1, y1, x1, w0, z0, y0, x0);
 	}
 
 	__forceinline GSVector8i(__m128i m0, __m128i m1)
@@ -2952,8 +3042,6 @@ public:
 		this->m = m;
 	}
 
-	__forceinline explicit GSVector8i(const GSVector8& v);
-
 	__forceinline void operator = (const GSVector8i& v)
 	{
 		m = v.m;
@@ -2979,8 +3067,6 @@ public:
 		return m;
 	}
 
-	static GSVector8i cast(const GSVector8& v);
-
 	// TODO
 
 	template<int i> __forceinline GSVector4i extract() const
@@ -3002,7 +3088,7 @@ public:
 
 	template<bool aligned> __forceinline static GSVector8i load(const void* p)
 	{
-		return GSVector8i(aligned ? _mm_load256i_si256((__m256i*)p) : _mm256i_loadu_si256((__m128i*)p));
+		return GSVector8i(aligned ? _mm_load256i_si256((__m256i*)p) : _mm256i_loadu_si256((__m256i*)p));
 	}
 
 	template<bool aligned> __forceinline static void store(void* p, const GSVector4i& v)
@@ -3010,6 +3096,103 @@ public:
 		if(aligned) _mm256i_store_si256((__m256i*)p, v.m);
 		else _mm256i_storeu_si256((__m256i*)p, v.m);
 	}
+
+	#else
+
+	__forceinline GSVector8i(int x0, int y0, int z0, int w0, int x1, int y1, int z1, int w1)
+	{
+		m[0] = _mm_set_epi32(w0, z0, y0, x0);
+		m[1] = _mm_set_epi32(w1, z1, y1, x1);		
+	}
+
+	__forceinline GSVector8i(__m128i m0, __m128i m1)
+	{
+		m[0] = m0;
+		m[1] = m1;
+	}
+
+	__forceinline GSVector8i(const GSVector8i& v)
+	{
+		m[0] = v.m[0];
+		m[1] = v.m[1];
+	}
+
+	__forceinline explicit GSVector8i(int i)
+	{
+		m[0] = m[1] = _mm_set1_epi32(i);
+	}
+
+	__forceinline explicit GSVector8i(__m128i m)
+	{
+		this->m[0] = this->m[1] = m;
+	}
+
+	__forceinline void operator = (const GSVector8i& v)
+	{
+		m[0] = v.m[0];
+		m[1] = v.m[1];
+	}
+
+	__forceinline void operator = (int i)
+	{
+		m[0] = m[1] = _mm_set1_epi32(i);
+	}
+
+	__forceinline void operator = (__m128i m)
+	{
+		this->m[0] = this->m[1] = m;
+	}
+
+	// TODO
+
+	template<int i> __forceinline GSVector4i extract() const
+	{
+		return GSVector4i(m[i]);
+	}
+
+	template<int i> __forceinline GSVector8i insert(__m128i m) const
+	{
+		GSVector8i v = *this;
+
+		v.m[i] = m;
+
+		return v;
+	}
+
+	__forceinline static GSVector8i zero()
+	{
+		GSVector8i v;
+
+		v.m[0] = v.m[1] = _mm_setzero_si128();
+		
+		return v;
+	}
+
+	// TODO
+
+	template<bool aligned> __forceinline static GSVector8i load(const void* p)
+	{
+		return GSVector8i(
+			aligned ? _mm_load_si128((__m128i*)p + 0) : _mm_loadu_si128((__m128i*)p + 0),
+			aligned ? _mm_load_si128((__m128i*)p + 1) : _mm_loadu_si128((__m128i*)p + 1),
+			);
+	}
+
+	template<bool aligned> __forceinline static void store(void* p, const GSVector4i& v)
+	{
+		if(aligned)
+		{
+			_mm_store_si128((__m128i*)p + 0, v.m[0]);
+			_mm_store_si128((__m128i*)p + 1, v.m[1]);
+		}
+		else
+		{
+			_mm_storeu_si128((__m128i*)p + 0, v.m[0]);
+			_mm_storeu_si128((__m128i*)p + 1, v.m[1]);
+		}
+	}
+
+	#endif
 };
 
 __aligned(class, 32) GSVector8
@@ -3029,25 +3212,97 @@ public:
 		uint16 u16[16];
 		uint32 u32[8];
 		uint64 u64[4];
+		#if _M_SSE >= 0x500
 		__m256 m;
-
-		// TODO: _M_SSE < 0x500 => union {__m128 m0, m1;}; and replace each function with a pair of 128 bit intructions
+		__m128 m0, m1;
+		#else
+		__m128 m[2];
+		#endif
 	};
 
-	__forceinline GSVector8()
+	__forceinline GSVector8() {}
+
+	__forceinline explicit GSVector8(const GSVector8i& v);
+
+	__forceinline static GSVector8 cast(const GSVector8i& v);
+
+	__forceinline GSVector8 rcpnr() const
 	{
+		GSVector8 v = rcp();
+
+		return (v + v) - (v * v) * *this;
 	}
+
+	__forceinline GSVector8 floor() const
+	{
+		return round<Round_NegInf>();
+	}
+
+	__forceinline GSVector8 ceil() const
+	{
+		return round<Round_PosInf>();
+	}
+
+	__forceinline GSVector8 operator - () const
+	{
+		return neg();
+	}
+
+	__forceinline void operator += (float f)
+	{
+		*this += GSVector8(f);
+	}
+
+	__forceinline void operator -= (float f)
+	{
+		*this -= GSVector8(f);
+	}
+
+	__forceinline void operator *= (float f)
+	{
+		*this *= GSVector8(f);
+	}
+
+	__forceinline void operator /= (float f)
+	{
+		*this /= GSVector8(f);
+	}
+
+	__forceinline friend GSVector8 operator + (const GSVector8& v, float f)
+	{
+		return v + GSVector8(f);
+	}
+
+	__forceinline friend GSVector8 operator - (const GSVector8& v, float f)
+	{
+		return v - GSVector8(f);
+	}
+
+	__forceinline friend GSVector8 operator * (const GSVector8& v, float f)
+	{
+		return v * GSVector8(f);
+	}
+
+	__forceinline friend GSVector8 operator / (const GSVector8& v, float f)
+	{
+		return v / GSVector8(f);
+	}
+
+	__forceinline static GSVector8 xffffffff()
+	{
+		return zero() == zero();
+	}
+
+	#if _M_SSE >= 0x500
 
 	__forceinline GSVector8(float x0, float y0, float z0, float w0, float x1, float y1, float z1, float w1)
 	{
-		m = _mm256_set_ps(w0, z0, y0, x0, w0, z0, y0, x0);
+		m = _mm256_set_ps(w1, z1, y1, x1, w0, z0, y0, x0);
 	}
 
 	__forceinline GSVector8(int x0, int y0, int z0, int w0, int x1, int y1, int z1, int w1)
 	{
-		GSVector8i v(x0, y0, z0, w0, x1, y1, z1, w1);
-
-		m = _mm256_cvtepi32_ps(v);
+		m = _mm256_cvtepi32_ps(_mm256_set_epi32(w1, z1, y1, x1, w0, z0, y0, x0));
 	}
 
 	__forceinline GSVector8(__m128 m0, __m128 m1)
@@ -3062,7 +3317,7 @@ public:
 
 	__forceinline explicit GSVector8(float f)
 	{
-		m = _mm256_set1_ps(f); // _mm256_broadcast_ss(&f); ?
+		m = _mm256_set1_ps(f);
 	}
 
 	__forceinline explicit GSVector8(__m128 m)
@@ -3075,8 +3330,6 @@ public:
 	{
 		this->m = m;
 	}
-
-	__forceinline explicit GSVector8(const GSVector8i& v);
 
 	__forceinline void operator = (const GSVector8& v)
 	{
@@ -3104,8 +3357,6 @@ public:
 		return m;
 	}
 
-	__forceinline static GSVector8 cast(const GSVector8i& v);
-
 	__forceinline GSVector8 abs() const
 	{
 		return *this & cast(GSVector8i(GSVector4i::x7fffffff())); // TODO: add GSVector8 consts
@@ -3121,28 +3372,9 @@ public:
 		return GSVector8(_mm256_rcp_ps(m));
 	}
 
-	__forceinline GSVector8 rcpnr() const
-	{
-		GSVector8 v = rcp();
-
-		return (v + v) - (v * v) * *this;
-	}
-
-	enum RoundMode {NearestInt = 8, NegInf = 9, PosInf = 10, Truncate = 11};
-
 	template<int mode> __forceinline GSVector8 round() const
 	{
 		return GSVector8(_mm256_round_ps(m, mode));
-	}
-
-	__forceinline GSVector8 floor() const
-	{
-		return round<NegInf>();
-	}
-
-	__forceinline GSVector8 ceil() const
-	{
-		return round<PosInf>();
 	}
 
 	// TODO
@@ -3157,7 +3389,12 @@ public:
 		return GSVector8(_mm256_max_ps(m, a));
 	}
 
-	__forceinline GSVector8 blend8(const GSVector8& a, const GSVector8& mask)  const
+	template<int mask> __forceinline GSVector8 blend32(const GSVector8& a)  const
+	{
+		return GSVector8(_mm256_blend_ps(m, a, mask));
+	}
+
+	__forceinline GSVector8 blend32(const GSVector8& a, const GSVector8& mask)  const
 	{
 		return GSVector8(_mm256_blendv_ps(m, a, mask));
 	}
@@ -3186,12 +3423,12 @@ public:
 
 	__forceinline GSVector8 l2h() const
 	{
-		return insert<1>(extract<0>());
+		return GSVector8(_mm256_shuffle_ps(m, m, 0x88));
 	}
 
 	__forceinline GSVector8 h2l() const
 	{
-		return insert<0>(extract<1>());
+		return GSVector8(_mm256_shuffle_ps(m, m, 0x22));
 	}
 
 	__forceinline GSVector8 andnot(const GSVector8& v) const
@@ -3206,12 +3443,12 @@ public:
 
 	__forceinline bool alltrue() const
 	{
-		return _mm256_movemask_ps(m) == 0xff;
+		return mask() == 0xff;
 	}
 
 	__forceinline bool allfalse() const
 	{
-		return _mm256_movemask_ps(m) == 0;
+		return _mm256_testz_ps(m, m) != 0;
 	}
 
 	template<int i> __forceinline GSVector4 extract() const
@@ -3239,11 +3476,6 @@ public:
 		_mm256_zeroall();
 	}
 
-	__forceinline static GSVector8 xffffffff()
-	{
-		return zero() == zero();
-	}
-
 	// TODO: load low, ss
 
 	template<bool aligned> __forceinline static GSVector8 load(const void* p)
@@ -3260,11 +3492,6 @@ public:
 	}
 
 	// TODO
-
-	__forceinline GSVector8 operator - () const
-	{
-		return neg();
-	}
 
 	__forceinline void operator += (const GSVector8& v)
 	{
@@ -3284,26 +3511,6 @@ public:
 	__forceinline void operator /= (const GSVector8& v)
 	{
 		m = _mm256_div_ps(m, v);
-	}
-
-	__forceinline void operator += (float f)
-	{
-		*this += GSVector8(f);
-	}
-
-	__forceinline void operator -= (float f)
-	{
-		*this -= GSVector8(f);
-	}
-
-	__forceinline void operator *= (float f)
-	{
-		*this *= GSVector8(f);
-	}
-
-	__forceinline void operator /= (float f)
-	{
-		*this /= GSVector8(f);
 	}
 
 	__forceinline void operator &= (const GSVector8& v)
@@ -3339,26 +3546,6 @@ public:
 	__forceinline friend GSVector8 operator / (const GSVector8& v1, const GSVector8& v2)
 	{
 		return GSVector8(_mm256_div_ps(v1, v2));
-	}
-
-	__forceinline friend GSVector8 operator + (const GSVector8& v, float f)
-	{
-		return v + GSVector8(f);
-	}
-
-	__forceinline friend GSVector8 operator - (const GSVector8& v, float f)
-	{
-		return v - GSVector8(f);
-	}
-
-	__forceinline friend GSVector8 operator * (const GSVector8& v, float f)
-	{
-		return v * GSVector8(f);
-	}
-
-	__forceinline friend GSVector8 operator / (const GSVector8& v, float f)
-	{
-		return v / GSVector8(f);
 	}
 
 	__forceinline friend GSVector8 operator & (const GSVector8& v1, const GSVector8& v2)
@@ -3410,6 +3597,361 @@ public:
 		__forceinline GSVector8 xs##ys() const {return GSVector8(_mm256_permute2f128_ps(m, m, xn | (yn << 4)));} \
 		__forceinline GSVector8 xs##ys(const GSVector8& v) const {return GSVector8(_mm256_permute2f128_ps(m, v.m, xn | (yn << 4)));} \
 
+	#define VECTOR8_SHUFFLE_4(xs, xn, ys, yn, zs, zn, ws, wn) \
+		__forceinline GSVector8 xs##ys##zs##ws() const {return GSVector8(_mm256_permute_ps(m, _MM_SHUFFLE(wn, zn, yn, xn)));} \
+		__forceinline GSVector8 xs##ys##zs##ws(const GSVector8& v) const {return GSVector8(_mm256_shuffle_ps(m, v.m, _MM_SHUFFLE(wn, zn, yn, xn)));} \
+
+	#else
+
+	__forceinline GSVector8(float x0, float y0, float z0, float w0, float x1, float y1, float z1, float w1)
+	{
+		m[0] = _mm_set_ps(w0, z0, y0, x0);
+		m[1] = _mm_set_ps(w1, z1, y1, x1);
+	}
+
+	__forceinline GSVector8(int x0, int y0, int z0, int w0, int x1, int y1, int z1, int w1)
+	{
+		m[0] = _mm_cvtepi32_ps(_mm_set_epi32(w0, z0, y0, x0));
+		m[1] = _mm_cvtepi32_ps(_mm_set_epi32(w1, z1, y1, x1));
+	}
+
+	__forceinline GSVector8(__m128 m0, __m128 m1)
+	{
+		m[0] = m0;
+		m[1] = m1;
+	}
+
+	__forceinline GSVector8(const GSVector8& v)
+	{
+		m[0] = v.m[0];
+		m[1] = v.m[1];
+	}
+
+	__forceinline explicit GSVector8(float f)
+	{
+		m[0] = m[1] = _mm_set1_ps(f);
+	}
+
+	__forceinline explicit GSVector8(__m128 m)
+	{
+		this->m[0] = this->m[1] = m;
+	}
+
+	__forceinline void operator = (const GSVector8& v)
+	{
+		m[0] = v.m[0];
+		m[1] = v.m[1];
+	}
+
+	__forceinline void operator = (float f)
+	{
+		m[0] = m[1] = _mm_set1_ps(f);
+	}
+
+	__forceinline void operator = (__m128 m)
+	{
+		this->m[0] = this->m[1] = m;
+	}
+
+	__forceinline GSVector8 abs() const
+	{
+		GSVector4 mask = GSVector4::cast(GSVector4i::x7fffffff());
+
+		return GSVector8(_mm_and_ps(m[0], mask), _mm_and_ps(m[1], mask));
+	}
+
+	__forceinline GSVector8 neg() const
+	{
+		GSVector4 mask = GSVector4::cast(GSVector4i::x80000000());
+
+		return GSVector8(_mm_xor_ps(m[0], mask), _mm_xor_ps(m[1], mask));
+	}
+
+	__forceinline GSVector8 rcp() const
+	{
+		return GSVector8(_mm_rcp_ps(m[0]), _mm_rcp_ps(m[1]));
+	}
+
+	template<int mode> __forceinline GSVector8 round() const
+	{
+		return GSVector8(_mm_round_ps(m[0], mode), _mm_round_ps(m[1], mode));
+	}
+
+	// TODO
+
+	__forceinline GSVector8 min(const GSVector8& a) const
+	{
+		return GSVector8(_mm_min_ps(m[0], a.m[0]), _mm_min_ps(m[1], a.m[1]));
+	}
+
+	__forceinline GSVector8 max(const GSVector8& a) const
+	{
+		return GSVector8(_mm_max_ps(m[0], a.m[0]), _mm_max_ps(m[1], a.m[1]));
+	}
+
+	#if _M_SSE >= 0x401
+
+	template<int mask> __forceinline GSVector8 blend32(const GSVector8& a)  const
+	{
+		return GSVector8(_mm_blend_ps(m[0], a.m[0], mask & 0x0f), _mm_blend_ps(m[1], a.m[1], (mask >> 4) & 0x0f));
+	}
+
+	#endif
+
+	__forceinline GSVector8 blend32(const GSVector8& a, const GSVector8& mask)  const
+	{
+		return GSVector8(_mm_blendv_ps(m[0], a.m[0], mask.m[0]), _mm_blendv_ps(m[1], a.m[1], mask.m[1]));
+	}
+
+	__forceinline GSVector8 upl(const GSVector8& a) const
+	{
+		return GSVector8(_mm_unpacklo_ps(m[0], a.m[0]), _mm_unpacklo_ps(m[1], a.m[1]));
+	}
+
+	__forceinline GSVector8 uph(const GSVector8& a) const
+	{
+		return GSVector8(_mm_unpackhi_ps(m[0], a.m[0]), _mm_unpackhi_ps(m[1], a.m[1]));
+	}
+
+	__forceinline GSVector8 upl64(const GSVector8& a) const
+	{
+		return GSVector8(
+			_mm_castpd_ps(_mm_unpacklo_pd(_mm_castps_pd(m[0]), _mm_castps_pd(a.m[0]))),
+			_mm_castpd_ps(_mm_unpacklo_pd(_mm_castps_pd(m[1]), _mm_castps_pd(a.m[1])))
+			);
+	}
+
+	__forceinline GSVector8 uph64(const GSVector8& a) const
+	{
+		return GSVector8(
+			_mm_castpd_ps(_mm_unpackhi_pd(_mm_castps_pd(m[0]), _mm_castps_pd(a.m[0]))),
+			_mm_castpd_ps(_mm_unpackhi_pd(_mm_castps_pd(m[1]), _mm_castps_pd(a.m[1])))
+			);
+	}
+
+	// TODO
+
+	__forceinline GSVector8 l2h() const
+	{
+		return GSVector8(_mm_movelh_ps(m[0], m[0]), _mm_movelh_ps(m[1], m[1]));
+	}
+
+	__forceinline GSVector8 h2l() const
+	{
+		return GSVector8(_mm_movehl_ps(m[0], m[0]), _mm_movehl_ps(m[1], m[1]));
+	}
+
+	__forceinline GSVector8 andnot(const GSVector8& v) const
+	{
+		return GSVector8(_mm_andnot_ps(v.m[0], m[0]), _mm_andnot_ps(v.m[1], m[1]));
+	}
+
+	__forceinline int mask() const
+	{
+		return _mm_movemask_ps(m[0]) | (_mm_movemask_ps(m[1]) << 4);
+	}
+
+	__forceinline bool alltrue() const
+	{
+		return mask() == 0xff;
+	}
+
+	__forceinline bool allfalse() const
+	{
+		#if _M_SSE >= 0x401
+
+		return (_mm_testz_ps(m[0], m[0]) & _mm_testz_ps(m[1], m[1])) != 0;
+
+		#else
+
+		return mask() == 0;
+
+		#endif
+	}
+
+	template<int i> __forceinline GSVector4 extract() const
+	{
+		return GSVector4(m[i]);
+	}
+
+	template<int i> __forceinline GSVector8 insert(__m128 m) const
+	{
+		return GSVector8(i == 0 ? m : this->m[0], i == 1 ? m : this->m[1]);
+	}
+
+	__forceinline static GSVector8 zero()
+	{
+		return GSVector8(_mm_setzero_ps(), _mm_setzero_ps());
+	}
+
+	__forceinline static void zeroupper()
+	{
+		// N/A
+	}
+
+	__forceinline static void zeroall()
+	{
+		// N/A
+	}
+
+	// TODO: load low, ss
+
+	template<bool aligned> __forceinline static GSVector8 load(const void* p)
+	{
+		return GSVector8(
+			aligned ? _mm_load_ps((const float*)p + 0) : _mm_loadu_ps((const float*)p + 0),
+			aligned ? _mm_load_ps((const float*)p + 4) : _mm_loadu_ps((const float*)p + 4),
+			);
+	}
+
+	// TODO: store low, ss
+
+	template<bool aligned> __forceinline static void store(void* p, const GSVector8& v)
+	{
+		if(aligned)
+		{
+			_mm_store_ps((float*)p + 0, v.m[0]);
+			_mm_store_ps((float*)p + 4, v.m[1]);
+		}
+		else
+		{
+			_mm_storeu_ps((float*)p + 0, v.m[0]);
+			_mm_storeu_ps((float*)p + 4, v.m[1]);
+		}
+	}
+
+	// TODO
+
+	__forceinline void operator += (const GSVector8& v)
+	{
+		m[0] = _mm_add_ps(m[0], v.m[0]);
+		m[1] = _mm_add_ps(m[1], v.m[1]);
+	}
+
+	__forceinline void operator -= (const GSVector8& v)
+	{
+		m[0] = _mm_sub_ps(m[0], v.m[0]);
+		m[1] = _mm_sub_ps(m[1], v.m[1]);
+	}
+
+	__forceinline void operator *= (const GSVector8& v)
+	{
+		m[0] = _mm_mul_ps(m[0], v.m[0]);
+		m[1] = _mm_mul_ps(m[1], v.m[1]);
+	}
+
+	__forceinline void operator /= (const GSVector8& v)
+	{
+		m[0] = _mm_div_ps(m[0], v.m[0]);
+		m[1] = _mm_div_ps(m[1], v.m[1]);
+	}
+
+	__forceinline void operator &= (const GSVector8& v)
+	{
+		m[0] = _mm_and_ps(m[0], v.m[0]);
+		m[1] = _mm_and_ps(m[1], v.m[1]);
+	}
+
+	__forceinline void operator |= (const GSVector8& v)
+	{
+		m[0] = _mm_or_ps(m[0], v.m[0]);
+		m[1] = _mm_or_ps(m[1], v.m[1]);
+	}
+
+	__forceinline void operator ^= (const GSVector8& v)
+	{
+		m[0] = _mm_xor_ps(m[0], v.m[0]);
+		m[1] = _mm_xor_ps(m[1], v.m[1]);
+	}
+
+	__forceinline friend GSVector8 operator + (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_add_ps(v1.m[0], v2.m[0]), _mm_add_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator - (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_sub_ps(v1.m[0], v2.m[0]), _mm_sub_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator * (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_mul_ps(v1.m[0], v2.m[0]), _mm_mul_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator / (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_div_ps(v1.m[0], v2.m[0]), _mm_div_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator & (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_and_ps(v1.m[0], v2.m[0]), _mm_and_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator | (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_or_ps(v1.m[0], v2.m[0]), _mm_or_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator ^ (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_xor_ps(v1.m[0], v2.m[0]), _mm_xor_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator == (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_cmpeq_ps(v1.m[0], v2.m[0]), _mm_cmpeq_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator != (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_cmpneq_ps(v1.m[0], v2.m[0]), _mm_cmpeq_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator > (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_cmpgt_ps(v1.m[0], v2.m[0]), _mm_cmpgt_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator < (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_cmplt_ps(v1.m[0], v2.m[0]), _mm_cmplt_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator >= (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_cmpge_ps(v1.m[0], v2.m[0]), _mm_cmpge_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline friend GSVector8 operator <= (const GSVector8& v1, const GSVector8& v2)
+	{
+		return GSVector8(_mm_cmple_ps(v1.m[0], v2.m[0]), _mm_cmple_ps(v1.m[1], v2.m[1]));
+	}
+
+	__forceinline static __m128 VECTOR8_SELECT(const GSVector8& v1, const GSVector8& v2, int n)
+	{
+		switch(n)
+		{
+		case 0: return v1.m[0];
+		case 1: return v1.m[1];
+		case 2: return v2.m[0];
+		case 3: return v2.m[1];
+		}
+		
+		return _mm_setzero_ps();
+	}
+
+	#define VECTOR8_PERMUTE_2(xs, xn, ys, yn) \
+		__forceinline GSVector8 xs##ys() const {return GSVector8(VECTOR8_SELECT(*this, *this, xn), VECTOR8_SELECT(*this, *this, yn));} \
+		__forceinline GSVector8 xs##ys(const GSVector8& v) const {return GSVector8(VECTOR8_SELECT(*this, v, xn), VECTOR8_SELECT(*this, v, yn));} \
+
+	#define VECTOR8_SHUFFLE_4(xs, xn, ys, yn, zs, zn, ws, wn) \
+		__forceinline GSVector8 xs##ys##zs##ws() const {return GSVector8(_mm_shuffle_ps(m[0], m[0], _MM_SHUFFLE(wn, zn, yn, xn)), _mm_shuffle_ps(m[1], m[1], _MM_SHUFFLE(wn, zn, yn, xn)));} \
+		__forceinline GSVector8 xs##ys##zs##ws(const GSVector8& v) const {return GSVector8(_mm_shuffle_ps(m[0], v.m[0], _MM_SHUFFLE(wn, zn, yn, xn)), _mm_shuffle_ps(m[1], v.m[1], _MM_SHUFFLE(wn, zn, yn, xn)));} \
+
+	#endif
+
 	#define VECTOR8_PERMUTE_1(xs, xn) \
 		VECTOR8_PERMUTE_2(xs, xn, x, 0) \
 		VECTOR8_PERMUTE_2(xs, xn, y, 1) \
@@ -3422,10 +3964,6 @@ public:
 	VECTOR8_PERMUTE_1(z, 2)
 	VECTOR8_PERMUTE_1(w, 3)
 	VECTOR8_PERMUTE_1(_, 8)
-
-	#define VECTOR8_SHUFFLE_4(xs, xn, ys, yn, zs, zn, ws, wn) \
-		__forceinline GSVector8 xs##ys##zs##ws() const {return GSVector8(_mm256_permute_ps(m, _MM_SHUFFLE(wn, zn, yn, xn)));} \
-		__forceinline GSVector8 xs##ys##zs##ws(const GSVector8& v) const {return GSVector8(_mm256_shuffle_ps(m, v.m, _MM_SHUFFLE(wn, zn, yn, xn)));} \
 
 	#define VECTOR8_SHUFFLE_3(xs, xn, ys, yn, zs, zn) \
 		VECTOR8_SHUFFLE_4(xs, xn, ys, yn, zs, zn, x, 0) \
@@ -3440,8 +3978,6 @@ public:
 		VECTOR8_SHUFFLE_3(xs, xn, ys, yn, w, 3) \
 
 	#define VECTOR8_SHUFFLE_1(xs, xn) \
-		__forceinline GSVector8 xs##4() const {return GSVector8(_mm256_permute_ps(m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
-		__forceinline GSVector8 xs##4(const GSVector8& v) const {return GSVector8(_mm256_shuffle_ps(m, v.m, _MM_SHUFFLE(xn, xn, xn, xn)));} \
 		VECTOR8_SHUFFLE_2(xs, xn, x, 0) \
 		VECTOR8_SHUFFLE_2(xs, xn, y, 1) \
 		VECTOR8_SHUFFLE_2(xs, xn, z, 2) \
@@ -3452,6 +3988,8 @@ public:
 	VECTOR8_SHUFFLE_1(z, 2)
 	VECTOR8_SHUFFLE_1(w, 3)
 };
+
+#if _M_SSE >= 0x500
 
 __forceinline GSVector8i::GSVector8i(const GSVector8& v)
 {
@@ -3471,6 +4009,40 @@ __forceinline GSVector8i GSVector8i::cast(const GSVector8& v)
 __forceinline GSVector8 GSVector8::cast(const GSVector8i& v)
 {
 	return GSVector8(_mm256_castsi256_ps(v.m));
+}
+
+#else
+
+__forceinline GSVector8i::GSVector8i(const GSVector8& v)
+{
+	m[0] = _mm_cvttps_epi32(v.m[0]);
+	m[1] = _mm_cvttps_epi32(v.m[1]);
+}
+
+__forceinline GSVector8::GSVector8(const GSVector8i& v)
+{
+	m[0] = _mm_cvtepi32_ps(v.m[0]);
+	m[1] = _mm_cvtepi32_ps(v.m[1]);
+}
+
+__forceinline GSVector8i GSVector8i::cast(const GSVector8& v)
+{
+	GSVector8i v2;
+	
+	v2.m[0] = _mm_castps_si128(v.m[0]);
+	v2.m[1] = _mm_castps_si128(v.m[1]);
+
+	return v2;
+}
+
+__forceinline GSVector8 GSVector8::cast(const GSVector8i& v)
+{
+	GSVector8 v2;
+	
+	v2.m[0] = _mm_castsi128_ps(v.m[0]);
+	v2.m[1] = _mm_castsi128_ps(v.m[1]);
+
+	return v2;
 }
 
 #endif

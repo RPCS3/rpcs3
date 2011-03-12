@@ -43,6 +43,7 @@ protected:
 	int m_filter;
 	bool m_vsync;
 	bool m_aa1;
+	bool m_mipmap;
 	bool m_framelimit;
 
 	virtual GSTexture* GetOutput(int i) = 0;
@@ -51,10 +52,9 @@ protected:
 
 	// following functions need m_vt to be initialized
 
-	void GetTextureMinMax(GSVector4i& r, bool linear);
+	void GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFRegCLAMP& CLAMP, bool linear);
 	void GetAlphaMinMax();
 	bool TryAlphaTest(uint32& fm, uint32& zm);
-	bool IsLinear();
 	bool IsOpaque();
 
 public:

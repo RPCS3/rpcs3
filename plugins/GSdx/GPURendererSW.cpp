@@ -174,10 +174,10 @@ void GPURendererSW::VertexKick()
 	int x = (int)(m_v.XY.X + m_env.DROFF.X) << m_scale.x;
 	int y = (int)(m_v.XY.Y + m_env.DROFF.Y) << m_scale.y;
 
-	int s = m_v.UV.X;
-	int t = m_v.UV.Y;
+	int u = m_v.UV.X;
+	int v = m_v.UV.Y;
 
-	GSVector4 pt(x, y, s, t);
+	GSVector4 pt(x, y, u, v);
 
 	dst.p = pt.xyxy(GSVector4::zero());
 	dst.t = (pt.zwzw(GSVector4::zero()) + GSVector4(0.125f)) * 256.0f;

@@ -566,7 +566,7 @@ protected:
 
 			GSVector4i r;
 
-			GetTextureMinMax(r, IsLinear());
+			GetTextureMinMax(r, context->TEX0, context->CLAMP, m_vt.IsLinear());
 
 			tex = m_tc->LookupSource(context->TEX0, env.TEXA, r);
 

@@ -128,9 +128,8 @@ void GPUDrawScanlineCodeGenerator::Init()
 	add(edi, edx);
 	lea(edi, ptr[edi * 2 + (size_t)m_local.gd->vm]);
 
-	// int steps = right - left - 8;
+	// int steps = pixels - 8;
 
-	sub(ecx, edx);
 	sub(ecx, 8);
 
 	if(m_sel.dtd)

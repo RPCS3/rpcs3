@@ -292,7 +292,7 @@ void GSTextureCache::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rec
 
 	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
-	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+	GSVector4i r = rect.ralign<Align_Outside>(bs);
 
 	if(!target)
 	{
@@ -881,7 +881,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 	int tw = std::max<int>(1 << m_TEX0.TW, bs.x);
 	int th = std::max<int>(1 << m_TEX0.TH, bs.y);
 
-	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+	GSVector4i r = rect.ralign<Align_Outside>(bs);
 
 	if(r.eq(GSVector4i(0, 0, tw, th)))
 	{

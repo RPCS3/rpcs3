@@ -66,11 +66,11 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 
 	if(t == NULL)
 	{
-		t = new GSTexture(m_state);
+		const GSOffset* o = m_state->m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
+
+		t = new GSTexture(m_state, o);
 
 		m_textures.insert(t);
-
-		const GSOffset* o = m_state->m_context->offset.tex;
 
 		GSVector2i bs = (TEX0.TBP0 & 31) == 0 ? psm.pgs : psm.bs;
 
@@ -132,7 +132,7 @@ void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& r
 
 	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
-	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+	GSVector4i r = rect.ralign<Align_Outside>(bs);
 
 	for(int y = r.top; y < r.bottom; y += bs.y)
 	{
@@ -209,8 +209,9 @@ void GSTextureCacheSW::IncAge()
 
 //
 
-GSTextureCacheSW::GSTexture::GSTexture(GSState* state)
+GSTextureCacheSW::GSTexture::GSTexture(GSState* state, const GSOffset* offset)
 	: m_state(state)
+	, m_offset(offset)
 	, m_buff(NULL)
 	, m_tw(0)
 	, m_age(0)
@@ -241,10 +242,25 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 
 	GSVector2i bs = psm.bs;
 
+	int shift = psm.pal == 0 ? 2 : 0;
+
 	int tw = std::max<int>(1 << TEX0.TW, bs.x);
 	int th = std::max<int>(1 << TEX0.TH, bs.y);
 
-	GSVector4i r = rect.ralign<GSVector4i::Outside>(bs);
+	GSVector4i r = rect;
+
+	bool repeating = m_TEX0.IsRepeating();
+
+	if(m_TEX0.TBW == 1) // repeating)
+	{
+		// FIXME: 
+		// - marking a block prevents fetching it again to a different part of the texture
+		// - only a real issue for TBW = 1 mipmap levels, where the repeating part is below and often exploited
+
+		r = GSVector4i(0, 0, tw, th);
+	}
+
+	r = r.ralign<Align_Outside>(bs);
 
 	if(r.eq(GSVector4i(0, 0, tw, th)))
 	{
@@ -260,20 +276,20 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 			return false;
 		}
 
-		m_tw = std::max<int>(TEX0.TW, psm.pal > 0 ? 5 : 3); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
+#ifdef DEBUG
+		for(uint32 i = 0, j = tw * th * sizeof(uint8); i < j; i++) ((uint8*)m_buff)[i] = 0xff;
+#endif
+
+		m_tw = std::max<int>(TEX0.TW, 5 - shift); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
 	}
 
 	GSLocalMemory& mem = m_state->m_mem;
 
-	const GSOffset* o = m_state->m_context->offset.tex;
-
-	bool repeating = m_TEX0.IsRepeating();
+	const GSOffset* RESTRICT o = m_offset;
 
 	uint32 blocks = 0;
 
-	GSLocalMemory::readTextureBlock rtxb = psm.rtxbP;
-
-	int shift = psm.pal == 0 ? 2 : 0;
+	GSLocalMemory::readTextureBlock rtxbP = psm.rtxbP;
 
 	uint32 pitch = (1 << m_tw) << shift;
 
@@ -299,7 +315,7 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 						m_valid[row] |= col;
 					}
 
-					(mem.*rtxb)(block, &dst[x << shift], pitch, TEXA);
+					(mem.*rtxbP)(block, &dst[x << shift], pitch, TEXA);
 
 					blocks++;
 				}
