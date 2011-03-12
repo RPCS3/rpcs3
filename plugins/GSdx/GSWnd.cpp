@@ -321,6 +321,18 @@ GSWnd::~GSWnd()
 	if(m_window != NULL)
 	{
 		SDL_DestroyWindow(m_window);
+		m_window = NULL;
+	}
+}
+
+// Actually the destructor is not called when there is a GSclose or GSshutdown
+// The window still need to be closed
+void GSWnd::Detach() 
+{
+	if(m_window != NULL)
+	{
+		SDL_DestroyWindow(m_window);
+		m_window = NULL;
 	}
 }
 

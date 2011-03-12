@@ -101,7 +101,7 @@ public:
 
 	bool Create(const string& title, int w, int h);
 	bool Attach(void* handle, bool managed = true) {return false;}
-	void Detach() {}
+	void Detach();
 	bool IsManaged() const {return true;}
 
 	Display* GetDisplay();
