@@ -36,19 +36,15 @@ static void mVUupdateFlags(mV, const xmm& reg, const xmm& regT1in = xEmptyReg, c
 	const xmm& regT1 = regT1b ? mVU->regAlloc->allocReg() : regT1in;
 
 	xmm regT2 = reg;
-	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW)))
-	{
+	if ((mFLAG.doFlag && !(_XYZW_SS && modXYZW))) {
 		regT2 = regT2in;
-		if (regT2.IsEmpty())
-		{
+		if (regT2.IsEmpty()) {
 			regT2 = mVU->regAlloc->allocReg();
 			regT2b = true;
 		}
-			
 		xPSHUF.D(regT2, reg, 0x1B); // Flip wzyx to xyzw
 	}
 	else regT2 = reg;
-
 
 	if (sFLAG.doFlag) {
 		mVUallocSFLAGa(sReg,   sFLAG.lastWrite);		// Get Prev Status Flag

@@ -162,10 +162,10 @@ struct microProgManager {
 	microRegInfo		lpState;			// Pipeline state from where program left off (useful for continuing execution)
 };
 
-static const uint mVUdispCacheSize    = __pagesize;	// Dispatcher Cache Size (in bytes)
-static const uint mVUcacheSafeZone    = 3;			// Safe-Zone for program recompilation (in megabytes)
-static const uint mVUcacheInitReserve = 64;			// Initial Reserve Cache Size (in megabytes)
-static const uint mVUcacheMaxReserve  = 128;		// Max Reserve Cache Size (in megabytes)
+static const uint mVUdispCacheSize	= __pagesize; // Dispatcher Cache Size (in bytes)
+static const uint mVUcacheSafeZone	= 3;		  // Safe-Zone for program recompilation (in megabytes)
+static const uint mVU0cacheReserve	= 64;		  // mVU0 Reserve Cache Size (in megabytes)
+static const uint mVU1cacheReserve	= 64;		  // mVU1 Reserve Cache Size (in megabytes)
 
 struct microVU {
 
@@ -241,20 +241,6 @@ struct microVU {
 		pxAssumeDev((prog.IRinfo.curPC & 1) == 0, "microVU recompiler: Upper instructions cannot have valid branch addresses.");
 		return (((prog.IRinfo.curPC + 4)  + (Imm11() * 2)) & progMemMask) * 4;
 	}
-	
-	microVU()
-	{
-		cacheSize		= mVUcacheInitReserve;
-		cache			= NULL;
-		dispCache		= NULL;
-		startFunct		= NULL;
-		exitFunct		= NULL;
-	}
-
-	void reserveCache();
-	void init(uint vuIndex);
-	void reset();
-	void close();
 };
 
 // microVU rec structs

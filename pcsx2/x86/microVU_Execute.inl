@@ -191,7 +191,7 @@ _mVUt void mVUcleanUp() {
 
 	if ((xGetPtr() < mVU->prog.x86start) || (xGetPtr() >= mVU->prog.x86end)) {
 		Console.WriteLn(vuIndex ? Color_Orange : Color_Magenta, "microVU%d: Program cache limit reached.", mVU->index);
-		mVU->reset();
+		mVUreset(*mVU, false);
 	}
 	
 	mVU->cycles = mVU->totalCycles - mVU->cycles;
