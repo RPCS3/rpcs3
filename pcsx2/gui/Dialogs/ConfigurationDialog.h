@@ -212,8 +212,9 @@ namespace Dialogs
 		uint		m_slot;
 		wxDirName	m_mcdpath;
 		wxString	m_mcdfile;
+		wxTextCtrl*	m_text_filenameInput;
 
-		wxFilePickerCtrl*	m_filepicker;
+		//wxFilePickerCtrl*	m_filepicker;
 		pxRadioPanel*		m_radio_CardSize;
 
 	#ifdef __WXMSW__
@@ -223,9 +224,10 @@ namespace Dialogs
 	public:
 		virtual ~CreateMemoryCardDialog()  throw() {}
 		//CreateMemoryCardDialog( wxWindow* parent, uint port, uint slot, const wxString& filepath=wxEmptyString );
-		CreateMemoryCardDialog( wxWindow* parent, uint slot, const wxDirName& mcdpath, const wxString& mcdfile=wxEmptyString );
-
-		wxDirName GetPathToMcds() const;
+		CreateMemoryCardDialog( wxWindow* parent, uint slot, const wxDirName& mcdpath, const wxString& suggested_mcdfileName);
+	
+		wxString result_createdMcdFilename;
+		//wxDirName GetPathToMcds() const;
 
 	protected:
 		void CreateControls();

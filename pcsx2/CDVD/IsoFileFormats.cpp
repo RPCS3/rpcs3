@@ -129,6 +129,7 @@ bool isoFile::Detect( bool readType )
 	m_blockofs	= 0;
 	m_type		= ISOTYPE_AUDIO;
 
+	//BUG: This also detects a memory-card-file as a valid Audio-CD ISO... -avih
 	return true;
 }
 

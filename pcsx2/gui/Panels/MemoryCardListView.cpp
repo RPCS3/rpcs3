@@ -73,11 +73,11 @@ enum McdColumnType_Simple
 {
 	McdColS_PortSlot,	// port and slot of the card
 	McdColS_Status,		// either Enabled/Disabled, or Missing (no card).
+	McdColS_Filename,
 	McdColS_Size,
 	McdColS_Formatted,
 	McdColS_DateModified,
 	McdColS_DateCreated,
-	McdColS_Filename,
 	McdColS_Count
 };
 
@@ -102,13 +102,13 @@ const ListViewColumnInfo& MemoryCardListView_Simple::GetDefaultColumnInfo( uint 
 {
 	static const ListViewColumnInfo columns[] =
 	{
-		{ _("PS2 Location")	, 140 , wxLIST_FORMAT_CENTER	},
-		{ _("Status")		, 96  , wxLIST_FORMAT_CENTER	},
-		{ _("Size")			, 72  , wxLIST_FORMAT_LEFT		},
-		{ _("Formatted")	, 96  , wxLIST_FORMAT_CENTER	},
-		{ _("Modified")		, 120 , wxLIST_FORMAT_LEFT		},
-		{ _("Created")		, 120 , wxLIST_FORMAT_LEFT		},
-		{ _("Filename")		, 256 , wxLIST_FORMAT_LEFT		},
+		{ _("PS2 Port")		, 140 , wxLIST_FORMAT_LEFT	},
+		{ _("Port status")	, 96  , wxLIST_FORMAT_LEFT	},
+		{ _("File name")	, 256 , wxLIST_FORMAT_LEFT	},
+		{ _("File size")	, 72  , wxLIST_FORMAT_LEFT	},
+		{ _("Formatted")	, 96  , wxLIST_FORMAT_LEFT	},
+		{ _("Last Modified"), 120 , wxLIST_FORMAT_LEFT	},
+		{ _("Created on")	, 120 , wxLIST_FORMAT_LEFT	},
 	};
 
 	pxAssumeDev( idx < ArraySize(columns), "ListView column index is out of bounds." );
@@ -128,29 +128,38 @@ wxString MemoryCardListView_Simple::OnGetItemText(long item, long column) const
 {
 	if( !m_CardProvider ) return _parent::OnGetItemText(item, column);
 	const McdSlotItem& it( m_CardProvider->GetCardForViewIndex(item) );
+	wxString prefix=L" ";
 
 	switch( column )
 	{
-//		case McdColS_PortSlot:		return pxsFmt( L"%u", item+1);
 		case McdColS_PortSlot:
 			if (!it.IsMultitapSlot())
-				return pxsFmt(L"Port-%u or Multitap-%u-Port-1", it.GetMtapPort()+1, it.GetMtapPort()+1);
-			return pxsFmt(L"              Multitap-%u-Port-%u", it.GetMtapPort()+1, it.GetMtapSlot()+1);
+				return pxsFmt(wxString(L" ") + _("Port-%u / Multitap-%u--Port-1"), it.GetMtapPort()+1, it.GetMtapPort()+1);
+			return pxsFmt(wxString(L"              ") + _("Multitap-%u--Port-%u"), it.GetMtapPort()+1, it.GetMtapSlot()+1);
 
-		case McdColS_Status:		return it.IsPresent ? ( it.IsEnabled ? _("Enabled") : _("Disabled")) : _("Missing");
-		case McdColS_Size:			return it.IsPresent ? pxsFmt( L"%u MB", it.SizeInMB ) : (wxString)_("N/A");
-		case McdColS_Formatted:		return it.IsFormatted ? _("Yes") : _("No");
-		case McdColS_DateModified:	return it.IsPresent ? it.DateModified.FormatDate()	: (wxString)_("N/A");
-		case McdColS_DateCreated:	return it.IsPresent ? it.DateCreated.FormatDate()	: (wxString)_("N/A");
+		case McdColS_Status:
+		{
+			wxString res = prefix + (it.IsEnabled ? _("Enabled") : _("Disabled"));
+			if( !it.IsPresent )
+				res = prefix + _("Empty");
+			return prefix + res;
+		}
+		
+		case McdColS_Size:			return prefix + ( !it.IsPresent ? L"" : pxsFmt( L"%u MB", it.SizeInMB ) );
+		case McdColS_Formatted:		return prefix + ( !it.IsPresent ? L"" : ( it.IsFormatted ? _("Yes") : _("No")) );
+		case McdColS_DateModified:	return prefix + ( !it.IsPresent ? L"" : it.DateModified.FormatDate() );
+		case McdColS_DateCreated:	return prefix + ( !it.IsPresent ? L"" : it.DateCreated.FormatDate() );
 
 		case McdColS_Filename:
 		{
+			if (!it.IsPresent) return L"";
+
 			wxDirName filepath( it.Filename.GetPath() );
 			
 			if (filepath.SameAs(g_Conf->Folders.MemoryCards))
-				return it.Filename.GetFullName();
+				return prefix + it.Filename.GetFullName();
 			else
-				return it.Filename.GetFullPath();
+				return prefix + it.Filename.GetFullPath();
 		}
 	}
 
@@ -185,11 +194,11 @@ wxListItemAttr* MemoryCardListView_Simple::OnGetItemAttr(long item) const
 
 	m_ItemAttr = wxListItemAttr();		// Wipe it clean!
 
-	if( !it.IsPresent )
+	if( !it.IsPresent || !it.IsEnabled)
 		m_ItemAttr.SetTextColour( *wxLIGHT_GREY );
-
+/*
 	if( m_TargetedItem == item )
 		m_ItemAttr.SetBackgroundColour( wxColour(L"Wheat") );
-
+*/
 	return &m_ItemAttr;
 }

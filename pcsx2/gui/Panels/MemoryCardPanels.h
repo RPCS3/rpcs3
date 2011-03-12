@@ -29,36 +29,43 @@ struct ListViewColumnInfo
 
 // --------------------------------------------------------------------------------------
 //  McdListItem / IMcdList
+//
+//  These are the items at the list-view.
+//  Each item holds:
+//     - An internal slot association (or -1 if it isn't associated with an internal slot)
+//     - Properties of the internal slot (when associated with one)
+//     - Properties of the file associated with this list item (when associated with one)
 // --------------------------------------------------------------------------------------
 struct McdSlotItem
 {
-	bool		IsPresent;
-	bool		IsEnabled;
+	int			Slot;			//0-7: internal slot. -1: unrelated to an internal slot (the rest of the files at the folder).
+	bool		IsPresent;		//Whether or not a file is associated with this item (true/false when 0<=Slot<=7. Always true when Slot==-1)
+	
+	//Only meaningful when IsPresent==true (a file exists for this item):
+	wxFileName	Filename;		// full pathname
 	bool		IsFormatted;
-
 	uint		SizeInMB;		// size, in megabytes!
 	wxDateTime	DateCreated;
 	wxDateTime	DateModified;
 
-	int			Slot;
-
-	wxFileName	Filename;		// full pathname (optional)
-
-	McdSlotItem()
-	{
-		//Port = -1;
-		Slot		= -1;
-		
-		IsPresent = false;
-		IsEnabled = false;
-	}
-	
+	//Only meaningful when 0<=Slot<=7 (associated with an internal slot):
+	//  Properties of an internal slot, and translation from internal slot index to ps2 physical port (0-based-indexes).
+	bool IsEnabled;					//This slot is enabled/disabled
 	bool IsMultitapSlot() const;
 	uint GetMtapPort() const;
 	uint GetMtapSlot() const;
 
 	bool operator==( const McdSlotItem& right ) const;
 	bool operator!=( const McdSlotItem& right ) const;
+
+	McdSlotItem()
+	{
+		Slot		= -1;
+		
+		IsPresent = false;
+		IsEnabled = false;
+	}
+
 };
 
 typedef std::vector<McdSlotItem> McdList;
@@ -84,7 +91,7 @@ protected:
 	IMcdList*		m_CardProvider;
 
 	// specifies the target of a drag&drop operation
-	int					m_TargetedItem;
+	int				m_TargetedItem;
 
 public:
 	virtual ~BaseMcdListView() throw() { }
@@ -183,7 +190,9 @@ namespace Panels
 		typedef BaseMcdListPanel _parent;
 
 	protected:
-		McdSlotItem		m_Cards[8]; 
+		McdSlotItem		m_Cards[8];
+
+		wxButton*		m_button_Rename;
 		
 		// Doubles as Create and Delete buttons
 		wxButton*		m_button_Create;
@@ -206,7 +215,8 @@ namespace Panels
 	protected:
 		void OnCreateCard(wxCommandEvent& evt);
 		void OnMountCard(wxCommandEvent& evt);
-		void OnRelocateCard(wxCommandEvent& evt);
+//		void OnRelocateCard(wxCommandEvent& evt);
+		void OnRenameFile(wxCommandEvent& evt);
 		
 		void OnListDrag(wxListEvent& evt);
 		void OnListSelectionChanged(wxListEvent& evt);

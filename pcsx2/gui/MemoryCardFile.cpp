@@ -15,6 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "Utilities/SafeArray.inl"
+#include <wx/file.h>
 
 #include "MemoryCardFile.h"
 
@@ -75,9 +76,9 @@ protected:
 	wxString GetDisabledMessage( uint slot ) const
 	{
 		return pxE( "!Notice:Mcd:HasBeenDisabled", wxsFormat(
-			L"The memory card in slot %d has been automatically disabled.  You can correct the problem\n"
-			L"and re-enable the memory card at any time using Config:Memory cards from the main menu.",
-			slot
+			L"The PS2-slot %d has been automatically disabled.  You can correct the problem\n"
+			L"and re-enable it at any time using Config:Memory cards from the main menu.",
+			slot//TODO: translate internal slot index to human-readable slot description
 		) );
 	}
 };
@@ -272,7 +273,7 @@ s32 FileMemoryCard::Read( uint slot, u8 *dest, u32 adr, int size )
 	wxFFile& mcfp( m_file[slot] );
 	if( !mcfp.IsOpened() )
 	{
-		DevCon.Error( "(FileMcd) Ignoring attempted read from disabled card." );
+		DevCon.Error( "(FileMcd) Ignoring attempted read from disabled slot." );
 		memset(dest, 0, size);
 		return 1;
 	}
@@ -286,7 +287,7 @@ s32 FileMemoryCard::Save( uint slot, const u8 *src, u32 adr, int size )
 
 	if( !mcfp.IsOpened() )
 	{
-		DevCon.Error( "(FileMcd) Ignoring attempted save/write to disabled card." );
+		DevCon.Error( "(FileMcd) Ignoring attempted save/write to disabled slot." );
 		return 1;
 	}
 
@@ -311,7 +312,7 @@ s32 FileMemoryCard::EraseBlock( uint slot, u32 adr )
 
 	if( !mcfp.IsOpened() )
 	{
-		DevCon.Error( "MemoryCard: Ignoring erase for disabled card." );
+		DevCon.Error( "MemoryCard: Ignoring erase for disabled slot." );
 		return 1;
 	}
 
@@ -509,3 +510,42 @@ struct superblock
 	u8 card_type; 				// 0x150
 	u8 card_flags; 				// 0x151
 };
+
+
+//Tests if a string is a valid name for a new file within a specified directory.
+//returns true if:
+//     - the file name has a minimum length of minNumCharacters chars (default is 5 chars: at least 1 char + '.' + 3-chars extension)
+// and - the file name is within the basepath directory (doesn't contain .. , / , \ , etc)
+// and - file name doesn't already exist
+// and - can be created on current system (it is actually created and deleted for this test).
+bool isValidNewFilename( wxString filenameStringToTest, wxDirName atBasePath, wxString& out_errorMessage, uint minNumCharacters)
+{
+	if ( filenameStringToTest.Length()<1 || filenameStringToTest.Length()<minNumCharacters )
+	{
+		out_errorMessage = _("File name empty or too short");
+		return false;
+	}
+
+	if( (atBasePath + wxFileName(filenameStringToTest)).GetFullPath() != (atBasePath + wxFileName(filenameStringToTest).GetFullName()).GetFullPath() ){
+		out_errorMessage = _("File name outside of required directory");
+		return false;
+	}
+
+	if ( wxFileExists( (atBasePath + wxFileName(filenameStringToTest)).GetFullPath() ))
+	{
+		out_errorMessage = _("File name already exists");
+		return false;
+	}
+
+	wxFile fp;
+	if( !fp.Create( (atBasePath + wxFileName(filenameStringToTest)).GetFullPath() ))
+	{
+		out_errorMessage = _("The Operating-System prevents this file from being created");
+		return false;
+	}
+	fp.Close();
+	wxRemoveFile( (atBasePath + wxFileName(filenameStringToTest)).GetFullPath() );
+
+	out_errorMessage = L"[OK - New file name is valid]";  //shouldn't be displayed on success, hence not translatable.
+	return true;
+}

@@ -48,7 +48,7 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 
 	for( uint i=0; i<2; ++i )
 	{
-		m_check_Multitap[i] = new pxCheckBox( this, pxsFmt(_("Enable Multitap on Port %u"), i+1) );
+		m_check_Multitap[i] = new pxCheckBox( this, pxsFmt(_("Use Multitap on Port %u"), i+1) );
 		m_check_Multitap[i]->SetClientData( (void*)i );
 		m_check_Multitap[i]->SetName(pxsFmt( L"CheckBox::Multitap%u", i ));
 	}
@@ -100,8 +100,10 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 
 	// [TODO] : Plan here is to add an advanced tab which gives the user the ability
 	// to configure the names of each memory card slot.
-
-	*this	+= Heading(_("Drag items over other items in the list to swap or copy memory cards."))	| StdExpand();
+	wxString title=_("Drag card files in the list to swap or copy between ports.");
+	title+=_("\n\nNote: 'Rename' and 'Delete' require to apply pending changes first.");
+	title+=_("\nAlso, 'Create', 'Rename' and 'Delete' will NOT be reverted when clicking 'Cancel'.");
+	*this	+= Heading(title)	| StdExpand();
 	*this	+= StdPadding;
 
 	*this	+= m_panel_mcdlist			| StdExpand();
