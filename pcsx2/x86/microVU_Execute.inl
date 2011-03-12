@@ -1,6 +1,6 @@
 /*  PCSX2 - PS2 Emulator for PCs
  *  Copyright (C) 2002-2010  PCSX2 Dev Team
- * 
+ *
  *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
  *  of the GNU Lesser General Public License as published by the Free Software Found-
  *  ation, either version 3 of the License, or (at your option) any later version.
@@ -19,6 +19,10 @@
 // Dispatcher Functions
 //------------------------------------------------------------------
 
+#ifdef __GNUC__
+extern void mVUreset(microVU& mVU, bool resetReserve);
+#endif
+
 // Generates the code for entering recompiled blocks
 void mVUdispatcherA(mV) {
 	mVU->startFunct = x86Ptr;
@@ -28,7 +32,7 @@ void mVUdispatcherA(mV) {
 	xPUSH(ebx);
 	xPUSH(esi);
 	xPUSH(edi);
-	
+
 	// Align the stackframe (GCC only, since GCC assumes stackframe is always aligned)
 	#ifdef __GNUC__
 	xSUB(esp, 12);
@@ -50,7 +54,7 @@ void mVUdispatcherA(mV) {
 #else
 	mVUallocSFLAGd((uptr)&mVU->regs().VI[REG_STATUS_FLAG].UL, 1);
 #endif
-	
+
 	xMOVAPS (xmmT1, ptr128[&mVU->regs().VI[REG_MAC_FLAG].UL]);
 	xSHUF.PS(xmmT1, xmmT1, 0);
 	xMOVAPS (ptr128[mVU->macFlag],  xmmT1);
@@ -75,7 +79,7 @@ void mVUdispatcherB(mV) {
 
 	// Load EE's MXCSR state
 	xLDMXCSR(g_sseMXCSR);
-	
+
 	// __fastcall = The first two DWORD or smaller arguments are passed in ECX and EDX registers;
 	//              all other arguments are passed right to left.
 	if (!isVU1) { xCALL(mVUcleanUpVU0); }
@@ -106,7 +110,7 @@ void mVUdispatcherC(mV) {
 	xPUSH(ebx);
 	xPUSH(esi);
 	xPUSH(edi);
-	
+
 	// Align the stackframe (GCC only, since GCC assumes stackframe is always aligned)
 	#ifdef __GNUC__
 	xSUB(esp, 12);
@@ -143,7 +147,7 @@ void mVUdispatcherD(mV) {
 
 	// Load EE's MXCSR state
 	xLDMXCSR(g_sseMXCSR);
-	
+
 	// Unalign the stackframe:
 	#ifdef __GNUC__
 	xADD( esp, 12 );
@@ -169,7 +173,7 @@ _mVUt void* __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 	microVU* mVU = mVUx;
 	//DevCon.WriteLn("microVU%x: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
-	
+
 	mVU->cycles		 = cycles;
 	mVU->totalCycles = cycles;
 
@@ -193,7 +197,7 @@ _mVUt void mVUcleanUp() {
 		Console.WriteLn(vuIndex ? Color_Orange : Color_Magenta, "microVU%d: Program cache limit reached.", mVU->index);
 		mVUreset(*mVU, false);
 	}
-	
+
 	mVU->cycles = mVU->totalCycles - mVU->cycles;
 	mVU->regs().cycle += mVU->cycles;
 	cpuRegs.cycle += ((mVU->cycles < 3000) ? mVU->cycles : 3000) * EmuConfig.Speedhacks.VUCycleSteal;
