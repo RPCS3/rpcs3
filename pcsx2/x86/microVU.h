@@ -21,12 +21,13 @@ using namespace std;
 using namespace x86Emitter;
 
 #include <deque>
-
+#include "Common.h"
 #include "VU.h"
 #include "GS.h"
 #include "Gif.h"
 #include "iR5900.h"
 #include "R5900OpcodeTables.h"
+#include "System/RecTypes.h"
 #include "x86emitter/x86emitter.h"
 #include "microVU_Misc.h"
 #include "microVU_IR.h"
@@ -210,7 +211,7 @@ struct microVU {
 
 	VURegs& regs() const { return ::vuRegs[index]; }
 
-	VIFregisters& getVifRegs() const	{ return regs().GetVifRegs(); }
+	VIFregisters& getVifRegs()   const	{ return regs().GetVifRegs(); }
 	__fi REG_VI& getVI(uint reg) const	{ return regs().VI[reg]; }
 	__fi VECTOR& getVF(uint reg) const	{ return regs().VF[reg]; }
 
@@ -244,15 +245,16 @@ struct microVU {
 };
 
 // microVU rec structs
-extern __aligned16 microVU microVU0;
-extern __aligned16 microVU microVU1;
+__aligned16 microVU microVU0;
+__aligned16 microVU microVU1;
 
 // Debug Helper
 int mVUdebugNow = 0;
 
 // Main Functions
-static void  mVUclear(mV, u32, u32);
-static void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
+extern void  mVUclear(mV, u32, u32);
+extern void  mVUreset(microVU& mVU, bool resetReserve);
+extern void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
 _mVUt extern void* __fastcall mVUcompileJIT(u32 startPC, uptr ptr);
 
 // Prototypes for Linux
@@ -262,10 +264,9 @@ mVUop(mVUopU);
 mVUop(mVUopL);
 
 // Private Functions
-_mVUt extern void  mVUcacheProg (microProgram&  prog);
-_mVUt extern void  mVUdeleteProg(microProgram*& prog);
+extern void  mVUcacheProg (microVU& mVU, microProgram&  prog);
+extern void  mVUdeleteProg(microVU& mVU, microProgram*& prog);
 _mVUt extern void* mVUsearchProg(u32 startPC, uptr pState);
-_mVUt extern microProgram* mVUfindLeastUsedProg();
 extern void* __fastcall mVUexecuteVU0(u32 startPC, u32 cycles);
 extern void* __fastcall mVUexecuteVU1(u32 startPC, u32 cycles);
 
@@ -282,3 +283,18 @@ template<typename T>
 void sortVector(T& v) {
 	sort(v.begin(), v.end());
 }
+
+// Include all the *.inl files (microVU compiles as 1 Translation Unit)
+#include "microVU_Clamp.inl"
+#include "microVU_Misc.inl"
+#include "microVU_Log.inl"
+#include "microVU_Analyze.inl"
+#include "microVU_Alloc.inl"
+#include "microVU_Upper.inl"
+#include "microVU_Lower.inl"
+#include "microVU_Tables.inl"
+#include "microVU_Flags.inl"
+#include "microVU_Branch.inl"
+#include "microVU_Compile.inl"
+#include "microVU_Execute.inl"
+#include "microVU_Macro.inl"

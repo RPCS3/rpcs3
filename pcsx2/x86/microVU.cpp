@@ -16,64 +16,7 @@
 // Micro VU recompiler! - author: cottonvibes(@gmail.com)
 
 #include "PrecompiledHeader.h"
-#include "Common.h"
 #include "microVU.h"
-#include "System/RecTypes.h"
-
-// Include all the *.inl files (Needed because C++ sucks with templates and *.cpp files)
-#include "microVU_Clamp.inl"
-#include "microVU_Misc.inl"
-#include "microVU_Log.inl"
-#include "microVU_Analyze.inl"
-#include "microVU_Alloc.inl"
-#include "microVU_Upper.inl"
-#include "microVU_Lower.inl"
-#include "microVU_Tables.inl"
-#include "microVU_Flags.inl"
-#include "microVU_Branch.inl"
-#include "microVU_Compile.inl"
-#include "microVU_Execute.inl"
-#include "microVU_Macro.inl"
-
-//------------------------------------------------------------------
-// Micro VU - Global Variables
-//------------------------------------------------------------------
-
-__aligned16 microVU microVU0;
-__aligned16 microVU microVU1;
-
-const __aligned(32) mVU_Globals mVUglob = {
-	__four(0x7fffffff),		  // absclip
-	__four(0x80000000),		  // signbit
-	__four(0xff7fffff),		  // minvals
-	__four(0x7f7fffff),		  // maxvals
-	__four(0x3f800000),		  // ONE!
-	__four(0x3f490fdb),		  // PI4!
-	__four(0x3f7ffff5),		  // T1
-	__four(0xbeaaa61c),		  // T5
-	__four(0x3e4c40a6),		  // T2
-	__four(0xbe0e6c63),		  // T3
-	__four(0x3dc577df),		  // T4
-	__four(0xbd6501c4),		  // T6
-	__four(0x3cb31652),		  // T7
-	__four(0xbb84d7e7),		  // T8
-	__four(0xbe2aaaa4),		  // S2
-	__four(0x3c08873e),		  // S3
-	__four(0xb94fb21f),		  // S4
-	__four(0x362e9c14),		  // S5
-	__four(0x3e7fffa8),		  // E1
-	__four(0x3d0007f4),		  // E2
-	__four(0x3b29d3ff),		  // E3
-	__four(0x3933e553),		  // E4
-	__four(0x36b63510),		  // E5
-	__four(0x353961ac),		  // E6
-	__four(16.0),			  // FTOI_4
-	__four(4096.0),			  // FTOI_12
-	__four(32768.0),		  // FTOI_15
-	__four(0.0625f),		  // ITOF_4
-	__four(0.000244140625),	  // ITOF_12
-	__four(0.000030517578125) // ITOF_15
-};
 
 //------------------------------------------------------------------
 // Micro VU - Main Functions
@@ -162,11 +105,9 @@ void mVUreset(microVU& mVU, bool resetReserve) {
 			mVU.prog.prog[i] = new deque<microProgram*>();
 			continue;
 		}
-
 		deque<microProgram*>::iterator it(mVU.prog.prog[i]->begin());
 		for ( ; it != mVU.prog.prog[i]->end(); ++it) {
-			if (mVU.index)	mVUdeleteProg<1>(it[0]);
-			else			mVUdeleteProg<0>(it[0]);
+			mVUdeleteProg(mVU, it[0]);
 		}
 		mVU.prog.prog[i]->clear();
 		mVU.prog.quick[i].block = NULL;
@@ -177,8 +118,7 @@ void mVUreset(microVU& mVU, bool resetReserve) {
 // Free Allocated Resources
 void mVUclose(microVU& mVU) {
 
-	safe_delete(mVU.cache_reserve);
-
+	safe_delete  (mVU.cache_reserve);
 	SafeSysMunmap(mVU.dispCache, mVUdispCacheSize);
 
 	// Delete Programs and Block Managers
@@ -186,8 +126,7 @@ void mVUclose(microVU& mVU) {
 		if (!mVU.prog.prog[i]) continue;
 		deque<microProgram*>::iterator it(mVU.prog.prog[i]->begin());
 		for ( ; it != mVU.prog.prog[i]->end(); ++it) {
-			if (mVU.index)	mVUdeleteProg<1>(it[0]);
-			else			mVUdeleteProg<0>(it[0]);
+			mVUdeleteProg(mVU, it[0]);
 		}
 		safe_delete(mVU.prog.prog[i]);
 	}
@@ -210,14 +149,13 @@ static __fi void mVUclear(mV, u32 addr, u32 size) {
 //------------------------------------------------------------------
 
 // Finds and Ages/Kills Programs if they haven't been used in a while.
-static __fi void mVUvsyncUpdate(mV) {
+static __ri void mVUvsyncUpdate(mV) {
 	//mVU->prog.curFrame++;
 }
 
 // Deletes a program
-_mVUt __fi void mVUdeleteProg(microProgram*& prog) {
-	microVU* mVU = mVUx;
-	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
+__ri void mVUdeleteProg(microVU& mVU, microProgram*& prog) {
+	for (u32 i = 0; i < (mVU.progSize / 2); i++) {
 		safe_delete(prog->block[i]);
 	}
 	safe_delete(prog->ranges);
@@ -225,38 +163,35 @@ _mVUt __fi void mVUdeleteProg(microProgram*& prog) {
 }
 
 // Creates a new Micro Program
-_mVUt __fi microProgram* mVUcreateProg(int startPC) {
-	microVU* mVU = mVUx;
+__ri microProgram* mVUcreateProg(microVU& mVU, int startPC) {
 	microProgram* prog = (microProgram*)_aligned_malloc(sizeof(microProgram), 64);
 	memzero_ptr<sizeof(microProgram)>(prog);
-	prog->idx     = mVU->prog.total++;
+	prog->idx     = mVU.prog.total++;
 	prog->ranges  = new deque<microRange>();
 	prog->startPC = startPC;
-	mVUcacheProg<vuIndex>(*prog); // Cache Micro Program
-	double cacheSize = (double)((u32)mVU->prog.x86end - (u32)mVU->prog.x86start);
-	double cacheUsed =((double)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / (double)_1mb;
-	double cachePerc =((double)((u32)mVU->prog.x86ptr - (u32)mVU->prog.x86start)) / cacheSize * 100;
-	ConsoleColors c = vuIndex ? Color_Orange : Color_Magenta;
+	mVUcacheProg(mVU, *prog); // Cache Micro Program
+	double cacheSize = (double)((u32)mVU.prog.x86end - (u32)mVU.prog.x86start);
+	double cacheUsed =((double)((u32)mVU.prog.x86ptr - (u32)mVU.prog.x86start)) / (double)_1mb;
+	double cachePerc =((double)((u32)mVU.prog.x86ptr - (u32)mVU.prog.x86start)) / cacheSize * 100;
+	ConsoleColors c = mVU.index ? Color_Orange : Color_Magenta;
 	DevCon.WriteLn(c, "microVU%d: Cached Prog = [%03d] [PC=%04x] [List=%02d] (Cache=%3.3f%%) [%3.1fmb]",
-				   vuIndex, prog->idx, startPC*8, mVU->prog.prog[startPC]->size()+1, cachePerc, cacheUsed);
+				   mVU.index, prog->idx, startPC*8, mVU.prog.prog[startPC]->size()+1, cachePerc, cacheUsed);
 	return prog;
 }
 
 // Caches Micro Program
-_mVUt __fi void mVUcacheProg(microProgram& prog) {
-	microVU* mVU = mVUx;
-	if (!vuIndex) memcpy_const(prog.data, mVU->regs().Micro, 0x1000);
-	else		  memcpy_const(prog.data, mVU->regs().Micro, 0x4000);
+__ri void mVUcacheProg(microVU& mVU, microProgram& prog) {
+	if (!mVU.index)	memcpy_const(prog.data, mVU.regs().Micro, 0x1000);
+	else			memcpy_const(prog.data, mVU.regs().Micro, 0x4000);
 	mVUdumpProg(prog);
 }
 
 // Generate Hash for partial program based on compiled ranges...
-_mVUt __fi u64 mVUrangesHash(microProgram& prog) {
-	microVU* mVU = mVUx;
+u64 mVUrangesHash(microVU& mVU, microProgram& prog) {
 	u32 hash[2] = {0, 0};
 	deque<microRange>::const_iterator it(prog.ranges->begin());
 	for ( ; it != prog.ranges->end(); ++it) {
-		if((it[0].start<0)||(it[0].end<0))  { DevCon.Error("microVU%d: Negative Range![%d][%d]", mVU->index, it[0].start, it[0].end); }
+		if((it[0].start<0)||(it[0].end<0))  { DevCon.Error("microVU%d: Negative Range![%d][%d]", mVU.index, it[0].start, it[0].end); }
 		for(int i = it[0].start/4; i < it[0].end/4; i++) {
 			hash[0] -= prog.data[i];
 			hash[1] ^= prog.data[i];
@@ -266,15 +201,14 @@ _mVUt __fi u64 mVUrangesHash(microProgram& prog) {
 }
 
 // Prints the ratio of unique programs to total programs
-_mVUt __fi void mVUprintUniqueRatio() {
-	microVU* mVU = mVUx;
+void mVUprintUniqueRatio(microVU& mVU) {
 	vector<u64> v;
 	for(u32 pc = 0; pc < mProgSize/2; pc++) {
-		microProgramList* list = mVU->prog.prog[pc];
+		microProgramList* list = mVU.prog.prog[pc];
 		if (!list) continue;
 		deque<microProgram*>::iterator it(list->begin());
 		for ( ; it != list->end(); ++it) {
-			v.push_back(mVUrangesHash<vuIndex>(*it[0]));
+			v.push_back(mVUrangesHash(mVU, *it[0]));
 		}
 	}
 	u32 total = v.size();
@@ -285,12 +219,11 @@ _mVUt __fi void mVUprintUniqueRatio() {
 }
 
 // Compare partial program by only checking compiled ranges...
-_mVUt __fi bool mVUcmpPartial(microProgram& prog) {
-	microVU* mVU = mVUx;
+__ri bool mVUcmpPartial(microVU& mVU, microProgram& prog) {
 	deque<microRange>::const_iterator it(prog.ranges->begin());
 	for ( ; it != prog.ranges->end(); ++it) {
-		if((it[0].start<0)||(it[0].end<0))  { DevCon.Error("microVU%d: Negative Range![%d][%d]", mVU->index, it[0].start, it[0].end); }
-		if (memcmp_mmx(cmpOffset(prog.data), cmpOffset(mVU->regs().Micro), ((it[0].end + 8)  -  it[0].start))) {
+		if((it[0].start<0)||(it[0].end<0))  { DevCon.Error("microVU%d: Negative Range![%d][%d]", mVU.index, it[0].start, it[0].end); }
+		if (memcmp_mmx(cmpOffset(prog.data), cmpOffset(mVU.regs().Micro), ((it[0].end + 8)  -  it[0].start))) {
 			return 0;
 		}
 	}
@@ -298,13 +231,12 @@ _mVUt __fi bool mVUcmpPartial(microProgram& prog) {
 }
 
 // Compare Cached microProgram to mVU->regs().Micro
-_mVUt __fi bool mVUcmpProg(microProgram& prog, const bool cmpWholeProg) {
-	microVU* mVU = mVUx;
-	if ((cmpWholeProg && !memcmp_mmx((u8*)prog.data, mVU->regs().Micro, mVU->microMemSize))
-	|| (!cmpWholeProg && mVUcmpPartial<vuIndex>(prog))) {
-		mVU->prog.cleared =  0;
-		mVU->prog.cur	  = &prog;
-		mVU->prog.isSame  =  cmpWholeProg ? 1 : -1;
+__fi bool mVUcmpProg(microVU& mVU, microProgram& prog, const bool cmpWholeProg) {
+	if ((cmpWholeProg && !memcmp_mmx((u8*)prog.data, mVU.regs().Micro, mVU.microMemSize))
+	|| (!cmpWholeProg && mVUcmpPartial(mVU, prog))) {
+		mVU.prog.cleared =  0;
+		mVU.prog.cur	 = &prog;
+		mVU.prog.isSame  =  cmpWholeProg ? 1 : -1;
 		return 1;
 	}
 	return 0;
@@ -312,13 +244,13 @@ _mVUt __fi bool mVUcmpProg(microProgram& prog, const bool cmpWholeProg) {
 
 // Searches for Cached Micro Program and sets prog.cur to it (returns entry-point to program)
 _mVUt __fi void* mVUsearchProg(u32 startPC, uptr pState) {
-	microVU* mVU = mVUx;
-	microProgramQuick& quick = mVU->prog.quick[startPC/8];
-	microProgramList*  list  = mVU->prog.prog [startPC/8];
+	microVU& mVU = mVUx;
+	microProgramQuick& quick = mVU.prog.quick[startPC/8];
+	microProgramList*  list  = mVU.prog.prog [startPC/8];
 	if(!quick.prog) { // If null, we need to search for new program
 		deque<microProgram*>::iterator it(list->begin());
 		for ( ; it != list->end(); ++it) {
-			if (mVUcmpProg<vuIndex>(*it[0], 0)) {
+			if (mVUcmpProg(mVU, *it[0], 0)) {
 				quick.block = it[0]->block[startPC/8];
 				quick.prog  = it[0];
 				list->erase(it);
@@ -328,19 +260,19 @@ _mVUt __fi void* mVUsearchProg(u32 startPC, uptr pState) {
 		}
 
 		// If cleared and program not found, make a new program instance
-		mVU->prog.cleared	= 0;
-		mVU->prog.isSame	= 1;
-		mVU->prog.cur		= mVUcreateProg<vuIndex>(startPC/8);
-		void* entryPoint	= mVUblockFetch(mVU, startPC, pState);
-		quick.block			= mVU->prog.cur->block[startPC/8];
-		quick.prog			= mVU->prog.cur;
-		list->push_front(mVU->prog.cur);
-		//mVUprintUniqueRatio<vuIndex>();
+		mVU.prog.cleared	= 0;
+		mVU.prog.isSame		= 1;
+		mVU.prog.cur		= mVUcreateProg( mVU, startPC/8);
+		void* entryPoint	= mVUblockFetch(&mVU, startPC, pState);
+		quick.block			= mVU.prog.cur->block[startPC/8];
+		quick.prog			= mVU.prog.cur;
+		list->push_front(mVU.prog.cur);
+		//mVUprintUniqueRatio(mVU);
 		return entryPoint;
 	}
 	// If list.quick, then we've already found and recompiled the program ;)
-	mVU->prog.isSame	 = -1;
-	mVU->prog.cur		 =  quick.prog;
+	mVU.prog.isSame	= -1;
+	mVU.prog.cur	=  quick.prog;
 	return mVUentryGet(mVU, quick.block, startPC, pState);
 }
 

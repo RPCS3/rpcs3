@@ -36,8 +36,7 @@ static __fi void mVUcheckIsSame(mV) {
 		mVU->prog.isSame = !memcmp_mmx((u8*)mVUcurProg.data, mVU->regs().Micro, mVU->microMemSize);
 	}
 	if (mVU->prog.isSame == 0) {
-		if (!isVU1)	mVUcacheProg<0>(*mVU->prog.cur);
-		else		mVUcacheProg<1>(*mVU->prog.cur);
+		mVUcacheProg(*mVU, *mVU->prog.cur);
 		mVU->prog.isSame = 1;
 	}
 }
@@ -495,32 +494,32 @@ void* mVUcompile(microVU* mVU, u32 startPC, uptr pState) {
 }
 
 // Returns the entry point of the block (compiles it if not found)
-static __fi void* mVUentryGet(microVU* mVU, microBlockManager* block, u32 startPC, uptr pState) {
+static __fi void* mVUentryGet(microVU& mVU, microBlockManager* block, u32 startPC, uptr pState) {
 	microBlock* pBlock = block->search((microRegInfo*)pState);
 	if (pBlock) return pBlock->x86ptrStart;
-	else	    return mVUcompile(mVU, startPC, pState);
+	else	    return mVUcompile(&mVU, startPC, pState);
 }
 
  // Search for Existing Compiled Block (if found, return x86ptr; else, compile and return x86ptr)
 static __fi void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState) {
 
-	pxAssumeDev( (startPC & 7) == 0,			pxsFmt("microVU%d: unaligned startPC=0x%04x", mVU->index, startPC) );
-	pxAssumeDev( startPC < mVU->microMemSize-8,	pxsFmt("microVU%d: invalid startPC=0x%04x", mVU->index, startPC) );
-	startPC    &= mVU->microMemSize-8;
+	pxAssumeDev((startPC & 7) == 0,				pxsFmt("microVU%d: unaligned startPC=0x%04x", mVU->index, startPC) );
+	pxAssumeDev( startPC < mVU->microMemSize-8,	pxsFmt("microVU%d: invalid startPC=0x%04x",   mVU->index, startPC) );
+	startPC &= mVU->microMemSize-8;
 
 	blockCreate(startPC/8);
-	return mVUentryGet(mVU, mVUblocks[startPC/8], startPC, pState);
+	return mVUentryGet(*mVU, mVUblocks[startPC/8], startPC, pState);
 }
 
 // mVUcompileJIT() - Called By JR/JALR during execution
 _mVUt void* __fastcall mVUcompileJIT(u32 startPC, uptr ptr) {
 	if (doJumpCaching) { // When doJumpCaching, ptr is a microBlock pointer
-		microVU* mVU = mVUx;
+		microVU& mVU = mVUx;
 		microBlock* pBlock = (microBlock*)ptr;
 		microJumpCache& jc = pBlock->jumpCache[startPC/8];
-		if (jc.prog && jc.prog == mVU->prog.quick[startPC/8].prog) return jc.x86ptrStart;
+		if (jc.prog && jc.prog == mVU.prog.quick[startPC/8].prog) return jc.x86ptrStart;
 		void* v = mVUsearchProg<vuIndex>(startPC, (uptr)&pBlock->pStateEnd);
-		jc.prog = mVU->prog.quick[startPC/8].prog;
+		jc.prog = mVU.prog.quick[startPC/8].prog;
 		jc.x86ptrStart = v;
 		return v;
 	}

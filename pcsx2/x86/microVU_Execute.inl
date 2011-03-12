@@ -19,10 +19,6 @@
 // Dispatcher Functions
 //------------------------------------------------------------------
 
-#ifdef __GNUC__
-extern void mVUreset(microVU& mVU, bool resetReserve);
-#endif
-
 // Generates the code for entering recompiled blocks
 void mVUdispatcherA(mV) {
 	mVU->startFunct = x86Ptr;
@@ -171,14 +167,14 @@ void mVUdispatcherD(mV) {
 // Executes for number of cycles
 _mVUt void* __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
-	microVU* mVU = mVUx;
+	microVU& mVU = mVUx;
 	//DevCon.WriteLn("microVU%x: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
 
-	mVU->cycles		 = cycles;
-	mVU->totalCycles = cycles;
+	mVU.cycles		 = cycles;
+	mVU.totalCycles = cycles;
 
-	xSetPtr(mVU->prog.x86ptr); // Set x86ptr to where last program left off
-	return mVUsearchProg<vuIndex>(startPC, (uptr)&mVU->prog.lpState); // Find and set correct program
+	xSetPtr(mVU.prog.x86ptr); // Set x86ptr to where last program left off
+	return mVUsearchProg<vuIndex>(startPC, (uptr)&mVU.prog.lpState); // Find and set correct program
 }
 
 //------------------------------------------------------------------
@@ -186,24 +182,24 @@ _mVUt void* __fastcall mVUexecute(u32 startPC, u32 cycles) {
 //------------------------------------------------------------------
 
 _mVUt void mVUcleanUp() {
-	microVU* mVU = mVUx;
+	microVU& mVU = mVUx;
 	//mVUprint("microVU: Program exited successfully!");
-	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", mVU->regs().VF[0].UL[0], mVU->regs().VF[0].UL[1], mVU->regs().VF[0].UL[2], mVU->regs().VF[0].UL[3]);
-	//mVUprint("microVU: VI0 = %x", mVU->regs().VI[0].UL);
+	//mVUprint("microVU: VF0 = {%x,%x,%x,%x}", mVU.regs().VF[0].UL[0], mVU.regs().VF[0].UL[1], mVU.regs().VF[0].UL[2], mVU.regs().VF[0].UL[3]);
+	//mVUprint("microVU: VI0 = %x", mVU.regs().VI[0].UL);
 
-	mVU->prog.x86ptr = x86Ptr;
+	mVU.prog.x86ptr = x86Ptr;
 
-	if ((xGetPtr() < mVU->prog.x86start) || (xGetPtr() >= mVU->prog.x86end)) {
-		Console.WriteLn(vuIndex ? Color_Orange : Color_Magenta, "microVU%d: Program cache limit reached.", mVU->index);
-		mVUreset(*mVU, false);
+	if ((xGetPtr() < mVU.prog.x86start) || (xGetPtr() >= mVU.prog.x86end)) {
+		Console.WriteLn(vuIndex ? Color_Orange : Color_Magenta, "microVU%d: Program cache limit reached.", mVU.index);
+		mVUreset(mVU, false);
 	}
 
-	mVU->cycles = mVU->totalCycles - mVU->cycles;
-	mVU->regs().cycle += mVU->cycles;
-	cpuRegs.cycle += ((mVU->cycles < 3000) ? mVU->cycles : 3000) * EmuConfig.Speedhacks.VUCycleSteal;
+	mVU.cycles = mVU.totalCycles - mVU.cycles;
+	mVU.regs().cycle += mVU.cycles;
+	cpuRegs.cycle += ((mVU.cycles < 3000) ? mVU.cycles : 3000) * EmuConfig.Speedhacks.VUCycleSteal;
 	//static int ax = 0; ax++;
 	//if (!(ax % 100000)) {
-	//	for (u32 i = 0; i < (mVU->progSize / 2); i++) {
+	//	for (u32 i = 0; i < (mVU.progSize / 2); i++) {
 	//		if (mVUcurProg.block[i]) {
 	//			mVUcurProg.block[i]->printInfo(i*8);
 	//		}
