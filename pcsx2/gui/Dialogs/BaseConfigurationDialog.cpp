@@ -31,6 +31,7 @@
 
 DEFINE_EVENT_TYPE( pxEvt_ApplySettings )
 DEFINE_EVENT_TYPE( pxEvt_SetSettingsPage )
+DEFINE_EVENT_TYPE( pxEvt_SomethingChanged )
 
 using namespace Panels;
 
@@ -165,6 +166,8 @@ Dialogs::BaseConfigurationDialog::BaseConfigurationDialog( wxWindow* parent, con
 	ConnectSomethingChanged( SPINCTRL_UPDATED );
 	ConnectSomethingChanged( SLIDER_UPDATED );
 	ConnectSomethingChanged( DIRPICKER_CHANGED );
+	
+	Connect( pxEvt_SomethingChanged, wxCommandEventHandler( BaseConfigurationDialog::OnSomethingChanged ) );
 }
 
 void Dialogs::BaseConfigurationDialog::AddListbook( wxSizer* sizer )

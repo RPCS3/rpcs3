@@ -30,6 +30,7 @@ namespace Panels
 
 BEGIN_DECLARE_EVENT_TYPES()
 	DECLARE_EVENT_TYPE( pxEvt_SetSettingsPage, -1 )
+	DECLARE_EVENT_TYPE( pxEvt_SomethingChanged, -1 );
 END_DECLARE_EVENT_TYPES()
 
 namespace Dialogs
