@@ -3,19 +3,19 @@
 
 #pragma once
 
-enum Align_Mode 
+enum Align_Mode
 {
-	Align_Outside, 
-	Align_Inside, 
-	Align_NegInf, 
+	Align_Outside,
+	Align_Inside,
+	Align_NegInf,
 	Align_PosInf
 };
 
-enum Round_Mode 
+enum Round_Mode
 {
-	Round_NearestInt = 8, 
-	Round_NegInf = 9, 
-	Round_PosInf = 10, 
+	Round_NearestInt = 8,
+	Round_NegInf = 9,
+	Round_PosInf = 10,
 	Round_Truncate = 11
 };
 
@@ -2503,7 +2503,7 @@ public:
 		}
 
 		// This effectively increases the polynomial degree by one, but ensures that log2(1) == 0
-		
+
 		p = p * (m - one);
 
 		return p + e;
@@ -3102,7 +3102,7 @@ public:
 	__forceinline GSVector8i(int x0, int y0, int z0, int w0, int x1, int y1, int z1, int w1)
 	{
 		m[0] = _mm_set_epi32(w0, z0, y0, x0);
-		m[1] = _mm_set_epi32(w1, z1, y1, x1);		
+		m[1] = _mm_set_epi32(w1, z1, y1, x1);
 	}
 
 	__forceinline GSVector8i(__m128i m0, __m128i m1)
@@ -3164,7 +3164,7 @@ public:
 		GSVector8i v;
 
 		v.m[0] = v.m[1] = _mm_setzero_si128();
-		
+
 		return v;
 	}
 
@@ -3174,11 +3174,11 @@ public:
 	{
 		return GSVector8i(
 			aligned ? _mm_load_si128((__m128i*)p + 0) : _mm_loadu_si128((__m128i*)p + 0),
-			aligned ? _mm_load_si128((__m128i*)p + 1) : _mm_loadu_si128((__m128i*)p + 1),
+			aligned ? _mm_load_si128((__m128i*)p + 1) : _mm_loadu_si128((__m128i*)p + 1)
 			);
 	}
 
-	template<bool aligned> __forceinline static void store(void* p, const GSVector4i& v)
+	template<bool aligned> __forceinline static void store(void* p, const GSVector8i& v)
 	{
 		if(aligned)
 		{
@@ -3674,7 +3674,7 @@ public:
 
 	template<int mode> __forceinline GSVector8 round() const
 	{
-		return GSVector8(_mm_round_ps(m[0], mode), _mm_round_ps(m[1], mode));
+		return GSVector8(GSVector4(m[0]).round<mode>(), GSVector4(m[1]).round<mode>());
 	}
 
 	// TODO
@@ -3696,12 +3696,12 @@ public:
 		return GSVector8(_mm_blend_ps(m[0], a.m[0], mask & 0x0f), _mm_blend_ps(m[1], a.m[1], (mask >> 4) & 0x0f));
 	}
 
-	#endif
-
 	__forceinline GSVector8 blend32(const GSVector8& a, const GSVector8& mask)  const
 	{
 		return GSVector8(_mm_blendv_ps(m[0], a.m[0], mask.m[0]), _mm_blendv_ps(m[1], a.m[1], mask.m[1]));
 	}
+
+	#endif
 
 	__forceinline GSVector8 upl(const GSVector8& a) const
 	{
@@ -3800,7 +3800,7 @@ public:
 	{
 		return GSVector8(
 			aligned ? _mm_load_ps((const float*)p + 0) : _mm_loadu_ps((const float*)p + 0),
-			aligned ? _mm_load_ps((const float*)p + 4) : _mm_loadu_ps((const float*)p + 4),
+			aligned ? _mm_load_ps((const float*)p + 4) : _mm_loadu_ps((const float*)p + 4)
 			);
 	}
 
@@ -3938,7 +3938,7 @@ public:
 		case 2: return v2.m[0];
 		case 3: return v2.m[1];
 		}
-		
+
 		return _mm_setzero_ps();
 	}
 
@@ -4028,7 +4028,7 @@ __forceinline GSVector8::GSVector8(const GSVector8i& v)
 __forceinline GSVector8i GSVector8i::cast(const GSVector8& v)
 {
 	GSVector8i v2;
-	
+
 	v2.m[0] = _mm_castps_si128(v.m[0]);
 	v2.m[1] = _mm_castps_si128(v.m[1]);
 
@@ -4038,7 +4038,7 @@ __forceinline GSVector8i GSVector8i::cast(const GSVector8& v)
 __forceinline GSVector8 GSVector8::cast(const GSVector8i& v)
 {
 	GSVector8 v2;
-	
+
 	v2.m[0] = _mm_castsi128_ps(v.m[0]);
 	v2.m[1] = _mm_castsi128_ps(v.m[1]);
 
