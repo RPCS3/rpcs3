@@ -133,7 +133,7 @@ void mVUclose(microVU& mVU) {
 }
 
 // Clears Block Data in specified range
-static __fi void mVUclear(mV, u32 addr, u32 size) {
+__fi void mVUclear(mV, u32 addr, u32 size) {
 	if(!mVU->prog.cleared) {
 		mVU->prog.cleared = 1;		// Next execution searches/creates a new microprogram
 		memzero(mVU->prog.lpState); // Clear pipeline state
@@ -149,7 +149,7 @@ static __fi void mVUclear(mV, u32 addr, u32 size) {
 //------------------------------------------------------------------
 
 // Finds and Ages/Kills Programs if they haven't been used in a while.
-static __ri void mVUvsyncUpdate(mV) {
+__ri void mVUvsyncUpdate(mV) {
 	//mVU->prog.curFrame++;
 }
 

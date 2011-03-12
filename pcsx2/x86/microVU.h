@@ -21,6 +21,7 @@ using namespace std;
 using namespace x86Emitter;
 
 #include <deque>
+#include <algorithm>
 #include "Common.h"
 #include "VU.h"
 #include "GS.h"
@@ -254,7 +255,7 @@ int mVUdebugNow = 0;
 // Main Functions
 extern void  mVUclear(mV, u32, u32);
 extern void  mVUreset(microVU& mVU, bool resetReserve);
-extern void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
+static void* mVUblockFetch(microVU* mVU, u32 startPC, uptr pState);
 _mVUt extern void* __fastcall mVUcompileJIT(u32 startPC, uptr ptr);
 
 // Prototypes for Linux
