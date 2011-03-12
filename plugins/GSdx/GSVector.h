@@ -960,12 +960,19 @@ public:
 	__forceinline bool eq(const GSVector4i& v) const
 	{
 		#if _M_SSE >= 0x401
+		
 		// pxor, ptest, je
+		
 		GSVector4i t = *this ^ v;
+		
 		return _mm_testz_si128(t, t) != 0;
+
 		#else
+
 		// pcmpeqd, pmovmskb, cmp, je
+
 		return eq32(v).alltrue();
+
 		#endif
 	}
 
@@ -2656,9 +2663,15 @@ public:
 
 	__forceinline bool allfalse() const
 	{
-		#if _M_SSE >= 0x401
+		#if _M_SSE >= 0x500
 
 		return _mm_testz_ps(m, m) != 0;
+
+		#elif _M_SSE >= 0x401
+
+		__m128i a = _mm_castps_si128(m);
+
+		return _mm_testz_si128(a, a) != 0;
 
 		#else
 
@@ -3758,9 +3771,16 @@ public:
 
 	__forceinline bool allfalse() const
 	{
-		#if _M_SSE >= 0x401
+		#if _M_SSE >= 0x500
 
 		return (_mm_testz_ps(m[0], m[0]) & _mm_testz_ps(m[1], m[1])) != 0;
+
+		#elif _M_SSE >= 0x401
+
+		__m128i a = _mm_castps_si128(m[0]);
+		__m128i b = _mm_castps_si128(m[1]);
+
+		return (_mm_testz_si128(a, a) & _mm_testz_si128(b, b)) != 0;
 
 		#else
 
