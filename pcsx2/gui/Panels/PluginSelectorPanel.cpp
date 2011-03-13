@@ -478,7 +478,7 @@ void Panels::PluginSelectorPanel::Apply()
 
 			throw Exception::CannotApplySettings( this )
 				.SetDiagMsg(pxsFmt( L"PluginSelectorPanel: Invalid or missing selection for the %s plugin.", plugname.c_str()) )
-				.SetUserMsg(pxsFmt( L"Please select a valid plugin for the %s.", plugname.c_str() ) + L"\n\n" + GetApplyFailedMsg() );
+				.SetUserMsg(pxsFmt( _("Please select a valid plugin for the %s."), plugname.c_str() ) + L"\n\n" + GetApplyFailedMsg() );
 		}
 
 		g_Conf->BaseFilenames.Plugins[pid] = GetFilename((int)m_ComponentBoxes->Get(pid).GetClientData(sel));

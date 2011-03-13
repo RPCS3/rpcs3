@@ -668,6 +668,8 @@ protected:
 Pcsx2App::Pcsx2App() 
 	: SysExecutorThread( new SysEvtHandler() )
 {
+	// Warning: Do not delete this comment block! Gettext will parse it to allow
+	// the translation of some wxWidget internal strings. -- greg
 	#if 0
 	{
 		// Some common labels provided by wxWidgets.  wxWidgets translation files are chucked full
@@ -685,11 +687,12 @@ Pcsx2App::Pcsx2App()
 		_("&Yes");
 		_("&No");
 		_("Browse");
-
 		_("&Save");
 		_("Save &As...");
 		_("&Help");
 		_("&Home");
+
+		_("Show about dialog")
 	}
 	#endif
 
