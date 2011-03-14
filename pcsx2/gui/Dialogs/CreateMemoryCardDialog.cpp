@@ -36,15 +36,14 @@ wxFilePickerCtrl* CreateMemoryCardFilePicker( wxWindow* parent, uint portidx, ui
 
 }
 */
-Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint slot, const wxDirName& mcdpath, const wxString& suggested_mcdfileName)
+Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, const wxDirName& mcdpath, const wxString& suggested_mcdfileName)
 	: wxDialogWithHelpers( parent, _("Create a new memory card file") )
-	, m_mcdpath( mcdpath.IsOk() ? mcdpath : (wxDirName)g_Conf->Mcd[slot].Filename.GetPath() )
+	, m_mcdpath( mcdpath )
 	, m_mcdfile( suggested_mcdfileName )//suggested_and_result_mcdfileName.IsEmpty() ? g_Conf->Mcd[slot].Filename.GetFullName()
 {
 	
 	SetMinWidth( 472 );
 	//m_filepicker	= NULL;
-	m_slot			= slot;
 
 	CreateControls();
 
@@ -94,7 +93,8 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, uint 
 
 	*this += s_padding | StdExpand();
 
-	Connect( wxID_OK,		wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CreateMemoryCardDialog::OnOk_Click ) );
+	Connect( wxID_OK,							wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler( CreateMemoryCardDialog::OnOk_Click ) );
+	Connect( m_text_filenameInput->GetId(),		wxEVT_COMMAND_TEXT_ENTER,		wxCommandEventHandler( CreateMemoryCardDialog::OnOk_Click ) );
 
 	m_text_filenameInput->SetFocus();
 	m_text_filenameInput->SelectAll();
@@ -108,7 +108,7 @@ wxDirName Dialogs::CreateMemoryCardDialog::GetPathToMcds() const
 // When this GUI is moved into the FileMemoryCard plugin (where it eventually belongs),
 // this function will be removed and the MemoryCardFile::Create() function will be used
 // instead.
-static bool CreateIt( const wxString& mcdFile, uint sizeInMB )
+bool Dialogs::CreateMemoryCardDialog::CreateIt( const wxString& mcdFile, uint sizeInMB )
 {
 	//int enc[16] = {0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0x77,0x7f,0x7f,0,0,0,0};
 
@@ -183,7 +183,7 @@ void Dialogs::CreateMemoryCardDialog::CreateControls()
 		)
 	);
 
-	m_text_filenameInput = new wxTextCtrl( this, wxID_ANY);
+	m_text_filenameInput = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 
 	// Initial value of the checkbox is saved between calls to the dialog box.  If the user checks
 	// the option, it remains checked for future dialog.  If the user unchecks it, ditto.

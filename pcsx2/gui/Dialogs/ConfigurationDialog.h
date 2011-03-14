@@ -209,7 +209,6 @@ namespace Dialogs
 	class CreateMemoryCardDialog : public wxDialogWithHelpers
 	{
 	protected:
-		uint		m_slot;
 		wxDirName	m_mcdpath;
 		wxString	m_mcdfile;
 		wxTextCtrl*	m_text_filenameInput;
@@ -223,11 +222,13 @@ namespace Dialogs
 
 	public:
 		virtual ~CreateMemoryCardDialog()  throw() {}
-		//CreateMemoryCardDialog( wxWindow* parent, uint port, uint slot, const wxString& filepath=wxEmptyString );
-		CreateMemoryCardDialog( wxWindow* parent, uint slot, const wxDirName& mcdpath, const wxString& suggested_mcdfileName);
+		CreateMemoryCardDialog( wxWindow* parent, const wxDirName& mcdpath, const wxString& suggested_mcdfileName);
 	
+		//duplicate of MemoryCardFile::Create. Don't know why the existing method isn't used. - avih
+		static bool CreateIt( const wxString& mcdFile, uint sizeInMB );
 		wxString result_createdMcdFilename;
 		//wxDirName GetPathToMcds() const;
+
 
 	protected:
 		void CreateControls();

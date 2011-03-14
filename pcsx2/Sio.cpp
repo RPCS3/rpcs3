@@ -29,7 +29,34 @@ static const mc_command_0x26_tag mc_sizeinfo_8mb= {'+', 512, 16, 0x4000, 0x52, 0
 
 // Ejection timeout management belongs in the MemoryCardFile plugin, except the plugin
 // interface is not yet complete.
+
+// FORCED_MCD_EJECTION_TIMEOUT is used internally when loading a savestate.
+// FORCED_MCD_EJECTION_TIMEOUT_SHORT is used for SetForceMcdEjectTimeoutNow() which is called from outside (e.g., the mcd manager).
+#define FORCED_MCD_EJECTION_TIMEOUT 128
+#define FORCED_MCD_EJECTION_TIMEOUT_SHORT 64
 static int m_ForceEjectionTimeout[2];
+static int m_debug_lastForceEjectionTimeout[2] ={0};
+
+wxString GetTimeMsStr(){
+	wxDateTime unow=wxDateTime::UNow();
+	wxString res;
+	res.Printf(L"%s.%03d", unow.Format(L"%H:%M:%S").c_str(), (int)unow.GetMillisecond() );
+	return res;
+}
+void _SetForceMcdEjectTimeoutNow(int port, int slot, int mcdEjectTimeoutInSioAccesses)
+{
+	m_ForceEjectionTimeout[port]=mcdEjectTimeoutInSioAccesses;
+}
+
+//allow timeout also for the mcd manager panel
+void SetForceMcdEjectTimeoutNow()
+{
+	const int slot=0;
+	int port=0;
+	for (port=0; port<2; port++)
+		_SetForceMcdEjectTimeoutNow(port, slot, FORCED_MCD_EJECTION_TIMEOUT_SHORT);
+}
+
 
 // SIO Inline'd IRQs : Calls the SIO interrupt handlers directly instead of
 // feeding them through the IOP's branch test. (see SIO.H for details)
@@ -670,10 +697,17 @@ void InitializeSIO(u8 value)
 			//  (ejection is only supported for the default non-multitap cards at this time)
 
 			bool forceEject = false;
-			if( slot == 0 && m_ForceEjectionTimeout[port] )
+			if( slot == 0 && m_ForceEjectionTimeout[port]>0 )
 			{
+				if( m_debug_lastForceEjectionTimeout[port] == 0 && SysPlugins.McdIsPresent( port, slot ) )
+					Console.Warning( L"[%s] Auto-ejecting memcard [port:%d, slot:%d]", GetTimeMsStr().c_str(), port, slot );
+
 				--m_ForceEjectionTimeout[port];
 				forceEject = true;
+
+				if( m_ForceEjectionTimeout[port] == 0 && SysPlugins.McdIsPresent( port, slot ))
+					Console.Warning( L"[%s] Re-inserting auto-ejected memcard [port:%d, slot:%d]", GetTimeMsStr().c_str(), port, slot);
+				m_debug_lastForceEjectionTimeout[port] = m_ForceEjectionTimeout[port];
 			}
 			
 			if( !forceEject && SysPlugins.McdIsPresent( port, slot ) )
@@ -771,7 +805,8 @@ void SaveStateBase::sioFreeze()
 			if( newCRC != m_mcdCRCs[port][slot] )
 			{
 				//m_mcdCRCs[port][slot] = newCRC;
-				m_ForceEjectionTimeout[port] = 128;
+				//m_ForceEjectionTimeout[port] = 128;
+				_SetForceMcdEjectTimeoutNow(port, slot, FORCED_MCD_EJECTION_TIMEOUT); 
 			}
 		}
 	}

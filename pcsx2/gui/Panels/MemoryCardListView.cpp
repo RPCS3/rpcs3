@@ -194,7 +194,7 @@ wxListItemAttr* MemoryCardListView_Simple::OnGetItemAttr(long item) const
 
 	m_ItemAttr = wxListItemAttr();		// Wipe it clean!
 
-	if( !it.IsPresent || !it.IsEnabled)
+	if( it.IsPresent && !it.IsEnabled)
 		m_ItemAttr.SetTextColour( *wxLIGHT_GREY );
 /*
 	if( m_TargetedItem == item )

@@ -78,6 +78,7 @@ public:
 	virtual McdSlotItem& GetCardForViewIndex( int idx )=0;
 	virtual int GetSlotIndexForViewIndex( int listViewIndex )=0;
 	virtual wxDirName GetMcdPath() const=0;
+	virtual void PublicApply() =0;
 };
 
 // --------------------------------------------------------------------------------------
@@ -211,9 +212,10 @@ namespace Panels
 
 		virtual McdSlotItem& GetCardForViewIndex( int idx );
 		virtual int GetSlotIndexForViewIndex( int viewIndex );
+		virtual void PublicApply(){ Apply(); };
 
 	protected:
-		void OnCreateCard(wxCommandEvent& evt);
+		void OnCreateOrDeleteCard(wxCommandEvent& evt);
 		void OnMountCard(wxCommandEvent& evt);
 //		void OnRelocateCard(wxCommandEvent& evt);
 		void OnRenameFile(wxCommandEvent& evt);
@@ -221,6 +223,7 @@ namespace Panels
 		void OnListDrag(wxListEvent& evt);
 		void OnListSelectionChanged(wxListEvent& evt);
 		void OnOpenItemContextMenu(wxListEvent& evt);
+		void OnItemActivated(wxListEvent& evt);
 
 		virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames);
 
@@ -228,6 +231,10 @@ namespace Panels
 		virtual void AppStatusEvent_OnSettingsApplied();
 		virtual void DoRefresh();
 		virtual bool ValidateEnumerationStatus();
+
+		virtual void UiRenameCard( McdSlotItem& card );
+		virtual void UiCreateNewCard( McdSlotItem& card );
+		virtual void UiDeleteCard( McdSlotItem& card );
 	};
 
 	// --------------------------------------------------------------------------------------

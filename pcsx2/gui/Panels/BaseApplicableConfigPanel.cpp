@@ -198,6 +198,13 @@ void BaseApplicableConfigPanel::OnSettingsApplied( wxCommandEvent& evt )
 
 void BaseApplicableConfigPanel::AppStatusEvent_OnSettingsApplied() {}
 
+void BaseApplicableConfigPanel::SomethingChanged()
+{
+	wxCommandEvent change(pxEvt_SomethingChanged);
+	AddPendingEvent(change);
+}
+
+
 BaseApplicableConfigPanel_SpecificConfig::BaseApplicableConfigPanel_SpecificConfig(wxWindow* parent, wxOrientation orient)
 	: BaseApplicableConfigPanel( parent, orient )
 {
@@ -207,4 +214,5 @@ BaseApplicableConfigPanel_SpecificConfig::BaseApplicableConfigPanel_SpecificConf
 	: BaseApplicableConfigPanel( parent, orient, staticLabel )
 {
 }
+
 

@@ -23,6 +23,7 @@
 
 #include "Dialogs/ConfigurationDialog.h"
 #include "Utilities/IniInterface.h"
+#include "../../Sio.h"
 
 #include <wx/filepicker.h>
 #include <wx/ffile.h>
@@ -169,6 +170,11 @@ void Panels::BaseMcdListPanel::CreateLayout()
 {
 	//if( m_listview ) m_listview->SetMinSize( wxSize( 480, 140 ) );
 
+	wxFlexGridSizer* s_flex=new wxFlexGridSizer(3,1, 0, 0);
+	s_flex->AddGrowableCol(0);
+	s_flex->AddGrowableRow(1);
+	SetSizer(s_flex);
+
 	wxBoxSizer& s_buttons(*new wxBoxSizer( wxHORIZONTAL ));
 	s_leftside_buttons	= new wxBoxSizer( wxHORIZONTAL );
 	s_rightside_buttons	= new wxBoxSizer( wxHORIZONTAL );
@@ -178,7 +184,11 @@ void Panels::BaseMcdListPanel::CreateLayout()
 	s_buttons += s_rightside_buttons	| pxAlignRight;
 
 	if( m_FolderPicker )	*this += m_FolderPicker | pxExpand;
+	else					*this += StdPadding;//we need the 'else' because we need these items to land into the proper rows of s_flex.
+
 	if( m_listview )		*this += m_listview		| pxExpand;
+	else					*this += StdPadding;
+
 							*this += s_buttons		| pxExpand;
 
 	*s_leftside_buttons += m_btn_Refresh;
@@ -446,52 +456,11 @@ public:
 			Msgbox::Alert(success, _("Success"));
 			dest.IsPresent=true;
 			dest.IsEnabled = true;//src.IsEnabled;
+			m_listview->GetMcdProvider().PublicApply();
 		}
 		else if( wxDragMove == def )
-		{
-			/*
-
-			// Move always performs a swap :)
-
-			const bool srcExists( srcfile.FileExists() );
-			const bool destExists( destfile.FileExists() );
-
-			if( destExists && srcExists)
-			{
-				wxFileName tempname;
-				tempname.AssignTempFileName( basepath.ToString() );
-
-				// Neat trick to handle errors.
-				result = result && wxRenameFile( srcfile.GetFullPath(), tempname.GetFullPath(), true );
-				result = result && wxRenameFile( destfile.GetFullPath(), srcfile.GetFullPath(), false );
-				result = result && wxRenameFile( tempname.GetFullPath(), destfile.GetFullPath(), true );
-			}
-			else if( destExists )
-			{
-				result = wxRenameFile( destfile.GetFullPath(), srcfile.GetFullPath() );
-			}
-			else if( srcExists )
-			{
-				result = wxRenameFile( srcfile.GetFullPath(), destfile.GetFullPath() );
-			}
-
-			// Swap isEnabled state since both files got exchanged
-			bool temp = dest.IsEnabled;
-			dest.IsEnabled = src.IsEnabled;
-			src.IsEnabled = temp;
-
-			if( !result )
-			{
-				// TODO : Popup an error to the user.
-
-				Console.Error( "(FileMcd) memory card files swap failed." );
-				Console.Indent().WriteLn( L"Src : " + srcfile.GetFullPath() );
-				Console.Indent().WriteLn( L"Dest: " + destfile.GetFullPath() );
-			}
-			*/
-
-			// avih: old implementation above was swapping file contents (by actually switching the file names of 2 files)
-			// New implementation just swaps the assigned file names at the slots.
+		{// move/swap files in ports
+			// Just swaps the assigned file names at the slots.
 
 			//Note: each slot has 2 important properties: IsPresent (with Filename) and IsEnabled.
 			//      For the sake of usability, when draggind src to dest, if src IsPresent, automatically enable dest.
@@ -561,24 +530,25 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 	*s_leftside_buttons	+= m_button_Rename;
 	*s_leftside_buttons	+= 2;
 	*s_leftside_buttons	+= m_button_Create;
+	SetSizerAndFit(GetSizer());
 
 	parent->SetWindowStyle(parent->GetWindowStyle() | wxRESIZE_BORDER);
 
 	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_BEGIN_DRAG,		wxListEventHandler(MemoryCardListPanel_Simple::OnListDrag));
 	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_SELECTED,	wxListEventHandler(MemoryCardListPanel_Simple::OnListSelectionChanged));
+	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_ACTIVATED,	wxListEventHandler(MemoryCardListPanel_Simple::OnItemActivated));//enter or double click
 
-	//Deselected is not working for some reason (e.g. when clicking an empty row at the table) - avih
+	//Deselected is not working for some reason (e.g. when clicking an empty row at the table?) - avih
 	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_DESELECTED,	wxListEventHandler(MemoryCardListPanel_Simple::OnListSelectionChanged));
 
 	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_RIGHT_CLICK, wxListEventHandler(MemoryCardListPanel_Simple::OnOpenItemContextMenu) );
 
 	Connect( m_button_Mount->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnMountCard));
-	Connect( m_button_Create->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnCreateCard));
+	Connect( m_button_Create->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnCreateOrDeleteCard));
 	Connect( m_button_Rename->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnRenameFile));
 
 	// Popup Menu Connections!
-
-	Connect( McdMenuId_Create,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnCreateCard) );
+	Connect( McdMenuId_Create,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnCreateOrDeleteCard) );
 	Connect( McdMenuId_Mount,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnMountCard) );
 	Connect( McdMenuId_Rename,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnRenameFile) );
 	Connect( McdMenuId_RefreshList,	wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnRefreshSelections) );
@@ -640,6 +610,9 @@ void Panels::MemoryCardListPanel_Simple::Apply()
 		else
 			g_Conf->Mcd[slot].Filename = L"";
 	}
+
+	SetForceMcdEjectTimeoutNow();
+
 }
 
 void Panels::MemoryCardListPanel_Simple::AppStatusEvent_OnSettingsApplied()
@@ -648,7 +621,27 @@ void Panels::MemoryCardListPanel_Simple::AppStatusEvent_OnSettingsApplied()
 	{
 		m_Cards[slot].IsEnabled = g_Conf->Mcd[slot].Enabled;
 		m_Cards[slot].Filename = g_Conf->Mcd[slot].Filename;
+		
+		//automatically create the enabled but non-existing file such that it can be managed (else will get created anyway on boot)
+		wxString targetFile = (GetMcdPath() + m_Cards[slot].Filename.GetFullName()).GetFullPath();
+		if ( m_Cards[slot].IsEnabled && !wxFileExists( targetFile ) )
+		{
+			wxString errMsg;
+			if (isValidNewFilename(m_Cards[slot].Filename.GetFullName(), GetMcdPath(), errMsg, 5))
+			{
+				if ( !Dialogs::CreateMemoryCardDialog::CreateIt(targetFile, 8) )
+					Console.Error( L"Automatic createion of MCD '%s' failed. Hope for the best...", targetFile.c_str() );
+				else
+					Console.WriteLn( L"memcard created: '%s'.", targetFile.c_str() );
+			}
+			else
+			{
+				Console.Error( L"memcard was enabled but had an invalid file name. Aborting automatic creation. Hope for the best..." );
+			}
+		}
+
 	}
+	DoRefresh();
 
 	_parent::AppStatusEvent_OnSettingsApplied();
 }
@@ -690,80 +683,141 @@ void Panels::MemoryCardListPanel_Simple::DoRefresh()
 	UpdateUI();
 }
 
-void Panels::MemoryCardListPanel_Simple::OnCreateCard(wxCommandEvent& evt)
+void Panels::MemoryCardListPanel_Simple::UiCreateNewCard( McdSlotItem& card )
 {
+	if( card.IsPresent ){
+		Console.WriteLn("Error: Aborted: create mcd invoked but but a file is already associated.");
+		return;
+	}
+
 	ScopedCoreThreadClose closed_core;
 
+	Dialogs::CreateMemoryCardDialog dialog( this, m_FolderPicker->GetPath(), L"my memory card" );
+	wxWindowID result = dialog.ShowModal();
+
+	if (result != wxID_CANCEL)
+	{
+		card.IsEnabled = true;
+		card.Filename  = dialog.result_createdMcdFilename;
+		card.IsPresent = true;
+		Console.WriteLn(L"setting new card to slot %u: '%s'", card.Slot, card.Filename.GetFullName().c_str());
+	}
+	else
+		card.IsEnabled=false;
+
+	Apply();
+	RefreshSelections();
+	closed_core.AllowResume();
+}
+
+
+void Panels::MemoryCardListPanel_Simple::UiDeleteCard( McdSlotItem& card )
+{
+	if( !card.IsPresent ){
+		Console.WriteLn("Error: Aborted: delete mcd invoked but but a file is not associated.");
+		return;
+	}
+
+	ScopedCoreThreadClose closed_core;
+
+	bool result = true;
+	if( card.IsFormatted )
+	{
+		wxString content;
+		content.Printf(
+			pxE( "!Notice:Mcd:Delete",
+				L"You are about to delete the formatted memory card file '%s' [=slot %u]. "
+				L"All data on this card will be lost!  Are you absolutely and quite positively sure?"
+				), card.Filename.GetFullName().c_str()
+				,  card.Slot
+		);
+
+		result = Msgbox::YesNo( content, _("Delete memory card file?") );
+	}
+
+	if( result )
+	{
+		wxFileName fullpath( m_FolderPicker->GetPath() + card.Filename.GetFullName());//g_Conf->Mcd[GetSlotIndexForViewIndex( selectedViewIndex )].Filename.GetFullName() );
+
+		card.IsEnabled=false;
+		Apply();
+		wxRemoveFile( fullpath.GetFullPath() );
+	}
+
+	RefreshSelections();
+	closed_core.AllowResume();
+}
+
+void Panels::MemoryCardListPanel_Simple::UiRenameCard( McdSlotItem& card )
+{
+	if( !card.IsPresent ){
+		Console.WriteLn("Error: Aborted: Rename mcd invoked but no file is associated.");
+		return;
+	}
+
+	const wxDirName basepath( m_listview->GetMcdProvider().GetMcdPath() );
+	wxString newFilename;
+	while (1){
+		wxString title;
+		title.Printf(_("Select a new name for the memory card file '%s'\n( '.ps2' will be added automatically)"),
+						card.Filename.GetFullName().c_str()
+						);
+		newFilename = wxGetTextFromUser(title, _("Rename memory card file"));
+		if( newFilename==L"" )
+			return;
+
+		newFilename += L".ps2";
+
+		//check that the name is valid for a new file
+		wxString errMsg;
+		if( !isValidNewFilename( newFilename, basepath, errMsg, 5 ) )
+		{
+			wxString message;
+			message.Printf(_("Error (%s)"), errMsg.c_str());
+			Msgbox::Alert( message, _("Rename memory card file") );
+			continue;
+		}
+
+		break;
+	}
+
+	ScopedCoreThreadClose closed_core;
+
+	bool origEnabled=card.IsEnabled;
+	card.IsEnabled=false;
+	Apply();
+	if( !wxRenameFile( (basepath + card.Filename).GetFullPath(), (basepath + wxFileName(newFilename)).GetFullPath(), false ) )
+	{
+		card.IsEnabled=origEnabled;
+		Apply();
+		Msgbox::Alert( _("Error: Rename could not be completed.\n"), _("Rename memory card file") );
+	
+		closed_core.AllowResume();
+		return;
+	}
+
+	card.Filename = newFilename;
+	card.IsEnabled=origEnabled;
+	Apply();
+
+	RefreshSelections();
+	closed_core.AllowResume();
+}
+
+void Panels::MemoryCardListPanel_Simple::OnCreateOrDeleteCard(wxCommandEvent& evt)
+{
 	const int selectedViewIndex = m_listview->GetFirstSelected();
 	if( wxNOT_FOUND == selectedViewIndex ) return;
 
 	McdSlotItem& card( GetCardForViewIndex(selectedViewIndex) );
 
 	if( card.IsPresent )
-	{// called for "delete memory card"
-
-		if ( 0<=card.Slot && card.Slot<=7 && card.Filename != g_Conf->Mcd[card.Slot].Filename)
-		{
-			Msgbox::Alert( _("Error: Please apply pending changes before proceeding."), _("Delete memory card file") );
-			return;
-		}
-
-		if ( 0<=card.Slot && card.Slot<=7 && g_Conf->Mcd[card.Slot].Enabled )
-		{
-			Msgbox::Alert( _("Error: Memory card file currently in use.\n\n1. Disable this port (if not already disabled).\n2. Click 'Apply'.\n3. Proceed with Delete."), _("Delete memory card file") );
-			return;
-		}
-
-		bool result = true;
-		if( card.IsFormatted )
-		{
-			wxString content;
-			content.Printf(
-				pxE( "!Notice:Mcd:Delete",
-					L"You are about to delete the formatted memory card file '%s' [=slot %u]. "
-					L"All data on this card will be lost!  Are you absolutely and quite positively sure?"
-					), card.Filename.GetFullName().c_str()
-					,  card.Slot
-			);
-
-			result = Msgbox::YesNo( content, _("Delete memory card file?") );
-		}
-
-		if( result )
-		{
-			wxFileName fullpath( m_FolderPicker->GetPath() + card.Filename.GetFullName());//g_Conf->Mcd[GetSlotIndexForViewIndex( selectedViewIndex )].Filename.GetFullName() );
-			wxRemoveFile( fullpath.GetFullPath() );
-		}
-	}
+		UiDeleteCard( card );
 	else
-	{// actually create a file
-		Dialogs::CreateMemoryCardDialog dialog( this, GetSlotIndexForViewIndex( selectedViewIndex ), m_FolderPicker->GetPath(), L"my memory card" );
-		wxWindowID result = dialog.ShowModal();
-		//card.IsEnabled = (result != wxID_CANCEL);
-		if (result != wxID_CANCEL)
-		{
-			card.IsEnabled = true;
-			card.Filename  = dialog.result_createdMcdFilename;
-			card.IsPresent = true;
-			Console.WriteLn(L"setting new card to slot %u: '%s'", card.Slot, card.Filename.GetFullName().c_str());
-		}
-		else
-		{
-			card.IsEnabled=false;
-		}
-	}
-    wxCommandEvent change(pxEvt_SomethingChanged);
-	this->AddPendingEvent(change);//enable the apply button (the auto-trigger doesn't get triggered here...)
-
-	RefreshSelections();
-	closed_core.AllowResume();
+		UiCreateNewCard( card );
 }
 
-/*void Panels::MemoryCardListPanel_Simple::OnSwapPorts(wxCommandEvent& evt)
-{
-
-}*/
-
+//enable/disapbe port
 void Panels::MemoryCardListPanel_Simple::OnMountCard(wxCommandEvent& evt)
 {
 	evt.Skip();
@@ -796,68 +850,28 @@ void Panels::MemoryCardListPanel_Simple::OnRelocateCard(wxCommandEvent& evt)
 }
 */
 
+// enter/double-click
+void Panels::MemoryCardListPanel_Simple::OnItemActivated(wxListEvent& evt)
+{
+	const int viewIndex = m_listview->GetFirstSelected();
+	if( wxNOT_FOUND == viewIndex ) return;
+	McdSlotItem& card( GetCardForViewIndex(viewIndex) );
+
+	if ( card.IsPresent )
+		UiRenameCard( card );
+	else
+		UiCreateNewCard( card );// IsPresent==false can only happen for an internal slot (vs filename on the HD), so a card can be created.
+}
+
 void Panels::MemoryCardListPanel_Simple::OnRenameFile(wxCommandEvent& evt)
 {
-	//evt.Skip();//what is it used for? - avih
-	const wxDirName basepath( m_listview->GetMcdProvider().GetMcdPath() );
-
 	const int viewIndex = m_listview->GetFirstSelected();
-	if( wxNOT_FOUND == viewIndex )
-		return;
-
+	if( wxNOT_FOUND == viewIndex ) return;
 	McdSlotItem& card( GetCardForViewIndex(viewIndex) );
-	if( !card.IsPresent ){
-		Console.WriteLn("Internal Error: rename mcd invoked but no file is associated. Aborting.");
-		return;
-	}
 
-	if ( 0<=card.Slot && card.Slot<=7 && card.Filename != g_Conf->Mcd[card.Slot].Filename)
-	{
-		Msgbox::Alert( _("Error: Please apply pending changes before proceeding."), _("Rename memory card file") );
-		return;
-	}
-
-	if ( 0<=card.Slot && card.Slot<=7 && g_Conf->Mcd[card.Slot].Enabled)
-	{
-		Msgbox::Alert( _("Error: Memory card file currently in use.\n\n1. Disable this port (if not already disabled).\n2. Click 'Apply'.\n3. Proceed with rename.\n4. Don't forget to re-enable this port."), _("Rename memory card file") );
-		return;
-	}
-
-	wxString newFilename;
-	while (1){
-		newFilename = wxGetTextFromUser(_("Select a new name for the memory card file\n( '.ps2' will be added automatically)"), _("Rename memory card file"));
-		if( newFilename==L"" )
-		{
-			Msgbox::Alert( _("Rename canceled"), _("Rename memory card file") );
-			return;
-		}
-		newFilename += L".ps2";
-
-		//check that the name is valid for a new file
-		wxString errMsg;
-		if( !isValidNewFilename( newFilename, basepath, errMsg, 5 ) )
-		{
-			wxString message;
-			message.Printf(_("Error (%s)"), errMsg.c_str());
-			Msgbox::Alert( message, _("Rename memory card file") );
-			continue;
-		}
-
-		break;
-	}
-
-	if( !wxRenameFile( (basepath + card.Filename).GetFullPath(), (basepath + wxFileName(newFilename)).GetFullPath(), false ) )
-	{
-		Msgbox::Alert( _("Error: Rename could not be completed.\n"), _("Rename memory card file") );
-		return;
-	}
-
-	card.Filename = newFilename;
-	this->DoRefresh();
-
-    wxCommandEvent change(pxEvt_SomethingChanged);
-	this->AddPendingEvent(change);//enable the apply button (the auto-trigger doesn't get triggered here...)
+	UiRenameCard( card );
 }
+
 
 void Panels::MemoryCardListPanel_Simple::OnListDrag(wxListEvent& evt)
 {

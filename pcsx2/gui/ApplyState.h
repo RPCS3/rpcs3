@@ -184,6 +184,10 @@ public:
 	// If no exceptions are thrown, then the operation is assumed a success. :)
 	virtual void Apply()=0;
 
+	//Enable the apply button manually if required (in case the auto-trigger doesn't kick in, e.g. when clicking a button)
+	void SomethingChanged();
+
+
 	void Init();
 
 	// Mandatory override: As a rule for proper interface design, all deriving classes need

@@ -98,19 +98,31 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	m_panel_mcdlist	= new MemoryCardListPanel_Simple( this );
 	m_needs_suspending = false;
 
-	// [TODO] : Plan here is to add an advanced tab which gives the user the ability
-	// to configure the names of each memory card slot.
-	wxString title=_("Drag card files in the list to swap or copy between ports.");
-	title+=_("\n\nNote: 'Rename' and 'Delete' require to apply pending changes first.");
-	title+=_("\nAlso, 'Create', 'Rename' and 'Delete' will NOT be reverted when clicking 'Cancel'.");
-	*this	+= Heading(title)	| StdExpand();
-	*this	+= StdPadding;
+	wxFlexGridSizer* s_flex=new wxFlexGridSizer(3,1, 0, 0);
+	s_flex->AddGrowableCol(0);
+	s_flex->AddGrowableRow(1);
+	
+	//set own sizer to s_flex (3-rows-1-col table with growable width and growable middle-row-height)
+	//  instead of the default vertical sizer which cannot expand vertically.
+	//  (vertical sizers can expand horizontally and consume the minimum vertical height possible)
+	SetSizer(s_flex);
 
-	*this	+= m_panel_mcdlist			| StdExpand();
-	//*this	+= StdPadding;
-	//*this	+= new wxStaticLine( this )	| StdExpand();
-	*this	+= StdPadding;
-	*this	+= new McdConfigPanel_Toggles( this )	| StdExpand();
+	wxBoxSizer* s_top = new wxBoxSizer(wxVERTICAL);
+
+	wxString title=_("Drag card files in the list to swap or copy between ports.");
+	title+=_("\nNote: Rename/Copy/Create/Delete will NOT be reverted with 'Cancel'.");
+
+	*s_top  += Heading(title)	| StdExpand();
+	*s_top  += StdPadding;
+
+	*this += s_top | StdExpand();
+	*this+= m_panel_mcdlist			| StdExpand();
+
+	wxBoxSizer* s_bottom = new wxBoxSizer(wxVERTICAL);
+	*s_bottom += StdPadding;
+	*s_bottom += new McdConfigPanel_Toggles( this )	| StdExpand();
+
+	*this+= s_bottom | StdExpand();
 
 	for( uint i=0; i<2; ++i )
 	{
@@ -118,7 +130,12 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 			Connect( check->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(McdConfigDialog::OnMultitapClicked) );
 	}
 
-	AddOkCancel();
+	AddOkCancel(s_bottom);
+
+	//make this dialog fit to current elements (else can be shrinked too much)
+	// [There seem to be a bug in wxWidgets which prevents Fit() to succeed by itself,
+	//    So using the "bigger" method: SetSizerAndFit, with existing sizer (set earlier to s_flex) - avih]
+	SetSizerAndFit(GetSizer());
 }
 
 void Dialogs::McdConfigDialog::OnMultitapClicked( wxCommandEvent& evt )
