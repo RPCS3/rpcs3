@@ -43,7 +43,7 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 
 	m_check_SizeLock	= new pxCheckBox( this, _("Disable window resize border") );
 	m_check_HideMouse	= new pxCheckBox( this, _("Always hide mouse cursor") );
-	m_check_CloseGS		= new pxCheckBox( this, _("Hide window on suspend") );
+	m_check_CloseGS		= new pxCheckBox( this, _("Hide window when paused") );
 	m_check_Fullscreen	= new pxCheckBox( this, _("Default to fullscreen mode on open") );
 	m_check_VsyncEnable	= new pxCheckBox( this, _("Wait for Vsync on refresh") );
 	m_check_ManagedVsync = new pxCheckBox( this, _("Dynamically toggle Vsync depending on frame rate (read tooltip!)") );
@@ -82,7 +82,7 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 */
 	m_check_CloseGS->SetToolTip( pxEt( "!ContextTip:Window:HideGS",
 		L"Completely closes the often large and bulky GS window when pressing "
-		L"ESC or suspending the emulator."
+		L"ESC or pausing the emulator."
 	) );
 
 	// ----------------------------------------------------------------------------

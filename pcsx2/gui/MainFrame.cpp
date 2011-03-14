@@ -570,7 +570,7 @@ void MainEmuFrame::ApplyCoreStatus()
 		if( !CoreThread.IsClosing() )
 		{
 			susres->Enable();
-			susres->SetText(_("Suspend"));
+			susres->SetText(_("Pause"));
 			susres->SetHelp(_("Safely pauses emulation and preserves the PS2 state."));
 		}
 		else
@@ -583,7 +583,7 @@ void MainEmuFrame::ApplyCoreStatus()
 			}
 			else
 			{
-				susres->SetText(_("Suspend/Resume"));
+				susres->SetText(_("Pause/Resume"));
 				susres->SetHelp(_("No emulation state is active; cannot suspend or resume."));
 			}
 		}
