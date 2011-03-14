@@ -24,7 +24,8 @@
 
 const GSVector4 GSVector4::m_ps0123(0.0f, 1.0f, 2.0f, 3.0f);
 const GSVector4 GSVector4::m_ps4567(4.0f, 5.0f, 6.0f, 7.0f);
-const GSVector4 GSVector4::m_half(0.5f, 0.5f, 0.5f, 0.5f);
+const GSVector4 GSVector4::m_half(0.5f);
+const GSVector4 GSVector4::m_one(1.0f);
 const GSVector4 GSVector4::m_x3f800000(_mm_castsi128_ps(_mm_set1_epi32(0x3f800000)));
 const GSVector4 GSVector4::m_x4b000000(_mm_castsi128_ps(_mm_set1_epi32(0x4b000000)));
 

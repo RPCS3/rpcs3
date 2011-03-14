@@ -70,7 +70,7 @@ void GSVertexTrace::UpdateLOD()
 	{
 		// LOD = log2(1/|Q|) * (1 << L) + K
 
-		GSVector4::storel(&m_lod, m_max.t.uph(m_min.t).log2(2).neg() * (float)(1 << TEX1.L) + K);
+		GSVector4::storel(&m_lod, m_max.t.uph(m_min.t).log2(3).neg() * (float)(1 << TEX1.L) + K);
 
 		if(m_lod.x > m_lod.y) {float tmp = m_lod.x; m_lod.x = m_lod.y; m_lod.y = tmp;}
 	}

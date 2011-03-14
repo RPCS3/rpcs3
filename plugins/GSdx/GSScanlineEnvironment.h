@@ -65,6 +65,8 @@ union GSScanlineSelector
 		uint32 edge:1; // 47
 
 		uint32 tw:3; // 48 (encodes values between 3 -> 10, texture cache makes sure it is at least 3)
+		uint32 mipmap:1; // 49
+		uint32 lcm:1; // 50
 	};
 
 	struct
@@ -127,18 +129,20 @@ __aligned(struct, 32) GSScanlineGlobalData // per batch variables, this is like 
 	GSVector4i aref;
 	GSVector4i afix;
 	GSVector4i frb, fga;
+	GSVector4 k; // TEX1.K * 0x10000
+	GSVector4 l; // TEX1.L * -0x10000
 };
 
 __aligned(struct, 32) GSScanlineLocalData // per prim variables, each thread has its own
 {
 	const GSScanlineGlobalData* gd;
 
-	struct {GSVector4 z, s, t, q; GSVector4i rb, ga, f, si, ti, _pad[7];} d[4];
-	struct {GSVector4 z, stq; GSVector4i c, f, st;} d4;
+	struct skip {GSVector4 z, s, t, q; GSVector4i rb, ga, f, _pad;} d[4];
+	struct step {GSVector4 z, stq; GSVector4i c, f;} d4;
 	struct {GSVector4i rb, ga;} c;
 	struct {GSVector4i z, f;} p;
 
 	// these should be stored on stack as normal local variables (no free regs to use, esp cannot be saved to anywhere, and we need an aligned stack)
 
-	struct {GSVector4i z, f, s, t, q, rb, ga, zs, zd, uf, vf, cov;} temp; 
+	struct {GSVector4i z, f, s, t, q, rb, ga, zs, zd, uf, vf, cov, lod;} temp; 
 };

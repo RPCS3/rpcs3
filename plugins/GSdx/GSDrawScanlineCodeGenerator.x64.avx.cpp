@@ -256,7 +256,7 @@ void GSDrawScanlineCodeGenerator::Init()
 	{
 		// edx = &m_local.d[skip]
 
-		shl(rdx, 4);
+		shl(rdx, 3);
 		lea(rdx, ptr[rdx + r11 + offsetof(GSScanlineLocalData, d)]);
 	}
 
@@ -317,17 +317,17 @@ void GSDrawScanlineCodeGenerator::Init()
 
 				vcvttps2dq(xmm0, xmm0);
 
-				// si = vti.xxxx() + m_local.d[skip].si;
-				// ti = vti.yyyy(); if(!sprite) ti += m_local.d[skip].ti;
+				// s = vti.xxxx() + m_local.d[skip].s;
+				// t = vti.yyyy(); if(!sprite) t += m_local.d[skip].t;
 
 				vpshufd(xmm10, xmm0, _MM_SHUFFLE(0, 0, 0, 0));
 				vpshufd(xmm11, xmm0, _MM_SHUFFLE(1, 1, 1, 1));
 
-				vpaddd(xmm10, ptr[rdx + 16 * 7]);
+				vpaddd(xmm10, ptr[rdx + offsetof(GSScanlineLocalData::skip, s)]);
 
 				if(!m_sel.sprite)
 				{
-					vpaddd(xmm11, ptr[rdx + 16 * 8]);
+					vpaddd(xmm11, ptr[rdx + offsetof(GSScanlineLocalData::skip, t)]);
 				}
 				else
 				{
@@ -337,6 +337,12 @@ void GSDrawScanlineCodeGenerator::Init()
 						vpshufhw(xmm6, xmm6, _MM_SHUFFLE(2, 2, 0, 0));
 						vpsrlw(xmm6, 1);
 					}
+				}
+
+				if(m_sel.mipmap && !m_sel.lcm)
+				{
+					vshufps(xmm12, xmm0, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
+					vaddps(xmm12, ptr[rdx + offsetof(GSScanlineLocalData::skip, q)]);
 				}
 			}
 			else
@@ -349,9 +355,9 @@ void GSDrawScanlineCodeGenerator::Init()
 				vshufps(xmm11, xmm0, xmm0, _MM_SHUFFLE(1, 1, 1, 1));
 				vshufps(xmm12, xmm0, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
 
-				vaddps(xmm10, ptr[rdx + 16 * 1]);
-				vaddps(xmm11, ptr[rdx + 16 * 2]);
-				vaddps(xmm12, ptr[rdx + 16 * 3]);
+				vaddps(xmm10, ptr[rdx + offsetof(GSScanlineLocalData::skip, s)]);
+				vaddps(xmm11, ptr[rdx + offsetof(GSScanlineLocalData::skip, t)]);
+				vaddps(xmm12, ptr[rdx + offsetof(GSScanlineLocalData::skip, q)]);
 			}
 		}
 
@@ -374,8 +380,8 @@ void GSDrawScanlineCodeGenerator::Init()
 				vpshufd(xmm13, xmm0, _MM_SHUFFLE(0, 0, 0, 0));
 				vpshufd(xmm14, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
 
-				vpaddw(xmm13, ptr[rdx + 16 * 4]);
-				vpaddw(xmm14, ptr[rdx + 16 * 5]);
+				vpaddw(xmm13, ptr[rdx + offsetof(GSScanlineLocalData::skip, rb)]);
+				vpaddw(xmm14, ptr[rdx + offsetof(GSScanlineLocalData::skip, ga)]);
 			}
 			else
 			{
@@ -430,7 +436,7 @@ void GSDrawScanlineCodeGenerator::Step()
 				// si += st.xxxx();
 				// if(!sprite) ti += st.yyyy();
 
-				vmovdqa(xmm0, ptr[r11 + offsetof(GSScanlineLocalData, d4.st)]);
+				vmovdqa(xmm0, ptr[r11 + offsetof(GSScanlineLocalData, d4.stq)]);
 
 				vpshufd(xmm1, xmm0, _MM_SHUFFLE(0, 0, 0, 0));
 				vpaddd(xmm10, xmm1);
@@ -439,6 +445,12 @@ void GSDrawScanlineCodeGenerator::Step()
 				{
 					vpshufd(xmm1, xmm0, _MM_SHUFFLE(1, 1, 1, 1));
 					vpaddd(xmm11, xmm1);
+				}
+
+				if(m_sel.mipmap && !m_sel.lcm)
+				{
+					vshufps(xmm3, xmm0, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
+					vaddps(xmm12, xmm3);
 				}
 			}
 			else
@@ -616,6 +628,11 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 	mov(rbx, ptr[r12 + offsetof(GSScanlineGlobalData, tex)]);
 
 	// ebx = tex
+
+	if(m_sel.mipmap && !m_sel.lcm)
+	{
+
+	}
 
 	if(!m_sel.fst)
 	{

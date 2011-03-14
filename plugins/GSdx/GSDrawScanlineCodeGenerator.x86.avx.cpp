@@ -52,8 +52,9 @@ L("loop");
 	// esi = fzbr
 	// edi = fzbc
 	// xmm0 = z/zi
-	// xmm2 = u (tme)
-	// xmm3 = v (tme)
+	// xmm2 = s/u (tme)
+	// xmm3 = t/v (tme)
+	// xmm4 = q (tme)
 	// xmm5 = rb (!tme)
 	// xmm6 = ga (!tme)
 	// xmm7 = test
@@ -66,8 +67,9 @@ L("loop");
 	// esi = fzbr
 	// edi = fzbc
 	// - xmm0
-	// xmm2 = u (tme)
-	// xmm3 = v (tme)
+	// xmm2 = s/u (tme)
+	// xmm3 = t/v (tme)
+	// xmm4 = q (tme)
 	// xmm5 = rb (!tme)
 	// xmm6 = ga (!tme)
 	// xmm7 = test
@@ -284,7 +286,7 @@ void GSDrawScanlineCodeGenerator::Init()
 	{
 		// edx = &m_local.d[skip]
 
-		shl(edx, 4);
+		shl(edx, 3);
 		lea(edx, ptr[edx + (size_t)m_local.d]);
 
 		// ebx = &v
@@ -305,7 +307,7 @@ void GSDrawScanlineCodeGenerator::Init()
 				vcvttps2dq(xmm1, xmm0);
 				vpshufhw(xmm1, xmm1, _MM_SHUFFLE(2, 2, 2, 2));
 				vpshufd(xmm1, xmm1, _MM_SHUFFLE(2, 2, 2, 2));
-				vpaddw(xmm1, ptr[edx + 16 * 6]);
+				vpaddw(xmm1, ptr[edx + offsetof(GSScanlineLocalData::skip, f)]);
 
 				vmovdqa(ptr[&m_local.temp.f], xmm1);
 			}
@@ -315,7 +317,7 @@ void GSDrawScanlineCodeGenerator::Init()
 				// z = vp.zzzz() + m_local.d[skip].z;
 
 				vshufps(xmm0, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
-				vaddps(xmm0, ptr[edx]);
+				vaddps(xmm0, ptr[edx + offsetof(GSScanlineLocalData::skip, z)]);
 
 				vmovaps(ptr[&m_local.temp.z], xmm0);
 			}
@@ -351,34 +353,41 @@ void GSDrawScanlineCodeGenerator::Init()
 			{
 				// GSVector4i vti(vt);
 
-				vcvttps2dq(xmm4, xmm4);
+				vcvttps2dq(xmm6, xmm4);
 
-				// si = vti.xxxx() + m_local.d[skip].si;
-				// ti = vti.yyyy(); if(!sprite) ti += m_local.d[skip].ti;
+				// s = vti.xxxx() + m_local.d[skip].s;
+				// t = vti.yyyy(); if(!sprite) t += m_local.d[skip].t;
 
-				vpshufd(xmm2, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
-				vpshufd(xmm3, xmm4, _MM_SHUFFLE(1, 1, 1, 1));
+				vpshufd(xmm2, xmm6, _MM_SHUFFLE(0, 0, 0, 0));
+				vpshufd(xmm3, xmm6, _MM_SHUFFLE(1, 1, 1, 1));
 
-				vpaddd(xmm2, ptr[edx + 16 * 7]);
+				vpaddd(xmm2, ptr[edx + offsetof(GSScanlineLocalData::skip, s)]);
 
 				if(!m_sel.sprite)
 				{
-					vpaddd(xmm3, ptr[edx + 16 * 8]);
+					vpaddd(xmm3, ptr[edx + offsetof(GSScanlineLocalData::skip, t)]);
 				}
 				else
 				{
 					if(m_sel.ltf)
 					{
-						vpshuflw(xmm4, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
-						vpshufhw(xmm4, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
-						vpsrlw(xmm4, 1);
+						vpshuflw(xmm6, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
+						vpshufhw(xmm6, xmm6, _MM_SHUFFLE(2, 2, 0, 0));
+						vpsrlw(xmm6, 1);
 
-						vmovdqa(ptr[&m_local.temp.vf], xmm4);
+						vmovdqa(ptr[&m_local.temp.vf], xmm6);
 					}
 				}
 
 				vmovdqa(ptr[&m_local.temp.s], xmm2);
 				vmovdqa(ptr[&m_local.temp.t], xmm3);
+
+				if(m_sel.mipmap && !m_sel.lcm)
+				{
+					vshufps(xmm4, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
+					vaddps(xmm4, ptr[edx + offsetof(GSScanlineLocalData::skip, q)]);
+					vmovaps(ptr[&m_local.temp.q], xmm4);
+				}
 			}
 			else
 			{
@@ -390,17 +399,13 @@ void GSDrawScanlineCodeGenerator::Init()
 				vshufps(xmm3, xmm4, xmm4, _MM_SHUFFLE(1, 1, 1, 1));
 				vshufps(xmm4, xmm4, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
 
-				vaddps(xmm2, ptr[edx + 16 * 1]);
-				vaddps(xmm3, ptr[edx + 16 * 2]);
-				vaddps(xmm4, ptr[edx + 16 * 3]);
+				vaddps(xmm2, ptr[edx + offsetof(GSScanlineLocalData::skip, s)]);
+				vaddps(xmm3, ptr[edx + offsetof(GSScanlineLocalData::skip, t)]);
+				vaddps(xmm4, ptr[edx + offsetof(GSScanlineLocalData::skip, q)]);
 
 				vmovaps(ptr[&m_local.temp.s], xmm2);
 				vmovaps(ptr[&m_local.temp.t], xmm3);
 				vmovaps(ptr[&m_local.temp.q], xmm4);
-
-				vrcpps(xmm4, xmm4);
-				vmulps(xmm2, xmm4);
-				vmulps(xmm3, xmm4);
 			}
 		}
 
@@ -423,8 +428,8 @@ void GSDrawScanlineCodeGenerator::Init()
 				vpshufd(xmm5, xmm6, _MM_SHUFFLE(0, 0, 0, 0));
 				vpshufd(xmm6, xmm6, _MM_SHUFFLE(2, 2, 2, 2));
 
-				vpaddw(xmm5, ptr[edx + 16 * 4]);
-				vpaddw(xmm6, ptr[edx + 16 * 5]);
+				vpaddw(xmm5, ptr[edx + offsetof(GSScanlineLocalData::skip, rb)]);
+				vpaddw(xmm6, ptr[edx + offsetof(GSScanlineLocalData::skip, ga)]);
 
 				vmovdqa(ptr[&m_local.temp.rb], xmm5);
 				vmovdqa(ptr[&m_local.temp.ga], xmm6);
@@ -485,12 +490,12 @@ void GSDrawScanlineCodeGenerator::Step()
 		{
 			if(m_sel.fst)
 			{
-				// GSVector4i st = m_local.d4.st;
+				// GSVector4i stq = m_local.d4.stq;
 
-				// si += st.xxxx();
-				// if(!sprite) ti += st.yyyy();
+				// s += stq.xxxx();
+				// if(!sprite) t += stq.yyyy();
 
-				vmovdqa(xmm4, ptr[&m_local.d4.st]);
+				vmovdqa(xmm4, ptr[&m_local.d4.stq]);
 
 				vpshufd(xmm2, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
 				vpaddd(xmm2, ptr[&m_local.temp.s]);
@@ -505,6 +510,13 @@ void GSDrawScanlineCodeGenerator::Step()
 				else
 				{
 					vmovdqa(xmm3, ptr[&m_local.temp.t]);
+				}
+
+				if(m_sel.mipmap && !m_sel.lcm)
+				{
+					vshufps(xmm4, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
+					vaddps(xmm4, ptr[&m_local.temp.q]);
+					vmovaps(ptr[&m_local.temp.q], xmm4);
 				}
 			}
 			else
@@ -528,10 +540,6 @@ void GSDrawScanlineCodeGenerator::Step()
 				vmovaps(ptr[&m_local.temp.s], xmm2);
 				vmovaps(ptr[&m_local.temp.t], xmm3);
 				vmovaps(ptr[&m_local.temp.q], xmm4);
-
-				vrcpps(xmm4, xmm4);
-				vmulps(xmm2, xmm4);
-				vmulps(xmm3, xmm4);
 			}
 		}
 
@@ -648,16 +656,14 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 		{
 			// GSVector4i o = GSVector4i::x80000000();
 
-			vpcmpeqd(xmm4, xmm4);
-			vpslld(xmm4, 31);
+			vpcmpeqd(temp1, temp1);
+			vpslld(temp1, 31);
 
 			// GSVector4i zso = zs - o;
-
-			vpsubd(xmm0, xmm4);
-
 			// GSVector4i zdo = zd - o;
 
-			vpsubd(xmm1, xmm4);
+			vpsubd(xmm0, temp1);
+			vpsubd(xmm1, temp1);
 		}
 
 		switch(m_sel.ztst)
@@ -671,8 +677,8 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 		case ZTST_GREATER: // TODO: tidus hair and chocobo wings only appear fully when this is tested as ZTST_GEQUAL
 			// test |= zso <= zdo; // ~(zso > zdo)
 			vpcmpgtd(xmm0, xmm1);
-			vpcmpeqd(xmm4, xmm4);
-			vpxor(xmm0, xmm4);
+			vpcmpeqd(temp1, temp1);
+			vpxor(xmm0, temp1);
 			vpor(xmm7, xmm0);
 			break;
 		}
@@ -694,11 +700,66 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 	if(!m_sel.fst)
 	{
-		// TODO: move these into Init/Step too?
+		vrcpps(xmm0, xmm4);
+
+		vmulps(xmm2, xmm0);
+		vmulps(xmm3, xmm0);
 
 		vcvttps2dq(xmm2, xmm2);
 		vcvttps2dq(xmm3, xmm3);
+	}
 
+	if(m_sel.mipmap)
+	{
+		// TODO: if the fractional part is not needed in round-off mode then there is a faster integer log2 (but can we round it?)
+
+		if(!m_sel.lcm)
+		{
+			// lod = -log2(Q) * (1 << L) + K
+
+			vpcmpeqd(xmm1, xmm1);
+			vpsrld(xmm1, xmm1, 25);
+			vpslld(xmm0, xmm4, 1);
+			vpsrld(xmm0, xmm0, 24);
+			vpsubd(xmm0, xmm1);
+			vcvtdq2ps(xmm0, xmm0); 
+
+			// xmm0 = (float)(exp(e) - 127)
+
+			vpslld(xmm4, xmm4, 9);
+			vpsrld(xmm4, xmm4, 9);
+			vorps(xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[3]]); 
+			
+			// xmm4 = mant(q) | 1.0f
+
+			vmulps(xmm5, xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[0]]);
+			vaddps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[1]]);
+			vmulps(xmm5, xmm4);
+			vsubps(xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[3]]); 
+			vaddps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[2]]);
+			vmulps(xmm4, xmm5);
+			vaddps(xmm4, xmm0);
+
+			// xmm4 = log2(Q) = (((((c0 * xmm4) + c1) * xmm4) + c2) * (xmm4 - 1.0f) + xmm0)
+
+			vmulps(xmm4, ptr[&m_local.gd->l]);
+			vaddps(xmm4, ptr[&m_local.gd->k]);
+
+			// xmm4 = (-log2(Q) * (1 << L) + K) * 0x10000
+
+			vcvtps2dq(xmm4, xmm4);
+			vmovdqa(ptr[&m_local.temp.lod], xmm4);
+		}
+		else
+		{
+			// lod = K (=> use m_local->gd.k later when lod is needed)
+		}
+	}
+
+	// TODO: if(m_sel.mipmap) ...
+
+	if(!m_sel.fst)
+	{
 		if(m_sel.ltf)
 		{
 			// u -= 0x8000;

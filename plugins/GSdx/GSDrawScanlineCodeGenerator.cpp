@@ -34,6 +34,14 @@ const GSVector4i GSDrawScanlineCodeGenerator::m_test[8] =
 	GSVector4i::zero(),
 };
 
+const GSVector4 GSDrawScanlineCodeGenerator::m_log2_coef[4] = 
+{
+	GSVector4(0.204446009836232697516f),
+	GSVector4(-1.04913055217340124191f),
+	GSVector4(2.28330284476918490682f),
+	GSVector4(1.0f),
+};
+
 GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(void* param, uint64 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)
 	, m_local(*(GSScanlineLocalData*)param)

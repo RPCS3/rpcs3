@@ -375,6 +375,14 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
 			{
+				gd.sel.mipmap = 1; // TODO: pass mmin here and store mxl to m_global for clamping the lod
+				gd.sel.lcm = context->TEX1.LCM;
+
+				gd.l = GSVector4((float)(-0x10000 << context->TEX1.L));
+				gd.k = GSVector4((float)(0x1000 * context->TEX1.K));
+
+				// the rest is fake, should be removed later
+
 				int level = (int)(m_vt.m_lod.x + 0.5f);
 
 				level = std::min<int>(level, context->TEX1.MXL); 
@@ -691,21 +699,17 @@ void GSRendererSW::VertexKick(bool skip)
 
 	if(tme)
 	{
-		float q;
-
 		if(fst)
 		{
 			v.t = GSVector4(((GSVector4i)m_v.UV).upl16() << (16 - 4));
-			q = 1.0f;
 		}
 		else
 		{
 			v.t = GSVector4(m_v.ST.S, m_v.ST.T);
 			v.t *= GSVector4(0x10000 << context->TEX0.TW, 0x10000 << context->TEX0.TH);
-			q = m_v.RGBAQ.Q;
 		}
 
-		v.t = v.t.xyxy(GSVector4::load(q));
+		v.t = v.t.xyxy(GSVector4::load(m_v.RGBAQ.Q));
 	}
 
 	GSVertexSW& dst = m_vl.AddTail();
