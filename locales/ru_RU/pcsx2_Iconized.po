@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-27 10:09+0100\n"
+"POT-Creation-Date: 2011-03-14 18:10+0100\n"
 "PO-Revision-Date: 2010-12-28 13:54+0300\n"
 "Last-Translator: Kein <kein-of@yandex.ru>\n"
 "Language-Team: Kein <kein-of@yandex.ru>\n"
@@ -68,7 +68,7 @@ msgstr ""
 "их снова в настройках эмуляции PCSX2 сразу после того, как устраните причину "
 "ошибки."
 
-#: pcsx2/gui/AppMain.cpp:476
+#: pcsx2/gui/AppMain.cpp:538
 msgid "!Notice:BiosDumpRequired"
 msgstr ""
 "Для работы эмулятора PCSX2 вам нужна *легальная* копия образа BIOS'а из "
@@ -76,13 +76,13 @@ msgstr ""
 "полученный от друзей. Используйте спец-программы для сохранения вашей "
 "собственной копии BIOS'а с вашей консоли."
 
-#: pcsx2/gui/AppMain.cpp:559
+#: pcsx2/gui/AppMain.cpp:621
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr ""
 "Выберите 'Игнорировать' если хотите подождать ответа.Выберите 'Отмена' если "
 "желаете закрыть поток.Выберите 'Выход' если хотите завершить работу PCSX2."
 
-#: pcsx2/gui/AppUserMode.cpp:59
+#: pcsx2/gui/AppUserMode.cpp:57
 msgid "!Notice:PortableModeRights"
 msgstr ""
 
@@ -154,7 +154,7 @@ msgstr ""
 "\n"
 "(примечание: все настройки плагинов сохранятся)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:77
+#: pcsx2/gui/MemoryCardFile.cpp:78
 msgid "!Notice:Mcd:HasBeenDisabled"
 msgstr ""
 "Карта памяти в слоте %d была автоматически отключена. После того, как вы "
@@ -196,20 +196,20 @@ msgstr ""
 "однако почти всегда вызывают ошибки и проблемы в других. При смене игры вам "
 "необходимо отключить хаки вручную (если какие-либо их них были включены)."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:366
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:411
 msgid "!Notice:Mcd:Overwrite"
 msgstr ""
 "Данная операция скопирует информацию карты памяти из слота %u на карту "
 "памяти в слоте %u. Все данные второй карты памяти будут потеряны. Вы уверены "
 "что хотите продолжить?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:382
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:429
 msgid "!Notice:Mcd:Copy Failed"
 msgstr ""
 "Ошибка! Невозможно скопировать выбранную карту памяти в слот %u. Указанный "
 "файл уже используется."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:594
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:722
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 "Вы действительно хотите удалить отформатированную карту памяти в слоте %u? "

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-25 18:54+0100\n"
+"POT-Creation-Date: 2011-03-14 18:10+0100\n"
 "PO-Revision-Date: 2010-12-28 13:40+0300\n"
 "Last-Translator: Kein <kein-of@yandex.ru>\n"
 "Language-Team: Kein <kein-of@yandex.ru>\n"
@@ -43,79 +43,79 @@ msgstr ""
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr "Ошибка инициализации встроенного плагина карт памяти."
 
-#: pcsx2/gui/AppConfig.cpp:776
+#: pcsx2/gui/AppConfig.cpp:778
 msgid "Safest"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:777
+#: pcsx2/gui/AppConfig.cpp:779
 msgid "Safe (faster)"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:778
+#: pcsx2/gui/AppConfig.cpp:780
 msgid "Balanced"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:779
+#: pcsx2/gui/AppConfig.cpp:781
 msgid "Aggressive"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:780
+#: pcsx2/gui/AppConfig.cpp:782
 msgid "Aggressive plus"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:781
+#: pcsx2/gui/AppConfig.cpp:783
 msgid "Mostly Harmful"
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:412
+#: pcsx2/gui/ConsoleLogger.cpp:413
 msgid "Fits a lot of log in a microcosmically small area."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:414
+#: pcsx2/gui/ConsoleLogger.cpp:415
 msgid "It's what I use (the programmer guy)."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:416
+#: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Its nice and readable."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:418
+#: pcsx2/gui/ConsoleLogger.cpp:419
 msgid "In case you have a really high res display."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:422
+#: pcsx2/gui/ConsoleLogger.cpp:423
 msgid "Default soft-tone color scheme."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:423
+#: pcsx2/gui/ConsoleLogger.cpp:424
 msgid ""
 "Classic black color scheme for people who enjoy having text seared into "
 "their optic nerves."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:427
+#: pcsx2/gui/ConsoleLogger.cpp:428
 msgid ""
 "When checked the log window will be visible over other foreground windows."
 msgstr ""
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:151
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
 msgid "!ContextTip:ChangingNTFS"
 msgstr ""
 "Режим NTFS-компрессии может быть изменен в любой момент времени через "
 "свойства файла Проводника Windows."
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:164
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
 msgid ""
 "Always use this option if you want the safest and surest memory card "
 "behavior."
 msgstr ""
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:168
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:172
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
 msgid "16 and 32 MB cards have roughly the same compatibility factor."
 msgstr ""
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:176
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
 msgid ""
 "Use at your own risk.  Erratic memory card behavior is possible (though "
 "unlikely)."
@@ -154,7 +154,7 @@ msgstr ""
 "Активируйте данную опцию, если желаете чтобы PCSX2 создавала соответствующие "
 "папки относительно пути указанному в настройках пользовательского режима."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:52
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:53
 msgid "!ContextTip:Window:Vsync"
 msgstr ""
 "Устраняет \"излом\" изображения при активной смене картинки на экране, "
@@ -162,28 +162,29 @@ msgstr ""
 "лишь при использовании полноэкранного режима и лишь в связке с теми видео-"
 "плагинами, которые его поддерживают."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:57
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:58
+#, fuzzy
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr ""
+"Устраняет \"излом\" изображения при активной смене картинки на экране, "
+"однако сия роскошь чревата общим понижением производительности. Актуально "
+"лишь при использовании полноэкранного режима и лишь в связке с теми видео-"
+"плагинами, которые его поддерживают."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:66
 msgid "!ContextTip:Window:HideMouse"
 msgstr ""
 "По умолчанию, курсор мыши скрывается после 2-ух секунд бездействия. Данная "
 "опция моментально скрывает курсор мыши в видеоокне. Удобно, если вы "
 "используете управление мышью в игре."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:72
 msgid "!ContextTip:Window:Fullscreen"
 msgstr ""
 "Автоматически переводит видеоокно в полный режим при запуске игры. Впрочем, "
 "вы всегда можете выйти из данного режима с помощью комбинации ALT+ENTER."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
-msgid "!ContextTip:Window:FullscreenExclusive"
-msgstr ""
-"Эксклюзивный полноэкранный режим немного улучшает качество видеоряда на "
-"старых CRT-мониторах и немного ускоряет отображение кадров на старых "
-"видеокартах. Однако, ввиду его особенностей, может приводить к утчекам "
-"памяти и вылетам при частой его активации/деактивации (alt+enter)."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:73
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
 msgid "!ContextTip:Window:HideGS"
 msgstr "Скрывает видеоокно при установке паузы или нажатии ESC."
 
@@ -365,3 +366,10 @@ msgstr ""
 "\n"
 "Примечание: данная опция применяется \"на лету\", однако ее последующее "
 "отключение в реальном времени чревато появлением графического мусора в игре. "
+
+#~ msgid "!ContextTip:Window:FullscreenExclusive"
+#~ msgstr ""
+#~ "Эксклюзивный полноэкранный режим немного улучшает качество видеоряда на "
+#~ "старых CRT-мониторах и немного ускоряет отображение кадров на старых "
+#~ "видеокартах. Однако, ввиду его особенностей, может приводить к утчекам "
+#~ "памяти и вылетам при частой его активации/деактивации (alt+enter)."

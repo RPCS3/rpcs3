@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-27 10:09+0100\n"
+"POT-Creation-Date: 2011-03-14 18:10+0100\n"
 "PO-Revision-Date: 2011-02-26 22:29+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
@@ -57,20 +57,20 @@ msgstr ""
 "wichtig um akzeptable FPS Raten zu erreichen. Du kannst versuchen die "
 "Recompiler über die Konfigurationseinstellungen zu reaktivieren."
 
-#: pcsx2/gui/AppMain.cpp:476
+#: pcsx2/gui/AppMain.cpp:538
 msgid "!Notice:BiosDumpRequired"
 msgstr ""
 "PCSX2 benötigt ein PS2 BIOS Abbild. Da Sony den BIOS Code lizenziert hat "
 "dürfen wir dieses nicht mit PCSX2 vertreiben. Du musst daher das BIOS Abbild "
 "deiner eigenen PS2 benutzen! Näheres dazu in der FAQ."
 
-#: pcsx2/gui/AppMain.cpp:559
+#: pcsx2/gui/AppMain.cpp:621
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr ""
 "Ignorieren um weiter auf den Thread zu warten.Abbrechen um den Thread zu "
 "beenden.Beenden um PCSX2 komplett zu schließen."
 
-#: pcsx2/gui/AppUserMode.cpp:59
+#: pcsx2/gui/AppUserMode.cpp:57
 msgid "!Notice:PortableModeRights"
 msgstr ""
 "Stelle  bitte sicher das diese Ordner erstellt wurden und das dein "
@@ -132,7 +132,7 @@ msgstr ""
 "Ausführen des Konfigurationshelfers. %s muss dazu neu gestartet werden.Alle "
 "%s Einstellungen gehen verloren. Bist du dir sicher?"
 
-#: pcsx2/gui/MemoryCardFile.cpp:77
+#: pcsx2/gui/MemoryCardFile.cpp:78
 msgid "!Notice:Mcd:HasBeenDisabled"
 msgstr ""
 "Die Memory Card in Slot %d wurde automatisch deaktiviert. Du kannst dieses "
@@ -162,17 +162,17 @@ msgstr ""
 "Spielefixes können spezifische, bekannte Fehler in einigen Spielen beheben. "
 "Sie sollten aber nur für diese Spiele aktiviert werden."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:366
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:411
 msgid "!Notice:Mcd:Overwrite"
 msgstr ""
 "Hiermit wird die Memory Card in Slot %u überschrieben. Bist du dir absolut "
 "sicher?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:382
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:429
 msgid "!Notice:Mcd:Copy Failed"
 msgstr "Konnte die Memory Card nicht kopieren. Die Zieldatei ist in Benutzung."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:594
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:722
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 "Hiermit wird die komplette Memory Card in Slot %u gelöscht. Bist du dir "

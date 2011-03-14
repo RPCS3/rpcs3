@@ -2,10 +2,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-27 10:09+0100\n"
+"POT-Creation-Date: 2011-03-14 18:10+0100\n"
 "PO-Revision-Date: 2011-03-06 02:27+0200\n"
 "Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
 "Language-Team: PyramidHead <atiamar@hotmail.com>\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -45,15 +46,15 @@ msgstr "!Notice:RecompilerInit:Header"
 msgid "!Notice:RecompilerInit:Footer"
 msgstr "!Notice:RecompilerInit:Footer"
 
-#: pcsx2/gui/AppMain.cpp:476
+#: pcsx2/gui/AppMain.cpp:538
 msgid "!Notice:BiosDumpRequired"
 msgstr "!Notice:BiosDumpRequired"
 
-#: pcsx2/gui/AppMain.cpp:559
+#: pcsx2/gui/AppMain.cpp:621
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr "!Notice Error:Thread Deadlock Actions"
 
-#: pcsx2/gui/AppUserMode.cpp:59
+#: pcsx2/gui/AppUserMode.cpp:57
 msgid "!Notice:PortableModeRights"
 msgstr "!Notice:PortableModeRights"
 
@@ -93,7 +94,7 @@ msgstr "!Notice:ConfirmSysReset"
 msgid "!Notice:DeleteSettings"
 msgstr "!Notice:DeleteSettings"
 
-#: pcsx2/gui/MemoryCardFile.cpp:77
+#: pcsx2/gui/MemoryCardFile.cpp:78
 msgid "!Notice:Mcd:HasBeenDisabled"
 msgstr "!Notice:Mcd:HasBeenDisabled"
 
@@ -117,15 +118,15 @@ msgstr "!Notice:DirPicker:CreatePath"
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr "!Panel:Gamefixes:Compat Warning"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:366
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:411
 msgid "!Notice:Mcd:Overwrite"
 msgstr "!Notice:Mcd:Overwrite"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:382
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:429
 msgid "!Notice:Mcd:Copy Failed"
 msgstr "!Notice:Mcd:Copy Failed"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:594
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:722
 msgid "!Notice:Mcd:Delete"
 msgstr "!Notice:Mcd:Delete"
 

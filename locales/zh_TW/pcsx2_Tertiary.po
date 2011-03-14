@@ -2,10 +2,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-27 10:09+0100\n"
+"POT-Creation-Date: 2011-03-14 18:10+0100\n"
 "PO-Revision-Date: 2011-03-04 03:40+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -30,80 +31,90 @@ msgid "Includes idle event processing and some other uncommon event usages."
 msgstr "包含閒置的事件處理和一些其他不尋常的事件使用。"
 
 #: pcsx2/MTGS.cpp:809
-msgid "The MTGS thread has become unresponsive while waiting for the GS plugin to open."
+msgid ""
+"The MTGS thread has become unresponsive while waiting for the GS plugin to "
+"open."
 msgstr "當等候圖形插件開啟時，多執行緒圖形模式的執行緒停止回應。"
 
 #: pcsx2/PluginManager.cpp:1329
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr "初始化內部記憶卡插件失敗。"
 
-#: pcsx2/gui/AppConfig.cpp:776
+#: pcsx2/gui/AppConfig.cpp:778
 msgid "Safest"
 msgstr "最安全"
 
-#: pcsx2/gui/AppConfig.cpp:777
+#: pcsx2/gui/AppConfig.cpp:779
 msgid "Safe (faster)"
 msgstr "安全（速度更快）"
 
-#: pcsx2/gui/AppConfig.cpp:778
+#: pcsx2/gui/AppConfig.cpp:780
 msgid "Balanced"
 msgstr "平衡"
 
-#: pcsx2/gui/AppConfig.cpp:779
+#: pcsx2/gui/AppConfig.cpp:781
 msgid "Aggressive"
 msgstr "激進"
 
-#: pcsx2/gui/AppConfig.cpp:780
+#: pcsx2/gui/AppConfig.cpp:782
 msgid "Aggressive plus"
 msgstr "更加激進"
 
-#: pcsx2/gui/AppConfig.cpp:781
+#: pcsx2/gui/AppConfig.cpp:783
 msgid "Mostly Harmful"
 msgstr "基本上有害"
 
-#: pcsx2/gui/ConsoleLogger.cpp:412
+#: pcsx2/gui/ConsoleLogger.cpp:413
 msgid "Fits a lot of log in a microcosmically small area."
 msgstr "在同等區域中顯示較多日誌"
 
-#: pcsx2/gui/ConsoleLogger.cpp:414
+#: pcsx2/gui/ConsoleLogger.cpp:415
 msgid "It's what I use (the programmer guy)."
 msgstr "這是 PCSX2 程式設計師們使用的字型大小"
 
-#: pcsx2/gui/ConsoleLogger.cpp:416
+#: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Its nice and readable."
 msgstr "令人心曠神怡而且便於閱讀"
 
-#: pcsx2/gui/ConsoleLogger.cpp:418
+#: pcsx2/gui/ConsoleLogger.cpp:419
 msgid "In case you have a really high res display."
 msgstr "適用於高螢幕解析度"
 
-#: pcsx2/gui/ConsoleLogger.cpp:422
+#: pcsx2/gui/ConsoleLogger.cpp:423
 msgid "Default soft-tone color scheme."
 msgstr "預設的軟色調顏色主題"
 
-#: pcsx2/gui/ConsoleLogger.cpp:423
-msgid "Classic black color scheme for people who enjoy having text seared into their optic nerves."
+#: pcsx2/gui/ConsoleLogger.cpp:424
+msgid ""
+"Classic black color scheme for people who enjoy having text seared into "
+"their optic nerves."
 msgstr "經典的黑色主題，獻給喜歡讓文字灼燒視神經的人。"
 
-#: pcsx2/gui/ConsoleLogger.cpp:427
-msgid "When checked the log window will be visible over other foreground windows."
+#: pcsx2/gui/ConsoleLogger.cpp:428
+msgid ""
+"When checked the log window will be visible over other foreground windows."
 msgstr "當勾選時，日誌視窗總是保持在最前端。"
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:151
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
 msgid "!ContextTip:ChangingNTFS"
-msgstr "NTFS 壓縮能夠在任何時候手動變更，透過從檔案總管使用右鍵選單的「內容」選項。"
+msgstr ""
+"NTFS 壓縮能夠在任何時候手動變更，透過從檔案總管使用右鍵選單的「內容」選項。"
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:164
-msgid "Always use this option if you want the safest and surest memory card behavior."
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
+msgid ""
+"Always use this option if you want the safest and surest memory card "
+"behavior."
 msgstr "如果您想要最安全可靠的記憶卡行為，就一直使用這個選項。"
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:168
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:172
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
 msgid "16 and 32 MB cards have roughly the same compatibility factor."
 msgstr "16 MB 和 32 MB 記憶卡的相容性係數大致相同。"
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:176
-msgid "Use at your own risk.  Erratic memory card behavior is possible (though unlikely)."
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
+msgid ""
+"Use at your own risk.  Erratic memory card behavior is possible (though "
+"unlikely)."
 msgstr "使用者自擔風險。可能出現不確定的記憶卡行為（儘管可能性不大）"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
@@ -140,7 +151,8 @@ msgstr ""
 "套用速度駭客、一些反編譯選項、一些已知加快遊戲速度的遊戲修正。\n"
 "已知重要的遊戲修正（補丁）會自動套用。\n"
 "\n"
-"--> 當取消勾選時，可以手動變更模擬器設定（基於當前滑桿所選擇的預先定義的設置）"
+"--> 當取消勾選時，可以手動變更模擬器設定（基於當前滑桿所選擇的預先定義的設"
+"置）"
 
 #: pcsx2/gui/ExecutorThread.cpp:40
 msgid "Logs events as they are passed to the PS2 virtual machine."
@@ -148,34 +160,36 @@ msgstr "隨著事件傳遞給 PS2 虛擬機，記錄事件。"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:156
 msgid "!ContextTip:DirPicker:UseDefault"
-msgstr "當勾選時，此資料夾將會自動反映與 PCSX2 當前的使用者設定所關聯的預設值。"
+msgstr ""
+"當勾選時，此資料夾將會自動反映與 PCSX2 當前的使用者設定所關聯的預設值。"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:52
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:53
 msgid "!ContextTip:Window:Vsync"
 msgstr ""
 "垂直同步消除遊戲畫面出現斷層（Screen tearing），但是效能大幅損失。\n"
 "通常僅用於全螢幕模式，恐怕不是在所有的圖形插件中都能工作。"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:57
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:58
+#, fuzzy
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr ""
+"垂直同步消除遊戲畫面出現斷層（Screen tearing），但是效能大幅損失。\n"
+"通常僅用於全螢幕模式，恐怕不是在所有的圖形插件中都能工作。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:66
 msgid "!ContextTip:Window:HideMouse"
 msgstr ""
 "當勾選時，強行令滑鼠指標在遊戲視窗中不可見；\n"
 "對於使用滑鼠作為遊戲中主要的控制裝置，是有用的。\n"
 "預設，滑鼠指標在 2 秒非活動之後自動隱藏。"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:72
 msgid "!ContextTip:Window:Fullscreen"
 msgstr ""
 "當開始或恢復模擬時，自動切換至全螢幕模式。\n"
 "您仍能使用 Alt + Enter，在視窗模式和全螢幕模式之間隨時切換。"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
-msgid "!ContextTip:Window:FullscreenExclusive"
-msgstr ""
-"可能在 CRT 螢幕上，畫面看起來更好；可能在老舊的顯示卡中，速度稍微快一些。\n"
-"但會導致當視窗模式和全螢幕模式之間切換時，記憶體洩漏或模擬器隨機當掉。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:73
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
 msgid "!ContextTip:Window:HideGS"
 msgstr ""
 "當按 ESC 或透過選單「檔案 -> 暫停遊戲」暫停模擬器的模擬時，\n"
@@ -320,24 +334,34 @@ msgid "!ContextTip:Framelimiter:Disable"
 msgstr "注意：當畫框限制停用時，渦輪加速和慢動作無法使用。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:162
-msgid "Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics."
-msgstr "當解析 NTSC 遊戲或 PAL 遊戲的畫框速率設定時出現錯誤。設定值必須是有效的浮點數。"
+msgid ""
+"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
+"valid floating point numerics."
+msgstr ""
+"當解析 NTSC 遊戲或 PAL 遊戲的畫框速率設定時出現錯誤。設定值必須是有效的浮點"
+"數。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:295
-msgid "For troubleshooting potential bugs in the MTGS only, as it is potentially very slow."
+msgid ""
+"For troubleshooting potential bugs in the MTGS only, as it is potentially "
+"very slow."
 msgstr ""
 "僅用於排除多執行緒圖形模式潛在的程式錯誤，\n"
 "因為速度可能非常慢"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid "Completely disables all GS plugin activity; ideal for benchmarking EEcore components."
+msgid ""
+"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+"components."
 msgstr ""
 "完全停止圖形插件所有的活動；\n"
 "適合用來做 EEcore 的效能測試"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:302
 msgid "!ContextTip:GS:SyncMTGS"
-msgstr "啟用這個選項，若您認為多執行緒圖形模式執行緒的同步正在導致模擬器當掉或圖形錯誤。"
+msgstr ""
+"啟用這個選項，若您認為多執行緒圖形模式執行緒的同步正在導致模擬器當掉或圖形錯"
+"誤。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:DisableOutput"
@@ -346,5 +370,11 @@ msgstr ""
 "這個選項最好是和即時存檔配合使用：\n"
 "在一個理想的畫面儲存即時存檔，啟用這個選項，再讀取即時存檔。\n"
 "\n"
-"警告：這個選項在遊戲運行時啟用即可生效，但無法在遊戲運行時停用（圖像變得垃圾）。"
+"警告：這個選項在遊戲運行時啟用即可生效，但無法在遊戲運行時停用（圖像變得垃"
+"圾）。"
 
+#~ msgid "!ContextTip:Window:FullscreenExclusive"
+#~ msgstr ""
+#~ "可能在 CRT 螢幕上，畫面看起來更好；可能在老舊的顯示卡中，速度稍微快一"
+#~ "些。\n"
+#~ "但會導致當視窗模式和全螢幕模式之間切換時，記憶體洩漏或模擬器隨機當掉。"

@@ -5,113 +5,137 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-03-04 11:56+0800\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2011-03-13 10:53+0800\n"
 "PO-Revision-Date: 2011-03-04 11:59+0800\n"
 "Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
 "Language-Team: \n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language: \n"
 "X-Poedit-KeywordsList: pxEt;pxLt;_t\n"
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: trunk\\\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
+#: common/include/Utilities/Exceptions.h:187
+msgid "No reason given."
+msgstr "无理由给出。"
+
+#: common/src/Utilities/ThreadTools.cpp:41
+msgid "Threading activity: start, detach, sync, deletion, etc."
+msgstr "线程活动: 开始、分离、同步、删除等等。"
+
+#: common/src/Utilities/wxAppWithHelpers.cpp:36
+msgid "Includes idle event processing and some other uncommon event usages."
+msgstr "包含空闲事件处理及一些其它的非常见事件使用。"
+
 #: pcsx2/MTGS.cpp:809
-msgid "The MTGS thread has become unresponsive while waiting for the GS plugin to open."
+msgid ""
+"The MTGS thread has become unresponsive while waiting for the GS plugin to "
+"open."
 msgstr "MTGS 线程在等待 GS 插件打开时失去响应。"
 
 #: pcsx2/PluginManager.cpp:1329
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr "内置记忆卡插件初始化失败。"
 
-#: pcsx2/gui/AppConfig.cpp:776
+#: pcsx2/gui/AppConfig.cpp:778
 msgid "Safest"
 msgstr "最安全"
 
-#: pcsx2/gui/AppConfig.cpp:777
+#: pcsx2/gui/AppConfig.cpp:779
 msgid "Safe (faster)"
 msgstr "安全 (较快)"
 
-#: pcsx2/gui/AppConfig.cpp:778
+#: pcsx2/gui/AppConfig.cpp:780
 msgid "Balanced"
 msgstr "平衡"
 
-#: pcsx2/gui/AppConfig.cpp:779
+#: pcsx2/gui/AppConfig.cpp:781
 msgid "Aggressive"
 msgstr "较激进"
 
-#: pcsx2/gui/AppConfig.cpp:780
+#: pcsx2/gui/AppConfig.cpp:782
 msgid "Aggressive plus"
 msgstr "激进"
 
-#: pcsx2/gui/AppConfig.cpp:781
+#: pcsx2/gui/AppConfig.cpp:783
 msgid "Mostly Harmful"
 msgstr "不稳定"
 
-#: pcsx2/gui/ConsoleLogger.cpp:412
+#: pcsx2/gui/ConsoleLogger.cpp:413
 msgid "Fits a lot of log in a microcosmically small area."
 msgstr "在较小区域中显示较多日志内容。"
 
-#: pcsx2/gui/ConsoleLogger.cpp:414
+#: pcsx2/gui/ConsoleLogger.cpp:415
 msgid "It's what I use (the programmer guy)."
 msgstr "我使用的 (程序员)。"
 
-#: pcsx2/gui/ConsoleLogger.cpp:416
+#: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Its nice and readable."
 msgstr "可读性较高。"
 
-#: pcsx2/gui/ConsoleLogger.cpp:418
+#: pcsx2/gui/ConsoleLogger.cpp:419
 msgid "In case you have a really high res display."
 msgstr "仅用于较高分辩率。"
 
-#: pcsx2/gui/ConsoleLogger.cpp:422
+#: pcsx2/gui/ConsoleLogger.cpp:423
 msgid "Default soft-tone color scheme."
 msgstr "默认柔色调色彩主题。"
 
-#: pcsx2/gui/ConsoleLogger.cpp:423
-msgid "Classic black color scheme for people who enjoy having text seared into their optic nerves."
+#: pcsx2/gui/ConsoleLogger.cpp:424
+msgid ""
+"Classic black color scheme for people who enjoy having text seared into "
+"their optic nerves."
 msgstr "经典黑色主题。"
 
-#: pcsx2/gui/ConsoleLogger.cpp:427
-msgid "When checked the log window will be visible over other foreground windows."
+#: pcsx2/gui/ConsoleLogger.cpp:428
+msgid ""
+"When checked the log window will be visible over other foreground windows."
 msgstr "如选中，日志窗口将在其它窗口上面显示。"
 
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "在事件被传递至 PS2 虚拟机时记录到日志中。"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:151
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
 msgid "!ContextTip:ChangingNTFS"
 msgstr "NTFS 压缩可以随时使用 Windows 资源管理器中的文件属性更改。"
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:164
-msgid "Always use this option if you want the safest and surest memory card behavior."
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
+msgid ""
+"Always use this option if you want the safest and surest memory card "
+"behavior."
 msgstr "如果您需要最安全的记忆卡行为，请使用此选项。"
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:168
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:172
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
 msgid "16 and 32 MB cards have roughly the same compatibility factor."
 msgstr "16MB 或 32MB 记忆卡通常具有相同的兼容性。"
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:176
-msgid "Use at your own risk.  Erratic memory card behavior is possible (though unlikely)."
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
+msgid ""
+"Use at your own risk.  Erratic memory card behavior is possible (though "
+"unlikely)."
 msgstr "可能出现错误的记忆卡行为 (一般不会)。"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
 msgid "!ContextTip:Folders:Settings"
-msgstr "这是 PCSX2 保存您的设置选项的文件夹，包括大多数插件生成的设置选项 (此选项对于一些旧的插件可能无效)。"
+msgstr ""
+"这是 PCSX2 保存您的设置选项的文件夹，包括大多数插件生成的设置选项 (此选项对于"
+"一些旧的插件可能无效)。"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
 msgid "!Panel:HasHacksOverrides"
-msgstr "警告! 您正在使用命令行选项运行 PCSX2，这将覆盖您已配置的设定。这些命令行选项将不会在设置对话框中反映，且如果您更改了任何选项的话命令行选项将失效。"
+msgstr ""
+"警告! 您正在使用命令行选项运行 PCSX2，这将覆盖您已配置的设定。这些命令行选项"
+"将不会在设置对话框中反映，且如果您更改了任何选项的话命令行选项将失效。"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
 msgid "!Panel:HasPluginsOverrides"
-msgstr "警告! 您正在使用命令行选项运行 PCSX2，这将覆盖您已配置的插件或文件夹设定。这些命令行选项将不会在设置对话框中反映，且如果您更改了任何选项的话命令行选项将失效。"
+msgstr ""
+"警告! 您正在使用命令行选项运行 PCSX2，这将覆盖您已配置的插件或文件夹设定。这"
+"些命令行选项将不会在设置对话框中反映，且如果您更改了任何选项的话命令行选项将"
+"失效。"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
 msgid "!Notice:Tooltip:Presets:Slider"
@@ -133,9 +157,43 @@ msgstr ""
 "\n"
 "--> 取消此项可手动修改设置 (基于当前预置)"
 
+#: pcsx2/gui/ExecutorThread.cpp:40
+msgid "Logs events as they are passed to the PS2 virtual machine."
+msgstr "在事件被传递至 PS2 虚拟机时记录到日志中。"
+
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:156
 msgid "!ContextTip:DirPicker:UseDefault"
 msgstr "选中时此文件夹将自动反映当前 PCSX2 用户设置选项相关的默认值。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:53
+msgid "!ContextTip:Window:Vsync"
+msgstr ""
+"垂直同步可以消除花屏但通常对性能有较大影响。通常仅应用于全屏幕模式，且不一定"
+"对所有的 GS 插件都有效。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:58
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr ""
+"如帧率处于全速状态则启用垂直同步，否则垂直同步将被禁用以避免性能进一步损"
+"失。\n"
+"注:此选项目前仅可用于 GSdx 插件，且被配置为 DX10/11 硬件渲染模式。其它插件或"
+"渲染模式将忽略此选项或导致图像闪烁。此选项同时需要垂直同步在插件配置中被启"
+"用。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:66
+msgid "!ContextTip:Window:HideMouse"
+msgstr ""
+"选中此项强制 GS 窗口中不显示鼠标光标。在使用鼠标控制游戏时比较有用。默认状态"
+"鼠标在 2 秒不活动后隐藏。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:72
+msgid "!ContextTip:Window:Fullscreen"
+msgstr ""
+"启动或恢复模拟时自动切换至全屏。您可以使用 Alt+Enter 随时切换全屏或窗口模式。"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
+msgid "!ContextTip:Window:HideGS"
+msgstr "在按 ESC 或挂起模拟器时彻底关闭 GS 窗口。"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:67
 msgid "!ContextTip:Gamefixes:EE Timing Hack"
@@ -153,43 +211,23 @@ msgstr ""
 " * 梦幻骑士 2 和 3\n"
 " * 巫术"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:53
-msgid "!ContextTip:Window:Vsync"
-msgstr "垂直同步可以消除花屏但通常对性能有较大影响。通常仅应用于全屏幕模式，且不一定对所有的 GS 插件都有效。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:58
-msgid "!ContextTip:Window:ManagedVsync"
-msgstr ""
-"如帧率处于全速状态则启用垂直同步，否则垂直同步将被禁用以避免性能进一步损失。\n"
-"注:此选项目前仅可用于 GSdx 插件，且被配置为 DX10/11 硬件渲染模式。其它插件或渲染模式将忽略此选项或导致图像闪烁。此选项同时需要垂直同步在插件配置中被启用。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:66
-msgid "!ContextTip:Window:HideMouse"
-msgstr "选中此项强制 GS 窗口中不显示鼠标光标。在使用鼠标控制游戏时比较有用。默认状态鼠标在 2 秒不活动后隐藏。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:72
-msgid "!ContextTip:Window:Fullscreen"
-msgstr "启动或恢复模拟时自动切换至全屏。您可以使用 Alt+Enter 随时切换全屏或窗口模式。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:77
-msgid "!ContextTip:Window:FullscreenExclusive"
-msgstr "独占全屏模式可能在旧的 CRT 显示器上效果较好，对一些旧显卡速度较快。但通常可能在进入或退出全屏模式时导致内存泄露或随机崩溃。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:82
-msgid "!ContextTip:Window:HideGS"
-msgstr "在按 ESC 或挂起模拟器时彻底关闭 GS 窗口。"
-
 #: pcsx2/gui/Panels/PathsPanel.cpp:40
 msgid "!ContextTip:Folders:Savestates"
-msgstr "此文件夹是 PCSX2 保存即时存档的位置；即时存档可使用菜单/工具栏或 F1/F3 (保存/读取) 使用。"
+msgstr ""
+"此文件夹是 PCSX2 保存即时存档的位置；即时存档可使用菜单/工具栏或 F1/F3 (保存/"
+"读取) 使用。"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:50
 msgid "!ContextTip:Folders:Snapshots"
-msgstr "此文件夹是 PCSX2 保存截图的位置。实际截图格式和风格对于不同的 GS 插件可能不同。"
+msgstr ""
+"此文件夹是 PCSX2 保存截图的位置。实际截图格式和风格对于不同的 GS 插件可能不"
+"同。"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:60
 msgid "!ContextTip:Folders:Logs"
-msgstr "此文件夹是 PCSX2 保存日志记录和诊断转储的位置。大多数插件也将使用此文件夹，但是一些旧的插件可能会忽略它。"
+msgstr ""
+"此文件夹是 PCSX2 保存日志记录和诊断转储的位置。大多数插件也将使用此文件夹，但"
+"是一些旧的插件可能会忽略它。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
 msgid "!Panel:Speedhacks:EECycleX1"
@@ -201,7 +239,9 @@ msgstr "2 - 将 EE 周期频率减少约 33%。对大多数游戏有轻微提速
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
 msgid "!Panel:Speedhacks:EECycleX3"
-msgstr "3 - 将 EE 周期频率减少约 50%。中等提速效果，但将导致很多 CG 动画中的音频出现间断。"
+msgstr ""
+"3 - 将 EE 周期频率减少约 50%。中等提速效果，但将导致很多 CG 动画中的音频出现"
+"间断。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
 msgid "!Panel:Speedhacks:VUCycleStealOff"
@@ -217,54 +257,78 @@ msgstr "2 - 中等 VU 周期挪用。兼容性更低，但对一些游戏有较�
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
 msgid "!Panel:Speedhacks:VUCycleSteal3"
-msgstr "3 - 最大的 VU 周期挪用。对大多数游戏将造成图像闪烁或速度拖慢，用途有限。"
+msgstr ""
+"3 - 最大的 VU 周期挪用。对大多数游戏将造成图像闪烁或速度拖慢，用途有限。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
 msgid "!ContextTip:Speedhacks:EECycleRate Slider"
-msgstr "提高此数值可减少情感引擎的 R5900 CPU 的时钟速度，通常对于未完全使用 PS2 实机硬件全部潜能的游戏有较大提速效果。"
+msgstr ""
+"提高此数值可减少情感引擎的 R5900 CPU 的时钟速度，通常对于未完全使用 PS2 实机"
+"硬件全部潜能的游戏有较大提速效果。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
 msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
-msgstr "此选项控制 VU 单元从情感引擎挪用的时钟周期数目。较高数值将增加各个被游戏执行的 VU 微程序从 EE 挪用的周期数目。"
+msgstr ""
+"此选项控制 VU 单元从情感引擎挪用的时钟周期数目。较高数值将增加各个被游戏执行"
+"的 VU 微程序从 EE 挪用的周期数目。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
 msgid "!ContextTip:Speedhacks:vuFlagHack"
-msgstr "仅在标志位被读取时更新，而不是总是更新。此选项通常是安全的，Super VU 默认会以相似的方式处理。"
+msgstr ""
+"仅在标志位被读取时更新，而不是总是更新。此选项通常是安全的，Super VU 默认会以"
+"相似的方式处理。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
 msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr "假定未来的块不需要旧的标志实例数据。这应该是安全的。是否导致游戏出现问题仍然未知。"
+msgstr ""
+"假定未来的块不需要旧的标志实例数据。这应该是安全的。是否导致游戏出现问题仍然"
+"未知。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
 msgid "!ContextTip:Speedhacks:vuMinMax"
-msgstr "使用 SSE 的浮点最大值/最小值操作来代替自定义的最大值/最小值过程。已经导致 GT 赛车和铁拳 5 出现问题。"
+msgstr ""
+"使用 SSE 的浮点最大值/最小值操作来代替自定义的最大值/最小值过程。已经导致 GT "
+"赛车和铁拳 5 出现问题。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:202
 msgid "!ContextTip:Speedhacks:INTC"
-msgstr "此选项对于使用 INTC 状态寄存器来等待垂直同步的游戏效果较好，包括一些主要的 3D RPG 游戏。对于不使用此方法的游戏没有提速效果。"
+msgstr ""
+"此选项对于使用 INTC 状态寄存器来等待垂直同步的游戏效果较好，包括一些主要的 "
+"3D RPG 游戏。对于不使用此方法的游戏没有提速效果。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:BIFC0"
-msgstr "主要针对于位置内核地址 0x81FC0 的 EE 空闲循环，此 hack 试图检测循环体在一个另外的模拟单元计划的事件处理过程之前不保证产生相同结果的循环。在一次循环体执行之后，将下一事件的时间或处理器的时间片结束时间 (孰早) 做出更新。"
+msgstr ""
+"主要针对于位置内核地址 0x81FC0 的 EE 空闲循环，此 hack 试图检测循环体在一个另"
+"外的模拟单元计划的事件处理过程之前不保证产生相同结果的循环。在一次循环体执行"
+"之后，将下一事件的时间或处理器的时间片结束时间 (孰早) 做出更新。"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:214
 msgid "!ContextTip:Speedhacks:fastCDVD"
-msgstr "请参看 HDLoader 兼容性列表以获取启用此项会出现问题的游戏列表。(通常标记为需要 'mode 1' 或 '慢速 DVD')"
+msgstr ""
+"请参看 HDLoader 兼容性列表以获取启用此项会出现问题的游戏列表。(通常标记为需"
+"要 'mode 1' 或 '慢速 DVD')"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:37
 msgid "!ContextTip:Framelimiter:Disable"
 msgstr "注意: 如限帧被禁用，快速模式和慢动作模式将不可用。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:162
-msgid "Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics."
+msgid ""
+"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
+"valid floating point numerics."
 msgstr "解析 NTSC 或 PAL 帧率时出错。设定值必须是一个合法的浮点数值。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:295
-msgid "For troubleshooting potential bugs in the MTGS only, as it is potentially very slow."
+msgid ""
+"For troubleshooting potential bugs in the MTGS only, as it is potentially "
+"very slow."
 msgstr "仅供诊断 MTGS 中可能的错误，可能会非常慢。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid "Completely disables all GS plugin activity; ideal for benchmarking EEcore components."
+msgid ""
+"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+"components."
 msgstr "彻底禁用所有的 GS 插件活动；可用于评测 EE 内核组件性能。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:302
@@ -274,19 +338,12 @@ msgstr "如您认为 MTGS 线程同步导致崩溃或图像错误，请启用此
 #: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
-"禁用全部由 MTGS 线程或 GPU 开销导致的测试信息。此选项可与即时存档配合使用: 在理想的场景中存档，启用此选项，读档。\n"
+"禁用全部由 MTGS 线程或 GPU 开销导致的测试信息。此选项可与即时存档配合使用: 在"
+"理想的场景中存档，启用此选项，读档。\n"
 "\n"
 "警告: 此选项可以即时启用但通常不能即时关闭 (通常会导致图像损坏)。"
 
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "线程活动: 开始、分离、同步、删除等等。"
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr "包含空闲事件处理及一些其它的非常见事件使用。"
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr "无理由给出。"
-
+#~ msgid "!ContextTip:Window:FullscreenExclusive"
+#~ msgstr ""
+#~ "独占全屏模式可能在旧的 CRT 显示器上效果较好，对一些旧显卡速度较快。但通常"
+#~ "可能在进入或退出全屏模式时导致内存泄露或随机崩溃。"

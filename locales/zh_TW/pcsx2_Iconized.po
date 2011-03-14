@@ -2,10 +2,11 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-27 10:09+0100\n"
+"POT-Creation-Date: 2011-03-14 18:10+0100\n"
 "PO-Revision-Date: 2011-03-02 06:48+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -59,7 +60,7 @@ msgstr ""
 "注意：反編譯裝置並非執行 PCSX2 所必須的，但反編譯裝置大幅提升遊戲速度。\n"
 "若錯誤已經解決，您可能必須手動重新啟用上面列出的反編譯裝置。"
 
-#: pcsx2/gui/AppMain.cpp:476
+#: pcsx2/gui/AppMain.cpp:538
 msgid "!Notice:BiosDumpRequired"
 msgstr ""
 "PCSX2 需要 PS2 BIOS 才能運行遊戲。\n"
@@ -68,19 +69,20 @@ msgstr ""
 "（借的 PS2 不算）。\n"
 "進一步的說明請洽 FAQ 和指南。"
 
-#: pcsx2/gui/AppMain.cpp:559
+#: pcsx2/gui/AppMain.cpp:621
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr ""
 "【忽略】繼續等待執行緒回應。\n"
 "【取消】嘗試取消執行緒。\n"
 "【終止】立即退出 PCSX2。"
 
-#: pcsx2/gui/AppUserMode.cpp:59
+#: pcsx2/gui/AppUserMode.cpp:57
 msgid "!Notice:PortableModeRights"
 msgstr ""
 "請確保這些資料夾已經建立，並且您的帳戶具有寫入這些資料夾的權限；\n"
 "或以更高的（管理員）權限重新執行 PCSX2 應該就能夠建立必需的資料夾。\n"
-"若您在這台電腦上沒有更高的權限，則需要切換至【我的文件】模式（按下方的按鈕）。"
+"若您在這台電腦上沒有更高的權限，則需要切換至【我的文件】模式（按下方的按"
+"鈕）。"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
 msgid "!Panel:Folders:Settings"
@@ -139,15 +141,17 @@ msgstr ""
 "清除 %s 的設定，並且允許您重新執行首次執行精靈。\n"
 "本操作完成之後，您需要手動重新啟動 %s。\n"
 "\n"
-"警告！！按【確定】刪除 %s 的全部設定，並會強行關閉 PCSX2，丟失任何當前的遊戲進展。您真的確定嗎？\n"
+"警告！！按【確定】刪除 %s 的全部設定，並會強行關閉 PCSX2，丟失任何當前的遊戲"
+"進展。您真的確定嗎？\n"
 "\n"
 "（注意：各個插件自身的設定不受影響）"
 
-#: pcsx2/gui/MemoryCardFile.cpp:77
+#: pcsx2/gui/MemoryCardFile.cpp:78
 msgid "!Notice:Mcd:HasBeenDisabled"
 msgstr ""
 "插槽 %d 的記憶卡已經被自動停用。\n"
-"您可以在任何時候，透過「PCSX2 主選單 => 設定 => 記憶卡」糾正這一問題並重新啟用記憶卡。"
+"您可以在任何時候，透過「PCSX2 主選單 => 設定 => 記憶卡」糾正這一問題並重新啟"
+"用記憶卡。"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
 msgid "!Notice:BIOS:InvalidSelection"
@@ -170,20 +174,21 @@ msgstr "指定的路徑 / 資料夾不存在。您想要新增嗎？"
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:96
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
-"遊戲修正能夠修復在一些遊戲裡不正確的模擬。但會引起其他遊戲出現相容性或效能問題。\n"
+"遊戲修正能夠修復在一些遊戲裡不正確的模擬。但會引起其他遊戲出現相容性或效能問"
+"題。\n"
 "若變更所玩的遊戲，您需要手動關閉已啟用的遊戲修正。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:366
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:411
 msgid "!Notice:Mcd:Overwrite"
 msgstr ""
 "複製插槽 %u 的記憶卡內容，覆寫插槽 %u 的記憶卡。\n"
 "目標插槽記憶卡的全部資料將會丟失。您確定嗎？"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:382
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:429
 msgid "!Notice:Mcd:Copy Failed"
 msgstr "錯誤！無法複製記憶卡至插槽 %u。目標檔案使用中。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:594
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:722
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 "您即將刪除 %u 插槽已格式化的記憶卡。\n"
@@ -222,12 +227,15 @@ msgstr ""
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
 msgid "!Panel:Speedhacks:Overview"
 msgstr ""
-"速度駭客通常會提升遊戲速度，但可能導致遊戲出現小毛病、破損的聲音、錯誤的 FPS 顯示。\n"
+"速度駭客通常會提升遊戲速度，但可能導致遊戲出現小毛病、破損的聲音、錯誤的 FPS "
+"顯示。\n"
 "當遊戲出現問題時，首先停用速度駭客。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:223
 msgid "!Panel:Frameskip:Heading"
-msgstr "注意：由於 PS2 的硬體設計，精確的跳框是不可能的。啟用跳框將導致一些遊戲出現嚴重的圖形錯誤。"
+msgstr ""
+"注意：由於 PS2 的硬體設計，精確的跳框是不可能的。啟用跳框將導致一些遊戲出現嚴"
+"重的圖形錯誤。"
 
 #: pcsx2/vtlb.cpp:698
 msgid "!Notice:HostVmReserve"
@@ -241,7 +249,8 @@ msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "幾乎是 Out of Memory：\n"
 "SuperVU 無法留住所需要的指定的記憶體範圍，SuperVU 不可用。\n"
-"這不是嚴重的錯誤，因為 SuperVU 是過時的。無論如何，您應該使用 microVU 代替。：）"
+"這不是嚴重的錯誤，因為 SuperVU 是過時的。無論如何，您應該使用 microVU 代"
+"替。：）"
 
 #~ msgid "!Notice:DocsFolderFileConflict"
 #~ msgstr ""

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-02-27 10:09+0100\n"
+"POT-Creation-Date: 2011-03-14 18:10+0100\n"
 "PO-Revision-Date: 2011-02-26 22:39+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
@@ -38,78 +38,78 @@ msgstr ""
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:776
+#: pcsx2/gui/AppConfig.cpp:778
 msgid "Safest"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:777
+#: pcsx2/gui/AppConfig.cpp:779
 msgid "Safe (faster)"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:778
+#: pcsx2/gui/AppConfig.cpp:780
 msgid "Balanced"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:779
+#: pcsx2/gui/AppConfig.cpp:781
 msgid "Aggressive"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:780
+#: pcsx2/gui/AppConfig.cpp:782
 msgid "Aggressive plus"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:781
+#: pcsx2/gui/AppConfig.cpp:783
 msgid "Mostly Harmful"
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:412
+#: pcsx2/gui/ConsoleLogger.cpp:413
 msgid "Fits a lot of log in a microcosmically small area."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:414
+#: pcsx2/gui/ConsoleLogger.cpp:415
 msgid "It's what I use (the programmer guy)."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:416
+#: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Its nice and readable."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:418
+#: pcsx2/gui/ConsoleLogger.cpp:419
 msgid "In case you have a really high res display."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:422
+#: pcsx2/gui/ConsoleLogger.cpp:423
 msgid "Default soft-tone color scheme."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:423
+#: pcsx2/gui/ConsoleLogger.cpp:424
 msgid ""
 "Classic black color scheme for people who enjoy having text seared into "
 "their optic nerves."
 msgstr ""
 
-#: pcsx2/gui/ConsoleLogger.cpp:427
+#: pcsx2/gui/ConsoleLogger.cpp:428
 msgid ""
 "When checked the log window will be visible over other foreground windows."
 msgstr ""
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:151
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
 msgid "!ContextTip:ChangingNTFS"
 msgstr ""
 "Die NTFS Komprimierung kann jederzeit via Windows Explorer geändert werden."
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:164
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
 msgid ""
 "Always use this option if you want the safest and surest memory card "
 "behavior."
 msgstr ""
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:168
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:172
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
 msgid "16 and 32 MB cards have roughly the same compatibility factor."
 msgstr ""
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:176
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
 msgid ""
 "Use at your own risk.  Erratic memory card behavior is possible (though "
 "unlikely)."
@@ -159,28 +159,30 @@ msgstr ""
 msgid "!ContextTip:DirPicker:UseDefault"
 msgstr "Nutzt das Standardverzeichnis des gewählten Installationsmodus."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:52
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:53
 msgid "!ContextTip:Window:Vsync"
 msgstr ""
 "VSync ist eine Grafikoption, die versucht Jidder und Tearing zu vermeiden. "
 "Sie setzt voraus, dass das Spiel mit voller Geschwindigkeit läuft, was "
 "selten zu 100% der Fall ist. Es wird nicht empfohlen, VSync zu aktivieren."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:57
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:58
+#, fuzzy
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr ""
+"VSync ist eine Grafikoption, die versucht Jidder und Tearing zu vermeiden. "
+"Sie setzt voraus, dass das Spiel mit voller Geschwindigkeit läuft, was "
+"selten zu 100% der Fall ist. Es wird nicht empfohlen, VSync zu aktivieren."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:66
 msgid "!ContextTip:Window:HideMouse"
 msgstr "Versteckt den Mauscursor."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:72
 msgid "!ContextTip:Window:Fullscreen"
 msgstr "Kann auch während der Emulation mit ALT+ENTER erreicht werden."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
-msgid "!ContextTip:Window:FullscreenExclusive"
-msgstr ""
-"Versucht das GS Plugin in den exklusiven Vollbildmodus zu versetzen. Einige "
-"Treibereinstellungen (VSync) funktionieren damit besser."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:73
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
 msgid "!ContextTip:Window:HideGS"
 msgstr "Versteckt das GS Fenster wenn man mit ESC die Emulation pausiert."
 
@@ -309,3 +311,8 @@ msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 "Entfernt störende Faktoren von der Grafikkarte oder Treiberproblemen. Nur "
 "für PCSX2 Benchmarks interressant."
+
+#~ msgid "!ContextTip:Window:FullscreenExclusive"
+#~ msgstr ""
+#~ "Versucht das GS Plugin in den exklusiven Vollbildmodus zu versetzen. "
+#~ "Einige Treibereinstellungen (VSync) funktionieren damit besser."
