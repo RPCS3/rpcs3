@@ -510,7 +510,14 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 	m_MultitapEnabled[1] = false;
 
 	m_listview = new MemoryCardListView_Simple(this);
-	m_listview->SetMinSize(wxSize(m_listview->GetMinWidth(), m_listview->GetCharHeight() * 13));
+	
+	// Fixme: Small problem:
+	// m_listview->GetMinWidth() can return -1 (On Win7 x64 + Aero for example)
+	if ( m_listview->GetMinWidth() <= 0 ) 
+		m_listview->SetMinSize(wxSize(740, m_listview->GetCharHeight() * 14)); // 740 is nice for default font sizes
+	else
+		m_listview->SetMinSize(wxSize(m_listview->GetMinWidth(), m_listview->GetCharHeight() * 14));
+	
 	m_listview->SetDropTarget( new McdDropTarget(m_listview) );
 
 	m_button_Create	= new wxButton(this, wxID_ANY, _("Create card file"));
