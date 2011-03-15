@@ -98,6 +98,16 @@ BOOL CALLBACK SoundtouchCfg::DialogProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM
 				WriteSettings();
 				EndDialog(hWnd,0);
 			}
+			else if( wmId == IDC_RESET_DEFAULTS ) 
+			{
+				SequenceLenMS	= 30;
+				SeekWindowMS	= 20;
+				OverlapMS		= 10;
+
+				SendDialogMsg( hWnd, IDC_SEQLEN_SLIDER, TBM_SETPOS, TRUE, SequenceLenMS );
+				SendDialogMsg( hWnd, IDC_SEEKWIN_SLIDER, TBM_SETPOS, TRUE, SeekWindowMS );
+				SendDialogMsg( hWnd, IDC_OVERLAP_SLIDER, TBM_SETPOS, TRUE, OverlapMS );
+			}
 			else if( wmId == IDCANCEL )
 			{
 				EndDialog(hWnd,0);
