@@ -104,7 +104,7 @@ int  _SPR0chain()
 __fi void SPR0chain()
 {
 	int cycles = 0;
-	cycles =  _SPR0chain() * 4;
+	cycles =  _SPR0chain() * BIAS;
 	if(spr0lastqwc == false)CPU_INT(DMAC_FROM_SPR, cycles);
 }
 
@@ -332,7 +332,7 @@ __fi void SPR1chain()
 	int cycles = 0;
 	if(!CHECK_IPUWAITHACK) 
 	{
-		cycles =  _SPR1chain() * 4;
+		cycles =  _SPR1chain() * BIAS;
 		if(spr1lastqwc == false)CPU_INT(DMAC_TO_SPR, cycles);
 	}
 	else 
