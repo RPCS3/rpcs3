@@ -104,7 +104,7 @@ int  _SPR0chain()
 __fi void SPR0chain()
 {
 	int cycles = 0;
-	cycles =  _SPR0chain() * BIAS;
+	cycles =  _SPR0chain() * 4;
 	if(spr0lastqwc == false)CPU_INT(DMAC_FROM_SPR, cycles);
 }
 
@@ -237,7 +237,9 @@ void SPRFROMinterrupt()
 	{
 		_dmaSPR0();
 
-		if(mfifotransferred != 0)
+		//the qwc check is simply because having data still to transfer from the packet can freak games out if they do a d.tadr == s.madr check
+		//and there is still data to come over (FF12 ingame menu)
+		if(mfifotransferred != 0 && spr0ch.qwc == 0)
 		{
 			switch (dmacRegs.ctrl.MFD)
 			{
@@ -330,7 +332,7 @@ __fi void SPR1chain()
 	int cycles = 0;
 	if(!CHECK_IPUWAITHACK) 
 	{
-		cycles =  _SPR1chain() * BIAS;
+		cycles =  _SPR1chain() * 4;
 		if(spr1lastqwc == false)CPU_INT(DMAC_TO_SPR, cycles);
 	}
 	else 
