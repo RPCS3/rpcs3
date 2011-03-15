@@ -23,7 +23,8 @@ extern void mfifoGIFtransfer(int);
 
 static bool spr0finished = false;
 static bool spr1finished = false;
-
+static bool spr0lastqwc = false;
+static bool spr1lastqwc = false;
 static u32 mfifotransferred = 0;
 
 void sprInit()
@@ -54,6 +55,8 @@ int  _SPR0chain()
 	if (spr0ch.qwc == 0) return 0;
 	pMem = SPRdmaGetAddr(spr0ch.madr, true);
 	if (pMem == NULL) return -1;
+
+	if(spr0ch.qwc == 1 && spr0finished == true) spr0lastqwc = true;
 
 	switch (dmacRegs.ctrl.MFD)
 	{
@@ -100,7 +103,9 @@ int  _SPR0chain()
 
 __fi void SPR0chain()
 {
-	CPU_INT(DMAC_FROM_SPR, _SPR0chain() * BIAS);
+	int cycles = 0;
+	cycles =  _SPR0chain() * BIAS;
+	if(spr0lastqwc == false)CPU_INT(DMAC_FROM_SPR, cycles);
 }
 
 void _SPR0interleave()
@@ -258,10 +263,11 @@ void SPRFROMinterrupt()
 					break;
 			}
 		}
-		return;
+		if(spr0lastqwc == false)return;
 	}
 
 
+	spr0lastqwc = false;
 	spr0ch.chcr.STR = false;
 	hwDmacIrq(DMAC_FROM_SPR);
 	DMA_LOG("SPR0 DMA End");
@@ -279,7 +285,7 @@ void dmaSPR0()   // fromSPR
 	{
 		//DevCon.Warning(L"SPR0 QWC on Chain " + spr0ch.chcr.desc());
 		if (spr0ch.chcr.tag().ID == TAG_END) // but not TAG_REFE?
-		{
+		{									 // Correct not REFE, Destination Chain doesnt have REFE!
 			spr0finished = true;
 		}
 	}
@@ -292,6 +298,8 @@ __fi static void SPR1transfer(const void* data, int qwc)
 	memcpy_qwc(&psSu128(spr1ch.sadr), data, qwc);
 	spr1ch.sadr += qwc * 16;
 }
+
+
 
 int  _SPR1chain()
 {
@@ -309,18 +317,21 @@ int  _SPR1chain()
 
 	SPR1transfer(pMem, partialqwc);
 	spr1ch.madr += partialqwc * 16;
+	if(spr1ch.qwc == 1 && spr1finished == true) spr1lastqwc = true;
 	spr1ch.qwc -= partialqwc;
 
 	hwDmacSrcTadrInc(spr1ch);
-
+	
 	return (partialqwc);
 }
 
 __fi void SPR1chain()
 {
+	int cycles = 0;
 	if(!CHECK_IPUWAITHACK) 
 	{
-		CPU_INT(DMAC_TO_SPR, _SPR1chain() * BIAS);
+		cycles =  _SPR1chain() * BIAS;
+		if(spr1lastqwc == false)CPU_INT(DMAC_TO_SPR, cycles);
 	}
 	else 
 	{
@@ -450,11 +461,12 @@ void SPRTOinterrupt()
 	if (!spr1finished || spr1ch.qwc > 0)
 	{
 		_dmaSPR1();
-		return;
+		if(spr1lastqwc == false)return;
 	}
 
 	DMA_LOG("SPR1 DMA End");
 	spr1ch.chcr.STR = false;
+	spr1lastqwc = false;
 	hwDmacIrq(DMAC_TO_SPR);
 }
 
