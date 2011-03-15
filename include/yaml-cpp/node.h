@@ -62,10 +62,7 @@ namespace YAML
 		bool Read(T& value) const;
 
 		template <typename T>
-		const T Read() const;
-		
-		template <typename T>
-		operator T() const;
+		const T to() const;
 
 		template <typename T>
 		friend void operator >> (const Node& node, T& value);
@@ -127,24 +124,6 @@ namespace YAML
 		node_seq m_seqData;
 		node_map m_mapData;
 	};
-	
-	// comparisons with auto-conversion
-	template <typename T>
-	bool operator == (const T& value, const Node& node);
-	
-	template <typename T>
-	bool operator == (const Node& node, const T& value);
-	
-	template <typename T>
-	bool operator != (const T& value, const Node& node);
-	
-	template <typename T>
-	bool operator != (const Node& node, const T& value);
-	
-	bool operator == (const char *value, const Node& node);
-	bool operator == (const Node& node, const char *value);
-	bool operator != (const char *value, const Node& node);
-	bool operator != (const Node& node, const char *value);
 }
 
 #include "yaml-cpp/nodeimpl.h"

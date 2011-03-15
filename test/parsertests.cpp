@@ -132,14 +132,11 @@ namespace Test
 			parser.GetNextDocument(doc);
 
 			std::string output;
-			doc[0] >> output;
-			if(output != "eggs")
+			if(doc[0].to<std::string>() != "eggs")
 				return false;
-			doc[1] >> output;
-			if(output != "bread")
+			if(doc[1].to<std::string>() != "bread")
 				return false;
-			doc[2] >> output;
-			if(output != "milk")
+			if(doc[2].to<std::string>() != "milk")
 				return false;
 
 			return true;
@@ -626,7 +623,7 @@ namespace Test
 				return false;
 			if(!IsNull(doc["key"]))
 			   return false;
-			if(doc["just a key"] != "value")
+			if(doc["just a key"].to<std::string>() != "value")
 				return false;
 			
 			return true;
@@ -647,13 +644,13 @@ namespace Test
 			parser.GetNextDocument(doc);
 			if(doc.size() != 4)
 				return false;
-			if(doc[0] != 15)
+			if(doc[0].to<int>() != 15)
 				return false;
-			if(doc[1] != 0x10)
+			if(doc[1].to<int>() != 0x10)
 				return false;
-			if(doc[2] != 030)
+			if(doc[2].to<int>() != 030)
 				return false;
-			if(doc[3] != 0xffffffff)
+			if(doc[3].to<unsigned>() != 0xffffffff)
 				return false;
 			return true;
 		}
@@ -698,11 +695,11 @@ namespace Test
 			YAML::Node doc;
 			parser.GetNextDocument(doc);
 			
-			if(doc["a"] != 4)
+			if(doc["a"].to<int>() != 4)
 				return false;
-			if(doc["b"] != 2)
+			if(doc["b"].to<int>() != 2)
 				return false;
-			if(doc["c"] != 3)
+			if(doc["c"].to<int>() != 3)
 				return false;
 			return true;
 		}

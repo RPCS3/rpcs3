@@ -56,9 +56,9 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc[0] == "Mark McGwire");
-			YAML_ASSERT(doc[1] == "Sammy Sosa");
-			YAML_ASSERT(doc[2] == "Ken Griffey");
+			YAML_ASSERT(doc[0].to<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc[1].to<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc[2].to<std::string>() == "Ken Griffey");
 			return true;
 		}
 		
@@ -71,9 +71,9 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["hr"] == "65");
-			YAML_ASSERT(doc["avg"] == "0.278");
-			YAML_ASSERT(doc["rbi"] == "147");
+			YAML_ASSERT(doc["hr"].to<std::string>() == "65");
+			YAML_ASSERT(doc["avg"].to<std::string>() == "0.278");
+			YAML_ASSERT(doc["rbi"].to<std::string>() == "147");
 			return true;
 		}
 		
@@ -92,13 +92,13 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["american"].size() == 3);
-			YAML_ASSERT(doc["american"][0] == "Boston Red Sox");
-			YAML_ASSERT(doc["american"][1] == "Detroit Tigers");
-			YAML_ASSERT(doc["american"][2] == "New York Yankees");
+			YAML_ASSERT(doc["american"][0].to<std::string>() == "Boston Red Sox");
+			YAML_ASSERT(doc["american"][1].to<std::string>() == "Detroit Tigers");
+			YAML_ASSERT(doc["american"][2].to<std::string>() == "New York Yankees");
 			YAML_ASSERT(doc["national"].size() == 3);
-			YAML_ASSERT(doc["national"][0] == "New York Mets");
-			YAML_ASSERT(doc["national"][1] == "Chicago Cubs");
-			YAML_ASSERT(doc["national"][2] == "Atlanta Braves");
+			YAML_ASSERT(doc["national"][0].to<std::string>() == "New York Mets");
+			YAML_ASSERT(doc["national"][1].to<std::string>() == "Chicago Cubs");
+			YAML_ASSERT(doc["national"][2].to<std::string>() == "Atlanta Braves");
 			return true;
 		}
 		
@@ -118,13 +118,13 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc[0].size() == 3);
-			YAML_ASSERT(doc[0]["name"] == "Mark McGwire");
-			YAML_ASSERT(doc[0]["hr"] == "65");
-			YAML_ASSERT(doc[0]["avg"] == "0.278");
+			YAML_ASSERT(doc[0]["name"].to<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc[0]["hr"].to<std::string>() == "65");
+			YAML_ASSERT(doc[0]["avg"].to<std::string>() == "0.278");
 			YAML_ASSERT(doc[1].size() == 3);
-			YAML_ASSERT(doc[1]["name"] == "Sammy Sosa");
-			YAML_ASSERT(doc[1]["hr"] == "63");
-			YAML_ASSERT(doc[1]["avg"] == "0.288");
+			YAML_ASSERT(doc[1]["name"].to<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc[1]["hr"].to<std::string>() == "63");
+			YAML_ASSERT(doc[1]["avg"].to<std::string>() == "0.288");
 			return true;
 		}
 		
@@ -139,17 +139,17 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0].size() == 3);
-			YAML_ASSERT(doc[0][0] == "name");
-			YAML_ASSERT(doc[0][1] == "hr");
-			YAML_ASSERT(doc[0][2] == "avg");
+			YAML_ASSERT(doc[0][0].to<std::string>() == "name");
+			YAML_ASSERT(doc[0][1].to<std::string>() == "hr");
+			YAML_ASSERT(doc[0][2].to<std::string>() == "avg");
 			YAML_ASSERT(doc[1].size() == 3);
-			YAML_ASSERT(doc[1][0] == "Mark McGwire");
-			YAML_ASSERT(doc[1][1] == "65");
-			YAML_ASSERT(doc[1][2] == "0.278");
+			YAML_ASSERT(doc[1][0].to<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc[1][1].to<std::string>() == "65");
+			YAML_ASSERT(doc[1][2].to<std::string>() == "0.278");
 			YAML_ASSERT(doc[2].size() == 3);
-			YAML_ASSERT(doc[2][0] == "Sammy Sosa");
-			YAML_ASSERT(doc[2][1] == "63");
-			YAML_ASSERT(doc[2][2] == "0.288");
+			YAML_ASSERT(doc[2][0].to<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc[2][1].to<std::string>() == "63");
+			YAML_ASSERT(doc[2][2].to<std::string>() == "0.288");
 			return true;
 		}
 		
@@ -166,11 +166,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["Mark McGwire"].size() == 2);
-			YAML_ASSERT(doc["Mark McGwire"]["hr"] == "65");
-			YAML_ASSERT(doc["Mark McGwire"]["avg"] == "0.278");
+			YAML_ASSERT(doc["Mark McGwire"]["hr"].to<std::string>() == "65");
+			YAML_ASSERT(doc["Mark McGwire"]["avg"].to<std::string>() == "0.278");
 			YAML_ASSERT(doc["Sammy Sosa"].size() == 2);
-			YAML_ASSERT(doc["Sammy Sosa"]["hr"] == "63");
-			YAML_ASSERT(doc["Sammy Sosa"]["avg"] == "0.288");
+			YAML_ASSERT(doc["Sammy Sosa"]["hr"].to<std::string>() == "63");
+			YAML_ASSERT(doc["Sammy Sosa"]["avg"].to<std::string>() == "0.288");
 			return true;
 		}
 		
@@ -191,14 +191,14 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc[0] == "Mark McGwire");
-			YAML_ASSERT(doc[1] == "Sammy Sosa");
-			YAML_ASSERT(doc[2] == "Ken Griffey");
+			YAML_ASSERT(doc[0].to<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc[1].to<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc[2].to<std::string>() == "Ken Griffey");
 
 			PARSE_NEXT(doc);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc[0] == "Chicago Cubs");
-			YAML_ASSERT(doc[1] == "St Louis Cardinals");
+			YAML_ASSERT(doc[0].to<std::string>() == "Chicago Cubs");
+			YAML_ASSERT(doc[1].to<std::string>() == "St Louis Cardinals");
 			return true;
 		}
 		
@@ -219,15 +219,15 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["time"] == "20:03:20");
-			YAML_ASSERT(doc["player"] == "Sammy Sosa");
-			YAML_ASSERT(doc["action"] == "strike (miss)");
+			YAML_ASSERT(doc["time"].to<std::string>() == "20:03:20");
+			YAML_ASSERT(doc["player"].to<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc["action"].to<std::string>() == "strike (miss)");
 
 			PARSE_NEXT(doc);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["time"] == "20:03:47");
-			YAML_ASSERT(doc["player"] == "Sammy Sosa");
-			YAML_ASSERT(doc["action"] == "grand slam");
+			YAML_ASSERT(doc["time"].to<std::string>() == "20:03:47");
+			YAML_ASSERT(doc["player"].to<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc["action"].to<std::string>() == "grand slam");
 			return true;
 		}
 		
@@ -247,11 +247,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["hr"].size() == 2);
-			YAML_ASSERT(doc["hr"][0] == "Mark McGwire");
-			YAML_ASSERT(doc["hr"][1] == "Sammy Sosa");
+			YAML_ASSERT(doc["hr"][0].to<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc["hr"][1].to<std::string>() == "Sammy Sosa");
 			YAML_ASSERT(doc["rbi"].size() == 2);
-			YAML_ASSERT(doc["rbi"][0] == "Sammy Sosa");
-			YAML_ASSERT(doc["rbi"][1] == "Ken Griffey");
+			YAML_ASSERT(doc["rbi"][0].to<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc["rbi"][1].to<std::string>() == "Ken Griffey");
 			return true;
 		}
 		
@@ -271,11 +271,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["hr"].size() == 2);
-			YAML_ASSERT(doc["hr"][0] == "Mark McGwire");
-			YAML_ASSERT(doc["hr"][1] == "Sammy Sosa");
+			YAML_ASSERT(doc["hr"][0].to<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc["hr"][1].to<std::string>() == "Sammy Sosa");
 			YAML_ASSERT(doc["rbi"].size() == 2);
-			YAML_ASSERT(doc["rbi"][0] == "Sammy Sosa");
-			YAML_ASSERT(doc["rbi"][1] == "Ken Griffey");
+			YAML_ASSERT(doc["rbi"][0].to<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc["rbi"][1].to<std::string>() == "Ken Griffey");
 			return true;
 		}
 		
@@ -311,11 +311,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago cubs")].size() == 1);
-			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago cubs")][0] == "2001-07-23");
+			YAML_ASSERT(doc[Pair("Detroit Tigers", "Chicago cubs")][0].to<std::string>() == "2001-07-23");
 			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")].size() == 3);
-			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][0] == "2001-07-02");
-			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][1] == "2001-08-12");
-			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][2] == "2001-08-14");
+			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][0].to<std::string>() == "2001-07-02");
+			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][1].to<std::string>() == "2001-08-12");
+			YAML_ASSERT(doc[Pair("New York Yankees", "Atlanta Braves")][2].to<std::string>() == "2001-08-14");
 			return true;
 		}
 		
@@ -335,14 +335,14 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0].size() == 2);
-			YAML_ASSERT(doc[0]["item"] == "Super Hoop");
-			YAML_ASSERT(doc[0]["quantity"] == 1);
+			YAML_ASSERT(doc[0]["item"].to<std::string>() == "Super Hoop");
+			YAML_ASSERT(doc[0]["quantity"].to<int>() == 1);
 			YAML_ASSERT(doc[1].size() == 2);
-			YAML_ASSERT(doc[1]["item"] == "Basketball");
-			YAML_ASSERT(doc[1]["quantity"] == 4);
+			YAML_ASSERT(doc[1]["item"].to<std::string>() == "Basketball");
+			YAML_ASSERT(doc[1]["quantity"].to<int>() == 4);
 			YAML_ASSERT(doc[2].size() == 2);
-			YAML_ASSERT(doc[2]["item"] == "Big Shoes");
-			YAML_ASSERT(doc[2]["quantity"] == 1);
+			YAML_ASSERT(doc[2]["item"].to<std::string>() == "Big Shoes");
+			YAML_ASSERT(doc[2]["quantity"].to<int>() == 1);
 			return true;
 		}
 		
@@ -356,7 +356,7 @@ namespace Test {
 				"  // ||  ||__";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc ==
+			YAML_ASSERT(doc.to<std::string>() ==
 						"\\//||\\/||\n"
 						"// ||  ||__");
 			return true;
@@ -372,7 +372,7 @@ namespace Test {
 				"  by a knee injury.";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "Mark McGwire's year was crippled by a knee injury.");
+			YAML_ASSERT(doc.to<std::string>() == "Mark McGwire's year was crippled by a knee injury.");
 			return true;
 		}
 		
@@ -390,7 +390,7 @@ namespace Test {
 				" What a year!";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc ==
+			YAML_ASSERT(doc.to<std::string>() ==
 						"Sammy Sosa completed another fine season with great stats.\n\n"
 						"  63 Home Runs\n"
 						"  0.288 Batting Average\n\n"
@@ -412,9 +412,9 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["name"] == "Mark McGwire");
-			YAML_ASSERT(doc["accomplishment"] == "Mark set a major league home run record in 1998.\n");
-			YAML_ASSERT(doc["stats"] == "65 Home Runs\n0.278 Batting Average\n");
+			YAML_ASSERT(doc["name"].to<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc["accomplishment"].to<std::string>() == "Mark set a major league home run record in 1998.\n");
+			YAML_ASSERT(doc["stats"].to<std::string>() == "65 Home Runs\n0.278 Batting Average\n");
 			return true;
 		}
 		
@@ -432,12 +432,12 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 6);
-			YAML_ASSERT(doc["unicode"] == "Sosa did fine.\xe2\x98\xba");
-			YAML_ASSERT(doc["control"] == "\b1998\t1999\t2000\n");
-			YAML_ASSERT(doc["hex esc"] == "\x0d\x0a is \r\n");
-			YAML_ASSERT(doc["single"] == "\"Howdy!\" he cried.");
-			YAML_ASSERT(doc["quoted"] == " # Not a 'comment'.");
-			YAML_ASSERT(doc["tie-fighter"] == "|\\-*-/|");
+			YAML_ASSERT(doc["unicode"].to<std::string>() == "Sosa did fine.\xe2\x98\xba");
+			YAML_ASSERT(doc["control"].to<std::string>() == "\b1998\t1999\t2000\n");
+			YAML_ASSERT(doc["hex esc"].to<std::string>() == "\x0d\x0a is \r\n");
+			YAML_ASSERT(doc["single"].to<std::string>() == "\"Howdy!\" he cried.");
+			YAML_ASSERT(doc["quoted"].to<std::string>() == " # Not a 'comment'.");
+			YAML_ASSERT(doc["tie-fighter"].to<std::string>() == "|\\-*-/|");
 			return true;
 		}
 		
@@ -454,8 +454,8 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["plain"] == "This unquoted scalar spans many lines.");
-			YAML_ASSERT(doc["quoted"] == "So does this quoted scalar.\n");
+			YAML_ASSERT(doc["plain"].to<std::string>() == "This unquoted scalar spans many lines.");
+			YAML_ASSERT(doc["quoted"].to<std::string>() == "So does this quoted scalar.\n");
 			return true;
 		}
 		
@@ -482,16 +482,16 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["not-date"].Tag() == "tag:yaml.org,2002:str");
-			YAML_ASSERT(doc["not-date"] == "2002-04-28");
+			YAML_ASSERT(doc["not-date"].to<std::string>() == "2002-04-28");
 			YAML_ASSERT(doc["picture"].Tag() == "tag:yaml.org,2002:binary");
-			YAML_ASSERT(doc["picture"] ==
+			YAML_ASSERT(doc["picture"].to<std::string>() ==
 				"R0lGODlhDAAMAIQAAP//9/X\n"
 				"17unp5WZmZgAAAOfn515eXv\n"
 				"Pz7Y6OjuDg4J+fn5OTk6enp\n"
 				"56enmleECcgggoBADs=\n"
 			);
 			YAML_ASSERT(doc["application specific tag"].Tag() == "!something");
-			YAML_ASSERT(doc["application specific tag"] ==
+			YAML_ASSERT(doc["application specific tag"].to<std::string>() ==
 				"The semantics of the tag\n"
 				"above may be different for\n"
 				"different documents."
@@ -524,24 +524,24 @@ namespace Test {
 			YAML_ASSERT(doc[0].Tag() == "tag:clarkevans.com,2002:circle");
 			YAML_ASSERT(doc[0].size() == 2);
 			YAML_ASSERT(doc[0]["center"].size() == 2);
-			YAML_ASSERT(doc[0]["center"]["x"] == 73);
-			YAML_ASSERT(doc[0]["center"]["y"] == 129);
-			YAML_ASSERT(doc[0]["radius"] == 7);
+			YAML_ASSERT(doc[0]["center"]["x"].to<int>() == 73);
+			YAML_ASSERT(doc[0]["center"]["y"].to<int>() == 129);
+			YAML_ASSERT(doc[0]["radius"].to<int>() == 7);
 			YAML_ASSERT(doc[1].Tag() == "tag:clarkevans.com,2002:line");
 			YAML_ASSERT(doc[1].size() == 2);
 			YAML_ASSERT(doc[1]["start"].size() == 2);
-			YAML_ASSERT(doc[1]["start"]["x"] == 73);
-			YAML_ASSERT(doc[1]["start"]["y"] == 129);
+			YAML_ASSERT(doc[1]["start"]["x"].to<int>() == 73);
+			YAML_ASSERT(doc[1]["start"]["y"].to<int>() == 129);
 			YAML_ASSERT(doc[1]["finish"].size() == 2);
-			YAML_ASSERT(doc[1]["finish"]["x"] == 89);
-			YAML_ASSERT(doc[1]["finish"]["y"] == 102);
+			YAML_ASSERT(doc[1]["finish"]["x"].to<int>() == 89);
+			YAML_ASSERT(doc[1]["finish"]["y"].to<int>() == 102);
 			YAML_ASSERT(doc[2].Tag() == "tag:clarkevans.com,2002:label");
 			YAML_ASSERT(doc[2].size() == 3);
 			YAML_ASSERT(doc[2]["start"].size() == 2);
-			YAML_ASSERT(doc[2]["start"]["x"] == 73);
-			YAML_ASSERT(doc[2]["start"]["y"] == 129);
-			YAML_ASSERT(doc[2]["color"] == "0xFFEEBB");
-			YAML_ASSERT(doc[2]["text"] == "Pretty vector drawing.");
+			YAML_ASSERT(doc[2]["start"]["x"].to<int>() == 73);
+			YAML_ASSERT(doc[2]["start"]["y"].to<int>() == 129);
+			YAML_ASSERT(doc[2]["color"].to<std::string>() == "0xFFEEBB");
+			YAML_ASSERT(doc[2]["text"].to<std::string>() == "Pretty vector drawing.");
 			return true;
 		}
 		
@@ -582,11 +582,11 @@ namespace Test {
 			YAML_ASSERT(doc.Tag() == "tag:yaml.org,2002:omap");
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0].size() == 1);
-			YAML_ASSERT(doc[0]["Mark McGwire"] == 65);
+			YAML_ASSERT(doc[0]["Mark McGwire"].to<int>() == 65);
 			YAML_ASSERT(doc[1].size() == 1);
-			YAML_ASSERT(doc[1]["Sammy Sosa"] == 63);
+			YAML_ASSERT(doc[1]["Sammy Sosa"].to<int>() == 63);
 			YAML_ASSERT(doc[2].size() == 1);
-			YAML_ASSERT(doc[2]["Ken Griffey"] == 58);
+			YAML_ASSERT(doc[2]["Ken Griffey"].to<int>() == 58);
 			return true;
 		}
 		
@@ -627,38 +627,38 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.Tag() == "tag:clarkevans.com,2002:invoice");
 			YAML_ASSERT(doc.size() == 8);
-			YAML_ASSERT(doc["invoice"] == 34843);
-			YAML_ASSERT(doc["date"] == "2001-01-23");
+			YAML_ASSERT(doc["invoice"].to<int>() == 34843);
+			YAML_ASSERT(doc["date"].to<std::string>() == "2001-01-23");
 			YAML_ASSERT(doc["bill-to"].size() == 3);
-			YAML_ASSERT(doc["bill-to"]["given"] == "Chris");
-			YAML_ASSERT(doc["bill-to"]["family"] == "Dumars");
+			YAML_ASSERT(doc["bill-to"]["given"].to<std::string>() == "Chris");
+			YAML_ASSERT(doc["bill-to"]["family"].to<std::string>() == "Dumars");
 			YAML_ASSERT(doc["bill-to"]["address"].size() == 4);
-			YAML_ASSERT(doc["bill-to"]["address"]["lines"] == "458 Walkman Dr.\nSuite #292\n");
-			YAML_ASSERT(doc["bill-to"]["address"]["city"] == "Royal Oak");
-			YAML_ASSERT(doc["bill-to"]["address"]["state"] == "MI");
-			YAML_ASSERT(doc["bill-to"]["address"]["postal"] == "48046");
+			YAML_ASSERT(doc["bill-to"]["address"]["lines"].to<std::string>() == "458 Walkman Dr.\nSuite #292\n");
+			YAML_ASSERT(doc["bill-to"]["address"]["city"].to<std::string>() == "Royal Oak");
+			YAML_ASSERT(doc["bill-to"]["address"]["state"].to<std::string>() == "MI");
+			YAML_ASSERT(doc["bill-to"]["address"]["postal"].to<std::string>() == "48046");
 			YAML_ASSERT(doc["ship-to"].size() == 3);
-			YAML_ASSERT(doc["ship-to"]["given"] == "Chris");
-			YAML_ASSERT(doc["ship-to"]["family"] == "Dumars");
+			YAML_ASSERT(doc["ship-to"]["given"].to<std::string>() == "Chris");
+			YAML_ASSERT(doc["ship-to"]["family"].to<std::string>() == "Dumars");
 			YAML_ASSERT(doc["ship-to"]["address"].size() == 4);
-			YAML_ASSERT(doc["ship-to"]["address"]["lines"] == "458 Walkman Dr.\nSuite #292\n");
-			YAML_ASSERT(doc["ship-to"]["address"]["city"] == "Royal Oak");
-			YAML_ASSERT(doc["ship-to"]["address"]["state"] == "MI");
-			YAML_ASSERT(doc["ship-to"]["address"]["postal"] == "48046");
+			YAML_ASSERT(doc["ship-to"]["address"]["lines"].to<std::string>() == "458 Walkman Dr.\nSuite #292\n");
+			YAML_ASSERT(doc["ship-to"]["address"]["city"].to<std::string>() == "Royal Oak");
+			YAML_ASSERT(doc["ship-to"]["address"]["state"].to<std::string>() == "MI");
+			YAML_ASSERT(doc["ship-to"]["address"]["postal"].to<std::string>() == "48046");
 			YAML_ASSERT(doc["product"].size() == 2);
 			YAML_ASSERT(doc["product"][0].size() == 4);
-			YAML_ASSERT(doc["product"][0]["sku"] == "BL394D");
-			YAML_ASSERT(doc["product"][0]["quantity"] == 4);
-			YAML_ASSERT(doc["product"][0]["description"] == "Basketball");
-			YAML_ASSERT(doc["product"][0]["price"] == "450.00");
+			YAML_ASSERT(doc["product"][0]["sku"].to<std::string>() == "BL394D");
+			YAML_ASSERT(doc["product"][0]["quantity"].to<int>() == 4);
+			YAML_ASSERT(doc["product"][0]["description"].to<std::string>() == "Basketball");
+			YAML_ASSERT(doc["product"][0]["price"].to<std::string>() == "450.00");
 			YAML_ASSERT(doc["product"][1].size() == 4);
-			YAML_ASSERT(doc["product"][1]["sku"] == "BL4438H");
-			YAML_ASSERT(doc["product"][1]["quantity"] == 1);
-			YAML_ASSERT(doc["product"][1]["description"] == "Super Hoop");
-			YAML_ASSERT(doc["product"][1]["price"] == "2392.00");
-			YAML_ASSERT(doc["tax"] == "251.42");
-			YAML_ASSERT(doc["total"] == "4443.52");
-			YAML_ASSERT(doc["comments"] == "Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338.");
+			YAML_ASSERT(doc["product"][1]["sku"].to<std::string>() == "BL4438H");
+			YAML_ASSERT(doc["product"][1]["quantity"].to<int>() == 1);
+			YAML_ASSERT(doc["product"][1]["description"].to<std::string>() == "Super Hoop");
+			YAML_ASSERT(doc["product"][1]["price"].to<std::string>() == "2392.00");
+			YAML_ASSERT(doc["tax"].to<std::string>() == "251.42");
+			YAML_ASSERT(doc["total"].to<std::string>() == "4443.52");
+			YAML_ASSERT(doc["comments"].to<std::string>() == "Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338.");
 			return true;
 		}
 		
@@ -695,30 +695,30 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["Time"] == "2001-11-23 15:01:42 -5");
-			YAML_ASSERT(doc["User"] == "ed");
-			YAML_ASSERT(doc["Warning"] == "This is an error message for the log file");
+			YAML_ASSERT(doc["Time"].to<std::string>() == "2001-11-23 15:01:42 -5");
+			YAML_ASSERT(doc["User"].to<std::string>() == "ed");
+			YAML_ASSERT(doc["Warning"].to<std::string>() == "This is an error message for the log file");
 
 			PARSE_NEXT(doc);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["Time"] == "2001-11-23 15:02:31 -5");
-			YAML_ASSERT(doc["User"] == "ed");
-			YAML_ASSERT(doc["Warning"] == "A slightly different error message.");
+			YAML_ASSERT(doc["Time"].to<std::string>() == "2001-11-23 15:02:31 -5");
+			YAML_ASSERT(doc["User"].to<std::string>() == "ed");
+			YAML_ASSERT(doc["Warning"].to<std::string>() == "A slightly different error message.");
 
 			PARSE_NEXT(doc);
 			YAML_ASSERT(doc.size() == 4);
-			YAML_ASSERT(doc["Date"] == "2001-11-23 15:03:17 -5");
-			YAML_ASSERT(doc["User"] == "ed");
-			YAML_ASSERT(doc["Fatal"] == "Unknown variable \"bar\"");
+			YAML_ASSERT(doc["Date"].to<std::string>() == "2001-11-23 15:03:17 -5");
+			YAML_ASSERT(doc["User"].to<std::string>() == "ed");
+			YAML_ASSERT(doc["Fatal"].to<std::string>() == "Unknown variable \"bar\"");
 			YAML_ASSERT(doc["Stack"].size() == 2);
 			YAML_ASSERT(doc["Stack"][0].size() == 3);
-			YAML_ASSERT(doc["Stack"][0]["file"] == "TopClass.py");
-			YAML_ASSERT(doc["Stack"][0]["line"] == "23");
-			YAML_ASSERT(doc["Stack"][0]["code"] == "x = MoreObject(\"345\\n\")\n");
+			YAML_ASSERT(doc["Stack"][0]["file"].to<std::string>() == "TopClass.py");
+			YAML_ASSERT(doc["Stack"][0]["line"].to<std::string>() == "23");
+			YAML_ASSERT(doc["Stack"][0]["code"].to<std::string>() == "x = MoreObject(\"345\\n\")\n");
 			YAML_ASSERT(doc["Stack"][1].size() == 3);
-			YAML_ASSERT(doc["Stack"][1]["file"] == "MoreClass.py");
-			YAML_ASSERT(doc["Stack"][1]["line"] == "58");
-			YAML_ASSERT(doc["Stack"][1]["code"] == "foo = bar");
+			YAML_ASSERT(doc["Stack"][1]["file"].to<std::string>() == "MoreClass.py");
+			YAML_ASSERT(doc["Stack"][1]["line"].to<std::string>() == "58");
+			YAML_ASSERT(doc["Stack"][1]["code"].to<std::string>() == "foo = bar");
 			return true;
 		}
 		
@@ -739,11 +739,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["sequence"].size() == 2);
-			YAML_ASSERT(doc["sequence"][0] == "one");
-			YAML_ASSERT(doc["sequence"][1] == "two");
+			YAML_ASSERT(doc["sequence"][0].to<std::string>() == "one");
+			YAML_ASSERT(doc["sequence"][1].to<std::string>() == "two");
 			YAML_ASSERT(doc["mapping"].size() == 2);
-			YAML_ASSERT(doc["mapping"]["sky"] == "blue");
-			YAML_ASSERT(doc["mapping"]["sea"] == "green");
+			YAML_ASSERT(doc["mapping"]["sky"].to<std::string>() == "blue");
+			YAML_ASSERT(doc["mapping"]["sea"].to<std::string>() == "green");
 			return true;
 		}
 		
@@ -757,11 +757,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["sequence"].size() == 2);
-			YAML_ASSERT(doc["sequence"][0] == "one");
-			YAML_ASSERT(doc["sequence"][1] == "two");
+			YAML_ASSERT(doc["sequence"][0].to<std::string>() == "one");
+			YAML_ASSERT(doc["sequence"][1].to<std::string>() == "two");
 			YAML_ASSERT(doc["mapping"].size() == 2);
-			YAML_ASSERT(doc["mapping"]["sky"] == "blue");
-			YAML_ASSERT(doc["mapping"]["sea"] == "green");
+			YAML_ASSERT(doc["mapping"]["sky"].to<std::string>() == "blue");
+			YAML_ASSERT(doc["mapping"]["sea"].to<std::string>() == "green");
 			return true;
 		}
 		
@@ -785,8 +785,8 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["anchored"] == "value"); // TODO: assert tag
-			YAML_ASSERT(doc["alias"] == "value");
+			YAML_ASSERT(doc["anchored"].to<std::string>() == "value"); // TODO: assert tag
+			YAML_ASSERT(doc["alias"].to<std::string>() == "value");
 			return true;
 		}
 		
@@ -803,8 +803,8 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["literal"] == "some\ntext\n");
-			YAML_ASSERT(doc["folded"] == "some text\n");
+			YAML_ASSERT(doc["literal"].to<std::string>() == "some\ntext\n");
+			YAML_ASSERT(doc["folded"].to<std::string>() == "some text\n");
 			return true;
 		}
 		
@@ -817,8 +817,8 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["single"] == "text");
-			YAML_ASSERT(doc["double"] == "text");
+			YAML_ASSERT(doc["single"].to<std::string>() == "text");
+			YAML_ASSERT(doc["double"].to<std::string>() == "text");
 			return true;
 		}
 		
@@ -834,7 +834,7 @@ namespace Test {
 				"  Line break (glyphed)\n";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "Line break (no glyph)\nLine break (glyphed)\n");
+			YAML_ASSERT(doc.to<std::string>() == "Line break (no glyph)\nLine break (glyphed)\n");
 			return true;
 		}
 		
@@ -851,8 +851,8 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["quoted"] == "Quoted\t");
-			YAML_ASSERT(doc["block"] ==
+			YAML_ASSERT(doc["quoted"].to<std::string>() == "Quoted\t");
+			YAML_ASSERT(doc["block"].to<std::string>() ==
 						"void main() {\n"
 						"\tprintf(\"Hello, world!\\n\");\n"
 						"}");
@@ -870,7 +870,7 @@ namespace Test {
 				"\\x41 \\u0041 \\U00000041\"";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "Fun with \x5C \x22 \x07 \x08 \x1B \x0C \x0A \x0D \x09 \x0B " + std::string("\x00", 1) + " \x20 \xA0 \x85 \xe2\x80\xa8 \xe2\x80\xa9 A A A");
+			YAML_ASSERT(doc.to<std::string>() == "Fun with \x5C \x22 \x07 \x08 \x1B \x0C \x0A \x0D \x09 \x0B " + std::string("\x00", 1) + " \x20 \xA0 \x85 \xe2\x80\xa8 \xe2\x80\xa9 A A A");
 			return true;
 		}
 		
@@ -915,11 +915,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["Not indented"].size() == 2);
-			YAML_ASSERT(doc["Not indented"]["By one space"] == "By four\n  spaces\n");
+			YAML_ASSERT(doc["Not indented"]["By one space"].to<std::string>() == "By four\n  spaces\n");
 			YAML_ASSERT(doc["Not indented"]["Flow style"].size() == 3);
-			YAML_ASSERT(doc["Not indented"]["Flow style"][0] == "By two");
-			YAML_ASSERT(doc["Not indented"]["Flow style"][1] == "Also by two");
-			YAML_ASSERT(doc["Not indented"]["Flow style"][2] == "Still by two");
+			YAML_ASSERT(doc["Not indented"]["Flow style"][0].to<std::string>() == "By two");
+			YAML_ASSERT(doc["Not indented"]["Flow style"][1].to<std::string>() == "Also by two");
+			YAML_ASSERT(doc["Not indented"]["Flow style"][2].to<std::string>() == "Still by two");
 			return true;
 		}
 		
@@ -935,10 +935,10 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["a"].size() == 2);
-			YAML_ASSERT(doc["a"][0] == "b");
+			YAML_ASSERT(doc["a"][0].to<std::string>() == "b");
 			YAML_ASSERT(doc["a"][1].size() == 2);
-			YAML_ASSERT(doc["a"][1][0] == "c");
-			YAML_ASSERT(doc["a"][1][1] == "d");
+			YAML_ASSERT(doc["a"][1][0].to<std::string>() == "c");
+			YAML_ASSERT(doc["a"][1][1].to<std::string>() == "d");
 			return true;
 		}
 		
@@ -953,10 +953,10 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc[0].size() == 1);
-			YAML_ASSERT(doc[0]["foo"] == "bar");
+			YAML_ASSERT(doc[0]["foo"].to<std::string>() == "bar");
 			YAML_ASSERT(doc[1].size() == 2);
-			YAML_ASSERT(doc[1][0] == "baz");
-			YAML_ASSERT(doc[1][1] == "baz");
+			YAML_ASSERT(doc[1][0].to<std::string>() == "baz");
+			YAML_ASSERT(doc[1][1].to<std::string>() == "baz");
 			return true;
 		}
 		
@@ -974,9 +974,9 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["plain"] == "text lines");
-			YAML_ASSERT(doc["quoted"] == "text lines");
-			YAML_ASSERT(doc["block"] == "text\n \tlines\n");
+			YAML_ASSERT(doc["plain"].to<std::string>() == "text lines");
+			YAML_ASSERT(doc["quoted"].to<std::string>() == "text lines");
+			YAML_ASSERT(doc["block"].to<std::string>() == "text\n \tlines\n");
 			return true;
 		}
 		
@@ -994,8 +994,8 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["Folding"] == "Empty line\nas a line feed");
-			YAML_ASSERT(doc["Chomping"] == "Clipped empty lines\n");
+			YAML_ASSERT(doc["Folding"].to<std::string>() == "Empty line\nas a line feed");
+			YAML_ASSERT(doc["Chomping"].to<std::string>() == "Clipped empty lines\n");
 			return true;
 		}
 		
@@ -1012,7 +1012,7 @@ namespace Test {
 				"  space";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "trimmed\n\n\nas space");
+			YAML_ASSERT(doc.to<std::string>() == "trimmed\n\n\nas space");
 			return true;
 		}
 		
@@ -1028,7 +1028,7 @@ namespace Test {
 				"  baz\n";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "foo \n\n\t bar\n\nbaz\n");
+			YAML_ASSERT(doc.to<std::string>() == "foo \n\n\t bar\n\nbaz\n");
 			return true;
 		}
 		
@@ -1045,7 +1045,7 @@ namespace Test {
 				"\"";
 
 			PARSE(doc, input);			
-			YAML_ASSERT(doc == " foo\nbar\nbaz ");
+			YAML_ASSERT(doc.to<std::string>() == " foo\nbar\nbaz ");
 			return true;
 		}
 		
@@ -1058,7 +1058,7 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
-			YAML_ASSERT(doc["key"] == "value");
+			YAML_ASSERT(doc["key"].to<std::string>() == "value");
 			return true;
 		}
 		
@@ -1086,7 +1086,7 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
-			YAML_ASSERT(doc["key"] == "value");
+			YAML_ASSERT(doc["key"].to<std::string>() == "value");
 			return true;
 		}
 
@@ -1102,8 +1102,8 @@ namespace Test {
 		void operator >> (const YAML::Node& node, StringMap& m) {
 			m._.clear();
 			for(YAML::Iterator it=node.begin();it!=node.end();++it) {
-				std::string key = it.first();
-				std::string value = it.second();
+				std::string key = it.first().to<std::string>();
+				std::string value = it.second().to<std::string>();
 				m._[key] = value;
 			}
 		}
@@ -1126,8 +1126,8 @@ namespace Test {
 			key["last"] = "Sosa";
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc[key].size() == 2);
-			YAML_ASSERT(doc[key]["hr"] == 65);
-			YAML_ASSERT(doc[key]["avg"] == "0.278");
+			YAML_ASSERT(doc[key]["hr"].to<int>() == 65);
+			YAML_ASSERT(doc[key]["avg"].to<std::string>() == "0.278");
 			return true;
 		}
 		
@@ -1186,7 +1186,7 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.Tag() == "tag:yaml.org,2002:str");
-			YAML_ASSERT(doc == "foo");
+			YAML_ASSERT(doc.to<std::string>() == "foo");
 			return true;
 		}
 		
@@ -1224,11 +1224,11 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.Tag() == "!foo");
-			YAML_ASSERT(doc == "bar");
+			YAML_ASSERT(doc.to<std::string>() == "bar");
 
 			PARSE_NEXT(doc);
 			YAML_ASSERT(doc.Tag() == "tag:example.com,2000:app/foo");
-			YAML_ASSERT(doc == "bar");
+			YAML_ASSERT(doc.to<std::string>() == "bar");
 			return true;
 		}
 		
@@ -1242,7 +1242,7 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.Tag() == "tag:example.com,2000:app/int");
-			YAML_ASSERT(doc == "1 - 3");
+			YAML_ASSERT(doc.to<std::string>() == "1 - 3");
 			return true;
 		}
 		
@@ -1256,7 +1256,7 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.Tag() == "tag:example.com,2000:app/foo");
-			YAML_ASSERT(doc == "bar");
+			YAML_ASSERT(doc.to<std::string>() == "bar");
 			return true;
 		}
 		
@@ -1274,11 +1274,11 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.Tag() == "!my-light");
-			YAML_ASSERT(doc == "fluorescent");
+			YAML_ASSERT(doc.to<std::string>() == "fluorescent");
 			
 			PARSE_NEXT(doc);
 			YAML_ASSERT(doc.Tag() == "!my-light");
-			YAML_ASSERT(doc == "green");
+			YAML_ASSERT(doc.to<std::string>() == "green");
 			return true;
 		}
 		
@@ -1293,7 +1293,7 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc[0].Tag() == "tag:example.com,2000:app/foo");
-			YAML_ASSERT(doc[0] == "bar");
+			YAML_ASSERT(doc[0].to<std::string>() == "bar");
 			return true;
 		}
 		
@@ -1308,12 +1308,12 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			for(YAML::Iterator it=doc.begin();it!=doc.end();++it) {
-				if(it.first() == "foo") {
+				if(it.first().to<std::string>() == "foo") {
 					YAML_ASSERT(it.first().Tag() == "tag:yaml.org,2002:str");
 					YAML_ASSERT(it.second().Tag() == "tag:yaml.org,2002:str");
-					YAML_ASSERT(it.second() == "bar");
-				} else if(it.first() == "baz") {
-					YAML_ASSERT(it.second() == "foo");
+					YAML_ASSERT(it.second().to<std::string>() == "bar");
+				} else if(it.first().to<std::string>() == "baz") {
+					YAML_ASSERT(it.second().to<std::string>() == "foo");
 				} else
 					return "  unknown key";
 			}
@@ -1332,9 +1332,9 @@ namespace Test {
 			YAML_ASSERT(doc.size() == 1);
 			for(YAML::Iterator it=doc.begin();it!=doc.end();++it) {
 				YAML_ASSERT(it.first().Tag() == "tag:yaml.org,2002:str");
-				YAML_ASSERT(it.first() == "foo");
+				YAML_ASSERT(it.first().to<std::string>() == "foo");
 				YAML_ASSERT(it.second().Tag() == "!bar");
-				YAML_ASSERT(it.second() == "baz");
+				YAML_ASSERT(it.second().to<std::string>() == "baz");
 			}
 			return true;
 		}
@@ -1363,11 +1363,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0].Tag() == "!local");
-			YAML_ASSERT(doc[0] == "foo");
+			YAML_ASSERT(doc[0].to<std::string>() == "foo");
 			YAML_ASSERT(doc[1].Tag() == "tag:yaml.org,2002:str");
-			YAML_ASSERT(doc[1] == "bar");
+			YAML_ASSERT(doc[1].to<std::string>() == "bar");
 			YAML_ASSERT(doc[2].Tag() == "tag:example.com,2000:app/tag%21");
-			YAML_ASSERT(doc[2] == "baz");
+			YAML_ASSERT(doc[2].to<std::string>() == "baz");
 			return true;
 		}
 		
@@ -1411,9 +1411,9 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc[0] == "12"); // TODO: check tags. How?
-			YAML_ASSERT(doc[1] == 12);
-			YAML_ASSERT(doc[2] == "12");
+			YAML_ASSERT(doc[0].to<std::string>() == "12"); // TODO: check tags. How?
+			YAML_ASSERT(doc[1].to<int>() == 12);
+			YAML_ASSERT(doc[2].to<std::string>() == "12");
 			return true;
 		}
 
@@ -1426,8 +1426,8 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["First occurrence"] == "Value");
-			YAML_ASSERT(doc["Second occurrence"] == "Value");
+			YAML_ASSERT(doc["First occurrence"].to<std::string>() == "Value");
+			YAML_ASSERT(doc["Second occurrence"].to<std::string>() == "Value");
 			return true;
 		}
 		
@@ -1442,10 +1442,10 @@ namespace Test {
 
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 4);
-			YAML_ASSERT(doc["First occurrence"] == "Foo");
-			YAML_ASSERT(doc["Second occurrence"] == "Foo");
-			YAML_ASSERT(doc["Override anchor"] == "Bar");
-			YAML_ASSERT(doc["Reuse anchor"] == "Bar");
+			YAML_ASSERT(doc["First occurrence"].to<std::string>() == "Foo");
+			YAML_ASSERT(doc["Second occurrence"].to<std::string>() == "Foo");
+			YAML_ASSERT(doc["Override anchor"].to<std::string>() == "Bar");
+			YAML_ASSERT(doc["Reuse anchor"].to<std::string>() == "Bar");
 			return true;
 		}
 		
@@ -1461,12 +1461,12 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			for(YAML::Iterator it=doc.begin();it!=doc.end();++it) {
-				if(it.first() == "foo") {
+				if(it.first().to<std::string>() == "foo") {
 					YAML_ASSERT(it.second().Tag() == "tag:yaml.org,2002:str");
-					YAML_ASSERT(it.second() == "");
-				} else if(it.first() == "") {
+					YAML_ASSERT(it.second().to<std::string>() == "");
+				} else if(it.first().to<std::string>() == "") {
 					YAML_ASSERT(it.first().Tag() == "tag:yaml.org,2002:str");
-					YAML_ASSERT(it.second() == "bar");
+					YAML_ASSERT(it.second().to<std::string>() == "bar");
 				} else
 					return "  unexpected key";
 			}
@@ -1485,7 +1485,7 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(IsNull(doc["foo"]));
-			YAML_ASSERT(doc[YAML::Null] == "bar");
+			YAML_ASSERT(doc[YAML::Null].to<std::string>() == "bar");
 			return true;
 		}
 		
@@ -1501,7 +1501,7 @@ namespace Test {
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["implicit block key"].size() == 1);
 			YAML_ASSERT(doc["implicit block key"][0].size() == 1);
-			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"] == "value");
+			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"].to<std::string>() == "value");
 			return true;
 		}
 		
@@ -1516,7 +1516,7 @@ namespace Test {
 				" \\ \tnon-content\"";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "folded to a space,\nto a line feed, or \t \tnon-content");
+			YAML_ASSERT(doc.to<std::string>() == "folded to a space,\nto a line feed, or \t \tnon-content");
 			return true;
 		}
 		
@@ -1530,7 +1530,7 @@ namespace Test {
 				"\t3rd non-empty \"";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc == " 1st non-empty\n2nd non-empty 3rd non-empty ");
+			YAML_ASSERT(doc.to<std::string>() == " 1st non-empty\n2nd non-empty 3rd non-empty ");
 			return true;
 		}
 		
@@ -1540,7 +1540,7 @@ namespace Test {
 			std::string input = " 'here''s to \"quotes\"'";
 
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "here's to \"quotes\"");
+			YAML_ASSERT(doc.to<std::string>() == "here's to \"quotes\"");
 			return true;
 		}
 		
@@ -1556,7 +1556,7 @@ namespace Test {
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["implicit block key"].size() == 1);
 			YAML_ASSERT(doc["implicit block key"][0].size() == 1);
-			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"] == "value");
+			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"].to<std::string>() == "value");
 			return true;
 		}
 		
@@ -1570,7 +1570,7 @@ namespace Test {
 				"\t3rd non-empty '";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc == " 1st non-empty\n2nd non-empty 3rd non-empty ");
+			YAML_ASSERT(doc.to<std::string>() == " 1st non-empty\n2nd non-empty 3rd non-empty ");
 			return true;
 		}
 		
@@ -1593,17 +1593,17 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 6);
-			YAML_ASSERT(doc[0] == "::vector");
-			YAML_ASSERT(doc[1] == ": - ()");
-			YAML_ASSERT(doc[2] == "Up, up, and away!");
-			YAML_ASSERT(doc[3] == -123);
-			YAML_ASSERT(doc[4] == "http://example.com/foo#bar");
+			YAML_ASSERT(doc[0].to<std::string>() == "::vector");
+			YAML_ASSERT(doc[1].to<std::string>() == ": - ()");
+			YAML_ASSERT(doc[2].to<std::string>() == "Up, up, and away!");
+			YAML_ASSERT(doc[3].to<int>() == -123);
+			YAML_ASSERT(doc[4].to<std::string>() == "http://example.com/foo#bar");
 			YAML_ASSERT(doc[5].size() == 5);
-			YAML_ASSERT(doc[5][0] == "::vector");
-			YAML_ASSERT(doc[5][1] == ": - ()");
-			YAML_ASSERT(doc[5][2] == "Up, up, and away!");
-			YAML_ASSERT(doc[5][3] == -123);
-			YAML_ASSERT(doc[5][4] == "http://example.com/foo#bar");
+			YAML_ASSERT(doc[5][0].to<std::string>() == "::vector");
+			YAML_ASSERT(doc[5][1].to<std::string>() == ": - ()");
+			YAML_ASSERT(doc[5][2].to<std::string>() == "Up, up, and away!");
+			YAML_ASSERT(doc[5][3].to<int>() == -123);
+			YAML_ASSERT(doc[5][4].to<std::string>() == "http://example.com/foo#bar");
 			return true;
 		}
 		
@@ -1619,7 +1619,7 @@ namespace Test {
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["implicit block key"].size() == 1);
 			YAML_ASSERT(doc["implicit block key"][0].size() == 1);
-			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"] == "value");
+			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"].to<std::string>() == "value");
 			return true;
 		}
 		
@@ -1633,7 +1633,7 @@ namespace Test {
 				"\t3rd non-empty";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "1st non-empty\n2nd non-empty 3rd non-empty");
+			YAML_ASSERT(doc.to<std::string>() == "1st non-empty\n2nd non-empty 3rd non-empty");
 			return true;
 		}
 		
@@ -1647,11 +1647,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc[0].size() == 2);
-			YAML_ASSERT(doc[0][0] == "one");
-			YAML_ASSERT(doc[0][1] == "two");
+			YAML_ASSERT(doc[0][0].to<std::string>() == "one");
+			YAML_ASSERT(doc[0][1].to<std::string>() == "two");
 			YAML_ASSERT(doc[1].size() == 2);
-			YAML_ASSERT(doc[1][0] == "three");
-			YAML_ASSERT(doc[1][1] == "four");
+			YAML_ASSERT(doc[1][0].to<std::string>() == "three");
+			YAML_ASSERT(doc[1][1].to<std::string>() == "four");
 			return true;
 		}
 		
@@ -1670,13 +1670,13 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 5);
-			YAML_ASSERT(doc[0] == "double quoted");
-			YAML_ASSERT(doc[1] == "single quoted");
-			YAML_ASSERT(doc[2] == "plain text");
+			YAML_ASSERT(doc[0].to<std::string>() == "double quoted");
+			YAML_ASSERT(doc[1].to<std::string>() == "single quoted");
+			YAML_ASSERT(doc[2].to<std::string>() == "plain text");
 			YAML_ASSERT(doc[3].size() == 1);
-			YAML_ASSERT(doc[3][0] == "nested");
+			YAML_ASSERT(doc[3][0].to<std::string>() == "nested");
 			YAML_ASSERT(doc[4].size() == 1);
-			YAML_ASSERT(doc[4]["single"] == "pair");
+			YAML_ASSERT(doc[4]["single"].to<std::string>() == "pair");
 			return true;
 		}
 		
@@ -1690,11 +1690,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc[0].size() == 2);
-			YAML_ASSERT(doc[0]["one"] == "two");
-			YAML_ASSERT(doc[0]["three"] == "four");
+			YAML_ASSERT(doc[0]["one"].to<std::string>() == "two");
+			YAML_ASSERT(doc[0]["three"].to<std::string>() == "four");
 			YAML_ASSERT(doc[1].size() == 2);
-			YAML_ASSERT(doc[1]["five"] == "six");
-			YAML_ASSERT(doc[1]["seven"] == "eight");
+			YAML_ASSERT(doc[1]["five"].to<std::string>() == "six");
+			YAML_ASSERT(doc[1]["seven"].to<std::string>() == "eight");
 			return true;
 		}
 		
@@ -1710,8 +1710,8 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["explicit"] == "entry");
-			YAML_ASSERT(doc["implicit"] == "entry");
+			YAML_ASSERT(doc["explicit"].to<std::string>() == "entry");
+			YAML_ASSERT(doc["implicit"].to<std::string>() == "entry");
 			YAML_ASSERT(IsNull(doc[YAML::Null]));
 			return true;
 		}
@@ -1729,10 +1729,10 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 4);
-			YAML_ASSERT(doc["unquoted"] == "separate");
+			YAML_ASSERT(doc["unquoted"].to<std::string>() == "separate");
 			YAML_ASSERT(IsNull(doc["http://foo.com"]));
 			YAML_ASSERT(IsNull(doc["omitted value"]));
-			YAML_ASSERT(doc[YAML::Null] == "omitted key");
+			YAML_ASSERT(doc[YAML::Null].to<std::string>() == "omitted key");
 			return true;
 		}
 		
@@ -1748,8 +1748,8 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["adjacent"] == "value");
-			YAML_ASSERT(doc["readable"] == "value");
+			YAML_ASSERT(doc["adjacent"].to<std::string>() == "value");
+			YAML_ASSERT(doc["readable"].to<std::string>() == "value");
 			YAML_ASSERT(IsNull(doc["empty"]));
 			return true;
 		}
@@ -1765,7 +1765,7 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc[0].size() == 1);
-			YAML_ASSERT(doc[0]["foo"] == "bar");
+			YAML_ASSERT(doc[0]["foo"].to<std::string>() == "bar");
 			return true;
 		}
 		
@@ -1781,7 +1781,7 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc[0].size() == 1);
-			YAML_ASSERT(doc[0]["foo bar"] == "baz");
+			YAML_ASSERT(doc[0]["foo bar"].to<std::string>() == "baz");
 			return true;
 		}
 		
@@ -1797,15 +1797,15 @@ namespace Test {
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0].size() == 1);
 			YAML_ASSERT(doc[0][0].size() == 1);
-			YAML_ASSERT(doc[0][0]["YAML"] == "separate");
+			YAML_ASSERT(doc[0][0]["YAML"].to<std::string>() == "separate");
 			YAML_ASSERT(doc[1].size() == 1);
 			YAML_ASSERT(doc[1][0].size() == 1);
-			YAML_ASSERT(doc[1][0][YAML::Null] == "empty key entry");
+			YAML_ASSERT(doc[1][0][YAML::Null].to<std::string>() == "empty key entry");
 			YAML_ASSERT(doc[2].size() == 1);
 			YAML_ASSERT(doc[2][0].size() == 1);
 			StringMap key;
 			key._["JSON"] = "like";
-			YAML_ASSERT(doc[2][0][key] == "adjacent");
+			YAML_ASSERT(doc[2][0][key].to<std::string>() == "adjacent");
 			return true;
 		}
 		
@@ -1840,13 +1840,13 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 5);
 			YAML_ASSERT(doc[0].size() == 2);
-			YAML_ASSERT(doc[0][0] == "a");
-			YAML_ASSERT(doc[0][1] == "b");
+			YAML_ASSERT(doc[0][0].to<std::string>() == "a");
+			YAML_ASSERT(doc[0][1].to<std::string>() == "b");
 			YAML_ASSERT(doc[1].size() == 1);
-			YAML_ASSERT(doc[1]["a"] == "b");
-			YAML_ASSERT(doc[2] == "a");
-			YAML_ASSERT(doc[3] == 'b');
-			YAML_ASSERT(doc[4] == "c");
+			YAML_ASSERT(doc[1]["a"].to<std::string>() == "b");
+			YAML_ASSERT(doc[2].to<std::string>() == "a");
+			YAML_ASSERT(doc[3].to<char>() == 'b');
+			YAML_ASSERT(doc[4].to<std::string>() == "c");
 			return true;
 		}
 		
@@ -1863,12 +1863,12 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 5);
 			YAML_ASSERT(doc[0].Tag() == "tag:yaml.org,2002:str");
-			YAML_ASSERT(doc[0] == "a");
-			YAML_ASSERT(doc[1] == 'b');
-			YAML_ASSERT(doc[2] == "c");
-			YAML_ASSERT(doc[3] == "c");
+			YAML_ASSERT(doc[0].to<std::string>() == "a");
+			YAML_ASSERT(doc[1].to<char>() == 'b');
+			YAML_ASSERT(doc[2].to<std::string>() == "c");
+			YAML_ASSERT(doc[3].to<std::string>() == "c");
 			YAML_ASSERT(doc[4].Tag() == "tag:yaml.org,2002:str");
-			YAML_ASSERT(doc[4] == "");
+			YAML_ASSERT(doc[4].to<std::string>() == "");
 			return true;
 		}
 		
@@ -1888,10 +1888,10 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 4);
-			YAML_ASSERT(doc[0] == "literal\n");
-			YAML_ASSERT(doc[1] == " folded\n");
-			YAML_ASSERT(doc[2] == "keep\n\n");
-			YAML_ASSERT(doc[3] == " strip");
+			YAML_ASSERT(doc[0].to<std::string>() == "literal\n");
+			YAML_ASSERT(doc[1].to<std::string>() == " folded\n");
+			YAML_ASSERT(doc[2].to<std::string>() == "keep\n\n");
+			YAML_ASSERT(doc[3].to<std::string>() == " strip");
 			return true;
 		}
 		
@@ -1913,10 +1913,10 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 4);
-			YAML_ASSERT(doc[0] == "detected\n");
-			YAML_ASSERT(doc[1] == "\n\n# detected\n");
-			YAML_ASSERT(doc[2] == " explicit\n");
-			YAML_ASSERT(doc[3] == "\t\ndetected\n");
+			YAML_ASSERT(doc[0].to<std::string>() == "detected\n");
+			YAML_ASSERT(doc[1].to<std::string>() == "\n\n# detected\n");
+			YAML_ASSERT(doc[2].to<std::string>() == " explicit\n");
+			YAML_ASSERT(doc[3].to<std::string>() == "\t\ndetected\n");
 			return true;
 		}
 		
@@ -1998,9 +1998,9 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["strip"] == "text");
-			YAML_ASSERT(doc["clip"] == "text\n");
-			YAML_ASSERT(doc["keep"] == "text\n");
+			YAML_ASSERT(doc["strip"].to<std::string>() == "text");
+			YAML_ASSERT(doc["clip"].to<std::string>() == "text\n");
+			YAML_ASSERT(doc["keep"].to<std::string>() == "text\n");
 			return true;
 		}
 		
@@ -2030,9 +2030,9 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["strip"] == "# text");
-			YAML_ASSERT(doc["clip"] == "# text\n");
-			YAML_ASSERT(doc["keep"] == "# text\n");
+			YAML_ASSERT(doc["strip"].to<std::string>() == "# text");
+			YAML_ASSERT(doc["clip"].to<std::string>() == "# text\n");
+			YAML_ASSERT(doc["keep"].to<std::string>() == "# text\n");
 			return true;
 		}
 		
@@ -2049,9 +2049,9 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["strip"] == "");
-			YAML_ASSERT(doc["clip"] == "");
-			YAML_ASSERT(doc["keep"] == "\n");
+			YAML_ASSERT(doc["strip"].to<std::string>() == "");
+			YAML_ASSERT(doc["clip"].to<std::string>() == "");
+			YAML_ASSERT(doc["keep"].to<std::string>() == "\n");
 			return true;
 		}
 		
@@ -2065,7 +2065,7 @@ namespace Test {
 				"\n";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "literal\n\ttext\n");
+			YAML_ASSERT(doc.to<std::string>() == "literal\n\ttext\n");
 			return true;
 		}
 		
@@ -2084,7 +2084,7 @@ namespace Test {
 				" # Comment\n";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "\n\nliteral\n \n\ntext\n");
+			YAML_ASSERT(doc.to<std::string>() == "\n\nliteral\n \n\ntext\n");
 			return true;
 		}
 		
@@ -2098,7 +2098,7 @@ namespace Test {
 				"\n";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "folded text\n");
+			YAML_ASSERT(doc.to<std::string>() == "folded text\n");
 			return true;
 		}
 		
@@ -2124,7 +2124,7 @@ namespace Test {
 				"# Comment\n";
 			
 			PARSE(doc, input);
-			YAML_ASSERT(doc == "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
+			YAML_ASSERT(doc.to<std::string>() == "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
 			return true;
 		}
 		
@@ -2157,9 +2157,9 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["block sequence"].size() == 2);
-			YAML_ASSERT(doc["block sequence"][0] == "one");
+			YAML_ASSERT(doc["block sequence"][0].to<std::string>() == "one");
 			YAML_ASSERT(doc["block sequence"][1].size() == 1);
-			YAML_ASSERT(doc["block sequence"][1]["two"] == "three");
+			YAML_ASSERT(doc["block sequence"][1]["two"].to<std::string>() == "three");
 			return true;
 		}
 		
@@ -2177,12 +2177,12 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 4);
 			YAML_ASSERT(YAML::IsNull(doc[0]));
-			YAML_ASSERT(doc[1] == "block node\n");
+			YAML_ASSERT(doc[1].to<std::string>() == "block node\n");
 			YAML_ASSERT(doc[2].size() == 2);
-			YAML_ASSERT(doc[2][0] == "one");
-			YAML_ASSERT(doc[2][1] == "two");
+			YAML_ASSERT(doc[2][0].to<std::string>() == "one");
+			YAML_ASSERT(doc[2][1].to<std::string>() == "two");
 			YAML_ASSERT(doc[3].size() == 1);
-			YAML_ASSERT(doc[3]["one"] == "two");
+			YAML_ASSERT(doc[3]["one"].to<std::string>() == "two");
 			return true;
 		}
 		
@@ -2196,7 +2196,7 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 1);
 			YAML_ASSERT(doc["block mapping"].size() == 1);
-			YAML_ASSERT(doc["block mapping"]["key"] == "value");
+			YAML_ASSERT(doc["block mapping"]["key"].to<std::string>() == "value");
 			return true;
 		}
 		
@@ -2214,8 +2214,8 @@ namespace Test {
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(IsNull(doc["explicit key"]));
 			YAML_ASSERT(doc["block key\n"].size() == 2);
-			YAML_ASSERT(doc["block key\n"][0] == "one");
-			YAML_ASSERT(doc["block key\n"][1] == "two");
+			YAML_ASSERT(doc["block key\n"][0].to<std::string>() == "one");
+			YAML_ASSERT(doc["block key\n"][1].to<std::string>() == "two");
 			return true;
 		}
 		
@@ -2230,10 +2230,10 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["plain key"] == "in-line value");
+			YAML_ASSERT(doc["plain key"].to<std::string>() == "in-line value");
 			YAML_ASSERT(IsNull(doc[YAML::Null]));
 			YAML_ASSERT(doc["quoted key"].size() == 1);
-			YAML_ASSERT(doc["quoted key"][0] == "entry");
+			YAML_ASSERT(doc["quoted key"][0].to<std::string>() == "entry");
 			return true;
 		}
 		
@@ -2248,12 +2248,12 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc[0].size() == 1);
-			YAML_ASSERT(doc[0]["sun"] == "yellow");
+			YAML_ASSERT(doc[0]["sun"].to<std::string>() == "yellow");
 			YAML_ASSERT(doc[1].size() == 1);
 			std::map<std::string, std::string> key;
 			key["earth"] = "blue";
 			YAML_ASSERT(doc[1][key].size() == 1);
-			YAML_ASSERT(doc[1][key]["moon"] == "white");
+			YAML_ASSERT(doc[1][key]["moon"].to<std::string>() == "white");
 			return true;
 		}
 		
@@ -2270,10 +2270,10 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc[0] == "flow in block");
-			YAML_ASSERT(doc[1] == "Block scalar\n");
+			YAML_ASSERT(doc[0].to<std::string>() == "flow in block");
+			YAML_ASSERT(doc[1].to<std::string>() == "Block scalar\n");
 			YAML_ASSERT(doc[2].size() == 1);
-			YAML_ASSERT(doc[2]["foo"] == "bar");
+			YAML_ASSERT(doc[2]["foo"].to<std::string>() == "bar");
 			return true;
 		}
 		
@@ -2290,8 +2290,8 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["literal"] == "value");
-			YAML_ASSERT(doc["folded"] == "value");
+			YAML_ASSERT(doc["literal"].to<std::string>() == "value");
+			YAML_ASSERT(doc["folded"].to<std::string>() == "value");
 			YAML_ASSERT(doc["folded"].Tag() == "!foo");
 			return true;
 		}
@@ -2310,11 +2310,11 @@ namespace Test {
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["sequence"].size() == 2);
-			YAML_ASSERT(doc["sequence"][0] == "entry");
+			YAML_ASSERT(doc["sequence"][0].to<std::string>() == "entry");
 			YAML_ASSERT(doc["sequence"][1].size() == 1);
-			YAML_ASSERT(doc["sequence"][1][0] == "nested");
+			YAML_ASSERT(doc["sequence"][1][0].to<std::string>() == "nested");
 			YAML_ASSERT(doc["mapping"].size() == 1);
-			YAML_ASSERT(doc["mapping"]["foo"] == "bar");
+			YAML_ASSERT(doc["mapping"]["foo"].to<std::string>() == "bar");
 			return true;
 		}
 	}
