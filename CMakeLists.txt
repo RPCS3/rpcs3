@@ -34,6 +34,7 @@ enable_testing()
 ###
 ## Project stuff
 option(YAML_CPP_BUILD_TOOLS "Enable testing and parse tools" ON)
+option(YAML_CPP_BUILD_CONTRIB "Enable contrib stuff in library" ON)
 
 ## Build options
 # --> General
@@ -54,14 +55,25 @@ option(MSVC_STHREADED_RT "MSVC: Build with single-threaded static runtime libs (
 ###
 ### Sources, headers, directories and libs
 ###
-file(GLOB_RECURSE sources "src/[a-zA-Z]*.cpp")
-file(GLOB_RECURSE public_headers "include/yaml-cpp/[a-zA-Z]*.h")
-file(GLOB_RECURSE private_headers "src/[a-zA-Z]*.h")
+file(GLOB sources "src/[a-zA-Z]*.cpp")
+file(GLOB public_headers "include/yaml-cpp/[a-zA-Z]*.h")
+file(GLOB private_headers "src/[a-zA-Z]*.h")
+ 
+if(YAML_CPP_BUILD_CONTRIB)
+	file(GLOB contrib_sources "src/contrib/[a-zA-Z]*.cpp")
+	file(GLOB contrib_public_headers "include/yaml-cpp/contrib/[a-zA-Z]*.h")
+	file(GLOB contrib_private_headers "src/contrib/[a-zA-Z]*.h")
+else()
+	add_definitions(-DYAML_CPP_NO_CONTRIB)
+endif()
 
 if(VERBOSE)
 	message(STATUS "sources: ${sources}")
 	message(STATUS "public_headers: ${public_headers}")
 	message(STATUS "private_headers: ${private_headers}")
+	message(STATUS "contrib_sources: ${contrib_sources}")
+	message(STATUS "contrib_public_headers: ${contrib_public_headers}")
+	message(STATUS "contrib_private_headers: ${contrib_private_headers}")
 endif()
 
 include_directories(${YAML_CPP_SOURCE_DIR}/include)
@@ -214,6 +226,9 @@ add_library(yaml-cpp
 	${sources}
 	${public_headers}
 	${private_headers}
+	${contrib_sources}
+	${contrib_public_headers}
+	${contrib_private_headers}
 )
 
 set_target_properties(yaml-cpp PROPERTIES
@@ -242,7 +257,9 @@ endif()
 
 install(TARGETS yaml-cpp ${_INSTALL_DESTINATIONS})
 install(
-	FILES ${public_headers}
+	FILES
+		${public_headers}
+		${contrib_public_headers}
 	DESTINATION ${INCLUDE_INSTALL_DIR}
 )
 
