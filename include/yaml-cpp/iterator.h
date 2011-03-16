@@ -5,6 +5,7 @@
 #pragma once
 #endif
 
+#include "yaml-cpp/dll.h"
 #include <memory>
 
 namespace YAML
@@ -12,7 +13,7 @@ namespace YAML
 	class Node;
 	struct IterPriv;
 
-	class Iterator
+	class YAML_CPP_API Iterator
 	{
 	public:
 		Iterator();
@@ -28,8 +29,8 @@ namespace YAML
 		const Node& first() const;
 		const Node& second() const;
 
-		friend bool operator == (const Iterator& it, const Iterator& jt);
-		friend bool operator != (const Iterator& it, const Iterator& jt);
+		friend YAML_CPP_API bool operator == (const Iterator& it, const Iterator& jt);
+		friend YAML_CPP_API bool operator != (const Iterator& it, const Iterator& jt);
 
 	private:
 		std::auto_ptr<IterPriv> m_pData;

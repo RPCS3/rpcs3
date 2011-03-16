@@ -6,6 +6,7 @@
 #endif
 
 
+#include "yaml-cpp/dll.h"
 #include "yaml-cpp/noncopyable.h"
 #include <ios>
 #include <memory>
@@ -19,7 +20,7 @@ namespace YAML
 	class Node;
 	class Scanner;
 
-	class Parser: private noncopyable
+	class YAML_CPP_API Parser: private noncopyable
 	{
 	public:
 		Parser();

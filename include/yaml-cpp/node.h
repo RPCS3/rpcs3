@@ -7,6 +7,7 @@
 
 
 #include "yaml-cpp/conversion.h"
+#include "yaml-cpp/dll.h"
 #include "yaml-cpp/exceptions.h"
 #include "yaml-cpp/iterator.h"
 #include "yaml-cpp/ltnode.h"
@@ -29,7 +30,7 @@ namespace YAML
 
 	struct NodeType { enum value { Null, Scalar, Sequence, Map }; };
 
-	class Node: private noncopyable
+	class YAML_CPP_API Node: private noncopyable
 	{
 	public:
 		friend class NodeOwnership;
@@ -65,7 +66,7 @@ namespace YAML
 		const T to() const;
 
 		template <typename T>
-		friend void operator >> (const Node& node, T& value);
+		friend YAML_CPP_API void operator >> (const Node& node, T& value);
 
 		// retrieval for maps and sequences
 		template <typename T>
@@ -82,7 +83,7 @@ namespace YAML
 		const std::string& Tag() const { return m_tag; }
 
 		// emitting
-		friend Emitter& operator << (Emitter& out, const Node& node);
+		friend YAML_CPP_API Emitter& operator << (Emitter& out, const Node& node);
 
 		// ordering
 		int Compare(const Node& rhs) const;

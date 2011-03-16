@@ -18,8 +18,8 @@ namespace YAML
 		return true;
 	}
 	
-	bool Convert(const std::string& input, bool& output);
-	bool Convert(const std::string& input, _Null& output);
+	YAML_CPP_API bool Convert(const std::string& input, bool& output);
+	YAML_CPP_API bool Convert(const std::string& input, _Null& output);
 	
 	template <typename T> 
 	inline bool Convert(const std::string& input, T& output, typename enable_if<is_numeric<T> >::type * = 0) {

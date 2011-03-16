@@ -6,6 +6,7 @@
 #endif
 
 
+#include "yaml-cpp/dll.h"
 #include "yaml-cpp/emittermanip.h"
 #include "yaml-cpp/ostream.h"
 #include "yaml-cpp/noncopyable.h"
@@ -18,7 +19,7 @@ namespace YAML
 {
 	class EmitterState;
 	
-	class Emitter: private noncopyable
+	class YAML_CPP_API Emitter: private noncopyable
 	{
 	public:
 		Emitter();
@@ -65,7 +66,9 @@ namespace YAML
 
 	private:
 		void PreWriteIntegralType(std::stringstream& str);
+		void PreWriteStreamable(std::stringstream& str);
 		void PostWriteIntegralType(const std::stringstream& str);
+		void PostWriteStreamable(const std::stringstream& str);
 	
 	private:
 		enum ATOMIC_TYPE { AT_SCALAR, AT_SEQ, AT_BLOCK_SEQ, AT_FLOW_SEQ, AT_MAP, AT_BLOCK_MAP, AT_FLOW_MAP };
@@ -114,15 +117,10 @@ namespace YAML
 		if(!good())
 			return *this;
 		
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
-		
 		std::stringstream str;
-		str.precision(15);
+		PreWriteStreamable(str);
 		str << value;
-		m_stream << str.str();
-		
-		PostAtomicWrite();
+		PostWriteStreamable(str);
 		return *this;
 	}
 	

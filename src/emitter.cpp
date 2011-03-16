@@ -657,7 +657,20 @@ namespace YAML
 		}
 	}
 
+	void Emitter::PreWriteStreamable(std::stringstream& str)
+	{
+		PreAtomicWrite();
+		EmitSeparationIfNecessary();
+		str.precision(15);
+	}
+
 	void Emitter::PostWriteIntegralType(const std::stringstream& str)
+	{
+		m_stream << str.str();
+		PostAtomicWrite();
+	}
+
+	void Emitter::PostWriteStreamable(const std::stringstream& str)
 	{
 		m_stream << str.str();
 		PostAtomicWrite();
