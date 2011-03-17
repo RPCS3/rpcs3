@@ -1551,7 +1551,7 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 		psrlw(xmm5, 8);
 		psrlw(xmm6, 8);
 	}
-return;
+
 	if(m_sel.mmin == 1) return; // round-off mode
 
 	movdqa(ptr[&m_local.temp.trb], xmm5);
