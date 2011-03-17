@@ -24,7 +24,7 @@ using namespace std;
 
 const u8 version  = PS2E_FW_VERSION;
 const u8 revision = 0;
-const u8 build    = 6;    // increase that with each version
+const u8 build    = 7;    // increase that with each version
 
 static char *libraryName = "FWnull Driver";
 
