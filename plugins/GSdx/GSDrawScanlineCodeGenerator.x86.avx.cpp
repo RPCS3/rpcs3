@@ -1375,23 +1375,7 @@ return;
 		// c10 = addr10.gather32_32((const uint32/uint8*)tex[, clut]);
 		// c11 = addr11.gather32_32((const uint32/uint8*)tex[, clut]);
 
-		for(int i = 0; i < 4; i++)
-		{
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
-			mov(ebx, ptr[edx + ebx * sizeof(void*)]);
-
-			ReadTexel(xmm6, xmm5, i);
-			ReadTexel(xmm4, xmm2, i);
-		}
-		
-		for(int i = 0; i < 4; i++)
-		{
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
-			mov(ebx, ptr[edx + ebx * sizeof(void*)]);
-
-			ReadTexel(xmm1, xmm0, i);
-			ReadTexel(xmm5, xmm3, i);
-		}
+		ReadTexel(4, 0);
 
 		// xmm6 = c00
 		// xmm4 = c01
@@ -1487,26 +1471,20 @@ return;
 	{
 		// GSVector4i addr00 = y0 + x0;
 
-		vpaddd(xmm2, xmm4);
+		vpaddd(xmm5, xmm2, xmm4);
 
 		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
 
-		for(int i = 0; i < 4; i++)
-		{
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
-			mov(ebx, ptr[edx + ebx * sizeof(void*)]);
-
-			ReadTexel(xmm5, xmm2, i);
-		}
+		ReadTexel(1, 0);
 
 		// GSVector4i mask = GSVector4i::x00ff();
 
 		// c[0] = c00 & mask;
 		// c[1] = (c00 >> 8) & mask;
 
-		vpsrlw(xmm6, xmm5, 8);
-		vpsllw(xmm5, 8);
+		vpsllw(xmm5, xmm6, 8);
 		vpsrlw(xmm5, 8);
+		vpsrlw(xmm6, 8);
 	}
 
 	if(m_sel.mmin == 1) return; // round-off mode
@@ -1638,23 +1616,7 @@ return;
 		// c10 = addr10.gather32_32((const uint32/uint8*)tex[, clut]);
 		// c11 = addr11.gather32_32((const uint32/uint8*)tex[, clut]);
 
-		for(int i = 0; i < 4; i++)
-		{
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
-			mov(ebx, ptr[edx + ebx * sizeof(void*) + sizeof(void*)]);
-
-			ReadTexel(xmm6, xmm5, i);
-			ReadTexel(xmm4, xmm2, i);
-		}
-		
-		for(int i = 0; i < 4; i++)
-		{
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
-			mov(ebx, ptr[edx + ebx * sizeof(void*) + sizeof(void*)]);
-
-			ReadTexel(xmm1, xmm0, i);
-			ReadTexel(xmm5, xmm3, i);
-		}
+		ReadTexel(4, 1);
 
 		// xmm6 = c00
 		// xmm4 = c01
@@ -1750,26 +1712,20 @@ return;
 	{
 		// GSVector4i addr00 = y0 + x0;
 
-		vpaddd(xmm2, xmm4);
+		vpaddd(xmm5, xmm2, xmm4);
 
 		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
 
-		for(int i = 0; i < 4; i++)
-		{
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
-			mov(ebx, ptr[edx + ebx * sizeof(void*) + sizeof(void*)]);
-
-			ReadTexel(xmm5, xmm2, i);
-		}
+		ReadTexel(1, 1);
 
 		// GSVector4i mask = GSVector4i::x00ff();
 
 		// c[0] = c00 & mask;
 		// c[1] = (c00 >> 8) & mask;
 
-		vpsrlw(xmm6, xmm5, 8);
-		vpsllw(xmm5, 8);
+		vpsllw(xmm5, xmm6, 8);
 		vpsrlw(xmm5, 8);
+		vpsrlw(xmm6, 8);
 	}
 
 	vmovdqa(xmm0, ptr[&m_local.temp.lod.f]);
@@ -2803,6 +2759,8 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 	ASSERT(pixels == 1 || pixels == 4);
 
+	mip_offset *= sizeof(void*);
+
 	if(m_sel.mmin)
 	{
 		int r[] = {5, 6, 2, 4, 0, 1, 3, 7};
@@ -2810,23 +2768,30 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 		if(pixels == 4)
 		{
 			vmovdqa(ptr[&m_local.temp.test], xmm7);
-		}
-
-		for(int i = 0; i < pixels; i++)
-		{
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
-			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			for(int j = 0; j < 4; j++)
 			{
-				ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
-			}
-		}
+				mov(ebx, ptr[&m_local.temp.lod.i.u32[j]]);
+				mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
-		if(pixels == 4)
-		{
+				for(int i = 0; i < 4; i++)
+				{
+					ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
+				}
+			}
+
 			vmovdqa(xmm5, xmm7);
 			vmovdqa(xmm7, ptr[&m_local.temp.test]);
+		}
+		else
+		{
+			for(int j = 0; j < 4; j++)
+			{
+				mov(ebx, ptr[&m_local.temp.lod.i.u32[j]]);
+				mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
+
+				ReadTexel(xmm6, xmm5, j);
+			}
 		}
 	}
 	else

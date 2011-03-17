@@ -945,7 +945,6 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// GSVector4i addr00 = y0 + x0;
 
 		paddd(xmm2, xmm4);
-
 		movdqa(xmm5, xmm2);
 
 		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
@@ -1534,7 +1533,6 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 		// GSVector4i addr00 = y0 + x0;
 
 		paddd(xmm2, xmm4);
-
 		movdqa(xmm5, xmm2);
 
 		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
@@ -1634,8 +1632,8 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 	pxor(xmm0, xmm0);
 
 	movdqa(xmm4, xmm2);
-	punpcklwd(xmm2, xmm0);
-	punpckhwd(xmm4, xmm0);
+	punpckhwd(xmm2, xmm0);
+	punpcklwd(xmm4, xmm0);
 	pslld(xmm2, m_sel.tw + 3);
 
 	// xmm0 = 0
@@ -1687,7 +1685,7 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 		// c10 = addr10.gather32_32((const uint32/uint8*)tex[, clut]);
 		// c11 = addr11.gather32_32((const uint32/uint8*)tex[, clut]);
 
-		ReadTexel(4, 0);
+		ReadTexel(4, 1);
 
 		// xmm6 = c00
 		// xmm4 = c01
@@ -1788,12 +1786,11 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 		// GSVector4i addr00 = y0 + x0;
 
 		paddd(xmm2, xmm4);
-
 		movdqa(xmm5, xmm2);
 
 		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
 
-		ReadTexel(1, 0);
+		ReadTexel(1, 1);
 
 		// GSVector4i mask = GSVector4i::x00ff();
 
@@ -2917,6 +2914,8 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 	ASSERT(pixels == 1 || pixels == 4);
 
+	mip_offset *= sizeof(void*);
+
 	if(m_sel.mmin)
 	{
 		#if _M_SSE >= 0x401
@@ -2925,24 +2924,31 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 		if(pixels == 4)
 		{
-			movdqa(ptr[&m_local.temp.test], xmm7);
-		}
-
-		for(int i = 0; i < pixels; i++)
-		{
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
-			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
+			vmovdqa(ptr[&m_local.temp.test], xmm7);
 
 			for(int j = 0; j < 4; j++)
 			{
-				ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
-			}
-		}
+				mov(ebx, ptr[&m_local.temp.lod.i.u32[j]]);
+				mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
-		if(pixels == 4)
+				for(int i = 0; i < 4; i++)
+				{
+					ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
+				}
+			}
+
+			vmovdqa(xmm5, xmm7);
+			vmovdqa(xmm7, ptr[&m_local.temp.test]);
+		}
+		else
 		{
-			movdqa(xmm5, xmm7);
-			movdqa(xmm7, ptr[&m_local.temp.test]);
+			for(int j = 0; j < 4; j++)
+			{
+				mov(ebx, ptr[&m_local.temp.lod.i.u32[j]]);
+				mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
+
+				ReadTexel(xmm6, xmm5, j);
+			}
 		}
 
 		#else
