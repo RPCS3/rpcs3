@@ -436,7 +436,6 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 					if(t == NULL) {ASSERT(0); return;}
 
 					gd.tex[i] = t->m_buff;
-					gd.tex[i + 1] = NULL;
 
 					//t->Save(format("c:/temp1/%08d_%05x_%d.bmp", s_counter, context->TEX0.TBP0, i));
 				}
