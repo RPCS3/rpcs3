@@ -33,17 +33,17 @@ GSTextureCacheSW::~GSTextureCacheSW()
 	RemoveAll();
 }
 
-const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r)
+const GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r, uint32 tw0)
 {
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
-	GSTexture* t = NULL;
+	Texture* t = NULL;
 
-	list<GSTexture*>& m = m_map[TEX0.TBP0 >> 5];
+	list<Texture*>& m = m_map[TEX0.TBP0 >> 5];
 
-	for(list<GSTexture*>::iterator i = m.begin(); i != m.end(); i++)
+	for(list<Texture*>::iterator i = m.begin(); i != m.end(); i++)
 	{
-		GSTexture* t2 = *i;
+		Texture* t2 = *i;
 
 		if(((TEX0.u32[0] ^ t2->m_TEX0.u32[0]) | ((TEX0.u32[1] ^ t2->m_TEX0.u32[1]) & 3)) != 0) // TBP0 TBW PSM TW TH
 		{
@@ -51,6 +51,11 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 		}
 
 		if((psm.trbpp == 16 || psm.trbpp == 24) && TEX0.TCC && TEXA != t2->m_TEXA)
+		{
+			continue;
+		}
+
+		if(tw0 != 0 && t2->m_tw != tw0)
 		{
 			continue;
 		}
@@ -68,7 +73,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 	{
 		const GSOffset* o = m_state->m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
 
-		t = new GSTexture(m_state, o);
+		t = new Texture(m_state, o, tw0);
 
 		m_textures.insert(t);
 
@@ -98,7 +103,7 @@ const GSTextureCacheSW::GSTexture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TE
 			{
 				m_pages[i] = 0;
 
-				list<GSTexture*>* m = &m_map[i << 5];
+				list<Texture*>* m = &m_map[i << 5];
 
 				unsigned long j;
 
@@ -144,11 +149,11 @@ void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& r
 
 			if(page < MAX_PAGES)
 			{
-				const list<GSTexture*>& map = m_map[page];
+				const list<Texture*>& map = m_map[page];
 
-				for(list<GSTexture*>::const_iterator i = map.begin(); i != map.end(); i++)
+				for(list<Texture*>::const_iterator i = map.begin(); i != map.end(); i++)
 				{
-					GSTexture* t = *i;
+					Texture* t = *i;
 
 					if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM))
 					{
@@ -173,17 +178,17 @@ void GSTextureCacheSW::RemoveAll()
 	}
 }
 
-void GSTextureCacheSW::RemoveAt(GSTexture* t)
+void GSTextureCacheSW::RemoveAt(Texture* t)
 {
 	m_textures.erase(t);
 
 	for(uint32 start = t->m_TEX0.TBP0 >> 5, end = countof(m_map) - 1; start <= end; start++)
 	{
-		list<GSTexture*>& m = m_map[start];
+		list<Texture*>& m = m_map[start];
 
-		for(list<GSTexture*>::iterator i = m.begin(); i != m.end(); )
+		for(list<Texture*>::iterator i = m.begin(); i != m.end(); )
 		{
-			list<GSTexture*>::iterator j = i++;
+			list<Texture*>::iterator j = i++;
 
 			if(*j == t) {m.erase(j); break;}
 		}
@@ -194,11 +199,11 @@ void GSTextureCacheSW::RemoveAt(GSTexture* t)
 
 void GSTextureCacheSW::IncAge()
 {
-	for(hash_set<GSTexture*>::iterator i = m_textures.begin(); i != m_textures.end(); )
+	for(hash_set<Texture*>::iterator i = m_textures.begin(); i != m_textures.end(); )
 	{
-		hash_set<GSTexture*>::iterator j = i++;
+		hash_set<Texture*>::iterator j = i++;
 
-		GSTexture* t = *j;
+		Texture* t = *j;
 
 		if(++t->m_age > 30)
 		{
@@ -209,18 +214,18 @@ void GSTextureCacheSW::IncAge()
 
 //
 
-GSTextureCacheSW::GSTexture::GSTexture(GSState* state, const GSOffset* offset)
+GSTextureCacheSW::Texture::Texture(GSState* state, const GSOffset* offset, uint32 tw0)
 	: m_state(state)
 	, m_offset(offset)
 	, m_buff(NULL)
-	, m_tw(0)
+	, m_tw(tw0)
 	, m_age(0)
 	, m_complete(false)
 {
 	memset(m_valid, 0, sizeof(m_valid));
 }
 
-GSTextureCacheSW::GSTexture::~GSTexture()
+GSTextureCacheSW::Texture::~Texture()
 {
 	if(m_buff)
 	{
@@ -228,7 +233,7 @@ GSTextureCacheSW::GSTexture::~GSTexture()
 	}
 }
 
-bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect)
+bool GSTextureCacheSW::Texture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect)
 {
 	if(m_complete)
 	{
@@ -255,7 +260,7 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 	{
 		// FIXME: 
 		// - marking a block prevents fetching it again to a different part of the texture
-		// - only a real issue for TBW = 1 mipmap levels, where the repeating part is below and often exploited
+		// - only a real issue for TBW = 1 mipmap levels, where the repeating part is below and often exploited (onimusha 3 intro / sidewalk)
 
 		r = GSVector4i(0, 0, tw, th);
 	}
@@ -269,18 +274,25 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 
 	if(m_buff == NULL)
 	{
-		m_buff = _aligned_malloc(tw * th * sizeof(uint32), 32);
+		uint32 tw0 = std::max<int>(TEX0.TW, 5 - shift); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
+
+		if(m_tw == 0)
+		{
+			m_tw = tw0;
+		}
+		else
+		{
+			ASSERT(m_tw >= tw0);
+		}
+
+		uint32 pitch = (1 << m_tw) << shift;
+		
+		m_buff = _aligned_malloc(pitch * th * 4, 32);
 
 		if(m_buff == NULL)
 		{
 			return false;
 		}
-
-#ifdef DEBUG
-		for(uint32 i = 0, j = tw * th * sizeof(uint8); i < j; i++) ((uint8*)m_buff)[i] = 0xff;
-#endif
-
-		m_tw = std::max<int>(TEX0.TW, 5 - shift); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
 	}
 
 	GSLocalMemory& mem = m_state->m_mem;
@@ -350,4 +362,47 @@ bool GSTextureCacheSW::GSTexture::Update(const GIFRegTEX0& TEX0, const GIFRegTEX
 	}
 
 	return true;
+}
+
+#include "GSTextureSW.h"
+
+bool GSTextureCacheSW::Texture::Save(const string& fn, bool dds) const
+{
+	const uint32* RESTRICT clut = m_state->m_mem.m_clut;
+
+	int w = 1 << m_TEX0.TW;
+	int h = 1 << m_TEX0.TH;
+
+	GSTextureSW t(0, w, h);
+
+	GSTexture::GSMap m;
+
+	if(t.Map(m, NULL))
+	{
+		const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[m_TEX0.PSM];
+
+		const uint8* RESTRICT src = (uint8*)m_buff;
+		int pitch = 1 << (m_tw + (psm.pal == 0 ? 2 : 0));
+
+		for(int j = 0; j < h; j++, src += pitch, m.bits += m.pitch)
+		{
+			if(psm.pal == 0)
+			{
+				memcpy(m.bits, src, sizeof(uint32) * w);
+			}
+			else
+			{
+				for(int i = 0; i < w; i++)
+				{
+					((uint32*)m.bits)[i] = clut[((uint8*)src)[i]];
+				}
+			}
+		}
+
+		t.Unmap();
+
+		return t.Save(fn.c_str());
+	}
+
+	return false;
 }

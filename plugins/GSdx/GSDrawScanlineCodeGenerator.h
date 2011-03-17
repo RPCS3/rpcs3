@@ -44,6 +44,9 @@ class GSDrawScanlineCodeGenerator : public GSCodeGenerator
 	void SampleTexture();
 	void Wrap(const Xmm& uv0);
 	void Wrap(const Xmm& uv0, const Xmm& uv1);
+	void SampleTextureLOD();
+	void WrapLOD(const Xmm& uv0);
+	void WrapLOD(const Xmm& uv0, const Xmm& uv1);
 	void AlphaTFX();
 	void ReadMask();
 	void TestAlpha();
@@ -66,7 +69,7 @@ class GSDrawScanlineCodeGenerator : public GSCodeGenerator
 	void WritePixel(const Xmm& src, const Reg32& addr, uint8 i, int psm);
 	#endif
 
-	void ReadTexel(const Xmm& dst, const Xmm& addr, const Xmm& temp1, const Xmm& temp2);
+	void ReadTexel(int pixels, int mip_offset = 0);
 	void ReadTexel(const Xmm& dst, const Xmm& addr, uint8 i);
 
 	void modulate16(const Xmm& a, const Operand& f, int shift);

@@ -26,7 +26,7 @@
 class GSTextureCacheSW
 {
 public:
-	class GSTexture
+	class Texture
 	{
 	public:
 		GSState* m_state;
@@ -39,27 +39,28 @@ public:
 		uint32 m_age;
 		bool m_complete;
 
-		explicit GSTexture(GSState* state, const GSOffset* offset);
-		virtual ~GSTexture();
+		explicit Texture(GSState* state, const GSOffset* offset, uint32 tw0);
+		virtual ~Texture();
 
 		bool Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);
+		bool Save(const string& fn, bool dds = false) const;
 	};
 
 protected:
 	GSState* m_state;
-	hash_set<GSTexture*> m_textures;
-	list<GSTexture*> m_map[MAX_PAGES];
+	hash_set<Texture*> m_textures;
+	list<Texture*> m_map[MAX_PAGES];
 	uint32 m_pages[16];
 
 public:
 	GSTextureCacheSW(GSState* state);
 	virtual ~GSTextureCacheSW();
 
-	const GSTexture* Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);
+	const Texture* Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r, uint32 tw0 = 0);
 
 	void InvalidateVideoMem(const GSOffset* o, const GSVector4i& r);
 
 	void RemoveAll();
-	void RemoveAt(GSTexture* t);
+	void RemoveAt(Texture* t);
 	void IncAge();
 };

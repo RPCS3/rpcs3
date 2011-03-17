@@ -74,7 +74,14 @@ L("loop");
 	// xmm6 = ga (!tme)
 	// xmm7 = test
 
-	SampleTexture();
+	if(m_sel.mmin)
+	{
+		SampleTextureLOD();
+	}
+	else
+	{
+		SampleTexture();
+	}
 
 	// ecx = steps
 	// esi = fzbr
@@ -125,7 +132,7 @@ L("loop");
 	// xmm7 = test
 
 	ColorTFX();
-	
+
 	// ecx = steps
 	// esi = fzbr
 	// edi = fzbc
@@ -273,7 +280,7 @@ void GSDrawScanlineCodeGenerator::Init()
 
 	// GSVector2i* fza_base = &m_local.gd->fzbr[top];
 
-	mov(esi, dword[esp + _top]);
+	mov(esi, ptr[esp + _top]);
 	lea(esi, ptr[esi * 8]);
 	add(esi, ptr[&m_local.gd->fzbr]);
 
@@ -291,7 +298,7 @@ void GSDrawScanlineCodeGenerator::Init()
 
 		// ebx = &v
 
-		mov(ebx, dword[esp + _v]);
+		mov(ebx, ptr[esp + _v]);
 	}
 
 	if(!m_sel.sprite)
@@ -363,7 +370,7 @@ void GSDrawScanlineCodeGenerator::Init()
 
 				vpaddd(xmm2, ptr[edx + offsetof(GSScanlineLocalData::skip, s)]);
 
-				if(!m_sel.sprite)
+				if(!m_sel.sprite || m_sel.mmin)
 				{
 					vpaddd(xmm3, ptr[edx + offsetof(GSScanlineLocalData::skip, t)]);
 				}
@@ -374,7 +381,6 @@ void GSDrawScanlineCodeGenerator::Init()
 						vpshuflw(xmm6, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
 						vpshufhw(xmm6, xmm6, _MM_SHUFFLE(2, 2, 0, 0));
 						vpsrlw(xmm6, 1);
-
 						vmovdqa(ptr[&m_local.temp.vf], xmm6);
 					}
 				}
@@ -382,7 +388,7 @@ void GSDrawScanlineCodeGenerator::Init()
 				vmovdqa(ptr[&m_local.temp.s], xmm2);
 				vmovdqa(ptr[&m_local.temp.t], xmm3);
 
-				if(m_sel.mipmap && !m_sel.lcm)
+				if(m_sel.mmin && !m_sel.lcm)
 				{
 					vshufps(xmm4, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
 					vaddps(xmm4, ptr[edx + offsetof(GSScanlineLocalData::skip, q)]);
@@ -501,7 +507,7 @@ void GSDrawScanlineCodeGenerator::Step()
 				vpaddd(xmm2, ptr[&m_local.temp.s]);
 				vmovdqa(ptr[&m_local.temp.s], xmm2);
 
-				if(!m_sel.sprite)
+				if(!m_sel.sprite || m_sel.mmin)
 				{
 					vpshufd(xmm3, xmm4, _MM_SHUFFLE(1, 1, 1, 1));
 					vpaddd(xmm3, ptr[&m_local.temp.t]);
@@ -512,7 +518,7 @@ void GSDrawScanlineCodeGenerator::Step()
 					vmovdqa(xmm3, ptr[&m_local.temp.t]);
 				}
 
-				if(m_sel.mipmap && !m_sel.lcm)
+				if(m_sel.mmin && !m_sel.lcm)
 				{
 					vshufps(xmm4, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
 					vaddps(xmm4, ptr[&m_local.temp.q]);
@@ -694,7 +700,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		return;
 	}
 
-	mov(ebx, ptr[&m_local.gd->tex]);
+	mov(ebx, ptr[&m_local.gd->tex[0]]);
 
 	// ebx = tex
 
@@ -707,59 +713,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 		vcvttps2dq(xmm2, xmm2);
 		vcvttps2dq(xmm3, xmm3);
-	}
 
-	if(m_sel.mipmap)
-	{
-		// TODO: if the fractional part is not needed in round-off mode then there is a faster integer log2 (but can we round it?)
-
-		if(!m_sel.lcm)
-		{
-			// lod = -log2(Q) * (1 << L) + K
-
-			vpcmpeqd(xmm1, xmm1);
-			vpsrld(xmm1, xmm1, 25);
-			vpslld(xmm0, xmm4, 1);
-			vpsrld(xmm0, xmm0, 24);
-			vpsubd(xmm0, xmm1);
-			vcvtdq2ps(xmm0, xmm0); 
-
-			// xmm0 = (float)(exp(e) - 127)
-
-			vpslld(xmm4, xmm4, 9);
-			vpsrld(xmm4, xmm4, 9);
-			vorps(xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[3]]); 
-			
-			// xmm4 = mant(q) | 1.0f
-
-			vmulps(xmm5, xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[0]]);
-			vaddps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[1]]);
-			vmulps(xmm5, xmm4);
-			vsubps(xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[3]]); 
-			vaddps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[2]]);
-			vmulps(xmm4, xmm5);
-			vaddps(xmm4, xmm0);
-
-			// xmm4 = log2(Q) = (((((c0 * xmm4) + c1) * xmm4) + c2) * (xmm4 - 1.0f) + xmm0)
-
-			vmulps(xmm4, ptr[&m_local.gd->l]);
-			vaddps(xmm4, ptr[&m_local.gd->k]);
-
-			// xmm4 = (-log2(Q) * (1 << L) + K) * 0x10000
-
-			vcvtps2dq(xmm4, xmm4);
-			vmovdqa(ptr[&m_local.temp.lod], xmm4);
-		}
-		else
-		{
-			// lod = K (=> use m_local->gd.k later when lod is needed)
-		}
-	}
-
-	// TODO: if(m_sel.mipmap) ...
-
-	if(!m_sel.fst)
-	{
 		if(m_sel.ltf)
 		{
 			// u -= 0x8000;
@@ -790,10 +744,10 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		{
 			// GSVector4i vf = v.xxzzlh().srl16(1);
 
-			vpshuflw(xmm1, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
-			vpshufhw(xmm1, xmm1, _MM_SHUFFLE(2, 2, 0, 0));
-			vpsrlw(xmm1, 1);
-			vmovdqa(ptr[&m_local.temp.vf], xmm1);
+			vpshuflw(xmm0, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
+			vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
+			vpsrlw(xmm0, 1);
+			vmovdqa(ptr[&m_local.temp.vf], xmm0);
 		}
 	}
 
@@ -828,8 +782,8 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 	// xmm0, xmm1, xmm4, xmm5, xmm6 = free
 	// xmm7 = used
 
-	// GSVector4i x0 = uv0.upl16();
 	// GSVector4i y0 = uv0.uph16() << tw;
+	// GSVector4i x0 = uv0.upl16();
 
 	vpxor(xmm0, xmm0);
 
@@ -846,8 +800,8 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 	if(m_sel.ltf)
 	{
-		// GSVector4i x1 = uv1.upl16();
 		// GSVector4i y1 = uv1.uph16() << tw;
+		// GSVector4i x1 = uv1.upl16();
 
 		vpunpcklwd(xmm6, xmm3, xmm0);
 		vpunpckhwd(xmm3, xmm3, xmm0);
@@ -882,19 +836,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// c10 = addr10.gather32_32((const uint32/uint8*)tex[, clut]);
 		// c11 = addr11.gather32_32((const uint32/uint8*)tex[, clut]);
 
-		ReadTexel(xmm6, xmm5, xmm1, xmm4);
-
-		// xmm2, xmm5, xmm1 = free
-
-		ReadTexel(xmm4, xmm2, xmm5, xmm1);
-
-		// xmm0, xmm2, xmm5 = free
-
-		ReadTexel(xmm1, xmm0, xmm2, xmm5);
-
-		// xmm3, xmm0, xmm2 = free
-
-		ReadTexel(xmm5, xmm3, xmm0, xmm2);
+		ReadTexel(4, 0);
 
 		// xmm6 = c00
 		// xmm4 = c01
@@ -990,20 +932,20 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 	{
 		// GSVector4i addr00 = y0 + x0;
 
-		vpaddd(xmm2, xmm4);
+		vpaddd(xmm5, xmm2, xmm4);
 
 		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
 
-		ReadTexel(xmm5, xmm2, xmm0, xmm1);
+		ReadTexel(1, 0);
 
 		// GSVector4i mask = GSVector4i::x00ff();
 
 		// c[0] = c00 & mask;
 		// c[1] = (c00 >> 8) & mask;
 
-		vpsrlw(xmm6, xmm5, 8);
-		vpsllw(xmm5, 8);
+		vpsllw(xmm5, xmm6, 8);
 		vpsrlw(xmm5, 8);
+		vpsrlw(xmm6, 8);
 	}
 }
 
@@ -1153,6 +1095,835 @@ void GSDrawScanlineCodeGenerator::Wrap(const Xmm& uv0, const Xmm& uv1)
 
 		vpmaxsw(uv1, xmm4);
 		vpminsw(uv1, xmm5);
+
+		// clamp.blend8(repeat, m_local.gd->t.mask);
+
+		vpblendvb(uv1, xmm1, xmm0);
+	}
+}
+
+void GSDrawScanlineCodeGenerator::SampleTextureLOD()
+{
+	if(!m_sel.fb || m_sel.tfx == TFX_NONE)
+	{
+		return;
+	}
+
+	mov(edx, (size_t)m_local.gd->tex);		
+
+	if(!m_sel.fst)
+	{
+		vrcpps(xmm0, xmm4);
+
+		vmulps(xmm2, xmm0);
+		vmulps(xmm3, xmm0);
+
+		vcvttps2dq(xmm2, xmm2);
+		vcvttps2dq(xmm3, xmm3);
+	}
+
+	// xmm2 = u
+	// xmm3 = v
+	// xmm4 = q
+	// xmm0 = xmm1 = xmm5 = xmm6 = free
+
+	// TODO: if the fractional part is not needed in round-off mode then there is a faster integer log2 (just take the exp) (but can we round it?)
+
+	if(!m_sel.lcm)
+	{
+		// store u/v
+
+		vpunpckldq(xmm0, xmm2, xmm3);
+		vmovdqa(ptr[&m_local.temp.uv[0]], xmm0);
+		vpunpckhdq(xmm0, xmm2, xmm3);
+		vmovdqa(ptr[&m_local.temp.uv[1]], xmm0);
+
+		// lod = -log2(Q) * (1 << L) + K
+
+		vpcmpeqd(xmm1, xmm1);
+		vpsrld(xmm1, xmm1, 25);
+		vpslld(xmm0, xmm4, 1);
+		vpsrld(xmm0, xmm0, 24);
+		vpsubd(xmm0, xmm1);
+		vcvtdq2ps(xmm0, xmm0); 
+
+		// xmm0 = (float)(exp(q) - 127)
+
+		vpslld(xmm4, xmm4, 9);
+		vpsrld(xmm4, xmm4, 9);
+		vorps(xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[3]]); 
+			
+		// xmm4 = mant(q) | 1.0f
+
+		vmulps(xmm5, xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[0]]);
+		vaddps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[1]]);
+		vmulps(xmm5, xmm4);
+		vsubps(xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[3]]); 
+		vaddps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[2]]);
+		vmulps(xmm4, xmm5);
+		vaddps(xmm4, xmm0);
+
+		// xmm4 = log2(Q) = ((((c0 * xmm4) + c1) * xmm4) + c2) * (xmm4 - 1.0f) + xmm0
+
+		vmulps(xmm4, ptr[&m_local.gd->l]);
+		vaddps(xmm4, ptr[&m_local.gd->k]);
+
+		// xmm4 = (-log2(Q) * (1 << L) + K) * 0x10000
+
+		vxorps(xmm0, xmm0);
+		vminps(xmm4, ptr[&m_local.gd->mxl]);
+		vmaxps(xmm4, xmm0);
+		vcvtps2dq(xmm4, xmm4);
+
+		vpsrld(xmm0, xmm4, 16);
+		vmovdqa(ptr[&m_local.temp.lod.i], xmm0);
+/*
+vpslld(xmm5, xmm0, 6);
+vpslld(xmm6, xmm4, 16);
+vpsrld(xmm6, xmm6, 24);
+return;
+*/
+		vpshuflw(xmm0, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
+		vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
+		vmovdqa(ptr[&m_local.temp.lod.f], xmm0);
+
+		// shift u/v by (int)lod
+
+		vmovq(xmm4, ptr[&m_local.gd->t.minmax]);
+
+		vmovq(xmm2, ptr[&m_local.temp.uv[0].u32[0]]);
+		vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[0]]); 
+		vpsrad(xmm2, xmm0);
+		vpsrlw(xmm1, xmm4, xmm0);
+		vmovq(ptr[&m_local.temp.uv_minmax[0].u32[0]], xmm1);
+
+		vmovq(xmm3, ptr[&m_local.temp.uv[0].u32[2]]);
+		vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[1]]);
+		vpsrad(xmm3, xmm0);
+		vpsrlw(xmm1, xmm4, xmm0);
+		vmovq(ptr[&m_local.temp.uv_minmax[1].u32[0]], xmm1);
+
+		vmovq(xmm5, ptr[&m_local.temp.uv[1].u32[0]]);
+		vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[2]]);
+		vpsrad(xmm5, xmm0);
+		vpsrlw(xmm1, xmm4, xmm0);
+		vmovq(ptr[&m_local.temp.uv_minmax[0].u32[2]], xmm1);
+
+		vmovq(xmm6, ptr[&m_local.temp.uv[1].u32[2]]);
+		vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[3]]);
+		vpsrad(xmm6, xmm0);
+		vpsrlw(xmm1, xmm4, xmm0);
+		vmovq(ptr[&m_local.temp.uv_minmax[1].u32[2]], xmm1);
+
+		vpunpckldq(xmm2, xmm3);
+		vpunpckldq(xmm5, xmm6);
+		vpunpckhqdq(xmm3, xmm2, xmm5);
+		vpunpcklqdq(xmm2, xmm5);
+
+		vmovdqa(ptr[&m_local.temp.uv[0]], xmm2);
+		vmovdqa(ptr[&m_local.temp.uv[1]], xmm3);
+
+		vmovdqa(xmm5, ptr[&m_local.temp.uv_minmax[0]]);
+		vmovdqa(xmm6, ptr[&m_local.temp.uv_minmax[1]]);
+
+		vpunpcklwd(xmm0, xmm5, xmm6);
+		vpunpckhwd(xmm1, xmm5, xmm6);
+		vpunpckldq(xmm5, xmm0, xmm1);
+		vpunpckhdq(xmm6, xmm0, xmm1);
+
+		vmovdqa(ptr[&m_local.temp.uv_minmax[0]], xmm5);
+		vmovdqa(ptr[&m_local.temp.uv_minmax[1]], xmm6);
+	}
+	else
+	{
+		// lod = K
+
+		vmovd(xmm0, ptr[&m_local.gd->lod.i.u32[0]]);
+
+		vpsrad(xmm2, xmm0);
+		vpsrad(xmm3, xmm0);
+
+		vmovdqa(ptr[&m_local.temp.uv[0]], xmm2);
+		vmovdqa(ptr[&m_local.temp.uv[1]], xmm3);
+
+		// TODO: precalc
+
+		vmovq(xmm4, ptr[&m_local.gd->t.minmax]);
+
+		vpunpcklwd(xmm4, xmm4);
+		vpunpckldq(xmm5, xmm4, xmm4);
+		vpunpckhdq(xmm6, xmm4, xmm4);
+
+		vmovdqa(ptr[&m_local.temp.uv_minmax[0]], xmm5);
+		vmovdqa(ptr[&m_local.temp.uv_minmax[1]], xmm6);
+	}
+
+	// xmm2 = m_local.temp.uv[0] = u (level m)
+	// xmm3 = m_local.temp.uv[1] = v (level m)
+	// xmm5 = minuv
+	// xmm6 = maxuv
+
+	if(m_sel.ltf)
+	{
+		// u -= 0x8000;
+		// v -= 0x8000;
+
+		mov(eax, 0x8000);
+		vmovd(xmm4, eax);
+		vpshufd(xmm4, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
+
+		vpsubd(xmm2, xmm4);
+		vpsubd(xmm3, xmm4);
+
+		// GSVector4i uf = u.xxzzlh().srl16(1);
+	
+		vpshuflw(xmm0, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
+		vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
+		vpsrlw(xmm0, 1);
+		vmovdqa(ptr[&m_local.temp.uf], xmm0);
+
+		// GSVector4i vf = v.xxzzlh().srl16(1);
+
+		vpshuflw(xmm0, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
+		vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
+		vpsrlw(xmm0, 1);
+		vmovdqa(ptr[&m_local.temp.vf], xmm0);
+	}
+
+	// GSVector4i uv0 = u.sra32(16).ps32(v.sra32(16));
+
+	vpsrad(xmm2, 16);
+	vpsrad(xmm3, 16);
+	vpackssdw(xmm2, xmm3);
+
+	if(m_sel.ltf)
+	{
+		// GSVector4i uv1 = uv0.add16(GSVector4i::x0001());
+
+		vpcmpeqd(xmm1, xmm1);
+		vpsrlw(xmm1, 15);
+		vpaddw(xmm3, xmm2, xmm1);
+
+		// uv0 = Wrap(uv0);
+		// uv1 = Wrap(uv1);
+
+		WrapLOD(xmm2, xmm3);
+	}
+	else
+	{
+		// uv0 = Wrap(uv0);
+
+		WrapLOD(xmm2);
+	}
+
+	// xmm2 = uv0
+	// xmm3 = uv1 (ltf)
+	// xmm0, xmm1, xmm4, xmm5, xmm6 = free
+	// xmm7 = used
+
+	// GSVector4i x0 = uv0.upl16();
+	// GSVector4i y0 = uv0.uph16() << tw;
+
+	vpxor(xmm0, xmm0);
+
+	vpunpcklwd(xmm4, xmm2, xmm0);
+	vpunpckhwd(xmm2, xmm2, xmm0);
+	vpslld(xmm2, m_sel.tw + 3);
+
+	// xmm0 = 0
+	// xmm2 = y0
+	// xmm3 = uv1 (ltf)
+	// xmm4 = x0
+	// xmm1, xmm5, xmm6 = free
+	// xmm7 = used
+
+	if(m_sel.ltf)
+	{
+		// GSVector4i x1 = uv1.upl16();
+		// GSVector4i y1 = uv1.uph16() << tw;
+
+		vpunpcklwd(xmm6, xmm3, xmm0);
+		vpunpckhwd(xmm3, xmm3, xmm0);
+		vpslld(xmm3, m_sel.tw + 3);
+
+		// xmm2 = y0
+		// xmm3 = y1
+		// xmm4 = x0
+		// xmm6 = x1
+		// xmm0, xmm5, xmm6 = free
+		// xmm7 = used
+
+		// GSVector4i addr00 = y0 + x0;
+		// GSVector4i addr01 = y0 + x1;
+		// GSVector4i addr10 = y1 + x0;
+		// GSVector4i addr11 = y1 + x1;
+
+		vpaddd(xmm5, xmm2, xmm4);
+		vpaddd(xmm2, xmm2, xmm6);
+		vpaddd(xmm0, xmm3, xmm4);
+		vpaddd(xmm3, xmm3, xmm6);
+
+		// xmm5 = addr00
+		// xmm2 = addr01
+		// xmm0 = addr10
+		// xmm3 = addr11
+		// xmm1, xmm4, xmm6 = free
+		// xmm7 = used
+
+		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c01 = addr01.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c10 = addr10.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c11 = addr11.gather32_32((const uint32/uint8*)tex[, clut]);
+
+		for(int i = 0; i < 4; i++)
+		{
+			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
+			mov(ebx, ptr[edx + ebx * sizeof(void*)]);
+
+			ReadTexel(xmm6, xmm5, i);
+			ReadTexel(xmm4, xmm2, i);
+		}
+		
+		for(int i = 0; i < 4; i++)
+		{
+			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
+			mov(ebx, ptr[edx + ebx * sizeof(void*)]);
+
+			ReadTexel(xmm1, xmm0, i);
+			ReadTexel(xmm5, xmm3, i);
+		}
+
+		// xmm6 = c00
+		// xmm4 = c01
+		// xmm1 = c10
+		// xmm5 = c11
+		// xmm0, xmm2, xmm3 = free
+		// xmm7 = used
+
+		vmovdqa(xmm0, ptr[&m_local.temp.uf]);
+
+		// GSVector4i rb00 = c00 & mask;
+		// GSVector4i ga00 = (c00 >> 8) & mask;
+
+		vpsllw(xmm2, xmm6, 8);
+		vpsrlw(xmm2, 8);
+		vpsrlw(xmm6, 8);
+
+		// GSVector4i rb01 = c01 & mask;
+		// GSVector4i ga01 = (c01 >> 8) & mask;
+
+		vpsllw(xmm3, xmm4, 8);
+		vpsrlw(xmm3, 8);
+		vpsrlw(xmm4, 8);
+
+		// xmm0 = uf
+		// xmm2 = rb00
+		// xmm3 = rb01
+		// xmm6 = ga00
+		// xmm4 = ga01
+		// xmm1 = c10
+		// xmm5 = c11
+		// xmm7 = used
+
+		// rb00 = rb00.lerp16<0>(rb01, uf);
+		// ga00 = ga00.lerp16<0>(ga01, uf);
+
+		lerp16(xmm3, xmm2, xmm0, 0);
+		lerp16(xmm4, xmm6, xmm0, 0);
+
+		// xmm0 = uf
+		// xmm3 = rb00
+		// xmm4 = ga00
+		// xmm1 = c10
+		// xmm5 = c11
+		// xmm2, xmm6 = free
+		// xmm7 = used
+
+		// GSVector4i rb10 = c10 & mask;
+		// GSVector4i ga10 = (c10 >> 8) & mask;
+
+		vpsrlw(xmm2, xmm1, 8);
+		vpsllw(xmm1, 8);
+		vpsrlw(xmm1, 8);
+
+		// GSVector4i rb11 = c11 & mask;
+		// GSVector4i ga11 = (c11 >> 8) & mask;
+
+		vpsrlw(xmm6, xmm5, 8);
+		vpsllw(xmm5, 8);
+		vpsrlw(xmm5, 8);
+
+		// xmm0 = uf
+		// xmm3 = rb00
+		// xmm4 = ga00
+		// xmm1 = rb10
+		// xmm5 = rb11
+		// xmm2 = ga10
+		// xmm6 = ga11
+		// xmm7 = used
+
+		// rb10 = rb10.lerp16<0>(rb11, uf);
+		// ga10 = ga10.lerp16<0>(ga11, uf);
+
+		lerp16(xmm5, xmm1, xmm0, 0);
+		lerp16(xmm6, xmm2, xmm0, 0);
+
+		// xmm3 = rb00
+		// xmm4 = ga00
+		// xmm5 = rb10
+		// xmm6 = ga10
+		// xmm0, xmm1, xmm2 = free
+		// xmm7 = used
+
+		// rb00 = rb00.lerp16<0>(rb10, vf);
+		// ga00 = ga00.lerp16<0>(ga10, vf);
+
+		vmovdqa(xmm0, ptr[&m_local.temp.vf]);
+
+		lerp16(xmm5, xmm3, xmm0, 0);
+		lerp16(xmm6, xmm4, xmm0, 0);
+	}
+	else
+	{
+		// GSVector4i addr00 = y0 + x0;
+
+		vpaddd(xmm2, xmm4);
+
+		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
+
+		for(int i = 0; i < 4; i++)
+		{
+			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
+			mov(ebx, ptr[edx + ebx * sizeof(void*)]);
+
+			ReadTexel(xmm5, xmm2, i);
+		}
+
+		// GSVector4i mask = GSVector4i::x00ff();
+
+		// c[0] = c00 & mask;
+		// c[1] = (c00 >> 8) & mask;
+
+		vpsrlw(xmm6, xmm5, 8);
+		vpsllw(xmm5, 8);
+		vpsrlw(xmm5, 8);
+	}
+
+	if(m_sel.mmin == 1) return; // round-off mode
+
+	vmovdqa(ptr[&m_local.temp.trb], xmm5);
+	vmovdqa(ptr[&m_local.temp.tga], xmm6);
+
+	vmovdqa(xmm2, ptr[&m_local.temp.uv[0]]);
+	vmovdqa(xmm3, ptr[&m_local.temp.uv[1]]);
+
+	vpsrad(xmm2, 1);
+	vpsrad(xmm3, 1);
+
+	vmovdqa(xmm5, ptr[&m_local.temp.uv_minmax[0]]);
+	vmovdqa(xmm6, ptr[&m_local.temp.uv_minmax[1]]);
+
+	vpsrlw(xmm5, 1);
+	vpsrlw(xmm6, 1);
+
+	if(m_sel.ltf)
+	{
+		// u -= 0x8000;
+		// v -= 0x8000;
+
+		mov(eax, 0x8000);
+		vmovd(xmm4, eax);
+		vpshufd(xmm4, xmm4, _MM_SHUFFLE(0, 0, 0, 0));
+
+		vpsubd(xmm2, xmm4);
+		vpsubd(xmm3, xmm4);
+
+		// GSVector4i uf = u.xxzzlh().srl16(1);
+	
+		vpshuflw(xmm0, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
+		vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
+		vpsrlw(xmm0, 1);
+		vmovdqa(ptr[&m_local.temp.uf], xmm0);
+
+		// GSVector4i vf = v.xxzzlh().srl16(1);
+
+		vpshuflw(xmm0, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
+		vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
+		vpsrlw(xmm0, 1);
+		vmovdqa(ptr[&m_local.temp.vf], xmm0);
+	}
+
+	// GSVector4i uv0 = u.sra32(16).ps32(v.sra32(16));
+
+	vpsrad(xmm2, 16);
+	vpsrad(xmm3, 16);
+	vpackssdw(xmm2, xmm3);
+
+	if(m_sel.ltf)
+	{
+		// GSVector4i uv1 = uv0.add16(GSVector4i::x0001());
+
+		vpcmpeqd(xmm1, xmm1);
+		vpsrlw(xmm1, 15);
+		vpaddw(xmm3, xmm2, xmm1);
+
+		// uv0 = Wrap(uv0);
+		// uv1 = Wrap(uv1);
+
+		WrapLOD(xmm2, xmm3);
+	}
+	else
+	{
+		// uv0 = Wrap(uv0);
+
+		WrapLOD(xmm2);
+	}
+
+	// xmm2 = uv0
+	// xmm3 = uv1 (ltf)
+	// xmm0, xmm1, xmm4, xmm5, xmm6 = free
+	// xmm7 = used
+
+	// GSVector4i x0 = uv0.upl16();
+	// GSVector4i y0 = uv0.uph16() << tw;
+
+	vpxor(xmm0, xmm0);
+
+	vpunpcklwd(xmm4, xmm2, xmm0);
+	vpunpckhwd(xmm2, xmm2, xmm0);
+	vpslld(xmm2, m_sel.tw + 3);
+
+	// xmm0 = 0
+	// xmm2 = y0
+	// xmm3 = uv1 (ltf)
+	// xmm4 = x0
+	// xmm1, xmm5, xmm6 = free
+	// xmm7 = used
+
+	if(m_sel.ltf)
+	{
+		// GSVector4i x1 = uv1.upl16();
+		// GSVector4i y1 = uv1.uph16() << tw;
+
+		vpunpcklwd(xmm6, xmm3, xmm0);
+		vpunpckhwd(xmm3, xmm3, xmm0);
+		vpslld(xmm3, m_sel.tw + 3);
+
+		// xmm2 = y0
+		// xmm3 = y1
+		// xmm4 = x0
+		// xmm6 = x1
+		// xmm0, xmm5, xmm6 = free
+		// xmm7 = used
+
+		// GSVector4i addr00 = y0 + x0;
+		// GSVector4i addr01 = y0 + x1;
+		// GSVector4i addr10 = y1 + x0;
+		// GSVector4i addr11 = y1 + x1;
+
+		vpaddd(xmm5, xmm2, xmm4);
+		vpaddd(xmm2, xmm2, xmm6);
+		vpaddd(xmm0, xmm3, xmm4);
+		vpaddd(xmm3, xmm3, xmm6);
+
+		// xmm5 = addr00
+		// xmm2 = addr01
+		// xmm0 = addr10
+		// xmm3 = addr11
+		// xmm1, xmm4, xmm6 = free
+		// xmm7 = used
+
+		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c01 = addr01.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c10 = addr10.gather32_32((const uint32/uint8*)tex[, clut]);
+		// c11 = addr11.gather32_32((const uint32/uint8*)tex[, clut]);
+
+		for(int i = 0; i < 4; i++)
+		{
+			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
+			mov(ebx, ptr[edx + ebx * sizeof(void*) + sizeof(void*)]);
+
+			ReadTexel(xmm6, xmm5, i);
+			ReadTexel(xmm4, xmm2, i);
+		}
+		
+		for(int i = 0; i < 4; i++)
+		{
+			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
+			mov(ebx, ptr[edx + ebx * sizeof(void*) + sizeof(void*)]);
+
+			ReadTexel(xmm1, xmm0, i);
+			ReadTexel(xmm5, xmm3, i);
+		}
+
+		// xmm6 = c00
+		// xmm4 = c01
+		// xmm1 = c10
+		// xmm5 = c11
+		// xmm0, xmm2, xmm3 = free
+		// xmm7 = used
+
+		vmovdqa(xmm0, ptr[&m_local.temp.uf]);
+
+		// GSVector4i rb00 = c00 & mask;
+		// GSVector4i ga00 = (c00 >> 8) & mask;
+
+		vpsllw(xmm2, xmm6, 8);
+		vpsrlw(xmm2, 8);
+		vpsrlw(xmm6, 8);
+
+		// GSVector4i rb01 = c01 & mask;
+		// GSVector4i ga01 = (c01 >> 8) & mask;
+
+		vpsllw(xmm3, xmm4, 8);
+		vpsrlw(xmm3, 8);
+		vpsrlw(xmm4, 8);
+
+		// xmm0 = uf
+		// xmm2 = rb00
+		// xmm3 = rb01
+		// xmm6 = ga00
+		// xmm4 = ga01
+		// xmm1 = c10
+		// xmm5 = c11
+		// xmm7 = used
+
+		// rb00 = rb00.lerp16<0>(rb01, uf);
+		// ga00 = ga00.lerp16<0>(ga01, uf);
+
+		lerp16(xmm3, xmm2, xmm0, 0);
+		lerp16(xmm4, xmm6, xmm0, 0);
+
+		// xmm0 = uf
+		// xmm3 = rb00
+		// xmm4 = ga00
+		// xmm1 = c10
+		// xmm5 = c11
+		// xmm2, xmm6 = free
+		// xmm7 = used
+
+		// GSVector4i rb10 = c10 & mask;
+		// GSVector4i ga10 = (c10 >> 8) & mask;
+
+		vpsrlw(xmm2, xmm1, 8);
+		vpsllw(xmm1, 8);
+		vpsrlw(xmm1, 8);
+
+		// GSVector4i rb11 = c11 & mask;
+		// GSVector4i ga11 = (c11 >> 8) & mask;
+
+		vpsrlw(xmm6, xmm5, 8);
+		vpsllw(xmm5, 8);
+		vpsrlw(xmm5, 8);
+
+		// xmm0 = uf
+		// xmm3 = rb00
+		// xmm4 = ga00
+		// xmm1 = rb10
+		// xmm5 = rb11
+		// xmm2 = ga10
+		// xmm6 = ga11
+		// xmm7 = used
+
+		// rb10 = rb10.lerp16<0>(rb11, uf);
+		// ga10 = ga10.lerp16<0>(ga11, uf);
+
+		lerp16(xmm5, xmm1, xmm0, 0);
+		lerp16(xmm6, xmm2, xmm0, 0);
+
+		// xmm3 = rb00
+		// xmm4 = ga00
+		// xmm5 = rb10
+		// xmm6 = ga10
+		// xmm0, xmm1, xmm2 = free
+		// xmm7 = used
+
+		// rb00 = rb00.lerp16<0>(rb10, vf);
+		// ga00 = ga00.lerp16<0>(ga10, vf);
+
+		vmovdqa(xmm0, ptr[&m_local.temp.vf]);
+
+		lerp16(xmm5, xmm3, xmm0, 0);
+		lerp16(xmm6, xmm4, xmm0, 0);
+	}
+	else
+	{
+		// GSVector4i addr00 = y0 + x0;
+
+		vpaddd(xmm2, xmm4);
+
+		// c00 = addr00.gather32_32((const uint32/uint8*)tex[, clut]);
+
+		for(int i = 0; i < 4; i++)
+		{
+			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
+			mov(ebx, ptr[edx + ebx * sizeof(void*) + sizeof(void*)]);
+
+			ReadTexel(xmm5, xmm2, i);
+		}
+
+		// GSVector4i mask = GSVector4i::x00ff();
+
+		// c[0] = c00 & mask;
+		// c[1] = (c00 >> 8) & mask;
+
+		vpsrlw(xmm6, xmm5, 8);
+		vpsllw(xmm5, 8);
+		vpsrlw(xmm5, 8);
+	}
+
+	vmovdqa(xmm0, ptr[&m_local.temp.lod.f]);
+	vpsrlw(xmm0, xmm0, 1);
+
+	vmovdqa(xmm2, ptr[&m_local.temp.trb]);
+	vmovdqa(xmm3, ptr[&m_local.temp.tga]);
+
+	lerp16(xmm5, xmm2, xmm0, 0);
+	lerp16(xmm6, xmm3, xmm0, 0);
+}
+
+void GSDrawScanlineCodeGenerator::WrapLOD(const Xmm& uv)
+{
+	// xmm5 = minuv
+	// xmm6 = maxuv
+	// xmm0, xmm1, xmm4 = free
+
+	int wms_clamp = ((m_sel.wms + 1) >> 1) & 1;
+	int wmt_clamp = ((m_sel.wmt + 1) >> 1) & 1;
+
+	int region = ((m_sel.wms | m_sel.wmt) >> 1) & 1;
+
+	if(wms_clamp == wmt_clamp)
+	{
+		if(wms_clamp)
+		{
+			if(region)
+			{
+				vpmaxsw(uv, xmm5);
+			}
+			else
+			{
+				vpxor(xmm0, xmm0);
+				vpmaxsw(uv, xmm0);
+			}
+
+			vpminsw(uv, xmm6);
+		}
+		else
+		{
+			vpand(uv, xmm5);
+
+			if(region)
+			{
+				vpor(uv, xmm6);
+			}
+		}
+	}
+	else
+	{
+		vmovdqa(xmm0, ptr[&m_local.gd->t.mask]);
+
+		// GSVector4i repeat = (t & m_local.gd->t.min) | m_local.gd->t.max;
+
+		vpand(xmm1, uv, xmm5);
+
+		if(region)
+		{
+			vpor(xmm1, xmm6);
+		}
+
+		// GSVector4i clamp = t.sat_i16(m_local.gd->t.min, m_local.gd->t.max);
+
+		vpmaxsw(uv, xmm5);
+		vpminsw(uv, xmm6);
+
+		// clamp.blend8(repeat, m_local.gd->t.mask);
+
+		vpblendvb(uv, xmm1, xmm0);
+	}
+}
+
+void GSDrawScanlineCodeGenerator::WrapLOD(const Xmm& uv0, const Xmm& uv1)
+{
+	// xmm5 = minuv
+	// xmm6 = maxuv
+	// xmm0, xmm1, xmm4 = free
+
+	int wms_clamp = ((m_sel.wms + 1) >> 1) & 1;
+	int wmt_clamp = ((m_sel.wmt + 1) >> 1) & 1;
+
+	int region = ((m_sel.wms | m_sel.wmt) >> 1) & 1;
+
+	if(wms_clamp == wmt_clamp)
+	{
+		if(wms_clamp)
+		{
+			if(region)
+			{
+				vpmaxsw(uv0, xmm5);
+				vpmaxsw(uv1, xmm5);
+			}
+			else
+			{
+				vpxor(xmm0, xmm0);
+				vpmaxsw(uv0, xmm0);
+				vpmaxsw(uv1, xmm0);
+			}
+
+			vpminsw(uv0, xmm6);
+			vpminsw(uv1, xmm6);
+		}
+		else
+		{
+			vpand(uv0, xmm5);
+			vpand(uv1, xmm5);
+
+			if(region)
+			{
+				vpor(uv0, xmm6);
+				vpor(uv1, xmm6);
+			}
+		}
+	}
+	else
+	{
+		vmovdqa(xmm0, ptr[&m_local.gd->t.mask]);
+
+		// uv0
+
+		// GSVector4i repeat = (t & m_local.gd->t.min) | m_local.gd->t.max;
+
+		vpand(xmm1, uv0, xmm5);
+
+		if(region)
+		{
+			vpor(xmm1, xmm6);
+		}
+
+		// GSVector4i clamp = t.sat_i16(m_local.gd->t.min, m_local.gd->t.max);
+
+		vpmaxsw(uv0, xmm5);
+		vpminsw(uv0, xmm6);
+
+		// clamp.blend8(repeat, m_local.gd->t.mask);
+
+		vpblendvb(uv0, xmm1, xmm0);
+
+		// uv1
+
+		// GSVector4i repeat = (t & m_local.gd->t.min) | m_local.gd->t.max;
+
+		vpand(xmm1, uv1, xmm5);
+
+		if(region)
+		{
+			vpor(xmm1, xmm6);
+		}
+
+		// GSVector4i clamp = t.sat_i16(m_local.gd->t.min, m_local.gd->t.max);
+
+		vpmaxsw(uv1, xmm5);
+		vpminsw(uv1, xmm6);
 
 		// clamp.blend8(repeat, m_local.gd->t.mask);
 
@@ -2014,12 +2785,64 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, 
 	}
 }
 
-void GSDrawScanlineCodeGenerator::ReadTexel(const Xmm& dst, const Xmm& addr, const Xmm& temp1, const Xmm& temp2)
+void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 {
-	ReadTexel(dst, addr, 0);
-	ReadTexel(dst, addr, 1);
-	ReadTexel(dst, addr, 2);
-	ReadTexel(dst, addr, 3);
+	// in
+	// xmm5 = addr00
+	// xmm2 = addr01
+	// xmm0 = addr10
+	// xmm3 = addr11
+	// ebx = m_local.tex[0] (!m_sel.mmin)
+	// edx = m_local.tex (m_sel.mmin)
+
+	// out
+	// xmm6 = c00
+	// xmm4 = c01
+	// xmm1 = c10
+	// xmm5 = c11
+
+	ASSERT(pixels == 1 || pixels == 4);
+
+	if(m_sel.mmin)
+	{
+		int r[] = {5, 6, 2, 4, 0, 1, 3, 7};
+
+		if(pixels == 4)
+		{
+			vmovdqa(ptr[&m_local.temp.test], xmm7);
+		}
+
+		for(int i = 0; i < pixels; i++)
+		{
+			mov(ebx, ptr[&m_local.temp.lod.i.u32[i]]);
+			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
+
+			for(int j = 0; j < 4; j++)
+			{
+				ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
+			}
+		}
+
+		if(pixels == 4)
+		{
+			vmovdqa(xmm5, xmm7);
+			vmovdqa(xmm7, ptr[&m_local.temp.test]);
+		}
+	}
+	else
+	{
+		int r[] = {5, 6, 2, 4, 0, 1, 3, 5};
+
+		// TODO: might be faster to read in columns, inserts into the same register would be further from eachother (last one overwrites xmm5, need to use xmm7)
+
+		for(int i = 0; i < pixels; i++)
+		{
+			for(int j = 0; j < 4; j++)
+			{
+				ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
+			}
+		}
+	}
 }
 
 void GSDrawScanlineCodeGenerator::ReadTexel(const Xmm& dst, const Xmm& addr, uint8 i)

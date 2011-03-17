@@ -242,6 +242,8 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 	m_tc->InvalidateVideoMem(m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM), r);
 }
 
+#include "GSTextureSW.h"
+
 void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 {
 	const GSDrawingEnvironment& env = m_env;
@@ -321,6 +323,8 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 		if(PRIM->TME)
 		{
+			gd.clut = m_mem.m_clut;
+
 			gd.sel.tfx = context->TEX0.TFX;
 			gd.sel.tcc = context->TEX0.TCC;
 			gd.sel.fst = PRIM->FST;
@@ -336,63 +340,53 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				gd.sel.tfx = TFX_DECAL;
 			}
 
-			if(gd.sel.fst == 0)
+			GSVector4i r;
+
+			GetTextureMinMax(r, context->TEX0, context->CLAMP, gd.sel.ltf);
+
+			const GSTextureCacheSW::Texture* t = m_tc->Lookup(context->TEX0, env.TEXA, r);
+
+			if(t == NULL) {ASSERT(0); return;}
+
+			gd.tex[0] = t->m_buff;
+			gd.sel.tw = t->m_tw - 3;
+
+			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt.m_lod.y > 0)
 			{
-				// skip per pixel division if q is constant
-
-				GSVertexSW* v = m_vertices;
-
-				if(m_vt.m_eq.q)
-				{
-					gd.sel.fst = 1;
-
-					if(v[0].t.z != 1.0f)
-					{
-						GSVector4 w = v[0].t.zzzz().rcpnr();
-
-						for(int i = 0, j = m_count; i < j; i++)
-						{
-							v[i].t *= w;
-						}
-					}
-				}
-				else if(primclass == GS_SPRITE_CLASS)
-				{
-					gd.sel.fst = 1;
-
-					for(int i = 0, j = m_count; i < j; i += 2)
-					{
-						GSVector4 w = v[i + 1].t.zzzz().rcpnr();
-
-						v[i + 0].t *= w;
-						v[i + 1].t *= w;
-					}
-				}
-			}
-
-			GIFRegTEX0 MIP_TEX0 = context->TEX0;
-			GIFRegCLAMP MIP_CLAMP = context->CLAMP;
-
-			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
-			{
-				gd.sel.mipmap = 1; // TODO: pass mmin here and store mxl to m_global for clamping the lod
+				//gd.sel.ltf = context->TEX1.MMIN & 1; // TODO: mmag != (mmin & 1) && lod <= 0
+				gd.sel.mmin = context->TEX1.MMIN >> 1;
 				gd.sel.lcm = context->TEX1.LCM;
 
+				int mxl = (std::min<int>((int)context->TEX1.MXL, 6) << 16) - 1;
+				int k = context->TEX1.K << 12;
+
+				gd.mxl = GSVector4((float)mxl);
 				gd.l = GSVector4((float)(-0x10000 << context->TEX1.L));
-				gd.k = GSVector4((float)(0x1000 * context->TEX1.K));
+				gd.k = GSVector4((float)k);
 
-				// the rest is fake, should be removed later
-
-				int level = (int)(m_vt.m_lod.x + 0.5f);
-
-				level = std::min<int>(level, context->TEX1.MXL); 
-				level = std::min<int>(level, 6);
-
-				if(level > 0)
+				if(gd.sel.lcm)
 				{
-					// printf("lvl %d\n", level);
+					int lod = std::min<int>(k, mxl);
 
-					switch(level)
+					gd.lod.i = GSVector4i(lod >> 16);
+					gd.lod.f = GSVector4i(lod & 0xffff).xxxxl().xxzz();
+
+					// TODO: lot to optimize when lod is constant
+				}
+
+				GIFRegTEX0 MIP_TEX0 = context->TEX0;
+				GIFRegCLAMP MIP_CLAMP = context->CLAMP;
+
+				GSVector4 tmin = m_vt.m_min.t;
+				GSVector4 tmax = m_vt.m_max.t;
+
+				//static int s_counter = 0;
+
+				//t->Save(format("c:/temp1/%08d_%05x_0.bmp", s_counter, context->TEX0.TBP0));
+
+				for(int i = 1, j = std::min<int>((int)context->TEX1.MXL, 6); i <= j; i++)
+				{
+					switch(i)
 					{
 					case 1: 
 						MIP_TEX0.TBP0 = context->MIPTBP1.TBP1; 
@@ -422,93 +416,83 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 						__assume(0);
 					}
 
-					ASSERT(MIP_TEX0.TBP0 != 0 && MIP_TEX0.TBW != 0);
-				
-					int tw = (int)MIP_TEX0.TW - level;
-					int th = (int)MIP_TEX0.TH - level;
+					if(MIP_TEX0.TW > 0) MIP_TEX0.TW--;
+					if(MIP_TEX0.TH > 0) MIP_TEX0.TH--;
 
-					switch(context->TEX1.MMIN)
-					{
-					case 2: case 3: // point (min size 1)
-						tw = std::max<int>(tw, 0);
-						th = std::max<int>(th, 0);
-						break; 
-					case 4: case 5: // linear (min size 8)
-						tw = std::max<int>(tw, 3);
-						th = std::max<int>(th, 3);
-						break; 
-					default:
-						__assume(0);
-					}
+					MIP_CLAMP.MINU >>= 1;
+					MIP_CLAMP.MINV >>= 1;
+					MIP_CLAMP.MAXU >>= 1;
+					MIP_CLAMP.MAXV >>= 1;
 
-					// scale down the texture coordinates, including vertex trace
+					m_vt.m_min.t *= 0.5f;
+					m_vt.m_max.t *= 0.5f;
 
-					GSVector4 scale = GSVector4(1.0f) / GSVector4(1 << ((int)MIP_TEX0.TW - tw), 1 << ((int)MIP_TEX0.TH - th), 1, 1);
+					GSVector4i r;
+
+					GetTextureMinMax(r, MIP_TEX0, MIP_CLAMP, gd.sel.ltf);
+
+					const GSTextureCacheSW::Texture* t = m_tc->Lookup(MIP_TEX0, env.TEXA, r, gd.sel.tw + 3);
+
+					if(t == NULL) {ASSERT(0); return;}
+
+					gd.tex[i] = t->m_buff;
+					gd.tex[i + 1] = NULL;
+
+					//t->Save(format("c:/temp1/%08d_%05x_%d.bmp", s_counter, context->TEX0.TBP0, i));
+				}
+
+				//s_counter++;
+
+				m_vt.m_min.t = tmin;
+				m_vt.m_max.t = tmax;
+			}
+			else
+			{
+				// TODO: these shortcuts are not compatible with mipmapping, yet
+
+				if(gd.sel.fst == 0)
+				{
+					// skip per pixel division if q is constant
 
 					GSVertexSW* v = m_vertices;
 
-					for(int i = 0, j = m_count; i < j; i++)
+					if(m_vt.m_eq.q)
 					{
-						v[i].t *= scale;
-					}
+						gd.sel.fst = 1;
 
-					m_vt.m_min.t *= scale;
-					m_vt.m_max.t *= scale;
-
-					MIP_TEX0.TW = (uint32)tw;
-					MIP_TEX0.TH = (uint32)th;
-
-					// this shift is done even for repeat modes
-
-					MIP_CLAMP.MINU >>= level;
-					MIP_CLAMP.MAXU >>= level;
-					MIP_CLAMP.MINV >>= level;
-					MIP_CLAMP.MAXV >>= level;
-/*
-					printf("%d%d%d%d%d L %d K %03x %.2f lod %.2f %.2f q %f %f\n", 
-						m_context->TEX1.MXL, 
-						m_context->TEX1.MMAG,
-						m_context->TEX1.MMIN,
-						PRIM->FST,
-						m_context->TEX1.LCM,
-						m_context->TEX1.L,
-						m_context->TEX1.K,
-						(float)m_context->TEX1.K / 16,
-						m_context->TEX1.MXL > 0 ? m_vt.m_lod.x : 0, 
-						m_context->TEX1.MXL > 0 ? m_vt.m_lod.y : 0,
-						1.0f / m_vt.m_min.t.z,
-						1.0f / m_vt.m_max.t.z);
-*/
-					if(s_dump)
-					{
-						uint64 frame = m_perfmon.GetFrame();
-
-						string s;
-
-						if(s_save && s_n >= s_saven)
+						if(v[0].t.z != 1.0f)
 						{
-							s = format("c:\\temp1\\_%05d_f%lld_tex_%05x_%d_(%d%d%d%d%d %.2f %.2f).bmp", 
-								s_n, frame, (int)MIP_TEX0.TBP0, (int)MIP_TEX0.PSM,
-								m_context->TEX1.MXL, 
-								m_context->TEX1.MMAG,
-								m_vt.m_filter.mmag, 
-								m_context->TEX1.MMIN,
-								m_vt.m_filter.mmin, 
-								m_context->TEX1.MXL > 0 ? m_vt.m_lod.x : 0, 
-								m_context->TEX1.MXL > 0 ? m_vt.m_lod.y : 0
-								);
+							GSVector4 w = v[0].t.zzzz().rcpnr();
 
-							m_mem.SaveBMP(s, MIP_TEX0.TBP0, MIP_TEX0.TBW, MIP_TEX0.PSM, 1 << MIP_TEX0.TW, 1 << MIP_TEX0.TH);
+							for(int i = 0, j = m_count; i < j; i++)
+							{
+								v[i].t *= w;
+							}
 						}
+
+						// TODO: q is now destoroyed, but since q is constant we should be able to pre-calc gd.lod and change LCM to 1
+					}
+					else if(primclass == GS_SPRITE_CLASS)
+					{
+						gd.sel.fst = 1;
+
+						for(int i = 0, j = m_count; i < j; i += 2)
+						{
+							GSVector4 w = v[i + 1].t.zzzz().rcpnr();
+
+							v[i + 0].t *= w;
+							v[i + 1].t *= w;
+						}
+
+						// TODO: preserve q, or if there only one sprite then see the comment above
 					}
 				}
-			}
 
-			if(gd.sel.ltf)
-			{
-				if(gd.sel.fst)
+				if(gd.sel.ltf && gd.sel.fst)
 				{
 					// if q is constant we can do the half pel shift for bilinear sampling on the vertices
+
+					// TODO: but not when mipmapping is used!!!
 
 					GSVector4 half(0x8000, 0x8000);
 
@@ -521,68 +505,55 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				}
 			}
 
-			GSVector4i r;
+			uint16 tw = 1u << context->TEX0.TW;
+			uint16 th = 1u << context->TEX0.TH;
 
-			GetTextureMinMax(r, MIP_TEX0, MIP_CLAMP, gd.sel.ltf);
-
-			const GSTextureCacheSW::GSTexture* t = m_tc->Lookup(MIP_TEX0, env.TEXA, r);
-
-			if(!t) {ASSERT(0); return;}
-
-			gd.tex = t->m_buff;
-			gd.clut = m_mem.m_clut;
-
-			gd.sel.tw = t->m_tw - 3;
-
-			uint16 tw = (uint16)(1 << MIP_TEX0.TW);
-			uint16 th = (uint16)(1 << MIP_TEX0.TH);
-
-			switch(MIP_CLAMP.WMS)
+			switch(context->CLAMP.WMS)
 			{
 			case CLAMP_REPEAT:
-				gd.t.min.u16[0] = tw - 1;
-				gd.t.max.u16[0] = 0;
+				gd.t.min.u16[0] = gd.t.minmax.u16[0] = tw - 1;
+				gd.t.max.u16[0] = gd.t.minmax.u16[2] = 0;
 				gd.t.mask.u32[0] = 0xffffffff;
 				break;
 			case CLAMP_CLAMP:
-				gd.t.min.u16[0] = 0;
-				gd.t.max.u16[0] = tw - 1;
+				gd.t.min.u16[0] = gd.t.minmax.u16[0] = 0;
+				gd.t.max.u16[0] = gd.t.minmax.u16[2] = tw - 1;
 				gd.t.mask.u32[0] = 0;
 				break;
 			case CLAMP_REGION_CLAMP:
-				gd.t.min.u16[0] = std::min<int>(MIP_CLAMP.MINU, tw - 1);
-				gd.t.max.u16[0] = std::min<int>(MIP_CLAMP.MAXU, tw - 1);
+				gd.t.min.u16[0] = gd.t.minmax.u16[0] = std::min<uint16>(context->CLAMP.MINU, tw - 1);
+				gd.t.max.u16[0] = gd.t.minmax.u16[2] = std::min<uint16>(context->CLAMP.MAXU, tw - 1);
 				gd.t.mask.u32[0] = 0;
 				break;
 			case CLAMP_REGION_REPEAT:
-				gd.t.min.u16[0] = MIP_CLAMP.MINU;
-				gd.t.max.u16[0] = MIP_CLAMP.MAXU;
+				gd.t.min.u16[0] = gd.t.minmax.u16[0] = context->CLAMP.MINU;
+				gd.t.max.u16[0] = gd.t.minmax.u16[2] = context->CLAMP.MAXU;
 				gd.t.mask.u32[0] = 0xffffffff;
 				break;
 			default:
 				__assume(0);
 			}
 
-			switch(MIP_CLAMP.WMT)
+			switch(context->CLAMP.WMT)
 			{
 			case CLAMP_REPEAT:
-				gd.t.min.u16[4] = th - 1;
-				gd.t.max.u16[4] = 0;
+				gd.t.min.u16[4] = gd.t.minmax.u16[1] = th - 1;
+				gd.t.max.u16[4] = gd.t.minmax.u16[3] = 0;
 				gd.t.mask.u32[2] = 0xffffffff;
 				break;
 			case CLAMP_CLAMP:
-				gd.t.min.u16[4] = 0;
-				gd.t.max.u16[4] = th - 1;
+				gd.t.min.u16[4] = gd.t.minmax.u16[1] = 0;
+				gd.t.max.u16[4] = gd.t.minmax.u16[3] = th - 1;
 				gd.t.mask.u32[2] = 0;
 				break;
 			case CLAMP_REGION_CLAMP:
-				gd.t.min.u16[4] = std::min<int>(MIP_CLAMP.MINV, th - 1);
-				gd.t.max.u16[4] = std::min<int>(MIP_CLAMP.MAXV, th - 1); // ffx anima summon scene, when the anchor appears (th = 256, maxv > 256)
+				gd.t.min.u16[4] = gd.t.minmax.u16[1] = std::min<uint16>(context->CLAMP.MINV, th - 1);
+				gd.t.max.u16[4] = gd.t.minmax.u16[3] = std::min<uint16>(context->CLAMP.MAXV, th - 1); // ffx anima summon scene, when the anchor appears (th = 256, maxv > 256)
 				gd.t.mask.u32[2] = 0;
 				break;
 			case CLAMP_REGION_REPEAT:
-				gd.t.min.u16[4] = MIP_CLAMP.MINV;
-				gd.t.max.u16[4] = MIP_CLAMP.MAXV;
+				gd.t.min.u16[4] = gd.t.minmax.u16[1] = context->CLAMP.MINV;
+				gd.t.max.u16[4] = gd.t.minmax.u16[3] = context->CLAMP.MAXV;
 				gd.t.mask.u32[2] = 0xffffffff;
 				break;
 			default:

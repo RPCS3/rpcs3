@@ -613,9 +613,7 @@
     <ClCompile Include="GSThread.cpp" />
     <ClCompile Include="GSUtil.cpp" />
     <ClCompile Include="GSVector.cpp">
-      <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release AVX|Win32'">AssemblyAndSourceCode</AssemblerOutput>
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release AVX|x64'">AssemblyAndSourceCode</AssemblerOutput>
-      <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release SSE4|Win32'">AssemblyAndSourceCode</AssemblerOutput>
     </ClCompile>
     <ClCompile Include="GSVertexList.cpp" />
     <ClCompile Include="GSVertexSW.cpp" />

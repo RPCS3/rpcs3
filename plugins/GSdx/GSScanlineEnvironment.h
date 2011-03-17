@@ -65,8 +65,8 @@ union GSScanlineSelector
 		uint32 edge:1; // 47
 
 		uint32 tw:3; // 48 (encodes values between 3 -> 10, texture cache makes sure it is at least 3)
-		uint32 mipmap:1; // 49
-		uint32 lcm:1; // 50
+		uint32 lcm:1; // 49
+		uint32 mmin:2; // 50
 	};
 
 	struct
@@ -113,7 +113,7 @@ __aligned(struct, 32) GSScanlineGlobalData // per batch variables, this is like 
 	// - if in the future drawing does not have to be synchronized per batch, the rest of GSRasterizerData should be copied here, too (scissor, prim type, vertices)
 
 	void* vm;
-	const void* tex;
+	const void* tex[7];
 	const uint32* clut;
 	const GSVector4i* dimx; 
 
@@ -125,12 +125,14 @@ __aligned(struct, 32) GSScanlineGlobalData // per batch variables, this is like 
 	const GSVector2i* fzbc;
 
 	GSVector4i fm, zm;
-	struct {GSVector4i min, max, mask, invmask;} t; // [u] x 4 [v] x 4
+	struct {GSVector4i min, max, minmax, mask, invmask;} t; // [u] x 4 [v] x 4
 	GSVector4i aref;
 	GSVector4i afix;
 	GSVector4i frb, fga;
+	GSVector4 mxl;
 	GSVector4 k; // TEX1.K * 0x10000
 	GSVector4 l; // TEX1.L * -0x10000
+	struct {GSVector4i i, f;} lod; // lcm == 1
 };
 
 __aligned(struct, 32) GSScanlineLocalData // per prim variables, each thread has its own
@@ -144,5 +146,20 @@ __aligned(struct, 32) GSScanlineLocalData // per prim variables, each thread has
 
 	// these should be stored on stack as normal local variables (no free regs to use, esp cannot be saved to anywhere, and we need an aligned stack)
 
-	struct {GSVector4i z, f, s, t, q, rb, ga, zs, zd, uf, vf, cov, lod;} temp; 
+	struct 
+	{
+		GSVector4i z, f;
+		GSVector4i s, t, q;
+		GSVector4i rb, ga;
+		GSVector4i zs, zd;
+		GSVector4i uf, vf;
+		GSVector4i cov;
+
+		// mipmapping
+		struct {GSVector4i i, f;} lod;
+		GSVector4i uv[2];
+		GSVector4i uv_minmax[2];
+		GSVector4i trb, tga;
+		GSVector4i test;
+	} temp; 
 };

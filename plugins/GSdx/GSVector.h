@@ -2500,6 +2500,9 @@ public:
 	{
 		// NOTE: sign bit ignored, safe to pass negative numbers
 
+		// The idea behind this algorithm is to split the float into two parts, log2(m * 2^e) => log2(m) + log2(2^e) => log2(m) + e, 
+		// and then approximate the logarithm of the mantissa (it's 1.x when normalized, a nice short range).
+
 		GSVector4 one(1.0f);
 
 		GSVector4i i = GSVector4i::cast(*this);
