@@ -2924,7 +2924,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 		if(pixels == 4)
 		{
-			vmovdqa(ptr[&m_local.temp.test], xmm7);
+			movdqa(ptr[&m_local.temp.test], xmm7);
 
 			for(int j = 0; j < 4; j++)
 			{
@@ -2937,8 +2937,8 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 				}
 			}
 
-			vmovdqa(xmm5, xmm7);
-			vmovdqa(xmm7, ptr[&m_local.temp.test]);
+			movdqa(xmm5, xmm7);
+			movdqa(xmm7, ptr[&m_local.temp.test]);
 		}
 		else
 		{
