@@ -79,6 +79,11 @@ public:
 	virtual int GetSlotIndexForViewIndex( int listViewIndex )=0;
 	virtual wxDirName GetMcdPath() const=0;
 	virtual void PublicApply() =0;
+	virtual bool isFileAssignedToInternalSlot(const wxFileName cardFile) const =0;
+	virtual void RemoveCardFromSlot(const wxFileName cardFile) =0;
+	virtual bool IsNonEmptyFilesystemCards() const =0;
+	virtual bool UiDuplicateCard( McdSlotItem& src, McdSlotItem& dest ) =0;
+	
 };
 
 // --------------------------------------------------------------------------------------
@@ -95,10 +100,17 @@ protected:
 	int				m_TargetedItem;
 
 public:
+	void (*m_externHandler)(void);
+	void setExternHandler(void (*f)(void)){m_externHandler=f;};
+	void OnChanged(wxEvent& evt){if (m_externHandler) m_externHandler(); evt.Skip();}
+
 	virtual ~BaseMcdListView() throw() { }
 	BaseMcdListView( wxWindow* parent )
 		: _parent( parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT | wxLC_SINGLE_SEL | wxLC_VIRTUAL )
 	{
+		m_externHandler=NULL;
+		Connect( this->GetId(),				wxEVT_LEFT_UP, wxEventHandler(BaseMcdListView::OnChanged));
+
 		m_CardProvider = NULL;
 	}
 
@@ -198,11 +210,15 @@ namespace Panels
 		// Doubles as Create and Delete buttons
 		wxButton*		m_button_Create;
 		
-		// Doubles as Mount and Unmount buttons
+		// Doubles as Mount and Unmount buttons ("Enable"/"Disable" port)
 		wxButton*		m_button_Mount;
 
+		wxButton*		m_button_AssignUnassign; //insert/eject card
+		wxButton*		m_button_Duplicate;
+
+
 	public:
-		virtual ~MemoryCardListPanel_Simple() throw() {}
+		virtual ~MemoryCardListPanel_Simple() throw();
 		MemoryCardListPanel_Simple( wxWindow* parent );
 
 		void UpdateUI();
@@ -213,12 +229,16 @@ namespace Panels
 		virtual McdSlotItem& GetCardForViewIndex( int idx );
 		virtual int GetSlotIndexForViewIndex( int viewIndex );
 		virtual void PublicApply(){ Apply(); };
+		void OnChangedListSelection(){ UpdateUI(); };
+		virtual bool UiDuplicateCard( McdSlotItem& src, McdSlotItem& dest );
 
 	protected:
 		void OnCreateOrDeleteCard(wxCommandEvent& evt);
 		void OnMountCard(wxCommandEvent& evt);
 //		void OnRelocateCard(wxCommandEvent& evt);
 		void OnRenameFile(wxCommandEvent& evt);
+		void OnDuplicateFile(wxCommandEvent& evt);
+		void OnAssignUnassignFile(wxCommandEvent& evt);
 		
 		void OnListDrag(wxListEvent& evt);
 		void OnListSelectionChanged(wxListEvent& evt);
@@ -226,6 +246,19 @@ namespace Panels
 		void OnItemActivated(wxListEvent& evt);
 
 		virtual bool OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filenames);
+
+		std::vector<McdSlotItem> m_allFilesystemCards;
+		McdSlotItem m_filesystemPlaceholderCard;
+
+		virtual int GetNumFilesVisibleAsFilesystem() const;
+		virtual int GetNumVisibleInternalSlots() const;
+		virtual McdSlotItem& GetNthVisibleFilesystemCard(int n);
+		virtual bool IsSlotVisible(int slotIndex) const;
+		virtual void ReadFilesAtMcdFolder();
+		virtual bool isFileAssignedAndVisibleOnList(const wxFileName cardFile) const;
+		virtual bool isFileAssignedToInternalSlot(const wxFileName cardFile) const;
+		virtual void RemoveCardFromSlot(const wxFileName cardFile);
+		virtual bool IsNonEmptyFilesystemCards() const;
 
 		virtual void Apply();
 		virtual void AppStatusEvent_OnSettingsApplied();
@@ -235,6 +268,8 @@ namespace Panels
 		virtual void UiRenameCard( McdSlotItem& card );
 		virtual void UiCreateNewCard( McdSlotItem& card );
 		virtual void UiDeleteCard( McdSlotItem& card );
+		virtual void UiAssignUnassignFile( McdSlotItem& card );
+		
 	};
 
 	// --------------------------------------------------------------------------------------

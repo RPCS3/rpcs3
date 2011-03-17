@@ -721,7 +721,7 @@ void InitializeSIO(u8 value)
 					wxTimeSpan delta = wxDateTime::UNow().Subtract( m_ForceEjection_minTriesTimestamp[port] );
 					if ( delta.GetMilliseconds() >= FORCED_MCD_EJECTION_MAX_MS_AFTER_MIN_TRIES )
 					{
-						Console.Warning( L"[%s] Auto-eject: Timeout reached after mcd was accessed %d times [port:%d, slot:%d]", GetTimeMsStr().c_str(), numTimesAccessed, port, slot);
+						DevCon.Warning( L"[%s] Auto-eject: Timeout reached after mcd was accessed %d times [port:%d, slot:%d]", GetTimeMsStr().c_str(), numTimesAccessed, port, slot);
 						m_ForceEjectionTimeout[port] = 0;	//Done. on next sio access the card will be seen as inserted.
 					}
 				}

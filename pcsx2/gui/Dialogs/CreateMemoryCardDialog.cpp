@@ -37,7 +37,7 @@ wxFilePickerCtrl* CreateMemoryCardFilePicker( wxWindow* parent, uint portidx, ui
 }
 */
 Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, const wxDirName& mcdpath, const wxString& suggested_mcdfileName)
-	: wxDialogWithHelpers( parent, _("Create a new memory card file") )
+	: wxDialogWithHelpers( parent, _("Create a new memory card") )
 	, m_mcdpath( mcdpath )
 	, m_mcdfile( suggested_mcdfileName )//suggested_and_result_mcdfileName.IsEmpty() ? g_Conf->Mcd[slot].Filename.GetFullName()
 {
@@ -68,7 +68,7 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, const
 //		s_padding += m_filepicker			| StdExpand();
 //	else
 	{
-		s_padding += Heading( _( "New memory card file:" ) )					| StdExpand();
+		s_padding += Heading( _( "New memory card:" ) )					| StdExpand();
 		s_padding += Heading( wxString(_("At folder:    ")) + (m_mcdpath + m_mcdfile).GetPath() ).Unwrapped()	| StdExpand();
 		
 		wxBoxSizer& s_filename( *new wxBoxSizer(wxHORIZONTAL) );
@@ -115,7 +115,7 @@ bool Dialogs::CreateMemoryCardDialog::CreateIt( const wxString& mcdFile, uint si
 	u8	m_effeffs[528*16];
 	memset8<0xff>( m_effeffs );
 
-	Console.WriteLn( L"(FileMcd) Creating new %uMB memory card file: '%s'", sizeInMB, mcdFile.c_str() );
+	Console.WriteLn( L"(FileMcd) Creating new %uMB memory card: '%s'", sizeInMB, mcdFile.c_str() );
 
 	wxFFile fp( mcdFile, L"wb" );
 	if( !fp.IsOpened() ) return false;
@@ -147,7 +147,7 @@ void Dialogs::CreateMemoryCardDialog::OnOk_Click( wxCommandEvent& evt )
 	{
 		wxString message;
 		message.Printf(_("Error (%s)"), errMsg.c_str());
-		Msgbox::Alert( message, _("Create memory card file") );
+		Msgbox::Alert( message, _("Create memory card") );
 		m_text_filenameInput->SetFocus();
 		m_text_filenameInput->SelectAll();
 		return;
@@ -160,8 +160,8 @@ void Dialogs::CreateMemoryCardDialog::OnOk_Click( wxCommandEvent& evt )
 	) )
 	{
 		Msgbox::Alert(
-			_("Error: The memory card file could not be created."),
-			_("Create memory card file")
+			_("Error: The memory card could not be created."),
+			_("Create memory card")
 		);
 		return;
 	}

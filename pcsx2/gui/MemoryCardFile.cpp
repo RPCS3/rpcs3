@@ -180,7 +180,7 @@ void FileMemoryCard::Open()
 			if( !Create( str, 8 ) )
 			{
 				Msgbox::Alert(
-					wxsFormat(_( "Could not create a memory card file: \n\n%s\n\n" ), str.c_str()) +
+					wxsFormat(_( "Could not create a memory card: \n\n%s\n\n" ), str.c_str()) +
 					GetDisabledMessage( slot )
 				);
 			}
@@ -198,7 +198,7 @@ void FileMemoryCard::Open()
 			// Translation note: detailed description should mention that the memory card will be disabled
 			// for the duration of this session.
 			Msgbox::Alert(
-				wxsFormat(_( "Access denied to memory card file: \n\n%s\n\n" ), str.c_str()) +
+				wxsFormat(_( "Access denied to memory card: \n\n%s\n\n" ), str.c_str()) +
 				GetDisabledMessage( slot )
 			);
 		}

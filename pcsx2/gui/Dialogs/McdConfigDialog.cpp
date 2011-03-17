@@ -109,8 +109,8 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 
 	wxBoxSizer* s_top = new wxBoxSizer(wxVERTICAL);
 
-	wxString title=_("Drag card files in the list to swap or copy between ports.");
-	title+=_("\nNote: Rename/Copy/Create/Delete will NOT be reverted with 'Cancel'.");
+	wxString title=_("Drag cards to or from PS2-ports");
+	title+=_("\nNote: Rename/Duplicate/Create/Delete will NOT be reverted with 'Cancel'.");
 
 	*s_top  += Heading(title)	| StdExpand();
 	*s_top  += StdPadding;
