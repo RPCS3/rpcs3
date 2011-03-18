@@ -1250,6 +1250,8 @@ return;
 
 		vmovq(xmm4, ptr[&m_local.gd->t.minmax]);
 
+		vpsrlw(xmm4, xmm0);
+
 		vpunpcklwd(xmm4, xmm4);
 		vpunpckldq(xmm5, xmm4, xmm4);
 		vpunpckhdq(xmm6, xmm4, xmm4);
@@ -1728,7 +1730,7 @@ return;
 		vpsrlw(xmm6, 8);
 	}
 
-	vmovdqa(xmm0, ptr[&m_local.temp.lod.f]);
+	vmovdqa(xmm0, ptr[m_sel.lcm ? &m_local.gd->lod.f : &m_local.temp.lod.f]);
 	vpsrlw(xmm0, xmm0, 1);
 
 	vmovdqa(xmm2, ptr[&m_local.temp.trb]);
@@ -2761,6 +2763,8 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 	mip_offset *= sizeof(void*);
 
+	const GSVector4i* lod_i = m_sel.lcm ? &m_local.gd->lod.i : &m_local.temp.lod.i;
+
 	if(m_sel.mmin)
 	{
 		int r[] = {5, 6, 2, 4, 0, 1, 3, 7};
@@ -2771,7 +2775,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 			for(int j = 0; j < 4; j++)
 			{
-				mov(ebx, ptr[&m_local.temp.lod.i.u32[j]]);
+				mov(ebx, ptr[&lod_i->u32[j]]);
 				mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 				for(int i = 0; i < 4; i++)
@@ -2787,7 +2791,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 		{
 			for(int j = 0; j < 4; j++)
 			{
-				mov(ebx, ptr[&m_local.temp.lod.i.u32[j]]);
+				mov(ebx, ptr[&lod_i->u32[j]]);
 				mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 				ReadTexel(xmm6, xmm5, j);
