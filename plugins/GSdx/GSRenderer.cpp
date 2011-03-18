@@ -516,6 +516,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			return;
 		case VK_INSERT:
 			m_mipmap = !m_mipmap;
+			printf("GSdx: (Software) mipmapping is now %s.\n", m_mipmap ? "enabled" : "disabled");
 			return;
 		}
 
