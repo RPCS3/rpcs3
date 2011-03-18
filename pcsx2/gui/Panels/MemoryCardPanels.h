@@ -211,7 +211,7 @@ namespace Panels
 		wxButton*		m_button_Create;
 		
 		// Doubles as Mount and Unmount buttons ("Enable"/"Disable" port)
-		wxButton*		m_button_Mount;
+//		wxButton*		m_button_Mount;
 
 		wxButton*		m_button_AssignUnassign; //insert/eject card
 		wxButton*		m_button_Duplicate;

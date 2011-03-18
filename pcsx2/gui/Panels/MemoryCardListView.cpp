@@ -72,7 +72,7 @@ void BaseMcdListView::LoadSaveColumns( IniInterface& ini )
 enum McdColumnType_Simple
 {
 	McdColS_PortSlot,	// port and slot of the card
-	McdColS_Status,		// either Enabled/Disabled, or Missing (no card).
+	//McdColS_Status,		// either Enabled/Disabled, or Missing (no card).
 	McdColS_Filename,
 	McdColS_Size,
 	McdColS_Formatted,
@@ -103,9 +103,9 @@ const ListViewColumnInfo& MemoryCardListView_Simple::GetDefaultColumnInfo( uint 
 	static const ListViewColumnInfo columns[] =
 	{
 		{ _("PS2 Port")		, 154 , wxLIST_FORMAT_LEFT	},
-		{ _("Port status")	, 80  , wxLIST_FORMAT_LEFT	},
-		{ _("File name")	, 126 , wxLIST_FORMAT_LEFT	},
-		{ _("File size")	, 60  , wxLIST_FORMAT_LEFT	},
+		//{ _("Port status")	, 80  , wxLIST_FORMAT_LEFT	},
+		{ _("Card (file) name")	, 126 , wxLIST_FORMAT_LEFT	},
+		{ _("Card size")	, 60  , wxLIST_FORMAT_LEFT	},
 		{ _("Formatted")	, 80  , wxLIST_FORMAT_LEFT	},
 		{ _("Last Modified"), 85 , wxLIST_FORMAT_LEFT	},
 		{ _("Created on")	, 85 , wxLIST_FORMAT_LEFT	},
@@ -141,7 +141,7 @@ wxString MemoryCardListView_Simple::OnGetItemText(long item, long column) const
 			}
 			
 			return L"";
-
+/*
 		case McdColS_Status:
 		{
 			wxString res = prefix + (it.IsEnabled ? _("Enabled") : _("Disabled"));
@@ -151,7 +151,7 @@ wxString MemoryCardListView_Simple::OnGetItemText(long item, long column) const
 				res= L"";
 			return prefix + res;
 		}
-		
+*/		
 		case McdColS_Size:			return prefix + ( !it.IsPresent ? L"" : pxsFmt( L"%u MB", it.SizeInMB ) );
 		case McdColS_Formatted:		return prefix + ( !it.IsPresent ? L"" : ( it.IsFormatted ? _("Yes") : _("No")) );
 		case McdColS_DateModified:	return prefix + ( !it.IsPresent ? L"" : it.DateModified.FormatDate() );

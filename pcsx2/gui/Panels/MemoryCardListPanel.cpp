@@ -418,7 +418,7 @@ public:
 enum McdMenuId
 {
 	McdMenuId_Create = 0x888,
-	McdMenuId_Mount,
+	//McdMenuId_Mount,
 	McdMenuId_Rename,
 	McdMenuId_RefreshList,
 	McdMenuId_AssignUnassign,
@@ -439,11 +439,11 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 
 	m_listview = new MemoryCardListView_Simple(this);
 	
-	m_listview->SetMinSize(wxSize(700, m_listview->GetCharHeight() * 13)); // 740 is nice for default font sizes
+	m_listview->SetMinSize(wxSize(600, m_listview->GetCharHeight() * 13)); // 740 is nice for default font sizes
 	
 	m_listview->SetDropTarget( new McdDropTarget(m_listview) );
 
-	m_button_Mount	= new wxButton(this, wxID_ANY, _("Enable port"));
+	//m_button_Mount	= new wxButton(this, wxID_ANY, _("Enable port"));
 
 	m_button_AssignUnassign = new wxButton(this, wxID_ANY, _("Eject"));
 	m_button_Duplicate = new wxButton(this, wxID_ANY, _("Duplicate ..."));
@@ -457,16 +457,16 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 	CreateLayout();
 
 	*s_leftside_buttons	+= 20;
-	*s_leftside_buttons	+= m_button_Mount;
-	*s_leftside_buttons	+= 20;
+	//*s_leftside_buttons	+= m_button_Mount;
+	//*s_leftside_buttons	+= 20;
 
 	*s_leftside_buttons += Label(_("Card: ")) | pxMiddle;
 	*s_leftside_buttons += m_button_AssignUnassign;
-	*s_leftside_buttons	+= 2;
+	*s_leftside_buttons	+= 20;
 	*s_leftside_buttons	+= m_button_Duplicate;
 	*s_leftside_buttons	+= 2;
 	*s_leftside_buttons	+= m_button_Rename;
-	*s_leftside_buttons	+= 8;
+	*s_leftside_buttons	+= 2;
 	*s_leftside_buttons	+= m_button_Create;
 	SetSizerAndFit(GetSizer());
 
@@ -481,7 +481,7 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 
 	Connect( m_listview->GetId(),		wxEVT_COMMAND_LIST_ITEM_RIGHT_CLICK, wxListEventHandler(MemoryCardListPanel_Simple::OnOpenItemContextMenu) );
 
-	Connect( m_button_Mount->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnMountCard));
+//	Connect( m_button_Mount->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnMountCard));
 	Connect( m_button_Create->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnCreateOrDeleteCard));
 	Connect( m_button_Rename->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnRenameFile));
 	Connect( m_button_Duplicate->GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(MemoryCardListPanel_Simple::OnDuplicateFile));
@@ -489,7 +489,7 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 
 	// Popup Menu Connections!
 	Connect( McdMenuId_Create,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnCreateOrDeleteCard) );
-	Connect( McdMenuId_Mount,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnMountCard) );
+	//Connect( McdMenuId_Mount,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnMountCard) );
 	Connect( McdMenuId_Rename,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnRenameFile) );
 	Connect( McdMenuId_AssignUnassign,	wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnAssignUnassignFile) );
 	Connect( McdMenuId_Duplicate,	wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MemoryCardListPanel_Simple::OnDuplicateFile) );
@@ -511,7 +511,7 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
 	if( wxNOT_FOUND == sel )
 	{
 		m_button_Create->Disable();
-		m_button_Mount->Disable();
+//		m_button_Mount->Disable();
 		m_button_Rename->Disable();
 		m_button_Duplicate->Disable();
 		m_button_AssignUnassign->Disable();
@@ -519,6 +519,7 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
 	}
 
 	const McdSlotItem& card( GetCardForViewIndex(sel) );
+
 
 	m_button_Rename->Enable( card.IsPresent );
 	wxString renameTip = _("Rename this memory card ...");
@@ -542,6 +543,7 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
     else
         pxSetToolTip( m_button_Create, _("Create a new memory card and assign it to the selected PS2-Port." ));
 
+/*
 	m_button_Mount->Enable( card.IsPresent && card.Slot>=0);
 	m_button_Mount->SetLabel( card.IsEnabled ? _("Disable Port") : _("Enable Port") );
 	pxSetToolTip( m_button_Mount,
@@ -549,7 +551,7 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
 			? _("Disable the selected PS2-Port (this memory card will be invisible to games/BIOS).")
 			: _("Enable the selected PS2-Port (games/BIOS will see this memory card).")
 	);
-
+*/
 }
 
 void Panels::MemoryCardListPanel_Simple::Apply()
@@ -595,6 +597,13 @@ void Panels::MemoryCardListPanel_Simple::AppStatusEvent_OnSettingsApplied()
 			{
 				Console.Error( L"memcard was enabled but had an invalid file name. Aborting automatic creation. Hope for the best... (%s)", errMsg.c_str() );
 			}
+		}
+
+		if ( !m_Cards[slot].IsEnabled || !wxFileExists( targetFile ) )
+		{
+			m_Cards[slot].IsEnabled = false;
+			m_Cards[slot].IsPresent = false;
+			m_Cards[slot].Filename = L"";
 		}
 
 	}
@@ -869,6 +878,7 @@ void Panels::MemoryCardListPanel_Simple::OnCreateOrDeleteCard(wxCommandEvent& ev
 }
 
 //enable/disapbe port
+/*
 void Panels::MemoryCardListPanel_Simple::OnMountCard(wxCommandEvent& evt)
 {
 	evt.Skip();
@@ -882,6 +892,7 @@ void Panels::MemoryCardListPanel_Simple::OnMountCard(wxCommandEvent& evt)
 	m_listview->RefreshItem(selectedViewIndex);
 	UpdateUI();
 }
+*/
 /*
 //text dialog: can be used for rename: wxGetTextFromUser - avih
 void Panels::MemoryCardListPanel_Simple::OnRelocateCard(wxCommandEvent& evt)
@@ -1021,11 +1032,13 @@ void Panels::MemoryCardListPanel_Simple::OnOpenItemContextMenu(wxListEvent& evt)
 		const McdSlotItem& card( GetCardForViewIndex(idx) );
 
 		if (card.IsPresent){
+			/*
 			if (card.Slot>=0)
 			{
 				junk->Append( McdMenuId_Mount,		card.IsEnabled ? _("Disable Port")	: _("Enable Port") );
 				junk->AppendSeparator();
 			}
+			*/
 			junk->Append( McdMenuId_AssignUnassign,	card.Slot>=0?_("Eject card"):_("Insert card ...") );
 			junk->Append( McdMenuId_Duplicate,	_("Duplicate card ...") );
 			junk->Append( McdMenuId_Rename,		_("Rename card ...") );
