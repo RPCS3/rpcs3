@@ -152,7 +152,13 @@ void SysMtgsThread::PostVsyncEnd()
 	// in the ringbuffer.  The queue limit is disabled when both FrameLimiting and Vsync are
 	// disabled, since the queue can have perverse effects on framerate benchmarking.
 
-	if ((AtomicIncrement(m_QueuedFrameCount) < EmuConfig.GS.VsyncQueueSize) || (!EmuConfig.GS.VsyncEnable && !EmuConfig.GS.FrameLimitEnable)) return;
+	// Edit: It's possible that MTGS is that much faster than the GS plugin that it creates so much lag, 
+	// a game becomes uncontrollable (software rendering for example).
+	// For that reason it's better to have the limit always in place, at the cost of a few max FPS in benchmarks.
+	// If those are needed back, it's better to increase the VsyncQueueSize via PCSX_vm.ini.
+	// (The Xenosaga engine is known to run into this, due to it throwing bulks of data in one frame followed by 2 empty frames.)
+
+	if ((AtomicIncrement(m_QueuedFrameCount) < EmuConfig.GS.VsyncQueueSize) /*|| (!EmuConfig.GS.VsyncEnable && !EmuConfig.GS.FrameLimitEnable)*/) return;
 
 	m_VsyncSignalListener = true;
 	//Console.WriteLn( Color_Blue, "(EEcore Sleep) Vsync\t\tringpos=0x%06x, writepos=0x%06x", volatize(m_ReadPos), m_WritePos );
