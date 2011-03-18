@@ -315,7 +315,7 @@ public:
 		int viewIndex = m_listview->HitTest( wxPoint(x,y), flags);
 		m_listview->SetTargetedItem( viewIndex );
 
-		if( wxNOT_FOUND == viewIndex ) return wxDragNone;
+		// can always drop. non item target is the filesystem placeholder. //if( wxNOT_FOUND == viewIndex ) return wxDragNone;
 
 		return def;
 	}
@@ -332,7 +332,7 @@ public:
 	{
 		int flags = 0;
 		int viewIndex = m_listview->HitTest( wxPoint(x,y), flags);
-		return ( wxNOT_FOUND != viewIndex );
+		return true;// can always drop. non item target is the filesystem placeholder.//( wxNOT_FOUND != viewIndex );
 	}
 
 	// may be called *only* from inside OnData() and will fill m_dataObject
@@ -344,7 +344,7 @@ public:
 
 		int destViewIndex = m_listview->HitTest( wxPoint(x,y), flags);
 		if( wxNOT_FOUND == destViewIndex )
-			return wxDragNone;
+			destViewIndex=-1;//non list item target is the filesystem placeholder.
 
 		if ( !GetData() )
 			return wxDragNone;
@@ -460,7 +460,7 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 	*s_leftside_buttons	+= m_button_Mount;
 	*s_leftside_buttons	+= 20;
 
-	*s_leftside_buttons += Text(_("Card: ")) | pxMiddle;
+	*s_leftside_buttons += Label(_("Card: ")) | pxMiddle;
 	*s_leftside_buttons += m_button_AssignUnassign;
 	*s_leftside_buttons	+= 2;
 	*s_leftside_buttons	+= m_button_Duplicate;
@@ -1213,12 +1213,12 @@ int Panels::MemoryCardListPanel_Simple::GetSlotIndexForViewIndex( int listViewIn
 
 McdSlotItem& Panels::MemoryCardListPanel_Simple::GetCardForViewIndex( int idx )
 {
-	pxAssert( 0<=idx && idx< GetNumVisibleInternalSlots()+1+GetNumFilesVisibleAsFilesystem() );
+	pxAssert( -1<=idx && idx< GetNumVisibleInternalSlots()+1+GetNumFilesVisibleAsFilesystem() );
 
 	if( 0<=idx && idx<GetNumVisibleInternalSlots() )
 		return m_Cards[GetSlotIndexForViewIndex( idx )];
 
-	if( idx == GetNumVisibleInternalSlots() )
+	if( idx==-1 || idx == GetNumVisibleInternalSlots() )
 		return this->m_filesystemPlaceholderCard;
 
 	return this->m_allFilesystemCards.at( idx - GetNumVisibleInternalSlots() - 1 );
