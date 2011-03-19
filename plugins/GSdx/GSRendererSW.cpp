@@ -365,7 +365,7 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 				if(m_vt.m_lod.x > 0)
 				{
-					gd.sel.ltf = (context->TEX1.MMIN & 5) ? 1 : 0;
+					gd.sel.ltf = context->TEX1.MMIN >> 2;
 				}
 				else
 				{
@@ -387,9 +387,22 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				gd.l = GSVector4((float)(-0x10000 << context->TEX1.L));
 				gd.k = GSVector4((float)k);
 
+				if(gd.sel.fst)
+				{
+					ASSERT(gd.sel.lcm == 1);
+					ASSERT(((m_vt.m_min.t.uph(m_vt.m_max.t) == GSVector4::zero()).mask() & 3) == 3); // ratchet and clank (menu)
+
+					gd.sel.lcm = 1;
+				}
+
 				if(gd.sel.lcm)
 				{
-					int lod = std::min<int>(k, mxl);
+					int lod = std::max<int>(std::min<int>(k, mxl), 0);
+
+					if(gd.sel.mmin == 1)
+					{
+						lod = (lod + 0x8000) & 0xffff0000; // rounding
+					}
 
 					gd.lod.i = GSVector4i(lod >> 16);
 					gd.lod.f = GSVector4i(lod & 0xffff).xxxxl().xxzz();
@@ -403,7 +416,7 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				GSVector4 tmin = m_vt.m_min.t;
 				GSVector4 tmax = m_vt.m_max.t;
 
-				//static int s_counter = 0;
+				static int s_counter = 0;
 
 				//t->Save(format("c:/temp1/%08d_%05x_0.bmp", s_counter, context->TEX0.TBP0));
 
@@ -460,10 +473,10 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 					gd.tex[i] = t->m_buff;
 
-					//t->Save(format("c:/temp1/%08d_%05x_%d.bmp", s_counter, context->TEX0.TBP0, i));
+					// t->Save(format("c:/temp1/%08d_%05x_%d.bmp", s_counter, context->TEX0.TBP0, i));
 				}
 
-				//s_counter++;
+				s_counter++;
 
 				m_vt.m_min.t = tmin;
 				m_vt.m_max.t = tmax;

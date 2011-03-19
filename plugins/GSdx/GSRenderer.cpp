@@ -513,6 +513,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			return;
 		case VK_DELETE:
 			m_aa1 = !m_aa1;
+			printf("GSdx: (Software) aa1 is now %s.\n", m_aa1 ? "enabled" : "disabled");
 			return;
 		case VK_INSERT:
 			m_mipmap = !m_mipmap;

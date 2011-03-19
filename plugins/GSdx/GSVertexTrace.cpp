@@ -66,7 +66,7 @@ void GSVertexTrace::UpdateLOD()
 
 	float K = (float)TEX1.K / 16;
 
-	if(TEX1.LCM == 0) // && m_state->PRIM->FST == 0 // if FST => assume Q = 1.0f (should not, but Q is very often bogus, 0 or DEN)
+	if(TEX1.LCM == 0 && m_state->PRIM->FST == 0) // FST == 1 => Q is not interpolated
 	{
 		// LOD = log2(1/|Q|) * (1 << L) + K
 

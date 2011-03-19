@@ -387,13 +387,6 @@ void GSDrawScanlineCodeGenerator::Init()
 
 				vmovdqa(ptr[&m_local.temp.s], xmm2);
 				vmovdqa(ptr[&m_local.temp.t], xmm3);
-
-				if(m_sel.mmin && !m_sel.lcm)
-				{
-					vshufps(xmm4, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
-					vaddps(xmm4, ptr[edx + offsetof(GSScanlineLocalData::skip, q)]);
-					vmovaps(ptr[&m_local.temp.q], xmm4);
-				}
 			}
 			else
 			{
@@ -516,13 +509,6 @@ void GSDrawScanlineCodeGenerator::Step()
 				else
 				{
 					vmovdqa(xmm3, ptr[&m_local.temp.t]);
-				}
-
-				if(m_sel.mmin && !m_sel.lcm)
-				{
-					vshufps(xmm4, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
-					vaddps(xmm4, ptr[&m_local.temp.q]);
-					vmovaps(ptr[&m_local.temp.q], xmm4);
 				}
 			}
 			else
@@ -1175,6 +1161,14 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 		vmaxps(xmm4, xmm0);
 		vcvtps2dq(xmm4, xmm4);
 
+		if(m_sel.mmin == 1) // round-off mode
+		{
+			mov(eax, 0x8000);
+			vmovd(xmm0, eax);
+			vpshufd(xmm0, xmm0, _MM_SHUFFLE(0, 0, 0, 0));
+			vpaddd(xmm4, xmm0);
+		}
+
 		vpsrld(xmm0, xmm4, 16);
 		vmovdqa(ptr[&m_local.temp.lod.i], xmm0);
 /*
@@ -1183,9 +1177,12 @@ vpslld(xmm6, xmm4, 16);
 vpsrld(xmm6, xmm6, 24);
 return;
 */
-		vpshuflw(xmm0, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
-		vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-		vmovdqa(ptr[&m_local.temp.lod.f], xmm0);
+		if(m_sel.mmin == 2) // trilinear mode
+		{
+			vpshuflw(xmm0, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
+			vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
+			vmovdqa(ptr[&m_local.temp.lod.f], xmm0);
+		}
 
 		// shift u/v by (int)lod
 

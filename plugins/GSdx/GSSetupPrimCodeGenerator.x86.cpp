@@ -176,16 +176,11 @@ void GSSetupPrimCodeGenerator::Texture()
 
 	if(m_sel.fst)
 	{
-		// m_local.d4.st = GSVector4i(t * 4.0f);
-
-		if(m_sel.mmin && !m_sel.lcm)
-		{
-			movhps(ptr[&m_local.d4.stq.z], xmm1);
-		}
+		// m_local.d4.stq = GSVector4i(t * 4.0f);
 
 		cvttps2dq(xmm1, xmm1);
 
-		movq(ptr[&m_local.d4.stq], xmm1);
+		movdqa(ptr[&m_local.d4.stq], xmm1);
 	}
 	else
 	{
@@ -194,7 +189,7 @@ void GSSetupPrimCodeGenerator::Texture()
 		movaps(ptr[&m_local.d4.stq], xmm1);
 	}
 
-	for(int j = 0, k = m_sel.fst && !(m_sel.mmin && !m_sel.lcm) ? 2 : 3; j < k; j++)
+	for(int j = 0, k = m_sel.fst ? 2 : 3; j < k; j++)
 	{
 		// GSVector4 ds = t.xxxx();
 		// GSVector4 dt = t.yyyy();
@@ -210,7 +205,7 @@ void GSSetupPrimCodeGenerator::Texture()
 			movaps(xmm2, xmm1);
 			mulps(xmm2, Xmm(4 + i));
 
-			if(m_sel.fst && !(m_sel.mmin && !m_sel.lcm))
+			if(m_sel.fst)
 			{
 				// m_local.d[i].s/t = GSVector4i(v);
 
