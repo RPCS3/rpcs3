@@ -41,7 +41,7 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, const
 	, m_mcdpath( mcdpath )
 	, m_mcdfile( suggested_mcdfileName )//suggested_and_result_mcdfileName.IsEmpty() ? g_Conf->Mcd[slot].Filename.GetFullName()
 {
-	
+
 	SetMinWidth( 472 );
 	//m_filepicker	= NULL;
 
@@ -70,24 +70,24 @@ Dialogs::CreateMemoryCardDialog::CreateMemoryCardDialog( wxWindow* parent, const
 	{
 		s_padding += Heading( _( "New memory card:" ) )					| StdExpand();
 		s_padding += Heading( wxString(_("At folder:    ")) + (m_mcdpath + m_mcdfile).GetPath() ).Unwrapped()	| StdExpand();
-		
+
 		wxBoxSizer& s_filename( *new wxBoxSizer(wxHORIZONTAL) );
 		s_filename += Heading( _("Select file name: ")).SetMinWidth(150);
 		m_text_filenameInput->SetMinSize(wxSize(150,20));
 		m_text_filenameInput->SetValue ((m_mcdpath + m_mcdfile).GetName());
 		s_filename += m_text_filenameInput;
 		s_filename += Heading( L".ps2" );
-		
+
 		s_padding += s_filename | wxALIGN_LEFT;
 
 	}
-	
+
 	s_padding += m_radio_CardSize			| StdExpand();
 	#ifdef __WXMSW__
 	if( m_check_CompressNTFS )
 		s_padding += m_check_CompressNTFS	| StdExpand();
 	#endif
-	
+
 	s_padding += 12;
 	s_padding += s_buttons	| StdCenter();
 
@@ -127,7 +127,7 @@ bool Dialogs::CreateMemoryCardDialog::CreateIt( const wxString& mcdFile, uint si
 		if( fp.Write( m_effeffs, sizeof(m_effeffs) ) == 0 )
 			return false;
 	}
-	
+
 	return true;
 }
 
@@ -183,12 +183,12 @@ void Dialogs::CreateMemoryCardDialog::CreateControls()
 		)
 	);
 
-	m_text_filenameInput = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
-
 	// Initial value of the checkbox is saved between calls to the dialog box.  If the user checks
 	// the option, it remains checked for future dialog.  If the user unchecks it, ditto.
 	m_check_CompressNTFS->SetValue( g_Conf->McdCompressNTFS );
 	#endif
+
+	m_text_filenameInput = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
 
 	const RadioPanelItem tbl_CardSizes[] =
 	{

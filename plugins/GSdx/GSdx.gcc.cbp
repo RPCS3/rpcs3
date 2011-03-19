@@ -46,6 +46,7 @@
 			<Add option="-m32" />
 			<Add option="-mpreferred-stack-boundary=2" />
 			<Add option="-mfpmath=sse" />
+			<Add option="-Wno-invalid-offsetof" />
 			<Add option="-D_LINUX" />
 		</Compiler>
 		<Linker>
