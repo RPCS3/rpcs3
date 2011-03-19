@@ -81,6 +81,7 @@ public:
 		SMTDDS1,
 		SMTDDS2,
 		RozenMaidenGebetGarden,
+		SuikodenTactics,
 		TitleCount,
 	};
 

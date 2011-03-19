@@ -2958,7 +2958,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 		{
 			movdqa(ptr[&m_local.temp.test], xmm7);
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[0]]);
+			mov(ebx, ptr[&lod_i->u32[0]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm6, xmm5, 0);
@@ -2966,7 +2966,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 			ReadTexel(xmm4, xmm2, 0);
 			psrldq(xmm2, 4);
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[1]]);
+			mov(ebx, ptr[&lod_i->u32[1]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm1, xmm5, 0);
@@ -2977,7 +2977,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 			punpckldq(xmm6, xmm1);
 			punpckldq(xmm4, xmm7);
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[2]]);
+			mov(ebx, ptr[&lod_i->u32[2]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm1, xmm5, 0);
@@ -2985,7 +2985,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 			ReadTexel(xmm7, xmm2, 0);
 			psrldq(xmm2, 4);
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[3]]);
+			mov(ebx, ptr[&lod_i->u32[3]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm5, xmm5, 0);
@@ -2997,7 +2997,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 			punpcklqdq(xmm6, xmm1);
 			punpcklqdq(xmm4, xmm7);
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[0]]);
+			mov(ebx, ptr[&lod_i->u32[0]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm1, xmm0, 0);
@@ -3005,7 +3005,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 			ReadTexel(xmm5, xmm3, 0);
 			psrldq(xmm3, 4);
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[1]]);
+			mov(ebx, ptr[&lod_i->u32[1]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm2, xmm0, 0);
@@ -3016,7 +3016,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 			punpckldq(xmm1, xmm2);
 			punpckldq(xmm5, xmm7);
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[2]]);
+			mov(ebx, ptr[&lod_i->u32[2]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm2, xmm0, 0);
@@ -3024,7 +3024,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 			ReadTexel(xmm7, xmm3, 0);
 			psrldq(xmm3, 4);
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[3]]);
+			mov(ebx, ptr[&lod_i->u32[3]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm0, xmm0, 0);
@@ -3040,13 +3040,13 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 		}
 		else
 		{
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[0]]);
+			mov(ebx, ptr[&lod_i->u32[0]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm6, xmm5, 0);
 			psrldq(xmm5, 4); // shuffle instead? (1 2 3 0 ~ rotation)
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[1]]);
+			mov(ebx, ptr[&lod_i->u32[1]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm1, xmm5, 0);
@@ -3054,13 +3054,13 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 			punpckldq(xmm6, xmm1);
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[2]]);
+			mov(ebx, ptr[&lod_i->u32[2]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm1, xmm5, 0);
 			psrldq(xmm5, 4);
 
-			mov(ebx, ptr[&m_local.temp.lod.i.u32[3]]);
+			mov(ebx, ptr[&lod_i->u32[3]]);
 			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
 
 			ReadTexel(xmm4, xmm5, 0);

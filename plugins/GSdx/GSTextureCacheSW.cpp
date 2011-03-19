@@ -119,7 +119,7 @@ const GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0
 
 	if(!t->Update(TEX0, TEXA, r))
 	{
-		printf("!@#$\n"); // memory allocation may fail if the game is too hungry
+		printf("!@#$\n"); // memory allocation may fail if the game is too hungry (tales of legendia fight transition/scene)
 
 		RemoveAt(t);
 
@@ -256,13 +256,15 @@ bool GSTextureCacheSW::Texture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA&
 
 	bool repeating = m_TEX0.IsRepeating();
 
-	if(m_TEX0.TBW == 1) // repeating)
+	if(m_TEX0.TBW == 1 && m_tw != 0) // repeating)
 	{
 		// FIXME: 
 		// - marking a block prevents fetching it again to a different part of the texture
 		// - only a real issue for TBW = 1 mipmap levels, where the repeating part is below and often exploited (onimusha 3 intro / sidewalk)
 
-		r = GSVector4i(0, 0, tw, th);
+		// r = GSVector4i(0, 0, tw, th);
+		r.top = 0;
+		r.bottom = th;
 	}
 
 	r = r.ralign<Align_Outside>(bs);

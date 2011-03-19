@@ -129,7 +129,10 @@ void GSRendererSW::Draw()
 
 	GSScanlineGlobalData gd;
 
-	GetScanlineGlobalData(gd);
+	if(!GetScanlineGlobalData(gd))
+	{
+		return;
+	}
 
 	if(!gd.sel.fwrite && !gd.sel.zwrite)
 	{
@@ -244,7 +247,7 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 
 #include "GSTextureSW.h"
 
-void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
+bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 {
 	const GSDrawingEnvironment& env = m_env;
 	const GSDrawingContext* context = m_context;
@@ -346,7 +349,7 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 			const GSTextureCacheSW::Texture* t = m_tc->Lookup(context->TEX0, env.TEXA, r);
 
-			if(t == NULL) {ASSERT(0); return;}
+			if(t == NULL) {ASSERT(0); return false;}
 
 			gd.tex[0] = t->m_buff;
 			gd.sel.tw = t->m_tw - 3;
@@ -469,7 +472,7 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 					const GSTextureCacheSW::Texture* t = m_tc->Lookup(MIP_TEX0, env.TEXA, r, gd.sel.tw + 3);
 
-					if(t == NULL) {ASSERT(0); return;}
+					if(t == NULL) {ASSERT(0); return false;}
 
 					gd.tex[i] = t->m_buff;
 
@@ -684,6 +687,8 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 	{
 		gd.zm |= GSVector4i::xffff0000();
 	}
+
+	return true;
 }
 
 template<uint32 prim, uint32 tme, uint32 fst>
@@ -848,5 +853,7 @@ if(!m_dump)
 		}
 
 		m_count += count;
+
+		// Flush();
 	}
 }

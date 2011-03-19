@@ -2482,6 +2482,19 @@ bool GSC_HauntingGround(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_SuikodenTactics(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(!fi.TME && fi.TPSM == PSM_PSMT8H && fi.FPSM == 0 && fi.FBMSK == 0x0FF000000 && fi.TBP0 == 0 && GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
+		{
+			skip = 4;
+		}
+	}
+
+	return true;
+}
+
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
 	GSFrameInfo fi;
@@ -2536,6 +2549,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::ValkyrieProfile2] = GSC_ValkyrieProfile2;
 		map[CRC::RadiataStories] = GSC_RadiataStories;
 		map[CRC::HauntingGround] = GSC_HauntingGround;
+		map[CRC::SuikodenTactics] = GSC_SuikodenTactics;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

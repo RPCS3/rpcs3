@@ -42,7 +42,7 @@ protected:
 	void Draw();
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 
-	void GetScanlineGlobalData(GSScanlineGlobalData& gd);
+	bool GetScanlineGlobalData(GSScanlineGlobalData& gd);
 
 public:
 	GSRendererSW(int threads);
