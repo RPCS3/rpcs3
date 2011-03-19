@@ -183,8 +183,8 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Config_Language,	Menu_Language_Click );
 	ConnectMenu( MenuId_Config_ResetAll,	Menu_ResetAllSettings_Click );
 
-//	ConnectMenu( MenuId_Config_Multitap0Toggle,	Menu_MultitapToggle_Click );
-//	ConnectMenu( MenuId_Config_Multitap1Toggle,	Menu_MultitapToggle_Click );
+	ConnectMenu( MenuId_Config_Multitap0Toggle,	Menu_MultitapToggle_Click );
+	ConnectMenu( MenuId_Config_Multitap1Toggle,	Menu_MultitapToggle_Click );
 
 	ConnectMenu( MenuId_Video_WindowSettings,	Menu_WindowSettings_Click );
 	ConnectMenu( MenuId_Video_CoreSettings,		Menu_GSSettings_Click );
@@ -461,9 +461,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menuConfig.AppendSeparator();
 	m_menuConfig.Append(MenuId_Config_Patches,	_("Patches (unimplemented)"),	wxEmptyString);
 
-//	m_menuConfig.AppendSeparator();
-//	m_menuConfig.Append(MenuId_Config_Multitap0Toggle,	_("Multitap 1"),	wxEmptyString, wxITEM_CHECK );
-//	m_menuConfig.Append(MenuId_Config_Multitap1Toggle,	_("Multitap 2"),	wxEmptyString, wxITEM_CHECK );
+	m_menuConfig.AppendSeparator();
+	m_menuConfig.Append(MenuId_Config_Multitap0Toggle,	_("Multitap 1"),	wxEmptyString, wxITEM_CHECK );
+	m_menuConfig.Append(MenuId_Config_Multitap1Toggle,	_("Multitap 2"),	wxEmptyString, wxITEM_CHECK );
 
 	m_menuConfig.AppendSeparator();
 	m_menuConfig.Append(MenuId_Config_ResetAll,	_("Clear all settings..."),
@@ -658,8 +658,8 @@ void MainEmuFrame::ApplyConfigToGui(AppConfig& configToApply, int flags)
 		menubar.Check( MenuId_Console_Stdio, configToApply.EmuOptions.ConsoleToStdio );
 #endif
 
-//		menubar.Check( MenuId_Config_Multitap0Toggle, configToApply.EmuOptions.MultitapPort0_Enabled );
-//		menubar.Check( MenuId_Config_Multitap1Toggle, configToApply.EmuOptions.MultitapPort1_Enabled );
+		menubar.Check( MenuId_Config_Multitap0Toggle, configToApply.EmuOptions.MultitapPort0_Enabled );
+		menubar.Check( MenuId_Config_Multitap1Toggle, configToApply.EmuOptions.MultitapPort1_Enabled );
 	}
 
 	UpdateIsoSrcSelection();	//shouldn't be affected by presets but updates from g_Conf anyway and not from configToApply, so no problem here.

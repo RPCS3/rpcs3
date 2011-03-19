@@ -53,7 +53,7 @@ bool EnumerateMemoryCard( McdSlotItem& dest, const wxFileName& filename, const w
 	const wxString fullpath( filename.GetFullPath() );
 	if( !filename.FileExists() ) return false;
 
-	Console.WriteLn( fullpath );
+	DevCon.WriteLn( fullpath );
 	wxFFile mcdFile( fullpath );
 	if( !mcdFile.IsOpened() ) return false;	// wx should log the error for us.
 	if( mcdFile.Length() < (1024*528) )
@@ -439,7 +439,7 @@ Panels::MemoryCardListPanel_Simple::MemoryCardListPanel_Simple( wxWindow* parent
 
 	m_listview = new MemoryCardListView_Simple(this);
 	
-	m_listview->SetMinSize(wxSize(600, m_listview->GetCharHeight() * 13)); // 740 is nice for default font sizes
+	m_listview->SetMinSize(wxSize(620, m_listview->GetCharHeight() * 13)); // 740 is nice for default font sizes
 	
 	m_listview->SetDropTarget( new McdDropTarget(m_listview) );
 
@@ -561,6 +561,8 @@ void Panels::MemoryCardListPanel_Simple::Apply()
 	ScopedCoreThreadClose closed_core;
 	closed_core.AllowResume();
 
+	int used=0;
+	Console.WriteLn( L"Apply Memory cards:" );
 	for( uint slot=0; slot<8; ++slot )
 	{
 		g_Conf->Mcd[slot].Enabled = m_Cards[slot].IsEnabled && m_Cards[slot].IsPresent;
@@ -568,7 +570,15 @@ void Panels::MemoryCardListPanel_Simple::Apply()
 			g_Conf->Mcd[slot].Filename = m_Cards[slot].Filename;
 		else
 			g_Conf->Mcd[slot].Filename = L"";
+
+		if( g_Conf->Mcd[slot].Enabled )
+		{
+			used++;
+			Console.WriteLn( L"slot[%d]='%s'", slot, g_Conf->Mcd[slot].Filename.GetFullName().c_str() );
+		}
 	}
+	if( !used )
+		Console.WriteLn( L"No active slots" );
 
 	SetForceMcdEjectTimeoutNow();
 
@@ -794,7 +804,7 @@ bool Panels::MemoryCardListPanel_Simple::UiDuplicateCard(McdSlotItem& src, McdSl
 
 		// Destination memcard isEnabled state is the same now as the source's
 		wxString success;
-		success.Printf(_("Memory card '%s' duplicated to '%s'.\n\nBoth card files are now identical."),
+		success.Printf(_("Memory card '%s' duplicated to '%s'."),
 			src.Filename.GetFullName().c_str(),
 			dest.Filename.GetFullName().c_str()
 			);

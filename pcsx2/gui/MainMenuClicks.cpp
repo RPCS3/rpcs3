@@ -395,7 +395,7 @@ void MainEmuFrame::Menu_IsoBrowse_Click( wxCommandEvent &event )
 	AppSaveSettings();		// save the new iso selection; update menus!
 }
 
-/*//now only available at the memory card manager.
+
 void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent& )
 {
 	g_Conf->EmuOptions.MultitapPort0_Enabled = GetMenuBar()->IsChecked( MenuId_Config_Multitap0Toggle );
@@ -405,7 +405,6 @@ void MainEmuFrame::Menu_MultitapToggle_Click( wxCommandEvent& )
 
 	//evt.Skip();
 }
-*/
 
 void MainEmuFrame::Menu_EnableBackupStates_Click( wxCommandEvent& )
 {

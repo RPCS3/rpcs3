@@ -45,7 +45,7 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 	);
 
 	//m_check_SavestateBackup = new pxCheckBox( this, pxsFmt(_("Backup existing Savestate when creating a new one")) );
-
+/*
 	for( uint i=0; i<2; ++i )
 	{
 		m_check_Multitap[i] = new pxCheckBox( this, pxsFmt(_("Use Multitap on Port %u"), i+1) );
@@ -63,7 +63,7 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 	//*this += 4;
 
 	//*this += m_check_SavestateBackup;
-
+*/
 	*this += 4;
 	*this	+= new wxStaticLine( this )	| StdExpand();
 
@@ -72,8 +72,8 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 
 void Panels::McdConfigPanel_Toggles::Apply()
 {
-	g_Conf->EmuOptions.MultitapPort0_Enabled	= m_check_Multitap[0]->GetValue();
-	g_Conf->EmuOptions.MultitapPort1_Enabled	= m_check_Multitap[1]->GetValue();
+//	g_Conf->EmuOptions.MultitapPort0_Enabled	= m_check_Multitap[0]->GetValue();
+//	g_Conf->EmuOptions.MultitapPort1_Enabled	= m_check_Multitap[1]->GetValue();
 
 	//g_Conf->EmuOptions.BackupSavestate			= m_check_SavestateBackup->GetValue();
 	g_Conf->EmuOptions.McdEnableEjection		= m_check_Ejection->GetValue();
@@ -81,8 +81,8 @@ void Panels::McdConfigPanel_Toggles::Apply()
 
 void Panels::McdConfigPanel_Toggles::AppStatusEvent_OnSettingsApplied()
 {
-	m_check_Multitap[0]		->SetValue( g_Conf->EmuOptions.MultitapPort0_Enabled );
-	m_check_Multitap[1]		->SetValue( g_Conf->EmuOptions.MultitapPort1_Enabled );
+//	m_check_Multitap[0]		->SetValue( g_Conf->EmuOptions.MultitapPort0_Enabled );
+//	m_check_Multitap[1]		->SetValue( g_Conf->EmuOptions.MultitapPort1_Enabled );
 
 	//m_check_SavestateBackup ->SetValue( g_Conf->EmuOptions.BackupSavestate );
 	m_check_Ejection		->SetValue( g_Conf->EmuOptions.McdEnableEjection );
@@ -123,13 +123,13 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	*s_bottom += new McdConfigPanel_Toggles( this )	| StdExpand();
 
 	*this+= s_bottom | StdExpand();
-
+/*
 	for( uint i=0; i<2; ++i )
 	{
 		if( pxCheckBox* check = (pxCheckBox*)FindWindow(pxsFmt( L"CheckBox::Multitap%u", i )) )
 			Connect( check->GetId(), wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(McdConfigDialog::OnMultitapClicked) );
 	}
-
+*/
 	AddOkCancel(s_bottom);
 
 	//make this dialog fit to current elements (else can be shrinked too much)
@@ -137,7 +137,7 @@ Dialogs::McdConfigDialog::McdConfigDialog( wxWindow* parent )
 	//    So using the "bigger" method: SetSizerAndFit, with existing sizer (set earlier to s_flex) - avih]
 	SetSizerAndFit(GetSizer());
 }
-
+/*
 void Dialogs::McdConfigDialog::OnMultitapClicked( wxCommandEvent& evt )
 {
 	evt.Skip();
@@ -146,7 +146,7 @@ void Dialogs::McdConfigDialog::OnMultitapClicked( wxCommandEvent& evt )
 	if( pxCheckBox* box = (pxCheckBox*)evt.GetEventObject() )
 		m_panel_mcdlist->SetMultitapEnabled( (int)box->GetClientData(), box->IsChecked() );
 }
-
+*/
 bool Dialogs::McdConfigDialog::Show( bool show )
 {
 	// Suspend the emulation before any file operations on the memory cards can be done.

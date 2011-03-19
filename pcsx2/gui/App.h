@@ -131,8 +131,8 @@ enum MenuIdentifiers
 	MenuId_Config_DEV9,
 	MenuId_Config_Patches,
 
-	//MenuId_Config_Multitap0Toggle,
-	//MenuId_Config_Multitap1Toggle,
+	MenuId_Config_Multitap0Toggle,
+	MenuId_Config_Multitap1Toggle,
 
 	// Plugin Sections
 	// ---------------

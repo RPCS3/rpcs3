@@ -280,7 +280,7 @@ namespace Panels
 		typedef BaseApplicableConfigPanel _parent;
 
 	protected:
-		pxCheckBox*		m_check_Multitap[2];
+		//pxCheckBox*		m_check_Multitap[2];
 		pxCheckBox*		m_check_Ejection;
 
 		//moved to the system menu, just below "Save State"

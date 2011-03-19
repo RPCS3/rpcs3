@@ -143,7 +143,7 @@ namespace Dialogs
 
 	protected:
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->McdSettingsTabName; }
-		void OnMultitapClicked( wxCommandEvent& evt );
+		//void OnMultitapClicked( wxCommandEvent& evt );
 	};
 
 	// --------------------------------------------------------------------------------------
