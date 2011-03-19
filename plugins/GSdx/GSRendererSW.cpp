@@ -353,12 +353,35 @@ void GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt.m_lod.y > 0)
 			{
-				//gd.sel.ltf = context->TEX1.MMIN & 1; // TODO: mmag != (mmin & 1) && lod <= 0
-				gd.sel.mmin = context->TEX1.MMIN >> 1;
+				// TEX1.MMIN
+				// 000 p
+				// 001 l
+				// 010 p round
+				// 011 p tri
+				// 100 l round
+				// 101 l tri
+			
+				// TODO: (int)m_vt.m_lod.x >= mxl => LCM == 1
+
+				if(m_vt.m_lod.x > 0)
+				{
+					gd.sel.ltf = (context->TEX1.MMIN & 5) ? 1 : 0;
+				}
+				else
+				{
+					// TODO: isbilinear(mmag) != isbilinear(mmin) && m_vt.m_lod.x <= 0 && m_vt.m_lod.y > 0
+				}
+
+				gd.sel.mmin = (context->TEX1.MMIN & 1) + 1; // 1: round, 2: tri
 				gd.sel.lcm = context->TEX1.LCM;
 
-				int mxl = (std::min<int>((int)context->TEX1.MXL, 6) << 16) - 1;
+				int mxl = (std::min<int>((int)context->TEX1.MXL, 6) << 16);
 				int k = context->TEX1.K << 12;
+
+				if(gd.sel.mmin == 2)
+				{
+					mxl--;
+				}
 
 				gd.mxl = GSVector4((float)mxl);
 				gd.l = GSVector4((float)(-0x10000 << context->TEX1.L));
