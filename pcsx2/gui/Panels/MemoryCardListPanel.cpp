@@ -507,10 +507,14 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
 	if( !m_listview ) return;
 
 	int sel = m_listview->GetFirstSelected();
-
+	
+	m_button_Create->Enable();
+	
 	if( wxNOT_FOUND == sel )
 	{
-		m_button_Create->Disable();
+		m_button_Create->SetLabel( _("Create ...") );
+		pxSetToolTip( m_button_Create, _("Create a new memory card." ));
+
 //		m_button_Mount->Disable();
 		m_button_Rename->Disable();
 		m_button_Duplicate->Disable();
@@ -534,14 +538,15 @@ void Panels::MemoryCardListPanel_Simple::UpdateUI()
 	wxString dupTip = _("Create a duplicate of this memory card ...");
 	pxSetToolTip( m_button_Duplicate, dupTip );
 
-	m_button_Create->Enable(card.Slot>=0 || card.IsPresent);
+	//m_button_Create->Enable( card.Slot>=0 || card.IsPresent);
 	m_button_Create->SetLabel( card.IsPresent ? _("Delete") : _("Create ...") );
-	wxString deleteTip = _("Permanently delete this memory card from disk (all contents are lost)");
 
     if (card.IsPresent)
-        pxSetToolTip( m_button_Create, deleteTip);
-    else
-        pxSetToolTip( m_button_Create, _("Create a new memory card and assign it to the selected PS2-Port." ));
+        pxSetToolTip( m_button_Create, _("Permanently delete this memory card from disk (all contents are lost)"));
+	else if( card.Slot >= 0 )
+        pxSetToolTip( m_button_Create, _("Create a new memory card and assign it to this Port." ));
+	else
+        pxSetToolTip( m_button_Create, _("Create a new memory card." ));
 
 /*
 	m_button_Mount->Enable( card.IsPresent && card.Slot>=0);
@@ -668,7 +673,8 @@ void Panels::MemoryCardListPanel_Simple::DoRefresh()
 // =====================================================================================================
 
 void Panels::MemoryCardListPanel_Simple::UiCreateNewCard( McdSlotItem& card )
-{
+{//card can also be the filesystem placeholder. On that case, the changes
+ //  made to it will be reverted on refresh, and we'll just have a new card at the folder.
 	if( card.IsPresent ){
 		Console.WriteLn("Error: Aborted: create mcd invoked but but a file is already associated.");
 		return;
@@ -876,8 +882,9 @@ void Panels::MemoryCardListPanel_Simple::UiRenameCard( McdSlotItem& card )
 
 void Panels::MemoryCardListPanel_Simple::OnCreateOrDeleteCard(wxCommandEvent& evt)
 {
-	const int selectedViewIndex = m_listview->GetFirstSelected();
-	if( wxNOT_FOUND == selectedViewIndex ) return;
+	int selectedViewIndex = m_listview->GetFirstSelected();
+	if( wxNOT_FOUND == selectedViewIndex )
+		selectedViewIndex = -1;//get filesystem placeholder, just create a new card at the filesystem.
 
 	McdSlotItem& card( GetCardForViewIndex(selectedViewIndex) );
 
@@ -1042,24 +1049,19 @@ void Panels::MemoryCardListPanel_Simple::OnOpenItemContextMenu(wxListEvent& evt)
 		const McdSlotItem& card( GetCardForViewIndex(idx) );
 
 		if (card.IsPresent){
-			/*
-			if (card.Slot>=0)
-			{
-				junk->Append( McdMenuId_Mount,		card.IsEnabled ? _("Disable Port")	: _("Enable Port") );
-				junk->AppendSeparator();
-			}
-			*/
 			junk->Append( McdMenuId_AssignUnassign,	card.Slot>=0?_("Eject card"):_("Insert card ...") );
 			junk->Append( McdMenuId_Duplicate,	_("Duplicate card ...") );
 			junk->Append( McdMenuId_Rename,		_("Rename card ...") );
+			junk->Append( McdMenuId_Create,		_("Delete card") );
 		}
+		else
+			junk->Append( McdMenuId_Create, _("Create a new card ...") );
 
-		if ( card.IsPresent || card.Slot>=0 )
-		{
-			junk->Append( McdMenuId_Create,		card.IsPresent ? _("Delete card")	: _("Create a new card ...") );
-			junk->AppendSeparator();
-		}
 	}
+	else
+		junk->Append( McdMenuId_Create, _("Create a new card ...") );
+
+	junk->AppendSeparator();
 
 	junk->Append( McdMenuId_RefreshList, _("Refresh List") );
 
