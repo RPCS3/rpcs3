@@ -67,6 +67,11 @@ void States_FreezeCurrentSlot()
 {
 	// FIXME : Use of the IsSavingOrLoading flag is mostly a hack until we implement a
 	// complete thread to manage queuing savestate tasks, and zipping states to disk.  --air
+	if( !SysHasValidState() )
+	{
+		Console.WriteLn( "Save state: Aborting (VM is not active)." );
+		return;
+	}
 
 	if( wxGetApp().HasPendingSaves() || AtomicExchange(IsSavingOrLoading, true) )
 	{
@@ -83,6 +88,12 @@ void States_FreezeCurrentSlot()
 
 void _States_DefrostCurrentSlot( bool isFromBackup )
 {
+	if( !SysHasValidState() )
+	{
+		Console.WriteLn( "Load state: Aborting (VM is not active)." );
+		return;
+	}
+
 	if( AtomicExchange(IsSavingOrLoading, true) )
 	{
 		Console.WriteLn( "Load or save action is already pending." );
