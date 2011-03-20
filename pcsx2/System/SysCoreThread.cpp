@@ -15,7 +15,7 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-
+#include "gui/App.h"
 #include "IopBios.h"
 
 #include "Counters.h"
@@ -240,6 +240,7 @@ bool SysCoreThread::StateCheckInThread()
 void SysCoreThread::DoCpuExecute()
 {
 	m_hasActiveMachine = true;
+	UI_EnableSysActions();
 	Cpu->Execute();
 }
 

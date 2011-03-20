@@ -46,7 +46,8 @@ void UI_UpdateSysControls()
 
 	sApp.PostAction( CoreThreadStatusEvent( CoreThread_Indeterminate ) );
 
-	_SaveLoadStuff( true );
+	//_SaveLoadStuff( true );
+	_SaveLoadStuff( SysHasValidState() );
 }
 
 void UI_DisableSysReset()
