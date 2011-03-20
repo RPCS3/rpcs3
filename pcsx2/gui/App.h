@@ -107,7 +107,8 @@ enum MenuIdentifiers
 	MenuId_State_Load,
 	MenuId_State_LoadOther,
 	MenuId_State_Load01,		// first of many load slots
-	MenuId_State_Save = MenuId_State_Load01+20,
+	MenuId_State_LoadBackup = MenuId_State_Load01+20,
+	MenuId_State_Save,
 	MenuId_State_SaveOther,
 	MenuId_State_Save01,		// first of many save slots
 

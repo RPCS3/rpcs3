@@ -29,7 +29,7 @@
 #endif
 
 // ------------------------------------------------------------------------
-wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid ) const
+wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid, int loadBackupId ) const
 {
 	wxMenu* mnuSubstates = new wxMenu();
 
@@ -37,8 +37,16 @@ wxMenu* MainEmuFrame::MakeStatesSubMenu( int baseid ) const
 	{
 		mnuSubstates->Append( baseid+i+1, wxsFormat(_("Slot %d"), i) );
 	}
-	mnuSubstates->AppendSeparator();
-	mnuSubstates->Append( baseid - 1,	_("Other...") );
+	if( loadBackupId>=0 )
+	{
+		mnuSubstates->AppendSeparator();
+
+		wxMenuItem* m = mnuSubstates->Append( loadBackupId,	_("Backup") );
+		m->Enable( false );
+		States_registerLoadBackupMenuItem( m );
+	}
+
+	//mnuSubstates->Append( baseid - 1,	_("Other...") );
 	return mnuSubstates;
 }
 
@@ -210,11 +218,13 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Sys_Restart,		Menu_SysReset_Click );
 	ConnectMenu( MenuId_Sys_Shutdown,		Menu_SysShutdown_Click );
 
-	ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
+	//ConnectMenu( MenuId_State_LoadOther,	Menu_LoadStateOther_Click );
 
 	ConnectMenuRange(MenuId_State_Load01+1, 10, Menu_LoadStates_Click);
+	ConnectMenu( MenuId_State_LoadBackup,	Menu_LoadStates_Click );
+	
 
-	ConnectMenu( MenuId_State_SaveOther,	Menu_SaveStateOther_Click );
+	//ConnectMenu( MenuId_State_SaveOther,	Menu_SaveStateOther_Click );
 
 	ConnectMenuRange(MenuId_State_Save01+1, 10, Menu_SaveStates_Click);
 
@@ -306,7 +316,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	, m_menuMisc	( *new wxMenu() )
 	, m_menuDebug	( *new wxMenu() )
 
-	, m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01 ) )
+	, m_LoadStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Load01, MenuId_State_LoadBackup ) )
 	, m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) )
 
 	, m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, _("Show Console"), wxEmptyString, wxITEM_CHECK ) )

@@ -213,7 +213,7 @@ protected:
 //     MainEmuFram Internal API for Populating Main Menu Contents
 // ------------------------------------------------------------------------
 
-	wxMenu* MakeStatesSubMenu( int baseid ) const;
+	wxMenu* MakeStatesSubMenu( int baseid, int loadBackupId=-1 ) const;
 	wxMenu* MakeStatesMenu();
 	wxMenu* MakeLanguagesMenu() const;
 

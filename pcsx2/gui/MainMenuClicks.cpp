@@ -450,6 +450,12 @@ void MainEmuFrame::Menu_OpenELF_Click(wxCommandEvent&)
 
 void MainEmuFrame::Menu_LoadStates_Click(wxCommandEvent &event)
 {
+	if( event.GetId() == MenuId_State_LoadBackup )
+	{
+		States_DefrostCurrentSlotBackup();
+		return;
+	}
+
 	States_SetCurrentSlot( event.GetId() - MenuId_State_Load01 - 1 );
 	States_DefrostCurrentSlot();
 }

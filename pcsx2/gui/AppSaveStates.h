@@ -59,9 +59,12 @@ protected:
 extern void StateCopy_SaveToFile( const wxString& file );
 extern void StateCopy_LoadFromFile( const wxString& file );
 extern void StateCopy_SaveToSlot( uint num );
-extern void StateCopy_LoadFromSlot( uint slot );
+extern void StateCopy_LoadFromSlot( uint slot, bool isFromBackup = false );
+
+extern void States_registerLoadBackupMenuItem( wxMenuItem* loadBackupMenuItem );
 
 extern bool States_isSlotUsed(int num);
+extern void States_DefrostCurrentSlotBackup();
 extern void States_DefrostCurrentSlot();
 extern void States_FreezeCurrentSlot();
 extern void States_CycleSlotForward();

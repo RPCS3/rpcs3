@@ -275,6 +275,12 @@ static const GlobalCommandDescriptor CommandDeclarations[] =
 		pxL( "Loads a virtual machine state from the current slot." ),
 	},
 
+	{	"States_DefrostCurrentSlotBackup",
+		States_DefrostCurrentSlotBackup,
+		pxL( "Load State Backup" ),
+		pxL( "Loads virtual machine state backup for current slot." ),
+	},
+
 	{	"States_CycleSlotForward",
 		States_CycleSlotForward,
 		pxL( "Cycle to next slot" ),

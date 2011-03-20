@@ -670,9 +670,9 @@ void StateCopy_SaveToSlot( uint num )
 	StateCopy_SaveToFile( file );
 }
 
-void StateCopy_LoadFromSlot( uint slot )
+void StateCopy_LoadFromSlot( uint slot, bool isFromBackup )
 {
-	wxString file( SaveStateBase::GetFilename( slot ) );
+	wxString file( SaveStateBase::GetFilename( slot ) + wxString( isFromBackup?L".backup":L"" ) );
 
 	if( !wxFileExists( file ) )
 	{
@@ -680,7 +680,7 @@ void StateCopy_LoadFromSlot( uint slot )
 		return;
 	}
 
-	Console.WriteLn( Color_StrongGreen, "Loading savestate from slot %d...", slot );
+	Console.WriteLn( Color_StrongGreen, L"Loading savestate from slot %d...%s", slot, wxString( isFromBackup?L" (backup)":L"" ).c_str() );
 	Console.Indent().WriteLn( Color_StrongGreen, L"filename: %s", file.c_str() );
 
 	StateCopy_LoadFromFile( file );
