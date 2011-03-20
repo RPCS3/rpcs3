@@ -195,6 +195,10 @@ void GSDrawScanlineCodeGenerator::blend8(const Xmm& a, const Xmm& b)
 {
 	#if _M_SSE >= 0x500
 	
+	vpblendvb(a, a, b, xmm0);
+
+	#elif _M_SSE >= 0x401
+	
 	pblendvb(a, b);
 
 	#else
@@ -208,6 +212,10 @@ void GSDrawScanlineCodeGenerator::blend8r(const Xmm& b, const Xmm& a)
 {
 	#if _M_SSE >= 0x500
 	
+	vpblendvb(b, a, b, xmm0);
+
+	#elif _M_SSE >= 0x401
+
 	pblendvb(a, b);
 	movdqa(b, a);
 
