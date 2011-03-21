@@ -690,7 +690,10 @@ void Panels::MemoryCardListPanel_Simple::UiCreateNewCard( McdSlotItem& card )
 		card.IsEnabled = true;
 		card.Filename  = dialog.result_createdMcdFilename;
 		card.IsPresent = true;
-		Console.WriteLn(L"setting new card to slot %u: '%s'", card.Slot, card.Filename.GetFullName().c_str());
+		if ( card.Slot >= 0)
+			Console.WriteLn(L"setting new card to slot %u: '%s'", card.Slot, card.Filename.GetFullName().c_str());
+		else
+			Console.WriteLn(L"Created a new unassigned card file: '%s'", card.Filename.GetFullName().c_str() );
 	}
 	else
 		card.IsEnabled=false;
