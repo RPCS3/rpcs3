@@ -181,7 +181,7 @@ if(MSVC)
 		endforeach()
 	endif()
 	#
-	set(LABEL_SUFFIX "${LABEL_SUFFIX} ${LIB_RT_OPTION}")
+	set(LABEL_SUFFIX "${LABEL_SUFFIX} ${LIB_RT_SUFFIX}")
 
 	# b) Change prefix for static libraries
 	set(CMAKE_STATIC_LIBRARY_PREFIX "lib")	# to distinguish static libraries from DLL import libs
