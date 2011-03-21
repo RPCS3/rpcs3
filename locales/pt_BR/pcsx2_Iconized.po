@@ -2,23 +2,22 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-03-14 18:10+0100\n"
-"PO-Revision-Date: 2011-03-13 00:39-0300\n"
-"Last-Translator: Rafael <Rafael.f.f1@gmail.com>\n"
+"POT-Creation-Date: 2011-03-21 18:33+0100\n"
+"PO-Revision-Date: 2011-03-20 23:29-0300\n"
+"Last-Translator: Rafael Ferreira <rafael.f.f1@gmail.com>\n"
 "Language-Team: \n"
 "Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Poedit-KeywordsList: pxE;pxExpandMsg\n"
+"X-Poedit-KeywordsList: pxE\n"
 "X-Poedit-SourceCharset: utf-8\n"
-"X-Poedit-Basepath: trunk\n"
+"X-Poedit-Basepath: trunk\\\n"
 "Plural-Forms: nplurals=2; plural=(n > 1)\n"
 "X-Poedit-Language: Portuguese\n"
 "X-Poedit-Country: BRAZIL\n"
-"X-Poedit-Bookmarks: 7,-1,-1,-1,-1,-1,-1,-1,-1,-1\n"
-"X-Poedit-SearchPath-0: pcsx2\n"
-"X-Poedit-SearchPath-1: common\n"
+"X-Poedit-SearchPath-0: common\n"
+"X-Poedit-SearchPath-1: pcsx2\n"
 
 #: common/src/Utilities/Exceptions.cpp:254
 msgid "!Notice:VirtualMemoryMap"
@@ -138,8 +137,8 @@ msgstr ""
 msgid "!Panel:Mcd:EnableEjection"
 msgstr ""
 "Evita corrupção de cartões de memória forçando jogos a reindexar o conteúdo "
-"dos cartões após carregado de savestates. Pode não ser compatível com todos "
-"jogos (Guitar Hero)."
+"dos cartões após carregados os savestates. Pode não ser compatível com todos "
+"jogos (ex: Guitar Hero)."
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
 msgid "!Panel:StuckThread:Heading"
@@ -199,24 +198,23 @@ msgstr ""
 "causar problemas de compatibilidade ou performance em outros games. Você vai "
 "precisar desativar manualmente os fixes."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:411
-msgid "!Notice:Mcd:Overwrite"
-msgstr ""
-"Isso vai copiar o conteúdo do cartão de memória no conector %u para o cartão "
-"de memória no conector %u. Todos dados no conector destinatário serão "
-"perdidos. Você tem certeza?"
-
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:429
-msgid "!Notice:Mcd:Copy Failed"
-msgstr ""
-"Erro! Não foi possível copiar o cartão de memória para o conector %u. O "
-"arquivo destinatário está em uso."
-
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:722
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:717
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 "Você está para excluir o cartão de memória formatado no conector %u. Todos "
 "dados nesse cartão serão perdidos! Você tem absoluta e bem positiva certeza?"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:755
+msgid "!Notice:Mcd:CantDuplicate"
+msgstr ""
+"Falhou: Duplicação só é permitida para uma Porta-PS2 vazia ou para o sistema "
+"de arquivos."
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+msgid "!Notice:Mcd:Copy Failed"
+msgstr ""
+"Erro! Não foi possível copiar o cartão de memória para o conector %u. O "
+"arquivo destinatário está em uso."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
 msgid "!Panel:Usermode:Explained"
@@ -264,7 +262,7 @@ msgstr ""
 "Nota: Por causa do design do PS2, frame skipping preciso não é possível. "
 "Ativar essa opção pode causar sérios erros gráficos em alguns jogos."
 
-#: pcsx2/vtlb.cpp:698
+#: pcsx2/vtlb.cpp:702
 msgid "!Notice:HostVmReserve"
 msgstr ""
 "Seu sistema está com poucos recursos virtuais para rodar PCSX2. Isso pode "
@@ -278,6 +276,12 @@ msgstr ""
 "faixa de memória requerida, e não estará disponível para ser usado. Esse "
 "erro não é crítico, uma vez que o recompilador sVU está obsoleto, e, ao "
 "invés dele, você deveria usar o microVU. :)"
+
+#~ msgid "!Notice:Mcd:Overwrite"
+#~ msgstr ""
+#~ "Isso vai copiar o conteúdo do cartão de memória no conector %u para o "
+#~ "cartão de memória no conector %u. Todos dados no conector destinatário "
+#~ "serão perdidos. Você tem certeza?"
 
 #~ msgid "!Panel:Framelimiter:Heading"
 #~ msgstr ""

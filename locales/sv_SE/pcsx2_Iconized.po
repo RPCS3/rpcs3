@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.8\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-03-14 18:10+0100\n"
-"PO-Revision-Date: 2011-03-13 19:36+0100\n"
+"POT-Creation-Date: 2011-03-21 18:33+0100\n"
+"PO-Revision-Date: 2011-03-19 13:03+0100\n"
 "Last-Translator: Georg Ronnert <pgert@yahoo.se>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -205,24 +205,23 @@ msgstr ""
 "De kan dock orsaka kompabilitets- eller prestandaproblem för andra spel. \n"
 "Ni får stänga av Spelfixar manuellt när Ni byter spel."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:411
-msgid "!Notice:Mcd:Overwrite"
-msgstr ""
-"Detta kommer att kopiera innehållet i minneskortet i sockel %u till "
-"minneskortet i sockel %u. \n"
-"All data i sockel %u kommer att förloras. Är Ni säker?"
-
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:429
-msgid "!Notice:Mcd:Copy Failed"
-msgstr ""
-"Fel! Kunde inte kopiera innehållet till sockel %u. Målfilen används "
-"förnärvarande."
-
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:722
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:717
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 "Ni är på väg att radera det formaterade minneskortet i sockel %u. \n"
 "All data på detta kort kommer att förloras! Är Ni helt säker?"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:755
+msgid "!Notice:Mcd:CantDuplicate"
+msgstr ""
+"Misslyckades: Dubblering är endast tillåtet till en tom PS2-Sockel, eller "
+"till ett filsystem."
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+msgid "!Notice:Mcd:Copy Failed"
+msgstr ""
+"Fel! Kunde inte kopiera innehållet till sockel %u. Målfilen används "
+"förnärvarande."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
 msgid "!Panel:Usermode:Explained"
@@ -277,7 +276,7 @@ msgstr ""
 "omöjligt. \n"
 "Att möjliggöra det kan orsaka regäla grafikfel hos vissa spel."
 
-#: pcsx2/vtlb.cpp:698
+#: pcsx2/vtlb.cpp:702
 msgid "!Notice:HostVmReserve"
 msgstr ""
 "Ert system har för lite VM resurser för att PCSX2 ska kunna köras. \n"
@@ -292,6 +291,12 @@ msgstr ""
 "och kommer inte vara tillgängligt för bruk. Detta är inte ett kritiskt fel, "
 "eftersom sVU är föråldrad, \n"
 "och följdaktligen borde Ni använda Er av microVU istället."
+
+#~ msgid "!Notice:Mcd:Overwrite"
+#~ msgstr ""
+#~ "Detta kommer att kopiera innehållet i minneskortet i sockel %u till "
+#~ "minneskortet i sockel %u. \n"
+#~ "All data i sockel %u kommer att förloras. Är Ni säker?"
 
 #~ msgid "!Panel:Presets:Name:1"
 #~ msgstr "Säkrast"

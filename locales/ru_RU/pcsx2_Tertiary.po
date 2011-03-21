@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-03-14 18:10+0100\n"
+"POT-Creation-Date: 2011-03-21 18:33+0100\n"
 "PO-Revision-Date: 2010-12-28 13:40+0300\n"
 "Last-Translator: Kein <kein-of@yandex.ru>\n"
 "Language-Team: Kein <kein-of@yandex.ru>\n"
@@ -32,7 +32,7 @@ msgstr ""
 "Включает в себя обработку событий ожидания и других редко используемых "
 "событий."
 
-#: pcsx2/MTGS.cpp:809
+#: pcsx2/MTGS.cpp:815
 msgid ""
 "The MTGS thread has become unresponsive while waiting for the GS plugin to "
 "open."

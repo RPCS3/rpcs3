@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-03-14 18:10+0100\n"
+"POT-Creation-Date: 2011-03-21 18:33+0100\n"
 "PO-Revision-Date: 2011-03-06 02:34+0200\n"
 "Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
 "Language-Team: PyramidHead <atiamar@hotmail.com>\n"
@@ -30,7 +30,7 @@ msgstr "İşlem etkinliği; başalt, çıkart, eşleştir, sil vb..."
 msgid "Includes idle event processing and some other uncommon event usages."
 msgstr "Includes idle event processing and some other uncommon event usages."
 
-#: pcsx2/MTGS.cpp:809
+#: pcsx2/MTGS.cpp:815
 msgid ""
 "The MTGS thread has become unresponsive while waiting for the GS plugin to "
 "open."

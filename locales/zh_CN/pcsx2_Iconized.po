@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-03-13 10:53+0800\n"
-"PO-Revision-Date: 2011-03-04 12:00+0800\n"
+"POT-Creation-Date: 2011-03-21 18:33+0100\n"
+"PO-Revision-Date: 2011-03-21 17:28+0800\n"
 "Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-KeywordsList: pxE;pxExpandMsg\n"
 "X-Poedit-SourceCharset: utf-8\n"
-"X-Poedit-Basepath: trunk\\\n"
+"X-Poedit-Basepath: pcsx2\\\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
@@ -165,20 +165,18 @@ msgstr ""
 "游戏特殊修正可以修正一些游戏中的模拟错误。但它也可能在其它游戏中导致兼容或性"
 "能问题。您需要在更换游戏时手动开关相应选项。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:411
-msgid "!Notice:Mcd:Overwrite"
-msgstr ""
-"此操作将把 %u 插槽上的记忆卡内容复制到 %u 插槽。目标插槽记忆卡的数据将丢失。"
-"是否确认?"
-
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:429
-msgid "!Notice:Mcd:Copy Failed"
-msgstr "错误! 无法将记忆卡复到到插槽 %u。目标文件正在使用。"
-
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:722
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:717
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 "即将删除已格式化的位于 %u 插柄上的记忆卡。此记忆卡中所有数据将丢失! 是否确定?"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:755
+msgid "!Notice:Mcd:CantDuplicate"
+msgstr "失败: 只允许复制到一个空的 PS2 端口或文件系统。"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+msgid "!Notice:Mcd:Copy Failed"
+msgstr "错误! 无法将记忆卡复到到插槽 %u。目标文件正在使用。"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
 msgid "!Panel:Usermode:Explained"
@@ -217,7 +215,7 @@ msgid "!Panel:Frameskip:Heading"
 msgstr ""
 "注意: 由于 PS2 硬件设计，不可能准确跳帧。启用此选项可能在游戏中导致图像错误。"
 
-#: pcsx2/vtlb.cpp:698
+#: pcsx2/vtlb.cpp:702
 msgid "!Notice:HostVmReserve"
 msgstr ""
 "您的系统没有足够的资源运行 PCSX2。可能是由于交换文件过小或未使用，或其它占用"
@@ -228,3 +226,8 @@ msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "内存溢出: SuperVU 重编译器无法保留所需的指定内存范围，且将不可用。这不是一个"
 "严重错误，sVU 重编译器已过时，您应该使用 microVU。:)"
+
+#~ msgid "!Notice:Mcd:Overwrite"
+#~ msgstr ""
+#~ "此操作将把 %u 插槽上的记忆卡内容复制到 %u 插槽。目标插槽记忆卡的数据将丢"
+#~ "失。是否确认?"

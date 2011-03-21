@@ -124,3 +124,14 @@ for po_file in `find ./locales -iname pcsx2_Tertiary.po`
 do
     msgmerge --update $po_file $TER_POT
 done
+
+######################################################################
+# Automatically compile po into mo file
+######################################################################
+echo "Compile po files, result are directly installed on bin/Langs directory"
+for po_file in `find ./locales -iname "pcsx2_*.po"`
+do
+    mo_file=`echo $po_file | sed -e 's/locales/bin\/Langs/' | sed -e 's/\.po/.mo/'`
+    mkdir -p `dirname $mo_file`
+    msgfmt -o $mo_file $po_file
+done

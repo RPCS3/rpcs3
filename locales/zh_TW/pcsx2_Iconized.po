@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-03-14 18:10+0100\n"
+"POT-Creation-Date: 2011-03-21 18:33+0100\n"
 "PO-Revision-Date: 2011-03-02 06:48+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
@@ -178,21 +178,22 @@ msgstr ""
 "題。\n"
 "若變更所玩的遊戲，您需要手動關閉已啟用的遊戲修正。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:411
-msgid "!Notice:Mcd:Overwrite"
-msgstr ""
-"複製插槽 %u 的記憶卡內容，覆寫插槽 %u 的記憶卡。\n"
-"目標插槽記憶卡的全部資料將會丟失。您確定嗎？"
-
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:429
-msgid "!Notice:Mcd:Copy Failed"
-msgstr "錯誤！無法複製記憶卡至插槽 %u。目標檔案使用中。"
-
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:722
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:717
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 "您即將刪除 %u 插槽已格式化的記憶卡。\n"
 "該記憶卡的全部資料將會丟失！您真的確定嗎？"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:755
+#, fuzzy
+msgid "!Notice:Mcd:CantDuplicate"
+msgstr ""
+"您即將刪除 %u 插槽已格式化的記憶卡。\n"
+"該記憶卡的全部資料將會丟失！您真的確定嗎？"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+msgid "!Notice:Mcd:Copy Failed"
+msgstr "錯誤！無法複製記憶卡至插槽 %u。目標檔案使用中。"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
 msgid "!Panel:Usermode:Explained"
@@ -237,7 +238,7 @@ msgstr ""
 "注意：由於 PS2 的硬體設計，精確的跳框是不可能的。啟用跳框將導致一些遊戲出現嚴"
 "重的圖形錯誤。"
 
-#: pcsx2/vtlb.cpp:698
+#: pcsx2/vtlb.cpp:702
 msgid "!Notice:HostVmReserve"
 msgstr ""
 "您的系統虛擬資源過低，以致 PCSX2 無法運行。\n"
@@ -251,6 +252,11 @@ msgstr ""
 "SuperVU 無法留住所需要的指定的記憶體範圍，SuperVU 不可用。\n"
 "這不是嚴重的錯誤，因為 SuperVU 是過時的。無論如何，您應該使用 microVU 代"
 "替。：）"
+
+#~ msgid "!Notice:Mcd:Overwrite"
+#~ msgstr ""
+#~ "複製插槽 %u 的記憶卡內容，覆寫插槽 %u 的記憶卡。\n"
+#~ "目標插槽記憶卡的全部資料將會丟失。您確定嗎？"
 
 #~ msgid "!Notice:DocsFolderFileConflict"
 #~ msgstr ""

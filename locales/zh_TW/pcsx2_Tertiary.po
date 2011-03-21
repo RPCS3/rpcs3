@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-03-14 18:10+0100\n"
+"POT-Creation-Date: 2011-03-21 18:33+0100\n"
 "PO-Revision-Date: 2011-03-04 03:40+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
@@ -30,7 +30,7 @@ msgstr "執行緒的活動：開始、分離、同步、刪除，以及其他。
 msgid "Includes idle event processing and some other uncommon event usages."
 msgstr "包含閒置的事件處理和一些其他不尋常的事件使用。"
 
-#: pcsx2/MTGS.cpp:809
+#: pcsx2/MTGS.cpp:815
 msgid ""
 "The MTGS thread has become unresponsive while waiting for the GS plugin to "
 "open."

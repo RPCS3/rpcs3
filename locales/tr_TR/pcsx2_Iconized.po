@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-03-14 18:10+0100\n"
+"POT-Creation-Date: 2011-03-21 18:33+0100\n"
 "PO-Revision-Date: 2011-03-06 02:27+0200\n"
 "Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
 "Language-Team: PyramidHead <atiamar@hotmail.com>\n"
@@ -118,17 +118,18 @@ msgstr "!Notice:DirPicker:CreatePath"
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr "!Panel:Gamefixes:Compat Warning"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:411
-msgid "!Notice:Mcd:Overwrite"
-msgstr "!Notice:Mcd:Overwrite"
-
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:429
-msgid "!Notice:Mcd:Copy Failed"
-msgstr "!Notice:Mcd:Copy Failed"
-
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:722
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:717
 msgid "!Notice:Mcd:Delete"
 msgstr "!Notice:Mcd:Delete"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:755
+#, fuzzy
+msgid "!Notice:Mcd:CantDuplicate"
+msgstr "!Notice:Mcd:Delete"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+msgid "!Notice:Mcd:Copy Failed"
+msgstr "!Notice:Mcd:Copy Failed"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
 msgid "!Panel:Usermode:Explained"
@@ -154,13 +155,16 @@ msgstr "!Panel:Speedhacks:Overview"
 msgid "!Panel:Frameskip:Heading"
 msgstr "!Panel:Frameskip:Heading"
 
-#: pcsx2/vtlb.cpp:698
+#: pcsx2/vtlb.cpp:702
 msgid "!Notice:HostVmReserve"
 msgstr "!Notice:HostVmReserve"
 
 #: pcsx2/x86/sVU_zerorec.cpp:362
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr "!Notice:superVU:VirtualMemoryAlloc"
+
+#~ msgid "!Notice:Mcd:Overwrite"
+#~ msgstr "!Notice:Mcd:Overwrite"
 
 #~ msgid "!Notice:DocsFolderFileConflict"
 #~ msgstr "!Notice:DocsFolderFileConflict"
