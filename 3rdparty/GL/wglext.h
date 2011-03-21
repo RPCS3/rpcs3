@@ -48,9 +48,9 @@ extern "C" {
 /*************************************************************/
 
 /* Header file version number */
-/* wglext.h last updated 2010/05/17 */
+/* wglext.h last updated 2010/08/06 */
 /* Current version at http://www.opengl.org/registry/ */
-#define WGL_WGLEXT_VERSION 19
+#define WGL_WGLEXT_VERSION 22
 
 #ifndef WGL_ARB_buffer_region
 #define WGL_FRONT_COLOR_BUFFER_BIT_ARB 0x00000001
@@ -175,6 +175,10 @@ extern "C" {
 #define WGL_TYPE_RGBA_FLOAT_ARB        0x21A0
 #endif
 
+#ifndef WGL_ARB_framebuffer_sRGB
+#define WGL_FRAMEBUFFER_SRGB_CAPABLE_ARB 0x20A9
+#endif
+
 #ifndef WGL_ARB_create_context
 #define WGL_CONTEXT_DEBUG_BIT_ARB      0x00000001
 #define WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB 0x00000002
@@ -190,6 +194,13 @@ extern "C" {
 #define WGL_CONTEXT_CORE_PROFILE_BIT_ARB 0x00000001
 #define WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
 #define ERROR_INVALID_PROFILE_ARB      0x2096
+#endif
+
+#ifndef WGL_ARB_create_context_robustness
+#define WGL_CONTEXT_ROBUST_ACCESS_BIT_ARB 0x00000004
+#define WGL_LOSE_CONTEXT_ON_RESET_ARB  0x8252
+#define WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB 0x8256
+#define WGL_NO_RESET_NOTIFICATION_ARB  0x8261
 #endif
 
 #ifndef WGL_EXT_make_current_read
@@ -388,17 +399,21 @@ extern "C" {
 #define WGL_GPU_NUM_SPI_AMD            0x21A8
 #endif
 
-#ifndef NV_video_capture
+#ifndef WGL_NV_video_capture
 #define WGL_UNIQUE_ID_NV               0x20CE
 #define WGL_NUM_VIDEO_CAPTURE_SLOTS_NV 0x20CF
 #endif
 
-#ifndef NV_copy_image
+#ifndef WGL_NV_copy_image
 #endif
 
-#ifndef NV_multisample_coverage
+#ifndef WGL_NV_multisample_coverage
 #define WGL_COVERAGE_SAMPLES_NV        0x2042
 #define WGL_COLOR_SAMPLES_NV           0x20B9
+#endif
+
+#ifndef WGL_EXT_create_context_es2_profile
+#define WGL_CONTEXT_ES2_PROFILE_BIT_EXT 0x00000004
 #endif
 
 
@@ -512,6 +527,10 @@ typedef BOOL (WINAPI * PFNWGLSETPBUFFERATTRIBARBPROC) (HPBUFFERARB hPbuffer, con
 #define WGL_ARB_pixel_format_float 1
 #endif
 
+#ifndef WGL_ARB_framebuffer_sRGB
+#define WGL_ARB_framebuffer_sRGB 1
+#endif
+
 #ifndef WGL_ARB_create_context
 #define WGL_ARB_create_context 1
 #ifdef WGL_WGLEXT_PROTOTYPES
@@ -522,6 +541,10 @@ typedef HGLRC (WINAPI * PFNWGLCREATECONTEXTATTRIBSARBPROC) (HDC hDC, HGLRC hShar
 
 #ifndef WGL_ARB_create_context_profile
 #define WGL_ARB_create_context_profile 1
+#endif
+
+#ifndef WGL_ARB_create_context_robustness
+#define WGL_ARB_create_context_robustness 1
 #endif
 
 #ifndef WGL_EXT_display_color_table
