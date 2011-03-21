@@ -40,7 +40,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 	// [TODO] : About box should be upgraded to use scrollable read-only text boxes.
 	
 	wxString LabelAuthors = wxsFormat(
-		L"Arcum42, Refraction, drk||raziel, cottonvibes, gigaherz, "
+		L"Arcum42, avih, Refraction, drk||raziel, cottonvibes, gigaherz, "
 		L"rama, Jake.Stine, saqib, pseudonym, gregory.hainaut"
 		L"\n\n"
 		L"%s: Alexey silinov, Aumatt, "
@@ -62,7 +62,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 		L"Gabest (Gsdx, Cdvdolio, Xpad),  Zeydlitz (ZZogl)"
 		L"\n\n"
 			L"%s: black_wd, Belmont, BGome, _Demo_, Dreamtime, "
-			L"F|RES, MrBrown, razorblade, Seta-san, Skarmeth, feal87, Athos",
+			L"F|RES, Jake.Stine, MrBrown, razorblade, Seta-san, Skarmeth, feal87, Athos",
 			_("Plugin Specialists"), _("Special thanks to"));
 
 	// This sizer holds text of the authors and a logo!
