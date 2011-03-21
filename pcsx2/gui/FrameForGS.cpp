@@ -36,6 +36,7 @@ void GSPanel::InitDefaultAccelerators()
 
 	m_Accels->Map( AAC( WXK_F1 ),				"States_FreezeCurrentSlot" );
 	m_Accels->Map( AAC( WXK_F3 ),				"States_DefrostCurrentSlot");
+	m_Accels->Map( AAC( WXK_F3 ).Shift(),		"States_DefrostCurrentSlotBackup");
 	m_Accels->Map( AAC( WXK_F2 ),				"States_CycleSlotForward" );
 	m_Accels->Map( AAC( WXK_F2 ).Shift(),		"States_CycleSlotBackward" );
 

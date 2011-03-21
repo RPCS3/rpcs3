@@ -676,7 +676,7 @@ void StateCopy_LoadFromSlot( uint slot, bool isFromBackup )
 
 	if( !wxFileExists( file ) )
 	{
-		Console.Warning( "Savestate slot %d is empty.", slot );
+		Console.Warning( L"Savestate slot %d%s is empty.", slot, isFromBackup?L" (backup)":L"" );
 		return;
 	}
 
