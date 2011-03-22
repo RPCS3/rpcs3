@@ -350,7 +350,7 @@ static __fi void _reloadElfInfo(wxString elfpath)
 
 	ElfCRC = elfptr->getCRC();
 	ElfEntry = elfptr->header.e_entry;
-	Console.WriteLn(L"ELF (%s) CRC=0x%08X, EntryPoint=0x%08X", elfpath.c_str(), ElfCRC, ElfEntry);
+	Console.WriteLn( Color_StrongBlue, L"ELF (%s) Game CRC = 0x%08X, EntryPoint = 0x%08X", elfpath.c_str(), ElfCRC, ElfEntry);
 
 	// Note: Do not load game database info here.  This code is generic and called from
 	// BIOS key encryption as well as eeloadReplaceOSDSYS.  The first is actually still executing
@@ -492,7 +492,7 @@ s32 cdvdReadSubQ(s32 lsn, cdvdSubQ* subq)
 
 s32 cdvdCtrlTrayOpen()
 {
-	Console.Warning("Open virtual disk tray");
+	DevCon.WriteLn( Color_Green, L"Open virtual disk tray");
 	DiscSwapTimerSeconds = cdvd.RTC.second; // remember the PS2 time when this happened
 	cdvd.Status = CDVD_STATUS_TRAY_OPEN;
 	cdvd.Ready = CDVD_NOTREADY;
@@ -503,7 +503,7 @@ s32 cdvdCtrlTrayOpen()
 
 s32 cdvdCtrlTrayClose()
 {
-	Console.Warning("Close virtual disk tray");
+	DevCon.WriteLn( Color_Green, L"Close virtual disk tray");
 	cdvd.Status = CDVD_STATUS_PAUSE;
 	cdvd.Ready = CDVD_READY1;
 	trayState = 0;
@@ -1125,7 +1125,6 @@ u8 cdvdRead(u8 key)
 		case 0x3A: 	// DEC_SET
 			CDVD_LOG("cdvdRead3A(DecSet) %x", cdvd.decSet);
 
-			Console.WriteLn("DecSet Read: %02X", cdvd.decSet);
 			return cdvd.decSet;
 			break;
 
@@ -1197,7 +1196,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
 			if( EmuConfig.CdvdVerboseReads )
-				Console.WriteLn("CdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
+				Console.WriteLn( Color_Gray, L"CdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
 					cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
@@ -1245,7 +1244,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
 			if( EmuConfig.CdvdVerboseReads )
-				Console.WriteLn("CdAudioRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
+				Console.WriteLn( Color_Gray, L"CdAudioRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
 					cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
@@ -1281,7 +1280,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
 			if( EmuConfig.CdvdVerboseReads )
-				Console.WriteLn("DvdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
+				Console.WriteLn( Color_Gray, L"DvdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
 					cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
@@ -1324,7 +1323,7 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 		break;
 
 		case N_CD_CHG_SPDL_CTRL: // CdChgSpdlCtrl
-			Console.Warning("sceCdChgSpdlCtrl(%d)", cdvd.Param[0]);
+			Console.WriteLn("sceCdChgSpdlCtrl(%d)", cdvd.Param[0]);
 			cdvdSetIrq();
 		break;
 
@@ -1465,7 +1464,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 				default:
 					SetResultSize(1);
 					cdvd.Result[0] = 0x80;
-					Console.WriteLn("*Unknown Mecacon Command param[0]=%02X", cdvd.Param[0]);
+					Console.Warning("*Unknown Mecacon Command param[0]=%02X", cdvd.Param[0]);
 					break;
 			}
 			break;
@@ -1721,7 +1720,7 @@ static void cdvdWrite16(u8 rt)		 // SCOMMAND
 
 			cdvdGetMechaVer(&cdvd.Result[1]);
 			cdvdReadRegionParams(&cdvd.Result[3]);//size==8
-			Console.WriteLn("REGION PARAMS = %s %s", mg_zones[cdvd.Result[1]], &cdvd.Result[3]);
+			DevCon.WriteLn("REGION PARAMS = %s %s", mg_zones[cdvd.Result[1]], &cdvd.Result[3]);
 			cdvd.Result[1] = 1 << cdvd.Result[1];	//encryption zone; see offset 0x1C in encrypted headers
 			//////////////////////////////////////////
 			cdvd.Result[2] = 0;						//??
@@ -2033,7 +2032,6 @@ static __fi void cdvdWrite18(u8 rt) { // SDATAOUT
 static __fi void cdvdWrite3A(u8 rt) { // DEC-SET
 	CDVD_LOG("cdvdWrite3A(DecSet) %x", rt);
 	cdvd.decSet = rt;
-	Console.WriteLn("DecSet Write: %02X", cdvd.decSet);
 }
 
 void cdvdWrite(u8 key, u8 rt)

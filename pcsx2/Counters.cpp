@@ -261,9 +261,9 @@ u32 UpdateVSyncRate()
 	if( vSyncInfo.Framerate != framerate )
 	{
 		vSyncInfoCalc( &vSyncInfo, framerate, scanlines );
-		Console.WriteLn( Color_Blue, "(UpdateVSyncRate) Mode Changed to %s.", ( gsRegionMode == Region_PAL ) ? "PAL" : "NTSC" );
+		Console.WriteLn( Color_Green, "(UpdateVSyncRate) Mode Changed to %s.", ( gsRegionMode == Region_PAL ) ? "PAL" : "NTSC" );
 		if( isCustom )
-			Console.Indent().WriteLn( Color_StrongBlue, "... with user configured refresh rate: %.02f Hz", framerate.ToFloat() );
+			Console.Indent().WriteLn( Color_StrongGreen, "... with user configured refresh rate: %.02f Hz", framerate.ToFloat() );
 
 		hsyncCounter.CycleT = vSyncInfo.hRender;	// Amount of cycles before the counter will be updated
 		vsyncCounter.CycleT = vSyncInfo.Render;		// Amount of cycles before the counter will be updated
@@ -281,7 +281,7 @@ u32 UpdateVSyncRate()
 	{
 		m_iTicks = ticks;
 		gsOnModeChanged( vSyncInfo.Framerate, m_iTicks );
-		Console.WriteLn( "(UpdateVSyncRate) FPS Limit Changed : %.02f fps", fpslimit.ToFloat()*2 );
+		Console.WriteLn( Color_Green, "(UpdateVSyncRate) FPS Limit Changed : %.02f fps", fpslimit.ToFloat()*2 );
 	}
 
 	m_iStart = GetCPUTicks();

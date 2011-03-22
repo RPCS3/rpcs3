@@ -564,7 +564,7 @@ __fi int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 					//  split time to EE and other processors, and then resume the kick's DMA later.  
 					//  ... yea, not happening for a while. ;) -- air
 
-					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
+					Console.Warning("GIFTAG warning, size exceeded VU memory size %x", startSize);
 					nloop	= 0;
 					const_cast<GIFTAG&>(tag).EOP = 1;
 				}
@@ -849,7 +849,7 @@ __fi int GIFPath::CopyTag(const u128* pMem128, u32 size)
 					//  split time to EE and other processors, and then resume the kick's DMA later.  
 					//  ... yea, not happening for a while. ;) -- air
 
-					Console.Warning("GIFTAG error, size exceeded VU memory size %x", startSize);
+					Console.Warning("GIFTAG warning, size exceeded VU memory size %x", startSize);
 					nloop	= 0;
 					const_cast<GIFTAG&>(tag).EOP = 1;
 

@@ -705,7 +705,7 @@ void InitializeSIO(u8 value)
 			if( slot == 0 && m_ForceEjectionTimeout[port]>0 )
 			{
 				if( m_ForceEjectionTimeout[port] == FORCED_MCD_EJECTION_MAX_TRIES && SysPlugins.McdIsPresent( port, slot ) )
-					Console.Warning( L"[%s] Auto-ejecting memcard [port:%d, slot:%d]", GetTimeMsStr().c_str(), port, slot );
+					Console.WriteLn( Color_Green,  L"[%s] Auto-ejecting memcard [port:%d, slot:%d]", GetTimeMsStr().c_str(), port, slot );
 
 				--m_ForceEjectionTimeout[port];
 				forceEject = true;
@@ -727,7 +727,7 @@ void InitializeSIO(u8 value)
 				}
 
 				if( m_ForceEjectionTimeout[port] == 0 && SysPlugins.McdIsPresent( port, slot ))
-					Console.Warning( L"[%s] Re-inserting auto-ejected memcard [port:%d, slot:%d]", GetTimeMsStr().c_str(), port, slot);
+					Console.WriteLn( Color_Green,  L"[%s] Re-inserting auto-ejected memcard [port:%d, slot:%d]", GetTimeMsStr().c_str(), port, slot);
 			}
 			
 			if( !forceEject && SysPlugins.McdIsPresent( port, slot ) )

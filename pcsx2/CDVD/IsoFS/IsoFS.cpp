@@ -58,18 +58,18 @@ IsoDirectory::IsoDirectory(SectorSource& r)
 		    switch (sector[0])
 		    {
 		        case 0:
-                    Console.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Boot partition info.", i );
+                    DevCon.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Boot partition info.", i );
                     break;
 
                 case 1:
-                    Console.WriteLn( "(IsoFS) Block 0x%x: Primary partition info.", i );
+                    DevCon.WriteLn( "(IsoFS) Block 0x%x: Primary partition info.", i );
                     rootDirEntry.Load( sector+156, 38 );
                     isValid = true;
                     break;
 
                 case 2:
                     // Probably means Joliet (long filenames support), which PCSX2 doesn't care about.
-                    Console.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Extended partition info.", i );
+                    DevCon.WriteLn( Color_Green, "(IsoFS) Block 0x%x: Extended partition info.", i );
                     m_fstype = FStype_Joliet;
                     break;
 
