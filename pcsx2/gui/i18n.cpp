@@ -162,12 +162,12 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 
 	switch(wxLangId)
 	{
-		case wxLANGUAGE_CHINESE_HONGKONG:
-		case wxLANGUAGE_CHINESE_MACAU:
-			return wxLANGUAGE_CHINESE_TRADITIONAL;
-		case wxLANGUAGE_CHINESE_SINGAPORE:
-			return wxLANGUAGE_CHINESE_SIMPLIFIED;
-		default: break;
+		case wxLANGUAGE_CHINESE_HONGKONG  : 
+		case wxLANGUAGE_CHINESE_MACAU     : return wxLANGUAGE_CHINESE_TRADITIONAL;
+		case wxLANGUAGE_CHINESE_SINGAPORE : return wxLANGUAGE_CHINESE_SIMPLIFIED;
+		case wxLANGUAGE_SWEDISH_FINLAND   : return wxLANGUAGE_SWEDISH;
+		case wxLANGUAGE_PORTUGUESE        : return wxLANGUAGE_PORTUGUESE_BRAZILIAN;
+		default                           : break;
 	}
 	return wxLangId;
 }
