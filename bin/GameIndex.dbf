@@ -1986,7 +1986,7 @@ Compat = 5
 Serial = SLUS-20075
 Name   = Disney's Jungle Book - Rhythm & Groove
 Region = NTSC-U
-Compat = 5
+Compat = 2
 ---------------------------------------------
 Serial = SLUS-20076
 Name   = Disney's Tarzan Untamed
@@ -3759,7 +3759,7 @@ Compat = 5
 Serial = SLUS-20493
 Name   = Gungrave
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20494
 Name   = Freestyle Metal X
@@ -4190,7 +4190,7 @@ Compat = 5
 Serial = SLUS-20595
 Name   = Area 51
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20596
 Name   = UFC - Ultimate Fighting Championship - Sudden Impact
@@ -5679,7 +5679,7 @@ Compat = 3
 Serial = SLUS-20934
 Name   = Death by Degrees
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20935
 Name   = IHRA Professional Drag Racing 2005
@@ -6775,7 +6775,8 @@ Compat = 5
 Serial = SLUS-21168
 Name   = Castlevania - Curse of Dakness
 Region = NTSC-U
-Compat = 4
+Compat = 5
+vuClampMode = 0		//SPS with microVU
 ---------------------------------------------
 Serial = SLUS-21169
 Name   = Rollercoaster Tycoon - The Peeps
@@ -6803,7 +6804,7 @@ Region = NTSC-U
 Serial = SLUS-21174
 Name   = Dance Dance Revolution Extreme 2
 Region = NTSC-U
-Compat = 3
+Compat = 2
 ---------------------------------------------
 Serial = SLUS-21175
 Name   = Bible Game, The
@@ -7026,7 +7027,7 @@ Compat = 5
 Serial = SLUS-21222
 Name   = Top Spin
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21223
 Name   = Karaoke Revolution Party
@@ -7763,6 +7764,7 @@ Serial = SLUS-21375
 Name   = Torino 2006 - The Official Game of the XX Olympic Winter Games
 Region = NTSC-U
 Compat = 5
+vuClampMode = 2		//for SPS with microVU.
 ---------------------------------------------
 Serial = SLUS-21376
 Name   = Black
@@ -8722,7 +8724,7 @@ Compat = 5
 Serial = SLUS-21613
 Name   = Manhunt 2
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21614
 Name   = Star Wars - The Force Unleashed
@@ -9285,7 +9287,7 @@ Compat = 5
 Serial = SLUS-21740
 Name   = Guitar Hero - Aerosmith
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21741
 Name   = Sea Monsters - A Prehistoric Adventure
@@ -13943,7 +13945,7 @@ Region = NTSC-J
 Serial = SLPM-62073
 Name   = Tam Tam Paradise
 Region = NTSC-J
-Compat = 4
+Compat = 1
 ---------------------------------------------
 Serial = SLPM-62075
 Name   = Live World Soccer 2001
@@ -20221,6 +20223,7 @@ Serial = SLPM-66175
 Name   = Akumajo Dracula - Yami no Juin
 Region = NTSC-J
 Compat = 5
+vuClampMode = 0		//SPS with microVU
 ---------------------------------------------
 Serial = SLPM-66176
 Name   = Chaos Field - New Order
@@ -20465,7 +20468,7 @@ Region = NTSC-J
 Serial = SLPM-66242
 Name   = Dance Dance Revolution - Strike
 Region = NTSC-J
-Compat = 3
+Compat = 2
 ---------------------------------------------
 Serial = SLPM-66243
 Name   = Galaxy Angel II
@@ -21973,6 +21976,7 @@ Region = NTSC-J
 Serial = SLPM-66668
 Name   = Akumajo Dracula - Yami no Juin [Konami the Best]
 Region = NTSC-J
+vuClampMode = 0		//SPS with microVU
 ---------------------------------------------
 Serial = SLPM-66669
 Name   = Prince of Tennis, The - Card Hunter [First Print Limited Edition]
@@ -23591,6 +23595,7 @@ Serial = SLPS-20007
 Name   = Driving Emotion Type S
 Region = NTSC-J
 Compat = 4
+EETimingHack = 1		//Garbage in FMVs.
 ---------------------------------------------
 Serial = SLPS-20009
 Name   = Golf Paradise
@@ -27849,6 +27854,7 @@ Region = NTSC-J
 Serial = SLPS-25854
 Name   = Poison Pink
 Region = NTSC-J
+eeClampMode = 0		//in-game background visible
 ---------------------------------------------
 Serial = SLPS-25855
 Name   = Battle of Sunrise
@@ -29459,7 +29465,7 @@ Region = PAL-Unk
 Serial = SCES-53326
 Name   = Shadow of the Colossus
 Region = PAL-Unk
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SCES-53328
 Name   = Genji
@@ -30427,7 +30433,8 @@ Region = PAL-Unk
 Serial = SLES-50230
 Name   = Lotus Challenge
 Region = PAL-M5
-Compat = 4
+Compat = 5
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SLES-50231
 Name   = International League Soccer
@@ -32291,7 +32298,8 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-51156
 Name   = Silent Hill 2 - Director's Cut
-Region = PAL-Unk
+Region = PAL-M5
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51157
 Name   = Silent Scope 3
@@ -34292,6 +34300,7 @@ Compat = 2
 Serial = SLES-52202
 Name   = Downhill Domination
 Region = PAL-Unk
+Compat = 4
 ---------------------------------------------
 Serial = SLES-52203
 Name   = Armored Core - Silent Line
@@ -34545,7 +34554,7 @@ Region = PAL-Unk
 Serial = SLES-52342
 Name   = Worms - Forts Under Seige
 Region = PAL-Unk
-Compat = 5
+Compat = 4
 ---------------------------------------------
 Serial = SLES-52343
 Name   = Midway Arcade Treasures
@@ -34652,6 +34661,18 @@ Serial = SLES-52388
 Name   = Transformers Armada - Prelude to Energon [Special Edition]
 Region = PAL-Unk
 Compat = 4
+[patches = E845F252]
+	
+	comment=patches by Nachbrenner
+	
+	//skip loops: DMA1 vs. VIF1_FBRST vs. mfc0 v0, Count
+	patch=0,EE,0025d660,word,00000000
+	patch=0,EE,0025d7bc,word,00000000
+	patch=0,EE,0025d75c,word,00000000
+	//skip loop at "warp gate animation" (cop2 BC2T called)
+	patch=0,EE,0026eee8,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-52393
 Name   = Pinball Fun
@@ -35501,7 +35522,7 @@ Compat = 5
 Serial = SLES-52776
 Name   = Junior Board Games
 Region = PAL-Unk
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLES-52778
 Name   = Arcade, The
@@ -36530,7 +36551,7 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53280
 Name   = 7 Sins
-Region = PAL-Unk
+Region = PAL-M3
 Compat = 5
 ---------------------------------------------
 Serial = SLES-53281
@@ -37455,6 +37476,7 @@ Serial = SLES-53755
 Name   = Castlevania - Curse of Darkness
 Region = PAL-Unk
 Compat = 5
+vuClampMode = 0		//SPS with microVU
 ---------------------------------------------
 Serial = SLES-53756
 Name   = Resident Evil 4
@@ -37700,6 +37722,8 @@ Serial = SLES-53901
 Name   = Torino 2006
 Region = PAL-E
 Compat = 5
+EETimingHack = 1	//Broken 3D.
+vuClampMode = 2		//for SPS with microVU.
 ---------------------------------------------
 Serial = SLES-53902
 Name   = Leaderboard Golf
@@ -38696,7 +38720,7 @@ Region = PAL-Unk
 Serial = SLES-54442
 Name   = Guitar Hero II
 Region = PAL-Unk
-Compat = 4
+Compat = 3
 ---------------------------------------------
 Serial = SLES-54444
 Name   = Made Man
