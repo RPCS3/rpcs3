@@ -134,7 +134,7 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 	m_slider_presets->SetToolTip(
 		pxEt( "!Notice:Tooltip:Presets:Slider",
 				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
-				L"Known important game fixes ('Patches') will be applied automatically.\n\n"
+				L"Known important game fixes will be applied automatically.\n\n"
 				L"Presets info:\n"
 				L"1 -     The most accurate emulation but also the slowest.\n"
 				L"3 --> Tries to balance speed with compatibility.\n"
@@ -148,7 +148,7 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 	m_check_presets->SetToolTip(
 		pxEt( "!Notice:Tooltip:Presets:Checkbox",
 				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
-				L"Known important game fixes ('Patches') will be applied automatically.\n\n"
+				L"Known important game fixes will be applied automatically.\n\n"
 				L"--> Uncheck to modify settings manually (with current preset as base)"
 			)
 	);

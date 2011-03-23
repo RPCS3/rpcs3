@@ -416,8 +416,8 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 
 	m_menuSys.AppendSeparator();
 
-	m_menuSys.Append(MenuId_EnablePatches,	_("Enable Patches"),
-		wxEmptyString, wxITEM_CHECK);
+	m_menuSys.Append(MenuId_EnablePatches,	_("Automatic Gamefixes"),
+		_("Automatically applies needed Gamefixes to known problematic games"), wxITEM_CHECK);
 
 	m_menuSys.Append(MenuId_EnableCheats,	_("Enable Cheats"),
 		wxEmptyString, wxITEM_CHECK);
