@@ -862,17 +862,17 @@ bool AppConfig::IsOkApplyPreset(int n)
 					EmuOptions.Cpu.Recompiler.vuSignOverflow = false; //VU Clamp mode to 'none'
 
 		//best balanced hacks combo?
-		case 2 :	//enable mvu flag hack, enable EE timing hack, set EE cyclerate to 1 click.
+		case 2 :	//set EE cyclerate to 1 click.
 					eeUsed?0:(eeUsed=true, EmuOptions.Speedhacks.EECycleRate = 1);
 					// EE timing hack appears to break the BIOS text and cause slowdowns in a few titles.
 					//EnableGameFixes = true;
 					//EmuOptions.Gamefixes.EETimingHack = true;
-					EmuOptions.Speedhacks.vuFlagHack = true;
 
-		case 1 :	//Recommended speed hacks without mvu flag hack.
+		case 1 :	//Recommended speed hacks.
 					EnableSpeedHacks = true;
 					EmuOptions.Speedhacks.IntcStat = true;
 					EmuOptions.Speedhacks.WaitLoop = true;
+					EmuOptions.Speedhacks.vuFlagHack = true;
 
 		case 0 :	//Base preset: Mostly pcsx2's defaults.
 					
