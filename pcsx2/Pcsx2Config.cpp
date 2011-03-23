@@ -64,7 +64,6 @@ void Pcsx2Config::SpeedhackOptions::LoadSave( IniInterface& ini )
 	IniBitBool( WaitLoop );
 	IniBitBool( vuFlagHack );
 	IniBitBool( vuBlockHack );
-	IniBitBool( vuMinMax );
 }
 
 void Pcsx2Config::ProfilerOptions::LoadSave( IniInterface& ini )

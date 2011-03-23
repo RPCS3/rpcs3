@@ -373,8 +373,7 @@ struct Pcsx2Config
 				IntcStat		:1,		// tells Pcsx2 to fast-forward through intc_stat waits.
 				WaitLoop		:1,		// enables constant loop detection and fast-forwarding
 				vuFlagHack		:1,		// microVU specific flag hack
-				vuBlockHack		:1,		// microVU specific block flag no-propagation hack
-				vuMinMax		:1;		// microVU specific MinMax hack
+				vuBlockHack		:1;		// microVU specific block flag no-propagation hack
 		BITFIELD_END
 
 		u8	EECycleRate;		// EE cycle rate selector (1.0, 1.5, 2.0)

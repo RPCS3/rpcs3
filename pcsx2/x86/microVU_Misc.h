@@ -312,7 +312,7 @@ static const bool doJumpCaching = 1; // Set to 1 to enable jump caching
 // of end-of-block flag instance shuffling, causing nice speedups.
 
 // Min/Max Speed Hack
-#define CHECK_VU_MINMAXHACK	(EmuConfig.Speedhacks.vuMinMax)
+#define CHECK_VU_MINMAXHACK	0 //(EmuConfig.Speedhacks.vuMinMax)
 // This hack uses SSE min/max instructions instead of emulated "logical min/max"
 // The PS2 does not consider denormals as zero on the mini/max opcodes.
 // This speedup is minor, but on AMD X2 CPUs it can be a 1~3% speedup

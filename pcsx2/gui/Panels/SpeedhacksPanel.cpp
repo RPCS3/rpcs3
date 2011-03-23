@@ -166,9 +166,6 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_check_vuBlockHack = new pxCheckBox( vuHacksPanel, _("mVU Block Hack"),
 		_("Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc...") );
 
-	m_check_vuMinMax = new pxCheckBox( vuHacksPanel, _("mVU Min/Max Hack"),
-		_("Small Speedup; may cause black screens, garbage graphics, SPS, etc... [Not Recommended]") );
-
 	m_check_vuFlagHack->SetToolTip( pxEt( "!ContextTip:Speedhacks:vuFlagHack",
 		L"Updates Status Flags only on blocks which will read them, instead of all the time. "
 		L"This is safe most of the time, and Super VU does something similar by default."
@@ -177,11 +174,6 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_check_vuBlockHack->SetToolTip( pxEt( "!ContextTip:Speedhacks:vuBlockHack",
 		L"Assumes that very far into future blocks will not need old flag instance data. "
 		L"This should be pretty safe. It is unknown if this breaks any game..."
-	) );
-
-	m_check_vuMinMax->SetToolTip( pxEt( "!ContextTip:Speedhacks:vuMinMax",
-		L"Uses SSE's Min/Max Floating Point Operations instead of custom logical Min/Max routines. "
-		L"Known to break Gran Turismo 4, Tekken 5."
 	) );
 
 	// ------------------------------------------------------------------------
@@ -234,7 +226,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 	*vuHacksPanel	+= m_check_vuFlagHack;
 	*vuHacksPanel	+= m_check_vuBlockHack;
-	*vuHacksPanel	+= m_check_vuMinMax;
+	*vuHacksPanel	+= 57; // Aligns left and right boxes in default language and font size
 
 	*miscHacksPanel	+= m_check_intc;
 	*miscHacksPanel	+= m_check_waitloop;
@@ -312,7 +304,6 @@ void Panels::SpeedHacksPanel::ApplyConfigToGui( AppConfig& configToApply, int fl
 
 	m_check_vuFlagHack	->SetValue(opts.vuFlagHack);
 	m_check_vuBlockHack	->SetValue(opts.vuBlockHack);
-	m_check_vuMinMax	->SetValue(opts.vuMinMax);
 	m_check_intc		->SetValue(opts.IntcStat);
 	m_check_waitloop	->SetValue(opts.WaitLoop);
 	m_check_fastCDVD	->SetValue(opts.fastCDVD);
@@ -342,7 +333,6 @@ void Panels::SpeedHacksPanel::Apply()
 	opts.IntcStat			= m_check_intc->GetValue();
 	opts.vuFlagHack			= m_check_vuFlagHack->GetValue();
 	opts.vuBlockHack		= m_check_vuBlockHack->GetValue();
-	opts.vuMinMax			= m_check_vuMinMax->GetValue();
 
 	// If the user has a command line override specified, we need to disable it
 	// so that their changes take effect

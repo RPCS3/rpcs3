@@ -333,7 +333,6 @@ namespace Panels
 		pxCheckBox*		m_check_fastCDVD;
 		pxCheckBox*		m_check_vuFlagHack;
 		pxCheckBox*		m_check_vuBlockHack;
-		pxCheckBox*		m_check_vuMinMax;
 
 	public:
 		virtual ~SpeedHacksPanel() throw() {}
