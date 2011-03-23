@@ -94,9 +94,9 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 
 	m_check_Enable = new pxCheckBox( this, _("Enable game fixes"),
 		pxE( "!Panel:Gamefixes:Compat Warning",
-			L"Gamefixes can fix wrong emulation in some games. However "
-			L"it can cause compatibility or performance issues in other games.  You "
-			L"will need to turn off fixes manually when changing games."
+			L"Gamefixes can work around wrong emulation in some titles. \n"
+			L"They may also cause compatibility or performance issues though, so they're not recommended. \n"
+			L"Gamefixes are automatically applied by default, so you do not need to set anything here."
 		)
 	);
 
