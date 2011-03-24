@@ -167,6 +167,14 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 		case wxLANGUAGE_CHINESE_SINGAPORE : return wxLANGUAGE_CHINESE_SIMPLIFIED;
 		case wxLANGUAGE_SWEDISH_FINLAND   : return wxLANGUAGE_SWEDISH;
 		case wxLANGUAGE_PORTUGUESE        : return wxLANGUAGE_PORTUGUESE_BRAZILIAN;
+		// Overkill 9000?
+		case wxLANGUAGE_GERMAN_AUSTRIAN   :
+		case wxLANGUAGE_GERMAN_BELGIUM    :
+		case wxLANGUAGE_GERMAN_LIECHTENSTEIN :
+		case wxLANGUAGE_GERMAN_LUXEMBOURG :
+		case wxLANGUAGE_GERMAN_SWISS      :
+                                            return wxLANGUAGE_GERMAN;
+		
 		default                           : break;
 	}
 	return wxLangId;
