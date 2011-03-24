@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1253"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="pcsx2"
 	ProjectGUID="{1CEFD830-2B76-4596-A4EE-BCD7280A60BD}"
 	RootNamespace="pcsx2"
@@ -148,7 +148,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="zlib.lib"
-				OutputFile="C:\Users\rama\Desktop\PCSX2_TEST_R4463\$(ProjectName)-dev.exe"
+				OutputFile="$(OutDir)\$(ProjectName)-dev.exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
