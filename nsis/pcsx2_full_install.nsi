@@ -2,7 +2,7 @@
 ; PCSX2 Full/Complete Install Package!
 ; (a NSIS installer script)
 ;
-; Copyright 2009-2010  PCSX2 Dev Team
+; Copyright 2009-2011  PCSX2 Dev Team
 ;
 
 !ifndef INC_CRT_2008
@@ -19,7 +19,6 @@
 !include "SharedBase.nsh"
 
 ; Reserve features for improved performance with solid archiving.
-File C:\Users\Jake\Documents\devpcsx2\trunk\nsis\SharedBase.nsh
 ;  (uncomment if we add our own install options ini files)
 ;!insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
 ;!insertmacro MUI_RESERVEFILE_LANGDLL
@@ -71,8 +70,6 @@ Section "!${APP_NAME} (required)" SEC_CORE
   
     File /nonfatal /oname=lilypad-r${SVNREV_LILYPAD}.dll   ..\bin\Plugins\lilypad.dll
     File                                                   ..\bin\Plugins\PadSSSPSX.dll
-  
-  ;File                                                   ..\bin\Plugins\FWlinuz.dll
 
   !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
 
@@ -170,7 +167,7 @@ LangString DESC_STARTMENU  ${LANG_ENGLISH} "Adds shortcuts for PCSX2 to the star
 LangString DESC_DESKTOP    ${LANG_ENGLISH} "Adds a shortcut for PCSX2 to the desktop (all users)."
 
 LangString DESC_CRT2008    ${LANG_ENGLISH} "Required by the PCSX2 binaries packaged in this installer."
-LangString DESC_CRT2010    ${LANG_ENGLISH} "This will be used by future PCSX2 plugins and updates, but is not (yet) necessary."
+LangString DESC_CRT2010    ${LANG_ENGLISH} "This may be used by future PCSX2 plugins and updates, but is not (yet) necessary."
 LangString DESC_DIRECTX    ${LANG_ENGLISH} "Only uncheck this if you are quite certain your Direct3D runtimes are up to date."
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN

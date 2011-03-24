@@ -2,7 +2,7 @@
   PCSX2 NSIS Installer Instructions
 -------------------------------------
 
- * Install NSIS (tested with 2.45)
+ * Install NSIS (tested with 2.46)
  * Install NSIS Script: Advanced Uninstall Log (you can find it on NSIS wiki)
 
  * Download the Visual C++ 2008 SP1 Redistributable and save it to this nsis/ folder under the name:

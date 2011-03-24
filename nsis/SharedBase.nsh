@@ -13,8 +13,8 @@
 !endif
 
 !ifndef INC_LANGS
-  ; Set to 1 to enable inclusion of Languages folders (which are currently missing in 0.9.7)
-  !define INC_LANGS     0
+  ; Set to 1 to enable inclusion of Languages folders
+  !define INC_LANGS     1
 !endif
 
 !ifndef USE_PACKAGE_REV
@@ -44,7 +44,7 @@
 ;   uninstall folders.  
 
 !ifndef APP_VERSION
-  !define APP_VERSION      "0.9.7"
+  !define APP_VERSION      "0.9.8"
 !endif
 
 !define APP_NAME         "PCSX2 ${APP_VERSION} (r${SVNREV_PACKAGE})"
