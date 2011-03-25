@@ -131,7 +131,7 @@ void SaveConfig()
 	Config *Conf1 = &conf;
 	char szValue[256];
 
-	string iniFile( s_strIniPath + "zerospu2.ini" );
+	string iniFile( s_strIniPath + "/zerospu2.ini" );
 
 	sprintf_s(szValue,"%u",Conf1->Log);
 	WritePrivateProfileString("Interface", "Logging",szValue, iniFile.c_str());
@@ -145,7 +145,7 @@ void LoadConfig()
 	Config *Conf1 = &conf;
 	char szValue[256];
 
-	string iniFile( s_strIniPath + "zerospu2.ini" );
+	string iniFile( s_strIniPath + "/zerospu2.ini" );
 
 	fopen_s(&fp, iniFile.c_str(), "rt");//check if zerospu2.ini really exists
 

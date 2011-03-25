@@ -2,6 +2,7 @@
 
 #include "GS.h"
 #include "Win32.h"
+#include "Utilities/Path.h"
 
 extern HINSTANCE hInst;
 
@@ -9,7 +10,7 @@ extern HINSTANCE hInst;
 void SaveConfig()
 {
 	wxChar szValue[256];
-	const wxString iniFile( wxString::FromUTF8(s_strIniPath.c_str()) + L"zzogl-pg.ini");
+	const wxString iniFile(Path::Combine(s_strIniPath, L"zzogl-pg.ini"));
 
 	wxSprintf(szValue, L"%u", conf.interlace);
 	WritePrivateProfileString(L"Settings", L"Interlace", szValue, iniFile);
@@ -32,7 +33,7 @@ void SaveConfig()
 void LoadConfig()
 {
 	wxChar szValue[256];
-	const wxString iniFile( wxString::FromUTF8(s_strIniPath.c_str()) + L"zzogl-pg.ini");
+	const wxString iniFile(Path::Combine(s_strIniPath, L"zzogl-pg.ini"));
 
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1
@@ -50,7 +51,7 @@ void LoadConfig()
 	if (!fp)
 	{
 		SysMessage("Unable to open ZZOgl-PG's ini file!");
-		CreateDirectory(wxString::FromUTF8(s_strIniPath.c_str()), NULL);
+		CreateDirectory(s_strIniPath, NULL);
 		SaveConfig();//save and return
 		return ;
 	}

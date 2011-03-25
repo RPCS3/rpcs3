@@ -28,8 +28,8 @@ const u8 build    = 7;    // increase that with each version
 
 static char *libraryName = "FWnull Driver";
 
-string s_strIniPath="inis/";
-string s_strLogPath = "logs/";
+string s_strIniPath="inis";
+string s_strLogPath = "logs";
 
 u8 phyregs[16];
 s8 *fwregs;
@@ -48,7 +48,7 @@ void LogInit()
 EXPORT_C_(void)  FWsetLogDir(const char* dir)
 {
 	// Get the path to the log directory.
-	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+	s_strLogPath = (dir==NULL) ? "logs" : dir;
 	
 	// Reload the log file after updated the path
 	FWLog.Close();
@@ -269,7 +269,7 @@ EXPORT_C_(void) FWirqCallback(void (*callback)())
 EXPORT_C_(void) FWsetSettingsDir(const char* dir)
 {
 	// Find out from pcsx2 where we are supposed to put our ini file.
-    s_strIniPath = (dir == NULL) ? "inis/" : dir;
+    s_strIniPath = (dir == NULL) ? "inis" : dir;
 }
 
 EXPORT_C_(s32) FWfreeze(int mode, freezeData *data)

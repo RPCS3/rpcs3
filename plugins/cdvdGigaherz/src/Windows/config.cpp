@@ -29,16 +29,15 @@
 char source_drive;
 char source_file[MAX_PATH];
 
-char CfgFile[MAX_PATH+10] = "inis\\cdvdGigaherz.ini";
+char CfgFile[MAX_PATH+10] = "inis/cdvdGigaherz.ini";
 
 void CfgSetSettingsDir( const char* dir )
 {
 	// a better std::string version, but it's inconvenient for other reasons.
-	//CfgFile = std::string(( dir == NULL ) ? "inis\\" : dir) + "cdvdGigaherz.ini";
+	//CfgFile = std::string(( dir == NULL ) ? "inis/" : dir) + "cdvdGigaherz.ini";
 
-	// emulator assures a trailing slash/backslash (yay!)
-	strcpy_s(CfgFile, (dir==NULL) ? "inis\\" : dir);
-	strcat_s(CfgFile, "cdvdGigaherz.ini");
+	strcpy_s(CfgFile, (dir==NULL) ? "inis" : dir);
+	strcat_s(CfgFile, "/cdvdGigaherz.ini");
 }
 
 

@@ -59,8 +59,8 @@ wxString RegDumpFileName;
 
 void CfgSetLogDir( const char* dir )
 {
-	LogsFolder	= (dir==NULL) ? wxString(L"logs") : fromUTF8(dir);
-	DumpsFolder	= (dir==NULL) ? wxString(L"logs") : fromUTF8(dir);
+	LogsFolder	= (dir==NULL) ? wxString(L"logs") : wxString(dir, wxConvFile);
+	DumpsFolder	= (dir==NULL) ? wxString(L"logs") : wxString(dir, wxConvFile);
 	LogLocationSetByPcsx2 = (dir!=NULL);
 }
 

@@ -12,7 +12,7 @@ extern HINSTANCE hInst;
 void SaveConfig() {
 
 	char szValue[256];
-	const std::string iniFile( s_strIniPath + "zerogs.ini" );
+	const std::string iniFile( s_strIniPath + "/zerogs.ini" );
 
 	sprintf(szValue,"%u",conf.interlace);
 	WritePrivateProfileString("Settings", "Interlace",szValue,iniFile.c_str());
@@ -29,7 +29,7 @@ void SaveConfig() {
 void LoadConfig() {
 
 	char szValue[256];
-	const std::string iniFile( s_strIniPath + "zerogs.ini" );
+	const std::string iniFile( s_strIniPath + "/zerogs.ini" );
 
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1

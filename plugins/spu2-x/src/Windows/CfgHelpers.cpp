@@ -51,7 +51,7 @@ void SysMessage(const wchar_t *fmt, ...)
 
 #include "Utilities/Path.h"
 
-static wxString CfgFile( L"inis\\SPU2-X.ini" );
+static wxString CfgFile( L"inis/SPU2-X.ini" );
 
 void CfgSetSettingsDir( const char* dir )
 {

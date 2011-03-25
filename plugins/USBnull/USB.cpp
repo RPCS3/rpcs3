@@ -18,8 +18,8 @@
 using namespace std;
 
 #include "USB.h"
-string s_strIniPath="inis/";
-string s_strLogPath="logs/";
+string s_strIniPath="inis";
+string s_strLogPath="logs";
 
 const unsigned char version  = PS2E_USB_VERSION;
 const unsigned char revision = 0;
@@ -43,7 +43,7 @@ void LogInit()
 EXPORT_C_(void)  USBsetLogDir(const char* dir)
 {
 	// Get the path to the log directory.
-	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+	s_strLogPath = (dir==NULL) ? "logs" : dir;
 	
 	// Reload the log file after updated the path
 	USBLog.Close();
@@ -239,7 +239,7 @@ EXPORT_C_(void) USBsetRAM(void *mem)
 EXPORT_C_(void) USBsetSettingsDir(const char* dir)
 {
 	// Get the path to the ini directory.
-    s_strIniPath = (dir==NULL) ? "inis/" : dir;
+    s_strIniPath = (dir==NULL) ? "inis" : dir;
 }
 
 // extended funcs

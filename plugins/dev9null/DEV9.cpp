@@ -43,8 +43,8 @@ void (*DEV9irq)(int);
 
 __aligned16 s8 dev9regs[0x10000];
 
-string s_strIniPath = "inis/";
-string s_strLogPath="logs/";
+string s_strIniPath = "inis";
+string s_strLogPath="logs";
 
 PluginLog Dev9Log;
 Config conf;
@@ -59,7 +59,7 @@ void LogInit()
 EXPORT_C_(void)  DEV9setLogDir(const char* dir)
 {
 	// Get the path to the log directory.
-	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+	s_strLogPath = (dir==NULL) ? "logs" : dir;
 	
 	// Reload the log file after updated the path
 	Dev9Log.Close();
@@ -275,7 +275,7 @@ EXPORT_C_(DEV9handler) DEV9irqHandler(void)
 EXPORT_C_(void) DEV9setSettingsDir(const char* dir)
 {
 	// Grab the ini directory.
-    s_strIniPath = (dir == NULL) ? "inis/" : dir;
+    s_strIniPath = (dir == NULL) ? "inis" : dir;
 }
 
 // extended funcs

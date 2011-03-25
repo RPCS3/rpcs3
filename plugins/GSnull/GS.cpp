@@ -39,7 +39,7 @@ u32 GSKeyEvent = 0;
 bool GSShift = false, GSAlt = false;
 
 string s_strIniPath="inis";
-std::string s_strLogPath("logs/");
+std::string s_strLogPath("logs");
 const char* s_iniFilename = "GSnull.ini";
 GSVars gs;
 
@@ -72,7 +72,7 @@ EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 bool OpenLog() {
     bool result = true;
 #ifdef GS_LOG
-    const std::string LogFile(s_strLogPath + "GSnull.log");
+    const std::string LogFile(s_strLogPath + "/GSnull.log");
 
     gsLog = fopen(LogFile.c_str(), "w");
     if (gsLog != NULL)
@@ -127,13 +127,13 @@ void SysPrintf(const char *fmt, ...)
 // basic funcs
 EXPORT_C_(void) GSsetSettingsDir(const char* dir)
 {
-	s_strIniPath = (dir == NULL) ? "inis/" : dir;
+	s_strIniPath = (dir == NULL) ? "inis" : dir;
 }
 
 EXPORT_C_(void) GSsetLogDir(const char* dir)
 {
 	// Get the path to the log directory.
-	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+	s_strLogPath = (dir==NULL) ? "logs" : dir;
 
 	// Reload the log file after updated the path
 	if (gsLog) {

@@ -158,7 +158,7 @@ void __LogToConsole(const char *fmt, ...) {
 }
 
 void CALLBACK GSsetSettingsDir(const char* dir) {
-	s_strIniPath = (dir==NULL) ? "inis/" : dir;
+	s_strIniPath = (dir==NULL) ? "inis" : dir;
 }
 
 void CALLBACK GSsetBaseMem(void* pmem) {

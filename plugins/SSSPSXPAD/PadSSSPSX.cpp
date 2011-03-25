@@ -22,7 +22,7 @@ static const unsigned char buildfix	= 1;
 HMODULE hInstance;
 HWND hTargetWnd;
 
-static std::string s_strIniPath( "inis/" );
+static std::string s_strIniPath( "inis" );
 
 static CRITICAL_SECTION update_lock;
 static CRITICAL_SECTION init_lock;
@@ -350,7 +350,7 @@ static std::string MakeConfigFileName()
 	//GetModuleFileName (hInstance, fname, 256);
 	//strcpy (fname + strlen (fname) - 3, "cfg");
 
-	return s_strIniPath + "PadSSSPSX.cfg";
+	return s_strIniPath + "/PadSSSPSX.cfg";
 }
 
 static void SaveConfig (void)
@@ -1140,7 +1140,7 @@ s32 CALLBACK PADtest (void)
 
 void CALLBACK PADsetSettingsDir(const char* dir)
 {
-	s_strIniPath = (dir==NULL) ? "inis/" : dir;
+	s_strIniPath = (dir==NULL) ? "inis" : dir;
 }
 
 // Returns 0 on success, -1 on error.

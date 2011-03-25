@@ -57,7 +57,7 @@ s32 s_buffers[NSSIZE][2]; // left and right buffers
 // mixer thread variables
 bool s_bThreadExit = true;
 s32 s_nDropPacket = 0;
-string s_strIniPath( "inis/" );
+string s_strIniPath( "inis" );
 
 #ifdef _WIN32
 LARGE_INTEGER g_counterfreq;
@@ -201,7 +201,7 @@ void __LogToConsole(const char *fmt, ...)
 
 void CALLBACK SPU2setSettingsDir(const char* dir)
 {
-	s_strIniPath = (dir==NULL) ? "inis/" : dir;
+	s_strIniPath = (dir==NULL) ? "inis" : dir;
 }
 
 void InitApi()

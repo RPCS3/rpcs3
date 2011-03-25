@@ -46,7 +46,7 @@ float fFPS = 0;
 
 void (*GSirq)();
 u8* g_pBasePS2Mem = NULL;
-string s_strIniPath("inis/");  	// Air's new ini path (r2361)
+wxString s_strIniPath(L"inis");  	// Air's new ini path (r2361)
 
 bool SaveStateExists = true;		// We could not know save slot status before first change occured
 const char* SaveStateFile = NULL;	// Name of SaveFile for access check.
@@ -112,7 +112,7 @@ void CALLBACK GSsetBaseMem(void* pmem)
 
 void CALLBACK GSsetSettingsDir(const char* dir)
 {
-	s_strIniPath = (dir == NULL) ? "inis/" : dir;
+	s_strIniPath = (dir == NULL) ? wxString(L"inis") : wxString(dir, wxConvFile);
 }
 
 void CALLBACK GSsetLogDir(const char* dir)

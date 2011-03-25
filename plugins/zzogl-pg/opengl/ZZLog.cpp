@@ -59,7 +59,7 @@ void ZZAddMessage(const char* pstr, u32 ms)
 
 namespace ZZLog
 {
-std::string s_strLogPath("logs/");
+std::string s_strLogPath("logs");
 FILE *gsLog;
 
 bool IsLogging()
@@ -71,7 +71,7 @@ bool IsLogging()
 
 void Open() 
 {
-    const std::string LogFile(s_strLogPath + "GSzzogl.log");
+    const std::string LogFile(s_strLogPath + "/GSzzogl.log");
 
     gsLog = fopen(LogFile.c_str(), "w");
     if (gsLog != NULL)
@@ -92,7 +92,7 @@ void Close()
 void SetDir(const char* dir)
 {
 	// Get the path to the log directory.
-	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+	s_strLogPath = (dir==NULL) ? "logs" : dir;
 
 	// Reload previously open log file
     if (gsLog) {

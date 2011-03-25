@@ -26,8 +26,8 @@ const u8 revision = 0;
 const u8 build    = 1;    // increase that with each version
 
 static char *libraryName = "Padnull Driver";
-string s_strIniPath="inis/";
-string s_strLogPath="logs/";
+string s_strIniPath="inis";
+string s_strLogPath="logs";
 
 FILE *padLog;
 Config conf;
@@ -74,7 +74,7 @@ void __LogToConsole(const char *fmt, ...)
 
 EXPORT_C_(void) PADsetSettingsDir(const char* dir)
 {
-	s_strIniPath = (dir == NULL) ? "inis/" : dir;
+	s_strIniPath = (dir == NULL) ? "inis" : dir;
 }
 
 bool OpenLog() {
@@ -99,7 +99,7 @@ bool OpenLog() {
 EXPORT_C_(void) PADsetLogDir(const char* dir)
 {
 	// Get the path to the log directory.
-	s_strLogPath = (dir==NULL) ? "logs/" : dir;
+	s_strLogPath = (dir==NULL) ? "logs" : dir;
 
 	// Reload the log file after updated the path
 	if (padLog) {
