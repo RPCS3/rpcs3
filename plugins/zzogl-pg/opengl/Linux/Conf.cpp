@@ -23,16 +23,18 @@
 #include <unistd.h>
 #include <string.h>
 #include "GS.h"
+#include "Utilities/Path.h"
 
 void SaveConfig()
 {
-	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
+	const wxString iniFile_s(Path::Combine(s_strIniPath, L"zzogl-pg.ini"));
+	const char* iniFile = iniFile_s.mb_str();
 	
-	FILE* f = fopen(iniFile.c_str(), "w");
+	FILE* f = fopen(iniFile, "w");
 
 	if (f == NULL)
 	{
-		ZZLog::Error_Log("Failed to open '%s'", iniFile.c_str());
+		ZZLog::Error_Log("Failed to open '%s'", iniFile);
 		return;
 	}
 
@@ -66,12 +68,14 @@ void LoadConfig()
 	conf.height = 600;
 	conf.disableHacks = 0;
 
-	const std::string iniFile(s_strIniPath + "zzogl-pg.ini");
-	FILE* f = fopen(iniFile.c_str(), "r");
+	const wxString iniFile_s(Path::Combine(s_strIniPath, L"zzogl-pg.ini"));
+	const char* iniFile = iniFile_s.mb_str();
+
+	FILE* f = fopen(iniFile, "r");
 
 	if (f == NULL)
 	{
-		ZZLog::Error_Log("Failed to open '%s'", iniFile.c_str());
+		ZZLog::Error_Log("Failed to open '%s'", iniFile);
 		SaveConfig();//save and return
 		return;
 	}

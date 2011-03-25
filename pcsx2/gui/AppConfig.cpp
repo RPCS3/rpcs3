@@ -673,15 +673,17 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 
 	for( int i=0; i<PluginId_Count; ++i )
 	{
-		if ( needRelativeName )
-			ini.Entry( tbl_PluginInfo[i].GetShortname(), wxFileName( Plugins[i].GetFullName() ), pc );
-		else
+		if ( needRelativeName ) {
+			wxFileName plugin_filename = wxFileName( Plugins[i].GetFullName() );
+			ini.Entry( tbl_PluginInfo[i].GetShortname(), plugin_filename, pc );
+		} else
 			ini.Entry( tbl_PluginInfo[i].GetShortname(), Plugins[i], pc );
 	}
 
-	if( needRelativeName )
-		ini.Entry( L"BIOS", wxFileName( Bios.GetFullName() ), pc );
-	else
+	if( needRelativeName ) { 
+		wxFileName bios_filename = wxFileName( Bios.GetFullName() );
+		ini.Entry( L"BIOS", bios_filename, pc );
+	} else
 		ini.Entry( L"BIOS", Bios, pc );
 }
 
