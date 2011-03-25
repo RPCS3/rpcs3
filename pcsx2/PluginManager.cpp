@@ -1546,10 +1546,10 @@ void SysCorePlugins::SendSettingsFolder()
 	ScopedLock lock( m_mtx_PluginStatus );
 	if( m_SettingsFolder.IsEmpty() ) return;
 
-	pxToUTF8 utf8buffer( m_SettingsFolder );
+	wxCharBuffer buffer(m_SettingsFolder.mb_str(wxConvFile));
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
-		if( m_info[pi->id] ) m_info[pi->id]->CommonBindings.SetSettingsDir( utf8buffer );
+		if( m_info[pi->id] ) m_info[pi->id]->CommonBindings.SetSettingsDir( buffer );
 	} while( ++pi, pi->shortname != NULL );
 }
 
@@ -1572,10 +1572,10 @@ void SysCorePlugins::SendLogFolder()
 	ScopedLock lock( m_mtx_PluginStatus );
 	if( m_LogFolder.IsEmpty() ) return;
 
-	pxToUTF8 utf8buffer( m_LogFolder );
+	wxCharBuffer buffer(m_LogFolder.mb_str(wxConvFile));
 
 	const PluginInfo* pi = tbl_PluginInfo; do {
-		if( m_info[pi->id] ) m_info[pi->id]->CommonBindings.SetLogDir( utf8buffer );
+		if( m_info[pi->id] ) m_info[pi->id]->CommonBindings.SetLogDir( buffer );
 	} while( ++pi, pi->shortname != NULL );
 }
 

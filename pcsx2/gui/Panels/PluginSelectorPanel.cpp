@@ -652,12 +652,12 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 
 			if( SetDirFnptr func = (SetDirFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"setSettingsDir" ) )
 			{
-				func( GetSettingsFolder().ToUTF8() );
+				func( GetSettingsFolder().ToString().mb_str(wxConvFile) );
 			}
 
 			if( SetDirFnptr func = (SetDirFnptr)dynlib.GetSymbol( tbl_PluginInfo[pid].GetShortname() + L"setLogDir" ) )
 			{
-				func( GetLogFolder().ToUTF8() );
+				func( GetLogFolder().ToString().mb_str(wxConvFile) );
 			}
 		}
 
