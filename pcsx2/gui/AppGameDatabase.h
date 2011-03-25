@@ -51,7 +51,7 @@ public:
 		Console.WriteLn( "(GameDB) Unloading..." );
 	}
 
-	AppGameDatabase& LoadFromFile(const wxString& file = L"GameIndex.dbf", const wxString& key = L"Serial" );
+	AppGameDatabase& LoadFromFile(wxString file = L"GameIndex.dbf", const wxString& key = L"Serial" );
 	void SaveToFile(const wxString& file = L"GameIndex.dbf");
 };
 

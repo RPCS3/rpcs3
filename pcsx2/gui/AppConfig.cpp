@@ -629,12 +629,16 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniBitBool( UseDefaultLangs );
 	IniBitBool( UseDefaultPluginsFolder );
 
-	IniEntry( Bios );
-	IniEntry( Snapshots );
-	IniEntry( Savestates );
-	IniEntry( MemoryCards );
-	IniEntry( Logs );
-	IniEntry( Langs );
+	if( !ini.IsSaving() || !(InstallationMode==InstallMode_Portable) )
+	{//when saving in portable mode, we skip these entries, as they cannot be modified anyway.
+	 //  --> on load they'll be initialized to default (relative) paths
+		IniEntry( Bios );
+		IniEntry( Snapshots );
+		IniEntry( Savestates );
+		IniEntry( MemoryCards );
+		IniEntry( Logs );
+		IniEntry( Langs );
+	}
 
 	IniEntry( RunIso );
 	IniEntry( RunELF );
@@ -661,10 +665,22 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 
 	static const wxFileName pc( L"Please Configure" );
 
-	for( int i=0; i<PluginId_Count; ++i )
-		ini.Entry( tbl_PluginInfo[i].GetShortname(), Plugins[i], pc );
+	//when saving in portable mode, we just save the non-full-path filename
+ 	//  --> on load they'll be initialized with default (relative) paths (works both for plugins and bios)
+	bool needRelativeName = ini.IsSaving() && (InstallationMode==InstallMode_Portable);
 
-	ini.Entry( L"BIOS", Bios, pc );
+	for( int i=0; i<PluginId_Count; ++i )
+	{
+		if ( needRelativeName )
+			ini.Entry( tbl_PluginInfo[i].GetShortname(), wxFileName( Plugins[i].GetFullName() ), pc );
+		else
+			ini.Entry( tbl_PluginInfo[i].GetShortname(), Plugins[i], pc );
+	}
+
+	if( needRelativeName )
+		ini.Entry( L"BIOS", wxFileName( Bios.GetFullName() ), pc );
+	else
+		ini.Entry( L"BIOS", Bios, pc );
 }
 
 // ------------------------------------------------------------------------
