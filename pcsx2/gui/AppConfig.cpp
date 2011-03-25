@@ -629,16 +629,17 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniBitBool( UseDefaultLangs );
 	IniBitBool( UseDefaultPluginsFolder );
 
-	if( !ini.IsSaving() || !(InstallationMode==InstallMode_Portable) )
-	{//when saving in portable mode, we skip these entries, as they cannot be modified anyway.
+	//when saving in portable mode, we save empty strings
 	 //  --> on load they'll be initialized to default (relative) paths
-		IniEntry( Bios );
-		IniEntry( Snapshots );
-		IniEntry( Savestates );
-		IniEntry( MemoryCards );
-		IniEntry( Logs );
-		IniEntry( Langs );
-	}
+	bool rel = ( ini.IsSaving() && (InstallationMode==InstallMode_Portable) );
+	wxDirName e(L"");
+		
+	ini.Entry( L"Bios",			rel?e:Bios,			Bios );
+	ini.Entry( L"Snapshots",	rel?e:Snapshots,	Snapshots );
+	ini.Entry( L"Savestates",	rel?e:Savestates,	Savestates );
+	ini.Entry( L"MemoryCards",	rel?e:MemoryCards,	MemoryCards );
+	ini.Entry( L"Logs",			rel?e:Logs,			Logs );
+	ini.Entry( L"Langs",		rel?e:Langs,		Langs );
 
 	IniEntry( RunIso );
 	IniEntry( RunELF );
@@ -667,6 +668,7 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 
 	//when saving in portable mode, we just save the non-full-path filename
  	//  --> on load they'll be initialized with default (relative) paths (works both for plugins and bios)
+	//note: this will break if converting from install to portable, and custom folders are used. We can live with that.
 	bool needRelativeName = ini.IsSaving() && (InstallationMode==InstallMode_Portable);
 
 	for( int i=0; i<PluginId_Count; ++i )
