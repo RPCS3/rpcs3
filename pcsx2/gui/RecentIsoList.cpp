@@ -224,7 +224,8 @@ void RecentIsoManager::AppStatusEvent_OnUiSettingsLoadSave( const AppSettingsEve
 		int cnt = m_Items.size();
 		for( int i=0; i<cnt; ++i )
 		{
-			ini.Entry( pxsFmt( L"Filename%02d", i ),  wxFileName(m_Items[i].Filename), wxFileName(L""), IsPortable());
+			wxFileName item_filename = wxFileName(m_Items[i].Filename);
+			ini.Entry( pxsFmt( L"Filename%02d", i ),  item_filename, wxFileName(L""), IsPortable());
 		}
 		
 		ini.GetConfig().SetRecordDefaults( true );
