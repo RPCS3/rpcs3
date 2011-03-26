@@ -26,6 +26,12 @@ const wxRect wxDefaultRect( wxDefaultCoord, wxDefaultCoord, wxDefaultCoord, wxDe
 template struct FixedInt<100>;
 template struct FixedInt<256>;
 
+wxDirName g_fullBaseDirName = wxDirName(L"");
+void SetFullBaseDir( wxDirName appRoot )
+{
+	g_fullBaseDirName = appRoot;
+}
+
 static int _calcEnumLength( const wxChar* const* enumArray )
 {
 	int cnt = 0;
@@ -113,11 +119,19 @@ void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName de
 		value = dest;
 }
 
-void IniLoader::Entry( const wxString& var, wxFileName& value, const wxFileName defvalue )
+void IniLoader::Entry( const wxString& var, wxFileName& value, const wxFileName defvalue, bool isAllowRelative )
 {
 	wxString dest( defvalue.GetFullPath() );
 	if( m_Config ) m_Config->Read( var, &dest, defvalue.GetFullPath() );
 	value = dest;
+	if( isAllowRelative && value.IsRelative() )
+		value = g_fullBaseDirName+value;
+
+	if( value.IsAbsolute() )
+		value.Normalize();
+
+	if (value.HasVolume())
+		value.SetVolume(value.GetVolume().Upper());
 }
 
 void IniLoader::Entry( const wxString& var, int& value, const int defvalue )
@@ -259,10 +273,32 @@ void IniSaver::Entry( const wxString& var, wxDirName& value, const wxDirName def
 		m_Config->Write( var, value.ToString() );
 }
 
-void IniSaver::Entry( const wxString& var, wxFileName& value, const wxFileName defvalue )
+//If isAllowRelative is true, we're saving as relative if the file is somewhere inside the PARENT of pcsx2 folder.
+//When a file is saved as relative, it's always relative to pcsx2 main folder (even if the file is outside of it).
+//e.g. at the next folder structure, files at ISOs_2 and ISOs_3 will be saved relative, but files at ISOs_1 will be saved absolute.
+//  -root
+//   |-ISOs_1
+//   |-parent_of_pcsx2_folder
+//     |-ISOs_2
+//     |-pcsx2_folder
+//       |-pcsx2.exe
+//       |-plugins
+//       | |-...
+//       |-ISOs_3
+void IniSaver::Entry( const wxString& var, wxFileName& value, const wxFileName defvalue, bool isAllowRelative )
 {
 	if( !m_Config ) return;
-	m_Config->Write( var, value.GetFullPath() );
+	wxFileName res(value);
+
+	if ( res.IsAbsolute() )
+		res.Normalize();
+	
+	wxDirName upper( g_fullBaseDirName );
+	upper.RemoveLast();
+	if( isAllowRelative && upper.IsContains( value ) )
+		res.MakeRelativeTo(g_fullBaseDirName.ToString());
+	
+	m_Config->Write( var, res.GetFullPath() );
 }
 
 void IniSaver::Entry( const wxString& var, int& value, const int defvalue )

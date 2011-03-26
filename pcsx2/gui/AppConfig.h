@@ -81,6 +81,7 @@ enum InstallationModeType
 	// This mode is typically enabled by the presence of a 'portable.ini' in the folder.
 	InstallMode_Portable,
 };
+bool IsPortable();
 
 extern InstallationModeType	InstallationMode;
 

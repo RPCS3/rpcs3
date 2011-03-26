@@ -149,8 +149,9 @@ void DBLoaderHelper::ReadGames()
 //  AppGameDatabase  (implementations)
 // --------------------------------------------------------------------------------------
 
-AppGameDatabase& AppGameDatabase::LoadFromFile(wxString file, const wxString& key )
+AppGameDatabase& AppGameDatabase::LoadFromFile(const wxString& _file, const wxString& key )
 {
+	wxString file(_file);
 	if( wxFileName(file).IsRelative() )
 		file = (InstallFolder + file).GetFullPath();
 	

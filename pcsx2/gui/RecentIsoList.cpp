@@ -172,9 +172,13 @@ void RecentIsoManager::InsertIntoMenu( int id )
 		wxid = this->m_firstIdForMenuItems_or_wxID_ANY + id;
 
 	curitem.ItemPtr = m_Menu->Append( wxid, Path::GetFilename(curitem.Filename), curitem.Filename, wxITEM_RADIO );
+	bool exists = wxFileExists( curitem.Filename );
 
-	if( m_cursel == id )
+	if( m_cursel == id && exists )
 		curitem.ItemPtr->Check();
+
+	if ( !exists )
+		curitem.ItemPtr->Enable( false );
 }
 
 void RecentIsoManager::LoadListFrom( IniInterface& ini )
@@ -189,9 +193,9 @@ void RecentIsoManager::LoadListFrom( IniInterface& ini )
 	ScopedIniGroup groupie( ini, L"RecentIso" );
 	for( uint i=0; i<m_MaxLength; ++i )
 	{
-		wxString loadtmp;
-		ini.Entry( pxsFmt( L"Filename%02d", i ), loadtmp );
-		if( !loadtmp.IsEmpty() ) Add( loadtmp );
+		wxFileName loadtmp(L"");
+		ini.Entry( pxsFmt( L"Filename%02d", i ), loadtmp, loadtmp, true );
+		if( loadtmp.GetFullName()!=L"" ) Add( loadtmp.GetFullPath() );
 	}
 	Add( g_Conf->CurrentIso );
 
@@ -220,7 +224,7 @@ void RecentIsoManager::AppStatusEvent_OnUiSettingsLoadSave( const AppSettingsEve
 		int cnt = m_Items.size();
 		for( int i=0; i<cnt; ++i )
 		{
-			ini.Entry( pxsFmt( L"Filename%02d", i ), m_Items[i].Filename );
+			ini.Entry( pxsFmt( L"Filename%02d", i ),  wxFileName(m_Items[i].Filename), wxFileName(L""), IsPortable());
 		}
 		
 		ini.GetConfig().SetRecordDefaults( true );

@@ -406,6 +406,11 @@ wxString AppConfig::FullpathToMcd( uint slot ) const
 	return Path::Combine( Folders.MemoryCards, Mcd[slot].Filename );
 }
 
+bool IsPortable()
+{
+	return InstallationMode==InstallMode_Portable;
+}
+
 AppConfig::AppConfig()
 	: MainGuiPosition( wxDefaultPosition )
 	, SysSettingsTabName( L"Cpu" )
@@ -471,6 +476,8 @@ void App_LoadSaveInstallSettings( IniInterface& ini )
 	// Attempt to load plugins and themes based on the Install Folder.
 
 	ini.Entry( L"Install_Dir",				InstallFolder,				(wxDirName)(wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath()) );
+	SetFullBaseDir( InstallFolder );
+
 	ini.Entry( L"PluginsFolder",			PluginsFolder,				InstallFolder + PathDefs::Base::Plugins() );
 	ini.Entry( L"ThemesFolder",				ThemesFolder,				InstallFolder + PathDefs::Base::Themes() );
 
@@ -530,7 +537,10 @@ void AppConfig::LoadSaveRootItems( IniInterface& ini )
 	IniEntry( Toolbar_ImageSize );
 	IniEntry( Toolbar_ShowLabels );
 
-	IniEntry( CurrentIso );
+	wxFileName res(CurrentIso);
+	ini.Entry( L"CurrentIso", res, res, ini.IsLoading() || IsPortable() );
+	CurrentIso = res.GetFullPath();
+
 	IniEntry( CurrentELF );
 
 	IniEntry( EnableSpeedHacks );
@@ -631,7 +641,7 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 
 	//when saving in portable mode, we save empty strings
 	 //  --> on load they'll be initialized to default (relative) paths
-	bool rel = ( ini.IsSaving() && (InstallationMode==InstallMode_Portable) );
+	bool rel = ( ini.IsSaving() && IsPortable() );
 	wxDirName e(L"");
 		
 	ini.Entry( L"Bios",			rel?e:Bios,			Bios );
@@ -669,7 +679,7 @@ void AppConfig::FilenameOptions::LoadSave( IniInterface& ini )
 	//when saving in portable mode, we just save the non-full-path filename
  	//  --> on load they'll be initialized with default (relative) paths (works both for plugins and bios)
 	//note: this will break if converting from install to portable, and custom folders are used. We can live with that.
-	bool needRelativeName = ini.IsSaving() && (InstallationMode==InstallMode_Portable);
+	bool needRelativeName = ini.IsSaving() && IsPortable();
 
 	for( int i=0; i<PluginId_Count; ++i )
 	{

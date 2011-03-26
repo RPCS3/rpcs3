@@ -72,6 +72,28 @@ public:
 		return wxFileName::SameAs( filepath );
 	}
 
+	//Returns true if the file is somewhere inside this directory (and both file and directory are not relative).
+	bool IsContains( const wxFileName& file ) const
+	{
+		if( this->IsRelative() || file.IsRelative() )
+			return false;
+
+		wxFileName f( file );
+
+		while( 1 )
+		{
+			if( this->SameAs( wxDirName(f.GetPath()) ) )
+				return true;
+
+			if( f.GetDirCount() == 0 )
+				return false;
+
+			f.RemoveLastDir();
+		}
+
+		return false;
+	}
+
 	// Returns the number of sub folders in this directory path
 	size_t GetCount() const { return GetDirCount(); }
 
