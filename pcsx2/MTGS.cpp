@@ -196,7 +196,7 @@ void SysMtgsThread::OpenPlugin()
 	if( renderswitch )
 	{
 		Console.Indent(2).WriteLn( "Forced software switch enabled." );
-		if (EmuConfig.GS.VsyncEnable)
+		if (EmuConfig.GS.VsyncEnable && !EmuConfig.GS.ManagedVsync)
 		{
 			// Better turn Vsync off now, as in most cases sw rendering is not fast enough to support a steady 60fps.
 			// Having Vsync still enabled then means a big cut in speed and sloppy rendering.
