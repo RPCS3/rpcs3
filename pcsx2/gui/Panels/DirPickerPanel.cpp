@@ -64,7 +64,7 @@ void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 		wxDialogWithHelpers createPathDlg( NULL, _("Path does not exist") );
 		createPathDlg.SetMinWidth( 600 );
 
-		createPathDlg += createPathDlg.Text( path.ToString() ) | StdCenter();
+		createPathDlg += createPathDlg.Label( path.ToString() ) | StdCenter();
 
 		createPathDlg += createPathDlg.Heading( pxE( "!Notice:DirPicker:CreatePath",
 			L"The specified path/directory does not exist.  Would you like to create it?" )

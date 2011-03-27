@@ -93,17 +93,22 @@ namespace PathDefs
 
 	// Specifies the root folder for the application install.
 	// (currently it's the CWD, but in the future I intend to move all binaries to a "bin"
-	// sub folder, in which case the approot will become "..")
+	// sub folder, in which case the approot will become "..") [- Air?]
+
+	//The installer installs the folders which are relative to AppRoot (that's plugins/themes/langs)
+	//  relative to the exe folder, and not relative to cwd. So the exe should be default AppRoot. - avih
 	const wxDirName& AppRoot()
 	{
 		AffinityAssert_AllowFrom_MainUI();
-
+/*
 		if (InstallationMode == InstallMode_Registered)
 		{
 			static const wxDirName cwdCache( (wxDirName)Path::Normalize(wxGetCwd()) );
 			return cwdCache;
 		}
 		else if (InstallationMode == InstallMode_Portable)
+*/		
+		if (InstallationMode == InstallMode_Registered || InstallationMode == InstallMode_Portable)
 		{
 			static const wxDirName appCache( (wxDirName)
 				wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath() );
