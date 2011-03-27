@@ -610,20 +610,23 @@ int GPUState::PH_Read(GPUReg* r, int size)
 	int w = r[2].XY.X;
 	int h = r[2].XY.Y;
 
-	GSVector4i r2;
+	if(w > 0 && h > 0)
+	{
+		GSVector4i r2;
 
-	r2.left = r[1].XY.X;
-	r2.top = r[1].XY.Y;
-	r2.right = r2.left + w;
-	r2.bottom = r2.top + h;
+		r2.left = r[1].XY.X;
+		r2.top = r[1].XY.Y;
+		r2.right = r2.left + w;
+		r2.bottom = r2.top + h;
 
-	m_read.bytes = ((w * h + 1) & ~1) * 2;
-	m_read.cur = 0;
-	m_read.Reserve(m_read.bytes);
+		m_read.bytes = ((w * h + 1) & ~1) * 2;
+		m_read.cur = 0;
+		m_read.Reserve(m_read.bytes);
 
-	m_mem.ReadRect(r2, (uint16*)m_read.buff);
+		m_mem.ReadRect(r2, (uint16*)m_read.buff);
 
-	Dump("r");
+		Dump("r");
+	}
 
 	m_env.STATUS.IMG = 1;
 

@@ -31,11 +31,14 @@ __aligned(class, 32) GSRasterizerData
 {
 public:
 	GSVector4i scissor;
+	bool scissor_test;
 	GS_PRIM_CLASS primclass;
 	const GSVertexSW* vertices;
 	int count;
 	uint64 frame;
 	const void* param;
+
+	GSRasterizerData() : scissor_test(true) {}
 };
 
 class IDrawScanline : public GSAlignedClass<32>
@@ -60,8 +63,8 @@ public:
 	virtual void PrintStats() = 0;
 
 	__forceinline void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan) {m_sp(vertices, dscan);}
-	__forceinline void DrawScanline(int right, int left, int top, const GSVertexSW& scan) {m_ds(right, left, top, scan);}
-	__forceinline void DrawEdge(int right, int left, int top, const GSVertexSW& scan) {m_de(right, left, top, scan);}
+	__forceinline void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan) {m_ds(pixels, left, top, scan);}
+	__forceinline void DrawEdge(int pixels, int left, int top, const GSVertexSW& scan) {m_de(pixels, left, top, scan);}
 	__forceinline void DrawRect(const GSVector4i& r, const GSVertexSW& v) {(this->*m_dr)(r, v);}
 
 	__forceinline bool IsEdge() const {return m_de != NULL;}
@@ -90,18 +93,20 @@ protected:
 	GSVector4 m_fscissor;
 	struct {GSVertexSW* buff; int count;} m_edge;
 
-	void DrawPoint(const GSVertexSW* v);
+	typedef void (GSRasterizer::*DrawPrimPtr)(const GSVertexSW* v, int count);
+
+	template<bool scissor_test> 
+	void DrawPoint(const GSVertexSW* v, int count);
 	void DrawLine(const GSVertexSW* v);
 	void DrawTriangle(const GSVertexSW* v);
 	void DrawSprite(const GSVertexSW* v);
-	void DrawEdge(const GSVertexSW* v);
 
 	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& l, const GSVertexSW& dl, const GSVertexSW& dscan);
 
 	void DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, int orientation, int side);
 
 	__forceinline bool IsOneOfMyScanlines(int scanline) const;
-
+	__forceinline void AddScanline(GSVertexSW* e, int pixels, int left, int top, const GSVertexSW& scan);
 	__forceinline void Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bool edge = false);
 
 public:

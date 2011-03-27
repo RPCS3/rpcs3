@@ -2764,42 +2764,33 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 	if(m_sel.mmin)
 	{
-		int r[] = {5, 6, 2, 4, 0, 1, 3, 7};
+		const int r[] = {5, 6, 2, 4, 0, 1, 3, 7};
 
 		if(pixels == 4)
 		{
 			vmovdqa(ptr[&m_local.temp.test], xmm7);
+		}
 
-			for(int j = 0; j < 4; j++)
+		for(int j = 0; j < 4; j++)
+		{
+			mov(ebx, ptr[&lod_i->u32[j]]);
+			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
+
+			for(int i = 0; i < pixels; i++)
 			{
-				mov(ebx, ptr[&lod_i->u32[j]]);
-				mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
-
-				for(int i = 0; i < 4; i++)
-				{
-					ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
-				}
+				ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
 			}
+		}
 
+		if(pixels == 4)
+		{
 			vmovdqa(xmm5, xmm7);
 			vmovdqa(xmm7, ptr[&m_local.temp.test]);
-		}
-		else
-		{
-			for(int j = 0; j < 4; j++)
-			{
-				mov(ebx, ptr[&lod_i->u32[j]]);
-				mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
-
-				ReadTexel(xmm6, xmm5, j);
-			}
 		}
 	}
 	else
 	{
-		int r[] = {5, 6, 2, 4, 0, 1, 3, 5};
-
-		// TODO: might be faster to read in columns, inserts into the same register would be further from eachother (last one overwrites xmm5, need to use xmm7)
+		const int r[] = {5, 6, 2, 4, 0, 1, 3, 5};
 
 		for(int i = 0; i < pixels; i++)
 		{

@@ -86,7 +86,8 @@ void GSRasterizer::Draw(const GSRasterizerData* data)
 	{
 	case GS_POINT_CLASS:
 		m_stats.prims = count;
-		for(int i = 0; i < count; i++) DrawPoint(&vertices[i]);
+		if(data->scissor_test) DrawPoint<true>(vertices, count);
+		else DrawPoint<false>(vertices, count);
 		break;
 	case GS_LINE_CLASS:
 		ASSERT(!(count & 1));
@@ -117,19 +118,23 @@ void GSRasterizer::GetStats(GSRasterizerStats& stats)
 	stats = m_stats;
 }
 
-void GSRasterizer::DrawPoint(const GSVertexSW* v)
+template<bool scissor_test> 
+void GSRasterizer::DrawPoint(const GSVertexSW* v, int count)
 {
-	GSVector4i p(v->p);
-
-	if(m_scissor.left <= p.x && p.x < m_scissor.right && m_scissor.top <= p.y && p.y < m_scissor.bottom)
+	for(; count > 0; count--, v++)
 	{
-		if(IsOneOfMyScanlines(p.y))
+		GSVector4i p(v->p);
+
+		if(!scissor_test || m_scissor.left <= p.x && p.x < m_scissor.right && m_scissor.top <= p.y && p.y < m_scissor.bottom)
 		{
-			m_stats.pixels++;
+			if(IsOneOfMyScanlines(p.y))
+			{
+				m_stats.pixels++;
 
-			m_ds->SetupPrim(v, *v);
+				m_ds->SetupPrim(v, *v);
 
-			m_ds->DrawScanline(1, p.x, p.y, *v);
+				m_ds->DrawScanline(1, p.x, p.y, *v);
+			}
 		}
 	}
 }
@@ -206,11 +211,7 @@ void GSRasterizer::DrawLine(const GSVertexSW* v)
 			{
 				if(IsOneOfMyScanlines(p.y))
 				{
-					*e = edge;
-
-					e->p.i16[0] = (int16)p.x;
-					e->p.i16[1] = (int16)p.y;
-					e->p.i16[2] = 1;
+					AddScanline(e, 1, p.x, p.y, edge);
 
 					e++;
 				}
@@ -243,8 +244,6 @@ static const int s_abc[8][4] =
 
 void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 {
-	// TODO: GSVertexSW::c/t could be merged into a GSVector8
-
 	GSVertexSW v[4];
 	GSVertexSW dv[3];
 	GSVertexSW ddv[3];
@@ -338,7 +337,7 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 			GSVector4 dy = tbmax.xxxx() - l.p.yyyy();
 
 			l.p = l.p.xxzw(); // r.x => l.y
-			dl.p = dl.p.upl(ddv[1 - j].p).xyzw(dl.p); // dr.x => dl.y
+			dl.p = dl.p.insert<0, 1>(ddv[1 - j].p); // dr.x => dl.y
 
 			l += dl * dy;
 
@@ -351,13 +350,13 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 			// v[3] isn't accurate enough, it may leave gaps horizontally if it happens to be on the left side of the triangle
 			// example: previous triangle's scanline ends on 48.9999, this one's starts from 49.0001, the pixel at 49 isn't drawn
 
-			GSVertexSW l = v[1 + (1 << j)];
+			GSVertexSW l = v[1 + (j << 1)];
 			GSVertexSW dl = ddv[2 - j];
 
 			GSVector4 dy = tbmax.zzzz() - l.p.yyyy();
 
-			l.p = l.p.upl(v[3 - (1 << j)].p).xyzw(l.p); // r.x => l.y
-			dl.p = dl.p.upl(ddv[1 + j].p).xyzw(dl.p); // dr.x => dl.y
+			l.p = l.p.insert<0, 1>(v[3 - (j << 1)].p); // r.x => l.y
+			dl.p = dl.p.insert<0, 1>(ddv[1 + j].p); // dr.x => dl.y
 
 			l += dl * dy;
 
@@ -375,8 +374,8 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 
 			GSVector4 dy = tbmax.xxxx() - l.p.yyyy();
 
-			l.p = l.p.upl(v[1 - j].p).xyzw(l.p); // r.x => l.y
-			dl.p = dl.p.upl(ddv[2 - j].p).xyzw(dl.p); // dr.x => dl.y
+			l.p = l.p.insert<0, 1>(v[1 - j].p); // r.x => l.y
+			dl.p = dl.p.insert<0, 1>(ddv[2 - j].p); // dr.x => dl.y
 
 			l += dl * dy;
 
@@ -395,7 +394,7 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 			GSVector4 dy = tbmax.xxxx() - l.p.yyyy();
 
 			l.p = l.p.xxzw(); // r.x => l.y
-			dl.p = dl.p.upl(ddv[1 - j].p).xyzw(dl.p); // dr.x => dl.y
+			dl.p = dl.p.insert<0, 1>(ddv[1 - j].p); // dr.x => dl.y
 
 			l += dl * dy;
 
@@ -417,13 +416,15 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 
 	GSVertexSW* RESTRICT e = &m_edge.buff[m_edge.count];
 
+	GSVector4 scissor = m_fscissor.xzxz();
+
 	while(1)
 	{
 		if(IsOneOfMyScanlines(top))
 		{
 			GSVector4 lrf = l.p.ceil();
-			GSVector4 lrmax = lrf.max(m_fscissor.xzxz());
-			GSVector4 lrmin = lrf.min(m_fscissor.xzxz());
+			GSVector4 lrmax = lrf.max(scissor);
+			GSVector4 lrmin = lrf.min(scissor);
 			GSVector4i lr = GSVector4i(lrmax.xxyy(lrmin));
 
 			int left = lr.extract32<0>();
@@ -435,11 +436,9 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& l, const
 			{
 				m_stats.pixels += pixels;
 
-				*e = l + dscan * (lrmax - l.p).xxxx();
+				GSVector4 prestep = lrmax - l.p;
 
-				e->p.i16[0] = (int16)left;
-				e->p.i16[1] = (int16)top;
-				e->p.i16[2] = (int16)pixels;
+				AddScanline(e, pixels, left, top, l + dscan * prestep.xxxx());
 
 				e++;
 			}
@@ -496,8 +495,12 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertices)
 	dedge.t = (dv.t / dv.p.yyyy()).xyxy(zero).wyww();
 	dscan.t = (dv.t / dv.p.xxxx()).xyxy(zero).xwww();
 
-	if(scan.p.y < (float)r.top) scan.t += dedge.t * ((float)r.top - scan.p.y);
-	if(scan.p.x < (float)r.left) scan.t += dscan.t * ((float)r.left - scan.p.x);
+	GSVector4 prestep = GSVector4(r.left, r.top) - scan.p;
+
+	int m = (prestep == GSVector4::zero()).mask();
+
+	if((m & 2) == 0) scan.t += dedge.t * prestep.yyyy();
+	if((m & 1) == 0) scan.t += dscan.t * prestep.xxxx();
 
 	m_ds->SetupPrim(v, dscan);
 
@@ -581,15 +584,9 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 
 				if(m_scissor.left <= xi && xi < m_scissor.right && IsOneOfMyScanlines(xi))
 				{
-					m_stats.pixels++;
-
-					*e = edge;
+					AddScanline(e, 1, xi, top, edge);
 
 					e->t.u32[3] = (0x10000 - xf) & 0xffff;
-
-					e->p.i16[0] = (int16)xi;
-					e->p.i16[1] = (int16)top;
-					e->p.i16[2] = 1;
 
 					e++;
 				}
@@ -609,15 +606,9 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 
 				if(m_scissor.left <= xi && xi < m_scissor.right && IsOneOfMyScanlines(xi))
 				{
-					m_stats.pixels++;
-
-					*e = edge;
+					AddScanline(e, 1, xi, top, edge);
 
 					e->t.u32[3] = xf;
-
-					e->p.i16[0] = (int16)xi;
-					e->p.i16[1] = (int16)top;
-					e->p.i16[2] = 1;
 
 					e++;
 				}
@@ -678,15 +669,9 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 
 				if(m_scissor.top <= yi && yi < m_scissor.bottom && IsOneOfMyScanlines(yi))
 				{
-					m_stats.pixels++;
+					AddScanline(e, 1, left, yi, edge);
 
-					*e = edge;
-					
 					e->t.u32[3] = (0x10000 - yf) & 0xffff;
-
-					e->p.i16[0] = (int16)left;
-					e->p.i16[1] = (int16)yi;
-					e->p.i16[2] = 1;
 
 					e++;
 				}
@@ -706,15 +691,9 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 
 				if(m_scissor.top <= yi && yi < m_scissor.bottom && IsOneOfMyScanlines(yi))
 				{
-					m_stats.pixels++;
+					AddScanline(e, 1, left, yi, edge);
 
-					*e = edge;
-					
 					e->t.u32[3] = yf;
-
-					e->p.i16[0] = (int16)left;
-					e->p.i16[1] = (int16)yi;
-					e->p.i16[2] = 1;
 
 					e++;
 				}
@@ -727,7 +706,20 @@ void GSRasterizer::DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GS
 		}
 	}
 
-	m_edge.count += e - &m_edge.buff[m_edge.count];
+	int count = e - &m_edge.buff[m_edge.count];
+
+	m_stats.pixels += count;
+
+	m_edge.count += count;
+}
+
+void GSRasterizer::AddScanline(GSVertexSW* e, int pixels, int left, int top, const GSVertexSW& scan)
+{
+	*e = scan;
+
+	e->p.i16[0] = (int16)pixels;
+	e->p.i16[1] = (int16)left;
+	e->p.i16[2] = (int16)top;
 }
 
 void GSRasterizer::Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bool edge)
@@ -741,18 +733,31 @@ void GSRasterizer::Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bo
 		m_ds->SetupPrim(vertices, dscan);
 
 		const GSVertexSW* RESTRICT e = m_edge.buff;
-
-		int i = 0;
+		const GSVertexSW* RESTRICT ee = e + count;
 
 		if(!edge)
 		{
-			do {m_ds->DrawScanline(e[i].p.i16[2], e[i].p.i16[0], e[i].p.i16[1], e[i]);}
-			while(++i < count);
+			do 
+			{
+				int pixels = e->p.i16[0];
+				int left = e->p.i16[1];
+				int top = e->p.i16[2];
+
+				m_ds->DrawScanline(pixels, left, top, *e++);
+			}
+			while(e < ee);
 		}
 		else
 		{
-			do {m_ds->DrawEdge(e[i].p.i16[2], e[i].p.i16[0], e[i].p.i16[1], e[i]);}
-			while(++i < count);
+			do 
+			{
+				int pixels = e->p.i16[0];
+				int left = e->p.i16[1];
+				int top = e->p.i16[2];
+
+				m_ds->DrawEdge(pixels, left, top, *e++);
+			}
+			while(e < ee);
 		}
 
 		m_edge.count = 0;

@@ -66,6 +66,20 @@ public:
     void Set() {SetEvent(m_hEvent);}
     bool Wait() {return WaitForSingleObject(m_hEvent, INFINITE) == WAIT_OBJECT_0;}
 };
+/*
+class GSAutoResetEvent
+{
+protected:
+    long m_sync;
+
+public:
+	GSAutoResetEvent() {m_sync = 0;}
+	~GSAutoResetEvent() {}
+
+    void Set() {_interlockedbittestandset(&m_sync, 0);}
+    bool Wait() {while(!_interlockedbittestandreset(&m_sync, 0)) _mm_pause(); return true;}
+};
+*/
 
 #else
 

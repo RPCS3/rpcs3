@@ -100,7 +100,7 @@ protected:
 				r.right = r.left + 256;
 				r.bottom = r.top + 256;
 
-				Dump(format("da_%d_%d_%d_%d_%d", m_env.STATUS.TP, r).c_str(), m_env.STATUS.TP, r, false);
+				Dump(format("da_%d_%d_%d_%d_%d", m_env.STATUS.TP, r.left, r.top, r.right, r.bottom).c_str(), m_env.STATUS.TP, r, false);
 			}
 			*/
 
