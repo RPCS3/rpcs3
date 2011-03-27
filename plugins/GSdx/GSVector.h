@@ -3113,7 +3113,7 @@ public:
 
 	__forceinline GSVector8i(__m128i m0, __m128i m1)
 	{
-		m = _mm256_insertf128_si256(_mm256_insertf128_si256(zero(), m0, 0), m1, 1);
+		this->m = zero().insert<0>(m0).insert<1>(m1);
 	}
 
 	__forceinline GSVector8i(const GSVector8i& v)
@@ -3401,7 +3401,11 @@ public:
 
 	__forceinline GSVector8(__m128 m0, __m128 m1)
 	{
-		m = _mm256_permute2f128_ps(_mm256_castps128_ps256(m0), _mm256_castps128_ps256(m1), 0x20);
+		// FIXME: MSVC bug, _mm256_castps128_ps256 may directy reload spilled regs from unaligned memory with vmovaps
+
+		// m = _mm256_permute2f128_ps(_mm256_castps128_ps256(m0), _mm256_castps128_ps256(m1), 0x20);
+
+		this->m = zero().insert<0>(m0).insert<1>(m1);
 	}
 
 	__forceinline GSVector8(const GSVector8& v)
@@ -3416,8 +3420,12 @@ public:
 
 	__forceinline explicit GSVector8(__m128 m)
 	{
-		this->m = _mm256_castps128_ps256(m);
-		this->m = _mm256_permute2f128_ps(this->m, this->m, 0);
+		// FIXME: MSVC bug, _mm256_castps128_ps256 may directy reload spilled regs from unaligned memory with vmovaps
+
+		// this->m = _mm256_castps128_ps256(m);
+		// this->m = _mm256_permute2f128_ps(this->m, this->m, 0);
+
+		this->m = zero().insert<0>(m).xx();
 	}
 
 	__forceinline explicit GSVector8(__m256 m)
