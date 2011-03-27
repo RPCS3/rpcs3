@@ -82,6 +82,10 @@ public:
 		SMTDDS2,
 		RozenMaidenGebetGarden,
 		SuikodenTactics,
+		TenchuWoH,
+		TenchuFS,
+		Sly3,
+		Sly2,
 		TitleCount,
 	};
 

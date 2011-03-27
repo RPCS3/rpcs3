@@ -2368,14 +2368,14 @@ bool GSC_SonicUnleashed(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && fi.FBP == 0x02200 && fi.FPSM == PSM_PSMCT16S && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT16)
+		if(fi.TME && fi.FPSM == PSM_PSMCT16S && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x00000)
 		{
 			skip = 1000; // shadow
 		}
 	}
 	else
 	{
-		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x02200 && fi.TPSM == PSM_PSMCT16S)
+		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT16 && fi.TPSM == PSM_PSMCT16S && fi.FBMSK == 0x00000)
 		{
 			skip = 2;
 		}
@@ -2495,6 +2495,58 @@ bool GSC_SuikodenTactics(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_TenchuWoH(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.TPSM == PSM_PSMZ16 && fi.FPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
+		{
+			skip = 3; 
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_TenchuFS(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.TPSM == PSM_PSMZ16 && fi.FPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
+		{
+			skip = 3; 
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_Sly3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00700) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x00700) && fi.TPSM == PSM_PSMCT16)
+		{
+			skip = 107;
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_Sly2(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME &&  /*(fi.FBP == 0x00000 || fi.FBP == 0x00700) &&*/  fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
+		{
+			skip = 540;	
+		}
+	}
+	
+	return true;
+}
+
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
 	GSFrameInfo fi;
@@ -2550,6 +2602,10 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::RadiataStories] = GSC_RadiataStories;
 		map[CRC::HauntingGround] = GSC_HauntingGround;
 		map[CRC::SuikodenTactics] = GSC_SuikodenTactics;
+		map[CRC::TenchuWoH] = GSC_TenchuWoH;
+		map[CRC::TenchuFS] = GSC_TenchuFS;
+		map[CRC::Sly3] = GSC_Sly3;
+		map[CRC::Sly2] = GSC_Sly2;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

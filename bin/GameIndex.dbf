@@ -740,7 +740,7 @@ Region = NTSC-U
 Serial = SCUS-97275
 Name   = SOCOM II - U.S. Navy SEALs
 Region = NTSC-U
-Compat = 3
+Compat = 1
 ---------------------------------------------
 Serial = SCUS-97276
 Name   = NFL GameDay 2004
@@ -791,7 +791,7 @@ Region = NTSC-U
 Serial = SCUS-97316
 Name   = Sly 2 - Band of Thieves
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SCUS-97317
 Name   = NFL GameDay 2004 [Demo]
@@ -1293,7 +1293,7 @@ Region = NTSC-U
 Serial = SCUS-97474
 Name   = SOCOM 3 - U.S. Navy SEALs
 Region = NTSC-U
-Compat = 2
+Compat = 4
 ---------------------------------------------
 Serial = SCUS-97475
 Name   = SOCOM 3 - U.S. Navy SEALs [Regular Demo]
@@ -1523,7 +1523,7 @@ Region = NTSC-U
 Serial = SCUS-97545
 Name   = SOCOM - U.S. Navy SEALs - Combined Assault
 Region = NTSC-U
-Compat = 2
+Compat = 4
 ---------------------------------------------
 Serial = SCUS-97548
 Name   = Ape Escape 3 [Demo]
@@ -1668,6 +1668,7 @@ Region = NTSC-U
 Serial = SCUS-97623
 Name   = Secret Agent Clank
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SCUS-97627
 Name   = Singstar Pop Volume 2
@@ -2182,7 +2183,7 @@ Compat = 5
 Serial = SLUS-20136
 Name   = Barbarian
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20138
 Name   = Rayman 2 - Revolution
@@ -2584,7 +2585,7 @@ Compat = 3
 Serial = SLUS-20224
 Name   = Pac-Man World 2
 Region = NTSC-U
-Compat = 1
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20225
 Name   = Gadget Racers
@@ -3527,6 +3528,7 @@ Compat = 4
 Serial = SLUS-20441
 Name   = NASCAR - Dirt to Daytona
 Region = NTSC-U
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20442
 Name   = Red Faction 2
@@ -3697,7 +3699,7 @@ Compat = 5
 Serial = SLUS-20483
 Name   = WWE Smackdown - Shut Your Mouth
 Region = NTSC-U
-Compat = 5
+Compat = 3
 [patches = B0AE1898]
 	
 	comment=patched by prafull
@@ -4073,6 +4075,7 @@ Serial = SLUS-20566
 Name   = Buffy the Vampire Slayer - Chaos Bleeds
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1	//garbage in HUD
 ---------------------------------------------
 Serial = SLUS-20567
 Name   = P.T.O. IV - Pacific Theater of Operations
@@ -4380,6 +4383,7 @@ Compat = 3
 Serial = SLUS-20639
 Name   = Def Jam - Vendetta
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20640
 Name   = Saturday Night Speedway
@@ -4835,6 +4839,7 @@ Compat = 5
 Serial = SLUS-20743
 Name   = Prince of Persia - Sands of Time
 Region = NTSC-U
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20744
 Name   = EverQuest - Online Adventures - Frontiers
@@ -6113,7 +6118,7 @@ Region = NTSC-U
 Serial = SLUS-21022
 Name   = Prince of Persia - Warrior Within
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21025
 Name   = Madden NFL 2005 [Special Collectors Edition]
@@ -6514,7 +6519,7 @@ Compat = 4
 Serial = SLUS-21111
 Name   = Scarface - The World is Yours
 Region = NTSC-U
-Compat = 1
+Compat = 2
 ---------------------------------------------
 Serial = SLUS-21112
 Name   = L.A. Rush
@@ -7028,6 +7033,7 @@ Serial = SLUS-21222
 Name   = Top Spin
 Region = NTSC-U
 Compat = 5
+SkipMPEGHack = 1	//background IPU in main menu hangs the game.
 ---------------------------------------------
 Serial = SLUS-21223
 Name   = Karaoke Revolution Party
@@ -7272,7 +7278,7 @@ Compat = 1
 Serial = SLUS-21273
 Name   = Matrix, The - Path of Neo
 Region = NTSC-U
-Compat = 5
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-21274
 Name   = Outrun 2006 - Coast 2 Coast
@@ -8930,7 +8936,7 @@ Region = NTSC-U
 Serial = SLUS-21658
 Name   = Need for Speed - ProStreet
 Region = NTSC-U
-Compat = 2
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-21660
 Name   = Disney Princess - Enchanted Journey
@@ -8960,7 +8966,7 @@ Compat = 1
 Serial = SLUS-21665
 Name   = Simpsons Game, The
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21666
 Name   = Mountain Bike Adrenaline
@@ -9035,7 +9041,7 @@ Compat = 3
 Serial = SLUS-21682
 Name   = Rock Band
 Region = NTSC-U
-Compat = 3
+Compat = 2
 ---------------------------------------------
 Serial = SLUS-21683
 Name   = Yu-Gi-Oh! The Beginning of Destiny
@@ -9567,6 +9573,7 @@ Compat = 5
 Serial = SLUS-21810
 Name   = WWE SmackDown vs. Raw 2009
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21811
 Name   = MotoGP 08
@@ -9836,6 +9843,7 @@ Region = NTSC-U
 Serial = SLUS-21876
 Name   = Rock Band Track Pack: Classic Rock
 Region = NTSC-U
+Compat = 3
 ---------------------------------------------
 Serial = SLUS-21877
 Name   = Tiger Woods PGA Tour 10
@@ -9886,6 +9894,7 @@ Compat = 5
 Serial = SLUS-21888
 Name   = Rock Band Country Track Pack
 Region = NTSC-U
+Compat = 3
 ---------------------------------------------
 Serial = SLUS-21889
 Name   = Rock Band Metal Track Pack
@@ -29489,7 +29498,8 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SCES-53409
 Name   = Sly 3
-Region = PAL-Unk
+Region = PAL-M11
+Compat = 5
 ---------------------------------------------
 Serial = SCES-53449
 Name   = AFL Premiership 2005
@@ -32798,17 +32808,7 @@ Region = PAL-Unk
 Serial = SLES-51402
 Name   = Tenchu - Wrath of Heaven
 Region = PAL-Unk
-Compat = 4
-[patches = 83261085]
-	
-	comment=patches by Nachbrenner
-	
-	//fix _waitIpuIdle for intro videos
-	patch=0,EE,00107a10,word,00000000
-	//fix D3_CHCR for tutorial's mini-videos
-	patch=0,EE,00310dc4,word,00000000 
-	
-[/patches]
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51403
 Name   = Tenchu - Wrath of Heaven
@@ -36064,6 +36064,7 @@ Region = PAL-Unk
 Serial = SLES-53016
 Name   = Tenchu - Fatal Shadows
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-53017
 Name   = Teenage Mutant Ninja Turtles 2 - Battle Nexus
@@ -36430,6 +36431,7 @@ Serial = SLES-53175
 Name   = Top Spin
 Region = PAL-Unk
 Compat = 5
+SkipMPEGHack = 1	//background IPU in main menu hangs the game.
 ---------------------------------------------
 Serial = SLES-53186
 Name   = International Super Karts
@@ -38462,7 +38464,8 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-54305
 Name   = Demon Chaos
-Region = PAL-Unk
+Region = PAL-M5
+Compat = 4
 ---------------------------------------------
 Serial = SLES-54306
 Name   = Cartoon Network Racing

@@ -143,6 +143,7 @@ CRC::Game CRC::m_games[] =
 	{0xf0a6d880, HarvestMoon, US, 0},
 	{0x75c01a04, NamcoXCapcom, US, 0},
 	{0xBF6F101F, GiTS, US, 0},
+	{0x95CC86EF, GiTS, US, 0},
 	{0xA5768F53, GiTS, JP, 0},
 	{0x6BF11378, Onimusha3, US, 0},
 	{0xF442260C, MajokkoALaMode2, JP, 0},
@@ -150,6 +151,7 @@ CRC::Game CRC::m_games[] =
 	{0x045D77E9, TalesOfAbyss, JPUNDUB, 0},
 	{0xAA5EC3A3, TalesOfAbyss, JP, 0},
 	{0xFB236A46, SonicUnleashed, US, 0},
+	{0x8C913264, SonicUnleashed, EU, 0},
 	{0x4C7BB3C8, SimpsonsGame, NoRegion, 0},
 	{0x4C94B32C, SimpsonsGame, NoRegion, 0},
 	{0xD71B57F4, Genji, NoRegion, 0},
@@ -177,6 +179,15 @@ CRC::Game CRC::m_games[] =
 	{0xE47C1A9C, SMTDDS2, JP, ZWriteMustNotClear},		// SMT Digital Devil Saga 2
 	{0x0B8AB37B, RozenMaidenGebetGarden, JP, 0},
 	{0x1CC39DBD, SuikodenTactics, US, 0},
+	{0x64C58FB4, TenchuFS, US, 0},
+	{0xE7CCCB1E, TenchuFS, EU, 0},
+	{0x1969B19A, TenchuFS, EU, 0},		//PAL Spanish
+	{0x767E383D, TenchuWoH, US, 0},
+	{0x83261085, TenchuWoH, EU, 0},		//PAL German
+	{0x8BC95883, Sly3, US, 0},
+	{0x8164C614, Sly3, EU, 0},
+	{0x07652DD9, Sly2, US, 0},
+	{0xFDA1CBF6, Sly2, EU, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;
