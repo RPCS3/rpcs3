@@ -2527,10 +2527,16 @@ bool GSC_Sly3(const GSFrameInfo& fi, int& skip)
 	{
 		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00700) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x00700) && fi.TPSM == PSM_PSMCT16)
 		{
-			skip = 107;
+			skip = 1000;
 		}
 	}
-	
+	else
+	{
+		if(fi.TME && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
+		{
+			skip = 3;
+		}
+	}
 	return true;
 }
 
@@ -2538,9 +2544,16 @@ bool GSC_Sly2(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME &&  /*(fi.FBP == 0x00000 || fi.FBP == 0x00700) &&*/  fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
+		if(fi.TME &&  (fi.FBP == 0x00000 || fi.FBP == 0x00700 || fi.FBP == 0x00800) &&  fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
 		{
-			skip = 540;	
+			skip = 1000;
+		}
+	}
+	else
+	{
+		if(fi.TME && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
+		{
+			skip = 3;
 		}
 	}
 	
