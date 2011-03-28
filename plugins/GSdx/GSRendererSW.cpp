@@ -382,6 +382,14 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				int mxl = (std::min<int>((int)context->TEX1.MXL, 6) << 16);
 				int k = context->TEX1.K << 12;
 
+				if((int)m_vt.m_lod.x >= (int)context->TEX1.MXL)
+				{
+					k = (int)m_vt.m_lod.x << 16; // set lod to max
+
+					gd.sel.lcm = 1; // lod is constant
+					gd.sel.mmin = 1; // tri-linear is meaningless
+				}
+
 				if(gd.sel.mmin == 2)
 				{
 					mxl--; // don't sample beyond the last level (TODO: add a dummy level instead?)
@@ -391,13 +399,6 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				{
 					ASSERT(gd.sel.lcm == 1);
 					ASSERT(((m_vt.m_min.t.uph(m_vt.m_max.t) == GSVector4::zero()).mask() & 3) == 3); // ratchet and clank (menu)
-
-					gd.sel.lcm = 1;
-				}
-
-				if((int)m_vt.m_lod.x >= (int)context->TEX1.MXL)
-				{
-					k = (int)m_vt.m_lod.x << 16;
 
 					gd.sel.lcm = 1;
 				}
