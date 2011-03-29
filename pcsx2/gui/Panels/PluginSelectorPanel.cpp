@@ -645,6 +645,7 @@ void Panels::PluginSelectorPanel::OnConfigure_Clicked( wxCommandEvent& evt )
 	{
 		
 		wxWindowDisabler disabler;
+		wxDoNotLogInThisScope quiettime;
 		ScopedCoreThreadPause paused_core( new SysExecEvent_SaveSinglePlugin(pid) );
 		if (!CorePlugins.AreLoaded())
 		{
