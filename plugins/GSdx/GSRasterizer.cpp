@@ -80,7 +80,7 @@ void GSRasterizer::Draw(const GSRasterizerData* data)
 
 	m_stats.Reset();
 
-	int64 start = __rdtsc();
+	uint64 start = __rdtsc();
 
 	// NOTE: data->scissor_test with templated Draw* speeds up large point lists (ffxii videos), but do not seem to make any difference for others
 
@@ -232,16 +232,16 @@ void GSRasterizer::DrawLine(const GSVertexSW* v)
 	}
 }
 
-static const int s_abc[8][4] =
+static const uint8 s_ysort[8][4] =
 {
-	{0, 1, 2, 0}, // c >= b >= a
-	{1, 0, 2, 0}, // c >= a > b
+	{0, 1, 2, 0}, // y0 <= y1 <= y2
+	{1, 0, 2, 0}, // y1 < y0 <= y2
 	{0, 0, 0, 0},
-	{1, 2, 0, 0}, // a > c >= b
-	{0, 2, 1, 0}, // b > c >= a
+	{1, 2, 0, 0}, // y1 <= y2 < y0
+	{0, 2, 1, 0}, // y0 <= y2 < y1
 	{0, 0, 0, 0},
-	{2, 0, 1, 0}, // b >= a > c
-	{2, 1, 0, 0}, // a > b > c
+	{2, 0, 1, 0}, // y2 < y0 <= y1
+	{2, 1, 0, 0}, // y2 < y1 < y0
 };
 
 void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
@@ -252,23 +252,23 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 	GSVertexSW dedge;
 	GSVertexSW dscan;
 
-	GSVector4 aabb = vertices[0].p.yyyy(vertices[1].p);
-	GSVector4 bccb = vertices[1].p.yyyy(vertices[2].p).xzzx();
+	GSVector4 y0011 = vertices[0].p.yyyy(vertices[1].p);
+	GSVector4 y1221 = vertices[1].p.yyyy(vertices[2].p).xzzx();
 
-	int abc = (aabb > bccb).mask() & 7;
+	int mask = (y0011 > y1221).mask() & 7;
 
-	v[0] = vertices[s_abc[abc][0]];
-	v[1] = vertices[s_abc[abc][1]];
-	v[2] = vertices[s_abc[abc][2]];
+	v[0] = vertices[s_ysort[mask][0]];
+	v[1] = vertices[s_ysort[mask][1]];
+	v[2] = vertices[s_ysort[mask][2]];
 
-	aabb = v[0].p.yyyy(v[1].p);
-	bccb = v[1].p.yyyy(v[2].p).xzzx();
+	y0011 = v[0].p.yyyy(v[1].p);
+	y1221 = v[1].p.yyyy(v[2].p).xzzx();
 
-	int i = (aabb == bccb).mask() & 7;
+	int i = (y0011 == y1221).mask() & 7;
 
-	if(i == 7) return; // a == b == c
+	if(i == 7) return; // y0 == y1 == y2
 
-	GSVector4 tbf = aabb.xzxz(bccb).ceil();
+	GSVector4 tbf = y0011.xzxz(y1221).ceil();
 	GSVector4 tbmax = tbf.max(m_fscissor.ywyw());
 	GSVector4 tbmin = tbf.min(m_fscissor.ywyw());
 	GSVector4i tb = GSVector4i(tbmax.xzyw(tbmin));
@@ -291,39 +291,10 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 
 	cross = cross.rcpnr();
 
-	GSVector4 dv01xy = dv[0].p.xyxy(dv[1].p);
+	GSVector4 dxy01 = dv[0].p.xyxy(dv[1].p);
 
-	GSVector4 _z = dv01xy * dv[1].p.zzzz(dv[0].p);
-	GSVector4 _f = dv01xy * dv[1].p.wwww(dv[0].p);
-
-	GSVector4 _zf = (_z.yzyz(_f) - _z.wxwx(_f)) * cross;
-
-	dscan.p = _zf.xzxz();
-	dedge.p = _zf.ywyw();
-
-	GSVector4 _s = dv01xy * dv[1].t.xxxx(dv[0].t);
-	GSVector4 _t = dv01xy * dv[1].t.yyyy(dv[0].t);
-	GSVector4 _q = dv01xy * dv[1].t.zzzz(dv[0].t);
-	
-	GSVector4 _st = (_s.yzyz(_t) - _s.wxwx(_t)) * cross;
-	GSVector4 _q_ = (_q.yzyz() - _q.wxwx()) * cross;
-
-	dscan.t = _st.xzxz(_q_);
-	dedge.t = _st.ywyw(_q_);
-
-	GSVector4 _r = dv01xy * dv[1].c.xxxx(dv[0].c);
-	GSVector4 _g = dv01xy * dv[1].c.yyyy(dv[0].c);
-	GSVector4 _b = dv01xy * dv[1].c.zzzz(dv[0].c);
-	GSVector4 _a = dv01xy * dv[1].c.wwww(dv[0].c);
-
-	GSVector4 _rg = (_r.yzyz(_g) - _r.wxwx(_g)) * cross;
-	GSVector4 _ba = (_b.yzyz(_a) - _b.wxwx(_a)) * cross;
-
-	dscan.c = _rg.xzxz(_ba);
-	dedge.c = _rg.ywyw(_ba);
-
-	GSVector4 dx = dv01xy.xzxy(dv[2].p);
-	GSVector4 dy = dv01xy.ywyx(dv[2].p);
+	GSVector4 dx = dxy01.xzxy(dv[2].p);
+	GSVector4 dy = dxy01.ywyx(dv[2].p);
 
 	GSVector4 ddx[3]; 
 	
@@ -331,12 +302,37 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 	ddx[1] = ddx[0].yxzw();
 	ddx[2] = ddx[0].xzyw();
 
+	GSVector4 dxy01c = dxy01 * cross;
+
+	GSVector4 _z = dxy01c * dv[1].p.zzzz(dv[0].p); // dx0 * z1, dy0 * z1, dx1 * z0, dy1 * z0
+	GSVector4 _f = dxy01c * dv[1].p.wwww(dv[0].p); // dx0 * f1, dy0 * f1, dx1 * f0, dy1 * f0
+
+	GSVector4 _zf = _z.ywyw(_f).hsub(_z.zxzx(_f)); // dy0 * z1 - dy1 * z0, dy0 * f1 - dy1 * f0, dx1 * z0 - dx0 * z1, dx1 * f0 - dx0 * f1
+
+	dscan.p = _zf.zwxy(); // dy0 * z1 - dy1 * z0, dy0 * f1 - dy1 * f0
+	dedge.p = _zf; // dx1 * z0 - dx0 * z1, dx1 * f0 - dx0 * f1
+
+	GSVector4 _s = dxy01c * dv[1].t.xxxx(dv[0].t); // dx0 * s1, dy0 * s1, dx1 * s0, dy1 * s0
+	GSVector4 _t = dxy01c * dv[1].t.yyyy(dv[0].t); // dx0 * t1, dy0 * t1, dx1 * t0, dy1 * t0
+	GSVector4 _q = dxy01c * dv[1].t.zzzz(dv[0].t); // dx0 * q1, dy0 * q1, dx1 * q0, dy1 * q0
+	
+	dscan.t = _s.ywyw(_t).hsub(_q.ywyw()); // dy0 * s1 - dy1 * s0, dy0 * t1 - dy1 * t0, dy0 * q1 - dy1 * q0
+	dedge.t = _s.zxzx(_t).hsub(_q.zxzx()); // dx1 * s0 - dx0 * s1, dx1 * t0 - dx0 * t1, dx1 * q0 - dx0 * q1
+
+	GSVector4 _r = dxy01c * dv[1].c.xxxx(dv[0].c); // dx0 * r1, dy0 * r1, dx1 * r0, dy1 * r0
+	GSVector4 _g = dxy01c * dv[1].c.yyyy(dv[0].c); // dx0 * g1, dy0 * g1, dx1 * g0, dy1 * g0
+	GSVector4 _b = dxy01c * dv[1].c.zzzz(dv[0].c); // dx0 * b1, dy0 * b1, dx1 * b0, dy1 * b0
+	GSVector4 _a = dxy01c * dv[1].c.wwww(dv[0].c); // dx0 * a1, dy0 * a1, dx1 * a0, dy1 * a0
+
+	dscan.c = _r.ywyw(_g).hsub(_b.ywyw(_a)); // dy0 * r1 - dy1 * r0, dy0 * g1 - dy1 * g0, dy0 * b1 - dy1 * b0, dy0 * a1 - dy1 * a0
+	dedge.c = _r.zxzx(_g).hsub(_b.zxzx(_a)); // dx1 * r0 - dx0 * r1, dx1 * g0 - dx0 * g1, dx1 * b0 - dx0 * b1, dx1 * a0 - dx0 * a1
+
 	GSVector4 x0;
 
 	switch(i)
 	{
-	case 0: // a < b < c
-	case 4: // a < b == c
+	case 0: // y0 < y1 < y2
+	case 4: // y0 < y1 == y2
 
 		x0 = v[0].p.xxxx();
 
@@ -370,7 +366,7 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 
 		break;
 
-	case 1: // a == b < c
+	case 1: // y0 == y1 < y2
 
 		if(tb.y < tb.w)
 		{

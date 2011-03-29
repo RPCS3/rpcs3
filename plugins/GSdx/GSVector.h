@@ -2581,18 +2581,52 @@ public:
 	__forceinline GSVector4 hadd() const
 	{
 		#if _M_SSE >= 0x300
+		
 		return GSVector4(_mm_hadd_ps(m, m));
+		
 		#else
+		
 		return xzxz() + ywyw();
+		
 		#endif
 	}
 
 	__forceinline GSVector4 hadd(const GSVector4& v) const
 	{
 		#if _M_SSE >= 0x300
+		
 		return GSVector4(_mm_hadd_ps(m, v.m));
+		
 		#else
+		
 		return xzxz(v) + ywyw(v);
+		
+		#endif
+	}
+
+	__forceinline GSVector4 hsub() const
+	{
+		#if _M_SSE >= 0x300
+		
+		return GSVector4(_mm_hsub_ps(m, m));
+		
+		#else
+		
+		return xzxz() - ywyw();
+		
+		#endif
+	}
+
+	__forceinline GSVector4 hsub(const GSVector4& v) const
+	{
+		#if _M_SSE >= 0x300
+		
+		return GSVector4(_mm_hsub_ps(m, v.m));
+		
+		#else
+		
+		return xzxz(v) - ywyw(v);
+
 		#endif
 	}
 
