@@ -413,8 +413,8 @@ void isoFile::Open( const wxString& srcfile )
 	
 	if (!Detect())
 		throw Exception::BadStream()
-			.SetUserMsg(L"Unrecognized ISO image file format")
-			.SetDiagMsg(_("ISO mounting failed: PCSX2 is unable to identify the ISO image type."));
+			.SetUserMsg(_("Unrecognized ISO image file format"))
+			.SetDiagMsg(L"ISO mounting failed: PCSX2 is unable to identify the ISO image type.");
 
 	if (!(m_flags & ISOFLAGS_BLOCKDUMP_V2))
 	{

@@ -323,7 +323,7 @@ protected:
 		if( !SysHasValidState() )
 			throw Exception::RuntimeError()
 				.SetDiagMsg(L"SysExecEvent_DownloadState: Cannot freeze/download an invalid VM state!")
-				.SetUserMsg(L"There is no active virtual machine state to download or save." );
+				.SetUserMsg(_("There is no active virtual machine state to download or save." ));
 
 		memSavingState saveme( m_dest_list->GetBuffer() );
 		ArchiveEntry internals( EntryFilename_InternalStructures );
