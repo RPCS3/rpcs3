@@ -77,9 +77,9 @@ public:
 	virtual ~IRasterizer() {}
 
 	virtual void Draw(const GSRasterizerData* data) = 0;
+	virtual void SetThreadId(int id, int threads) = 0;
 	virtual void GetStats(GSRasterizerStats& stats) = 0;
 	virtual void PrintStats() = 0;
-	virtual void SetThreadId(int id, int threads) = 0;
 };
 
 __aligned(class, 32) GSRasterizer : public GSAlignedClass<32>, public IRasterizer
@@ -88,6 +88,7 @@ protected:
 	IDrawScanline* m_ds;
 	int m_id;
 	int m_threads;
+	uint8* m_myscanline;
 	GSRasterizerStats m_stats;
 	GSVector4i m_scissor;
 	GSVector4 m_fscissor;
@@ -116,9 +117,9 @@ public:
 	// IRasterizer
 
 	void Draw(const GSRasterizerData* data);
+	void SetThreadId(int id, int threads);
 	void GetStats(GSRasterizerStats& stats);
 	void PrintStats() {m_ds->PrintStats();}
-	void SetThreadId(int id, int threads) {m_id = id; m_threads = threads;}
 };
 
 class GSRasterizerMT : public GSRasterizer, private GSThread

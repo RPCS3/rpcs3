@@ -24,32 +24,25 @@
 #include "stdafx.h"
 #include "GSRasterizer.h"
 
-// Set this to 1 to remove a lot of non-const div/modulus ops from the rasterization process.
-// Might likely be a measurable speedup but limits threading to 1, 2, 4, and 8 threads.
-// note by rama: Speedup is around 5% on average.
-
-// #define UseConstThreadCount
-
-#ifdef UseConstThreadCount
-	// ThreadsConst - const number of threads.  User-configured threads (in GSdx panel) must match
-	// this value if UseConstThreadCount is enabled. [yeah, it's hacky for now]
-	static const int ThreadsConst = 2;
-	static const int ThreadMaskConst = ThreadsConst - 1;
-#endif
-
 #define THREAD_HEIGHT 5
 
 GSRasterizer::GSRasterizer(IDrawScanline* ds)
 	: m_ds(ds)
-	, m_id(0)
-	, m_threads(1)
+	, m_id(-1)
+	, m_threads(-1)
 {
 	m_edge.buff = (GSVertexSW*)vmalloc(sizeof(GSVertexSW) * 2048, false);
 	m_edge.count = 0;
+
+	m_myscanline = (uint8*)_aligned_malloc((2048 >> THREAD_HEIGHT) + 16, 64);
+
+	SetThreadId(0, 1);
 }
 
 GSRasterizer::~GSRasterizer()
 {
+	_aligned_free(m_myscanline);
+
 	if(m_edge.buff != NULL) vmfree(m_edge.buff, sizeof(GSVertexSW) * 2048);
 
 	delete m_ds;
@@ -57,15 +50,7 @@ GSRasterizer::~GSRasterizer()
 
 bool GSRasterizer::IsOneOfMyScanlines(int scanline) const
 {
-	#ifdef UseConstThreadCount
-
-	return ThreadMaskConst == 0 || (scanline & ThreadMaskConst) == m_id;
-
-	#else
-
-	return m_threads == 1 || ((scanline >> THREAD_HEIGHT) % m_threads) == m_id;
-
-	#endif
+	return m_myscanline[scanline >> THREAD_HEIGHT] != 0;
 }
 
 void GSRasterizer::Draw(const GSRasterizerData* data)
@@ -113,6 +98,32 @@ void GSRasterizer::Draw(const GSRasterizerData* data)
 	m_stats.ticks = __rdtsc() - start;
 
 	m_ds->EndDraw(m_stats, data->frame);
+}
+
+void GSRasterizer::SetThreadId(int id, int threads) 
+{
+	if(m_id != id || m_threads != threads)
+	{
+		m_id = id; 
+		m_threads = threads;
+
+		if(threads > 1)
+		{
+			int row = 0;
+
+			while(row < (2048 >> THREAD_HEIGHT))
+			{
+				for(int i = 0; i < threads; i++, row++)
+				{
+					m_myscanline[row] = i == id ? 1 : 0;
+				}
+			}
+		}
+		else
+		{
+			memset(m_myscanline, 1, 2048 >> THREAD_HEIGHT);
+		}
+	}
 }
 
 void GSRasterizer::GetStats(GSRasterizerStats& stats)
