@@ -69,10 +69,6 @@ OutFile "output\pcsx2-${APP_VERSION}-r${SVNREV_PACKAGE}-${OUTFILE_POSTFIX}.exe"
 ; The default installation directory
 InstallDir "$PROGRAMFILES\PCSX2 ${APP_VERSION}"
 
-; Registry key to check for directory (so if you install again, it will 
-; overwrite the old one automatically)
-InstallDirRegKey ${INSTDIR_REG_ROOT} "Software\PCSX2\${APP_VERSION}" "Install_Dir"
-
 ; These defines are dependent on NSIS vars assigned above.
 
 !define APP_EXE          "$INSTDIR\${APP_FILENAME}.exe"

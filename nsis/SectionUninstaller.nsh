@@ -5,14 +5,13 @@
 ;  may change in the future, though I doubt it.)
 
 ; -----------------------------------------------------------------------
-Section "Un.Exes and Plugins ${APP_NAME}"
+Section "Un.Program and Plugins ${APP_NAME}"
 
   SetShellVarContext all
 
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR"
 
-  ; nsis todo: Some legacy key? Check
-  ; Remove registry keys (but only the ones related to the installer -- user options remain)
+  ; Remove uninstaller info reg key ( Wow6432Node on 64bit Windows! )
   DeleteRegKey HKLM "${INSTDIR_REG_KEY}"
 
   Call un.removeShorties
@@ -21,26 +20,26 @@ Section "Un.Exes and Plugins ${APP_NAME}"
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Plugins"
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Docs"
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR\Cheats"
+  
+  ; Remove files and registry key that store PCSX2 paths configurations
+  SetShellVarContext current
+  Delete $DOCUMENTS\PCSX2\inis\PCSX2_ui.ini
+  DeleteRegKey HKCU Software\PCSX2
 
 SectionEnd
 
-Section "Un.Complete Settings / Registry Cleanup"
-
-  ; nsis todo: Some legacy key? Check
-  ; Kill the entire PCSX2 registry key!
-  DeleteRegKey ${INSTDIR_REG_ROOT} Software\PCSX2
-
-  ; Kill user options PCSX2 reg key
-  DeleteRegKey HKCU Software\PCSX2
+; /o for optional and unticked by default
+Section /o "Un.Program and Plugin configuration files"
   
   SetShellVarContext current
   RMDir /r "$DOCUMENTS\PCSX2\inis\"
 
-  ; nsis todo: is this still used?
-  ; Kill AppData/PCSX2 entry!
-  StrCpy $0 $LOCALAPPDATA\PCSX2
-  Call un.DeleteDirIfEmpty
-  StrCpy $0 $APPDATA\PCSX2
-  Call un.DeleteDirIfEmpty
+SectionEnd
+
+; /o for optional and unticked by default
+Section /o "Un.User files (Memory Cards, Savestates, BIOS, etc)"
+  
+  SetShellVarContext current
+  RMDir /r "$DOCUMENTS\PCSX2\"
 
 SectionEnd
