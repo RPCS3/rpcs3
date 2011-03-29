@@ -375,7 +375,7 @@ Panels::PluginSelectorPanel::ComboBoxPanel::ComboBoxPanel( PluginSelectorPanel* 
 		s_plugin	+= m_configbutton[pid];
 	} while( ++pi, pi->shortname != NULL );
 
-	if (InstallationMode != InstallMode_Portable)
+//	if (InstallationMode != InstallMode_Portable)
 		m_FolderPicker.SetStaticDesc( _("Click the Browse button to select a different folder for PCSX2 plugins.") );
 
 	*this	+= s_plugin			| pxExpand;

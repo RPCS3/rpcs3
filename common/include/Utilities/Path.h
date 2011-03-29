@@ -94,6 +94,50 @@ public:
 		return false;
 	}
 
+	bool IsContains( const wxDirName& dir ) const
+	{
+		return IsContains( (wxFileName)dir );
+	}
+
+
+	//Auto relative works as follows:
+	// 1. if either base or subject are relative, return subject (should never be used with relative paths).
+	// 2. else if subject is somewhere inside base folder, then result is subject relative to base.
+	// 3. (windows only, implicitly) else if subject is on the same driveletter as base, result is absolute path of subject without the driveletter.
+	// 4. else, result is absolute path of subject.
+	//
+	// returns ok if both this and base are absolute paths.
+	static wxString MakeAutoRelativeTo(const wxFileName _subject, const wxString& pathbase)
+	{
+		wxFileName subject( _subject );
+		wxDirName base   ( pathbase );
+		if( base.IsRelative() || subject.IsRelative() )
+			return subject.GetFullPath();
+
+		wxString bv( base.GetVolume() ); bv.MakeUpper();
+		wxString sv( subject.GetVolume() ); sv.MakeUpper();
+
+		if( base.IsContains( subject ) )
+		{
+			subject.MakeRelativeTo( base.GetFullPath() );
+		}
+		else if( base.HasVolume() && subject.HasVolume() && bv == sv )
+		{
+			wxString unusedVolume;
+			wxString pathSansVolume;
+			subject.SplitVolume(subject.GetFullPath(), &unusedVolume, &pathSansVolume);
+			subject = pathSansVolume;
+		}
+		//implicit else: this stays fully absolute
+
+		return subject.GetFullPath();
+	}
+
+	static wxString MakeAutoRelativeTo(const wxDirName subject, const wxString& pathbase)
+	{
+		return MakeAutoRelativeTo( wxFileName( subject ), pathbase );
+	}
+
 	// Returns the number of sub folders in this directory path
 	size_t GetCount() const { return GetDirCount(); }
 

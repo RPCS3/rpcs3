@@ -483,7 +483,7 @@ void App_LoadSaveInstallSettings( IniInterface& ini )
 	ini.Entry( L"Install_Dir",				InstallFolder,				(wxDirName)(wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath()) );
 	SetFullBaseDir( InstallFolder );
 
-	ini.Entry( L"PluginsFolder",			PluginsFolder,				InstallFolder + PathDefs::Base::Plugins() );
+	//ini.Entry( L"PluginsFolder",			PluginsFolder,				InstallFolder + PathDefs::Base::Plugins() );
 	ini.Entry( L"ThemesFolder",				ThemesFolder,				InstallFolder + PathDefs::Base::Themes() );
 
 	ini.Flush();
@@ -644,20 +644,20 @@ void AppConfig::FolderOptions::LoadSave( IniInterface& ini )
 	IniBitBool( UseDefaultLangs );
 	IniBitBool( UseDefaultPluginsFolder );
 
-	//when saving in portable mode, we save empty strings
-	 //  --> on load they'll be initialized to default (relative) paths
-	bool rel = ( ini.IsSaving() && IsPortable() );
-	wxDirName e(L"");
-		
-	ini.Entry( L"Bios",			rel?e:Bios,			Bios );
-	ini.Entry( L"Snapshots",	rel?e:Snapshots,	Snapshots );
-	ini.Entry( L"Savestates",	rel?e:Savestates,	Savestates );
-	ini.Entry( L"MemoryCards",	rel?e:MemoryCards,	MemoryCards );
-	ini.Entry( L"Logs",			rel?e:Logs,			Logs );
-	ini.Entry( L"Langs",		rel?e:Langs,		Langs );
+	//when saving in portable mode, we save relative paths if possible
+	 //  --> on load, these relative paths will be expanded relative to the exe folder.
+	bool rel = ( ini.IsLoading() || IsPortable() );
+	
+	IniEntryDirFile( Bios,  rel);
+	IniEntryDirFile( Snapshots,  rel );
+	IniEntryDirFile( Savestates,  rel );
+	IniEntryDirFile( MemoryCards,  rel );
+	IniEntryDirFile( Logs,  rel );
+	IniEntryDirFile( Langs,  rel );
+	ini.Entry( L"PluginsFolder", PluginsFolder, InstallFolder + PathDefs::Base::Plugins(), rel );
 
-	IniEntry( RunIso );
-	IniEntry( RunELF );
+	IniEntryDirFile( RunIso, rel );
+	IniEntryDirFile( RunELF, rel );
 
 	if( ini.IsLoading() )
 	{

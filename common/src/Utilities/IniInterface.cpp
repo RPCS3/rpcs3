@@ -108,7 +108,8 @@ void IniLoader::Entry( const wxString& var, wxString& value, const wxString defv
 		value = defvalue;
 }
 
-void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName defvalue )
+
+void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName defvalue, bool isAllowRelative )
 {
 	wxString dest;
 	if( m_Config ) m_Config->Read( var, &dest, wxEmptyString );
@@ -116,7 +117,14 @@ void IniLoader::Entry( const wxString& var, wxDirName& value, const wxDirName de
 	if( dest.IsEmpty() )
 		value = defvalue;
 	else
+	{
 		value = dest;
+		if( isAllowRelative )
+			value = g_fullBaseDirName + value;
+
+		if( value.IsAbsolute() )
+			value.Normalize();
+	}
 }
 
 void IniLoader::Entry( const wxString& var, wxFileName& value, const wxFileName defvalue, bool isAllowRelative )
@@ -124,8 +132,8 @@ void IniLoader::Entry( const wxString& var, wxFileName& value, const wxFileName 
 	wxString dest( defvalue.GetFullPath() );
 	if( m_Config ) m_Config->Read( var, &dest, defvalue.GetFullPath() );
 	value = dest;
-	if( isAllowRelative && value.IsRelative() )
-		value = g_fullBaseDirName+value;
+	if( isAllowRelative )
+		value = g_fullBaseDirName + value;
 
 	if( value.IsAbsolute() )
 		value.Normalize();
@@ -263,28 +271,24 @@ void IniSaver::Entry( const wxString& var, wxString& value, const wxString defva
 	m_Config->Write( var, value );
 }
 
-void IniSaver::Entry( const wxString& var, wxDirName& value, const wxDirName defvalue )
+void IniSaver::Entry( const wxString& var, wxDirName& value, const wxDirName defvalue, bool isAllowRelative )
 {
 	if( !m_Config ) return;
+	wxDirName res(value);
+
+	if ( res.IsAbsolute() )
+		res.Normalize();
+	
+	if (isAllowRelative)
+		res = wxDirName::MakeAutoRelativeTo( res, g_fullBaseDirName.ToString() );
+
 
 	/*if( value == defvalue )
 		m_Config->Write( var, wxString() );
 	else*/
-		m_Config->Write( var, value.ToString() );
+		m_Config->Write( var, res.ToString() );
 }
 
-//If isAllowRelative is true, we're saving as relative if the file is somewhere inside the PARENT of pcsx2 folder.
-//When a file is saved as relative, it's always relative to pcsx2 main folder (even if the file is outside of it).
-//e.g. at the next folder structure, files at ISOs_2 and ISOs_3 will be saved relative, but files at ISOs_1 will be saved absolute.
-//  -root
-//   |-ISOs_1
-//   |-parent_of_pcsx2_folder
-//     |-ISOs_2
-//     |-pcsx2_folder
-//       |-pcsx2.exe
-//       |-plugins
-//       | |-...
-//       |-ISOs_3
 void IniSaver::Entry( const wxString& var, wxFileName& value, const wxFileName defvalue, bool isAllowRelative )
 {
 	if( !m_Config ) return;
@@ -293,10 +297,8 @@ void IniSaver::Entry( const wxString& var, wxFileName& value, const wxFileName d
 	if ( res.IsAbsolute() )
 		res.Normalize();
 	
-	wxDirName upper( g_fullBaseDirName );
-	upper.RemoveLast();
-	if( isAllowRelative && upper.IsContains( value ) )
-		res.MakeRelativeTo(g_fullBaseDirName.ToString());
+	if (isAllowRelative)
+		res = wxDirName::MakeAutoRelativeTo( res, g_fullBaseDirName.ToString() );
 	
 	m_Config->Write( var, res.GetFullPath() );
 }
