@@ -44,6 +44,7 @@ void pxDwm_Load()
 	{
 		Console.WriteLn( "[Dwm] Desktop Window Manager detected." );
 
+		// Seems to set the Windows timer resolution to 10ms
 		if(FAILED(pDwmEnableMMCSS(TRUE)))
 			Console.WriteLn("[Dwm] DwmEnableMMCSS returned a failure code.");
 	}

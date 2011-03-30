@@ -9269,6 +9269,7 @@ Serial = SLUS-21735
 Name   = Mana Khemia - Alchemists of Al-Revis
 Region = NTSC-U
 Compat = 5
+DMABusyHack = 1
 ---------------------------------------------
 Serial = SLUS-21736
 Name   = Wall-E

@@ -83,6 +83,13 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 				L" * Growlanser II and III\n"
 				L" * Wizardry"
 			)
+		},
+		{
+			_("Ignore DMAC writes when it is busy."),
+			pxEt( "!ContextTip:Gamefixes:DMA Busy hack",
+				L"Known to affect following games:\n"
+				L" * Mana Khemia 1 (Going \"off campus\")\n"
+			)
 		}
 	};
 

@@ -51,6 +51,7 @@ enum GamefixId
 	Fix_EETiming,
 	Fix_SkipMpeg,
 	Fix_OPHFlag,
+	Fix_DMABusy,
 
 	GamefixId_COUNT
 };
@@ -339,7 +340,8 @@ struct Pcsx2Config
 				IPUWaitHack     :1,		// FFX FMV, makes GIF flush before doing IPU work. Fixes bad graphics overlay.
 				EETimingHack	:1,		// General purpose timing hack.
 				SkipMPEGHack	:1,		// Skips MPEG videos (Katamari and other games need this)
-				OPHFlagHack		:1;		// Skips MPEG videos (Katamari and other games need this)
+				OPHFlagHack		:1,		// Bleach Blade Battlers
+				DMABusyHack		:1;		// Denies writes to the DMAC when it's busy. This is correct behaviour but bad timing can cause problems.
 		BITFIELD_END
 
 		GamefixOptions();
@@ -483,7 +485,8 @@ TraceLogFilters&				SetTraceConfig();
 #define CHECK_IPUWAITHACK			(EmuConfig.Gamefixes.IPUWaitHack)	 // Special Fix For FFX
 #define CHECK_EETIMINGHACK			(EmuConfig.Gamefixes.EETimingHack)	 // Fix all scheduled events to happen in 1 cycle.
 #define CHECK_SKIPMPEGHACK			(EmuConfig.Gamefixes.SkipMPEGHack)	 // Finds sceMpegIsEnd pattern to tell the game the mpeg is finished (Katamari and a lot of games need this)
-#define CHECK_OPHFLAGHACK			(EmuConfig.Gamefixes.OPHFlagHack)
+#define CHECK_OPHFLAGHACK			(EmuConfig.Gamefixes.OPHFlagHack)	 // Bleach Blade Battlers
+#define CHECK_DMABUSYHACK			(EmuConfig.Gamefixes.DMABusyHack)    // Denies writes to the DMAC when it's busy. This is correct behaviour but bad timing can cause problems.
 
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW			(EmuConfig.Cpu.Recompiler.vuOverflow)
