@@ -92,11 +92,12 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 		m_checkbox[i]->SetToolTip( check_text[i].tooltip );
 	}
 
-	m_check_Enable = new pxCheckBox( this, _("Enable game fixes"),
+	m_check_Enable = new pxCheckBox( this, _("Enable manual game fixes [Not recommended]"),
 		pxE( "!Panel:Gamefixes:Compat Warning",
 			L"Gamefixes can work around wrong emulation in some titles. \n"
-			L"They may also cause compatibility or performance issues though, so they're not recommended. \n"
-			L"Gamefixes are automatically applied by default, so you do not need to set anything here."
+			L"They may also cause compatibility or performance issues. \n\n"
+			L"It's better to enable 'Automatic game fixes' at the main menu instead, and leave this page empty. \n"
+			L"('Automatic' means: selectively use specific tested fixes for specific games)"
 		)
 	);
 
