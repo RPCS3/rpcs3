@@ -113,11 +113,11 @@ static const uint divD = 0x2080000;
 #define _Fsf_	((mVU.code >> 21) & 0x03)
 #define _Ftf_	((mVU.code >> 23) & 0x03)
 
-#define _Imm5_	(mVU.Imm5())
-#define _Imm11_	(mVU.Imm11())
-#define _Imm12_	(mVU.Imm12())
-#define _Imm15_	(mVU.Imm15())
-#define _Imm24_	(mVU.Imm24())
+#define _Imm5_	((s16) (((mVU.code & 0x400) ? 0xfff0 : 0) | ((mVU.code >> 6) & 0xf)))
+#define _Imm11_	((s32)  ((mVU.code & 0x400) ? (0xfffffc00 |  (mVU.code & 0x3ff)) : (mVU.code & 0x3ff)))
+#define _Imm12_	((u32)((((mVU.code >> 21) & 0x1) << 11)   |  (mVU.code & 0x7ff)))
+#define _Imm15_	((u32) (((mVU.code >> 10) & 0x7800)       |  (mVU.code & 0x7ff)))
+#define _Imm24_	((u32)   (mVU.code & 0xffffff))
 
 #define isCOP2		(mVU.cop2  != 0)
 #define isVU1		(mVU.index != 0)
@@ -219,12 +219,6 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define xPC			 ((iPC / 2) * 8)
 #define curI		 ((u32*)mVU.regs().Micro)[iPC] //mVUcurProg.data[iPC]
 #define setCode()	 { mVU.code = curI; }
-
-#define incPC(x)	 (mVU.advancePC(x))
-#define branchAddr	 mVU.getBranchAddr()
-#define branchAddrN	 mVU.getBranchAddrN()
-
-#define incPC2(x)	 { iPC = ((iPC + (x)) & mVU.progMemMask); }
 #define bSaveAddr	 (((xPC + 16) & (mVU.microMemSize-8)) / 8)
 #define shufflePQ	 (((mVU.p) ? 0xb0 : 0xe0) | ((mVU.q) ? 0x01 : 0x04))
 #define cmpOffset(x) ((u8*)&(((u8*)x)[it[0].start]))
@@ -233,6 +227,20 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 #define clampE       CHECK_VU_EXTRA_OVERFLOW
 #define elif		 else if
+
+#define branchAddr (																	\
+	pxAssumeDev((iPC & 1) == 0, "microVU: Expected Lower Op for valid branch addr."),	\
+	((((iPC + 2)  + (_Imm11_ * 2)) & mVU.progMemMask) * 4)								\
+)
+#define branchAddrN (																	\
+	pxAssumeDev((iPC & 1) == 0, "microVU: Expected Lower Op for valid branch addr."),	\
+	((((iPC + 4)  + (_Imm11_ * 2)) & mVU.progMemMask) * 4)								\
+)
+
+// Fetches the PC and instruction opcode relative to the current PC.  Used to rewind and
+// fast-forward the IR state while calculating VU pipeline conditions (branches, writebacks, etc)
+#define incPC(x)	 { iPC = ((iPC + (x)) & mVU.progMemMask); mVU.code = curI; }
+#define incPC2(x)	 { iPC = ((iPC + (x)) & mVU.progMemMask); }
 
 // Flag Info (Set if next-block's first 4 ops will read current-block's flags)
 #define __Status	 (mVUregs.needExactMatch & 1)

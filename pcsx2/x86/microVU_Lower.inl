@@ -717,7 +717,11 @@ mVUop(mVU_ISUBIU) {
 //------------------------------------------------------------------
 
 mVUop(mVU_MFIR) {
-	pass1 { if (!_Ft_) { mVUlow.isNOP = 1; } analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeReg2(_Ft_, mVUlow.VF_write, 1); }
+	pass1 {
+		if (!_Ft_) { mVUlow.isNOP = 1; }
+		analyzeVIreg1(mVU, _Is_, mVUlow.VI_read[0]);
+		analyzeReg2  (mVU, _Ft_, mVUlow.VF_write, 1);
+	}
 	pass2 {
 		const xmm& Ft = mVU.regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		mVUallocVIa(mVU, gprT1, _Is_, true);
@@ -761,7 +765,11 @@ mVUop(mVU_MR32) {
 }
 
 mVUop(mVU_MTIR) {
-	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeReg5(_Fs_, _Fsf_, mVUlow.VF_read[0]); analyzeVIreg2(_It_, mVUlow.VI_write, 1); }
+	pass1 {
+		if (!_It_) mVUlow.isNOP = 1;
+		analyzeReg5  (mVU, _Fs_, _Fsf_, mVUlow.VF_read[0]);
+		analyzeVIreg2(mVU, _It_, mVUlow.VI_write, 1);
+	}
 	pass2 {
 		const xmm& Fs = mVU.regAlloc->allocReg(_Fs_, 0, (1 << (3 - _Fsf_)));
 		xMOVD(gprT1, Fs);
@@ -776,7 +784,11 @@ mVUop(mVU_MTIR) {
 //------------------------------------------------------------------
 
 mVUop(mVU_ILW) {
-	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeVIreg2(_It_, mVUlow.VI_write, 4);  }
+	pass1 {
+		if (!_It_) mVUlow.isNOP = 1;
+		analyzeVIreg1(mVU, _Is_, mVUlow.VI_read[0]);
+		analyzeVIreg2(mVU, _It_, mVUlow.VI_write, 4);
+	}
 	pass2 {
 		xAddressVoid ptr(mVU.regs().Mem + offsetSS);
 		if (_Is_) {
@@ -794,7 +806,11 @@ mVUop(mVU_ILW) {
 }
 
 mVUop(mVU_ILWR) {
-	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeVIreg2(_It_, mVUlow.VI_write, 4); }
+	pass1 {
+		if (!_It_) mVUlow.isNOP = 1;
+		analyzeVIreg1(mVU, _Is_, mVUlow.VI_read[0]);
+		analyzeVIreg2(mVU, _It_, mVUlow.VI_write, 4);
+	}
 	pass2 {
 		xAddressVoid ptr(mVU.regs().Mem + offsetSS);
 		if (_Is_) {
@@ -813,7 +829,10 @@ mVUop(mVU_ILWR) {
 //------------------------------------------------------------------
 
 mVUop(mVU_ISW) {
-	pass1 { analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeVIreg1(_It_, mVUlow.VI_read[1]); }
+	pass1 {
+		analyzeVIreg1(mVU, _Is_, mVUlow.VI_read[0]);
+		analyzeVIreg1(mVU, _It_, mVUlow.VI_read[1]);
+	}
 	pass2 {
 		xAddressVoid ptr(mVU.regs().Mem);
 		if (_Is_) {
@@ -834,7 +853,9 @@ mVUop(mVU_ISW) {
 }
 
 mVUop(mVU_ISWR) {
-	pass1 { analyzeVIreg1(_Is_, mVUlow.VI_read[0]); analyzeVIreg1(_It_, mVUlow.VI_read[1]); }
+	pass1 {
+		analyzeVIreg1(mVU, _Is_, mVUlow.VI_read[0]);
+		analyzeVIreg1(mVU, _It_, mVUlow.VI_read[1]); }
 	pass2 {
 		xAddressVoid ptr(mVU.regs().Mem);
 		if (_Is_) {
@@ -1053,12 +1074,12 @@ mVUop(mVU_RXOR) {
 //------------------------------------------------------------------
 
 mVUop(mVU_WAITP) {
-	pass1 { mVUstall = aMax(mVUstall, ((mVUregs.p) ? (mVUregs.p - 1) : 0)); }
+	pass1 { mVUstall = max(mVUstall, (u8)((mVUregs.p) ? (mVUregs.p - 1) : 0)); }
 	pass3 { mVUlog("WAITP"); }
 }
 
 mVUop(mVU_WAITQ) {
-	pass1 { mVUstall = aMax(mVUstall, mVUregs.q); }
+	pass1 { mVUstall = max(mVUstall, mVUregs.q); }
 	pass3 { mVUlog("WAITQ"); }
 }
 
@@ -1067,7 +1088,10 @@ mVUop(mVU_WAITQ) {
 //------------------------------------------------------------------
 
 mVUop(mVU_XTOP) {
-	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeVIreg2(_It_, mVUlow.VI_write, 1); }
+	pass1 {
+		if (!_It_) mVUlow.isNOP = 1;
+		analyzeVIreg2(mVU, _It_, mVUlow.VI_write, 1);
+	}
 	pass2 {
 		xMOVZX(gprT1, ptr16[&mVU.getVifRegs().top]);
 		mVUallocVIb(mVU, gprT1, _It_);
@@ -1076,10 +1100,12 @@ mVUop(mVU_XTOP) {
 }
 
 mVUop(mVU_XITOP) {
-	pass1 { if (!_It_) { mVUlow.isNOP = 1; } analyzeVIreg2(_It_, mVUlow.VI_write, 1); }
+	pass1 {
+		if (!_It_) mVUlow.isNOP = 1;
+		analyzeVIreg2(mVU, _It_, mVUlow.VI_write, 1); }
 	pass2 {
 		xMOVZX(gprT1, ptr16[&mVU.getVifRegs().itop]);
-		xAND(gprT1, isVU1 ? 0x3ff : 0xff);
+		xAND  (gprT1, isVU1 ? 0x3ff : 0xff);
 		mVUallocVIb(mVU, gprT1, _It_);
 	}
 	pass3 { mVUlog("XITOP vi%02d", _Ft_); }
