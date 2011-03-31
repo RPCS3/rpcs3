@@ -445,7 +445,7 @@ __ri int mVUbranchCheck(mV) {
 		mVUlow.evilBranch = 1;
 		mVUregs.blockType = 2;
 		mVUregs.needExactMatch |= 7; // This might not be necessary, but w/e...
-		DevCon.Warning("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU->index, xPC);
+		DevCon.Warning("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU.index, xPC);
 		return 1;
 	}
 	incPC(2);
@@ -482,7 +482,7 @@ __ri void mVUanalyzeJump(mV, int Is, int It, bool isJALR) {
 	if (mVUconstReg[Is].isValid && doConstProp) {
 		mVUlow.constJump.isValid  = 1;
 		mVUlow.constJump.regValue = mVUconstReg[Is].regValue;
-		//DevCon.Status("microVU%d: Constant JR/JALR Address Optimization", mVU->index);
+		//DevCon.Status("microVU%d: Constant JR/JALR Address Optimization", mVU.index);
 	}
 	analyzeVIreg1(Is, mVUlow.VI_read[0]);
 	if (isJALR) {

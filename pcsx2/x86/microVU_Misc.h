@@ -85,43 +85,43 @@ static const uint divD = 0x2080000;
 // Helper Macros
 //------------------------------------------------------------------
 
-#define _Ft_ ((mVU->code >> 16) & 0x1F)  // The ft part of the instruction register
-#define _Fs_ ((mVU->code >> 11) & 0x1F)  // The fs part of the instruction register
-#define _Fd_ ((mVU->code >>  6) & 0x1F)  // The fd part of the instruction register
+#define _Ft_ ((mVU.code >> 16) & 0x1F)  // The ft part of the instruction register
+#define _Fs_ ((mVU.code >> 11) & 0x1F)  // The fs part of the instruction register
+#define _Fd_ ((mVU.code >>  6) & 0x1F)  // The fd part of the instruction register
 
-#define _It_ ((mVU->code >> 16) & 0xF)   // The it part of the instruction register
-#define _Is_ ((mVU->code >> 11) & 0xF)   // The is part of the instruction register
-#define _Id_ ((mVU->code >>  6) & 0xF)   // The id part of the instruction register
+#define _It_ ((mVU.code >> 16) & 0xF)   // The it part of the instruction register
+#define _Is_ ((mVU.code >> 11) & 0xF)   // The is part of the instruction register
+#define _Id_ ((mVU.code >>  6) & 0xF)   // The id part of the instruction register
 
-#define _X	 ((mVU->code>>24) & 0x1)
-#define _Y	 ((mVU->code>>23) & 0x1)
-#define _Z	 ((mVU->code>>22) & 0x1)
-#define _W	 ((mVU->code>>21) & 0x1)
+#define _X	 ((mVU.code>>24) & 0x1)
+#define _Y	 ((mVU.code>>23) & 0x1)
+#define _Z	 ((mVU.code>>22) & 0x1)
+#define _W	 ((mVU.code>>21) & 0x1)
 
-#define _X_Y_Z_W	(((mVU->code >> 21 ) & 0xF))
+#define _X_Y_Z_W	(((mVU.code >> 21 ) & 0xF))
 #define _XYZW_SS	(_X+_Y+_Z+_W==1)
 #define _XYZW_SS2	(_XYZW_SS && (_X_Y_Z_W != 8))
 #define _XYZW_PS	(_X_Y_Z_W == 0xf)
 #define _XYZWss(x)	((x==8) || (x==4) || (x==2) || (x==1))
 
-#define _bc_	 (mVU->code & 0x3)
-#define _bc_x	((mVU->code & 0x3) == 0)
-#define _bc_y	((mVU->code & 0x3) == 1)
-#define _bc_z	((mVU->code & 0x3) == 2)
-#define _bc_w	((mVU->code & 0x3) == 3)
+#define _bc_	 (mVU.code & 0x3)
+#define _bc_x	((mVU.code & 0x3) == 0)
+#define _bc_y	((mVU.code & 0x3) == 1)
+#define _bc_z	((mVU.code & 0x3) == 2)
+#define _bc_w	((mVU.code & 0x3) == 3)
 
-#define _Fsf_	((mVU->code >> 21) & 0x03)
-#define _Ftf_	((mVU->code >> 23) & 0x03)
+#define _Fsf_	((mVU.code >> 21) & 0x03)
+#define _Ftf_	((mVU.code >> 23) & 0x03)
 
-#define _Imm5_	(mVU->Imm5())
-#define _Imm11_	(mVU->Imm11())
-#define _Imm12_	(mVU->Imm12())
-#define _Imm15_	(mVU->Imm15())
-#define _Imm24_	(mVU->Imm24())
+#define _Imm5_	(mVU.Imm5())
+#define _Imm11_	(mVU.Imm11())
+#define _Imm12_	(mVU.Imm12())
+#define _Imm15_	(mVU.Imm15())
+#define _Imm24_	(mVU.Imm24())
 
-#define isCOP2		(mVU->cop2  != 0)
-#define isVU1		(mVU->index != 0)
-#define isVU0		(mVU->index == 0)
+#define isCOP2		(mVU.cop2  != 0)
+#define isVU1		(mVU.index != 0)
+#define isVU0		(mVU.index == 0)
 #define getIndex	(isVU1 ? 1 : 0)
 #define getVUmem(x)	(((isVU1) ? (x & 0x3ff) : ((x >= 0x400) ? (x & 0x43f) : (x & 0xff))) * 16)
 #define offsetSS	((_X) ? (0) : ((_Y) ? (4) : ((_Z) ? 8: 12)))
@@ -149,12 +149,12 @@ static const uint divD = 0x2080000;
 #define gprF3  edi // Status Flag 3
 
 // Function Params
-#define mP microVU* mVU, int recPass
-#define mV microVU* mVU
+#define mP microVU& mVU, int recPass
+#define mV microVU& mVU
 #define mF int recPass
 #define mX mVU, recPass
 
-typedef void __fastcall Fntype_mVUrecInst( microVU* mVU, int recPass );
+typedef void __fastcall Fntype_mVUrecInst(microVU& mVU, int recPass);
 typedef Fntype_mVUrecInst* Fnptr_mVUrecInst;
 
 // Function/Template Stuff
@@ -192,21 +192,21 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 //------------------------------------------------------------------
 
 // Misc Macros...
-#define mVUcurProg   mVU->prog.cur[0]
-#define mVUblocks	 mVU->prog.cur->block
-#define mVUir		 mVU->prog.IRinfo
-#define mVUbranch	 mVU->prog.IRinfo.branch
-#define mVUcycles	 mVU->prog.IRinfo.cycles
-#define mVUcount	 mVU->prog.IRinfo.count
-#define mVUpBlock	 mVU->prog.IRinfo.pBlock
-#define mVUblock	 mVU->prog.IRinfo.block
-#define mVUregs		 mVU->prog.IRinfo.block.pState
-#define mVUregsTemp	 mVU->prog.IRinfo.regsTemp
-#define iPC			 mVU->prog.IRinfo.curPC
-#define mVUsFlagHack mVU->prog.IRinfo.sFlagHack
-#define mVUconstReg	 mVU->prog.IRinfo.constReg
-#define mVUstartPC	 mVU->prog.IRinfo.startPC
-#define mVUinfo		 mVU->prog.IRinfo.info[iPC / 2]
+#define mVUcurProg   mVU.prog.cur[0]
+#define mVUblocks	 mVU.prog.cur->block
+#define mVUir		 mVU.prog.IRinfo
+#define mVUbranch	 mVU.prog.IRinfo.branch
+#define mVUcycles	 mVU.prog.IRinfo.cycles
+#define mVUcount	 mVU.prog.IRinfo.count
+#define mVUpBlock	 mVU.prog.IRinfo.pBlock
+#define mVUblock	 mVU.prog.IRinfo.block
+#define mVUregs		 mVU.prog.IRinfo.block.pState
+#define mVUregsTemp	 mVU.prog.IRinfo.regsTemp
+#define iPC			 mVU.prog.IRinfo.curPC
+#define mVUsFlagHack mVU.prog.IRinfo.sFlagHack
+#define mVUconstReg	 mVU.prog.IRinfo.constReg
+#define mVUstartPC	 mVU.prog.IRinfo.startPC
+#define mVUinfo		 mVU.prog.IRinfo.info[iPC / 2]
 #define mVUstall	 mVUinfo.stall
 #define mVUup		 mVUinfo.uOp
 #define mVUlow		 mVUinfo.lOp
@@ -217,18 +217,18 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define isEvilBlock	 (mVUpBlock->pState.blockType == 2)
 #define isBadOrEvil  (mVUlow.badBranch || mVUlow.evilBranch)
 #define xPC			 ((iPC / 2) * 8)
-#define curI		 ((u32*)mVU->regs().Micro)[iPC] //mVUcurProg.data[iPC]
-#define setCode()	 { mVU->code = curI; }
+#define curI		 ((u32*)mVU.regs().Micro)[iPC] //mVUcurProg.data[iPC]
+#define setCode()	 { mVU.code = curI; }
 
-#define incPC(x)	 (mVU->advancePC(x))
-#define branchAddr	 mVU->getBranchAddr()
-#define branchAddrN	 mVU->getBranchAddrN()
+#define incPC(x)	 (mVU.advancePC(x))
+#define branchAddr	 mVU.getBranchAddr()
+#define branchAddrN	 mVU.getBranchAddrN()
 
-#define incPC2(x)	 { iPC = ((iPC + (x)) & mVU->progMemMask); }
-#define bSaveAddr	 (((xPC + 16) & (mVU->microMemSize-8)) / 8)
-#define shufflePQ	 (((mVU->p) ? 0xb0 : 0xe0) | ((mVU->q) ? 0x01 : 0x04))
+#define incPC2(x)	 { iPC = ((iPC + (x)) & mVU.progMemMask); }
+#define bSaveAddr	 (((xPC + 16) & (mVU.microMemSize-8)) / 8)
+#define shufflePQ	 (((mVU.p) ? 0xb0 : 0xe0) | ((mVU.q) ? 0x01 : 0x04))
 #define cmpOffset(x) ((u8*)&(((u8*)x)[it[0].start]))
-#define Rmem		 &mVU->regs().VI[REG_R].UL
+#define Rmem		 &mVU.regs().VI[REG_R].UL
 #define aWrap(x, m)	 ((x > m) ? 0 : x)
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 #define clampE       CHECK_VU_EXTRA_OVERFLOW
@@ -257,7 +257,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 // Program Logging...
 #ifdef mVUlogProg
 #define mVUlog		((isVU1) ? __mVULog<1> : __mVULog<0>)
-#define mVUdumpProg __mVUdumpProgram<vuIndex>
+#define mVUdumpProg __mVUdumpProgram
 #else
 #define mVUlog(...)		 if (0) {}
 #define mVUdumpProg(...) if (0) {}

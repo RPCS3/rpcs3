@@ -17,11 +17,11 @@
 
 #include "Utilities/AsciiFile.h"
 
-// writes text directly to mVU->logFile, no newlines appended.
+// writes text directly to mVU.logFile, no newlines appended.
 _mVUt void __mVULog(const char* fmt, ...) {
 
-	microVU* mVU = mVUx;
-	if (!mVU->logFile) return;
+	microVU& mVU = mVUx;
+	if (!mVU.logFile) return;
 
 	char tmp[2024];
 	va_list list;
@@ -31,28 +31,27 @@ _mVUt void __mVULog(const char* fmt, ...) {
 	int length = vsprintf(tmp, fmt, list);
 	va_end(list);
 
-	mVU->logFile->Write( tmp );
-	mVU->logFile->Flush();
+	mVU.logFile->Write( tmp );
+	mVU.logFile->Flush();
 }
 
 #define commaIf() { if (bitX[6]) { mVUlog(","); bitX[6] = 0; } }
 
 #include "AppConfig.h"
 
-_mVUt void __mVUdumpProgram(microProgram& prog) {
-	microVU* mVU = mVUx;
+void __mVUdumpProgram(microVU& mVU, microProgram& prog) {
 	bool bitX[7];
 	int	delay = 0;
 	int bBranch = mVUbranch;
-	int bCode	= mVU->code;
+	int bCode	= mVU.code;
 	int bPC		= iPC;
 	mVUbranch	= 0;
 
-	const wxString logname(wxsFormat(L"microVU%d prog - %02d.html", vuIndex, prog.idx));
-	mVU->logFile = new AsciiFile(Path::Combine(g_Conf->Folders.Logs, logname), L"w");
+	const wxString logname(wxsFormat(L"microVU%d prog - %02d.html", mVU.index, prog.idx));
+	mVU.logFile = new AsciiFile(Path::Combine(g_Conf->Folders.Logs, logname), L"w");
 
 	mVUlog("<html>\n");
-	mVUlog("<title>microVU%d MicroProgram Log</title>\n", vuIndex);
+	mVUlog("<title>microVU%d MicroProgram Log</title>\n", mVU.index);
 	mVUlog("<body bgcolor=\"#000000\" LINK=\"#1111ff\" VLINK=\"#1111ff\">\n");
 	mVUlog("<font face=\"Courier New\" color=\"#ffffff\">\n");
 
@@ -62,11 +61,11 @@ _mVUt void __mVUdumpProgram(microProgram& prog) {
 	mVUlog("*********************\n\n<br><br>",	prog.idx);
 	mVUlog("</font>");
 
-	for (u32 i = 0; i < mVU->progSize; i+=2) {
+	for (u32 i = 0; i < mVU.progSize; i+=2) {
 
 		if (delay)		{ delay--; mVUlog("</font>"); if (!delay) mVUlog("<hr/>"); }
 		if (mVUbranch)	{ delay = 1; mVUbranch = 0; }
-		mVU->code = prog.data[i+1];
+		mVU.code = prog.data[i+1];
 
 		bitX[0] = 0;
 		bitX[1] = 0;
@@ -76,18 +75,18 @@ _mVUt void __mVUdumpProgram(microProgram& prog) {
 		bitX[5] = 0;
 		bitX[6] = 0;
 
-		if (mVU->code & _Ibit_) { bitX[0] = 1; bitX[5] = 1; }
-		if (mVU->code & _Ebit_) { bitX[1] = 1; bitX[5] = 1; delay = 2; }
-		if (mVU->code & _Mbit_) { bitX[2] = 1; bitX[5] = 1; }
-		if (mVU->code & _Dbit_) { bitX[3] = 1; bitX[5] = 1; }
-		if (mVU->code & _Tbit_) { bitX[4] = 1; bitX[5] = 1; }
+		if (mVU.code & _Ibit_) { bitX[0] = 1; bitX[5] = 1; }
+		if (mVU.code & _Ebit_) { bitX[1] = 1; bitX[5] = 1; delay = 2; }
+		if (mVU.code & _Mbit_) { bitX[2] = 1; bitX[5] = 1; }
+		if (mVU.code & _Dbit_) { bitX[3] = 1; bitX[5] = 1; }
+		if (mVU.code & _Tbit_) { bitX[4] = 1; bitX[5] = 1; }
 
 		if (delay == 2) { mVUlog("<font color=\"#FFFF00\">"); }
 		if (delay == 1) { mVUlog("<font color=\"#999999\">"); }
 
 		iPC = (i+1);
 		mVUlog("<a name=\"addr%04x\">", i*4);
-		mVUlog("[%04x] (%08x)</a> ", i*4, mVU->code);
+		mVUlog("[%04x] (%08x)</a> ", i*4, mVU.code);
 		mVUopU(mVU, 2);
 
 		if (bitX[5]) {
@@ -101,15 +100,15 @@ _mVUt void __mVUdumpProgram(microProgram& prog) {
 		}
 
 		iPC = i;
-		mVU->code = prog.data[i];
+		mVU.code = prog.data[i];
 
 		if(bitX[0]) {
 			mVUlog("<br>\n<font color=\"#FF7000\">");
-			mVUlog("[%04x] (%08x) %f", i*4, mVU->code, *(float*)&mVU->code);
+			mVUlog("[%04x] (%08x) %f", i*4, mVU.code, *(float*)&mVU.code);
 			mVUlog("</font>\n\n<br><br>");
 		}
 		else {
-			mVUlog("<br>\n[%04x] (%08x) ", i*4, mVU->code);
+			mVUlog("<br>\n[%04x] (%08x) ", i*4, mVU.code);
 			mVUopL(mVU, 2);
 			mVUlog("\n\n<br><br>");
 		}
@@ -119,10 +118,10 @@ _mVUt void __mVUdumpProgram(microProgram& prog) {
 	mVUlog("</html>\n");
 
 	mVUbranch = bBranch;
-	mVU->code = bCode;
+	mVU.code  = bCode;
 	iPC		  = bPC;
 	setCode();
 
-	mVU->logFile.Delete();
+	mVU.logFile.Delete();
 }
 

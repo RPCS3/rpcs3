@@ -77,10 +77,10 @@ void mVUreset(microVU& mVU, bool resetReserve) {
 	if (resetReserve) mVU.cache_reserve->Reset();
 	
 	x86SetPtr(mVU.dispCache);
-	mVUdispatcherA(&mVU);
-	mVUdispatcherB(&mVU);
-	mVUdispatcherC(&mVU);
-	mVUdispatcherD(&mVU);
+	mVUdispatcherA(mVU);
+	mVUdispatcherB(mVU);
+	mVUdispatcherC(mVU);
+	mVUdispatcherD(mVU);
 	mVUemitSearch();
 
 	// Clear All Program Data
@@ -134,12 +134,12 @@ void mVUclose(microVU& mVU) {
 
 // Clears Block Data in specified range
 __fi void mVUclear(mV, u32 addr, u32 size) {
-	if(!mVU->prog.cleared) {
-		mVU->prog.cleared = 1;		// Next execution searches/creates a new microprogram
-		memzero(mVU->prog.lpState); // Clear pipeline state
-		for(u32 i = 0; i < (mVU->progSize / 2); i++) {
-			mVU->prog.quick[i].block = NULL; // Clear current quick-reference block
-			mVU->prog.quick[i].prog  = NULL; // Clear current quick-reference prog
+	if(!mVU.prog.cleared) {
+		mVU.prog.cleared = 1;		// Next execution searches/creates a new microprogram
+		memzero(mVU.prog.lpState); // Clear pipeline state
+		for(u32 i = 0; i < (mVU.progSize / 2); i++) {
+			mVU.prog.quick[i].block = NULL; // Clear current quick-reference block
+			mVU.prog.quick[i].prog  = NULL; // Clear current quick-reference prog
 		}
 	}
 }
@@ -150,7 +150,7 @@ __fi void mVUclear(mV, u32 addr, u32 size) {
 
 // Finds and Ages/Kills Programs if they haven't been used in a while.
 __ri void mVUvsyncUpdate(mV) {
-	//mVU->prog.curFrame++;
+	//mVU.prog.curFrame++;
 }
 
 // Deletes a program
@@ -183,7 +183,7 @@ __ri microProgram* mVUcreateProg(microVU& mVU, int startPC) {
 __ri void mVUcacheProg(microVU& mVU, microProgram& prog) {
 	if (!mVU.index)	memcpy_const(prog.data, mVU.regs().Micro, 0x1000);
 	else			memcpy_const(prog.data, mVU.regs().Micro, 0x4000);
-	mVUdumpProg(prog);
+	mVUdumpProg(mVU, prog);
 }
 
 // Generate Hash for partial program based on compiled ranges...
@@ -230,7 +230,7 @@ __ri bool mVUcmpPartial(microVU& mVU, microProgram& prog) {
 	return 1;
 }
 
-// Compare Cached microProgram to mVU->regs().Micro
+// Compare Cached microProgram to mVU.regs().Micro
 __fi bool mVUcmpProg(microVU& mVU, microProgram& prog, const bool cmpWholeProg) {
 	if ((cmpWholeProg && !memcmp_mmx((u8*)prog.data, mVU.regs().Micro, mVU.microMemSize))
 	|| (!cmpWholeProg && mVUcmpPartial(mVU, prog))) {
@@ -262,8 +262,8 @@ _mVUt __fi void* mVUsearchProg(u32 startPC, uptr pState) {
 		// If cleared and program not found, make a new program instance
 		mVU.prog.cleared	= 0;
 		mVU.prog.isSame		= 1;
-		mVU.prog.cur		= mVUcreateProg( mVU, startPC/8);
-		void* entryPoint	= mVUblockFetch(&mVU, startPC, pState);
+		mVU.prog.cur		= mVUcreateProg(mVU,  startPC/8);
+		void* entryPoint	= mVUblockFetch(mVU,  startPC, pState);
 		quick.block			= mVU.prog.cur->block[startPC/8];
 		quick.prog			= mVU.prog.cur;
 		list->push_front(mVU.prog.cur);
@@ -282,8 +282,8 @@ _mVUt __fi void* mVUsearchProg(u32 startPC, uptr pState) {
 
 recMicroVU0::recMicroVU0()		  { m_Idx = 0; IsInterpreter = false; }
 recMicroVU1::recMicroVU1()		  { m_Idx = 1; IsInterpreter = false; }
-void recMicroVU0::Vsync() throw() { mVUvsyncUpdate(&microVU0); }
-void recMicroVU1::Vsync() throw() { mVUvsyncUpdate(&microVU1); }
+void recMicroVU0::Vsync() throw() { mVUvsyncUpdate(microVU0); }
+void recMicroVU1::Vsync() throw() { mVUvsyncUpdate(microVU1); }
 
 void recMicroVU0::Reserve() {
 	if (AtomicExchange(m_Reserved, 1) == 0)
@@ -331,11 +331,11 @@ void recMicroVU1::Execute(u32 cycles) {
 
 void recMicroVU0::Clear(u32 addr, u32 size) {
 	pxAssert(m_Reserved); // please allocate me first! :|
-	mVUclear(&microVU0, addr, size);
+	mVUclear(microVU0, addr, size);
 }
 void recMicroVU1::Clear(u32 addr, u32 size) {
 	pxAssert(m_Reserved); // please allocate me first! :|
-	mVUclear(&microVU1, addr, size);
+	mVUclear(microVU1, addr, size);
 }
 
 uint recMicroVU0::GetCacheReserve() const {

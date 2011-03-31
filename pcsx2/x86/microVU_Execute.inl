@@ -21,7 +21,7 @@
 
 // Generates the code for entering recompiled blocks
 void mVUdispatcherA(mV) {
-	mVU->startFunct = x86Ptr;
+	mVU.startFunct = x86Ptr;
 
 	// Backup cpu state
 	xPUSH(ebp);
@@ -43,35 +43,35 @@ void mVUdispatcherA(mV) {
 
 	// Load Regs
 #if 1 // CHECK_MACROVU0 - Always on now
-	xMOV(gprF0, ptr32[&mVU->regs().VI[REG_STATUS_FLAG].UL]);
+	xMOV(gprF0, ptr32[&mVU.regs().VI[REG_STATUS_FLAG].UL]);
 	xMOV(gprF1, gprF0);
 	xMOV(gprF2, gprF0);
 	xMOV(gprF3, gprF0);
 #else
-	mVUallocSFLAGd((uptr)&mVU->regs().VI[REG_STATUS_FLAG].UL, 1);
+	mVUallocSFLAGd((uptr)&mVU.regs().VI[REG_STATUS_FLAG].UL, 1);
 #endif
 
-	xMOVAPS (xmmT1, ptr128[&mVU->regs().VI[REG_MAC_FLAG].UL]);
+	xMOVAPS (xmmT1, ptr128[&mVU.regs().VI[REG_MAC_FLAG].UL]);
 	xSHUF.PS(xmmT1, xmmT1, 0);
-	xMOVAPS (ptr128[mVU->macFlag],  xmmT1);
+	xMOVAPS (ptr128[mVU.macFlag],  xmmT1);
 
-	xMOVAPS (xmmT1, ptr128[&mVU->regs().VI[REG_CLIP_FLAG].UL]);
+	xMOVAPS (xmmT1, ptr128[&mVU.regs().VI[REG_CLIP_FLAG].UL]);
 	xSHUF.PS(xmmT1, xmmT1, 0);
-	xMOVAPS (ptr128[mVU->clipFlag], xmmT1);
+	xMOVAPS (ptr128[mVU.clipFlag], xmmT1);
 
-	xMOVAPS (xmmT1, ptr128[&mVU->regs().VI[REG_P].UL]);
-	xMOVAPS (xmmPQ, ptr128[&mVU->regs().VI[REG_Q].UL]);
+	xMOVAPS (xmmT1, ptr128[&mVU.regs().VI[REG_P].UL]);
+	xMOVAPS (xmmPQ, ptr128[&mVU.regs().VI[REG_Q].UL]);
 	xSHUF.PS(xmmPQ, xmmT1, 0); // wzyx = PPQQ
 
 	// Jump to Recompiled Code Block
 	xJMP(eax);
-	pxAssertDev(xGetPtr() < (mVU->dispCache + mVUdispCacheSize),
+	pxAssertDev(xGetPtr() < (mVU.dispCache + mVUdispCacheSize),
 		"microVU: Dispatcher generation exceeded reserved cache area!");
 }
 
 // Generates the code to exit from recompiled blocks
 void mVUdispatcherB(mV) {
-	mVU->exitFunct = x86Ptr;
+	mVU.exitFunct = x86Ptr;
 
 	// Load EE's MXCSR state
 	xLDMXCSR(g_sseMXCSR);
@@ -93,13 +93,13 @@ void mVUdispatcherB(mV) {
 	xPOP(ebp);
 
 	xRET();
-	pxAssertDev(xGetPtr() < (mVU->dispCache + mVUdispCacheSize),
+	pxAssertDev(xGetPtr() < (mVU.dispCache + mVUdispCacheSize),
 		"microVU: Dispatcher generation exceeded reserved cache area!");
 }
 
 // Generates the code for resuming xgkick
 void mVUdispatcherC(mV) {
-	mVU->startFunctXG = x86Ptr;
+	mVU.startFunctXG = x86Ptr;
 
 	// Backup cpu state
 	xPUSH(ebp);
@@ -117,29 +117,29 @@ void mVUdispatcherC(mV) {
 
 	mVUrestoreRegs(mVU);
 
-	xMOV(gprF0, ptr32[&mVU->statFlag[0]]);
-	xMOV(gprF1, ptr32[&mVU->statFlag[1]]);
-	xMOV(gprF2, ptr32[&mVU->statFlag[2]]);
-	xMOV(gprF3, ptr32[&mVU->statFlag[3]]);
+	xMOV(gprF0, ptr32[&mVU.statFlag[0]]);
+	xMOV(gprF1, ptr32[&mVU.statFlag[1]]);
+	xMOV(gprF2, ptr32[&mVU.statFlag[2]]);
+	xMOV(gprF3, ptr32[&mVU.statFlag[3]]);
 
 	// Jump to Recompiled Code Block
-	xJMP(ptr32[&mVU->resumePtrXG]);
-	pxAssertDev(xGetPtr() < (mVU->dispCache + mVUdispCacheSize),
+	xJMP(ptr32[&mVU.resumePtrXG]);
+	pxAssertDev(xGetPtr() < (mVU.dispCache + mVUdispCacheSize),
 		"microVU: Dispatcher generation exceeded reserved cache area!");
 }
 
 // Generates the code to exit from xgkick
 void mVUdispatcherD(mV) {
-	mVU->exitFunctXG = x86Ptr;
+	mVU.exitFunctXG = x86Ptr;
 
 	//xPOP(gprT1); // Pop return address
-	//xMOV(ptr32[&mVU->resumePtrXG], gprT1);
+	//xMOV(ptr32[&mVU.resumePtrXG], gprT1);
 
 	// Backup Status Flag (other regs were backed up on xgkick)
-	xMOV(ptr32[&mVU->statFlag[0]], gprF0);
-	xMOV(ptr32[&mVU->statFlag[1]], gprF1);
-	xMOV(ptr32[&mVU->statFlag[2]], gprF2);
-	xMOV(ptr32[&mVU->statFlag[3]], gprF3);
+	xMOV(ptr32[&mVU.statFlag[0]], gprF0);
+	xMOV(ptr32[&mVU.statFlag[1]], gprF1);
+	xMOV(ptr32[&mVU.statFlag[2]], gprF2);
+	xMOV(ptr32[&mVU.statFlag[3]], gprF3);
 
 	// Load EE's MXCSR state
 	xLDMXCSR(g_sseMXCSR);
@@ -156,7 +156,7 @@ void mVUdispatcherD(mV) {
 	xPOP(ebp);
 
 	xRET();
-	pxAssertDev(xGetPtr() < (mVU->dispCache + mVUdispCacheSize),
+	pxAssertDev(xGetPtr() < (mVU.dispCache + mVUdispCacheSize),
 		"microVU: Dispatcher generation exceeded reserved cache area!");
 }
 

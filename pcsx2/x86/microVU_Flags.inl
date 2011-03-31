@@ -23,7 +23,7 @@ __fi void mVUdivSet(mV) {
 	if (mVUinfo.doDivFlag) {
 		if (!sFLAG.doFlag) { xMOV(getFlagReg(sFLAG.write), getFlagReg(sFLAG.lastWrite)); }
 		xAND(getFlagReg(sFLAG.write), 0xfff3ffff);
-		xOR (getFlagReg(sFLAG.write), ptr32[&mVU->divFlag]);
+		xOR (getFlagReg(sFLAG.write), ptr32[&mVU.divFlag]);
 	}
 }
 
@@ -166,7 +166,12 @@ __fi void mVUsetFlags(mV, microFlagCycles& mFC) {
 // Recompiles Code for Proper Flags on Block Linkings
 __fi void mVUsetupFlags(mV, microFlagCycles& mFC) {
 
+	const bool pf = 0; // Print Flag Info
+	if (pf)	DevCon.WriteLn("mVU%d - [#%d][sPC=%04x][bPC=%04x][mVUBranch=%d][branch=%d]",
+			mVU.index, mVU.prog.cur->idx, mVUstartPC/2*8, xPC, mVUbranch, mVUlow.branch);
+
 	if (__Status) {
+		if (pf) DevCon.WriteLn("mVU%d - Status Flag", mVU.index);
 		int bStatus[4];
 		int sortRegs = sortFlag(mFC.xStatus, bStatus, mFC.cycles);
 		// DevCon::Status("sortRegs = %d", params sortRegs);
@@ -205,19 +210,21 @@ __fi void mVUsetupFlags(mV, microFlagCycles& mFC) {
 	}
 	
 	if (__Mac) {
+		if (pf) DevCon.WriteLn("mVU%d - Mac Flag", mVU.index);
 		int bMac[4];
 		sortFlag(mFC.xMac, bMac, mFC.cycles);
-		xMOVAPS(xmmT1, ptr128[mVU->macFlag]);
+		xMOVAPS(xmmT1, ptr128[mVU.macFlag]);
 		xSHUF.PS(xmmT1, xmmT1, shuffleMac);
-		xMOVAPS(ptr128[mVU->macFlag], xmmT1);
+		xMOVAPS(ptr128[mVU.macFlag], xmmT1);
 	}
 
 	if (__Clip) {
+		if (pf) DevCon.WriteLn("mVU%d - Clip Flag", mVU.index);
 		int bClip[4];
 		sortFlag(mFC.xClip, bClip, mFC.cycles);
-		xMOVAPS(xmmT2, ptr128[mVU->clipFlag]);
+		xMOVAPS(xmmT2, ptr128[mVU.clipFlag]);
 		xSHUF.PS(xmmT2, xmmT2, shuffleClip);
-		xMOVAPS(ptr128[mVU->clipFlag], xmmT2);
+		xMOVAPS(ptr128[mVU.clipFlag], xmmT2);
 	}
 }
 
@@ -287,7 +294,7 @@ __fi void mVUsetFlagInfo(mV) {
 	branchType1 { incPC(-1); mVUflagPass(mVU, branchAddr); incPC(1); }
 	branchType2 { // This case can possibly be turned off via a hack for a small speedup...
 		if (!mVUlow.constJump.isValid || !doConstProp) { mVUregs.needExactMatch |= 0x7; } 
-		else { mVUflagPass(mVU, (mVUlow.constJump.regValue*8)&(mVU->microMemSize-8)); }
+		else { mVUflagPass(mVU, (mVUlow.constJump.regValue*8)&(mVU.microMemSize-8)); }
 	}
 	branchType3 {
 		incPC(-1);

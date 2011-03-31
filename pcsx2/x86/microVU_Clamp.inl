@@ -54,7 +54,7 @@ void mVUclamp1(const xmm& reg, const xmm& regT1, int xyzw, bool bClampE = 0) {
 // Note 2: Using regalloc here seems to contaminate some regs in certain games.
 // Must be some specific case I've overlooked (or I used regalloc improperly on an opcode)
 // so we just use a temporary mem location for our backup for now... (non-sse4 version only)
-void mVUclamp2(microVU* mVU, const xmm& reg, const xmm& regT1in, int xyzw, bool bClampE = 0) {
+void mVUclamp2(microVU& mVU, const xmm& reg, const xmm& regT1in, int xyzw, bool bClampE = 0) {
 	if ((!clampE && CHECK_VU_SIGN_OVERFLOW) || (clampE && bClampE && CHECK_VU_SIGN_OVERFLOW)) {
 		if (x86caps.hasStreamingSIMD4Extensions) {
 			int i = (xyzw==1||xyzw==2||xyzw==4||xyzw==8) ? 0: 1;
@@ -62,9 +62,9 @@ void mVUclamp2(microVU* mVU, const xmm& reg, const xmm& regT1in, int xyzw, bool 
 			xPMIN.UD(reg, ptr128[&sse4_minvals[i][0]]);
 			return;
 		}
-		//const xmm& regT1 = regT1b ? mVU->regAlloc->allocReg() : regT1in;
+		//const xmm& regT1 = regT1b ? mVU.regAlloc->allocReg() : regT1in;
 		const xmm& regT1 = regT1in.IsEmpty() ? xmm((reg.Id + 1) % 8) : regT1in;
-		if (regT1 != regT1in) xMOVAPS(ptr128[mVU->xmmCTemp], regT1);
+		if (regT1 != regT1in) xMOVAPS(ptr128[mVU.xmmCTemp], regT1);
 		switch (xyzw) {
 			case 1: case 2: case 4: case 8:
 				xMOVAPS(regT1, reg);
@@ -81,14 +81,14 @@ void mVUclamp2(microVU* mVU, const xmm& reg, const xmm& regT1in, int xyzw, bool 
 				xOR.PS (reg,   regT1);
 				break;
 		}
-		//if (regT1 != regT1in) mVU->regAlloc->clearNeeded(regT1);
-		if (regT1 != regT1in) xMOVAPS(regT1, ptr128[mVU->xmmCTemp]);
+		//if (regT1 != regT1in) mVU.regAlloc->clearNeeded(regT1);
+		if (regT1 != regT1in) xMOVAPS(regT1, ptr128[mVU.xmmCTemp]);
 	}
 	else mVUclamp1(reg, regT1in, xyzw, bClampE);
 }
 
 // Used for operand clamping on every SSE instruction (add/sub/mul/div)
-void mVUclamp3(microVU* mVU, const xmm& reg, const xmm& regT1, int xyzw) {
+void mVUclamp3(microVU& mVU, const xmm& reg, const xmm& regT1, int xyzw) {
 	if (clampE) mVUclamp2(mVU, reg, regT1, xyzw, 1);
 }
 

@@ -214,28 +214,28 @@ void mVUmergeRegs(const xmm& dest, const xmm& src, int xyzw, bool modXYZW)
 //------------------------------------------------------------------
 
 // Backup Volatile Regs (EAX, ECX, EDX, MM0~7, XMM0~7, are all volatile according to 32bit Win/Linux ABI)
-__fi void mVUbackupRegs(microVU* mVU, bool toMemory = false)
+__fi void mVUbackupRegs(microVU& mVU, bool toMemory = false)
 {
 	if (toMemory) {
 		for(int i = 0; i < 8; i++) {
-			xMOVAPS(ptr128[&mVU->xmmBackup[i][0]], xmm(i));
+			xMOVAPS(ptr128[&mVU.xmmBackup[i][0]], xmm(i));
 		}
 	}
 	else {
-		mVU->regAlloc->flushAll(); // Flush Regalloc
-		xMOVAPS(ptr128[&mVU->xmmBackup[xmmPQ.Id][0]], xmmPQ);
+		mVU.regAlloc->flushAll(); // Flush Regalloc
+		xMOVAPS(ptr128[&mVU.xmmBackup[xmmPQ.Id][0]], xmmPQ);
 	}
 }
 
 // Restore Volatile Regs
-__fi void mVUrestoreRegs(microVU* mVU, bool fromMemory = false)
+__fi void mVUrestoreRegs(microVU& mVU, bool fromMemory = false)
 {
 	if (fromMemory) {
 		for(int i = 0; i < 8; i++) {
-			xMOVAPS(xmm(i), ptr128[&mVU->xmmBackup[i][0]]);
+			xMOVAPS(xmm(i), ptr128[&mVU.xmmBackup[i][0]]);
 		}
 	}
-	else xMOVAPS(xmmPQ, ptr128[&mVU->xmmBackup[xmmPQ.Id][0]]);
+	else xMOVAPS(xmmPQ, ptr128[&mVU.xmmBackup[xmmPQ.Id][0]]);
 }
 
 // Gets called by mVUaddrFix at execution-time
@@ -259,7 +259,7 @@ __fi void mVUaddrFix(mV, const x32& gprReg)
 				xPUSH(gprT1);			 // Note: Kernel does it via COP2 to initialize VU1!
 				xPUSH(gprT2);			 // So we don't spam console, we'll only check micro-mode...
 				xPUSH(gprT3);
-				xMOV (gprT2, mVU->prog.cur->idx);
+				xMOV (gprT2, mVU.prog.cur->idx);
 				xMOV (gprT3, xPC);
 				xCALL(mVUwarningRegAccess);
 				xPOP (gprT3);
@@ -288,10 +288,10 @@ static const __aligned16 SSEMaskPair MIN_MAX =
 
 
 // Warning: Modifies t1 and t2
-void MIN_MAX_PS(microVU* mVU, const xmm& to, const xmm& from, const xmm& t1in, const xmm& t2in, bool min)
+void MIN_MAX_PS(microVU& mVU, const xmm& to, const xmm& from, const xmm& t1in, const xmm& t2in, bool min)
 {
-	const xmm& t1 = t1in.IsEmpty() ? mVU->regAlloc->allocReg() : t1in;
-	const xmm& t2 = t2in.IsEmpty() ? mVU->regAlloc->allocReg() : t2in;
+	const xmm& t1 = t1in.IsEmpty() ? mVU.regAlloc->allocReg() : t1in;
+	const xmm& t2 = t2in.IsEmpty() ? mVU.regAlloc->allocReg() : t2in;
 	// ZW
 	xPSHUF.D(t1, to, 0xfa);
 	xPAND   (t1, ptr128[MIN_MAX.mask1]);
@@ -313,28 +313,28 @@ void MIN_MAX_PS(microVU* mVU, const xmm& to, const xmm& from, const xmm& t1in, c
 	else     xMAX.PD(to, t2);
 
 	xSHUF.PS(to, t1, 0x88);
-	if (t1 != t1in) mVU->regAlloc->clearNeeded(t1);
-	if (t2 != t2in) mVU->regAlloc->clearNeeded(t2);
+	if (t1 != t1in) mVU.regAlloc->clearNeeded(t1);
+	if (t2 != t2in) mVU.regAlloc->clearNeeded(t2);
 }
 
 // Warning: Modifies to's upper 3 vectors, and t1
 void MIN_MAX_SS(mV, const xmm& to, const xmm& from, const xmm& t1in, bool min)
 {
-	const xmm& t1 = t1in.IsEmpty() ? mVU->regAlloc->allocReg() : t1in;
+	const xmm& t1 = t1in.IsEmpty() ? mVU.regAlloc->allocReg() : t1in;
 	xSHUF.PS(to, from, 0);
 	xPAND	(to, ptr128[MIN_MAX.mask1]);
 	xPOR	(to, ptr128[MIN_MAX.mask2]);
 	xPSHUF.D(t1, to, 0xee);
 	if (min) xMIN.PD(to, t1);
 	else	 xMAX.PD(to, t1);
-	if (t1 != t1in) mVU->regAlloc->clearNeeded(t1);
+	if (t1 != t1in) mVU.regAlloc->clearNeeded(t1);
 }
 
 // Warning: Modifies all vectors in 'to' and 'from', and Modifies xmmT1 and xmmT2
-void ADD_SS(microVU* mVU, const xmm& to, const xmm& from, const xmm& t1in, const xmm& t2in)
+void ADD_SS(microVU& mVU, const xmm& to, const xmm& from, const xmm& t1in, const xmm& t2in)
 {
-	const xmm& t1 = t1in.IsEmpty() ? mVU->regAlloc->allocReg() : t1in;
-	const xmm& t2 = t2in.IsEmpty() ? mVU->regAlloc->allocReg() : t2in;
+	const xmm& t1 = t1in.IsEmpty() ? mVU.regAlloc->allocReg() : t1in;
+	const xmm& t2 = t2in.IsEmpty() ? mVU.regAlloc->allocReg() : t2in;
 
 	xMOVAPS(t1, to);
 	xMOVAPS(t2, from);
@@ -397,8 +397,8 @@ void ADD_SS(microVU* mVU, const xmm& to, const xmm& from, const xmm& t1in, const
 	xAND.PS(to,   t1); // to   contains mask
 	xAND.PS(from, t2); // from contains mask
 	xADD.SS(to, from);
-	if (t1 != t1in) mVU->regAlloc->clearNeeded(t1);
-	if (t2 != t2in) mVU->regAlloc->clearNeeded(t2);
+	if (t1 != t1in) mVU.regAlloc->clearNeeded(t1);
+	if (t2 != t2in) mVU.regAlloc->clearNeeded(t2);
 }
 
 #define clampOp(opX, isPS) {					\
