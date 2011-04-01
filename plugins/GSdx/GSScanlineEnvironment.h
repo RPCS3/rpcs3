@@ -137,8 +137,6 @@ __aligned(struct, 32) GSScanlineGlobalData // per batch variables, this is like 
 
 __aligned(struct, 32) GSScanlineLocalData // per prim variables, each thread has its own
 {
-	const GSScanlineGlobalData* gd;
-
 	struct skip {GSVector4 z, s, t, q; GSVector4i rb, ga, f, _pad;} d[4];
 	struct step {GSVector4 z, stq; GSVector4i c, f;} d4;
 	struct {GSVector4i rb, ga;} c;
@@ -156,10 +154,15 @@ __aligned(struct, 32) GSScanlineLocalData // per prim variables, each thread has
 		GSVector4i cov;
 
 		// mipmapping
+
 		struct {GSVector4i i, f;} lod;
 		GSVector4i uv[2];
 		GSVector4i uv_minmax[2];
 		GSVector4i trb, tga;
 		GSVector4i test;
 	} temp; 
+
+	//
+
+	const GSScanlineGlobalData* gd;
 };

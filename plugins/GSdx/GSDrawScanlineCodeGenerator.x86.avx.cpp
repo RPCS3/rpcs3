@@ -293,8 +293,7 @@ void GSDrawScanlineCodeGenerator::Init()
 	{
 		// edx = &m_local.d[skip]
 
-		shl(edx, 3);
-		lea(edx, ptr[edx + (size_t)m_local.d]);
+		lea(edx, ptr[edx * 8 + (size_t)m_local.d]);
 
 		// ebx = &v
 
@@ -1243,18 +1242,8 @@ return;
 		vmovdqa(ptr[&m_local.temp.uv[0]], xmm2);
 		vmovdqa(ptr[&m_local.temp.uv[1]], xmm3);
 
-		// TODO: precalc
-
-		vmovq(xmm4, ptr[&m_local.gd->t.minmax]);
-
-		vpsrlw(xmm4, xmm0);
-
-		vpunpcklwd(xmm4, xmm4);
-		vpunpckldq(xmm5, xmm4, xmm4);
-		vpunpckhdq(xmm6, xmm4, xmm4);
-
-		vmovdqa(ptr[&m_local.temp.uv_minmax[0]], xmm5);
-		vmovdqa(ptr[&m_local.temp.uv_minmax[1]], xmm6);
+		vmovdqa(xmm5, ptr[&m_local.temp.uv_minmax[0]]);
+		vmovdqa(xmm6, ptr[&m_local.temp.uv_minmax[1]]);
 	}
 
 	// xmm2 = m_local.temp.uv[0] = u (level m)
@@ -2762,7 +2751,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 	const GSVector4i* lod_i = m_sel.lcm ? &m_local.gd->lod.i : &m_local.temp.lod.i;
 
-	if(m_sel.mmin)
+	if(m_sel.mmin && !m_sel.lcm)
 	{
 		const int r[] = {5, 6, 2, 4, 0, 1, 3, 7};
 
@@ -2790,6 +2779,12 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 	}
 	else
 	{
+		if(m_sel.mmin && m_sel.lcm)
+		{
+			mov(ebx, ptr[&lod_i->u32[0]]);
+			mov(ebx, ptr[edx + ebx * sizeof(void*) + mip_offset]);
+		}
+
 		const int r[] = {5, 6, 2, 4, 0, 1, 3, 5};
 
 		for(int i = 0; i < pixels; i++)

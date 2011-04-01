@@ -40,6 +40,16 @@ void GSDrawScanline::BeginDraw(const void* param)
 {
 	memcpy(&m_global, param, sizeof(m_global));
 
+	if(m_global.sel.mmin && m_global.sel.lcm)
+	{
+		GSVector4i v = m_global.t.minmax.srl16(m_global.lod.i.x);
+
+		v = v.upl16(v);
+
+		m_local.temp.uv_minmax[0] = v.upl32(v);
+		m_local.temp.uv_minmax[1] = v.uph32(v);
+	}
+
 	m_ds = m_ds_map[m_global.sel];
 
 	if(m_global.sel.aa1)

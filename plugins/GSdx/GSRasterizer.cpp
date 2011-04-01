@@ -785,7 +785,7 @@ GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, volatile long& sync)
 
 GSRasterizerMT::~GSRasterizerMT()
 {
-    Draw(NULL);
+	Draw(NULL);
 
 	CloseThread();
 }
