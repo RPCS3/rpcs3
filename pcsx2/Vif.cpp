@@ -77,6 +77,7 @@ __fi void vif0FBRST(u32 value) {
 		u128 SaveCol;
 		u128 SaveRow;
 
+	//	if(vif0ch.chcr.STR == true) DevCon.Warning("FBRST While Vif0 active");
 		//Must Preserve Row/Col registers! (Downhill Domination for testing)
 		SaveCol._u64[0] = vif0.MaskCol._u64[0];
 		SaveCol._u64[1] = vif0.MaskCol._u64[1];
@@ -88,16 +89,16 @@ __fi void vif0FBRST(u32 value) {
 		vif0.MaskRow._u64[0] = SaveRow._u64[0];
 		vif0.MaskRow._u64[1] = SaveRow._u64[1];
 		vif0ch.qwc = 0; //?
-		//cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
+		cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
 		psHu64(VIF0_FIFO) = 0;
 		psHu64(VIF0_FIFO + 8) = 0;
 		vif0.vifstalled = false;
 		vif0.inprogress = 0;
 		vif0.cmd = 0;
-		//vif0.done = false;
+		vif0.done = true;
+		vif0ch.chcr.STR = false;
 		vif0Regs.err.reset();
 		vif0Regs.stat.clear_flags(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
-		if(vif0ch.chcr.STR == true) CPU_INT(DMAC_VIF0, 4);
 	}
 
 	/* Fixme: Forcebreaks are pretty unknown for operation, presumption is it just stops it what its doing
@@ -151,6 +152,7 @@ __fi void vif1FBRST(u32 value) {
 	{
 		u128 SaveCol;
 		u128 SaveRow;
+		//if(vif1ch.chcr.STR == true) DevCon.Warning("FBRST While Vif1 active");
 		//Must Preserve Row/Col registers! (Downhill Domination for testing) - Really shouldnt be part of the vifstruct.
 		SaveCol._u64[0] = vif1.MaskCol._u64[0];
 		SaveCol._u64[1] = vif1.MaskCol._u64[1];
@@ -161,13 +163,14 @@ __fi void vif1FBRST(u32 value) {
 		vif1.MaskCol._u64[1] = SaveCol._u64[1];
 		vif1.MaskRow._u64[0] = SaveRow._u64[0];
 		vif1.MaskRow._u64[1] = SaveRow._u64[1];
-		//cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-		//vif1ch.qwc -= min((int)vif1ch.qwc, 16); //not sure if the dma should stop, FFWDing could be tricky
+		cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
+		///vif1ch.qwc -= min((int)vif1ch.qwc, 16); //not sure if the dma should stop, FFWDing could be tricky
 		vif1ch.qwc = 0;
+
 		psHu64(VIF1_FIFO) = 0;
 		psHu64(VIF1_FIFO + 8) = 0;
-		//vif1.done = false;
-
+		vif1.done = true;
+		vif1ch.chcr.STR = false;
 		
 		//DevCon.Warning("VIF FBRST Reset MSK = %x", vif1Regs.mskpath3);
 		if(vif1Regs.mskpath3 == 1 && GSTransferStatus.PTH3 == STOPPED_MODE && gifch.chcr.STR == true) 
@@ -186,7 +189,6 @@ __fi void vif1FBRST(u32 value) {
 		vif1.vifstalled = false;
 		vif1Regs.stat.FQC = 0;
 		vif1Regs.stat.clear_flags(VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS);
-		if(vif1ch.chcr.STR == true) CPU_INT(DMAC_VIF1, 4);
 	}
 
 	/* Fixme: Forcebreaks are pretty unknown for operation, presumption is it just stops it what its doing
