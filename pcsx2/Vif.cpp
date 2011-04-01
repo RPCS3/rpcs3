@@ -74,8 +74,19 @@ __fi void vif0FBRST(u32 value) {
 	if (value & 0x1) // Reset Vif.
 	{
 		//Console.WriteLn("Vif0 Reset %x", vif0Regs.stat._u32);
+		u128 SaveCol;
+		u128 SaveRow;
 
+		//Must Preserve Row/Col registers! (Downhill Domination for testing)
+		SaveCol._u64[0] = vif0.MaskCol._u64[0];
+		SaveCol._u64[1] = vif0.MaskCol._u64[1];
+		SaveRow._u64[0] = vif0.MaskRow._u64[0];
+		SaveRow._u64[1] = vif0.MaskRow._u64[1];
 		memzero(vif0);
+		vif0.MaskCol._u64[0] = SaveCol._u64[0];
+		vif0.MaskCol._u64[1] = SaveCol._u64[1];
+		vif0.MaskRow._u64[0] = SaveRow._u64[0];
+		vif0.MaskRow._u64[1] = SaveRow._u64[1];
 		vif0ch.qwc = 0; //?
 		//cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
 		psHu64(VIF0_FIFO) = 0;
@@ -135,11 +146,21 @@ __fi void vif0FBRST(u32 value) {
 
 __fi void vif1FBRST(u32 value) {
 	VIF_LOG("VIF1_FBRST write32 0x%8.8x", value);
-
+	
 	if (FBRST(value).RST) // Reset Vif.
 	{
+		u128 SaveCol;
+		u128 SaveRow;
+		//Must Preserve Row/Col registers! (Downhill Domination for testing) - Really shouldnt be part of the vifstruct.
+		SaveCol._u64[0] = vif1.MaskCol._u64[0];
+		SaveCol._u64[1] = vif1.MaskCol._u64[1];
+		SaveRow._u64[0] = vif1.MaskRow._u64[0];
+		SaveRow._u64[1] = vif1.MaskRow._u64[1];
 		memzero(vif1);
-
+		vif1.MaskCol._u64[0] = SaveCol._u64[0];
+		vif1.MaskCol._u64[1] = SaveCol._u64[1];
+		vif1.MaskRow._u64[0] = SaveRow._u64[0];
+		vif1.MaskRow._u64[1] = SaveRow._u64[1];
 		//cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
 		//vif1ch.qwc -= min((int)vif1ch.qwc, 16); //not sure if the dma should stop, FFWDing could be tricky
 		vif1ch.qwc = 0;
