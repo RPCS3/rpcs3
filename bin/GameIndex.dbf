@@ -7374,6 +7374,7 @@ Serial = SLUS-21293
 Name   = Metal Saga
 Region = NTSC-U
 Compat = 5
+DMABusyHack = 1 //intro fmv
 ---------------------------------------------
 Serial = SLUS-21294
 Name   = Mark Ecko's Getting Up - Contents Under Pressure [Special Edition]
@@ -9268,6 +9269,12 @@ Compat = 5
 Serial = SLUS-21735
 Name   = Mana Khemia - Alchemists of Al-Revis
 Region = NTSC-U
+Compat = 5
+DMABusyHack = 1
+---------------------------------------------
+Serial = SLES-55443
+Name   = Mana Khemia - Alchemists of Al-Revis
+Region = PAL-E
 Compat = 5
 DMABusyHack = 1
 ---------------------------------------------
@@ -19148,6 +19155,7 @@ Compat = 5
 Serial = SLPM-65868
 Name   = Metal Saga - Chain of Cloud
 Region = NTSC-J
+DMABusyHack = 1 //intro fmv
 ---------------------------------------------
 Serial = SLPM-65869
 Name   = Monster Hunter G
@@ -23385,6 +23393,7 @@ Region = NTSC-J
 Serial = SLPM-74226
 Name   = Metal Saga - Sajin no Kusari [PlayStation 2 The Best]
 Region = NTSC-J
+DMABusyHack = 1 //intro fmv
 ---------------------------------------------
 Serial = SLPM-74227
 Name   = Ikusa Gami [PlayStation 2 The Best]
