@@ -152,13 +152,22 @@ void RecentIsoManager::Add( const wxString& src )
 		}
 	}
 
+	//New item doesn't exist at the menu/internal-list, add it.
+	
 	m_Items.push_back( RecentItem( normalized ) );
-	InsertIntoMenu( m_cursel = (m_Items.size()-1) );
+	InsertIntoMenu( m_Items.size()-1 );
 
 	while( m_Items.size() > m_MaxLength )
-	{
+	{	//We're removing items from the internal list, need to keep the menu IDs in sync, by refreshing the menu.
+		//This 'while' loop typically iterates at most once.
+		RemoveAllFromMenu();
 		m_Items.erase( m_Items.begin() );
+		Repopulate();
 	}
+
+	//check the new (last) item
+	m_Items[m_Items.size()-1].ItemPtr->Check();
+	m_cursel = m_Items.size()-1;
 }
 
 //id here is the position index at the list of recent ISOs
