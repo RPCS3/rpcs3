@@ -144,19 +144,35 @@ _vifT int nVifUnpack(const u8* data) {
 		// to read back from it mid-transfer.  Since so few games actually use partial transfers
 		// of VIF unpacks, this code should not be any bottleneck.
 
-		while (size >= vSize) {
-			--vifRegs.num;
-			++vif.cl;
+		// We can optimize the calculation either way as some games have big partial chunks (Guitar Hero). 
+		// Skipping writes are easy, filling is a bit more complex, so for now until we can 
+		// be sure its right (if it happens) it just prints debug stuff and processes the old way.
+		if(!isFill) 
+		{
+				vifRegs.num -= (size / vSize);
+		}
+		else
+		{
+			int guessedsize = (size / vSize);
+			guessedsize = vifRegs.num - (((guessedsize / vifRegs.cycle.cl) * (vifRegs.cycle.wl - vifRegs.cycle.cl)) + guessedsize);
 
-			if (isFill) {
-				if (vif.cl <= vifRegs.cycle.cl)			size -= vSize;
-				else if (vif.cl == vifRegs.cycle.wl)	vif.cl = 0;
+			while (size >= vSize) {
+				--vifRegs.num;
+				++vif.cl;
+
+				if (isFill) {
+					if (vif.cl <= vifRegs.cycle.cl)			size -= vSize;
+					else if (vif.cl == vifRegs.cycle.wl)	vif.cl = 0;
+				}
+				else
+				{
+					size -= vSize;
+					if (vif.cl >= vifRegs.cycle.wl) vif.cl = 0;
+				}
 			}
-			else
-			{
-				size -= vSize;
-				if (vif.cl >= vifRegs.cycle.wl) vif.cl = 0;
-			}
+			
+			
+			DevCon.Warning("Fill!! Partial num left = %x, guessed %x", vifRegs.num, guessedsize);
 		}
 	}
 
