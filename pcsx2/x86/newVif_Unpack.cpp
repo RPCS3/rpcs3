@@ -149,7 +149,7 @@ _vifT int nVifUnpack(const u8* data) {
 			++vif.cl;
 
 			if (isFill) {
-				if (vif.cl < vifRegs.cycle.cl)			size -= vSize;
+				if (vif.cl <= vifRegs.cycle.cl)			size -= vSize;
 				else if (vif.cl == vifRegs.cycle.wl)	vif.cl = 0;
 			}
 			else
@@ -262,7 +262,7 @@ __ri void __fastcall _nVifUnpackLoop(const u8* data) {
 
 		if (isFill) {
 			//DevCon.WriteLn("isFill!");
-			if (vif.cl < vifRegs.cycle.cl)			data += vSize;
+			if (vif.cl <= vifRegs.cycle.cl)			data += vSize;
 			else if (vif.cl == vifRegs.cycle.wl)	vif.cl = 0;
 		}
 		else
