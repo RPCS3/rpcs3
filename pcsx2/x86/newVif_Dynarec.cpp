@@ -80,8 +80,8 @@ __fi void VifUnpackSSE_Dynarec::SetMasks(int cS) const {
 	u32 m1 =  m0 & 0xaaaaaaaa;
 	u32 m2 =(~m1>>1) &  m0;
 	u32 m3 = (m1>>1) & ~m0;
-	if((m2&&(doMask||isFill))||doMode) { xMOVAPS(xmmRow, ptr128[&vif.MaskRow]); }
-	if (m3&&(doMask||isFill)) {
+	if((m2&&doMask)||doMode) { xMOVAPS(xmmRow, ptr128[&vif.MaskRow]); }
+	if (m3&&doMask) {
 		xMOVAPS(xmmCol0, ptr128[&vif.MaskCol]);
 		if ((cS>=2) && (m3&0x0000ff00)) xPSHUF.D(xmmCol1, xmmCol0, _v1);
 		if ((cS>=3) && (m3&0x00ff0000)) xPSHUF.D(xmmCol2, xmmCol0, _v2);
@@ -271,7 +271,7 @@ _vifT __fi void dVifUnpack(const u8* data, bool isFill) {
 	VIFregisters& vifRegs	= vifXRegs;
 
 	const u8	upkType		= (vif.cmd & 0x1f) | (vif.usn << 5);
-	const int	doMask		= (vif.cmd & 0x10);
+	const int	doMask		= isFill? 1 : (vif.cmd & 0x10);
 
 	_vBlock.upkType = upkType;
 	_vBlock.num		= (u8&)vifRegs.num;
