@@ -384,7 +384,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 				if((int)m_vt.m_lod.x >= (int)context->TEX1.MXL)
 				{
-					k = (int)m_vt.m_lod.x << 16; // set lod to max
+					k = (int)m_vt.m_lod.x << 16; // set lod to max level
 
 					gd.sel.lcm = 1; // lod is constant
 					gd.sel.mmin = 1; // tri-linear is meaningless
@@ -432,7 +432,11 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 				static int s_counter = 0;
 
-				//t->Save(format("c:/temp1/%08d_%05x_0.bmp", s_counter, context->TEX0.TBP0));
+				if(0)
+				//if(context->TEX0.TH > context->TEX0.TW)
+				//if(s_n >= s_saven && s_n < s_saven + 3)
+				//if(context->TEX0.TBP0 >= 0x2b80 && context->TEX0.TBW == 2 && context->TEX0.PSM == PSM_PSMT4)
+				t->Save(format("c:/temp1/%08d_%05x_0.bmp", s_counter, context->TEX0.TBP0));
 
 				for(int i = 1, j = std::min<int>((int)context->TEX1.MXL, 6); i <= j; i++)
 				{
@@ -487,7 +491,28 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 					gd.tex[i] = t->m_buff;
 
-					// t->Save(format("c:/temp1/%08d_%05x_%d.bmp", s_counter, context->TEX0.TBP0, i));
+					if(0)
+					//if(context->TEX0.TH > context->TEX0.TW)
+					//if(s_n >= s_saven && s_n < s_saven + 3)
+					//if(context->TEX0.TBP0 >= 0x2b80 && context->TEX0.TBW == 2 && context->TEX0.PSM == PSM_PSMT4)
+					{
+						t->Save(format("c:/temp1/%08d_%05x_%d.bmp", s_counter, context->TEX0.TBP0, i));
+						/*
+						GIFRegTEX0 TEX0 = MIP_TEX0;
+						TEX0.TBP0 = context->TEX0.TBP0;
+						do
+						{
+							TEX0.TBP0++;
+							const GSTextureCacheSW::Texture* t = m_tc->Lookup(TEX0, env.TEXA, r, gd.sel.tw + 3);
+							if(t == NULL) {ASSERT(0); return false;}
+							t->Save(format("c:/temp1/%08d_%05x_%d.bmp", s_counter, TEX0.TBP0, i));
+						}
+						while(TEX0.TBP0 < 0x3fff);
+						*/
+
+						int i = 0;
+					}
+
 				}
 
 				s_counter++;
@@ -701,38 +726,31 @@ void GSRendererSW::VertexKick(bool skip)
 {
 	const GSDrawingContext* context = m_context;
 
-	GSVector4i xy = GSVector4i::load((int)m_v.XYZ.u32[0]);
+	GSVertexSW& dst = m_vl.AddTail();
 
-	xy = xy.insert16<3>(m_v.FOG.F);
-	xy = xy.upl16();
-	xy -= context->XYOFFSET;
+	GSVector4i xy = GSVector4i::load((int)m_v.XYZ.u32[0]).upl16() - context->XYOFFSET;
+	GSVector4i zf = GSVector4i((int)std::min<uint32>(m_v.XYZ.Z, 0xffffff00), m_v.FOG.F);
 
-	GSVertexSW v;
-
-	v.p = GSVector4(xy) * g_pos_scale;
-
-	v.c = GSVector4(GSVector4i::load((int)m_v.RGBAQ.u32[0]).u8to32() << 7);
+	dst.p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
 
 	if(tme)
 	{
+		GSVector4 t;
+
 		if(fst)
 		{
-			v.t = GSVector4(((GSVector4i)m_v.UV).upl16() << (16 - 4));
+			t = GSVector4(((GSVector4i)m_v.UV).upl16() << (16 - 4));
 		}
 		else
 		{
-			v.t = GSVector4(m_v.ST.S, m_v.ST.T);
-			v.t *= GSVector4(0x10000 << context->TEX0.TW, 0x10000 << context->TEX0.TH);
+			t = GSVector4(m_v.ST.S, m_v.ST.T) * GSVector4(0x10000 << context->TEX0.TW, 0x10000 << context->TEX0.TH);
+			t = t.xyxy(GSVector4::load(m_v.RGBAQ.Q));
 		}
 
-		v.t = v.t.xyxy(GSVector4::load(m_v.RGBAQ.Q));
+		dst.t = t;
 	}
 
-	GSVertexSW& dst = m_vl.AddTail();
-
-	dst = v;
-
-	dst.p.z = (float)min(m_v.XYZ.Z, 0xffffff00); // max value which can survive the uint32 => float => uint32 conversion
+	dst.c = GSVector4::rgba32(m_v.RGBAQ.u32[0], 7);
 
 	int count = 0;
 

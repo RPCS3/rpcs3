@@ -2333,6 +2333,7 @@ public:
 	static const GSVector4 m_two;
 	static const GSVector4 m_four;
 	static const GSVector4 m_x4b000000;
+	static const GSVector4 m_x4f800000;
 
 	__forceinline GSVector4()
 	{
@@ -2385,9 +2386,18 @@ public:
 		this->m = m;
 	}
 
-	__forceinline explicit GSVector4(uint32 u32)
+	__forceinline explicit GSVector4(int i)
 	{
-		*this = GSVector4(GSVector4i::load((int)u32).u8to32());
+		GSVector4i v((int)i);
+
+		*this = GSVector4(v);
+	}
+
+	__forceinline explicit GSVector4(uint32 u)
+	{
+		GSVector4i v((int)u);
+
+		*this = GSVector4(v) + (m_x4f800000 & GSVector4::cast(v.sra32(31)));
 	}
 
 	__forceinline explicit GSVector4(const GSVector4i& v);
@@ -2407,11 +2417,6 @@ public:
 		this->m = m;
 	}
 
-	__forceinline void operator = (uint32 u32)
-	{
-		*this = GSVector4(GSVector4i::load((int)u32).u8to32());
-	}
-
 	__forceinline operator __m128() const
 	{
 		return m;
@@ -2420,6 +2425,16 @@ public:
 	__forceinline uint32 rgba32() const
 	{
 		return GSVector4i(*this).rgba32();
+	}
+
+	__forceinline static GSVector4 rgba32(uint32 rgba)
+	{
+		return GSVector4(GSVector4i::load((int)rgba).u8to32());
+	}
+
+	__forceinline static GSVector4 rgba32(uint32 rgba, int shift)
+	{
+		return GSVector4(GSVector4i::load((int)rgba).u8to32() << shift);
 	}
 
 	__forceinline static GSVector4 cast(const GSVector4i& v);
@@ -2838,6 +2853,13 @@ public:
 	__forceinline static GSVector4 load(float f)
 	{
 		return GSVector4(_mm_load_ss(&f));
+	}
+
+	__forceinline static GSVector4 load(uint32 u)
+	{
+		GSVector4i v = GSVector4i::load((int)u);
+
+		return GSVector4(v) + (m_x4f800000 & GSVector4::cast(v.sra32(31)));
 	}
 
 	template<bool aligned> __forceinline static GSVector4 load(const void* p)

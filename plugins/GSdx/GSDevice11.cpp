@@ -350,7 +350,7 @@ void GSDevice11::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 
 void GSDevice11::ClearRenderTarget(GSTexture* t, uint32 c)
 {
-	GSVector4 color = GSVector4(c) * (1.0f / 255);
+	GSVector4 color = GSVector4::rgba32(c) * (1.0f / 255);
 
 	m_ctx->ClearRenderTargetView(*(GSTexture11*)t, color.v);
 }

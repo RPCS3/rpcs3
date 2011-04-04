@@ -29,7 +29,7 @@ using namespace Xbyak;
 
 void GSSetupPrimCodeGenerator::Generate()
 {
-	enter(32, true);
+	sub(rsp, 8 + 2 * 16);
 
 	vmovdqa(ptr[rsp + 0], xmm6);
 	vmovdqa(ptr[rsp + 16], xmm7);
@@ -55,7 +55,7 @@ void GSSetupPrimCodeGenerator::Generate()
 	vmovdqa(xmm6, ptr[rsp + 0]);
 	vmovdqa(xmm7, ptr[rsp + 16]);
 
-	leave();
+	add(rsp, 8 + 2 * 16);
 
 	ret();
 }
@@ -186,16 +186,11 @@ void GSSetupPrimCodeGenerator::Texture()
 
 	if(m_sel.fst)
 	{
-		// m_local.d4.st = GSVector4i(t * 4.0f);
-
-		if(m_sel.mipmap && !m_sel.lcm)
-		{
-			vmovhps(ptr[r8 + offsetof(GSScanlineLocalData, d4.stq.z)], xmm1);
-		}
+		// m_local.d4.stq = GSVector4i(t * 4.0f);
 
 		vcvttps2dq(xmm1, xmm1);
 
-		vmovq(ptr[r8 + offsetof(GSScanlineLocalData, d4.stq)], xmm1);
+		vmovdqa(ptr[r8 + offsetof(GSScanlineLocalData, d4.stq)], xmm1);
 	}
 	else
 	{
@@ -204,7 +199,7 @@ void GSSetupPrimCodeGenerator::Texture()
 		vmovaps(ptr[r8 + offsetof(GSScanlineLocalData, d4.stq)], xmm1);
 	}
 
-	for(int j = 0, k = m_sel.fst && !(m_sel.mipmap && !m_sel.lcm) ? 2 : 3; j < k; j++)
+	for(int j = 0, k = m_sel.fst ? 2 : 3; j < k; j++)
 	{
 		// GSVector4 ds = t.xxxx();
 		// GSVector4 dt = t.yyyy();
@@ -218,7 +213,7 @@ void GSSetupPrimCodeGenerator::Texture()
 
 			vmulps(xmm2, xmm1, Xmm(4 + i));
 
-			if(m_sel.fst && !(m_sel.mipmap && !m_sel.lcm))
+			if(m_sel.fst)
 			{
 				// m_local.d[i].s/t = GSVector4i(v);
 

@@ -109,7 +109,7 @@ bool GSClut::WriteTest(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 	case 4: if(m_CBP[0] == TEX0.CBP) return false; m_CBP[0] = TEX0.CBP; break;
 	case 5: if(m_CBP[1] == TEX0.CBP) return false; m_CBP[1] = TEX0.CBP; break;
 	case 6: ASSERT(0); return false; // ffx2 menu
-	case 7: ASSERT(0); return false;
+	case 7: ASSERT(0); return false; // ford mustang racing
 	default: __assume(0);
 	}
 

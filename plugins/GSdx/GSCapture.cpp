@@ -249,10 +249,15 @@ public:
 			GSVector4 ys(0.257f, 0.504f, 0.098f, 0.0f);
 			GSVector4 us(-0.148f / 2, -0.291f / 2, 0.439f / 2, 0.0f);
 			GSVector4 vs(0.439f / 2, -0.368f / 2, -0.071f / 2, 0.0f);
-			const GSVector4 offset(16, 128, 16, 128);
 
-			if (!rgba)
-				ys = ys.zyxw(), us = us.zyxw(), vs = vs.zyxw();
+			if(!rgba)
+			{
+				ys = ys.zyxw();
+				us = us.zyxw();
+				vs = vs.zyxw();
+			}
+
+			const GSVector4 offset(16, 128, 16, 128);
 
 			for(int j = 0; j < h; j++, dst += dstpitch, src += srcpitch)
 			{
@@ -261,8 +266,8 @@ public:
 
 				for(int i = 0; i < w; i += 2)
 				{
-					GSVector4 c0 = GSVector4(s[i + 0]);
-					GSVector4 c1 = GSVector4(s[i + 1]);
+					GSVector4 c0 = GSVector4::rgba32(s[i + 0]);
+					GSVector4 c1 = GSVector4::rgba32(s[i + 1]);
 					GSVector4 c2 = c0 + c1;
 
 					GSVector4 lo = (c0 * ys).hadd(c2 * us);

@@ -322,8 +322,7 @@ void GSSetupPrimCodeGenerator::Color()
 	{
 		// GSVector4i c = GSVector4i(vertices[0].c);
 
-		movaps(xmm0, ptr[ecx + offsetof(GSVertexSW, c)]);
-		cvttps2dq(xmm0, xmm0);
+		cvttps2dq(xmm0, ptr[ecx + offsetof(GSVertexSW, c)]);
 
 		// c = c.upl16(c.zwxy());
 

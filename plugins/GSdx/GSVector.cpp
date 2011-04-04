@@ -29,6 +29,7 @@ const GSVector4 GSVector4::m_one(1.0f);
 const GSVector4 GSVector4::m_two(2.0f);
 const GSVector4 GSVector4::m_four(4.0f);
 const GSVector4 GSVector4::m_x4b000000(_mm_castsi128_ps(_mm_set1_epi32(0x4b000000)));
+const GSVector4 GSVector4::m_x4f800000(_mm_castsi128_ps(_mm_set1_epi32(0x4f800000)));
 
 GSVector4i GSVector4i::fit(int arx, int ary) const
 {

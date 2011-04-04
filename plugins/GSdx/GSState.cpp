@@ -590,41 +590,41 @@ template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* r)
 
 	if(m_env.CTXT[i].TEX1.MTBA)
 	{
+		// NOTE 1: TEX1.MXL must not be automatically set to 3 here.
+		// NOTE 2: Mipmap levels are tightly packed, if (tbw << 6) > (1 << tw) then the left-over space to the right is used. (common for PSM_PSMT4)
+		// NOTE 3: Non-rectangular textures are treated as rectangular when calculating the occupied space (height is extended, not sure about width)
+
+		uint32 bp = TEX0.TBP0;
+		uint32 bw = TEX0.TBW;
+		uint32 w = 1u << TEX0.TW;
+		uint32 h = 1u << TEX0.TH;
 		uint32 bpp = GSLocalMemory::m_psm[TEX0.PSM].bpp;
 
-		uint32 tbp = TEX0.TBP0;
-		uint32 tbw = TEX0.TBW;
-		uint32 th = TEX0.TH;
+		if(h < w) h = w;
 
-		if(th >= 3)
-		{
-			tbp += (((tbw << 6) * (1 << th) * bpp >> 3) + 255) >> 8;
-			tbw = std::max<uint32>(tbw >> 1, 1);
-			th--;
+		bp += ((w * h * bpp >> 3) + 255) >> 8;
+		bw = std::max<uint32>(bw >> 1, 1);
+		w = std::max<uint32>(w >> 1, 1);
+		h = std::max<uint32>(h >> 1, 1);
 
-			m_env.CTXT[i].MIPTBP1.TBP1 = tbp;
-			m_env.CTXT[i].MIPTBP1.TBW1 = tbw;
+		m_env.CTXT[i].MIPTBP1.TBP1 = bp;
+		m_env.CTXT[i].MIPTBP1.TBW1 = bw;
 
-			tbp += (((tbw << 6) * (1 << th) * bpp >> 3) + 255) >> 8;
-			tbw = std::max<uint32>(tbw >> 1, 1);
-			th--;
+		bp += ((w * h * bpp >> 3) + 255) >> 8;
+		bw = std::max<uint32>(bw >> 1, 1);
+		w = std::max<uint32>(w >> 1, 1);
+		h = std::max<uint32>(h >> 1, 1);
 
-			m_env.CTXT[i].MIPTBP1.TBP2 = tbp;
-			m_env.CTXT[i].MIPTBP1.TBW2 = tbw;
+		m_env.CTXT[i].MIPTBP1.TBP2 = bp;
+		m_env.CTXT[i].MIPTBP1.TBW2 = bw;
 
-			tbp += (((tbw << 6) * (1 << th) * bpp >> 3) + 255) >> 8;
-			tbw = std::max<uint32>(tbw >> 1, 1);
-			th--;
+		bp += ((w * h * bpp >> 3) + 255) >> 8;
+		bw = std::max<uint32>(bw >> 1, 1);
+		w = std::max<uint32>(w >> 1, 1);
+		h = std::max<uint32>(h >> 1, 1);
 
-			m_env.CTXT[i].MIPTBP1.TBP3 = tbp;
-			m_env.CTXT[i].MIPTBP1.TBW3 = tbw;
-
-			// NOTE: TEX1.MXL must not be automatically set to 3 here
-		}
-		else
-		{
-			ASSERT(0);
-		}
+		m_env.CTXT[i].MIPTBP1.TBP3 = bp;
+		m_env.CTXT[i].MIPTBP1.TBW3 = bw;
 
 		// printf("MTBA\n");
 	}

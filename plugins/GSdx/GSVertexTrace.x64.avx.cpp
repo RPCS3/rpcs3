@@ -51,7 +51,7 @@ GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxs
 		break;
 	}
 
-	enter(32, true);
+	sub(rsp, 8 + 2 * 16);
 
 	vmovdqa(ptr[rsp + 0], xmm6);
 	vmovdqa(ptr[rsp + 16], xmm7);
@@ -168,7 +168,7 @@ GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxs
 	vmovdqa(xmm6, ptr[rsp + 0]);
 	vmovdqa(xmm7, ptr[rsp + 16]);
 
-	leave();
+	add(rsp, 8 + 2 * 16);
 
 	ret();
 }
@@ -200,7 +200,7 @@ GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t ma
 		break;
 	}
 
-	enter(32, true);
+	sub(rsp, 8 + 2 * 16);
 
 	vmovdqa(ptr[rsp + 0], xmm6);
 	vmovdqa(ptr[rsp + 16], xmm7);
@@ -334,7 +334,7 @@ GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t ma
 	vmovdqa(xmm6, ptr[rsp + 0]);
 	vmovdqa(xmm7, ptr[rsp + 16]);
 
-	leave();
+	add(rsp, 8 + 2 * 16);
 
 	ret();
 }
@@ -364,7 +364,7 @@ GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t 
 		break;
 	}
 
-	enter(32, true);
+	sub(rsp, 8 + 2 * 16);
 
 	vmovdqa(ptr[rsp + 0], xmm6);
 	vmovdqa(ptr[rsp + 16], xmm7);
@@ -488,7 +488,7 @@ GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t 
 	vmovdqa(xmm6, ptr[rsp + 0]);
 	vmovdqa(xmm7, ptr[rsp + 16]);
 
-	leave();
+	add(rsp, 8 + 2 * 16);
 
 	ret();
 }

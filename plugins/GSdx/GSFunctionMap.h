@@ -161,9 +161,6 @@ class GSCodeGenerator : public Xbyak::CodeGenerator
 protected:
 	Xbyak::util::Cpu m_cpu;
 
-	void enter(uint32 size, bool align);
-	void leave();
-
 public:
 	GSCodeGenerator(void* code, size_t maxsize)
 		: Xbyak::CodeGenerator(maxsize, code)

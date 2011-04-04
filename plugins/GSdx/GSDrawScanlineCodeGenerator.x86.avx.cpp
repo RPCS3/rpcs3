@@ -19,9 +19,6 @@
  *
  */
 
-// TODO: x64 (use the extra regs to avoid spills of zs, zd, uf, vf, rb, ga and keep a few constants in the last two like aref or afix)
-// TODO: for edges doing 4 pixels is wasteful (needed memory access * 4)
-
 #include "stdafx.h"
 #include "GSDrawScanlineCodeGenerator.h"
 #include "GSVertexSW.h"

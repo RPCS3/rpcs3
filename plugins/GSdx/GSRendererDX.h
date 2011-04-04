@@ -263,7 +263,7 @@ public:
 		{
 			ps_sel.fog = 1;
 
-			ps_cb.FogColor_AREF = GSVector4(env.FOGCOL.u32[0]) / 255;
+			ps_cb.FogColor_AREF = GSVector4::rgba32(env.FOGCOL.u32[0]) / 255;
 		}
 
 		if(context->TEST.ATE)
