@@ -504,12 +504,15 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 		{
 		case VK_F5:
 			m_interlace = (m_interlace + 7 + step) % 7;
+			printf("GSdx: Set deinterlace mode to %d (%s).\n", (int)m_interlace, theApp.m_gs_interlace.at(m_interlace).name.c_str());
 			return;
 		case VK_F6:
-			m_aspectratio = (m_aspectratio + 3 + step) % 3;
+			if( m_wnd.IsManaged() )
+				m_aspectratio = (m_aspectratio + 3 + step) % 3;
 			return;
 		case VK_F7:
 			m_shader = (m_shader + 3 + step) % 3;
+			printf("GSdx: Set shader %d (%s).\n", (int)m_shader);
 			return;
 		case VK_DELETE:
 			m_aa1 = !m_aa1;

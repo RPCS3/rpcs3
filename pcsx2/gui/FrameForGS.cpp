@@ -45,6 +45,8 @@ void GSPanel::InitDefaultAccelerators()
 	m_Accels->Map( AAC( WXK_TAB ),				"Framelimiter_TurboToggle" );
 	m_Accels->Map( AAC( WXK_TAB ).Shift(),		"Framelimiter_SlomoToggle" );
 
+	m_Accels->Map( AAC( WXK_F6 ),				"GSwindow_CycleAspectRatio" );
+
 	m_Accels->Map( AAC( WXK_ESCAPE ),			"Sys_Suspend" );
 	m_Accels->Map( AAC( WXK_F8 ),				"Sys_TakeSnapshot" );
 	m_Accels->Map( AAC( WXK_F8 ).Shift(),		"Sys_TakeSnapshot");
