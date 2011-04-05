@@ -264,6 +264,8 @@ namespace Panels
 	protected:
 		wxComboBox*		m_combo_AspectRatio;
 
+		wxTextCtrl*		m_text_Zoom;
+
 		pxCheckBox*		m_check_CloseGS;
 		pxCheckBox*		m_check_SizeLock;
 		pxCheckBox*		m_check_VsyncEnable;

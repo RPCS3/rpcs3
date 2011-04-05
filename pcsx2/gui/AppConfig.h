@@ -189,6 +189,7 @@ public:
 		bool		DisableScreenSaver;
 
 		AspectRatioType AspectRatio;
+		Fixed100	Zoom;
 
 		wxSize		WindowSize;
 		wxPoint		WindowPos;

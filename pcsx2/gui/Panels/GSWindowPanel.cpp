@@ -32,6 +32,8 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 		_("Widescreen (16:9)")
 	};
 
+	m_text_Zoom = CreateNumericalTextCtrl( this, 5 );
+
 	m_combo_AspectRatio	= new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 		ArraySize(aspect_ratio_labels), aspect_ratio_labels, wxCB_READONLY );
 
@@ -49,6 +51,14 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	m_check_ManagedVsync = new pxCheckBox( this, _("Dynamically toggle Vsync depending on frame rate (read tooltip!)") );
 	m_check_DclickFullscreen = new pxCheckBox( this, _("Double-click toggles fullscreen mode") );
 	//m_check_ExclusiveFS = new pxCheckBox( this, _("Use exclusive fullscreen mode (if available)") );
+
+	m_text_Zoom->SetToolTip( pxEt( "!ContextTip:Window:Zoom",
+		L"Zoom = 100: Fit the entire image to the window without any cropping.\n"
+		L"Above/Below 100: Zoom In/Out\n"
+		L"0: Automatic-Zoom-In untill the black-bars are gone (Aspect ratio is kept, some of the image goes out of screen).\n"
+		L"  NOTE: Some games draw their own black-bars, which will not be removed with '0'.\n\n"
+		L"Keyboard: NUMPAD-PLUS: Zoom-In, NUMPAD-MINUS: Zoom-Out, NUMPAD-*: Toggle 100/0"
+	) );
 
 	m_check_VsyncEnable->SetToolTip( pxEt( "!ContextTip:Window:Vsync",
 		L"Vsync eliminates screen tearing but typically has a big performance hit. "
@@ -102,6 +112,10 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	s_AspectRatio += Label(_("Custom Window Size:"))| pxMiddle;
 	s_AspectRatio += s_customsize					| pxAlignRight;
 
+	s_AspectRatio	+= Label(_("Zoom:"))			| StdExpand();
+	s_AspectRatio	+= m_text_Zoom;
+
+
 	*this += s_AspectRatio				| StdExpand();
 	*this += m_check_SizeLock;
 	*this += m_check_HideMouse;
@@ -109,7 +123,7 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	*this += new wxStaticLine( this )	| StdExpand();
 
 	*this += m_check_Fullscreen;
-	*this += m_check_DclickFullscreen;;
+	*this += m_check_DclickFullscreen;
 
 	//*this += m_check_ExclusiveFS;
 	*this += new wxStaticLine( this )	| StdExpand();
@@ -141,6 +155,7 @@ void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, 
 		m_check_SizeLock	->SetValue( conf.DisableResizeBorders );
 
 		m_combo_AspectRatio	->SetSelection( (int)conf.AspectRatio );
+		m_text_Zoom			->SetValue( conf.Zoom.ToString() );
 
 		m_check_DclickFullscreen ->SetValue ( conf.IsToggleFullscreenOnDoubleClick );
 
@@ -166,6 +181,7 @@ void Panels::GSWindowSettingsPanel::Apply()
 	appconf.DisableResizeBorders	= m_check_SizeLock	->GetValue();
 
 	appconf.AspectRatio		= (AspectRatioType)m_combo_AspectRatio->GetSelection();
+	appconf.Zoom			= Fixed100::FromString( m_text_Zoom->GetValue() );
 
 	gsconf.VsyncEnable		= m_check_VsyncEnable->GetValue();
 	gsconf.ManagedVsync		= m_check_ManagedVsync->GetValue();

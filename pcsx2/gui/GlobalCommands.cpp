@@ -176,6 +176,39 @@ namespace Implementations
 		AppApplySettings();
 	}
 
+	void SetZoom(float zoom)
+	{
+		if( zoom < 0 )
+			return;
+		g_Conf->GSWindow.Zoom = zoom;
+		Console.WriteLn(L"GSwindow: set zoom: %f", zoom);
+		AppApplySettings();
+	}
+
+
+	void GSwindow_ZoomIn()
+	{
+		float z = g_Conf->GSWindow.Zoom.ToFloat();
+		if( z==0 ) z = 100;
+		z++;
+		SetZoom( z );
+	}
+	void GSwindow_ZoomOut()
+	{
+		float z = g_Conf->GSWindow.Zoom.ToFloat();
+		if( z==0 ) z = 100;
+		z--;
+		SetZoom( z );
+	}
+	void GSwindow_ZoomToggle()
+	{
+		float z = g_Conf->GSWindow.Zoom.ToFloat();
+		if( z==100 )	z = 0;
+		else			z = 100;
+
+		SetZoom( z );
+	}
+
 	void Sys_Suspend()
 	{
 		CoreThread.Suspend();
@@ -334,6 +367,24 @@ static const GlobalCommandDescriptor CommandDeclarations[] =
 
 	{	"GSwindow_CycleAspectRatio",
 		Implementations::GSwindow_CycleAspectRatio,
+		NULL,
+		NULL,
+	},
+
+	{	"GSwindow_ZoomIn",
+		Implementations::GSwindow_ZoomIn,
+		NULL,
+		NULL,
+	},
+
+	{	"GSwindow_ZoomOut",
+		Implementations::GSwindow_ZoomOut,
+		NULL,
+		NULL,
+	},
+
+	{	"GSwindow_ZoomToggle",
+		Implementations::GSwindow_ZoomToggle,
 		NULL,
 		NULL,
 	},

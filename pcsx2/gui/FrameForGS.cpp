@@ -47,6 +47,10 @@ void GSPanel::InitDefaultAccelerators()
 
 	m_Accels->Map( AAC( WXK_F6 ),				"GSwindow_CycleAspectRatio" );
 
+	m_Accels->Map( AAC( WXK_NUMPAD_ADD ),		"GSwindow_ZoomIn" );
+	m_Accels->Map( AAC( WXK_NUMPAD_SUBTRACT ),	"GSwindow_ZoomOut" );
+	m_Accels->Map( AAC( WXK_NUMPAD_MULTIPLY ),	"GSwindow_ZoomToggle" );
+
 	m_Accels->Map( AAC( WXK_ESCAPE ),			"Sys_Suspend" );
 	m_Accels->Map( AAC( WXK_F8 ),				"Sys_TakeSnapshot" );
 	m_Accels->Map( AAC( WXK_F8 ).Shift(),		"Sys_TakeSnapshot");
@@ -127,6 +131,28 @@ void GSPanel::DoResize()
 	wxSize client = GetParent()->GetClientSize();
 	wxSize viewport = client;
 
+	double clientAr = (double)client.GetWidth()/(double)client.GetHeight();
+
+	double targetAr = clientAr;
+	if( g_Conf->GSWindow.AspectRatio == AspectRatio_4_3 )
+		targetAr = 4.0/3.0;
+	else if( g_Conf->GSWindow.AspectRatio == AspectRatio_16_9 )
+		targetAr = 16.0/9.0;
+
+	double arr = targetAr / clientAr;
+
+	if( arr < 1 )
+		viewport.x = (int)( (double)viewport.x*arr + 0.5);
+	else if( arr > 1 )
+		viewport.y = (int)( (double)viewport.y/arr + 0.5);
+
+	float zoom = g_Conf->GSWindow.Zoom.ToFloat()/100.0;
+	if( zoom == 0 )//auto zoom in untill black-bars are gone (while keeping the aspect ratio).
+		zoom = max( (float)arr, (float)(1.0/arr) );
+
+	viewport.Scale(zoom, zoom);
+/*
+
 	switch( g_Conf->GSWindow.AspectRatio )
 	{
 		case AspectRatio_Stretch:
@@ -151,7 +177,7 @@ void GSPanel::DoResize()
 				viewport.x = (int)(client.y * (16.0/9.0));
 		break;
 	}
-
+*/
 	SetSize( viewport );
 	CenterOnParent();
 }

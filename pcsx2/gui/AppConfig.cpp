@@ -712,6 +712,7 @@ AppConfig::GSWindowOptions::GSWindowOptions()
 	DisableScreenSaver		= true;
 
 	AspectRatio				= AspectRatio_4_3;
+	Zoom					= 100;
 
 	WindowSize				= wxSize( 640, 480 );
 	WindowPos				= wxDefaultPosition;
@@ -765,6 +766,7 @@ void AppConfig::GSWindowOptions::LoadSave( IniInterface& ini )
 	};
 
 	ini.EnumEntry( L"AspectRatio", AspectRatio, AspectRatioNames, AspectRatio );
+	IniEntry( Zoom );
 
 	if( ini.IsLoading() ) SanityCheck();
 }
