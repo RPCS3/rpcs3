@@ -55,11 +55,11 @@ void GSPanel::InitDefaultAccelerators()
 	m_Accels->Map( AAC( WXK_NUMPAD_SUBTRACT ).Cmd().Alt(),	"GSwindow_ZoomOutY" );
 	m_Accels->Map( AAC( WXK_NUMPAD_MULTIPLY ).Cmd().Alt(),	"GSwindow_ZoomResetY" );
 
-	m_Accels->Map( AAC( WXK_NUMPAD8 ).Cmd(),	"GSwindow_OffsetYminus" );
-	m_Accels->Map( AAC( WXK_NUMPAD2 ).Cmd(),	"GSwindow_OffsetYplus" );
-	m_Accels->Map( AAC( WXK_NUMPAD4 ).Cmd(),	"GSwindow_OffsetXminus" );
-	m_Accels->Map( AAC( WXK_NUMPAD6 ).Cmd(),	"GSwindow_OffsetXplus" );
-	m_Accels->Map( AAC( WXK_NUMPAD5 ).Cmd(),	"GSwindow_OffsetReset" );
+	m_Accels->Map( AAC( WXK_UP ).Cmd().Alt(),	"GSwindow_OffsetYminus" );
+	m_Accels->Map( AAC( WXK_DOWN ).Cmd().Alt(),	"GSwindow_OffsetYplus" );
+	m_Accels->Map( AAC( WXK_LEFT ).Cmd().Alt(),	"GSwindow_OffsetXminus" );
+	m_Accels->Map( AAC( WXK_RIGHT ).Cmd().Alt(),	"GSwindow_OffsetXplus" );
+	m_Accels->Map( AAC( WXK_NUMPAD_DIVIDE ).Cmd().Alt(),	"GSwindow_OffsetReset" );
 
 	m_Accels->Map( AAC( WXK_ESCAPE ),			"Sys_Suspend" );
 	m_Accels->Map( AAC( WXK_F8 ),				"Sys_TakeSnapshot" );
