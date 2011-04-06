@@ -713,6 +713,9 @@ AppConfig::GSWindowOptions::GSWindowOptions()
 
 	AspectRatio				= AspectRatio_4_3;
 	Zoom					= 100;
+	StretchY				= 100;
+	OffsetX					= 0;
+	OffsetY					= 0;
 
 	WindowSize				= wxSize( 640, 480 );
 	WindowPos				= wxDefaultPosition;

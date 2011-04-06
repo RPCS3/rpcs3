@@ -190,6 +190,10 @@ public:
 
 		AspectRatioType AspectRatio;
 		Fixed100	Zoom;
+		Fixed100	StretchY;
+		Fixed100	OffsetX;
+		Fixed100	OffsetY;
+
 
 		wxSize		WindowSize;
 		wxPoint		WindowPos;

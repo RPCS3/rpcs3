@@ -51,6 +51,16 @@ void GSPanel::InitDefaultAccelerators()
 	m_Accels->Map( AAC( WXK_NUMPAD_SUBTRACT ).Cmd(),	"GSwindow_ZoomOut" );
 	m_Accels->Map( AAC( WXK_NUMPAD_MULTIPLY ).Cmd(),	"GSwindow_ZoomToggle" );
 
+	m_Accels->Map( AAC( WXK_NUMPAD_ADD ).Cmd().Alt(),			"GSwindow_ZoomInY" );	//CTRL on Windows (probably linux too), CMD on OSX
+	m_Accels->Map( AAC( WXK_NUMPAD_SUBTRACT ).Cmd().Alt(),	"GSwindow_ZoomOutY" );
+	m_Accels->Map( AAC( WXK_NUMPAD_MULTIPLY ).Cmd().Alt(),	"GSwindow_ZoomResetY" );
+
+	m_Accels->Map( AAC( WXK_NUMPAD8 ).Cmd(),	"GSwindow_OffsetYminus" );
+	m_Accels->Map( AAC( WXK_NUMPAD2 ).Cmd(),	"GSwindow_OffsetYplus" );
+	m_Accels->Map( AAC( WXK_NUMPAD4 ).Cmd(),	"GSwindow_OffsetXminus" );
+	m_Accels->Map( AAC( WXK_NUMPAD6 ).Cmd(),	"GSwindow_OffsetXplus" );
+	m_Accels->Map( AAC( WXK_NUMPAD5 ).Cmd(),	"GSwindow_OffsetReset" );
+
 	m_Accels->Map( AAC( WXK_ESCAPE ),			"Sys_Suspend" );
 	m_Accels->Map( AAC( WXK_F8 ),				"Sys_TakeSnapshot" );
 	m_Accels->Map( AAC( WXK_F8 ).Shift(),		"Sys_TakeSnapshot");
@@ -131,6 +141,9 @@ void GSPanel::DoResize()
 	wxSize client = GetParent()->GetClientSize();
 	wxSize viewport = client;
 
+	if ( !client.GetHeight() || !client.GetWidth() )
+		return;
+
 	double clientAr = (double)client.GetWidth()/(double)client.GetHeight();
 
 	double targetAr = clientAr;
@@ -150,9 +163,14 @@ void GSPanel::DoResize()
 	if( zoom == 0 )//auto zoom in untill black-bars are gone (while keeping the aspect ratio).
 		zoom = max( (float)arr, (float)(1.0/arr) );
 
-	viewport.Scale(zoom, zoom);
+	viewport.Scale(zoom, zoom*g_Conf->GSWindow.StretchY.ToFloat()/100.0 );
 	SetSize( viewport );
 	CenterOnParent();
+	
+	int cx, cy;
+	GetPosition(&cx, &cy);
+	float unit = .01*(float)min(viewport.x, viewport.y);
+	SetPosition( wxPoint( cx + unit*g_Conf->GSWindow.OffsetX.ToFloat(), cy + unit*g_Conf->GSWindow.OffsetY.ToFloat() ) );
 }
 
 void GSPanel::OnResize(wxSizeEvent& event)

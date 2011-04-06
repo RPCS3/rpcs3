@@ -176,6 +176,69 @@ namespace Implementations
 		AppApplySettings();
 	}
 
+	void UpdateImagePosition()
+	{
+		//AppApplySettings() would have been nicer, since it also immidiately affects the GUI (if open).
+		//However, the events sequence it generates also "depresses" Shift/CTRL/etc, so consecutive zoom with CTRL down breaks.
+		//Since zoom only affects the window viewport anyway, we can live with directly calling it.
+		if (GSFrame* gsFrame = wxGetApp().GetGsFramePtr())
+			if (GSPanel* woot = gsFrame->GetViewport())
+				woot->DoResize();
+	}
+
+	void SetOffset(float x, float y)
+	{
+		g_Conf->GSWindow.OffsetX = x;
+		g_Conf->GSWindow.OffsetY = y;
+		Console.WriteLn(L"GSwindow: set offset: x=%f, y=%f", x,y);
+
+		UpdateImagePosition();
+
+	}
+
+	void GSwindow_OffsetYplus(){
+		SetOffset(g_Conf->GSWindow.OffsetX.ToFloat(), g_Conf->GSWindow.OffsetY.ToFloat()+1);
+	}
+
+	void GSwindow_OffsetYminus(){
+		SetOffset(g_Conf->GSWindow.OffsetX.ToFloat(), g_Conf->GSWindow.OffsetY.ToFloat()-1);
+	}
+
+	void GSwindow_OffsetXplus(){
+		SetOffset(g_Conf->GSWindow.OffsetX.ToFloat()+1, g_Conf->GSWindow.OffsetY.ToFloat());
+	}
+
+	void GSwindow_OffsetXminus(){
+		SetOffset(g_Conf->GSWindow.OffsetX.ToFloat()-1, g_Conf->GSWindow.OffsetY.ToFloat());
+	}
+
+	void GSwindow_OffsetReset(){
+		SetOffset(0,0);
+	}
+
+	void SetZoomY(float zoom)
+	{
+		if( zoom <= 0 )
+			return;
+		g_Conf->GSWindow.StretchY = zoom;
+		Console.WriteLn(L"GSwindow: set vertical sterctch: %f", zoom);
+
+		UpdateImagePosition();
+	}
+
+	void GSwindow_ZoomInY()
+	{
+		SetZoomY( g_Conf->GSWindow.StretchY.ToFloat()+1 );
+	}
+	void GSwindow_ZoomOutY()
+	{
+		SetZoomY( g_Conf->GSWindow.StretchY.ToFloat()-1 );
+	}
+	void GSwindow_ZoomResetY()
+	{
+		SetZoomY( 100 );
+	}
+
 	void SetZoom(float zoom)
 	{
 		if( zoom < 0 )
@@ -183,12 +246,7 @@ namespace Implementations
 		g_Conf->GSWindow.Zoom = zoom;
 		Console.WriteLn(L"GSwindow: set zoom: %f", zoom);
 
-		//AppApplySettings() would have been nicer, since it also immidiately affects the GUI (if open).
-		//However, the events sequence it generates also "depresses" Shift/CTRL/etc, so consecutive zoom with CTRL down breaks.
-		//Since zoom only affects the window viewport anyway, we can live with directly calling it.
-		if (GSFrame* gsFrame = wxGetApp().GetGsFramePtr())
-			if (GSPanel* woot = gsFrame->GetViewport())
-				woot->DoResize();
+		UpdateImagePosition();
 	}
 
 
@@ -214,6 +272,7 @@ namespace Implementations
 
 		SetZoom( z );
 	}
+
 
 	void Sys_Suspend()
 	{
@@ -394,6 +453,16 @@ static const GlobalCommandDescriptor CommandDeclarations[] =
 		NULL,
 		NULL,
 	},
+
+	{	"GSwindow_ZoomInY",	Implementations::GSwindow_ZoomInY, NULL, NULL, },
+	{	"GSwindow_ZoomOutY",	Implementations::GSwindow_ZoomOutY, NULL, NULL, },
+	{	"GSwindow_ZoomResetY",	Implementations::GSwindow_ZoomResetY, NULL, NULL, },
+
+	{	"GSwindow_OffsetYminus",	Implementations::GSwindow_OffsetYminus, NULL, NULL, },
+	{	"GSwindow_OffsetYplus",		Implementations::GSwindow_OffsetYplus, NULL, NULL, },
+	{	"GSwindow_OffsetXminus",	Implementations::GSwindow_OffsetXminus, NULL, NULL, },
+	{	"GSwindow_OffsetXplus",		Implementations::GSwindow_OffsetXplus, NULL, NULL, },
+	{	"GSwindow_OffsetReset",		Implementations::GSwindow_OffsetReset, NULL, NULL, },
 
 	{	"Sys_Suspend",
 		Implementations::Sys_Suspend,
