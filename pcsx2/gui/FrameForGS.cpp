@@ -47,9 +47,9 @@ void GSPanel::InitDefaultAccelerators()
 
 	m_Accels->Map( AAC( WXK_F6 ),				"GSwindow_CycleAspectRatio" );
 
-	m_Accels->Map( AAC( WXK_NUMPAD_ADD ),		"GSwindow_ZoomIn" );
-	m_Accels->Map( AAC( WXK_NUMPAD_SUBTRACT ),	"GSwindow_ZoomOut" );
-	m_Accels->Map( AAC( WXK_NUMPAD_MULTIPLY ),	"GSwindow_ZoomToggle" );
+	m_Accels->Map( AAC( WXK_NUMPAD_ADD ).Cmd(),			"GSwindow_ZoomIn" );	//CTRL on Windows (probably linux too), CMD on OSX
+	m_Accels->Map( AAC( WXK_NUMPAD_SUBTRACT ).Cmd(),	"GSwindow_ZoomOut" );
+	m_Accels->Map( AAC( WXK_NUMPAD_MULTIPLY ).Cmd(),	"GSwindow_ZoomToggle" );
 
 	m_Accels->Map( AAC( WXK_ESCAPE ),			"Sys_Suspend" );
 	m_Accels->Map( AAC( WXK_F8 ),				"Sys_TakeSnapshot" );
@@ -151,33 +151,6 @@ void GSPanel::DoResize()
 		zoom = max( (float)arr, (float)(1.0/arr) );
 
 	viewport.Scale(zoom, zoom);
-/*
-
-	switch( g_Conf->GSWindow.AspectRatio )
-	{
-		case AspectRatio_Stretch:
-			// Default to matching client size.
-			// Add a few pixels here, so the outermost pixels of the GS plugin output are "hidden".
-			// This avoids issues with flashing pixels on the edges, especially when Anti Aliasing is used.
-			viewport.x+=4;
-			viewport.y+=4;
-		break;
-
-		case AspectRatio_4_3:
-			if( client.x/4 <= client.y/3 )
-				viewport.y = (int)(client.x * (3.0/4.0));
-			else
-				viewport.x = (int)(client.y * (4.0/3.0));
-		break;
-
-		case AspectRatio_16_9:
-			if( client.x/16 <= client.y/9 )
-				viewport.y = (int)(client.x * (9.0/16.0));
-			else
-				viewport.x = (int)(client.y * (16.0/9.0));
-		break;
-	}
-*/
 	SetSize( viewport );
 	CenterOnParent();
 }
