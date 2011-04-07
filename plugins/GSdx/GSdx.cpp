@@ -170,7 +170,7 @@ void GSdxApp::BuildConfigurationMap(const char* lpFileName)
 	char key[255];
 	FILE* f = fopen(lpFileName, "r");
 
-	if (f == NULL) return false; // FIXME print a nice message
+	if (f == NULL) return; // FIXME print a nice message
 
 	while( fscanf(f, "%s = %s\n", key, value) != EOF ) {
 		std::string key_s(key);

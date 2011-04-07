@@ -48,6 +48,7 @@ bool RunLinuxDialog()
 	GtkWidget *render_label, *render_combo_box;
 	GtkWidget *interlace_label, *interlace_combo_box;
 	GtkWidget *aspect_label, *aspect_combo_box;
+	GtkWidget *swthreads_label, *swthreads_text;
 	GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check, *win_check;
 	int return_value;
 
@@ -132,9 +133,20 @@ bool RunLinuxDialog()
 		gtk_combo_box_append_text(GTK_COMBO_BOX(aspect_combo_box), label.c_str());
 	}
 
+
 	gtk_combo_box_set_active(GTK_COMBO_BOX(aspect_combo_box), 0);
 	gtk_container_add(GTK_CONTAINER(main_box), aspect_label);
 	gtk_container_add(GTK_CONTAINER(main_box), aspect_combo_box);
+
+	swthreads_label = gtk_label_new("Software renderer threads:");
+	swthreads_text = gtk_entry_new();
+	char buf[5];
+	sprintf(buf, "%d", theApp.GetConfig("swthreads", 1));
+
+	gtk_entry_set_text(GTK_ENTRY(swthreads_text), buf);
+	gtk_container_add(GTK_CONTAINER(main_box), swthreads_label);
+	gtk_container_add(GTK_CONTAINER(main_box), swthreads_text);
+
 
 
 	filter_check = gtk_check_button_new_with_label("Texture Filtering");
@@ -192,6 +204,8 @@ bool RunLinuxDialog()
 			}
 
 		}
+
+		theApp.SetConfig("swthreads", atoi((char*)gtk_entry_get_text(GTK_ENTRY(swthreads_text))) );
 
         theApp.SetConfig("filter", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(filter_check)));
         theApp.SetConfig("logz", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(logz_check)));
