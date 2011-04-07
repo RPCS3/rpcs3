@@ -43,25 +43,54 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 
 #else
 
-size_t GetPrivateProfileString(const char* lpAppName, const char* lpKeyName, const char* lpDefault, char* lpReturnedString, size_t nSize, const char* lpFileName)
+size_t GSdxApp::GetPrivateProfileString(const char* lpAppName, const char* lpKeyName, const char* lpDefault, char* lpReturnedString, size_t nSize, const char* lpFileName)
 {
-    // TODO: linux
+	BuildConfigurationMap(lpFileName);
+
+	std::string key(lpKeyName);
+	std::string value = m_configuration_map[key];
+	if (value.empty())
+		strcpy(lpReturnedString, lpDefault);
+	else
+		strcpy(lpReturnedString, value.c_str());
 
     return 0;
 }
 
-bool WritePrivateProfileString(const char* lpAppName, const char* lpKeyName, const char* pString, const char* lpFileName)
+bool GSdxApp::WritePrivateProfileString(const char* lpAppName, const char* lpKeyName, const char* pString, const char* lpFileName)
 {
-    // TODO: linux
+	BuildConfigurationMap(lpFileName);
 
-    return false;
+	std::string key(lpKeyName);
+	std::string value(pString);
+	m_configuration_map[key] = value;
+
+	// Save config to a file
+	FILE* f = fopen(lpFileName, "w");
+
+	if (f == NULL) return false; // FIXME print a nice message
+
+	map<std::string,std::string>::iterator it;
+	for (it = m_configuration_map.begin(); it != m_configuration_map.end(); ++it) {
+		// Do not save the inifile key which is not an option
+		if (it->first.compare("inifile") == 0) continue;
+
+		fprintf(f, "%s = %s\n", it->first.c_str(), it->second.c_str());
+	}
+	fclose(f);
+
+	return false;
 }
 
-int GetPrivateProfileInt(const char* lpAppName, const char* lpKeyName, int nDefault, const char* lpFileName)
+int GSdxApp::GetPrivateProfileInt(const char* lpAppName, const char* lpKeyName, int nDefault, const char* lpFileName)
 {
-    // TODO: linux
+	BuildConfigurationMap(lpFileName);
 
-    return nDefault;
+	std::string value = m_configuration_map[std::string(lpKeyName)];
+	if (value.empty())
+		return nDefault;
+	else
+		return atoi(value.c_str());
 }
 #endif
 
@@ -127,6 +156,31 @@ GSdxApp::GSdxApp()
 	m_gpu_scale.push_back(GSSetting(1 | (2 << 2), "H x 2 - V x 4", ""));
 	m_gpu_scale.push_back(GSSetting(2 | (2 << 2), "H x 4 - V x 4", ""));
 }
+
+#ifdef _LINUX
+void GSdxApp::BuildConfigurationMap(const char* lpFileName)
+{
+	// Check if the map was already built
+	std::string inifile_value(lpFileName);
+	if ( inifile_value.compare(m_configuration_map["inifile"]) == 0 ) return;
+	m_configuration_map["inifile"] = inifile_value;
+
+	// Load config from file
+	char value[255];
+	char key[255];
+	FILE* f = fopen(lpFileName, "r");
+
+	if (f == NULL) return false; // FIXME print a nice message
+
+	while( fscanf(f, "%s = %s\n", key, value) != EOF ) {
+		std::string key_s(key);
+		std::string value_s(value);
+		m_configuration_map[key_s] = value_s;
+	}
+
+	fclose(f);
+}
+#endif
 
 void* GSdxApp::GetModuleHandlePtr()
 {

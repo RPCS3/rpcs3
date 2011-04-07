@@ -71,6 +71,7 @@ bool RunLinuxDialog()
 	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "640x480@60");
 	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "800x600@60");
 	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "1024x768@60");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "1280x960@60");
 	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "And a few other values like that.");
 
 	// Or whatever the default value is.
@@ -180,6 +181,17 @@ bool RunLinuxDialog()
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(aspect_combo_box)) != -1)
 			aspect = gtk_combo_box_get_active(GTK_COMBO_BOX(aspect_combo_box));
 		#endif
+		if (gtk_combo_box_get_active(GTK_COMBO_BOX(res_combo_box)) != -1) {
+			int resolution = gtk_combo_box_get_active(GTK_COMBO_BOX(res_combo_box));
+			switch (resolution) {
+				case 0: theApp.SetConfig("w", 640); theApp.SetConfig("h", 480); break;
+				case 1: theApp.SetConfig("w", 800); theApp.SetConfig("h", 600); break;
+				case 2: theApp.SetConfig("w", 1024); theApp.SetConfig("h", 768); break;
+				case 3: theApp.SetConfig("w", 1280); theApp.SetConfig("h", 960); break;
+				default: theApp.SetConfig("w", 640); theApp.SetConfig("h", 480);
+			}
+
+		}
 
         theApp.SetConfig("filter", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(filter_check)));
         theApp.SetConfig("logz", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(logz_check)));

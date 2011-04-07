@@ -340,7 +340,10 @@ bool GSWnd::Create(const string& title, int w, int h)
 {
 	if(m_window != NULL) return false;
 
-	if(w <= 0 || h <= 0) {w = 640; h = 480;}
+	if(w <= 0 || h <= 0) {
+		w = theApp.GetConfig("w", 640);
+		h = theApp.GetConfig("h", 480);
+	}
 
 	m_window = SDL_CreateWindow(title.c_str(), 100, 100, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
@@ -364,8 +367,11 @@ Display* GSWnd::GetDisplay()
 GSVector4i GSWnd::GetClientRect()
 {
 	// TODO
+	int h, w;
+	w = theApp.GetConfig("w", 640);
+	h = theApp.GetConfig("h", 480);
 
-	return GSVector4i(0, 0, 640, 480);
+	return GSVector4i(0, 0, w, h);
 }
 
 // Returns FALSE if the window has no title, or if th window title is under the strict
