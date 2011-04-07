@@ -27,13 +27,12 @@
   ; (Binaries, shared DLLs, null plugins, game database, languages, etc)
 
   ; Note that v3 pthreads is compatible with v4 pthreads, so we just copy v4 over both
-  ; filenames.  This allows many older plugin versions to continue to work.  (note that
-  ; v3 will be removed for 0.9.8).
+  ; filenames.  This allows many older plugin versions to continue to work.
 
     File                                            ..\bin\w32pthreads.v4.dll
     File                                            ..\bin\SDL.dll
   ; See above comment.
-  ;  File           /oname=w32pthreads.v3.dll        ..\bin\w32pthreads.v4.dll
+    File           /oname=w32pthreads.v3.dll        ..\bin\w32pthreads.v4.dll
     File                                            ..\bin\GameIndex.dbf
 
 	!insertmacro UNINSTALL.LOG_CLOSE_INSTALL
@@ -61,9 +60,6 @@
     File ..\bin\Plugins\FWnull.dll
     File ..\bin\Plugins\CDVDnull.dll
   !insertmacro UNINSTALL.LOG_CLOSE_INSTALL
-  
-  ; In 0.9.7 there is only English, so including the other mo files (for now) is pointless.
-  ; This code will be re-enabled when the new GUI is translated.
   
   !if ${INC_LANGS} > 0
     SetOutPath $INSTDIR\Langs
