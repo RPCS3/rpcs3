@@ -56,7 +56,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 
 
 	wxString LabelGreets = wxsFormat( 
-		L"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu), n1ckname (compilation guides)"
+		L"Hiryu and Sjeep (libcdvd / iso filesystem), nneeve (fpu and vu), n1ckname (compilation guides), Shadow Lady"
 		L"\n\n"
 			L"%s: ChickenLiver (Lilypad), Efp (efp), "
 		L"Gabest (Gsdx, Cdvdolio, Xpad),  Zeydlitz (ZZogl)"
