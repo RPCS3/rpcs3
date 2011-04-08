@@ -49,9 +49,11 @@ size_t GSdxApp::GetPrivateProfileString(const char* lpAppName, const char* lpKey
 
 	std::string key(lpKeyName);
 	std::string value = m_configuration_map[key];
-	if (value.empty())
+	if (value.empty()) {
+		// save the value for futur call
+		m_configuration_map[key] = std::string(lpDefault);
 		strcpy(lpReturnedString, lpDefault);
-	else
+	} else
 		strcpy(lpReturnedString, value.c_str());
 
     return 0;
@@ -75,7 +77,8 @@ bool GSdxApp::WritePrivateProfileString(const char* lpAppName, const char* lpKey
 		// Do not save the inifile key which is not an option
 		if (it->first.compare("inifile") == 0) continue;
 
-		fprintf(f, "%s = %s\n", it->first.c_str(), it->second.c_str());
+		if (!it->second.empty())
+			fprintf(f, "%s = %s\n", it->first.c_str(), it->second.c_str());
 	}
 	fclose(f);
 
@@ -87,9 +90,11 @@ int GSdxApp::GetPrivateProfileInt(const char* lpAppName, const char* lpKeyName, 
 	BuildConfigurationMap(lpFileName);
 
 	std::string value = m_configuration_map[std::string(lpKeyName)];
-	if (value.empty())
+	if (value.empty()) {
+		// save the value for futur call
+		SetConfig(lpKeyName, nDefault);
 		return nDefault;
-	else
+	} else
 		return atoi(value.c_str());
 }
 #endif

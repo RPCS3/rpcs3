@@ -75,8 +75,17 @@ bool RunLinuxDialog()
 	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "1280x960@60");
 	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "And a few other values like that.");
 
-	// Or whatever the default value is.
-	gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 2);
+	// A little hackish but enough for the moment.
+	// Better drop this setting and lets the user resize the windows like any applications
+	// You need only to constrain it with the aspect ratio -- greg
+	int width = theApp.GetConfig("ModeWidth", 640);
+	switch(width) {
+		case 1280: gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 3); break;
+		case 1024: gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 2); break;
+		case 800: gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 1); break;
+		case 640: gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 0); break;
+		default: gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 0); break;
+	}
 
 	gtk_container_add(GTK_CONTAINER(main_box), res_label);
 	gtk_container_add(GTK_CONTAINER(main_box), res_combo_box);
@@ -196,11 +205,11 @@ bool RunLinuxDialog()
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(res_combo_box)) != -1) {
 			int resolution = gtk_combo_box_get_active(GTK_COMBO_BOX(res_combo_box));
 			switch (resolution) {
-				case 0: theApp.SetConfig("w", 640); theApp.SetConfig("h", 480); break;
-				case 1: theApp.SetConfig("w", 800); theApp.SetConfig("h", 600); break;
-				case 2: theApp.SetConfig("w", 1024); theApp.SetConfig("h", 768); break;
-				case 3: theApp.SetConfig("w", 1280); theApp.SetConfig("h", 960); break;
-				default: theApp.SetConfig("w", 640); theApp.SetConfig("h", 480);
+				case 0: theApp.SetConfig("ModeWidth", 640); theApp.SetConfig("ModeHeight", 480); break;
+				case 1: theApp.SetConfig("ModeWidth", 800); theApp.SetConfig("ModeHeight", 600); break;
+				case 2: theApp.SetConfig("ModeWidth", 1024); theApp.SetConfig("ModeHeight", 768); break;
+				case 3: theApp.SetConfig("ModeWidth", 1280); theApp.SetConfig("ModeHeight", 960); break;
+				default: theApp.SetConfig("ModeWidth", 640); theApp.SetConfig("ModeHeight", 480);
 			}
 
 		}
