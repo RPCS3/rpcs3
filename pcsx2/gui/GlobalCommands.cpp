@@ -244,8 +244,12 @@ namespace Implementations
 		if( zoom < 0 )
 			return;
 		g_Conf->GSWindow.Zoom = zoom;
-		Console.WriteLn(L"(GSwindow) Zoom: %f", zoom);
-
+		
+		if ( zoom == 0 ) 
+            Console.WriteLn(L"(GSwindow) Zoom: 0 (auto, no black bars)");
+		else 
+            Console.WriteLn(L"(GSwindow) Zoom: %f", zoom);
+		
 		UpdateImagePosition();
 	}
 
