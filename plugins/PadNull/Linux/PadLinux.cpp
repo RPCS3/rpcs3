@@ -15,7 +15,7 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-
+#include <gdk/gdkx.h>
 #include "PadLinux.h"
 
 Display *GSdsp;
@@ -63,7 +63,24 @@ void _PadUpdate(int pad)
 
 s32  _PADOpen(void *pDsp)
 {
-	GSdsp = *(Display**)pDsp;
+	
+    GtkScrolledWindow *win;
+
+    win = *(GtkScrolledWindow**) pDsp;
+
+	if (GTK_IS_WIDGET(win))
+	{
+	    // Since we have a GtkScrolledWindow, for now we'll grab whatever display
+	    // comes along instead. Later, we can fiddle with this, but I'm not sure the
+	    // best way to get a Display* out of a GtkScrolledWindow. A GtkWindow I might
+	    // be able to manage... --arcum42
+        GSdsp = GDK_DISPLAY_XDISPLAY(gdk_display_get_default());
+	}
+	else
+	{
+        GSdsp = *(Display**)pDsp;
+	}
+	
 	XAutoRepeatOff(GSdsp);
 
 	return 0;
