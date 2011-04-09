@@ -56,14 +56,11 @@ int  _SPR0chain()
 	pMem = SPRdmaGetAddr(spr0ch.madr, true);
 	if (pMem == NULL) return -1;
 
-	if(spr0ch.qwc == 1 && spr0finished == true) spr0lastqwc = true;
-
 	switch (dmacRegs.ctrl.MFD)
 	{
 		case MFD_VIF1:
 		case MFD_GIF:
-			if(spr0ch.qwc > 1) partialqwc = spr0ch.qwc - 1;
-			else partialqwc = spr0ch.qwc;
+			partialqwc = spr0ch.qwc;
 
 			if ((spr0ch.madr & ~dmacRegs.rbsr.RMSK) != dmacRegs.rbor.ADDR)
 				Console.WriteLn("SPR MFIFO Write outside MFIFO area");
@@ -82,8 +79,7 @@ int  _SPR0chain()
 			
 			//Taking an arbitary small value for games which like to check the QWC/MADR instead of STR, so get most of
 			//the cycle delay out of the way before the end.
-			if(spr0ch.qwc > 1) partialqwc = spr0ch.qwc - 1;
-			else partialqwc = spr0ch.qwc;
+			partialqwc = spr0ch.qwc;
 			memcpy_qwc(pMem, &psSu128(spr0ch.sadr), partialqwc);
 
 			// clear VU mem also!
@@ -105,7 +101,7 @@ __fi void SPR0chain()
 {
 	int cycles = 0;
 	cycles =  _SPR0chain() * BIAS;
-	if(spr0lastqwc == false)CPU_INT(DMAC_FROM_SPR, cycles);
+	CPU_INT(DMAC_FROM_SPR, cycles);
 }
 
 void _SPR0interleave()
@@ -265,7 +261,8 @@ void SPRFROMinterrupt()
 					break;
 			}
 		}
-		if(spr0lastqwc == false)return;
+		
+		return;
 	}
 
 
@@ -314,12 +311,10 @@ int  _SPR1chain()
 	int partialqwc = 0;
 	//Taking an arbitary small value for games which like to check the QWC/MADR instead of STR, so get most of
 	//the cycle delay out of the way before the end.
-	if(spr1ch.qwc > 1) partialqwc = spr1ch.qwc - 1;
-	else partialqwc = spr1ch.qwc;
+	partialqwc = spr1ch.qwc;
 
 	SPR1transfer(pMem, partialqwc);
 	spr1ch.madr += partialqwc * 16;
-	if(spr1ch.qwc == 1 && spr1finished == true) spr1lastqwc = true;
 	spr1ch.qwc -= partialqwc;
 
 	hwDmacSrcTadrInc(spr1ch);
@@ -333,7 +328,7 @@ __fi void SPR1chain()
 	if(!CHECK_IPUWAITHACK) 
 	{
 		cycles =  _SPR1chain() * BIAS;
-		if(spr1lastqwc == false)CPU_INT(DMAC_TO_SPR, cycles);
+		CPU_INT(DMAC_TO_SPR, cycles);
 	}
 	else 
 	{
@@ -463,7 +458,7 @@ void SPRTOinterrupt()
 	if (!spr1finished || spr1ch.qwc > 0)
 	{
 		_dmaSPR1();
-		if(spr1lastqwc == false)return;
+		return;
 	}
 
 	DMA_LOG("SPR1 DMA End");
