@@ -115,6 +115,7 @@ CRC::Game CRC::m_games[] =
 	{0x7B2DE9CC, WildArms4, EU, 0},
 	{0x8B029334, Manhunt2, NoRegion, 0},
 	{0x09F49E37, CrashBandicootWoC, NoRegion, 0},
+	{0x3A03D62F, CrashBandicootWoC, EU, 0},
 	{0x013E349D, ResidentEvil4, US, 0},
 	{0x6BA2F6B9, ResidentEvil4, NoRegion, 0},
 	{0x60FA8C69, ResidentEvil4, JP, 0},
@@ -123,8 +124,8 @@ CRC::Game CRC::m_games[] =
 	{0x1B9B7563, AceCombat4, NoRegion, 0},
 	{0xEC432B24, Drakengard2, NoRegion, 0},
 	{0xFC46EA61, Tekken5, JP, 0},
-	{0x1F88EE37, Tekken5, NoRegion, 0},
-	{0x652050D2, Tekken5, NoRegion, 0},
+	{0x1F88EE37, Tekken5, EU, 0},
+	{0x652050D2, Tekken5, US, 0},
 	{0x9E98B8AE, IkkiTousen, JP, 0},
 	{0xD6385328, GodOfWar, US, 0},
 	{0xFB0E6D72, GodOfWar, EU, 0},
@@ -181,7 +182,8 @@ CRC::Game CRC::m_games[] =
 	{0x1CC39DBD, SuikodenTactics, US, 0},
 	{0x64C58FB4, TenchuFS, US, 0},
 	{0xE7CCCB1E, TenchuFS, EU, 0},
-	{0x1969B19A, TenchuFS, EU, 0},		//PAL Spanish
+	{0x1969B19A, TenchuFS, ES, 0},		//PAL Spanish
+	{0x525C1994, TenchuFS, ASIA, 0},
 	{0x767E383D, TenchuWoH, US, 0},
 	{0x83261085, TenchuWoH, EU, 0},		//PAL German
 	{0x8BC95883, Sly3, US, 0},
