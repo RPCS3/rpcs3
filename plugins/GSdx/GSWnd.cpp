@@ -327,7 +327,7 @@ GSWnd::~GSWnd()
 
 // Actually the destructor is not called when there is a GSclose or GSshutdown
 // The window still need to be closed
-void GSWnd::Detach() 
+void GSWnd::Detach()
 {
 	if(m_window != NULL)
 	{
@@ -344,6 +344,11 @@ bool GSWnd::Create(const string& title, int w, int h)
 		w = theApp.GetConfig("ModeWidth", 640);
 		h = theApp.GetConfig("ModeHeight", 480);
 	}
+
+#ifdef _LINUX
+    // Sanity check; if there aren't any video displays available, we can't create a window.
+    if (SDL_GetNumVideoDisplays() <= 0) return false;
+#endif
 
 	m_window = SDL_CreateWindow(title.c_str(), 100, 100, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
