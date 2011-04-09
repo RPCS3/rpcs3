@@ -190,7 +190,7 @@ namespace Implementations
 	{
 		g_Conf->GSWindow.OffsetX = x;
 		g_Conf->GSWindow.OffsetY = y;
-		Console.WriteLn(L"GSwindow: set offset: x=%f, y=%f", x,y);
+		Console.WriteLn(L"(GSwindow) Offset: x=%f, y=%f", x,y);
 
 		UpdateImagePosition();
 
@@ -221,7 +221,7 @@ namespace Implementations
 		if( zoom <= 0 )
 			return;
 		g_Conf->GSWindow.StretchY = zoom;
-		Console.WriteLn(L"GSwindow: set vertical sterctch: %f", zoom);
+		Console.WriteLn(L"(GSwindow) Vertical stretch: %f", zoom);
 
 		UpdateImagePosition();
 	}
@@ -244,7 +244,7 @@ namespace Implementations
 		if( zoom < 0 )
 			return;
 		g_Conf->GSWindow.Zoom = zoom;
-		Console.WriteLn(L"GSwindow: set zoom: %f", zoom);
+		Console.WriteLn(L"(GSwindow) Zoom: %f", zoom);
 
 		UpdateImagePosition();
 	}
