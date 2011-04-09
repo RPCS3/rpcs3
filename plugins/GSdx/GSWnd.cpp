@@ -352,7 +352,7 @@ bool GSWnd::Create(const string& title, int w, int h)
 
 	m_window = SDL_CreateWindow(title.c_str(), 100, 100, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
-	return true;
+	return (m_window != NULL);
 }
 
 Display* GSWnd::GetDisplay()

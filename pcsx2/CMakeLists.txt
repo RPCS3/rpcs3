@@ -8,6 +8,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 # set common flags
 set(CommonFlags 
+    -DLINUX_PRINT_SVN_NUMBER
 	-pthread
     -fvisibility=hidden
 	-fno-guess-branch-probability
