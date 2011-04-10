@@ -200,24 +200,10 @@ class keys_tree
 };
 keys_tree *fir;
 
-int _GetJoystickIdFromPAD(int pad)
+int _GetJoystickId()
 {
 	// select the right joystick id
 	u32 joyid = -1;
-
-//	for (int p = 0; p < MAX_SUB_KEYS; p++)
-//	{
-//		for (int i = 0; i < MAX_KEYS; ++i)
-//		{
-//			KeyType k = type_of_key(PadEnum[pad][p],i);
-//
-//			if (k == PAD_JOYSTICK || k == PAD_JOYBUTTONS)
-//			{
-//				joyid = key_to_joystick_id(PadEnum[pad][p],i);
-//				return joyid;
-//			}
-//		}
-//	}
 
 	if (!JoystickIdWithinBounds(joyid))
 	{
@@ -234,7 +220,7 @@ int _GetJoystickIdFromPAD(int pad)
 int Get_Current_Joystick()
 {
 	// check bounds
-	int joyid = _GetJoystickIdFromPAD(0);
+	int joyid = _GetJoystickId();
 
 	if (JoystickIdWithinBounds(joyid))
 		return joyid + 1; // select the combo

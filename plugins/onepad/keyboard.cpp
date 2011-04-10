@@ -227,47 +227,6 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			event.key = wParam;
 			break;
 
-		/*case WM_LBUTTONDOWN:
-			lbutton = true;
-			break;
-
-		case WM_LBUTTONUP:
-			g_lanalog[0].x = 0x80;
-			g_lanalog[0].y = 0x80;
-			g_lanalog[1].x = 0x80;
-			g_lanalog[1].y = 0x80;
-			lbutton = false;
-			break;
-
-		case WM_RBUTTONDOWN:
-			rbutton = true;
-			break;
-
-		case WM_RBUTTONUP:
-			g_ranalog[0].x = 0x80;
-			g_ranalog[0].y = 0x80;
-			g_ranalog[1].x = 0x80;
-			g_ranalog[1].y = 0x80;
-			rbutton = false;
-			break;
-
-		case WM_MOUSEMOVE:
-			if (lbutton)
-			{
-				g_lanalog[0].x = LOWORD(lParam) & 254;
-				g_lanalog[0].y = HIWORD(lParam) & 254;
-				g_lanalog[1].x = LOWORD(lParam) & 254;
-				g_lanalog[1].y = HIWORD(lParam) & 254;
-			}
-			if (rbutton)
-			{
-				g_ranalog[0].x = LOWORD(lParam) & 254;
-				g_ranalog[0].y = HIWORD(lParam) & 254;
-				g_ranalog[1].x = LOWORD(lParam) & 254;
-				g_ranalog[1].y = HIWORD(lParam) & 254;
-			}
-			break;*/
-
 		case WM_DESTROY:
 		case WM_QUIT:
 			event.evt = KEYPRESS;

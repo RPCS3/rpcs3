@@ -35,27 +35,28 @@
 class JoystickInfo
 {
 	public:
-		JoystickInfo();
+		JoystickInfo() : devname(""), _id(-1), numbuttons(0), numaxes(0), numhats(0), axisrange(0x7fff),
+		 deadzone(2000), pad(-1), vbuttonstate(NULL), vaxisstate(NULL), vhatstate(NULL), joy(NULL) {}
 		~JoystickInfo()
 		{
 			Destroy();
 		}
 
+		JoystickInfo(const JoystickInfo&);             // copy constructor
+		JoystickInfo& operator=(const JoystickInfo&); // assignment
+    
 		void Destroy();
 		// opens handles to all possible joysticks
 		static void EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks);
 
-		bool Init(int id, bool bStartThread = true); // opens a handle and gets information
+		bool Init(int id); // opens a handle and gets information
 		void Assign(int pad); // assigns a joystick to a pad
 
 		void TestForce();
 
 		bool PollButtons(int &jbutton, u32 &pkey);
-
 		bool PollAxes(int &axis_id, u32 &pkey);
-
 		bool PollHats(int &jbutton, int &dir, u32 &pkey);
-
 		bool PollPOV(int &axis_id, bool &sign, u32 &pkey);
 
 		const string& GetName()
@@ -88,7 +89,7 @@ class JoystickInfo
 			return pad;
 		}
 
-		int GetDeadzone(int axis)
+		int GetDeadzone(/*int axis*/)
 		{
 			return deadzone;
 		}

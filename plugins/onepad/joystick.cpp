@@ -100,7 +100,7 @@ void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
 	for (int i = 0; i < (int)vjoysticks.size(); ++i)
 	{
 		vjoysticks[i] = new JoystickInfo();
-		vjoysticks[i]->Init(i, true);
+		vjoysticks[i]->Init(i);
 	}
 
 	// set the pads
@@ -124,16 +124,6 @@ void JoystickInfo::EnumerateJoysticks(vector<JoystickInfo*>& vjoysticks)
 
 }
 
-JoystickInfo::JoystickInfo()
-{
-	joy = NULL;
-
-	_id = -1;
-	pad = -1;
-	axisrange = 0x7fff;
-	deadzone = 2000;
-}
-
 void JoystickInfo::Destroy()
 {
 	if (joy != NULL)
@@ -143,7 +133,7 @@ void JoystickInfo::Destroy()
 	}
 }
 
-bool JoystickInfo::Init(int id, bool bStartThread)
+bool JoystickInfo::Init(int id)
 {
 	Destroy();
 	_id = id;

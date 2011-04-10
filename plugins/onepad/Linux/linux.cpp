@@ -180,7 +180,7 @@ EXPORT_C_(void) PADupdate(int pad)
 						case PAD_LY:
 						case PAD_RX:
 						case PAD_RY:
-							if (abs(value) > (pjoy)->GetDeadzone(value))
+							if (abs(value) > (pjoy)->GetDeadzone(/*value*/))
 								Analog::ConfigurePad(pad, i, value);
 							else
 								Analog::ResetPad(pad, i);
