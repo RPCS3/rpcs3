@@ -29,7 +29,7 @@ struct Component_FileMcd;
 #include "System.h"
 #include "AppConfig.h"
 
-#if _MSC_VER
+#if _MSC_VER || defined(LINUX_PRINT_SVN_NUMBER)
 #	include "svnrev.h"
 #endif
 

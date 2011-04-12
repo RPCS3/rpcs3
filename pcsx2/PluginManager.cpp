@@ -25,7 +25,7 @@
 #include "Utilities/ScopedPtr.h"
 #include "Utilities/pxStreams.h"
 
-#if _MSC_VER
+#if _MSC_VER || defined(LINUX_PRINT_SVN_NUMBER)
 #	include "svnrev.h"
 #endif
 
