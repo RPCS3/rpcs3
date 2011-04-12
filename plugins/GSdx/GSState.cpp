@@ -2598,6 +2598,19 @@ bool GSC_BigMuthaTruckers(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_TimeSplitters2(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x01000) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x01000) && fi.TPSM == PSM_PSMCT32 && fi.FBMSK == 0x0FF000000)
+		{
+			skip = 1;
+		}
+	}
+	
+	return true;
+}
+
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
 	GSFrameInfo fi;
@@ -2659,6 +2672,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::Sly2] = GSC_Sly2;
 		map[CRC::DemonStone] = GSC_DemonStone;
 		map[CRC::BigMuthaTruckers] = GSC_BigMuthaTruckers;
+		map[CRC::TimeSplitters2] = GSC_TimeSplitters2;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

@@ -88,6 +88,7 @@ public:
 		Sly2,
 		DemonStone,
 		BigMuthaTruckers,
+		TimeSplitters2,
 		TitleCount,
 	};
 

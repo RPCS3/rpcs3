@@ -196,6 +196,7 @@ CRC::Game CRC::m_games[] =
 	{0x7C7578F3, DemonStone, EU, 0},
 	{0x506644B3, BigMuthaTruckers, EU, 0},
 	{0x90F0D852, BigMuthaTruckers, US, 0},
+	{0x5CC9BF81, TimeSplitters2, EU, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;
