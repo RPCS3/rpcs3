@@ -913,7 +913,7 @@ Region = NTSC-U
 Serial = SCUS-97353
 Name   = Ratchet and Clank - Up Your Arsenal
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SCUS-97355
 Name   = Siren
@@ -1387,7 +1387,7 @@ Compat = 4
 Serial = SCUS-97502
 Name   = Tourist Trophy
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SCUS-97503
 Name   = MLB '06 - The Show [Demo]
@@ -2235,7 +2235,7 @@ SkipMPEGHack = 1
 Serial = SLUS-20146
 Name   = Shadow of Destiny
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20147
 Name   = Aliens vs. Predator - Extinction
@@ -2275,6 +2275,7 @@ Serial = SLUS-20152
 Name   = Ace Combat 4 - Shattered Skies
 Region = NTSC-U
 Compat = 5
+SkipMPEGHack = 1		//hangs on menus
 ---------------------------------------------
 Serial = SLUS-20153
 Name   = RC Revenge Pro
@@ -3814,6 +3815,7 @@ Compat = 4
 Serial = SLUS-20504
 Name   = Tony Hawk's Pro Skater 4
 Region = NTSC-U
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLUS-20505
 Name   = Mace Griffin - Bounty Hunter
@@ -5052,7 +5054,7 @@ Compat = 5
 Serial = SLUS-20791
 Name   = Trivial Pursuit - Unhinged
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20792
 Name   = Goblin Commander - Unleash the Horde
@@ -5103,12 +5105,12 @@ Compat = 5
 Serial = SLUS-20803
 Name   = Bard's Tale, The
 Region = NTSC-U
-Compat = 2
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20804
 Name   = Forgotten Realms - Demon Stone
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20805
 Name   = Yu Yu Hakusho - Dark Tournament
@@ -5297,7 +5299,8 @@ Compat = 5
 Serial = SLUS-20851
 Name   = Ace Combat 5 - The Unsung War
 Region = NTSC-U
-Compat = 2
+Compat = 5
+SkipMPEGHack = 1		//hangs on menus
 ---------------------------------------------
 Serial = SLUS-20852
 Name   = Terminator 3, The - The Redemption
@@ -5784,7 +5787,7 @@ Compat = 5
 Serial = SLUS-20952
 Name   = Tak 2 - The Staff of Dreams
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20953
 Name   = Shaman King - Power of Spirit
@@ -5961,6 +5964,7 @@ Region = NTSC-U
 Serial = SLUS-20986
 Name   = Armored Core Nexus [Evolution Disc]
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20987
 Name   = Pool Paradise
@@ -6140,7 +6144,7 @@ Region = NTSC-U
 Serial = SLUS-21026
 Name   = Battlefield 2 - Mordern Combat
 Region = NTSC-U
-Compat = 3
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21027
 Name   = Lord of the Rings, The - The Third Age
@@ -6460,7 +6464,7 @@ Compat = 1
 Serial = SLUS-21096
 Name   = Ape Escape - Pumped & Primed
 Region = NTSC-U
-Compat = 1
+Compat = 3
 ---------------------------------------------
 Serial = SLUS-21097
 Name   = MX World Tour featuring Jamie Little
@@ -6683,7 +6687,7 @@ Compat = 4
 Serial = SLUS-21144
 Name   = Tom Clancy's Rainbow Six - Lockdown
 Region = NTSC-U
-Compat = 5
+Compat = 2
 ---------------------------------------------
 Serial = SLUS-21145
 Name   = Full Spectrum Warrior
@@ -6861,7 +6865,7 @@ Compat = 5
 Serial = SLUS-21182
 Name   = TOCA Race Driver 3
 Region = NTSC-U
-Compat = 3
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21183
 Name   = Teen Titans
@@ -6960,7 +6964,7 @@ Compat = 5
 Serial = SLUS-21203
 Name   = Tomb Raider - Legend
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21204
 Name   = Victorious Boxers 2 - Fighting Spirit
@@ -7595,7 +7599,7 @@ Compat = 5
 Serial = SLUS-21338
 Name   = Armored Core - Last Raven
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21339
 Name   = Puzzle Collection - Crosswords & More!
@@ -7635,7 +7639,8 @@ Compat = 5
 Serial = SLUS-21346
 Name   = Ace Combat Zero - The Belkan War
 Region = NTSC-U
-Compat = 2
+Compat = 5
+SkipMPEGHack = 1		//hangs ofn menus
 ---------------------------------------------
 Serial = SLUS-21347
 Name   = AMF Xtreme Bowling
@@ -8108,7 +8113,7 @@ Compat = 5
 Serial = SLUS-21444
 Name   = Tony Hawk's Project 8
 Region = NTSC-U
-Compat = 2
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-21445
 Name   = Ar Tonelico
@@ -8328,7 +8333,7 @@ Compat = 5
 Serial = SLUS-21490
 Name   = Test Drive Unlimited
 Region = NTSC-U
-Compat = 3
+Compat = 2
 ---------------------------------------------
 Serial = SLUS-21491
 Name   = World Series of Poker - Tournament of Champions
@@ -8475,7 +8480,7 @@ Compat = 5
 Serial = SLUS-21555
 Name   = Tomb Raider - Anniversary
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21556
 Name   = Konami Kids Playground - Dinosaur Shapes & Colors
@@ -8733,7 +8738,7 @@ Compat = 5
 Serial = SLUS-21611
 Name   = Thrillville - Off the Rails
 Region = NTSC-U
-Compat = 2
+Compat = 3
 ---------------------------------------------
 Serial = SLUS-21612
 Name   = Legend of the Dragon
@@ -8837,7 +8842,7 @@ Compat = 2
 Serial = SLUS-21633
 Name   = Aqua Teen Hunger Force - Zombie Ninja Pro-Am
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21634
 Name   = Crazy Frog Racer
@@ -8959,7 +8964,7 @@ Compat = 4
 Serial = SLUS-21661
 Name   = Ben 10 - Protector of Earth
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21662
 Name   = Warriors Orochi
@@ -9092,7 +9097,8 @@ Compat = 2
 Serial = SLUS-21690
 Name   = Alone in the Dark
 Region = NTSC-U
-Compat = 2
+Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-21691
 Name   = Swashbucklers - Blue vs. Grey
@@ -9499,7 +9505,7 @@ Compat = 5
 Serial = SLUS-21787
 Name   = TNA iMPACT!
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21788
 Name   = Ar Tonelico 2 - Melody Of Metafalica
@@ -9719,7 +9725,7 @@ Compat = 5
 Serial = SLUS-21844
 Name   = Bolt
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21845
 Name   = Shin Megami Tensei: Devil Summoner 2: Raidou Kuzunoha vs. King Abaddon
@@ -9734,7 +9740,7 @@ Serial = SLUS-21847
 Name   = Guilty Gear XX - Accent Core Plus
 Region = NTSC-U
 Compat = 5
-SkipMpegHack = 1
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-21848
 Name   = Rock Band Track Pack - AC/DC Live
@@ -18918,6 +18924,7 @@ VuAddSubHack = 1
 Serial = SLPM-65801
 Name   = Crash Bandicoot 5
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-65802
 Name   = Def Jam - Vendetta [EA Best Hits]
@@ -26659,7 +26666,7 @@ Region = NTSC-J
 Serial = SLPS-25533
 Name   = Tales of Legendia
 Region = NTSC-J
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLPS-25534
 Name   = Twinkle Star Sprites - La Petite Princesse
@@ -28874,6 +28881,7 @@ Region = PAL-Unk
 Serial = SCES-50916
 Name   = Ratchet & Clank
 Region = PAL-M5
+Compat = 5
 ---------------------------------------------
 Serial = SCES-50917
 Name   = Sly Racoon
@@ -29048,6 +29056,7 @@ Region = PAL-M4
 Serial = SCES-51607
 Name   = Ratchet & Clank 2 - Locked & Loaded
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SCES-51608
 Name   = Jak & Daxter 2 - Renegade
@@ -30022,7 +30031,7 @@ Region = PAL-Unk
 Serial = SLES-50048
 Name   = Donald Duck - Quack Attack
 Region = PAL-Unk
-Compat = 5
+Compat = 2
 EETimingHack = 1		//For Flickery textures.
 ---------------------------------------------
 Serial = SLES-50050
@@ -30837,6 +30846,7 @@ Region = PAL-Unk
 Serial = SLES-50435
 Name   = Tony Hawk's Pro Skater 3
 Region = PAL-E
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50436
 Name   = Tony Hawk Pro Skater 3
@@ -31349,6 +31359,7 @@ Region = PAL-Unk
 Serial = SLES-50717
 Name   = Mortal Kombat - Deadly Alliance
 Region = PAL-E
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50720
 Name   = FMX - Freestyle Metal X
@@ -31470,6 +31481,7 @@ Region = PAL-Unk
 Serial = SLES-50771
 Name   = Blood Omen 2 - Legend of Kain
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50772
 Name   = Blood Omen 2 - Legend of Kain
@@ -32266,10 +32278,13 @@ Compat = 5
 Serial = SLES-51130
 Name   = Tony Hawk's Pro Skater 4
 Region = PAL-Unk
+Compat = 5
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLES-51132
 Name   = Tony Hawk's Pro Skater 4
 Region = PAL-Unk
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLES-51133
 Name   = Red Faction 2
@@ -32926,6 +32941,7 @@ Region = PAL-M5
 Serial = SLES-51474
 Name   = Blood Rayne
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51476
 Name   = Mystic Heroes
@@ -33416,6 +33432,7 @@ Compat = 5
 Serial = SLES-51752
 Name   = Tony Hawks Underground
 Region = PAL-Unk
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLES-51753
 Name   = True Crime - Streets of L.A.
@@ -33623,6 +33640,8 @@ Region = PAL-G
 Serial = SLES-51848
 Name   = Tony Hawk's Underground
 Region = PAL-E
+Compat = 5
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLES-51850
 Name   = Basketball Xciting
@@ -33631,6 +33650,7 @@ Region = PAL-Unk
 Serial = SLES-51851
 Name   = Tony Hawk's Underground
 Region = PAL-F
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLES-51852
 Name   = Thug MOTX [Demo]
@@ -33640,10 +33660,12 @@ Compat = 2
 Serial = SLES-51853
 Name   = Tony Hawk's Underground
 Region = PAL-F
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLES-51854
 Name   = Tony Hawk Underground
 Region = PAL-Unk
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLES-51855
 Name   = Tank Elite
@@ -34892,7 +34914,7 @@ Serial = SLES-52510
 Name   = Neo Contra
 Region = PAL-Unk
 Compat = 4
-SkipMPEGPatch = 1
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-52511
 Name   = Headhunter - Redemption (EX)
@@ -37041,6 +37063,7 @@ Region = PAL-Unk
 Serial = SLES-53534
 Name   = Tony Hawk's American Wasteland
 Region = PAL-Unk
+Compat = 4
 ---------------------------------------------
 Serial = SLES-53535
 Name   = Tony Hawk's American Wasteland

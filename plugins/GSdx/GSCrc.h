@@ -86,6 +86,8 @@ public:
 		TenchuFS,
 		Sly3,
 		Sly2,
+		DemonStone,
+		BigMuthaTruckers,
 		TitleCount,
 	};
 

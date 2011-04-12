@@ -858,7 +858,7 @@ __forceinline void Mix()
 		#endif
 		{
 			// Dealias filter emphasizes the highs too much.
-			//Out = Apply_Dealias_Filter ( Out );
+			Out = Apply_Dealias_Filter ( Out );
 			Out = Apply_Frequency_Response_Filter ( Out );
 		}
 

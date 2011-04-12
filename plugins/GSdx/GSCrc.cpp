@@ -115,6 +115,8 @@ CRC::Game CRC::m_games[] =
 	{0x7B2DE9CC, WildArms4, EU, 0},
 	{0x8B029334, Manhunt2, NoRegion, 0},
 	{0x09F49E37, CrashBandicootWoC, NoRegion, 0},
+	{0x75182BE5, CrashBandicootWoC, US, 0},
+	{0x5188ABCA, CrashBandicootWoC, US, 0},
 	{0x3A03D62F, CrashBandicootWoC, EU, 0},
 	{0x013E349D, ResidentEvil4, US, 0},
 	{0x6BA2F6B9, ResidentEvil4, NoRegion, 0},
@@ -190,6 +192,10 @@ CRC::Game CRC::m_games[] =
 	{0x8164C614, Sly3, EU, 0},
 	{0x07652DD9, Sly2, US, 0},
 	{0xFDA1CBF6, Sly2, EU, 0},
+	{0xA9C82AB9, DemonStone, US, 0},
+	{0x7C7578F3, DemonStone, EU, 0},
+	{0x506644B3, BigMuthaTruckers, EU, 0},
+	{0x90F0D852, BigMuthaTruckers, US, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;
