@@ -19,31 +19,11 @@
 
 BASEBLOCKEX* BaseBlocks::New(u32 startpc, uptr fnptr)
 {
-	BASEBLOCKEX newblock;
-	std::vector<BASEBLOCKEX>::iterator iter;
-	memset(&newblock, 0, sizeof newblock);
-	newblock.startpc = startpc;
-	newblock.fnptr = fnptr;
-
-	int imin = 0, imax = blocks.size(), imid;
-
-	while (imin < imax) {
-		imid = (imin+imax)>>1;
-
-		if (blocks[imid].startpc > startpc)
-			imax = imid;
-		else
-			imin = imid + 1;
-	}
-
-	pxAssert(imin == blocks.size() || blocks[imin].startpc > startpc);
-	iter = blocks.insert(blocks.begin() + imin, newblock);
-
 	std::pair<linkiter_t, linkiter_t> range = links.equal_range(startpc);
 	for (linkiter_t i = range.first; i != range.second; ++i)
 		*(u32*)i->second = fnptr - (i->second + 4);
-
-	return &*iter;
+	
+	return blocks.insert(startpc, fnptr);;
 }
 
 int BaseBlocks::LastIndex(u32 startpc) const

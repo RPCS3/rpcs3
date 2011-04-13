@@ -927,7 +927,6 @@ static __fi u32 psxRecClearMem(u32 pc)
 
 	u32 lowerextent = pc, upperextent = pc + 4;
 	int blockidx = recBlocks.Index(pc);
-
 	pxAssert(blockidx != -1);
 
 	while (BASEBLOCKEX* pexblock = recBlocks[blockidx - 1]) {
@@ -938,13 +937,20 @@ static __fi u32 psxRecClearMem(u32 pc)
 		blockidx--;
 	}
 
+	int toRemoveFirst = blockidx;
+
 	while (BASEBLOCKEX* pexblock = recBlocks[blockidx]) {
 		if (pexblock->startpc >= upperextent)
 			break;
 
 		lowerextent = min(lowerextent, pexblock->startpc);
 		upperextent = max(upperextent, pexblock->startpc + pexblock->size * 4);
-		recBlocks.Remove(blockidx);
+
+		blockidx++;
+	}
+
+	if(toRemoveFirst != blockidx) {
+		recBlocks.Remove(toRemoveFirst, (blockidx - 1));
 	}
 
 	blockidx=0;
@@ -1224,6 +1230,7 @@ static void __fastcall iopRecRecompile( const u32 startpc )
 		|| s_pCurBlock->GetFnptr() == (uptr)iopJITCompileInBlock);
 
 	s_pCurBlockEx = recBlocks.Get(HWADDR(startpc));
+
 	if(!s_pCurBlockEx || s_pCurBlockEx->startpc != HWADDR(startpc))
 		s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
 

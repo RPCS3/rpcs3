@@ -889,13 +889,18 @@ void recClear(u32 addr, u32 size)
 	if (pexblock)
 		ceiling = pexblock->startpc;
 
+	int toRemoveLast = blockidx;
+
 	while (pexblock = recBlocks[blockidx]) {
 		u32 blockstart = pexblock->startpc;
 		u32 blockend = pexblock->startpc + pexblock->size * 4;
 		BASEBLOCK* pblock = PC_GETBLOCK(blockstart);
 
 		if (pblock == s_pCurBlock) {
-			blockidx--;
+			if(toRemoveLast != blockidx) {
+				recBlocks.Remove((blockidx + 1), toRemoveLast);
+			}
+			toRemoveLast = --blockidx;
 			continue;
 		}
 
@@ -909,7 +914,12 @@ void recClear(u32 addr, u32 size)
 		// This might end up inside a block that doesn't contain the clearing range,
 		// so set it to recompile now.  This will become JITCompile if we clear it.
 		pblock->SetFnptr((uptr)JITCompileInBlock);
-		recBlocks.Remove(blockidx--);
+
+		blockidx--;
+	}
+
+	if(toRemoveLast != blockidx) {
+		recBlocks.Remove((blockidx + 1), toRemoveLast);
 	}
 
 	upperextent = min(upperextent, ceiling);
