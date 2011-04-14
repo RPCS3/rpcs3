@@ -291,7 +291,12 @@ public:
 	{
 		wxString api( L"EMPTYEMPTYEMPTY" );
 		m_Device = L"EMPTYEMPTYEMPTY";
+#ifdef __LINUX__
+		// By default on linux use the ALSA API (+99% users) -- Gregory
+		CfgReadStr( L"PORTAUDIO", L"HostApi", api, L"ALSA" );
+#else
 		CfgReadStr( L"PORTAUDIO", L"HostApi", api, L"Unknown" );
+#endif
 		CfgReadStr( L"PORTAUDIO", L"Device", m_Device, L"default" );
 
 		SetApiSettings(api);
