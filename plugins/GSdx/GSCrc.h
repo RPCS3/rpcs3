@@ -52,6 +52,8 @@ public:
 		OnePieceGrandBattle,
 		ICO,
 		GT4,
+		GT3,
+		GTConcept,
 		WildArms5,
 		WildArms4,
 		Manhunt2,

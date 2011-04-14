@@ -2096,6 +2096,32 @@ bool GSC_GT4(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_GT3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP >= 0x02de0 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x01180) && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 770;
+		}
+	}
+
+	return true;
+}
+
+bool GSC_GTConcept(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP >= 0x03420 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x01400) && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 880;
+		}
+	}
+	
+	return true;
+}
+
 bool GSC_WildArms4(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -2428,6 +2454,14 @@ bool GSC_ValkyrieProfile2(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
+		/*if(fi.TME && (fi.FBP == 0x018c0 || fi.FBP == 0x02180) && fi.FPSM == fi.TPSM && fi.TBP0 >= 0x03200 && fi.TPSM == PSM_PSMCT32)	//NTSC only, !(fi.TBP0 == 0x03580 || fi.TBP0 == 0x03960)
+		{
+			skip = 1;	//red garbage in lost forest, removes other effects...
+		}
+		if(fi.TME && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
+		{
+			skip = 1;	//garbage in cutscenes, doesn't remove completely, better use "Alpha Hack"
+		}*/
 		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4HH)
 		{
 			skip = 1000; //
@@ -2644,6 +2678,8 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::OnePieceGrandBattle] = GSC_OnePieceGrandBattle;
 		map[CRC::ICO] = GSC_ICO;
 		map[CRC::GT4] = GSC_GT4;
+		map[CRC::GT3] = GSC_GT3;
+		map[CRC::GTConcept] = GSC_GTConcept;
 		map[CRC::WildArms4] = GSC_WildArms4;
 		map[CRC::WildArms5] = GSC_WildArms5;
 		map[CRC::Manhunt2] = GSC_Manhunt2;

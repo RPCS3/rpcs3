@@ -105,6 +105,10 @@ CRC::Game CRC::m_games[] =
 	{0x44A61C8F, GT4, NoRegion, 0},
 	{0x0086E35B, GT4, NoRegion, 0},
 	{0x77E61C8A, GT4, NoRegion, 0},
+	{0x85AE91B3, GT3, US, 0},
+	{0xC220951A, GT3, NoRegion, 0},
+	{0x60013EBD, GTConcept, EU, 0},
+	{0xB590CE04, GTConcept, NoRegion, 0},
 	{0xC164550A, WildArms5, JPUNDUB, 0},
 	{0xC1640D2C, WildArms5, US, 0},
 	{0x0FCF8FE4, WildArms5, EU, 0},
@@ -127,6 +131,7 @@ CRC::Game CRC::m_games[] =
 	{0xEC432B24, Drakengard2, NoRegion, 0},
 	{0xFC46EA61, Tekken5, JP, 0},
 	{0x1F88EE37, Tekken5, EU, 0},
+	{0x1F88BECD, Tekken5, EU, 0},	//language selector...
 	{0x652050D2, Tekken5, US, 0},
 	{0x9E98B8AE, IkkiTousen, JP, 0},
 	{0xD6385328, GodOfWar, US, 0},
