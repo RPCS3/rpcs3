@@ -637,7 +637,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		else if(tw < 1024)
 		{
 			// FIXME: timesplitters blurs the render target by blending itself over a couple of times
-			//hack = true;
+			hack = true;
 			//if(tw == 256 && th == 128 && (TEX0.TBP0 == 0 || TEX0.TBP0 == 0x00e00))
 			//{
 			//	delete src;
