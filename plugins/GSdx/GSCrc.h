@@ -91,6 +91,8 @@ public:
 		DemonStone,
 		BigMuthaTruckers,
 		TimeSplitters2,
+		ReZ,
+		LordOfTheRingsTwoTowers,
 		TitleCount,
 	};
 

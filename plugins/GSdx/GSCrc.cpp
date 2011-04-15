@@ -202,6 +202,13 @@ CRC::Game CRC::m_games[] =
 	{0x506644B3, BigMuthaTruckers, EU, 0},
 	{0x90F0D852, BigMuthaTruckers, US, 0},
 	{0x5CC9BF81, TimeSplitters2, EU, 0},
+	{0x12532F1C, TimeSplitters2, US, 0},
+	{0xA33748AA, ReZ, US, 0},
+	{0xAE1152EB, ReZ, EU, 0},
+	{0xD2EA890A, ReZ, JP, 0},
+	{0xC818BEC2, LordOfTheRingsTwoTowers, US, 0},
+	{0x9ABF90FB, LordOfTheRingsTwoTowers, ES, 0},
+	{0xC0E909E9, LordOfTheRingsTwoTowers, JP, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

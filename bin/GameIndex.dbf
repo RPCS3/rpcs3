@@ -4552,7 +4552,7 @@ Compat = 4
 Serial = SLUS-20674
 Name   = Virtual On Marz
 Region = NTSC-U
-Compat = 5
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20675
 Name   = Baldur's Gate - Dark Alliance 2
@@ -7858,7 +7858,7 @@ Compat = 5
 Serial = SLUS-21390
 Name   = Urban Chaos - Riot Response
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21391
 Name   = SpongeBob SquarePants - Creature from the Krusty Krab
@@ -28646,7 +28646,7 @@ Region = PAL-Unk
 Serial = SCES-50294
 Name   = Gran Turismo 3 A-Spec
 Region = PAL-M5
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SCES-50295
 Name   = Dark Cloud

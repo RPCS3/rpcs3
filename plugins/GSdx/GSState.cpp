@@ -2636,9 +2636,46 @@ bool GSC_TimeSplitters2(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x01000) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x01000) && fi.TPSM == PSM_PSMCT32 && fi.FBMSK == 0x0FF000000)
+		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00e00 || fi.FBP == 0x01000) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x00e00 || fi.TBP0 == 0x01000) && fi.TPSM == PSM_PSMCT32 && fi.FBMSK == 0x0FF000000)
 		{
 			skip = 1;
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_ReZ(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x008c0 || fi.FBP == 0x00a00) && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1; 
+		}
+	}
+
+	return true;
+}
+
+bool GSC_LordOfTheRingsTwoTowers(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP == 0x01180 || fi.FBP == 0x01400) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x01000) && fi.TPSM == PSM_PSMCT16)
+		{
+			skip = 1000;//shadows
+		}
+		else if(fi.TME && fi.TPSM == PSM_PSMZ16 && fi.TBP0 == 0x01400 && fi.FPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
+		{
+			skip = 3;	//wall of fog
+		}
+	}
+	else
+	{
+		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x01000) && (fi.TBP0 == 0x01180 || fi.TBP0 == 0x01400) && fi.FPSM == PSM_PSMCT32)
+		{
+			skip = 2;
 		}
 	}
 	
@@ -2709,6 +2746,8 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::DemonStone] = GSC_DemonStone;
 		map[CRC::BigMuthaTruckers] = GSC_BigMuthaTruckers;
 		map[CRC::TimeSplitters2] = GSC_TimeSplitters2;
+		map[CRC::ReZ] = GSC_ReZ;
+		map[CRC::LordOfTheRingsTwoTowers] = GSC_LordOfTheRingsTwoTowers;
 	}
 
 	// TODO: just set gsc in SetGameCRC once
