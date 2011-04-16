@@ -144,6 +144,7 @@ public:
 	void UpdateIsoSrcSelection();
 	void RemoveCdvdMenu();
 	void EnableMenuItem( int id, bool enable );
+	int  GetCdvdPluginSubmenuItemId();
 	
 	bool Destroy();
 
@@ -222,3 +223,4 @@ protected:
 	friend class Pcsx2App;
 };
 
+extern int GetPluginMenuId_Settings( PluginsEnum_t pid );

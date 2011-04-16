@@ -168,6 +168,8 @@ wxWindowID SwapOrReset_Iso( wxWindow* owner, IScopedCoreThread& core_control, co
 		core_control.AllowResume();
 	}
 
+	GetMainFrame().EnableMenuItem( GetMainFrame().GetCdvdPluginSubmenuItemId(), g_Conf->CdvdSource == CDVDsrc_Plugin );
+
 	return result;
 }
 
@@ -214,6 +216,8 @@ wxWindowID SwapOrReset_CdvdSrc( wxWindow* owner, CDVD_SourceType newsrc )
 		core.DisallowResume();
 		sApp.SysExecute( g_Conf->CdvdSource );
 	}
+
+	GetMainFrame().EnableMenuItem( GetMainFrame().GetCdvdPluginSubmenuItemId(), g_Conf->CdvdSource == CDVDsrc_Plugin );
 
 	return result;
 }
@@ -347,6 +351,11 @@ void MainEmuFrame::_DoBootCdvd()
 	}
 
 	sApp.SysExecute( g_Conf->CdvdSource );
+}
+
+int MainEmuFrame::GetCdvdPluginSubmenuItemId()
+{
+	return GetPluginMenuId_Settings(PluginId_CDVD);
 }
 
 void MainEmuFrame::Menu_CdvdSource_Click( wxCommandEvent &event )
