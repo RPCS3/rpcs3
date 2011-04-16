@@ -144,7 +144,7 @@ public:
 	void UpdateIsoSrcSelection();
 	void RemoveCdvdMenu();
 	void EnableMenuItem( int id, bool enable );
-	int  GetCdvdPluginSubmenuItemId();
+	void EnableCdvdPluginSubmenu(bool isEnable = true);
 	
 	bool Destroy();
 

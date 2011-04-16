@@ -65,7 +65,7 @@ void MainEmuFrame::UpdateIsoSrcSelection()
 	sMenuBar.Check( cdsrc, true );
 	m_statusbar.SetStatusText( CDVD_SourceLabels[g_Conf->CdvdSource], 1 );
 
-	m_menuCDVD.Enable( GetPluginMenuId_Settings(PluginId_CDVD), cdsrc == MenuId_Src_Plugin );
+	EnableCdvdPluginSubmenu( cdsrc == MenuId_Src_Plugin );
 
 	//sMenuBar.SetLabel( MenuId_Src_Iso, wxsFormat( L"%s -> %s", _("Iso"),
 	//	exists ? Path::GetFilename(g_Conf->CurrentIso).c_str() : _("Empty") ) );
