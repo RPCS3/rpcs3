@@ -209,6 +209,10 @@ CRC::Game CRC::m_games[] =
 	{0xC818BEC2, LordOfTheRingsTwoTowers, US, 0},
 	{0x9ABF90FB, LordOfTheRingsTwoTowers, ES, 0},
 	{0xC0E909E9, LordOfTheRingsTwoTowers, JP, 0},
+	{0xE169BAF8, RedDeadRevolver, US, 0},
+	{0xE2E67E23, RedDeadRevolver, EU, 0},
+	{0xEDDD6573, SpidermanWoS, US, 0},	//Web of Shadows
+	{0xF56C7948, HeavyMetalThunder, JP, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

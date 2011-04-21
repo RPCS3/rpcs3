@@ -245,6 +245,22 @@ class GSRendererHW : public GSRendererT<Vertex>
 		return true;
 	}
 
+	bool OI_SpidermanWoS(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
+	{
+		uint32 FBP = m_context->FRAME.Block();
+		uint32 FPSM = m_context->FRAME.PSM;
+
+		if((FBP == 0x025a0 || FBP == 0x02a60) && FPSM == PSM_PSMCT32)
+		{
+			//only top half of the screen clears
+			m_dev->ClearDepth(ds, 0);
+
+			return false;
+		}
+
+		return true;
+	}
+
 	bool OI_PointListPalette(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		if(m_vt.m_primclass == GS_POINT_CLASS && !PRIM->TME)
@@ -425,6 +441,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::GodOfWar2, CRC::RegionCount, &GSRendererHW::OI_GodOfWar2));
 			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::SimpsonsGame, CRC::RegionCount, &GSRendererHW::OI_SimpsonsGame));
 			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::RozenMaidenGebetGarden, CRC::RegionCount, &GSRendererHW::OI_RozenMaidenGebetGarden));
+			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::SpidermanWoS, CRC::RegionCount, &GSRendererHW::OI_SpidermanWoS));
 
 			m_oo_list.push_back(HackEntry<OO_Ptr>(CRC::DBZBT2, CRC::RegionCount, &GSRendererHW::OO_DBZBT2));
 			m_oo_list.push_back(HackEntry<OO_Ptr>(CRC::MajokkoALaMode2, CRC::RegionCount, &GSRendererHW::OO_MajokkoALaMode2));

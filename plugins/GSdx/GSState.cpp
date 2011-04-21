@@ -2264,16 +2264,20 @@ bool GSC_Tekken5(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && (fi.FBP == 0x02d60 || fi.FBP == 0x02d80 || fi.FBP == 0x02ea0 || fi.FBP == 0x03620) && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT32)
+		if(fi.TME && (fi.FBP == 0x02d60 || fi.FBP == 0x02d80 || fi.FBP == 0x02ea0 || fi.FBP == 0x03620) && fi.FPSM == fi.TPSM && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT32)
 		{
 			skip = 95;
 		}
-		else if(fi.TME && (fi.FBP == 0x02bc0 || fi.FBP == 0x02be0) && fi.FPSM == fi.TPSM && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT32)
+		else if(fi.TME && (fi.FBP == 0x02bc0 || fi.FBP == 0x02be0 || fi.FBP == 0x02d00) && fi.FPSM == fi.TPSM && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT32)
 		{
 			skip = 2;
 		}
+		else if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32 && fi.FBMSK == 0x00FFFFFF)
+		{
+			skip = 5;	//city at sunset's... sun...
+		}
 	}
-
+	
 	return true;
 }
 
@@ -2682,6 +2686,54 @@ bool GSC_LordOfTheRingsTwoTowers(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_RedDeadRevolver(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(!fi.TME && (fi.FBP == 0x02420 || fi.FBP == 0x025e0) && fi.FPSM == PSM_PSMCT24)
+		{
+			skip = 1200;
+		}
+		else if(fi.TME && (fi.FBP == 0x00800 || fi.FBP == 0x009c0) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x01600 || fi.TBP0 == 0x017c0) && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 2;	//filter
+		}
+		else if(fi.FBP == 0x03700 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMCT24)
+		{
+			skip = 2;	//blur
+		}
+	}
+	else
+	{
+		if(fi.TME && (fi.FBP == 0x00800 || fi.FBP == 0x009c0) && fi.FPSM == PSM_PSMCT32)
+		{
+			skip = 1;
+		}
+	}
+
+	return true;
+}
+
+bool GSC_HeavyMetalThunder(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x03100 && fi.FPSM == fi.TPSM && fi.TBP0 == 0x01c00 && fi.TPSM == PSM_PSMZ32)
+		{
+			skip = 100;
+		}
+	}
+	else
+	{
+		if(fi.TME && fi.FBP == 0x00e00 && fi.FPSM == fi.TPSM && fi.TBP0 == 0x02a00 && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1;
+		}
+	}
+
+	return true;
+}
+
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
 	GSFrameInfo fi;
@@ -2748,6 +2800,8 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::TimeSplitters2] = GSC_TimeSplitters2;
 		map[CRC::ReZ] = GSC_ReZ;
 		map[CRC::LordOfTheRingsTwoTowers] = GSC_LordOfTheRingsTwoTowers;
+		map[CRC::RedDeadRevolver] = GSC_RedDeadRevolver;
+		map[CRC::HeavyMetalThunder] = GSC_HeavyMetalThunder;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

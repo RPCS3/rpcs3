@@ -93,6 +93,9 @@ public:
 		TimeSplitters2,
 		ReZ,
 		LordOfTheRingsTwoTowers,
+		RedDeadRevolver,
+		SpidermanWoS,
+		HeavyMetalThunder,
 		TitleCount,
 	};
 
