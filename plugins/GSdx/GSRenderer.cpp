@@ -619,6 +619,9 @@ void GSRenderer::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const G
 		switch(wms)
 		{
 		case CLAMP_REPEAT:
+			// FixMe: The last + 1 here breaks character portraits in Ar Tonelico 2.
+			// The problem is the same in HW and in SW rendering, and I also ruled out the
+			// usual scaling problems. (rama)	
 			if(mask & 0x000f) {if(vr.x < u.x) vr.x = u.x; if(vr.z > u.z + 1) vr.z = u.z + 1;}
 			break;
 		case CLAMP_CLAMP:
