@@ -48,6 +48,9 @@ EXPORT_C_(void) SPU2dmaInterrupt(s32 channel);
 // dma irq callbacks not needed anymore, they are handled by the dmac
 EXPORT_C_(void) SPU2irqCallback(void (*SPU2callback)());
 #else
+// These defines are useless and gcc-4.6 complain about redefinition
+// so we remove them on linux
+#ifndef __LINUX__
 EXPORT_C_(void) SPU2readDMA4Mem(u16 *pMem, u32 size);
 EXPORT_C_(void) SPU2writeDMA4Mem(u16 *pMem, u32 size);
 EXPORT_C_(void) SPU2interruptDMA4();
@@ -60,6 +63,7 @@ EXPORT_C_(void) SPU2interruptDMA7();
 EXPORT_C_(u32)  SPU2ReadMemAddr(int core);
 EXPORT_C_(void) SPU2WriteMemAddr(int core,u32 value);
 EXPORT_C_(void) SPU2irqCallback(void (*SPU2callback)(),void (*DMA4callback)(),void (*DMA7callback)());
+#endif
 #endif
 
 // extended funcs

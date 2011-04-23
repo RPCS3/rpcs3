@@ -97,6 +97,7 @@ u32 pclocks;
 
 u32 oldlimit;
 
+#ifdef _MSC_VER
 void dummy1()
 {
 }
@@ -117,7 +118,6 @@ void dummy7()
 
 #define Cread(a,b,c,d) if(fread(a,b,c,d)<b) break;
 
-#ifdef _MSC_VER
 #include "Windows/Dialogs.h"
 EXPORT_C_(void) s2r_replay(HWND hwnd, HINSTANCE hinst, LPSTR filename, int nCmdShow)
 {

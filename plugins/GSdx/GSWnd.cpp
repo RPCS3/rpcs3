@@ -346,6 +346,15 @@ bool GSWnd::Create(const string& title, int w, int h)
 	}
 
 #ifdef _LINUX
+	// When you reconfigure the plugins during the play, SDL is shutdown so SDL_GetNumVideoDisplays return 0
+	// and the plugins is badly closed. NOTE: SDL is initialized in SDL_CreateWindow.
+	//
+	// I'm not sure this sanity check is still useful, normally (I hope) SDL_CreateWindow will return a null
+	// hence a false for this current function.
+	// For the moment do an init -- Gregory
+	if(!SDL_WasInit(SDL_INIT_VIDEO))
+		if(SDL_Init(SDL_INIT_VIDEO) < 0) return false;
+
     // Sanity check; if there aren't any video displays available, we can't create a window.
     if (SDL_GetNumVideoDisplays() <= 0) return false;
 #endif
