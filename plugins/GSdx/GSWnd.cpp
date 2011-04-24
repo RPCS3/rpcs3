@@ -380,10 +380,14 @@ Display* GSWnd::GetDisplay()
 
 GSVector4i GSWnd::GetClientRect()
 {
-	// TODO
-	int h, w;
-	w = theApp.GetConfig("ModeWidth", 640);
-	h = theApp.GetConfig("ModeHeight", 480);
+	// Get all SDL events. It refreshes the window parameter do not ask why.
+	// Anyway it allow to properly resize the window surface
+	// FIXME: it does not feel a good solution -- Gregory
+	SDL_PumpEvents();
+
+	int h = 480;
+	int w = 640;
+	if (m_window) SDL_GetWindowSize(m_window, &w, &h);
 
 	return GSVector4i(0, 0, w, h);
 }
@@ -393,6 +397,16 @@ GSVector4i GSWnd::GetClientRect()
 
 bool GSWnd::SetWindowText(const char* title)
 {
+	// Do not find anyway to check the current fullscreen status
+	// Better than nothing heuristic, check the window position. Fullscreen = (0,0)
+	// if(!(m_window->flags & SDL_WINDOW_FULLSCREEN) ) // Do not compile
+	//
+	// Same as GetClientRect. We call SDL_PumpEvents to refresh x and y value
+	// FIXME: it does not feel a good solution -- Gregory
+	SDL_PumpEvents();
+	int x,y = 0;
+	SDL_GetWindowPosition(m_window, &x, &y);
+	if ( x && y )
 	SDL_SetWindowTitle(m_window, title);
 
 	return true;
