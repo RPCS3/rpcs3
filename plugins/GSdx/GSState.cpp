@@ -339,8 +339,18 @@ GSVector2i GSState::GetDeviceSize(int i)
 	}*/
 
 	//Fixme : Just slightly better than the hack above
-	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && h > 1){
-		if (!IsEnabled(0) || !IsEnabled(1)){h >>= 1;}
+	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && h > 1)
+	{
+		if (IsEnabled(0) || IsEnabled(1))
+		{
+			h >>= 1;
+		}
+	}
+
+	//Fixme: These games elude the code above, worked with the old hack
+	else if(m_game.title == CRC::SilentHill2 || m_game.title == CRC::SilentHill3)
+	{
+		h /= 2; 
 	}
 
 	return GSVector2i(w, h);
@@ -2418,6 +2428,26 @@ bool GSC_SonicUnleashed(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_SimpsonsGame(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == fi.TPSM && fi.TBP0 == 0x03000 && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 100;
+		}
+	}
+	else
+	{
+		if(fi.TME && fi.FBP == 0x03000 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8H)
+		{
+			skip = 2;
+		}
+	}
+	
+	return true;
+}
+
 bool GSC_Genji(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -2734,6 +2764,32 @@ bool GSC_HeavyMetalThunder(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_BleachBladeBattlers(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x01180 && fi.FPSM == fi.TPSM && fi.TBP0 == 0x03fc0 && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1;
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_Castlevania(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMCT16S && fi.FBMSK == 0x00FFFFFF)
+		{
+			skip = 2;
+		}
+	}
+
+	return true;
+}
+
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
 	GSFrameInfo fi;
@@ -2785,6 +2841,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::Onimusha3] = GSC_Onimusha3;
 		map[CRC::TalesOfAbyss] = GSC_TalesOfAbyss;
 		map[CRC::SonicUnleashed] = GSC_SonicUnleashed;
+		map[CRC::SimpsonsGame] = GSC_SimpsonsGame;
 		map[CRC::Genji] = GSC_Genji;
 		map[CRC::StarOcean3] = GSC_StarOcean3;
 		map[CRC::ValkyrieProfile2] = GSC_ValkyrieProfile2;
@@ -2802,6 +2859,9 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::LordOfTheRingsTwoTowers] = GSC_LordOfTheRingsTwoTowers;
 		map[CRC::RedDeadRevolver] = GSC_RedDeadRevolver;
 		map[CRC::HeavyMetalThunder] = GSC_HeavyMetalThunder;
+		map[CRC::BleachBladeBattlers] = GSC_BleachBladeBattlers;
+		map[CRC::CastlevaniaCoD] = GSC_Castlevania;
+		map[CRC::CastlevaniaLoI] = GSC_Castlevania;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

@@ -162,6 +162,8 @@ CRC::Game CRC::m_games[] =
 	{0x8C913264, SonicUnleashed, EU, 0},
 	{0x4C7BB3C8, SimpsonsGame, NoRegion, 0},
 	{0x4C94B32C, SimpsonsGame, NoRegion, 0},
+	{0x206779D8, SimpsonsGame, EU, 0},
+	{0xBBE4D862, SimpsonsGame, US, 0},
 	{0xD71B57F4, Genji, NoRegion, 0},
 	{0xE04EA200, StarOcean3, EU, 0},
 	{0x23A97857, StarOcean3, US, 0},
@@ -213,6 +215,15 @@ CRC::Game CRC::m_games[] =
 	{0xE2E67E23, RedDeadRevolver, EU, 0},
 	{0xEDDD6573, SpidermanWoS, US, 0},	//Web of Shadows
 	{0xF56C7948, HeavyMetalThunder, JP, 0},
+	{0x2498951B, SilentHill3, US, 0},
+	{0x5088CCDB, SilentHill3, EU, 0},
+	{0x8E8E384B, SilentHill2, US, 0},
+	{0x6DF62AEA, BleachBladeBattlers, JP, 0},
+	{0x6EB71AB0, BleachBladeBattlers, JP, 0},	//2nd
+	{0x3A446111, CastlevaniaCoD, US, 0},
+	{0xF321BC38, CastlevaniaCoD, EU, 0},
+	{0x28270F7D, CastlevaniaLoI, US, 0},
+	{0xA36CFF6C, CastlevaniaLoI, JP, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

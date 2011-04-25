@@ -96,6 +96,11 @@ public:
 		RedDeadRevolver,
 		SpidermanWoS,
 		HeavyMetalThunder,
+		SilentHill3,
+		SilentHill2,
+		BleachBladeBattlers,
+		CastlevaniaCoD,
+		CastlevaniaLoI,
 		TitleCount,
 	};
 

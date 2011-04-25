@@ -185,7 +185,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 		uint32 FBW = m_context->FRAME.FBW;
 		uint32 FPSM = m_context->FRAME.PSM;
 
-		if(FBP == 0x01800 && FPSM == PSM_PSMZ24)
+		if((FBP == 0x01500 || FBP == 0x01800) && FPSM == PSM_PSMZ24)	//0x1800 pal, 0x1500 ntsc
 		{
 			// instead of just simply drawing a full height 512x512 sprite to clear the z buffer,
 			// it uses a 512x256 sprite only, yet it is still able to fill the whole surface with zeros,
