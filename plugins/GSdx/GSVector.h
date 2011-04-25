@@ -2753,6 +2753,8 @@ public:
 
 	template<int src, int dst> __forceinline GSVector4 insert(const GSVector4& v) const
 	{
+		// TODO: use blendps when src == dst
+
 		#if 0 // _M_SSE >= 0x401
 
 		// NOTE: it's faster with shuffles...
@@ -2766,40 +2768,40 @@ public:
 		case 0:
 			switch(src)
 			{
-			case 0: return v.xxyy(*this).xzzw(*this);
-			case 1: return v.yyyy(*this).xzzw(*this);
-			case 2: return v.zzyy(*this).xzzw(*this);
-			case 3: return v.wwyy(*this).xzzw(*this);
+			case 0: return yyxx(v).zxzw(*this);
+			case 1: return yyyy(v).zxzw(*this);
+			case 2: return yyzz(v).zxzw(*this);
+			case 3: return yyww(v).zxzw(*this);
 			default: __assume(0);
 			}
 			break;
 		case 1:
 			switch(src)
 			{
-			case 0: return v.xxxx(*this).zxzw(*this);
-			case 1: return v.yyxx(*this).zxzw(*this);
-			case 2: return v.zzxx(*this).zxzw(*this);
-			case 3: return v.wwxx(*this).zxzw(*this);
+			case 0: return xxxx(v).xzzw(*this);
+			case 1: return xxyy(v).xzzw(*this);
+			case 2: return xxzz(v).xzzw(*this);
+			case 3: return xxww(v).xzzw(*this);
 			default: __assume(0);
 			}
 			break;
 		case 2:
 			switch(src)
 			{
-			case 0: return xyxz(v.xxww(*this));
-			case 1: return xyxz(v.yyww(*this));
-			case 2: return xyxz(v.zzww(*this));
-			case 3: return xyxz(v.wwww(*this));
+			case 0: return xyzx(wwxx(v));
+			case 1: return xyzx(wwyy(v));
+			case 2: return xyzx(wwzz(v));
+			case 3: return xyzx(wwww(v));
 			default: __assume(0);
 			}
 			break;
 		case 3:
 			switch(src)
 			{
-			case 0: return xyzx(v.xxzz(*this));
-			case 1: return xyzx(v.yyzz(*this));
-			case 2: return xyzx(v.zzzz(*this));
-			case 3: return xyzx(v.wwzz(*this));
+			case 0: return xyxz(zzxx(v));
+			case 1: return xyxz(zzyy(v));
+			case 2: return xyxz(zzzz(v));
+			case 3: return xyxz(zzww(v));
 			default: __assume(0);
 			}
 			break;

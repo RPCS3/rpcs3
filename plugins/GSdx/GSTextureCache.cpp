@@ -892,31 +892,88 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 
 	bool repeating = m_TEX0.IsRepeating();
 
+	if(repeating && m_tiles.empty())
+	{
+		for(int y = 0; y < th; y += bs.y)
+		{
+			uint32 base = o->block.row[y >> 3];
+
+			for(int x = 0; x < tw; x += bs.x)
+			{
+				uint32 block = base + o->block.col[x >> 3];
+
+				if(block < MAX_BLOCKS)
+				{
+					m_tiles[block].push_back(GSVector2i(x, y));
+				}
+			}
+		}
+	}
+
 	uint32 blocks = 0;
 
-	for(int y = r.top; y < r.bottom; y += bs.y)
+	if(!repeating)
 	{
-		uint32 base = o->block.row[y >> 3];
-
-		for(int x = r.left; x < r.right; x += bs.x)
+		for(int y = r.top; y < r.bottom; y += bs.y)
 		{
-			uint32 block = base + o->block.col[x >> 3];
+			uint32 base = o->block.row[y >> 3];
 
-			if(block < MAX_BLOCKS)
+			for(int x = r.left; x < r.right; x += bs.x)
 			{
-				uint32 row = block >> 5;
-				uint32 col = 1 << (block & 31);
+				uint32 block = base + o->block.col[x >> 3];
 
-				if((m_valid[row] & col) == 0)
+				if(block < MAX_BLOCKS)
 				{
-					if(!repeating)
+					uint32 row = block >> 5;
+					uint32 col = 1 << (block & 31);
+
+					if((m_valid[row] & col) == 0)
 					{
 						m_valid[row] |= col;
+
+						Write(GSVector4i(x, y, x + bs.x, y + bs.y));
+
+						blocks++;
 					}
+				}
+			}
+		}
+	}
+	else
+	{
+		for(int y = r.top; y < r.bottom; y += bs.y)
+		{
+			uint32 base = o->block.row[y >> 3];
 
-					Write(GSVector4i(x, y, x + bs.x, y + bs.y));
+			for(int x = r.left; x < r.right; x += bs.x)
+			{
+				uint32 block = base + o->block.col[x >> 3];
 
-					blocks++;
+				if(block < MAX_BLOCKS)
+				{
+					uint32 row = block >> 5;
+					uint32 col = 1 << (block & 31);
+
+					if((m_valid[row] & col) == 0)
+					{
+						m_valid[row] |= col;
+
+						hash_map<uint32, list<GSVector2i> >::iterator i = m_tiles.find(block);
+
+						if(i != m_tiles.end())
+						{
+							list<GSVector2i>& l = i->second;
+
+							for(list<GSVector2i>::iterator j = l.begin(); j != l.end(); j++)
+							{
+								Write(GSVector4i(j->x, j->y, j->x + bs.x, j->y + bs.y));
+
+								blocks++;
+							}
+						}
+
+						blocks++;
+					}
 				}
 			}
 		}
@@ -924,27 +981,6 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 
 	if(blocks > 0)
 	{
-		if(repeating)
-		{
-			for(int y = r.top; y < r.bottom; y += bs.y)
-			{
-				uint32 base = o->block.row[y >> 3];
-
-				for(int x = r.left; x < r.right; x += bs.x)
-				{
-					uint32 block = base + o->block.col[x >> 3];
-
-					if(block < MAX_BLOCKS)
-					{
-						uint32 row = block >> 5;
-						uint32 col = 1 << (block & 31);
-
-						m_valid[row] |= col;
-					}
-				}
-			}
-		}
-
 		m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * blocks << (m_fmt == FMT_32 ? 2 : 0));
 
 		Flush(m_write.count);

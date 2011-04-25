@@ -25,7 +25,6 @@
 GSTextureCacheSW::GSTextureCacheSW(GSState* state)
 	: m_state(state)
 {
-	memset(m_pages, 0, sizeof(m_pages));
 }
 
 GSTextureCacheSW::~GSTextureCacheSW()
@@ -77,6 +76,13 @@ const GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0
 
 		m_textures.insert(t);
 
+		__aligned(uint32, 16) pages[16];
+
+		((GSVector4i*)pages)[0] = GSVector4i::zero();
+		((GSVector4i*)pages)[1] = GSVector4i::zero();
+		((GSVector4i*)pages)[2] = GSVector4i::zero();
+		((GSVector4i*)pages)[3] = GSVector4i::zero();
+
 		GSVector2i bs = (TEX0.TBP0 & 31) == 0 ? psm.pgs : psm.bs;
 
 		int tw = 1 << TEX0.TW;
@@ -92,17 +98,17 @@ const GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0
 
 				if(page < MAX_PAGES)
 				{
-					m_pages[page >> 5] |= 1 << (page & 31);
+					pages[page >> 5] |= 1 << (page & 31);
 				}
 			}
 		}
 
-		for(int i = 0; i < countof(m_pages); i++)
+		for(int i = 0; i < countof(pages); i++)
 		{
-			if(uint32 p = m_pages[i])
-			{
-				m_pages[i] = 0;
+			uint32 p = pages[i];
 
+			if(p != 0)
+			{
 				list<Texture*>* m = &m_map[i << 5];
 
 				unsigned long j;
@@ -256,17 +262,6 @@ bool GSTextureCacheSW::Texture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA&
 
 	bool repeating = m_TEX0.IsRepeating();
 
-	if(m_TEX0.TBW == 1 && m_tw != 0) // repeating)
-	{
-		// FIXME: 
-		// - marking a block prevents fetching it again to a different part of the texture
-		// - only a real issue for TBW = 1 mipmap levels, where the repeating part is below and often exploited (onimusha 3 intro / sidewalk)
-
-		// r = GSVector4i(0, 0, tw, th);
-		r.top = 0;
-		r.bottom = th;
-	}
-
 	r = r.ralign<Align_Outside>(bs);
 
 	if(r.eq(GSVector4i(0, 0, tw, th)))
@@ -295,6 +290,30 @@ bool GSTextureCacheSW::Texture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA&
 		{
 			return false;
 		}
+
+		if(repeating)
+		{
+			// TODO: pull this from cache (hash = o->... + m_tw), need to use m_buff relative pointers then
+
+			const GSOffset* RESTRICT o = m_offset;
+
+			uint8* dst = (uint8*)m_buff;
+
+			for(int y = 0, block_pitch = pitch * bs.y; y < th; y += bs.y, dst += block_pitch)
+			{
+				uint32 base = o->block.row[y >> 3];
+
+				for(int x = 0; x < tw; x += bs.x)
+				{
+					uint32 block = base + o->block.col[x >> 3];
+
+					if(block < MAX_BLOCKS)
+					{
+						m_tiles[block].push_back(&dst[x << shift]);
+					}
+				}
+			}
+		}		
 	}
 
 	GSLocalMemory& mem = m_state->m_mem;
@@ -307,31 +326,68 @@ bool GSTextureCacheSW::Texture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA&
 
 	uint32 pitch = (1 << m_tw) << shift;
 
-	uint8* dst = (uint8*)m_buff + pitch * r.top;
-
-	for(int y = r.top, block_pitch = pitch * bs.y; y < r.bottom; y += bs.y, dst += block_pitch)
+	if(!repeating)
 	{
-		uint32 base = o->block.row[y >> 3];
+		uint8* dst = (uint8*)m_buff + pitch * r.top;
 
-		for(int x = r.left; x < r.right; x += bs.x)
+		for(int y = r.top, block_pitch = pitch * bs.y; y < r.bottom; y += bs.y, dst += block_pitch)
 		{
-			uint32 block = base + o->block.col[x >> 3];
+			uint32 base = o->block.row[y >> 3];
 
-			if(block < MAX_BLOCKS)
+			for(int x = r.left; x < r.right; x += bs.x)
 			{
-				uint32 row = block >> 5;
-				uint32 col = 1 << (block & 31);
+				uint32 block = base + o->block.col[x >> 3];
 
-				if((m_valid[row] & col) == 0)
+				if(block < MAX_BLOCKS)
 				{
-					if(!repeating)
+					uint32 row = block >> 5;
+					uint32 col = 1 << (block & 31);
+
+					if((m_valid[row] & col) == 0)
 					{
 						m_valid[row] |= col;
+
+						(mem.*rtxbP)(block, &dst[x << shift], pitch, TEXA);
+
+						blocks++;
 					}
+				}
+			}
+		}
+	}
+	else
+	{
+		for(int y = r.top; y < r.bottom; y += bs.y)
+		{
+			uint32 base = o->block.row[y >> 3];
 
-					(mem.*rtxbP)(block, &dst[x << shift], pitch, TEXA);
+			for(int x = r.left; x < r.right; x += bs.x)
+			{
+				uint32 block = base + o->block.col[x >> 3];
 
-					blocks++;
+				if(block < MAX_BLOCKS)
+				{
+					uint32 row = block >> 5;
+					uint32 col = 1 << (block & 31);
+
+					if((m_valid[row] & col) == 0)
+					{
+						m_valid[row] |= col;
+
+						hash_map<uint32, list<uint8*> >::iterator i = m_tiles.find(block);
+
+						if(i != m_tiles.end())
+						{
+							list<uint8*>& l = i->second;
+
+							for(list<uint8*>::iterator j = l.begin(); j != l.end(); j++)
+							{
+								(mem.*rtxbP)(block, *j, pitch, TEXA);
+
+								blocks++;
+							}
+						}
+					}
 				}
 			}
 		}
@@ -339,27 +395,6 @@ bool GSTextureCacheSW::Texture::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA&
 
 	if(blocks > 0)
 	{
-		if(repeating)
-		{
-			for(int y = r.top; y < r.bottom; y += bs.y)
-			{
-				uint32 base = o->block.row[y >> 3];
-
-				for(int x = r.left; x < r.right; x += bs.x)
-				{
-					uint32 block = base + o->block.col[x >> 3];
-
-					if(block < MAX_BLOCKS)
-					{
-						uint32 row = block >> 5;
-						uint32 col = 1 << (block & 31);
-
-						m_valid[row] |= col;
-					}
-				}
-			}
-		}
-
 		m_state->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * blocks << shift);
 	}
 

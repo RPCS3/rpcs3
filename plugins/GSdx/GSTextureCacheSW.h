@@ -38,6 +38,7 @@ public:
 		uint32 m_valid[MAX_PAGES]; // each uint32 bits map to the 32 blocks of that page
 		uint32 m_age;
 		bool m_complete;
+		hash_map<uint32, list<uint8*> > m_tiles;
 
 		explicit Texture(GSState* state, const GSOffset* offset, uint32 tw0);
 		virtual ~Texture();
@@ -50,7 +51,6 @@ protected:
 	GSState* m_state;
 	hash_set<Texture*> m_textures;
 	list<Texture*> m_map[MAX_PAGES];
-	uint32 m_pages[16];
 
 public:
 	GSTextureCacheSW(GSState* state);

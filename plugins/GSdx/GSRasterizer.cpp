@@ -493,15 +493,15 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertices)
 		return;
 	}
 
-	GSVertexSW dedge = GSVertexSW::zero();
-	GSVertexSW dscan = GSVertexSW::zero();
-
 	GSVertexSW dv = v[1] - v[0];
 
-	GSVector4 zero = GSVector4::zero();
+	GSVector4 dt = dv.t / dv.p.xyxy();
 
-	dedge.t = (dv.t / dv.p.yyyy()).xyxy(zero).wyww();
-	dscan.t = (dv.t / dv.p.xxxx()).xyxy(zero).xwww();
+	GSVertexSW dedge;
+	GSVertexSW dscan;
+
+	dedge.t = GSVector4::zero().insert<1, 1>(dt);
+	dscan.t = GSVector4::zero().insert<0, 0>(dt);
 
 	GSVector4 prestep = GSVector4(r.left, r.top) - scan.p;
 

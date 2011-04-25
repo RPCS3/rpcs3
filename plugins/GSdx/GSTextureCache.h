@@ -74,6 +74,7 @@ public:
 		int m_fmt;
 		bool m_target;
 		bool m_complete;
+		hash_map<uint32, list<GSVector2i> > m_tiles;
 
 	public:
 		Source(GSRenderer* r, uint8* temp);
