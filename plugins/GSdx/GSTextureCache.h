@@ -74,13 +74,14 @@ public:
 		int m_fmt;
 		bool m_target;
 		bool m_complete;
-		hash_map<uint32, list<GSVector2i> > m_tiles;
+		bool m_repeating;
+		list<GSVector2i> m_page2tile[MAX_PAGES];
 
 	public:
-		Source(GSRenderer* r, uint8* temp);
+		Source(GSRenderer* r, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, uint8* temp);
 		virtual ~Source();
 
-		virtual void Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect);
+		virtual void Update(const GSVector4i& rect);
 	};
 
 	class Target : public Surface
@@ -92,7 +93,7 @@ public:
 		GSVector4i m_valid;
 
 	public:
-		Target(GSRenderer* r, uint8* temp);
+		Target(GSRenderer* r, const GIFRegTEX0& TEX0, uint8* temp);
 
 		virtual void Update();
 	};

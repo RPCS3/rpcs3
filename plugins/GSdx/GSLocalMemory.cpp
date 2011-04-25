@@ -542,6 +542,72 @@ GSPixelOffset4* GSLocalMemory::GetPixelOffset4(const GIFRegFRAME& FRAME, const G
 	return o;
 }
 
+void GSLocalMemory::GetPage2TileMap(const GIFRegTEX0& TEX0, list<GSVector2i>* page2tile)
+{
+	// TODO: cache this, hash = hash of o + tw + th (th not even needed, it can be 1024 always)
+
+	const GSOffset* o = GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
+
+	const GSLocalMemory::psm_t& psm = m_psm[TEX0.PSM];
+
+	GSVector2i bs = psm.bs;
+
+	int tw = std::max<int>(1 << TEX0.TW, bs.x);
+	int th = std::max<int>(1 << TEX0.TH, bs.y);
+
+	map<uint32, hash_set<uint32> > tmp; // key = page, value = y:x, 7 bits each, max 128x128 tiles for the worst case (1024x1024 32bpp 8x8 blocks)
+
+	for(int y = 0; y < th; y += bs.y)
+	{
+		uint32 base = o->block.row[y >> 3];
+
+		for(int x = 0, i = y << 7; x < tw; x += bs.x, i += bs.x)
+		{
+			uint32 page = (base + o->block.col[x >> 3]) >> 5;
+
+			if(page < MAX_PAGES)
+			{
+				tmp[page].insert(i >> 3); // ((y << 7) | x) >> 3
+			}
+		}
+	}
+
+	// combine the lower 5 bits of the address into a 9:5 pointer:mask form, so the "valid bits" can be tested against an uint32 array
+
+	for(map<uint32, hash_set<uint32> >::iterator i = tmp.begin(); i != tmp.end(); i++)
+	{
+		uint32 page = i->first;
+
+		const hash_set<uint32>& tiles = i->second;
+
+		hash_map<uint32, uint32> m;
+
+		for(hash_set<uint32>::iterator j = tiles.begin(); j != tiles.end(); j++)
+		{
+			uint32 addr = *j;
+
+			uint32 row = addr >> 5;
+			uint32 col = 1 << (addr & 31);
+
+			hash_map<uint32, uint32>::iterator k = m.find(row);
+
+			if(k != m.end())
+			{
+				k->second |= col;
+			}
+			else
+			{
+				m[row] = col;
+			}
+		}
+
+		for(hash_map<uint32, uint32>::iterator j = m.begin(); j != m.end(); j++)
+		{
+			page2tile[page].push_back(GSVector2i(j->first, j->second));
+		}
+	}
+}
+
 ////////////////////
 
 template<int psm, int bsx, int bsy, bool aligned>

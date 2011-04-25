@@ -154,6 +154,8 @@ public:
 	GSOffset* GetOffset(uint32 bp, uint32 bw, uint32 psm);
 	GSPixelOffset4* GetPixelOffset4(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF);
 
+	void GetPage2TileMap(const GIFRegTEX0& TEX0, list<GSVector2i>* page2tile); // count = 512
+
 	// address
 
 	static uint32 BlockNumber32(int x, int y, uint32 bp, uint32 bw)

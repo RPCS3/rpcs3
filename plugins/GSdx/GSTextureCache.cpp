@@ -133,7 +133,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 		}
 	}
 
-	src->Update(TEX0, TEXA, r);
+	src->Update(r);
 
 	m_src.m_used = true;
 
@@ -337,7 +337,20 @@ void GSTextureCache::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rec
 
 						if(!s->m_target)
 						{
-							s->m_valid[page] = 0;
+							if(s->m_repeating)
+							{
+								list<GSVector2i>& l = s->m_page2tile[page];
+						
+								for(list<GSVector2i>::iterator k = l.begin(); k != l.end(); k++)
+								{
+									s->m_valid[k->x] &= ~k->y;
+								}
+							}
+							else
+							{
+								s->m_valid[page] = 0;
+							}
+
 							s->m_complete = false;
 
 							found = b;
@@ -528,10 +541,7 @@ void GSTextureCache::IncAge()
 //Fixme: Several issues in here. Not handling depth stencil, pitch conversion doesnt work.
 GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* dst)
 {
-	Source* src = new Source(m_renderer, m_temp);
-
-	src->m_TEX0 = TEX0;
-	src->m_TEXA = TEXA;
+	Source* src = new Source(m_renderer, TEX0, TEXA, m_temp);
 
 	int tw = 1 << TEX0.TW;
 	int th = 1 << TEX0.TH;
@@ -783,9 +793,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 GSTextureCache::Target* GSTextureCache::CreateTarget(const GIFRegTEX0& TEX0, int w, int h, int type)
 {
-	Target* t = new Target(m_renderer, m_temp);
-
-	t->m_TEX0 = TEX0;
+	Target* t = new Target(m_renderer, TEX0, m_temp);
 
 	// FIXME: initial data should be unswizzled from local mem in Update() if dirty
 
@@ -837,7 +845,7 @@ void GSTextureCache::Surface::Update()
 
 // GSTextureCache::Source
 
-GSTextureCache::Source::Source(GSRenderer* r, uint8* temp)
+GSTextureCache::Source::Source(GSRenderer* r, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, uint8* temp)
 	: Surface(r, temp)
 	, m_palette(NULL)
 	, m_initpalette(true)
@@ -845,6 +853,9 @@ GSTextureCache::Source::Source(GSRenderer* r, uint8* temp)
 	, m_target(false)
 	, m_complete(false)
 {
+	m_TEX0 = TEX0;
+	m_TEXA = TEXA;
+
 	memset(m_valid, 0, sizeof(m_valid));
 
 	m_clut = (uint32*)_aligned_malloc(256 * sizeof(uint32), 32);
@@ -853,6 +864,13 @@ GSTextureCache::Source::Source(GSRenderer* r, uint8* temp)
 
 	m_write.rect = (GSVector4i*)_aligned_malloc(3 * sizeof(GSVector4i), 32);
 	m_write.count = 0;
+
+	m_repeating = m_TEX0.IsRepeating();
+
+	if(m_repeating)
+	{
+		r->m_mem.GetPage2TileMap(m_TEX0, m_page2tile);
+	}
 }
 
 GSTextureCache::Source::~Source()
@@ -864,7 +882,7 @@ GSTextureCache::Source::~Source()
 	_aligned_free(m_write.rect);
 }
 
-void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& rect)
+void GSTextureCache::Source::Update(const GSVector4i& rect)
 {
 	Surface::Update();
 
@@ -872,9 +890,6 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 	{
 		return;
 	}
-
-	m_TEX0 = TEX0;
-	m_TEXA = TEXA;
 
 	GSVector2i bs = GSLocalMemory::m_psm[m_TEX0.PSM].bs;
 
@@ -890,42 +905,24 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 
 	const GSOffset* o = m_renderer->m_context->offset.tex;
 
-	bool repeating = m_TEX0.IsRepeating();
-
-	if(repeating && m_tiles.empty())
-	{
-		for(int y = 0; y < th; y += bs.y)
-		{
-			uint32 base = o->block.row[y >> 3];
-
-			for(int x = 0; x < tw; x += bs.x)
-			{
-				uint32 block = base + o->block.col[x >> 3];
-
-				if(block < MAX_BLOCKS)
-				{
-					m_tiles[block].push_back(GSVector2i(x, y));
-				}
-			}
-		}
-	}
-
 	uint32 blocks = 0;
 
-	if(!repeating)
+	if(m_repeating)
 	{
 		for(int y = r.top; y < r.bottom; y += bs.y)
 		{
 			uint32 base = o->block.row[y >> 3];
 
-			for(int x = r.left; x < r.right; x += bs.x)
+			for(int x = r.left, i = (y << 7) + x; x < r.right; x += bs.x, i += bs.x)
 			{
 				uint32 block = base + o->block.col[x >> 3];
 
 				if(block < MAX_BLOCKS)
 				{
-					uint32 row = block >> 5;
-					uint32 col = 1 << (block & 31);
+					uint32 addr = i >> 3;
+
+					uint32 row = addr >> 5;
+					uint32 col = 1 << (addr & 31);
 
 					if((m_valid[row] & col) == 0)
 					{
@@ -958,19 +955,7 @@ void GSTextureCache::Source::Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TE
 					{
 						m_valid[row] |= col;
 
-						hash_map<uint32, list<GSVector2i> >::iterator i = m_tiles.find(block);
-
-						if(i != m_tiles.end())
-						{
-							list<GSVector2i>& l = i->second;
-
-							for(list<GSVector2i>::iterator j = l.begin(); j != l.end(); j++)
-							{
-								Write(GSVector4i(j->x, j->y, j->x + bs.x, j->y + bs.y));
-
-								blocks++;
-							}
-						}
+						Write(GSVector4i(x, y, x + bs.x, y + bs.y));
 
 						blocks++;
 					}
@@ -1084,11 +1069,13 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 // GSTextureCache::Target
 
-GSTextureCache::Target::Target(GSRenderer* r, uint8* temp)
+GSTextureCache::Target::Target(GSRenderer* r, const GIFRegTEX0& TEX0, uint8* temp)
 	: Surface(r, temp)
 	, m_type(-1)
 	, m_used(false)
 {
+	m_TEX0 = TEX0;
+
 	m_valid = GSVector4i::zero();
 }
 

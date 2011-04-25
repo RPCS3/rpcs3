@@ -35,15 +35,20 @@ public:
 		GIFRegTEXA m_TEXA;
 		void* m_buff;
 		uint32 m_tw;
-		uint32 m_valid[MAX_PAGES]; // each uint32 bits map to the 32 blocks of that page
 		uint32 m_age;
 		bool m_complete;
-		hash_map<uint32, list<uint8*> > m_tiles;
+		bool m_repeating;
+		list<GSVector2i> m_page2tile[MAX_PAGES];
+		uint32 m_valid[MAX_PAGES]; 
 
-		explicit Texture(GSState* state, const GSOffset* offset, uint32 tw0);
+		// m_valid
+		// fast mode: each uint32 bits map to the 32 blocks of that page
+		// repeating mode: 1 bpp image of the texture tiles (8x8), also having 512 elements is just a coincidence (worst case: (1024*1024)/(8*8)/(sizeof(uint32)*8))
+
+		explicit Texture(GSState* state, const GSOffset* offset, uint32 tw0, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA);
 		virtual ~Texture();
 
-		bool Update(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);
+		bool Update(const GSVector4i& r);
 		bool Save(const string& fn, bool dds = false) const;
 	};
 
