@@ -117,6 +117,7 @@ public:
 		IT,
 		ES,
 		ASIA,
+		KO,
 		RegionCount,
 	};
 
