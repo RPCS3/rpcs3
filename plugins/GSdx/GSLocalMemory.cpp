@@ -561,13 +561,13 @@ list<GSVector2i>* GSLocalMemory::GetPage2TileMap(const GIFRegTEX0& TEX0)
 	GSVector2i bs = m_psm[TEX0.PSM].bs;
 
 	int tw = std::max<int>(1 << TEX0.TW, bs.x);
-	int th = std::max<int>(1 << TEX0.TH, bs.y);
+	// int th = std::max<int>(1 << TEX0.TH, bs.y);
 
 	const GSOffset* o = GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
 
 	hash_map<uint32, hash_set<uint32> > tmp; // key = page, value = y:x, 7 bits each, max 128x128 tiles for the worst case (1024x1024 32bpp 8x8 blocks)
 
-	for(int y = 0; y < th; y += bs.y)
+	for(int y = 0; y < 1024; y += bs.y) // the hash is a little short on bits for TEX0.TH, hard-coding it to 1024 lines
 	{
 		uint32 base = o->block.row[y >> 3];
 
