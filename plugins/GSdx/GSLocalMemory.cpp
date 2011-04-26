@@ -448,6 +448,11 @@ GSLocalMemory::~GSLocalMemory()
 
 	for_each(m_omap.begin(), m_omap.end(), aligned_free_second());
 	for_each(m_po4map.begin(), m_po4map.end(), aligned_free_second());
+
+	for(hash_map<uint32, list<GSVector2i>*>::iterator i = m_p2tmap.begin(); i != m_p2tmap.end(); i++)
+	{
+		delete [] i->second;
+	}
 }
 
 GSOffset* GSLocalMemory::GetOffset(uint32 bp, uint32 bw, uint32 psm)
@@ -542,20 +547,25 @@ GSPixelOffset4* GSLocalMemory::GetPixelOffset4(const GIFRegFRAME& FRAME, const G
 	return o;
 }
 
-void GSLocalMemory::GetPage2TileMap(const GIFRegTEX0& TEX0, list<GSVector2i>* page2tile)
+list<GSVector2i>* GSLocalMemory::GetPage2TileMap(const GIFRegTEX0& TEX0)
 {
-	// TODO: cache this, hash = hash of o + tw + th (th not even needed, it can be 1024 always)
+	uint32 hash = TEX0.TBP0 | (TEX0.TBW << 14) | (TEX0.PSM << 20) | (TEX0.TW << 26);
 
-	const GSOffset* o = GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
+	hash_map<uint32, list<GSVector2i>*>::iterator i = m_p2tmap.find(hash);
 
-	const GSLocalMemory::psm_t& psm = m_psm[TEX0.PSM];
+	if(i != m_p2tmap.end())
+	{
+		return i->second;
+	}
 
-	GSVector2i bs = psm.bs;
+	GSVector2i bs = m_psm[TEX0.PSM].bs;
 
 	int tw = std::max<int>(1 << TEX0.TW, bs.x);
 	int th = std::max<int>(1 << TEX0.TH, bs.y);
 
-	map<uint32, hash_set<uint32> > tmp; // key = page, value = y:x, 7 bits each, max 128x128 tiles for the worst case (1024x1024 32bpp 8x8 blocks)
+	const GSOffset* o = GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
+
+	hash_map<uint32, hash_set<uint32> > tmp; // key = page, value = y:x, 7 bits each, max 128x128 tiles for the worst case (1024x1024 32bpp 8x8 blocks)
 
 	for(int y = 0; y < th; y += bs.y)
 	{
@@ -574,11 +584,13 @@ void GSLocalMemory::GetPage2TileMap(const GIFRegTEX0& TEX0, list<GSVector2i>* pa
 
 	// combine the lower 5 bits of the address into a 9:5 pointer:mask form, so the "valid bits" can be tested against an uint32 array
 
-	for(map<uint32, hash_set<uint32> >::iterator i = tmp.begin(); i != tmp.end(); i++)
+	list<GSVector2i>* p2t = new list<GSVector2i>[MAX_PAGES];
+
+	for(hash_map<uint32, hash_set<uint32> >::iterator i = tmp.begin(); i != tmp.end(); i++)
 	{
 		uint32 page = i->first;
 
-		const hash_set<uint32>& tiles = i->second;
+		hash_set<uint32>& tiles = i->second;
 
 		hash_map<uint32, uint32> m;
 
@@ -603,9 +615,13 @@ void GSLocalMemory::GetPage2TileMap(const GIFRegTEX0& TEX0, list<GSVector2i>* pa
 
 		for(hash_map<uint32, uint32>::iterator j = m.begin(); j != m.end(); j++)
 		{
-			page2tile[page].push_back(GSVector2i(j->first, j->second));
+			p2t[page].push_back(GSVector2i(j->first, j->second));
 		}
 	}
+
+	m_p2tmap[hash] = p2t;
+
+	return p2t;
 }
 
 ////////////////////

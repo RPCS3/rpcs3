@@ -38,7 +38,7 @@ public:
 		uint32 m_age;
 		bool m_complete;
 		bool m_repeating;
-		list<GSVector2i> m_page2tile[MAX_PAGES];
+		list<GSVector2i>* m_p2t;
 		uint32 m_valid[MAX_PAGES]; 
 
 		// m_valid

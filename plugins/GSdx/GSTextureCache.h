@@ -75,7 +75,7 @@ public:
 		bool m_target;
 		bool m_complete;
 		bool m_repeating;
-		list<GSVector2i> m_page2tile[MAX_PAGES];
+		list<GSVector2i>* m_p2t;
 
 	public:
 		Source(GSRenderer* r, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, uint8* temp);

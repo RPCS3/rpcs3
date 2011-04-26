@@ -339,7 +339,7 @@ void GSTextureCache::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rec
 						{
 							if(s->m_repeating)
 							{
-								list<GSVector2i>& l = s->m_page2tile[page];
+								list<GSVector2i>& l = s->m_p2t[page];
 						
 								for(list<GSVector2i>::iterator k = l.begin(); k != l.end(); k++)
 								{
@@ -852,6 +852,7 @@ GSTextureCache::Source::Source(GSRenderer* r, const GIFRegTEX0& TEX0, const GIFR
 	, m_fmt(0)
 	, m_target(false)
 	, m_complete(false)
+	, m_p2t(NULL)
 {
 	m_TEX0 = TEX0;
 	m_TEXA = TEXA;
@@ -869,7 +870,7 @@ GSTextureCache::Source::Source(GSRenderer* r, const GIFRegTEX0& TEX0, const GIFR
 
 	if(m_repeating)
 	{
-		r->m_mem.GetPage2TileMap(m_TEX0, m_page2tile);
+		m_p2t = r->m_mem.GetPage2TileMap(m_TEX0);
 	}
 }
 

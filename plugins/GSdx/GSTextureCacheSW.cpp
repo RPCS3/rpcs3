@@ -165,11 +165,11 @@ void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& r
 					{
 						if(t->m_repeating)
 						{
-							list<GSVector2i>& l = t->m_page2tile[page];
+							list<GSVector2i>& l = t->m_p2t[page];
 						
-							for(list<GSVector2i>::iterator k = l.begin(); k != l.end(); k++)
+							for(list<GSVector2i>::iterator j = l.begin(); j != l.end(); j++)
 							{
-								t->m_valid[k->x] &= ~k->y;
+								t->m_valid[j->x] &= ~j->y;
 							}
 						}
 						else
@@ -240,6 +240,7 @@ GSTextureCacheSW::Texture::Texture(GSState* state, const GSOffset* offset, uint3
 	, m_tw(tw0)
 	, m_age(0)
 	, m_complete(false)
+	, m_p2t(NULL)
 {
 	m_TEX0 = TEX0;
 	m_TEXA = TEXA;
@@ -247,6 +248,11 @@ GSTextureCacheSW::Texture::Texture(GSState* state, const GSOffset* offset, uint3
 	memset(m_valid, 0, sizeof(m_valid));
 	
 	m_repeating = m_TEX0.IsRepeating(); // repeating mode always works, it is just slightly slower
+
+	if(m_repeating)
+	{
+		m_p2t = m_state->m_mem.GetPage2TileMap(m_TEX0);
+	}
 }
 
 GSTextureCacheSW::Texture::~Texture()
@@ -284,7 +290,7 @@ bool GSTextureCacheSW::Texture::Update(const GSVector4i& rect)
 
 	if(m_buff == NULL)
 	{
-		uint32 tw0 = std::max<int>(m_TEX0.TW, 5 - shift); // makes one row 32 bytes at least, matches the smallest block size that is allocated above for m_buff
+		uint32 tw0 = std::max<int>(m_TEX0.TW, 5 - shift); // makes one row 32 bytes at least, matches the smallest block size that is allocated for m_buff
 
 		if(m_tw == 0)
 		{
@@ -302,13 +308,6 @@ bool GSTextureCacheSW::Texture::Update(const GSVector4i& rect)
 		if(m_buff == NULL)
 		{
 			return false;
-		}
-
-		const GSOffset* RESTRICT o = m_offset;
-
-		if(m_repeating)
-		{
-			m_state->m_mem.GetPage2TileMap(m_TEX0, m_page2tile);
 		}
 	}
 
