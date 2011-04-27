@@ -23,7 +23,14 @@
 #include "Util.h"
 #include "GS.h"
 
-extern bool __forceinline NoHighlights(int i);
+// extern bool __forceinline NoHighlights(int i);
+
+// return true if triangle SHOULD be painted.
+// Hackish and should be replaced.
+// Previous version was an inlined function but gcc-4.6 does not want to inline it.
+// Because the code is in the middle of vertex which are very often call,
+// a basic macro is more effective -- Gregory
+#define NoHighlights(I) (!(conf.settings().xenosaga_spec) || !vb[(I)].zbuf.zmsk || prim->iip)
 
 enum PRIM_TYPE {
     PRIM_POINT = 0,

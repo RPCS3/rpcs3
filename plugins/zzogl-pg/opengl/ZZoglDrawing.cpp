@@ -41,13 +41,14 @@ void Prim()
 	curvb.SetCurrentPrim();
 }
 
+// Replaced by a macro -> see ZZoglDrawing.h 
 // return true if triangle SHOULD be painted.
 // Hackish and should be replaced.
-bool __forceinline NoHighlights(int i)
-{
-	//Old code
-	return (!(conf.settings().xenosaga_spec) || !vb[i].zbuf.zmsk || prim->iip) ;
-}
+// bool __forceinline NoHighlights(int i)
+// {
+// 	//Old code
+// 	return (!(conf.settings().xenosaga_spec) || !vb[i].zbuf.zmsk || prim->iip) ;
+// }
 
 // Not inlining for the moment to avoid getting 'unresolved external symbol' errors in Windows. 
 // This could also be resolved by moving the function into the header...
