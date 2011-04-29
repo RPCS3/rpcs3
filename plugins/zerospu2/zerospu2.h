@@ -178,7 +178,7 @@ static __forceinline u16 c_offset(u32 ch)
 	return channel_test(ch) ? 0x0 : 0x400;
 }
 
-static __forceinline tSPU_ATTR spu2attr(u32 channel)
+static __forceinline tSPU_ATTR &spu2attr(u32 channel)
 {
 	return channel_test(channel) ? spu2attr0 : spu2attr1;
 }

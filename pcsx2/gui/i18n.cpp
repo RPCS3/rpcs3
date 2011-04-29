@@ -60,6 +60,7 @@ LangPackEnumeration::LangPackEnumeration()
 {
 	wxLangId = wxLANGUAGE_DEFAULT;
 	englishName = L" System Default";		// left-side space forces it to sort to the front of the lists
+	englishName += _(" (default)");
 	canonicalName = L"default";
 
 	int sysLang = wxLocale::GetSystemLanguage();
