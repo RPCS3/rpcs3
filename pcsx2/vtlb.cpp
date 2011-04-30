@@ -68,11 +68,19 @@ __inline int CheckCache(u32 addr)
 
 	for(int i = 1; i < 48; i++)
 	{
-		if (((tlb[i].EntryLo1 & 0x38) >> 3) == 0x3 || ((tlb[i].EntryLo0 & 0x38) >> 3) == 0x3) {
+		if (((tlb[i].EntryLo1 & 0x38) >> 3) == 0x3) {
+			mask  = tlb[i].PageMask;
+			
+			if ((addr >= tlb[i].PFN1) && (addr <= tlb[i].PFN1 + mask)) {
+				//DevCon.Warning("Yay! Cache check cache addr=%x, mask=%x, addr+mask=%x, VPN2=%x PFN0=%x", addr, mask, (addr & mask), tlb[i].VPN2, tlb[i].PFN0); 
+				return true;
+			}
+		}
+		if (((tlb[i].EntryLo0 & 0x38) >> 3) == 0x3) {
 			mask  = tlb[i].PageMask;
 			
 			if ((addr >= tlb[i].PFN0) && (addr <= tlb[i].PFN0 + mask)) {
-				//DevCon.Warning("Yay! Cache check cache addr=%x, mask=%x, addr+mask=%x, VPN2=%x", addr, mask, (addr & mask), tlb[i].VPN2); 
+				//DevCon.Warning("Yay! Cache check cache addr=%x, mask=%x, addr+mask=%x, VPN2=%x PFN0=%x", addr, mask, (addr & mask), tlb[i].VPN2, tlb[i].PFN0); 
 				return true;
 			}
 		}

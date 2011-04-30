@@ -39,41 +39,31 @@ int getFreeCache(u32 mem, int mode, int * way ) {
 	u32 hand=(u8)vmv;
 	u32 paddr=ppf-hand+0x80000000;
 
-	if((cpuRegs.CP0.n.Config & 0x10000)  == 0) DevCon.Warning("Cache off!");
+	if((cpuRegs.CP0.n.Config & 0x10000)  == 0) CACHE_LOG("Cache off!");
 	
 	if ((pCache[i].tag[0] & ~0xFFF) == (paddr & ~0xFFF) && (pCache[i].tag[0] & VALID_FLAG))
 	{
 		*way = 0;
-		if(pCache[i].tag[0] & LOCK_FLAG) DevCon.Warning("Index %x Way %x Locked!!", i, 0);
+		if(pCache[i].tag[0] & LOCK_FLAG) CACHE_LOG("Index %x Way %x Locked!!", i, 0);
 		return i;
 	}
 	else if((pCache[i].tag[1] & ~0xFFF) == (paddr & ~0xFFF) && (pCache[i].tag[1] & VALID_FLAG))
 	{
 		*way = 1;
-		if(pCache[i].tag[1] & LOCK_FLAG) DevCon.Warning("Index %x Way %x Locked!!", i, 1);
+		if(pCache[i].tag[1] & LOCK_FLAG) CACHE_LOG("Index %x Way %x Locked!!", i, 1);
 		return i;
 	}
 
 	
 
-	number = ((pCache[i].tag[0]>>4) & 1) ^ ((pCache[i].tag[1]>>4) & 1);
+	number = (((pCache[i].tag[0]) & LRF_FLAG) ^ ((pCache[i].tag[1]) & LRF_FLAG)) >> 4;
 	
 
 	ppf = (ppf & ~0x3F) ; 
-	if((pCache[i].tag[number] & (DIRTY_FLAG|VALID_FLAG)) == (DIRTY_FLAG|VALID_FLAG))	// Dirty
+	if((pCache[i].tag[number] & (DIRTY_FLAG|VALID_FLAG)) == (DIRTY_FLAG|VALID_FLAG))	// Dirty Write
 	{		
-		s32 oldppf = (pCache[i].tag[number] & ~0xf0000fff) + (mem & 0xFC0) + 0x20000000;
-		
-		CACHE_LOG("Dirty cache fill! PPF %x", oldppf);
-		*reinterpret_cast<mem64_t*>(oldppf) = pCache[i].data[number][0].b8._u64[0];
-		*reinterpret_cast<mem64_t*>(oldppf+8) =  pCache[i].data[number][0].b8._u64[1];
-		*reinterpret_cast<mem64_t*>(oldppf+16) = pCache[i].data[number][1].b8._u64[0];
-		*reinterpret_cast<mem64_t*>(oldppf+24) = pCache[i].data[number][1].b8._u64[1];
-		*reinterpret_cast<mem64_t*>(oldppf+32) = pCache[i].data[number][2].b8._u64[0];
-		*reinterpret_cast<mem64_t*>(oldppf+40) = pCache[i].data[number][2].b8._u64[1];
-		*reinterpret_cast<mem64_t*>(oldppf+48) = pCache[i].data[number][3].b8._u64[0];
-		*reinterpret_cast<mem64_t*>(oldppf+56) = pCache[i].data[number][3].b8._u64[1];
-		pCache[i].tag[number] &= ~DIRTY_FLAG;
+		//Perform a cache miss.
+		return -1;
 	}
 	
 	
@@ -96,7 +86,6 @@ int getFreeCache(u32 mem, int mode, int * way ) {
 	else
 		pCache[i].tag[number] |= LRF_FLAG;
 
-	
 	return i;
 	
 }
@@ -106,6 +95,14 @@ void writeCache8(u32 mem, u8 value) {
 	//u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
 	//s32 ppf=(mem+vmv) & ~0x3f;
 	i = getFreeCache(mem,1,&number);
+
+	if(i == -1)
+	{
+		u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+		s32 ppf=mem+vmv;
+		*reinterpret_cast<mem8_t*>(ppf) = value;
+		return;
+	}
 	CACHE_LOG("writeCache8 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 	pCache[i].tag[number] |= DIRTY_FLAG;	// Set Dirty Bit if mode == write
 	pCache[i].data[number][(mem>>4) & 0x3].b8._u8[(mem&0xf)] = value;
@@ -116,6 +113,13 @@ void writeCache16(u32 mem, u16 value) {
 	//u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
 	//s32 ppf=(mem+vmv) & ~0x3f;
 	i = getFreeCache(mem,1,&number);
+	if(i == -1)
+	{
+		u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+		s32 ppf=mem+vmv;
+		*reinterpret_cast<mem16_t*>(ppf) = value;
+		return;
+	}
 	CACHE_LOG("writeCache16 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 	pCache[i].tag[number] |= DIRTY_FLAG;	// Set Dirty Bit if mode == write
 	pCache[i].data[number][(mem>>4) & 0x3].b8._u16[(mem&0xf)>>1] = value;
@@ -126,6 +130,13 @@ void writeCache32(u32 mem, u32 value) {
 	//u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
 	//s32 ppf=(mem+vmv) & ~0x3f;
 	i = getFreeCache(mem,1,&number);
+	if(i == -1)
+	{
+		u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+		s32 ppf=mem+vmv;
+		*reinterpret_cast<mem32_t*>(ppf) = value;
+		return;
+	}
 	CACHE_LOG("writeCache32 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 	pCache[i].tag[number] |= DIRTY_FLAG;	// Set Dirty Bit if mode == write
 	pCache[i].data[number][(mem>>4) & 0x3].b8._u32[(mem&0xf)>>2] = value;
@@ -136,6 +147,13 @@ void writeCache64(u32 mem, const u64 value) {
 	//u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
 	//s32 ppf=(mem+vmv) & ~0x3f;
 	i = getFreeCache(mem,1,&number);
+	if(i == -1)
+	{
+		u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+		s32 ppf=mem+vmv;
+		*reinterpret_cast<mem64_t*>(ppf) = value;
+		return;
+	}
 	CACHE_LOG("writeCache64 %8.8x adding to %d, way %d, value %x", mem, i,number,value);
 	pCache[i].tag[number] |= DIRTY_FLAG;	// Set Dirty Bit if mode == write
 	pCache[i].data[number][(mem>>4) & 0x3].b8._u64[(mem&0xf)>>3] = value;
@@ -146,6 +164,14 @@ void writeCache128(u32 mem, const mem128_t* value){
 	//u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
 	//s32 ppf=(mem+vmv) & ~0x3f;
 	i = getFreeCache(mem,1,&number);
+	if(i == -1)
+	{
+		u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+		s32 ppf=mem+vmv;
+		*reinterpret_cast<mem64_t*>(ppf) = value->lo;
+		*reinterpret_cast<mem64_t*>(ppf+8) = value->hi;
+		return;
+	}
 	CACHE_LOG("writeCache128 %8.8x adding to %d way %x tag %x vallo = %x_%x valhi = %x_%x", mem, i, number, pCache[i].tag[number], value->lo, value->hi);
 	pCache[i].tag[number] |= DIRTY_FLAG;	// Set Dirty Bit if mode == write
 	pCache[i].data[number][(mem>>4) & 0x3].b8._u64[0] = value->lo;
@@ -157,7 +183,12 @@ u8 readCache8(u32 mem) {
 	
 	i = getFreeCache(mem,0,&number);
 	CACHE_LOG("readCache %8.8x from %d, way %d QW %x u8 part %x Really Reading %x", mem, i,number, (mem >> 4) & 0x3, (mem&0xf)>>2, (u32)pCache[i].data[number][(mem >> 4) & 0x3].b8._u8[(mem&0xf)]);
-
+	if(i == -1)
+	{
+		u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+		s32 ppf=mem+vmv;
+		return *(u8*)ppf;
+	}
 	return pCache[i].data[number][(mem >> 4) & 0x3].b8._u8[(mem&0xf)];
 }
 
@@ -167,6 +198,13 @@ u16 readCache16(u32 mem) {
 	i = getFreeCache(mem,0,&number);
 	CACHE_LOG("readCache %8.8x from %d, way %d QW %x u16 part %x Really Reading %x", mem, i,number, (mem >> 4) & 0x3, (mem&0xf)>>2, (u32)pCache[i].data[number][(mem >> 4) & 0x3].b8._u16[(mem&0xf)>>1]);
 
+	if(i == -1)
+	{
+		u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+		s32 ppf=mem+vmv;
+		return *(u16*)ppf;
+	}
+
 	return pCache[i].data[number][(mem >> 4) & 0x3].b8._u16[(mem&0xf)>>1];
 }
 
@@ -175,7 +213,12 @@ u32 readCache32(u32 mem) {
 	
 	i = getFreeCache(mem,0,&number);
 	CACHE_LOG("readCache %8.8x from %d, way %d QW %x u32 part %x Really Reading %x", mem, i,number, (mem >> 4) & 0x3, (mem&0xf)>>2, (u32)pCache[i].data[number][(mem >> 4) & 0x3].b8._u32[(mem&0xf)>>2]);
-
+	if(i == -1)
+	{
+		u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+		s32 ppf=mem+vmv;
+		return *(u32*)ppf;
+	}
 	return pCache[i].data[number][(mem >> 4) & 0x3].b8._u32[(mem&0xf)>>2];
 }
 
@@ -184,7 +227,12 @@ u64 readCache64(u32 mem) {
 	
 	i = getFreeCache(mem,0,&number);
 	CACHE_LOG("readCache %8.8x from %d, way %d QW %x u64 part %x Really Reading %x_%x", mem, i,number, (mem >> 4) & 0x3, (mem&0xf)>>2, pCache[i].data[number][(mem >> 4) & 0x3].b8._u64[(mem&0xf)>>3]);
-
+	if(i == -1)
+	{
+		u32 vmv=vtlbdata.vmap[mem>>VTLB_PAGE_BITS];
+		s32 ppf=mem+vmv;
+		return *(u64*)ppf;
+	}
 	return pCache[i].data[number][(mem >> 4) & 0x3].b8._u64[(mem&0xf)>>3];
 }
 
@@ -199,7 +247,7 @@ void CACHE() {
     u32 addr;
 
    addr = cpuRegs.GPR.r[_Rs_].UL[0] + _Imm_;
-  // DevCon.Warning("cpuRegs.GPR.r[_Rs_].UL[0] = %x, IMM = %x RT = %x", cpuRegs.GPR.r[_Rs_].UL[0], _Imm_, _Rt_);
+  // CACHE_LOG("cpuRegs.GPR.r[_Rs_].UL[0] = %x, IMM = %x RT = %x", cpuRegs.GPR.r[_Rs_].UL[0], _Imm_, _Rt_);
 	switch (_Rt_) 
 	{
 		case 0x1a: //DHIN (Data Cache Hit Invalidate)
@@ -298,7 +346,7 @@ void CACHE() {
 		{
 			int index = (addr >> 6) & 0x3F;
 			int way = 0;
-			u32 pfnaddr = (pCache[index].tag[way] & ~0xf0000fff) | (addr & 0xfc0); 
+			u32 pfnaddr = (pCache[index].tag[way] & ~0x80000fff) | (addr & 0xfc0); 
 			u32 vmv=vtlbdata.vmap[pfnaddr>>VTLB_PAGE_BITS];
 			s32 ppf=(pfnaddr+vmv) & ~0x3F;
 			u32 hand=(u8)vmv;
@@ -404,7 +452,7 @@ void CACHE() {
 		{
 			int index = (addr >> 6) & 0x3F;
 			int way = addr & 0x1;
-			u32 pfnaddr = (pCache[index].tag[way] & ~0xf0000fff) + (addr & 0xFC0);
+			u32 pfnaddr = (pCache[index].tag[way] & ~0x80000fff) + (addr & 0xFC0);
 			u32 vmv=vtlbdata.vmap[pfnaddr >>VTLB_PAGE_BITS];
 			s32 ppf=pfnaddr+vmv;
 			u32 hand=(u8)vmv;
@@ -413,7 +461,7 @@ void CACHE() {
 			CACHE_LOG("CACHE DXWBIN addr %x, index %d, way %d, Flags %x Paddr %x tag %x",addr,index,way,pCache[index].tag[way] & 0x78, paddr, pCache[index].tag[way]);
 			if((pCache[index].tag[way] & (DIRTY_FLAG|VALID_FLAG)) == (DIRTY_FLAG|VALID_FLAG))	// Dirty
 			{		
-				ppf = (ppf & 0x0fffffff) + 0x20000000;
+				ppf = (ppf & 0x7fffffff);
 				CACHE_LOG("DXWBIN Dirty WriteBack! PPF %x", ppf);
 
 				*reinterpret_cast<mem64_t*>(ppf) = pCache[index].data[way][0].b8._u64[0];
@@ -450,7 +498,7 @@ void CACHE() {
 			break;
 		}
 		default:
-			CACHE_LOG("Cache mode %x not impemented", _Rt_);
+			DevCon.Warning("Cache mode %x not impemented", _Rt_);
 			break;
 	}
 }
