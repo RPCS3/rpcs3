@@ -200,19 +200,16 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 			// only seems to happen on TTE mode transfers with their split-64-bit packets, there shouldn't
 			// be any need to worry about queuing more than 16 bytes of data,
 			//
-
-			
-
-			ret = 0;
 			minSize = aMin(minSize, 4-partial_count);
+			
 			for( uint i=0; i<(minSize & 3); ++i)
 			{
 				partial_write[partial_count++] = ((u32*)data)[i];
-				ret++;
+				
 			}
 
 			pxAssume( partial_count <= 4 );
-			
+						
 			if (partial_count == 4)
 			{
 				GetMTGS().PrepDataPacket(GIF_PATH_2, 1);
@@ -220,6 +217,8 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 				GetMTGS().SendDataPacket();
 				partial_count = 0;
 			}
+
+			ret = minSize;
 		}
 		else
 		{
@@ -242,7 +241,9 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 		{
 			vif1.cmd = 0;
 		}
+
 		vif1.vifstalled    = true;
+
 		return ret;
 	}
 	return 0;

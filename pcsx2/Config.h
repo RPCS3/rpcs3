@@ -52,6 +52,7 @@ enum GamefixId
 	Fix_SkipMpeg,
 	Fix_OPHFlag,
 	Fix_DMABusy,
+	Fix_VIFFIFO,
 
 	GamefixId_COUNT
 };
@@ -341,7 +342,8 @@ struct Pcsx2Config
 				EETimingHack	:1,		// General purpose timing hack.
 				SkipMPEGHack	:1,		// Skips MPEG videos (Katamari and other games need this)
 				OPHFlagHack		:1,		// Bleach Blade Battlers
-				DMABusyHack		:1;		// Denies writes to the DMAC when it's busy. This is correct behaviour but bad timing can cause problems.
+				DMABusyHack		:1,		// Denies writes to the DMAC when it's busy. This is correct behaviour but bad timing can cause problems.
+				VIFFIFOHack		:1;     // Pretends to fill the non-existant VIF FIFO Buffer.
 		BITFIELD_END
 
 		GamefixOptions();
@@ -487,6 +489,7 @@ TraceLogFilters&				SetTraceConfig();
 #define CHECK_SKIPMPEGHACK			(EmuConfig.Gamefixes.SkipMPEGHack)	 // Finds sceMpegIsEnd pattern to tell the game the mpeg is finished (Katamari and a lot of games need this)
 #define CHECK_OPHFLAGHACK			(EmuConfig.Gamefixes.OPHFlagHack)	 // Bleach Blade Battlers
 #define CHECK_DMABUSYHACK			(EmuConfig.Gamefixes.DMABusyHack)    // Denies writes to the DMAC when it's busy. This is correct behaviour but bad timing can cause problems.
+#define CHECK_VIFFIFOHACK			(EmuConfig.Gamefixes.VIFFIFOHack)    // Pretends to fill the non-existant VIF FIFO Buffer.
 
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW			(EmuConfig.Cpu.Recompiler.vuOverflow)

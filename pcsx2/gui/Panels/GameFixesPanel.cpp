@@ -90,6 +90,14 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 				L"Known to affect following games:\n"
 				L" * Mana Khemia 1 (Going \"off campus\")\n"
 			)
+		},
+		{
+			_("Simulate VIF1 FIFO read ahead. Fixes slow loading games."),
+			pxEt( "!ContextTip:Gamefixes:VIF1 FIFO hack",
+				L"Known to affect following games:\n"
+				L" * Test Drive Unlimited\n"
+				L" * Transformers"
+			)
 		}
 	};
 

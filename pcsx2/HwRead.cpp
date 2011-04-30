@@ -136,6 +136,11 @@ mem32_t __fastcall _hwRead32(u32 mem)
 		}
 		break;
 	}
+	//Hack for Transformers and Test Drive Unlimited to simulate filling the VIF FIFO
+	//It actually stalls VIF a few QW before the end of the transfer, so we need to pretend its all gone
+	//else itll take aaaaaaaaages to boot.
+	if(mem == (D1_CHCR + 0x10) && CHECK_VIFFIFOHACK) 
+		return psHu32(mem) + (vif1ch.qwc * 16);
 
 	return psHu32(mem);
 }

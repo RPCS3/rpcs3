@@ -252,7 +252,8 @@ const wxChar *const tbl_GamefixNames[] =
 	L"EETiming",
 	L"SkipMpeg",
 	L"OPHFlag",
-	L"DMABusy"
+	L"DMABusy",
+	L"VIFFIFO"
 };
 
 const __fi wxChar* EnumToString( GamefixId id )
@@ -310,6 +311,7 @@ void Pcsx2Config::GamefixOptions::Set( GamefixId id, bool enabled )
 		case Fix_SkipMpeg:		SkipMPEGHack		= enabled;	break;
 		case Fix_OPHFlag:		OPHFlagHack			= enabled;  break;
 		case Fix_DMABusy:		DMABusyHack			= enabled;  break;
+		case Fix_VIFFIFO:		VIFFIFOHack			= enabled;  break;
 
 		jNO_DEFAULT;
 	}
@@ -331,8 +333,9 @@ bool Pcsx2Config::GamefixOptions::Get( GamefixId id ) const
 		case Fix_SkipMpeg:		return SkipMPEGHack;
 		case Fix_OPHFlag:		return OPHFlagHack;
 		case Fix_DMABusy:		return DMABusyHack;
+		case Fix_VIFFIFO:		return VIFFIFOHack;
 		
-		jNO_DEFAULT
+		jNO_DEFAULT;
 	}
 	return false;		// unreachable, but we still need to suppress warnings >_<
 }
@@ -352,6 +355,7 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 	IniBitBool( SkipMPEGHack );
 	IniBitBool( OPHFlagHack );
 	IniBitBool( DMABusyHack );
+	IniBitBool( VIFFIFOHack );
 }
 
 Pcsx2Config::Pcsx2Config()
