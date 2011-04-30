@@ -114,11 +114,17 @@ protected:
 
 	void GrowVertexBuffer()
 	{
-	    if(m_vertices != NULL) _aligned_free(m_vertices);
+		int maxcount = std::max<int>(m_maxcount * 3 / 2, 10000);
+		Vertex* vertices = (Vertex*)_aligned_malloc(sizeof(Vertex) * maxcount, 16);
 
-		m_maxcount = max(10000, m_maxcount * 3/2);
-		m_vertices = (Vertex*)_aligned_malloc(sizeof(Vertex) * m_maxcount, 16);
-		m_maxcount -= 100;
+	    if(m_vertices != NULL)
+		{
+			memcpy(vertices, m_vertices, sizeof(Vertex) * m_maxcount);
+			_aligned_free(m_vertices);
+		}
+
+		m_vertices = vertices;
+		m_maxcount = maxcount - 100;
 	}
 
 	__forceinline Vertex* DrawingKick(int& count)
