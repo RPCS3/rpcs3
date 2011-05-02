@@ -19,7 +19,17 @@
 #include "Threading.h"
 #include "IniInterface.h"
 
+#ifdef __LINUX__
+// I do not know if it is a GCC issue or a bug in wxwidget !
+// Anyway the code isn't used (m_hasContextHelp always false) so I remove
+// it for linux. The 'vtable' issue appears with the include of 
+// <wx/cshelp.h> -- Gregory
+#define GCC_4_6_LTO_COMPILATION_ISSUE
+#endif
+
+#ifndef GCC_4_6_LTO_COMPILATION_ISSUE
 #include <wx/cshelp.h>
+#endif
 #include <wx/tooltip.h>
 #include <wx/spinctrl.h>
 
@@ -146,8 +156,10 @@ void wxDialogWithHelpers::Init( const pxDialogCreationFlags& cflags )
 
 	m_extraButtonSizer	= NULL;
 
+#ifndef GCC_4_6_LTO_COMPILATION_ISSUE
 	if( m_hasContextHelp )
 		delete wxHelpProvider::Set( new wxSimpleHelpProvider() );
+#endif
 
 	// GTK/Linux Note: currently the Close (X) button doesn't appear to work in dialogs.  Docs
 	// indicate that it should, so I presume the problem is in wxWidgets and that (hopefully!)
@@ -327,6 +339,7 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 
 	m_extraButtonSizer = new wxBoxSizer( wxHORIZONTAL );
 
+#ifndef GCC_4_6_LTO_COMPILATION_ISSUE
 	// Add the context-sensitive help button on the caption for the platforms
 	// which support it (currently MSW only)
 	if( m_hasContextHelp )
@@ -336,6 +349,7 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 		*m_extraButtonSizer += new wxContextHelpButton(this) | StdButton();
 #endif
 	}
+#endif
 
 	// create a sizer to hold the help and ok/cancel buttons, for platforms
 	// that need a custom help icon.  [fixme: help icon prolly better off somewhere else]
