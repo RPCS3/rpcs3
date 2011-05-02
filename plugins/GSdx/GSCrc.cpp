@@ -180,6 +180,7 @@ CRC::Game CRC::m_games[] =
 	{0x774DE8E2, ValkyrieProfile2, JP, 0},
 	{0x04CCB600, ValkyrieProfile2, EU, 0},
 	{0xB65E141B, ValkyrieProfile2, EU, 0}, // PAL German
+	{0xC70FC973, ValkyrieProfile2, EU, 0}, // PAL Italy
 	{0x47B9B2FD, RadiataStories, US, 0},
 	{0xE8FCF8EC, SMTNocturne, US, ZWriteMustNotClear},	// saves/reloads z buffer around shadow drawing, same issue with all the SMT games following
 	{0xF0A31EE3, SMTNocturne, EU, ZWriteMustNotClear},	// SMTNocturne (Lucifers Call in EU)

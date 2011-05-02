@@ -68,6 +68,9 @@ void GSCaptureDlg::OnInit()
 
 	ComboBoxAppend(IDC_CODECS, "Uncompressed", 0, true);
 
+	ComboBoxAppend(IDC_COLORSPACE, "YUY2", 0, true);
+	ComboBoxAppend(IDC_COLORSPACE, "RGB32", 1, false);
+
 	CoInitialize(0); // this is obviously wrong here, each thread should call this on start, and where is CoUninitalize?
 
 	BeginEnumSysDev(CLSID_VideoCompressorCategory, moniker)
@@ -178,6 +181,7 @@ bool GSCaptureDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		m_width = GetTextAsInt(IDC_WIDTH);
 		m_height = GetTextAsInt(IDC_HEIGHT);
 		m_filename = GetText(IDC_FILENAME);
+		ComboBoxGetSelData(IDC_COLORSPACE, (INT_PTR)m_colorspace);
 
 		Codec c;
 

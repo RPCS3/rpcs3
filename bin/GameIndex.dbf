@@ -39038,6 +39038,12 @@ Region = PAL-E
 Compat = 5
 VuAddSubHack = 1
 ---------------------------------------------
+Serial = SLES-54647
+Name   = Valkyrie Profile 2 - Silmeria
+Region = PAL-I
+Compat = 5
+VuAddSubHack = 1
+---------------------------------------------
 Serial = SLES-54666
 Name   = Mr. Bean
 Region = PAL-E

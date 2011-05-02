@@ -74,6 +74,7 @@
 #define IDC_USERHACKS                   2047
 #define IDC_SKIPDRAWHACKEDIT            2048
 #define IDC_STATIC10                    2049
+#define IDC_COLORSPACE                  3000
 #define IDR_CONVERT_FX                  10000
 #define IDR_TFX_FX                      10001
 #define IDR_MERGE_FX                    10002
