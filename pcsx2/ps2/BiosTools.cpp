@@ -288,7 +288,8 @@ bool IsBIOS(const wxString& filename, wxString& description)
 	pxInputStream inway( filename, new wxFFileInputStream( filename ) );
 	
 	if (!inway.IsOk()) return false;
-	if (inway.Length() < 512*1024) return false;
+	// FPS2BIOS is smaller and of variable size
+	//if (inway.Length() < 512*1024) return false;
 
 	try {
 		u32 version;
