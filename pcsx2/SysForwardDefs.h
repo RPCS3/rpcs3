@@ -17,7 +17,7 @@
 
 static const int PCSX2_VersionHi	= 0;
 static const int PCSX2_VersionMid	= 9;
-static const int PCSX2_VersionLo	= 7;
+static const int PCSX2_VersionLo	= 9;
 
 class SysCoreThread;
 class CpuInitializerSet;
