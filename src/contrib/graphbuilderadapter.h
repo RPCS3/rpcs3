@@ -5,6 +5,7 @@
 #pragma once
 #endif
 
+#include <cstdlib>
 #include <map>
 #include <stack>
 #include "yaml-cpp/eventhandler.h"
