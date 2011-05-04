@@ -427,7 +427,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 	mVUsetupRange(mVU, startPC, 1); // Setup Program Bounds/Range
 	mVU.regAlloc->reset();	// Reset regAlloc
 	mVUinitFirstPass(mVU, pState, thisPtr);
-	for (int branch = 0; mVUcount < endCount; mVUcount++) {
+	for(int branch = 0; mVUcount < endCount; mVUcount++) {
 		incPC(1);
 		startLoop(mVU);
 		mVUincCycles(mVU, 1);
@@ -462,7 +462,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 	setCode();
 	mVUbranch = 0;
 	u32 x = 0;
-	for (; x < endCount; x++) {
+	for( ; x < endCount; x++) {
 		if (mVUinfo.isEOB)			{ handleBadOp(mVU, x); x = 0xffff; }
 		if (mVUup.mBit)				{ xOR(ptr32[&mVU.regs().flags], VUFLAG_MFLAGSET); }
 		mVUexecuteInstruction(mVU);

@@ -227,6 +227,7 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define shuffleSS(x) ((x==1)?(0x27):((x==2)?(0xc6):((x==4)?(0xe1):(0xe4))))
 #define clampE       CHECK_VU_EXTRA_OVERFLOW
 #define elif		 else if
+#define varPrint(x)  DevCon.WriteLn(#x " = %d", (int)x)
 
 #define branchAddr (																	\
 	pxAssumeDev((iPC & 1) == 0, "microVU: Expected Lower Op for valid branch addr."),	\

@@ -54,7 +54,7 @@ __fi void mVUstatusFlagOp(mV) {
 
 int findFlagInst(int* fFlag, int cycles) {
 	int j = 0, jValue = -1;
-	for (int i = 0; i < 4; i++) {
+	for(int i = 0; i < 4; i++) {
 		if ((fFlag[i] <= cycles) && (fFlag[i] > jValue)) { j = i; jValue = fFlag[i]; }
 	}
 	return j;
@@ -64,7 +64,7 @@ int findFlagInst(int* fFlag, int cycles) {
 int sortFlag(int* fFlag, int* bFlag, int cycles) {
 	int lFlag = -5;
 	int x = 0;
-	for (int i = 0; i < 4; i++) {
+	for(int i = 0; i < 4; i++) {
 		bFlag[i] = findFlagInst(fFlag, cycles);
 		if (lFlag != bFlag[i]) { x++; }
 		lFlag = bFlag[i];
@@ -83,18 +83,18 @@ __fi void mVUsetFlags(mV, microFlagCycles& mFC) {
 	u32 aCount = 1; // Amount of instructions needed to get valid mac flag instances for block linking
 
 	// Ensure last ~4+ instructions update mac/status flags (if next block's first 4 instructions will read them)
-	for (int i = mVUcount; i > 0; i--, aCount++) {
+	for(int i = mVUcount; i > 0; i--, aCount++) {
 		if (sFLAG.doFlag) { 
-			if (__Mac)	  { mFLAG.doFlag = 1; } 
-			if (__Status) { sFLAG.doNonSticky = 1; } 		
-			if (aCount >= 4) { break; } 
+			if (__Mac)    mFLAG.doFlag = 1;
+			if (__Status) sFLAG.doNonSticky = 1; 		
+			if (aCount >= 4) break;
 		}
 		incPC2(-2);
 	}
 
 	// Status/Mac Flags Setup Code
 	int xS = 0, xM = 0, xC = 0;
-	for (int i = 0; i < 4; i++) {
+	for(int i = 0; i < 4; i++) {
 		mFC.xStatus[i] = i;
 		mFC.xMac   [i] = i;
 		mFC.xClip  [i] = i;
@@ -122,7 +122,7 @@ __fi void mVUsetFlags(mV, microFlagCycles& mFC) {
 	mFC.cycles	= 0;
 	u32 xCount	= mVUcount; // Backup count
 	iPC			= mVUstartPC;
-	for (mVUcount = 0; mVUcount < xCount; mVUcount++) {
+	for(mVUcount = 0; mVUcount < xCount; mVUcount++) {
 		if (mVUlow.isFSSET && !noFlagOpts) {
 			if (__Status) { // Don't Optimize out on the last ~4+ instructions
 				if ((xCount - mVUcount) > aCount) { mVUstatusFlagOp(mVU); }

@@ -1346,7 +1346,7 @@ void normJumpPass2(mV) {
 		xSHL(gprT1, 3);
 		xAND(gprT1, mVU.microMemSize - 8);
 		xMOV(ptr32[&mVU.branch], gprT1);
-		if (!mVUlow.evilBranch) xMOV(ptr32[&mVU.branch],	  gprT1);
+		if (!mVUlow.evilBranch) xMOV(ptr32[&mVU.branch],	 gprT1);
 		else					xMOV(ptr32[&mVU.evilBranch], gprT1);
 		if (mVUlow.badBranch) {
 			xADD(gprT1, 8);

@@ -168,13 +168,16 @@ void mVUdispatcherD(mV) {
 _mVUt void* __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 	microVU& mVU = mVUx;
-	//DevCon.WriteLn("microVU%x: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
+	u32 vuLimit  = vuIndex ? 0x3fff : 0xfff;
+	if (startPC  > vuLimit) {
+		DevCon.Warning("microVU%x Warning: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
+	}
 
-	mVU.cycles		 = cycles;
+	mVU.cycles		= cycles;
 	mVU.totalCycles = cycles;
 
 	xSetPtr(mVU.prog.x86ptr); // Set x86ptr to where last program left off
-	return mVUsearchProg<vuIndex>(startPC, (uptr)&mVU.prog.lpState); // Find and set correct program
+	return mVUsearchProg<vuIndex>(startPC & vuLimit, (uptr)&mVU.prog.lpState); // Find and set correct program
 }
 
 //------------------------------------------------------------------
