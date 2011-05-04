@@ -42,6 +42,7 @@ int Interpolation = 4;
 */
 
 bool EffectsDisabled = false;
+float FinalVolume;
 int ReverbBoost = 0;
 bool postprocess_filter_enabled = 1;
 bool _visual_debug_enabled = false; // windows only feature
@@ -66,6 +67,8 @@ void ReadSettings()
 	
 	Interpolation = CfgReadInt( L"MIXING",L"Interpolation", 4 );
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
+	FinalVolume = ((float)CfgReadInt( L"MIXING", L"FinalVolume", 100 )) / 100;
+		if ( FinalVolume > 1.0f) FinalVolume = 1.0f;
 	ReverbBoost = CfgReadInt( L"MIXING",L"Reverb_Boost", 0 );
 
 	wxString temp;
@@ -107,6 +110,7 @@ void WriteSettings()
 	
 	CfgWriteInt(L"MIXING",L"Interpolation",Interpolation);
 	CfgWriteBool(L"MIXING",L"Disable_Effects",EffectsDisabled);
+	CfgWriteInt(L"MIXING",L"FinalVolume",(int)(FinalVolume*100));
 	CfgWriteInt(L"MIXING",L"Reverb_Boost",ReverbBoost);
 
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
@@ -244,6 +248,7 @@ void DisplayDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), output_frame);
 
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(effects_check), EffectsDisabled);
+	//FinalVolume;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(debug_check), DebugEnabled);
 
     gtk_container_add (GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_frame);
@@ -261,8 +266,9 @@ void DisplayDialog()
     		Interpolation = gtk_combo_box_get_active(GTK_COMBO_BOX(int_box));
 
     	EffectsDisabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(effects_check));
-
-    	if (gtk_combo_box_get_active(GTK_COMBO_BOX(reverb_box)) != -1)
+		//FinalVolume;
+    	
+		if (gtk_combo_box_get_active(GTK_COMBO_BOX(reverb_box)) != -1)
 			ReverbBoost = gtk_combo_box_get_active(GTK_COMBO_BOX(reverb_box));
 
     	if (gtk_combo_box_get_active(GTK_COMBO_BOX(mod_box)) != -1)

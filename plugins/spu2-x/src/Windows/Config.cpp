@@ -37,6 +37,7 @@ int Interpolation = 4;
 */
 int ReverbBoost = 0;
 bool EffectsDisabled = false;
+float FinalVolume;
 bool postprocess_filter_enabled = 1;
 
 // OUTPUT
@@ -64,7 +65,8 @@ void ReadSettings()
 
 	SynchMode = CfgReadInt( L"OUTPUT", L"Synch_Mode", 0);
 	EffectsDisabled = CfgReadBool( L"MIXING", L"Disable_Effects", false );
-
+	FinalVolume = ((float)CfgReadInt( L"MIXING", L"FinalVolume", 100 )) / 100;
+		if ( FinalVolume > 1.0f) FinalVolume = 1.0f;
 	numSpeakers = CfgReadInt( L"OUTPUT", L"XAudio2_SpeakerConfiguration", 0);
 	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
 
@@ -109,6 +111,7 @@ void WriteSettings()
 	CfgWriteInt(L"MIXING",L"Reverb_Boost",ReverbBoost);
 
 	CfgWriteBool(L"MIXING",L"Disable_Effects",EffectsDisabled);
+	CfgWriteInt(L"MIXING",L"FinalVolume",(int)(FinalVolume*100));
 
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
@@ -192,6 +195,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
 
 			SET_CHECK(IDC_EFFECTS_DISABLE,	EffectsDisabled);
+			//FinalVolume;
 			SET_CHECK(IDC_DEBUG_ENABLE,		DebugEnabled);
 			SET_CHECK(IDC_DSP_ENABLE,		dspPluginEnabled);
 		}
@@ -248,6 +252,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 				break;
 
 				HANDLE_CHECK(IDC_EFFECTS_DISABLE,EffectsDisabled);
+				//FinalVolume;
 				HANDLE_CHECK(IDC_DSP_ENABLE,dspPluginEnabled);
 				
 				// Fixme : Eh, how to update this based on drop list selections? :p
