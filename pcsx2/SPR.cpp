@@ -150,7 +150,7 @@ static __fi void _dmaSPR0()
 {
 	if (dmacRegs.ctrl.STS == STS_fromSPR)
 	{
-		Console.WriteLn("SPR0 stall %d", dmacRegs.ctrl.STS);
+		DevCon.Warning("SPR0 stall %d", dmacRegs.ctrl.STS);
 	}
 
 	// Transfer Dn_QWC from SPR to Dn_MADR

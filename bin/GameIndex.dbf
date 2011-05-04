@@ -58,13 +58,15 @@
 -- VuAddSubHack 	= 1 // Tri-ace games, they use an encryption algorithm that requires VU ADDI opcode to be bit-accurate.
 -- VuClipFlagHack	= 1 // Persona games, maybe others. It's to do with the VU clip flag (sVU-only).
 -- FpuCompareHack	= 1 // Digimon Rumble Arena 2, fixes spinning/hanging on intro-menu.
--- FpuMulHack	= 1 // Tales of Destiny hangs.
+-- FpuMulHack		= 1 // Tales of Destiny hangs.
 -- FpuNegDivHack	= 1 // Gundam games messed up camera-view. Dakar 2's sky showing over 3D. Others...
--- XgKickHack	= 1 // Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
--- IPUWaitHack    = 1 // FFX FMV, makes GIF flush before doing IPU work. Fixes bad graphics overlay.
--- EETimingHack	= 1 // General purpose timing hack.
--- SkipMPEGHack	= 1 // Finds sceMpegIsEnd pattern in games and then recompiles code to say the videos are finished.
--- OPHFLagHack = 1 // Bleach Bankais and others
+-- XgKickHack		= 1 // Erementar Gerad, adds more delay to VU XGkick instructions. Corrects the color of some graphics, but breaks Tri-ace games and others.
+-- IPUWaitHack		= 1 // FFX FMV, makes GIF flush before doing IPU work. Fixes bad graphics overlay.
+-- EETimingHack		= 1 // General purpose timing hack.
+-- SkipMPEGHack		= 1 // Finds sceMpegIsEnd pattern in games and then recompiles code to say the videos are finished.
+-- OPHFLagHack 		= 1 // Bleach Bankais and others
+-- DMABusyHack 		= 1 // Mana Khemia, Metal Saga. Denies writes to the DMAC when it's busy.
+-- VIFFIFOHack 		= 1 // Transformers Armada, Test Drive Unlimited. Fixes slow booting issue.
 
 ---------------------------------------------
 -- Patches ([patches] or [patches = crc])
@@ -3186,6 +3188,7 @@ Serial = SLUS-20362
 Name   = Need for Speed - Hot Pursuit 2
 Region = NTSC-U
 Compat = 5
+vuClampMode = 2			//white textures
 ---------------------------------------------
 Serial = SLUS-20363
 Name   = Sled Storm
@@ -3728,7 +3731,7 @@ Compat = 5
 Serial = SLUS-20485
 Name   = Dino Stalker
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20486
 Name   = Marvel vs. Capcom 2
@@ -3760,7 +3763,7 @@ Compat = 5
 Serial = SLUS-20491
 Name   = RTX Red Rock
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20492
 Name   = Ninja Assault
@@ -4352,6 +4355,7 @@ Serial = SLUS-20630
 Name   = Grand Prix Challenge
 Region = NTSC-U
 Compat = 2
+VIFFIFOHack = 1
 ---------------------------------------------
 Serial = SLUS-20631
 Name   = NFL Blitz Pro
@@ -4524,6 +4528,7 @@ Serial = SLUS-20668
 Name   = Transformers
 Region = NTSC-U
 Compat = 1
+VIFFIFOHack = 1
 ---------------------------------------------
 Serial = SLUS-20669
 Name   = Resident Evil - Dead Aim
@@ -8338,6 +8343,7 @@ Serial = SLUS-21490
 Name   = Test Drive Unlimited
 Region = NTSC-U
 Compat = 2
+VIFFIFOHack = 1
 ---------------------------------------------
 Serial = SLUS-21491
 Name   = World Series of Poker - Tournament of Champions
@@ -10039,6 +10045,7 @@ Region = NTSC-U
 Serial = SLUS-21927
 Name   = Sakura Wars: So Long, My Love [English - Disc 1]
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21928
 Name   = Scooby-Doo! and the Spooky Swamp
@@ -11006,6 +11013,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20025
 Name   = Grand Prix Challenge
 Region = NTSC-Unk
+VIFFIFOHack = 1
 ---------------------------------------------
 Serial = SCAJ-20026
 Name   = Generation of Chaos 3
@@ -17058,6 +17066,7 @@ Region = NTSC-J
 Serial = SLPM-65276
 Name   = Grand Prix Challenge
 Region = NTSC-J
+VIFFIFOHack = 1
 ---------------------------------------------
 Serial = SLPM-65277
 Name   = DDR Max 2 - Dance Dance Revolution - 7th Mix
@@ -18228,6 +18237,12 @@ Region = NTSC-J
 Serial = SLPM-65604
 Name   = Animation Battle - Recca no Honou
 Region = NTSC-J
+Compat = 4
+[patches = 9BDBA170]
+	comment=patch by Shadow Lady
+	//IPU menu hang fix...
+	patch=0,EE,00115c00,word,24200001
+[/patches]
 ---------------------------------------------
 Serial = SLPM-65607
 Name   = 3LDK - Shiawase ni Narouyo [Limited Edition]
@@ -30049,8 +30064,7 @@ Region = PAL-Unk
 Serial = SLES-50048
 Name   = Donald Duck - Quack Attack
 Region = PAL-Unk
-Compat = 2
-EETimingHack = 1		//For Flickery textures.
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50050
 Name   = Evergrace
@@ -31422,6 +31436,7 @@ Serial = SLES-50731
 Name   = Need for Speed - Hot Pursuit 2
 Region = PAL-M6
 Compat = 5
+vuClampMode = 2			//white textures
 ---------------------------------------------
 Serial = SLES-50735
 Name   = Jade Cocoon 2
@@ -31432,12 +31447,6 @@ Serial = SLES-50738
 Name   = Star Trek Voyager - Elite Force
 Region = PAL-Unk
 Compat = 5
-[patches = 624F11F1]
-	
-	//suppress message: SPR0 stall 1
-	patch=0,EE,0027fd18,byte,49 // 0027fd20: sw v0, $0000(v1) (D_CTRL)
-	
-[/patches]
 ---------------------------------------------
 Serial = SLES-50739
 Name   = Soldier of Fortune - Gold Edition
@@ -32631,6 +32640,7 @@ Serial = SLES-51296
 Name   = Grand Prix Challenge
 Region = PAL-Unk
 Compat = 4
+VIFFIFOHack = 1
 ---------------------------------------------
 Serial = SLES-51298
 Name   = Jimmy Neutron - Boy Genius
@@ -34363,8 +34373,8 @@ Compat = 2
 ---------------------------------------------
 Serial = SLES-52202
 Name   = Downhill Domination
-Region = PAL-Unk
-Compat = 4
+Region = PAL-M5
+Compat = 5
 ---------------------------------------------
 Serial = SLES-52203
 Name   = Armored Core - Silent Line
@@ -34725,18 +34735,7 @@ Serial = SLES-52388
 Name   = Transformers Armada - Prelude to Energon [Special Edition]
 Region = PAL-Unk
 Compat = 4
-[patches = E845F252]
-	
-	comment=patches by Nachbrenner
-	
-	//skip loops: DMA1 vs. VIF1_FBRST vs. mfc0 v0, Count
-	patch=0,EE,0025d660,word,00000000
-	patch=0,EE,0025d7bc,word,00000000
-	patch=0,EE,0025d75c,word,00000000
-	//skip loop at "warp gate animation" (cop2 BC2T called)
-	patch=0,EE,0026eee8,word,00000000
-	
-[/patches]
+VIFFIFOHack = 1
 ---------------------------------------------
 Serial = SLES-52393
 Name   = Pinball Fun
@@ -34935,7 +34934,15 @@ Serial = SLES-52510
 Name   = Neo Contra
 Region = PAL-Unk
 Compat = 4
-SkipMPEGHack = 1
+[patches = EEE2F6A3]
+	comment=Patches By Nachbrenner
+	
+	//fix IPU busy! ingame
+	patch=0,EE,003a9a88,word,03e00008
+	patch=0,EE,003a9a8c,word,00000000
+	patch=0,EE,003a9b60,word,03e00008
+	patch=0,EE,003a9b64,word,00000000
+[/patches]
 ---------------------------------------------
 Serial = SLES-52511
 Name   = Headhunter - Redemption (EX)
@@ -35370,7 +35377,7 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-52669
 Name   = Forgotten Realms - Demon Stone
-Region = PAL-Unk
+Region = PAL-M5
 Compat = 5
 ---------------------------------------------
 Serial = SLES-52670
@@ -35587,7 +35594,7 @@ Compat = 5
 ---------------------------------------------
 Serial = SLES-52776
 Name   = Junior Board Games
-Region = PAL-Unk
+Region = PAL-M5
 Compat = 5
 ---------------------------------------------
 Serial = SLES-52778
@@ -36663,6 +36670,11 @@ Compat = 5
 Serial = SLES-53303
 Name   = Skijumping 2006
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-53309
+Name   = Transformers
+Region = PAL-Unk
+VIFFIFOHack = 1
 ---------------------------------------------
 Serial = SLES-53311
 Name   = Graffiti Kingdom
@@ -37797,7 +37809,6 @@ Serial = SLES-53901
 Name   = Torino 2006
 Region = PAL-E
 Compat = 5
-EETimingHack = 1		//Broken 3D.
 vuClampMode = 2			//for SPS with microVU.
 ---------------------------------------------
 Serial = SLES-53902
@@ -38860,6 +38871,7 @@ Serial = SLES-54466
 Name   = Test Drive Unlimited
 Region = PAL-E
 Compat = 2
+VIFFIFOHack = 1
 ---------------------------------------------
 Serial = SLES-54467
 Name   = Final Armada
@@ -39038,10 +39050,26 @@ Region = PAL-E
 Compat = 5
 VuAddSubHack = 1
 ---------------------------------------------
+Serial = SLES-54645
+Name   = Valkyrie Profile 2 - Silmeria
+Region = PAL-F
+VuAddSubHack = 1
+---------------------------------------------
+Serial = SLES-54646
+Name   = Valkyrie Profile 2 - Silmeria
+Region = PAL-G
+Compat = 5
+VuAddSubHack = 1
+---------------------------------------------
 Serial = SLES-54647
 Name   = Valkyrie Profile 2 - Silmeria
 Region = PAL-I
 Compat = 5
+VuAddSubHack = 1
+---------------------------------------------
+Serial = SLES-54648
+Name   = Valkyrie Profile 2 - Silmeria
+Region = PAL-S
 VuAddSubHack = 1
 ---------------------------------------------
 Serial = SLES-54666
