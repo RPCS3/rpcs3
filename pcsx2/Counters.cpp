@@ -193,7 +193,14 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, Fixed100 framesPerSecond, u32 
 
 	u64 Frame		= ((u64)PS2CLK * 1000000ULL) / (framesPerSecond*100).ToIntRounded();
 	u64 HalfFrame	= Frame / 2;
-	u64 Blank		= HalfFrame / 2;		// two blanks and renders per frame
+	u64 Blank = (Frame / scansPerFrame) * 22; // PAL VBlank Period is roughly 22 HSyncs
+
+	if(scansPerFrame == SCANLINES_TOTAL_NTSC) 
+		Blank = (Frame / scansPerFrame) * 26;		// NTSC VBlank Period is roughly 26 HSyncs, so we update
+
+	//I would have suspected this to be Frame - Blank, but that seems to completely freak it out
+	//and the test results are completely wrong. It seems 100% the same as the PS2 test on this,
+	//So let's roll with it :P
 	u64 Render		= HalfFrame - Blank;	// so use the half-frame value for these...
 
 	// Important!  The hRender/hBlank timers should be 50/50 for best results.
@@ -237,9 +244,7 @@ u32 UpdateVSyncRate()
 	//  The PS2's vsync timer is an *independent* crystal that is fixed to either 59.94 (NTSC)
 	//  or 50.0 (PAL) Hz.  It has *nothing* to do with real TV timings or the real vsync of
 	//  the GS's output circuit.  It is the same regardless if the GS is outputting interlace
-	//  or progressive scan content.  Indications are that it is also a simple 50/50 timer and
-	//  that it does not actually measure Vblank/Vdraw zones accurately (which would be like
-	//  1/5 and 4/5 ratios).
+	//  or progressive scan content. 
 
 	Fixed100	framerate;
 	u32			scanlines;
@@ -264,11 +269,6 @@ u32 UpdateVSyncRate()
 		Console.WriteLn( Color_Green, "(UpdateVSyncRate) Mode Changed to %s.", ( gsRegionMode == Region_PAL ) ? "PAL" : "NTSC" );
 		if( isCustom )
 			Console.Indent().WriteLn( Color_StrongGreen, "... with user configured refresh rate: %.02f Hz", framerate.ToFloat() );
-
-		hsyncCounter.CycleT = vSyncInfo.hRender;	// Amount of cycles before the counter will be updated
-		vsyncCounter.CycleT = vSyncInfo.Render;		// Amount of cycles before the counter will be updated
-
-		cpuRcntSet();
 	}
 
 	Fixed100 fpslimit = framerate *
@@ -369,7 +369,7 @@ static __fi void VSyncStart(u32 sCycle)
 
 	hwIntcIrq(INTC_VBLANK_S);
 	psxVBlankStart();
-
+	gsPostVsyncStart();
 	if (gates) rcntStartGate(true, sCycle); // Counters Start Gate code
 
 	// INTC - VB Blank Start Hack --
@@ -399,7 +399,7 @@ static __fi void VSyncEnd(u32 sCycle)
 
 	g_FrameCount++;
 
-	gsPostVsyncEnd();
+
 
 	hwIntcIrq(INTC_VBLANK_E);  // HW Irq
 	psxVBlankEnd(); // psxCounters vBlank End
@@ -462,17 +462,17 @@ __fi void rcntUpdate_vSync()
 	if (vsyncCounter.Mode == MODE_VSYNC)
 	{
 		VSyncEnd(vsyncCounter.sCycle);
-
-		vsyncCounter.sCycle += vSyncInfo.Blank;
-		vsyncCounter.CycleT = vSyncInfo.Render;
+		
+		vsyncCounter.sCycle += vSyncInfo.Render;
+		vsyncCounter.CycleT = 0;
 		vsyncCounter.Mode = MODE_VRENDER;
 	}
 	else	// VSYNC end / VRENDER begin
 	{
 		VSyncStart(vsyncCounter.sCycle);
 
-		vsyncCounter.sCycle += vSyncInfo.Render;
-		vsyncCounter.CycleT = vSyncInfo.Blank;
+		vsyncCounter.sCycle += vSyncInfo.Blank;
+		vsyncCounter.CycleT = 0;
 		vsyncCounter.Mode = MODE_VSYNC;
 
 		// Accumulate hsync rounding errors:
@@ -620,8 +620,8 @@ static __fi void rcntStartGate(bool isVblank, u32 sCycle)
 
 				counters[i].mode.IsCounting = 1;
 				counters[i].sCycleT = sCycle;
-				EECNT_LOG("EE Counter[%d] %s StartGate Type0, count = %x",
-					isVblank ? "vblank" : "hblank", i, counters[i].count );
+				EECNT_LOG("EE Counter[%d] %s StartGate Type0, count = %x", i,
+					isVblank ? "vblank" : "hblank", counters[i].count );
 				break;
 
 			case 0x2:	// reset and start counting on vsync end
@@ -634,8 +634,8 @@ static __fi void rcntStartGate(bool isVblank, u32 sCycle)
 				counters[i].count = 0;
 				counters[i].target &= 0xffff;
 				counters[i].sCycleT = sCycle;
-				EECNT_LOG("EE Counter[%d] %s StartGate Type%d, count = %x",
-					isVblank ? "vblank" : "hblank", i, counters[i].mode.GateMode, counters[i].count );
+				EECNT_LOG("EE Counter[%d] %s StartGate Type%d, count = %x", i,
+					isVblank ? "vblank" : "hblank", counters[i].mode.GateMode, counters[i].count );
 				break;
 		}
 	}
@@ -667,8 +667,8 @@ static __fi void rcntEndGate(bool isVblank , u32 sCycle)
 				counters[i].count = rcntRcount(i);
 				counters[i].mode.IsCounting = 0;
 				counters[i].sCycleT = sCycle;
-				EECNT_LOG("EE Counter[%d] %s EndGate Type0, count = %x",
-					isVblank ? "vblank" : "hblank", i, counters[i].count );
+				EECNT_LOG("EE Counter[%d] %s EndGate Type0, count = %x", i,
+					isVblank ? "vblank" : "hblank", counters[i].count );
 			break;
 
 			case 0x1:	// Reset and start counting on Vsync start
@@ -681,8 +681,8 @@ static __fi void rcntEndGate(bool isVblank , u32 sCycle)
 				counters[i].count = 0;
 				counters[i].target &= 0xffff;
 				counters[i].sCycleT = sCycle;
-				EECNT_LOG("EE Counter[%d] %s EndGate Type%d, count = %x",
-					isVblank ? "vblank" : "hblank", i, counters[i].mode.GateMode, counters[i].count );
+				EECNT_LOG("EE Counter[%d] %s EndGate Type%d, count = %x", i,
+					isVblank ? "vblank" : "hblank", counters[i].mode.GateMode, counters[i].count );
 			break;
 		}
 	}

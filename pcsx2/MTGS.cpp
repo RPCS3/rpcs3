@@ -125,7 +125,7 @@ struct RingCmdPacket_Vsync
 	GSRegSIGBLID	siglblid;
 };
 
-void SysMtgsThread::PostVsyncEnd()
+void SysMtgsThread::PostVsyncStart()
 {
 	// Optimization note: Typically regset1 isn't needed.  The regs in that area are typically
 	// changed infrequently, usually during video mode changes.  However, on modern systems the

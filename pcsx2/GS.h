@@ -331,7 +331,7 @@ public:
 
 	u8* GetDataPacketPtr() const;
 	void SetEvent();
-	void PostVsyncEnd();
+	void PostVsyncStart();
 
 	bool IsPluginOpened() const { return m_PluginOpened; }
 
@@ -371,7 +371,7 @@ extern void gsReset();
 extern void gsOnModeChanged( Fixed100 framerate, u32 newTickrate );
 extern void gsSetRegionMode( GS_RegionMode isPal );
 extern void gsResetFrameSkip();
-extern void gsPostVsyncEnd();
+extern void gsPostVsyncStart();
 extern void gsFrameSkip();
 
 // Some functions shared by both the GS and MTGS
