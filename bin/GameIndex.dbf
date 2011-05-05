@@ -4921,11 +4921,19 @@ Serial = SLUS-20758
 Name   = Growlanser Generations [Disc1of2]
 Region = NTSC-U
 Compat = 4
+[patches = 03F9C6D1]
+	comment=IPU freeze fix
+	patch=0,EE,00109d04,word,00000000
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20759
 Name   = Growlanser Generations [Disc2of2]
 Region = NTSC-U
 Compat = 4
+[patches = 4CD3663F]
+	comment=IPU freeze fix
+	patch=0,EE,00109d04,word,00000000
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20760
 Name   = World Championship Pool 2004
