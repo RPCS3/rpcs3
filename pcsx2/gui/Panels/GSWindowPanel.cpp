@@ -155,7 +155,7 @@ void Panels::GSWindowSettingsPanel::ApplyConfigToGui( AppConfig& configToApply, 
 		m_check_SizeLock	->SetValue( conf.DisableResizeBorders );
 
 		m_combo_AspectRatio	->SetSelection( (int)conf.AspectRatio );
-		m_text_Zoom			->SetValue( conf.Zoom.ToString() );
+		m_text_Zoom			->ChangeValue( conf.Zoom.ToString() );
 
 		m_check_DclickFullscreen ->SetValue ( conf.IsToggleFullscreenOnDoubleClick );
 
