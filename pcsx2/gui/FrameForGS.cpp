@@ -222,6 +222,9 @@ void GSPanel::DirectKeyCommand( const KeyAcceleratorCode& kac )
 
 	DbgCon.WriteLn( "(gsFrame) Invoking command: %s", cmd->Id );
 	cmd->Invoke();
+	
+	if( cmd->AlsoApplyToGui && !g_ConfigPanelChanged)
+		AppApplySettings();
 }
 
 void GSPanel::DirectKeyCommand( wxKeyEvent& evt )

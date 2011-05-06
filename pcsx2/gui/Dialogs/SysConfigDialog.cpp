@@ -307,3 +307,5 @@ void AppearanceThemesPanel::AppStatusEvent_OnSettingsApplied()
 {
 
 }
+
+bool g_ConfigPanelChanged = false;

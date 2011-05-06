@@ -16,6 +16,8 @@
 #include "PrecompiledHeader.h"
 #include "MainFrame.h"
 #include "GSFrame.h"
+#include "ApplyState.h"
+
 
 #include "AppAccelerators.h"
 #include "AppSaveStates.h"
@@ -161,6 +163,16 @@ namespace Implementations
 		pauser.AllowResume();
 	}
 
+	void UpdateImagePosition()
+	{
+		//AppApplySettings() would have been nicer, since it also immidiately affects the GUI (if open).
+		//However, the events sequence it generates also "depresses" Shift/CTRL/etc, so consecutive zoom with CTRL down breaks.
+		//Since zoom only affects the window viewport anyway, we can live with directly calling it.
+		if (GSFrame* gsFrame = wxGetApp().GetGsFramePtr())
+			if (GSPanel* woot = gsFrame->GetViewport())
+				woot->DoResize();
+	}
+
 	void GSwindow_CycleAspectRatio()
 	{
 		AspectRatioType& art = g_Conf->GSWindow.AspectRatio;
@@ -173,17 +185,7 @@ namespace Implementations
 		}
 
 		Console.WriteLn(L"(GSwindow) Aspect ratio: %s.", arts.c_str());
-		AppApplySettings();
-	}
-
-	void UpdateImagePosition()
-	{
-		//AppApplySettings() would have been nicer, since it also immidiately affects the GUI (if open).
-		//However, the events sequence it generates also "depresses" Shift/CTRL/etc, so consecutive zoom with CTRL down breaks.
-		//Since zoom only affects the window viewport anyway, we can live with directly calling it.
-		if (GSFrame* gsFrame = wxGetApp().GetGsFramePtr())
-			if (GSPanel* woot = gsFrame->GetViewport())
-				woot->DoResize();
+		UpdateImagePosition();
 	}
 
 	void SetOffset(float x, float y)
@@ -432,12 +434,14 @@ static const GlobalCommandDescriptor CommandDeclarations[] =
 		Implementations::Framelimiter_MasterToggle,
 		NULL,
 		NULL,
+		true,
 	},
 
 	{	"GSwindow_CycleAspectRatio",
 		Implementations::GSwindow_CycleAspectRatio,
 		NULL,
 		NULL,
+		true,
 	},
 
 	{	"GSwindow_ZoomIn",

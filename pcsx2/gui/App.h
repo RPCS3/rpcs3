@@ -737,3 +737,5 @@ extern void UI_DisableSysShutdown();
 	pxAssertMsg( !wxGetApp().SysExecutorThread.IsSelf(), "Thread affinity violation: Call is *not* allowed from SysExecutor thread." )
 
 extern ExecutorThread& GetSysExecutorThread();
+
+extern bool g_ConfigPanelChanged; //Indicates that the main config panel is open and holds unapplied changes.

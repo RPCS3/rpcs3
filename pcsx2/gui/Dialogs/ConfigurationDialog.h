@@ -20,6 +20,7 @@
 
 #include "AppCommon.h"
 #include "ApplyState.h"
+#include "App.h"
 
 namespace Panels
 {
@@ -62,6 +63,11 @@ namespace Dialogs
 		void AddPage( const wxChar* label, int iconid );
 
 		void AllowApplyActivation( bool allow=true );
+		virtual bool SomethingChanged_StateModified_IsChanged(){ //returns the state of the apply button.
+			if( wxWindow* apply = FindWindow( wxID_APPLY ) )
+				return apply->IsEnabled();
+			return false;
+		}
 
 	protected:
 		void OnSettingsApplied( wxCommandEvent& evt );
@@ -93,6 +99,12 @@ namespace Dialogs
 		wxString GetDialogName() const { return GetNameStatic(); }
    		void Apply();
 		void Cancel();
+
+		//Stores the state of the apply button in a global var.
+		//This var will be used by KB shortcuts commands to decide if the gui should be modified (only when no intermediate changes)
+		virtual bool SomethingChanged_StateModified_IsChanged(){
+			return g_ConfigPanelChanged = BaseConfigurationDialog::SomethingChanged_StateModified_IsChanged();
+		}
 
 	protected:
 		virtual wxString& GetConfSettingsTabName() const { return g_Conf->SysSettingsTabName; }
