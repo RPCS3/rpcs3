@@ -434,7 +434,7 @@ void SSE_ADD2SS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, c
 	else					 { ADD_SS(mVU, to, from, t1, t2); }
 }
 
-// FIXME: why do we need two identical definitions with different names?
+// Does same as SSE_ADDPS since tri-ace games only need SS implementation of VUADDSUBHACK...
 void SSE_ADD2PS(mV, const xmm& to, const xmm& from, const xmm& t1 = xEmptyReg, const xmm& t2 = xEmptyReg)
 {
 	clampOp(xADD.PS, 1);

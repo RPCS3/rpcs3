@@ -131,17 +131,17 @@ __fi void mVUsetFlags(mV, microFlagCycles& mFC) {
 		}
 		mFC.cycles += mVUstall;
 
-		sFLAG.read = findFlagInst(mFC.xStatus, mFC.cycles);
-		mFLAG.read = findFlagInst(mFC.xMac,	   mFC.cycles);
-		cFLAG.read = findFlagInst(mFC.xClip,   mFC.cycles);
+		sFLAG.read  = doFlagInsts ? findFlagInst(mFC.xStatus, mFC.cycles) : 0;
+		mFLAG.read  = doFlagInsts ? findFlagInst(mFC.xMac,    mFC.cycles) : 0;
+		cFLAG.read  = doFlagInsts ? findFlagInst(mFC.xClip,   mFC.cycles) : 0;
 		
-		sFLAG.write = xS;
-		mFLAG.write = xM;
-		cFLAG.write = xC;
+		sFLAG.write = doFlagInsts ? xS : 0;
+		mFLAG.write = doFlagInsts ? xM : 0;
+		cFLAG.write = doFlagInsts ? xC : 0;
 
-		sFLAG.lastWrite = (xS-1) & 3;
-		mFLAG.lastWrite = (xM-1) & 3;
-		cFLAG.lastWrite = (xC-1) & 3;
+		sFLAG.lastWrite = doFlagInsts ? (xS-1) & 3 : 0;
+		mFLAG.lastWrite = doFlagInsts ? (xM-1) & 3 : 0;
+		cFLAG.lastWrite = doFlagInsts ? (xC-1) & 3 : 0;
 
 		if (sHackCond)	  { sFLAG.doFlag = 0; }
 		if (sFLAG.doFlag) { if(noFlagOpts){sFLAG.doNonSticky=1;mFLAG.doFlag=1;}}

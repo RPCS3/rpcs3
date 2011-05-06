@@ -552,6 +552,8 @@ mVUop(mVU_FMOR) {
 mVUop(mVU_FSAND) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 {
+		if (_Imm12_ & 0x0c30) DevCon.WriteLn(Color_Green, "mVU_FSAND: Checking I/D/IS/DS Flags");
+		if (_Imm12_ & 0x030c) DevCon.WriteLn(Color_Green, "mVU_FSAND: Checking U/O/US/OS Flags");
 		mVUallocSFLAGc(gprT1, gprT2, sFLAG.read);
 		xAND(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
@@ -575,6 +577,8 @@ mVUop(mVU_FSEQ) {
 	pass1 { mVUanalyzeSflag(mVU, _It_); }
 	pass2 {
 		int imm = 0;
+		if (_Imm12_ & 0x0c30) DevCon.WriteLn(Color_Green, "mVU_FSEQ: Checking I/D/IS/DS Flags");
+		if (_Imm12_ & 0x030c) DevCon.WriteLn(Color_Green, "mVU_FSEQ: Checking U/O/US/OS Flags");
 		if (_Imm12_ & 0x0001) imm |= 0x0000f00; // Z
 		if (_Imm12_ & 0x0002) imm |= 0x000f000; // S
 		if (_Imm12_ & 0x0004) imm |= 0x0010000; // U

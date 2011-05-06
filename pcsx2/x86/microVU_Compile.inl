@@ -513,6 +513,9 @@ __fi void* mVUblockFetch(microVU& mVU, u32 startPC, uptr pState) {
 
 // mVUcompileJIT() - Called By JR/JALR during execution
 _mVUt void* __fastcall mVUcompileJIT(u32 startPC, uptr ptr) {
+	if (doJumpAsSameProgram) { // Treat jump as part of same microProgram
+		return mVUblockFetch(mVUx, startPC, ptr);
+	}
 	if (doJumpCaching) { // When doJumpCaching, ptr is a microBlock pointer
 		microVU& mVU = mVUx;
 		microBlock* pBlock = (microBlock*)ptr;
@@ -524,7 +527,6 @@ _mVUt void* __fastcall mVUcompileJIT(u32 startPC, uptr ptr) {
 		return v;
 	}
 	else { // When !doJumpCaching, pBlock param is really a microRegInfo pointer
-		//return mVUblockFetch(mVUx, startPC, ptr);
 		return mVUsearchProg<vuIndex>(startPC, ptr); // Find and set correct program
 	}
 }

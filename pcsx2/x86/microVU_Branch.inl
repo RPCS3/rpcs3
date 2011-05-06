@@ -118,7 +118,7 @@ void normJumpCompile(mV, microFlagCycles& mFC, bool isEvilJump) {
 	else				xMOV(gprT3, (uptr)&mVUpBlock->pStateEnd);
 
 	if (!mVU.index) xCALL(mVUcompileJIT<0>); //(u32 startPC, uptr pState)
-	else			 xCALL(mVUcompileJIT<1>);
+	else			xCALL(mVUcompileJIT<1>);
 
 	mVUrestoreRegs(mVU);
 	xJMP(gprT1);  // Jump to rec-code address

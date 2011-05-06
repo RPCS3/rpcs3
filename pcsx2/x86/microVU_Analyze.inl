@@ -441,13 +441,21 @@ __ri int mVUbranchCheck(mV) {
 	if (!mVUcount) return 0;
 	incPC(-2);
 	if (mVUlow.branch) {
-		mVUlow.badBranch  = 1;
-		incPC(2);
-		mVUlow.evilBranch = 1;
-		mVUregs.blockType = 2;
-		mVUregs.needExactMatch |= 7; // This might not be necessary, but w/e...
-		DevCon.Warning("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU.index, xPC);
-		return 1;
+		if (doBranchInDelaySlot) {
+			mVUlow.badBranch  = 1;
+			incPC(2);
+			mVUlow.evilBranch = 1;
+			mVUregs.blockType = 2;
+			mVUregs.needExactMatch |= 7; // This might not be necessary, but w/e...
+			DevCon.Warning("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU.index, xPC);
+			return 1;
+		}
+		else {
+			incPC(2);
+			mVUlow.isNOP = 1;
+			DevCon.Warning("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU.index, xPC);
+			return 0;
+		}
 	}
 	incPC(2);
 	return 0;

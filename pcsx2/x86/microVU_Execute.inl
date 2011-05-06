@@ -168,8 +168,8 @@ void mVUdispatcherD(mV) {
 _mVUt void* __fastcall mVUexecute(u32 startPC, u32 cycles) {
 
 	microVU& mVU = mVUx;
-	u32 vuLimit  = vuIndex ? 0x3fff : 0xfff;
-	if (startPC  > vuLimit) {
+	u32 vuLimit  = vuIndex ? 0x3ff8 : 0xff8;
+	if (startPC  > vuLimit + 7) {
 		DevCon.Warning("microVU%x Warning: startPC = 0x%x, cycles = 0x%x", vuIndex, startPC, cycles);
 	}
 
