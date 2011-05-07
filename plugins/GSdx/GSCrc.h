@@ -101,6 +101,7 @@ public:
 		BleachBladeBattlers,
 		CastlevaniaCoD,
 		CastlevaniaLoI,
+		Black,
 		TitleCount,
 	};
 

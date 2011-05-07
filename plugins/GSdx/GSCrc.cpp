@@ -180,7 +180,7 @@ CRC::Game CRC::m_games[] =
 	{0x774DE8E2, ValkyrieProfile2, JP, 0},
 	{0x04CCB600, ValkyrieProfile2, EU, 0},
 	{0xB65E141B, ValkyrieProfile2, EU, 0}, // PAL German
-	{0xC70FC973, ValkyrieProfile2, EU, 0}, // PAL Italy
+	{0xC70FC973, ValkyrieProfile2, IT, 0}, 
 	{0x47B9B2FD, RadiataStories, US, 0},
 	{0xE8FCF8EC, SMTNocturne, US, ZWriteMustNotClear},	// saves/reloads z buffer around shadow drawing, same issue with all the SMT games following
 	{0xF0A31EE3, SMTNocturne, EU, ZWriteMustNotClear},	// SMTNocturne (Lucifers Call in EU)
@@ -226,6 +226,7 @@ CRC::Game CRC::m_games[] =
 	{0x2498951B, SilentHill3, US, 0},
 	{0x5088CCDB, SilentHill3, EU, 0},
 	{0x8E8E384B, SilentHill2, US, 0},
+	{0xFE06A030, SilentHill2, US, 0},	//greatest hits
 	{0x6DF62AEA, BleachBladeBattlers, JP, 0},
 	{0x6EB71AB0, BleachBladeBattlers, JP, 0},	//2nd
 	{0x3A446111, CastlevaniaCoD, US, 0},
@@ -233,6 +234,9 @@ CRC::Game CRC::m_games[] =
 	{0x28270F7D, CastlevaniaLoI, US, 0},
 	{0x306CDADA, CastlevaniaLoI, EU, 0},
 	{0xA36CFF6C, CastlevaniaLoI, JP, 0},
+	{0x5C891FF1, Black, US, 0},
+	{0xCAA04879, Black, EU, 0},
+	{0xB3A9F9ED, Black, JP, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

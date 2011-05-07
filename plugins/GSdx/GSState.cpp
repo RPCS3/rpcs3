@@ -2790,6 +2790,26 @@ bool GSC_Castlevania(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_Black(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x008c0) && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x01a40 && fi.TPSM == PSM_PSMZ16 || (GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+		{
+			skip = 5;
+		}
+	}
+	else
+	{
+		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x008c0) && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4)
+		{
+			skip = 0;
+		}
+	}
+	
+	return true;
+}
+
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
 	GSFrameInfo fi;
@@ -2862,6 +2882,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::BleachBladeBattlers] = GSC_BleachBladeBattlers;
 		map[CRC::CastlevaniaCoD] = GSC_Castlevania;
 		map[CRC::CastlevaniaLoI] = GSC_Castlevania;
+		map[CRC::Black] = GSC_Black;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

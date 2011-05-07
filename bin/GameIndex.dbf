@@ -4111,7 +4111,7 @@ Compat = 4
 Serial = SLUS-20571
 Name   = Ty the Tasmanian Tiger
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20572
 Name   = Tiger Woods PGA Tour 2003
@@ -4930,6 +4930,10 @@ Serial = SLUS-20759
 Name   = Growlanser Generations [Disc2of2]
 Region = NTSC-U
 Compat = 4
+[patches = 4AD529BB]
+	comment=IPU freeze fix
+	patch=0,EE,00109d04,word,00000000
+[/patches]
 [patches = 4CD3663F]
 	comment=IPU freeze fix
 	patch=0,EE,00109d04,word,00000000
@@ -6930,7 +6934,7 @@ Compat = 5
 Serial = SLUS-21193
 Name   = Inuyasha - Feudal Combat
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21194
 Name   = Phantasy Star Universe
@@ -7332,7 +7336,7 @@ Compat = 5
 Serial = SLUS-21277
 Name   = Barnyard
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21278
 Name   = SSX on Tour
@@ -25484,12 +25488,14 @@ Name   = Venus & Braves [Premium Pack]
 Region = NTSC-J
 Compat = 5
 SkipMPEGHack = 1
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPS-25196
 Name   = Venus & Braves
 Region = NTSC-J
 Compat = 5
 SkipMPEGHack = 1
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPS-25197
 Name   = Kingdom Hearts - Final Mix [Limited Edition]
@@ -28659,7 +28665,7 @@ Region = PAL-Unk
 Serial = SCES-50139
 Name   = World Rally Championship
 Region = PAL-M7
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SCES-50240
 Name   = Extermination
