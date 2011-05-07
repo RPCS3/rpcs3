@@ -236,6 +236,7 @@ CRC::Game CRC::m_games[] =
 	{0xA36CFF6C, CastlevaniaLoI, JP, 0},
 	{0x5C891FF1, Black, US, 0},
 	{0xCAA04879, Black, EU, 0},
+	{0xADDFF505, Black, EU, 0},	//?
 	{0xB3A9F9ED, Black, JP, 0},
 };
 

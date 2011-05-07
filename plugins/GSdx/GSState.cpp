@@ -1922,6 +1922,10 @@ bool GSC_MetalGearSolid3(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 0;
 		}
+		else if(!fi.TME && fi.FBP == fi.TBP0 && fi.FBP == 0x2000 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMCT24)
+		{
+			skip = 119;
+		}
 	}
 
 	return true;
@@ -2794,14 +2798,18 @@ bool GSC_Black(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x008c0) && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x01a40 && fi.TPSM == PSM_PSMZ16 || (GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+		if(fi.TME /*&& (fi.FBP == 0x00000 || fi.FBP == 0x008c0)*/ && fi.FPSM == PSM_PSMCT16 && (fi.TBP0 == 0x01a40 || fi.TBP0 == 0x01b80 || fi.TBP0 == 0x030c0) && fi.TPSM == PSM_PSMZ16 || (GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)))
 		{
 			skip = 5;
 		}
 	}
 	else
 	{
-		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x008c0) && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4)
+		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x008c0 || fi.FBP == 0x0a00 ) && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4)
+		{
+			skip = 0;
+		}
+		else if(!fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8H)
 		{
 			skip = 0;
 		}
