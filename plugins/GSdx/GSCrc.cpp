@@ -166,6 +166,7 @@ CRC::Game CRC::m_games[] =
 	{0xAA5EC3A3, TalesOfAbyss, JP, 0},
 	{0xFB236A46, SonicUnleashed, US, 0},
 	{0x8C913264, SonicUnleashed, EU, 0},
+	{0x5C1EBD61, SimpsonsGame, NoRegion, 0},
 	{0x4C7BB3C8, SimpsonsGame, NoRegion, 0},
 	{0x4C94B32C, SimpsonsGame, NoRegion, 0},
 	{0x206779D8, SimpsonsGame, EU, 0},
