@@ -431,8 +431,10 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 	if (psm == PSM_PSMZ32 || psm == PSM_PSMZ24 || psm == PSM_PSMZ16 || psm == PSM_PSMZ16S)
 		return;
 
-	GSTextureCache::Target* rt2 = NULL;
-	int ymin = INT_MAX;
+	// This is a shorter but potentially slower version of the below, commented out code.
+	// It works for all the games mentioned below and fixes a couple of other ones as well
+	// (Japanese Wizardry and Chaos Legion).
+	// Also in a few games the below code ran the Grandia3 case when it shouldn't :p
 	for(list<Target*>::iterator i = m_dst[RenderTarget].begin(); i != m_dst[RenderTarget].end(); )
 	{
 		list<Target*>::iterator j = i++;
@@ -443,60 +445,80 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 		{
 			if(GSUtil::HasSharedBits(bp, psm, t->m_TEX0.TBP0, t->m_TEX0.PSM))
 			{
-				if(GSUtil::HasCompatibleBits(psm, t->m_TEX0.PSM))
-				{
-					Read(t, r.rintersect(t->m_valid));
-					return;
-				}
-				else if(psm == PSM_PSMCT32 && (t->m_TEX0.PSM == PSM_PSMCT16 || t->m_TEX0.PSM == PSM_PSMCT16S))
-				{
-					// ffx-2 riku changing to her default (shoots some reflecting glass at the end), 16-bit rt read as 32-bit
-					Read(t, GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2).rintersect(t->m_valid));
-					return;
-				}
-				else
-				{
-					if (psm == PSM_PSMT4HH && t->m_TEX0.PSM == PSM_PSMCT32)
-					{
-						// Silent Hill Origins shadows: Read 8 bit using only the HIGH bits (4 bit) texture as 32 bit.
-						Read(t, r.rintersect(t->m_valid));
-						return;
-					}
-					else
-					{
-						//printf("Trashing render target. We have a %d type texture and we are trying to write into a %d type texture\n", t->m_TEX0.PSM, psm);
-						m_dst[RenderTarget].erase(j);
-						delete t;
-					}
-				}
-			}
-
-			// Grandia3, FFX, FFX-2 pause menus. t->m_TEX0.TBP0 magic number checks because otherwise kills xs2 videos
-			if( (GSUtil::HasSharedBits(psm, t->m_TEX0.PSM) && (bp > t->m_TEX0.TBP0) )
-				&& ((t->m_TEX0.TBP0 == 0) || (t->m_TEX0.TBP0==3328) || (t->m_TEX0.TBP0==3584) ))
-			{
-				//printf("first : %d-%d child : %d-%d\n", psm, bp, t->m_TEX0.PSM, t->m_TEX0.TBP0);
-				uint32 rowsize = bw * 8192;
-				uint32 offset = (uint32)((bp - t->m_TEX0.TBP0) * 256);
-
-				if(rowsize > 0 && offset % rowsize == 0)
-				{
-					int y = GSLocalMemory::m_psm[psm].pgs.y * offset / rowsize;
-
-					if(y < ymin && y < 512)
-					{
-						rt2 = t;
-						ymin = y;
-					}
-				}
+				//printf("Read rect: %d %d %d %d\n", t->m_valid.x, t->m_valid.y, t->m_valid.z, t->m_valid.w);
+				// note: r.rintersect breaks Wizardry and Chaos Legion
+				Read(t, t->m_valid);
 			}
 		}
 	}
-	if(rt2)
-	{
-		Read(rt2, GSVector4i(r.left, r.top + ymin, r.right, r.bottom + ymin));
-	}
+	
+	//GSTextureCache::Target* rt2 = NULL;
+	//int ymin = INT_MAX;
+	//for(list<Target*>::iterator i = m_dst[RenderTarget].begin(); i != m_dst[RenderTarget].end(); )
+	//{
+	//	list<Target*>::iterator j = i++;
 
+	//	Target* t = *j;
+
+	//	if (t->m_TEX0.PSM != PSM_PSMZ32 && t->m_TEX0.PSM != PSM_PSMZ24 && t->m_TEX0.PSM != PSM_PSMZ16 && t->m_TEX0.PSM != PSM_PSMZ16S)
+	//	{
+	//		if(GSUtil::HasSharedBits(bp, psm, t->m_TEX0.TBP0, t->m_TEX0.PSM))
+	//		{
+	//			if(GSUtil::HasCompatibleBits(psm, t->m_TEX0.PSM))
+	//			{
+	//				Read(t, r.rintersect(t->m_valid));
+	//				return;
+	//			}
+	//			else if(psm == PSM_PSMCT32 && (t->m_TEX0.PSM == PSM_PSMCT16 || t->m_TEX0.PSM == PSM_PSMCT16S))
+	//			{
+	//				// ffx-2 riku changing to her default (shoots some reflecting glass at the end), 16-bit rt read as 32-bit
+	//				Read(t, GSVector4i(r.left, r.top, r.right, r.top + (r.bottom - r.top) * 2).rintersect(t->m_valid));
+	//				return;
+	//			}
+	//			else
+	//			{
+	//				if (psm == PSM_PSMT4HH && t->m_TEX0.PSM == PSM_PSMCT32)
+	//				{
+	//					// Silent Hill Origins shadows: Read 8 bit using only the HIGH bits (4 bit) texture as 32 bit.
+	//					Read(t, r.rintersect(t->m_valid));
+	//					return;
+	//				}
+	//				else
+	//				{
+	//					//printf("Trashing render target. We have a %d type texture and we are trying to write into a %d type texture\n", t->m_TEX0.PSM, psm);
+	//					m_dst[RenderTarget].erase(j);
+	//					delete t;
+	//				}
+	//			}
+	//		}
+
+	//		// Grandia3, FFX, FFX-2 pause menus. t->m_TEX0.TBP0 magic number checks because otherwise kills xs2 videos
+	//		if( (GSUtil::HasSharedBits(psm, t->m_TEX0.PSM) && (bp > t->m_TEX0.TBP0) )
+	//			&& ((t->m_TEX0.TBP0 == 0) || (t->m_TEX0.TBP0==3328) || (t->m_TEX0.TBP0==3584) ))
+	//		{
+	//			//printf("first : %d-%d child : %d-%d\n", psm, bp, t->m_TEX0.PSM, t->m_TEX0.TBP0);
+	//			uint32 rowsize = bw * 8192;
+	//			uint32 offset = (uint32)((bp - t->m_TEX0.TBP0) * 256);
+
+	//			if(rowsize > 0 && offset % rowsize == 0)
+	//			{
+	//				int y = GSLocalMemory::m_psm[psm].pgs.y * offset / rowsize;
+
+	//				if(y < ymin && y < 512)
+	//				{
+	//					rt2 = t;
+	//					ymin = y;
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
+	//if(rt2)
+	//{
+	//	Read(rt2, GSVector4i(r.left, r.top + ymin, r.right, r.bottom + ymin));
+	//}
+
+	
 	// TODO: ds
 }
 
