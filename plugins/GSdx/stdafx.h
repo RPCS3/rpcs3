@@ -329,4 +329,4 @@ extern void* vmalloc(size_t size, bool code);
 extern void vmfree(void* ptr, size_t size);
 
 #define USE_UPSCALE_HACKS // Hacks intended to fix upscaling / rendering glitches in HW renderers
-
+//#define HW_NO_TEXTURE_CACHE // Slow but fixes a lot of bugs

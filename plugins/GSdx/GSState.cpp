@@ -25,6 +25,10 @@
 //#define DISABLE_BITMASKING
 //#define DISABLE_COLCLAMP
 //#define DISABLE_DATE
+//see stdafx.h for #define HW_NO_TEXTURE_CACHE
+
+//#define Offset_ST  // Fixes Persona3 mini map alignment which is off even in software rendering
+//#define Offset_UV  // Fixes / breaks various titles
 
 GSState::GSState()
 	: m_version(6)
@@ -431,6 +435,12 @@ __forceinline void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* r)
 	#endif
 
 	m_q = r->STQ.Q;
+	
+#ifdef Offset_ST
+	GIFRegTEX0 TEX0 = m_context->TEX0;
+	m_v.ST.S -= 0.02f * m_q / (1 << TEX0.TW);
+	m_v.ST.T -= 0.02f * m_q / (1 << TEX0.TH);
+#endif
 }
 
 __forceinline void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* r)
@@ -446,6 +456,11 @@ __forceinline void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* r)
 	m_v.UV.V = r->UV.V;
 
 	#endif
+
+#ifdef Offset_UV
+	m_v.UV.U = min((uint16)m_v.UV.U, (uint16)(m_v.UV.U - 4U));
+	m_v.UV.V = min((uint16)m_v.UV.V, (uint16)(m_v.UV.V - 4U));
+#endif
 }
 
 __forceinline void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* r)
@@ -529,11 +544,22 @@ __forceinline void GSState::GIFRegHandlerRGBAQ(const GIFReg* r)
 __forceinline void GSState::GIFRegHandlerST(const GIFReg* r)
 {
 	m_v.ST = (GSVector4i)r->ST;
+
+#ifdef Offset_ST
+	GIFRegTEX0 TEX0 = m_context->TEX0;
+	m_v.ST.S -= 0.02f * m_q / (1 << TEX0.TW);
+	m_v.ST.T -= 0.02f * m_q / (1 << TEX0.TH);
+#endif
 }
 
 __forceinline void GSState::GIFRegHandlerUV(const GIFReg* r)
 {
 	m_v.UV.u32[0] = r->UV.u32[0] & 0x3fff3fff;
+
+#ifdef Offset_UV
+	m_v.UV.U = min((uint16)m_v.UV.U, (uint16)(m_v.UV.U - 4U));
+	m_v.UV.V = min((uint16)m_v.UV.V, (uint16)(m_v.UV.V - 4U));
+#endif
 }
 
 void GSState::GIFRegHandlerXYZF2(const GIFReg* r)

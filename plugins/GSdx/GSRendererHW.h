@@ -556,7 +556,9 @@ protected:
 
 	void Draw()
 	{
+#ifndef HW_NO_TEXTURE_CACHE
 		if(IsBadFrame(m_skip, m_userhacks_skipdraw)) return;
+#endif
 
 		GSDrawingEnvironment& env = m_env;
 		GSDrawingContext* context = m_context;
@@ -715,6 +717,9 @@ protected:
 
 			s_n++;
 		}
+#ifdef HW_NO_TEXTURE_CACHE
+		m_tc->Read(rt, r);
+#endif
 	}
 
 	virtual void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex) = 0;
@@ -748,11 +753,7 @@ public:
 		m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", 1);
 		m_userhacks_skipdraw = theApp.GetConfig("UserHacks_SkipDraw", 0);
 
-		if(m_nativeres)
-		{
-			m_filter = 2;
-		}
-		else
+		if(!m_nativeres)
 		{
 			m_width = theApp.GetConfig("resx", m_width);
 			m_height = theApp.GetConfig("resy", m_height);

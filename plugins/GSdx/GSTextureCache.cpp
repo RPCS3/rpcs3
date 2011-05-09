@@ -88,7 +88,11 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 
 	Target* dst = NULL;
 
+#ifdef HW_NO_TEXTURE_CACHE
+	if( 0 )
+#else
 	if(src == NULL)
+#endif
 	{
 		uint32 bp = TEX0.TBP0;
 		uint32 psm = TEX0.PSM;

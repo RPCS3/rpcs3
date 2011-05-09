@@ -127,12 +127,16 @@ protected:
 
 	// TODO: virtual void Write(Source* s, const GSVector4i& r) = 0;
 	// TODO: virtual void Write(Target* t, const GSVector4i& r) = 0;
+#ifndef HW_NO_TEXTURE_CACHE
 	virtual void Read(Target* t, const GSVector4i& r) = 0;
+#endif
 
 public:
 	GSTextureCache(GSRenderer* r);
 	virtual ~GSTextureCache();
-
+#ifdef HW_NO_TEXTURE_CACHE
+	virtual void Read(Target* t, const GSVector4i& r) = 0;
+#endif
 	void RemoveAll();
 
 	Source* LookupSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r);

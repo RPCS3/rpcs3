@@ -309,7 +309,7 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_RESY_EDIT), hw && !native && scaling == 1);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_UPSCALE_MULTIPLIER), hw && !native);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_NATIVERES), hw);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_FILTER), hw && !native);
+		EnableWindow(GetDlgItem(m_hWnd, IDC_FILTER), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_PALTEX), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_LOGZ), dx9 && hw && GSDevice9::GetMaxDepth(m_lastValidMsaa) < 32);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FBA), dx9 && hw);
