@@ -25,7 +25,7 @@
 //#define DISABLE_BITMASKING
 //#define DISABLE_COLCLAMP
 //#define DISABLE_DATE
-//see stdafx.h for #define HW_NO_TEXTURE_CACHE
+//see stdafx.h for #define HW_NO_TEXTURE_CACHE and #define NO_CRC_HACKS
 
 //#define Offset_ST  // Fixes Persona3 mini map alignment which is off even in software rendering
 //#define Offset_UV  // Fixes / breaks various titles

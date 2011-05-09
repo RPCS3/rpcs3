@@ -556,7 +556,7 @@ protected:
 
 	void Draw()
 	{
-#ifndef HW_NO_TEXTURE_CACHE
+#ifndef NO_CRC_HACKS
 		if(IsBadFrame(m_skip, m_userhacks_skipdraw)) return;
 #endif
 

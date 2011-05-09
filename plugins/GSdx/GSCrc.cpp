@@ -252,13 +252,13 @@ CRC::Game CRC::Lookup(uint32 crc)
 			m_map[m_games[i].crc] = &m_games[i];
 		}
 	}
-
+#ifndef NO_CRC_HACKS
 	hash_map<uint32, Game*>::iterator i = m_map.find(crc);
 
 	if(i != m_map.end())
 	{
 		return *i->second;
 	}
-
+#endif
 	return m_games[0];
 }
