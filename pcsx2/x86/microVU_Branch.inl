@@ -19,18 +19,20 @@ extern bool  doEarlyExit (microVU& mVU);
 extern void  mVUincCycles(microVU& mVU, int x);
 extern void* mVUcompile  (microVU& mVU, u32 startPC, uptr pState);
 
-#define blockCreate(addr) { if (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager(); }
-#define sI ((mVUpBlock->pState.needExactMatch & 1) ? 3 : ((mVUpBlock->pState.flags >> 0) & 3))
-#define cI ((mVUpBlock->pState.needExactMatch & 4) ? 3 : ((mVUpBlock->pState.flags >> 2) & 3))
+__fi int getLastFlagInst(microRegInfo& pState, int* xFlag, int flagType, int isEbit) {
+	if (isEbit) return findFlagInst(xFlag, 0x7fffffff);
+	if (pState.needExactMatch & (1<<flagType)) return 3;
+	return (((pState.flagInfo >> (2*flagType+2)) & 3) - 1) & 3;
+}
 
 void mVU0clearlpStateJIT() { if (!microVU0.prog.cleared) memzero(microVU0.prog.lpState); }
 void mVU1clearlpStateJIT() { if (!microVU1.prog.cleared) memzero(microVU1.prog.lpState); }
 
 void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 
-	int fStatus = (isEbit) ? findFlagInst(mFC->xStatus, 0x7fffffff) : sI;
-	int fMac	= (isEbit) ? findFlagInst(mFC->xMac,	0x7fffffff) : 0;
-	int fClip	= (isEbit) ? findFlagInst(mFC->xClip,   0x7fffffff) : cI;
+	int fStatus = getLastFlagInst(mVUpBlock->pState, mFC->xStatus, 0, isEbit);
+	int fMac	= getLastFlagInst(mVUpBlock->pState, mFC->xMac,    1, isEbit);
+	int fClip	= getLastFlagInst(mVUpBlock->pState, mFC->xClip,   2, isEbit);
 	int qInst	= 0;
 	int pInst	= 0;
 	mVU.regAlloc->flushAll();

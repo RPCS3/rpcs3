@@ -45,6 +45,7 @@ private:
 	int qListI, fListI;
 
 public:
+	inline int getFullListCount() const { return fListI; }
 	microBlockManager() {
 		qListI = fListI = 0;
 		qBlockEnd = qBlockList = NULL;
@@ -71,13 +72,14 @@ public:
 	microBlock* add(microBlock* pBlock) {
 		microBlock* thisBlock = search(&pBlock->pState);
 		if (!thisBlock) {
-			u8  fullCmp = pBlock->pState.needExactMatch;
+			u8  doFF    = doFullFlagOpt && (pBlock->pState.flagInfo&1);
+			u8  fullCmp = pBlock->pState.needExactMatch || doFF;
 			if (fullCmp) fListI++; else qListI++;
 
 			microBlockLink*& blockList = fullCmp ? fBlockList : qBlockList;
 			microBlockLink*& blockEnd  = fullCmp ? fBlockEnd  : qBlockEnd;
 			microBlockLink*  newBlock  = (microBlockLink*)_aligned_malloc(sizeof(microBlockLink), 16);
-			newBlock->block.jumpCache = NULL;
+			newBlock->block.jumpCache  = NULL;
 			newBlock->next = NULL;
 
 			if (blockEnd) {
@@ -94,7 +96,8 @@ public:
 		return thisBlock;
 	}
 	__ri microBlock* search(microRegInfo* pState) {
-		if (pState->needExactMatch) { // Needs Detailed Search (Exact Match of Pipeline State)
+		u8  doFF = doFullFlagOpt && (pState->flagInfo&1);
+		if (pState->needExactMatch || doFF) { // Needs Detailed Search (Exact Match of Pipeline State)
 			for(microBlockLink* linkI = fBlockList; linkI != NULL; linkI = linkI->next) {
 				if (mVUquickSearch((void*)pState, (void*)&linkI->block.pState, sizeof(microRegInfo)))
 					return &linkI->block;
@@ -102,9 +105,10 @@ public:
 		}
 		else { // Can do Simple Search (Only Matches the Important Pipeline Stuff)
 			for(microBlockLink* linkI = qBlockList; linkI != NULL; linkI = linkI->next) {
-				if (doConstProp && (linkI->block.pState.vi15 != pState->vi15)) continue;
 				if (linkI->block.pState.quick32[0] != pState->quick32[0]) continue;
 				if (linkI->block.pState.quick32[1] != pState->quick32[1]) continue;
+				if (doConstProp && (linkI->block.pState.vi15  != pState->vi15))  continue;
+				if (doConstProp && (linkI->block.pState.vi15v != pState->vi15v)) continue;
 				return &linkI->block;
 			}
 		}
@@ -119,10 +123,11 @@ public:
 			for (u32 j = 0; j < 4;  j++) viCRC -= ((u32*)linkI->block.pState.VI)[j];
 			for (u32 j = 0; j < 32; j++) vfCRC -= linkI->block.pState.VF[j].reg;
 			for (u32 j = 0; j < z;  j++) crc   -= ((u32*)&linkI->block.pState)[j];
-			DevCon.WriteLn(Color_Green, "[%04x][Block #%d][crc=%08x][q=%02d][p=%02d][xgkick=%d][vi15=%08x][viBackup=%02d]"
+			DevCon.WriteLn(Color_Green, "[%04x][Block #%d][crc=%08x][q=%02d][p=%02d][xgkick=%d][vi15=%04x][vi15v=%d][viBackup=%02d]"
 			"[flags=%02x][exactMatch=%x][blockType=%d][viCRC=%08x][vfCRC=%08x]", pc, i, crc, linkI->block.pState.q, 
-			linkI->block.pState.p, linkI->block.pState.xgkick, linkI->block.pState.vi15, linkI->block.pState.viBackUp, 
-			linkI->block.pState.flags, linkI->block.pState.needExactMatch, linkI->block.pState.blockType, viCRC, vfCRC);
+			linkI->block.pState.p, linkI->block.pState.xgkick, linkI->block.pState.vi15, linkI->block.pState.vi15v,
+			linkI->block.pState.viBackUp, linkI->block.pState.flagInfo, linkI->block.pState.needExactMatch,
+			linkI->block.pState.blockType, viCRC, vfCRC);
 			linkI = linkI->next;
 		}
 	}

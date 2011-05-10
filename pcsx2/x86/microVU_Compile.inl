@@ -384,8 +384,8 @@ __fi void mVUinitConstValues(microVU& mVU) {
 		mVUconstReg[i].isValid	= 0;
 		mVUconstReg[i].regValue	= 0;
 	}
-	mVUconstReg[15].isValid  = mVUregs.vi15 >> 31;
-	mVUconstReg[15].regValue = mVUconstReg[15].isValid ? (mVUregs.vi15&0xffff) : 0;
+	mVUconstReg[15].isValid  = mVUregs.vi15v;
+	mVUconstReg[15].regValue = mVUregs.vi15v ? mVUregs.vi15 : 0;
 }
 
 // Initialize Variables
@@ -403,11 +403,13 @@ __fi void mVUinitFirstPass(microVU& mVU, uptr pState, u8* thisPtr) {
 		memcpy_const((u8*)&mVU.prog.lpState, (u8*)pState, sizeof(microRegInfo));
 	}
 	mVUblock.x86ptrStart	= thisPtr;
-	mVUpBlock				= mVUblocks[mVUstartPC/2]->add(&mVUblock);  // Add this block to block manager
-	mVUregs.needExactMatch	=(mVUregs.blockType || noFlagOpts) ? 7 : 0; // 1-Op blocks should just always set exactMatch (Sly Cooper)
+	mVUpBlock				= mVUblocks[mVUstartPC/2]->add(&mVUblock); // Add this block to block manager
+	mVUregs.needExactMatch	= /*(mVUregs.blockType||noFlagOpts)?7:*/0; // ToDo: Fix 1-Op block flag linking (MGS2:Demo/Sly Cooper)
 	mVUregs.blockType		= 0;
 	mVUregs.viBackUp		= 0;
-	mVUregs.flags			= 0;
+	mVUregs.flagInfo		= 0;
+	mVUregs.fullFlags0		= 0;
+	mVUregs.fullFlags1		= 0;
 	mVUsFlagHack			= CHECK_VU_FLAGHACK;
 	mVUinitConstValues(mVU);
 }
@@ -425,7 +427,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 	// First Pass
 	iPC = startPC / 4;
 	mVUsetupRange(mVU, startPC, 1); // Setup Program Bounds/Range
-	mVU.regAlloc->reset();	// Reset regAlloc
+	mVU.regAlloc->reset(); // Reset regAlloc
 	mVUinitFirstPass(mVU, pState, thisPtr);
 	for(int branch = 0; mVUcount < endCount; mVUcount++) {
 		incPC(1);
@@ -450,8 +452,9 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 	}
 
 	// Fix up vi15 const info for propagation through blocks
-	mVUregs.vi15 = (mVUconstReg[15].isValid && doConstProp) ? ((1<<31) | (mVUconstReg[15].regValue&0xffff)) : 0;
-	
+	mVUregs.vi15  = (doConstProp && mVUconstReg[15].isValid) ? (u16)mVUconstReg[15].regValue : 0;
+	mVUregs.vi15v = (doConstProp && mVUconstReg[15].isValid) ? 1 : 0;
+		
 	mVUsetFlags(mVU, mFC);	   // Sets Up Flag instances
 	mVUoptimizePipeState(mVU); // Optimize the End Pipeline State for nicer Block Linking
 	mVUdebugPrintBlocks(mVU,0);// Prints Start/End PC of blocks executed, for debugging...

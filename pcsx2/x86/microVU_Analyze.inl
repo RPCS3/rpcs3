@@ -447,6 +447,9 @@ __ri int mVUbranchCheck(mV) {
 			mVUlow.evilBranch = 1;
 			mVUregs.blockType = 2;
 			mVUregs.needExactMatch |= 7; // This might not be necessary, but w/e...
+			mVUregs.flagInfo   = 0;
+			mVUregs.fullFlags0 = 0;
+			mVUregs.fullFlags1 = 0;
 			DevCon.Warning("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU.index, xPC);
 			return 1;
 		}
@@ -463,7 +466,7 @@ __ri int mVUbranchCheck(mV) {
 
 __fi void mVUanalyzeCondBranch1(mV, int Is) {
 	analyzeVIreg1(mVU, Is, mVUlow.VI_read[0]);
-	if (!mVUstall && !mVUbranchCheck(mVU)) { 
+	if (!mVUbranchCheck(mVU) && !mVUstall) { 
 		analyzeBranchVI(mVU, Is, mVUlow.memReadIs);
 	}
 }
@@ -471,7 +474,7 @@ __fi void mVUanalyzeCondBranch1(mV, int Is) {
 __fi void mVUanalyzeCondBranch2(mV, int Is, int It) {
 	analyzeVIreg1(mVU, Is, mVUlow.VI_read[0]);
 	analyzeVIreg1(mVU, It, mVUlow.VI_read[1]);
-	if (!mVUstall && !mVUbranchCheck(mVU)) {
+	if (!mVUbranchCheck(mVU) && !mVUstall) {
 		analyzeBranchVI(mVU, Is, mVUlow.memReadIs);
 		analyzeBranchVI(mVU, It, mVUlow.memReadIt);
 	}

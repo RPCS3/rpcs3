@@ -229,6 +229,10 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 #define elif		 else if
 #define varPrint(x)  DevCon.WriteLn(#x " = %d", (int)x)
 
+#define blockCreate(addr) {												\
+	if  (!mVUblocks[addr]) mVUblocks[addr] = new microBlockManager();	\
+}
+
 #define branchAddr (																	\
 	pxAssumeDev((iPC & 1) == 0, "microVU: Expected Lower Op for valid branch addr."),	\
 	((((iPC + 2)  + (_Imm11_ * 2)) & mVU.progMemMask) * 4)								\
@@ -292,12 +296,22 @@ static const bool noFlagOpts = 0; // Set to 1 to disable all flag setting optimi
 // flag instances between blocks...
 
 // Multiple Flag Instances
-static const bool doFlagInsts = 1; // Set to 1 to enable multiple flag instances
+static const bool doSFlagInsts = 1; // Set to 1 to enable multiple status flag instances
+static const bool doMFlagInsts = 1; // Set to 1 to enable multiple mac    flag instances
+static const bool doCFlagInsts = 1; // Set to 1 to enable multiple clip   flag instances
 // This is the correct behavior of the VU's. Due to the pipeline of the VU's
 // there can be up to 4 different instances of values to keep track of
 // for the 3 different types of flags: Status, Mac, Clip flags.
-// Setting this to 0 acts as if there is only 1 instance of each flag,
-// which may be useful to check for potential flag pipeline bugs.
+// Setting one of these to 0 acts as if there is only 1 instance of the
+// corresponding flag, which may be useful when debugging flag pipeline bugs.
+
+static const int doFullFlagOpt = 0; // Set above 0 to enable full flag optimization
+// This attempts to eliminate some flag shuffling at the end of blocks, but
+// can end up creating more recompiled code. The max amount of times this optimization
+// is performed per block can be set by changing the doFullFlagOpt value to be that limit.
+// i.e. setting doFullFlagOpt to 2 will recompile the current block at-most 2 times with
+// the full flag optimization.
+// Note: This optimization doesn't really seem to be benefitial and is buggy...
 
 // Branch in Branch Delay Slots
 static const bool doBranchInDelaySlot = 1; // Set to 1 to enable evil-branches
@@ -334,7 +348,7 @@ static const bool doJumpAsSameProgram = 0; // Set to 1 to treat jumps as same pr
 //------------------------------------------------------------------
 
 // Status Flag Speed Hack
-#define CHECK_VU_FLAGHACK	(EmuConfig.Speedhacks.vuFlagHack)
+#define CHECK_VU_FLAGHACK  (EmuConfig.Speedhacks.vuFlagHack)
 // This hack only updates the Status Flag on blocks that will read it.
 // Most blocks do not read status flags, so this is a big speedup.
 
