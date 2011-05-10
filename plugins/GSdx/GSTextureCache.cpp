@@ -433,7 +433,7 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 
 	// This is a shorter but potentially slower version of the below, commented out code.
 	// It works for all the games mentioned below and fixes a couple of other ones as well
-	// (Japanese Wizardry and Chaos Legion).
+	// (Busen0: Wizardry and Chaos Legion).
 	// Also in a few games the below code ran the Grandia3 case when it shouldn't :p
 	for(list<Target*>::iterator i = m_dst[RenderTarget].begin(); i != m_dst[RenderTarget].end(); )
 	{
@@ -445,9 +445,12 @@ void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
 		{
 			if(GSUtil::HasSharedBits(bp, psm, t->m_TEX0.TBP0, t->m_TEX0.PSM))
 			{
-				//printf("Read rect: %d %d %d %d\n", t->m_valid.x, t->m_valid.y, t->m_valid.z, t->m_valid.w);
 				// note: r.rintersect breaks Wizardry and Chaos Legion
-				Read(t, t->m_valid);
+				// Read(t, t->m_valid) works in all tested games but is very slow in GUST titles ><
+				if (r.x == 0 && r.y == 0) // Full screen read?
+					Read(t, t->m_valid);
+				else // Block level read?
+					Read(t, r.rintersect(t->m_valid));
 			}
 		}
 	}
