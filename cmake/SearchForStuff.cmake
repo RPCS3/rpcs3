@@ -168,8 +168,16 @@ if(wxWidgets_FOUND)
         # Force the use of 32 bit library configuration on
         # 64 bits machine with 32 bits library in /usr/lib32
         if(CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
-            STRING(REGEX REPLACE "/usr/lib/wx" "/usr/lib32/wx"
-                wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
+            if (EXISTS "/usr/lib32")
+                # Debian/ubuntu. 64b in /usr/lib and 32b in /usr/lib32
+                STRING(REGEX REPLACE "/usr/lib/wx" "/usr/lib32/wx" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
+                # I'm sure someone did it! 64b in /usr/lib64 and 32b in /usr/lib32
+                STRING(REGEX REPLACE "/usr/lib64/wx" "/usr/lib32/wx" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
+            endif (EXISTS "/usr/lib32")
+            if (EXISTS "/usr/lib")
+                # Fedora/Open suse. 64b in /usr/lib64 and 32b in /usr/lib
+                STRING(REGEX REPLACE "/usr/lib64/wx" "/usr/lib/wx" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
+            endif (EXISTS "/usr/lib")
         endif(CMAKE_SIZEOF_VOID_P MATCHES "8" AND EXISTS "/usr/lib32")
     endif(Linux)
 

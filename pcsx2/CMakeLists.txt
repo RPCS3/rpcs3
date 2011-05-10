@@ -8,6 +8,10 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 # set common flags
 set(CommonFlags 
+    # GCC-4.6 crash pcsx2 during the binding of plugins at startup...
+    # Disable this optimization for the moment
+    -fno-omit-frame-pointer 
+    # END GCC-4.6
     -DLINUX_PRINT_SVN_NUMBER
 	-pthread
     -fvisibility=hidden

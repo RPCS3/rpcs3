@@ -474,7 +474,13 @@ int pxGetCharHeight( const wxWindow* wind, int rows )
 	if( !wind ) return 0;
 	wxClientDC dc(wx_const_cast(wxWindow*, wind));
 	dc.SetFont( wind->GetFont() );
+#ifdef __LINUX__
+	// It seems there is a bad detection of the size of the font (non standard dpi ???). Font are cut in top or bottom.
+	// Add a correction factor to leave enough room. Visualy 1.7 seems fine but feel free to tune it -- Gregory
+	return (dc.GetCharHeight() * 1.7 + 1 ) * rows;
+#else
 	return (dc.GetCharHeight() + 1 ) * rows;
+#endif
 }
 
 int pxGetCharHeight( const wxWindow& wind, int rows )
