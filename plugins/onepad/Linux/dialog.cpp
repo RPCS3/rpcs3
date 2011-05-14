@@ -29,8 +29,8 @@ extern string KeyName(int pad, int key);
 void config_key(int pad, int key);
 void on_conf_key(GtkButton *button, gpointer user_data);
 
-int current_pad = 0;
-int current_joystick = -1;
+static int current_pad = 0;
+static int current_joystick = -1;
 GtkWidget *rev_lx_check, *rev_ly_check, *force_feedback_check, *rev_rx_check, *rev_ry_check;
 
 const char* s_pGuiKeyMap[] =
@@ -477,7 +477,6 @@ void DisplayDialog()
     dialog_buttons btn[29];
     
 	LoadConfig();
-    current_pad = 0;
 	fir = new keys_tree;
 	fir->init();
 	

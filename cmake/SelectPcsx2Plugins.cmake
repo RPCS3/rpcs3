@@ -3,7 +3,7 @@
 #-------------------------------------------------------------------------------
 set(msg_dep_common_libs "check these libraries -> wxWidgets (>=2.8.10), sparsehash (>=1.5)")
 set(msg_dep_pcsx2       "check these libraries -> wxWidgets (>=2.8.10), gtk2 (>=2.16), zlib (>=1.2.4), pcsx2 common libs")
-set(msg_dep_cdvdiso     "check these libraries -> bzip2 (>=1.0.5)")
+set(msg_dep_cdvdiso     "check these libraries -> bzip2 (>=1.0.5), gtk2 (>=2.16)")
 set(msg_dep_zerogs      "check these libraries -> glew (>=1.5), opengl, X11, nvidia-cg-toolkit (>=2.1)")
 set(msg_dep_gsdx        "check these libraries -> opengl, X11, pcsx2 SDL")
 set(msg_dep_zzogl       "check these libraries -> glew (>=1.5), jpeg (>=6.2), opengl, X11, nvidia-cg-toolkit (>=2.1), pcsx2 common libs")
@@ -73,14 +73,15 @@ set(CDVDnull TRUE)
 #			CDVDiso
 #---------------------------------------
 # requires: -BZip2
+#           -gtk2 (linux)
 #---------------------------------------
-if(BZIP2_FOUND)
+if(BZIP2_FOUND AND GTK2_FOUND)
     set(CDVDiso TRUE)
-else(BZIP2_FOUND)
+else(BZIP2_FOUND AND GTK2_FOUND)
     set(CDVDiso FALSE)
     message(STATUS "Skip build of CDVDiso: miss some dependencies")
     message(STATUS "${msg_dep_cdvdiso}")
-endif(BZIP2_FOUND)
+endif(BZIP2_FOUND AND GTK2_FOUND)
 
 #---------------------------------------
 #			CDVDlinuz

@@ -147,6 +147,10 @@ endif(NOT DEFINED FORCE_INTERNAL_ZLIB)
 if(NOT DEFINED FORCE_INTERNAL_SDL)
     set(FORCE_INTERNAL_SDL FALSE)
 endif(NOT DEFINED FORCE_INTERNAL_SDL)
+if (FORCE_INTERNAL_SDL)
+    message(STATUS "Internal SDL is a development snapshot of libsdl 1.3
+    Crashes can be expected and no support will be provided")
+endif (FORCE_INTERNAL_SDL)
 
 #-------------------------------------------------------------------------------
 # Select library system vs 3rdparty

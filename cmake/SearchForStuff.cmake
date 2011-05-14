@@ -37,8 +37,8 @@ if(NOT FORCE_INTERNAL_SDL)
     find_package(SDL)
 endif(NOT FORCE_INTERNAL_SDL)
 find_package(Subversion)
-# The requierement of wxWidgets is checked in SelectPcsx2Plugins module
-# Does not requiere the module (allow to compile non-wx plugins)
+# The requirement of wxWidgets is checked in SelectPcsx2Plugins module
+# Does not require the module (allow to compile non-wx plugins)
 # Force the unicode build (the variable is only supported on cmake 2.8.3 and above)
 # Warning do not put any double-quote for the argument...
 # set(wxWidgets_CONFIG_OPTIONS --unicode=yes --debug=yes) # In case someone want to debug inside wx
