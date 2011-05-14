@@ -120,7 +120,7 @@ void SaveConfig()
 	f = fopen(iniFile.c_str(), "w");
 	if (f == NULL)
 	{
-		printf("ZeroPAD: failed to save ini %s\n", iniFile.c_str());
+		printf("OnePAD: failed to save ini %s\n", iniFile.c_str());
 		return;
 	}
 

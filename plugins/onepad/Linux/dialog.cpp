@@ -370,7 +370,7 @@ void joy_changed(GtkComboBox *box, gpointer user_data)
 	// unassign every joystick with this pad
 	for (int i = 0; i < (int)s_vjoysticks.size(); ++i)
 	{
-		if (s_vjoysticks[i]->GetPAD() == s_selectedpad) s_vjoysticks[i]->Assign(-1);
+		if (s_vjoysticks[i]->GetPAD() == current_pad) s_vjoysticks[i]->Assign(-1);
 	}
 
 	if (joyid >= 0 && joyid < (int)s_vjoysticks.size()) s_vjoysticks[joyid]->Assign(current_pad);

@@ -93,5 +93,5 @@ __forceinline int key_to_pov_sign(int pad, int index)
 
 __forceinline int key_to_hat_dir(int pad, int index)
 {
-	return (((conf.keys[pad][index]) & ~ 0x40000) >> 8);
+	return (((conf.keys[pad][index]) & 0xF00) >> 8);
 }

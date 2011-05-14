@@ -25,7 +25,6 @@
 // Joystick definitions //
 //////////////////////////
 
-int s_selectedpad = 0;
 vector<JoystickInfo*> s_vjoysticks;
 static u32 s_bSDLInit = false;
 
