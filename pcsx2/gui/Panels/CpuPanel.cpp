@@ -151,7 +151,7 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	wxStaticBoxSizer& s_iop	( *new wxStaticBoxSizer( wxVERTICAL, this, L"IOP" ) );
 
 	s_ee	+= m_panel_RecEE	| StdExpand();
-	s_ee   += m_check_EECacheEnable = new pxCheckBox( this, _("Enable EE Cache - Interpreter Only! (Slower)") );
+	s_ee    += m_check_EECacheEnable = &(new pxCheckBox( this, _("Enable EE Cache (Slower)") ))->SetToolTip(_("Interpreter only; provided for diagnostic"));
 	s_iop	+= m_panel_RecIOP	| StdExpand();
 
 	s_recs	+= s_ee				| SubGroup();

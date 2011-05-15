@@ -172,7 +172,7 @@ void Panels::FramelimiterPanel::Apply()
 Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 	: BaseApplicableConfigPanel_SpecificConfig( parent )
 {
-	SetMinWidth( 280 );
+	SetMinWidth( 350 );
 
 	const RadioPanelItem FrameskipOptions[] =
 	{
