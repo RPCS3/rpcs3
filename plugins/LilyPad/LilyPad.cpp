@@ -823,8 +823,8 @@ ExtraWndProcResult TitleHackWndProc(HWND hWndTop, UINT uMsg, WPARAM wParam, LPAR
 				else {
 					len = MultiByteToWideChar(CP_ACP, 0, (char*) lParam, -1, text, sizeof(text)/sizeof(wchar_t));
 				}
-				if (len > 0 && len < 150 && !wcsstr(text, L" | State ")) {
-					wsprintfW(text+len, L" | State %i", saveStateIndex);
+				if (len > 0 && len < 150 && !wcsstr(text, L" | State(Lilypad) ")) {
+					wsprintfW(text+len, L" | State(Lilypad) %i", saveStateIndex);
 					SetWindowText(hWndTop, text);
 					return NO_WND_PROC;
 				}
