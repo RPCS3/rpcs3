@@ -1228,9 +1228,9 @@ void condEvilBranch(mV, int JMPcc) {
 		xMOV(ptr32[&mVU.badBranch], branchAddrN);
 		xCMP(gprT1b, 0);
 		xForwardJump8 cJMP((JccComparisonType)JMPcc);
-			incPC(4); // Branch Not Taken
+			incPC(6); // Branch Not Taken Addr + 8
 			xMOV(ptr32[&mVU.badBranch], xPC);
-			incPC(-4);
+			incPC(-6);
 		cJMP.SetTarget();
 		return;
 	}

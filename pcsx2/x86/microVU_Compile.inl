@@ -435,19 +435,19 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		mVUincCycles(mVU, 1);
 		mVUopU(mVU, 0);
 		mVUcheckBadOp(mVU);
-		if (curI & _Ebit_)	  { eBitPass1(mVU, branch); }
-		if (curI & _DTbit_)	  { branch = 4; }
-		if (curI & _Mbit_)	  { mVUup.mBit = 1; }
-		if (curI & _Ibit_)	  { mVUlow.isNOP = 1; mVUup.iBit = 1; }
-		else				  { incPC(-1); mVUopL(mVU, 0); incPC(1); }
+		if (curI & _Ebit_)  { eBitPass1(mVU, branch); }
+		if (curI & _DTbit_) { branch = 4; }
+		if (curI & _Mbit_)  { mVUup.mBit = 1; }
+		if (curI & _Ibit_)  { mVUlow.isNOP = 1; mVUup.iBit = 1; }
+		else			    { incPC(-1); mVUopL(mVU, 0); incPC(1); }
 		mVUsetCycles(mVU);
 		mVUinfo.readQ  =  mVU.q;
 		mVUinfo.writeQ = !mVU.q;
 		mVUinfo.readP  =  mVU.p;
 		mVUinfo.writeP = !mVU.p;
-		if		(branch >= 2) { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } mVUcount++; branchWarning(mVU); break; }
-		else if (branch == 1) { branch = 2; }
-		if		(mVUbranch)   { mVUsetFlagInfo(mVU); eBitWarning(mVU); branch = 3; mVUbranch = 0; }
+		if   (branch >= 2)  { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } mVUcount++; branchWarning(mVU); break; }
+		elif (branch == 1)  { branch = 2; }
+		if   (mVUbranch)    { mVUsetFlagInfo(mVU); eBitWarning(mVU); branch = 3; mVUbranch = 0; }
 		incPC(1);
 	}
 

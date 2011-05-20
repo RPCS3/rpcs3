@@ -441,6 +441,7 @@ __ri int mVUbranchCheck(mV) {
 	if (!mVUcount) return 0;
 	incPC(-2);
 	if (mVUlow.branch) {
+		u32 branchType = mVUlow.branch;
 		if (doBranchInDelaySlot) {
 			mVUlow.badBranch  = 1;
 			incPC(2);
@@ -450,13 +451,15 @@ __ri int mVUbranchCheck(mV) {
 			mVUregs.flagInfo   = 0;
 			mVUregs.fullFlags0 = 0;
 			mVUregs.fullFlags1 = 0;
-			DevCon.Warning("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU.index, xPC);
+			DevCon.Warning("microVU%d Warning: Branch[%d] in Branch[%d] delay slot! [%04x]",
+							mVU.index, branchType, mVUlow.branch, xPC);
 			return 1;
 		}
 		else {
 			incPC(2);
 			mVUlow.isNOP = 1;
-			DevCon.Warning("microVU%d Warning: Branch in Branch delay slot! [%04x]", mVU.index, xPC);
+			DevCon.Warning("microVU%d Warning: Branch[%d] in Branch[%d] delay slot! [%04x]",
+							mVU.index, branchType, mVUlow.branch, xPC);
 			return 0;
 		}
 	}
@@ -489,8 +492,8 @@ __fi void mVUanalyzeNormBranch(mV, int It, bool isBAL) {
 }
 
 __ri void mVUanalyzeJump(mV, int Is, int It, bool isJALR) {
-	mVUbranchCheck(mVU);
 	mVUlow.branch = (isJALR) ? 10 : 9;
+	mVUbranchCheck(mVU);
 	if (mVUconstReg[Is].isValid && doConstProp) {
 		mVUlow.constJump.isValid  = 1;
 		mVUlow.constJump.regValue = mVUconstReg[Is].regValue;
