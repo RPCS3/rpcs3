@@ -122,7 +122,7 @@ struct microLowerOp {
 	microVIreg VI_write;	  // VI reg written to by this instruction
 	microVIreg VI_read[2];	  // VI regs read by this instruction
 	microConstInfo constJump; // Constant Reg Info for JR/JARL instructions
-	u32  branch;	// Branch Type (0 = Not a Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JALR, 10 = JR)
+	u32  branch;	// Branch Type (0 = Not a Branch, 1 = B. 2 = BAL, 3~8 = Conditional Branches, 9 = JR, 10 = JALR)
 	bool badBranch; // This instruction is a Branch who has another branch in its Delay Slot
 	bool evilBranch;// This instruction is a Branch in a Branch Delay Slot (Instruction after badBranch)
 	bool isNOP;		// This instruction is a NOP

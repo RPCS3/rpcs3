@@ -451,15 +451,15 @@ __ri int mVUbranchCheck(mV) {
 			mVUregs.flagInfo   = 0;
 			mVUregs.fullFlags0 = 0;
 			mVUregs.fullFlags1 = 0;
-			DevCon.Warning("microVU%d Warning: Branch[%d] in Branch[%d] delay slot! [%04x]",
-							mVU.index, branchType, mVUlow.branch, xPC);
+			DevCon.Warning("microVU%d Warning: %s in %s delay slot! [%04x]", mVU.index,
+							branchSTR[mVUlow.branch&0xf], branchSTR[branchType&0xf], xPC);
 			return 1;
 		}
 		else {
 			incPC(2);
 			mVUlow.isNOP = 1;
-			DevCon.Warning("microVU%d Warning: Branch[%d] in Branch[%d] delay slot! [%04x]",
-							mVU.index, branchType, mVUlow.branch, xPC);
+			DevCon.Warning("microVU%d Warning: %s in %s delay slot! [%04x]", mVU.index,
+							branchSTR[mVUlow.branch&0xf], branchSTR[branchType&0xf], xPC);
 			return 0;
 		}
 	}

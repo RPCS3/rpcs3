@@ -81,6 +81,13 @@ static const uint _DTbit_ = 0; //( _Dbit_ | _Tbit_ ) // ToDo: Implement this stu
 static const uint divI = 0x1040000;
 static const uint divD = 0x2080000;
 
+static const char branchSTR[16][8] = {
+	"None",  "B",     "BAL",   "IBEQ",
+	"IBGEZ", "IBGTZ", "IBLEZ", "IBLTZ",
+	"IBNE",  "JR",    "JALR",  "N/A",
+	"N/A",   "N/A",   "N/A",   "N/A"
+};
+
 //------------------------------------------------------------------
 // Helper Macros
 //------------------------------------------------------------------

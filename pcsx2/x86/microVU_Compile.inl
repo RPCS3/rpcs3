@@ -21,8 +21,8 @@
 
 static void __fastcall mVUbadOp0(u32 prog, u32 pc)	{ Console.Error("microVU0 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", pc, prog); }
 static void __fastcall mVUbadOp1(u32 prog, u32 pc)	{ Console.Error("microVU1 Warning: Exiting... Block started with illegal opcode. [%04x] [%x]", pc, prog); }
-static void __fastcall mVUwarning0(u32 prog)		{ Console.Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", prog); }
-static void __fastcall mVUwarning1(u32 prog)		{ Console.Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x] [%x]", prog); }
+static void __fastcall mVUwarning0(u32 prog)		{ Console.Error("microVU0 Warning: Exiting from Possible Infinite Loop [%03d]", prog); }
+static void __fastcall mVUwarning1(u32 prog)		{ Console.Error("microVU1 Warning: Exiting from Possible Infinite Loop [%03d]", prog); }
 static void __fastcall mVUprintPC1(u32 pc)			{ Console.WriteLn("Block Start PC = 0x%04x", pc); }
 static void __fastcall mVUprintPC2(u32 pc)			{ Console.WriteLn("Block End PC   = 0x%04x", pc); }
 
