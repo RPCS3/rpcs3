@@ -704,22 +704,19 @@ StereoOut32 V_Core::Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, 
 
 	WaveDump::WriteCore( Index, CoreSrc_PreReverb, TW );
 
-	StereoOut32 RV( DoReverb( TW ) );
+	StereoOut32 RV;
+	// Fake reverb active?
+	if (ReverbMode == 1)
+		RV = DoReverb_Fake( TW );
+	else 
+		RV = DoReverb( TW );
+	
 
 	WaveDump::WriteCore( Index, CoreSrc_PostReverb, RV );
 
-	// Boost reverb volume
-	int temp = 1;
-	switch (ReverbBoost)
-	{
-		case 0: break;
-		case 1: temp = 2; break;
-		case 2: temp = 4; break;
-		case 3: temp = 8; break;
-	}
 	// Mix Dry + Wet
 	// (master volume is applied later to the result of both outputs added together).
-	return TD + ApplyVolume( RV*temp, FxVol );
+	return TD + ApplyVolume( RV, FxVol );
 }
 
 // Filters that work on the final output to de-alias and equlize it.

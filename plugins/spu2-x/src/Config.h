@@ -62,7 +62,7 @@ extern wxString MemDumpFileName;
 extern wxString RegDumpFileName;
 
 extern int Interpolation;
-extern int ReverbBoost;
+extern int ReverbMode;
 extern int numSpeakers;
 extern bool EffectsDisabled;
 extern float FinalVolume;

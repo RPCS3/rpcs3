@@ -440,6 +440,7 @@ struct V_Core
 	StereoOut32 downbuf[8];
 	StereoOut32 upbuf[8];
 	int			dbpos, ubpos;
+	bool FakeReverbActive;
 
 	// HACK -- This is a temp buffer which is (or isn't?) used to circumvent some memory
 	// corruption that originates elsewhere in the plugin. >_<  The actual ADMA buffer
@@ -451,13 +452,14 @@ struct V_Core
 // ----------------------------------------------------------------------------------
 
 	// uninitialized constructor
-	V_Core() : Index( -1 ), DMAPtr( NULL ) {}
+	V_Core() : Index( -1 ), DMAPtr( NULL ), FakeReverbActive(false) {}
 	V_Core( int idx );			// our badass constructor
 	~V_Core() throw();
 
 	void	Reset( int index );
 	void	Init( int index );
 	void	UpdateEffectsBufferSize();
+	void	AnalyzeReverbPreset();
 
 	s32		EffectsBufferIndexer( s32 offset ) const;
 	void	UpdateFeedbackBuffersA();
@@ -473,6 +475,7 @@ struct V_Core
 	StereoOut32 Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, const StereoOut32& Ext );
 	void		Reverb_AdvanceBuffer();
 	StereoOut32 DoReverb( const StereoOut32& Input );
+	StereoOut32 DoReverb_Fake( const StereoOut32& Input );
 	s32			RevbGetIndexer( s32 offset );
 
 	StereoOut32 ReadInput();

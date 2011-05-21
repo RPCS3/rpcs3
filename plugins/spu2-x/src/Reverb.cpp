@@ -39,6 +39,11 @@ __forceinline s32 V_Core::RevbGetIndexer( s32 offset )
 	return pos;
 }
 
+u32 WrapAround(V_Core& thiscore, u32 offset)
+{
+	return (thiscore.ReverbX + offset) % thiscore.EffectsBufferSize;
+}
+
 void V_Core::Reverb_AdvanceBuffer()
 {
 	if( RevBuffers.NeedsUpdated )
@@ -273,4 +278,115 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 	ubpos = (ubpos+1) & 7;
 
 	return retval;
+}
+
+StereoOut32 V_Core::DoReverb_Fake( const StereoOut32& Input )
+{
+	if(!FakeReverbActive)
+		return StereoOut32::Empty;
+
+	V_Core& thiscore(Cores[Index]);
+
+	s16* Base = GetMemPtr(thiscore.EffectsStartA);
+
+	s32 accL = 0;
+	s32 accR = 0;
+
+	///////////////////////////////////////////////////////////
+	// part 0: Parameters
+
+	// Input volumes
+	const s32 InputL = -0x3fff;
+	const s32 InputR = -0x3fff;
+
+	// Echo 1: Positive, short delay
+	const u32 Echo1L = 0x3700; // must be even!
+	const u32 Echo1R = 0x2704; // must be even!
+	const s32 Echo1A = 0x5000 / 8;
+
+	// Echo 2: Negative, slightly longer delay, quiet
+	const u32 Echo2L = 0x2f10; // must be even!
+	const u32 Echo2R = 0x1f04; // must be even!
+	const s32 Echo2A = 0x4c00 / 8;
+
+	// Echo 3: Negative, longer delay, full feedback
+	const u32 Echo3L = 0x2800 ; // must be even!
+	const u32 Echo3R = 0x1b34 ; // must be even!
+	const s32 Echo3A = 0xb800 / 8;
+
+	// Echo 4: Negative, longer delay, full feedback
+	const u32 Echo4L = 0x2708 ; // must be even!
+	const u32 Echo4R = 0x1704 ; // must be even!
+	const s32 Echo4A = 0xbc00 / 8;
+
+	const u32 CrossChannelL = 0x0694 ; // must be even!
+	const u32 CrossChannelR = 0x04e4 ; // must be even!
+	const u32 CrossChannelA = 0x6000 / 2;
+
+	///////////////////////////////////////////////////////////
+	// part 1: input
+
+	const s32 inL = Input.Left  * InputL;
+	const s32 inR = Input.Right * InputR;
+
+	accL += inL;
+	accR += inR;
+
+	///////////////////////////////////////////////////////////
+	// part 2: straight echos
+
+	s32 e1L = Base[WrapAround(thiscore,Echo1L  )] * Echo1A;
+	s32 e1R = Base[WrapAround(thiscore,Echo1R+1)] * Echo1A;
+
+	accL += e1L;
+	accR += e1R;
+
+	s32 e2L = Base[WrapAround(thiscore,Echo2L  )] * Echo2A;
+	s32 e2R = Base[WrapAround(thiscore,Echo2R+1)] * Echo2A;
+
+	accL += e2L;
+	accR += e2R;
+
+	s32 e3L = Base[WrapAround(thiscore,Echo3L  )] * Echo3A;
+	s32 e3R = Base[WrapAround(thiscore,Echo3R+1)] * Echo3A;
+
+
+	accL += e3L;
+	accR += e3R;
+
+	s32 e4L = Base[WrapAround(thiscore,Echo4L  )] * Echo4A;
+	s32 e4R = Base[WrapAround(thiscore,Echo4R+1)] * Echo4A;
+
+	accL += e4L;
+	accR += e4R;
+
+	///////////////////////////////////////////////////////////
+	// part 4: cross-channel feedback
+
+	s32 ccL = Base[WrapAround(thiscore,CrossChannelL+1)] * CrossChannelA;
+	s32 ccR = Base[WrapAround(thiscore,CrossChannelR  )] * CrossChannelA;
+	accL += ccL;
+	accR += ccR;
+ 
+	///////////////////////////////////////////////////////////
+	// part N-2: filter
+
+	if (accL > -200000 && accL < 200000) accL /= 4;
+	if (accR > -200000 && accR < 200000) accR /= 4;
+
+	///////////////////////////////////////////////////////////
+	// part N-1: normalize output
+
+	accL >>= 15;
+	accR >>= 15;
+
+	///////////////////////////////////////////////////////////
+	// part N: write output
+
+	s32 tmpL = accL>>5;
+	s32 tmpR = accR>>5;
+	Base[WrapAround(thiscore,0)] = clamp_mix(accL-tmpL);
+	Base[WrapAround(thiscore,1)] = clamp_mix(accR-tmpR);
+
+	return StereoOut32(accL,accR);
 }
