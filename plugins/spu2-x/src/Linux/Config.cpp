@@ -110,7 +110,7 @@ void WriteSettings()
 	
 	CfgWriteInt(L"MIXING",L"Interpolation",Interpolation);
 	CfgWriteBool(L"MIXING",L"Disable_Effects",EffectsDisabled);
-	CfgWriteInt(L"MIXING",L"FinalVolume",(int)(FinalVolume*100));
+	CfgWriteInt(L"MIXING",L"FinalVolume",(int)(FinalVolume * 100 +0.5f));
 	CfgWriteInt(L"MIXING",L"Reverb_Boost",ReverbBoost);
 
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );

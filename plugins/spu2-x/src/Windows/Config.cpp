@@ -111,7 +111,7 @@ void WriteSettings()
 	CfgWriteInt(L"MIXING",L"Reverb_Boost",ReverbBoost);
 
 	CfgWriteBool(L"MIXING",L"Disable_Effects",EffectsDisabled);
-	CfgWriteInt(L"MIXING",L"FinalVolume",(int)(FinalVolume*100));
+	CfgWriteInt(L"MIXING",L"FinalVolume",(int)(FinalVolume * 100 + 0.5f));
 
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
@@ -191,11 +191,17 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			swprintf_s(temp,L"%d ms (avg)",SndOutLatencyMS);
 			SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
 
+			int configvol = (int)(FinalVolume * 100 + 0.5f);
+			INIT_SLIDER( IDC_VOLUME_SLIDER, 0, 100, 10, 42, 1 );
+
+			SendDialogMsg( hWnd, IDC_VOLUME_SLIDER, TBM_SETPOS, TRUE, configvol );
+			swprintf_s(temp,L"%d%%",configvol);
+			SetWindowText(GetDlgItem(hWnd,IDC_VOLUME_LABEL),temp);
+			
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_SOUNDTOUCH ), (SynchMode == 0) );
 			EnableWindow( GetDlgItem( hWnd, IDC_OPEN_CONFIG_DEBUG ), DebugEnabled );
 
 			SET_CHECK(IDC_EFFECTS_DISABLE,	EffectsDisabled);
-			//FinalVolume;
 			SET_CHECK(IDC_DEBUG_ENABLE,		DebugEnabled);
 			SET_CHECK(IDC_DSP_ENABLE,		dspPluginEnabled);
 		}
@@ -212,7 +218,7 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					double res = ((int)SendDialogMsg( hWnd, IDC_LATENCY_SLIDER, TBM_GETPOS, 0, 0 )) / 128.0;
 					SndOutLatencyMS = (int)pow( res, 3.0 );
 					Clampify( SndOutLatencyMS, LATENCY_MIN, LATENCY_MAX );
-
+					FinalVolume = (float)(SendDialogMsg( hWnd, IDC_VOLUME_SLIDER, TBM_GETPOS, 0, 0 )) / 100;
 					Interpolation = (int)SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_GETCURSEL,0,0 );
 					ReverbBoost = (int)SendDialogMsg( hWnd, IDC_REVERB_BOOST, CB_GETCURSEL,0,0 );
 					OutputModule = (int)SendDialogMsg( hWnd, IDC_OUTPUT, CB_GETCURSEL,0,0 );
@@ -252,7 +258,6 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 				break;
 
 				HANDLE_CHECK(IDC_EFFECTS_DISABLE,EffectsDisabled);
-				//FinalVolume;
 				HANDLE_CHECK(IDC_DSP_ENABLE,dspPluginEnabled);
 				
 				// Fixme : Eh, how to update this based on drop list selections? :p
@@ -306,6 +311,12 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 						curpos = (int)res;
 						swprintf_s(temp,L"%d ms (avg)",curpos);
 						SetDlgItemText(hWnd,IDC_LATENCY_LABEL,temp);
+					}
+					
+					if( hwndDlg == GetDlgItem( hWnd, IDC_VOLUME_SLIDER ) )
+					{
+						swprintf_s(temp,L"%d%%",curpos);
+						SetDlgItemText(hWnd,IDC_VOLUME_LABEL,temp);
 					}
 				break;
 
