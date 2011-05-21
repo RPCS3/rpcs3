@@ -1983,15 +1983,25 @@ bool GSC_DBZBT3(const GSFrameInfo& fi, int& skip)
 			//not needed anymore?
 			//skip = 24; // blur
 		}
-		else if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00e00 || fi.FBP == 0x01000) && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8H && fi.FBMSK == 0x00000)
+		else if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00e00 || fi.FBP == 0x01000) && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8H)
 		{
-			skip = 28; // outline
+			if(fi.FBMSK == 0x00000)
+			{
+				skip = 28; // outline
+			}
+			else if(fi.FBMSK == 0x00FFFFFF)
+			{
+				skip = 1;
+			}
 		}
 	}
-	else if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00e00 || fi.FBP == 0x01000) && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8H)
+	else
+	{
+		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00e00 || fi.FBP == 0x01000) && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8H)
 		{
 			skip = 10;
 		}
+	}
 	
 	return true;
 }
@@ -2716,13 +2726,14 @@ bool GSC_TimeSplitters2(const GSFrameInfo& fi, int& skip)
 
 bool GSC_ReZ(const GSFrameInfo& fi, int& skip)
 {
-	if(skip == 0)
+	//not needed anymore
+	/*if(skip == 0)
 	{
 		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x008c0 || fi.FBP == 0x00a00) && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32)
 		{
 			skip = 1; 
 		}
-	}
+	}*/
 
 	return true;
 }
