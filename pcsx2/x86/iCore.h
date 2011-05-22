@@ -360,7 +360,7 @@ extern u16 x86FpuState;
 #define FLUSH_CODE			0x800	// opcode for interpreter
 
 #define FLUSH_EVERYTHING	0x1ff
-#define FLUSH_EXCEPTION		0x7ff
+#define FLUSH_EXCEPTION		0x1ff   // not supported yet, so disabled for a small speedup (set back to 0x7ff when needed)
 #define FLUSH_INTERPRETER	0xfff
 
 // no freeing, used when callee won't destroy mmx/xmm regs
