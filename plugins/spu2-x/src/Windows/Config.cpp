@@ -153,8 +153,8 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			SendDialogMsg( hWnd, IDC_INTERPOLATE, CB_SETCURSEL,Interpolation,0 );
 
 			SendDialogMsg( hWnd, IDC_REVERB_MODE, CB_RESETCONTENT,0,0 );
-			SendDialogMsg( hWnd, IDC_REVERB_MODE, CB_ADDSTRING,0,(LPARAM) L"Normal Reverb" );
-			SendDialogMsg( hWnd, IDC_REVERB_MODE, CB_ADDSTRING,0,(LPARAM) L"Fake Reverb" );
+			SendDialogMsg( hWnd, IDC_REVERB_MODE, CB_ADDSTRING,0,(LPARAM) L"SPU2 Reverb" );
+			SendDialogMsg( hWnd, IDC_REVERB_MODE, CB_ADDSTRING,0,(LPARAM) L"Custom Reverb" );
 			SendDialogMsg( hWnd, IDC_REVERB_MODE, CB_SETCURSEL,ReverbMode,0 );
 
 			SendDialogMsg( hWnd, IDC_SYNCHMODE, CB_RESETCONTENT,0,0 );

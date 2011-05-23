@@ -705,7 +705,7 @@ StereoOut32 V_Core::Mix( const VoiceMixSet& inVoices, const StereoOut32& Input, 
 	WaveDump::WriteCore( Index, CoreSrc_PreReverb, TW );
 
 	StereoOut32 RV;
-	// Fake reverb active?
+	// Custom reverb active?
 	if (ReverbMode == 1)
 		RV = DoReverb_Fake( TW );
 	else 

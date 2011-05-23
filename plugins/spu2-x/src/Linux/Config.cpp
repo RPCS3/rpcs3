@@ -177,8 +177,8 @@ void DisplayDialog()
 
     reverb_label = gtk_label_new ("Reverb Mode Selection:");
     reverb_box = gtk_combo_box_new_text ();
-    gtk_combo_box_append_text(GTK_COMBO_BOX(reverb_box), "Normal Reverb");
-    gtk_combo_box_append_text(GTK_COMBO_BOX(reverb_box), "Fake Reverb");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(reverb_box), "SPU2 Reverb");
+    gtk_combo_box_append_text(GTK_COMBO_BOX(reverb_box), "Custom Reverb");
     gtk_combo_box_set_active(GTK_COMBO_BOX(reverb_box), ReverbMode);
 
     debug_check = gtk_check_button_new_with_label("Enable Debug Options");

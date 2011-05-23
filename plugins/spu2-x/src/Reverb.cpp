@@ -282,7 +282,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 
 StereoOut32 V_Core::DoReverb_Fake( const StereoOut32& Input )
 {
-	if(!FakeReverbActive)
+	if(!FakeReverbActive /*|| (Cycles&1) == 0*/)
 		return StereoOut32::Empty;
 
 	V_Core& thiscore(Cores[Index]);
@@ -300,28 +300,34 @@ StereoOut32 V_Core::DoReverb_Fake( const StereoOut32& Input )
 	const s32 InputR = -0x3fff;
 
 	// Echo 1: Positive, short delay
-	const u32 Echo1L = 0x3700; // must be even!
-	const u32 Echo1R = 0x2704; // must be even!
+	const u32 Echo1L = 0x3700;
+	const u32 Echo1R = 0x2704;
 	const s32 Echo1A = 0x5000 / 8;
 
 	// Echo 2: Negative, slightly longer delay, quiet
-	const u32 Echo2L = 0x2f10; // must be even!
-	const u32 Echo2R = 0x1f04; // must be even!
+	const u32 Echo2L = 0x2f10;
+	const u32 Echo2R = 0x1f04;
 	const s32 Echo2A = 0x4c00 / 8;
 
 	// Echo 3: Negative, longer delay, full feedback
-	const u32 Echo3L = 0x2800 ; // must be even!
-	const u32 Echo3R = 0x1b34 ; // must be even!
+	const u32 Echo3L = 0x2800;
+	const u32 Echo3R = 0x1b34;
 	const s32 Echo3A = 0xb800 / 8;
 
 	// Echo 4: Negative, longer delay, full feedback
-	const u32 Echo4L = 0x2708 ; // must be even!
-	const u32 Echo4R = 0x1704 ; // must be even!
+	const u32 Echo4L = 0x2708;
+	const u32 Echo4R = 0x1704;
 	const s32 Echo4A = 0xbc00 / 8;
 
-	const u32 CrossChannelL = 0x0694 ; // must be even!
-	const u32 CrossChannelR = 0x04e4 ; // must be even!
-	const u32 CrossChannelA = 0x6000 / 2;
+	// Output control:
+	const u32 Mix1L = thiscore.Revb.MIX_DEST_A0;
+	const u32 Mix1R = thiscore.Revb.MIX_DEST_A1;
+	const u32 Mix2L = thiscore.Revb.MIX_DEST_B0;
+	const u32 Mix2R = thiscore.Revb.MIX_DEST_B1;
+
+	const u32 CrossChannelL = 0x4694;
+	const u32 CrossChannelR = 0x52e4;
+	const u32 CrossChannelA = thiscore.Revb.FB_ALPHA / 8;
 
 	///////////////////////////////////////////////////////////
 	// part 1: input
@@ -367,12 +373,6 @@ StereoOut32 V_Core::DoReverb_Fake( const StereoOut32& Input )
 	s32 ccR = Base[WrapAround(thiscore,CrossChannelR  )] * CrossChannelA;
 	accL += ccL;
 	accR += ccR;
- 
-	///////////////////////////////////////////////////////////
-	// part N-2: filter
-
-	if (accL > -200000 && accL < 200000) accL /= 4;
-	if (accR > -200000 && accR < 200000) accR /= 4;
 
 	///////////////////////////////////////////////////////////
 	// part N-1: normalize output
@@ -383,10 +383,17 @@ StereoOut32 V_Core::DoReverb_Fake( const StereoOut32& Input )
 	///////////////////////////////////////////////////////////
 	// part N: write output
 
-	s32 tmpL = accL>>5;
+	s32 tmpL = accL>>5; //  reduce the volume
 	s32 tmpR = accR>>5;
-	Base[WrapAround(thiscore,0)] = clamp_mix(accL-tmpL);
-	Base[WrapAround(thiscore,1)] = clamp_mix(accR-tmpR);
 
-	return StereoOut32(accL,accR);
+
+	Base[WrapAround(thiscore,Mix1L)] = clamp_mix(accL-tmpL);
+	Base[WrapAround(thiscore,Mix1R)] = clamp_mix(accR-tmpR);
+	Base[WrapAround(thiscore,Mix2L)] = clamp_mix(accL-tmpL);
+	Base[WrapAround(thiscore,Mix2R)] = clamp_mix(accR-tmpR);
+
+	s32 returnL = Base[WrapAround(thiscore,Mix1L)] + Base[WrapAround(thiscore,Mix2L)];
+	s32 returnR = Base[WrapAround(thiscore,Mix1R)] + Base[WrapAround(thiscore,Mix2R)];
+
+	return StereoOut32(returnL,returnR);
 }
