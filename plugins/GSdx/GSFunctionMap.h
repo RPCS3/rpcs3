@@ -168,10 +168,12 @@ public:
 	}
 };
 
+#if 0 // we can't legally distribute vtune libraries or headers
 #ifdef _WINDOWS
 
 #include "vtune/JITProfiling.h"
 
+#endif
 #endif
 
 template<class CG, class KEY, class VALUE>
@@ -213,6 +215,7 @@ public:
 
 			m_cgmap[key] = ret;
 
+			#if 0 // we can't legally distribute vtune libraries or headers
             #ifdef _WINDOWS
 
 			// vtune method registration
@@ -252,6 +255,7 @@ public:
 			}
 
             #endif
+			#endif
 
 			delete cg;
 		}
