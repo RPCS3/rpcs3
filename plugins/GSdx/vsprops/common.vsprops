@@ -18,7 +18,7 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="JITProfiling.lib d3d11.lib d3dx11.lib d3d10_1.lib d3dx10.lib d3d9.lib d3dx9.lib dxguid.lib winmm.lib strmiids.lib xinput.lib"
+		AdditionalDependencies="d3d11.lib d3dx11.lib d3d10_1.lib d3dx10.lib d3d9.lib d3dx9.lib dxguid.lib winmm.lib strmiids.lib xinput.lib"
 		DelayLoadDLLs="d3d9.dll;d3dx9_43.dll;d3d11.dll;d3dx11_43.dll"
 		GenerateDebugInformation="true"
 		SubSystem="2"
