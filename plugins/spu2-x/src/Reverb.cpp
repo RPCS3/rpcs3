@@ -180,7 +180,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		// http://cnx.org/content/m15491/latest/
 
 		//////////////////////////////////////////////////////////////
-		// Part 1: Input filter block
+		// Part 1: Input filter block (FIR filter)
 		// Purpose: Filter and write data to the sample queues for the echos below
 
 		INPUT_SAMPLE.Left  >>= 16;
@@ -189,20 +189,20 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		s32 input_L = (INPUT_SAMPLE.Left * Revb.IN_COEF_L);
 		s32 input_R = (INPUT_SAMPLE.Right * Revb.IN_COEF_R);
 
-		const s32 IIR_INPUT_A0 = ((_spu2mem[src_a0] * Revb.IIR_COEF) + input_L)>>16;
-		const s32 IIR_INPUT_A1 = ((_spu2mem[src_a1] * Revb.IIR_COEF) + input_L)>>16;
-		const s32 IIR_INPUT_B0 = ((_spu2mem[src_b0] * Revb.IIR_COEF) + input_R)>>16;
-		const s32 IIR_INPUT_B1 = ((_spu2mem[src_b1] * Revb.IIR_COEF) + input_R)>>16;
+		const s32 IIR_A0 = (_spu2mem[src_a0] * Revb.IIR_COEF) + input_L;
+		const s32 IIR_A1 = (_spu2mem[src_a1] * Revb.IIR_COEF) + input_R;
+		const s32 IIR_B0 = (_spu2mem[src_b0] * Revb.IIR_COEF) + input_L;
+		const s32 IIR_B1 = (_spu2mem[src_b1] * Revb.IIR_COEF) + input_R;
 
-		const s32 IIR_A0 = _spu2mem[dest_a0];
-		const s32 IIR_A1 = _spu2mem[dest_a1];
-		const s32 IIR_B0 = _spu2mem[dest_b0];
-		const s32 IIR_B1 = _spu2mem[dest_b1];
+		const s32 IIR_C0 = _spu2mem[dest_a0]* Revb.IIR_ALPHA;
+		const s32 IIR_C1 = _spu2mem[dest_a1]* Revb.IIR_ALPHA;
+		const s32 IIR_D0 = _spu2mem[dest_b0]* Revb.IIR_ALPHA;
+		const s32 IIR_D1 = _spu2mem[dest_b1]* Revb.IIR_ALPHA;
 
-		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 + (((IIR_INPUT_A0-IIR_A0) * Revb.IIR_ALPHA) >> 16) );
-		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 + (((IIR_INPUT_A1-IIR_A1) * Revb.IIR_ALPHA) >> 16) );
-		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 + (((IIR_INPUT_B0-IIR_B0) * Revb.IIR_ALPHA) >> 16) );
-		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 + (((IIR_INPUT_B1-IIR_B1) * Revb.IIR_ALPHA) >> 16) );
+		_spu2mem[dest2_a0] = clamp_mix( (IIR_A0-IIR_C0) >> 16 );
+		_spu2mem[dest2_a1] = clamp_mix( (IIR_A1-IIR_C1) >> 16 );
+		_spu2mem[dest2_b0] = clamp_mix( (IIR_B0-IIR_D0) >> 16 );
+		_spu2mem[dest2_b1] = clamp_mix( (IIR_B1-IIR_D1) >> 16 );
 
 
 		//////////////////////////////////////////////////////////////
