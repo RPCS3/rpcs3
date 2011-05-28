@@ -26,7 +26,7 @@
 
 __forceinline s32 V_Core::RevbGetIndexer( s32 offset )
 {
-	u32 pos = ReverbX + offset;
+	u32 pos = ReverbX + offset & 0xFFFFF; // Apparently some reverb presets use offsets outside of the ps2 memory ...
 
 	// Fast and simple single step wrapping, made possible by the preparation of the
 	// effects buffer addresses.
