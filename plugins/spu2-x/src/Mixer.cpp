@@ -1086,8 +1086,9 @@ Air notes:
     buffer[MIX_DEST_B1] = (ACC1 * FB_ALPHA) + (FB_A1 * (1.0-FB_ALPHA)) - FB_B1 * FB_X;
 
   Which reduces to:
-    buffer[MIX_DEST_B0] = ACC0 + ((FB_A0-ACC0) * FB_ALPHA) - FB_B0 * FB_X;
-    buffer[MIX_DEST_B1] = ACC1 + ((FB_A1-ACC1) * FB_ALPHA) - FB_B1 * FB_X;
+    buffer[MIX_DEST_B0] = FB_A0 + ((ACC0-FB_A0) * FB_ALPHA) - FB_B0 * FB_X;
+    buffer[MIX_DEST_B1] = FB_A1 + ((ACC1-FB_A1) * FB_ALPHA) - FB_B1 * FB_X;
+
 
 
 -----------------------------------------------------------------------------
