@@ -222,82 +222,36 @@ void V_Core::Reset( int index )
 
 void V_Core::AnalyzeReverbPreset()
 {
-	ConLog("Reverb Parameter Update:\n");
+	ConLog("Reverb Parameter Update for Core %d:\n", Index);
 	ConLog("----------------------------------------------------------\n");
 	
-	ConLog("    IN_COEF_L, IN_COEF_R		0x%08x, 0x%08x\n", Revb.IN_COEF_L, Revb.IN_COEF_R);
-	ConLog("    FB_SRC_A, FB_SRC_B			0x%08x, 0x%08x\n", Revb.FB_SRC_A, Revb.FB_SRC_B);
-	ConLog("    FB_ALPHA, FB_X			0x%08x, 0x%08x\n", Revb.FB_ALPHA, Revb.FB_X);
+	ConLog("    IN_COEF_L, IN_COEF_R        0x%08x, 0x%08x\n", Revb.IN_COEF_L, Revb.IN_COEF_R);
+	ConLog("    FB_SRC_A, FB_SRC_B          0x%08x, 0x%08x\n", Revb.FB_SRC_A, Revb.FB_SRC_B);
+	ConLog("    FB_ALPHA, FB_X              0x%08x, 0x%08x\n", Revb.FB_ALPHA, Revb.FB_X);
 	
-	ConLog("    ACC_COEF_A				0x%08x\n", Revb.ACC_COEF_A);
-	ConLog("    ACC_COEF_B				0x%08x\n", Revb.ACC_COEF_B);
-	ConLog("    ACC_COEF_C				0x%08x\n", Revb.ACC_COEF_C);
-	ConLog("    ACC_COEF_D				0x%08x\n", Revb.ACC_COEF_D);
+	ConLog("    ACC_COEF_A                  0x%08x\n", Revb.ACC_COEF_A);
+	ConLog("    ACC_COEF_B                  0x%08x\n", Revb.ACC_COEF_B);
+	ConLog("    ACC_COEF_C                  0x%08x\n", Revb.ACC_COEF_C);
+	ConLog("    ACC_COEF_D                  0x%08x\n", Revb.ACC_COEF_D);
+	
+	ConLog("    ACC_SRC_A0, ACC_SRC_A1      0x%08x, 0x%08x\n", Revb.ACC_SRC_A0, Revb.ACC_SRC_A1);
+	ConLog("    ACC_SRC_B0, ACC_SRC_B1      0x%08x, 0x%08x\n", Revb.ACC_SRC_B0, Revb.ACC_SRC_B1);
+	ConLog("    ACC_SRC_C0, ACC_SRC_C1      0x%08x, 0x%08x\n", Revb.ACC_SRC_C0, Revb.ACC_SRC_C1);
+	ConLog("    ACC_SRC_D0, ACC_SRC_D1      0x%08x, 0x%08x\n", Revb.ACC_SRC_D0, Revb.ACC_SRC_D1);
+	
+	ConLog("    IIR_SRC_A0, IIR_SRC_A1      0x%08x, 0x%08x\n", Revb.IIR_SRC_A0, Revb.IIR_SRC_A1);
+	ConLog("    IIR_SRC_B0, IIR_SRC_B1      0x%08x, 0x%08x\n", Revb.IIR_SRC_B0, Revb.IIR_SRC_B1);
+	ConLog("    IIR_DEST_A0, IIR_DEST_A1    0x%08x, 0x%08x\n", Revb.IIR_DEST_A0, Revb.IIR_DEST_A1);
+	ConLog("    IIR_DEST_B0, IIR_DEST_B1    0x%08x, 0x%08x\n", Revb.IIR_DEST_B0, Revb.IIR_DEST_B1);	
+	ConLog("    IIR_ALPHA, IIR_COEF         0x%08x, 0x%08x\n", Revb.IIR_ALPHA, Revb.IIR_COEF);
 
-	ConLog("    MIX_DEST_A0				0x%08x\n", Revb.MIX_DEST_A0);
-	ConLog("    MIX_DEST_A1				0x%08x\n", Revb.MIX_DEST_A1);
-	ConLog("    MIX_DEST_B0				0x%08x\n", Revb.MIX_DEST_B0);
-	ConLog("    MIX_DEST_B1				0x%08x\n", Revb.MIX_DEST_B1);
+	ConLog("    MIX_DEST_A0                 0x%08x\n", Revb.MIX_DEST_A0);
+	ConLog("    MIX_DEST_A1                 0x%08x\n", Revb.MIX_DEST_A1);
+	ConLog("    MIX_DEST_B0                 0x%08x\n", Revb.MIX_DEST_B0);
+	ConLog("    MIX_DEST_B1                 0x%08x\n", Revb.MIX_DEST_B1);
 	
-	ConLog("    ACC_SRC_A0, ACC_SRC_A1		0x%08x, 0x%08x\n", Revb.ACC_SRC_A0, Revb.ACC_SRC_A1);
-	ConLog("    ACC_SRC_B0, ACC_SRC_B1		0x%08x, 0x%08x\n", Revb.ACC_SRC_B0, Revb.ACC_SRC_B1);
-	ConLog("    ACC_SRC_C0, ACC_SRC_C1		0x%08x, 0x%08x\n", Revb.ACC_SRC_C0, Revb.ACC_SRC_C1);
-	ConLog("    ACC_SRC_D0, ACC_SRC_D1		0x%08x, 0x%08x\n", Revb.ACC_SRC_D0, Revb.ACC_SRC_D1);
-	
-	ConLog("    IIR_SRC_A0, IIR_SRC_A1		0x%08x, 0x%08x\n", Revb.IIR_SRC_A0, Revb.IIR_SRC_A1);
-	ConLog("    IIR_SRC_B0, IIR_SRC_B1		0x%08x, 0x%08x\n", Revb.IIR_SRC_B0, Revb.IIR_SRC_B1);
-	ConLog("    IIR_DEST_A0, IIR_DEST_A1		0x%08x, 0x%08x\n", Revb.IIR_DEST_A0, Revb.IIR_DEST_A1);
-	ConLog("    IIR_DEST_B0, IIR_DEST_B1		0x%08x, 0x%08x\n", Revb.IIR_DEST_B0, Revb.IIR_DEST_B1);
-	
-	ConLog("    IIR_ALPHA, IIR_COEF		0x%08x, 0x%08x\n", Revb.IIR_ALPHA, Revb.IIR_COEF);
-	
+    ConLog("    EffectsBufferSize           0x%x\n", EffectsBufferSize);
 	ConLog("----------------------------------------------------------\n");
-
-	//u32 Reverb_Parameters[] = {	// 32 values
-	//	// Coefs/Alphas		// L/0				// R/1				// params here / total
-
-	//						Revb.IN_COEF_L,		Revb.IN_COEF_R,		// 2 / 2
-
-	//	Revb.ACC_COEF_A,	Revb.ACC_SRC_A0,	Revb.ACC_SRC_A1,
-	//	Revb.ACC_COEF_B,	Revb.ACC_SRC_B0,	Revb.ACC_SRC_B1,
-	//	Revb.ACC_COEF_C,	Revb.ACC_SRC_C0,	Revb.ACC_SRC_C1,
-	//	Revb.ACC_COEF_D,	Revb.ACC_SRC_D0,	Revb.ACC_SRC_D1,	// 12 / 14
-
-	//	Revb.IIR_ALPHA,												// 1 / 15
-	//	Revb.IIR_COEF,												// 1 / 16
-
-	//						Revb.IIR_DEST_A0,	Revb.IIR_DEST_A1,
-	//						Revb.IIR_DEST_B0,	Revb.IIR_DEST_B1,	// 4 / 20
-
-	//						Revb.IIR_SRC_A0,	Revb.IIR_SRC_A1,
-	//						Revb.IIR_SRC_B0,	Revb.IIR_SRC_B1,	// 4 / 24
-
-	//						Revb.MIX_DEST_A0,	Revb.MIX_DEST_A1,
-	//						Revb.MIX_DEST_B0,	Revb.MIX_DEST_B1,	// 4 / 28
-
-	//	Revb.FB_ALPHA,		Revb.FB_SRC_A,		Revb.FB_SRC_B,		// 3 / 31
-
-	//	EffectsBufferSize											// 1 / 32
-	//};
-
-	//ConLog("Reverb Parameter Update:\n");
-	//ConLog("--------------------------------------------\n");
-	//ConLog("  { /**/        0x%08x, 0x%08x,\n",				Reverb_Parameters[ 0], Reverb_Parameters[ 1]);
-	//ConLog(    "    0x%08x, 0x%08x, 0x%08x,\n", Reverb_Parameters[ 2], Reverb_Parameters[ 3], Reverb_Parameters[ 4]);
-	//ConLog(    "    0x%08x, 0x%08x, 0x%08x,\n", Reverb_Parameters[ 5], Reverb_Parameters[ 6], Reverb_Parameters[ 7]);
-	//ConLog(    "    0x%08x, 0x%08x, 0x%08x,\n", Reverb_Parameters[ 8], Reverb_Parameters[ 9], Reverb_Parameters[10]);
-	//ConLog(    "    0x%08x, 0x%08x, 0x%08x,\n", Reverb_Parameters[11], Reverb_Parameters[12], Reverb_Parameters[13]);
-	//ConLog(    "    0x%08x,\n",					Reverb_Parameters[14]);
-	//ConLog(    "    0x%08x,\n",					Reverb_Parameters[15]);
-	//ConLog("    /**/        0x%08x, 0x%08x,\n",				Reverb_Parameters[16], Reverb_Parameters[17]);
-	//ConLog("    /**/        0x%08x, 0x%08x,\n",				Reverb_Parameters[18], Reverb_Parameters[19]);
-	//ConLog("    /**/        0x%08x, 0x%08x,\n",				Reverb_Parameters[20], Reverb_Parameters[21]);
-	//ConLog("    /**/        0x%08x, 0x%08x,\n",				Reverb_Parameters[22], Reverb_Parameters[23]);
-	//ConLog("    /**/        0x%08x, 0x%08x,\n",				Reverb_Parameters[24], Reverb_Parameters[25]);
-	//ConLog("    /**/        0x%08x, 0x%08x,\n",				Reverb_Parameters[26], Reverb_Parameters[27]);
-	//ConLog(    "    0x%08x, 0x%08x, 0x%08x,\n", Reverb_Parameters[28], Reverb_Parameters[29], Reverb_Parameters[30]);
-	//ConLog(    "    0x%08x }\n",				Reverb_Parameters[31]);
-	//ConLog("--------------------------------------------\n");
 }
 s32 V_Core::EffectsBufferIndexer( s32 offset ) const
 {
