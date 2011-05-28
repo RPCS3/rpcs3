@@ -226,7 +226,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 	
 		//////////////////////////////////////////////////////////////
 		// Part 3: All-pass filters
-		// Purpose: Create actual reverberations
+		// Purpose: Create actual reverberation sound effect
 
 		// First
 
@@ -245,7 +245,7 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		// Apply second gain and add
 		ACC0 = (FB_A0 << 16) - MIX_A0 * Revb.FB_ALPHA;
 		ACC1 = (FB_A1 << 16) - MIX_A1 * Revb.FB_ALPHA;
-		
+
 		//////////////////////////////////////////////////////////////
 
 		// Second
@@ -267,8 +267,8 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		ACC1 = (FB_B1 << 16) - MIX_B1 * Revb.FB_X;
 
 		upbuf[ubpos] = clamp_mix( StereoOut32(
-			ACC0,	// left
-			ACC1	// right
+			ACC0>>16,	// left
+			ACC1>>16	// right
 		) );
 	}
 
