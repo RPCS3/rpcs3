@@ -243,8 +243,8 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		_spu2mem[mix_dest_a1] = clamp_mix(MIX_A1);
 
 		// Apply second gain and add
-		ACC0 = (FB_A0 << 16) - MIX_A0 * Revb.FB_ALPHA;
-		ACC1 = (FB_A1 << 16) - MIX_A1 * Revb.FB_ALPHA;
+		ACC0 += (FB_A0 << 16) - MIX_A0 * Revb.FB_ALPHA;
+		ACC1 += (FB_A1 << 16) - MIX_A1 * Revb.FB_ALPHA;
 
 		//////////////////////////////////////////////////////////////
 
@@ -263,8 +263,8 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		_spu2mem[mix_dest_b1] = clamp_mix(MIX_B1);
 
 		// Apply second gain and add
-		ACC0 = (FB_B0 << 16) - MIX_B0 * Revb.FB_X;
-		ACC1 = (FB_B1 << 16) - MIX_B1 * Revb.FB_X;
+		ACC0 += (FB_B0 << 16) - MIX_B0 * Revb.FB_X;
+		ACC1 += (FB_B1 << 16) - MIX_B1 * Revb.FB_X;
 
 		upbuf[ubpos] = clamp_mix( StereoOut32(
 			ACC0>>16,	// left
