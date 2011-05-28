@@ -259,10 +259,8 @@ s32 V_Core::EffectsBufferIndexer( s32 offset ) const
 	// that it *4's all addresses before upping them to the SPU2 -- so our buffers are
 	// already x4'd.  It doesn't really make sense that we should x4 them again, and this
 	// seems to work. (feedback-free in bios and DDS)  --air
-
-	//offset *= 4;
-
-	u32 pos = EffectsStartA + offset;
+	
+	u32 pos = EffectsStartA + offset & 0xFFFFF;
 
 	// Need to use modulus here, because games can and will drop the buffer size
 	// without notice, and it leads to offsets several times past the end of the buffer.
