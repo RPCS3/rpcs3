@@ -209,7 +209,9 @@ else()
 	set(_library_dir lib)
 endif()
 
-set(INCLUDE_INSTALL_DIR include/yaml-cpp)
+set(INCLUDE_INSTALL_ROOT_DIR include)
+
+set(INCLUDE_INSTALL_DIR ${INCLUDE_INSTALL_ROOT_DIR}/yaml-cpp)
 set(LIB_INSTALL_DIR "${_library_dir}${LIB_SUFFIX}")
 
 set(_INSTALL_DESTINATIONS
