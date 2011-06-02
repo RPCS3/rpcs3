@@ -198,10 +198,11 @@ void V_Core::Reset( int index )
 	EffectsEndA		= c ? 0xEFFFF : 0xFFFFF; // (After rom0:PS2LOGO)
 
 	// Uninitialized it's 0 for both cores. Resetting libs however may set this to 0 or 1 depending on a flag.
-	// Assuming 1 to be common from game behaviour (DDS has strange reverb on voiceovers if this is reset to 0,
-	// Formula1 2005 seemingly needs a Reverb Interrupt to boot.)
-	// rom0:PS2LOGO also leaves it at 1.
-	FxEnable		= 1;
+	// DDS has strange reverb on voiceovers if this is reset to 0
+	// Formula1 2005 seemingly needs a Reverb Interrupt to boot.
+	// rom0:PS2LOGO leaves it at 1.
+	// BoF:DQ has ugly noise with this at 1.  << therefore settling with "0" for now.
+	FxEnable		= 0;
 	IRQA			= prev_IRQA; // IRQA isn't reset by sdinit or the BIOS
 	IRQEnable		= 0;
 
