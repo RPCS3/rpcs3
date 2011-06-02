@@ -123,14 +123,14 @@ void V_Core::Init( int index )
 	Regs.ATTR		= 0;
 	ExtVol			= V_VolumeLR::Max;
 	InpVol			= V_VolumeLR::Max;
-	FxVol			= V_VolumeLR::Max;
+	FxVol			= V_VolumeLR(0);
 
-	MasterVol		= V_VolumeSlideLR::Max;
+	MasterVol		= V_VolumeSlideLR(0,0);
 
 	memset( &DryGate, -1, sizeof(DryGate) );
 	memset( &WetGate, -1, sizeof(WetGate) );
 
-	Regs.MMIX		= 0xFFCF;
+	Regs.MMIX		= c ? 0xF3C : 0xF30; // PS2 confirmed (f3c and f30 after BIOS ran, ffc and ff0 after sdinit)
 	Regs.VMIXL		= 0xFFFFFF;
 	Regs.VMIXR		= 0xFFFFFF;
 	Regs.VMIXEL		= 0xFFFFFF;
@@ -138,9 +138,9 @@ void V_Core::Init( int index )
 	EffectsStartA	= c ? 0xEFFF8 : 0xFFFF8;
 	EffectsEndA		= c ? 0xEFFFF : 0xFFFFF;
 
-	FxEnable		= 0;
-	IRQA			= 0xFFFFF;
-	IRQEnable		= 0;
+	FxEnable		= 0; // Uninitialized it's 0 for both cores. Resetting libs however may set this to 0 or 1.
+	IRQA			= 0xFFFFF; //0x40505E9C : 0x3220EAA4;  // << Actual PS2 values, so this is uninitialized.
+	IRQEnable		= 0; // PS2 confirmed
 
 	for( uint v=0; v<NumVoices; ++v )
 	{
@@ -164,11 +164,16 @@ void V_Core::Init( int index )
 	AdmaInProgress	= 0;
 
 	Regs.STATX		= 0x80;
+	Regs.ENDX		= 0xffffff; // PS2 confirmed
 }
 
+// Most values are confirmed on a PS2
 void V_Core::Reset( int index )
 {
 	ConLog( "* SPU2-X: Reset SPU2 core %d \n", index );
+	
+	u32 prev_IRQA = Cores[index].IRQA;
+
 	memset( this, 0, sizeof(V_Core) );
 
 	const int c = Index = index;
@@ -177,23 +182,27 @@ void V_Core::Reset( int index )
 	Regs.ATTR		= 0;
 	ExtVol			= V_VolumeLR::Max;
 	InpVol			= V_VolumeLR::Max;
-	FxVol			= V_VolumeLR::Max;
+	FxVol			= V_VolumeLR(0);
 
-	MasterVol		= V_VolumeSlideLR::Max;
-
+	MasterVol		= V_VolumeSlideLR(0,0);
+	
 	memset( &DryGate, -1, sizeof(DryGate) );
 	memset( &WetGate, -1, sizeof(WetGate) );
 
-	Regs.MMIX		= 0xFFCF;
+	Regs.MMIX		= 0xFFF;
 	Regs.VMIXL		= 0xFFFFFF;
 	Regs.VMIXR		= 0xFFFFFF;
 	Regs.VMIXEL		= 0xFFFFFF;
 	Regs.VMIXER		= 0xFFFFFF;
-	EffectsStartA	= c ? 0xEFFF8 : 0xFFFF8;
-	EffectsEndA		= c ? 0xEFFFF : 0xFFFFF;
+	EffectsStartA	= c ? 0xEFFF8 : 0xFC810; // (After rom0:PS2LOGO)
+	EffectsEndA		= c ? 0xEFFFF : 0xFFFFF; // (After rom0:PS2LOGO)
 
-	FxEnable		= 0;
-	IRQA			= 0xFFFF0;
+	// Uninitialized it's 0 for both cores. Resetting libs however may set this to 0 or 1 depending on a flag.
+	// Assuming 1 to be common from game behaviour (DDS has strange reverb on voiceovers if this is reset to 0,
+	// Formula1 2005 seemingly needs a Reverb Interrupt to boot.)
+	// rom0:PS2LOGO also leaves it at 1.
+	FxEnable		= 1;
+	IRQA			= prev_IRQA; // IRQA isn't reset by sdinit or the BIOS
 	IRQEnable		= 0;
 
 	for( uint v=0; v<NumVoices; ++v )
@@ -218,6 +227,7 @@ void V_Core::Reset( int index )
 	AdmaInProgress	= 0;
 
 	Regs.STATX		= 0x80;
+	Regs.ENDX		= 0xffffff; // PS2 confirmed
 }
 
 void V_Core::AnalyzeReverbPreset()
@@ -901,12 +911,12 @@ static void __fastcall RegWrite_VoiceAddr( u16 value )
 
 		case 2:
 			thisvoice.LoopStartA = ((value & 0x0F) << 16) | (thisvoice.LoopStartA & 0xFFF8);
-			thisvoice.LoopMode = 3;
+			thisvoice.LoopMode = 1;
 		break;
 
 		case 3:
 			thisvoice.LoopStartA = (thisvoice.LoopStartA & 0x0F0000) | (value & 0xFFF8);
-			thisvoice.LoopMode = 3;
+			thisvoice.LoopMode = 1;
 		break;
 
 		// Note that there's no proof that I know of that writing to NextA is
@@ -976,6 +986,8 @@ static void __fastcall RegWrite_Core( u16 value )
 				// So do the next best thing and reset the core directly.
 				if(cyclePtr != NULL && SynchMode != 1) // !AsyncMix
 				{
+					// InitDelay  = 1 has ugly noise in Grandia 3 bootup (maybe ingame as well).
+					// InitDelay  = 2 would fix that but it breaks Eternal Ring booting.
 					thiscore.InitDelay  = 1;
 					thiscore.Regs.STATX = 0;
 				}
@@ -1017,11 +1029,18 @@ static void __fastcall RegWrite_Core( u16 value )
 			}
 			if(thiscore.IRQEnable!=irqe)
 			{
-				//ConLog("* SPU2-X: IRQ %s at cycle %d. Current IRQA = %x\n",
-				//	((thiscore.IRQEnable==0)?"disabled":"enabled"), Cycles, thiscore.IRQA);
+				//ConLog("* SPU2-X: Core%d IRQ %s at cycle %d. Current IRQA = %x Current EffectA = %x\n",
+				//	core, ((thiscore.IRQEnable==0)?"disabled":"enabled"), Cycles, thiscore.IRQA, thiscore.EffectsStartA);
 				
 				if(!thiscore.IRQEnable)
 					Spdif.Info &= ~(4 << thiscore.Index);
+	
+				// Hack for F1 2005.
+				//if (thiscore.IRQEnable && (thiscore.IRQA == thiscore.EffectsStartA + thiscore.ReverbX))
+				//{
+				//	printf("F1 2005 IRQ Hack (Reverb). IRQA = %x\n",thiscore.IRQA);
+				//	SetIrqCall(core);
+				//}
 			}
 
 		}
@@ -1139,11 +1158,15 @@ static void __fastcall RegWrite_Core( u16 value )
 		break;
 
 		case REG_S_ENDX:
-			thiscore.Regs.ENDX&=0x00FF0000;
+			// If writing any value other than 0 ENDX becomes 0.
+			if (value)
+				thiscore.Regs.ENDX = 0;
 		break;
 
 		case (REG_S_ENDX + 2):
-			thiscore.Regs.ENDX&=0xFFFF;
+			// If writing any value other than 0 ENDX becomes 0.
+			if (value)
+				thiscore.Regs.ENDX = 0;
 		break;
 
 		// Reverb Start and End Address Writes!
@@ -1607,7 +1630,7 @@ void StopVoices(int core, u32 value)
 		if( !((value>>vc) & 1) ) continue;
 
 		Cores[core].Voices[vc].ADSR.Releasing = true;
-		//if(MsgKeyOnOff()) ConLog("* SPU2-X: KeyOff: Core %d; Voice %d.\n",core,vc);
+		if(MsgKeyOnOff()) ConLog("* SPU2-X: KeyOff: Core %d; Voice %d.\n",core,vc);
 	}
 }
 
