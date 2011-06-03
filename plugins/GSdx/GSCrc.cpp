@@ -59,6 +59,7 @@ CRC::Game CRC::m_games[] =
 	{0x280AD120, FFXII, JP, 0},
 	{0x08C1ED4D, HauntingGround, NoRegion, 0},
 	{0x2CD5794C, HauntingGround, EU, 0},
+	{0x7D4EA48F, HauntingGround, EU, 0},
 	{0x867BB945, HauntingGround, JP, 0},
 	{0xE263BC4B, HauntingGround, JP, 0},
 	{0x901AAC09, HauntingGround, US, 0},
@@ -169,6 +170,7 @@ CRC::Game CRC::m_games[] =
 	{0x5C1EBD61, SimpsonsGame, NoRegion, 0},
 	{0x4C7BB3C8, SimpsonsGame, NoRegion, 0},
 	{0x4C94B32C, SimpsonsGame, NoRegion, 0},
+	{0x565B7E04, SimpsonsGame, IT, 0},
 	{0x206779D8, SimpsonsGame, EU, 0},
 	{0xBBE4D862, SimpsonsGame, US, 0},
 	{0xD71B57F4, Genji, NoRegion, 0},
@@ -218,6 +220,7 @@ CRC::Game CRC::m_games[] =
 	{0xAE1152EB, ReZ, EU, 0},
 	{0xD2EA890A, ReZ, JP, 0},
 	{0xC818BEC2, LordOfTheRingsTwoTowers, US, 0},
+	{0xDC43F2B8, LordOfTheRingsTwoTowers, EU, 0},
 	{0x9ABF90FB, LordOfTheRingsTwoTowers, ES, 0},
 	{0xC0E909E9, LordOfTheRingsTwoTowers, JP, 0},
 	{0xE169BAF8, RedDeadRevolver, US, 0},
@@ -239,6 +242,8 @@ CRC::Game CRC::m_games[] =
 	{0xCAA04879, Black, EU, 0},
 	{0xADDFF505, Black, EU, 0},	//?
 	{0xB3A9F9ED, Black, JP, 0},
+	{0x4F755D39, TyTasmanianTiger, US, 0},
+	{0xD59D3252, TyTasmanianTiger, EU, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

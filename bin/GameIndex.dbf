@@ -219,6 +219,7 @@ Serial = SCUS-97128
 Name   = Drakan - The Ancients' Gates
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1		//flickery textures
 ---------------------------------------------
 Serial = SCUS-97129
 Name   = Okage - Shadow King
@@ -1779,7 +1780,6 @@ Serial = SLUS-20011
 Name   = Orphen - Scion of Sorcery
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20012
 Name   = Super Car Street Challenge
@@ -3182,7 +3182,7 @@ Compat = 4
 Serial = SLUS-20361
 Name   = Rally Fusion - Race of Champions
 Region = NTSC-U
-Compat = 2
+Compat = 3
 ---------------------------------------------
 Serial = SLUS-20362
 Name   = Need for Speed - Hot Pursuit 2
@@ -3411,7 +3411,7 @@ Compat = 4
 Serial = SLUS-20412
 Name   = Hot Wheels - Velocity X
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20413
 Name   = Shadow Man - Second Coming
@@ -4024,7 +4024,7 @@ Compat = 3
 Serial = SLUS-20552
 Name   = Grand Theft Auto - Vice City
 Region = NTSC-U
-Compat = 2
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20553
 Name   = Fisherman's Challenge
@@ -4809,7 +4809,7 @@ Serial = SLUS-20732
 Name   = Drakengard
 Region = NTSC-U
 Compat = 5
-eeClampMode = 3		//so the characters are visible in-game.
+eeClampMode = 3		//characters are visible in-game.
 ---------------------------------------------
 Serial = SLUS-20733
 Name   = Castlevania - Lament of Innocence
@@ -4920,7 +4920,7 @@ Compat = 4
 Serial = SLUS-20758
 Name   = Growlanser Generations [Disc1of2]
 Region = NTSC-U
-Compat = 4
+Compat = 5
 [patches = 03F9C6D1]
 	comment=IPU freeze fix
 	patch=0,EE,00109d04,word,00000000
@@ -5882,7 +5882,8 @@ Compat = 5
 Serial = SLUS-20965
 Name   = Tony Hawk's Underground 2
 Region = NTSC-U
-Compat = 2
+Compat = 5
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLUS-20966
 Name   = State of Emergency 2
@@ -6446,7 +6447,7 @@ Compat = 5
 Serial = SLUS-21087
 Name   = Mortal Kombat - Shaolin Monks
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21088
 Name   = Disney's Chicken Little
@@ -6624,6 +6625,7 @@ Compat = 5
 Serial = SLUS-21126
 Name   = NBA Street v3
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21127
 Name   = Brave - The Search for Spirit Dancer
@@ -6874,9 +6876,13 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-21180
-Name   = Onimusha - Dawn of Dreams
+Name   = Onimusha - Dawn of Dreams [Disc1]
 Region = NTSC-U
-Compat = 2
+Compat = 5
+[patches = FE44479E]
+	comment= patch by Shadow Lady
+	patch=0,EE,00104170,word,00000000
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21181
 Name   = D.I.C.E.
@@ -7744,9 +7750,13 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-21362
-Name   = Onimusha - Dawn of Dreams
+Name   = Onimusha - Dawn of Dreams [Disc2]
 Region = NTSC-U
-Compat = 2
+Compat = 5
+[patches = FFDE85E9]
+	comment= patch by Shadow Lady
+	patch=0,EE,00104170,word,00000000
+[/patches]
 ---------------------------------------------
 Serial = SLUS-21363
 Name   = Zatch Bell! Mamodo Fury
@@ -8052,7 +8062,8 @@ Compat = 2
 Serial = SLUS-21426
 Name   = Call of Duty 3
 Region = NTSC-U
-Compat = 4
+Compat = 5
+eeClampMode = 3
 ---------------------------------------------
 Serial = SLUS-21427
 Name   = WWE SmackDown! vs. RAW 2007
@@ -8406,7 +8417,7 @@ Region = NTSC-U
 Serial = SLUS-21501
 Name   = Raw Danger
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21503
 Name   = God Hand
@@ -8698,7 +8709,7 @@ Compat = 2
 Serial = SLUS-21597
 Name   = Medal of Honor - Vanguard
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21598
 Name   = Digimon World - Data Squad
@@ -16033,6 +16044,7 @@ Region = NTSC-J
 Serial = SLPM-62717
 Name   = Sega Ages 2500 Series Vol.26 - Dynamite Deka
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-62718
 Name   = Sega Ages 2500 Series Vol.27 - Panzer Dragoon
@@ -16069,6 +16081,7 @@ Region = NTSC-J
 Serial = SLPM-62727
 Name   = Spectral vs. Generation
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-62729
 Name   = Oretachi Geasen Zoku Sono Vol.15 - Akumajou Dracula
@@ -16236,7 +16249,7 @@ Compat = 5
 ---------------------------------------------
 Serial = SLPM-64525
 Name   = Guilty Gear X Plus "By Your Side"
-Region = NTSC-J
+Region = NTSC-K
 Compat = 5
 SkipMPEGHack = 1
 ---------------------------------------------
@@ -18253,7 +18266,7 @@ Compat = 4
 [patches = 9BDBA170]
 	comment=patch by Shadow Lady
 	//IPU menu hang fix...
-	patch=0,EE,00115c00,word,24200001
+	patch=0,EE,00115c00,word,03e00008
 [/patches]
 ---------------------------------------------
 Serial = SLPM-65607
@@ -18315,6 +18328,7 @@ Region = NTSC-J
 Serial = SLPM-65621
 Name   = Street Fighter III - 3rd Strike
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-65622
 Name   = Silent Hill 3 [Konami The Best]
@@ -22198,6 +22212,8 @@ Region = NTSC-J
 Serial = SLPM-66712
 Name   = Rozen Maiden - Geppetto Garden [Limited Edition]
 Region = NTSC-J
+Compat = 5
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-66714
 Name   = Wrestle Kingdom 2 - Pro Wrestling Sekai Taisen
@@ -26756,6 +26772,7 @@ Compat = 3
 Serial = SLPS-25545
 Name   = Fighting for One Piece
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPS-25546
 Name   = Ichigo Mashimaro [Limited Edition]
@@ -27123,6 +27140,7 @@ Compat = 4
 Serial = SLPS-25642
 Name   = Super DragonBall Z
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPS-25643
 Name   = Kimikisu
@@ -27344,6 +27362,7 @@ Serial = SLPS-25697
 Name   = CR Fever Powerful Zero
 Region = NTSC-J
 Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPS-25698
 Name   = Fatal Fury - Battle Archives 2
@@ -28648,6 +28667,7 @@ Compat = 5
 Serial = SCES-50006
 Name   = Drakan - The Ancients' Gates
 Region = PAL-Unk
+EETimingHack = 1		//flickery textures
 ---------------------------------------------
 Serial = SCES-50009
 Name   = Wild Wild Racing
@@ -29264,7 +29284,7 @@ Region = PAL-Unk
 Serial = SCES-52389
 Name   = World Rally Championship 4
 Region = PAL-Unk
-Compat = 4
+Compat = 1
 ---------------------------------------------
 Serial = SCES-52410
 Name   = Athens 2004 - Olympic Summer Games
@@ -30148,6 +30168,7 @@ Region = PAL-Unk
 Serial = SLES-50071
 Name   = Midnight Club - Street Racing
 Region = PAL-Unk
+Compat = 3
 ---------------------------------------------
 Serial = SLES-50072
 Name   = Street Fighter EX3
@@ -30657,7 +30678,7 @@ Region = PAL-G
 Serial = SLES-50306
 Name   = Resident Evil - CODE Veronica X
 Region = PAL-M4
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50310
 Name   = Freak Out
@@ -32081,7 +32102,14 @@ Region = PAL-Unk
 Serial = SLES-51023
 Name   = LMA Manager 2003
 Region = PAL-E
-Compat = 3
+Compat = 5
+[patches = 5C313124]
+	comment=patches by Shadow Lady
+	//IPU menus
+	patch=0,EE,002328a8,word,00000000
+	patch=0,EE,00338570,word,00000000
+	
+[/patches]
 ---------------------------------------------
 Serial = SLES-51025
 Name   = BDFL Manager 2003
@@ -33555,7 +33583,6 @@ Serial = SLES-51794
 Name   = Looney Toons - Back in Action
 Region = PAL-M5
 Compat = 5
-EETimingHack = 1		//For SPS on chars.
 ---------------------------------------------
 Serial = SLES-51797
 Name   = Madden NFL 2004
@@ -34589,6 +34616,7 @@ Region = PAL-Unk
 Serial = SLES-52313
 Name   = Space Invaders Anniversary
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-52314
 Name   = Hugo - Bukkazoom
@@ -34597,6 +34625,9 @@ Region = PAL-Unk
 Serial = SLES-52322
 Name   = Drakengard
 Region = PAL-Unk
+Compat = 5
+eeClampMode = 3			//characters are visible in-game.
+EETimingHack = 1		//flickering textures.
 ---------------------------------------------
 Serial = SLES-52323
 Name   = Richard Burns Rally
@@ -35233,10 +35264,12 @@ Region = PAL-Unk
 Serial = SLES-52621
 Name   = Tony Hawk's Underground 2
 Region = PAL-Unk
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLES-52622
 Name   = Tony Hawk's Underground 2
 Region = PAL-Unk
+vuRoundMode = 0		//Crashes without.
 ---------------------------------------------
 Serial = SLES-52624
 Name   = X-Men Legends
@@ -37687,6 +37720,7 @@ Compat = 4
 Serial = SLES-53825
 Name   = Project Zero 3 - Tormented
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-53826
 Name   = Tom Clancy's Splinter Cell - Double Agent
@@ -38322,14 +38356,17 @@ Region = PAL-Unk
 Serial = SLES-54166
 Name   = Call of Duty 3
 Region = PAL-Unk
+eeClampMode = 3
 ---------------------------------------------
 Serial = SLES-54167
 Name   = Call of Duty 3
 Region = PAL-S
+eeClampMode = 3
 ---------------------------------------------
 Serial = SLES-54168
 Name   = Call of Duty 3
 Region = PAL-Unk
+eeClampMode = 3
 ---------------------------------------------
 Serial = SLES-54169
 Name   = Aeon Flux
@@ -39182,6 +39219,11 @@ Serial = SLES-54975
 Name   = George Of The Jungle
 Region = PAL-E
 Compat = 4
+---------------------------------------------
+Serial = SLES-54997
+Name   = Mercenaries 2 - World in Flames
+Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-54998
 Name   = Bratz - The Movie

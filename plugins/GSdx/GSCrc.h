@@ -102,6 +102,7 @@ public:
 		CastlevaniaCoD,
 		CastlevaniaLoI,
 		Black,
+		TyTasmanianTiger,
 		TitleCount,
 	};
 

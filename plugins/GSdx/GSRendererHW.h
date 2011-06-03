@@ -261,6 +261,23 @@ class GSRendererHW : public GSRendererT<Vertex>
 		return true;
 	}
 
+	bool OI_TyTasmanianTiger(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)	//fbp 0x3680 ntsc, 0x3200 pal , PSM_PSMCT24
+	{
+		uint32 FBP = m_context->FRAME.Block();
+		uint32 FBW = m_context->FRAME.FBW;
+		uint32 FPSM = m_context->FRAME.PSM;
+
+		if((FBP == 0x02800 || FBP == 0x02BC0) && FPSM == PSM_PSMCT24)	//0x2800 pal, 0x2bc0 ntsc
+		{
+			//half height buffer clear
+			m_dev->ClearDepth(ds, 0);
+
+			return false;
+		}
+
+		return true;
+	}
+
 	bool OI_PointListPalette(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		if(m_vt.m_primclass == GS_POINT_CLASS && !PRIM->TME)
@@ -442,6 +459,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::SimpsonsGame, CRC::RegionCount, &GSRendererHW::OI_SimpsonsGame));
 			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::RozenMaidenGebetGarden, CRC::RegionCount, &GSRendererHW::OI_RozenMaidenGebetGarden));
 			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::SpidermanWoS, CRC::RegionCount, &GSRendererHW::OI_SpidermanWoS));
+			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::TyTasmanianTiger, CRC::RegionCount, &GSRendererHW::OI_TyTasmanianTiger));
 
 			m_oo_list.push_back(HackEntry<OO_Ptr>(CRC::DBZBT2, CRC::RegionCount, &GSRendererHW::OO_DBZBT2));
 			m_oo_list.push_back(HackEntry<OO_Ptr>(CRC::MajokkoALaMode2, CRC::RegionCount, &GSRendererHW::OO_MajokkoALaMode2));
