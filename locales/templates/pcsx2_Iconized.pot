@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-03-21 18:33+0100\n"
+"POT-Creation-Date: 2011-06-04 17:47+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -62,6 +62,14 @@ msgstr ""
 msgid "!Notice:PortableModeRights"
 msgstr ""
 
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
+msgid "!ContextTip:ChangingNTFS"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+msgid "!ContextTip:Folders:Settings"
+msgstr ""
+
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
 msgid "!Panel:Folders:Settings"
 msgstr ""
@@ -88,6 +96,22 @@ msgstr ""
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
 msgid "!Panel:StuckThread:Heading"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid "!Panel:HasHacksOverrides"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+msgid "!Notice:Tooltip:Presets:Checkbox"
 msgstr ""
 
 #: pcsx2/gui/IsoDropTarget.cpp:28
@@ -118,19 +142,63 @@ msgstr ""
 msgid "!Notice:DirPicker:CreatePath"
 msgstr ""
 
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
+msgid "!ContextTip:DirPicker:UseDefault"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:55
+msgid "!ContextTip:Window:Zoom"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Vsync"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:76
+msgid "!ContextTip:Window:HideMouse"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:82
+msgid "!ContextTip:Window:Fullscreen"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:93
+msgid "!ContextTip:Window:HideGS"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+msgid "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
+msgid "!ContextTip:Gamefixes:DMA Busy hack"
+msgstr ""
+
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:717
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
 msgid "!Notice:Mcd:Delete"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:755
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:758
 msgid "!Notice:Mcd:CantDuplicate"
 msgstr ""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:801
 msgid "!Notice:Mcd:Copy Failed"
 msgstr ""
 
@@ -142,6 +210,18 @@ msgstr ""
 msgid "!Panel:Usermode:Warning"
 msgstr ""
 
+#: pcsx2/gui/Panels/PathsPanel.cpp:40
+msgid "!ContextTip:Folders:Savestates"
+msgstr ""
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:50
+msgid "!ContextTip:Folders:Snapshots"
+msgstr ""
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:60
+msgid "!ContextTip:Folders:Logs"
+msgstr ""
+
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
 msgid "!Notice:PluginSelector:ConfirmShutdown"
 msgstr ""
@@ -150,15 +230,83 @@ msgstr ""
 msgid "!Notice:PluginSelector:ApplyFailed"
 msgstr ""
 
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
+msgid "!Panel:Speedhacks:EECycleX1"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
+msgid "!Panel:Speedhacks:EECycleX2"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
+msgid "!Panel:Speedhacks:EECycleX3"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+msgid "!Panel:Speedhacks:VUCycleStealOff"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
+msgid "!Panel:Speedhacks:VUCycleSteal1"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
+msgid "!Panel:Speedhacks:VUCycleSteal2"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
+msgid "!Panel:Speedhacks:VUCycleSteal3"
+msgstr ""
+
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
 msgid "!Panel:Speedhacks:Overview"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
+msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
+msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+msgid "!ContextTip:Speedhacks:vuFlagHack"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+msgid "!ContextTip:Speedhacks:vuBlockHack"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+msgid "!ContextTip:Speedhacks:INTC"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+msgid "!ContextTip:Speedhacks:BIFC0"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
+msgid "!ContextTip:Speedhacks:fastCDVD"
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:37
+msgid "!ContextTip:Framelimiter:Disable"
 msgstr ""
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:223
 msgid "!Panel:Frameskip:Heading"
 msgstr ""
 
-#: pcsx2/vtlb.cpp:702
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
+msgid "!ContextTip:GS:SyncMTGS"
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
+msgid "!ContextTip:GS:DisableOutput"
+msgstr ""
+
+#: pcsx2/vtlb.cpp:710
 msgid "!Notice:HostVmReserve"
 msgstr ""
 
