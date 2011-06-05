@@ -292,27 +292,50 @@ void MIN_MAX_PS(microVU& mVU, const xmm& to, const xmm& from, const xmm& t1in, c
 {
 	const xmm& t1 = t1in.IsEmpty() ? mVU.regAlloc->allocReg() : t1in;
 	const xmm& t2 = t2in.IsEmpty() ? mVU.regAlloc->allocReg() : t2in;
-	// ZW
-	xPSHUF.D(t1, to, 0xfa);
-	xPAND   (t1, ptr128[MIN_MAX.mask1]);
-	xPOR    (t1, ptr128[MIN_MAX.mask2]);
-	xPSHUF.D(t2, from, 0xfa);
-	xPAND   (t2, ptr128[MIN_MAX.mask1]);
-	xPOR    (t2, ptr128[MIN_MAX.mask2]);
-	if (min) xMIN.PD(t1, t2);
-	else     xMAX.PD(t1, t2);
 
-	// XY
-	xPSHUF.D(t2, from, 0x50);
-	xPAND   (t2, ptr128[MIN_MAX.mask1]);
-	xPOR    (t2, ptr128[MIN_MAX.mask2]);
-	xPSHUF.D(to, to, 0x50);
-	xPAND   (to, ptr128[MIN_MAX.mask1]);
-	xPOR    (to, ptr128[MIN_MAX.mask2]);
-	if (min) xMIN.PD(to, t2);
-	else     xMAX.PD(to, t2);
+	if (0) { // use double comparison
+		// ZW
+		xPSHUF.D(t1, to, 0xfa);
+		xPAND   (t1, ptr128[MIN_MAX.mask1]);
+		xPOR    (t1, ptr128[MIN_MAX.mask2]);
+		xPSHUF.D(t2, from, 0xfa);
+		xPAND   (t2, ptr128[MIN_MAX.mask1]);
+		xPOR    (t2, ptr128[MIN_MAX.mask2]);
+		if (min) xMIN.PD(t1, t2);
+		else     xMAX.PD(t1, t2);
 
-	xSHUF.PS(to, t1, 0x88);
+		// XY
+		xPSHUF.D(t2, from, 0x50);
+		xPAND   (t2, ptr128[MIN_MAX.mask1]);
+		xPOR    (t2, ptr128[MIN_MAX.mask2]);
+		xPSHUF.D(to, to, 0x50);
+		xPAND   (to, ptr128[MIN_MAX.mask1]);
+		xPOR    (to, ptr128[MIN_MAX.mask2]);
+		if (min) xMIN.PD(to, t2);
+		else     xMAX.PD(to, t2);
+
+		xSHUF.PS(to, t1, 0x88);
+	}
+	else { // use integer comparison
+		const xmm& c1 = min ? t2 : t1;
+		const xmm& c2 = min ? t1 : t2;
+
+		xMOVAPS  (t1, to);
+		xPSRA.D  (t1, 31);
+		xPSRL.D  (t1,  1);
+		xPXOR    (t1, to);
+
+		xMOVAPS  (t2, from);
+		xPSRA.D  (t2, 31);
+		xPSRL.D  (t2,  1);
+		xPXOR    (t2, from);
+
+		xPCMP.GTD(c1, c2);
+		xPAND    (to, c1);
+		xPANDN   (c1, from);
+		xPOR     (to, c1);
+	}
+
 	if (t1 != t1in) mVU.regAlloc->clearNeeded(t1);
 	if (t2 != t2in) mVU.regAlloc->clearNeeded(t2);
 }

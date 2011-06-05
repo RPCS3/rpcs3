@@ -308,6 +308,7 @@ static const int __pagesize	= PCSX2_PAGESIZE;
 
 #define __ri	__releaseinline
 #define __fi	__forceinline
+#define __fc	__fastcall
 
 
 #endif
