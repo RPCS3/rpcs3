@@ -66,20 +66,20 @@ TER_KEY2=pxLt
 TER_KEY3=pxEt
 
 echo "Generate $MAIN_POT"
-xgettext --keyword=$MAIN_KEY1 --keyword=$MAIN_KEY2 $GENERAL_OPTION $input_files --output=$MAIN_POT
+xgettext --keyword=$MAIN_KEY1 --keyword=$MAIN_KEY2 --keyword=$DEV_KEY1 --keyword=$DEV_KEY2 --keyword=$TER_KEY1 --keyword=$TER_KEY2 $GENERAL_OPTION $input_files --output=$MAIN_POT
 sed --in-place $MAIN_POT --expression=s/charset=CHARSET/charset=UTF-8/
 
-echo "Generate $DEV_POT"
-xgettext --keyword=$DEV_KEY1 --keyword=$DEV_KEY2 $GENERAL_OPTION $input_files --output=$DEV_POT
-sed --in-place $DEV_POT --expression=s/charset=CHARSET/charset=UTF-8/
+# echo "Generate $DEV_POT"
+# xgettext --keyword=$DEV_KEY1 --keyword=$DEV_KEY2 $GENERAL_OPTION $input_files --output=$DEV_POT
+# sed --in-place $DEV_POT --expression=s/charset=CHARSET/charset=UTF-8/
 
 echo "Generate $ICO_POT"
-xgettext --keyword=$ICO_KEY1 $GENERAL_OPTION $input_files --output=$ICO_POT
+xgettext --keyword=$ICO_KEY1 --keyword=$TER_KEY3 $GENERAL_OPTION $input_files --output=$ICO_POT
 sed --in-place $ICO_POT --expression=s/charset=CHARSET/charset=UTF-8/
 
-echo "Generate $TER_POT"
-xgettext --keyword=$TER_KEY1 --keyword=$TER_KEY2 --keyword=$TER_KEY3 $GENERAL_OPTION $input_files --output=$TER_POT
-sed --in-place $TER_POT --expression=s/charset=CHARSET/charset=UTF-8/
+# echo "Generate $TER_POT"
+# xgettext --keyword=$TER_KEY1 --keyword=$TER_KEY2 --keyword=$TER_KEY3 $GENERAL_OPTION $input_files --output=$TER_POT
+# sed --in-place $TER_POT --expression=s/charset=CHARSET/charset=UTF-8/
 
 ######################################################################
 # Add poedit metadata
@@ -94,9 +94,9 @@ sed --in-place $TER_POT --expression=s/charset=CHARSET/charset=UTF-8/
 # Normally "...Content-Transfer-Encoding..." is the end of the header. Use it as anchor to place poedit metadata after
 COMMON_META="\"X-Poedit-SourceCharset: utf-8\\\n\"\n\"X-Poedit-Basepath: trunk\\\\\\\\\\\n\"\n\"X-Poedit-SearchPath-0: pcsx2\\\n\"\n\"X-Poedit-SearchPath-1: common\\\n\""
 sed --in-place $MAIN_POT --expression=s/'\"Content-Transfer-Encoding: 8bit\\n\"'/"\"Content-Transfer-Encoding: 8bit\\\n\"\n\"X-Poedit-KeywordsList: ${MAIN_KEY1};${MAIN_KEY2}\\\n\"\n${COMMON_META}"/
-sed --in-place $DEV_POT --expression=s/'\"Content-Transfer-Encoding: 8bit\\n\"'/"\"Content-Transfer-Encoding: 8bit\\\n\"\n\"X-Poedit-KeywordsList: ${DEV_KEY1};${DEV_KEY2}\\\n\"\n${COMMON_META}"/
 sed --in-place $ICO_POT --expression=s/'\"Content-Transfer-Encoding: 8bit\\n\"'/"\"Content-Transfer-Encoding: 8bit\\\n\"\n\"X-Poedit-KeywordsList: ${ICO_KEY1}\\\n\"\n${COMMON_META}"/
-sed --in-place $TER_POT --expression=s/'\"Content-Transfer-Encoding: 8bit\\n\"'/"\"Content-Transfer-Encoding: 8bit\\\n\"\n\"X-Poedit-KeywordsList: ${TER_KEY1};${TER_KEY2};${TER_KEY3}\\\n\"\n${COMMON_META}"/
+# sed --in-place $DEV_POT --expression=s/'\"Content-Transfer-Encoding: 8bit\\n\"'/"\"Content-Transfer-Encoding: 8bit\\\n\"\n\"X-Poedit-KeywordsList: ${DEV_KEY1};${DEV_KEY2}\\\n\"\n${COMMON_META}"/
+# sed --in-place $TER_POT --expression=s/'\"Content-Transfer-Encoding: 8bit\\n\"'/"\"Content-Transfer-Encoding: 8bit\\\n\"\n\"X-Poedit-KeywordsList: ${TER_KEY1};${TER_KEY2};${TER_KEY3}\\\n\"\n${COMMON_META}"/
 
 ######################################################################
 # Automatically align the .po to the new pot file
@@ -107,11 +107,11 @@ do
     msgmerge --update $po_file $MAIN_POT
 done
 
-echo "Update pcsx2_Devel.po files"
-for po_file in `find ./locales -iname pcsx2_Devel.po`
-do
-    msgmerge --update $po_file $DEV_POT
-done
+# echo "Update pcsx2_Devel.po files"
+# for po_file in `find ./locales -iname pcsx2_Devel.po`
+# do
+#     msgmerge --update $po_file $DEV_POT
+# done
 
 echo "Update pcsx2_Iconized.po files"
 for po_file in `find ./locales -iname pcsx2_Iconized.po`
@@ -119,11 +119,11 @@ do
     msgmerge --update $po_file $ICO_POT
 done
 
-echo "Update pcsx2_Tertiary.po files"
-for po_file in `find ./locales -iname pcsx2_Tertiary.po`
-do
-    msgmerge --update $po_file $TER_POT
-done
+# echo "Update pcsx2_Tertiary.po files"
+# for po_file in `find ./locales -iname pcsx2_Tertiary.po`
+# do
+#     msgmerge --update $po_file $TER_POT
+# done
 
 ######################################################################
 # Automatically compile po into mo file
