@@ -130,13 +130,13 @@ void V_Core::Init( int index )
 	memset( &DryGate, -1, sizeof(DryGate) );
 	memset( &WetGate, -1, sizeof(WetGate) );
 
-	Regs.MMIX		= c ? 0xF3C : 0xF30; // PS2 confirmed (f3c and f30 after BIOS ran, ffc and ff0 after sdinit)
+	Regs.MMIX		= c ? 0xFFC : 0xFF0; // PS2 confirmed (f3c and f30 after BIOS ran, ffc and ff0 after sdinit)
 	Regs.VMIXL		= 0xFFFFFF;
 	Regs.VMIXR		= 0xFFFFFF;
 	Regs.VMIXEL		= 0xFFFFFF;
 	Regs.VMIXER		= 0xFFFFFF;
-	EffectsStartA	= c ? 0xEFFF8 : 0xFFFF8;
-	EffectsEndA		= c ? 0xEFFFF : 0xFFFFF;
+	EffectsStartA	= c ? 0xFFFF8 : 0xEFFF8;
+	EffectsEndA		= c ? 0xFFFFF : 0xEFFFF;
 
 	FxEnable		= 0; // Uninitialized it's 0 for both cores. Resetting libs however may set this to 0 or 1.
 	IRQA			= 0xFFFFF; //0x40505E9C : 0x3220EAA4;  // << Actual PS2 values, so this is uninitialized.
