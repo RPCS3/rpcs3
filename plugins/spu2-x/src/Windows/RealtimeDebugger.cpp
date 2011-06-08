@@ -186,13 +186,29 @@ void UpdateDebugDialog()
 			SetTextColor(hdc,RGB(255,255,255));
 			SetBkColor  (hdc,RGB(  0,  0,  0));
 
+			static wchar_t t[256];
 			TextOut(hdc,JX+4,JY+ 4,L"REVB",4);
 			TextOut(hdc,JX+4,JY+18,L"IRQE",4);
 			TextOut(hdc,JX+4,JY+32,L"ADMA",4);
-			static wchar_t t[256];
 			swprintf_s(t,L"DMA%s",c==0 ? "4" : "7");
 			TextOut(hdc,JX+4,JY+46,t, 4);
+			
+			SetTextColor(hdc,RGB(  0,255,  0));
+			memset(t, 0, sizeof(t));
+			swprintf_s(t,L"ESA %x",cx.EffectsStartA);
+			TextOut(hdc,JX+56,JY+ 4,t, 9);
+			memset(t, 0, sizeof(t));
+			swprintf_s(t,L"EEA %x",cx.EffectsEndA);
+			TextOut(hdc,JX+128,JY+ 4,t, 9);
+            memset(t, 0, sizeof(t));
+			swprintf_s(t,L"(%x)",cx.EffectsBufferSize);
+			TextOut(hdc,JX+200,JY+ 4,t,7);
 
+            memset(t, 0, sizeof(t));
+			swprintf_s(t,L"IRQA %x",cx.IRQA);
+			TextOut(hdc,JX+56,JY+18,t, 9);
+
+			SetTextColor(hdc,RGB(255,255,255));
 			SetDCBrushColor(hdc,RGB(  255,0,  0));
 
 			if(cx.FxEnable)
