@@ -61,3 +61,5 @@ EXPORTS
 	SPU2setDMABaseAddr	@32
 	
 	SPU2replay = s2r_replay	@33
+
+	SPU2reset			@34
