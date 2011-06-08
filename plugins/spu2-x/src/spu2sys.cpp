@@ -129,6 +129,13 @@ void V_Core::Init( int index )
 
 	memset( &DryGate, -1, sizeof(DryGate) );
 	memset( &WetGate, -1, sizeof(WetGate) );
+	DryGate.ExtL = 0;
+	DryGate.ExtR = 0;
+	if (!c)
+	{
+		WetGate.ExtL = 0;
+		WetGate.ExtL = 0;
+	}
 
 	Regs.MMIX		= c ? 0xFFC : 0xFF0; // PS2 confirmed (f3c and f30 after BIOS ran, ffc and ff0 after sdinit)
 	Regs.VMIXL		= 0xFFFFFF;
@@ -186,16 +193,18 @@ void V_Core::Reset( int index )
 
 	MasterVol		= V_VolumeSlideLR(0,0);
 	
+#if 0
 	memset( &DryGate, -1, sizeof(DryGate) );
 	memset( &WetGate, -1, sizeof(WetGate) );
 
 	Regs.MMIX		= 0xFFF;
+#endif
 	Regs.VMIXL		= 0xFFFFFF;
 	Regs.VMIXR		= 0xFFFFFF;
 	Regs.VMIXEL		= 0xFFFFFF;
 	Regs.VMIXER		= 0xFFFFFF;
-	EffectsStartA	= c ? 0xEFFF8 : 0xFC810; // (After rom0:PS2LOGO)
-	EffectsEndA		= c ? 0xEFFFF : 0xFFFFF; // (After rom0:PS2LOGO)
+	EffectsStartA	= c ? 0xFFFF8 : 0xEC810; // (After rom0:PS2LOGO)
+	EffectsEndA		= c ? 0xFFFFF : 0xEFFFF; // (After rom0:PS2LOGO)
 
 	// Uninitialized it's 0 for both cores. Resetting libs however may set this to 0 or 1 depending on a flag.
 	// DDS has strange reverb on voiceovers if this is reset to 0
