@@ -174,72 +174,6 @@ void V_Core::Init( int index )
 	Regs.ENDX		= 0xffffff; // PS2 confirmed
 }
 
-// Most values are confirmed on a PS2
-void V_Core::Reset( int index )
-{
-	ConLog( "* SPU2-X: Reset SPU2 core %d \n", index );
-	
-	u32 prev_IRQA = Cores[index].IRQA;
-
-	memset( this, 0, sizeof(V_Core) );
-
-	const int c = Index = index;
-
-	Regs.STATX		= 0;
-	Regs.ATTR		= 0;
-	ExtVol			= V_VolumeLR::Max;
-	InpVol			= V_VolumeLR::Max;
-	FxVol			= V_VolumeLR(0);
-
-	MasterVol		= V_VolumeSlideLR(0,0);
-	
-#if 0
-	memset( &DryGate, -1, sizeof(DryGate) );
-	memset( &WetGate, -1, sizeof(WetGate) );
-
-	Regs.MMIX		= 0xFFF;
-#endif
-	Regs.VMIXL		= 0xFFFFFF;
-	Regs.VMIXR		= 0xFFFFFF;
-	Regs.VMIXEL		= 0xFFFFFF;
-	Regs.VMIXER		= 0xFFFFFF;
-	EffectsStartA	= c ? 0xFFFF8 : 0xEC810; // (After rom0:PS2LOGO)
-	EffectsEndA		= c ? 0xFFFFF : 0xEFFFF; // (After rom0:PS2LOGO)
-
-	// Uninitialized it's 0 for both cores. Resetting libs however may set this to 0 or 1 depending on a flag.
-	// DDS has strange reverb on voiceovers if this is reset to 0
-	// Formula1 2005 seemingly needs a Reverb Interrupt to boot.
-	// rom0:PS2LOGO leaves it at 1.
-	// BoF:DQ has ugly noise with this at 1.  << therefore settling with "0" for now.
-	FxEnable		= 0;
-	IRQA			= prev_IRQA; // IRQA isn't reset by sdinit or the BIOS
-	IRQEnable		= 0;
-
-	for( uint v=0; v<NumVoices; ++v )
-	{
-		VoiceGates[v].DryL = -1;
-		VoiceGates[v].DryR = -1;
-		VoiceGates[v].WetL = -1;
-		VoiceGates[v].WetR = -1;
-
-		Voices[v].Volume		= V_VolumeSlideLR(0,0); // V_VolumeSlideLR::Max;
-		Voices[v].SCurrent		= 28;
-
-		Voices[v].ADSR.Value	= 0;
-		Voices[v].ADSR.Phase	= 0;
-		Voices[v].Pitch			= 0x3FFF;
-		Voices[v].NextA			= 0x2800;
-		Voices[v].StartA		= 0x2800;
-		Voices[v].LoopStartA	= 0x2800;
-	}
-
-	DMAICounter		= 0;
-	AdmaInProgress	= 0;
-
-	Regs.STATX		= 0x80;
-	Regs.ENDX		= 0xffffff; // PS2 confirmed
-}
-
 void V_Core::AnalyzeReverbPreset()
 {
 	ConLog("Reverb Parameter Update for Core %d:\n", Index);
@@ -444,24 +378,6 @@ __forceinline void TimeUpdate(u32 cClocks)
 			//ConLog("* SPU2-X: Irq Called (%04x) at cycle %d.\n", Spdif.Info, Cycles);
 			has_to_call_irq=false;
 			if(_irqcallback) _irqcallback();
-		}
-
-		if(Cores[0].InitDelay>0)
-		{
-			Cores[0].InitDelay--;
-			if(Cores[0].InitDelay==0)
-			{
-				Cores[0].Reset(0);
-			}
-		}
-
-		if(Cores[1].InitDelay>0)
-		{
-			Cores[1].InitDelay--;
-			if(Cores[1].InitDelay==0)
-			{
-				Cores[1].Reset(1);
-			}
 		}
 
 #ifndef ENABLE_NEW_IOPDMA_SPU2
@@ -985,29 +901,6 @@ static void __fastcall RegWrite_Core( u16 value )
 			int bit0		= thiscore.AttrBit0;
 			u8 oldDmaMode	= thiscore.DmaMode;
 			
-
-			if( ((value>>15)&1) && (!thiscore.CoreEnabled) && (thiscore.InitDelay==0) ) // on init/reset
-			{
-				// When we have exact cycle update info from the Pcsx2 IOP unit, then use
-				// the more accurate delayed initialization system.
-				ConLog( "* SPU2-X: Core%d reset bit set\n", core );
-
-				// Async mixing can cause a scheduled reset to happen untimely, ff12 hates it and dies.
-				// So do the next best thing and reset the core directly.
-				if(cyclePtr != NULL && SynchMode != 1) // !AsyncMix
-				{
-					// InitDelay  = 1 has ugly noise in Grandia 3 bootup (maybe ingame as well).
-					// InitDelay  = 2 would fix that but it breaks Eternal Ring booting.
-					thiscore.InitDelay  = 1;
-					thiscore.Regs.STATX = 0;
-				}
-				else
-				{
-					thiscore.Reset(thiscore.Index);
-					return;
-				}
-			}
-
 			thiscore.AttrBit0   =(value>> 0) & 0x01; //1 bit
 			thiscore.DMABits	=(value>> 1) & 0x07; //3 bits
 			thiscore.DmaMode    =(value>> 4) & 0x03; //2 bit (not necessary, we get the direction from the iop)

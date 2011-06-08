@@ -422,7 +422,6 @@ struct V_Core
 	// from this for the odd Ts.
 	StereoOut32		LastEffect;
 
-	u8				InitDelay;
 	u8				CoreEnabled;
 
 	u8				AttrBit0;
@@ -456,7 +455,6 @@ struct V_Core
 	V_Core( int idx );			// our badass constructor
 	~V_Core() throw();
 
-	void	Reset( int index );
 	void	Init( int index );
 	void	UpdateEffectsBufferSize();
 	void	AnalyzeReverbPreset();
