@@ -1159,15 +1159,11 @@ static void __fastcall RegWrite_Core( u16 value )
 		break;
 
 		case REG_S_ENDX:
-			// If writing any value other than 0 ENDX becomes 0.
-			if (value)
-				thiscore.Regs.ENDX = 0;
+			thiscore.Regs.ENDX &= 0xff0000;
 		break;
 
 		case (REG_S_ENDX + 2):
-			// If writing any value other than 0 ENDX becomes 0.
-			if (value)
-				thiscore.Regs.ENDX = 0;
+			thiscore.Regs.ENDX &= 0xffff;
 		break;
 
 		// Reverb Start and End Address Writes!
@@ -1319,6 +1315,10 @@ static void __fastcall RegWrite_Raw( u16 value )
 	*(regtable[addr>>1]) = value;
 }
 
+static void __fastcall RegWrite_Null( u16 value )
+{
+}
+
 // --------------------------------------------------------------------------------------
 //  Macros for tbl_reg_writes
 // --------------------------------------------------------------------------------------
@@ -1413,7 +1413,7 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	ReverbPair(0,R_MIX_DEST_B0), //    0x0334
 	ReverbPair(0,R_MIX_DEST_B1), //    0x0338
 
-	RegWrite_Core<0,REG_A_EEA>, NULL,
+	RegWrite_Core<0,REG_A_EEA>, RegWrite_Null,
 
 	CoreParamsPair(0,REG_S_ENDX), //       0x0340	// End Point passed flag
 	RegWrite_Core<0,REG_P_STATX>, //      0x0344 	// Status register?
@@ -1503,7 +1503,7 @@ static RegWriteHandler * const tbl_reg_writes[0x401] =
 	ReverbPair(1,R_MIX_DEST_B0), //    0x0334
 	ReverbPair(1,R_MIX_DEST_B1), //    0x0338
 
-	RegWrite_Core<1,REG_A_EEA>, NULL,
+	RegWrite_Core<1,REG_A_EEA>, RegWrite_Null,
 
 	CoreParamsPair(1,REG_S_ENDX), //       0x0340	// End Point passed flag
 	RegWrite_Core<1,REG_P_STATX>, //      0x0344 	// Status register?

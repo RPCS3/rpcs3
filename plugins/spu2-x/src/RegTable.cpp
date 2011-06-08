@@ -122,7 +122,7 @@ u16 const* const regtable_original[0x401] =
 	PREVB_REG(0,MIX_DEST_B1),
 
 	PCORE(0,EffectsEndA)+1,
-	NULL,
+	PCORE(0,EffectsEndA),
 
 	PCORE(0,Regs.ENDX),
 	PCORE(0,Regs.ENDX)+1,
@@ -225,7 +225,7 @@ u16 const* const regtable_original[0x401] =
 	PREVB_REG(1,MIX_DEST_B1),
 
 	PCORE(1,EffectsEndA)+1,
-	NULL,
+	PCORE(1,EffectsEndA),
 
 	PCORE(1,Regs.ENDX),
 	PCORE(1,Regs.ENDX)+1,
