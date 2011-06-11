@@ -2387,10 +2387,11 @@ bool GSC_GodOfWar2(const GSFrameInfo& fi, int& skip)
 	{
 		if(fi.TME)
 		{
-			if(fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00100 && fi.TPSM == PSM_PSMCT16 // ntsc
+			if( (fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00100 && fi.TPSM == PSM_PSMCT16 // ntsc
 				|| fi.FBP == 0x02100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x02100 && fi.TPSM == PSM_PSMCT16) // pal
+				&& (GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
 			{
-				skip = 29; // shadows
+				skip = 3; // shadows
 			}
 			if(fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 & 0x03000) == 0x03000
 				&& (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4)
