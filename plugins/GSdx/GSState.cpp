@@ -2364,9 +2364,9 @@ bool GSC_GodOfWar(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT16)
+		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
 		{
-			skip = 30;
+			skip = 1000;
 		}
 		else if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT32 && fi.FBMSK == 0xff000000)
 		{
@@ -2375,6 +2375,13 @@ bool GSC_GodOfWar(const GSFrameInfo& fi, int& skip)
 		else if(fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8 && ((fi.TZTST == 2 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 1 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 3 && fi.FBMSK == 0xFF000000)))
 		{
 			skip = 1; // wall of fog
+		}
+	}
+	else
+	{
+		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT16)
+		{
+			skip = 3;
 		}
 	}
 
@@ -2391,16 +2398,24 @@ bool GSC_GodOfWar2(const GSFrameInfo& fi, int& skip)
 				|| fi.FBP == 0x02100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x02100 && fi.TPSM == PSM_PSMCT16) // pal
 				&& (GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
 			{
-				skip = 3; // shadows
+				skip = 1000; // shadows
 			}
 			if(fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 & 0x03000) == 0x03000
 				&& (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4)
-				&& ((fi.TZTST == 2 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 1 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 3 && fi.FBMSK == 0xFF000000))){
+				&& ((fi.TZTST == 2 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 1 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 3 && fi.FBMSK == 0xFF000000)))
+			{
 					skip = 1; // wall of fog
 			}
 		}
 	}
-
+	else
+	{
+		if(fi.TME && (fi.FBP == 0x00100 || fi.FBP == 0x02100) && fi.FPSM == PSM_PSMCT16)
+		{
+			skip = 3;
+		}
+	}
+	
 	return true;
 }
 

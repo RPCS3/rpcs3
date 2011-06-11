@@ -51,6 +51,7 @@ CRC::Game CRC::m_games[] =
 	{0x9aac530d, FFX2, DE, 0},
 	{0x9aac530b, FFX2, IT, 0},
 	{0x48fe0c71, FFX2, US, 0},
+	{0x8A6D7F14, FFX2, JP, 0},
 	{0xe1fd9a2d, FFX2, JP, 0}, // int.
 	{0x78da0252, FFXII, EU, 0},
 	{0xc1274668, FFXII, EU, 0},
@@ -65,6 +66,7 @@ CRC::Game CRC::m_games[] =
 	{0x901AAC09, HauntingGround, US, 0},
 	{0x8BE3D7B2, ShadowHearts, NoRegion, 0},
 	{0xDEFA4763, ShadowHearts, US, 0},
+	{0xDDFB18B0, ShadowHearts, JP, 0},
 	{0x21068223, Okami, US, 0},
 	{0x891f223f, Okami, FR, 0},
 	{0xC5DEFEA0, Okami, JP, 0},
@@ -86,6 +88,7 @@ CRC::Game CRC::m_games[] =
 	{0x35AA84D1, DBZBT2, NoRegion, 0},
 	{0x428113C2, DBZBT3, US, 0},
 	{0xA422BB13, DBZBT3, EU, 0},
+	{0xF28D21F1, DBZBT3, JP, 0},
 	{0x983C53D2, DBZBT3, NoRegion, 0},
 	{0x983C53D3, DBZBT3, NoRegion, 0},
 	{0x72B3802A, SFEX3, US, 0},
@@ -94,6 +97,7 @@ CRC::Game CRC::m_games[] =
 	{0xC78A495D, BullyCC, US, 0},
 	{0xC19A374E, SoTC, US, 0},
 	{0x7D8F539A, SoTC, EU, 0},
+	{0x877F3436, SoTC, JP, 0},
 	{0x3122B508, OnePieceGrandAdventure, US, 0},
 	{0x8DF14A24, OnePieceGrandAdventure, EU, 0},
 	{0xB049DD5E, OnePieceGrandBattle, US, 0},
@@ -130,6 +134,7 @@ CRC::Game CRC::m_games[] =
 	{0x60FA8C69, ResidentEvil4, JP, 0},
 	{0x5F254B7C, ResidentEvil4, KO, 0},
 	{0x72E1E60E, Spartan, NoRegion, 0},
+	{0x26689C87, Spartan, JP, 0},
 	{0x5ED8FB53, AceCombat4, JP, 0},
 	{0x1B9B7563, AceCombat4, NoRegion, 0},
 	{0xEC432B24, Drakengard2, NoRegion, 0},
@@ -142,6 +147,7 @@ CRC::Game CRC::m_games[] =
 	{0xD6385328, GodOfWar, US, 0},
 	{0xFB0E6D72, GodOfWar, EU, 0},
 	{0xEB001875, GodOfWar, EU, 0},
+	{0xCA052D22, GodOfWar, JP, 0},
 	{0xBFCC1795, GodOfWar, KO, 0},
 	{0xA61A4C6D, GodOfWar, NoRegion, 0},
 	{0xE23D532B, GodOfWar, NoRegion, 0},
@@ -151,6 +157,7 @@ CRC::Game CRC::m_games[] =
 	{0x2F123FD8, GodOfWar2, US, 0},
 	{0x44A8A22A, GodOfWar2, EU, 0},
 	{0x4340C7C6, GodOfWar2, KO, 0},
+	{0xE96E55BD, GodOfWar2, JP, 0},
 	{0xF8CD3DF6, GodOfWar2, NoRegion, 0},
 	{0x0B82BFF7, GodOfWar2, NoRegion, 0},
 	{0x5D482F18, JackieChanAdv, NoRegion, 0},
@@ -160,6 +167,7 @@ CRC::Game CRC::m_games[] =
 	{0x95CC86EF, GiTS, US, 0},
 	{0xA5768F53, GiTS, JP, 0},
 	{0x6BF11378, Onimusha3, US, 0},
+	{0x71320CA8, Onimusha3, JP, 0},
 	{0xDAFFFB0D, Onimusha3, KO, 0},
 	{0xF442260C, MajokkoALaMode2, JP, 0},
 	{0x14FE77F7, TalesOfAbyss, US, 0},
@@ -174,6 +182,7 @@ CRC::Game CRC::m_games[] =
 	{0x206779D8, SimpsonsGame, EU, 0},
 	{0xBBE4D862, SimpsonsGame, US, 0},
 	{0xD71B57F4, Genji, NoRegion, 0},
+	{0xB4776FC1, Genji, JP, 0},
 	{0xE04EA200, StarOcean3, EU, 0},
 	{0x23A97857, StarOcean3, US, 0},
 	{0xBEC32D49, StarOcean3, JP, 0},
@@ -185,6 +194,7 @@ CRC::Game CRC::m_games[] =
 	{0xB65E141B, ValkyrieProfile2, EU, 0}, // PAL German
 	{0xC70FC973, ValkyrieProfile2, IT, 0}, 
 	{0x47B9B2FD, RadiataStories, US, 0},
+	{0xAC73005E, RadiataStories, JP, 0},
 	{0xE8FCF8EC, SMTNocturne, US, ZWriteMustNotClear},	// saves/reloads z buffer around shadow drawing, same issue with all the SMT games following
 	{0xF0A31EE3, SMTNocturne, EU, ZWriteMustNotClear},	// SMTNocturne (Lucifers Call in EU)
 	{0xAE0DE7B7, SMTNocturne, EU, ZWriteMustNotClear},	// SMTNocturne (Lucifers Call in EU)
@@ -206,6 +216,7 @@ CRC::Game CRC::m_games[] =
 	{0x525C1994, TenchuFS, ASIA, 0},
 	{0x767E383D, TenchuWoH, US, 0},
 	{0x83261085, TenchuWoH, EU, 0},		//PAL German
+	{0x13DD9957, TenchuWoH, JP, 0},
 	{0x8BC95883, Sly3, US, 0},
 	{0x8164C614, Sly3, EU, 0},
 	{0x07652DD9, Sly2, US, 0},
@@ -229,8 +240,11 @@ CRC::Game CRC::m_games[] =
 	{0xF56C7948, HeavyMetalThunder, JP, 0},
 	{0x2498951B, SilentHill3, US, 0},
 	{0x5088CCDB, SilentHill3, EU, 0},
+	{0x8CFE667F, SilentHill3, JP, 0},
 	{0x8E8E384B, SilentHill2, US, 0},
 	{0xFE06A030, SilentHill2, US, 0},	//greatest hits
+	{0xE36E16C9, SilentHill2, JP, 0},
+	{0x380D6782, SilentHill2, JP, 0},	//Saigo no uta
 	{0x6DF62AEA, BleachBladeBattlers, JP, 0},
 	{0x6EB71AB0, BleachBladeBattlers, JP, 0},	//2nd
 	{0x3A446111, CastlevaniaCoD, US, 0},
