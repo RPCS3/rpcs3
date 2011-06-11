@@ -1049,18 +1049,22 @@ static void __fastcall RegWrite_Core( u16 value )
 
 		case (REG_S_KON + 2):
 			StartVoices(core,((u32)value)<<16);
+			spu2regs[omem >> 1 | core * 0x200] = value;
 		break;
 
 		case REG_S_KON:
 			StartVoices(core,((u32)value));
+			spu2regs[omem >> 1 | core * 0x200] = value;
 		break;
 
 		case (REG_S_KOFF + 2):
 			StopVoices(core,((u32)value)<<16);
+			spu2regs[omem >> 1 | core * 0x200] = value;
 		break;
 
 		case REG_S_KOFF:
 			StopVoices(core,((u32)value));
+			spu2regs[omem >> 1 | core * 0x200] = value;
 		break;
 
 		case REG_S_ENDX:
