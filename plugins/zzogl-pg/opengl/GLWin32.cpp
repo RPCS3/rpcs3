@@ -209,7 +209,7 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	rc.left = 0;
 	rc.top = 0;
-	rc.right = backbuffer.h;
+	rc.right = backbuffer.w;
 	rc.bottom = backbuffer.h;
 	AdjustWindowRectEx(&rc, dwStyle, false, dwExStyle);
 	int X = (rcdesktop.right - rcdesktop.left) / 2 - (rc.right - rc.left) / 2;

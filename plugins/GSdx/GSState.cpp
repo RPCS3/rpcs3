@@ -1989,21 +1989,29 @@ bool GSC_DBZBT3(const GSFrameInfo& fi, int& skip)
 			{
 				skip = 28; // outline
 			}
-			else if(fi.FBMSK == 0x00FFFFFF)
+			if(fi.FBMSK == 0x00FFFFFF)
 			{
 				skip = 1;
 			}
 		}
-	}
-	else
-	{
-		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00e00 || fi.FBP == 0x01000) && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8H)
+		else if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00e00 || fi.FBP == 0x01000) && fi.FPSM == PSM_PSMCT16 && fi.TPSM == PSM_PSMZ16)
 		{
-			skip = 10;
+			skip = 5;
+		}
+		else if(fi.TME && fi.FPSM == fi.TPSM && fi.TBP0 == 0x03f00 && fi.TPSM == PSM_PSMCT32)
+		{
+			if (fi.FBP == 0x03400)
+			{
+				skip = 1;	//PAL
+			}
+			if(fi.FBP == 0x02e00)
+			{
+				skip = 3;	//NTSC
+			}
 		}
 	}
-	
-	return true;
+
+    return true;
 }
 
 bool GSC_SFEX3(const GSFrameInfo& fi, int& skip)
