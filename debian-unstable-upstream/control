@@ -1,5 +1,5 @@
 Source: pcsx2.snapshot
-Section: games
+Section: contrib/games
 Priority: optional
 Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
 # WARNING we need dpkg-dev 1.15.7 to support dpkg-buildflags but ubunutu 10.04 have only 1.15.5.6...
@@ -10,13 +10,13 @@ Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.5.6), cmake (>=2.8),
     libbz2-dev (>= 1.0.4),
     libsdl1.2-dev,
     libjpeg-dev,
-    libwxbase2.8-dev (>= 2.8.10), libwxbase2.8-dev (<< 2.8.11), 
-    libwxgtk2.8-dev (>= 2.8.10), libwxgtk2.8-dev (<< 2.8.11),
+    libwxbase2.8-dev, 
+    libwxgtk2.8-dev,
     libgtk2.0-dev (>= 2.16),
     libasound2-dev | lib32asound2-dev [amd64],
     portaudio19-dev,
 # 1.5 is in debian experimental, rename to libsoundtouch0 (yeah...). Keep 1.3 for the moment
-    libsoundtouch1-dev (>= 1.3)| libsoundtouch0-dev | lib32soundtouch0-dev [amd64],
+    libsoundtouch0-dev | lib32soundtouch0-dev [amd64] | libsoundtouch1-dev (>= 1.3),
     libsparsehash-dev (>= 1.6),
     libx11-dev,
     libglew1.5-dev (>= 1.5.1),
@@ -37,7 +37,7 @@ Package: pcsx2-unstable
 # Warning amd64 need additional ia32libs
 Architecture: i386 amd64
 Depends: ${shlibs:Depends}, ${misc:Depends},
-    pcsx2-data-unstable (>= ${binary:Version}),
+    pcsx2-data-unstable (>= ${source:Version}),
     pcsx2-plugins-unstable (>= ${binary:Version})
 Conflicts: pcsx2
 Description: Playstation 2 emulator
@@ -52,7 +52,7 @@ Description: Playstation 2 emulator
 Package: pcsx2-data-unstable
 Architecture: all 
 Depends: ${misc:Depends}
-Recommends: pcsx2-unstable (>= ${binary:Version}), pcsx2-plugins-unstable (>= ${binary:Version})
+Recommends: pcsx2-unstable (>= ${source:Version}), pcsx2-plugins-unstable (>= ${source:Version})
 Conflicts: pcsx2-data
 Description: data for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
@@ -66,11 +66,11 @@ Description: data for pcsx2
 Package: pcsx2-plugins-unstable
 # Warning amd64 need additional ia32libs
 Architecture: i386 amd64
-# manually add nvidia-cg-toolkit for zzogl. Do not why is not found by shlibs !!!
+# manually add nvidia-cg-toolkit for zzogl (cg pacakge does not provide symbol or shlibs files)
 Depends: ${shlibs:Depends}, ${misc:Depends},
     nvidia-cg-toolkit-pcsx2 | nvidia-cg-toolkit (>= 2.1), ia32-nvidia-cg-toolkit-pcsx2 [amd64]
 Recommends: pcsx2-unstable (>= ${binary:Version}),
-    pcsx2-data-unstable (>= ${binary:Version})
+    pcsx2-data-unstable (>= ${source:Version})
 Conflicts: pcsx2-plugins
 Description: Various plugins for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
@@ -119,6 +119,7 @@ Priority: optional
 # Warning amd64 need additional ia32libs
 Architecture: all
 Depends: ${misc:Depends}
+Recommends: pcsx2-unstable (>= ${source:Version})
 Conflicts: pcsx2-l10n
 Description: Languages package for PCSX2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.

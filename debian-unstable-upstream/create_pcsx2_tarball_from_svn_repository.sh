@@ -18,19 +18,42 @@
 ######################################################################
 # Global Parameters
 ######################################################################
-# Svn parameter
-if [ -n "$1" ] ; then
-    SVN_CO_VERSION=$1;
-else
-    echo "Please provide the subversion revision number as the first parameter"
-    exit 1;
+help()
+{
+    cat <<EOF
+    Help:
+    -rev <rev>     : revision number
+    -branch <name> : branch name, take trunk otherwise
+    -local         : download the svn repository into $HOME/.cache (not deleted by the script)
+EOF
+
+    exit 0
+}
+
+# Default value
+SVN_CO_VERSION=0;
+BRANCH="trunk"
+LOCAL=0
+while [ -n "$1" ]; do
+case $1 in
+    -help|-h) help;shift 1;;
+    -rev|-r) SVN_CO_VERSION=$2; shift 2;;
+    -branch|-b) BRANCH=$2; shift 1;;
+    -local|-l) LOCAL=1;shift 1;;
+    --) shift;break;;
+    -*) echo "ERROR: $1 option does not exists. Use -h for help";exit 1;;
+    *)  break;;
+esac
+done
+
+if [ "$SVN_CO_VERSION" = "0" ] ; then
+    help
 fi
-if [ -n "$2" ] ; then
-    # Use branch argument
-    SVN_TRUNK="http://pcsx2.googlecode.com/svn/branches/$2"
-else
-    # by default take the trunk
+
+if [ "$BRANCH" = "trunk" ] ; then
     SVN_TRUNK="http://pcsx2.googlecode.com/svn/trunk"
+else
+    SVN_TRUNK="http://pcsx2.googlecode.com/svn/branches/$BRANCH"
 fi
 
 # Debian name of package and tarball
@@ -39,7 +62,11 @@ TAR_NAME="pcsx2.snapshot_${SVN_CO_VERSION}.orig.tar"
 
 # Directory
 TMP_DIR=/tmp
-ROOT_DIR=${TMP_DIR}/subversion_pcsx2_${SVN_CO_VERSION}
+if [ "$LOCAL" = 1 ] ; then
+    ROOT_DIR=${HOME}/.cache/svn_pcsx2__${BRANCH}
+else
+    ROOT_DIR=${TMP_DIR}/subversion_pcsx2_${SVN_CO_VERSION}
+fi
 NEW_DIR=${TMP_DIR}/$PKG_NAME
 
 
@@ -63,11 +90,9 @@ get_svn_dir()
 get_svn_file()
 {
     for file in $* ; do
-        if [ ! -e `basename ${file}` ] ; then
-            # Versioning information is not supported for a single file
-            # therefore you can't use svn co
-            svn export --quiet ${SVN_TRUNK}/${file} -r $SVN_CO_VERSION;
-        fi
+        # Versioning information is not supported for a single file
+        # therefore you can't use svn co
+        svn export --quiet ${SVN_TRUNK}/${file} -r $SVN_CO_VERSION;
     done
 }
 
@@ -120,8 +145,6 @@ find $NEW_DIR -name "missing" -exec rm -f {} \;
 find $NEW_DIR -name "aclocal.m4" -exec rm -f {} \;
 find $NEW_DIR -name "configure.ac" -exec rm -f {} \;
 find $NEW_DIR -name "Makefile.am" -exec rm -f {} \;
-echo "Remove 3rd party directories"
-find $NEW_DIR -name "3rdparty" -exec rm -fr {} \; 2> /dev/null
 echo "Remove windows file (useless & copyright issue)"
 find $NEW_DIR -iname "windows" -type d -exec rm -fr {} \; 2> /dev/null
 find $NEW_DIR -name "Win32" -type d -exec rm -fr {} \; 2> /dev/null
@@ -129,6 +152,7 @@ rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/Win32"
 rm -fr "${NEW_DIR}/tools/GSDumpGUI"
 rm -fr "${NEW_DIR}/common/vsprops"
 echo "Remove useless files (copyright issues)"
+rm -fr "${NEW_DIR}/pcsx2/3rdparty" # useless link which annoy me
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders"
 rm -fr "${NEW_DIR}/common/src/Utilities/x86/MemcpyFast.cpp"
 
@@ -138,4 +162,6 @@ tar -C $TMP_DIR -czf ${TAR_NAME}.gz $PKG_NAME
 
 ## Clean
 rm -fr $NEW_DIR
-rm -fr $ROOT_DIR
+if [ "$LOCAL" = 0 ] ; then
+    rm -fr $ROOT_DIR
+fi

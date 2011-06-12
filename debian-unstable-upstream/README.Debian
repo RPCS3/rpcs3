@@ -4,8 +4,6 @@
 * This version has some major modifications against the default upstream version. 
     -> documents are stored in $XDG_CONFIG_HOME instead of $HOME/pcsx2
 
-* This package is highly experimental.
-
 * Documentation needs some love. Feel free to help.
 
 * -fPIC option was removed for multiple reason.
