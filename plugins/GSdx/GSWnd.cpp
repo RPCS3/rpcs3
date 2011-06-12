@@ -312,27 +312,43 @@ void GSWnd::HideFrame()
 */
 
 GSWnd::GSWnd()
-	: m_window(NULL)
+	: m_window(NULL), m_Xwindow(0), m_XDisplay(NULL)
 {
 }
 
 GSWnd::~GSWnd()
 {
-	if(m_window != NULL)
+	if(m_window != NULL && m_managed)
 	{
 		SDL_DestroyWindow(m_window);
 		m_window = NULL;
 	}
+	if (m_XDisplay) {
+		XCloseDisplay(m_XDisplay);
+		m_XDisplay = NULL;
+	}
 }
 
-// Actually the destructor is not called when there is a GSclose or GSshutdown
-// The window still need to be closed
+bool GSWnd::Attach(void* handle, bool managed)
+{
+	m_Xwindow = *(Window*)handle;
+	m_managed = managed;
+
+	return true;
+}
+
 void GSWnd::Detach()
 {
-	if(m_window != NULL)
+	// Actually the destructor is not called when there is only a GSclose/GSshutdown
+	// The window still need to be closed
+	if(m_window != NULL && m_managed)
 	{
 		SDL_DestroyWindow(m_window);
 		m_window = NULL;
+	}
+	if (m_XDisplay) {
+		XCloseDisplay(m_XDisplay);
+		m_XDisplay = NULL;
 	}
 }
 
@@ -359,7 +375,20 @@ bool GSWnd::Create(const string& title, int w, int h)
     if (SDL_GetNumVideoDisplays() <= 0) return false;
 #endif
 
+	m_managed = true;
 	m_window = SDL_CreateWindow(title.c_str(), 100, 100, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+
+	// Get the X window from the newly created window
+	// It would be needed to get the current size
+	SDL_SysWMinfo wminfo;
+	memset(&wminfo, 0, sizeof(wminfo));
+
+	wminfo.version.major = SDL_MAJOR_VERSION;
+	wminfo.version.minor = SDL_MINOR_VERSION;
+
+	SDL_GetWindowWMInfo(m_window, &wminfo);
+	m_Xwindow = wminfo.info.x11.window;
+
 
 	return (m_window != NULL);
 }
@@ -380,16 +409,25 @@ Display* GSWnd::GetDisplay()
 
 GSVector4i GSWnd::GetClientRect()
 {
-	// Get all SDL events. It refreshes the window parameter do not ask why.
-	// Anyway it allow to properly resize the window surface
-	// FIXME: it does not feel a good solution -- Gregory
-	SDL_PumpEvents();
+	unsigned int h = 480;
+	unsigned int w = 640;
 
-	int h = 480;
-	int w = 640;
-	if (m_window) SDL_GetWindowSize(m_window, &w, &h);
+	unsigned int borderDummy;
+	unsigned int depthDummy;
+	Window winDummy;
+    int xDummy;
+    int yDummy;
 
-	return GSVector4i(0, 0, w, h);
+	// In gsopen2, pcsx2 stoles all event (including resize event). SDL is not able to update its structure
+	// so you must do it yourself
+	// In perfect world:
+	// if (m_window) SDL_GetWindowSize(m_window, &w, &h);
+	// In real world...:
+	if (!m_XDisplay) m_XDisplay = XOpenDisplay(NULL);
+	XGetGeometry(m_XDisplay, m_Xwindow, &winDummy, &xDummy, &yDummy, &w, &h, &borderDummy, &depthDummy);
+	SDL_SetWindowSize(m_window, w, h);
+
+	return GSVector4i(0, 0, (int)w, (int)h);
 }
 
 // Returns FALSE if the window has no title, or if th window title is under the strict
@@ -397,17 +435,21 @@ GSVector4i GSWnd::GetClientRect()
 
 bool GSWnd::SetWindowText(const char* title)
 {
+	if (!m_managed) return true;
+
 	// Do not find anyway to check the current fullscreen status
 	// Better than nothing heuristic, check the window position. Fullscreen = (0,0)
 	// if(!(m_window->flags & SDL_WINDOW_FULLSCREEN) ) // Do not compile
 	//
-	// Same as GetClientRect. We call SDL_PumpEvents to refresh x and y value
+	// We call SDL_PumpEvents to refresh x and y value.
+	// but we not use this function anyway.
 	// FIXME: it does not feel a good solution -- Gregory
+	// NOte: it might be more thread safe to use a call to XGetGeometry
 	SDL_PumpEvents();
 	int x,y = 0;
 	SDL_GetWindowPosition(m_window, &x, &y);
 	if ( x && y )
-	SDL_SetWindowTitle(m_window, title);
+		SDL_SetWindowTitle(m_window, title);
 
 	return true;
 }

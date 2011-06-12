@@ -34,14 +34,13 @@
 #include "svnrev.h"
 #endif
 
+PADconf* conf;
 char libraryName[256];
-
-PADconf conf;
 
 keyEvent event;
 
 u16 status[2];
-int pressure;
+int status_pressure[2][MAX_KEYS];
 static keyEvent s_event;
 std::string s_strIniPath("inis/");
 std::string s_strLogPath("logs/");
@@ -125,7 +124,15 @@ int ds2mode = 0; // DS Mode at start
 FILE *padLog = NULL;
 
 pthread_spinlock_t s_mutexStatus;
-u32 s_keyPress[2], s_keyRelease[2];
+pthread_mutex_t	   mutex_KeyEvent;
+static u32 s_keyPress[2], s_keyRelease[2];
+
+queue<keyEvent> ev_fifo;
+
+static int padVib0[2];
+static int padVib1[2];
+static int padVibC[2];
+static int padVibF[2][4];
 
 static void InitLibraryName()
 {
@@ -239,15 +246,11 @@ void CloseLogging()
 #endif
 }
 
-void clearPAD()
+void clearPAD(int pad)
 {
-	for (int pad = 0; pad < MAX_SUB_KEYS; pad++)
-	{
-		for (int key= 0; key < MAX_KEYS; ++key)
-		{
-			set_key(pad, key, 0);
-		}
-	}
+	conf->keysym_map[pad].clear();
+	for (int key= 0; key < MAX_KEYS; ++key)
+		set_key(pad, key, 0);
 }
 
 EXPORT_C_(s32) PADinit(u32 flags)
@@ -255,15 +258,17 @@ EXPORT_C_(s32) PADinit(u32 flags)
 	initLogging();
 
 	pads |= flags;
-	status[0] = 0xffff;
-	status[1] = 0xffff;
+	for (int i = 0 ; i < 2 ; i++) {
+		status[i] = 0xffff;
+		for (int j = 0 ; j < MAX_KEYS ; j++)
+			status_pressure[i][j] = 255;
+	}
 
 	LoadConfig();
 
 	PADsetMode(0, 0);
 	PADsetMode(1, 0);
 
-	pressure = 100;
 	Analog::Init();
 
 	return 0;
@@ -272,13 +277,16 @@ EXPORT_C_(s32) PADinit(u32 flags)
 EXPORT_C_(void) PADshutdown()
 {
     CloseLogging();
+	if (conf) delete conf;
 }
 
 EXPORT_C_(s32) PADopen(void *pDsp)
 {
 	memset(&event, 0, sizeof(event));
 
+	while (!ev_fifo.empty()) ev_fifo.pop();
 	pthread_spin_init(&s_mutexStatus, PTHREAD_PROCESS_PRIVATE);
+	pthread_mutex_init(&mutex_KeyEvent, NULL);
 	s_keyPress[0] = s_keyPress[1] = 0;
 	s_keyRelease[0] = s_keyRelease[1] = 0;
 
@@ -306,7 +314,9 @@ EXPORT_C_(void) PADsetLogDir(const char* dir)
 
 EXPORT_C_(void) PADclose()
 {
+	while (!ev_fifo.empty()) ev_fifo.pop();
 	pthread_spin_destroy(&s_mutexStatus);
+	pthread_mutex_destroy(&mutex_KeyEvent);
 	_PADclose();
 }
 
@@ -338,6 +348,11 @@ EXPORT_C_(u32) PADquery()
 void PADsetMode(int pad, int mode)
 {
 	padMode[pad] = mode;
+	// FIXME FEEDBACK
+	padVib0[pad] = 0;
+	padVib1[pad] = 0;
+	padVibF[pad][0] = 0;
+	padVibF[pad][1] = 0;
 	switch (ds2mode)
 	{
 		case 0: // dualshock
@@ -381,7 +396,8 @@ EXPORT_C_(u8) PADstartPoll(int pad)
 u8  _PADpoll(u8 value)
 {
 	u8 button_check = 0;
-	const int avg_pressure = (pressure * 255) / 100;
+	int vib_small;
+	int vib_big;
 
 	if (curByte == 0)
 	{
@@ -408,10 +424,10 @@ u8  _PADpoll(u8 value)
 
 				stdpar[curPad][2] = status[curPad] >> 8;
 				stdpar[curPad][3] = status[curPad] & 0xff;
-				stdpar[curPad][4] = Analog::Pad(curPad, PAD_RX);
-				stdpar[curPad][5] = Analog::Pad(curPad, PAD_RY);
-				stdpar[curPad][6] = Analog::Pad(curPad, PAD_LX);
-				stdpar[curPad][7] = Analog::Pad(curPad, PAD_LY);
+				stdpar[curPad][4] = Analog::Pad(curPad, PAD_R_RIGHT);
+				stdpar[curPad][5] = Analog::Pad(curPad, PAD_R_UP);
+				stdpar[curPad][6] = Analog::Pad(curPad, PAD_L_RIGHT);
+				stdpar[curPad][7] = Analog::Pad(curPad, PAD_L_UP);
 
 				if (padMode[curPad] == 1)
 					cmdLen = 20;
@@ -422,35 +438,35 @@ u8  _PADpoll(u8 value)
 				switch (stdpar[curPad][3])
 				{
 					case 0xBF: // X
-						stdpar[curPad][14] = avg_pressure;
+						stdpar[curPad][14] = status_pressure[curPad][PAD_CROSS];
 						break;
 
 					case 0xDF: // Circle
-						stdpar[curPad][13] = avg_pressure;
+						stdpar[curPad][13] = status_pressure[curPad][PAD_CIRCLE];
 						break;
 
 					case 0xEF: // Triangle
-						stdpar[curPad][12] = avg_pressure;
+						stdpar[curPad][12] = status_pressure[curPad][PAD_TRIANGLE];
 						break;
 
 					case 0x7F: // Square
-						stdpar[curPad][15] = avg_pressure;
+						stdpar[curPad][15] = status_pressure[curPad][PAD_SQUARE];
 						break;
 
 					case 0xFB: // L1
-						stdpar[curPad][16] = avg_pressure;
+						stdpar[curPad][16] = status_pressure[curPad][PAD_L1];
 						break;
 
 					case 0xF7: // R1
-						stdpar[curPad][17] = avg_pressure;
+						stdpar[curPad][17] = status_pressure[curPad][PAD_R1];
 						break;
 
 					case 0xFE: // L2
-						stdpar[curPad][18] = avg_pressure;
+						stdpar[curPad][18] = status_pressure[curPad][PAD_L2];
 						break;
 
 					case 0xFD: // R2
-						stdpar[curPad][19] = avg_pressure;
+						stdpar[curPad][19] = status_pressure[curPad][PAD_R2];
 						break;
 
 					default:
@@ -467,19 +483,19 @@ u8  _PADpoll(u8 value)
 				switch (button_check)
 				{
 					case 0xE: // UP
-						stdpar[curPad][10] = avg_pressure;
+						stdpar[curPad][10] = status_pressure[curPad][PAD_UP];
 						break;
 
 					case 0xB: // DOWN
-						stdpar[curPad][11] = avg_pressure;
+						stdpar[curPad][11] =status_pressure[curPad][PAD_DOWN];
 						break;
 
 					case 0x7: // LEFT
-						stdpar[curPad][9] = avg_pressure;
+						stdpar[curPad][9] = status_pressure[curPad][PAD_LEFT];
 						break;
 
 					case 0xD: // RIGHT
-						stdpar[curPad][8] = avg_pressure;
+						stdpar[curPad][8] = status_pressure[curPad][PAD_RIGHT];
 						break;
 
 					default:
@@ -490,6 +506,28 @@ u8  _PADpoll(u8 value)
 						break;
 				}
 				buf = stdpar[curPad];
+
+				// FIXME FEEDBACK. Set effect here
+				/* Small Motor */
+				vib_small = padVibF[curPad][0] ? 2000 : 0;
+				// if ((padVibF[curPad][2] != vib_small) && (padVibC[curPad] >= 0))
+				if (padVibF[curPad][2] != vib_small)
+				{
+					padVibF[curPad][2] = vib_small;
+					// SetDeviceForceS (padVibC[curPad], vib_small);
+					JoystickInfo::DoHapticEffect(0, curPad, vib_small);
+				}
+
+				/* Big Motor */
+				vib_big = padVibF[curPad][1] ? 500 + 37*padVibF[curPad][1] : 0;
+				// if ((padVibF[curPad][3] != vib_big) && (padVibC[curPad] >= 0))
+				if (padVibF[curPad][3] != vib_big)
+				{
+					padVibF[curPad][3] = vib_big;
+					// SetDeviceForceB (padVibC[curPad], vib_big);
+					JoystickInfo::DoHapticEffect(1, curPad, vib_big);
+				}
+
 				return padID[curPad];
 
 			case CMD_CONFIG_MODE: // CONFIG_MODE
@@ -546,6 +584,13 @@ u8  _PADpoll(u8 value)
 
 	switch (curCmd)
 	{
+		case CMD_READ_DATA_AND_VIBRATE:
+			// FIXME FEEDBACK
+			if (curByte == padVib0[curPad])
+				padVibF[curPad][0] = value;
+			if (curByte == padVib1[curPad])
+				padVibF[curPad][1] = value;
+			break;
 		case CMD_CONFIG_MODE:
 			if (curByte == 2)
 			{
@@ -604,6 +649,31 @@ u8  _PADpoll(u8 value)
 				}
 			}
 			break;
+
+		case CMD_VIBRATION_TOGGLE:
+			// FIXME FEEDBACK
+			if (curByte >= 2)
+			{
+				if (curByte == padVib0[curPad])
+					buf[curByte] = 0x00;
+				if (curByte == padVib1[curPad])
+					buf[curByte] = 0x01;
+				if (value == 0x00)
+				{
+					padVib0[curPad] = curByte;
+					// FIXME: code from SSSXPAD I'm not sure we need this part
+					// if ((padID[curPad] & 0x0f) < (curByte - 1) / 2)
+					// 	padID[curPad] = (padID[curPad] & 0xf0) + (curByte - 1) / 2;
+				}
+				else if (value == 0x01)
+				{
+					padVib1[curPad] = curByte;
+					// FIXME: code from SSSXPAD I'm not sure we need this part
+					// if ((padID[curPad] & 0x0f) < (curByte - 1) / 2)
+					// 	padID[curPad] = (padID[curPad] & 0xf0) + (curByte - 1) / 2;
+				}
+			}
+			break;
 	}
 
 	if (curByte >= cmdLen) return 0;
@@ -627,3 +697,12 @@ EXPORT_C_(keyEvent*) PADkeyEvent()
 	event.key = 0;
 	return &s_event;
 }
+
+#ifdef __LINUX__
+EXPORT_C_(void) PADWriteEvent(keyEvent &evt)
+{
+	pthread_mutex_lock(&mutex_KeyEvent);
+	ev_fifo.push(evt);
+	pthread_mutex_unlock(&mutex_KeyEvent);
+}
+#endif

@@ -18,14 +18,9 @@
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
-//
-//#include "joystick.h"
-//#include "keyboard.h"
-//#include "onepad.h"
-//
-//#include <string.h>
-//#include <gtk/gtk.h>
-//#include <gdk/gdkkeysyms.h>
-//#include <pthread.h>
 
+#ifndef __LINUX_H__
+#define __LINUX_H__
 extern void DisplayDialog();
+extern string KeyName(int pad, int key, int keysym = 0);
+#endif

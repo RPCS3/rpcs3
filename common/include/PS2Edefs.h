@@ -322,6 +322,11 @@ u32  CALLBACK PADquery();
 // have to be added to maintain data integrity.
 void CALLBACK PADupdate(int pad);
 
+// Send a key event from wx-gui to pad
+// Note: On linux GSOpen2, wx-gui and pad share the same event buffer. Wx-gui reads and deletes event
+// before the pad saw them. So the gui needs to send them back to the pad.
+void CALLBACK PADWriteEvent(keyEvent &evt);
+
 // extended funcs
 
 void CALLBACK PADgsDriverInfo(GSdriverInfo *info);
@@ -603,6 +608,7 @@ typedef keyEvent* (CALLBACK* _PADkeyEvent)();
 typedef void (CALLBACK* _PADgsDriverInfo)(GSdriverInfo *info);
 typedef s32  (CALLBACK* _PADsetSlot)(u8 port, u8 slot);
 typedef s32  (CALLBACK* _PADqueryMtap)(u8 port);
+typedef void (CALLBACK* _PADWriteEvent)(keyEvent &evt);
 
 // SPU2
 typedef s32  (CALLBACK* _SPU2open)(void *pDsp);
@@ -755,6 +761,7 @@ extern _PADkeyEvent       PADkeyEvent;
 extern _PADgsDriverInfo   PADgsDriverInfo;
 extern _PADsetSlot        PADsetSlot;
 extern _PADqueryMtap      PADqueryMtap;
+extern _PADWriteEvent     PADWriteEvent;
 
 // SPU2
 extern _SPU2open          SPU2open;

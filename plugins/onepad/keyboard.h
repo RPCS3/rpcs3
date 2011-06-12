@@ -29,19 +29,18 @@
 #include "Linux/linux.h"
 
 extern Display *GSdsp;
-extern void PollForX11KeyboardInput(int pad);
-extern bool PollX11Keyboard(char* &temp, u32 &pkey);
+extern void PollForX11KeyboardInput(int pad, int& keyPress, int& keyRelease, bool& used_by_keyboard);
+extern bool PollX11KeyboardMouseEvent(u32 &pkey);
+extern Window GSwin;
 
 #else
 
+extern char* KeysymToChar(int keysym);
 extern WNDPROC GSwndProc;
 extern HWND GShwnd;
 
 #endif
 
-extern char* KeysymToChar(int keysym);
-extern void PollForKeyboardInput(int pad);
 extern void SetAutoRepeat(bool autorep);
-extern int FindKey(int key, int pad);
 
- #endif
+#endif

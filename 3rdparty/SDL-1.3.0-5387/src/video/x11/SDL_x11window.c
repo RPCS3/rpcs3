@@ -512,7 +512,9 @@ X11_CreateWindow(_THIS, SDL_Window * window)
 int
 X11_CreateWindowFrom(_THIS, SDL_Window * window, const void *data)
 {
-    Window w = (Window) data;
+    // For me it is a bug -- Gregory
+    // Window w = (Window) data;
+    Window w = *(Window*) data;
 
     window->title = X11_GetWindowTitle(_this, w);
 
@@ -537,8 +539,12 @@ X11_GetWindowTitle(_THIS, Window xwindow)
                 0L, 8192L, False, data->UTF8_STRING, &real_type, &real_format,
                 &items_read, &items_left, &propdata);
     if (status == Success) {
-        title = SDL_strdup(SDL_static_cast(char*, propdata));
-        XFree(propdata);
+        // Propdata can be null I do not know if it normal or not.
+        // At least handle gracefully and dont crash. -- Gregory
+        if (propdata) {
+            title = SDL_strdup(SDL_static_cast(char*, propdata));
+            XFree(propdata);
+        }
     } else {
         status = XGetWindowProperty(display, xwindow, XA_WM_NAME,
                     0L, 8192L, False, XA_STRING, &real_type, &real_format,

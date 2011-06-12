@@ -21,17 +21,15 @@
 
 #include "joystick.h"
 #include "onepad.h"
+#include "keyboard.h"
 
 #include <string.h>
 #include <gtk/gtk.h>
 #include "linux.h"
 #include <gdk/gdkx.h>
 
-extern void PollForKeyboardInput(int pad);
-extern void SetAutoRepeat(bool autorep);
 Display *GSdsp;
-
-extern string KeyName(int pad, int key);
+Window	GSwin;
 
 void SysMessage(const char *fmt, ...)
 {
@@ -66,22 +64,8 @@ EXPORT_C_(s32) PADtest()
 
 s32  _PADopen(void *pDsp)
 {
-    GtkScrolledWindow *win;
-
-    win = *(GtkScrolledWindow**) pDsp;
-
-	if (GTK_IS_WIDGET(win))
-	{
-	    // Since we have a GtkScrolledWindow, for now we'll grab whatever display
-	    // comes along instead. Later, we can fiddle with this, but I'm not sure the
-	    // best way to get a Display* out of a GtkScrolledWindow. A GtkWindow I might
-	    // be able to manage... --arcum42
-        GSdsp = GDK_DISPLAY_XDISPLAY(gdk_display_get_default());
-	}
-	else
-	{
-        GSdsp = *(Display**)pDsp;
-	}
+	GSdsp = *(Display**)pDsp;
+	GSwin = (Window)*(((u32*)pDsp)+1);
 
     SetAutoRepeat(false);
 	return 0;
@@ -103,97 +87,104 @@ void _PADclose()
 	s_vjoysticks.clear();
 }
 
+static bool used_by_keyboard = false;
 EXPORT_C_(void) PADupdate(int pad)
 {
-	// Poll keyboard.
-	PollForKeyboardInput(pad);
+	// FIXME joystick directly update the status variable
+	// Keyboard does a nice roadtrip (with semaphore in the middle)
+	// s_keyRelease (by UpdateKeys) -> status (by _PADupdate -> by _PADpoll)
+	// If we need semaphore, joy part must be updated
 
-	// joystick info
-	SDL_JoystickUpdate();
+	// Actually PADupdate is always call with pad == 0. So you need to update both 
+	// pads -- Gregory
+	for (int cpad = 0; cpad < 2; cpad++) {
+		int keyPress = 0, keyRelease = 0;
 
-	for (int i = 0; i < MAX_KEYS; i++)
-	{
-		int cpad = PadEnum[pad][0];
+		// Poll keyboard.
+		PollForX11KeyboardInput(cpad, keyPress, keyRelease, used_by_keyboard);
 
-		if (JoystickIdWithinBounds(key_to_joystick_id(cpad, i)))
-		{
-			JoystickInfo* pjoy = s_vjoysticks[key_to_joystick_id(cpad, i)];
-			int pad = (pjoy)->GetPAD();
+		UpdateKeys(pad, keyPress, keyRelease);
 
-			switch (type_of_key(cpad, i))
+		// joystick info
+		SDL_JoystickUpdate();
+
+		int joyid = conf->get_joyid(cpad);
+
+		if (JoystickIdWithinBounds(joyid)) {
+			for (int i = 0; i < MAX_KEYS; i++)
 			{
-				case PAD_JOYBUTTONS:
-				{
-					int value = SDL_JoystickGetButton((pjoy)->GetJoy(), key_to_button(cpad, i));
+				JoystickInfo* pjoy = s_vjoysticks[joyid];
 
-					if (value)
-						clear_bit(status[pad], i); // released
-					else
-						set_bit(status[pad], i); // pressed
-					break;
-				}
-			case PAD_HAT:
+				switch (type_of_joykey(cpad, i))
 				{
-					int value = SDL_JoystickGetHat((pjoy)->GetJoy(), key_to_axis(cpad, i));
+					case PAD_JOYBUTTONS:
+						{
 
-					if (key_to_hat_dir(cpad, i) == value)
-					{
-						clear_bit(status[pad], i);
-						//PAD_LOG("Registered %s\n", HatName(value), i);
-						//PAD_LOG("%s\n", KeyName(cpad, i).c_str());
-					}
-					else
-					{
-						set_bit(status[pad], i);
-					}
-					break;
-				}
-			case PAD_POV:
-				{
-					int value = pjoy->GetAxisFromKey(cpad, i);
-
-					PAD_LOG("%s: %d (%d)\n", KeyName(cpad, i).c_str(), value, key_to_pov_sign(cpad, i));
-					if (key_to_pov_sign(cpad, i) && (value < -2048))
-					{
-						//PAD_LOG("%s Released+.\n", KeyName(cpad, i).c_str());
-						clear_bit(status[pad], i);
-					}
-					else if (!key_to_pov_sign(cpad, i) && (value > 2048))
-					{
-						//PAD_LOG("%s Released-\n", KeyName(cpad, i).c_str());
-						clear_bit(status[pad], i);
-					}
-					else
-					{
-						//PAD_LOG("%s Pressed.\n", KeyName(cpad, i).c_str());
-						set_bit(status[pad], i);
-					}
-					break;
-				}
-				case PAD_JOYSTICK:
-				{
-					int value = pjoy->GetAxisFromKey(cpad, i);
-
-					switch (i)
-					{
-						case PAD_LX:
-						case PAD_LY:
-						case PAD_RX:
-						case PAD_RY:
-							if (abs(value) > (pjoy)->GetDeadzone(/*value*/))
-								Analog::ConfigurePad(pad, i, value);
+							int value = SDL_JoystickGetButton((pjoy)->GetJoy(), key_to_button(cpad, i));
+							if (value)
+								clear_bit(status[cpad], i); // released
 							else
-								Analog::ResetPad(pad, i);
+								set_bit(status[cpad], i); // pressed
+
 							break;
-					}
-					break;
+						}
+					case PAD_HAT:
+						{
+							int value = SDL_JoystickGetHat((pjoy)->GetJoy(), key_to_axis(cpad, i));
+
+							if (key_to_hat_dir(cpad, i) == value)
+								clear_bit(status[cpad], i);
+							else
+								set_bit(status[cpad], i);
+
+							break;
+						}
+					case PAD_AXIS:
+						{
+							int value = pjoy->GetAxisFromKey(cpad, i);
+							bool sign = key_to_axis_sign(cpad, i);
+							bool full_axis = key_to_axis_type(cpad, i);
+
+							if (IsAnalogKey(i)) {
+								if (abs(value) > (pjoy)->GetDeadzone())
+									Analog::ConfigurePad(cpad, i, value);
+								else if (! (conf->options & ((PADOPTION_MOUSE_R|PADOPTION_MOUSE_L) << 16 * cpad ))
+										&& !(used_by_keyboard) )
+									// There is a conflict between keyboard/mouse and joystick configuration.
+									// Do nothing when either the mouse or the keyboad is pressed/enabled.
+									// It avoid to be stuck in reset mode --Gregory
+									Analog::ResetPad(cpad, i);
+
+							} else {
+								if (full_axis) {
+									value += 0x8000;
+									if (value > 2048) {
+										clear_bit(status[cpad], i);
+										status_pressure[cpad][i] = min(value/256 , 0xFF); // Max pressure is 255
+									} else {
+										set_bit(status[cpad], i);
+										status_pressure[cpad][i] = 0; // no pressure
+									}
+								} else {
+									if (sign && (value < -2048)) {
+										clear_bit(status[cpad], i);
+										status_pressure[cpad][i] = min(-value /128, 0xFF); // Max pressure is 255
+									} else if (!sign && (value > 2048)) {
+										clear_bit(status[cpad], i);
+										status_pressure[cpad][i] = min(value /128, 0xFF); // Max pressure is 255
+									} else {
+										set_bit(status[cpad], i);
+										status_pressure[cpad][i] = 0; // no pressure
+									}
+								}
+							}
+						}
+					default: break;
 				}
-			default: break;
 			}
 		}
 	}
 }
-
 
 EXPORT_C_(void) PADconfigure()
 {

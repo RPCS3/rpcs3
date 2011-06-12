@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <queue>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -67,7 +68,9 @@ enum PadOptions
 	PADOPTION_REVERSELX = 0x2,
 	PADOPTION_REVERSELY = 0x4,
 	PADOPTION_REVERSERX = 0x8,
-	PADOPTION_REVERSERY = 0x10
+	PADOPTION_REVERSERY = 0x10,
+	PADOPTION_MOUSE_L = 0x20,
+	PADOPTION_MOUSE_R = 0x40
 };
 
 extern FILE *padLog;
@@ -94,34 +97,30 @@ enum PadCommands
 
 enum gamePadValues
 {
-	PAD_R_LEFT = 27,
-	PAD_R_DOWN = 26,
-	PAD_R_RIGHT = 25,
-	PAD_R_UP = 24,
-	PAD_L_LEFT = 23,
-	PAD_L_DOWN = 22,
-	PAD_L_RIGHT = 21,
-	PAD_L_UP = 20,
-	PAD_RY = 19,
-	PAD_LY = 18,
-	PAD_RX = 17,
-	PAD_LX = 16,
-	PAD_LEFT = 15,
-	PAD_DOWN = 14,
-	PAD_RIGHT = 13,
-	PAD_UP = 12,
-	PAD_START = 11,
-	PAD_R3 = 10,
-	PAD_L3 = 9,
-	PAD_SELECT = 8,
-	PAD_SQUARE = 7,
-	PAD_CROSS = 6,
-	PAD_CIRCLE = 5,
-	PAD_TRIANGLE = 4,
-	PAD_R1 = 3,
-	PAD_L1 = 2,
-	PAD_R2 = 1,
-	PAD_L2 = 0
+	PAD_L2 = 0,
+	PAD_R2,
+	PAD_L1,
+	PAD_R1,
+	PAD_TRIANGLE,
+	PAD_CIRCLE,
+	PAD_CROSS,
+	PAD_SQUARE,
+	PAD_SELECT,
+	PAD_L3,
+	PAD_R3,
+	PAD_START,
+	PAD_UP,
+	PAD_RIGHT,
+	PAD_DOWN,
+	PAD_LEFT,
+	PAD_L_UP,
+	PAD_L_RIGHT,
+	PAD_L_DOWN,
+	PAD_L_LEFT,
+	PAD_R_UP,
+	PAD_R_RIGHT,
+	PAD_R_DOWN,
+	PAD_R_LEFT
 };
 
 // Activate bolche's analog controls hack
@@ -134,10 +133,14 @@ enum gamePadValues
 
 extern keyEvent event;
 
+extern queue<keyEvent> ev_fifo;
+extern pthread_mutex_t	mutex_KeyEvent;
+
 extern u16 status[2];
+extern int status_pressure[2][MAX_KEYS];
 extern u32 pads;
 
-void clearPAD();
+void clearPAD(int pad);
 int POV(u32 direction, u32 angle);
 s32  _PADopen(void *pDsp);
 void _PADclose();

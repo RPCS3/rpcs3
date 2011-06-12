@@ -50,20 +50,15 @@ GSDeviceSDL::~GSDeviceSDL()
 
 bool GSDeviceSDL::Create(GSWnd* wnd)
 {
-	void* handle = wnd->GetHandle();
-
-	if(handle == wnd->GetDisplay())
-	{
-		// HACK: no SDL window
-
-		m_window = SDL_CreateWindowFrom(handle);
-
-		m_free_window = true;
+	if (m_window == NULL) {
+		m_window = SDL_CreateWindowFrom(wnd->GetHandle());
+	 	m_free_window = true;
 	}
-	else
-	{
-		m_window = (SDL_Window*)handle;
-	}
+#ifdef __LINUX__
+	// In GSopen2, sdl failed to received any resize event. GSWnd::GetClientRect need to manually
+	// set the window size... So we send the m_window to the wnd object to allow some manipulation on it.
+	wnd->SetWindow(m_window);
+#endif
 
 	return GSDeviceSW::Create(wnd);
 }

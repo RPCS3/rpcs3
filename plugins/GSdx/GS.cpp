@@ -281,7 +281,12 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 	{
 		s_gs->SetMultithreaded(true);
 
+#ifdef __LINUX__
+		// Get the Xwindow from dsp.
+		s_gs->m_wnd.Attach((void*)((uint32*)(dsp)+1), false);
+#else
 		s_gs->m_wnd.Attach(*dsp, false);
+#endif
 	}
 
 	if(!s_gs->CreateDevice(dev))
@@ -297,8 +302,6 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 
 	return 0;
 }
-
-#ifdef _WINDOWS
 
 EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 {
@@ -319,8 +322,6 @@ EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 
 	return retval;
 }
-
-#endif
 
 EXPORT_C_(int) GSopen(void** dsp, char* title, int mt)
 {

@@ -30,13 +30,13 @@
 
 extern u32 THR_KeyEvent; // value for passing out key events beetwen threads
 extern bool THR_bShift;
+extern bool THR_bCtrl;
 
 static map<string, confOptsStruct> mapConfOpts;
 static gameHacks tempHacks;
 
 void CALLBACK GSkeyEvent(keyEvent *ev)
 {
-	//static bool bShift = false;
 	static bool bAlt = false;
 
 	switch (ev->evt)
@@ -57,8 +57,12 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 
 				case XK_Shift_L:
 				case XK_Shift_R:
-					//bShift = true;
 					THR_bShift = true;
+					break;
+
+				case XK_Control_L:
+				case XK_Control_R:
+					THR_bCtrl = true;
 					break;
 
 				case XK_Alt_L:
@@ -77,8 +81,12 @@ void CALLBACK GSkeyEvent(keyEvent *ev)
 			{
 				case XK_Shift_L:
 				case XK_Shift_R:
-					//bShift = false;
 					THR_bShift = false;
+					break;
+
+				case XK_Control_L:
+				case XK_Control_R:
+					THR_bCtrl = false;
 					break;
 
 				case XK_Alt_L:

@@ -23,93 +23,97 @@
 #include <gtk/gtk.h>
 
 #include "joystick.h"
+#include "keyboard.h"
 #include "onepad.h"
 #include "linux.h"
 
-extern char* KeysymToChar(int keysym);
 extern std::string s_strIniPath;
 
-string KeyName(int pad, int key)
+string KeyName(int pad, int key, int keysym)
 {
 	string tmp;
-	KeyType k = type_of_key(pad, key);
+	tmp.resize(28);
 
-	switch (k)
+	if (keysym) {
+		if (keysym < 10) {
+			// mouse
+			switch (keysym) {
+				case 1: sprintf(&tmp[0], "Mouse Left"); break;
+				case 2: sprintf(&tmp[0], "Mouse Middle"); break;
+				case 3: sprintf(&tmp[0], "Mouse Right"); break;
+				default: // Use only number for extra button
+						sprintf(&tmp[0], "Mouse %d", keysym);
+			}
+		} else {
+			// keyboard
+			char* pstr = XKeysymToString(keysym);
+			if (pstr != NULL) tmp = pstr;
+		}
+	} else {
+		// joystick
+		KeyType k = type_of_joykey(pad, key);
+		switch (k)
 		{
-			case PAD_KEYBOARD:
-			{
-				char* pstr = KeysymToChar(pad_to_key(pad, key));
-				if (pstr != NULL) tmp = pstr;
-				break;
-			}
 			case PAD_JOYBUTTONS:
-			{
-				int button = key_to_button(pad, key);
-				tmp.resize(28);
-
-				sprintf(&tmp[0], "JBut %d", button);
-				break;
-			}
-			case PAD_JOYSTICK:
-			{
-				int axis = key_to_axis(pad, key);
-				tmp.resize(28);
-
-				sprintf(&tmp[0], "JAxis %d", axis);
-				break;
-			}
-			case PAD_HAT:
-			{
-				int axis = key_to_axis(pad, key);
-				tmp.resize(28);
-
-				switch(key_to_hat_dir(pad, key))
 				{
-					case SDL_HAT_UP:
-						sprintf(&tmp[0], "JPOVU-%d", axis);
-						break;
-
-					case SDL_HAT_RIGHT:
-						sprintf(&tmp[0], "JPOVR-%d", axis);
-						break;
-
-					case SDL_HAT_DOWN:
-						sprintf(&tmp[0], "JPOVD-%d", axis);
-						break;
-
-					case SDL_HAT_LEFT:
-						sprintf(&tmp[0], "JPOVL-%d", axis);
-						break;
+					int button = key_to_button(pad, key);
+					sprintf(&tmp[0], "JBut %d", button);
+					break;
 				}
-				break;
-			}
-			case PAD_POV:
-			{
-				tmp.resize(28);
-				sprintf(&tmp[0], "JPOV %d%s", key_to_axis(pad, key), key_to_pov_sign(pad, key) ? "-" : "+");
-				break;
-			}
+			case PAD_AXIS:
+				{
+					if (key_to_axis_type(pad,key))
+						sprintf(&tmp[0], "JAxis %d Full", key_to_axis(pad, key), key_to_axis_sign(pad, key) ? "-" : "+");
+					else
+						sprintf(&tmp[0], "JAxis %d Half%s", key_to_axis(pad, key), key_to_axis_sign(pad, key) ? "-" : "+");
+					break;
+				}
+			case PAD_HAT:
+				{
+					int axis = key_to_axis(pad, key);
+					switch(key_to_hat_dir(pad, key))
+					{
+						case SDL_HAT_UP:
+							sprintf(&tmp[0], "JPOVU-%d", axis);
+							break;
+
+						case SDL_HAT_RIGHT:
+							sprintf(&tmp[0], "JPOVR-%d", axis);
+							break;
+
+						case SDL_HAT_DOWN:
+							sprintf(&tmp[0], "JPOVD-%d", axis);
+							break;
+
+						case SDL_HAT_LEFT:
+							sprintf(&tmp[0], "JPOVL-%d", axis);
+							break;
+					}
+					break;
+				}
 			default: break;
 		}
+	}
+
 	return tmp;
 }
 
-void DefaultValues()
+void DefaultKeyboardValues()
 {
-	set_key(0, PAD_L2, XK_a);
-	set_key(0, PAD_R2, XK_semicolon);
-	set_key(0, PAD_L1, XK_w);
-	set_key(0, PAD_R1, XK_p);
-	set_key(0, PAD_TRIANGLE, XK_i);
-	set_key(0, PAD_CIRCLE, XK_l);
-	set_key(0, PAD_CROSS, XK_k);
-	set_key(0, PAD_SQUARE, XK_j);
-	set_key(0, PAD_SELECT, XK_v);
-	set_key(0, PAD_START, XK_n);
-	set_key(0, PAD_UP, XK_e);
-	set_key(0, PAD_RIGHT, XK_f);
-	set_key(0, PAD_DOWN, XK_d);
-	set_key(0, PAD_LEFT, XK_s);
+	set_keyboad_key(0, XK_a, PAD_L2);
+	set_keyboad_key(0, XK_semicolon, PAD_R2);
+	set_keyboad_key(0, XK_w, PAD_L1);
+	set_keyboad_key(0, XK_p, PAD_R1);
+	set_keyboad_key(0, XK_i, PAD_TRIANGLE);
+	set_keyboad_key(0, XK_l, PAD_CIRCLE);
+	set_keyboad_key(0, XK_k, PAD_CROSS);
+	set_keyboad_key(0, XK_j, PAD_SQUARE);
+	set_keyboad_key(0, XK_v, PAD_SELECT);
+	set_keyboad_key(0, XK_n, PAD_START);
+	set_keyboad_key(0, XK_e, PAD_UP);
+	set_keyboad_key(0, XK_f, PAD_RIGHT);
+	set_keyboad_key(0, XK_d, PAD_DOWN);
+	set_keyboad_key(0, XK_s, PAD_LEFT);
 }
 
 void SaveConfig()
@@ -124,15 +128,24 @@ void SaveConfig()
 		return;
 	}
 
-	for (int pad = 0; pad < 2 * MAX_SUB_KEYS; pad++)
+	fprintf(f, "log = %d\n", conf->log);
+	fprintf(f, "options = %d\n", conf->options);
+	fprintf(f, "mouse_sensibility = %d\n", conf->sensibility);
+	fprintf(f, "joy_pad_map = %d\n", conf->joyid_map);
+
+	for (int pad = 0; pad < 2; pad++)
 	{
 		for (int key = 0; key < MAX_KEYS; key++)
 		{
-			fprintf(f, "[%d][%d] = 0x%lx\n", pad, key, get_key(pad,key));
+			fprintf(f, "[%d][%d] = 0x%x\n", pad, key, get_key(pad,key));
 		}
 	}
-	fprintf(f, "log = %d\n", conf.log);
-	fprintf(f, "options = %d\n", conf.options);
+
+	map<u32,u32>::iterator it;
+	for (int pad = 0; pad < 2 ; pad++)
+		for (it = conf->keysym_map[pad].begin(); it != conf->keysym_map[pad].end(); ++it)
+				fprintf(f, "PAD %d:KEYSYM 0x%x = %d\n", pad, it->first, it->second);
+
 	fclose(f);
 }
 
@@ -140,10 +153,12 @@ void LoadConfig()
 {
 	FILE *f;
 	char str[256];
+	bool have_user_setting = false;
 
-	memset(&conf, 0, sizeof(conf));
-	DefaultValues();
-	conf.log = 0;
+	if (!conf)
+		conf = new PADconf;
+
+	conf->init();
 
 	const std::string iniFile(s_strIniPath + "OnePAD.ini");
 	f = fopen(iniFile.c_str(), "r");
@@ -154,18 +169,33 @@ void LoadConfig()
 		return;
 	}
 
-	for (int pad = 0; pad < 2 * MAX_SUB_KEYS; pad++)
+	fscanf(f, "log = %d\n", &conf->log);
+	fscanf(f, "options = %d\n", &conf->options);
+	fscanf(f, "mouse_sensibility = %d\n", &conf->sensibility);
+	fscanf(f, "joy_pad_map = %d\n", &conf->joyid_map);
+	for (int pad = 0; pad < 2; pad++)
+
 	{
 		for (int key = 0; key < MAX_KEYS; key++)
 		{
 			sprintf(str, "[%d][%d] = 0x%%x\n", pad, key);
-			u32 temp;
+			u32 temp = 0;
 
 			if (fscanf(f, str, &temp) == 0) temp = 0;
 			set_key(pad, key, temp);
+			if (temp && pad == 0) have_user_setting = true;
 		}
 	}
-	fscanf(f, "log = %d\n", &conf.log);
-	fscanf(f, "options = %d\n", &conf.options);
+
+	u32 pad;
+	u32 keysym;
+	u32 index;
+	while( fscanf(f, "PAD %d:KEYSYM 0x%x = %d\n", &pad, &keysym, &index) != EOF ) {
+		set_keyboad_key(pad, keysym, index);
+		if(pad == 0) have_user_setting = true;
+	}
+
 	fclose(f);
+
+	if (!have_user_setting) DefaultKeyboardValues();
 }

@@ -379,10 +379,10 @@ inline bool CreateFillExtensionsMap()
 
 	PFNGLGETSTRINGIPROC glGetStringi = 0;
 	glGetStringi = (PFNGLGETSTRINGIPROC)wglGetProcAddress("glGetStringi");
+	glGetIntegerv(GL_NUM_EXTENSIONS, &max_ext);
 
-    if (glGetStringi) {
+    if (glGetStringi && max_ext) {
         // Get opengl extension (opengl3)
-        glGetIntegerv(GL_NUM_EXTENSIONS, &max_ext);
         for (GLint i = 0; i < max_ext; i++)
         {
             string extension((const char*)glGetStringi(GL_EXTENSIONS, i));
@@ -392,13 +392,13 @@ inline bool CreateFillExtensionsMap()
             if (i != (max_ext - 1)) all_ext += ", ";
         }
     } else {
-        // fallback to old method (pre opengl3, intel gma ...)
+        // fallback to old method (pre opengl3, intel gma, geforce 7 ...)
         ZZLog::Error_Log("glGetStringi opengl 3 interface not supported, fallback to opengl 2");
 
         const char* ptoken = (const char*)glGetString(GL_EXTENSIONS);
-        all_ext = string(ptoken); // save the string to print a nice debug message
-
         if (ptoken == NULL) return false;
+
+        all_ext = string(ptoken); // save the string to print a nice debug message
 
         const char* pend = NULL;
         while (ptoken != NULL)

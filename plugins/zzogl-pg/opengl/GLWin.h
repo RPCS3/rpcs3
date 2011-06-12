@@ -20,10 +20,10 @@
 #ifndef GLWIN_H_INCLUDED
 #define GLWIN_H_INCLUDED
 
-
 #ifdef _WIN32
 #define GL_WIN32_WINDOW
 #else
+#define USE_GSOPEN2
 #define GL_X11_WINDOW
 #endif
 
@@ -37,7 +37,6 @@ class GLWindow
 	private:
 #ifdef GL_X11_WINDOW
 		Display *glDisplay;
-		int glScreen;
 		GLXContext context;
 		XVisualInfo *vi;
 		
@@ -49,6 +48,7 @@ class GLWindow
 		void GetWindowSize();
         void UpdateGrabKey();
         void Force43Ratio();
+		void CreateContextGL();
 #endif
 		bool fullScreen, doubleBuffered;
 		u32 width, height, depth;

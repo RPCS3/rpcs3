@@ -252,6 +252,7 @@ _PADupdate         PADupdate;
 _PADkeyEvent       PADkeyEvent;
 _PADsetSlot        PADsetSlot;
 _PADqueryMtap      PADqueryMtap;
+_PADWriteEvent	   PADWriteEvent;
 
 static void PAD_update( u32 padslot ) { }
 
@@ -323,7 +324,7 @@ _FWirqCallback     FWirqCallback;
 
 DEV9handler dev9Handler;
 USBhandler usbHandler;
-uptr pDsp;
+uptr pDsp[2];
 
 static s32 CALLBACK _hack_PADinit()
 {
@@ -417,6 +418,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_PAD[] =
 static const LegacyApi_OptMethod s_MethMessOpt_PAD[] =
 {
 	{	"PADupdate",		(vMeth**)&PADupdate },
+	{   "PADWriteEvent",	(vMeth**)&PADWriteEvent },
 	{ NULL },
 };
 
@@ -1058,12 +1060,12 @@ bool SysCorePlugins::OpenPlugin_GS()
 
 bool SysCorePlugins::OpenPlugin_PAD()
 {
-	return !PADopen( (void*)&pDsp );
+	return !PADopen( (void*)pDsp );
 }
 
 bool SysCorePlugins::OpenPlugin_SPU2()
 {
-	if( SPU2open((void*)&pDsp) ) return false;
+	if( SPU2open((void*)pDsp) ) return false;
 
 #ifdef ENABLE_NEW_IOPDMA_SPU2
 	SPU2irqCallback( spu2Irq );
@@ -1079,7 +1081,7 @@ bool SysCorePlugins::OpenPlugin_DEV9()
 {
 	dev9Handler = NULL;
 
-	if( DEV9open( (void*)&pDsp ) ) return false;
+	if( DEV9open( (void*)pDsp ) ) return false;
 	DEV9irqCallback( dev9Irq );
 	dev9Handler = DEV9irqHandler();
 	return true;
@@ -1089,7 +1091,7 @@ bool SysCorePlugins::OpenPlugin_USB()
 {
 	usbHandler = NULL;
 
-	if( USBopen((void*)&pDsp) ) return false;
+	if( USBopen((void*)pDsp) ) return false;
 	USBirqCallback( usbIrq );
 	usbHandler = USBirqHandler();
 	if( USBsetRAM != NULL )
@@ -1099,7 +1101,7 @@ bool SysCorePlugins::OpenPlugin_USB()
 
 bool SysCorePlugins::OpenPlugin_FW()
 {
-	if( FWopen((void*)&pDsp) ) return false;
+	if( FWopen((void*)pDsp) ) return false;
 	FWirqCallback( fwIrq );
 	return true;
 }
@@ -1159,7 +1161,15 @@ void SysCorePlugins::Open()
 		// If GS doesn't support GSopen2, need to wait until call to GSopen
 		// returns to populate pDsp.  If it does, can initialize other plugins
 		// at same time as GS, as long as GSopen2 does not subclass its window.
+#ifdef __LINUX__
+		// On linux, application have also a channel (named display) to communicate with the
+		// Xserver. The safe rule is 1 thread, 1 channel. In our case we use the display in
+		// several places. Save yourself of multithread headache. Wait few seconds the end of 
+		// gsopen -- Gregory
+		if (pi->id == PluginId_GS) GetMTGS().WaitForOpen();
+#else
 		if (pi->id == PluginId_GS && !GSopen2) GetMTGS().WaitForOpen();
+#endif
 	} while( ++pi, pi->shortname != NULL );
 
 	if (GSopen2) GetMTGS().WaitForOpen();
