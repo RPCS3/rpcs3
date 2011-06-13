@@ -132,6 +132,11 @@ int g_counter_cache_hits = 0;
 int g_counter_cache_misses = 0;
 int g_counter_cache_ignores = 0;
 
+// LOOP/END sets the ENDX bit and sets NAX to LSA, and the voice is muted if LOOP is not set
+// LOOP probably prevents SPU2 from muting the voice when the ENDX bit is set
+// (which would explain the requirement that every block in a loop has the LOOP bit set, not just the last)
+// LOOP/START sets LSA to NAX unless LSA was written manually since sound generation started
+// (see LoopMode, the method by which this is achieved on the real SPU2 is unknown)
 #define XAFLAG_LOOP_END		(1ul<<0)
 #define XAFLAG_LOOP			(1ul<<1)
 #define XAFLAG_LOOP_START	(1ul<<2)
@@ -145,18 +150,13 @@ static __forceinline s32 GetNextDataBuffered( V_Core& thiscore, uint voiceidx )
 		if(vc.LoopFlags & XAFLAG_LOOP_END)
 		{
 			thiscore.Regs.ENDX |= (1 << voiceidx);
-
-			if( vc.LoopFlags & XAFLAG_LOOP )
-			{
-				vc.NextA = vc.LoopStartA;
-			}
-			else
-			{
+			if (!(vc.LoopFlags & XAFLAG_LOOP))
 				vc.Stop();
-				if( IsDevBuild )
-				{
-					if(MsgVoiceOff()) ConLog("* SPU2-X: Voice Off by EndPoint: %d \n", voiceidx);
-				}
+
+			vc.NextA = vc.LoopStartA;
+			if( IsDevBuild )
+			{
+				if(MsgVoiceOff()) ConLog("* SPU2-X: Voice Off by EndPoint: %d \n", voiceidx);
 			}
 		}
 
