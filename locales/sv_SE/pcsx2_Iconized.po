@@ -2,17 +2,17 @@
 # This file is distributed under the same license as the PCSX2 package.
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.8\n"
+"Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-04-07 12:06+0200\n"
-"PO-Revision-Date: 2011-04-06 18:54+0100\n"
+"POT-Creation-Date: 2011-06-13 16:04+0200\n"
+"PO-Revision-Date: 2011-06-06 20:04+0100\n"
 "Last-Translator: Georg Ronnert <pgert@yahoo.se>\n"
 "Language-Team: \n"
 "Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Poedit-KeywordsList: pxE;pxExpandMsg\n"
+"X-Poedit-KeywordsList: pxE;pxEt\n"
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: C:\\Arkiv\\PCSX2\\SVN\n"
 "X-Poedit-Language: Swedish\n"
@@ -73,14 +73,14 @@ msgstr ""
 "Ni kanske måste återmöjliggöra omkompileraren ovanför manuellt, om Ni löser "
 "felen."
 
-#: pcsx2/gui/AppMain.cpp:538
+#: pcsx2/gui/AppMain.cpp:546
 msgid "!Notice:BiosDumpRequired"
 msgstr ""
 "PCSX2 kräver PS2-BIOS för att köras. Av juridiska skäl *måste* Ni skaffa \n"
 "ett BIOS från en faktisk PS2 enhet som Ni äger (tillåns räknas inte). \n"
 "Konsultera FAQ's och Guider för ytterligare information."
 
-#: pcsx2/gui/AppMain.cpp:621
+#: pcsx2/gui/AppMain.cpp:629
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr ""
 "Ignorera' för att fortsätta vänta på trådarna att svara. \n"
@@ -98,6 +98,20 @@ msgstr ""
 "Annat insticksprogram eller annan tolkning kommer antingen att ignorera den "
 "eller producera en svart skärm som blinkar när läget byts. \n"
 "Det kräver även att Vsync möjliggörs. "
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
+msgid "!ContextTip:ChangingNTFS"
+msgstr ""
+"NTFS komprimering kan ändras manuellt när som helst genom att använda "
+"filegenskaper hos Windows Explorer."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+msgid "!ContextTip:Folders:Settings"
+msgstr ""
+"Detta är mappen där PCSX2 sparar Era inställningar, och då även "
+"inställningar skapade \n"
+"av de flesta insticksprogram (gäller måhända dock inte för vissa äldre "
+"insticksprogram)."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
 msgid "!Panel:Folders:Settings"
@@ -154,6 +168,47 @@ msgstr ""
 "Tråden '%s' svarar inte. \n"
 "Den kan ha gått i baklås, eller kanske bara kör *väldigt* långsamt."
 
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid "!Panel:HasHacksOverrides"
+msgstr ""
+"Varning! Ni kör PCSX2 med instruktionsmöjligheter som upphäver Era "
+"konfigurationsinställningar. Dessa instruktionsmöjligheter kommer inte "
+"beaktas i Inställningar, och kommer att förhindras om Ni tillämpar några "
+"förändringar här."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr ""
+"Varning! Ni kör PCSX2 med instruktionsmöjligheter som upphäver Era insticks- "
+"och/eller mappkonfigurationsinställningar. Dessa instruktionsmöjligheter "
+"kommer inte beaktas i Inställningar, och kommer att förhindras om Ni "
+"tillämpar några förändringar här."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+"Förinställningarna tillämpar snabbfixar, några omkompilerarmöjligheter, och "
+"en del spelfixar som till vetskap höjer farten.\n"
+"Spelfixar som till vetskap är viktiga ('Patchar') kommer tillämpas "
+"automatiskt.\n"
+"\n"
+"Förinställningsinfo:\n"
+"1 -     Det riktigaste emuleringen, men också den långsammaste.\n"
+"3 --> Försöker balansera hastighet med kompabilitet.\n"
+"4 -     Några mer aggresiva fixar.\n"
+"6 -     För många fixar kommer förmodligen att sakta ner de flesta spel."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+msgid "!Notice:Tooltip:Presets:Checkbox"
+msgstr ""
+"Förinställningarna tillämpar snabbfixar, några omkompilerarmöjligheter, och "
+"en del spelfixar som till vetskap höjer farten.\n"
+"Spelfixar som till vetskap är viktiga ('Patchar') kommer tillämpas "
+"automatiskt.\n"
+"\n"
+"--> Avmarkera för att ändra inställningarna manuellt (med nuvarande "
+"inställningar som bas)"
+
 #: pcsx2/gui/IsoDropTarget.cpp:28
 msgid "!Notice:ConfirmSysReset"
 msgstr ""
@@ -186,7 +241,7 @@ msgstr ""
 msgid "!Notice:BIOS:InvalidSelection"
 msgstr ""
 "Välj ett giltligt BIOS. Om ni är oförmögen att göra ett giltligt val \n"
-"så tryck Avbryt för att stäng Konfigurationspanelen."
+"så tryck Avbryt för att stänga Konfigurationspanelen."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:111
 msgid "!Panel:EE/IOP:Heading"
@@ -200,7 +255,92 @@ msgstr "Bemärk: De flesta spel har det fint med förvalsmöjligheterna."
 msgid "!Notice:DirPicker:CreatePath"
 msgstr "Den angivna sökvägen/katalogen finnes ej. Vill Ni skapa den?"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:103
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
+msgid "!ContextTip:DirPicker:UseDefault"
+msgstr ""
+"När markerad kommer denna mapp att automatiskt begrunda förvalen assosierade "
+"med PCSX2's nuvarande användarinställningar."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:55
+msgid "!ContextTip:Window:Zoom"
+msgstr ""
+"Påverkar till vetskap följande spel:\n"
+"* Test Drive Unlimited\n"
+"* Transformers"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Vsync"
+msgstr ""
+"Vsync slår ut skärmsönderrivning men har oftast en stor prestationseffekt. \n"
+"Det tillämpar vanligtvis bara i helskärmsläge, och kanske inte fungerar för "
+"alla GS insticksprogram."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr ""
+"Möjliggör Vsync när bildfrekvensen är precis på full hastighet. \n"
+"Skulle den falla under denna så förhindras Vsync för att undvika vidare "
+"prestandastraff. \n"
+"Bemärk: Detta fungerar för närvarande bara bra med GSdx som GS "
+"insticksprogram, \n"
+"och konfigurationen DX10/11 Hårdvarutolkning. \n"
+"Annat insticksprogram eller annat tolkningsläge kommer antigen att "
+"ignoreras \n"
+"eller producera en svart skärm som blinkar när läget byts. \n"
+"Det kräver även att Vsync möjliggörs."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:76
+msgid "!ContextTip:Window:HideMouse"
+msgstr ""
+"Markera denna för att tvinga muspekaren att bli osynlig när den är i ett GS-"
+"fönster; \n"
+"användbart om man har musen som främsta kontroll-mojäng för spelande. \n"
+"Som förval auto-gömmer sig musen efter 2 sekunders inaktivitet."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:82
+msgid "!ContextTip:Window:Fullscreen"
+msgstr ""
+"Möjliggör automatiskt lägesbyte till fullskärm när emulering statas eller "
+"återupptas. \n"
+"Ni kan ännu växla mellan helskärm och fönsterläge genom att trycka Alt + "
+"Enter."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:93
+msgid "!ContextTip:Window:HideGS"
+msgstr ""
+"Stänger helt det ofta stora och omfångsrika GS-fönstret \n"
+"när Ni trycker på Esc eller avbryter emulatorn."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr ""
+"Påverkar till vetskap följande spel:\n"
+" * Digital Devil Saga (Fixar FMV och crashar)\n"
+" * SSX (Fixar dålig grafik och crashar)\n"
+" * Resident Evil: Dead Aim (Orsakar förvrängda texturer)"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+msgid "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr ""
+"Påverkar till vetskap följande spel:\n"
+" * Bleach Blade Battler\n"
+" * Growlanser II and III\n"
+" * Wizardry"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
+msgid "!ContextTip:Gamefixes:DMA Busy hack"
+msgstr ""
+"Påverkar till vetskap följande spel:\n"
+" * Mana Khemia 1 (Går \"bortom behörighet\")"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
+msgstr ""
+"Påverkar till vetskap följande spel:\n"
+"* Test Drive Unlimited\n"
+"* Transformers"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 "Spelfixar kan åtgärda felaktig emulering för vissa spel. \n"
@@ -241,354 +381,6 @@ msgstr ""
 "Detta påverkar bara Standard Sökvägarna vilka ställs in för att använda "
 "installationsförvalsvärdena."
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
-msgid "!Notice:PluginSelector:ConfirmShutdown"
-msgstr ""
-"Varning! Att byta insticksprogram kräver en full nedstängning och "
-"återställning av PS2-VM. \n"
-"PCSX2 kommer att försöka att spara och återställa tillståndet, men om de "
-"nyligen valda insticksprogrammen \n"
-"är okompatibla kan detta misslyckas, och alla nuvarande framsteg kommer att "
-"förloras. \n"
-"\n"
-"\n"
-"Är Ni säker att Ni vill tillämpa inställningarna nu?"
-
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
-msgid "!Notice:PluginSelector:ApplyFailed"
-msgstr ""
-"Alla insticksprogram måste ha giltliga val för att %s ska kunna köras. \n"
-"Om Ni är oförmögen att göra ett giltligt val till följd av saknade "
-"insticksprogram \n"
-"eller en ofullständig installaion av %s, så tryck Avbryt för att stänga "
-"Konfigurationspanelen."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
-msgid "!Panel:Speedhacks:Overview"
-msgstr ""
-"Snabbfixar förbättrar vanligtvis emuleringshastighet, men kan orsaka "
-"trassel, bruten audio, \n"
-"och falska FPS avläsningar. När Ni har emuleringsproblem, så förhindra denna "
-"panel först."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
-msgid "!Panel:Frameskip:Heading"
-msgstr ""
-"Bemärk: Till följd av PS2 hårdvaruutformning så är precist bildöverhoppande "
-"omöjligt. \n"
-"Att möjliggöra det kan orsaka regäla grafikfel hos vissa spel."
-
-#: pcsx2/vtlb.cpp:702
-msgid "!Notice:HostVmReserve"
-msgstr ""
-"Ert system har för lite VM resurser för att PCSX2 ska kunna köras. \n"
-"Detta kan ha orsakats av att ha en liten eller förhindrad bytfil, \n"
-"eller av att andra program tar för sig av resurser."
-
-#: pcsx2/x86/sVU_zerorec.cpp:362
-msgid "!Notice:superVU:VirtualMemoryAlloc"
-msgstr ""
-"Slut på Minne (typ): superVU-omkompileraren var oförmögen att resarvera den "
-"mängd specifika minne som krävs, \n"
-"och kommer inte vara tillgängligt för bruk. Detta är inte ett kritiskt fel, "
-"eftersom sVU är föråldrad, \n"
-"och följdaktligen borde Ni använda Er av microVU istället."
-
-#~ msgid "!Notice:Mcd:Overwrite"
-#~ msgstr ""
-#~ "Detta kommer att kopiera innehållet i minneskortet i sockel %u till "
-#~ "minneskortet i sockel %u. \n"
-#~ "All data i sockel %u kommer att förloras. Är Ni säker?"
-
-#~ msgid "!Panel:HasHacksOverrides"
-#~ msgstr ""
-#~ "Varning! Ni kör PCSX2 med instruktionsmöjligheter som upphäver Era "
-#~ "konfigurationsinställningar. Dessa instruktionsmöjligheter kommer inte "
-#~ "beaktas i Inställningar, och kommer att förhindras om Ni tillämpar några "
-#~ "förändringar här."
-
-#~ msgid "!Panel:HasPluginsOverrides"
-#~ msgstr ""
-#~ "Varning! Ni kör PCSX2 med instruktionsmöjligheter som upphäver Era "
-#~ "insticks- och/eller mappkonfigurationsinställningar. Dessa "
-#~ "instruktionsmöjligheter kommer inte beaktas i Inställningar, och kommer "
-#~ "att förhindras om Ni tillämpar några förändringar här."
-
-#~ msgid "!Notice:Tooltip:Presets:Slider"
-#~ msgstr ""
-#~ "Förinställningarna tillämpar snabbfixar, några omkompilerarmöjligheter, "
-#~ "och en del spelfixar som till vetskap höjer farten.\n"
-#~ "Spelfixar som till vetskap är viktiga ('Patchar') kommer tillämpas "
-#~ "automatiskt.\n"
-#~ "\n"
-#~ "Förinställningsinfo:\n"
-#~ "1 -     Det riktigaste emuleringen, men också den långsammaste.\n"
-#~ "3 --> Försöker balansera hastighet med kompabilitet.\n"
-#~ "4 -     Några mer aggresiva fixar.\n"
-#~ "6 -     För många fixar kommer förmodligen att sakta ner de flesta spel."
-
-#~ msgid "!Panel:"
-#~ msgstr "Förinställningar:"
-
-#~ msgid "!Notice:Tooltip:Presets:Checkbox"
-#~ msgstr ""
-#~ "Förinställningarna tillämpar snabbfixar, några omkompilerarmöjligheter, "
-#~ "och en del spelfixar som till vetskap höjer farten.\n"
-#~ "Spelfixar som till vetskap är viktiga ('Patchar') kommer tillämpas "
-#~ "automatiskt.\n"
-#~ "\n"
-#~ "--> Avmarkera för att ändra inställningarna manuellt (med nuvarande "
-#~ "inställningar som bas)"
-
-#~ msgid "!Panel:Framelimiter:Heading"
-#~ msgstr ""
-#~ "Den interna bildbegränsaren regulerar hastigheten hos VM. "
-#~ "Anpassningsvärdena nedanför är i procent av den förvalta regions-baserade "
-#~ "bildfrekvensen, vilken också kan konfigureras nedanför."
-
-#~ msgid "!Notice:DocsFolderFileConflict"
-#~ msgstr ""
-#~ "PCSX2 kan inte skapa dokumentmappen i den begärda platsen. Sökvägens namn "
-#~ "överensstämmer med en befintlig fil. Radera filen eller ändra sökväg, och "
-#~ "försök igen."
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr "Ingen anledning given."
-
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "Trådaktivitet: start, avskiljning, sync, borttagning, etc."
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr ""
-"Inkluderar tomgångshändelsebearbetning och några andra ovanliga "
-"händelseanvändningar."
-
-#: pcsx2/MTGS.cpp:815
-msgid ""
-"The MTGS thread has become unresponsive while waiting for the GS plugin to "
-"open."
-msgstr ""
-"MTGS tråden har blivit osvarandes under inväntningen av att GS-"
-"insticksprogrammet ska öppna."
-
-#: pcsx2/PluginManager.cpp:1329
-msgid "Internal Memorycard Plugin failed to initialize."
-msgstr ""
-"Det interna minneskorts-insticksprogrammet misslyckades att initialiseras."
-
-#: pcsx2/gui/AppConfig.cpp:818
-msgid "Safest"
-msgstr "Säkrast"
-
-#: pcsx2/gui/AppConfig.cpp:819
-msgid "Safe (faster)"
-msgstr "Säkert (snabare)"
-
-#: pcsx2/gui/AppConfig.cpp:820
-msgid "Balanced"
-msgstr "Balanserat"
-
-#: pcsx2/gui/AppConfig.cpp:821
-msgid "Aggressive"
-msgstr "Aggressivt"
-
-#: pcsx2/gui/AppConfig.cpp:822
-msgid "Aggressive plus"
-msgstr "Aggressivt plus"
-
-#: pcsx2/gui/AppConfig.cpp:823
-msgid "Mostly Harmful"
-msgstr "Mest Skadligt"
-
-#: pcsx2/gui/ConsoleLogger.cpp:413
-msgid "Fits a lot of log in a microcosmically small area."
-msgstr "Klämmer in mycket loggning i en mikroskopiskt liten yta."
-
-#: pcsx2/gui/ConsoleLogger.cpp:415
-msgid "It's what I use (the programmer guy)."
-msgstr "Det är vad Jag använder (programmerarsnubben)."
-
-#: pcsx2/gui/ConsoleLogger.cpp:417
-msgid "Its nice and readable."
-msgstr "Det är fint och läsbart."
-
-#: pcsx2/gui/ConsoleLogger.cpp:419
-msgid "In case you have a really high res display."
-msgstr "Utifall att Ni har en riktigt hög upplösning."
-
-#: pcsx2/gui/ConsoleLogger.cpp:423
-msgid "Default soft-tone color scheme."
-msgstr "Förvals mjukatmosfärs färgtema."
-
-#: pcsx2/gui/ConsoleLogger.cpp:424
-msgid ""
-"Classic black color scheme for people who enjoy having text seared into "
-"their optic nerves."
-msgstr ""
-"Klassiskt svart färgtema för folk som njuter av att ha text svedd in i sina "
-"synnerver."
-
-#: pcsx2/gui/ConsoleLogger.cpp:428
-msgid ""
-"When checked the log window will be visible over other foreground windows."
-msgstr "När markerad kommer loggfönstret att bli synligt över andra fönster."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
-msgid "!ContextTip:ChangingNTFS"
-msgstr ""
-"NTFS komprimering kan ändras manuellt när som helst genom att använda "
-"filegenskaper hos Windows Explorer."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
-msgid ""
-"Always use this option if you want the safest and surest memory card "
-"behavior."
-msgstr ""
-"Använd alltid denna möjlighet om Ni vill ha det säkraste och "
-"tillförlitligaste minneskortsbeteendet."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
-msgid "16 and 32 MB cards have roughly the same compatibility factor."
-msgstr "16 och 32 MB kort har ungefär samma kompabilitetsfaktor."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
-msgid ""
-"Use at your own risk.  Erratic memory card behavior is possible (though "
-"unlikely)."
-msgstr ""
-"Använd på egen risk.  Oberäkneliga minneskortsbeteenden är möjliga (dock "
-"osannolika)."
-
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
-msgid "!ContextTip:Folders:Settings"
-msgstr ""
-"Detta är mappen där PCSX2 sparar Era inställningar, och då även "
-"inställningar skapade \n"
-"av de flesta insticksprogram (gäller måhända dock inte för vissa äldre "
-"insticksprogram)."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
-msgid "!Panel:HasHacksOverrides"
-msgstr ""
-"Varning! Ni kör PCSX2 med instruktionsmöjligheter som kan överskrida Era "
-"konfigurationsinställningar. \n"
-"Dessa instruktionsmöjligheter kommer inte att beaktas i "
-"Inställningsdialogen, \n"
-"och kommer att förhindras om Ni tillämpar förändringar här."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
-msgid "!Panel:HasPluginsOverrides"
-msgstr ""
-"Varning! Ni kör PCSX2 med instruktionsmöjligheter som kan överskrida Ert "
-"konfigurerade insticksprogram och/eller mappinställningar. \n"
-"Dessa instruktionsmöjligheter kommer inte att beaktas i "
-"inställningsdialogen, \n"
-"och kommer att förhindras när Ni tillämpar förändringar här."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
-msgid "!Notice:Tooltip:Presets:Slider"
-msgstr ""
-"Förinställningarna tillämpar snabbfixar, några omkompilerarmöjligheter, och "
-"några spelfixar som till vetskap höjer hastgheten.\n"
-"Spelfixar ('Patchar') som till vetskap är viktiga kommer att tillämpas "
-"automatiskt.\n"
-"\n"
-"Förinställningsinfo:\n"
-"1 -     Den nogrannaste emuleringen, men också den långsammaste.\n"
-"3 --> Försöker att balansera hastighet med kompabilitet.\n"
-"4 -     Mera aggresiva fixar.\n"
-"6 -     För många fixar kommer troligen att sakta ner de flesta spel."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
-msgid "!Notice:Tooltip:Presets:Checkbox"
-msgstr ""
-"Förinställningarna tillämpar snabbfixar, några omkompilerarmöjligheter, och "
-"några spelfixar som till vetskap höjer hastigheten.\n"
-"Spelfixar ('Patchar') som till vetskap är viktiga kommer att tillämpas "
-"automatiskt.\n"
-"\n"
-"--> Avmarkera för att modifiera inställningarna manuellt (med nuvarande "
-"förinställningar som bas)"
-
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "Loggar händelser medans de skickas till PS2-VM."
-
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
-msgid "!ContextTip:DirPicker:UseDefault"
-msgstr ""
-"När markerad kommer denna mapp att automatiskt begrunda förvalen assosierade "
-"med PCSX2's nuvarande användarinställningar."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
-msgid "!ContextTip:Window:Vsync"
-msgstr ""
-"Vsync slår ut skärmsönderrivning men har oftast en stor prestationseffekt. \n"
-"Det tillämpar vanligtvis bara i helskärmsläge, och kanske inte fungerar för "
-"alla GS insticksprogram."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:69
-msgid "!ContextTip:Window:ManagedVsync"
-msgstr ""
-"Möjliggör Vsync när bildfrekvensen är precis på full hastighet. \n"
-"Skulle den falla under denna så förhindras Vsync för att undvika vidare "
-"prestandastraff. \n"
-"Bemärk: Detta fungerar för närvarande bara bra med GSdx som GS "
-"insticksprogram, \n"
-"och konfigurationen DX10/11 Hårdvarutolkning. \n"
-"Annat insticksprogram eller annat tolkningsläge kommer antigen att "
-"ignoreras \n"
-"eller producera en svart skärm som blinkar när läget byts. \n"
-"Det kräver även att Vsync möjliggörs."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:77
-msgid "!ContextTip:Window:HideMouse"
-msgstr ""
-"Markera denna för att tvinga muspekaren att bli osynlig när den är i ett GS-"
-"fönster; \n"
-"användbart om man har musen som främsta kontroll-mojäng för spelande. \n"
-"Som förval auto-gömmer sig musen efter 2 sekunders inaktivitet."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
-msgid "!ContextTip:Window:Fullscreen"
-msgstr ""
-"Möjliggör automatiskt lägesbyte till fullskärm när emulering statas eller "
-"återupptas. \n"
-"Ni kan ännu växla mellan helskärm och fönsterläge genom att trycka Alt + "
-"Enter."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:94
-msgid "!ContextTip:Window:HideGS"
-msgstr ""
-"Stänger helt det ofta stora och omfångsrika GS-fönstret \n"
-"när Ni trycker på Esc eller avbryter emulatorn."
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
-msgid "!ContextTip:Gamefixes:EE Timing Hack"
-msgstr ""
-"Påverkar till vetskap följande spel:\n"
-" * Digital Devil Saga (Fixar FMV och crashar)\n"
-" * SSX (Fixar dålig grafik och crashar)\n"
-" * Resident Evil: Dead Aim (Orsakar förvrängda texturer)"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
-msgid "!ContextTip:Gamefixes:OPH Flag hack"
-msgstr ""
-"Påverkar till vetskap följande spel:\n"
-" * Bleach Blade Battler\n"
-" * Growlanser II and III\n"
-" * Wizardry"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
-msgid "!ContextTip:Gamefixes:DMA Busy hack"
-msgstr ""
-"Påverkar till vetskap följande spel:\n"
-" * Mana Khemia 1 (Går \"bortom behörighet\")"
-
 #: pcsx2/gui/Panels/PathsPanel.cpp:40
 msgid "!ContextTip:Folders:Savestates"
 msgstr ""
@@ -610,6 +402,28 @@ msgstr ""
 "flesta insticksprogram \n"
 "håller fast vid denna mapp, men dock kan vissa äldre insticksprogram "
 "ignorera den."
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+msgid "!Notice:PluginSelector:ConfirmShutdown"
+msgstr ""
+"Varning! Att byta insticksprogram kräver en full nedstängning och "
+"återställning av PS2-VM. \n"
+"PCSX2 kommer att försöka att spara och återställa tillståndet, men om de "
+"nyligen valda insticksprogrammen \n"
+"är okompatibla kan detta misslyckas, och alla nuvarande framsteg kommer att "
+"förloras. \n"
+"\n"
+"\n"
+"Är Ni säker att Ni vill tillämpa inställningarna nu?"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
+msgid "!Notice:PluginSelector:ApplyFailed"
+msgstr ""
+"Alla insticksprogram måste ha giltliga val för att %s ska kunna köras. \n"
+"Om Ni är oförmögen att göra ett giltligt val till följd av saknade "
+"insticksprogram \n"
+"eller en ofullständig installaion av %s, så tryck Avbryt för att stänga "
+"Konfigurationspanelen."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
 msgid "!Panel:Speedhacks:EECycleX1"
@@ -650,6 +464,14 @@ msgid "!Panel:Speedhacks:VUCycleSteal3"
 msgstr ""
 "3 - Maximal VU Cykelstöld. Användningen är begränsad, \n"
 "eftersom detta kommer att orsaka synligt flimrande hos de flesta spel."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
+msgid "!Panel:Speedhacks:Overview"
+msgstr ""
+"Snabbfixar förbättrar vanligtvis emuleringshastighet, men kan orsaka "
+"trassel, bruten audio, \n"
+"och falska FPS avläsningar. När Ni har emuleringsproblem, så förhindra denna "
+"panel först."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
 msgid "!ContextTip:Speedhacks:EECycleRate Slider"
@@ -715,29 +537,12 @@ msgstr ""
 "lägena \n"
 "inte att vara tillgängliga heller."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:162
-msgid ""
-"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
-"valid floating point numerics."
+#: pcsx2/gui/Panels/VideoPanel.cpp:223
+msgid "!Panel:Frameskip:Heading"
 msgstr ""
-"Fel under tolkning av antingen NTSC eller PAL bildfrekvensinstälningar.  "
-"Inställningarna måste vara giltliga flyttalsnummer."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:295
-msgid ""
-"For troubleshooting potential bugs in the MTGS only, as it is potentially "
-"very slow."
-msgstr ""
-"Enbart för att problemlösa eventuella fel inom MTGS, \n"
-"eftersom det möjligen är mycket långsamt."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid ""
-"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
-"components."
-msgstr ""
-"Förhindrar helt all GS-insticksprogramsaktivitet; \n"
-"idealt som utgångspunkt för EE-kärnkomponenter."
+"Bemärk: Till följd av PS2 hårdvaruutformning så är precist bildöverhoppande "
+"omöjligt. \n"
+"Att möjliggöra det kan orsaka regäla grafikfel hos vissa spel."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:302
 msgid "!ContextTip:GS:SyncMTGS"
@@ -757,36 +562,33 @@ msgstr ""
 "Varning: Denna möjlighet kan möjliggöras dynamiskt men kan vanligtvis inte "
 "förhindras på samma vis (video blir ofta skräp)."
 
-#~ msgid "!ContextTip:Window:Zoom"
-#~ msgstr ""
-#~ "Zoom = 100: Passar in hela bilden i fönstret utan beskärkning.\n"
-#~ "Över/Under 100: Zooma In/Ut\n"
-#~ "0: Automatisk-Inzoomning tills de svarta räckena är borta "
-#~ "(Bildförhållande bibehålls, en del av bilden går utanför skärmen).\n"
-#~ "BEMÄRK: Vissa spel ritar sina egna svarta räcken, vilka inte tas bort med "
-#~ "'0'.\n"
-#~ "\n"
-#~ "Tangentbord: Ctrl + Sifferbord-Plus: Inzoomning, Ctrl + Sifferbord-Minus: "
-#~ "Utzooming, Ctrl + Sifferbord-*: Växla 100/0"
+#: pcsx2/vtlb.cpp:710
+msgid "!Notice:HostVmReserve"
+msgstr ""
+"Ert system har för lite VM resurser för att PCSX2 ska kunna köras. \n"
+"Detta kan ha orsakats av att ha en liten eller förhindrad bytfil, \n"
+"eller av att andra program tar för sig av resurser."
 
-#~ msgid ""
-#~ "Error while parsing either NTSC or PAL framerate settings.\n"
-#~ "\tNTSC Input = %s\n"
-#~ "\tPAL Input  = %s"
-#~ msgstr ""
-#~ "Fel under tolkning av antingen NTSC eller PAL bildfrekvensinstälningar.\n"
-#~ "\tNTSC Input = %s\n"
-#~ "\tPAL Input  = %s"
+#: pcsx2/x86/sVU_zerorec.cpp:362
+msgid "!Notice:superVU:VirtualMemoryAlloc"
+msgstr ""
+"Slut på Minne (typ): superVU-omkompileraren var oförmögen att resarvera den "
+"mängd specifika minne som krävs, \n"
+"och kommer inte vara tillgängligt för bruk. Detta är inte ett kritiskt fel, "
+"eftersom sVU är föråldrad, \n"
+"och följdaktligen borde Ni använda Er av microVU istället."
 
-#~ msgid "!ContextTip:Speedhacks:vuMinMax"
+#~ msgid "!Notice:Mcd:Overwrite"
 #~ msgstr ""
-#~ "Använder SSE's Min/Max Flyttalsoperationer istället för logiska Min/Max "
-#~ "rutiner, som annars är brukligt. \n"
-#~ "Känt att förstöra Gran Turismo 4 & Tekken 5."
+#~ "Detta kommer att kopiera innehållet i minneskortet i sockel %u till "
+#~ "minneskortet i sockel %u. \n"
+#~ "All data i sockel %u kommer att förloras. Är Ni säker?"
 
-#~ msgid "!ContextTip:Window:FullscreenExclusive"
+#~ msgid "!Panel:"
+#~ msgstr "Förinställningar:"
+
+#~ msgid "!Notice:DocsFolderFileConflict"
 #~ msgstr ""
-#~ "Exklusivt helskärmsläge kan se bätte ut hos äldre CRTs och kan vara lite "
-#~ "snabbare hos äldre videokort, \n"
-#~ "men oftast leder det till minnesläckor eler slumpmässiga kraschar när "
-#~ "helskärmsläget slås på eller av."
+#~ "PCSX2 kan inte skapa dokumentmappen i den begärda platsen. Sökvägens namn "
+#~ "överensstämmer med en befintlig fil. Radera filen eller ändra sökväg, och "
+#~ "försök igen."

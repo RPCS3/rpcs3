@@ -5,9 +5,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.7\n"
+"Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-04-01 20:24+0200\n"
+"POT-Creation-Date: 2011-06-13 15:54+0200\n"
 "PO-Revision-Date: 2011-04-08 19:53+0200\n"
 "Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
@@ -51,17 +51,25 @@ msgstr "!Notice:RecompilerInit:Header"
 msgid "!Notice:RecompilerInit:Footer"
 msgstr "!Notice:RecompilerInit:Footer"
 
-#: pcsx2/gui/AppMain.cpp:538
+#: pcsx2/gui/AppMain.cpp:546
 msgid "!Notice:BiosDumpRequired"
 msgstr "!Notice:BiosDumpRequired"
 
-#: pcsx2/gui/AppMain.cpp:621
+#: pcsx2/gui/AppMain.cpp:629
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr "!Notice Error:Thread Deadlock Actions"
 
 #: pcsx2/gui/AppUserMode.cpp:57
 msgid "!Notice:PortableModeRights"
 msgstr "!Notice:PortableModeRights"
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
+msgid "!ContextTip:ChangingNTFS"
+msgstr "!ContextTip:ChangingNTFS"
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+msgid "!ContextTip:Folders:Settings"
+msgstr "!ContextTip:Folders:Settings"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
 msgid "!Panel:Folders:Settings"
@@ -91,6 +99,22 @@ msgstr "!Panel:Mcd:EnableEjection"
 msgid "!Panel:StuckThread:Heading"
 msgstr "!Panel:StuckThread:Heading"
 
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid "!Panel:HasHacksOverrides"
+msgstr "!Panel:HasHacksOverrides"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr "!Panel:HasPluginsOverrides"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr "!Notice:Tooltip:Presets:Slider"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+msgid "!Notice:Tooltip:Presets:Checkbox"
+msgstr "!Notice:Tooltip:Presets:Checkbox"
+
 #: pcsx2/gui/IsoDropTarget.cpp:28
 msgid "!Notice:ConfirmSysReset"
 msgstr "!Notice:ConfirmSysReset"
@@ -119,7 +143,53 @@ msgstr "!Panel:VUs:Heading"
 msgid "!Notice:DirPicker:CreatePath"
 msgstr "!Notice:DirPicker:CreatePath"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:103
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
+msgid "!ContextTip:DirPicker:UseDefault"
+msgstr "!ContextTip:DirPicker:UseDefault"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:55
+#, fuzzy
+msgid "!ContextTip:Window:Zoom"
+msgstr "!ContextTip:Window:Vsync"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Vsync"
+msgstr "!ContextTip:Window:Vsync"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr "!ContextTip:Window:ManagedVsync"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:76
+msgid "!ContextTip:Window:HideMouse"
+msgstr "!ContextTip:Window:HideMouse"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:82
+msgid "!ContextTip:Window:Fullscreen"
+msgstr "!ContextTip:Window:Fullscreen"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:93
+msgid "!ContextTip:Window:HideGS"
+msgstr "!ContextTip:Window:HideGS"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr "!ContextTip:Gamefixes:EE Timing Hack"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+msgid "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr "!ContextTip:Gamefixes:OPH Flag hack"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
+msgid "!ContextTip:Gamefixes:DMA Busy hack"
+msgstr "!ContextTip:Gamefixes:DMA Busy hack"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+#, fuzzy
+msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
+msgstr "!ContextTip:Gamefixes:OPH Flag hack"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr "!Panel:Gamefixes:Compat Warning"
 
@@ -143,191 +213,6 @@ msgstr "!Panel:Usermode:Explained"
 msgid "!Panel:Usermode:Warning"
 msgstr "!Panel:Usermode:Warning"
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
-msgid "!Notice:PluginSelector:ConfirmShutdown"
-msgstr "!Notice:PluginSelector:ConfirmShutdown"
-
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
-msgid "!Notice:PluginSelector:ApplyFailed"
-msgstr "!Notice:PluginSelector:ApplyFailed"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
-msgid "!Panel:Speedhacks:Overview"
-msgstr "!Panel:Speedhacks:Overview"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
-msgid "!Panel:Frameskip:Heading"
-msgstr "!Panel:Frameskip:Heading"
-
-#: pcsx2/vtlb.cpp:702
-msgid "!Notice:HostVmReserve"
-msgstr "!Notice:HostVmReserve"
-
-#: pcsx2/x86/sVU_zerorec.cpp:362
-msgid "!Notice:superVU:VirtualMemoryAlloc"
-msgstr "!Notice:superVU:VirtualMemoryAlloc"
-
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr "Sebep belirtilmemiş."
-
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "İşlem etkinliği; başlat, çıkart, eşleştir, sil vb..."
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr "Boş olay işlemesi ve diğer yaygın olmayan olay işlemelerini içerir."
-
-#: pcsx2/MTGS.cpp:815
-msgid ""
-"The MTGS thread has become unresponsive while waiting for the GS plugin to "
-"open."
-msgstr ""
-"MTGS işlemcisi GS eklentisinin açılmasını beklerken yanıt vermeyi durdurdu."
-
-#: pcsx2/PluginManager.cpp:1329
-msgid "Internal Memorycard Plugin failed to initialize."
-msgstr "Hafıza kartı eklentisi başlatılamadı."
-
-#: pcsx2/gui/AppConfig.cpp:818
-msgid "Safest"
-msgstr "En Güvenli"
-
-#: pcsx2/gui/AppConfig.cpp:819
-msgid "Safe (faster)"
-msgstr "Güvenli (daha hızlı)"
-
-#: pcsx2/gui/AppConfig.cpp:820
-msgid "Balanced"
-msgstr "Dengeli"
-
-#: pcsx2/gui/AppConfig.cpp:821
-msgid "Aggressive"
-msgstr "Agresif"
-
-#: pcsx2/gui/AppConfig.cpp:822
-msgid "Aggressive plus"
-msgstr "Daha Agresif"
-
-#: pcsx2/gui/AppConfig.cpp:823
-msgid "Mostly Harmful"
-msgstr "Çoğu Zaman Zararlı"
-
-#: pcsx2/gui/ConsoleLogger.cpp:413
-msgid "Fits a lot of log in a microcosmically small area."
-msgstr "Çok küçük bir alana birçok günlük dosyası sığdırır."
-
-#: pcsx2/gui/ConsoleLogger.cpp:415
-msgid "It's what I use (the programmer guy)."
-msgstr "Benim kullandığım. :) (Geliştiricinin)"
-
-#: pcsx2/gui/ConsoleLogger.cpp:417
-msgid "Its nice and readable."
-msgstr "Güzel ve okunur."
-
-#: pcsx2/gui/ConsoleLogger.cpp:419
-msgid "In case you have a really high res display."
-msgstr "Yüksek çözünürlüklü bir ekranınız varsa."
-
-#: pcsx2/gui/ConsoleLogger.cpp:423
-msgid "Default soft-tone color scheme."
-msgstr "Varsayılan yumuşak tonlu renk şeması"
-
-#: pcsx2/gui/ConsoleLogger.cpp:424
-msgid ""
-"Classic black color scheme for people who enjoy having text seared into "
-"their optic nerves."
-msgstr "Yazıların gözüne girmesinden hoşlananlar için klasik siyah tema."
-
-#: pcsx2/gui/ConsoleLogger.cpp:428
-msgid ""
-"When checked the log window will be visible over other foreground windows."
-msgstr "Seçildiğinde günlük diğer pencerelerin önünde gözükür."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
-msgid "!ContextTip:ChangingNTFS"
-msgstr "!ContextTip:ChangingNTFS"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
-msgid ""
-"Always use this option if you want the safest and surest memory card "
-"behavior."
-msgstr "Hafıza kartını en güvenli ve kararlı yapan seçenek."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
-msgid "16 and 32 MB cards have roughly the same compatibility factor."
-msgstr "16 ve 32 MB kartlar neredeyse aynı uyumluluk oranına sahiptir."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
-msgid ""
-"Use at your own risk.  Erratic memory card behavior is possible (though "
-"unlikely)."
-msgstr ""
-"Riski size ait olmak üzere kullanın. Hafıza kartınız çıldırabilir (nadiren)."
-
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
-msgid "!ContextTip:Folders:Settings"
-msgstr "!ContextTip:Folders:Settings"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
-msgid "!Panel:HasHacksOverrides"
-msgstr "!Panel:HasHacksOverrides"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
-msgid "!Panel:HasPluginsOverrides"
-msgstr "!Panel:HasPluginsOverrides"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
-msgid "!Notice:Tooltip:Presets:Slider"
-msgstr "!Notice:Tooltip:Presets:Slider"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
-msgid "!Notice:Tooltip:Presets:Checkbox"
-msgstr "!Notice:Tooltip:Presets:Checkbox"
-
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "Olayları PS2 sanal makinesindeki gibi günlükler."
-
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
-msgid "!ContextTip:DirPicker:UseDefault"
-msgstr "!ContextTip:DirPicker:UseDefault"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
-msgid "!ContextTip:Window:Vsync"
-msgstr "!ContextTip:Window:Vsync"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:69
-msgid "!ContextTip:Window:ManagedVsync"
-msgstr "!ContextTip:Window:ManagedVsync"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:77
-msgid "!ContextTip:Window:HideMouse"
-msgstr "!ContextTip:Window:HideMouse"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
-msgid "!ContextTip:Window:Fullscreen"
-msgstr "!ContextTip:Window:Fullscreen"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:94
-msgid "!ContextTip:Window:HideGS"
-msgstr "!ContextTip:Window:HideGS"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
-msgid "!ContextTip:Gamefixes:EE Timing Hack"
-msgstr "!ContextTip:Gamefixes:EE Timing Hack"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
-msgid "!ContextTip:Gamefixes:OPH Flag hack"
-msgstr "!ContextTip:Gamefixes:OPH Flag hack"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
-msgid "!ContextTip:Gamefixes:DMA Busy hack"
-msgstr "!ContextTip:Gamefixes:DMA Busy hack"
-
 #: pcsx2/gui/Panels/PathsPanel.cpp:40
 msgid "!ContextTip:Folders:Savestates"
 msgstr "!ContextTip:Folders:Savestates"
@@ -339,6 +224,14 @@ msgstr "!ContextTip:Folders:Snapshots"
 #: pcsx2/gui/Panels/PathsPanel.cpp:60
 msgid "!ContextTip:Folders:Logs"
 msgstr "!ContextTip:Folders:Logs"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+msgid "!Notice:PluginSelector:ConfirmShutdown"
+msgstr "!Notice:PluginSelector:ConfirmShutdown"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
+msgid "!Notice:PluginSelector:ApplyFailed"
+msgstr "!Notice:PluginSelector:ApplyFailed"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
 msgid "!Panel:Speedhacks:EECycleX1"
@@ -367,6 +260,10 @@ msgstr "!Panel:Speedhacks:VUCycleSteal2"
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
 msgid "!Panel:Speedhacks:VUCycleSteal3"
 msgstr "!Panel:Speedhacks:VUCycleSteal3"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
+msgid "!Panel:Speedhacks:Overview"
+msgstr "!Panel:Speedhacks:Overview"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
 msgid "!ContextTip:Speedhacks:EECycleRate Slider"
@@ -400,27 +297,9 @@ msgstr "!ContextTip:Speedhacks:fastCDVD"
 msgid "!ContextTip:Framelimiter:Disable"
 msgstr "!ContextTip:Framelimiter:Disable"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:162
-msgid ""
-"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
-"valid floating point numerics."
-msgstr ""
-"NTSC ya da PAL kare hızı ayarlarında hata. Ayarlar geçerli rakamlardan "
-"oluşmalı."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:295
-msgid ""
-"For troubleshooting potential bugs in the MTGS only, as it is potentially "
-"very slow."
-msgstr "MTGS hatalarını tespit etmek için. Çok yavaştır."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid ""
-"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
-"components."
-msgstr ""
-"Tüm GS eklenti işlemlerini devre dışı bırakır; EEcore bileşenlerini test "
-"etmek için idealdir."
+#: pcsx2/gui/Panels/VideoPanel.cpp:223
+msgid "!Panel:Frameskip:Heading"
+msgstr "!Panel:Frameskip:Heading"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:302
 msgid "!ContextTip:GS:SyncMTGS"
@@ -429,6 +308,112 @@ msgstr "!ContextTip:GS:SyncMTGS"
 #: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:DisableOutput"
 msgstr "!ContextTip:GS:DisableOutput"
+
+#: pcsx2/vtlb.cpp:710
+msgid "!Notice:HostVmReserve"
+msgstr "!Notice:HostVmReserve"
+
+#: pcsx2/x86/sVU_zerorec.cpp:362
+msgid "!Notice:superVU:VirtualMemoryAlloc"
+msgstr "!Notice:superVU:VirtualMemoryAlloc"
+
+#~ msgid "No reason given."
+#~ msgstr "Sebep belirtilmemiş."
+
+#~ msgid "Threading activity: start, detach, sync, deletion, etc."
+#~ msgstr "İşlem etkinliği; başlat, çıkart, eşleştir, sil vb..."
+
+#~ msgid "Includes idle event processing and some other uncommon event usages."
+#~ msgstr "Boş olay işlemesi ve diğer yaygın olmayan olay işlemelerini içerir."
+
+#~ msgid ""
+#~ "The MTGS thread has become unresponsive while waiting for the GS plugin "
+#~ "to open."
+#~ msgstr ""
+#~ "MTGS işlemcisi GS eklentisinin açılmasını beklerken yanıt vermeyi "
+#~ "durdurdu."
+
+#~ msgid "Internal Memorycard Plugin failed to initialize."
+#~ msgstr "Hafıza kartı eklentisi başlatılamadı."
+
+#~ msgid "Safest"
+#~ msgstr "En Güvenli"
+
+#~ msgid "Safe (faster)"
+#~ msgstr "Güvenli (daha hızlı)"
+
+#~ msgid "Balanced"
+#~ msgstr "Dengeli"
+
+#~ msgid "Aggressive"
+#~ msgstr "Agresif"
+
+#~ msgid "Aggressive plus"
+#~ msgstr "Daha Agresif"
+
+#~ msgid "Mostly Harmful"
+#~ msgstr "Çoğu Zaman Zararlı"
+
+#~ msgid "Fits a lot of log in a microcosmically small area."
+#~ msgstr "Çok küçük bir alana birçok günlük dosyası sığdırır."
+
+#~ msgid "It's what I use (the programmer guy)."
+#~ msgstr "Benim kullandığım. :) (Geliştiricinin)"
+
+#~ msgid "Its nice and readable."
+#~ msgstr "Güzel ve okunur."
+
+#~ msgid "In case you have a really high res display."
+#~ msgstr "Yüksek çözünürlüklü bir ekranınız varsa."
+
+#~ msgid "Default soft-tone color scheme."
+#~ msgstr "Varsayılan yumuşak tonlu renk şeması"
+
+#~ msgid ""
+#~ "Classic black color scheme for people who enjoy having text seared into "
+#~ "their optic nerves."
+#~ msgstr "Yazıların gözüne girmesinden hoşlananlar için klasik siyah tema."
+
+#~ msgid ""
+#~ "When checked the log window will be visible over other foreground windows."
+#~ msgstr "Seçildiğinde günlük diğer pencerelerin önünde gözükür."
+
+#~ msgid ""
+#~ "Always use this option if you want the safest and surest memory card "
+#~ "behavior."
+#~ msgstr "Hafıza kartını en güvenli ve kararlı yapan seçenek."
+
+#~ msgid "16 and 32 MB cards have roughly the same compatibility factor."
+#~ msgstr "16 ve 32 MB kartlar neredeyse aynı uyumluluk oranına sahiptir."
+
+#~ msgid ""
+#~ "Use at your own risk.  Erratic memory card behavior is possible (though "
+#~ "unlikely)."
+#~ msgstr ""
+#~ "Riski size ait olmak üzere kullanın. Hafıza kartınız çıldırabilir "
+#~ "(nadiren)."
+
+#~ msgid "Logs events as they are passed to the PS2 virtual machine."
+#~ msgstr "Olayları PS2 sanal makinesindeki gibi günlükler."
+
+#~ msgid ""
+#~ "Error while parsing either NTSC or PAL framerate settings.  Settings must "
+#~ "be valid floating point numerics."
+#~ msgstr ""
+#~ "NTSC ya da PAL kare hızı ayarlarında hata. Ayarlar geçerli rakamlardan "
+#~ "oluşmalı."
+
+#~ msgid ""
+#~ "For troubleshooting potential bugs in the MTGS only, as it is potentially "
+#~ "very slow."
+#~ msgstr "MTGS hatalarını tespit etmek için. Çok yavaştır."
+
+#~ msgid ""
+#~ "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+#~ "components."
+#~ msgstr ""
+#~ "Tüm GS eklenti işlemlerini devre dışı bırakır; EEcore bileşenlerini test "
+#~ "etmek için idealdir."
 
 #~ msgid "!ContextTip:Window:FullscreenExclusive"
 #~ msgstr "!ContextTip:Window:FullscreenExclusive"

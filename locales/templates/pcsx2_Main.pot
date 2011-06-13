@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-05 22:01+0200\n"
+"POT-Creation-Date: 2011-06-13 16:04+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -98,53 +98,53 @@ msgstr ""
 msgid "The MTGS thread has become unresponsive while waiting for the GS plugin to open."
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:692
+#: pcsx2/PluginManager.cpp:694
 msgid "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:702
+#: pcsx2/PluginManager.cpp:704
 #, c-format
 msgid "%s plugin failed to open.  Your computer may have insufficient resources, or incompatible hardware/drivers."
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:709
+#: pcsx2/PluginManager.cpp:711
 #, c-format
 msgid "%s plugin failed to initialize.  Your system may have insufficient memory or resources needed."
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:815
+#: pcsx2/PluginManager.cpp:817
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:819
+#: pcsx2/PluginManager.cpp:821
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:837
+#: pcsx2/PluginManager.cpp:839
 #, c-format
 msgid "The configured %s plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2."
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:862
+#: pcsx2/PluginManager.cpp:864
 msgid "The plugin reports that your hardware or software/drivers are not supported."
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:883
+#: pcsx2/PluginManager.cpp:885
 msgid "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2."
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:909
+#: pcsx2/PluginManager.cpp:911
 #, c-format
 msgid "Configured %s plugin is not a valid PCSX2 plugin, or is for an older unsupported version of PCSX2."
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:1329
+#: pcsx2/PluginManager.cpp:1339
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr ""
 
-#: pcsx2/PluginManager.cpp:1726
+#: pcsx2/PluginManager.cpp:1736
 msgid "Unloaded Plugin"
 msgstr ""
 
@@ -340,7 +340,7 @@ msgstr ""
 msgid "All options are for the current session only and will not be saved.\n"
 msgstr ""
 
-#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:291
+#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:299
 msgid "IsoFile"
 msgstr ""
 
@@ -509,39 +509,39 @@ msgstr ""
 msgid "Show about dialog"
 msgstr ""
 
-#: pcsx2/gui/AppMain.cpp:79
+#: pcsx2/gui/AppMain.cpp:87
 msgid ""
 "\n"
 "\n"
 "Press Ok to go to the Plugin Configuration Panel."
 msgstr ""
 
-#: pcsx2/gui/AppMain.cpp:132 pcsx2/gui/AppMain.cpp:146
+#: pcsx2/gui/AppMain.cpp:140 pcsx2/gui/AppMain.cpp:154
 msgid "Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
 msgstr ""
 
-#: pcsx2/gui/AppMain.cpp:301
+#: pcsx2/gui/AppMain.cpp:309
 #, c-format
 msgid "%s Commandline Options"
 msgstr ""
 
-#: pcsx2/gui/AppMain.cpp:565
+#: pcsx2/gui/AppMain.cpp:573
 msgid "PS2 BIOS Error"
 msgstr ""
 
-#: pcsx2/gui/AppMain.cpp:566
+#: pcsx2/gui/AppMain.cpp:574
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr ""
 
-#: pcsx2/gui/AppMain.cpp:618
+#: pcsx2/gui/AppMain.cpp:626
 msgid "PCSX2 Unresponsive Thread"
 msgstr ""
 
-#: pcsx2/gui/AppMain.cpp:628
+#: pcsx2/gui/AppMain.cpp:636
 msgid "Terminate"
 msgstr ""
 
-#: pcsx2/gui/AppMain.cpp:938
+#: pcsx2/gui/AppMain.cpp:964
 msgid "Executing PS2 Virtual Machine..."
 msgstr ""
 
@@ -1052,7 +1052,7 @@ msgstr ""
 msgid "Terminate App"
 msgstr ""
 
-#: pcsx2/gui/FrameForGS.cpp:298
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr ""
 

@@ -2,9 +2,9 @@
 # This file is distributed under the same license as the PCSX2 package.
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.7\n"
+"Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-04-20 18:40+0200\n"
+"POT-Creation-Date: 2011-06-13 15:52+0200\n"
 "PO-Revision-Date: 2011-04-09 16:40+0200\n"
 "Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
@@ -19,6 +19,10 @@ msgstr ""
 "X-Poedit-Country: TURKEY\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
+
+#: common/include/Utilities/Exceptions.h:187
+msgid "No reason given."
+msgstr "Sebep belirtilmemiş."
 
 #: common/include/Utilities/Exceptions.h:226
 msgid "Parse error"
@@ -72,6 +76,10 @@ msgid ""
 "corrupted."
 msgstr "Beklenmeyen dosya sonu hatası. Dosya muhtemelen yarım ya da bozuk."
 
+#: common/src/Utilities/ThreadTools.cpp:41
+msgid "Threading activity: start, detach, sync, deletion, etc."
+msgstr "İşlem etkinliği; başlat, çıkart, eşleştir, sil vb..."
+
 #: common/src/Utilities/ThreadingDialogs.cpp:30
 msgid "Waiting for tasks..."
 msgstr "İşlemler bekleniyor..."
@@ -79,6 +87,10 @@ msgstr "İşlemler bekleniyor..."
 #: common/src/Utilities/ThreadingDialogs.cpp:41
 msgid "Waiting for task..."
 msgstr "İşlem bekleniyor..."
+
+#: common/src/Utilities/wxAppWithHelpers.cpp:36
+msgid "Includes idle event processing and some other uncommon event usages."
+msgstr "Boş olay işlemesi ve diğer yaygın olmayan olay işlemelerini içerir."
 
 #: pcsx2/CDVD/IsoFileFormats.cpp:416
 msgid "Unrecognized ISO image file format"
@@ -96,12 +108,19 @@ msgstr ""
 "Eğer bir ISO dosyası yüklemeye çalışıyorsanız bu hata desteklenmeyen dosya "
 "formatı ya da PCSX2'deki bir hatadan kaynaklanıyor olabilir."
 
-#: pcsx2/PluginManager.cpp:692
+#: pcsx2/MTGS.cpp:815
+msgid ""
+"The MTGS thread has become unresponsive while waiting for the GS plugin to "
+"open."
+msgstr ""
+"MTGS işlemcisi GS eklentisinin açılmasını beklerken yanıt vermeyi durdurdu."
+
+#: pcsx2/PluginManager.cpp:694
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr "Kayıt konumu yüklenemiyor. Dosya bozuk olabilir."
 
-#: pcsx2/PluginManager.cpp:702
+#: pcsx2/PluginManager.cpp:704
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -109,7 +128,7 @@ msgid ""
 msgstr ""
 "%s eklentisi açılamıyor. Bilgisayarınızın donanımı yeterli olmayabilir."
 
-#: pcsx2/PluginManager.cpp:709
+#: pcsx2/PluginManager.cpp:711
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
@@ -117,17 +136,17 @@ msgid ""
 msgstr ""
 "%s eklentisi çalışmıyor. Bilgisayarınızın donanımı yeterli olmayabilir."
 
-#: pcsx2/PluginManager.cpp:815
+#: pcsx2/PluginManager.cpp:817
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "Ayarlanmış %s eklentisi bulunamıyor."
 
-#: pcsx2/PluginManager.cpp:819
+#: pcsx2/PluginManager.cpp:821
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr "Seçili %s eklentisi geçerli bir kütüphaneye sahip değil"
 
-#: pcsx2/PluginManager.cpp:837
+#: pcsx2/PluginManager.cpp:839
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
@@ -136,12 +155,12 @@ msgstr ""
 "Seçili %s eklentisi geçerli bir PCSX2 eklentisi değil ya da eski ve "
 "desteklenmeyen bir PCSX2 sürümüne ait."
 
-#: pcsx2/PluginManager.cpp:862
+#: pcsx2/PluginManager.cpp:864
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr "Donanım, yazılım ya da sürücüleriniz desteklenmiyor."
 
-#: pcsx2/PluginManager.cpp:883
+#: pcsx2/PluginManager.cpp:885
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
@@ -149,7 +168,7 @@ msgstr ""
 "Seçili eklenti bir PCSX2 eklentisi değil ya da desteklenmeyen eski bir "
 "sürüme ait."
 
-#: pcsx2/PluginManager.cpp:909
+#: pcsx2/PluginManager.cpp:911
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
@@ -158,7 +177,11 @@ msgstr ""
 "Ayarlanmış %s eklentisi geçerli bir PCSX2 eklentisi değil ya da eski ve "
 "desteklenmeyen bir PCSX2 sürümüne ait."
 
-#: pcsx2/PluginManager.cpp:1726
+#: pcsx2/PluginManager.cpp:1339
+msgid "Internal Memorycard Plugin failed to initialize."
+msgstr "Hafıza kartı eklentisi başlatılamadı."
+
+#: pcsx2/PluginManager.cpp:1736
 msgid "Unloaded Plugin"
 msgstr "Yüklenmemiş Eklenti"
 
@@ -167,6 +190,149 @@ msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr ""
 "Kayıt konumu yüklenemiyor. Dosya bilinmeyen ya da desteklenmeyen bir sürüme "
 "ait."
+
+#: pcsx2/SourceLog.cpp:96
+msgid "Dumps detailed information for PS2 executables (ELFs)."
+msgstr "PS2 ELF dosyalarını ayrıntılı olarak günlükle."
+
+#: pcsx2/SourceLog.cpp:101
+msgid ""
+"Logs manual protection, split blocks, and other things that might impact "
+"performance."
+msgstr ""
+"Manual koruma, blok ayırma ve diğer performansı etkileyecek zamazingoları "
+"günlükler."
+
+#: pcsx2/SourceLog.cpp:106
+msgid "Shows the game developer's logging text (EE processor)"
+msgstr "Oyun üreticisinin günlükleme dosyasını gösterir (EE işlemcisi)"
+
+#: pcsx2/SourceLog.cpp:111
+msgid "Shows the game developer's logging text (IOP processor)"
+msgstr "Oyun üreticisinin günlükleme dosyasını gösterir (IOP işlemcisi)"
+
+#: pcsx2/SourceLog.cpp:116
+msgid "Shows DECI2 debugging logs (EE processor)"
+msgstr "DECI2 test günlükleri (EE işlemcisi)"
+
+#: pcsx2/SourceLog.cpp:145
+msgid "SYSCALL and DECI2 activity."
+msgstr "SYSCALL ve DECI2 etkinliği."
+
+#: pcsx2/SourceLog.cpp:151
+msgid "Direct memory accesses to unknown or unmapped EE memory space."
+msgstr "Bilinmeyen ya da belirtilmemiş EE hafıza konumuna doğrudan erişim."
+
+#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
+msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
+msgstr "Yürütme yönergelerinin ayrımı (COPs ve CACHE hariç)"
+
+#: pcsx2/SourceLog.cpp:163
+msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
+msgstr "COP0 yönergelerinin ayrımı (MMU, işlemci ve dma durumları vb)."
+
+#: pcsx2/SourceLog.cpp:169
+msgid "Disasm of the EE's floating point unit (FPU) only."
+msgstr "EE'nin FPU ayrımı."
+
+#: pcsx2/SourceLog.cpp:175
+msgid "Disasm of the EE's VU0macro co-processor instructions."
+msgstr "EE'nin VU0macro işlemci yönergelerinin ayrımı."
+
+#: pcsx2/SourceLog.cpp:181
+msgid "Execution of EE cache instructions."
+msgstr "EE önbellek yönergelerinin yürütülmesi."
+
+#: pcsx2/SourceLog.cpp:187
+msgid ""
+"All known hardware register accesses (very slow!); not including sub filter "
+"options below."
+msgstr ""
+"Altta belirtilen filtreler hariç tüm bilinen donanım erişimleri (ÇOK YAVAŞ!)."
+
+#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
+msgid "Logs only unknown, unmapped, or unimplemented register accesses."
+msgstr ""
+"Yalnızca bilinmeyen, ayarlanmamış ve düzenlenmemiş erişim girdilerini "
+"günlükler."
+
+#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
+msgid "Logs only DMA-related registers."
+msgstr "Yalnızca DMA ile ilgili girişleri günlükler."
+
+#: pcsx2/SourceLog.cpp:205
+msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
+msgstr ""
+"IPU etkinliği: donanım erişimleri, çözümleme işlemleri, DMA durumu vb..."
+
+#: pcsx2/SourceLog.cpp:211
+msgid "All GIFtag parse activity; path index, tag type, etc."
+msgstr "Tüm GIFtag etkinliği; klasör indeksleme, etiket türü vb..."
+
+#: pcsx2/SourceLog.cpp:217
+msgid "All VIFcode processing; command, tag style, interrupts."
+msgstr "Tüm VIFcode işlemleri; komutlar, tag türü, hatalar."
+
+#: pcsx2/SourceLog.cpp:223
+msgid "All processing involved in Path3 Masking"
+msgstr "Path3 Masking'deki tüm işlemler"
+
+#: pcsx2/SourceLog.cpp:229
+msgid "Scratchpad's MFIFO activity."
+msgstr "Scratchpad'in MFIFO etkinliği."
+
+#: pcsx2/SourceLog.cpp:235
+msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
+msgstr "Dosya transfer günlükleri, beklemeler vb."
+
+#: pcsx2/SourceLog.cpp:241
+msgid "Tracks all EE counters events and some counter register activity."
+msgstr "Tüm EE sayaç olaylarını ve bazı girdi etkinliklerini izler."
+
+#: pcsx2/SourceLog.cpp:247
+msgid "Dumps various VIF and VIFcode processing data."
+msgstr "Çeşitli VIF ve VIFcode işlemlerini yığınlar."
+
+#: pcsx2/SourceLog.cpp:253
+msgid "Dumps various GIF and GIFtag parsing data."
+msgstr "Çeşitlli GIF ve GIFtag verilerini yığınlar."
+
+#: pcsx2/SourceLog.cpp:264
+msgid "SYSCALL and IRX activity."
+msgstr "SYSCALL ve IRX etkinliği."
+
+#: pcsx2/SourceLog.cpp:270
+msgid "Direct memory accesses to unknown or unmapped IOP memory space."
+msgstr "Bilinmeyen ya da belirtilmemiş IOP hafıza konumuna doğrudan erişim."
+
+#: pcsx2/SourceLog.cpp:282
+msgid "Disasm of the IOP's GPU co-processor instructions."
+msgstr "IOS'nin GPU işlemcili yönergelerininin ayrımı."
+
+#: pcsx2/SourceLog.cpp:288
+msgid ""
+"All known hardware register accesses, not including the sub-filters below."
+msgstr "Alttaki filtreleri içermeyen tüm bilinen donanım erişimleri."
+
+#: pcsx2/SourceLog.cpp:306
+msgid "Memorycard reads, writes, erases, terminators, and other processing."
+msgstr "Hafıza kartı okumaları, yazmaları, silmeleri ve diğer işlemler."
+
+#: pcsx2/SourceLog.cpp:312
+msgid "Gamepad activity on the SIO."
+msgstr "SIO'daki oyun kolu etkinliği."
+
+#: pcsx2/SourceLog.cpp:318
+msgid "Actual DMA event processing and data transfer logs."
+msgstr "DMA olay işlemi ve dosya transfer günlükleri."
+
+#: pcsx2/SourceLog.cpp:324
+msgid "Tracks all IOP counters events and some counter register activity."
+msgstr "Tüm IOP sayaç olaylarını ve diğer sayaç girdisi etkinliklerini izler."
+
+#: pcsx2/SourceLog.cpp:330
+msgid "Detailed logging of CDVD hardware."
+msgstr "CDVD donanımının detaylı günlüklemesi."
 
 #: pcsx2/System.h:206 pcsx2/System.h:207 pcsx2/System.h:208
 msgid "PCSX2 Message"
@@ -179,6 +345,30 @@ msgid ""
 msgstr ""
 "Kayıt konumu doğru şekilde kaydedilemedi. Geçici dosya oluşturuldu fakat son "
 "kayıt işlemi tamamlanamadı."
+
+#: pcsx2/gui/AppConfig.cpp:818
+msgid "Safest"
+msgstr "En Güvenli"
+
+#: pcsx2/gui/AppConfig.cpp:819
+msgid "Safe (faster)"
+msgstr "Güvenli (daha hızlı)"
+
+#: pcsx2/gui/AppConfig.cpp:820
+msgid "Balanced"
+msgstr "Dengeli"
+
+#: pcsx2/gui/AppConfig.cpp:821
+msgid "Aggressive"
+msgstr "Agresif"
+
+#: pcsx2/gui/AppConfig.cpp:822
+msgid "Aggressive plus"
+msgstr "Daha Agresif"
+
+#: pcsx2/gui/AppConfig.cpp:823
+msgid "Mostly Harmful"
+msgstr "Çoğu Zaman Zararlı"
 
 #: pcsx2/gui/AppConfig.cpp:980 pcsx2/gui/AppConfig.cpp:986
 msgid "Failed to overwrite existing settings file; permission was denied."
@@ -208,7 +398,7 @@ msgstr "PCSX2 Derleyici Hataları"
 msgid "All options are for the current session only and will not be saved.\n"
 msgstr "Tüm ayarlar şimdiki oturum için geçerlidir ve kaydedilmeyecektir.\n"
 
-#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:291
+#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:299
 msgid "IsoFile"
 msgstr "IsoFile"
 
@@ -383,7 +573,7 @@ msgstr "Web Sayfası"
 msgid "Show about dialog"
 msgstr "Hakkında penceresini göster"
 
-#: pcsx2/gui/AppMain.cpp:79
+#: pcsx2/gui/AppMain.cpp:87
 msgid ""
 "\n"
 "\n"
@@ -393,33 +583,33 @@ msgstr ""
 "\n"
 "Eklenti Ayarlama Paneli'ne gitmek için Tamam'a basın."
 
-#: pcsx2/gui/AppMain.cpp:132 pcsx2/gui/AppMain.cpp:146
+#: pcsx2/gui/AppMain.cpp:140 pcsx2/gui/AppMain.cpp:154
 msgid ""
 "Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
 msgstr "Dikkat! Eklentiler yüklenemedi. PCSX2 çalışmayabilir."
 
-#: pcsx2/gui/AppMain.cpp:301
+#: pcsx2/gui/AppMain.cpp:309
 #, c-format
 msgid "%s Commandline Options"
 msgstr "%s Komut Dizini Ayarları"
 
-#: pcsx2/gui/AppMain.cpp:565
+#: pcsx2/gui/AppMain.cpp:573
 msgid "PS2 BIOS Error"
 msgstr "PS2 BIOS Hatası"
 
-#: pcsx2/gui/AppMain.cpp:566
+#: pcsx2/gui/AppMain.cpp:574
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr "BIOS Ayarlama Paneli'ne gitmek için Tamam'a basın."
 
-#: pcsx2/gui/AppMain.cpp:618
+#: pcsx2/gui/AppMain.cpp:626
 msgid "PCSX2 Unresponsive Thread"
 msgstr "PCSX2 Yanıt Vermeyen İşlem"
 
-#: pcsx2/gui/AppMain.cpp:628
+#: pcsx2/gui/AppMain.cpp:636
 msgid "Terminate"
 msgstr "Sonlandır"
 
-#: pcsx2/gui/AppMain.cpp:938
+#: pcsx2/gui/AppMain.cpp:964
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Sanal PS2 çalıştırılıyor..."
 
@@ -476,12 +666,24 @@ msgid "Save log question"
 msgstr "Günlük sorgulamasını kaydet"
 
 #: pcsx2/gui/ConsoleLogger.cpp:413
+msgid "Fits a lot of log in a microcosmically small area."
+msgstr "Çok küçük bir alana birçok günlük dosyası sığdırır."
+
+#: pcsx2/gui/ConsoleLogger.cpp:413
 msgid "Small"
 msgstr "Küçük"
+
+#: pcsx2/gui/ConsoleLogger.cpp:415
+msgid "It's what I use (the programmer guy)."
+msgstr "Benim kullandığım. :) (Geliştiricinin)"
 
 #: pcsx2/gui/ConsoleLogger.cpp:415 pcsx2/gui/Panels/CpuPanel.cpp:38
 msgid "Normal"
 msgstr "Normal"
+
+#: pcsx2/gui/ConsoleLogger.cpp:417
+msgid "Its nice and readable."
+msgstr "Güzel ve okunur."
 
 #: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Large"
@@ -491,9 +693,23 @@ msgstr "Büyük"
 msgid "Huge"
 msgstr "Çok Büyük"
 
+#: pcsx2/gui/ConsoleLogger.cpp:419
+msgid "In case you have a really high res display."
+msgstr "Yüksek çözünürlüklü bir ekranınız varsa."
+
+#: pcsx2/gui/ConsoleLogger.cpp:423
+msgid "Default soft-tone color scheme."
+msgstr "Varsayılan yumuşak tonlu renk şeması"
+
 #: pcsx2/gui/ConsoleLogger.cpp:423
 msgid "Light theme"
 msgstr "Aydınlık Tema"
+
+#: pcsx2/gui/ConsoleLogger.cpp:424
+msgid ""
+"Classic black color scheme for people who enjoy having text seared into "
+"their optic nerves."
+msgstr "Yazıların gözüne girmesinden hoşlananlar için klasik siyah tema."
 
 #: pcsx2/gui/ConsoleLogger.cpp:424
 msgid "Dark theme"
@@ -502,6 +718,11 @@ msgstr "Karanlık Tema"
 #: pcsx2/gui/ConsoleLogger.cpp:427
 msgid "Always on Top"
 msgstr "Her zaman üstte"
+
+#: pcsx2/gui/ConsoleLogger.cpp:428
+msgid ""
+"When checked the log window will be visible over other foreground windows."
+msgstr "Seçildiğinde günlük diğer pencerelerin önünde gözükür."
 
 #: pcsx2/gui/ConsoleLogger.cpp:430
 msgid "&Save..."
@@ -624,11 +845,11 @@ msgstr "Peki..."
 msgid "Assertion Failure - "
 msgstr "Onaylama İşlemi Hatası -"
 
-#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:192
+#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:193
 msgid "Saves a snapshot of this settings panel to a PNG file."
 msgstr "Bu ayarlar ekranını bir PNG olarak kaydeder."
 
-#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:303
+#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:308
 msgid "Save dialog screenshots to..."
 msgstr "İleti ekran görüntülerini şu klasöre kaydet..."
 
@@ -718,6 +939,12 @@ msgstr ""
 "Sony'nin ürettiği standart boyut. Tüm BIOS versiyonları ve oyunlar "
 "tarafından desteklenir."
 
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
+msgid ""
+"Always use this option if you want the safest and surest memory card "
+"behavior."
+msgstr "Hafıza kartını en güvenli ve kararlı yapan seçenek."
+
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:199
 msgid "16 MB"
 msgstr "16 MB"
@@ -729,6 +956,11 @@ msgid ""
 msgstr ""
 "3. parti hafıza kartlarının genel boyutu. Çoğu oyunda sorun çıkarmaması "
 "gerekir."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
+msgid "16 and 32 MB cards have roughly the same compatibility factor."
+msgstr "16 ve 32 MB kartlar neredeyse aynı uyumluluk oranına sahiptir."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:203
 msgid "32 MB"
@@ -745,6 +977,13 @@ msgid ""
 msgstr ""
 "Düşük uyumluluk uyarısı: Evet hız artışı çok fazla fakat çoğu oyunla "
 "çalışmayabilir."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
+msgid ""
+"Use at your own risk.  Erratic memory card behavior is possible (though "
+"unlikely)."
+msgstr ""
+"Riski size ait olmak üzere kullanın. Hafıza kartınız çıldırabilir (nadiren)."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:47
 #, c-format
@@ -903,6 +1142,10 @@ msgstr "Klasörler"
 msgid "Appearance/Themes - %s"
 msgstr "Görünüm/Temalar -%s"
 
+#: pcsx2/gui/ExecutorThread.cpp:40
+msgid "Logs events as they are passed to the PS2 virtual machine."
+msgstr "Olayları PS2 sanal makinesindeki gibi günlükler."
+
 #: pcsx2/gui/ExecutorThread.cpp:430
 msgid "Press Cancel to attempt to cancel the action."
 msgstr "İşlemi iptal etmek için İptal'e tıklayın."
@@ -916,47 +1159,47 @@ msgstr "%s 'ı sonlandırmak için Sonlandır'a basın."
 msgid "Terminate App"
 msgstr "İşlemi Sonlandır"
 
-#: pcsx2/gui/FrameForGS.cpp:294
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "GS Çıkışı devre dışı!"
 
-#: pcsx2/gui/GlobalCommands.cpp:385 pcsx2/gui/MainFrame.cpp:414
+#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:414
 msgid "Save state"
 msgstr "Kayıt konumu"
 
-#: pcsx2/gui/GlobalCommands.cpp:386
+#: pcsx2/gui/GlobalCommands.cpp:388
 msgid "Saves the virtual machine state to the current slot."
 msgstr "Oyun konumunu şimdiki slota kaydeder."
 
-#: pcsx2/gui/GlobalCommands.cpp:391 pcsx2/gui/MainFrame.cpp:413
+#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:413
 msgid "Load state"
 msgstr "Konum yükle"
 
-#: pcsx2/gui/GlobalCommands.cpp:392
+#: pcsx2/gui/GlobalCommands.cpp:394
 msgid "Loads a virtual machine state from the current slot."
 msgstr "Oyun konumunu şimdiki slottan yükler."
 
-#: pcsx2/gui/GlobalCommands.cpp:397
+#: pcsx2/gui/GlobalCommands.cpp:399
 msgid "Load State Backup"
 msgstr "Konum Yedeği Yükle"
 
-#: pcsx2/gui/GlobalCommands.cpp:398
+#: pcsx2/gui/GlobalCommands.cpp:400
 msgid "Loads virtual machine state backup for current slot."
 msgstr "Oyun konumu yedeğini şimdiki slottan yükler."
 
-#: pcsx2/gui/GlobalCommands.cpp:403
+#: pcsx2/gui/GlobalCommands.cpp:405
 msgid "Cycle to next slot"
 msgstr "Bir sonraki slota geç"
 
-#: pcsx2/gui/GlobalCommands.cpp:404
+#: pcsx2/gui/GlobalCommands.cpp:406
 msgid "Cycles the current save slot in +1 fashion!"
 msgstr "Kayıt işlemini sürekli bir sonraki slota kaydederek yapar."
 
-#: pcsx2/gui/GlobalCommands.cpp:409
+#: pcsx2/gui/GlobalCommands.cpp:411
 msgid "Cycle to prev slot"
 msgstr "Önceki slota geç"
 
-#: pcsx2/gui/GlobalCommands.cpp:410
+#: pcsx2/gui/GlobalCommands.cpp:412
 msgid "Cycles the current save slot in -1 fashion!"
 msgstr "Kayıt işlemini sürekli bir önceki slota kaydederek yapar."
 
@@ -1521,8 +1764,14 @@ msgid ""
 msgstr "x86 işlemler için doğru zamanlı 32 bit MIPS-IV kodu dönüşümü sağlar."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:154
-msgid "Enable EE Cache - Interpreter Only! (Slower)"
+#, fuzzy
+msgid "Enable EE Cache (Slower)"
 msgstr "EE Cache'yi aktifleştir (Yorumlayıcı için ve daha yavaş)"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:154
+#, fuzzy
+msgid "Interpreter only; provided for diagnostic"
+msgstr "Olabildiğince yavaştır; yalnızca test amaçlı."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:170 pcsx2/gui/Panels/CpuPanel.cpp:223
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:110
@@ -1619,19 +1868,19 @@ msgstr "Kare hızına göre Vsync'i otomatik aç ya da kapat (ipucunu okuyun!)"
 msgid "Double-click toggles fullscreen mode"
 msgstr "Çift tıklama tam ekrana geçer"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:111
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:110
 msgid "Aspect Ratio:"
 msgstr "En Boy Oranı:"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:113
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:112
 msgid "Custom Window Size:"
 msgstr "Özel Pencere Boyutu:"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:116
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:115
 msgid "Zoom:"
 msgstr "Yakınlaştırma:"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:197
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:196
 msgid ""
 "Invalid window dimensions specified: Size cannot contain non-numeric digits! "
 ">_<"
@@ -1710,11 +1959,15 @@ msgstr ""
 msgid "Ignore DMAC writes when it is busy."
 msgstr "Meşgulken DMAC'yı yoksay."
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:102
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:95
+msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "Elle yapılan oyun yamalarını etkinleştir [Önerilmez]"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
 msgstr "Tüm oyun yamalarının kapalı olduğuna emin olmak için en garanti yol."
@@ -2207,6 +2460,14 @@ msgstr "FPS"
 msgid "PAL Framerate:"
 msgstr "PAL Kare hızı:"
 
+#: pcsx2/gui/Panels/VideoPanel.cpp:162
+msgid ""
+"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
+"valid floating point numerics."
+msgstr ""
+"NTSC ya da PAL kare hızı ayarlarında hata. Ayarlar geçerli rakamlardan "
+"oluşmalı."
+
 #: pcsx2/gui/Panels/VideoPanel.cpp:180
 msgid "Disabled [default]"
 msgstr "Devre dışı [varsayılan]"
@@ -2238,9 +2499,23 @@ msgstr "Atlanacak Kare Sayısı"
 msgid "Use Synchronized MTGS"
 msgstr "Senkronize MTGS Kullan"
 
+#: pcsx2/gui/Panels/VideoPanel.cpp:295
+msgid ""
+"For troubleshooting potential bugs in the MTGS only, as it is potentially "
+"very slow."
+msgstr "MTGS hatalarını tespit etmek için. Çok yavaştır."
+
 #: pcsx2/gui/Panels/VideoPanel.cpp:298
 msgid "Disable all GS output"
 msgstr "Tüm GS çıkışını devre dışı bırak"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
+msgid ""
+"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+"components."
+msgstr ""
+"Tüm GS eklenti işlemlerini devre dışı bırakır; EEcore bileşenlerini test "
+"etmek için idealdir."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:316
 msgid "Frame Skipping"
@@ -2292,6 +2567,10 @@ msgid ""
 msgstr ""
 "Kayıt konumu bazı kritik bileşenler eksik olduğundan yüklenemedi. Ayrıntılar "
 "için günlük dosyasına bakın."
+
+#: pcsx2/gui/i18n.cpp:63
+msgid " (default)"
+msgstr ""
 
 #: pcsx2/ps2/BiosTools.cpp:83 pcsx2/ps2/BiosTools.cpp:151
 msgid "The selected BIOS file is not a valid PS2 BIOS.  Please re-configure."
@@ -2449,410 +2728,110 @@ msgstr ""
 #~ msgid "Denormals are Zero"
 #~ msgstr "Denormals are Zero"
 
-#: pcsx2/SourceLog.cpp:96
-msgid "Dumps detailed information for PS2 executables (ELFs)."
-msgstr "PS2 ELF dosyalarını ayrıntılı olarak günlükle."
-
-#: pcsx2/SourceLog.cpp:101
-msgid ""
-"Logs manual protection, split blocks, and other things that might impact "
-"performance."
-msgstr ""
-"Manual koruma, blok ayırma ve diğer performansı etkileyecek zamazingoları "
-"günlükler."
-
-#: pcsx2/SourceLog.cpp:106
-msgid "Shows the game developer's logging text (EE processor)"
-msgstr "Oyun üreticisinin günlükleme dosyasını gösterir (EE işlemcisi)"
-
-#: pcsx2/SourceLog.cpp:111
-msgid "Shows the game developer's logging text (IOP processor)"
-msgstr "Oyun üreticisinin günlükleme dosyasını gösterir (IOP işlemcisi)"
-
-#: pcsx2/SourceLog.cpp:116
-msgid "Shows DECI2 debugging logs (EE processor)"
-msgstr "DECI2 test günlükleri (EE işlemcisi)"
-
-#: pcsx2/SourceLog.cpp:145
-msgid "SYSCALL and DECI2 activity."
-msgstr "SYSCALL ve DECI2 etkinliği."
-
-#: pcsx2/SourceLog.cpp:151
-msgid "Direct memory accesses to unknown or unmapped EE memory space."
-msgstr "Bilinmeyen ya da belirtilmemiş EE hafıza konumuna doğrudan erişim."
-
-#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
-msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
-msgstr "Yürütme yönergelerinin ayrımı (COPs ve CACHE hariç)"
-
-#: pcsx2/SourceLog.cpp:163
-msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
-msgstr "COP0 yönergelerinin ayrımı (MMU, işlemci ve dma durumları vb)."
-
-#: pcsx2/SourceLog.cpp:169
-msgid "Disasm of the EE's floating point unit (FPU) only."
-msgstr "EE'nin FPU ayrımı."
-
-#: pcsx2/SourceLog.cpp:175
-msgid "Disasm of the EE's VU0macro co-processor instructions."
-msgstr "EE'nin VU0macro işlemci yönergelerinin ayrımı."
-
-#: pcsx2/SourceLog.cpp:181
-msgid "Execution of EE cache instructions."
-msgstr "EE önbellek yönergelerinin yürütülmesi."
-
-#: pcsx2/SourceLog.cpp:187
-msgid ""
-"All known hardware register accesses (very slow!); not including sub filter "
-"options below."
-msgstr ""
-"Altta belirtilen filtreler hariç tüm bilinen donanım erişimleri (ÇOK YAVAŞ!)."
-
-#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
-msgid "Logs only unknown, unmapped, or unimplemented register accesses."
-msgstr ""
-"Yalnızca bilinmeyen, ayarlanmamış ve düzenlenmemiş erişim girdilerini "
-"günlükler."
-
-#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
-msgid "Logs only DMA-related registers."
-msgstr "Yalnızca DMA ile ilgili girişleri günlükler."
-
-#: pcsx2/SourceLog.cpp:205
-msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
-msgstr ""
-"IPU etkinliği: donanım erişimleri, çözümleme işlemleri, DMA durumu vb..."
-
-#: pcsx2/SourceLog.cpp:211
-msgid "All GIFtag parse activity; path index, tag type, etc."
-msgstr "Tüm GIFtag etkinliği; klasör indeksleme, etiket türü vb..."
-
-#: pcsx2/SourceLog.cpp:217
-msgid "All VIFcode processing; command, tag style, interrupts."
-msgstr "Tüm VIFcode işlemleri; komutlar, tag türü, hatalar."
-
-#: pcsx2/SourceLog.cpp:223
-msgid "All processing involved in Path3 Masking"
-msgstr "Path3 Masking'deki tüm işlemler"
-
-#: pcsx2/SourceLog.cpp:229
-msgid "Scratchpad's MFIFO activity."
-msgstr "Scratchpad'in MFIFO etkinliği."
-
-#: pcsx2/SourceLog.cpp:235
-msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
-msgstr "Dosya transfer günlükleri, beklemeler vb."
-
-#: pcsx2/SourceLog.cpp:241
-msgid "Tracks all EE counters events and some counter register activity."
-msgstr "Tüm EE sayaç olaylarını ve bazı girdi etkinliklerini izler."
-
-#: pcsx2/SourceLog.cpp:247
-msgid "Dumps various VIF and VIFcode processing data."
-msgstr "Çeşitli VIF ve VIFcode işlemlerini yığınlar."
-
-#: pcsx2/SourceLog.cpp:253
-msgid "Dumps various GIF and GIFtag parsing data."
-msgstr "Çeşitlli GIF ve GIFtag verilerini yığınlar."
-
-#: pcsx2/SourceLog.cpp:264
-msgid "SYSCALL and IRX activity."
-msgstr "SYSCALL ve IRX etkinliği."
-
-#: pcsx2/SourceLog.cpp:270
-msgid "Direct memory accesses to unknown or unmapped IOP memory space."
-msgstr "Bilinmeyen ya da belirtilmemiş IOP hafıza konumuna doğrudan erişim."
-
-#: pcsx2/SourceLog.cpp:282
-msgid "Disasm of the IOP's GPU co-processor instructions."
-msgstr "IOS'nin GPU işlemcili yönergelerininin ayrımı."
-
-#: pcsx2/SourceLog.cpp:288
-msgid ""
-"All known hardware register accesses, not including the sub-filters below."
-msgstr "Alttaki filtreleri içermeyen tüm bilinen donanım erişimleri."
-
-#: pcsx2/SourceLog.cpp:306
-msgid "Memorycard reads, writes, erases, terminators, and other processing."
-msgstr "Hafıza kartı okumaları, yazmaları, silmeleri ve diğer işlemler."
-
-#: pcsx2/SourceLog.cpp:312
-msgid "Gamepad activity on the SIO."
-msgstr "SIO'daki oyun kolu etkinliği."
-
-#: pcsx2/SourceLog.cpp:318
-msgid "Actual DMA event processing and data transfer logs."
-msgstr "DMA olay işlemi ve dosya transfer günlükleri."
-
-#: pcsx2/SourceLog.cpp:324
-msgid "Tracks all IOP counters events and some counter register activity."
-msgstr "Tüm IOP sayaç olaylarını ve diğer sayaç girdisi etkinliklerini izler."
-
-#: pcsx2/SourceLog.cpp:330
-msgid "Detailed logging of CDVD hardware."
-msgstr "CDVD donanımının detaylı günlüklemesi."
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr "Sebep belirtilmemiş."
-
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "İşlem etkinliği; başlat, çıkart, eşleştir, sil vb..."
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr "Boş olay işlemesi ve diğer yaygın olmayan olay işlemelerini içerir."
-
-#: pcsx2/MTGS.cpp:815
-msgid ""
-"The MTGS thread has become unresponsive while waiting for the GS plugin to "
-"open."
-msgstr ""
-"MTGS işlemcisi GS eklentisinin açılmasını beklerken yanıt vermeyi durdurdu."
-
-#: pcsx2/PluginManager.cpp:1329
-msgid "Internal Memorycard Plugin failed to initialize."
-msgstr "Hafıza kartı eklentisi başlatılamadı."
-
-#: pcsx2/gui/AppConfig.cpp:818
-msgid "Safest"
-msgstr "En Güvenli"
-
-#: pcsx2/gui/AppConfig.cpp:819
-msgid "Safe (faster)"
-msgstr "Güvenli (daha hızlı)"
-
-#: pcsx2/gui/AppConfig.cpp:820
-msgid "Balanced"
-msgstr "Dengeli"
-
-#: pcsx2/gui/AppConfig.cpp:821
-msgid "Aggressive"
-msgstr "Agresif"
-
-#: pcsx2/gui/AppConfig.cpp:822
-msgid "Aggressive plus"
-msgstr "Daha Agresif"
-
-#: pcsx2/gui/AppConfig.cpp:823
-msgid "Mostly Harmful"
-msgstr "Çoğu Zaman Zararlı"
-
-#: pcsx2/gui/ConsoleLogger.cpp:413
-msgid "Fits a lot of log in a microcosmically small area."
-msgstr "Çok küçük bir alana birçok günlük dosyası sığdırır."
-
-#: pcsx2/gui/ConsoleLogger.cpp:415
-msgid "It's what I use (the programmer guy)."
-msgstr "Benim kullandığım. :) (Geliştiricinin)"
-
-#: pcsx2/gui/ConsoleLogger.cpp:417
-msgid "Its nice and readable."
-msgstr "Güzel ve okunur."
-
-#: pcsx2/gui/ConsoleLogger.cpp:419
-msgid "In case you have a really high res display."
-msgstr "Yüksek çözünürlüklü bir ekranınız varsa."
-
-#: pcsx2/gui/ConsoleLogger.cpp:423
-msgid "Default soft-tone color scheme."
-msgstr "Varsayılan yumuşak tonlu renk şeması"
-
-#: pcsx2/gui/ConsoleLogger.cpp:424
-msgid ""
-"Classic black color scheme for people who enjoy having text seared into "
-"their optic nerves."
-msgstr "Yazıların gözüne girmesinden hoşlananlar için klasik siyah tema."
-
-#: pcsx2/gui/ConsoleLogger.cpp:428
-msgid ""
-"When checked the log window will be visible over other foreground windows."
-msgstr "Seçildiğinde günlük diğer pencerelerin önünde gözükür."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
-msgid "!ContextTip:ChangingNTFS"
-msgstr "!ContextTip:ChangingNTFS"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
-msgid ""
-"Always use this option if you want the safest and surest memory card "
-"behavior."
-msgstr "Hafıza kartını en güvenli ve kararlı yapan seçenek."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
-msgid "16 and 32 MB cards have roughly the same compatibility factor."
-msgstr "16 ve 32 MB kartlar neredeyse aynı uyumluluk oranına sahiptir."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
-msgid ""
-"Use at your own risk.  Erratic memory card behavior is possible (though "
-"unlikely)."
-msgstr ""
-"Riski size ait olmak üzere kullanın. Hafıza kartınız çıldırabilir (nadiren)."
-
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
-msgid "!ContextTip:Folders:Settings"
-msgstr "!ContextTip:Folders:Settings"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
-msgid "!Panel:HasHacksOverrides"
-msgstr "!Panel:HasHacksOverrides"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
-msgid "!Panel:HasPluginsOverrides"
-msgstr "!Panel:HasPluginsOverrides"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
-msgid "!Notice:Tooltip:Presets:Slider"
-msgstr "!Notice:Tooltip:Presets:Slider"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
-msgid "!Notice:Tooltip:Presets:Checkbox"
-msgstr "!Notice:Tooltip:Presets:Checkbox"
-
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "Olayları PS2 sanal makinesindeki gibi günlükler."
-
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
-msgid "!ContextTip:DirPicker:UseDefault"
-msgstr "!ContextTip:DirPicker:UseDefault"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
-msgid "!ContextTip:Window:Vsync"
-msgstr "!ContextTip:Window:Vsync"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:69
-msgid "!ContextTip:Window:ManagedVsync"
-msgstr "!ContextTip:Window:ManagedVsync"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:77
-msgid "!ContextTip:Window:HideMouse"
-msgstr "!ContextTip:Window:HideMouse"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
-msgid "!ContextTip:Window:Fullscreen"
-msgstr "!ContextTip:Window:Fullscreen"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:94
-msgid "!ContextTip:Window:HideGS"
-msgstr "!ContextTip:Window:HideGS"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
-msgid "!ContextTip:Gamefixes:EE Timing Hack"
-msgstr "!ContextTip:Gamefixes:EE Timing Hack"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
-msgid "!ContextTip:Gamefixes:OPH Flag hack"
-msgstr "!ContextTip:Gamefixes:OPH Flag hack"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
-msgid "!ContextTip:Gamefixes:DMA Busy hack"
-msgstr "!ContextTip:Gamefixes:DMA Busy hack"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:40
-msgid "!ContextTip:Folders:Savestates"
-msgstr "!ContextTip:Folders:Savestates"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:50
-msgid "!ContextTip:Folders:Snapshots"
-msgstr "!ContextTip:Folders:Snapshots"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:60
-msgid "!ContextTip:Folders:Logs"
-msgstr "!ContextTip:Folders:Logs"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
-msgid "!Panel:Speedhacks:EECycleX1"
-msgstr "!Panel:Speedhacks:EECycleX1"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
-msgid "!Panel:Speedhacks:EECycleX2"
-msgstr "!Panel:Speedhacks:EECycleX2"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
-msgid "!Panel:Speedhacks:EECycleX3"
-msgstr "!Panel:Speedhacks:EECycleX3"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
-msgid "!Panel:Speedhacks:VUCycleStealOff"
-msgstr "!Panel:Speedhacks:VUCycleStealOff"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
-msgid "!Panel:Speedhacks:VUCycleSteal1"
-msgstr "!Panel:Speedhacks:VUCycleSteal1"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
-msgid "!Panel:Speedhacks:VUCycleSteal2"
-msgstr "!Panel:Speedhacks:VUCycleSteal2"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
-msgid "!Panel:Speedhacks:VUCycleSteal3"
-msgstr "!Panel:Speedhacks:VUCycleSteal3"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
-msgid "!ContextTip:Speedhacks:EECycleRate Slider"
-msgstr "!ContextTip:Speedhacks:EECycleRate Slider"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
-msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
-msgstr "!ContextTip:Speedhacks:VUCycleStealing Slider"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
-msgid "!ContextTip:Speedhacks:vuFlagHack"
-msgstr "!ContextTip:Speedhacks:vuFlagHack"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr "!ContextTip:Speedhacks:vuBlockHack"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
-msgid "!ContextTip:Speedhacks:INTC"
-msgstr "!ContextTip:Speedhacks:INTC"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
-msgid "!ContextTip:Speedhacks:BIFC0"
-msgstr "!ContextTip:Speedhacks:BIFC0"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
-msgid "!ContextTip:Speedhacks:fastCDVD"
-msgstr "!ContextTip:Speedhacks:fastCDVD"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:37
-msgid "!ContextTip:Framelimiter:Disable"
-msgstr "!ContextTip:Framelimiter:Disable"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:162
-msgid ""
-"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
-"valid floating point numerics."
-msgstr ""
-"NTSC ya da PAL kare hızı ayarlarında hata. Ayarlar geçerli rakamlardan "
-"oluşmalı."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:295
-msgid ""
-"For troubleshooting potential bugs in the MTGS only, as it is potentially "
-"very slow."
-msgstr "MTGS hatalarını tespit etmek için. Çok yavaştır."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid ""
-"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
-"components."
-msgstr ""
-"Tüm GS eklenti işlemlerini devre dışı bırakır; EEcore bileşenlerini test "
-"etmek için idealdir."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
-msgid "!ContextTip:GS:SyncMTGS"
-msgstr "!ContextTip:GS:SyncMTGS"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
-msgid "!ContextTip:GS:DisableOutput"
-msgstr "!ContextTip:GS:DisableOutput"
+#~ msgid "!ContextTip:ChangingNTFS"
+#~ msgstr "!ContextTip:ChangingNTFS"
+
+#~ msgid "!ContextTip:Folders:Settings"
+#~ msgstr "!ContextTip:Folders:Settings"
+
+#~ msgid "!Panel:HasHacksOverrides"
+#~ msgstr "!Panel:HasHacksOverrides"
+
+#~ msgid "!Panel:HasPluginsOverrides"
+#~ msgstr "!Panel:HasPluginsOverrides"
+
+#~ msgid "!Notice:Tooltip:Presets:Slider"
+#~ msgstr "!Notice:Tooltip:Presets:Slider"
+
+#~ msgid "!Notice:Tooltip:Presets:Checkbox"
+#~ msgstr "!Notice:Tooltip:Presets:Checkbox"
+
+#~ msgid "!ContextTip:DirPicker:UseDefault"
+#~ msgstr "!ContextTip:DirPicker:UseDefault"
+
+#~ msgid "!ContextTip:Window:Vsync"
+#~ msgstr "!ContextTip:Window:Vsync"
+
+#~ msgid "!ContextTip:Window:ManagedVsync"
+#~ msgstr "!ContextTip:Window:ManagedVsync"
+
+#~ msgid "!ContextTip:Window:HideMouse"
+#~ msgstr "!ContextTip:Window:HideMouse"
+
+#~ msgid "!ContextTip:Window:Fullscreen"
+#~ msgstr "!ContextTip:Window:Fullscreen"
+
+#~ msgid "!ContextTip:Window:HideGS"
+#~ msgstr "!ContextTip:Window:HideGS"
+
+#~ msgid "!ContextTip:Gamefixes:EE Timing Hack"
+#~ msgstr "!ContextTip:Gamefixes:EE Timing Hack"
+
+#~ msgid "!ContextTip:Gamefixes:OPH Flag hack"
+#~ msgstr "!ContextTip:Gamefixes:OPH Flag hack"
+
+#~ msgid "!ContextTip:Gamefixes:DMA Busy hack"
+#~ msgstr "!ContextTip:Gamefixes:DMA Busy hack"
+
+#~ msgid "!ContextTip:Folders:Savestates"
+#~ msgstr "!ContextTip:Folders:Savestates"
+
+#~ msgid "!ContextTip:Folders:Snapshots"
+#~ msgstr "!ContextTip:Folders:Snapshots"
+
+#~ msgid "!ContextTip:Folders:Logs"
+#~ msgstr "!ContextTip:Folders:Logs"
+
+#~ msgid "!Panel:Speedhacks:EECycleX1"
+#~ msgstr "!Panel:Speedhacks:EECycleX1"
+
+#~ msgid "!Panel:Speedhacks:EECycleX2"
+#~ msgstr "!Panel:Speedhacks:EECycleX2"
+
+#~ msgid "!Panel:Speedhacks:EECycleX3"
+#~ msgstr "!Panel:Speedhacks:EECycleX3"
+
+#~ msgid "!Panel:Speedhacks:VUCycleStealOff"
+#~ msgstr "!Panel:Speedhacks:VUCycleStealOff"
+
+#~ msgid "!Panel:Speedhacks:VUCycleSteal1"
+#~ msgstr "!Panel:Speedhacks:VUCycleSteal1"
+
+#~ msgid "!Panel:Speedhacks:VUCycleSteal2"
+#~ msgstr "!Panel:Speedhacks:VUCycleSteal2"
+
+#~ msgid "!Panel:Speedhacks:VUCycleSteal3"
+#~ msgstr "!Panel:Speedhacks:VUCycleSteal3"
+
+#~ msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+#~ msgstr "!ContextTip:Speedhacks:EECycleRate Slider"
+
+#~ msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+#~ msgstr "!ContextTip:Speedhacks:VUCycleStealing Slider"
+
+#~ msgid "!ContextTip:Speedhacks:vuFlagHack"
+#~ msgstr "!ContextTip:Speedhacks:vuFlagHack"
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr "!ContextTip:Speedhacks:vuBlockHack"
+
+#~ msgid "!ContextTip:Speedhacks:INTC"
+#~ msgstr "!ContextTip:Speedhacks:INTC"
+
+#~ msgid "!ContextTip:Speedhacks:BIFC0"
+#~ msgstr "!ContextTip:Speedhacks:BIFC0"
+
+#~ msgid "!ContextTip:Speedhacks:fastCDVD"
+#~ msgstr "!ContextTip:Speedhacks:fastCDVD"
+
+#~ msgid "!ContextTip:Framelimiter:Disable"
+#~ msgstr "!ContextTip:Framelimiter:Disable"
+
+#~ msgid "!ContextTip:GS:SyncMTGS"
+#~ msgstr "!ContextTip:GS:SyncMTGS"
+
+#~ msgid "!ContextTip:GS:DisableOutput"
+#~ msgstr "!ContextTip:GS:DisableOutput"
 
 #~ msgid "!ContextTip:Window:FullscreenExclusive"
 #~ msgstr "!ContextTip:Window:FullscreenExclusive"

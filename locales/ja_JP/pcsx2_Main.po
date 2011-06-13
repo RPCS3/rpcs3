@@ -5,9 +5,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.7\n"
+"Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-05-01 08:17+0200\n"
+"POT-Creation-Date: 2011-06-13 15:54+0200\n"
 "PO-Revision-Date: 2011-04-30 09:01+0900\n"
 "Last-Translator: oreore\n"
 "Language-Team: \n"
@@ -22,6 +22,10 @@ msgstr ""
 "X-Poedit-Country: JAPAN\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
+
+#: common/include/Utilities/Exceptions.h:187
+msgid "No reason given."
+msgstr "不明な理由"
 
 #: common/include/Utilities/Exceptions.h:226
 msgid "Parse error"
@@ -74,6 +78,10 @@ msgid ""
 msgstr ""
 "ファイルやストリームが予期せず終了しました。恐らくファイルが破損しています。"
 
+#: common/src/Utilities/ThreadTools.cpp:41
+msgid "Threading activity: start, detach, sync, deletion, etc."
+msgstr "スレッドのアクティビティ； 開始、分離、同期、削除など"
+
 #: common/src/Utilities/ThreadingDialogs.cpp:30
 msgid "Waiting for tasks..."
 msgstr "タスク待機中…"
@@ -81,6 +89,10 @@ msgstr "タスク待機中…"
 #: common/src/Utilities/ThreadingDialogs.cpp:41
 msgid "Waiting for task..."
 msgstr "タスク待機中…"
+
+#: common/src/Utilities/wxAppWithHelpers.cpp:36
+msgid "Includes idle event processing and some other uncommon event usages."
+msgstr "アイドル状態のイベント処理と、いくつかの他の珍しいイベント"
 
 #: pcsx2/CDVD/IsoFileFormats.cpp:416
 msgid "Unrecognized ISO image file format"
@@ -100,12 +112,18 @@ msgstr ""
 "ISOイメージから読み込んだ場合、このエラーはISOイメージが未サポートか、PCSX2の"
 "ISOイメージ読み込み機能のバグの可能性があります。"
 
-#: pcsx2/PluginManager.cpp:692
+#: pcsx2/MTGS.cpp:815
+msgid ""
+"The MTGS thread has become unresponsive while waiting for the GS plugin to "
+"open."
+msgstr "GS プラグインを開くまで MTGS スレッドはしなくなる事があります。"
+
+#: pcsx2/PluginManager.cpp:694
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr "データが破損または不完全なため、ステートセーブはロードできません。"
 
-#: pcsx2/PluginManager.cpp:702
+#: pcsx2/PluginManager.cpp:704
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -114,7 +132,7 @@ msgstr ""
 "%s プラグインを開くのに失敗しました。リソース不足か、ハードウェアやデバイスの"
 "競合が原因です。"
 
-#: pcsx2/PluginManager.cpp:709
+#: pcsx2/PluginManager.cpp:711
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
@@ -123,17 +141,17 @@ msgstr ""
 "%s プラグインの初期化に失敗しました。ご使用のPCのメモリやリソース不足の可能性"
 "があります。"
 
-#: pcsx2/PluginManager.cpp:815
+#: pcsx2/PluginManager.cpp:817
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "設定した %s プラグインが見つかりませんでした。"
 
-#: pcsx2/PluginManager.cpp:819
+#: pcsx2/PluginManager.cpp:821
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr "設定した %s プラグインは有効なダイナミックライブラリではありません。"
 
-#: pcsx2/PluginManager.cpp:837
+#: pcsx2/PluginManager.cpp:839
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
@@ -142,14 +160,14 @@ msgstr ""
 "設定した %s プラグインは有効なPCSX2プラグインではありません。古いバージョン"
 "か、未サポートのプラグインです。"
 
-#: pcsx2/PluginManager.cpp:862
+#: pcsx2/PluginManager.cpp:864
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr ""
 "このプラグインはあなたのハードウェア、またはソフトウェア/ドライバでは動作しま"
 "せん。"
 
-#: pcsx2/PluginManager.cpp:883
+#: pcsx2/PluginManager.cpp:885
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
@@ -157,7 +175,7 @@ msgstr ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
 
-#: pcsx2/PluginManager.cpp:909
+#: pcsx2/PluginManager.cpp:911
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
@@ -166,7 +184,11 @@ msgstr ""
 "設定した %s プラグインは有効なPCSX2プラグインではありません。古いバージョン"
 "か、未サポートのプラグインです。"
 
-#: pcsx2/PluginManager.cpp:1726
+#: pcsx2/PluginManager.cpp:1339
+msgid "Internal Memorycard Plugin failed to initialize."
+msgstr "内蔵メモリーカードプラグインの初期化に失敗しました。"
+
+#: pcsx2/PluginManager.cpp:1736
 msgid "Unloaded Plugin"
 msgstr "プラグインのアンインストール"
 
@@ -175,6 +197,154 @@ msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr ""
 "ステートセーブを読み込めません。未知のバージョン、または未サポートのデータで"
 "す。"
+
+#: pcsx2/SourceLog.cpp:96
+msgid "Dumps detailed information for PS2 executables (ELFs)."
+msgstr "PS2実行 (ELF) ファイルの詳細情報をダンプ表示します。"
+
+#: pcsx2/SourceLog.cpp:101
+msgid ""
+"Logs manual protection, split blocks, and other things that might impact "
+"performance."
+msgstr ""
+"手動プロテクション、分割ブロック、およびパフォーマンスに影響を及ぼす可能性の"
+"ある他のソースについての情報を表示する。"
+
+#: pcsx2/SourceLog.cpp:106
+msgid "Shows the game developer's logging text (EE processor)"
+msgstr "開発者向けのログ (EEプロセッサ) を表示する。"
+
+#: pcsx2/SourceLog.cpp:111
+msgid "Shows the game developer's logging text (IOP processor)"
+msgstr "開発者向けのログ (IOPプロセッサ) を表示する。"
+
+#: pcsx2/SourceLog.cpp:116
+msgid "Shows DECI2 debugging logs (EE processor)"
+msgstr "DECI2 デバッグログ (EEプロセッサ) を表示"
+
+#: pcsx2/SourceLog.cpp:145
+msgid "SYSCALL and DECI2 activity."
+msgstr "SYSCALL と DECI2 の動作"
+
+#: pcsx2/SourceLog.cpp:151
+msgid "Direct memory accesses to unknown or unmapped EE memory space."
+msgstr ""
+"EE メモリマップの未知の領域、またはマッピングされていないアドレスへのダイレク"
+"トメモリアクセス。"
+
+#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
+msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
+msgstr "コア命令を逆アセンブルする(COPSとキャッシュを除く)。"
+
+#: pcsx2/SourceLog.cpp:163
+msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
+msgstr "COP 命令を逆アセンブル (MMU、CPU、DMAステータスなど)"
+
+#: pcsx2/SourceLog.cpp:169
+msgid "Disasm of the EE's floating point unit (FPU) only."
+msgstr "EEの浮動小数点演算ユニット (FPU) のみ逆アセンブルする。"
+
+#: pcsx2/SourceLog.cpp:175
+msgid "Disasm of the EE's VU0macro co-processor instructions."
+msgstr "EE の VU0 コプロセッサ命令を逆アセンブル"
+
+#: pcsx2/SourceLog.cpp:181
+msgid "Execution of EE cache instructions."
+msgstr "EE キャッシュ命令を実行。"
+
+#: pcsx2/SourceLog.cpp:187
+msgid ""
+"All known hardware register accesses (very slow!); not including sub filter "
+"options below."
+msgstr ""
+"全ての既知ハードウェアレジスタにアクセス(非常に低速！) ; サブフィルタオプショ"
+"ン以降は含まれません。"
+
+#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
+msgid "Logs only unknown, unmapped, or unimplemented register accesses."
+msgstr "未知か、未実装か、レジスタアクセスが実装されていない物のログ。"
+
+#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
+msgid "Logs only DMA-related registers."
+msgstr "DMA関連のレジスタのみログ。"
+
+#: pcsx2/SourceLog.cpp:205
+msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
+msgstr ""
+"IPUアクティビティ：ハードウェアレジスタ、デコード操作、DMAステータスなど"
+
+#: pcsx2/SourceLog.cpp:211
+msgid "All GIFtag parse activity; path index, tag type, etc."
+msgstr "全ての GIFtag 解析アクティビティ ; パス、インデックス、タグタイプなど"
+
+#: pcsx2/SourceLog.cpp:217
+msgid "All VIFcode processing; command, tag style, interrupts."
+msgstr "全ての VIFコード処理 ; コマンド、タグスタイル、割り込みなど"
+
+#: pcsx2/SourceLog.cpp:223
+msgid "All processing involved in Path3 Masking"
+msgstr "Path3 マスキング関係する全ての処理"
+
+#: pcsx2/SourceLog.cpp:229
+msgid "Scratchpad's MFIFO activity."
+msgstr "スクラッチパッドの MFIFO アクティビティ"
+
+#: pcsx2/SourceLog.cpp:235
+msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
+msgstr "バス調停権やストールなどの実際のデータ転送ログ"
+
+#: pcsx2/SourceLog.cpp:241
+msgid "Tracks all EE counters events and some counter register activity."
+msgstr "全ての EE カウンタイベントと、一部カウンタレジスタの動作を追跡"
+
+#: pcsx2/SourceLog.cpp:247
+msgid "Dumps various VIF and VIFcode processing data."
+msgstr "VIF と VIFコード処理データのダンプ "
+
+#: pcsx2/SourceLog.cpp:253
+msgid "Dumps various GIF and GIFtag parsing data."
+msgstr "様々な GIF や GIFtag 解析データのダンプ"
+
+#: pcsx2/SourceLog.cpp:264
+msgid "SYSCALL and IRX activity."
+msgstr "SYSCALL と IRX アクティビティ"
+
+#: pcsx2/SourceLog.cpp:270
+msgid "Direct memory accesses to unknown or unmapped IOP memory space."
+msgstr ""
+"IOP メモリマップの未知の領域、またはマッピングされていないアドレスへのダイレ"
+"クトメモリアクセス。"
+
+#: pcsx2/SourceLog.cpp:282
+msgid "Disasm of the IOP's GPU co-processor instructions."
+msgstr "IOP の GPU コプロセッサ命令の逆アセンブル。"
+
+#: pcsx2/SourceLog.cpp:288
+msgid ""
+"All known hardware register accesses, not including the sub-filters below."
+msgstr ""
+"サブフィルタオプション以降は含めない、全ての既知ハードウェアレジスタにアクセ"
+"ス"
+
+#: pcsx2/SourceLog.cpp:306
+msgid "Memorycard reads, writes, erases, terminators, and other processing."
+msgstr "メモリーカードの読み込み、書き込み、消去、ターミネイトその他の処理"
+
+#: pcsx2/SourceLog.cpp:312
+msgid "Gamepad activity on the SIO."
+msgstr "SIO上でゲームパッドの有効化"
+
+#: pcsx2/SourceLog.cpp:318
+msgid "Actual DMA event processing and data transfer logs."
+msgstr "実際の DMA イベント処理とデータ転送ログを表示"
+
+#: pcsx2/SourceLog.cpp:324
+msgid "Tracks all IOP counters events and some counter register activity."
+msgstr "全ての IOP カウンタイベントと、一部カウンタレジスタの動作を追跡"
+
+#: pcsx2/SourceLog.cpp:330
+msgid "Detailed logging of CDVD hardware."
+msgstr "CDVDハードウェアの詳細ログを表示"
 
 #: pcsx2/System.h:206 pcsx2/System.h:207 pcsx2/System.h:208
 msgid "PCSX2 Message"
@@ -187,6 +357,30 @@ msgid ""
 msgstr ""
 "ステートセーブを保存できませんでした。一時ファイルは正常に作成されましたが、"
 "データの保存ができませんでした。"
+
+#: pcsx2/gui/AppConfig.cpp:818
+msgid "Safest"
+msgstr "最も安定"
+
+#: pcsx2/gui/AppConfig.cpp:819
+msgid "Safe (faster)"
+msgstr "最も安定(高速)"
+
+#: pcsx2/gui/AppConfig.cpp:820
+msgid "Balanced"
+msgstr "バランス"
+
+#: pcsx2/gui/AppConfig.cpp:821
+msgid "Aggressive"
+msgstr "アグレッシブ"
+
+#: pcsx2/gui/AppConfig.cpp:822
+msgid "Aggressive plus"
+msgstr "アグレッシブ＋"
+
+#: pcsx2/gui/AppConfig.cpp:823
+msgid "Mostly Harmful"
+msgstr "害にしかならない"
 
 #: pcsx2/gui/AppConfig.cpp:980 pcsx2/gui/AppConfig.cpp:986
 msgid "Failed to overwrite existing settings file; permission was denied."
@@ -216,7 +410,7 @@ msgstr "PCSX2 リコンパイラ エラー"
 msgid "All options are for the current session only and will not be saved.\n"
 msgstr "全てのオプションは現在のセッション中のみ有効で保存はされません。\n"
 
-#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:291
+#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:299
 msgid "IsoFile"
 msgstr "IsoFile"
 
@@ -391,7 +585,7 @@ msgstr "ホーム(&H)"
 msgid "Show about dialog"
 msgstr "アバウトダイアログを表示します"
 
-#: pcsx2/gui/AppMain.cpp:79
+#: pcsx2/gui/AppMain.cpp:87
 msgid ""
 "\n"
 "\n"
@@ -401,35 +595,35 @@ msgstr ""
 "\n"
 "OK を押してプラグイン設定パネルを開いてください。"
 
-#: pcsx2/gui/AppMain.cpp:132 pcsx2/gui/AppMain.cpp:146
+#: pcsx2/gui/AppMain.cpp:140 pcsx2/gui/AppMain.cpp:154
 msgid ""
 "Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
 msgstr ""
 "警告！システムプラグインが読み込まれていないため、PCSX2が動作しなくなる可能性"
 "があります。"
 
-#: pcsx2/gui/AppMain.cpp:301
+#: pcsx2/gui/AppMain.cpp:309
 #, c-format
 msgid "%s Commandline Options"
 msgstr "%s コマンドラインオプション"
 
-#: pcsx2/gui/AppMain.cpp:565
+#: pcsx2/gui/AppMain.cpp:573
 msgid "PS2 BIOS Error"
 msgstr "PS2 BIOS エラー"
 
-#: pcsx2/gui/AppMain.cpp:566
+#: pcsx2/gui/AppMain.cpp:574
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr "OK を押してBIOS設定に移動してください。"
 
-#: pcsx2/gui/AppMain.cpp:618
+#: pcsx2/gui/AppMain.cpp:626
 msgid "PCSX2 Unresponsive Thread"
 msgstr "PCSX2 スレッドが応答しません"
 
-#: pcsx2/gui/AppMain.cpp:628
+#: pcsx2/gui/AppMain.cpp:636
 msgid "Terminate"
 msgstr "終了"
 
-#: pcsx2/gui/AppMain.cpp:938
+#: pcsx2/gui/AppMain.cpp:964
 msgid "Executing PS2 Virtual Machine..."
 msgstr "PS2仮想マシンを実行します..."
 
@@ -486,12 +680,24 @@ msgid "Save log question"
 msgstr "ログの問題を保存"
 
 #: pcsx2/gui/ConsoleLogger.cpp:413
+msgid "Fits a lot of log in a microcosmically small area."
+msgstr "小スペースに大量のログを表示します。"
+
+#: pcsx2/gui/ConsoleLogger.cpp:413
 msgid "Small"
 msgstr "小さく"
+
+#: pcsx2/gui/ConsoleLogger.cpp:415
+msgid "It's what I use (the programmer guy)."
+msgstr "それは私(プログラマたち)が使用します。"
 
 #: pcsx2/gui/ConsoleLogger.cpp:415 pcsx2/gui/Panels/CpuPanel.cpp:38
 msgid "Normal"
 msgstr "通常"
+
+#: pcsx2/gui/ConsoleLogger.cpp:417
+msgid "Its nice and readable."
+msgstr "読みやすくてナイスです。"
 
 #: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Large"
@@ -501,9 +707,23 @@ msgstr "大きく"
 msgid "Huge"
 msgstr "巨大に"
 
+#: pcsx2/gui/ConsoleLogger.cpp:419
+msgid "In case you have a really high res display."
+msgstr "非常に高い解像度にした場合。"
+
+#: pcsx2/gui/ConsoleLogger.cpp:423
+msgid "Default soft-tone color scheme."
+msgstr "デフォルトのソフトな配色。"
+
 #: pcsx2/gui/ConsoleLogger.cpp:423
 msgid "Light theme"
 msgstr "明るいテーマ"
+
+#: pcsx2/gui/ConsoleLogger.cpp:424
+msgid ""
+"Classic black color scheme for people who enjoy having text seared into "
+"their optic nerves."
+msgstr "クラシックな黒い配色。文字を見えやすくしたい場合などに。"
 
 #: pcsx2/gui/ConsoleLogger.cpp:424
 msgid "Dark theme"
@@ -512,6 +732,11 @@ msgstr "暗いテーマ"
 #: pcsx2/gui/ConsoleLogger.cpp:427
 msgid "Always on Top"
 msgstr "常に前面に表示"
+
+#: pcsx2/gui/ConsoleLogger.cpp:428
+msgid ""
+"When checked the log window will be visible over other foreground windows."
+msgstr "チェックするとログウィンドウを常に手前に表示します。"
 
 #: pcsx2/gui/ConsoleLogger.cpp:430
 msgid "&Save..."
@@ -634,11 +859,11 @@ msgstr "十分に見たよ"
 msgid "Assertion Failure - "
 msgstr "アサーションの失敗 -"
 
-#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:192
+#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:193
 msgid "Saves a snapshot of this settings panel to a PNG file."
 msgstr "この設定画面のスナップショットをPNGファイルで保存"
 
-#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:303
+#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:308
 msgid "Save dialog screenshots to..."
 msgstr "スナップショットの保存ダイアログ..."
 
@@ -724,6 +949,14 @@ msgid ""
 msgstr ""
 "SONY製の標準的なメモリサイズ。全てのゲームとBIOSでサポートされています。"
 
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
+msgid ""
+"Always use this option if you want the safest and surest memory card "
+"behavior."
+msgstr ""
+"メモリカードの最も安全で確実な動作を望むなら、このオプションを使用してくださ"
+"い。"
+
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:199
 msgid "16 MB"
 msgstr "16 MB"
@@ -734,6 +967,11 @@ msgid ""
 "A typical size for 3rd-party memory cards which should work with most games."
 msgstr ""
 "サードパーティ製の一般的なメモリサイズ。ほとんどのゲームで動作するはずです。"
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
+msgid "16 and 32 MB cards have roughly the same compatibility factor."
+msgstr "16 MB と 32 MB のメモリーカードの互換性は同等程度です。"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:203
 msgid "32 MB"
@@ -750,6 +988,13 @@ msgid ""
 msgstr ""
 "低互換性の警告：とても大きいメモリサイズですが、多くのゲームで動作しない可能"
 "性があります。"
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
+msgid ""
+"Use at your own risk.  Erratic memory card behavior is possible (though "
+"unlikely)."
+msgstr ""
+"不安定なメモリーカードの使用は自己責任でお願いします(運がよければ大丈夫)。"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:47
 #, c-format
@@ -906,6 +1151,10 @@ msgstr "フォルダ"
 msgid "Appearance/Themes - %s"
 msgstr "アピアランス/テーマ - %s"
 
+#: pcsx2/gui/ExecutorThread.cpp:40
+msgid "Logs events as they are passed to the PS2 virtual machine."
+msgstr "PS2 仮想マシンに渡されてからイベントを記録します。"
+
 #: pcsx2/gui/ExecutorThread.cpp:430
 msgid "Press Cancel to attempt to cancel the action."
 msgstr "キャンセルを押して操作をキャンセルします。"
@@ -919,47 +1168,47 @@ msgstr "終了を押して%sを終わらせます。"
 msgid "Terminate App"
 msgstr "終了させるアプリケーション"
 
-#: pcsx2/gui/FrameForGS.cpp:294
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "GS出力が無効です！"
 
-#: pcsx2/gui/GlobalCommands.cpp:385 pcsx2/gui/MainFrame.cpp:414
+#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:414
 msgid "Save state"
 msgstr "ステートセーブ"
 
-#: pcsx2/gui/GlobalCommands.cpp:386
+#: pcsx2/gui/GlobalCommands.cpp:388
 msgid "Saves the virtual machine state to the current slot."
 msgstr "現在のスロットにステートセーブを保存します。"
 
-#: pcsx2/gui/GlobalCommands.cpp:391 pcsx2/gui/MainFrame.cpp:413
+#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:413
 msgid "Load state"
 msgstr "ステートロード"
 
-#: pcsx2/gui/GlobalCommands.cpp:392
+#: pcsx2/gui/GlobalCommands.cpp:394
 msgid "Loads a virtual machine state from the current slot."
 msgstr "現在のスロットからステートセーブを読み込みます。"
 
-#: pcsx2/gui/GlobalCommands.cpp:397
+#: pcsx2/gui/GlobalCommands.cpp:399
 msgid "Load State Backup"
 msgstr "ステートセーブ(バックアップ)をロード"
 
-#: pcsx2/gui/GlobalCommands.cpp:398
+#: pcsx2/gui/GlobalCommands.cpp:400
 msgid "Loads virtual machine state backup for current slot."
 msgstr "現在のスロットからバックアップのステートセーブをロードする。"
 
-#: pcsx2/gui/GlobalCommands.cpp:403
+#: pcsx2/gui/GlobalCommands.cpp:405
 msgid "Cycle to next slot"
 msgstr "次のスロットへ"
 
-#: pcsx2/gui/GlobalCommands.cpp:404
+#: pcsx2/gui/GlobalCommands.cpp:406
 msgid "Cycles the current save slot in +1 fashion!"
 msgstr "ステートセーブの場所を１つ次のスロットへ移します。"
 
-#: pcsx2/gui/GlobalCommands.cpp:409
+#: pcsx2/gui/GlobalCommands.cpp:411
 msgid "Cycle to prev slot"
 msgstr "前のスロットへ"
 
-#: pcsx2/gui/GlobalCommands.cpp:410
+#: pcsx2/gui/GlobalCommands.cpp:412
 msgid "Cycles the current save slot in -1 fashion!"
 msgstr "ステートセーブの場所を１つ前のスロットへ移します。"
 
@@ -1527,8 +1776,14 @@ msgid ""
 msgstr "32bit MIPS-Iコードをjust-in-timeでx86コードに変換して実行。"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:154
-msgid "Enable EE Cache - Interpreter Only! (Slower)"
+#, fuzzy
+msgid "Enable EE Cache (Slower)"
 msgstr "EE キャッシュを有効 - インタプリタのみ(非常に低速)"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:154
+#, fuzzy
+msgid "Interpreter only; provided for diagnostic"
+msgstr "非常に遅い。診断用としてのみの用途。"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:170 pcsx2/gui/Panels/CpuPanel.cpp:223
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:110
@@ -1627,19 +1882,19 @@ msgstr ""
 msgid "Double-click toggles fullscreen mode"
 msgstr "ダブルクリックでフルスクリーンモードに切り替え"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:111
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:110
 msgid "Aspect Ratio:"
 msgstr "アスペクト比："
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:113
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:112
 msgid "Custom Window Size:"
 msgstr "カスタムウィンドウサイズ："
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:116
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:115
 msgid "Zoom:"
 msgstr "拡大率："
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:197
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:196
 msgid ""
 "Invalid window dimensions specified: Size cannot contain non-numeric digits! "
 ">_<"
@@ -1716,11 +1971,15 @@ msgstr "OPH Flag hack - 同じフレームでいつもフリーズする場合�
 msgid "Ignore DMAC writes when it is busy."
 msgstr "ビジー状態の時にDMACの書き込みを無視"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:102
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:95
+msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "Gamefixを手動で有効化 [非推奨]"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
 msgstr "全ての Gamefix を無効にするのが一番安定します。"
@@ -2217,6 +2476,14 @@ msgstr "FPS"
 msgid "PAL Framerate:"
 msgstr "PAL フレームレート："
 
+#: pcsx2/gui/Panels/VideoPanel.cpp:162
+msgid ""
+"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
+"valid floating point numerics."
+msgstr ""
+"NTSC または PAL のフレームレートの設定の解析中にエラーが発生しました。有効な"
+"浮動小数点値を入力してください。"
+
 #: pcsx2/gui/Panels/VideoPanel.cpp:180
 msgid "Disabled [default]"
 msgstr "無効 [デフォルト]"
@@ -2249,9 +2516,22 @@ msgstr "フレームスキップ"
 msgid "Use Synchronized MTGS"
 msgstr "MTGSと同期"
 
+#: pcsx2/gui/Panels/VideoPanel.cpp:295
+msgid ""
+"For troubleshooting potential bugs in the MTGS only, as it is potentially "
+"very slow."
+msgstr "MTGSに潜在的なバグがあった場合のみ有効に。非常に低速になります。"
+
 #: pcsx2/gui/Panels/VideoPanel.cpp:298
 msgid "Disable all GS output"
 msgstr "GS出力を無効"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
+msgid ""
+"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+"components."
+msgstr ""
+"GSプラグインを無効にします。EEコアコンポーネントのベンチマークに最適です。"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:316
 msgid "Frame Skipping"
@@ -2305,6 +2585,10 @@ msgstr ""
 "このステートセーブは重要なコンポーネントが見つからないためロードできません。"
 "詳細はログファイルを参照してください。"
 
+#: pcsx2/gui/i18n.cpp:63
+msgid " (default)"
+msgstr ""
+
 #: pcsx2/ps2/BiosTools.cpp:83 pcsx2/ps2/BiosTools.cpp:151
 msgid "The selected BIOS file is not a valid PS2 BIOS.  Please re-configure."
 msgstr "指定されたBIOSは有効なPS2 BIOSではありません。設定しなおしてください。"
@@ -2339,503 +2623,210 @@ msgstr ""
 "%s 拡張命令が見つかりませんでした。microVU にはMMX, SSE, SSE2 拡張命令が必要"
 "です。"
 
-#: pcsx2/SourceLog.cpp:96
-msgid "Dumps detailed information for PS2 executables (ELFs)."
-msgstr "PS2実行 (ELF) ファイルの詳細情報をダンプ表示します。"
-
-#: pcsx2/SourceLog.cpp:101
-msgid "Logs manual protection, split blocks, and other things that might impact performance."
-msgstr "手動プロテクション、分割ブロック、およびパフォーマンスに影響を及ぼす可能性のある他のソースについての情報を表示する。"
-
-#: pcsx2/SourceLog.cpp:106
-msgid "Shows the game developer's logging text (EE processor)"
-msgstr "開発者向けのログ (EEプロセッサ) を表示する。"
-
-#: pcsx2/SourceLog.cpp:111
-msgid "Shows the game developer's logging text (IOP processor)"
-msgstr "開発者向けのログ (IOPプロセッサ) を表示する。"
-
-#: pcsx2/SourceLog.cpp:116
-msgid "Shows DECI2 debugging logs (EE processor)"
-msgstr "DECI2 デバッグログ (EEプロセッサ) を表示"
-
-#: pcsx2/SourceLog.cpp:145
-msgid "SYSCALL and DECI2 activity."
-msgstr "SYSCALL と DECI2 の動作"
-
-#: pcsx2/SourceLog.cpp:151
-msgid "Direct memory accesses to unknown or unmapped EE memory space."
-msgstr "EE メモリマップの未知の領域、またはマッピングされていないアドレスへのダイレクトメモリアクセス。"
-
-#: pcsx2/SourceLog.cpp:157
-#: pcsx2/SourceLog.cpp:276
-msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
-msgstr "コア命令を逆アセンブルする(COPSとキャッシュを除く)。"
-
-#: pcsx2/SourceLog.cpp:163
-msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
-msgstr "COP 命令を逆アセンブル (MMU、CPU、DMAステータスなど)"
-
-#: pcsx2/SourceLog.cpp:169
-msgid "Disasm of the EE's floating point unit (FPU) only."
-msgstr "EEの浮動小数点演算ユニット (FPU) のみ逆アセンブルする。"
-
-#: pcsx2/SourceLog.cpp:175
-msgid "Disasm of the EE's VU0macro co-processor instructions."
-msgstr "EE の VU0 コプロセッサ命令を逆アセンブル"
-
-#: pcsx2/SourceLog.cpp:181
-msgid "Execution of EE cache instructions."
-msgstr "EE キャッシュ命令を実行。"
-
-#: pcsx2/SourceLog.cpp:187
-msgid "All known hardware register accesses (very slow!); not including sub filter options below."
-msgstr "全ての既知ハードウェアレジスタにアクセス(非常に低速！) ; サブフィルタオプション以降は含まれません。"
-
-#: pcsx2/SourceLog.cpp:193
-#: pcsx2/SourceLog.cpp:294
-msgid "Logs only unknown, unmapped, or unimplemented register accesses."
-msgstr "未知か、未実装か、レジスタアクセスが実装されていない物のログ。"
-
-#: pcsx2/SourceLog.cpp:199
-#: pcsx2/SourceLog.cpp:300
-msgid "Logs only DMA-related registers."
-msgstr "DMA関連のレジスタのみログ。"
-
-#: pcsx2/SourceLog.cpp:205
-msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
-msgstr "IPUアクティビティ：ハードウェアレジスタ、デコード操作、DMAステータスなど"
-
-#: pcsx2/SourceLog.cpp:211
-msgid "All GIFtag parse activity; path index, tag type, etc."
-msgstr "全ての GIFtag 解析アクティビティ ; パス、インデックス、タグタイプなど"
-
-#: pcsx2/SourceLog.cpp:217
-msgid "All VIFcode processing; command, tag style, interrupts."
-msgstr "全ての VIFコード処理 ; コマンド、タグスタイル、割り込みなど"
-
-#: pcsx2/SourceLog.cpp:223
-msgid "All processing involved in Path3 Masking"
-msgstr "Path3 マスキング関係する全ての処理"
-
-#: pcsx2/SourceLog.cpp:229
-msgid "Scratchpad's MFIFO activity."
-msgstr "スクラッチパッドの MFIFO アクティビティ"
-
-#: pcsx2/SourceLog.cpp:235
-msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
-msgstr "バス調停権やストールなどの実際のデータ転送ログ"
-
-#: pcsx2/SourceLog.cpp:241
-msgid "Tracks all EE counters events and some counter register activity."
-msgstr "全ての EE カウンタイベントと、一部カウンタレジスタの動作を追跡"
-
-#: pcsx2/SourceLog.cpp:247
-msgid "Dumps various VIF and VIFcode processing data."
-msgstr "VIF と VIFコード処理データのダンプ "
-
-#: pcsx2/SourceLog.cpp:253
-msgid "Dumps various GIF and GIFtag parsing data."
-msgstr "様々な GIF や GIFtag 解析データのダンプ"
-
-#: pcsx2/SourceLog.cpp:264
-msgid "SYSCALL and IRX activity."
-msgstr "SYSCALL と IRX アクティビティ"
-
-#: pcsx2/SourceLog.cpp:270
-msgid "Direct memory accesses to unknown or unmapped IOP memory space."
-msgstr "IOP メモリマップの未知の領域、またはマッピングされていないアドレスへのダイレクトメモリアクセス。"
-
-#: pcsx2/SourceLog.cpp:282
-msgid "Disasm of the IOP's GPU co-processor instructions."
-msgstr "IOP の GPU コプロセッサ命令の逆アセンブル。"
-
-#: pcsx2/SourceLog.cpp:288
-msgid "All known hardware register accesses, not including the sub-filters below."
-msgstr "サブフィルタオプション以降は含めない、全ての既知ハードウェアレジスタにアクセス"
-
-#: pcsx2/SourceLog.cpp:306
-msgid "Memorycard reads, writes, erases, terminators, and other processing."
-msgstr "メモリーカードの読み込み、書き込み、消去、ターミネイトその他の処理"
-
-#: pcsx2/SourceLog.cpp:312
-msgid "Gamepad activity on the SIO."
-msgstr "SIO上でゲームパッドの有効化"
-
-#: pcsx2/SourceLog.cpp:318
-msgid "Actual DMA event processing and data transfer logs."
-msgstr "実際の DMA イベント処理とデータ転送ログを表示"
-
-#: pcsx2/SourceLog.cpp:324
-msgid "Tracks all IOP counters events and some counter register activity."
-msgstr "全ての IOP カウンタイベントと、一部カウンタレジスタの動作を追跡"
-
-#: pcsx2/SourceLog.cpp:330
-msgid "Detailed logging of CDVD hardware."
-msgstr "CDVDハードウェアの詳細ログを表示"
-
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr "不明な理由"
-
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "スレッドのアクティビティ； 開始、分離、同期、削除など"
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr "アイドル状態のイベント処理と、いくつかの他の珍しいイベント"
-
-#: pcsx2/MTGS.cpp:815
-msgid ""
-"The MTGS thread has become unresponsive while waiting for the GS plugin to "
-"open."
-msgstr "GS プラグインを開くまで MTGS スレッドはしなくなる事があります。"
-
-#: pcsx2/PluginManager.cpp:1329
-msgid "Internal Memorycard Plugin failed to initialize."
-msgstr "内蔵メモリーカードプラグインの初期化に失敗しました。"
-
-#: pcsx2/gui/AppConfig.cpp:818
-msgid "Safest"
-msgstr "最も安定"
-
-#: pcsx2/gui/AppConfig.cpp:819
-msgid "Safe (faster)"
-msgstr "最も安定(高速)"
-
-#: pcsx2/gui/AppConfig.cpp:820
-msgid "Balanced"
-msgstr "バランス"
-
-#: pcsx2/gui/AppConfig.cpp:821
-msgid "Aggressive"
-msgstr "アグレッシブ"
-
-#: pcsx2/gui/AppConfig.cpp:822
-msgid "Aggressive plus"
-msgstr "アグレッシブ＋"
-
-#: pcsx2/gui/AppConfig.cpp:823
-msgid "Mostly Harmful"
-msgstr "害にしかならない"
-
-#: pcsx2/gui/ConsoleLogger.cpp:413
-msgid "Fits a lot of log in a microcosmically small area."
-msgstr "小スペースに大量のログを表示します。"
-
-#: pcsx2/gui/ConsoleLogger.cpp:415
-msgid "It's what I use (the programmer guy)."
-msgstr "それは私(プログラマたち)が使用します。"
-
-#: pcsx2/gui/ConsoleLogger.cpp:417
-msgid "Its nice and readable."
-msgstr "読みやすくてナイスです。"
-
-#: pcsx2/gui/ConsoleLogger.cpp:419
-msgid "In case you have a really high res display."
-msgstr "非常に高い解像度にした場合。"
-
-#: pcsx2/gui/ConsoleLogger.cpp:423
-msgid "Default soft-tone color scheme."
-msgstr "デフォルトのソフトな配色。"
-
-#: pcsx2/gui/ConsoleLogger.cpp:424
-msgid ""
-"Classic black color scheme for people who enjoy having text seared into "
-"their optic nerves."
-msgstr "クラシックな黒い配色。文字を見えやすくしたい場合などに。"
-
-#: pcsx2/gui/ConsoleLogger.cpp:428
-msgid ""
-"When checked the log window will be visible over other foreground windows."
-msgstr "チェックするとログウィンドウを常に手前に表示します。"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
-msgid "!ContextTip:ChangingNTFS"
-msgstr ""
-"NTFS 圧縮の設定は、Windowsのエクスプローラーでファイルのプロパティを開くこと"
-"でいつでも変更できます。"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
-msgid ""
-"Always use this option if you want the safest and surest memory card "
-"behavior."
-msgstr ""
-"メモリカードの最も安全で確実な動作を望むなら、このオプションを使用してくださ"
-"い。"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
-msgid "16 and 32 MB cards have roughly the same compatibility factor."
-msgstr "16 MB と 32 MB のメモリーカードの互換性は同等程度です。"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
-msgid ""
-"Use at your own risk.  Erratic memory card behavior is possible (though "
-"unlikely)."
-msgstr ""
-"不安定なメモリーカードの使用は自己責任でお願いします(運がよければ大丈夫)。"
-
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
-msgid "!ContextTip:Folders:Settings"
-msgstr ""
-"このフォルダはプラグインを含む PCSX2 のほとんどの設定ファイルを保存するフォル"
-"ダです。\n"
-"(一部の古いプラグインはこの設定を利用しない可能性があります)"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
-msgid "!Panel:HasHacksOverrides"
-msgstr ""
-"警告！コマンドラインオプションを使用して PCSX2 の設定上書きして実行していま"
-"す。コマンドラインオプションは設定ダイアログには反映されず、設定を変更しても"
-"無効になります。"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
-msgid "!Panel:HasPluginsOverrides"
-msgstr ""
-"警告！コマンドラインオプションを使用して PCSX2 のプラグイン設定上書きして実行"
-"しています。コマンドラインオプションは設定ダイアログには反映されず、設定を変"
-"更しても無効になります。"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
-msgid "!Notice:Tooltip:Presets:Slider"
-msgstr ""
-"プリセットを有効にするといくつかのSpeedhack、コンパイラオプション、既知の "
-"Gamefix を適用して速度を向上させます。\n"
-"既知の重要な Gamefix は自動で有効になります。\n"
-"\n"
-"プリセットの内容\n"
-"1 -     最も精密にエミュレーションを行います。\n"
-"3 --> 互換性とスピードのバランスを取ってエミュレーションを行います。\n"
-"4 -     より積極的に hack を行います。\n"
-"6 -     hack のしすぎで多くの場合は速度の低下が起きてしまいます。"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
-msgid "!Notice:Tooltip:Presets:Checkbox"
-msgstr ""
-"プリセットを有効にするといくつかのSpeedhack、コンパイラオプション、既知の "
-"Gamefix を適用して速度を向上させます。\n"
-"既知の重要な Gamefix は自動で有効になります。\n"
-"\n"
-"-->チェックを外すと、手動で(現在のプリセットを元にして)設定することができま"
-"す。"
-
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "PS2 仮想マシンに渡されてからイベントを記録します。"
-
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
-msgid "!ContextTip:DirPicker:UseDefault"
-msgstr ""
-"チェックをすると、このフォルダをPCSX2の現在のユーザーモードのデフォルト設定が"
-"自動的に反映されます。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
-msgid "!ContextTip:Window:Vsync"
-msgstr ""
-"VSYNC を同期させるとティアリング現象を解消できますが、パフォーマンスに重大な"
-"問題が発生します。\n"
-"通常はフルスクリーンモードでのみ使用します。また一部の GS プラグインでは機能"
-"しない可能性があります。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:69
-msgid "!ContextTip:Window:ManagedVsync"
-msgstr ""
-"フレームレートが最速の時に VSYNC を有効にします。最速でない場合は速度の低下を"
-"防ぐために無効にします。\n"
-"注意：現時点ではDX10/11ハードウェアレンダリングで GSdx を使用している時のみ動"
-"作します。\n"
-"他のプラグインやレンダリングモードでは無視されるか、黒いフレームが挿入され点"
-"滅が起こります。\n"
-"またVSYNCと同期する設定を有効にする必要があります。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:77
-msgid "!ContextTip:Window:HideMouse"
-msgstr ""
-"GS ウィンドウ上でマウスを強制的に非表示にします。マウス操作がメインのゲームで"
-"有効にすると便利です。\n"
-"デフォルトでは操作をしないで2秒経過するとマウスを自動で非表示にします。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
-msgid "!ContextTip:Window:Fullscreen"
-msgstr ""
-"ゲームを始めた時や再開した時に自動的にフルスクリーンになります。\n"
-"フルスクリーンにはAlt+Enterキーでいつでも切り替えができます。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:94
-msgid "!ContextTip:Window:HideGS"
-msgstr "ESC を押したりしてゲームを一時停止した時にGSウィンドウを閉じます。"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
-msgid "!ContextTip:Gamefixes:EE Timing Hack"
-msgstr ""
-"以下のゲームに効果があります。\n"
-" * デジタルデビルサーガ (FMVでのクラッシュの問題)\n"
-" * SSX (グラフィックの不具合やクラッシュの問題)\n"
-" * バイオハザード ガンサバイバー4 (テクスチャの問題)"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
-msgid "!ContextTip:Gamefixes:OPH Flag hack"
-msgstr ""
-"以下のゲームに効果があります。\n"
-" * BLEACH～ブレイド・バトラーズ～\n"
-" * グローランサー2＆3\n"
-" * Wizardry"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
-msgid "!ContextTip:Gamefixes:DMA Busy hack"
-msgstr ""
-"以下のゲームに効果があります。\n"
-" * マナケミア～学園の錬金術士たち～"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:40
-msgid "!ContextTip:Folders:Savestates"
-msgstr ""
-"このフォルダは PCSX2 のステートセーブの保存場所です。\n"
-"メニューまたはツールバーを使うか、F1/F3(セーブ/ロード)キーで操作します。"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:50
-msgid "!ContextTip:Folders:Snapshots"
-msgstr ""
-"このフォルダは PCSX2 のスナップショットの保存場所です。ご使用の GS プラグイン"
-"によってはサイズや形式が違うかもしれません。"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:60
-msgid "!ContextTip:Folders:Logs"
-msgstr ""
-"このフォルダは PCSX2 のログとダンプデータの保存場所です。一部の古いプラグイン"
-"はこの設定を利用しない可能性があります。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
-msgid "!Panel:Speedhacks:EECycleX1"
-msgstr ""
-"1 - 通常のサイクルレート。これは実機のPS2の EmotionEngine の速度に近いもので"
-"す。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
-msgid "!Panel:Speedhacks:EECycleX2"
-msgstr ""
-"2 - EEのサイクルレートを約33%低下。多くのゲームで互換性を維持したままある程度"
-"のスピードアップ出来ます。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
-msgid "!Panel:Speedhacks:EECycleX3"
-msgstr ""
-"2 - EEのサイクルレートを約50%低下。中々の高速化が期待できますが *恐らく* FMV"
-"で音声の途切れる原因にもなります。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
-msgid "!Panel:Speedhacks:VUCycleStealOff"
-msgstr "0 - VU ｻｲｸﾙｽﾃｨｰﾘﾝｸﾞ無効。最も互換性の高い設定！"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
-msgid "!Panel:Speedhacks:VUCycleSteal1"
-msgstr ""
-"1 - 少しだけVU ｻｲｸﾙｽﾃｨｰﾘﾝｸﾞ実行。互換性は下がりますがほとんどのゲームで若干の"
-"高速化します。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
-msgid "!Panel:Speedhacks:VUCycleSteal2"
-msgstr ""
-"2 - 適度にVU ｻｲｸﾙｽﾃｨｰﾘﾝｸﾞ実行。より互換性は下がりますがいくつかのゲームで大幅"
-"に高速化します。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
-msgid "!Panel:Speedhacks:VUCycleSteal3"
-msgstr ""
-"3 - 限界までVU ｻｲｸﾙｽﾃｨｰﾘﾝｸﾞ実行。画面のちらつきが発生し多くのゲームで速度の低"
-"下かが起こるため有用性は限定的。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
-msgid "!ContextTip:Speedhacks:EECycleRate Slider"
-msgstr ""
-"このスライドバーを上げるとEmotionEngineのR5900コアCPUのクロックを下げる代わり"
-"に大きな高速化を行い、\n"
-"PS2ハードウェアの機能を最大限利用していないゲームの高速化に有用です。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
-msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
-msgstr ""
-"このスライドバーを上げるとEmotionEngineのVUユニットからスティーリングを行いま"
-"す。\n"
-"高い設定にするほどｻｲｸﾙｽﾃｨｰﾘﾝｸﾞを行う量が増加します。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
-msgid "!ContextTip:Speedhacks:vuFlagHack"
-msgstr ""
-"常時ではなくブロックされた時のみフラグステータスを更新します。\n"
-"ほとんどの安全であり、SuperVUにも同様の動作をさせます。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr ""
-"遠い将来にインスタンスデータの古いフラグを必要としないと仮定しています。\n"
-"かなり安全なはずです。どんなゲームに不具合が起きるかは不明ですが..."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
-msgid "!ContextTip:Speedhacks:INTC"
-msgstr ""
-"このhackは主に非3D系RPGにある INTC ステータスレジスタを使用しVSYNC待ちをする"
-"ゲームに最適です。\n"
-"効果がなかった場合には使用しないでください。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
-msgid "!ContextTip:Speedhacks:BIFC0"
-msgstr ""
-"主にEEのカーネル空間のアドレス 0x81FC0 のアイドルループ処理を対象にしていま"
-"す。\n"
-"このhackは別ユニットによるエミュレーションのイベントトリガまでの間に、状態が"
-"同じである事を検出します。\n"
-"このようなループを1度だけ繰り返したあと、次のイベントかﾀｲﾑｽﾗｲｽの終りのいずれ"
-"か早いほうに進みます。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
-msgid "!ContextTip:Speedhacks:fastCDVD"
-msgstr ""
-"この問題を抱えている既知のゲーム用の設定。\n"
-"HDLoader互換性リストを参照してください(主に'MODE 1'や'低速DVD'など)"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:37
-msgid "!ContextTip:Framelimiter:Disable"
-msgstr ""
-"フレームリミットを無効にした場合、スローモーションモードとターボモードは使用"
-"できません。"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:162
-msgid ""
-"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
-"valid floating point numerics."
-msgstr ""
-"NTSC または PAL のフレームレートの設定の解析中にエラーが発生しました。有効な"
-"浮動小数点値を入力してください。"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:295
-msgid ""
-"For troubleshooting potential bugs in the MTGS only, as it is potentially "
-"very slow."
-msgstr "MTGSに潜在的なバグがあった場合のみ有効に。非常に低速になります。"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid ""
-"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
-"components."
-msgstr ""
-"GSプラグインを無効にします。EEコアコンポーネントのベンチマークに最適です。"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
-msgid "!ContextTip:GS:SyncMTGS"
-msgstr ""
-"映像の不具合の原因が MTGS スレッドの同期によるものだと思われる場合有効にして"
-"ください。"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
-msgid "!ContextTip:GS:DisableOutput"
-msgstr ""
-"MTGSスレッドかGPUオーバーヘッドによって発生されたベンチマークノイズを除去しま"
-"す。このオプションはステートセーブと併用するのが最良です。； 最適な場面でス"
-"テートセーブを行い、このオプションを有効にしてリロードします。\n"
-"\n"
-"警告：このオプションはいつでも有効にすることができますが、動作中に無効にでき"
-"ません(映像に悪影響を与えます)。"
+#~ msgid "!ContextTip:ChangingNTFS"
+#~ msgstr ""
+#~ "NTFS 圧縮の設定は、Windowsのエクスプローラーでファイルのプロパティを開くこ"
+#~ "とでいつでも変更できます。"
+
+#~ msgid "!ContextTip:Folders:Settings"
+#~ msgstr ""
+#~ "このフォルダはプラグインを含む PCSX2 のほとんどの設定ファイルを保存する"
+#~ "フォルダです。\n"
+#~ "(一部の古いプラグインはこの設定を利用しない可能性があります)"
+
+#~ msgid "!Panel:HasHacksOverrides"
+#~ msgstr ""
+#~ "警告！コマンドラインオプションを使用して PCSX2 の設定上書きして実行してい"
+#~ "ます。コマンドラインオプションは設定ダイアログには反映されず、設定を変更し"
+#~ "ても無効になります。"
+
+#~ msgid "!Panel:HasPluginsOverrides"
+#~ msgstr ""
+#~ "警告！コマンドラインオプションを使用して PCSX2 のプラグイン設定上書きして"
+#~ "実行しています。コマンドラインオプションは設定ダイアログには反映されず、設"
+#~ "定を変更しても無効になります。"
+
+#~ msgid "!Notice:Tooltip:Presets:Slider"
+#~ msgstr ""
+#~ "プリセットを有効にするといくつかのSpeedhack、コンパイラオプション、既知の "
+#~ "Gamefix を適用して速度を向上させます。\n"
+#~ "既知の重要な Gamefix は自動で有効になります。\n"
+#~ "\n"
+#~ "プリセットの内容\n"
+#~ "1 -     最も精密にエミュレーションを行います。\n"
+#~ "3 --> 互換性とスピードのバランスを取ってエミュレーションを行います。\n"
+#~ "4 -     より積極的に hack を行います。\n"
+#~ "6 -     hack のしすぎで多くの場合は速度の低下が起きてしまいます。"
+
+#~ msgid "!Notice:Tooltip:Presets:Checkbox"
+#~ msgstr ""
+#~ "プリセットを有効にするといくつかのSpeedhack、コンパイラオプション、既知の "
+#~ "Gamefix を適用して速度を向上させます。\n"
+#~ "既知の重要な Gamefix は自動で有効になります。\n"
+#~ "\n"
+#~ "-->チェックを外すと、手動で(現在のプリセットを元にして)設定することができ"
+#~ "ます。"
+
+#~ msgid "!ContextTip:DirPicker:UseDefault"
+#~ msgstr ""
+#~ "チェックをすると、このフォルダをPCSX2の現在のユーザーモードのデフォルト設"
+#~ "定が自動的に反映されます。"
+
+#~ msgid "!ContextTip:Window:Vsync"
+#~ msgstr ""
+#~ "VSYNC を同期させるとティアリング現象を解消できますが、パフォーマンスに重大"
+#~ "な問題が発生します。\n"
+#~ "通常はフルスクリーンモードでのみ使用します。また一部の GS プラグインでは機"
+#~ "能しない可能性があります。"
+
+#~ msgid "!ContextTip:Window:ManagedVsync"
+#~ msgstr ""
+#~ "フレームレートが最速の時に VSYNC を有効にします。最速でない場合は速度の低"
+#~ "下を防ぐために無効にします。\n"
+#~ "注意：現時点ではDX10/11ハードウェアレンダリングで GSdx を使用している時の"
+#~ "み動作します。\n"
+#~ "他のプラグインやレンダリングモードでは無視されるか、黒いフレームが挿入され"
+#~ "点滅が起こります。\n"
+#~ "またVSYNCと同期する設定を有効にする必要があります。"
+
+#~ msgid "!ContextTip:Window:HideMouse"
+#~ msgstr ""
+#~ "GS ウィンドウ上でマウスを強制的に非表示にします。マウス操作がメインのゲー"
+#~ "ムで有効にすると便利です。\n"
+#~ "デフォルトでは操作をしないで2秒経過するとマウスを自動で非表示にします。"
+
+#~ msgid "!ContextTip:Window:Fullscreen"
+#~ msgstr ""
+#~ "ゲームを始めた時や再開した時に自動的にフルスクリーンになります。\n"
+#~ "フルスクリーンにはAlt+Enterキーでいつでも切り替えができます。"
+
+#~ msgid "!ContextTip:Window:HideGS"
+#~ msgstr "ESC を押したりしてゲームを一時停止した時にGSウィンドウを閉じます。"
+
+#~ msgid "!ContextTip:Gamefixes:EE Timing Hack"
+#~ msgstr ""
+#~ "以下のゲームに効果があります。\n"
+#~ " * デジタルデビルサーガ (FMVでのクラッシュの問題)\n"
+#~ " * SSX (グラフィックの不具合やクラッシュの問題)\n"
+#~ " * バイオハザード ガンサバイバー4 (テクスチャの問題)"
+
+#~ msgid "!ContextTip:Gamefixes:OPH Flag hack"
+#~ msgstr ""
+#~ "以下のゲームに効果があります。\n"
+#~ " * BLEACH～ブレイド・バトラーズ～\n"
+#~ " * グローランサー2＆3\n"
+#~ " * Wizardry"
+
+#~ msgid "!ContextTip:Gamefixes:DMA Busy hack"
+#~ msgstr ""
+#~ "以下のゲームに効果があります。\n"
+#~ " * マナケミア～学園の錬金術士たち～"
+
+#~ msgid "!ContextTip:Folders:Savestates"
+#~ msgstr ""
+#~ "このフォルダは PCSX2 のステートセーブの保存場所です。\n"
+#~ "メニューまたはツールバーを使うか、F1/F3(セーブ/ロード)キーで操作します。"
+
+#~ msgid "!ContextTip:Folders:Snapshots"
+#~ msgstr ""
+#~ "このフォルダは PCSX2 のスナップショットの保存場所です。ご使用の GS プラグ"
+#~ "インによってはサイズや形式が違うかもしれません。"
+
+#~ msgid "!ContextTip:Folders:Logs"
+#~ msgstr ""
+#~ "このフォルダは PCSX2 のログとダンプデータの保存場所です。一部の古いプラグ"
+#~ "インはこの設定を利用しない可能性があります。"
+
+#~ msgid "!Panel:Speedhacks:EECycleX1"
+#~ msgstr ""
+#~ "1 - 通常のサイクルレート。これは実機のPS2の EmotionEngine の速度に近いもの"
+#~ "です。"
+
+#~ msgid "!Panel:Speedhacks:EECycleX2"
+#~ msgstr ""
+#~ "2 - EEのサイクルレートを約33%低下。多くのゲームで互換性を維持したままある"
+#~ "程度のスピードアップ出来ます。"
+
+#~ msgid "!Panel:Speedhacks:EECycleX3"
+#~ msgstr ""
+#~ "2 - EEのサイクルレートを約50%低下。中々の高速化が期待できますが *恐らく* "
+#~ "FMVで音声の途切れる原因にもなります。"
+
+#~ msgid "!Panel:Speedhacks:VUCycleStealOff"
+#~ msgstr "0 - VU ｻｲｸﾙｽﾃｨｰﾘﾝｸﾞ無効。最も互換性の高い設定！"
+
+#~ msgid "!Panel:Speedhacks:VUCycleSteal1"
+#~ msgstr ""
+#~ "1 - 少しだけVU ｻｲｸﾙｽﾃｨｰﾘﾝｸﾞ実行。互換性は下がりますがほとんどのゲームで若"
+#~ "干の高速化します。"
+
+#~ msgid "!Panel:Speedhacks:VUCycleSteal2"
+#~ msgstr ""
+#~ "2 - 適度にVU ｻｲｸﾙｽﾃｨｰﾘﾝｸﾞ実行。より互換性は下がりますがいくつかのゲームで"
+#~ "大幅に高速化します。"
+
+#~ msgid "!Panel:Speedhacks:VUCycleSteal3"
+#~ msgstr ""
+#~ "3 - 限界までVU ｻｲｸﾙｽﾃｨｰﾘﾝｸﾞ実行。画面のちらつきが発生し多くのゲームで速度"
+#~ "の低下かが起こるため有用性は限定的。"
+
+#~ msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+#~ msgstr ""
+#~ "このスライドバーを上げるとEmotionEngineのR5900コアCPUのクロックを下げる代"
+#~ "わりに大きな高速化を行い、\n"
+#~ "PS2ハードウェアの機能を最大限利用していないゲームの高速化に有用です。"
+
+#~ msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+#~ msgstr ""
+#~ "このスライドバーを上げるとEmotionEngineのVUユニットからスティーリングを行"
+#~ "います。\n"
+#~ "高い設定にするほどｻｲｸﾙｽﾃｨｰﾘﾝｸﾞを行う量が増加します。"
+
+#~ msgid "!ContextTip:Speedhacks:vuFlagHack"
+#~ msgstr ""
+#~ "常時ではなくブロックされた時のみフラグステータスを更新します。\n"
+#~ "ほとんどの安全であり、SuperVUにも同様の動作をさせます。"
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr ""
+#~ "遠い将来にインスタンスデータの古いフラグを必要としないと仮定しています。\n"
+#~ "かなり安全なはずです。どんなゲームに不具合が起きるかは不明ですが..."
+
+#~ msgid "!ContextTip:Speedhacks:INTC"
+#~ msgstr ""
+#~ "このhackは主に非3D系RPGにある INTC ステータスレジスタを使用しVSYNC待ちをす"
+#~ "るゲームに最適です。\n"
+#~ "効果がなかった場合には使用しないでください。"
+
+#~ msgid "!ContextTip:Speedhacks:BIFC0"
+#~ msgstr ""
+#~ "主にEEのカーネル空間のアドレス 0x81FC0 のアイドルループ処理を対象にしてい"
+#~ "ます。\n"
+#~ "このhackは別ユニットによるエミュレーションのイベントトリガまでの間に、状態"
+#~ "が同じである事を検出します。\n"
+#~ "このようなループを1度だけ繰り返したあと、次のイベントかﾀｲﾑｽﾗｲｽの終りのいず"
+#~ "れか早いほうに進みます。"
+
+#~ msgid "!ContextTip:Speedhacks:fastCDVD"
+#~ msgstr ""
+#~ "この問題を抱えている既知のゲーム用の設定。\n"
+#~ "HDLoader互換性リストを参照してください(主に'MODE 1'や'低速DVD'など)"
+
+#~ msgid "!ContextTip:Framelimiter:Disable"
+#~ msgstr ""
+#~ "フレームリミットを無効にした場合、スローモーションモードとターボモードは使"
+#~ "用できません。"
+
+#~ msgid "!ContextTip:GS:SyncMTGS"
+#~ msgstr ""
+#~ "映像の不具合の原因が MTGS スレッドの同期によるものだと思われる場合有効にし"
+#~ "てください。"
+
+#~ msgid "!ContextTip:GS:DisableOutput"
+#~ msgstr ""
+#~ "MTGSスレッドかGPUオーバーヘッドによって発生されたベンチマークノイズを除去"
+#~ "します。このオプションはステートセーブと併用するのが最良です。； 最適な場"
+#~ "面でステートセーブを行い、このオプションを有効にしてリロードします。\n"
+#~ "\n"
+#~ "警告：このオプションはいつでも有効にすることができますが、動作中に無効にで"
+#~ "きません(映像に悪影響を与えます)。"

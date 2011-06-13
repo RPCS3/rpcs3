@@ -2,12 +2,12 @@
 # Copyright (C) 2002-2011 PCSX2_Dev_Team
 # This file is distributed under the same license as the PCSX2 package.
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2011.
-# 
+#
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.7\n"
+"Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-04-01 20:15+0200\n"
+"POT-Creation-Date: 2011-06-13 15:55+0200\n"
 "PO-Revision-Date: 2011-03-28 13:31+0100\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Zbyněk Schwarz\n"
@@ -70,14 +70,14 @@ msgstr ""
 "výrazně zlepšují rychlost emulace. Možná budete muset ruřne rekompilátory "
 "znovu zapnout, pokud vyřešíte chyby."
 
-#: pcsx2/gui/AppMain.cpp:538
+#: pcsx2/gui/AppMain.cpp:546
 msgid "!Notice:BiosDumpRequired"
 msgstr ""
 "PCSX2 vyžaduje ke spuštění BIOS PS2. Z právních důvodů *musíte* BIOS získat "
 "ze skutečného PS2, které vlastníte (půjčení se nepočítá). Podívejte se "
 "prosím na Nejčastější Otázky a Průvodce pro další instrukce."
 
-#: pcsx2/gui/AppMain.cpp:621
+#: pcsx2/gui/AppMain.cpp:629
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr ""
 "'Ignorovat' pro pokračování čekání na odpověď vlákna.\n"
@@ -92,6 +92,19 @@ msgstr ""
 "schopnost samo si potřebné adresáře vytvořit. Pokud nemáte na tomto počítači "
 "správcovská oprávnění, pak budete muset přepnout do režimu Uživatelských "
 "Dokumentů (klikněte na tlačítko níže)."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
+msgid "!ContextTip:ChangingNTFS"
+msgstr ""
+"Komprese NTFS může být kdykoliv ručně změněna použitím vlastností souboru z "
+"Průzkumníku Windows."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+msgid "!ContextTip:Folders:Settings"
+msgstr ""
+"Do tohoto adresáře PCSX2 ukládá Vaše nastavení, zahrnující i nastavení "
+"vytvořená většinou zásuvných modulů (některé starší moduly nemusí tuto "
+"hodnotu respektovat)."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
 msgid "!Panel:Folders:Settings"
@@ -140,6 +153,45 @@ msgid "!Panel:StuckThread:Heading"
 msgstr ""
 "Vlákno '%s' neodpovídá. Mohlo uváznout, nebo prostě běží *velmi* pomalu."
 
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid "!Panel:HasHacksOverrides"
+msgstr ""
+"Varování! Spouštíte PCSX2 s volbami příkazového řádku, které potlačují Vaše "
+"uložená nastavení. Tyto volby příkazového řádku se nebudou odrážet v "
+"dialogovém okně Nastavení a budou zrušeny, pokud zde použijete jakékoli "
+"změny."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr ""
+"Varování! Spouštíte PCSX2 s volbami příkazového řádku, které potlačují Vaše "
+"uložená nastavení zásuvných modulů a/nebo adresářů. Tyto volby příkazového "
+"řádku se nebudou odrážet v dialogovém okně Nastavení a budou zrušeny, když "
+"zde použijete jakékoli změny nastavení."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+"Předvolby použijí hacky rychlosti, některá nastavení rekompilátoru a některé "
+"opravy her známé tím, že zvyšují rychlost.\n"
+"Známé důležité opravy budou použity automaticky.\n"
+"\n"
+"Informace o předvolbách:\n"
+"1 --> Nejpřesnější emulace, ale také nejpomalejší.\n"
+"3 --> Pokouší se vyvážit rychlost a kompatibilitu.\n"
+"4 --> Některé agresivní hacky.\n"
+"6 --> Příliš mnoho hacků, což pravděpodobně zpomalí většinu her."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+msgid "!Notice:Tooltip:Presets:Checkbox"
+msgstr ""
+"Předvolby použijí hacky rychlosti, některá nastavení rekompilátoru a některé "
+"opravy her známé tím, že zvyšují rychlost.\n"
+"Známé důležité opravy budou použity automaticky.\n"
+"\n"
+" --> Odškrtněte pro ruční změnu nastavení (se současnými předvolbami jako "
+"základ)"
+
 #: pcsx2/gui/IsoDropTarget.cpp:28
 msgid "!Notice:ConfirmSysReset"
 msgstr ""
@@ -182,7 +234,89 @@ msgstr "Upozornění: Většina her bude v pořádku s výchozím nastavením."
 msgid "!Notice:DirPicker:CreatePath"
 msgstr "Zadaná cesta/adresář neexistuje. Chtěli byste je vytvořit?"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:103
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
+msgid "!ContextTip:DirPicker:UseDefault"
+msgstr ""
+"Je-li zaškrtnuto, tento adresář bude automaticky odrážet výchozí asociaci se "
+"současným nastavením uživatelského režimu PCSX2."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:55
+#, fuzzy
+msgid "!ContextTip:Window:Zoom"
+msgstr ""
+"Vsynch odstraňuje trhání obrazovky, ale má velký vliv na výkon. Většinou se "
+"toto týká režimu celé obrazovky a nemusí fungovat se všemi zásuvnými moduly "
+"GS."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Vsync"
+msgstr ""
+"Vsynch odstraňuje trhání obrazovky, ale má velký vliv na výkon. Většinou se "
+"toto týká režimu celé obrazovky a nemusí fungovat se všemi zásuvnými moduly "
+"GS."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr ""
+"Povolí Vsynch když snímkovací frekvence je přesně na plné rychlosti. Pokud "
+"spadne pod tuto hodnotu, Vsynch je zakázána k zabránění dalších penalizací "
+"výkonu. Poznámka: Toto nyní správně funguje pouze s GSdx jako zásuvný modul "
+"GS a nastaveným na použití hardwarového vykreslování DX10/11. Jakýkoli jiný "
+"modul nebo režim vykreslování toto bude ignorovat, nebo vytvoří černý "
+"snímek, který blikne, kdykoliv je režim přepnut. Také vyžaduje povolenou "
+"Vsynch."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:76
+msgid "!ContextTip:Window:HideMouse"
+msgstr ""
+"Zašrktněte toto pro vynucení zneviditelnění kurzoru myši uvnitř okna GS; "
+"užitečné, jestli myš používáte jako hlavní kontrolní zařízení pro hraní. "
+"Standardně je myš schována po 2 vteřinách nečinnosti."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:82
+msgid "!ContextTip:Window:Fullscreen"
+msgstr ""
+"Povolí automatické přepnutí režimu na celou obrazovku, při spuštění nebo "
+"obnově emulace. Stále můžete přepnout na celou obrazovku pomocí alt-enter."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:93
+msgid "!ContextTip:Window:HideGS"
+msgstr ""
+"Úplně zavře často velké a rozměrné okno GS při stisku ESC nebo pozastavení "
+"emulátoru."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr ""
+"Známo, že ovlivňuje následující hry:\n"
+"* Digital Devil Saga (Opravuje FMV a pády)\n"
+"* SSX (Opravuje špatnou grafiku a pády)\n"
+"* Resident Evil: Dead Aim (Způsobuje zkomolené textury)"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+msgid "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr ""
+"Známo, že ovlivňuje následující hry:\n"
+"* Bleach Blade Battler\n"
+"* Growlanser II and III\n"
+"* Wizardry"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
+msgid "!ContextTip:Gamefixes:DMA Busy hack"
+msgstr ""
+"Známo, že ovlivňuje následující hry:\n"
+"* Mana Khemia 1 (Going \"off campus\")"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+#, fuzzy
+msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
+msgstr ""
+"Známo, že ovlivňuje následující hry:\n"
+"* Bleach Blade Battler\n"
+"* Growlanser II and III\n"
+"* Wizardry"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 "Opravy her můžou obejít špatnou emulaci v některých hrách.\n"
@@ -222,269 +356,6 @@ msgstr ""
 "nastavení a uložené stavy). Tato volba ovlivňuje pouze Standardní Cesty, "
 "které jsou nastaveny, aby používali výchozí hodnoty instalace."
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
-msgid "!Notice:PluginSelector:ConfirmShutdown"
-msgstr "Varování! Změna zásuvných modulů vyžaduje"
-
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
-msgid "!Notice:PluginSelector:ApplyFailed"
-msgstr ""
-"Všechny zásuvné moduly musí mít platný výběr pro %s ke spuštění. Pokud "
-"nemůžete provést výběr kvůli chybějícímu modulu nebo nedokončené instalaci "
-"%s, pak stiskněte Zrušit pro uzavření panelu Nastavení."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
-msgid "!Panel:Speedhacks:Overview"
-msgstr ""
-"Hacky Rychlosti většinou zlepšují rychlost emulace, ale můžou způsobovat "
-"chyby, špatný zvuk a špatné údaje o SZS. Když máte problémy s emulací, tento "
-"panel zakažte nejdříve."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
-msgid "!Panel:Frameskip:Heading"
-msgstr ""
-"Upozornění: Kvůli hardwarovému designu PS2 je přesné přeskakování snímků "
-"nemožné. Zapnutím tohoto způsobí vážné grafické chyby v některých hrách."
-
-#: pcsx2/vtlb.cpp:702
-msgid "!Notice:HostVmReserve"
-msgstr ""
-"Váš systém má příliš nízké virtuální zdroje, aby mohl být PCSX2 spuštěn. To "
-"může být způsobeno malým nebo vypnutým stránkovacím souborem, nebo jinými "
-"programy, které jsou náročné na zdroje."
-
-#: pcsx2/x86/sVU_zerorec.cpp:362
-msgid "!Notice:superVU:VirtualMemoryAlloc"
-msgstr ""
-"Došla Paměť (tak trochu): Rekompilátor SuperVJ nemohl vyhradit určitý "
-"vyžadovaný rozsah paměti a nebude dostupný k použití. To není kritická "
-"chyba, protože rek sVU je zastaralý a stejně byste místo něj měli používat "
-"mVU :)."
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr "Bez udání důvodu."
-
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "Aktivita vláken: spuštění, odpojení, synch, smazání, atd."
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr ""
-"Zahrnuje zpracování nečinné události a další neobyčejné používání událostí."
-
-#: pcsx2/MTGS.cpp:815
-msgid ""
-"The MTGS thread has become unresponsive while waiting for the GS plugin to "
-"open."
-msgstr ""
-"Vlákno VVGS přestalo odpovídat při čekání na otevření zásuvného modulu GS."
-
-#: pcsx2/PluginManager.cpp:1329
-msgid "Internal Memorycard Plugin failed to initialize."
-msgstr "Vnitřní zásuvný modul Paměťové Karty nelze spustit."
-
-#: pcsx2/gui/AppConfig.cpp:818
-msgid "Safest"
-msgstr "Nejbezpečnější"
-
-#: pcsx2/gui/AppConfig.cpp:819
-msgid "Safe (faster)"
-msgstr "Bezpečné (rychlejší)"
-
-#: pcsx2/gui/AppConfig.cpp:820
-msgid "Balanced"
-msgstr "Vyrovnaný"
-
-#: pcsx2/gui/AppConfig.cpp:821
-msgid "Aggressive"
-msgstr "Agresivní"
-
-#: pcsx2/gui/AppConfig.cpp:822
-msgid "Aggressive plus"
-msgstr "Agresivní plus"
-
-#: pcsx2/gui/AppConfig.cpp:823
-msgid "Mostly Harmful"
-msgstr "Většinou Škodlivý"
-
-#: pcsx2/gui/ConsoleLogger.cpp:413
-msgid "Fits a lot of log in a microcosmically small area."
-msgstr "Nacpe spoustu záznamu do mikrokosmicky malé oblasti."
-
-#: pcsx2/gui/ConsoleLogger.cpp:415
-msgid "It's what I use (the programmer guy)."
-msgstr "To, co používám já (programátor)."
-
-#: pcsx2/gui/ConsoleLogger.cpp:417
-msgid "Its nice and readable."
-msgstr "Je hezké a čitelné."
-
-#: pcsx2/gui/ConsoleLogger.cpp:419
-msgid "In case you have a really high res display."
-msgstr "V případě, že máte displej s opravdu vysokým rozlišením."
-
-#: pcsx2/gui/ConsoleLogger.cpp:423
-msgid "Default soft-tone color scheme."
-msgstr "Výchozí barevné schéma jemných odstínů."
-
-#: pcsx2/gui/ConsoleLogger.cpp:424
-msgid ""
-"Classic black color scheme for people who enjoy having text seared into "
-"their optic nerves."
-msgstr ""
-"Klasický vzhled černé barvy pro lidi, kteří mají rádi text vypálen do jejich "
-"optických nervů."
-
-#: pcsx2/gui/ConsoleLogger.cpp:428
-msgid ""
-"When checked the log window will be visible over other foreground windows."
-msgstr ""
-"Při zaškrtnutí bude okno záznamu viditelné nad ostatními okny v popředí."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
-msgid "!ContextTip:ChangingNTFS"
-msgstr ""
-"Komprese NTFS může být kdykoliv ručně změněna použitím vlastností souboru z "
-"Průzkumníku Windows."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
-msgid ""
-"Always use this option if you want the safest and surest memory card "
-"behavior."
-msgstr ""
-"Používejte tuto volbu vždy, když chcete nejbezpečnější a nejjistější chování "
-"paměťové karty."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
-msgid "16 and 32 MB cards have roughly the same compatibility factor."
-msgstr "16 a 32 MB karty mají zhruba stejný faktor kompatibility."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
-msgid ""
-"Use at your own risk.  Erratic memory card behavior is possible (though "
-"unlikely)."
-msgstr ""
-"Používejte na vlastní riziko. Je možné nestálé chování paměťové karty (i "
-"když nepravděpodobné)."
-
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
-msgid "!ContextTip:Folders:Settings"
-msgstr ""
-"Do tohoto adresáře PCSX2 ukládá Vaše nastavení, zahrnující i nastavení "
-"vytvořená většinou zásuvných modulů (některé starší moduly nemusí tuto "
-"hodnotu respektovat)."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
-msgid "!Panel:HasHacksOverrides"
-msgstr ""
-"Varování! Spouštíte PCSX2 s volbami příkazového řádku, které potlačují Vaše "
-"uložená nastavení. Tyto volby příkazového řádku se nebudou odrážet v "
-"dialogovém okně Nastavení a budou zrušeny, pokud zde použijete jakékoli "
-"změny."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
-msgid "!Panel:HasPluginsOverrides"
-msgstr ""
-"Varování! Spouštíte PCSX2 s volbami příkazového řádku, které potlačují Vaše "
-"uložená nastavení zásuvných modulů a/nebo adresářů. Tyto volby příkazového "
-"řádku se nebudou odrážet v dialogovém okně Nastavení a budou zrušeny, když "
-"zde použijete jakékoli změny nastavení."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
-msgid "!Notice:Tooltip:Presets:Slider"
-msgstr ""
-"Předvolby použijí hacky rychlosti, některá nastavení rekompilátoru a některé "
-"opravy her známé tím, že zvyšují rychlost.\n"
-"Známé důležité opravy budou použity automaticky.\n"
-"\n"
-"Informace o předvolbách:\n"
-"1 --> Nejpřesnější emulace, ale také nejpomalejší.\n"
-"3 --> Pokouší se vyvážit rychlost a kompatibilitu.\n"
-"4 --> Některé agresivní hacky.\n"
-"6 --> Příliš mnoho hacků, což pravděpodobně zpomalí většinu her."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
-msgid "!Notice:Tooltip:Presets:Checkbox"
-msgstr ""
-"Předvolby použijí hacky rychlosti, některá nastavení rekompilátoru a některé "
-"opravy her známé tím, že zvyšují rychlost.\n"
-"Známé důležité opravy budou použity automaticky.\n"
-"\n"
-" --> Odškrtněte pro ruční změnu nastavení (se současnými předvolbami jako "
-"základ)"
-
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "Záznam událostí, jak jsou předávány virtuálnímu stroji PS2."
-
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
-msgid "!ContextTip:DirPicker:UseDefault"
-msgstr ""
-"Je-li zaškrtnuto, tento adresář bude automaticky odrážet výchozí asociaci se "
-"současným nastavením uživatelského režimu PCSX2."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
-msgid "!ContextTip:Window:Vsync"
-msgstr ""
-"Vsynch odstraňuje trhání obrazovky, ale má velký vliv na výkon. Většinou se "
-"toto týká režimu celé obrazovky a nemusí fungovat se všemi zásuvnými moduly "
-"GS."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:69
-msgid "!ContextTip:Window:ManagedVsync"
-msgstr ""
-"Povolí Vsynch když snímkovací frekvence je přesně na plné rychlosti. Pokud "
-"spadne pod tuto hodnotu, Vsynch je zakázána k zabránění dalších penalizací "
-"výkonu. Poznámka: Toto nyní správně funguje pouze s GSdx jako zásuvný modul "
-"GS a nastaveným na použití hardwarového vykreslování DX10/11. Jakýkoli jiný "
-"modul nebo režim vykreslování toto bude ignorovat, nebo vytvoří černý "
-"snímek, který blikne, kdykoliv je režim přepnut. Také vyžaduje povolenou "
-"Vsynch."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:77
-msgid "!ContextTip:Window:HideMouse"
-msgstr ""
-"Zašrktněte toto pro vynucení zneviditelnění kurzoru myši uvnitř okna GS; "
-"užitečné, jestli myš používáte jako hlavní kontrolní zařízení pro hraní. "
-"Standardně je myš schována po 2 vteřinách nečinnosti."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
-msgid "!ContextTip:Window:Fullscreen"
-msgstr ""
-"Povolí automatické přepnutí režimu na celou obrazovku, při spuštění nebo "
-"obnově emulace. Stále můžete přepnout na celou obrazovku pomocí alt-enter."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:94
-msgid "!ContextTip:Window:HideGS"
-msgstr ""
-"Úplně zavře často velké a rozměrné okno GS při stisku ESC nebo pozastavení "
-"emulátoru."
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
-msgid "!ContextTip:Gamefixes:EE Timing Hack"
-msgstr ""
-"Známo, že ovlivňuje následující hry:\n"
-"* Digital Devil Saga (Opravuje FMV a pády)\n"
-"* SSX (Opravuje špatnou grafiku a pády)\n"
-"* Resident Evil: Dead Aim (Způsobuje zkomolené textury)"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
-msgid "!ContextTip:Gamefixes:OPH Flag hack"
-msgstr ""
-"Známo, že ovlivňuje následující hry:\n"
-"* Bleach Blade Battler\n"
-"* Growlanser II and III\n"
-"* Wizardry"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
-msgid "!ContextTip:Gamefixes:DMA Busy hack"
-msgstr ""
-"Známo, že ovlivňuje následující hry:\n"
-"* Mana Khemia 1 (Going \"off campus\")"
-
 #: pcsx2/gui/Panels/PathsPanel.cpp:40
 msgid "!ContextTip:Folders:Savestates"
 msgstr ""
@@ -503,6 +374,17 @@ msgstr ""
 "Toto je adresář, kde PCSX2 ukládá své soubory se záznamem a diagnostické "
 "výpisy. Většina zásuvných modulů bude také používat tento adresář, ale "
 "některé starší ho můžou ignorovat."
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+msgid "!Notice:PluginSelector:ConfirmShutdown"
+msgstr "Varování! Změna zásuvných modulů vyžaduje"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
+msgid "!Notice:PluginSelector:ApplyFailed"
+msgstr ""
+"Všechny zásuvné moduly musí mít platný výběr pro %s ke spuštění. Pokud "
+"nemůžete provést výběr kvůli chybějícímu modulu nebo nedokončené instalaci "
+"%s, pak stiskněte Zrušit pro uzavření panelu Nastavení."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
 msgid "!Panel:Speedhacks:EECycleX1"
@@ -543,6 +425,13 @@ msgid "!Panel:Speedhacks:VUCycleSteal3"
 msgstr ""
 "Maximální krádež cyklů VJ. Užitečnost je omezená protože toto způsobuje "
 "blikání grafiky nebo zpomalení ve většině her. "
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
+msgid "!Panel:Speedhacks:Overview"
+msgstr ""
+"Hacky Rychlosti většinou zlepšují rychlost emulace, ale můžou způsobovat "
+"chyby, špatný zvuk a špatné údaje o SZS. Když máte problémy s emulací, tento "
+"panel zakažte nejdříve."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
 msgid "!ContextTip:Speedhacks:EECycleRate Slider"
@@ -600,29 +489,11 @@ msgstr ""
 "Nezapomeňte, že když je omezení snímků vypnuté, nebudou ani také dostupné "
 "režimy Turbo a ZpomalenýPohyb."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:162
-msgid ""
-"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
-"valid floating point numerics."
+#: pcsx2/gui/Panels/VideoPanel.cpp:223
+msgid "!Panel:Frameskip:Heading"
 msgstr ""
-"Chyba při analýze nastavení snímkovací frekvence NTSC nebo PAL. Nastavení "
-"musí být platná čísla s plovoucí čárkou."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:295
-msgid ""
-"For troubleshooting potential bugs in the MTGS only, as it is potentially "
-"very slow."
-msgstr ""
-"Pouze pro řešení možných chyb v VVGS, protože je toto potenciálně velmi "
-"pomalé."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid ""
-"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
-"components."
-msgstr ""
-"Úplně zakáže jakoukoli aktivitu zásuvného modulu GS; ideální pro měření "
-"výkonu hlavních součástí EE."
+"Upozornění: Kvůli hardwarovému designu PS2 je přesné přeskakování snímků "
+"nemožné. Zapnutím tohoto způsobí vážné grafické chyby v některých hrách."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:302
 msgid "!ContextTip:GS:SyncMTGS"
@@ -640,6 +511,127 @@ msgstr ""
 "\n"
 "Varování: Tato volba může být zapnuta za běhu ale typicky nemůže být takto "
 "vypnuta (obraz bude většinou poškozený)"
+
+#: pcsx2/vtlb.cpp:710
+msgid "!Notice:HostVmReserve"
+msgstr ""
+"Váš systém má příliš nízké virtuální zdroje, aby mohl být PCSX2 spuštěn. To "
+"může být způsobeno malým nebo vypnutým stránkovacím souborem, nebo jinými "
+"programy, které jsou náročné na zdroje."
+
+#: pcsx2/x86/sVU_zerorec.cpp:362
+msgid "!Notice:superVU:VirtualMemoryAlloc"
+msgstr ""
+"Došla Paměť (tak trochu): Rekompilátor SuperVJ nemohl vyhradit určitý "
+"vyžadovaný rozsah paměti a nebude dostupný k použití. To není kritická "
+"chyba, protože rek sVU je zastaralý a stejně byste místo něj měli používat "
+"mVU :)."
+
+#~ msgid "No reason given."
+#~ msgstr "Bez udání důvodu."
+
+#~ msgid "Threading activity: start, detach, sync, deletion, etc."
+#~ msgstr "Aktivita vláken: spuštění, odpojení, synch, smazání, atd."
+
+#~ msgid "Includes idle event processing and some other uncommon event usages."
+#~ msgstr ""
+#~ "Zahrnuje zpracování nečinné události a další neobyčejné používání "
+#~ "událostí."
+
+#~ msgid ""
+#~ "The MTGS thread has become unresponsive while waiting for the GS plugin "
+#~ "to open."
+#~ msgstr ""
+#~ "Vlákno VVGS přestalo odpovídat při čekání na otevření zásuvného modulu GS."
+
+#~ msgid "Internal Memorycard Plugin failed to initialize."
+#~ msgstr "Vnitřní zásuvný modul Paměťové Karty nelze spustit."
+
+#~ msgid "Safest"
+#~ msgstr "Nejbezpečnější"
+
+#~ msgid "Safe (faster)"
+#~ msgstr "Bezpečné (rychlejší)"
+
+#~ msgid "Balanced"
+#~ msgstr "Vyrovnaný"
+
+#~ msgid "Aggressive"
+#~ msgstr "Agresivní"
+
+#~ msgid "Aggressive plus"
+#~ msgstr "Agresivní plus"
+
+#~ msgid "Mostly Harmful"
+#~ msgstr "Většinou Škodlivý"
+
+#~ msgid "Fits a lot of log in a microcosmically small area."
+#~ msgstr "Nacpe spoustu záznamu do mikrokosmicky malé oblasti."
+
+#~ msgid "It's what I use (the programmer guy)."
+#~ msgstr "To, co používám já (programátor)."
+
+#~ msgid "Its nice and readable."
+#~ msgstr "Je hezké a čitelné."
+
+#~ msgid "In case you have a really high res display."
+#~ msgstr "V případě, že máte displej s opravdu vysokým rozlišením."
+
+#~ msgid "Default soft-tone color scheme."
+#~ msgstr "Výchozí barevné schéma jemných odstínů."
+
+#~ msgid ""
+#~ "Classic black color scheme for people who enjoy having text seared into "
+#~ "their optic nerves."
+#~ msgstr ""
+#~ "Klasický vzhled černé barvy pro lidi, kteří mají rádi text vypálen do "
+#~ "jejich optických nervů."
+
+#~ msgid ""
+#~ "When checked the log window will be visible over other foreground windows."
+#~ msgstr ""
+#~ "Při zaškrtnutí bude okno záznamu viditelné nad ostatními okny v popředí."
+
+#~ msgid ""
+#~ "Always use this option if you want the safest and surest memory card "
+#~ "behavior."
+#~ msgstr ""
+#~ "Používejte tuto volbu vždy, když chcete nejbezpečnější a nejjistější "
+#~ "chování paměťové karty."
+
+#~ msgid "16 and 32 MB cards have roughly the same compatibility factor."
+#~ msgstr "16 a 32 MB karty mají zhruba stejný faktor kompatibility."
+
+#~ msgid ""
+#~ "Use at your own risk.  Erratic memory card behavior is possible (though "
+#~ "unlikely)."
+#~ msgstr ""
+#~ "Používejte na vlastní riziko. Je možné nestálé chování paměťové karty (i "
+#~ "když nepravděpodobné)."
+
+#~ msgid "Logs events as they are passed to the PS2 virtual machine."
+#~ msgstr "Záznam událostí, jak jsou předávány virtuálnímu stroji PS2."
+
+#~ msgid ""
+#~ "Error while parsing either NTSC or PAL framerate settings.  Settings must "
+#~ "be valid floating point numerics."
+#~ msgstr ""
+#~ "Chyba při analýze nastavení snímkovací frekvence NTSC nebo PAL. Nastavení "
+#~ "musí být platná čísla s plovoucí čárkou."
+
+#~ msgid ""
+#~ "For troubleshooting potential bugs in the MTGS only, as it is potentially "
+#~ "very slow."
+#~ msgstr ""
+#~ "Pouze pro řešení možných chyb v VVGS, protože je toto potenciálně velmi "
+#~ "pomalé."
+
+#~ msgid ""
+#~ "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+#~ "components."
+#~ msgstr ""
+#~ "Úplně zakáže jakoukoli aktivitu zásuvného modulu GS; ideální pro měření "
+#~ "výkonu hlavních součástí EE."
 
 #~ msgid "!ContextTip:Speedhacks:vuMinMax"
 #~ msgstr ""

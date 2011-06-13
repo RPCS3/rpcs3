@@ -2,23 +2,27 @@
 # This file is distributed under the same license as the PCSX2 package.
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.8\n"
+"Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-04-20 18:40+0200\n"
-"PO-Revision-Date: 2011-04-06 18:55+0100\n"
+"POT-Creation-Date: 2011-06-13 16:04+0200\n"
+"PO-Revision-Date: 2011-06-06 20:10+0100\n"
 "Last-Translator: Georg Ronnert <pgert@yahoo.se>\n"
 "Language-Team: \n"
 "Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Poedit-KeywordsList: _;pxL\n"
+"X-Poedit-KeywordsList: _;pxL;_d;pxDt;_t;pxLt\n"
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: C:\\Arkiv\\PCSX2\\SVN\n"
 "X-Poedit-Language: Swedish\n"
 "X-Poedit-Country: SWEDEN\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
+
+#: common/include/Utilities/Exceptions.h:187
+msgid "No reason given."
+msgstr "Ingen anledning given."
 
 #: common/include/Utilities/Exceptions.h:226
 msgid "Parse error"
@@ -74,6 +78,10 @@ msgstr ""
 "Oväntat slut på fil eller ström påträffat. Filen är troligen stympt eller "
 "förstörd."
 
+#: common/src/Utilities/ThreadTools.cpp:41
+msgid "Threading activity: start, detach, sync, deletion, etc."
+msgstr "Trådaktivitet: start, avskiljning, sync, borttagning, etc."
+
 #: common/src/Utilities/ThreadingDialogs.cpp:30
 msgid "Waiting for tasks..."
 msgstr "Väntar på uppgifter..."
@@ -81,6 +89,12 @@ msgstr "Väntar på uppgifter..."
 #: common/src/Utilities/ThreadingDialogs.cpp:41
 msgid "Waiting for task..."
 msgstr "Väntar på uppgift..."
+
+#: common/src/Utilities/wxAppWithHelpers.cpp:36
+msgid "Includes idle event processing and some other uncommon event usages."
+msgstr ""
+"Inkluderar tomgångshändelsebearbetning och några andra ovanliga "
+"händelseanvändningar."
 
 #: pcsx2/CDVD/IsoFileFormats.cpp:416
 msgid "Unrecognized ISO image file format"
@@ -98,13 +112,21 @@ msgstr ""
 "Om försök att ladda en ISO har gjorts, kan detta fel ha orsakats av en "
 "ostödjande ISO-typ, eller ett fel i PCSX2's ISO-stöd."
 
-#: pcsx2/PluginManager.cpp:692
+#: pcsx2/MTGS.cpp:815
+msgid ""
+"The MTGS thread has become unresponsive while waiting for the GS plugin to "
+"open."
+msgstr ""
+"MTGS tråden har blivit osvarandes under inväntningen av att GS-"
+"insticksprogrammet ska öppna."
+
+#: pcsx2/PluginManager.cpp:694
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr ""
 "Sparpunkten kan inte laddas, eftersom den verkar förstörd eller ofullständig."
 
-#: pcsx2/PluginManager.cpp:702
+#: pcsx2/PluginManager.cpp:704
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -113,7 +135,7 @@ msgstr ""
 "%s insticksprogram misslyckades att öppna. Er dator kan ha otillräckliga "
 "resurser, eller oförenlig hårdvara/drivrutiner."
 
-#: pcsx2/PluginManager.cpp:709
+#: pcsx2/PluginManager.cpp:711
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
@@ -122,17 +144,17 @@ msgstr ""
 "%s insticksprogram misslyckades att initialiseras. Ert system kan ha "
 "otillräckligt med minne eller andra erfordeliga resurser."
 
-#: pcsx2/PluginManager.cpp:815
+#: pcsx2/PluginManager.cpp:817
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "Den konfigurerade %s-insticksprogramfilen hittades ej."
 
-#: pcsx2/PluginManager.cpp:819
+#: pcsx2/PluginManager.cpp:821
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr "Den konfigurerade %s-insticksprogrammet är inte en giltlig DLL."
 
-#: pcsx2/PluginManager.cpp:837
+#: pcsx2/PluginManager.cpp:839
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
@@ -141,14 +163,14 @@ msgstr ""
 "Den konfigurerade %s-insticksprogrammet är inte ett PCSX2 insticksprogram, "
 "eller är för en äldre version av PCSX2 och stödjes inte här."
 
-#: pcsx2/PluginManager.cpp:862
+#: pcsx2/PluginManager.cpp:864
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr ""
 "Insticksprogrammet rapporterar att Er hårdvara eller mjukvara/drivrutiner "
 "icke stödjes."
 
-#: pcsx2/PluginManager.cpp:883
+#: pcsx2/PluginManager.cpp:885
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
@@ -156,7 +178,7 @@ msgstr ""
 "Den konfigurerade insticksprogrammet är inte ett PCSX2 insticksprogram, "
 "eller för en äldre version av PCSX2 och stödjes inte här."
 
-#: pcsx2/PluginManager.cpp:909
+#: pcsx2/PluginManager.cpp:911
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
@@ -165,7 +187,12 @@ msgstr ""
 "Den konfigurerade %s insticksprogram är inte ett giltligt PCSX2 "
 "insticksprogram, eller för en äldre version av PCSX2 och stödjes inte här."
 
-#: pcsx2/PluginManager.cpp:1726
+#: pcsx2/PluginManager.cpp:1339
+msgid "Internal Memorycard Plugin failed to initialize."
+msgstr ""
+"Det interna minneskorts-insticksprogrammet misslyckades att initialiseras."
+
+#: pcsx2/PluginManager.cpp:1736
 msgid "Unloaded Plugin"
 msgstr "Oladdat insticksprogram"
 
@@ -173,6 +200,152 @@ msgstr "Oladdat insticksprogram"
 msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr ""
 "Kan inte ladda sparpunkten. Den är av en okänd eller ostödjande version."
+
+#: pcsx2/SourceLog.cpp:96
+msgid "Dumps detailed information for PS2 executables (ELFs)."
+msgstr "Dumpar detaljerad information om PS2 verkställare (ELFar)."
+
+#: pcsx2/SourceLog.cpp:101
+msgid ""
+"Logs manual protection, split blocks, and other things that might impact "
+"performance."
+msgstr ""
+"Loggar manuellt skydd, delar block, och annat som kan vara av betydelse för "
+"prestanda."
+
+#: pcsx2/SourceLog.cpp:106
+msgid "Shows the game developer's logging text (EE processor)"
+msgstr "Visar spelutveklarens loggningstext (EE processor)"
+
+#: pcsx2/SourceLog.cpp:111
+msgid "Shows the game developer's logging text (IOP processor)"
+msgstr "Visar spelutvecklarens loggningstext (IOP processor)"
+
+#: pcsx2/SourceLog.cpp:116
+msgid "Shows DECI2 debugging logs (EE processor)"
+msgstr "Visar DECI2 felsökningsloggar (EE processor)"
+
+#: pcsx2/SourceLog.cpp:145
+msgid "SYSCALL and DECI2 activity."
+msgstr "SYSCALL och DECI2 aktivitet."
+
+#: pcsx2/SourceLog.cpp:151
+msgid "Direct memory accesses to unknown or unmapped EE memory space."
+msgstr "Direkt minnestillgång till okänt eller ofördelat EE minne."
+
+#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
+msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
+msgstr ""
+"Avassembering av verkställande kärninstruktioner (exklusive COPar och CACHE)."
+
+#: pcsx2/SourceLog.cpp:163
+msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
+msgstr "Avassemblering av COP0 instruktioner (MMU, CPU och DMA status etc)."
+
+#: pcsx2/SourceLog.cpp:169
+msgid "Disasm of the EE's floating point unit (FPU) only."
+msgstr "Endast avassemblering av EE's flyttalsenhet (FPU)."
+
+#: pcsx2/SourceLog.cpp:175
+msgid "Disasm of the EE's VU0macro co-processor instructions."
+msgstr "Avassemblering av EE's VU0macro hjälpprocessorinstruktioner."
+
+#: pcsx2/SourceLog.cpp:181
+msgid "Execution of EE cache instructions."
+msgstr "Verkställande av EE cacheinstruktioner."
+
+#: pcsx2/SourceLog.cpp:187
+msgid ""
+"All known hardware register accesses (very slow!); not including sub filter "
+"options below."
+msgstr ""
+"Alla kända hårdvaruregister ges åtkomst (mycket långsamt!); ej inräknat "
+"underfiltermöjligheterna nedanför."
+
+#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
+msgid "Logs only unknown, unmapped, or unimplemented register accesses."
+msgstr "Loggar endast okända, ofördelade, eller ogenomförda registeråtkomster."
+
+#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
+msgid "Logs only DMA-related registers."
+msgstr "Loggar endast DMA-närliggande register."
+
+#: pcsx2/SourceLog.cpp:205
+msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
+msgstr ""
+"IPU aktivitet: hårdvaruregister, avkådningsprocedurer, DMA status, etc."
+
+#: pcsx2/SourceLog.cpp:211
+msgid "All GIFtag parse activity; path index, tag type, etc."
+msgstr "All slags GIF-märkesaktivitetstolkningar; sökvägsindex, märktyp, etc."
+
+#: pcsx2/SourceLog.cpp:217
+msgid "All VIFcode processing; command, tag style, interrupts."
+msgstr "All slags VIF-kodsbearbetning; betingande, märkstil, avbrott."
+
+#: pcsx2/SourceLog.cpp:223
+msgid "All processing involved in Path3 Masking"
+msgstr "All bearbetning inblandat i Path3 Maskning."
+
+#: pcsx2/SourceLog.cpp:229
+msgid "Scratchpad's MFIFO activity."
+msgstr "Antekningshäftets MFIFO aktivitet."
+
+#: pcsx2/SourceLog.cpp:235
+msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
+msgstr "Faktiska dataöverföringsloggar, rätt buss medling, uppehåll, etc."
+
+#: pcsx2/SourceLog.cpp:241
+msgid "Tracks all EE counters events and some counter register activity."
+msgstr "Spårar all EE räknarbegivenhet och en del registerräknaraktivitet."
+
+#: pcsx2/SourceLog.cpp:247
+msgid "Dumps various VIF and VIFcode processing data."
+msgstr "Dumpar diverse VIF och VIF-kod bearbetningsdata."
+
+#: pcsx2/SourceLog.cpp:253
+msgid "Dumps various GIF and GIFtag parsing data."
+msgstr "Dumpar diverse GIF och GIF-märkt tolkningsdata."
+
+#: pcsx2/SourceLog.cpp:264
+msgid "SYSCALL and IRX activity."
+msgstr "SYSCALL och IRX aktivitet."
+
+#: pcsx2/SourceLog.cpp:270
+msgid "Direct memory accesses to unknown or unmapped IOP memory space."
+msgstr "Direkt minnestillgång till okänd eller ofördelat IOP minne."
+
+#: pcsx2/SourceLog.cpp:282
+msgid "Disasm of the IOP's GPU co-processor instructions."
+msgstr "Avassemblering av IOP's GPU-hjälpprocessorinstruktioner."
+
+#: pcsx2/SourceLog.cpp:288
+msgid ""
+"All known hardware register accesses, not including the sub-filters below."
+msgstr ""
+"Alla kända hårdvaruregister ges tillgång, ej inräknat underfilterna nedanför."
+
+#: pcsx2/SourceLog.cpp:306
+msgid "Memorycard reads, writes, erases, terminators, and other processing."
+msgstr ""
+"Minneskorts läs-, skriv-, raderings-, avslutar-, och andra, bearbetningar."
+
+#: pcsx2/SourceLog.cpp:312
+msgid "Gamepad activity on the SIO."
+msgstr "Spelplattsaktivitet hos SIO."
+
+#: pcsx2/SourceLog.cpp:318
+msgid "Actual DMA event processing and data transfer logs."
+msgstr "Faktisk DMA begivenhetsbearbetning och dataöverföringsloggar."
+
+#: pcsx2/SourceLog.cpp:324
+msgid "Tracks all IOP counters events and some counter register activity."
+msgstr ""
+"Spårar alla IOP räknares begivenheter och några räknarregisters aktiviteter."
+
+#: pcsx2/SourceLog.cpp:330
+msgid "Detailed logging of CDVD hardware."
+msgstr "Detaljerad loggning av CDVD hårdvara."
 
 #: pcsx2/System.h:206 pcsx2/System.h:207 pcsx2/System.h:208
 msgid "PCSX2 Message"
@@ -185,6 +358,30 @@ msgid ""
 msgstr ""
 "Sparpunkten blev inte ordentligt sparad. Den tillfälliga filen skapades "
 "framgångsrikt med kunde inte flyttas till sin slutliga viloplats."
+
+#: pcsx2/gui/AppConfig.cpp:818
+msgid "Safest"
+msgstr "Säkrast"
+
+#: pcsx2/gui/AppConfig.cpp:819
+msgid "Safe (faster)"
+msgstr "Säkert (snabare)"
+
+#: pcsx2/gui/AppConfig.cpp:820
+msgid "Balanced"
+msgstr "Balanserat"
+
+#: pcsx2/gui/AppConfig.cpp:821
+msgid "Aggressive"
+msgstr "Aggressivt"
+
+#: pcsx2/gui/AppConfig.cpp:822
+msgid "Aggressive plus"
+msgstr "Aggressivt plus"
+
+#: pcsx2/gui/AppConfig.cpp:823
+msgid "Mostly Harmful"
+msgstr "Mest Skadligt"
 
 #: pcsx2/gui/AppConfig.cpp:980 pcsx2/gui/AppConfig.cpp:986
 msgid "Failed to overwrite existing settings file; permission was denied."
@@ -217,7 +414,7 @@ msgstr ""
 "Alla valmöjligheter är endast för den nuvarande sessionen och kommer inte "
 "att sparas.\n"
 
-#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:291
+#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:299
 msgid "IsoFile"
 msgstr "ISO-fil"
 
@@ -392,7 +589,7 @@ msgstr "&Hem"
 msgid "Show about dialog"
 msgstr "Visa om dialog"
 
-#: pcsx2/gui/AppMain.cpp:79
+#: pcsx2/gui/AppMain.cpp:87
 msgid ""
 "\n"
 "\n"
@@ -402,34 +599,34 @@ msgstr ""
 "\n"
 "Tryck OK för att gå till instickskonfigurationspanelen."
 
-#: pcsx2/gui/AppMain.cpp:132 pcsx2/gui/AppMain.cpp:146
+#: pcsx2/gui/AppMain.cpp:140 pcsx2/gui/AppMain.cpp:154
 msgid ""
 "Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
 msgstr ""
 "Varning! Systeminsticksprogram har inte laddats. PCSX2 kan vara oduglig."
 
-#: pcsx2/gui/AppMain.cpp:301
+#: pcsx2/gui/AppMain.cpp:309
 #, c-format
 msgid "%s Commandline Options"
 msgstr "%s Instruktionsmöjligheter"
 
-#: pcsx2/gui/AppMain.cpp:565
+#: pcsx2/gui/AppMain.cpp:573
 msgid "PS2 BIOS Error"
 msgstr "PS2 BIOS Fel"
 
-#: pcsx2/gui/AppMain.cpp:566
+#: pcsx2/gui/AppMain.cpp:574
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr "Tryck OK för att gå till BIOS-konfigurationspanelen."
 
-#: pcsx2/gui/AppMain.cpp:618
+#: pcsx2/gui/AppMain.cpp:626
 msgid "PCSX2 Unresponsive Thread"
 msgstr "PCSX2 Osvarande tråd"
 
-#: pcsx2/gui/AppMain.cpp:628
+#: pcsx2/gui/AppMain.cpp:636
 msgid "Terminate"
 msgstr "Avsluta"
 
-#: pcsx2/gui/AppMain.cpp:938
+#: pcsx2/gui/AppMain.cpp:964
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Verkställer PS2 VM..."
 
@@ -489,12 +686,24 @@ msgid "Save log question"
 msgstr "Spara loggfråga"
 
 #: pcsx2/gui/ConsoleLogger.cpp:413
+msgid "Fits a lot of log in a microcosmically small area."
+msgstr "Klämmer in mycket loggning i en mikroskopiskt liten yta."
+
+#: pcsx2/gui/ConsoleLogger.cpp:413
 msgid "Small"
 msgstr "Liten"
+
+#: pcsx2/gui/ConsoleLogger.cpp:415
+msgid "It's what I use (the programmer guy)."
+msgstr "Det är vad Jag använder (programmerarsnubben)."
 
 #: pcsx2/gui/ConsoleLogger.cpp:415 pcsx2/gui/Panels/CpuPanel.cpp:38
 msgid "Normal"
 msgstr "Normal"
+
+#: pcsx2/gui/ConsoleLogger.cpp:417
+msgid "Its nice and readable."
+msgstr "Det är fint och läsbart."
 
 #: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Large"
@@ -504,9 +713,25 @@ msgstr "Stor"
 msgid "Huge"
 msgstr "Enorm"
 
+#: pcsx2/gui/ConsoleLogger.cpp:419
+msgid "In case you have a really high res display."
+msgstr "Utifall att Ni har en riktigt hög upplösning."
+
+#: pcsx2/gui/ConsoleLogger.cpp:423
+msgid "Default soft-tone color scheme."
+msgstr "Förvals mjukatmosfärs färgtema."
+
 #: pcsx2/gui/ConsoleLogger.cpp:423
 msgid "Light theme"
 msgstr "Ljus tema"
+
+#: pcsx2/gui/ConsoleLogger.cpp:424
+msgid ""
+"Classic black color scheme for people who enjoy having text seared into "
+"their optic nerves."
+msgstr ""
+"Klassiskt svart färgtema för folk som njuter av att ha text svedd in i sina "
+"synnerver."
 
 #: pcsx2/gui/ConsoleLogger.cpp:424
 msgid "Dark theme"
@@ -515,6 +740,11 @@ msgstr "Mörkt tema"
 #: pcsx2/gui/ConsoleLogger.cpp:427
 msgid "Always on Top"
 msgstr "Alltid på Topp"
+
+#: pcsx2/gui/ConsoleLogger.cpp:428
+msgid ""
+"When checked the log window will be visible over other foreground windows."
+msgstr "När markerad kommer loggfönstret att bli synligt över andra fönster."
 
 #: pcsx2/gui/ConsoleLogger.cpp:430
 msgid "&Save..."
@@ -637,11 +867,11 @@ msgstr "Jag har sett nog"
 msgid "Assertion Failure - "
 msgstr "Bedyrande Misslyckande - "
 
-#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:192
+#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:193
 msgid "Saves a snapshot of this settings panel to a PNG file."
 msgstr "Sparar en snabbild av denna inställningspanel till en PNG-fil."
 
-#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:303
+#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:308
 msgid "Save dialog screenshots to..."
 msgstr "Spara dialogskärmsbilder i..."
 
@@ -731,6 +961,14 @@ msgstr ""
 "Detta är den standard-Sony-provianterade storleken, och stödjes av alla spel "
 "och BIOS-versioner."
 
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
+msgid ""
+"Always use this option if you want the safest and surest memory card "
+"behavior."
+msgstr ""
+"Använd alltid denna möjlighet om Ni vill ha det säkraste och "
+"tillförlitligaste minneskortsbeteendet."
+
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:199
 msgid "16 MB"
 msgstr "16 MB"
@@ -742,6 +980,11 @@ msgid ""
 msgstr ""
 "En typisk storlek för tredje-persons-minneskort som ska fungera med de "
 "flesta spel."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
+msgid "16 and 32 MB cards have roughly the same compatibility factor."
+msgstr "16 och 32 MB kort har ungefär samma kompabilitetsfaktor."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:203
 msgid "32 MB"
@@ -758,6 +1001,14 @@ msgid ""
 msgstr ""
 "Låg kompabilitesvarning: Jo den är väldigt stor, men kan måhända inte "
 "fungera med många spel."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
+msgid ""
+"Use at your own risk.  Erratic memory card behavior is possible (though "
+"unlikely)."
+msgstr ""
+"Använd på egen risk.  Oberäkneliga minneskortsbeteenden är möjliga (dock "
+"osannolika)."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:47
 #, c-format
@@ -915,6 +1166,10 @@ msgstr "Mappar"
 msgid "Appearance/Themes - %s"
 msgstr "Framträdande/Teman - %s"
 
+#: pcsx2/gui/ExecutorThread.cpp:40
+msgid "Logs events as they are passed to the PS2 virtual machine."
+msgstr "Loggar händelser medans de skickas till PS2-VM."
+
 #: pcsx2/gui/ExecutorThread.cpp:430
 msgid "Press Cancel to attempt to cancel the action."
 msgstr "Tryck Avbryt för att försöka avbryta verkan."
@@ -928,47 +1183,47 @@ msgstr "Tryck Avsluta för att avsluta %s omedelebart."
 msgid "Terminate App"
 msgstr "Avsluta tillämpning"
 
-#: pcsx2/gui/FrameForGS.cpp:294
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "GS Utsignal är Förhindrad!"
 
-#: pcsx2/gui/GlobalCommands.cpp:385 pcsx2/gui/MainFrame.cpp:414
+#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:414
 msgid "Save state"
 msgstr "Spara tillstånd"
 
-#: pcsx2/gui/GlobalCommands.cpp:386
+#: pcsx2/gui/GlobalCommands.cpp:388
 msgid "Saves the virtual machine state to the current slot."
 msgstr "Sparar VM-tillståndet till den nuvarande sockeln."
 
-#: pcsx2/gui/GlobalCommands.cpp:391 pcsx2/gui/MainFrame.cpp:413
+#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:413
 msgid "Load state"
 msgstr "Ladda tillstånd"
 
-#: pcsx2/gui/GlobalCommands.cpp:392
+#: pcsx2/gui/GlobalCommands.cpp:394
 msgid "Loads a virtual machine state from the current slot."
 msgstr "Laddar VM tillståndet från den nuvarande sockeln."
 
-#: pcsx2/gui/GlobalCommands.cpp:397
+#: pcsx2/gui/GlobalCommands.cpp:399
 msgid "Load State Backup"
 msgstr "Ladda Tillståndskopia"
 
-#: pcsx2/gui/GlobalCommands.cpp:398
+#: pcsx2/gui/GlobalCommands.cpp:400
 msgid "Loads virtual machine state backup for current slot."
 msgstr "Laddar VM tillståndskopian för den nuvarande sockeln."
 
-#: pcsx2/gui/GlobalCommands.cpp:403
+#: pcsx2/gui/GlobalCommands.cpp:405
 msgid "Cycle to next slot"
 msgstr "Cyklar till nästa sockel"
 
-#: pcsx2/gui/GlobalCommands.cpp:404
+#: pcsx2/gui/GlobalCommands.cpp:406
 msgid "Cycles the current save slot in +1 fashion!"
 msgstr "Cyklar den nuvarande sockeln i +1 stil!"
 
-#: pcsx2/gui/GlobalCommands.cpp:409
+#: pcsx2/gui/GlobalCommands.cpp:411
 msgid "Cycle to prev slot"
 msgstr "Cyklar tll föregående sockel"
 
-#: pcsx2/gui/GlobalCommands.cpp:410
+#: pcsx2/gui/GlobalCommands.cpp:412
 msgid "Cycles the current save slot in -1 fashion!"
 msgstr "Cyklar den nuvarande sockeln i -1 stil!"
 
@@ -1535,8 +1790,12 @@ msgstr ""
 "Utför precis-i-tid binäröversättning av 32-bit MIPS-I maskinkod till x86."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:154
-msgid "Enable EE Cache - Interpreter Only! (Slower)"
-msgstr "Möjliggör EE Förråd - Endast Tolkare! (Långsammare)"
+msgid "Enable EE Cache (Slower)"
+msgstr "Möjliggör EE Förråd (Långsammare)"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:154
+msgid "Interpreter only; provided for diagnostic"
+msgstr "Endast tolkare; tillhandahålls för diagnostiksyften."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:170 pcsx2/gui/Panels/CpuPanel.cpp:223
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:110
@@ -1638,19 +1897,19 @@ msgstr "Dynamiskt växla Vsync beroende på bildfrekvens (läs verktygstips!)"
 msgid "Double-click toggles fullscreen mode"
 msgstr "Dubbel-klicka bryter helskärmsläge"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:111
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:110
 msgid "Aspect Ratio:"
 msgstr "Bildkvot:"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:113
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:112
 msgid "Custom Window Size:"
 msgstr "Anpassad Fönsterstorlek:"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:116
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:115
 msgid "Zoom:"
 msgstr "Zoom:"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:197
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:196
 msgid ""
 "Invalid window dimensions specified: Size cannot contain non-numeric digits! "
 ">_<"
@@ -1726,11 +1985,15 @@ msgstr "OPH Flag hack - Försök ifall Ert spel fryser visandes samma bild."
 msgid "Ignore DMAC writes when it is busy."
 msgstr "Ignorera DMAC skrivningar när den är upptagen."
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:102
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:95
+msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
+msgstr "Simulerar VIF1 FIFO läs vidare. Löser långsamt laddande spel."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "Möjliggör manuella spelfixar [Rekomenderas ej]"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
 msgstr ""
@@ -2233,6 +2496,14 @@ msgstr "FPS"
 msgid "PAL Framerate:"
 msgstr "PAL Bildfrekvens:"
 
+#: pcsx2/gui/Panels/VideoPanel.cpp:162
+msgid ""
+"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
+"valid floating point numerics."
+msgstr ""
+"Fel under tolkning av antingen NTSC eller PAL bildfrekvensinstälningar.  "
+"Inställningarna måste vara giltliga flyttalsnummer."
+
 #: pcsx2/gui/Panels/VideoPanel.cpp:180
 msgid "Disabled [default]"
 msgstr "Förhindrad [förval]"
@@ -2265,9 +2536,25 @@ msgstr "Bilder att Hoppa över"
 msgid "Use Synchronized MTGS"
 msgstr "Använd Synkroniserad MTGS"
 
+#: pcsx2/gui/Panels/VideoPanel.cpp:295
+msgid ""
+"For troubleshooting potential bugs in the MTGS only, as it is potentially "
+"very slow."
+msgstr ""
+"Enbart för att problemlösa eventuella fel inom \n"
+"MTGS, eftersom det möjligen är mycket långsamt."
+
 #: pcsx2/gui/Panels/VideoPanel.cpp:298
 msgid "Disable all GS output"
 msgstr "Förhindra all GS utgång"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
+msgid ""
+"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+"components."
+msgstr ""
+"Förhindrar helt all GS-insticksprogramsaktivitet; \n"
+"idealt som utgångspunkt för EE-kärnkomponenter."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:316
 msgid "Frame Skipping"
@@ -2318,6 +2605,10 @@ msgid ""
 msgstr ""
 "Denna sparpunkt kan inte laddas till följd av saknade kritiska komponenter. "
 "Se loggfil för detaljer."
+
+#: pcsx2/gui/i18n.cpp:63
+msgid " (default)"
+msgstr " (förval)"
 
 #: pcsx2/ps2/BiosTools.cpp:83 pcsx2/ps2/BiosTools.cpp:151
 msgid "The selected BIOS file is not a valid PS2 BIOS.  Please re-configure."
@@ -2545,588 +2836,3 @@ msgstr ""
 
 #~ msgid "Denormals are Zero"
 #~ msgstr "Onormalare är Noll"
-
-#: pcsx2/SourceLog.cpp:96
-msgid "Dumps detailed information for PS2 executables (ELFs)."
-msgstr "Dumpar detaljerad information om PS2 verkställare (ELFar)."
-
-#: pcsx2/SourceLog.cpp:101
-msgid ""
-"Logs manual protection, split blocks, and other things that might impact "
-"performance."
-msgstr ""
-"Loggar manuellt skydd, delar block, och annat som kan vara av betydelse för "
-"prestanda."
-
-#: pcsx2/SourceLog.cpp:106
-msgid "Shows the game developer's logging text (EE processor)"
-msgstr "Visar spelutveklarens loggningstext (EE processor)"
-
-#: pcsx2/SourceLog.cpp:111
-msgid "Shows the game developer's logging text (IOP processor)"
-msgstr "Visar spelutvecklarens loggningstext (IOP processor)"
-
-#: pcsx2/SourceLog.cpp:116
-msgid "Shows DECI2 debugging logs (EE processor)"
-msgstr "Visar DECI2 felsökningsloggar (EE processor)"
-
-#: pcsx2/SourceLog.cpp:145
-msgid "SYSCALL and DECI2 activity."
-msgstr "SYSCALL och DECI2 aktivitet."
-
-#: pcsx2/SourceLog.cpp:151
-msgid "Direct memory accesses to unknown or unmapped EE memory space."
-msgstr "Direkt minnestillgång till okänt eller ofördelat EE minne."
-
-#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
-msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
-msgstr ""
-"Avassembering av verkställande kärninstruktioner (exklusive COPar och CACHE)."
-
-#: pcsx2/SourceLog.cpp:163
-msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
-msgstr "Avassemblering av COP0 instruktioner (MMU, CPU och DMA status etc)."
-
-#: pcsx2/SourceLog.cpp:169
-msgid "Disasm of the EE's floating point unit (FPU) only."
-msgstr "Endast avassemblering av EE's flyttalsenhet (FPU)."
-
-#: pcsx2/SourceLog.cpp:175
-msgid "Disasm of the EE's VU0macro co-processor instructions."
-msgstr "Avassemblering av EE's VU0macro hjälpprocessorinstruktioner."
-
-#: pcsx2/SourceLog.cpp:181
-msgid "Execution of EE cache instructions."
-msgstr "Verkställande av EE cacheinstruktioner."
-
-#: pcsx2/SourceLog.cpp:187
-msgid ""
-"All known hardware register accesses (very slow!); not including sub filter "
-"options below."
-msgstr ""
-"Alla kända hårdvaruregister ges åtkomst (mycket långsamt!); ej inräknat "
-"underfiltermöjligheterna nedanför."
-
-#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
-msgid "Logs only unknown, unmapped, or unimplemented register accesses."
-msgstr "Loggar endast okända, ofördelade, eller ogenomförda registeråtkomster."
-
-#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
-msgid "Logs only DMA-related registers."
-msgstr "Loggar endast DMA-närliggande register."
-
-#: pcsx2/SourceLog.cpp:205
-msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
-msgstr ""
-"IPU aktivitet: hårdvaruregister, avkådningsprocedurer, DMA status, etc."
-
-#: pcsx2/SourceLog.cpp:211
-msgid "All GIFtag parse activity; path index, tag type, etc."
-msgstr "All slags GIF-märkesaktivitetstolkningar; sökvägsindex, märktyp, etc."
-
-#: pcsx2/SourceLog.cpp:217
-msgid "All VIFcode processing; command, tag style, interrupts."
-msgstr "All slags VIF-kodsbearbetning; betingande, märkstil, avbrott."
-
-#: pcsx2/SourceLog.cpp:223
-msgid "All processing involved in Path3 Masking"
-msgstr "All bearbetning inblandat i Path3 Maskning."
-
-#: pcsx2/SourceLog.cpp:229
-msgid "Scratchpad's MFIFO activity."
-msgstr "Antekningshäftets MFIFO aktivitet."
-
-#: pcsx2/SourceLog.cpp:235
-msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
-msgstr "Faktiska dataöverföringsloggar, rätt buss medling, uppehåll, etc."
-
-#: pcsx2/SourceLog.cpp:241
-msgid "Tracks all EE counters events and some counter register activity."
-msgstr "Spårar all EE räknarbegivenhet och en del registerräknaraktivitet."
-
-#: pcsx2/SourceLog.cpp:247
-msgid "Dumps various VIF and VIFcode processing data."
-msgstr "Dumpar diverse VIF och VIF-kod bearbetningsdata."
-
-#: pcsx2/SourceLog.cpp:253
-msgid "Dumps various GIF and GIFtag parsing data."
-msgstr "Dumpar diverse GIF och GIF-märkt tolkningsdata."
-
-#: pcsx2/SourceLog.cpp:264
-msgid "SYSCALL and IRX activity."
-msgstr "SYSCALL och IRX aktivitet."
-
-#: pcsx2/SourceLog.cpp:270
-msgid "Direct memory accesses to unknown or unmapped IOP memory space."
-msgstr "Direkt minnestillgång till okänd eller ofördelat IOP minne."
-
-#: pcsx2/SourceLog.cpp:282
-msgid "Disasm of the IOP's GPU co-processor instructions."
-msgstr "Avassemblering av IOP's GPU-hjälpprocessorinstruktioner."
-
-#: pcsx2/SourceLog.cpp:288
-msgid ""
-"All known hardware register accesses, not including the sub-filters below."
-msgstr ""
-"Alla kända hårdvaruregister ges tillgång, ej inräknat underfilterna nedanför."
-
-#: pcsx2/SourceLog.cpp:306
-msgid "Memorycard reads, writes, erases, terminators, and other processing."
-msgstr ""
-"Minneskorts läs-, skriv-, raderings-, avslutar-, och andra, bearbetningar."
-
-#: pcsx2/SourceLog.cpp:312
-msgid "Gamepad activity on the SIO."
-msgstr "Spelplattsaktivitet hos SIO."
-
-#: pcsx2/SourceLog.cpp:318
-msgid "Actual DMA event processing and data transfer logs."
-msgstr "Faktisk DMA begivenhetsbearbetning och dataöverföringsloggar."
-
-#: pcsx2/SourceLog.cpp:324
-msgid "Tracks all IOP counters events and some counter register activity."
-msgstr ""
-"Spårar alla IOP räknares begivenheter och några räknarregisters aktiviteter."
-
-#: pcsx2/SourceLog.cpp:330
-msgid "Detailed logging of CDVD hardware."
-msgstr "Detaljerad loggning av CDVD hårdvara."
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr "Ingen anledning given."
-
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "Trådaktivitet: start, avskiljning, sync, borttagning, etc."
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr ""
-"Inkluderar tomgångshändelsebearbetning och några andra ovanliga "
-"händelseanvändningar."
-
-#: pcsx2/MTGS.cpp:815
-msgid ""
-"The MTGS thread has become unresponsive while waiting for the GS plugin to "
-"open."
-msgstr ""
-"MTGS tråden har blivit osvarandes under inväntningen av att GS-"
-"insticksprogrammet ska öppna."
-
-#: pcsx2/PluginManager.cpp:1329
-msgid "Internal Memorycard Plugin failed to initialize."
-msgstr ""
-"Det interna minneskorts-insticksprogrammet misslyckades att initialiseras."
-
-#: pcsx2/gui/AppConfig.cpp:818
-msgid "Safest"
-msgstr "Säkrast"
-
-#: pcsx2/gui/AppConfig.cpp:819
-msgid "Safe (faster)"
-msgstr "Säkert (snabare)"
-
-#: pcsx2/gui/AppConfig.cpp:820
-msgid "Balanced"
-msgstr "Balanserat"
-
-#: pcsx2/gui/AppConfig.cpp:821
-msgid "Aggressive"
-msgstr "Aggressivt"
-
-#: pcsx2/gui/AppConfig.cpp:822
-msgid "Aggressive plus"
-msgstr "Aggressivt plus"
-
-#: pcsx2/gui/AppConfig.cpp:823
-msgid "Mostly Harmful"
-msgstr "Mest Skadligt"
-
-#: pcsx2/gui/ConsoleLogger.cpp:413
-msgid "Fits a lot of log in a microcosmically small area."
-msgstr "Klämmer in mycket loggning i en mikroskopiskt liten yta."
-
-#: pcsx2/gui/ConsoleLogger.cpp:415
-msgid "It's what I use (the programmer guy)."
-msgstr "Det är vad Jag använder (programmerarsnubben)."
-
-#: pcsx2/gui/ConsoleLogger.cpp:417
-msgid "Its nice and readable."
-msgstr "Det är fint och läsbart."
-
-#: pcsx2/gui/ConsoleLogger.cpp:419
-msgid "In case you have a really high res display."
-msgstr "Utifall att Ni har en riktigt hög upplösning."
-
-#: pcsx2/gui/ConsoleLogger.cpp:423
-msgid "Default soft-tone color scheme."
-msgstr "Förvals mjukatmosfärs färgtema."
-
-#: pcsx2/gui/ConsoleLogger.cpp:424
-msgid ""
-"Classic black color scheme for people who enjoy having text seared into "
-"their optic nerves."
-msgstr ""
-"Klassiskt svart färgtema för folk som njuter av att ha text svedd in i sina "
-"synnerver."
-
-#: pcsx2/gui/ConsoleLogger.cpp:428
-msgid ""
-"When checked the log window will be visible over other foreground windows."
-msgstr "När markerad kommer loggfönstret att bli synligt över andra fönster."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
-msgid "!ContextTip:ChangingNTFS"
-msgstr ""
-"NTFS komprimering kan ändras manuellt när som helst genom att använda "
-"filegenskaper hos Windows Explorer."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
-msgid ""
-"Always use this option if you want the safest and surest memory card "
-"behavior."
-msgstr ""
-"Använd alltid denna möjlighet om Ni vill ha det säkraste och "
-"tillförlitligaste minneskortsbeteendet."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
-msgid "16 and 32 MB cards have roughly the same compatibility factor."
-msgstr "16 och 32 MB kort har ungefär samma kompabilitetsfaktor."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
-msgid ""
-"Use at your own risk.  Erratic memory card behavior is possible (though "
-"unlikely)."
-msgstr ""
-"Använd på egen risk.  Oberäkneliga minneskortsbeteenden är möjliga (dock "
-"osannolika)."
-
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
-msgid "!ContextTip:Folders:Settings"
-msgstr ""
-"Detta är mappen där PCSX2 sparar Era inställningar, och då även "
-"inställningar skapade \n"
-"av de flesta insticksprogram (gäller måhända dock inte för vissa äldre "
-"insticksprogram)."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
-msgid "!Panel:HasHacksOverrides"
-msgstr ""
-"Varning! Ni kör PCSX2 med instruktionsmöjligheter som kan överskrida Era "
-"konfigurationsinställningar. \n"
-"Dessa instruktionsmöjligheter kommer inte att beaktas i "
-"Inställningsdialogen, \n"
-"och kommer att förhindras om Ni tillämpar förändringar här."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
-msgid "!Panel:HasPluginsOverrides"
-msgstr ""
-"Varning! Ni kör PCSX2 med instruktionsmöjligheter som kan överskrida Ert "
-"konfigurerade insticksprogram och/eller mappinställningar. \n"
-"Dessa instruktionsmöjligheter kommer inte att beaktas i "
-"inställningsdialogen, \n"
-"och kommer att förhindras när Ni tillämpar förändringar här."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
-msgid "!Notice:Tooltip:Presets:Slider"
-msgstr ""
-"Förinställningarna tillämpar snabbfixar, några omkompilerarmöjligheter, och "
-"några spelfixar som till vetskap höjer hastgheten.\n"
-"Spelfixar ('Patchar') som till vetskap är viktiga kommer att tillämpas "
-"automatiskt.\n"
-"\n"
-"Förinställningsinfo:\n"
-"1 -     Den nogrannaste emuleringen, men också den långsammaste.\n"
-"3 --> Försöker att balansera hastighet med kompabilitet.\n"
-"4 -     Mera aggresiva fixar.\n"
-"6 -     För många fixar kommer troligen att sakta ner de flesta spel."
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
-msgid "!Notice:Tooltip:Presets:Checkbox"
-msgstr ""
-"Förinställningarna tillämpar snabbfixar, några omkompilerarmöjligheter, och "
-"några spelfixar som till vetskap höjer hastigheten.\n"
-"Spelfixar ('Patchar') som till vetskap är viktiga kommer att tillämpas "
-"automatiskt.\n"
-"\n"
-"--> Avmarkera för att modifiera inställningarna manuellt (med nuvarande "
-"förinställningar som bas)"
-
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "Loggar händelser medans de skickas till PS2-VM."
-
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
-msgid "!ContextTip:DirPicker:UseDefault"
-msgstr ""
-"När markerad kommer denna mapp att automatiskt begrunda förvalen assosierade "
-"med PCSX2's nuvarande användarinställningar."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
-msgid "!ContextTip:Window:Vsync"
-msgstr ""
-"Vsync slår ut skärmsönderrivning men har oftast en stor prestationseffekt. \n"
-"Det tillämpar vanligtvis bara i helskärmsläge, och kanske inte fungerar för "
-"alla GS insticksprogram."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:69
-msgid "!ContextTip:Window:ManagedVsync"
-msgstr ""
-"Möjliggör Vsync när bildfrekvensen är precis på full hastighet. \n"
-"Skulle den falla under denna så förhindras Vsync för att undvika vidare "
-"prestandastraff. \n"
-"Bemärk: Detta fungerar för närvarande bara bra med GSdx som GS "
-"insticksprogram, \n"
-"och konfigurationen DX10/11 Hårdvarutolkning. \n"
-"Annat insticksprogram eller annat tolkningsläge kommer antigen att "
-"ignoreras \n"
-"eller producera en svart skärm som blinkar när läget byts. \n"
-"Det kräver även att Vsync möjliggörs."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:77
-msgid "!ContextTip:Window:HideMouse"
-msgstr ""
-"Markera denna för att tvinga muspekaren att bli osynlig när den är i ett GS-"
-"fönster; \n"
-"användbart om man har musen som främsta kontroll-mojäng för spelande. \n"
-"Som förval auto-gömmer sig musen efter 2 sekunders inaktivitet."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
-msgid "!ContextTip:Window:Fullscreen"
-msgstr ""
-"Möjliggör automatiskt lägesbyte till fullskärm när emulering statas eller "
-"återupptas. \n"
-"Ni kan ännu växla mellan helskärm och fönsterläge genom att trycka Alt + "
-"Enter."
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:94
-msgid "!ContextTip:Window:HideGS"
-msgstr ""
-"Stänger helt det ofta stora och omfångsrika GS-fönstret \n"
-"när Ni trycker på Esc eller avbryter emulatorn."
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
-msgid "!ContextTip:Gamefixes:EE Timing Hack"
-msgstr ""
-"Påverkar till vetskap följande spel:\n"
-" * Digital Devil Saga (Fixar FMV och crashar)\n"
-" * SSX (Fixar dålig grafik och crashar)\n"
-" * Resident Evil: Dead Aim (Orsakar förvrängda texturer)"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
-msgid "!ContextTip:Gamefixes:OPH Flag hack"
-msgstr ""
-"Påverkar till vetskap följande spel:\n"
-" * Bleach Blade Battler\n"
-" * Growlanser II and III\n"
-" * Wizardry"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
-msgid "!ContextTip:Gamefixes:DMA Busy hack"
-msgstr ""
-"Påverkar till vetskap följande spel:\n"
-" * Mana Khemia 1 (Går \"bortom behörighet\")"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:40
-msgid "!ContextTip:Folders:Savestates"
-msgstr ""
-"I denna mapp sparar PCSX2 sparpunkter, vilka är sparade antingen genom "
-"användning \n"
-"av menyer/verktygsrad, eller genom att trycka på F1/F3 (spara/ladda)."
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:50
-msgid "!ContextTip:Folders:Snapshots"
-msgstr ""
-"I denna mapp sparar PCSX2 skärmbilder. Det faktiska skärmbildsformatet och "
-"stilen \n"
-"kan variera beroende på vilket GS-insticksprogram som användes."
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:60
-msgid "!ContextTip:Folders:Logs"
-msgstr ""
-"I denna mapp sparar PCSX2 sina loggfiler och diagnostiska rapporter. De "
-"flesta insticksprogram \n"
-"håller fast vid denna mapp, men dock kan vissa äldre insticksprogram "
-"ignorera den."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
-msgid "!Panel:Speedhacks:EECycleX1"
-msgstr ""
-"1 - Förvals cykelgrad. Detta överensstämmer nästan med den faktiska "
-"hastigheten hos en PS2 RörelseMotor."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
-msgid "!Panel:Speedhacks:EECycleX2"
-msgstr ""
-"2 - Minskar EE's cykelgrad med ungefär 33%. Mild uppsnabbning för de flesta "
-"spel med hög kompabilitet."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
-msgid "!Panel:Speedhacks:EECycleX3"
-msgstr ""
-"3 - Minskar EE's cykelgrad med ungefär 50%. Måttfull upsnabbning, \n"
-"men *kommer* att orsaka stamningsaudio hos många FMV'er."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
-msgid "!Panel:Speedhacks:VUCycleStealOff"
-msgstr "0 - Förhndrar VU Cykelstöld. Den mest kompatibla inställningen!"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
-msgid "!Panel:Speedhacks:VUCycleSteal1"
-msgstr ""
-"1 - Mild VU Cykelstöld. Lägre kompabilitet, men en viss uppsnabbning för de "
-"flesta spel."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
-msgid "!Panel:Speedhacks:VUCycleSteal2"
-msgstr ""
-"2 - Måttfull VU Cykelstöld. Ännu lägre kompabilitet, men markant "
-"uppsnabbning hos vissa spel."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
-msgid "!Panel:Speedhacks:VUCycleSteal3"
-msgstr ""
-"3 - Maximal VU Cykelstöld. Användningen är begränsad, \n"
-"eftersom detta kommer att orsaka synligt flimrande hos de flesta spel."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
-msgid "!ContextTip:Speedhacks:EECycleRate Slider"
-msgstr ""
-"Att sätta ett högre värde för denna glidare minskar verkningsfullt "
-"klockhastigheten hos RörelseMotorns R5900 kärn-CPU, \n"
-"och för oftast en hastghetsökning till spel som misslyckas att nyttja "
-"möjligheterna med PS2's verkliga hårdvara fullt ut."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
-msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
-msgstr ""
-"Denna glidare kontrollerar mängden cykler som VU-enheten stjäl ifrån "
-"RörelseMotorn. \n"
-"Högre värden ökar antalet cykler som stjäls från EE'n för varje VU-"
-"microprogram spelt kör."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
-msgid "!ContextTip:Speedhacks:vuFlagHack"
-msgstr ""
-"Updaterar endast Statusflaggor för block som kommer att läsa dem, isället "
-"för alltid. \n"
-"Detta är för det mesta säkert, och Super-VU gör något liknande som standard."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr ""
-"Förmodar att väldigt långt in i framtiden så kommer block inte behöva "
-"gammelflagg-instansdata. \n"
-"Detta borde vara rätt säkert. Det är okänt ifall detta har sönder något "
-"spel..."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
-msgid "!ContextTip:Speedhacks:INTC"
-msgstr ""
-"Denna fix fungerar bäst för spel som använder INTC-statusregistret för att "
-"invänta vsyncs, vilket i första hand inkluderar icke-3D \n"
-"RPG titlar. Spel som inte använder denna vsync-metod kommer på sin höjd att "
-"få en liten uppsnabbning av denna fix."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
-msgid "!ContextTip:Speedhacks:BIFC0"
-msgstr ""
-"I första hand inriktat på EE tomgångs-loop hos adress 0x81FC0 i kärnan, "
-"denna fix försöker att \n"
-"upptäcka loopar vars kroppar garanterat resulterar i samma maskintillstånd "
-"för varje upprepning \n"
-"tills en schemaläggd händelse utlöser emulering av en annan enhet. Efter en "
-"enskild upprepning av en sådan loop, \n"
-"avanserar vi till tiden för nästa händelse eller till slutet av processorns "
-"tidskvantum, vilket som än kommer först."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
-msgid "!ContextTip:Speedhacks:fastCDVD"
-msgstr ""
-"Kolla HDLaddar-kompabilitetslistan för spel som till vetskap kommer till "
-"fråga med det här (ofta markerat som behövande 'läge 1' eller 'långsam DVD')."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:37
-msgid "!ContextTip:Framelimiter:Disable"
-msgstr ""
-"Bemärk att när Bildbegränsning är förhindrad så kommer Turbo och SlowMotion "
-"lägena \n"
-"inte att vara tillgängliga heller."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:162
-msgid ""
-"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
-"valid floating point numerics."
-msgstr ""
-"Fel under tolkning av antingen NTSC eller PAL bildfrekvensinstälningar.  "
-"Inställningarna måste vara giltliga flyttalsnummer."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:295
-msgid ""
-"For troubleshooting potential bugs in the MTGS only, as it is potentially "
-"very slow."
-msgstr ""
-"Enbart för att problemlösa eventuella fel inom MTGS, \n"
-"eftersom det möjligen är mycket långsamt."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid ""
-"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
-"components."
-msgstr ""
-"Förhindrar helt all GS-insticksprogramsaktivitet; \n"
-"idealt som utgångspunkt för EE-kärnkomponenter."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
-msgid "!ContextTip:GS:SyncMTGS"
-msgstr ""
-"Möjliggör detta ifall Ni tror att MTGS trådsync orsakar krascher eller "
-"grafiska fel."
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
-msgid "!ContextTip:GS:DisableOutput"
-msgstr ""
-"Tar bort allt norm-oljud orsakat av MTGS-trådens eler GPU'ns överdrag. Denna "
-"möjlighet användes bäst i förening med sparpunkter: \n"
-"spara ett tillstånd i en idealisk scen, möjliggör denna möjlighet, och "
-"återladda sparpunkten.\n"
-"\n"
-"\n"
-"Varning: Denna möjlighet kan möjliggöras dynamiskt men kan vanligtvis inte "
-"förhindras på samma vis (video blir ofta skräp)."
-
-#~ msgid "!ContextTip:Window:Zoom"
-#~ msgstr ""
-#~ "Zoom = 100: Passar in hela bilden i fönstret utan beskärkning.\n"
-#~ "Över/Under 100: Zooma In/Ut\n"
-#~ "0: Automatisk-Inzoomning tills de svarta räckena är borta "
-#~ "(Bildförhållande bibehålls, en del av bilden går utanför skärmen).\n"
-#~ "BEMÄRK: Vissa spel ritar sina egna svarta räcken, vilka inte tas bort med "
-#~ "'0'.\n"
-#~ "\n"
-#~ "Tangentbord: Ctrl + Sifferbord-Plus: Inzoomning, Ctrl + Sifferbord-Minus: "
-#~ "Utzooming, Ctrl + Sifferbord-*: Växla 100/0"
-
-#~ msgid ""
-#~ "Error while parsing either NTSC or PAL framerate settings.\n"
-#~ "\tNTSC Input = %s\n"
-#~ "\tPAL Input  = %s"
-#~ msgstr ""
-#~ "Fel under tolkning av antingen NTSC eller PAL bildfrekvensinstälningar.\n"
-#~ "\tNTSC Input = %s\n"
-#~ "\tPAL Input  = %s"
-
-#~ msgid "!ContextTip:Speedhacks:vuMinMax"
-#~ msgstr ""
-#~ "Använder SSE's Min/Max Flyttalsoperationer istället för logiska Min/Max "
-#~ "rutiner, som annars är brukligt. \n"
-#~ "Känt att förstöra Gran Turismo 4 & Tekken 5."
-
-#~ msgid "!ContextTip:Window:FullscreenExclusive"
-#~ msgstr ""
-#~ "Exklusivt helskärmsläge kan se bätte ut hos äldre CRTs och kan vara lite "
-#~ "snabbare hos äldre videokort, \n"
-#~ "men oftast leder det till minnesläckor eler slumpmässiga kraschar när "
-#~ "helskärmsläget slås på eller av."

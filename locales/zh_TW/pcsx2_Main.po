@@ -2,9 +2,9 @@
 # This file is distributed under the same license as the PCSX2 package.
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.7\n"
+"Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-05-01 08:17+0200\n"
+"POT-Creation-Date: 2011-06-13 15:53+0200\n"
 "PO-Revision-Date: 2011-04-15 12:03+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
@@ -19,6 +19,10 @@ msgstr ""
 "X-Poedit-Country: TAIWAN\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
+
+#: common/include/Utilities/Exceptions.h:187
+msgid "No reason given."
+msgstr "未給出原因。"
 
 #: common/include/Utilities/Exceptions.h:226
 msgid "Parse error"
@@ -69,6 +73,10 @@ msgid ""
 "corrupted."
 msgstr "遭遇意外的檔案結尾或流。檔案可能被縮減或損壞。"
 
+#: common/src/Utilities/ThreadTools.cpp:41
+msgid "Threading activity: start, detach, sync, deletion, etc."
+msgstr "執行緒的活動：開始、分離、同步、刪除，以及其他。"
+
 #: common/src/Utilities/ThreadingDialogs.cpp:30
 msgid "Waiting for tasks..."
 msgstr "等待任務完成..."
@@ -76,6 +84,10 @@ msgstr "等待任務完成..."
 #: common/src/Utilities/ThreadingDialogs.cpp:41
 msgid "Waiting for task..."
 msgstr "等待任務完成..."
+
+#: common/src/Utilities/wxAppWithHelpers.cpp:36
+msgid "Includes idle event processing and some other uncommon event usages."
+msgstr "包含閒置的事件處理和一些其他不尋常的事件使用。"
 
 #: pcsx2/CDVD/IsoFileFormats.cpp:416
 msgid "Unrecognized ISO image file format"
@@ -94,12 +106,18 @@ msgstr ""
 "那麼這個錯誤可能由未支援的光碟映像檔類型引起，\n"
 "或者由功能 PCSX2 光碟映像檔支援，它的程式錯誤所引起。"
 
-#: pcsx2/PluginManager.cpp:692
+#: pcsx2/MTGS.cpp:815
+msgid ""
+"The MTGS thread has become unresponsive while waiting for the GS plugin to "
+"open."
+msgstr "當等候圖形插件開啟時，多執行緒圖形模式的執行緒停止回應。"
+
+#: pcsx2/PluginManager.cpp:694
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr "無法讀取即時存檔，檔案似乎損壞或不完整。"
 
-#: pcsx2/PluginManager.cpp:702
+#: pcsx2/PluginManager.cpp:704
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -108,42 +126,42 @@ msgstr ""
 "開啟【%s】插件失敗。您的電腦可能沒有足夠的資源，\n"
 "或是有不相容的硬體或驅動程式。"
 
-#: pcsx2/PluginManager.cpp:709
+#: pcsx2/PluginManager.cpp:711
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
 "resources needed."
 msgstr "初始化【%s】插件失敗。您的系統可能沒有足夠的記憶體或資源。"
 
-#: pcsx2/PluginManager.cpp:815
+#: pcsx2/PluginManager.cpp:817
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "未找到所選【%s】插件的檔案"
 
-#: pcsx2/PluginManager.cpp:819
+#: pcsx2/PluginManager.cpp:821
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr "所選【%s】插件的檔案不是有效的動態連結函式庫"
 
-#: pcsx2/PluginManager.cpp:837
+#: pcsx2/PluginManager.cpp:839
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
 "unsupported version of PCSX2."
 msgstr "所選擇的 %s 插件不是 PCSX2 的插件，或者是不再支援的舊版 PCSX2 的插件。"
 
-#: pcsx2/PluginManager.cpp:862
+#: pcsx2/PluginManager.cpp:864
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr "插件報告不支援您的硬體或軟體 / 驅動程式。"
 
-#: pcsx2/PluginManager.cpp:883
+#: pcsx2/PluginManager.cpp:885
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
 msgstr "所選擇的插件不是 PCSX2 的插件，或者是不再支援的舊版 PCSX2 的插件。"
 
-#: pcsx2/PluginManager.cpp:909
+#: pcsx2/PluginManager.cpp:911
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
@@ -151,13 +169,154 @@ msgid ""
 msgstr ""
 "所選擇的 %s 插件不是有效的 PCSX2 插件，或者是不再支援的舊版 PCSX2 的插件。"
 
-#: pcsx2/PluginManager.cpp:1726
+#: pcsx2/PluginManager.cpp:1339
+msgid "Internal Memorycard Plugin failed to initialize."
+msgstr "初始化內部記憶卡插件失敗。"
+
+#: pcsx2/PluginManager.cpp:1736
 msgid "Unloaded Plugin"
 msgstr "未載入的插件"
 
 #: pcsx2/SaveState.cpp:338
 msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr "無法讀取即時存檔，檔案版本未知或不支援。"
+
+#: pcsx2/SourceLog.cpp:96
+msgid "Dumps detailed information for PS2 executables (ELFs)."
+msgstr "擷取 PS2 執行檔（ELF）的詳細資訊"
+
+#: pcsx2/SourceLog.cpp:101
+msgid ""
+"Logs manual protection, split blocks, and other things that might impact "
+"performance."
+msgstr "記錄手動保護、分塊，以及其他可能影響效能的東西。"
+
+#: pcsx2/SourceLog.cpp:106
+msgid "Shows the game developer's logging text (EE processor)"
+msgstr "顯示遊戲開發人員的日誌（EE processor）"
+
+#: pcsx2/SourceLog.cpp:111
+msgid "Shows the game developer's logging text (IOP processor)"
+msgstr "顯示遊戲開發人員的日誌（IOP processor）"
+
+#: pcsx2/SourceLog.cpp:116
+msgid "Shows DECI2 debugging logs (EE processor)"
+msgstr "顯示 DECI2 偵錯日誌（EE processor）"
+
+#: pcsx2/SourceLog.cpp:145
+msgid "SYSCALL and DECI2 activity."
+msgstr "SYSCALL 和 DECI2 的活動。"
+
+#: pcsx2/SourceLog.cpp:151
+msgid "Direct memory accesses to unknown or unmapped EE memory space."
+msgstr "直接記憶體存取至未知或未映射的 EE 記憶體空間。"
+
+#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
+msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
+msgstr "執行核心指令集的反組譯（不包含 COP 和 CACHE）。"
+
+#: pcsx2/SourceLog.cpp:163
+msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
+msgstr "COP0 指令集的反組譯（MMU、cpu 和 dma 的狀態，以及其他）。"
+
+#: pcsx2/SourceLog.cpp:169
+msgid "Disasm of the EE's floating point unit (FPU) only."
+msgstr "僅 EE 浮點運算器的反組譯。"
+
+#: pcsx2/SourceLog.cpp:175
+msgid "Disasm of the EE's VU0macro co-processor instructions."
+msgstr "EE 的 VU0macro 輔助處理器指令集的反組譯。"
+
+#: pcsx2/SourceLog.cpp:181
+msgid "Execution of EE cache instructions."
+msgstr "EE 快取指令集的執行。"
+
+#: pcsx2/SourceLog.cpp:187
+msgid ""
+"All known hardware register accesses (very slow!); not including sub filter "
+"options below."
+msgstr "所有已知的硬體暫存器存取（非常慢！）；不包括下面的分項選項。"
+
+#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
+msgid "Logs only unknown, unmapped, or unimplemented register accesses."
+msgstr "僅記錄未知、未映射，或未實現的暫存器存取。"
+
+#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
+msgid "Logs only DMA-related registers."
+msgstr "僅記錄 DMA 相關的暫存器。"
+
+#: pcsx2/SourceLog.cpp:205
+msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
+msgstr "IPU 活動：硬體暫存器、解碼操作、DMA 狀態，以及其他。"
+
+#: pcsx2/SourceLog.cpp:211
+msgid "All GIFtag parse activity; path index, tag type, etc."
+msgstr "全部 GIFtag 解析活動；路徑索引，標籤類型，以及其他。"
+
+#: pcsx2/SourceLog.cpp:217
+msgid "All VIFcode processing; command, tag style, interrupts."
+msgstr "全部 VIFcode 處理；命令，標籤風格，中斷。"
+
+#: pcsx2/SourceLog.cpp:223
+msgid "All processing involved in Path3 Masking"
+msgstr "Path3 Masking 裡面的全部處理"
+
+#: pcsx2/SourceLog.cpp:229
+msgid "Scratchpad's MFIFO activity."
+msgstr "便條式暫存的 MFIFO 活動。"
+
+#: pcsx2/SourceLog.cpp:235
+msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
+msgstr "實際的資料傳輸日誌、匯流排正確的仲裁、停頓，以及其他。"
+
+#: pcsx2/SourceLog.cpp:241
+msgid "Tracks all EE counters events and some counter register activity."
+msgstr "追蹤全部 EE 計數器事件以及一些計數器暫存器活動。"
+
+#: pcsx2/SourceLog.cpp:247
+msgid "Dumps various VIF and VIFcode processing data."
+msgstr "擷取各種各樣的 VIF 和 VIFcode 處理資料。"
+
+#: pcsx2/SourceLog.cpp:253
+msgid "Dumps various GIF and GIFtag parsing data."
+msgstr "擷取各種各樣的 GIF 和 GIFtag 解析資料。"
+
+#: pcsx2/SourceLog.cpp:264
+msgid "SYSCALL and IRX activity."
+msgstr "SYSCALL 和 IRX 的活動。"
+
+#: pcsx2/SourceLog.cpp:270
+msgid "Direct memory accesses to unknown or unmapped IOP memory space."
+msgstr "直接記憶體存取至未知或未映射的 IOP 記憶體空間。"
+
+#: pcsx2/SourceLog.cpp:282
+msgid "Disasm of the IOP's GPU co-processor instructions."
+msgstr "IOP 的 GPU 輔助處理器指令集的反組譯。"
+
+#: pcsx2/SourceLog.cpp:288
+msgid ""
+"All known hardware register accesses, not including the sub-filters below."
+msgstr "所有已知的硬體暫存器存取，不包括下面的分項。"
+
+#: pcsx2/SourceLog.cpp:306
+msgid "Memorycard reads, writes, erases, terminators, and other processing."
+msgstr "記憶卡的讀取、寫入、清除、終結者，以及其他處理。"
+
+#: pcsx2/SourceLog.cpp:312
+msgid "Gamepad activity on the SIO."
+msgstr "SIO 上的遊戲手把活動。"
+
+#: pcsx2/SourceLog.cpp:318
+msgid "Actual DMA event processing and data transfer logs."
+msgstr "實際的直接記憶體存取事件處理和資料傳輸日誌。"
+
+#: pcsx2/SourceLog.cpp:324
+msgid "Tracks all IOP counters events and some counter register activity."
+msgstr "追蹤全部 IOP 計數器事件以及一些計數器暫存器活動。"
+
+#: pcsx2/SourceLog.cpp:330
+msgid "Detailed logging of CDVD hardware."
+msgstr "CDVD 硬體的詳細日誌紀錄。"
 
 #: pcsx2/System.h:206 pcsx2/System.h:207 pcsx2/System.h:208
 msgid "PCSX2 Message"
@@ -168,6 +327,30 @@ msgid ""
 "The savestate was not properly saved. The temporary file was created "
 "successfully but could not be moved to its final resting place."
 msgstr "即時存檔未能正確地儲存。成功建立暫存檔，但是無法將其移至目的地。"
+
+#: pcsx2/gui/AppConfig.cpp:818
+msgid "Safest"
+msgstr "最安全"
+
+#: pcsx2/gui/AppConfig.cpp:819
+msgid "Safe (faster)"
+msgstr "安全（速度更快）"
+
+#: pcsx2/gui/AppConfig.cpp:820
+msgid "Balanced"
+msgstr "平衡"
+
+#: pcsx2/gui/AppConfig.cpp:821
+msgid "Aggressive"
+msgstr "激進"
+
+#: pcsx2/gui/AppConfig.cpp:822
+msgid "Aggressive plus"
+msgstr "更加激進"
+
+#: pcsx2/gui/AppConfig.cpp:823
+msgid "Mostly Harmful"
+msgstr "基本上有害"
 
 #: pcsx2/gui/AppConfig.cpp:980 pcsx2/gui/AppConfig.cpp:986
 msgid "Failed to overwrite existing settings file; permission was denied."
@@ -195,7 +378,7 @@ msgstr "PCSX2 反編譯錯誤"
 msgid "All options are for the current session only and will not be saved.\n"
 msgstr "全部選項僅用於當前的作業並且不會被儲存。\n"
 
-#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:291
+#: pcsx2/gui/AppInit.cpp:237 pcsx2/gui/AppMain.cpp:299
 msgid "IsoFile"
 msgstr "ISO 檔案"
 
@@ -367,7 +550,7 @@ msgstr "家"
 msgid "Show about dialog"
 msgstr "顯示關於視窗"
 
-#: pcsx2/gui/AppMain.cpp:79
+#: pcsx2/gui/AppMain.cpp:87
 msgid ""
 "\n"
 "\n"
@@ -377,33 +560,33 @@ msgstr ""
 "\n"
 "按【確定】開啟插件設定視窗。"
 
-#: pcsx2/gui/AppMain.cpp:132 pcsx2/gui/AppMain.cpp:146
+#: pcsx2/gui/AppMain.cpp:140 pcsx2/gui/AppMain.cpp:154
 msgid ""
 "Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
 msgstr "警告！插件未載入。PCSX2 可能無法使用。"
 
-#: pcsx2/gui/AppMain.cpp:301
+#: pcsx2/gui/AppMain.cpp:309
 #, c-format
 msgid "%s Commandline Options"
 msgstr "%s 命令列選項"
 
-#: pcsx2/gui/AppMain.cpp:565
+#: pcsx2/gui/AppMain.cpp:573
 msgid "PS2 BIOS Error"
 msgstr "PS2 BIOS 錯誤"
 
-#: pcsx2/gui/AppMain.cpp:566
+#: pcsx2/gui/AppMain.cpp:574
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr "按【確定】開啟 BIOS 設定視窗。"
 
-#: pcsx2/gui/AppMain.cpp:618
+#: pcsx2/gui/AppMain.cpp:626
 msgid "PCSX2 Unresponsive Thread"
 msgstr "PCSX2 停止回應的執行緒"
 
-#: pcsx2/gui/AppMain.cpp:628
+#: pcsx2/gui/AppMain.cpp:636
 msgid "Terminate"
 msgstr "終止"
 
-#: pcsx2/gui/AppMain.cpp:938
+#: pcsx2/gui/AppMain.cpp:964
 msgid "Executing PS2 Virtual Machine..."
 msgstr "正在執行 PS2 虛擬機..."
 
@@ -458,12 +641,24 @@ msgid "Save log question"
 msgstr "儲存日誌的提問"
 
 #: pcsx2/gui/ConsoleLogger.cpp:413
+msgid "Fits a lot of log in a microcosmically small area."
+msgstr "在同等區域中顯示較多日誌"
+
+#: pcsx2/gui/ConsoleLogger.cpp:413
 msgid "Small"
 msgstr "最小"
+
+#: pcsx2/gui/ConsoleLogger.cpp:415
+msgid "It's what I use (the programmer guy)."
+msgstr "這是 PCSX2 程式設計師們使用的字型大小"
 
 #: pcsx2/gui/ConsoleLogger.cpp:415 pcsx2/gui/Panels/CpuPanel.cpp:38
 msgid "Normal"
 msgstr "普通"
+
+#: pcsx2/gui/ConsoleLogger.cpp:417
+msgid "Its nice and readable."
+msgstr "令人心曠神怡而且便於閱讀"
 
 #: pcsx2/gui/ConsoleLogger.cpp:417
 msgid "Large"
@@ -473,9 +668,23 @@ msgstr "較大"
 msgid "Huge"
 msgstr "最大"
 
+#: pcsx2/gui/ConsoleLogger.cpp:419
+msgid "In case you have a really high res display."
+msgstr "適用於高螢幕解析度"
+
+#: pcsx2/gui/ConsoleLogger.cpp:423
+msgid "Default soft-tone color scheme."
+msgstr "預設的軟色調顏色主題"
+
 #: pcsx2/gui/ConsoleLogger.cpp:423
 msgid "Light theme"
 msgstr "明亮背景主題（需重啟 PCSX2）"
+
+#: pcsx2/gui/ConsoleLogger.cpp:424
+msgid ""
+"Classic black color scheme for people who enjoy having text seared into "
+"their optic nerves."
+msgstr "經典的黑色主題，獻給喜歡讓文字灼燒視神經的人。"
 
 #: pcsx2/gui/ConsoleLogger.cpp:424
 msgid "Dark theme"
@@ -484,6 +693,11 @@ msgstr "暗黑背景主題（需重啟 PCSX2）"
 #: pcsx2/gui/ConsoleLogger.cpp:427
 msgid "Always on Top"
 msgstr "視窗總在最前"
+
+#: pcsx2/gui/ConsoleLogger.cpp:428
+msgid ""
+"When checked the log window will be visible over other foreground windows."
+msgstr "當勾選時，日誌視窗總是保持在最前端。"
 
 #: pcsx2/gui/ConsoleLogger.cpp:430
 msgid "&Save..."
@@ -606,11 +820,11 @@ msgstr "我已經看得足夠多"
 msgid "Assertion Failure - "
 msgstr "程式斷言失敗 - "
 
-#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:192
+#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:193
 msgid "Saves a snapshot of this settings panel to a PNG file."
 msgstr "將當前設定視窗的擷圖儲存為 PNG 圖片"
 
-#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:303
+#: pcsx2/gui/Dialogs/BaseConfigurationDialog.cpp:308
 msgid "Save dialog screenshots to..."
 msgstr "儲存設定視窗的螢幕擷圖"
 
@@ -695,6 +909,12 @@ msgid ""
 "and BIOS versions."
 msgstr "標準的 Sony 提供的大小，所有遊戲和 BIOS 版本都支援。"
 
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
+msgid ""
+"Always use this option if you want the safest and surest memory card "
+"behavior."
+msgstr "如果您想要最安全可靠的記憶卡行為，就一直使用這個選項。"
+
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:199
 msgid "16 MB"
 msgstr "16 MB"
@@ -704,6 +924,11 @@ msgstr "16 MB"
 msgid ""
 "A typical size for 3rd-party memory cards which should work with most games."
 msgstr "典型的第三方記憶卡的大小，在大多數遊戲中應該能夠正常工作。"
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
+msgid "16 and 32 MB cards have roughly the same compatibility factor."
+msgstr "16 MB 和 32 MB 記憶卡的相容性係數大致相同。"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:203
 msgid "32 MB"
@@ -718,6 +943,12 @@ msgid ""
 "Low compatibility warning: Yes it's very big, but may not work with many "
 "games."
 msgstr "低相容性警告：是的，檔案非常大。但恐怕在許多遊戲中不能正常工作。"
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
+msgid ""
+"Use at your own risk.  Erratic memory card behavior is possible (though "
+"unlikely)."
+msgstr "使用者自擔風險。可能出現不確定的記憶卡行為（儘管可能性不大）"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:47
 #, c-format
@@ -875,6 +1106,10 @@ msgstr "資料夾"
 msgid "Appearance/Themes - %s"
 msgstr "外觀 / 主題 - %s"
 
+#: pcsx2/gui/ExecutorThread.cpp:40
+msgid "Logs events as they are passed to the PS2 virtual machine."
+msgstr "隨著事件傳遞給 PS2 虛擬機，記錄事件。"
+
 #: pcsx2/gui/ExecutorThread.cpp:430
 msgid "Press Cancel to attempt to cancel the action."
 msgstr "按【取消】嘗試取消動作。"
@@ -888,47 +1123,47 @@ msgstr "按【終止】立即終止 %s。"
 msgid "Terminate App"
 msgstr "終止"
 
-#: pcsx2/gui/FrameForGS.cpp:294
+#: pcsx2/gui/FrameForGS.cpp:384
 msgid "GS Output is Disabled!"
 msgstr "畫面輸出被停用！"
 
-#: pcsx2/gui/GlobalCommands.cpp:385 pcsx2/gui/MainFrame.cpp:414
+#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:414
 msgid "Save state"
 msgstr "即時存檔"
 
-#: pcsx2/gui/GlobalCommands.cpp:386
+#: pcsx2/gui/GlobalCommands.cpp:388
 msgid "Saves the virtual machine state to the current slot."
 msgstr "將虛擬機狀態儲存到當前的即時存檔插槽。"
 
-#: pcsx2/gui/GlobalCommands.cpp:391 pcsx2/gui/MainFrame.cpp:413
+#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:413
 msgid "Load state"
 msgstr "即時讀檔"
 
-#: pcsx2/gui/GlobalCommands.cpp:392
+#: pcsx2/gui/GlobalCommands.cpp:394
 msgid "Loads a virtual machine state from the current slot."
 msgstr "從當前的即時存檔插槽讀取虛擬機狀態。"
 
-#: pcsx2/gui/GlobalCommands.cpp:397
+#: pcsx2/gui/GlobalCommands.cpp:399
 msgid "Load State Backup"
 msgstr "讀取狀態備份"
 
-#: pcsx2/gui/GlobalCommands.cpp:398
+#: pcsx2/gui/GlobalCommands.cpp:400
 msgid "Loads virtual machine state backup for current slot."
 msgstr "當前的即時存檔插槽讀取虛擬機狀態備份。"
 
-#: pcsx2/gui/GlobalCommands.cpp:403
+#: pcsx2/gui/GlobalCommands.cpp:405
 msgid "Cycle to next slot"
 msgstr "循環至下一個即時存檔插槽"
 
-#: pcsx2/gui/GlobalCommands.cpp:404
+#: pcsx2/gui/GlobalCommands.cpp:406
 msgid "Cycles the current save slot in +1 fashion!"
 msgstr "將當前的即時存檔插槽以 +1 的式樣循環！"
 
-#: pcsx2/gui/GlobalCommands.cpp:409
+#: pcsx2/gui/GlobalCommands.cpp:411
 msgid "Cycle to prev slot"
 msgstr "循環至上一個即時存檔插槽"
 
-#: pcsx2/gui/GlobalCommands.cpp:410
+#: pcsx2/gui/GlobalCommands.cpp:412
 msgid "Cycles the current save slot in -1 fashion!"
 msgstr "將當前的即時存檔插槽以 -1 的式樣循環！"
 
@@ -1484,8 +1719,14 @@ msgid ""
 msgstr "適時地將 32 位元 MIPS-I 機器碼轉譯至 x86。"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:154
-msgid "Enable EE Cache - Interpreter Only! (Slower)"
+#, fuzzy
+msgid "Enable EE Cache (Slower)"
 msgstr "啟用快取 - 僅用於直譯器！（速度更慢）"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:154
+#, fuzzy
+msgid "Interpreter only; provided for diagnostic"
+msgstr "非常慢；僅用於診斷。"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:170 pcsx2/gui/Panels/CpuPanel.cpp:223
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:110
@@ -1583,19 +1824,19 @@ msgstr "視遊戲速度而定，隨時開啟或關閉垂直同步（閱讀工具
 msgid "Double-click toggles fullscreen mode"
 msgstr "滑鼠雙擊遊戲畫面切換全螢幕模式和視窗模式"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:111
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:110
 msgid "Aspect Ratio:"
 msgstr "圖像縱橫比："
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:113
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:112
 msgid "Custom Window Size:"
 msgstr "自訂視窗大小："
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:116
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:115
 msgid "Zoom:"
 msgstr "畫面縮放（以百分數表示）："
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:197
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:196
 msgid ""
 "Invalid window dimensions specified: Size cannot contain non-numeric digits! "
 ">_<"
@@ -1675,11 +1916,15 @@ msgstr ""
 "當 DMAC 忙碌時忽略其寫入 - 修正 Mana Khemia 1 離開校園進入大地圖時（Off "
 "Campus）遊戲畫面全黑"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:102
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:95
+msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "手動設定遊戲修正【不推薦】"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
 msgstr "最安全的狀態就是確保完全停用所有遊戲修正"
@@ -2174,6 +2419,14 @@ msgstr "FPS"
 msgid "PAL Framerate:"
 msgstr "PAL 遊戲的畫框速率："
 
+#: pcsx2/gui/Panels/VideoPanel.cpp:162
+msgid ""
+"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
+"valid floating point numerics."
+msgstr ""
+"當解析 NTSC 遊戲或 PAL 遊戲的畫框速率設定時出現錯誤。設定值必須是有效的浮點"
+"數。"
+
 #: pcsx2/gui/Panels/VideoPanel.cpp:180
 msgid "Disabled [default]"
 msgstr "停用【預設】"
@@ -2206,9 +2459,25 @@ msgstr "跳過的畫框"
 msgid "Use Synchronized MTGS"
 msgstr "使用同步的多執行緒圖形模式"
 
+#: pcsx2/gui/Panels/VideoPanel.cpp:295
+msgid ""
+"For troubleshooting potential bugs in the MTGS only, as it is potentially "
+"very slow."
+msgstr ""
+"僅用於排除多執行緒圖形模式潛在的程式錯誤，\n"
+"因為速度可能非常慢"
+
 #: pcsx2/gui/Panels/VideoPanel.cpp:298
 msgid "Disable all GS output"
 msgstr "停止輸出遊戲畫面"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
+msgid ""
+"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+"components."
+msgstr ""
+"完全停止圖形插件所有的活動；\n"
+"適合用來做 EEcore 的效能測試"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:316
 msgid "Frame Skipping"
@@ -2256,6 +2525,10 @@ msgid ""
 "log file for details."
 msgstr "由於缺失關鍵元件，無法讀取這個即時存檔。詳情請洽日誌檔案。"
 
+#: pcsx2/gui/i18n.cpp:63
+msgid " (default)"
+msgstr ""
+
 #: pcsx2/ps2/BiosTools.cpp:83 pcsx2/ps2/BiosTools.cpp:151
 msgid "The selected BIOS file is not a valid PS2 BIOS.  Please re-configure."
 msgstr "指定的 BIOS 檔案不是有效的 PS2 BIOS。請重新設定。"
@@ -2284,860 +2557,205 @@ msgid ""
 "SSE2 extensions."
 msgstr "%s 指令集未找到。microVU 要求 CPU 支援 MMX、SSE、SSE2。"
 
-#~ msgid "ISO mounting failed: PCSX2 is unable to identify the ISO image type."
-#~ msgstr "掛載光碟映像檔失敗：PCSX2 無法確認光碟映像檔的類型。"
-
-#~ msgid "Select memory card for Port %u / Slot %u"
-#~ msgstr "選擇用在手把插槽 %u / 插槽 %u 的記憶卡"
-
-#~ msgid "New card will be saved to:"
-#~ msgstr "新記憶卡將會儲存在："
-
-#~ msgid "memory card creation error"
-#~ msgstr "新增記憶卡時出現錯誤"
-
-#~ msgid "Backup existing Savestate when creating a new one"
-#~ msgstr "當建立一個新的即時存檔時，備份現有的即時存檔"
-
-#~ msgid "Enable Multitap on Port %u"
-#~ msgstr "在手把插槽 %u 啟用手把擴充器"
-
-#~ msgid ""
-#~ "Drag items over other items in the list to swap or copy memory cards."
+#~ msgid "!ContextTip:ChangingNTFS"
 #~ msgstr ""
-#~ "在記憶卡列表中，將一個記憶卡拖曳到其他記憶卡的上面，以更換或複製記憶卡。"
+#~ "NTFS 壓縮能夠在任何時候手動變更，透過從檔案總管使用右鍵選單的「內容」選"
+#~ "項。"
 
-#~ msgid "Other..."
-#~ msgstr "其他..."
-
-#~ msgid "Enable Patches"
-#~ msgstr "啟用補丁"
-
-#~ msgid "Patches (unimplemented)"
-#~ msgstr "補丁（未實現）"
-
-#~ msgid "Print CDVD Info"
-#~ msgstr "在主控台顯示光碟讀取日誌"
-
-#~ msgid "Open Debug Window..."
-#~ msgstr "開啟偵錯視窗"
-
-#~ msgid "Memory Dump..."
-#~ msgstr "記憶體轉存"
-
-#~ msgid "Suspend"
-#~ msgstr "暫停遊戲"
-
-#~ msgid "Suspend/Resume"
-#~ msgstr "暫停 / 繼續"
-
-#~ msgid "Hide window on suspend"
-#~ msgstr "模擬器暫停時隱藏遊戲視窗"
-
-#~ msgid "Wait for vsync on refresh"
-#~ msgstr "重新整理時等待垂直同步"
-
-#~ msgid "Double-click Toggles Full-Screen mode"
-#~ msgstr "滑鼠雙擊遊戲畫面切換全螢幕模式和視窗模式"
-
-#~ msgid "Use exclusive fullscreen mode (if available)"
-#~ msgstr "使用全螢幕獨占模式（若可用）"
-
-#~ msgid "Enable game fixes"
-#~ msgstr "啟用遊戲修正"
-
-#~ msgid "Overwrite memory card?"
-#~ msgstr "覆寫記憶卡？"
-
-#~ msgid "Mount"
-#~ msgstr "掛載"
-
-#~ msgid "Deletes the existing memory card from disk (all contents are lost)."
-#~ msgstr "刪除所選擇的記憶卡（失去所有遊戲存檔）"
-
-#~ msgid "Creates a new memory card in the empty slot."
-#~ msgstr "於空插口建立一個新的記憶卡。"
-
-#~ msgid "Disable"
-#~ msgstr "停用"
-
-#~ msgid "Enable"
-#~ msgstr "啟用"
-
-#~ msgid ""
-#~ "Disables the selected memory card, so that it will not be seen by games "
-#~ "or BIOS."
-#~ msgstr "停用所選擇的記憶卡，遊戲或 BIOS 中就看不到該記憶卡。"
-
-#~ msgid "Mounts the selected memory card, so that games can see it again."
-#~ msgstr "掛載所選擇的記憶卡，遊戲中能夠再次看到該記憶卡。"
-
-#~ msgid "Create new..."
-#~ msgstr "新增"
-
-#~ msgid "Relocate file..."
-#~ msgstr "遷移檔案"
-
-#~ msgid "Slot"
-#~ msgstr "插口"
-
-#~ msgid "Status"
-#~ msgstr "狀態"
-
-#~ msgid "Size"
-#~ msgstr "大小"
-
-#~ msgid "Modified"
-#~ msgstr "修改日期"
-
-#~ msgid "Created"
-#~ msgstr "建立日期"
-
-#~ msgid "Filename"
-#~ msgstr "檔案名稱"
-
-#~ msgid "Disabled"
-#~ msgstr "已停用"
-
-#~ msgid "Enabled"
-#~ msgstr "已啟用"
-
-#~ msgid "Missing"
-#~ msgstr "不存在"
-
-#~ msgid "N/A"
-#~ msgstr "N/A"
-
-#~ msgid "mVU Min/Max Hack"
-#~ msgstr "mVU Min/Max Hack"
-
-#~ msgid ""
-#~ "Small Speedup; may cause black screens, garbage graphics, SPS, etc... "
-#~ "[Not Recommended]"
+#~ msgid "!ContextTip:Folders:Settings"
 #~ msgstr ""
-#~ "速度少量提升；可能導致遊戲畫面全黑、\n"
-#~ "圖像變得垃圾、有尖刺的多邊形，等等...\n"
-#~ "【不推薦】"
+#~ "PCSX2 用這個資料夾儲存您的設定，包括大多數插件的設定。\n"
+#~ "（一些較老的插件可能不將設定儲存在這個資料夾裡面）"
 
-#~ msgid "&Back >"
-#~ msgstr "上一步 >"
-
-#~ msgid "Appearance..."
-#~ msgstr "外觀..."
-
-#~ msgid ""
-#~ "%s will create the following folder for documents.  You can change this "
-#~ "setting later, at any time."
+#~ msgid "!Panel:HasHacksOverrides"
 #~ msgstr ""
-#~ "%s 將會新增下列資料夾用來存放檔案。\n"
-#~ "您可以稍後隨時變更設定。"
+#~ "警告！您正在從覆寫現有設定的命令列選項執行 PCSX2。\n"
+#~ "這些命令列選項不會反映到設定視窗中，並且會被停用。\n"
+#~ "如果您在這裡套用任何變更。"
 
-#~ msgid "Flush to Zero"
-#~ msgstr "浮點數下溢位為零"
-
-#~ msgid "Denormals are Zero"
-#~ msgstr "浮點數反常值為零"
-
-#~ msgid "Skip when on Turbo only"
-#~ msgstr "僅在渦輪加速時跳框"
-
-#~ msgid ""
-#~ "For troubleshooting potential bugs in the MTGS only, as it is potentially "
-#~ "very slow."
+#~ msgid "!Panel:HasPluginsOverrides"
 #~ msgstr ""
-#~ "僅用於排除多執行緒圖形模式潛在的程式錯誤，\n"
-#~ "因為速度可能非常慢"
+#~ "警告！您正在從覆寫現有插件 / 資料夾設定的命令列選項執行 PCSX2。\n"
+#~ "這些命令列選項不會反映到設定視窗中，並且會被停用。\n"
+#~ "當您在這裡套用變更時。"
 
-#~ msgid ""
-#~ "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
-#~ "components."
+#~ msgid "!Notice:Tooltip:Presets:Slider"
 #~ msgstr ""
-#~ "完全停止圖形插件所有的活動；\n"
-#~ "適合用來做 EEcore 的效能測試"
+#~ "1 -　最準確的模擬、速度最慢。\n"
+#~ "3 --> 嘗試在遊戲速度和相容性之間取得平衡。\n"
+#~ "4 -　一些更加激進的速度駭客、模擬器選項。\n"
+#~ "6 -　非常多的速度駭客，可能會降低大多數遊戲的遊戲速度。"
 
-#~ msgid "Illegal ELF file size over 2GB!"
-#~ msgstr "無效的檔案大小超過 2GB！"
-
-#~ msgid "ELF file does not exist!"
-#~ msgstr "ELF 檔案不存在！"
-
-#~ msgid "Unexpected end of ELF file."
-#~ msgstr "意外的 ELF 檔案結尾。"
-
-#~ msgid ""
-#~ "The MTGS thread has become unresponsive while waiting for the GS plugin "
-#~ "to open."
-#~ msgstr "當等候圖形插件開啟時，多執行緒圖形模式的執行緒停止回應。"
-
-#~ msgid "Internal Memorycard Plugin failed to initialize."
-#~ msgstr "初始化內部記憶卡插件失敗。"
-
-#~ msgid "The savestate data is invalid or corrupted."
-#~ msgstr "即時存檔的資料無效或損壞。"
-
-#~ msgid "Dumps detailed information for PS2 executables (ELFs)."
-#~ msgstr "擷取 PS2 執行檔（ELF）的詳細資訊"
-
-#~ msgid ""
-#~ "Logs manual protection, split blocks, and other things that might impact "
-#~ "performance."
-#~ msgstr "記錄手動保護、分塊，以及其他可能影響效能的東西。"
-
-#~ msgid "Shows the game developer's logging text (EE processor)"
-#~ msgstr "顯示遊戲開發人員的日誌（EE processor）"
-
-#~ msgid "Shows the game developer's logging text (IOP processor)"
-#~ msgstr "顯示遊戲開發人員的日誌（IOP processor）"
-
-#~ msgid "Shows DECI2 debugging logs (EE processor)"
-#~ msgstr "顯示 DECI2 偵錯日誌（EE processor）"
-
-#~ msgid "SYSCALL and DECI2 activity."
-#~ msgstr "SYSCALL 和 DECI2 的活動。"
-
-#~ msgid "Direct memory accesses to unknown or unmapped EE memory space."
-#~ msgstr "直接記憶體存取至未知或未映射的 EE 記憶體空間。"
-
-#~ msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
-#~ msgstr "執行核心指令集的反組譯（不包含 COP 和 CACHE）。"
-
-#~ msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
-#~ msgstr "COP0 指令集的反組譯（MMU、cpu 和 dma 的狀態，以及其他）。"
-
-#~ msgid "Disasm of the EE's floating point unit (FPU) only."
-#~ msgstr "僅 EE 浮點運算器的反組譯。"
-
-#~ msgid "Disasm of the EE's VU0macro co-processor instructions."
-#~ msgstr "EE 的 VU0macro 輔助處理器指令集的反組譯。"
-
-#~ msgid "Execution of EE cache instructions."
-#~ msgstr "EE 快取指令集的執行。"
-
-#~ msgid ""
-#~ "All known hardware register accesses (very slow!); not including sub "
-#~ "filter options below."
-#~ msgstr "所有已知的硬體暫存器存取（非常慢！）；不包括下面的分項選項。"
-
-#~ msgid "Logs only unknown, unmapped, or unimplemented register accesses."
-#~ msgstr "僅記錄未知、未映射，或未實現的暫存器存取。"
-
-#~ msgid "Logs only DMA-related registers."
-#~ msgstr "僅記錄 DMA 相關的暫存器。"
-
-#~ msgid ""
-#~ "IPU activity: hardware registers, decoding operations, DMA status, etc."
-#~ msgstr "IPU 活動：硬體暫存器、解碼操作、DMA 狀態，以及其他。"
-
-#~ msgid "All GIFtag parse activity; path index, tag type, etc."
-#~ msgstr "全部 GIFtag 解析活動；路徑索引，標籤類型，以及其他。"
-
-#~ msgid "All VIFcode processing; command, tag style, interrupts."
-#~ msgstr "全部 VIFcode 處理；命令，標籤風格，中斷。"
-
-#~ msgid "Scratchpad's MFIFO activity."
-#~ msgstr "便條式暫存的 MFIFO 活動。"
-
-#~ msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
-#~ msgstr "實際的資料傳輸日誌、匯流排正確的仲裁、停頓，以及其他。"
-
-#~ msgid "Tracks all EE counters events and some counter register activity."
-#~ msgstr "追蹤全部 EE 計數器事件以及一些計數器暫存器活動。"
-
-#~ msgid "Dumps various VIF and VIFcode processing data."
-#~ msgstr "擷取各種各樣的 VIF 和 VIFcode 處理資料。"
-
-#~ msgid "Dumps various GIF and GIFtag parsing data."
-#~ msgstr "擷取各種各樣的 GIF 和 GIFtag 解析資料。"
-
-#~ msgid "SYSCALL and IRX activity."
-#~ msgstr "SYSCALL 和 IRX 的活動。"
-
-#~ msgid "Direct memory accesses to unknown or unmapped IOP memory space."
-#~ msgstr "直接記憶體存取至未知或未映射的 IOP 記憶體空間。"
-
-#~ msgid "Disasm of the IOP's GPU co-processor instructions."
-#~ msgstr "IOP 的 GPU 輔助處理器指令集的反組譯。"
-
-#~ msgid ""
-#~ "All known hardware register accesses, not including the sub-filters below."
-#~ msgstr "所有已知的硬體暫存器存取，不包括下面的分項。"
-
-#~ msgid "Memorycard reads, writes, erases, terminators, and other processing."
-#~ msgstr "記憶卡的讀取、寫入、清除、終結者，以及其他處理。"
-
-#~ msgid "Gamepad activity on the SIO."
-#~ msgstr "SIO 上的遊戲手把活動。"
-
-#~ msgid "Actual DMA event processing and data transfer logs."
-#~ msgstr "實際的直接記憶體存取事件處理和資料傳輸日誌。"
-
-#~ msgid "Tracks all IOP counters events and some counter register activity."
-#~ msgstr "追蹤全部 IOP 計數器事件以及一些計數器暫存器活動。"
-
-#~ msgid "Detailed logging of CDVD hardware."
-#~ msgstr "CDVD 硬體的詳細日誌紀錄。"
-
-#~ msgid "Fits a lot of log in a microcosmically small area."
-#~ msgstr "在同等區域中顯示較多日誌"
-
-#~ msgid "It's what I use (the programmer guy)."
-#~ msgstr "這是 PCSX2 程式設計師們使用的字型大小"
-
-#~ msgid "Its nice and readable."
-#~ msgstr "令人心曠神怡而且便於閱讀"
-
-#~ msgid "In case you have a really high res display."
-#~ msgstr "適用於高螢幕解析度"
-
-#~ msgid "Default soft-tone color scheme."
-#~ msgstr "預設的軟色調顏色主題"
-
-#~ msgid ""
-#~ "Classic black color scheme for people who enjoy having text seared into "
-#~ "their optic nerves."
-#~ msgstr "經典的黑色主題，獻給喜歡讓文字灼燒視神經的人。"
-
-#~ msgid ""
-#~ "When checked the log window will be visible over other foreground windows."
-#~ msgstr "當勾選時，日誌視窗總是保持在最前端。"
-
-#~ msgid "Logs events as they are passed to the PS2 virtual machine."
-#~ msgstr "隨著事件傳遞給 PS2 虛擬機，記錄事件。"
-
-#~ msgid "Data read failed: Invalid or corrupted gzip archive."
-#~ msgstr "資料讀取失敗：無效或損壞的 gzip 壓縮檔。"
-
-#~ msgid ""
-#~ "Always use this option if you want the safest and surest memory card "
-#~ "behavior."
-#~ msgstr "如果您想要最安全可靠的記憶卡行為，就一直使用這個選項。"
-
-#~ msgid "16 and 32 MB cards have roughly the same compatibility factor."
-#~ msgstr "16 MB 和 32 MB 記憶卡的相容性係數大致相同。"
-
-#~ msgid ""
-#~ "Use at your own risk.  Erratic memory card behavior is possible (though "
-#~ "unlikely)."
-#~ msgstr "使用者自擔風險。可能出現不確定的記憶卡行為（儘管可能性不大）"
-
-#~ msgid ""
-#~ "Error while parsing either NTSC or PAL framerate settings.  Settings must "
-#~ "be valid floating point numerics."
+#~ msgid "!Notice:Tooltip:Presets:Checkbox"
 #~ msgstr ""
-#~ "當解析 NTSC 遊戲或 PAL 遊戲的畫框速率設定時出現錯誤。設定值必須是有效的浮"
-#~ "點數。"
-
-#~ msgid "Threading activity: start, detach, sync, deletion, etc."
-#~ msgstr "執行緒的活動：開始、分離、同步、刪除，以及其他。"
-
-#~ msgid "Includes idle event processing and some other uncommon event usages."
-#~ msgstr "包含閒置的事件處理和一些其他不尋常的事件使用。"
-
-#~ msgid "No reason given."
-#~ msgstr "未給出原因。"
-
-#: pcsx2/SourceLog.cpp:96
-msgid "Dumps detailed information for PS2 executables (ELFs)."
-msgstr "擷取 PS2 執行檔（ELF）的詳細資訊"
-
-#: pcsx2/SourceLog.cpp:101
-msgid ""
-"Logs manual protection, split blocks, and other things that might impact "
-"performance."
-msgstr "記錄手動保護、分塊，以及其他可能影響效能的東西。"
-
-#: pcsx2/SourceLog.cpp:106
-msgid "Shows the game developer's logging text (EE processor)"
-msgstr "顯示遊戲開發人員的日誌（EE processor）"
-
-#: pcsx2/SourceLog.cpp:111
-msgid "Shows the game developer's logging text (IOP processor)"
-msgstr "顯示遊戲開發人員的日誌（IOP processor）"
-
-#: pcsx2/SourceLog.cpp:116
-msgid "Shows DECI2 debugging logs (EE processor)"
-msgstr "顯示 DECI2 偵錯日誌（EE processor）"
-
-#: pcsx2/SourceLog.cpp:145
-msgid "SYSCALL and DECI2 activity."
-msgstr "SYSCALL 和 DECI2 的活動。"
-
-#: pcsx2/SourceLog.cpp:151
-msgid "Direct memory accesses to unknown or unmapped EE memory space."
-msgstr "直接記憶體存取至未知或未映射的 EE 記憶體空間。"
-
-#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
-msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
-msgstr "執行核心指令集的反組譯（不包含 COP 和 CACHE）。"
-
-#: pcsx2/SourceLog.cpp:163
-msgid "Disasm of COP0 instructions (MMU, cpu and dma status, etc)."
-msgstr "COP0 指令集的反組譯（MMU、cpu 和 dma 的狀態，以及其他）。"
-
-#: pcsx2/SourceLog.cpp:169
-msgid "Disasm of the EE's floating point unit (FPU) only."
-msgstr "僅 EE 浮點運算器的反組譯。"
-
-#: pcsx2/SourceLog.cpp:175
-msgid "Disasm of the EE's VU0macro co-processor instructions."
-msgstr "EE 的 VU0macro 輔助處理器指令集的反組譯。"
-
-#: pcsx2/SourceLog.cpp:181
-msgid "Execution of EE cache instructions."
-msgstr "EE 快取指令集的執行。"
-
-#: pcsx2/SourceLog.cpp:187
-msgid ""
-"All known hardware register accesses (very slow!); not including sub filter "
-"options below."
-msgstr "所有已知的硬體暫存器存取（非常慢！）；不包括下面的分項選項。"
-
-#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
-msgid "Logs only unknown, unmapped, or unimplemented register accesses."
-msgstr "僅記錄未知、未映射，或未實現的暫存器存取。"
-
-#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
-msgid "Logs only DMA-related registers."
-msgstr "僅記錄 DMA 相關的暫存器。"
-
-#: pcsx2/SourceLog.cpp:205
-msgid "IPU activity: hardware registers, decoding operations, DMA status, etc."
-msgstr "IPU 活動：硬體暫存器、解碼操作、DMA 狀態，以及其他。"
-
-#: pcsx2/SourceLog.cpp:211
-msgid "All GIFtag parse activity; path index, tag type, etc."
-msgstr "全部 GIFtag 解析活動；路徑索引，標籤類型，以及其他。"
-
-#: pcsx2/SourceLog.cpp:217
-msgid "All VIFcode processing; command, tag style, interrupts."
-msgstr "全部 VIFcode 處理；命令，標籤風格，中斷。"
-
-#: pcsx2/SourceLog.cpp:223
-msgid "All processing involved in Path3 Masking"
-msgstr "Path3 Masking 裡面的全部處理"
-
-#: pcsx2/SourceLog.cpp:229
-msgid "Scratchpad's MFIFO activity."
-msgstr "便條式暫存的 MFIFO 活動。"
-
-#: pcsx2/SourceLog.cpp:235
-msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
-msgstr "實際的資料傳輸日誌、匯流排正確的仲裁、停頓，以及其他。"
-
-#: pcsx2/SourceLog.cpp:241
-msgid "Tracks all EE counters events and some counter register activity."
-msgstr "追蹤全部 EE 計數器事件以及一些計數器暫存器活動。"
-
-#: pcsx2/SourceLog.cpp:247
-msgid "Dumps various VIF and VIFcode processing data."
-msgstr "擷取各種各樣的 VIF 和 VIFcode 處理資料。"
-
-#: pcsx2/SourceLog.cpp:253
-msgid "Dumps various GIF and GIFtag parsing data."
-msgstr "擷取各種各樣的 GIF 和 GIFtag 解析資料。"
-
-#: pcsx2/SourceLog.cpp:264
-msgid "SYSCALL and IRX activity."
-msgstr "SYSCALL 和 IRX 的活動。"
-
-#: pcsx2/SourceLog.cpp:270
-msgid "Direct memory accesses to unknown or unmapped IOP memory space."
-msgstr "直接記憶體存取至未知或未映射的 IOP 記憶體空間。"
-
-#: pcsx2/SourceLog.cpp:282
-msgid "Disasm of the IOP's GPU co-processor instructions."
-msgstr "IOP 的 GPU 輔助處理器指令集的反組譯。"
-
-#: pcsx2/SourceLog.cpp:288
-msgid ""
-"All known hardware register accesses, not including the sub-filters below."
-msgstr "所有已知的硬體暫存器存取，不包括下面的分項。"
-
-#: pcsx2/SourceLog.cpp:306
-msgid "Memorycard reads, writes, erases, terminators, and other processing."
-msgstr "記憶卡的讀取、寫入、清除、終結者，以及其他處理。"
-
-#: pcsx2/SourceLog.cpp:312
-msgid "Gamepad activity on the SIO."
-msgstr "SIO 上的遊戲手把活動。"
-
-#: pcsx2/SourceLog.cpp:318
-msgid "Actual DMA event processing and data transfer logs."
-msgstr "實際的直接記憶體存取事件處理和資料傳輸日誌。"
-
-#: pcsx2/SourceLog.cpp:324
-msgid "Tracks all IOP counters events and some counter register activity."
-msgstr "追蹤全部 IOP 計數器事件以及一些計數器暫存器活動。"
-
-#: pcsx2/SourceLog.cpp:330
-msgid "Detailed logging of CDVD hardware."
-msgstr "CDVD 硬體的詳細日誌紀錄。"
-
-#: common/include/Utilities/Exceptions.h:187
-msgid "No reason given."
-msgstr "未給出原因。"
-
-#: common/src/Utilities/ThreadTools.cpp:41
-msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "執行緒的活動：開始、分離、同步、刪除，以及其他。"
-
-#: common/src/Utilities/wxAppWithHelpers.cpp:36
-msgid "Includes idle event processing and some other uncommon event usages."
-msgstr "包含閒置的事件處理和一些其他不尋常的事件使用。"
-
-#: pcsx2/MTGS.cpp:815
-msgid ""
-"The MTGS thread has become unresponsive while waiting for the GS plugin to "
-"open."
-msgstr "當等候圖形插件開啟時，多執行緒圖形模式的執行緒停止回應。"
-
-#: pcsx2/PluginManager.cpp:1329
-msgid "Internal Memorycard Plugin failed to initialize."
-msgstr "初始化內部記憶卡插件失敗。"
-
-#: pcsx2/gui/AppConfig.cpp:818
-msgid "Safest"
-msgstr "最安全"
-
-#: pcsx2/gui/AppConfig.cpp:819
-msgid "Safe (faster)"
-msgstr "安全（速度更快）"
-
-#: pcsx2/gui/AppConfig.cpp:820
-msgid "Balanced"
-msgstr "平衡"
-
-#: pcsx2/gui/AppConfig.cpp:821
-msgid "Aggressive"
-msgstr "激進"
-
-#: pcsx2/gui/AppConfig.cpp:822
-msgid "Aggressive plus"
-msgstr "更加激進"
-
-#: pcsx2/gui/AppConfig.cpp:823
-msgid "Mostly Harmful"
-msgstr "基本上有害"
-
-#: pcsx2/gui/ConsoleLogger.cpp:413
-msgid "Fits a lot of log in a microcosmically small area."
-msgstr "在同等區域中顯示較多日誌"
-
-#: pcsx2/gui/ConsoleLogger.cpp:415
-msgid "It's what I use (the programmer guy)."
-msgstr "這是 PCSX2 程式設計師們使用的字型大小"
-
-#: pcsx2/gui/ConsoleLogger.cpp:417
-msgid "Its nice and readable."
-msgstr "令人心曠神怡而且便於閱讀"
-
-#: pcsx2/gui/ConsoleLogger.cpp:419
-msgid "In case you have a really high res display."
-msgstr "適用於高螢幕解析度"
-
-#: pcsx2/gui/ConsoleLogger.cpp:423
-msgid "Default soft-tone color scheme."
-msgstr "預設的軟色調顏色主題"
-
-#: pcsx2/gui/ConsoleLogger.cpp:424
-msgid ""
-"Classic black color scheme for people who enjoy having text seared into "
-"their optic nerves."
-msgstr "經典的黑色主題，獻給喜歡讓文字灼燒視神經的人。"
-
-#: pcsx2/gui/ConsoleLogger.cpp:428
-msgid ""
-"When checked the log window will be visible over other foreground windows."
-msgstr "當勾選時，日誌視窗總是保持在最前端。"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
-msgid "!ContextTip:ChangingNTFS"
-msgstr ""
-"NTFS 壓縮能夠在任何時候手動變更，透過從檔案總管使用右鍵選單的「內容」選項。"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
-msgid ""
-"Always use this option if you want the safest and surest memory card "
-"behavior."
-msgstr "如果您想要最安全可靠的記憶卡行為，就一直使用這個選項。"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
-msgid "16 and 32 MB cards have roughly the same compatibility factor."
-msgstr "16 MB 和 32 MB 記憶卡的相容性係數大致相同。"
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
-msgid ""
-"Use at your own risk.  Erratic memory card behavior is possible (though "
-"unlikely)."
-msgstr "使用者自擔風險。可能出現不確定的記憶卡行為（儘管可能性不大）"
-
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
-msgid "!ContextTip:Folders:Settings"
-msgstr ""
-"PCSX2 用這個資料夾儲存您的設定，包括大多數插件的設定。\n"
-"（一些較老的插件可能不將設定儲存在這個資料夾裡面）"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
-msgid "!Panel:HasHacksOverrides"
-msgstr ""
-"警告！您正在從覆寫現有設定的命令列選項執行 PCSX2。\n"
-"這些命令列選項不會反映到設定視窗中，並且會被停用。\n"
-"如果您在這裡套用任何變更。"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
-msgid "!Panel:HasPluginsOverrides"
-msgstr ""
-"警告！您正在從覆寫現有插件 / 資料夾設定的命令列選項執行 PCSX2。\n"
-"這些命令列選項不會反映到設定視窗中，並且會被停用。\n"
-"當您在這裡套用變更時。"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
-msgid "!Notice:Tooltip:Presets:Slider"
-msgstr ""
-"1 -　最準確的模擬、速度最慢。\n"
-"3 --> 嘗試在遊戲速度和相容性之間取得平衡。\n"
-"4 -　一些更加激進的速度駭客、模擬器選項。\n"
-"6 -　非常多的速度駭客，可能會降低大多數遊戲的遊戲速度。"
-
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
-msgid "!Notice:Tooltip:Presets:Checkbox"
-msgstr ""
-"套用速度駭客、一些反編譯選項、一些已知加快遊戲速度的遊戲修正。\n"
-"已知重要的遊戲修正（補丁）會自動套用。\n"
-"\n"
-"--> 當取消勾選時，可以手動變更模擬器設定（基於當前滑桿所選擇的預先定義的設"
-"置）"
-
-#: pcsx2/gui/ExecutorThread.cpp:40
-msgid "Logs events as they are passed to the PS2 virtual machine."
-msgstr "隨著事件傳遞給 PS2 虛擬機，記錄事件。"
-
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
-msgid "!ContextTip:DirPicker:UseDefault"
-msgstr ""
-"當勾選時，此資料夾將會自動反映與 PCSX2 當前的使用者設定所關聯的預設值。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
-msgid "!ContextTip:Window:Vsync"
-msgstr ""
-"垂直同步消除遊戲畫面出現斷層（Screen tearing），但是效能大幅損失。\n"
-"通常僅用於全螢幕模式，恐怕不是在所有的圖形插件中都能工作。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:69
-msgid "!ContextTip:Window:ManagedVsync"
-msgstr ""
-"當擁有正常的遊戲速度時，開啟垂直同步。\n"
-"若達不到正常的遊戲速度，就關閉垂直同步以避免遊戲速度進一步下降。\n"
-"注意：僅用於 GSdx 的 Renderer 設定為 Direct3D10/11 (Hardware)。\n"
-"任何其他的圖形插件或 GSdx 的 Renderer 設定將會忽略本選項，\n"
-"或在切換垂直同步時，出現閃爍的黑色框架。\n"
-"本選項也要求開啟顯示卡的垂直同步。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:77
-msgid "!ContextTip:Window:HideMouse"
-msgstr ""
-"當勾選時，強行令滑鼠指標在遊戲視窗中不可見；\n"
-"對於使用滑鼠作為遊戲中主要的控制裝置，是有用的。\n"
-"預設，滑鼠指標在 2 秒非活動之後自動隱藏。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:83
-msgid "!ContextTip:Window:Fullscreen"
-msgstr ""
-"當開始或恢復模擬時，自動切換至全螢幕模式。\n"
-"您仍能使用 Alt + Enter，在視窗模式和全螢幕模式之間隨時切換。"
-
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:94
-msgid "!ContextTip:Window:HideGS"
-msgstr ""
-"當按 ESC 或透過選單「檔案 -> 暫停遊戲」暫停模擬器的模擬時，\n"
-"暫時徹底關閉又大又笨重的遊戲視窗。"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
-msgid "!ContextTip:Gamefixes:EE Timing Hack"
-msgstr ""
-"已知影響下列遊戲：\n"
-" * 數位惡魔傳說（Digital Devil Saga）（修正遊戲動畫和遊戲當掉）\n"
-" * SSX（修正糟糕的圖形和遊戲當掉）\n"
-" * 惡靈古堡：英雄不死（Resident Evil: Dead Aim）（導致混亂的紋理）"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
-msgid "!ContextTip:Gamefixes:OPH Flag hack"
-msgstr ""
-"已知影響下列遊戲：\n"
-" * 死神刀刃戰士（Bleach Blade Battler）\n"
-" * 夢幻騎士（Growlancer）II 和 III\n"
-" * 巫術（Wizardry）"
-
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
-msgid "!ContextTip:Gamefixes:DMA Busy hack"
-msgstr ""
-"已知影響下列遊戲：\n"
-" * Mana Khemia 1 離開校園（Off Campus）"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:40
-msgid "!ContextTip:Folders:Savestates"
-msgstr ""
-"PCSX2 用這個資料夾儲存即時存檔；\n"
-"即時存檔透過「選單 / 工具列」寫入，或熱鍵 F1 / F3（寫檔 / 讀檔）。"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:50
-msgid "!ContextTip:Folders:Snapshots"
-msgstr ""
-"PCSX2 用這個資料夾儲存遊戲擷圖。\n"
-"取決於所使用的圖形插件，實際的圖片格式可能不同。"
-
-#: pcsx2/gui/Panels/PathsPanel.cpp:60
-msgid "!ContextTip:Folders:Logs"
-msgstr ""
-"PCSX2 用這個資料夾儲存日誌和用於診斷的轉存。\n"
-"大多數插件也使用這個資料夾儲存自己的日誌，\n"
-"但是一些較老的插件可能忽略這個資料夾。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
-msgid "!Panel:Speedhacks:EECycleX1"
-msgstr ""
-"1 - 預設值。\n"
-"緊密地匹配正港 PS2 CPU 的實際速度。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
-msgid "!Panel:Speedhacks:EECycleX2"
-msgstr ""
-"2 - 將 EE cyclerate 減少大約 33%。\n"
-"對於大多數遊戲有溫和的速度提升；\n"
-"相容性高。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
-msgid "!Panel:Speedhacks:EECycleX3"
-msgstr ""
-"3 - 將 EE cyclerate 減少大約 50%。\n"
-"適度的速度提升；\n"
-"許多遊戲動畫的聲音結結巴巴。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
-msgid "!Panel:Speedhacks:VUCycleStealOff"
-msgstr ""
-"0 - 停用 VU Cycle Stealing。\n"
-"相容性最佳！"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
-msgid "!Panel:Speedhacks:VUCycleSteal1"
-msgstr ""
-"1 - 溫和的 VU Cycle Stealing。\n"
-"相容性降低；\n"
-"對於大多數遊戲能夠提升一些速度。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
-msgid "!Panel:Speedhacks:VUCycleSteal2"
-msgstr ""
-"2 - 適度的 VU Cycle Stealing。\n"
-"相容性更低；\n"
-"對於一些遊戲有巨大的速度提升。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
-msgid "!Panel:Speedhacks:VUCycleSteal3"
-msgstr ""
-"3 - 最大的 VU Cycle Stealing。\n"
-"實用性有限，因為會導致大多數遊戲\n"
-"畫面閃爍或速度變慢。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
-msgid "!ContextTip:Speedhacks:EECycleRate Slider"
-msgstr ""
-"數值愈高，就愈能有效降低 EE 的 CPU 核心 R5900 的時脈。\n"
-"對於那些無法利用真實 PS2 硬體全部潛能的遊戲，能夠大幅提升遊戲速度。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
-msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
-msgstr ""
-"滑桿控制著 VU 從 EE 偷竊的週期的數目。\n"
-"數值愈高，遊戲執行的每一個 VU 微程式從 EE 偷的就愈多。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
-msgid "!ContextTip:Speedhacks:vuFlagHack"
-msgstr ""
-"僅對讀取狀態旗標的塊，更新狀態旗標，取代一直更新狀態旗標。\n"
-"大部分時間是安全的，Super VU 預設做類似的事情。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr ""
-"假定遙遠未來的塊不需要舊的旗標實例資料。\n"
-"非常安全。不曉得會不會令遊戲不正常..."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
-msgid "!ContextTip:Speedhacks:INTC"
-msgstr ""
-"對於使用 INTC 狀態暫存器等待垂直同步的遊戲，表現最好。\n"
-"主要包括 RPG 遊戲非 3D 的標題。\n"
-"不使用此垂直同步方式的遊戲，將會有少量或沒有速度提升。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
-msgid "!ContextTip:Speedhacks:BIFC0"
-msgstr ""
-"主要把核心內位址 0x81FC0 的 EE 空閒循環作為目標。\n"
-"嘗試偵測每次重複都確保導致相同機器狀態的循環，\n"
-"直到一個排定的事件觸發另一個單元的模擬。\n"
-"這樣的循環重複一次之後，取決於哪個先到：\n"
-"我們前進到下次事件或處理器時間片段的結束。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
-msgid "!ContextTip:Speedhacks:fastCDVD"
-msgstr ""
-"查閱 HDLoader 相容性列表，以確定已知使用這個選項會出現問題的遊戲。\n"
-"通常是有注明需要 mode 1（模式 1）或 slow DVD（慢速 DVD）的遊戲。"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:37
-msgid "!ContextTip:Framelimiter:Disable"
-msgstr "注意：當畫框限制停用時，渦輪加速和慢動作無法使用。"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:162
-msgid ""
-"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
-"valid floating point numerics."
-msgstr ""
-"當解析 NTSC 遊戲或 PAL 遊戲的畫框速率設定時出現錯誤。設定值必須是有效的浮點"
-"數。"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:295
-msgid ""
-"For troubleshooting potential bugs in the MTGS only, as it is potentially "
-"very slow."
-msgstr ""
-"僅用於排除多執行緒圖形模式潛在的程式錯誤，\n"
-"因為速度可能非常慢"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid ""
-"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
-"components."
-msgstr ""
-"完全停止圖形插件所有的活動；\n"
-"適合用來做 EEcore 的效能測試"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
-msgid "!ContextTip:GS:SyncMTGS"
-msgstr ""
-"啟用這個選項，若您認為多執行緒圖形模式執行緒的同步正在導致模擬器當掉或圖形錯"
-"誤。"
-
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
-msgid "!ContextTip:GS:DisableOutput"
-msgstr ""
-"移除任何由多執行緒圖形模式的執行緒過載或 GPU 過載引起的效能測試產生的噪音。\n"
-"這個選項最好是和即時存檔配合使用：\n"
-"在一個理想的畫面儲存即時存檔，啟用這個選項，再讀取即時存檔。\n"
-"\n"
-"警告：這個選項在遊戲運行時啟用即可生效，但無法在遊戲運行時停用（圖像變得垃"
-"圾）。"
-
-#~ msgid "!ContextTip:Window:FullscreenExclusive"
+#~ "套用速度駭客、一些反編譯選項、一些已知加快遊戲速度的遊戲修正。\n"
+#~ "已知重要的遊戲修正（補丁）會自動套用。\n"
+#~ "\n"
+#~ "--> 當取消勾選時，可以手動變更模擬器設定（基於當前滑桿所選擇的預先定義的設"
+#~ "置）"
+
+#~ msgid "!ContextTip:DirPicker:UseDefault"
 #~ msgstr ""
-#~ "可能在 CRT 螢幕上，畫面看起來更好；可能在老舊的顯示卡中，速度稍微快一"
-#~ "些。\n"
-#~ "但會導致當視窗模式和全螢幕模式之間切換時，記憶體洩漏或模擬器隨機當掉。"
+#~ "當勾選時，此資料夾將會自動反映與 PCSX2 當前的使用者設定所關聯的預設值。"
 
-#~ msgid "!ContextTip:Speedhacks:vuMinMax"
+#~ msgid "!ContextTip:Window:Vsync"
 #~ msgstr ""
-#~ "使用 SSE 的 Min/Max 浮點操作，取代自訂邏輯 Min/Max 例行程序。\n"
-#~ "已知令 Gran Turismo 4（GT4）和 Tekken 5（鐵拳 5）遊戲不正常。"
+#~ "垂直同步消除遊戲畫面出現斷層（Screen tearing），但是效能大幅損失。\n"
+#~ "通常僅用於全螢幕模式，恐怕不是在所有的圖形插件中都能工作。"
+
+#~ msgid "!ContextTip:Window:ManagedVsync"
+#~ msgstr ""
+#~ "當擁有正常的遊戲速度時，開啟垂直同步。\n"
+#~ "若達不到正常的遊戲速度，就關閉垂直同步以避免遊戲速度進一步下降。\n"
+#~ "注意：僅用於 GSdx 的 Renderer 設定為 Direct3D10/11 (Hardware)。\n"
+#~ "任何其他的圖形插件或 GSdx 的 Renderer 設定將會忽略本選項，\n"
+#~ "或在切換垂直同步時，出現閃爍的黑色框架。\n"
+#~ "本選項也要求開啟顯示卡的垂直同步。"
+
+#~ msgid "!ContextTip:Window:HideMouse"
+#~ msgstr ""
+#~ "當勾選時，強行令滑鼠指標在遊戲視窗中不可見；\n"
+#~ "對於使用滑鼠作為遊戲中主要的控制裝置，是有用的。\n"
+#~ "預設，滑鼠指標在 2 秒非活動之後自動隱藏。"
+
+#~ msgid "!ContextTip:Window:Fullscreen"
+#~ msgstr ""
+#~ "當開始或恢復模擬時，自動切換至全螢幕模式。\n"
+#~ "您仍能使用 Alt + Enter，在視窗模式和全螢幕模式之間隨時切換。"
+
+#~ msgid "!ContextTip:Window:HideGS"
+#~ msgstr ""
+#~ "當按 ESC 或透過選單「檔案 -> 暫停遊戲」暫停模擬器的模擬時，\n"
+#~ "暫時徹底關閉又大又笨重的遊戲視窗。"
+
+#~ msgid "!ContextTip:Gamefixes:EE Timing Hack"
+#~ msgstr ""
+#~ "已知影響下列遊戲：\n"
+#~ " * 數位惡魔傳說（Digital Devil Saga）（修正遊戲動畫和遊戲當掉）\n"
+#~ " * SSX（修正糟糕的圖形和遊戲當掉）\n"
+#~ " * 惡靈古堡：英雄不死（Resident Evil: Dead Aim）（導致混亂的紋理）"
+
+#~ msgid "!ContextTip:Gamefixes:OPH Flag hack"
+#~ msgstr ""
+#~ "已知影響下列遊戲：\n"
+#~ " * 死神刀刃戰士（Bleach Blade Battler）\n"
+#~ " * 夢幻騎士（Growlancer）II 和 III\n"
+#~ " * 巫術（Wizardry）"
+
+#~ msgid "!ContextTip:Gamefixes:DMA Busy hack"
+#~ msgstr ""
+#~ "已知影響下列遊戲：\n"
+#~ " * Mana Khemia 1 離開校園（Off Campus）"
+
+#~ msgid "!ContextTip:Folders:Savestates"
+#~ msgstr ""
+#~ "PCSX2 用這個資料夾儲存即時存檔；\n"
+#~ "即時存檔透過「選單 / 工具列」寫入，或熱鍵 F1 / F3（寫檔 / 讀檔）。"
+
+#~ msgid "!ContextTip:Folders:Snapshots"
+#~ msgstr ""
+#~ "PCSX2 用這個資料夾儲存遊戲擷圖。\n"
+#~ "取決於所使用的圖形插件，實際的圖片格式可能不同。"
+
+#~ msgid "!ContextTip:Folders:Logs"
+#~ msgstr ""
+#~ "PCSX2 用這個資料夾儲存日誌和用於診斷的轉存。\n"
+#~ "大多數插件也使用這個資料夾儲存自己的日誌，\n"
+#~ "但是一些較老的插件可能忽略這個資料夾。"
+
+#~ msgid "!Panel:Speedhacks:EECycleX1"
+#~ msgstr ""
+#~ "1 - 預設值。\n"
+#~ "緊密地匹配正港 PS2 CPU 的實際速度。"
+
+#~ msgid "!Panel:Speedhacks:EECycleX2"
+#~ msgstr ""
+#~ "2 - 將 EE cyclerate 減少大約 33%。\n"
+#~ "對於大多數遊戲有溫和的速度提升；\n"
+#~ "相容性高。"
+
+#~ msgid "!Panel:Speedhacks:EECycleX3"
+#~ msgstr ""
+#~ "3 - 將 EE cyclerate 減少大約 50%。\n"
+#~ "適度的速度提升；\n"
+#~ "許多遊戲動畫的聲音結結巴巴。"
+
+#~ msgid "!Panel:Speedhacks:VUCycleStealOff"
+#~ msgstr ""
+#~ "0 - 停用 VU Cycle Stealing。\n"
+#~ "相容性最佳！"
+
+#~ msgid "!Panel:Speedhacks:VUCycleSteal1"
+#~ msgstr ""
+#~ "1 - 溫和的 VU Cycle Stealing。\n"
+#~ "相容性降低；\n"
+#~ "對於大多數遊戲能夠提升一些速度。"
+
+#~ msgid "!Panel:Speedhacks:VUCycleSteal2"
+#~ msgstr ""
+#~ "2 - 適度的 VU Cycle Stealing。\n"
+#~ "相容性更低；\n"
+#~ "對於一些遊戲有巨大的速度提升。"
+
+#~ msgid "!Panel:Speedhacks:VUCycleSteal3"
+#~ msgstr ""
+#~ "3 - 最大的 VU Cycle Stealing。\n"
+#~ "實用性有限，因為會導致大多數遊戲\n"
+#~ "畫面閃爍或速度變慢。"
+
+#~ msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+#~ msgstr ""
+#~ "數值愈高，就愈能有效降低 EE 的 CPU 核心 R5900 的時脈。\n"
+#~ "對於那些無法利用真實 PS2 硬體全部潛能的遊戲，能夠大幅提升遊戲速度。"
+
+#~ msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+#~ msgstr ""
+#~ "滑桿控制著 VU 從 EE 偷竊的週期的數目。\n"
+#~ "數值愈高，遊戲執行的每一個 VU 微程式從 EE 偷的就愈多。"
+
+#~ msgid "!ContextTip:Speedhacks:vuFlagHack"
+#~ msgstr ""
+#~ "僅對讀取狀態旗標的塊，更新狀態旗標，取代一直更新狀態旗標。\n"
+#~ "大部分時間是安全的，Super VU 預設做類似的事情。"
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr ""
+#~ "假定遙遠未來的塊不需要舊的旗標實例資料。\n"
+#~ "非常安全。不曉得會不會令遊戲不正常..."
+
+#~ msgid "!ContextTip:Speedhacks:INTC"
+#~ msgstr ""
+#~ "對於使用 INTC 狀態暫存器等待垂直同步的遊戲，表現最好。\n"
+#~ "主要包括 RPG 遊戲非 3D 的標題。\n"
+#~ "不使用此垂直同步方式的遊戲，將會有少量或沒有速度提升。"
+
+#~ msgid "!ContextTip:Speedhacks:BIFC0"
+#~ msgstr ""
+#~ "主要把核心內位址 0x81FC0 的 EE 空閒循環作為目標。\n"
+#~ "嘗試偵測每次重複都確保導致相同機器狀態的循環，\n"
+#~ "直到一個排定的事件觸發另一個單元的模擬。\n"
+#~ "這樣的循環重複一次之後，取決於哪個先到：\n"
+#~ "我們前進到下次事件或處理器時間片段的結束。"
+
+#~ msgid "!ContextTip:Speedhacks:fastCDVD"
+#~ msgstr ""
+#~ "查閱 HDLoader 相容性列表，以確定已知使用這個選項會出現問題的遊戲。\n"
+#~ "通常是有注明需要 mode 1（模式 1）或 slow DVD（慢速 DVD）的遊戲。"
+
+#~ msgid "!ContextTip:Framelimiter:Disable"
+#~ msgstr "注意：當畫框限制停用時，渦輪加速和慢動作無法使用。"
+
+#~ msgid "!ContextTip:GS:SyncMTGS"
+#~ msgstr ""
+#~ "啟用這個選項，若您認為多執行緒圖形模式執行緒的同步正在導致模擬器當掉或圖形"
+#~ "錯誤。"
+
+#~ msgid "!ContextTip:GS:DisableOutput"
+#~ msgstr ""
+#~ "移除任何由多執行緒圖形模式的執行緒過載或 GPU 過載引起的效能測試產生的噪"
+#~ "音。\n"
+#~ "這個選項最好是和即時存檔配合使用：\n"
+#~ "在一個理想的畫面儲存即時存檔，啟用這個選項，再讀取即時存檔。\n"
+#~ "\n"
+#~ "警告：這個選項在遊戲運行時啟用即可生效，但無法在遊戲運行時停用（圖像變得垃"
+#~ "圾）。"
