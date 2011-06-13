@@ -199,6 +199,7 @@
 		</Build>
 		<Compiler>
 			<Add option="-march=i486" />
+			<Add option="`pkg-config gtk+-2.0 --cflags`" />
 			<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --cflags`" />
 			<Add option="-Wno-format" />
 			<Add option="-Wno-unused-parameter" />
@@ -213,8 +214,6 @@
 			<Add option="-fvisibility=hidden" />
 			<Add option="-DWX_PRECOMP" />
 			<Add option="-DGDK_DISABLE_DEPRECATED" />
-			<Add option="-DGTK_DISABLE_DEPRECATED" />
-			<Add option="-DGTK_DISABLE_SINGLE_INCLUDES" />
 			<Add option="-DGSEAL_ENABLE" />
 			<Add directory="$(SvnRootDir)/common/include/" />
 			<Add directory="$(SvnRootDir)/3rdparty/" />
