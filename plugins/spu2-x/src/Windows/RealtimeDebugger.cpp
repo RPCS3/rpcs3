@@ -206,7 +206,7 @@ void UpdateDebugDialog()
 
             memset(t, 0, sizeof(t));
 			swprintf_s(t,L"IRQA %x",cx.IRQA);
-			TextOut(hdc,JX+56,JY+18,t, 9);
+			TextOut(hdc,JX+56,JY+18,t, 12);
 
 			SetTextColor(hdc,RGB(255,255,255));
 			SetDCBrushColor(hdc,RGB(  255,0,  0));
