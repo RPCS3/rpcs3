@@ -109,13 +109,14 @@ StereoOut32 V_Core::ReadInput_HiFi()
 
 StereoOut32 V_Core::ReadInput()
 {
-	if((AutoDMACtrl&(Index+1)) != (Index+1))
-		return StereoOut32();
-
 	StereoOut32 retval;
 
 	if( (Index!=1) || ((PlayMode&2)==0) )
 	{
+		for (int i=0; i<2; i++)
+			if (Cores[i].IRQEnable && 0x2000 + (Index << 10) + InputPosRead == (Cores[i].IRQA & 0xfffffdff))
+				SetIrqCall(Index);
+
 		//retval = StereoOut32(
 		//	(s32)ADMATempBuffer[InputPosRead],
 		//	(s32)ADMATempBuffer[InputPosRead+0x200]
@@ -132,7 +133,8 @@ StereoOut32 V_Core::ReadInput()
 #endif
 
 	InputPosRead++;
-	if( (InputPosRead==0x100) || (InputPosRead>=0x200) )
+
+	if (AutoDMACtrl & Index + 1 && (InputPosRead == 0x100 || InputPosRead == 0x200))
 	{
 #ifdef ENABLE_NEW_IOPDMA_SPU2
 		// WARNING: Assumes this to be in the same thread as the dmas
@@ -169,7 +171,7 @@ StereoOut32 V_Core::ReadInput()
 			}
 		}
 #endif
-		InputPosRead&=0x1ff;
 	}
+	InputPosRead &= 0x1ff;
 	return retval;
 }
