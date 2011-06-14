@@ -225,10 +225,7 @@ static __forceinline void GetNextDataDummy(V_Core& thiscore, uint voiceidx)
 		if(vc.LoopFlags & XAFLAG_LOOP_END)
 		{
 			thiscore.Regs.ENDX |= (1 << voiceidx);
-
-			if( vc.LoopFlags & XAFLAG_LOOP )
-				vc.NextA = vc.LoopStartA;
-			// no else, already stopped
+			vc.NextA = vc.LoopStartA;
 		}
 
 		vc.LoopFlags = *GetMemPtr(vc.NextA&0xFFFFF) >> 8;	// grab loop flags from the upper byte.
