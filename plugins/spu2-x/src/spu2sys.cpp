@@ -899,7 +899,6 @@ static void __fastcall RegWrite_Core( u16 value )
 
 		case REG_C_ATTR:
 		{
-			bool fxenable	= thiscore.FxEnable;
 			bool irqe		= thiscore.IRQEnable;
 			int bit0		= thiscore.AttrBit0;
 			u8 oldDmaMode	= thiscore.DmaMode;
@@ -914,9 +913,6 @@ static void __fastcall RegWrite_Core( u16 value )
 			thiscore.Mute		=0;
 			thiscore.CoreEnabled=(value>>15) & 0x01; //1 bit
 			thiscore.Regs.ATTR  =value&0x7fff;
-
-			if (!fxenable && thiscore.FxEnable)
-				thiscore.RevBuffers.NeedsUpdated = true;
 
 			if(oldDmaMode != thiscore.DmaMode)
 			{
@@ -1089,6 +1085,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			{
 				SetHiWord( thiscore.EffectsStartA, value );
 				thiscore.ReverbX = 0;
+				thiscore.RevBuffers.NeedsUpdated = true;
 			}
 		break;
 
@@ -1097,6 +1094,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			{
 				SetLoWord( thiscore.EffectsStartA, value );
 				thiscore.ReverbX = 0;
+				thiscore.RevBuffers.NeedsUpdated = true;
 			}
 		break;
 
@@ -1105,6 +1103,7 @@ static void __fastcall RegWrite_Core( u16 value )
 			{
 				thiscore.EffectsEndA = ((u32)value<<16) | 0xFFFF;
 				thiscore.ReverbX = 0;
+				thiscore.RevBuffers.NeedsUpdated = true;
 			}
 		break;
 
