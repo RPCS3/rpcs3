@@ -146,7 +146,15 @@ void V_Core::Init( int index )
 	EffectsEndA		= c ? 0xFFFFF : 0xEFFFF;
 
 	FxEnable		= 0; // Uninitialized it's 0 for both cores. Resetting libs however may set this to 0 or 1.
-	IRQA			= 0xFFFFF; //0x40505E9C : 0x3220EAA4;  // << Actual PS2 values, so this is uninitialized.
+	// These are real PS2 values, mainly constant apart from a few bits: 0x3220EAA4, 0x40505E9C.
+	// These values mean nothing.  They do not reflect the actual address the SPU2 is testing,
+	// it would seem that reading the IRQA register returns the last written value, not the
+	// value of the internal register.  Rewriting the registers with their current values changes
+	// whether interrupts fire (they do while uninitialised, but do not when rewritten).
+	// The exact boot value is unknown and probably unknowable, but it seems to be somewhere
+	// in the input or output areas, so we're using 0x800.
+	// F1 2005 is known to rely on an uninitialised IRQA being an address which will be hit.
+	IRQA			= 0x800;
 	IRQEnable		= 0; // PS2 confirmed
 
 	for( uint v=0; v<NumVoices; ++v )
