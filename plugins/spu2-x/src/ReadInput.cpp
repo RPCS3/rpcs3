@@ -115,7 +115,7 @@ StereoOut32 V_Core::ReadInput()
 	{
 		for (int i=0; i<2; i++)
 			if (Cores[i].IRQEnable && 0x2000 + (Index << 10) + InputPosRead == (Cores[i].IRQA & 0xfffffdff))
-				SetIrqCall(Index);
+				SetIrqCall(i);
 
 		//retval = StereoOut32(
 		//	(s32)ADMATempBuffer[InputPosRead],
