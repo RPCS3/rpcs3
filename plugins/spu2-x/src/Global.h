@@ -48,7 +48,7 @@ namespace soundtouch
 namespace VersionInfo
 {
 	static const u8 Release  = 1;
-	static const u8 Revision = 4;	// increase that with each version
+	static const u8 Revision = 5;	// increase that with each version
 }
 
 //////////////////////////////////////////////////////////////////////////
