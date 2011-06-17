@@ -281,17 +281,12 @@ bool JoystickInfo::PollButtons(u32 &pkey)
 			{
 				continue;
 			}
-			// Pressure sensitive button are detected as both button (digital) and axe (analog). So better
-			// drop the button to emulate the pressure sensiblity of the ds2 :) -- Gregory
-			for (int j = 0; j < GetNumAxes(); ++j) {
-				int value = SDL_JoystickGetAxis(GetJoy(), j);
-				int old_value = GetAxisState(j);
-				bool full_axis = (old_value < -0x3FFF) ? true : false;
-				if (value != old_value && ((full_axis && value > -0x6FFF ) || (!full_axis && abs(value) > old_value))) {
-					return false;
-				}
 
-			}
+			// Pressure sensitive button are detected as both button (digital) and axes (analog). So better
+			// drop the button to emulate the pressure sensiblity of the ds2 :) -- Gregory
+			u32 pkey_dummy;
+			if (PollAxes(pkey_dummy))
+				return false;
 
 			pkey = button_to_key(i);
 			return true;
@@ -315,19 +310,23 @@ bool JoystickInfo::PollAxes(u32 &pkey)
 			// Half+: 0 (release) -> 32768
 			// Half-: 0 (release) -> -32768
 			// Full (like dualshock 3): -32768 (release) ->32768
-			bool full_axis = (old_value < -0x2FFF) ? true : false;
+			const s32 full_axis_ceil = -0x6FFF;
+			const s32 half_axis_ceil = 0x1FFF;
 
-			if ((!full_axis && abs(value) <= 0x1FFF)
-					|| (full_axis && value <= -0x6FFF))  // we don't want this
+			// Normally, old_value contains the release state so it can be used to detect the types of axis.
+			bool is_full_axis = (old_value < full_axis_ceil) ? true : false;
+
+			if ((!is_full_axis && abs(value) <= half_axis_ceil)
+					|| (is_full_axis && value <= full_axis_ceil))  // we don't want this
 			{
 				continue;
 			}
 
-			if ((!full_axis && abs(value) > 0x3FFF)
-					|| (full_axis && value > -0x6FFF)) 
+			if ((!is_full_axis && abs(value) > half_axis_ceil)
+					|| (is_full_axis && value > full_axis_ceil)) 
 			{
 				bool sign = (value < 0);
-				pkey = axis_to_key(full_axis, sign, i);
+				pkey = axis_to_key(is_full_axis, sign, i);
 
 				return true;
 			}

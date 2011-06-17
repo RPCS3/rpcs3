@@ -35,7 +35,7 @@ class JoystickInfo
 {
 	public:
 		JoystickInfo() : devname(""), _id(-1), numbuttons(0), numaxes(0), numhats(0), axisrange(0x7fff),
-		 deadzone(2000), pad(-1), joy(NULL) {
+		 deadzone(1500), pad(-1), joy(NULL) {
 			 vbuttonstate.clear();
 			 vaxisstate.clear();
 			 vhatstate.clear();
@@ -94,7 +94,7 @@ class JoystickInfo
 			return pad;
 		}
 
-		int GetDeadzone(/*int axis*/)
+		int GetDeadzone()
 		{
 			return deadzone;
 		}
@@ -141,7 +141,6 @@ class JoystickInfo
 		}
 		int GetAxisFromKey(int pad, int index);
 	private:
-
 		string devname; // pretty device name
 		int _id;
 		int numbuttons, numaxes, numhats;

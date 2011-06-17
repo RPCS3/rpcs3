@@ -47,7 +47,7 @@ std::string s_strLogPath("logs/");
 bool toggleAutoRepeat = true;
 
 const u32 version  = PS2E_PAD_VERSION;
-const u32 revision = 0;
+const u32 revision = 1;
 const u32 build    = 1;    // increase that with each version
 
 int PadEnum[2][2] = {{0, 2}, {1, 3}};

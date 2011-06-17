@@ -63,7 +63,7 @@ string KeyName(int pad, int key, int keysym)
 			case PAD_AXIS:
 				{
 					if (key_to_axis_type(pad,key))
-						sprintf(&tmp[0], "JAxis %d Full", key_to_axis(pad, key), key_to_axis_sign(pad, key) ? "-" : "+");
+						sprintf(&tmp[0], "JAxis %d Full", key_to_axis(pad, key));
 					else
 						sprintf(&tmp[0], "JAxis %d Half%s", key_to_axis(pad, key), key_to_axis_sign(pad, key) ? "-" : "+");
 					break;
@@ -169,12 +169,17 @@ void LoadConfig()
 		return;
 	}
 
-	fscanf(f, "log = %d\n", &conf->log);
-	fscanf(f, "options = %d\n", &conf->options);
-	fscanf(f, "mouse_sensibility = %d\n", &conf->sensibility);
-	fscanf(f, "joy_pad_map = %d\n", &conf->joyid_map);
-	for (int pad = 0; pad < 2; pad++)
+	u32 value;
+	if (fscanf(f, "log = %d\n", &value) == 0) return;
+	conf->log = value;
+	if (fscanf(f, "options = %d\n", &value) == 0) return;
+	conf->options = value;
+	if (fscanf(f, "mouse_sensibility = %d\n", &value) == 0) return;
+	conf->sensibility = value;
+	if (fscanf(f, "joy_pad_map = %d\n", &value) == 0) return;
+	conf->joyid_map = value;
 
+	for (int pad = 0; pad < 2; pad++)
 	{
 		for (int key = 0; key < MAX_KEYS; key++)
 		{
