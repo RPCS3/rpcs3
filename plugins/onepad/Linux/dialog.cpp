@@ -399,7 +399,6 @@ void on_toggle_option(GtkToggleButton *togglebutton, gpointer user_data)
 		conf->options &= ~checkbox->mask;
 }
 
-
 void joy_changed(GtkComboBox *box, gpointer user_data)
 {
 	int joyid = gtk_combo_box_get_active(box);
@@ -490,7 +489,7 @@ button_positions b_pos[MAX_KEYS] =
 };
 
 // Warning position is important and must match the order of the PadOptions structure
-button_positions check_pos[7] =
+button_positions check_pos[8] =
 {
 	{ "Enable force feedback", 40, 400},
 	{ "Reverse Lx", 40, 304},
@@ -498,7 +497,8 @@ button_positions check_pos[7] =
 	{ "Reverse Rx", 368, 304},
 	{ "Reverse Ry", 368, 328},
 	{ "Use mouse for left analog joy", 40, 352},
-	{ "Use mouse for right analog joy", 368,352},
+	{ "Use mouse for right analog joy", 368, 352},
+	{ "Hack: Sixaxis/DS3 plugged in USB", 368, 400}
 };
 
 GtkWidget *create_notebook_page_dialog(int page, dialog_buttons btn[MAX_KEYS], dialog_checkbox checkbox[7])
@@ -567,7 +567,7 @@ GtkWidget *create_notebook_page_dialog(int page, dialog_buttons btn[MAX_KEYS], d
 	}
     
 	u32 mask = 1 << (16*page);
-	for(int i = 0; i < 7; i++) {
+	for(int i = 0; i < 8; i++) {
 		checkbox[i].create(keys_static_area, check_pos[i].label, check_pos[i].x, check_pos[i].y, mask);
 		mask = mask << 1;
 	}

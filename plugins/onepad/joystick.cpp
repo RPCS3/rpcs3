@@ -128,17 +128,17 @@ void JoystickInfo::InitHapticEffect()
     haptic_effect_data[0].periodic.direction.dir[0] = 18000; // Force comes from south
 
 	// periodic parameter
-    haptic_effect_data[0].periodic.period = 1000; // 1000 ms
+    haptic_effect_data[0].periodic.period = 200; // 200 ms
     haptic_effect_data[0].periodic.magnitude = 2000; // 2000/32767 strength
 
 	// Replay
-    haptic_effect_data[0].periodic.length = 2000; // 2 seconds long
+    haptic_effect_data[0].periodic.length = 1000; // 1 seconds long
     haptic_effect_data[0].periodic.delay  = 0;	   // start 0 second after the upload
 
 	// enveloppe
-    haptic_effect_data[0].periodic.attack_length = 500;// Takes 0.5 second to get max strength
+    haptic_effect_data[0].periodic.attack_length = 100;// Takes 0.1 second to get max strength
 	haptic_effect_data[0].periodic.attack_level = 0;   // start at 0
-    haptic_effect_data[0].periodic.fade_length = 500;	// Takes 0.5 second to fade away
+    haptic_effect_data[0].periodic.fade_length = 100;	// Takes 0.1 second to fade away
 	haptic_effect_data[0].periodic.fade_level = 0;    	// finish at 0
 
 	/*******************************************************************/
@@ -151,17 +151,17 @@ void JoystickInfo::InitHapticEffect()
     haptic_effect_data[1].periodic.direction.dir[0] = 18000; // Force comes from south
 
 	// periodic parameter
-    haptic_effect_data[1].periodic.period = 1000; // 1000 ms
+    haptic_effect_data[1].periodic.period = 200; // 200 ms
     haptic_effect_data[1].periodic.magnitude = 2000; // 2000/32767 strength
 
 	// Replay
-    haptic_effect_data[1].periodic.length = 2000; // 2 seconds long
+    haptic_effect_data[1].periodic.length = 1000; // 1 seconds long
     haptic_effect_data[1].periodic.delay  = 0;	   // start 0 second after the upload
 
 	// enveloppe
-    haptic_effect_data[1].periodic.attack_length = 500;// Takes 0.5 second to get max strength
+    haptic_effect_data[1].periodic.attack_length = 100;// Takes 0.1 second to get max strength
 	haptic_effect_data[1].periodic.attack_level = 0;   // start at 0
-    haptic_effect_data[1].periodic.fade_length = 500;	// Takes 0.5 second to fade away
+    haptic_effect_data[1].periodic.fade_length = 100;	// Takes 0.1 second to fade away
 	haptic_effect_data[1].periodic.fade_level = 0;    	// finish at 0
 
 	/*******************************************************************/
@@ -172,31 +172,26 @@ void JoystickInfo::InitHapticEffect()
 #endif
 }
 
-
 void JoystickInfo::DoHapticEffect(int type, int pad, int force)
 {
 	if (type > 1) return;
 	if ( !(conf->options & (PADOPTION_FORCEFEEDBACK << 16 * pad)) ) return;
 
 #if SDL_VERSION_ATLEAST(1,3,0)
-	// first search the joy associated to the pad
-	vector<JoystickInfo*>::iterator itjoy = s_vjoysticks.begin();
-	while (itjoy != s_vjoysticks.end()) {
-		if ((*itjoy)->GetPAD() == pad) break;
-		itjoy++;
-	}
+	int joyid = conf->get_joyid(pad);
+	if (!JoystickIdWithinBounds(joyid)) return;
+	JoystickInfo* pjoy = s_vjoysticks[joyid];
 
-	if (itjoy == s_vjoysticks.end()) return;
-	if ((*itjoy)->haptic == NULL) return;
-	if ((*itjoy)->haptic_effect_id[type] < 0) return;
+	if (pjoy->haptic == NULL) return;
+	if (pjoy->haptic_effect_id[type] < 0) return;
 
 	// FIXME: might need to multiply force
-	(*itjoy)->haptic_effect_data[type].periodic.magnitude = force; // force/32767 strength
+	pjoy->haptic_effect_data[type].periodic.magnitude = force; // force/32767 strength
 	// Upload the new effect
-	SDL_HapticUpdateEffect((*itjoy)->haptic, (*itjoy)->haptic_effect_id[type], &(*itjoy)->haptic_effect_data[type]);
+	SDL_HapticUpdateEffect(pjoy->haptic, pjoy->haptic_effect_id[type], &pjoy->haptic_effect_data[type]);
 
 	// run the effect once
-	SDL_HapticRunEffect( (*itjoy)->haptic, (*itjoy)->haptic_effect_id[type], 1 );
+	SDL_HapticRunEffect( pjoy->haptic, pjoy->haptic_effect_id[type], 1 );
 #endif
 }
 
@@ -237,6 +232,18 @@ bool JoystickInfo::Init(int id)
 	vaxisstate.resize(numaxes);
 	vbuttonstate.resize(numbuttons);
 	vhatstate.resize(numhats);
+
+	// Sixaxis, dualshock3 hack
+	// Most buttons are actually axes due to analog pressure support. Only the first 4 buttons
+	// are digital (select, start, l3, r3). To avoid conflict just forget the others.
+	// Keep the 4 hat buttons too (usb driver). (left pressure does not work with recent kernel). Moreover the pressure
+	// work sometime on half axis neg others time in fulll axis. So better keep them as button for the moment
+	u32 found_hack = devname.find(string("PLAYSTATION(R)3"));
+	if (found_hack != string::npos) {
+		numbuttons = 4;
+		// Enable this hack is bluetooth too. It avoid to restart the onepad gui
+		numbuttons += 4;
+	}
 
 #if SDL_VERSION_ATLEAST(1,3,0)
 	if ( haptic == NULL ) {
@@ -300,8 +307,20 @@ bool JoystickInfo::PollAxes(u32 &pkey)
 {
 	for (int i = 0; i < GetNumAxes(); ++i)
 	{
-		int value = SDL_JoystickGetAxis(GetJoy(), i);
-		int old_value = GetAxisState(i);
+		// Sixaxis, dualshock3 hack
+		u32 found_hack = devname.find(string("PLAYSTATION(R)3"));
+		if (found_hack != string::npos) {
+			// The analog mode of the hat button is quite erratic. Values can be in half- axis
+			// or full axis... So better keep them as button for the moment -- gregory
+			if (i >= 8 && i <= 11 && (conf->options & PADOPTION_SIXAXIS_USB))
+				continue;
+			// Disable accelerometer
+			if ((i >= 4 && i <= 6))
+				continue;
+		}
+
+		s32 value = SDL_JoystickGetAxis(GetJoy(), i);
+		s32 old_value = GetAxisState(i);
 
 		if (value != old_value)
 		{
