@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(Output zzogl)
+set(Output zzogl-0.3.0)
 
 set(CommonFlags
     -pthread

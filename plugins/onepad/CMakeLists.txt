@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(Output onepad)
+set(Output onepad-1.1.0)
 
 set(CommonFlags
     -fvisibility=hidden

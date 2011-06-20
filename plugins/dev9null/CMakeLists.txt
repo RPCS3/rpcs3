@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(Output dev9null)
+set(Output dev9null-0.5.0)
 
 set(CommonFlags
     -fvisibility=hidden

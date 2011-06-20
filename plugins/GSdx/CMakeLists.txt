@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(Output GSdx)
+set(Output GSdx-0.1.16)
 
 set(CommonFlags
     -D_LINUX

@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(Output spu2x)
+set(Output spu2x-1.5.0)
 
 set(CommonFlags
     -fvisibility=hidden
