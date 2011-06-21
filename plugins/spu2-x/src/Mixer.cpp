@@ -133,8 +133,8 @@ int g_counter_cache_misses = 0;
 int g_counter_cache_ignores = 0;
 
 // LOOP/END sets the ENDX bit and sets NAX to LSA, and the voice is muted if LOOP is not set
-// LOOP probably prevents SPU2 from muting the voice when the ENDX bit is set
-// (which would explain the requirement that every block in a loop has the LOOP bit set, not just the last)
+// LOOP seems to only have any effect on the block with LOOP/END set, where it prevents muting the voice
+// (the documented requirement that every block in a loop has the LOOP bit set is nonsense according to tests)
 // LOOP/START sets LSA to NAX unless LSA was written manually since sound generation started
 // (see LoopMode, the method by which this is achieved on the real SPU2 is unknown)
 #define XAFLAG_LOOP_END		(1ul<<0)
@@ -145,26 +145,44 @@ static __forceinline s32 GetNextDataBuffered( V_Core& thiscore, uint voiceidx )
 {
 	V_Voice& vc( thiscore.Voices[voiceidx] );
 
+	if( (vc.SCurrent&3) == 0 )
+	{
+		IncrementNextA( thiscore, voiceidx );
+		
+		if ((vc.NextA & 7) == 0) // vc.SCurrent == 24 equivalent
+		{
+			if(vc.LoopFlags & XAFLAG_LOOP_END)
+			{
+				thiscore.Regs.ENDX |= (1 << voiceidx);
+				vc.NextA = vc.LoopStartA | 1;
+				if (!(vc.LoopFlags & XAFLAG_LOOP))
+					vc.Stop();
+
+				if( IsDevBuild )
+				{
+					if(MsgVoiceOff()) ConLog("* SPU2-X: Voice Off by EndPoint: %d \n", voiceidx);
+				}
+			}
+			else
+				vc.NextA++; // no, don't IncrementNextA here.  We haven't read the header yet.
+		}
+	}
+
 	if( vc.SCurrent == 28 )
 	{
-		if(vc.LoopFlags & XAFLAG_LOOP_END)
-		{
-			thiscore.Regs.ENDX |= (1 << voiceidx);
-			if (!(vc.LoopFlags & XAFLAG_LOOP))
-				vc.Stop();
-
-			vc.NextA = vc.LoopStartA;
-			if( IsDevBuild )
-			{
-				if(MsgVoiceOff()) ConLog("* SPU2-X: Voice Off by EndPoint: %d \n", voiceidx);
-			}
-		}
+		vc.SCurrent = 0;
 
 		// We'll need the loop flags and buffer pointers regardless of cache status:
-		// Note to Self : NextA addresses WORDS (not bytes).
 
-		s16* memptr = GetMemPtr(vc.NextA&0xFFFFF);
+		for (int i=0; i<2; i++)
+			if (Cores[i].IRQEnable && Cores[i].IRQA == (vc.NextA & 0xFFFF8))
+				SetIrqCall(i);
+
+		s16* memptr = GetMemPtr(vc.NextA & 0xFFFF8);
 		vc.LoopFlags = *memptr >> 8;	// grab loop flags from the upper byte.
+
+		if( (vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode )
+			vc.LoopStartA = vc.NextA & 0xFFFF8;
 
 		const int cacheIdx = vc.NextA / pcm_WordsPerBlock;
 		PcmCacheEntry& cacheLine = pcm_cache_data[cacheIdx];
@@ -199,18 +217,6 @@ static __forceinline s32 GetNextDataBuffered( V_Core& thiscore, uint voiceidx )
 
 			XA_decode_block( vc.SBuffer, memptr, vc.Prev1, vc.Prev2 );
 		}
-
-		vc.SCurrent = 0;
-		if( (vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode )
-			vc.LoopStartA = vc.NextA;
-
-		goto _Increment;
-	}
-
-	if( (vc.SCurrent&3) == 3 )
-	{
-_Increment:
-		IncrementNextA( thiscore, voiceidx );
 	}
 
 	return vc.SBuffer[vc.SCurrent++];
@@ -220,27 +226,35 @@ static __forceinline void GetNextDataDummy(V_Core& thiscore, uint voiceidx)
 {
 	V_Voice& vc( thiscore.Voices[voiceidx] );
 
-	if (vc.SCurrent == 28)
+	IncrementNextA( thiscore, voiceidx );
+	
+	if ((vc.NextA & 7) == 0) // vc.SCurrent == 24 equivalent
 	{
 		if(vc.LoopFlags & XAFLAG_LOOP_END)
 		{
 			thiscore.Regs.ENDX |= (1 << voiceidx);
-			vc.NextA = vc.LoopStartA;
+			vc.NextA = vc.LoopStartA | 1;
 		}
+		else
+			vc.NextA++; // no, don't IncrementNextA here.  We haven't read the header yet.
+	}
 
-		vc.LoopFlags = *GetMemPtr(vc.NextA&0xFFFFF) >> 8;	// grab loop flags from the upper byte.
+	if (vc.SCurrent == 28)
+	{
+		for (int i=0; i<2; i++)
+			if (Cores[i].IRQEnable && Cores[i].IRQA == (vc.NextA & 0xFFFF8))
+				SetIrqCall(i);
+
+		vc.LoopFlags = *GetMemPtr(vc.NextA&0xFFFF8) >> 8;	// grab loop flags from the upper byte.
 
 		if ((vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode)
 			vc.LoopStartA = vc.NextA;
-
-		IncrementNextA(thiscore, voiceidx);
 
 		vc.SCurrent = 0;
 	}
 
 	vc.SP -= 4096 * (4 - (vc.SCurrent & 3));
 	vc.SCurrent += 4 - (vc.SCurrent & 3);
-	IncrementNextA(thiscore, voiceidx);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////

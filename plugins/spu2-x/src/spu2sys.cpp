@@ -170,7 +170,7 @@ void V_Core::Init( int index )
 		Voices[v].ADSR.Value	= 0;
 		Voices[v].ADSR.Phase	= 0;
 		Voices[v].Pitch			= 0x3FFF;
-		Voices[v].NextA			= 0x2800;
+		Voices[v].NextA			= 0x2801;
 		Voices[v].StartA		= 0x2800;
 		Voices[v].LoopStartA	= 0x2800;
 	}
@@ -324,9 +324,7 @@ void V_Voice::Start()
 		SCurrent		= 28;
 		LoopMode		= 0;
 		LoopFlags		= 0;
-		// Setting the loopstart to NextA breaks Squaresoft games (KH2 intro gets crackly)
-		//LoopStartA		= StartA;
-		NextA			= StartA;
+		NextA			= StartA | 1;
 		Prev1			= 0;
 		Prev2			= 0;
 
@@ -862,12 +860,12 @@ static void __fastcall RegWrite_VoiceAddr( u16 value )
 		// reg, and see if they're buggy or not. --air
 
 		case 4:
-			thisvoice.NextA = ((value & 0x0F) << 16) | (thisvoice.NextA & 0xFFF8);
+			thisvoice.NextA = ((value & 0x0F) << 16) | (thisvoice.NextA & 0xFFF8) | 1;
 			thisvoice.SCurrent = 28;
 		break;
 
 		case 5:
-			thisvoice.NextA = (thisvoice.NextA & 0x0F0000) | (value & 0xFFF8);
+			thisvoice.NextA = (thisvoice.NextA & 0x0F0000) | (value & 0xFFF8) | 1;
 			thisvoice.SCurrent = 28;
 		break;
 	}
