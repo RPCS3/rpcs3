@@ -248,7 +248,7 @@ static __forceinline void GetNextDataDummy(V_Core& thiscore, uint voiceidx)
 		vc.LoopFlags = *GetMemPtr(vc.NextA&0xFFFF8) >> 8;	// grab loop flags from the upper byte.
 
 		if ((vc.LoopFlags & XAFLAG_LOOP_START) && !vc.LoopMode)
-			vc.LoopStartA = vc.NextA;
+			vc.LoopStartA = vc.NextA & 0xFFFF8;
 
 		vc.SCurrent = 0;
 	}
