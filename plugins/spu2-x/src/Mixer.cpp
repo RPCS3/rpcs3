@@ -341,7 +341,7 @@ static void __forceinline UpdatePitch( uint coreidx, uint voiceidx )
 	if( (vc.Modulated==0) || (voiceidx==0) )
 		pitch = vc.Pitch;
 	else
-		pitch = (vc.Pitch*(32768 + Cores[coreidx].Voices[voiceidx-1].OutX))>>15;
+		pitch = GetClamped((vc.Pitch*(32768 + Cores[coreidx].Voices[voiceidx-1].OutX))>>15, 0, 0x3fff);
 
 	vc.SP+=pitch;
 }
@@ -584,17 +584,15 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 		
 		// Store Value for eventual modulation later
 		// Pseudonym's Crest calculation idea. Actually calculates a crest, unlike the old code which was just peak.
-		u32 Amplitude = std::abs(Value);
-		if(Amplitude < vc.NextCrest)
+		if(vc.PV1 < vc.NextCrest)
 		{
-			vc.OutX = vc.NextCrest;
-			vc.NextCrest = 0;
+			vc.OutX = MulShr32(vc.NextCrest, vc.ADSR.Value);
+			vc.NextCrest = -0x8000;
 		}
-		if(Amplitude > vc.PrevAmp)
+		if(vc.PV1 > vc.PV2)
 		{
-			vc.NextCrest = Amplitude;
+			vc.NextCrest = vc.PV1;
 		}
-		vc.PrevAmp = Amplitude;
 
 		if( IsDevBuild )
 			DebugCores[coreidx].Voices[voiceidx].displayPeak = std::max(DebugCores[coreidx].Voices[voiceidx].displayPeak,(s32)vc.OutX);

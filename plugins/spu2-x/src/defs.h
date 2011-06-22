@@ -180,9 +180,8 @@ struct V_Voice
 	s32 PV1;
 
 // Last outputted audio value, used for voice modulation.
-	u32 OutX;
-	u32 NextCrest; // temp value for Crest calculation
-	u32 PrevAmp;  // temp value for Crest calculation (abs of last value)
+	s32 OutX;
+	s32 NextCrest; // temp value for Crest calculation
 
 // SBuffer now points directly to an ADPCM cache entry.
 	s16 *SBuffer;
