@@ -46,7 +46,7 @@ void SPU2writeLog( const char* action, u32 rmem, u16 value )
 		sprintf( dest, "Voice %d %s", voice,ParamNames[param] );
 		RegLog( 2, dest, rmem, core, value );
 	}
-	else if ((omem >= 0x01C0) && (omem < 0x02DE))	// Voice Addressing Params (VA)
+	else if ((omem >= 0x01C0) && (omem < 0x02E0))	// Voice Addressing Params (VA)
 	{
 		const u32 voice   = ((omem-0x01C0) / 12);
 		const u32 address = ((omem-0x01C0) % 12)>>1;
