@@ -916,7 +916,10 @@ static void __fastcall RegWrite_Core( u16 value )
 			thiscore.NoiseClk   =(value>> 8) & 0x3f; //6 bits
 			//thiscore.Mute		=(value>>14) & 0x01; //1 bit
 			thiscore.Mute		=0;
-			thiscore.CoreEnabled=(value>>15) & 0x01; //1 bit
+			//thiscore.CoreEnabled=(value>>15) & 0x01; //1 bit
+			// no clue
+			if (value>>15)
+				thiscore.Regs.STATX = 0;
 			thiscore.Regs.ATTR  =value&0x7fff;
 
 			if(oldDmaMode != thiscore.DmaMode)
