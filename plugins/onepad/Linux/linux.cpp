@@ -132,7 +132,10 @@ EXPORT_C_(void) PADupdate(int pad)
 						{
 							int value = SDL_JoystickGetHat((pjoy)->GetJoy(), key_to_axis(cpad, i));
 
-							if (key_to_hat_dir(cpad, i) == value)
+							// key_to_hat_dir and value are a 4 bits bitmap, one for each directions. Only 1 bit can be high for
+							// key_to_hat_dir. Value handles diagonal too (2 bits) so you must check the intersection
+							// '&' not only equality '=='. -- Gregory
+							if (key_to_hat_dir(cpad, i) & value)
 								clear_bit(status[cpad], i);
 							else
 								set_bit(status[cpad], i);
