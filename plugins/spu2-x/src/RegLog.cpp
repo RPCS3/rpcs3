@@ -206,13 +206,13 @@ void SPU2writeLog( const char* action, u32 rmem, u16 value )
 				RegLog(3,"STATX",rmem,core,value);
 				break;
 			case REG_A_ESA:
-				RegLog(1,"ESAH",rmem,core,value);
+				RegLog(2,"ESAH",rmem,core,value);
 				break;
 			case (REG_A_ESA + 2):
-				RegLog(1,"ESAL",rmem,core,value);
+				RegLog(2,"ESAL",rmem,core,value);
 				break;
 			case REG_A_EEA:
-				RegLog(1,"EEAH",rmem,core,value);
+				RegLog(2,"EEAH",rmem,core,value);
 				break;
 
 	#define LOG_REVB_REG(n,t) \

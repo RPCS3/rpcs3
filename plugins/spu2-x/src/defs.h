@@ -407,6 +407,8 @@ struct V_Core
 	V_ReverbBuffers	RevBuffers;		// buffer pointers for reverb, pre-calculated and pre-clipped.
 	u32				EffectsStartA;
 	u32				EffectsEndA;
+	u32				ExtEffectsStartA;
+	u32				ExtEffectsEndA;
 	u32				ReverbX;
 
 	// Current size of the effects buffer.  Pre-caculated when the effects start

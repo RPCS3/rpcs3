@@ -144,6 +144,8 @@ void V_Core::Init( int index )
 	Regs.VMIXER		= 0xFFFFFF;
 	EffectsStartA	= c ? 0xFFFF8 : 0xEFFF8;
 	EffectsEndA		= c ? 0xFFFFF : 0xEFFFF;
+	ExtEffectsStartA = EffectsStartA;
+	ExtEffectsEndA = EffectsEndA;
 
 	FxEnable		= 0; // Uninitialized it's 0 for both cores. Resetting libs however may set this to 0 or 1.
 	// These are real PS2 values, mainly constant apart from a few bits: 0x3220EAA4, 0x40505E9C.
@@ -257,13 +259,13 @@ void V_Core::UpdateEffectsBufferSize()
 {
 	const s32 newbufsize = EffectsEndA - EffectsStartA + 1;
 	//printf("Rvb Area change: ESA = %x, EEA = %x, Size(dec) = %d, Size(hex) = %x FxEnable = %d\n", EffectsStartA, EffectsEndA, newbufsize * 2, newbufsize * 2, FxEnable);
-	
+
 	if( (newbufsize*2) > 0x20000 ) // max 128kb per core
 	{ 
 		//printf("too big, returning\n");
 		//return;
 	}
-	if( !RevBuffers.NeedsUpdated && (newbufsize == EffectsBufferSize) ) return;
+	if (newbufsize == EffectsBufferSize) return;
 	
 	RevBuffers.NeedsUpdated = false;
 	EffectsBufferSize = newbufsize;
@@ -693,12 +695,17 @@ u16 V_Core::ReadRegPS1(u32 mem)
 		case 0x1d9e: value = Regs.VMIXL>>16;     break;
 
 		case 0x1da2:
+#if 0
+			// This smells of old hack
 			if( value != EffectsStartA>>3 )
 			{
 				value = EffectsStartA>>3;
 				UpdateEffectsBufferSize();
 				ReverbX = 0;
 			}
+#else
+			value = EffectsStartA >> 3;
+#endif
 		break;
 		case 0x1da4: value = IRQA>>3;            break;
 		case 0x1da6: value = TSA>>3;             break;
@@ -906,6 +913,7 @@ static void __fastcall RegWrite_Core( u16 value )
 		{
 			bool irqe		= thiscore.IRQEnable;
 			int bit0		= thiscore.AttrBit0;
+			bool fxenable	= thiscore.FxEnable;
 			u8 oldDmaMode	= thiscore.DmaMode;
 			
 			thiscore.AttrBit0   =(value>> 0) & 0x01; //1 bit
@@ -921,6 +929,16 @@ static void __fastcall RegWrite_Core( u16 value )
 			if (value>>15)
 				thiscore.Regs.STATX = 0;
 			thiscore.Regs.ATTR  =value&0x7fff;
+
+			if (fxenable && !thiscore.FxEnable
+				&& (thiscore.EffectsStartA != thiscore.ExtEffectsStartA
+				 || thiscore.EffectsEndA   != thiscore.ExtEffectsEndA))
+			{
+				thiscore.EffectsStartA = thiscore.ExtEffectsStartA;
+				thiscore.EffectsEndA = thiscore.ExtEffectsEndA;
+				thiscore.ReverbX = 0;
+				thiscore.RevBuffers.NeedsUpdated = true;
+			}
 
 			if(oldDmaMode != thiscore.DmaMode)
 			{
@@ -944,13 +962,6 @@ static void __fastcall RegWrite_Core( u16 value )
 				
 				if(!thiscore.IRQEnable)
 					Spdif.Info &= ~(4 << thiscore.Index);
-	
-				// Hack for F1 2005.
-				//if (thiscore.IRQEnable && (thiscore.IRQA == thiscore.EffectsStartA + thiscore.ReverbX))
-				//{
-				//	printf("F1 2005 IRQ Hack (Reverb). IRQA = %x\n",thiscore.IRQA);
-				//	SetIrqCall(core);
-				//}
 			}
 
 		}
@@ -1082,6 +1093,9 @@ static void __fastcall RegWrite_Core( u16 value )
 		// Reverb Start and End Address Writes!
 		//  * These regs are only writable when Effects are *DISABLED* (FxEnable is false).
 		//    Writes while enabled should be ignored.
+		//    NOTE: Above is false by testing but there are references saying this, so for
+		//    now we think that writing is allowed but the internal register doesn't reflect
+		//    the value until effects area writing is disabled.
 		//  * Yes, these are backwards from all the volumes -- the hiword comes FIRST (wtf!)
 		//  * End position is a hiword only!  Loword is always ffff.
 		//  * The Reverb buffer position resets on writes to StartA.  It probably resets
@@ -1089,27 +1103,30 @@ static void __fastcall RegWrite_Core( u16 value )
 		//    change the end address anyway.
 		//
 		case REG_A_ESA:
+			SetHiWord( thiscore.ExtEffectsStartA, value );
 			if (!thiscore.FxEnable)
 			{
-				SetHiWord( thiscore.EffectsStartA, value );
+				thiscore.EffectsStartA = thiscore.ExtEffectsStartA;
 				thiscore.ReverbX = 0;
 				thiscore.RevBuffers.NeedsUpdated = true;
 			}
 		break;
 
 		case (REG_A_ESA + 2):
+			SetLoWord( thiscore.ExtEffectsStartA, value );
 			if (!thiscore.FxEnable)
 			{
-				SetLoWord( thiscore.EffectsStartA, value );
+				thiscore.EffectsStartA = thiscore.ExtEffectsStartA;
 				thiscore.ReverbX = 0;
 				thiscore.RevBuffers.NeedsUpdated = true;
 			}
 		break;
 
 		case REG_A_EEA:
+			thiscore.ExtEffectsEndA = ((u32)value<<16) | 0xFFFF;
 			if (!thiscore.FxEnable)
 			{
-				thiscore.EffectsEndA = ((u32)value<<16) | 0xFFFF;
+				thiscore.EffectsEndA = thiscore.ExtEffectsEndA;
 				thiscore.ReverbX = 0;
 				thiscore.RevBuffers.NeedsUpdated = true;
 			}
