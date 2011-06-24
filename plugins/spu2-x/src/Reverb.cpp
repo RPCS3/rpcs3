@@ -26,7 +26,7 @@
 
 __forceinline s32 V_Core::RevbGetIndexer( s32 offset )
 {
-	u32 pos = ReverbX + offset; // Apparently some reverb presets use offsets outside of the ps2 memory ...
+	u32 pos = ReverbX + offset;
 
 	// Fast and simple single step wrapping, made possible by the preparation of the
 	// effects buffer addresses.
@@ -176,13 +176,6 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 			INPUT_SAMPLE.Left += (downbuf[(dbpos+x)&7].Left * downcoeffs[x]);
 			INPUT_SAMPLE.Right += (downbuf[(dbpos+x)&7].Right * downcoeffs[x]);
 		}
-		
-		// This is gotta be a Schroeder Reverberator:
-		// http://cnx.org/content/m15491/latest/
-
-		//////////////////////////////////////////////////////////////
-		// Part 1: Input filter block (FIR filter)
-		// Purpose: Filter and write data to the sample queues for the echos below
 
 		INPUT_SAMPLE.Left  >>= 16;
 		INPUT_SAMPLE.Right >>= 16;
@@ -190,86 +183,59 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		s32 input_L = (INPUT_SAMPLE.Left * Revb.IN_COEF_L);
 		s32 input_R = (INPUT_SAMPLE.Right * Revb.IN_COEF_R);
 
-		const s32 IIR_A0 = (_spu2mem[src_a0] * Revb.IIR_COEF) + input_L;
-		const s32 IIR_A1 = (_spu2mem[src_a1] * Revb.IIR_COEF) + input_R;
-		const s32 IIR_B0 = (_spu2mem[src_b0] * Revb.IIR_COEF) + input_L;
-		const s32 IIR_B1 = (_spu2mem[src_b1] * Revb.IIR_COEF) + input_R;
+		const s32 IIR_INPUT_A0 = ((_spu2mem[src_a0] * Revb.IIR_COEF) + input_L)>>16;
+		const s32 IIR_INPUT_A1 = ((_spu2mem[src_a1] * Revb.IIR_COEF) + input_L)>>16;
+		const s32 IIR_INPUT_B0 = ((_spu2mem[src_b0] * Revb.IIR_COEF) + input_R)>>16;
+		const s32 IIR_INPUT_B1 = ((_spu2mem[src_b1] * Revb.IIR_COEF) + input_R)>>16;
 
-		const s32 IIR_C0 = _spu2mem[dest_a0]* Revb.IIR_ALPHA;
-		const s32 IIR_C1 = _spu2mem[dest_a1]* Revb.IIR_ALPHA;
-		const s32 IIR_D0 = _spu2mem[dest_b0]* Revb.IIR_ALPHA;
-		const s32 IIR_D1 = _spu2mem[dest_b1]* Revb.IIR_ALPHA;
+		const s32 src_dest_a0 = _spu2mem[dest_a0];
+		const s32 src_dest_a1 = _spu2mem[dest_a1];
+		const s32 src_dest_b0 = _spu2mem[dest_b0];
+		const s32 src_dest_b1 = _spu2mem[dest_b1];
 
-		_spu2mem[dest2_a0] = clamp_mix( (IIR_A0-IIR_C0) >> 16 );
-		_spu2mem[dest2_a1] = clamp_mix( (IIR_A1-IIR_C1) >> 16 );
-		_spu2mem[dest2_b0] = clamp_mix( (IIR_B0-IIR_D0) >> 16 );
-		_spu2mem[dest2_b1] = clamp_mix( (IIR_B1-IIR_D1) >> 16 );
+		// This section differs from Neill's doc as it uses single-mul interpolation instead
+		// of 0x8000-val inversion.  (same result, faster)
+		const s32 IIR_A0 = src_dest_a0 + (((IIR_INPUT_A0 - src_dest_a0) * Revb.IIR_ALPHA)>>16);
+		const s32 IIR_A1 = src_dest_a1 + (((IIR_INPUT_A1 - src_dest_a1) * Revb.IIR_ALPHA)>>16);
+		const s32 IIR_B0 = src_dest_b0 + (((IIR_INPUT_B0 - src_dest_b0) * Revb.IIR_ALPHA)>>16);
+		const s32 IIR_B1 = src_dest_b1 + (((IIR_INPUT_B1 - src_dest_b1) * Revb.IIR_ALPHA)>>16);
+		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 );
+		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 );
+		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 );
+		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 );
 
-
-		//////////////////////////////////////////////////////////////
-		// Part 2: Comb filters (echos)
-		// Purpose: Create the primary reflections on the virtual walls
-
-		s32 ACC0 = (
+		const s32 ACC0 = (
 			((_spu2mem[acc_src_a0] * Revb.ACC_COEF_A)) +
 			((_spu2mem[acc_src_b0] * Revb.ACC_COEF_B)) +
 			((_spu2mem[acc_src_c0] * Revb.ACC_COEF_C)) +
 			((_spu2mem[acc_src_d0] * Revb.ACC_COEF_D))
 		); // >> 16;
 
-		s32 ACC1 = (
+		const s32 ACC1 = (
 			((_spu2mem[acc_src_a1] * Revb.ACC_COEF_A)) +
 			((_spu2mem[acc_src_b1] * Revb.ACC_COEF_B)) +
 			((_spu2mem[acc_src_c1] * Revb.ACC_COEF_C)) +
 			((_spu2mem[acc_src_d1] * Revb.ACC_COEF_D))
 		); // >> 16;
 
-	
-		//////////////////////////////////////////////////////////////
-		// Part 3: All-pass filters
-		// Purpose: Create actual reverberation sound effect
+		// The following code differs from Neill's doc as it uses the more natural single-mul
+		// interpolative, instead of the funky ^0x8000 stuff.  (better result, faster)
 
-		// First
+		const s32 FB_A0 = _spu2mem[fb_src_a0];
+		const s32 FB_A1 = _spu2mem[fb_src_a1];
 
-		// Take delayed input
-		s32 FB_A0 = _spu2mem[fb_src_a0]; // 16
-		s32 FB_A1 = _spu2mem[fb_src_a1];
+		_spu2mem[mix_dest_a0] = clamp_mix( (ACC0 - FB_A0 * Revb.FB_ALPHA) >> 16 );
+		_spu2mem[mix_dest_a1] = clamp_mix( (ACC1 - FB_A1 * Revb.FB_ALPHA) >> 16 );
 
-		// Apply gain and add to input
-		s32 MIX_A0 = (ACC0 + FB_A0 * Revb.FB_ALPHA)>>16; // 32 + 16*16 = 32
-		s32 MIX_A1 = (ACC1 + FB_A1 * Revb.FB_ALPHA)>>16;
+		const s32 acc_fb_mix_a = (FB_A0<<16) + ( ((ACC0>>16) - FB_A0) * Revb.FB_ALPHA );
+		const s32 acc_fb_mix_b = (FB_A0<<16) + ( ((ACC1>>16) - FB_A0) * Revb.FB_ALPHA );
 
-		// Write to queue
-		_spu2mem[mix_dest_a0] = clamp_mix(MIX_A0);
-		_spu2mem[mix_dest_a1] = clamp_mix(MIX_A1);
-
-		// Apply second gain and add
-		ACC0 += (FB_A0 << 16) - MIX_A0 * Revb.FB_ALPHA;
-		ACC1 += (FB_A1 << 16) - MIX_A1 * Revb.FB_ALPHA;
-
-		//////////////////////////////////////////////////////////////
-
-		// Second
-
-		// Take delayed input
-		s32 FB_B0 = _spu2mem[fb_src_b0]; // 16
-		s32 FB_B1 = _spu2mem[fb_src_b1];
-
-		// Apply gain and add to input
-		s32 MIX_B0 = (ACC0 + FB_B0 * Revb.FB_X)>>16; // 32 + 16*16 = 32
-		s32 MIX_B1 = (ACC1 + FB_B1 * Revb.FB_X)>>16;
-
-		// Write to queue
-		_spu2mem[mix_dest_b0] = clamp_mix(MIX_B0);
-		_spu2mem[mix_dest_b1] = clamp_mix(MIX_B1);
-
-		// Apply second gain and add
-		ACC0 += (FB_B0 << 16) - MIX_B0 * Revb.FB_X;
-		ACC1 += (FB_B1 << 16) - MIX_B1 * Revb.FB_X;
+		_spu2mem[mix_dest_b0] = clamp_mix( ( acc_fb_mix_a - (_spu2mem[fb_src_b0] * Revb.FB_X) ) >> 16 );
+		_spu2mem[mix_dest_b1] = clamp_mix( ( acc_fb_mix_b - (_spu2mem[fb_src_b1] * Revb.FB_X) ) >> 16 );
 
 		upbuf[ubpos] = clamp_mix( StereoOut32(
-			ACC0>>16,	// left
-			ACC1>>16	// right
+			(_spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0]),	// left
+			(_spu2mem[mix_dest_a1] + _spu2mem[mix_dest_b1])		// right
 		) );
 	}
 
