@@ -25,7 +25,7 @@ namespace Savestate
 
 	// versioning for saves.
 	// Increment this when changes to the savestate system are made.
-	static const u32 SAVE_VERSION = 0x0009;
+	static const u32 SAVE_VERSION = 0x000a;
 
 	static void wipe_the_cache()
 	{
