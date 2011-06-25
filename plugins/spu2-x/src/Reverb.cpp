@@ -180,13 +180,13 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		INPUT_SAMPLE.Left  >>= 16;
 		INPUT_SAMPLE.Right >>= 16;
 
-		s32 input_L = INPUT_SAMPLE.Left * Revb.IN_COEF_L - 1;
-		s32 input_R = INPUT_SAMPLE.Right * Revb.IN_COEF_R - 1;
+		s32 input_L = INPUT_SAMPLE.Left * Revb.IN_COEF_L;
+		s32 input_R = INPUT_SAMPLE.Right * Revb.IN_COEF_R;
 
-		const s32 IIR_INPUT_A0 = ((_spu2mem[src_a0] * Revb.IIR_COEF - 1) + input_L)>>15;
-		const s32 IIR_INPUT_A1 = ((_spu2mem[src_a1] * Revb.IIR_COEF - 1) + input_L)>>15;
-		const s32 IIR_INPUT_B0 = ((_spu2mem[src_b0] * Revb.IIR_COEF - 1) + input_R)>>15;
-		const s32 IIR_INPUT_B1 = ((_spu2mem[src_b1] * Revb.IIR_COEF - 1) + input_R)>>15;
+		const s32 IIR_INPUT_A0 = (((s32)_spu2mem[src_a0] * Revb.IIR_COEF) + input_L)>>15;
+		const s32 IIR_INPUT_A1 = (((s32)_spu2mem[src_a1] * Revb.IIR_COEF) + input_L)>>15;
+		const s32 IIR_INPUT_B0 = (((s32)_spu2mem[src_b0] * Revb.IIR_COEF) + input_R)>>15;
+		const s32 IIR_INPUT_B1 = (((s32)_spu2mem[src_b1] * Revb.IIR_COEF) + input_R)>>15;
 
 		const s32 src_dest_a0 = _spu2mem[dest_a0];
 		const s32 src_dest_a1 = _spu2mem[dest_a1];
@@ -195,27 +195,27 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 
 		// This section differs from Neill's doc as it uses single-mul interpolation instead
 		// of 0x8000-val inversion.  (same result, faster)
-		const s32 IIR_A0 = src_dest_a0 + (((IIR_INPUT_A0 - src_dest_a0) * Revb.IIR_ALPHA - 1)>>15);
-		const s32 IIR_A1 = src_dest_a1 + (((IIR_INPUT_A1 - src_dest_a1) * Revb.IIR_ALPHA - 1)>>15);
-		const s32 IIR_B0 = src_dest_b0 + (((IIR_INPUT_B0 - src_dest_b0) * Revb.IIR_ALPHA - 1)>>15);
-		const s32 IIR_B1 = src_dest_b1 + (((IIR_INPUT_B1 - src_dest_b1) * Revb.IIR_ALPHA - 1)>>15);
+		const s32 IIR_A0 = src_dest_a0 + (((IIR_INPUT_A0 - src_dest_a0) * Revb.IIR_ALPHA)>>15);
+		const s32 IIR_A1 = src_dest_a1 + (((IIR_INPUT_A1 - src_dest_a1) * Revb.IIR_ALPHA)>>15);
+		const s32 IIR_B0 = src_dest_b0 + (((IIR_INPUT_B0 - src_dest_b0) * Revb.IIR_ALPHA)>>15);
+		const s32 IIR_B1 = src_dest_b1 + (((IIR_INPUT_B1 - src_dest_b1) * Revb.IIR_ALPHA)>>15);
 		_spu2mem[dest2_a0] = clamp_mix( IIR_A0 );
 		_spu2mem[dest2_a1] = clamp_mix( IIR_A1 );
 		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 );
 		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 );
 
 		const s32 ACC0 = (
-			((_spu2mem[acc_src_a0] * Revb.ACC_COEF_A - 1) >> 15) +
-			((_spu2mem[acc_src_b0] * Revb.ACC_COEF_B - 1) >> 15) +
-			((_spu2mem[acc_src_c0] * Revb.ACC_COEF_C - 1) >> 15) +
-			((_spu2mem[acc_src_d0] * Revb.ACC_COEF_D - 1) >> 15)
+			((_spu2mem[acc_src_a0] * Revb.ACC_COEF_A) >> 15) +
+			((_spu2mem[acc_src_b0] * Revb.ACC_COEF_B) >> 15) +
+			((_spu2mem[acc_src_c0] * Revb.ACC_COEF_C) >> 15) +
+			((_spu2mem[acc_src_d0] * Revb.ACC_COEF_D) >> 15)
 		);
 
 		const s32 ACC1 = (
-			((_spu2mem[acc_src_a1] * Revb.ACC_COEF_A - 1) >> 15) +
-			((_spu2mem[acc_src_b1] * Revb.ACC_COEF_B - 1) >> 15) +
-			((_spu2mem[acc_src_c1] * Revb.ACC_COEF_C - 1) >> 15) +
-			((_spu2mem[acc_src_d1] * Revb.ACC_COEF_D - 1) >> 15)
+			((_spu2mem[acc_src_a1] * Revb.ACC_COEF_A) >> 15) +
+			((_spu2mem[acc_src_b1] * Revb.ACC_COEF_B) >> 15) +
+			((_spu2mem[acc_src_c1] * Revb.ACC_COEF_C) >> 15) +
+			((_spu2mem[acc_src_d1] * Revb.ACC_COEF_D) >> 15)
 		);
 
 		// The following code differs from Neill's doc as it uses the more natural single-mul
@@ -224,14 +224,14 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		const s32 FB_A0 = _spu2mem[fb_src_a0];
 		const s32 FB_A1 = _spu2mem[fb_src_a1];
 
-		_spu2mem[mix_dest_a0] = clamp_mix( ACC0 - ((FB_A0 * Revb.FB_ALPHA - 1) >> 15) );
-		_spu2mem[mix_dest_a1] = clamp_mix( ACC1 - ((FB_A1 * Revb.FB_ALPHA - 1) >> 15) );
+		_spu2mem[mix_dest_a0] = clamp_mix( ACC0 - ((FB_A0 * Revb.FB_ALPHA) >> 15) );
+		_spu2mem[mix_dest_a1] = clamp_mix( ACC1 - ((FB_A1 * Revb.FB_ALPHA) >> 15) );
 
-		const s32 acc_fb_mix_a = FB_A0 + (((ACC0 - FB_A0) * Revb.FB_ALPHA - 1) >> 15);
-		const s32 acc_fb_mix_b = FB_A1 + (((ACC1 - FB_A1) * Revb.FB_ALPHA - 1) >> 15);
+		const s32 acc_fb_mix_a = FB_A0 + (((ACC0 - FB_A0) * Revb.FB_ALPHA) >> 15);
+		const s32 acc_fb_mix_b = FB_A1 + (((ACC1 - FB_A1) * Revb.FB_ALPHA) >> 15);
 
-		_spu2mem[mix_dest_b0] = clamp_mix( ( acc_fb_mix_a - (_spu2mem[fb_src_b0] * Revb.FB_X - 1) ) >> 15 );
-		_spu2mem[mix_dest_b1] = clamp_mix( ( acc_fb_mix_b - (_spu2mem[fb_src_b1] * Revb.FB_X - 1) ) >> 15 );
+		_spu2mem[mix_dest_b0] = clamp_mix((acc_fb_mix_a - (s32)_spu2mem[fb_src_b0] * Revb.FB_X) >> 15);
+		_spu2mem[mix_dest_b1] = clamp_mix((acc_fb_mix_b - (s32)_spu2mem[fb_src_b1] * Revb.FB_X) >> 15);
 
 		upbuf[ubpos] = clamp_mix( StereoOut32(
 			(_spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0]),	// left
