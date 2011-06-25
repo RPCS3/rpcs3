@@ -442,7 +442,7 @@ __forceinline void UpdateSpdifMode()
 	if(Spdif.Out&SPDIF_OUT_BYPASS)
 	{
 		PlayMode=2;
-		if(Spdif.Mode&SPDIF_MODE_BYPASS_BITSTREAM)
+		if(!(Spdif.Mode&SPDIF_MODE_BYPASS_BITSTREAM))
 			PlayMode=4; //bitstream bypass
 	}
 	else
