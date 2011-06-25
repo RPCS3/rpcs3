@@ -343,7 +343,7 @@ GSVector2i GSState::GetDeviceSize(int i)
 	}*/
 
 	//Fixme : Just slightly better than the hack above
-	if(m_regs->SMODE2.INT && !m_regs->SMODE2.FFMD && h > 1)
+	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && h > 1)
 	{
 		if (IsEnabled(0) || IsEnabled(1))
 		{
