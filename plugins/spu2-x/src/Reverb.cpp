@@ -172,8 +172,11 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 			INPUT_SAMPLE.Right += (downbuf[(dbpos+x)&7].Right * downcoeffs[x]);
 		}
 
-		INPUT_SAMPLE.Left  >>= 16;
-		INPUT_SAMPLE.Right >>= 16;
+		// short term quality hack
+		INPUT_SAMPLE.Left  >>= 17;
+		INPUT_SAMPLE.Right >>= 17;
+		//INPUT_SAMPLE.Left  >>= 16;
+		//INPUT_SAMPLE.Right >>= 16;
 
 		s32 input_L = INPUT_SAMPLE.Left * Revb.IN_COEF_L;
 		s32 input_R = INPUT_SAMPLE.Right * Revb.IN_COEF_R;
