@@ -20,8 +20,6 @@
 #include "Dma.h"
 #include "Dialogs.h"
 
-#include "x86emitter/tools.h"
-
 #ifdef _MSC_VER
 #	include "svnrev.h"
 #endif
