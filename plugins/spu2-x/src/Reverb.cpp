@@ -178,10 +178,10 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		s32 input_L = INPUT_SAMPLE.Left * Revb.IN_COEF_L;
 		s32 input_R = INPUT_SAMPLE.Right * Revb.IN_COEF_R;
 
-		const s32 IIR_INPUT_A0 = (((s32)_spu2mem[src_a0] * Revb.IIR_COEF) + input_L)>>15;
-		const s32 IIR_INPUT_A1 = (((s32)_spu2mem[src_a1] * Revb.IIR_COEF) + input_L)>>15;
-		const s32 IIR_INPUT_B0 = (((s32)_spu2mem[src_b0] * Revb.IIR_COEF) + input_R)>>15;
-		const s32 IIR_INPUT_B1 = (((s32)_spu2mem[src_b1] * Revb.IIR_COEF) + input_R)>>15;
+		const s32 IIR_INPUT_A0 = clamp_mix((((s32)_spu2mem[src_a0] * Revb.IIR_COEF) + input_L)>>15);
+		const s32 IIR_INPUT_A1 = clamp_mix((((s32)_spu2mem[src_a1] * Revb.IIR_COEF) + input_L)>>15);
+		const s32 IIR_INPUT_B0 = clamp_mix((((s32)_spu2mem[src_b0] * Revb.IIR_COEF) + input_R)>>15);
+		const s32 IIR_INPUT_B1 = clamp_mix((((s32)_spu2mem[src_b1] * Revb.IIR_COEF) + input_R)>>15);
 
 		const s32 src_dest_a0 = _spu2mem[dest_a0];
 		const s32 src_dest_a1 = _spu2mem[dest_a1];
@@ -199,14 +199,14 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		_spu2mem[dest2_b0] = clamp_mix( IIR_B0 );
 		_spu2mem[dest2_b1] = clamp_mix( IIR_B1 );
 
-		const s32 ACC0 = (
+		const s32 ACC0 = clamp_mix(
 			((_spu2mem[acc_src_a0] * Revb.ACC_COEF_A) >> 15) +
 			((_spu2mem[acc_src_b0] * Revb.ACC_COEF_B) >> 15) +
 			((_spu2mem[acc_src_c0] * Revb.ACC_COEF_C) >> 15) +
 			((_spu2mem[acc_src_d0] * Revb.ACC_COEF_D) >> 15)
 		);
 
-		const s32 ACC1 = (
+		const s32 ACC1 = clamp_mix(
 			((_spu2mem[acc_src_a1] * Revb.ACC_COEF_A) >> 15) +
 			((_spu2mem[acc_src_b1] * Revb.ACC_COEF_B) >> 15) +
 			((_spu2mem[acc_src_c1] * Revb.ACC_COEF_C) >> 15) +
