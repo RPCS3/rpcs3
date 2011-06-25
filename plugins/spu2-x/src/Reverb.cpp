@@ -218,19 +218,22 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 
 		const s32 FB_A0 = _spu2mem[fb_src_a0];
 		const s32 FB_A1 = _spu2mem[fb_src_a1];
+		const s32 FB_B0 = _spu2mem[fb_src_b0];
+		const s32 FB_B1 = _spu2mem[fb_src_b1];
 
-		_spu2mem[mix_dest_a0] = clamp_mix( ACC0 - ((FB_A0 * Revb.FB_ALPHA) >> 15) );
-		_spu2mem[mix_dest_a1] = clamp_mix( ACC1 - ((FB_A1 * Revb.FB_ALPHA) >> 15) );
+		const s32 mix_a0 = clamp_mix(ACC0 - ((FB_A0 * Revb.FB_ALPHA) >> 15));
+		const s32 mix_a1 = clamp_mix(ACC1 - ((FB_A1 * Revb.FB_ALPHA) >> 15));
+		const s32 mix_b0 = clamp_mix(FB_A0 + (((ACC0 - FB_A0) * Revb.FB_ALPHA - FB_B0 * Revb.FB_X) >> 15));
+		const s32 mix_b1 = clamp_mix(FB_A1 + (((ACC1 - FB_A1) * Revb.FB_ALPHA - FB_B1 * Revb.FB_X) >> 15));
 
-		const s32 acc_fb_mix_a = FB_A0 + (((ACC0 - FB_A0) * Revb.FB_ALPHA) >> 15);
-		const s32 acc_fb_mix_b = FB_A1 + (((ACC1 - FB_A1) * Revb.FB_ALPHA) >> 15);
-
-		_spu2mem[mix_dest_b0] = clamp_mix(acc_fb_mix_a - (((s32)_spu2mem[fb_src_b0] * Revb.FB_X) >> 15));
-		_spu2mem[mix_dest_b1] = clamp_mix(acc_fb_mix_b - (((s32)_spu2mem[fb_src_b1] * Revb.FB_X) >> 15));
+		_spu2mem[mix_dest_a0] = mix_a0;
+		_spu2mem[mix_dest_a1] = mix_a1;
+		_spu2mem[mix_dest_b0] = mix_b0;
+		_spu2mem[mix_dest_b1] = mix_b1;
 
 		upbuf[ubpos] = clamp_mix( StereoOut32(
-			(_spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0]),	// left
-			(_spu2mem[mix_dest_a1] + _spu2mem[mix_dest_b1])		// right
+			mix_a0 + mix_b0,	// left
+			mix_a1 + mix_b1		// right
 		) );
 	}
 
