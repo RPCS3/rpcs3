@@ -225,8 +225,8 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 		const s32 acc_fb_mix_a = FB_A0 + (((ACC0 - FB_A0) * Revb.FB_ALPHA) >> 15);
 		const s32 acc_fb_mix_b = FB_A1 + (((ACC1 - FB_A1) * Revb.FB_ALPHA) >> 15);
 
-		_spu2mem[mix_dest_b0] = clamp_mix((acc_fb_mix_a - (s32)_spu2mem[fb_src_b0] * Revb.FB_X) >> 15);
-		_spu2mem[mix_dest_b1] = clamp_mix((acc_fb_mix_b - (s32)_spu2mem[fb_src_b1] * Revb.FB_X) >> 15);
+		_spu2mem[mix_dest_b0] = clamp_mix(acc_fb_mix_a - ((s32)_spu2mem[fb_src_b0] * Revb.FB_X) >> 15);
+		_spu2mem[mix_dest_b1] = clamp_mix(acc_fb_mix_b - ((s32)_spu2mem[fb_src_b1] * Revb.FB_X) >> 15);
 
 		upbuf[ubpos] = clamp_mix( StereoOut32(
 			(_spu2mem[mix_dest_a0] + _spu2mem[mix_dest_b0]),	// left
