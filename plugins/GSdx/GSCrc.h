@@ -93,6 +93,7 @@ public:
 		TimeSplitters2,
 		ReZ,
 		LordOfTheRingsTwoTowers,
+		LordOfTheRingsThirdAge,
 		RedDeadRevolver,
 		SpidermanWoS,
 		HeavyMetalThunder,
@@ -103,6 +104,12 @@ public:
 		CastlevaniaLoI,
 		Black,
 		TyTasmanianTiger,
+		FFVIIDoC,
+		DigimonRumbleArena2,
+		StarWarsForceUnleashed,
+		StarWarsBattlefront,
+		StarWarsBattlefront2,
+		BlackHawkDown,
 		TitleCount,
 	};
 

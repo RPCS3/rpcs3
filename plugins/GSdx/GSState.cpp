@@ -343,7 +343,7 @@ GSVector2i GSState::GetDeviceSize(int i)
 	}*/
 
 	//Fixme : Just slightly better than the hack above
-	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && h > 1)
+	if(m_regs->SMODE2.INT && !m_regs->SMODE2.FFMD && h > 1)
 	{
 		if (IsEnabled(0) || IsEnabled(1))
 		{
@@ -2402,13 +2402,12 @@ bool GSC_GodOfWar2(const GSFrameInfo& fi, int& skip)
 	{
 		if(fi.TME)
 		{
-			if( (fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00100 && fi.TPSM == PSM_PSMCT16 // ntsc
+			if( fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00100 && fi.TPSM == PSM_PSMCT16 // ntsc
 				|| fi.FBP == 0x02100 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x02100 && fi.TPSM == PSM_PSMCT16) // pal
-				&& (GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
 			{
 				skip = 1000; // shadows
 			}
-			if(fi.FBP == 0x00100 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 & 0x03000) == 0x03000
+			if((fi.FBP == 0x00100 || fi.FBP == 0x02100) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 & 0x03000) == 0x03000
 				&& (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4)
 				&& ((fi.TZTST == 2 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 1 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 3 && fi.FBMSK == 0xFF000000)))
 			{
@@ -2481,14 +2480,14 @@ bool GSC_SonicUnleashed(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && fi.FPSM == PSM_PSMCT16S && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x00000)
+		if(fi.TME && fi.FPSM == PSM_PSMCT16S && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT16)
 		{
 			skip = 1000; // shadow
 		}
 	}
 	else
 	{
-		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT16 && fi.TPSM == PSM_PSMCT16S && fi.FBMSK == 0x00000)
+		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT16 && fi.TPSM == PSM_PSMCT16S)
 		{
 			skip = 2;
 		}
@@ -2636,20 +2635,7 @@ bool GSC_SuikodenTactics(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
-bool GSC_TenchuWoH(const GSFrameInfo& fi, int& skip)
-{
-	if(skip == 0)
-	{
-		if(fi.TME && fi.TPSM == PSM_PSMZ16 && fi.FPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
-		{
-			skip = 3; 
-		}
-	}
-	
-	return true;
-}
-
-bool GSC_TenchuFS(const GSFrameInfo& fi, int& skip)
+bool GSC_Tenchu(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
@@ -2786,6 +2772,26 @@ bool GSC_LordOfTheRingsTwoTowers(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_LordOfTheRingsThirdAge(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(!fi.TME && fi.FBP == 0x03000 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4 && fi.FBMSK == 0xFF000000)
+		{
+			skip = 1000;	//shadows
+		}
+	}
+	else
+	{
+		if (fi.TME && (fi.FBP == 0x0 || fi.FBP == 0x00e00 || fi.FBP == 0x01000) && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x03000 && fi.TPSM == PSM_PSMCT24)
+		{
+			skip = 1;
+		}
+	}
+	
+	return true;
+}
+
 bool GSC_RedDeadRevolver(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -2884,6 +2890,88 @@ bool GSC_Black(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_FFVIIDoC(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x01c00 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x02c00 && fi.TPSM == PSM_PSMCT24)
+		{
+			skip = 1;
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_StarWarsForceUnleashed(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP == 0x038a0 || fi.FBP == 0x03ae0) && fi.FPSM == fi.TPSM && fi.TBP0 == 0x02300 && fi.TPSM == PSM_PSMZ24)
+		{
+			skip = 1000;	//9, shadows
+		}
+	}
+	else
+	{
+		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x034a0 || fi.TBP0 == 0x36e0) && fi.TPSM == PSM_PSMCT16)
+		{
+			skip = 2;	
+		}
+
+	}
+	
+	return true;
+}
+
+bool GSC_StarWarsBattlefront(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP > 0x0 && fi.FBP < 0x00e00) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 > 0x02000 && fi.TBP0 < 0x02e00) && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 1;
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_StarWarsBattlefront2(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP > 0x01000 && fi.FBP < 0x01e00) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 > 0x0 && fi.TBP0 < 0x00e00) && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 1;
+		}
+		if(fi.TME && (fi.FBP > 0x01000 && fi.FBP < 0x01e00) && fi.FPSM == PSM_PSMZ32 && (fi.TBP0 > 0x0 && fi.TBP0 < 0x0e00) && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 1;
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_BlackHawkDown(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x00800 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x01800 && fi.TPSM == PSM_PSMZ16)
+		{
+			skip = 2;	//wall of fog
+		}
+		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 5;	//night filter
+		}
+	}
+	
+	return true;
+}
+
+
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
 	GSFrameInfo fi;
@@ -2942,8 +3030,8 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::RadiataStories] = GSC_RadiataStories;
 		map[CRC::HauntingGround] = GSC_HauntingGround;
 		map[CRC::SuikodenTactics] = GSC_SuikodenTactics;
-		map[CRC::TenchuWoH] = GSC_TenchuWoH;
-		map[CRC::TenchuFS] = GSC_TenchuFS;
+		map[CRC::TenchuWoH] = GSC_Tenchu;
+		map[CRC::TenchuFS] = GSC_Tenchu;
 		map[CRC::Sly3] = GSC_Sly3;
 		map[CRC::Sly2] = GSC_Sly2;
 		map[CRC::DemonStone] = GSC_DemonStone;
@@ -2951,12 +3039,18 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::TimeSplitters2] = GSC_TimeSplitters2;
 		map[CRC::ReZ] = GSC_ReZ;
 		map[CRC::LordOfTheRingsTwoTowers] = GSC_LordOfTheRingsTwoTowers;
+		map[CRC::LordOfTheRingsThirdAge] = GSC_LordOfTheRingsThirdAge;
 		map[CRC::RedDeadRevolver] = GSC_RedDeadRevolver;
 		map[CRC::HeavyMetalThunder] = GSC_HeavyMetalThunder;
 		map[CRC::BleachBladeBattlers] = GSC_BleachBladeBattlers;
 		map[CRC::CastlevaniaCoD] = GSC_Castlevania;
 		map[CRC::CastlevaniaLoI] = GSC_Castlevania;
 		map[CRC::Black] = GSC_Black;
+		map[CRC::FFVIIDoC] = GSC_FFVIIDoC;
+		map[CRC::StarWarsForceUnleashed] = GSC_StarWarsForceUnleashed;
+		map[CRC::StarWarsBattlefront] = GSC_StarWarsBattlefront;
+		map[CRC::StarWarsBattlefront2] = GSC_StarWarsBattlefront2;
+		map[CRC::BlackHawkDown] = GSC_BlackHawkDown;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

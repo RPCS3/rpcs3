@@ -4803,13 +4803,14 @@ Serial = SLUS-20731
 Name   = Tony Hawk's Underground
 Region = NTSC-U
 Compat = 5
-vuRoundMode = 0		//Crashes without.
+vuRoundMode = 0			//Crashes without.
 ---------------------------------------------
 Serial = SLUS-20732
 Name   = Drakengard
 Region = NTSC-U
 Compat = 5
-eeClampMode = 3		//characters are visible in-game.
+eeClampMode = 3			//characters are visible in-game.
+EETimingHack = 1		//flickering textures.
 ---------------------------------------------
 Serial = SLUS-20733
 Name   = Castlevania - Lament of Innocence
@@ -6357,7 +6358,7 @@ Compat = 5
 Serial = SLUS-21067
 Name   = Digimon Rumble Arena 2
 Region = NTSC-U
-Compat = 1
+Compat = 5
 FpuCompareHack = 1
 ---------------------------------------------
 Serial = SLUS-21068
@@ -7809,6 +7810,7 @@ Serial = SLUS-21373
 Name   = Drakengard 2
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1		//flickering textures.
 ---------------------------------------------
 Serial = SLUS-21374
 Name   = Marvel - Ultimate Alliance
@@ -8403,7 +8405,8 @@ Region = NTSC-U
 Serial = SLUS-21498
 Name   = Naruto - Uzumaki Chronicles
 Region = NTSC-U
-Compat = 4
+Compat = 5
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLUS-21499
 Name   = Evolution GT
@@ -8695,6 +8698,7 @@ Compat = 4
 Serial = SLUS-21594
 Name   = Naruto - Uzumaki Chronicles 2
 Region = NTSC-U
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLUS-21595
 Name   = T.M.N.T. - Teenage Mutant Ninja Turtles
@@ -8786,7 +8790,7 @@ Compat = 5
 Serial = SLUS-21614
 Name   = Star Wars - The Force Unleashed
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21615
 Name   = Wild Arms 5
@@ -19446,6 +19450,7 @@ Region = NTSC-J
 Serial = SLPM-65926
 Name   = Y's IV - Mask of the Sun - A New Theory
 Region = NTSC-J
+eeClampMode = 3
 ---------------------------------------------
 Serial = SLPM-65927
 Name   = Forgotten Realms - Demon Stone
@@ -25153,7 +25158,7 @@ Region = NTSC-J
 Serial = SLPS-25074
 Name   = Project Zero
 Region = NTSC-J
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLPS-25075
 Name   = Sidewinder F
@@ -25858,7 +25863,7 @@ Region = NTSC-J
 Serial = SLPS-25303
 Name   = Zero - Crimson Butterfly
 Region = NTSC-J
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLPS-25304
 Name   = Beast Sapp
@@ -26759,6 +26764,7 @@ Serial = SLPS-25542
 Name   = Naruto Uzumaki Ninden
 Region = NTSC-J
 Compat = 4
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLPS-25543
 Name   = Futakoi - Koi to Mizugi no Survival
@@ -27419,6 +27425,7 @@ Region = NTSC-J
 Serial = SLPS-25714
 Name   = Naruto - Konoha Spirits
 Region = NTSC-J
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLPS-25715
 Name   = Tales of Destiny
@@ -34889,7 +34896,7 @@ Region = PAL-Unk
 Serial = SLES-52467
 Name   = dot Hack - Part 2 - Mutation
 Region = PAL-M5
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-52468
 Name   = dot Hack - Part 4 - Quarantine
@@ -35290,6 +35297,7 @@ Region = PAL-Unk
 Serial = SLES-52631
 Name   = Digimon Rumble Arena 2
 Region = PAL-Unk
+Compat = 5
 FpuCompareHack = 1
 ---------------------------------------------
 Serial = SLES-52636
@@ -37667,6 +37675,7 @@ Region = PAL-Unk
 Serial = SLES-53794
 Name   = Drakengard 2
 Region = PAL-Unk
+EETimingHack = 1		//flickering textures.
 ---------------------------------------------
 Serial = SLES-53796
 Name   = FIFA Street 2
@@ -39465,8 +39474,20 @@ Name   = Armored Core - Nexus
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-82038
-Name   = Onimusha - Dawn of Dreams
+Name   = Onimusha - Dawn of Dreams [Disc1]
 Region = PAL-Unk
+[patches = 812C5A96]
+	comment= patch by Shadow Lady
+	patch=0,EE,00104170,word,00000000
+[/patches]
+---------------------------------------------
+Serial = SLES-82039
+Name   = Onimusha - Dawn of Dreams [Disc2]
+Region = PAL-Unk
+[patches = 812C5A96]
+	comment= patch by Shadow Lady
+	patch=0,EE,00104170,word,00000000
+[/patches]
 ---------------------------------------------
 Serial = SLES-82042
 Name   = Metal Gear Solid 3 - Subsistance [Disc1of2]
