@@ -56,11 +56,20 @@ void V_Core::Reverb_AdvanceBuffer()
 
 StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 {
+#if 0
 	static const s32 downcoeffs[8] =
 	{
 		1283,  5344,  10895, 15243,
 		15243, 10895,  5344,  1283
 	};
+#else
+	// 2/3 of the above
+	static const s32 downcoeffs[8] =
+	{
+		855,  3562,  7263, 10163,
+		10163, 7263,  3562,  855
+	};
+#endif
 
 	downbuf[dbpos] = Input;
 	dbpos = (dbpos+1) & 7;
@@ -172,11 +181,8 @@ StereoOut32 V_Core::DoReverb( const StereoOut32& Input )
 			INPUT_SAMPLE.Right += (downbuf[(dbpos+x)&7].Right * downcoeffs[x]);
 		}
 
-		// short term quality hack
-		INPUT_SAMPLE.Left  >>= 17;
-		INPUT_SAMPLE.Right >>= 17;
-		//INPUT_SAMPLE.Left  >>= 16;
-		//INPUT_SAMPLE.Right >>= 16;
+		INPUT_SAMPLE.Left  >>= 16;
+		INPUT_SAMPLE.Right >>= 16;
 
 		s32 input_L = INPUT_SAMPLE.Left * Revb.IN_COEF_L;
 		s32 input_R = INPUT_SAMPLE.Right * Revb.IN_COEF_R;
