@@ -278,8 +278,8 @@ IDB_SPU2X_SMALL         BITMAP                  "..\\..\\spu2-x-sm.bmp"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,5,0,SVN_REV
- PRODUCTVERSION 1,5,0,SVN_REV
+ FILEVERSION 2,0,0,SVN_REV
+ PRODUCTVERSION 2,0,0,SVN_REV
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -297,12 +297,12 @@ BEGIN
             VALUE "Comments", "SPU2 Plugin for PS2 Emulators"
             VALUE "CompanyName", "PCSX2 Dev Team"
             VALUE "FileDescription", "SPU2-X Plugin (svn build)"
-            VALUE "FileVersion", "1.5.SVN"
+            VALUE "FileVersion", "2.0.SVN"
             VALUE "InternalName", "SPU2-X"
             VALUE "LegalCopyright", "Copyright (C) 2011"
-            VALUE "OriginalFilename", "SPU2-X-1.5.dll"
+            VALUE "OriginalFilename", "SPU2-X-2.0.dll"
             VALUE "ProductName", "SPU2-X"
-            VALUE "ProductVersion", "1.5.SVN"
+            VALUE "ProductVersion", "2.0.SVN"
         END
     END
     BLOCK "VarFileInfo"
