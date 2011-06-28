@@ -56,10 +56,10 @@ static bool s_grab_input = false;
 static bool s_Shift = false;
 static unsigned int  s_previous_mouse_x = 0;
 static unsigned int  s_previous_mouse_y = 0;
-void AnalyzeKeyEvent(int pad, keyEvent &evt, int& keyPress, int& keyRelease, bool& used_by_keyboard)
+void AnalyzeKeyEvent(int pad, keyEvent &evt)
 {
-	int i;
 	KeySym key = (KeySym)evt.key;
+	int index = get_keyboard_key(pad, key);
 
 	switch (evt.evt)
 	{
@@ -82,36 +82,28 @@ void AnalyzeKeyEvent(int pad, keyEvent &evt, int& keyPress, int& keyRelease, boo
 				}
 			}
 
-			i = get_keyboard_key(pad, key);
-
 			// Analog controls.
-			if (IsAnalogKey(i))
+			if (IsAnalogKey(index))
 			{
-				used_by_keyboard = true; // avoid the joystick to reset the analog pad...
-				switch (i)
+				switch (index)
 				{
 					case PAD_R_LEFT:
 					case PAD_R_UP:
 					case PAD_L_LEFT:
 					case PAD_L_UP:
-						Analog::ConfigurePad(pad, i, -DEF_VALUE);
+						key_status->press(pad, index, -MAX_ANALOG_VALUE);
 						break;
 					case PAD_R_RIGHT:
 					case PAD_R_DOWN:
 					case PAD_L_RIGHT:
 					case PAD_L_DOWN:
-						Analog::ConfigurePad(pad, i, DEF_VALUE);
+						key_status->press(pad, index, MAX_ANALOG_VALUE);
 						break;
 				}
-				i += 0xff00;
-			}
+			} else if (index != -1)
+				key_status->press(pad, index);
 
-			if (i != -1)
-			{
-				clear_bit(keyRelease, i);
-				set_bit(keyPress, i);
-			}
-			//PAD_LOG("Key pressed:%d\n", i);
+			//PAD_LOG("Key pressed:%d\n", index);
 
 			event.evt = KEYPRESS;
 			event.key = key;
@@ -120,21 +112,8 @@ void AnalyzeKeyEvent(int pad, keyEvent &evt, int& keyPress, int& keyRelease, boo
 		case KeyRelease:
 			if (key == XK_Shift_R || key == XK_Shift_L) s_Shift = false;
 
-			i = get_keyboard_key(pad, key);
-
-			// Analog Controls.
-			if (IsAnalogKey(i))
-			{
-				used_by_keyboard = false; // allow the joystick to reset the analog pad...
-				Analog::ResetPad(pad, i);
-				i += 0xff00;
-			}
-
-			if (i != -1)
-			{
-				clear_bit(keyPress, i);
-				set_bit(keyRelease, i);
-			}
+			if (index != -1)
+				key_status->release(pad, index);
 
 			event.evt = KEYRELEASE;
 			event.key = key;
@@ -149,21 +128,13 @@ void AnalyzeKeyEvent(int pad, keyEvent &evt, int& keyPress, int& keyRelease, boo
 			break;
 
 		case ButtonPress:
-			i = get_keyboard_key(pad, evt.key);
-			if (i != -1)
-			{
-				clear_bit(keyRelease, i);
-				set_bit(keyPress, i);
-			}
+			if (index != -1)
+				key_status->press(pad, index);
 			break;
 
 		case ButtonRelease:
-			i = get_keyboard_key(pad, evt.key);
-			if (i != -1)
-			{
-				clear_bit(keyPress, i);
-				set_bit(keyRelease, i);
-			}
+			if (index != -1)
+				key_status->release(pad, index);
 			break;
 
 		case MotionNotify:
@@ -185,34 +156,32 @@ void AnalyzeKeyEvent(int pad, keyEvent &evt, int& keyPress, int& keyRelease, boo
 
 				unsigned x = evt.key & 0xFFFF;
 				unsigned int value = abs(s_previous_mouse_x - x) * conf->sensibility;
-				value = max(value, (unsigned int)DEF_VALUE);
 
 				if (x == 0)
-					Analog::ConfigurePad(pad, pad_x, -DEF_VALUE);
+					key_status->press(pad, pad_x, -MAX_ANALOG_VALUE);
 				else if (x == 0xFFFF)
-					Analog::ConfigurePad(pad, pad_x, DEF_VALUE);
+					key_status->press(pad, pad_x, MAX_ANALOG_VALUE);
 				else if (x < (s_previous_mouse_x -2))
-					Analog::ConfigurePad(pad, pad_x, -value);
+					key_status->press(pad, pad_x, -value);
 				else if (x > (s_previous_mouse_x +2))
-					Analog::ConfigurePad(pad, pad_x, value);
+					key_status->press(pad, pad_x, value);
 				else
-					Analog::ResetPad(pad, pad_x);
+					key_status->release(pad, pad_x);
 
 
 				unsigned y = evt.key >> 16;
 				value = abs(s_previous_mouse_y - y) * conf->sensibility;
-				value = max(value, (unsigned int)DEF_VALUE);
 
 				if (y == 0)
-					Analog::ConfigurePad(pad, pad_y, -DEF_VALUE);
+					key_status->press(pad, pad_y, -MAX_ANALOG_VALUE);
 				else if (y == 0xFFFF)
-					Analog::ConfigurePad(pad, pad_y, DEF_VALUE);
+					key_status->press(pad, pad_y, MAX_ANALOG_VALUE);
 				else if (y < (s_previous_mouse_y -2))
-					Analog::ConfigurePad(pad, pad_y, -value);
+					key_status->press(pad, pad_y, -value);
 				else if (y > (s_previous_mouse_y +2))
-					Analog::ConfigurePad(pad, pad_y, value);
+					key_status->press(pad, pad_y, value);
 				else
-					Analog::ResetPad(pad, pad_y);
+					key_status->release(pad, pad_y);
 
 				s_previous_mouse_x = x;
 				s_previous_mouse_y = y;
@@ -222,7 +191,7 @@ void AnalyzeKeyEvent(int pad, keyEvent &evt, int& keyPress, int& keyRelease, boo
 	}
 }
 
-void PollForX11KeyboardInput(int pad, int& keyPress, int& keyRelease, bool& used_by_keyboard)
+void PollForX11KeyboardInput(int pad)
 {
 	keyEvent evt;
 	XEvent E;
@@ -230,10 +199,10 @@ void PollForX11KeyboardInput(int pad, int& keyPress, int& keyRelease, bool& used
 
 	// Keyboard input send by PCSX2
 	while (!ev_fifo.empty()) {
-		AnalyzeKeyEvent(pad, ev_fifo.front(), keyPress, keyRelease, used_by_keyboard);
-		pthread_mutex_lock(&mutex_KeyEvent);
+		AnalyzeKeyEvent(pad, ev_fifo.front());
+		pthread_spin_lock(&mutex_KeyEvent);
 		ev_fifo.pop();
-		pthread_mutex_unlock(&mutex_KeyEvent);
+		pthread_spin_unlock(&mutex_KeyEvent);
 	}
 
 	// keyboard input
@@ -251,7 +220,7 @@ void PollForX11KeyboardInput(int pad, int& keyPress, int& keyRelease, bool& used
 			case ButtonPress: evt.key = BE->button; break;
 			default: break;
 		}
-		AnalyzeKeyEvent(pad, evt, keyPress, keyRelease, used_by_keyboard);
+		AnalyzeKeyEvent(pad, evt);
 	}
 }
 

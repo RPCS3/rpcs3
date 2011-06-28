@@ -39,19 +39,19 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # onepad sources
 set(onepadSources
-	analog.cpp
 	controller.cpp
 	joystick.cpp
 	keyboard.cpp
+    KeyStatus.cpp
 	onepad.cpp)
 
 # onepad headers
 set(onepadHeaders
-	analog.h
 	bitwise.h
 	controller.h
 	joystick.h
 	keyboard.h
+    KeyStatus.h
 	onepad.h)
 
 # onepad Linux sources

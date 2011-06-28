@@ -50,9 +50,9 @@ using namespace std;
 #ifdef __LINUX__
 #include "joystick.h"
 #endif
-#include "analog.h"
 #include "bitwise.h"
 #include "controller.h"
+#include "KeyStatus.h"
 
 #ifdef _MSC_VER
 #define EXPORT_C_(type) extern "C" __declspec(dllexport) type CALLBACK
@@ -124,31 +124,14 @@ enum gamePadValues
 	PAD_R_LEFT
 };
 
-// Activate bolche's analog controls hack
-// DEF_VALUE is the strength you press the control.
-// Code taken from http://forums.pcsx2.net/thread-4699.html
-
-#define DEF_VALUE	  	32766
-
-/* end of pad.h */
-
 extern keyEvent event;
-
 extern queue<keyEvent> ev_fifo;
-extern pthread_mutex_t	mutex_KeyEvent;
-
-extern u16 status[2];
-extern int status_pressure[2][MAX_KEYS];
-extern u32 pads;
+extern pthread_spinlock_t	mutex_KeyEvent;
 
 void clearPAD(int pad);
-int POV(u32 direction, u32 angle);
 s32  _PADopen(void *pDsp);
 void _PADclose();
-void _KeyPress(int pad, u32 key);
-void _KeyRelease(int pad, u32 key);
 void PADsetMode(int pad, int mode);
-void _PADupdate(int pad);
 
 void __Log(const char *fmt, ...);
 void __LogToConsole(const char *fmt, ...);
@@ -156,7 +139,5 @@ void LoadConfig();
 void SaveConfig();
 
 void SysMessage(char *fmt, ...);
-void UpdateKeys(int pad, int keyPress, int keyRelease);
-
 
 #endif

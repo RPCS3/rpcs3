@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(Output spu2x-1.5.0)
+set(Output spu2x-2.0.0)
 
 set(CommonFlags
     -fvisibility=hidden
@@ -113,7 +113,7 @@ set_target_properties(${Output} PROPERTIES
 					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
 
 # link target with project internal libraries
-target_link_libraries(${Output} Utilities x86emitter Utilities)
+target_link_libraries(${Output} Utilities Utilities)
 
 # link target with ALSA
 target_link_libraries(${Output} ${ALSA_LIBRARIES})

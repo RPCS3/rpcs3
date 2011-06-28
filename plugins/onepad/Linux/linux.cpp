@@ -87,105 +87,97 @@ void _PADclose()
 	s_vjoysticks.clear();
 }
 
-static bool used_by_keyboard = false;
-EXPORT_C_(void) PADupdate(int pad)
+void PollForJoystickInput(int cpad)
 {
-	// FIXME joystick directly update the status variable
-	// Keyboard does a nice roadtrip (with semaphore in the middle)
-	// s_keyRelease (by UpdateKeys) -> status (by _PADupdate -> by _PADpoll)
-	// If we need semaphore, joy part must be updated
+	int joyid = conf->get_joyid(cpad);
+	if (!JoystickIdWithinBounds(joyid)) return;
 
-	// Actually PADupdate is always call with pad == 0. So you need to update both 
-	// pads -- Gregory
-	for (int cpad = 0; cpad < 2; cpad++) {
-		int keyPress = 0, keyRelease = 0;
+	SDL_JoystickUpdate();
+	for (int i = 0; i < MAX_KEYS; i++)
+	{
+		JoystickInfo* pjoy = s_vjoysticks[joyid];
 
-		// Poll keyboard.
-		PollForX11KeyboardInput(cpad, keyPress, keyRelease, used_by_keyboard);
-
-		UpdateKeys(pad, keyPress, keyRelease);
-
-		// joystick info
-		SDL_JoystickUpdate();
-
-		int joyid = conf->get_joyid(cpad);
-
-		if (JoystickIdWithinBounds(joyid)) {
-			for (int i = 0; i < MAX_KEYS; i++)
-			{
-				JoystickInfo* pjoy = s_vjoysticks[joyid];
-
-				switch (type_of_joykey(cpad, i))
+		switch (type_of_joykey(cpad, i))
+		{
+			case PAD_JOYBUTTONS:
 				{
-					case PAD_JOYBUTTONS:
-						{
 
-							int value = SDL_JoystickGetButton((pjoy)->GetJoy(), key_to_button(cpad, i));
-							if (value)
-								clear_bit(status[cpad], i); // released
-							else
-								set_bit(status[cpad], i); // pressed
+					int value = SDL_JoystickGetButton((pjoy)->GetJoy(), key_to_button(cpad, i));
+					if (value)
+						key_status->press(cpad, i);
+					else
+						key_status->release(cpad, i);
 
-							break;
-						}
-					case PAD_HAT:
-						{
-							int value = SDL_JoystickGetHat((pjoy)->GetJoy(), key_to_axis(cpad, i));
+					break;
+				}
+			case PAD_HAT:
+				{
+					int value = SDL_JoystickGetHat((pjoy)->GetJoy(), key_to_axis(cpad, i));
 
-							// key_to_hat_dir and value are a 4 bits bitmap, one for each directions. Only 1 bit can be high for
-							// key_to_hat_dir. Value handles diagonal too (2 bits) so you must check the intersection
-							// '&' not only equality '=='. -- Gregory
-							if (key_to_hat_dir(cpad, i) & value)
-								clear_bit(status[cpad], i);
-							else
-								set_bit(status[cpad], i);
+					// key_to_hat_dir and SDL_JoystickGetHat are a 4 bits bitmap, one for each directions. Only 1 bit can be high for
+					// key_to_hat_dir. SDL_JoystickGetHat handles diagonal too (2 bits) so you must check the intersection
+					// '&' not only equality '=='. -- Gregory
+					if (key_to_hat_dir(cpad, i) & value)
+						key_status->press(cpad, i);
+					else
+						key_status->release(cpad, i);
 
-							break;
-						}
-					case PAD_AXIS:
-						{
-							int value = pjoy->GetAxisFromKey(cpad, i);
-							bool sign = key_to_axis_sign(cpad, i);
-							bool full_axis = key_to_axis_type(cpad, i);
+					break;
+				}
+			case PAD_AXIS:
+				{
+					int value = pjoy->GetAxisFromKey(cpad, i);
+					bool sign = key_to_axis_sign(cpad, i);
+					bool full_axis = key_to_axis_type(cpad, i);
 
-							if (IsAnalogKey(i)) {
-								if (abs(value) > (pjoy)->GetDeadzone())
-									Analog::ConfigurePad(cpad, i, value);
-								else if (! (conf->options & ((PADOPTION_MOUSE_R|PADOPTION_MOUSE_L) << 16 * cpad ))
-										&& !(used_by_keyboard) )
-									// There is a conflict between keyboard/mouse and joystick configuration.
-									// Do nothing when either the mouse or the keyboad is pressed/enabled.
-									// It avoid to be stuck in reset mode --Gregory
-									Analog::ResetPad(cpad, i);
+					if (IsAnalogKey(i)) {
+						if (abs(value) > pjoy->GetDeadzone())
+							key_status->press(cpad, i, value);
+						else
+							key_status->release(cpad, i);
 
+					} else {
+						if (full_axis) {
+							value += 0x8000;
+							if (value > pjoy->GetDeadzone()) {
+								key_status->press(cpad, i);
+								key_status->set_pressure(cpad, i, min(value/256 , 0xFF));
 							} else {
-								if (full_axis) {
-									value += 0x8000;
-									if (value > 2048) {
-										clear_bit(status[cpad], i);
-										status_pressure[cpad][i] = min(value/256 , 0xFF); // Max pressure is 255
-									} else {
-										set_bit(status[cpad], i);
-										status_pressure[cpad][i] = 0; // no pressure
-									}
-								} else {
-									if (sign && (value < -2048)) {
-										clear_bit(status[cpad], i);
-										status_pressure[cpad][i] = min(-value /128, 0xFF); // Max pressure is 255
-									} else if (!sign && (value > 2048)) {
-										clear_bit(status[cpad], i);
-										status_pressure[cpad][i] = min(value /128, 0xFF); // Max pressure is 255
-									} else {
-										set_bit(status[cpad], i);
-										status_pressure[cpad][i] = 0; // no pressure
-									}
-								}
+								key_status->release(cpad, i);
+							}
+
+						} else {
+							if (sign && (-value > pjoy->GetDeadzone())) {
+								key_status->press(cpad, i);
+								key_status->set_pressure(cpad, i, min(-value /128, 0xFF));
+							} else if (!sign && (value > pjoy->GetDeadzone())) {
+								key_status->press(cpad, i);
+								key_status->set_pressure(cpad, i, min(value /128, 0xFF));
+							} else {
+								key_status->release(cpad, i);
 							}
 						}
-					default: break;
+					}
 				}
-			}
+			default: break;
 		}
+	}
+}
+
+EXPORT_C_(void) PADupdate(int pad)
+{
+	// Actually PADupdate is always call with pad == 0. So you need to update both
+	// pads -- Gregory
+	for (int cpad = 0; cpad < 2; cpad++) {
+		// Poll keyboard/mouse event
+		key_status->keyboard_state_acces(cpad);
+		PollForX11KeyboardInput(cpad);
+
+		// Get joystick state
+		key_status->joystick_state_acces(cpad);
+		PollForJoystickInput(cpad);
+
+		key_status->commit_status(cpad);
 	}
 }
 

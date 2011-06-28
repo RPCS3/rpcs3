@@ -44,10 +44,8 @@ bool RunLinuxDialog()
 {
 	GtkWidget *dialog;
 	GtkWidget *main_frame, *main_box;
-	GtkWidget *res_label, *res_combo_box;
 	GtkWidget *render_label, *render_combo_box;
 	GtkWidget *interlace_label, *interlace_combo_box;
-	GtkWidget *aspect_label, *aspect_combo_box;
 	GtkWidget *swthreads_label, *swthreads_text;
 	GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check, *win_check;
 	int return_value;
@@ -66,30 +64,6 @@ bool RunLinuxDialog()
 	main_box = gtk_vbox_new(false, 5);
 	main_frame = gtk_frame_new ("GSdx Config");
 	gtk_container_add (GTK_CONTAINER(main_frame), main_box);
-
-	res_label = gtk_label_new ("Interpolation:");
-	res_combo_box = gtk_combo_box_new_text ();
-	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "640x480@60");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "800x600@60");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "1024x768@60");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "1280x960@60");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(res_combo_box), "And a few other values like that.");
-
-	// A little hackish but enough for the moment.
-	// Better drop this setting and lets the user resize the windows like any applications
-	// You need only to constrain it with the aspect ratio -- greg
-	int width = theApp.GetConfig("ModeWidth", 640);
-	switch(width) {
-		case 1280: gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 3); break;
-		case 1024: gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 2); break;
-		case 800: gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 1); break;
-		case 640: gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 0); break;
-		default: gtk_combo_box_set_active(GTK_COMBO_BOX(res_combo_box), 0); break;
-	}
-
-	gtk_container_add(GTK_CONTAINER(main_box), res_label);
-	gtk_container_add(GTK_CONTAINER(main_box), res_combo_box);
-
 
 	render_label = gtk_label_new ("Renderer:");
 	render_combo_box = gtk_combo_box_new_text ();
@@ -128,25 +102,6 @@ bool RunLinuxDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), interlace_label);
 	gtk_container_add(GTK_CONTAINER(main_box), interlace_combo_box);
 
-	aspect_label = gtk_label_new ("Aspect Ratio:");
-	aspect_combo_box = gtk_combo_box_new_text ();
-
-	for(size_t i = 0; i < theApp.m_gs_aspectratio.size(); i++)
-	{
-		const GSSetting& s = theApp.m_gs_aspectratio[i];
-
-		string label = s.name;
-
-		if(!s.note.empty()) label += format(" (%s)", s.note.c_str());
-
-		gtk_combo_box_append_text(GTK_COMBO_BOX(aspect_combo_box), label.c_str());
-	}
-
-
-	gtk_combo_box_set_active(GTK_COMBO_BOX(aspect_combo_box), 0);
-	gtk_container_add(GTK_CONTAINER(main_box), aspect_label);
-	gtk_container_add(GTK_CONTAINER(main_box), aspect_combo_box);
-
 	swthreads_label = gtk_label_new("Software renderer threads:");
 	swthreads_text = gtk_entry_new();
 	char buf[5];
@@ -155,7 +110,6 @@ bool RunLinuxDialog()
 	gtk_entry_set_text(GTK_ENTRY(swthreads_text), buf);
 	gtk_container_add(GTK_CONTAINER(main_box), swthreads_label);
 	gtk_container_add(GTK_CONTAINER(main_box), swthreads_text);
-
 
 
 	filter_check = gtk_check_button_new_with_label("Texture Filtering");
@@ -190,9 +144,6 @@ bool RunLinuxDialog()
 		// Get all the settings from the dialog box.
 
 		#if 0 // I'll put the right variable names in later.
-		if (gtk_combo_box_get_active(GTK_COMBO_BOX(res_combo_box)) != -1)
-			resolution = gtk_combo_box_get_active(GTK_COMBO_BOX(res_combo_box));
-
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box)) != -1)
 			renderer = gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box));
 
@@ -202,17 +153,6 @@ bool RunLinuxDialog()
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(aspect_combo_box)) != -1)
 			aspect = gtk_combo_box_get_active(GTK_COMBO_BOX(aspect_combo_box));
 		#endif
-		if (gtk_combo_box_get_active(GTK_COMBO_BOX(res_combo_box)) != -1) {
-			int resolution = gtk_combo_box_get_active(GTK_COMBO_BOX(res_combo_box));
-			switch (resolution) {
-				case 0: theApp.SetConfig("ModeWidth", 640); theApp.SetConfig("ModeHeight", 480); break;
-				case 1: theApp.SetConfig("ModeWidth", 800); theApp.SetConfig("ModeHeight", 600); break;
-				case 2: theApp.SetConfig("ModeWidth", 1024); theApp.SetConfig("ModeHeight", 768); break;
-				case 3: theApp.SetConfig("ModeWidth", 1280); theApp.SetConfig("ModeHeight", 960); break;
-				default: theApp.SetConfig("ModeWidth", 640); theApp.SetConfig("ModeHeight", 480);
-			}
-
-		}
 
 		theApp.SetConfig("swthreads", atoi((char*)gtk_entry_get_text(GTK_ENTRY(swthreads_text))) );
 

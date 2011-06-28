@@ -136,9 +136,4 @@ struct PADconf
 	}
 };
 extern PADconf *conf;
-
-typedef struct
-{
-	u8 x, y;
-} PADAnalog;
 #endif

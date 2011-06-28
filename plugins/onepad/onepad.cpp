@@ -39,8 +39,6 @@ char libraryName[256];
 
 keyEvent event;
 
-u16 status[2];
-int status_pressure[2][MAX_KEYS];
 static keyEvent s_event;
 std::string s_strIniPath("inis/");
 std::string s_strLogPath("logs/");
@@ -52,7 +50,6 @@ const u32 build    = 1;    // increase that with each version
 
 int PadEnum[2][2] = {{0, 2}, {1, 3}};
 
-u32 pads = 0;
 u8 stdpar[2][20] = {
 	{0xff, 0x5a, 0xff, 0xff, 0x80, 0x80, 0x80, 0x80,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -123,9 +120,8 @@ int curPad, curByte, curCmd, cmdLen;
 int ds2mode = 0; // DS Mode at start
 FILE *padLog = NULL;
 
-pthread_spinlock_t s_mutexStatus;
-pthread_mutex_t	   mutex_KeyEvent;
-static u32 s_keyPress[2], s_keyRelease[2];
+pthread_spinlock_t	   mutex_KeyEvent;
+KeyStatus* key_status = NULL;
 
 queue<keyEvent> ev_fifo;
 
@@ -257,19 +253,12 @@ EXPORT_C_(s32) PADinit(u32 flags)
 {
 	initLogging();
 
-	pads |= flags;
-	for (int i = 0 ; i < 2 ; i++) {
-		status[i] = 0xffff;
-		for (int j = 0 ; j < MAX_KEYS ; j++)
-			status_pressure[i][j] = 255;
-	}
-
 	LoadConfig();
 
 	PADsetMode(0, 0);
 	PADsetMode(1, 0);
 
-	Analog::Init();
+	key_status = new KeyStatus();
 
 	return 0;
 }
@@ -278,17 +267,16 @@ EXPORT_C_(void) PADshutdown()
 {
     CloseLogging();
 	if (conf) delete conf;
+	if (key_status) delete key_status;
 }
 
 EXPORT_C_(s32) PADopen(void *pDsp)
 {
 	memset(&event, 0, sizeof(event));
+	key_status->Init();
 
 	while (!ev_fifo.empty()) ev_fifo.pop();
-	pthread_spin_init(&s_mutexStatus, PTHREAD_PROCESS_PRIVATE);
-	pthread_mutex_init(&mutex_KeyEvent, NULL);
-	s_keyPress[0] = s_keyPress[1] = 0;
-	s_keyRelease[0] = s_keyRelease[1] = 0;
+	pthread_spin_init(&mutex_KeyEvent, PTHREAD_PROCESS_PRIVATE);
 
 #ifdef __LINUX__
 	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
@@ -315,29 +303,8 @@ EXPORT_C_(void) PADsetLogDir(const char* dir)
 EXPORT_C_(void) PADclose()
 {
 	while (!ev_fifo.empty()) ev_fifo.pop();
-	pthread_spin_destroy(&s_mutexStatus);
-	pthread_mutex_destroy(&mutex_KeyEvent);
+	pthread_spin_destroy(&mutex_KeyEvent);
 	_PADclose();
-}
-
-void _PADupdate(int pad)
-{
-	pthread_spin_lock(&s_mutexStatus);
-	status[pad] |= s_keyRelease[pad];
-	status[pad] &= ~s_keyPress[pad];
-	s_keyRelease[pad] = 0;
-	s_keyPress[pad] = 0;
-	pthread_spin_unlock(&s_mutexStatus);
-}
-
-void UpdateKeys(int pad, int keyPress, int keyRelease)
-{
-	pthread_spin_lock(&s_mutexStatus);
-	s_keyPress[pad] |= keyPress;
-	s_keyPress[pad] &= ~keyRelease;
-	s_keyRelease[pad] |= keyRelease;
-	s_keyRelease[pad] &= ~keyPress;
-	pthread_spin_unlock(&s_mutexStatus);
 }
 
 EXPORT_C_(u32) PADquery()
@@ -420,14 +387,12 @@ u8  _PADpoll(u8 value)
 
 			case CMD_READ_DATA_AND_VIBRATE: // READ_DATA
 
-				_PADupdate(curPad);
-
-				stdpar[curPad][2] = status[curPad] >> 8;
-				stdpar[curPad][3] = status[curPad] & 0xff;
-				stdpar[curPad][4] = Analog::Pad(curPad, PAD_R_RIGHT);
-				stdpar[curPad][5] = Analog::Pad(curPad, PAD_R_UP);
-				stdpar[curPad][6] = Analog::Pad(curPad, PAD_L_RIGHT);
-				stdpar[curPad][7] = Analog::Pad(curPad, PAD_L_UP);
+				stdpar[curPad][2] = key_status->get(curPad) >> 8;
+				stdpar[curPad][3] = key_status->get(curPad) & 0xff;
+				stdpar[curPad][4] = key_status->analog_get(curPad, PAD_R_RIGHT);
+				stdpar[curPad][5] = key_status->analog_get(curPad, PAD_R_UP);
+				stdpar[curPad][6] = key_status->analog_get(curPad, PAD_L_RIGHT);
+				stdpar[curPad][7] = key_status->analog_get(curPad, PAD_L_UP);
 
 				if (padMode[curPad] == 1)
 					cmdLen = 20;
@@ -438,35 +403,35 @@ u8  _PADpoll(u8 value)
 				switch (stdpar[curPad][3])
 				{
 					case 0xBF: // X
-						stdpar[curPad][14] = status_pressure[curPad][PAD_CROSS];
+						stdpar[curPad][14] = key_status->get_pressure(curPad, PAD_CROSS);
 						break;
 
 					case 0xDF: // Circle
-						stdpar[curPad][13] = status_pressure[curPad][PAD_CIRCLE];
+						stdpar[curPad][13] = key_status->get_pressure(curPad, PAD_CIRCLE);
 						break;
 
 					case 0xEF: // Triangle
-						stdpar[curPad][12] = status_pressure[curPad][PAD_TRIANGLE];
+						stdpar[curPad][12] = key_status->get_pressure(curPad, PAD_TRIANGLE);
 						break;
 
 					case 0x7F: // Square
-						stdpar[curPad][15] = status_pressure[curPad][PAD_SQUARE];
+						stdpar[curPad][15] = key_status->get_pressure(curPad, PAD_SQUARE);
 						break;
 
 					case 0xFB: // L1
-						stdpar[curPad][16] = status_pressure[curPad][PAD_L1];
+						stdpar[curPad][16] = key_status->get_pressure(curPad, PAD_L1);
 						break;
 
 					case 0xF7: // R1
-						stdpar[curPad][17] = status_pressure[curPad][PAD_R1];
+						stdpar[curPad][17] = key_status->get_pressure(curPad, PAD_R1);
 						break;
 
 					case 0xFE: // L2
-						stdpar[curPad][18] = status_pressure[curPad][PAD_L2];
+						stdpar[curPad][18] = key_status->get_pressure(curPad, PAD_L2);
 						break;
 
 					case 0xFD: // R2
-						stdpar[curPad][19] = status_pressure[curPad][PAD_R2];
+						stdpar[curPad][19] = key_status->get_pressure(curPad, PAD_R2);
 						break;
 
 					default:
@@ -483,19 +448,19 @@ u8  _PADpoll(u8 value)
 				switch (button_check)
 				{
 					case 0xE: // UP
-						stdpar[curPad][10] = status_pressure[curPad][PAD_UP];
+						stdpar[curPad][10] = key_status->get_pressure(curPad, PAD_UP);
 						break;
 
 					case 0xB: // DOWN
-						stdpar[curPad][11] =status_pressure[curPad][PAD_DOWN];
+						stdpar[curPad][11] =key_status->get_pressure(curPad, PAD_DOWN);
 						break;
 
 					case 0x7: // LEFT
-						stdpar[curPad][9] = status_pressure[curPad][PAD_LEFT];
+						stdpar[curPad][9] = key_status->get_pressure(curPad, PAD_LEFT);
 						break;
 
 					case 0xD: // RIGHT
-						stdpar[curPad][8] = status_pressure[curPad][PAD_RIGHT];
+						stdpar[curPad][8] = key_status->get_pressure(curPad, PAD_RIGHT);
 						break;
 
 					default:
@@ -701,8 +666,8 @@ EXPORT_C_(keyEvent*) PADkeyEvent()
 #ifdef __LINUX__
 EXPORT_C_(void) PADWriteEvent(keyEvent &evt)
 {
-	pthread_mutex_lock(&mutex_KeyEvent);
+	pthread_spin_lock(&mutex_KeyEvent);
 	ev_fifo.push(evt);
-	pthread_mutex_unlock(&mutex_KeyEvent);
+	pthread_spin_unlock(&mutex_KeyEvent);
 }
 #endif
