@@ -389,10 +389,10 @@ u8  _PADpoll(u8 value)
 
 				stdpar[curPad][2] = key_status->get(curPad) >> 8;
 				stdpar[curPad][3] = key_status->get(curPad) & 0xff;
-				stdpar[curPad][4] = key_status->analog_get(curPad, PAD_R_RIGHT);
-				stdpar[curPad][5] = key_status->analog_get(curPad, PAD_R_UP);
-				stdpar[curPad][6] = key_status->analog_get(curPad, PAD_L_RIGHT);
-				stdpar[curPad][7] = key_status->analog_get(curPad, PAD_L_UP);
+				stdpar[curPad][4] = key_status->get(curPad, PAD_R_RIGHT);
+				stdpar[curPad][5] = key_status->get(curPad, PAD_R_UP);
+				stdpar[curPad][6] = key_status->get(curPad, PAD_L_RIGHT);
+				stdpar[curPad][7] = key_status->get(curPad, PAD_L_UP);
 
 				if (padMode[curPad] == 1)
 					cmdLen = 20;
@@ -403,35 +403,35 @@ u8  _PADpoll(u8 value)
 				switch (stdpar[curPad][3])
 				{
 					case 0xBF: // X
-						stdpar[curPad][14] = key_status->get_pressure(curPad, PAD_CROSS);
+						stdpar[curPad][14] = key_status->get(curPad, PAD_CROSS);
 						break;
 
 					case 0xDF: // Circle
-						stdpar[curPad][13] = key_status->get_pressure(curPad, PAD_CIRCLE);
+						stdpar[curPad][13] = key_status->get(curPad, PAD_CIRCLE);
 						break;
 
 					case 0xEF: // Triangle
-						stdpar[curPad][12] = key_status->get_pressure(curPad, PAD_TRIANGLE);
+						stdpar[curPad][12] = key_status->get(curPad, PAD_TRIANGLE);
 						break;
 
 					case 0x7F: // Square
-						stdpar[curPad][15] = key_status->get_pressure(curPad, PAD_SQUARE);
+						stdpar[curPad][15] = key_status->get(curPad, PAD_SQUARE);
 						break;
 
 					case 0xFB: // L1
-						stdpar[curPad][16] = key_status->get_pressure(curPad, PAD_L1);
+						stdpar[curPad][16] = key_status->get(curPad, PAD_L1);
 						break;
 
 					case 0xF7: // R1
-						stdpar[curPad][17] = key_status->get_pressure(curPad, PAD_R1);
+						stdpar[curPad][17] = key_status->get(curPad, PAD_R1);
 						break;
 
 					case 0xFE: // L2
-						stdpar[curPad][18] = key_status->get_pressure(curPad, PAD_L2);
+						stdpar[curPad][18] = key_status->get(curPad, PAD_L2);
 						break;
 
 					case 0xFD: // R2
-						stdpar[curPad][19] = key_status->get_pressure(curPad, PAD_R2);
+						stdpar[curPad][19] = key_status->get(curPad, PAD_R2);
 						break;
 
 					default:
@@ -448,19 +448,19 @@ u8  _PADpoll(u8 value)
 				switch (button_check)
 				{
 					case 0xE: // UP
-						stdpar[curPad][10] = key_status->get_pressure(curPad, PAD_UP);
+						stdpar[curPad][10] = key_status->get(curPad, PAD_UP);
 						break;
 
 					case 0xB: // DOWN
-						stdpar[curPad][11] =key_status->get_pressure(curPad, PAD_DOWN);
+						stdpar[curPad][11] =key_status->get(curPad, PAD_DOWN);
 						break;
 
 					case 0x7: // LEFT
-						stdpar[curPad][9] = key_status->get_pressure(curPad, PAD_LEFT);
+						stdpar[curPad][9] = key_status->get(curPad, PAD_LEFT);
 						break;
 
 					case 0xD: // RIGHT
-						stdpar[curPad][8] = key_status->get_pressure(curPad, PAD_RIGHT);
+						stdpar[curPad][8] = key_status->get(curPad, PAD_RIGHT);
 						break;
 
 					default:

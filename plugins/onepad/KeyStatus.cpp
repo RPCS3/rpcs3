@@ -33,10 +33,10 @@ void KeyStatus::Init()
 			m_internal_button_pressure[pad][index] = 0xFF;
 		}
 
-		analog[pad].lx = 0x80;
-		analog[pad].ly = 0x80;
-		analog[pad].rx = 0x80;
-		analog[pad].ry = 0x80;
+		m_analog[pad].lx = 0x80;
+		m_analog[pad].ly = 0x80;
+		m_analog[pad].rx = 0x80;
+		m_analog[pad].ry = 0x80;
 		m_internal_analog_kbd[pad].lx = 0x80;
 		m_internal_analog_kbd[pad].ly = 0x80;
 		m_internal_analog_kbd[pad].rx = 0x80;
@@ -51,6 +51,7 @@ void KeyStatus::Init()
 void KeyStatus::press(u32 pad, u32 index, s32 value)
 {
 	if (!IsAnalogKey(index)) {
+		m_internal_button_pressure[pad][index] = value;
 		if (m_state_acces[pad])
 			clear_bit(m_internal_button_kbd[pad], index);
 		else
@@ -88,16 +89,6 @@ void KeyStatus::release(u32 pad, u32 index)
 u16 KeyStatus::get(u32 pad)
 {
 	return m_button[pad];
-}
-
-void KeyStatus::set_pressure(u32 pad, u32 index, u32 value)
-{
-	m_internal_button_pressure[pad][index] = value;
-}
-
-u8 KeyStatus::get_pressure(u32 pad, u32 index)
-{
-	return m_button_pressure[pad][index];
 }
 
 void KeyStatus::analog_set(u32 pad, u32 index, u8 value)
@@ -150,23 +141,23 @@ bool KeyStatus::analog_is_reversed(u32 index)
 	}
 }
 
-u8 KeyStatus::analog_get(u32 pad, u32 index)
+u8 KeyStatus::get(u32 pad, u32 index)
 {
 	switch (index)
 	{
 		case PAD_R_LEFT:
-		case PAD_R_RIGHT: return analog[pad].rx;
+		case PAD_R_RIGHT: return m_analog[pad].rx;
 
 		case PAD_R_DOWN:
-		case PAD_R_UP: return analog[pad].ry;
+		case PAD_R_UP: return m_analog[pad].ry;
 
 		case PAD_L_LEFT:
-		case PAD_L_RIGHT: return analog[pad].lx;
+		case PAD_L_RIGHT: return m_analog[pad].lx;
 
 		case PAD_L_DOWN:
-		case PAD_L_UP: return analog[pad].ly;
+		case PAD_L_UP: return m_analog[pad].ly;
 
-		default: return 0;
+		default: return m_button_pressure[pad][index];
 	}
 }
 
@@ -185,8 +176,8 @@ void KeyStatus::commit_status(u32 pad)
 	for (int index = 0; index < MAX_KEYS; index++)
 		m_button_pressure[pad][index] = m_internal_button_pressure[pad][index];
 
-	analog[pad].lx = analog_merge(m_internal_analog_kbd[pad].lx, m_internal_analog_joy[pad].lx);
-	analog[pad].ly = analog_merge(m_internal_analog_kbd[pad].ly, m_internal_analog_joy[pad].ly);
-	analog[pad].rx = analog_merge(m_internal_analog_kbd[pad].rx, m_internal_analog_joy[pad].rx);
-	analog[pad].ry = analog_merge(m_internal_analog_kbd[pad].ry, m_internal_analog_joy[pad].ry);
+	m_analog[pad].lx = analog_merge(m_internal_analog_kbd[pad].lx, m_internal_analog_joy[pad].lx);
+	m_analog[pad].ly = analog_merge(m_internal_analog_kbd[pad].ly, m_internal_analog_joy[pad].ly);
+	m_analog[pad].rx = analog_merge(m_internal_analog_kbd[pad].rx, m_internal_analog_joy[pad].rx);
+	m_analog[pad].ry = analog_merge(m_internal_analog_kbd[pad].ry, m_internal_analog_joy[pad].ry);
 }

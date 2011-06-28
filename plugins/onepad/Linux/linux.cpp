@@ -139,23 +139,18 @@ void PollForJoystickInput(int cpad)
 					} else {
 						if (full_axis) {
 							value += 0x8000;
-							if (value > pjoy->GetDeadzone()) {
-								key_status->press(cpad, i);
-								key_status->set_pressure(cpad, i, min(value/256 , 0xFF));
-							} else {
+							if (value > pjoy->GetDeadzone())
+								key_status->press(cpad, i, min(value/256 , 0xFF));
+							else
 								key_status->release(cpad, i);
-							}
 
 						} else {
-							if (sign && (-value > pjoy->GetDeadzone())) {
-								key_status->press(cpad, i);
-								key_status->set_pressure(cpad, i, min(-value /128, 0xFF));
-							} else if (!sign && (value > pjoy->GetDeadzone())) {
-								key_status->press(cpad, i);
-								key_status->set_pressure(cpad, i, min(value /128, 0xFF));
-							} else {
+							if (sign && (-value > pjoy->GetDeadzone()))
+								key_status->press(cpad, i, min(-value /128, 0xFF));
+							else if (!sign && (value > pjoy->GetDeadzone()))
+								key_status->press(cpad, i, min(value /128, 0xFF));
+							else
 								key_status->release(cpad, i);
-							}
 						}
 					}
 				}
