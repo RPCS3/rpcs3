@@ -1164,6 +1164,10 @@ Serial = SCUS-97436
 Name   = Gran Turismo 4 [Online Public Beta]
 Region = NTSC-U
 ---------------------------------------------
+Serial = SCUS-97437
+Name   = ATV Offroad Fury 3 [Demo]
+Region = NTSC-U
+---------------------------------------------
 Serial = SCUS-97438
 Name   = EyeToy - Antigrav [Demo]
 Region = NTSC-U
@@ -1658,6 +1662,10 @@ Compat = 3
 ---------------------------------------------
 Serial = SCUS-97618
 Name   = SingStar 80's [Game Only]
+Region = NTSC-U
+---------------------------------------------
+Serial = SCUS-97620
+Name   = Syphon Filter - Dark Mirror [Demo]
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97621
@@ -2314,7 +2322,7 @@ Region = NTSC-U
 Serial = SLUS-20164
 Name   = Project Eden
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20165
 Name   = Legacy of Kain - Soul Reaver 2
@@ -3244,7 +3252,8 @@ Compat = 3
 Serial = SLUS-20373
 Name   = Men in Black 2 - Alien Escape
 Region = NTSC-U
-Compat = 2
+Compat = 5
+VIFFIFOHack = 1
 ---------------------------------------------
 Serial = SLUS-20374
 Name   = Hitman 2 - Silent Assassin
@@ -4024,7 +4033,7 @@ Compat = 3
 Serial = SLUS-20552
 Name   = Grand Theft Auto - Vice City
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20553
 Name   = Fisherman's Challenge
@@ -4713,7 +4722,7 @@ Compat = 5
 Serial = SLUS-20710
 Name   = Onimusha - Blade Warriors
 Region = NTSC-U
-Compat = 5
+Compat = 1
 ---------------------------------------------
 Serial = SLUS-20711
 Name   = Dance Dance Revolution MAX 2
@@ -8979,6 +8988,10 @@ Name   = Kiki Kai Kai
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
+Serial = SLUS-21654
+Name   = Kane & Lynch - Dead Men Sneak Preview
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21655
 Name   = CSI 3 - Dimensions of Murder
 Region = NTSC-U
@@ -9507,6 +9520,10 @@ Name   = Fifa 2009
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
+Serial = SLUS-21778
+Name   = Dokapon Kingdom
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21779
 Name   = Eternal Poison
 Region = NTSC-U
@@ -9612,6 +9629,10 @@ Serial = SLUS-21805
 Name   = Hasbro Family Game Night
 Region = NTSC-U
 Compat = 2
+---------------------------------------------
+Serial = SLUS-21806
+Name   = Barbie Horse Adventures - Riding Camp
+Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21807
 Name   = Monster Jam - Urban Assault
@@ -10012,8 +10033,12 @@ Serial = SLUS-21905
 Name   = FIFA Soccer 10
 Region = NTSC-U
 ---------------------------------------------
+Serial = SLUS-21906
+Name   = Cabela's Outdoor - Adventures 2010
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21907
-Name   = Jurassic: The Hunted
+Name   = Jurassic - The Hunted
 Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-21908
@@ -10126,6 +10151,10 @@ Serial = SLUS-21939
 Name   = WWE SmackDown vs. Raw 2011
 Region = NTSC-U
 ---------------------------------------------
+Serial = SLUS-21940
+Name   = WWE All-Stars
+Region = NTSC-U
+---------------------------------------------
 Serial = SLUS-21941
 Name   = FIFA Soccer 11
 Region = NTSC-U
@@ -10231,6 +10260,10 @@ Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-28029
 Name   = High Heat - Major League Baseball 2004 [Trade Demo]
+Region = NTSC-U
+---------------------------------------------
+Serial = SLUS-28031
+Name   = Auto Modelista - Public Beta Volume 2.0
 Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-28032
@@ -11782,6 +11815,10 @@ Serial = SCKA-20010
 Name   = Jak II
 Region = NTSC-K
 ---------------------------------------------
+Serial = SCKA-20012
+Name   = Ark the Lad - jeongryeongui Hwanghon
+Region = NTSC-K
+---------------------------------------------
 Serial = SCKA-20020
 Name   = SOCOM II - U.S. Navy SEALs
 Region = NTSC-K
@@ -11963,6 +12000,10 @@ Serial = SCKA-20117
 Name   = Super Robot Taisen OG - Original Generations Gaiden
 Region = NTSC-K
 ---------------------------------------------
+Serial = SCKA-24008
+Name   = SOCOM - U.S. Navy SEALs
+Region = NTSC-K
+---------------------------------------------
 Serial = SCPS-11001
 Name   = I.Q. Remix
 Region = NTSC-J
@@ -12066,6 +12107,10 @@ Serial = SCPS-11021
 Name   = Yoake no Mariko 2nd Act
 Region = NTSC-J
 ---------------------------------------------
+Serial = SCPS-11022
+Name   = Yoake no Mariko 2nd Act
+Region = NTSC-J
+---------------------------------------------
 Serial = SCPS-11023
 Name   = Bravo Music - Chou-Meikyokuban
 Region = NTSC-J
@@ -12090,6 +12135,10 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-11028
 Name   = Let's Bravo Music
+Region = NTSC-J
+---------------------------------------------
+Serial = SCPS-11029
+Name   = Shibai Muchi
 Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-11030
@@ -12171,6 +12220,10 @@ Serial = SCPS-15013
 Name   = Poinie's Poin
 Region = NTSC-J
 ---------------------------------------------
+Serial = SCPS-15014
+Name   = Genshi no Kotoba
+Region = NTSC-J
+---------------------------------------------
 Serial = SCPS-15015
 Name   = Toro to Kyuujitsu
 Region = NTSC-J
@@ -12221,6 +12274,14 @@ Serial = SCPS-15026
 Name   = Boku no Natsuyasumi 2
 Region = NTSC-J
 ---------------------------------------------
+Serial = SCPS-15027
+Name   = PoPoLoCrois - Hajimari no Bouken [Limited]
+Region = NTSC-J
+---------------------------------------------
+Serial = SCPS-15028
+Name   = PoPoLoCrois - Hajimari no Bouken
+Region = NTSC-J
+---------------------------------------------
 Serial = SCPS-15029
 Name   = Xi (Sai) Jumbo
 Region = NTSC-J
@@ -12249,6 +12310,10 @@ Serial = SCPS-15035
 Name   = Train Simulator Real, The - Keihin Keikyu
 Region = NTSC-J
 ---------------------------------------------
+Serial = SCPS-15036
+Name   = Kaitou Sly Cooper
+Region = NTSC-J
+---------------------------------------------
 Serial = SCPS-15037
 Name   = Ratchet & Clank
 Region = NTSC-J
@@ -12267,6 +12332,14 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-15041
 Name   = Arc the Lad - Seirei no Koukon
+Region = NTSC-J
+---------------------------------------------
+Serial = SCPS-15042
+Name   = Deka Voice [with Microphone]
+Region = NTSC-J
+---------------------------------------------
+Serial = SCPS-15043
+Name   = Deka Voice
 Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-15044
@@ -12482,7 +12555,7 @@ Region = NTSC-J
 Serial = SCPS-15093
 Name   = Rule of Rose
 Region = NTSC-J
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SCPS-15094
 Name   = EyeToy - Play 2 [Game Only]
@@ -12507,6 +12580,10 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-15099
 Name   = Ratchet & Clank - Giga Battle
+Region = NTSC-J
+---------------------------------------------
+Serial = SCPS-15100
+Name   = Ratchet & Clank 4th - GiriGiri Ginga no Giga Battle
 Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-15101
@@ -12590,6 +12667,10 @@ Name   = Bleach - Blade Battlers 2nd
 Region = NTSC-J
 OPHFLagHack = 1 // Special moves "Bankai" hang otherwise
 Compat = 5
+---------------------------------------------
+Serial = SCPS-15120
+Name   = Ratchet & Clank 5 Gekitotsu! Dodeka Ginga no Mirimiri Gundan
+Region = NTSC-J
 ---------------------------------------------
 Serial = SCPS-17001
 Name   = Gran Turismo 4
@@ -13341,6 +13422,10 @@ Serial = SLAJ-25099
 Name   = NBA Live '08
 Region = NTSC-Unk
 ---------------------------------------------
+Serial = SLAJ-25115
+Name   = World Soccer Winning Eleven 2011
+Region = NTSC-Unk
+---------------------------------------------
 Serial = SLAJ-35001
 Name   = Sakura Wars
 Region = NTSC-Unk
@@ -13349,10 +13434,22 @@ Serial = SLAJ-35003
 Name   = Sakura Taisen - Atsuki Chishioni Ni
 Region = NTSC-Unk
 ---------------------------------------------
+Serial = SLKA-15004
+Name   = Gunbird - Premium Package
+Region = NTSC-J
+---------------------------------------------
 Serial = SLKA-15005
 Name   = Strikers 1945 III
 Region = NTSC-J
 Compat = 5
+---------------------------------------------
+Serial = SLKA-15008
+Name   = Choro Q HG2
+Region = NTSC-E-F-G
+---------------------------------------------
+Serial = SLKA-25015
+Name   = Evolution Skateboarding
+Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25021
 Name   = Shinobi
@@ -13370,6 +13467,10 @@ Serial = SLKA-25038
 Name   = Gun Survivor 4 - Biohazard - Heroes Never Die
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25043
+Name   = Virtua Fighter 4 - Evolution
+Region = NTSC-K
+---------------------------------------------
 Serial = SLKA-25049
 Name   = Metal Slug 3
 Region = NTSC-K
@@ -13385,6 +13486,10 @@ Region = NTSC-K
 Serial = SLKA-25063
 Name   = Kaido Battle
 Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25070
+Name   = Guity Gear XX Reload - The Midnight Carnival
+Region = NTSC-J-K
 ---------------------------------------------
 Serial = SLKA-25077
 Name   = Culdicept II - Expansion
@@ -13535,6 +13640,10 @@ Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25243
 Name   = Medal of Honor - European Assault
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25244
+Name   = WWE SmackDown! vs. Raw
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25249
@@ -13762,15 +13871,19 @@ Serial = SLPM-55005
 Name   = Mana Khemia 2: Ochita Gakuen to Renkinjutsushi Tachi
 Region = NTSC-J
 ---------------------------------------------
-Serial = SLPM-55096
-Name   = ThunderForce VI
-Region = NTSC-J
-Compat = 5
----------------------------------------------
 Serial = SLPM-55008
 Name   = Sengoku Basara X
 Region = NTSC-J
 Compat = 4
+---------------------------------------------
+Serial = SLPM-55033
+Name   = J. League Winning Eleven 2008 - Club Championship
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55096
+Name   = ThunderForce VI
+Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-55108
 Name   = Fate - Unlimited Codes
@@ -13778,8 +13891,16 @@ Region = NTSC-J
 Compat = 5
 eeRoundMode = 0
 ---------------------------------------------
+Serial = SLPM-55110
+Name   = Mercenaries 2 - World in Flames
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPM-55114
 Name   = Mana Khemia 2: Ochita Gakuen to Renkinjutsushi Tachi
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55120
+Name   = Fukakutei Sekai no Tantei Shinshi - Agyou Souma no Jiken File
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-55122
@@ -13796,6 +13917,10 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-55148
 Name   = 007: Nagusame no Houshuu
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55182
+Name   = J. League Winning Eleven 2009 - Club Championship
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-55184
@@ -13815,6 +13940,14 @@ Serial = SLPM-55251
 Name   = WWE SmackDown vs. Raw 2009
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPM-55258
+Name   = World Soccer Winning Eleven 2010 - Aoki Samurai no Chousen
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-55262
+Name   = J.League Winning Eleven 2010 - Club Championship
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPM-55271
 Name   = FIFA 10: World Class Soccer (EA:SY! 1980)
 Region = NTSC-J
@@ -13827,8 +13960,40 @@ Serial = SLPM-55280
 Name   = The King of Fighters '98 Ultimate Match
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPM-60101
+Name   = 0 Story
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-60102
+Name   = From Software First Previews
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-60104
+Name   = Konami PlayStation 2 Taikeban
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-60106
+Name   = Koei PlayStation 2 Line-Up
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-60107
+Name   = Golf Paradise
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-60172
+Name   = Itadaki Street 3 - Okuman Chouja ni Shiteageru
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-60207
+Name   = Rockman X7
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPM-60251
 Name   = Devil May Cry 3 [Trial Version]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-60262
+Name   = 10th Anniversary Memorial Save Data [Disc 2]
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-60265
@@ -13849,6 +14014,10 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62004
 Name   = Mahjong Yarouze 2
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-62005
+Name   = Shin Sangokumusou
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62006
@@ -13931,6 +14100,10 @@ Serial = SLPM-62035
 Name   = Got to Do! Hot Spring Table Tennis
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPM-62036
+Name   = Choukousoku Reversi
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPM-62040
 Name   = J League Winning Eleven 8 - Asia Championship
 Region = NTSC-J
@@ -13941,6 +14114,10 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62044
 Name   = RC Revenge Pro
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-62045
+Name   = Jikkou J. League Perfect Striker 3
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62046
@@ -14067,6 +14244,10 @@ Serial = SLPM-62092
 Name   = XG3 Extreme G Racing
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPM-62094
+Name   = Simple 2000 Series Vol. 2 - The Party Game
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPM-62095
 Name   = Flying Circus [Limited Edition]
 Region = NTSC-J
@@ -14131,8 +14312,16 @@ Name   = Bomberman Kart
 Region = NTSC-J
 Compat = 1
 ---------------------------------------------
+Serial = SLPM-62120
+Name   = Jikkyou World Soccer 2001
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPM-62121
 Name   = ESPN NBA 2Night 2002
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-62122
+Name   = Hermina to Culus - Lilie no Atelier Mou Hitotsu no Monogatari
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-62123
@@ -15224,6 +15413,10 @@ Name   = Yoshinoya
 Region = NTSC-J
 Compat = 5
 ---------------------------------------------
+Serial = SLPM-62490
+Name   = Dragon Quest VIII [Premium Disc]
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPM-62491
 Name   = RockMan Power Battle Fighters
 Region = NTSC-J
@@ -16256,6 +16449,10 @@ Name   = Guilty Gear X Plus "By Your Side"
 Region = NTSC-K
 Compat = 5
 SkipMPEGHack = 1
+---------------------------------------------
+Serial = SLPM-64549
+Name   = Shikigame no Shiro
+Region = NTSC-K
 ---------------------------------------------
 Serial = SLPM-65001
 Name   = Kessen
@@ -17386,6 +17583,10 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65352
 Name   = Simple 2000 Series Ultimate Vol.10 - Love Songs
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-65353
+Name   = SuperLite 2000 Series Vol. 6 - Konohana 2 - Todokanai Requiem
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65356
@@ -23318,6 +23519,10 @@ Serial = SLPM-67528
 Name   = Hajime no Ippo - Victorious Boxers [Championship Edition]
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLPM-67535
+Name   = Memories Of
+Region = NTSC-J-K
+---------------------------------------------
 Serial = SLPM-67546
 Name   = Lord of the Rings - The Two Towers
 Region = NTSC-K
@@ -23565,7 +23770,11 @@ Name   = Shin Sangoku Musou 4 Moushouden [PlayStation 2 the Best]
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-74251
-Name   = Shin Onimusha - Dawn of Dreams [PlayStation 2 the Best - Reprint]
+Name   = Shin Onimusha - Dawn of Dreams [PlayStation 2 the Best - Reprint Disc 1]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPM-74252
+Name   = Shin Onimusha - Dawn of Dreams [Playstation 2 the Best - Reprint Disc 2]
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-74253
@@ -23591,6 +23800,7 @@ Region = NTSC-J
 Serial = SLPM-74278
 Name   = Persona 4 [PlayStation 2 the Best]
 Region = NTSC-J
+VuClipFlagHack = 1
 ---------------------------------------------
 Serial = SLPM-74286
 Name   = Shin Sangoku Musou 5 Special [PlayStation 2 the Best]
@@ -23904,6 +24114,10 @@ Serial = SLPS-20073
 Name   = NBA Live 2001
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPS-20078
+Name   = Generation of Chaos
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPS-20082
 Name   = Saikyou Toudai Shogi 3 [Mycom Best]
 Region = NTSC-J
@@ -23913,7 +24127,11 @@ Name   = Air Ranger Rescue Helicopter
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20084
-Name   = Basic Studio
+Name   = Basic Studio [Disc 1]
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPS-20085
+Name   = Basic Studio [Disc 2]
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20086
@@ -24104,6 +24322,10 @@ Serial = SLPS-20194
 Name   = Underwater Unit
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPS-20196
+Name   = Akagawa Jiro - Tsuki no Hikari - Shizumeru Kane no Satsujin
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPS-20198
 Name   = Raging Bless
 Region = NTSC-J
@@ -24233,6 +24455,10 @@ Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20288
 Name   = Saikyo Todai Shogi 2003
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPS-20289
+Name   = Yamasa Digi World SP - Umi Ichiban R
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20291
@@ -25185,6 +25411,10 @@ Serial = SLPS-25080
 Name   = Uchuu Senkan Yamato - Iscandar he no Tsuioku [Special Edition]
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPS-25081
+Name   = Saishuu Densha
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPS-25084
 Name   = Thunder Strike - Operation Phoenix
 Region = NTSC-J
@@ -25259,6 +25489,10 @@ Compat = 1
 ---------------------------------------------
 Serial = SLPS-25108
 Name   = Runabout 3 - Neo Age
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPS-25111
+Name   = Higanbana
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-25112
@@ -28017,6 +28251,14 @@ Serial = SLPS-25869
 Name   = CR Shinseiki Evangelion - Shito, Futatabi
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPS-25887
+Name   = Super Robot Taisen Z
+Region = NTSC-J
+---------------------------------------------
+Serial = SLPS-25892
+Name   = Nogizaka Haruka no Himitsu - Cosplay Hajimemashita
+Region = NTSC-J
+---------------------------------------------
 Serial = SLPS-25905
 Name   = Dragon Ball Z: Infinite World
 Region = NTSC-J
@@ -29230,6 +29472,10 @@ Serial = SCES-51977
 Name   = Hardware Online Arena
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SCES-51979
+Name   = Destruction Derby Arenas
+Region = PAL-M6
+---------------------------------------------
 Serial = SCES-52004
 Name   = Killzone
 Region = PAL-M6
@@ -29250,6 +29496,10 @@ Region = PAL-Unk
 Serial = SCES-52099
 Name   = I-Ninja
 Region = PAL-Unk
+---------------------------------------------
+Serial = SCES-52124
+Name   = kill.switch
+Region = PAL-M5
 ---------------------------------------------
 Serial = SCES-52154
 Name   = EyeToy - Chat
@@ -29277,8 +29527,8 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SCES-52328
 Name   = Forbidden Siren
-Region = PAL-Unk
-Compat = 4
+Region = PAL-G
+Compat = 5
 ---------------------------------------------
 Serial = SCES-52329
 Name   = Forbidden Siren
@@ -29286,12 +29536,16 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SCES-52330
 Name   = Forbidden Siren - Viviendo la Pesadilla
-Region = PAL-Unk
+Region = PAL-S
 ---------------------------------------------
 Serial = SCES-52389
 Name   = World Rally Championship 4
 Region = PAL-Unk
 Compat = 1
+---------------------------------------------
+Serial = SCES-52405
+Name   = DJ - Decks & FX - House Edition
+Region = PAL-M9
 ---------------------------------------------
 Serial = SCES-52410
 Name   = Athens 2004 - Olympic Summer Games
@@ -29304,6 +29558,10 @@ Region = PAL-Unk
 Serial = SCES-52412
 Name   = Jackie Chan Adventures
 Region = PAL-Unk
+---------------------------------------------
+Serial = SCES-52423
+Name   = Smash Court Tennis - Pro Tournament 2
+Region = PAL-M5
 ---------------------------------------------
 Serial = SCES-52424
 Name   = Ace Combat - Squadron Leader
@@ -29400,6 +29658,10 @@ Name   = EyeToy - Play 2
 Region = PAL-Unk
 Compat = 2
 ---------------------------------------------
+Serial = SCES-52756
+Name   = DJ - Decks & FX - Claudio Coccoluto Edition
+Region = PAL-I
+---------------------------------------------
 Serial = SCES-52758
 Name   = Getaway, The - Black Monday
 Region = PAL-Unk
@@ -29468,6 +29730,10 @@ Serial = SCES-53054
 Name   = Death by Degrees
 Region = PAL-Unk
 Compat = 5
+---------------------------------------------
+Serial = SCES-53055
+Name   = Eyetoy - Antigrav
+Region = PAL-M5
 ---------------------------------------------
 Serial = SCES-53133
 Name   = God of War
@@ -29542,6 +29808,10 @@ Serial = SCES-53286
 Name   = Jak X - Combat Racing
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SCES-53300
+Name   = SOCOM 3 - U.S. Navy SEALs
+Region = PAL-M5
+---------------------------------------------
 Serial = SCES-53304
 Name   = Buzz! The Music Quiz
 Region = PAL-Unk
@@ -29605,6 +29875,10 @@ Serial = SCES-53409
 Name   = Sly 3
 Region = PAL-M11
 Compat = 5
+---------------------------------------------
+Serial = SCES-53422
+Name   = Stuart Little 3 - Big Photo Adventure
+Region = PAL-M9
 ---------------------------------------------
 Serial = SCES-53449
 Name   = AFL Premiership 2005
@@ -29903,9 +30177,21 @@ Name   = Socom US Navy Seals - Combined Assault
 Region = PAL-E
 Compat = 4
 ---------------------------------------------
+Serial = SCES-54497
+Name   = Buzz! Le Mega Quiz
+Region = PAL-F
+---------------------------------------------
 Serial = SCES-54499
 Name   = Buzz! Das Mega-Quiz
 Region = PAL-G
+---------------------------------------------
+Serial = SCES-54500
+Name   = Buzz! El Mega Concurso
+Region = PAL-S
+---------------------------------------------
+Serial = SCES-54507
+Name   = Buzz! The Mega Quiz
+Region = PAL-M3
 ---------------------------------------------
 Serial = SCES-54524
 Name   = Buzz! Junior - Jungle Party
@@ -29915,16 +30201,172 @@ Serial = SCES-54535
 Name   = Everybody's Tennis
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SCES-54538
+Name   = Eyetoy - Play Astro Zoo
+Region = PAL-M15
+---------------------------------------------
+Serial = SCES-54552
+Name   = Rogue Galaxy
+Region = PAL-M5
+---------------------------------------------
 Serial = SCES-54571
 Name   = Sing-Star Pop Hits
 Region = PAL-G
+---------------------------------------------
+Serial = SCES-54597
+Name   = Buzz! The Mega Quiz
+Region = PAL-M3
+---------------------------------------------
+Serial = SCES-54598
+Name   = SingStar - Svenska Hits Schlager
+Region = PAL-Unk
+---------------------------------------------
+Serial = SCES-54599
+Name   = SingStar - '90s
+Region = PAL-E
 ---------------------------------------------
 Serial = SCES-54600
 Name   = SingStar - Die Toten Hosen
 Region = PAL-G
 ---------------------------------------------
+Serial = SCES-54601
+Name   = SingStar - Apres-Ski Party
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-54625
+Name   = Buzz! Junior - Monster Rumble
+Region = PAL-M7
+---------------------------------------------
+Serial = SCES-54638
+Name   = Gaelic Games - Football 2
+Region = PAL-E
+---------------------------------------------
+Serial = SCES-54676
+Name   = Buzz! Junior - RoboJam
+Region = PAL-M7
+---------------------------------------------
+Serial = SCES-54688
+Name   = ATV Offroad Fury 4
+Region = PAL-M12
+---------------------------------------------
+Serial = SCES-54748
+Name   = WipEout Pulse
+Region = PAL-M5
+---------------------------------------------
+Serial = SCES-54749
+Name   = Buzz! Junior - Dino Den
+Region = PAL-M8
+---------------------------------------------
+Serial = SCES-54762
+Name   = SingStar R&B
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-54794
+Name   = Syphon Filter - Dark Mirror
+Region = PAL-M5
+---------------------------------------------
+Serial = SCES-54823
+Name   = SingStar Bollywood
+Region = PAL-E
+---------------------------------------------
+Serial = SCES-54844
+Name   = Buzz! The Hollywood Quiz
+Region = PAL-E
+---------------------------------------------
+Serial = SCES-54845
+Name   = Buzz! The Hollywood Quiz
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-54848
+Name   = Buzz! Hollywood
+Region = PAL-M2
+---------------------------------------------
+Serial = SCES-54851
+Name   = Buzz! The Hollywood Quiz
+Region = PAL-M3
+---------------------------------------------
+Serial = SCES-55093
+Name   = Buzz! The Pop Quiz
+Region = PAL-E
+---------------------------------------------
+Serial = SCES-55094
+Name   = Buzz! The Pop Quiz
+Region = PAL-M3
+---------------------------------------------
+Serial = SCES-55179
+Name   = SingStar Schlager
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-55183
+Name   = SingStar Turkish Party
+Region = PAL-Unk
+---------------------------------------------
+Serial = SCES-55210
+Name   = Buzz! Junior - Ace Racers
+Region = PAL-M6
+---------------------------------------------
+Serial = SCES-55213
+Name   = Buzz! Escuela de Talentos
+Region = PAL-S
+---------------------------------------------
+Serial = SCES-55361
+Name   = SingStar Boy Bands vs Girl Bands
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-55362
+Name   = SingStar Hottest Hits
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-55385
+Name   = Buzz! Brain of the UK
+Region = PAL-E
+---------------------------------------------
+Serial = SCES-55387
+Name   = Buzz! Deutschlands Superquiz
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-55437
+Name   = SingStar ABBA
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-55454
+Name   = SingStar Queen
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-55510
+Name   = Jak and Dexter - The Lost Frontier
+Region = PAL-M12
+---------------------------------------------
+Serial = SCES-55538
+Name   = SingStar
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-55552
+Name   = SingStar MoTown
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-55557
+Name   = SingStar Take That
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-55570
+Name   = SingStar Chartbreaker
+Region = PAL-G
+---------------------------------------------
+Serial = SCES-55573
+Name   = MotorStorm - Arctic Edge
+Region = PAL-M14
+---------------------------------------------
+Serial = SCES-55606
+Name   = SingStar Die groten Solokunstler
+Region = PAL-G
+---------------------------------------------
 Serial = SCES-82034
-Name   = Xenosaga II - Jenseits von Gut und Bose
+Name   = Xenosaga II - Jenseits von Gut und Bose [Disc 1]
+Region = PAL-Unk
+---------------------------------------------
+Serial = SCES-82035
+Name   = Xenosaga II - Jenseits von Gut und Bose [Disc 2]
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLED-50117
@@ -29933,7 +30375,7 @@ Region = PAL-E
 ---------------------------------------------
 Serial = SLED-50359
 Name   = Devil May Cry [Demo]
-Region = PAL-Unk
+Region = PAL-E
 ---------------------------------------------
 Serial = SLED-50478
 Name   = WWF Smackdown! - Just Bring It [Demo]
@@ -29943,9 +30385,101 @@ Serial = SLED-50488
 Name   = Spy Hunter [Demo]
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLED-50884
+Name   = TimeSplitters 2 [Demo]
+Region = PAL-E
+---------------------------------------------
 Serial = SLED-51211
 Name   = Burnout 2 - Point of Impact [Demo]
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLED-51281
+Name   = Haven - Call of the King [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-51901
+Name   = Soul Calibur II [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-52375
+Name   = Fight Night 2004 [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-52441
+Name   = Transformers [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-52473
+Name   = Transformers - Optimus Prime [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-52474
+Name   = Transformers - Red Alert [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-52476
+Name   = UEFA Euro 2004 - Portugal [Demo]
+Region = PAL-M5
+---------------------------------------------
+Serial = SLED-52488
+Name   = The Suffering [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-52929
+Name   = Prince of Persia - Warrior Within [Demo]
+Region = PAL-M5
+---------------------------------------------
+Serial = SLED-53083
+Name   = Monster Hunter [Demo]
+Region = PAL-M5
+---------------------------------------------
+Serial = SLED-53109
+Name   = Juiced [Demo]
+Region = PAL-M5
+---------------------------------------------
+Serial = SLED-53673
+Name   = 007 - From Russia with Love [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-53719
+Name   = Pro Evolution Soccer 5 [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-53723
+Name   = Peter Jackson's king Kong [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-53745
+Name   = Total Overdose [Demo]
+Region = PAL-M5
+---------------------------------------------
+Serial = SLED-53745
+Name   = Total Overdose [Demo]
+Region = PAL-M5
+---------------------------------------------
+Serial = SLED-53745
+Name   = Total Overdose [Demo]
+Region = PAL-M5
+---------------------------------------------
+Serial = SLED-53845
+Name   = Matrix - Path of Neo [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-53937
+Name   = Black [Demo]
+Region = PAL-M5
+---------------------------------------------
+Serial = SLED-53951
+Name   = Honda Demo [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-53953
+Name   = FIFA Street 2 [Demo]
+Region = PAL-E
+---------------------------------------------
+Serial = SLED-54035
+Name   = Play the Best Demos from Atari [Demo]
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLED-54312
 Name   = Need for Speed - Carbon [Demo]
@@ -30033,6 +30567,10 @@ Serial = SLES-50027
 Name   = NHL 2001
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-50028
+Name   = NHL 2001
+Region = PAL-G
+---------------------------------------------
 Serial = SLES-50030
 Name   = SSX Snowboarding
 Region = PAL-M3
@@ -30050,6 +30588,10 @@ Compat = 5
 Serial = SLES-50033
 Name   = Swing Away Golf
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-50035
+Name   = Winter X-games Snowboarding
+Region = PAL-M3
 ---------------------------------------------
 Serial = SLES-50036
 Name   = ESPN International Track & Field
@@ -31183,6 +31725,10 @@ Serial = SLES-50556
 Name   = New York Race
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-50558
+Name   = DSF Futball Manager 2002
+Region = PAL-G
+---------------------------------------------
 Serial = SLES-50559
 Name   = Guy Roux Manager 2002
 Region = PAL-Unk
@@ -31747,6 +32293,11 @@ Name   = Indiana Jones and The Emperor's Tomb
 Region = PAL-Unk
 EETimingHack = 1		//For texture flicker.
 ---------------------------------------------
+Serial = SLES-50841
+Name   = Largo Winch - Empire Under Threat
+Region = PAL-M5
+Compat = 5
+---------------------------------------------
 Serial = SLES-50842
 Name   = Downforce
 Region = PAL-Unk
@@ -31829,7 +32380,7 @@ Name   = F1 2002
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-50876
-Name   = Driver 3
+Name   = Driv3r
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-50877
@@ -31939,6 +32490,10 @@ Serial = SLES-50930
 Name   = Dino Stalker
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-50932
+Name   = Smash Court Tennis - Pro Tournament
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-50933
 Name   = eJay Clubworld
 Region = PAL-Unk
@@ -32013,12 +32568,12 @@ Region = PAL-Unk
 Serial = SLES-50975
 Name   = Thing, The
 Region = PAL-M4
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50976
 Name   = Thing, The (Das Ding)
 Region = PAL-G
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50978
 Name   = Onimusha 2 - Samurai's Destiny
@@ -32076,6 +32631,10 @@ Region = PAL-Unk
 Serial = SLES-50999
 Name   = UFC Throwdown
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-51009
+Name   = Autobahn Raser IV
+Region = PAL-G
 ---------------------------------------------
 Serial = SLES-51011
 Name   = Knight Rider - The Game
@@ -32178,12 +32737,12 @@ Region = PAL-Unk
 Serial = SLES-51061
 Name   = Grand Theft Auto - Vice City
 Region = PAL-M5
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51061-T
 Name   = Grand Theft Auto - Vice City
 Region = PAL-E
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51064
 Name   = Gladius
@@ -32312,9 +32871,13 @@ Compat = 5
 	
 [/patches]
 ---------------------------------------------
+Serial = SLES-51108
+Name   = Hitman 2 - Silent Assassin
+Region = PAL-F
+---------------------------------------------
 Serial = SLES-51109
 Name   = Hitman 2 - Silent Assassin
-Region = PAL-Unk
+Region = PAL-G
 ---------------------------------------------
 Serial = SLES-51113
 Name   = Zone of the Enders - The 2nd Runner
@@ -32472,6 +33035,14 @@ Serial = SLES-51194
 Name   = Harry Potter - Kammer D Schreckens
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-51195
+Name   = Harry Potter y La Camara Secreta
+Region = PAL-S
+---------------------------------------------
+Serial = SLES-51196
+Name   = Harry Potter e La Camera dei Secreti
+Region = PAL-I
+---------------------------------------------
 Serial = SLES-51197
 Name   = FIFA 2003
 Region = PAL-M7
@@ -32519,7 +33090,8 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-51220
 Name   = Ty - The Tazmanian Tiger
-Region = PAL-Unk
+Region = PAL-5
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51222
 Name   = Rayman 3 - Hoodlum Havoc
@@ -32951,6 +33523,10 @@ Region = PAL-Unk
 Serial = SLES-51436
 Name   = Chessmaster 9000
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-51439
+Name   = Mortal Kombat - Deadly Alliance
+Region = PAL-G
 ---------------------------------------------
 Serial = SLES-51441
 Name   = Dynasty Warriors 3 - Extreme Legends
@@ -33666,6 +34242,10 @@ Serial = SLES-51825
 Name   = Pop Idol
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-51826
+Name   = AFL Live 2004
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-51828
 Name   = Gladiator - Sword of Vengeance
 Region = PAL-Unk
@@ -33795,9 +34375,17 @@ Serial = SLES-51869
 Name   = Dynasty Tactics 2
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-51870
+Name   = Disney-Pixar's Finding Nemo
+Region = PAL-
+---------------------------------------------
 Serial = SLES-51871
 Name   = Disney-Pixar's Finding Nemo
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-51872
+Name   = Disney-Pixar's Finding Nemo
+Region = PAL-unk
 ---------------------------------------------
 Serial = SLES-51873
 Name   = Medal of Honor - Rising Sun
@@ -33846,6 +34434,10 @@ Region = PAL-Unk
 Serial = SLES-51887
 Name   = Tiger Woods PGA Tour 2004
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-51888
+Name   = RTL Skiijumping 2004
+Region = PAL-M2
 ---------------------------------------------
 Serial = SLES-51890
 Name   = Buffy the Vampire Slayer - Chaos Bleeds
@@ -34042,6 +34634,10 @@ Region = PAL-Unk
 Serial = SLES-51973
 Name   = War Chess
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-51974
+Name   = XS Junior League Soccer
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-51976
 Name   = Tom Clancy's Ghost Recon - Jungle Storm
@@ -34262,6 +34858,10 @@ Region = PAL-Unk
 Compat = 5
 eeClampMode = 3			//For grey screen ingame.
 SkipMPEGHack = 1
+---------------------------------------------
+Serial = SLES-52100
+Name   = NRL Rugby League
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-52101
 Name   = Wrath Unleashed
@@ -34718,6 +35318,10 @@ Serial = SLES-52367
 Name   = America's 10 Most Wanted
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-52368
+Name   = AFL Live - Premiership Edition
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-52369
 Name   = Empires of Atlantis
 Region = PAL-Unk
@@ -34889,6 +35493,10 @@ Serial = SLES-52458
 Name   = Disgaea - Hour of Darkness
 Region = PAL-E
 ---------------------------------------------
+Serial = SLES-52459
+Name   = Autobahn Raser - Das Spiel zum Film
+Region = PAL-G
+---------------------------------------------
 Serial = SLES-52466
 Name   = Ribbit King
 Region = PAL-Unk
@@ -34906,6 +35514,7 @@ Compat = 5
 Serial = SLES-52469
 Name   = dot Hack - Part 3 - Outbreak
 Region = PAL-M5
+Compat = 5
 ---------------------------------------------
 Serial = SLES-52471
 Name   = Naval Ops - Commander
@@ -35481,6 +36090,18 @@ Serial = SLES-52693
 Name   = LMA Manager 2005
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-52694
+Name   = BDFL Manager 2005
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-52695
+Name   = Roger Lemerre - La Selection des Champions
+Region = PAL-F
+---------------------------------------------
+Serial = SLES-52697
+Name   = Manager de la Liga 2005
+Region = PAL-S
+---------------------------------------------
 Serial = SLES-52700
 Name   = Jimmy Neutron - Attack of the Twonkies
 Region = PAL-Unk
@@ -35527,6 +36148,10 @@ Serial = SLES-52713
 Name   = NBA Live 2005
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-52714
+Name   = Board Games Gallery
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-52716
 Name   = Energy Thieves, The
 Region = PAL-Unk
@@ -35572,6 +36197,10 @@ Name   = DragonBall Z - Budokai 3
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-52731
+Name   = One Piece - Round the Land!
+Region = PAL-M3
+---------------------------------------------
 Serial = SLES-52733
 Name   = Driven to Destruction
 Region = PAL-Unk
@@ -35589,6 +36218,10 @@ Name   = Obscure
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-52745
+Name   = Hugo - CannonCruise
+Region = PAL-M4
+---------------------------------------------
 Serial = SLES-52747
 Name   = Dukes of Hazzard, The - The Return of General Lee
 Region = PAL-Unk
@@ -35602,6 +36235,10 @@ Serial = SLES-52750
 Name   = Monster Trux Extreme
 Region = PAL-Unk
 Compat = 5
+---------------------------------------------
+Serial = SLES-52751
+Name   = Offroad Extreme!
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-52752
 Name   = Playboy - The Mansion
@@ -35634,6 +36271,10 @@ Name   = Godzilla - Save The Earth
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-52767
+Name   = Hugo - CannonCruise
+Region = PAL-M4
+---------------------------------------------
 Serial = SLES-52768
 Name   = Commandos - Strike Force
 Region = PAL-Unk
@@ -35656,6 +36297,10 @@ Serial = SLES-52778
 Name   = Arcade, The
 Region = PAL-Unk
 Compat = 5
+---------------------------------------------
+Serial = SLES-52779
+Name   = Poker Masters
+Region = PAL-M6
 ---------------------------------------------
 Serial = SLES-52781
 Name   = WWE SmackDown! vs. RAW
@@ -35683,19 +36328,19 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-52800
 Name   = Pro Evolution Soccer 4
-Region = PAL-Unk
+Region = PAL-I
 ---------------------------------------------
 Serial = SLES-52801
 Name   = Lord of the Rings, The - The Third Age
-Region = PAL-Unk
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-52802
 Name   = Lord of the Rings, The - The Third Age
-Region = PAL-Unk
+Region = PAL-F
 ---------------------------------------------
 Serial = SLES-52803
 Name   = Lord of the Rings, The - The Third Age (Der Herr der Ringe - Das dritte Zeitalter)
-Region = PAL-Unk
+Region = PAL-G
 ---------------------------------------------
 Serial = SLES-52804
 Name   = Lord of the Rings, The - The Third Age
@@ -35703,7 +36348,7 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-52805
 Name   = Lord of the Rings, The - The Third Age
-Region = PAL-Unk
+Region = PAL-S
 ---------------------------------------------
 Serial = SLES-52807
 Name   = Lemony Snicket's A Series of Unfortunate Events
@@ -35955,6 +36600,10 @@ Serial = SLES-52918
 Name   = Scaler
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-52919
+Name   = NRL Rugby League 2
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-52921
 Name   = Rogue Trooper
 Region = PAL-Unk
@@ -35965,7 +36614,7 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-52927
 Name   = Grand Theft Auto - San Andreas
-Region = PAL-Unk
+Region = PAL-G
 ---------------------------------------------
 Serial = SLES-52931
 Name   = Legend of Kay
@@ -36234,7 +36883,7 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53028
 Name   = Hitman - Blood Money
-Region = PAL-Unk
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53029
 Name   = Hitman - Blood Money
@@ -36242,11 +36891,15 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53030
 Name   = Hitman - Blood Money
-Region = PAL-Unk
+Region = PAL-G
 ---------------------------------------------
 Serial = SLES-53031
 Name   = Hitman - Blood Money
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-53032
+Name   = Hitman - Blood Money
+Region = PAL-S
 ---------------------------------------------
 Serial = SLES-53035
 Name   = Masters of the Universe - He-Man - Defender of Greyskull
@@ -36384,6 +37037,10 @@ Serial = SLES-53089
 Name   = V8 Supercars 3
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53090
+Name   = Circuit Blasters
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-53091
 Name   = Predator - Concrete Jungle
 Region = PAL-Unk
@@ -36428,6 +37085,10 @@ Region = PAL-Unk
 Serial = SLES-53106
 Name   = MX vs. ATV Unleashed
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-53107
+Name   = Cabela's Big Game Hunter 2005 Adventures
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53108
 Name   = American Chopper
@@ -36482,6 +37143,10 @@ Serial = SLES-53139
 Name   = Alien Humanoid
 Region = PAL-Unk
 Compat = 5
+---------------------------------------------
+Serial = SLES-53140
+Name   = Choro Q
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53141
 Name   = X-Treme Quads
@@ -36549,6 +37214,10 @@ Serial = SLES-53158
 Name   = Cold Fear
 Region = PAL-Unk
 Compat = 2
+---------------------------------------------
+Serial = SLES-53172
+Name   = Strike Force Bowling
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-53174
 Name   = Golden Age of Racing
@@ -36649,6 +37318,10 @@ Serial = SLES-53227
 Name   = Madagascar
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53233
+Name   = Assault Suits Valken
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-53234
 Name   = Samurai Western
 Region = PAL-M5
@@ -36699,6 +37372,10 @@ Region = PAL-Unk
 Compat = 5
 SkipMPEGHack = 1
 ---------------------------------------------
+Serial = SLES-53287
+Name   = Tom Clancy's Splinter Cell - Chaos Theory
+Region = PAL-M3
+---------------------------------------------
 Serial = SLES-53296
 Name   = Ford Mustang - The Legend Lives
 Region = PAL-E
@@ -36739,6 +37416,10 @@ Serial = SLES-53317
 Name   = Black Market Bowling
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53318
+Name   = Crazy Golf - World Tour
+Region = PAL-M6
+---------------------------------------------
 Serial = SLES-53319
 Name   = Resident Evil Outbreak - File #2
 Region = PAL-Unk
@@ -36775,18 +37456,22 @@ Serial = SLES-53338
 Name   = Victorious Boxers 2 - Fighting Spirit
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53339
+Name   = Dynasty Warriors 5
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-53341
 Name   = Dynasty Warriors 5
 Region = PAL-G
 Compat = 5
 ---------------------------------------------
-Serial = SLES-53339
-Name   = Dynasty Warriors 5
-Region = PAL-Unk
----------------------------------------------
 Serial = SLES-53342
 Name   = EA Sports Cricket 2005
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-53344
+Name   = Gerrilla Strike
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53346
 Name   = DragonBall Z - Budokai 3 [Collector's Edition]
@@ -36796,6 +37481,10 @@ Serial = SLES-53350
 Name   = Sonic Gems Collection
 Region = PAL-E
 Compat = 5
+---------------------------------------------
+Serial = SLES-53351
+Name   = SSX On Tour
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53354
 Name   = Superbike GP
@@ -36813,6 +37502,14 @@ Serial = SLES-53360
 Name   = Alarm for Cobra 11 Vol.2 - Hot Pursuit
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53361
+Name   = Stealth Force - The War on Terror
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-53362
+Name   = Alpine Skiing 2005
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-53363
 Name   = Shin Megami Tensei - Lucifer's Call
 Region = PAL-M3
@@ -36826,6 +37523,10 @@ Serial = SLES-53367
 Name   = Dodgeball
 Region = PAL-Unk
 Compat = 5
+---------------------------------------------
+Serial = SLES-53368
+Name   = Splatter Master
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53369
 Name   = Twenty-2 Party
@@ -36844,17 +37545,29 @@ Serial = SLES-53373
 Name   = Madagascar
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53374
+Name   = X-Men Legends II - Rise of Apocalypse
+Region = PAL-M3
+---------------------------------------------
+Serial = SLES-53377
+Name   = X-Men Legends II - Rise of Apocalypse
+Region = PAL-Unk
+---------------------------------------------
 Serial = SLES-53380
 Name   = Metal Slug 4
 Region = PAL-E
 ---------------------------------------------
+Serial = SLES-53381
+Name   = King of Fighters 2002
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-53382
 Name   = King of Fighters 2003
-Region = PAL-Unk
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53383
 Name   = Metal Slug 5
-Region = PAL-Unk
+Region = PAL-E
 Compat = 5
 ---------------------------------------------
 Serial = SLES-53386
@@ -36887,6 +37600,10 @@ Serial = SLES-53399
 Name   = Yakuza Fury
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53402
+Name   = Taxi Rider
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-53403
 Name   = Demolition Girl
 Region = PAL-E
@@ -36900,6 +37617,10 @@ Serial = SLES-53406
 Name   = Party Girls
 Region = PAL-Unk
 Compat = 5
+---------------------------------------------
+Serial = SLES-53407
+Name   = Street Boyz
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53408
 Name   = Fighting Angels
@@ -37015,6 +37736,18 @@ Serial = SLES-53463
 Name   = NHL '06
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53466
+Name   = Il Grande Quiz sul Calcio Italiano
+Region = PAL-I
+---------------------------------------------
+Serial = SLES-53468
+Name   = Family Boardgames
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-53471
+Name   = LMA Manager 2006
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-53473
 Name   = Incredibles, The - Rise of the Underminer
 Region = PAL-Unk
@@ -37125,9 +37858,17 @@ Serial = SLES-53524
 Name   = Mortal Kombat - Shaolin Monks
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53525
+Name   = Mortal Kombat - Shaolin Monks
+Region = PAL-G
+---------------------------------------------
 Serial = SLES-53527
-Name   = Suffering, The - Ties that Bond
+Name   = Suffering, The - Ties that Bind
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-53528
+Name   = Suffering, The - Ties that Bind
+Region = PAL-G
 ---------------------------------------------
 Serial = SLES-53529
 Name   = FIFA '06
@@ -37324,6 +38065,18 @@ Serial = SLES-53594
 Name   = Living World Racing
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53595
+Name   = Wild Water Adrenaline featuring Salomon
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-53596
+Name   = The Ultimate Film Quiz
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-53599
+Name   = The Ultimate Music Quiz
+Region = PAL-M6
+---------------------------------------------
 Serial = SLES-53614
 Name   = Classic British Motor Racing
 Region = PAL-Unk
@@ -37349,9 +38102,17 @@ Name   = Disney-Pixar's Cars
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-53626
+Name   = Suffering, The - Ties that Bind
+Region = PAL-M2
+---------------------------------------------
 Serial = SLES-53635
 Name   = NASCAR '06 - Total Team Control
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-53639
+Name   = Ford Street Racing
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-53641
 Name   = Destroy All Humans!
@@ -37373,6 +38134,10 @@ Region = PAL-Unk
 Serial = SLES-53651
 Name   = WWII - Soldier
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-53652
+Name   = Daemon Summoner
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53654
 Name   = London Racer - Destruction Madness
@@ -37592,6 +38357,10 @@ Serial = SLES-53744
 Name   = Disney's Chicken Little
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-53746
+Name   = Superman Returns
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-53747
 Name   = Ed, Edd, 'n Eddy - The Misadventure
 Region = PAL-Unk
@@ -37671,6 +38440,10 @@ Compat = 5
 Serial = SLES-53778
 Name   = Jacked
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-53779
+Name   = American Chopper 2 - Full Throttle
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53794
 Name   = Drakengard 2
@@ -37806,12 +38579,11 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53862
 Name   = Dynasty Warriors 5 - Xtreme Legends
-Region = PAL-Unk
+Region = PAL-G
 ---------------------------------------------
-Serial = SLES-52246
-Name   = Pool Paradise
+Serial = SLES-53863
+Name   = Pool Paradise - International Edition
 Region = PAL-M5
-Compat = 5
 ---------------------------------------------
 Serial = SLES-53866
 Name   = Over the Hedge
@@ -37853,6 +38625,10 @@ Name   = Black
 Region = PAL-Unk
 Compat = 5
 vuClampMode = 0
+---------------------------------------------
+Serial = SLES-53897
+Name   = Dreamworks Vecinos Invasores
+Region = PAL-S
 ---------------------------------------------
 Serial = SLES-53899
 Name   = Pro Evolution Soccer Management
@@ -38061,7 +38837,7 @@ SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-53998
 Name   = OutRun 2006 - Coast 2 Coast
-Region = PAL-Unk
+Region = PAL-M5
 Compat = 5
 ---------------------------------------------
 Serial = SLES-53999
@@ -38164,6 +38940,10 @@ Serial = SLES-54066
 Name   = X-Men - The Official Game
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54068
+Name   = AFL Premiership 2006
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-54074
 Name   = Speedboat GP
 Region = PAL-Unk
@@ -38237,6 +39017,10 @@ Serial = SLES-54110
 Name   = Monster Trux Arenas [Special Edition]
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54111
+Name   = PDC World Championship Darts
+Region = PAL-M6
+---------------------------------------------
 Serial = SLES-54112
 Name   = Myth Makers - Orbs of Doom
 Region = PAL-Unk
@@ -38257,15 +39041,19 @@ Compat = 5
 ---------------------------------------------
 Serial = SLES-54116
 Name   = Operation Winback 2 - Project Poseidon
-Region = PAL-Unk
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54117
 Name   = Torrente 3 - El Protector
-Region = PAL-Unk
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54118
 Name   = Da Vinci Code, The
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54120
+Name   = The Snow Queen Quest
+Region = PAL-M6
 ---------------------------------------------
 Serial = SLES-54123
 Name   = Marvel - Ultimate Alliance
@@ -38309,6 +39097,14 @@ Serial = SLES-54140
 Name   = Playwize Poker & Casino
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54143
+Name   = Hard Rock Casino
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54146
+Name   = Crusty Demons
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-54150
 Name   = Bionicle Heroes
 Region = PAL-Unk
@@ -38324,6 +39120,14 @@ Region = PAL-Unk
 Serial = SLES-54153
 Name   = Virtua Pro Football
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54154
+Name   = D-Unit Drift Racing
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54155
+Name   = Drag Racer USA
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54156
 Name   = Mortal Kombat - Armageddon
@@ -38403,6 +39207,10 @@ Serial = SLES-54178
 Name   = Ant Bully, The
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54179
+Name   = Pirates of the Caribbean - At World's End
+Region = PAL-M6
+---------------------------------------------
 Serial = SLES-54181
 Name   = Gottlieb Pinball Classics
 Region = PAL-M5
@@ -38443,6 +39251,10 @@ Serial = SLES-54187
 Name   = Real World Golf 2007
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54188
+Name   = Nickelodeon Avatar - The Legend of Aang
+Region = PAL-M4
+---------------------------------------------
 Serial = SLES-54193
 Name   = Sudoku, Carol Vonderman's
 Region = PAL-Unk
@@ -38450,6 +39262,10 @@ Region = PAL-Unk
 Serial = SLES-54194
 Name   = Sudoku, Carol Vonderman's
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54195
+Name   = Turbo Trucks
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54199
 Name   = Who Wants to be a Millionaire - Party Edition
@@ -38483,6 +39299,14 @@ Serial = SLES-54211
 Name   = NHL 2K7
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54212
+Name   = Agent Hugo - RoboRumble
+Region = PAL-M11
+---------------------------------------------
+Serial = SLES-54213
+Name   = Black Buccaneer
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-54215
 Name   = Monster House
 Region = PAL-Unk
@@ -38512,6 +39336,10 @@ Serial = SLES-54223
 Name   = NASCAR '07
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54224
+Name   = Australian Idol Sing
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-54225
 Name   = LMA Manager 2007
 Region = PAL-Unk
@@ -38523,11 +39351,11 @@ Compat = 5
 ---------------------------------------------
 Serial = SLES-54232
 Name   = Kingdom Hearts II
-Region = PAL-Unk
+Region = PAL-F
 ---------------------------------------------
 Serial = SLES-54233
 Name   = Kingdom Hearts II
-Region = PAL-Unk
+Region = PAL-G
 ---------------------------------------------
 Serial = SLES-54234
 Name   = Kingdom Hearts II
@@ -38535,7 +39363,7 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-54235
 Name   = Kingdom Hearts II
-Region = PAL-Unk
+Region = PAL-S
 ---------------------------------------------
 Serial = SLES-54237
 Name   = Pirates of the Caribbean - The Legend of Jack Sparrow
@@ -38611,7 +39439,7 @@ Region = PAL-Unk
 Serial = SLES-54305
 Name   = Demon Chaos
 Region = PAL-M5
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-54306
 Name   = Cartoon Network Racing
@@ -38647,6 +39475,10 @@ Region = PAL-F
 Serial = SLES-54317
 Name   = Ghost Rider
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54319
+Name   = Biker Mice from Mars
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-54320
 Name   = Championship Manager 2007
@@ -38693,6 +39525,10 @@ Serial = SLES-54340
 Name   = Samurai Warriors 2
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54341
+Name   = Dancing Stage SuperNOVA
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-54342
 Name   = Bratz - Forever Diamondz
 Region = PAL-Unk
@@ -38705,9 +39541,17 @@ Serial = SLES-54344
 Name   = Bratz - Forever Diamondz
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54346
+Name   = Heatseeker
+Region = PAL-M3
+---------------------------------------------
 Serial = SLES-54347
 Name   = Sims 2, The - Pets
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54350
+Name   = Superman Returns
+Region = PAL-G
 ---------------------------------------------
 Serial = SLES-54354
 Name   = Final Fantasy XII
@@ -38750,6 +39594,10 @@ Serial = SLES-54364
 Name   = Curious George
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54365
+Name   = AMF Xtreme bowling 2006
+Region = PAL-M6
+---------------------------------------------
 Serial = SLES-54366
 Name   = David Douillet Judo
 Region = PAL-Unk
@@ -38769,6 +39617,14 @@ Region = PAL-Unk
 Serial = SLES-54376
 Name   = Barnyard
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54379
+Name   = NFL Street 3
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54380
+Name   = Babe
+Region = PAL-M6
 ---------------------------------------------
 Serial = SLES-54381
 Name   = Dr. Dolittle
@@ -38812,6 +39668,10 @@ Serial = SLES-54395
 Name   = NeoGeo Battle Coliseum
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54396
+Name   = Cricket 07
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-54400
 Name   = SpongeBob Squarepants - Creature from the Krusty Krab
 Region = PAL-Unk
@@ -38832,6 +39692,10 @@ Serial = SLES-54421
 Name   = Happy Feet
 Region = PAL-Unk
 Compat = 4
+---------------------------------------------
+Serial = SLES-54423
+Name   = Justice League Heroes
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-54424
 Name   = Dr. Dolittle
@@ -38858,9 +39722,17 @@ Name   = Mercury Meltdown Remix
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-54437
+Name   = King of Fighters XI
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-54439
 Name   = Okami
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54440
+Name   = GT-R Touring
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54441
 Name   = Hawk Kawasaki Racing
@@ -38909,6 +39781,10 @@ Name   = Beverly Hills Cop
 Region = PAL-E
 Compat = 1
 ---------------------------------------------
+Serial = SLES-54459
+Name   = All Star Fighters
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-54460
 Name   = Dragon Sisters
 Region = PAL-E
@@ -38921,6 +39797,10 @@ Compat = 5
 ---------------------------------------------
 Serial = SLES-54462
 Name   = Zombie Virus
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54464
+Name   = Global Defence Force
 Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54465
@@ -38957,18 +39837,25 @@ Serial = SLES-54474
 Name   = Curious George
 Region = PAL-Unk
 ---------------------------------------------
-Serial = SLES-54755
-Name   = Transformers - The Game
+Serial = SLES-54476
+Name   = Buccaneer
 Region = PAL-E
-Compat = 4
 ---------------------------------------------
 Serial = SLES-54478
 Name   = TMNT
-Region = PAL-E
+Region = PAL-M5
 Compat = 4
+---------------------------------------------
+Serial = SLES-54483
+Name   = The Fast and the Furious
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54486
 Name   = Xiaolin Showdown
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54487
+Name   = Tokobot Plus - Mysteries of the Karakuri
 Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-54488
@@ -38993,6 +39880,14 @@ Serial = SLES-54493
 Name   = Need for Speed - Carbon [Collector's Edition]
 Region = PAL-G
 ---------------------------------------------
+Serial = SLES-54494
+Name   = Little Britain - The Video Game
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54510
+Name   = Disney's Meet the Robinsons
+Region = PAL-M3
+---------------------------------------------
 Serial = SLES-54511
 Name   = UEFA Champions League
 Region = PAL-Unk
@@ -39008,6 +39903,10 @@ Region = PAL-Unk
 Serial = SLES-54518
 Name   = Clumsy Shumsy
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54521
+Name   = Nickelodeon SpongeBob and Friends - Battle for Volcano Island
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-54527
 Name   = Flushed Away
@@ -39025,6 +39924,10 @@ Region = PAL-Unk
 Serial = SLES-54544
 Name   = Gun Club
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54545
+Name   = Maxxed Out Racing Nitro
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54546
 Name   = Horsez
@@ -39059,6 +39962,10 @@ Serial = SLES-54560
 Name   = Alpine Ski Racing 2007
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54561
+Name   = Capcom Classics Collection Vol. 2
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-54566
 Name   = Barbie in The 12 Dancing Princesses
 Region = PAL-Unk
@@ -39072,9 +39979,37 @@ Serial = SLES-54579
 Name   = Flintstones, The - Bedrock Racing
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54581
+Name   = The Red Star
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54582
+Name   = International Tennis Pro
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54583
+Name   = Surf's Up
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-54584
 Name   = Pac-Man Rally
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54586
+Name   = Ar Tonelico - Melody of Elemia
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54588
+Name   = Brunswick Pro Bowling
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54589
+Name   = Global Defense Force Tactics
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54604
+Name   = 'Que pasa Neng! El Videojuego
+Region = PAL-S
 ---------------------------------------------
 Serial = SLES-54606
 Name   = Harley-Davidson - Race to the Rally
@@ -39084,13 +40019,33 @@ Serial = SLES-54608
 Name   = Barbie in The 12 Dancing Princesses
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54611
+Name   = TT Superbikes - Real Road Racing Championship
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-54615
 Name   = Code of the Samurai
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-54617
+Name   = Action Man A.T.O.M. - Alpha Teens on Machines
+Region = PAL-M9
+---------------------------------------------
+Serial = SLES-54622
+Name   = Grand Theft Auto - Vice City Stories
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-54623
 Name   = Grand Theft Auto - Vice City Stories
-Region = PAL-Unk
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-54624
+Name   = Samurai Warriors 2 - Empires
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54626
+Name   = An American Tail
+Region = PAL-M11
 ---------------------------------------------
 Serial = SLES-54629
 Name   = Shin Megami Tensei - Devil Summoner
@@ -39099,6 +40054,22 @@ Region = PAL-E
 Serial = SLES-54631
 Name   = Harley-Davidson - Race to the Rally
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54633
+Name   = Premier Manager 08
+Region = PAL-M4
+---------------------------------------------
+Serial = SLES-54634
+Name   = Top Trumps Adventures Vol. 1 - Horror & Predators
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54635
+Name   = Top Trumps Adventures Vol. 2 - Dogs & Dinosaurs
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54639
+Name   = AFL Premiership 2007
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54641
 Name   = International Cricket Captain III
@@ -39132,35 +40103,169 @@ Name   = Valkyrie Profile 2 - Silmeria
 Region = PAL-S
 VuAddSubHack = 1
 ---------------------------------------------
+Serial = SLES-54657
+Name   = Charlotte's Web
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54659
+Name   = Star Wars - The Force Unleashed
+Region = PAL-M4
+---------------------------------------------
+Serial = SLES-54663
+Name   = Jackass - The Game
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-54666
 Name   = Mr. Bean
 Region = PAL-E
 Compat = 5
+---------------------------------------------
+Serial = SLES-54670
+Name   = Wacky Races - Mad Motors
+Region = PAL-M11
+---------------------------------------------
+Serial = SLES-54674
+Name   = Lara Croft Tomb Raider - Anniversary
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54675
+Name   = Street Warrior
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54677
 Name   = Metal Slug - Anthology
 Region = PAL-E
 Compat = 5
 ---------------------------------------------
+Serial = SLES-54681
+Name   = Burnout Dominator
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54683
+Name   = Medal of Honor - Vanguard
+Region = PAL-M9
+---------------------------------------------
 Serial = SLES-54686
 Name   = Impossible Mission
 Region = PAL-E
 Compat = 1
+---------------------------------------------
+Serial = SLES-54687
+Name   = Spectral vs. Generation
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54695
 Name   = Azur & Asmar
 Region = PAL-E
 Compat = 4
 ---------------------------------------------
+Serial = SLES-54705
+Name   = SBK-07 - Superbike World Championship
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54711
+Name   = Shadow Hearts - From the New World
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54717
+Name   = Power Volleyball
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54719
+Name   = Charlotte's Web
+Region = PAL-11
+---------------------------------------------
 Serial = SLES-54723
 Name   = Spiderman 3
 Region = PAL-E
 Compat = 4
 ---------------------------------------------
+Serial = SLES-54727
+Name   = Naruto - Uzumaki Chronicles
+Region = PAL-M5
+OPHFLagHack = 1
+---------------------------------------------
+Serial = SLES-54731
+Name   = King of Clubs
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54733
+Name   = Disney-Pixar Ratatouille
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54735
+Name   = Disney-Pixar Ratatouille
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-54747
+Name   = Disney-Pixar Ratatouille
+Region = PAL-M2
+---------------------------------------------
+Serial = SLES-54755
+Name   = Transformers - The Game
+Region = PAL-E
+Compat = 5
+---------------------------------------------
+Serial = SLES-54756
+Name   = Transformers - The Game
+Region = PAL-M2
+---------------------------------------------
+Serial = SLES-54770
+Name   = DreamWorks Shrek the Third
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54771
+Name   = DreamWorks Shrek the Third
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54776
+Name   = Fantastic Four - Rise of the Silver Surfer
+Region = PAL-I
+---------------------------------------------
+Serial = SLES-54779
+Name   = Harry Potter and the Order of the Phoenix
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-54782
 Name   = Obscure 2
 Region = PAL-E
 Compat = 5
+---------------------------------------------
+Serial = SLES-54784
+Name   = Xyanide - Resurrection
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54788
+Name   = Aqua Teen Hunger Force - Zombie Ninja Pro-Am
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54790
+Name   = Art of Fighting Anthology
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54793
+Name   = WWE SmackDown vs. Raw 2008
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54804
+Name   = Operation Air Assault 2
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54805
+Name   = Wer Wird Millionar - Party Edition
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-54810
+Name   = Rugby 08
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54811
+Name   = Rugby 08
+Region = PAL-I
+---------------------------------------------
+Serial = SLES-54812
+Name   = Madden NFL 08
+Region = PAL-E
 ---------------------------------------------
 Serial = SLES-54815
 Name   = Spyro - The Eternal Night
@@ -39168,15 +40273,47 @@ Region = PAL-M6
 Compat = 4
 SkipMPEGHack = 1
 ---------------------------------------------
+Serial = SLES-54819
+Name   = Manhunt 2
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-54820
 Name   = Stuntman Ignition
 Region = PAL-E
 Compat = 4
 ---------------------------------------------
+Serial = SLES-54822
+Name   = Atelier Iris 3 - Grand Phantasm
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54825
+Name   = Bob the Builder
+Region = PAL-M3
+---------------------------------------------
 Serial = SLES-54834
 Name   = Juiced 2
 Region = PAL-Unk
 Compat = 5
+---------------------------------------------
+Serial = SLES-54836
+Name   = Disney High School Musical - Sing It!
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54837
+Name   = Disney Princess - Enchanted Journey
+Region = PAL-M3
+---------------------------------------------
+Serial = SLES-54840
+Name   = Nickelodeon Avatar - The Legend of Aang - The Burning Earth
+Region = PAL-M4
+---------------------------------------------
+Serial = SLES-54841
+Name   = Crash of the Titans
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-54842
+Name   = Crash of the Titans
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-54845
 Name   = Warriors Orochi
@@ -39187,47 +40324,203 @@ Name   = Guitar Hero - Rocks The 80's
 Region = PAL-E
 Compat = 4
 ---------------------------------------------
+Serial = SLES-54861
+Name   = Thomas & Friends - A Day at the Races
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54870
+Name   = FIFA 08
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-54871
 Name   = FIFA 2008
 Region = PAL-F-G-I
 ---------------------------------------------
+Serial = SLES-54872
+Name   = FIFA 08
+Region = PAL-P-S
+---------------------------------------------
 Serial = SLES-54873
 Name   = FIFA 2008
 Region = PAL-E-N-Sw
+---------------------------------------------
+Serial = SLES-54875
+Name   = Warriors Orochi
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54877
+Name   = Warriors Orochi
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-54878
+Name   = Naruto - Ultimate Ninja 2
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54879
+Name   = WWE SmackDown vs. Raw 2008
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54880
+Name   = NBA 2K8
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-54884
 Name   = Alone in the Dark
 Region = PAL-E
 Compat = 3
 ---------------------------------------------
+Serial = SLES-54885
+Name   = Moto X Maniac
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54891
+Name   = Clever Kids - Pony World
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-54892
+Name   = Phantasy Star Universe - Ambition of the Illuminus
+Region = PAL-M3
+---------------------------------------------
+Serial = SLES-54895
+Name   = NBA Live 08
+Region = PAL-M3
+---------------------------------------------
 Serial = SLES-54897
 Name   = GrimGrimoire
 Region = PAL-E
 Compat = 5
+---------------------------------------------
+Serial = SLES-54898
+Name   = Metropolismania 2
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54899
+Name   = Bob the Builder
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54903
+Name   = The Sims 2 - Castaway
+Region = PAL-M13
 ---------------------------------------------
 Serial = SLES-54904
 Name   = The Simpsons Game
 Region = PAL-M4
 Compat = 5
 ---------------------------------------------
+Serial = SLES-54906
+Name   = The Simpsons Game
+Region = PAL-I-S
+---------------------------------------------
 Serial = SLES-54913
 Name   = Pro Evolution Soccer 2008
 Region = PAL-E
 Compat = 5
+---------------------------------------------
+Serial = SLES-54914
+Name   = Pro Evolution Soccer 2008
+Region = PAL-I-P
+---------------------------------------------
+Serial = SLES-54915
+Name   = Sonic Riders - Zero Gravity
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54918
+Name   = Agent Hugo - Lemoon Twist
+Region = PAL-M7
+---------------------------------------------
+Serial = SLES-54929
+Name   = Realplay Racing
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54931
+Name   = Looney Tunes - ACME Arsenal
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54937
+Name   = RTL Biathon 2008
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-54939
+Name   = RTL Winter Sports 2008 - The Ultimate Challenge
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-54942
+Name   = Disney Princess - Enchanted Journey
+Region = PAL-D-F-I
 ---------------------------------------------
 Serial = SLES-54945
 Name   = Dragonball Z Budokai Tenkaichi 3
 Region = PAL-E
 Compat = 5
 ---------------------------------------------
+Serial = SLES-54946
+Name   = Sega Superstars Tennis
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54949
+Name   = Catz
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-54952
+Name   = Ben 10 - Protector of Earth
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-54953
 Name   = Totally Spies! Totally Party
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-54955
+Name   = Finkles World
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54957
+Name   = Cheggers Party Quiz
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54958
+Name   = Alan Hansen's Sports Challenge
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54962
+Name   = Guitar Hero III - Legends of Rock
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-54964
+Name   = Tony Hawk's Proving Ground
+Region = PAL-M4
 ---------------------------------------------
 Serial = SLES-54975
 Name   = George Of The Jungle
 Region = PAL-E
 Compat = 4
+---------------------------------------------
+Serial = SLES-54981
+Name   = Bob the Builder - Festival of Fun
+Region = PAL-I-F-G
+---------------------------------------------
+Serial = SLES-54986
+Name   = Bratz - The Movie
+Region = PAL-E-I
+---------------------------------------------
+Serial = SLES-54988
+Name   = Bratz - The Movie
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-54992
+Name   = PDC World Championship Darts 2008
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-54994
+Name   = Pippa Funnell - Ranch Rescue
+Region = PAL-M11
+---------------------------------------------
+Serial = SLES-54995
+Name   = Puzzle Quest - Challenge of the Warlords
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-54996
+Name   = The Golden Compass
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-54997
 Name   = Mercenaries 2 - World in Flames
@@ -39238,10 +40531,42 @@ Serial = SLES-54998
 Name   = Bratz - The Movie
 Region = PAL-M5
 ---------------------------------------------
+Serial = SLES-55000
+Name   = Mercenaries 2 - World in Flames
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-55001
+Name   = Mercenaries 2 - World in Flames
+Region = PAL-S
+---------------------------------------------
+Serial = SLES-55002
+Name   = Need for Speed - ProStreet
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55003
+Name   = Need for Speed - ProStreet
+Region = PAL-F-G
+---------------------------------------------
+Serial = SLES-55005
+Name   = Need for Speed - ProStreet
+Region = PAL-M8
+---------------------------------------------
 Serial = SLES-55007
 Name   = Boogie
 Region = PAL-E
 Compat = 4
+---------------------------------------------
+Serial = SLES-55013
+Name   = Iridium Runners
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55016
+Name   = DreamWorks Bee Movie Game
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55017
+Name   = Yu-Gi-Oh! GX - Tag Force Evolution
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-55018
 Name   = Shin Megami Tensei: Persona 3
@@ -39249,41 +40574,270 @@ Region = PAL-E
 Compat = 5
 VuClipFlagHack = 1
 ---------------------------------------------
+Serial = SLES-55019
+Name   = Ratchet & Clank - Size Matters
+Region = PAL-M13
+---------------------------------------------
+Serial = SLES-55020
+Name   = Die Simpsons - Das Spiel
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-55021
+Name   = Pro Evolution Soccer 2008
+Region = PAL-F-G
+---------------------------------------------
+Serial = SLES-55024
+Name   = Nickelodeon SpongeBob's Atlantis SquarePantis
+Region = PAL-M4
+---------------------------------------------
+Serial = SLES-55032
+Name   = Off Road
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55034
+Name   = Asterix at the Olympic Games
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55039
+Name   = Rock Band
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55050
+Name   = MX vs. ATV - Untamed
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55052
+Name   = Alvin and the Chipmunks
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55053
+Name   = Jetix - Puzzle Buzzle
+Region = PAL-M10
+---------------------------------------------
+Serial = SLES-55064
+Name   = Luxor - Pharaoh's Challenge
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55069
+Name   = 7 Wonders of the Ancient World
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55075
+Name   = Speed racer
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55079
+Name   = CID the Dummy
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55081
+Name   = Jackass - The Game
+Region = PAL-E
+---------------------------------------------
+Serial = SLPS-55090
+Name   = Naruto - Uzumaki Chronicles 2
+Region = PAL-M5
+OPHFLagHack = 1
+---------------------------------------------
+Serial = SLES-55105
+Name   = UEFA Euro 2008 - Austria-Switzerland
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55108
+Name   = Samurai Warriors 2 - Xtreme Legends
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-55110
 Name   = Odin Sphere
 Region = PAL-M5
 Compat = 5
+---------------------------------------------
+Serial = SLES-55123
+Name   = Legend of Sayuki
+Region = PAL-M4
+---------------------------------------------
+Serial = SLES-55126
+Name   = Artlist Collection - The Dog Island
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55129
+Name   = Jumper - Griffin's Story
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55133
+Name   = LEGO Indiana Jones - The Original Adventure
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55135
+Name   = LEGO Batman - The VideoGame
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55136
+Name   = Let's Ride! Silver Buckle Stables
+Region = PAL-M4
+---------------------------------------------
+Serial = SLES-55147
+Name   = Silent Hill Origins
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-55150
 Name   = TNA Impact
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55163
+Name   = the Legend of Spyro - Dawn of the Dragon
+Region = PAL-M6
+---------------------------------------------
 Serial = SLES-55169
 Name   = Monster Lab
-Region = PAL-Unk
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55174
+Name   = NHL 08
+Region = PAL-R
+---------------------------------------------
+Serial = SLES-55187
+Name   = Disney-Pixar WALL-E
+Region = PAL-D-F
+---------------------------------------------
+Serial = SLES-55191
+Name   = Guitar Hero - Aerosmith
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55197
+Name   = Dancing Stage SuperNOVA 2
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-55198
 Name   = Iron Man
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55204
+Name   = Crash - Mind Over Mutant
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55207
+Name   = Alone in the Dark
+Region = PAL-M4
+---------------------------------------------
+Serial = SLES-55208
+Name   = The Incredible Hulk
+Region = PAL-E-F-G
+---------------------------------------------
+Serial = SLES-55215
+Name   = Growlanser - Heritage of War
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55216
+Name   = Baroque
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55220
+Name   = Summer Athletics
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55231
+Name   = Fatal Fury - Battle Archives Volume 1
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55232
+Name   = SNK Arcade Classics Vol. 1
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55233
+Name   = World Heroes Anthology
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55237
+Name   = Naruto - Ultimate Ninja 3
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55240
+Name   = Pipe Mania
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55242
+Name   = Yakuza 2
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55243
+Name   = FIFA 09
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55244
+Name   = FIFA 09
+Region = PAL-F-G
+---------------------------------------------
+Serial = SLES-55245
+Name   = FIFA 09
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55247
+Name   = FIFA 09
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55248
+Name   = Harry Potter and the Half-Blood Prince
+Region = PAL-M6
+---------------------------------------------
 Serial = SLES-55249
 Name   = Harry Potter and the Half-Blood Prince
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55251
+Name   = WWE SmackDown vs. Raw 2009
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55253
+Name   = NBA 2K5
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55263
+Name   = Nickelodeon Avatar - The Legend of Aang - Into the Inferno
+Region = PAL-M7
 ---------------------------------------------
 Serial = SLES-55266
 Name   = MotoGP 08
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55274
+Name   = Diabolik - The Original Sin
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55280
+Name   = King of Fighters '98 - Ultimate Match
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55292
+Name   = Samurai Shodown Anthology
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55328
+Name   = The Millenium European Paintball Series - Championship Paintball 2009
+Region = PAL-E
+---------------------------------------------
 Serial = SLES-55329
 Name   = Shrek's Carnival Craze
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-55331
+Name   = Cabela's Dangerous Adventures
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55341
+Name   = Hasbro Family Game Night
+Region = PAL-G
+---------------------------------------------
 Serial = SLES-55342
 Name   = Hasbro Family Game Night
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55344
+Name   = Rock Band - Song Back 1
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-55345
 Name   = James Bond: Quantum of Solace
@@ -39298,14 +40852,51 @@ Serial = SLES-55349
 Name   = Need For Speed - Undercover
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-55350
+Name   = Need for Speed - Undercover
+Region = PAL-F-G
+---------------------------------------------
 Serial = SLES-55352
 Name   = Need For Speed - Undercover
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55354
+Name   = Persona 3 FES
+Region = PAL-E
+VuClipFlagHack = 1
+---------------------------------------------
+Serial = SLES-55355
+Name   = Guitar Hero - World Tour
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55365
+Name   = Agent Hugo - Hula Holiday
+Region = PAL-M7
+---------------------------------------------
+Serial = SLES-55367
+Name   = Call of Duty - World at War - Final Fronts
+Region = PAL-M4
+---------------------------------------------
+Serial = SLES-55369
+Name   = Call of Duty - World at War - Final Fronts
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-55371
+Name   = Barbie Horse Adventures - Riding Camp
+Region = PAL-M6
+---------------------------------------------
 Serial = SLES-55373
 Name   = The King of Fighters Collection: The Orochi Saga
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55374
+Name   = DreamWorks Madagascar 2 - Escape 2 Africa
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55376
+Name   = Nickelodeon Tak and the Guardians of Gross
+Region = PAL-E-G
 ---------------------------------------------
 Serial = SLES-55380
 Name   = Sonic Unleashed
@@ -39317,13 +40908,53 @@ Name   = Warriors Orochi 2
 Region = PAL-E
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55384
+Name   = Warriors Orochi 2
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-55392
+Name   = Disne Sing It!
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55394
+Name   = Disney TH!NK Fast
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55395
+Name   = Disney TH!NK Fast
+Region = PAL-D-F-G
+---------------------------------------------
+Serial = SLES-55398
+Name   = Disney High School Musical 3 - Senior Year Dance!
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55405
+Name   = Pro Evolution Soccer 2009
+Region = PAL-F-G
+---------------------------------------------
 Serial = SLES-55406
 Name   = Pro Evolution Soccer 2009
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-55409
+Name   = TT SuperBikes - Legends
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55430
+Name   = Disney Bolt
+Region = PAL-D-F-G
+---------------------------------------------
+Serial = SLES-55431
+Name   = Disney Vol't
+Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55440
+Name   = Ben 10 - Alien Force
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-55442
 Name   = Tomb Raider Underworld
-Region = PAL-Unk
+Region = PAL-M5
 Compat = 5
 ---------------------------------------------
 Serial = SLES-55443
@@ -39335,6 +40966,10 @@ DMABusyHack = 1
 Serial = SLES-55444
 Name   = Ar tonelico II: Melody of Metafalica
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55448
+Name   = Indiana Jones and the Staff of Kings
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-55453
 Name   = Singstar Queen
@@ -39348,44 +40983,193 @@ Serial = SLES-55459
 Name   = Jelly Belly: Ballistic Beans
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-55467
+Name   = Trivial Pursuit
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-55470
 Name   = Coraline
 Region = PAL-E
 Compat = 3
 ---------------------------------------------
+Serial = SLES-55472
+Name   = Guitar Hero - Metalica
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-55474
 Name   = Shin Megami Tensei: Persona 4
 Region = PAL-E
+VuClipFlagHack = 1
+---------------------------------------------
+Serial = SLES-55476
+Name   = Scooby-Doo! First Frights
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55482
+Name   = Naruto Shipuuden - Ultimate Ninja 4
+Region = PAL-G-I-S
+---------------------------------------------
+Serial = SLES-55486
+Name   = DreamWorks Monsters vs. Aliens
+Region = PAL-M7
+---------------------------------------------
+Serial = SLES-55487
+Name   = Ice Age 3 - Dawn of the Dinosaurs
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55492
+Name   = SBK 09 - Superbike World Championship
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-55494
 Name   = X-Men Origins: Wolverine
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-55495
+Name   = X-Men Origins - Wolverine
+Region = PAL-G-F-S
+---------------------------------------------
 Serial = SLES-55496
 Name   = Secret Agent Clank
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55500
+Name   = Disney G-Force
+Region = PAL-G-I
 ---------------------------------------------
 Serial = SLES-55509
 Name   = Music Maker - Rockstar
 Region = PAL-E
 Compat = 5
 ---------------------------------------------
+Serial = SLES-55511
+Name   = MTV Pimp My Ride - Street Racing
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55520
+Name   = Transformers - Revenge of the Fallen
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55525
+Name   = Disney-Pixar Oben
+Region = PAL-G
+---------------------------------------------
+Serial = SLES-55533
+Name   = Guitar Hero 5
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55537
+Name   = G.I. Joe - The Rise of Cobra
+Region = PAL-M8
+---------------------------------------------
+Serial = SLES-55542
+Name   = Disney Sing It - Pop Hits
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55545
+Name   = WWE SmackDown vs. Raw 2010
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55546
+Name   = The Secret Saturdays - Beasts of the 5th Sun
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55565
+Name   = Teenage Mutant Ninja Turtles - Smash-Up
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55569
+Name   = Silent Hill - Shattered Memories
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-55571
 Name   = Ghostbusters
 Region = PAL-E
 Compat = 4
 ---------------------------------------------
+Serial = SLES-55572
+Name   = Marvel Super Hero Squad
+Region = PAL-M6
+---------------------------------------------
 Serial = SLES-55573
 Name   = MotorStorm Arctic Edge
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLES-55574
+Name   = the Lord of the Rings - Aragorn's Quest
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55578
+Name   = Band Hero
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55579
+Name   = Bakugan - Battle Brawlers
+Region = PAL-M7
+---------------------------------------------
+Serial = SLES-55582
+Name   = FIFA 10
+Region = PAL-F-G
+---------------------------------------------
+Serial = SLES-55584
+Name   = FIFA 10
+Region = PAL-M5
+---------------------------------------------
 Serial = SLES-55585
 Name   = FIFA 10
-Region = PAL-Unk
+Region = PAL-E
+---------------------------------------------
+Serial = SLES-55588
+Name   = Pro Evolution Soccer 2010
+Region = PAL-F-G
+---------------------------------------------
+Serial = SLES-55589
+Name   = Pro Evolution Soccer 2010
+Region = PAL-I-P-S
+---------------------------------------------
+Serial = SLES-55592
+Name   = Ben 10 - Alien Force - Vilgax Attacks
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55593
+Name   = Astro Boy - The Video Game
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55605
+Name   = Naruto Shipuuden - Ultimate Ninja 5
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55609
+Name   = Scooby-Doo! and the Spooky Swamp
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55622
+Name   = Disney-Pixar Toy Story 3
+Region = PAL-M6
+---------------------------------------------
+Serial = SLES-55635
+Name   = WWE SmackDown vs. Raw 2011
+Region = PAL-M4
 ---------------------------------------------
 Serial = SLES-55636
 Name   = Pro Evolution Soccer 2011
 Region = PAL-Unk
+---------------------------------------------
+Serial = SLES-55637
+Name   = Pro Evolution Soccer 2011
+Region = PAL-F-G
+---------------------------------------------
+Serial = SLES-55638
+Name   = Pro Evolution Soccer 2011
+Region = PAL-M4
+---------------------------------------------
+Serial = SLES-55644
+Name   = FIFA 11
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55648
+Name   = WWE All-Stars
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-82001
 Name   = Summoner
@@ -39426,8 +41210,12 @@ Name   = Cy Girls
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-82020
-Name   = Cy Girls
-Region = PAL-Unk
+Name   = Cy Girls [Disc 1]
+Region = PAL-E-G-I
+---------------------------------------------
+Serial = SLES-82021
+Name   = Cy Girls [Disc 2]
+Region = PAL-E-G-I
 ---------------------------------------------
 Serial = SLES-82024
 Name   = Metal Gear Solid 3 - Snake Eater
@@ -39470,8 +41258,12 @@ Name   = Xenosaga Episode II [Disc2of2]
 Region = PAL-E
 ---------------------------------------------
 Serial = SLES-82036
-Name   = Armored Core - Nexus
-Region = PAL-Unk
+Name   = Armored Core - Nexus [Evolution Disc]
+Region = PAL-M5
+---------------------------------------------
+Serial = SLES-82037
+Name   = Armored Core - Nexus [Revolution Disc]
+Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-82038
 Name   = Onimusha - Dawn of Dreams [Disc1]
