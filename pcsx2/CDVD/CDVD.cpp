@@ -601,6 +601,9 @@ void SaveStateBase::cdvdFreeze()
 
 		if( cdvd.Reading )
 			cdvd.RErr = DoCDVDreadTrack( cdvd.Readed ? cdvd.Sector : cdvd.SeekToSector, cdvd.ReadMode);
+
+		// Also close the tray!
+		trayState = 0;
 	}
 }
 
