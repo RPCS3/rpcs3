@@ -22,8 +22,6 @@
 #include "onepad.h"
 #include "controller.h"
 
-HatPins hat_position = {false, false, false, false};
-
 __forceinline void set_keyboad_key(int pad, int keysym, int index)
 {
 	conf->keysym_map[pad][keysym] = index;

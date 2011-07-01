@@ -114,7 +114,6 @@ class JoystickInfo
 		int GetHatState(int i)
 		{
 			//PAD_LOG("Getting POV State of %d.\n", i);
-			set_hat_pins(vhatstate[i]);
 			return vhatstate[i];
 		}
 
@@ -131,7 +130,6 @@ class JoystickInfo
 		void SetHatState(int i, int value)
 		{
 			//PAD_LOG("We should set %d to %d.\n", i, value);
-			set_hat_pins(i);
 			vhatstate[i] = value;
 		}
 

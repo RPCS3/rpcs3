@@ -250,8 +250,8 @@ bool PollX11KeyboardMouseEvent(u32 &pkey)
 #else
 LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	int keyPress[2] = {0}, keyRelease[2] = {0};
 	static bool lbutton = false, rbutton = false;
+	key_status->keyboard_state_acces(cpad);
 
 	switch (msg)
 	{
@@ -264,8 +264,7 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					if (wParam ==  get_key(pad, i))
 					{
-						set_bit(keyPress[pad], i);
-						clear_bit(keyRelease[pad], i);
+						key_status->press(pad, i);
 						break;
 					}
 				}
@@ -282,8 +281,7 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				{
 					if (wParam == get_key(pad,i))
 					{
-						set_bit(keyRelease[pad], i);
-						clear_bit(keyPress[pad], i);
+						key_status->release(pad, i);
 						break;
 					}
 				}
@@ -305,9 +303,7 @@ LRESULT WINAPI PADwndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 
 	for (int pad = 0; pad < 2; ++pad)
-	{
-		UpdateKeys(pad, keyPress[pad], keyRelease[pad]);
-	}
+		key_status->commit_status(pad);
 
 	return TRUE;
 }

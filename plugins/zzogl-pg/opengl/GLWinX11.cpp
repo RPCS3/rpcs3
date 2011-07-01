@@ -181,6 +181,11 @@ void GLWindow::CreateContextGL()
 	// Create a 2.0 opengl context. My understanding, you need it to call the gl function to get the 3.0 context
     context = glXCreateContext(glDisplay, vi, NULL, GL_TRUE);
 
+	// FIXME
+	// On Geforce7, the context 3.0 creation crashes with BadAlloc (insufficient resources for operation)
+	// So until a better solution is found, keep the 2.0 context -- Gregory
+	return;
+
 	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC) glXGetProcAddress((GLubyte *) "glXCreateContextAttribsARB");
 	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
 	if (!glXCreateContextAttribsARB or !glXChooseFBConfig) {

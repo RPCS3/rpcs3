@@ -55,55 +55,6 @@ extern int hat_to_key(int dir, int axis_id);
 
 extern int PadEnum[2][2];
 
-typedef struct
-{
-	bool left, right, up, down;
-} HatPins;
-
-extern HatPins hat_position;
-
-static __forceinline void set_hat_pins(int tilt_o_the_hat)
-{
-	hat_position.left = false;
-	hat_position.right = false;
-	hat_position.up = false;
-	hat_position.down = false;
-
-	switch (tilt_o_the_hat)
-	{
-		case SDL_HAT_UP:
-			hat_position.up = true;
-			break;
-		case SDL_HAT_RIGHT:
-			hat_position.right= true;
-			break;
-		case SDL_HAT_DOWN:
-			hat_position.down = true;
-			break;
-		case SDL_HAT_LEFT:
-			hat_position.left = true;
-			break;
-		case SDL_HAT_LEFTUP:
-			hat_position.left = true;
-			hat_position.up = true;
-			break;
-		case SDL_HAT_RIGHTUP:
-			hat_position.right= true;
-			hat_position.up = true;
-			break;
-		case SDL_HAT_LEFTDOWN:
-			hat_position.left = true;
-			hat_position.down = true;
-			break;
-		case SDL_HAT_RIGHTDOWN:
-			hat_position.right= true;
-			hat_position.down = true;
-			break;
-		default:
-			break;
-	}
-}
-
 struct PADconf
 {
 	public:
