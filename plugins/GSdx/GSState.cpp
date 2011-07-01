@@ -309,6 +309,11 @@ GSVector4i GSState::GetFrameRect(int i)
 	int w = r.width();
 	int h = r.height();
 
+	if(m_game.title == CRC::DevilMayCry3 && (m_game.region == CRC::US || m_game.region == CRC::JP))
+	{
+		h = 448; 
+	}
+	
 	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && h > 1) h >>= 1;
 
 	//Breaks Disgaea2 FMV borders
@@ -2928,7 +2933,7 @@ bool GSC_StarWarsBattlefront(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && (fi.FBP > 0x0 && fi.FBP < 0x00e00) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 > 0x02000 && fi.TBP0 < 0x02e00) && fi.TPSM == PSM_PSMT8)
+		if(fi.TME && (fi.FBP > 0x0 && fi.FBP < 0x01000) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 > 0x02000 && fi.TBP0 < 0x03000) && fi.TPSM == PSM_PSMT8)
 		{
 			skip = 1;
 		}
@@ -2941,11 +2946,11 @@ bool GSC_StarWarsBattlefront2(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && (fi.FBP > 0x01000 && fi.FBP < 0x01e00) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 > 0x0 && fi.TBP0 < 0x00e00) && fi.TPSM == PSM_PSMT8)
+		if(fi.TME && (fi.FBP > 0x01000 && fi.FBP < 0x02000) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 > 0x0 && fi.TBP0 < 0x01000) && fi.TPSM == PSM_PSMT8)
 		{
 			skip = 1;
 		}
-		if(fi.TME && (fi.FBP > 0x01000 && fi.FBP < 0x01e00) && fi.FPSM == PSM_PSMZ32 && (fi.TBP0 > 0x0 && fi.TBP0 < 0x0e00) && fi.TPSM == PSM_PSMT8)
+		if(fi.TME && (fi.FBP > 0x01000 && fi.FBP < 0x02000) && fi.FPSM == PSM_PSMZ32 && (fi.TBP0 > 0x0 && fi.TBP0 < 0x01000) && fi.TPSM == PSM_PSMT8)
 		{
 			skip = 1;
 		}
@@ -2965,6 +2970,28 @@ bool GSC_BlackHawkDown(const GSFrameInfo& fi, int& skip)
 		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8)
 		{
 			skip = 5;	//night filter
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_DevilMayCry3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+
+		if(fi.TME && fi.FBP == 0x01800 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x01000 && fi.TPSM == PSM_PSMZ16)
+		{
+			skip = 32;
+		}
+		if(fi.TME && fi.FBP == 0x01800 && fi.FPSM == PSM_PSMZ32 && fi.TBP0 == 0x0800 && fi.TPSM == PSM_PSMT8H)
+		{
+			skip = 16;
+		}
+		if(fi.TME && fi.FBP == 0x01800 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x0 && fi.TPSM == PSM_PSMT8H)
+		{
+			skip = 24;
 		}
 	}
 	
@@ -3051,6 +3078,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::StarWarsBattlefront] = GSC_StarWarsBattlefront;
 		map[CRC::StarWarsBattlefront2] = GSC_StarWarsBattlefront2;
 		map[CRC::BlackHawkDown] = GSC_BlackHawkDown;
+		map[CRC::DevilMayCry3] = GSC_DevilMayCry3;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

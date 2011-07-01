@@ -243,6 +243,7 @@ CRC::Game CRC::m_games[] =
 	{0xE169BAF8, RedDeadRevolver, US, 0},
 	{0xE2E67E23, RedDeadRevolver, EU, 0},
 	{0xEDDD6573, SpidermanWoS, US, 0},	//Web of Shadows
+	{0xF14C1D82, SpidermanWoS, EU, 0},
 	{0xF56C7948, HeavyMetalThunder, JP, 0},
 	{0x2498951B, SilentHill3, US, 0},
 	{0x5088CCDB, SilentHill3, EU, 0},
@@ -270,9 +271,14 @@ CRC::Game CRC::m_games[] =
 	{0x568A5C78, DigimonRumbleArena2, US, 0},
 	{0x785E22BB, DigimonRumbleArena2, EU, 0},
 	{0x879CDA5E, StarWarsForceUnleashed, US, 0},
-	{0x503BF9E1, StarWarsBattlefront, US, 0},
-	{0x02F4B541, StarWarsBattlefront2, US, 0},
+	{0x503BF9E1, StarWarsBattlefront, NoRegion, 0},		//EU and US versions have same CRC
+	{0x02F4B541, StarWarsBattlefront2, NoRegion, 0},	//EU and US versions have same CRC
 	{0xA8DB29DF, BlackHawkDown, EU, 0},
+	{0x25FC361B, DevilMayCry3, US, 0},	//SE
+	{0x18C9343F, DevilMayCry3, EU, 0},	//SE
+	{0x7ADCB24A, DevilMayCry3, EU, 0},
+	{0x79C952B0, DevilMayCry3, JP, 0},	//SE
+	{0x7F3DDEAB, DevilMayCry3, JP, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

@@ -110,6 +110,7 @@ public:
 		StarWarsBattlefront,
 		StarWarsBattlefront2,
 		BlackHawkDown,
+		DevilMayCry3,
 		TitleCount,
 	};
 
