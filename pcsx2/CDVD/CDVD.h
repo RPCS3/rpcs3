@@ -126,6 +126,7 @@ struct cdvdStruct {
 	u8	mg_kbit[16];//last BIT key 'seen'
 	u8	mg_kcon[16];//last content key 'seen'
 
+	u8  TrayTimeout;
 	u8  Action;			// the currently scheduled emulated action
 	u32 SeekToSector;	// Holds the destination sector during seek operations.
 	u32 ReadTime;		// Avg. time to read one block of data (in Iop cycles)

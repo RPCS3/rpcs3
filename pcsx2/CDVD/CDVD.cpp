@@ -505,7 +505,7 @@ s32 cdvdCtrlTrayClose()
 	DevCon.WriteLn( Color_Green, L"Close virtual disk tray");
 	cdvd.Status = CDVD_STATUS_PAUSE;
 	cdvd.Ready = CDVD_READY1;
-
+	cdvd.TrayTimeout = 0; // Reset so it can't get closed twice by cdvdVsync()
 	return 0; // needs to be 0 for success according to homebrew test "CDVD"
 }
 
@@ -933,21 +933,18 @@ static uint cdvdStartSeek( uint newsector, CDVD_MODE_TYPE mode )
 u8 monthmap[13] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
 void cdvdVsync() {
-	static u8 timeout = 0; // For closing the disk tray
 	cdvd.RTCcount++;
 	if (cdvd.RTCcount < ((gsRegionMode == Region_NTSC) ? 60 : 50)) return;
 	cdvd.RTCcount = 0;
 
 	if ( cdvd.Status == CDVD_STATUS_TRAY_OPEN )
-	{	
-		// Fixme: Hacky and unsafe (rama)
-		timeout++;
-		//Console.Warning( "timeout = %d",timeout );
+	{
+		cdvd.TrayTimeout++;
 	}
-	if (timeout > 2)
+	if (cdvd.TrayTimeout > 3)
 	{
 		cdvdCtrlTrayClose();
-		timeout = 0;
+		cdvd.TrayTimeout = 0;
 	}
 
 	cdvd.RTC.second++;
