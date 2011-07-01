@@ -295,10 +295,6 @@ void CDVDsys_ChangeSource( CDVD_SourceType type )
 {
 	GetCorePlugins().Close( PluginId_CDVD );
 	
-	static bool firstRun = true;
-	if (!firstRun) cdvdCtrlTrayOpen();
-	firstRun = false;
-	
 	switch( m_CurrentSourceType = type )
 	{
 		case CDVDsrc_Iso:

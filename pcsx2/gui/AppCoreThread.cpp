@@ -387,6 +387,7 @@ void AppCoreThread::OnResumeInThread( bool isSuspended )
 	{
 		GetCorePlugins().Close( PluginId_CDVD );
 		CDVDsys_ChangeSource( g_Conf->CdvdSource );
+		cdvdCtrlTrayOpen();
 		m_resetCdvd = false;	
 	}
 
