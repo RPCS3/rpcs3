@@ -250,7 +250,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
 
-		if((FBP == 0x025a0 || FBP == 0x025a0) && FPSM == PSM_PSMCT32)	//0x2800 pal, 0x25a0 ntsc
+		if((FBP == 0x025a0 || FBP == 0x02800) && FPSM == PSM_PSMCT32)	//0x2800 pal, 0x25a0 ntsc
 		{
 			//only top half of the screen clears
 			m_dev->ClearDepth(ds, 0);
