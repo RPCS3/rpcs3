@@ -2998,6 +2998,27 @@ bool GSC_DevilMayCry3(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_Burnout(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP == 0x01dc0 || fi.FBP == 0x02200) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x01dc0 || fi.TBP0 == 0x02200) && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 4;
+		}
+		else if (fi.TME && (fi.FBP == 0x008c0 || fi.FBP == 0x00a00) && fi.FPSM == PSM_PSMCT16 && (fi.TBP0 == 0x01a40 || fi.TBP0 == 0x01e00) && fi.TPSM == PSM_PSMZ16)
+		{
+			skip = 4; //fog
+		}
+		else if (fi.TME && (fi.FBP == 0x02d60 || fi.FBP == 0x033a0) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x02d60 || fi.TBP0 == 0x033a0) && fi.TPSM == PSM_PSMCT32 && fi.FBMSK == 0x0)
+		{
+			skip = 2; //impact screen
+		}
+	}
+	
+	return true;
+}
+
 
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
@@ -3079,6 +3100,9 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::StarWarsBattlefront2] = GSC_StarWarsBattlefront2;
 		map[CRC::BlackHawkDown] = GSC_BlackHawkDown;
 		map[CRC::DevilMayCry3] = GSC_DevilMayCry3;
+		map[CRC::BurnoutTakedown] = GSC_Burnout;
+		map[CRC::BurnoutRevenge] = GSC_Burnout;
+		map[CRC::BurnoutDominator] = GSC_Burnout;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

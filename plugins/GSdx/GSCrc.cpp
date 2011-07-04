@@ -279,6 +279,12 @@ CRC::Game CRC::m_games[] =
 	{0x7ADCB24A, DevilMayCry3, EU, 0},
 	{0x79C952B0, DevilMayCry3, JP, 0},	//SE
 	{0x7F3DDEAB, DevilMayCry3, JP, 0},
+	{0xBEBF8793, BurnoutTakedown, US, 0},
+	{0x75BECC18, BurnoutTakedown, EU, 0},
+	{0xD224D348, BurnoutRevenge, US, 0},
+	{0x7E83CC5B, BurnoutRevenge, EU, 0},
+	{0x8C9576A1, BurnoutDominator, US, 0},
+	{0x8C9576B4, BurnoutDominator, EU, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

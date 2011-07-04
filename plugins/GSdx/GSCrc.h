@@ -111,6 +111,9 @@ public:
 		StarWarsBattlefront2,
 		BlackHawkDown,
 		DevilMayCry3,
+		BurnoutTakedown,
+		BurnoutRevenge,
+		BurnoutDominator,
 		TitleCount,
 	};
 
