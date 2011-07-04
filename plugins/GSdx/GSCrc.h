@@ -114,6 +114,7 @@ public:
 		BurnoutTakedown,
 		BurnoutRevenge,
 		BurnoutDominator,
+		MidnightClub3,
 		TitleCount,
 	};
 

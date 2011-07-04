@@ -3006,13 +3006,33 @@ bool GSC_Burnout(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 4;
 		}
-		else if (fi.TME && (fi.FBP == 0x008c0 || fi.FBP == 0x00a00) && fi.FPSM == PSM_PSMCT16 && (fi.TBP0 == 0x01a40 || fi.TBP0 == 0x01e00) && fi.TPSM == PSM_PSMZ16)
+		else if(fi.TME && fi.FPSM == PSM_PSMCT16 && fi.TPSM == PSM_PSMZ16)	//fog
 		{
-			skip = 4; //fog
+			if(fi.FBP == 0x00a00 && fi.TBP0 == 0x01e00)	
+			{
+				skip = 4; //pal
+			}
+			if(fi.FBP == 0x008c0 && fi.TBP0 == 0x01a40)
+			{
+				skip = 3; //ntsc
+			}
 		}
 		else if (fi.TME && (fi.FBP == 0x02d60 || fi.FBP == 0x033a0) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x02d60 || fi.TBP0 == 0x033a0) && fi.TPSM == PSM_PSMCT32 && fi.FBMSK == 0x0)
 		{
 			skip = 2; //impact screen
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_MidnightClub3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP > 0x01d00 && fi.FBP <= 0x02a00) && fi.FPSM == PSM_PSMCT32 && (fi.FBP >= 0x01600 && fi.FBP < 0x03260) && fi.TPSM == PSM_PSMT8H)
+		{
+			skip = 1;
 		}
 	}
 	
