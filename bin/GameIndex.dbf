@@ -5069,6 +5069,7 @@ Compat = 5
 Serial = SLUS-20788
 Name   = Ford Racing 2
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20789
 Name   = Jeopardy
@@ -5328,7 +5329,7 @@ Compat = 5
 Serial = SLUS-20851
 Name   = Ace Combat 5 - The Unsung War
 Region = NTSC-U
-Compat = 5
+Compat = 4
 SkipMPEGHack = 1		//hangs on menus
 ---------------------------------------------
 Serial = SLUS-20852
@@ -8717,7 +8718,7 @@ Compat = 2
 Serial = SLUS-21596
 Name   = Burnout - Dominator
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21597
 Name   = Medal of Honor - Vanguard
@@ -36636,6 +36637,14 @@ Region = PAL-Unk
 Serial = SLES-52942
 Name   = Midnight Club 3 - DUB Edition
 Region = PAL-Unk
+[patches = EBE1972D]
+
+	comment=patch by Shadow Lady
+	
+	//skip videos
+	patch=0,EE,006537a0,word,00000000
+
+[/patches]
 ---------------------------------------------
 Serial = SLES-52943
 Name   = ESPN NFL 2K5
@@ -40046,6 +40055,11 @@ Region = PAL-E
 Serial = SLES-54626
 Name   = An American Tail
 Region = PAL-M11
+---------------------------------------------
+Serial = SLES-54627
+Name   = Burnout Dominator
+Region = PAL-E
+Compat = 5
 ---------------------------------------------
 Serial = SLES-54629
 Name   = Shin Megami Tensei - Devil Summoner

@@ -1966,11 +1966,11 @@ bool GSC_DBZBT2(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && /*fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT16 &&*/ fi.TBP0 == 0x02000 && fi.TPSM == PSM_PSMZ16)
+		if(fi.TME && /*fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT16 &&*/ (fi.TBP0 == 0x01c00 || fi.TBP0 == 0x02000) && fi.TPSM == PSM_PSMZ16)
 		{
-			skip = 27;
+			skip = 26; //27
 		}
-		else if(!fi.TME && fi.FBP == 0x03000 && fi.FPSM == PSM_PSMCT16)
+		else if(!fi.TME && (fi.FBP == 0x02a00 || fi.FBP == 0x03000) && fi.FPSM == PSM_PSMCT16)
 		{
 			skip = 10;
 		}
@@ -3123,6 +3123,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::BurnoutTakedown] = GSC_Burnout;
 		map[CRC::BurnoutRevenge] = GSC_Burnout;
 		map[CRC::BurnoutDominator] = GSC_Burnout;
+		map[CRC::MidnightClub3] = GSC_MidnightClub3;
 	}
 
 	// TODO: just set gsc in SetGameCRC once
