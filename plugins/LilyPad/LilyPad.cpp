@@ -713,9 +713,9 @@ void ResetPad(int port, int slot) {
 	pads[port][slot].umask[0] = pads[port][slot].umask[1] = 0xFF;
 	// Sets up vibrate variable.
 	ResetVibrate(port, slot);
-	/*if (config.padConfigs[port][slot].autoAnalog) {
+	if (config.padConfigs[port][slot].autoAnalog && !ps2e) {
 		pads[port][slot].mode = MODE_ANALOG;
-	}*/
+	}
 	pads[port][slot].initialized = 1;
 
 	pads[port][slot].enabled = enabled;
@@ -1252,9 +1252,9 @@ u8 CALLBACK PADpoll(u8 value) {
 					}
 					else {
 						pad->modeLock = 0;
-						/*if (pad->mode == MODE_DIGITAL && config.padConfigs[query.port][query.slot].autoAnalog) {
+						if (pad->mode == MODE_DIGITAL && config.padConfigs[query.port][query.slot].autoAnalog && !ps2e) {
 							pad->mode = MODE_ANALOG;
-						}*/
+						}
 					}
 					query.queryDone = 1;
 				}

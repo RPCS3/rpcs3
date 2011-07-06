@@ -18,6 +18,7 @@ GeneralConfig config;
 // 1 if running inside a PS2 emulator.  Set to 1 on any
 // of the PS2-specific functions (PS2EgetLibVersion2, PS2EgetLibType).
 // Only affects if I allow read input in GS thread to be set.
+// Also disables usage of AutoAnalog mode if in PS2 mode.
 u8 ps2e = 0;
 
 HWND hWndProp = 0;
@@ -1746,7 +1747,7 @@ void UpdatePadList(HWND hWnd) {
 		CheckDlgButton(hWnd, IDC_ANALOG_START1, BST_CHECKED*config.padConfigs[port][slot].autoAnalog);
 	}
 	EnableWindow(hWndCombo, enable);
-	EnableWindow(hWndAnalog, enable);
+	EnableWindow(hWndAnalog, enable && !ps2e);
 	//ListView_SetExtendedListViewStyleEx(hWndList, LVS_EX_DOUBLEBUFFER|LVS_EX_ONECLICKACTIVATE, LVS_EX_DOUBLEBUFFER|LVS_EX_ONECLICKACTIVATE);
 	recurse = 0;
 }
