@@ -906,17 +906,17 @@ void xImpl_DwordShift::operator()( const xRegister16& to,	const xRegister16& fro
 void xImpl_DwordShift::operator()( const xRegister32& to,	const xRegister32& from, u8 shiftcnt ) const
 {
 	if( shiftcnt != 0 )
-		xOpWrite0F( OpcodeBase, to, from );
+		xOpWrite0F( OpcodeBase, to, from, shiftcnt );
 }
 void xImpl_DwordShift::operator()( const xRegister16& to,	const xRegister16& from, u8 shiftcnt ) const
 {
 	if( shiftcnt != 0 )
-		xOpWrite0F( 0x66, OpcodeBase, to, from );
+		xOpWrite0F( 0x66, OpcodeBase, to, from, shiftcnt );
 }
 
 void xImpl_DwordShift::operator()( const xIndirectVoid& dest, const xRegister16or32& from, const xRegisterCL& /* clreg */ ) const
 {
-	xOpWrite0F( (from->GetOperandSize() == 2) ? 0x66 : 0x00, OpcodeBase, from, dest );
+	xOpWrite0F( (from->GetOperandSize() == 2) ? 0x66 : 0x00, OpcodeBase + 1, from, dest );
 }
 
 void xImpl_DwordShift::operator()( const xIndirectVoid& dest, const xRegister16or32& from, u8 shiftcnt ) const
