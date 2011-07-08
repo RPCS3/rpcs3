@@ -271,8 +271,9 @@ void recSD( void )  { recStore(64); }
 
 void recLWL( void )
 {
+	if (!_Rt_)
+		return;
 #ifdef REC_LOADS
-
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rt_, 1);
 
@@ -315,6 +316,8 @@ void recLWL( void )
 ////////////////////////////////////////////////////
 void recLWR(void)
 {
+	if (!_Rt_)
+		return;
 #ifdef REC_LOADS
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rt_, 1);
@@ -453,6 +456,8 @@ void recSWR(void)
 ////////////////////////////////////////////////////
 void recLDL( void )
 {
+	if (!_Rt_)
+		return;
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
@@ -462,6 +467,8 @@ void recLDL( void )
 ////////////////////////////////////////////////////
 void recLDR( void )
 {
+	if (!_Rt_)
+		return;
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
