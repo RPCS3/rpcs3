@@ -44,7 +44,6 @@ void _deleteEEreg(int reg, int flush)
 	if( !reg ) return;
 	if( flush && GPR_IS_CONST1(reg) ) {
 		_flushConstReg(reg);
-		return;
 	}
 	GPR_DEL_CONST(reg);
 	_deleteGPRtoXMMreg(reg, flush ? 0 : 2);
@@ -381,7 +380,7 @@ void eeRecompileCode3(R5900FNPTR constcode, R5900FNPTR_INFO multicode)
 	pxFail( "Unfinished code reached." );
 
 	// for now, don't support xmm
-	_deleteEEreg(_Rs_, 1);
+	_deleteEEreg(_Rs_, 0);
 	_deleteEEreg(_Rt_, 1);
 
 	if( GPR_IS_CONST2(_Rs_, _Rt_) ) {

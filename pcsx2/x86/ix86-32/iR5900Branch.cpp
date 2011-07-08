@@ -563,7 +563,7 @@ void recBLEZ( void )
 		return;
 	}
 
-	_deleteEEreg(_Rs_, 1);
+	_flushEEreg(_Rs_);
 
 	CMP32ItoM( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ], 0 );
 	j8Ptr[ 0 ] = JL8( 0 );
@@ -609,7 +609,7 @@ void recBGTZ( void )
 		return;
 	}
 
-	_deleteEEreg(_Rs_, 1);
+	_flushEEreg(_Rs_);
 
 	CMP32ItoM( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ], 0 );
 	j8Ptr[ 0 ] = JG8( 0 );
@@ -791,7 +791,7 @@ void recBLEZL( void )
 		return;
 	}
 
-	_deleteEEreg(_Rs_, 1);
+	_flushEEreg(_Rs_);
 
 	CMP32ItoM( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ], 0 );
 	j32Ptr[ 0 ] = JL32( 0 );
@@ -835,7 +835,7 @@ void recBGTZL( void )
 		return;
 	}
 
-	_deleteEEreg(_Rs_, 1);
+	_flushEEreg(_Rs_);
 
 	CMP32ItoM( (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 1 ], 0 );
 	j32Ptr[ 0 ] = JG32( 0 );

@@ -216,7 +216,7 @@ void recStore(u32 sz, bool edxAlreadyAssigned=false)
                 }
                 else if (sz==128 || sz==64)
                 {
-                        _deleteEEreg(_Rt_, 1);          // flush register to mem
+                        _flushEEreg(_Rt_);          // flush register to mem
                         MOV32ItoR(EDX,(int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ]);
                 }
         }
@@ -281,23 +281,23 @@ void recLWL( void )
 	if (_Imm_ != 0)
 		xADD(ecx, _Imm_);
 
-	// ebx = bit offset in word
-	xMOV(ebx, ecx);
-	xAND(ebx, 0x3);
-	xSHL(ebx, 3);
+	// edi = bit offset in word
+	xMOV(edi, ecx);
+	xAND(edi, 3);
+	xSHL(edi, 3);
 
-	xAND(ecx, ~0x3);
+	xAND(ecx, ~3);
 	vtlb_DynGenRead32(32, true);
 
 	// mask off bytes loaded
-	xMOV(ecx, ebx);
+	xMOV(ecx, edi);
 	xMOV(edx, 0xffffff);
 	xSHR(edx, cl);
 	xAND(ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]], edx);
 
 	// OR in bytes loaded
 	xMOV(ecx, 24);
-	xSUB(ecx, ebx);
+	xSUB(ecx, edi);
 	xSHL(eax, cl);
 	xOR(ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]], eax);
 
@@ -326,27 +326,27 @@ void recLWR(void)
 	if (_Imm_ != 0)
 		xADD(ecx, _Imm_);
 
-	// ebx = bit offset in word
-	xMOV(ebx, ecx);
-	xAND(ebx, 0x3);
-	xSHL(ebx, 3);
+	// edi = bit offset in word
+	xMOV(edi, ecx);
+	xAND(edi, 3);
+	xSHL(edi, 3);
 
-	xAND(ecx,~0x3);
+	xAND(ecx, ~3);
 	vtlb_DynGenRead32(32, true);
 
 	// mask off bytes loaded
 	xMOV(ecx, 24);
-	xSUB(ecx, ebx);
+	xSUB(ecx, edi);
 	xMOV(edx, 0xffffff00);
 	xSHL(edx, cl);
 	xAND(ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]], edx);
 
 	// OR in bytes loaded
-	xMOV(ecx, ebx);
+	xMOV(ecx, edi);
 	xSHR(eax, cl);
 	xOR(ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]], eax);
 
-	xCMP(ebx, 0);
+	xCMP(edi, 0);
 	xForwardJump8 nosignextend(Jcc_NotEqual);
 	// if ((addr & 3) == 0)
 	xCDQ();
@@ -371,18 +371,16 @@ void recSWL(void)
 	if (_Imm_ != 0)
 		xADD(ecx, _Imm_);
 
-	// ebx = bit offset in word
-	xMOV(ebx, ecx);
-	xAND(ebx, 0x3);
-	xSHL(ebx, 3);
-
-	xAND(ecx, ~0x3);
-	// edi = word address
+	// edi = bit offset in word
 	xMOV(edi, ecx);
+	xAND(edi, 3);
+	xSHL(edi, 3);
+
+	xAND(ecx, ~3);
 	vtlb_DynGenRead32(32, false);
 
 	// mask read -> edx
-	xMOV(ecx, ebx);
+	xMOV(ecx, edi);
 	xMOV(edx, 0xffffff00);
 	xSHL(edx, cl);
 	xAND(edx, eax);
@@ -391,13 +389,17 @@ void recSWL(void)
 	{
 		// mask write and OR -> edx
 		xMOV(ecx, 24);
-		xSUB(ecx, ebx);
+		xSUB(ecx, edi);
 		_eeMoveGPRtoR(EAX, _Rt_);
 		xSHR(eax, cl);
 		xOR(edx, eax);
 	}
 
-	xMOV(ecx, edi);
+	_eeMoveGPRtoR(ECX, _Rs_);
+	if (_Imm_ != 0)
+		xADD(ecx, _Imm_);
+	xAND(ecx, ~3);
+
 	vtlb_DynGenWrite(32);
 #else
 	iFlushCall(FLUSH_EXCEPTION);
@@ -417,19 +419,17 @@ void recSWR(void)
 	if (_Imm_ != 0)
 		xADD(ecx, _Imm_);
 
-	// ebx = bit offset in word
-	xMOV(ebx, ecx);
-	xAND(ebx, 0x3);
-	xSHL(ebx, 3);
-
-	xAND(ecx, ~0x3);
-	// edi = word address
+	// edi = bit offset in word
 	xMOV(edi, ecx);
+	xAND(edi, 3);
+	xSHL(edi, 3);
+
+	xAND(ecx, ~3);
 	vtlb_DynGenRead32(32, false);
 
 	// mask read -> edx
 	xMOV(ecx, 24);
-	xSUB(ecx, ebx);
+	xSUB(ecx, edi);
 	xMOV(edx, 0xffffff);
 	xSHR(edx, cl);
 	xAND(edx, eax);
@@ -437,13 +437,17 @@ void recSWR(void)
 	if(_Rt_)
 	{
 		// mask write and OR -> edx
-		xMOV(ecx, ebx);
+		xMOV(ecx, edi);
 		_eeMoveGPRtoR(EAX, _Rt_);
 		xSHL(eax, cl);
 		xOR(edx, eax);
 	}
 
-	xMOV(ecx, edi);
+	_eeMoveGPRtoR(ECX, _Rs_);
+	if (_Imm_ != 0)
+		xADD(ecx, _Imm_);
+	xAND(ecx, ~3);
+
 	vtlb_DynGenWrite(32);
 #else
 	iFlushCall(FLUSH_EXCEPTION);
@@ -506,7 +510,6 @@ void recLWC1( void )
 {
 #ifdef NEWLWC1
 	iFlushCall(FLUSH_EXCEPTION);
-	_deleteEEreg(_Rs_, 1);
 	_deleteFPtoXMMreg(_Rt_, 2);
 
 	if( GPR_IS_CONST1( _Rs_ ) )
@@ -516,7 +519,7 @@ void recLWC1( void )
 	}
 	else
 	{
-		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		_eeMoveGPRtoR(ECX, _Rs_);
 		if ( _Imm_ != 0 )
 			ADD32ItoR( ECX, _Imm_ );
 		vtlb_DynGenRead32(32, false);
@@ -525,10 +528,9 @@ void recLWC1( void )
 	MOV32RtoM( (int)&fpuRegs.fpr[ _Rt_ ].UL, EAX );
 #else
 	iFlushCall(FLUSH_EXCEPTION);
-	_deleteEEreg(_Rs_, 1);
 	_deleteFPtoXMMreg(_Rt_, 2);
 
-	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+	_eeMoveGPRtoR(ECX, _Rs_);
 	if ( _Imm_ != 0 )
 		ADD32ItoR( ECX, _Imm_ );
 
@@ -543,7 +545,6 @@ void recSWC1( void )
 {
 #ifdef NEWSWC
 	iFlushCall(FLUSH_EXCEPTION);
-	_deleteEEreg(_Rs_, 1);
 	_deleteFPtoXMMreg(_Rt_, 1);
 
 	MOV32MtoR(EDX, (int)&fpuRegs.fpr[ _Rt_ ].UL );
@@ -555,17 +556,16 @@ void recSWC1( void )
 	}
 	else
 	{
-		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		_eeMoveGPRtoR(ECX, _Rs_);
 		if ( _Imm_ != 0 )
 			ADD32ItoR( ECX, _Imm_ );
 		vtlb_DynGenWrite(32);
 	}
 #else
 	iFlushCall(FLUSH_EXCEPTION);
-	_deleteEEreg(_Rs_, 1);
 	_deleteFPtoXMMreg(_Rt_, 0);
 
-	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+	_eeMoveGPRtoR(ECX, _Rs_);
 	if ( _Imm_ != 0 )
 		ADD32ItoR( ECX, _Imm_ );
 
@@ -591,7 +591,6 @@ void recLQC2( void )
 {
 #ifdef NEWLQC
 	iFlushCall(FLUSH_EXCEPTION);
-	_deleteEEreg(_Rs_, 1);
 	_deleteVFtoXMMreg(_Ft_, 0, 2);
 
 	if ( _Rt_ )
@@ -607,7 +606,7 @@ void recLQC2( void )
 	}
 	else
 	{
-		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		_eeMoveGPRtoR(ECX, _Rs_);
 
 		if ( _Imm_ != 0 )
 			ADD32ItoR( ECX, _Imm_);
@@ -616,10 +615,9 @@ void recLQC2( void )
 	}
 #else
 	iFlushCall(FLUSH_EXCEPTION);
-	_deleteEEreg(_Rs_, 1);
 	_deleteVFtoXMMreg(_Ft_, 0, 2);
 
-	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+	_eeMoveGPRtoR(ECX, _Rs_);
 	if ( _Imm_ != 0 )
 		ADD32ItoR( ECX, _Imm_);
 
@@ -640,7 +638,6 @@ void recSQC2( void )
 {
 #ifdef NEWSQC
 	iFlushCall(FLUSH_EXCEPTION);
-	_deleteEEreg(_Rs_, 1);
 	_deleteVFtoXMMreg(_Ft_, 0, 1); //Want to flush it but not clear it
 
 	MOV32ItoR(EDX, (int)&VU0.VF[_Ft_].UD[0] );
@@ -651,7 +648,7 @@ void recSQC2( void )
 	}
 	else
 	{
-		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+		_eeMoveGPRtoR(ECX, _Rs_);
 		if ( _Imm_ != 0 )
 			ADD32ItoR( ECX, _Imm_ );
 
@@ -659,10 +656,9 @@ void recSQC2( void )
 	}
 #else
 	iFlushCall(FLUSH_EXCEPTION);
-	_deleteEEreg(_Rs_, 1);
 	_deleteVFtoXMMreg(_Ft_, 0, 0);
 
-	MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
+	_eeMoveGPRtoR(ECX, _Rs_);
 	if ( _Imm_ != 0 )
 		ADD32ItoR( ECX, _Imm_ );
 
