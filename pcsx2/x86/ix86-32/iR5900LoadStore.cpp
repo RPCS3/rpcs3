@@ -21,6 +21,8 @@
 #include "iR5900LoadStore.h"
 #include "iR5900.h"
 
+using namespace x86Emitter;
+
 #define REC_STORES
 #define REC_LOADS
 #define NEWLWC1
@@ -267,83 +269,43 @@ void recSD( void )  { recStore(64); }
 
 ////////////////////////////////////////////////////
 
-static const s32 LWL_MASK[4] = { 0xffffff, 0x0000ffff, 0x000000ff, 0x00000000 };
-static const s32 LWR_MASK[4] = { 0x000000, 0xff000000, 0xffff0000, 0xffffff00 };
-static const u8 LWL_SHIFT[4] = { 24, 16, 8, 0 };
-static const u8 LWR_SHIFT[4] = { 0, 8, 16, 24 };
-
 void recLWL( void )
 {
-	if(!_Rt_) return;
 #ifdef REC_LOADS
 
 	iFlushCall(FLUSH_EXCEPTION);
-	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
 
-	if( GPR_IS_CONST1( _Rs_ ) )
-	{
-		u32 srcadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
-		u32 shift = srcadr & 0x3;
-		srcadr &= ~0x3;
+	_eeMoveGPRtoR(ECX, _Rs_);
+	if (_Imm_ != 0)
+		xADD(ecx, _Imm_);
 
-		vtlb_DynGenRead32_Const( 32, true, srcadr );
+	// ebx = bit offset in word
+	xMOV(ebx, ecx);
+	xAND(ebx, 0x3);
+	xSHL(ebx, 3);
 
-		if( GPR_IS_CONST1( _Rt_ ) )
-		{
-			int res = g_cpuConstRegs[_Rt_].UL[0] & LWL_MASK[shift];
-			MOV32ItoR( EDX, res );
-		}
-		else
-		{
-			_eeMoveGPRtoR(EDX, _Rt_);		
-			AND32ItoR( EDX, LWL_MASK[shift] );
-		}
-		
-		SHL32ItoR( EAX, LWL_SHIFT[shift] );
-		OR32RtoR( EAX, EDX );
-	}
-	else
-	{
-		// Load ECX with the source memory address that we're reading from.
-		_eeMoveGPRtoR(ECX, _Rs_);
-		if ( _Imm_ != 0 )
-			ADD32ItoR( ECX, _Imm_ );
+	xAND(ecx, ~0x3);
+	vtlb_DynGenRead32(32, true);
 
-		MOV32RtoR(EDX, ECX);
-		AND32ItoR(EDX, 0x3);
-		SHL32ItoR(EDX, 3);
-		
-		AND32ItoR(ECX,~0x3);
-		
-		
-		vtlb_DynGenRead32(32, true);
+	// mask off bytes loaded
+	xMOV(ecx, ebx);
+	xMOV(edx, 0xffffff);
+	xSHR(edx, cl);
+	xAND(ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]], edx);
 
-		MOV32RtoR(ECX, EDX);
-		MOV32ItoR( EBX, 0xffffff );
-		SHR32CLtoR( EBX );
+	// OR in bytes loaded
+	xMOV(ecx, 24);
+	xSUB(ecx, ebx);
+	xSHL(eax, cl);
+	xOR(ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]], eax);
 
-		MOV32ItoR( ECX, 24 );
-		SUB32RtoR(ECX, EDX);
-		SHL32CLtoR( EAX );// eax << ecx
-		
-		_eeMoveGPRtoR(EDX, _Rt_);
-
-		AND32RtoR( EDX, EBX );
-		
-		OR32RtoR( EAX, EDX );
-	}
-	
-	// EAX holds the loaded value, so sign extend as needed:
-	CDQ();
-
-	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
+	// eax will always have the sign bit
+	xCDQ();
+	xMOV(ptr32[&cpuRegs.GPR.r[_Rt_].UL[1]], edx);
 #else
-	
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
 
 	recCall(LWL);
@@ -351,165 +313,89 @@ void recLWL( void )
 }
 
 ////////////////////////////////////////////////////
-void recLWR( void )
+void recLWR(void)
 {
-	if(!_Rt_) return;
 #ifdef REC_LOADS
 	iFlushCall(FLUSH_EXCEPTION);
-	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
 
-	if( GPR_IS_CONST1( _Rs_ ) )
-	{
-		u32 srcadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
-		u32 shift = srcadr & 0x3;
-		srcadr &= ~0x3;
-		//DevCon.Warning("LWR Const");
-		vtlb_DynGenRead32_Const( 32, true, srcadr );
+	_eeMoveGPRtoR(ECX, _Rs_);
+	if (_Imm_ != 0)
+		xADD(ecx, _Imm_);
 
-		if( GPR_IS_CONST1( _Rt_ ) )
-		{
-			int res = g_cpuConstRegs[_Rt_].UL[0] & LWR_MASK[shift];
-			MOV32ItoR( EDX, res );
-		}
-		else
-		{
-			_eeMoveGPRtoR(EDX, _Rt_);
-			AND32ItoR( EDX, LWR_MASK[shift] );
-		}
-		
-		SHR32ItoR( EAX, LWR_SHIFT[shift] );
-		OR32RtoR( EAX, EDX );
-	}
-	else
-	{
-		
-		//iFlushCall(FLUSH_EXCEPTION);
-		// Load ECX with the source memory address that we're reading from.
-		_eeMoveGPRtoR(ECX, _Rs_);
-		if ( _Imm_ != 0 )
-			ADD32ItoR( ECX, _Imm_ );
+	// ebx = bit offset in word
+	xMOV(ebx, ecx);
+	xAND(ebx, 0x3);
+	xSHL(ebx, 3);
 
-		MOV32RtoR(EDX, ECX);
-		AND32ItoR(EDX, 0x3);
-		SHL32ItoR(EDX, 3);
-		
-		AND32ItoR(ECX,~0x3);
+	xAND(ecx,~0x3);
+	vtlb_DynGenRead32(32, true);
 
-		vtlb_DynGenRead32(32, true);
-		MOV32RtoR(ECX, EDX);
-		MOV32ItoR( EBX, 0xffffff00 );
-		SHR32CLtoR( EAX ); // eax << ecx
+	// mask off bytes loaded
+	xMOV(ecx, 24);
+	xSUB(ecx, ebx);
+	xMOV(edx, 0xffffff00);
+	xSHL(edx, cl);
+	xAND(ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]], edx);
 
-		MOV32ItoR( ECX, 24 );
-		SUB32RtoR(ECX, EDX);
-		SHL32CLtoR( EBX );// ebx << ecx
-		
-		_eeMoveGPRtoR(EDX, _Rt_);
+	// OR in bytes loaded
+	xMOV(ecx, ebx);
+	xSHR(eax, cl);
+	xOR(ptr32[&cpuRegs.GPR.r[_Rt_].UL[0]], eax);
 
-		AND32RtoR( EDX, EBX );
-		
-		OR32RtoR( EAX, EDX );
-	}
-
-	// EAX holds the loaded value, so sign extend as needed:
-	CDQ();
-
-	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ], EAX );
-	MOV32RtoM( (int)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ], EDX );
-#else	
+	xCMP(ebx, 0);
+	xForwardJump8 nosignextend(Jcc_NotEqual);
+	// if ((addr & 3) == 0)
+	xCDQ();
+	xMOV(ptr32[&cpuRegs.GPR.r[_Rt_].UL[1]], edx);
+	nosignextend.SetTarget();
+#else
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
 
 	recCall(LWR);
 #endif
 }
 
-static const u32 SWL_MASK[4] = { 0xffffff00, 0xffff0000, 0xff000000, 0x00000000 };
-static const u32 SWR_MASK[4] = { 0x00000000, 0x000000ff, 0x0000ffff, 0x00ffffff };
-
-static const u8 SWR_SHIFT[4] = { 0, 8, 16, 24 };
-static const u8 SWL_SHIFT[4] = { 24, 16, 8, 0 };
-
 ////////////////////////////////////////////////////
-void recSWL( void )
+void recSWL(void)
 {
-
 #ifdef REC_STORES
 	iFlushCall(FLUSH_EXCEPTION);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 1);
 
-	if( GPR_IS_CONST1( _Rs_ ) )
+	_eeMoveGPRtoR(ECX, _Rs_);
+	if (_Imm_ != 0)
+		xADD(ecx, _Imm_);
+
+	// ebx = bit offset in word
+	xMOV(ebx, ecx);
+	xAND(ebx, 0x3);
+	xSHL(ebx, 3);
+
+	xAND(ecx, ~0x3);
+	// edi = word address
+	xMOV(edi, ecx);
+	vtlb_DynGenRead32(32, false);
+
+	// mask read -> edx
+	xMOV(ecx, ebx);
+	xMOV(edx, 0xffffff00);
+	xSHL(edx, cl);
+	xAND(edx, eax);
+
+	if (_Rt_)
 	{
-		u32 addr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
-		u32 shift = addr & 3;
-		vtlb_DynGenRead32_Const( 32, false, addr & ~3 );
-
-		// Prep eax/edx for producing the writeback result:
-		//DevCon.Warning("SWL Const");
-		if(_Rt_)
-		{
-			if( GPR_IS_CONST1( _Rt_ ) )
-			{
-				int res;
-				res = g_cpuConstRegs[_Rt_].UL[0] >> SWL_SHIFT[shift];
-			}
-			else
-			{
-				_eeMoveGPRtoR(EDX, _Rt_);				
-				SHR32ItoR( EDX, SWL_SHIFT[shift] );
-			}
-		}
-		else XOR32RtoR( EDX, EDX );
-
-		AND32ItoR( EAX, SWL_MASK[shift] );		
-		OR32RtoR( EDX, EAX );
-
-		vtlb_DynGenWrite_Const( 32, addr & ~0x3 );
+		// mask write and OR -> edx
+		xMOV(ecx, 24);
+		xSUB(ecx, ebx);
+		_eeMoveGPRtoR(EAX, _Rt_);
+		xSHR(eax, cl);
+		xOR(edx, eax);
 	}
-	else
-	{
 
-		_eeMoveGPRtoR(ECX, _Rs_);
-		//DevCon.Warning("SWL No Const");
-		if ( _Imm_ != 0 )
-			ADD32ItoR(ECX, _Imm_);
-
-
-		MOV32RtoR(EDX, ECX);
-		AND32ItoR(EDX, 0x3);
-		SHL32ItoR(EDX, 3);
-
-		AND32ItoR(ECX,~0x3);
-		
-		vtlb_DynGenRead32(32, false);
-		MOV32RtoR( ECX, EDX );
-		MOV32ItoR( EBX, 0xffffff00 );
-		SHL32CLtoR( EBX ); // ebx << ecx
-		AND32RtoR( EAX, EBX );
-		if(_Rt_)
-		{
-			MOV32ItoR( ECX, 24 );
-			SUB32RtoR( ECX, EDX );
-
-			_eeMoveGPRtoR(EDX, _Rt_);				
-			SHR32CLtoR( EDX ); // edx >> ecx
-		} 
-		else XOR32RtoR( EDX, EDX );
-		OR32RtoR( EDX, EAX );
-		
-		_eeMoveGPRtoR(ECX, _Rs_);
-
-		if ( _Imm_ != 0 )
-			ADD32ItoR(ECX, _Imm_);
-
-		AND32ItoR(ECX,~0x3);
-
-		vtlb_DynGenWrite(32);
-	}
+	xMOV(ecx, edi);
+	vtlb_DynGenWrite(32);
 #else
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -519,81 +405,43 @@ void recSWL( void )
 }
 
 ////////////////////////////////////////////////////
-void recSWR( void )
+void recSWR(void)
 {
-
 #ifdef REC_STORES
 	iFlushCall(FLUSH_EXCEPTION);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 1);
-	if( GPR_IS_CONST1( _Rs_ ) )
+
+	_eeMoveGPRtoR(ECX, _Rs_);
+	if (_Imm_ != 0)
+		xADD(ecx, _Imm_);
+
+	// ebx = bit offset in word
+	xMOV(ebx, ecx);
+	xAND(ebx, 0x3);
+	xSHL(ebx, 3);
+
+	xAND(ecx, ~0x3);
+	// edi = word address
+	xMOV(edi, ecx);
+	vtlb_DynGenRead32(32, false);
+
+	// mask read -> edx
+	xMOV(ecx, 24);
+	xSUB(ecx, ebx);
+	xMOV(edx, 0xffffff);
+	xSHR(edx, cl);
+	xAND(edx, eax);
+
+	if(_Rt_)
 	{
-		u32 addr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
-		u32 shift = addr & 3;
-		vtlb_DynGenRead32_Const( 32, false, addr & ~3 );
-
-		// Prep eax/edx for producing the writeback result:
-		//DevCon.Warning("SWR Const");
-		if(_Rt_)
-		{
-			if( GPR_IS_CONST1( _Rt_ ) )
-			{
-				int res;
-				res = g_cpuConstRegs[_Rt_].UL[0] << SWR_SHIFT[shift];
-				MOV32ItoR( EDX, res );
-			}
-			else
-			{
-				_eeMoveGPRtoR(EDX, _Rt_);				
-				SHL32ItoR( EDX, SWR_SHIFT[shift] );
-			}
-		}
-		else XOR32RtoR( EDX, EDX );
-		AND32ItoR( EAX, SWR_MASK[shift] );
-		OR32RtoR( EDX, EAX );
-
-		vtlb_DynGenWrite_Const( 32, addr & ~0x3 );
+		// mask write and OR -> edx
+		xMOV(ecx, ebx);
+		_eeMoveGPRtoR(EAX, _Rt_);
+		xSHL(eax, cl);
+		xOR(edx, eax);
 	}
-	else
-	{		
-		_eeMoveGPRtoR(ECX, _Rs_);
-		//DevCon.Warning("SWR No Const");
-		if ( _Imm_ != 0 )
-			ADD32ItoR(ECX, _Imm_);
-		MOV32RtoR(EDX, ECX); //Move to EBX for shift
-		AND32ItoR(ECX,~0x3);  //Mask final bit of address
-		
-		vtlb_DynGenRead32(32, false); //Read in to EAX
 
-		AND32ItoR(EDX, 0x3); //Mask shift bits
-		SHL32ItoR(EDX, 3);   //Multiply by 8
-
-		if(_Rt_)
-		{
-			MOV32RtoR( ECX, EDX ); //Copy shift in to ECX
-			_eeMoveGPRtoR(EBX, _Rt_);	//Move Rt in to EDX
-			SHL32CLtoR( EBX ); // Rt << shift (ecx)
-		}
-		else XOR32RtoR( EBX, EBX );
-		MOV32ItoR( ECX, 24 );  //Move 24 in to ECX
-		SUB32RtoR( ECX, EDX ); //Take the shift from it (so if shift is 1, itll do 24 - 8 = 16)
-		MOV32ItoR( EDX, 0xffffff ); //Move the mask in to where the shift was
-		SHR32CLtoR( EDX ); // mask >> 24-shift
-
-		AND32RtoR( EAX, EDX ); //And the Mask with the original memory in EAX
-		
-		OR32RtoR( EBX, EAX ); //Or our result of the _Rt_ shift to it	
-		MOV32RtoR( EDX, EBX );
-		_eeMoveGPRtoR(ECX, _Rs_);
-
-		if ( _Imm_ != 0 )
-			ADD32ItoR(ECX, _Imm_);
-
-		AND32ItoR(ECX,~0x3);
-
-		//EDX holds data to be written back
-		vtlb_DynGenWrite(32); //Write back to memory
-	}
+	xMOV(ecx, edi);
+	vtlb_DynGenWrite(32);
 #else
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -605,216 +453,38 @@ void recSWR( void )
 ////////////////////////////////////////////////////
 void recLDL( void )
 {
-	
-	if(!_Rt_) return;
-#ifdef REC_LOADS
-	iFlushCall(FLUSH_EXCEPTION);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 1);
-
-	if( GPR_IS_CONST1( _Rs_ ) )
-	{
-		u32 srcadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
-		u32 shift = srcadr & 0x7;
-
-		if(shift == 7)
-		{
-			//DevCon.Warning("LDL 7");
-			srcadr &= ~0x7;			
-			MOV32ItoR(EDX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-			
-			vtlb_DynGenRead64_Const( 64, srcadr );
-		}
-		else if(shift == 3)
-		{
-			//DevCon.Warning("LDL threeeee");
-			srcadr &= ~0x7;
-			vtlb_DynGenRead32_Const( 32, false, srcadr );
-			MOV32RtoM((uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] , EAX);
-			
-		}
-		else
-		{
-			//DevCon.Warning("LDL Const Interpreter Drop Back %x", shift);
-			recCall(LDL);
-		}
-	}
-	else
-	{
-		    
-			//DevCon.Warning("Interpreter %x", shift);
-			_deleteEEreg(_Rt_, 0);
-			_eeOnLoadWrite(_Rt_);
-			recCall(LDL);
-	}
-#else
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
 	recCall(LDL);
-#endif
 }
 
 ////////////////////////////////////////////////////
 void recLDR( void )
 {
-	if(!_Rt_) return;
-	
-#ifdef REC_LOADS
-	iFlushCall(FLUSH_EXCEPTION);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 1);
-	if( GPR_IS_CONST1( _Rs_ ) )
-	{
-		u32 srcadr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
-		u32 shift = srcadr & 0x7;
-
-		if(shift == 0)
-		{
-			//DevCon.Warning("LDR 0");
-
-			MOV32ItoR(EDX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-			
-			vtlb_DynGenRead64_Const( 64, srcadr );
-		}
-		else if(shift == 4)
-		{
-			//DevCon.Warning("LDR 4");		
-
-			vtlb_DynGenRead32_Const( 32, false, srcadr );
-			MOV32RtoM((uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] , EAX);
-		}
-		else
-		{
-			//DevCon.Warning("LDR Const Interpreter Drop Back %x", shift);
-			recCall(LDR);
-		}
-	}
-	else
-	{
-			//DevCon.Warning("Interpreter %x", shift);
-			_deleteEEreg(_Rt_, 0);
-			_eeOnLoadWrite(_Rt_);
-			recCall(LDR);
-	}
-#else
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
-	_eeOnLoadWrite(_Rt_);
 	_deleteEEreg(_Rt_, 1);
 	recCall(LDR);
-#endif
 }
 
 ////////////////////////////////////////////////////
 
-static const u64 SDL_MASK[8] =
-{	0xffffffffffffff00LL, 0xffffffffffff0000LL, 0xffffffffff000000LL, 0xffffffff00000000LL,
-	0xffffff0000000000LL, 0xffff000000000000LL, 0xff00000000000000LL, 0x0000000000000000LL
-};
-static const u64 SDR_MASK[8] =
-{	0x0000000000000000LL, 0x00000000000000ffLL, 0x000000000000ffffLL, 0x0000000000ffffffLL,
-	0x00000000ffffffffLL, 0x000000ffffffffffLL, 0x0000ffffffffffffLL, 0x00ffffffffffffffLL
-};
-
 void recSDL( void )
 {
-
-#ifdef REC_STORES
-	iFlushCall(FLUSH_EXCEPTION);
-	_eeOnLoadWrite(_Rt_);
-	_deleteEEreg(_Rt_, 1);
-
-	if( GPR_IS_CONST1( _Rs_ ) )
-	{
-		
-		if( GPR_IS_CONST1( _Rt_ ) )DevCon.Warning("Yay SDL!");
-		u32 addr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
-		u32 shift = addr & 7;
-		//DevCon.Warning("SDL %x", shift);
-		if(shift == 7)
-		{
-			//DevCon.Warning("T SDL 7");
-			if( GPR_IS_CONST1( _Rt_ ) ) MOV32ItoR(EDX, (uptr)&g_cpuConstRegs[_Rt_].UL[0]);
-			else MOV32ItoR(EDX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-			vtlb_DynGenWrite_Const( 64, addr & ~0x7 );
-		}
-		else if(shift == 3)
-		{
-			//DevCon.Warning("T SDL 3");
-			if( GPR_IS_CONST1( _Rt_ ) ) MOV32ItoR(EDX, (uptr)&g_cpuConstRegs[_Rt_].UL[1]);
-			else MOV32MtoR(EDX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 1 ] );
-			vtlb_DynGenWrite_Const( 32, addr & ~0x7 );
-		}
-		else
-		{
-			//DevCon.Warning("SDL Const Interpreter Drop Back %x", shift);
-			iFlushCall(FLUSH_INTERPRETER);
-			recCall(SDL);
-		}
-	}
-	else
-	{
-		iFlushCall(FLUSH_INTERPRETER);
-		recCall(SDL);
-		
-	}
-#else
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
 	recCall(SDL);
-#endif
 }
 
 ////////////////////////////////////////////////////
 void recSDR( void )
 {
-#ifdef REC_STORES
-	if( GPR_IS_CONST1( _Rs_ ) )
-	{
-		iFlushCall(FLUSH_EXCEPTION);
-		_eeOnLoadWrite(_Rt_);
-		_deleteEEreg(_Rt_, 1);
-
-		u32 addr = g_cpuConstRegs[_Rs_].UL[0] + _Imm_;
-		u32 shift = addr & 7;
-
-		if( GPR_IS_CONST1( _Rt_ ) )DevCon.Warning("Yay SDR!");
-		
-		if(shift == 0)
-		{
-			//DevCon.Warning("T SDR 0");
-			if( GPR_IS_CONST1( _Rt_ ) ) MOV32ItoR(EDX, (uptr)&g_cpuConstRegs[_Rt_].UL[0]);
-			else MOV32ItoR(EDX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-			vtlb_DynGenWrite_Const( 64, addr );
-		}
-		else if(shift == 4)
-		{
-			//DevCon.Warning("T SDR 4");
-			if( GPR_IS_CONST1( _Rt_ ) ) MOV32ItoR(EDX, (uptr)&g_cpuConstRegs[_Rt_].UL[0]);
-			else MOV32MtoR(EDX, (uptr)&cpuRegs.GPR.r[ _Rt_ ].UL[ 0 ] );
-			vtlb_DynGenWrite_Const( 32, addr );
-		}
-		else
-		{
-			//DevCon.Warning("SDR Const Interpreter Drop Back %x", shift);
-			iFlushCall(FLUSH_INTERPRETER);
-			recCall(SDR);
-		}
-	}
-	else
-	{
-		iFlushCall(FLUSH_INTERPRETER);
-		recCall(SDR);
-	}
-#else
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
 	_deleteEEreg(_Rt_, 1);
 	recCall(SDR);
-#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -844,7 +514,7 @@ void recLWC1( void )
 			ADD32ItoR( ECX, _Imm_ );
 		vtlb_DynGenRead32(32, false);
 	}
-		
+
 	MOV32RtoM( (int)&fpuRegs.fpr[ _Rt_ ].UL, EAX );
 #else
 	iFlushCall(FLUSH_EXCEPTION);
@@ -912,7 +582,6 @@ void recSWC1( void )
 
 void recLQC2( void )
 {
-	
 #ifdef NEWLQC
 	iFlushCall(FLUSH_EXCEPTION);
 	_deleteEEreg(_Rs_, 1);
@@ -934,7 +603,7 @@ void recLQC2( void )
 		MOV32MtoR( ECX, (int)&cpuRegs.GPR.r[ _Rs_ ].UL[ 0 ] );
 
 		if ( _Imm_ != 0 )
-			ADD32ItoR( ECX, _Imm_);	
+			ADD32ItoR( ECX, _Imm_);
 
 		vtlb_DynGenRead64(128);
 	}
@@ -993,7 +662,6 @@ void recSQC2( void )
 	MOV32ItoR(EDX, (int)&VU0.VF[_Ft_].UD[0] );
 	vtlb_DynGenWrite(128);
 #endif
-	
 }
 
 #endif
