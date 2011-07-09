@@ -834,20 +834,23 @@ __fi void cdvdReadInterrupt()
 		pxAssume( cdvd.RErr == 0 );
 	}
 
-	if (cdvdReadSector() == -1)
+	if (cdvd.nSectors > 0)
 	{
-		// This means that the BCR/DMA hasn't finished yet, and rather than fire off the
-		// sector-finished notice too early (which might overwrite game data) we delay a
-		// bit and try to read the sector again later.
-		// An arbitrary delay of some number of cycles probably makes more sense here,
-		// but for now it's based on the cdvd.ReadTime value. -- air
+		if (cdvdReadSector() == -1)
+		{
+			// This means that the BCR/DMA hasn't finished yet, and rather than fire off the
+			// sector-finished notice too early (which might overwrite game data) we delay a
+			// bit and try to read the sector again later.
+			// An arbitrary delay of some number of cycles probably makes more sense here,
+			// but for now it's based on the cdvd.ReadTime value. -- air
 
-		pxAssume((int)cdvd.ReadTime > 0 );
-		CDVDREAD_INT(cdvd.ReadTime/4);
-		return;
+			pxAssume((int)cdvd.ReadTime > 0 );
+			CDVDREAD_INT(cdvd.ReadTime/4);
+			return;
+		}
+
+		cdvd.Sector++;
 	}
-
-	cdvd.Sector++;
 
 	if (--cdvd.nSectors <= 0)
 	{
