@@ -172,16 +172,18 @@ if(wxWidgets_FOUND)
         # Force the use of 32 bit library configuration on
         # 64 bits machine with 32 bits library in /usr/lib32
         if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-            if (EXISTS "/usr/lib32")
-                # Debian/ubuntu. 64b in /usr/lib and 32b in /usr/lib32
+            ## There is no guarantee that wx-config is a link to a 32 bits library. So you need to force the destinity
+            # Library can go into 3 path major paths (+ multiarch but you will see that later when implementation is done)
+            # 1/ /usr/lib32 (32 bits only)
+            # 2/ /usr/lib64 (64 bits only)
+            # 3/ /usr/lib   (32 or 64 bits depends on distributions)
+            if (EXISTS "/usr/lib32/wx")
                 STRING(REGEX REPLACE "/usr/lib/wx" "/usr/lib32/wx" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
-                # I'm sure someone did it! 64b in /usr/lib64 and 32b in /usr/lib32
                 STRING(REGEX REPLACE "/usr/lib64/wx" "/usr/lib32/wx" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
-            endif (EXISTS "/usr/lib32")
-            if (EXISTS "/usr/lib")
-                # Fedora/Open suse. 64b in /usr/lib64 and 32b in /usr/lib
+            endif (EXISTS "/usr/lib32/wx")
+            if (EXISTS "/usr/lib/wx")
                 STRING(REGEX REPLACE "/usr/lib64/wx" "/usr/lib/wx" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
-            endif (EXISTS "/usr/lib")
+            endif (EXISTS "/usr/lib/wx")
         endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
     endif(Linux)
 
