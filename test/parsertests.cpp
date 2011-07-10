@@ -822,13 +822,13 @@ namespace Test
 			parser.GetNextDocument(doc);
 			
 			for(unsigned i=0;i<doc.size();i++)
-				if(doc[i].to<double>() != std::numeric_limits<double>::infinity())
+				if(doc[i].to<double>() != (i < 6 ? +1 : -1) * std::numeric_limits<double>::infinity())
 					return false;
 			for(unsigned i=0;i<doc.size();i++)
-				if(doc[i].to<long double>() != std::numeric_limits<long double>::infinity())
+				if(doc[i].to<long double>() != (i < 6 ? +1 : -1) * std::numeric_limits<long double>::infinity())
 					return false;
 			for(unsigned i=0;i<doc.size();i++)
-				if(doc[i].to<float>() != std::numeric_limits<float>::infinity())
+				if(doc[i].to<float>() != (i < 6 ? +1 : -1) * std::numeric_limits<float>::infinity())
 					return false;
 			return true;
 		}

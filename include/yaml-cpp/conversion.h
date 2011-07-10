@@ -23,9 +23,11 @@ namespace YAML
 	YAML_CPP_API bool Convert(const std::string& input, _Null& output);
 	
 	inline bool IsInfinity(const std::string& input) {
-		return input == ".inf" || input == ".Inf" || input == ".INF" ||
-			input == "+.inf" || input == "+.Inf" || input == "+.INF" ||
-			input == "-.inf" || input == "-.Inf" || input == "-.INF";
+		return input == ".inf" || input == ".Inf" || input == ".INF" || input == "+.inf" || input == "+.Inf" || input == "+.INF";
+	}
+	
+	inline bool IsNegativeInfinity(const std::string& input) {
+		return input == "-.inf" || input == "-.Inf" || input == "-.INF";
 	}
 	
 	inline bool IsNaN(const std::string& input) {
@@ -41,9 +43,14 @@ namespace YAML
 		if(!!stream)
 			return true;
 		
-		if(std::numeric_limits<T>::has_infinity && IsInfinity(input)) {
-			output = std::numeric_limits<T>::infinity();
-			return true;
+		if(std::numeric_limits<T>::has_infinity) {
+			if(IsInfinity(input)) {
+				output = std::numeric_limits<T>::infinity();
+				return true;
+			} else if(IsNegativeInfinity(input)) {
+				output = -std::numeric_limits<T>::infinity();
+				return true;
+			}
 		}
 		
 		if(std::numeric_limits<T>::has_quiet_NaN && IsNaN(input)) {
