@@ -576,7 +576,6 @@ void _deleteVFtoXMMreg(int reg, int vu, int flush)
 					_freeXMMreg(i);
 					break;
 				case 1:
-				case 2:
 					if( xmmregs[i].mode & MODE_WRITE )
 					{
 						pxAssert( reg != 0 );
@@ -621,8 +620,10 @@ void _deleteVFtoXMMreg(int reg, int vu, int flush)
 						xmmregs[i].mode &= ~MODE_WRITE;
 						xmmregs[i].mode |= MODE_READ;
 					}
+					break;
 
-					if (flush == 2) xmmregs[i].inuse = 0;
+				case 2:
+					xmmregs[i].inuse = 0;
 					break;
 			}
 

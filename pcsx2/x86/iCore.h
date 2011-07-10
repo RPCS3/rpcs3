@@ -356,12 +356,13 @@ extern u16 x86FpuState;
 #define FLUSH_FREE_ALLX86	0x080	// free all x86 regs
 #define FLUSH_FREE_VU0		0x100	// free all vu0 related regs
 #define FLUSH_PC			0x200	// program counter
-#define FLUSH_CAUSE			0x400	// cause register, only the branch delay bit
+#define FLUSH_CAUSE			0x000	// disabled for now: cause register, only the branch delay bit
 #define FLUSH_CODE			0x800	// opcode for interpreter
 
 #define FLUSH_EVERYTHING	0x1ff
-#define FLUSH_EXCEPTION		0x1ff   // not supported yet, so disabled for a small speedup (set back to 0x7ff when needed)
+//#define FLUSH_EXCEPTION		0x1ff   // will probably do this totally differently actually
 #define FLUSH_INTERPRETER	0xfff
+#define FLUSH_FULLVTLB FLUSH_NOCONST
 
 // no freeing, used when callee won't destroy mmx/xmm regs
 #define FLUSH_NODESTROY (FLUSH_CACHED_REGS|FLUSH_FLUSH_XMM|FLUSH_FLUSH_MMX|FLUSH_FLUSH_ALLX86)

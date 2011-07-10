@@ -394,6 +394,7 @@ void vtlb_DynGenRead64_Const( u32 bits, u32 addr_const )
 			case 128:	szidx=4;	break;
 		}
 
+		iFlushCall(FLUSH_FULLVTLB);
 		xMOV( ecx, paddr );
 		xCALL( vtlbdata.RWFT[szidx][0][handler] );
 	}
@@ -455,6 +456,7 @@ void vtlb_DynGenRead32_Const( u32 bits, bool sign, u32 addr_const )
 		}
 		else
 		{
+			iFlushCall(FLUSH_FULLVTLB);
 			xMOV( ecx, paddr );
 			xCALL( vtlbdata.RWFT[szidx][0][handler] );
 
@@ -543,6 +545,7 @@ void vtlb_DynGenWrite_Const( u32 bits, u32 addr_const )
 			case 128:   szidx=4; break;
 		}
 
+		iFlushCall(FLUSH_FULLVTLB);
 		xMOV( ecx, paddr );
 		xCALL( vtlbdata.RWFT[szidx][1][handler] );
 	}
