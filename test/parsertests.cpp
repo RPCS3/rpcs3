@@ -803,6 +803,67 @@ namespace Test
 			
 			return ExpectedTagValue(node, "!");
 		}
+		
+		bool Infinity()
+		{
+			std::string input =
+			"- .inf\n"
+			"- .Inf\n"
+			"- .INF\n"
+			"- +.inf\n"
+			"- +.Inf\n"
+			"- +.INF\n"
+			"- -.inf\n"
+			"- -.Inf\n"
+			"- -.INF\n";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			for(unsigned i=0;i<doc.size();i++)
+				if(doc[i].to<double>() != std::numeric_limits<double>::infinity())
+					return false;
+			for(unsigned i=0;i<doc.size();i++)
+				if(doc[i].to<long double>() != std::numeric_limits<long double>::infinity())
+					return false;
+			for(unsigned i=0;i<doc.size();i++)
+				if(doc[i].to<float>() != std::numeric_limits<float>::infinity())
+					return false;
+			return true;
+		}
+
+		bool NaN()
+		{
+			std::string input =
+			"- .nan\n"
+			"- .NaN\n"
+			"- .NAN\n";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			for(unsigned i=0;i<doc.size();i++) {
+				double d;
+				doc[i] >> d;
+				if(d == d)
+					return false;
+			}
+			for(unsigned i=0;i<doc.size();i++) {
+				long double d;
+				doc[i] >> d;
+				if(d == d)
+					return false;
+			}
+			for(unsigned i=0;i<doc.size();i++) {
+				float d;
+				doc[i] >> d;
+				if(d == d)
+					return false;
+			}
+			return true;
+		}
 	}
 	
 	namespace {
@@ -1079,6 +1140,8 @@ namespace Test
 		RunParserTest(&Parser::DefaultPlainScalarTag, "default plain scalar tag", passed, total);
 		RunParserTest(&Parser::DefaultSequenceTag, "default sequence tag", passed, total);
 		RunParserTest(&Parser::ExplicitNonSpecificSequenceTag, "explicit, non-specific sequence tag", passed, total);
+		RunParserTest(&Parser::Infinity, "infinity", passed, total);
+		RunParserTest(&Parser::NaN, "NaN", passed, total);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed, total);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed, total);

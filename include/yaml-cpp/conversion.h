@@ -8,6 +8,7 @@
 
 #include "yaml-cpp/null.h"
 #include "yaml-cpp/traits.h"
+#include <limits>
 #include <string>
 #include <sstream>
 
@@ -21,12 +22,36 @@ namespace YAML
 	YAML_CPP_API bool Convert(const std::string& input, bool& output);
 	YAML_CPP_API bool Convert(const std::string& input, _Null& output);
 	
+	inline bool IsInfinity(const std::string& input) {
+		return input == ".inf" || input == ".Inf" || input == ".INF" ||
+			input == "+.inf" || input == "+.Inf" || input == "+.INF" ||
+			input == "-.inf" || input == "-.Inf" || input == "-.INF";
+	}
+	
+	inline bool IsNaN(const std::string& input) {
+		return input == ".nan" || input == ".NaN" || input == ".NAN";
+	}
+
+
 	template <typename T> 
 	inline bool Convert(const std::string& input, T& output, typename enable_if<is_numeric<T> >::type * = 0) {
 		std::stringstream stream(input);
 		stream.unsetf(std::ios::dec);
 		stream >> output;
-		return !!stream;
+		if(!!stream)
+			return true;
+		
+		if(std::numeric_limits<T>::has_infinity && IsInfinity(input)) {
+			output = std::numeric_limits<T>::infinity();
+			return true;
+		}
+		
+		if(std::numeric_limits<T>::has_quiet_NaN && IsNaN(input)) {
+			output = std::numeric_limits<T>::quiet_NaN();
+			return true;
+		}
+		
+		return false;
 	}
 }
 
