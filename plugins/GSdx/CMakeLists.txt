@@ -176,10 +176,6 @@ add_library(${Output} SHARED
     ${GSdxHeaders}
     )
 
-# set output directory
-set_target_properties(${Output} PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
-
 # link target with X11
 target_link_libraries(${Output} ${X11_LIBRARIES})
 
@@ -190,3 +186,9 @@ target_link_libraries(${Output} ${SDL_LIBRARY})
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
     target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
 endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+
+if(PACKAGE_MODE)
+    install(TARGETS ${Output} DESTINATION lib/games/pcsx2)
+else(PACKAGE_MODE)
+    install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+endif(PACKAGE_MODE)

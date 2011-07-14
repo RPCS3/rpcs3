@@ -12,7 +12,7 @@
 # control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
 # control C++ flags           : -DUSER_CMAKE_CXX_FLAGS="cxxflags"
 # control link flags          : -DUSER_CMAKE_LD_FLAGS="ldflags"
-# Special mode to ease package: -DPACKAGE_MODE=TRUE
+# Special mode to ease package: -DPACKAGE_MODE=TRUE(follow FHS)|FALSE(local bin/)
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -151,11 +151,3 @@ if (FORCE_INTERNAL_SDL)
     message(STATUS "Internal SDL is a development snapshot of libsdl 1.3
     Crashes can be expected and no support will be provided")
 endif (FORCE_INTERNAL_SDL)
-
-#-------------------------------------------------------------------------------
-# Select library system vs 3rdparty
-#-------------------------------------------------------------------------------
-if(NOT DEFINED L10N_PORTABLE)
-    set(L10N_PORTABLE TRUE)
-    message(STATUS "Install localization file in bin/Langs by default")
-endif(NOT DEFINED L10N_PORTABLE)

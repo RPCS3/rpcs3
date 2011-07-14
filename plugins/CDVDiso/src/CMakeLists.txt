@@ -73,10 +73,6 @@ add_library(${Output} SHARED
 			${CDVDisoLinuxSources}
 			${CDVDisoLinuxHeaders})
 
-# set output directory
-set_target_properties(${Output} PROPERTIES
-					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
-
 # Link with bz2
 target_link_libraries(${Output} ${BZIP2_LIBRARIES})
 
@@ -84,3 +80,9 @@ target_link_libraries(${Output} ${BZIP2_LIBRARIES})
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
     target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
 endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+
+if(PACKAGE_MODE)
+    install(TARGETS ${Output} DESTINATION lib/games/pcsx2)
+else(PACKAGE_MODE)
+    install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+endif(PACKAGE_MODE)

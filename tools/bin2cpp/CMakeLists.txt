@@ -32,6 +32,5 @@ set(bin2cppHeaders
 add_executable(${bin2cppName} ${bin2cppSources} ${bin2cppHeaders})
 
 # set output directory
-set_target_properties(${bin2cppName} PROPERTIES
-					  RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/tools/bin)
+# set_target_properties(${bin2cppName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/tools/bin)
 
