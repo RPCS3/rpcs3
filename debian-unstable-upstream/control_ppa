@@ -2,22 +2,24 @@ Source: pcsx2.snapshot
 Section: games
 Priority: optional
 Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
+# WARNING we need dpkg-dev 1.15.7 to support dpkg-buildflags but ubunutu 10.04 have only 1.15.5.6...
+# WARNING Natty need at least cmake 2.8.5
 Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.5.6), cmake (>=2.8),
     locales|locales-all,
     zlib1g-dev (>= 1:1.2.3.3),
-    libbz2-dev (>= 1.0.4),
+    libbz2-dev,
     libsdl1.2-dev,
     libjpeg-dev,
-    libwxbase2.8-dev (>= 2.8.10), libwxbase2.8-dev (<< 2.8.11), 
-    libwxgtk2.8-dev (>= 2.8.10), libwxgtk2.8-dev (<< 2.8.11),
+    libwxbase2.8-dev,
+    libwxgtk2.8-dev,
     libgtk2.0-dev (>= 2.16),
     libasound2-dev,
     portaudio19-dev,
 # 1.5 is in debian experimental, rename to libsoundtouch0 (yeah...). Keep 1.3 for the moment
     libsoundtouch0-dev | libsoundtouch1-dev (>= 1.3),
-    libsparsehash-dev (>= 1.6),
+    libsparsehash-dev,
     libx11-dev,
-    libglew1.5-dev (>= 1.5.1),
+    libglew1.5-dev,
     libgl1-mesa-dev,
     libglu1-mesa-dev,
     nvidia-cg-toolkit-pcsx2
@@ -27,7 +29,7 @@ Homepage: http://pcsx2.net/
 Package: pcsx2-unstable
 Architecture: i386
 Depends: ${shlibs:Depends}, ${misc:Depends},
-    pcsx2-data-unstable (>= ${binary:Version}),
+    pcsx2-data-unstable (>= ${source:Version}),
     pcsx2-plugins-unstable (>= ${binary:Version})
 Conflicts: pcsx2
 Description: Playstation 2 emulator
@@ -42,7 +44,7 @@ Description: Playstation 2 emulator
 Package: pcsx2-data-unstable
 Architecture: all 
 Depends: ${misc:Depends}
-Recommends: pcsx2-unstable (>= ${binary:Version}), pcsx2-plugins-unstable (>= ${binary:Version})
+Recommends: pcsx2-unstable (>= ${source:Version}), pcsx2-plugins-unstable (>= ${source:Version})
 Conflicts: pcsx2-data
 Description: data for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
@@ -59,7 +61,7 @@ Architecture: i386
 Depends: ${shlibs:Depends}, ${misc:Depends},
     nvidia-cg-toolkit-pcsx2 | nvidia-cg-toolkit (>= 2.1)
 Recommends: pcsx2-unstable (>= ${binary:Version}),
-    pcsx2-data-unstable (>= ${binary:Version})
+    pcsx2-data-unstable (>= ${source:Version})
 Conflicts: pcsx2-plugins
 Description: Various plugins for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
@@ -106,7 +108,8 @@ Priority: optional
 # Warning amd64 need additional ia32libs
 Architecture: all
 Depends: ${misc:Depends}
-Conflicts: pcsx2-plugins-dbg
+Recommends: pcsx2-unstable (>= ${source:Version})
+Conflicts: pcsx2-l10n
 Description: Languages package for PCSX2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
  .

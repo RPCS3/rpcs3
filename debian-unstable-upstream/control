@@ -3,23 +3,24 @@ Section: contrib/games
 Priority: optional
 Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
 # WARNING we need dpkg-dev 1.15.7 to support dpkg-buildflags but ubunutu 10.04 have only 1.15.5.6...
+# WARNING Natty need at least cmake 2.8.5
 Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.5.6), cmake (>=2.8),
     gcc-multilib [amd64], g++-multilib [amd64],
     locales|locales-all,
     zlib1g-dev (>= 1:1.2.3.3) | lib32z1-dev (>= 1.2.3.3) [amd64],
-    libbz2-dev (>= 1.0.4),
+    libbz2-dev,
     libsdl1.2-dev,
     libjpeg-dev,
-    libwxbase2.8-dev, 
+    libwxbase2.8-dev,
     libwxgtk2.8-dev,
     libgtk2.0-dev (>= 2.16),
     libasound2-dev | lib32asound2-dev [amd64],
     portaudio19-dev,
 # 1.5 is in debian experimental, rename to libsoundtouch0 (yeah...). Keep 1.3 for the moment
     libsoundtouch0-dev | lib32soundtouch0-dev [amd64] | libsoundtouch1-dev (>= 1.3),
-    libsparsehash-dev (>= 1.6),
+    libsparsehash-dev,
     libx11-dev,
-    libglew1.5-dev (>= 1.5.1),
+    libglew1.5-dev,
     libgl1-mesa-dev,
     libglu1-mesa-dev,
     ia32-libs-dev [amd64],
@@ -121,7 +122,7 @@ Architecture: all
 Depends: ${misc:Depends}
 Recommends: pcsx2-unstable (>= ${source:Version})
 Conflicts: pcsx2-l10n
-Description: Languages package for PCSX2
+Description: Languages package for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
  .
  WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support

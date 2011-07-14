@@ -10,65 +10,24 @@ else
 	CMAKE_BUILD_TYPE=Release
 endif
 
-ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
-	NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
-	MAKEFLAGS += -j$(NUMJOBS)
-endif
-
 USER_CFLAGS=$(shell dpkg-buildflags --get CFLAGS)
 USER_CXXFLAGS=$(shell dpkg-buildflags --get CXXFLAGS)
 
-build: build-stamp
-build-stamp:
-	dh_testdir
-
-	# backup orig makefile
-	for makefile in `find ./ -name "Makefile"` ; do [ -f $${makefile}.orig ] || mv $${makefile} $${makefile}.orig ; done
-
-	# Cmake based makefile
-	cmake CMakeLists.txt \
+override_dh_auto_configure:
+	dh_auto_configure -- \
 		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		-DCMAKE_BUILD_STRIP=FALSE \
 		-DFORCE_INTERNAL_SOUNDTOUCH=FALSE \
-		-DL10N_PORTABLE=FALSE \
-		-DUSER_CMAKE_C_FLAGS:STRING="$(USER_CFLAGS)" \
-		-DUSER_CMAKE_CXX_FLAGS:STRING="$(USER_CXXFLAGS)" \
-		-DCMAKE_INSTALL_PREFIX="/usr" \
 		-DPACKAGE_MODE=TRUE
-	$(MAKE) $(MAKEFLAGS)
-
-	touch build-stamp
+		-DUSER_CMAKE_C_FLAGS:STRING="$(USER_CFLAGS)" \
+		-DUSER_CMAKE_CXX_FLAGS:STRING="$(USER_CXXFLAGS)"
 
 clean:
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp 
 
-	# Backup some orig makefile if it's not already done.
-	# I hope that some will be delete by upstream when the cmake port is over.
-	# Note: In case that we do not dl all the plugins, the test [ -f $${makefile} ] ensures it works
-	for makefile in plugins/CDVDlinuz/Src/Linux/Makefile \
-		plugins/CDVDiso/src/Linux/Makefile \
-		plugins/CDVDiso/src/Windows/Makefile \
-		plugins/USBnull/Windows/Makefile \
-		plugins/FWnull/Windows/Makefile \
-		plugins/PeopsSPU2/Makefile \
-		plugins/CDVDisoEFP/src/Linux/Makefile ; do \
-	[ -f $${makefile}.orig ] || ( [ -f $${makefile} ] && mv $${makefile} $${makefile}.orig ) || true ; done
-
-	# Add here the commands to clean up after the build process.
-	[ -f Makefile ] && $(MAKE) clean || true
-	# Remove cmake stuff
-	rm -fr $$(find . -type d -name CMakeFiles) 
-	rm -f $$(find . -type f -name CMakeCache.txt)  $$(find . -type f -name cmake_install.cmake)
-	rm -f $$(find . -type f -name Makefile)
-	# leftover of cmake
-	rm -f bin/plugins/ps2hw.dat
-	rm -f pcsx2/svnrev.h
-	# Restore orig makefile
-	for makefile_orig in `find ./ -name "Makefile.orig"` ; do [ -f $${makefile_orig} ] && mv $${makefile_orig} `echo $${makefile_orig} | sed -e 's/.orig//'` ; done
-	# do not know who create this file....
-	rm -f install_manifest.txt
+	dh_auto_clean
+	rm -fr obj-* # Remove cmake stuff in case auto_clean does not do its jobs properly
 
 	dh_clean
 
@@ -80,11 +39,7 @@ override_dh_strip:
 	dh_strip --package=pcsx2-unstable --dbg-package=pcsx2-unstable-dbg
 	dh_strip --package=pcsx2-plugins-unstable --dbg-package=pcsx2-plugins-unstable-dbg
 
-# Avoid to relaunch the compilation twice. (build and dh_auto_build target)
-override_dh_auto_build:
-	# Do nothing
-
 %:
-	dh $@
+	dh $@ --parallel
 
 .PHONY: build clean install

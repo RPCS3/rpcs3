@@ -1,0 +1,14 @@
+pcsx2/gui/Resources/ConfigIcon_Cpu.h
+pcsx2/gui/Resources/AppIcon32.h
+pcsx2/gui/Resources/AppIcon16.h
+pcsx2/gui/Resources/ConfigIcon_Paths.h
+pcsx2/gui/Resources/ConfigIcon_Video.h
+pcsx2/gui/Resources/BackgroundLogo.h
+pcsx2/gui/Resources/ConfigIcon_Plugins.h
+pcsx2/gui/Resources/AppIcon64.h
+pcsx2/gui/Resources/ConfigIcon_Appearance.h
+pcsx2/gui/Resources/ConfigIcon_Speedhacks.h
+pcsx2/gui/Resources/ConfigIcon_MemoryCard.h
+pcsx2/gui/Resources/Dualshock.h
+pcsx2/gui/Resources/ConfigIcon_Gamefixes.h
+pcsx2/gui/Resources/ButtonIcon_Camera.h

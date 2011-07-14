@@ -11,7 +11,7 @@ Index: pcsx2.snapshot-4292/pcsx2/gui/AppConfig.cpp
  	{
 -		return AppRoot() + Base::Plugins();
 +		// return AppRoot() + Base::Plugins();
-+		return wxDirName( L"/usr/lib/games/pcsx2" ) + Base::Plugins();
++		return wxDirName( L"/usr/lib/games/pcsx2" );
  	}
  
  	wxDirName GetThemes()

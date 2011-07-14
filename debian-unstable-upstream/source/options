@@ -1,2 +1,2 @@
 # Don't store changes on locales files
-extend-diff-ignore = "(^|/)(pcsx2_(Devel|Iconized|Main|Tertiary)\.po)$"
+extend-diff-ignore = "(^|/)(pcsx2_(Devel|Iconized|Main|Tertiary)\.po|Makefile)$"
