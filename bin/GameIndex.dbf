@@ -200,7 +200,7 @@ Compat = 5
 Serial = SCUS-97124
 Name   = Jak and Daxter - The Precursor Legacy
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SCUS-97125
 Name   = Frequency
@@ -2022,7 +2022,7 @@ Region = NTSC-U
 Serial = SLUS-20080
 Name   = GunGriffon Blaze
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20084
 Name   = Soldier of Fortune - Gold Edition
@@ -2047,7 +2047,7 @@ Compat = 5
 Serial = SLUS-20088
 Name   = Fur Fighters - Viggo's Revenge
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20089
 Name   = ESPN - Winter X Games - Snowboarding
@@ -2584,7 +2584,7 @@ Compat = 1
 Serial = SLUS-20220
 Name   = Dead to Rights
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20221
 Name   = Vampire Night
@@ -2609,7 +2609,7 @@ Compat = 4
 Serial = SLUS-20225
 Name   = Gadget Racers
 Region = NTSC-U
-Compat = 1
+Compat = 2
 ---------------------------------------------
 Serial = SLUS-20226
 Name   = Batman - Vengeance
@@ -3329,7 +3329,8 @@ Compat = 5
 Serial = SLUS-20389
 Name   = Endgame
 Region = NTSC-U
-Compat = 1
+Compat = 5
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20390
 Name   = Risk - Global Domination
@@ -4270,7 +4271,7 @@ Compat = 5
 Serial = SLUS-20607
 Name   = Disney's Extreme Skate Adventure
 Region = NTSC-U
-Compat = 1
+Compat = 2
 ---------------------------------------------
 Serial = SLUS-20608
 Name   = Mobile Light Force 2
@@ -4501,7 +4502,7 @@ Compat = 5
 Serial = SLUS-20658
 Name   = Freedom Fighters - The Battle for Liberty Island
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20659
 Name   = Piglet's Big Game
@@ -4834,7 +4835,8 @@ Compat = 5
 Serial = SLUS-20735
 Name   = Lethal Skies 2
 Region = NTSC-U
-Compat = 1
+Compat = 5
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20736
 Name   = Cabela's Dangerous Hunts
@@ -4882,6 +4884,7 @@ Compat = 5
 Serial = SLUS-20746
 Name   = Rogue Ops
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20748
 Name   = Super Trucks Racing
@@ -4899,7 +4902,7 @@ Region = NTSC-U
 Serial = SLUS-20751
 Name   = James Bond 007 - Everything or Nothing
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20752
 Name   = Madden NFL 2004
@@ -5218,7 +5221,7 @@ Compat = 5
 Serial = SLUS-20823
 Name   = Robotech - Invasion
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20824
 Name   = NASCAR Thunder 2004
@@ -5481,7 +5484,7 @@ Compat = 5
 Serial = SLUS-20882
 Name   = Hitman - Contracts
 Region = NTSC-U
-Compat = 1
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20883
 Name   = Tom Clancy's Rainbow Six 3
@@ -5714,7 +5717,7 @@ Compat = 5
 Serial = SLUS-20931
 Name   = Trigger Man
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20932
 Name   = Mercenaries - Playground of Destruction
@@ -5762,12 +5765,12 @@ Compat = 5
 Serial = SLUS-20941
 Name   = Incredible Hulk, The - Ultimate Destruction
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20942
 Name   = Robots
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20943
 Name   = Heroes of the Pacific
@@ -5889,6 +5892,7 @@ Serial = SLUS-20964
 Name   = Devil May Cry 3
 Region = NTSC-U
 Compat = 5
+eeRoundMode = 0
 ---------------------------------------------
 Serial = SLUS-20965
 Name   = Tony Hawk's Underground 2
@@ -6506,7 +6510,7 @@ Compat = 5
 Serial = SLUS-21098
 Name   = Frogger - Ancient Shadow
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21099
 Name   = Stolen
@@ -6725,7 +6729,7 @@ Compat = 2
 Serial = SLUS-21145
 Name   = Full Spectrum Warrior
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21146
 Name   = Far East of Eden
@@ -6779,7 +6783,7 @@ Compat = 5
 Serial = SLUS-21156
 Name   = Without Warning
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21157
 Name   = Flipnic - Ultimate Pinball
@@ -6941,7 +6945,7 @@ Compat = 5
 Serial = SLUS-21191
 Name   = Crash Tag Team Racing
 Region = NTSC-U
-Compat = 1
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-21192
 Name   = Cabela's Outdoor Adventures 2006
@@ -6987,7 +6991,7 @@ Compat = 4
 Serial = SLUS-21200
 Name   = Armored Core - Nine Breaker
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21201
 Name   = Tales of Legendia
@@ -7223,7 +7227,7 @@ Region = NTSC-U
 Serial = SLUS-21250
 Name   = Full Spectrum Warrior - Ten Hammers
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21251
 Name   = FlatOut 2
@@ -7520,7 +7524,7 @@ Compat = 5
 Serial = SLUS-21314
 Name   = Ruff Trigger - Vancore Conspiracy
 Region = NTSC-U
-Compat = 1
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-21315
 Name   = 50cent - Bulletproof
@@ -7553,7 +7557,7 @@ Compat = 2
 Serial = SLUS-21321
 Name   = Squadra Course Alfa Romeo
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21322
 Name   = Eragon
@@ -7563,7 +7567,7 @@ Compat = 4
 Serial = SLUS-21323
 Name   = Rampage - Total Destruction
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21324
 Name   = Major League Baseball 2K5 [World Series Edition]
@@ -7759,6 +7763,7 @@ Serial = SLUS-21361
 Name   = Devil May Cry 3 - Dante's Awakening [Special Edition]
 Region = NTSC-U
 Compat = 5
+eeRoundMode = 0
 ---------------------------------------------
 Serial = SLUS-21362
 Name   = Onimusha - Dawn of Dreams [Disc2]
@@ -8348,7 +8353,7 @@ Compat = 2
 Serial = SLUS-21484
 Name   = Flushed Away
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21485
 Name   = Backyard Basketball '07
@@ -8421,7 +8426,7 @@ OPHFLagHack = 1
 Serial = SLUS-21499
 Name   = Evolution GT
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21500
 Name   = Superbikes - Riding Challenge
@@ -8487,7 +8492,7 @@ Region = NTSC-U
 Serial = SLUS-21547
 Name   = NHRA - Countdown to the Championship 2007
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21548
 Name   = Mercury Meltdown - Remix
@@ -8654,7 +8659,7 @@ Region = NTSC-U
 Serial = SLUS-21583
 Name   = Crash of the Titans
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21584
 Name   = Romance of the Three Kingdoms XI
@@ -9138,7 +9143,7 @@ Region = NTSC-U
 Serial = SLUS-21688
 Name   = MotoGP '07
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21689
 Name   = Petz - Horsez 2
@@ -9164,7 +9169,7 @@ Compat = 4
 Serial = SLUS-21693
 Name   = 7 Wonders of the Ancient World
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21694
 Name   = Final Fantasy XI - Wings of the Goddess
@@ -9306,7 +9311,7 @@ Region = NTSC-U
 Serial = SLUS-21728
 Name   = Crash - Mind Over Mutant
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21729
 Name   = Major League Baseball 2K8
@@ -9440,7 +9445,7 @@ Compat = 3
 Serial = SLUS-21759
 Name   = LEGO Indiana Jones - The Original Adventures
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21760
 Name   = Jeep Thrills
@@ -9657,7 +9662,7 @@ Compat = 5
 Serial = SLUS-21811
 Name   = MotoGP 08
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21812
 Name   = Speed Racer
@@ -9686,7 +9691,7 @@ Compat = 5
 Serial = SLUS-21817
 Name   = SBK Superbike World Chamipionship
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21818
 Name   = Spongebob Squarepants Featuring Nicktoons - Globs Of Doom
@@ -9755,7 +9760,7 @@ Compat = 5
 Serial = SLUS-21838
 Name   = Monster Lab
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21839
 Name   = Ski and Shoot
@@ -12033,7 +12038,7 @@ Region = NTSC-J
 Serial = SCPS-11006
 Name   = Sky Gunner
 Region = NTSC-J
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SCPS-11007
 Name   = Tsuganai
@@ -13683,6 +13688,7 @@ Compat = 5
 Serial = SLKA-25265
 Name   = Devil May Cry 3
 Region = NTSC-K
+eeRoundMode = 0
 ---------------------------------------------
 Serial = SLKA-25266
 Name   = Sangokushi IX [PlayStation 2 - Big Hit Series]
@@ -13992,6 +13998,7 @@ Region = NTSC-J
 Serial = SLPM-60251
 Name   = Devil May Cry 3 [Trial Version]
 Region = NTSC-J
+eeRoundMode = 0
 ---------------------------------------------
 Serial = SLPM-60262
 Name   = 10th Anniversary Memorial Save Data [Disc 2]
@@ -17753,7 +17760,7 @@ Region = NTSC-J
 Serial = SLPM-65405
 Name   = Hyper Dimension Fortress Macross
 Region = NTSC-J
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-65406
 Name   = Castlevania - Lament of Innocence [Limited Edition]
@@ -19475,6 +19482,7 @@ Serial = SLPM-65880
 Name   = Devil May Cry 3
 Region = NTSC-J
 Compat = 5
+eeRoundMode = 0
 ---------------------------------------------
 Serial = SLPM-65881
 Name   = SmackDown vs. Raw - Exciting Professional Wrestling 6
@@ -20473,6 +20481,7 @@ Serial = SLPM-66160
 Name   = Devil May Cry 3 [Special Edition]
 Region = NTSC-J
 Compat = 5
+eeRoundMode = 0
 ---------------------------------------------
 Serial = SLPM-66163
 Name   = Fuuraiki 2
@@ -23736,6 +23745,7 @@ Region = NTSC-J
 Serial = SLPM-74242
 Name   = Devil May Cry 3 [Special Edition] [PlayStation 2 the Best]
 Region = NTSC-J
+eeRoundMode = 0
 ---------------------------------------------
 Serial = SLPM-74243
 Name   = True Crime - New York City [PlayStation 2 the Best]
@@ -25486,7 +25496,7 @@ Region = NTSC-J
 Serial = SLPS-25107
 Name   = Kengo 2
 Region = NTSC-J
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLPS-25108
 Name   = Runabout 3 - Neo Age
@@ -29547,6 +29557,7 @@ Compat = 1
 Serial = SCES-52405
 Name   = DJ - Decks & FX - House Edition
 Region = PAL-M9
+Compat = 5
 ---------------------------------------------
 Serial = SCES-52410
 Name   = Athens 2004 - Olympic Summer Games
@@ -30764,6 +30775,7 @@ Region = PAL-Unk
 Serial = SLES-50106
 Name   = Fur Fighters - Viggo's Revenge
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50107
 Name   = Legends of Wrestling
@@ -31023,7 +31035,7 @@ Region = PAL-Unk
 Serial = SLES-50214
 Name   = 18 Wheeler
 Region = PAL-Unk
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50215
 Name   = Crazy Taxi
@@ -36928,6 +36940,7 @@ Serial = SLES-53038
 Name   = Devil May Cry 3 - Dante's Awakening
 Region = PAL-E
 Compat = 5
+eeRoundMode = 0
 ---------------------------------------------
 Serial = SLES-53039
 Name   = Champions - Return to Arms
@@ -39255,6 +39268,7 @@ Compat = 5
 Serial = SLES-54186
 Name   = Devil May Cry 3 - Dante's Awakening [Special Edition]
 Region = PAL-E
+eeRoundMode = 0
 ---------------------------------------------
 Serial = SLES-54187
 Name   = Real World Golf 2007
