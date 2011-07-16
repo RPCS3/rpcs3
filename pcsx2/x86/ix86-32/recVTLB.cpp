@@ -247,22 +247,23 @@ static __pagealigned u8 m_IndirectDispatchers[__pagesize];
 // mode        - 0 for read, 1 for write!
 // operandsize - 0 thru 4 represents 8, 16, 32, 64, and 128 bits.
 //
-static u8* GetIndirectDispatcherPtr( int mode, int operandsize )
+static u8* GetIndirectDispatcherPtr( int mode, int operandsize, bool sign = false )
 {
 	// Each dispatcher is aligned to 64 bytes.  The actual dispatchers are only like
 	// 20-some bytes each, but 64 byte alignment on functions that are called
 	// more frequently than a hot sex hotline at 1:15am is probably a good thing.
 
-	// 5*64?  Because 5 operand types per each mode :D
+	// 7*64? 5 widths with two sign extension modes for 8 and 16 bit reads
 
-	return &m_IndirectDispatchers[(mode*(5*64)) + (operandsize*64)];
+	assert(mode || operandsize >= 2 ? !sign : true);
+	return &m_IndirectDispatchers[(mode*(7*64)) + (sign*5*64) + (operandsize*64)];
 }
 
 // ------------------------------------------------------------------------
 // Generates a JS instruction that targets the appropriate templated instance of
 // the vtlb Indirect Dispatcher.
 //
-static void DynGen_IndirectDispatch( int mode, int bits )
+static void DynGen_IndirectDispatch( int mode, int bits, bool sign = false )
 {
 	int szidx;
 	switch( bits )
@@ -274,7 +275,7 @@ static void DynGen_IndirectDispatch( int mode, int bits )
 		case 128:	szidx=4;	break;
 		jNO_DEFAULT;
 	}
-	xJS( GetIndirectDispatcherPtr( mode, szidx ) );
+	xJS( GetIndirectDispatcherPtr( mode, szidx, sign ) );
 }
 
 // One-time initialization procedure.  Multiple subsequent calls during the lifespan of the
@@ -296,16 +297,38 @@ void vtlb_dynarec_init()
 	{
 		for( int bits=0; bits<5; ++bits )
 		{
-			xSetPtr( GetIndirectDispatcherPtr( mode, bits ) );
+			for (int sign = 0; sign < (!mode && bits < 2 ? 2 : 1); sign++)
+			{
+				xSetPtr( GetIndirectDispatcherPtr( mode, bits, !!sign ) );
 
-			xMOVZX( eax, al );
-			xSUB( ecx, 0x80000000 );
-			xSUB( ecx, eax );
+				xMOVZX( eax, al );
+				xSUB( ecx, 0x80000000 );
+				xSUB( ecx, eax );
 
-			// jump to the indirect handler, which is a __fastcall C++ function.
-			// [ecx is address, edx is data]
-			xCALL( ptr32[(eax*4) + vtlbdata.RWFT[bits][mode]] );
-			xJMP( ebx );
+				// jump to the indirect handler, which is a __fastcall C++ function.
+				// [ecx is address, edx is data]
+				xCALL( ptr32[(eax*4) + vtlbdata.RWFT[bits][mode]] );
+
+				if (!mode)
+				{
+					if (bits == 0)
+					{
+						if (sign)
+							xMOVSX(eax, al);
+						else
+							xMOVZX(eax, al);
+					}
+					else if (bits == 1)
+					{
+						if (sign)
+							xMOVSX(eax, ax);
+						else
+							xMOVZX(eax, ax);
+					}
+				}
+
+				xJMP( ebx );
+			}
 		}
 	}
 
@@ -336,27 +359,10 @@ void vtlb_DynGenRead32(u32 bits, bool sign)
 
 	uptr* writeback = DynGen_PrepRegs();
 
-	DynGen_IndirectDispatch( 0, bits );
+	DynGen_IndirectDispatch( 0, bits, sign && bits < 32 );
 	DynGen_DirectRead( bits, sign );
 
 	*writeback = (uptr)xGetPtr();
-
-	// perform sign extension on the result:
-
-	if( bits == 8 )
-	{
-		if( sign )
-			xMOVSX( eax, al );
-		else
-			xMOVZX( eax, al );
-	}
-	else if( bits == 16 )
-	{
-		if( sign )
-			xMOVSX( eax, ax );
-		else
-			xMOVZX( eax, ax );
-	}
 }
 
 // ------------------------------------------------------------------------
