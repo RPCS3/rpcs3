@@ -71,6 +71,7 @@ extern int Interpolation;
 extern bool EffectsDisabled;
 extern float FinalVolume;
 extern bool postprocess_filter_enabled;
+extern bool postprocess_filter_dealias;
 
 extern int AutoDMAPlayRate[2];
 

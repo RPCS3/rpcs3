@@ -66,6 +66,7 @@ extern int numSpeakers;
 extern bool EffectsDisabled;
 extern float FinalVolume;
 extern bool postprocess_filter_enabled;
+extern bool postprocess_filter_dealias;
 
 extern u32 OutputModule;
 extern int SndOutLatencyMS;

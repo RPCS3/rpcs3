@@ -862,8 +862,11 @@ void Mix()
 		if(postprocess_filter_enabled)
 		#endif
 		{
-			// Dealias filter emphasizes the highs too much.
-			//Out = Apply_Dealias_Filter ( Out );
+			if(postprocess_filter_dealias)
+			{
+				// Dealias filter emphasizes the highs too much.
+				Out = Apply_Dealias_Filter ( Out );
+			}
 			Out = Apply_Frequency_Response_Filter ( Out );
 		}
 

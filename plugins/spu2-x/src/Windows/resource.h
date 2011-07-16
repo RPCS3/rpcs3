@@ -22,6 +22,7 @@
 #define IDC_DEBUG                       1009
 #define IDC_DEBUG_ENABLE                1010
 #define IDC_INTERPOLATE                 1011
+#define IDC_DEALIASFILTER               1012
 #define IDC_OUTPUT                      1013
 #define IDC_BUFFERS_SLIDER              1014
 #define IDC_SPEAKERS                    1015
@@ -60,12 +61,12 @@
 #define IDC_VOLUME_SLIDER               1068
 
 // Next default values for new objects
-//
+// 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        119
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1067
+#define _APS_NEXT_CONTROL_VALUE         1069
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
