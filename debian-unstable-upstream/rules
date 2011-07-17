@@ -10,8 +10,6 @@ else
 	CMAKE_BUILD_TYPE=Release
 endif
 
-USER_CFLAGS=$(shell dpkg-buildflags --get CFLAGS)
-USER_CXXFLAGS=$(shell dpkg-buildflags --get CXXFLAGS)
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
@@ -19,8 +17,6 @@ override_dh_auto_configure:
 		-DCMAKE_BUILD_STRIP=FALSE \
 		-DFORCE_INTERNAL_SOUNDTOUCH=FALSE \
 		-DPACKAGE_MODE=TRUE
-		-DUSER_CMAKE_C_FLAGS:STRING="$(USER_CFLAGS)" \
-		-DUSER_CMAKE_CXX_FLAGS:STRING="$(USER_CXXFLAGS)"
 
 clean:
 	dh_testdir
@@ -42,4 +38,4 @@ override_dh_strip:
 %:
 	dh $@ --parallel
 
-.PHONY: build clean install
+.PHONY: clean
