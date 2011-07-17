@@ -169,7 +169,15 @@ namespace PathDefs
 
 	wxDirName GetPlugins()
 	{
+		// Each linux distributions have his rules for path so we give them the possibility to
+		// change it with compilation flags. -- Gregory
+#ifndef PLUGIN_DIR_COMPILATION
 		return AppRoot() + Base::Plugins();
+#else
+#define xPLUGIN_DIR_str(s) PLUGIN_DIR_str(s)
+#define PLUGIN_DIR_str(s) #s
+		return wxDirName( xPLUGIN_DIR_str(PLUGIN_DIR_COMPILATION) );
+#endif
 	}
 
 	wxDirName GetThemes()

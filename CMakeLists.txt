@@ -87,3 +87,9 @@ endif(EXISTS "${PROJECT_SOURCE_DIR}/pcsx2" AND pcsx2_core)
 if(EXISTS "${PROJECT_SOURCE_DIR}/plugins")
     add_subdirectory(plugins)
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins")
+
+#-------------------------------------------------------------------------------
+# Install some files to ease package creation
+if(PACKAGE_MODE)
+    INSTALL(FILES "${PROJECT_SOURCE_DIR}/bin/GameIndex.dbf" DESTINATION ${GAMEINDEX_DIR})
+endif(PACKAGE_MODE)

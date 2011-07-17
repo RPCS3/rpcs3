@@ -168,7 +168,7 @@ if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 
 if(PACKAGE_MODE)
-    install(TARGETS ${Output} DESTINATION lib/games/pcsx2)
+    install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION share/games/pcsx2/shaders)
 else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)

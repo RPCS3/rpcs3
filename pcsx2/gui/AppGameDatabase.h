@@ -51,8 +51,17 @@ public:
 		Console.WriteLn( "(GameDB) Unloading..." );
 	}
 
+	// Each linux distributions have his rules for path so we give them the possibility to
+	// change it with compilation flags. -- Gregory
+#ifndef GAMEINDEX_DIR_COMPILATION
 	AppGameDatabase& LoadFromFile(const wxString& file = L"GameIndex.dbf", const wxString& key = L"Serial" );
 	void SaveToFile(const wxString& file = L"GameIndex.dbf");
+#else
+#define xGAMEINDEX_str(s) GAMEINDEX_DIR_str(s)
+#define GAMEINDEX_DIR_str(s) #s
+	AppGameDatabase& LoadFromFile(const wxString& file = Path::Combine( wxString(xGAMEINDEX_str(GAMEINDEX_DIR_COMPILATION), wxConvUTF8) , L"GameIndex.dbf" ), const wxString& key = L"Serial" );
+	void SaveToFile(const wxString& file = Path::Combine( wxString(xGAMEINDEX_str(GAMEINDEX_DIR_COMPILATION), wxConvUTF8) , L"GameIndex.dbf") );
+#endif
 };
 
 static wxString compatToStringWX(int compat) {

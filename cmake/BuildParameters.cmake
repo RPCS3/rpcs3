@@ -6,13 +6,14 @@
 # Use soundtouch  internal lib: -DFORCE_INTERNAL_SOUNDTOUCH=TRUE
 # Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
 # Use sdl1.3      internal lib: -DFORCE_INTERNAL_SDL=TRUE # Not supported yet
-### Miscellaneous
-# Select install dir of l10n  : -DL10N_PORTABLE=TRUE(bin/Langs)|FALSE(FHS, /usr...)
-### Add some flags to the build process
+### GCC optimization options
 # control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
 # control C++ flags           : -DUSER_CMAKE_CXX_FLAGS="cxxflags"
 # control link flags          : -DUSER_CMAKE_LD_FLAGS="ldflags"
-# Special mode to ease package: -DPACKAGE_MODE=TRUE(follow FHS)|FALSE(local bin/)
+### Packaging options
+# Installation path           : -DPACKAGE_MODE=TRUE(follow FHS)|FALSE(local bin/)
+# Plugin installation path    : -DPLUGIN_DIR="/usr/lib/pcsx2"
+# Game DB installation path   : -DGAMEINDEX_DIR="/var/games/pcsx2"
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -24,11 +25,8 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
 	set(CMAKE_BUILD_TYPE Devel)
 	message(STATUS "BuildType set to ${CMAKE_BUILD_TYPE} by default")
 endif(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
-#-------------------------------------------------------------------------------
 
-#-------------------------------------------------------------------------------
 # Set default strip option. Can be set with -DCMAKE_BUILD_STRIP=TRUE/FALSE
-#-------------------------------------------------------------------------------
 if(NOT DEFINED CMAKE_BUILD_STRIP)
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         set(CMAKE_BUILD_STRIP TRUE)
@@ -38,6 +36,35 @@ if(NOT DEFINED CMAKE_BUILD_STRIP)
         message(STATUS "Disable the stripping by default in ${CMAKE_BUILD_TYPE} build !!!")
     endif(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif(NOT DEFINED CMAKE_BUILD_STRIP)
+
+#-------------------------------------------------------------------------------
+# Select library system vs 3rdparty
+#-------------------------------------------------------------------------------
+if(FORCE_INTERNAL_ALL)
+    set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
+    set(FORCE_INTERNAL_ZLIB TRUE)
+    set(FORCE_INTERNAL_SDL TRUE)
+endif(FORCE_INTERNAL_ALL)
+
+if(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
+    set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
+    message(STATUS "Use internal version of Soundtouch by default.
+    Note: There have been issues in the past with sound quality depending on the version of Soundtouch
+    Use -DFORCE_INTERNAL_SOUNDTOUCH=FALSE at your own risk")
+    # set(FORCE_INTERNAL_SOUNDTOUCH FALSE)
+endif(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
+
+if(NOT DEFINED FORCE_INTERNAL_ZLIB)
+    set(FORCE_INTERNAL_ZLIB FALSE)
+endif(NOT DEFINED FORCE_INTERNAL_ZLIB)
+
+if(NOT DEFINED FORCE_INTERNAL_SDL)
+    set(FORCE_INTERNAL_SDL FALSE)
+endif(NOT DEFINED FORCE_INTERNAL_SDL)
+if (FORCE_INTERNAL_SDL)
+    message(STATUS "Internal SDL is a development snapshot of libsdl 1.3
+    Crashes can be expected and no support will be provided")
+endif (FORCE_INTERNAL_SDL)
 
 #-------------------------------------------------------------------------------
 # Control GCC flags
@@ -117,37 +144,21 @@ endif(DEFINED USER_CMAKE_CXX_FLAGS)
 string(STRIP "${CMAKE_CXX_FLAGS} -m32 -msse -msse2 -march=i686 -pthread" CMAKE_CXX_FLAGS)
 
 #-------------------------------------------------------------------------------
-# By default use the standard compilation mode
+# Default package option
 #-------------------------------------------------------------------------------
 if(NOT DEFINED PACKAGE_MODE)
     set(PACKAGE_MODE FALSE)
 endif(NOT DEFINED PACKAGE_MODE)
 
-#-------------------------------------------------------------------------------
-# Select library system vs 3rdparty
-#-------------------------------------------------------------------------------
-if(FORCE_INTERNAL_ALL)
-    set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
-    set(FORCE_INTERNAL_ZLIB TRUE)
-    set(FORCE_INTERNAL_SDL TRUE)
-endif(FORCE_INTERNAL_ALL)
+if(PACKAGE_MODE)
+    if(NOT DEFINED PLUGIN_DIR)
+        set(PLUGIN_DIR "${CMAKE_INSTALL_PREFIX}/lib/games/pcsx2")
+    endif(NOT DEFINED PLUGIN_DIR)
 
-if(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
-    set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
-    message(STATUS "Use internal version of Soundtouch by default.
-    Note: There have been issues in the past with sound quality depending on the version of Soundtouch
-    Use -DFORCE_INTERNAL_SOUNDTOUCH=FALSE at your own risk")
-    # set(FORCE_INTERNAL_SOUNDTOUCH FALSE)
-endif(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
+    if(NOT DEFINED GAMEINDEX_DIR)
+        set(GAMEINDEX_DIR "/var/games/pcsx2")
+    endif(NOT DEFINED GAMEINDEX_DIR)
 
-if(NOT DEFINED FORCE_INTERNAL_ZLIB)
-    set(FORCE_INTERNAL_ZLIB FALSE)
-endif(NOT DEFINED FORCE_INTERNAL_ZLIB)
-
-if(NOT DEFINED FORCE_INTERNAL_SDL)
-    set(FORCE_INTERNAL_SDL FALSE)
-endif(NOT DEFINED FORCE_INTERNAL_SDL)
-if (FORCE_INTERNAL_SDL)
-    message(STATUS "Internal SDL is a development snapshot of libsdl 1.3
-    Crashes can be expected and no support will be provided")
-endif (FORCE_INTERNAL_SDL)
+    # Compile all source codes with these 2 defines
+    add_definitions(-DPLUGIN_DIR_COMPILATION=${PLUGIN_DIR} -DGAMEINDEX_DIR_COMPILATION=${GAMEINDEX_DIR})
+endif(PACKAGE_MODE)

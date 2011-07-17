@@ -83,7 +83,7 @@ if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 
 if(PACKAGE_MODE)
-    install(TARGETS ${Output} DESTINATION lib/games/pcsx2)
+    install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
 else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
 endif(PACKAGE_MODE)
