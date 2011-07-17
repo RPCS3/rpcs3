@@ -43,7 +43,8 @@ int Interpolation = 4;
 
 bool EffectsDisabled = false;
 float FinalVolume;
-bool postprocess_filter_enabled = 1;
+bool postprocess_filter_enabled = true;
+bool postprocess_filter_dealias = false;
 bool _visual_debug_enabled = false; // windows only feature
 
 // OUTPUT
@@ -141,6 +142,7 @@ void DisplayDialog()
     GtkWidget *mixing_frame, *mixing_box;
     GtkWidget *int_label, *int_box;
     GtkWidget *effects_check;
+    GtkWidget *dealias_filter;
     GtkWidget *debug_check;
     GtkWidget *debug_button;
 
@@ -172,6 +174,7 @@ void DisplayDialog()
     gtk_combo_box_set_active(GTK_COMBO_BOX(int_box), Interpolation);
 
     effects_check = gtk_check_button_new_with_label("Disable Effects Processing");
+    dealias_filter = gtk_check_button_new_with_label("Use the de-alias filter(overemphasizes the highs)");
 
     debug_check = gtk_check_button_new_with_label("Enable Debug Options");
 	debug_button = gtk_button_new_with_label("Debug...");
@@ -219,6 +222,7 @@ void DisplayDialog()
 	gtk_container_add(GTK_CONTAINER(mixing_box), int_label);
 	gtk_container_add(GTK_CONTAINER(mixing_box), int_box);
 	gtk_container_add(GTK_CONTAINER(mixing_box), effects_check);
+	gtk_container_add(GTK_CONTAINER(mixing_box), dealias_filter);
 	gtk_container_add(GTK_CONTAINER(mixing_box), debug_check);
 	gtk_container_add(GTK_CONTAINER(mixing_box), debug_button);
 
@@ -236,6 +240,7 @@ void DisplayDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), output_frame);
 
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(effects_check), EffectsDisabled);
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dealias_filter), postprocess_filter_dealias);
 	//FinalVolume;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(debug_check), DebugEnabled);
 
@@ -250,6 +255,7 @@ void DisplayDialog()
     if (return_value == GTK_RESPONSE_ACCEPT)
     {
 		DebugEnabled = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(debug_check));
+		postprocess_filter_dealias = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(dealias_filter));
     	if (gtk_combo_box_get_active(GTK_COMBO_BOX(int_box)) != -1)
     		Interpolation = gtk_combo_box_get_active(GTK_COMBO_BOX(int_box));
 
