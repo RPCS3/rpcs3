@@ -207,7 +207,7 @@ static __fi void HandleEETransfer()
 {
 	if(sif1dma.chcr.STR == false)
 	{
-		DevCon.Warning("Replacement for irq prevention hack EE SIF1");
+		//DevCon.Warning("Replacement for irq prevention hack EE SIF1");
 		sif1.ee.end = false;
 		sif1.ee.busy = false;
 		return;
