@@ -842,6 +842,7 @@ public:
 				m_height = 512 * m_upscale_multiplier; // 448 is also common, but this is not always detected right.
 			}
 		}
+		else m_upscale_multiplier = 1;
 	}
 
 	virtual ~GSRendererHW()
