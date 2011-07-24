@@ -382,6 +382,7 @@ private:
 	static void PredictDataWrite( int samples );
 	static float GetStatusPct();
 	static void UpdateTempoChangeSoundTouch();
+	static void UpdateTempoChangeSoundTouch2();
 
 public:
 	static void UpdateTempoChangeAsyncMixing();
