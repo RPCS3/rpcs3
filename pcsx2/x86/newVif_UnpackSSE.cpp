@@ -110,7 +110,7 @@ void VifUnpackSSE_Base::xUPK_S_8() const {
 
 void VifUnpackSSE_Base::xUPK_V2_32() const {
 	xMOV64     (destReg, ptr32[srcIndirect]);
-	xMOVH.PS   (destReg, ptr32[srcIndirect]); //v1v0v1v0
+	xPSHUF.D   (destReg, destReg, 0x44); //v1v0v1v0
 }
 
 void VifUnpackSSE_Base::xUPK_V2_16() const {

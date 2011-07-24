@@ -535,7 +535,7 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 
 	// If this assertion fails, it mans SCurrent is being corrupted somewhere, or is not initialized
 	// properly.  Invalid values in SCurrent will cause errant IRQs and corrupted audio.
-	pxAssumeMsg( (vc.SCurrent <= 28) && (vc.SCurrent != 0), "Current sample should always range from 1->28" );
+	pxAssertMsg( (vc.SCurrent <= 28) && (vc.SCurrent != 0), "Current sample should always range from 1->28" );
 
 	// Most games don't use much volume slide effects.  So only call the UpdateVolume
 	// methods when needed by checking the flag outside the method here...

@@ -50,7 +50,7 @@ void iopMemoryReserve::Reset()
 {
 	_parent::Reset();
 
-	pxAssume( iopMem );
+	pxAssert( iopMem );
 
 	if (!psxMemWLUT)
 	{

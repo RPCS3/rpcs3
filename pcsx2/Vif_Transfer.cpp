@@ -83,12 +83,11 @@ _vifT void vifTransferLoop(u32* &data) {
 		if(!vifX.cmd) { // Get new VifCode
 			
 			vifXRegs.code = data[0];
-			vifX.cmd	   = data[0] >> 24;
-			iBit		   = data[0] >> 31;
+			vifX.cmd	  = data[0] >> 24;
+			iBit		  = data[0] >> 31;
 
 			//VIF_LOG("New VifCMD %x tagsize %x", vifX.cmd, vifX.tag.size);
-			if (IsDevBuild && SysTrace.EE.VIFcode.IsActive())
-			{
+			if (IsDevBuild && SysTrace.EE.VIFcode.IsActive()) {
 				// Pass 2 means "log it"
 				vifCmdHandler[idx][vifX.cmd & 0x7f](2, data);
 			}
@@ -106,7 +105,7 @@ _vifT void vifTransferLoop(u32* &data) {
 		if (analyzeIbit<idx>(data, iBit)) break;
 	}
 
-	if (pSize)	  vifX.vifstalled	 = true;
+	if (pSize) vifX.vifstalled = true;
 }
 
 _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
@@ -122,51 +121,37 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 	g_packetsizeonvu = size;
 	vifTransferLoop<idx>(data);
 
+	transferred += size - vifX.vifpacketsize;
+	g_vifCycles +=((transferred * BIAS) >> 2) ; /* guessing */
 
-	transferred   += size - vifX.vifpacketsize;
-
-	g_vifCycles   +=((transferred * BIAS) >> 2) ; /* guessing */
-
-	if(!idx && g_vu0Cycles > 0)
-	{
-		if(g_vifCycles < g_vu0Cycles) g_vu0Cycles -= g_vifCycles;
-		else if(g_vifCycles >= g_vu0Cycles)g_vu0Cycles = 0;
+	if(!idx && g_vu0Cycles > 0) {
+		if  (g_vifCycles <  g_vu0Cycles) g_vu0Cycles -= g_vifCycles;
+		elif(g_vifCycles >= g_vu0Cycles) g_vu0Cycles  = 0;
 	}
-	else if(idx && g_vu1Cycles > 0)
-	{
-		if(g_vifCycles < g_vu1Cycles) g_vu1Cycles -= g_vifCycles;
-		else if(g_vifCycles >= g_vu1Cycles)g_vu1Cycles = 0;
+	if (idx && g_vu1Cycles > 0) {
+		if  (g_vifCycles <  g_vu1Cycles) g_vu1Cycles -= g_vifCycles;
+		elif(g_vifCycles >= g_vu1Cycles) g_vu1Cycles  = 0;
 	}
 
 	vifX.irqoffset = transferred % 4; // cannot lose the offset
 
-	if (!TTE) // *WARNING* - Tags CAN have interrupts! so lets just ignore the dma modifying stuffs (GT4)
-	{
-		transferred   = transferred >> 2;
-
+	if (!TTE) {// *WARNING* - Tags CAN have interrupts! so lets just ignore the dma modifying stuffs (GT4)
+		transferred  = transferred >> 2;
 		vifXch.madr +=(transferred << 4);
 		vifXch.qwc  -= transferred;
-		if(vifXch.chcr.STR)hwDmacSrcTadrInc(vifXch);
-
-		if (!vifXch.qwc) 
-		{
+		if (vifXch.chcr.STR) hwDmacSrcTadrInc(vifXch);
+		if(!vifXch.qwc) {
 			vifX.inprogress &= ~0x1;
 			vifX.vifstalled = false;
 		}
 	}
-	else
-	{
-		
-		if(!vifX.irqoffset)
-		{
-			vifX.vifstalled = false;
-		}
+	else {
+		if (!vifX.irqoffset) vifX.vifstalled = false;
 	}
 
 	if (vifX.irq && vifX.cmd == 0) {
 		//DevCon.WriteLn("Vif IRQ!");
-		if(((vifXRegs.code >> 24) & 0x7f) != 0x7)
-		{
+		if(((vifXRegs.code >> 24) & 0x7f) != 0x7) {
 			vifXRegs.stat.VIS = true; // Note: commenting this out fixes WALL-E?
 			vifX.vifstalled = true;
 		}		

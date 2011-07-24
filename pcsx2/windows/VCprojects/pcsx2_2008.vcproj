@@ -889,6 +889,18 @@
 								RelativePath="..\..\Gif.h"
 								>
 							</File>
+							<File
+								RelativePath="..\..\Gif_Unit.cpp"
+								>
+							</File>
+							<File
+								RelativePath="..\..\Gif_Unit.h"
+								>
+							</File>
+							<File
+								RelativePath="..\..\ps2\GIFpath.cpp"
+								>
+							</File>
 						</Filter>
 					</Filter>
 					<Filter
@@ -1355,10 +1367,6 @@
 				<Filter
 					Name="GS"
 					>
-					<File
-						RelativePath="..\..\ps2\GIFpath.cpp"
-						>
-					</File>
 					<File
 						RelativePath="..\..\GS.cpp"
 						>

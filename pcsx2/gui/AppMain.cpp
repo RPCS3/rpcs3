@@ -690,7 +690,7 @@ void Pcsx2App::ClearPendingSave()
 	if( AppRpc_TryInvokeAsync(&Pcsx2App::ClearPendingSave) ) return;
 
 	--m_PendingSaves;
-	pxAssumeDev( m_PendingSaves >= 0, "Pending saves count mismatch (pending count is less than 0)" );
+	pxAssertDev( m_PendingSaves >= 0, "Pending saves count mismatch (pending count is less than 0)" );
 
 	if( (m_PendingSaves == 0) && m_ScheduledTermination )
 	{
@@ -708,17 +708,16 @@ MainEmuFrame& Pcsx2App::GetMainFrame() const
 {
 	MainEmuFrame* mainFrame = GetMainFramePtr();
 
-	pxAssume( mainFrame != NULL );
-	pxAssert( ((uptr)GetTopWindow()) == ((uptr)mainFrame) );
-	return *mainFrame;
+	pxAssert(mainFrame != NULL);
+	pxAssert(((uptr)GetTopWindow()) == ((uptr)mainFrame));
+	return  *mainFrame;
 }
 
 GSFrame& Pcsx2App::GetGsFrame() const
 {
-	GSFrame* gsFrame = (GSFrame*)wxWindow::FindWindowById( m_id_GsFrame );
-
-	pxAssume( gsFrame != NULL );
-	return *gsFrame;
+	GSFrame* gsFrame  = (GSFrame*)wxWindow::FindWindowById( m_id_GsFrame );
+	pxAssert(gsFrame != NULL);
+	return  *gsFrame;
 }
 
 // NOTE: Plugins are *not* applied by this function.  Changes to plugins need to handled

@@ -85,7 +85,6 @@ struct vifStruct {
 };
 
 extern __aligned16 vifStruct  vif0, vif1;
-extern u8		  schedulepath3msk;
 
 _vifT extern u32 vifRead32(u32 mem);
 _vifT extern bool vifWrite32(u32 mem, u32 value);

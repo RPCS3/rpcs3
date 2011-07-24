@@ -17,6 +17,7 @@
 #include "Common.h"
 #include "VUops.h"
 #include "GS.h"
+#include "Gif_Unit.h"
 
 #include <cmath>
 
@@ -2024,12 +2025,26 @@ static __ri void _vuXGKICK(VURegs * VU)
 {
 	// flush all pipelines first (in the right order)
 	_vuFlushAll(VU);
-
+#if USE_OLD_GIF == 1 // todo
 	u8* data = ((u8*)VU->Mem + ((VU->VI[_Is_].US[0]*16) & 0x3fff));
 	u32 size;
 	GetMTGS().PrepDataPacket( GIF_PATH_1, 0x400 );
 	size = GIFPath_CopyTag( GIF_PATH_1, (u128*)data, (0x400-(VU->VI[_Is_].US[0] & 0x3ff)) );
 	GetMTGS().SendDataPacket();
+#else
+	u32 addr = (VU->VI[_Is_].US[0] & 0x3ff) * 16;
+	u32 diff = 0x4000 - addr;
+	u32 size = gifUnit.GetGSPacketSize(GIF_PATH_1, VU->Mem, addr);
+
+	if (size > diff) {
+		//DevCon.WriteLn(Color_Green, "VU1 Int: XGkick Wrap!");
+		gifUnit.gifPath[GIF_PATH_1].CopyGSPacketData(  &VU->Mem[addr],  diff,true);
+		gifUnit.TransferGSPacketData(GIF_TRANS_XGKICK, &VU->Mem[0],size-diff,true);
+	}
+	else {
+		gifUnit.TransferGSPacketData(GIF_TRANS_XGKICK, &VU->Mem[addr], size, true);
+	}
+#endif
 }
 
 static __ri void _vuXTOP(VURegs * VU) {

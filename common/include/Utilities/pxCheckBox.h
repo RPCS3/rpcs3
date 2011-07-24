@@ -50,12 +50,12 @@ public:
 	pxCheckBox& SetIndeterminate();
 	pxCheckBox& SetState( wxCheckBoxState state );
 
-	wxCheckBoxState GetState() const	{ pxAssume( m_checkbox != NULL ); return m_checkbox->Get3StateValue(); }
-	bool GetValue() const				{ pxAssume( m_checkbox != NULL ); return m_checkbox->GetValue(); }
-	bool IsChecked() const				{ pxAssume( m_checkbox != NULL ); return m_checkbox->IsChecked(); }
-	bool IsIndeterminate() const		{ pxAssume( m_checkbox != NULL ); return m_checkbox->Get3StateValue() == wxCHK_UNDETERMINED; }
-	operator wxCheckBox&()				{ pxAssume( m_checkbox != NULL ); return *m_checkbox; }
-	operator const wxCheckBox&() const	{ pxAssume( m_checkbox != NULL ); return *m_checkbox; }
+	wxCheckBoxState GetState() const	{ pxAssert( m_checkbox != NULL ); return m_checkbox->Get3StateValue(); }
+	bool GetValue() const				{ pxAssert( m_checkbox != NULL ); return m_checkbox->GetValue(); }
+	bool IsChecked() const				{ pxAssert( m_checkbox != NULL ); return m_checkbox->IsChecked(); }
+	bool IsIndeterminate() const		{ pxAssert( m_checkbox != NULL ); return m_checkbox->Get3StateValue() == wxCHK_UNDETERMINED; }
+	operator wxCheckBox&()				{ pxAssert( m_checkbox != NULL ); return *m_checkbox; }
+	operator const wxCheckBox&() const	{ pxAssert( m_checkbox != NULL ); return *m_checkbox; }
 
 	wxCheckBox* GetWxPtr() { return m_checkbox; }
 	const wxCheckBox* GetWxPtr() const { return m_checkbox; }

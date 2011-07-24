@@ -18,6 +18,7 @@
 #include "Vif_Dma.h"
 #include "GS.h"
 #include "Gif.h"
+#include "Gif_Unit.h"
 #include "VUmicro.h"
 #include "newVif.h"
 
@@ -46,13 +47,15 @@ __fi void vif1FLUSH()
 		//DevCon.Warning("VIF1 adding %x cycles", (VU1.cycle - _cycles) * BIAS);
 		g_vifCycles += (VU1.cycle - _cycles) * BIAS;
 	}
-	if(gifRegs.stat.P1Q && ((vif1.cmd & 0x7f) != 0x14) && ((vif1.cmd & 0x7f) != 0x17))
-	{
-		vif1.vifstalled = true;
+#if USE_OLD_GIF == 1 // d
+	if ((gifRegs.stat.P1Q == true)
+	&& ((vif1.cmd & 0x7f) != 0x14)    // cmd != MSCAL
+	&& ((vif1.cmd & 0x7f) != 0x17)) { // cmd != MSCNT
+		vif1.vifstalled   = true;
 		vif1Regs.stat.VGW = true;
 		vif1.GifWaitState = 2;
 	}
-	
+#endif	
 }
 
 void vif1TransferToMemory()
@@ -250,6 +253,7 @@ __fi void vif1SetupTransfer()
 	}
 }
 
+#if USE_OLD_GIF == 1 // d
 extern bool SIGNAL_IMR_Pending;
 
 bool CheckPath2GIF(EE_EventType channel)
@@ -330,33 +334,32 @@ bool CheckPath2GIF(EE_EventType channel)
 
 	return true;
 }
+#endif
+
 __fi void vif1Interrupt()
 {
 	VIF_LOG("vif1Interrupt: %8.8x", cpuRegs.cycle);
 
 	g_vifCycles = 0;
-
-	if (schedulepath3msk & 0x10) 
-	{
+#if USE_OLD_GIF == 1 // d
+	if (schedulepath3msk & 0x10) {
 		MSKPATH3_LOG("Scheduled Path3 Mask Firing");
 		Vif1MskPath3();
 	}
 
-	if(GSTransferStatus.PTH2 == PENDINGSTOP_MODE)
-	{
+	if (GSTransferStatus.PTH2 == PENDINGSTOP_MODE) {
 		GSTransferStatus.PTH2 = STOPPED_MODE;
 
-		if(gifRegs.stat.APATH == GIF_APATH2)
-		{
-			if(gifRegs.stat.DIR == 0)gifRegs.stat.OPH = false;
+		if(gifRegs.stat.APATH == GIF_APATH2) {
+			if(gifRegs.stat.DIR == 0) gifRegs.stat.OPH = false;
 			gifRegs.stat.APATH = GIF_APATH_IDLE;
 			if(gifRegs.stat.P1Q) gsPath1Interrupt();
 		}
 	}
+#endif
 
 	//Some games (Fahrenheit being one) start vif first, let it loop through blankness while it sets MFIFO mode, so we need to check it here.
-	if (dmacRegs.ctrl.MFD == MFD_VIF1)
-	{
+	if (dmacRegs.ctrl.MFD == MFD_VIF1) {
 		//Console.WriteLn("VIFMFIFO\n");
 		// Test changed because the Final Fantasy 12 opening somehow has the tag in *Undefined* mode, which is not in the documentation that I saw.
 		if (vif1ch.chcr.MOD == NORMAL_MODE) Console.WriteLn("MFIFO mode is normal (which isn't normal here)! %x", vif1ch.chcr._u32);
@@ -365,11 +368,19 @@ __fi void vif1Interrupt()
 		return;
 	}
 
-	//We need to check the direction, if it is downloading from the GS, we handle that separately (KH2 for testing)
-	if (vif1ch.chcr.DIR)
-	{
+	// We need to check the direction, if it is downloading
+	// from the GS then we handle that separately (KH2 for testing)
+	if (vif1ch.chcr.DIR) {
+#if USE_OLD_GIF == 1 // ...
 		if (!CheckPath2GIF(DMAC_VIF1)) return;
-		
+#else
+		if(gifUnit.gsSIGNAL.queued && (vif1.cmd & 0x7e) == 0x50) { // Direct/DirectHL
+			GUNIT_WARN("Path 2 Paused (vif1ch.chcr.DIR)");
+			//CPU_INT(DMAC_VIF1, 128);
+			//return;
+		}
+#endif
+
 		vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
 		//Simulated GS transfer time done, clear the flags
 	}

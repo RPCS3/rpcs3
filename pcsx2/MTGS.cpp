@@ -20,6 +20,7 @@
 #include <wx/datetime.h>
 
 #include "GS.h"
+#include "Gif_Unit.h"
 #include "Elfheader.h"
 #include "SamplProf.h"
 
@@ -114,7 +115,12 @@ void SysMtgsThread::ResetGS()
 	SendSimplePacket( GS_RINGTYPE_FRAMESKIP, 0, 0, 0 );
 	SetEvent();
 
+#if USE_OLD_GIF == 1 // d
 	GIFPath_Reset();
+#else
+	//DevCon.WriteLn("ResetGS()");
+	//gifUnit.Reset();
+#endif
 }
 
 struct RingCmdPacket_Vsync
@@ -328,6 +334,7 @@ void SysMtgsThread::ExecuteTaskInThread()
 
 			switch( tag.command )
 			{
+#if USE_OLD_GIF == 1 || COPY_GS_PACKET_TO_MTGS == 1 // d
 				case GS_RINGTYPE_P1:
 				{
 					uint datapos = (m_ReadPos+1) & RingBufferMask;
@@ -402,6 +409,15 @@ void SysMtgsThread::ExecuteTaskInThread()
 					ringposinc += qsize;
 				}
 				break;
+#endif
+				case GS_RINGTYPE_GSPACKET: {
+					Gif_Path& path   = gifUnit.gifPath[tag.data[2]];
+					u32       offset = tag.data[0];
+					u32       size   = tag.data[1];
+					if (offset != ~0u) GSgifTransfer((u32*)&path.buffer[offset], size/16);
+					AtomicExchangeSub(path.readAmount, size);
+					break;
+				}
 
 				default:
 				{
@@ -590,7 +606,7 @@ void SysMtgsThread::WaitGS()
 // For use in loops that wait on the GS thread to do certain things.
 void SysMtgsThread::SetEvent()
 {
-	if( !m_RingBufferIsBusy )
+	if(!m_RingBufferIsBusy)
 		m_sem_event.Post();
 
 	m_CopyDataTally = 0;
@@ -768,6 +784,18 @@ void SysMtgsThread::SendSimplePacket( MTGS_RingCommand type, int data0, int data
 	tag.data[2] = data2;
 
 	_FinishSimplePacket();
+}
+
+void SysMtgsThread::SendSimpleGSPacket(MTGS_RingCommand type, u32 offset, u32 size, GIF_PATH path)
+{
+	SendSimplePacket(type, (int)offset, (int)size, (int)path);
+
+	if(!EmuConfig.GS.SynchronousMTGS) {
+		if(!m_RingBufferIsBusy) {
+			m_CopyDataTally += size / 16;
+			if (m_CopyDataTally > 0x2000) SetEvent();
+		}
+	}
 }
 
 void SysMtgsThread::SendPointerPacket( MTGS_RingCommand type, u32 data0, void* data1 )

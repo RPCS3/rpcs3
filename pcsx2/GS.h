@@ -17,6 +17,7 @@
 
 #include "Common.h"
 #include "System/SysThreads.h"
+#include "Gif.h"
 
 extern __aligned16 u8 g_RealGSMem[Ps2MemSize::GSregs];
 
@@ -222,19 +223,6 @@ enum GS_RegionMode
 	Region_PAL
 };
 
-enum GIF_PATH
-{
-	GIF_PATH_1 = 0,
-	GIF_PATH_2,
-	GIF_PATH_3,
-};
-
-extern void GIFPath_Initialize();
-extern int  GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size);
-extern int  GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size);
-extern void GIFPath_Reset();
-extern void GIFPath_Clear( GIF_PATH pathidx );
-
 extern GS_RegionMode gsRegionMode;
 
 /////////////////////////////////////////////////////////////////////////////
@@ -256,6 +244,7 @@ enum MTGS_RingCommand
 ,	GS_RINGTYPE_SOFTRESET		// issues a soft reset for the GIF
 ,	GS_RINGTYPE_MODECHANGE		// for issued mode changes.
 ,	GS_RINGTYPE_CRC
+,	GS_RINGTYPE_GSPACKET
 };
 
 
@@ -326,6 +315,7 @@ public:
 	void WaitForOpen();
 	void Freeze( int mode, MTGS_FreezeData& data );
 
+	void SendSimpleGSPacket( MTGS_RingCommand type, u32 offset, u32 size, GIF_PATH path );
 	void SendSimplePacket( MTGS_RingCommand type, int data0, int data1, int data2 );
 	void SendPointerPacket( MTGS_RingCommand type, u32 data0, void* data1 );
 
@@ -376,10 +366,6 @@ extern void gsFrameSkip();
 
 // Some functions shared by both the GS and MTGS
 extern void _gs_ResetFrameskip();
-
-
-// used for resetting GIF fifo
-extern void gsGIFReset();
 
 extern void gsWrite8(u32 mem, u8 value);
 extern void gsWrite16(u32 mem, u16 value);
@@ -449,5 +435,30 @@ extern __aligned(32) MTGS_BufferedData RingBuffer;
 
 // FIXME: These belong in common with other memcpy tools.  Will move them there later if no one
 // else beats me to it.  --air
-extern void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len );
-extern void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len );
+inline void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len ) {
+	uint endpos = destStart + len;
+	if ( endpos < destSize ) {
+		memcpy_qwc(&destBase[destStart], src, len );
+		destStart += len;
+	}
+	else {
+		uint firstcopylen = destSize - destStart;
+		memcpy_qwc(&destBase[destStart], src, firstcopylen );
+		destStart = endpos % destSize;
+		memcpy_qwc(destBase, src+firstcopylen, destStart );
+	}
+}
+
+inline void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len ) {
+	uint endpos = srcStart + len;
+	if ( endpos < srcSize ) {
+		memcpy_qwc(dest, &srcBase[srcStart], len );
+		srcStart += len;
+	}
+	else {
+		uint firstcopylen = srcSize - srcStart;
+		memcpy_qwc(dest, &srcBase[srcStart], firstcopylen );
+		srcStart = endpos % srcSize;
+		memcpy_qwc(dest+firstcopylen, srcBase, srcStart );
+	}
+}

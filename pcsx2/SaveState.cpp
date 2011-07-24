@@ -81,7 +81,7 @@ void SaveStateBase::Init( SafeArray<u8>* memblock )
 
 void SaveStateBase::PrepBlock( int size )
 {
-	pxAssumeDev( m_memory, "Savestate memory/buffer pointer is null!" );
+	pxAssertDev( m_memory, "Savestate memory/buffer pointer is null!" );
 
 	const int end = m_idx+size;
 	if( IsSaving() )
@@ -208,6 +208,7 @@ SaveStateBase& SaveStateBase::FreezeInternals()
 	ipuFreeze();
 	ipuDmaFreeze();
 	gifFreeze();
+	gifDmaFreeze();
 	sprFreeze();
 
 	// Fifth Block - iop-related systems
@@ -283,7 +284,7 @@ void memSavingState::FreezeMem( void* data, int size )
 
 void memSavingState::MakeRoomForData()
 {
-	pxAssumeDev( m_memory, "Savestate memory/buffer pointer is null!" );
+	pxAssertDev( m_memory, "Savestate memory/buffer pointer is null!" );
 
 	m_memory->ChunkSize = ReallocThreshold;
 	m_memory->MakeRoomFor( m_idx + MemoryBaseAllocSize );

@@ -19,6 +19,8 @@
 #include "Hardware.h"
 #include "newVif.h"
 #include "IPU/IPUdma.h"
+#include "Gif.h"
+#include "Gif_Unit.h"
 
 using namespace R5900;
 
@@ -73,6 +75,7 @@ void hwReset()
 	sprInit();
 
 	gsReset();
+	gifUnit.Reset();
 	ipuReset();
 	vif0Reset();
 	vif1Reset();
@@ -145,14 +148,14 @@ void FireMFIFOEmpty()
 	hwDmacIrq(DMAC_MFIFO_EMPTY);
 
 	if (dmacRegs.ctrl.MFD == MFD_VIF1) vif1Regs.stat.FQC = 0;
-	else if (dmacRegs.ctrl.MFD == MFD_GIF) gifRegs.stat.FQC = 0;
+	if (dmacRegs.ctrl.MFD == MFD_GIF)  gifRegs.stat.FQC  = 0;
 }
 // Write 'size' bytes to memory address 'addr' from 'data'.
 __ri bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
 {
 	// all FIFO addresses should always be QWC-aligned.
-	pxAssume((dmacRegs.rbor.ADDR & 15) == 0);
-	pxAssume((addr & 15) == 0);
+	pxAssert((dmacRegs.rbor.ADDR & 15) == 0);
+	pxAssert((addr & 15) == 0);
 
 	if(qwc > ((dmacRegs.rbsr.RMSK + 16) >> 4)) DevCon.Warning("MFIFO Write bigger than MFIFO! QWC=%x FifoSize=%x", qwc, ((dmacRegs.rbsr.RMSK + 16) >> 4));
 	// DMAC Address resolution:  FIFO can be placed anywhere in the *physical* memory map

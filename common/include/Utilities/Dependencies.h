@@ -195,18 +195,19 @@ public:
 // --------------------------------------------------------------------------------------
 //  Handy Human-readable constants for common immediate values (_16kb -> _4gb)
 
-static const sptr _64kb		= 0x10000;
-static const sptr _16kb		= _64kb / 4;
-static const sptr _128kb	= _64kb * 2;
-static const sptr _256kb	= _128kb * 2;
+static const sptr _1kb		= 1024 * 1;
+static const sptr _16kb		= _1kb * 16;
+static const sptr _64kb		= _1kb * 64;
+static const sptr _128kb	= _1kb * 128;
+static const sptr _256kb	= _1kb * 256;
 
-static const s64 _1mb		= 0x100000;
+static const s64 _1mb		= 1024 * 1024;
 static const s64 _8mb		= _1mb * 8;
 static const s64 _16mb		= _1mb * 16;
 static const s64 _32mb		= _1mb * 32;
 static const s64 _64mb		= _1mb * 64;
 static const s64 _256mb		= _1mb * 256;
-static const s64 _1gb		= _256mb * 4;
+static const s64 _1gb		= _1mb * 1024;
 static const s64 _4gb		= _1gb * 4;
 
 

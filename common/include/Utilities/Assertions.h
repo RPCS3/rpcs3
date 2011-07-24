@@ -84,15 +84,18 @@ extern pxDoAssertFnType* pxDoAssert;
 // --------------------------------------------------------------------------------------
 //  pxAssume / pxAssumeDev / pxFail / pxFailDev
 // --------------------------------------------------------------------------------------
-// Assumptions are like "extra rigid" assertions, which should never fail under any circum-
-// stance in release build optimized code.
+// Assumptions are hints to the compiler that the condition will always be true,
+// the condition should never fail under any circumstance in release builds
+// or else you might get incorrect compiler generated code.
 //
 // Performance: All assumption/fail  types optimize into __assume()/likely() directives in
-// Release builds (non-dev varieties optimize as such in Devel builds as well).  If using
+// Release builds (non-dev varieties optimize as such in Devel builds as well).
+// __assume(0) is a special form of __assume() which tells the compiler that the code path
+// is not reachable and will cause undefined results if it is reachable...
 //
 // Having pxFail and pxFailDev translate into __assume statements is very dangerous, since
 // it can lead to the compiler optimizing out code and leading to crashes in dev/release
-// builds.  To have code optimized, explicitly use pxAssume(false) or pxAssumeDev(false,msg);
+// builds. To have code optimized, explicitly use pxAssume(false) or pxAssumeDev(false,msg);
 
 #define pxDiagSpot			DiagnosticOrigin( __TFILE__, __LINE__, __pxFUNCTION__ )
 #define pxAssertSpot(cond)	DiagnosticOrigin( __TFILE__, __LINE__, __pxFUNCTION__, _T(#cond) )
@@ -119,16 +122,26 @@ extern pxDoAssertFnType* pxDoAssert;
 
 #elif defined(PCSX2_DEVBUILD)
 
-	// Devel builds use __assume for standard assertions and call pxOnAssertDevel
-	// for AssertDev brand assertions (which typically throws a LogicError exception).
+	// Devel builds now will give you a release-mode assertion dialog window if any of the
+	// following macro's 'cond' field is false.
+	// Note: Only use pxAssume/Msg/Dev if you know what you're doing, __assume is supposed
+	// to be used as an optimization hint, yet many devs have been using psAssume
+	// thinking its the same as an assertion.
+	// __assume(0) is also very dangerous because it is a special case of __assume() which
+	// tells the compiler that the code path is not reachable, and it can cause unpredictable
+	// results if the code path can be reached.
+	// i.e. if (1) { __assume(0); something(); } 
+	// In the above example, something() may never be called.
+	// __assume(0)'s real use is in optimizing stuff such as "default:" cases on a switch
+	// statement. See jNO_DEFAULT
 
-#	define pxAssertMsg(cond, msg)	(likely(cond))
+#	define pxAssertMsg(cond, msg)	pxAssertRel(cond, msg)
 #	define pxAssertDev(cond, msg)	pxAssertRel(cond, msg)
 
-#	define pxAssumeMsg(cond, msg)	(__assume(cond))
+#	define pxAssumeMsg(cond, msg)	pxAssumeRel(cond, msg) //(__assume(cond))
 #	define pxAssumeDev(cond, msg)	pxAssumeRel(cond, msg)
 
-#	define pxFail(msg)
+#	define pxFail(msg)				pxAssertDev(false, msg)
 #	define pxFailDev(msg)			pxAssertDev(false, msg)
 
 #else
@@ -142,8 +155,8 @@ extern pxDoAssertFnType* pxDoAssert;
 #	define pxAssumeMsg(cond, msg)	(__assume(cond))
 #	define pxAssumeDev(cond, msg)	(__assume(cond))
 
-#	define pxFail(msg)
-#	define pxFailDev(msg)
+#	define pxFail(msg)				do{} while(0)
+#	define pxFailDev(msg)			do{} while(0)
 
 #endif
 
@@ -186,7 +199,7 @@ extern void pxOnAssert( const DiagnosticOrigin& origin, const char* msg );
 #	define jNO_DEFAULT \
 		default: \
 		{ \
-			pxAssumeDev( false, "Incorrect usage of jNO_DEFAULT detected (default case is not unreachable!)" ); \
+			pxAssumeDev( 0, "Incorrect usage of jNO_DEFAULT detected (default case is not unreachable!)" ); \
 			break; \
 		}
 #endif

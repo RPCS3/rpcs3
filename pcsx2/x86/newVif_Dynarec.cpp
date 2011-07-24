@@ -32,7 +32,7 @@ void dVifReserve(int idx)
 
 void dVifReset(int idx) {
 
-	pxAssumeDev(nVif[idx].recReserve, "Dynamic VIF recompiler reserve must be created prior to VIF use or reset!");
+	pxAssertDev(nVif[idx].recReserve, "Dynamic VIF recompiler reserve must be created prior to VIF use or reset!");
 
 	if (!nVif[idx].vifBlocks)
 		nVif[idx].vifBlocks = new HashBucket<_tParams>();
@@ -92,7 +92,7 @@ __fi void VifUnpackSSE_Dynarec::SetMasks(int cS) const {
 }
 
 void VifUnpackSSE_Dynarec::doMaskWrite(const xRegisterSSE& regX) const {
-	pxAssumeDev(regX.Id <= 1, "Reg Overflow! XMM2 thru XMM6 are reserved for masking.");
+	pxAssertDev(regX.Id <= 1, "Reg Overflow! XMM2 thru XMM6 are reserved for masking.");
 	xRegisterSSE t  =  regX == xmm0 ? xmm1 : xmm0; // Get Temp Reg
 	int cc =  aMin(vCL, 3);
 	u32 m0 = (vB.mask >> (cc * 8)) & 0xff;

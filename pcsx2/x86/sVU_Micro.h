@@ -47,7 +47,7 @@ struct _vuopinfo {
 
 void SuperVUAnalyzeOp(VURegs *VU, _vuopinfo *info, _VURegsNum* pCodeRegs);
 int eeVURecompileCode(VURegs *VU, _VURegsNum* regs); // allocates all the necessary regs and returns the indices
-void __fastcall VU1XGKICK_MTGSTransfer(u32 *pMem, u32 addr); // used for MTGS in XGKICK
+void __fastcall VU1XGKICK_MTGSTransfer(u32 addr); // used for MTGS in XGKICK
 
 extern int vucycle;
 typedef void (*vFloat)(int regd, int regTemp);

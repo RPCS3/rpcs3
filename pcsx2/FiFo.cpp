@@ -18,6 +18,7 @@
 #include "Common.h"
 
 #include "Gif.h"
+#include "Gif_Unit.h"
 #include "GS.h"
 #include "Vif.h"
 #include "Vif_Dma.h"
@@ -55,6 +56,9 @@ void __fastcall ReadFIFO_VIF1(mem128_t* out)
 			GetMTGS().WaitGS();
 			GSreadFIFO((u64*)out);
 			vif1.GSLastDownloadSize--;
+#if USE_OLD_GIF == 0 // d
+			GUNIT_LOG("ReadFIFO_VIF1");
+#endif
 			if (vif1.GSLastDownloadSize <= 16)
 				gifRegs.stat.OPH = false;
 			vif1Regs.stat.FQC = min((u32)16, vif1.GSLastDownloadSize);
@@ -100,12 +104,15 @@ void __fastcall WriteFIFO_VIF1(const mem128_t *value)
 	if(vif1.irqoffset != 0 && vif1.vifstalled == true) DevCon.Warning("Offset on VIF1 FIFO start!");
 	bool ret = VIF1transfer((u32*)value, 4);
 
+#if USE_OLD_GIF == 1 // d
 	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs.stat.APATH == GIF_APATH2)
 	{
 		if(gifRegs.stat.DIR == 0)gifRegs.stat.OPH = false;
 		gifRegs.stat.APATH = GIF_APATH_IDLE;
 		if(gifRegs.stat.P1Q) gsPath1Interrupt();
 	}
+#endif
+
 	if (vif1.cmd) 
 	{
 		if(vif1.done == true && vif1ch.qwc == 0)	vif1Regs.stat.VPS = VPS_WAITING;
@@ -120,6 +127,7 @@ void __fastcall WriteFIFO_VIF1(const mem128_t *value)
 
 void __fastcall WriteFIFO_GIF(const mem128_t *value)
 {
+#if USE_OLD_GIF == 1 // d
 	GIF_LOG("WriteFIFO/GIF <- %ls", value->ToString().c_str());
 
 	//CopyQWC(&psHu128(GIF_FIFO), value);
@@ -139,4 +147,9 @@ void __fastcall WriteFIFO_GIF(const mem128_t *value)
 			if(gifRegs.stat.P1Q) gsPath1Interrupt();
 		}
 	}
+#else
+	GUNIT_LOG("WriteFIFO_GIF()");
+	gifUnit.TransferGSPacketData(GIF_TRANS_FIFO, (u8*)value, 16);
+#endif
 }
+

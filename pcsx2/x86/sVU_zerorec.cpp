@@ -396,7 +396,7 @@ void DestroyVUHeaders(int vuindex)
 // destroy VU resources
 void SuperVUDestroy(int vuindex)
 {
-	pxAssumeDev(vuindex >= 0 && vuindex <= 2, "Invalid VU index parameter!");
+	pxAssertDev(vuindex >= 0 && vuindex <= 2, "Invalid VU index parameter!");
 
 	safe_delete_array(recVUHeaders[vuindex]);
 	safe_delete_array(recVUBlocks[vuindex]);
@@ -418,7 +418,7 @@ void SuperVUDestroy(int vuindex)
 // reset VU
 void SuperVUReset(int vuindex)
 {
-	pxAssumeDev(vuindex >= 0 && vuindex <= 2, "Invalid VU index parameter!");
+	pxAssertDev(vuindex >= 0 && vuindex <= 2, "Invalid VU index parameter!");
 
 #ifdef PCSX2_DEBUG
 	s_vucount = 0;
@@ -4314,8 +4314,7 @@ void recVUMI_XGKICK_(VURegs *VU)
 	_freeX86regs();
 	_freeXMMregs();
 
-	xMOV(edx, xRegister32(s_XGKICKReg));
-	xMOV(ecx, (uptr)VU->Mem);
+	xMOV(ecx, xRegister32(s_XGKICKReg));
 	xCALL(VU1XGKICK_MTGSTransfer);
 
 	s_ScheduleXGKICK = 0;

@@ -537,7 +537,7 @@ void SysExecEvent_CoreThreadPause::InvokeEvent()
 	if( CorePluginsAreOpen )
 	{
 		CorePluginsAreOpen = GetCorePlugins().AreOpen();
-		pxAssumeDev( CorePluginsAreOpen, "Invalid plugin close/shutdown detected during paused CoreThread; please Stop/Suspend the core instead." );
+		pxAssertDev( CorePluginsAreOpen, "Invalid plugin close/shutdown detected during paused CoreThread; please Stop/Suspend the core instead." );
 	}
 	paused_core.AllowResume();
 

@@ -185,14 +185,14 @@ void isoFile::_ReadBlockD(u8* dst, uint lsn)
 
 void isoFile::_ReadBlock(u8* dst, uint lsn)
 {
-	pxAssumeMsg(lsn <= m_blocks,	"Invalid lsn passed into isoFile::_ReadBlock.");
-	pxAssumeMsg(m_numparts,			"Invalid isoFile object state; an iso file needs at least one part!");
+	pxAssertMsg(lsn <= m_blocks,	"Invalid lsn passed into isoFile::_ReadBlock.");
+	pxAssertMsg(m_numparts,			"Invalid isoFile object state; an iso file needs at least one part!");
 
 	uint i;
 	for (i = 0; i < m_numparts-1; ++i)
 	{
 		// lsn indexes should always go in order; use an assertion just to be sure:
-		pxAssume(lsn >= m_parts[i].slsn);
+		pxAssert(lsn >= m_parts[i].slsn);
 		if (lsn <= m_parts[i].elsn) break;
 	}
 

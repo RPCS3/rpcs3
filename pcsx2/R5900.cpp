@@ -278,10 +278,13 @@ static __fi void _cpuTestInterrupts()
 	   that depends on the cycle timings */
 
 	TESTINT(DMAC_VIF1,		vif1Interrupt);	
-	TESTINT(DMAC_GIF,		gsInterrupt);	
+	TESTINT(DMAC_GIF,		gifInterrupt);
 	TESTINT(DMAC_SIF0,		EEsif0Interrupt);
 	TESTINT(DMAC_SIF1,		EEsif1Interrupt);
 
+	//extern void Gif_Execute();
+	//TESTINT(DMAC_GIF_UNIT,	Gif_Execute);
+	
 	// Profile-guided Optimization (sorta)
 	// The following ints are rarely called.  Encasing them in a conditional
 	// as follows helps speed up most games.
@@ -488,7 +491,7 @@ __fi void cpuTestHwInts() {
 
 __fi void CPU_INT( EE_EventType n, s32 ecycle)
 {
-	if( n != 2 && cpuRegs.interrupt & (1<<n) ){ //2 is Gif, and every path 3 masking game triggers this :/
+	if( n != 2 && cpuRegs.interrupt & (1<<n) ){ // 2 is Gif, and every path 3 masking game triggers this :/
 		DevCon.Warning( "***** EE > Twice-thrown int on IRQ %d", n );
 	}
 

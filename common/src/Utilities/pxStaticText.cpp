@@ -116,7 +116,7 @@ pxStaticText& pxStaticText::PaddingPixV( int pixels )
 
 pxStaticText& pxStaticText::PaddingPctH( float pct )
 {
-	pxAssume( pct < 0.5 );
+	pxAssert( pct < 0.5 );
 
 	m_paddingPct_horiz = pct;
 	UpdateWrapping( false );
@@ -126,7 +126,7 @@ pxStaticText& pxStaticText::PaddingPctH( float pct )
 
 pxStaticText& pxStaticText::PaddingPctV( float pct )
 {
-	pxAssume( pct < 0.5 );
+	pxAssert( pct < 0.5 );
 
 	m_paddingPct_vert = pct;
 	Refresh();
@@ -152,7 +152,7 @@ int pxStaticText::calcPaddingHeight( int newHeight ) const
 
 wxSize pxStaticText::GetBestWrappedSize( const wxClientDC& dc ) const
 {
-	pxAssume( m_autowrap );
+	pxAssert( m_autowrap );
 
 	// Find an ideal(-ish) width, based on a search of all parent controls and their
 	// valid Minimum sizes.

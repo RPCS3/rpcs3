@@ -28,7 +28,7 @@ static const uint headsize = sizeof(AlignedMallocHeader);
 
 void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align)
 {
-	pxAssume( align < 0x10000 );
+	pxAssert( align < 0x10000 );
 
 	u8* p = (u8*)malloc(size+align+headsize);
 
@@ -37,7 +37,7 @@ void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align)
 	uptr aligned = (pasthead + align-1) & ~(align-1);
 
 	AlignedMallocHeader* header = (AlignedMallocHeader*)(aligned-headsize);
-	pxAssume( (uptr)header >= (uptr)p );
+	pxAssert( (uptr)header >= (uptr)p );
 
 	header->baseptr = p;
 	header->size = size;
@@ -47,7 +47,7 @@ void* __fastcall pcsx2_aligned_malloc(size_t size, size_t align)
 
 void* __fastcall pcsx2_aligned_realloc(void* handle, size_t size, size_t align)
 {
-	pxAssume( align < 0x10000 );
+	pxAssert( align < 0x10000 );
 
 	void* newbuf = pcsx2_aligned_malloc( size, align );
 

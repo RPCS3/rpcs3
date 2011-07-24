@@ -1119,64 +1119,50 @@ mVUop(mVU_XITOP) {
 // XGkick
 //------------------------------------------------------------------
 
-extern void gsPath1Interrupt();
-extern bool SIGNAL_IMR_Pending;
-
 void __fastcall mVU_XGKICK_(u32 addr) {
+#if USE_OLD_GIF == 1 // d
+	extern void gsPath1Interrupt();
+	extern bool SIGNAL_IMR_Pending;
+
 	addr &= 0x3ff;
 	u8* data  = vuRegs[1].Mem + (addr*16);
 	u32 diff  = 0x400 - addr;
 	u32 size;
 
-	///////////////////////////////////////////////
-	///////////////SIGNAL WARNING!!////////////////
-	///////////////////////////////////////////////
-	/* Due to the face SIGNAL can cause the loop
-	   to leave early, we can end up missing data.
-	   The only way we can avoid this is to queue
-	   it :(, im relying on someone else to come
-	   up with a better solution!                 */
-	
-	/*if(gifRegs.stat.APATH <= GIF_APATH1 || (gifRegs.stat.APATH == GIF_APATH3 && gifRegs.stat.IP3 == true) && SIGNAL_IMR_Pending == false)
-	{
-		if(Path1WritePos != 0)	
-		{
-			//Flush any pending transfers so things dont go up in the wrong order
-			while(gifRegs.stat.P1Q == true) gsPath1Interrupt();
-		}
-		GetMTGS().PrepDataPacket(GIF_PATH_1, 0x400);
-		size = GIFPath_CopyTag(GIF_PATH_1, (u128*)data, diff);
-		GetMTGS().SendDataPacket();
+	size = GIFPath_ParseTagQuick(GIF_PATH_1, data, diff);
+	u8* pDest = &Path1Buffer[Path1WritePos*16];
 
-		if(GSTransferStatus.PTH1 == STOPPED_MODE)
-		{
-			gifRegs.stat.OPH = false;
-			gifRegs.stat.APATH = GIF_APATH_IDLE;
-		}
+	Path1WritePos += size;
+
+	pxAssertMsg((Path1WritePos < sizeof(Path1Buffer)), "XGKick Buffer Overflow detected on Path1Buffer!");
+	//DevCon.Warning("Storing size %x PATH 1", size);
+
+	if (size > diff) {
+		//DevCon.Status("XGkick Wrap!");
+		memcpy_qwc(pDest, vuRegs[1].Mem + (addr*16), diff);
+		memcpy_qwc(pDest+(diff*16), vuRegs[1].Mem, size-diff);
 	}
-	else
-	{*/
-		//DevCon.Warning("GIF APATH busy %x Holding for later  W %x, R %x", gifRegs.stat.APATH, Path1WritePos, Path1ReadPos);
-		size = GIFPath_ParseTagQuick(GIF_PATH_1, data, diff);
-		u8* pDest = &Path1Buffer[Path1WritePos*16];
+	else {
+		memcpy_qwc(pDest, vuRegs[1].Mem + (addr*16), size);
+	}
+	//if(!gifRegs.stat.P1Q) CPU_INT(28, 128);
+	gifRegs.stat.P1Q = true;
 
-		Path1WritePos += size;
+	gsPath1Interrupt();
+#else
+	addr = (addr & 0x3ff) * 16;
+	u32 diff = 0x4000 - addr;
+	u32 size = gifUnit.GetGSPacketSize(GIF_PATH_1, vuRegs[1].Mem, addr);
 
-		pxAssumeMsg((Path1WritePos < sizeof(Path1Buffer)), "XGKick Buffer Overflow detected on Path1Buffer!");
-		//DevCon.Warning("Storing size %x PATH 1", size);
-
-		if (size > diff) {
-			//DevCon.Status("XGkick Wrap!");
-			memcpy_qwc(pDest, vuRegs[1].Mem + (addr*16), diff);
-			memcpy_qwc(pDest+(diff*16), vuRegs[1].Mem, size-diff);
-		}
-		else {
-			memcpy_qwc(pDest, vuRegs[1].Mem + (addr*16), size);
-		}
-		//if(!gifRegs.stat.P1Q) CPU_INT(28, 128);
-		gifRegs.stat.P1Q = true;
-	//}
-		gsPath1Interrupt();
+	if (size > diff) {
+		//DevCon.WriteLn(Color_Green, "microVU1: XGkick Wrap!");
+		gifUnit.gifPath[GIF_PATH_1].CopyGSPacketData(  &vuRegs[1].Mem[addr],  diff,true);
+		gifUnit.TransferGSPacketData(GIF_TRANS_XGKICK, &vuRegs[1].Mem[0],size-diff,true);
+	}
+	else {
+		gifUnit.TransferGSPacketData(GIF_TRANS_XGKICK, &vuRegs[1].Mem[addr], size, true);
+	}
+#endif
 }
 
 static __fi void mVU_XGKICK_DELAY(mV, bool memVI) {

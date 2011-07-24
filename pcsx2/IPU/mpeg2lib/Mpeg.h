@@ -174,8 +174,8 @@ struct decoder_t {
 	
 	void AdvanceIpuDataBy(uint amt)
 	{
-		pxAssumeMsg(ipu0_data>=amt, "IPU FIFO Overflow on advance!" );
-		ipu0_idx += amt;
+		pxAssertMsg(ipu0_data>=amt, "IPU FIFO Overflow on advance!" );
+		ipu0_idx  += amt;
 		ipu0_data -= amt;
 	}
 };

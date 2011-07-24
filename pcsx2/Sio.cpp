@@ -276,7 +276,7 @@ void SIO_CommandWrite(u8 value,int way) {
 				info.McdSizeInSectors	= cmd.mcdSizeInSectors;
 				
 				SysPlugins.McdGetSizeInfo( port, slot, info );
-				pxAssumeDev( cmd.mcdSizeInSectors >= mc_sizeinfo_8mb.mcdSizeInSectors,
+				pxAssertDev( cmd.mcdSizeInSectors >= mc_sizeinfo_8mb.mcdSizeInSectors,
 					"Mcd plugin returned an invalid memorycard size: Cards smaller than 8MB are not supported." );
 				
 				cmd.sectorSize			= info.SectorSize;

@@ -26,6 +26,7 @@ using namespace x86Emitter;
 #include "VU.h"
 #include "GS.h"
 #include "Gif.h"
+#include "Gif_Unit.h"
 #include "iR5900.h"
 #include "R5900OpcodeTables.h"
 #include "System/RecTypes.h"

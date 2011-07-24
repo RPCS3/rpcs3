@@ -83,14 +83,14 @@ pxCheckBox& pxCheckBox::SetToolTip( const wxString& tip )
 
 pxCheckBox& pxCheckBox::SetValue( bool val )
 {
-	pxAssume( m_checkbox );
+	pxAssert( m_checkbox );
 	m_checkbox->SetValue( val );
 	return *this;
 }
 
 pxCheckBox& pxCheckBox::SetIndeterminate()
 {
-	pxAssume( m_checkbox );
+	pxAssert( m_checkbox );
 	m_checkbox->Set3StateValue( wxCHK_UNDETERMINED );
 	return *this;
 }
@@ -98,7 +98,7 @@ pxCheckBox& pxCheckBox::SetIndeterminate()
 
 pxCheckBox& pxCheckBox::SetState( wxCheckBoxState state )
 {
-	pxAssume( m_checkbox );
+	pxAssert( m_checkbox );
 	m_checkbox->Set3StateValue( state );
 	return *this;
 }

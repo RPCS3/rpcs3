@@ -17,6 +17,8 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "Hardware.h"
+#include "Gif.h"
+#include "Gif_Unit.h"
 
 #include "ps2/HwInternal.h"
 #include "ps2/eeHwTraceLog.inl"
@@ -88,16 +90,17 @@ void __fastcall _hwWrite32( u32 mem, u32 value )
 			{
 				icase(GIF_CTRL)
 				{
-					psHu32(mem) = value & 0x8;
-
-					if (value & 0x1)
-						gsGIFReset();
-
-					if (value & 8)
-						gifRegs.stat.PSE = true;
-					else
-						gifRegs.stat.PSE = false;
-
+					// Not exactly sure what RST needs to do
+					gifRegs.ctrl.write(value & 9);
+					if (gifRegs.ctrl.RST) {
+#if USE_OLD_GIF == 1 // d
+						gifUnit.ResetRegs(); // hmm?
+#else
+						GUNIT_LOG("GIF CTRL - Reset");
+						gifUnit.Reset(true); // hmm?
+#endif
+					}
+					gifRegs.stat.PSE = gifRegs.ctrl.PSE;
 					return;
 				}
 
@@ -110,7 +113,6 @@ void __fastcall _hwWrite32( u32 mem, u32 value )
 					const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
 					psHu32(GIF_STAT) &= ~bitmask;
 					psHu32(GIF_STAT) |= (u32)value & bitmask;
-
 					return;
 				}
 			}

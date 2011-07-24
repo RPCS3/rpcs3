@@ -43,7 +43,7 @@ public:
 	void SetPath( const wxString& path );
 	void Flush();
 
-	wxConfigBase& GetConfig() { pxAssume( m_Config ); return *m_Config; }
+	wxConfigBase& GetConfig() { pxAssert( m_Config ); return *m_Config; }
 	bool IsOk() const { return m_Config != NULL; }
 
 	virtual bool IsLoading() const=0;

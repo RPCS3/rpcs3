@@ -73,31 +73,6 @@ static __fi void ipuDmacSrcChain()
 	}
 }
 
-static __fi bool WaitGSPaths()
-{
-	if(CHECK_IPUWAITHACK)
-	{
-		if(GSTransferStatus.PTH3 < STOPPED_MODE && GSTransferStatus.PTH3 != IDLE_MODE)
-		{
-			//GIF_LOG("Flushing gif chcr %x tadr %x madr %x qwc %x", gif->chcr._u32, gif->tadr, gif->madr, gif->qwc);
-			//DevCon.WriteLn("Waiting for GIF");
-			return false;
-		}
-
-		if(GSTransferStatus.PTH2 != STOPPED_MODE)
-		{
-			//DevCon.WriteLn("Waiting for VIF");
-			return false;
-		}
-		if(GSTransferStatus.PTH1 != STOPPED_MODE)
-		{
-			//DevCon.WriteLn("Waiting for VU");
-			return false;
-		}
-	}
-	return true;
-}
-
 static __fi int IPU1chain() {
 
 	int totalqwc = 0;
@@ -130,21 +105,6 @@ static __fi int IPU1chain() {
 
 	return totalqwc;
 }
-
-//static __fi bool WaitGSPaths()
-//{
-//	//Wait for all GS paths to be clear
-//	if (GSTransferStatus._u32 != 0x2a)
-//	{
-//		if(GSTransferStatus.PTH3 != STOPPED_MODE && vif1Regs.mskpath3) return true;
-//		IPU_LOG("Waiting for GS transfers to finish %x", GSTransferStatus._u32);
-//		IPU_INT_TO(4);
-//		return false;
-//	}
-//	return true;
-//}
-
-
 
 int IPU1dma()
 {

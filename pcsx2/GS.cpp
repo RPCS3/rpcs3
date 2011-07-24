@@ -20,6 +20,7 @@
 
 #include "GS.h"
 #include "Gif.h"
+#include "Gif_Unit.h"
 #include "Counters.h"
 
 using namespace Threading;
@@ -51,38 +52,35 @@ void gsInit()
 	memzero(g_RealGSMem);
 }
 
+#if USE_OLD_GIF == 1 // d
 extern bool SIGNAL_IMR_Pending;
 extern u32 SIGNAL_Data_Pending[2];
-
-void gsGIFReset()
-{
-	gifRegs.stat.reset();
-	gifRegs.ctrl.reset();
-	gifRegs.mode.reset();
-}
+#endif
 
 void gsReset()
 {
 	GetMTGS().ResetGS();
 
 	UpdateVSyncRate();
-	GSTransferStatus = (STOPPED_MODE<<8) | (STOPPED_MODE<<4) | STOPPED_MODE;
 	memzero(g_RealGSMem);
 
+#if USE_OLD_GIF == 1 // d
+	GSTransferStatus = (STOPPED_MODE<<8) | (STOPPED_MODE<<4) | STOPPED_MODE;
 	SIGNAL_IMR_Pending = false;
-
-	CSRreg.Reset();
-	GSIMR = 0x7f00;
 
 	// FIXME: This really doesn't belong here, and I seriously doubt it's needed.
 	// If it is needed it should be in the GIF portion of hwReset().  --air
-	gsGIFReset();
+	gifUnit.ResetRegs();
+#endif
+
+	CSRreg.Reset();
+	GSIMR = 0x7f00;
 }
 
 static __fi void gsCSRwrite( const tGS_CSR& csr )
 {
 	if (csr.RESET) {
-
+#if USE_OLD_GIF == 1 // ...
 		// perform a soft reset -- which is a clearing of all GIFpaths -- and fall back to doing
 		// a full reset if the plugin doesn't support soft resets.
 
@@ -98,6 +96,13 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 		}
 
 		SIGNAL_IMR_Pending = false;
+#else
+		GUNIT_WARN("csr.RESET");
+		//gifUnit.Reset(true); // Don't think gif should be reset...
+		gifUnit.gsSIGNAL.queued = false;
+		GetMTGS().SendSimplePacket(GS_RINGTYPE_RESET, 0, 0, 0);
+#endif
+
 		CSRreg.Reset();
 		GSIMR = 0x7F00;			//This is bits 14-8 thats all that should be 1
 	}
@@ -110,6 +115,7 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 	
 	if(csr.SIGNAL)
 	{
+#if USE_OLD_GIF == 1 // d
 		// SIGNAL : What's not known here is whether or not the SIGID register should be updated
 		//  here or when the IMR is cleared (below).
 
@@ -119,8 +125,7 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 			GIF_LOG("GS SIGNAL (pending) data=%x_%x IMR=%x CSRr=%x",SIGNAL_Data_Pending[0], SIGNAL_Data_Pending[1], GSIMR, GSCSRr);
 			GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~SIGNAL_Data_Pending[1])|(SIGNAL_Data_Pending[0]&SIGNAL_Data_Pending[1]);
 
-			if (!(GSIMR&0x100))
-			gsIrq();
+			if (!(GSIMR&0x100)) gsIrq();
 
 			CSRreg.SIGNAL = true; //Just to be sure :P
 		}
@@ -129,6 +134,20 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 		SIGNAL_IMR_Pending = false;
 
 		if(gifRegs.stat.P1Q && gifRegs.stat.APATH <= GIF_APATH1) gsPath1Interrupt();
+#else
+		GUNIT_LOG("csr.SIGNAL");
+		if (gifUnit.gsSIGNAL.queued) {
+			//DevCon.Warning("Firing pending signal");
+			GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID & ~gifUnit.gsSIGNAL.data[1])
+				        | (gifUnit.gsSIGNAL.data[0]&gifUnit.gsSIGNAL.data[1]);
+
+			if (!(GSIMR&0x100)) gsIrq();
+			CSRreg.SIGNAL  = true; // Just to be sure :P
+		}
+		else CSRreg.SIGNAL = false;
+		gifUnit.gsSIGNAL.queued = false;
+		gifUnit.Execute();
+#endif
 	}
 	
 	if(csr.FINISH)	CSRreg.FINISH	= false;
@@ -144,6 +163,7 @@ static __fi void IMRwrite(u32 value)
 	if(CSRreg.GetInterruptMask() & (~(GSIMR >> 8) & 0x1f))
 		gsIrq();
 
+#if USE_OLD_GIF == 1 // d
 	if( SIGNAL_IMR_Pending && !(GSIMR & 0x100))
 	{
 		// Note: PS2 apps are expected to write a successive 1 and 0 to the IMR in order to
@@ -159,6 +179,13 @@ static __fi void IMRwrite(u32 value)
 		CSRreg.SIGNAL = true;
 		gsIrq();
 	}
+#else
+	GUNIT_LOG("IMRwrite()");
+	if (gifUnit.gsSIGNAL.queued && !(GSIMR & 0x100)) {
+		CSRreg.SIGNAL = true;
+		gsIrq();
+	}
+#endif
 }
 
 __fi void gsWrite8(u32 mem, u8 value)
@@ -166,7 +193,7 @@ __fi void gsWrite8(u32 mem, u8 value)
 	switch (mem)
 	{
 		// CSR 8-bit write handlers.
-		// I'm quite sure these whould just write the CSR portion with the other
+		// I'm quite sure these would just write the CSR portion with the other
 		// bits set to 0 (no action).  The previous implementation masked the 8-bit 
 		// write value against the previous CSR write value, but that really doesn't
 		// make any sense, given that the real hardware's CSR circuit probably has no
@@ -280,8 +307,8 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 
 	switch( mem )
 	{
-		case 0x12001040: //busdir
-
+		case GS_BUSDIR:
+#if USE_OLD_GIF == 1 // d
 			//This is probably a complete hack, however writing to BUSDIR "should" start a transfer 
 			//Only problem is it kills killzone :(.
 			// (yes it *is* a complete hack; both lines here in fact --air)
@@ -294,12 +321,22 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 			//
 			// Yup folks.  BUSDIR is evil.  The only safe way to handle it is to flush the whole MTGS
 			// and ensure complete MTGS and EEcore thread synchronization  This is very slow, no doubt,
-			// but on the birght side BUSDIR is used quite rately, indeed.
+			// but on the bright side BUSDIR is used quite rarely, indeed.
 
 			// Important: writeback to gsRegs area *prior* to flushing the MTGS.  The flush will sync
 			// the GS and MTGS register states, and upload our screwy busdir register in the process. :)
 			gsWrite64_generic( mem, value );
 			GetMTGS().WaitGS();
+#else
+			GUNIT_LOG("GIF - busdir");
+			gifRegs.stat.DIR = value[0] & 1;
+			if (gifRegs.stat.DIR) { // Assume will do local->host transfer?
+				gifRegs.stat.OPH = true; // Is OPH set on local->host transfers?
+				DevCon.WriteLn("Busdir - Local->Host Transfer");
+			}
+			gsWrite64_generic( mem, value );
+			GetMTGS().WaitGS();
+#endif
 		return;
 
 		case GS_CSR:
@@ -461,7 +498,9 @@ void gsResetFrameSkip()
 void SaveStateBase::gsFreeze()
 {
 	FreezeMem(PS2MEM_GS, 0x2000);
+#if USE_OLD_GIF == 1 // d
 	Freeze(SIGNAL_IMR_Pending);
+#endif
 	Freeze(gsRegionMode);
 
 	gifPathFreeze();

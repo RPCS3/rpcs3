@@ -501,7 +501,7 @@ template< typename T > void xWrite( T val );
 			&xmm6, &xmm7
 		};
 
-		pxAssume(id < iREGCNT_XMM);
+		pxAssert(id < iREGCNT_XMM);
 		return *m_tbl_xmmRegs[id];
 	}
 

@@ -244,7 +244,7 @@ public:
 
 	uint GetViewIndex() const
 	{
-		pxAssumeDev( m_viewIndex >= 0, "memory card view-Index is uninitialized (invalid drag&drop object state)" );
+		pxAssertDev( m_viewIndex >= 0, "memory card view-Index is uninitialized (invalid drag&drop object state)" );
 		return (uint)m_viewIndex;
 	}
 

@@ -21,36 +21,10 @@
 #include "Vif.h"
 #include <xmmintrin.h>
 
+#if USE_OLD_GIF == 1 // d
 // --------------------------------------------------------------------------------------
 //  GIFpath -- the GIFtag Parser
 // --------------------------------------------------------------------------------------
-
-enum GIF_FLG
-{
-	GIF_FLG_PACKED	= 0,
-	GIF_FLG_REGLIST	= 1,
-	GIF_FLG_IMAGE	= 2,
-	GIF_FLG_IMAGE2	= 3
-};
-
-enum GIF_REG
-{
-	GIF_REG_PRIM	= 0x00,
-	GIF_REG_RGBA	= 0x01,
-	GIF_REG_STQ		= 0x02,
-	GIF_REG_UV		= 0x03,
-	GIF_REG_XYZF2	= 0x04,
-	GIF_REG_XYZ2	= 0x05,
-	GIF_REG_TEX0_1	= 0x06,
-	GIF_REG_TEX0_2	= 0x07,
-	GIF_REG_CLAMP_1	= 0x08,
-	GIF_REG_CLAMP_2	= 0x09,
-	GIF_REG_FOG		= 0x0a,
-	GIF_REG_XYZF3	= 0x0c,
-	GIF_REG_XYZ3	= 0x0d,
-	GIF_REG_A_D		= 0x0e,
-	GIF_REG_NOP		= 0x0f,
-};
 
 // GIFTAG
 // Members of this structure are in CAPS to help visually denote that they are representative
@@ -203,7 +177,7 @@ static void __fastcall RegHandlerSIGNAL(const u32* data)
 		if (!SIGNAL_IMR_Pending)
 		{
 			//DevCon.WriteLn( Color_StrongOrange, "GS SIGNAL double throw encountered!" );
-			SIGNAL_IMR_Pending	= true;
+			SIGNAL_IMR_Pending	    = true;
 			SIGNAL_Data_Pending[0]	= data[0];
 			SIGNAL_Data_Pending[1]	= data[1];
 			
@@ -273,8 +247,8 @@ static void __fastcall RegHandlerUNMAPPED(const u32* data)
 	//  Using microVU avoids the GIFtag errors, so probably just one of sVU's hacks conflicting
 	//  with one of VIF's hacks, and causing corrupted packet data.
 
-	if( regidx != 0x7f && regidx != 0xee )
-		DbgCon.Warning( "Ignoring Unmapped GIFtag Register, Index = %02x", regidx );
+	if( regidx != 0x7f /*&& regidx != 0xee*/ )
+		DevCon.Warning( "Ignoring Unmapped GIFtag Register, Index = %02x", regidx );
 }
 
 #define INSERT_UNMAPPED_4	RegHandlerUNMAPPED, RegHandlerUNMAPPED, RegHandlerUNMAPPED, RegHandlerUNMAPPED,
@@ -354,13 +328,6 @@ __fi bool GIFPath::IsActive() const
 {
 	return (nloop != 0) || !tag.EOP;
 }
-
-void SaveStateBase::gifPathFreeze()
-{
-	FreezeTag( "GIFpath" );
-	Freeze( s_gifPath.path );
-}
-
 
 static __fi void gsHandler(const u8* pMem)
 {
@@ -577,42 +544,6 @@ __fi int GIFPath::ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size)
 
 
 	return size;
-}
-
-__ri void MemCopy_WrappedDest( const u128* src, u128* destBase, uint& destStart, uint destSize, uint len )
-{
-	uint endpos = destStart + len;
-	if( endpos < destSize )
-	{
-		memcpy_qwc(&destBase[destStart], src, len );
-		destStart += len;
-	}
-	else
-	{
-		uint firstcopylen = destSize - destStart;
-		memcpy_qwc(&destBase[destStart], src, firstcopylen );
-
-		destStart = endpos % destSize;
-		memcpy_qwc(destBase, src+firstcopylen, destStart );
-	}
-}
-
-__ri void MemCopy_WrappedSrc( const u128* srcBase, uint& srcStart, uint srcSize, u128* dest, uint len )
-{
-	uint endpos = srcStart + len;
-	if( endpos < srcSize )
-	{
-		memcpy_qwc(dest, &srcBase[srcStart], len );
-		srcStart += len;
-	}
-	else
-	{
-		uint firstcopylen = srcSize - srcStart;
-		memcpy_qwc(dest, &srcBase[srcStart], firstcopylen );
-
-		srcStart = endpos % srcSize;
-		memcpy_qwc(dest+firstcopylen, srcBase, srcStart );
-	}
 }
 
 #define copyTag() do {						\
@@ -991,7 +922,22 @@ __fi void GIFPath_Clear( GIF_PATH pathidx )
 	s_gifPath.path[pathidx].Reset();
 
 	GSTransferStatus._u32 &= ~(0xf << (pathidx * 4));
-	GSTransferStatus._u32 |= (0x5 << (pathidx * 4));
+	GSTransferStatus._u32 |=  (0x5 << (pathidx * 4));
 	if( GSgifSoftReset == NULL ) return;
 	GetMTGS().SendSimplePacket( GS_RINGTYPE_SOFTRESET, (1<<pathidx), 0, 0 );
 }
+
+void SaveStateBase::gifPathFreeze()
+{
+	FreezeTag( "GIFpath" );
+	Freeze( s_gifPath.path );
+}
+#else
+void SaveStateBase::gifPathFreeze()
+{
+	//FreezeTag( "GIFpath" );
+	//Freeze( s_gifPath.path );
+}
+#endif // USE_OLD_GIF == 1
+
+

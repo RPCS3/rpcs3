@@ -44,7 +44,7 @@ ConsoleLogSource_App pxConLog_App;
 void BaseDeletableObject::DoDeletion()
 {
 	wxAppWithHelpers* app = wxDynamicCast( wxApp::GetInstance(), wxAppWithHelpers );
-	pxAssume( app != NULL );
+	pxAssert( app != NULL );
 	app->DeleteObject( *this );
 }
 

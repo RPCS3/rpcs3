@@ -44,7 +44,7 @@ void pxInstallSignalHandler()
 // --------------------------------------------------------------------------------------
 EventListener_PageFault::EventListener_PageFault()
 {
-	pxAssume(Source_PageFault);
+	pxAssert(Source_PageFault);
 	Source_PageFault->Add( *this );
 }
 

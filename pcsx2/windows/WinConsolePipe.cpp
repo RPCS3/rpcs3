@@ -158,7 +158,7 @@ WinPipeRedirection::WinPipeRedirection( FILE* stdstream )
 	m_crtFile		= -1;
 	m_fp			= NULL;
 
-	pxAssume( (stdstream == stderr) || (stdstream == stdout) );
+	pxAssert( (stdstream == stderr) || (stdstream == stdout) );
 
 	try
 	{

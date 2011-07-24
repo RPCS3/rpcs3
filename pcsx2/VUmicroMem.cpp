@@ -51,8 +51,8 @@ void vuMemoryReserve::Reset()
 {
 	_parent::Reset();
 	
-	pxAssume( VU0.Mem );
-	pxAssume( VU1.Mem );
+	pxAssert( VU0.Mem );
+	pxAssert( VU1.Mem );
 
 	memMapVUmicro();
 

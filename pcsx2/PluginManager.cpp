@@ -227,7 +227,7 @@ static void CALLBACK GS_gifTransferLegacy( const u32* src, u32 data )
 
 			if (src128 == RingBuffer.m_Ring)
 			{
-				pxAssume( (data+path1size) <= 0x400 );
+				pxAssert( (data+path1size) <= 0x400 );
 				memcpy_qwc( &path1queue[path1size], src128, data );
 				path1size += data;
 			}
@@ -951,7 +951,7 @@ SysCorePlugins::~SysCorePlugins() throw()
 void SysCorePlugins::Load( PluginsEnum_t pid, const wxString& srcfile )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
-	pxAssume( (uint)pid < PluginId_Count );
+	pxAssert( (uint)pid < PluginId_Count );
 	Console.Indent().WriteLn( L"Binding %s\t: %s ", tbl_PluginInfo[pid].GetShortname().c_str(), srcfile.c_str() );
 	m_info[pid] = new PluginStatus_t( pid, srcfile );
 }
@@ -1017,7 +1017,7 @@ void SysCorePlugins::Load( const wxString (&folders)[PluginId_Count] )
 void SysCorePlugins::Unload(PluginsEnum_t pid)
 {
 	ScopedLock lock( m_mtx_PluginStatus );
-	pxAssume( (uint)pid < PluginId_Count );
+	pxAssert( (uint)pid < PluginId_Count );
 	m_info[pid].Delete();
 }
 
@@ -1119,7 +1119,7 @@ bool SysCorePlugins::OpenPlugin_Mcd()
 
 void SysCorePlugins::Open( PluginsEnum_t pid )
 {
-	pxAssume( (uint)pid < PluginId_Count );
+	pxAssert( (uint)pid < PluginId_Count );
 	if( IsOpen(pid) ) return;
 
 	Console.Indent().WriteLn( "Opening %s", tbl_PluginInfo[pid].shortname );
@@ -1240,7 +1240,7 @@ void SysCorePlugins::ClosePlugin_Mcd()
 
 void SysCorePlugins::Close( PluginsEnum_t pid )
 {
-	pxAssume( (uint)pid < PluginId_Count );
+	pxAssert( (uint)pid < PluginId_Count );
 
 	if( !IsOpen(pid) ) return;
 	
@@ -1653,21 +1653,21 @@ bool SysCorePlugins::AreAnyInitialized() const
 
 bool SysCorePlugins::IsOpen( PluginsEnum_t pid ) const
 {
-	pxAssume( (uint)pid < PluginId_Count );
+	pxAssert( (uint)pid < PluginId_Count );
 	ScopedLock lock( m_mtx_PluginStatus );
 	return m_info[pid] && m_info[pid]->IsInitialized && m_info[pid]->IsOpened;
 }
 
 bool SysCorePlugins::IsInitialized( PluginsEnum_t pid ) const
 {
-	pxAssume( (uint)pid < PluginId_Count );
+	pxAssert( (uint)pid < PluginId_Count );
 	ScopedLock lock( m_mtx_PluginStatus );
 	return m_info[pid] && m_info[pid]->IsInitialized;
 }
 
 bool SysCorePlugins::IsLoaded( PluginsEnum_t pid ) const
 {
-	pxAssume( (uint)pid < PluginId_Count );
+	pxAssert( (uint)pid < PluginId_Count );
 	return !!m_info[pid];
 }
 
@@ -1732,13 +1732,13 @@ bool SysCorePlugins::NeedsClose() const
 const wxString SysCorePlugins::GetName( PluginsEnum_t pid ) const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
-	pxAssume( (uint)pid < PluginId_Count );
+	pxAssert( (uint)pid < PluginId_Count );
 	return m_info[pid] ? m_info[pid]->Name : (wxString)_("Unloaded Plugin");
 }
 
 const wxString SysCorePlugins::GetVersion( PluginsEnum_t pid ) const
 {
 	ScopedLock lock( m_mtx_PluginStatus );
-	pxAssume( (uint)pid < PluginId_Count );
+	pxAssert( (uint)pid < PluginId_Count );
 	return m_info[pid] ? m_info[pid]->Version : L"0.0";
 }

@@ -175,7 +175,7 @@ namespace Panels
 
 		virtual wxDirName GetMcdPath() const
 		{
-			pxAssume(m_FolderPicker);
+			pxAssert(m_FolderPicker);
 			return m_FolderPicker->GetPath();
 		}
 

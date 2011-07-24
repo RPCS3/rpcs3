@@ -188,7 +188,7 @@ public:
 	EventListenerHelper_CoreThread( TypeToDispatchTo* dispatchTo )
 		: Owner( *dispatchTo )
 	{
-		pxAssume(dispatchTo != NULL);
+		pxAssert(dispatchTo != NULL);
 	}
 
 	virtual ~EventListenerHelper_CoreThread() throw() {}
@@ -215,7 +215,7 @@ public:
 	EventListenerHelper_Plugins( TypeToDispatchTo* dispatchTo )
 		: Owner( *dispatchTo )
 	{
-		pxAssume(dispatchTo != NULL);
+		pxAssert(dispatchTo != NULL);
 	}
 
 	virtual ~EventListenerHelper_Plugins() throw() {}
@@ -244,7 +244,7 @@ public:
 	EventListenerHelper_AppStatus( TypeToDispatchTo* dispatchTo )
 		: Owner( *dispatchTo )
 	{
-		pxAssume(dispatchTo != NULL);
+		pxAssert(dispatchTo != NULL);
 	}
 
 	virtual ~EventListenerHelper_AppStatus() throw() {}

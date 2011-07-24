@@ -107,7 +107,7 @@ public:
 
 	virtual ~BaseScopedAlloc() throw()
 	{
-		//pxAssume(m_buffer==NULL);
+		//pxAssert(m_buffer==NULL);
 	}
 
 public:

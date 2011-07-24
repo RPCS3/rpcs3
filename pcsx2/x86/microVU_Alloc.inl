@@ -25,9 +25,9 @@
 
 __fi static const x32& getFlagReg(uint fInst)
 {
-	static const x32* const gprF_crap[4] = { &gprF0, &gprF1, &gprF2, &gprF3 };
-	pxAssume(fInst < 4);
-	return *gprF_crap[fInst];
+	static const x32* const gprFlags[4] = { &gprF0, &gprF1, &gprF2, &gprF3 };
+	pxAssert(fInst < 4);
+	return *gprFlags[fInst];
 }
 
 __fi void setBitSFLAG(const x32& reg, const x32& regT, int bitTest, int bitSet)

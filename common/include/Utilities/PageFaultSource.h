@@ -199,13 +199,13 @@ public:
 
 	u8& operator[](uint idx)
 	{
-		pxAssume(idx < (m_pages_reserved * __pagesize));
+		pxAssert(idx < (m_pages_reserved * __pagesize));
 		return *((u8*)m_baseptr + idx);
 	}
 
 	const u8& operator[](uint idx) const
 	{
-		pxAssume(idx < (m_pages_reserved * __pagesize));
+		pxAssert(idx < (m_pages_reserved * __pagesize));
 		return *((u8*)m_baseptr + idx);
 	}
 

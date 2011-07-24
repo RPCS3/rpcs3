@@ -23,7 +23,9 @@
 
 __aligned16 vifStruct  vif0, vif1;
 
+#if USE_OLD_GIF == 1 // d
 tGSTransferStatus GSTransferStatus((STOPPED_MODE<<8) | (STOPPED_MODE<<4) | STOPPED_MODE);
+#endif
 
 void vif0Reset()
 {
@@ -172,17 +174,21 @@ __fi void vif1FBRST(u32 value) {
 		vif1.done = true;
 		vif1ch.chcr.STR = false;
 		
+#if USE_OLD_GIF == 1 // ...
 		//DevCon.Warning("VIF FBRST Reset MSK = %x", vif1Regs.mskpath3);
-		if(vif1Regs.mskpath3 == 1 && GSTransferStatus.PTH3 == STOPPED_MODE && gifch.chcr.STR == true) 
-		{
+		if(vif1Regs.mskpath3 == 1 && GSTransferStatus.PTH3 == STOPPED_MODE && gifch.chcr.STR == true) {
 			DevCon.Warning("VIF Path3 Resume on FBRST MSK = %x", vif1Regs.mskpath3);
-			gsInterrupt();
+			gifInterrupt();
 			vif1Regs.mskpath3 = false;
 			gifRegs.stat.M3P = 0;
 		}
-
 		vif1Regs.mskpath3 = false;
-		gifRegs.stat.M3P = 0;
+		gifRegs.stat.M3P  = 0;
+#else
+		GUNIT_WARN(Color_Red, "VIF FBRST Reset MSK = %x", vif1Regs.mskpath3);
+		vif1Regs.mskpath3 = false;
+		gifRegs.stat.M3P  = 0;
+#endif
 		vif1Regs.err.reset();
 		vif1.inprogress = 0;
 		vif1.cmd = 0;

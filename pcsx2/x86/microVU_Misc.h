@@ -241,11 +241,11 @@ typedef u32 (__fastcall *mVUCall)(void*, void*);
 }
 
 #define branchAddr (																	\
-	pxAssumeDev((iPC & 1) == 0, "microVU: Expected Lower Op for valid branch addr."),	\
+	pxAssertDev((iPC & 1) == 0, "microVU: Expected Lower Op for valid branch addr."),	\
 	((((iPC + 2)  + (_Imm11_ * 2)) & mVU.progMemMask) * 4)								\
 )
 #define branchAddrN (																	\
-	pxAssumeDev((iPC & 1) == 0, "microVU: Expected Lower Op for valid branch addr."),	\
+	pxAssertDev((iPC & 1) == 0, "microVU: Expected Lower Op for valid branch addr."),	\
 	((((iPC + 4)  + (_Imm11_ * 2)) & mVU.progMemMask) * 4)								\
 )
 

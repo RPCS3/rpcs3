@@ -368,7 +368,7 @@ void wxDialogWithHelpers::AddOkCancel( wxSizer &sizer, bool hasApply )
 void wxDialogWithHelpers::AddOkCancel( wxSizer *sizer, bool hasApply )
 {
 	if( sizer == NULL ) sizer = GetSizer();
-	pxAssume( sizer );
+	pxAssert( sizer );
 	AddOkCancel( *sizer, hasApply );
 }
 

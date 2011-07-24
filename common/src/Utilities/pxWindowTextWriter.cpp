@@ -86,7 +86,7 @@ pxWindowTextWriter& pxWindowTextWriter::MoveY( int ydelta )
 
 void pxWindowTextWriter::_DoWriteLn( const wxChar* msg )
 {
-	pxAssume( msg );
+	pxAssert( msg );
 
 	int	tWidth, tHeight;
 	m_dc.GetMultiLineTextExtent( msg, &tWidth, &tHeight );
@@ -110,7 +110,7 @@ void pxWindowTextWriter::_DoWriteLn( const wxChar* msg )
 // to the text writer.
 void pxWindowTextWriter::_DoWrite( const wxChar* msg )
 {
-	pxAssume( msg );
+	pxAssert( msg );
 
 	wxArrayString parts;
 	SplitString( parts, msg, L'\n' );

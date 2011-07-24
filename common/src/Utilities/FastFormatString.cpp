@@ -92,14 +92,14 @@ public:
 	BufferType& GrabBuffer()
 	{
 		++m_curslot;
-		pxAssume(m_curslot < BufferCount);
+		pxAssert(m_curslot < BufferCount);
 		return m_buffers[m_curslot];
 	}
 
 	void ReleaseBuffer()
 	{
 		--m_curslot;
-		pxAssume(m_curslot < BufferCount);
+		pxAssert(m_curslot < BufferCount);
 	}
 
 	BufferType& operator[](uint i)

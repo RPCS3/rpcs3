@@ -93,7 +93,7 @@ const ListViewColumnInfo& GameDatabaseListView::GetDefaultColumnInfo( uint idx )
 		{ L"Patches",		48,		wxLIST_FORMAT_CENTER	},
 	};
 
-	pxAssumeDev( idx < ArraySize(columns), "ListView column index is out of bounds." );
+	pxAssertDev( idx < ArraySize(columns), "ListView column index is out of bounds." );
 	return columns[idx];
 }
 

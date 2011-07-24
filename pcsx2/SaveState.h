@@ -24,7 +24,7 @@
 //  the lower 16 bit value.  IF the change is breaking of all compatibility with old
 //  states, increment the upper 16 bit value, and clear the lower 16 bits to 0.
 
-static const u32 g_SaveVersion = (0x9A01 << 16) | 0x0000;
+static const u32 g_SaveVersion = (0x9A02 << 16) | 0x0000;
 
 // this function is meant to be used in the place of GSfreeze, and provides a safe layer
 // between the GS saving function and the MTGS's needs. :)
@@ -202,8 +202,12 @@ protected:
 #endif
 	void sifFreeze();
 	void ipuFreeze();
-	void ipuDmaFreeze();	
+	void ipuDmaFreeze();
 	void gifFreeze();
+	void gifDmaFreeze();
+	void gifPathFreeze(u32 path); // called by gifFreeze()
+	void gifPathFreeze();         // called by gsFreeze()
+
 	void sprFreeze();
 
 	void sioFreeze();
@@ -212,8 +216,6 @@ protected:
 	void psxRcntFreeze();
 	void sio2Freeze();
 
-	void gifPathFreeze();		// called by gsFreeze
-	
 	void deci2Freeze();
 };
 

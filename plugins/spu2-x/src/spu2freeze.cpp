@@ -54,7 +54,7 @@ s32 __fastcall Savestate::FreezeIt( DataBlock& spud )
 	spud.spu2id		= SAVE_ID;
 	spud.version	= SAVE_VERSION;
 
-	pxAssumeMsg( spu2regs && _spu2mem, "Looks like PCSX2 is trying to savestate while pluigns are shut down.  That's a no-no! It shouldn't crash, but the savestate will probably be corrupted." );
+	pxAssertMsg( spu2regs && _spu2mem, "Looks like PCSX2 is trying to savestate while pluigns are shut down.  That's a no-no! It shouldn't crash, but the savestate will probably be corrupted." );
 
 	if( spu2regs != NULL )	memcpy(spud.unkregs,	spu2regs,	sizeof(spud.unkregs));
 	if( _spu2mem != NULL )	memcpy(spud.mem,		_spu2mem,	sizeof(spud.mem));
@@ -104,7 +104,7 @@ s32 __fastcall Savestate::ThawIt( DataBlock& spud )
 	{
 		SndBuffer::ClearContents();
 
-		pxAssumeMsg( spu2regs && _spu2mem, "Looks like PCSX2 is trying to loadstate while pluigns are shut down.  That's a no-no!  It shouldn't crash, but the savestate will probably be corrupted." );
+		pxAssertMsg( spu2regs && _spu2mem, "Looks like PCSX2 is trying to loadstate while pluigns are shut down.  That's a no-no!  It shouldn't crash, but the savestate will probably be corrupted." );
 
 		// base stuff
 		if( spu2regs )	memcpy(spu2regs, spud.unkregs,	sizeof(spud.unkregs));

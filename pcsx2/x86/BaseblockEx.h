@@ -259,7 +259,7 @@ static void recLUT_SetPage(uptr reclut[0x10000], uptr hwlut[0x10000],
 	// this value is in 64k pages!
 	uint page = pagebase + pageidx;
 
-	pxAssume( page < 0x10000 );
+	pxAssert( page < 0x10000 );
 	reclut[page] = (uptr)&mapbase[(mappage - page) << 14];
 	if (hwlut)
 		hwlut[page] = 0u - (pagebase << 16);

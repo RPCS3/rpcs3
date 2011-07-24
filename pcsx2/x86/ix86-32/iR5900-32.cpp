@@ -468,7 +468,7 @@ static DynGenFunc* _DynGen_DispatcherReg()
 
 static DynGenFunc* _DynGen_EnterRecompiledCode()
 {
-	pxAssumeDev( DispatcherReg != NULL, "Dynamically generated dispatchers are required prior to generating EnterRecompiledCode!" );
+	pxAssertDev( DispatcherReg != NULL, "Dynamically generated dispatchers are required prior to generating EnterRecompiledCode!" );
 	
 	u8* retval = xGetAlignedCallTarget();
 
@@ -1400,7 +1400,7 @@ static void __fastcall recRecompile( const u32 startpc )
     if (dumplog & 4) iDumpRegisters(startpc, 0);
 #endif
 
-	pxAssume( startpc );
+	pxAssert( startpc );
 
 	// if recPtr reached the mem limit reset whole mem
 	if (recPtr >= (recMem->GetPtrEnd() - _64kb)) {
@@ -1429,7 +1429,7 @@ static void __fastcall recRecompile( const u32 startpc )
 
 	s_pCurBlockEx = recBlocks.New(HWADDR(startpc), (uptr)recPtr);
 
-	pxAssume(s_pCurBlockEx);
+	pxAssert(s_pCurBlockEx);
 
 	if (g_SkipBiosHack && HWADDR(startpc) == EELOAD_START) {
 		xCALL(eeloadReplaceOSDSYS);
@@ -1448,7 +1448,7 @@ static void __fastcall recRecompile( const u32 startpc )
 	pc = startpc;
 	x86FpuState = FPU_STATE;
 	g_cpuHasConstReg = g_cpuFlushedConstReg = 1;
-	pxAssume( g_cpuConstRegs[0].UD[0] == 0 );
+	pxAssert( g_cpuConstRegs[0].UD[0] == 0 );
 
 	_initX86regs();
 	_initXMMregs();

@@ -111,7 +111,7 @@ void SysThreadBase::Suspend( bool isBlocking )
 			break;
 		}
 
-		pxAssumeDev( m_ExecMode == ExecMode_Closing, "ExecMode should be nothing other than Closing..." );
+		pxAssertDev( m_ExecMode == ExecMode_Closing, "ExecMode should be nothing other than Closing..." );
 		m_sem_event.Post();
 	}
 
@@ -140,7 +140,7 @@ void SysThreadBase::Pause()
 		if( m_ExecMode == ExecMode_Opened )
 			m_ExecMode = ExecMode_Pausing;
 
-		pxAssumeDev( m_ExecMode == ExecMode_Pausing, "ExecMode should be nothing other than Pausing..." );
+		pxAssertDev( m_ExecMode == ExecMode_Pausing, "ExecMode should be nothing other than Pausing..." );
 
 		m_sem_event.Post();
 	}

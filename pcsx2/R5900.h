@@ -404,7 +404,9 @@ enum EE_EventType
 	// We're setting error conditions through hwDmacIrq, so these correspond to the conditions above.
 	DMAC_STALL_SIS		= 13, // SIS
 	DMAC_MFIFO_EMPTY	= 14, // MEIS
-	DMAC_BUS_ERROR	= 15      // BEIS
+	DMAC_BUS_ERROR	= 15,      // BEIS
+
+	DMAC_GIF_UNIT
 };
 
 extern void CPU_INT( EE_EventType n, s32 ecycle );

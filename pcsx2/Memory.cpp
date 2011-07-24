@@ -837,7 +837,7 @@ static __aligned16 vtlb_PageProtectionInfo m_PageProtectInfo[Ps2MemSize::MainRam
 //
 int mmap_GetRamPageInfo( u32 paddr )
 {
-	pxAssume( eeMem );
+	pxAssert( eeMem );
 
 	paddr &= ~0xfff;
 
@@ -854,7 +854,7 @@ int mmap_GetRamPageInfo( u32 paddr )
 // paddr - physically mapped PS2 address
 void mmap_MarkCountedRamPage( u32 paddr )
 {
-	pxAssume( eeMem );
+	pxAssert( eeMem );
 	
 	paddr &= ~0xfff;
 
@@ -883,7 +883,7 @@ void mmap_MarkCountedRamPage( u32 paddr )
 // from code residing in this page will use manual protection.
 static __fi void mmap_ClearCpuBlock( uint offset )
 {
-	pxAssume( eeMem );
+	pxAssert( eeMem );
 
 	int rampage = offset >> 12;
 
@@ -899,7 +899,7 @@ static __fi void mmap_ClearCpuBlock( uint offset )
 
 void mmap_PageFaultHandler::OnPageFaultEvent( const PageFaultInfo& info, bool& handled )
 {
-	pxAssume( eeMem );
+	pxAssert( eeMem );
 
 	// get bad virtual address
 	uptr offset = info.addr - (uptr)eeMem->Main;
