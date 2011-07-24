@@ -409,6 +409,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\GameDatabase.cpp" />
+    <ClCompile Include="..\..\Gif_Unit.cpp" />
     <ClCompile Include="..\..\gui\AppGameDatabase.cpp" />
     <ClCompile Include="..\..\gui\AppUserMode.cpp" />
     <ClCompile Include="..\..\gui\Dialogs\GameDatabaseDialog.cpp" />
@@ -681,6 +682,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\GameDatabase.h" />
+    <ClInclude Include="..\..\Gif_Unit.h" />
     <ClInclude Include="..\..\gui\AppGameDatabase.h" />
     <ClInclude Include="..\..\gui\Panels\MemoryCardPanels.h" />
     <ClInclude Include="..\..\IPU\IPUdma.h" />

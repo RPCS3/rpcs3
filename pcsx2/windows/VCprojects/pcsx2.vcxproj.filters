@@ -811,6 +811,9 @@
     <ClCompile Include="..\..\gui\Panels\MemoryCardListView.cpp">
       <Filter>AppHost\Panels</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Gif_Unit.cpp">
+      <Filter>System\Ps2\GS</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Patch.h">
@@ -1188,6 +1191,9 @@
     </ClInclude>
     <ClInclude Include="..\..\gui\Panels\MemoryCardPanels.h">
       <Filter>AppHost\Panels</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Gif_Unit.h">
+      <Filter>System\Ps2\GS</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
