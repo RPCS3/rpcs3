@@ -93,12 +93,9 @@ void __fastcall _hwWrite32( u32 mem, u32 value )
 					// Not exactly sure what RST needs to do
 					gifRegs.ctrl.write(value & 9);
 					if (gifRegs.ctrl.RST) {
-#if USE_OLD_GIF == 1 // d
-						gifUnit.ResetRegs(); // hmm?
-#else
 						GUNIT_LOG("GIF CTRL - Reset");
-						gifUnit.Reset(true); // hmm?
-#endif
+						gifUnit.Reset(true); // Should it reset gsSIGNAL?
+						//gifUnit.ResetRegs();
 					}
 					gifRegs.stat.PSE = gifRegs.ctrl.PSE;
 					return;
@@ -108,11 +105,8 @@ void __fastcall _hwWrite32( u32 mem, u32 value )
 				{
 					// need to set GIF_MODE (hamster ball)
 					gifRegs.mode.write(value);
-
-					// set/clear bits 0 and 2 as per the GIF_MODE value.
-					const u32 bitmask = GIF_MODE_M3R | GIF_MODE_IMT;
-					psHu32(GIF_STAT) &= ~bitmask;
-					psHu32(GIF_STAT) |= (u32)value & bitmask;
+					gifRegs.stat.M3R = gifRegs.mode.M3R;
+					gifRegs.stat.IMT = gifRegs.mode.IMT;
 					return;
 				}
 			}

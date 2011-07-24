@@ -52,26 +52,12 @@ void gsInit()
 	memzero(g_RealGSMem);
 }
 
-#if USE_OLD_GIF == 1 // d
-extern bool SIGNAL_IMR_Pending;
-extern u32 SIGNAL_Data_Pending[2];
-#endif
-
 void gsReset()
 {
 	GetMTGS().ResetGS();
 
 	UpdateVSyncRate();
 	memzero(g_RealGSMem);
-
-#if USE_OLD_GIF == 1 // d
-	GSTransferStatus = (STOPPED_MODE<<8) | (STOPPED_MODE<<4) | STOPPED_MODE;
-	SIGNAL_IMR_Pending = false;
-
-	// FIXME: This really doesn't belong here, and I seriously doubt it's needed.
-	// If it is needed it should be in the GIF portion of hwReset().  --air
-	gifUnit.ResetRegs();
-#endif
 
 	CSRreg.Reset();
 	GSIMR = 0x7f00;
@@ -84,16 +70,12 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 		// perform a soft reset -- which is a clearing of all GIFpaths -- and fall back to doing
 		// a full reset if the plugin doesn't support soft resets.
 
-		if( GSgifSoftReset != NULL )
-		{
+		if (GSgifSoftReset != NULL) {
 			GIFPath_Clear( GIF_PATH_1 );
 			GIFPath_Clear( GIF_PATH_2 );
 			GIFPath_Clear( GIF_PATH_3 );
 		}
-		else
-		{
-			GetMTGS().SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
-		}
+		else GetMTGS().SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
 
 		SIGNAL_IMR_Pending = false;
 #else
@@ -115,26 +97,8 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 	
 	if(csr.SIGNAL)
 	{
-#if USE_OLD_GIF == 1 // d
 		// SIGNAL : What's not known here is whether or not the SIGID register should be updated
 		//  here or when the IMR is cleared (below).
-
-		if(SIGNAL_IMR_Pending == true)
-		{
-			//DevCon.Warning("Firing pending signal");
-			GIF_LOG("GS SIGNAL (pending) data=%x_%x IMR=%x CSRr=%x",SIGNAL_Data_Pending[0], SIGNAL_Data_Pending[1], GSIMR, GSCSRr);
-			GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~SIGNAL_Data_Pending[1])|(SIGNAL_Data_Pending[0]&SIGNAL_Data_Pending[1]);
-
-			if (!(GSIMR&0x100)) gsIrq();
-
-			CSRreg.SIGNAL = true; //Just to be sure :P
-		}
-		else CSRreg.SIGNAL = false;
-		
-		SIGNAL_IMR_Pending = false;
-
-		if(gifRegs.stat.P1Q && gifRegs.stat.APATH <= GIF_APATH1) gsPath1Interrupt();
-#else
 		GUNIT_LOG("csr.SIGNAL");
 		if (gifUnit.gsSIGNAL.queued) {
 			//DevCon.Warning("Firing pending signal");
@@ -142,12 +106,11 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 				        | (gifUnit.gsSIGNAL.data[0]&gifUnit.gsSIGNAL.data[1]);
 
 			if (!(GSIMR&0x100)) gsIrq();
-			CSRreg.SIGNAL  = true; // Just to be sure :P
+			CSRreg.SIGNAL  = true; // Just to be sure :p
 		}
 		else CSRreg.SIGNAL = false;
 		gifUnit.gsSIGNAL.queued = false;
-		gifUnit.Execute();
-#endif
+		gifUnit.Execute(); // Resume paused transfers
 	}
 	
 	if(csr.FINISH)	CSRreg.FINISH	= false;
@@ -163,9 +126,8 @@ static __fi void IMRwrite(u32 value)
 	if(CSRreg.GetInterruptMask() & (~(GSIMR >> 8) & 0x1f))
 		gsIrq();
 
-#if USE_OLD_GIF == 1 // d
-	if( SIGNAL_IMR_Pending && !(GSIMR & 0x100))
-	{
+	GUNIT_LOG("IMRwrite()");
+	if (gifUnit.gsSIGNAL.queued && !(GSIMR & 0x100)) {
 		// Note: PS2 apps are expected to write a successive 1 and 0 to the IMR in order to
 		//  trigger the gsInt and clear the second pending SIGNAL interrupt -- if they fail
 		//  to do so, the GS will freeze again upon the very next SIGNAL).
@@ -173,19 +135,9 @@ static __fi void IMRwrite(u32 value)
 		// What's not known here is whether or not the SIGID register should be updated
 		//  here or when the GS is resumed during CSR write (above).
 
-		//GIF_LOG("GS SIGNAL (pending) data=%x_%x IMR=%x CSRr=%x\n",CSR_SIGNAL_Data[0], CSR_SIGNAL_Data[1], GSIMR, GSCSRr);
-		//GSSIGLBLID.SIGID = (GSSIGLBLID.SIGID&~CSR_SIGNAL_Data[1])|(CSR_SIGNAL_Data[0]&CSR_SIGNAL_Data[1]);
-
 		CSRreg.SIGNAL = true;
 		gsIrq();
 	}
-#else
-	GUNIT_LOG("IMRwrite()");
-	if (gifUnit.gsSIGNAL.queued && !(GSIMR & 0x100)) {
-		CSRreg.SIGNAL = true;
-		gsIrq();
-	}
-#endif
 }
 
 __fi void gsWrite8(u32 mem, u8 value)
@@ -308,14 +260,19 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 	switch( mem )
 	{
 		case GS_BUSDIR:
-#if USE_OLD_GIF == 1 // d
 			//This is probably a complete hack, however writing to BUSDIR "should" start a transfer 
 			//Only problem is it kills killzone :(.
 			// (yes it *is* a complete hack; both lines here in fact --air)
 			//=========================================================================
 			//gifRegs.stat.OPH = true; // Bleach wants it, Killzone hates it.
-			
-			gifRegs.stat.DIR = (u32)value[0];
+
+			GUNIT_LOG("GIF - busdir");
+			gifRegs.stat.DIR = value[0] & 1;
+			if (gifRegs.stat.DIR) { // Assume will do local->host transfer?
+				gifRegs.stat.OPH = true; // Is OPH set on local->host transfers?
+				DevCon.WriteLn("Busdir - Local->Host Transfer");
+			}
+
 			//=========================================================================
 			// BUSDIR INSANITY !! MTGS FLUSH NEEDED
 			//
@@ -327,16 +284,6 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 			// the GS and MTGS register states, and upload our screwy busdir register in the process. :)
 			gsWrite64_generic( mem, value );
 			GetMTGS().WaitGS();
-#else
-			GUNIT_LOG("GIF - busdir");
-			gifRegs.stat.DIR = value[0] & 1;
-			if (gifRegs.stat.DIR) { // Assume will do local->host transfer?
-				gifRegs.stat.OPH = true; // Is OPH set on local->host transfers?
-				DevCon.WriteLn("Busdir - Local->Host Transfer");
-			}
-			gsWrite64_generic( mem, value );
-			GetMTGS().WaitGS();
-#endif
 		return;
 
 		case GS_CSR:
@@ -498,10 +445,6 @@ void gsResetFrameSkip()
 void SaveStateBase::gsFreeze()
 {
 	FreezeMem(PS2MEM_GS, 0x2000);
-#if USE_OLD_GIF == 1 // d
-	Freeze(SIGNAL_IMR_Pending);
-#endif
 	Freeze(gsRegionMode);
-
 	gifPathFreeze();
 }

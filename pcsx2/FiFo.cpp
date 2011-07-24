@@ -56,9 +56,7 @@ void __fastcall ReadFIFO_VIF1(mem128_t* out)
 			GetMTGS().WaitGS();
 			GSreadFIFO((u64*)out);
 			vif1.GSLastDownloadSize--;
-#if USE_OLD_GIF == 0 // d
 			GUNIT_LOG("ReadFIFO_VIF1");
-#endif
 			if (vif1.GSLastDownloadSize <= 16)
 				gifRegs.stat.OPH = false;
 			vif1Regs.stat.FQC = min((u32)16, vif1.GSLastDownloadSize);
@@ -95,61 +93,30 @@ void __fastcall WriteFIFO_VIF1(const mem128_t *value)
 {
 	VIF_LOG("WriteFIFO/VIF1 <- %ls", value->ToString().c_str());
 
-	if (vif1Regs.stat.FDR)
+	if (vif1Regs.stat.FDR) {
 		DevCon.Warning("writing to fifo when fdr is set!");
-	if (vif1Regs.stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
+	}
+	if (vif1Regs.stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) ) {
 		DevCon.Warning("writing to vif1 fifo when stalled");
+	}
+	if (vif1.irqoffset != 0 && vif1.vifstalled == true) {
+		DevCon.Warning("Offset on VIF1 FIFO start!");
+	}
 
 	vif1ch.qwc += 1;
-	if(vif1.irqoffset != 0 && vif1.vifstalled == true) DevCon.Warning("Offset on VIF1 FIFO start!");
+
 	bool ret = VIF1transfer((u32*)value, 4);
 
-#if USE_OLD_GIF == 1 // d
-	if(GSTransferStatus.PTH2 == STOPPED_MODE && gifRegs.stat.APATH == GIF_APATH2)
-	{
-		if(gifRegs.stat.DIR == 0)gifRegs.stat.OPH = false;
-		gifRegs.stat.APATH = GIF_APATH_IDLE;
-		if(gifRegs.stat.P1Q) gsPath1Interrupt();
+	if (vif1.cmd) {
+		if (vif1.done && !vif1ch.qwc) vif1Regs.stat.VPS = VPS_WAITING;
 	}
-#endif
-
-	if (vif1.cmd) 
-	{
-		if(vif1.done == true && vif1ch.qwc == 0)	vif1Regs.stat.VPS = VPS_WAITING;
-	}
-	else		 
-	{
-		vif1Regs.stat.VPS = VPS_IDLE;
-	}
+	else vif1Regs.stat.VPS = VPS_IDLE;
 
 	pxAssertDev( ret, "vif stall code not implemented" );
 }
 
 void __fastcall WriteFIFO_GIF(const mem128_t *value)
 {
-#if USE_OLD_GIF == 1 // d
-	GIF_LOG("WriteFIFO/GIF <- %ls", value->ToString().c_str());
-
-	//CopyQWC(&psHu128(GIF_FIFO), value);
-	//CopyQWC(&nloop0_packet, value);
-
-	GetMTGS().PrepDataPacket(GIF_PATH_3, 1);
-	GIFPath_CopyTag( GIF_PATH_3, value, 1 );
-	GetMTGS().SendDataPacket();
-
-	if(GSTransferStatus.PTH3 >= PENDINGSTOP_MODE )
-	{
-		GSTransferStatus.PTH3 = STOPPED_MODE;
-		if(gifRegs.stat.APATH == GIF_APATH3)
-		{
-			if(gifRegs.stat.DIR == 0)gifRegs.stat.OPH = false;
-			gifRegs.stat.APATH = GIF_APATH_IDLE;
-			if(gifRegs.stat.P1Q) gsPath1Interrupt();
-		}
-	}
-#else
 	GUNIT_LOG("WriteFIFO_GIF()");
 	gifUnit.TransferGSPacketData(GIF_TRANS_FIFO, (u8*)value, 16);
-#endif
 }
-

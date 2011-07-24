@@ -114,13 +114,6 @@ void SysMtgsThread::ResetGS()
 	SendSimplePacket( GS_RINGTYPE_RESET, 0, 0, 0 );
 	SendSimplePacket( GS_RINGTYPE_FRAMESKIP, 0, 0, 0 );
 	SetEvent();
-
-#if USE_OLD_GIF == 1 // d
-	GIFPath_Reset();
-#else
-	//DevCon.WriteLn("ResetGS()");
-	//gifUnit.Reset();
-#endif
 }
 
 struct RingCmdPacket_Vsync
@@ -334,7 +327,7 @@ void SysMtgsThread::ExecuteTaskInThread()
 
 			switch( tag.command )
 			{
-#if USE_OLD_GIF == 1 || COPY_GS_PACKET_TO_MTGS == 1 // d
+#if COPY_GS_PACKET_TO_MTGS == 1 // d
 				case GS_RINGTYPE_P1:
 				{
 					uint datapos = (m_ReadPos+1) & RingBufferMask;

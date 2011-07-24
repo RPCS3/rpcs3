@@ -56,62 +56,6 @@ enum GIF_PATH_STATE {
 	GIF_PATH_IMAGE   = 3  // Path is on a IMAGE   gif tag
 };
 
-enum gifstate_t {
-	GIF_STATE_READY = 0,
-	GIF_STATE_STALL = 1,
-	GIF_STATE_DONE  = 2,
-	GIF_STATE_EMPTY = 0x10
-};
-
-enum GSTransferModes { // 0 = Image Mode (DirectHL), 1 = transferring, 2 = Stopped at End of Packet
-	WAITING_MODE = 0,
-	IMAGE_MODE = 1,
-	TRANSFER_MODE = 2,
-	PENDINGSTOP_MODE = 3,
-	IDLE_MODE = 4,
-	STOPPED_MODE = 5
-};
-
-union tGSTransferStatus {
-	struct {
-		u32 PTH1 : 4; // Resets Vif(0/1) when written.
-		u32 PTH2 : 4; // Causes a Forcebreak to Vif((0/1) when true. (Stall)
-		u32 PTH3 : 4; // Stops after the end of the Vifcode in progress when true. (Stall)
-		u32 reserved : 20;
-	};
-	u32 _u32;
-
-	tGSTransferStatus(u32 val)			{ _u32 = val; }
-	bool test		(u32 flags) const	{ return !!(_u32 & flags); }
-	void set_flags	(u32 flags)			{ _u32 |=  flags; }
-	void clear_flags(u32 flags)			{ _u32 &= ~flags; }
-	void reset()						{ _u32 = 0; }
-	wxString desc() const				{ return wxsFormat(L"GSTransferStatus.PTH3: 0x%x", _u32); }
-};
-
-//GIF_STAT
-enum gif_stat_flags {
-	GIF_STAT_M3R		= (1),		// GIF_MODE Mask
-	GIF_STAT_M3P		= (1<<1),	// VIF PATH3 Mask
-	GIF_STAT_IMT		= (1<<2),	// Intermittent Transfer Mode
-	GIF_STAT_PSE		= (1<<3),	// Temporary Transfer Stop
-	GIF_STAT_IP3		= (1<<5),	// Interrupted PATH3
-	GIF_STAT_P3Q		= (1<<6),	// PATH3 request Queued
-	GIF_STAT_P2Q		= (1<<7),	// PATH2 request Queued
-	GIF_STAT_P1Q		= (1<<8),	// PATH1 request Queued
-	GIF_STAT_OPH		= (1<<9),	// Output Path (Outputting Data)
-	GIF_STAT_APATH1		= (1<<10),	// Data Transfer Path 1 (In progress)
-	GIF_STAT_APATH2		= (2<<10),	// Data Transfer Path 2 (In progress)
-	GIF_STAT_APATH3		= (3<<10),	// Data Transfer Path 3 (In progress) (Mask too)
-	GIF_STAT_DIR		= (1<<12),	// Transfer Direction
-	GIF_STAT_FQC		= (31<<24)	// QWC in GIF-FIFO
-};
-
-enum gif_mode_flags {
-	GIF_MODE_M3R	= (1),
-	GIF_MODE_IMT	= (1<<2)
-};
-
 enum GIF_FLG {
 	GIF_FLG_PACKED	= 0,
 	GIF_FLG_REGLIST	= 1,
@@ -136,6 +80,13 @@ enum GIF_REG {
 	GIF_REG_XYZ3	= 0x0d,
 	GIF_REG_A_D		= 0x0e,
 	GIF_REG_NOP		= 0x0f,
+};
+
+enum gifstate_t {
+	GIF_STATE_READY = 0,
+	GIF_STATE_STALL = 1,
+	GIF_STATE_DONE  = 2,
+	GIF_STATE_EMPTY = 0x10
 };
 
 union tGIF_CTRL
@@ -176,13 +127,6 @@ union tGIF_MODE
 	void clear_flags(u32 flags) { _u32 &= ~flags; }
 	void reset() { _u32 = 0; }
 	wxString desc() { return wxsFormat(L"Mode: 0x%x", _u32); }
-};
-
-enum gif_paths {
-    GIF_APATH_IDLE = 0,
-    GIF_APATH1,
-    GIF_APATH2,
-    GIF_APATH3
 };
 
 union tGIF_STAT
@@ -341,22 +285,3 @@ extern void GIFdma();
 extern void dmaGIF();
 extern void mfifoGIFtransfer(int qwc);
 extern void gifMFIFOInterrupt();
-
-#if USE_OLD_GIF == 1 // d
-extern u8 schedulepath3msk;
-extern tGSTransferStatus GSTransferStatus;
-extern bool CheckPath2GIF(EE_EventType channel);
-
-//Just some temporary bits to store Path1 transfers if another is in progress.
-extern void gsPath1Interrupt();
-extern __aligned16 u8 Path1Buffer[0x1000000];
-extern u32 Path1WritePos;
-extern u32 Path1ReadPos;
-
-extern void GIFPath_Initialize();
-extern int  GIFPath_CopyTag(GIF_PATH pathidx, const u128* pMem, u32 size);
-extern int  GIFPath_ParseTagQuick(GIF_PATH pathidx, const u8* pMem, u32 size);
-extern void GIFPath_Reset();
-extern void GIFPath_Clear( GIF_PATH pathidx );
-#endif
-

@@ -150,6 +150,7 @@ void FireMFIFOEmpty()
 	if (dmacRegs.ctrl.MFD == MFD_VIF1) vif1Regs.stat.FQC = 0;
 	if (dmacRegs.ctrl.MFD == MFD_GIF)  gifRegs.stat.FQC  = 0;
 }
+
 // Write 'size' bytes to memory address 'addr' from 'data'.
 __ri bool hwMFIFOWrite(u32 addr, const u128* data, uint qwc)
 {

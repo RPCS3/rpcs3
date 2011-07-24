@@ -2025,13 +2025,6 @@ static __ri void _vuXGKICK(VURegs * VU)
 {
 	// flush all pipelines first (in the right order)
 	_vuFlushAll(VU);
-#if USE_OLD_GIF == 1 // todo
-	u8* data = ((u8*)VU->Mem + ((VU->VI[_Is_].US[0]*16) & 0x3fff));
-	u32 size;
-	GetMTGS().PrepDataPacket( GIF_PATH_1, 0x400 );
-	size = GIFPath_CopyTag( GIF_PATH_1, (u128*)data, (0x400-(VU->VI[_Is_].US[0] & 0x3ff)) );
-	GetMTGS().SendDataPacket();
-#else
 	u32 addr = (VU->VI[_Is_].US[0] & 0x3ff) * 16;
 	u32 diff = 0x4000 - addr;
 	u32 size = gifUnit.GetGSPacketSize(GIF_PATH_1, VU->Mem, addr);
@@ -2044,7 +2037,6 @@ static __ri void _vuXGKICK(VURegs * VU)
 	else {
 		gifUnit.TransferGSPacketData(GIF_TRANS_XGKICK, &VU->Mem[addr], size, true);
 	}
-#endif
 }
 
 static __ri void _vuXTOP(VURegs * VU) {

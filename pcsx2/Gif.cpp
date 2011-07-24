@@ -34,57 +34,6 @@ static u32 gscycles = 0, prevcycles = 0, mfifocycles = 0;
 static u32 gifqwc = 0;
 static bool gifmfifoirq = false;
 
-#if USE_OLD_GIF == 1 // d
-
-//Just some temporary bits to store Path1 transfers if another is in progress.
-__aligned16 u8 Path1Buffer[0x1000000];
-u32 Path1WritePos = 0;
-u32 Path1ReadPos = 0;
-
-extern bool SIGNAL_IMR_Pending;
-void gsPath1Interrupt()
-{
-	if ((gifRegs.stat.APATH <= GIF_APATH1 || (gifRegs.stat.IP3 == true))
-	 && Path1WritePos > 0 && !gifRegs.stat.PSE && SIGNAL_IMR_Pending == false) {
-		gifRegs.stat.P1Q = false;
-
-		if (uint size = (Path1WritePos - Path1ReadPos)) {
-			GetMTGS().PrepDataPacket(GIF_PATH_1, size);
-			//DevCon.Warning("Flush Size = %x", size);
-			while(size > 0 && SIGNAL_IMR_Pending == false) {
-				uint count = GIFPath_CopyTag(GIF_PATH_1, ((u128*)Path1Buffer) + Path1ReadPos, size);
-				Path1ReadPos += count;
-				size -= count;
-
-				if(GSTransferStatus.PTH1 == STOPPED_MODE) {	
-					gifRegs.stat.OPH = false;
-					gifRegs.stat.APATH = GIF_APATH_IDLE;
-				}
-			}
-			GetMTGS().SendDataPacket();
-
-			if (Path1ReadPos == Path1WritePos) {
-				Path1WritePos = Path1ReadPos = 0;
-			} 
-			else {
-				//DevCon.Warning("Queue quitting early due to signal or EOP %x", size);
-				gifRegs.stat.P1Q = true;
-			}
-		}
-	}
-	else {
-		if(gifRegs.stat.PSE) DevCon.Warning("Path1 paused by GIF_CTRL");
-		if(gifRegs.stat.P1Q == false && Path1ReadPos != Path1WritePos) {
-			DevCon.Warning("Wa's Goin on ere then?");
-			gifRegs.stat.P1Q = true;
-		}
-		//DevCon.Warning("Looping??? IP3 %x APATH %x OPH %x", gifRegs.stat.IP3, gifRegs.stat.APATH, gifRegs.stat.OPH);
-		//if(!(cpuRegs.interrupt & (1<<28)) && Path1WritePos > 0)CPU_INT(28, 128);
-	}
-	
-}
-#endif
-
 static __fi void clearFIFOstuff(bool full) {
 	if (full) CSRreg.FIFO = CSR_FIFO_FULL;
 	else      CSRreg.FIFO = CSR_FIFO_EMPTY;
@@ -109,28 +58,11 @@ __fi void gifInterrupt()
 		return;
 	}	
 
-#if USE_OLD_GIF == 1 // d
-	if(SIGNAL_IMR_Pending == true) {
-		//DevCon.Warning("Path 3 Paused");
-		CPU_INT(DMAC_GIF, 128);
-		return;
-	}
-
-	if(GSTransferStatus.PTH3 == PENDINGSTOP_MODE) {		
-		GSTransferStatus.PTH3 = STOPPED_MODE;
-		if(gifRegs.stat.APATH == GIF_APATH3) {
-			gifRegs.stat.APATH = GIF_APATH_IDLE;
-			gifRegs.stat.OPH = false;
-			if(gifRegs.stat.P1Q) gsPath1Interrupt();
-		}		
-	}
-#else
 	if (gifUnit.gsSIGNAL.queued) {
 		//DevCon.WriteLn("Path 3 Paused");
 		CPU_INT(DMAC_GIF, 128);
 		return;
 	}
-#endif
 	
 	if (!(gifch.chcr.STR)) return;
 
@@ -141,33 +73,23 @@ __fi void gifInterrupt()
 			CPU_INT( DMAC_GIF, 64 );
 			return;
 		}
-
 		GIFdma();
 		return;
 	}
 
-	gifRegs.stat.clear_flags(GIF_STAT_FQC);
-
-	gscycles		= 0;
-	gspath3done		= false;
-	gifch.chcr.STR	= false;
+	gifRegs.stat.FQC = 0;
+	gscycles		 = 0;
+	gspath3done		 = false;
+	gifch.chcr.STR	 = false;
 	clearFIFOstuff(false);
 	hwDmacIrq(DMAC_GIF);
 	DMA_LOG("GIF DMA End");
 }
 
-static u32 WRITERING_DMA(u32 *pMem, u32 qwc)
-{
-#if USE_OLD_GIF == 1 // d
-	GetMTGS().PrepDataPacket(GIF_PATH_3, qwc);
-	uint size = GIFPath_CopyTag(GIF_PATH_3, (u128*)pMem, qwc);
-	GetMTGS().SendDataPacket();
-	return size;
-#else
+static u32 WRITERING_DMA(u32 *pMem, u32 qwc) {
 	uint size = gifUnit.TransferGSPacketData(GIF_TRANS_DMA, (u8*)pMem, qwc*16) / 16;
 	incGifChAddr(size);
 	return size;
-#endif
 }
 
 int  _GIFchain()
@@ -232,40 +154,12 @@ static __fi tDMA_TAG* ReadTag2()
 	return ptag;
 }
 
-bool CheckPaths(EE_EventType Channel)
-{
-#if USE_OLD_GIF == 1 // d
-	if((GSTransferStatus.PTH3 == IMAGE_MODE && gifRegs.mode.IMT) /*|| GSTransferStatus.PTH3 == WAITING_MODE*/) {
-		if((gifRegs.stat.P1Q == true || gifRegs.stat.P2Q == true) || (gifRegs.stat.APATH > GIF_APATH_IDLE && gifRegs.stat.APATH < GIF_APATH3)) {
-			if((vif1.cmd & 0x7f) != 0x51 || gifRegs.stat.P1Q == true) {
-				//DevCon.Warning("GIF Stall 1 P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs.stat.P1Q, gifRegs.stat.P2Q, gifRegs.stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
-				gifRegs.stat.IP3 = true;
-				if(gifRegs.stat.P1Q) gsPath1Interrupt();
-				CPU_INT(DMAC_GIF, 16);
-				return false;
-			}
-		}
-	}
-	else if(GSTransferStatus.PTH3 == STOPPED_MODE) {
-		//This should cover both scenarios, as DIRECTHL doesn't gain priority when image mode is running (PENDINGIMAGE_MODE == finished).
-		if((gifRegs.stat.P1Q == true || gifRegs.stat.P2Q == true)
-		|| (gifRegs.stat.APATH > GIF_APATH_IDLE && gifRegs.stat.APATH < GIF_APATH3) || vif1Regs.stat.VGW == true) {
-			//DevCon.Warning("GIF Stall 2 P1Q %x P2Q %x APATH %x PTH3 %x vif1cmd %x", gifRegs.stat.P1Q, gifRegs.stat.P2Q, gifRegs.stat.APATH, GSTransferStatus.PTH3, vif1.cmd);
-			gifRegs.stat.IP3 = true;
-			if(gifRegs.stat.P1Q) gsPath1Interrupt();
-			CPU_INT(DMAC_GIF, 16);
-			return false;
-		}
-	}
-
-	gifRegs.stat.IP3 = false;
-#else
+bool CheckPaths(EE_EventType Channel) {
 	// Can't do Path 3, so try dma again later...
 	if(!gifUnit.CanDoPath3()) {
 		CPU_INT(Channel, 128);
 		return false;
 	}
-#endif
 	return true;
 }
 
@@ -339,13 +233,7 @@ void GIFdma()
 	{
 		gifRegs.stat.FQC = min((u16)0x10, gifch.qwc);// FQC=31, hack ;) (for values of 31 that equal 16) [ used to be 0xE00; // APATH=3]
 
-#if USE_OLD_GIF == 1 // ...
-		gifRegs.stat.set_flags(GIF_STAT_P3Q);
-		if(CheckPaths(DMAC_GIF) == false) return;
-		gifRegs.stat.clear_flags(GIF_STAT_P3Q);
-#else
-		if(CheckPaths(DMAC_GIF) == false) return;
-#endif
+		if (CheckPaths(DMAC_GIF) == false) return;
 
 		GIFchain();	//Transfers the data set by the switch
 		CPU_INT(DMAC_GIF, gscycles);
@@ -408,55 +296,6 @@ static __fi bool mfifoGIFrbTransfer()
 	u16 mfifoqwc = min(QWCinGIFMFIFO(gifch.madr), gifch.qwc);
 	if (mfifoqwc == 0) return true; //Lets skip all this, we don't have the data
 
-#if USE_OLD_GIF == 1 // d
-	u32 *src;
-	GetMTGS().PrepDataPacket(GIF_PATH_3, mfifoqwc);
-
-	// TODO (minor optimization): The new GIFpath parser can do rather efficient wrapping of
-	// its own internally now. We just need to groom a version of it that can wrap around MFIFO
-	// memory similarly to how it wraps VU1 memory on PATH1.
-	GIF_LOG("MFIFO QWC to Transfer %x", mfifoqwc);
-	/* Check if the transfer should wrap around the ring buffer */
-	if ( (gifch.madr + (mfifoqwc * 16)) > (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) {
-		DevCon.Warning("0mfifoGIFrbTransfer() - Wrap [%d]", mfifoqwc);
-		uint s1 = ((dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16) - gifch.madr) >> 4;
-		uint s2 = (mfifoqwc - s1);
-		GIF_LOG("Split transfer doing %x QWC of %x Total QWC", s1, mfifoqwc);
-		/* it does (wrap around), so first copy 's1' bytes from 'addr' to 'data' */
-		/* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
-		
-		gifch.madr = dmacRegs.rbor.ADDR + (gifch.madr & dmacRegs.rbsr.RMSK);
-		src = (u32*)PSM(gifch.madr);
-		if (src == NULL) return false;
-		uint copied = GIFPath_CopyTag(GIF_PATH_3, (u128*)src, s1);
-
-		if (copied == s1) {	// but only copy second if first didn't abort prematurely for some reason.
-			GIF_LOG("Transferring last %x QWC", s2);
-			src = (u32*)PSM(dmacRegs.rbor.ADDR);
-			gifch.madr = dmacRegs.rbor.ADDR;
-			if (src == NULL) return false;
-			copied += GIFPath_CopyTag(GIF_PATH_3, (u128*)src, s2);
-		}
-
-		mfifoqwc = copied;
-		GIF_LOG("Copied %x QWC, %x QWC Left", mfifoqwc, gifch.qwc);
-		DevCon.Warning("1mfifoGIFrbTransfer() - Wrap [%d]", mfifoqwc);
-	}
-	else {
-		//DevCon.WriteLn("mfifoGIFrbTransfer() - Norm[%d]", mfifoqwc*16);
-		GIF_LOG("Direct MFIFO transfer doing %x Total QWC", mfifoqwc);
-		/* it doesn't, so just transfer 'qwc*16' words from 'gifch.madr' to GS */
-		
-		gifch.madr = dmacRegs.rbor.ADDR + (gifch.madr & dmacRegs.rbsr.RMSK);
-		src = (u32*)PSM(gifch.madr);
-		if (src == NULL) return false;
-		mfifoqwc = GIFPath_CopyTag(GIF_PATH_3, (u128*)src, mfifoqwc);
-		GIF_LOG("%X QWC Copied direct %x QWC Left", mfifoqwc, gifch.qwc);
-	}
-
-	GetMTGS().SendDataPacket();
-	mfifocycles += (mfifoqwc) * 2; // guessing
-#else
 	if(!gifUnit.CanDoPath3()) {
 		DevCon.Warning("mfifoGIFrbTransfer() - Can't do path3");
 		return true; // Skip if can't do path3
@@ -483,7 +322,6 @@ static __fi bool mfifoGIFrbTransfer()
 		incGifChAddr(t2);
 		mfifocycles += t2 * 2; // guessing
 	}
-#endif
 	return true;
 }
 
@@ -571,14 +409,11 @@ void mfifoGIFtransfer(int qwc)
 	 }	
 
 #if USE_OLD_GIF == 1 // ...
-	if (vif1Regs.mskpath3 || gifRegs.mode.M3R)
-	{	
+	if (vif1Regs.mskpath3 || gifRegs.mode.M3R) {	
 		if ((gifch.qwc == 0) && (gifstate & GIF_STATE_DONE)) gifstate |= GIF_STATE_STALL;
 
-		if (GSTransferStatus.PTH3 == STOPPED_MODE)
-		{
+		if (GSTransferStatus.PTH3 == STOPPED_MODE) {
 			DevCon.Warning("GIFMFIFO PTH3 MASK Paused by VIF QWC %x");
-			
 			MSKPATH3_LOG("Path3 Paused by VIF Idling");
 			gifRegs.stat.set_flags(GIF_STAT_P3Q);
 			return;
@@ -607,76 +442,49 @@ void gifMFIFOInterrupt()
 		return;
 	}
 
-#if USE_OLD_GIF == 1 // d
-	if(SIGNAL_IMR_Pending == true) {
-		//DevCon.Warning("Path 3 Paused");
-		CPU_INT(DMAC_MFIFO_GIF, 128);
-		return;
-	}
-
-	if(GSTransferStatus.PTH3 == PENDINGSTOP_MODE) {		
-		GSTransferStatus.PTH3 = STOPPED_MODE;
-		if(gifRegs.stat.APATH == GIF_APATH3) {
-			gifRegs.stat.APATH = GIF_APATH_IDLE;
-			gifRegs.stat.OPH = false;
-			if(gifRegs.stat.P1Q) gsPath1Interrupt();
-		}		
-	}
-#else
 	if (gifUnit.gsSIGNAL.queued) {
 		//DevCon.WriteLn("Path 3 Paused");
 		CPU_INT(DMAC_MFIFO_GIF, 128);
 		return;
 	}
-#endif
 
 	if((gifstate & GIF_STATE_EMPTY)) {
 		FireMFIFOEmpty();
 		if(!(gifstate & GIF_STATE_STALL)) return;
 	}
 
-#if USE_OLD_GIF == 1 // d
-#endif
-	if(CheckPaths(DMAC_MFIFO_GIF) == false) return;
+	if (CheckPaths(DMAC_MFIFO_GIF) == false) return;
 
-	if (!(gifch.chcr.STR))
-	{
+	if(!gifch.chcr.STR) {
 		Console.WriteLn("WTF GIFMFIFO");
 		cpuRegs.interrupt &= ~(1 << 11);
 		return;
 	}
 
-	if (!(gifstate & GIF_STATE_STALL))
-	{
-		if (QWCinGIFMFIFO(gifch.tadr) == 0) 
-		{
+	if (!(gifstate & GIF_STATE_STALL)) {
+
+		if (QWCinGIFMFIFO(gifch.tadr) == 0) {
 			gifstate |= GIF_STATE_EMPTY;
 			CPU_INT(DMAC_MFIFO_GIF, 4);
 			return;
 		}
-		
 		mfifoGIFtransfer(0);
 		return;
 	}
 
-#ifdef PCSX2_DEVBUILD
 	if ((gifstate & GIF_STATE_READY) || (gifch.qwc > 0)) {
-		Console.Error("gifMFIFO Panic > Shouldn't go here!");
+		DevCon.Error("gifMFIFO Panic > Shouldn't go here!");
 		return;
 	}
-#endif
+
 	//if(gifqwc > 0) Console.WriteLn("GIF MFIFO ending with stuff in it %x", gifqwc);
 	if (!gifmfifoirq) gifqwc = 0;
 
 	gspath3done = false;
-	gscycles = 0;
+	gscycles    = 0;
 
-#if USE_OLD_GIF == 1 // d
-	gifRegs.stat.clear_flags(GIF_STAT_APATH3 | GIF_STAT_P3Q | GIF_STAT_FQC); // APATH, P3Q,  FQC = 0
-	vif1Regs.stat.VGW = false;
-#else
-	gifRegs.stat.clear_flags(GIF_STAT_FQC); // FQC = 0
-#endif
+	gifRegs.stat.FQC = 0;
+	//vif1Regs.stat.VGW = false; // old code had this
 
 	gifch.chcr.STR = false;
 	gifstate = GIF_STATE_READY;
@@ -685,31 +493,11 @@ void gifMFIFOInterrupt()
 	clearFIFOstuff(false);
 }
 
-void SaveStateBase::gifDmaFreeze()
-{
-	FreezeTag( "GIFdma" );
-
-	Freeze( gifstate );
-	Freeze( gifqwc );
-	Freeze( gspath3done );
-	Freeze( gscycles );
+void SaveStateBase::gifDmaFreeze() {
 	// Note: mfifocycles is not a persistent var, so no need to save it here.
-
-#if USE_OLD_GIF == 1 // d
-	int bufsize = Path1WritePos - Path1ReadPos;
-	Freeze(bufsize);
-
-	if(!IsSaving()) {
-		// We can just load the queued Path1 data into the front of the buffer, and
-		// reset the ReadPos and WritePos accordingly.
-		FreezeMem(Path1Buffer, bufsize);
-		Path1ReadPos = 0;
-		Path1WritePos = bufsize;
-	}
-	else {
-		// Only want to save the actual Path1 data between readpos and writepos.  The
-		// rest of the buffer is just unused-ness!
-		FreezeMem(&Path1Buffer[Path1ReadPos], bufsize);
-	}
-#endif
+	FreezeTag("GIFdma");
+	Freeze(gifstate);
+	Freeze(gifqwc);
+	Freeze(gspath3done);
+	Freeze(gscycles);
 }
