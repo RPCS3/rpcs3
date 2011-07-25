@@ -100,7 +100,7 @@ struct GS_SIGNAL {
 	void Reset() { memzero(*this); }
 };
 
-__fi void incTag(u32& offset, u32& size, u32 incAmount) {
+static __fi void incTag(u32& offset, u32& size, u32 incAmount) {
 	size   += incAmount;
 	offset += incAmount;
 }

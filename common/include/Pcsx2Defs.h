@@ -244,9 +244,9 @@ static const int __pagesize	= PCSX2_PAGESIZE;
 #	define __fastcall		__attribute__((fastcall))
 #	define _inline			__inline__ __attribute__((unused))
 #	ifdef NDEBUG
-#		define __forceinline	__attribute__((always_inline,unused)) inline
+#		define __forceinline	__attribute__((always_inline,unused))
 #	else
-#		define __forceinline	inline
+#		define __forceinline	__attribute__((unused))
 #	endif
 #	define __noinline		__attribute__((noinline))
 #	define __hot			__attribute__((hot))
