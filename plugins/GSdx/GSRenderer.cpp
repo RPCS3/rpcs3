@@ -36,6 +36,7 @@ GSRenderer::GSRenderer()
 	m_vsync = !!theApp.GetConfig("vsync", 0);
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
 	m_mipmap = !!theApp.GetConfig("mipmap", 1);
+	m_fxaa = !!theApp.GetConfig("fxaa", 0);
 
 	s_n = 0;
 	s_dump = !!theApp.GetConfig("dump", 0);
@@ -261,6 +262,11 @@ bool GSRenderer::Merge(int field)
 			int mode = (m_interlace - 1) >> 1;
 
 			m_dev->Interlace(ds, field ^ field2, mode, tex[1] ? tex[1]->GetScale().y : tex[0]->GetScale().y);
+		}
+
+		if(m_fxaa)
+		{
+			m_dev->FXAA();
 		}
 	}
 
@@ -521,6 +527,10 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 		case VK_INSERT:
 			m_mipmap = !m_mipmap;
 			printf("GSdx: (Software) mipmapping is now %s.\n", m_mipmap ? "enabled" : "disabled");
+			return;
+		case VK_PRIOR:
+			m_fxaa = !m_fxaa;
+			printf("GSdx: fxaa is now %s.\n", m_fxaa ? "enabled" : "disabled");
 			return;
 		}
 

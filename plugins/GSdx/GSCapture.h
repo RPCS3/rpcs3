@@ -33,8 +33,6 @@ class GSCapture : protected GSCritSec
 	bool m_capturing;
 	GSVector2i m_size;
 
-	int m_colorspace;
-
 	#ifdef _WINDOWS
 
 	CComPtr<IGraphBuilder> m_graph;

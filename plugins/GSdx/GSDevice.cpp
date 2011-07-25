@@ -31,6 +31,7 @@ GSDevice::GSDevice()
 	, m_merge(NULL)
 	, m_weavebob(NULL)
 	, m_blend(NULL)
+	, m_fxaa(NULL)
 	, m_1x1(NULL)
 	, m_frame(0)
 {
@@ -45,6 +46,7 @@ GSDevice::~GSDevice()
 	delete m_merge;
 	delete m_weavebob;
 	delete m_blend;
+	delete m_fxaa;
 	delete m_1x1;
 }
 
@@ -65,12 +67,14 @@ bool GSDevice::Reset(int w, int h)
 	delete m_merge;
 	delete m_weavebob;
 	delete m_blend;
+	delete m_fxaa;
 	delete m_1x1;
 
 	m_backbuffer = NULL;
 	m_merge = NULL;
 	m_weavebob = NULL;
 	m_blend = NULL;
+	m_fxaa = NULL;
 	m_1x1 = NULL;
 
 	m_current = NULL; // current is special, points to other textures, no need to delete
@@ -198,7 +202,7 @@ GSTexture* GSDevice::GetCurrent()
 
 void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c)
 {
-	if(!m_merge || !(m_merge->GetSize() == fs))
+	if(m_merge == NULL || m_merge->GetSize() != fs)
 	{
 		Recycle(m_merge);
 
@@ -243,7 +247,7 @@ void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVec
 
 void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffset)
 {
-	if(!m_weavebob || !(m_weavebob->GetSize() == ds))
+	if(m_weavebob == NULL || m_weavebob->GetSize() != ds)
 	{
 		delete m_weavebob;
 
@@ -260,7 +264,7 @@ void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 		{
 			// blend
 
-			if(!m_blend || !(m_blend->GetSize() == ds))
+			if(m_blend == NULL || m_blend->GetSize() != ds)
 			{
 				delete m_blend;
 
@@ -285,6 +289,28 @@ void GSDevice::Interlace(const GSVector2i& ds, int field, int mode, float yoffse
 	else
 	{
 		m_current = m_merge;
+	}
+}
+
+void GSDevice::FXAA()
+{
+	GSVector2i s = m_current->GetSize();
+
+	if(m_fxaa == NULL || m_fxaa->GetSize() != s)
+	{
+		delete m_fxaa;
+
+		m_fxaa = CreateRenderTarget(s.x, s.y, false);
+	}
+
+	if(m_fxaa != NULL)
+	{
+		GSVector4 sr(0, 0, 1, 1);
+		GSVector4 dr(0, 0, s.x, s.y);
+
+		StretchRect(m_current, sr, m_fxaa, dr, 7, false);
+
+		DoFXAA(m_fxaa, m_current);
 	}
 }
 

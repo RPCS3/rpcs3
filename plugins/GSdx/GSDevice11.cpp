@@ -203,6 +203,18 @@ bool GSDevice11::Create(GSWnd* wnd)
 		hr = CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
 
+	// fxaa
+
+	memset(&bd, 0, sizeof(bd));
+
+	bd.ByteWidth = sizeof(FXAAConstantBuffer);
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+	hr = m_dev->CreateBuffer(&bd, NULL, &m_fxaa.cb);
+
+	hr = CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+
 	//
 
 	memset(&rd, 0, sizeof(rd));
@@ -609,6 +621,26 @@ void GSDevice11::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool line
 	m_ctx->UpdateSubresource(m_interlace.cb, 0, NULL, &cb, 0, 0);
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], m_interlace.cb, linear);
+}
+
+void GSDevice11::DoFXAA(GSTexture* st, GSTexture* dt)
+{
+	GSVector2i s = dt->GetSize();
+
+	GSVector4 sr(0, 0, 1, 1);
+	GSVector4 dr(0, 0, s.x, s.y);
+
+	FXAAConstantBuffer cb;
+
+	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
+	cb.rcpFrameOpt = GSVector4::zero();
+
+	m_ctx->UpdateSubresource(m_fxaa.cb, 0, NULL, &cb, 0, 0);
+
+	StretchRect(st, sr, dt, dr, m_fxaa.ps, m_fxaa.cb, true);
+
+	//st->Save("c:\\temp1\\1.bmp");
+	//dt->Save("c:\\temp1\\2.bmp");
 }
 
 void GSDevice11::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm)

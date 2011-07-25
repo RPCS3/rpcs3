@@ -43,6 +43,7 @@ BEGIN
     "#include ""res/convert.fx""\r\n"
     "#include ""res/interlace.fx""\r\n"
     "#include ""res/merge.fx""\r\0"
+    "#include ""res/fxaa.fx""\r\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -57,6 +58,7 @@ IDR_CONVERT_FX          RCDATA                  "res\\convert.fx"
 IDR_TFX_FX              RCDATA                  "res\\tfx.fx"
 IDR_MERGE_FX            RCDATA                  "res\\merge.fx"
 IDR_INTERLACE_FX        RCDATA                  "res\\interlace.fx"
+IDR_FXAA_FX			    RCDATA                  "res\\fxaa.fx"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -310,6 +312,7 @@ END
 #include "res/convert.fx"
 #include "res/interlace.fx"
 #include "res/merge.fx"
+#include "res/fxaa.fx"
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED

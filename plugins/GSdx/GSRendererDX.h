@@ -145,7 +145,7 @@ public:
 				else
 				{
 					//Breath of Fire Dragon Quarter triggers this in battles. Graphics are fine though.
-					ASSERT(0);
+					//ASSERT(0);
 				}
 			}
 		}

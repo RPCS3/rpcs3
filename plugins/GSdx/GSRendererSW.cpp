@@ -354,6 +354,20 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 			if(t == NULL) {ASSERT(0); return false;}
 
+			if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
+			{
+				uint64 frame = m_perfmon.GetFrame();
+
+				string s;
+
+				if(s_save && s_n >= s_saven && PRIM->TME)
+				{
+					s = format("c:\\temp1\\_%05d_f%lld_tex32_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
+
+					t->Save(s);
+				}
+			}
+
 			gd.tex[0] = t->m_buff;
 			gd.sel.tw = t->m_tw - 3;
 

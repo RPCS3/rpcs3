@@ -671,6 +671,9 @@
       <Filter>Baseclasses</Filter>
     </None>
     <None Include="GSdx.def" />
+    <None Include="res\fxaa.fx">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GSdx.rc">

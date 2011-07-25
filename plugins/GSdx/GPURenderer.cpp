@@ -36,6 +36,7 @@ GPURenderer::GPURenderer(GSDevice* dev)
 	m_dither = theApp.GetConfig("dithering", 1);
 	m_aspectratio = theApp.GetConfig("AspectRatio", 1);
 	m_vsync = !!theApp.GetConfig("vsync", 0);
+	m_fxaa = !!theApp.GetConfig("fxaa", 0);
 	m_scale = m_mem.GetScale();
 
 	#ifdef _WINDOWS
@@ -115,6 +116,11 @@ bool GPURenderer::Merge()
 	dr[0] = GSVector4(0, 0, s.x, s.y);
 
 	m_dev->Merge(st, sr, dr, s, 1, 1, GSVector4(0, 0, 0, 1));
+
+	if(m_fxaa)
+	{
+		m_dev->FXAA();
+	}
 
 	return true;
 }
@@ -234,6 +240,9 @@ LRESULT GPURenderer::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 			return 0;
 		case VK_NEXT:
 			m_aspectratio = (m_aspectratio + 1) % 3;
+			return 0;
+		case VK_PRIOR:
+			m_fxaa = !m_fxaa;
 			return 0;
 		}
 	}

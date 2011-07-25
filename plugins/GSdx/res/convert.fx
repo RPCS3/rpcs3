@@ -89,6 +89,19 @@ PS_OUTPUT ps_main0(PS_INPUT input)
 	return output;
 }
 
+PS_OUTPUT ps_main7(PS_INPUT input)
+{
+	PS_OUTPUT output;
+	
+	float4 c = sample_c(input.t);
+	
+	c.a = dot(c.rgb, float3(0.299, 0.587, 0.114));
+
+	output.c = c;
+
+	return output;
+}
+
 float4 ps_crt(PS_INPUT input, int i)
 {
 	float4 mask[4] = 

@@ -45,6 +45,7 @@ protected:
 	bool m_aa1;
 	bool m_mipmap;
 	bool m_framelimit;
+	bool m_fxaa;
 
 	virtual GSTexture* GetOutput(int i) = 0;
 

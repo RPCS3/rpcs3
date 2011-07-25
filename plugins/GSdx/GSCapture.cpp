@@ -64,7 +64,7 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 		vector<CMediaType> m_mts;
 
 	public:
-		GSSourceOutputPin(const GSVector2i& size, REFERENCE_TIME atpf, CBaseFilter* pFilter, CCritSec* pLock, HRESULT& hr, int m_colorspace)
+		GSSourceOutputPin(const GSVector2i& size, REFERENCE_TIME atpf, CBaseFilter* pFilter, CCritSec* pLock, HRESULT& hr, int colorspace)
 			: CBaseOutputPin("GSSourceOutputPin", pFilter, pLock, &hr, L"Output")
 			, m_size(size)
 		{
@@ -79,24 +79,8 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 			vih.bmiHeader.biWidth = m_size.x;
 			vih.bmiHeader.biHeight = m_size.y;
 
-			// RGB32 (priority)
-			if ( m_colorspace == 1 )
-			{
-			mt.subtype = MEDIASUBTYPE_RGB32;
-			mt.lSampleSize = m_size.x * m_size.y * 4;
-
-			vih.bmiHeader.biCompression = BI_RGB;
-			vih.bmiHeader.biPlanes = 1;
-			vih.bmiHeader.biBitCount = 32;
-			vih.bmiHeader.biSizeImage = m_size.x * m_size.y * 4;
-			mt.SetFormat((uint8*)&vih, sizeof(vih));
-
-			m_mts.push_back(mt);
-			}
-
 			// YUY2
-			else
-			{
+
 			mt.subtype = MEDIASUBTYPE_YUY2;
 			mt.lSampleSize = m_size.x * m_size.y * 2;
 
@@ -107,7 +91,6 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 			mt.SetFormat((uint8*)&vih, sizeof(vih));
 
 			m_mts.push_back(mt);
-			}
 
 			// RGB32
 
@@ -120,7 +103,8 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 			vih.bmiHeader.biSizeImage = m_size.x * m_size.y * 4;
 			mt.SetFormat((uint8*)&vih, sizeof(vih));
 
-			m_mts.push_back(mt);
+			if(colorspace == 1) m_mts.insert(m_mts.begin(), mt);
+			else m_mts.push_back(mt);
 		}
 
 		HRESULT GSSourceOutputPin::DecideBufferSize(IMemAllocator* pAlloc, ALLOCATOR_PROPERTIES* pProperties)
@@ -189,14 +173,14 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 
 public:
 
-	GSSource(int w, int h, int fps, IUnknown* pUnk, HRESULT& hr, int m_colorspace)
+	GSSource(int w, int h, int fps, IUnknown* pUnk, HRESULT& hr, int colorspace)
 		: CBaseFilter(NAME("GSSource"), pUnk, this, __uuidof(this), &hr)
 		, m_output(NULL)
 		, m_size(w, h)
 		, m_atpf(10000000i64 / fps)
 		, m_now(0)
 	{
-		m_output = new GSSourceOutputPin(m_size, m_atpf, this, this, hr, m_colorspace);
+		m_output = new GSSourceOutputPin(m_size, m_atpf, this, this, hr, colorspace);
 
 		// FIXME
 		if(fps == 60) m_atpf = 166834; // = 10000000i64 / 59.94
@@ -420,8 +404,6 @@ bool GSCapture::BeginCapture(int fps)
 	m_size.x = (dlg.m_width + 7) & ~7;
 	m_size.y = (dlg.m_height + 7) & ~7;
 
-	m_colorspace = dlg.m_colorspace;
-
 	wstring fn(dlg.m_filename.begin(), dlg.m_filename.end());
 
 	//
@@ -439,7 +421,7 @@ bool GSCapture::BeginCapture(int fps)
 		return false;
 	}
 
-	m_src = new GSSource(m_size.x, m_size.y, fps, NULL, hr, m_colorspace);
+	m_src = new GSSource(m_size.x, m_size.y, fps, NULL, hr, dlg.m_colorspace);
 
 	if (dlg.m_enc==0)
 	{

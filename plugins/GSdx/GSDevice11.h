@@ -36,6 +36,7 @@ class GSDevice11 : public GSDeviceDX
 
 	void DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c);
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
+	void DoFXAA(GSTexture* st, GSTexture* dt);
 
 	//
 
@@ -77,7 +78,7 @@ public: // TODO
 	{
 		CComPtr<ID3D11InputLayout> il;
 		CComPtr<ID3D11VertexShader> vs;
-		CComPtr<ID3D11PixelShader> ps[7];
+		CComPtr<ID3D11PixelShader> ps[8];
 		CComPtr<ID3D11SamplerState> ln;
 		CComPtr<ID3D11SamplerState> pt;
 		CComPtr<ID3D11DepthStencilState> dss;
@@ -96,6 +97,12 @@ public: // TODO
 		CComPtr<ID3D11PixelShader> ps[4];
 		CComPtr<ID3D11Buffer> cb;
 	} m_interlace;
+
+	struct 
+	{
+		CComPtr<ID3D11PixelShader> ps;
+		CComPtr<ID3D11Buffer> cb;
+	} m_fxaa;
 
 	struct
 	{

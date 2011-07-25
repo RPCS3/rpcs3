@@ -35,6 +35,7 @@ protected:
 	int m_dither;
 	int m_aspectratio;
 	bool m_vsync;
+	bool m_fxaa;
 	GSVector2i m_scale;
 
 	virtual void ResetDevice() {}

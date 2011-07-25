@@ -1727,6 +1727,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="GSdx.def" />
+    <None Include="res\fxaa.fx" />
     <None Include="res\logo10.bmp" />
     <None Include="res\logo9.bmp" />
     <None Include="res\convert.fx" />
