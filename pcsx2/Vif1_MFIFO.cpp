@@ -260,18 +260,16 @@ void vifMFIFOInterrupt()
 		return;
 	}
 
-#if USE_OLD_GIF == 1 // ...
-	if(vif1ch.chcr.DIR && CheckPath2GIF(DMAC_MFIFO_VIF) == false) {
-		SPR_LOG("Waiting for PATH to be ready");
-		return;
+	if (vif1ch.chcr.DIR) {
+		bool isDirect   = (vif1.cmd & 0x7f) == 0x50;
+		bool isDirectHL = (vif1.cmd & 0x7f) == 0x51;
+		if((isDirect   && !gifUnit.CanDoPath2())
+		|| (isDirectHL && !gifUnit.CanDoPath2HL())) {
+			GUNIT_WARN("vifMFIFOInterrupt() - Waiting for Path 2 to be ready");
+			CPU_INT(DMAC_MFIFO_VIF, 128);
+			return;
+		}
 	}
-#else
-	if(vif1ch.chcr.DIR && gifUnit.gsSIGNAL.queued && (vif1.cmd & 0x7e) == 0x50) { // Direct/DirectHL
-		GUNIT_WARN("Waiting for PATH to be ready (vif1ch.chcr.DIR)");
-		//CPU_INT(DMAC_MFIFO_VIF, 128);
-		//return;
-	}
-#endif
 
 	// We need to check the direction, if it is downloading from the GS,
 	// we handle that separately (KH2 for testing)
@@ -285,8 +283,8 @@ void vifMFIFOInterrupt()
 		--vif1.irq;
 
 		if (vif1Regs.stat.test(VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS)) {
-			/*vif1Regs.stat.FQC = 0; // FQC=0
-			vif1ch.chcr.STR = false;*/
+			//vif1Regs.stat.FQC = 0; // FQC=0
+			//vif1ch.chcr.STR = false;
 			vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);
 			if((vif1ch.qwc > 0 || !vif1.done) && !(vif1.inprogress & 0x10)) {
 				VIF_LOG("VIF1 MFIFO Stalled");
@@ -297,7 +295,7 @@ void vifMFIFOInterrupt()
 
 	//Mirroring change to VIF0
 	if (vif1.cmd) {
-		if (vif1.done == true && vif1ch.qwc == 0) vif1Regs.stat.VPS = VPS_WAITING;
+		if (vif1.done && vif1ch.qwc == 0) vif1Regs.stat.VPS = VPS_WAITING;
 	}
 	else {
 		vif1Regs.stat.VPS = VPS_IDLE;

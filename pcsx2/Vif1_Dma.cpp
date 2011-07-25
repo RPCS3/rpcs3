@@ -263,15 +263,14 @@ __fi void vif1Interrupt()
 	// We need to check the direction, if it is downloading
 	// from the GS then we handle that separately (KH2 for testing)
 	if (vif1ch.chcr.DIR) {
-#if USE_OLD_GIF == 1 // ...
-		if (!CheckPath2GIF(DMAC_VIF1)) return;
-#else
-		if(gifUnit.gsSIGNAL.queued && (vif1.cmd & 0x7e) == 0x50) { // Direct/DirectHL
-			GUNIT_WARN("Path 2 Paused (vif1ch.chcr.DIR)");
-			//CPU_INT(DMAC_VIF1, 128);
-			//return;
+		bool isDirect   = (vif1.cmd & 0x7f) == 0x50;
+		bool isDirectHL = (vif1.cmd & 0x7f) == 0x51;
+		if((isDirect   && !gifUnit.CanDoPath2())
+		|| (isDirectHL && !gifUnit.CanDoPath2HL())) {
+			GUNIT_WARN("vif1Interrupt() - Waiting for Path 2 to be ready");
+			CPU_INT(DMAC_VIF1, 128);
+			return;
 		}
-#endif
 
 		vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
 		//Simulated GS transfer time done, clear the flags
