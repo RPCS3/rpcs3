@@ -122,6 +122,7 @@ set(pcsx2Sources
 	FiFo.cpp
 	FPU.cpp
 	Gif.cpp
+	Gif_Unit.cpp
 	GS.cpp
 	GSState.cpp
 	Hw.cpp
@@ -191,6 +192,7 @@ set(pcsx2Headers
 	GameDatabase.h
 	Elfheader.h
 	Gif.h
+	Gif_Unit.h
 	GS.h
 	Hardware.h
 	Hw.h
