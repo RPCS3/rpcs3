@@ -229,7 +229,7 @@ struct Gif_Path {
 			if (gifTag.hasAD) { // Only can be true if GIF_FLG_PACKED
 				bool dblSIGNAL = false;
 				while(gifTag.nLoop && !dblSIGNAL) {
-					if (curOffset >= curSize) return gsPack; // Exit Early
+					if (curOffset + 16 > curSize) return gsPack; // Exit Early
 					if (gifTag.curReg() == GIF_REG_A_D) {
 						dblSIGNAL = Gif_HandlerAD(&buffer[curOffset]);
 					}
