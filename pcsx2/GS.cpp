@@ -268,10 +268,12 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 
 			GUNIT_LOG("GIF - busdir");
 			gifRegs.stat.DIR = value[0] & 1;
+
 			if (gifRegs.stat.DIR) { // Assume will do local->host transfer?
 				gifRegs.stat.OPH = true; // Is OPH set on local->host transfers?
-				DevCon.WriteLn("Busdir - Local->Host Transfer");
+				DevCon.WriteLn("Busdir - GS->EE Download");
 			}
+			else DevCon.WriteLn("Busdir - EE->GS Upload");
 
 			//=========================================================================
 			// BUSDIR INSANITY !! MTGS FLUSH NEEDED

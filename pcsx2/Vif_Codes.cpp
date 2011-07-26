@@ -169,7 +169,7 @@ vifOp(vifCode_FlushA) {
 				GUNIT_WARN("Vif FlushA - Getting path3 to finish!");
 				if (gifUnit.lastTranType == GIF_TRANS_FIFO
 				&&  p3.state != GIF_PATH_IDLE && !p3.hasDataRemaining()) { 
-					p3.state  = GIF_PATH_IDLE; // Hack: Tekken 4 and Gitaroo Man need this to boot... 
+					//p3.state= GIF_PATH_IDLE; // Does any game need this anymore?
 					DevCon.Warning("Vif FlushA - path3 has no more data, but didn't EOP");
 				}
 				else { // Path 3 hasn't finished its current gs packet

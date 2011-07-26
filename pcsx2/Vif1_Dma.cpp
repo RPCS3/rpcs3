@@ -74,9 +74,20 @@ void vif1TransferToMemory()
 	size = min((u32)vif1ch.qwc, vif1.GSLastDownloadSize);
 	const u128* pMemEnd = pMem + vif1.GSLastDownloadSize;
 
+	if (size) {
+		// Checking if any crazy game does a partial
+		// gs primitive and then does a gs download...
+		Gif_Path& p1 = gifUnit.gifPath[GIF_PATH_1];
+		Gif_Path& p2 = gifUnit.gifPath[GIF_PATH_2];
+		Gif_Path& p3 = gifUnit.gifPath[GIF_PATH_3];
+		pxAssert(p1.isDone() || !p1.gifTag.isValid);
+		pxAssert(p2.isDone() || !p2.gifTag.isValid);
+		pxAssert(p3.isDone() || !p3.gifTag.isValid);
+	}
+
 	if (GSreadFIFO2 == NULL)
 	{
-		for (;size > 0; --size)
+		for ( ; size > 0; --size)
 		{
 			GetMTGS().WaitGS();
 			GSreadFIFO((u64*)pMem);

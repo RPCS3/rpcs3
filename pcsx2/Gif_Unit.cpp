@@ -28,9 +28,9 @@ bool Gif_HandlerAD(u8* pMem) {
 	u32* data = (u32*)pMem;
 	if   (reg == 0x50) vif1.BITBLTBUF._u64	= *(u64*)pMem;
 	elif (reg == 0x52) vif1.TRXREG._u64		= *(u64*)pMem;
-	elif (reg == 0x53) {
+	elif (reg == 0x53) { // TRXDIR
 		if ((pMem[0] & 3) == 1) { // local -> host
-			u8 bpp = 32;
+			u8 bpp = 32; // Onimusha does TRXDIR without BLTDIVIDE first, assume 32bit
 			switch(vif1.BITBLTBUF.SPSM & 7) {
 				case 0: bpp = 32; break;
 				case 1: bpp = 24; break;
