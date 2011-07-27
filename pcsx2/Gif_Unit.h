@@ -317,7 +317,7 @@ struct Gif_Unit {
 		
 		GIF_LOG("%s - [path=%d][size=%d]", Gif_TransferStr[(tranType>>8)&0xf], (tranType&3)+1, size);
 		if (size == 0)  { GUNIT_WARN("Gif Unit - Size == 0"); return 0; }
-		if(!CanDoGif()) { GUNIT_WARN("Gif Unit - PSE Set or Dir = GS to EE"); }
+		if(!CanDoGif()) { GUNIT_WARN("Gif Unit - Signal or PSE Set or Dir = GS to EE"); }
 		pxAssertDev((stat.APATH==0) || checkPaths(1,1,1), "Gif Unit - APATH wasn't cleared?");
 		lastTranType = tranType;
 
@@ -361,8 +361,21 @@ struct Gif_Unit {
 		return ret;
 	}
 
+	// Send processed GS Primitive(s) to the MTGS thread
+	// Note: Only does so if current path fully completed all
+	// of its given gs primitives (but didn't upload them yet)
+	void FlushToMTGS() {
+		if (!stat.APATH) return;
+		Gif_Path& path = gifPath[stat.APATH-1];
+		if (path.gsPack.size && !path.gifTag.isValid) {
+			AddCompletedGSPacket(path.gsPack, (GIF_PATH)(stat.APATH-1));
+			path.gsPack.offset = path.curOffset;
+			path.gsPack.size   = 0;
+		}
+	}
+
 	// Processes gif packets and performs path arbitration
-	// according to path priority...
+	// on EOPs or on Path 3 Images when IMT is set.
 	void Execute() {
 		if (!CanDoGif()) { DevCon.Error("Gif Unit - Signal or PSE Set or Dir = GS to EE"); return; }
 		bool didPath3 = false;
@@ -377,7 +390,7 @@ struct Gif_Unit {
 							didPath3 = true;
 							stat.APATH = 0;
 							stat.IP3   = 1;
-							//DevCon.WriteLn(Color_Magenta, "Gif Unit - Path 3 slicing arbitration");
+							GUNIT_LOG(Color_Magenta, "Gif Unit - Path 3 slicing arbitration");
 							if (gsPack.size > 16) { // Packet had other tags which we already processed
 								u32 subOffset = path.gifTag.isValid ? 16 : 0; // if isValid, image-primitive not finished
 								gsPack.size  -= subOffset; // Remove the image-tag (should be last thing read)
@@ -388,16 +401,10 @@ struct Gif_Unit {
 								path.gifTag.isValid = false; // Reload tag next ExecuteGSPacket()
 								pxAssert((s32)path.curOffset >= 0);
 								pxAssert(path.state == GIF_PATH_IMAGE);
-								DevCon.WriteLn(Color_Magenta, "Gif Unit - Sending path 3 sliced gs packet!");
+								GUNIT_LOG(Color_Magenta, "Gif Unit - Sending path 3 sliced gs packet!");
 							}
 							continue;
 						}
-					}
-					// Send complete gs primitive packet(s)
-					if (gsPack.size && !path.gifTag.isValid) {
-						AddCompletedGSPacket(gsPack, (GIF_PATH)(stat.APATH-1));
-						path.gsPack.size   = 0;
-						path.gsPack.offset = path.curOffset;
 					}
 					//DevCon.WriteLn("Incomplete GS Packet for path %d, size=%d", stat.APATH, gsPack.size);
 					break; // Not finished with GS packet
@@ -405,13 +412,13 @@ struct Gif_Unit {
 				//DevCon.WriteLn("Adding GS Packet for path %d", stat.APATH);
 				AddCompletedGSPacket(gsPack, (GIF_PATH)(stat.APATH-1));
 			}
-			if   (!gsSIGNAL.queued && checkPaths(1,0,0,0)) { stat.APATH = 1; stat.P1Q = 0; }
-			elif (!gsSIGNAL.queued && checkPaths(0,1,0,0)) { stat.APATH = 2; stat.P2Q = 0; }
-			elif (!gsSIGNAL.queued && checkPaths(0,0,1,0) && !Path3Masked())
+			if   (!gsSIGNAL.queued && !gifPath[0].isDone()) { stat.APATH = 1; stat.P1Q = 0; }
+			elif (!gsSIGNAL.queued && !gifPath[1].isDone()) { stat.APATH = 2; stat.P2Q = 0; }
+			elif (!gsSIGNAL.queued && !gifPath[2].isDone() && !Path3Masked())
 				 { stat.APATH = 3; stat.P3Q = 0; stat.IP3 = 0; }
 			else { stat.APATH = 0; stat.OPH = 0; break; }
 		}
-		Gif_FinishIRQ(); // hmm
+		Gif_FinishIRQ();
 		//DevCon.WriteLn("APATH = %d [%d,%d,%d]", stat.APATH, !!checkPaths(1,0,0,0),!!checkPaths(0,1,0,0),!!checkPaths(0,0,1,0));
 	}
 

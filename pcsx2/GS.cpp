@@ -260,20 +260,16 @@ void __fastcall gsWrite64_page_01( u32 mem, const mem64_t* value )
 	switch( mem )
 	{
 		case GS_BUSDIR:
-			//This is probably a complete hack, however writing to BUSDIR "should" start a transfer 
-			//Only problem is it kills killzone :(.
-			// (yes it *is* a complete hack; both lines here in fact --air)
-			//=========================================================================
-			//gifRegs.stat.OPH = true; // Bleach wants it, Killzone hates it.
 
-			GUNIT_LOG("GIF - busdir");
-			gifRegs.stat.DIR = value[0] & 1;
-
-			if (gifRegs.stat.DIR) { // Assume will do local->host transfer?
-				gifRegs.stat.OPH = true; // Is OPH set on local->host transfers?
-				DevCon.WriteLn("Busdir - GS->EE Download");
+			gifUnit.stat.DIR = value[0] & 1;
+			if (gifUnit.stat.DIR) {      // Assume will do local->host transfer
+				gifUnit.stat.OPH = true; // Should we set OPH here?
+				gifUnit.FlushToMTGS();   // Send any pending GS Primitives to the GS
+				GUNIT_LOG("Busdir - GS->EE Download");
 			}
-			else DevCon.WriteLn("Busdir - EE->GS Upload");
+			else {
+				GUNIT_LOG("Busdir - EE->GS Upload");
+			}
 
 			//=========================================================================
 			// BUSDIR INSANITY !! MTGS FLUSH NEEDED
