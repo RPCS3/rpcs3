@@ -1,4 +1,4 @@
-; FireWire.def : Declares the module parameters for the DLL.
+; GS.def : Declares the module parameters for the DLL.
 
 ;LIBRARY      "GSnull"
 
@@ -12,30 +12,31 @@ EXPORTS
 	GSclose					@7
 	GSshutdown				@8
 	GSvsync					@9
-	GSgifTransfer1			@10
-	GSgifTransfer2			@11
-	GSgifTransfer3			@12
-	GSgetLastTag			@13
-	GSgifSoftReset			@14
-	GSreadFIFO				@15
-	GSreadFIFO2				@16
-	GSkeyEvent				@17
-	GSchangeSaveState		@18
-	GSmakeSnapshot			@19
-	GSmakeSnapshot2			@20
-	GSirqCallback			@21
-	GSprintf				@22
-	GSsetBaseMem			@23
-	GSsetGameCRC			@24
-	GSsetFrameSkip			@25
-	GSsetupRecording		@26
-	GSreset					@27
-	GSwriteCSR				@28
-	GSgetDriverInfo			@29
-	GSsetWindowInfo			@30
-	GSfreeze				@31
-	GSconfigure				@32
-	GSabout					@33
-	GStest					@34
+	GSgifTransfer			@10
+	GSgifTransfer1			@11
+	GSgifTransfer2			@12
+	GSgifTransfer3			@13
+	GSgetLastTag			@14
+	GSgifSoftReset			@15
+	GSreadFIFO				@16
+	GSreadFIFO2				@17
+	GSkeyEvent				@18
+	GSchangeSaveState		@19
+	GSmakeSnapshot			@20
+	GSmakeSnapshot2			@21
+	GSirqCallback			@22
+	GSprintf				@23
+	GSsetBaseMem			@24
+	GSsetGameCRC			@25
+	GSsetFrameSkip			@26
+	GSsetupRecording		@27
+	GSreset					@28
+	GSwriteCSR				@29
+	GSgetDriverInfo			@30
+	GSsetWindowInfo			@31
+	GSfreeze				@32
+	GSconfigure				@33
+	GSabout					@34
+	GStest					@35
 
 

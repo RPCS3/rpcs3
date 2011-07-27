@@ -559,6 +559,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\zerogs.def"
+				>
+			</File>
+			<File
 				RelativePath=".\zerogs.rc"
 				>
 			</File>
@@ -572,11 +576,11 @@
 			</File>
 		</Filter>
 		<File
-			RelativePath="..\ps2hw.dat"
+			RelativePath=".\ps2hw.dat"
 			>
 		</File>
 		<File
-			RelativePath=".\ps2hw.dat"
+			RelativePath="..\ps2hw.dat"
 			>
 		</File>
 	</Files>

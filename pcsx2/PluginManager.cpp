@@ -20,6 +20,7 @@
 #include <wx/file.h>
 
 #include "GS.h"
+#include "Gif.h"
 #include "CDVD/CDVDisoReader.h"
 
 #include "Utilities/ScopedPtr.h"
@@ -196,6 +197,7 @@ void CALLBACK GS_getTitleInfo2( char* dest, size_t length )
 	dest[2] = 0;
 }
 
+#if COPY_GS_PACKET_TO_MTGS == 1
 // This legacy passthrough function is needed because the old GS plugins tended to assume that
 // a PATH1 transfer that didn't EOP needed an automatic EOP (which was needed to avoid a crash
 // in the BIOS when it starts an XGKICK prior to having an EOP written to VU1 memory).  The new
@@ -240,7 +242,15 @@ static void CALLBACK GS_gifTransferLegacy( const u32* src, u32 data )
 		}
 	}
 }
-
+#else
+// In this case the MTGS thread will only be using the "GSgifTransfer"
+// callback, which falls back to this function if its an old plugin.
+// Since GSgifTransfer2 is the least hacky old call-back, and MTGS will
+// just be using a single gif path, we'll just solely use path 2...
+static void CALLBACK GS_gifTransferLegacy(const u32* src, u32 data) {
+	GSgifTransfer2((u32*)src, data);
+}
+#endif
 
 // PAD
 _PADinit           PADinit;

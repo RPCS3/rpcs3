@@ -12,6 +12,7 @@ EXPORTS
 	GSshutdown			@6
 	GSopen				@7
 	GSclose				@8
+	GSgifTransfer		@12
 	GSgifTransfer1		@13
 	GSgifTransfer2		@14
 	GSgifTransfer3		@15
