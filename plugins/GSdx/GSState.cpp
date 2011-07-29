@@ -1913,6 +1913,7 @@ struct GSFrameInfo
 };
 
 typedef bool (*GetSkipCount)(const GSFrameInfo& fi, int& skip);
+CRC::Region g_crc_region = CRC::NoRegion;
 
 bool GSC_Okami(const GSFrameInfo& fi, int& skip)
 {
@@ -1955,7 +1956,14 @@ bool GSC_MetalGearSolid3(const GSFrameInfo& fi, int& skip)
 		}
 		else if(!fi.TME && fi.FBP == fi.TBP0 && fi.FBP == 0x2000 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMCT24)
 		{
-			skip = 119;
+			if(g_crc_region == CRC::US || g_crc_region == CRC::JP || g_crc_region == CRC::KO)
+			{
+				skip = 119;	//ntsc
+			}
+			else
+			{
+				skip = 136;	//pal
+			}
 		}
 	}
 
@@ -2079,6 +2087,10 @@ bool GSC_SoTC(const GSFrameInfo& fi, int& skip)
 	// Not needed anymore? What did it fix anyway? (rama)
 	/*if(skip == 0)
 	{
+		if(fi.TME && (fi.FBP == 0x03d00 || fi.FBP == 0x03d80) && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x03fc0 && fi.TPSM == PSM_PSMCT24)
+		{
+			//skip = 48;	//stops light sources
+		}
 		if(fi.TME && fi.FBP == 0x02b80 && fi.FPSM == PSM_PSMCT24 && fi.TBP0 == 0x01e80 && fi.TPSM == PSM_PSMCT24)
 		{
 			skip = 9;
@@ -2150,9 +2162,13 @@ bool GSC_GT4(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && (fi.FBP == 0x03440 || fi.FBP >= 0x03e00) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x01400) && fi.TPSM == PSM_PSMT8)
+		if(fi.TME && fi.FBP >= 0x02f00 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x01180 /*|| fi.TBP0 == 0x01a40*/) && fi.TPSM == PSM_PSMT8) //TBP0 0x1a40 progressive
 		{
-			skip = 880;
+			skip = 770;	//ntsc, progressive 1540
+		}
+		if(g_crc_region == CRC::EU && fi.TME && fi.FBP >= 0x03400 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x01400 ) && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 880;	//pal
 		}
 		else if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x01400) && fi.FPSM == PSM_PSMCT24 && fi.TBP0 >= 0x03420 && fi.TPSM == PSM_PSMT8)
 		{
@@ -2657,7 +2673,7 @@ bool GSC_Sly3(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00700) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x00700) && fi.TPSM == PSM_PSMCT16)
+		if(fi.TME && (fi.FBP == 0x00000 || fi.FBP == 0x00700 || fi.FBP == 0x00a80 || fi.FBP == 0x00e00) && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x00700 || fi.TBP0 == 0x00a80 || fi.TBP0 == 0x00e00) && fi.TPSM == PSM_PSMCT16)
 		{
 			skip = 1000;
 		}
@@ -3039,6 +3055,49 @@ bool GSC_MidnightClub3(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_SpyroNewBeginning(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == fi.TPSM && fi.TBP0 == 0x034a0 && fi.TPSM == PSM_PSMCT16)
+		{
+			skip = 2;
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_SpyroEternalNight(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == fi.TPSM && (fi.TBP0 == 0x034a0 ||fi.TBP0 == 0x035a0 || fi.TBP0 == 0x036e0) && fi.TPSM == PSM_PSMCT16)
+		{
+			skip = 2;
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_TalesOfLegendia(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP == 0x3f80 || fi.FBP == 0x03fa0) && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 3; //3, 9
+		}
+		if(fi.TME && fi.FBP == 0x3800 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMZ32)
+		{
+			skip = 2;
+		}
+	}
+		
+	return true;
+}
+
 
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
@@ -3124,11 +3183,15 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::BurnoutRevenge] = GSC_Burnout;
 		map[CRC::BurnoutDominator] = GSC_Burnout;
 		map[CRC::MidnightClub3] = GSC_MidnightClub3;
+		map[CRC::SpyroNewBeginning] = GSC_SpyroNewBeginning;
+		map[CRC::SpyroEternalNight] = GSC_SpyroEternalNight;
+		map[CRC::TalesOfLegendia] = GSC_TalesOfLegendia;
 	}
 
 	// TODO: just set gsc in SetGameCRC once
 
 	GetSkipCount gsc = map[m_game.title];
+	g_crc_region = m_game.region;
 
 	if(gsc && !gsc(fi, skip))
 	{

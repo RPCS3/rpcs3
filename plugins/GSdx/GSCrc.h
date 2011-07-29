@@ -104,6 +104,7 @@ public:
 		CastlevaniaLoI,
 		Black,
 		TyTasmanianTiger,
+		TyTasmanianTiger2,
 		FFVIIDoC,
 		DigimonRumbleArena2,
 		StarWarsForceUnleashed,
@@ -115,6 +116,11 @@ public:
 		BurnoutRevenge,
 		BurnoutDominator,
 		MidnightClub3,
+		XmenOriginsWolverine,
+		CallofDutyFinalFronts,
+		SpyroNewBeginning,
+		SpyroEternalNight,
+		TalesOfLegendia,
 		TitleCount,
 	};
 

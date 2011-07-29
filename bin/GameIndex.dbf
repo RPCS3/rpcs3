@@ -3656,7 +3656,7 @@ Region = NTSC-U
 Serial = SLUS-20467
 Name   = Tomb Raider - The Angel of Darkness
 Region = NTSC-U
-Compat = 4
+Compat = 2
 ---------------------------------------------
 Serial = SLUS-20468
 Name   = Dynasty Tactics
@@ -4097,7 +4097,7 @@ Compat = 2
 Serial = SLUS-20566
 Name   = Buffy the Vampire Slayer - Chaos Bleeds
 Region = NTSC-U
-Compat = 5
+Compat = 4
 EETimingHack = 1		//garbage in HUD
 ---------------------------------------------
 Serial = SLUS-20567
@@ -4180,7 +4180,6 @@ Serial = SLUS-20585
 Name   = Powerpuff Girls, The - Relish Rampage
 Region = NTSC-U
 Compat = 5
-EETimingHack = 1		//hang showing "Press start"
 ---------------------------------------------
 Serial = SLUS-20586
 Name   = IHRA Drag Racing 2
@@ -4271,7 +4270,8 @@ Compat = 5
 Serial = SLUS-20607
 Name   = Disney's Extreme Skate Adventure
 Region = NTSC-U
-Compat = 2
+Compat = 5
+vuRoundMode = 0
 ---------------------------------------------
 Serial = SLUS-20608
 Name   = Mobile Light Force 2
@@ -4656,7 +4656,6 @@ Serial = SLUS-20694
 Name   = Onimusha 3 - Demon Siege
 Region = NTSC-U
 Compat = 5
-EETimingHack = 1		//sliced FMVs
 ---------------------------------------------
 Serial = SLUS-20695
 Name   = Chaos Legion
@@ -4820,7 +4819,6 @@ Name   = Drakengard
 Region = NTSC-U
 Compat = 5
 eeClampMode = 3			//characters are visible in-game.
-EETimingHack = 1		//flickering textures.
 ---------------------------------------------
 Serial = SLUS-20733
 Name   = Castlevania - Lament of Innocence
@@ -5173,6 +5171,7 @@ Serial = SLUS-20811
 Name   = Need for Speed - Underground
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1	//broken textures
 ---------------------------------------------
 Serial = SLUS-20812
 Name   = Dynasty Warriors 4 - Extreme Edition
@@ -5338,7 +5337,7 @@ SkipMPEGHack = 1		//hangs on menus
 Serial = SLUS-20852
 Name   = Terminator 3, The - The Redemption
 Region = NTSC-U
-Compat = 2
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20853
 Name   = Looney Tunes - Back in Action
@@ -5574,7 +5573,6 @@ Serial = SLUS-20901
 Name   = FlatOut
 Region = NTSC-U
 Compat = 5
-EETimingHack = 1		//random hang
 ---------------------------------------------
 Serial = SLUS-20902
 Name   = Shadow of Rome
@@ -5871,8 +5869,8 @@ Compat = 4
 	comment=Patches By Nachbrenner
 	
 	//fix IPU busy! ingame
-	patch=0,EE,003a9538,word,03e00008
-	patch=0,EE,003a953c,word,00000000
+	//patch=0,EE,003a9538,word,03e00008
+	//patch=0,EE,003a953c,word,00000000
 	patch=0,EE,003a9460,word,03e00008
 	patch=0,EE,003a9464,word,00000000
 	
@@ -6730,6 +6728,7 @@ Serial = SLUS-21145
 Name   = Full Spectrum Warrior
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLUS-21146
 Name   = Far East of Eden
@@ -7228,6 +7227,7 @@ Serial = SLUS-21250
 Name   = Full Spectrum Warrior - Ten Hammers
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLUS-21251
 Name   = FlatOut 2
@@ -7819,13 +7819,12 @@ Region = NTSC-U
 Serial = SLUS-21372
 Name   = Legend of Spyro, The - A New Beginning
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21373
 Name   = Drakengard 2
 Region = NTSC-U
 Compat = 5
-EETimingHack = 1		//flickering textures.
 ---------------------------------------------
 Serial = SLUS-21374
 Name   = Marvel - Ultimate Alliance
@@ -8775,7 +8774,7 @@ Compat = 5
 Serial = SLUS-21607
 Name   = Legend of Spyro, The - The Eternal Night
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21608
 Name   = Dance Dance Revolution - SuperNOVA 2
@@ -8977,7 +8976,8 @@ Region = NTSC-U
 Serial = SLUS-21650
 Name   = Mercenaries 2 - World in Flames
 Region = NTSC-U
-Compat = 2
+Compat = 4
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLUS-21651
 Name   = Noddy and the Magic Book
@@ -9041,6 +9041,7 @@ Serial = SLUS-21665
 Name   = Simpsons Game, The
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1	//broken textures
 ---------------------------------------------
 Serial = SLUS-21666
 Name   = Mountain Bike Adrenaline
@@ -10072,7 +10073,6 @@ Serial = SLUS-21915
 Name   = The Lord of the Rings: Aragorn's Quest
 Region = NTSC-U
 Compat = 5
-EETimingHack = 1		//SPS
 ---------------------------------------------
 Serial = SLUS-21917
 Name   = Dance Dance Revolution X2 (Bundle)
@@ -10566,6 +10566,7 @@ Region = NTSC-U
 Serial = SLUS-29073
 Name   = Need for Speed - Underground [Demo]
 Region = NTSC-U
+EETimingHack = 1	//broken textures
 ---------------------------------------------
 Serial = SLUS-29074
 Name   = Dance Dance Revolution Max 2 [Demo]
@@ -13770,7 +13771,7 @@ Region = NTSC-K
 Serial = SLKA-25320
 Name   = Ikusa Gami
 Region = NTSC-K
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25321
 Name   = K.League - Winning Eleven 9 - Asia Championship
@@ -18513,6 +18514,7 @@ Region = NTSC-J
 Serial = SLPM-65614
 Name   = Need for Speed Underground [EA Best Hits]
 Region = NTSC-J
+EETimingHack = 1	//broken textures
 ---------------------------------------------
 Serial = SLPM-65615
 Name   = Dokapon DX
@@ -20846,6 +20848,7 @@ Region = NTSC-J
 Serial = SLPM-66263
 Name   = Full Spectrum Warrior
 Region = NTSC-J
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLPM-66264
 Name   = Canvas 2 - Niji-iro no Sketch [Deluxe Pack]
@@ -21393,6 +21396,7 @@ Region = NTSC-J
 Serial = SLPM-66427
 Name   = Full Spectrum Warrior - Ten Hammers
 Region = NTSC-J
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLPM-66429
 Name   = Special Forces - Fire for Effect
@@ -33122,7 +33126,7 @@ Compat = 5
 Serial = SLES-51227
 Name   = Tomb Raider - Angel of Darkness
 Region = PAL-Unk
-Compat = 4
+Compat = 2
 ---------------------------------------------
 Serial = SLES-51229
 Name   = Virtua Cop - Elite Edition
@@ -34058,6 +34062,7 @@ Compat = 5
 Serial = SLES-51720
 Name   = Disney's Extreme Skate Adventure
 Region = PAL-Unk
+vuRoundMode = 0
 ---------------------------------------------
 Serial = SLES-51723
 Name   = Hobbit, The
@@ -34630,6 +34635,7 @@ Serial = SLES-51967
 Name   = Need for Speed - Underground
 Region = PAL-M4
 Compat = 5
+EETimingHack = 1	//broken textures
 ---------------------------------------------
 Serial = SLES-51968
 Name   = Spongebob Squarepants - Battle for Bikini Bottom
@@ -35247,7 +35253,6 @@ Name   = Drakengard
 Region = PAL-Unk
 Compat = 5
 eeClampMode = 3			//characters are visible in-game.
-EETimingHack = 1		//flickering textures.
 ---------------------------------------------
 Serial = SLES-52323
 Name   = Richard Burns Rally
@@ -37119,6 +37124,7 @@ Region = PAL-Unk
 Serial = SLES-53114
 Name   = Full Spectrum Warrior
 Region = PAL-Unk
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLES-53119
 Name   = Kessen III
@@ -37156,6 +37162,7 @@ Region = PAL-Unk
 Serial = SLES-53131
 Name   = Full Spectrum Warrior
 Region = PAL-R
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLES-53138
 Name   = Outlaw Volleyball - Remixed
@@ -38169,6 +38176,7 @@ Compat = 4
 Serial = SLES-53656
 Name   = Full Spectrum Warrior - Ten Hammers
 Region = PAL-Unk
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLES-53657
 Name   = Shrek - Super Slam
@@ -38470,7 +38478,6 @@ Region = PAL-E
 Serial = SLES-53794
 Name   = Drakengard 2
 Region = PAL-Unk
-EETimingHack = 1		//flickering textures.
 ---------------------------------------------
 Serial = SLES-53796
 Name   = FIFA Street 2
@@ -38690,6 +38697,7 @@ Compat = 5
 Serial = SLES-53909
 Name   = Full Spectrum Warrior - Ten Hammers
 Region = PAL-Unk
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLES-53910
 Name   = Agent Hugo
@@ -38870,7 +38878,6 @@ Serial = SLES-54002
 Name   = FlatOut 2
 Region = PAL-M5
 Compat = 5
-EETimingHack = 1		//random hang
 ---------------------------------------------
 Serial = SLES-54003
 Name   = Flatout 2
@@ -39060,6 +39067,7 @@ Serial = SLES-54115
 Name   = Delta Force - Black Hawk Down - Team Sabre
 Region = PAL-Unk
 Compat = 5
+EETimingHack = 1	//missing text
 ---------------------------------------------
 Serial = SLES-54116
 Name   = Operation Winback 2 - Project Poseidon
@@ -40298,8 +40306,7 @@ Region = PAL-E
 Serial = SLES-54815
 Name   = Spyro - The Eternal Night
 Region = PAL-M6
-Compat = 4
-SkipMPEGHack = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLES-54819
 Name   = Manhunt 2
@@ -40434,10 +40441,12 @@ Serial = SLES-54904
 Name   = The Simpsons Game
 Region = PAL-M4
 Compat = 5
+EETimingHack = 1	//broken textures
 ---------------------------------------------
 Serial = SLES-54906
 Name   = The Simpsons Game
 Region = PAL-I-S
+EETimingHack = 1	//broken textures
 ---------------------------------------------
 Serial = SLES-54913
 Name   = Pro Evolution Soccer 2008
@@ -40554,6 +40563,7 @@ Serial = SLES-54997
 Name   = Mercenaries 2 - World in Flames
 Region = PAL-Unk
 Compat = 5
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLES-54998
 Name   = Bratz - The Movie
@@ -40562,10 +40572,12 @@ Region = PAL-M5
 Serial = SLES-55000
 Name   = Mercenaries 2 - World in Flames
 Region = PAL-G
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLES-55001
 Name   = Mercenaries 2 - World in Flames
 Region = PAL-S
+EETimingHack = 1	//flickery textures
 ---------------------------------------------
 Serial = SLES-55002
 Name   = Need for Speed - ProStreet
@@ -40714,7 +40726,7 @@ Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
 Serial = SLES-55163
-Name   = the Legend of Spyro - Dawn of the Dragon
+Name   = The Legend of Spyro - Dawn of the Dragon
 Region = PAL-M6
 ---------------------------------------------
 Serial = SLES-55169
