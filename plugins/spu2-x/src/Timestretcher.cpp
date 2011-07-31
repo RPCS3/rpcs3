@@ -111,7 +111,7 @@ T clamp(T val, T min, T max){
 void SndBuffer::UpdateTempoChangeSoundTouch2()
 {
 	//base aim at buffer filled %
-	float targetFullness=0.1;
+	float baseTargetFullness=0.05;
 
 	//threshold params (hysteresis)
 	static const float hys_ok_factor=1.03;
@@ -121,6 +121,7 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 	//state vars
 	static bool inside_hysteresis=false;
 	static int hys_ok_count=0;
+	static float dynamicTargetFullness=baseTargetFullness;
 
 	//some precalculated values
 	static const float hys_ok_min=1.0/hys_ok_factor;
@@ -132,12 +133,17 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 	static float last_bufferFullness=0;
 	if(last_bufferFullness != bufferFullness){// only recalculate if buffer changes
 		last_bufferFullness = bufferFullness;
-		
-		float tempoAdjust=bufferFullness/targetFullness;
+
+		float tempoAdjust=bufferFullness/dynamicTargetFullness;
 		float avgerage = addToAvg(tempoAdjust);
 		tempoAdjust = avgerage;
-		if( tempoAdjust>1.2 ) tempoAdjust=0.2+pow(tempoAdjust-0.2f, 3);//reduce latency for faster speeds only
-		tempoAdjust = clamp( tempoAdjust, 0.1f, 10.0f);
+		tempoAdjust = clamp( tempoAdjust, 0.05f, 10.0f);
+		dynamicTargetFullness += (baseTargetFullness/tempoAdjust - dynamicTargetFullness)/50.0;
+		if( 
+			tempoAdjust == clamp(tempoAdjust, 0.9f, 1.1f) 
+			&& dynamicTargetFullness == clamp( dynamicTargetFullness, baseTargetFullness*0.9f, baseTargetFullness*1.1f)
+			)
+			dynamicTargetFullness=baseTargetFullness;
 
 		if( !inside_hysteresis )
 		{
@@ -168,7 +174,8 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 			wxTimeSpan delta = unow.Subtract(last);
 
 			if(delta.GetMilliseconds()>1000){//report buffers state and tempo adjust every second
-				printf("buffers: %f, actual adjust: %f, iterations: %d\n", bufferFullness, tempoAdjust, iters);
+				printf("buffers[->%.2f]: %.3f (%3.0f%%), tempo adjust: %f, compensated target: %.3f, iterations: %d\n", 
+					(double)baseTargetFullness, (double)bufferFullness, (double)(100.0*bufferFullness/baseTargetFullness), (double)tempoAdjust, (double)dynamicTargetFullness, iters);
 				last=unow;
 				iters=0;
 			}
