@@ -409,6 +409,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\GameDatabase.cpp" />
+    <ClCompile Include="..\..\Gif_Logger.cpp" />
     <ClCompile Include="..\..\Gif_Unit.cpp" />
     <ClCompile Include="..\..\gui\AppGameDatabase.cpp" />
     <ClCompile Include="..\..\gui\AppUserMode.cpp" />
@@ -549,7 +550,6 @@
     <ClCompile Include="..\..\Ipu\yuv2rgb.cpp" />
     <ClCompile Include="..\..\Ipu\mpeg2lib\Idct.cpp" />
     <ClCompile Include="..\..\Ipu\mpeg2lib\Mpeg.cpp" />
-    <ClCompile Include="..\..\ps2\GIFpath.cpp" />
     <ClCompile Include="..\..\GS.cpp" />
     <ClCompile Include="..\..\GSState.cpp" />
     <ClCompile Include="..\..\MTGS.cpp" />

@@ -551,9 +551,6 @@
     <ClCompile Include="..\..\Ipu\mpeg2lib\Mpeg.cpp">
       <Filter>System\Ps2\IPU\mpeg2lib</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ps2\GIFpath.cpp">
-      <Filter>System\Ps2\GS</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\GS.cpp">
       <Filter>System\Ps2\GS</Filter>
     </ClCompile>
@@ -812,6 +809,9 @@
       <Filter>AppHost\Panels</Filter>
     </ClCompile>
     <ClCompile Include="..\..\Gif_Unit.cpp">
+      <Filter>System\Ps2\GS</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Gif_Logger.cpp">
       <Filter>System\Ps2\GS</Filter>
     </ClCompile>
   </ItemGroup>
