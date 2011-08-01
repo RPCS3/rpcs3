@@ -343,7 +343,7 @@ __fi void mVUanalyzeCflag(mV, int It) {
 
 __fi void mVUanalyzeXGkick(mV, int Fs, int xCycles) {
 	analyzeVIreg1(mVU, Fs, mVUlow.VI_read[0]);
-	analyzeXGkick1();
+	analyzeXGkick1(); // Stall will cause mVUincCycles() to trigger pending xgkick
 	analyzeXGkick2(xCycles);
 	// Note: Technically XGKICK should stall on the next instruction,
 	// this code stalls on the same instruction. The only case where this
@@ -357,17 +357,30 @@ __fi void mVUanalyzeXGkick(mV, int Fs, int xCycles) {
 // Branches - Branch Opcodes
 //------------------------------------------------------------------
 
-static void analyzeBranchVI(mV, int xReg, bool &infoVar) {
+// If the VI reg is modified directly before the branch, then the VI
+// value read by the branch is the value the VI reg had at the start
+// of the instruction 4 instructions ago (assuming no stalls).
+// See: http://forums.pcsx2.net/Thread-blog-PS2-VU-Vector-Unit-Documentation-Part-1
+static void analyzeBranchVI(mV, int xReg, bool& infoVar) {
 	if (!xReg) return;
+	if (mVUstall) { // I assume a stall on branch means the vi reg is not modified directly b4 the branch...
+		DevCon.Warning("microVU%d: Warning %d cycle stall on branch instruction [%04x]", getIndex, mVUstall, xPC);
+		return;
+	}
 	int i, j = 0;
+	int cyc  = 0;
 	int iEnd = 4;
 	int bPC  = iPC;
 	incPC2(-2);
-	for (i = 0; i < iEnd; i++) {
+	for (i = 0; i < iEnd && cyc < iEnd; i++) {
+		if (i && mVUstall) {
+			DevCon.Warning("microVU%d: Warning Branch VI-Delay with %d cycle stall (%d) [%04x]", getIndex, mVUstall, i, xPC);
+		}
 		if (i == mVUcount) {
 			bool warn = 0;
 			if (i == 1) warn = 1;
 			if (mVUpBlock->pState.viBackUp == xReg) {
+				DevCon.WriteLn(Color_Green, "microVU%d: Loading Branch VI value from previous block", getIndex);
 				if (i == 0) warn = 1;
 				infoVar = 1;
 				j = i; i++;
@@ -383,6 +396,7 @@ static void analyzeBranchVI(mV, int xReg, bool &infoVar) {
 			j = i;
 		}
 		elif (i == 0) break;
+		cyc += mVUstall + 1;
 		incPC2(-2);
 	}
 	if (i) {
@@ -393,14 +407,14 @@ static void analyzeBranchVI(mV, int xReg, bool &infoVar) {
 			infoVar = 1;
 		}
 		iPC = bPC;
-		DevCon.WriteLn(Color_Green, "microVU%d: Branch VI-Delay (%d) [%04x]", getIndex, j+1, xPC);
+		DevCon.WriteLn(Color_Green, "microVU%d: Branch VI-Delay (%d) [%04x][%03d]", getIndex, j+1, xPC, mVU.prog.cur->idx);
 	}
 	else iPC = bPC;
 }
 
 /*
 // Dead Code... the old version of analyzeBranchVI()
-__fi void analyzeBranchVI(mV, int xReg, bool &infoVar) {
+__fi void analyzeBranchVI(mV, int xReg, bool& infoVar) {
 	if (!xReg) return;
 	int i;
 	int iEnd = aMin(5, (mVUcount+1));
@@ -469,7 +483,7 @@ __ri int mVUbranchCheck(mV) {
 
 __fi void mVUanalyzeCondBranch1(mV, int Is) {
 	analyzeVIreg1(mVU, Is, mVUlow.VI_read[0]);
-	if (!mVUbranchCheck(mVU) && !mVUstall) { 
+	if (!mVUbranchCheck(mVU)) { 
 		analyzeBranchVI(mVU, Is, mVUlow.memReadIs);
 	}
 }
@@ -477,7 +491,7 @@ __fi void mVUanalyzeCondBranch1(mV, int Is) {
 __fi void mVUanalyzeCondBranch2(mV, int Is, int It) {
 	analyzeVIreg1(mVU, Is, mVUlow.VI_read[0]);
 	analyzeVIreg1(mVU, It, mVUlow.VI_read[1]);
-	if (!mVUbranchCheck(mVU) && !mVUstall) {
+	if (!mVUbranchCheck(mVU)) {
 		analyzeBranchVI(mVU, Is, mVUlow.memReadIs);
 		analyzeBranchVI(mVU, It, mVUlow.memReadIt);
 	}

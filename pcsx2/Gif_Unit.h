@@ -1,8 +1,27 @@
+/*  PCSX2 - PS2 Emulator for PCs
+ *  Copyright (C) 2002-2010  PCSX2 Dev Team
+ *
+ *  PCSX2 is free software: you can redistribute it and/or modify it under the terms
+ *  of the GNU Lesser General Public License as published by the Free Software Found-
+ *  ation, either version 3 of the License, or (at your option) any later version.
+ *
+ *  PCSX2 is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ *  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ *  PURPOSE.  See the GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License along with PCSX2.
+ *  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #pragma once
 #include "System/SysThreads.h"
+struct GS_Packet;
+extern void Gif_MTGS_Wait();
 extern void Gif_FinishIRQ();
 extern bool Gif_HandlerAD(u8* pMem);
+extern void Gif_AddCompletedGSPacket(GS_Packet& gsPack, GIF_PATH path);
+extern void Gif_ParsePacket(u8* data, u32 size, GIF_PATH path);
+extern void Gif_ParsePacket(GS_Packet& gsPack, GIF_PATH path);
 
 struct Gif_Tag {
 	struct HW_Gif_Tag {
@@ -152,7 +171,6 @@ struct Gif_Path {
 		//pxAssertDev(AtomicExchangeAdd(readAmount, 0) != 0, "Gif Path Buffer Overflow!");
 		DevCon.WriteLn(Color_Red, "Gif Path[%d] - MTGS Wait! [r=0x%x]", 
 			           idx+1, AtomicExchangeAdd(readAmount, 0));
-		extern void Gif_MTGS_Wait();
 		Gif_MTGS_Wait();
 	}
 
@@ -289,8 +307,8 @@ struct Gif_Unit {
 
 	// Adds a finished GS Packet to the MTGS ring buffer
 	__fi void AddCompletedGSPacket(GS_Packet& gsPack, GIF_PATH path) {
-		extern void Gif_AddCompletedGSPacket(GS_Packet& gsPack, GIF_PATH path);
 		Gif_AddCompletedGSPacket(gsPack, path);
+		if (PRINT_GIF_PACKET) Gif_ParsePacket(gsPack, path);
 	}
 
 	// Returns GS Packet Size in bytes
@@ -406,6 +424,7 @@ struct Gif_Unit {
 							continue;
 						}
 					}
+					//FlushToMTGS();
 					//DevCon.WriteLn("Incomplete GS Packet for path %d, size=%d", stat.APATH, gsPack.size);
 					break; // Not finished with GS packet
 				}

@@ -44,15 +44,13 @@ void __fastcall ReadFIFO_VIF1(mem128_t* out)
 	if (vif1Regs.stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) )
 		DevCon.Warning( "Reading from vif1 fifo when stalled" );
 
+	ZeroQWC(out); // Clear first in case no data gets written...
 	pxAssertRel(vif1Regs.stat.FQC != 0, "FQC = 0 on VIF FIFO READ!");
-	if (vif1Regs.stat.FDR)
-	{
-		if(vif1Regs.stat.FQC > vif1.GSLastDownloadSize)
-		{
+	if (vif1Regs.stat.FDR) {
+		if (vif1Regs.stat.FQC > vif1.GSLastDownloadSize) {
 			DevCon.Warning("Warning! GS Download size < FIFO count!");
 		}
-		if (vif1Regs.stat.FQC > 0)
-		{
+		if (vif1Regs.stat.FQC > 0) {
 			GetMTGS().WaitGS();
 			GSreadFIFO((u64*)out);
 			vif1.GSLastDownloadSize--;

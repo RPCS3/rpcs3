@@ -203,7 +203,7 @@ void CALLBACK GS_getTitleInfo2( char* dest, size_t length )
 // in the BIOS when it starts an XGKICK prior to having an EOP written to VU1 memory).  The new
 // MTGS wraps data around the end of the MTGS buffer, so it often splits PATH1 data into two
 // transfers now.
-static void CALLBACK GS_gifTransferLegacy( const u32* src, u32 data )
+static void CALLBACK GS_Legacy_gifTransfer( const u32* src, u32 data )
 {
 	static __aligned16 u128 path1queue[0x400];
 	static uint path1size = 0;
@@ -247,10 +247,14 @@ static void CALLBACK GS_gifTransferLegacy( const u32* src, u32 data )
 // callback, which falls back to this function if its an old plugin.
 // Since GSgifTransfer2 is the least hacky old call-back, and MTGS will
 // just be using a single gif path, we'll just solely use path 2...
-static void CALLBACK GS_gifTransferLegacy(const u32* src, u32 data) {
+static void CALLBACK GS_Legacy_gifTransfer(const u32* src, u32 data) {
 	GSgifTransfer2((u32*)src, data);
 }
 #endif
+
+static void CALLBACK GS_Legacy_GSreadFIFO2(u64* pMem, int qwc) {
+	while(qwc--) GSreadFIFO(pMem);
+}
 
 // PAD
 _PADinit           PADinit;
@@ -371,10 +375,10 @@ static const LegacyApi_ReqMethod s_MethMessReq_GS[] =
 {
 	{	"GSopen",			(vMeth**)&GSopen,			NULL	},
 	{	"GSvsync",			(vMeth**)&GSvsync,			NULL	},
-	{	"GSgifTransfer",	(vMeth**)&GSgifTransfer,	(vMeth*)GS_gifTransferLegacy },
+	{	"GSgifTransfer",	(vMeth**)&GSgifTransfer,	(vMeth*)GS_Legacy_gifTransfer },
 	{	"GSgifTransfer2",	(vMeth**)&GSgifTransfer2,	NULL	},
 	{	"GSgifTransfer3",	(vMeth**)&GSgifTransfer3,	NULL	},
-	{	"GSreadFIFO2",		(vMeth**)&GSreadFIFO2,		NULL	},
+	{	"GSreadFIFO2",		(vMeth**)&GSreadFIFO2,		(vMeth*)GS_Legacy_GSreadFIFO2 },
 
 	{	"GSmakeSnapshot",	(vMeth**)&GSmakeSnapshot,	(vMeth*)GS_makeSnapshot },
 	{	"GSirqCallback",	(vMeth**)&GSirqCallback,	(vMeth*)GS_irqCallback },

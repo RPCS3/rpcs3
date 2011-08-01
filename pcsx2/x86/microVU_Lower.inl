@@ -273,17 +273,17 @@ mVUop(mVU_EEXP) {
 
 // sumXYZ(): PQ.x = x ^ 2 + y ^ 2 + z ^ 2
 static __fi void mVU_sumXYZ(mV, const xmm& PQ, const xmm& Fs) {
-	if( x86caps.hasStreamingSIMD4Extensions ) {
+	if (x86caps.hasStreamingSIMD4Extensions) {
 		xDP.PS(Fs, Fs, 0x71);
 		xMOVSS(PQ, Fs);
 	}
 	else {
-		SSE_MULPS(mVU, Fs, Fs);  // wzyx ^ 2
+		SSE_MULPS(mVU, Fs, Fs);       // wzyx ^ 2
 		xMOVSS        (PQ, Fs);		  // x ^ 2
 		xPSHUF.D      (Fs, Fs, 0xe1); // wzyx -> wzxy
-		SSE_ADDSS(mVU, PQ, Fs);  // x ^ 2 + y ^ 2
-		xPSHUF.D      (Fs, Fs, 0xD2); // wzxy -> wxyz
-		SSE_ADDSS(mVU, PQ, Fs);  // x ^ 2 + y ^ 2 + z ^ 2
+		SSE_ADDSS(mVU, PQ, Fs);       // x ^ 2 + y ^ 2
+		xPSHUF.D      (Fs, Fs, 0xd2); // wzxy -> wxyz
+		SSE_ADDSS(mVU, PQ, Fs);       // x ^ 2 + y ^ 2 + z ^ 2
 	}
 }
 
@@ -319,7 +319,7 @@ mVUop(mVU_ERLENG) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 24); }
 	pass2 {
 		const xmm& Fs = mVU.regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
-		xPSHUF.D(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
+		xPSHUF.D       (xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
 		mVU_sumXYZ(mVU, xmmPQ, Fs);
 		xSQRT.SS       (xmmPQ, xmmPQ);
 		xMOVSSZX       (Fs, ptr32[mVUglob.one]);
@@ -374,13 +374,6 @@ mVUop(mVU_ESADD) {
 	pass3 { mVUlog("ESADD P"); }
 }
 
-#define esinHelper(addr) {				\
-	SSE_MULSS(mVU, t2, t1);				\
-	xMOVAPS       (Fs, t2);				\
-	xMUL.SS       (Fs, ptr32[addr]);	\
-	SSE_ADDSS(mVU, xmmPQ, Fs);			\
-}
-
 mVUop(mVU_ESIN) {
 	pass1 { mVUanalyzeEFU2(mVU, _Fs_, 29); }
 	pass2 {
@@ -388,19 +381,27 @@ mVUop(mVU_ESIN) {
 		const xmm& t1 = mVU.regAlloc->allocReg();
 		const xmm& t2 = mVU.regAlloc->allocReg();
 		xPSHUF.D      (xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip xmmPQ to get Valid P instance
-		xMOVSS        (xmmPQ, Fs);
-		xMOVAPS       (t1, Fs);
-		SSE_MULSS(mVU, Fs, t1);
-		xMOVAPS       (t2, Fs);
-		SSE_MULSS(mVU, Fs, t1);
-		xMOVAPS       (t1, Fs);
-		xMUL.SS       (Fs, ptr32[mVUglob.S2]);
-		SSE_ADDSS(mVU, xmmPQ, Fs);
-		esinHelper(mVUglob.S3);
-		esinHelper(mVUglob.S4);
-		SSE_MULSS(mVU, t2, t1);
-		xMUL.SS       (t2, ptr32[mVUglob.S5]);
-		SSE_ADDSS(mVU, xmmPQ, t2);
+		xMOVSS        (xmmPQ, Fs); // pq = X
+		SSE_MULSS(mVU, Fs, Fs);    // fs = X^2
+		xMOVAPS       (t1, Fs);    // t1 = X^2
+		SSE_MULSS(mVU, Fs, xmmPQ); // fs = X^3
+		xMOVAPS       (t2, Fs);    // t2 = X^3
+		xMUL.SS       (Fs, ptr32[mVUglob.S2]); // fs = s2 * X^3
+		SSE_ADDSS(mVU, xmmPQ, Fs); // pq = X + s2 * X^3
+
+		SSE_MULSS(mVU, t2, t1);    // t2 = X^3 * X^2
+		xMOVAPS       (Fs, t2);    // fs = X^5
+		xMUL.SS       (Fs, ptr32[mVUglob.S3]); // ps = s3 * X^5
+		SSE_ADDSS(mVU, xmmPQ, Fs); // pq = X + s2 * X^3 + s3 * X^5
+
+		SSE_MULSS(mVU, t2, t1);    // t2 = X^5 * X^2
+		xMOVAPS       (Fs, t2);    // fs = X^7
+		xMUL.SS       (Fs, ptr32[mVUglob.S4]); // fs = s4 * X^7
+		SSE_ADDSS(mVU, xmmPQ, Fs); // pq = X + s2 * X^3 + s3 * X^5 + s4 * X^7
+
+		SSE_MULSS(mVU, t2, t1);    // t2 = X^7 * X^2
+		xMUL.SS       (t2, ptr32[mVUglob.S5]); // t2 = s5 * X^9
+		SSE_ADDSS(mVU, xmmPQ, t2); // pq = X + s2 * X^3 + s3 * X^5 + s4 * X^7 + s5 * X^9
 		xPSHUF.D      (xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU.regAlloc->clearNeeded(Fs);
 		mVU.regAlloc->clearNeeded(t1);
@@ -1150,8 +1151,8 @@ static __fi void mVU_XGKICK_DELAY(mV, bool memVI) {
 mVUop(mVU_XGKICK) {
 	pass1 { mVUanalyzeXGkick(mVU, _Is_, mVU_XGKICK_CYCLES); }
 	pass2 {
-		if (!mVU_XGKICK_CYCLES)		{ mVU_XGKICK_DELAY(mVU, 0); return; }
-		else if (mVUinfo.doXGKICK)	{ mVU_XGKICK_DELAY(mVU, 1); mVUinfo.doXGKICK = 0; }
+		if (!mVU_XGKICK_CYCLES)	{ mVU_XGKICK_DELAY(mVU, 0); return; }
+		elif (mVUinfo.doXGKICK)	{ mVU_XGKICK_DELAY(mVU, 1); mVUinfo.doXGKICK = 0; }
 		mVUallocVIa(mVU, gprT1, _Is_);
 		xMOV(ptr32[&mVU.VIxgkick], gprT1);
 	}

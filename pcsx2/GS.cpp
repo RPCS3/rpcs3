@@ -444,5 +444,4 @@ void SaveStateBase::gsFreeze()
 {
 	FreezeMem(PS2MEM_GS, 0x2000);
 	Freeze(gsRegionMode);
-	gifPathFreeze();
 }

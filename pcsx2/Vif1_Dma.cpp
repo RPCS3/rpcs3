@@ -51,29 +51,27 @@ __fi void vif1FLUSH()
 
 void vif1TransferToMemory()
 {
-	u32 size;
 	u128* pMem = (u128*)dmaGetAddr(vif1ch.madr, false);
 
 	// VIF from gsMemory
-	if (pMem == NULL)  						//Is vif0ptag empty?
-	{
+	if (pMem == NULL) { // Is vif0ptag empty?
 		Console.WriteLn("Vif1 Tag BUSERR");
-		dmacRegs.stat.BEIS = true;      //Bus Error
+		dmacRegs.stat.BEIS = true; // Bus Error
 		vif1Regs.stat.FQC = 0;
 
 		vif1ch.qwc = 0;
 		vif1.done = true;
 		CPU_INT(DMAC_VIF1, 0);
-		return;						   //An error has occurred.
+		return; // An error has occurred.
 	}
 
 	// MTGS concerns:  The MTGS is inherently disagreeable with the idea of downloading
 	// stuff from the GS.  The *only* way to handle this case safely is to flush the GS
 	// completely and execute the transfer there-after.
 	//Console.Warning("Real QWC %x", vif1ch.qwc);
-	size = min((u32)vif1ch.qwc, vif1.GSLastDownloadSize);
-	const u128* pMemEnd = pMem + vif1.GSLastDownloadSize;
-
+	const u32   size = min(vif1.GSLastDownloadSize, (u32)vif1ch.qwc);
+	const u128* pMemEnd  = vif1.GSLastDownloadSize + pMem;
+	
 	if (size) {
 		// Checking if any crazy game does a partial
 		// gs primitive and then does a gs download...
@@ -85,42 +83,26 @@ void vif1TransferToMemory()
 		pxAssert(p3.isDone() || !p3.gifTag.isValid);
 	}
 
-	if (GSreadFIFO2 == NULL)
-	{
-		for ( ; size > 0; --size)
-		{
-			GetMTGS().WaitGS();
-			GSreadFIFO((u64*)pMem);
-			++pMem;
-		}
-	}
-	else
-	{
-		GetMTGS().WaitGS();
-		GSreadFIFO2((u64*)pMem, size);
-		pMem += size;
-	}
+	GetMTGS().WaitGS();
+	GSreadFIFO2((u64*)pMem, size);
+	pMem += size;
 
-	if(pMem < pMemEnd)
-	{
+	if(pMem < pMemEnd) {
 		DevCon.Warning("GS Transfer < VIF QWC, Clearing end of space");
 		
 		__m128 zeroreg = _mm_setzero_ps();
 		do {
 			_mm_store_ps((float*)pMem, zeroreg);
-			++pMem;
-		} while (pMem < pMemEnd);
+		} while (++pMem < pMemEnd);
 	}
 
 	g_vifCycles += vif1ch.qwc * 2;
 	vif1ch.madr += vif1ch.qwc * 16; // mgs3 scene changes
-	if(vif1.GSLastDownloadSize >= vif1ch.qwc)
-	{
+	if (vif1.GSLastDownloadSize >= vif1ch.qwc) {
 		vif1.GSLastDownloadSize -= vif1ch.qwc;
 		vif1Regs.stat.FQC = min((u32)16, vif1.GSLastDownloadSize);
 	}
-	else
-	{
+	else {
 		vif1Regs.stat.FQC = 0;
 		vif1.GSLastDownloadSize = 0;
 	}

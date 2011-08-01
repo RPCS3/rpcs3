@@ -206,7 +206,6 @@ protected:
 	void gifFreeze();
 	void gifDmaFreeze();
 	void gifPathFreeze(u32 path); // called by gifFreeze()
-	void gifPathFreeze();         // called by gsFreeze()
 
 	void sprFreeze();
 
