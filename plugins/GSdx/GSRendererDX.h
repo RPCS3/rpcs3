@@ -248,7 +248,7 @@ public:
 			}
 		}
 
-		if (env.COLCLAMP.CLAMP == 0 && /* hack */ !tex)
+		if (env.COLCLAMP.CLAMP == 0 && /* hack */ !tex && PRIM->PRIM != GS_POINTLIST)
 		{
 			ps_sel.colclip = 1;
 		}
@@ -357,7 +357,7 @@ public:
 		{
 			dev->DrawPrimitive();
 
-			if (env.COLCLAMP.CLAMP == 0 && /* hack */ !tex)
+			if (env.COLCLAMP.CLAMP == 0 && /* hack */ !tex && PRIM->PRIM != GS_POINTLIST)
 			{
 				GSDeviceDX::OMBlendSelector om_bselneg(om_bsel);
 				GSDeviceDX::PSSelector ps_selneg(ps_sel);
@@ -422,7 +422,7 @@ public:
 
 				dev->DrawPrimitive();
 
-				if (env.COLCLAMP.CLAMP == 0 && /* hack */ !tex)
+				if (env.COLCLAMP.CLAMP == 0 && /* hack */ !tex && PRIM->PRIM != GS_POINTLIST)
 				{
 					GSDeviceDX::OMBlendSelector om_bselneg(om_bsel);
 					GSDeviceDX::PSSelector ps_selneg(ps_sel);
