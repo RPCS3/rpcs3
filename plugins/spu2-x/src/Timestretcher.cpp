@@ -81,19 +81,22 @@ float SndBuffer::GetStatusPct()
 //  These params were tested to show good respond and stability, on all audio systems (dsound, wav, port audio, xaudio2),
 //    even at extreme small latency of 50ms which can handle 50%-100% variations without audible glitches.
 
+int targetIPS=750;
+
 
 //running average can be implemented in O(1) time.
 //For the sake of simplicity, this average is calculated in O(<buffer-size>). Possibly improve later.
-#define STRETCH_AVERAGE_LEN 50
+#define MAX_STRETCH_AVERAGE_LEN 100
+int STRETCH_AVERAGE_LEN=50.0 *targetIPS/750;
 //adds a value to the running average buffer, and return new running average.
 float addToAvg(float val){
-	static float avg_fullness[STRETCH_AVERAGE_LEN]={0};
+	static float avg_fullness[MAX_STRETCH_AVERAGE_LEN]={0};
 	static int nextAvgPos=0;
 
 	avg_fullness[nextAvgPos]=val;
 	nextAvgPos=(nextAvgPos+1)%STRETCH_AVERAGE_LEN;
 	float sum=0;
-	for(int i=0; i<STRETCH_AVERAGE_LEN; i++)
+	for(int c=0, i=(nextAvgPos-1)%STRETCH_AVERAGE_LEN; c<STRETCH_AVERAGE_LEN; c++, i=(i+STRETCH_AVERAGE_LEN-1)%STRETCH_AVERAGE_LEN)
 		sum+=avg_fullness[i];
 
 	sum= (float)sum/(float)STRETCH_AVERAGE_LEN;
@@ -110,90 +113,106 @@ T clamp(T val, T min, T max){
 //actual stretch algorithm implementation
 void SndBuffer::UpdateTempoChangeSoundTouch2()
 {
-	//base aim at buffer filled %
-	float baseTargetFullness=0.05;
 
-	//threshold params (hysteresis)
-	static const float hys_ok_factor=1.03;
-	static const int hys_min_ok_count=100; //consecutive iterations within hys_ok before going to 1:1 mode
-	static const float hys_bad_factor=1.2;
+	long targetSamplesReservoir=48*SndOutLatencyMS;//48000*SndOutLatencyMS/1000
+	//base aim at buffer filled %
+	float baseTargetFullness=(double)targetSamplesReservoir;///(double)m_size;//0.05;
 
 	//state vars
 	static bool inside_hysteresis=false;
 	static int hys_ok_count=0;
 	static float dynamicTargetFullness=baseTargetFullness;
 
-	//some precalculated values
-	static const float hys_ok_min=1.0/hys_ok_factor;
-	static const float hys_ok_max=hys_ok_factor;
-	static const float hys_bad_min=1.0/hys_bad_factor;
-	static const float hys_bad_max=hys_bad_factor;
+	float bufferFullness=(float)m_data;///(float)m_size;
 
-	float bufferFullness=(float)m_data/(float)m_size;
-	static float last_bufferFullness=0;
-	if(last_bufferFullness != bufferFullness){// only recalculate if buffer changes
-		last_bufferFullness = bufferFullness;
-
-		float tempoAdjust=bufferFullness/dynamicTargetFullness;
-		float avgerage = addToAvg(tempoAdjust);
-		tempoAdjust = avgerage;
-		tempoAdjust = clamp( tempoAdjust, 0.05f, 10.0f);
-		dynamicTargetFullness += (baseTargetFullness/tempoAdjust - dynamicTargetFullness)/50.0;
-		if( 
-			tempoAdjust == clamp(tempoAdjust, 0.9f, 1.1f) 
-			&& dynamicTargetFullness == clamp( dynamicTargetFullness, baseTargetFullness*0.9f, baseTargetFullness*1.1f)
-			)
-			dynamicTargetFullness=baseTargetFullness;
-
-		if( !inside_hysteresis )
-		{
-			if( tempoAdjust == clamp( tempoAdjust, hys_ok_min, hys_ok_max ) )
-				hys_ok_count++;
-			else
-				hys_ok_count=0;
-
-			if( hys_ok_count >= hys_min_ok_count ){
-				inside_hysteresis=true;
-				if(MsgOverruns()) printf("======> stretch: None (1:1)\n");
+	{//test current iterations/sec every 0.5s, and change algo params accordingly if different than previous IPS more than 30%
+		static long iters=0;
+		static wxDateTime last=wxDateTime::UNow();
+		wxDateTime unow=wxDateTime::UNow();
+		wxTimeSpan delta = unow.Subtract(last);
+		if( delta.GetMilliseconds()>500 ){
+			int pot_targetIPS=1000.0/delta.GetMilliseconds().ToDouble()*iters;
+			if(pot_targetIPS != clamp(pot_targetIPS, int((float)targetIPS/1.3f), int((float)targetIPS*1.3f)) ){
+				if(MsgOverruns()) printf("Stretcher: setting iters/sec from %d to %d\n", targetIPS, pot_targetIPS);
+				targetIPS=pot_targetIPS;
+				STRETCH_AVERAGE_LEN=clamp((int)(50.0f *(float)targetIPS/750.0f), 3, MAX_STRETCH_AVERAGE_LEN);
 			}
-
+			last=unow;
+			iters=0;
 		}
-		else if( tempoAdjust != clamp( tempoAdjust, hys_bad_min, hys_bad_max ) ){
-			if(MsgOverruns()) printf("~~~~~~> stretch: Dynamic\n");
-			inside_hysteresis=false;
-			hys_ok_count=0;
-		}
+		iters++;
+	}
 
-		if(inside_hysteresis)
-			tempoAdjust=1.0;
+	//Algorithm params: (threshold params (hysteresis), etc) 
+	const float hys_ok_factor=1.04;
+	int hys_min_ok_count=clamp((int)(50.0 *(float)targetIPS/750.0), 2, 100); //consecutive iterations within hys_ok before going to 1:1 mode
+	const float hys_bad_factor=1.2;
+	int compensationDivider=clamp((int)(100.0 *(float)targetIPS/750), 15, 150);
 
-		if(MsgOverruns()){
-			static int iters=0;
-			static wxDateTime last=wxDateTime::UNow();
-			wxDateTime unow=wxDateTime::UNow();
-			wxTimeSpan delta = unow.Subtract(last);
+	float tempoAdjust=bufferFullness/dynamicTargetFullness;
+	float avgerage = addToAvg(tempoAdjust);
+	tempoAdjust = avgerage;
+	tempoAdjust = clamp( tempoAdjust, 0.05f, 10.0f);
 
-			if(delta.GetMilliseconds()>1000){//report buffers state and tempo adjust every second
-				printf("buffers[->%.2f]: %.3f (%3.0f%%), tempo adjust: %f, compensated target: %.3f, iterations: %d\n", 
-					(double)baseTargetFullness, (double)bufferFullness, (double)(100.0*bufferFullness/baseTargetFullness), (double)tempoAdjust, (double)dynamicTargetFullness, iters);
-				last=unow;
-				iters=0;
-			}
-			iters++;
-		}
 
-		pSoundTouch->setTempo(tempoAdjust);
-		
-		//collect some stats...
-		if(tempoAdjust==1.0)
-			ts_stats_normalblocks++;
+	dynamicTargetFullness += (baseTargetFullness/tempoAdjust - dynamicTargetFullness)/(double)compensationDivider;
+	if( 
+		tempoAdjust == clamp(tempoAdjust, 0.9f, 1.1f) 
+		&& dynamicTargetFullness == clamp( dynamicTargetFullness, baseTargetFullness*0.9f, baseTargetFullness*1.1f)
+		)
+		dynamicTargetFullness=baseTargetFullness;
+
+	if( !inside_hysteresis )
+	{
+		if( tempoAdjust == clamp( tempoAdjust, 1.0f/hys_ok_factor, hys_ok_factor ) )
+			hys_ok_count++;
 		else
-			ts_stats_stretchblocks++;
+			hys_ok_count=0;
+
+		if( hys_ok_count >= hys_min_ok_count ){
+			inside_hysteresis=true;
+			if(MsgOverruns()) printf("======> stretch: None (1:1)\n");
+		}
 
 	}
+	else if( tempoAdjust != clamp( tempoAdjust, 1.0f/hys_bad_factor, hys_bad_factor ) ){
+		if(MsgOverruns()) printf("~~~~~~> stretch: Dynamic\n");
+		inside_hysteresis=false;
+		hys_ok_count=0;
+	}
+
+	if(inside_hysteresis)
+		tempoAdjust=1.0;
+
+	if(MsgOverruns()){
+		static int iters=0;
+		static wxDateTime last=wxDateTime::UNow();
+		wxDateTime unow=wxDateTime::UNow();
+		wxTimeSpan delta = unow.Subtract(last);
+
+		if(delta.GetMilliseconds()>1000){//report buffers state and tempo adjust every second
+			printf("buffers: %4d ms (%3.0f%%), tempo: %f, comp: %2.3f, iters: %d, (N-IPS:%d -> avg:%d, minokc:%d, div:%d)\n", 
+				(int)(m_data/48), (double)(100.0*bufferFullness/baseTargetFullness), (double)tempoAdjust, (double)(dynamicTargetFullness/baseTargetFullness), iters, (int)targetIPS
+				, STRETCH_AVERAGE_LEN, hys_min_ok_count, compensationDivider
+				);
+			last=unow;
+			iters=0;
+		}
+		iters++;
+	}
+
+	pSoundTouch->setTempo(tempoAdjust);
+	
+	//collect some unuseful stats...
+	if(tempoAdjust==1.0)
+		ts_stats_normalblocks++;
+	else
+		ts_stats_stretchblocks++;
+
 
 	return;
 }
+
 
 void SndBuffer::UpdateTempoChangeSoundTouch()
 {
@@ -436,7 +455,7 @@ void SndBuffer::timeStretchWrite()
 
 	if( MsgOverruns() )
 	{
-		if( progress )
+		if( progress && (ts_stats_normalblocks + ts_stats_stretchblocks))
 		{
 			if( ++ts_stats_logcounter > 150 )
 			{
