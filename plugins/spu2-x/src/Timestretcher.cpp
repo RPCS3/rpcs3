@@ -23,10 +23,6 @@
 //#define SPU2X_USE_OLD_STRETCHER
 
 static soundtouch::SoundTouch* pSoundTouch = NULL;
-static int ts_stats_stretchblocks = 0;
-static int ts_stats_normalblocks = 0;
-static int ts_stats_logcounter = 0;
-
 
 // data prediction amount, used to "commit" data that hasn't
 // finished timestretch processing.
@@ -133,7 +129,7 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 		if( delta.GetMilliseconds()>500 ){
 			int pot_targetIPS=1000.0/delta.GetMilliseconds().ToDouble()*iters;
 			if(pot_targetIPS != clamp(pot_targetIPS, int((float)targetIPS/1.3f), int((float)targetIPS*1.3f)) ){
-				if(MsgOverruns()) printf("Stretcher: setting iters/sec from %d to %d\n", targetIPS, pot_targetIPS);
+				if(MsgOverruns()) ConLog("Stretcher: setting iters/sec from %d to %d\n", targetIPS, pot_targetIPS);
 				targetIPS=pot_targetIPS;
 				STRETCH_AVERAGE_LEN=clamp((int)(50.0f *(float)targetIPS/750.0f), 3, MAX_STRETCH_AVERAGE_LEN);
 			}
@@ -171,12 +167,12 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 
 		if( hys_ok_count >= hys_min_ok_count ){
 			inside_hysteresis=true;
-			if(MsgOverruns()) printf("======> stretch: None (1:1)\n");
+			if(MsgOverruns()) ConLog("======> stretch: None (1:1)\n");
 		}
 
 	}
 	else if( tempoAdjust != clamp( tempoAdjust, 1.0f/hys_bad_factor, hys_bad_factor ) ){
-		if(MsgOverruns()) printf("~~~~~~> stretch: Dynamic\n");
+		if(MsgOverruns()) ConLog("~~~~~~> stretch: Dynamic\n");
 		inside_hysteresis=false;
 		hys_ok_count=0;
 	}
@@ -191,7 +187,7 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 		wxTimeSpan delta = unow.Subtract(last);
 
 		if(delta.GetMilliseconds()>1000){//report buffers state and tempo adjust every second
-			printf("buffers: %4d ms (%3.0f%%), tempo: %f, comp: %2.3f, iters: %d, (N-IPS:%d -> avg:%d, minokc:%d, div:%d)\n", 
+			ConLog("buffers: %4d ms (%3.0f%%), tempo: %f, comp: %2.3f, iters: %d, (N-IPS:%d -> avg:%d, minokc:%d, div:%d)\n", 
 				(int)(m_data/48), (double)(100.0*bufferFullness/baseTargetFullness), (double)tempoAdjust, (double)(dynamicTargetFullness/baseTargetFullness), iters, (int)targetIPS
 				, STRETCH_AVERAGE_LEN, hys_min_ok_count, compensationDivider
 				);
@@ -202,13 +198,6 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 	}
 
 	pSoundTouch->setTempo(tempoAdjust);
-	
-	//collect some unuseful stats...
-	if(tempoAdjust==1.0)
-		ts_stats_normalblocks++;
-	else
-		ts_stats_stretchblocks++;
-
 
 	return;
 }
@@ -322,7 +311,6 @@ void SndBuffer::UpdateTempoChangeSoundTouch()
 		else if( cTempo > 7.5f ) cTempo = 7.5f;
 
 		pSoundTouch->setTempo( eTempo = (float)newTempo );
-		ts_stats_stretchblocks++;
 
 		/*ConLog("* SPU2-X: [Nominal %d%%] [Emergency: %d%%] (baseTempo: %d%% ) (newTempo: %d%%) (buffer: %d%%)\n",
 			//(relation < 0.0) ? "Normalize" : "",
@@ -348,7 +336,6 @@ void SndBuffer::UpdateTempoChangeSoundTouch()
 		{
 			if( eTempo != cTempo )
 				pSoundTouch->setTempo( eTempo=cTempo );
-			ts_stats_normalblocks++;
 		}
 	}
 }
@@ -453,21 +440,6 @@ void SndBuffer::timeStretchWrite()
 	UpdateTempoChangeSoundTouch2();
 #endif
 
-	if( MsgOverruns() )
-	{
-		if( progress && (ts_stats_normalblocks + ts_stats_stretchblocks))
-		{
-			if( ++ts_stats_logcounter > 150 )
-			{
-				ts_stats_logcounter = 0;
-				ConLog( " * SPU2 > Timestretch Stats > %d percent stretched. Total stretchblocks = %d.\n",
-					( ts_stats_stretchblocks * 100 ) / ( ts_stats_normalblocks + ts_stats_stretchblocks ),
-					ts_stats_stretchblocks);
-				ts_stats_normalblocks = 0;
-				ts_stats_stretchblocks = 0;
-			}
-		}
-	}
 }
 
 void SndBuffer::soundtouchInit()
