@@ -47,12 +47,14 @@ void FileLog(const char *fmt, ...) {
 #endif
 }
 
+//Note to developer on the usage of ConLog:
+//  while ConLog doesn't print anything if messages to console are disabled at the GUI,
+//    it's still better to outright not call it on tight loop scenarios, by testing MsgToConsole() (which is inline and very quick).
+//    Else, there's some (small) overhead in calling and returning from ConLog.
 void ConLog(const char *fmt, ...) {
-#ifdef SPU2_LOG
-	va_list list;
-
 	if(!MsgToConsole()) return;
 
+	va_list list;
 	va_start(list, fmt);
 	vsprintf(s,fmt, list);
 	va_end(list);
@@ -65,7 +67,6 @@ void ConLog(const char *fmt, ...) {
 		fputs(s,spu2Log);
 		fflush(spu2Log);
 	}
-#endif
 }
 
 void V_VolumeSlide::DebugDump( FILE* dump, const char* title, const char* nameLR )

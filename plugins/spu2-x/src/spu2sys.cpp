@@ -80,7 +80,7 @@ __forceinline void spu2M_Write( u32 addr, s16 value )
 		const int cacheIdx = addr / pcm_WordsPerBlock;
 		pcm_cache_data[cacheIdx].Validated = false;
 
-		ConLog( "* SPU2-X: PcmCache Block Clear at 0x%x (cacheIdx=0x%x)\n", addr, cacheIdx);
+		if(MsgToConsole()) ConLog( "* SPU2-X: PcmCache Block Clear at 0x%x (cacheIdx=0x%x)\n", addr, cacheIdx);
 	}
 	*GetMemPtr( addr ) = value;
 }
@@ -360,7 +360,7 @@ __forceinline void TimeUpdate(u32 cClocks)
 
 	if( dClocks > (u32)(TickInterval*SanityInterval) )
 	{
-		ConLog( " * SPU2 > TimeUpdate Sanity Check (Tick Delta: %d) (PS2 Ticks: %d)\n", dClocks/TickInterval, cClocks/TickInterval );
+		if(MsgToConsole()) ConLog( " * SPU2 > TimeUpdate Sanity Check (Tick Delta: %d) (PS2 Ticks: %d)\n", dClocks/TickInterval, cClocks/TickInterval );
 		dClocks = TickInterval * SanityInterval;
 		lClocks = cClocks - dClocks;
 	}
@@ -942,12 +942,12 @@ static void __fastcall RegWrite_Core( u16 value )
 
 			if(value&0x000E)
 			{
-				ConLog("* SPU2-X: Core %d ATTR unknown bits SET! value=%04x\n",core,value);
+				if(MsgToConsole()) ConLog("* SPU2-X: Core %d ATTR unknown bits SET! value=%04x\n",core,value);
 			}
 
 			if(thiscore.AttrBit0!=bit0)
 			{
-				ConLog("* SPU2-X: ATTR bit 0 set to %d\n",thiscore.AttrBit0);
+				if(MsgToConsole()) ConLog("* SPU2-X: ATTR bit 0 set to %d\n",thiscore.AttrBit0);
 			}
 			if(thiscore.IRQEnable!=irqe)
 			{
