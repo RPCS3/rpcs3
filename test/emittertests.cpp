@@ -282,6 +282,20 @@ namespace Test
 			desiredOutput = "- &fred ~\n- *fred";
 		}
 		
+		void AliasAndAnchorInFlow(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Flow << YAML::BeginSeq;
+			out << YAML::Anchor("fred");
+			out << YAML::BeginMap;
+			out << YAML::Key << "name" << YAML::Value << "Fred";
+			out << YAML::Key << "age" << YAML::Value << 42;
+			out << YAML::EndMap;
+			out << YAML::Alias("fred");
+			out << YAML::EndSeq;
+			
+			desiredOutput = "[&fred {name: Fred, age: 42}, *fred]";
+		}
+		
 		void SimpleVerbatimTag(YAML::Emitter& out, std::string& desiredOutput)
 		{
 			out << YAML::VerbatimTag("!foo") << "bar";
@@ -997,6 +1011,7 @@ namespace Test
 		RunEmitterTest(&Emitter::BlockMapAsKey, "block map as key", passed, total);
 		RunEmitterTest(&Emitter::AliasAndAnchor, "alias and anchor", passed, total);
 		RunEmitterTest(&Emitter::AliasAndAnchorWithNull, "alias and anchor with null", passed, total);
+		RunEmitterTest(&Emitter::AliasAndAnchorInFlow, "alias and anchor in flow", passed, total);
 		RunEmitterTest(&Emitter::SimpleVerbatimTag, "simple verbatim tag", passed, total);
 		RunEmitterTest(&Emitter::VerbatimTagInBlockSeq, "verbatim tag in block seq", passed, total);
 		RunEmitterTest(&Emitter::VerbatimTagInFlowSeq, "verbatim tag in flow seq", passed, total);
