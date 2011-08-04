@@ -503,6 +503,40 @@ namespace Test
 			
 			desiredOutput = "? long key  # long key\n: value";
 		}
+		
+		void InitialComment(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Comment("A comment describing the purpose of the file.");
+			out << YAML::BeginMap << YAML::Key << "key" << YAML::Value << "value" << YAML::EndMap;
+			
+			desiredOutput = "# A comment describing the purpose of the file.\nkey: value";
+		}
+
+		void InitialCommentWithDocIndicator(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginDoc << YAML::Comment("A comment describing the purpose of the file.");
+			out << YAML::BeginMap << YAML::Key << "key" << YAML::Value << "value" << YAML::EndMap;
+			
+			desiredOutput = "---\n# A comment describing the purpose of the file.\nkey: value";
+		}
+
+		void CommentInFlowSeq(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Flow << YAML::BeginSeq << "foo" << YAML::Comment("foo!") << "bar" << YAML::EndSeq;
+			
+			desiredOutput = "[foo  # foo!\n, bar]";
+		}
+
+		void CommentInFlowMap(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Flow << YAML::BeginMap;
+			out << YAML::Key << "foo" << YAML::Comment("foo!") << YAML::Value << "foo value";
+			out << YAML::Key << "bar" << YAML::Value << "bar value" << YAML::Comment("bar!");
+			out << YAML::Key << "baz" << YAML::Comment("baz!") << YAML::Value << "baz value" << YAML::Comment("baz!");
+			out << YAML::EndMap;
+			
+			desiredOutput = "{foo  # foo!\n: foo value, bar: bar value  # bar!\n, baz  # baz!\n: baz value  # baz!\n}";
+		}
 
 		void Indentation(YAML::Emitter& out, std::string& desiredOutput)
 		{
@@ -980,6 +1014,10 @@ namespace Test
 		RunEmitterTest(&Emitter::SimpleComment, "simple comment", passed, total);
 		RunEmitterTest(&Emitter::MultiLineComment, "multi-line comment", passed, total);
 		RunEmitterTest(&Emitter::ComplexComments, "complex comments", passed, total);
+		RunEmitterTest(&Emitter::InitialComment, "initial comment", passed, total);
+		RunEmitterTest(&Emitter::InitialCommentWithDocIndicator, "initial comment with doc indicator", passed, total);
+		RunEmitterTest(&Emitter::CommentInFlowSeq, "comment in flow seq", passed, total);
+		RunEmitterTest(&Emitter::CommentInFlowMap, "comment in flow map", passed, total);
 		RunEmitterTest(&Emitter::Indentation, "indentation", passed, total);
 		RunEmitterTest(&Emitter::SimpleGlobalSettings, "simple global settings", passed, total);
 		RunEmitterTest(&Emitter::ComplexGlobalSettings, "complex global settings", passed, total);
