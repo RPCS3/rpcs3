@@ -61,15 +61,23 @@ float SndBuffer::GetStatusPct()
 
 
 //Alternative simple tempo adjustment. Based only on the soundtouch buffer state.
-//Base algorithm: aim at specific % filled of that buffer, and adjust tempo simply by current/target of % fill.
+//Base algorithm: aim at specific average number of samples at the buffer (by GUI), and adjust tempo simply by current/target.
 //An extra mechanism is added to keep adjustment at perfect 1:1 ratio (when emulation speed is stable around 100%)
 //  to prevent constant stretching/shrinking of packets if possible.
 //  This mechanism is triggered when the adjustment is close to 1:1 for long enough (defaults to 100 iterations within hys_ok_factor - defaults to 3%).
 //  1:1 state is aborted when required adjustment goes beyond hys_bad_factor (defaults to 20%).
 //
-//To compensate for wide variation of the current buffer ratio due to relatively small size of the buffer,
+//To compensate for wide variation of the <num of samples> ratio due to relatively small size of the buffer,
 //  The required tempo is a running average of STRETCH_AVERAGE_LEN (defaults to 50) last calculations.
 //  This averaging slows down the respons time of the algorithm, but greatly stablize it towards steady stretching.
+//
+//Keeping the buffer at required latency:
+//  This algorithm stabilises when the actual latency is <speed>*<required_latency>. While this is just fine at 100% speed,
+//  it's problematic especially for slow speeds, as the number of actual samples at the buffer gets very small on that case,
+//  which may lead to underruns (or just too much latency when running very fast fast).
+//To compensate for that, the algorithm has a slowly moving compensation factor which will eventually bring the actual latency to the required one.
+//compensationDivider defines how slow this compensation changes. By default it's set to 100,
+//  which will finalize the compensation after about 200 iterations.
 //
 // Note, this algorithm is intentionally simplified by not taking extreme actions at extreme scenarios (mostly underruns when speed dtops sharply),
 //  and let's the overrun/underrun protections do what they should (doesn't happen much though in practice, even at big FPS variations).
@@ -78,6 +86,15 @@ float SndBuffer::GetStatusPct()
 //    even at extreme small latency of 50ms which can handle 50%-100% variations without audible glitches.
 
 int targetIPS=750;
+
+//Dynamic tuning changes the values of the base algorithm parameters (derived from targetIPS) to adapt, in real time, to
+//  diferent number of invocations/sec (mostly affects number of iterations to average).
+//  Dynamic tuning can have a slight negative effect on the behavior of the algorithm, so it's preferred to have it off.
+//Currently it looks like it's around 750/sec on all systems when playing at 100% speed (50/60fps),
+//  and proportional to that speed otherwise.
+//If changes are made to SPU2X which affects this number (but it's still the same on all systems), then just change targetIPS.
+//If we find out that some systems are very different, we can turn on dynamic tuning by uncommenting the next line.
+//#define NEWSTRETCHER_USE_DYNAMIC_TUNING
 
 
 //running average can be implemented in O(1) time.
@@ -121,6 +138,7 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 
 	float bufferFullness=(float)m_data;///(float)m_size;
 
+#ifdef NEWSTRETCHER_USE_DYNAMIC_TUNING
 	{//test current iterations/sec every 0.5s, and change algo params accordingly if different than previous IPS more than 30%
 		static long iters=0;
 		static wxDateTime last=wxDateTime::UNow();
@@ -138,6 +156,7 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 		}
 		iters++;
 	}
+#endif
 
 	//Algorithm params: (threshold params (hysteresis), etc) 
 	const float hys_ok_factor=1.04;
