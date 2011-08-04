@@ -6,6 +6,7 @@
 #endif
 
 #include "yaml-cpp/noncopyable.h"
+#include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <vector>
