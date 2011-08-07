@@ -524,84 +524,60 @@ PaError setBestFramesPerBuffer( const AudioDeviceID device,
                                 UInt32 requestedFramesPerBuffer, 
                                 UInt32 *actualFramesPerBuffer )
 {
-   UInt32 afpb;
-   const bool isInput = !isOutput;
-   UInt32 propsize = sizeof(UInt32);
-   OSErr err;
-   Float64 min  = -1; /*the min blocksize*/
-   Float64 best = -1; /*the best blocksize*/
-   int i=0;
-   AudioValueRange *ranges;
+    UInt32 afpb;
+    const bool isInput = !isOutput;
+    UInt32 propsize = sizeof(UInt32);
+    OSErr err;
+    AudioValueRange range;
 
-   if( actualFramesPerBuffer == NULL )
-      actualFramesPerBuffer = &afpb;
+    if( actualFramesPerBuffer == NULL )
+    {
+        actualFramesPerBuffer = &afpb;
+    }
 
-
-   /* -- try and set exact FPB -- */
-   err = AudioDeviceSetProperty( device, NULL, 0, isInput,
+    /* -- try and set exact FPB -- */
+    err = AudioDeviceSetProperty( device, NULL, 0, isInput,
                                  kAudioDevicePropertyBufferFrameSize,
                                  propsize, &requestedFramesPerBuffer);
-   err = AudioDeviceGetProperty( device, 0, isInput,
+    err = AudioDeviceGetProperty( device, 0, isInput,
                            kAudioDevicePropertyBufferFrameSize,
                            &propsize, actualFramesPerBuffer);
-   if( err )
+    if( err )
+    {
+        return ERR( err );
+    }
+    // Did we get the size we asked for?
+    if( *actualFramesPerBuffer == requestedFramesPerBuffer )
+    {
+        return paNoError; /* we are done */
+    }
+    
+    // Clip requested value against legal range for the device.
+    propsize = sizeof(AudioValueRange);
+    err = AudioDeviceGetProperty( device, 0, isInput,
+                                kAudioDevicePropertyBufferFrameSizeRange,
+                                &propsize, &range );
+    if( err )
+    {
       return ERR( err );
-   if( *actualFramesPerBuffer == requestedFramesPerBuffer )
-      return paNoError; /* we are done */
-
-   /* -- fetch available block sizes -- */
-   err = AudioDeviceGetPropertyInfo( device, 0, isInput,
-                           kAudioDevicePropertyBufferSizeRange,
-                           &propsize, NULL );
-   if( err )
-      return ERR( err );
-   ranges = (AudioValueRange *)calloc( 1, propsize );
-   if( !ranges )
-      return paInsufficientMemory;
-   err = AudioDeviceGetProperty( device, 0, isInput,
-                                kAudioDevicePropertyBufferSizeRange,
-                                &propsize, ranges );
-   if( err )
-   {
-      free( ranges );
-      return ERR( err );
-   }
-   VDBUG(("Requested block size of %lu was not available.\n",
-          requestedFramesPerBuffer ));
-   VDBUG(("%lu Available block sizes are:\n",propsize/sizeof(AudioValueRange)));
-#ifdef MAC_CORE_VERBOSE_DEBUG
-   for( i=0; i<propsize/sizeof(AudioValueRange); ++i )
-      VDBUG( ("\t%g-%g\n",
-              (float) ranges[i].mMinimum,
-              (float) ranges[i].mMaximum ) );
-#endif
-   VDBUG(("-----\n"));
-   
-   /* --- now pick the best available framesPerBuffer -- */
-   for( i=0; i<propsize/sizeof(AudioValueRange); ++i )
-   {
-      if( min == -1 || ranges[i].mMinimum < min ) min = ranges[i].mMinimum;
-      if( ranges[i].mMaximum < requestedFramesPerBuffer ) {
-         if( best < 0 )
-            best = ranges[i].mMaximum;
-         else if( ranges[i].mMaximum > best )
-            best = ranges[i].mMaximum;
-      }
-   }
-   if( best == -1 )
-      best = min;
-   VDBUG( ("Minimum FPB  %g. best is %g.\n", min, best ) );
-   free( ranges );
-
+    }
+    if( requestedFramesPerBuffer < range.mMinimum )
+    {
+        requestedFramesPerBuffer = range.mMinimum;
+    }
+    else if( requestedFramesPerBuffer > range.mMaximum )
+    {
+        requestedFramesPerBuffer = range.mMaximum;
+    }
+    
    /* --- set the buffer size (ignore errors) -- */
-   requestedFramesPerBuffer = (UInt32) best ;
-   propsize = sizeof( UInt32 );
+    propsize = sizeof( UInt32 );
    err = AudioDeviceSetProperty( device, NULL, 0, isInput,
-                                 kAudioDevicePropertyBufferSize,
+                                 kAudioDevicePropertyBufferFrameSize,
                                  propsize, &requestedFramesPerBuffer );
    /* --- read the property to check that it was set -- */
    err = AudioDeviceGetProperty( device, 0, isInput,
-                                 kAudioDevicePropertyBufferSize,
+                                 kAudioDevicePropertyBufferFrameSize,
                                  &propsize, actualFramesPerBuffer );
 
    if( err )

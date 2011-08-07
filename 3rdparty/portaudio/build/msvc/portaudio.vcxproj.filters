@@ -40,6 +40,9 @@
       <UniqueIdentifier>{78689f06-8c26-4417-93e2-b809a8c41ee7}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl</Extensions>
     </Filter>
+    <Filter Include="Source Files\hostapi\wdmks">
+      <UniqueIdentifier>{0d9360dd-9d00-434a-ab46-7a89b2d35fd0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\common\pa_allocation.c">
@@ -123,6 +126,12 @@
     <ClCompile Include="..\..\src\os\win\pa_x86_plain_converters.c">
       <Filter>Source Files\os\win</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\hostapi\wdmks\pa_win_wdmks.c">
+      <Filter>Source Files\hostapi\wdmks</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\os\win\pa_win_coinitialize.c">
+      <Filter>Source Files\os\win</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="portaudio.def">
@@ -130,6 +139,9 @@
     </None>
     <None Include="portaudio_noasio.def">
       <Filter>Resource Files</Filter>
+    </None>
+    <None Include="..\..\src\hostapi\wdmks\readme.txt">
+      <Filter>Source Files\hostapi\wdmks</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -158,6 +170,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\portaudio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\os\win\pa_win_coinitialize.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

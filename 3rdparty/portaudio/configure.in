@@ -201,11 +201,20 @@ case "${host_os}" in
         LIBS="-framework CoreAudio -framework AudioToolbox -framework AudioUnit -framework Carbon"
 
         if test "x$enable_mac_universal" = "xyes" ; then
-           mac_version_min="-mmacosx-version-min=10.3"
            if [[ -d /Developer/SDKs/MacOSX10.5.sdk ]] ; then
+              mac_version_min="-mmacosx-version-min=10.3"
               mac_arches="-arch i386 -arch ppc -arch x86_64 -arch ppc64"
               mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.5.sdk"
+           elif [[ -d /Developer/SDKs/MacOSX10.6.sdk ]] ; then
+              mac_version_min="-mmacosx-version-min=10.4"
+              mac_arches="-arch i386 -arch x86_64"
+              mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.6.sdk"
+           elif [[ -d /Developer/SDKs/MacOSX10.7.sdk ]] ; then
+              mac_version_min="-mmacosx-version-min=10.4"
+              mac_arches="-arch i386 -arch x86_64"
+              mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.7.sdk"
            else
+              mac_version_min="-mmacosx-version-min=10.3"
               mac_arches="-arch i386 -arch ppc"
               mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.4u.sdk"
            fi
@@ -230,7 +239,7 @@ case "${host_os}" in
 
         if [[ "x$with_directx" = "xyes" ]]; then
             DXDIR="$with_dxdir"
-            add_objects src/hostapi/dsound/pa_win_ds.o src/hostapi/dsound/pa_win_ds_dynlink.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o
+            add_objects src/hostapi/dsound/pa_win_ds.o src/hostapi/dsound/pa_win_ds_dynlink.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_coinitialize.o src/os/win/pa_win_waveformat.o
             LIBS="-lwinmm -lm -ldsound -lole32"
             DLL_LIBS="${DLL_LIBS} -lwinmm -lm -L$DXDIR/lib -ldsound -lole32"
             #VC98="\"/c/Program Files/Microsoft Visual Studio/VC98/Include\""
@@ -240,7 +249,7 @@ case "${host_os}" in
 
         if [[ "x$with_asio" = "xyes" ]]; then
             ASIODIR="$with_asiodir"
-            add_objects src/hostapi/asio/pa_asio.o src/common/pa_ringbuffer.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/hostapi/asio/iasiothiscallresolver.o $ASIODIR/common/asio.o $ASIODIR/host/asiodrivers.o $ASIODIR/host/pc/asiolist.o
+            add_objects src/hostapi/asio/pa_asio.o src/common/pa_ringbuffer.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_coinitialize.o src/hostapi/asio/iasiothiscallresolver.o $ASIODIR/common/asio.o $ASIODIR/host/asiodrivers.o $ASIODIR/host/pc/asiolist.o
             LIBS="-lwinmm -lm -lole32 -luuid"
             DLL_LIBS="${DLL_LIBS} -lwinmm -lm -lole32 -luuid"
             CFLAGS="$CFLAGS -ffast-math -fomit-frame-pointer -I\$(top_srcdir)/src/common -I\$(top_srcdir)/src/hostapi/asio -I$ASIODIR/host/pc -I$ASIODIR/common -I$ASIODIR/host -UPA_USE_ASIO -DPA_USE_ASIO=1 -DWINDOWS"
@@ -265,7 +274,7 @@ case "${host_os}" in
         fi
 
         if [[ "x$with_wasapi" = "xyes" ]]; then
-            add_objects src/hostapi/wasapi/pa_win_wasapi.o src/common/pa_ringbuffer.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o
+            add_objects src/hostapi/wasapi/pa_win_wasapi.o src/common/pa_ringbuffer.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_coinitialize.o src/os/win/pa_win_waveformat.o
             LIBS="-lwinmm -lm -lole32 -luuid"
             DLL_LIBS="${DLL_LIBS} -lwinmm -lole32"
             CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -I\$(top_srcdir)/src/hostapi/wasapi/mingw-include -UPA_USE_WASAPI -DPA_USE_WASAPI=1"

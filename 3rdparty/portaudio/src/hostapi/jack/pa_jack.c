@@ -1,5 +1,5 @@
 /*
- * $Id: pa_jack.c 1541 2010-09-22 06:33:47Z dmitrykos $
+ * $Id: pa_jack.c 1668 2011-05-02 17:07:11Z rossb $
  * PortAudio Portable Real-Time Audio Library
  * Latest Version at: http://www.portaudio.com
  * JACK Implementation by Joshua Haberman
@@ -1296,11 +1296,11 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     if( stream->num_incoming_connections > 0 )
         stream->streamRepresentation.streamInfo.inputLatency = (jack_port_get_latency( stream->remote_output_ports[0] )
                 - jack_get_buffer_size( jackHostApi->jack_client )  /* One buffer is not counted as latency */
-            + PaUtil_GetBufferProcessorInputLatency( &stream->bufferProcessor )) / sampleRate;
+            + PaUtil_GetBufferProcessorInputLatencyFrames( &stream->bufferProcessor )) / sampleRate;
     if( stream->num_outgoing_connections > 0 )
         stream->streamRepresentation.streamInfo.outputLatency = (jack_port_get_latency( stream->remote_input_ports[0] )
                 - jack_get_buffer_size( jackHostApi->jack_client )  /* One buffer is not counted as latency */
-            + PaUtil_GetBufferProcessorOutputLatency( &stream->bufferProcessor )) / sampleRate;
+            + PaUtil_GetBufferProcessorOutputLatencyFrames( &stream->bufferProcessor )) / sampleRate;
 
     stream->streamRepresentation.streamInfo.sampleRate = jackSr;
     stream->t0 = jack_frame_time( jackHostApi->jack_client );   /* A: Time should run from Pa_OpenStream */

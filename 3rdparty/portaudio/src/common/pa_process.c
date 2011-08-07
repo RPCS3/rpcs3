@@ -1,5 +1,5 @@
 /*
- * $Id: pa_process.c 1584 2011-02-02 18:58:17Z rossb $
+ * $Id: pa_process.c 1706 2011-07-21 18:44:58Z philburk $
  * Portable Audio I/O Library
  * streamCallback <-> host buffer processing adapter
  *
@@ -223,7 +223,7 @@ PaError PaUtil_InitializeBufferProcessor( PaUtilBufferProcessor* bp,
             goto error;
         }
 
-        /* Under the assumption that no ADC in existence delivers better than 24bits resoultion,
+        /* Under the assumption that no ADC in existence delivers better than 24bits resolution,
             we disable dithering when host input format is paInt32 and user format is paInt24, 
             since the host samples will just be padded with zeros anyway. */
 
@@ -428,13 +428,13 @@ void PaUtil_ResetBufferProcessor( PaUtilBufferProcessor* bp )
 }
 
 
-unsigned long PaUtil_GetBufferProcessorInputLatency( PaUtilBufferProcessor* bp )
+unsigned long PaUtil_GetBufferProcessorInputLatencyFrames( PaUtilBufferProcessor* bp )
 {
     return bp->initialFramesInTempInputBuffer;
 }
 
 
-unsigned long PaUtil_GetBufferProcessorOutputLatency( PaUtilBufferProcessor* bp )
+unsigned long PaUtil_GetBufferProcessorOutputLatencyFrames( PaUtilBufferProcessor* bp )
 {
     return bp->initialFramesInTempOutputBuffer;
 }

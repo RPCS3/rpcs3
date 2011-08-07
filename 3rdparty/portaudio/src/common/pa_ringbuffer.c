@@ -1,5 +1,5 @@
 /*
- * $Id: pa_ringbuffer.c 1574 2011-02-01 11:18:16Z rossb $
+ * $Id: pa_ringbuffer.c 1694 2011-06-17 08:01:02Z rossb $
  * Portable Audio I/O Library
  * Ring Buffer utility.
  *
@@ -77,14 +77,14 @@ ring_buffer_size_t PaUtil_InitializeRingBuffer( PaUtilRingBuffer *rbuf, ring_buf
 
 /***************************************************************************
 ** Return number of elements available for reading. */
-ring_buffer_size_t PaUtil_GetRingBufferReadAvailable( PaUtilRingBuffer *rbuf )
+ring_buffer_size_t PaUtil_GetRingBufferReadAvailable( const PaUtilRingBuffer *rbuf )
 {
     PaUtil_ReadMemoryBarrier();
     return ( (rbuf->writeIndex - rbuf->readIndex) & rbuf->bigMask );
 }
 /***************************************************************************
 ** Return number of elements available for writing. */
-ring_buffer_size_t PaUtil_GetRingBufferWriteAvailable( PaUtilRingBuffer *rbuf )
+ring_buffer_size_t PaUtil_GetRingBufferWriteAvailable( const PaUtilRingBuffer *rbuf )
 {
     /* Since we are calling PaUtil_GetRingBufferReadAvailable, we don't need an aditional MB */
     return ( rbuf->bufferSize - PaUtil_GetRingBufferReadAvailable(rbuf));

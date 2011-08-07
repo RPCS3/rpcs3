@@ -1,5 +1,5 @@
 /*
- * $Id: pa_linux_alsa.c 1613 2011-03-01 00:49:52Z philburk $
+ * $Id: pa_linux_alsa.c 1691 2011-05-26 20:19:19Z aknudsen $
  * PortAudio Portable Real-Time Audio Library
  * Latest Version at: http://www.portaudio.com
  * ALSA implementation by Joshua Haberman and Arve Knudsen
@@ -78,6 +78,10 @@
 #include "pa_debugprint.h"
 
 #include "pa_linux_alsa.h"
+
+#ifndef SND_PCM_TSTAMP_ENABLE
+#define SND_PCM_TSTAMP_ENABLE SND_PCM_TSTAMP_MMAP
+#endif
 
 /* Defines Alsa function types and pointers to these functions. */
 #define _PA_DEFINE_FUNC(x)  typedef typeof(x) x##_ft; static x##_ft *alsa_##x = 0
@@ -2768,10 +2772,10 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     /* Ok, buffer processor is initialized, now we can deduce it's latency */
     if( numInputChannels > 0 )
         stream->streamRepresentation.streamInfo.inputLatency = inputLatency + (PaTime)(
-                PaUtil_GetBufferProcessorInputLatency( &stream->bufferProcessor ) / sampleRate);
+                PaUtil_GetBufferProcessorInputLatencyFrames( &stream->bufferProcessor ) / sampleRate);
     if( numOutputChannels > 0 )
         stream->streamRepresentation.streamInfo.outputLatency = outputLatency + (PaTime)(
-                PaUtil_GetBufferProcessorOutputLatency( &stream->bufferProcessor ) / sampleRate);
+                PaUtil_GetBufferProcessorOutputLatencyFrames( &stream->bufferProcessor ) / sampleRate);
 
     PA_DEBUG(( "%s: Stream: framesPerBuffer = %lu, maxFramesPerHostBuffer = %lu, latency = i(%f)/o(%f), \n", __FUNCTION__, framesPerBuffer, stream->maxFramesPerHostBuffer, stream->streamRepresentation.streamInfo.inputLatency, stream->streamRepresentation.streamInfo.outputLatency));
 

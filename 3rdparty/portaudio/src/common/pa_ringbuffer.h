@@ -1,7 +1,7 @@
 #ifndef PA_RINGBUFFER_H
 #define PA_RINGBUFFER_H
 /*
- * $Id: pa_ringbuffer.h 1549 2010-10-24 10:21:35Z rossb $
+ * $Id: pa_ringbuffer.h 1694 2011-06-17 08:01:02Z rossb $
  * Portable Audio I/O Library
  * Ring Buffer utility.
  *
@@ -125,7 +125,7 @@ void PaUtil_FlushRingBuffer( PaUtilRingBuffer *rbuf );
 
  @return The number of elements available for writing.
 */
-ring_buffer_size_t PaUtil_GetRingBufferWriteAvailable( PaUtilRingBuffer *rbuf );
+ring_buffer_size_t PaUtil_GetRingBufferWriteAvailable( const PaUtilRingBuffer *rbuf );
 
 /** Retrieve the number of elements available in the ring buffer for reading.
 
@@ -133,7 +133,7 @@ ring_buffer_size_t PaUtil_GetRingBufferWriteAvailable( PaUtilRingBuffer *rbuf );
 
  @return The number of elements available for reading.
 */
-ring_buffer_size_t PaUtil_GetRingBufferReadAvailable( PaUtilRingBuffer *rbuf );
+ring_buffer_size_t PaUtil_GetRingBufferReadAvailable( const PaUtilRingBuffer *rbuf );
 
 /** Write data to the ring buffer.
 

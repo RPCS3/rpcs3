@@ -113,7 +113,18 @@ typedef struct
 }
 PaMacAUHAL;
 
-
+typedef struct PaMacCoreDeviceProperties
+{
+    /* Values in Frames from property queries. */
+    UInt32 safetyOffset;
+    UInt32 bufferFrameSize;
+    // UInt32 streamLatency; // Seems to be the same as deviceLatency!?
+    UInt32 deviceLatency;
+    /* Current device sample rate. May change! */
+    Float64 sampleRate;
+    Float64 samplePeriod; // reciprocal
+}
+PaMacCoreDeviceProperties;
 
 /* stream data structure specifically for this implementation */
 typedef struct PaMacCoreStream
@@ -159,17 +170,24 @@ typedef struct PaMacCoreStream
     double outDeviceSampleRate;
     double inDeviceSampleRate;
 	
+    PaMacCoreDeviceProperties  inputProperties;
+    PaMacCoreDeviceProperties  outputProperties;
+    
 	/* data updated by main thread and notifications, protected by timingInformationMutex */
 	int timingInformationMutexIsInitialized;
 	pthread_mutex_t timingInformationMutex;
-	Float64 recipricalOfActualOutputSampleRate;
-	UInt32 deviceOutputLatencySamples;
-	UInt32 deviceInputLatencySamples;
+
+    /* These are written by the PA thread or from CoreAudio callbacks. Protected by the mutex. */
+    Float64 timestampOffsetCombined;
+    Float64 timestampOffsetInputDevice;
+    Float64 timestampOffsetOutputDevice;
 	
-	/* while the io proc is active, the following values are only accessed and manipulated by the ioproc */
-	Float64 recipricalOfActualOutputSampleRate_ioProcCopy;
-	UInt32 deviceOutputLatencySamples_ioProcCopy;
-	UInt32 deviceInputLatencySamples_ioProcCopy;
+	/* Offsets in seconds to be applied to Apple timestamps to convert them to PA timestamps.
+     * While the io proc is active, the following values are only accessed and manipulated by the ioproc */
+    Float64 timestampOffsetCombined_ioProcCopy;
+    Float64 timestampOffsetInputDevice_ioProcCopy;
+    Float64 timestampOffsetOutputDevice_ioProcCopy;
+    
 }
 PaMacCoreStream;
 

@@ -1,7 +1,7 @@
 #ifndef PORTAUDIO_H
 #define PORTAUDIO_H
 /*
- * $Id: portaudio.h 1594 2011-02-05 14:33:29Z rossb $
+ * $Id: portaudio.h 1702 2011-07-20 03:24:00Z rossb $
  * PortAudio Portable Real-Time Audio Library
  * PortAudio API Header File
  * Latest version available at: http://www.portaudio.com/
@@ -450,15 +450,15 @@ typedef struct PaDeviceInfo
 {
     int structVersion;  /* this is struct version 2 */
     const char *name;
-    PaHostApiIndex hostApi; /* note this is a host API index, not a type id*/
+    PaHostApiIndex hostApi; /**< note this is a host API index, not a type id*/
     
     int maxInputChannels;
     int maxOutputChannels;
 
-    /* Default latency values for interactive performance. */
+    /** Default latency values for interactive performance. */
     PaTime defaultLowInputLatency;
     PaTime defaultLowOutputLatency;
-    /* Default latency values for robust non-interactive applications (eg. playing sound files). */
+    /** Default latency values for robust non-interactive applications (eg. playing sound files). */
     PaTime defaultHighInputLatency;
     PaTime defaultHighOutputLatency;
 
@@ -640,11 +640,15 @@ typedef unsigned long PaStreamFlags;
 
 /**
  Timing information for the buffers passed to the stream callback.
+
+ Time values are expressed in seconds and are synchronised with the time base used by Pa_GetStreamTime() for the associated stream.
+ 
+ @see PaStreamCallback, Pa_GetStreamTime
 */
 typedef struct PaStreamCallbackTimeInfo{
-    PaTime inputBufferAdcTime;
-    PaTime currentTime;
-    PaTime outputBufferDacTime;
+    PaTime inputBufferAdcTime;  /**< The time when the first sample of the input buffer was captured at the ADC input */
+    PaTime currentTime;         /**< The time when the stream callback was invoked */
+    PaTime outputBufferDacTime; /**< The time when the first sample of the output buffer will output the DAC */
 } PaStreamCallbackTimeInfo;
 
 
@@ -697,9 +701,9 @@ typedef unsigned long PaStreamCallbackFlags;
 */
 typedef enum PaStreamCallbackResult
 {
-    paContinue=0,
-    paComplete=1,
-    paAbort=2
+    paContinue=0,   /**< Signal that the stream should continue invoking the callback and processing audio. */
+    paComplete=1,   /**< Signal that the stream should stop invoking the callback and finish once all output samples have played. */
+    paAbort=2       /**< Signal that the stream should stop invoking the callback and finish as soon as possible. */
 } PaStreamCallbackResult;
 
 
@@ -719,11 +723,10 @@ typedef enum PaStreamCallbackResult
  @param frameCount The number of sample frames to be processed by
  the stream callback.
 
- @param timeInfo The time in seconds when the first sample of the input
- buffer was received at the audio input, the time in seconds when the first
- sample of the output buffer will begin being played at the audio output, and
- the time in seconds when the stream callback was called.
- See also Pa_GetStreamTime()
+ @param timeInfo Timestamps indicating the ADC capture time of the first sample
+ in the input buffer, the DAC output time of the first sample in the output buffer
+ and the time the callback was invoked. 
+ See PaStreamCallbackTimeInfo and Pa_GetStreamTime()
 
  @param statusFlags Flags indicating whether input and/or output buffers
  have been inserted or will be dropped to overcome underflow or overflow

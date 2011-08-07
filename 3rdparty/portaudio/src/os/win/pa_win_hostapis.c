@@ -1,5 +1,5 @@
 /*
- * $Id: pa_win_hostapis.c 1635 2011-03-04 04:18:44Z rossb $
+ * $Id: pa_win_hostapis.c 1687 2011-05-19 08:24:02Z rob_bielik $
  * Portable Audio I/O Library Windows initialization table
  *
  * Based on the Open Source API proposed by Ross Bencina
@@ -42,7 +42,15 @@
     @brief Win32 host API initialization function table.
 */
 
+/* This is needed to make this source file depend on CMake option changes
+   and at the same time make it transparent for clients not using CMake.
+*/
+#ifdef PORTAUDIO_CMAKE_GENERATED
+#include "options_cmake.h"
+#endif
+
 #include "pa_hostapi.h"
+
 
 #ifdef __cplusplus
 extern "C"

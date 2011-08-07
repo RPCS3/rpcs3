@@ -1,5 +1,5 @@
 /*
- * $Id: pa_unix_oss.c 1602 2011-02-12 09:26:30Z rossb $
+ * $Id: pa_unix_oss.c 1668 2011-05-02 17:07:11Z rossb $
  * PortAudio Portable Real-Time Audio Library
  * Latest Version at: http://www.portaudio.com
  * OSS implementation by:
@@ -1241,13 +1241,13 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     {
         inputHostFormat = stream->capture->hostFormat;
         stream->streamRepresentation.streamInfo.inputLatency = inLatency +
-            PaUtil_GetBufferProcessorInputLatency( &stream->bufferProcessor ) / sampleRate;
+            PaUtil_GetBufferProcessorInputLatencyFrames( &stream->bufferProcessor ) / sampleRate;
     }
     if( outputParameters )
     {
         outputHostFormat = stream->playback->hostFormat;
         stream->streamRepresentation.streamInfo.outputLatency = outLatency +
-            PaUtil_GetBufferProcessorOutputLatency( &stream->bufferProcessor ) / sampleRate;
+            PaUtil_GetBufferProcessorOutputLatencyFrames( &stream->bufferProcessor ) / sampleRate;
     }
 
     /* Initialize buffer processor with fixed host buffer size.

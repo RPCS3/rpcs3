@@ -172,7 +172,7 @@
     <ClCompile>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <AdditionalIncludeDirectories>..\..\src\common;..\..\include;.\;..\..\src\os\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=0;PA_USE_WMME=0;PA_USE_ASIO=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=1;PA_USE_WMME=0;PA_USE_ASIO=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -241,7 +241,7 @@
     </Midl>
     <ClCompile>
       <AdditionalIncludeDirectories>..\..\src\common;..\..\include;.\;..\..\src\os\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=0;PA_USE_WMME=0;PA_USE_ASIO=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=1;PA_USE_WMME=0;PA_USE_ASIO=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -315,7 +315,7 @@
     <ClCompile>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
       <AdditionalIncludeDirectories>..\..\src\common;..\..\include;.\;..\..\src\os\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=0;PA_USE_WMME=0;PA_USE_ASIO=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=1;PA_USE_WMME=0;PA_USE_ASIO=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <ResourceCompile>
@@ -385,7 +385,7 @@
     </Midl>
     <ClCompile>
       <AdditionalIncludeDirectories>..\..\src\common;..\..\include;.\;..\..\src\os\win;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_DEBUG;_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=0;PA_USE_WMME=0;PA_USE_ASIO=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=1;PA_USE_WMME=0;PA_USE_ASIO=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -616,8 +616,10 @@
     </ClCompile>
     <ClCompile Include="..\..\src\hostapi\dsound\pa_win_ds.c" />
     <ClCompile Include="..\..\src\hostapi\dsound\pa_win_ds_dynlink.c" />
+    <ClCompile Include="..\..\src\hostapi\wdmks\pa_win_wdmks.c" />
     <ClCompile Include="..\..\src\hostapi\wmme\pa_win_wmme.c" />
     <ClCompile Include="..\..\src\hostapi\wasapi\pa_win_wasapi.c" />
+    <ClCompile Include="..\..\src\os\win\pa_win_coinitialize.c" />
     <ClCompile Include="..\..\src\os\win\pa_win_hostapis.c" />
     <ClCompile Include="..\..\src\os\win\pa_win_util.c" />
     <ClCompile Include="..\..\src\os\win\pa_win_waveformat.c" />
@@ -625,6 +627,7 @@
     <ClCompile Include="..\..\src\os\win\pa_x86_plain_converters.c" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\src\hostapi\wdmks\readme.txt" />
     <None Include="portaudio.def" />
     <None Include="portaudio_noasio.def" />
   </ItemGroup>
@@ -638,6 +641,7 @@
     <ClInclude Include="..\..\include\pa_win_waveformat.h" />
     <ClInclude Include="..\..\include\pa_win_wmme.h" />
     <ClInclude Include="..\..\include\portaudio.h" />
+    <ClInclude Include="..\..\src\os\win\pa_win_coinitialize.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

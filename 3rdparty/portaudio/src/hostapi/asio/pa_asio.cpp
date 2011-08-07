@@ -1,5 +1,5 @@
 /*
- * $Id: pa_asio.cpp 1631 2011-03-04 01:45:06Z rossb $
+ * $Id: pa_asio.cpp 1681 2011-05-10 15:58:15Z rossb $
  * Portable Audio I/O Library for ASIO Drivers
  *
  * Author: Stephane Letz
@@ -100,6 +100,8 @@
 #include "pa_process.h"
 #include "pa_debugprint.h"
 #include "pa_ringbuffer.h"
+
+#include "pa_win_coinitialize.h"
 
 /* This version of pa_asio.cpp is currently only targetted at Win32,
    It would require a few tweaks to work with pre-OS X Macintosh.
@@ -288,6 +290,8 @@ typedef struct
     PaUtilStreamInterface blockingStreamInterface;
 
     PaUtilAllocationGroup *allocations;
+
+    PaWinUtilComInitializationResult comInitializationResult;
 
     AsioDrivers *asioDrivers;
     void *systemSpecific;
@@ -906,8 +910,8 @@ typedef struct PaAsioDeviceInfo
 PaAsioDeviceInfo;
 
 
-PaError PaAsio_GetAvailableLatencyValues( PaDeviceIndex device,
-        long *minLatency, long *maxLatency, long *preferredLatency, long *granularity )
+PaError PaAsio_GetAvailableBufferSizes( PaDeviceIndex device,
+        long *minBufferSizeFrames, long *maxBufferSizeFrames, long *preferredBufferSizeFrames, long *granularity )
 {
     PaError result;
     PaUtilHostApiRepresentation *hostApi;
@@ -924,9 +928,9 @@ PaError PaAsio_GetAvailableLatencyValues( PaDeviceIndex device,
             PaAsioDeviceInfo *asioDeviceInfo =
                     (PaAsioDeviceInfo*)hostApi->deviceInfos[hostApiDevice];
 
-            *minLatency = asioDeviceInfo->minBufferSize;
-            *maxLatency = asioDeviceInfo->maxBufferSize;
-            *preferredLatency = asioDeviceInfo->preferredBufferSize;
+            *minBufferSizeFrames = asioDeviceInfo->minBufferSize;
+            *maxBufferSizeFrames = asioDeviceInfo->maxBufferSize;
+            *preferredBufferSizeFrames = asioDeviceInfo->preferredBufferSize;
             *granularity = asioDeviceInfo->bufferGranularity;
         }
     }
@@ -935,12 +939,10 @@ PaError PaAsio_GetAvailableLatencyValues( PaDeviceIndex device,
 }
 
 /* Unload whatever we loaded in LoadAsioDriver().
-   Also balance the call to CoInitialize(0).
 */
 static void UnloadAsioDriver( void )
 {
 	ASIOExit();
-	CoUninitialize();
 }
 
 /*
@@ -956,23 +958,8 @@ static PaError LoadAsioDriver( PaAsioHostApiRepresentation *asioHostApi, const c
     ASIOError asioError;
     int asioIsInitialized = 0;
 
-    /* 
-	ASIO uses CoCreateInstance() to load a driver. That requires that
-	CoInitialize(0) be called for every thread that loads a driver.
-	It is OK to call CoInitialize(0) multiple times form one thread as long
-	as it is balanced by a call to CoUninitialize(). See UnloadAsioDriver().
-
-	The V18 version called CoInitialize() starting on 2/19/02.
-	That was removed from PA V19 for unknown reasons.
-	Phil Burk added it back on 6/27/08 so that JSyn would work.
-    */
-	CoInitialize( 0 );
-
     if( !asioHostApi->asioDrivers->loadDriver( const_cast<char*>(driverName) ) )
     {
-		/* If this returns an error then it might be because CoInitialize(0) was removed.
-		  It should be called right before this.
-	    */
         result = paUnanticipatedHostError;
         PA_ASIO_SET_LAST_HOST_ERROR( 0, "Failed to load ASIO driver" );
         goto error;
@@ -1021,7 +1008,7 @@ error:
 	{
 		ASIOExit();
 	}
-	CoUninitialize();
+
     return result;
 }
 
@@ -1053,6 +1040,24 @@ PaError PaAsio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIndex
         goto error;
     }
 
+    /*
+        We initialize COM ourselves here and uninitialize it in Terminate().
+        This should be the only COM initialization needed in this module.
+
+        The ASIO SDK may also initialize COM but since we want to reduce dependency
+        on the ASIO SDK we manage COM initialization ourselves.
+
+        There used to be code that initialized COM in other situations
+        such as when creating a Stream. This made PA work when calling Pa_CreateStream
+        from a non-main thread. However we currently consider initialization 
+        of COM in non-main threads to be the caller's responsibility.
+    */
+    result = PaWinUtil_CoInitialize( paASIO, &asioHostApi->comInitializationResult );
+    if( result != paNoError )
+    {
+        goto error;
+    }
+
     asioHostApi->asioDrivers = 0; /* avoid surprises in our error handler below */
 
     asioHostApi->allocations = PaUtil_CreateAllocationGroup();
@@ -1065,7 +1070,7 @@ PaError PaAsio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIndex
     /* Allocate the AsioDrivers() driver list (class from ASIO SDK) */
     try
     {
-        asioHostApi->asioDrivers = new AsioDrivers(); /* calls CoInitialize(0) */
+        asioHostApi->asioDrivers = new AsioDrivers(); /* invokes CoInitialize(0) in AsioDriverList::AsioDriverList */
     } 
     catch (std::bad_alloc)
     {
@@ -1347,8 +1352,11 @@ error:
         delete asioHostApi->asioDrivers;
         asioDrivers = 0; /* keep SDK global in sync until we stop depending on it */
 
+        PaWinUtil_CoUninitialize( paASIO, &asioHostApi->comInitializationResult );
+
         PaUtil_FreeMemory( asioHostApi );
     }
+
     return result;
 }
 
@@ -1368,8 +1376,10 @@ static void Terminate( struct PaUtilHostApiRepresentation *hostApi )
         PaUtil_DestroyAllocationGroup( asioHostApi->allocations );
     }
 
-    delete asioHostApi->asioDrivers; /* calls CoUninitialize() */
+    delete asioHostApi->asioDrivers;
     asioDrivers = 0; /* keep SDK global in sync until we stop depending on it */
+
+    PaWinUtil_CoUninitialize( paASIO, &asioHostApi->comInitializationResult );
 
     PaUtil_FreeMemory( asioHostApi );
 }
@@ -1619,7 +1629,7 @@ static void ZeroOutputBuffers( PaAsioStream *stream, long index )
 }
 
 
-static unsigned long SelectHostBufferSize( unsigned long suggestedLatencyFrames,
+static unsigned long SelectHostBufferSize( unsigned long suggestedLatencyFrames, unsigned long userFramesPerBuffer,
         PaAsioDriverInfo *driverInfo )
 {
     unsigned long result;
@@ -2085,15 +2095,15 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     if( usingBlockingIo )
     {
 /** @todo REVIEW selection of host buffer size for blocking i/o */
-        /* Use default host latency for blocking i/o. */
-        framesPerHostBuffer = SelectHostBufferSize( 0, driverInfo );
+
+        framesPerHostBuffer = SelectHostBufferSize( 0, framesPerBuffer, driverInfo );
 
     }
     else /* Using callback interface... */
     {
         framesPerHostBuffer = SelectHostBufferSize(
                 (( suggestedInputLatencyFrames > suggestedOutputLatencyFrames )
-                        ? suggestedInputLatencyFrames : suggestedOutputLatencyFrames),
+                        ? suggestedInputLatencyFrames : suggestedOutputLatencyFrames), framesPerBuffer,
                 driverInfo );
     }
 
@@ -2369,8 +2379,8 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 
             /* Compute total intput latency in seconds */
             stream->streamRepresentation.streamInfo.inputLatency =
-                (double)( PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor               )
-                        + PaUtil_GetBufferProcessorInputLatency(&stream->blockingState->bufferProcessor)
+                (double)( PaUtil_GetBufferProcessorInputLatencyFrames(&stream->bufferProcessor               )
+                        + PaUtil_GetBufferProcessorInputLatencyFrames(&stream->blockingState->bufferProcessor)
                         + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer
                         + stream->asioInputLatencyFrames )
                 / sampleRate;
@@ -2382,10 +2392,10 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
             PA_DEBUG(("PaAsio : ASIO InputLatency = %ld (%ld ms),\n         added buffProc:%ld (%ld ms),\n         added blocking:%ld (%ld ms)\n",
                 stream->asioInputLatencyFrames,
                 (long)( stream->asioInputLatencyFrames * (1000.0 / sampleRate) ),
-                PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor),
-                (long)( PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor) * (1000.0 / sampleRate) ),
-                PaUtil_GetBufferProcessorInputLatency(&stream->blockingState->bufferProcessor) + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer,
-                (long)( (PaUtil_GetBufferProcessorInputLatency(&stream->blockingState->bufferProcessor) + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer) * (1000.0 / sampleRate) )
+                PaUtil_GetBufferProcessorInputLatencyFrames(&stream->bufferProcessor),
+                (long)( PaUtil_GetBufferProcessorInputLatencyFrames(&stream->bufferProcessor) * (1000.0 / sampleRate) ),
+                PaUtil_GetBufferProcessorInputLatencyFrames(&stream->blockingState->bufferProcessor) + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer,
+                (long)( (PaUtil_GetBufferProcessorInputLatencyFrames(&stream->blockingState->bufferProcessor) + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer) * (1000.0 / sampleRate) )
                 ));
 
             /* Determine the size of ring buffer in bytes. */
@@ -2460,8 +2470,8 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 
             /* Compute total output latency in seconds */
             stream->streamRepresentation.streamInfo.outputLatency =
-                (double)( PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor               )
-                        + PaUtil_GetBufferProcessorOutputLatency(&stream->blockingState->bufferProcessor)
+                (double)( PaUtil_GetBufferProcessorOutputLatencyFrames(&stream->bufferProcessor)
+                        + PaUtil_GetBufferProcessorOutputLatencyFrames(&stream->blockingState->bufferProcessor)
                         + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer
                         + stream->asioOutputLatencyFrames )
                 / sampleRate;
@@ -2473,10 +2483,10 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
             PA_DEBUG(("PaAsio : ASIO OutputLatency = %ld (%ld ms),\n         added buffProc:%ld (%ld ms),\n         added blocking:%ld (%ld ms)\n",
                 stream->asioOutputLatencyFrames,
                 (long)( stream->asioOutputLatencyFrames * (1000.0 / sampleRate) ),
-                PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor),
-                (long)( PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor) * (1000.0 / sampleRate) ),
-                PaUtil_GetBufferProcessorOutputLatency(&stream->blockingState->bufferProcessor) + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer,
-                (long)( (PaUtil_GetBufferProcessorOutputLatency(&stream->blockingState->bufferProcessor) + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer) * (1000.0 / sampleRate) )
+                PaUtil_GetBufferProcessorOutputLatencyFrames(&stream->bufferProcessor),
+                (long)( PaUtil_GetBufferProcessorOutputLatencyFrames(&stream->bufferProcessor) * (1000.0 / sampleRate) ),
+                PaUtil_GetBufferProcessorOutputLatencyFrames(&stream->blockingState->bufferProcessor) + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer,
+                (long)( (PaUtil_GetBufferProcessorOutputLatencyFrames(&stream->blockingState->bufferProcessor) + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer) * (1000.0 / sampleRate) )
                 ));
 
             /* Determine the size of ring buffer in bytes. */
@@ -2517,10 +2527,10 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
         callbackBufferProcessorInited = TRUE;
 
         stream->streamRepresentation.streamInfo.inputLatency =
-                (double)( PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor)
+                (double)( PaUtil_GetBufferProcessorInputLatencyFrames(&stream->bufferProcessor)
                     + stream->asioInputLatencyFrames) / sampleRate;   // seconds
         stream->streamRepresentation.streamInfo.outputLatency =
-                (double)( PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor)
+                (double)( PaUtil_GetBufferProcessorOutputLatencyFrames(&stream->bufferProcessor)
                     + stream->asioOutputLatencyFrames) / sampleRate; // seconds
         stream->streamRepresentation.streamInfo.sampleRate = sampleRate;
 
@@ -2529,15 +2539,15 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
         PA_DEBUG(("PaAsio : ASIO InputLatency = %ld (%ld ms), added buffProc:%ld (%ld ms)\n",
                 stream->asioInputLatencyFrames,
                 (long)((stream->asioInputLatencyFrames*1000)/ sampleRate),  
-                PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor),
-                (long)((PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor)*1000)/ sampleRate)
+                PaUtil_GetBufferProcessorInputLatencyFrames(&stream->bufferProcessor),
+                (long)((PaUtil_GetBufferProcessorInputLatencyFrames(&stream->bufferProcessor)*1000)/ sampleRate)
                 ));
 
         PA_DEBUG(("PaAsio : ASIO OuputLatency = %ld (%ld ms), added buffProc:%ld (%ld ms)\n",
                 stream->asioOutputLatencyFrames,
                 (long)((stream->asioOutputLatencyFrames*1000)/ sampleRate), 
-                PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor),
-                (long)((PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor)*1000)/ sampleRate)
+                PaUtil_GetBufferProcessorOutputLatencyFrames(&stream->bufferProcessor),
+                (long)((PaUtil_GetBufferProcessorOutputLatencyFrames(&stream->bufferProcessor)*1000)/ sampleRate)
                 ));
     }
 
@@ -3836,7 +3846,12 @@ PaError PaAsio_ShowControlPanel( PaDeviceIndex device, void* systemSpecific )
     int asioIsInitialized = 0;
     PaAsioHostApiRepresentation *asioHostApi;
     PaAsioDeviceInfo *asioDeviceInfo;
+    PaWinUtilComInitializationResult comInitializationResult;
 
+    /* initialize COM again here, we might be in another thread */
+    result = PaWinUtil_CoInitialize( paASIO, &comInitializationResult );
+    if( result != paNoError )
+        return result;
 
     result = PaUtil_GetHostApiRepresentation( &hostApi, paASIO );
     if( result != paNoError )
@@ -3862,9 +3877,6 @@ PaError PaAsio_ShowControlPanel( PaDeviceIndex device, void* systemSpecific )
     }
 
     asioDeviceInfo = (PaAsioDeviceInfo*)hostApi->deviceInfos[hostApiDevice];
-
-    /* See notes about CoInitialize(0) in LoadAsioDriver(). */
-	CoInitialize(0);
 
     if( !asioHostApi->asioDrivers->loadDriver( const_cast<char*>(asioDeviceInfo->commonDeviceInfo.name) ) )
     {
@@ -3914,7 +3926,6 @@ PA_DEBUG(("PaAsio_ShowControlPanel: ASIOControlPanel(): %s\n", PaAsio_GetAsioErr
         goto error;
     }
 
-	CoUninitialize();
 PA_DEBUG(("PaAsio_ShowControlPanel: ASIOExit(): %s\n", PaAsio_GetAsioErrorText(asioError) ));
 
     return result;
@@ -3924,7 +3935,8 @@ error:
 	{
 		ASIOExit();
 	}
-	CoUninitialize();
+
+    PaWinUtil_CoUninitialize( paASIO, &comInitializationResult );
 
     return result;
 }
