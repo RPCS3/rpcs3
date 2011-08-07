@@ -177,7 +177,7 @@ public:
 				deviceIndex,
 				2,
 				paInt32,
-				0.2f,
+				SndOutPacketSize/(float)SampleRate, // 0.2f,
 				infoPtr
 			};
 
