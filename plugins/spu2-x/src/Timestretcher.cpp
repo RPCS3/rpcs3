@@ -97,7 +97,7 @@ int targetIPS=750;
 //#define NEWSTRETCHER_USE_DYNAMIC_TUNING
 
 
-//running average can be implemented in O(1) time.
+//running average can be implemented in O(1) time. 
 //For the sake of simplicity, this average is calculated in O(<buffer-size>). Possibly improve later.
 #define MAX_STRETCH_AVERAGE_LEN 100
 int STRETCH_AVERAGE_LEN=50.0 *targetIPS/750;
