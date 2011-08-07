@@ -1,5 +1,5 @@
 /*
- * $Id: pa_win_ds.c 1534 2010-08-03 21:02:52Z dmitrykos $
+ * $Id: pa_win_ds.c 1606 2011-02-17 15:56:04Z rob_bielik $
  * Portable Audio I/O Library DirectSound implementation
  *
  * Authors: Phil Burk, Robert Marsanyi & Ross Bencina
@@ -39,36 +39,7 @@
 
 /** @file
  @ingroup hostapi_src
-
-    @todo implement paInputOverflow callback status flag
-    
-    @todo implement paNeverDropInput.
-
-    @todo implement host api specific extension to set i/o buffer sizes in frames
-
-    @todo implement initialisation of PaDeviceInfo default*Latency fields (currently set to 0.)
-
-    @todo implement ReadStream, WriteStream, GetStreamReadAvailable, GetStreamWriteAvailable
-
-    @todo audit handling of DirectSound result codes - in many cases we could convert a HRESULT into
-        a native portaudio error code. Standard DirectSound result codes are documented at msdn.
-
-    @todo implement IsFormatSupported
-
-    @todo call PaUtil_SetLastHostErrorInfo with a specific error string (currently just "DSound error").
-
-    @todo make sure all buffers have been played before stopping the stream
-        when the stream callback returns paComplete
-
-    @todo retrieve default devices using the DRVM_MAPPER_PREFERRED_GET functions used in the wmme api
-        these wave device ids can be aligned with the directsound devices either by retrieving
-        the system interface device name using DRV_QUERYDEVICEINTERFACE or by using the wave device
-        id retrieved in KsPropertySetEnumerateCallback.
-
-    old TODOs from phil, need to work out if these have been done:
-        O- fix "patest_stop.c"
 */
-
 
 #include <assert.h>
 #include <stdio.h>
@@ -104,6 +75,9 @@
 #include "pa_win_waveformat.h"
 #include "pa_win_wdmks_utils.h"
 
+#ifndef PA_USE_WMME
+#error "Portaudio internal error: PA_USE_WMME=0/1 not defined. pa_hostapi.h should ensure that it is."
+#endif
 
 #if (defined(WIN32) && (defined(_MSC_VER) && (_MSC_VER >= 1200))) /* MSC version 6 and above */
 #pragma comment( lib, "dsound.lib" )
@@ -706,7 +680,7 @@ static PaError AddOutputDeviceInfoFromDirectSound(
         else
         {
 
-#ifndef PA_NO_WMME
+#if PA_USE_WMME
             if( caps.dwFlags & DSCAPS_EMULDRIVER )
             {
                 /* If WMME supported, then reject Emulated drivers because they are lousy. */
@@ -922,7 +896,7 @@ static PaError AddInputDeviceInfoFromDirectSoundCapture(
         }
         else
         {
-#ifndef PA_NO_WMME
+#if PA_USE_WMME
             if( caps.dwFlags & DSCAPS_EMULDRIVER )
             {
                 /* If WMME supported, then reject Emulated drivers because they are lousy. */
@@ -1873,9 +1847,9 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     bufferProcessorIsInitialized = 1;
 
     stream->streamRepresentation.streamInfo.inputLatency =
-            PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor);   /* FIXME: not initialised anywhere else */
+            (PaTime)PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor) / sampleRate;   /* FIXME: only includes buffer processor latency */
     stream->streamRepresentation.streamInfo.outputLatency =
-            PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor);    /* FIXME: not initialised anywhere else */
+            (PaTime)PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor) / sampleRate;    /* FIXME: only includes buffer processor latency */
     stream->streamRepresentation.streamInfo.sampleRate = sampleRate;
 
     
@@ -2859,6 +2833,4 @@ static signed long GetStreamWriteAvailable( PaStream* s )
 
     return 0;
 }
-
-
 

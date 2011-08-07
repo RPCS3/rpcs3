@@ -1,5 +1,5 @@
 /*
- * $Id: pa_win_wdmks.c 1411 2009-05-14 14:37:37Z rossb $
+ * $Id: pa_win_wdmks.c 1606 2011-02-17 15:56:04Z rob_bielik $
  * PortAudio Windows WDM-KS interface
  *
  * Author: Andrew Baldwin
@@ -104,6 +104,10 @@
     #define  WAVE_FORMAT_DRM        0x0009
     #define DYNAMIC_GUID_THUNK(l,w1,w2,b1,b2,b3,b4,b5,b6,b7,b8) {l,w1,w2,{b1,b2,b3,b4,b5,b6,b7,b8}}
     #define DYNAMIC_GUID(data) DYNAMIC_GUID_THUNK(data)
+#endif
+
+#if (defined(WIN32) && (defined(_MSC_VER) && (_MSC_VER >= 1200))) /* MSC version 6 and above */
+#pragma comment( lib, "setupapi.lib" )
 #endif
 
 /* use CreateThread for CYGWIN, _beginthreadex for all others */

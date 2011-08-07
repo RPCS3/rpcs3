@@ -5,7 +5,7 @@ UnitCount=16
 Type=3
 Ver=1
 ObjFiles=
-Includes=..\..\..\asiosdk2;..\..\..\asiosdk2\common;..\..\..\asiosdk2\host;..\..\..\asiosdk2\host\pc;..\..\pa_common
+Includes=..\..\..\asiosdk2;..\..\..\asiosdk2\common;..\..\..\asiosdk2\host;..\..\..\asiosdk2\host\pc;..\..\common
 Libs=
 PrivateResource=
 ResourceIncludes=
@@ -30,17 +30,17 @@ UseCustomMakefile=0
 CustomMakefile=
 
 [Unit1]
-FileName=..\..\pa_common\pa_skeleton.c
+FileName=..\..\hostapi\skeleton\pa_hostapi_skeleton.c
 CompileCpp=1
 Folder=portaudio
 Compile=1
 Link=1
 Priority=1000
 OverrideBuildCmd=0
-BuildCmd=$(CC) -c pa_skeleton.c -o ./pa_skeleton.o $(CFLAGS)
+BuildCmd=$(CC) -c pa_hostapi_skeleton.c -o ./pa_hostapi_skeleton.o $(CFLAGS)
 
 [Unit2]
-FileName=..\..\pa_common\pa_stream.c
+FileName=..\..\common\pa_stream.c
 CompileCpp=1
 Folder=portaudio
 Compile=1
@@ -50,7 +50,7 @@ OverrideBuildCmd=0
 BuildCmd=$(CC) -c pa_stream.c -o ./pa_stream.o $(CFLAGS)
 
 [Unit3]
-FileName=..\..\pa_common\pa_trace.c
+FileName=..\..\common\pa_trace.c
 CompileCpp=1
 Folder=portaudio
 Compile=1
@@ -60,7 +60,7 @@ OverrideBuildCmd=0
 BuildCmd=$(CC) -c pa_trace.c -o ./pa_trace.o $(CFLAGS)
 
 [Unit4]
-FileName=..\..\pa_common\pa_allocation.c
+FileName=..\..\common\pa_allocation.c
 CompileCpp=1
 Folder=portaudio
 Compile=1
@@ -70,7 +70,7 @@ OverrideBuildCmd=0
 BuildCmd=$(CC) -c pa_allocation.c -o ./pa_allocation.o $(CFLAGS)
 
 [Unit5]
-FileName=..\..\pa_common\pa_converters.c
+FileName=..\..\common\pa_converters.c
 CompileCpp=1
 Folder=portaudio
 Compile=1
@@ -80,7 +80,7 @@ OverrideBuildCmd=0
 BuildCmd=$(CC) -c pa_converters.c -o ./pa_converters.o $(CFLAGS)
 
 [Unit6]
-FileName=..\..\pa_common\pa_cpuload.c
+FileName=..\..\common\pa_cpuload.c
 CompileCpp=1
 Folder=portaudio
 Compile=1
@@ -90,7 +90,7 @@ OverrideBuildCmd=0
 BuildCmd=$(CC) -c pa_cpuload.c -o ./pa_cpuload.o $(CFLAGS)
 
 [Unit7]
-FileName=..\..\pa_common\pa_dither.c
+FileName=..\..\common\pa_dither.c
 CompileCpp=1
 Folder=portaudio
 Compile=1
@@ -100,7 +100,7 @@ OverrideBuildCmd=0
 BuildCmd=$(CC) -c pa_dither.c -o ./pa_dither.o $(CFLAGS)
 
 [Unit8]
-FileName=..\..\pa_common\pa_front.c
+FileName=..\..\common\pa_front.c
 CompileCpp=1
 Folder=portaudio
 Compile=1
@@ -110,7 +110,7 @@ OverrideBuildCmd=0
 BuildCmd=$(CC) -c pa_front.c -o ./pa_front.o $(CFLAGS)
 
 [Unit9]
-FileName=..\..\pa_common\pa_process.c
+FileName=..\..\common\pa_process.c
 CompileCpp=1
 Folder=portaudio
 Compile=1

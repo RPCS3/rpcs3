@@ -47,7 +47,7 @@ extern "C"
 
 
 /**
- @brief Install optimised converter functions suitable for all IA32 processors
+ @brief Install optimized converter functions suitable for all IA32 processors
 
  It is recommended to call PaUtil_InitializeX86PlainConverters prior to calling Pa_Initialize
 */

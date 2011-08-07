@@ -161,7 +161,8 @@ env = conf.Finish()
 
 # PA infrastructure
 CommonSources = [os.path.join("common", f) for f in "pa_allocation.c pa_converters.c pa_cpuload.c pa_dither.c pa_front.c \
-        pa_process.c pa_skeleton.c pa_stream.c pa_trace.c pa_debugprint.c pa_ringbuffer.c".split()]
+        pa_process.c pa_stream.c pa_trace.c pa_debugprint.c pa_ringbuffer.c".split()]
+CommonSources.append(os.path.join("hostapi", "skeleton", "pa_hostapi_skeleton.c"))
 
 # Host APIs implementations
 ImplSources = []

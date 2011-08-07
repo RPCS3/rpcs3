@@ -1,5 +1,5 @@
 /*
- * $Id: pa_ringbuffer.c 1421 2009-11-18 16:09:05Z bjornroche $
+ * $Id: pa_ringbuffer.c 1574 2011-02-01 11:18:16Z rossb $
  * Portable Audio I/O Library
  * Ring Buffer utility.
  *
@@ -145,7 +145,7 @@ ring_buffer_size_t PaUtil_AdvanceRingBufferWriteIndex( PaUtilRingBuffer *rbuf, r
 ** Get address of region(s) from which we can read data.
 ** If the region is contiguous, size2 will be zero.
 ** If non-contiguous, size2 will be the size of second region.
-** Returns room available to be written or elementCount, whichever is smaller.
+** Returns room available to be read or elementCount, whichever is smaller.
 */
 ring_buffer_size_t PaUtil_GetRingBufferReadRegions( PaUtilRingBuffer *rbuf, ring_buffer_size_t elementCount,
                                 void **dataPtr1, ring_buffer_size_t *sizePtr1,

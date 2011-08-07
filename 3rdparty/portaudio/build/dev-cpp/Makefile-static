@@ -5,11 +5,11 @@ CPP  = g++.exe
 CC   = gcc.exe
 WINDRES = windres.exe
 RES  = 
-OBJ  = ./pa_skeleton.o ./pa_stream.o ./pa_trace.o ./pa_allocation.o ./pa_converters.o ./pa_cpuload.o ./pa_dither.o ./pa_front.o ./pa_process.o ./pa_asio.o ./pa_win_util.o ./pa_win_hostapis.o ./pa_win_ds.o ./dsound_wrapper.o ./pa_win_wmme.o ./iasiothiscallresolver.o $(RES)
-LINKOBJ  = ./pa_skeleton.o ./pa_stream.o ./pa_trace.o ./pa_allocation.o ./pa_converters.o ./pa_cpuload.o ./pa_dither.o ./pa_front.o ./pa_process.o ./pa_asio.o ./pa_win_util.o ./pa_win_hostapis.o ./pa_win_ds.o ./dsound_wrapper.o ./pa_win_wmme.o ./iasiothiscallresolver.o $(RES)
+OBJ  = ./pa_hostapi_skeleton.o ./pa_stream.o ./pa_trace.o ./pa_allocation.o ./pa_converters.o ./pa_cpuload.o ./pa_dither.o ./pa_front.o ./pa_process.o ./pa_asio.o ./pa_win_util.o ./pa_win_hostapis.o ./pa_win_ds.o ./dsound_wrapper.o ./pa_win_wmme.o ./iasiothiscallresolver.o $(RES)
+LINKOBJ  = ./pa_hostapi_skeleton.o ./pa_stream.o ./pa_trace.o ./pa_allocation.o ./pa_converters.o ./pa_cpuload.o ./pa_dither.o ./pa_front.o ./pa_process.o ./pa_asio.o ./pa_win_util.o ./pa_win_hostapis.o ./pa_win_ds.o ./dsound_wrapper.o ./pa_win_wmme.o ./iasiothiscallresolver.o $(RES)
 LIBS =  -L"C:/Dev-CPP/lib" -fmessage-length=0 -O3 -s 
-INCS =  -I"C:/Dev-CPP/include"  -I"../../../asiosdk2"  -I"../../../asiosdk2/common"  -I"../../../asiosdk2/host"  -I"../../../asiosdk2/host/pc"  -I"../../pa_common" 
-CXXINCS =  -I"C:/Dev-CPP/include/c++"  -I"C:/Dev-CPP/include/c++/mingw32"  -I"C:/Dev-CPP/include/c++/backward"  -I"C:/Dev-CPP/include"  -I"../../../asiosdk2"  -I"../../../asiosdk2/common"  -I"../../../asiosdk2/host"  -I"../../../asiosdk2/host/pc"  -I"../../pa_common" 
+INCS =  -I"C:/Dev-CPP/include"  -I"../../../asiosdk2"  -I"../../../asiosdk2/common"  -I"../../../asiosdk2/host"  -I"../../../asiosdk2/host/pc"  -I"../../common" 
+CXXINCS =  -I"C:/Dev-CPP/include/c++"  -I"C:/Dev-CPP/include/c++/mingw32"  -I"C:/Dev-CPP/include/c++/backward"  -I"C:/Dev-CPP/include"  -I"../../../asiosdk2"  -I"../../../asiosdk2/common"  -I"../../../asiosdk2/host"  -I"../../../asiosdk2/host/pc"  -I"../../common" 
 BIN  = portaudio-static.a
 CXXFLAGS = $(CXXINCS)-O3   -fmessage-length=0 -Wall
 CFLAGS = $(INCS)-O3   -fmessage-length=0 -Wall
@@ -26,32 +26,32 @@ $(BIN): $(LINKOBJ)
 	ar r $(BIN) $(LINKOBJ)
 	ranlib $(BIN)
 
-./pa_skeleton.o: ../../pa_common/pa_skeleton.c
-	$(CPP) -c ../../pa_common/pa_skeleton.c -o ./pa_skeleton.o $(CXXFLAGS)
+./pa_hostapi_skeleton.o: ../../hostapi/skeleton/pa_hostapi_skeleton.c
+	$(CPP) -c ../../hostapi/skeleton/pa_hostapi_skeleton.c -o ./pa_hostapi_skeleton.o $(CXXFLAGS)
 
-./pa_stream.o: ../../pa_common/pa_stream.c
-	$(CPP) -c ../../pa_common/pa_stream.c -o ./pa_stream.o $(CXXFLAGS)
+./pa_stream.o: ../../common/pa_stream.c
+	$(CPP) -c ../../common/pa_stream.c -o ./pa_stream.o $(CXXFLAGS)
 
-./pa_trace.o: ../../pa_common/pa_trace.c
-	$(CPP) -c ../../pa_common/pa_trace.c -o ./pa_trace.o $(CXXFLAGS)
+./pa_trace.o: ../../common/pa_trace.c
+	$(CPP) -c ../../common/pa_trace.c -o ./pa_trace.o $(CXXFLAGS)
 
-./pa_allocation.o: ../../pa_common/pa_allocation.c
-	$(CPP) -c ../../pa_common/pa_allocation.c -o ./pa_allocation.o $(CXXFLAGS)
+./pa_allocation.o: ../../common/pa_allocation.c
+	$(CPP) -c ../../common/pa_allocation.c -o ./pa_allocation.o $(CXXFLAGS)
 
-./pa_converters.o: ../../pa_common/pa_converters.c
-	$(CPP) -c ../../pa_common/pa_converters.c -o ./pa_converters.o $(CXXFLAGS)
+./pa_converters.o: ../../common/pa_converters.c
+	$(CPP) -c ../../common/pa_converters.c -o ./pa_converters.o $(CXXFLAGS)
 
-./pa_cpuload.o: ../../pa_common/pa_cpuload.c
-	$(CPP) -c ../../pa_common/pa_cpuload.c -o ./pa_cpuload.o $(CXXFLAGS)
+./pa_cpuload.o: ../../common/pa_cpuload.c
+	$(CPP) -c ../../common/pa_cpuload.c -o ./pa_cpuload.o $(CXXFLAGS)
 
-./pa_dither.o: ../../pa_common/pa_dither.c
-	$(CPP) -c ../../pa_common/pa_dither.c -o ./pa_dither.o $(CXXFLAGS)
+./pa_dither.o: ../../common/pa_dither.c
+	$(CPP) -c ../../common/pa_dither.c -o ./pa_dither.o $(CXXFLAGS)
 
-./pa_front.o: ../../pa_common/pa_front.c
-	$(CPP) -c ../../pa_common/pa_front.c -o ./pa_front.o $(CXXFLAGS)
+./pa_front.o: ../../common/pa_front.c
+	$(CPP) -c ../../common/pa_front.c -o ./pa_front.o $(CXXFLAGS)
 
-./pa_process.o: ../../pa_common/pa_process.c
-	$(CPP) -c ../../pa_common/pa_process.c -o ./pa_process.o $(CXXFLAGS)
+./pa_process.o: ../../common/pa_process.c
+	$(CPP) -c ../../common/pa_process.c -o ./pa_process.o $(CXXFLAGS)
 
 ./pa_asio.o: ../../pa_asio/pa_asio.cpp
 	$(CPP) -c ../../pa_asio/pa_asio.cpp -o ./pa_asio.o $(CXXFLAGS)

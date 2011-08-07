@@ -165,6 +165,7 @@ AC_SUBST(DLL_LIBS)
 AC_SUBST(CXXFLAGS)
 AC_SUBST(NASM)
 AC_SUBST(NASMOPT)
+AC_SUBST(INCLUDES)
 
 dnl -g is optional on darwin
 if ( echo "${host_os}" | grep ^darwin >> /dev/null ) &&
@@ -187,6 +188,8 @@ add_objects()
         test "${OTHER_OBJS#*${o}*}" = "${OTHER_OBJS}" && OTHER_OBJS="$OTHER_OBJS $o"
     done
 }
+
+INCLUDES=portaudio.h
 
 case "${host_os}" in
   darwin* )
@@ -223,7 +226,7 @@ case "${host_os}" in
         PADLL="portaudio.dll"
         THREAD_CFLAGS="-mthreads"
         SHARED_FLAGS="-shared"
-        CFLAGS="$CFLAGS -I\$(top_srcdir)/include -DPA_NO_WMME -DPA_NO_ASIO -DPA_NO_WDMKS -DPA_NO_DS -DPA_NO_WASAPI"
+        CFLAGS="$CFLAGS -I\$(top_srcdir)/include -DPA_USE_WMME=0 -DPA_USE_ASIO=0 -DPA_USE_WDMKS=0 -DPA_USE_DS=0 -DPA_USE_WASAPI=0"
 
         if [[ "x$with_directx" = "xyes" ]]; then
             DXDIR="$with_dxdir"
@@ -232,7 +235,7 @@ case "${host_os}" in
             DLL_LIBS="${DLL_LIBS} -lwinmm -lm -L$DXDIR/lib -ldsound -lole32"
             #VC98="\"/c/Program Files/Microsoft Visual Studio/VC98/Include\""
             #CFLAGS="$CFLAGS -I$VC98 -DPA_NO_WMME -DPA_NO_ASIO"
-            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/os/win -I$DXDIR/include -UPA_NO_DS"
+            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/os/win -I$DXDIR/include -UPA_USE_DS -DPA_USE_DS=1"
         fi
 
         if [[ "x$with_asio" = "xyes" ]]; then
@@ -240,7 +243,7 @@ case "${host_os}" in
             add_objects src/hostapi/asio/pa_asio.o src/common/pa_ringbuffer.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/hostapi/asio/iasiothiscallresolver.o $ASIODIR/common/asio.o $ASIODIR/host/asiodrivers.o $ASIODIR/host/pc/asiolist.o
             LIBS="-lwinmm -lm -lole32 -luuid"
             DLL_LIBS="${DLL_LIBS} -lwinmm -lm -lole32 -luuid"
-            CFLAGS="$CFLAGS -ffast-math -fomit-frame-pointer -I\$(top_srcdir)/src/common -I\$(top_srcdir)/src/hostapi/asio -I$ASIODIR/host/pc -I$ASIODIR/common -I$ASIODIR/host -UPA_NO_ASIO -DWINDOWS"
+            CFLAGS="$CFLAGS -ffast-math -fomit-frame-pointer -I\$(top_srcdir)/src/common -I\$(top_srcdir)/src/hostapi/asio -I$ASIODIR/host/pc -I$ASIODIR/common -I$ASIODIR/host -UPA_USE_ASIO -DPA_USE_ASIO=1 -DWINDOWS"
             CXXFLAGS="$CFLAGS"
         fi
 
@@ -251,21 +254,21 @@ case "${host_os}" in
             DLL_LIBS="${DLL_LIBS} -lwinmm -lm -L$DXDIR/lib -luuid -lsetupapi -lole32"
             #VC98="\"/c/Program Files/Microsoft Visual Studio/VC98/Include\""
             #CFLAGS="$CFLAGS -I$VC98 -DPA_NO_WMME -DPA_NO_ASIO"
-            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -I$DXDIR/include -UPA_NO_WDMKS"
+            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -I$DXDIR/include -UPA_USE_WDMKS -DPA_USE_WDMKS=1"
         fi
 
         if [[ "x$with_wmme" = "xyes" ]]; then
             add_objects src/hostapi/wmme/pa_win_wmme.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o
             LIBS="-lwinmm -lm -lole32 -luuid"
             DLL_LIBS="${DLL_LIBS} -lwinmm"
-            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -UPA_NO_WMME"
+            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -UPA_USE_WMME -DPA_USE_WMME=1"
         fi
 
         if [[ "x$with_wasapi" = "xyes" ]]; then
-            add_objects src/hostapi/wasapi/pa_win_wasapi.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o
+            add_objects src/hostapi/wasapi/pa_win_wasapi.o src/common/pa_ringbuffer.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o
             LIBS="-lwinmm -lm -lole32 -luuid"
-            DLL_LIBS="${DLL_LIBS} -lwinmm"
-            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -I\$(top_srcdir)/src/hostapi/wasapi/mingw-include -UPA_NO_WASAPI"
+            DLL_LIBS="${DLL_LIBS} -lwinmm -lole32"
+            CFLAGS="$CFLAGS -I\$(top_srcdir)/src/common -I\$(top_srcdir)/src/hostapi/wasapi/mingw-include -UPA_USE_WASAPI -DPA_USE_WASAPI=1"
         fi
         ;;
 
@@ -273,7 +276,7 @@ case "${host_os}" in
         dnl Cygwin configuration
 
         OTHER_OBJS="src/hostapi/wmme/pa_win_wmme.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o"
-        CFLAGS="$CFLAGS -DPA_NO_DS -DPA_NO_WDMKS -DPA_NO_ASIO -DPA_NO_WASAPI"
+        CFLAGS="$CFLAGS -DPA_USE_DS=0 -DPA_USE_WDMKS=0 -DPA_USE_ASIO=0 -DPA_USE_WASAPI=0 -DPA_USE_WMME=1"
         LIBS="-lwinmm -lm"
         PADLL="portaudio.dll"
         THREAD_CFLAGS="-mthreads"
@@ -317,6 +320,7 @@ case "${host_os}" in
            DLL_LIBS="$DLL_LIBS -lasound"
            LIBS="$LIBS -lasound"
            OTHER_OBJS="$OTHER_OBJS src/hostapi/alsa/pa_linux_alsa.o"
+           INCLUDES="$INCLUDES pa_linux_alsa.h"
            AC_DEFINE(PA_USE_ALSA)
         fi
 
@@ -324,6 +328,7 @@ case "${host_os}" in
            DLL_LIBS="$DLL_LIBS $JACK_LIBS"
            CFLAGS="$CFLAGS $JACK_CFLAGS"
            OTHER_OBJS="$OTHER_OBJS src/hostapi/jack/pa_jack.o src/common/pa_ringbuffer.o"
+           INCLUDES="$INCLUDES pa_jack.h"
            AC_DEFINE(PA_USE_JACK)
         fi
 
@@ -332,7 +337,7 @@ case "${host_os}" in
            if [[ "$have_libossaudio" = "yes" ]] ; then
                    DLL_LIBS="$DLL_LIBS -lossaudio"
                    LIBS="$LIBS -lossaudio"
-           fi      
+           fi
            AC_DEFINE(PA_USE_OSS)
         fi
 

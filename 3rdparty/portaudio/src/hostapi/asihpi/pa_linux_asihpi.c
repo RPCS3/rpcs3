@@ -1826,8 +1826,9 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
         PaTime bufferDuration = ( stream->input->hostBufferSize + stream->input->hardwareBufferSize )
                                 / sampleRate / stream->input->bytesPerFrame;
         stream->baseStreamRep.streamInfo.inputLatency =
-            PaUtil_GetBufferProcessorInputLatency( &stream->bufferProcessor ) +
-            bufferDuration - stream->maxFramesPerHostBuffer / sampleRate;
+            bufferDuration +
+            ((PaTime)PaUtil_GetBufferProcessorInputLatency( &stream->bufferProcessor ) -
+                stream->maxFramesPerHostBuffer) / sampleRate;
         assert( stream->baseStreamRep.streamInfo.inputLatency > 0.0 );
     }
     /* Determine output latency from buffer processor and buffer sizes */
@@ -1842,8 +1843,9 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                                      stream->output->outputBufferCap / sampleRate / stream->output->bytesPerFrame );
         }
         stream->baseStreamRep.streamInfo.outputLatency =
-            PaUtil_GetBufferProcessorOutputLatency( &stream->bufferProcessor ) +
-            bufferDuration - stream->maxFramesPerHostBuffer / sampleRate;
+            bufferDuration +
+            ((PaTime)PaUtil_GetBufferProcessorOutputLatency( &stream->bufferProcessor ) -
+                stream->maxFramesPerHostBuffer) / sampleRate;
         assert( stream->baseStreamRep.streamInfo.outputLatency > 0.0 );
     }
 

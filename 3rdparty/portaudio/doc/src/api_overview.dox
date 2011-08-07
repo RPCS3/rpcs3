@@ -1,6 +1,6 @@
 /** @page api_overview PortAudio API Overview
 
-This page provides a top-down overview of the entire PortAudio API. It shows how all of the PortAudio data types and functions fit together. It provides links to the documentation for each function and data type. You can find all of the detailed documentation for each API function and data type on the portaudio.h page.
+This page provides a top-down overview of the entire PortAudio API. It describes how all of the PortAudio data types and functions fit together. It provides links to the documentation for each function and data type. You can find all of the detailed documentation for each API function and data type on the portaudio.h page.
 
 @section introduction Introduction
 
@@ -32,7 +32,7 @@ The PortAudio API offers the following functionality:
 - Provide Stream timing information to support synchronising audio with other parts of your application
 - Retrieve version and error information.
 
-These functions are described in more detail in the sections that follow.
+These functions are described in more detail below.
 
 
 @section top_level_functions Initialization, termination and utility functions

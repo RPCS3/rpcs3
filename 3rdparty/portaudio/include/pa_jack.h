@@ -43,6 +43,7 @@
  *  @ingroup public_header
  *  @brief JACK-specific PortAudio API extension header file.
  */
+
 #include "portaudio.h"
 
 #ifdef __cplusplus

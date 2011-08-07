@@ -1,5 +1,5 @@
 /*
- * $Id: pa_win_util.c 1437 2009-12-10 08:10:08Z rossb $
+ * $Id: pa_win_util.c 1584 2011-02-02 18:58:17Z rossb $
  * Portable Audio I/O Library
  * Win32 platform-specific support functions
  *
@@ -41,9 +41,6 @@
  @ingroup win_src
 
  @brief Win32 implementation of platform-specific PaUtil support functions.
-
-    @todo Implement workaround for QueryPerformanceCounter() skipping forward
-    bug. (see msdn kb Q274323).
 */
  
 #include <windows.h>
@@ -129,13 +126,18 @@ double PaUtil_GetTime( void )
 
     if( usePerformanceCounter_ )
     {
-        /* FIXME:
-            according to this knowledge-base article, QueryPerformanceCounter
-            can skip forward by seconds!
+        /*
+            Note: QueryPerformanceCounter has a known issue where it can skip forward
+            by a few seconds (!) due to a hardware bug on some PCI-ISA bridge hardware.
+            This is documented here:
             http://support.microsoft.com/default.aspx?scid=KB;EN-US;Q274323&
 
-            it may be better to use the rtdsc instruction using inline asm,
-            however then a method is needed to calculate a ticks/seconds ratio.
+            The work-arounds are not very paletable and involve querying GetTickCount 
+            at every time step.
+
+            Using rdtsc is not a good option on multi-core systems.
+
+            For now we just use QueryPerformanceCounter(). It's good, most of the time.
         */
         QueryPerformanceCounter( &time );
         return time.QuadPart * secondsPerTick_;

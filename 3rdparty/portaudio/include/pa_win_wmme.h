@@ -1,7 +1,7 @@
 #ifndef PA_WIN_WMME_H
 #define PA_WIN_WMME_H
 /*
- * $Id: pa_win_wmme.h 1405 2009-03-08 08:10:55Z rossb $
+ * $Id: pa_win_wmme.h 1592 2011-02-04 10:41:58Z rossb $
  * PortAudio Portable Real-Time Audio Library
  * MME specific extensions
  *
@@ -42,7 +42,6 @@
  @ingroup public_header
  @brief WMME-specific PortAudio API extension header file.
 */
-
 
 #include "portaudio.h"
 #include "pa_win_waveformat.h"

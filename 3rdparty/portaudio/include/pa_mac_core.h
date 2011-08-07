@@ -43,6 +43,8 @@
  *  @brief CoreAudio-specific PortAudio API extension header file.
  */
 
+#include "portaudio.h"
+
 #include <AudioUnit/AudioUnit.h>
 //#include <AudioToolbox/AudioToolbox.h>
 

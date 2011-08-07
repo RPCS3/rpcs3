@@ -1,8 +1,8 @@
 Hello
 
   This is a small list of steps in order to build portaudio
-(Currently v19-devel) into a VC6 DLL and lib file.
-This DLL contains all 3 current win32 PA APIS (MM/DS/ASIO)
+(Currently v19-devel) into a VS2005 DLL and lib file.
+This DLL contains all 5 current Win32 PA APIS (MME/DS/ASIO/WASAPI/WDMKS)
 
 1)Copy the source dirs that comes with the ASIO SDK inside src\hostapi\asio\ASIOSDK
   so you should now have example:
@@ -29,7 +29,7 @@ This DLL contains all 3 current win32 PA APIS (MM/DS/ASIO)
   Processor Pack(only works with above SP5)
      Latest known URL:
      http://msdn2.microsoft.com/en-us/vstudio/Aa718349.aspx
-	 This isnt absolutely required for portaudio, but if you plan on using SSE intrinsics and similar things.
+	 This isn't absolutely required for portaudio, but if you plan on using SSE intrinsics and similar things.
 	 Up to you to decide upon Service pack 5 or 6 depending on your need for intrinsics.
 
   Platform SDK (Feb 2003) : 
@@ -51,8 +51,9 @@ This DLL contains all 3 current win32 PA APIS (MM/DS/ASIO)
   *If you have 7.0(VC.NET/2001) or 7.1(VC.2003) *
   then I suggest you open portaudio.dsp (and convert if needed)
  
-  *If you have Visual Studio 2005*, I suggest you open the portaudio.sln file
-  which contains 4 configurations. Win32/x64 in both Release and Debug variants
+  *If you have Visual Studio 2005 * (or later), I suggest you open the portaudio.sln file
+  which contains 2 projects (portaudio & portaudio_static) each with 6 configurations: Win32/x64 in both Debug, Release and ReleaseMinDependency,
+  last of which removes dependency of all but basic OS system DLLs.
 
   hit compile and hope for the best.
  
@@ -88,22 +89,24 @@ To build PortAudio without ASIO support you need to:
 
   B. Make sure your project doesn't try to build the PortAudio ASIO
      implementation files:
-	 src/hostapi/pa_asio.cpp src/hostapi/iasiothiscallresolver.cpp
+	      src/hostapi/pa_asio.cpp
+        src/hostapi/iasiothiscallresolver.cpp
      If you're using one of the shipped projects remove them from the project.
 
-  C. Define the PA_NO_ASIO preprocessor symbol in the project properties.
+  C. Set the PA_USE_ASIO preprocessor symbol to zero (i.e. PA_USE_ASIO=0) in the project properties.
      In VS2005 this can be added under
      Project Properties > Configuration Properties > C/C++ > Preprocessor > Preprocessor Definitions
 
-     Defining PA_NO_ASIO stops src/os/win/pa_win_hostapis.c 
+     Setting PA_USE_ASIO=0 stops src/os/win/pa_win_hostapis.c 
      from trying to initialize the PA ASIO implementation.
 
-  D. Remove PaAsio_* entry points from portaudio.def
+  D. Remove PaAsio_* entry points from portaudio.def, or comment them out with ;
+
 
 A similar procedure can be used to omit any of the other host APIs from the 
 build. The relevant preprocessor symbols used by pa_win_hostapis.c are:
-PA_NO_WMME, PA_NO_DS, PA_NO_ASIO, PA_NO_WASAPI and PA_NO_WDMKS
-
+PA_USE_WMME, PA_USE_DSOUND, PA_USE_ASIO, PA_USE_WASAPI and PA_USE_WDMKS
 
 -----
 David Viens, davidv@plogue.com
+Robert Bielik, robert@xponaut.se

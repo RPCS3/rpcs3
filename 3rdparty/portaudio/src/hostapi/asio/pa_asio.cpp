@@ -1,5 +1,5 @@
 /*
- * $Id: pa_asio.cpp 1525 2010-07-14 06:45:25Z rossb $
+ * $Id: pa_asio.cpp 1631 2011-03-04 01:45:06Z rossb $
  * Portable Audio I/O Library for ASIO Drivers
  *
  * Author: Stephane Letz
@@ -78,44 +78,7 @@
     Note that specific support for paInputUnderflow, paOutputOverflow and
     paNeverDropInput is not necessary or possible with this driver due to the
     synchronous full duplex double-buffered architecture of ASIO.
-
-    @todo implement host api specific extension to set i/o buffer sizes in frames
-
-    @todo review ReadStream, WriteStream, GetStreamReadAvailable, GetStreamWriteAvailable
-
-    @todo review Blocking i/o latency computations in OpenStream(), changing ring 
-          buffer to a non-power-of-two structure could reduce blocking i/o latency.
-
-    @todo implement IsFormatSupported
-
-    @todo work out how to implement stream stoppage from callback and
-            implement IsStreamActive properly. Stream stoppage could be implemented
-            using a high-priority thread blocked on an Event which is signalled
-            by the callback. Or, we could just call ASIO stop from the callback
-            and see what happens.
-
-    @todo rigorously check asio return codes and convert to pa error codes
-
-    @todo Different channels of a multichannel stream can have different sample
-            formats, but we assume that all are the same as the first channel for now.
-            Fixing this will require the block processor to maintain per-channel
-            conversion functions - could get nasty.
-
-    @todo investigate whether the asio processNow flag needs to be honoured
-
-    @todo handle asioMessages() callbacks in a useful way, or at least document
-            what cases we don't handle.
-
-    @todo miscellaneous other FIXMEs
-
-    @todo provide an asio-specific method for setting the systems specific
-        value (aka main window handle) - check that this matches the value
-        passed to PaAsio_ShowControlPanel, or remove it entirely from
-        PaAsio_ShowControlPanel. - this would allow PaAsio_ShowControlPanel
-        to be called for the currently open stream (at present all streams
-        must be closed).
 */
-
 
 
 #include <stdio.h>
@@ -1170,7 +1133,7 @@ PaError PaAsio_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiIndex
             goto error;
         }
 
-        IsDebuggerPresent_ = (IsDebuggerPresentPtr)GetProcAddress( LoadLibrary( "Kernel32.dll" ), "IsDebuggerPresent" );
+        IsDebuggerPresent_ = (IsDebuggerPresentPtr)GetProcAddress( LoadLibraryA( "Kernel32.dll" ), "IsDebuggerPresent" );
 
         for( i=0; i < driverCount; ++i )
         {
@@ -1606,7 +1569,7 @@ typedef struct PaAsioStream
 
     ASIOBufferInfo *asioBufferInfos;
     ASIOChannelInfo *asioChannelInfos;
-    long inputLatency, outputLatency; // actual latencies returned by asio
+    long asioInputLatencyFrames, asioOutputLatencyFrames; // actual latencies returned by asio
 
     long inputChannelCount, outputChannelCount;
     bool postOutput;
@@ -2241,7 +2204,11 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 
     if( inputChannelCount > 0 )
     {
-        /* FIXME: assume all channels use the same type for now */
+        /* FIXME: assume all channels use the same type for now 
+        
+            see: "ASIO devices with multiple sample formats are unsupported"
+            http://www.portaudio.com/trac/ticket/106
+        */
         ASIOSampleType inputType = stream->asioChannelInfos[0].type;
 
         PA_DEBUG(("ASIO Input  type:%d",inputType));
@@ -2258,7 +2225,11 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 
     if( outputChannelCount > 0 )
     {
-        /* FIXME: assume all channels use the same type for now */
+        /* FIXME: assume all channels use the same type for now 
+        
+            see: "ASIO devices with multiple sample formats are unsupported"
+            http://www.portaudio.com/trac/ticket/106
+        */
         ASIOSampleType outputType = stream->asioChannelInfos[inputChannelCount].type;
 
         PA_DEBUG(("ASIO Output type:%d",outputType));
@@ -2274,7 +2245,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
     }
 
 
-    ASIOGetLatencies( &stream->inputLatency, &stream->outputLatency );
+    ASIOGetLatencies( &stream->asioInputLatencyFrames, &stream->asioOutputLatencyFrames );
 
 
     /* Using blocking i/o interface... */
@@ -2386,7 +2357,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                   to samples frames.
                5) Get the next larger (or equal) power-of-two buffer size.
              */
-            lBlockingBufferSize = suggestedInputLatencyFrames - stream->inputLatency;
+            lBlockingBufferSize = suggestedInputLatencyFrames - stream->asioInputLatencyFrames;
             lBlockingBufferSize = (lBlockingBufferSize > 0) ? lBlockingBufferSize : 1;
             lBlockingBufferSize = (lBlockingBufferSize + framesPerBuffer - 1) / framesPerBuffer;
             lBlockingBufferSize = (lBlockingBufferSize + 1) * framesPerBuffer;
@@ -2401,7 +2372,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                 (double)( PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor               )
                         + PaUtil_GetBufferProcessorInputLatency(&stream->blockingState->bufferProcessor)
                         + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer
-                        + stream->inputLatency )
+                        + stream->asioInputLatencyFrames )
                 / sampleRate;
 
             /* The code below prints the ASIO latency which doesn't include
@@ -2409,8 +2380,8 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                reports the added latency separately.
             */
             PA_DEBUG(("PaAsio : ASIO InputLatency = %ld (%ld ms),\n         added buffProc:%ld (%ld ms),\n         added blocking:%ld (%ld ms)\n",
-                stream->inputLatency,
-                (long)( stream->inputLatency * (1000.0 / sampleRate) ),
+                stream->asioInputLatencyFrames,
+                (long)( stream->asioInputLatencyFrames * (1000.0 / sampleRate) ),
                 PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor),
                 (long)( PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor) * (1000.0 / sampleRate) ),
                 PaUtil_GetBufferProcessorInputLatency(&stream->blockingState->bufferProcessor) + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer,
@@ -2472,7 +2443,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                   to samples frames.
                5) Get the next larger (or equal) power-of-two buffer size.
              */
-            lBlockingBufferSize = suggestedOutputLatencyFrames - stream->outputLatency;
+            lBlockingBufferSize = suggestedOutputLatencyFrames - stream->asioOutputLatencyFrames;
             lBlockingBufferSize = (lBlockingBufferSize > 0) ? lBlockingBufferSize : 1;
             lBlockingBufferSize = (lBlockingBufferSize + framesPerBuffer - 1) / framesPerBuffer;
             lBlockingBufferSize = (lBlockingBufferSize + 1) * framesPerBuffer;
@@ -2492,7 +2463,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                 (double)( PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor               )
                         + PaUtil_GetBufferProcessorOutputLatency(&stream->blockingState->bufferProcessor)
                         + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer
-                        + stream->outputLatency )
+                        + stream->asioOutputLatencyFrames )
                 / sampleRate;
 
             /* The code below prints the ASIO latency which doesn't include
@@ -2500,8 +2471,8 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                reports the added latency separately.
             */
             PA_DEBUG(("PaAsio : ASIO OutputLatency = %ld (%ld ms),\n         added buffProc:%ld (%ld ms),\n         added blocking:%ld (%ld ms)\n",
-                stream->outputLatency,
-                (long)( stream->inputLatency * (1000.0 / sampleRate) ),
+                stream->asioOutputLatencyFrames,
+                (long)( stream->asioOutputLatencyFrames * (1000.0 / sampleRate) ),
                 PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor),
                 (long)( PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor) * (1000.0 / sampleRate) ),
                 PaUtil_GetBufferProcessorOutputLatency(&stream->blockingState->bufferProcessor) + (lBlockingBufferSize / framesPerBuffer - 1) * framesPerBuffer,
@@ -2547,24 +2518,24 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 
         stream->streamRepresentation.streamInfo.inputLatency =
                 (double)( PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor)
-                    + stream->inputLatency) / sampleRate;   // seconds
+                    + stream->asioInputLatencyFrames) / sampleRate;   // seconds
         stream->streamRepresentation.streamInfo.outputLatency =
                 (double)( PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor)
-                    + stream->outputLatency) / sampleRate; // seconds
+                    + stream->asioOutputLatencyFrames) / sampleRate; // seconds
         stream->streamRepresentation.streamInfo.sampleRate = sampleRate;
 
         // the code below prints the ASIO latency which doesn't include the
         // buffer processor latency. it reports the added latency separately
         PA_DEBUG(("PaAsio : ASIO InputLatency = %ld (%ld ms), added buffProc:%ld (%ld ms)\n",
-                stream->inputLatency,
-                (long)((stream->inputLatency*1000)/ sampleRate),  
+                stream->asioInputLatencyFrames,
+                (long)((stream->asioInputLatencyFrames*1000)/ sampleRate),  
                 PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor),
                 (long)((PaUtil_GetBufferProcessorInputLatency(&stream->bufferProcessor)*1000)/ sampleRate)
                 ));
 
         PA_DEBUG(("PaAsio : ASIO OuputLatency = %ld (%ld ms), added buffProc:%ld (%ld ms)\n",
-                stream->outputLatency,
-                (long)((stream->outputLatency*1000)/ sampleRate), 
+                stream->asioOutputLatencyFrames,
+                (long)((stream->asioOutputLatencyFrames*1000)/ sampleRate), 
                 PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor),
                 (long)((PaUtil_GetBufferProcessorOutputLatency(&stream->bufferProcessor)*1000)/ sampleRate)
                 ));
@@ -2791,10 +2762,6 @@ static ASIOTime *bufferSwitchTimeInfo( ASIOTime *timeInfo, long index, ASIOBool 
     if( !theAsioStream )
         return 0L;
 
-    // Keep sample position
-    // FIXME: asioDriverInfo.pahsc_NumFramesDone = timeInfo->timeInfo.samplePosition.lo;
-
-
     // protect against reentrancy
     if( PaAsio_AtomicIncrement(&theAsioStream->reenterCount) )
     {
@@ -2849,6 +2816,11 @@ static ASIOTime *bufferSwitchTimeInfo( ASIOTime *timeInfo, long index, ASIOBool 
             {
 
 #if 0
+/*
+    see: "ASIO callback underflow/overflow buffer slip detection doesn't work"
+    http://www.portaudio.com/trac/ticket/110
+*/
+
 // test code to try to detect slip conditions... these may work on some systems
 // but neither of them work on the RME Digi96
 
@@ -2899,10 +2871,10 @@ previousIndex = index;
 
                 /* patch from Paul Boege */
                 paTimeInfo.inputBufferAdcTime = paTimeInfo.currentTime -
-                    ((double)theAsioStream->inputLatency/theAsioStream->streamRepresentation.streamInfo.sampleRate);
+                    ((double)theAsioStream->asioInputLatencyFrames/theAsioStream->streamRepresentation.streamInfo.sampleRate);
 
                 paTimeInfo.outputBufferDacTime = paTimeInfo.currentTime +
-                    ((double)theAsioStream->outputLatency/theAsioStream->streamRepresentation.streamInfo.sampleRate);
+                    ((double)theAsioStream->asioOutputLatencyFrames/theAsioStream->streamRepresentation.streamInfo.sampleRate);
 
                 /* old version is buggy because the buffer processor also adds in its latency to the time parameters
                 paTimeInfo.inputBufferAdcTime = paTimeInfo.currentTime - theAsioStream->streamRepresentation.streamInfo.inputLatency;
@@ -3061,7 +3033,11 @@ static long asioMessages(long selector, long value, void* message, double* opt)
             // Reset the driver is done by completely destruct is. I.e. ASIOStop(), ASIODisposeBuffers(), Destruction
             // Afterwards you initialize the driver again.
 
-            /*FIXME: commented the next line out */
+            /*FIXME: commented the next line out
+
+                see: "PA/ASIO ignores some driver notifications it probably shouldn't"
+                http://www.portaudio.com/trac/ticket/108
+            */
             //asioDriverInfo.stopped;  // In this sample the processing will just stop
             ret = 1L;
             break;

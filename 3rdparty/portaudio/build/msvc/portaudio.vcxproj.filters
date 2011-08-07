@@ -66,9 +66,6 @@
     <ClCompile Include="..\..\src\common\pa_ringbuffer.c">
       <Filter>Source Files\common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\common\pa_skeleton.c">
-      <Filter>Source Files\common</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\common\pa_stream.c">
       <Filter>Source Files\common</Filter>
     </ClCompile>

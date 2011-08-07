@@ -1,7 +1,7 @@
 #ifndef PA_HOSTAPI_H
 #define PA_HOSTAPI_H
 /*
- * $Id: pa_hostapi.h 1339 2008-02-15 07:50:33Z rossb $
+ * $Id: pa_hostapi.h 1634 2011-03-04 04:12:08Z rossb $
  * Portable Audio I/O Library
  * host api representation
  *
@@ -46,8 +46,65 @@
  to manage and communicate with host API implementations.
 */
 
-
 #include "portaudio.h"
+
+/**
+The PA_NO_* host API macros are now deprecated in favor of PA_USE_* macros.
+PA_USE_* indicates whether a particular host API will be initialized by PortAudio.
+An undefined or 0 value indicates that the host API will not be used. A value of 1 
+indicates that the host API will be used. PA_USE_* macros should be left undefined 
+or defined to either 0 or 1.
+
+The code below ensures that PA_USE_* macros are always defined and have value
+0 or 1. Undefined symbols are defaulted to 0. Symbols that are neither 0 nor 1 
+are defaulted to 1.
+*/
+
+#ifndef PA_USE_SKELETON
+#define PA_USE_SKELETON 0
+#elif (PA_USE_SKELETON != 0) && (PA_USE_SKELETON != 1)
+#undef PA_USE_SKELETON
+#define PA_USE_SKELETON 1
+#endif 
+
+#if defined(PA_NO_ASIO) || defined(PA_NO_DS) || defined(PA_NO_WMME) || defined(PA_NO_WASAPI) || defined(PA_NO_WDMKS)
+#error "Portaudio: PA_NO_<APINAME> is no longer supported, please remove definition and use PA_USE_<APINAME> instead"
+#endif
+
+#ifndef PA_USE_ASIO
+#define PA_USE_ASIO 0
+#elif (PA_USE_ASIO != 0) && (PA_USE_ASIO != 1)
+#undef PA_USE_ASIO
+#define PA_USE_ASIO 1
+#endif 
+
+#ifndef PA_USE_DS
+#define PA_USE_DS 0
+#elif (PA_USE_DS != 0) && (PA_USE_DS != 1)
+#undef PA_USE_DS
+#define PA_USE_DS 1
+#endif 
+
+#ifndef PA_USE_WMME
+#define PA_USE_WMME 0
+#elif (PA_USE_WMME != 0) && (PA_USE_WMME != 1)
+#undef PA_USE_WMME
+#define PA_USE_WMME 1
+#endif 
+
+#ifndef PA_USE_WASAPI
+#define PA_USE_WASAPI 0
+#elif (PA_USE_WASAPI != 0) && (PA_USE_WASAPI != 1)
+#undef PA_USE_WASAPI
+#define PA_USE_WASAPI 1
+#endif 
+
+#ifndef PA_USE_WDMKS
+#define PA_USE_WDMKS 0
+#elif (PA_USE_WDMKS != 0) && (PA_USE_WDMKS != 1)
+#undef PA_USE_WDMKS
+#define PA_USE_WDMKS 1
+#endif 
 
 #ifdef __cplusplus
 extern "C"

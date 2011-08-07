@@ -1,5 +1,5 @@
 /*
- * $Id: pa_unix_oss.c 1509 2010-06-06 17:36:33Z dmitrykos $
+ * $Id: pa_unix_oss.c 1602 2011-02-12 09:26:30Z rossb $
  * PortAudio Portable Real-Time Audio Library
  * Latest Version at: http://www.portaudio.com
  * OSS implementation by:
@@ -1121,7 +1121,7 @@ static PaError PaOssStream_Configure( PaOssStream *stream, double sampleRate, un
         assert( component->hostChannelCount > 0 );
         assert( component->hostFrames > 0 );
 
-        *inputLatency = component->hostFrames * (component->numBufs - 1) / sampleRate;
+        *inputLatency = (component->hostFrames * (component->numBufs - 1)) / sampleRate;
     }
     if( stream->playback )
     {
@@ -1132,7 +1132,7 @@ static PaError PaOssStream_Configure( PaOssStream *stream, double sampleRate, un
         assert( component->hostChannelCount > 0 );
         assert( component->hostFrames > 0 );
 
-        *outputLatency = component->hostFrames * (component->numBufs - 1) / sampleRate;
+        *outputLatency = (component->hostFrames * (component->numBufs - 1)) / sampleRate;
     }
 
     if( duplex )

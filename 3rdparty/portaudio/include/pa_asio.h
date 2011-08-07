@@ -1,7 +1,7 @@
 #ifndef PA_ASIO_H
 #define PA_ASIO_H
 /*
- * $Id: pa_asio.h 1400 2009-01-21 10:20:42Z rossb $
+ * $Id: pa_asio.h 1592 2011-02-04 10:41:58Z rossb $
  * PortAudio Portable Real-Time Audio Library
  * ASIO specific extensions
  *
@@ -44,7 +44,6 @@
  @brief ASIO-specific PortAudio API extension header file.
 */
 
-
 #include "portaudio.h"
 
 #ifdef __cplusplus
@@ -65,7 +64,8 @@ extern "C"
 
  @see ASIOGetBufferSize in the ASIO SDK.
 
- @todo This function should have a better name, any suggestions?
+ @todo This function should be renamed to PaAsio_GetAvailableBufferSizes. 
+        No reason to use a wildly different name from the ASIO version.
 */
 PaError PaAsio_GetAvailableLatencyValues( PaDeviceIndex device,
 		long *minLatency, long *maxLatency, long *preferredLatency, long *granularity );

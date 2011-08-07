@@ -1,5 +1,5 @@
 /*
- * $Id: pa_converters.c 1495 2010-04-17 07:43:00Z dmitrykos $
+ * $Id: pa_converters.c 1576 2011-02-01 12:58:26Z rossb $
  * Portable Audio I/O Library sample conversion mechanism
  *
  * Based on the Open Source API proposed by Ross Bencina
@@ -45,12 +45,16 @@
 
  @todo Consider whether functions which dither but don't clip should exist,
  V18 automatically enabled clipping whenever dithering was selected. Perhaps
- we should do the same.
+ we should do the same. 
+    see: "require clipping for dithering sample conversion functions?"
+    http://www.portaudio.com/trac/ticket/112
 
  @todo implement the converters marked IMPLEMENT ME: Float32_To_UInt8_Dither,
  Float32_To_UInt8_Clip, Float32_To_UInt8_DitherClip, Int32_To_Int24_Dither,
  Int32_To_UInt8_Dither, Int24_To_Int16_Dither, Int24_To_Int8_Dither, 
- Int24_To_UInt8_Dither, Int16_To_Int8_Dither, Int16_To_UInt8_Dither,
+ Int24_To_UInt8_Dither, Int16_To_Int8_Dither, Int16_To_UInt8_Dither
+    see: "some conversion functions are not implemented in pa_converters.c"
+    http://www.portaudio.com/trac/ticket/35
 
  @todo review the converters marked REVIEW: Float32_To_Int32,
  Float32_To_Int32_Dither, Float32_To_Int32_Clip, Float32_To_Int32_DitherClip,
@@ -1163,8 +1167,8 @@ static void Int24_To_Int16_Dither(
     void *sourceBuffer, signed int sourceStride,
     unsigned int count, struct PaUtilTriangularDitherGenerator *ditherGenerator )
 {
-    unsigned char *src = (unsigned char *)sourceBuffer;
-    PaInt16 *dest = (PaInt16 *)destinationBuffer;
+    unsigned char *src = (unsigned char*)sourceBuffer;
+    PaInt16 *dest = (PaInt16*)destinationBuffer;
 
     PaInt32 temp, dither;
 
@@ -1185,7 +1189,7 @@ static void Int24_To_Int16_Dither(
         dither = PaUtil_Generate16BitTriangularDither( ditherGenerator );
         *dest = (PaInt16) (((temp >> 1) + dither) >> 15);
 
-        src += sourceStride * 3;
+        src  += sourceStride * 3;
         dest += destinationStride;
     }
 }
@@ -1251,7 +1255,7 @@ static void Int24_To_Int8_Dither(
 
         src += sourceStride * 3;
         dest += destinationStride;
-}
+    }
 }
 
 /* -------------------------------------------------------------------------- */

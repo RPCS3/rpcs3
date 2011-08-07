@@ -452,7 +452,6 @@
     <ClCompile Include="..\..\src\common\pa_front.c" />
     <ClCompile Include="..\..\src\common\pa_process.c" />
     <ClCompile Include="..\..\src\common\pa_ringbuffer.c" />
-    <ClCompile Include="..\..\src\common\pa_skeleton.c" />
     <ClCompile Include="..\..\src\common\pa_stream.c" />
     <ClCompile Include="..\..\src\common\pa_trace.c" />
     <ClCompile Include="..\..\src\hostapi\asio\pa_asio.cpp">

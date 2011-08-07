@@ -48,9 +48,6 @@
 	"byte code/abi portable". So the technique used here is to allocate a local
 	a static array, write in it, then callback the user with a pointer to its
 	start.
-
-    @todo Consider allocating strdump using dynamic allocation.
-    @todo Consider reentrancy and possibly corrupted strdump buffer.
 */
 
 #include <stdio.h>

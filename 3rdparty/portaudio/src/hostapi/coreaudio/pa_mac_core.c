@@ -1340,13 +1340,19 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
                 (float) sampleRate,
                 framesPerBuffer ));
     VDBUG( ("Opening Stream.\n") );
-
+	
     /*These first few bits of code are from paSkeleton with few modifications.*/
     if( inputParameters )
     {
         inputChannelCount = inputParameters->channelCount;
         inputSampleFormat = inputParameters->sampleFormat;
 
+		/* @todo Blocking read/write on Mac is not yet supported. */
+		if( inputSampleFormat & paNonInterleaved )
+		{
+			return paSampleFormatNotSupported;
+		}
+		
         /* unless alternate device specification is supported, reject the use of
             paUseHostApiSpecificDeviceSpecification */
 
@@ -1371,6 +1377,12 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
         outputChannelCount = outputParameters->channelCount;
         outputSampleFormat = outputParameters->sampleFormat;
         
+		/* @todo Blocking read/write on Mac is not yet supported. */
+		if( outputSampleFormat & paNonInterleaved )
+		{
+			return paSampleFormatNotSupported;
+		}
+		
         /* unless alternate device specification is supported, reject the use of
             paUseHostApiSpecificDeviceSpecification */
 

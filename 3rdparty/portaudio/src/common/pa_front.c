@@ -1,5 +1,5 @@
 /*
- * $Id: pa_front.c 1396 2008-11-03 19:31:30Z philburk $
+ * $Id: pa_front.c 1584 2011-02-02 18:58:17Z rossb $
  * Portable Audio I/O Library Multi-Host API front end
  * Validate function parameters and manage multiple host APIs.
  *
@@ -59,18 +59,6 @@
 
  All PortAudio API functions can be conditionally compiled with logging code.
  To compile with logging, define the PA_LOG_API_CALLS precompiler symbol.
-
-    @todo Consider adding host API specific error text in Pa_GetErrorText() for
-    paUnanticipatedHostError
-
-    @todo Consider adding a new error code for when (inputParameters == NULL)
-    && (outputParameters == NULL)
-
-    @todo review whether Pa_CloseStream() should call the interface's
-    CloseStream function if aborting the stream returns an error code.
-
-    @todo Create new error codes if a NULL buffer pointer, or a
-    zero frame count is passed to Pa_ReadStream or Pa_WriteStream.
 */
 
 
@@ -381,7 +369,7 @@ const char *Pa_GetErrorText( PaError errorCode )
     {
     case paNoError:                  result = "Success"; break;
     case paNotInitialized:           result = "PortAudio not initialized"; break;
-    /** @todo could catenate the last host error text to result in the case of paUnanticipatedHostError */
+    /** @todo could catenate the last host error text to result in the case of paUnanticipatedHostError. see: http://www.portaudio.com/trac/ticket/114 */
     case paUnanticipatedHostError:   result = "Unanticipated host error"; break;
     case paInvalidChannelCount:      result = "Invalid number of channels"; break;
     case paInvalidSampleRate:        result = "Invalid sample rate"; break;
@@ -1343,7 +1331,7 @@ PaError Pa_CloseStream( PaStream* stream )
         else if( result == 0 )
             result = interface->Abort( stream );
 
-        if( result == paNoError )                 /** @todo REVIEW: shouldn't we close anyway? */
+        if( result == paNoError )                 /** @todo REVIEW: shouldn't we close anyway? see: http://www.portaudio.com/trac/ticket/115 */
             result = interface->Close( stream );
     }
 
@@ -1601,7 +1589,7 @@ PaError Pa_ReadStream( PaStream* stream,
     {
         if( frames == 0 )
         {
-            /* XXX: Should we not allow the implementation to signal any overflow condition? */
+            /* @todo Should we not allow the implementation to signal any overflow condition? see: http://www.portaudio.com/trac/ticket/116*/
             result = paNoError;
         }
         else if( buffer == 0 )
@@ -1641,7 +1629,7 @@ PaError Pa_WriteStream( PaStream* stream,
     {
         if( frames == 0 )
         {
-            /* XXX: Should we not allow the implementation to signal any underflow condition? */
+            /* @todo Should we not allow the implementation to signal any underflow condition? see: http://www.portaudio.com/trac/ticket/116*/
             result = paNoError;
         }
         else if( buffer == 0 )
