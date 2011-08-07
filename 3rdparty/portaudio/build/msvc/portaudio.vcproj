@@ -47,7 +47,7 @@
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
 				AdditionalIncludeDirectories="..\..\src\common,..\..\include,.\,..\..\src\os\win"
-				PreprocessorDefinitions="_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=0;PA_USE_WDMKS=1;PA_USE_WMME=0;PA_USE_ASIO=1"
+				PreprocessorDefinitions="_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=0;PA_USE_WMME=0;PA_USE_ASIO=1"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -112,7 +112,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories="..\..\src\common,..\..\include,.\,..\..\src\os\win"
-				PreprocessorDefinitions="_DEBUG;_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=0;PA_USE_WDMKS=1;PA_USE_WMME=0;PA_USE_ASIO=1"
+				PreprocessorDefinitions="_DEBUG;_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=0;PA_USE_WMME=0;PA_USE_ASIO=1"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -179,7 +179,7 @@
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
 				AdditionalIncludeDirectories="..\..\src\common,..\..\include,.\,..\..\src\os\win"
-				PreprocessorDefinitions="_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=0;PA_USE_WDMKS=1;PA_USE_WMME=0;PA_USE_ASIO=0"
+				PreprocessorDefinitions="_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=0;PA_USE_WMME=0;PA_USE_ASIO=0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -244,7 +244,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories="..\..\src\common,..\..\include,.\,..\..\src\os\win"
-				PreprocessorDefinitions="_DEBUG;_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=0;PA_USE_WDMKS=1;PA_USE_WMME=0;PA_USE_ASIO=0"
+				PreprocessorDefinitions="_DEBUG;_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=0;PA_USE_WMME=0;PA_USE_ASIO=0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -310,7 +310,7 @@
 				Name="VCCLCompilerTool"
 				InlineFunctionExpansion="1"
 				AdditionalIncludeDirectories="..\..\src\common,..\..\include,.\,..\..\src\os\win"
-				PreprocessorDefinitions="_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=0;PA_USE_WDMKS=1;PA_USE_WMME=0;PA_USE_ASIO=0"
+				PreprocessorDefinitions="_USRDLL;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PAWIN_USE_WDMKS_DEVICE_INFO;PA_USE_DS=1;PA_USE_WASAPI=1;PA_USE_WDMKS=0;PA_USE_WMME=0;PA_USE_ASIO=0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
