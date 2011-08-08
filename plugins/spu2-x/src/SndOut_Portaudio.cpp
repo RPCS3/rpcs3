@@ -61,9 +61,7 @@ private:
 
 	bool started;
 	PaStream* stream;
-
-	std::vector<const PaDeviceInfo*> devices;
-
+	
 public:
 	int ActualPaCallback( const void *inputBuffer, void *outputBuffer,
 		unsigned long framesPerBuffer,
@@ -107,30 +105,32 @@ public:
 
 		int deviceIndex = -1;
 
-		fprintf(stderr,"* SPU2-X: Enumerating PortAudio devices:");
-		for(int i=0;i<Pa_GetDeviceCount();i++)
+		fprintf(stderr,"* SPU2-X: Enumerating PortAudio devices:\n");
+		for(int i=0, j=0;i<Pa_GetDeviceCount();i++)
 		{
 			const PaDeviceInfo * info = Pa_GetDeviceInfo(i);
 
-			const PaHostApiInfo * apiinfo = Pa_GetHostApiInfo(info->hostApi);
-
-			fprintf(stderr," *** Device %d: '%s' (%s)", i, info->name, apiinfo->name);
-
-			if(apiinfo->type == m_ApiId)
+			if(info->maxOutputChannels > 0)
 			{
-				static wchar_t buffer [1000];
-				mbstowcs(buffer,info->name,1000);
-				buffer[999]=0;
+				const PaHostApiInfo * apiinfo = Pa_GetHostApiInfo(info->hostApi);
 
-				if(m_Device == buffer)
+				fprintf(stderr," *** Device %d: '%s' (%s)", j, info->name, apiinfo->name);
+
+				if(apiinfo->type == m_ApiId)
 				{
-					deviceIndex = i;
-					fprintf(stderr," (selected)");
-				}
+					if(m_Device == wxString::FromAscii(info->name))
+					{
+						deviceIndex = i;
+						fprintf(stderr," (selected)");
+					}
 
+				}
+				fprintf(stderr,"\n");
+
+				j++;
 			}
-			fprintf(stderr,"\n");
 		}
+		fflush(stderr);
 
 		if(deviceIndex<0 && m_ApiId>=0)
 		{
@@ -263,13 +263,6 @@ private:
 			case WM_INITDIALOG:
 			{
 				wchar_t temp[128];
-								
-				for(int i=0;i<Pa_GetDeviceCount();i++)
-				{
-					const PaDeviceInfo * info = Pa_GetDeviceInfo(i);
-			
-					devices.push_back(info);
-				}
 				
 				SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_RESETCONTENT,0,0);
 				SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)"Default Device");
@@ -298,16 +291,16 @@ private:
 					int api_idx = idx-1;
 					SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_RESETCONTENT,0,0);
 					SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)"Default Device");
-					SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,0,-1);
+					SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,0,0);
 					int idx=0;
 					int i=1,j=0;
-					for(std::vector<const PaDeviceInfo*>::iterator it=devices.begin(); it != devices.end(); it++, j++)
+					for(int j=0;j<Pa_GetDeviceCount();j++)
 					{
-						const PaDeviceInfo* info = *it;
+						const PaDeviceInfo * info = Pa_GetDeviceInfo(j);
 						if(info->hostApi == api_idx && info->maxOutputChannels > 0)
 						{
 							SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)info->name);
-							SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,i,j);			
+							SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,i,(LPARAM)info);			
 							if(wxString::FromAscii(info->name) == m_Device)
 							{
 								idx = i;
@@ -347,12 +340,12 @@ private:
 						m_ApiId = SendMessage(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_GETITEMDATA,idx,0);
 
 						idx = (int)SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_GETCURSEL,0,0);
-						idx = SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_GETITEMDATA,idx,0);
-						if(idx >= 0)
-							m_Device = wxString::FromAscii( devices.at(idx)->name );
+						const PaDeviceInfo * info = (const PaDeviceInfo *)SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_GETITEMDATA,idx,0);
+						if(info)
+							m_Device = wxString::FromAscii( info->name );
 						else
 							m_Device = L"default";
-						
+														
 						m_SuggestedLatencyMS = (int)SendMessage( GetDlgItem( hWnd, IDC_LATENCY ), TBM_GETPOS, 0, 0 );
 
 						if( m_SuggestedLatencyMS < 10 ) m_SuggestedLatencyMS = 10;
@@ -378,16 +371,16 @@ private:
 							int apiId = SendMessageA(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_GETITEMDATA,api_idx,0);
 							SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_RESETCONTENT,0,0);
 							SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)"Default Device");
-							SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,0,-1);
+							SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,0,0);
 							int idx=0;
-							int i=1,j=0;
-							for(std::vector<const PaDeviceInfo*>::iterator it=devices.begin(); it != devices.end(); it++, j++)
+							int i=1;
+							for(int j=0;j<Pa_GetDeviceCount();j++)
 							{
-								const PaDeviceInfo* info = *it;
+								const PaDeviceInfo * info = Pa_GetDeviceInfo(j);
 								if(info->hostApi == api_idx && info->maxOutputChannels > 0)
 								{
 									SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)info->name);
-									SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,i,j);
+									SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,i,(LPARAM)info);
 									i++;
 								}
 							}
