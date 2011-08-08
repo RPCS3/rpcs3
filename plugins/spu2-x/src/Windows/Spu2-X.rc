@@ -13,13 +13,11 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// English (United States) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -195,7 +193,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_ABOUT, DIALOG
     BEGIN
@@ -280,8 +278,8 @@ IDB_SPU2X_SMALL         BITMAP                  "..\\..\\spu2-x-sm.bmp"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,0,0,SVN_REV
- PRODUCTVERSION 2,0,0,SVN_REV
+ FILEVERSION 2,0,0,4851
+ PRODUCTVERSION 2,0,0,4851
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -313,18 +311,72 @@ BEGIN
     END
 END
 
-#endif    // English (U.S.) resources
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
-// Spanish resources
+// English (United Kingdom) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENG)
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_UK
+#pragma code_page(1252)
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_PORTAUDIO DIALOGEX 0, 0, 316, 166
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Portaudio Output Module Settings"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,205,145,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,259,145,50,14
+    COMBOBOX        IDC_PA_HOSTAPI,7,18,95,62,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Host Api",IDC_STATIC,7,7,28,8
+    COMBOBOX        IDC_PA_DEVICE,108,18,201,62,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Device Name",IDC_STATIC,107,7,42,8
+    CONTROL         "",IDC_LATENCY,"msctls_trackbar32",TBS_AUTOTICKS | WS_TABSTOP,96,93,155,10
+    LTEXT           "NOTE: Depending on the hardware and drivers, the suggested manual latency might not be used, and portaudio will choose the closest possible value.",IDC_STATIC,12,111,286,19
+    CTEXT           "20ms",IDC_LATENCY_LABEL,264,93,35,11
+    GROUPBOX        "Output Latency",IDC_STATIC,7,57,302,82
+    CONTROL         "Use smallest possible (may cause issues if the actual value is too small)",IDC_MINIMIZE,
+                    "Button",BS_AUTORADIOBUTTON | WS_GROUP,12,75,258,10
+    CONTROL         "Use this latency:",IDC_MANUAL,"Button",BS_AUTORADIOBUTTON,12,93,69,10
+    CONTROL         "WASAPI Exclusive Mode",IDC_EXCLUSIVE,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,39,93,10
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO
+BEGIN
+    IDD_PORTAUDIO, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 309
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 159
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (United Kingdom) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Spanish (Spain, International Sort) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ESN)
-#ifdef _WIN32
 LANGUAGE LANG_SPANISH, SUBLANG_SPANISH_MODERN
 #pragma code_page(1252)
-#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -350,7 +402,7 @@ END
 
 #endif    // APSTUDIO_INVOKED
 
-#endif    // Spanish resources
+#endif    // Spanish (Spain, International Sort) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

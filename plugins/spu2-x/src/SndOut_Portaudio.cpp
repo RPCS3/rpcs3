@@ -24,17 +24,17 @@
 
 #include "wchar.h"
 
+#include <vector>
+
 #ifdef __WIN32__
 #include "pa_win_wasapi.h"
 #endif
 
-#ifdef __LINUX__
-int PaLinuxCallback( const void *inputBuffer, void *outputBuffer,
+int PaCallback( const void *inputBuffer, void *outputBuffer,
 	unsigned long framesPerBuffer,
 	const PaStreamCallbackTimeInfo* timeInfo,
 	PaStreamCallbackFlags statusFlags,
 	void *userData );
-#endif
 
 class Portaudio : public SndOutModule
 {
@@ -48,6 +48,9 @@ private:
 	bool m_UseHardware;
 
 	bool m_WasapiExclusiveMode;
+	
+	bool m_SuggestedLatencyMinimal;
+	int m_SuggestedLatencyMS;
 
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// Instance vars
@@ -59,16 +62,7 @@ private:
 	bool started;
 	PaStream* stream;
 
-#ifndef __LINUX__
-        static int PaCallback( const void *inputBuffer, void *outputBuffer,
-                unsigned long framesPerBuffer,
-                const PaStreamCallbackTimeInfo* timeInfo,
-                PaStreamCallbackFlags statusFlags,
-                void *userData )
-        {
-                return PA.ActualPaCallback(inputBuffer,outputBuffer,framesPerBuffer,timeInfo,statusFlags,userData);
-        }
-#endif
+	std::vector<const PaDeviceInfo*> devices;
 
 public:
 	int ActualPaCallback( const void *inputBuffer, void *outputBuffer,
@@ -92,6 +86,8 @@ public:
 	Portaudio()
 	{
 		m_ApiId=-1;
+		m_SuggestedLatencyMinimal = true;
+		m_SuggestedLatencyMS = 20;
 	}
 
 	s32 Init()
@@ -177,7 +173,7 @@ public:
 				deviceIndex,
 				2,
 				paInt32,
-				SndOutPacketSize/(float)SampleRate, // 0.2f,
+				m_SuggestedLatencyMinimal?(SndOutPacketSize/(float)SampleRate):(m_SuggestedLatencyMS/1000.0f),
 				infoPtr
 			};
 
@@ -185,11 +181,8 @@ public:
 				NULL, &outParams, SampleRate,
 				SndOutPacketSize,
 				paNoFlag,
-#ifndef __LINUX__
 				PaCallback,
-#else
-				PaLinuxCallback,
-#endif
+
 				NULL);
 		}
 		else
@@ -254,9 +247,225 @@ public:
 		}
 	}
 
-	virtual void Configure(uptr parent)
+	////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////
+#ifdef WIN32
+private:
+	
+	bool _ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 	{
+		int wmId,wmEvent;
+		int tSel = 0;
+
+		switch(uMsg)
+		{
+			case WM_INITDIALOG:
+			{
+				wchar_t temp[128];
+								
+				for(int i=0;i<Pa_GetDeviceCount();i++)
+				{
+					const PaDeviceInfo * info = Pa_GetDeviceInfo(i);
+			
+					devices.push_back(info);
+				}
+				
+				SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_RESETCONTENT,0,0);
+				SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)"Default Device");
+				SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETCURSEL,0,0);
+
+				SendMessage(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_RESETCONTENT,0,0);
+				SendMessageA(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_ADDSTRING,0,(LPARAM)"Unspecified");
+				int idx = 0;
+				for(int i=0;i<Pa_GetHostApiCount();i++)
+				{
+					const PaHostApiInfo * apiinfo = Pa_GetHostApiInfo(i);
+					if(apiinfo->deviceCount > 0)
+					{
+						SendMessageA(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_ADDSTRING,0,(LPARAM)apiinfo->name);
+						SendMessageA(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_SETITEMDATA,i+1,apiinfo->type);
+					}
+					if(apiinfo->type == m_ApiId)
+					{
+						idx = i+1;
+					}
+				}
+				SendMessage(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_SETCURSEL,idx,0);
+				
+				if(idx > 0)
+				{
+					int api_idx = idx-1;
+					SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_RESETCONTENT,0,0);
+					SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)"Default Device");
+					SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,0,-1);
+					int idx=0;
+					int i=1,j=0;
+					for(std::vector<const PaDeviceInfo*>::iterator it=devices.begin(); it != devices.end(); it++, j++)
+					{
+						const PaDeviceInfo* info = *it;
+						if(info->hostApi == api_idx && info->maxOutputChannels > 0)
+						{
+							SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)info->name);
+							SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,i,j);			
+							if(wxString::FromAscii(info->name) == m_Device)
+							{
+								idx = i;
+							}
+							i++;
+						}
+					}
+					SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETCURSEL,idx,0);
+				}
+
+				INIT_SLIDER( IDC_LATENCY, 10, 200, 10, 1, 1 );
+				SendMessage(GetDlgItem(hWnd,IDC_LATENCY),TBM_SETPOS,TRUE,m_SuggestedLatencyMS);
+				swprintf_s(temp, L"%d ms",m_SuggestedLatencyMS);
+				SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
+
+				if(m_SuggestedLatencyMinimal)
+					SET_CHECK( IDC_MINIMIZE, true );
+				else
+					SET_CHECK( IDC_MANUAL, true );
+				
+				SET_CHECK( IDC_EXCLUSIVE, m_WasapiExclusiveMode );
+			}
+			break;
+
+			case WM_COMMAND:
+			{
+				//wchar_t temp[128];
+
+				wmId    = LOWORD(wParam);
+				wmEvent = HIWORD(wParam);
+				// Parse the menu selections:
+				switch (wmId)
+				{
+					case IDOK:
+					{
+						int idx = (int)SendMessage(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_GETCURSEL,0,0);
+						m_ApiId = SendMessage(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_GETITEMDATA,idx,0);
+
+						idx = (int)SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_GETCURSEL,0,0);
+						idx = SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_GETITEMDATA,idx,0);
+						if(idx >= 0)
+							m_Device = wxString::FromAscii( devices.at(idx)->name );
+						else
+							m_Device = L"default";
+						
+						m_SuggestedLatencyMS = (int)SendMessage( GetDlgItem( hWnd, IDC_LATENCY ), TBM_GETPOS, 0, 0 );
+
+						if( m_SuggestedLatencyMS < 10 ) m_SuggestedLatencyMS = 10;
+						if( m_SuggestedLatencyMS > 200 ) m_SuggestedLatencyMS = 200;
+
+						m_SuggestedLatencyMinimal = SendMessage(GetDlgItem(hWnd,IDC_MINIMIZE),BM_GETCHECK,0,0)==BST_CHECKED;
+						
+						m_WasapiExclusiveMode = SendMessage(GetDlgItem(hWnd,IDC_EXCLUSIVE),BM_GETCHECK,0,0)==BST_CHECKED;
+
+						EndDialog(hWnd,0);
+					}
+					break;
+
+					case IDCANCEL:
+						EndDialog(hWnd,0);
+					break;
+
+					case IDC_PA_HOSTAPI:
+					{
+						if(wmEvent == CBN_SELCHANGE)
+						{
+							int api_idx = (int)SendMessage(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_GETCURSEL,0,0)-1;
+							int apiId = SendMessageA(GetDlgItem(hWnd,IDC_PA_HOSTAPI),CB_GETITEMDATA,api_idx,0);
+							SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_RESETCONTENT,0,0);
+							SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)"Default Device");
+							SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,0,-1);
+							int idx=0;
+							int i=1,j=0;
+							for(std::vector<const PaDeviceInfo*>::iterator it=devices.begin(); it != devices.end(); it++, j++)
+							{
+								const PaDeviceInfo* info = *it;
+								if(info->hostApi == api_idx && info->maxOutputChannels > 0)
+								{
+									SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)info->name);
+									SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,i,j);
+									i++;
+								}
+							}
+							SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETCURSEL,idx,0);
+						}
+					}
+					break;
+
+					default:
+						return FALSE;
+				}
+			}
+			break;
+
+			case WM_HSCROLL:
+			{
+				wmId    = LOWORD(wParam);
+				wmEvent = HIWORD(wParam);
+				switch(wmId)
+				{
+					//case TB_ENDTRACK:
+					//case TB_THUMBPOSITION:
+					case TB_LINEUP:
+					case TB_LINEDOWN:
+					case TB_PAGEUP:
+					case TB_PAGEDOWN:
+						wmEvent = (int)SendMessage((HWND)lParam,TBM_GETPOS,0,0);
+					case TB_THUMBTRACK:
+					{
+						wchar_t temp[128];
+						if( wmEvent < 10 ) wmEvent = 10;
+						if( wmEvent > 200 ) wmEvent = 200;
+						SendMessage((HWND)lParam,TBM_SETPOS,TRUE,wmEvent);
+						swprintf_s(temp, L"%d ms",wmEvent);
+						SetWindowText(GetDlgItem(hWnd,IDC_LATENCY_LABEL),temp);
+						break;
+					}
+					default:
+						return FALSE;
+				}
+			}
+			break;
+
+			default:
+				return FALSE;
+		}
+		return TRUE;
 	}
+
+	static BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam);
+	static BOOL CALLBACK DSEnumCallback( LPGUID lpGuid, LPCTSTR lpcstrDescription, LPCTSTR lpcstrModule, LPVOID lpContext );
+
+public:
+	virtual void Configure(uptr parent)
+	{		
+		PaError err = Pa_Initialize(); // Initialization can be done multiple times, PA keeps a counter
+		if( err != paNoError )
+		{
+			fprintf(stderr,"* SPU2-X: PortAudio error: %s\n", Pa_GetErrorText( err ) );
+			return;
+		}
+		// keep portaudio initialized until the dialog closes
+
+		INT_PTR ret;
+		ret=DialogBoxParam(hInstance,MAKEINTRESOURCE(IDD_PORTAUDIO),(HWND)parent,(DLGPROC)ConfigProc,1);
+		if(ret==-1)
+		{
+			MessageBox((HWND)parent,L"Error Opening the config dialog.",L"OMG ERROR!",MB_OK | MB_SETFOREGROUND);
+			return;
+		}
+
+		Pa_Terminate();
+	}
+#else
+	virtual void Configure(uptr parent)
+	{		
+	}
+#endif
 
 	virtual bool Is51Out() const { return false; }
 
@@ -302,6 +511,11 @@ public:
 		SetApiSettings(api);
 
 		m_WasapiExclusiveMode = CfgReadBool( L"PORTAUDIO", L"Wasapi_Exclusive_Mode", false);
+		m_SuggestedLatencyMinimal = CfgReadBool( L"PORTAUDIO", L"Minimal_Suggested_Latency", true);
+		m_SuggestedLatencyMS = CfgReadInt( L"PORTAUDIO", L"Manual_Suggested_Latency_MS", 20);
+		
+		if( m_SuggestedLatencyMS < 10 ) m_SuggestedLatencyMS = 10;
+		if( m_SuggestedLatencyMS > 200 ) m_SuggestedLatencyMS = 200;
 	}
 
 	void SetApiSettings(wxString api)
@@ -349,19 +563,24 @@ public:
 		CfgWriteStr( L"PORTAUDIO", L"Device", m_Device);
 
 		CfgWriteBool( L"PORTAUDIO", L"Wasapi_Exclusive_Mode", m_WasapiExclusiveMode);
+		CfgWriteBool( L"PORTAUDIO", L"Minimal_Suggested_Latency", m_SuggestedLatencyMinimal);
+		CfgWriteInt( L"PORTAUDIO", L"Manual_Suggested_Latency_MS", m_SuggestedLatencyMS);
 	}
 
 } static PA;
 
-#ifdef __LINUX__
-	int PaLinuxCallback( const void *inputBuffer, void *outputBuffer,
-		unsigned long framesPerBuffer,
-		const PaStreamCallbackTimeInfo* timeInfo,
-		PaStreamCallbackFlags statusFlags,
-		void *userData )
-	{
-		return PA.ActualPaCallback(inputBuffer,outputBuffer,framesPerBuffer,timeInfo,statusFlags,userData);
-	}
-#endif
+int PaCallback( const void *inputBuffer, void *outputBuffer,
+	unsigned long framesPerBuffer,
+	const PaStreamCallbackTimeInfo* timeInfo,
+	PaStreamCallbackFlags statusFlags,
+	void *userData )
+{
+	return PA.ActualPaCallback(inputBuffer,outputBuffer,framesPerBuffer,timeInfo,statusFlags,userData);
+}
+
+BOOL CALLBACK Portaudio::ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
+{
+	return PA._ConfigProc( hWnd, uMsg, wParam, lParam );
+}
 
 SndOutModule *PortaudioOut = &PA;

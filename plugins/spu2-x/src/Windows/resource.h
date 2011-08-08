@@ -12,6 +12,7 @@
 #define IDB_SPU2X_SMALL                 116
 #define IDD_CONFIG_SOUNDTOUCH           117
 #define IDD_CONFIG_DEBUG                118
+#define IDD_PORTAUDIO                   119
 #define IDC_EFFECTS_DISABLE             1001
 #define IDC_DUMPREGS                    1003
 #define IDC_DUMPMEM                     1004
@@ -34,6 +35,7 @@
 #define IDC_OUTCONF                     1028
 #define IDC_DSP_ENABLE                  1029
 #define IDC_DS_DEVICE                   1032
+#define IDC_PA_DEVICE                   1033
 #define IDC_DBG_OVERRUNS                1038
 #define IDC_DBG_CACHE                   1039
 #define IDC_LATENCY_SLIDER              1040
@@ -59,14 +61,19 @@
 #define IDC_DEBUG_VISUAL                1066
 #define IDC_VOLUME_LABEL                1067
 #define IDC_VOLUME_SLIDER               1068
+#define IDC_MINIMIZE                    1069
+#define IDC_MANUAL                      1070
+#define IDC_PA_HOSTAPI                  1071
+#define IDC_LATENCY                     1072
+#define IDC_EXCLUSIVE                   1073
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        119
+#define _APS_NEXT_RESOURCE_VALUE        120
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1069
+#define _APS_NEXT_CONTROL_VALUE         1074
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

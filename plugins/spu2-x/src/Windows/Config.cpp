@@ -86,6 +86,7 @@ void ReadSettings()
 	Config_WaveOut.NumBuffers = CfgReadInt( L"WAVEOUT", L"Buffer_Count", 4 );
 
 	DSoundOut->ReadSettings();
+	PortaudioOut->ReadSettings();
 
 	SoundtouchCfg::ReadSettings();
 	DebugConfig::ReadSettings();
@@ -126,7 +127,8 @@ void WriteSettings()
 	CfgWriteStr(L"DSP PLUGIN",L"Filename",dspPlugin);
 	CfgWriteInt(L"DSP PLUGIN",L"ModuleNum",dspPluginModule);
 	CfgWriteBool(L"DSP PLUGIN",L"Enabled",dspPluginEnabled);
-
+	
+	PortaudioOut->WriteSettings();
 	DSoundOut->WriteSettings();
 	SoundtouchCfg::WriteSettings();
 	DebugConfig::WriteSettings();
