@@ -24,7 +24,8 @@ static const int LATENCY_MAX = 3000;
 static const int LATENCY_MAX = 750;
 #endif
 
-static const int LATENCY_MIN = 50;
+static const int LATENCY_MIN = 3;
+static const int LATENCY_MIN_TS = 50;
 
 // MIXING
 int Interpolation = 4;
@@ -70,6 +71,11 @@ void ReadSettings()
 		if ( FinalVolume > 1.0f) FinalVolume = 1.0f;
 	numSpeakers = CfgReadInt( L"OUTPUT", L"XAudio2_SpeakerConfiguration", 0);
 	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
+
+	if((SynchMode == 0) && (SndOutLatencyMS < LATENCY_MIN_TS)) // can't use low-latency with timestretcher atm
+		SndOutLatencyMS = LATENCY_MIN_TS;
+	else if(SndOutLatencyMS < LATENCY_MIN)
+		SndOutLatencyMS = LATENCY_MIN;
 
 	wchar_t omodid[128];
 	CfgReadStr( L"OUTPUT", L"Output_Module", omodid, 127, XAudio2Out->GetIdent() );
@@ -179,7 +185,8 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 			}
 			SendDialogMsg( hWnd, IDC_OUTPUT, CB_SETCURSEL, OutputModule, 0 );
 
-			int minexp = (int)(pow( (double)LATENCY_MIN+1, 1.0/3.0 ) * 128.0);
+			double minlat = (SynchMode == 0)?LATENCY_MIN_TS:LATENCY_MIN;
+			int minexp = (int)(pow( minlat+1, 1.0/3.0 ) * 128.0);
 			int maxexp = (int)(pow( (double)LATENCY_MAX+2, 1.0/3.0 ) * 128.0);
 			INIT_SLIDER( IDC_LATENCY_SLIDER, minexp, maxexp, 200, 42, 1 );
 
@@ -248,6 +255,26 @@ BOOL CALLBACK ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 					DebugEnabled = dbgtmp;
 				}
 				break;
+
+				case IDC_SYNCHMODE:
+				{
+					if(wmEvent == CBN_SELCHANGE)
+					{
+						int sMode = (int)SendDialogMsg( hWnd, IDC_SYNCHMODE, CB_GETCURSEL,0,0 );
+						double minlat = (sMode == 0)?LATENCY_MIN_TS:LATENCY_MIN;
+						int minexp = (int)(pow( minlat+1, 1.0/3.0 ) * 128.0);
+						int maxexp = (int)(pow( (double)LATENCY_MAX+2, 1.0/3.0 ) * 128.0);
+						INIT_SLIDER( IDC_LATENCY_SLIDER, minexp, maxexp, 200, 42, 1 );
+						
+						int curpos = (int)SendMessage(GetDlgItem( hWnd, IDC_LATENCY_SLIDER ),TBM_GETPOS,0,0);
+						double res = pow( curpos / 128.0, 3.0 );
+						curpos = (int)res;
+						swprintf_s(temp,L"%d ms (avg)",curpos);
+						SetDlgItemText(hWnd,IDC_LATENCY_LABEL,temp);
+					}
+				}
+				break;
+
 
 				case IDC_OPEN_CONFIG_SOUNDTOUCH:
 					SoundtouchCfg::OpenDialog( hWnd );
