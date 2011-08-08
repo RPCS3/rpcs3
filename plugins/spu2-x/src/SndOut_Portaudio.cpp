@@ -190,11 +190,7 @@ public:
 			err = Pa_OpenDefaultStream( &stream,
 				0, 2, paInt32, 48000,
 				SndOutPacketSize,
-#ifndef __LINUX__
 				PaCallback,
-#else
-				PaLinuxCallback,
-#endif
 				NULL );
 		}
 		if( err != paNoError )
@@ -571,9 +567,11 @@ int PaCallback( const void *inputBuffer, void *outputBuffer,
 	return PA.ActualPaCallback(inputBuffer,outputBuffer,framesPerBuffer,timeInfo,statusFlags,userData);
 }
 
+#ifdef WIN32
 BOOL CALLBACK Portaudio::ConfigProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 {
 	return PA._ConfigProc( hWnd, uMsg, wParam, lParam );
 }
+#endif
 
 SndOutModule *PortaudioOut = &PA;
