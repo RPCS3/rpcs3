@@ -240,6 +240,9 @@
     <ClCompile Include="..\PS2E-spu2.cpp">
       <Filter>Source Files\PluginInterface</Filter>
     </ClCompile>
+    <ClCompile Include="..\DplIIdecoder.cpp">
+      <Filter>Source Files\Sound Output</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\LGPL.txt">

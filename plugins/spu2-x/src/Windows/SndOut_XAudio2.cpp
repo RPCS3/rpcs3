@@ -200,6 +200,7 @@ private:
 				case 4: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT; break;
 				case 5: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT; break;
 				case 6: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT | SPEAKER_LOW_FREQUENCY; break;
+				case 8: chanMask |= SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT | SPEAKER_SIDE_LEFT | SPEAKER_SIDE_RIGHT | SPEAKER_LOW_FREQUENCY; break;
 			}
 			_init( pXAudio2, chanMask );
 		}
@@ -316,9 +317,21 @@ public:
 
 				case 6:
 				case 7:
-					ConLog( "* SPU2 > 5.1 speaker expansion enabled.\n" );
-					voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );   //"normal" stereo upmix
-					//voiceContext = new StreamingVoice<Stereo51Out16DplII>( pXAudio2 );  //gigas PLII
+					switch(dplLevel)
+					{
+					case 0:
+						ConLog( "* SPU2 > 5.1 speaker expansion enabled.\n" );
+						voiceContext = new StreamingVoice<Stereo51Out16>( pXAudio2 );   //"normal" stereo upmix
+						break;
+					case 1:
+						ConLog( "* SPU2 > 5.1 speaker expansion with basic ProLogic dematrixing enabled.\n" );
+						voiceContext = new StreamingVoice<Stereo51Out16Dpl>( pXAudio2 ); // basic Dpl decoder without rear stereo balancing
+						break;
+					case 2:
+						ConLog( "* SPU2 > 5.1 speaker expansion with experimental ProLogicII dematrixing enabled.\n" );
+						voiceContext = new StreamingVoice<Stereo51Out16DplII>( pXAudio2 ); //gigas PLII
+						break;
+					}
 				break;
 
 				default:	// anything 8 or more gets the 7.1 treatment!

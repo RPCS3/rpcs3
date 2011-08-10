@@ -234,6 +234,7 @@ template void SndBuffer::ReadSamples(Stereo21Out16*);
 template void SndBuffer::ReadSamples(Stereo40Out16*);
 template void SndBuffer::ReadSamples(Stereo41Out16*);
 template void SndBuffer::ReadSamples(Stereo51Out16*);
+template void SndBuffer::ReadSamples(Stereo51Out16Dpl*);
 template void SndBuffer::ReadSamples(Stereo51Out16DplII*);
 template void SndBuffer::ReadSamples(Stereo71Out16*);
 
@@ -242,6 +243,8 @@ template void SndBuffer::ReadSamples(Stereo21Out32*);
 template void SndBuffer::ReadSamples(Stereo40Out32*);
 template void SndBuffer::ReadSamples(Stereo41Out32*);
 template void SndBuffer::ReadSamples(Stereo51Out32*);
+template void SndBuffer::ReadSamples(Stereo51Out32Dpl*);
+template void SndBuffer::ReadSamples(Stereo51Out32DplII*);
 template void SndBuffer::ReadSamples(Stereo71Out32*);
 
 void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)

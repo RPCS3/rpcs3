@@ -104,7 +104,7 @@ private:
 			return 0;
 		}
 	};
-
+	
 public:
 	SampleReader* ActualPaCallback;
 
@@ -189,10 +189,8 @@ public:
 				case 3: speakers = 8; break; // Surround 7.1
 				default: speakers = 2;
 			}
-			actualUsedChannels = devinfo->maxOutputChannels;
-			if(actualUsedChannels > speakers)
-				actualUsedChannels = speakers;
-			
+			actualUsedChannels = std::min(speakers, devinfo->maxOutputChannels);
+
 			switch( actualUsedChannels )
 			{
 				case 2:
@@ -217,14 +215,28 @@ public:
 
 				case 6:
 				case 7:
-					ConLog( "* SPU2 > 5.1 speaker expansion enabled.\n" );
-					ActualPaCallback = new ConvertedSampleReader<Stereo51Out32>(&writtenSoFar);   //"normal" stereo upmix
-					//ActualPaCallback = new ConvertedSampleReader<Stereo51Out32DplII>(&writtenSoFar); //gigas PLII
+					switch(dplLevel)
+					{
+					case 0:
+						ConLog( "* SPU2 > 5.1 speaker expansion enabled.\n" );
+						ActualPaCallback = new ConvertedSampleReader<Stereo51Out32>(&writtenSoFar);   //"normal" stereo upmix
+						break;
+					case 1:
+						ConLog( "* SPU2 > 5.1 speaker expansion with basic ProLogic dematrixing enabled.\n" );
+						ActualPaCallback = new ConvertedSampleReader<Stereo51Out32Dpl>(&writtenSoFar); // basic Dpl decoder without rear stereo balancing
+						break;
+					case 2:
+						ConLog( "* SPU2 > 5.1 speaker expansion with experimental ProLogicII dematrixing enabled.\n" );
+						ActualPaCallback = new ConvertedSampleReader<Stereo51Out32DplII>(&writtenSoFar); //gigas PLII
+						break;
+					}
+					actualUsedChannels = 6; // we do not support 7.0 or 6.2 configurations, downgrade to 5.1
 				break;
 
 				default:	// anything 8 or more gets the 7.1 treatment!
 					ConLog( "* SPU2 > 7.1 speaker expansion enabled.\n" );
 					ActualPaCallback = new ConvertedSampleReader<Stereo71Out32>(&writtenSoFar);
+					actualUsedChannels = 8; // we do not support 7.2 or more, downgrade to 7.1
 				break;
 			}
 

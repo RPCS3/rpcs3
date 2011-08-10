@@ -58,6 +58,8 @@ wchar_t dspPlugin[256];
 
 int numSpeakers = 0;
 
+int dplLevel = 0;
+
 /*****************************************************************************/
 
 void ReadSettings()
@@ -69,7 +71,8 @@ void ReadSettings()
 	postprocess_filter_dealias = CfgReadBool( L"MIXING", L"DealiasFilter", false );
 	FinalVolume = ((float)CfgReadInt( L"MIXING", L"FinalVolume", 100 )) / 100;
 		if ( FinalVolume > 1.0f) FinalVolume = 1.0f;
-	numSpeakers = CfgReadInt( L"OUTPUT", L"XAudio2_SpeakerConfiguration", 0);
+	numSpeakers = CfgReadInt( L"OUTPUT", L"SpeakerConfiguration", 0);
+	dplLevel = CfgReadInt( L"OUTPUT", L"DplDecodingLevel", 0);
 	SndOutLatencyMS = CfgReadInt(L"OUTPUT",L"Latency", 150);
 
 	if((SynchMode == 0) && (SndOutLatencyMS < LATENCY_MIN_TS)) // can't use low-latency with timestretcher atm
@@ -124,7 +127,8 @@ void WriteSettings()
 	CfgWriteStr(L"OUTPUT",L"Output_Module", mods[OutputModule]->GetIdent() );
 	CfgWriteInt(L"OUTPUT",L"Latency", SndOutLatencyMS);
 	CfgWriteInt(L"OUTPUT",L"Synch_Mode", SynchMode);
-	CfgWriteInt(L"OUTPUT",L"XAudio2_SpeakerConfiguration", numSpeakers);
+	CfgWriteInt(L"OUTPUT",L"SpeakerConfiguration", numSpeakers);
+	CfgWriteInt( L"OUTPUT", L"DplDecodingLevel", dplLevel);
 
 	if( Config_WaveOut.Device.empty() ) Config_WaveOut.Device = L"default";
 	CfgWriteStr(L"WAVEOUT",L"Device",Config_WaveOut.Device);
