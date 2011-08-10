@@ -22,9 +22,8 @@ static const u8 sLogTable[256] = {
 static float Gfl=0,Gfr=0;
 static float LMax=0,RMax=0;
 
-static float LAccum=0;
-static float RAccum=0;
-static s32 ANum=0;
+static float AccL=0;
+static float AccR=0;
 
 const float Scale = 4294967296.0f; // tweak this value to change the overall output volume
 
@@ -46,61 +45,52 @@ extern void ResetDplIIDecoder()
 	Gfr=0;
 	LMax=0;
 	RMax=0;
-	LAccum=0;
-	RAccum=0;
-	ANum=0;
+	AccL=0;
+	AccR=0;
 }
 
 void ProcessDplIISample32( const StereoOut32& src, Stereo51Out32DplII * s)
 {
-	float ValL = src.Left  / (float)(1<<(SndOutVolumeShift+16));
-	float ValR = src.Right / (float)(1<<(SndOutVolumeShift+16));
+	float IL = src.Left  / (float)(1<<(SndOutVolumeShift+16));
+	float IR = src.Right / (float)(1<<(SndOutVolumeShift+16));
 
-	float XL = abs(ValL);
-	float XR = abs(ValR);
+	// Calculate center channel and LFE
+	float C = (IL+IR) * 0.5f;
+	float SUB = C; // no need to lowpass, the speaker amplifier should take care of it
 
-	if(XL>LMax) LMax = XL; // 23
-	if(XR>RMax) RMax = XR;
+	float L = IL - C; // Effective L/R data
+	float R = IR - C;
 
-	ANum++;
-	if(ANum>=128)
-	{
-		ANum=0;
-		LAccum = (LAccum * 0.9f + LMax * 0.1f);
-		RAccum = (RAccum * 0.9f + RMax * 0.1f);
+	// Peak L/R
+	float PL = abs(L);
+	float PR = abs(R);
 
-		LMax = 0;
-		RMax = 0;
+	AccL += (PL-AccL)*0.1f;
+	AccR += (PR-AccR)*0.1f;
+	
+	// Calculate power balance
+	float Balance = (AccR-AccL); // -1 .. 1
 
-		float Tfl=RAccum/std::max(1.0f,LAccum);
-		float Tfr=LAccum/std::max(1.0f,RAccum);
+	// If the power levels are different, then the audio is meant for the front speakers
+	float Frontness = abs(Balance);
+	float Rearness = 1-Frontness; // And the other way around
 
-		float gMax = std::max(1.0f,std::max(Tfl,Tfr));
-		Tfl = Tfl/gMax;
-		Tfr = Tfr/gMax;
+	// Equalize the power levels for L/R
+	float B = std::min(0.5f,std::max(-0.5f,Balance));
 
-		if(Tfl<0.00001f) Tfl=0.00001f;
-		if(Tfr<0.00001f) Tfr=0.00001f;
+	float VL = L / (1-B); // if B>0, it means R>L, so increase L, else decrease L 
+	float VR = R / (1+B); // vice-versa
 
-		Gfl = Gfl * 0.78f + Tfl * 0.22f;
-		Gfr = Gfr * 0.78f + Tfr * 0.22f;
-	}
+	// 1.73+1.22 = 2.94; 2.94 = 0.34 = 0.9996; Close enough... xcept VL/VR are equalized to < 1
+	const float RearScale = 0.34f * 2;
 
-	float C = (ValL+ValR) * 0.5f;
+	float SL = (VR*1.73f - VL*1.22f) * RearScale * Rearness;
+	float SR = (VR*1.22f - VL*1.73f) * RearScale * Rearness;
+	// Possible experiment: Play with stereo expension levels on rear
 
-	float L = ValL - C;
-	float R = ValR - C;
-
-	float SUB = C;
-
-	float Cfl = (1+log(Gfl+1)/log(2.0f));
-	float Cfr = (1+log(Gfr+1)/log(2.0f));
-
-	float VL = L * Cfl;
-	float VR = R * Cfr;
-
-	float SL = (VR*1.73f - VL*1.22f)*0.25*Cfr; // not sure about this
-	float SR = (VR*1.22f - VL*1.73f)*0.25*Cfl;
+	// Adjust the volume of the front speakers based on what we calculated above
+	L *= Frontness;
+	R *= Frontness;
 		
 	s32 CX  = (s32)(C * AddCLR);
 
