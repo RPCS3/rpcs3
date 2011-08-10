@@ -57,7 +57,6 @@ public:
 	void Close() { }
 	s32  Test() const { return 0; }
 	void Configure(uptr parent)  { }
-	bool Is51Out() const { return false; }
 	int GetEmptySampleCount()  { return 0; }
 
 	const wchar_t* GetIdent() const
@@ -229,16 +228,21 @@ template<typename T> void SndBuffer::ReadSamples(T* bData)
 
 template void SndBuffer::ReadSamples(StereoOut16*);
 template void SndBuffer::ReadSamples(StereoOut32*);
+
 //template void SndBuffer::ReadSamples(StereoOutFloat*);
 template void SndBuffer::ReadSamples(Stereo21Out16*);
-template void SndBuffer::ReadSamples(StereoQuadOut16*);
+template void SndBuffer::ReadSamples(Stereo40Out16*);
 template void SndBuffer::ReadSamples(Stereo41Out16*);
 template void SndBuffer::ReadSamples(Stereo51Out16*);
 template void SndBuffer::ReadSamples(Stereo51Out16DplII*);
 template void SndBuffer::ReadSamples(Stereo71Out16*);
-//template void SndBuffer::ReadSamples(Stereo21Out32*);
-//template void SndBuffer::ReadSamples(Stereo41Out32*);
-//template void SndBuffer::ReadSamples(Stereo51Out32*);
+
+template void SndBuffer::ReadSamples(Stereo20Out32*);
+template void SndBuffer::ReadSamples(Stereo21Out32*);
+template void SndBuffer::ReadSamples(Stereo40Out32*);
+template void SndBuffer::ReadSamples(Stereo41Out32*);
+template void SndBuffer::ReadSamples(Stereo51Out32*);
+template void SndBuffer::ReadSamples(Stereo71Out32*);
 
 void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)
 {

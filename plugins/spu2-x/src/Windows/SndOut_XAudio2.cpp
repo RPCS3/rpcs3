@@ -306,7 +306,7 @@ public:
 
 				case 4:
 					ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]\n" );
-					voiceContext = new StreamingVoice<StereoQuadOut16>( pXAudio2 );
+					voiceContext = new StreamingVoice<Stereo40Out16>( pXAudio2 );
 				break;
 
 				case 5:
@@ -367,9 +367,7 @@ public:
 	virtual void Configure(uptr parent)
 	{
 	}
-
-	virtual bool Is51Out() const { return false; }
-
+	
 	s32  Test() const
 	{
 		return 0;

@@ -280,9 +280,7 @@ public:
 			return;
 		}
 	}
-
-	virtual bool Is51Out() const { return false; }
-
+	
 	s32 Test() const
 	{
 		if (waveOutGetNumDevs() == 0) {

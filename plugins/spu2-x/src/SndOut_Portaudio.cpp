@@ -59,33 +59,62 @@ private:
 	int writtenLastTime;
 	int availableLastTime;
 
+	int actualUsedChannels;
+
 	bool started;
 	PaStream* stream;
-	
-public:
-	int ActualPaCallback( const void *inputBuffer, void *outputBuffer,
-		unsigned long framesPerBuffer,
-		const PaStreamCallbackTimeInfo* timeInfo,
-		PaStreamCallbackFlags statusFlags,
-		void *userData )
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	// Stuff necessary for speaker expansion
+	class SampleReader
 	{
-		StereoOut32* p1 = (StereoOut32*)outputBuffer;
+	public:
+		virtual int ReadSamples( const void *inputBuffer, void *outputBuffer,
+			unsigned long framesPerBuffer,
+			const PaStreamCallbackTimeInfo* timeInfo,
+			PaStreamCallbackFlags statusFlags,
+			void *userData ) = 0;
+	};
 
-		int packets = framesPerBuffer / SndOutPacketSize;
+	template<class T>
+	class ConvertedSampleReader : public SampleReader
+	{
+		int* written;
+	public:
+		ConvertedSampleReader(int* pWritten)
+		{
+			written = pWritten;
+		}
 
-		for(int p=0; p<packets; p++, p1+=SndOutPacketSize )
-			SndBuffer::ReadSamples( p1 );
+		virtual int ReadSamples( const void *inputBuffer, void *outputBuffer,
+			unsigned long framesPerBuffer,
+			const PaStreamCallbackTimeInfo* timeInfo,
+			PaStreamCallbackFlags statusFlags,
+			void *userData )
+		{
+			T* p1 = (T*)outputBuffer;
 
-		writtenSoFar += packets * SndOutPacketSize;
+			int packets = framesPerBuffer / SndOutPacketSize;
 
-		return 0;
-	}
+			for(int p=0; p<packets; p++, p1+=SndOutPacketSize )
+				SndBuffer::ReadSamples( p1 );
+
+			(*written) += packets * SndOutPacketSize;
+
+			return 0;
+		}
+	};
+
+public:
+	SampleReader* ActualPaCallback;
 
 	Portaudio()
 	{
 		m_ApiId=-1;
 		m_SuggestedLatencyMinimal = true;
 		m_SuggestedLatencyMS = 20;
+
+		actualUsedChannels = 0;
 	}
 
 	s32 Init()
@@ -147,6 +176,57 @@ public:
 		if(deviceIndex>=0)
 		{
 			void* infoPtr = NULL;
+			
+			const PaDeviceInfo * devinfo = Pa_GetDeviceInfo(deviceIndex);
+			const PaHostApiInfo * apiinfo = Pa_GetHostApiInfo(devinfo->hostApi);
+			
+			int speakers;		
+			switch(numSpeakers) // speakers = (numSpeakers + 1) *2; ?
+			{
+				case 0: speakers = 2; break; // Stereo
+				case 1: speakers = 4; break; // Quadrafonic
+				case 2: speakers = 6; break; // Surround 5.1
+				case 3: speakers = 8; break; // Surround 7.1
+				default: speakers = 2;
+			}
+			actualUsedChannels = devinfo->maxOutputChannels;
+			if(actualUsedChannels > speakers)
+				actualUsedChannels = speakers;
+			
+			switch( actualUsedChannels )
+			{
+				case 2:
+					ConLog( "* SPU2 > Using normal 2 speaker stereo output.\n" );
+					ActualPaCallback = new ConvertedSampleReader<Stereo20Out32>(&writtenSoFar);
+				break;
+
+				case 3:
+					ConLog( "* SPU2 > 2.1 speaker expansion enabled.\n" );
+					ActualPaCallback = new ConvertedSampleReader<Stereo21Out32>(&writtenSoFar);
+				break;
+
+				case 4:
+					ConLog( "* SPU2 > 4 speaker expansion enabled [quadraphenia]\n" );
+					ActualPaCallback = new ConvertedSampleReader<Stereo40Out32>(&writtenSoFar);
+				break;
+
+				case 5:
+					ConLog( "* SPU2 > 4.1 speaker expansion enabled.\n" );
+					ActualPaCallback = new ConvertedSampleReader<Stereo41Out32>(&writtenSoFar);
+				break;
+
+				case 6:
+				case 7:
+					ConLog( "* SPU2 > 5.1 speaker expansion enabled.\n" );
+					ActualPaCallback = new ConvertedSampleReader<Stereo51Out32>(&writtenSoFar);   //"normal" stereo upmix
+					//ActualPaCallback = new ConvertedSampleReader<Stereo51Out32DplII>(&writtenSoFar); //gigas PLII
+				break;
+
+				default:	// anything 8 or more gets the 7.1 treatment!
+					ConLog( "* SPU2 > 7.1 speaker expansion enabled.\n" );
+					ActualPaCallback = new ConvertedSampleReader<Stereo71Out32>(&writtenSoFar);
+				break;
+			}
 
 #ifdef __WIN32__
 			PaWasapiStreamInfo info = {
@@ -171,7 +251,7 @@ public:
 			//	PaTime suggestedLatency;
 			//	void *hostApiSpecificStreamInfo;
 				deviceIndex,
-				2,
+				actualUsedChannels,
 				paInt32,
 				m_SuggestedLatencyMinimal?(SndOutPacketSize/(float)SampleRate):(m_SuggestedLatencyMS/1000.0f),
 				infoPtr
@@ -188,7 +268,7 @@ public:
 		else
 		{
 			err = Pa_OpenDefaultStream( &stream,
-				0, 2, paInt32, 48000,
+				0, actualUsedChannels, paInt32, 48000,
 				SndOutPacketSize,
 				PaCallback,
 				NULL );
@@ -455,9 +535,7 @@ public:
 	{		
 	}
 #endif
-
-	virtual bool Is51Out() const { return false; }
-
+	
 	s32 Test() const
 	{
 		return 0;
@@ -564,7 +642,7 @@ int PaCallback( const void *inputBuffer, void *outputBuffer,
 	PaStreamCallbackFlags statusFlags,
 	void *userData )
 {
-	return PA.ActualPaCallback(inputBuffer,outputBuffer,framesPerBuffer,timeInfo,statusFlags,userData);
+	return PA.ActualPaCallback->ReadSamples(inputBuffer,outputBuffer,framesPerBuffer,timeInfo,statusFlags,userData);
 }
 
 #ifdef WIN32

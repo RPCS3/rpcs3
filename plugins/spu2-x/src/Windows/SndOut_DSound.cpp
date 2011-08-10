@@ -421,9 +421,7 @@ public:
 			return;
 		}
 	}
-
-	virtual bool Is51Out() const { return false; }
-
+	
 	s32 Test() const
 	{
 		return 0;

@@ -27,6 +27,7 @@ static const int SndOutPacketSize = 64;
 // downsamples 32 bit samples to 16 bit sound driver output (this way timestretching and
 // DSP effects get better precision results)
 static const int SndOutVolumeShift = 12;
+static const int SndOutVolumeShift32 = 16-SndOutVolumeShift; // shift up, not down
 
 // Samplerate of the SPU2. For accurate playback we need to match this
 // exactly.  Trying to scale samplerates and maintain SPU2's Ts timing accuracy
@@ -111,7 +112,7 @@ struct Stereo21Out16
 	}
 };
 
-struct StereoQuadOut16
+struct Stereo40Out16
 {
 	s16 Left;
 	s16 Right;
@@ -124,6 +125,22 @@ struct StereoQuadOut16
 		Right = src.Right >> SndOutVolumeShift;
 		LeftBack = src.Left >> SndOutVolumeShift;
 		RightBack = src.Right >> SndOutVolumeShift;
+	}
+};
+
+struct Stereo40Out32
+{
+	s32 Left;
+	s32 Right;
+	s32 LeftBack;
+	s32 RightBack;
+
+	void ResampleFrom( const StereoOut32& src )
+	{
+		Left = src.Left << SndOutVolumeShift32;
+		Right = src.Right << SndOutVolumeShift32;
+		LeftBack = src.Left << SndOutVolumeShift32;
+		RightBack = src.Right << SndOutVolumeShift32;
 	}
 };
 
@@ -314,11 +331,55 @@ struct Stereo71Out16
 	}
 };
 
+struct Stereo71Out32
+{
+	s32 Left;
+	s32 Right;
+	s32 Center;
+	s32 LFE;
+	s32 LeftBack;
+	s32 RightBack;
+	s32 LeftSide;
+	s32 RightSide;
+
+	void ResampleFrom( const StereoOut32& src )
+	{
+		Left = src.Left << SndOutVolumeShift32;
+		Right = src.Right << SndOutVolumeShift32;
+		Center = (src.Left + src.Right) << (SndOutVolumeShift32 - 1);
+		LFE = Center;
+		LeftBack = src.Left << SndOutVolumeShift32;
+		RightBack = src.Right << SndOutVolumeShift32;
+
+		LeftSide = src.Left << (SndOutVolumeShift32 - 1);
+		RightSide = src.Right << (SndOutVolumeShift32 - 1);
+	}
+};
+
+struct Stereo20Out32
+{
+	s32 Left;
+	s32 Right;
+	
+	void ResampleFrom( const StereoOut32& src )
+	{
+		Left = src.Left << SndOutVolumeShift32;
+		Right = src.Right << SndOutVolumeShift32;
+	}
+};
+
 struct Stereo21Out32
 {
 	s32 Left;
 	s32 Right;
 	s32 LFE;
+	
+	void ResampleFrom( const StereoOut32& src )
+	{
+		Left = src.Left << SndOutVolumeShift32;
+		Right = src.Right << SndOutVolumeShift32;
+		LFE = (src.Left + src.Right) << (SndOutVolumeShift32 - 1);
+	}
 };
 
 struct Stereo41Out32
@@ -328,6 +389,16 @@ struct Stereo41Out32
 	s32 LFE;
 	s32 LeftBack;
 	s32 RightBack;
+	
+	void ResampleFrom( const StereoOut32& src )
+	{
+		Left = src.Left << SndOutVolumeShift32;
+		Right = src.Right << SndOutVolumeShift32;
+		LFE = (src.Left + src.Right) << (SndOutVolumeShift32 - 1);
+
+		LeftBack = src.Left << SndOutVolumeShift32;
+		RightBack = src.Right << SndOutVolumeShift32;
+	}
 };
 
 struct Stereo51Out32
@@ -338,6 +409,16 @@ struct Stereo51Out32
 	s32 LFE;
 	s32 LeftBack;
 	s32 RightBack;
+
+	void ResampleFrom( const StereoOut32& src )
+	{
+		Left = src.Left << SndOutVolumeShift32;
+		Right = src.Right << SndOutVolumeShift32;
+		Center = (src.Left + src.Right) << (SndOutVolumeShift32 - 1);
+		LFE = Center;
+		LeftBack = src.Left << SndOutVolumeShift32;
+		RightBack = src.Right << SndOutVolumeShift32;
+	}
 };
 
 // Developer Note: This is a static class only (all static members).
@@ -429,9 +510,7 @@ public:
 
 	// Saves settings to the INI file for this driver
 	virtual void WriteSettings() const=0;
-
-	virtual bool Is51Out() const=0;
-
+	
 	// Returns the number of empty samples in the output buffer.
 	// (which is effectively the amount of data played since the last update)
 	virtual int GetEmptySampleCount() =0;
