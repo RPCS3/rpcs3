@@ -76,12 +76,14 @@ void ProcessDplIISample32( const StereoOut32& src, Stereo51Out32DplII * s)
 	float Rearness = 1-Frontness; // And the other way around
 
 	// Equalize the power levels for L/R
-	float B = std::min(0.5f,std::max(-0.5f,Balance));
+	float B = std::min(0.9f,std::max(-0.9f,Balance));
 
 	float VL = L / (1-B); // if B>0, it means R>L, so increase L, else decrease L 
 	float VR = R / (1+B); // vice-versa
 
-	// 1.73+1.22 = 2.94; 2.94 = 0.34 = 0.9996; Close enough... xcept VL/VR are equalized to < 1
+	// 1.73+1.22 = 2.94; 2.94 = 0.34 = 0.9996; Close enough.
+	// The range for VL/VR is approximately 0..1,
+	// But in the cases where VL/VR are > 0.5, Rearness is 0 so it should never overflow.
 	const float RearScale = 0.34f * 2;
 
 	float SL = (VR*1.73f - VL*1.22f) * RearScale * Rearness;
