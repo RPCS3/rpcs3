@@ -283,6 +283,7 @@ CRC::Game CRC::m_games[] =
 	{0xA8DB29DF, BlackHawkDown, EU, 0},
 	{0x25FC361B, DevilMayCry3, US, 0},	//SE
 	{0x18C9343F, DevilMayCry3, EU, 0},	//SE
+	{0x2F7D8AD5, DevilMayCry3, US, 0},
 	{0x7ADCB24A, DevilMayCry3, EU, 0},
 	{0x79C952B0, DevilMayCry3, JP, 0},	//SE
 	{0x7F3DDEAB, DevilMayCry3, JP, 0},

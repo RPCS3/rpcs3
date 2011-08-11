@@ -503,6 +503,10 @@
 				Name="Sound Output"
 				>
 				<File
+					RelativePath="..\DplIIdecoder.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\Lowpass.cpp"
 					>
 					<FileConfiguration
