@@ -121,6 +121,8 @@ public:
 		SpyroNewBeginning,
 		SpyroEternalNight,
 		TalesOfLegendia,
+		NanoBreaker,
+		Kunoichi,
 		TitleCount,
 	};
 

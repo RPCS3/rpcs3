@@ -3424,7 +3424,7 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-20413
-Name   = Shadow Man - Second Coming
+Name   = Shadow Man - 2econd Coming
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
@@ -5846,7 +5846,7 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-20958
-Name   = Tom Clancy's Splinter Cell 2 - Pandora Tomorrow
+Name   = Tom Clancy's Splinter Cell - Pandora Tomorrow
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
@@ -6109,7 +6109,7 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-21010
-Name   = Nano Breaker
+Name   = NanoBreaker
 Region = NTSC-U
 Compat = 2
 ---------------------------------------------
@@ -6690,7 +6690,7 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-21137
-Name   = Tom Clancy's Splinter Cell 3 - Chaos Theory
+Name   = Tom Clancy's Splinter Cell - Chaos Theory
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
@@ -6740,7 +6740,7 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-21148
-Name   = TimeSplitters 3 - Future Perfect
+Name   = TimeSplitters - Future Perfect
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
@@ -7075,6 +7075,7 @@ Serial = SLUS-21219
 Name   = Pac-Man World 3
 Region = NTSC-U
 Compat = 4
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-21220
 Name   = World Soccer - Winning Eleven 9 International
@@ -9394,7 +9395,8 @@ Compat = 3
 Serial = SLUS-21746
 Name   = Call Of Duty - World At War - Final Fronts
 Region = NTSC-U
-Compat = 2
+Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-21748
 Name   = MLB Power Pros 2008
@@ -9621,6 +9623,7 @@ Serial = SLUS-21801
 Name   = Need For Speed - Undercover
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-21802
 Name   = Naked Brothers Band - The Video Game
@@ -13682,7 +13685,7 @@ Name   = Tsukiyo ni Saraba
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25263
-Name   = Nano Breaker
+Name   = NanoBreaker
 Region = NTSC-J
 Compat = 5
 ---------------------------------------------
@@ -13918,6 +13921,7 @@ Region = NTSC-J
 Serial = SLPM-55127
 Name   = Need for Speed - Undercover
 Region = NTSC-J
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPM-55131
 Name   = World Soccer Winning Eleven 2009
@@ -13943,6 +13947,7 @@ Region = NTSC-J
 Serial = SLPM-55244
 Name   = Need for Speed - Undercover [EA:SY! 1980]
 Region = NTSC-J
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPM-55251
 Name   = WWE SmackDown vs. Raw 2009
@@ -19220,7 +19225,7 @@ Name   = Derby Tsuku 4 - Derby Uma o Tsukurou!
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65809
-Name   = Nanobreaker
+Name   = NanoBreaker
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPM-65810
@@ -30048,7 +30053,7 @@ Compat = 5
 Serial = SCES-53950
 Name   = F1 '06
 Region = PAL-Unk
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SCES-53960
 Name   = B-Boy
@@ -31508,7 +31513,7 @@ Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
 Serial = SLES-50446
-Name   = Shadow Man 2 - The Second Coming
+Name   = Shadow Man - 2econd Coming
 Region = PAL-Unk
 Compat = 4
 ---------------------------------------------
@@ -31813,7 +31818,7 @@ Name   = State of Emergency
 Region = PAL-M4
 ---------------------------------------------
 Serial = SLES-50608
-Name   = Shadow Man 2 - The Second Coming
+Name   = Shadow Man - 2econd Coming
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-50613
@@ -36719,7 +36724,7 @@ Name   = Cold Winter
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-52964
-Name   = Nanobreaker
+Name   = NanoBreaker
 Region = PAL-M5
 Compat = 5
 ---------------------------------------------
@@ -38779,6 +38784,7 @@ Compat = 5
 Serial = SLES-53959
 Name   = Pac-Man World 3
 Region = PAL-Unk
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-53963
 Name   = Downhill Slalom
@@ -40891,15 +40897,18 @@ Compat = 5
 Serial = SLES-55349
 Name   = Need For Speed - Undercover
 Region = PAL-Unk
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-55350
 Name   = Need for Speed - Undercover
 Region = PAL-F-G
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-55352
 Name   = Need For Speed - Undercover
 Region = PAL-Unk
 Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-55354
 Name   = Persona 3 FES
@@ -40917,10 +40926,12 @@ Region = PAL-M7
 Serial = SLES-55367
 Name   = Call of Duty - World at War - Final Fronts
 Region = PAL-M4
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-55369
 Name   = Call of Duty - World at War - Final Fronts
 Region = PAL-G
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-55371
 Name   = Barbie Horse Adventures - Riding Camp

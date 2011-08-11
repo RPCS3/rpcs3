@@ -1954,7 +1954,7 @@ bool GSC_MetalGearSolid3(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 0;
 		}
-		else if(!fi.TME && fi.FBP == fi.TBP0 && fi.FBP == 0x2000 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMCT24)
+		else if(!fi.TME && fi.FBP == fi.TBP0 && fi.TBP0 == 0x2000 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMCT24)
 		{
 			if(g_crc_region == CRC::US || g_crc_region == CRC::JP || g_crc_region == CRC::KO)
 			{
@@ -2919,6 +2919,10 @@ bool GSC_FFVIIDoC(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 1;
 		}
+		if(!fi.TME && fi.FBP == 0x01c00 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x01c00 && fi.TPSM == PSM_PSMCT24)
+		{
+			//skip = 1;
+		}
 	}
 	
 	return true;
@@ -3098,6 +3102,32 @@ bool GSC_TalesOfLegendia(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_NanoBreaker(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x0 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x03900 && fi.TPSM == PSM_PSMCT16S)
+		{
+			skip = 2;
+		}
+	}
+		
+	return true;
+}
+
+bool GSC_Kunoichi(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(!fi.TME && (fi.FBP == 0x0 || fi.FBP == 0x00700) && fi.FPSM == PSM_PSMCT32 && (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4) && fi.FBMSK == 0x00FFFFFF)
+		{
+			skip = 3;
+		}
+	}
+		
+	return true;
+}
+
 
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
@@ -3186,6 +3216,8 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::SpyroNewBeginning] = GSC_SpyroNewBeginning;
 		map[CRC::SpyroEternalNight] = GSC_SpyroEternalNight;
 		map[CRC::TalesOfLegendia] = GSC_TalesOfLegendia;
+		map[CRC::NanoBreaker] = GSC_NanoBreaker;
+		map[CRC::Kunoichi] = GSC_Kunoichi;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

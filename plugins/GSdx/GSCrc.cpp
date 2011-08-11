@@ -278,12 +278,13 @@ CRC::Game CRC::m_games[] =
 	{0x785E22BB, DigimonRumbleArena2, EU, 0},
 	{0x4C5CE4C3, DigimonRumbleArena2, EU, 0},
 	{0x879CDA5E, StarWarsForceUnleashed, US, 0},
+	{0x137C792E, StarWarsForceUnleashed, US, 0},
 	{0x503BF9E1, StarWarsBattlefront, NoRegion, 0},		//EU and US versions have same CRC
 	{0x02F4B541, StarWarsBattlefront2, NoRegion, 0},	//EU and US versions have same CRC
 	{0xA8DB29DF, BlackHawkDown, EU, 0},
 	{0x25FC361B, DevilMayCry3, US, 0},	//SE
-	{0x18C9343F, DevilMayCry3, EU, 0},	//SE
 	{0x2F7D8AD5, DevilMayCry3, US, 0},
+	{0x18C9343F, DevilMayCry3, EU, 0},	//SE
 	{0x7ADCB24A, DevilMayCry3, EU, 0},
 	{0x79C952B0, DevilMayCry3, JP, 0},	//SE
 	{0x7F3DDEAB, DevilMayCry3, JP, 0},
@@ -305,6 +306,10 @@ CRC::Game CRC::m_games[] =
 	{0x8AE9536D, SpyroEternalNight, EU, 0},
 	{0x43AB7214, TalesOfLegendia, US, 0},
 	{0x1F8640E0, TalesOfLegendia, JP, 0},
+	{0x98C7B76D, NanoBreaker, US, 0},
+	{0x7098BE76, NanoBreaker, KO, 0},
+	{0x519E816B, Kunoichi, US, 0},	//Nightshade
+	{0x3FB419FD, Kunoichi, JP, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

@@ -368,7 +368,6 @@ class GSRendererHW : public GSRendererT<Vertex>
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
-		uint32 ZTE = m_context->TEST.ZTE;
 		
 		if(!PRIM->TME)
 		{
@@ -382,7 +381,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 		}
 		else if(PRIM->TME)
 		{
-			if(ZTE && (FBP == 0x0 || FBP == 0x01180) && FPSM == PSM_PSMCT32 && (m_vt.m_max.p.z == m_vt.m_min.p.z && m_vt.m_min.p.z == 0x0))
+			if((FBP == 0x0 || FBP == 0x01180) && FPSM == PSM_PSMCT32 && (m_vt.m_max.p.z == m_vt.m_min.p.z && m_vt.m_min.p.z == 0x0))
 			{
 				m_dev->ClearDepth(ds, 0);
 			}
@@ -395,7 +394,6 @@ class GSRendererHW : public GSRendererT<Vertex>
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
-		uint32 ZTE = m_context->TEST.ZTE;
 		
 		if(!PRIM->TME)
 		{
@@ -409,7 +407,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 		}
 		else if(PRIM->TME)
 		{
-			if(ZTE && (FBP == 0x0 || FBP == 0x01180) && FPSM == PSM_PSMCT32 && (m_vt.m_max.p.z == m_vt.m_min.p.z && m_vt.m_min.p.z == 0x0))
+			if((FBP == 0x0 || FBP == 0x01180) && FPSM == PSM_PSMCT32 && (m_vt.m_max.p.z == m_vt.m_min.p.z && m_vt.m_min.p.z == 0x0))
 			{
 				m_dev->ClearDepth(ds, 0);
 			}
@@ -432,7 +430,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 		return true;
 	}
 
-	
+
 	bool OI_PointListPalette(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		if(m_vt.m_primclass == GS_POINT_CLASS && !PRIM->TME)
