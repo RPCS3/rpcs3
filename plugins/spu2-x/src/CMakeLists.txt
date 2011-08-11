@@ -41,6 +41,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 set(spu2xSources
     ADSR.cpp
     Debug.cpp
+    DplIIdecoder.cpp
     Dma.cpp
     iconvert.cpp
     Lowpass.cpp

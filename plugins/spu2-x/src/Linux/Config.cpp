@@ -53,6 +53,8 @@ int SndOutLatencyMS = 300;
 int SynchMode = 0; // Time Stretch, Async or Disabled
 static u32 OutputAPI = 0;
 
+int numSpeakers = 0;
+int dplLevel = 0;
 /*****************************************************************************/
 
 void ReadSettings()
