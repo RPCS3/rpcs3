@@ -14,11 +14,16 @@
  */
 
 #pragma once
+#include <deque>
 #include "System/SysThreads.h"
+#include "Gif.h"
 struct GS_Packet;
-extern void Gif_MTGS_Wait();
+extern void Gif_MTGS_Wait(bool isMTVU);
 extern void Gif_FinishIRQ();
 extern bool Gif_HandlerAD(u8* pMem);
+extern bool Gif_HandlerAD_Debug(u8* pMem);
+extern void Gif_AddBlankGSPacket(u32 size, GIF_PATH path);
+extern void Gif_AddGSPacketMTVU     (GS_Packet& gsPack, GIF_PATH path);
 extern void Gif_AddCompletedGSPacket(GS_Packet& gsPack, GIF_PATH path);
 extern void Gif_ParsePacket(u8* data, u32 size, GIF_PATH path);
 extern void Gif_ParsePacket(GS_Packet& gsPack, GIF_PATH path);
@@ -105,10 +110,11 @@ struct Gif_Tag {
 };
 
 struct GS_Packet {
-	u32  offset; // Path buffer offset for start of packet
-	u32  size;	 // Full size of GS-Packet
-	s32  cycles; // EE Cycles taken to process this GS packet
-	bool done;	 // 0 = Incomplete, 1 = Complete
+	u32  offset;     // Path buffer offset for start of packet
+	u32  size;	     // Full size of GS-Packet
+	s32  cycles;     // EE Cycles taken to process this GS packet
+	s32  readAmount; // Dummy read-amount data needed for proper buffer calculations
+	bool done;	     // 0 = Incomplete, 1 = Complete
 	GS_Packet()  { Reset(); }
 	void Reset() { memzero(*this); }
 };
@@ -124,8 +130,16 @@ static __fi void incTag(u32& offset, u32& size, u32 incAmount) {
 	offset += incAmount;
 }
 
+struct Gif_Path_MTVU {
+	u32   fakePackets; // Fake packets pending to be sent to MTGS
+	Mutex gsPackMutex; // Used for atomic access to gsPackQueue
+	std::deque<GS_Packet> gsPackQueue; // VU1 programs' XGkick(s)
+	Gif_Path_MTVU() { Reset(); }
+	void Reset()    { fakePackets = 0; gsPackQueue.clear(); }
+};
+
 struct Gif_Path {
-	volatile s32 __aligned(4) readAmount; // Amount of data MTGS still needs to read
+	__aligned(4) volatile s32 readAmount; // Amount of data MTGS still needs to read
 	u8* buffer;		  // Path packet buffer
 	u32 buffSize;	  // Full size of buffer
 	u32 buffLimit;	  // Cut off limit to wrap around
@@ -135,6 +149,7 @@ struct Gif_Path {
 	GS_Packet gsPack; // Current GS Packet info
 	GIF_PATH  idx;	  // Gif Path Index
 	GIF_PATH_STATE state; // Path State
+	Gif_Path_MTVU  mtvu;  // Must be last for saved states
 
 	Gif_Path()  {}
 	~Gif_Path() { _aligned_free(buffer); }
@@ -156,6 +171,7 @@ struct Gif_Path {
 			//curOffset = curSize;
 			return;
 		}
+		mtvu.Reset();
 		curSize     = 0;
 		curOffset   = 0;
 		readAmount  = 0;
@@ -163,32 +179,38 @@ struct Gif_Path {
 		gsPack.Reset();
 	}
 
+	bool isMTVU()           { return !idx && THREAD_VU1; }
+	s32 getReadAmount()     { return AtomicRead(readAmount) + gsPack.readAmount; }
 	bool hasDataRemaining() { return curOffset < curSize; }
-	bool isDone() { return !hasDataRemaining() && state == GIF_PATH_IDLE; }
+	bool isDone()           { return isMTVU() ? !mtvu.fakePackets 
+							: (!hasDataRemaining() && state == GIF_PATH_IDLE); }
 
 	// Waits on the MTGS to process gs packets
 	void mtgsReadWait() {
-		//pxAssertDev(AtomicExchangeAdd(readAmount, 0) != 0, "Gif Path Buffer Overflow!");
-		DevCon.WriteLn(Color_Red, "Gif Path[%d] - MTGS Wait! [r=0x%x]", 
-			           idx+1, AtomicExchangeAdd(readAmount, 0));
-		Gif_MTGS_Wait();
+		if (IsDevBuild) {
+			DevCon.WriteLn(Color_Red,   "Gif Path[%d] - MTGS Wait! [r=0x%x]", idx+1, getReadAmount());
+			Gif_MTGS_Wait(isMTVU());
+			DevCon.WriteLn(Color_Green, "Gif Path[%d] - MTGS Wait! [r=0x%x]", idx+1, getReadAmount());
+			return;
+		}
+		Gif_MTGS_Wait(isMTVU());
 	}
 
 	// Moves packet data to start of buffer
 	void RealignPacket() {
-		extern void Gif_AddBlankGSPacket(u32 size, GIF_PATH path);
 		GUNIT_LOG("Path Buffer: Realigning packet!");
 		s32 offset    = curOffset - gsPack.size;
 		s32 sizeToAdd = curSize   - offset;
 		s32 intersect = sizeToAdd - offset;
 		if (intersect < 0) intersect = 0;
 		for(;;) {
-			s32 frontFree  = offset - AtomicExchangeAdd(readAmount, 0);
+			s32 frontFree  = offset - getReadAmount();
 			if (frontFree >= sizeToAdd - intersect) break;
 			mtgsReadWait();
 		}
 		if (offset < (s32)buffLimit) { // Needed for correct readAmount values
-			Gif_AddBlankGSPacket(buffLimit - offset, idx);
+			if (isMTVU()) gsPack.readAmount += buffLimit - offset;
+			else Gif_AddBlankGSPacket(buffLimit - offset, idx);
 		}
 		//DevCon.WriteLn("Realign Packet [%d]", curSize - offset);
 		if (intersect) memmove(buffer, &buffer[offset], curSize - offset);
@@ -200,12 +222,12 @@ struct Gif_Path {
 
 	void CopyGSPacketData(u8* pMem, u32 size, bool aligned = false) {	
 		if (curSize + size > buffSize) { // Move gsPack to front of buffer
-			DevCon.Warning("CopyGSPacketData: Realigning packet!");
+			GUNIT_LOG("CopyGSPacketData: Realigning packet!");
 			RealignPacket();
 		}
 		for(;;) {
 			s32 offset  = curOffset - gsPack.size;
-			s32 readPos = offset    - AtomicExchangeAdd(readAmount, 0);
+			s32 readPos = offset    - getReadAmount();
 			if (readPos >= 0) break; // MTGS is reading in back of curOffset
 			if ((s32)buffLimit + readPos > (s32)curSize + (s32)size) break; // Enough free front space
 			mtgsReadWait(); // Let MTGS run to free up buffer space
@@ -217,12 +239,21 @@ struct Gif_Path {
 	}
 
 	// If completed a GS packet (with EOP) then returned GS_Packet.done = 1
+	// MTVU: This function only should be called called on EE thread
 	GS_Packet ExecuteGSPacket() {
+		if (mtvu.fakePackets) { // For MTVU mode...
+			mtvu.fakePackets--;
+			GS_Packet fakePack;
+			fakePack.done =  1; // Fake packets don't get processed by pcsx2
+			fakePack.size =~0u; // Used to indicate that its a fake packet
+			return fakePack;
+		}
+		pxAssert(!isMTVU());
 		for(;;) {
 			if (!gifTag.isValid) { // Need new Gif Tag
 				// We don't have enough data for a Gif Tag
 				if (curOffset + 16 > curSize) {
-					GUNIT_LOG("Path Buffer: Not enough data for gif tag! [%d]", curSize-curOffset);
+					//GUNIT_LOG("Path Buffer: Not enough data for gif tag! [%d]", curSize-curOffset);
 					return gsPack;
 				}
 
@@ -249,7 +280,7 @@ struct Gif_Path {
 				while(gifTag.nLoop && !dblSIGNAL) {
 					if (curOffset + 16 > curSize) return gsPack; // Exit Early
 					if (gifTag.curReg() == GIF_REG_A_D) {
-						dblSIGNAL = Gif_HandlerAD(&buffer[curOffset]);
+						if (!isMTVU()) dblSIGNAL = Gif_HandlerAD(&buffer[curOffset]);
 					}
 					incTag(curOffset, gsPack.size, 16); // 1 QWC
 					gifTag.packedStep();
@@ -271,6 +302,84 @@ struct Gif_Path {
 			}
 		}
 	}
+
+	// MTVU: Gets called on VU XGkicks on MTVU thread
+	void ExecuteGSPacketMTVU() {
+		// Move packet to start of buffer
+		if (curOffset > buffLimit) {
+			RealignPacket();
+		}
+		if (IsDevBuild) { // We check the packet to see if it actually
+			for(;;) {     // needed to be processed by pcsx2...
+				if (curOffset + 16 > curSize) break;
+				gifTag.setTag(&buffer[curOffset], 1);
+				
+				if(!gifTag.hasAD && curOffset + 16 + gifTag.len > curSize) break;
+				incTag(curOffset, gsPack.size, 16); // Tag Size
+				
+				if (gifTag.hasAD) { // Only can be true if GIF_FLG_PACKED
+					while(gifTag.nLoop) {
+						if (curOffset + 16 > curSize) break; // Exit Early
+						if (gifTag.curReg() == GIF_REG_A_D) {
+							pxAssert(!Gif_HandlerAD_Debug(&buffer[curOffset]));
+						}
+						incTag(curOffset, gsPack.size, 16); // 1 QWC
+						gifTag.packedStep();
+					}
+				}
+				else incTag(curOffset, gsPack.size, gifTag.len); // Data length
+				if (curOffset >= curSize) break;
+				if (gifTag.tag.EOP)       break;
+			}
+			pxAssert(curOffset == curSize);
+			gifTag.isValid = false;
+		}
+		else {
+			// We assume every packet is a full GS Packet
+			// And we don't process anything on pcsx2 side
+			gsPack.size += curSize - curOffset;
+			curOffset    = curSize;
+		}
+	}
+
+	// MTVU: Gets called after VU1 execution on MTVU thread
+	void FinishGSPacketMTVU() {
+		if (1) {
+			ScopedLock lock(mtvu.gsPackMutex);
+			AtomicExchangeAdd(readAmount, gsPack.size + gsPack.readAmount);
+			mtvu.gsPackQueue.push_back(gsPack);
+		}
+		gsPack.Reset();
+		gsPack.offset = curOffset;
+	}
+
+	// MTVU: Gets called by MTGS thread
+	GS_Packet GetGSPacketMTVU() {
+		ScopedLock lock(mtvu.gsPackMutex);
+		if (mtvu.gsPackQueue.size()) {
+			GS_Packet t = mtvu.gsPackQueue[0];
+			return t; // XGkick GS packet(s)
+		}
+		Console.Error("MTVU: Expected gsPackQueue to have elements!");
+		pxAssert(0);
+		return GS_Packet(); // gsPack.size will be 0
+	}
+
+	// MTVU: Gets called by MTGS thread
+	void PopGSPacketMTVU() {
+		ScopedLock lock(mtvu.gsPackMutex);
+		if (mtvu.gsPackQueue.size()) {
+			mtvu.gsPackQueue.pop_front();
+		}
+	}
+
+	// MTVU: Returns the amount of pending
+	// GS Packets that MTGS hasn't yet processed
+	u32 GetPendingGSPackets() {
+		ScopedLock lock(mtvu.gsPackMutex);
+		u32 t = mtvu.gsPackQueue.size();
+		return t;
+	}
 };
 
 struct Gif_Unit {
@@ -280,8 +389,8 @@ struct Gif_Unit {
 	GIF_TRANSFER_TYPE lastTranType; // Last Transfer Type
 
 	Gif_Unit() : stat(gifRegs.stat) {
-		gifPath[0].Init(GIF_PATH_1, _1mb*8, _16kb + _1kb);
-		gifPath[1].Init(GIF_PATH_2, _1mb*8, _1mb  + _1kb);
+		gifPath[0].Init(GIF_PATH_1, _1mb*9, _1mb  + _1kb);
+		gifPath[1].Init(GIF_PATH_2, _1mb*9, _1mb  + _1kb);
 		gifPath[2].Init(GIF_PATH_3, _1mb*9, _1mb  + _1kb);
 	}
 
@@ -307,24 +416,24 @@ struct Gif_Unit {
 
 	// Adds a finished GS Packet to the MTGS ring buffer
 	__fi void AddCompletedGSPacket(GS_Packet& gsPack, GIF_PATH path) {
-		Gif_AddCompletedGSPacket(gsPack, path);
+		if (gsPack.size==~0u) Gif_AddGSPacketMTVU     (gsPack, path);
+		else                  Gif_AddCompletedGSPacket(gsPack, path);
 		if (PRINT_GIF_PACKET) Gif_ParsePacket(gsPack, path);
 	}
 
 	// Returns GS Packet Size in bytes
-	u32 GetGSPacketSize(GIF_PATH pathIdx, u8* pMem, u32 offset = 0) {
-		u32 memMask = pathIdx ? 0xffffffffu : 0x3fffu;
-		u32 size    = 0;
+	u32 GetGSPacketSize(GIF_PATH pathIdx, u8* pMem, u32 offset = 0, u32 size = ~0u) {
+		u32 memMask = pathIdx ? ~0u : 0x3fffu;
+		u32 curSize = 0;
 		for(;;) {
 			Gif_Tag gifTag(&pMem[offset & memMask]);
-			incTag(offset, size, 16 + gifTag.len); // Tag + Data length
-			if (pathIdx == GIF_PATH_1 && size >= 0x4000) {
+			incTag(offset, curSize, 16 + gifTag.len); // Tag + Data length
+			if (pathIdx == GIF_PATH_1 && curSize >= 0x4000) {
 				Console.Warning("Gif Unit - GS packet size exceeded VU memory size!");
 				return 0; // Bios does this... (Fixed if you delay vu1's xgkick by 103 vu cycles)
 			}
-			if (gifTag.tag.EOP) {
-				return size;
-			}
+			if (curSize >= size) return size;
+			if (gifTag.tag.EOP)  return curSize;
 		}
 	}
 
@@ -332,8 +441,22 @@ struct Gif_Unit {
 	// The return value is the amount of data (in bytes) that was processed
 	// If transfer cannot take place at this moment the return value is 0
 	u32 TransferGSPacketData(GIF_TRANSFER_TYPE tranType, u8* pMem, u32 size, bool aligned=false) {
-		
-		GIF_LOG("%s - [path=%d][size=%d]", Gif_TransferStr[(tranType>>8)&0xf], (tranType&3)+1, size);
+
+		if (THREAD_VU1) {
+			Gif_Path& path1 = gifPath[GIF_PATH_1];
+			if (tranType == GIF_TRANS_XGKICK) { // This is on the MTVU thread
+				path1.CopyGSPacketData(pMem, size, aligned);
+				path1.ExecuteGSPacketMTVU();
+				return size;
+			}
+			if (tranType == GIF_TRANS_MTVU) {   // This is on the EE thread
+				path1.mtvu.fakePackets++;
+				if (CanDoGif()) Execute();
+				return 0;
+			}
+		}
+
+		GUNIT_LOG("%s - [path=%d][size=%d]", Gif_TransferStr[(tranType>>8)&0xf], (tranType&3)+1, size);
 		if (size == 0)  { GUNIT_WARN("Gif Unit - Size == 0"); return 0; }
 		if(!CanDoGif()) { GUNIT_WARN("Gif Unit - Signal or PSE Set or Dir = GS to EE"); }
 		pxAssertDev((stat.APATH==0) || checkPaths(1,1,1), "Gif Unit - APATH wasn't cleared?");
@@ -344,6 +467,7 @@ struct Gif_Unit {
 		}
 		if (tranType == GIF_TRANS_DMA) {
 			if(!CanDoPath3())   { if (!Path3Masked()) stat.P3Q = 1; return 0; } // DMA Stall
+			//if (stat.P2Q) DevCon.WriteLn("P2Q while path 3");
 		}
 		if (tranType == GIF_TRANS_XGKICK) {
 			if(!CanDoPath1())   { stat.P1Q = 1; } // We always buffer path1 packets
@@ -404,7 +528,7 @@ struct Gif_Unit {
 				GS_Packet gsPack = path.ExecuteGSPacket();
 				if(!gsPack.done) {
 					if (stat.APATH == 3 && CanDoP3Slice() && !gsSIGNAL.queued) {
-						if(!didPath3 && checkPaths(1,1,0)) { // Path3 slicing
+						if(!didPath3 && /*!Path3Masked() &&*/ checkPaths(1,1,0)) { // Path3 slicing
 							didPath3 = true;
 							stat.APATH = 0;
 							stat.IP3   = 1;
@@ -433,7 +557,7 @@ struct Gif_Unit {
 			}
 			if   (!gsSIGNAL.queued && !gifPath[0].isDone()) { stat.APATH = 1; stat.P1Q = 0; }
 			elif (!gsSIGNAL.queued && !gifPath[1].isDone()) { stat.APATH = 2; stat.P2Q = 0; }
-			elif (!gsSIGNAL.queued && !gifPath[2].isDone() && !Path3Masked())
+			elif (!gsSIGNAL.queued && !gifPath[2].isDone() && !Path3Masked() /*&& !stat.P2Q*/)
 				 { stat.APATH = 3; stat.P3Q = 0; stat.IP3 = 0; }
 			else { stat.APATH = 0; stat.OPH = 0; break; }
 		}

@@ -16,7 +16,6 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "Vif.h"
-#include "Gif.h"
 #include "Gif_Unit.h"
 #include "Vif_Dma.h"
 

@@ -21,6 +21,7 @@
 #include "R3000A.h"
 #include "VUmicro.h"
 #include "COP0.h"
+#include "MTVU.h"
 
 #include "System/SysThreads.h"
 #include "R5900Exceptions.h"
@@ -54,6 +55,7 @@ extern SysMainMemory& GetVmMemory();
 
 void cpuReset()
 {
+	vu1Thread.WaitVU();
 	if (GetMTGS().IsOpen())
 		GetMTGS().WaitGS();		// GS better be done processing before we reset the EE, just in case.
 
@@ -281,9 +283,6 @@ static __fi void _cpuTestInterrupts()
 	TESTINT(DMAC_GIF,		gifInterrupt);
 	TESTINT(DMAC_SIF0,		EEsif0Interrupt);
 	TESTINT(DMAC_SIF1,		EEsif1Interrupt);
-
-	//extern void Gif_Execute();
-	//TESTINT(DMAC_GIF_UNIT,	Gif_Execute);
 	
 	// Profile-guided Optimization (sorta)
 	// The following ints are rarely called.  Encasing them in a conditional

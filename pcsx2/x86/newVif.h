@@ -57,7 +57,6 @@ _vifT extern void  dVifUnpack  (const u8* data, bool isFill);
 
 // nVifBlock - Ordered for Hashing; the 'num' field and the lower 6 bits of upkType are
 //             used as the hash bucket selector.
-//
 struct __aligned16 nVifBlock {
 	u8   num;		// [00] Num  Field
 	u8   upkType;	// [01] Unpack Type [usn*1:mask*1:upk*4]
@@ -73,6 +72,8 @@ struct __aligned16 nVifBlock {
 #define _cmpS  (sizeof(nVifBlock) - (4))
 #define _tParams nVifBlock, _hSize, _cmpS
 struct nVifStruct {
+
+	__aligned16 nVifBlock   block;
 
 	// Buffer for partial transfers (should always be first to ensure alignment)
 	// Maximum buffer size is 256 (vifRegs.Num max range) * 16 (quadword)

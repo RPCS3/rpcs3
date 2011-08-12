@@ -56,14 +56,18 @@ union tTRXREG {
 
 // NOTE, if debugging vif stalls, use sega classics, spyro, gt4, and taito
 struct vifStruct {
-	u128	MaskRow, MaskCol;
+	__aligned16 u128 MaskRow;
+	__aligned16 u128 MaskCol;
 
-	vifCode tag;
-	int cmd;
+	struct { // These must be together for MTVU
+		vifCode tag;
+		int cmd;
+		int cl;
+		u8  usn;
+		u8  StructEnd; // Address of this is used to calculate end of struct
+	};
+
 	int irq;
-	int cl;
-	int qwcalign;
-	u8 usn;
 
 	bool done;
 	bool vifstalled;
@@ -72,17 +76,13 @@ struct vifStruct {
 	// GS registers used for calculating the size of the last local->host transfer initiated on the GS
 	// Transfer size calculation should be restricted to GS emulation in the future
 	tBITBLTBUF BITBLTBUF;
-	tTRXREG TRXREG;
-	u32 GSLastDownloadSize;
+	tTRXREG    TRXREG;
+	u32        GSLastDownloadSize;
 
-	u8 irqoffset; // 32bit offset where next vif code is
-	u32 savedtag; // need this for backwards compat with save states
+	u8  irqoffset; // 32bit offset where next vif code is
 	u32 vifpacketsize;
-	u8 inprogress;
-	u32 lastcmd;
-	u8 dmamode;
-	u8 Unused_GifWaitState; // Only here for saved state compatibility
-	//u8 GifWaitState; // 0 = General PATH checking, 1 = Flush path 3, 2 == Wait for VU1
+	u8  inprogress;
+	u8  dmamode;
 };
 
 extern __aligned16 vifStruct  vif0, vif1;

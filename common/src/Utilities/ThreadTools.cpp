@@ -786,72 +786,70 @@ void Threading::WaitEvent::Wait()
 //  InterlockedExchanges / AtomicExchanges (PCSX2's Helper versions)
 // --------------------------------------------------------------------------------------
 // define some overloads for InterlockedExchanges for commonly used types, like u32 and s32.
+// Note: For all of these atomic operations below to be atomic, the variables need to be 4-byte
+// aligned. Read: http://msdn.microsoft.com/en-us/library/ms684122%28v=vs.85%29.aspx
 
-__fi bool Threading::AtomicBitTestAndReset( volatile u32& bitset, u8 bit )
-{
+__fi u32 Threading::AtomicRead(volatile u32& Target) {
+	return Target; // Properly-aligned 32-bit reads are atomic
+}
+__fi s32 Threading::AtomicRead(volatile s32& Target) {
+	return Target; // Properly-aligned 32-bit reads are atomic
+}
+
+__fi bool Threading::AtomicBitTestAndReset( volatile u32& bitset, u8 bit ) {
+	return _interlockedbittestandreset( (volatile long*)& bitset, bit ) != 0;
+}
+__fi bool Threading::AtomicBitTestAndReset( volatile s32& bitset, u8 bit ) {
 	return _interlockedbittestandreset( (volatile long*)& bitset, bit ) != 0;
 }
 
-__fi u32 Threading::AtomicExchange( volatile u32& Target, u32 value )
-{
+__fi u32 Threading::AtomicExchange(volatile u32& Target, u32 value ) {
+	return _InterlockedExchange( (volatile long*)&Target, value );
+}
+__fi s32 Threading::AtomicExchange( volatile s32& Target, s32 value ) {
 	return _InterlockedExchange( (volatile long*)&Target, value );
 }
 
-__fi u32 Threading::AtomicExchangeAdd( volatile u32& Target, u32 value )
-{
+__fi u32 Threading::AtomicExchangeAdd( volatile u32& Target, u32 value ) {
+	return _InterlockedExchangeAdd( (volatile long*)&Target, value );
+}
+__fi s32 Threading::AtomicExchangeAdd( volatile s32& Target, s32 value ) {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, value );
 }
 
-__fi u32 Threading::AtomicIncrement( volatile u32& Target )
-{
-	return _InterlockedExchangeAdd( (volatile long*)&Target, 1 );
-}
-
-__fi u32 Threading::AtomicDecrement( volatile u32& Target )
-{
-	return _InterlockedExchangeAdd( (volatile long*)&Target, -1 );
-}
-
-__fi s32 Threading::AtomicExchange( volatile s32& Target, s32 value )
-{
-	return _InterlockedExchange( (volatile long*)&Target, value );
-}
-
-__fi s32 Threading::AtomicExchangeAdd( volatile s32& Target, s32 value )
-{
-	return _InterlockedExchangeAdd( (volatile long*)&Target, value );
-}
-
-__fi s32 Threading::AtomicExchangeSub( volatile s32& Target, s32 value )
-{
+__fi s32 Threading::AtomicExchangeSub( volatile s32& Target, s32 value ) {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, -value );
 }
 
-__fi s32 Threading::AtomicIncrement( volatile s32& Target )
-{
+__fi u32 Threading::AtomicIncrement( volatile u32& Target ) {
+	return _InterlockedExchangeAdd( (volatile long*)&Target, 1 );
+}
+__fi s32 Threading::AtomicIncrement( volatile s32& Target) {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, 1 );
 }
 
-__fi s32 Threading::AtomicDecrement( volatile s32& Target )
-{
+__fi u32 Threading::AtomicDecrement( volatile u32& Target ) {
 	return _InterlockedExchangeAdd( (volatile long*)&Target, -1 );
 }
+__fi s32 Threading::AtomicDecrement(volatile s32& Target) {
+	return _InterlockedExchangeAdd((volatile long*)&Target, -1);
+}
 
-__fi void* Threading::_AtomicExchangePointer( volatile uptr& target, uptr value )
+__fi void* Threading::_AtomicExchangePointer(volatile uptr& target, uptr value)
 {
 #ifdef _M_AMD64		// high-level atomic ops, please leave these 64 bit checks in place.
-	return (void*)_InterlockedExchange64( &(volatile s64&)target, value );
+	return (void*)_InterlockedExchange64(&(volatile s64&)target, value);
 #else
-	return (void*)_InterlockedExchange( (volatile long*)&target, value );
+	return (void*)_InterlockedExchange((volatile long*)&target, value);
 #endif
 }
 
-__fi void* Threading::_AtomicCompareExchangePointer( volatile uptr& target, uptr value, uptr comparand )
+__fi void* Threading::_AtomicCompareExchangePointer(volatile uptr& target, uptr value, uptr comparand)
 {
 #ifdef _M_AMD64		// high-level atomic ops, please leave these 64 bit checks in place.
-	return (void*)_InterlockedCompareExchange64( &(volatile s64&)target, value );
+	return (void*)_InterlockedCompareExchange64(&(volatile s64&)target, value);
 #else
-	return (void*)_InterlockedCompareExchange( &(volatile long&)target, value, comparand );
+	return (void*)_InterlockedCompareExchange(&(volatile long&)target, value, comparand);
 #endif
 }
 

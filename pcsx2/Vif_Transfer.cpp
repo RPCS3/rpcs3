@@ -94,7 +94,6 @@ _vifT void vifTransferLoop(u32* &data) {
 
 			vifCmdHandler[idx][vifX.cmd & 0x7f](0, data);
 			data++; pSize--;
-			vifX.lastcmd = (vifXRegs.code >> 24) & 0x7f;
 			if (analyzeIbit<idx>(data, iBit)) break;
 			continue;
 		}

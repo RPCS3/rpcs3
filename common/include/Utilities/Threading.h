@@ -179,17 +179,20 @@ namespace Threading
 // from these little beasties!  (these are all implemented internally using cross-platform
 // implementations of _InterlockedExchange and such)
 
+	extern u32 AtomicRead( volatile u32& Target );
+	extern s32 AtomicRead( volatile s32& Target );
 	extern u32 AtomicExchange( volatile u32& Target, u32 value );
-	extern u32 AtomicExchangeAdd( volatile u32& Target, u32 value );
-	extern u32 AtomicIncrement( volatile u32& Target );
-	extern u32 AtomicDecrement( volatile u32& Target );
 	extern s32 AtomicExchange( volatile s32& Target, s32 value );
+	extern u32 AtomicExchangeAdd( volatile u32& Target, u32 value );
 	extern s32 AtomicExchangeAdd( volatile s32& Target, s32 value );
 	extern s32 AtomicExchangeSub( volatile s32& Target, s32 value );
+	extern u32 AtomicIncrement( volatile u32& Target );
 	extern s32 AtomicIncrement( volatile s32& Target );
+	extern u32 AtomicDecrement( volatile u32& Target );
 	extern s32 AtomicDecrement( volatile s32& Target );
 
 	extern bool AtomicBitTestAndReset( volatile u32& bitset, u8 bit );
+	extern bool AtomicBitTestAndReset( volatile s32& bitset, u8 bit );
 
 	extern void* _AtomicExchangePointer( volatile uptr& target, uptr value );
 	extern void* _AtomicCompareExchangePointer( volatile uptr& target, uptr value, uptr comparand );
@@ -392,6 +395,35 @@ namespace Threading
 		}
 
 		bool Failed() const { return !m_IsLocked; }
+	};
+
+// --------------------------------------------------------------------------------------
+//  ScopedLockBool
+// --------------------------------------------------------------------------------------
+// A ScopedLock in which you specify an external bool to get updated on locks/unlocks.
+// Note that the isLockedBool should only be used as an indicator for the locked status,
+// and not actually depended on for thread synchronization...
+
+	struct ScopedLockBool {	
+		ScopedLock m_lock;
+		volatile __aligned(4) bool& m_bool;
+
+		ScopedLockBool(Mutex& mutexToLock, volatile __aligned(4) bool& isLockedBool)
+			: m_lock(mutexToLock),
+			  m_bool(isLockedBool) {
+			m_bool = m_lock.IsLocked();
+		}
+		virtual ~ScopedLockBool() throw() {
+			m_bool = false;
+		}
+		void Acquire() {
+			m_lock.Acquire();
+			m_bool = m_lock.IsLocked();
+		}
+		void Release() {
+			m_bool = false;
+			m_lock.Release();
+		}
 	};
 }
 

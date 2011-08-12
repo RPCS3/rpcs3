@@ -21,6 +21,7 @@
 #include "ps2/BiosTools.h"
 #include "COP0.h"
 #include "VUmicro.h"
+#include "MTVU.h"
 #include "Cache.h"
 #include "AppConfig.h"
 
@@ -150,10 +151,9 @@ static const uint MainMemorySizeInBytes =
 
 SaveStateBase& SaveStateBase::FreezeMainMemory()
 {
-	if (IsLoading())
-		PreLoadPrep();
-	else
-		m_memory->MakeRoomFor( m_idx + MainMemorySizeInBytes );
+	vu1Thread.WaitVU(); // Finish VU1 just in-case...
+	if (IsLoading()) PreLoadPrep();
+	else m_memory->MakeRoomFor( m_idx + MainMemorySizeInBytes );
 
 	// First Block - Memory Dumps
 	// ---------------------------
@@ -175,8 +175,8 @@ SaveStateBase& SaveStateBase::FreezeMainMemory()
 
 SaveStateBase& SaveStateBase::FreezeInternals()
 {
-	if( IsLoading() )
-		PreLoadPrep();
+	vu1Thread.WaitVU(); // Finish VU1 just in-case...
+	if (IsLoading()) PreLoadPrep();
 
 	// Second Block - Various CPU Registers and States
 	// -----------------------------------------------

@@ -41,7 +41,7 @@
 using namespace R5900;
 using namespace vtlb_private;
 
-#define verify pxAssume
+#define verify pxAssert
 
 namespace vtlb_private
 {
@@ -512,14 +512,14 @@ void vtlb_MapBlock(void* base, u32 start, u32 size, u32 blocksize)
 {
 	verify(0==(start&VTLB_PAGE_MASK));
 	verify(0==(size&VTLB_PAGE_MASK) && size>0);
-	if (!blocksize)
+	if(!blocksize)
 		blocksize = size;
 	verify(0==(blocksize&VTLB_PAGE_MASK) && blocksize>0);
 	verify(0==(size%blocksize));
 
 	s32 baseint = (s32)base;
 	u32 end = start + (size - VTLB_PAGE_SIZE);
-	pxAssume( (end>>VTLB_PAGE_BITS) < ArraySize(vtlbdata.pmap) );
+	verify((end>>VTLB_PAGE_BITS) < ArraySize(vtlbdata.pmap));
 
 	while (start <= end)
 	{
@@ -544,7 +544,7 @@ void vtlb_Mirror(u32 new_region,u32 start,u32 size)
 	verify(0==(size&VTLB_PAGE_MASK) && size>0);
 
 	u32 end = start + (size-VTLB_PAGE_SIZE);
-	pxAssume( (end>>VTLB_PAGE_BITS) < ArraySize(vtlbdata.pmap) );
+	verify((end>>VTLB_PAGE_BITS) < ArraySize(vtlbdata.pmap));
 
 	while(start <= end)
 	{

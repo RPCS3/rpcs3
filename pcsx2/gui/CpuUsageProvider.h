@@ -27,6 +27,7 @@ public:
 	virtual void UpdateStats()=0;
 	virtual int GetEEcorePct() const=0;
 	virtual int GetGsPct() const=0;
+	virtual int GetVUPct() const=0;
 	virtual int GetGuiPct() const=0;
 };
 
@@ -44,16 +45,17 @@ public:
 	virtual void UpdateStats()			{ m_Implementation->UpdateStats(); }
 	virtual int GetEEcorePct() const	{ return m_Implementation->GetEEcorePct(); }
 	virtual int GetGsPct() const		{ return m_Implementation->GetGsPct(); }
+	virtual int GetVUPct() const		{ return m_Implementation->GetVUPct(); }
 	virtual int GetGuiPct() const		{ return m_Implementation->GetGuiPct(); }
 };
 
-struct AllThreeThreads
+struct AllPCSX2Threads
 {
-	u64		ee, gs, ui;
+	u64		ee, gs, vu, ui;
 	u64		update;
 
 	void LoadWithCurrentTimes();
-	AllThreeThreads operator-( const AllThreeThreads& right ) const;
+	AllPCSX2Threads operator-( const AllPCSX2Threads& right ) const;
 };
 
 class DefaultCpuUsageProvider :
@@ -64,11 +66,12 @@ public:
 	static const uint QueueDepth = 4;
 
 protected:
-	AllThreeThreads m_queue[QueueDepth];
+	AllPCSX2Threads m_queue[QueueDepth];
 
 	uint	m_writepos;
 	u32		m_pct_ee;
 	u32		m_pct_gs;
+	u32		m_pct_vu;
 	u32		m_pct_ui;
 
 public:
@@ -80,6 +83,7 @@ public:
 	void UpdateStats();
 	int GetEEcorePct() const;
 	int GetGsPct() const;
+	int GetVUPct() const;
 	int GetGuiPct() const;
 
 protected:

@@ -32,6 +32,7 @@
 #include "GS.h"
 #include "Gif.h"
 #include "VU.h"
+#include "MTVU.h"
 
 #include "R5900.h"
 #include "iR5900.h"
@@ -456,15 +457,14 @@ void SuperVUReset(int vuindex)
 	s_recVUPtr[vuindex] = *s_recVUMem[vuindex];
 }
 
-// clear the block and any joining blocks
+// clear the block and any joining blocks (size given in bytes)
 static void __fastcall SuperVUClear(u32 startpc, u32 size, int vuindex)
 {
 	vector<VuFunctionHeader::RANGE>::iterator itrange;
 	list<VuFunctionHeader*>::iterator it = s_listVUHeaders[vuindex].begin();
-	u32 endpc = startpc + ((size * 4 + 7) & ~7); // Adding this code to ensure size is always a multiple of 8, it can be simplified to startpc+size if size is always a multiple of 8 (cottonvibes)
+	u32 endpc = startpc + ((size + 7) & ~7); // Ensure size is a multiple of u64 (round up)
 	while (it != s_listVUHeaders[vuindex].end())
 	{
-
 		// for every fn, check if it has code in the range
 		for(itrange = (*it)->ranges.begin(); itrange != (*it)->ranges.end(); itrange++)
 		{
@@ -4641,11 +4641,13 @@ void recSuperVU1::Reserve()
 
 void recSuperVU1::Shutdown() throw()
 {
+	vu1Thread.WaitVU();
 	SuperVUDestroy( 1 );
 }
 
 void recSuperVU1::Reset()
 {
+	vu1Thread.WaitVU();
 	SuperVUReset( 1 );
 }
 

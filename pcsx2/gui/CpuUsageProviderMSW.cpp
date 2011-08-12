@@ -55,6 +55,7 @@ public:
 	void UpdateStats();
 	int GetEEcorePct() const;
 	int GetGsPct() const;
+	int GetVUPct() const;
 	int GetGuiPct() const;
 };
 
@@ -260,6 +261,11 @@ int CpuUsageProviderMSW::GetEEcorePct() const
 }
 
 int CpuUsageProviderMSW::GetGsPct() const
+{
+	return 0;
+}
+
+int CpuUsageProviderMSW::GetVUPct() const
 {
 	return 0;
 }

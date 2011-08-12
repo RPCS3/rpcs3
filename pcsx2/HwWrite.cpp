@@ -17,7 +17,6 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "Hardware.h"
-#include "Gif.h"
 #include "Gif_Unit.h"
 
 #include "ps2/HwInternal.h"

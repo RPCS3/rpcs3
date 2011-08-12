@@ -245,6 +245,7 @@ enum MTGS_RingCommand
 ,	GS_RINGTYPE_MODECHANGE		// for issued mode changes.
 ,	GS_RINGTYPE_CRC
 ,	GS_RINGTYPE_GSPACKET
+,	GS_RINGTYPE_MTVU_GSPACKET
 };
 
 
@@ -263,8 +264,8 @@ class SysMtgsThread : public SysThreadBase
 
 public:
 	// note: when m_ReadPos == m_WritePos, the fifo is empty
-	uint			m_ReadPos;			// cur pos gs is reading from
-	uint			m_WritePos;			// cur pos ee thread is writing to
+	__aligned(4) uint m_ReadPos;	// cur pos gs is reading from
+	__aligned(4) uint m_WritePos;	// cur pos ee thread is writing to
 
 	volatile bool	m_RingBufferIsBusy;
 	volatile u32	m_SignalRingEnable;
@@ -273,7 +274,9 @@ public:
 	volatile s32	m_QueuedFrameCount;
 	volatile u32	m_VsyncSignalListener;
 
-	Mutex			m_mtx_RingBufferBusy;
+	Mutex			m_mtx_RingBufferBusy;  // Is obtained while processing ring-buffer data
+	Mutex			m_mtx_RingBufferBusy2; // This one gets released on semaXGkick waiting...
+	Mutex			m_mtx_WaitGS;
 	Semaphore		m_sem_OnRingReset;
 	Semaphore		m_sem_Vsync;
 
@@ -304,8 +307,7 @@ public:
 	virtual ~SysMtgsThread() throw();
 
 	// Waits for the GS to empty out the entire ring buffer contents.
-	// Used primarily for plugin startup/shutdown.
-	void WaitGS();
+	void WaitGS(bool syncRegs=true, bool weakWait=false, bool isMTVU=false);
 	void ResetGS();
 
 	void PrepDataPacket( MTGS_RingCommand cmd, u32 size );

@@ -21,6 +21,7 @@
 
 #include "GS.h"
 #include "Gif_Unit.h"
+#include "MTVU.h"
 #include "Elfheader.h"
 #include "SamplProf.h"
 
@@ -242,36 +243,29 @@ void SysMtgsThread::OpenPlugin()
 	GSsetGameCRC( ElfCRC, 0 );
 }
 
-class RingBufferLock : public ScopedLock
-{
-	typedef ScopedLock _parent;
-	
-protected:
-	SysMtgsThread&		m_mtgs;
+struct RingBufferLock {	
+	ScopedLock     m_lock1;
+	ScopedLock     m_lock2;
+	SysMtgsThread& m_mtgs;
 
-public:
-	RingBufferLock( SysMtgsThread& mtgs )
-		: ScopedLock( mtgs.m_mtx_RingBufferBusy )
-		, m_mtgs( mtgs )
-	{
+	RingBufferLock(SysMtgsThread& mtgs)
+		: m_lock1(mtgs.m_mtx_RingBufferBusy),
+		  m_lock2(mtgs.m_mtx_RingBufferBusy2),
+		  m_mtgs(mtgs) {
 		m_mtgs.m_RingBufferIsBusy = true;
 	}
-
-	virtual ~RingBufferLock() throw()
-	{
+	virtual ~RingBufferLock() throw() {
 		m_mtgs.m_RingBufferIsBusy = false;
 	}
-	
-	void Acquire()
-	{
-		_parent::Acquire();
+	void Acquire() {
+		m_lock1.Acquire();
+		m_lock2.Acquire();
 		m_mtgs.m_RingBufferIsBusy = true;
 	}
-	
-	void Release()
-	{
+	void Release() {
 		m_mtgs.m_RingBufferIsBusy = false;
-		_parent::Release();	
+		m_lock2.Release();
+		m_lock1.Release();
 	}
 };
 
@@ -281,10 +275,9 @@ void SysMtgsThread::ExecuteTaskInThread()
 	PacketTagType prevCmd;
 #endif
 
-	RingBufferLock busy( *this );
+	RingBufferLock busy (*this);
 
-	while( true )
-	{
+	while(true) {
 		busy.Release();
 
 		// Performance note: Both of these perform cancellation tests, but pthread_testcancel
@@ -299,8 +292,7 @@ void SysMtgsThread::ExecuteTaskInThread()
 		// ever be modified by this thread.
 		while( m_ReadPos != volatize(m_WritePos))
 		{
-			if( EmuConfig.GS.DisableOutput )
-			{
+			if (EmuConfig.GS.DisableOutput) {
 				m_ReadPos = m_WritePos;
 				continue;
 			}
@@ -327,7 +319,7 @@ void SysMtgsThread::ExecuteTaskInThread()
 
 			switch( tag.command )
 			{
-#if COPY_GS_PACKET_TO_MTGS == 1 // d
+#if COPY_GS_PACKET_TO_MTGS == 1
 				case GS_RINGTYPE_P1:
 				{
 					uint datapos = (m_ReadPos+1) & RingBufferMask;
@@ -409,6 +401,21 @@ void SysMtgsThread::ExecuteTaskInThread()
 					u32       size   = tag.data[1];
 					if (offset != ~0u) GSgifTransfer((u32*)&path.buffer[offset], size/16);
 					AtomicExchangeSub(path.readAmount, size);
+					break;
+				}
+
+				case GS_RINGTYPE_MTVU_GSPACKET: {
+					MTVU_LOG("MTGS - Waiting on semaXGkick!");
+					vu1Thread.KickStart(true);
+					busy.m_lock2.Release();
+					// Wait for MTVU to complete vu1 program
+					vu1Thread.semaXGkick.WaitWithoutYield();
+					busy.m_lock2.Acquire();
+					Gif_Path& path   = gifUnit.gifPath[GIF_PATH_1];
+					GS_Packet gsPack = path.GetGSPacketMTVU(); // Get vu1 program's xgkick packet(s)
+					if (gsPack.size) GSgifTransfer((u32*)&path.buffer[gsPack.offset], gsPack.size/16);
+					AtomicExchangeSub(path.readAmount, gsPack.size + gsPack.readAmount);
+					path.PopGSPacketMTVU(); // Should be done last, for proper Gif_MTGS_Wait()
 					break;
 				}
 
@@ -572,27 +579,43 @@ void SysMtgsThread::OnCleanupInThread()
 }
 
 // Waits for the GS to empty out the entire ring buffer contents.
-// Used primarily for plugin startup/shutdown.
-void SysMtgsThread::WaitGS()
+// If syncRegs, then writes pcsx2's gs regs to MTGS's internal copy
+// If weakWait, then this function is allowed to exit after MTGS finished a path1 packet
+// If isMTVU, then this implies this function is being called from the MTVU thread...
+void SysMtgsThread::WaitGS(bool syncRegs, bool weakWait, bool isMTVU)
 {
 	pxAssertDev( !IsSelf(), "This method is only allowed from threads *not* named MTGS." );
 
 	if( m_ExecMode == ExecMode_NoThreadYet || !IsRunning() ) return;
 	if( !pxAssertDev( IsOpen(), "MTGS Warning!  WaitGS issued on a closed thread." ) ) return;
 
-	if( volatize(m_ReadPos) != m_WritePos )
-	{
+	Gif_Path&   path = gifUnit.gifPath[GIF_PATH_1];
+	u32 startP1Packs = weakWait ? path.GetPendingGSPackets() : 0;
+
+	if (isMTVU || volatize(m_ReadPos) != m_WritePos) {
 		SetEvent();
 		RethrowException();
-
-		do {
-			m_mtx_RingBufferBusy.Wait();
+		for(;;) {
+			if (weakWait) m_mtx_RingBufferBusy2.Wait();
+			else          m_mtx_RingBufferBusy .Wait();
 			RethrowException();
-		} while( volatize(m_ReadPos) != m_WritePos );
+			if(!isMTVU && volatize(m_ReadPos) == m_WritePos) break;
+			u32 curP1Packs = weakWait ? path.GetPendingGSPackets() : 0;
+			if (weakWait && ((startP1Packs-curP1Packs) || !curP1Packs)) break;
+			// On weakWait we will stop waiting on the MTGS thread if the
+			// MTGS thread has processed a vu1 xgkick packet, or is pending on
+			// its final vu1 xgkick packet (!curP1Packs)...
+			// Note: m_WritePos doesn't seem to have proper atomic write
+			// code, so reading it from the MTVU thread might be dangerous;
+			// hence it has been avoided...
+		}
 	}
 	
-	// Completely synchronize GS and MTGS register states.
-	memcpy_fast( RingBuffer.Regs, PS2MEM_GS, sizeof(RingBuffer.Regs) );
+	if (syncRegs) {
+		ScopedLock lock(m_mtx_WaitGS);
+		// Completely synchronize GS and MTGS register states.
+		memcpy_fast(RingBuffer.Regs, PS2MEM_GS, sizeof(RingBuffer.Regs));
+	}
 }
 
 // Sets the gsEvent flag and releases a timeslice.

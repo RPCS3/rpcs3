@@ -193,8 +193,8 @@ public:
 	wxString GetLongName() const		{ return L"VU1 Interpreter"; }
 
 	void Reserve() { }
-	void Shutdown() throw() { }
-	void Reset() { }
+	void Shutdown() throw();
+	void Reset();
 
 	void Step();
 	void Execute(u32 cycles);

@@ -18,6 +18,7 @@
 #include "VUops.h"
 #include "GS.h"
 #include "Gif_Unit.h"
+#include "MTVU.h"
 
 #include <cmath>
 
@@ -2018,7 +2019,8 @@ static __ri void _vuEEXP(VURegs * VU) {
 
 static __ri void _vuXITOP(VURegs * VU) {
 	if (_It_ == 0) return;
-	VU->VI[_It_].US[0] = VU->GetVifRegs().itop;
+	if (VU==&VU1 && THREAD_VU1) VU->VI[_It_].US[0] = vu1Thread.vifRegs.itop;
+	else                        VU->VI[_It_].US[0] = VU->GetVifRegs().itop;
 }
 
 static __ri void _vuXGKICK(VURegs * VU)
@@ -2041,7 +2043,8 @@ static __ri void _vuXGKICK(VURegs * VU)
 
 static __ri void _vuXTOP(VURegs * VU) {
 	if(_It_ == 0) return;
-	VU->VI[_It_].US[0] = (u16)VU->GetVifRegs().top;
+	if (VU==&VU1 && THREAD_VU1) VU->VI[_It_].US[0] = (u16)vu1Thread.vifRegs.top;
+	else                        VU->VI[_It_].US[0] = (u16)VU->GetVifRegs().top;
 }
 
 #define GET_VF0_FLAG(reg) (((reg)==0)?(1<<REG_VF0_FLAG):0)

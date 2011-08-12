@@ -533,10 +533,18 @@ void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 	}
 
 	FastFormatUnicode cpuUsage;
-	if( m_CpuUsage.IsImplemented() )
-	{
+	if (m_CpuUsage.IsImplemented()) {
 		m_CpuUsage.UpdateStats();
-		cpuUsage.Write( L" | EE: %3d%% | GS: %3d%% | UI: %3d%%", m_CpuUsage.GetEEcorePct(), m_CpuUsage.GetGsPct(), m_CpuUsage.GetGuiPct() );
+		if (THREAD_VU1) { // Display VU thread's usage
+			cpuUsage.Write(L" | EE: %3d%% | GS: %3d%% | VU: %3d%% | UI: %3d%%",
+				m_CpuUsage.GetEEcorePct(),	m_CpuUsage.GetGsPct(),
+				m_CpuUsage.GetVUPct(),		m_CpuUsage.GetGuiPct());
+		}
+		else {
+			cpuUsage.Write(L" | EE: %3d%% | GS: %3d%% | UI: %3d%%",
+				m_CpuUsage.GetEEcorePct(),	m_CpuUsage.GetGsPct(),
+				m_CpuUsage.GetGuiPct());
+		}
 	}
 
 	const u64& smode2 = *(u64*)PS2GS_BASE(GS_SMODE2);

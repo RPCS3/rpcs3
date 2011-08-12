@@ -25,6 +25,10 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 	if( eps->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION )
 		return EXCEPTION_CONTINUE_SEARCH;
 
+	// Note: This exception can be accessed by the EE or MTVU thread
+	// Source_PageFault is a global variable with its own state information
+	// so for now we lock this exception code unless someone can fix this better...
+	Threading::ScopedLock lock(PageFault_Mutex);
 	Source_PageFault->Dispatch( PageFaultInfo( (uptr)eps->ExceptionRecord->ExceptionInformation[1] ) );
 	return Source_PageFault->WasHandled() ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
 }

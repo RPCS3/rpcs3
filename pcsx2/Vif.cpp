@@ -20,6 +20,7 @@
 #include "newVif.h"
 #include "GS.h"
 #include "Gif.h"
+#include "MTVU.h"
 
 __aligned16 vifStruct  vif0, vif1;
 
@@ -289,18 +290,18 @@ __fi void vif1STAT(u32 value) {
 #define caseVif(x) (idx ? VIF1_##x : VIF0_##x)
 
 _vifT __fi u32 vifRead32(u32 mem) {
-	vifStruct& vif = GetVifX;
-
+	vifStruct& vif = MTVU_VifX;
+	bool wait = idx && THREAD_VU1;
 	switch (mem) {
-		case caseVif(ROW0): return vif.MaskRow._u32[0];
-		case caseVif(ROW1): return vif.MaskRow._u32[1];
-		case caseVif(ROW2): return vif.MaskRow._u32[2];
-		case caseVif(ROW3): return vif.MaskRow._u32[3];
+		case caseVif(ROW0): if (wait) vu1Thread.WaitVU(); return vif.MaskRow._u32[0];
+		case caseVif(ROW1): if (wait) vu1Thread.WaitVU(); return vif.MaskRow._u32[1];
+		case caseVif(ROW2): if (wait) vu1Thread.WaitVU(); return vif.MaskRow._u32[2];
+		case caseVif(ROW3): if (wait) vu1Thread.WaitVU(); return vif.MaskRow._u32[3];
 
-		case caseVif(COL0): return vif.MaskCol._u32[0];
-		case caseVif(COL1): return vif.MaskCol._u32[1];
-		case caseVif(COL2): return vif.MaskCol._u32[2];
-		case caseVif(COL3): return vif.MaskCol._u32[3];
+		case caseVif(COL0): if (wait) vu1Thread.WaitVU(); return vif.MaskCol._u32[0];
+		case caseVif(COL1): if (wait) vu1Thread.WaitVU(); return vif.MaskCol._u32[1];
+		case caseVif(COL2): if (wait) vu1Thread.WaitVU(); return vif.MaskCol._u32[2];
+		case caseVif(COL3): if (wait) vu1Thread.WaitVU(); return vif.MaskCol._u32[3];
 	}
 	
 	return psHu32(mem);
@@ -334,15 +335,15 @@ _vifT __fi bool vifWrite32(u32 mem, u32 value) {
 			// standard register writes -- handled by caller.
 		break;
 
-		case caseVif(ROW0): vif.MaskRow._u32[0] = value; return false;
-		case caseVif(ROW1): vif.MaskRow._u32[1] = value; return false;
-		case caseVif(ROW2): vif.MaskRow._u32[2] = value; return false;
-		case caseVif(ROW3): vif.MaskRow._u32[3] = value; return false;
+		case caseVif(ROW0): vif.MaskRow._u32[0] = value; if (idx && THREAD_VU1) vu1Thread.WriteRow(vif); return false;
+		case caseVif(ROW1): vif.MaskRow._u32[1] = value; if (idx && THREAD_VU1) vu1Thread.WriteRow(vif); return false;
+		case caseVif(ROW2): vif.MaskRow._u32[2] = value; if (idx && THREAD_VU1) vu1Thread.WriteRow(vif); return false;
+		case caseVif(ROW3): vif.MaskRow._u32[3] = value; if (idx && THREAD_VU1) vu1Thread.WriteRow(vif); return false;
 
-		case caseVif(COL0): vif.MaskCol._u32[0] = value; return false;
-		case caseVif(COL1): vif.MaskCol._u32[1] = value; return false;
-		case caseVif(COL2): vif.MaskCol._u32[2] = value; return false;
-		case caseVif(COL3): vif.MaskCol._u32[3] = value; return false;
+		case caseVif(COL0): vif.MaskCol._u32[0] = value; if (idx && THREAD_VU1) vu1Thread.WriteCol(vif); return false;
+		case caseVif(COL1): vif.MaskCol._u32[1] = value; if (idx && THREAD_VU1) vu1Thread.WriteCol(vif); return false;
+		case caseVif(COL2): vif.MaskCol._u32[2] = value; if (idx && THREAD_VU1) vu1Thread.WriteCol(vif); return false;
+		case caseVif(COL3): vif.MaskCol._u32[3] = value; if (idx && THREAD_VU1) vu1Thread.WriteCol(vif); return false;
 	}
 
 	// fall-through case: issue standard writeback behavior.

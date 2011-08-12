@@ -239,7 +239,14 @@ __fi void mVUrestoreRegs(microVU& mVU, bool fromMemory = false)
 }
 
 // Gets called by mVUaddrFix at execution-time
-static void __fastcall mVUwarningRegAccess(u32 prog, u32 pc) { Console.Error("microVU0 Warning: Accessing VU1 Regs! [%04x] [%x]", pc, prog); }
+static void __fc mVUwarningRegAccess(u32 prog, u32 pc) {
+	Console.Error("microVU0 Warning: Accessing VU1 Regs! [%04x] [%x]", pc, prog);
+}
+
+static void __fc mVUwaitMTVU() {
+	if (IsDevBuild) DevCon.WriteLn("microVU0: Waiting on VU1 thread to access VU1 regs!");
+	if (THREAD_VU1) vu1Thread.WaitVU();
+}
 
 // Transforms the Address in gprReg to valid VU0/VU1 Address
 __fi void mVUaddrFix(mV, const x32& gprReg)
@@ -249,28 +256,31 @@ __fi void mVUaddrFix(mV, const x32& gprReg)
 		xSHL(gprReg, 4);
 	}
 	else {
-		if (IsDevBuild && !isCOP2) mVUbackupRegs(mVU, true);
 		xTEST(gprReg, 0x400);
 		xForwardJNZ8 jmpA;		// if addr & 0x4000, reads VU1's VF regs and VI regs
 			xAND(gprReg, 0xff); // if !(addr & 0x4000), wrap around
-			xForwardJump8 jmpB;
+			xForwardJump32 jmpB;
 		jmpA.SetTarget();
-			if (IsDevBuild && !isCOP2) { // Lets see which games do this!
-				xPUSH(gprT1);			 // Note: Kernel does it via COP2 to initialize VU1!
-				xPUSH(gprT2);			 // So we don't spam console, we'll only check micro-mode...
+			if (THREAD_VU1 || (IsDevBuild && !isCOP2)) {
+				mVUbackupRegs(mVU, true);
+				xPUSH(gprT1);
+				xPUSH(gprT2);
 				xPUSH(gprT3);
-				xMOV (gprT2, mVU.prog.cur->idx);
-				xMOV (gprT3, xPC);
-				xCALL(mVUwarningRegAccess);
+				if (IsDevBuild && !isCOP2) {         // Lets see which games do this!
+					xMOV (gprT2, mVU.prog.cur->idx); // Note: Kernel does it via COP2 to initialize VU1!
+					xMOV (gprT3, xPC);               // So we don't spam console, we'll only check micro-mode...
+					xCALL(mVUwarningRegAccess);
+				}
+				xCALL(mVUwaitMTVU);
 				xPOP (gprT3);
 				xPOP (gprT2);
 				xPOP (gprT1);
+				mVUrestoreRegs(mVU, true);
 			}
 			xAND(gprReg, 0x3f); // ToDo: theres a potential problem if VU0 overrides VU1's VF0/VI0 regs!
 			xADD(gprReg, (u128*)VU1.VF - (u128*)VU0.Mem);
 		jmpB.SetTarget();
 		xSHL(gprReg, 4); // multiply by 16 (shift left by 4)
-		if (IsDevBuild && !isCOP2) mVUrestoreRegs(mVU, true);
 	}
 }
 

@@ -19,10 +19,9 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-
 #include <cmath>
-
 #include "VUmicro.h"
+#include "MTVU.h"
 
 #ifdef PCSX2_DEBUG
 u32 vudump = 0;
@@ -39,6 +38,10 @@ void vu1ResetRegs()
 }
 
 void vu1Finish() {
+	if (THREAD_VU1) {
+		if (VU0.VI[REG_VPU_STAT].UL & 0x100) DevCon.Error("MTVU: VU0.VI[REG_VPU_STAT].UL & 0x100");
+		return;
+	}
 	while (VU0.VI[REG_VPU_STAT].UL & 0x100) {
 		VUM_LOG("vu1ExecMicro > Stalling until current microprogram finishes");
 		CpuVU1->Execute(vu1RunCycles);
@@ -47,10 +50,15 @@ void vu1Finish() {
 
 void __fastcall vu1ExecMicro(u32 addr)
 {
+	if (THREAD_VU1) {
+		vu1Thread.ExecuteVU(addr, vif1Regs.top, vif1Regs.itop);
+		vif1Regs.stat.VEW        = false;
+		VU0.VI[REG_VPU_STAT].UL &= ~0xFF00;
+		return;
+	}
 	static int count = 0;
 	vu1Finish();
 
-	VUM_LOG("vu1ExecMicro %x", addr);
 	VUM_LOG("vu1ExecMicro %x (count=%d)", addr, count++);
 
 	VU0.VI[REG_VPU_STAT].UL &= ~0xFF00;

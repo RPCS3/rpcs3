@@ -17,6 +17,7 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "Hardware.h"
+#include "MTVU.h"
 
 #include "IPU/IPUdma.h"
 #include "ps2/HwInternal.h"
@@ -91,7 +92,7 @@ __fi void setDmacStat(u32 num)
 }
 
 // Note: Dma addresses are guaranteed to be aligned to 16 bytes (128 bits)
-__fi tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
+__fi tDMA_TAG* SPRdmaGetAddr(u32 addr, bool write)
 {
 	// if (addr & 0xf) { DMA_LOG("*PCSX2*: DMA address not 128bit aligned: %8.8x", addr); }
 
@@ -114,6 +115,10 @@ __fi tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write)
 	}
 	else if ((addr >= 0x11004000) && (addr < 0x11010000))
 	{
+		if (THREAD_VU1) {
+			DevCon.Error("MTVU: SPRdmaGetAddr Accessing VU Memory!");
+			vu1Thread.WaitVU();
+		}
 		//Access for VU Memory
 		return (tDMA_TAG*)vtlb_GetPhyPtr(addr & 0x1FFFFFF0);
 	}

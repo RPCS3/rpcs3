@@ -99,6 +99,7 @@ void mVUreset(microVU& mVU, bool resetReserve) {
 	mVU.prog.x86start	= z;
 	mVU.prog.x86ptr		= z;
 	mVU.prog.x86end		= z + ((mVU.cacheSize - mVUcacheSafeZone) * _1mb);
+	//memset(mVU.prog.x86start, 0xcc, mVU.cacheSize*_1mb);
 
 	for(u32 i = 0; i < (mVU.progSize / 2); i++) {
 		if(!mVU.prog.prog[i]) {
@@ -279,7 +280,6 @@ _mVUt __fi void* mVUsearchProg(u32 startPC, uptr pState) {
 //------------------------------------------------------------------
 // recMicroVU0 / recMicroVU1
 //------------------------------------------------------------------
-
 recMicroVU0::recMicroVU0()		  { m_Idx = 0; IsInterpreter = false; }
 recMicroVU1::recMicroVU1()		  { m_Idx = 1; IsInterpreter = false; }
 void recMicroVU0::Vsync() throw() { mVUvsyncUpdate(microVU0); }
@@ -290,8 +290,10 @@ void recMicroVU0::Reserve() {
 		mVUinit(microVU0, 0);
 }
 void recMicroVU1::Reserve() {
-	if (AtomicExchange(m_Reserved, 1) == 0)
+	if (AtomicExchange(m_Reserved, 1) == 0) {
 		mVUinit(microVU1, 1);
+		vu1Thread.InitThread();
+	}
 }
 
 void recMicroVU0::Shutdown() throw() {
@@ -299,8 +301,10 @@ void recMicroVU0::Shutdown() throw() {
 		mVUclose(microVU0);
 }
 void recMicroVU1::Shutdown() throw() {
-	if (AtomicExchange(m_Reserved, 0) == 1)
+	if (AtomicExchange(m_Reserved, 0) == 1) {
+		vu1Thread.WaitVU();
 		mVUclose(microVU1);
+	}
 }
 
 void recMicroVU0::Reset() {
@@ -309,6 +313,7 @@ void recMicroVU0::Reset() {
 }
 void recMicroVU1::Reset() {
 	if(!pxAssertDev(m_Reserved, "MicroVU1 CPU Provider has not been reserved prior to reset!")) return;
+	vu1Thread.WaitVU();
 	mVUreset(microVU1, true);
 }
 
@@ -325,8 +330,10 @@ void recMicroVU0::Execute(u32 cycles) {
 void recMicroVU1::Execute(u32 cycles) {
 	pxAssert(m_Reserved); // please allocate me first! :|
 
-	if(!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
-	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, vu1RunCycles);
+	if (!THREAD_VU1) {
+		if(!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
+	}
+	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, cycles);
 }
 
 void recMicroVU0::Clear(u32 addr, u32 size) {

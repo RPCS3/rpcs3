@@ -35,15 +35,17 @@ enum GIF_PATH {
 enum GIF_TRANSFER_TYPE {
 	GIF_TRANS_INVALID  = 0x000, // Invalid
 	GIF_TRANS_XGKICK   = 0x100, // Path 1
-	GIF_TRANS_DIRECT   = 0x201, // Path 2
-	GIF_TRANS_DIRECTHL = 0x301, // Path 2
-	GIF_TRANS_DMA      = 0x402, // Path 3
-	GIF_TRANS_FIFO     = 0x502  // Path 3
+	GIF_TRANS_MTVU     = 0x200, // Path 1
+	GIF_TRANS_DIRECT   = 0x301, // Path 2
+	GIF_TRANS_DIRECTHL = 0x401, // Path 2
+	GIF_TRANS_DMA      = 0x502, // Path 3
+	GIF_TRANS_FIFO     = 0x602  // Path 3
 };
 
-static const char Gif_TransferStr[6][32] = {
+static const char Gif_TransferStr[7][32] = {
 	"Invalid Transfer Type",
 	"GIF_TRANS_XGKICK",
+	"GIF_TRANS_MTVU",
 	"GIF_TRANS_DIRECT",
 	"GIF_TRANS_DIRECTHL",
 	"GIF_TRANS_DMA",

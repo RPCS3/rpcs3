@@ -1323,6 +1323,14 @@
 						Name="VU"
 						>
 						<File
+							RelativePath="..\..\MTVU.cpp"
+							>
+						</File>
+						<File
+							RelativePath="..\..\MTVU.h"
+							>
+						</File>
+						<File
 							RelativePath="..\..\VU.h"
 							>
 						</File>

@@ -26,7 +26,6 @@
 #include "sVU_Micro.h"
 #include "sVU_Debug.h"
 #include "sVU_zerorec.h"
-#include "Gif.h"
 #include "Gif_Unit.h"
 
 using namespace x86Emitter;

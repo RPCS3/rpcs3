@@ -17,6 +17,7 @@
 #include "Common.h"
 #include "Vif.h"
 #include "Vif_Dma.h"
+#include "MTVU.h"
 
 enum UnpackOffset {
 	OFFSET_X = 0,
@@ -36,10 +37,10 @@ template< uint idx, uint mode, bool doMask >
 static __ri void writeXYZW(u32 offnum, u32 &dest, u32 data) {
 	int n = 0;
 
-	vifStruct& vif = GetVifX;
+	vifStruct& vif = MTVU_VifX;
 
 	if (doMask) {
-		const VIFregisters& regs = vifXRegs;
+		const VIFregisters& regs = MTVU_VifXRegs;
 		switch (vif.cl) {
 			case 0:  n = (regs.mask >> (offnum * 2)) & 0x3;		break;
 			case 1:  n = (regs.mask >> ( 8 + (offnum * 2))) & 0x3;	break;

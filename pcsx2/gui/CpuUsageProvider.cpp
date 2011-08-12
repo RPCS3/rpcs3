@@ -23,21 +23,24 @@
 #endif
 
 #include "GS.h"
+#include "MTVU.h"
 
-void AllThreeThreads::LoadWithCurrentTimes()
+void AllPCSX2Threads::LoadWithCurrentTimes()
 {
 	ee		= GetCoreThread().GetCpuTime();
 	gs		= GetMTGS().GetCpuTime();
+	vu		= vu1Thread.GetCpuTime();
 	ui		= GetThreadCpuTime();
 	update	= GetCPUTicks();
 }
 
-AllThreeThreads AllThreeThreads::operator-( const AllThreeThreads& right ) const
+AllPCSX2Threads AllPCSX2Threads::operator-( const AllPCSX2Threads& right ) const
 {
-	AllThreeThreads retval;
+	AllPCSX2Threads retval;
 
 	retval.ee		= ee - right.ee;
 	retval.gs		= gs - right.gs;
+	retval.vu		= vu - right.vu;
 	retval.ui		= ui - right.ui;
 	retval.update	= update - right.update;
 
@@ -48,6 +51,7 @@ DefaultCpuUsageProvider::DefaultCpuUsageProvider()
 {
 	m_pct_ee = 0;
 	m_pct_gs = 0;
+	m_pct_vu = 0;
 	m_pct_ui = 0;
 	m_writepos = 0;
 
@@ -69,16 +73,17 @@ void DefaultCpuUsageProvider::UpdateStats()
 {
 	// Measure deltas between the first and last positions in the ring buffer:
 
-	AllThreeThreads& newone( m_queue[m_writepos] );
+	AllPCSX2Threads& newone( m_queue[m_writepos] );
 	newone.LoadWithCurrentTimes();
 	m_writepos = (m_writepos+1) % QueueDepth;
-	const AllThreeThreads deltas( newone - m_queue[m_writepos] );
+	const AllPCSX2Threads deltas( newone - m_queue[m_writepos] );
 
 	// get the real time passed, scaled to the Thread's tick frequency.
 	u64 timepass	= (deltas.update * GetThreadTicksPerSecond()) / GetTickFrequency();
 
 	m_pct_ee = (deltas.ee * 100) / timepass;
 	m_pct_gs = (deltas.gs * 100) / timepass;
+	m_pct_vu = (deltas.vu * 100) / timepass;
 	m_pct_ui = (deltas.ui * 100) / timepass;
 }
 
@@ -90,6 +95,11 @@ int DefaultCpuUsageProvider::GetEEcorePct() const
 int DefaultCpuUsageProvider::GetGsPct() const
 {
 	return m_pct_gs;
+}
+
+int DefaultCpuUsageProvider::GetVUPct() const
+{
+	return m_pct_vu;
 }
 
 int DefaultCpuUsageProvider::GetGuiPct() const

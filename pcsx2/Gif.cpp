@@ -17,7 +17,6 @@
 #include "Common.h"
 
 #include "GS.h"
-#include "Gif.h"
 #include "Gif_Unit.h"
 #include "Vif_Dma.h"
 
@@ -87,6 +86,7 @@ __fi void gifInterrupt()
 }
 
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc) {
+	//qwc = min(qwc, 1024u);
 	uint size = gifUnit.TransferGSPacketData(GIF_TRANS_DMA, (u8*)pMem, qwc*16) / 16;
 	incGifChAddr(size);
 	return size;

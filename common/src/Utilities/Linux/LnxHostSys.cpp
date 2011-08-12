@@ -46,6 +46,12 @@ static void SysPageFaultSignalFilter( int signal, siginfo_t *siginfo, void * )
 	// Note: Use of stdio functions isn't safe here.  Avoid console logs,
 	// assertions, file logs, or just about anything else useful.
 
+
+	// Note: This signal can be accessed by the EE or MTVU thread
+	// Source_PageFault is a global variable with its own state information
+	// so for now we lock this exception code unless someone can fix this better...
+	Threading::ScopedLock lock(PageFault_Mutex);
+
 	Source_PageFault->Dispatch( PageFaultInfo( (uptr)siginfo->si_addr & ~m_pagemask ) );
 
 	// resumes execution right where we left off (re-executes instruction that

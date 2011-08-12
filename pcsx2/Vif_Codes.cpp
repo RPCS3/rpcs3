@@ -16,11 +16,11 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 #include "GS.h"
-#include "Gif.h"
 #include "Gif_Unit.h"
 #include "Vif_Dma.h"
 #include "newVif.h"
 #include "VUmicro.h"
+#include "MTVU.h"
 
 #define vifOp(vifCodeName) _vifT int __fastcall vifCodeName(int pass, const u32 *data)
 #define pass1    if (pass == 0)
@@ -36,7 +36,7 @@ vifOp(vifCode_Null);
 
 static __fi void vifFlush(int idx) {
 	if (!idx) vif0FLUSH();
-	else	  vif1FLUSH();
+	else      vif1FLUSH();
 }
 
 static __fi void vuExecMicro(int idx, u32 addr) {
@@ -70,14 +70,16 @@ static __fi void vuExecMicro(int idx, u32 addr) {
 		}
 	}
 
-	if(!idx)startcycles = VU0.cycle;
-	else    startcycles = VU1.cycle;
+	if (!idx) startcycles = VU0.cycle;
+	else      startcycles = VU1.cycle;
 
 	if (!idx) vu0ExecMicro(addr);
 	else	  vu1ExecMicro(addr);
 
-	if(!idx) { g_vu0Cycles += (VU0.cycle-startcycles); g_packetsizeonvu = vif0.vifpacketsize; }
-	else     { g_vu1Cycles += (VU1.cycle-startcycles); g_packetsizeonvu = vif1.vifpacketsize; }
+	if (!idx || !THREAD_VU1) {
+		if (!idx) { g_vu0Cycles += (VU0.cycle-startcycles); g_packetsizeonvu = vif0.vifpacketsize; }
+		else      { g_vu1Cycles += (VU1.cycle-startcycles); g_packetsizeonvu = vif1.vifpacketsize; }
+	}
 	//DevCon.Warning("Ran VU%x, VU0 Cycles %x, VU1 Cycles %x, start %x cycle %x", idx, g_vu0Cycles, g_vu1Cycles, startcycles, VU1.cycle);
 	GetVifX.vifstalled = true;
 }
@@ -225,11 +227,14 @@ static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 	VURegs& VUx = idx ? VU1 : VU0;
 	pxAssert(VUx.Micro > 0);
 
+	if (idx && THREAD_VU1) {
+		vu1Thread.WriteMicroMem(addr, (u8*)data, size*4);
+		return;
+	}
 	if (memcmp_mmx(VUx.Micro + addr, data, size*4)) {
 		// Clear VU memory before writing!
-		// (VUs expect size to be 32-bit scale, same as VIF's internal working sizes)
-		if (!idx)  CpuVU0->Clear(addr, size);
-		else	   CpuVU1->Clear(addr, size);
+		if (!idx)  CpuVU0->Clear(addr, size*4);
+		else	   CpuVU1->Clear(addr, size*4);
 		memcpy_fast(VUx.Micro + addr, data, size*4);
 	}
 }
@@ -387,7 +392,9 @@ vifOp(vifCode_STCol) {
 		return 1;
 	}
 	pass2 {
-		return _vifCode_STColRow<idx>(data, &vifX.MaskCol._u32[vifX.tag.addr]);
+		u32 ret = _vifCode_STColRow<idx>(data, &vifX.MaskCol._u32[vifX.tag.addr]);
+		if (idx && THREAD_VU1) { vu1Thread.WriteCol(vifX); }
+		return ret;
 	}
 	pass3 { VifCodeLog("STCol"); }
 	return 0;
@@ -401,7 +408,9 @@ vifOp(vifCode_STRow) {
 		return 1;
 	}
 	pass2 {
-		return _vifCode_STColRow<idx>(data, &vifX.MaskRow._u32[vifX.tag.addr]);
+		u32 ret = _vifCode_STColRow<idx>(data, &vifX.MaskRow._u32[vifX.tag.addr]);
+		if (idx && THREAD_VU1) { vu1Thread.WriteRow(vifX); }
+		return ret;
 	}
 	pass3 { VifCodeLog("STRow"); }
 	return 0;
@@ -447,7 +456,9 @@ vifOp(vifCode_Unpack) {
 		vifUnpackSetup<idx>(data);
 		return 1;
 	}
-	pass2 { return nVifUnpack<idx>((u8*)data); }
+	pass2 { 
+		return nVifUnpack<idx>((u8*)data);
+	}
 	pass3 {
 		vifStruct& vifX = GetVifX;
 		VIFregisters& vifRegs = vifXRegs;

@@ -77,8 +77,10 @@ void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 	xMOV(ptr32[&mVU.regs().VI[REG_CLIP_FLAG].UL],	gprT2);
 
 	if (isEbit || isVU1) { // Clear 'is busy' Flags
-		xAND(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
-		xAND(ptr32[&mVU.getVifRegs().stat], ~VIF1_STAT_VEW); // Clear VU 'is busy' signal for vif
+		if (!mVU.index || !THREAD_VU1) {
+			xAND(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
+			xAND(ptr32[&mVU.getVifRegs().stat], ~VIF1_STAT_VEW); // Clear VU 'is busy' signal for vif
+		}
 	}
 
 	if (isEbit != 2) { // Save PC, and Jump to Exit Point

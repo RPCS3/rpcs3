@@ -19,7 +19,6 @@
 #include "Hardware.h"
 #include "newVif.h"
 #include "IPU/IPUdma.h"
-#include "Gif.h"
 #include "Gif_Unit.h"
 
 using namespace R5900;

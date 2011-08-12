@@ -15,7 +15,6 @@
 
 #include "PrecompiledHeader.h"
 #include "Common.h"
-#include "Gif.h"
 #include "Gif_Unit.h"
 
 #define GIF_PARSE DevCon.WriteLn

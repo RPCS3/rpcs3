@@ -199,7 +199,10 @@ _mVUt void mVUcleanUp() {
 
 	mVU.cycles = mVU.totalCycles - mVU.cycles;
 	mVU.regs().cycle += mVU.cycles;
-	cpuRegs.cycle += ((mVU.cycles < 3000) ? mVU.cycles : 3000) * EmuConfig.Speedhacks.VUCycleSteal;
+
+	if (!vuIndex || !THREAD_VU1) {
+		cpuRegs.cycle += std::min(mVU.cycles, 3000u) * EmuConfig.Speedhacks.VUCycleSteal;
+	}
 	//static int ax = 0; ax++;
 	//if (!(ax % 100000)) {
 	//	for (u32 i = 0; i < (mVU.progSize / 2); i++) {

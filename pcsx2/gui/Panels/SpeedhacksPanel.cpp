@@ -161,10 +161,13 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	wxPanelWithHelpers* vuHacksPanel = new wxPanelWithHelpers( right, wxVERTICAL, _("microVU Hacks") );
 
 	m_check_vuFlagHack = new pxCheckBox( vuHacksPanel, _("mVU Flag Hack"),
-		_("Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc... [Recommended]") );
+		_("Good Speedup and High Compatibility; may cause bad graphics... [Recommended]" ) );
 
 	m_check_vuBlockHack = new pxCheckBox( vuHacksPanel, _("mVU Block Hack"),
-		_("Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc...") );
+		_("Good Speedup and High Compatibility; may cause bad graphics, SPS, etc...") );
+
+	m_check_vuThread = new pxCheckBox( vuHacksPanel, _("MTVU (Multi-Threaded microVU1)"),
+		_("Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ cores]") );
 
 	m_check_vuFlagHack->SetToolTip( pxEt( "!ContextTip:Speedhacks:vuFlagHack",
 		L"Updates Status Flags only on blocks which will read them, instead of all the time. "
@@ -174,6 +177,12 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_check_vuBlockHack->SetToolTip( pxEt( "!ContextTip:Speedhacks:vuBlockHack",
 		L"Assumes that very far into future blocks will not need old flag instance data. "
 		L"This should be pretty safe. It is unknown if this breaks any game..."
+	) );
+
+	m_check_vuThread->SetToolTip( pxEt( "!ContextTip:Speedhacks:vuThread",
+		L"Runs VU1 on its own thread (microVU1-only). Generally a speedup on CPUs with 3 or more cores. "
+		L"This is safe for most games, but a few games are incompatible and may hang. "
+		L"In the case of GS limited games, it may be a slowdown (especially on dual core CPUs)."
 	) );
 
 	// ------------------------------------------------------------------------
@@ -226,7 +235,8 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 	*vuHacksPanel	+= m_check_vuFlagHack;
 	*vuHacksPanel	+= m_check_vuBlockHack;
-	*vuHacksPanel	+= 57; // Aligns left and right boxes in default language and font size
+	*vuHacksPanel	+= m_check_vuThread;
+	//*vuHacksPanel	+= 57; // Aligns left and right boxes in default language and font size
 
 	*miscHacksPanel	+= m_check_intc;
 	*miscHacksPanel	+= m_check_waitloop;
@@ -304,6 +314,7 @@ void Panels::SpeedHacksPanel::ApplyConfigToGui( AppConfig& configToApply, int fl
 
 	m_check_vuFlagHack	->SetValue(opts.vuFlagHack);
 	m_check_vuBlockHack	->SetValue(opts.vuBlockHack);
+	m_check_vuThread	->SetValue(opts.vuThread);
 	m_check_intc		->SetValue(opts.IntcStat);
 	m_check_waitloop	->SetValue(opts.WaitLoop);
 	m_check_fastCDVD	->SetValue(opts.fastCDVD);
@@ -333,6 +344,7 @@ void Panels::SpeedHacksPanel::Apply()
 	opts.IntcStat			= m_check_intc->GetValue();
 	opts.vuFlagHack			= m_check_vuFlagHack->GetValue();
 	opts.vuBlockHack		= m_check_vuBlockHack->GetValue();
+	opts.vuThread			= m_check_vuThread->GetValue();
 
 	// If the user has a command line override specified, we need to disable it
 	// so that their changes take effect

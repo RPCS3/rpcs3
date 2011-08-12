@@ -17,9 +17,8 @@
 #include "PrecompiledHeader.h"
 #include "Common.h"
 
-#include "Gif.h"
-#include "Gif_Unit.h"
 #include "GS.h"
+#include "Gif_Unit.h"
 #include "Vif.h"
 #include "Vif_Dma.h"
 #include "IPU/IPU.h"

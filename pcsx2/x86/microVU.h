@@ -24,8 +24,8 @@ using namespace x86Emitter;
 #include <algorithm>
 #include "Common.h"
 #include "VU.h"
+#include "MTVU.h"
 #include "GS.h"
-#include "Gif.h"
 #include "Gif_Unit.h"
 #include "iR5900.h"
 #include "R5900OpcodeTables.h"
@@ -217,9 +217,11 @@ struct microVU {
 
 	VURegs& regs() const { return ::vuRegs[index]; }
 
-	__fi VIFregisters&	getVifRegs()	const	{ return regs().GetVifRegs(); }
-	__fi REG_VI&		getVI(uint reg) const	{ return regs().VI[reg]; }
-	__fi VECTOR&		getVF(uint reg) const	{ return regs().VF[reg]; }
+	__fi REG_VI& getVI(uint reg) const	{ return regs().VI[reg]; }
+	__fi VECTOR& getVF(uint reg) const	{ return regs().VF[reg]; }
+	__fi VIFregisters& getVifRegs()	const {
+		return (index && THREAD_VU1) ? vu1Thread.vifRegs : regs().GetVifRegs();
+	}
 };
 
 // microVU rec structs

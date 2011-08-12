@@ -19,6 +19,7 @@
 #include "GS.h"
 #include "Gif_Unit.h"
 #include "Vif_Dma.h"
+#include "MTVU.h"
 
 Gif_Unit gifUnit;
 
@@ -76,10 +77,30 @@ bool Gif_HandlerAD(u8* pMem) {
 	return false;
 }
 
+// Returns true if pcsx2 needed to process the packet...
+bool Gif_HandlerAD_Debug(u8* pMem) {
+	u32   reg = pMem[8];
+	if   (reg == 0x50) { Console.Error("GIF Handler Debug - BITBLTBUF"); return 1; }
+	elif (reg == 0x52) { Console.Error("GIF Handler Debug - TRXREG");    return 1; }
+	elif (reg == 0x53) { Console.Error("GIF Handler Debug - TRXDIR");    return 1; }
+	elif (reg == 0x60) { Console.Error("GIF Handler Debug - SIGNAL");    return 1; }
+	elif (reg == 0x61) { Console.Error("GIF Handler Debug - FINISH");    return 1; }
+	elif (reg == 0x62) { Console.Error("GIF Handler Debug - LABEL");     return 1; }
+	elif (reg >= 0x63 && reg != 0x7f) {
+		DevCon.Warning("GIF Handler Debug - Write to unknown register! [reg=%x]", reg);
+	}
+	return 0;
+}
+
 void Gif_FinishIRQ() {
 	if (CSRreg.FINISH && !(GSIMR&0x200)) {
 		gsIrq();
 	}
+}
+
+// Used in MTVU mode... MTVU will later complete a real packet
+void Gif_AddGSPacketMTVU(GS_Packet& gsPack, GIF_PATH path) {
+	GetMTGS().SendSimpleGSPacket(GS_RINGTYPE_MTVU_GSPACKET, 0, 0, path);
 }
 
 void Gif_AddCompletedGSPacket(GS_Packet& gsPack, GIF_PATH path) {
@@ -91,6 +112,7 @@ void Gif_AddCompletedGSPacket(GS_Packet& gsPack, GIF_PATH path) {
 		GetMTGS().SendDataPacket();
 	}
 	else {
+		pxAssertDev(!gsPack.readAmount, "Gif Unit - gsPack.readAmount only valid for MTVU path 1!");
 		AtomicExchangeAdd(gifUnit.gifPath[path].readAmount, gsPack.size);
 		GetMTGS().SendSimpleGSPacket(GS_RINGTYPE_GSPACKET,  gsPack.offset, gsPack.size, path);
 	}
@@ -102,35 +124,47 @@ void Gif_AddBlankGSPacket(u32 size, GIF_PATH path) {
 	GetMTGS().SendSimpleGSPacket(GS_RINGTYPE_GSPACKET, ~0u, size, path);
 }
 
-void Gif_MTGS_Wait() {
-	GetMTGS().WaitGS();
-}
-
-void Gif_Execute() {
-	gifUnit.Execute();
+void Gif_MTGS_Wait(bool isMTVU) {
+	GetMTGS().WaitGS(false, true, isMTVU);
 }
 
 void SaveStateBase::gifPathFreeze(u32 path) {
 
 	Gif_Path& gifPath = gifUnit.gifPath[path];
-	pxAssertDev(gifPath.readAmount==0, "Gif Path readAmount should be 0!");
+	pxAssertDev(!gifPath.readAmount,           "Gif Path readAmount should be 0!");
+	pxAssertDev(!gifPath.gsPack.readAmount,     "GS Pack readAmount should be 0!");
+	pxAssertDev(!gifPath.GetPendingGSPackets(), "MTVU GS Pack Queue should be 0!");
+
 	if (IsSaving()) { // Move all the buffered data to the start of buffer
 		gifPath.RealignPacket(); // May add readAmount which we need to clear on load
 	}
 	u8* bufferPtr = gifPath.buffer; // Backup current buffer ptr
-	Freeze(gifPath);
+	Freeze(gifPath.mtvu.fakePackets);
+	FreezeMem(&gifPath,  sizeof(gifPath) - sizeof(gifPath.mtvu));
 	FreezeMem(bufferPtr, gifPath.curSize);
 	gifPath.buffer = bufferPtr;
-	if (!IsSaving()) gifPath.readAmount = 0;
+	if(!IsSaving()) {
+		gifPath.readAmount        = 0;
+		gifPath.gsPack.readAmount = 0;
+	}
 }
 
 void SaveStateBase::gifFreeze() {
-	Gif_MTGS_Wait();
+	bool mtvuMode = THREAD_VU1;
+	pxAssert(vu1Thread.IsDone());
+	GetMTGS().WaitGS();
 	FreezeTag("Gif Unit");
+	Freeze(mtvuMode);
 	Freeze(gifUnit.stat);
 	Freeze(gifUnit.gsSIGNAL);
 	Freeze(gifUnit.lastTranType);
 	gifPathFreeze(GIF_PATH_1);
 	gifPathFreeze(GIF_PATH_2);
 	gifPathFreeze(GIF_PATH_3);
+	if (!IsSaving()) {
+		if (mtvuMode != THREAD_VU1) {
+			DevCon.Warning("gifUnit: MTVU Mode has switched between save/load state");
+			// ToDo: gifUnit.SwitchMTVU(mtvuMode);
+		}
+	}
 }

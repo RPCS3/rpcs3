@@ -342,8 +342,8 @@ protected:
 struct _EXCEPTION_POINTERS;
 extern int SysPageFaultExceptionFilter(struct _EXCEPTION_POINTERS* eps);
 
-#	define PCSX2_PAGEFAULT_PROTECT		__try
-#	define PCSX2_PAGEFAULT_EXCEPT		__except(SysPageFaultExceptionFilter(GetExceptionInformation())) {}
+#	define PCSX2_PAGEFAULT_PROTECT __try
+#	define PCSX2_PAGEFAULT_EXCEPT  __except(SysPageFaultExceptionFilter(GetExceptionInformation())) {}
 
 #else
 #	error PCSX2 - Unsupported operating system platform.
@@ -352,5 +352,7 @@ extern int SysPageFaultExceptionFilter(struct _EXCEPTION_POINTERS* eps);
 extern void pxInstallSignalHandler();
 extern void _platform_InstallSignalHandler();
 
+#include "Threading.h"
 extern SrcType_PageFault* Source_PageFault;
+extern Threading::Mutex   PageFault_Mutex;
 

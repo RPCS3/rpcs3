@@ -24,7 +24,7 @@
 //  the lower 16 bit value.  IF the change is breaking of all compatibility with old
 //  states, increment the upper 16 bit value, and clear the lower 16 bits to 0.
 
-static const u32 g_SaveVersion = (0x9A02 << 16) | 0x0000;
+static const u32 g_SaveVersion = (0x9A03 << 16) | 0x0000;
 
 // this function is meant to be used in the place of GSfreeze, and provides a safe layer
 // between the GS saving function and the MTGS's needs. :)
@@ -193,6 +193,7 @@ protected:
 
 	// Load/Save functions for the various components of our glorious emulator!
 
+	void mtvuFreeze();
 	void rcntFreeze();
 	void vuMicroFreeze();
 	void vif0Freeze();
