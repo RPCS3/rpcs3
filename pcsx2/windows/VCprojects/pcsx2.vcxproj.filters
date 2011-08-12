@@ -314,6 +314,9 @@
     <ClCompile Include="..\..\vtlb.cpp">
       <Filter>System\Ps2\EmotionEngine\Memory</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\MTVU.cpp">
+      <Filter>System\Ps2\EmotionEngine\VU</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\VUmicro.cpp">
       <Filter>System\Ps2\EmotionEngine\VU</Filter>
     </ClCompile>
@@ -893,6 +896,9 @@
     </ClInclude>
     <ClInclude Include="..\..\vtlb.h">
       <Filter>System\Ps2\EmotionEngine\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MTVU.h">
+      <Filter>System\Ps2\EmotionEngine\VU</Filter>
     </ClInclude>
     <ClInclude Include="..\..\VU.h">
       <Filter>System\Ps2\EmotionEngine\VU</Filter>

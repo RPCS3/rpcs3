@@ -457,6 +457,7 @@
     <ClCompile Include="..\..\Memory.cpp" />
     <ClCompile Include="..\..\x86\ix86-32\recVTLB.cpp" />
     <ClCompile Include="..\..\vtlb.cpp" />
+    <ClCompile Include="..\..\MTVU.cpp" />
     <ClCompile Include="..\..\VUmicro.cpp" />
     <ClCompile Include="..\..\VUmicroMem.cpp" />
     <ClCompile Include="..\..\x86\iVU1micro.cpp" />
@@ -713,7 +714,8 @@
     <ClInclude Include="..\..\Cache.h" />
     <ClInclude Include="..\..\Memory.h" />
     <ClInclude Include="..\..\vtlb.h" />
-    <ClInclude Include="..\..\VU.h" />
+    <ClInclude Include="..\..\MTVU.h" />
+	<ClInclude Include="..\..\VU.h" />
     <ClInclude Include="..\..\VUmicro.h" />
     <ClInclude Include="..\..\x86\microVU.h" />
     <ClInclude Include="..\..\x86\microVU_IR.h" />
