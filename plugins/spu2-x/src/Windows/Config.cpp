@@ -108,7 +108,7 @@ void ReadSettings()
 	if( mods[OutputModule] == NULL )
 	{
 		// Unsupported or legacy module.
-		fprintf( stderr, "* SPU2-X: Unknown output module '%s' specified in configuration file.\n", omodid );
+		fwprintf( stderr, L"* SPU2-X: Unknown output module '%s' specified in configuration file.\n", omodid );
 		fprintf( stderr, "* SPU2-X: Defaulting to DirectSound (%S).\n", DSoundOut->GetIdent() );
 		OutputModule = FindOutputModuleById( DSoundOut->GetIdent() );
 	}

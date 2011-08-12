@@ -188,7 +188,7 @@ u32 WaitSync( u32 TargetCycle )
 	u32 WaitTime = WaitCycles / IOPCiclesPerMS;
 	if(WaitTime > 10)
 		WaitTime = 10;
-	if(WaitTime = 0)
+	if(WaitTime == 0)
 		WaitTime = 1;
 	SleepEx(WaitTime, TRUE);
 

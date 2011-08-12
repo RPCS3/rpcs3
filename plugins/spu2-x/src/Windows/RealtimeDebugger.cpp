@@ -190,7 +190,7 @@ void UpdateDebugDialog()
 			TextOut(hdc,JX+4,JY+ 4,L"REVB",4);
 			TextOut(hdc,JX+4,JY+18,L"IRQE",4);
 			TextOut(hdc,JX+4,JY+32,L"ADMA",4);
-			swprintf_s(t,L"DMA%s",c==0 ? "4" : "7");
+			swprintf_s(t,L"DMA%s",c==0 ? L"4" : L"7");
 			TextOut(hdc,JX+4,JY+46,t, 4);
 			
 			SetTextColor(hdc,RGB(  0,255,  0));
@@ -259,7 +259,6 @@ void UpdateDebugDialog()
 			}
 			if(cd.dmaFlag > 0) // So it shows x times this is called, since dmas are so fast
 			{
-				static wchar_t t[256];
 				swprintf_s(t,L"size = %d",cd.lastsize);
 				
 				TextOut(hdc,JX+64,JY+46,t,wcslen(t));

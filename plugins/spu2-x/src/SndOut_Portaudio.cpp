@@ -380,8 +380,8 @@ private:
 					SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_RESETCONTENT,0,0);
 					SendMessageA(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_ADDSTRING,0,(LPARAM)"Default Device");
 					SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,0,0);
-					int idx=0;
-					int i=1,j=0;
+					int _idx=0;
+					int i=1;
 					for(int j=0;j<Pa_GetDeviceCount();j++)
 					{
 						const PaDeviceInfo * info = Pa_GetDeviceInfo(j);
@@ -391,12 +391,12 @@ private:
 							SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETITEMDATA,i,(LPARAM)info);			
 							if(wxString::FromAscii(info->name) == m_Device)
 							{
-								idx = i;
+								_idx = i;
 							}
 							i++;
 						}
 					}
-					SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETCURSEL,idx,0);
+					SendMessage(GetDlgItem(hWnd,IDC_PA_DEVICE),CB_SETCURSEL,_idx,0);
 				}
 
 				INIT_SLIDER( IDC_LATENCY, 10, 200, 10, 1, 1 );
