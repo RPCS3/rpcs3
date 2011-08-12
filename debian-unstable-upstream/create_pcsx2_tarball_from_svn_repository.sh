@@ -1,5 +1,5 @@
 #!/bin/sh
-# copyright (c) 2010 Gregory Hainaut
+# copyright (c) 2011 Gregory Hainaut
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -105,29 +105,39 @@ echo "Downloading pcsx2 source revision ${SVN_CO_VERSION}"
 mkdir -p $ROOT_DIR;
 (cd $ROOT_DIR; 
     get_svn_file CMakeLists.txt;
-    get_svn_dir bin common cmake locales pcsx2 tools;
+    get_svn_dir common cmake locales pcsx2 tools;
     get_svn_dir debian-unstable-upstream;
 echo "Done")
 
-echo "Downloading Linux compatible plugins for revision ${SVN_CO_VERSION}"
+# separate bin to avoid downloading the .mo file
+mkdir -p $ROOT_DIR/bin;
+(cd $ROOT_DIR/bin;
+    get_svn_file bin/GameIndex.dbf;
+    get_svn_dir  bin/docs;)
+
+echo "Downloading Linux compatible plugins revision ${SVN_CO_VERSION}"
 # Note: Other plugins exist but they are not 100% copyright free.
 mkdir -p $ROOT_DIR/plugins
 (cd $ROOT_DIR/plugins; 
     get_svn_file plugins/CMakeLists.txt;
-    # DVD
     get_svn_dir plugins/CDVDnull;
-    # Copyright issue
+    # Potential copyrigh issue. Optional anyway
     # get_svn_dir plugins/CDVDnull plugins/CDVDiso;
-    # PAD
     get_svn_dir plugins/PadNull plugins/onepad;
-    # AUDIO
-    get_svn_dir plugins/SPU2null plugins/spu2-x plugins/zerospu2;
-    # Graphics
-    get_svn_dir plugins/GSnull plugins/zzogl-pg;
-    # Misc
+    get_svn_dir plugins/SPU2null plugins/spu2-x;
+    get_svn_dir plugins/GSnull plugins/zzogl-pg plugins/GSdx;
     get_svn_dir plugins/dev9null plugins/FWnull plugins/USBnull;
 echo "Note: some plugins are more or less deprecated CDVDisoEFP, CDVDlinuz, Zerogs, Zeropad ...";
 echo "Done")
+
+## Download the internal sdl 1.3 for gsdx
+echo "Downloading 3rdpary SDL 1.3 (need by gsdx) revision ${SVN_CO_VERSION}"
+mkdir -p $ROOT_DIR/3rdparty
+(cd $ROOT_DIR/3rdparty/;
+    get_svn_file 3rdparty/CMakeLists.txt;
+    get_svn_dir 3rdparty/SDL-1.3.0-5387;)
+echo "Done"
+    
 
 ## Installation
 echo "Copy the subversion repository to a temporary directory"
@@ -155,6 +165,8 @@ echo "Remove useless files (copyright issues)"
 rm -fr "${NEW_DIR}/pcsx2/3rdparty" # useless link which annoy me
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders"
 rm -fr "${NEW_DIR}/common/src/Utilities/x86/MemcpyFast.cpp"
+rm -fr "${NEW_DIR}/plugins/GSdx/baseclasses"
+rm -fr "${NEW_DIR}/plugins/GSdx/vtune"
 
 ## BUILD
 echo "Build the tar.gz file"

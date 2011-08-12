@@ -16,6 +16,7 @@ override_dh_auto_configure:
 		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		-DCMAKE_BUILD_STRIP=FALSE \
 		-DFORCE_INTERNAL_SOUNDTOUCH=FALSE \
+		-DFORCE_INTERNAL_SDL=TRUE \
 		-DPACKAGE_MODE=TRUE
 
 clean:
@@ -23,11 +24,12 @@ clean:
 	dh_testroot
 
 	dh_auto_clean
-	rm -fr obj-* # Remove cmake stuff in case auto_clean does not do its jobs properly
+	rm -fr obj-* # cmake stuff is not always removed (fixed in debhelper 0.9.4)
 
 	dh_clean
 
-## Uncomment this, if fglrx driver is installed
+## Uncomment this, if fglrx driver is installed.
+## Need a confirmation but I think it is useless in recent system
 #override_dh_shlibdeps:
 #	dh_shlibdeps -- --ignore-missing-info
 
