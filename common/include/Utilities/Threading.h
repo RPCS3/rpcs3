@@ -408,7 +408,11 @@ namespace Threading
 		ScopedLock m_lock;
 		volatile __aligned(4) bool& m_bool;
 
+#ifdef __LINUX__
+		ScopedLockBool(Mutex& mutexToLock, volatile bool& isLockedBool)
+#else
 		ScopedLockBool(Mutex& mutexToLock, volatile __aligned(4) bool& isLockedBool)
+#endif
 			: m_lock(mutexToLock),
 			  m_bool(isLockedBool) {
 			m_bool = m_lock.IsLocked();

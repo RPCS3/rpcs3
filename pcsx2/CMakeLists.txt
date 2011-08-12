@@ -141,6 +141,7 @@ set(pcsx2Sources
 	Memory.cpp
 	MMI.cpp
 	MTGS.cpp
+    MTVU.cpp
 	Patch.cpp
 	Patch_Memory.cpp
 	Pcsx2Config.cpp
@@ -205,6 +206,7 @@ set(pcsx2Headers
 	IopMem.h
 	IopSio2.h
 #	Mdec.h
+    MTVU.h
 	Memory.h
 	MemoryTypes.h
 	NakedAsm.h
