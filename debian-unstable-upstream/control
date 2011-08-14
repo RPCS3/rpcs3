@@ -1,31 +1,37 @@
-Source: pcsx2.snapshot
+Source: pcsx2-unstable
 Section: contrib/games
 Priority: optional
 Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
 # WARNING we need dpkg-dev 1.15.7 to support dpkg-buildflags but ubunutu 10.04 have only 1.15.5.6...
 # WARNING Natty need at least cmake 2.8.5 (multiarch issue)
-Build-Depends: debhelper (>= 7.0.50), dpkg-dev (>= 1.15.5.6), cmake (>=2.8),
-    locales|locales-all,
-    zlib1g-dev (>= 1:1.2.3.3),
-    libbz2-dev,
-    libsdl1.2-dev,
-    libjpeg-dev,
-    libwxbase2.8-dev,
-    libwxgtk2.8-dev,
-    libgtk2.0-dev (>= 2.16),
+Build-Depends: cmake (>= 2.8),
+ debhelper (>= 7.0.50),
+ dpkg-dev (>= 1.15.5.6),
+ gcc-multilib [amd64],
+ g++-multilib [amd64],
+ ia32-libs-dev [amd64],
+ lib32asound2-dev [amd64],
+ lib32bz2-dev [amd64],
+ lib32z1-dev (>= 1:1.2.3.3) [amd64],
     libasound2-dev,
-    portaudio19-dev,
-# Virtual package must be enough for all
-#    libsoundtouch-dev | libsoundtouch1-dev | libsoundtouch0-dev,
+    libbz2-dev,
+    libgl1-mesa-dev,
+    libglew1.5-dev,
+    libglu1-mesa-dev,
+    libgtk2.0-dev (>= 2.16),
+    libjpeg-dev,
+    libsdl1.2-dev,
     libsoundtouch-dev,
     libsparsehash-dev,
+    libwxbase2.8-dev,
+    libwxgtk2.8-dev,
     libx11-dev,
-    libglew1.5-dev,
-    libgl1-mesa-dev,
-    libglu1-mesa-dev,
+    locales | locales-all,
 # Note lucid need nvidia-cg-toolkit-pcsx2 to be compatible with ppa   
-    nvidia-cg-toolkit-pcsx2 | nvidia-cg-toolkit (>= 3)
-Standards-Version: 3.9.1
+    nvidia-cg-toolkit-pcsx2 | nvidia-cg-toolkit (>= 3),
+    portaudio19-dev,
+    zlib1g-dev (>= 1:1.2.3.3)
+Standards-Version: 3.9.2
 Homepage: http://pcsx2.net/
 
 Package: pcsx2-unstable
@@ -53,7 +59,7 @@ Recommends: pcsx2-unstable (>= ${binary:Version}),
 Conflicts: pcsx2-plugins,
     pcsx2-data-unstable
 Replaces: pcsx2-data-unstable
-Description: Various plugins for pcsx2
+Description: Various plugins for PCSX2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
  .
  WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
@@ -63,7 +69,7 @@ Description: Various plugins for pcsx2
  This package includes the plugins for PCSX2.
 
 Package: pcsx2-unstable-dbg
-Section: debug
+Section: contrib/debug
 Priority: extra
 Architecture: i386
 Depends: ${misc:Depends}, pcsx2-unstable (= ${binary:Version})
@@ -75,10 +81,10 @@ Description: Debug symbols for pcsx2
  this instruction set, it does not have enough horse power to run this emulator
  anyway.
  .
- This package contains the debug symbol of pcsx2.
+ This package contains the debug symbols for PCSX2.
 
 Package: pcsx2-plugins-unstable-dbg
-Section: debug
+Section: contrib/debug
 Priority: extra
 Architecture: i386
 Depends: ${misc:Depends}, pcsx2-plugins-unstable (= ${binary:Version})
@@ -90,16 +96,15 @@ Description: Debug symbols of the pcsx2-plugins
  this instruction set, it does not have enough horse power to run this emulator
  anyway.
  .
- This package contains the debug symbols of the pcsx2 plugins.
+ This package contains the debug symbols for the PCSX2 plugins.
 
 Package: pcsx2-l10n-unstable
-Section: localization
-Priority: optional
+Section: contrib/localization
 Architecture: all
 Depends: ${misc:Depends}
 Recommends: pcsx2-unstable (>= ${source:Version})
 Conflicts: pcsx2-l10n
-Description: Languages package for pcsx2
+Description: Language files for PCSX2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
  .
  WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support

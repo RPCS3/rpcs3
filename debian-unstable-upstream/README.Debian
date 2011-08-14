@@ -1,13 +1,13 @@
     pcsx2 for debian
 =========================
 
-* This version has some major modifications against the default upstream version. 
+* This version has some major modifications against the default upstream code.
     -> documents are stored in $XDG_CONFIG_HOME instead of $HOME/pcsx2
 
 * Documentation needs some love. Feel free to help.
 
-* -fPIC option was removed for multiple reason.
-    - Code only support x86 architecture.
+* -fPIC option was removed for multiple reasons.
+    - Code only supports the x86 architecture.
     - Upstream code uses the ebx register so it's not compliant with PIC.
     - Impacts the performance too much.
     - Only plugins. No package will link to them.

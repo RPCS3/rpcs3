@@ -38,7 +38,7 @@ while [ -n "$1" ]; do
 case $1 in
     -help|-h) help;shift 1;;
     -rev|-r) SVN_CO_VERSION=$2; shift 2;;
-    -branch|-b) BRANCH=$2; shift 1;;
+    -branch|-b) BRANCH=$2; shift 2;;
     -local|-l) LOCAL=1;shift 1;;
     --) shift;break;;
     -*) echo "ERROR: $1 option does not exists. Use -h for help";exit 1;;
@@ -115,13 +115,13 @@ mkdir -p $ROOT_DIR/bin;
     get_svn_file bin/GameIndex.dbf;
     get_svn_dir  bin/docs;)
 
-echo "Downloading Linux compatible plugins revision ${SVN_CO_VERSION}"
+echo "Downloading Linux compatible plugins for revision ${SVN_CO_VERSION}"
 # Note: Other plugins exist but they are not 100% copyright free.
 mkdir -p $ROOT_DIR/plugins
 (cd $ROOT_DIR/plugins; 
     get_svn_file plugins/CMakeLists.txt;
     get_svn_dir plugins/CDVDnull;
-    # Potential copyrigh issue. Optional anyway
+    # Potential copyright issue. Optional anyway
     # get_svn_dir plugins/CDVDnull plugins/CDVDiso;
     get_svn_dir plugins/PadNull plugins/onepad;
     get_svn_dir plugins/SPU2null plugins/spu2-x;
@@ -155,7 +155,7 @@ find $NEW_DIR -name "missing" -exec rm -f {} \;
 find $NEW_DIR -name "aclocal.m4" -exec rm -f {} \;
 find $NEW_DIR -name "configure.ac" -exec rm -f {} \;
 find $NEW_DIR -name "Makefile.am" -exec rm -f {} \;
-echo "Remove windows file (useless & copyright issue)"
+echo "Remove windows files (useless & copyright issues)"
 find $NEW_DIR -iname "windows" -type d -exec rm -fr {} \; 2> /dev/null
 find $NEW_DIR -name "Win32" -type d -exec rm -fr {} \; 2> /dev/null
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/Win32"

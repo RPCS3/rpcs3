@@ -14,15 +14,13 @@ set(CommonFlags
     -msse2
     -fvisibility=hidden
 	-pipe
-	-Wno-format
-	-Wno-unused-parameter
-	-Wno-unused-value
-	-Wunused-variable)
+    -w
+    )
 
 # set warning flags
 set(DebugFlags
-	-W
-	-g)
+	-g
+    )
 
 # set optimization flags
 set(OptimizationFlags
