@@ -385,7 +385,7 @@ private:
 
 	static StereoOut32* sndTempBuffer;
 	static StereoOut16* sndTempBuffer16;
-
+	
 	static int sndTempProgress;
 	static int m_dsp_progress;
 
@@ -394,17 +394,16 @@ private:
 
 	static StereoOut32 *m_buffer;
 	static s32 m_size;
-	static s32 m_rpos;
-	static s32 m_wpos;
-	static s32 m_data;
 
+	static __aligned(4) volatile s32 m_rpos;
+	static __aligned(4) volatile s32 m_wpos;
+	
 	static float lastEmergencyAdj;
 	static float cTempo;
 	static float eTempo;
 	static int ssFreeze;
 
 	static void _InitFail();
-	static void _WriteSamples(StereoOut32* bData, int nSamples);
 	static bool CheckUnderrunStatus( int& nSamples, int& quietSampleCount );
 
 	static void soundtouchInit();
@@ -419,6 +418,17 @@ private:
 	static void UpdateTempoChangeSoundTouch();
 	static void UpdateTempoChangeSoundTouch2();
 
+	static void _WriteSamples(StereoOut32* bData, int nSamples);
+		
+	static void _WriteSamples_Safe(StereoOut32* bData, int nSamples);
+	static void _ReadSamples_Safe(StereoOut32* bData, int nSamples);
+
+	static void _WriteSamples_Internal(StereoOut32 *bData, int nSamples);
+	static void _DropSamples_Internal(int nSamples);
+	static void _ReadSamples_Internal(StereoOut32 *bData, int nSamples);
+
+	static int _GetApproximateDataInBuffer(); 
+	
 public:
 	static void UpdateTempoChangeAsyncMixing();
 	static void Init();

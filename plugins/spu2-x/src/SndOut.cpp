@@ -112,9 +112,8 @@ int FindOutputModuleById( const wchar_t* omodid )
 
 StereoOut32 *SndBuffer::m_buffer;
 s32 SndBuffer::m_size;
-s32 SndBuffer::m_rpos;
-s32 SndBuffer::m_wpos;
-s32 SndBuffer::m_data;
+__aligned(4) volatile s32 SndBuffer::m_rpos;
+__aligned(4) volatile s32 SndBuffer::m_wpos;
 
 bool SndBuffer::m_underrun_freeze;
 StereoOut32* SndBuffer::sndTempBuffer = NULL;
@@ -131,6 +130,8 @@ int GetAlignedBufferSize( int comp )
 bool SndBuffer::CheckUnderrunStatus( int& nSamples, int& quietSampleCount )
 {
 	quietSampleCount = 0;
+
+	int data = _GetApproximateDataInBuffer();
 	if( m_underrun_freeze )
 	{
 		int toFill = m_size / ( (SynchMode == 2) ? 32 : 400); // TimeStretch and Async off?
@@ -138,7 +139,7 @@ bool SndBuffer::CheckUnderrunStatus( int& nSamples, int& quietSampleCount )
 
 		// toFill is now aligned to a SndOutPacket
 
-		if( m_data < toFill )
+		if( data < toFill )
 		{
 			quietSampleCount = nSamples;
 			return false;
@@ -149,10 +150,10 @@ bool SndBuffer::CheckUnderrunStatus( int& nSamples, int& quietSampleCount )
 			ConLog(" * SPU2 > Underrun compensation (%d packets buffered)\n", toFill / SndOutPacketSize );
 		lastPct = 0.0;		// normalize timestretcher
 	}
-	else if( m_data < nSamples )
+	else if( data < nSamples )
 	{
-		nSamples = m_data;
-		quietSampleCount = SndOutPacketSize - m_data;
+		nSamples = data;
+		quietSampleCount = SndOutPacketSize - data;
 		m_underrun_freeze = true;
 
 		if( SynchMode == 0 ) // TimeStrech on
@@ -170,6 +171,68 @@ void SndBuffer::_InitFail()
 	// the game to emulate properly (hopefully), albeit without sound.
 	OutputModule = FindOutputModuleById( NullOut.GetIdent() );
 	mods[OutputModule]->Init();
+}
+
+int SndBuffer::_GetApproximateDataInBuffer()
+{
+	// WARNING: not necessarily 100% up to date by the time it's used, but it will have to do.
+	return (m_wpos + m_size - m_rpos) % m_size;
+}
+
+void SndBuffer::_WriteSamples_Internal(StereoOut32 *bData, int nSamples)
+{
+	// WARNING: This assumes the write will NOT wrap around,
+	// and also assumes there's enough free space in the buffer.
+
+	memcpy(m_buffer + m_wpos, bData, nSamples * sizeof(StereoOut32));
+	m_wpos = (m_wpos + nSamples) % m_size;
+}
+
+void SndBuffer::_DropSamples_Internal(int nSamples)
+{
+	m_rpos = (m_rpos + nSamples) % m_size;
+}
+
+void SndBuffer::_ReadSamples_Internal(StereoOut32 *bData, int nSamples)
+{
+	// WARNING: This assumes the read will NOT wrap around,
+	// and also assumes there's enough data in the buffer.
+	memcpy(bData, m_buffer + m_rpos, nSamples * sizeof(StereoOut32));
+	_DropSamples_Internal(nSamples);
+}
+
+void SndBuffer::_WriteSamples_Safe(StereoOut32 *bData, int nSamples)
+{
+	// WARNING: This code assumes there's only ONE writing process.
+	if( (m_size - m_wpos) < nSamples)
+	{
+		int b1 = m_size - m_wpos;
+		int b2 = nSamples - b1;
+
+		_WriteSamples_Internal(bData, b1);
+		_WriteSamples_Internal(bData+b1, b2);
+	}
+	else
+	{
+		_WriteSamples_Internal(bData, nSamples);
+	}
+}
+
+void SndBuffer::_ReadSamples_Safe(StereoOut32* bData, int nSamples)
+{
+	// WARNING: This code assumes there's only ONE reading process.
+	if( (m_size - m_rpos) < nSamples)
+	{
+		int b1 = m_size - m_rpos;
+		int b2 = nSamples - b1;
+
+		_ReadSamples_Internal(bData, b1);
+		_ReadSamples_Internal(bData+b1, b2);
+	}
+	else
+	{
+		_ReadSamples_Internal(bData, nSamples);
+	}
 }
 
 // Note: When using with 32 bit output buffers, the user of this function is responsible
@@ -197,27 +260,23 @@ template<typename T> void SndBuffer::ReadSamples(T* bData)
 	if( CheckUnderrunStatus( nSamples, quietSamples ) )
 	{
 		jASSUME( nSamples <= SndOutPacketSize );
+		
+		// WARNING: This code assumes there's only ONE reading process.
+		int b1 = m_size - m_rpos;
 
-		// [Air] [TODO]: This loop is probably a candidate for SSE2 optimization.
+		if(b1 > nSamples)
+			b1 = nSamples;
 
-		const int endPos = m_rpos + nSamples;
-		const int secondCopyLen = endPos - m_size;
-		const StereoOut32* rposbuffer = &m_buffer[m_rpos];
+		// First part
+		for( int i=0; i<b1; i++ )
+			bData[i].ResampleFrom( m_buffer[i + m_rpos] );
 
-		m_data -= nSamples;
+		// Second part
+		int b2 = nSamples - b1;
+		for( int i=0; i<b2; i++ )
+			bData[i+b1].ResampleFrom( m_buffer[i] );
 
-		if( secondCopyLen > 0 )
-		{
-			nSamples -= secondCopyLen;
-			for( int i=0; i<secondCopyLen; i++ )
-				bData[nSamples+i].ResampleFrom( m_buffer[i] );
-			m_rpos = secondCopyLen;
-		}
-		else
-			m_rpos += nSamples;
-
-		for( int i=0; i<nSamples; i++ )
-			bData[i].ResampleFrom( rposbuffer[i] );
+		_DropSamples_Internal(nSamples);
 	}
 
 	// If quietSamples != 0 it means we have an underrun...
@@ -249,10 +308,7 @@ template void SndBuffer::ReadSamples(Stereo71Out32*);
 
 void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)
 {
-	int free = m_size-m_data;
 	m_predictData = 0;
-
-	jASSUME( m_data <= m_size );
 
 	// Problem:
 	//  If the SPU2 gets out of sync with the SndOut device, the writepos of the
@@ -265,8 +321,11 @@ void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)
 	//  The older portion of the buffer is discarded rather than incoming data,
 	//  so that the overall audio synchronization is better.
 
-	if( free < nSamples )
+	int free = m_size - _GetApproximateDataInBuffer(); // -1, but the <= handles that
+	if( free <= nSamples )
 	{
+		// Disabled since the lock-free queue can't handle changing the read end from the write thread
+#if 0
 		// Buffer overrun!
 		// Dump samples from the read portion of the buffer instead of dropping
 		// the newly written stuff.
@@ -284,40 +343,20 @@ void SndBuffer::_WriteSamples(StereoOut32 *bData, int nSamples)
 			if( comp > (m_size-SndOutPacketSize) ) comp = m_size-SndOutPacketSize;
 		}
 
-		m_data -= comp;
-		m_rpos = (m_rpos+comp) % m_size;
+		_DropSamples_Internal(comp);
+
 		if( MsgOverruns() )
 			ConLog(" * SPU2 > Overrun Compensation (%d packets tossed)\n", comp / SndOutPacketSize );
 		lastPct = 0.0;		// normalize the timestretcher
+#else
+		if( MsgOverruns() )
+			ConLog(" * SPU2 > Overrun! 1 packet tossed)\n");
+		lastPct = 0.0;		// normalize the timestretcher
+		return;
+#endif
 	}
 
-	// copy in two phases, since there's a chance the packet
-	// wraps around the buffer (it'd be nice to deal in packets only, but
-	// the timestretcher and DSP options require flexibility).
-
-	const int endPos = m_wpos + nSamples;
-	const int secondCopyLen = endPos - m_size;
-	StereoOut32* wposbuffer = &m_buffer[m_wpos];
-
-	m_data += nSamples;
-	if( secondCopyLen > 0 )
-	{
-		nSamples -= secondCopyLen;
-		memcpy( m_buffer, &bData[nSamples], secondCopyLen * sizeof( *bData ) );
-		m_wpos = secondCopyLen;
-	}
-	else
-		m_wpos += nSamples;
-
-	memcpy( wposbuffer, bData, nSamples * sizeof( *bData ) );
-
-	// Use to monitor buffer levels in real time
-	/*int drvempty = mods[OutputModule]->GetEmptySampleCount();
-	float result = (float)(m_data + m_predictData - drvempty) - (m_size/16);
-	result /= (m_size/16);
-	if (result > 0.6 || result < -0.5)
-		printf("buffer: %f\n",result);
-	}*/
+	_WriteSamples_Safe(bData, nSamples);
 }
 
 void SndBuffer::Init()
@@ -331,11 +370,9 @@ void SndBuffer::Init()
 	// initialize sound buffer
 	// Buffer actually attempts to run ~50%, so allocate near double what
 	// the requested latency is:
-
-
+	
 	m_rpos = 0;
 	m_wpos = 0;
-	m_data = 0;
 
 	try
 	{

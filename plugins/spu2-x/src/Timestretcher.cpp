@@ -54,7 +54,8 @@ float SndBuffer::GetStatusPct()
 
 	//ConLog( "Data %d >>> driver: %d   predict: %d\n", m_data, drvempty, m_predictData );
 
-	float result = (float)(m_data + m_predictData - drvempty) - (m_size/16);
+	int data = _GetApproximateDataInBuffer();
+	float result = (float)( data + m_predictData - drvempty) - (m_size/16);
 	result /= (m_size/16);
 	return result;
 }
@@ -136,7 +137,8 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 	static int hys_ok_count=0;
 	static float dynamicTargetFullness=baseTargetFullness;
 
-	float bufferFullness=(float)m_data;///(float)m_size;
+	int data = _GetApproximateDataInBuffer();
+	float bufferFullness=(float)data;///(float)m_size;
 
 #ifdef NEWSTRETCHER_USE_DYNAMIC_TUNING
 	{//test current iterations/sec every 0.5s, and change algo params accordingly if different than previous IPS more than 30%
@@ -207,7 +209,7 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 
 		if(delta.GetMilliseconds()>1000){//report buffers state and tempo adjust every second
 			ConLog("buffers: %4d ms (%3.0f%%), tempo: %f, comp: %2.3f, iters: %d, (N-IPS:%d -> avg:%d, minokc:%d, div:%d)\n", 
-				(int)(m_data/48), (double)(100.0*bufferFullness/baseTargetFullness), (double)tempoAdjust, (double)(dynamicTargetFullness/baseTargetFullness), iters, (int)targetIPS
+				(int)(data/48), (double)(100.0*bufferFullness/baseTargetFullness), (double)tempoAdjust, (double)(dynamicTargetFullness/baseTargetFullness), iters, (int)targetIPS
 				, STRETCH_AVERAGE_LEN, hys_min_ok_count, compensationDivider
 				);
 			last=unow;

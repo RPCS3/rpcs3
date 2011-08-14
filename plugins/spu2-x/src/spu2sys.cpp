@@ -183,7 +183,7 @@ void V_Core::Init( int index )
 	Regs.STATX		= 0x80;
 	Regs.ENDX		= 0xffffff; // PS2 confirmed
 
-	RevBuffers.NeedsUpdated = 1;
+	RevBuffers.NeedsUpdated = true;
 	UpdateEffectsBufferSize();
 }
 
