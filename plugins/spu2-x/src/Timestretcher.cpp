@@ -118,10 +118,9 @@ float addToAvg(float val){
 }
 
 template <class T>
-T clamp(T val, T min, T max){
-	if( val > max ) return max;
-	if( val < min ) return min;
-	return val;
+bool IsInRange(const T& val, const T& min, const T& max)
+{
+	return ( min <= val && val <= max );
 }
 
 //actual stretch algorithm implementation
@@ -162,26 +161,23 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 
 	//Algorithm params: (threshold params (hysteresis), etc) 
 	const float hys_ok_factor=1.04;
-	int hys_min_ok_count=clamp((int)(50.0 *(float)targetIPS/750.0), 2, 100); //consecutive iterations within hys_ok before going to 1:1 mode
+	int hys_min_ok_count = GetClamped((int)(50.0 *(float)targetIPS/750.0), 2, 100); //consecutive iterations within hys_ok before going to 1:1 mode
 	const float hys_bad_factor=1.2;
-	int compensationDivider=clamp((int)(100.0 *(float)targetIPS/750), 15, 150);
+	int compensationDivider = GetClamped((int)(100.0 *(float)targetIPS/750), 15, 150);
 
 	float tempoAdjust=bufferFullness/dynamicTargetFullness;
 	float avgerage = addToAvg(tempoAdjust);
 	tempoAdjust = avgerage;
-	tempoAdjust = clamp( tempoAdjust, 0.05f, 10.0f);
+	tempoAdjust = GetClamped( tempoAdjust, 0.05f, 10.0f);
 
 
 	dynamicTargetFullness += (baseTargetFullness/tempoAdjust - dynamicTargetFullness)/(double)compensationDivider;
-	if( 
-		tempoAdjust == clamp(tempoAdjust, 0.9f, 1.1f) 
-		&& dynamicTargetFullness == clamp( dynamicTargetFullness, baseTargetFullness*0.9f, baseTargetFullness*1.1f)
-		)
+	if( IsInRange(tempoAdjust, 0.9f, 1.1f) && IsInRange( dynamicTargetFullness, baseTargetFullness*0.9f, baseTargetFullness*1.1f) )
 		dynamicTargetFullness=baseTargetFullness;
 
 	if( !inside_hysteresis )
 	{
-		if( tempoAdjust == clamp( tempoAdjust, 1.0f/hys_ok_factor, hys_ok_factor ) )
+		if( IsInRange( tempoAdjust, 1.0f/hys_ok_factor, hys_ok_factor ) )
 			hys_ok_count++;
 		else
 			hys_ok_count=0;
@@ -192,7 +188,7 @@ void SndBuffer::UpdateTempoChangeSoundTouch2()
 		}
 
 	}
-	else if( tempoAdjust != clamp( tempoAdjust, 1.0f/hys_bad_factor, hys_bad_factor ) ){
+	else if( !IsInRange( tempoAdjust, 1.0f/hys_bad_factor, hys_bad_factor ) ){
 		if(MsgOverruns()) ConLog("~~~~~~> stretch: Dynamic\n");
 		inside_hysteresis=false;
 		hys_ok_count=0;
