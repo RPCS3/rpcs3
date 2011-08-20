@@ -17,7 +17,23 @@ PWD_old=$PWD
 
 # Go to the script directory
 cd `dirname $current_script`
-if [ -e pcsx2 ] ; then
+
+# Setup LD_PRELOAD to work-around issue 1003
+SDL_SO=`pwd`/plugins/libpcsx2_SDL.so
+if [ -e "$SDL_SO" ]
+then
+    echo "INFO: LD_PRELOAD $SDL_SO"
+    if [ -n "$LD_PRELOAD" ]
+    then
+        LD_PRELOAD="$SDL_SO:$LD_PRELOAD"
+    else
+        LD_PRELOAD="$SDL_SO"
+    fi
+fi
+
+# Launch PCSX2
+if [ -x pcsx2 ]
+then
     ./pcsx2
 else
     echo "Error PCSX2 not found"

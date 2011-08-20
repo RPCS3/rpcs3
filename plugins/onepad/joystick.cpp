@@ -186,7 +186,7 @@ void JoystickInfo::DoHapticEffect(int type, int pad, int force)
 	if (pjoy->haptic_effect_id[type] < 0) return;
 
 	// FIXME: might need to multiply force
-	pjoy->haptic_effect_data[type].periodic.magnitude = force; // force/32767 strength
+	pjoy->haptic_effect_data[type].periodic.magnitude = force * conf->ff_intensity ; // force/32767 strength
 	// Upload the new effect
 	SDL_HapticUpdateEffect(pjoy->haptic, pjoy->haptic_effect_id[type], &pjoy->haptic_effect_data[type]);
 

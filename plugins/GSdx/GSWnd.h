@@ -108,7 +108,7 @@ public:
 	bool IsManaged() const {return m_managed;}
 
 	Display* GetDisplay();
-	void* GetHandle() {return (void*)&m_Xwindow;}
+	void* GetHandle() {return (void*)m_Xwindow;}
 	GSVector4i GetClientRect();
 	bool SetWindowText(const char* title);
 	void SetWindow(SDL_Window* current_window) { if (current_window) m_window = current_window; }

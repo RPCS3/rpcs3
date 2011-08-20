@@ -98,7 +98,7 @@ bool RunLinuxDialog()
 		gtk_combo_box_append_text(GTK_COMBO_BOX(interlace_combo_box), label.c_str());
 	}
 
-	gtk_combo_box_set_active(GTK_COMBO_BOX(interlace_combo_box), 0);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(interlace_combo_box), theApp.GetConfig("interlace", 0));
 	gtk_container_add(GTK_CONTAINER(main_box), interlace_label);
 	gtk_container_add(GTK_CONTAINER(main_box), interlace_combo_box);
 
@@ -143,16 +143,16 @@ bool RunLinuxDialog()
 	{
 		// Get all the settings from the dialog box.
 
-		#if 0 // I'll put the right variable names in later.
+		#if 0
+		// I'll put the right variable names in later.
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box)) != -1)
 			renderer = gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box));
 
+		// Crash, for some interlace options
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box)) != -1)
-			interlace = gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box));
-
-		if (gtk_combo_box_get_active(GTK_COMBO_BOX(aspect_combo_box)) != -1)
-			aspect = gtk_combo_box_get_active(GTK_COMBO_BOX(aspect_combo_box));
+			theApp.SetConfig( "interlace", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box)) );
 		#endif
+
 
 		theApp.SetConfig("swthreads", atoi((char*)gtk_entry_get_text(GTK_ENTRY(swthreads_text))) );
 

@@ -388,7 +388,28 @@ set(SDL_sources
 
 #include_directories( ${SDL_ROOT}/include /usr/include/kde/artsc /usr/include/directfb)
 
-add_library(${Output} STATIC ${SDL_sources} )
+
+# Hiden option. It is only a temporary workaround of issue 1003. The purpose is to LD_PRELOAD
+# the library so it avoid any conflict with previous SDL1.2 symbol
+if (DEFINED SHARED_SDL)
+    add_library(${Output} SHARED ${SDL_sources} )
+
+    # Seem to be needed when pre-loading on Fedora
+    target_link_libraries(${Output} dl)
+    target_link_libraries(${Output} m)
+
+    # Install the library with others plugins
+    if(PACKAGE_MODE)
+        install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
+    else(PACKAGE_MODE)
+        install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    endif(PACKAGE_MODE)
+
+else (DEFINED SHARED_SDL)
+    # Std build use static build
+    add_library(${Output} STATIC ${SDL_sources} )
+endif (DEFINED SHARED_SDL)
+
 
 # User flags options
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

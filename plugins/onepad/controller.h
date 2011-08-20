@@ -63,6 +63,7 @@ struct PADconf
 	u32 options;  // upper 16 bits are for pad2
 	u32 sensibility;
 	u32 joyid_map;
+	u32 ff_intensity;
 	map<u32,u32> keysym_map[2];
 
 	PADconf() { init(); }
@@ -70,6 +71,7 @@ struct PADconf
 	void init() {
 		memset(&keys, 0, sizeof(keys));
 		log = options = joyid_map = 0;
+		ff_intensity = 100;
 		sensibility = 500;
 		for (int pad = 0; pad < 2 ; pad++)
 			keysym_map[pad].clear();
