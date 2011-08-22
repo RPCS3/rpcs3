@@ -71,8 +71,6 @@ namespace YAML
 		void PostWriteStreamable(const std::stringstream& str);
 	
 	private:
-		enum ATOMIC_TYPE { AT_SCALAR, AT_SEQ, AT_BLOCK_SEQ, AT_FLOW_SEQ, AT_MAP, AT_BLOCK_MAP, AT_FLOW_MAP };
-		
 		void PreAtomicWrite();
 		bool GotoNextPreAtomicState();
 		void PostAtomicWrite();
