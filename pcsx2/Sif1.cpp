@@ -37,9 +37,9 @@ static __fi bool WriteEEtoFifo()
 {
 	// There's some data ready to transfer into the fifo..
 
-	SIF_LOG("Sif 1: Write EE to Fifo");
+	
 	const int writeSize = min((s32)sif1dma.qwc, sif1.fifo.sif_free() >> 2);
-
+	SIF_LOG("Sif 1: Write EE QWC %x to Fifo Size %x", sif1dma.qwc, writeSize);
 	tDMA_TAG *ptag;
 
 	ptag = sif1dma.getAddr(sif1dma.madr, DMAC_SIF1, false);
@@ -55,7 +55,7 @@ static __fi bool WriteEEtoFifo()
 	hwDmacSrcTadrInc(sif1dma);
 	sif1.ee.cycles += writeSize;		// fixme : BIAS is factored in above
 	sif1dma.qwc -= writeSize;
-
+	SIF_LOG("Ending FIFO Write, sif1 qwc = %x", sif1dma.qwc);
 	return true;
 }
 
@@ -166,7 +166,7 @@ static __fi void EndEE()
 {
 	sif1.ee.end = false;
 	sif1.ee.busy = false;
-	SIF_LOG("Sif 1: End EE");
+	SIF_LOG("Sif 1: End EE %x", sif1dma.qwc);
 
 	// Voodoocycles : Okami wants around 100 cycles when booting up
 	// Other games reach like 50k cycles here, but the EE will long have given up by then and just retry.
@@ -178,7 +178,7 @@ static __fi void EndEE()
 	}
 
 
-	CPU_INT(DMAC_SIF1, /*min((int)(*/sif1.ee.cycles*BIAS/*), 384)*/);
+	CPU_INT(DMAC_SIF1, /*min((int)(*/sif1.ee.cycles*8/*), 384)*/);
 }
 
 // Stop processing IOP, and signal an interrupt.
@@ -280,7 +280,7 @@ static __fi void Sif1End()
 {
 	psHu32(SBUS_F240) &= ~0x40;
 	psHu32(SBUS_F240) &= ~0x4000;
-
+	
 	DMA_LOG("SIF1 DMA End");
 }
 
@@ -313,13 +313,12 @@ __fi void SIF1Dma()
 			}
 		}
 
-	} while (/*!done &&*/ BusyCheck > 0);
-
-	Sif1End();
+	} while (/*!done &&*/ BusyCheck > 0);	
 }
 
 __fi void  sif1Interrupt()
 {
+	Sif1End();
 	HW_DMA10_CHCR &= ~0x01000000; //reset TR flag
 	psxDmaInterrupt2(3);
 }
@@ -346,13 +345,20 @@ __fi void dmaSIF1()
 	psHu32(SBUS_F240) |= 0x4000;
 	sif1.ee.busy = true;
 
+
+	
 	// Okay, this here is needed currently (r3644). 
 	// FFX battles in the thunder plains map die otherwise, Phantasy Star 4 as well
 	// These 2 games could be made playable again by increasing the time the EE or the IOP run,
 	// showing that this is very timing sensible.
 	// Doing this DMA unfortunately brings back an old warning in Legend of Legaia though, but it still works.
-	if (sif1.iop.busy)
-	{
-		SIF1Dma();
-	}
+	
+	//Updated 23/08/2011: The hangs are caused by the EE suspending SIF1 DMA and restarting it when in the middle 
+	//of processing a "REFE" tag, so the hangs can be solved by forcing the ee.end to be false
+	// (as it should always be at the beginning of a DMA).  using "if iop is busy" flags breaks Tom Clancy Rainbow Six.
+	// Legend of Legaia doesn't throw a warning either :)
+	sif1.ee.end = false;
+
+	SIF1Dma();
+
 }
