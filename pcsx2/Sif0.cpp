@@ -286,7 +286,7 @@ static __fi void HandleIOPTransfer()
 static __fi void Sif0End()
 {
 	psHu32(SBUS_F240) &= ~0x20;
-	//psHu32(SBUS_F240) &= ~0x2000;
+	psHu32(SBUS_F240) &= ~0x2000;
 
 	DMA_LOG("SIF0 DMA End");
 }
@@ -320,7 +320,7 @@ __fi void SIF0Dma()
 		}
 	} while (/*!done && */BusyCheck > 0); // Substituting (sif0.ee.busy || sif0.iop.busy) breaks things.
 
-	
+	Sif0End();
 }
 
 __fi void  sif0Interrupt()
@@ -331,14 +331,12 @@ __fi void  sif0Interrupt()
 
 __fi void  EEsif0Interrupt()
 {
-	Sif0End();
 	hwDmacIrq(DMAC_SIF0);
 	sif0dma.chcr.STR = false;
 }
 
 __fi void dmaSIF0()
 {
-	if(sif0.ee.end == true) DevCon.Warning("Happened on SIF0 :(");
 	SIF_LOG(wxString(L"dmaSIF0" + sif0dma.cmqt_to_str()).To8BitData());
 
 	if (sif0.fifo.readPos != sif0.fifo.writePos)
@@ -347,7 +345,7 @@ __fi void dmaSIF0()
 	}
 
 	//if(sif0dma.chcr.MOD == CHAIN_MODE && sif0dma.qwc > 0) DevCon.Warning(L"SIF0 QWC on Chain CHCR " + sif0dma.chcr.desc());
-	//psHu32(SBUS_F240) |= 0x2000;
+	psHu32(SBUS_F240) |= 0x2000;
 	sif0.ee.busy = true;
 
 	// Okay, this here is needed currently (r3644). 
