@@ -63,7 +63,8 @@ _vifT bool analyzeIbit(u32* &data, int iBit) {
 		// ... the VIF should not stall and raise the interrupt until after the NOP is processed.
 		// So the final value for MARK as the game sees it will be 0x333. --air
 		
-		return runMark<idx>(data);
+		if(CHECK_VIF1STALLHACK) return 0;
+		else return 1;
 	}
 	return 0;
 }

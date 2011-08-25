@@ -254,7 +254,8 @@ const wxChar *const tbl_GamefixNames[] =
 	L"SkipMpeg",
 	L"OPHFlag",
 	L"DMABusy",
-	L"VIFFIFO"
+	L"VIFFIFO",
+	L"VIF1Stall"
 };
 
 const __fi wxChar* EnumToString( GamefixId id )
@@ -313,6 +314,7 @@ void Pcsx2Config::GamefixOptions::Set( GamefixId id, bool enabled )
 		case Fix_OPHFlag:		OPHFlagHack			= enabled;  break;
 		case Fix_DMABusy:		DMABusyHack			= enabled;  break;
 		case Fix_VIFFIFO:		VIFFIFOHack			= enabled;  break;
+		case Fix_VIF1Stall:		VIF1StallHack		= enabled;  break;
 
 		jNO_DEFAULT;
 	}
@@ -335,6 +337,7 @@ bool Pcsx2Config::GamefixOptions::Get( GamefixId id ) const
 		case Fix_OPHFlag:		return OPHFlagHack;
 		case Fix_DMABusy:		return DMABusyHack;
 		case Fix_VIFFIFO:		return VIFFIFOHack;
+		case Fix_VIF1Stall:		return VIF1StallHack;
 		
 		jNO_DEFAULT;
 	}
@@ -357,6 +360,7 @@ void Pcsx2Config::GamefixOptions::LoadSave( IniInterface& ini )
 	IniBitBool( OPHFlagHack );
 	IniBitBool( DMABusyHack );
 	IniBitBool( VIFFIFOHack );
+	IniBitBool( VIF1StallHack );
 }
 
 Pcsx2Config::Pcsx2Config()

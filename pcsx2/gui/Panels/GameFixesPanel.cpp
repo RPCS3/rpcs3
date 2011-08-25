@@ -98,6 +98,10 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 				L" * Test Drive Unlimited\n"
 				L" * Transformers"
 			)
+		},
+		{
+			_("Delay VIF1 Stalls (VIF1 FIFO) - For SOCOM 2 HUD."),
+			wxEmptyString
 		}
 	};
 
