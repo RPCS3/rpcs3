@@ -61,10 +61,8 @@ int  _SPR0chain()
 	pMem = SPRdmaGetAddr(spr0ch.madr, true);
 	if (pMem == NULL) return -1;
 
-	switch (dmacRegs.ctrl.MFD)
+	if(spr0ch.madr >= dmacRegs.rbor.ADDR && spr0ch.madr <= (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
 	{
-		case MFD_VIF1:
-		case MFD_GIF:
 			partialqwc = spr0ch.qwc;
 
 			if ((spr0ch.madr & ~dmacRegs.rbsr.RMSK) != dmacRegs.rbor.ADDR)
@@ -77,10 +75,11 @@ int  _SPR0chain()
 			spr0ch.madr = dmacRegs.rbor.ADDR + (spr0ch.madr & dmacRegs.rbsr.RMSK);
 			spr0ch.sadr += partialqwc << 4;
 			spr0ch.qwc -= partialqwc;
-			break;
-
-		case NO_MFD:
-		case MFD_RESERVED:
+			
+			spr0finished = true;
+	}
+	else
+	{
 			
 			//Taking an arbitary small value for games which like to check the QWC/MADR instead of STR, so get most of
 			//the cycle delay out of the way before the end.
@@ -94,7 +93,6 @@ int  _SPR0chain()
 			spr0ch.sadr += partialqwc << 4;
 			spr0ch.qwc -= partialqwc;
 
-			break;
 	}
 
 	

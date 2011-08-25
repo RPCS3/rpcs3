@@ -152,13 +152,6 @@ __fi void vif1SetupTransfer()
 	
 	switch (vif1.dmamode)
 	{
-		case VIF_NORMAL_TO_MEM_MODE:
-		case VIF_NORMAL_FROM_MEM_MODE:
-			vif1.inprogress |= 1;
-			vif1.done = true;
-			g_vifCycles = 2;
-		break;
-
 		case VIF_CHAIN_MODE:
 			ptag = dmaGetAddr(vif1ch.tadr, false); //Set memory pointer to TADR
 
@@ -379,21 +372,11 @@ void dmaVIF1()
 	}
 #endif
 
-	if ((vif1ch.chcr.MOD == NORMAL_MODE) || vif1ch.qwc > 0)   // Normal Mode
+	if (vif1ch.qwc > 0)   // Normal Mode
 	{
-
-		if (dmacRegs.ctrl.STD == STD_VIF1)
-			Console.WriteLn("DMA Stall Control on VIF1 normal");
-
-		if (vif1ch.chcr.DIR)  // to Memory
-			vif1.dmamode = VIF_NORMAL_FROM_MEM_MODE;
-		else
-			vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
-
-		vif1.done = false;
 		
 		// ignore tag if it's a GS download (Def Jam Fight for NY)
-		if(vif1ch.chcr.MOD == CHAIN_MODE && vif1.dmamode != VIF_NORMAL_TO_MEM_MODE) 
+		if(vif1ch.chcr.MOD == CHAIN_MODE && vif1ch.chcr.DIR) 
 		{
 			vif1.dmamode = VIF_CHAIN_MODE;
 			//DevCon.Warning(L"VIF1 QWC on Chain CHCR " + vif1ch.chcr.desc());
@@ -402,7 +385,25 @@ void dmaVIF1()
 			{
 				vif1.done = true;
 			}
+			else 
+			{
+				vif1.done = false;
+			}
 		}
+		else //Assume normal mode for reverse FIFO and Normal.
+		{
+			if (dmacRegs.ctrl.STD == STD_VIF1)
+				Console.WriteLn("DMA Stall Control on VIF1 normal");
+
+			if (vif1ch.chcr.DIR)  // to Memory
+				vif1.dmamode = VIF_NORMAL_FROM_MEM_MODE;
+			else
+				vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
+
+			vif1.done = true;
+		}
+
+		vif1.inprogress |= 1;
 	}
 	else
 	{
