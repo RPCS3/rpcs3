@@ -489,7 +489,8 @@ button_positions b_pos[MAX_KEYS] =
 };
 
 // Warning position is important and must match the order of the PadOptions structure
-button_positions check_pos[8] =
+#define CHECK_NBR 8
+button_positions check_pos[CHECK_NBR] =
 {
 	{ "Enable force feedback", 40, 400},
 	{ "Reverse Lx", 40, 304},
@@ -501,7 +502,7 @@ button_positions check_pos[8] =
 	{ "Hack: Sixaxis/DS3 plugged in USB", 368, 400}
 };
 
-GtkWidget *create_notebook_page_dialog(int page, dialog_buttons btn[MAX_KEYS], dialog_checkbox checkbox[7])
+GtkWidget *create_notebook_page_dialog(int page, dialog_buttons btn[MAX_KEYS], dialog_checkbox checkbox[CHECK_NBR])
 {
     GtkWidget *main_box;
     GtkWidget *joy_choose_frame, *joy_choose_box;
@@ -567,7 +568,7 @@ GtkWidget *create_notebook_page_dialog(int page, dialog_buttons btn[MAX_KEYS], d
 	}
     
 	u32 mask = 1 << (16*page);
-	for(int i = 0; i < 8; i++) {
+	for(int i = 0; i < CHECK_NBR; i++) {
 		checkbox[i].create(keys_static_area, check_pos[i].label, check_pos[i].x, check_pos[i].y, mask);
 		mask = mask << 1;
 	}
@@ -608,7 +609,7 @@ void DisplayDialog()
 	GtkWidget *page_label[2];
 
 	dialog_buttons btn[2][MAX_KEYS];
-	dialog_checkbox checkbox[2][7];
+	dialog_checkbox checkbox[2][CHECK_NBR];
 
 	LoadConfig();
 	key_tree_manager = new keys_tree;

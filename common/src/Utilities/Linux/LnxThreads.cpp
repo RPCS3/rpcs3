@@ -16,6 +16,7 @@
 
 #include "../PrecompiledHeader.h"
 #include "PersistentThread.h"
+#include <sys/prctl.h>
 
 // We wont need this until we actually have this more then just stubbed out, so I'm commenting this out
 // to remove an unneeded dependency.
@@ -92,7 +93,9 @@ void Threading::pxThread::_platform_specific_OnCleanupInThread()
 
 void Threading::pxThread::_DoSetThreadName( const char* name )
 {
-	// dunno if linux has a feature for naming threads ...?
+	// Extract of manpage: "The name can be up to 16 bytes long, and should be
+	//						null-terminated if it contains fewer bytes."
+	prctl(PR_SET_NAME, name, 0, 0, 0);
 }
 
 #endif
