@@ -3106,7 +3106,7 @@ bool GSC_NanoBreaker(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && fi.FBP == 0x0 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x03900 && fi.TPSM == PSM_PSMCT16S)
+		if(fi.TME && fi.FBP == 0x0 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 == 0x03800 || fi.TBP0 == 0x03900) && fi.TPSM == PSM_PSMCT16S)
 		{
 			skip = 2;
 		}
@@ -3119,7 +3119,7 @@ bool GSC_Kunoichi(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(!fi.TME && (fi.FBP == 0x0 || fi.FBP == 0x00700) && fi.FPSM == PSM_PSMCT32 && (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4) && fi.FBMSK == 0x00FFFFFF)
+		if(!fi.TME && (fi.FBP == 0x0 || fi.FBP == 0x00700 || fi.FBP == 0x00800) && fi.FPSM == PSM_PSMCT32 && (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4) && fi.FBMSK == 0x00FFFFFF)
 		{
 			skip = 3;
 		}

@@ -284,6 +284,7 @@ CRC::Game CRC::m_games[] =
 	{0xA8DB29DF, BlackHawkDown, EU, 0},
 	{0x25FC361B, DevilMayCry3, US, 0},	//SE
 	{0x2F7D8AD5, DevilMayCry3, US, 0},
+	{0x0BED0AF9, DevilMayCry3, US, 0},
 	{0x18C9343F, DevilMayCry3, EU, 0},	//SE
 	{0x7ADCB24A, DevilMayCry3, EU, 0},
 	{0x79C952B0, DevilMayCry3, JP, 0},	//SE
@@ -302,14 +303,18 @@ CRC::Game CRC::m_games[] =
 	{0xBFF3DBCB, CallofDutyFinalFronts, US, 0},
 	{0xD03D4C77, SpyroNewBeginning, US, 0},
 	{0x0EE5646B, SpyroNewBeginning, EU, 0},
+	{0x7ACF7E03, SpyroNewBeginning, NoRegion, 0},
 	{0xB80CE8EC, SpyroEternalNight, US, 0},
 	{0x8AE9536D, SpyroEternalNight, EU, 0},
+	{0xC95F0198, SpyroEternalNight, NoRegion, 0},
 	{0x43AB7214, TalesOfLegendia, US, 0},
 	{0x1F8640E0, TalesOfLegendia, JP, 0},
 	{0x98C7B76D, NanoBreaker, US, 0},
 	{0x7098BE76, NanoBreaker, KO, 0},
+	{0x9B89F425, NanoBreaker, EU, 0},
 	{0x519E816B, Kunoichi, US, 0},	//Nightshade
 	{0x3FB419FD, Kunoichi, JP, 0},
+	{0x3B470BBD, Kunoichi, EU, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;
