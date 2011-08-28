@@ -57,8 +57,18 @@ __forceinline void Threading::DisableHiresScheduler()
 
 u64 Threading::GetThreadTicksPerSecond()
 {
-	// Returning 0 is like saying "I'm not supported yet!"
-	return 0;
+	// Note the value is not correct but I'm not sure we can do better because 
+	// most modern system use a tickless system anyway
+	// Besides x86 architecture always returns 100;
+	/* A Forum post extract
+	   sysconf(SC_CLK_TCK) does not give the frequency of the timer interrupts in Linux. It gives
+	   the frequency of jiffies which is visible to userspace in things like the counters in various directories in /proc
+
+	   The actual frequency is hidden from userspace, deliberately. Indeed, some systems
+	   use dynamic ticks or "tickless" systems, so there aren't really any at all.
+	 */
+	u32 hertz = sysconf(_SC_CLK_TCK);
+	return hertz;
 }
 
 u64 Threading::GetThreadCpuTime()
@@ -67,7 +77,16 @@ u64 Threading::GetThreadCpuTime()
 	// thread has used on the CPU (scaled by the value returned by GetThreadTicksPerSecond(),
 	// which typically would be an OS-provided scalar or some sort).
 
-	return 0;
+	clockid_t cid;
+	int err = pthread_getcpuclockid(pthread_self(), &cid);
+	if (err) return 0;
+
+	struct timespec ts;
+	clock_gettime(cid, &ts);
+
+    unsigned long timeJiff = (ts.tv_sec*1e6 + ts.tv_nsec / 1000)/1e6 * GetThreadTicksPerSecond();
+
+	return timeJiff;
 }
 
 u64 Threading::pxThread::GetCpuTime() const
@@ -77,13 +96,23 @@ u64 Threading::pxThread::GetCpuTime() const
 	// thread has used on the CPU (scaled by the value returned by GetThreadTicksPerSecond(),
 	// which typically would be an OS-provided scalar or some sort).
 
-	return 0;
+	clockid_t cid;
+	int err = pthread_getcpuclockid(m_native_id, &cid);
+	if (err) return 0;
+
+	struct timespec ts;
+	clock_gettime(cid, &ts);
+
+    unsigned long timeJiff = (ts.tv_sec*1e6 + ts.tv_nsec / 1000)/1e6 * GetThreadTicksPerSecond();
+
+	return timeJiff;
 }
 
 void Threading::pxThread::_platform_specific_OnStartInThread()
 {
 	// Obtain linux-specific thread IDs or Handles here, which can be used to query
 	// kernel scheduler performance information.
+	m_native_id = (uptr) pthread_self();
 }
 
 void Threading::pxThread::_platform_specific_OnCleanupInThread()
