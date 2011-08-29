@@ -246,7 +246,7 @@ void __fastcall _hwWrite8(u32 mem, u8 value)
 		case INTC_STAT:
 		case INTC_MASK:
 		case DMAC_FAKESTAT:
-			_hwWrite32<page>(mem & ~3, (u32)value << (mem & 3));
+			_hwWrite32<page>(mem & ~3, (u32)value << (mem & 3) * 8);
 			return;
 	}
 
@@ -274,7 +274,7 @@ void __fastcall _hwWrite16(u32 mem, u16 value)
 		case INTC_STAT:
 		case INTC_MASK:
 		case DMAC_FAKESTAT:
-			_hwWrite32<page>(mem & ~3, (u32)value << (mem & 3));
+			_hwWrite32<page>(mem & ~3, (u32)value << (mem & 3) * 8);
 			return;
 	}
 
