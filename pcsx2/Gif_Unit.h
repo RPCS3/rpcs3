@@ -576,13 +576,13 @@ struct Gif_Unit {
 	// DirectHL
 	bool CanDoPath2HL() { return (stat.APATH == 0 || stat.APATH == 2)
 							&&   (CanDoGif() == 1); }
-	// Gif DMA - gifch.qwc <= 1 is a hack for Hot Wheels, shouldnt cause much trouble (if any):S
+	// Gif DMA - CHECK_GIFREVERSEHACK is a hack for Hot Wheels.
 	bool CanDoPath3()   { return((stat.APATH == 0 && !Path3Masked())
 							||	  stat.APATH == 3)
-							&&   (CanDoGif() == 1 || gifch.qwc <= 1); }
+							&&   (CanDoGif() == 1); }
 
 	bool CanDoP3Slice() { return stat.IMT == 1 && gifPath[GIF_PATH_3].state == GIF_PATH_IMAGE; }
-	bool CanDoGif()		{ return stat.PSE == 0 && stat.DIR == 0 && gsSIGNAL.queued == 0; }
+	bool CanDoGif()		{ return stat.PSE == 0 && (CHECK_GIFREVERSEHACK ? 1 : stat.DIR == 0) && gsSIGNAL.queued == 0; }
 	bool Path3Masked()  { return stat.M3R || stat.M3P; }
 
 	void PrintInfo(bool printP1=1, bool printP2=1, bool printP3=1) {

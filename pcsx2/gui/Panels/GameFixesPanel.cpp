@@ -102,6 +102,10 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 		{
 			_("Delay VIF1 Stalls (VIF1 FIFO) - For SOCOM 2 HUD."),
 			wxEmptyString
+		},
+		{
+			_("Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"),
+			wxEmptyString
 		}
 	};
 

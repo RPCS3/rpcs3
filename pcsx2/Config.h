@@ -54,6 +54,7 @@ enum GamefixId
 	Fix_DMABusy,
 	Fix_VIFFIFO,
 	Fix_VIF1Stall,
+	Fix_GIFReverse,
 
 	GamefixId_COUNT
 };
@@ -345,7 +346,8 @@ struct Pcsx2Config
 				OPHFlagHack		:1,		// Bleach Blade Battlers
 				DMABusyHack		:1,		// Denies writes to the DMAC when it's busy. This is correct behaviour but bad timing can cause problems.
 				VIFFIFOHack		:1,     // Pretends to fill the non-existant VIF FIFO Buffer.
-				VIF1StallHack   :1;     // Like above, processes FIFO data before the stall is allowed (to make sure data goes over).
+				VIF1StallHack   :1,     // Like above, processes FIFO data before the stall is allowed (to make sure data goes over).
+				GIFReverseHack  :1;		// Allows PATH3 to continue even if the FIFO is reversed.
 		BITFIELD_END
 
 		GamefixOptions();
@@ -495,6 +497,7 @@ TraceLogFilters&				SetTraceConfig();
 #define CHECK_DMABUSYHACK			(EmuConfig.Gamefixes.DMABusyHack)    // Denies writes to the DMAC when it's busy. This is correct behaviour but bad timing can cause problems.
 #define CHECK_VIFFIFOHACK			(EmuConfig.Gamefixes.VIFFIFOHack)    // Pretends to fill the non-existant VIF FIFO Buffer.
 #define CHECK_VIF1STALLHACK			(EmuConfig.Gamefixes.VIF1StallHack)  // Like above, processes FIFO data before the stall is allowed (to make sure data goes over).
+#define CHECK_GIFREVERSEHACK		(EmuConfig.Gamefixes.GIFReverseHack) // Allows PATH3 to continue even if the FIFO is reversed.
 //------------ Advanced Options!!! ---------------
 #define CHECK_VU_OVERFLOW			(EmuConfig.Cpu.Recompiler.vuOverflow)
 #define CHECK_VU_EXTRA_OVERFLOW		(EmuConfig.Cpu.Recompiler.vuExtraOverflow) // If enabled, Operands are clamped before being used in the VU recs
