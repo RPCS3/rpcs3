@@ -138,6 +138,9 @@ static __ri const char* _ioplog_GetHwName( u32 addr, T val )
 		case HW_CDR_DATA2:	return "CDROM DATA2";
 		case HW_CDR_DATA3:	return "CDROM DATA3";
 
+		case HW_PS1_GPU_DATA:   return "PS1 GPU DATA";
+		case HW_PS1_GPU_STATUS: return "PS1 GPU STATUS";
+
 		case 0x1f80380c:	return "STDOUT";
 
 		// ------------------------------------------------------------------------

@@ -453,22 +453,27 @@ static __fi void _HwWrite_16or32_Page1( u32 addr, T val )
 			break;
 
 			// ------------------------------------------------------------------------
-			// Legacy GPU  emulation (not needed).
-			// The IOP emulates the GPU itself through the EE's hardware.
+			// Legacy GPU  emulation
+			//
 
-			/*case 0x810:
-				PSXHW_LOG("GPU DATA 32bit write %lx", value);
-				GPU_writeData(value); return;
-			case 0x814:
-				PSXHW_LOG("GPU STATUS 32bit write %lx", value);
-				GPU_writeStatus(value); return;
+			mcase (HW_PS1_GPU_DATA):
+				psxHu(addr) = val; // guess
+				//GPU_writeData(value); // really old code from PCSX? (rama)
+				break;
+			mcase (HW_PS1_GPU_STATUS):
+				psxHu(addr) = val; // guess
+				//GPU_writeStatus(value); // really old code from PCSX? (rama)
+				break;
+			mcase (0x1f801820): // MDEC
+				psxHu(addr) = val; // guess
+				//mdecWrite0(value); // really old code from PCSX? (rama)
+				break;
+			mcase (0x1f801824): // MDEC
+				psxHu(addr) = val; // guess
+				//mdecWrite1(value); // really old code from PCSX? (rama)
+				break;
 
-			case 0x820:
-				mdecWrite0(value); break;
-			case 0x824:
-				mdecWrite1(value); break;*/
-
-			// ------------------------------------------------------------------------
+				// ------------------------------------------------------------------------
 
 			mcase(HW_DEV9_DATA):
 				DEV9write16( addr, val );

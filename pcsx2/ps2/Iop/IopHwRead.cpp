@@ -293,20 +293,25 @@ static __fi T _HwRead_16or32_Page1( u32 addr )
 			break;
 
 			// ------------------------------------------------------------------------
-			// Legacy GPU  emulation (not needed).
-			// The IOP emulates the GPU itself through the EE's hardware.
+			// Legacy GPU  emulation
+			//
 
-			/*case 0x810:
-				PSXHW_LOG("GPU DATA 32bit write %lx", value);
-				GPU_writeData(value); return;
-			case 0x814:
-				PSXHW_LOG("GPU STATUS 32bit write %lx", value);
-				GPU_writeStatus(value); return;
-
-			case 0x820:
-				mdecWrite0(value); break;
-			case 0x824:
-				mdecWrite1(value); break;*/
+			mcase (HW_PS1_GPU_DATA):
+				ret = psxHu32(addr);
+			break;
+			
+			mcase (HW_PS1_GPU_STATUS):
+				ret = psxHu32(addr);
+				//ret = -1; // fake alive GPU :p
+			break;
+			
+			mcase (0x1f801820): // MDEC
+				ret = psxHu32(addr);
+			break;
+			
+			mcase (0x1f801824): // MDEC
+				ret = psxHu32(addr);
+			break;
 
 			// ------------------------------------------------------------------------
 

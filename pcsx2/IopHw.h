@@ -67,6 +67,9 @@ static const u32
 	HW_CDR_DATA2		= 0x1f801802,	// CDROM multipurpose data register 3
 	HW_CDR_DATA3		= 0x1f801803,	// CDROM multipurpose data register 4
 
+	HW_PS1_GPU_DATA	= 	0x1f801810,	// PS1 GPU DATA register
+	HW_PS1_GPU_STATUS =	0x1f801814,	// PS1 GPU STATUS register
+
 	// SIO2 is a DMA interface for the SIO.
 
 	HW_SIO2_DATAIN		= 0x1F808260,
