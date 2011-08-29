@@ -260,7 +260,12 @@ __fi void vif1STAT(u32 value) {
 	if ((vif1Regs.stat.FDR) ^ ((tVIF_STAT&)value).FDR) {
 		// different so can't be stalled
 		if (vif1Regs.stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS)) {
-			DevCon.WriteLn("changing dir when vif1 fifo stalled");
+			DevCon.WriteLn("changing dir when vif1 fifo stalled done = %x qwc = %x", vif1.done, vif1ch.qwc);
+
+			//Hack!! Hotwheels seems to leave 1QW in the fifo and expect the DMA to be ready for a reverse FIFO
+			//There's no important data in there so for it to work, we will just end it.
+			vif1ch.chcr.STR = false;
+			//This is actually more important for our handling, else the DMA for reverse fifo doesnt start properly.
 		}
 	}
 

@@ -576,10 +576,10 @@ struct Gif_Unit {
 	// DirectHL
 	bool CanDoPath2HL() { return (stat.APATH == 0 || stat.APATH == 2)
 							&&   (CanDoGif() == 1); }
-	// Gif DMA
+	// Gif DMA - gifch.qwc <= 1 is a hack for Hot Wheels, shouldnt cause much trouble (if any):S
 	bool CanDoPath3()   { return((stat.APATH == 0 && !Path3Masked())
 							||	  stat.APATH == 3)
-							&&   (CanDoGif() == 1); }
+							&&   (CanDoGif() == 1 || gifch.qwc <= 1); }
 
 	bool CanDoP3Slice() { return stat.IMT == 1 && gifPath[GIF_PATH_3].state == GIF_PATH_IMAGE; }
 	bool CanDoGif()		{ return stat.PSE == 0 && stat.DIR == 0 && gsSIGNAL.queued == 0; }
