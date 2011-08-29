@@ -246,6 +246,7 @@ void __fastcall _hwWrite8(u32 mem, u8 value)
 		case INTC_STAT:
 		case INTC_MASK:
 		case DMAC_FAKESTAT:
+			DevCon.Warning ( "8bit write mem = %x value %x", mem, value );
 			_hwWrite32<page>(mem & ~3, (u32)value << (mem & 3) * 8);
 			return;
 	}
@@ -274,6 +275,7 @@ void __fastcall _hwWrite16(u32 mem, u16 value)
 		case INTC_STAT:
 		case INTC_MASK:
 		case DMAC_FAKESTAT:
+			DevCon.Warning ( "16bit write mem = %x value %x", mem, value );
 			_hwWrite32<page>(mem & ~3, (u32)value << (mem & 3) * 8);
 			return;
 	}
