@@ -239,10 +239,52 @@ void __fastcall _hwWrite8(u32 mem, u8 value)
 		}
 		return;
 	}
-	icase(DMAC_STAT) // Virtual on Marz sound effect hang. Broke in r3704 (handled in r3703 HwWrite.cpp line 352)
-	{
-		DevCon.Warning ( "8bit DMAC_STAT write, ignoring" );
-		return; // r3703 ignored 8 bit DMAC_STAT writes. Is that okay? (rama)
+	
+	switch(mem) // Virtual on Marz sound effect hang. Broke in r3704 (handled in r3703 HwWrite.cpp line 352)
+	{			//Didnt realise this got missed, whoopsy! This should cover everything needed. (Refraction)
+		//DMAC_STAT Status Flags
+		case(DMAC_STAT):
+		case(DMAC_STAT+1):
+			DevCon.Warning ( "8/16bit DMAC_STAT bottom write mem = %x value %x", mem, value );
+			psHu8(mem) &= ~value;
+		return; 
+		//DMAC_STAT Mask
+		case(DMAC_STAT+2):
+		case(DMAC_STAT+3):
+			DevCon.Warning ( "8/16bit DMAC_STAT top write mem = %x value %x", mem, value );
+			psHu8(mem) ^= value;
+			cpuTestDMACInts();
+		return;
+
+		//INTC_STAT
+		case(INTC_STAT):
+		case(INTC_STAT+1):
+			DevCon.Warning ( "8/16bit INTC_STAT write mem = %x value %x", mem, value );
+			psHu8(mem) &= ~value;
+		return;
+
+		//INTC_MASK
+		case(INTC_MASK):
+		case(INTC_MASK+1):
+			DevCon.Warning ( "8/16bit INTC_MASK write mem = %x value %x", mem, value );
+			psHu8(INTC_MASK) ^= value;
+			cpuTestINTCInts();
+		return;
+
+		//Just in case :P
+		//FAKEDMAC_STAT Status
+		case(DMAC_FAKESTAT):
+		case(DMAC_FAKESTAT+1):
+			DevCon.Warning ( "8/16bit FAKEDMAC_STAT bottom write mem = %x value %x", mem, value );
+			psHu8(mem) &= ~value;
+		return; 
+		//FAKEDMAC_STAT Mask
+		case(DMAC_FAKESTAT+2):
+		case(DMAC_FAKESTAT+3):
+			DevCon.Warning ( "8/16bit FAKEDMAC_STAT top write mem = %x value %x", mem, value );
+			psHu8(mem) ^= value;
+			cpuTestDMACInts();
+		return;
 	}
 
 	u32 merged = _hwRead32<page,false>(mem & ~0x03);
