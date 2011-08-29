@@ -239,6 +239,14 @@ void __fastcall _hwWrite8(u32 mem, u8 value)
 		}
 		return;
 	}
+	icase(DMAC_STAT) // Virtual on Marz sound effect hang. Broke in r3705 (handled in r3704 HwWrite.cpp line 352)
+	{
+		static bool warnedOnce = false;
+		if (!warnedOnce)
+			DevCon.Warning ( "8bit DMAC_STAT write, ignoring" );
+		warnedOnce = true;
+		return; // r3704 ignored 8 bit DMAC_STAT writes. Is that okay? (rama)
+	}
 
 	u32 merged = _hwRead32<page,false>(mem & ~0x03);
 	((u8*)&merged)[mem & 0x3] = value;
