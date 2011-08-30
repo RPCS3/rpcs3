@@ -971,7 +971,7 @@ template<int i> void GSState::GIFRegHandlerFRAME(const GIFReg* r)
 		m_env.CTXT[i].offset.zb = m_mem.GetOffset(m_env.CTXT[i].ZBUF.Block(), r->FRAME.FBW, m_env.CTXT[i].ZBUF.PSM);
 		m_env.CTXT[i].offset.fzb = m_mem.GetPixelOffset4(r->FRAME, m_env.CTXT[i].ZBUF);
 	}
-
+	
 	m_env.CTXT[i].FRAME = (GSVector4i)r->FRAME;
 #ifdef DISABLE_BITMASKING
 	m_env.CTXT[i].FRAME.FBMSK = GSVector4i::store(GSVector4i::load((int)m_env.CTXT[i].FRAME.FBMSK).eq8(GSVector4i::xffffffff()));
@@ -2084,26 +2084,31 @@ bool GSC_BullyCC(const GSFrameInfo& fi, int& skip)
 }
 bool GSC_SoTC(const GSFrameInfo& fi, int& skip)
 {
-	// Not needed anymore? What did it fix anyway? (rama)
-	/*if(skip == 0)
-	{
-		if(fi.TME && (fi.FBP == 0x03d00 || fi.FBP == 0x03d80) && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x03fc0 && fi.TPSM == PSM_PSMCT24)
-		{
-			//skip = 48;	//stops light sources
-		}
-		if(fi.TME && fi.FBP == 0x02b80 && fi.FPSM == PSM_PSMCT24 && fi.TBP0 == 0x01e80 && fi.TPSM == PSM_PSMCT24)
-		{
-			skip = 9;
-		}
-		else if(fi.TME && fi.FBP == 0x01c00 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x03800 && fi.TPSM == PSM_PSMCT32)
-		{
-			skip = 8;
-		}
-		else if(fi.TME && fi.FBP == 0x01e80 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x03880 && fi.TPSM == PSM_PSMCT32)
-		{
-			skip = 8;
-		}
-	}*/
+            // Not needed anymore? What did it fix anyway? (rama)
+    if(skip == 0)
+    {
+            if(fi.TME /*&& fi.FBP == 0x03d80*/ && fi.FPSM == 0 && fi.TBP0 == 0x03fc0 && fi.TPSM == 1)
+            {
+                    skip = 48;	//removes sky bloom
+            }
+            /*
+            if(fi.TME && fi.FBP == 0x02b80 && fi.FPSM == PSM_PSMCT24 && fi.TBP0 == 0x01e80 && fi.TPSM == PSM_PSMCT24)
+            {
+                    skip = 9;
+            }
+            else if(fi.TME && fi.FBP == 0x01c00 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x03800 && fi.TPSM == PSM_PSMCT32)
+            {
+                    skip = 8;
+            }
+            else if(fi.TME && fi.FBP == 0x01e80 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x03880 && fi.TPSM == PSM_PSMCT32)
+            {
+                    skip = 8;
+            }*/
+    }
+
+
+     
+
 
 	return true;
 }

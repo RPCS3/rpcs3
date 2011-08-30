@@ -97,6 +97,7 @@ CRC::Game CRC::m_games[] =
 	{0xC78A495D, BullyCC, US, 0},
 	{0xC19A374E, SoTC, US, 0},
 	{0x7D8F539A, SoTC, EU, 0},
+	{0x0F0C4A9C, SoTC, EU, 0},
 	{0x877F3436, SoTC, JP, 0},
 	{0x3122B508, OnePieceGrandAdventure, US, 0},
 	{0x8DF14A24, OnePieceGrandAdventure, EU, 0},
