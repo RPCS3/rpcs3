@@ -553,17 +553,29 @@ EXPORT_C GSirqCallback(void (*irq)())
 	}
 }
 
+void pt(char* str){
+	struct tm *current;
+	time_t now;
+	
+	time(&now);
+	current = localtime(&now);
+
+	printf("%02i:%02i:%02i%s", current->tm_hour, current->tm_min, current->tm_sec, str);
+}
+
 EXPORT_C_(int) GSsetupRecording(int start, void* data)
 {
 	if(s_gs == NULL) return 0;
 
 	if(start & 1)
 	{
-		s_gs->BeginCapture();
+		if( s_gs->BeginCapture() )
+			pt(" - Capture started\n");
 	}
 	else
 	{
 		s_gs->EndCapture();
+		pt(" - Capture ended\n");
 	}
 
 	return 1;

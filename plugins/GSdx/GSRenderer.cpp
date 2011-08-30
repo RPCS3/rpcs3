@@ -488,9 +488,9 @@ bool GSRenderer::MakeSnapshot(const string& path)
 	return true;
 }
 
-void GSRenderer::BeginCapture()
+bool GSRenderer::BeginCapture()
 {
-	m_capture.BeginCapture(GetFPS());
+	return m_capture.BeginCapture(GetFPS());
 }
 
 void GSRenderer::EndCapture()

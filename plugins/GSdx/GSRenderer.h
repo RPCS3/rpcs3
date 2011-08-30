@@ -85,7 +85,7 @@ public:
 	void SetFrameLimit(bool limit);
 	virtual void SetExclusive(bool isExcl) {}
 
-	virtual void BeginCapture();
+	virtual bool BeginCapture();
 	virtual void EndCapture();
 
 public:
