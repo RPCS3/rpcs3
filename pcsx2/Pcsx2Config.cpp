@@ -373,6 +373,7 @@ Pcsx2Config::Pcsx2Config()
 	// Set defaults for fresh installs / reset settings
 	McdEnableEjection = true;
 	EnablePatches = true;
+	BackupSavestate = true;
 }
 
 void Pcsx2Config::LoadSave( IniInterface& ini )

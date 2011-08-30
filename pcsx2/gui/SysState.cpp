@@ -661,7 +661,7 @@ void StateCopy_SaveToSlot( uint num )
 		const wxString copy( SaveStateBase::GetFilename( num ) + pxsFmt( L".backup") );
 		
 		Console.Indent().WriteLn( Color_StrongGreen, L"Backing up existing state in slot %d.", num);
-		wxCopyFile( file, copy );
+		wxRenameFile( file, copy );
 	}
 
 	Console.WriteLn( Color_StrongGreen, "Saving savestate to slot %d...", num );
