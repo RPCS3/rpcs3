@@ -20,6 +20,7 @@
  */
 
 #include "stdafx.h"
+#include "GSdx.h"
 #include "GSCrc.h"
 
 CRC::Game CRC::m_games[] =
@@ -320,13 +321,36 @@ CRC::Game CRC::m_games[] =
 
 hash_map<uint32, CRC::Game*> CRC::m_map;
 
+string ToLower( string str )
+{
+	transform( str.begin(), str.end(), str.begin(), ::tolower);
+	return str;
+}
+
+// The exclusions list is a comma separated list of: the word "all" and/or CRCs in standard hex notation (0x and 8 digits with leading 0's if required).
+// The list is case insensitive and order insensitive.
+// E.g. Disable all CRC hacks:          CrcHacksExclusions=all
+// E.g. Disable hacks for these CRCs:   CrcHacksExclusions=0x0F0C4A9C, 0x0EE5646B, 0x7ACF7E03
+bool IsCrcExcluded(string exclusionList, uint32 crc)
+{
+	string target = format( "0x%08x", crc );
+	exclusionList = ToLower( exclusionList );
+	return ( exclusionList.find( target ) != string::npos || exclusionList.find( "all" ) != string::npos );
+}
+
 CRC::Game CRC::Lookup(uint32 crc)
 {
 	if(m_map.empty())
 	{
+		string exclusions = theApp.GetConfig( "CrcHacksExclusions", "" );
+		printf( "GSdx: CrcHacksExclusions: %s\n", exclusions.c_str() );
+
 		for(int i = 0; i < countof(m_games); i++)
 		{
-			m_map[m_games[i].crc] = &m_games[i];
+			if( !IsCrcExcluded( exclusions, m_games[i].crc ) )
+				m_map[m_games[i].crc] = &m_games[i];
+			//else
+			//	printf( "GSdx: excluding CRC hack for 0x%08x\n", m_games[i].crc );
 		}
 	}
 #ifndef NO_CRC_HACKS
