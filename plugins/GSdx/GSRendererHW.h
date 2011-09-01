@@ -756,6 +756,12 @@ protected:
 		
 		GSTextureCache::Target* ds = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::DepthStencil, m_context->DepthWrite());
 
+		if(!rt || !ds)
+		{
+			ASSERT(0);
+			return;
+		}
+
 		GSTextureCache::Source* tex = NULL;
 
 		if(PRIM->TME)

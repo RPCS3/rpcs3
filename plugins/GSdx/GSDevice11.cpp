@@ -518,6 +518,12 @@ GSTexture* GSDevice11::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w,
 
 void GSDevice11::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 {
+	if(!st || !dt)
+	{
+		ASSERT(0);
+		return;
+	}
+
 	D3D11_BOX box = {r.left, r.top, 0, r.right, r.bottom, 1};
 
 	m_ctx->CopySubresourceRegion(*(GSTexture11*)dt, 0, 0, 0, 0, *(GSTexture11*)st, 0, &box);
@@ -535,6 +541,12 @@ void GSDevice11::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, 
 
 void GSDevice11::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D11PixelShader* ps, ID3D11Buffer* ps_cb, ID3D11BlendState* bs, bool linear)
 {
+	if(!st || !dt)
+	{
+		ASSERT(0);
+		return;
+	}
+
 	BeginScene();
 
 	GSVector2i ds = dt->GetSize();

@@ -736,7 +736,10 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 			src->m_texture = dt;
 		}
 
-		src->m_texture->SetScale(scale);
+		if( src->m_texture )
+			src->m_texture->SetScale(scale);
+		else
+			ASSERT(0);
 
 		switch(TEX0.PSM)
 		{
