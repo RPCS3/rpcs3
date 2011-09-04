@@ -100,11 +100,15 @@ typedef struct OHCIPort {
 typedef uint32_t target_phys_addr_t;
 
 typedef struct {
-    target_phys_addr_t mem_base;
+    //USBBus bus;
+    //qemu_irq irq;
+    enum ohci_type type;
     int mem;
     int num_ports;
+    const char *name;
 
-    uint64_t eof_timer;
+    //QEMUTimer *eof_timer;
+	int64_t eof_timer;
     int64_t sof_time;
 
     /* OHCI state */
@@ -135,6 +139,23 @@ typedef struct {
     uint32_t rhdesc_a, rhdesc_b;
     uint32_t rhstatus;
     OHCIPort rhport[OHCI_MAX_PORTS];
+
+    /* PXA27x Non-OHCI events */
+    uint32_t hstatus;
+    uint32_t hmask;
+    uint32_t hreset;
+    uint32_t htest;
+
+    /* SM501 local memory offset */
+    target_phys_addr_t localmem_base;
+
+    /* Active packets.  */
+    uint32_t old_ctl;
+    USBPacket usb_packet;
+    uint8_t usb_buf[8192];
+    uint32_t async_td;
+    int async_complete;
+
 } OHCIState;
 
 /* Host Controller Communications Area */
@@ -143,6 +164,20 @@ struct ohci_hcca {
     uint16_t frame, pad;
     uint32_t done;
 };
+
+
+extern int64_t usb_frame_time;
+extern int64_t usb_bit_time;
+
+enum ohci_type {
+    OHCI_TYPE_PCI,
+    OHCI_TYPE_PXA,
+    OHCI_TYPE_SM501,
+};
+
+int64_t get_ticks_per_sec();
+
+static void ohci_bus_stop(OHCIState *ohci);
 
 /* Bitfields for the first word of an Endpoint Desciptor.  */
 #define OHCI_ED_FA_SHIFT  0
@@ -154,8 +189,8 @@ struct ohci_hcca {
 #define OHCI_ED_S         (1<<13)
 #define OHCI_ED_K         (1<<14)
 #define OHCI_ED_F         (1<<15)
-#define OHCI_ED_MPS_SHIFT 7
-#define OHCI_ED_MPS_MASK  (0xf<<OHCI_ED_FA_SHIFT)
+#define OHCI_ED_MPS_SHIFT 16
+#define OHCI_ED_MPS_MASK  (0x7ff<<OHCI_ED_MPS_SHIFT)
 
 /* Flags in the head field of an Endpoint Desciptor.  */
 #define OHCI_ED_H         1
@@ -173,6 +208,22 @@ struct ohci_hcca {
 #define OHCI_TD_EC_MASK   (3<<OHCI_TD_EC_SHIFT)
 #define OHCI_TD_CC_SHIFT  28
 #define OHCI_TD_CC_MASK   (0xf<<OHCI_TD_CC_SHIFT)
+
+/* Bitfields for the first word of an Isochronous Transfer Desciptor.  */
+/* CC & DI - same as in the General Transfer Desciptor */
+#define OHCI_TD_SF_SHIFT  0
+#define OHCI_TD_SF_MASK   (0xffff<<OHCI_TD_SF_SHIFT)
+#define OHCI_TD_FC_SHIFT  24
+#define OHCI_TD_FC_MASK   (7<<OHCI_TD_FC_SHIFT)
+
+/* Isochronous Transfer Desciptor - Offset / PacketStatusWord */
+#define OHCI_TD_PSW_CC_SHIFT 12
+#define OHCI_TD_PSW_CC_MASK  (0xf<<OHCI_TD_PSW_CC_SHIFT)
+#define OHCI_TD_PSW_SIZE_SHIFT 0
+#define OHCI_TD_PSW_SIZE_MASK  (0xfff<<OHCI_TD_PSW_SIZE_SHIFT)
+
+#define OHCI_PAGE_MASK    0xfffff000
+#define OHCI_OFFSET_MASK  0xfff
 
 #define OHCI_DPTR_MASK    0xfffffff0
 
@@ -198,6 +249,15 @@ struct ohci_td {
     uint32_t cbp;
     uint32_t next;
     uint32_t be;
+};
+
+/* Isochronous transfer descriptor */
+struct ohci_iso_td {
+    uint32_t flags;
+    uint32_t bp;
+    uint32_t next;
+    uint32_t be;
+    uint16_t offset[8];
 };
 
 #define USB_HZ                      12000000
@@ -294,12 +354,15 @@ struct ohci_td {
 #define OHCI_CC_BUFFEROVERRUN       0xc
 #define OHCI_CC_BUFFERUNDERRUN      0xd
 
+#define OHCI_HRESET_FSBIR       (1 << 0)
+
+
 int64_t get_clock();
 
 OHCIState *ohci_create(uint32_t base, int ports);
 
-uint32_t ohci_mem_read(OHCIState *ohci, uint32_t addr );
-void ohci_mem_write(OHCIState *ohci, uint32_t addr, uint32_t value );
+uint32_t ohci_mem_read(void *ptr, target_phys_addr_t addr);
+void ohci_mem_write(void *ptr, target_phys_addr_t addr, uint32_t val);
 void ohci_frame_boundary(void *opaque);
 
 int ohci_bus_start(OHCIState *ohci);

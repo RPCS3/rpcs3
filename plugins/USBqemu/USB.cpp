@@ -44,10 +44,26 @@ u8 *ram;
 usbStruct usb;
 USBcallback _USBirq;
 FILE *usbLog;
-int64_t usb_frame_time;
-int64_t usb_bit_time;
+int64_t usb_frame_time=0;
+int64_t usb_bit_time=0;
 
-s64 clocks;
+s64 clocks=0;
+s64 remaining=0;
+
+int64_t get_ticks_per_sec()
+{
+	return PSXCLK;
+}
+
+void __Log(char *fmt, ...) {
+	va_list list;
+
+	if (!conf.Log) return;
+
+	va_start(list, fmt);
+	vfprintf(usbLog, fmt, list);
+	va_end(list);
+}
 
 u32 CALLBACK PS2EgetLibType() {
 	return PS2E_LT_USB;
@@ -59,16 +75,6 @@ char* CALLBACK PS2EgetLibName() {
 
 u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 	return (version<<16) | (revision<<8) | build;
-}
-
-void __Log(char *fmt, ...) {
-	va_list list;
-
-	if (!conf.Log) return;
-
-	va_start(list, fmt);
-	vfprintf(usbLog, fmt, list);
-	va_end(list);
 }
 
 void USBirq(int cycles)
@@ -84,7 +90,7 @@ s32 CALLBACK USBinit() {
 	{
 		usbLog = fopen("logs/usbLog.txt", "w");
 		setvbuf(usbLog, NULL,  _IONBF, 0);
-		USB_LOG("usblinuz plugin version %d,%d\n",revision,build);
+		USB_LOG("USBqemu plugin version %d,%d\n",revision,build);
 		USB_LOG("USBinit\n");
 	}
 
@@ -96,12 +102,13 @@ s32 CALLBACK USBinit() {
 
 void CALLBACK USBshutdown() {
 
-	qemu_ohci->rhport[0].port.dev->handle_destroy(qemu_ohci->rhport[0].port.dev);
+	qemu_ohci->rhport[0].port.dev->info->handle_destroy(qemu_ohci->rhport[0].port.dev);
 
 	free(qemu_ohci);
 
 #ifdef _DEBUG
-	fclose(usbLog);
+	if(usbLog)
+		fclose(usbLog);
 #endif
 }
 
@@ -140,7 +147,7 @@ u16  CALLBACK USBread16(u32 addr) {
 u32  CALLBACK USBread32(u32 addr) {
 	u32 hard;
 
-	hard=ohci_mem_read(qemu_ohci,addr);
+	hard=ohci_mem_read(qemu_ohci,addr - qemu_ohci->mem);
 
 	USB_LOG("* Known 32bit read at address %lx: %lx\n", addr, hard);
 
@@ -157,7 +164,7 @@ void CALLBACK USBwrite16(u32 addr, u16 value) {
 
 void CALLBACK USBwrite32(u32 addr, u32 value) {
 	USB_LOG("* Known 32bit write at address %lx value %lx\n", addr, value);
-	ohci_mem_write(qemu_ohci,addr,value);
+	ohci_mem_write(qemu_ohci,addr - qemu_ohci->mem, value);
 }
 
 void CALLBACK USBirqCallback(USBcallback callback) {
@@ -209,20 +216,31 @@ s32 CALLBACK USBfreeze(int mode, freezeData *data) {
 	return 0;
 }
 
-void CALLBACK USBasync(u32 cycles)
+void CALLBACK USBasync(u32 _cycles)
 {
-	clocks+=cycles;
+	remaining += _cycles;
+	clocks += remaining;
 	if(qemu_ohci->eof_timer>0)
 	{
-		while(cycles>=qemu_ohci->eof_timer)
+		while(remaining>=qemu_ohci->eof_timer)
 		{
-			cycles-=qemu_ohci->eof_timer;
+			remaining-=qemu_ohci->eof_timer;
 			qemu_ohci->eof_timer=0;
 			ohci_frame_boundary(qemu_ohci);
 		}
-		if((cycles>0)&&(qemu_ohci->eof_timer>0))
-			qemu_ohci->eof_timer-=cycles;
+		if((remaining>0)&&(qemu_ohci->eof_timer>0))
+		{
+			s64 m = qemu_ohci->eof_timer;
+			if(remaining < m)
+				m = remaining;
+			qemu_ohci->eof_timer -= m;
+			remaining -= m;
+		}
 	}
+	//if(qemu_ohci->eof_timer <= 0)
+	//{
+	//	ohci_frame_boundary(qemu_ohci);
+	//}
 }
 
 s32  CALLBACK USBtest() {

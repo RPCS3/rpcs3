@@ -1,7 +1,3 @@
-; USBlinuz.def : Declares the module parameters for the DLL.
-
-LIBRARY      "USBqemu"
-DESCRIPTION  'USBqemu Driver'
 
 EXPORTS
     ; Explicit exports can go here

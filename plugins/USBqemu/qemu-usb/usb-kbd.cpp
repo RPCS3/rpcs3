@@ -38,6 +38,8 @@ typedef struct USBKeyboardState {
 	int keyboard_grabbed;
 } USBKeyboardState;
 
+USBDeviceInfo devinfo;
+
 extern HWND gsWnd;
 
 #define VK_BASED
@@ -817,16 +819,15 @@ static int usb_keyboard_handle_control(USBDevice *dev, int request, int value,
     return ret;
 }
 
-static int usb_keyboard_handle_data(USBDevice *dev, int pid, 
-                                 uint8_t devep, uint8_t *data, int len)
+static int usb_keyboard_handle_data(USBDevice *dev, USBPacket* packet)
 {
     USBKeyboardState *s = (USBKeyboardState *)dev;
     int ret = 0;
 
-    switch(pid) {
+    switch(packet->pid) {
     case USB_TOKEN_IN:
-        if (devep == 1) {
-			ret = usb_keyboard_poll(s, data, len);
+        if (packet->devep == 1) {
+			ret = usb_keyboard_poll(s, packet->data, packet->len);
         } else {
             goto fail;
         }
@@ -857,14 +858,13 @@ USBDevice *usb_keyboard_init(void)
         return NULL;
     memset(s,0,sizeof(USBKeyboardState));
     s->dev.speed = USB_SPEED_FULL;
-    s->dev.handle_packet = usb_generic_handle_packet;
-
-    s->dev.handle_reset = usb_keyboard_handle_reset;
-    s->dev.handle_control = usb_keyboard_handle_control;
-    s->dev.handle_data = usb_keyboard_handle_data;
-    s->dev.handle_destroy = usb_keyboard_handle_destroy;
-
-    strncpy(s->dev.devname, "Generic USB Keyboard", sizeof(s->dev.devname));
+	s->dev.info = &devinfo;
+    s->dev.info->handle_packet = usb_generic_handle_packet;
+    s->dev.info->handle_reset = usb_keyboard_handle_reset;
+    s->dev.info->handle_control = usb_keyboard_handle_control;
+    s->dev.info->handle_data = usb_keyboard_handle_data;
+    s->dev.info->handle_destroy = usb_keyboard_handle_destroy;
+    s->dev.info->product_desc = "Generic USB Keyboard";
 
     return (USBDevice *)s;
 }

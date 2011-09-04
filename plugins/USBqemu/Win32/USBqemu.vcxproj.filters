@@ -1,0 +1,85 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{dfc571b5-5df6-405b-9920-d273ad48d332}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm</Extensions>
+    </Filter>
+    <Filter Include="Source Files\qemu-usb">
+      <UniqueIdentifier>{fe40e0a3-a73a-44b8-a8ee-3d9591f91f0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{2f1d0e2b-ba2b-4bd2-8bbd-63b3e4909ff3}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc</Extensions>
+    </Filter>
+    <Filter Include="Header Files\qemu-usb">
+      <UniqueIdentifier>{d1b11b29-e230-4fb1-84e1-795a3aafe8dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{5468eb4e-6580-45d9-9432-a8ac8083abf9}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\USB.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\qemu-usb\usb-base.cpp">
+      <Filter>Source Files\qemu-usb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\usb-eyetoy\usb-eyetoy.cpp">
+      <Filter>Source Files\qemu-usb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\qemu-usb\usb-hid.cpp">
+      <Filter>Source Files\qemu-usb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\qemu-usb\usb-hub.cpp">
+      <Filter>Source Files\qemu-usb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\qemu-usb\usb-kbd.cpp">
+      <Filter>Source Files\qemu-usb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\usb-mic\usb-mic-dummy.cpp">
+      <Filter>Source Files\qemu-usb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\qemu-usb\usb-ohci.cpp">
+      <Filter>Source Files\qemu-usb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\qemu-usb\vl.cpp">
+      <Filter>Source Files\qemu-usb</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="USBqemu.def">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\USB.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\qemu-usb\usb-ohci.h">
+      <Filter>Header Files\qemu-usb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\qemu-usb\usb.h">
+      <Filter>Header Files\qemu-usb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\qemu-usb\vl.h">
+      <Filter>Header Files\qemu-usb</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="USBlinuz.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>
