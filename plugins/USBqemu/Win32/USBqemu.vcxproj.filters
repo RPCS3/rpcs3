@@ -57,6 +57,9 @@
     <ClCompile Include="CfgHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\qemu-usb\usb-msd.cpp">
+      <Filter>Source Files\qemu-usb</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="USBqemu.def">
