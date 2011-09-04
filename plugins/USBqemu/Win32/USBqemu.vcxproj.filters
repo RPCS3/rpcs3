@@ -76,9 +76,12 @@
     <ClInclude Include="..\qemu-usb\vl.h">
       <Filter>Header Files\qemu-usb</Filter>
     </ClInclude>
+    <ClInclude Include="..\qemu-usb\qemu-queue.h">
+      <Filter>Header Files\qemu-usb</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="USBlinuz.rc">
+    <ResourceCompile Include="USBqemu.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>

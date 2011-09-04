@@ -40,8 +40,6 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>10.0.40219.1</_ProjectFileVersion>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">H:\pcsx2-trunk\bin\plugins\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Debug\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)bin\</OutDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</LinkIncremental>
@@ -132,6 +130,7 @@
     <None Include="USBqemu.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\qemu-usb\qemu-queue.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="..\USB.h" />
     <ClInclude Include="..\qemu-usb\usb-ohci.h" />
@@ -139,7 +138,7 @@
     <ClInclude Include="..\qemu-usb\vl.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="USBlinuz.rc" />
+    <ResourceCompile Include="USBqemu.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
