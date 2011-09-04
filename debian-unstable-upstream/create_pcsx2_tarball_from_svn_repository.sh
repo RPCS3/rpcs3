@@ -106,7 +106,7 @@ mkdir -p $ROOT_DIR;
 (cd $ROOT_DIR; 
     get_svn_file CMakeLists.txt;
     get_svn_dir common cmake locales pcsx2 tools;
-    get_svn_dir debian-unstable-upstream;
+    get_svn_dir debian-unstable-upstream linux_various;
 echo "Done")
 
 # separate bin to avoid downloading the .mo file

@@ -1,4 +1,4 @@
 usr/bin/pcsx2
-debian/pcsx2.desktop usr/share/applications
-debian/pcsx2.xpm usr/share/pixmaps
+usr/share/applications/pcsx2.desktop
+usr/share/pixmaps/pcsx2.xpm
 var/games/pcsx2

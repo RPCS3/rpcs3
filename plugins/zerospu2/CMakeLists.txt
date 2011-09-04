@@ -94,10 +94,6 @@ add_library(${Output} SHARED
 			${zerospu2LinuxSources}
 			${zerospu2LinuxHeaders})
 
-# set output directory
-set_target_properties(${Output} PROPERTIES
-					  LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin/plugins)
-
 # link target with ALSA
 target_link_libraries(${Output} ${ALSA_LIBRARIES})
 
@@ -113,3 +109,9 @@ target_link_libraries(${Output} ${SOUNDTOUCH_LIBRARIES})
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
     target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
 endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+
+if(PACKAGE_MODE)
+    install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
+else(PACKAGE_MODE)
+    install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+endif(PACKAGE_MODE)
