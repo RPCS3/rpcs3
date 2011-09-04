@@ -54,6 +54,9 @@
     <ClCompile Include="..\qemu-usb\vl.cpp">
       <Filter>Source Files\qemu-usb</Filter>
     </ClCompile>
+    <ClCompile Include="CfgHelpers.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="USBqemu.def">
@@ -77,6 +80,12 @@
       <Filter>Header Files\qemu-usb</Filter>
     </ClInclude>
     <ClInclude Include="..\qemu-usb\qemu-queue.h">
+      <Filter>Header Files\qemu-usb</Filter>
+    </ClInclude>
+    <ClInclude Include="CfgHelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\qemu-usb\USBinternal.h">
       <Filter>Header Files\qemu-usb</Filter>
     </ClInclude>
   </ItemGroup>

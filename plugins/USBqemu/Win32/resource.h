@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by USBlinuz.rc
+// Used by USBqemu.rc
 //
 #define IDD_CONFDLG                     101
 #define IDD_CONFIG                      101

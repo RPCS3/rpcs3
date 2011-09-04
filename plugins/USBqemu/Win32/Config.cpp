@@ -1,51 +1,21 @@
 #include <stdlib.h>
 
-#include "USB.h"
+#include "../USB.h"
 
-extern HINSTANCE hInst;
-void SaveConfig() 
+#include "CfgHelpers.h"
+
+void CALLBACK USBsetSettingsDir( const char* dir )
 {
-
-    Config *Conf1 = &conf;
-	char *szTemp;
-	char szIniFile[256], szValue[256];
-
-	GetModuleFileName(GetModuleHandle((LPCSTR)hInst), szIniFile, 256);
-	szTemp = strrchr(szIniFile, '\\');
-
-	if(!szTemp) return;
-	strcpy(szTemp, "\\inis\\usblinuz.ini");
-	sprintf(szValue,"%u",Conf1->Log);
-    WritePrivateProfileString("Interface", "Logging",szValue,szIniFile);
-
+	CfgSetSettingsDir(dir);
 }
 
-void LoadConfig() {
-   FILE *fp;
+void SaveConfig() 
+{
+	CfgWriteBool(L"Interface", L"Logging", conf.Log);
+}
 
-
-    Config *Conf1 = &conf;
-	char *szTemp;
-	char szIniFile[256], szValue[256];
-  
-	GetModuleFileName(GetModuleHandle((LPCSTR)hInst), szIniFile, 256);
-	szTemp = strrchr(szIniFile, '\\');
-
-	if(!szTemp) return ;
-	strcpy(szTemp, "\\inis\\usblinuz.ini");
-    fp=fopen("inis\\usblinuz.ini","rt");//check if usbnull.ini really exists
-	if (!fp)
-	{
-		CreateDirectory("inis",NULL); 
-        memset(&conf, 0, sizeof(conf));
-        conf.Log = 0;//default value
-		SaveConfig();//save and return
-		return ;
-	}
-	fclose(fp);
-	GetPrivateProfileString("Interface", "Logging", NULL, szValue, 20, szIniFile);
-	Conf1->Log = strtoul(szValue, NULL, 10);
-	return ;
-
+void LoadConfig() 
+{
+	conf.Log = CfgReadBool(L"Interface", L"Logging", false);
 }
 

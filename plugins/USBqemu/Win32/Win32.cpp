@@ -2,19 +2,19 @@
 #include <windows.h>
 #include <windowsx.h>
 
-#include "USB.h"
+#include "../USB.h"
 #include "resource.h"
 
 HINSTANCE hInst;
 
-void SysMessage(char *fmt, ...) {
+void SysMessage(TCHAR *fmt, ...) {
 	va_list list;
-	char tmp[512];
+	TCHAR tmp[512];
 
 	va_start(list,fmt);
-	vsprintf(tmp,fmt,list);
+	_vswprintf(tmp,fmt,list);
 	va_end(list);
-	MessageBox(0, tmp, "USBlinuz Msg", 0);
+	MessageBox(0, tmp, L"USBqemu Msg", 0);
 }
 
 BOOL CALLBACK ConfigureDlgProc(HWND hW, UINT uMsg, WPARAM wParam, LPARAM lParam) {

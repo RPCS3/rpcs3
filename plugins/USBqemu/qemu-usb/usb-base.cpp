@@ -23,7 +23,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "vl.h"
+#include "USBinternal.h"
 //#include "usb.h"
 
 void usb_attach(USBPort *port, USBDevice *dev)

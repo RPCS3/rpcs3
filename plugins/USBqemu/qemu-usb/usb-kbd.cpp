@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include "vl.h"
+#include "USBinternal.h"
 
 /* HID interface requests */
 #define GET_REPORT   0xa101
@@ -40,7 +40,6 @@ typedef struct USBKeyboardState {
 
 USBDeviceInfo devinfo;
 
-extern HWND gsWnd;
 
 #define VK_BASED
 
@@ -624,7 +623,7 @@ static int usb_keyboard_poll(USBKeyboardState *s, uint8_t *buf, int len)
 		s->keyboard_grabbed = 1;
     }
 
-	if(gsWnd != GetForegroundWindow())
+	if(gsWindowHandle != GetForegroundWindow())
 	{
 		for(int i=0;i<256;i++)
 		{

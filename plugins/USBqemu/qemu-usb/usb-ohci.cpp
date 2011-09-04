@@ -28,8 +28,7 @@
 
 //typedef CPUReadMemoryFunc
 
-#include "vl.h"
-#include "../USB.h"
+#include "USBinternal.h"
 
 s64 last_cycle = 0;
 #define MIN_IRQ_INTERVAL 64 /* hack */

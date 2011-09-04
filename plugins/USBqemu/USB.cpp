@@ -1,5 +1,5 @@
-/*  USBlinuz
- *  Copyright (C) 2002-2004  USBlinuz Team
+/*  USBqemu
+ *  Copyright (C) 2002-2011  PCSX2 Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,32 +16,26 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
+#include "qemu-usb/USBinternal.h"
 
-#include "qemu-usb/vl.h"
-#include "USB.h"
+#ifdef _MSC_VER
+#	include "svnrev.h"
+#endif
 
 const unsigned char version  = PS2E_USB_VERSION;
 const unsigned char revision = 0;
 const unsigned char build    = 1;    // increase that with each version
 
-static char *libraryName     = "Qemu USB Driver by Gigaherz"
-#ifdef _DEBUG
-" (debug)"
-#endif
-;
+// PCSX2 expects ASNI, not unicode, so this MUST always be char...
+static char libraryName[256];
 
 OHCIState *qemu_ohci;
 
 Config conf;
 
-HWND gsWnd=NULL;
+HWND gsWindowHandle=NULL;
 
-u8 *usbR;
 u8 *ram;
-usbStruct usb;
 USBcallback _USBirq;
 FILE *usbLog;
 int64_t usb_frame_time=0;
@@ -65,11 +59,64 @@ void __Log(char *fmt, ...) {
 	va_end(list);
 }
 
+static void InitLibraryName()
+{
+#ifdef SPU2X_PUBLIC_RELEASE
+
+	// Public Release!
+	// Output a simplified string that's just our name:
+
+	strcpy( libraryName, "USBqemu" );
+
+#else
+	#ifdef SVN_REV_UNKNOWN
+
+	// Unknown revision.
+	// Output a name that includes devbuild status but not
+	// subversion revision tags:
+
+	strcpy( libraryName, "USBqemu"
+	#ifdef DEBUG_FAST
+		"-Debug"
+	#elif defined( PCSX2_DEBUG )
+		"-Debug/Strict"		// strict debugging is slow!
+	#elif defined( PCSX2_DEVBUILD )
+		"-Dev"
+	#else
+		""
+	#endif
+	);
+
+	#else
+
+	// Use TortoiseSVN's SubWCRev utility's output
+	// to label the specific revision:
+
+	sprintf_s( libraryName, "USBqemu r%d%s"
+	#ifdef DEBUG_FAST
+		"-Debug"
+	#elif defined( PCSX2_DEBUG )
+		"-Debug/Strict"		// strict debugging is slow!
+	#elif defined( PCSX2_DEVBUILD )
+		"-Dev"
+	#else
+		""
+	#endif
+		,SVN_REV,
+		SVN_MODS ? "m" : ""
+	);
+	#endif
+#endif
+
+}
+
 u32 CALLBACK PS2EgetLibType() {
 	return PS2E_LT_USB;
 }
 
-char* CALLBACK PS2EgetLibName() {
+char* CALLBACK PS2EgetLibName() 
+{
+	InitLibraryName();
 	return libraryName;
 }
 
@@ -126,7 +173,7 @@ s32 CALLBACK USBopen(void *pDsp) {
 		while (GetWindowLong (hWnd, GWL_STYLE) & WS_CHILD)
 			hWnd = GetParent (hWnd);
 	}
-	gsWnd = hWnd;
+	gsWindowHandle = hWnd;
 
 	return 0;
 }
