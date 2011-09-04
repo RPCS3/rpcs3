@@ -90,6 +90,10 @@ void cpuReset()
 	DiscSerial = L"";
 	ElfEntry = -1;
 
+	// Probably not the right place, but it has to be done when the ram is actually initialized
+	if(USBsetRAM != 0)
+		USBsetRAM(iopMem->Main);
+
 	// FIXME: LastELF should be reset on media changes as well as on CPU resets, in
 	// the very unlikely case that a user swaps to another media source that "looks"
 	// the same (identical ELF names) but is actually different (devs actually could

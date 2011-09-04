@@ -646,6 +646,7 @@ static const LegacyApi_ReqMethod s_MethMessReq_USB[] =
 static const LegacyApi_OptMethod s_MethMessOpt_USB[] =
 {
 	{	"USBasync",		(vMeth**)&USBasync },
+	{	"USBsetRAM",	(vMeth**)&USBsetRAM },
 	{ NULL }
 };
 
@@ -1108,8 +1109,9 @@ bool SysCorePlugins::OpenPlugin_USB()
 	if( USBopen((void*)pDsp) ) return false;
 	USBirqCallback( usbIrq );
 	usbHandler = USBirqHandler();
-	if( USBsetRAM != NULL )
-		USBsetRAM(iopMem->Main);
+	// iopMem is not initialized yet. Moved elsewhere
+	//if( USBsetRAM != NULL )
+	//	USBsetRAM(iopMem->Main);
 	return true;
 }
 
