@@ -27,7 +27,7 @@ void SysMessage(const char *fmt, ...)
 	va_end(list);
 	swprintf_s(wtmp, L"%S", tmp);
 	MessageBox( (!!gsWindowHandle) ? (HWND)gsWindowHandle : GetActiveWindow(), wtmp,
-		L"SPU2-X System Message", MB_OK | MB_SETFOREGROUND);
+		L"USBqemu System Message", MB_OK | MB_SETFOREGROUND);
 }
 
 void SysMessage(const wchar_t *fmt, ...)
@@ -40,18 +40,18 @@ void SysMessage(const wchar_t *fmt, ...)
 	va_end(list);
 
 	MessageBox( (!!gsWindowHandle) ? (HWND)gsWindowHandle : GetActiveWindow(), tmp,
-		L"SPU2-X System Message", MB_OK | MB_SETFOREGROUND);
+		L"USBqemu System Message", MB_OK | MB_SETFOREGROUND);
 }
 
 //////
 
-static TCHAR CfgFile[260] = L"inis/SPU2-X.ini";
+static TCHAR CfgFile[260] = L"inis/USBqemu.ini";
 
 void CfgSetSettingsDir( const char* dir )
 {
 	if(dir == NULL)
 	{
-		wcscpy(CfgFile, L"inis/SPU2-X.ini");
+		wcscpy(CfgFile, L"inis/USBqemu.ini");
 	}
 	else
 	{
