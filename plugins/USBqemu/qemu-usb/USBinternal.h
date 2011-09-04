@@ -28,7 +28,6 @@ typedef uint32_t target_phys_addr_t;
 typedef struct {
     //USBBus bus;
     //qemu_irq irq;
-    enum ohci_type type;
     int mem;
     int num_ports;
     const char *name;
@@ -91,19 +90,8 @@ struct ohci_hcca {
     uint32_t done;
 };
 
-
-extern int64_t usb_frame_time;
-extern int64_t usb_bit_time;
-
-enum ohci_type {
-    OHCI_TYPE_PCI,
-    OHCI_TYPE_PXA,
-    OHCI_TYPE_SM501,
-};
-
-int64_t get_ticks_per_sec();
-
 static void ohci_bus_stop(OHCIState *ohci);
+static void ohci_async_cancel_device(OHCIState *ohci, USBDevice *dev);
 
 /* Bitfields for the first word of an Endpoint Desciptor.  */
 #define OHCI_ED_FA_SHIFT  0
@@ -282,6 +270,7 @@ struct ohci_iso_td {
 
 #define OHCI_HRESET_FSBIR       (1 << 0)
 
+int64_t get_ticks_per_sec();
 
 int64_t get_clock();
 

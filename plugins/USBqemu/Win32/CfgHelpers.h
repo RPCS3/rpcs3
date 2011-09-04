@@ -3,7 +3,6 @@
 #include <tchar.h>
 
 extern void	CfgSetSettingsDir( const char* dir );
-extern void	CfgSetLogDir( const char* dir );
 
 extern bool	CfgFindName( const TCHAR *Section, const TCHAR* Name);
 

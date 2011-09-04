@@ -697,8 +697,8 @@ static void usb_keyboard_handle_reset(USBDevice *dev)
     USBKeyboardState *s = (USBKeyboardState *)dev;
 }
 
-static int usb_keyboard_handle_control(USBDevice *dev, int request, int value,
-                                  int index, int length, uint8_t *data)
+static int usb_keyboard_handle_control(USBDevice *dev, USBPacket *p, int request, int value,
+                          int index, int length, uint8_t *data)
 {
     USBKeyboardState *s = (USBKeyboardState *)dev;
     int ret = 0;

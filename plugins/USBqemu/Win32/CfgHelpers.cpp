@@ -64,7 +64,7 @@ void CfgSetSettingsDir( const char* dir )
 }
 
 
-/*| Config File Format: |¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*\
+/*¯| Config File Format: |¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯¯*\
 +--+---------------------+------------------------+
 |												  |
 | Option=Value									  |
@@ -76,7 +76,7 @@ void CfgSetSettingsDir( const char* dir )
 | All Values are limited to 255 chars.			  |
 |												  |
 +-------------------------------------------------+
-\*_____________________________________________*/
+\*______________________________________________*/
 
 
 void CfgWriteBool(const TCHAR* Section, const TCHAR* Name, bool Value)
@@ -136,7 +136,6 @@ int CfgReadInt(const TCHAR* Section, const TCHAR* Name,int Default)
 
 void CfgReadStr(const TCHAR* Section, const TCHAR* Name, TCHAR* Data, int DataSize, const TCHAR* Default)
 {
-	wchar_t workspace[512];
 	int chars = GetPrivateProfileString(Section,Name,L"",Data,DataSize,CfgFile);
 	
 	if(!chars)

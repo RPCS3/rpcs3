@@ -6,17 +6,6 @@
 void cpu_physical_memory_rw(uint32_t addr, uint8_t *buf,
                             int len, int is_write);
 
-static inline void cpu_physical_memory_read(uint32_t addr, 
-                                            uint8_t *buf, int len)
-{
-    cpu_physical_memory_rw(addr, buf, len, 0);
-}
-static inline void cpu_physical_memory_write(uint32_t addr, 
-                                             const uint8_t *buf, int len)
-{
-    cpu_physical_memory_rw(addr, (uint8_t *)buf, len, 1);
-}
-
 /* compute with 96 bit intermediate result: (a*b)/c */
 uint64_t muldiv64(uint64_t a, uint32_t b, uint32_t c)
 {
