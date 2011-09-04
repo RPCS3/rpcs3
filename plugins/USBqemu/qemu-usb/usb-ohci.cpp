@@ -31,8 +31,8 @@
 #include "vl.h"
 #include "../USB.h"
 
-uint32_t bits = 0;
-uint32_t need_interrupt = 0;
+s64 last_cycle = 0;
+#define MIN_IRQ_INTERVAL 64 /* hack */
 
 extern FILE* usbLog;
 
@@ -59,14 +59,15 @@ int dprintf(const char *fmt,...)
 #endif
 }
 
+
 /* Update IRQ levels */
 static inline void ohci_intr_update(OHCIState *ohci)
 {
-	bits = (ohci->intr_status & ohci->intr) & 0x7fffffff;
+	uint32_t bits = (ohci->intr_status & ohci->intr) & 0x7fffffff;
 
     if ((ohci->intr & OHCI_INTR_MIE) && (bits!=0)) // && (ohci->ctl & OHCI_CTL_HCFS))
 	{
-		
+		/*
 		static char reasons[1024];
 		int first=1;
 
@@ -81,10 +82,14 @@ static inline void ohci_intr_update(OHCIState *ohci)
 		reason_add(OHCI_INTR_FNO,"Frame number overflow");
 		reason_add(OHCI_INTR_RHSC,"Root hub status change");
 		reason_add(OHCI_INTR_OC,"Ownership change");
-		
+		*/
 		if((ohci->ctl & OHCI_CTL_HCFS)==OHCI_USB_OPERATIONAL)
 		{
-			USBirq(1);
+			if( (get_clock() - last_cycle) > MIN_IRQ_INTERVAL)
+			{
+				USBirq(1);
+				last_cycle = get_clock();
+			}
 			//dprintf("usb-ohci: Interrupt Called. Reason(s): %s\n",reasons);
 		}
 	}
