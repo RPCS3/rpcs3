@@ -55,12 +55,6 @@ __forceinline void Threading::DisableHiresScheduler()
 {
 }
 
-// pthread_getcpuclockid causes a segmentation fault on Mandriva/Mageia.
-// It seems to impact fedora users so I bet it is an issue with glic (the library was
-// replaced by eglibc on Debian/Ubuntu)
-// So for the moment I disable this feature -- Gregory
-#define LNX_DISABLE_THREAD_TIME 1
-
 u64 Threading::GetThreadTicksPerSecond()
 {
 	// Note the value is not correct but I'm not sure we can do better because 
@@ -73,12 +67,8 @@ u64 Threading::GetThreadTicksPerSecond()
 	   The actual frequency is hidden from userspace, deliberately. Indeed, some systems
 	   use dynamic ticks or "tickless" systems, so there aren't really any at all.
 	 */
-#ifndef LNX_DISABLE_THREAD_TIME
 	u32 hertz = sysconf(_SC_CLK_TCK);
 	return hertz;
-#else
-	return 0;
-#endif
 }
 
 u64 Threading::GetThreadCpuTime()
@@ -87,7 +77,6 @@ u64 Threading::GetThreadCpuTime()
 	// thread has used on the CPU (scaled by the value returned by GetThreadTicksPerSecond(),
 	// which typically would be an OS-provided scalar or some sort).
 
-#ifndef LNX_DISABLE_THREAD_TIME
 	clockid_t cid;
 	int err = pthread_getcpuclockid(pthread_self(), &cid);
 	if (err) return 0;
@@ -98,9 +87,6 @@ u64 Threading::GetThreadCpuTime()
     unsigned long timeJiff = (ts.tv_sec*1e6 + ts.tv_nsec / 1000)/1e6 * GetThreadTicksPerSecond();
 
 	return timeJiff;
-#else
-	return 0;
-#endif
 }
 
 u64 Threading::pxThread::GetCpuTime() const
@@ -110,7 +96,8 @@ u64 Threading::pxThread::GetCpuTime() const
 	// thread has used on the CPU (scaled by the value returned by GetThreadTicksPerSecond(),
 	// which typically would be an OS-provided scalar or some sort).
 
-#ifndef LNX_DISABLE_THREAD_TIME
+	if (!m_native_id) return 0;
+
 	clockid_t cid;
 	int err = pthread_getcpuclockid(m_native_id, &cid);
 	if (err) return 0;
@@ -121,9 +108,6 @@ u64 Threading::pxThread::GetCpuTime() const
     unsigned long timeJiff = (ts.tv_sec*1e6 + ts.tv_nsec / 1000)/1e6 * GetThreadTicksPerSecond();
 
 	return timeJiff;
-#else
-	return 0;
-#endif
 }
 
 void Threading::pxThread::_platform_specific_OnStartInThread()
