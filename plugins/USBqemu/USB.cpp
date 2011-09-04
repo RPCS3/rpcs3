@@ -61,7 +61,7 @@ void __Log(char *fmt, ...) {
 
 static void InitLibraryName()
 {
-#ifdef SPU2X_PUBLIC_RELEASE
+#ifdef USBQEMU_PUBLIC_RELEASE
 
 	// Public Release!
 	// Output a simplified string that's just our name:
@@ -144,6 +144,9 @@ s32 CALLBACK USBinit() {
 	qemu_ohci = ohci_create(0x1f801600,2);
 	qemu_ohci->rhport[0].port.dev = usb_keyboard_init();
 	qemu_ohci->rhport[0].port.ops->attach(&(qemu_ohci->rhport[0].port));
+
+	clocks = 0;
+	remaining = 0;
 
 	return 0;
 }
@@ -245,6 +248,8 @@ char USBfreezeID[] = "USBqemu01";
 
 typedef struct {
 	char freezeID[10];
+	int cycles;
+	int remaining;
 	OHCIState t;
 	int extraData; // for future expansion with the device state
 } USBfreezeData;
@@ -262,7 +267,9 @@ s32 CALLBACK USBfreeze(int mode, freezeData *data) {
 
 		usbd = *(USBfreezeData*)data->data;
 		usbd.freezeID[9] = 0;
-
+		usbd.cycles = clocks;
+		usbd.remaining = remaining;
+		
 		if( strcmp(usbd.freezeID, USBfreezeID) != 0)
 		{
 			SysMessage("ERROR: Unable to load freeze data! Found ID '%s', expected ID '%s'.", usbd.freezeID, USBfreezeID);
@@ -299,6 +306,9 @@ s32 CALLBACK USBfreeze(int mode, freezeData *data) {
 			usbd.t.rhport[i].port.opaque = NULL; // pointers
 			usbd.t.rhport[i].port.dev = NULL; // pointers
 		}
+
+		clocks = usbd.cycles;
+		remaining = usbd.remaining;
 
 		// WARNING: TODO: Save the state of the attached devices!
 	}
