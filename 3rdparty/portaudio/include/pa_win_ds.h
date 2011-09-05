@@ -59,15 +59,14 @@ extern "C"
 typedef struct PaWinDirectSoundStreamInfo{
     unsigned long size;             /**< sizeof(PaWinDirectSoundStreamInfo) */
     PaHostApiTypeId hostApiType;    /**< paDirectSound */
-    unsigned long version;          /**< 1 */
+    unsigned long version;          /**< 2 */
 
     unsigned long flags;
 
     /* low-level latency setting support
-        TODO ** NOT IMPLEMENTED **
-        These settings control the number and size of host buffers in order
-        to set latency. They will be used instead of the generic parameters
-        to Pa_OpenStream() if flags contains the paWinDirectSoundUseLowLevelLatencyParameters
+       Control the size of host buffers in order to set latency. They will 
+        be used instead of the generic parameters to Pa_OpenStream() if 
+        flags contains the paWinDirectSoundUseLowLevelLatencyParameters
         flag.
 
         If PaWinDirectSoundStreamInfo structures with paWinDirectSoundUseLowLevelLatencyParameters
@@ -76,9 +75,8 @@ typedef struct PaWinDirectSoundStreamInfo{
         two must be a multiple of the smaller, otherwise a
         paIncompatibleHostApiSpecificStreamInfo error will be returned from
         Pa_OpenStream().
-
-    unsigned long framesPerBuffer;
     */
+    unsigned long framesPerBuffer;  /* NOT IMPLEMENTED see http://www.portaudio.com/trac/ticket/129 */
 
     /*
         support for WAVEFORMATEXTENSIBLE channel masks. If flags contains

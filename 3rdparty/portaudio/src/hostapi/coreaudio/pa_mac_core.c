@@ -1009,6 +1009,10 @@ static OSStatus UpdateSampleRateFromDeviceProperty( PaMacCoreStream *stream, Aud
 static OSStatus AudioDevicePropertyActualSampleRateListenerProc( AudioDeviceID inDevice, UInt32 inChannel, Boolean isInput, AudioDevicePropertyID inPropertyID, void *inClientData )
 {
 	PaMacCoreStream *stream = (PaMacCoreStream*)inClientData;
+    
+    // Make sure the callback is operating on a stream that is still valid!
+    assert( stream->streamRepresentation.magic == PA_STREAM_MAGIC );
+
 	OSStatus osErr = UpdateSampleRateFromDeviceProperty( stream, inDevice, isInput );
     if( osErr == noErr )
     {
@@ -1034,6 +1038,10 @@ static OSStatus AudioDevicePropertyGenericListenerProc( AudioDeviceID inDevice, 
 {
     OSStatus osErr = noErr;
 	PaMacCoreStream *stream = (PaMacCoreStream*)inClientData;
+    
+    // Make sure the callback is operating on a stream that is still valid!
+    assert( stream->streamRepresentation.magic == PA_STREAM_MAGIC );
+    
     PaMacCoreDeviceProperties *deviceProperties = isInput ? &stream->inputProperties : &stream->outputProperties;
     UInt32 *valuePtr = NULL;
     switch( inPropertyID )
@@ -2107,7 +2115,7 @@ static OSStatus AudioIOProc( void *inRefCon,
    PaMacCoreStream *stream           = (PaMacCoreStream*)inRefCon;
    const bool isRender               = inBusNumber == OUTPUT_ELEMENT;
    int callbackResult                = paContinue ;
-    double hostTimeStampInPaTime     = HOST_TIME_TO_PA_TIME(inTimeStamp->mHostTime);
+   double hostTimeStampInPaTime      = HOST_TIME_TO_PA_TIME(inTimeStamp->mHostTime);
 
    VVDBUG(("AudioIOProc()\n"));
 
@@ -2546,7 +2554,7 @@ static PaError CloseStream( PaStream* s )
 		
 		if( stream->inputUnit )
         {
-            Boolean isInput = FALSE;
+            Boolean isInput = TRUE;
             CleanupDevicePropertyListeners( stream, stream->inputDevice, isInput );
 		}
 		

@@ -125,13 +125,13 @@
 #endif
 
 #ifdef _MSC_VER
-    //#define NOMMIDS
+    #define NOMMIDS
     #define DYNAMIC_GUID(data) {data}
-    //#define _NTRTL_ /* Turn off default definition of DEFINE_GUIDEX */
-    //#undef DEFINE_GUID
-    //#define DEFINE_GUID(n,data) EXTERN_C const GUID n = {data}
-    //#define DEFINE_GUID_THUNK(n,data) DEFINE_GUID(n,data)
-    //#define DEFINE_GUIDEX(n) DEFINE_GUID_THUNK(n, STATIC_##n)
+    #define _NTRTL_ /* Turn off default definition of DEFINE_GUIDEX */
+    #undef DEFINE_GUID
+    #define DEFINE_GUID(n,data) EXTERN_C const GUID n = {data}
+    #define DEFINE_GUID_THUNK(n,data) DEFINE_GUID(n,data)
+    #define DEFINE_GUIDEX(n) DEFINE_GUID_THUNK(n, STATIC_##n)
 #endif
 
 #include <mmreg.h>

@@ -1,5 +1,5 @@
 /*
- * $Id: pa_front.c 1584 2011-02-02 18:58:17Z rossb $
+ * $Id: pa_front.c 1730 2011-08-18 03:43:51Z rossb $
  * Portable Audio I/O Library Multi-Host API front end
  * Validate function parameters and manage multiple host APIs.
  *
@@ -116,6 +116,7 @@ void PaUtil_SetLastHostErrorInfo( PaHostApiTypeId hostApiType, long errorCode,
 
 static PaUtilHostApiRepresentation **hostApis_ = 0;
 static int hostApisCount_ = 0;
+static int defaultHostApiIndex_ = 0;
 static int initializationCount_ = 0;
 static int deviceCount_ = 0;
 
@@ -146,6 +147,7 @@ static void TerminateHostApis( void )
         hostApis_[hostApisCount_]->Terminate( hostApis_[hostApisCount_] );
     }
     hostApisCount_ = 0;
+    defaultHostApiIndex_ = 0;
     deviceCount_ = 0;
 
     if( hostApis_ != 0 )
@@ -172,6 +174,7 @@ static PaError InitializeHostApis( void )
     }
 
     hostApisCount_ = 0;
+    defaultHostApiIndex_ = -1; /* indicates that we haven't determined the default host API yet */
     deviceCount_ = 0;
     baseDeviceIndex = 0;
 
@@ -193,6 +196,16 @@ static PaError InitializeHostApis( void )
             assert( hostApi->info.defaultInputDevice < hostApi->info.deviceCount );
             assert( hostApi->info.defaultOutputDevice < hostApi->info.deviceCount );
 
+            /* the first successfully initialized host API with a default input *or* 
+               output device is used as the default host API.
+            */
+            if( (defaultHostApiIndex_ == -1) &&
+                    ( hostApi->info.defaultInputDevice != paNoDevice 
+                        || hostApi->info.defaultOutputDevice != paNoDevice ) )
+            {
+                defaultHostApiIndex_ = hostApisCount_;
+            }
+
             hostApi->privatePaFrontInfo.baseDeviceIndex = baseDeviceIndex;
 
             if( hostApi->info.defaultInputDevice != paNoDevice )
@@ -207,6 +220,10 @@ static PaError InitializeHostApis( void )
             ++hostApisCount_;
         }
     }
+
+    /* if no host APIs have devices, the default host API is the first initialized host API */
+    if( defaultHostApiIndex_ == -1 )
+        defaultHostApiIndex_ = 0;
 
     return result;
 
@@ -525,7 +542,7 @@ PaHostApiIndex Pa_GetDefaultHostApi( void )
     }
     else
     {
-        result = paDefaultHostApiIndex;
+        result = defaultHostApiIndex_;
 
         /* internal consistency check: make sure that the default host api
          index is within range */

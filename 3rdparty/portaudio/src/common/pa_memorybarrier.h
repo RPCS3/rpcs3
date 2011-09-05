@@ -103,6 +103,7 @@
 #   pragma intrinsic(_ReadWriteBarrier)
 #   pragma intrinsic(_ReadBarrier)
 #   pragma intrinsic(_WriteBarrier)
+/* note that MSVC intrinsics _ReadWriteBarrier(), _ReadBarrier(), _WriteBarrier() are just compiler barriers *not* memory barriers */
 #   define PaUtil_FullMemoryBarrier()  _ReadWriteBarrier()
 #   define PaUtil_ReadMemoryBarrier()  _ReadBarrier()
 #   define PaUtil_WriteMemoryBarrier() _WriteBarrier()

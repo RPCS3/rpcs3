@@ -1,7 +1,7 @@
 #ifndef PA_HOSTAPI_H
 #define PA_HOSTAPI_H
 /*
- * $Id: pa_hostapi.h 1634 2011-03-04 04:12:08Z rossb $
+ * $Id: pa_hostapi.h 1740 2011-08-25 07:17:48Z philburk $
  * Portable Audio I/O Library
  * host api representation
  *
@@ -104,6 +104,53 @@ are defaulted to 1.
 #elif (PA_USE_WDMKS != 0) && (PA_USE_WDMKS != 1)
 #undef PA_USE_WDMKS
 #define PA_USE_WDMKS 1
+#endif 
+
+/* Set default values for Unix based APIs. */
+#if defined(PA_NO_OSS) || defined(PA_NO_ALSA) || defined(PA_NO_JACK) || defined(PA_NO_COREAUDIO) || defined(PA_NO_SGI) || defined(PA_NO_ASIHPI)
+#error "Portaudio: PA_NO_<APINAME> is no longer supported, please remove definition and use PA_USE_<APINAME> instead"
+#endif
+
+#ifndef PA_USE_OSS
+#define PA_USE_OSS 0
+#elif (PA_USE_OSS != 0) && (PA_USE_OSS != 1)
+#undef PA_USE_OSS
+#define PA_USE_OSS 1
+#endif 
+
+#ifndef PA_USE_ALSA
+#define PA_USE_ALSA 0
+#elif (PA_USE_ALSA != 0) && (PA_USE_ALSA != 1)
+#undef PA_USE_ALSA
+#define PA_USE_ALSA 1
+#endif 
+
+#ifndef PA_USE_JACK
+#define PA_USE_JACK 0
+#elif (PA_USE_JACK != 0) && (PA_USE_JACK != 1)
+#undef PA_USE_JACK
+#define PA_USE_JACK 1
+#endif 
+
+#ifndef PA_USE_SGI
+#define PA_USE_SGI 0
+#elif (PA_USE_SGI != 0) && (PA_USE_SGI != 1)
+#undef PA_USE_SGI
+#define PA_USE_SGI 1
+#endif 
+
+#ifndef PA_USE_COREAUDIO
+#define PA_USE_COREAUDIO 0
+#elif (PA_USE_COREAUDIO != 0) && (PA_USE_COREAUDIO != 1)
+#undef PA_USE_COREAUDIO
+#define PA_USE_COREAUDIO 1
+#endif 
+
+#ifndef PA_USE_ASIHPI
+#define PA_USE_ASIHPI 0
+#elif (PA_USE_ASIHPI != 0) && (PA_USE_ASIHPI != 1)
+#undef PA_USE_ASIHPI
+#define PA_USE_ASIHPI 1
 #endif 
 
 #ifdef __cplusplus
@@ -294,20 +341,19 @@ typedef PaError PaUtilHostApiInitializer( PaUtilHostApiRepresentation**, PaHostA
 
 /** paHostApiInitializers is a NULL-terminated array of host API initialization
  functions. These functions are called by pa_front.c to initialize the host APIs
- when the client calls Pa_Initialize().
+ when the client calls Pa_Initialize(). 
+ 
+ The initialization functions are invoked in order.
 
- There is a platform specific file which defines paHostApiInitializers for that
+ The first successfully initialized host API that has a default input *or* output 
+ device is used as the default PortAudio host API. This is based on the logic that
+ there is only one default host API, and it must contain the default input and output
+ devices (if defined).
+
+ There is a platform specific file that defines paHostApiInitializers for that
  platform, pa_win/pa_win_hostapis.c contains the Win32 definitions for example.
 */
 extern PaUtilHostApiInitializer *paHostApiInitializers[];
-
-
-/** The index of the default host API in the paHostApiInitializers array.
- 
- There is a platform specific file which defines paDefaultHostApiIndex for that
- platform, see pa_win/pa_win_hostapis.c for example.
-*/
-extern int paDefaultHostApiIndex;
 
 
 #ifdef __cplusplus

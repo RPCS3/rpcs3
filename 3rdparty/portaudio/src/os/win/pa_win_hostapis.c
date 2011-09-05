@@ -1,5 +1,5 @@
 /*
- * $Id: pa_win_hostapis.c 1687 2011-05-19 08:24:02Z rob_bielik $
+ * $Id: pa_win_hostapis.c 1728 2011-08-18 03:31:51Z rossb $
  * Portable Audio I/O Library Windows initialization table
  *
  * Based on the Open Source API proposed by Ross Bencina
@@ -99,6 +99,4 @@ PaUtilHostApiInitializer *paHostApiInitializers[] =
         0   /* NULL terminated array */
     };
 
-
-int paDefaultHostApiIndex = 0;
 
