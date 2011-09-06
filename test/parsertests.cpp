@@ -864,6 +864,22 @@ namespace Test
 			}
 			return true;
 		}
+		
+		bool NonConstKey()
+		{
+			std::string input = "{a: 1}";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			std::vector<char> key(2);
+			key[0] = 'a';
+			key[1] = '\0';
+			if(doc[&key[0]].to<int>() != 1)
+				return false;
+			return true;
+		}
 	}
 	
 	namespace {
@@ -1142,6 +1158,7 @@ namespace Test
 		RunParserTest(&Parser::ExplicitNonSpecificSequenceTag, "explicit, non-specific sequence tag", passed, total);
 		RunParserTest(&Parser::Infinity, "infinity", passed, total);
 		RunParserTest(&Parser::NaN, "NaN", passed, total);
+		RunParserTest(&Parser::NonConstKey, "non const key", passed, total);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed, total);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed, total);

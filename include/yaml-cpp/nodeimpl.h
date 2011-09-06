@@ -68,8 +68,16 @@ namespace YAML
 	inline const Node *Node::FindValue(const char *key) const {
 		return FindValue(std::string(key));
 	}
+
+	inline const Node *Node::FindValue(char *key) const {
+		return FindValue(std::string(key));
+	}
 	
 	inline const Node& Node::operator [] (const char *key) const {
+		return GetValue(std::string(key));
+	}
+
+	inline const Node& Node::operator [] (char *key) const {
 		return GetValue(std::string(key));
 	}
 }

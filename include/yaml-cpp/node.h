@@ -77,7 +77,9 @@ namespace YAML
 		
 		// specific to maps
 		const Node *FindValue(const char *key) const;
+		const Node *FindValue(char *key) const;
 		const Node& operator [] (const char *key) const;
+		const Node& operator [] (char *key) const;
 
 		// for tags
 		const std::string& Tag() const { return m_tag; }
