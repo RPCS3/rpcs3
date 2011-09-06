@@ -846,6 +846,14 @@ namespace Test
 			out << "Oops";
 			desiredOutput = "Hi\n---\nBye\n---\nOops";
 		}
+		
+		void EmptyString(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginMap;
+			out << YAML::Key << "key" << YAML::Value << "";
+			out << YAML::EndMap;
+			desiredOutput = "key: \"\"";
+		}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
@@ -1058,6 +1066,7 @@ namespace Test
 		RunEmitterTest(&Emitter::BoolFormatting, "bool formatting", passed, total);
 		RunEmitterTest(&Emitter::DocStartAndEnd, "doc start and end", passed, total);
 		RunEmitterTest(&Emitter::ImplicitDocStart, "implicit doc start", passed, total);
+		RunEmitterTest(&Emitter::EmptyString, "empty string", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);

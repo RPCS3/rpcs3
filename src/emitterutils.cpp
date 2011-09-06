@@ -128,6 +128,9 @@ namespace YAML
 			}
 			
 			bool IsValidPlainScalar(const std::string& str, bool inFlow, bool allowOnlyAscii) {
+				if(str.empty())
+					return false;
+				
 				// first check the start
 				const RegEx& start = (inFlow ? Exp::PlainScalarInFlow() : Exp::PlainScalar());
 				if(!start.Matches(str))
