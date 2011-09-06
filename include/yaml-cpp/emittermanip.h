@@ -127,12 +127,12 @@ namespace YAML
 	}
 	
 	struct _Binary {
-		_Binary(const char *data_, std::size_t size_): data(data_), size(size_) {}
-		const char *data;
+		_Binary(const unsigned char *data_, std::size_t size_): data(data_), size(size_) {}
+		const unsigned char *data;
 		std::size_t size;
 	};
 	
-	inline _Binary Binary(const char *data, std::size_t size) {
+	inline _Binary Binary(const unsigned char *data, std::size_t size) {
 		return _Binary(data, size);
 	}
 }

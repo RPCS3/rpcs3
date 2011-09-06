@@ -22,7 +22,7 @@ namespace YAML
 		bool WriteAnchor(ostream& out, const std::string& str);
 		bool WriteTag(ostream& out, const std::string& str, bool verbatim);
 		bool WriteTagWithPrefix(ostream& out, const std::string& prefix, const std::string& tag);
-		bool WriteBinary(ostream& out, const char *data, std::size_t size);
+		bool WriteBinary(ostream& out, const unsigned char *data, std::size_t size);
 	}
 }
 
