@@ -1,7 +1,7 @@
 #ifndef NODE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 #define NODE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
-#if !defined(__GNUC__) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ >= 4) // GCC supports "pragma once" correctly since 3.4
+#if defined(_MSC_VER) || (defined(__GNUC__) && (__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ >= 4)) // GCC supports "pragma once" correctly since 3.4
 #pragma once
 #endif
 
@@ -77,7 +77,9 @@ namespace YAML
 		
 		// specific to maps
 		const Node *FindValue(const char *key) const;
+		const Node *FindValue(char *key) const;
 		const Node& operator [] (const char *key) const;
+		const Node& operator [] (char *key) const;
 
 		// for tags
 		const std::string& Tag() const { return m_tag; }

@@ -759,19 +759,19 @@ namespace Test
 		
 		void Binary(YAML::Emitter& out, std::string& desiredOutput)
 		{
-			out << YAML::Binary("Hello, World!", 13);
+			out << YAML::Binary(reinterpret_cast<const unsigned char*>("Hello, World!"), 13);
 			desiredOutput = "!!binary \"SGVsbG8sIFdvcmxkIQ==\"";
 		}
 
 		void LongBinary(YAML::Emitter& out, std::string& desiredOutput)
 		{
-			out << YAML::Binary("Man is distinguished, not only by his reason, but by this singular passion from other animals, which is a lust of the mind, that by a perseverance of delight in the continued and indefatigable generation of knowledge, exceeds the short vehemence of any carnal pleasure.\n", 270);
+			out << YAML::Binary(reinterpret_cast<const unsigned char*>("Man is distinguished, not only by his reason, but by this singular passion from other animals, which is a lust of the mind, that by a perseverance of delight in the continued and indefatigable generation of knowledge, exceeds the short vehemence of any carnal pleasure.\n"), 270);
 			desiredOutput = "!!binary \"TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyByZWFzb24sIGJ1dCBieSB0aGlzIHNpbmd1bGFyIHBhc3Npb24gZnJvbSBvdGhlciBhbmltYWxzLCB3aGljaCBpcyBhIGx1c3Qgb2YgdGhlIG1pbmQsIHRoYXQgYnkgYSBwZXJzZXZlcmFuY2Ugb2YgZGVsaWdodCBpbiB0aGUgY29udGludWVkIGFuZCBpbmRlZmF0aWdhYmxlIGdlbmVyYXRpb24gb2Yga25vd2xlZGdlLCBleGNlZWRzIHRoZSBzaG9ydCB2ZWhlbWVuY2Ugb2YgYW55IGNhcm5hbCBwbGVhc3VyZS4K\"";
 		}
 
 		void EmptyBinary(YAML::Emitter& out, std::string& desiredOutput)
 		{
-			out << YAML::Binary("", 0);
+			out << YAML::Binary(reinterpret_cast<const unsigned char *>(""), 0);
 			desiredOutput = "!!binary \"\"";
 		}
 		
@@ -845,6 +845,14 @@ namespace Test
 			out << "Bye";
 			out << "Oops";
 			desiredOutput = "Hi\n---\nBye\n---\nOops";
+		}
+		
+		void EmptyString(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginMap;
+			out << YAML::Key << "key" << YAML::Value << "";
+			out << YAML::EndMap;
+			desiredOutput = "key: \"\"";
 		}
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1058,6 +1066,7 @@ namespace Test
 		RunEmitterTest(&Emitter::BoolFormatting, "bool formatting", passed, total);
 		RunEmitterTest(&Emitter::DocStartAndEnd, "doc start and end", passed, total);
 		RunEmitterTest(&Emitter::ImplicitDocStart, "implicit doc start", passed, total);
+		RunEmitterTest(&Emitter::EmptyString, "empty string", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);

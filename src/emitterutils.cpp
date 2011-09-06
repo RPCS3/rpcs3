@@ -128,6 +128,9 @@ namespace YAML
 			}
 			
 			bool IsValidPlainScalar(const std::string& str, bool inFlow, bool allowOnlyAscii) {
+				if(str.empty())
+					return false;
+				
 				// first check the start
 				const RegEx& start = (inFlow ? Exp::PlainScalarInFlow() : Exp::PlainScalar());
 				if(!start.Matches(str))
@@ -344,7 +347,7 @@ namespace YAML
 			return true;
 		}
 
-		bool WriteBinary(ostream& out, const char *data, std::size_t size)
+		bool WriteBinary(ostream& out, const unsigned char *data, std::size_t size)
 		{
 			static const char encoding[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 			const char PAD = '=';
