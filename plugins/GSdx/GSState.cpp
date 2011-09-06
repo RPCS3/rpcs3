@@ -3133,6 +3133,54 @@ bool GSC_Kunoichi(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_Yakuza(const GSFrameInfo& fi, int& skip)
+{
+	if(1
+		&& !skip
+		&& !fi.TME
+		&& (0
+			|| fi.FBP == 0x1c20 && fi.TBP0 == 0xe00		//ntsc (EU and US DVDs)
+			|| fi.FBP == 0x1e20 && fi.TBP0 == 0x1000	//pal1
+			|| fi.FBP == 0x1620 && fi.TBP0 == 0x800		//pal2
+		)
+		&& fi.TPSM == PSM_PSMZ24
+		&& fi.FPSM == PSM_PSMCT32
+		/*
+		&& fi.FBMSK	==0xffffff
+		&& fi.TZTST
+		&& !GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)
+		*/
+	)
+	{
+		skip=17;
+	}
+	return true;
+}
+
+bool GSC_Yakuza2(const GSFrameInfo& fi, int& skip)
+{
+	if(1
+		&& !skip
+		&& !fi.TME
+		&& (0
+			|| fi.FBP == 0x1c20 && fi.TBP0 == 0xe00		//ntsc (EU DVD)
+			|| fi.FBP == 0x1e20 && fi.TBP0 == 0x1000	//pal1
+			|| fi.FBP == 0x1620 && fi.TBP0 == 0x800		//pal2
+		)
+		&& fi.TPSM == PSM_PSMZ24
+		&& fi.FPSM == PSM_PSMCT32
+		/*
+		&& fi.FBMSK	==0xffffff
+		&& fi.TZTST
+		&& !GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)
+		*/
+	)
+	{
+		skip=17;
+	}
+	return true;
+}
+
 
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
@@ -3223,6 +3271,8 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::TalesOfLegendia] = GSC_TalesOfLegendia;
 		map[CRC::NanoBreaker] = GSC_NanoBreaker;
 		map[CRC::Kunoichi] = GSC_Kunoichi;
+		map[CRC::Yakuza] = GSC_Yakuza;
+		map[CRC::Yakuza2] = GSC_Yakuza2;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

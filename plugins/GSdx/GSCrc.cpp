@@ -317,6 +317,12 @@ CRC::Game CRC::m_games[] =
 	{0x519E816B, Kunoichi, US, 0},	//Nightshade
 	{0x3FB419FD, Kunoichi, JP, 0},
 	{0x3B470BBD, Kunoichi, EU, 0},
+	{0XD3F182A3, Yakuza, EU, 0},
+	{0x6F9F99F8, Yakuza, EU, 0},
+	{0x388F687B, Yakuza, US, 0},
+	{0xA60C2E65, Yakuza2, EU, 0},
+	{0x800E3E5A, Yakuza2, EU, 0},
+	{0x97E9C87E, Yakuza2, US, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;
@@ -348,7 +354,7 @@ CRC::Game CRC::Lookup(uint32 crc)
 		for(int i = 0; i < countof(m_games); i++)
 		{
 			if( !IsCrcExcluded( exclusions, m_games[i].crc ) )
-				m_map[m_games[i].crc] = &m_games[i];
+			m_map[m_games[i].crc] = &m_games[i];
 			//else
 			//	printf( "GSdx: excluding CRC hack for 0x%08x\n", m_games[i].crc );
 		}

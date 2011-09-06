@@ -123,6 +123,9 @@ public:
 		TalesOfLegendia,
 		NanoBreaker,
 		Kunoichi,
+		Yakuza,
+		Yakuza2,
+
 		TitleCount,
 	};
 
