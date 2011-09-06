@@ -179,6 +179,10 @@ add_library(${Output} STATIC ${UtilitiesSources} ${UtilitiesHeaders} ${Utilities
 # link target with wx
 target_link_libraries(${Output} ${wxWidgets_LIBRARIES})
 
+# Gold (new linux linker) does not get automatically dependency of dependency so you must add
+# them manually.
+target_link_libraries(${Output} ${LIBC_LIBRARIES})
+
 # User flags options
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
     target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")

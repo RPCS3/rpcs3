@@ -55,6 +55,7 @@ endif(NOT FORCE_INTERNAL_ZLIB)
 ## Use pcsx2 package to find module
 include(FindCg)
 include(FindGlew)
+include(FindLibc)
 include(FindPortAudio)
 if(NOT FORCE_INTERNAL_SOUNDTOUCH)
     include(FindSoundTouch)
