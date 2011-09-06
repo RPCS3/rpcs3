@@ -2032,7 +2032,7 @@ namespace Test {
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["strip"].to<std::string>() == "# text");
 			YAML_ASSERT(doc["clip"].to<std::string>() == "# text\n");
-			YAML_ASSERT(doc["keep"].to<std::string>() == "# text\n");
+			YAML_ASSERT(doc["keep"].to<std::string>() == "# text\n"); // Note: I believe this is a bug in the YAML spec - it should be "# text\n\n"
 			return true;
 		}
 		
@@ -2290,7 +2290,7 @@ namespace Test {
 			
 			PARSE(doc, input);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["literal"].to<std::string>() == "value");
+			YAML_ASSERT(doc["literal"].to<std::string>() == "value"); // Note: I believe this is a bug in the YAML spec - it should be "value\n"
 			YAML_ASSERT(doc["folded"].to<std::string>() == "value");
 			YAML_ASSERT(doc["folded"].Tag() == "!foo");
 			return true;
