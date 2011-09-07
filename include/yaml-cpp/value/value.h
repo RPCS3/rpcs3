@@ -59,17 +59,18 @@ namespace YAML
 		bool remove(char *key);
 		
 	private:
+		explicit Value(detail::shared_node pNode, detail::shared_memory_holder pMemory);
+		
 		template<typename T> void Assign(const T& rhs);
 		void Assign(const char *rhs);
 		void Assign(char *rhs);
 
-		void EnsureNodeExists();
 		void AssignData(const Value& rhs);
 		void AssignNode(const Value& rhs);
 		
 	private:
-		detail::shared_node m_pNode;
 		detail::shared_memory_holder m_pMemory;
+		detail::shared_node m_pNode;
 	};
 	
 	int compare(const Value& lhs, const Value& rhs);

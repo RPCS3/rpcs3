@@ -9,7 +9,8 @@
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/value/type.h"
 #include "yaml-cpp/value/ptr.h"
-#include <pair>
+#include <list>
+#include <utility>
 #include <vector>
 
 namespace YAML
@@ -19,12 +20,29 @@ namespace YAML
 		class node_data
 		{
 		public:
-			explicit node_data(const std::string& scalar);
+			node_data();
 			
-			ValueType::value type() const { return m_type; }
-			const std::string scalar() const { return m_data; }
+			void set_type(ValueType::value type);
+			void set_null();
+			void set_scalar(const std::string& scalar);
+			
+			ValueType::value type() const { return m_isDefined ? m_type : ValueType::Undefined; }
+			const std::string scalar() const { return m_scalar; }
+			
+			// indexing
+			template<typename Key> shared_node operator[](const Key& key) const;
+			template<typename Key> shared_node operator[](const Key& key);
+			template<typename Key> bool remove(const Key& key);
+			
+			shared_node operator[](shared_node pKey) const;
+			shared_node operator[](shared_node pKey);
+			bool remove(shared_node pKey);
 			
 		private:
+			void convert_sequence_to_map();
+
+		private:
+			bool m_isDefined;
 			ValueType::value m_type;
 			
 			// scalar
@@ -36,7 +54,7 @@ namespace YAML
 			
 			// map
 			typedef std::pair<shared_node, shared_node> kv_pair;
-			typedef std::vector<kv_pair> node_map;
+			typedef std::list<kv_pair> node_map;
 			node_map m_map;
 		};
 	}

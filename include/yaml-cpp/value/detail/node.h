@@ -18,34 +18,28 @@ namespace YAML
 		class node
 		{
 		public:
-			node();
+			node(): m_pData(new node_data) {}
+
+			ValueType::value type() const { return m_pData->type(); }
 			
-			ValueType::value type() const;
-			void assign_data(const node& rhs);
-			void set_scalar(const std::string& data);
+			void set_data(const node& rhs) { m_pData = rhs.m_pData; }
+				
+			void set_type(ValueType::value type) { m_pData->set_type(type); }
+			void set_null() { m_pData->set_null(); }
+			void set_scalar(const std::string& scalar) { m_pData->set_scalar(scalar); }
 			
+			// indexing
+			template<typename Key> shared_node operator[](const Key& key) const { return (static_cast<const node_data&>(*m_pData))[key]; }
+			template<typename Key> shared_node operator[](const Key& key) { return (*m_pData)[key]; }
+			template<typename Key> bool remove(const Key& key) { return m_pData->remove(key); }
+			
+			shared_node operator[](shared_node pKey) const { return (static_cast<const node_data&>(*m_pData))[pKey]; }
+			shared_node operator[](shared_node pKey) { return (*m_pData)[pKey]; }
+			bool remove(shared_node pKey) { return m_pData->remove(pKey); }
+
 		private:
 			shared_node_data m_pData;
 		};
-		
-		inline node::node()
-		{
-		}
-		
-		inline ValueType::value node::type() const
-		{
-			return m_pData ? m_pData->type() : ValueType::Null;
-		}
-		
-		inline void node::assign_data(const node& rhs)
-		{
-			m_pData = rhs.m_pData;
-		}
-
-		inline void node::set_scalar(const std::string& data)
-		{
-			m_pData.reset(new node_data(data));
-		}
 	}
 }
 

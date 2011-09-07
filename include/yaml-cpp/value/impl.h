@@ -12,28 +12,37 @@
 
 namespace YAML
 {
-	inline Value::Value(): m_pMemory(new detail::memory_holder)
+	inline Value::Value(): m_pMemory(new detail::memory_holder), m_pNode(m_pMemory->create_node())
 	{
-		EnsureNodeExists();
+		m_pNode->set_null();
+	}
+	
+	inline Value::Value(ValueType::value type): m_pMemory(new detail::memory_holder), m_pNode(m_pMemory->create_node())
+	{
+		m_pNode->set_type(type);
 	}
 	
 	template<typename T>
-	inline Value::Value(const T& rhs): m_pMemory(new detail::memory_holder)
+	inline Value::Value(const T& rhs): m_pMemory(new detail::memory_holder), m_pNode(m_pMemory->create_node())
 	{
 		Assign(rhs);
 	}
 	
-	inline Value::Value(const Value& rhs): m_pNode(rhs.m_pNode), m_pMemory(rhs.m_pMemory)
+	inline Value::Value(const Value& rhs): m_pMemory(rhs.m_pMemory), m_pNode(rhs.m_pNode)
 	{
 	}
 	
+	inline Value::Value(detail::shared_node pNode, detail::shared_memory_holder pMemory): m_pMemory(pMemory), m_pNode(pNode)
+	{
+	}
+
 	inline Value::~Value()
 	{
 	}
 
 	inline ValueType::value Value::Type() const
 	{
-		return m_pNode ? m_pNode->type() : ValueType::Undefined;
+		return m_pNode->type();
 	}
 	
 	// access
@@ -63,19 +72,16 @@ namespace YAML
 	template<>
 	inline void Value::Assign(const std::string& rhs)
 	{
-		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
 	}
 
 	inline void Value::Assign(const char *rhs)
 	{
-		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
 	}
 
 	inline void Value::Assign(char *rhs)
 	{
-		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
 	}
 	
@@ -86,20 +92,10 @@ namespace YAML
 		AssignNode(rhs);
 		return *this;
 	}
-	
-	void Value::EnsureNodeExists()
-	{
-		if(!m_pNode)
-			m_pNode = m_pMemory->create_node();
-	}
-	
+
 	void Value::AssignData(const Value& rhs)
 	{
-		EnsureNodeExists();
-		if(!rhs.m_pNode)
-			throw std::runtime_error("Tried to assign an undefined value");
-		
-		m_pNode->assign_data(*rhs.m_pNode);
+		m_pNode->set_data(*rhs.m_pNode);
 		m_pMemory->merge(*rhs.m_pMemory);
 	}
 
@@ -139,64 +135,68 @@ namespace YAML
 	template<typename Key>
 	inline const Value Value::operator[](const Key& key) const
 	{
-		return Value();
+		detail::shared_node pValue = (static_cast<const detail::node&>(*m_pNode))[key];
+		return Value(pValue, m_pMemory);
 	}
 	
 	template<typename Key>
 	inline Value Value::operator[](const Key& key)
 	{
-		return Value();
+		detail::shared_node pValue = (*m_pNode)[key];
+		return Value(pValue, m_pMemory);
 	}
 	
 	template<typename Key>
 	inline bool Value::remove(const Key& key)
 	{
-		return false;
+		return m_pNode->remove(key);
 	}
 	
 	inline const Value Value::operator[](const Value& key) const
 	{
-		return Value();
+		detail::shared_node pValue = (static_cast<const detail::node&>(*m_pNode))[*key.m_pNode];
+		return Value(pValue, m_pMemory);
 	}
 	
 	inline Value Value::operator[](const Value& key)
 	{
-		return Value();
+		detail::shared_node pValue = (*m_pNode)[*key.m_pNode];
+		return Value(pValue, m_pMemory);
 	}
 	
 	inline bool Value::remove(const Value& key)
 	{
-		return false;
+		return m_pNode->remove(*key.m_pNode);
 	}
 	
 	inline const Value Value::operator[](const char *key) const
 	{
-		return Value();
+		return operator[](std::string(key));
 	}
 	
 	inline Value Value::operator[](const char *key)
 	{
-		return Value();
+		return operator[](std::string(key));
 	}
 	
 	inline bool Value::remove(const char *key)
 	{
-		return false;
+		return m_pNode->remove(std::string(key));
 	}
 	
 	inline const Value Value::operator[](char *key) const
 	{
-		return Value();
+		return operator[](static_cast<const char *>(key));
 	}
 	
 	inline Value Value::operator[](char *key)
 	{
-		return Value();
+		return operator[](static_cast<const char *>(key));
 	}
 	
 	inline bool Value::remove(char *key)
 	{
-		return false;
+		return remove(static_cast<const char *>(key));
 	}
 
 	// free functions
