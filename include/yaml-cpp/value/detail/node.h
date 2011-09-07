@@ -9,8 +9,7 @@
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/value/type.h"
 #include "yaml-cpp/value/ptr.h"
-#include "yaml-cpp/value/value.h"
-#include "yaml-cpp/value/detail/node_data.h"
+#include "yaml-cpp/value/detail/node_ref.h"
 
 namespace YAML
 {
@@ -19,27 +18,28 @@ namespace YAML
 		class node
 		{
 		public:
-			node(): m_pData(new node_data) {}
+			node(): m_pRef(new node_ref) {}
 
-			ValueType::value type() const { return m_pData->type(); }
+			ValueType::value type() const { return m_pRef->type(); }
 			
-			void set_data(const node& rhs) { m_pData = rhs.m_pData; }
+			void set_ref(const node& rhs) { m_pRef = rhs.m_pRef; }
+			void set_data(const node& rhs) { m_pRef->set_data(*rhs.m_pRef); }
 				
-			void set_type(ValueType::value type) { m_pData->set_type(type); }
-			void set_null() { m_pData->set_null(); }
-			void set_scalar(const std::string& scalar) { m_pData->set_scalar(scalar); }
+			void set_type(ValueType::value type) { m_pRef->set_type(type); }
+			void set_null() { m_pRef->set_null(); }
+			void set_scalar(const std::string& scalar) { m_pRef->set_scalar(scalar); }
 
 			// indexing
-			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_data&>(*m_pData).get(key, pMemory); }
-			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) { return m_pData->get(key, pMemory); }
-			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory) { return m_pData->remove(key, pMemory); }
+			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).get(key, pMemory); }
+			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) { return m_pRef->get(key, pMemory); }
+			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory) { return m_pRef->remove(key, pMemory); }
 			
-			shared_node get(shared_node pKey) const { return static_cast<const node_data&>(*m_pData).get(pKey); }
-			shared_node get(shared_node pKey) { return m_pData->get(pKey); }
-			bool remove(shared_node pKey) { return m_pData->remove(pKey); }
+			shared_node get(shared_node pKey) const { return static_cast<const node_ref&>(*m_pRef).get(pKey); }
+			shared_node get(shared_node pKey) { return m_pRef->get(pKey); }
+			bool remove(shared_node pKey) { return m_pRef->remove(pKey); }
 
 		private:
-			shared_node_data m_pData;
+			shared_node_ref m_pRef;
 		};
 	}
 }

@@ -102,7 +102,7 @@ namespace YAML
 
 	void Value::AssignNode(const Value& rhs)
 	{
-		m_pNode = rhs.m_pNode;
+		m_pNode->set_ref(*rhs.m_pNode);
 		m_pMemory->merge(*rhs.m_pMemory);
 	}
 
