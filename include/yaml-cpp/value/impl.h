@@ -215,15 +215,6 @@ namespace YAML
 	{
 		return false;
 	}
-	
-	template<typename T>
-	inline bool equals(detail::shared_node pNode, const T& rhs, detail::shared_memory_holder pMemory)
-	{
-		T lhs;
-		if(convert(Value(pNode, pMemory), lhs))
-			return lhs == rhs;
-		return false;
-	}
 }
 
 #endif // VALUE_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66

@@ -40,6 +40,12 @@ namespace YAML
 			
 		private:
 			void convert_sequence_to_map();
+			
+			template<typename T>
+			static bool equals(detail::shared_node pNode, const T& rhs, detail::shared_memory_holder pMemory);
+			
+			template<typename T>
+			static shared_node convert_to_node(const T& rhs, detail::shared_memory_holder pMemory);
 
 		private:
 			bool m_isDefined;
