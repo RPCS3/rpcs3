@@ -57,6 +57,11 @@ namespace YAML
 	}
 	
 	// assignment
+	inline bool Value::is(const Value& rhs) const
+	{
+		return m_pNode->is(*rhs.m_pNode);
+	}
+
 	template<typename T>
 	inline Value& Value::operator=(const T& rhs)
 	{
@@ -88,7 +93,7 @@ namespace YAML
 	
 	inline Value& Value::operator=(const Value& rhs)
 	{
-		if(is(*this, rhs))
+		if(is(rhs))
 			return *this;
 		AssignNode(rhs);
 		return *this;
@@ -213,7 +218,7 @@ namespace YAML
 	
 	inline bool is(const Value& lhs, const Value& rhs)
 	{
-		return false;
+		return lhs.is(rhs);
 	}
 }
 

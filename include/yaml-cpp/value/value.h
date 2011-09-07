@@ -31,6 +31,7 @@ namespace YAML
 		template<typename T> const T as() const;
 		
 		// assignment
+		bool is(const Value& rhs) const;
 		template<typename T> Value& operator=(const T& rhs);
 		Value& operator=(const Value& rhs);
 		

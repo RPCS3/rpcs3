@@ -21,6 +21,8 @@ namespace YAML
 			node(): m_pRef(new node_ref) {}
 
 			ValueType::value type() const { return m_pRef->type(); }
+
+			bool is(const node& rhs) const { return m_pRef == rhs.m_pRef; }
 			
 			void set_ref(const node& rhs) { m_pRef = rhs.m_pRef; }
 			void set_data(const node& rhs) { m_pRef->set_data(*rhs.m_pRef); }
