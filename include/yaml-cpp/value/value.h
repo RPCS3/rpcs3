@@ -1,5 +1,5 @@
-#ifndef VALUE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
-#define VALUE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#ifndef VALUE_VALUE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define VALUE_VALUE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
 #if defined(_MSC_VER) || (defined(__GNUC__) && (__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ >= 4)) // GCC supports "pragma once" correctly since 3.4
 #pragma once
@@ -7,7 +7,7 @@
 
 
 #include "yaml-cpp/dll.h"
-#include "yaml-cpp/node_ptr.h"
+#include "yaml-cpp/value/ptr.h"
 
 namespace YAML
 {
@@ -18,6 +18,8 @@ namespace YAML
 	public:
 		Value();
 		explicit Value(ValueType::value type);
+		explicit template<typename T> Value(const T& rhs);
+		explicit Value(const Value& rhs);
 		~Value();
 		
 		ValueType::value Type() const;
@@ -26,7 +28,7 @@ namespace YAML
 		template<typename T> const T as() const;
 		
 		// assignment
-		template<typename T> Value& operator=(const T& rhs) const;
+		template<typename T> Value& operator=(const T& rhs);
 		Value& operator=(const Value& rhs);
 		
 		// size/iterator
@@ -54,12 +56,29 @@ namespace YAML
 		const Value operator[](char *key) const;
 		Value operator[](char *key);
 		bool remove(char *key);
+		
+	private:
+		void EnsureNodeExists();
+		void AssignData(const Value& rhs);
+		void AssignNode(const Value& rhs);
+		
+	private:
+		shared_node m_pNode;
+		shared_memory_holder m_pMemory;
 	};
 	
 	int compare(const Value& lhs, const Value& rhs);
 	bool operator<(const Value& lhs, const Value& rhs);
 	
 	bool is(const Value& lhs, const Value& rhs);
+	
+	template<typename T>
+	Value convert(const T& rhs);
+	
+	template<typename T>
+	bool convert(const Value& value, T& rhs);
 }
 
-#endif // VALUE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#include "yaml-cpp/value/impl.h"
+
+#endif // VALUE_VALUE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
