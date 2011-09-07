@@ -1,4 +1,5 @@
 #include "yaml-cpp/value/detail/node_data.h"
+#include "yaml-cpp/value/detail/memory.h"
 #include "yaml-cpp/value/detail/node.h"
 #include <sstream>
 
@@ -57,20 +58,20 @@ namespace YAML
 		}
 
 		// indexing
-		shared_node node_data::get(shared_node pKey) const
+		shared_node node_data::get(shared_node pKey, shared_memory_holder pMemory) const
 		{
 			if(m_type != ValueType::Map)
-				return shared_node(new node);
+				return pMemory->create_node();
 			
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
 				if(it->first == pKey)
 					return it->second;
 			}
 			
-			return shared_node(new node);
+			return pMemory->create_node();
 		}
 		
-		shared_node node_data::get(shared_node pKey)
+		shared_node node_data::get(shared_node pKey, shared_memory_holder pMemory)
 		{
 			switch(m_type) {
 				case ValueType::Undefined:
@@ -80,7 +81,7 @@ namespace YAML
 					m_map.clear();
 					break;
 				case ValueType::Sequence:
-					convert_sequence_to_map();
+					convert_sequence_to_map(pMemory);
 					break;
 				case ValueType::Map:
 					break;
@@ -91,12 +92,12 @@ namespace YAML
 					return it->second;
 			}
 			
-			shared_node pValue(new node);
+			shared_node pValue = pMemory->create_node();
 			m_map.push_back(kv_pair(pKey, pValue));
 			return pValue;
 		}
 		
-		bool node_data::remove(shared_node pKey)
+		bool node_data::remove(shared_node pKey, shared_memory_holder /* pMemory */)
 		{
 			if(m_type != ValueType::Map)
 				return false;
@@ -111,7 +112,7 @@ namespace YAML
 			return false;
 		}
 
-		void node_data::convert_sequence_to_map()
+		void node_data::convert_sequence_to_map(shared_memory_holder pMemory)
 		{
 			assert(m_type == ValueType::Sequence);
 			
@@ -120,7 +121,7 @@ namespace YAML
 				std::stringstream stream;
 				stream << i;
 
-				shared_node pKey(new node);
+				shared_node pKey = pMemory->create_node();
 				pKey->set_scalar(stream.str());
 				m_map.push_back(kv_pair(pKey, m_sequence[i]));
 			}

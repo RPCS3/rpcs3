@@ -34,12 +34,12 @@ namespace YAML
 			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory);
 			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory);
 			
-			shared_node get(shared_node pKey) const;
-			shared_node get(shared_node pKey);
-			bool remove(shared_node pKey);
+			shared_node get(shared_node pKey, shared_memory_holder pMemory) const;
+			shared_node get(shared_node pKey, shared_memory_holder pMemory);
+			bool remove(shared_node pKey, shared_memory_holder pMemory);
 			
 		private:
-			void convert_sequence_to_map();
+			void convert_sequence_to_map(shared_memory_holder pMemory);
 			
 			template<typename T>
 			static bool equals(detail::shared_node pNode, const T& rhs, detail::shared_memory_holder pMemory);

@@ -19,7 +19,7 @@ namespace YAML
 			void merge(const memory& rhs);
 			
 		private:
-			typedef std::set<shared_node> Nodes;
+			typedef std::set<shared_node_ref> Nodes;
 			Nodes m_nodes;
 		};
 

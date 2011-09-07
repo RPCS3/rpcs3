@@ -16,9 +16,9 @@ namespace YAML
 		
 		shared_node memory::create_node()
 		{
-			shared_node pNode(new node);
-			m_nodes.insert(pNode);
-			return pNode;
+			shared_node_ref pRef(new node_ref);
+			m_nodes.insert(pRef);
+			return shared_node(new node(pRef));
 		}
 		
 		void memory::merge(const memory& rhs)

@@ -18,7 +18,7 @@ namespace YAML
 		class node
 		{
 		public:
-			node(): m_pRef(new node_ref) {}
+			explicit node(shared_node_ref pRef): m_pRef(pRef) {}
 
 			ValueType::value type() const { return m_pRef->type(); }
 
@@ -36,9 +36,9 @@ namespace YAML
 			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) { return m_pRef->get(key, pMemory); }
 			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory) { return m_pRef->remove(key, pMemory); }
 			
-			shared_node get(shared_node pKey) const { return static_cast<const node_ref&>(*m_pRef).get(pKey); }
-			shared_node get(shared_node pKey) { return m_pRef->get(pKey); }
-			bool remove(shared_node pKey) { return m_pRef->remove(pKey); }
+			shared_node get(shared_node pKey, shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).get(pKey, pMemory); }
+			shared_node get(shared_node pKey, shared_memory_holder pMemory) { return m_pRef->get(pKey, pMemory); }
+			bool remove(shared_node pKey, shared_memory_holder pMemory) { return m_pRef->remove(pKey, pMemory); }
 
 		private:
 			shared_node_ref m_pRef;

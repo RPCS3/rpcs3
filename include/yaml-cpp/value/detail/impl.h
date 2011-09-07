@@ -18,14 +18,14 @@ namespace YAML
 		inline shared_node node_data::get(const Key& key, shared_memory_holder pMemory) const
 		{
 			if(m_type != ValueType::Map)
-				return shared_node(new node);
+				return pMemory->create_node();
 			
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
 				if(equals(it->first, key, pMemory))
 					return it->second;
 			}
 			
-			return shared_node(new node);
+			return pMemory->create_node();
 		}
 		
 		template<typename Key>
@@ -41,7 +41,7 @@ namespace YAML
 					m_map.clear();
 					break;
 				case ValueType::Sequence:
-					convert_sequence_to_map();
+					convert_sequence_to_map(pMemory);
 					break;
 				case ValueType::Map:
 					break;
@@ -53,7 +53,7 @@ namespace YAML
 			}
 			
 			shared_node pKey = convert_to_node(key, pMemory);
-			shared_node pValue(new node);
+			shared_node pValue = pMemory->create_node();
 			m_map.push_back(kv_pair(pKey, pValue));
 			return pValue;
 		}

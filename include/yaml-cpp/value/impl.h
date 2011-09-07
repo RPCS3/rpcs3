@@ -160,19 +160,19 @@ namespace YAML
 	
 	inline const Value Value::operator[](const Value& key) const
 	{
-		detail::shared_node pValue = static_cast<const detail::node&>(*m_pNode).get(key.m_pNode);
+		detail::shared_node pValue = static_cast<const detail::node&>(*m_pNode).get(key.m_pNode, m_pMemory);
 		return Value(pValue, m_pMemory);
 	}
 	
 	inline Value Value::operator[](const Value& key)
 	{
-		detail::shared_node pValue = m_pNode->get(key.m_pNode);
+		detail::shared_node pValue = m_pNode->get(key.m_pNode, m_pMemory);
 		return Value(pValue, m_pMemory);
 	}
 	
 	inline bool Value::remove(const Value& key)
 	{
-		return m_pNode->remove(key.m_pNode);
+		return m_pNode->remove(key.m_pNode, m_pMemory);
 	}
 	
 	inline const Value Value::operator[](const char *key) const

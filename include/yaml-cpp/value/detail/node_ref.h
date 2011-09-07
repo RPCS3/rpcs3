@@ -33,9 +33,9 @@ namespace YAML
 			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) { return m_pData->get(key, pMemory); }
 			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory) { return m_pData->remove(key, pMemory); }
 			
-			shared_node get(shared_node pKey) const { return static_cast<const node_data&>(*m_pData).get(pKey); }
-			shared_node get(shared_node pKey) { return m_pData->get(pKey); }
-			bool remove(shared_node pKey) { return m_pData->remove(pKey); }
+			shared_node get(shared_node pKey, shared_memory_holder pMemory) const { return static_cast<const node_data&>(*m_pData).get(pKey, pMemory); }
+			shared_node get(shared_node pKey, shared_memory_holder pMemory) { return m_pData->get(pKey, pMemory); }
+			bool remove(shared_node pKey, shared_memory_holder pMemory) { return m_pData->remove(pKey, pMemory); }
 			
 		private:
 			shared_node_data m_pData;
