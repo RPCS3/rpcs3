@@ -27,7 +27,7 @@ namespace YAML
 			void set_scalar(const std::string& scalar);
 			
 			ValueType::value type() const { return m_isDefined ? m_type : ValueType::Undefined; }
-			const std::string scalar() const { return m_scalar; }
+			const std::string& scalar() const { return m_scalar; }
 			
 			// indexing
 			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) const;

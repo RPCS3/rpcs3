@@ -29,6 +29,7 @@ namespace YAML
 		
 		// access
 		template<typename T> const T as() const;
+		const std::string& scalar() const;
 		
 		// assignment
 		bool is(const Value& rhs) const;

@@ -21,6 +21,7 @@ namespace YAML
 			node_ref(): m_pData(new node_data) {}
 			
 			ValueType::value type() const { return m_pData->type(); }
+			const std::string& scalar() const { return m_pData->scalar(); }
 			
 			void set_data(const node_ref& rhs) { m_pData = rhs.m_pData; }
 			

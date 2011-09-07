@@ -56,6 +56,19 @@ namespace YAML
 		throw std::runtime_error("Unable to convert to type");
 	}
 	
+	template<>
+	inline const std::string Value::as() const
+	{
+		if(Type() != ValueType::Scalar)
+			throw std::runtime_error("Unable to convert to string, not a scalar");
+		return scalar();
+	}
+
+	inline const std::string& Value::scalar() const
+	{
+		return m_pNode->scalar();
+	}
+
 	// assignment
 	inline bool Value::is(const Value& rhs) const
 	{

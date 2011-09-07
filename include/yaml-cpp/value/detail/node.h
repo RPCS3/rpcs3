@@ -20,9 +20,10 @@ namespace YAML
 		public:
 			explicit node(shared_node_ref pRef): m_pRef(pRef) {}
 
-			ValueType::value type() const { return m_pRef->type(); }
-
 			bool is(const node& rhs) const { return m_pRef == rhs.m_pRef; }
+			ValueType::value type() const { return m_pRef->type(); }
+			
+			const std::string& scalar() const { return m_pRef->scalar(); }
 			
 			void set_ref(const node& rhs) { m_pRef = rhs.m_pRef; }
 			void set_data(const node& rhs) { m_pRef->set_data(*rhs.m_pRef); }
