@@ -7,8 +7,8 @@
 
 
 #include "yaml-cpp/dll.h"
-#include "yaml-cpp/value/type.h"
 #include "yaml-cpp/value/ptr.h"
+#include "yaml-cpp/value/type.h"
 #include <list>
 #include <utility>
 #include <vector>

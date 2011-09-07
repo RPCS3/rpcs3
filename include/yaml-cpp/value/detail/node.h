@@ -28,6 +28,8 @@ namespace YAML
 			void set_null() { m_pData->set_null(); }
 			void set_scalar(const std::string& scalar) { m_pData->set_scalar(scalar); }
 			
+			template<typename T> bool equals(const T& rhs) const;
+			
 			// indexing
 			template<typename Key> shared_node operator[](const Key& key) const { return (static_cast<const node_data&>(*m_pData))[key]; }
 			template<typename Key> shared_node operator[](const Key& key) { return (*m_pData)[key]; }
@@ -40,6 +42,11 @@ namespace YAML
 		private:
 			shared_node_data m_pData;
 		};
+
+		template<typename T>
+		inline bool node::equals(const T& rhs) const
+		{
+		}
 	}
 }
 

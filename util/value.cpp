@@ -1,4 +1,4 @@
-#include "yaml-cpp/value/value.h"
+#include "yaml-cpp/value.h"
 
 int main()
 {

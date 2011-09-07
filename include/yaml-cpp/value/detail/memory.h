@@ -6,7 +6,6 @@
 #endif
 
 #include "yaml-cpp/value/ptr.h"
-#include "yaml-cpp/value/detail/node.h"
 #include <set>
 #include <boost/shared_ptr.hpp>
 
@@ -14,19 +13,6 @@ namespace YAML
 {
 	namespace detail
 	{
-		class memory;
-		
-		class memory_holder {
-		public:
-			memory_holder();
-			
-			shared_node create_node();
-			void merge(memory_holder& rhs);
-			
-		private:
-			boost::shared_ptr<memory> m_pMemory;
-		};
-		
 		class memory {
 		public:
 			shared_node create_node();
@@ -36,36 +22,17 @@ namespace YAML
 			typedef std::set<shared_node> Nodes;
 			Nodes m_nodes;
 		};
-		
-		inline memory_holder::memory_holder(): m_pMemory(new memory)
-		{
-		}
-		
-		inline shared_node memory_holder::create_node()
-		{
-			return m_pMemory->create_node();
-		}
-		
-		inline void memory_holder::merge(memory_holder& rhs)
-		{
-			if(m_pMemory == rhs.m_pMemory)
-				return;
+
+		class memory_holder {
+		public:
+			memory_holder(): m_pMemory(new memory) {}
 			
-			m_pMemory->merge(*rhs.m_pMemory);
-			rhs.m_pMemory = m_pMemory;
-		}
-
-		shared_node memory::create_node()
-		{
-			shared_node pNode(new node);
-			m_nodes.insert(pNode);
-			return pNode;
-		}
-
-		inline void memory::merge(const memory& rhs)
-		{
-			m_nodes.insert(rhs.m_nodes.begin(), rhs.m_nodes.end());
-		}
+			shared_node create_node() { return m_pMemory->create_node(); }
+			void merge(memory_holder& rhs);
+			
+		private:
+			boost::shared_ptr<memory> m_pMemory;
+		};
 	}
 }
 

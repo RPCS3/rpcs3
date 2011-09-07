@@ -8,6 +8,7 @@
 
 #include "yaml-cpp/value/value.h"
 #include "yaml-cpp/value/detail/memory.h"
+#include "yaml-cpp/value/detail/node.h"
 #include <string>
 
 namespace YAML
