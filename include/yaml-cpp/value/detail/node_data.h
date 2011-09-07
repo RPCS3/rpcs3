@@ -16,7 +16,7 @@ namespace YAML
 		class node_data
 		{
 		public:
-			explicit node_data(const std::string& data);
+			explicit node_data(const std::string& data) {}
 		};
 	}
 }

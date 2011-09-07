@@ -61,6 +61,8 @@ namespace YAML
 		
 	private:
 		template<typename T> void Assign(const T& rhs);
+		void Assign(const char *rhs);
+		void Assign(char *rhs);
 
 		void EnsureNodeExists();
 		void AssignData(const Value& rhs);

@@ -61,15 +61,13 @@ namespace YAML
 		m_pNode->set_scalar(rhs);
 	}
 
-	template<>
-	inline void Value::Assign(const char * const & rhs)
+	inline void Value::Assign(const char *rhs)
 	{
 		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
 	}
 
-	template<>
-	inline void Value::Assign(char * const & rhs)
+	inline void Value::Assign(char *rhs)
 	{
 		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
