@@ -9,6 +9,7 @@
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/value/type.h"
 #include "yaml-cpp/value/ptr.h"
+#include "yaml-cpp/value/value.h"
 #include "yaml-cpp/value/detail/node_data.h"
 
 namespace YAML
@@ -27,26 +28,19 @@ namespace YAML
 			void set_type(ValueType::value type) { m_pData->set_type(type); }
 			void set_null() { m_pData->set_null(); }
 			void set_scalar(const std::string& scalar) { m_pData->set_scalar(scalar); }
-			
-			template<typename T> bool equals(const T& rhs) const;
-			
+
 			// indexing
-			template<typename Key> shared_node operator[](const Key& key) const { return (static_cast<const node_data&>(*m_pData))[key]; }
-			template<typename Key> shared_node operator[](const Key& key) { return (*m_pData)[key]; }
-			template<typename Key> bool remove(const Key& key) { return m_pData->remove(key); }
+			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_data&>(*m_pData).get(key, pMemory); }
+			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) { return m_pData->get(key, pMemory); }
+			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory) { return m_pData->remove(key, pMemory); }
 			
-			shared_node operator[](shared_node pKey) const { return (static_cast<const node_data&>(*m_pData))[pKey]; }
-			shared_node operator[](shared_node pKey) { return (*m_pData)[pKey]; }
+			shared_node get(shared_node pKey) const { return static_cast<const node_data&>(*m_pData).get(pKey); }
+			shared_node get(shared_node pKey) { return m_pData->get(pKey); }
 			bool remove(shared_node pKey) { return m_pData->remove(pKey); }
 
 		private:
 			shared_node_data m_pData;
 		};
-
-		template<typename T>
-		inline bool node::equals(const T& rhs) const
-		{
-		}
 	}
 }
 

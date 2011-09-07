@@ -15,13 +15,13 @@ namespace YAML
 	{
 		// indexing
 		template<typename Key>
-		inline shared_node node_data::operator[](const Key& key) const
+		inline shared_node node_data::get(const Key& key, shared_memory_holder pMemory) const
 		{
 			if(m_type != ValueType::Map)
 				return shared_node(new node);
 			
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
-				if(it->first->equals(key))
+				if(equals(it->first, key, pMemory))
 					return it->second;
 			}
 			
@@ -29,12 +29,12 @@ namespace YAML
 		}
 		
 		template<typename Key>
-		inline shared_node node_data::operator[](const Key& key)
+		inline shared_node node_data::get(const Key& key, shared_memory_holder pMemory)
 		{
 		}
 		
 		template<typename Key>
-		inline bool node_data::remove(const Key& key)
+		inline bool node_data::remove(const Key& key, shared_memory_holder pMemory)
 		{
 		}
 	}

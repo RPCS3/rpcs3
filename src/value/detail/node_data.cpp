@@ -57,7 +57,7 @@ namespace YAML
 		}
 
 		// indexing
-		shared_node node_data::operator[](shared_node pKey) const
+		shared_node node_data::get(shared_node pKey) const
 		{
 			if(m_type != ValueType::Map)
 				return shared_node(new node);
@@ -70,7 +70,7 @@ namespace YAML
 			return shared_node(new node);
 		}
 		
-		shared_node node_data::operator[](shared_node pKey)
+		shared_node node_data::get(shared_node pKey)
 		{
 			switch(m_type) {
 				case ValueType::Undefined:

@@ -61,6 +61,9 @@ namespace YAML
 	private:
 		explicit Value(detail::shared_node pNode, detail::shared_memory_holder pMemory);
 		
+		template<typename T>
+		friend bool equals(detail::shared_node pNode, const T& rhs, detail::shared_memory_holder pMemory);
+
 		template<typename T> void Assign(const T& rhs);
 		void Assign(const char *rhs);
 		void Assign(char *rhs);

@@ -136,38 +136,38 @@ namespace YAML
 	template<typename Key>
 	inline const Value Value::operator[](const Key& key) const
 	{
-		detail::shared_node pValue = (static_cast<const detail::node&>(*m_pNode))[key];
+		detail::shared_node pValue = static_cast<const detail::node&>(*m_pNode).get(key, m_pMemory);
 		return Value(pValue, m_pMemory);
 	}
 	
 	template<typename Key>
 	inline Value Value::operator[](const Key& key)
 	{
-		detail::shared_node pValue = (*m_pNode)[key];
+		detail::shared_node pValue = m_pNode->get(key, m_pMemory);
 		return Value(pValue, m_pMemory);
 	}
 	
 	template<typename Key>
 	inline bool Value::remove(const Key& key)
 	{
-		return m_pNode->remove(key);
+		return m_pNode->remove(key, m_pMemory);
 	}
 	
 	inline const Value Value::operator[](const Value& key) const
 	{
-		detail::shared_node pValue = (static_cast<const detail::node&>(*m_pNode))[*key.m_pNode];
+		detail::shared_node pValue = static_cast<const detail::node&>(*m_pNode).get(key.m_pNode);
 		return Value(pValue, m_pMemory);
 	}
 	
 	inline Value Value::operator[](const Value& key)
 	{
-		detail::shared_node pValue = (*m_pNode)[*key.m_pNode];
+		detail::shared_node pValue = m_pNode->get(key.m_pNode);
 		return Value(pValue, m_pMemory);
 	}
 	
 	inline bool Value::remove(const Value& key)
 	{
-		return m_pNode->remove(*key.m_pNode);
+		return m_pNode->remove(key.m_pNode);
 	}
 	
 	inline const Value Value::operator[](const char *key) const
@@ -182,7 +182,7 @@ namespace YAML
 	
 	inline bool Value::remove(const char *key)
 	{
-		return m_pNode->remove(std::string(key));
+		return remove(std::string(key));
 	}
 	
 	inline const Value Value::operator[](char *key) const
@@ -213,6 +213,15 @@ namespace YAML
 	
 	inline bool is(const Value& lhs, const Value& rhs)
 	{
+		return false;
+	}
+	
+	template<typename T>
+	inline bool equals(detail::shared_node pNode, const T& rhs, detail::shared_memory_holder pMemory)
+	{
+		T lhs;
+		if(convert(Value(pNode, pMemory), lhs))
+			return lhs == rhs;
 		return false;
 	}
 }

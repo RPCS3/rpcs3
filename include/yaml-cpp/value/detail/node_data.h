@@ -30,12 +30,12 @@ namespace YAML
 			const std::string scalar() const { return m_scalar; }
 			
 			// indexing
-			template<typename Key> shared_node operator[](const Key& key) const;
-			template<typename Key> shared_node operator[](const Key& key);
-			template<typename Key> bool remove(const Key& key);
+			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) const;
+			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory);
+			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory);
 			
-			shared_node operator[](shared_node pKey) const;
-			shared_node operator[](shared_node pKey);
+			shared_node get(shared_node pKey) const;
+			shared_node get(shared_node pKey);
 			bool remove(shared_node pKey);
 			
 		private:
