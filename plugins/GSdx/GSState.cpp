@@ -3182,7 +3182,7 @@ bool GSC_Yakuza2(const GSFrameInfo& fi, int& skip)
 }
 
 
-#define USE_DYNAMIC_CRC_HACK
+//#define USE_DYNAMIC_CRC_HACK
 #ifdef USE_DYNAMIC_CRC_HACK
 
 #define DYNA_DLL_PATH "c:/dev/pcsx2/trunk/tools/dynacrchack/DynaCrcHack.dll"
