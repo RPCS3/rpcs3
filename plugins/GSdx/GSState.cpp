@@ -3182,6 +3182,137 @@ bool GSC_Yakuza2(const GSFrameInfo& fi, int& skip)
 }
 
 
+#define USE_DYNAMIC_CRC_HACK
+#ifdef USE_DYNAMIC_CRC_HACK
+
+#define DYNA_DLL_PATH "c:/dev/pcsx2/trunk/tools/dynacrchack/DynaCrcHack.dll"
+
+#include <sys/stat.h>
+/***************************************************************************
+	AutoReloadLibrary : Automatically reloads a dll if the file was modified.
+		Uses a temporary copy of the watched dll such that the original
+		can be modified while the copy is loaded and used.
+
+	NOTE: The API is not platform specific, but current implementation is Win32.
+***************************************************************************/
+class AutoReloadLibrary
+{
+private:
+	string	m_dllPath, m_loadedDllPath;
+	DWORD	m_minMsBetweenProbes;
+	time_t	m_lastFileModification;
+	DWORD	m_lastProbe;
+	HMODULE	m_library;
+
+	string	GetTempName()
+	{
+		string result = m_loadedDllPath + ".tmp"; //default name
+		TCHAR tmpPath[MAX_PATH], tmpName[MAX_PATH];
+		DWORD ret = GetTempPath(MAX_PATH, tmpPath);
+		if(ret && ret <= MAX_PATH && GetTempFileName(tmpPath, TEXT("GSdx"), 0, tmpName))
+			result = tmpName;
+
+		return result;
+	};
+
+	void	UnloadLib()
+	{
+		if( !m_library )
+			return;
+
+		FreeLibrary( m_library );
+		m_library = NULL;
+
+		// If can't delete (might happen when GSdx closes), schedule delete on reboot
+		if(!DeleteFile( m_loadedDllPath.c_str() ) )
+			MoveFileEx( m_loadedDllPath.c_str(), NULL, MOVEFILE_DELAY_UNTIL_REBOOT );
+	}
+
+public:
+	AutoReloadLibrary( const string dllPath, const int minMsBetweenProbes=100 )
+		: m_minMsBetweenProbes( minMsBetweenProbes )
+		, m_dllPath( dllPath )
+		, m_lastFileModification( 0 )
+		, m_lastProbe( 0 )
+		, m_library( 0 )
+	{};
+
+	~AutoReloadLibrary(){ UnloadLib();	};
+
+	// If timeout has ellapsed, probe the dll for change, and reload if it was changed.
+	// If it returns true, then the dll was freed/reloaded, and any symbol addresse previously obtained is now invalid and needs to be re-obtained.
+	// Overhead is very low when when probe timeout has not ellapsed, and especially if current timestamp is supplied as argument.
+	// Note: there's no relation between the file modification date and currentMs value, so it need'nt neccessarily be an actual timestamp.
+	// Note: isChanged is guarenteed to return true at least once
+	//       (even if the file doesn't exist, at which case the following GetSymbolAddress will return NULL)
+	bool isChanged( const DWORD currentMs=0 )
+	{
+		DWORD current = currentMs? currentMs : GetTickCount();
+		if( current >= m_lastProbe && ( current - m_lastProbe ) < m_minMsBetweenProbes )
+			return false;
+
+		bool firstTime = !m_lastProbe;
+		m_lastProbe = current;
+
+		struct stat s;
+		if( stat( m_dllPath.c_str(), &s ) )
+		{	
+			// File doesn't exist or other error, unload dll
+			bool wasLoaded = m_library?true:false;
+			UnloadLib();	
+			return firstTime || wasLoaded;	// Changed if previously loaded or the first time accessing this method (and file doesn't exist)
+		}
+
+		if( m_lastFileModification == s.st_mtime )
+			return false;
+		m_lastFileModification = s.st_mtime;
+
+		// File modified, reload
+		UnloadLib();
+
+		if( !CopyFile( m_dllPath.c_str(), ( m_loadedDllPath = GetTempName() ).c_str(), false ) )
+			return true;
+
+		m_library = LoadLibrary( m_loadedDllPath.c_str() );
+		return true;
+	};
+
+	// Return value is NULL if the dll isn't loaded (failure or doesn't exist) or if the symbol isn't found.
+	void* GetSymbolAddress( const char* name ){ return m_library? GetProcAddress( m_library, name ) : NULL; };
+};
+
+
+// Use DynamicCrcHack function from a dll which can be modified while GSdx/PCSX2 is running.
+// return value is true if the call succeeded or false otherwise (If the hack could not be invoked: no dll/function/etc).
+// result contains the result of the hack call.
+
+typedef uint32 (__cdecl* DynaHackType)(uint32, uint32, uint32, uint32, uint32, uint32, uint32, int32*, uint32, int32);
+
+bool IsInvokedDynamicCrcHack( GSFrameInfo &fi, int& skip, int region, bool &result )
+{
+	static AutoReloadLibrary dll( DYNA_DLL_PATH );
+	static DynaHackType dllFunc = NULL;
+
+	if( dll.isChanged() )
+	{
+		dllFunc = (DynaHackType)dll.GetSymbolAddress( "DynamicCrcHack" );
+		printf( "GSdx: Dynamic CRC-hacks: %s\n", dllFunc?
+			"Loaded OK    (-> overriding internal hacks)" : "Not available    (-> using internal hacks)");
+	}
+	
+	if( !dllFunc )
+		return false;
+	
+	int32	skip32 = skip;
+	bool	hasSharedBits = GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM);
+	result	= dllFunc( fi.FBP, fi.FPSM, fi.FBMSK, fi.TBP0, fi.TPSM, fi.TZTST, (uint32)fi.TME, &skip32, (uint32)region, (uint32)(hasSharedBits?1:0) )?true:false;
+	skip	= skip32;
+
+	return true;
+}
+
+#endif
+
 bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 {
 	GSFrameInfo fi;
@@ -3280,6 +3411,9 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 	GetSkipCount gsc = map[m_game.title];
 	g_crc_region = m_game.region;
 
+#ifdef USE_DYNAMIC_CRC_HACK
+	bool res=false; if(IsInvokedDynamicCrcHack(fi, skip, g_crc_region, res)){ if( !res ) return false;	} else
+#endif
 	if(gsc && !gsc(fi, skip))
 	{
 		return false;
