@@ -7,6 +7,8 @@
 
 
 #include "yaml-cpp/value/value.h"
+#include "yaml-cpp/value/detail/memory.h"
+#include <string>
 
 namespace YAML
 {
@@ -17,10 +19,14 @@ namespace YAML
 	template<typename T>
 	inline Value::Value(const T& rhs): m_pMemory(new detail::memory_holder)
 	{
-		operator=(rhs);
+		Assign(rhs);
 	}
 	
 	inline Value::Value(const Value& rhs): m_pNode(rhs.m_pNode), m_pMemory(rhs.m_pMemory)
+	{
+	}
+	
+	inline Value::~Value()
 	{
 	}
 
@@ -38,12 +44,32 @@ namespace YAML
 	template<typename T>
 	inline Value& Value::operator=(const T& rhs)
 	{
-		AssignData(convert<T>(rhs));
+		Assign(rhs);
 		return *this;
 	}
 	
+	template<typename T>
+	inline void Value::Assign(const T& rhs)
+	{
+		AssignData(convert<T>(rhs));
+	}
+
 	template<>
-	inline Value& Value::operator=(const std::string& rhs)
+	inline void Value::Assign(const std::string& rhs)
+	{
+		EnsureNodeExists();
+		m_pNode->set_scalar(rhs);
+	}
+
+	template<>
+	inline void Value::Assign(const char * const & rhs)
+	{
+		EnsureNodeExists();
+		m_pNode->set_scalar(rhs);
+	}
+
+	template<>
+	inline void Value::Assign(char * const & rhs)
 	{
 		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
@@ -54,6 +80,7 @@ namespace YAML
 		if(is(*this, rhs))
 			return *this;
 		AssignNode(rhs);
+		return *this;
 	}
 	
 	void Value::EnsureNodeExists()
@@ -81,87 +108,107 @@ namespace YAML
 	// size/iterator
 	inline std::size_t Value::size() const
 	{
+		return 0;
 	}
 
 	inline const_iterator Value::begin() const
 	{
+		return const_iterator();
 	}
 	
 	inline iterator Value::begin()
 	{
+		return iterator();
 	}
 
 	inline const_iterator Value::end() const
 	{
+		return const_iterator();
 	}
 
 	inline iterator Value::end()
 	{
+		return iterator();
 	}
 	
 	// indexing
 	template<typename Key>
 	inline const Value Value::operator[](const Key& key) const
 	{
+		return Value();
 	}
 	
 	template<typename Key>
 	inline Value Value::operator[](const Key& key)
 	{
+		return Value();
 	}
 	
 	template<typename Key>
 	inline bool Value::remove(const Key& key)
 	{
+		return false;
 	}
 	
 	inline const Value Value::operator[](const Value& key) const
 	{
+		return Value();
 	}
 	
 	inline Value Value::operator[](const Value& key)
 	{
+		return Value();
 	}
 	
 	inline bool Value::remove(const Value& key)
 	{
+		return false;
 	}
 	
 	inline const Value Value::operator[](const char *key) const
 	{
+		return Value();
 	}
 	
 	inline Value Value::operator[](const char *key)
 	{
+		return Value();
 	}
 	
 	inline bool Value::remove(const char *key)
 	{
+		return false;
 	}
 	
 	inline const Value Value::operator[](char *key) const
 	{
+		return Value();
 	}
 	
 	inline Value Value::operator[](char *key)
 	{
+		return Value();
 	}
 	
 	inline bool Value::remove(char *key)
 	{
+		return false;
 	}
 
 	// free functions
 	inline int compare(const Value& lhs, const Value& rhs)
 	{
+		return 0;
 	}
 	
 	inline bool operator<(const Value& lhs, const Value& rhs)
 	{
+		return false;
 	}
 	
 	inline bool is(const Value& lhs, const Value& rhs)
 	{
+		return false;
 	}
 }
 

@@ -8,6 +8,8 @@
 
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/value/ptr.h"
+#include "yaml-cpp/value/iterator.h"
+#include <stdexcept>
 
 namespace YAML
 {
@@ -18,8 +20,8 @@ namespace YAML
 	public:
 		Value();
 		explicit Value(ValueType::value type);
-		explicit template<typename T> Value(const T& rhs);
-		explicit Value(const Value& rhs);
+		template<typename T> explicit Value(const T& rhs);
+		Value(const Value& rhs);
 		~Value();
 		
 		ValueType::value Type() const;
@@ -58,13 +60,15 @@ namespace YAML
 		bool remove(char *key);
 		
 	private:
+		template<typename T> void Assign(const T& rhs);
+
 		void EnsureNodeExists();
 		void AssignData(const Value& rhs);
 		void AssignNode(const Value& rhs);
 		
 	private:
-		shared_node m_pNode;
-		shared_memory_holder m_pMemory;
+		detail::shared_node m_pNode;
+		detail::shared_memory_holder m_pMemory;
 	};
 	
 	int compare(const Value& lhs, const Value& rhs);

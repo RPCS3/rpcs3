@@ -8,6 +8,7 @@
 
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/value/ptr.h"
+#include "yaml-cpp/value/detail/node_data.h"
 
 namespace YAML
 {
