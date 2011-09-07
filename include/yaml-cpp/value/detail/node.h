@@ -7,6 +7,7 @@
 
 
 #include "yaml-cpp/dll.h"
+#include "yaml-cpp/value/type.h"
 #include "yaml-cpp/value/ptr.h"
 #include "yaml-cpp/value/detail/node_data.h"
 
@@ -19,6 +20,7 @@ namespace YAML
 		public:
 			node();
 			
+			ValueType::value type() const;
 			void assign_data(const node& rhs);
 			void set_scalar(const std::string& data);
 			
@@ -28,6 +30,11 @@ namespace YAML
 		
 		inline node::node()
 		{
+		}
+		
+		inline ValueType::value node::type() const
+		{
+			return m_pData ? m_pData->type() : ValueType::Null;
 		}
 		
 		inline void node::assign_data(const node& rhs)

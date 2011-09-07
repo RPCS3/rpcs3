@@ -7,7 +7,10 @@
 
 
 #include "yaml-cpp/dll.h"
+#include "yaml-cpp/value/type.h"
 #include "yaml-cpp/value/ptr.h"
+#include <pair>
+#include <vector>
 
 namespace YAML
 {
@@ -16,7 +19,25 @@ namespace YAML
 		class node_data
 		{
 		public:
-			explicit node_data(const std::string& data) {}
+			explicit node_data(const std::string& scalar);
+			
+			ValueType::value type() const { return m_type; }
+			const std::string scalar() const { return m_data; }
+			
+		private:
+			ValueType::value m_type;
+			
+			// scalar
+			std::string m_scalar;
+			
+			// sequence
+			typedef std::vector<shared_node> node_seq;
+			node_seq m_sequence;
+			
+			// map
+			typedef std::pair<shared_node, shared_node> kv_pair;
+			typedef std::vector<kv_pair> node_map;
+			node_map m_map;
 		};
 	}
 }

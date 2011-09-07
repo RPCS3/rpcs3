@@ -55,7 +55,11 @@ option(MSVC_STHREADED_RT "MSVC: Build with single-threaded static runtime libs (
 ###
 ### Sources, headers, directories and libs
 ###
-file(GLOB sources "src/[a-zA-Z]*.cpp")
+file(GLOB sources
+  "src/[a-zA-Z]*.cpp"
+  "src/value/[a-zA-Z]*.cpp"
+  "src/value/detail/[a-zA-Z]*.cpp"
+)
 file(GLOB public_headers
   "include/yaml-cpp/[a-zA-Z]*.h"
   "include/yaml-cpp/value/[a-zA-Z]*.h"

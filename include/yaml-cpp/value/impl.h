@@ -14,6 +14,7 @@ namespace YAML
 {
 	inline Value::Value(): m_pMemory(new detail::memory_holder)
 	{
+		EnsureNodeExists();
 	}
 	
 	template<typename T>
@@ -30,6 +31,11 @@ namespace YAML
 	{
 	}
 
+	inline ValueType::value Value::Type() const
+	{
+		return m_pNode ? m_pNode->type() : ValueType::Undefined;
+	}
+	
 	// access
 	template<typename T>
 	inline const T Value::as() const

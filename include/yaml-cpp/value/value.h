@@ -7,14 +7,13 @@
 
 
 #include "yaml-cpp/dll.h"
-#include "yaml-cpp/value/ptr.h"
 #include "yaml-cpp/value/iterator.h"
+#include "yaml-cpp/value/ptr.h"
+#include "yaml-cpp/value/type.h"
 #include <stdexcept>
 
 namespace YAML
 {
-	struct ValueType { enum value { Undefined, Null, Scalar, Sequence, Map }; };
-	
 	class Value
 	{
 	public:

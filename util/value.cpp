@@ -3,7 +3,7 @@
 int main()
 {
 	YAML::Value value;
-	value = "Hello";
+	value["key"] = "value";
 	
 	return 0;
 }
