@@ -78,7 +78,7 @@ namespace YAML
 		inline bool node_data::equals(detail::shared_node pNode, const T& rhs, detail::shared_memory_holder pMemory)
 		{
 			T lhs;
-			if(convert(Value(pNode, pMemory), lhs))
+			if(convert<T>::decode(Value(pNode, pMemory), lhs))
 				return lhs == rhs;
 			return false;
 		}
@@ -86,7 +86,7 @@ namespace YAML
 		template<typename T>
 		inline shared_node node_data::convert_to_node(const T& rhs, detail::shared_memory_holder pMemory)
 		{
-			Value value = convert(rhs);
+			Value value = convert<T>::encode(rhs);
 			pMemory->merge(*value.m_pMemory);
 			return value.m_pNode;
 		}

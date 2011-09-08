@@ -51,7 +51,7 @@ namespace YAML
 	inline const T Value::as() const
 	{
 		T t;
-		if(convert<T>(*this, t))
+		if(convert<T>::decode(*this, t))
 			return t;
 		throw std::runtime_error("Unable to convert to type");
 	}
@@ -85,7 +85,7 @@ namespace YAML
 	template<typename T>
 	inline void Value::Assign(const T& rhs)
 	{
-		AssignData(convert<T>(rhs));
+		AssignData(convert<T>::encode(rhs));
 	}
 
 	template<>

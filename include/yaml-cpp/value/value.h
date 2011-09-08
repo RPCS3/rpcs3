@@ -83,10 +83,7 @@ namespace YAML
 	bool is(const Value& lhs, const Value& rhs);
 	
 	template<typename T>
-	Value convert(const T& rhs);
-	
-	template<typename T>
-	bool convert(const Value& value, T& rhs);
+	struct convert;
 }
 
 #endif // VALUE_VALUE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
