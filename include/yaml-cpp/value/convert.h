@@ -7,6 +7,7 @@
 
 
 #include "yaml-cpp/value/value.h"
+#include <map>
 #include <sstream>
 
 namespace YAML
@@ -61,6 +62,21 @@ namespace YAML
 	YAML_DEFINE_CONVERT_STREAMABLE(long double);
 	
 #undef YAML_DEFINE_CONVERT_STREAMABLE
+
+	template<typename K, typename V>
+	struct convert<std::map<K, V> > {
+		static Value encode(const std::map<K, V>& rhs) {
+			Value value(ValueType::Map);
+			for(typename std::map<K, V>::const_iterator it=rhs.begin();it!=rhs.end();++it)
+				value[it->first] = it->second;
+			return value;
+		}
+		
+		static bool decode(const Value& value, std::map<K, V>& rhs) {
+			rhs.clear();
+			return false;
+		}
+	};
 }
 
 #endif // VALUE_CONVERT_H_62B23520_7C8E_11DE_8A39_0800200C9A66
