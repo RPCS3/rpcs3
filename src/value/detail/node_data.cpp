@@ -64,7 +64,7 @@ namespace YAML
 				return pMemory->create_node();
 			
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
-				if(it->first == &key) // TODO: equality?
+				if(it->first->is(key))
 					return *it->second;
 			}
 			
@@ -88,7 +88,7 @@ namespace YAML
 			}
 
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
-				if(it->first == &key) // TODO: equality?
+				if(it->first->is(key))
 					return *it->second;
 			}
 			
@@ -103,7 +103,7 @@ namespace YAML
 				return false;
 
 			for(node_map::iterator it=m_map.begin();it!=m_map.end();++it) {
-				if(it->first == &key) { // TODO: equality?
+				if(it->first->is(key)) {
 					m_map.erase(it);
 					return true;
 				}

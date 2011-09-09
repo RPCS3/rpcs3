@@ -20,5 +20,9 @@ int main()
 	names[4] = "four";
 	value["names"] = names;
 	
+	value["this"] = value;
+	value["this"]["change"] = value;
+	value["this"]["change"] = 5;
+	
 	return 0;
 }
