@@ -63,7 +63,7 @@ namespace YAML
 		bool remove(char *key);
 		
 	private:
-		explicit Value(detail::shared_node pNode, detail::shared_memory_holder pMemory);
+		explicit Value(detail::node& node, detail::shared_memory_holder pMemory);
 		
 		template<typename T> void Assign(const T& rhs);
 		void Assign(const char *rhs);
@@ -74,7 +74,7 @@ namespace YAML
 		
 	private:
 		detail::shared_memory_holder m_pMemory;
-		detail::shared_node m_pNode;
+		detail::node *m_pNode;
 	};
 	
 	int compare(const Value& lhs, const Value& rhs);

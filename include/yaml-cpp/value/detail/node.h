@@ -10,15 +10,16 @@
 #include "yaml-cpp/value/type.h"
 #include "yaml-cpp/value/ptr.h"
 #include "yaml-cpp/value/detail/node_ref.h"
+#include <boost/utility.hpp>
 
 namespace YAML
 {
 	namespace detail
 	{
-		class node
+		class node: private boost::noncopyable
 		{
 		public:
-			explicit node(shared_node_ref pRef): m_pRef(pRef) {}
+			node(): m_pRef(new node_ref) {}
 
 			bool is(const node& rhs) const { return m_pRef == rhs.m_pRef; }
 			ValueType::value type() const { return m_pRef->type(); }
@@ -33,13 +34,13 @@ namespace YAML
 			void set_scalar(const std::string& scalar) { m_pRef->set_scalar(scalar); }
 
 			// indexing
-			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).get(key, pMemory); }
-			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) { return m_pRef->get(key, pMemory); }
+			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).get(key, pMemory); }
+			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) { return m_pRef->get(key, pMemory); }
 			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory) { return m_pRef->remove(key, pMemory); }
 			
-			shared_node get(shared_node pKey, shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).get(pKey, pMemory); }
-			shared_node get(shared_node pKey, shared_memory_holder pMemory) { return m_pRef->get(pKey, pMemory); }
-			bool remove(shared_node pKey, shared_memory_holder pMemory) { return m_pRef->remove(pKey, pMemory); }
+			node& get(node& key, shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).get(key, pMemory); }
+			node& get(node& key, shared_memory_holder pMemory) { return m_pRef->get(key, pMemory); }
+			bool remove(node& key, shared_memory_holder pMemory) { return m_pRef->remove(key, pMemory); }
 
 		private:
 			shared_node_ref m_pRef;

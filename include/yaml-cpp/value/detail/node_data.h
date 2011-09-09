@@ -9,6 +9,7 @@
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/value/ptr.h"
 #include "yaml-cpp/value/type.h"
+#include <boost/utility.hpp>
 #include <list>
 #include <utility>
 #include <vector>
@@ -17,7 +18,7 @@ namespace YAML
 {
 	namespace detail
 	{
-		class node_data
+		class node_data: private boost::noncopyable
 		{
 		public:
 			node_data();
@@ -30,22 +31,22 @@ namespace YAML
 			const std::string& scalar() const { return m_scalar; }
 			
 			// indexing
-			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) const;
-			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory);
+			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) const;
+			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory);
 			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory);
 			
-			shared_node get(shared_node pKey, shared_memory_holder pMemory) const;
-			shared_node get(shared_node pKey, shared_memory_holder pMemory);
-			bool remove(shared_node pKey, shared_memory_holder pMemory);
+			node& get(node& key, shared_memory_holder pMemory) const;
+			node& get(node& key, shared_memory_holder pMemory);
+			bool remove(node& key, shared_memory_holder pMemory);
 			
 		private:
 			void convert_sequence_to_map(shared_memory_holder pMemory);
 			
 			template<typename T>
-			static bool equals(detail::shared_node pNode, const T& rhs, detail::shared_memory_holder pMemory);
+			static bool equals(node& node, const T& rhs, shared_memory_holder pMemory);
 			
 			template<typename T>
-			static shared_node convert_to_node(const T& rhs, detail::shared_memory_holder pMemory);
+			static node& convert_to_node(const T& rhs, shared_memory_holder pMemory);
 
 		private:
 			bool m_isDefined;
@@ -55,11 +56,11 @@ namespace YAML
 			std::string m_scalar;
 			
 			// sequence
-			typedef std::vector<shared_node> node_seq;
+			typedef std::vector<node *> node_seq;
 			node_seq m_sequence;
 			
 			// map
-			typedef std::pair<shared_node, shared_node> kv_pair;
+			typedef std::pair<node *, node *> kv_pair;
 			typedef std::list<kv_pair> node_map;
 			node_map m_map;
 		};

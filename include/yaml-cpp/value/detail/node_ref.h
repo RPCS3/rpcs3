@@ -10,12 +10,13 @@
 #include "yaml-cpp/value/type.h"
 #include "yaml-cpp/value/ptr.h"
 #include "yaml-cpp/value/detail/node_data.h"
+#include <boost/utility.hpp>
 
 namespace YAML
 {
 	namespace detail
 	{
-		class node_ref
+		class node_ref: private boost::noncopyable
 		{
 		public:
 			node_ref(): m_pData(new node_data) {}
@@ -30,13 +31,13 @@ namespace YAML
 			void set_scalar(const std::string& scalar) { m_pData->set_scalar(scalar); }
 			
 			// indexing
-			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_data&>(*m_pData).get(key, pMemory); }
-			template<typename Key> shared_node get(const Key& key, shared_memory_holder pMemory) { return m_pData->get(key, pMemory); }
+			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_data&>(*m_pData).get(key, pMemory); }
+			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) { return m_pData->get(key, pMemory); }
 			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory) { return m_pData->remove(key, pMemory); }
 			
-			shared_node get(shared_node pKey, shared_memory_holder pMemory) const { return static_cast<const node_data&>(*m_pData).get(pKey, pMemory); }
-			shared_node get(shared_node pKey, shared_memory_holder pMemory) { return m_pData->get(pKey, pMemory); }
-			bool remove(shared_node pKey, shared_memory_holder pMemory) { return m_pData->remove(pKey, pMemory); }
+			node& get(node& key, shared_memory_holder pMemory) const { return static_cast<const node_data&>(*m_pData).get(key, pMemory); }
+			node& get(node& key, shared_memory_holder pMemory) { return m_pData->get(key, pMemory); }
+			bool remove(node& key, shared_memory_holder pMemory) { return m_pData->remove(key, pMemory); }
 			
 		private:
 			shared_node_data m_pData;

@@ -13,18 +13,18 @@
 
 namespace YAML
 {
-	inline Value::Value(): m_pMemory(new detail::memory_holder), m_pNode(m_pMemory->create_node())
+	inline Value::Value(): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
 	{
 		m_pNode->set_null();
 	}
 	
-	inline Value::Value(ValueType::value type): m_pMemory(new detail::memory_holder), m_pNode(m_pMemory->create_node())
+	inline Value::Value(ValueType::value type): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
 	{
 		m_pNode->set_type(type);
 	}
 	
 	template<typename T>
-	inline Value::Value(const T& rhs): m_pMemory(new detail::memory_holder), m_pNode(m_pMemory->create_node())
+	inline Value::Value(const T& rhs): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
 	{
 		Assign(rhs);
 	}
@@ -33,7 +33,7 @@ namespace YAML
 	{
 	}
 	
-	inline Value::Value(detail::shared_node pNode, detail::shared_memory_holder pMemory): m_pMemory(pMemory), m_pNode(pNode)
+	inline Value::Value(detail::node& node, detail::shared_memory_holder pMemory): m_pMemory(pMemory), m_pNode(&node)
 	{
 	}
 
@@ -154,15 +154,15 @@ namespace YAML
 	template<typename Key>
 	inline const Value Value::operator[](const Key& key) const
 	{
-		detail::shared_node pValue = static_cast<const detail::node&>(*m_pNode).get(key, m_pMemory);
-		return Value(pValue, m_pMemory);
+		detail::node& value = static_cast<const detail::node&>(*m_pNode).get(key, m_pMemory);
+		return Value(value, m_pMemory);
 	}
 	
 	template<typename Key>
 	inline Value Value::operator[](const Key& key)
 	{
-		detail::shared_node pValue = m_pNode->get(key, m_pMemory);
-		return Value(pValue, m_pMemory);
+		detail::node& value = m_pNode->get(key, m_pMemory);
+		return Value(value, m_pMemory);
 	}
 	
 	template<typename Key>
@@ -173,19 +173,19 @@ namespace YAML
 	
 	inline const Value Value::operator[](const Value& key) const
 	{
-		detail::shared_node pValue = static_cast<const detail::node&>(*m_pNode).get(key.m_pNode, m_pMemory);
-		return Value(pValue, m_pMemory);
+		detail::node& value = static_cast<const detail::node&>(*m_pNode).get(*key.m_pNode, m_pMemory);
+		return Value(value, m_pMemory);
 	}
 	
 	inline Value Value::operator[](const Value& key)
 	{
-		detail::shared_node pValue = m_pNode->get(key.m_pNode, m_pMemory);
-		return Value(pValue, m_pMemory);
+		detail::node& value = m_pNode->get(*key.m_pNode, m_pMemory);
+		return Value(value, m_pMemory);
 	}
 	
 	inline bool Value::remove(const Value& key)
 	{
-		return m_pNode->remove(key.m_pNode, m_pMemory);
+		return m_pNode->remove(*key.m_pNode, m_pMemory);
 	}
 	
 	inline const Value Value::operator[](const char *key) const

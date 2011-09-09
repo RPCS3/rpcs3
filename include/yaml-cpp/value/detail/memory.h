@@ -15,11 +15,11 @@ namespace YAML
 	{
 		class memory {
 		public:
-			shared_node create_node();
+			node& create_node();
 			void merge(const memory& rhs);
 			
 		private:
-			typedef std::set<shared_node_ref> Nodes;
+			typedef std::set<shared_node> Nodes;
 			Nodes m_nodes;
 		};
 
@@ -27,7 +27,7 @@ namespace YAML
 		public:
 			memory_holder(): m_pMemory(new memory) {}
 			
-			shared_node create_node() { return m_pMemory->create_node(); }
+			node& create_node() { return m_pMemory->create_node(); }
 			void merge(memory_holder& rhs);
 			
 		private:

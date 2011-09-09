@@ -58,20 +58,20 @@ namespace YAML
 		}
 
 		// indexing
-		shared_node node_data::get(shared_node pKey, shared_memory_holder pMemory) const
+		node& node_data::get(node& key, shared_memory_holder pMemory) const
 		{
 			if(m_type != ValueType::Map)
 				return pMemory->create_node();
 			
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
-				if(it->first == pKey)
-					return it->second;
+				if(it->first == &key) // TODO: equality?
+					return *it->second;
 			}
 			
 			return pMemory->create_node();
 		}
 		
-		shared_node node_data::get(shared_node pKey, shared_memory_holder pMemory)
+		node& node_data::get(node& key, shared_memory_holder pMemory)
 		{
 			switch(m_type) {
 				case ValueType::Undefined:
@@ -88,22 +88,22 @@ namespace YAML
 			}
 
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
-				if(it->first == pKey)
-					return it->second;
+				if(it->first == &key) // TODO: equality?
+					return *it->second;
 			}
 			
-			shared_node pValue = pMemory->create_node();
-			m_map.push_back(kv_pair(pKey, pValue));
-			return pValue;
+			node& value = pMemory->create_node();
+			m_map.push_back(kv_pair(&key, &value));
+			return value;
 		}
 		
-		bool node_data::remove(shared_node pKey, shared_memory_holder /* pMemory */)
+		bool node_data::remove(node& key, shared_memory_holder /* pMemory */)
 		{
 			if(m_type != ValueType::Map)
 				return false;
 
 			for(node_map::iterator it=m_map.begin();it!=m_map.end();++it) {
-				if(it->first == pKey) {
+				if(it->first == &key) { // TODO: equality?
 					m_map.erase(it);
 					return true;
 				}
@@ -121,9 +121,9 @@ namespace YAML
 				std::stringstream stream;
 				stream << i;
 
-				shared_node pKey = pMemory->create_node();
-				pKey->set_scalar(stream.str());
-				m_map.push_back(kv_pair(pKey, m_sequence[i]));
+				node& key = pMemory->create_node();
+				key.set_scalar(stream.str());
+				m_map.push_back(kv_pair(&key, m_sequence[i]));
 			}
 			
 			m_sequence.clear();

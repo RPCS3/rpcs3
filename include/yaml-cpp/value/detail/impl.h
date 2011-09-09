@@ -15,21 +15,21 @@ namespace YAML
 	{
 		// indexing
 		template<typename Key>
-		inline shared_node node_data::get(const Key& key, shared_memory_holder pMemory) const
+		inline node& node_data::get(const Key& key, shared_memory_holder pMemory) const
 		{
 			if(m_type != ValueType::Map)
 				return pMemory->create_node();
 			
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
-				if(equals(it->first, key, pMemory))
-					return it->second;
+				if(equals(*it->first, key, pMemory))
+					return *it->second;
 			}
 			
 			return pMemory->create_node();
 		}
 		
 		template<typename Key>
-		inline shared_node node_data::get(const Key& key, shared_memory_holder pMemory)
+		inline node& node_data::get(const Key& key, shared_memory_holder pMemory)
 		{
 			// TODO: check if 'key' is index-like, and we're a sequence
 			
@@ -48,14 +48,14 @@ namespace YAML
 			}
 			
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
-				if(equals(it->first, key, pMemory))
-					return it->second;
+				if(equals(*it->first, key, pMemory))
+					return *it->second;
 			}
 			
-			shared_node pKey = convert_to_node(key, pMemory);
-			shared_node pValue = pMemory->create_node();
-			m_map.push_back(kv_pair(pKey, pValue));
-			return pValue;
+			node& k = convert_to_node(key, pMemory);
+			node& v = pMemory->create_node();
+			m_map.push_back(kv_pair(&k, &v));
+			return v;
 		}
 		
 		template<typename Key>
@@ -65,7 +65,7 @@ namespace YAML
 				return false;
 			
 			for(node_map::iterator it=m_map.begin();it!=m_map.end();++it) {
-				if(equals(it->first, key, pMemory)) {
+				if(equals(*it->first, key, pMemory)) {
 					m_map.erase(it);
 					return true;
 				}
@@ -75,20 +75,20 @@ namespace YAML
 		}
 
 		template<typename T>
-		inline bool node_data::equals(detail::shared_node pNode, const T& rhs, detail::shared_memory_holder pMemory)
+		inline bool node_data::equals(node& node, const T& rhs, shared_memory_holder pMemory)
 		{
 			T lhs;
-			if(convert<T>::decode(Value(pNode, pMemory), lhs))
+			if(convert<T>::decode(Value(node, pMemory), lhs))
 				return lhs == rhs;
 			return false;
 		}
 		
 		template<typename T>
-		inline shared_node node_data::convert_to_node(const T& rhs, detail::shared_memory_holder pMemory)
+		inline node& node_data::convert_to_node(const T& rhs, shared_memory_holder pMemory)
 		{
 			Value value = convert<T>::encode(rhs);
 			pMemory->merge(*value.m_pMemory);
-			return value.m_pNode;
+			return *value.m_pNode;
 		}
 	}
 }
