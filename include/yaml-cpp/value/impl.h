@@ -15,7 +15,6 @@ namespace YAML
 {
 	inline Value::Value(): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
 	{
-		m_pNode->set_null();
 	}
 	
 	inline Value::Value(ValueType::value type): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
