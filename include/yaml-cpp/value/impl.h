@@ -122,6 +122,7 @@ namespace YAML
 	{
 		m_pNode->set_ref(*rhs.m_pNode);
 		m_pMemory->merge(*rhs.m_pMemory);
+		m_pNode = rhs.m_pNode;
 	}
 
 	// size/iterator
