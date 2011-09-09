@@ -32,6 +32,8 @@ namespace YAML
 			void set_type(ValueType::value type) { m_pRef->set_type(type); }
 			void set_null() { m_pRef->set_null(); }
 			void set_scalar(const std::string& scalar) { m_pRef->set_scalar(scalar); }
+			
+			void append(node& node, shared_memory_holder pMemory) { m_pRef->append(node, pMemory); }
 
 			// indexing
 			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).get(key, pMemory); }

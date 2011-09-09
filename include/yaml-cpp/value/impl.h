@@ -150,6 +150,19 @@ namespace YAML
 		return iterator();
 	}
 	
+	// sequence
+	template<typename T>
+	inline void Value::append(const T& rhs)
+	{
+		append(Value(rhs));
+	}
+	
+	inline void Value::append(const Value& rhs)
+	{
+		m_pNode->append(*rhs.m_pNode, m_pMemory);
+		m_pMemory->merge(*rhs.m_pMemory);
+	}
+
 	// indexing
 	template<typename Key>
 	inline const Value Value::operator[](const Key& key) const

@@ -22,7 +22,11 @@ int main()
 	
 	value["this"] = value;
 	value["this"]["change"] = value;
-	value["this"]["change"] = 5;
+	
+	value["seq"] = YAML::Value(YAML::ValueType::Sequence);
+	value["seq"].append(2);
+	value["seq"].append(3);
+	value["seq"].append("five");
 	
 	return 0;
 }

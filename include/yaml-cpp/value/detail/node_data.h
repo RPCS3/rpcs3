@@ -30,6 +30,8 @@ namespace YAML
 			ValueType::value type() const { return m_isDefined ? m_type : ValueType::Undefined; }
 			const std::string& scalar() const { return m_scalar; }
 			
+			void append(node& node, shared_memory_holder pMemory);
+
 			// indexing
 			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) const;
 			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory);

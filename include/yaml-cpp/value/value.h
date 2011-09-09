@@ -45,6 +45,10 @@ namespace YAML
 		const_iterator end() const;
 		iterator end();
 		
+		// sequence
+		template<typename T> void append(const T& rhs);
+		void append(const Value& rhs);
+		
 		// indexing
 		template<typename Key> const Value operator[](const Key& key) const;
 		template<typename Key> Value operator[](const Key& key);

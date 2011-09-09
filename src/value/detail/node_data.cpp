@@ -2,6 +2,7 @@
 #include "yaml-cpp/value/detail/memory.h"
 #include "yaml-cpp/value/detail/node.h"
 #include <sstream>
+#include <stdexcept>
 
 namespace YAML
 {
@@ -55,6 +56,14 @@ namespace YAML
 			m_isDefined = true;
 			m_type = ValueType::Scalar;
 			m_scalar = scalar;
+		}
+
+		void node_data::append(node& node, shared_memory_holder /* pMemory */)
+		{
+			if(m_type != ValueType::Sequence)
+				throw std::runtime_error("Can't append to a non-sequence node");
+			
+			m_sequence.push_back(&node);
 		}
 
 		// indexing
