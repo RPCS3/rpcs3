@@ -7,13 +7,15 @@
 
 
 #include "yaml-cpp/dll.h"
-#include "yaml-cpp/value/iterator.h"
 #include "yaml-cpp/value/ptr.h"
 #include "yaml-cpp/value/type.h"
 #include <stdexcept>
 
 namespace YAML
 {
+	class iterator;
+	class const_iterator;
+	
 	class Value
 	{
 	public:

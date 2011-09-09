@@ -7,6 +7,7 @@
 
 
 #include "yaml-cpp/value/value.h"
+#include "yaml-cpp/value/iterator.h"
 #include "yaml-cpp/value/detail/memory.h"
 #include "yaml-cpp/value/detail/node.h"
 #include <string>
@@ -127,27 +128,27 @@ namespace YAML
 	// size/iterator
 	inline std::size_t Value::size() const
 	{
-		return 0;
+		return m_pNode->size();
 	}
 
 	inline const_iterator Value::begin() const
 	{
-		return const_iterator();
+		return static_cast<const detail::node&>(*m_pNode).begin(m_pMemory);
 	}
 	
 	inline iterator Value::begin()
 	{
-		return iterator();
+		return m_pNode->begin(m_pMemory);
 	}
 
 	inline const_iterator Value::end() const
 	{
-		return const_iterator();
+		return static_cast<const detail::node&>(*m_pNode).end(m_pMemory);
 	}
 
 	inline iterator Value::end()
 	{
-		return iterator();
+		return m_pNode->end(m_pMemory);
 	}
 	
 	// sequence

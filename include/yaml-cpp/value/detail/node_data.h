@@ -7,6 +7,7 @@
 
 
 #include "yaml-cpp/dll.h"
+#include "yaml-cpp/value/iterator.h"
 #include "yaml-cpp/value/ptr.h"
 #include "yaml-cpp/value/type.h"
 #include <boost/utility.hpp>
@@ -30,6 +31,16 @@ namespace YAML
 			ValueType::value type() const { return m_isDefined ? m_type : ValueType::Undefined; }
 			const std::string& scalar() const { return m_scalar; }
 			
+			// size/iterator
+			std::size_t size() const;
+			
+			const_iterator begin(shared_memory_holder pMemory) const;
+			iterator begin(shared_memory_holder pMemory);
+			
+			const_iterator end(shared_memory_holder pMemory) const;
+			iterator end(shared_memory_holder pMemory);
+
+			// sequence
 			void append(node& node, shared_memory_holder pMemory);
 
 			// indexing

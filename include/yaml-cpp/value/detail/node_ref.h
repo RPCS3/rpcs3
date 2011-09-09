@@ -30,6 +30,16 @@ namespace YAML
 			void set_null() { ensure_data_exists(); m_pData->set_null(); }
 			void set_scalar(const std::string& scalar) { ensure_data_exists(); m_pData->set_scalar(scalar); }
 			
+			// size/iterator
+			std::size_t size() const { return m_pData ? m_pData->size() : 0; }
+			
+			const_iterator begin(shared_memory_holder pMemory) const { return m_pData ? static_cast<const node_data&>(*m_pData).begin(pMemory) : const_iterator(); }
+			iterator begin(shared_memory_holder pMemory) {return m_pData ? m_pData->begin(pMemory) : iterator(); }
+			
+			const_iterator end(shared_memory_holder pMemory) const { return m_pData ? static_cast<const node_data&>(*m_pData).end(pMemory) : const_iterator(); }
+			iterator end(shared_memory_holder pMemory) {return m_pData ? m_pData->end(pMemory) : iterator(); }
+
+			// sequence
 			void append(node& node, shared_memory_holder pMemory) { ensure_data_exists(); m_pData->append(node, pMemory); }
 			
 			// indexing

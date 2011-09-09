@@ -7,11 +7,12 @@
 
 
 #include "yaml-cpp/dll.h"
+#include "yaml-cpp/value/detail/iterator.h"
 
 namespace YAML
 {
-	struct iterator {};
-	struct const_iterator {};
+	class iterator: public detail::iterator_base<detail::iterator_value, detail::node_seq_iterator, detail::node_map_iterator> {};
+	class const_iterator: public detail::iterator_base<const detail::iterator_value, detail::node_seq_const_iterator, detail::node_map_const_iterator> {};
 }
 
 #endif // VALUE_ITERATOR_H_62B23520_7C8E_11DE_8A39_0800200C9A66

@@ -60,6 +60,49 @@ namespace YAML
 			m_scalar = scalar;
 		}
 
+		// size/iterator
+		std::size_t node_data::size() const
+		{
+			return 0;
+		}
+		
+		const_iterator node_data::begin(shared_memory_holder pMemory) const
+		{
+			switch(m_type) {
+				case ValueType::Sequence: return const_iterator(pMemory, m_sequence.begin());
+				case ValueType::Map: return const_iterator(pMemory, m_map.begin());
+				default: return const_iterator();
+			}
+		}
+		
+		iterator node_data::begin(shared_memory_holder pMemory)
+		{
+			switch(m_type) {
+				case ValueType::Sequence: return iterator(pMemory, m_sequence.begin());
+				case ValueType::Map: return iterator(pMemory, m_map.begin());
+				default: return iterator();
+			}
+		}
+		
+		const_iterator node_data::end(shared_memory_holder pMemory) const
+		{
+			switch(m_type) {
+				case ValueType::Sequence: return const_iterator(pMemory, m_sequence.end());
+				case ValueType::Map: return const_iterator(pMemory, m_map.end());
+				default: return const_iterator();
+			}
+		}
+		
+		iterator node_data::end(shared_memory_holder pMemory)
+		{
+			switch(m_type) {
+				case ValueType::Sequence: return iterator(pMemory, m_sequence.end());
+				case ValueType::Map: return iterator(pMemory, m_map.end());
+				default: return iterator();
+			}
+		}
+
+		// sequence
 		void node_data::append(node& node, shared_memory_holder /* pMemory */)
 		{
 			if(m_type != ValueType::Sequence)

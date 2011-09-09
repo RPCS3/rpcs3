@@ -32,7 +32,17 @@ namespace YAML
 			void set_type(ValueType::value type) { m_pRef->set_type(type); }
 			void set_null() { m_pRef->set_null(); }
 			void set_scalar(const std::string& scalar) { m_pRef->set_scalar(scalar); }
+
+			// size/iterator
+			std::size_t size() const { return m_pRef->size(); }
 			
+			const_iterator begin(shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).begin(pMemory); }
+			iterator begin(shared_memory_holder pMemory) { return m_pRef->begin(pMemory); }
+			
+			const_iterator end(shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).end(pMemory); }
+			iterator end(shared_memory_holder pMemory) { return m_pRef->end(pMemory); }
+
+			// sequence
 			void append(node& node, shared_memory_holder pMemory) { m_pRef->append(node, pMemory); }
 
 			// indexing
