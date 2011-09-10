@@ -19,6 +19,8 @@ namespace YAML
 		ValueBuilder();
 		virtual ~ValueBuilder();
 		
+		Value Root();
+		
 		virtual void OnDocumentStart(const Mark& mark);
 		virtual void OnDocumentEnd();
 		

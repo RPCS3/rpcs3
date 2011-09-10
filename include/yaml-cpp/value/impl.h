@@ -112,13 +112,13 @@ namespace YAML
 		return *this;
 	}
 
-	void Value::AssignData(const Value& rhs)
+	inline void Value::AssignData(const Value& rhs)
 	{
 		m_pNode->set_data(*rhs.m_pNode);
 		m_pMemory->merge(*rhs.m_pMemory);
 	}
 
-	void Value::AssignNode(const Value& rhs)
+	inline void Value::AssignNode(const Value& rhs)
 	{
 		m_pNode->set_ref(*rhs.m_pNode);
 		m_pMemory->merge(*rhs.m_pMemory);

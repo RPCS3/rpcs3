@@ -14,6 +14,14 @@ namespace YAML
 	{
 	}
 	
+	Value ValueBuilder::Root()
+	{
+		if(!m_pRoot)
+			return Value();
+		
+		return Value(*m_pRoot, m_pMemory);
+	}
+
 	void ValueBuilder::OnDocumentStart(const Mark&)
 	{
 	}
@@ -70,13 +78,13 @@ namespace YAML
 
 	detail::node& ValueBuilder::Push(anchor_t anchor)
 	{
-		detail::node& top = *m_stack.back();
+		const bool needsKey = (!m_stack.empty() && m_stack.back()->type() == ValueType::Map && m_keys.size() < m_mapDepth);
 		
 		detail::node& node = m_pMemory->create_node();
 		m_stack.push_back(&node);
 		RegisterAnchor(anchor, node);
 		
-		if(top.type() == ValueType::Map && m_keys.size() < m_mapDepth)
+		if(needsKey)
 			m_keys.push_back(&node);
 		
 		return node;
