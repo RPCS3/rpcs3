@@ -21,13 +21,17 @@ namespace YAML
 		struct iterator_type { enum value { None, Sequence, Map }; };
 		
 		template<typename V>
-		struct node_iterator_value {
-			node_iterator_value(): pNode(0), pKey(0), pValue(0) {}
-			explicit node_iterator_value(V& rhs): pNode(&rhs), pKey(0), pValue(0) {}
-			explicit node_iterator_value(V& key, V& value): pNode(0), pKey(&key), pValue(&value) {}
+		struct node_iterator_value: public std::pair<V*, V*> {
+			typedef std::pair<V*, V*> kv;
+			
+			node_iterator_value(): kv(), pNode(0) {}
+			explicit node_iterator_value(V& rhs): kv(), pNode(&rhs) {}
+			explicit node_iterator_value(V& key, V& value): kv(&key, &value), pNode(0) {}
+			
+			V& operator *() const { return *pNode; }
+			V& operator ->() const { return *pNode; }
 			
 			V *pNode;
-			V *pKey, *pValue;
 		};
 		
 		typedef std::vector<node *> node_seq;

@@ -1,4 +1,5 @@
 #include "valueevents.h"
+#include "yaml-cpp/value.h"
 
 namespace YAML
 {
@@ -7,7 +8,7 @@ namespace YAML
 		Visit(m_root);
 	}
 
-	void Visit(detail::node& node)
+	void ValueEvents::Visit(const detail::node& node)
 	{
 		int& refCount = m_refCount[node.ref()];
 		refCount++;
@@ -15,8 +16,13 @@ namespace YAML
 			return;
 		
 		if(node.type() == ValueType::Sequence) {
-			
+			for(detail::const_node_iterator it=node.begin();it!=node.end();++it)
+				Visit(**it);
 		} else if(node.type() == ValueType::Map) {
+			for(detail::const_node_iterator it=node.begin();it!=node.end();++it) {
+				Visit(*it->first);
+				Visit(*it->second);
+			}
 		}
 	}
 }

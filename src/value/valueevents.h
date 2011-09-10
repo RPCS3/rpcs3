@@ -7,7 +7,7 @@
 
 #include "yaml-cpp/anchor.h"
 #include "yaml-cpp/value/ptr.h"
-#include <multiset>
+#include <map>
 #include <vector>
 
 namespace YAML
@@ -20,7 +20,7 @@ namespace YAML
 		ValueEvents(const Value& value);
 		
 	private:
-		void Visit(detail::node& node);
+		void Visit(const detail::node& node);
 		
 	private:
 		detail::shared_memory_holder m_pMemory;
