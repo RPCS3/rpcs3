@@ -33,11 +33,11 @@ namespace YAML
 			// size/iterator
 			std::size_t size() const { return m_pData ? m_pData->size() : 0; }
 			
-			const_iterator begin(shared_memory_holder pMemory) const { return m_pData ? static_cast<const node_data&>(*m_pData).begin(pMemory) : const_iterator(); }
-			iterator begin(shared_memory_holder pMemory) {return m_pData ? m_pData->begin(pMemory) : iterator(); }
+			const_node_iterator begin() const { return m_pData ? static_cast<const node_data&>(*m_pData).begin() : const_node_iterator(); }
+			node_iterator begin() {return m_pData ? m_pData->begin() : node_iterator(); }
 			
-			const_iterator end(shared_memory_holder pMemory) const { return m_pData ? static_cast<const node_data&>(*m_pData).end(pMemory) : const_iterator(); }
-			iterator end(shared_memory_holder pMemory) {return m_pData ? m_pData->end(pMemory) : iterator(); }
+			const_node_iterator end() const { return m_pData ? static_cast<const node_data&>(*m_pData).end() : const_node_iterator(); }
+			node_iterator end() {return m_pData ? m_pData->end() : node_iterator(); }
 
 			// sequence
 			void append(node& node, shared_memory_holder pMemory) { ensure_data_exists(); m_pData->append(node, pMemory); }

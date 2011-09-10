@@ -66,39 +66,39 @@ namespace YAML
 			return 0;
 		}
 		
-		const_iterator node_data::begin(shared_memory_holder pMemory) const
+		const_node_iterator node_data::begin() const
 		{
 			switch(m_type) {
-				case ValueType::Sequence: return const_iterator(pMemory, m_sequence.begin());
-				case ValueType::Map: return const_iterator(pMemory, m_map.begin());
-				default: return const_iterator();
+				case ValueType::Sequence: return const_node_iterator(m_sequence.begin());
+				case ValueType::Map: return const_node_iterator(m_map.begin());
+				default: return const_node_iterator();
 			}
 		}
 		
-		iterator node_data::begin(shared_memory_holder pMemory)
+		node_iterator node_data::begin()
 		{
 			switch(m_type) {
-				case ValueType::Sequence: return iterator(pMemory, m_sequence.begin());
-				case ValueType::Map: return iterator(pMemory, m_map.begin());
-				default: return iterator();
+				case ValueType::Sequence: return node_iterator(m_sequence.begin());
+				case ValueType::Map: return node_iterator(m_map.begin());
+				default: return node_iterator();
 			}
 		}
 		
-		const_iterator node_data::end(shared_memory_holder pMemory) const
+		const_node_iterator node_data::end() const
 		{
 			switch(m_type) {
-				case ValueType::Sequence: return const_iterator(pMemory, m_sequence.end());
-				case ValueType::Map: return const_iterator(pMemory, m_map.end());
-				default: return const_iterator();
+				case ValueType::Sequence: return const_node_iterator(m_sequence.end());
+				case ValueType::Map: return const_node_iterator(m_map.end());
+				default: return const_node_iterator();
 			}
 		}
 		
-		iterator node_data::end(shared_memory_holder pMemory)
+		node_iterator node_data::end()
 		{
 			switch(m_type) {
-				case ValueType::Sequence: return iterator(pMemory, m_sequence.end());
-				case ValueType::Map: return iterator(pMemory, m_map.end());
-				default: return iterator();
+				case ValueType::Sequence: return node_iterator(m_sequence.end());
+				case ValueType::Map: return node_iterator(m_map.end());
+				default: return node_iterator();
 			}
 		}
 

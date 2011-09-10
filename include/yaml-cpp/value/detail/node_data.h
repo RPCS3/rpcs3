@@ -34,11 +34,11 @@ namespace YAML
 			// size/iterator
 			std::size_t size() const;
 			
-			const_iterator begin(shared_memory_holder pMemory) const;
-			iterator begin(shared_memory_holder pMemory);
+			const_node_iterator begin() const;
+			node_iterator begin();
 			
-			const_iterator end(shared_memory_holder pMemory) const;
-			iterator end(shared_memory_holder pMemory);
+			const_node_iterator end() const;
+			node_iterator end();
 
 			// sequence
 			void append(node& node, shared_memory_holder pMemory);

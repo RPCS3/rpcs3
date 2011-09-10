@@ -133,22 +133,22 @@ namespace YAML
 
 	inline const_iterator Value::begin() const
 	{
-		return static_cast<const detail::node&>(*m_pNode).begin(m_pMemory);
+		return const_iterator(m_pNode->begin(), m_pMemory);
 	}
 	
 	inline iterator Value::begin()
 	{
-		return m_pNode->begin(m_pMemory);
+		return iterator(m_pNode->begin(), m_pMemory);
 	}
 
 	inline const_iterator Value::end() const
 	{
-		return static_cast<const detail::node&>(*m_pNode).end(m_pMemory);
+		return const_iterator(m_pNode->end(), m_pMemory);
 	}
 
 	inline iterator Value::end()
 	{
-		return m_pNode->end(m_pMemory);
+		return iterator(m_pNode->end(), m_pMemory);
 	}
 	
 	// sequence

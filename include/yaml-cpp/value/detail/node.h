@@ -38,11 +38,11 @@ namespace YAML
 			// size/iterator
 			std::size_t size() const { return m_pRef->size(); }
 			
-			const_iterator begin(shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).begin(pMemory); }
-			iterator begin(shared_memory_holder pMemory) { return m_pRef->begin(pMemory); }
+			const_node_iterator begin() const { return static_cast<const node_ref&>(*m_pRef).begin(); }
+			node_iterator begin() { return m_pRef->begin(); }
 			
-			const_iterator end(shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).end(pMemory); }
-			iterator end(shared_memory_holder pMemory) { return m_pRef->end(pMemory); }
+			const_node_iterator end() const { return static_cast<const node_ref&>(*m_pRef).end(); }
+			node_iterator end() { return m_pRef->end(); }
 
 			// sequence
 			void append(node& node, shared_memory_holder pMemory) { m_pRef->append(node, pMemory); }
