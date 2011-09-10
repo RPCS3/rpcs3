@@ -8,79 +8,41 @@
 
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/value/ptr.h"
-#include <boost/iterator/iterator_facade.hpp>
+#include "yaml-cpp/value/detail/node_iterator.h"
+#include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/utility/enable_if.hpp>
 
 namespace YAML
 {
 	namespace detail
 	{
-		struct iterator_type { enum value { None, Sequence, Map }; };
+		template<typename V> struct iterator_value;
 
-		template<typename V, typename SeqIter, typename MapIter>
-		class iterator_base: public boost::iterator_facade<iterator_base<V, SeqIter, MapIter>, V, std::bidirectional_iterator_tag>
+		template<typename V>
+		class iterator_base: public boost::iterator_adaptor<
+		iterator_base<V>,
+		node_iterator_base<V, typename node_iterator<V>::seq, typename node_iterator<V>::map>,
+		iterator_value<V>,
+		std::bidirectional_iterator_tag>
 		{
 		private:
-			struct enabler {};
+			template<typename W> friend class iterator_base<W>;
 			
 		public:
-			iterator_base(): m_type(iterator_type::None) {}
-			explicit iterator_base(shared_memory_holder pMemory, SeqIter seqIt): m_type(iterator_type::Sequence), m_pMemory(pMemory), m_seqIt(seqIt) {}
-			explicit iterator_base(shared_memory_holder pMemory, MapIter mapIt): m_type(iterator_type::Map), m_pMemory(pMemory), m_mapIt(mapIt) {}
+			iterator_base() {}
+			explicit iterator_base(base_type rhs, shared_memory_holder pMemory): iterator_base::iterator_adaptor_(rhs), m_pMemory(pMemory) {}
 			
-			template<typename W, typename I, typename J>
-			iterator_base(const iterator_base<W, I, J>& rhs, typename boost::enable_if<boost::is_convertible<W*, V*>, enabler>::type = enabler())
-			: m_type(rhs.m_type), m_pMemory(rhs.m_pMemory), m_seqIt(rhs.m_seqIt), m_mapIt(rhs.m_mapIt) {}
-			
+			template<class W>
+			iterator_base(const iterator_Base<W>& rhs, typename boost::enable_if<boost::is_convertible<W*, V*>, enabler>::type = enabler()): iterator_Base::iterator_adaptor_(rhs.base()), m_pMemory(rhs.m_pMemory) {}
+		
 		private:
 			friend class boost::iterator_core_access;
-			template<typename, typename, typename> friend class iterator_base;
-			
-			template<typename W, typename I, typename J>
-			bool equal(const iterator_base<W, I, J>& rhs) const {
-				if(m_type != rhs.m_type || m_pMemory != rhs.m_pMemory)
-					return false;
-				
-				switch(m_type) {
-					case iterator_type::None: return true;
-					case iterator_type::Sequence: return m_seqIt == rhs.m_seqIt;
-					case iterator_type::Map: return m_mapIt == rhs.m_mapIt;
-				}
-				return true;
-			}
-			
-			void increment() {
-				switch(m_type) {
-					case iterator_type::None: break;
-					case iterator_type::Sequence: ++m_seqIt; break;
-					case iterator_type::Map: ++m_mapIt; break;
-				}
-			}
 
-			void decrement() {
-				switch(m_type) {
-					case iterator_type::None: break;
-					case iterator_type::Sequence: --m_seqIt; break;
-					case iterator_type::Map: --m_mapIt; break;
-				}
-			}
-			
-			V dereference() const {
-				switch(m_type) {
-					case iterator_type::None: return V();
-					case iterator_type::Sequence: return V(Value(**m_seqIt, m_pMemory));
-					case iterator_type::Map: return V(Value(*m_mapIt->first, m_pMemory), Value(*m_mapIt->second, m_pMemory));
-				}
-				return V();
-			}
-			
+			void increment() { this->base_reference() = this->base()->next(); }
+			void decrement() { this->base_reference() = this->base()->previous(); }
+		
 		private:
-			typename iterator_type::value m_type;
-			
 			shared_memory_holder m_pMemory;
-
-			SeqIter m_seqIt;
-			MapIter m_mapIt;
 		};
 	}
 }
