@@ -16,30 +16,42 @@ namespace YAML
 {
 	namespace detail
 	{
-		template<typename V> struct iterator_value;
+		struct iterator_value;
 
 		template<typename V>
 		class iterator_base: public boost::iterator_adaptor<
 		iterator_base<V>,
-		node_iterator_base<V, typename node_iterator<V>::seq, typename node_iterator<V>::map>,
-		iterator_value<V>,
+		node_iterator,
+		V,
 		std::bidirectional_iterator_tag>
 		{
 		private:
-			template<typename W> friend class iterator_base<W>;
+			template<typename> friend class iterator_base;
+			struct enabler {};
+			typedef typename iterator_base::iterator_adaptor_::base_type base_type;
+			typedef typename iterator_base::iterator_adaptor_::value_type value_type;
 			
 		public:
 			iterator_base() {}
 			explicit iterator_base(base_type rhs, shared_memory_holder pMemory): iterator_base::iterator_adaptor_(rhs), m_pMemory(pMemory) {}
 			
 			template<class W>
-			iterator_base(const iterator_Base<W>& rhs, typename boost::enable_if<boost::is_convertible<W*, V*>, enabler>::type = enabler()): iterator_Base::iterator_adaptor_(rhs.base()), m_pMemory(rhs.m_pMemory) {}
+			iterator_base(const iterator_base<W>& rhs, typename boost::enable_if<boost::is_convertible<W*, V*>, enabler>::type = enabler()): iterator_base::iterator_adaptor_(rhs.base()), m_pMemory(rhs.m_pMemory) {}
 		
 		private:
 			friend class boost::iterator_core_access;
 
 			void increment() { this->base_reference() = this->base()->next(); }
 			void decrement() { this->base_reference() = this->base()->previous(); }
+			
+			value_type dereference() {
+				const typename base_type::value_type& v = *this->base();
+				if(v.pNode)
+					return value_type(Value(*v.pNode, m_pMemory));
+				if(v.pKey && v.pValue)
+					return value_type(Value(*v.pKey, m_pMemory), Value(*v.pValue, m_pMemory));
+				return value_type();
+			}
 		
 		private:
 			shared_memory_holder m_pMemory;

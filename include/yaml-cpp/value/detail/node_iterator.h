@@ -22,37 +22,60 @@ namespace YAML
 		
 		template<typename V>
 		struct node_iterator_value {
-			iterator_value(): pNode(0), pKey(0), pValue(0) {}
-			explicit iterator_value(V& rhs): pNode(&rhs), pKey(0), pValue(0) {}
-			explicit iterator_value(V& key, V& value): pNode(0), pKey(&key), pValue(&value) {}
+			node_iterator_value(): pNode(0), pKey(0), pValue(0) {}
+			explicit node_iterator_value(V& rhs): pNode(&rhs), pKey(0), pValue(0) {}
+			explicit node_iterator_value(V& key, V& value): pNode(0), pKey(&key), pValue(&value) {}
 			
 			V *pNode;
 			V *pKey, *pValue;
 		};
 		
-		template<typename V, typename SeqIter, typename MapIter>
-		class node_iterator_base: public boost::iterator_facade<node_iterator_base<V, SeqIter, MapIter>, node_iterator_value<V>, std::bidirectional_iterator_tag>
+		typedef std::vector<node *> node_seq;
+		typedef std::pair<node *, node *> kv_pair;
+		typedef std::list<kv_pair> node_map;
+		
+		template<typename V>
+		struct node_iterator_type {
+			typedef node_seq::iterator seq;
+			typedef node_map::iterator map;
+		};
+		
+		template<typename V>
+		struct node_iterator_type<const V> {
+			typedef node_seq::const_iterator seq;
+			typedef node_map::const_iterator map;
+		};
+		
+
+		template<typename V>
+		class node_iterator_base: public boost::iterator_facade<
+		node_iterator_base<V>,
+		node_iterator_value<V>,
+		std::bidirectional_iterator_tag,
+		node_iterator_value<V> >
 		{
 		private:
 			struct enabler {};
 			
 		public:
+			typedef typename node_iterator_type<V>::seq SeqIter;
+			typedef typename node_iterator_type<V>::map MapIter;
 			typedef node_iterator_value<V> value_type;
 			
-			iterator_base(): m_type(iterator_type::None) {}
+			node_iterator_base(): m_type(iterator_type::None) {}
 			explicit node_iterator_base(SeqIter seqIt): m_type(iterator_type::Sequence), m_seqIt(seqIt) {}
 			explicit node_iterator_base(MapIter mapIt): m_type(iterator_type::Map), m_mapIt(mapIt) {}
 			
-			template<typename W, typename I, typename J>
-			node_iterator_base(const node_iterator_base<W, I, J>& rhs, typename boost::enable_if<boost::is_convertible<W*, V*>, enabler>::type = enabler())
+			template<typename W>
+			node_iterator_base(const node_iterator_base<W>& rhs, typename boost::enable_if<boost::is_convertible<W*, V*>, enabler>::type = enabler())
 			: m_type(rhs.m_type), m_seqIt(rhs.m_seqIt), m_mapIt(rhs.m_mapIt) {}
 			
 		private:
 			friend class boost::iterator_core_access;
-			template<typename, typename, typename> friend class node_iterator_base;
+			template<typename> friend class node_iterator_base;
 			
-			template<typename W, typename I, typename J>
-			bool equal(const node_iterator_base<W, I, J>& rhs) const {
+			template<typename W>
+			bool equal(const node_iterator_base<W>& rhs) const {
 				if(m_type != rhs.m_type)
 					return false;
 				
@@ -83,7 +106,7 @@ namespace YAML
 			value_type dereference() const {
 				switch(m_type) {
 					case iterator_type::None: return value_type();
-					case iterator_type::Sequence: return value_type(**m_seqIt));
+					case iterator_type::Sequence: return value_type(**m_seqIt);
 					case iterator_type::Map: return value_type(*m_mapIt->first, *m_mapIt->second);
 				}
 				return V();
@@ -95,25 +118,9 @@ namespace YAML
 			SeqIter m_seqIt;
 			MapIter m_mapIt;
 		};
-		
-		typedef std::vector<node *> node_seq;
-		typedef std::pair<node *, node *> kv_pair;
-		typedef std::list<kv_pair> node_map;
-		
-		template<typename V>
-		struct node_iterator {
-			typedef node_seq::iterator seq;
-			typedef node_map::iterator map;
-		};
-		
-		template<typename V>
-		struct node_iterator<const V> {
-			typedef node_seq::const_iterator seq;
-			typedef node_map::const_iterator map;
-		};
 
-		typedef node_iterator_base<node, detail::node_seq_iterator,node_map_iterator> node_iterator;
-		typedef node_iterator_base<const node, node_seq_const_iterator, node_map_const_iterator> const_node_iterator;
+		typedef node_iterator_base<node> node_iterator;
+		typedef node_iterator_base<const node> const_node_iterator;
 	}
 }
 
