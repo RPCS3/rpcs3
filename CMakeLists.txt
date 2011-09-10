@@ -65,7 +65,10 @@ file(GLOB public_headers
   "include/yaml-cpp/value/[a-zA-Z]*.h"
   "include/yaml-cpp/value/detail/[a-zA-Z]*.h"
 )
-file(GLOB private_headers "src/[a-zA-Z]*.h")
+file(GLOB private_headers
+  "src/[a-zA-Z]*.h"
+  "src/value/[a-zA-Z]*.h"
+)
  
 if(YAML_CPP_BUILD_CONTRIB)
 	file(GLOB contrib_sources "src/contrib/[a-zA-Z]*.cpp")

@@ -44,6 +44,9 @@ namespace YAML
 
 			// sequence
 			void append(node& node, shared_memory_holder pMemory) { m_pRef->append(node, pMemory); }
+			void insert(node& key, node& value, shared_memory_holder pMemory) {
+				m_pRef->insert(key, value, pMemory);
+			}
 
 			// indexing
 			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).get(key, pMemory); }

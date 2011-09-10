@@ -111,6 +111,14 @@ namespace YAML
 			m_sequence.push_back(&node);
 		}
 
+		void node_data::insert(node& key, node& value, shared_memory_holder /* pMemory */)
+		{
+			if(m_type != ValueType::Map)
+				throw std::runtime_error("Can't insert into a non-map node");
+
+			m_map.push_back(kv_pair(&key, &value));
+		}
+
 		// indexing
 		node& node_data::get(node& key, shared_memory_holder pMemory) const
 		{
