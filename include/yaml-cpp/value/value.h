@@ -9,13 +9,11 @@
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/value/ptr.h"
 #include "yaml-cpp/value/type.h"
+#include "yaml-cpp/value/detail/iterator_fwd.h"
 #include <stdexcept>
 
 namespace YAML
 {
-	class iterator;
-	class const_iterator;
-	
 	class Value
 	{
 	public:

@@ -8,25 +8,13 @@
 
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/value/ptr.h"
-#include "yaml-cpp/value/value.h"
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/utility/enable_if.hpp>
-#include <list>
-#include <utility>
-#include <vector>
 
 namespace YAML
 {
 	namespace detail
 	{
-		class node;
-		
-		struct iterator_value: public Value, std::pair<Value, Value> {
-			iterator_value() {}
-			explicit iterator_value(const Value& rhs): Value(rhs) {}
-			explicit iterator_value(const Value& key, const Value& value): std::pair<Value, Value>(key, value) {}
-		};
-
 		struct iterator_type { enum value { None, Sequence, Map }; };
 
 		template<typename V, typename SeqIter, typename MapIter>
@@ -94,16 +82,6 @@ namespace YAML
 			SeqIter m_seqIt;
 			MapIter m_mapIt;
 		};
-
-		typedef std::vector<node *> node_seq;
-		typedef std::pair<node *, node *> kv_pair;
-		typedef std::list<kv_pair> node_map;
-		
-		typedef node_seq::iterator node_seq_iterator;
-		typedef node_seq::const_iterator node_seq_const_iterator;
-
-		typedef node_map::iterator node_map_iterator;
-		typedef node_map::const_iterator node_map_const_iterator;
 	}
 }
 

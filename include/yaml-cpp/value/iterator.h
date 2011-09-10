@@ -7,32 +7,22 @@
 
 
 #include "yaml-cpp/dll.h"
+#include "yaml-cpp/value/value.h"
+#include "yaml-cpp/value/detail/iterator_fwd.h"
 #include "yaml-cpp/value/detail/iterator.h"
+#include <list>
+#include <utility>
+#include <vector>
 
 namespace YAML
 {
-	class iterator: public detail::iterator_base<detail::iterator_value, detail::node_seq_iterator, detail::node_map_iterator>
-	{
-	private:
-		typedef detail::iterator_base<detail::iterator_value, detail::node_seq_iterator, detail::node_map_iterator> base;
-		
-	public:
-		iterator() {}
-		explicit iterator(detail::shared_memory_holder pMemory, detail::node_seq_iterator seqIt): base(pMemory, seqIt) {}
-		explicit iterator(detail::shared_memory_holder pMemory, detail::node_map_iterator mapIt): base(pMemory, mapIt) {}
-	};
-	
-	class const_iterator: public detail::iterator_base<const detail::iterator_value, detail::node_seq_const_iterator, detail::node_map_const_iterator>
-	{
-	private:
-		typedef detail::iterator_base<const detail::iterator_value, detail::node_seq_const_iterator, detail::node_map_const_iterator> base;
-
-	public:
-		const_iterator() {}
-		explicit const_iterator(detail::shared_memory_holder pMemory, detail::node_seq_const_iterator seqIt): base(pMemory, seqIt) {}
-		explicit const_iterator(detail::shared_memory_holder pMemory, detail::node_map_const_iterator mapIt): base(pMemory, mapIt) {}
-		explicit const_iterator(const iterator& rhs): base(rhs) {}
-	};
+	namespace detail {
+		struct iterator_value: public Value, std::pair<Value, Value> {
+			iterator_value() {}
+			explicit iterator_value(const Value& rhs): Value(rhs) {}
+			explicit iterator_value(const Value& key, const Value& value): std::pair<Value, Value>(key, value) {}
+		};
+	}
 }
 
 #endif // VALUE_ITERATOR_H_62B23520_7C8E_11DE_8A39_0800200C9A66
