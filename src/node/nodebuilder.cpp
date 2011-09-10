@@ -1,84 +1,85 @@
-#include "valuebuilder.h"
+#include "nodebuilder.h"
 #include "yaml-cpp/mark.h"
-#include "yaml-cpp/value.h"
+#include "yaml-cpp/node/node.h"
+#include "yaml-cpp/node/impl.h"
 #include <cassert>
 
 namespace YAML
 {
-	ValueBuilder::ValueBuilder(): m_pMemory(new detail::memory_holder), m_pRoot(0), m_mapDepth(0)
+	NodeBuilder::NodeBuilder(): m_pMemory(new detail::memory_holder), m_pRoot(0), m_mapDepth(0)
 	{
 		m_anchors.push_back(0); // since the anchors start at 1
 	}
 	
-	ValueBuilder::~ValueBuilder()
+	NodeBuilder::~NodeBuilder()
 	{
 	}
 	
-	Value ValueBuilder::Root()
+	Node NodeBuilder::Root()
 	{
 		if(!m_pRoot)
-			return Value();
+			return Node();
 		
-		return Value(*m_pRoot, m_pMemory);
+		return Node(*m_pRoot, m_pMemory);
 	}
 
-	void ValueBuilder::OnDocumentStart(const Mark&)
+	void NodeBuilder::OnDocumentStart(const Mark&)
 	{
 	}
 	
-	void ValueBuilder::OnDocumentEnd()
+	void NodeBuilder::OnDocumentEnd()
 	{
 	}
 	
-	void ValueBuilder::OnNull(const Mark& mark, anchor_t anchor)
+	void NodeBuilder::OnNull(const Mark& mark, anchor_t anchor)
 	{
 		detail::node& node = Push(anchor);
 		node.set_null();
 		Pop();
 	}
 	
-	void ValueBuilder::OnAlias(const Mark& /*mark*/, anchor_t anchor)
+	void NodeBuilder::OnAlias(const Mark& /*mark*/, anchor_t anchor)
 	{
 		detail::node& node = *m_anchors[anchor];
 		m_stack.push_back(&node);
 		Pop();
 	}
 	
-	void ValueBuilder::OnScalar(const Mark& mark, const std::string& tag, anchor_t anchor, const std::string& value)
+	void NodeBuilder::OnScalar(const Mark& mark, const std::string& tag, anchor_t anchor, const std::string& value)
 	{
 		detail::node& node = Push(anchor);
 		node.set_scalar(value);
 		Pop();
 	}
 	
-	void ValueBuilder::OnSequenceStart(const Mark& mark, const std::string& tag, anchor_t anchor)
+	void NodeBuilder::OnSequenceStart(const Mark& mark, const std::string& tag, anchor_t anchor)
 	{
 		detail::node& node = Push(anchor);
-		node.set_type(ValueType::Sequence);
+		node.set_type(NodeType::Sequence);
 	}
 	
-	void ValueBuilder::OnSequenceEnd()
+	void NodeBuilder::OnSequenceEnd()
 	{
 		Pop();
 	}
 	
-	void ValueBuilder::OnMapStart(const Mark& mark, const std::string& tag, anchor_t anchor)
+	void NodeBuilder::OnMapStart(const Mark& mark, const std::string& tag, anchor_t anchor)
 	{
 		detail::node& node = Push(anchor);
-		node.set_type(ValueType::Map);
+		node.set_type(NodeType::Map);
 		m_mapDepth++;
 	}
 	
-	void ValueBuilder::OnMapEnd()
+	void NodeBuilder::OnMapEnd()
 	{
 		assert(m_mapDepth > 0);
 		m_mapDepth--;
 		Pop();
 	}
 
-	detail::node& ValueBuilder::Push(anchor_t anchor)
+	detail::node& NodeBuilder::Push(anchor_t anchor)
 	{
-		const bool needsKey = (!m_stack.empty() && m_stack.back()->type() == ValueType::Map && m_keys.size() < m_mapDepth);
+		const bool needsKey = (!m_stack.empty() && m_stack.back()->type() == NodeType::Map && m_keys.size() < m_mapDepth);
 		
 		detail::node& node = m_pMemory->create_node();
 		m_stack.push_back(&node);
@@ -90,7 +91,7 @@ namespace YAML
 		return node;
 	}
 	
-	void ValueBuilder::Pop()
+	void NodeBuilder::Pop()
 	{
 		assert(!m_stack.empty());
 		if(m_stack.size() == 1) {
@@ -104,9 +105,9 @@ namespace YAML
 
 		detail::node& collection = *m_stack.back();
 		
-		if(collection.type() == ValueType::Sequence) {
+		if(collection.type() == NodeType::Sequence) {
 			collection.append(node, m_pMemory);
-		} else if(collection.type() == ValueType::Map) {
+		} else if(collection.type() == NodeType::Map) {
 			detail::node& key = *m_keys.back();
 			if(&key != &node) {
 				m_keys.pop_back();
@@ -118,7 +119,7 @@ namespace YAML
 		}
 	}
 
-	void ValueBuilder::RegisterAnchor(anchor_t anchor, detail::node& node)
+	void NodeBuilder::RegisterAnchor(anchor_t anchor, detail::node& node)
 	{
 		if(anchor) {
 			assert(anchor == m_anchors.size());

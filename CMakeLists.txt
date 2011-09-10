@@ -35,6 +35,7 @@ enable_testing()
 ## Project stuff
 option(YAML_CPP_BUILD_TOOLS "Enable testing and parse tools" ON)
 option(YAML_CPP_BUILD_CONTRIB "Enable contrib stuff in library" ON)
+option(YAML_CPP_BUILD_OLD_API "Enable building the old API" OFF)
 
 ## Build options
 # --> General
@@ -55,21 +56,35 @@ option(MSVC_STHREADED_RT "MSVC: Build with single-threaded static runtime libs (
 ###
 ### Sources, headers, directories and libs
 ###
-file(GLOB sources
-  "src/[a-zA-Z]*.cpp"
-  "src/value/[a-zA-Z]*.cpp"
-  "src/value/detail/[a-zA-Z]*.cpp"
+file(GLOB common_sources "src/[a-zA-Z]*.cpp")
+file(GLOB new_api_sources 
+	"src/node/[a-zA-Z]*.cpp"
+	"src/node/detail/[a-zA-Z]*.cpp"
 )
-file(GLOB public_headers
-  "include/yaml-cpp/[a-zA-Z]*.h"
-  "include/yaml-cpp/value/[a-zA-Z]*.h"
-  "include/yaml-cpp/value/detail/[a-zA-Z]*.h"
+file(GLOB old_api_sources "src/old-api/[a-zA-Z]*.cpp")
+
+file(GLOB common_public_headers "include/yaml-cpp/[a-zA-Z]*.h")
+file(GLOB new_api_public_headers
+	"include/yaml-cpp/node/[a-zA-Z]*.h"
+	"include/yaml-cpp/node/detail/[a-zA-Z]*.h"
 )
-file(GLOB private_headers
-  "src/[a-zA-Z]*.h"
-  "src/value/[a-zA-Z]*.h"
-)
- 
+file(GLOB old_api_public_headers "include/yaml-cpp/old-api/[a-zA-Z]*.h")
+
+file(GLOB common_private_headers "include/yaml-cpp/[a-zA-Z]*.h")
+file(GLOB new_api_private_headers "src/node/[a-zA-Z]*.h")
+file(GLOB old_api_private_headers "src/old-api/[a-zA-Z]*.h")
+
+if(YAML_CPP_BUILD_OLD_API)
+	list(APPEND sources ${common_sources} ${old_api_sources})
+	list(APPEND public_headers ${common_public_headers} ${old_api_public_headers})
+	list(APPEND private_headers ${common_private_headers} ${old_api_private_headers})
+	add_definitions(-DYAML_CPP_OLD_API)
+else()
+	list(APPEND sources ${common_sources} ${new_api_sources})
+	list(APPEND public_headers ${common_public_headers} ${new_api_public_headers})
+	list(APPEND private_headers ${common_private_headers} ${new_api_private_headers})
+endif()
+
 if(YAML_CPP_BUILD_CONTRIB)
 	file(GLOB contrib_sources "src/contrib/[a-zA-Z]*.cpp")
 	file(GLOB contrib_public_headers "include/yaml-cpp/contrib/[a-zA-Z]*.h")

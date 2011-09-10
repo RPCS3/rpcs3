@@ -1,22 +1,22 @@
-#include "yaml-cpp/value/emit.h"
+#include "yaml-cpp/node/emit.h"
 #include "yaml-cpp/emitfromevents.h"
 #include "yaml-cpp/emitter.h"
-#include "valueevents.h"
+#include "nodeevents.h"
 
 namespace YAML
 {
-	Emitter& operator << (Emitter& out, const Value& value)
+	Emitter& operator << (Emitter& out, const Node& node)
 	{
 		EmitFromEvents emitFromEvents(out);
-		ValueEvents events(value);
+		NodeEvents events(node);
 		events.Emit(emitFromEvents);
 		return out;
 	}
 	
-	std::ostream& operator << (std::ostream& out, const Value& value)
+	std::ostream& operator << (std::ostream& out, const Node& node)
 	{
 		Emitter emitter;
-		emitter << value;
+		emitter << node;
 		out << emitter.c_str();
 		return out;
 	}

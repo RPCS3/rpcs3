@@ -7,7 +7,7 @@
 
 
 #include "yaml-cpp/dll.h"
-#include "yaml-cpp/value/ptr.h"
+#include "yaml-cpp/node/ptr.h"
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <list>

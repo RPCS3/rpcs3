@@ -5,7 +5,7 @@
 #pragma once
 #endif
 
-#include "yaml-cpp/value/ptr.h"
+#include "yaml-cpp/node/ptr.h"
 #include <set>
 #include <boost/shared_ptr.hpp>
 

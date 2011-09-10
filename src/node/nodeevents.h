@@ -1,24 +1,24 @@
-#ifndef VALUE_VALUEEVENTS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
-#define VALUE_VALUEEVENTS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#ifndef NODE_NODEEVENTS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define NODE_NODEEVENTS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
 #if defined(_MSC_VER) || (defined(__GNUC__) && (__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ >= 4)) // GCC supports "pragma once" correctly since 3.4
 #pragma once
 #endif
 
 #include "yaml-cpp/anchor.h"
-#include "yaml-cpp/value/ptr.h"
+#include "yaml-cpp/node/ptr.h"
 #include <map>
 #include <vector>
 
 namespace YAML
 {
-	class Value;
 	class EventHandler;
+	class Node;
 	
-	class ValueEvents
+	class NodeEvents
 	{
 	public:
-		explicit ValueEvents(const Value& value);
+		explicit NodeEvents(const Node& node);
 		
 		void Emit(EventHandler& handler);
 		
@@ -53,5 +53,5 @@ namespace YAML
 	};
 }
 
-#endif // VALUE_VALUEEVENTS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#endif // NODE_NODEEVENTS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 

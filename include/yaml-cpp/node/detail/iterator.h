@@ -7,8 +7,8 @@
 
 
 #include "yaml-cpp/dll.h"
-#include "yaml-cpp/value/ptr.h"
-#include "yaml-cpp/value/detail/node_iterator.h"
+#include "yaml-cpp/node/ptr.h"
+#include "yaml-cpp/node/detail/node_iterator.h"
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/utility.hpp>
 

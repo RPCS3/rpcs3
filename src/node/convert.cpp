@@ -1,4 +1,4 @@
-#include "yaml-cpp/value/convert.h"
+#include "yaml-cpp/node/convert.h"
 
 namespace YAML
 {

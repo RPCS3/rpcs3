@@ -7,9 +7,9 @@
 
 
 #include "yaml-cpp/dll.h"
-#include "yaml-cpp/value/iterator.h"
-#include "yaml-cpp/value/ptr.h"
-#include "yaml-cpp/value/type.h"
+#include "yaml-cpp/node/iterator.h"
+#include "yaml-cpp/node/ptr.h"
+#include "yaml-cpp/node/type.h"
 #include <boost/utility.hpp>
 #include <list>
 #include <utility>
@@ -24,11 +24,11 @@ namespace YAML
 		public:
 			node_data();
 			
-			void set_type(ValueType::value type);
+			void set_type(NodeType::value type);
 			void set_null();
 			void set_scalar(const std::string& scalar);
 			
-			ValueType::value type() const { return m_isDefined ? m_type : ValueType::Undefined; }
+			NodeType::value type() const { return m_isDefined ? m_type : NodeType::Undefined; }
 			const std::string& scalar() const { return m_scalar; }
 			
 			// size/iterator
@@ -67,7 +67,7 @@ namespace YAML
 
 		private:
 			bool m_isDefined;
-			ValueType::value m_type;
+			NodeType::value m_type;
 			
 			// scalar
 			std::string m_scalar;

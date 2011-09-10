@@ -1,54 +1,54 @@
-#ifndef VALUE_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66
-#define VALUE_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#ifndef NODE_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define NODE_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
 #if defined(_MSC_VER) || (defined(__GNUC__) && (__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ >= 4)) // GCC supports "pragma once" correctly since 3.4
 #pragma once
 #endif
 
 
-#include "yaml-cpp/value/value.h"
-#include "yaml-cpp/value/iterator.h"
-#include "yaml-cpp/value/detail/memory.h"
-#include "yaml-cpp/value/detail/node.h"
+#include "yaml-cpp/node/node.h"
+#include "yaml-cpp/node/iterator.h"
+#include "yaml-cpp/node/detail/memory.h"
+#include "yaml-cpp/node/detail/node.h"
 #include <string>
 
 namespace YAML
 {
-	inline Value::Value(): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
+	inline Node::Node(): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
 	{
 	}
 	
-	inline Value::Value(ValueType::value type): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
+	inline Node::Node(NodeType::value type): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
 	{
 		m_pNode->set_type(type);
 	}
 	
 	template<typename T>
-	inline Value::Value(const T& rhs): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
+	inline Node::Node(const T& rhs): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
 	{
 		Assign(rhs);
 	}
 	
-	inline Value::Value(const Value& rhs): m_pMemory(rhs.m_pMemory), m_pNode(rhs.m_pNode)
+	inline Node::Node(const Node& rhs): m_pMemory(rhs.m_pMemory), m_pNode(rhs.m_pNode)
 	{
 	}
 	
-	inline Value::Value(detail::node& node, detail::shared_memory_holder pMemory): m_pMemory(pMemory), m_pNode(&node)
+	inline Node::Node(detail::node& node, detail::shared_memory_holder pMemory): m_pMemory(pMemory), m_pNode(&node)
 	{
 	}
 
-	inline Value::~Value()
+	inline Node::~Node()
 	{
 	}
 
-	inline ValueType::value Value::Type() const
+	inline NodeType::value Node::Type() const
 	{
 		return m_pNode->type();
 	}
 	
 	// access
 	template<typename T>
-	inline const T Value::as() const
+	inline const T Node::as() const
 	{
 		T t;
 		if(convert<T>::decode(*this, t))
@@ -57,54 +57,54 @@ namespace YAML
 	}
 	
 	template<>
-	inline const std::string Value::as() const
+	inline const std::string Node::as() const
 	{
-		if(Type() != ValueType::Scalar)
+		if(Type() != NodeType::Scalar)
 			throw std::runtime_error("Unable to convert to string, not a scalar");
 		return scalar();
 	}
 
-	inline const std::string& Value::scalar() const
+	inline const std::string& Node::scalar() const
 	{
 		return m_pNode->scalar();
 	}
 
 	// assignment
-	inline bool Value::is(const Value& rhs) const
+	inline bool Node::is(const Node& rhs) const
 	{
 		return m_pNode->is(*rhs.m_pNode);
 	}
 
 	template<typename T>
-	inline Value& Value::operator=(const T& rhs)
+	inline Node& Node::operator=(const T& rhs)
 	{
 		Assign(rhs);
 		return *this;
 	}
 	
 	template<typename T>
-	inline void Value::Assign(const T& rhs)
+	inline void Node::Assign(const T& rhs)
 	{
 		AssignData(convert<T>::encode(rhs));
 	}
 
 	template<>
-	inline void Value::Assign(const std::string& rhs)
+	inline void Node::Assign(const std::string& rhs)
 	{
 		m_pNode->set_scalar(rhs);
 	}
 
-	inline void Value::Assign(const char *rhs)
+	inline void Node::Assign(const char *rhs)
 	{
 		m_pNode->set_scalar(rhs);
 	}
 
-	inline void Value::Assign(char *rhs)
+	inline void Node::Assign(char *rhs)
 	{
 		m_pNode->set_scalar(rhs);
 	}
 	
-	inline Value& Value::operator=(const Value& rhs)
+	inline Node& Node::operator=(const Node& rhs)
 	{
 		if(is(rhs))
 			return *this;
@@ -112,13 +112,13 @@ namespace YAML
 		return *this;
 	}
 
-	inline void Value::AssignData(const Value& rhs)
+	inline void Node::AssignData(const Node& rhs)
 	{
 		m_pNode->set_data(*rhs.m_pNode);
 		m_pMemory->merge(*rhs.m_pMemory);
 	}
 
-	inline void Value::AssignNode(const Value& rhs)
+	inline void Node::AssignNode(const Node& rhs)
 	{
 		m_pNode->set_ref(*rhs.m_pNode);
 		m_pMemory->merge(*rhs.m_pMemory);
@@ -126,39 +126,39 @@ namespace YAML
 	}
 
 	// size/iterator
-	inline std::size_t Value::size() const
+	inline std::size_t Node::size() const
 	{
 		return m_pNode->size();
 	}
 
-	inline const_iterator Value::begin() const
+	inline const_iterator Node::begin() const
 	{
 		return const_iterator(m_pNode->begin(), m_pMemory);
 	}
 	
-	inline iterator Value::begin()
+	inline iterator Node::begin()
 	{
 		return iterator(m_pNode->begin(), m_pMemory);
 	}
 
-	inline const_iterator Value::end() const
+	inline const_iterator Node::end() const
 	{
 		return const_iterator(m_pNode->end(), m_pMemory);
 	}
 
-	inline iterator Value::end()
+	inline iterator Node::end()
 	{
 		return iterator(m_pNode->end(), m_pMemory);
 	}
 	
 	// sequence
 	template<typename T>
-	inline void Value::append(const T& rhs)
+	inline void Node::append(const T& rhs)
 	{
-		append(Value(rhs));
+		append(Node(rhs));
 	}
 	
-	inline void Value::append(const Value& rhs)
+	inline void Node::append(const Node& rhs)
 	{
 		m_pNode->append(*rhs.m_pNode, m_pMemory);
 		m_pMemory->merge(*rhs.m_pMemory);
@@ -166,87 +166,87 @@ namespace YAML
 
 	// indexing
 	template<typename Key>
-	inline const Value Value::operator[](const Key& key) const
+	inline const Node Node::operator[](const Key& key) const
 	{
 		detail::node& value = static_cast<const detail::node&>(*m_pNode).get(key, m_pMemory);
-		return Value(value, m_pMemory);
+		return Node(value, m_pMemory);
 	}
 	
 	template<typename Key>
-	inline Value Value::operator[](const Key& key)
+	inline Node Node::operator[](const Key& key)
 	{
 		detail::node& value = m_pNode->get(key, m_pMemory);
-		return Value(value, m_pMemory);
+		return Node(value, m_pMemory);
 	}
 	
 	template<typename Key>
-	inline bool Value::remove(const Key& key)
+	inline bool Node::remove(const Key& key)
 	{
 		return m_pNode->remove(key, m_pMemory);
 	}
 	
-	inline const Value Value::operator[](const Value& key) const
+	inline const Node Node::operator[](const Node& key) const
 	{
 		detail::node& value = static_cast<const detail::node&>(*m_pNode).get(*key.m_pNode, m_pMemory);
-		return Value(value, m_pMemory);
+		return Node(value, m_pMemory);
 	}
 	
-	inline Value Value::operator[](const Value& key)
+	inline Node Node::operator[](const Node& key)
 	{
 		detail::node& value = m_pNode->get(*key.m_pNode, m_pMemory);
-		return Value(value, m_pMemory);
+		return Node(value, m_pMemory);
 	}
 	
-	inline bool Value::remove(const Value& key)
+	inline bool Node::remove(const Node& key)
 	{
 		return m_pNode->remove(*key.m_pNode, m_pMemory);
 	}
 	
-	inline const Value Value::operator[](const char *key) const
+	inline const Node Node::operator[](const char *key) const
 	{
 		return operator[](std::string(key));
 	}
 	
-	inline Value Value::operator[](const char *key)
+	inline Node Node::operator[](const char *key)
 	{
 		return operator[](std::string(key));
 	}
 	
-	inline bool Value::remove(const char *key)
+	inline bool Node::remove(const char *key)
 	{
 		return remove(std::string(key));
 	}
 	
-	inline const Value Value::operator[](char *key) const
+	inline const Node Node::operator[](char *key) const
 	{
 		return operator[](static_cast<const char *>(key));
 	}
 	
-	inline Value Value::operator[](char *key)
+	inline Node Node::operator[](char *key)
 	{
 		return operator[](static_cast<const char *>(key));
 	}
 	
-	inline bool Value::remove(char *key)
+	inline bool Node::remove(char *key)
 	{
 		return remove(static_cast<const char *>(key));
 	}
 
 	// free functions
-	inline int compare(const Value& lhs, const Value& rhs)
+	inline int compare(const Node& lhs, const Node& rhs)
 	{
 		return 0;
 	}
 	
-	inline bool operator<(const Value& lhs, const Value& rhs)
+	inline bool operator<(const Node& lhs, const Node& rhs)
 	{
 		return false;
 	}
 	
-	inline bool is(const Value& lhs, const Value& rhs)
+	inline bool is(const Node& lhs, const Node& rhs)
 	{
 		return lhs.is(rhs);
 	}
 }
 
-#endif // VALUE_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#endif // NODE_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66

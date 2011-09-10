@@ -7,9 +7,9 @@
 
 
 #include "yaml-cpp/dll.h"
-#include "yaml-cpp/value/type.h"
-#include "yaml-cpp/value/ptr.h"
-#include "yaml-cpp/value/detail/node_data.h"
+#include "yaml-cpp/node/type.h"
+#include "yaml-cpp/node/ptr.h"
+#include "yaml-cpp/node/detail/node_data.h"
 #include <boost/utility.hpp>
 
 namespace YAML
@@ -21,12 +21,12 @@ namespace YAML
 		public:
 			node_ref() {}
 			
-			ValueType::value type() const { return m_pData ? m_pData->type() : ValueType::Undefined; }
+			NodeType::value type() const { return m_pData ? m_pData->type() : NodeType::Undefined; }
 			const std::string& scalar() const { return m_pData ? m_pData->scalar() : node_data::empty_scalar; }
 			
 			void set_data(const node_ref& rhs) { m_pData = rhs.m_pData; }
 			
-			void set_type(ValueType::value type) { ensure_data_exists(); m_pData->set_type(type); }
+			void set_type(NodeType::value type) { ensure_data_exists(); m_pData->set_type(type); }
 			void set_null() { ensure_data_exists(); m_pData->set_null(); }
 			void set_scalar(const std::string& scalar) { ensure_data_exists(); m_pData->set_scalar(scalar); }
 			

@@ -7,9 +7,9 @@
 
 
 #include "yaml-cpp/dll.h"
-#include "yaml-cpp/value/value.h"
-#include "yaml-cpp/value/detail/iterator_fwd.h"
-#include "yaml-cpp/value/detail/iterator.h"
+#include "yaml-cpp/node/node.h"
+#include "yaml-cpp/node/detail/iterator_fwd.h"
+#include "yaml-cpp/node/detail/iterator.h"
 #include <list>
 #include <utility>
 #include <vector>
@@ -17,10 +17,10 @@
 namespace YAML
 {
 	namespace detail {
-		struct iterator_value: public Value, std::pair<Value, Value> {
+		struct iterator_value: public Node, std::pair<Node, Node> {
 			iterator_value() {}
-			explicit iterator_value(const Value& rhs): Value(rhs) {}
-			explicit iterator_value(const Value& key, const Value& value): std::pair<Value, Value>(key, value) {}
+			explicit iterator_value(const Node& rhs): Node(rhs) {}
+			explicit iterator_value(const Node& key, const Node& value): std::pair<Node, Node>(key, value) {}
 		};
 	}
 }

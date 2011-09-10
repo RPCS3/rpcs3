@@ -1,13 +1,13 @@
-#ifndef VALUE_DETAIL_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66
-#define VALUE_DETAIL_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#ifndef NODE_DETAIL_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define NODE_DETAIL_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
 #if defined(_MSC_VER) || (defined(__GNUC__) && (__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ >= 4)) // GCC supports "pragma once" correctly since 3.4
 #pragma once
 #endif
 
 
-#include "yaml-cpp/value/detail/node.h"
-#include "yaml-cpp/value/detail/node_data.h"
+#include "yaml-cpp/node/detail/node.h"
+#include "yaml-cpp/node/detail/node_data.h"
 
 namespace YAML
 {
@@ -17,7 +17,7 @@ namespace YAML
 		template<typename Key>
 		inline node& node_data::get(const Key& key, shared_memory_holder pMemory) const
 		{
-			if(m_type != ValueType::Map)
+			if(m_type != NodeType::Map)
 				return pMemory->create_node();
 			
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
@@ -34,16 +34,16 @@ namespace YAML
 			// TODO: check if 'key' is index-like, and we're a sequence
 			
 			switch(m_type) {
-				case ValueType::Undefined:
-				case ValueType::Null:
-				case ValueType::Scalar:
-					m_type = ValueType::Map;
+				case NodeType::Undefined:
+				case NodeType::Null:
+				case NodeType::Scalar:
+					m_type = NodeType::Map;
 					m_map.clear();
 					break;
-				case ValueType::Sequence:
+				case NodeType::Sequence:
 					convert_sequence_to_map(pMemory);
 					break;
-				case ValueType::Map:
+				case NodeType::Map:
 					break;
 			}
 			
@@ -61,7 +61,7 @@ namespace YAML
 		template<typename Key>
 		inline bool node_data::remove(const Key& key, shared_memory_holder pMemory)
 		{
-			if(m_type != ValueType::Map)
+			if(m_type != NodeType::Map)
 				return false;
 			
 			for(node_map::iterator it=m_map.begin();it!=m_map.end();++it) {
@@ -78,7 +78,7 @@ namespace YAML
 		inline bool node_data::equals(node& node, const T& rhs, shared_memory_holder pMemory)
 		{
 			T lhs;
-			if(convert<T>::decode(Value(node, pMemory), lhs))
+			if(convert<T>::decode(Node(node, pMemory), lhs))
 				return lhs == rhs;
 			return false;
 		}
@@ -86,11 +86,11 @@ namespace YAML
 		template<typename T>
 		inline node& node_data::convert_to_node(const T& rhs, shared_memory_holder pMemory)
 		{
-			Value value = convert<T>::encode(rhs);
+			Node value = convert<T>::encode(rhs);
 			pMemory->merge(*value.m_pMemory);
 			return *value.m_pNode;
 		}
 	}
 }
 
-#endif // VALUE_DETAIL_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#endif // NODE_DETAIL_IMPL_H_62B23520_7C8E_11DE_8A39_0800200C9A66

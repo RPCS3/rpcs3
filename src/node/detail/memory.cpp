@@ -1,5 +1,5 @@
-#include "yaml-cpp/value/detail/memory.h"
-#include "yaml-cpp/value/detail/node.h"
+#include "yaml-cpp/node/detail/memory.h"
+#include "yaml-cpp/node/detail/node.h"
 
 namespace YAML
 {

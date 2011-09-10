@@ -1,28 +1,28 @@
-#include "yaml-cpp/value/parse.h"
-#include "yaml-cpp/value/value.h"
-#include "yaml-cpp/value/impl.h"
+#include "yaml-cpp/node/parse.h"
+#include "yaml-cpp/node/node.h"
+#include "yaml-cpp/node/impl.h"
 #include "yaml-cpp/parser.h"
-#include "valuebuilder.h"
+#include "nodebuilder.h"
 
 #include <sstream>
 
 namespace YAML
 {
-	Value Parse(const std::string& input) {
+	Node Parse(const std::string& input) {
 		std::stringstream stream(input);
 		return Parse(stream);
 	}
 	
-	Value Parse(const char *input) {
+	Node Parse(const char *input) {
 		std::stringstream stream(input);
 		return Parse(stream);
 	}
 	
-	Value Parse(std::istream& input) {
+	Node Parse(std::istream& input) {
 		Parser parser(input);
-		ValueBuilder builder;
+		NodeBuilder builder;
 		if(!parser.HandleNextDocument(builder))
-			return Value();
+			return Node();
 		
 		return builder.Root();
 	}

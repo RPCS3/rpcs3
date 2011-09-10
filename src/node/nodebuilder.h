@@ -1,25 +1,25 @@
-#ifndef VALUE_VALUEBUILDER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
-#define VALUE_VALUEBUILDER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#ifndef NODE_NODEBUILDER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#define NODE_NODEBUILDER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 
 #if defined(_MSC_VER) || (defined(__GNUC__) && (__GNUC__ == 3 && __GNUC_MINOR__ >= 4) || (__GNUC__ >= 4)) // GCC supports "pragma once" correctly since 3.4
 #pragma once
 #endif
 
 #include "yaml-cpp/eventhandler.h"
-#include "yaml-cpp/value/ptr.h"
+#include "yaml-cpp/node/ptr.h"
 #include <vector>
 
 namespace YAML
 {
-	class Value;
+	class Node;
 
-	class ValueBuilder: public EventHandler
+	class NodeBuilder: public EventHandler
 	{
 	public:
-		ValueBuilder();
-		virtual ~ValueBuilder();
+		NodeBuilder();
+		virtual ~NodeBuilder();
 		
-		Value Root();
+		Node Root();
 		
 		virtual void OnDocumentStart(const Mark& mark);
 		virtual void OnDocumentEnd();
@@ -52,5 +52,5 @@ namespace YAML
 	};
 }
 
-#endif // VALUE_VALUEBUILDER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
+#endif // NODE_NODEBUILDER_H_62B23520_7C8E_11DE_8A39_0800200C9A66
 

@@ -10,11 +10,11 @@
 
 namespace YAML
 {
-	class Value;
+	class Node;
 	
-	Value Parse(const std::string& input);
-	Value Parse(const char *input);
-	Value Parse(std::istream& input);
+	Node Parse(const std::string& input);
+	Node Parse(const char *input);
+	Node Parse(std::istream& input);
 }
 
 #endif // VALUE_PARSE_H_62B23520_7C8E_11DE_8A39_0800200C9A66

@@ -1,6 +1,6 @@
-#include "yaml-cpp/value/detail/node_data.h"
-#include "yaml-cpp/value/detail/memory.h"
-#include "yaml-cpp/value/detail/node.h"
+#include "yaml-cpp/node/detail/node_data.h"
+#include "yaml-cpp/node/detail/memory.h"
+#include "yaml-cpp/node/detail/node.h"
 #include <sstream>
 #include <stdexcept>
 
@@ -10,13 +10,13 @@ namespace YAML
 	{
 		std::string node_data::empty_scalar;
 
-		node_data::node_data(): m_isDefined(false), m_type(ValueType::Null)
+		node_data::node_data(): m_isDefined(false), m_type(NodeType::Null)
 		{
 		}
 
-		void node_data::set_type(ValueType::value type)
+		void node_data::set_type(NodeType::value type)
 		{
-			if(type == ValueType::Undefined) {
+			if(type == NodeType::Undefined) {
 				m_type = type;
 				m_isDefined = false;
 				return;
@@ -30,18 +30,18 @@ namespace YAML
 			m_type = type;
 			
 			switch(m_type) {
-				case ValueType::Null:
+				case NodeType::Null:
 					break;
-				case ValueType::Scalar:
+				case NodeType::Scalar:
 					m_scalar.clear();
 					break;
-				case ValueType::Sequence:
+				case NodeType::Sequence:
 					m_sequence.clear();
 					break;
-				case ValueType::Map:
+				case NodeType::Map:
 					m_map.clear();
 					break;
-				case ValueType::Undefined:
+				case NodeType::Undefined:
 					assert(false);
 					break;
 			}
@@ -50,13 +50,13 @@ namespace YAML
 		void node_data::set_null()
 		{
 			m_isDefined = true;
-			m_type = ValueType::Null;
+			m_type = NodeType::Null;
 		}
 		
 		void node_data::set_scalar(const std::string& scalar)
 		{
 			m_isDefined = true;
-			m_type = ValueType::Scalar;
+			m_type = NodeType::Scalar;
 			m_scalar = scalar;
 		}
 
@@ -69,8 +69,8 @@ namespace YAML
 		const_node_iterator node_data::begin() const
 		{
 			switch(m_type) {
-				case ValueType::Sequence: return const_node_iterator(m_sequence.begin());
-				case ValueType::Map: return const_node_iterator(m_map.begin());
+				case NodeType::Sequence: return const_node_iterator(m_sequence.begin());
+				case NodeType::Map: return const_node_iterator(m_map.begin());
 				default: return const_node_iterator();
 			}
 		}
@@ -78,8 +78,8 @@ namespace YAML
 		node_iterator node_data::begin()
 		{
 			switch(m_type) {
-				case ValueType::Sequence: return node_iterator(m_sequence.begin());
-				case ValueType::Map: return node_iterator(m_map.begin());
+				case NodeType::Sequence: return node_iterator(m_sequence.begin());
+				case NodeType::Map: return node_iterator(m_map.begin());
 				default: return node_iterator();
 			}
 		}
@@ -87,8 +87,8 @@ namespace YAML
 		const_node_iterator node_data::end() const
 		{
 			switch(m_type) {
-				case ValueType::Sequence: return const_node_iterator(m_sequence.end());
-				case ValueType::Map: return const_node_iterator(m_map.end());
+				case NodeType::Sequence: return const_node_iterator(m_sequence.end());
+				case NodeType::Map: return const_node_iterator(m_map.end());
 				default: return const_node_iterator();
 			}
 		}
@@ -96,8 +96,8 @@ namespace YAML
 		node_iterator node_data::end()
 		{
 			switch(m_type) {
-				case ValueType::Sequence: return node_iterator(m_sequence.end());
-				case ValueType::Map: return node_iterator(m_map.end());
+				case NodeType::Sequence: return node_iterator(m_sequence.end());
+				case NodeType::Map: return node_iterator(m_map.end());
 				default: return node_iterator();
 			}
 		}
@@ -105,7 +105,7 @@ namespace YAML
 		// sequence
 		void node_data::append(node& node, shared_memory_holder /* pMemory */)
 		{
-			if(m_type != ValueType::Sequence)
+			if(m_type != NodeType::Sequence)
 				throw std::runtime_error("Can't append to a non-sequence node");
 			
 			m_sequence.push_back(&node);
@@ -113,7 +113,7 @@ namespace YAML
 
 		void node_data::insert(node& key, node& value, shared_memory_holder /* pMemory */)
 		{
-			if(m_type != ValueType::Map)
+			if(m_type != NodeType::Map)
 				throw std::runtime_error("Can't insert into a non-map node");
 
 			m_map.push_back(kv_pair(&key, &value));
@@ -122,7 +122,7 @@ namespace YAML
 		// indexing
 		node& node_data::get(node& key, shared_memory_holder pMemory) const
 		{
-			if(m_type != ValueType::Map)
+			if(m_type != NodeType::Map)
 				return pMemory->create_node();
 			
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
@@ -136,16 +136,16 @@ namespace YAML
 		node& node_data::get(node& key, shared_memory_holder pMemory)
 		{
 			switch(m_type) {
-				case ValueType::Undefined:
-				case ValueType::Null:
-				case ValueType::Scalar:
-					m_type = ValueType::Map;
+				case NodeType::Undefined:
+				case NodeType::Null:
+				case NodeType::Scalar:
+					m_type = NodeType::Map;
 					m_map.clear();
 					break;
-				case ValueType::Sequence:
+				case NodeType::Sequence:
 					convert_sequence_to_map(pMemory);
 					break;
-				case ValueType::Map:
+				case NodeType::Map:
 					break;
 			}
 
@@ -161,7 +161,7 @@ namespace YAML
 		
 		bool node_data::remove(node& key, shared_memory_holder /* pMemory */)
 		{
-			if(m_type != ValueType::Map)
+			if(m_type != NodeType::Map)
 				return false;
 
 			for(node_map::iterator it=m_map.begin();it!=m_map.end();++it) {
@@ -176,7 +176,7 @@ namespace YAML
 
 		void node_data::convert_sequence_to_map(shared_memory_holder pMemory)
 		{
-			assert(m_type == ValueType::Sequence);
+			assert(m_type == NodeType::Sequence);
 			
 			m_map.clear();
 			for(std::size_t i=0;i<m_sequence.size();i++) {
@@ -189,7 +189,7 @@ namespace YAML
 			}
 			
 			m_sequence.clear();
-			m_type = ValueType::Map;
+			m_type = NodeType::Map;
 		}
 	}
 }

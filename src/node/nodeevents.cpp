@@ -1,16 +1,17 @@
-#include "valueevents.h"
-#include "yaml-cpp/value.h"
+#include "nodeevents.h"
+#include "yaml-cpp/node/node.h"
+#include "yaml-cpp/node/impl.h"
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/mark.h"
 
 namespace YAML
 {
-	void ValueEvents::AliasManager::RegisterReference(const detail::node& node)
+	void NodeEvents::AliasManager::RegisterReference(const detail::node& node)
 	{
 		m_anchorByIdentity.insert(std::make_pair(node.ref(), _CreateNewAnchor()));
 	}
 	
-	anchor_t ValueEvents::AliasManager::LookupAnchor(const detail::node& node) const
+	anchor_t NodeEvents::AliasManager::LookupAnchor(const detail::node& node) const
 	{
 		AnchorByIdentity::const_iterator it = m_anchorByIdentity.find(node.ref());
 		if(it == m_anchorByIdentity.end())
@@ -18,22 +19,22 @@ namespace YAML
 		return it->second;
 	}
 
-	ValueEvents::ValueEvents(const Value& value): m_pMemory(value.m_pMemory), m_root(*value.m_pNode)
+	NodeEvents::NodeEvents(const Node& node): m_pMemory(node.m_pMemory), m_root(*node.m_pNode)
 	{
 		Setup(m_root);
 	}
 
-	void ValueEvents::Setup(const detail::node& node)
+	void NodeEvents::Setup(const detail::node& node)
 	{
 		int& refCount = m_refCount[node.ref()];
 		refCount++;
 		if(refCount > 1)
 			return;
 		
-		if(node.type() == ValueType::Sequence) {
+		if(node.type() == NodeType::Sequence) {
 			for(detail::const_node_iterator it=node.begin();it!=node.end();++it)
 				Setup(**it);
-		} else if(node.type() == ValueType::Map) {
+		} else if(node.type() == NodeType::Map) {
 			for(detail::const_node_iterator it=node.begin();it!=node.end();++it) {
 				Setup(*it->first);
 				Setup(*it->second);
@@ -41,7 +42,7 @@ namespace YAML
 		}
 	}
 
-	void ValueEvents::Emit(EventHandler& handler)
+	void NodeEvents::Emit(EventHandler& handler)
 	{
 		AliasManager am;
 		
@@ -50,7 +51,7 @@ namespace YAML
 		handler.OnDocumentEnd();
 	}
 
-	void ValueEvents::Emit(const detail::node& node, EventHandler& handler, AliasManager& am) const
+	void NodeEvents::Emit(const detail::node& node, EventHandler& handler, AliasManager& am) const
 	{
 		anchor_t anchor = NullAnchor;
 		if(IsAliased(node)) {
@@ -65,21 +66,21 @@ namespace YAML
 		}
 		
 		switch(node.type()) {
-			case ValueType::Undefined:
+			case NodeType::Undefined:
 				break;
-			case ValueType::Null:
+			case NodeType::Null:
 				handler.OnNull(Mark(), anchor);
 				break;
-			case ValueType::Scalar:
+			case NodeType::Scalar:
 				handler.OnScalar(Mark(), "", anchor, node.scalar());
 				break;
-			case ValueType::Sequence:
+			case NodeType::Sequence:
 				handler.OnSequenceStart(Mark(), "", anchor);
 				for(detail::const_node_iterator it=node.begin();it!=node.end();++it)
 					Emit(**it, handler, am);
 				handler.OnSequenceEnd();
 				break;
-			case ValueType::Map:
+			case NodeType::Map:
 				handler.OnMapStart(Mark(), "", anchor);
 				for(detail::const_node_iterator it=node.begin();it!=node.end();++it) {
 					Emit(*it->first, handler, am);
@@ -90,7 +91,7 @@ namespace YAML
 		}
 	}
 
-	bool ValueEvents::IsAliased(const detail::node& node) const
+	bool NodeEvents::IsAliased(const detail::node& node) const
 	{
 		RefCount::const_iterator it = m_refCount.find(node.ref());
 		return it != m_refCount.end() && it->second > 1;
