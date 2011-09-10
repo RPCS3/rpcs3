@@ -31,7 +31,6 @@ namespace YAML
 	}
 	
 	typedef detail::iterator_base<detail::iterator_value, detail::node_seq_iterator, detail::node_map_iterator> iterator;
-	
 	typedef detail::iterator_base<const detail::iterator_value, detail::node_seq_const_iterator, detail::node_map_const_iterator> const_iterator;
 }
 

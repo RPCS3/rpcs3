@@ -3,30 +3,13 @@
 
 int main()
 {
-	YAML::Value value;
-	value["key"] = "value";
-	std::cout << value["key"].as<std::string>() << "\n";
-	value["key"]["key"] = "value";
-	std::cout << value["key"]["key"].as<std::string>() << "\n";
-	value[5] = "monkey";
-	std::cout << value[5].as<std::string>() << "\n";
-	value["monkey"] = 5;
-	std::cout << value["monkey"].as<int>() << "\n";
+	YAML::Value value(YAML::ValueType::Sequence);
+	for(int i=0;i<5;i++)
+		value.append(i);
 	
-	std::map<int, std::string> names;
-	names[1] = "one";
-	names[2] = "two";
-	names[3] = "three";
-	names[4] = "four";
-	value["names"] = names;
-	
-	value["this"] = value;
-	value["this"]["change"] = value;
-	
-	value["seq"] = YAML::Value(YAML::ValueType::Sequence);
-	value["seq"].append(2);
-	value["seq"].append(3);
-	value["seq"].append("five");
+	for(YAML::const_iterator it=value.begin();it!=value.end();++it) {
+		std::cout << it->as<int>() << "\n";
+	}
 	
 	return 0;
 }

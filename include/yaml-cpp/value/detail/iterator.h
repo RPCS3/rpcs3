@@ -29,7 +29,7 @@ namespace YAML
 			explicit iterator_base(shared_memory_holder pMemory, MapIter mapIt): m_type(iterator_type::Map), m_pMemory(pMemory), m_mapIt(mapIt) {}
 			
 			template<typename W, typename I, typename J>
-			explicit iterator_base(const iterator_base<W, I, J>& rhs, typename boost::enable_if<boost::is_convertible<W*, V*>, enabler>::type = enabler())
+			iterator_base(const iterator_base<W, I, J>& rhs, typename boost::enable_if<boost::is_convertible<W*, V*>, enabler>::type = enabler())
 			: m_type(rhs.m_type), m_pMemory(rhs.m_pMemory), m_seqIt(rhs.m_seqIt), m_mapIt(rhs.m_mapIt) {}
 			
 		private:
@@ -65,10 +65,10 @@ namespace YAML
 				}
 			}
 			
-			V dereference() {
+			V dereference() const {
 				switch(m_type) {
 					case iterator_type::None: return V();
-					case iterator_type::Sequence: return V(Value(*m_seqIt, m_pMemory));
+					case iterator_type::Sequence: return V(Value(**m_seqIt, m_pMemory));
 					case iterator_type::Map: return V(Value(*m_mapIt->first, m_pMemory), Value(*m_mapIt->second, m_pMemory));
 				}
 				return V();

@@ -18,6 +18,7 @@ namespace YAML
 	{
 	public:
 		friend class detail::node_data;
+		template<typename, typename, typename> friend class detail::iterator_base;
 		
 		Value();
 		explicit Value(ValueType::value type);
