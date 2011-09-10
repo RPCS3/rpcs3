@@ -18,7 +18,7 @@ namespace YAML
 	class ValueEvents
 	{
 	public:
-		ValueEvents(const Value& value);
+		explicit ValueEvents(const Value& value);
 		
 		void Emit(EventHandler& handler);
 		

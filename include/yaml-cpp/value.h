@@ -12,5 +12,6 @@
 #include "yaml-cpp/value/iterator.h"
 #include "yaml-cpp/value/detail/impl.h"
 #include "yaml-cpp/value/parse.h"
+#include "yaml-cpp/value/emit.h"
 
 #endif // VALUE_H_62B23520_7C8E_11DE_8A39_0800200C9A66

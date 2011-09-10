@@ -4,9 +4,7 @@
 int main()
 {
 	YAML::Value value = YAML::Parse("{foo: bar, monkey: value}");
-	for(YAML::const_iterator it=value.begin();it!=value.end();++it) {
-		std::cout << it->first.as<std::string>() << " -> " << it->second.as<std::string>() << "\n";
-	}
+	std::cout << value << "\n";
 	
 	return 0;
 }
