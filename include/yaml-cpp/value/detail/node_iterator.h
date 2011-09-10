@@ -109,7 +109,7 @@ namespace YAML
 					case iterator_type::Sequence: return value_type(**m_seqIt);
 					case iterator_type::Map: return value_type(*m_mapIt->first, *m_mapIt->second);
 				}
-				return V();
+				return value_type();
 			}
 			
 		private:

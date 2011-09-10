@@ -10,7 +10,7 @@
 #include "yaml-cpp/value/ptr.h"
 #include "yaml-cpp/value/detail/node_iterator.h"
 #include <boost/iterator/iterator_adaptor.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <boost/utility.hpp>
 
 namespace YAML
 {
@@ -41,10 +41,10 @@ namespace YAML
 		private:
 			friend class boost::iterator_core_access;
 
-			void increment() { this->base_reference() = this->base()->next(); }
-			void decrement() { this->base_reference() = this->base()->previous(); }
+			void increment() { this->base_reference() = boost::next(this->base()); }
+			void decrement() { this->base_reference() = boost::prior(this->base()); }
 			
-			value_type dereference() {
+			value_type dereference() const {
 				const typename base_type::value_type& v = *this->base();
 				if(v.pNode)
 					return value_type(Value(*v.pNode, m_pMemory));
