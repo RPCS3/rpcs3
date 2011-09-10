@@ -18,6 +18,7 @@ namespace YAML
 	{
 	public:
 		friend class ValueBuilder;
+		friend class ValueEvents;
 		friend class detail::node_data;
 		template<typename, typename, typename> friend class detail::iterator_base;
 		

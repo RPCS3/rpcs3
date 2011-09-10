@@ -22,6 +22,8 @@ namespace YAML
 			node(): m_pRef(new node_ref) {}
 
 			bool is(const node& rhs) const { return m_pRef == rhs.m_pRef; }
+			const node_ref *ref() const { return m_pRef.get(); }
+			
 			ValueType::value type() const { return m_pRef->type(); }
 			
 			const std::string& scalar() const { return m_pRef->scalar(); }
