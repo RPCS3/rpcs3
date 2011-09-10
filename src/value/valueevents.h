@@ -13,14 +13,36 @@
 namespace YAML
 {
 	class Value;
+	class EventHandler;
 	
 	class ValueEvents
 	{
 	public:
 		ValueEvents(const Value& value);
 		
+		void Emit(EventHandler& handler);
+		
 	private:
-		void Visit(const detail::node& node);
+		class AliasManager {
+		public:
+			AliasManager(): m_curAnchor(0) {}
+			
+			void RegisterReference(const detail::node& node);
+			anchor_t LookupAnchor(const detail::node& node) const;
+			
+		private:
+			anchor_t _CreateNewAnchor() { return ++m_curAnchor; }
+			
+		private:
+			typedef std::map<const detail::node_ref*, anchor_t> AnchorByIdentity;
+			AnchorByIdentity m_anchorByIdentity;
+			
+			anchor_t m_curAnchor;
+		};
+		
+		void Setup(const detail::node& node);
+		void Emit(const detail::node& node, EventHandler& handler, AliasManager& am) const;
+		bool IsAliased(const detail::node& node) const;
 		
 	private:
 		detail::shared_memory_holder m_pMemory;
