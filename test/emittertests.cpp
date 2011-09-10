@@ -952,10 +952,15 @@ namespace Test
 
 			if(output == desiredOutput) {
 				try {
+#ifdef YAML_CPP_OLD_API
 					std::stringstream stream(output);
 					YAML::Parser parser;
 					YAML::Node node;
 					parser.GetNextDocument(node);
+#else
+					// Parse with the new API
+#endif
+					
 					passed++;
 				} catch(const YAML::Exception& e) {
 					std::cout << "Emitter test failed: " << name << "\n";
