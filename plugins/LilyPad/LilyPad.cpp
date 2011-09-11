@@ -347,6 +347,16 @@ void AddForce(ButtonSum *sum, u8 cmd, int delta = 255) {
 
 void ProcessButtonBinding(Binding *b, ButtonSum *sum, int value) {
 	if (value < b->deadZone || !value) return;
+	
+	if ( config.turboKeyHack == 1 ){ // send a tabulator keypress to emulator
+		if ( b->command == 0x12 ){ // R3 button
+			static unsigned int LastCheck = 0;
+			unsigned int t = timeGetTime();
+			if (t - LastCheck < 300 ) return;
+			QueueKeyEvent(VK_TAB, KEYPRESS);
+			LastCheck = t;
+		}
+	}
 
 	int sensitivity = b->sensitivity;
 	if (sensitivity < 0) {

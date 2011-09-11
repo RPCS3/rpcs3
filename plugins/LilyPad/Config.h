@@ -47,6 +47,7 @@ public:
 
 			u8 saveStateTitle;
 			u8 GH2;
+			u8 turboKeyHack;
 
 			u8 vistaVolume;
 		};

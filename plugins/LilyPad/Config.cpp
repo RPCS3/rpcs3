@@ -60,6 +60,7 @@ const GeneralSettingsBool BoolOptionsInfo[] = {
 
 	{L"Save State in Title", IDC_SAVE_STATE_TITLE, 0}, //No longer required, PCSX2 now handles it - avih 2011-05-17
 	{L"GH2", IDC_GH2_HACK, 0},
+	{L"Turbo Key Hack", IDC_TURBO_KEY_HACK, 0},
 
 	{L"Vista Volume", IDC_VISTA_VOLUME, 1},
 };
