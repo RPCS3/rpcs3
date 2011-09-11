@@ -37,14 +37,17 @@ public:
 void parse(std::istream& input)
 {
 	try {
+#if YAML_CPP_OLD_API
 		YAML::Parser parser(input);
 		YAML::Node doc;
-		NullEventHandler handler;
 		while(parser.GetNextDocument(doc)) {
 			YAML::Emitter emitter;
 			emitter << doc;
 			std::cout << emitter.c_str() << "\n";
 		}
+#else
+		// TODO: Parse with new API
+#endif
 	} catch(const YAML::Exception& e) {
 		std::cerr << e.what() << "\n";
 	}

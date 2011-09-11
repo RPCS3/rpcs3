@@ -3,5 +3,6 @@
 namespace Test {
 	bool RunParserTests()
 	{
+		return true;
 	}
 }
