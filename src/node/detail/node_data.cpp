@@ -75,7 +75,7 @@ namespace YAML
 
 			switch(m_type) {
 				case NodeType::Sequence: compute_seq_size(); return m_seqSize;
-				case NodeType::Map: compute_map_size(); return m_map.size();
+				case NodeType::Map: compute_map_size(); return m_map.size() - m_undefinedPairs.size();
 				default:
 					return 0;
 			}
@@ -90,6 +90,13 @@ namespace YAML
 
 		void node_data::compute_map_size() const
 		{
+			kv_pairs::iterator it = m_undefinedPairs.begin();
+			while(it != m_undefinedPairs.end()) {
+				kv_pairs::iterator jt = boost::next(it);
+				if(it->first->is_defined() && it->second->is_defined())
+					m_undefinedPairs.erase(it);
+				it = jt;
+			}
 		}
 		
 		const_node_iterator node_data::begin() const
@@ -166,7 +173,7 @@ namespace YAML
 			if(m_type != NodeType::Map)
 				throw std::runtime_error("Can't insert into a non-map node");
 
-			m_map[&key] = &value;
+			insert_map_pair(key, value);
 		}
 
 		// indexing
@@ -205,7 +212,7 @@ namespace YAML
 			}
 			
 			node& value = pMemory->create_node();
-			m_map[&key] = &value;
+			insert_map_pair(key, value);
 			return value;
 		}
 		
@@ -233,6 +240,14 @@ namespace YAML
 		void node_data::reset_map()
 		{
 			m_map.clear();
+			m_undefinedPairs.clear();
+		}
+
+		void node_data::insert_map_pair(node& key, node& value)
+		{
+			m_map[&key] = &value;
+			if(!key.is_defined() || !value.is_defined())
+				m_undefinedPairs.push_back(kv_pair(&key, &value));
 		}
 
 		void node_data::convert_sequence_to_map(shared_memory_holder pMemory)
@@ -246,7 +261,7 @@ namespace YAML
 
 				node& key = pMemory->create_node();
 				key.set_scalar(stream.str());
-				m_map[&key] = m_sequence[i];
+				insert_map_pair(key, *m_sequence[i]);
 			}
 			
 			reset_sequence();

@@ -67,6 +67,9 @@ namespace Test
 			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
 			YAML_ASSERT(node["key"].as<std::string>() == "value");
 			YAML_ASSERT(node.size() == 1);
+			node["undefined"] = "monkey";
+			YAML_ASSERT(node["undefined"].as<std::string>() == "monkey");
+			YAML_ASSERT(node.size() == 2);
 			return true;
 		}
 	}

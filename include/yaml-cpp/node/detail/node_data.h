@@ -64,6 +64,7 @@ namespace YAML
 
 			void reset_sequence();
 			void reset_map();
+			void insert_map_pair(node& key, node& value);
 			void convert_sequence_to_map(shared_memory_holder pMemory);
 			
 			template<typename T>
@@ -88,6 +89,10 @@ namespace YAML
 			// map
 			typedef std::map<node *, node *> node_map;
 			node_map m_map;
+			
+			typedef std::pair<node *, node *> kv_pair;
+			typedef std::list<kv_pair> kv_pairs;
+			mutable kv_pairs m_undefinedPairs;
 		};
 	}
 }
