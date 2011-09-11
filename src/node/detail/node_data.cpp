@@ -166,7 +166,7 @@ namespace YAML
 			if(m_type != NodeType::Map)
 				throw std::runtime_error("Can't insert into a non-map node");
 
-			m_map.push_back(kv_pair(&key, &value));
+			m_map[&key] = &value;
 		}
 
 		// indexing
@@ -205,7 +205,7 @@ namespace YAML
 			}
 			
 			node& value = pMemory->create_node();
-			m_map.push_back(kv_pair(&key, &value));
+			m_map[&key] = &value;
 			return value;
 		}
 		
@@ -246,7 +246,7 @@ namespace YAML
 
 				node& key = pMemory->create_node();
 				key.set_scalar(stream.str());
-				m_map.push_back(kv_pair(&key, m_sequence[i]));
+				m_map[&key] = m_sequence[i];
 			}
 			
 			reset_sequence();

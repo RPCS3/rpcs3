@@ -54,7 +54,7 @@ namespace YAML
 			
 			node& k = convert_to_node(key, pMemory);
 			node& v = pMemory->create_node();
-			m_map.push_back(kv_pair(&k, &v));
+			m_map[&k] = &v;
 			return v;
 		}
 		

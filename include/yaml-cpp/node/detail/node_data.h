@@ -86,8 +86,7 @@ namespace YAML
 			mutable std::size_t m_seqSize;
 			
 			// map
-			typedef std::pair<node *, node *> kv_pair;
-			typedef std::list<kv_pair> node_map;
+			typedef std::map<node *, node *> node_map;
 			node_map m_map;
 		};
 	}

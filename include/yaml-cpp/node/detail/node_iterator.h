@@ -10,7 +10,7 @@
 #include "yaml-cpp/node/ptr.h"
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/utility/enable_if.hpp>
-#include <list>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -35,8 +35,7 @@ namespace YAML
 		};
 		
 		typedef std::vector<node *> node_seq;
-		typedef std::pair<node *, node *> kv_pair;
-		typedef std::list<kv_pair> node_map;
+		typedef std::map<node *, node *> node_map;
 		
 		template<typename V>
 		struct node_iterator_type {
