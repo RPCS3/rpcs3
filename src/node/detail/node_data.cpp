@@ -105,14 +105,26 @@ namespace YAML
 		// sequence
 		void node_data::append(node& node, shared_memory_holder /* pMemory */)
 		{
+			if(m_type == NodeType::Undefined || m_type == NodeType::Null) {
+				m_type = NodeType::Sequence;
+				m_sequence.clear();
+			}
+			
 			if(m_type != NodeType::Sequence)
 				throw std::runtime_error("Can't append to a non-sequence node");
 			
 			m_sequence.push_back(&node);
 		}
 
-		void node_data::insert(node& key, node& value, shared_memory_holder /* pMemory */)
+		void node_data::insert(node& key, node& value, shared_memory_holder pMemory)
 		{
+			if(m_type == NodeType::Undefined || m_type == NodeType::Null) {
+				m_type = NodeType::Map;
+				m_map.clear();
+			} else if(m_type == NodeType::Sequence) {
+				convert_sequence_to_map(pMemory);
+			}
+
 			if(m_type != NodeType::Map)
 				throw std::runtime_error("Can't insert into a non-map node");
 

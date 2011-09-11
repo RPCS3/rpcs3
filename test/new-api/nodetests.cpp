@@ -25,6 +25,28 @@ namespace Test
 			YAML_ASSERT(node.as<std::string>() == "Hello, World!");
 			return true;
 		}
+		
+		TEST IntScalar()
+		{
+			YAML::Node node = YAML::Node(15);
+			YAML_ASSERT(node.Type() == YAML::NodeType::Scalar);
+			YAML_ASSERT(node.as<int>() == 15);
+			return true;
+		}
+
+		TEST SimpleSequence()
+		{
+			YAML::Node node;
+			node.append(10);
+			node.append("foo");
+			node.append("monkey");
+			YAML_ASSERT(node.Type() == YAML::NodeType::Sequence);
+			YAML_ASSERT(node.size() == 3);
+			YAML_ASSERT(node[0].as<int>() == 10);
+			YAML_ASSERT(node[1].as<std::string>() == "foo");
+			YAML_ASSERT(node[1].as<std::string>() == "monkey");
+			return true;
+		}
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -50,6 +72,8 @@ namespace Test
 		int total = 0;
 
 		RunNodeTest(&Node::SimpleScalar, "simple scalar", passed, total);
+		RunNodeTest(&Node::IntScalar, "int scalar", passed, total);
+		RunNodeTest(&Node::SimpleSequence, "simple sequence", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
