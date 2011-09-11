@@ -47,6 +47,27 @@ namespace Test
 			YAML_ASSERT(node[1].as<std::string>() == "monkey");
 			return true;
 		}
+
+		TEST SimpleMap()
+		{
+			YAML::Node node;
+			node["key"] = "value";
+			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node["key"].as<std::string>() == "value");
+			YAML_ASSERT(node.size() == 1);
+			return true;
+		}
+
+		TEST MapWithUndefinedValues()
+		{
+			YAML::Node node;
+			node["key"] = "value";
+			node["undefined"];
+			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node["key"].as<std::string>() == "value");
+			YAML_ASSERT(node.size() == 1);
+			return true;
+		}
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -74,6 +95,8 @@ namespace Test
 		RunNodeTest(&Node::SimpleScalar, "simple scalar", passed, total);
 		RunNodeTest(&Node::IntScalar, "int scalar", passed, total);
 		RunNodeTest(&Node::SimpleSequence, "simple sequence", passed, total);
+		RunNodeTest(&Node::SimpleMap, "simple map", passed, total);
+		RunNodeTest(&Node::MapWithUndefinedValues, "map with undefined values", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
