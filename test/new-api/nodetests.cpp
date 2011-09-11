@@ -67,9 +67,24 @@ namespace Test
 			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
 			YAML_ASSERT(node["key"].as<std::string>() == "value");
 			YAML_ASSERT(node.size() == 1);
+
 			node["undefined"] = "monkey";
 			YAML_ASSERT(node["undefined"].as<std::string>() == "monkey");
 			YAML_ASSERT(node.size() == 2);
+			
+			return true;
+		}
+		
+		TEST MapIteratorWithUndefinedValues()
+		{
+			YAML::Node node;
+			node["key"] = "value";
+			node["undefined"];
+			
+			std::size_t count = 0;
+			for(YAML::const_iterator it=node.begin();it!=node.end();++it)
+				count++;
+			YAML_ASSERT(count == 1);
 			return true;
 		}
 	}
@@ -101,6 +116,7 @@ namespace Test
 		RunNodeTest(&Node::SimpleSequence, "simple sequence", passed, total);
 		RunNodeTest(&Node::SimpleMap, "simple map", passed, total);
 		RunNodeTest(&Node::MapWithUndefinedValues, "map with undefined values", passed, total);
+		RunNodeTest(&Node::MapIteratorWithUndefinedValues, "map iterator with undefined values", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
