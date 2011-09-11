@@ -14,6 +14,13 @@ namespace YAML
 		{
 		}
 
+		void node_data::mark_defined()
+		{
+			if(m_type == NodeType::Undefined)
+				m_type = NodeType::Null;
+			m_isDefined = true;
+		}
+
 		void node_data::set_type(NodeType::value type)
 		{
 			if(type == NodeType::Undefined) {

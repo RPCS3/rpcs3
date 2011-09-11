@@ -10,6 +10,7 @@
 #include "yaml-cpp/node/type.h"
 #include "yaml-cpp/node/ptr.h"
 #include "yaml-cpp/node/detail/node_ref.h"
+#include <set>
 #include <boost/utility.hpp>
 
 namespace YAML
@@ -24,16 +25,52 @@ namespace YAML
 			bool is(const node& rhs) const { return m_pRef == rhs.m_pRef; }
 			const node_ref *ref() const { return m_pRef.get(); }
 			
+			bool is_defined() const { return m_pRef->is_defined(); }
 			NodeType::value type() const { return m_pRef->type(); }
 			
 			const std::string& scalar() const { return m_pRef->scalar(); }
 			
-			void set_ref(const node& rhs) { m_pRef = rhs.m_pRef; }
-			void set_data(const node& rhs) { m_pRef->set_data(*rhs.m_pRef); }
+			void mark_defined() {
+				if(is_defined())
+					return;
 				
-			void set_type(NodeType::value type) { m_pRef->set_type(type); }
-			void set_null() { m_pRef->set_null(); }
-			void set_scalar(const std::string& scalar) { m_pRef->set_scalar(scalar); }
+				m_pRef->mark_defined();
+				for(nodes::iterator it=m_dependencies.begin();it!=m_dependencies.end();++it)
+					(*it)->mark_defined();
+				m_dependencies.clear();
+			}
+			
+			void add_dependency(node& rhs) {
+				if(is_defined())
+					rhs.mark_defined();
+				else
+					m_dependencies.insert(&rhs);
+			}
+			
+			void set_ref(const node& rhs) {
+				if(rhs.is_defined())
+					mark_defined();
+				m_pRef = rhs.m_pRef;
+			}
+			void set_data(const node& rhs) {
+				if(rhs.is_defined())
+					mark_defined();
+				m_pRef->set_data(*rhs.m_pRef);
+			}
+				
+			void set_type(NodeType::value type) {
+				if(type != NodeType::Undefined)
+					mark_defined();
+				m_pRef->set_type(type);
+			}
+			void set_null() {
+				mark_defined();
+				m_pRef->set_null();
+			}
+			void set_scalar(const std::string& scalar) {
+				mark_defined();
+				m_pRef->set_scalar(scalar);
+			}
 
 			// size/iterator
 			std::size_t size() const { return m_pRef->size(); }
@@ -45,22 +82,38 @@ namespace YAML
 			node_iterator end() { return m_pRef->end(); }
 
 			// sequence
-			void append(node& node, shared_memory_holder pMemory) { m_pRef->append(node, pMemory); }
+			void append(node& node, shared_memory_holder pMemory) {
+				m_pRef->append(node, pMemory);
+				node.add_dependency(*this);
+			}
 			void insert(node& key, node& value, shared_memory_holder pMemory) {
 				m_pRef->insert(key, value, pMemory);
+				key.add_dependency(*this);
+				value.add_dependency(*this);
 			}
 
 			// indexing
 			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).get(key, pMemory); }
-			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) { return m_pRef->get(key, pMemory); }
+			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) {
+				node& value = m_pRef->get(key, pMemory);
+				value.add_dependency(*this);
+				return value;
+			}
 			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory) { return m_pRef->remove(key, pMemory); }
 			
 			node& get(node& key, shared_memory_holder pMemory) const { return static_cast<const node_ref&>(*m_pRef).get(key, pMemory); }
-			node& get(node& key, shared_memory_holder pMemory) { return m_pRef->get(key, pMemory); }
+			node& get(node& key, shared_memory_holder pMemory) {
+				node& value = m_pRef->get(key, pMemory);
+				key.add_dependency(*this);
+				value.add_dependency(*this);
+				return value;
+			}
 			bool remove(node& key, shared_memory_holder pMemory) { return m_pRef->remove(key, pMemory); }
 
 		private:
 			shared_node_ref m_pRef;
+			typedef std::set<node *> nodes;
+			nodes m_dependencies;
 		};
 	}
 }

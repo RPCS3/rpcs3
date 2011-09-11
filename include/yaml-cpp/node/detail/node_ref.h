@@ -21,9 +21,11 @@ namespace YAML
 		public:
 			node_ref() {}
 			
+			bool is_defined() const { return m_pData ? m_pData->is_defined() : false; }
 			NodeType::value type() const { return m_pData ? m_pData->type() : NodeType::Undefined; }
 			const std::string& scalar() const { return m_pData ? m_pData->scalar() : node_data::empty_scalar; }
 			
+			void mark_defined() { ensure_data_exists(); m_pData->mark_defined(); }
 			void set_data(const node_ref& rhs) { m_pData = rhs.m_pData; }
 			
 			void set_type(NodeType::value type) { ensure_data_exists(); m_pData->set_type(type); }
