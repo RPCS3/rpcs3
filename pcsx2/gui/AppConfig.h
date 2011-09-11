@@ -63,6 +63,8 @@ extern wxDirName		ThemesFolder;
 extern wxDirName GetSettingsFolder();
 extern wxString  GetVmSettingsFilename();
 extern wxString  GetUiSettingsFilename();
+extern wxString  GetUiKeysFilename();
+
 extern wxDirName GetLogFolder();
 
 enum InstallationModeType

@@ -55,8 +55,8 @@ wxString KeyAcceleratorCode::ToString() const
 
 	return wxAcceleratorEntry(
 		(cmd ? wxACCEL_CMD : 0) |
-		(shift ? wxACCEL_CMD : 0) |
-		(alt ? wxACCEL_CMD : 0),
+		(shift ? wxACCEL_SHIFT : 0) |
+		(alt ? wxACCEL_ALT : 0),
 		keycode
 	).ToString();
 }
@@ -530,8 +530,26 @@ AcceleratorDictionary::AcceleratorDictionary()
 
 AcceleratorDictionary::~AcceleratorDictionary() throw() {}
 
-void AcceleratorDictionary::Map( const KeyAcceleratorCode& acode, const char *searchfor )
+void AcceleratorDictionary::Map( const KeyAcceleratorCode& _acode, const char *searchfor )
 {
+	// Search override mapping at ini file
+	KeyAcceleratorCode acode = _acode;
+	wxString overrideStr;
+	wxAcceleratorEntry codeParser;	//Provides string parsing capabilities
+	wxFileConfig cfg(L"", L"", L"" , GetUiKeysFilename(), wxCONFIG_USE_GLOBAL_FILE );
+	if( cfg.Read( wxString::FromUTF8(searchfor), &overrideStr) )
+	{
+		overrideStr = wxString(L"\t") + overrideStr;
+		if( codeParser.FromString( overrideStr ) ) // needs a '\t' prefix (originally used for wxMenu accelerators parsing)...
+		{
+			//ini file contains alternative parsable key combination for current 'searchfor'.
+			acode = codeParser;
+			Console.WriteLn(Color_StrongGreen, L"Overriding '%s': assigning %s (instead of %s)",
+				fromUTF8( searchfor ).c_str(), acode.ToString().c_str(), _acode.ToString().c_str());
+		}
+	}
+	// End of overrides section
+
 	const GlobalCommandDescriptor* result = NULL;
 	TryGetValue( acode.val32, result );
 

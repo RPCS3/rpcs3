@@ -336,6 +336,11 @@ namespace FilenameDefs
 		return pxGetAppName() + L"_ui.ini";
 	}
 
+	wxFileName GetUiKeysConfig()
+	{
+		return pxGetAppName() + L"_keys.ini";
+	}
+
 	wxFileName GetVmConfig()
 	{
 		return pxGetAppName() + L"_vm.ini";
@@ -409,6 +414,12 @@ wxString GetVmSettingsFilename()
 wxString GetUiSettingsFilename()
 {
 	wxFileName fname( FilenameDefs::GetUiConfig() );
+	return GetSettingsFolder().Combine( fname ).GetFullPath();
+}
+
+wxString GetUiKeysFilename()
+{
+	wxFileName fname( FilenameDefs::GetUiKeysConfig() );
 	return GetSettingsFolder().Combine( fname ).GetFullPath();
 }
 

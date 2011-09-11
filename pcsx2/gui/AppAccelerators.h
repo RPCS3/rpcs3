@@ -39,6 +39,16 @@ struct KeyAcceleratorCode
 
 	KeyAcceleratorCode() : val32( 0 ) {}
 	KeyAcceleratorCode( const wxKeyEvent& evt );
+	
+	//grab event attributes only
+	KeyAcceleratorCode( const wxAcceleratorEntry& right)
+	{
+		val32 = 0;
+		keycode = right.GetKeyCode();
+		if( right.GetFlags() & wxACCEL_ALT )	Alt();
+		if( right.GetFlags() & wxACCEL_CMD )	Cmd();
+		if( right.GetFlags() & wxACCEL_SHIFT )	Shift();
+	}
 
 	KeyAcceleratorCode( wxKeyCode code )
 	{

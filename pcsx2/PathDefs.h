@@ -80,6 +80,7 @@ namespace PathDefs
 namespace FilenameDefs
 {
 	extern wxFileName GetUiConfig();
+	extern wxFileName GetUiKeysConfig();
 	extern wxFileName GetVmConfig();
 	extern wxFileName GetUsermodeConfig();
 	extern const wxFileName& Memcard( uint port, uint slot );
