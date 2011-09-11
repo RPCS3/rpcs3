@@ -1,5 +1,5 @@
-#include "nodeownership.h"
-#include "yaml-cpp/node.h"
+#include "old-api/nodeownership.h"
+#include "yaml-cpp/old-api/node.h"
 
 namespace YAML
 {

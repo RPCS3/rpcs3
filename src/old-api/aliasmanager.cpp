@@ -1,5 +1,5 @@
-#include "yaml-cpp/aliasmanager.h"
-#include "yaml-cpp/node.h"
+#include "yaml-cpp/old-api/aliasmanager.h"
+#include "yaml-cpp/old-api/node.h"
 #include <cassert>
 #include <sstream>
 

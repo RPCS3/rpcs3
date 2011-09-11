@@ -9,10 +9,10 @@
 #include "yaml-cpp/conversion.h"
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/exceptions.h"
-#include "yaml-cpp/iterator.h"
-#include "yaml-cpp/ltnode.h"
 #include "yaml-cpp/mark.h"
 #include "yaml-cpp/noncopyable.h"
+#include "yaml-cpp/old-api/iterator.h"
+#include "yaml-cpp/old-api/ltnode.h"
 #include <iostream>
 #include <map>
 #include <memory>

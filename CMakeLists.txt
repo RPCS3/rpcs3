@@ -103,6 +103,7 @@ if(VERBOSE)
 endif()
 
 include_directories(${YAML_CPP_SOURCE_DIR}/include)
+include_directories(${YAML_CPP_SOURCE_DIR}/src)
 
 
 ###

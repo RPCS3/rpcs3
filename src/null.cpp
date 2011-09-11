@@ -1,7 +1,7 @@
 #include "yaml-cpp/null.h"
 
 #if YAML_CPP_OLD_API
-#include "yaml-cpp/node.h"
+#include "yaml-cpp/old-api/node.h"
 #endif
 
 namespace YAML

@@ -1,14 +1,14 @@
-#include "yaml-cpp/node.h"
-#include "iterpriv.h"
-#include "nodebuilder.h"
-#include "nodeownership.h"
-#include "scanner.h"
-#include "tag.h"
-#include "token.h"
+#include "yaml-cpp/old-api/node.h"
 #include "yaml-cpp/aliasmanager.h"
 #include "yaml-cpp/emitfromevents.h"
 #include "yaml-cpp/emitter.h"
 #include "yaml-cpp/eventhandler.h"
+#include "old-api/iterpriv.h"
+#include "old-api/nodebuilder.h"
+#include "old-api/nodeownership.h"
+#include "scanner.h"
+#include "tag.h"
+#include "token.h"
 #include <cassert>
 #include <stdexcept>
 
