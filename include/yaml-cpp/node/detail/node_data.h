@@ -59,6 +59,11 @@ namespace YAML
 			static std::string empty_scalar;
 			
 		private:
+			void compute_seq_size() const;
+			void compute_map_size() const;
+
+			void reset_sequence();
+			void reset_map();
 			void convert_sequence_to_map(shared_memory_holder pMemory);
 			
 			template<typename T>
@@ -77,6 +82,8 @@ namespace YAML
 			// sequence
 			typedef std::vector<node *> node_seq;
 			node_seq m_sequence;
+			
+			mutable std::size_t m_seqSize;
 			
 			// map
 			typedef std::pair<node *, node *> kv_pair;

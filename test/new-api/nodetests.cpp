@@ -44,7 +44,8 @@ namespace Test
 			YAML_ASSERT(node.size() == 3);
 			YAML_ASSERT(node[0].as<int>() == 10);
 			YAML_ASSERT(node[1].as<std::string>() == "foo");
-			YAML_ASSERT(node[1].as<std::string>() == "monkey");
+			YAML_ASSERT(node[2].as<std::string>() == "monkey");
+			YAML_ASSERT(node.Type() == YAML::NodeType::Sequence);
 			return true;
 		}
 
