@@ -13,13 +13,43 @@ namespace YAML
 {
 	namespace detail
 	{
+		template<typename Key, typename Enable = void>
+		struct get_idx_helper {
+			static node *get(const Key& /* key */, shared_memory_holder /* pMemory */) {
+				return 0;
+			}
+		};
+
+		template<typename Key>
+		struct get_idx_helper<Key, typename boost::enable_if<boost::is_integral<Key> >::type> {
+			static node *get(const Key& key, shared_memory_holder pMemory) {
+				return 0;
+			}
+		};
+		
+		template<typename Key>
+		inline node *get_idx(const Key& key, shared_memory_holder pMemory) {
+			return get_idx_helper<Key>::get(key, pMemory);
+		}
+
 		// indexing
 		template<typename Key>
 		inline node& node_data::get(const Key& key, shared_memory_holder pMemory) const
 		{
-			if(m_type != NodeType::Map)
-				return pMemory->create_node();
-			
+			switch(m_type) {
+				case NodeType::Map:
+					break;
+				case NodeType::Undefined:
+				case NodeType::Null:
+					return pMemory->create_node();
+				case NodeType::Sequence:
+					if(node *pNode = get_idx(key, pMemory))
+						return *pNode;
+					return pMemory->create_node();
+				case NodeType::Scalar:
+					throw std::runtime_error("Can't call operator[] on a scalar");
+			}
+
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
 				if(equals(*it->first, key, pMemory))
 					return *it->second;
@@ -31,20 +61,19 @@ namespace YAML
 		template<typename Key>
 		inline node& node_data::get(const Key& key, shared_memory_holder pMemory)
 		{
-			// TODO: check if 'key' is index-like, and we're a sequence
-			
 			switch(m_type) {
-				case NodeType::Undefined:
-				case NodeType::Null:
-				case NodeType::Scalar:
-					m_type = NodeType::Map;
-					m_map.clear();
-					break;
-				case NodeType::Sequence:
-					convert_sequence_to_map(pMemory);
-					break;
 				case NodeType::Map:
 					break;
+				case NodeType::Undefined:
+				case NodeType::Null:
+				case NodeType::Sequence:
+					if(node *pNode = get_idx(key, pMemory))
+						return *pNode;
+					
+					convert_to_map(pMemory);
+					break;
+				case NodeType::Scalar:
+					throw std::runtime_error("Can't call operator[] on a scalar");
 			}
 			
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {

@@ -163,15 +163,17 @@ namespace YAML
 
 		void node_data::insert(node& key, node& value, shared_memory_holder pMemory)
 		{
-			if(m_type == NodeType::Undefined || m_type == NodeType::Null) {
-				m_type = NodeType::Map;
-				reset_map();
-			} else if(m_type == NodeType::Sequence) {
-				convert_sequence_to_map(pMemory);
+			switch(m_type) {
+				case NodeType::Map:
+					break;
+				case NodeType::Undefined:
+				case NodeType::Null:
+				case NodeType::Sequence:
+					convert_to_map(pMemory);
+					break;
+				case NodeType::Scalar:
+					throw std::runtime_error("Can't call operator[] on a scalar");
 			}
-
-			if(m_type != NodeType::Map)
-				throw std::runtime_error("Can't insert into a non-map node");
 
 			insert_map_pair(key, value);
 		}
@@ -193,17 +195,15 @@ namespace YAML
 		node& node_data::get(node& key, shared_memory_holder pMemory)
 		{
 			switch(m_type) {
-				case NodeType::Undefined:
-				case NodeType::Null:
-				case NodeType::Scalar:
-					m_type = NodeType::Map;
-					reset_map();
-					break;
-				case NodeType::Sequence:
-					convert_sequence_to_map(pMemory);
-					break;
 				case NodeType::Map:
 					break;
+				case NodeType::Undefined:
+				case NodeType::Null:
+				case NodeType::Sequence:
+					convert_to_map(pMemory);
+					break;
+				case NodeType::Scalar:
+					throw std::runtime_error("Can't call operator[] on a scalar");
 			}
 
 			for(node_map::const_iterator it=m_map.begin();it!=m_map.end();++it) {
@@ -248,6 +248,25 @@ namespace YAML
 			m_map[&key] = &value;
 			if(!key.is_defined() || !value.is_defined())
 				m_undefinedPairs.push_back(kv_pair(&key, &value));
+		}
+
+		void node_data::convert_to_map(shared_memory_holder pMemory)
+		{
+			switch(m_type) {
+				case NodeType::Undefined:
+				case NodeType::Null:
+					reset_map();
+					m_type = NodeType::Map;
+					break;
+				case NodeType::Sequence:
+					convert_sequence_to_map(pMemory);
+					break;
+				case NodeType::Map:
+					break;
+				case NodeType::Scalar:
+					assert(false);
+					break;
+			}
 		}
 
 		void node_data::convert_sequence_to_map(shared_memory_holder pMemory)

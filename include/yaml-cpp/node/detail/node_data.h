@@ -64,7 +64,9 @@ namespace YAML
 
 			void reset_sequence();
 			void reset_map();
+			
 			void insert_map_pair(node& key, node& value);
+			void convert_to_map(shared_memory_holder pMemory);
 			void convert_sequence_to_map(shared_memory_holder pMemory);
 			
 			template<typename T>
