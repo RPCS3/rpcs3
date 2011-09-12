@@ -47,7 +47,8 @@ namespace YAML
 		Nodes m_stack;
 		Nodes m_anchors;
 
-		Nodes m_keys;
+		typedef std::pair<detail::node *, bool> Key;
+		std::vector<Key> m_keys;
 		std::size_t m_mapDepth;
 	};
 }

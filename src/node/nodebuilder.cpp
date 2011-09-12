@@ -86,7 +86,7 @@ namespace YAML
 		RegisterAnchor(anchor, node);
 		
 		if(needsKey)
-			m_keys.push_back(&node);
+			m_keys.push_back(Key(&node, false));
 		
 		return node;
 	}
@@ -108,10 +108,12 @@ namespace YAML
 		if(collection.type() == NodeType::Sequence) {
 			collection.append(node, m_pMemory);
 		} else if(collection.type() == NodeType::Map) {
-			detail::node& key = *m_keys.back();
-			if(&key != &node) {
+			Key& key = m_keys.back();
+			if(key.second) {
+				collection.insert(*key.first, node, m_pMemory);
 				m_keys.pop_back();
-				collection.insert(key, node, m_pMemory);
+			} else {
+				key.second = true;
 			}
 		} else {
 			assert(false);
