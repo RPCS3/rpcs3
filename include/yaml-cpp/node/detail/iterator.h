@@ -46,9 +46,9 @@ namespace YAML
 			value_type dereference() const {
 				const typename base_type::value_type& v = *this->base();
 				if(v.pNode)
-					return value_type(Value(*v, m_pMemory));
+					return value_type(Node(*v, m_pMemory));
 				if(v.first && v.second)
-					return value_type(Value(*v.first, m_pMemory), Value(*v.second, m_pMemory));
+					return value_type(Node(*v.first, m_pMemory), Node(*v.second, m_pMemory));
 				return value_type();
 			}
 		

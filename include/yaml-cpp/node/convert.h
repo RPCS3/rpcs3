@@ -7,6 +7,7 @@
 
 
 #include "yaml-cpp/node/node.h"
+#include "yaml-cpp/node/iterator.h"
 #include <map>
 #include <sstream>
 
@@ -19,10 +20,10 @@ namespace YAML
 			return Node(rhs);
 		}
 		
-		static bool decode(const Node& value, std::string& rhs) {
-			if(value.Type() != NodeType::Scalar)
+		static bool decode(const Node& node, std::string& rhs) {
+			if(node.Type() != NodeType::Scalar)
 				return false;
-			rhs = value.scalar();
+			rhs = node.scalar();
 			return true;
 		}
 	};
@@ -36,10 +37,10 @@ namespace YAML
 			return Node(stream.str());\
 		}\
 		\
-		static bool decode(const Node& value, type& rhs) {\
-			if(value.Type() != NodeType::Scalar)\
+		static bool decode(const Node& node, type& rhs) {\
+			if(node.Type() != NodeType::Scalar)\
 				return false;\
-			std::stringstream stream(value.scalar());\
+			std::stringstream stream(node.scalar());\
 			stream >> rhs;\
 			return !!stream;\
 		}\
@@ -66,15 +67,35 @@ namespace YAML
 	template<typename K, typename V>
 	struct convert<std::map<K, V> > {
 		static Node encode(const std::map<K, V>& rhs) {
-			Node value(NodeType::Map);
+			Node node(NodeType::Map);
 			for(typename std::map<K, V>::const_iterator it=rhs.begin();it!=rhs.end();++it)
-				value[it->first] = it->second;
-			return value;
+				node[it->first] = it->second;
+			return node;
 		}
 		
-		static bool decode(const Node& value, std::map<K, V>& rhs) {
+		static bool decode(const Node& node, std::map<K, V>& rhs) {
 			rhs.clear();
 			return false;
+		}
+	};
+	
+	template<typename T>
+	struct convert<std::vector<T> > {
+		static Node encode(const std::vector<T>& rhs) {
+			Node node(NodeType::Sequence);
+			for(std::size_t i=0;i<rhs.size();i++)
+				node.append(rhs[i]);
+			return node;
+		}
+		
+		static bool decode(const Node& node, std::vector<T>& rhs) {
+			if(node.Type() != NodeType::Sequence)
+				return false;
+			
+			rhs.clear();
+			for(const_iterator it=node.begin();it!=node.end();++it)
+				rhs.push_back(it->as<T>());
+			return true;
 		}
 	};
 }

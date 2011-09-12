@@ -102,6 +102,36 @@ namespace Test
 			YAML_ASSERT(count == 1);
 			return true;
 		}
+		
+		TEST SimpleSubkeys()
+		{
+			YAML::Node node;
+			node["device"]["udid"] = "12345";
+			node["device"]["name"] = "iPhone";
+			node["device"]["os"] = "4.0";
+			node["username"] = "monkey";
+			YAML_ASSERT(node["device"]["udid"].as<std::string>() == "12345");
+			YAML_ASSERT(node["device"]["name"].as<std::string>() == "iPhone");
+			YAML_ASSERT(node["device"]["os"].as<std::string>() == "4.0");
+			YAML_ASSERT(node["username"].as<std::string>() == "monkey");
+			return true;
+		}
+		
+		TEST StdVector()
+		{
+			std::vector<int> primes;
+			primes.push_back(2);
+			primes.push_back(3);
+			primes.push_back(5);
+			primes.push_back(7);
+			primes.push_back(11);
+			primes.push_back(13);
+			
+			YAML::Node node;
+			node["primes"] = primes;
+			YAML_ASSERT(node["primes"].as<std::vector<int> >() == primes);
+			return true;
+		}
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -133,6 +163,8 @@ namespace Test
 		RunNodeTest(&Node::SimpleMap, "simple map", passed, total);
 		RunNodeTest(&Node::MapWithUndefinedValues, "map with undefined values", passed, total);
 		RunNodeTest(&Node::MapIteratorWithUndefinedValues, "map iterator with undefined values", passed, total);
+		RunNodeTest(&Node::SimpleSubkeys, "simple subkey", passed, total);
+		RunNodeTest(&Node::StdVector, "std::vector", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
