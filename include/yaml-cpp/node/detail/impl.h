@@ -24,18 +24,25 @@ namespace YAML
 		template<typename Key>
 		struct get_idx<Key, typename boost::enable_if<boost::is_unsigned<Key> >::type> {
 			static node *get(const std::vector<node *>& sequence, const Key& key, shared_memory_holder pMemory) {
-				if(key < sequence.size())
-					return sequence[key];
-				return 0;
+				return key < sequence.size() ? sequence[key] : 0;
+			}
+
+			static node *get(std::vector<node *>& sequence, const Key& key, shared_memory_holder pMemory) {
+				if(key > sequence.size())
+					return 0;
+				if(key == sequence.size())
+					sequence.push_back(&pMemory->create_node());
+				return sequence[key];
 			}
 		};
 		
 		template<typename Key>
 		struct get_idx<Key, typename boost::enable_if<boost::is_signed<Key> >::type> {
 			static node *get(const std::vector<node *>& sequence, const Key& key, shared_memory_holder pMemory) {
-				if(key < 0)
-					return 0;
-				return get_idx<std::size_t>::get(sequence, static_cast<std::size_t>(key), pMemory);
+				return key >= 0 ? get_idx<std::size_t>::get(sequence, static_cast<std::size_t>(key), pMemory) : 0;
+			}
+			static node *get(std::vector<node *>& sequence, const Key& key, shared_memory_holder pMemory) {
+				return key >= 0 ? get_idx<std::size_t>::get(sequence, static_cast<std::size_t>(key), pMemory) : 0;
 			}
 		};
 
@@ -74,8 +81,10 @@ namespace YAML
 				case NodeType::Undefined:
 				case NodeType::Null:
 				case NodeType::Sequence:
-					if(node *pNode = get_idx<Key>::get(m_sequence, key, pMemory))
+					if(node *pNode = get_idx<Key>::get(m_sequence, key, pMemory)) {
+						m_type = NodeType::Sequence;
 						return *pNode;
+					}
 					
 					convert_to_map(pMemory);
 					break;
