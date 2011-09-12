@@ -83,11 +83,8 @@ namespace YAML
 		detail::shared_memory_holder m_pMemory;
 		detail::node *m_pNode;
 	};
-	
-	int compare(const Node& lhs, const Node& rhs);
-	bool operator<(const Node& lhs, const Node& rhs);
-	
-	bool is(const Node& lhs, const Node& rhs);
+
+	bool operator==(const Node& lhs, const Node& rhs);
 	
 	template<typename T>
 	struct convert;

@@ -233,17 +233,8 @@ namespace YAML
 	}
 
 	// free functions
-	inline int compare(const Node& lhs, const Node& rhs)
-	{
-		return 0;
-	}
-	
-	inline bool operator<(const Node& lhs, const Node& rhs)
-	{
-		return false;
-	}
-	
-	inline bool is(const Node& lhs, const Node& rhs)
+
+	inline bool operator==(const Node& lhs, const Node& rhs)
 	{
 		return lhs.is(rhs);
 	}
