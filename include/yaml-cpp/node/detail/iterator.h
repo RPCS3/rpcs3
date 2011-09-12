@@ -23,7 +23,7 @@ namespace YAML
 		iterator_base<V>,
 		node_iterator,
 		V,
-		std::bidirectional_iterator_tag>
+		std::forward_iterator_tag>
 		{
 		private:
 			template<typename> friend class iterator_base;
@@ -42,7 +42,6 @@ namespace YAML
 			friend class boost::iterator_core_access;
 
 			void increment() { this->base_reference() = boost::next(this->base()); }
-			void decrement() { this->base_reference() = boost::prior(this->base()); }
 			
 			value_type dereference() const {
 				const typename base_type::value_type& v = *this->base();

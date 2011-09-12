@@ -54,7 +54,7 @@ namespace YAML
 		class node_iterator_base: public boost::iterator_facade<
 		node_iterator_base<V>,
 		node_iterator_value<V>,
-		std::bidirectional_iterator_tag,
+		std::forward_iterator_tag,
 		node_iterator_value<V> >
 		{
 		private:
@@ -67,11 +67,13 @@ namespace YAML
 			
 			node_iterator_base(): m_type(iterator_type::None) {}
 			explicit node_iterator_base(SeqIter seqIt): m_type(iterator_type::Sequence), m_seqIt(seqIt) {}
-			explicit node_iterator_base(MapIter mapIt): m_type(iterator_type::Map), m_mapIt(mapIt) {}
+			explicit node_iterator_base(MapIter mapIt, MapIter mapEnd): m_type(iterator_type::Map), m_mapIt(mapIt), m_mapEnd(mapEnd) {
+				m_mapIt = increment_until_defined(m_mapIt);
+			}
 			
 			template<typename W>
 			node_iterator_base(const node_iterator_base<W>& rhs, typename boost::enable_if<boost::is_convertible<W*, V*>, enabler>::type = enabler())
-			: m_type(rhs.m_type), m_seqIt(rhs.m_seqIt), m_mapIt(rhs.m_mapIt) {}
+			: m_type(rhs.m_type), m_seqIt(rhs.m_seqIt), m_mapIt(rhs.m_mapIt), m_mapEnd(rhs.m_mapEnd) {}
 			
 		private:
 			friend class boost::iterator_core_access;
@@ -93,19 +95,16 @@ namespace YAML
 			void increment() {
 				switch(m_type) {
 					case iterator_type::None: break;
-					case iterator_type::Sequence: ++m_seqIt; break;
-					case iterator_type::Map: ++m_mapIt; break;
+					case iterator_type::Sequence:
+						++m_seqIt;
+						break;
+					case iterator_type::Map:
+						++m_mapIt;
+						m_mapIt = increment_until_defined(m_mapIt);
+						break;
 				}
 			}
-			
-			void decrement() {
-				switch(m_type) {
-					case iterator_type::None: break;
-					case iterator_type::Sequence: --m_seqIt; break;
-					case iterator_type::Map: --m_mapIt; break;
-				}
-			}
-			
+
 			value_type dereference() const {
 				switch(m_type) {
 					case iterator_type::None: return value_type();
@@ -115,11 +114,21 @@ namespace YAML
 				return value_type();
 			}
 			
+			MapIter increment_until_defined(MapIter it) {
+				while(it != m_mapEnd && !is_defined(it))
+					++it;
+				return it;
+			}
+			
+			bool is_defined(MapIter it) const {
+				return it->first->is_defined() && it->second->is_defined();
+			}
+
 		private:
 			typename iterator_type::value m_type;
 
 			SeqIter m_seqIt;
-			MapIter m_mapIt;
+			MapIter m_mapIt, m_mapEnd;
 		};
 
 		typedef node_iterator_base<node> node_iterator;

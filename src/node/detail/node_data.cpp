@@ -106,7 +106,7 @@ namespace YAML
 			
 			switch(m_type) {
 				case NodeType::Sequence: return const_node_iterator(m_sequence.begin());
-				case NodeType::Map: return const_node_iterator(m_map.begin());
+				case NodeType::Map: return const_node_iterator(m_map.begin(), m_map.end());
 				default: return const_node_iterator();
 			}
 		}
@@ -118,7 +118,7 @@ namespace YAML
 
 			switch(m_type) {
 				case NodeType::Sequence: return node_iterator(m_sequence.begin());
-				case NodeType::Map: return node_iterator(m_map.begin());
+				case NodeType::Map: return node_iterator(m_map.begin(), m_map.end());
 				default: return node_iterator();
 			}
 		}
@@ -130,7 +130,7 @@ namespace YAML
 
 			switch(m_type) {
 				case NodeType::Sequence: return const_node_iterator(m_sequence.end());
-				case NodeType::Map: return const_node_iterator(m_map.end());
+				case NodeType::Map: return const_node_iterator(m_map.end(), m_map.end());
 				default: return const_node_iterator();
 			}
 		}
@@ -142,7 +142,7 @@ namespace YAML
 
 			switch(m_type) {
 				case NodeType::Sequence: return node_iterator(m_sequence.end());
-				case NodeType::Map: return node_iterator(m_map.end());
+				case NodeType::Map: return node_iterator(m_map.end(), m_map.end());
 				default: return node_iterator();
 			}
 		}
