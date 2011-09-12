@@ -34,12 +34,27 @@ namespace Test
 			return true;
 		}
 
-		TEST SimpleSequence()
+		TEST SimpleAppendSequence()
 		{
 			YAML::Node node;
 			node.append(10);
 			node.append("foo");
 			node.append("monkey");
+			YAML_ASSERT(node.Type() == YAML::NodeType::Sequence);
+			YAML_ASSERT(node.size() == 3);
+			YAML_ASSERT(node[0].as<int>() == 10);
+			YAML_ASSERT(node[1].as<std::string>() == "foo");
+			YAML_ASSERT(node[2].as<std::string>() == "monkey");
+			YAML_ASSERT(node.Type() == YAML::NodeType::Sequence);
+			return true;
+		}
+
+		TEST SimpleAssignSequence()
+		{
+			YAML::Node node;
+			node[0] = 10;
+			node[1] = "foo";
+			node[2] = "monkey";
 			YAML_ASSERT(node.Type() == YAML::NodeType::Sequence);
 			YAML_ASSERT(node.size() == 3);
 			YAML_ASSERT(node[0].as<int>() == 10);
@@ -113,7 +128,8 @@ namespace Test
 
 		RunNodeTest(&Node::SimpleScalar, "simple scalar", passed, total);
 		RunNodeTest(&Node::IntScalar, "int scalar", passed, total);
-		RunNodeTest(&Node::SimpleSequence, "simple sequence", passed, total);
+		RunNodeTest(&Node::SimpleAppendSequence, "simple append sequence", passed, total);
+		RunNodeTest(&Node::SimpleAssignSequence, "simple assign sequence", passed, total);
 		RunNodeTest(&Node::SimpleMap, "simple map", passed, total);
 		RunNodeTest(&Node::MapWithUndefinedValues, "map with undefined values", passed, total);
 		RunNodeTest(&Node::MapIteratorWithUndefinedValues, "map iterator with undefined values", passed, total);

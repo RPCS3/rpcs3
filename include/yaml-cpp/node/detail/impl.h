@@ -8,29 +8,36 @@
 
 #include "yaml-cpp/node/detail/node.h"
 #include "yaml-cpp/node/detail/node_data.h"
+#include <boost/type_traits.hpp>
 
 namespace YAML
 {
 	namespace detail
 	{
 		template<typename Key, typename Enable = void>
-		struct get_idx_helper {
-			static node *get(const Key& /* key */, shared_memory_holder /* pMemory */) {
+		struct get_idx {
+			static node *get(const std::vector<node *>& /* sequence */, const Key& /* key */, shared_memory_holder /* pMemory */) {
 				return 0;
 			}
 		};
 
 		template<typename Key>
-		struct get_idx_helper<Key, typename boost::enable_if<boost::is_integral<Key> >::type> {
-			static node *get(const Key& key, shared_memory_holder pMemory) {
+		struct get_idx<Key, typename boost::enable_if<boost::is_unsigned<Key> >::type> {
+			static node *get(const std::vector<node *>& sequence, const Key& key, shared_memory_holder pMemory) {
+				if(key < sequence.size())
+					return sequence[key];
 				return 0;
 			}
 		};
 		
 		template<typename Key>
-		inline node *get_idx(const Key& key, shared_memory_holder pMemory) {
-			return get_idx_helper<Key>::get(key, pMemory);
-		}
+		struct get_idx<Key, typename boost::enable_if<boost::is_signed<Key> >::type> {
+			static node *get(const std::vector<node *>& sequence, const Key& key, shared_memory_holder pMemory) {
+				if(key < 0)
+					return 0;
+				return get_idx<std::size_t>::get(sequence, static_cast<std::size_t>(key), pMemory);
+			}
+		};
 
 		// indexing
 		template<typename Key>
@@ -43,7 +50,7 @@ namespace YAML
 				case NodeType::Null:
 					return pMemory->create_node();
 				case NodeType::Sequence:
-					if(node *pNode = get_idx(key, pMemory))
+					if(node *pNode = get_idx<Key>::get(m_sequence, key, pMemory))
 						return *pNode;
 					return pMemory->create_node();
 				case NodeType::Scalar:
@@ -67,7 +74,7 @@ namespace YAML
 				case NodeType::Undefined:
 				case NodeType::Null:
 				case NodeType::Sequence:
-					if(node *pNode = get_idx(key, pMemory))
+					if(node *pNode = get_idx<Key>::get(m_sequence, key, pMemory))
 						return *pNode;
 					
 					convert_to_map(pMemory);
