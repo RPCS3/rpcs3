@@ -23,7 +23,8 @@ namespace YAML
 		iterator_base<V>,
 		node_iterator,
 		V,
-		std::forward_iterator_tag>
+		std::forward_iterator_tag,
+		V>
 		{
 		private:
 			template<typename> friend class iterator_base;

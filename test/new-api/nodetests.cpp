@@ -148,6 +148,21 @@ namespace Test
 			YAML_ASSERT(node["primes"].as<std::list<int> >() == primes);
 			return true;
 		}
+
+		TEST StdMap()
+		{
+			std::map<int, int> squares;
+			squares[0] = 0;
+			squares[1] = 1;
+			squares[2] = 4;
+			squares[3] = 9;
+			squares[4] = 16;
+			
+			YAML::Node node;
+			node["squares"] = squares;
+			YAML_ASSERT((node["squares"].as<std::map<int, int> >() == squares));
+			return true;
+		}
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -182,6 +197,7 @@ namespace Test
 		RunNodeTest(&Node::SimpleSubkeys, "simple subkey", passed, total);
 		RunNodeTest(&Node::StdVector, "std::vector", passed, total);
 		RunNodeTest(&Node::StdList, "std::list", passed, total);
+		RunNodeTest(&Node::StdMap, "std::map", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

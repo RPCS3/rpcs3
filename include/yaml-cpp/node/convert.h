@@ -76,8 +76,13 @@ namespace YAML
 		}
 		
 		static bool decode(const Node& node, std::map<K, V>& rhs) {
+			if(node.Type() != NodeType::Map)
+				return false;
+
 			rhs.clear();
-			return false;
+			for(const_iterator it=node.begin();it!=node.end();++it)
+				rhs[it->first.as<K>()] = it->second.as<V>();
+			return true;
 		}
 	};
 	
