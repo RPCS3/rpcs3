@@ -36,6 +36,7 @@ namespace YAML
 		
 	private:
 		detail::node& Push(anchor_t anchor);
+		void Push(detail::node& node);
 		void Pop();
 		void RegisterAnchor(anchor_t anchor, detail::node& node);
 		
@@ -47,8 +48,8 @@ namespace YAML
 		Nodes m_stack;
 		Nodes m_anchors;
 
-		typedef std::pair<detail::node *, bool> Key;
-		std::vector<Key> m_keys;
+		typedef std::pair<detail::node *, bool> PushedKey;
+		std::vector<PushedKey> m_keys;
 		std::size_t m_mapDepth;
 	};
 }

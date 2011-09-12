@@ -41,7 +41,7 @@ namespace YAML
 	void NodeBuilder::OnAlias(const Mark& /*mark*/, anchor_t anchor)
 	{
 		detail::node& node = *m_anchors[anchor];
-		m_stack.push_back(&node);
+		Push(node);
 		Pop();
 	}
 	
@@ -79,16 +79,19 @@ namespace YAML
 
 	detail::node& NodeBuilder::Push(anchor_t anchor)
 	{
+		detail::node& node = m_pMemory->create_node();
+		RegisterAnchor(anchor, node);
+		Push(node);
+		return node;
+	}
+	
+	void NodeBuilder::Push(detail::node& node)
+	{
 		const bool needsKey = (!m_stack.empty() && m_stack.back()->type() == NodeType::Map && m_keys.size() < m_mapDepth);
 		
-		detail::node& node = m_pMemory->create_node();
 		m_stack.push_back(&node);
-		RegisterAnchor(anchor, node);
-		
 		if(needsKey)
-			m_keys.push_back(Key(&node, false));
-		
-		return node;
+			m_keys.push_back(PushedKey(&node, false));
 	}
 	
 	void NodeBuilder::Pop()
@@ -108,7 +111,8 @@ namespace YAML
 		if(collection.type() == NodeType::Sequence) {
 			collection.append(node, m_pMemory);
 		} else if(collection.type() == NodeType::Map) {
-			Key& key = m_keys.back();
+			assert(!m_keys.empty());
+			PushedKey& key = m_keys.back();
 			if(key.second) {
 				collection.insert(*key.first, node, m_pMemory);
 				m_keys.pop_back();
