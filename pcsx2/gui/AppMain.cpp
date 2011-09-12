@@ -231,7 +231,7 @@ void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 	const bool isDown = (ev.evt == KEYPRESS);
 
 #ifdef __WXMSW__
-	const int vkey = wxCharCodeMSWToWX( ev.key );
+	const int vkey = wxCharCodeMSWToWX( ev.key );	//returns 0 if plain ascii value or a WXK_... (<=32 or >=300) if a special key
 #elif defined( __WXGTK__ )
 	const int vkey = TranslateGDKtoWXK( ev.key );
 #else
@@ -247,7 +247,7 @@ void Pcsx2App::PadKeyDispatch( const keyEvent& ev )
 		case WXK_MENU:		m_kevt.m_altDown		= isDown; return;
 	}
 
-	m_kevt.m_keyCode = vkey;
+	m_kevt.m_keyCode = vkey? vkey : ev.key;
 
 	if( m_kevt.GetEventType() == wxEVT_KEY_DOWN )
 	{
