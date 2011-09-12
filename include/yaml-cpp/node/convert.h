@@ -8,8 +8,10 @@
 
 #include "yaml-cpp/node/node.h"
 #include "yaml-cpp/node/iterator.h"
+#include <list>
 #include <map>
 #include <sstream>
+#include <vector>
 
 namespace YAML
 {
@@ -83,12 +85,32 @@ namespace YAML
 	struct convert<std::vector<T> > {
 		static Node encode(const std::vector<T>& rhs) {
 			Node node(NodeType::Sequence);
-			for(std::size_t i=0;i<rhs.size();i++)
-				node.append(rhs[i]);
+			for(typename std::vector<T>::const_iterator it=rhs.begin();it!=rhs.end();++it)
+				node.append(*it);
 			return node;
 		}
 		
 		static bool decode(const Node& node, std::vector<T>& rhs) {
+			if(node.Type() != NodeType::Sequence)
+				return false;
+			
+			rhs.clear();
+			for(const_iterator it=node.begin();it!=node.end();++it)
+				rhs.push_back(it->as<T>());
+			return true;
+		}
+	};
+	
+	template<typename T>
+	struct convert<std::list<T> > {
+		static Node encode(const std::list<T>& rhs) {
+			Node node(NodeType::Sequence);
+			for(typename std::list<T>::const_iterator it=rhs.begin();it!=rhs.end();++it)
+				node.append(*it);
+			return node;
+		}
+		
+		static bool decode(const Node& node, std::list<T>& rhs) {
 			if(node.Type() != NodeType::Sequence)
 				return false;
 			

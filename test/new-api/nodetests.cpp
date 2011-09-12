@@ -132,6 +132,22 @@ namespace Test
 			YAML_ASSERT(node["primes"].as<std::vector<int> >() == primes);
 			return true;
 		}
+
+		TEST StdList()
+		{
+			std::list<int> primes;
+			primes.push_back(2);
+			primes.push_back(3);
+			primes.push_back(5);
+			primes.push_back(7);
+			primes.push_back(11);
+			primes.push_back(13);
+			
+			YAML::Node node;
+			node["primes"] = primes;
+			YAML_ASSERT(node["primes"].as<std::list<int> >() == primes);
+			return true;
+		}
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -165,6 +181,7 @@ namespace Test
 		RunNodeTest(&Node::MapIteratorWithUndefinedValues, "map iterator with undefined values", passed, total);
 		RunNodeTest(&Node::SimpleSubkeys, "simple subkey", passed, total);
 		RunNodeTest(&Node::StdVector, "std::vector", passed, total);
+		RunNodeTest(&Node::StdList, "std::list", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
