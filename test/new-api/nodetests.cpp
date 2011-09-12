@@ -163,6 +163,31 @@ namespace Test
 			YAML_ASSERT((node["squares"].as<std::map<int, int> >() == squares));
 			return true;
 		}
+		
+		TEST SimpleAlias()
+		{
+			YAML::Node node;
+			node["foo"] = "value";
+			node["bar"] = node["foo"];
+			YAML_ASSERT(node["foo"].as<std::string>() == "value");
+			YAML_ASSERT(node["bar"].as<std::string>() == "value");
+			YAML_ASSERT(node["foo"] == node["bar"]);
+			YAML_ASSERT(node.size() == 2);
+			return true;
+		}
+
+		TEST AliasAsKey()
+		{
+			YAML::Node node;
+			node["foo"] = "value";
+			YAML::Node value = node["foo"];
+			node[value] = "foo";
+			YAML_ASSERT(node["foo"].as<std::string>() == "value");
+			YAML_ASSERT(node[value].as<std::string>() == "foo");
+			YAML_ASSERT(node["value"].as<std::string>() == "foo");
+			YAML_ASSERT(node.size() == 2);
+			return true;
+		}
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -198,6 +223,8 @@ namespace Test
 		RunNodeTest(&Node::StdVector, "std::vector", passed, total);
 		RunNodeTest(&Node::StdList, "std::list", passed, total);
 		RunNodeTest(&Node::StdMap, "std::map", passed, total);
+		RunNodeTest(&Node::SimpleAlias, "simple alias", passed, total);
+		RunNodeTest(&Node::AliasAsKey, "alias as key", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
