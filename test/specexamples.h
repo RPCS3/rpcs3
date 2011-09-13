@@ -441,7 +441,6 @@ namespace Test {
 		"!yaml!str \"foo\"";
 		
 		const char *ex6_17 =
-		std::string input =
 		"%TAG ! !foo\n"
 		"%TAG ! !foo\n"
 		"bar";
@@ -687,17 +686,17 @@ namespace Test {
 		" \t\n"
 		" detected\n";
 		
-		const char *ex8_3_a =
+		const char *ex8_3a =
 		"- |\n"
 		"  \n"
 		" text";
 		
-		const char *ex8_3_b =
+		const char *ex8_3b =
 		"- >\n"
 		"  text\n"
 		" text";
 		
-		const char *ex8_3_b =
+		const char *ex8_3c =
 		"- |2\n"
 		" text";
 		

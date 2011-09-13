@@ -1,62 +1,231 @@
 #include "spectests.h"
+#include "specexamples.h"
+#include "yaml-cpp/yaml.h"
+
+#define YAML_ASSERT(cond) do { if(!(cond)) return "  Assert failed: " #cond; } while(false)
 
 namespace Test
 {
 	namespace Spec
 	{
 		// 2.1
-		TEST SeqScalars() { return "  not written yet"; }
+		TEST SeqScalars() {
+			YAML::Node doc = YAML::Parse(ex2_1);
+			YAML_ASSERT(doc.Type() == YAML::NodeType::Sequence);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].as<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc[1].as<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc[2].as<std::string>() == "Ken Griffey");
+			return true;
+		}
 		
 		// 2.2
-		TEST MappingScalarsToScalars() { return "  not written yet"; }
+		TEST MappingScalarsToScalars() {
+			YAML::Node doc = YAML::Parse(ex2_2);
+			YAML_ASSERT(doc.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["hr"].as<std::string>() == "65");
+			YAML_ASSERT(doc["avg"].as<std::string>() == "0.278");
+			YAML_ASSERT(doc["rbi"].as<std::string>() == "147");
+			return true;
+		}
 		
 		// 2.3
-		TEST MappingScalarsToSequences() { return "  not written yet"; }
+		TEST MappingScalarsToSequences() {
+			YAML::Node doc = YAML::Parse(ex2_3);
+			YAML_ASSERT(doc.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["american"].size() == 3);
+			YAML_ASSERT(doc["american"][0].as<std::string>() == "Boston Red Sox");
+			YAML_ASSERT(doc["american"][1].as<std::string>() == "Detroit Tigers");
+			YAML_ASSERT(doc["american"][2].as<std::string>() == "New York Yankees");
+			YAML_ASSERT(doc["national"].size() == 3);
+			YAML_ASSERT(doc["national"][0].as<std::string>() == "New York Mets");
+			YAML_ASSERT(doc["national"][1].as<std::string>() == "Chicago Cubs");
+			YAML_ASSERT(doc["national"][2].as<std::string>() == "Atlanta Braves");
+			return true;
+		}
 		
 		// 2.4
-		TEST SequenceOfMappings() { return "  not written yet"; }
+		TEST SequenceOfMappings() {
+			YAML::Node doc = YAML::Parse(ex2_4);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[0].size() == 3);
+			YAML_ASSERT(doc[0]["name"].as<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc[0]["hr"].as<std::string>() == "65");
+			YAML_ASSERT(doc[0]["avg"].as<std::string>() == "0.278");
+			YAML_ASSERT(doc[1].size() == 3);
+			YAML_ASSERT(doc[1]["name"].as<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc[1]["hr"].as<std::string>() == "63");
+			YAML_ASSERT(doc[1]["avg"].as<std::string>() == "0.288");
+			return true;
+		}
 		
 		// 2.5
-		TEST SequenceOfSequences() { return "  not written yet"; }
+		TEST SequenceOfSequences() {
+			YAML::Node doc = YAML::Parse(ex2_5);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].size() == 3);
+			YAML_ASSERT(doc[0][0].as<std::string>() == "name");
+			YAML_ASSERT(doc[0][1].as<std::string>() == "hr");
+			YAML_ASSERT(doc[0][2].as<std::string>() == "avg");
+			YAML_ASSERT(doc[1].size() == 3);
+			YAML_ASSERT(doc[1][0].as<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc[1][1].as<std::string>() == "65");
+			YAML_ASSERT(doc[1][2].as<std::string>() == "0.278");
+			YAML_ASSERT(doc[2].size() == 3);
+			YAML_ASSERT(doc[2][0].as<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc[2][1].as<std::string>() == "63");
+			YAML_ASSERT(doc[2][2].as<std::string>() == "0.288");
+			return true;
+		}
 		
 		// 2.6
-		TEST MappingOfMappings() { return "  not written yet"; }
+		TEST MappingOfMappings() {
+			YAML::Node doc = YAML::Parse(ex2_6);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["Mark McGwire"].size() == 2);
+			YAML_ASSERT(doc["Mark McGwire"]["hr"].as<std::string>() == "65");
+			YAML_ASSERT(doc["Mark McGwire"]["avg"].as<std::string>() == "0.278");
+			YAML_ASSERT(doc["Sammy Sosa"].size() == 2);
+			YAML_ASSERT(doc["Sammy Sosa"]["hr"].as<std::string>() == "63");
+			YAML_ASSERT(doc["Sammy Sosa"]["avg"].as<std::string>() == "0.288");
+			return true;
+		}
 		
 		// 2.7
-		TEST TwoDocumentsInAStream() { return "  not written yet"; }
+		TEST TwoDocumentsInAStream() {
+			return "  not written yet"; 
+		}
 		
 		// 2.8
-		TEST PlayByPlayFeed() { return "  not written yet"; }
+		TEST PlayByPlayFeed() {
+			return "  not written yet";
+		}
 		
 		// 2.9
-		TEST SingleDocumentWithTwoComments() { return "  not written yet"; }
+		TEST SingleDocumentWithTwoComments() {
+			YAML::Node doc = YAML::Parse(ex2_9);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["hr"].size() == 2);
+			YAML_ASSERT(doc["hr"][0].as<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc["hr"][1].as<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc["rbi"].size() == 2);
+			YAML_ASSERT(doc["rbi"][0].as<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc["rbi"][1].as<std::string>() == "Ken Griffey");
+			return true;
+		}
 		
 		// 2.10
-		TEST SimpleAnchor() { return "  not written yet"; }
+		TEST SimpleAnchor() {
+			YAML::Node doc = YAML::Parse(ex2_10);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["hr"].size() == 2);
+			YAML_ASSERT(doc["hr"][0].as<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc["hr"][1].as<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc["rbi"].size() == 2);
+			YAML_ASSERT(doc["rbi"][0].as<std::string>() == "Sammy Sosa");
+			YAML_ASSERT(doc["rbi"][1].as<std::string>() == "Ken Griffey");
+			return true;
+		}
 		
 		// 2.11
-		TEST MappingBetweenSequences() { return "  not written yet"; }
+		TEST MappingBetweenSequences() {
+			YAML::Node doc = YAML::Parse(ex2_11);
+
+			std::vector<std::string> tigers_cubs;
+			tigers_cubs.push_back("Detroit Tigers");
+			tigers_cubs.push_back("Chicago cubs");
+			
+			std::vector<std::string> yankees_braves;
+			yankees_braves.push_back("New York Yankees");
+			yankees_braves.push_back("Atlanta Braves");
+			
+			
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[tigers_cubs].size() == 1);
+			YAML_ASSERT(doc[tigers_cubs][0].as<std::string>() == "2001-07-23");
+			YAML_ASSERT(doc[yankees_braves].size() == 3);
+			YAML_ASSERT(doc[yankees_braves][0].as<std::string>() == "2001-07-02");
+			YAML_ASSERT(doc[yankees_braves][1].as<std::string>() == "2001-08-12");
+			YAML_ASSERT(doc[yankees_braves][2].as<std::string>() == "2001-08-14");
+			return true;
+		}
 		
 		// 2.12
-		TEST CompactNestedMapping() { return "  not written yet"; }
+		TEST CompactNestedMapping() {
+			YAML::Node doc = YAML::Parse(ex2_12);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].size() == 2);
+			YAML_ASSERT(doc[0]["item"].as<std::string>() == "Super Hoop");
+			YAML_ASSERT(doc[0]["quantity"].as<int>() == 1);
+			YAML_ASSERT(doc[1].size() == 2);
+			YAML_ASSERT(doc[1]["item"].as<std::string>() == "Basketball");
+			YAML_ASSERT(doc[1]["quantity"].as<int>() == 4);
+			YAML_ASSERT(doc[2].size() == 2);
+			YAML_ASSERT(doc[2]["item"].as<std::string>() == "Big Shoes");
+			YAML_ASSERT(doc[2]["quantity"].as<int>() == 1);
+			return true;
+		}
 		
 		// 2.13
-		TEST InLiteralsNewlinesArePreserved() { return "  not written yet"; }
+		TEST InLiteralsNewlinesArePreserved() {
+			YAML::Node doc = YAML::Parse(ex2_13);
+			YAML_ASSERT(doc.as<std::string>() ==
+						"\\//||\\/||\n"
+						"// ||  ||__");
+			return true;
+		}
 		
 		// 2.14
-		TEST InFoldedScalarsNewlinesBecomeSpaces() { return "  not written yet"; }
+		TEST InFoldedScalarsNewlinesBecomeSpaces() {
+			YAML::Node doc = YAML::Parse(ex2_14);
+			YAML_ASSERT(doc.as<std::string>() == "Mark McGwire's year was crippled by a knee injury.");
+			return true;
+		}
 		
 		// 2.15
-		TEST FoldedNewlinesArePreservedForMoreIndentedAndBlankLines() { return "  not written yet"; }
+		TEST FoldedNewlinesArePreservedForMoreIndentedAndBlankLines() {
+			YAML::Node doc = YAML::Parse(ex2_15);
+			YAML_ASSERT(doc.as<std::string>() ==
+						"Sammy Sosa completed another fine season with great stats.\n\n"
+						"  63 Home Runs\n"
+						"  0.288 Batting Average\n\n"
+						"What a year!");
+			return true;
+		}
 		
 		// 2.16
-		TEST IndentationDeterminesScope() { return "  not written yet"; }
+		TEST IndentationDeterminesScope() {
+			YAML::Node doc = YAML::Parse(ex2_16);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["name"].as<std::string>() == "Mark McGwire");
+			YAML_ASSERT(doc["accomplishment"].as<std::string>() == "Mark set a major league home run record in 1998.\n");
+			YAML_ASSERT(doc["stats"].as<std::string>() == "65 Home Runs\n0.278 Batting Average\n");
+			return true;
+		}
 		
 		// 2.17
-		TEST QuotedScalars() { return "  not written yet"; }
+		TEST QuotedScalars() {
+			YAML::Node doc = YAML::Parse(ex2_17);
+			YAML_ASSERT(doc.size() == 6);
+			YAML_ASSERT(doc["unicode"].as<std::string>() == "Sosa did fine.\xe2\x98\xba");
+			YAML_ASSERT(doc["control"].as<std::string>() == "\b1998\t1999\t2000\n");
+			YAML_ASSERT(doc["hex esc"].as<std::string>() == "\x0d\x0a is \r\n");
+			YAML_ASSERT(doc["single"].as<std::string>() == "\"Howdy!\" he cried.");
+			YAML_ASSERT(doc["quoted"].as<std::string>() == " # Not a 'comment'.");
+			YAML_ASSERT(doc["tie-fighter"].as<std::string>() == "|\\-*-/|");
+			return true;
+		}
 		
 		// 2.18
-		TEST MultiLineFlowScalars() { return "  not written yet"; }
+		TEST MultiLineFlowScalars() {
+			YAML::Node doc = YAML::Parse(ex2_18);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["plain"].as<std::string>() == "This unquoted scalar spans many lines.");
+			YAML_ASSERT(doc["quoted"].as<std::string>() == "So does this quoted scalar.\n");
+			return true;
+		}
 		
 		// TODO: 2.19 - 2.22 schema tags
 		
