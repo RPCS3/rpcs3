@@ -95,12 +95,47 @@ namespace Test
 		
 		// 2.7
 		TEST TwoDocumentsInAStream() {
-			return "  not written yet"; 
+			std::vector<YAML::Node> docs = YAML::LoadAll(ex2_7);
+			YAML_ASSERT(docs.size() == 2);
+			
+			{
+				YAML::Node doc = docs[0];
+				YAML_ASSERT(doc.size() == 3);
+				YAML_ASSERT(doc[0].as<std::string>() == "Mark McGwire");
+				YAML_ASSERT(doc[1].as<std::string>() == "Sammy Sosa");
+				YAML_ASSERT(doc[2].as<std::string>() == "Ken Griffey");
+			}
+
+			{
+				YAML::Node doc = docs[1];
+				YAML_ASSERT(doc.size() == 2);
+				YAML_ASSERT(doc[0].as<std::string>() == "Chicago Cubs");
+				YAML_ASSERT(doc[1].as<std::string>() == "St Louis Cardinals");
+			}
+			return true;
 		}
 		
 		// 2.8
 		TEST PlayByPlayFeed() {
-			return "  not written yet";
+			std::vector<YAML::Node> docs = YAML::LoadAll(ex2_8);
+			YAML_ASSERT(docs.size() == 2);
+			
+			{
+				YAML::Node doc = docs[0];
+				YAML_ASSERT(doc.size() == 3);
+				YAML_ASSERT(doc["time"].as<std::string>() == "20:03:20");
+				YAML_ASSERT(doc["player"].as<std::string>() == "Sammy Sosa");
+				YAML_ASSERT(doc["action"].as<std::string>() == "strike (miss)");
+			}
+
+			{
+				YAML::Node doc = docs[1];
+				YAML_ASSERT(doc.size() == 3);
+				YAML_ASSERT(doc["time"].as<std::string>() == "20:03:47");
+				YAML_ASSERT(doc["player"].as<std::string>() == "Sammy Sosa");
+				YAML_ASSERT(doc["action"].as<std::string>() == "grand slam");
+			}
+			return true;
 		}
 		
 		// 2.9
@@ -346,7 +381,44 @@ namespace Test
 		}
 		
 		// 2.28
-		TEST LogFile() { return "  not written yet"; }
+		TEST LogFile() {
+			std::vector<YAML::Node> docs = YAML::LoadAll(ex2_28);
+			YAML_ASSERT(docs.size() == 3);
+
+			{
+				YAML::Node doc = docs[0];
+				YAML_ASSERT(doc.size() == 3);
+				YAML_ASSERT(doc["Time"].as<std::string>() == "2001-11-23 15:01:42 -5");
+				YAML_ASSERT(doc["User"].as<std::string>() == "ed");
+				YAML_ASSERT(doc["Warning"].as<std::string>() == "This is an error message for the log file");
+			}
+
+			{
+				YAML::Node doc = docs[1];
+				YAML_ASSERT(doc.size() == 3);
+				YAML_ASSERT(doc["Time"].as<std::string>() == "2001-11-23 15:02:31 -5");
+				YAML_ASSERT(doc["User"].as<std::string>() == "ed");
+				YAML_ASSERT(doc["Warning"].as<std::string>() == "A slightly different error message.");
+			}
+
+			{
+				YAML::Node doc = docs[2];
+				YAML_ASSERT(doc.size() == 4);
+				YAML_ASSERT(doc["Date"].as<std::string>() == "2001-11-23 15:03:17 -5");
+				YAML_ASSERT(doc["User"].as<std::string>() == "ed");
+				YAML_ASSERT(doc["Fatal"].as<std::string>() == "Unknown variable \"bar\"");
+				YAML_ASSERT(doc["Stack"].size() == 2);
+				YAML_ASSERT(doc["Stack"][0].size() == 3);
+				YAML_ASSERT(doc["Stack"][0]["file"].as<std::string>() == "TopClass.py");
+				YAML_ASSERT(doc["Stack"][0]["line"].as<std::string>() == "23");
+				YAML_ASSERT(doc["Stack"][0]["code"].as<std::string>() == "x = MoreObject(\"345\\n\")\n");
+				YAML_ASSERT(doc["Stack"][1].size() == 3);
+				YAML_ASSERT(doc["Stack"][1]["file"].as<std::string>() == "MoreClass.py");
+				YAML_ASSERT(doc["Stack"][1]["line"].as<std::string>() == "58");
+				YAML_ASSERT(doc["Stack"][1]["code"].as<std::string>() == "foo = bar");
+			}
+			return true;
+		}
 		
 		// TODO: 5.1 - 5.2 BOM
 		
@@ -615,7 +687,23 @@ namespace Test
 		}
 		
 		// 6.18
-		TEST PrimaryTagHandle() { return "  not written yet"; }
+		TEST PrimaryTagHandle() {
+			std::vector<YAML::Node> docs = YAML::LoadAll(ex6_18);
+			YAML_ASSERT(docs.size() == 2);
+			
+			{
+				YAML::Node doc = docs[0];
+				YAML_ASSERT(doc.Tag() == "!foo");
+				YAML_ASSERT(doc.as<std::string>() == "bar");
+			}
+
+			{
+				YAML::Node doc = docs[1];
+				YAML_ASSERT(doc.Tag() == "tag:example.com,2000:app/foo");
+				YAML_ASSERT(doc.as<std::string>() == "bar");
+			}
+			return true;
+		}
 		
 		// 6.19
 		TEST SecondaryTagHandle() {
@@ -634,7 +722,23 @@ namespace Test
 		}
 		
 		// 6.21
-		TEST LocalTagPrefix() { return "  not written yet"; }
+		TEST LocalTagPrefix() {
+			std::vector<YAML::Node> docs = YAML::LoadAll(ex6_21);
+			YAML_ASSERT(docs.size() == 2);
+			
+			{
+				YAML::Node doc = docs[0];
+				YAML_ASSERT(doc.Tag() == "!my-light");
+				YAML_ASSERT(doc.as<std::string>() == "fluorescent");
+			}
+
+			{
+				YAML::Node doc = docs[1];
+				YAML_ASSERT(doc.Tag() == "!my-light");
+				YAML_ASSERT(doc.as<std::string>() == "green");
+			}
+			return true;
+		}
 		
 		// 6.22
 		TEST GlobalTagPrefix() {
