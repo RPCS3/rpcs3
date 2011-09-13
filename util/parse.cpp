@@ -46,7 +46,7 @@ void parse(std::istream& input)
 			std::cout << emitter.c_str() << "\n";
 		}
 #else
-		YAML::Node doc = YAML::Parse(input);
+		YAML::Node doc = YAML::Load(input);
 		std::cout << doc << "\n";
 #endif
 	} catch(const YAML::Exception& e) {

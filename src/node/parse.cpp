@@ -8,22 +8,46 @@
 
 namespace YAML
 {
-	Node Parse(const std::string& input) {
+	Node Load(const std::string& input) {
 		std::stringstream stream(input);
-		return Parse(stream);
+		return Load(stream);
 	}
 	
-	Node Parse(const char *input) {
+	Node Load(const char *input) {
 		std::stringstream stream(input);
-		return Parse(stream);
+		return Load(stream);
 	}
 	
-	Node Parse(std::istream& input) {
+	Node Load(std::istream& input) {
 		Parser parser(input);
 		NodeBuilder builder;
 		if(!parser.HandleNextDocument(builder))
 			return Node();
 		
 		return builder.Root();
+	}
+
+	std::vector<Node> LoadAll(const std::string& input) {
+		std::stringstream stream(input);
+		return LoadAll(stream);
+	}
+	
+	std::vector<Node> LoadAll(const char *input) {
+		std::stringstream stream(input);
+		return LoadAll(stream);
+	}
+	
+	std::vector<Node> LoadAll(std::istream& input) {
+		std::vector<Node> docs;
+		
+		Parser parser(input);
+		while(1) {
+			NodeBuilder builder;
+			if(!parser.HandleNextDocument(builder))
+				break;
+			docs.push_back(builder.Root());
+		}
+		
+		return docs;
 	}
 }
