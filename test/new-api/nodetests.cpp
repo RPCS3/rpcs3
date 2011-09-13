@@ -234,6 +234,31 @@ namespace Test
 			YAML_ASSERT(node[node][node] == node[node]);
 			return true;
 		}
+		
+		TEST TempMapVariable()
+		{
+			YAML::Node node;
+			YAML::Node tmp = node["key"];
+			tmp = "value";
+			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node.size() == 1);
+			YAML_ASSERT(node["key"].as<std::string>() == "value");
+			return true;
+		}
+
+		TEST TempMapVariableAlias()
+		{
+			YAML::Node node;
+			YAML::Node tmp = node["key"];
+			tmp = node["other"];
+			node["other"] = "value";
+			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node.size() == 2);
+			YAML_ASSERT(node["key"].as<std::string>() == "value");
+			YAML_ASSERT(node["other"].as<std::string>() == "value");
+			YAML_ASSERT(node["other"] == node["key"]);
+			return true;
+		}
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -275,6 +300,8 @@ namespace Test
 		RunNodeTest(&Node::ValueSelfReferenceMap, "value self reference map", passed, total);
 		RunNodeTest(&Node::KeySelfReferenceMap, "key self reference map", passed, total);
 		RunNodeTest(&Node::SelfReferenceMap, "self reference map", passed, total);
+		RunNodeTest(&Node::TempMapVariable, "temp map variable", passed, total);
+		RunNodeTest(&Node::TempMapVariableAlias, "temp map variable alias", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
