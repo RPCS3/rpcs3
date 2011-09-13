@@ -498,10 +498,15 @@ namespace Test {
 		"- !!str bar\n"
 		"- !e!tag%21 baz\n";
 		
-		const char *ex6_27 =
+		const char *ex6_27a =
 		"%TAG !e! tag:example,2000:app/\n"
 		"---\n"
 		"- !e! foo";
+
+		const char *ex6_27b =
+		"%TAG !e! tag:example,2000:app/\n"
+		"---\n"
+		"- !h!bar baz";
 		
 		const char *ex6_28 =
 		"# Assuming conventional resolution:\n"

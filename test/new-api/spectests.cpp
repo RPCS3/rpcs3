@@ -593,43 +593,135 @@ namespace Test
 		}
 		
 		// 6.16
-		TEST TagDirective() { return "  not written yet"; }
+		TEST TagDirective() {
+			YAML::Node doc = YAML::Parse(ex6_16);
+			YAML_ASSERT(doc.Tag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc.as<std::string>() == "foo");
+			return true;
+		}
 		
 		// 6.17
-		TEST InvalidRepeatedTagDirective() { return "  not written yet"; }
+		TEST InvalidRepeatedTagDirective() {
+			try {
+				YAML::Parse(ex6_17);
+			} catch(const YAML::ParserException& e) {
+				if(e.msg == YAML::ErrorMsg::REPEATED_TAG_DIRECTIVE)
+					return true;
+				
+				throw;
+			}
+			
+			return "  No exception was thrown";
+		}
 		
 		// 6.18
 		TEST PrimaryTagHandle() { return "  not written yet"; }
 		
 		// 6.19
-		TEST SecondaryTagHandle() { return "  not written yet"; }
+		TEST SecondaryTagHandle() {
+			YAML::Node doc = YAML::Parse(ex6_19);
+			YAML_ASSERT(doc.Tag() == "tag:example.com,2000:app/int");
+			YAML_ASSERT(doc.as<std::string>() == "1 - 3");
+			return true;
+		}
 		
 		// 6.20
-		TEST TagHandles() { return "  not written yet"; }
+		TEST TagHandles() {
+			YAML::Node doc = YAML::Parse(ex6_20);
+			YAML_ASSERT(doc.Tag() == "tag:example.com,2000:app/foo");
+			YAML_ASSERT(doc.as<std::string>() == "bar");
+			return true;
+		}
 		
 		// 6.21
 		TEST LocalTagPrefix() { return "  not written yet"; }
 		
 		// 6.22
-		TEST GlobalTagPrefix() { return "  not written yet"; }
+		TEST GlobalTagPrefix() {
+			YAML::Node doc = YAML::Parse(ex6_22);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc[0].Tag() == "tag:example.com,2000:app/foo");
+			YAML_ASSERT(doc[0].as<std::string>() == "bar");
+			return true;
+		}
 		
 		// 6.23
-		TEST NodeProperties() { return "  not written yet"; }
+		TEST NodeProperties() {
+			YAML::Node doc = YAML::Parse(ex6_23);
+			YAML_ASSERT(doc.size() == 2);
+			for(YAML::const_iterator it=doc.begin();it!=doc.end();++it) {
+				if(it->first.as<std::string>() == "foo") {
+					YAML_ASSERT(it->first.Tag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it->second.Tag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it->second.as<std::string>() == "bar");
+				} else if(it->first.as<std::string>() == "baz") {
+					YAML_ASSERT(it->second.as<std::string>() == "foo");
+				} else
+					return "  unknown key";
+			}
+			
+			return true;
+		}
 		
 		// 6.24
-		TEST VerbatimTags() { return "  not written yet"; }
+		TEST VerbatimTags() {
+			YAML::Node doc = YAML::Parse(ex6_24);
+			YAML_ASSERT(doc.size() == 1);
+			for(YAML::const_iterator it=doc.begin();it!=doc.end();++it) {
+				YAML_ASSERT(it->first.Tag() == "tag:yaml.org,2002:str");
+				YAML_ASSERT(it->first.as<std::string>() == "foo");
+				YAML_ASSERT(it->second.Tag() == "!bar");
+				YAML_ASSERT(it->second.as<std::string>() == "baz");
+			}
+			return true;
+		}
 		
 		// 6.25
-		TEST InvalidVerbatimTags() { return "  not written yet"; }
+		TEST InvalidVerbatimTags() {
+			YAML::Node doc = YAML::Parse(ex6_25);
+			return "  not implemented yet"; // TODO: check tags (but we probably will say these are valid, I think)
+		}
 		
 		// 6.26
-		TEST TagShorthands() { return "  not written yet"; }
+		TEST TagShorthands() {
+			YAML::Node doc = YAML::Parse(ex6_26);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].Tag() == "!local");
+			YAML_ASSERT(doc[0].as<std::string>() == "foo");
+			YAML_ASSERT(doc[1].Tag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc[1].as<std::string>() == "bar");
+			YAML_ASSERT(doc[2].Tag() == "tag:example.com,2000:app/tag%21");
+			YAML_ASSERT(doc[2].as<std::string>() == "baz");
+			return true;
+		}
 		
 		// 6.27
-		TEST InvalidTagShorthands() { return "  not written yet"; }
+		TEST InvalidTagShorthands() {
+			bool threw = false;
+			try {
+				YAML::Parse(ex6_27a);
+			} catch(const YAML::ParserException& e) {
+				threw = true;
+				if(e.msg != YAML::ErrorMsg::TAG_WITH_NO_SUFFIX)
+					throw;
+			}
+			
+			if(!threw)
+				return "  No exception was thrown for a tag with no suffix";
+			
+			YAML::Parse(ex6_27b); // TODO: should we reject this one (since !h! is not declared)?
+			return "  not implemented yet";
+		}
 		
 		// 6.28
-		TEST NonSpecificTags() { return "  not written yet"; }
+		TEST NonSpecificTags() {
+			YAML::Node doc = YAML::Parse(ex6_28);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].as<std::string>() == "12"); // TODO: check tags. How?
+			YAML_ASSERT(doc[1].as<int>() == 12);
+			YAML_ASSERT(doc[2].as<std::string>() == "12");
+			return true;
+		}
 		
 		// 6.29
 		TEST NodeAnchors() {
