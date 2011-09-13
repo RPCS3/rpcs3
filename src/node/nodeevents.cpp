@@ -72,16 +72,16 @@ namespace YAML
 				handler.OnNull(Mark(), anchor);
 				break;
 			case NodeType::Scalar:
-				handler.OnScalar(Mark(), "", anchor, node.scalar());
+				handler.OnScalar(Mark(), node.tag(), anchor, node.scalar());
 				break;
 			case NodeType::Sequence:
-				handler.OnSequenceStart(Mark(), "", anchor);
+				handler.OnSequenceStart(Mark(), node.tag(), anchor);
 				for(detail::const_node_iterator it=node.begin();it!=node.end();++it)
 					Emit(**it, handler, am);
 				handler.OnSequenceEnd();
 				break;
 			case NodeType::Map:
-				handler.OnMapStart(Mark(), "", anchor);
+				handler.OnMapStart(Mark(), node.tag(), anchor);
 				for(detail::const_node_iterator it=node.begin();it!=node.end();++it) {
 					Emit(*it->first, handler, am);
 					Emit(*it->second, handler, am);
