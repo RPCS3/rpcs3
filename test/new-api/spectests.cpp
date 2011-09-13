@@ -230,19 +230,120 @@ namespace Test
 		// TODO: 2.19 - 2.22 schema tags
 		
 		// 2.23
-		TEST VariousExplicitTags() { return "  not written yet"; }
+		TEST VariousExplicitTags() {
+			YAML::Node doc = YAML::Parse(ex2_23);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["not-date"].Tag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc["not-date"].as<std::string>() == "2002-04-28");
+			YAML_ASSERT(doc["picture"].Tag() == "tag:yaml.org,2002:binary");
+			YAML_ASSERT(doc["picture"].as<std::string>() ==
+						"R0lGODlhDAAMAIQAAP//9/X\n"
+						"17unp5WZmZgAAAOfn515eXv\n"
+						"Pz7Y6OjuDg4J+fn5OTk6enp\n"
+						"56enmleECcgggoBADs=\n"
+						);
+			YAML_ASSERT(doc["application specific tag"].Tag() == "!something");
+			YAML_ASSERT(doc["application specific tag"].as<std::string>() ==
+						"The semantics of the tag\n"
+						"above may be different for\n"
+						"different documents."
+						);
+			return true;
+		}
 		
 		// 2.24
-		TEST GlobalTags() { return "  not written yet"; }
+		TEST GlobalTags() {
+			YAML::Node doc = YAML::Parse(ex2_24);
+			YAML_ASSERT(doc.Tag() == "tag:clarkevans.com,2002:shape");
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].Tag() == "tag:clarkevans.com,2002:circle");
+			YAML_ASSERT(doc[0].size() == 2);
+			YAML_ASSERT(doc[0]["center"].size() == 2);
+			YAML_ASSERT(doc[0]["center"]["x"].as<int>() == 73);
+			YAML_ASSERT(doc[0]["center"]["y"].as<int>() == 129);
+			YAML_ASSERT(doc[0]["radius"].as<int>() == 7);
+			YAML_ASSERT(doc[1].Tag() == "tag:clarkevans.com,2002:line");
+			YAML_ASSERT(doc[1].size() == 2);
+			YAML_ASSERT(doc[1]["start"].size() == 2);
+			YAML_ASSERT(doc[1]["start"]["x"].as<int>() == 73);
+			YAML_ASSERT(doc[1]["start"]["y"].as<int>() == 129);
+			YAML_ASSERT(doc[1]["finish"].size() == 2);
+			YAML_ASSERT(doc[1]["finish"]["x"].as<int>() == 89);
+			YAML_ASSERT(doc[1]["finish"]["y"].as<int>() == 102);
+			YAML_ASSERT(doc[2].Tag() == "tag:clarkevans.com,2002:label");
+			YAML_ASSERT(doc[2].size() == 3);
+			YAML_ASSERT(doc[2]["start"].size() == 2);
+			YAML_ASSERT(doc[2]["start"]["x"].as<int>() == 73);
+			YAML_ASSERT(doc[2]["start"]["y"].as<int>() == 129);
+			YAML_ASSERT(doc[2]["color"].as<std::string>() == "0xFFEEBB");
+			YAML_ASSERT(doc[2]["text"].as<std::string>() == "Pretty vector drawing.");
+			return true;
+		}
 		
 		// 2.25
-		TEST UnorderedSets() { return "  not written yet"; }
+		TEST UnorderedSets() {
+			YAML::Node doc = YAML::Parse(ex2_25);
+			YAML_ASSERT(doc.Tag() == "tag:yaml.org,2002:set");
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["Mark McGwire"].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc["Sammy Sosa"].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc["Ken Griffey"].Type() == YAML::NodeType::Null);
+			return true;
+		}
 		
 		// 2.26
-		TEST OrderedMappings() { return "  not written yet"; }
+		TEST OrderedMappings() {
+			YAML::Node doc = YAML::Parse(ex2_26);
+			YAML_ASSERT(doc.Tag() == "tag:yaml.org,2002:omap");
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0]["Mark McGwire"].as<int>() == 65);
+			YAML_ASSERT(doc[1].size() == 1);
+			YAML_ASSERT(doc[1]["Sammy Sosa"].as<int>() == 63);
+			YAML_ASSERT(doc[2].size() == 1);
+			YAML_ASSERT(doc[2]["Ken Griffey"].as<int>() == 58);
+			return true;
+		}
 		
 		// 2.27
-		TEST Invoice() { return "  not written yet"; }
+		TEST Invoice() {
+			YAML::Node doc = YAML::Parse(ex2_27);
+			YAML_ASSERT(doc.Tag() == "tag:clarkevans.com,2002:invoice");
+			YAML_ASSERT(doc.size() == 8);
+			YAML_ASSERT(doc["invoice"].as<int>() == 34843);
+			YAML_ASSERT(doc["date"].as<std::string>() == "2001-01-23");
+			YAML_ASSERT(doc["bill-to"].size() == 3);
+			YAML_ASSERT(doc["bill-to"]["given"].as<std::string>() == "Chris");
+			YAML_ASSERT(doc["bill-to"]["family"].as<std::string>() == "Dumars");
+			YAML_ASSERT(doc["bill-to"]["address"].size() == 4);
+			YAML_ASSERT(doc["bill-to"]["address"]["lines"].as<std::string>() == "458 Walkman Dr.\nSuite #292\n");
+			YAML_ASSERT(doc["bill-to"]["address"]["city"].as<std::string>() == "Royal Oak");
+			YAML_ASSERT(doc["bill-to"]["address"]["state"].as<std::string>() == "MI");
+			YAML_ASSERT(doc["bill-to"]["address"]["postal"].as<std::string>() == "48046");
+			YAML_ASSERT(doc["ship-to"].size() == 3);
+			YAML_ASSERT(doc["ship-to"]["given"].as<std::string>() == "Chris");
+			YAML_ASSERT(doc["ship-to"]["family"].as<std::string>() == "Dumars");
+			YAML_ASSERT(doc["ship-to"]["address"].size() == 4);
+			YAML_ASSERT(doc["ship-to"]["address"]["lines"].as<std::string>() == "458 Walkman Dr.\nSuite #292\n");
+			YAML_ASSERT(doc["ship-to"]["address"]["city"].as<std::string>() == "Royal Oak");
+			YAML_ASSERT(doc["ship-to"]["address"]["state"].as<std::string>() == "MI");
+			YAML_ASSERT(doc["ship-to"]["address"]["postal"].as<std::string>() == "48046");
+			YAML_ASSERT(doc["product"].size() == 2);
+			YAML_ASSERT(doc["product"][0].size() == 4);
+			YAML_ASSERT(doc["product"][0]["sku"].as<std::string>() == "BL394D");
+			YAML_ASSERT(doc["product"][0]["quantity"].as<int>() == 4);
+			YAML_ASSERT(doc["product"][0]["description"].as<std::string>() == "Basketball");
+			YAML_ASSERT(doc["product"][0]["price"].as<std::string>() == "450.00");
+			YAML_ASSERT(doc["product"][1].size() == 4);
+			YAML_ASSERT(doc["product"][1]["sku"].as<std::string>() == "BL4438H");
+			YAML_ASSERT(doc["product"][1]["quantity"].as<int>() == 1);
+			YAML_ASSERT(doc["product"][1]["description"].as<std::string>() == "Super Hoop");
+			YAML_ASSERT(doc["product"][1]["price"].as<std::string>() == "2392.00");
+			YAML_ASSERT(doc["tax"].as<std::string>() == "251.42");
+			YAML_ASSERT(doc["total"].as<std::string>() == "4443.52");
+			YAML_ASSERT(doc["comments"].as<std::string>() == "Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338.");
+			return true;
+		}
 		
 		// 2.28
 		TEST LogFile() { return "  not written yet"; }

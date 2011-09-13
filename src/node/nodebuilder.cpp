@@ -49,12 +49,14 @@ namespace YAML
 	{
 		detail::node& node = Push(anchor);
 		node.set_scalar(value);
+		node.set_tag(tag);
 		Pop();
 	}
 	
 	void NodeBuilder::OnSequenceStart(const Mark& mark, const std::string& tag, anchor_t anchor)
 	{
 		detail::node& node = Push(anchor);
+		node.set_tag(tag);
 		node.set_type(NodeType::Sequence);
 	}
 	
@@ -67,6 +69,7 @@ namespace YAML
 	{
 		detail::node& node = Push(anchor);
 		node.set_type(NodeType::Map);
+		node.set_tag(tag);
 		m_mapDepth++;
 	}
 	
