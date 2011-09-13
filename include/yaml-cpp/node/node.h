@@ -72,6 +72,8 @@ namespace YAML
 	private:
 		explicit Node(detail::node& node, detail::shared_memory_holder pMemory);
 		
+		void EnsureNodeExists() const;
+		
 		template<typename T> void Assign(const T& rhs);
 		void Assign(const char *rhs);
 		void Assign(char *rhs);
@@ -80,8 +82,8 @@ namespace YAML
 		void AssignNode(const Node& rhs);
 		
 	private:
-		detail::shared_memory_holder m_pMemory;
-		detail::node *m_pNode;
+		mutable detail::shared_memory_holder m_pMemory;
+		mutable detail::node *m_pNode;
 	};
 
 	bool operator==(const Node& lhs, const Node& rhs);

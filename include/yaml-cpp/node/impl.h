@@ -14,7 +14,7 @@
 
 namespace YAML
 {
-	inline Node::Node(): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
+	inline Node::Node(): m_pNode(0)
 	{
 	}
 	
@@ -41,15 +41,27 @@ namespace YAML
 	{
 	}
 
+	inline void Node::EnsureNodeExists() const
+	{
+		if(!m_pNode) {
+			m_pMemory.reset(new detail::memory_holder);
+			m_pNode = &m_pMemory->create_node();
+			m_pNode->set_null();
+		}
+	}
+
 	inline NodeType::value Node::Type() const
 	{
-		return m_pNode->type();
+		return m_pNode ? m_pNode->type() : NodeType::Null;
 	}
 	
 	// access
 	template<typename T>
 	inline const T Node::as() const
 	{
+		if(!m_pNode)
+			throw std::runtime_error("Unable to convert to type");
+			
 		T t;
 		if(convert<T>::decode(*this, t))
 			return t;
@@ -66,13 +78,13 @@ namespace YAML
 
 	inline const std::string& Node::scalar() const
 	{
-		return m_pNode->scalar();
+		return m_pNode ? m_pNode->scalar() : detail::node_data::empty_scalar;
 	}
 
 	// assignment
 	inline bool Node::is(const Node& rhs) const
 	{
-		return m_pNode->is(*rhs.m_pNode);
+		return m_pNode ? m_pNode->is(*rhs.m_pNode) : false;
 	}
 
 	template<typename T>
@@ -91,16 +103,19 @@ namespace YAML
 	template<>
 	inline void Node::Assign(const std::string& rhs)
 	{
+		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
 	}
 
 	inline void Node::Assign(const char *rhs)
 	{
+		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
 	}
 
 	inline void Node::Assign(char *rhs)
 	{
+		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
 	}
 	
@@ -114,12 +129,18 @@ namespace YAML
 
 	inline void Node::AssignData(const Node& rhs)
 	{
+		EnsureNodeExists();
+		rhs.EnsureNodeExists();
+		
 		m_pNode->set_data(*rhs.m_pNode);
 		m_pMemory->merge(*rhs.m_pMemory);
 	}
 
 	inline void Node::AssignNode(const Node& rhs)
 	{
+		EnsureNodeExists();
+		rhs.EnsureNodeExists();
+
 		m_pNode->set_ref(*rhs.m_pNode);
 		m_pMemory->merge(*rhs.m_pMemory);
 		m_pNode = rhs.m_pNode;
@@ -128,27 +149,27 @@ namespace YAML
 	// size/iterator
 	inline std::size_t Node::size() const
 	{
-		return m_pNode->size();
+		return m_pNode ? m_pNode->size() : 0;
 	}
 
 	inline const_iterator Node::begin() const
 	{
-		return const_iterator(m_pNode->begin(), m_pMemory);
+		return m_pNode ? const_iterator(m_pNode->begin(), m_pMemory) : const_iterator();
 	}
 	
 	inline iterator Node::begin()
 	{
-		return iterator(m_pNode->begin(), m_pMemory);
+		return m_pNode ? iterator(m_pNode->begin(), m_pMemory) : iterator();
 	}
 
 	inline const_iterator Node::end() const
 	{
-		return const_iterator(m_pNode->end(), m_pMemory);
+		return m_pNode ? const_iterator(m_pNode->end(), m_pMemory) : const_iterator();
 	}
 
 	inline iterator Node::end()
 	{
-		return iterator(m_pNode->end(), m_pMemory);
+		return m_pNode ? iterator(m_pNode->end(), m_pMemory) : iterator();
 	}
 	
 	// sequence
@@ -160,6 +181,9 @@ namespace YAML
 	
 	inline void Node::append(const Node& rhs)
 	{
+		EnsureNodeExists();
+		rhs.EnsureNodeExists();
+		
 		m_pNode->append(*rhs.m_pNode, m_pMemory);
 		m_pMemory->merge(*rhs.m_pMemory);
 	}
@@ -168,6 +192,7 @@ namespace YAML
 	template<typename Key>
 	inline const Node Node::operator[](const Key& key) const
 	{
+		EnsureNodeExists();
 		detail::node& value = static_cast<const detail::node&>(*m_pNode).get(key, m_pMemory);
 		return Node(value, m_pMemory);
 	}
@@ -175,6 +200,7 @@ namespace YAML
 	template<typename Key>
 	inline Node Node::operator[](const Key& key)
 	{
+		EnsureNodeExists();
 		detail::node& value = m_pNode->get(key, m_pMemory);
 		return Node(value, m_pMemory);
 	}
@@ -182,23 +208,30 @@ namespace YAML
 	template<typename Key>
 	inline bool Node::remove(const Key& key)
 	{
+		EnsureNodeExists();
 		return m_pNode->remove(key, m_pMemory);
 	}
 	
 	inline const Node Node::operator[](const Node& key) const
 	{
+		EnsureNodeExists();
+		key.EnsureNodeExists();
 		detail::node& value = static_cast<const detail::node&>(*m_pNode).get(*key.m_pNode, m_pMemory);
 		return Node(value, m_pMemory);
 	}
 	
 	inline Node Node::operator[](const Node& key)
 	{
+		EnsureNodeExists();
+		key.EnsureNodeExists();
 		detail::node& value = m_pNode->get(*key.m_pNode, m_pMemory);
 		return Node(value, m_pMemory);
 	}
 	
 	inline bool Node::remove(const Node& key)
 	{
+		EnsureNodeExists();
+		key.EnsureNodeExists();
 		return m_pNode->remove(*key.m_pNode, m_pMemory);
 	}
 	
