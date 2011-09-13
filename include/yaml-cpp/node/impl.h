@@ -138,8 +138,13 @@ namespace YAML
 
 	inline void Node::AssignNode(const Node& rhs)
 	{
-		EnsureNodeExists();
 		rhs.EnsureNodeExists();
+
+		if(!m_pNode) {
+			m_pNode = rhs.m_pNode;
+			m_pMemory = rhs.m_pMemory;
+			return;
+		}
 
 		m_pNode->set_ref(*rhs.m_pNode);
 		m_pMemory->merge(*rhs.m_pMemory);
