@@ -19,46 +19,41 @@ namespace YAML
 		class node_ref: private boost::noncopyable
 		{
 		public:
-			node_ref() {}
+			node_ref(): m_pData(new node_data) {}
 			
-			bool is_defined() const { return m_pData ? m_pData->is_defined() : false; }
-			NodeType::value type() const { return m_pData ? m_pData->type() : NodeType::Undefined; }
-			const std::string& scalar() const { return m_pData ? m_pData->scalar() : node_data::empty_scalar; }
+			bool is_defined() const { return m_pData->is_defined(); }
+			NodeType::value type() const { return m_pData->type(); }
+			const std::string& scalar() const { return m_pData->scalar(); }
 			
-			void mark_defined() { ensure_data_exists(); m_pData->mark_defined(); }
+			void mark_defined() { m_pData->mark_defined(); }
 			void set_data(const node_ref& rhs) { m_pData = rhs.m_pData; }
 			
-			void set_type(NodeType::value type) { ensure_data_exists(); m_pData->set_type(type); }
-			void set_null() { ensure_data_exists(); m_pData->set_null(); }
-			void set_scalar(const std::string& scalar) { ensure_data_exists(); m_pData->set_scalar(scalar); }
+			void set_type(NodeType::value type) { m_pData->set_type(type); }
+			void set_null() { m_pData->set_null(); }
+			void set_scalar(const std::string& scalar) { m_pData->set_scalar(scalar); }
 			
 			// size/iterator
-			std::size_t size() const { return m_pData ? m_pData->size() : 0; }
+			std::size_t size() const { return m_pData->size(); }
 			
-			const_node_iterator begin() const { return m_pData ? static_cast<const node_data&>(*m_pData).begin() : const_node_iterator(); }
-			node_iterator begin() {return m_pData ? m_pData->begin() : node_iterator(); }
+			const_node_iterator begin() const { return static_cast<const node_data&>(*m_pData).begin(); }
+			node_iterator begin() {return m_pData->begin(); }
 			
-			const_node_iterator end() const { return m_pData ? static_cast<const node_data&>(*m_pData).end() : const_node_iterator(); }
-			node_iterator end() {return m_pData ? m_pData->end() : node_iterator(); }
+			const_node_iterator end() const { return static_cast<const node_data&>(*m_pData).end(); }
+			node_iterator end() {return m_pData->end(); }
 
 			// sequence
-			void append(node& node, shared_memory_holder pMemory) { ensure_data_exists(); m_pData->append(node, pMemory); }
-			void insert(node& key, node& value, shared_memory_holder pMemory) {
-				ensure_data_exists(); m_pData->insert(key, value, pMemory);
-			}
+			void append(node& node, shared_memory_holder pMemory) { m_pData->append(node, pMemory); }
+			void insert(node& key, node& value, shared_memory_holder pMemory) { m_pData->insert(key, value, pMemory); }
 			
 			// indexing
-			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) const { return m_pData ? static_cast<const node_data&>(*m_pData).get(key, pMemory) : pMemory->create_node(); }
-			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) { ensure_data_exists(); return m_pData->get(key, pMemory); }
-			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory) { return m_pData ? m_pData->remove(key, pMemory) : false; }
+			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) const { return static_cast<const node_data&>(*m_pData).get(key, pMemory); }
+			template<typename Key> node& get(const Key& key, shared_memory_holder pMemory) { return m_pData->get(key, pMemory); }
+			template<typename Key> bool remove(const Key& key, shared_memory_holder pMemory) { return m_pData->remove(key, pMemory); }
 			
-			node& get(node& key, shared_memory_holder pMemory) const { return m_pData ? static_cast<const node_data&>(*m_pData).get(key, pMemory) : pMemory->create_node(); }
-			node& get(node& key, shared_memory_holder pMemory) { ensure_data_exists(); return m_pData->get(key, pMemory); }
-			bool remove(node& key, shared_memory_holder pMemory) { return m_pData ? m_pData->remove(key, pMemory) : false; }
-			
-		private:
-			void ensure_data_exists() { if(!m_pData) m_pData.reset(new node_data); }
-			
+			node& get(node& key, shared_memory_holder pMemory) const { return static_cast<const node_data&>(*m_pData).get(key, pMemory); }
+			node& get(node& key, shared_memory_holder pMemory) { return m_pData->get(key, pMemory); }
+			bool remove(node& key, shared_memory_holder pMemory) { return m_pData->remove(key, pMemory); }
+
 		private:
 			shared_node_data m_pData;
 		};
