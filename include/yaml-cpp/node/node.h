@@ -29,6 +29,10 @@ namespace YAML
 		~Node();
 		
 		NodeType::value Type() const;
+		bool IsNull() const { return Type() == NodeType::Null; }
+		bool IsScalar() const { return Type() == NodeType::Scalar; }
+		bool IsSequence() const { return Type() == NodeType::Sequence; }
+		bool IsMap() const { return Type() == NodeType::Map; }
 		
 		// access
 		template<typename T> const T as() const;

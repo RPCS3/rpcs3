@@ -21,7 +21,7 @@ namespace Test
 		TEST SimpleScalar()
 		{
 			YAML::Node node = YAML::Node("Hello, World!");
-			YAML_ASSERT(node.Type() == YAML::NodeType::Scalar);
+			YAML_ASSERT(node.IsScalar());
 			YAML_ASSERT(node.as<std::string>() == "Hello, World!");
 			return true;
 		}
@@ -29,7 +29,7 @@ namespace Test
 		TEST IntScalar()
 		{
 			YAML::Node node = YAML::Node(15);
-			YAML_ASSERT(node.Type() == YAML::NodeType::Scalar);
+			YAML_ASSERT(node.IsScalar());
 			YAML_ASSERT(node.as<int>() == 15);
 			return true;
 		}
@@ -40,12 +40,12 @@ namespace Test
 			node.append(10);
 			node.append("foo");
 			node.append("monkey");
-			YAML_ASSERT(node.Type() == YAML::NodeType::Sequence);
+			YAML_ASSERT(node.IsSequence());
 			YAML_ASSERT(node.size() == 3);
 			YAML_ASSERT(node[0].as<int>() == 10);
 			YAML_ASSERT(node[1].as<std::string>() == "foo");
 			YAML_ASSERT(node[2].as<std::string>() == "monkey");
-			YAML_ASSERT(node.Type() == YAML::NodeType::Sequence);
+			YAML_ASSERT(node.IsSequence());
 			return true;
 		}
 
@@ -55,12 +55,12 @@ namespace Test
 			node[0] = 10;
 			node[1] = "foo";
 			node[2] = "monkey";
-			YAML_ASSERT(node.Type() == YAML::NodeType::Sequence);
+			YAML_ASSERT(node.IsSequence());
 			YAML_ASSERT(node.size() == 3);
 			YAML_ASSERT(node[0].as<int>() == 10);
 			YAML_ASSERT(node[1].as<std::string>() == "foo");
 			YAML_ASSERT(node[2].as<std::string>() == "monkey");
-			YAML_ASSERT(node.Type() == YAML::NodeType::Sequence);
+			YAML_ASSERT(node.IsSequence());
 			return true;
 		}
 
@@ -68,7 +68,7 @@ namespace Test
 		{
 			YAML::Node node;
 			node["key"] = "value";
-			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node.IsMap());
 			YAML_ASSERT(node["key"].as<std::string>() == "value");
 			YAML_ASSERT(node.size() == 1);
 			return true;
@@ -79,7 +79,7 @@ namespace Test
 			YAML::Node node;
 			node["key"] = "value";
 			node["undefined"];
-			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node.IsMap());
 			YAML_ASSERT(node["key"].as<std::string>() == "value");
 			YAML_ASSERT(node.size() == 1);
 
@@ -193,7 +193,7 @@ namespace Test
 		{
 			YAML::Node node;
 			node[0] = node;
-			YAML_ASSERT(node.Type() == YAML::NodeType::Sequence);
+			YAML_ASSERT(node.IsSequence());
 			YAML_ASSERT(node.size() == 1);
 			YAML_ASSERT(node[0] == node);
 			YAML_ASSERT(node[0][0] == node);
@@ -205,7 +205,7 @@ namespace Test
 		{
 			YAML::Node node;
 			node["key"] = node;
-			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node.IsMap());
 			YAML_ASSERT(node.size() == 1);
 			YAML_ASSERT(node["key"] == node);
 			YAML_ASSERT(node["key"]["key"] == node);
@@ -217,7 +217,7 @@ namespace Test
 		{
 			YAML::Node node;
 			node[node] = "value";
-			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node.IsMap());
 			YAML_ASSERT(node.size() == 1);
 			YAML_ASSERT(node[node].as<std::string>() == "value");
 			return true;
@@ -227,7 +227,7 @@ namespace Test
 		{
 			YAML::Node node;
 			node[node] = node;
-			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node.IsMap());
 			YAML_ASSERT(node.size() == 1);
 			YAML_ASSERT(node[node] == node);
 			YAML_ASSERT(node[node][node] == node);
@@ -240,7 +240,7 @@ namespace Test
 			YAML::Node node;
 			YAML::Node tmp = node["key"];
 			tmp = "value";
-			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node.IsMap());
 			YAML_ASSERT(node.size() == 1);
 			YAML_ASSERT(node["key"].as<std::string>() == "value");
 			return true;
@@ -252,7 +252,7 @@ namespace Test
 			YAML::Node tmp = node["key"];
 			tmp = node["other"];
 			node["other"] = "value";
-			YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(node.IsMap());
 			YAML_ASSERT(node.size() == 2);
 			YAML_ASSERT(node["key"].as<std::string>() == "value");
 			YAML_ASSERT(node["other"].as<std::string>() == "value");

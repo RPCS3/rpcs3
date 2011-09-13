@@ -11,7 +11,7 @@ namespace Test
 		// 2.1
 		TEST SeqScalars() {
 			YAML::Node doc = YAML::Parse(ex2_1);
-			YAML_ASSERT(doc.Type() == YAML::NodeType::Sequence);
+			YAML_ASSERT(doc.IsSequence());
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc[0].as<std::string>() == "Mark McGwire");
 			YAML_ASSERT(doc[1].as<std::string>() == "Sammy Sosa");
@@ -22,7 +22,7 @@ namespace Test
 		// 2.2
 		TEST MappingScalarsToScalars() {
 			YAML::Node doc = YAML::Parse(ex2_2);
-			YAML_ASSERT(doc.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(doc.IsMap());
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["hr"].as<std::string>() == "65");
 			YAML_ASSERT(doc["avg"].as<std::string>() == "0.278");
@@ -33,7 +33,7 @@ namespace Test
 		// 2.3
 		TEST MappingScalarsToSequences() {
 			YAML::Node doc = YAML::Parse(ex2_3);
-			YAML_ASSERT(doc.Type() == YAML::NodeType::Map);
+			YAML_ASSERT(doc.IsMap());
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["american"].size() == 3);
 			YAML_ASSERT(doc["american"][0].as<std::string>() == "Boston Red Sox");
@@ -285,9 +285,9 @@ namespace Test
 			YAML::Node doc = YAML::Parse(ex2_25);
 			YAML_ASSERT(doc.Tag() == "tag:yaml.org,2002:set");
 			YAML_ASSERT(doc.size() == 3);
-			YAML_ASSERT(doc["Mark McGwire"].Type() == YAML::NodeType::Null);
-			YAML_ASSERT(doc["Sammy Sosa"].Type() == YAML::NodeType::Null);
-			YAML_ASSERT(doc["Ken Griffey"].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc["Mark McGwire"].IsNull());
+			YAML_ASSERT(doc["Sammy Sosa"].IsNull());
+			YAML_ASSERT(doc["Ken Griffey"].IsNull());
 			return true;
 		}
 		
@@ -379,7 +379,7 @@ namespace Test
 		// 5.5
 		TEST CommentIndicator() {
 			YAML::Node doc = YAML::Parse(ex5_5);
-			YAML_ASSERT(doc.Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc.IsNull());
 			return true;
 		}
 		
@@ -539,7 +539,7 @@ namespace Test
 		// 6.10
 		TEST CommentLines() {
 			YAML::Node doc = YAML::Parse(ex6_10);
-			YAML_ASSERT(doc.Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc.IsNull());
 			return true;
 		}
 		
@@ -658,7 +658,7 @@ namespace Test
 		TEST CompletelyEmptyNodes() {
 			YAML::Node doc = YAML::Parse(ex7_3);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["foo"].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc["foo"].IsNull());
 			YAML_ASSERT(doc[YAML::Null].as<std::string>() == "bar");
 			return true;
 		}
@@ -792,7 +792,7 @@ namespace Test
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["explicit"].as<std::string>() == "entry");
 			YAML_ASSERT(doc["implicit"].as<std::string>() == "entry");
-			YAML_ASSERT(doc[YAML::Null].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc[YAML::Null].IsNull());
 			return true;
 		}
 		
@@ -801,8 +801,8 @@ namespace Test
 			YAML::Node doc = YAML::Parse(ex7_17);
 			YAML_ASSERT(doc.size() == 4);
 			YAML_ASSERT(doc["unquoted"].as<std::string>() == "separate");
-			YAML_ASSERT(doc["http://foo.com"].Type() == YAML::NodeType::Null);
-			YAML_ASSERT(doc["omitted value"].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc["http://foo.com"].IsNull());
+			YAML_ASSERT(doc["omitted value"].IsNull());
 			YAML_ASSERT(doc[YAML::Null].as<std::string>() == "omitted key");
 			return true;
 		}
@@ -813,7 +813,7 @@ namespace Test
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["adjacent"].as<std::string>() == "value");
 			YAML_ASSERT(doc["readable"].as<std::string>() == "value");
-			YAML_ASSERT(doc["empty"].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc["empty"].IsNull());
 			return true;
 		}
 		
@@ -1051,7 +1051,7 @@ namespace Test
 		TEST BlockSequenceEntryTypes() {
 			YAML::Node doc = YAML::Parse(ex8_15);
 			YAML_ASSERT(doc.size() == 4);
-			YAML_ASSERT(doc[0].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc[0].IsNull());
 			YAML_ASSERT(doc[1].as<std::string>() == "block node\n");
 			YAML_ASSERT(doc[2].size() == 2);
 			YAML_ASSERT(doc[2][0].as<std::string>() == "one");
@@ -1074,7 +1074,7 @@ namespace Test
 		TEST ExplicitBlockMappingEntries() {
 			YAML::Node doc = YAML::Parse(ex8_17);
 			YAML_ASSERT(doc.size() == 2);
-			YAML_ASSERT(doc["explicit key"].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc["explicit key"].IsNull());
 			YAML_ASSERT(doc["block key\n"].size() == 2);
 			YAML_ASSERT(doc["block key\n"][0].as<std::string>() == "one");
 			YAML_ASSERT(doc["block key\n"][1].as<std::string>() == "two");
@@ -1086,7 +1086,7 @@ namespace Test
 			YAML::Node doc = YAML::Parse(ex8_18);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["plain key"].as<std::string>() == "in-line value");
-			YAML_ASSERT(doc[YAML::Null].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc[YAML::Null].IsNull());
 			YAML_ASSERT(doc["quoted key"].size() == 1);
 			YAML_ASSERT(doc["quoted key"][0].as<std::string>() == "entry");
 			return true;
