@@ -250,37 +250,105 @@ namespace Test
 		// TODO: 5.1 - 5.2 BOM
 		
 		// 5.3
-		TEST BlockStructureIndicators() { return "  not written yet"; }
+		TEST BlockStructureIndicators() {
+			YAML::Node doc = YAML::Parse(ex5_3);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["sequence"].size() == 2);
+			YAML_ASSERT(doc["sequence"][0].as<std::string>() == "one");
+			YAML_ASSERT(doc["sequence"][1].as<std::string>() == "two");
+			YAML_ASSERT(doc["mapping"].size() == 2);
+			YAML_ASSERT(doc["mapping"]["sky"].as<std::string>() == "blue");
+			YAML_ASSERT(doc["mapping"]["sea"].as<std::string>() == "green");
+			return true;
+		}
 		
 		// 5.4
-		TEST FlowStructureIndicators() { return "  not written yet"; }
+		TEST FlowStructureIndicators() {
+			YAML::Node doc = YAML::Parse(ex5_4);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["sequence"].size() == 2);
+			YAML_ASSERT(doc["sequence"][0].as<std::string>() == "one");
+			YAML_ASSERT(doc["sequence"][1].as<std::string>() == "two");
+			YAML_ASSERT(doc["mapping"].size() == 2);
+			YAML_ASSERT(doc["mapping"]["sky"].as<std::string>() == "blue");
+			YAML_ASSERT(doc["mapping"]["sea"].as<std::string>() == "green");
+			return true;
+		}
 		
 		// 5.5
-		TEST CommentIndicator() { return "  not written yet"; }
+		TEST CommentIndicator() {
+			YAML::Node doc = YAML::Parse(ex5_5);
+			YAML_ASSERT(doc.Type() == YAML::NodeType::Null);
+			return true;
+		}
 		
 		// 5.6
-		TEST NodePropertyIndicators() { return "  not written yet"; }
+		TEST NodePropertyIndicators() {
+			YAML::Node doc = YAML::Parse(ex5_6);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["anchored"].as<std::string>() == "value"); // TODO: assert tag
+			YAML_ASSERT(doc["alias"].as<std::string>() == "value");
+			return true;
+		}
 		
 		// 5.7
-		TEST BlockScalarIndicators() { return "  not written yet"; }
+		TEST BlockScalarIndicators() {
+			YAML::Node doc = YAML::Parse(ex5_7);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["literal"].as<std::string>() == "some\ntext\n");
+			YAML_ASSERT(doc["folded"].as<std::string>() == "some text\n");
+			return true;
+		}
 		
 		// 5.8
-		TEST QuotedScalarIndicators() { return "  not written yet"; }
+		TEST QuotedScalarIndicators() {
+			YAML::Node doc = YAML::Parse(ex5_8);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["single"].as<std::string>() == "text");
+			YAML_ASSERT(doc["double"].as<std::string>() == "text");
+			return true;
+		}
 		
 		// TODO: 5.9 directive
 		// TODO: 5.10 reserved indicator
 		
 		// 5.11
-		TEST LineBreakCharacters() { return "  not written yet"; }
+		TEST LineBreakCharacters() {
+			YAML::Node doc = YAML::Parse(ex5_11);
+			YAML_ASSERT(doc.as<std::string>() == "Line break (no glyph)\nLine break (glyphed)\n");
+			return true;
+		}
 		
 		// 5.12
-		TEST TabsAndSpaces() { return "  not written yet"; }
+		TEST TabsAndSpaces() {
+			YAML::Node doc = YAML::Parse(ex5_12);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["quoted"].as<std::string>() == "Quoted\t");
+			YAML_ASSERT(doc["block"].as<std::string>() ==
+						"void main() {\n"
+						"\tprintf(\"Hello, world!\\n\");\n"
+						"}");
+			return true;
+		}
 		
 		// 5.13
-		TEST EscapedCharacters() { return "  not written yet"; }
+		TEST EscapedCharacters() {
+			YAML::Node doc = YAML::Parse(ex5_13);
+			YAML_ASSERT(doc.as<std::string>() == "Fun with \x5C \x22 \x07 \x08 \x1B \x0C \x0A \x0D \x09 \x0B " + std::string("\x00", 1) + " \x20 \xA0 \x85 \xe2\x80\xa8 \xe2\x80\xa9 A A A");
+			return true;
+		}
 		
 		// 5.14
-		TEST InvalidEscapedCharacters() { return "  not written yet"; }
+		TEST InvalidEscapedCharacters() {
+			try {
+				YAML::Parse(ex5_14);
+			} catch(const YAML::ParserException& e) {
+				YAML_ASSERT(e.msg == std::string(YAML::ErrorMsg::INVALID_ESCAPE) + "c");
+				return true;
+			}
+			
+			return false;
+		}
 		
 		// 6.1
 		TEST IndentationSpaces() { return "  not written yet"; }
