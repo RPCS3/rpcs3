@@ -558,8 +558,7 @@ namespace Test
 			YAML::Node doc = YAML::Parse(ex7_3);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["foo"].Type() == YAML::NodeType::Null);
-//			YAML_ASSERT(doc[YAML::as<.as<std::string>() == "bar");
-			return "  null as a key not implemented";
+			YAML_ASSERT(doc[YAML::Null].as<std::string>() == "bar");
 			return true;
 		}
 		
@@ -692,8 +691,7 @@ namespace Test
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["explicit"].as<std::string>() == "entry");
 			YAML_ASSERT(doc["implicit"].as<std::string>() == "entry");
-//			YAML_ASSERT(doc[YAML::as<.Type() == YAML::NodeType::Null);
-			return "  null as a key not implemented";
+			YAML_ASSERT(doc[YAML::Null].Type() == YAML::NodeType::Null);
 			return true;
 		}
 		
@@ -704,8 +702,7 @@ namespace Test
 			YAML_ASSERT(doc["unquoted"].as<std::string>() == "separate");
 			YAML_ASSERT(doc["http://foo.com"].Type() == YAML::NodeType::Null);
 			YAML_ASSERT(doc["omitted value"].Type() == YAML::NodeType::Null);
-//			YAML_ASSERT(doc[YAML::as<.as<std::string>() == "omitted key");
-			return "  null as a key not implemented";
+			YAML_ASSERT(doc[YAML::Null].as<std::string>() == "omitted key");
 			return true;
 		}
 		
@@ -746,8 +743,7 @@ namespace Test
 			YAML_ASSERT(doc[0][0]["YAML"].as<std::string>() == "separate");
 			YAML_ASSERT(doc[1].size() == 1);
 			YAML_ASSERT(doc[1][0].size() == 1);
-//			YAML_ASSERT(doc[1][0][YAML::as<.as<std::string>() == "empty key entry");
-			return "  null as a key not implemented";
+			YAML_ASSERT(doc[1][0][YAML::Null].as<std::string>() == "empty key entry");
 			YAML_ASSERT(doc[2].size() == 1);
 			YAML_ASSERT(doc[2][0].size() == 1);
 			
@@ -989,8 +985,7 @@ namespace Test
 			YAML::Node doc = YAML::Parse(ex8_18);
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["plain key"].as<std::string>() == "in-line value");
-//			YAML_ASSERT(doc[YAML::Null].Type() == YAML::NodeType::Null);
-			return "  null not implemented as key";
+			YAML_ASSERT(doc[YAML::Null].Type() == YAML::NodeType::Null);
 			YAML_ASSERT(doc["quoted key"].size() == 1);
 			YAML_ASSERT(doc["quoted key"][0].as<std::string>() == "entry");
 			return true;

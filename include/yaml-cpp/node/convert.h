@@ -8,6 +8,7 @@
 
 #include "yaml-cpp/node/node.h"
 #include "yaml-cpp/node/iterator.h"
+#include "yaml-cpp/null.h"
 #include <list>
 #include <map>
 #include <sstream>
@@ -27,6 +28,17 @@ namespace YAML
 				return false;
 			rhs = node.scalar();
 			return true;
+		}
+	};
+	
+	template<>
+	struct convert<_Null> {
+		static Node encode(const _Null& /* rhs */) {
+			return Node();
+		}
+		
+		static bool decode(const Node& node, _Null& /* rhs */) {
+			return node.Type() == NodeType::Null;
 		}
 	};
 	
@@ -66,6 +78,7 @@ namespace YAML
 	
 #undef YAML_DEFINE_CONVERT_STREAMABLE
 
+	// std::map
 	template<typename K, typename V>
 	struct convert<std::map<K, V> > {
 		static Node encode(const std::map<K, V>& rhs) {
@@ -86,6 +99,7 @@ namespace YAML
 		}
 	};
 	
+	// std::vector
 	template<typename T>
 	struct convert<std::vector<T> > {
 		static Node encode(const std::vector<T>& rhs) {
@@ -106,6 +120,7 @@ namespace YAML
 		}
 	};
 	
+	// std::list
 	template<typename T>
 	struct convert<std::list<T> > {
 		static Node encode(const std::list<T>& rhs) {
