@@ -558,7 +558,7 @@ namespace Test
 			YAML::Node doc = YAML::Parse(ex7_3);
 			YAML_ASSERT(doc.size() == 2);
 			YAML_ASSERT(doc["foo"].Type() == YAML::NodeType::Null);
-//			YAML_ASSERT(doc[YAML::Null].as<std::string>() == "bar");
+//			YAML_ASSERT(doc[YAML::as<.as<std::string>() == "bar");
 			return "  null as a key not implemented";
 			return true;
 		}
@@ -692,7 +692,7 @@ namespace Test
 			YAML_ASSERT(doc.size() == 3);
 			YAML_ASSERT(doc["explicit"].as<std::string>() == "entry");
 			YAML_ASSERT(doc["implicit"].as<std::string>() == "entry");
-//			YAML_ASSERT(doc[YAML::Null].Type() == YAML::NodeType::Null);
+//			YAML_ASSERT(doc[YAML::as<.Type() == YAML::NodeType::Null);
 			return "  null as a key not implemented";
 			return true;
 		}
@@ -704,7 +704,7 @@ namespace Test
 			YAML_ASSERT(doc["unquoted"].as<std::string>() == "separate");
 			YAML_ASSERT(doc["http://foo.com"].Type() == YAML::NodeType::Null);
 			YAML_ASSERT(doc["omitted value"].Type() == YAML::NodeType::Null);
-//			YAML_ASSERT(doc[YAML::Null].as<std::string>() == "omitted key");
+//			YAML_ASSERT(doc[YAML::as<.as<std::string>() == "omitted key");
 			return "  null as a key not implemented";
 			return true;
 		}
@@ -746,7 +746,7 @@ namespace Test
 			YAML_ASSERT(doc[0][0]["YAML"].as<std::string>() == "separate");
 			YAML_ASSERT(doc[1].size() == 1);
 			YAML_ASSERT(doc[1][0].size() == 1);
-//			YAML_ASSERT(doc[1][0][YAML::Null].as<std::string>() == "empty key entry");
+//			YAML_ASSERT(doc[1][0][YAML::as<.as<std::string>() == "empty key entry");
 			return "  null as a key not implemented";
 			YAML_ASSERT(doc[2].size() == 1);
 			YAML_ASSERT(doc[2][0].size() == 1);
@@ -787,71 +787,254 @@ namespace Test
 		
 		// 7.24
 		TEST FlowNodes() { return "  not written yet"; }
-		
+
 		// 8.1
-		TEST BlockScalarHeader() { return "  not written yet"; }
+		TEST BlockScalarHeader() {
+			YAML::Node doc = YAML::Parse(ex8_1);
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(doc[0].as<std::string>() == "literal\n");
+			YAML_ASSERT(doc[1].as<std::string>() == " folded\n");
+			YAML_ASSERT(doc[2].as<std::string>() == "keep\n\n");
+			YAML_ASSERT(doc[3].as<std::string>() == " strip");
+			return true;
+		}
 		
 		// 8.2
-		TEST BlockIndentationHeader() { return "  not written yet"; }
+		TEST BlockIndentationHeader() {
+			YAML::Node doc = YAML::Parse(ex8_2);
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(doc[0].as<std::string>() == "detected\n");
+			YAML_ASSERT(doc[1].as<std::string>() == "\n\n# detected\n");
+			YAML_ASSERT(doc[2].as<std::string>() == " explicit\n");
+			YAML_ASSERT(doc[3].as<std::string>() == "\t\ndetected\n");
+			return true;
+		}
 		
 		// 8.3
-		TEST InvalidBlockScalarIndentationIndicators() { return "  not written yet"; }
+		TEST InvalidBlockScalarIndentationIndicators() {
+			{
+				bool threw = false;
+				try {
+					YAML::Parse(ex8_3a);
+				} catch(const YAML::Exception& e) {
+					if(e.msg != YAML::ErrorMsg::END_OF_SEQ)
+						throw;
+					
+					threw = true;
+				}
+				
+				if(!threw)
+					return "  no exception thrown for less indented auto-detecting indentation for a literal block scalar";
+			}
+			
+			{
+				bool threw = false;
+				try {
+					YAML::Parse(ex8_3b);
+				} catch(const YAML::Exception& e) {
+					if(e.msg != YAML::ErrorMsg::END_OF_SEQ)
+						throw;
+					
+					threw = true;
+				}
+				
+				if(!threw)
+					return "  no exception thrown for less indented auto-detecting indentation for a folded block scalar";
+			}
+			
+			{
+				bool threw = false;
+				try {
+					YAML::Parse(ex8_3c);
+				} catch(const YAML::Exception& e) {
+					if(e.msg != YAML::ErrorMsg::END_OF_SEQ)
+						throw;
+					
+					threw = true;
+				}
+				
+				if(!threw)
+					return "  no exception thrown for less indented explicit indentation for a literal block scalar";
+			}
+			
+			return true;
+		}
 		
 		// 8.4
-		TEST ChompingFinalLineBreak() { return "  not written yet"; }
+		TEST ChompingFinalLineBreak() {
+			YAML::Node doc = YAML::Parse(ex8_4);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["strip"].as<std::string>() == "text");
+			YAML_ASSERT(doc["clip"].as<std::string>() == "text\n");
+			YAML_ASSERT(doc["keep"].as<std::string>() == "text\n");
+			return true;
+		}
 		
 		// 8.5
-		TEST ChompingTrailingLines() { return "  not written yet"; }
+		TEST ChompingTrailingLines() {
+			YAML::Node doc = YAML::Parse(ex8_5);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["strip"].as<std::string>() == "# text");
+			YAML_ASSERT(doc["clip"].as<std::string>() == "# text\n");
+			YAML_ASSERT(doc["keep"].as<std::string>() == "# text\n"); // Note: I believe this is a bug in the YAML spec - it should be "# text\n\n"
+			return true;
+		}
 		
 		// 8.6
-		TEST EmptyScalarChomping() { return "  not written yet"; }
+		TEST EmptyScalarChomping() {
+			YAML::Node doc = YAML::Parse(ex8_6);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["strip"].as<std::string>() == "");
+			YAML_ASSERT(doc["clip"].as<std::string>() == "");
+			YAML_ASSERT(doc["keep"].as<std::string>() == "\n");
+			return true;
+		}
 		
 		// 8.7
-		TEST LiteralScalar() { return "  not written yet"; }
+		TEST LiteralScalar() {
+			YAML::Node doc = YAML::Parse(ex8_7);
+			YAML_ASSERT(doc.as<std::string>() == "literal\n\ttext\n");
+			return true;
+		}
 		
 		// 8.8
-		TEST LiteralContent() { return "  not written yet"; }
+		TEST LiteralContent() {
+			YAML::Node doc = YAML::Parse(ex8_8);
+			YAML_ASSERT(doc.as<std::string>() == "\n\nliteral\n \n\ntext\n");
+			return true;
+		}
 		
 		// 8.9
-		TEST FoldedScalar() { return "  not written yet"; }
+		TEST FoldedScalar() {
+			YAML::Node doc = YAML::Parse(ex8_9);
+			YAML_ASSERT(doc.as<std::string>() == "folded text\n");
+			return true;
+		}
 		
 		// 8.10
-		TEST FoldedLines() { return "  not written yet"; }
+		TEST FoldedLines() {
+			YAML::Node doc = YAML::Parse(ex8_10);
+			YAML_ASSERT(doc.as<std::string>() == "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
+			return true;
+		}
 		
 		// 8.11
-		TEST MoreIndentedLines() { return "  not written yet"; }
+		TEST MoreIndentedLines() {
+			YAML::Node doc = YAML::Parse(ex8_11);
+			YAML_ASSERT(doc.as<std::string>() == "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
+			return true;
+		}
 		
 		// 8.12
-		TEST EmptySeparationLines() { return "  not written yet"; }
+		TEST EmptySeparationLines() {
+			YAML::Node doc = YAML::Parse(ex8_12);
+			YAML_ASSERT(doc.as<std::string>() == "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
+			return true;
+		}
 		
 		// 8.13
-		TEST FinalEmptyLines() { return "  not written yet"; }
+		TEST FinalEmptyLines() {
+			YAML::Node doc = YAML::Parse(ex8_13);
+			YAML_ASSERT(doc.as<std::string>() == "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
+			return true;
+		}
 		
 		// 8.14
-		TEST BlockSequence() { return "  not written yet"; }
+		TEST BlockSequence() {
+			YAML::Node doc = YAML::Parse(ex8_14);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["block sequence"].size() == 2);
+			YAML_ASSERT(doc["block sequence"][0].as<std::string>() == "one");
+			YAML_ASSERT(doc["block sequence"][1].size() == 1);
+			YAML_ASSERT(doc["block sequence"][1]["two"].as<std::string>() == "three");
+			return true;
+		}
 		
 		// 8.15
-		TEST BlockSequenceEntryTypes() { return "  not written yet"; }
+		TEST BlockSequenceEntryTypes() {
+			YAML::Node doc = YAML::Parse(ex8_15);
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(doc[0].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc[1].as<std::string>() == "block node\n");
+			YAML_ASSERT(doc[2].size() == 2);
+			YAML_ASSERT(doc[2][0].as<std::string>() == "one");
+			YAML_ASSERT(doc[2][1].as<std::string>() == "two");
+			YAML_ASSERT(doc[3].size() == 1);
+			YAML_ASSERT(doc[3]["one"].as<std::string>() == "two");
+			return true;
+		}
 		
 		// 8.16
-		TEST BlockMappings() { return "  not written yet"; }
+		TEST BlockMappings() {
+			YAML::Node doc = YAML::Parse(ex8_16);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["block mapping"].size() == 1);
+			YAML_ASSERT(doc["block mapping"]["key"].as<std::string>() == "value");
+			return true;
+		}
 		
 		// 8.17
-		TEST ExplicitBlockMappingEntries() { return "  not written yet"; }
+		TEST ExplicitBlockMappingEntries() {
+			YAML::Node doc = YAML::Parse(ex8_17);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["explicit key"].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc["block key\n"].size() == 2);
+			YAML_ASSERT(doc["block key\n"][0].as<std::string>() == "one");
+			YAML_ASSERT(doc["block key\n"][1].as<std::string>() == "two");
+			return true;
+		}
 		
 		// 8.18
-		TEST ImplicitBlockMappingEntries() { return "  not written yet"; }
+		TEST ImplicitBlockMappingEntries() {
+			YAML::Node doc = YAML::Parse(ex8_18);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["plain key"].as<std::string>() == "in-line value");
+//			YAML_ASSERT(doc[YAML::Null].Type() == YAML::NodeType::Null);
+			return "  null not implemented as key";
+			YAML_ASSERT(doc["quoted key"].size() == 1);
+			YAML_ASSERT(doc["quoted key"][0].as<std::string>() == "entry");
+			return true;
+		}
 		
 		// 8.19
-		TEST CompactBlockMappings() { return "  not written yet"; }
+		TEST CompactBlockMappings() {
+			YAML::Node doc = YAML::Parse(ex8_19);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0]["sun"].as<std::string>() == "yellow");
+			YAML_ASSERT(doc[1].size() == 1);
+			std::map<std::string, std::string> key;
+			key["earth"] = "blue";
+			YAML_ASSERT(doc[1][key].size() == 1);
+			YAML_ASSERT(doc[1][key]["moon"].as<std::string>() == "white");
+			return true;
+		}
 		
 		// 8.20
-		TEST BlockNodeTypes() { return "  not written yet"; }
+		TEST BlockNodeTypes() {
+			YAML::Node doc = YAML::Parse(ex8_20);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].as<std::string>() == "flow in block");
+			YAML_ASSERT(doc[1].as<std::string>() == "Block scalar\n");
+			YAML_ASSERT(doc[2].size() == 1);
+			YAML_ASSERT(doc[2]["foo"].as<std::string>() == "bar");
+			return true;
+		}
 		
 		// 8.21
 		TEST BlockScalarNodes() { return "  not written yet"; }
 		
 		// 8.22
-		TEST BlockCollectionNodes() { return "  not written yet"; }
+		TEST BlockCollectionNodes() {
+			YAML::Node doc = YAML::Parse(ex8_22);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["sequence"].size() == 2);
+			YAML_ASSERT(doc["sequence"][0].as<std::string>() == "entry");
+			YAML_ASSERT(doc["sequence"][1].size() == 1);
+			YAML_ASSERT(doc["sequence"][1][0].as<std::string>() == "nested");
+			YAML_ASSERT(doc["mapping"].size() == 1);
+			YAML_ASSERT(doc["mapping"]["foo"].as<std::string>() == "bar");
+			return true;
+		}
 	}
 }
