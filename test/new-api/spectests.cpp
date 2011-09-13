@@ -351,49 +351,145 @@ namespace Test
 		}
 		
 		// 6.1
-		TEST IndentationSpaces() { return "  not written yet"; }
+		TEST IndentationSpaces() {
+			YAML::Node doc = YAML::Parse(ex6_1);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["Not indented"].size() == 2);
+			YAML_ASSERT(doc["Not indented"]["By one space"].as<std::string>() == "By four\n  spaces\n");
+			YAML_ASSERT(doc["Not indented"]["Flow style"].size() == 3);
+			YAML_ASSERT(doc["Not indented"]["Flow style"][0].as<std::string>() == "By two");
+			YAML_ASSERT(doc["Not indented"]["Flow style"][1].as<std::string>() == "Also by two");
+			YAML_ASSERT(doc["Not indented"]["Flow style"][2].as<std::string>() == "Still by two");
+			return true;
+		}
 		
 		// 6.2
-		TEST IndentationIndicators() { return "  not written yet"; }
+		TEST IndentationIndicators() {
+			YAML::Node doc = YAML::Parse(ex6_2);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["a"].size() == 2);
+			YAML_ASSERT(doc["a"][0].as<std::string>() == "b");
+			YAML_ASSERT(doc["a"][1].size() == 2);
+			YAML_ASSERT(doc["a"][1][0].as<std::string>() == "c");
+			YAML_ASSERT(doc["a"][1][1].as<std::string>() == "d");
+			return true;
+		}
 		
 		// 6.3
-		TEST SeparationSpaces() { return "  not written yet"; }
+		TEST SeparationSpaces() {
+			YAML::Node doc = YAML::Parse(ex6_3);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0]["foo"].as<std::string>() == "bar");
+			YAML_ASSERT(doc[1].size() == 2);
+			YAML_ASSERT(doc[1][0].as<std::string>() == "baz");
+			YAML_ASSERT(doc[1][1].as<std::string>() == "baz");
+			return true;
+		}
 		
 		// 6.4
-		TEST LinePrefixes() { return "  not written yet"; }
+		TEST LinePrefixes() {
+			YAML::Node doc = YAML::Parse(ex6_4);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["plain"].as<std::string>() == "text lines");
+			YAML_ASSERT(doc["quoted"].as<std::string>() == "text lines");
+			YAML_ASSERT(doc["block"].as<std::string>() == "text\n \tlines\n");
+			return true;
+		}
 		
 		// 6.5
-		TEST EmptyLines() { return "  not written yet"; }
+		TEST EmptyLines() {
+			YAML::Node doc = YAML::Parse(ex6_5);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["Folding"].as<std::string>() == "Empty line\nas a line feed");
+			YAML_ASSERT(doc["Chomping"].as<std::string>() == "Clipped empty lines\n");
+			return true;
+		}
 		
 		// 6.6
-		TEST LineFolding() { return "  not written yet"; }
+		TEST LineFolding() {
+			YAML::Node doc = YAML::Parse(ex6_6);
+			YAML_ASSERT(doc.as<std::string>() == "trimmed\n\n\nas space");
+			return true;
+		}
 		
 		// 6.7
-		TEST BlockFolding() { return "  not written yet"; }
+		TEST BlockFolding() {
+			YAML::Node doc = YAML::Parse(ex6_7);
+			YAML_ASSERT(doc.as<std::string>() == "foo \n\n\t bar\n\nbaz\n");
+			return true;
+		}
 		
 		// 6.8
-		TEST FlowFolding() { return "  not written yet"; }
+		TEST FlowFolding() {
+			YAML::Node doc = YAML::Parse(ex6_8);
+			YAML_ASSERT(doc.as<std::string>() == " foo\nbar\nbaz ");
+			return true;
+		}
 		
 		// 6.9
-		TEST SeparatedComment() { return "  not written yet"; }
+		TEST SeparatedComment() {
+			YAML::Node doc = YAML::Parse(ex6_9);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["key"].as<std::string>() == "value");
+			return true;
+		}
 		
 		// 6.10
-		TEST CommentLines() { return "  not written yet"; }
+		TEST CommentLines() {
+			YAML::Node doc = YAML::Parse(ex6_10);
+			YAML_ASSERT(doc.Type() == YAML::NodeType::Null);
+			return true;
+		}
 		
 		// 6.11
-		TEST MultiLineComments() { return "  not written yet"; }
+		TEST MultiLineComments() {
+			YAML::Node doc = YAML::Parse(ex6_11);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["key"].as<std::string>() == "value");
+			return true;
+		}
 		
 		// 6.12
-		TEST SeparationSpacesII() { return "  not written yet"; }
+		TEST SeparationSpacesII() {
+			YAML::Node doc = YAML::Parse(ex6_12);
+			
+			std::map<std::string, std::string> sammy;
+			sammy["first"] = "Sammy";
+			sammy["last"] = "Sosa";
+			
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc[sammy].size() == 2);
+			YAML_ASSERT(doc[sammy]["hr"].as<int>() == 65);
+			YAML_ASSERT(doc[sammy]["avg"].as<std::string>() == "0.278");
+			return true;
+		}
 		
 		// 6.13
-		TEST ReservedDirectives() { return "  not written yet"; }
+		TEST ReservedDirectives() {
+			YAML::Node doc = YAML::Parse(ex6_13);
+			YAML_ASSERT(doc.as<std::string>() == "foo");
+			return true;
+		}
 		
 		// 6.14
-		TEST YAMLDirective() { return "  not written yet"; }
+		TEST YAMLDirective() {
+			YAML::Node doc = YAML::Parse(ex6_14);
+			YAML_ASSERT(doc.as<std::string>() == "foo");
+			return true;
+		}
 		
 		// 6.15
-		TEST InvalidRepeatedYAMLDirective() { return "  not written yet"; }
+		TEST InvalidRepeatedYAMLDirective() {
+			try {
+				YAML::Parse(ex6_15);
+			} catch(const YAML::ParserException& e) {
+				YAML_ASSERT(e.msg == YAML::ErrorMsg::REPEATED_YAML_DIRECTIVE);
+				return true;
+			}
+			
+			return "  No exception was thrown";
+		}
 		
 		// 6.16
 		TEST TagDirective() { return "  not written yet"; }
@@ -435,7 +531,13 @@ namespace Test
 		TEST NonSpecificTags() { return "  not written yet"; }
 		
 		// 6.29
-		TEST NodeAnchors() { return "  not written yet"; }
+		TEST NodeAnchors() {
+			YAML::Node doc = YAML::Parse(ex6_29);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["First occurrence"].as<std::string>() == "Value");
+			YAML_ASSERT(doc["Second occurrence"].as<std::string>() == "Value");
+			return true;
+		}
 		
 		// 7.1
 		TEST AliasNodes() { return "  not written yet"; }
