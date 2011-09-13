@@ -540,73 +540,250 @@ namespace Test
 		}
 		
 		// 7.1
-		TEST AliasNodes() { return "  not written yet"; }
+		TEST AliasNodes() {
+			YAML::Node doc = YAML::Parse(ex7_1);
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(doc["First occurrence"].as<std::string>() == "Foo");
+			YAML_ASSERT(doc["Second occurrence"].as<std::string>() == "Foo");
+			YAML_ASSERT(doc["Override anchor"].as<std::string>() == "Bar");
+			YAML_ASSERT(doc["Reuse anchor"].as<std::string>() == "Bar");
+			return true;
+		}
 		
 		// 7.2
 		TEST EmptyNodes() { return "  not written yet"; }
 		
 		// 7.3
-		TEST CompletelyEmptyNodes() { return "  not written yet"; }
+		TEST CompletelyEmptyNodes() {
+			YAML::Node doc = YAML::Parse(ex7_3);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["foo"].Type() == YAML::NodeType::Null);
+//			YAML_ASSERT(doc[YAML::Null].as<std::string>() == "bar");
+			return "  null as a key not implemented";
+			return true;
+		}
 		
 		// 7.4
-		TEST DoubleQuotedImplicitKeys() { return "  not written yet"; }
+		TEST DoubleQuotedImplicitKeys() {
+			YAML::Node doc = YAML::Parse(ex7_4);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["implicit block key"].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"].as<std::string>() == "value");
+			return true;
+		}
 		
 		// 7.5
-		TEST DoubleQuotedLineBreaks() { return "  not written yet"; }
+		TEST DoubleQuotedLineBreaks() {
+			YAML::Node doc = YAML::Parse(ex7_5);
+			YAML_ASSERT(doc.as<std::string>() == "folded to a space,\nto a line feed, or \t \tnon-content");
+			return true;
+		}
 		
 		// 7.6
-		TEST DoubleQuotedLines() { return "  not written yet"; }
+		TEST DoubleQuotedLines() {
+			YAML::Node doc = YAML::Parse(ex7_6);
+			YAML_ASSERT(doc.as<std::string>() == " 1st non-empty\n2nd non-empty 3rd non-empty ");
+			return true;
+		}
 		
 		// 7.7
-		TEST SingleQuotedCharacters() { return "  not written yet"; }
+		TEST SingleQuotedCharacters() {
+			YAML::Node doc = YAML::Parse(ex7_7);
+			YAML_ASSERT(doc.as<std::string>() == "here's to \"quotes\"");
+			return true;
+		}
 		
 		// 7.8
-		TEST SingleQuotedImplicitKeys() { return "  not written yet"; }
+		TEST SingleQuotedImplicitKeys() {
+			YAML::Node doc = YAML::Parse(ex7_8);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["implicit block key"].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"].as<std::string>() == "value");
+			return true;
+		}
 		
 		// 7.9
-		TEST SingleQuotedLines() { return "  not written yet"; }
+		TEST SingleQuotedLines() {
+			YAML::Node doc = YAML::Parse(ex7_9);
+			YAML_ASSERT(doc.as<std::string>() == " 1st non-empty\n2nd non-empty 3rd non-empty ");
+			return true;
+		}
 		
 		// 7.10
-		TEST PlainCharacters() { return "  not written yet"; }
+		TEST PlainCharacters() {
+			YAML::Node doc = YAML::Parse(ex7_10);
+			YAML_ASSERT(doc.size() == 6);
+			YAML_ASSERT(doc[0].as<std::string>() == "::vector");
+			YAML_ASSERT(doc[1].as<std::string>() == ": - ()");
+			YAML_ASSERT(doc[2].as<std::string>() == "Up, up, and away!");
+			YAML_ASSERT(doc[3].as<int>() == -123);
+			YAML_ASSERT(doc[4].as<std::string>() == "http://example.com/foo#bar");
+			YAML_ASSERT(doc[5].size() == 5);
+			YAML_ASSERT(doc[5][0].as<std::string>() == "::vector");
+			YAML_ASSERT(doc[5][1].as<std::string>() == ": - ()");
+			YAML_ASSERT(doc[5][2].as<std::string>() == "Up, up, and away!");
+			YAML_ASSERT(doc[5][3].as<int>() == -123);
+			YAML_ASSERT(doc[5][4].as<std::string>() == "http://example.com/foo#bar");
+			return true;
+		}
 		
 		// 7.11
-		TEST PlainImplicitKeys() { return "  not written yet"; }
+		TEST PlainImplicitKeys() {
+			YAML::Node doc = YAML::Parse(ex7_11);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc["implicit block key"].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0].size() == 1);
+			YAML_ASSERT(doc["implicit block key"][0]["implicit flow key"].as<std::string>() == "value");
+			return true;
+		}
 		
 		// 7.12
-		TEST PlainLines() { return "  not written yet"; }
+		TEST PlainLines() {
+			YAML::Node doc = YAML::Parse(ex7_12);
+			YAML_ASSERT(doc.as<std::string>() == "1st non-empty\n2nd non-empty 3rd non-empty");
+			return true;
+		}
 		
 		// 7.13
-		TEST FlowSequence() { return "  not written yet"; }
+		TEST FlowSequence() {
+			YAML::Node doc = YAML::Parse(ex7_13);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[0].size() == 2);
+			YAML_ASSERT(doc[0][0].as<std::string>() == "one");
+			YAML_ASSERT(doc[0][1].as<std::string>() == "two");
+			YAML_ASSERT(doc[1].size() == 2);
+			YAML_ASSERT(doc[1][0].as<std::string>() == "three");
+			YAML_ASSERT(doc[1][1].as<std::string>() == "four");
+			return true;
+		}
 		
 		// 7.14
-		TEST FlowSequenceEntries() { return "  not written yet"; }
+		TEST FlowSequenceEntries() {
+			YAML::Node doc = YAML::Parse(ex7_14);
+			YAML_ASSERT(doc.size() == 5);
+			YAML_ASSERT(doc[0].as<std::string>() == "double quoted");
+			YAML_ASSERT(doc[1].as<std::string>() == "single quoted");
+			YAML_ASSERT(doc[2].as<std::string>() == "plain text");
+			YAML_ASSERT(doc[3].size() == 1);
+			YAML_ASSERT(doc[3][0].as<std::string>() == "nested");
+			YAML_ASSERT(doc[4].size() == 1);
+			YAML_ASSERT(doc[4]["single"].as<std::string>() == "pair");
+			return true;
+		}
 		
 		// 7.15
-		TEST FlowMappings() { return "  not written yet"; }
+		TEST FlowMappings() {
+			YAML::Node doc = YAML::Parse(ex7_15);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc[0].size() == 2);
+			YAML_ASSERT(doc[0]["one"].as<std::string>() == "two");
+			YAML_ASSERT(doc[0]["three"].as<std::string>() == "four");
+			YAML_ASSERT(doc[1].size() == 2);
+			YAML_ASSERT(doc[1]["five"].as<std::string>() == "six");
+			YAML_ASSERT(doc[1]["seven"].as<std::string>() == "eight");
+			return true;
+		}
 		
 		// 7.16
-		TEST FlowMappingEntries() { return "  not written yet"; }
+		TEST FlowMappingEntries() {
+			YAML::Node doc = YAML::Parse(ex7_16);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["explicit"].as<std::string>() == "entry");
+			YAML_ASSERT(doc["implicit"].as<std::string>() == "entry");
+//			YAML_ASSERT(doc[YAML::Null].Type() == YAML::NodeType::Null);
+			return "  null as a key not implemented";
+			return true;
+		}
 		
 		// 7.17
-		TEST FlowMappingSeparateValues() { return "  not written yet"; }
+		TEST FlowMappingSeparateValues() {
+			YAML::Node doc = YAML::Parse(ex7_17);
+			YAML_ASSERT(doc.size() == 4);
+			YAML_ASSERT(doc["unquoted"].as<std::string>() == "separate");
+			YAML_ASSERT(doc["http://foo.com"].Type() == YAML::NodeType::Null);
+			YAML_ASSERT(doc["omitted value"].Type() == YAML::NodeType::Null);
+//			YAML_ASSERT(doc[YAML::Null].as<std::string>() == "omitted key");
+			return "  null as a key not implemented";
+			return true;
+		}
 		
 		// 7.18
-		TEST FlowMappingAdjacentValues() { return "  not written yet"; }
+		TEST FlowMappingAdjacentValues() {
+			YAML::Node doc = YAML::Parse(ex7_18);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc["adjacent"].as<std::string>() == "value");
+			YAML_ASSERT(doc["readable"].as<std::string>() == "value");
+			YAML_ASSERT(doc["empty"].Type() == YAML::NodeType::Null);
+			return true;
+		}
 		
 		// 7.19
-		TEST SinglePairFlowMappings() { return "  not written yet"; }
+		TEST SinglePairFlowMappings() {
+			YAML::Node doc = YAML::Parse(ex7_19);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0]["foo"].as<std::string>() == "bar");
+			return true;
+		}
 		
 		// 7.20
-		TEST SinglePairExplicitEntry() { return "  not written yet"; }
+		TEST SinglePairExplicitEntry() {
+			YAML::Node doc = YAML::Parse(ex7_20);
+			YAML_ASSERT(doc.size() == 1);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0]["foo bar"].as<std::string>() == "baz");
+			return true;
+		}
 		
 		// 7.21
-		TEST SinglePairImplicitEntries() { return "  not written yet"; }
+		TEST SinglePairImplicitEntries() {
+			YAML::Node doc = YAML::Parse(ex7_21);
+			YAML_ASSERT(doc.size() == 3);
+			YAML_ASSERT(doc[0].size() == 1);
+			YAML_ASSERT(doc[0][0].size() == 1);
+			YAML_ASSERT(doc[0][0]["YAML"].as<std::string>() == "separate");
+			YAML_ASSERT(doc[1].size() == 1);
+			YAML_ASSERT(doc[1][0].size() == 1);
+//			YAML_ASSERT(doc[1][0][YAML::Null].as<std::string>() == "empty key entry");
+			return "  null as a key not implemented";
+			YAML_ASSERT(doc[2].size() == 1);
+			YAML_ASSERT(doc[2][0].size() == 1);
+			
+			std::map<std::string, std::string> key;
+			key["JSON"] = "like";
+			YAML_ASSERT(doc[2][0][key].as<std::string>() == "adjacent");
+			return true;
+		}
 		
 		// 7.22
-		TEST InvalidImplicitKeys() { return "  not written yet"; }
+		TEST InvalidImplicitKeys() {
+			try {
+				YAML::Parse(ex7_22);
+			} catch(const YAML::Exception& e) {
+				if(e.msg == YAML::ErrorMsg::END_OF_SEQ_FLOW)
+					return true;
+				
+				throw;
+			}
+			return "  no exception thrown";
+		}
 		
 		// 7.23
-		TEST FlowContent() { return "  not written yet"; }
+		TEST FlowContent() {
+			YAML::Node doc = YAML::Parse(ex7_23);
+			YAML_ASSERT(doc.size() == 5);
+			YAML_ASSERT(doc[0].size() == 2);
+			YAML_ASSERT(doc[0][0].as<std::string>() == "a");
+			YAML_ASSERT(doc[0][1].as<std::string>() == "b");
+			YAML_ASSERT(doc[1].size() == 1);
+			YAML_ASSERT(doc[1]["a"].as<std::string>() == "b");
+			YAML_ASSERT(doc[2].as<std::string>() == "a");
+			YAML_ASSERT(doc[3].as<char>() == 'b');
+			YAML_ASSERT(doc[4].as<std::string>() == "c");
+			return true;
+		}
 		
 		// 7.24
 		TEST FlowNodes() { return "  not written yet"; }
