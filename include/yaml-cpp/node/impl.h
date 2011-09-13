@@ -73,12 +73,23 @@ namespace YAML
 	{
 		if(Type() != NodeType::Scalar)
 			throw std::runtime_error("Unable to convert to string, not a scalar");
-		return scalar();
+		return Scalar();
 	}
 
-	inline const std::string& Node::scalar() const
+	inline const std::string& Node::Scalar() const
 	{
 		return m_pNode ? m_pNode->scalar() : detail::node_data::empty_scalar;
+	}
+
+	inline const std::string& Node::Tag() const
+	{
+		return m_pNode ? m_pNode->tag() : detail::node_data::empty_scalar;
+	}
+
+	inline void Node::SetTag(const std::string& tag)
+	{
+		EnsureNodeExists();
+		m_pNode->set_tag(tag);
 	}
 
 	// assignment

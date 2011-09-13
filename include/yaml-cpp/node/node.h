@@ -32,13 +32,15 @@ namespace YAML
 		
 		// access
 		template<typename T> const T as() const;
-		const std::string& scalar() const;
-		
+		const std::string& Scalar() const;
+		const std::string& Tag() const;
+		void SetTag(const std::string& tag);
+
 		// assignment
 		bool is(const Node& rhs) const;
 		template<typename T> Node& operator=(const T& rhs);
 		Node& operator=(const Node& rhs);
-		
+
 		// size/iterator
 		std::size_t size() const;
 

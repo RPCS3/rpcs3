@@ -26,12 +26,14 @@ namespace YAML
 			
 			void mark_defined();
 			void set_type(NodeType::value type);
+			void set_tag(const std::string& tag);
 			void set_null();
 			void set_scalar(const std::string& scalar);
 			
 			bool is_defined() const { return m_isDefined; }
 			NodeType::value type() const { return m_isDefined ? m_type : NodeType::Undefined; }
 			const std::string& scalar() const { return m_scalar; }
+			const std::string& tag() const { return m_tag; }
 			
 			// size/iterator
 			std::size_t size() const;
@@ -78,6 +80,7 @@ namespace YAML
 		private:
 			bool m_isDefined;
 			NodeType::value m_type;
+			std::string m_tag;
 			
 			// scalar
 			std::string m_scalar;

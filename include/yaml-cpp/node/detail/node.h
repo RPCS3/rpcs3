@@ -29,6 +29,7 @@ namespace YAML
 			NodeType::value type() const { return m_pRef->type(); }
 			
 			const std::string& scalar() const { return m_pRef->scalar(); }
+			const std::string& tag() const { return m_pRef->tag(); }
 			
 			void mark_defined() {
 				if(is_defined())
@@ -70,6 +71,10 @@ namespace YAML
 			void set_scalar(const std::string& scalar) {
 				mark_defined();
 				m_pRef->set_scalar(scalar);
+			}
+			void set_tag(const std::string& tag) {
+				mark_defined();
+				m_pRef->set_tag(tag);
 			}
 
 			// size/iterator

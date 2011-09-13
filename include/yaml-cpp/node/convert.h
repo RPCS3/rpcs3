@@ -26,7 +26,7 @@ namespace YAML
 		static bool decode(const Node& node, std::string& rhs) {
 			if(node.Type() != NodeType::Scalar)
 				return false;
-			rhs = node.scalar();
+			rhs = node.Scalar();
 			return true;
 		}
 	};
@@ -54,7 +54,7 @@ namespace YAML
 		static bool decode(const Node& node, type& rhs) {\
 			if(node.Type() != NodeType::Scalar)\
 				return false;\
-			std::stringstream stream(node.scalar());\
+			std::stringstream stream(node.Scalar());\
 			stream >> rhs;\
 			return !!stream;\
 		}\

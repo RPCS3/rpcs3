@@ -54,6 +54,11 @@ namespace YAML
 			}
 		}
 
+		void node_data::set_tag(const std::string& tag)
+		{
+			m_tag = tag;
+		}
+		
 		void node_data::set_null()
 		{
 			m_isDefined = true;
