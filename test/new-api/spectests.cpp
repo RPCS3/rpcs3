@@ -744,7 +744,21 @@ namespace Test
 		}
 		
 		// 7.2
-		TEST EmptyNodes() { return "  not written yet"; }
+		TEST EmptyNodes() {
+			YAML::Node doc = YAML::Parse(ex7_2);
+			YAML_ASSERT(doc.size() == 2);
+			for(YAML::const_iterator it=doc.begin();it!=doc.end();++it) {
+				if(it->first.as<std::string>() == "foo") {
+					YAML_ASSERT(it->second.Tag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it->second.as<std::string>() == "");
+				} else if(it->first.as<std::string>() == "") {
+					YAML_ASSERT(it->first.Tag() == "tag:yaml.org,2002:str");
+					YAML_ASSERT(it->second.as<std::string>() == "bar");
+				} else
+					return "  unexpected key";
+			}
+			return true;
+		}
 		
 		// 7.3
 		TEST CompletelyEmptyNodes() {
@@ -975,7 +989,18 @@ namespace Test
 		}
 		
 		// 7.24
-		TEST FlowNodes() { return "  not written yet"; }
+		TEST FlowNodes() {
+			YAML::Node doc = YAML::Parse(ex7_24);
+			YAML_ASSERT(doc.size() == 5);
+			YAML_ASSERT(doc[0].Tag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc[0].as<std::string>() == "a");
+			YAML_ASSERT(doc[1].as<char>() == 'b');
+			YAML_ASSERT(doc[2].as<std::string>() == "c");
+			YAML_ASSERT(doc[3].as<std::string>() == "c");
+			YAML_ASSERT(doc[4].Tag() == "tag:yaml.org,2002:str");
+			YAML_ASSERT(doc[4].as<std::string>() == "");
+			return true;
+		}
 
 		// 8.1
 		TEST BlockScalarHeader() {
@@ -1210,7 +1235,14 @@ namespace Test
 		}
 		
 		// 8.21
-		TEST BlockScalarNodes() { return "  not written yet"; }
+		TEST BlockScalarNodes() {
+			YAML::Node doc = YAML::Parse(ex8_21);
+			YAML_ASSERT(doc.size() == 2);
+			YAML_ASSERT(doc["literal"].as<std::string>() == "value"); // Note: I believe this is a bug in the YAML spec - it should be "value\n"
+			YAML_ASSERT(doc["folded"].as<std::string>() == "value");
+			YAML_ASSERT(doc["folded"].Tag() == "!foo");
+			return true;
+		}
 		
 		// 8.22
 		TEST BlockCollectionNodes() {
