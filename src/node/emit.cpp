@@ -20,4 +20,11 @@ namespace YAML
 		out << emitter.c_str();
 		return out;
 	}
+
+	std::string Dump(const Node& node)
+	{
+		Emitter emitter;
+		emitter << node;
+		return emitter.c_str();
+	}
 }
