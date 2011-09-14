@@ -259,6 +259,15 @@ namespace Test
 			YAML_ASSERT(node["other"] == node["key"]);
 			return true;
 		}
+		
+		TEST Bool()
+		{
+			YAML::Node node;
+			node[true] = false;
+			YAML_ASSERT(node.IsMap());
+			YAML_ASSERT(node[true].as<bool>() == false);
+			return true;
+		}
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -302,6 +311,7 @@ namespace Test
 		RunNodeTest(&Node::SelfReferenceMap, "self reference map", passed, total);
 		RunNodeTest(&Node::TempMapVariable, "temp map variable", passed, total);
 		RunNodeTest(&Node::TempMapVariableAlias, "temp map variable alias", passed, total);
+		RunNodeTest(&Node::Bool, "bool", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

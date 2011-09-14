@@ -24,7 +24,7 @@ namespace YAML
 		}
 		
 		static bool decode(const Node& node, std::string& rhs) {
-			if(node.Type() != NodeType::Scalar)
+			if(!node.IsScalar())
 				return false;
 			rhs = node.Scalar();
 			return true;
@@ -38,7 +38,7 @@ namespace YAML
 		}
 		
 		static bool decode(const Node& node, _Null& /* rhs */) {
-			return node.Type() == NodeType::Null;
+			return node.IsNull();
 		}
 	};
 	
@@ -77,6 +77,16 @@ namespace YAML
 	YAML_DEFINE_CONVERT_STREAMABLE(long double);
 	
 #undef YAML_DEFINE_CONVERT_STREAMABLE
+	
+	// bool
+	template<>
+	struct convert<bool> {
+		static Node encode(bool rhs) {
+			return rhs ? Node("true") : Node("false");
+		}
+		
+		static bool decode(const Node& node, bool& rhs);
+	};
 
 	// std::map
 	template<typename K, typename V>
@@ -89,7 +99,7 @@ namespace YAML
 		}
 		
 		static bool decode(const Node& node, std::map<K, V>& rhs) {
-			if(node.Type() != NodeType::Map)
+			if(!node.IsMap())
 				return false;
 
 			rhs.clear();
@@ -110,7 +120,7 @@ namespace YAML
 		}
 		
 		static bool decode(const Node& node, std::vector<T>& rhs) {
-			if(node.Type() != NodeType::Sequence)
+			if(!node.IsSequence())
 				return false;
 			
 			rhs.clear();
@@ -131,7 +141,7 @@ namespace YAML
 		}
 		
 		static bool decode(const Node& node, std::list<T>& rhs) {
-			if(node.Type() != NodeType::Sequence)
+			if(!node.IsSequence())
 				return false;
 			
 			rhs.clear();
