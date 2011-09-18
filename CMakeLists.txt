@@ -35,7 +35,7 @@ enable_testing()
 ## Project stuff
 option(YAML_CPP_BUILD_TOOLS "Enable testing and parse tools" ON)
 option(YAML_CPP_BUILD_CONTRIB "Enable contrib stuff in library" ON)
-option(YAML_CPP_BUILD_OLD_API "Enable building the old API" OFF)
+option(YAML_CPP_BUILD_OLD_API "Enable building the old API" ON)
 
 ## Build options
 # --> General
