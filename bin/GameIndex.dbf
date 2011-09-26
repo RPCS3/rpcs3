@@ -288,7 +288,13 @@ Region = NTSC-U
 Serial = SCUS-97150
 Name   = Formula One 2001
 Region = NTSC-U
-Compat = 1
+Compat = 3
+[patches = 272F1C14]
+	comment=patches by Plot and Ref Skip videos
+	patch=0,EE,0010aafc,word,00000000
+	patch=0,EE,0010ae2c,word,00000000
+	patch=0,EE,00230010,word,00000000
+[/patches]
 ---------------------------------------------
 Serial = SCUS-97152
 Name   = Dark Cloud [Demo]
@@ -3809,7 +3815,7 @@ Compat = 3
 Serial = SLUS-20496
 Name   = V-Rally 3
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20497
 Name   = Burnout 2 - Point of Impact
@@ -4078,7 +4084,7 @@ Compat = 4
 Serial = SLUS-20560
 Name   = Galerians - Ash
 Region = NTSC-U
-Compat = 3
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20561
 Name   = Disaster Report
@@ -4170,7 +4176,7 @@ Compat = 5
 Serial = SLUS-20579
 Name   = James Bond 007 - Nightfire
 Region = NTSC-U
-Compat = 1
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20580
 Name   = FIFA Soccer 2003
@@ -4400,7 +4406,8 @@ Compat = 5
 Serial = SLUS-20635
 Name   = Muppets Party Cruise, Jim Henson's
 Region = NTSC-U
-Compat = 1
+Compat = 5
+EETimingHack = 1		//Path 3 masking errors
 ---------------------------------------------
 Serial = SLUS-20636
 Name   = Suffering, The
@@ -4579,7 +4586,7 @@ Compat = 4
 Serial = SLUS-20674
 Name   = Virtual On Marz
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20675
 Name   = Baldur's Gate - Dark Alliance 2
@@ -4609,7 +4616,7 @@ Compat = 5
 Serial = SLUS-20681
 Name   = Disney's The Haunted Mansion
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20682
 Name   = K1 World Grand Prix
@@ -4898,7 +4905,7 @@ Compat = 5
 Serial = SLUS-20748
 Name   = Super Trucks Racing
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20749
 Name   = Rugby 2004
@@ -6505,7 +6512,7 @@ Compat = 5
 Serial = SLUS-21095
 Name   = DT Racer
 Region = NTSC-U
-Compat = 1
+Compat = 3
 ---------------------------------------------
 Serial = SLUS-21096
 Name   = Ape Escape - Pumped & Primed
@@ -8463,7 +8470,7 @@ Compat = 5
 Serial = SLUS-21536
 Name   = Sims 2, The - Pets
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21537
 Name   = NeoGeo Fatal Fury Collection
@@ -9055,7 +9062,7 @@ Compat = 5
 Serial = SLUS-21664
 Name   = Sims 2, The - Castaway
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21665
 Name   = Simpsons Game, The
@@ -9648,7 +9655,7 @@ EETimingHack = 1
 Serial = SLUS-21802
 Name   = Naked Brothers Band - The Video Game
 Region = NTSC-U
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21804
 Name   = Avatar - The Last Airbender - Into The Inferno
@@ -20935,11 +20942,19 @@ Serial = SLPM-66275
 Name   = Shin Onimusha - Dawn of Dreams [Disc1of2]
 Region = NTSC-J
 Compat = 2
+[patches = BD17248E]
+	comment= patch by Shadow Lady
+	patch=0,EE,00104170,word,00000000
+[/patches]
 ---------------------------------------------
 Serial = SLPM-66276
 Name   = Shin Onimusha - Dawn of Dreams [Disc2of2]
 Region = NTSC-J
 Compat = 2
+[patches = BD17248E]
+	comment= patch by Shadow Lady
+	patch=0,EE,00104170,word,00000000
+[/patches]
 ---------------------------------------------
 Serial = SLPM-66277
 Name   = Juiced
@@ -31757,6 +31772,7 @@ Region = PAL-Unk
 Serial = SLES-50544
 Name   = Jet Ion GP
 Region = PAL-E
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50545
 Name   = SSX Tricky
@@ -35134,6 +35150,7 @@ Region = PAL-Unk
 Serial = SLES-52230
 Name   = Muppets Party Cruise
 Region = PAL-Unk
+EETimingHack = 1		//Path 3 masking errors
 ---------------------------------------------
 Serial = SLES-52237
 Name   = dot Hack - Part 1 - Infection
@@ -35141,7 +35158,8 @@ Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-52238
 Name   = Nightshade
-Region = PAL-Unk
+Region = PAL-M5
+Compat = 5
 ---------------------------------------------
 Serial = SLES-52240
 Name   = International Pool Championship
@@ -40736,6 +40754,7 @@ Region = PAL-M5
 Serial = SLES-55075
 Name   = Speed racer
 Region = PAL-M6
+Compat = 5
 ---------------------------------------------
 Serial = SLES-55079
 Name   = CID the Dummy
