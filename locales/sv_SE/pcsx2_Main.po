@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 16:04+0200\n"
-"PO-Revision-Date: 2011-06-06 20:10+0100\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
+"PO-Revision-Date: 2011-09-01 22:18+0100\n"
 "Last-Translator: Georg Ronnert <pgert@yahoo.se>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -112,7 +112,7 @@ msgstr ""
 "Om försök att ladda en ISO har gjorts, kan detta fel ha orsakats av en "
 "ostödjande ISO-typ, eller ett fel i PCSX2's ISO-stöd."
 
-#: pcsx2/MTGS.cpp:815
+#: pcsx2/MTGS.cpp:859
 msgid ""
 "The MTGS thread has become unresponsive while waiting for the GS plugin to "
 "open."
@@ -120,13 +120,13 @@ msgstr ""
 "MTGS tråden har blivit osvarandes under inväntningen av att GS-"
 "insticksprogrammet ska öppna."
 
-#: pcsx2/PluginManager.cpp:694
+#: pcsx2/PluginManager.cpp:709
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr ""
 "Sparpunkten kan inte laddas, eftersom den verkar förstörd eller ofullständig."
 
-#: pcsx2/PluginManager.cpp:704
+#: pcsx2/PluginManager.cpp:719
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -135,7 +135,7 @@ msgstr ""
 "%s insticksprogram misslyckades att öppna. Er dator kan ha otillräckliga "
 "resurser, eller oförenlig hårdvara/drivrutiner."
 
-#: pcsx2/PluginManager.cpp:711
+#: pcsx2/PluginManager.cpp:726
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
@@ -144,59 +144,59 @@ msgstr ""
 "%s insticksprogram misslyckades att initialiseras. Ert system kan ha "
 "otillräckligt med minne eller andra erfordeliga resurser."
 
-#: pcsx2/PluginManager.cpp:817
+#: pcsx2/PluginManager.cpp:832
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "Den konfigurerade %s-insticksprogramfilen hittades ej."
 
-#: pcsx2/PluginManager.cpp:821
+#: pcsx2/PluginManager.cpp:836
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
-msgstr "Den konfigurerade %s-insticksprogrammet är inte en giltlig DLL."
+msgstr "Det konfigurerade %s-insticksprogrammet är inte en giltlig DLL."
 
-#: pcsx2/PluginManager.cpp:839
+#: pcsx2/PluginManager.cpp:854
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
 "unsupported version of PCSX2."
 msgstr ""
-"Den konfigurerade %s-insticksprogrammet är inte ett PCSX2 insticksprogram, "
+"Det konfigurerade %s-insticksprogrammet är inte ett PCSX2 insticksprogram, "
 "eller är för en äldre version av PCSX2 och stödjes inte här."
 
-#: pcsx2/PluginManager.cpp:864
+#: pcsx2/PluginManager.cpp:879
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr ""
 "Insticksprogrammet rapporterar att Er hårdvara eller mjukvara/drivrutiner "
 "icke stödjes."
 
-#: pcsx2/PluginManager.cpp:885
+#: pcsx2/PluginManager.cpp:900
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
 msgstr ""
-"Den konfigurerade insticksprogrammet är inte ett PCSX2 insticksprogram, "
+"Det konfigurerade insticksprogrammet är inte ett PCSX2 insticksprogram, "
 "eller för en äldre version av PCSX2 och stödjes inte här."
 
-#: pcsx2/PluginManager.cpp:911
+#: pcsx2/PluginManager.cpp:926
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
 "unsupported version of PCSX2."
 msgstr ""
-"Den konfigurerade %s insticksprogram är inte ett giltligt PCSX2 "
+"Det konfigurerade %s insticksprogramet är inte ett giltligt PCSX2 "
 "insticksprogram, eller för en äldre version av PCSX2 och stödjes inte här."
 
-#: pcsx2/PluginManager.cpp:1339
+#: pcsx2/PluginManager.cpp:1355
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr ""
 "Det interna minneskorts-insticksprogrammet misslyckades att initialiseras."
 
-#: pcsx2/PluginManager.cpp:1736
+#: pcsx2/PluginManager.cpp:1752
 msgid "Unloaded Plugin"
 msgstr "Oladdat insticksprogram"
 
-#: pcsx2/SaveState.cpp:338
+#: pcsx2/SaveState.cpp:339
 msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr ""
 "Kan inte ladda sparpunkten. Den är av en okänd eller ostödjande version."
@@ -359,31 +359,31 @@ msgstr ""
 "Sparpunkten blev inte ordentligt sparad. Den tillfälliga filen skapades "
 "framgångsrikt med kunde inte flyttas till sin slutliga viloplats."
 
-#: pcsx2/gui/AppConfig.cpp:818
+#: pcsx2/gui/AppConfig.cpp:837
 msgid "Safest"
 msgstr "Säkrast"
 
-#: pcsx2/gui/AppConfig.cpp:819
+#: pcsx2/gui/AppConfig.cpp:838
 msgid "Safe (faster)"
 msgstr "Säkert (snabare)"
 
-#: pcsx2/gui/AppConfig.cpp:820
+#: pcsx2/gui/AppConfig.cpp:839
 msgid "Balanced"
 msgstr "Balanserat"
 
-#: pcsx2/gui/AppConfig.cpp:821
+#: pcsx2/gui/AppConfig.cpp:840
 msgid "Aggressive"
 msgstr "Aggressivt"
 
-#: pcsx2/gui/AppConfig.cpp:822
+#: pcsx2/gui/AppConfig.cpp:841
 msgid "Aggressive plus"
 msgstr "Aggressivt plus"
 
-#: pcsx2/gui/AppConfig.cpp:823
+#: pcsx2/gui/AppConfig.cpp:842
 msgid "Mostly Harmful"
 msgstr "Mest Skadligt"
 
-#: pcsx2/gui/AppConfig.cpp:980 pcsx2/gui/AppConfig.cpp:986
+#: pcsx2/gui/AppConfig.cpp:999 pcsx2/gui/AppConfig.cpp:1005
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr ""
 "Misslyckades att skriva över befintlig inställningsfil; tillstånd nekades."
@@ -401,7 +401,7 @@ msgid ""
 "SSE extensions are not available.  PCSX2 requires a cpu that supports the "
 "SSE instruction set."
 msgstr ""
-"SSE utvidningar är ej tillgängliga. PCSX2 kräver en CPU som stödjer "
+"SSE utvidgningar är ej tillgängliga. PCSX2 kräver en CPU som stödjer "
 "instruktionsuppsättningen SSE."
 
 #: pcsx2/gui/AppInit.cpp:154
@@ -444,7 +444,7 @@ msgstr "verkställ en ELF avbild"
 
 #: pcsx2/gui/AppInit.cpp:245
 msgid "boots an empty dvd tray; use to enter the PS2 system menu"
-msgstr "kör en tom dvd tråg; använd för att åtkomma PS2's systemmeny"
+msgstr "kör en tom DVD tråg; använd för att åtkomma PS2's systemmeny"
 
 #: pcsx2/gui/AppInit.cpp:246
 msgid "boots from the CDVD plugin (overrides IsoFile parameter)"
@@ -507,85 +507,85 @@ msgstr ""
 "Tryck OK för att använda den förvaldskonfigurerade insticksprogrammet, eller "
 "Avbryt för att stänga %s."
 
-#: pcsx2/gui/AppInit.cpp:495
+#: pcsx2/gui/AppInit.cpp:496
 msgid "PCSX2 Error: Hardware Deficiency"
 msgstr "PCSX2 Fel: Hårdvarubristfällighet"
 
-#: pcsx2/gui/AppInit.cpp:495 pcsx2/gui/AppInit.cpp:507
+#: pcsx2/gui/AppInit.cpp:496 pcsx2/gui/AppInit.cpp:508
 #, c-format
 msgid "Press OK to close %s."
 msgstr "Tryck OK för att stänga %s."
 
-#: pcsx2/gui/AppInit.cpp:508
+#: pcsx2/gui/AppInit.cpp:509
 #, c-format
 msgid "%s Critical Error"
 msgstr "%s Kritiskt Fel"
 
-#: pcsx2/gui/AppInit.cpp:678
+#: pcsx2/gui/AppInit.cpp:679
 msgid "OK"
 msgstr "OK"
 
-#: pcsx2/gui/AppInit.cpp:679
+#: pcsx2/gui/AppInit.cpp:680
 msgid "&OK"
 msgstr "&OK"
 
-#: pcsx2/gui/AppInit.cpp:680
+#: pcsx2/gui/AppInit.cpp:681
 msgid "Cancel"
 msgstr "Avbryt"
 
-#: pcsx2/gui/AppInit.cpp:681
+#: pcsx2/gui/AppInit.cpp:682
 msgid "&Cancel"
 msgstr "&Avbryt"
 
-#: pcsx2/gui/AppInit.cpp:682
+#: pcsx2/gui/AppInit.cpp:683
 msgid "&Apply"
 msgstr "&Tillämpa"
 
-#: pcsx2/gui/AppInit.cpp:683
+#: pcsx2/gui/AppInit.cpp:684
 msgid "&Next >"
 msgstr "&Nästa >"
 
-#: pcsx2/gui/AppInit.cpp:684
+#: pcsx2/gui/AppInit.cpp:685
 msgid "< &Back"
 msgstr "<&Tillbaka"
 
-#: pcsx2/gui/AppInit.cpp:685
+#: pcsx2/gui/AppInit.cpp:686
 msgid "&Back"
 msgstr "&Tillbaka"
 
-#: pcsx2/gui/AppInit.cpp:686
+#: pcsx2/gui/AppInit.cpp:687
 msgid "&Finish"
 msgstr "&Avsluta"
 
-#: pcsx2/gui/AppInit.cpp:687
+#: pcsx2/gui/AppInit.cpp:688
 msgid "&Yes"
 msgstr "&Ja"
 
-#: pcsx2/gui/AppInit.cpp:688
+#: pcsx2/gui/AppInit.cpp:689
 msgid "&No"
 msgstr "&Nej"
 
-#: pcsx2/gui/AppInit.cpp:689
+#: pcsx2/gui/AppInit.cpp:690
 msgid "Browse"
 msgstr "Bläddra"
 
-#: pcsx2/gui/AppInit.cpp:690
+#: pcsx2/gui/AppInit.cpp:691
 msgid "&Save"
 msgstr "&Spara"
 
-#: pcsx2/gui/AppInit.cpp:691
+#: pcsx2/gui/AppInit.cpp:692
 msgid "Save &As..."
 msgstr "Spara &Som"
 
-#: pcsx2/gui/AppInit.cpp:692
+#: pcsx2/gui/AppInit.cpp:693
 msgid "&Help"
 msgstr "&Hjälp"
 
-#: pcsx2/gui/AppInit.cpp:693
+#: pcsx2/gui/AppInit.cpp:694
 msgid "&Home"
 msgstr "&Hem"
 
-#: pcsx2/gui/AppInit.cpp:695
+#: pcsx2/gui/AppInit.cpp:696
 msgid "Show about dialog"
 msgstr "Visa om dialog"
 
@@ -626,7 +626,7 @@ msgstr "PCSX2 Osvarande tråd"
 msgid "Terminate"
 msgstr "Avsluta"
 
-#: pcsx2/gui/AppMain.cpp:964
+#: pcsx2/gui/AppMain.cpp:963
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Verkställer PS2 VM..."
 
@@ -951,7 +951,7 @@ msgstr "Använd NTFS-komprimering för skapande att detta kort."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:195
 msgid "8 MB [most compatible]"
-msgstr "8 MB [mest kompatibel]"
+msgstr "8 MB [mest förenlig]"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:195
 msgid ""
@@ -984,7 +984,7 @@ msgstr ""
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
 msgid "16 and 32 MB cards have roughly the same compatibility factor."
-msgstr "16 och 32 MB kort har ungefär samma kompabilitetsfaktor."
+msgstr "16 och 32 MB kort har ungefär samma förenlighetsfaktor."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:203
 msgid "32 MB"
@@ -999,7 +999,7 @@ msgid ""
 "Low compatibility warning: Yes it's very big, but may not work with many "
 "games."
 msgstr ""
-"Låg kompabilitesvarning: Jo den är väldigt stor, men kan måhända inte "
+"Låg förenlighetsvarning: Jo den är väldigt stor, men kan måhända inte "
 "fungera med många spel."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
@@ -1807,7 +1807,7 @@ msgid ""
 "Vector Unit Interpreter. Slow and not very compatible. Only use for "
 "diagnostics."
 msgstr ""
-"Vektor Enhets Tolkare. Långsam och inte värst kompatibel. Använd endast för "
+"Vektor Enhets Tolkare. Långsam och inte värst förenlig. Använd endast för "
 "diagnostik."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:187
@@ -1818,7 +1818,7 @@ msgstr "microVU Omkompilerare"
 msgid ""
 "New Vector Unit recompiler with much improved compatibility. Recommended."
 msgstr ""
-"Ny Vektor Enhets omkompilerare med mycket förbättrad kompabilitet. "
+"Ny Vektor Enhets omkompilerare med mycket förbättrad förenlighet. "
 "Rekomenderas."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:190
@@ -1928,7 +1928,7 @@ msgstr "Spelfixar"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:38
 msgid "VU Add Hack - Fixes Tri-Ace games boot crash."
-msgstr "VU Add Hack - Fixar Tri-Ace spelens körkrash."
+msgstr "VU Add Hack - Fixar Tri-Ace spelens körbrak."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:39
 msgid ""
@@ -1989,11 +1989,19 @@ msgstr "Ignorera DMAC skrivningar när den är upptagen."
 msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
 msgstr "Simulerar VIF1 FIFO läs vidare. Löser långsamt laddande spel."
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:103
+msgid "Delay VIF1 Stalls (VIF1 FIFO) - For SOCOM 2 HUD."
+msgstr "Fördröj VIF1 uppehåll (VIF1 FIFO) - för SOCOM 2 HUD."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:107
+msgid "Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"
+msgstr "Strunta i Bussriktning vid Path3 Överföring - Används för Hotwheels"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:118
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "Möjliggör manuella spelfixar [Rekomenderas ej]"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:127
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
 msgstr ""
@@ -2390,10 +2398,9 @@ msgstr "mVU Flag Hack"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:164
 msgid ""
-"Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc... "
-"[Recommended]"
+"Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
 msgstr ""
-"Bra Uppsnabbning och Hög Kompabilitet; kan orsaka skräpgrafik, SPS, etc... "
+"Bra Uppsnabbning och Hög Förenlighet; kan orsaka dålig grafik... "
 "[Rekomenderas]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:166
@@ -2402,42 +2409,54 @@ msgstr "mVU Block Hack"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
 msgid ""
-"Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc..."
+"Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
 msgstr ""
-"Bra Uppsnabbning och Hög Kompabilitet; kan orsaka skräpgrafik, SPS, etc..."
+"Bra Uppsnabbning och Hög Förenlighet; kan orsaka dålig grafik, SPS, etc..."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+msgid "MTVU (Multi-Threaded microVU1)"
+msgstr "MTVU (Multi-Trådad microVU1)"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
+msgid ""
+"Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
+"cores]"
+msgstr ""
+"Bra Uppsnabbning och Hög Förenlighet; kan orsaka att det hänger sig... "
+"[Rekomenderas för 3+ kärnor]"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
 msgid "Other Hacks"
 msgstr "Andra Hacks"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:184
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:193
 msgid "Enable INTC Spin Detection"
 msgstr "Möjliggör INTC Rotationsuppfattning"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:185
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
 msgid ""
 "Huge speedup for some games, with almost no compatibility side effects. "
 "[Recommended]"
 msgstr ""
-"Enorm uppsnabbning för vissa spel, med nästan inga kompabilitetsbieffekter. "
+"Enorm uppsnabbning för vissa spel, med nästan inga förenlighetsbieffekter. "
 "[Rekomenderas]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:187
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:196
 msgid "Enable Wait Loop Detection"
 msgstr "Möjliggör Vänta Loop Uppfattning"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:188
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:197
 msgid ""
 "Moderate speedup for some games, with no known side effects. [Recommended]"
 msgstr ""
 "Måttlig uppsnabbning för vissa spel, med inga kända bieffekter. "
 "[Rekomenderas]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:190
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
 msgid "Enable fast CDVD"
 msgstr "Möjliggör snabb CDVD"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "Fast disc access, less loading times. [Not Recommended]"
 msgstr "Snabb disktillgång, färre laddningsgånger. [Rekomenderas Ej]"
 
@@ -2569,8 +2588,8 @@ msgid ""
 "Cannot load this savestate.  The state is from an incompatible edition of "
 "PCSX2 that is either newer than this version, or is no longer supported."
 msgstr ""
-"Kan inte ladda denna sparpunkt; den är från en okompatibel utgåva av PCSX2 "
-"som antingen är nyare än denna version eller som ej längre stödjes."
+"Kan inte ladda denna sparpunkt; den är från en oförenlig utgåva av PCSX2 som "
+"antingen är nyare än denna version eller som ej längre stödjes."
 
 #: pcsx2/gui/SysState.cpp:290
 msgid ""

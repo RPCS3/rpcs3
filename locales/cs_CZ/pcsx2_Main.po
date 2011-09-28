@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 15:54+0200\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
 "PO-Revision-Date: 2011-04-07 16:35+0100\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Zbyněk Schwarz\n"
@@ -113,19 +113,19 @@ msgstr ""
 "Pokud načítáte z obrazu ISO, tato chyba mohla být způsobena nepodporovaným "
 "typem obrazu ISO nebo chyba PCSX2 v podpoře obrazů ISO."
 
-#: pcsx2/MTGS.cpp:815
+#: pcsx2/MTGS.cpp:859
 msgid ""
 "The MTGS thread has become unresponsive while waiting for the GS plugin to "
 "open."
 msgstr ""
 "Vlákno VVGS přestalo odpovídat při čekání na otevření zásuvného modulu GS."
 
-#: pcsx2/PluginManager.cpp:694
+#: pcsx2/PluginManager.cpp:709
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr "Uložený stav nelze načíst, protože vypadá poškozený nebo neúplný"
 
-#: pcsx2/PluginManager.cpp:704
+#: pcsx2/PluginManager.cpp:719
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -134,7 +134,7 @@ msgstr ""
 "Zásuvný modul %s nelze otevřít. Váš počítač může mít nedostatečné zdroje, "
 "nebo nekompatibilní hardware/ovladače."
 
-#: pcsx2/PluginManager.cpp:711
+#: pcsx2/PluginManager.cpp:726
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
@@ -143,17 +143,17 @@ msgstr ""
 "Zásuvný modul %s nelze spustit. Váš systém možná nemá dostatečnou paměť nebo "
 "potřebné zdroje."
 
-#: pcsx2/PluginManager.cpp:817
+#: pcsx2/PluginManager.cpp:832
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "Nastavený soubor zásuvného modulu %s nebyl nalezen"
 
-#: pcsx2/PluginManager.cpp:821
+#: pcsx2/PluginManager.cpp:836
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr "Nastavený soubor zásuvného modulu %s není platná dynamická knihovna"
 
-#: pcsx2/PluginManager.cpp:839
+#: pcsx2/PluginManager.cpp:854
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
@@ -162,14 +162,14 @@ msgstr ""
 "Nastavený zásuvný modul %s není platný modul PCSX2, nebo je pro starší "
 "nepodporovanou verzi PCSX2."
 
-#: pcsx2/PluginManager.cpp:864
+#: pcsx2/PluginManager.cpp:879
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr ""
 "Zásuvný modul hlásí, že Váš hardware nebo software/ovladače nejsou "
 "podporovány."
 
-#: pcsx2/PluginManager.cpp:885
+#: pcsx2/PluginManager.cpp:900
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
@@ -177,7 +177,7 @@ msgstr ""
 "Nastavený zásuvný modul není modul PCSX2. nebo je pro starší nepodporovanou "
 "verzi PCSX2."
 
-#: pcsx2/PluginManager.cpp:911
+#: pcsx2/PluginManager.cpp:926
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
@@ -186,15 +186,15 @@ msgstr ""
 "Nastavený zásuvný modul %s není platný modul PCSX2, nebo je pro starší "
 "nepodporovanou verzi PCSX2."
 
-#: pcsx2/PluginManager.cpp:1339
+#: pcsx2/PluginManager.cpp:1355
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr "Vnitřní zásuvný modul Paměťové Karty nelze spustit."
 
-#: pcsx2/PluginManager.cpp:1736
+#: pcsx2/PluginManager.cpp:1752
 msgid "Unloaded Plugin"
 msgstr "Uvolněný Zásuvný Modul"
 
-#: pcsx2/SaveState.cpp:338
+#: pcsx2/SaveState.cpp:339
 msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr "Nelze načíst uložený stav. Je neznámé nebo nepodporované verze."
 
@@ -358,31 +358,31 @@ msgstr ""
 "Uložený stav nebyl správně uložen. Dočasný soubor byl úspěšně vytvořen ale "
 "nemohl být přesunut do svého posledního místa odpočinku."
 
-#: pcsx2/gui/AppConfig.cpp:818
+#: pcsx2/gui/AppConfig.cpp:837
 msgid "Safest"
 msgstr "Nejbezpečnější"
 
-#: pcsx2/gui/AppConfig.cpp:819
+#: pcsx2/gui/AppConfig.cpp:838
 msgid "Safe (faster)"
 msgstr "Bezpečné (rychlejší)"
 
-#: pcsx2/gui/AppConfig.cpp:820
+#: pcsx2/gui/AppConfig.cpp:839
 msgid "Balanced"
 msgstr "Vyrovnaný"
 
-#: pcsx2/gui/AppConfig.cpp:821
+#: pcsx2/gui/AppConfig.cpp:840
 msgid "Aggressive"
 msgstr "Agresivní"
 
-#: pcsx2/gui/AppConfig.cpp:822
+#: pcsx2/gui/AppConfig.cpp:841
 msgid "Aggressive plus"
 msgstr "Agresivní plus"
 
-#: pcsx2/gui/AppConfig.cpp:823
+#: pcsx2/gui/AppConfig.cpp:842
 msgid "Mostly Harmful"
 msgstr "Většinou Škodlivý"
 
-#: pcsx2/gui/AppConfig.cpp:980 pcsx2/gui/AppConfig.cpp:986
+#: pcsx2/gui/AppConfig.cpp:999 pcsx2/gui/AppConfig.cpp:1005
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "Nelze přepsat existující soubor nastavení; oprávnění bylo zamítnuto."
 
@@ -505,85 +505,85 @@ msgstr ""
 "Stiskněte OK pro použití výchozího nastaveného zásuvného modulu, nebo Zrušit "
 "pro zavření %s."
 
-#: pcsx2/gui/AppInit.cpp:495
+#: pcsx2/gui/AppInit.cpp:496
 msgid "PCSX2 Error: Hardware Deficiency"
 msgstr "Chyba PCSX2: Hardwarová Vada"
 
-#: pcsx2/gui/AppInit.cpp:495 pcsx2/gui/AppInit.cpp:507
+#: pcsx2/gui/AppInit.cpp:496 pcsx2/gui/AppInit.cpp:508
 #, c-format
 msgid "Press OK to close %s."
 msgstr "Stiskněte OK pro uzavření %s."
 
-#: pcsx2/gui/AppInit.cpp:508
+#: pcsx2/gui/AppInit.cpp:509
 #, c-format
 msgid "%s Critical Error"
 msgstr "%s Kritická Chyba"
 
-#: pcsx2/gui/AppInit.cpp:678
+#: pcsx2/gui/AppInit.cpp:679
 msgid "OK"
 msgstr "OK"
 
-#: pcsx2/gui/AppInit.cpp:679
+#: pcsx2/gui/AppInit.cpp:680
 msgid "&OK"
 msgstr "&OK"
 
-#: pcsx2/gui/AppInit.cpp:680
+#: pcsx2/gui/AppInit.cpp:681
 msgid "Cancel"
 msgstr "Zrušit"
 
-#: pcsx2/gui/AppInit.cpp:681
+#: pcsx2/gui/AppInit.cpp:682
 msgid "&Cancel"
 msgstr "&Zrušit"
 
-#: pcsx2/gui/AppInit.cpp:682
+#: pcsx2/gui/AppInit.cpp:683
 msgid "&Apply"
 msgstr "&Použít"
 
-#: pcsx2/gui/AppInit.cpp:683
+#: pcsx2/gui/AppInit.cpp:684
 msgid "&Next >"
 msgstr "&Další >"
 
-#: pcsx2/gui/AppInit.cpp:684
+#: pcsx2/gui/AppInit.cpp:685
 msgid "< &Back"
 msgstr "< &Zpět"
 
-#: pcsx2/gui/AppInit.cpp:685
+#: pcsx2/gui/AppInit.cpp:686
 msgid "&Back"
 msgstr "&Zpět"
 
-#: pcsx2/gui/AppInit.cpp:686
+#: pcsx2/gui/AppInit.cpp:687
 msgid "&Finish"
 msgstr "&Dokončit"
 
-#: pcsx2/gui/AppInit.cpp:687
+#: pcsx2/gui/AppInit.cpp:688
 msgid "&Yes"
 msgstr "&Ano"
 
-#: pcsx2/gui/AppInit.cpp:688
+#: pcsx2/gui/AppInit.cpp:689
 msgid "&No"
 msgstr "&Ne"
 
-#: pcsx2/gui/AppInit.cpp:689
+#: pcsx2/gui/AppInit.cpp:690
 msgid "Browse"
 msgstr "Procházet"
 
-#: pcsx2/gui/AppInit.cpp:690
+#: pcsx2/gui/AppInit.cpp:691
 msgid "&Save"
 msgstr "&Uložit"
 
-#: pcsx2/gui/AppInit.cpp:691
+#: pcsx2/gui/AppInit.cpp:692
 msgid "Save &As..."
 msgstr "Uložit &Jako..."
 
-#: pcsx2/gui/AppInit.cpp:692
+#: pcsx2/gui/AppInit.cpp:693
 msgid "&Help"
 msgstr "&Nápověda"
 
-#: pcsx2/gui/AppInit.cpp:693
+#: pcsx2/gui/AppInit.cpp:694
 msgid "&Home"
 msgstr "&Domů"
 
-#: pcsx2/gui/AppInit.cpp:695
+#: pcsx2/gui/AppInit.cpp:696
 msgid "Show about dialog"
 msgstr "Zobrazí dialogové okno O Programu "
 
@@ -625,7 +625,7 @@ msgstr "Neodpovídající Vlákno PCSX2"
 msgid "Terminate"
 msgstr "Ukončit"
 
-#: pcsx2/gui/AppMain.cpp:964
+#: pcsx2/gui/AppMain.cpp:963
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Spouštím Virtuální Stroj PS2..."
 
@@ -1994,11 +1994,19 @@ msgstr "Ignorovat zápisy do kontroly DMA, když je zaneprázdněna."
 msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
 msgstr ""
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:103
+msgid "Delay VIF1 Stalls (VIF1 FIFO) - For SOCOM 2 HUD."
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:107
+msgid "Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:118
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "Povolit ruční záplaty her [Nedoporučeno]"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:127
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
 msgstr ""
@@ -2397,9 +2405,9 @@ msgid "mVU Flag Hack"
 msgstr "Hack Příznaku mVJ"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:164
+#, fuzzy
 msgid ""
-"Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc... "
-"[Recommended]"
+"Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
 msgstr ""
 "Dobré Zrychlení a Vysoká Kompatibilita; může způsobit grafické chyby, SŠP, "
 "atd... [Doporučeno]"
@@ -2409,21 +2417,35 @@ msgid "mVU Block Hack"
 msgstr "Hack Bloku mVJ"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
+#, fuzzy
 msgid ""
-"Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc..."
+"Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
 msgstr ""
 "Dobré Zrychlení a Vysoká Kompatibilita; může způsobit grafické chyby, SŠP, "
 "atd..."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+msgid "MTVU (Multi-Threaded microVU1)"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
+#, fuzzy
+msgid ""
+"Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
+"cores]"
+msgstr ""
+"Dobré Zrychlení a Vysoká Kompatibilita; může způsobit grafické chyby, SŠP, "
+"atd... [Doporučeno]"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
 msgid "Other Hacks"
 msgstr "Jiné Hacky"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:184
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:193
 msgid "Enable INTC Spin Detection"
 msgstr "Povolit Zjišťování Otáčení KPŘE"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:185
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
 msgid ""
 "Huge speedup for some games, with almost no compatibility side effects. "
 "[Recommended]"
@@ -2431,22 +2453,22 @@ msgstr ""
 "Velké zrychlení v některých hrách bez jakýchkoliv vedlejších účinků na "
 "kompatibilitu. [Doporučeno]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:187
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:196
 msgid "Enable Wait Loop Detection"
 msgstr "Povolit Zjištění Čekací Smyčky"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:188
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:197
 msgid ""
 "Moderate speedup for some games, with no known side effects. [Recommended]"
 msgstr ""
 "Mírné zrychlení v některých hrách bez žádných známých vedlejších účinků. "
 "[Doporučeno]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:190
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
 msgid "Enable fast CDVD"
 msgstr "Zapnout rychlé CDVD"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "Fast disc access, less loading times. [Not Recommended]"
 msgstr "Rychlý přístup k disku, menší doba nahrávání. [Nedoporučeno]"
 

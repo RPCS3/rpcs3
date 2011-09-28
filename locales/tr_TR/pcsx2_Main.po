@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 15:52+0200\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
 "PO-Revision-Date: 2011-04-09 16:40+0200\n"
 "Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
@@ -108,19 +108,19 @@ msgstr ""
 "Eğer bir ISO dosyası yüklemeye çalışıyorsanız bu hata desteklenmeyen dosya "
 "formatı ya da PCSX2'deki bir hatadan kaynaklanıyor olabilir."
 
-#: pcsx2/MTGS.cpp:815
+#: pcsx2/MTGS.cpp:859
 msgid ""
 "The MTGS thread has become unresponsive while waiting for the GS plugin to "
 "open."
 msgstr ""
 "MTGS işlemcisi GS eklentisinin açılmasını beklerken yanıt vermeyi durdurdu."
 
-#: pcsx2/PluginManager.cpp:694
+#: pcsx2/PluginManager.cpp:709
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr "Kayıt konumu yüklenemiyor. Dosya bozuk olabilir."
 
-#: pcsx2/PluginManager.cpp:704
+#: pcsx2/PluginManager.cpp:719
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -128,7 +128,7 @@ msgid ""
 msgstr ""
 "%s eklentisi açılamıyor. Bilgisayarınızın donanımı yeterli olmayabilir."
 
-#: pcsx2/PluginManager.cpp:711
+#: pcsx2/PluginManager.cpp:726
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
@@ -136,17 +136,17 @@ msgid ""
 msgstr ""
 "%s eklentisi çalışmıyor. Bilgisayarınızın donanımı yeterli olmayabilir."
 
-#: pcsx2/PluginManager.cpp:817
+#: pcsx2/PluginManager.cpp:832
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "Ayarlanmış %s eklentisi bulunamıyor."
 
-#: pcsx2/PluginManager.cpp:821
+#: pcsx2/PluginManager.cpp:836
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr "Seçili %s eklentisi geçerli bir kütüphaneye sahip değil"
 
-#: pcsx2/PluginManager.cpp:839
+#: pcsx2/PluginManager.cpp:854
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
@@ -155,12 +155,12 @@ msgstr ""
 "Seçili %s eklentisi geçerli bir PCSX2 eklentisi değil ya da eski ve "
 "desteklenmeyen bir PCSX2 sürümüne ait."
 
-#: pcsx2/PluginManager.cpp:864
+#: pcsx2/PluginManager.cpp:879
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr "Donanım, yazılım ya da sürücüleriniz desteklenmiyor."
 
-#: pcsx2/PluginManager.cpp:885
+#: pcsx2/PluginManager.cpp:900
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
@@ -168,7 +168,7 @@ msgstr ""
 "Seçili eklenti bir PCSX2 eklentisi değil ya da desteklenmeyen eski bir "
 "sürüme ait."
 
-#: pcsx2/PluginManager.cpp:911
+#: pcsx2/PluginManager.cpp:926
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
@@ -177,15 +177,15 @@ msgstr ""
 "Ayarlanmış %s eklentisi geçerli bir PCSX2 eklentisi değil ya da eski ve "
 "desteklenmeyen bir PCSX2 sürümüne ait."
 
-#: pcsx2/PluginManager.cpp:1339
+#: pcsx2/PluginManager.cpp:1355
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr "Hafıza kartı eklentisi başlatılamadı."
 
-#: pcsx2/PluginManager.cpp:1736
+#: pcsx2/PluginManager.cpp:1752
 msgid "Unloaded Plugin"
 msgstr "Yüklenmemiş Eklenti"
 
-#: pcsx2/SaveState.cpp:338
+#: pcsx2/SaveState.cpp:339
 msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr ""
 "Kayıt konumu yüklenemiyor. Dosya bilinmeyen ya da desteklenmeyen bir sürüme "
@@ -346,31 +346,31 @@ msgstr ""
 "Kayıt konumu doğru şekilde kaydedilemedi. Geçici dosya oluşturuldu fakat son "
 "kayıt işlemi tamamlanamadı."
 
-#: pcsx2/gui/AppConfig.cpp:818
+#: pcsx2/gui/AppConfig.cpp:837
 msgid "Safest"
 msgstr "En Güvenli"
 
-#: pcsx2/gui/AppConfig.cpp:819
+#: pcsx2/gui/AppConfig.cpp:838
 msgid "Safe (faster)"
 msgstr "Güvenli (daha hızlı)"
 
-#: pcsx2/gui/AppConfig.cpp:820
+#: pcsx2/gui/AppConfig.cpp:839
 msgid "Balanced"
 msgstr "Dengeli"
 
-#: pcsx2/gui/AppConfig.cpp:821
+#: pcsx2/gui/AppConfig.cpp:840
 msgid "Aggressive"
 msgstr "Agresif"
 
-#: pcsx2/gui/AppConfig.cpp:822
+#: pcsx2/gui/AppConfig.cpp:841
 msgid "Aggressive plus"
 msgstr "Daha Agresif"
 
-#: pcsx2/gui/AppConfig.cpp:823
+#: pcsx2/gui/AppConfig.cpp:842
 msgid "Mostly Harmful"
 msgstr "Çoğu Zaman Zararlı"
 
-#: pcsx2/gui/AppConfig.cpp:980 pcsx2/gui/AppConfig.cpp:986
+#: pcsx2/gui/AppConfig.cpp:999 pcsx2/gui/AppConfig.cpp:1005
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "Var olan dosya değiştirilemiyor; erişim engellendi."
 
@@ -491,85 +491,85 @@ msgstr ""
 "Varsayılan eklentiyi kullanmak için Tamam'a basın ya da %s 'ı kapatmak için "
 "İptal'e basın. "
 
-#: pcsx2/gui/AppInit.cpp:495
+#: pcsx2/gui/AppInit.cpp:496
 msgid "PCSX2 Error: Hardware Deficiency"
 msgstr "PCSX2 Hatası: Donanım Yetersiz"
 
-#: pcsx2/gui/AppInit.cpp:495 pcsx2/gui/AppInit.cpp:507
+#: pcsx2/gui/AppInit.cpp:496 pcsx2/gui/AppInit.cpp:508
 #, c-format
 msgid "Press OK to close %s."
 msgstr "%s 'ı kapatmak için Tamam'a basın."
 
-#: pcsx2/gui/AppInit.cpp:508
+#: pcsx2/gui/AppInit.cpp:509
 #, c-format
 msgid "%s Critical Error"
 msgstr "%s Önemli Hata"
 
-#: pcsx2/gui/AppInit.cpp:678
+#: pcsx2/gui/AppInit.cpp:679
 msgid "OK"
 msgstr "Tamam"
 
-#: pcsx2/gui/AppInit.cpp:679
+#: pcsx2/gui/AppInit.cpp:680
 msgid "&OK"
 msgstr "&Tamam"
 
-#: pcsx2/gui/AppInit.cpp:680
+#: pcsx2/gui/AppInit.cpp:681
 msgid "Cancel"
 msgstr "İptal"
 
-#: pcsx2/gui/AppInit.cpp:681
+#: pcsx2/gui/AppInit.cpp:682
 msgid "&Cancel"
 msgstr "&İptal"
 
-#: pcsx2/gui/AppInit.cpp:682
+#: pcsx2/gui/AppInit.cpp:683
 msgid "&Apply"
 msgstr "&Uygula"
 
-#: pcsx2/gui/AppInit.cpp:683
+#: pcsx2/gui/AppInit.cpp:684
 msgid "&Next >"
 msgstr "&İleri >"
 
-#: pcsx2/gui/AppInit.cpp:684
+#: pcsx2/gui/AppInit.cpp:685
 msgid "< &Back"
 msgstr "< &Geri"
 
-#: pcsx2/gui/AppInit.cpp:685
+#: pcsx2/gui/AppInit.cpp:686
 msgid "&Back"
 msgstr "&Geri"
 
-#: pcsx2/gui/AppInit.cpp:686
+#: pcsx2/gui/AppInit.cpp:687
 msgid "&Finish"
 msgstr "&Tamamla"
 
-#: pcsx2/gui/AppInit.cpp:687
+#: pcsx2/gui/AppInit.cpp:688
 msgid "&Yes"
 msgstr "Evet"
 
-#: pcsx2/gui/AppInit.cpp:688
+#: pcsx2/gui/AppInit.cpp:689
 msgid "&No"
 msgstr "Hayır"
 
-#: pcsx2/gui/AppInit.cpp:689
+#: pcsx2/gui/AppInit.cpp:690
 msgid "Browse"
 msgstr "Göz at"
 
-#: pcsx2/gui/AppInit.cpp:690
+#: pcsx2/gui/AppInit.cpp:691
 msgid "&Save"
 msgstr "&Kaydet"
 
-#: pcsx2/gui/AppInit.cpp:691
+#: pcsx2/gui/AppInit.cpp:692
 msgid "Save &As..."
 msgstr "&Farklı Kaydet..."
 
-#: pcsx2/gui/AppInit.cpp:692
+#: pcsx2/gui/AppInit.cpp:693
 msgid "&Help"
 msgstr "&Yardım"
 
-#: pcsx2/gui/AppInit.cpp:693
+#: pcsx2/gui/AppInit.cpp:694
 msgid "&Home"
 msgstr "Web Sayfası"
 
-#: pcsx2/gui/AppInit.cpp:695
+#: pcsx2/gui/AppInit.cpp:696
 msgid "Show about dialog"
 msgstr "Hakkında penceresini göster"
 
@@ -609,7 +609,7 @@ msgstr "PCSX2 Yanıt Vermeyen İşlem"
 msgid "Terminate"
 msgstr "Sonlandır"
 
-#: pcsx2/gui/AppMain.cpp:964
+#: pcsx2/gui/AppMain.cpp:963
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Sanal PS2 çalıştırılıyor..."
 
@@ -1963,11 +1963,19 @@ msgstr "Meşgulken DMAC'yı yoksay."
 msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
 msgstr ""
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:103
+msgid "Delay VIF1 Stalls (VIF1 FIFO) - For SOCOM 2 HUD."
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:107
+msgid "Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:118
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "Elle yapılan oyun yamalarını etkinleştir [Önerilmez]"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:127
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
 msgstr "Tüm oyun yamalarının kapalı olduğuna emin olmak için en garanti yol."
@@ -2356,9 +2364,9 @@ msgid "mVU Flag Hack"
 msgstr "mVU Flag Hack"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:164
+#, fuzzy
 msgid ""
-"Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc... "
-"[Recommended]"
+"Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
 msgstr ""
 "Hızı oldukça artırır ve uyumluluğu yüksektir; görüntü ya da ses hatalarına "
 "neden olabilir [Önerilir]"
@@ -2368,41 +2376,55 @@ msgid "mVU Block Hack"
 msgstr "mVU Block Hack"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
+#, fuzzy
 msgid ""
-"Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc..."
+"Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
 msgstr ""
 "Hızı oldukça artırır ve uyumluluğu yüksektir; görüntü ya da ses hatalarına "
 "neden olabilir."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+msgid "MTVU (Multi-Threaded microVU1)"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
+#, fuzzy
+msgid ""
+"Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
+"cores]"
+msgstr ""
+"Hızı oldukça artırır ve uyumluluğu yüksektir; görüntü ya da ses hatalarına "
+"neden olabilir [Önerilir]"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
 msgid "Other Hacks"
 msgstr "Diğer Hackler"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:184
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:193
 msgid "Enable INTC Spin Detection"
 msgstr "INTC Spin Tanımlamasını Etkinleştir"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:185
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
 msgid ""
 "Huge speedup for some games, with almost no compatibility side effects. "
 "[Recommended]"
 msgstr ""
 "Bazı oyunlarda hiçbir soruna yol açmadan büyük hız artışı sağlar. [Önerilir]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:187
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:196
 msgid "Enable Wait Loop Detection"
 msgstr "Wait Loop Tanımlamasını Etkinleştir"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:188
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:197
 msgid ""
 "Moderate speedup for some games, with no known side effects. [Recommended]"
 msgstr "Bazı oyunlarda hiçvir soruna yol açmadan hız artışı sağlar. [Önerilir]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:190
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
 msgid "Enable fast CDVD"
 msgstr "Hızlı CDVD'yi etkinleştir"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "Fast disc access, less loading times. [Not Recommended]"
 msgstr "CD'ye daha hızlı ulaşarak yükleme süresini azaltır. [Önerilmez]"
 

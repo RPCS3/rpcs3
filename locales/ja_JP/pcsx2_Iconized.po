@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 15:55+0200\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
 "PO-Revision-Date: 2011-04-30 10:48+0900\n"
 "Last-Translator: oreore\n"
 "Language-Team: \n"
@@ -318,7 +318,7 @@ msgstr ""
 " * グローランサー2＆3\n"
 " * Wizardry"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 "Gamefix は一部タイトルのエミュレーションの不具合を回避することができます。し"
@@ -460,26 +460,34 @@ msgstr ""
 "す。\n"
 "高い設定にするほどｻｲｸﾙｽﾃｨｰﾘﾝｸﾞを行う量が増加します。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "常時ではなくブロックされた時のみフラグステータスを更新します。\n"
 "ほとんどの安全であり、SuperVUにも同様の動作をさせます。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
 msgid "!ContextTip:Speedhacks:vuBlockHack"
 msgstr ""
 "遠い将来にインスタンスデータの古いフラグを必要としないと仮定しています。\n"
 "かなり安全なはずです。どんなゲームに不具合が起きるかは不明ですが..."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#, fuzzy
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr ""
+"このhackは主に非3D系RPGにある INTC ステータスレジスタを使用しVSYNC待ちをする"
+"ゲームに最適です。\n"
+"効果がなかった場合には使用しないでください。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "このhackは主に非3D系RPGにある INTC ステータスレジスタを使用しVSYNC待ちをする"
 "ゲームに最適です。\n"
 "効果がなかった場合には使用しないでください。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "主にEEのカーネル空間のアドレス 0x81FC0 のアイドルループ処理を対象にしていま"
@@ -489,7 +497,7 @@ msgstr ""
 "このようなループを1度だけ繰り返したあと、次のイベントかﾀｲﾑｽﾗｲｽの終りのいずれ"
 "か早いほうに進みます。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "この問題を抱えている既知のゲーム用の設定。\n"
@@ -532,7 +540,7 @@ msgstr ""
 "スクがあることなどの原因で、\n"
 "仮想記憶リソース少ないによって起こされているかもしれません。 "
 
-#: pcsx2/x86/sVU_zerorec.cpp:362
+#: pcsx2/x86/sVU_zerorec.cpp:363
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "メモリがたりなかった(似たい状況)。 SuperVU リコンパイラは必要の特定メモリ範囲"

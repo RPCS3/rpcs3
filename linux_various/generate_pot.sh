@@ -30,9 +30,9 @@ GENERAL_OPTION="--sort-by-file --no-wrap --package-name=PCSX2 \
 ######################################################################
 # Build Input file list
 ######################################################################
-[ ! -e pcsx2 ] && echo "pcsx2 directory not present" && return 1;
-[ ! -e common ] && echo "common directory not present" && return 1;
-[ ! -e locales ] && echo "locales directory not present" && return 1;
+[ ! -e pcsx2 ] && echo "pcsx2 directory not present" && exit 1;
+[ ! -e common ] && echo "common directory not present" && exit 1;
+[ ! -e locales ] && echo "locales directory not present" && exit 1;
 
 # Build a list of all input files
 input_files=""

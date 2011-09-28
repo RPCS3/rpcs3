@@ -7,9 +7,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 15:56+0200\n"
-"PO-Revision-Date: 2011-04-07 13:27+0800\n"
-"Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
+"POT-Creation-Date: 2011-09-24 20:29+0800\n"
+"PO-Revision-Date: 2011-08-13 16:51+0700\n"
+"Last-Translator: Wei Mingzhi <whistler@openoffice.org>\n"
 "Language-Team: \n"
 "Language: \n"
 "MIME-Version: 1.0\n"
@@ -270,15 +270,13 @@ msgstr ""
 " * Mana Khemia 1 (学校的炼金术士)"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:96
-#, fuzzy
 msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
 msgstr ""
-"已知对以下游戏有效:\n"
-" * 死神刀刃战士\n"
-" * 梦幻骑士 2 和 3\n"
-" * 巫术"
+"已知影响以下游戏:\n"
+" * Test Drive Unlimited (无限试驾 2)\n"
+" * Transformers (变形金刚)"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 "游戏特殊修正可以修正一些游戏中的模拟错误。但它也可能在其它游戏中导致兼容或性"
@@ -392,32 +390,39 @@ msgstr ""
 "此选项控制 VU 单元从情感引擎挪用的时钟周期数目。较高数值将增加各个被游戏执行"
 "的 VU 微程序从 EE 挪用的周期数目。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "仅在标志位被读取时更新，而不是总是更新。此选项通常是安全的，Super VU 默认会以"
 "相似的方式处理。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
 msgid "!ContextTip:Speedhacks:vuBlockHack"
 msgstr ""
 "假定未来的块不需要旧的标志实例数据。这应该是安全的。是否导致游戏出现问题仍然"
 "未知。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr ""
+"在单独的线程是运行 VU1 (仅限 microVU1)。通常在三核以上 CPU 中有提速效果。此选"
+"项对大多数游戏是安全的，但一部分游戏可能不兼容或导致没有响应。对于受限于 GS "
+"的游戏，可能会造成性能下降 (特别是在双核 CPU 上)。"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "此选项对于使用 INTC 状态寄存器来等待垂直同步的游戏效果较好，包括一些主要的 "
 "3D RPG 游戏。对于不使用此方法的游戏没有提速效果。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "主要针对位于内核地址 0x81FC0 的 EE 空闲循环，此 Hack 试图检测循环体在一个另外"
 "的模拟单元计划的事件处理过程之前不保证产生相同结果的循环。在一次循环体执行之"
 "后，将下一事件的时间或处理器的时间片结束时间 (孰早) 做出更新。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "请参看 HDLoader 兼容性列表以获取启用此项会出现问题的游戏列表。(通常标记为需"
@@ -450,7 +455,7 @@ msgstr ""
 "您的系统没有足够的资源运行 PCSX2。可能是由于交换文件过小或未使用，或其它占用"
 "资源的程序。"
 
-#: pcsx2/x86/sVU_zerorec.cpp:362
+#: pcsx2/x86/sVU_zerorec.cpp:363
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "内存溢出: SuperVU 重编译器无法保留所需的指定内存范围，且将不可用。这不是一个"
@@ -550,11 +555,6 @@ msgstr ""
 #~ "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
 #~ "components."
 #~ msgstr "彻底禁用所有的 GS 插件活动；可用于评测 EE 内核组件性能。"
-
-#~ msgid "!ContextTip:Speedhacks:vuMinMax"
-#~ msgstr ""
-#~ "使用 SSE 的浮点最大值/最小值操作来代替自定义的最大值/最小值过程。已经导致 "
-#~ "GT 赛车和铁拳 5 出现问题。"
 
 #~ msgid "!ContextTip:Window:FullscreenExclusive"
 #~ msgstr ""

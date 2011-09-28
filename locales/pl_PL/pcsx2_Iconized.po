@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 16:04+0200\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
 "PO-Revision-Date: 2011-06-13 09:26+0100\n"
 "Last-Translator: Miseru99 <miseru99@hotmail.com>\n"
 "Language-Team: Miseru99 <miseru99@hotmail.com>\n"
@@ -339,7 +339,7 @@ msgstr ""
 "Test Drive Unlimited\n"
 "Transformers"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 "Łatki do gier mogą poprawić działanie pewnych tytułów.\n"
@@ -490,7 +490,7 @@ msgstr ""
 "ilość skradzionych cykli używanych na każdy mikroprogram uruchamiany przez "
 "grę."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "Uaktualnia Flagi Statusu tylko na blokach, które je odczytują zamiast cały "
@@ -498,7 +498,7 @@ msgstr ""
 "Jest to bezpieczne w większości przypadków, SuperVU robi coś podobnego w "
 "standardzie."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
 msgid "!ContextTip:Speedhacks:vuBlockHack"
 msgstr ""
 "Zakłada iż w bardzo dalekiej przyszłości, bloki nie będą potrzebować starych "
@@ -506,7 +506,16 @@ msgstr ""
 "Powinno to być w miarę bezpieczne, nie jest wiadome czy przeszkadza "
 "jakiejkolwiek grze."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#, fuzzy
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr ""
+"Ta łatka działa najlepiej z grami, które używają zapisu stanu INTC do "
+"oczekiwania na synchronizację pionową,\n"
+"głównie wszelkie nie zrobione w 3D RPGi. Inne gry nie będą miały z tego "
+"żadnego, lub minimalny pożytek."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "Ta łatka działa najlepiej z grami, które używają zapisu stanu INTC do "
@@ -514,7 +523,7 @@ msgstr ""
 "głównie wszelkie nie zrobione w 3D RPGi. Inne gry nie będą miały z tego "
 "żadnego, lub minimalny pożytek."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "Ta łatka namierza bezczynne pętle o adresie 0x81FC0 w jądrze EE. Stara się "
@@ -523,7 +532,7 @@ msgstr ""
 "odtwarza je\n"
 "dopiero gdy to zdarzenie nastąpi."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "Sprawdź listę kompatybilności HDLoader'a aby zobaczyć które gry mają z tą "
@@ -571,7 +580,7 @@ msgstr ""
 "małą jego wielkością.\n"
 "Możliwe też, że w tej chwili masz uruchomione inne pamięciożerne programy."
 
-#: pcsx2/x86/sVU_zerorec.cpp:362
+#: pcsx2/x86/sVU_zerorec.cpp:363
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "Zabrakło Pamięci(Tak jakby): Rekompilator SuperVU nie mógł zarezerwować "

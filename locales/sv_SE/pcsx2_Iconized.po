@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 16:04+0200\n"
-"PO-Revision-Date: 2011-06-06 20:04+0100\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
+"PO-Revision-Date: 2011-09-01 22:14+0100\n"
 "Last-Translator: Georg Ronnert <pgert@yahoo.se>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -90,14 +90,13 @@ msgstr ""
 #: pcsx2/gui/AppUserMode.cpp:57
 msgid "!Notice:PortableModeRights"
 msgstr ""
-"Möjliggör Vsync när bildfrekvensen är på precis full hastighet. \n"
-"Skullen den falla under detta, förhindras Vsync för att undvika vidare "
-"prestandastraff. \n"
-"Bemärk: Detta fungerar för närvarande bra med GSdx som GS insticksprogram, "
-"och konfigurerad till DX10/11 Hårdvarutolkning. \n"
-"Annat insticksprogram eller annan tolkning kommer antingen att ignorera den "
-"eller producera en svart skärm som blinkar när läget byts. \n"
-"Det kräver även att Vsync möjliggörs. "
+"Försäkra Er om att dessa mappar är skapade och att Er användarbehörighet "
+"medger \n"
+"skrivskydd för dem -- eller återkör PCSX2 med upphöjd (administratör) "
+"behörighet, \n"
+"vilket borde medge PCSX2 förmågan att skapa de nödvändiga mapparna självt. \n"
+"Om Ni inte har upphöjd behörighet för denna dator, \n"
+"måste Ni byta till Användar Dokument läge (klicka på knappen nedanför)."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
 msgid "!ContextTip:ChangingNTFS"
@@ -127,7 +126,7 @@ msgstr ""
 "Denna trollkarl kommer att vägleda Er igenom "
 "konfigurationsinsticksprogram, \n"
 "minneskort, och BIOS. Ifall detta är första gången Ni installerar %s, \n"
-"så rekomenderas det att Ni kollar in Läsmig och konfigurationsvägledningen."
+"så rekomenderas Ni att kolla in Läsmig och konfigurationsvägledningen."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
 msgid "!Wizard:Bios:Tutorial"
@@ -159,7 +158,7 @@ msgid "!Panel:Mcd:EnableEjection"
 msgstr ""
 "Undviker minneskortsförstörelse genom att tvinga spel att återindexera "
 "kortinnehåll \n"
-"efter att ha laddat från sparpunkt. Måhända inte kompatibelt med alla spel "
+"efter att ha laddat från sparpunkt. Måhända inte förenligt med alla spel "
 "(Guitar Hero)."
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
@@ -194,7 +193,7 @@ msgstr ""
 "\n"
 "Förinställningsinfo:\n"
 "1 -     Det riktigaste emuleringen, men också den långsammaste.\n"
-"3 --> Försöker balansera hastighet med kompabilitet.\n"
+"3 --> Försöker balansera hastighet med förenlighet.\n"
 "4 -     Några mer aggresiva fixar.\n"
 "6 -     För många fixar kommer förmodligen att sakta ner de flesta spel."
 
@@ -218,16 +217,15 @@ msgstr ""
 #: pcsx2/gui/MainMenuClicks.cpp:106
 msgid "!Notice:DeleteSettings"
 msgstr ""
-"Detta kommando rensar %s inställningar och låter Er att återköra Första-"
-"Gången Trollkarlen. \n"
+"Detta kommando rensar %s inställningarna \n"
+"och låter Er att återköra Första-Gången Trollkarlen. \n"
 "Ni måste manuelt återstarta %s efter detta. \n"
 "\n"
+"VARNING! Tryck OK för att makulera *ALLA* inställningar för %s \n"
+"och tvångstänga tillämpningen, \n"
+"med följd att alla nuvarande emuleringsprocesser mistes. Är Ni helt säker? \n"
 "\n"
-"VARNING! Tryck OK för att radera *ALLA* inställningar för %s och tvångstänga "
-"tillämpningen, \n"
-"med följd att alla nuvarande emuleringsprocesser mistes.Är Ni helt säker? \n"
-"\n"
-"(bemärk: inställningar för insticksprogram påverkas ej)"
+"(Bemärk: inställningar för insticksprogram påverkas ej)"
 
 #: pcsx2/gui/MemoryCardFile.cpp:78
 msgid "!Notice:Mcd:HasBeenDisabled"
@@ -272,7 +270,7 @@ msgstr ""
 msgid "!ContextTip:Window:Vsync"
 msgstr ""
 "Vsync slår ut skärmsönderrivning men har oftast en stor prestationseffekt. \n"
-"Det tillämpar vanligtvis bara i helskärmsläge, och kanske inte fungerar för "
+"Det tillämpas vanligtvis bara i helskärmsläge, och kanske inte fungerar för "
 "alla GS insticksprogram."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:68
@@ -315,8 +313,8 @@ msgstr ""
 msgid "!ContextTip:Gamefixes:EE Timing Hack"
 msgstr ""
 "Påverkar till vetskap följande spel:\n"
-" * Digital Devil Saga (Fixar FMV och crashar)\n"
-" * SSX (Fixar dålig grafik och crashar)\n"
+" * Digital Devil Saga (Fixar FMV och brakar)\n"
+" * SSX (Fixar dålig grafik och brakar)\n"
 " * Resident Evil: Dead Aim (Orsakar förvrängda texturer)"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:80
@@ -324,7 +322,7 @@ msgid "!ContextTip:Gamefixes:OPH Flag hack"
 msgstr ""
 "Påverkar till vetskap följande spel:\n"
 " * Bleach Blade Battler\n"
-" * Growlanser II and III\n"
+" * Growlanser II & III\n"
 " * Wizardry"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:89
@@ -340,11 +338,11 @@ msgstr ""
 "* Test Drive Unlimited\n"
 "* Transformers"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 "Spelfixar kan åtgärda felaktig emulering för vissa spel. \n"
-"De kan dock orsaka kompabilitets- eller prestandaproblem för andra spel. \n"
+"De kan dock orsaka förenlighets- eller prestandaproblem för andra spel. \n"
 "Ni får stänga av Spelfixar manuellt när Ni byter spel."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
@@ -410,7 +408,7 @@ msgstr ""
 "återställning av PS2-VM. \n"
 "PCSX2 kommer att försöka att spara och återställa tillståndet, men om de "
 "nyligen valda insticksprogrammen \n"
-"är okompatibla kan detta misslyckas, och alla nuvarande framsteg kommer att "
+"är oförenliga kan detta misslyckas, och alla nuvarande framsteg kommer att "
 "förloras. \n"
 "\n"
 "\n"
@@ -435,7 +433,7 @@ msgstr ""
 msgid "!Panel:Speedhacks:EECycleX2"
 msgstr ""
 "2 - Minskar EE's cykelgrad med ungefär 33%. Mild uppsnabbning för de flesta "
-"spel med hög kompabilitet."
+"spel med hög förenlighet."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
 msgid "!Panel:Speedhacks:EECycleX3"
@@ -445,19 +443,19 @@ msgstr ""
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
 msgid "!Panel:Speedhacks:VUCycleStealOff"
-msgstr "0 - Förhndrar VU Cykelstöld. Den mest kompatibla inställningen!"
+msgstr "0 - Förhndrar VU Cykelstöld. Den mest förenliga inställningen!"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
 msgid "!Panel:Speedhacks:VUCycleSteal1"
 msgstr ""
-"1 - Mild VU Cykelstöld. Lägre kompabilitet, men en viss uppsnabbning för de "
+"1 - Mild VU Cykelstöld. Lägre förenlighet, men en viss uppsnabbning för de "
 "flesta spel."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
 msgid "!Panel:Speedhacks:VUCycleSteal2"
 msgstr ""
-"2 - Måttfull VU Cykelstöld. Ännu lägre kompabilitet, men markant "
-"uppsnabbning hos vissa spel."
+"2 - Måttfull VU Cykelstöld. Ännu lägre förenlighet, men markant uppsnabbning "
+"hos vissa spel."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
 msgid "!Panel:Speedhacks:VUCycleSteal3"
@@ -489,14 +487,14 @@ msgstr ""
 "Högre värden ökar antalet cykler som stjäls från EE'n för varje VU-"
 "microprogram spelt kör."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "Updaterar endast Statusflaggor för block som kommer att läsa dem, isället "
 "för alltid. \n"
 "Detta är för det mesta säkert, och Super-VU gör något liknande som standard."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
 msgid "!ContextTip:Speedhacks:vuBlockHack"
 msgstr ""
 "Förmodar att väldigt långt in i framtiden så kommer block inte behöva "
@@ -504,15 +502,25 @@ msgstr ""
 "Detta borde vara rätt säkert. Det är okänt ifall detta har sönder något "
 "spel..."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr ""
+"Kör VU1 i dess egna tråd (endast microVU1). I allmänhet en uppsnabbning för "
+"CPUer med 3 eller fler kärnor.\n"
+"Detta är säkert för de flesta spel, men en del är oförenliga och kan hänga.\n"
+"Vad gäller GS begränsade spel, kan en nedbromsning förekomma (speciellt hos "
+"dubbelkärniga CPUer)."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "Denna fix fungerar bäst för spel som använder INTC-statusregistret för att "
-"invänta vsyncs, vilket i första hand inkluderar icke-3D \n"
-"RPG titlar. Spel som inte använder denna vsync-metod kommer på sin höjd att "
-"få en liten uppsnabbning av denna fix."
+"invänta vsyncs, \n"
+"vilket i första hand inkluderar icke-3D RPG titlar. \n"
+"Spel som inte använder denna vsync-metod kommer på sin höjd att få en liten "
+"uppsnabbning av denna fix."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "I första hand inriktat på EE tomgångs-loop hos adress 0x81FC0 i kärnan, "
@@ -524,11 +532,12 @@ msgstr ""
 "avanserar vi till tiden för nästa händelse eller till slutet av processorns "
 "tidskvantum, vilket som än kommer först."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
-"Kolla HDLaddar-kompabilitetslistan för spel som till vetskap kommer till "
-"fråga med det här (ofta markerat som behövande 'läge 1' eller 'långsam DVD')."
+"Kolla HDLaddar-förenlighetslistan för spel som till vetskap kommer till "
+"fråga \n"
+"med det här (ofta markerat som behövande 'läge 1' eller 'långsam DVD')."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:37
 msgid "!ContextTip:Framelimiter:Disable"
@@ -547,7 +556,7 @@ msgstr ""
 #: pcsx2/gui/Panels/VideoPanel.cpp:302
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr ""
-"Möjliggör detta ifall Ni tror att MTGS trådsync orsakar krascher eller "
+"Möjliggör detta ifall Ni tror att MTGS trådsync orsakar braker eller "
 "grafiska fel."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:306
@@ -569,7 +578,7 @@ msgstr ""
 "Detta kan ha orsakats av att ha en liten eller förhindrad bytfil, \n"
 "eller av att andra program tar för sig av resurser."
 
-#: pcsx2/x86/sVU_zerorec.cpp:362
+#: pcsx2/x86/sVU_zerorec.cpp:363
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "Slut på Minne (typ): superVU-omkompileraren var oförmögen att resarvera den "

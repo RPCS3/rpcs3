@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.8\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 15:54+0200\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
 "PO-Revision-Date: 2011-04-17 17:56+0100\n"
 "Last-Translator: Delirious <delirious@freemail.hu>\n"
 "Language-Team: Delirious <delirious@freemail.hu>\n"
@@ -327,7 +327,7 @@ msgstr ""
 " * Growlanser II és III\n"
 " * Wizardry"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 "A játék javítások megoldások lehetnek a hibás emulációra néhány játék "
@@ -471,21 +471,26 @@ msgstr ""
 "elvesz az EmotionEngine elől.  Magasabb érték növeli az EE elől elvett és a "
 "játék által futtatott összes mikroprogram számára átadott ciklusok számát."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "Az állapot jelzőket csak azokon a blokkokon frissíti amelyek olvassák "
 "azokat. Legtöbbször ez biztonságos és a Super VU is valami hasonlót végez "
 "alapértelmezettként."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
 msgid "!ContextTip:Speedhacks:vuBlockHack"
 msgstr ""
 "Elfogadva, hogy a távoli jövőbeni blokkoknak nem lesz szükségük a régi "
 "jelzőre utaló adatokra. Ez meglehetősen biztonságos lehet. Nem ismeretes, "
 "hogy valamelyik játék kifagyását okozná..."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#, fuzzy
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr "Nem működik a Gran Turismo 4 vagy Tekken 5 esetén."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "Ez a hack működik legjobban azoknál a játékoknál, amelyek használják az INTC "
@@ -494,7 +499,7 @@ msgstr ""
 "eljárást használják a függőleges szinkronhoz csak csekély, vagy semmilyen "
 "gyorsulás nem észlelhető a hack használatával."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "Elsődlegesen megcélozva az EE üresjárati hurkot a 0x81FC0 címzésen a "
@@ -505,7 +510,7 @@ msgstr ""
 "előrehozhatjuk a következő eseményt vagy a processzor időszeletének végét, "
 "bármelyik is következik előbb."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "Ellenőrizd a HDLoader kompatibilitási listát a problémás játékok végett. "
@@ -548,7 +553,7 @@ msgstr ""
 "működtetéséhez.  Ilyen hibát okozhat a kis méretű vagy kikapcsolt "
 "lapozófájl, vagy más, nagy mennyiségű erőforrást fogyasztó program."
 
-#: pcsx2/x86/sVU_zerorec.cpp:362
+#: pcsx2/x86/sVU_zerorec.cpp:363
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "Kevés a memória (valahogyan): A SuperVu recompiler nem volt képes lefoglalni "
@@ -664,9 +669,6 @@ msgstr ""
 #~ msgstr ""
 #~ "Teljesen leállít minden GS plugin tevékenységet; ideális az EEcore "
 #~ "összetevők tesztelése esetén."
-
-#~ msgid "!ContextTip:Speedhacks:vuMinMax"
-#~ msgstr "Nem működik a Gran Turismo 4 vagy Tekken 5 esetén."
 
 #~ msgid "!ContextTip:Window:FullscreenExclusive"
 #~ msgstr ""

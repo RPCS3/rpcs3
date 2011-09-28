@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.9\n"
+"Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 15:54+0200\n"
-"PO-Revision-Date: 2011-06-05 11:05-0300\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
+"PO-Revision-Date: 2011-09-11 23:09-0300\n"
 "Last-Translator: Rafael Ferreira <rafael.f.f1@gmail.com>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -336,7 +336,7 @@ msgstr ""
 "* Test Drive Unlimited\n"
 "* Transformers"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 "Correções de Jogos podem reparar problemas de emulação de alguns jogos, "
@@ -476,21 +476,30 @@ msgstr ""
 "EmotionEngine. Maiores valores aumentam o número de ciclos roubados do EE "
 "para cada micro-programa VU que o jogo roda."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "Atualiza Sinalizadores de Estado somente nos blocos que vão ler eles, ao "
 "contrário de de o tempo todo. Isso é seguro na maioria do tempo, e o Super "
 "VU faz coisa semelhante por padrão."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
 msgid "!ContextTip:Speedhacks:vuBlockHack"
 msgstr ""
 "Presume que num futuro bem distante os blocos não vão precisar dos dados de "
 "instâncias de sinalizadores antigos. Isso pode ser bem seguro. Não se sabe "
 "se isso quebra algum jogo..."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr ""
+"Executa VU1 em uma thread própria (somente microVU1). Em geral, é uma "
+"aceleração em CPUs com 3 ou mais núcleos (cores). Essa opção é segura para a "
+"maioria dos jogos, mas alguns jogos são incompatíveis e podem travar. No "
+"caso de jogos limitados pelo GS, pode ser um atraso (especialmente em CPUs "
+"dual core)."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "Esse hack funciona melhor para jogos que usam o registrador de INTC Status "
@@ -498,7 +507,7 @@ msgstr ""
 "Jogos que não usam esse método de vsync vão aproveitar um pouco ou nada de "
 "aceleração desse hack."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "Mirando primariamente o loop ocioso do EE no endereço 0x81Fc0 no kernel, "
@@ -508,7 +517,7 @@ msgstr ""
 "avançamos para a vez do evento seguinte ou o fim da fatia de tempo do "
 "processador, seja qual for que vier a ocorrer primeiro."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "Verifica lista de compatibilidade de HDLoader para jogos conhecidos que "
@@ -550,7 +559,7 @@ msgstr ""
 "estar sendo causado por ter um arquivo swap pequeno ou desabilitado, ou por "
 "haver outros programas utilizando muito dos recursos."
 
-#: pcsx2/x86/sVU_zerorec.cpp:362
+#: pcsx2/x86/sVU_zerorec.cpp:363
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "Sem memória (mais ou menos): o recompilador SuperVU não conseguiu reservar a "

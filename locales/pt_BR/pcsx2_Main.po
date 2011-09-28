@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.9\n"
+"Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 15:52+0200\n"
-"PO-Revision-Date: 2011-06-05 11:05-0300\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
+"PO-Revision-Date: 2011-09-11 23:09-0300\n"
 "Last-Translator: Rafael Ferreira <rafael.f.f1@gmail.com>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -121,19 +121,19 @@ msgstr ""
 "causado por um tipo de imagem ISO não suportada ou um bug do PCSX2 no "
 "suporte de imagem ISO."
 
-#: pcsx2/MTGS.cpp:815
+#: pcsx2/MTGS.cpp:859
 msgid ""
 "The MTGS thread has become unresponsive while waiting for the GS plugin to "
 "open."
 msgstr "A thread MTGS não está respondendo enquanto espera o plug-in GS abrir."
 
-#: pcsx2/PluginManager.cpp:694
+#: pcsx2/PluginManager.cpp:709
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr ""
 "O savestate não pôde ser carregado, pois parece estar corrupto ou incompleto."
 
-#: pcsx2/PluginManager.cpp:704
+#: pcsx2/PluginManager.cpp:719
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -142,7 +142,7 @@ msgstr ""
 "Plug-in %s falhou em carregar. Seu computador deve ter recursos "
 "insuficientes, ou hardware/drivers incompatíveis."
 
-#: pcsx2/PluginManager.cpp:711
+#: pcsx2/PluginManager.cpp:726
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
@@ -151,18 +151,18 @@ msgstr ""
 "Plug-in %s falhou em inicializar. Seu sistema deve ter memória insuficiente "
 "ou recursos faltando."
 
-#: pcsx2/PluginManager.cpp:817
+#: pcsx2/PluginManager.cpp:832
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "O arquivo do plug-in %s configurado não foi encontrado"
 
-#: pcsx2/PluginManager.cpp:821
+#: pcsx2/PluginManager.cpp:836
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr ""
 "O arquivo do plug-in %s configurado não é uma biblioteca dinâmica válida"
 
-#: pcsx2/PluginManager.cpp:839
+#: pcsx2/PluginManager.cpp:854
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
@@ -171,13 +171,13 @@ msgstr ""
 "O plug-in %s configurado não é um plug-in de PCSX2, ou é para uma versão "
 "antiga e não suportada do PCSX2."
 
-#: pcsx2/PluginManager.cpp:864
+#: pcsx2/PluginManager.cpp:879
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr ""
 "O plug-in relata que o seu hardware o software/drivers não são suportados."
 
-#: pcsx2/PluginManager.cpp:885
+#: pcsx2/PluginManager.cpp:900
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
@@ -185,7 +185,7 @@ msgstr ""
 "Plug-in configurado não é um plugin de PCSX2, ou é para uma versão antiga e "
 "não suportada do PCSX2."
 
-#: pcsx2/PluginManager.cpp:911
+#: pcsx2/PluginManager.cpp:926
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
@@ -194,15 +194,15 @@ msgstr ""
 "Plug-in %s configurado não é um plug-in válido de PCXSX2, ou é para uma "
 "versão antiga ou não suportada do PCSX2."
 
-#: pcsx2/PluginManager.cpp:1339
+#: pcsx2/PluginManager.cpp:1355
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr "Plug-in de  Cartão de Memória interno falhou em inicializar."
 
-#: pcsx2/PluginManager.cpp:1736
+#: pcsx2/PluginManager.cpp:1752
 msgid "Unloaded Plugin"
 msgstr "Plug-in descarregado"
 
-#: pcsx2/SaveState.cpp:338
+#: pcsx2/SaveState.cpp:339
 msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr ""
 "Não foi possível carregar o savestate. Ele é de uma versão desconhecida ou "
@@ -307,7 +307,7 @@ msgstr "Atividade MFIFO do Bloco de Rascunho."
 #: pcsx2/SourceLog.cpp:235
 msgid "Actual data transfer logs, bus right arbitration, stalls, etc."
 msgstr ""
-"Logs de transferência de dados real, arbitragem de direito de via, "
+"Logs de transferência de dados real, arbitragem de direito de barramento, "
 "obstruções, etc."
 
 #: pcsx2/SourceLog.cpp:241
@@ -382,31 +382,31 @@ msgstr ""
 "O savestate não foi armazenado corretamente. O arquivo temporário foi criado "
 "com sucesso, mas não pôde ser movido para seu destino de armazenamento."
 
-#: pcsx2/gui/AppConfig.cpp:818
+#: pcsx2/gui/AppConfig.cpp:837
 msgid "Safest"
 msgstr "Mais seguro"
 
-#: pcsx2/gui/AppConfig.cpp:819
+#: pcsx2/gui/AppConfig.cpp:838
 msgid "Safe (faster)"
 msgstr "Seguro (+ rápido)"
 
-#: pcsx2/gui/AppConfig.cpp:820
+#: pcsx2/gui/AppConfig.cpp:839
 msgid "Balanced"
 msgstr "Balanceado"
 
-#: pcsx2/gui/AppConfig.cpp:821
+#: pcsx2/gui/AppConfig.cpp:840
 msgid "Aggressive"
 msgstr "Agressivo"
 
-#: pcsx2/gui/AppConfig.cpp:822
+#: pcsx2/gui/AppConfig.cpp:841
 msgid "Aggressive plus"
 msgstr "Agressivo plus"
 
-#: pcsx2/gui/AppConfig.cpp:823
+#: pcsx2/gui/AppConfig.cpp:842
 msgid "Mostly Harmful"
 msgstr "Prejudicial"
 
-#: pcsx2/gui/AppConfig.cpp:980 pcsx2/gui/AppConfig.cpp:986
+#: pcsx2/gui/AppConfig.cpp:999 pcsx2/gui/AppConfig.cpp:1005
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr ""
 "Falha em sobrescrever arquivo de configurações existentes; permissão negada."
@@ -531,85 +531,85 @@ msgstr ""
 "Pressione OK para usar o plug-in configurado padrão, ou Cancelar para fechar "
 "%s."
 
-#: pcsx2/gui/AppInit.cpp:495
+#: pcsx2/gui/AppInit.cpp:496
 msgid "PCSX2 Error: Hardware Deficiency"
 msgstr "Erro no PCSX2: Deficiência de Hardware"
 
-#: pcsx2/gui/AppInit.cpp:495 pcsx2/gui/AppInit.cpp:507
+#: pcsx2/gui/AppInit.cpp:496 pcsx2/gui/AppInit.cpp:508
 #, c-format
 msgid "Press OK to close %s."
 msgstr "Pressione OK para fechar %s."
 
-#: pcsx2/gui/AppInit.cpp:508
+#: pcsx2/gui/AppInit.cpp:509
 #, c-format
 msgid "%s Critical Error"
 msgstr "Erro Crítico no %s"
 
-#: pcsx2/gui/AppInit.cpp:678
+#: pcsx2/gui/AppInit.cpp:679
 msgid "OK"
 msgstr "OK"
 
-#: pcsx2/gui/AppInit.cpp:679
+#: pcsx2/gui/AppInit.cpp:680
 msgid "&OK"
 msgstr "&OK"
 
-#: pcsx2/gui/AppInit.cpp:680
+#: pcsx2/gui/AppInit.cpp:681
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: pcsx2/gui/AppInit.cpp:681
+#: pcsx2/gui/AppInit.cpp:682
 msgid "&Cancel"
 msgstr "&Cancelar"
 
-#: pcsx2/gui/AppInit.cpp:682
+#: pcsx2/gui/AppInit.cpp:683
 msgid "&Apply"
 msgstr "&Aplicar"
 
-#: pcsx2/gui/AppInit.cpp:683
+#: pcsx2/gui/AppInit.cpp:684
 msgid "&Next >"
 msgstr "&Próximo >"
 
-#: pcsx2/gui/AppInit.cpp:684
+#: pcsx2/gui/AppInit.cpp:685
 msgid "< &Back"
 msgstr "< Voltar"
 
-#: pcsx2/gui/AppInit.cpp:685
+#: pcsx2/gui/AppInit.cpp:686
 msgid "&Back"
 msgstr "&Voltar"
 
-#: pcsx2/gui/AppInit.cpp:686
+#: pcsx2/gui/AppInit.cpp:687
 msgid "&Finish"
 msgstr "&Concluir"
 
-#: pcsx2/gui/AppInit.cpp:687
+#: pcsx2/gui/AppInit.cpp:688
 msgid "&Yes"
 msgstr "Sim"
 
-#: pcsx2/gui/AppInit.cpp:688
+#: pcsx2/gui/AppInit.cpp:689
 msgid "&No"
 msgstr "Não"
 
-#: pcsx2/gui/AppInit.cpp:689
+#: pcsx2/gui/AppInit.cpp:690
 msgid "Browse"
 msgstr "Procurar"
 
-#: pcsx2/gui/AppInit.cpp:690
+#: pcsx2/gui/AppInit.cpp:691
 msgid "&Save"
 msgstr "&Salvar"
 
-#: pcsx2/gui/AppInit.cpp:691
+#: pcsx2/gui/AppInit.cpp:692
 msgid "Save &As..."
 msgstr "&Salvar Como..."
 
-#: pcsx2/gui/AppInit.cpp:692
+#: pcsx2/gui/AppInit.cpp:693
 msgid "&Help"
 msgstr "&Ajuda"
 
-#: pcsx2/gui/AppInit.cpp:693
+#: pcsx2/gui/AppInit.cpp:694
 msgid "&Home"
 msgstr "&Página Inicial"
 
-#: pcsx2/gui/AppInit.cpp:695
+#: pcsx2/gui/AppInit.cpp:696
 msgid "Show about dialog"
 msgstr "Exibir informações sobre PCSX2."
 
@@ -651,7 +651,7 @@ msgstr "Thread de PCSX2 não respondendo"
 msgid "Terminate"
 msgstr "Terminar"
 
-#: pcsx2/gui/AppMain.cpp:964
+#: pcsx2/gui/AppMain.cpp:963
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Executando Máquina Virtual de PS2..."
 
@@ -2041,11 +2041,20 @@ msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
 msgstr ""
 "Simula leitura à frente no V1F1 FIFO. Corrige jogos de carregamento lento."
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:103
+msgid "Delay VIF1 Stalls (VIF1 FIFO) - For SOCOM 2 HUD."
+msgstr "Atrasar obstruções do V1F1 (V1F1 FIFO) - Para SOCOM 2 HUD."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:107
+msgid "Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"
+msgstr ""
+"Ignorar Direção de Barramento na Transferência Path3 - Usado para Hotwheels"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:118
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "Habilitar correções de jogos manuais [Não Recomendado]"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:127
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
 msgstr ""
@@ -2446,11 +2455,10 @@ msgstr "Hack de Sinalizador de mVU"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:164
 msgid ""
-"Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc... "
-"[Recommended]"
+"Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
 msgstr ""
-"Boa Aceleração e Alta Compatibilidade; pode causar gráficos distorcidos, "
-"SPS, etc. [Recomendado]"
+"Boa Aceleração e Alta Compatibilidade; pode ocasionar gráficos ruins... "
+"[Recomendado]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:166
 msgid "mVU Block Hack"
@@ -2458,20 +2466,32 @@ msgstr "Hack de Bloco mVU"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
 msgid ""
-"Good Speedup and High Compatibility; may cause garbage graphics, SPS, etc..."
+"Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
 msgstr ""
-"Boa Aceleração e Alta Compatibilidade; pode ocasionar em gráficos sem "
-"sentidos, SPS, etc."
+"Boa Aceleração e Alta Compatibilidade; pode ocasionar gráficos ruins, SPS, "
+"etc."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+msgid "MTVU (Multi-Threaded microVU1)"
+msgstr "MTVU (Multi-Threaded microVU1)"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
+msgid ""
+"Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
+"cores]"
+msgstr ""
+"Boa Aceleração e Alta Compatibilidade; pode causar travamento...  "
+"[Recomendado para 3+ núcleos]"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
 msgid "Other Hacks"
 msgstr "Outros Hacks"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:184
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:193
 msgid "Enable INTC Spin Detection"
 msgstr "Habilita Detecção de Rotação INTC"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:185
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
 msgid ""
 "Huge speedup for some games, with almost no compatibility side effects. "
 "[Recommended]"
@@ -2479,22 +2499,22 @@ msgstr ""
 "Imensa aceleração para alguns jogos, com quase nenhum efeito colateral. "
 "[Recomendado]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:187
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:196
 msgid "Enable Wait Loop Detection"
 msgstr "Habilita Detecção de Loop de Espera"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:188
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:197
 msgid ""
 "Moderate speedup for some games, with no known side effects. [Recommended]"
 msgstr ""
 "Moderada aceleração para alguns jogos, com nenhum efeito colateral conhecido "
 "[Recomendado]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:190
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
 msgid "Enable fast CDVD"
 msgstr "Habilita CDVD rápido"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "Fast disc access, less loading times. [Not Recommended]"
 msgstr "Acesso rápido ao disco, menor tempo de carregamento. [Não recomendado]"
 

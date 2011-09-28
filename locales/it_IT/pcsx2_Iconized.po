@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.8\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 15:55+0200\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
 "PO-Revision-Date: 2011-04-30 14:57+0100\n"
 "Last-Translator: Leucos <leucos@live.it>\n"
 "Language-Team: \n"
@@ -351,7 +351,7 @@ msgstr ""
 " * SSX (corregge errori nella grafica e crash)\n"
 " * Resident Evil: Dead Aim (causa texture alterate) "
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 "I GameFix possono correggere i problemi di emulazione in alcuni giochi.\n"
@@ -506,7 +506,7 @@ msgstr ""
 "Valori più alti aumentano il numero di cicli 'rubati' dall'EE per ogni "
 "microprogramma VU eseguito dal gioco."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "Aggiorna le Flag di stato solo nei blocchi che le leggeranno, invece che "
@@ -514,7 +514,7 @@ msgstr ""
 "per la maggior parte dei casi e superVU fa qualcosa del genere in maniera "
 "predefinita."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
 msgid "!ContextTip:Speedhacks:vuBlockHack"
 msgstr ""
 "Prevede che nel futuro prossimo i blocchi non avranno bisogno della vecchia "
@@ -522,7 +522,16 @@ msgstr ""
 "Questo dovrebbe essere abbastanza sicuro. Non si sa se crea problemi in "
 "qualche gioco..."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#, fuzzy
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr ""
+"Questo hack funziona al meglio nei giochi che utilizzano il registro di "
+"Stato INTC per attendere la sincronia verticale, principalmente i GdR non in "
+"3D. I giochi che non utilizzano questo metodo di sincronia verticale "
+"otterranno un aumento di velocità minimo se non nullo."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "Questo hack funziona al meglio nei giochi che utilizzano il registro di "
@@ -530,7 +539,7 @@ msgstr ""
 "3D. I giochi che non utilizzano questo metodo di sincronia verticale "
 "otterranno un aumento di velocità minimo se non nullo."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "L'obiettivo principale è l'idle loop (ciclo per inattività) dell'EE "
@@ -541,7 +550,7 @@ msgstr ""
 "successivo o alla fine del tempo riservato al processore, qualunque venga "
 "prima."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "Controlla la lista compatibilità di HDLoader per sapere quali giochi creano "
@@ -586,7 +595,7 @@ msgstr ""
 "può essere causato da un file di swap troppo piccolo o disattivato, o da "
 "altri programmi che stanno occupando troppe risorse."
 
-#: pcsx2/x86/sVU_zerorec.cpp:362
+#: pcsx2/x86/sVU_zerorec.cpp:363
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "Memoria Esaurita (più o meno): il ricompilatore SuperVU non è riuscito a "

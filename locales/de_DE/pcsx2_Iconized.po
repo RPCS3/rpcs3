@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-06-13 15:56+0200\n"
+"POT-Creation-Date: 2011-09-28 20:27+0200\n"
 "PO-Revision-Date: 2011-04-09 01:11+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
@@ -251,7 +251,7 @@ msgstr "!ContextTip:Gamefixes:DMA Busy hack"
 msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
 msgstr "Veraltet"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:111
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr ""
 "Spielefixes können spezifische, bekannte Fehler in einigen Spielen beheben. "
@@ -361,23 +361,28 @@ msgstr ""
 "\"Stiehlt\" der PS2 CPU einige Zyklen bei jeder VU Programmausführung. "
 "Geschwindigkeitsgewinn bei reduzierter Kompatibilität."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr "Lässt einige VU Statusflags aus. Sicher."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
 msgid "!ContextTip:Speedhacks:vuBlockHack"
 msgstr "Kann die Geschwindigkeit leicht erhöhen. In FFX kontraproduktiv!"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#, fuzzy
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr "Funktioniert nicht mit Gran Turismo 4 oder Tekken 5."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr "Kann gefahrlos aktiviert werden."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr "Kann gefahrlos aktiviert werden."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:206
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "Einige Spiele erwarten ein standardkonformes (langsam lesendes) DVD "
@@ -411,7 +416,7 @@ msgstr ""
 "Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher "
 "wird von anderen Programmen / DLLs belegt."
 
-#: pcsx2/x86/sVU_zerorec.cpp:362
+#: pcsx2/x86/sVU_zerorec.cpp:363
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "Der SuperVU Recompiler konnte nicht genügend virtuellen Speicher allokieren. "
@@ -510,9 +515,6 @@ msgstr ""
 #~ msgstr ""
 #~ "Deaktiviert alle GS Plugin Aktivitäten. Ideal um den Emulatorkern zu "
 #~ "Benchmarken."
-
-#~ msgid "!ContextTip:Speedhacks:vuMinMax"
-#~ msgstr "Funktioniert nicht mit Gran Turismo 4 oder Tekken 5."
 
 #~ msgid "!ContextTip:Window:FullscreenExclusive"
 #~ msgstr ""
