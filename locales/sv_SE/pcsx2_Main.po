@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
-"PO-Revision-Date: 2011-09-01 22:18+0100\n"
+"POT-Creation-Date: 2011-10-05 20:13+0200\n"
+"PO-Revision-Date: 2011-10-05 13:17+0100\n"
 "Last-Translator: Georg Ronnert <pgert@yahoo.se>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -42,9 +42,9 @@ msgid ""
 "drivers, services, or may simply have insufficient memory or resources to "
 "meet PCSX2's lofty needs."
 msgstr ""
-"Virituell minneskartläggning misslyckades. Ert system kanske har "
-"motstridande enhetsdrivrutiner/tjänster, eller otillräckliga "
-"hårdvaruresurser för att stödja PCSX2's storslagna behov."
+"Virtuell minneskartläggning misslyckades. Ert system kanske har motstridande "
+"enhetsdrivrutiner/tjänster, eller otillräckliga hårdvaruresurser för att "
+"stödja PCSX2's storslagna behov."
 
 #: common/src/Utilities/Exceptions.cpp:309
 msgid "Path: "
@@ -215,7 +215,7 @@ msgstr ""
 
 #: pcsx2/SourceLog.cpp:106
 msgid "Shows the game developer's logging text (EE processor)"
-msgstr "Visar spelutveklarens loggningstext (EE processor)"
+msgstr "Visar spelutvecklarens loggningstext (EE processor)"
 
 #: pcsx2/SourceLog.cpp:111
 msgid "Shows the game developer's logging text (IOP processor)"
@@ -780,7 +780,7 @@ msgstr "Moj/Ordrik"
 
 #: pcsx2/gui/ConsoleLogger.cpp:439
 msgid "Shows PCSX2 developer logs"
-msgstr "Visar PCSX2 utveklarloggar"
+msgstr "Visar PCSX2 utvecklarloggar"
 
 #: pcsx2/gui/ConsoleLogger.cpp:440
 msgid "CDVD reads"
@@ -1390,7 +1390,7 @@ msgstr "Ingen disk"
 
 #: pcsx2/gui/MainFrame.cpp:449
 msgid "Use this to boot into your virtual PS2's BIOS configuration."
-msgstr "Använd detta för att köra Er virituella PS2's-BIOS konfiguration."
+msgstr "Använd detta för att köra Er virtuella PS2's-BIOS konfiguration."
 
 #: pcsx2/gui/MainFrame.cpp:457
 msgid "Emulation &Settings"
@@ -1819,7 +1819,7 @@ msgid ""
 "New Vector Unit recompiler with much improved compatibility. Recommended."
 msgstr ""
 "Ny Vektor Enhets omkompilerare med mycket förbättrad förenlighet. "
-"Rekomenderas."
+"Rekommenderas."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:190
 msgid "superVU Recompiler [legacy]"
@@ -1999,7 +1999,7 @@ msgstr "Strunta i Bussriktning vid Path3 Överföring - Används för Hotwheels"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:118
 msgid "Enable manual game fixes [Not recommended]"
-msgstr "Möjliggör manuella spelfixar [Rekomenderas ej]"
+msgstr "Möjliggör manuella spelfixar [Rekommenderas ej]"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:127
 msgid ""
@@ -2252,7 +2252,7 @@ msgstr "Användarlägesval"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:50
 msgid "User Documents (recommended)"
-msgstr "Användardokument (rekomenderas)"
+msgstr "Användardokument (rekommenderas)"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:51
 msgid "Location: "
@@ -2382,11 +2382,11 @@ msgstr ""
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:120
 msgid "EE Cyclerate [Not Recommended]"
-msgstr "EE Cykelhastighet [Rekomenderas Ej]"
+msgstr "EE Cykelhastighet [Rekommenderas Ej]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:141
 msgid "VU Cycle Stealing [Not Recommended]"
-msgstr "VU Cykelstöld [Rekomenderas Ej]"
+msgstr "VU Cykelstöld [Rekommenderas Ej]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:161
 msgid "microVU Hacks"
@@ -2401,7 +2401,7 @@ msgid ""
 "Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
 msgstr ""
 "Bra Uppsnabbning och Hög Förenlighet; kan orsaka dålig grafik... "
-"[Rekomenderas]"
+"[Rekommenderas]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:166
 msgid "mVU Block Hack"
@@ -2423,7 +2423,7 @@ msgid ""
 "cores]"
 msgstr ""
 "Bra Uppsnabbning och Hög Förenlighet; kan orsaka att det hänger sig... "
-"[Rekomenderas för 3+ kärnor]"
+"[Rekommenderas för 3+ kärnor]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
 msgid "Other Hacks"
@@ -2439,7 +2439,7 @@ msgid ""
 "[Recommended]"
 msgstr ""
 "Enorm uppsnabbning för vissa spel, med nästan inga förenlighetsbieffekter. "
-"[Rekomenderas]"
+"[Rekommenderas]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:196
 msgid "Enable Wait Loop Detection"
@@ -2450,7 +2450,7 @@ msgid ""
 "Moderate speedup for some games, with no known side effects. [Recommended]"
 msgstr ""
 "Måttlig uppsnabbning för vissa spel, med inga kända bieffekter. "
-"[Rekomenderas]"
+"[Rekommenderas]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
 msgid "Enable fast CDVD"
@@ -2458,7 +2458,7 @@ msgstr "Möjliggör snabb CDVD"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "Fast disc access, less loading times. [Not Recommended]"
-msgstr "Snabb disktillgång, färre laddningsgånger. [Rekomenderas Ej]"
+msgstr "Snabb disktillgång, färre laddningsgånger. [Rekommenderas Ej]"
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:37
 msgid "Themes Search Path:"

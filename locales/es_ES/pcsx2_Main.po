@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.9\n"
+"Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
-"PO-Revision-Date: 2011-06-11 19:34+0100\n"
+"POT-Creation-Date: 2011-10-05 20:13+0200\n"
+"PO-Revision-Date: 2011-09-28 21:53+0100\n"
 "Last-Translator: Víctor González <pajaroloco_2@hotmail.com>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -2051,10 +2051,12 @@ msgstr ""
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:103
 msgid "Delay VIF1 Stalls (VIF1 FIFO) - For SOCOM 2 HUD."
 msgstr ""
+"Retrasar detenciones de VIF1 (FIFO VIF1) - Para la interfaz de SOCOM 2."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:107
 msgid "Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"
 msgstr ""
+"Ignorar dirección del bus en transferencia de Path3 - Utilizar en Hot Wheels"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:118
 msgid "Enable manual game fixes [Not recommended]"
@@ -2459,37 +2461,34 @@ msgid "mVU Flag Hack"
 msgstr "Arreglo de etiqueta mVU"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:164
-#, fuzzy
 msgid ""
 "Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
 msgstr ""
-"Buena subida y alta compatibilidad; puede crear gráficos basura, SPS, "
-"etcétera. (Recomendado)"
+"Buena subida y alta compatibilidad; puede crear gráficos dañados... "
+"(Recomendado)"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:166
 msgid "mVU Block Hack"
 msgstr "Arreglo de bloqueo mVU"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
-#, fuzzy
 msgid ""
 "Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
 msgstr ""
-"Buena subida y alta compatibilidad; puede crear gráficos basura, SPS, "
-"etcétera."
+"Buena subida y alta compatibilidad; puede crear gráficos dañados, SPS, "
+"etcétera..."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "MTVU (Multi-Threaded microVU1)"
-msgstr ""
+msgstr "MTVU (microVU1 multihilos)"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
-#, fuzzy
 msgid ""
 "Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
 "cores]"
 msgstr ""
-"Buena subida y alta compatibilidad; puede crear gráficos basura, SPS, "
-"etcétera. (Recomendado)"
+"Buena subida y alta compatibilidad; puede provocar cuelgues... (Recomendado "
+"si tienes 3 o más núcleos de CPU)"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
 msgid "Other Hacks"

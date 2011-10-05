@@ -2,13 +2,13 @@
 # Copyright (C) YEAR PCSX2 Dev Team
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
-"PO-Revision-Date: 2011-06-13 09:12+0100\n"
+"POT-Creation-Date: 2011-10-05 20:13+0200\n"
+"PO-Revision-Date: 2011-09-28 22:22+0100\n"
 "Last-Translator: Miseru99 <miseru99@hotmail.com>\n"
 "Language-Team: Miseru99 <miseru99@hotmail.com>\n"
 "Language: \n"
@@ -471,7 +471,7 @@ msgstr "wyłącza szybkie odtwarzanie"
 
 #: pcsx2/gui/AppInit.cpp:252
 msgid "changes the configuration file path"
-msgstr "zmienia ścieżkę dostępu do pliku configuracji"
+msgstr "zmienia ścieżkę dostępu do pliku konfiguracji"
 
 #: pcsx2/gui/AppInit.cpp:253
 msgid "specifies the PCSX2 configuration file to use"
@@ -1313,7 +1313,7 @@ msgstr "%s  %d.%d.%d %s"
 
 #: pcsx2/gui/MainFrame.cpp:362
 msgid "(modded)"
-msgstr "(zmodowane)"
+msgstr "(zmodyfikowany)"
 
 #: pcsx2/gui/MainFrame.cpp:399 pcsx2/gui/MainFrame.cpp:401
 #: pcsx2/gui/MainFrame.cpp:407
@@ -2006,11 +2006,11 @@ msgstr ""
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:103
 msgid "Delay VIF1 Stalls (VIF1 FIFO) - For SOCOM 2 HUD."
-msgstr ""
+msgstr "Opóźniaj przestoje VIF1(VIF1 FIFO) - dla interface'u w grze SOCOM 2."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:107
 msgid "Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"
-msgstr ""
+msgstr "Ignoruj kierunek transferu w Path3 - dla Hotwheels."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:118
 msgid "Enable manual game fixes [Not recommended]"
@@ -2410,37 +2410,35 @@ msgid "mVU Flag Hack"
 msgstr "mVU Flag Hack"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:164
-#, fuzzy
 msgid ""
 "Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
 msgstr ""
-"Dobre przyspieszenie i duża kompatybilność; może powodować błędy grafiki, "
-"SPS, etc... [Zalecane]"
+"Dobre przyspieszenie i duża kompatybilność; może powodować błędy grafiki... "
+"[Zalecane]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:166
 msgid "mVU Block Hack"
 msgstr "mVU Block Hack"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
-#, fuzzy
 msgid ""
 "Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
 msgstr ""
 "Dobre przyspieszenie i duża kompatybilność; może powodować błędy grafiki, "
-"SPS, etc..."
+"SPS, itd..."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "MTVU (Multi-Threaded microVU1)"
-msgstr ""
+msgstr "MTVU(Wielo-Wątkowe microVU1)"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
-#, fuzzy
 msgid ""
 "Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
 "cores]"
 msgstr ""
-"Dobre przyspieszenie i duża kompatybilność; może powodować błędy grafiki, "
-"SPS, etc... [Zalecane]"
+"W niektórych grach ogromne przyspieszenie, całkiem kompatybilne; może "
+"powodować niestabilność...\n"
+"[Zalecane dla 3+ rdzeniowych procesorów]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
 msgid "Other Hacks"

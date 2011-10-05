@@ -2,13 +2,13 @@
 # Copyright (C) YEAR PCSX2 Dev Team
 # This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-# 
+#
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
-"PO-Revision-Date: 2011-06-13 09:26+0100\n"
+"POT-Creation-Date: 2011-10-05 20:13+0200\n"
+"PO-Revision-Date: 2011-09-28 21:55+0100\n"
 "Last-Translator: Miseru99 <miseru99@hotmail.com>\n"
 "Language-Team: Miseru99 <miseru99@hotmail.com>\n"
 "Language: \n"
@@ -507,13 +507,14 @@ msgstr ""
 "jakiejkolwiek grze."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
-#, fuzzy
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr ""
-"Ta łatka działa najlepiej z grami, które używają zapisu stanu INTC do "
-"oczekiwania na synchronizację pionową,\n"
-"głównie wszelkie nie zrobione w 3D RPGi. Inne gry nie będą miały z tego "
-"żadnego, lub minimalny pożytek."
+"Dodaje osobny wątek dla VU1(działa tylko z microVU1). Najczęściej oznacza to "
+"przyspieszenie dla komputerów\n"
+"z 3 lub więcej rdzeniami, może jednak w niektórych grach prowadzić do "
+"niestabilności i wieszania się emulacji.\n"
+"Na gry ograniczone wątkiem GS może to mieć odwrotny skutek, szczególnie przy "
+"2-rdzeniowych procesorach."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"

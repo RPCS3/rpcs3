@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
-"PO-Revision-Date: 2011-09-01 22:14+0100\n"
+"POT-Creation-Date: 2011-10-05 20:13+0200\n"
+"PO-Revision-Date: 2011-10-05 13:20+0100\n"
 "Last-Translator: Georg Ronnert <pgert@yahoo.se>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -23,9 +23,9 @@ msgstr ""
 #: common/src/Utilities/Exceptions.cpp:254
 msgid "!Notice:VirtualMemoryMap"
 msgstr ""
-"Det finns inte tillräkligt med virituellt minne tillgängligt, eller så har "
+"Det finns inte tillräkligt med virtuellt minne tillgängligt, eller så har "
 "den nödvändiga \n"
-"virituella minnestilldelningen redan blivit resarverat av andra processer, "
+"virtuella minnestilldelningen redan blivit resarverat av andra processer, "
 "tjänster, eller DLL'er."
 
 #: pcsx2/CDVD/CDVD.cpp:385
@@ -76,8 +76,9 @@ msgstr ""
 #: pcsx2/gui/AppMain.cpp:546
 msgid "!Notice:BiosDumpRequired"
 msgstr ""
-"PCSX2 kräver PS2-BIOS för att köras. Av juridiska skäl *måste* Ni skaffa \n"
-"ett BIOS från en faktisk PS2 enhet som Ni äger (tillåns räknas inte). \n"
+"PCSX2 kräver PS2-BIOS för att köras. \n"
+"Av juridiska skäl *måste* Ni anskaffa ett BIOS från en faktisk PS2 enhet som "
+"Ni äger (tillåns räknas inte). \n"
 "Konsultera FAQ's och Guider för ytterligare information."
 
 #: pcsx2/gui/AppMain.cpp:629
@@ -126,7 +127,7 @@ msgstr ""
 "Denna trollkarl kommer att vägleda Er igenom "
 "konfigurationsinsticksprogram, \n"
 "minneskort, och BIOS. Ifall detta är första gången Ni installerar %s, \n"
-"så rekomenderas Ni att kolla in Läsmig och konfigurationsvägledningen."
+"så rekommenderas Ni att kolla in Läsmig och konfigurationsvägledningen."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
 msgid "!Wizard:Bios:Tutorial"
@@ -151,7 +152,7 @@ msgid "!Panel:Mcd:NtfsCompress"
 msgstr ""
 "NTFS komprimering är inbyggt, snabbt, och helt tillförlitligt; \n"
 "det komprimerar vanligtvis minneskort mycket bra (denna möjlighet "
-"rekomenderas)."
+"rekommenderas)."
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
 msgid "!Panel:Mcd:EnableEjection"

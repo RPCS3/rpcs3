@@ -5,10 +5,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.9\n"
+"Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
-"PO-Revision-Date: 2011-06-11 19:58+0100\n"
+"POT-Creation-Date: 2011-10-05 20:13+0200\n"
+"PO-Revision-Date: 2011-09-28 21:51+0100\n"
 "Last-Translator: Víctor González <pajaroloco_2@hotmail.com>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -513,13 +513,14 @@ msgstr ""
 "algún juego..."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
-#, fuzzy
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr ""
-"Este arreglo funciona mejor en juegos que utilizan el registro de estado "
-"INTC para esperar a la sincronía vertical, que incluyen principalmente a los "
-"RPGs que no son 3D. Los juegos que no utilizan este método de sincronía "
-"vertical no recibirán aumentos de velocidad con este arreglo."
+"Ejecuta VU1 en un hilo dedicado (sólo microVU1). Suele aumentar la velocidad "
+"en CPUs de tres núcleos o más.\n"
+"Opción segura para la mayoría de los juegos, pero algunos no son compatibles "
+"y pueden bloquear el emulador.\n"
+"En el caso de los juegos limitados por GS, podría ralentizarlos (sobre todo "
+"en CPUs de doble núcleo)."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"
