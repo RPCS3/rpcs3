@@ -397,6 +397,7 @@ Compat = 5
 Serial = SCUS-97179
 Name   = Twisted Metal Black
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SCUS-97181
 Name   = Official U.S. PlayStation Magazine Demo Disc 055
@@ -680,7 +681,7 @@ Region = NTSC-U
 Serial = SCUS-97258
 Name   = Amplitude
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SCUS-97259
 Name   = NHL FaceOff 2003 [Demo]
@@ -721,7 +722,7 @@ Compat = 3
 Serial = SCUS-97268
 Name   = Ratchet & Clank - Going Commando
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SCUS-97269
 Name   = Final Fantasy XI [Disc2of2]
@@ -3894,7 +3895,7 @@ Compat = 5
 Serial = SLUS-20515
 Name   = Yu-Gi-Oh! The Duelists of the Roses
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20516
 Name   = Shrek - Super Party
@@ -4571,7 +4572,8 @@ Compat = 4
 Serial = SLUS-20671
 Name   = Mafia
 Region = NTSC-U
-Compat = 2
+Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-20672
 Name   = Final Fantasy X-2
@@ -5310,7 +5312,8 @@ Compat = 5
 Serial = SLUS-20842
 Name   = Sims, The - Bustin' Out
 Region = NTSC-U
-Compat = 2
+Compat = 5
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20843
 Name   = Dead to Rights II
@@ -6049,7 +6052,7 @@ Compat = 4
 Serial = SLUS-20993
 Name   = Ghosthunter
 Region = NTSC-U
-Compat = 2
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-20994
 Name   = Full Metal Alchemist and The Broken Angel
@@ -6736,7 +6739,7 @@ Compat = 5
 Serial = SLUS-21143
 Name   = Star Wars - Episode III - Revenge of the Sith
 Region = NTSC-U
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21144
 Name   = Tom Clancy's Rainbow Six - Lockdown
@@ -7213,6 +7216,7 @@ Compat = 5
 Serial = SLUS-21243
 Name   = Metal Gear Solid 3 - Subsistence
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21244
 Name   = Fatal Frame 3 - The Tormented
@@ -10186,6 +10190,7 @@ Region = NTSC-U
 Serial = SLUS-21939
 Name   = WWE SmackDown vs. Raw 2011
 Region = NTSC-U
+Compat = 5
 ---------------------------------------------
 Serial = SLUS-21940
 Name   = WWE All-Stars
@@ -10928,7 +10933,7 @@ Region = NTSC-J
 Serial = PBPX-95524
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-Unk
-Compat = 4
+Compat = 5
 [patches = CA6243B9]
 	
 	comment=patches by Nachbrenner
@@ -11821,7 +11826,7 @@ Region = NTSC-Unk
 Serial = SCAJ-30007
 Name   = Gran Turismo 4
 Region = NTSC-Unk
-Compat = 4
+Compat = 5
 [patches = 7ABDBB5E]
 	
 	comment=patches by nachbrenner
@@ -13606,6 +13611,8 @@ Region = NTSC-K
 Serial = SLKA-25165
 Name   = Mobile Suit Gundam - Seed Destiny - Rengou vs. Z.A.F.T. II Plus
 Region = NTSC-K
+eeRoundMode = 1
+FpuNegDivHack = 1
 ---------------------------------------------
 Serial = SLKA-25166
 Name   = Sengoku Musou
@@ -14102,6 +14109,7 @@ Region = NTSC-J
 Serial = SLPM-62013
 Name   = Ring of Red
 Region = NTSC-J
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-62015
 Name   = Silpheed - The Lost Planet
@@ -14289,6 +14297,7 @@ Region = NTSC-J
 Serial = SLPM-62091
 Name   = Ring of Red
 Region = NTSC-J
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-62092
 Name   = XG3 Extreme G Racing
@@ -16507,6 +16516,7 @@ Region = NTSC-K
 Serial = SLPM-65001
 Name   = Kessen
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-65002
 Name   = Love Story
@@ -17655,6 +17665,7 @@ Compat = 5
 Serial = SLPM-65361
 Name   = Anubis Zone of Enders [Special Edition LE]
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-65362
 Name   = NHK Tensai Bit-Kun - Guramon Battle
@@ -18063,6 +18074,7 @@ Compat = 5
 Serial = SLPM-65479
 Name   = Sims, The - Bustin' Out
 Region = NTSC-J
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-65480
 Name   = Michigan
@@ -18333,6 +18345,7 @@ Region = NTSC-J
 Serial = SLPM-65555
 Name   = Dragon Quest V - Bride of the Sky
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-65556
 Name   = Nobunaga no Yabou - Tenka Sousei
@@ -22464,10 +22477,12 @@ Region = NTSC-J
 Serial = SLPM-66704
 Name   = Negima! Dream Tactic Yumemiru Otome Princess [Maihime Edition]
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-66705
 Name   = Negima! Dream Tactic Yumemiru Otome Princess [Utahime Edition]
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-66708
 Name   = Brothers In Arms - Earned In Blood [Best Version]
@@ -24876,8 +24891,9 @@ Name   = Phantom Kingdom [Limited Edition]
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-20410
-Name   = Phantom Kingdom
+Name   = Phantom Kingdom [Limited Edition]
 Region = NTSC-J
+Status = 5
 ---------------------------------------------
 Serial = SLPS-20411
 Name   = Hissatsu Pachinko Station v9
@@ -25955,6 +25971,8 @@ Region = NTSC-J
 Serial = SLPS-25235
 Name   = Yumeria
 Region = NTSC-J
+Compat = 5
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-25236
 Name   = Fantastic Fortune 2
@@ -27014,6 +27032,11 @@ Region = NTSC-J
 Serial = SLPS-25527
 Name   = dot Hack - Fragment
 Region = NTSC-J
+Compat = 5
+EETimingHack = 1
+SkipMPEGHack = 1
+OPHFlagHack = 1
+DMABusyHack = 1
 ---------------------------------------------
 Serial = SLPS-25528
 Name   = Summon Night EX Thesis - Yoake no Tsubasa
@@ -27114,6 +27137,7 @@ Region = NTSC-J
 Serial = SLPS-25551
 Name   = Cowboy Bebop - Tsuitou no Yakyoku
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPS-25552
 Name   = Inuyasha - Juuso no Kamen [Bandai the Best]
@@ -27316,7 +27340,7 @@ Region = NTSC-J
 Serial = SLPS-25606
 Name   = Zettai Zetsumei Toshi 2 - Itetsuita Kioutachi
 Region = NTSC-J
-Compat = 1
+Compat = 5
 ---------------------------------------------
 Serial = SLPS-25607
 Name   = Makai Senki Disgaea 2 [Limited Edition]
@@ -27754,6 +27778,7 @@ Region = NTSC-J
 Serial = SLPS-25718
 Name   = Mobile Suit Gundam Seed Destiny - Rengou vs. Z.A.F.T. II Plus
 Region = NTSC-J
+Compat = 5
 eeRoundMode = 1
 FpuNegDivHack = 1
 ---------------------------------------------
@@ -28055,6 +28080,7 @@ Region = NTSC-J
 Serial = SLPS-25798
 Name   = Ikki Tousen - Shining Dragon
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPS-25799
 Name   = Ultraman Fighting Evolution 3 [Banpresto Best]
@@ -29895,6 +29921,7 @@ XgKickHack = 1			//Most of the ingame SPS gets fixed with it.
 Serial = SCES-53285
 Name   = Ratchet - Gladiator
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SCES-53286
 Name   = Jak X - Combat Racing
@@ -29946,6 +29973,7 @@ Compat = 5
 Serial = SCES-53328
 Name   = Genji
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SCES-53347
 Name   = SpyToy
@@ -30019,6 +30047,7 @@ Region = PAL-Unk
 Serial = SCES-53642
 Name   = Ape Escape 3
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SCES-53663
 Name   = Buzz! The Music Quiz
@@ -30186,7 +30215,8 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SCES-54206
 Name   = God of War II
-Region = PAL-Unk
+Region = PAL-M6
+Compat = 5
 ---------------------------------------------
 Serial = SCES-54219
 Name   = Buzz! Junior - Jungle Party
@@ -31435,7 +31465,7 @@ Compat = 5
 Serial = SLES-50383
 Name   = Metal Gear Solid 2 - Sons of Liberty
 Region = PAL-M3
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-50384
 Name   = Project Zero II
@@ -32790,6 +32820,7 @@ Region = PAL-Unk
 Serial = SLES-51044
 Name   = Burnout 2 - Point of Impact
 Region = PAL-M5
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51045
 Name   = Legends of Wrestling II
@@ -33346,6 +33377,7 @@ Region = PAL-Unk
 Serial = SLES-51290
 Name   = Sword of the Samurai
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51294
 Name   = XIII
@@ -34307,15 +34339,16 @@ Region = PAL-Unk
 Serial = SLES-51817
 Name   = Final Fantasy X-2
 Region = PAL-G
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51818
 Name   = Final Fantasy X-2
-Region = PAL-Unk
+Region = PAL-I
 ---------------------------------------------
 Serial = SLES-51819
 Name   = Final Fantasy X-2
-Region = PAL-Unk
+Region = PAL-S
+Compat = 5
 ---------------------------------------------
 Serial = SLES-51821
 Name   = Alias
@@ -34905,6 +34938,7 @@ SkipMPEGHack = 1
 Serial = SLES-52048
 Name   = Sims, The - Bustin' Out
 Region = PAL-Unk
+SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-52055
 Name   = Harry Potter and the Philosopher's Stone
@@ -35900,6 +35934,7 @@ Region = PAL-Unk
 Serial = SLES-52584
 Name   = Burnout 3 - Takedown
 Region = PAL-M4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-52585
 Name   = Burnout 3 - Takedown
@@ -36807,7 +36842,7 @@ Compat = 5
 Serial = SLES-52965
 Name   = Outlaw Golf 2
 Region = PAL-Unk
-Compat = 3
+Compat = 5
 ---------------------------------------------
 Serial = SLES-52966
 Name   = ESPN NHL 2K5
@@ -36822,6 +36857,7 @@ SkipMPEGHack = 1
 Serial = SLES-52968
 Name   = Burnout 2 - Point of Impact
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-52973
 Name   = Ski Racing 2005
@@ -37092,12 +37128,12 @@ Compat = 5
 Serial = SLES-53064
 Name   = FIFA Street
 Region = PAL-Unk
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-53065
 Name   = SNK vs. Capcom - SVC Chaos
 Region = PAL-Unk
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-53074
 Name   = Soccer Life
@@ -38407,6 +38443,7 @@ Region = PAL-Unk
 Serial = SLES-53718
 Name   = Sims 2, The
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-53722
 Name   = Call of Duty 2 - Big Red One [Collector's Edition]
@@ -38568,7 +38605,7 @@ Region = PAL-Unk
 Serial = SLES-53796
 Name   = FIFA Street 2
 Region = PAL-Unk
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-53797
 Name   = FIFA Street 2
@@ -39092,7 +39129,8 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-54087
 Name   = Suikoden V
-Region = PAL-Unk
+Region = PAL-M5
+Compat = 5
 ---------------------------------------------
 Serial = SLES-54089
 Name   = State of Emergency 2
@@ -39691,7 +39729,8 @@ Region = PAL-I
 ---------------------------------------------
 Serial = SLES-54358
 Name   = Final Fantasy XII
-Region = PAL-Unk
+Region = PAL-S
+Compat = 5
 ---------------------------------------------
 Serial = SLES-54359
 Name   = Legend of Spyro, The - A New Beginning
@@ -39921,6 +39960,7 @@ Region = PAL-E
 Serial = SLES-54464
 Name   = Global Defence Force
 Region = PAL-E
+Compat = 5
 ---------------------------------------------
 Serial = SLES-54465
 Name   = CSI 3 - Dimensions of Murder
@@ -40764,7 +40804,7 @@ Serial = SLES-55081
 Name   = Jackass - The Game
 Region = PAL-E
 ---------------------------------------------
-Serial = SLPS-55090
+Serial = SLES-55090
 Name   = Naruto - Uzumaki Chronicles 2
 Region = PAL-M5
 OPHFLagHack = 1
@@ -41101,6 +41141,7 @@ DMABusyHack = 1
 Serial = SLES-55444
 Name   = Ar tonelico II: Melody of Metafalica
 Region = PAL-Unk
+Compat = 5
 ---------------------------------------------
 Serial = SLES-55448
 Name   = Indiana Jones and the Staff of Kings
@@ -41338,7 +41379,7 @@ Compat = 5
 Serial = SLES-82013
 Name   = Metal Gear Solid 3 - Snake Eater
 Region = PAL-E-F
-Compat = 4
+Compat = 5
 ---------------------------------------------
 Serial = SLES-82018
 Name   = Cy Girls

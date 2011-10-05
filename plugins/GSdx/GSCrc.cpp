@@ -39,6 +39,7 @@ CRC::Game CRC::m_games[] =
 	{0x941BB7D9, FFX, DE, 0},
 	{0xA39517A9, FFX, IT, 0},
 	{0x941BB7DE, FFX, ES, 0},
+	{0xA80F497C, FFX, ES, 0},
 	{0xB4414EA1, FFX, RU, 0},
 	{0xEE97DB5B, FFX, RU, 0},
 	{0xAEC495CC, FFX, RU, 0},
@@ -48,7 +49,7 @@ CRC::Game CRC::m_games[] =
 	{0x658597E2, FFX, JP, 0}, // int.
 	{0x9AAC5309, FFX2, EU, 0},
 	{0x9AAC530C, FFX2, FR, 0},
-	{0x9AAC530A, FFX2, FR, 0}, // ?
+	{0x9AAC530A, FFX2, ES, 0}, 
 	{0x9AAC530D, FFX2, DE, 0},
 	{0x9AAC530B, FFX2, IT, 0},
 	{0x48FE0C71, FFX2, US, 0},
@@ -58,6 +59,7 @@ CRC::Game CRC::m_games[] =
 	{0xC1274668, FFXII, EU, 0},
 	{0xDC2A467E, FFXII, EU, 0},
 	{0xCA284668, FFXII, EU, 0},
+	{0xC52B466E, FFXII, EU, 0}, //ES
 	{0x280AD120, FFXII, JP, 0},
 	{0x08C1ED4D, HauntingGround, NoRegion, 0},
 	{0x2CD5794C, HauntingGround, EU, 0},
