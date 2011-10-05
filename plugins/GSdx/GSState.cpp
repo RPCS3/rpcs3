@@ -309,9 +309,10 @@ GSVector4i GSState::GetFrameRect(int i)
 	int w = r.width();
 	int h = r.height();
 
-	if(m_game.title == CRC::DevilMayCry3 && (m_game.region == CRC::US || m_game.region == CRC::JP))
+	//Fixme: These games have an extra black bar at bottom of screen
+	if((m_game.title == CRC::DevilMayCry3 || m_game.title == CRC::SkyGunner) && (m_game.region == CRC::US || m_game.region == CRC::JP))
 	{
-		h = 448; 
+		h = 448; //
 	}
 	
 	if(m_regs->SMODE2.INT && m_regs->SMODE2.FFMD && h > 1) h >>= 1;
@@ -3181,6 +3182,34 @@ bool GSC_Yakuza2(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_SkyGunner(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+
+		if(!fi.TME && !(fi.FBP == 0x0 || fi.FBP == 0x00800 || fi.FBP == 0x008c0 || fi.FBP == 0x03e00) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 == 0x0 || fi.TBP0 == 0x01800) && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1; //Huge Vram usage
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_JamesBondEverythingOrNothing(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+
+		if(fi.TME && (fi.FBP < 0x02000 && !(fi.FBP == 0x0 || fi.FBP == 0x00e00)) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 > 0x01c00 && fi.TBP0 < 0x03000) && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 1; //Huge Vram usage
+		}
+	}
+	
+	return true;
+}
+
 
 //#define USE_DYNAMIC_CRC_HACK
 #ifdef USE_DYNAMIC_CRC_HACK
@@ -3404,6 +3433,8 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::Kunoichi] = GSC_Kunoichi;
 		map[CRC::Yakuza] = GSC_Yakuza;
 		map[CRC::Yakuza2] = GSC_Yakuza2;
+		map[CRC::SkyGunner] = GSC_SkyGunner;
+		map[CRC::JamesBondEverythingOrNothing] = GSC_JamesBondEverythingOrNothing;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

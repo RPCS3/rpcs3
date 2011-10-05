@@ -125,7 +125,8 @@ public:
 		Kunoichi,
 		Yakuza,
 		Yakuza2,
-
+		SkyGunner,
+		JamesBondEverythingOrNothing,
 		TitleCount,
 	};
 

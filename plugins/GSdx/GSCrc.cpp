@@ -323,6 +323,9 @@ CRC::Game CRC::m_games[] =
 	{0xA60C2E65, Yakuza2, EU, 0},
 	{0x800E3E5A, Yakuza2, EU, 0},
 	{0x97E9C87E, Yakuza2, US, 0},
+	{0x9000252A, SkyGunner, JP, 0},
+	{0xA9461CB2, SkyGunner, US, 0},
+	{0x6848699B, JamesBondEverythingOrNothing, US, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

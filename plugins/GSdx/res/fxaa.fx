@@ -1,6 +1,7 @@
 #ifdef SHADER_MODEL // make safe to include in resource file to enforce dependency
 
 #define FXAA_PC 1
+#define FXAA_QUALITY__SUBPIX 0.0
 
 #if SHADER_MODEL >= 0x400
 
