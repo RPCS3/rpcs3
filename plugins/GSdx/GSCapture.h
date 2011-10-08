@@ -44,7 +44,7 @@ public:
 	GSCapture();
 	virtual ~GSCapture();
 
-	bool BeginCapture(int fps);
+	bool BeginCapture(float fps);
 	bool DeliverFrame(const void* bits, int pitch, bool rgba);
 	bool EndCapture();
 

@@ -173,7 +173,7 @@ GSSource : public CBaseFilter, private CCritSec, public IGSSource
 
 public:
 
-	GSSource(int w, int h, int fps, IUnknown* pUnk, HRESULT& hr, int colorspace)
+	GSSource(int w, int h, float fps, IUnknown* pUnk, HRESULT& hr, int colorspace)
 		: CBaseFilter(NAME("GSSource"), pUnk, this, __uuidof(this), &hr)
 		, m_output(NULL)
 		, m_size(w, h)
@@ -181,9 +181,6 @@ public:
 		, m_now(0)
 	{
 		m_output = new GSSourceOutputPin(m_size, m_atpf, this, this, hr, colorspace);
-
-		// FIXME
-		if(fps == 60) m_atpf = 166834; // = 10000000i64 / 59.94
 	}
 
 	virtual ~GSSource()
@@ -387,7 +384,7 @@ GSCapture::~GSCapture()
 	EndCapture();
 }
 
-bool GSCapture::BeginCapture(int fps)
+bool GSCapture::BeginCapture(float fps)
 {
 	GSAutoLock lock(this);
 

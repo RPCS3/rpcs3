@@ -68,8 +68,8 @@ public:
 		return r.rintersect(GSVector4i(0, 0, 1024, 512));
 	}
 
-	int GetFPS()
+	float GetFPS()
 	{
-		return STATUS.ISPAL ? 50 : 60;
+		return STATUS.ISPAL ? 50 : 59.94;
 	}
 };

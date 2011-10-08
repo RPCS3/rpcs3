@@ -199,7 +199,7 @@ public:
 
 	bool IsEnabled(int i);
 
-	int GetFPS();
+	float GetFPS();
 
 	virtual void Reset();
 	virtual void Flush();

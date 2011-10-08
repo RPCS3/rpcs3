@@ -383,9 +383,9 @@ bool GSState::IsEnabled(int i)
 	return false;
 }
 
-int GSState::GetFPS()
+float GSState::GetFPS()
 {
-	return ((m_regs->SMODE1.CMOD & 1) ? 50 : 60) >> (1 - m_regs->SMODE2.INT);
+	return ((m_regs->SMODE1.CMOD & 1) ? 50 : 59.94) * pow(2.0f, (float)m_regs->SMODE2.INT-1.0f);
 }
 
 // GIFPackedRegHandler*
