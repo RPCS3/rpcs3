@@ -349,7 +349,8 @@ void ProcessButtonBinding(Binding *b, ButtonSum *sum, int value) {
 	if (value < b->deadZone || !value) return;
 	
 	if ( config.turboKeyHack == 1 ){ // send a tabulator keypress to emulator
-		if ( b->command == 0x12 ){ // R3 button
+		//printf("%x\n", b->command);
+		if ( b->command == 0x11 ){ // L3 button
 			static unsigned int LastCheck = 0;
 			unsigned int t = timeGetTime();
 			if (t - LastCheck < 300 ) return;
