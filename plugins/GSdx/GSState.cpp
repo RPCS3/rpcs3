@@ -3154,7 +3154,7 @@ bool GSC_Yakuza(const GSFrameInfo& fi, int& skip)
 		*/
 	)
 	{
-		skip=17;
+		skip=3;
 	}
 	return true;
 }
