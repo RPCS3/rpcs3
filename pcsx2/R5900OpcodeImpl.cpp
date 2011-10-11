@@ -24,7 +24,7 @@
 #include "R5900Exceptions.h"
 
 
-static __fi s64 _add64_Overflow( s64 x, s64 y )
+static __fi bool _add64_Overflow( s64 x, s64 y, s64 &ret )
 {
 	const s64 result = x + y;
 
@@ -32,18 +32,21 @@ static __fi s64 _add64_Overflow( s64 x, s64 y )
 	// which apparently works, and generates compact/fast x86 code too (the
 	// other method below is like 5-10 times slower).
 
-	if( ((~(x^y))&(x^result)) < 0 )
+	if( ((~(x^y))&(x^result)) < 0 ) {
 		cpuException(0x30, cpuRegs.branch);		// fixme: is 0x30 right for overflow??
+		return true;
+	}
 
 	// the not-as-fast style!
 	//if( ((x >= 0) && (y >= 0) && (result <  0)) ||
 	//	((x <  0) && (y <  0) && (result >= 0)) )
 	//	cpuException(0x30, cpuRegs.branch);
 
-	return result;
+	ret = result;
+	return false;
 }
 
-static __fi s64 _add32_Overflow( s32 x, s32 y )
+static __fi bool _add32_Overflow( s32 x, s32 y, s64 &ret )
 {
 	GPR_reg64 result;  result.SD[0] = (s64)x + y;
 
@@ -52,10 +55,14 @@ static __fi s64 _add32_Overflow( s32 x, s32 y )
 	// against bit 31 (leftmost of the lower word).
 
 	// If bit32 != bit31 then we have an overflow.
-	if( (result.UL[0]>>31) != (result.UL[1] & 1) )
+	if( (result.UL[0]>>31) != (result.UL[1] & 1) ) {
 		cpuException(0x30, cpuRegs.branch);
+		return true;
+	}
+	
+	ret = result.SD[0];
 
-	return result.SD[0];
+	return false;
 }
 
 
@@ -266,8 +273,9 @@ void COP1_Unknown() { Console.Warning("Unknown FPU/COP1 opcode called"); }
 // Rt = Rs + Im signed [exception on overflow]
 void ADDI()
 {
-	s64 result = _add32_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], _Imm_ );
-	if (!_Rt_) return;
+	s64 result;
+	bool overflow = _add32_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], _Imm_, result );
+	if (overflow || !_Rt_) return;
 	cpuRegs.GPR.r[_Rt_].SD[0] = result;
 }
 
@@ -285,8 +293,9 @@ void ADDIU()
 // of at 32 bits.
 void DADDI()
 {
-	s64 result = _add64_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], _Imm_ );
-	if (!_Rt_) return;
+	s64 result;
+	bool overflow = _add64_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], _Imm_, result );
+	if (overflow || !_Rt_) return;
 	cpuRegs.GPR.r[_Rt_].SD[0] = result;
 }
 
@@ -312,31 +321,35 @@ void SLTIU()    { if (!_Rt_) return; cpuRegs.GPR.r[_Rt_].UD[0] = (cpuRegs.GPR.r[
 // Rd = Rs + Rt		(Exception on Integer Overflow)
 void ADD()
 {
-	s64 result = _add32_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], cpuRegs.GPR.r[_Rt_].SD[0] );
-	if (!_Rd_) return;
+	s64 result;
+	bool overflow = _add32_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], cpuRegs.GPR.r[_Rt_].SD[0], result );
+	if (overflow || !_Rd_) return;
 	cpuRegs.GPR.r[_Rd_].SD[0] = result;
 }
 
 void DADD()
 {
-	s64 result = _add64_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], cpuRegs.GPR.r[_Rt_].SD[0] );
-	if (!_Rd_) return;
+	s64 result;
+	bool overflow = _add64_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], cpuRegs.GPR.r[_Rt_].SD[0], result );
+	if (overflow || !_Rd_) return;
 	cpuRegs.GPR.r[_Rd_].SD[0] = result;
 }
 
 // Rd = Rs - Rt		(Exception on Integer Overflow)
 void SUB()
 {
-	s64 result = _add32_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], -cpuRegs.GPR.r[_Rt_].SD[0] );
-	if (!_Rd_) return;
+	s64 result;
+	bool overflow = _add32_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], -cpuRegs.GPR.r[_Rt_].SD[0], result );
+	if (overflow || !_Rd_) return;
 	cpuRegs.GPR.r[_Rd_].SD[0] = result;
 }
 
 // Rd = Rs - Rt		(Exception on Integer Overflow)
 void DSUB()
 {
-	s64 result = _add64_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], -cpuRegs.GPR.r[_Rt_].SD[0] );
-	if (!_Rd_) return;
+	s64 result;
+	bool overflow = _add64_Overflow( cpuRegs.GPR.r[_Rs_].SD[0], -cpuRegs.GPR.r[_Rt_].SD[0], result );
+	if (overflow || !_Rd_) return;
 	cpuRegs.GPR.r[_Rd_].SD[0] = result;
 }
 
