@@ -445,6 +445,7 @@ wxStaticText* GSFrame::GetLabel_OutputDisabled() const
 void GSFrame::CoreThread_OnResumed()
 {
 	m_timer_UpdateTitle.Start( TitleBarUpdateMs );
+	if( !IsShown() ) Show();
 }
 
 void GSFrame::CoreThread_OnSuspended()
