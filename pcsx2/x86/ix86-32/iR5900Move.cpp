@@ -71,8 +71,19 @@ void recLUI()
 	}
 
 	_deleteEEreg(_Rt_, 0);
-	GPR_SET_CONST(_Rt_);
-	g_cpuConstRegs[_Rt_].UD[0] = (s32)(cpuRegs.code << 16);
+
+	if(EE_CONST_PROP)
+	{
+		GPR_SET_CONST(_Rt_);
+		g_cpuConstRegs[_Rt_].UD[0] = (s32)(cpuRegs.code << 16);
+	}
+	else
+	{
+		MOV32ItoR(EAX, (s32)(cpuRegs.code << 16));
+		CDQ();
+		MOV32RtoM((u32)&cpuRegs.GPR.r[_Rt_].UL[0], EAX);
+		MOV32RtoM((u32)&cpuRegs.GPR.r[_Rt_].UL[1], EDX);
+	}	
 }
 
 ////////////////////////////////////////////////////

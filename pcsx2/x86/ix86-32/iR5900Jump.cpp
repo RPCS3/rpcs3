@@ -56,9 +56,17 @@ void recJAL( void )
 {
 	u32 newpc = (_Target_ << 2) + ( pc & 0xf0000000 );
 	_deleteEEreg(31, 0);
-	GPR_SET_CONST(31);
-	g_cpuConstRegs[31].UL[0] = pc + 4;
-	g_cpuConstRegs[31].UL[1] = 0;
+	if(EE_CONST_PROP)
+	{
+		GPR_SET_CONST(31);
+		g_cpuConstRegs[31].UL[0] = pc + 4;
+		g_cpuConstRegs[31].UL[1] = 0;
+	}
+	else
+	{
+		MOV32ItoM((u32)&cpuRegs.GPR.r[31].UL[0], pc + 4);
+		MOV32ItoM((u32)&cpuRegs.GPR.r[31].UL[1], 0);
+	}
 
 	recompileNextInstruction(1);
 	SetBranchImm(newpc);
@@ -78,6 +86,7 @@ void recJR( void )
 ////////////////////////////////////////////////////
 void recJALR( void )
 {
+	int newpc = pc + 4;
 	_allocX86reg(ESI, X86TYPE_PCWRITEBACK, 0, MODE_WRITE);
 	_eeMoveGPRtoR(ESI, _Rs_);
 	// uncomment when there are NO instructions that need to call interpreter
@@ -100,12 +109,21 @@ void recJALR( void )
 //		}
 //	}
 
+	
 	if ( _Rd_ )
 	{
 		_deleteEEreg(_Rd_, 0);
-		GPR_SET_CONST(_Rd_);
-		g_cpuConstRegs[_Rd_].UL[0] = pc + 4;
-		g_cpuConstRegs[_Rd_].UL[1] = 0;
+		if(EE_CONST_PROP)
+		{
+			GPR_SET_CONST(_Rd_);
+			g_cpuConstRegs[_Rd_].UL[0] = newpc;
+			g_cpuConstRegs[_Rd_].UL[1] = 0;
+		}
+		else
+		{
+			MOV32ItoM((u32)&cpuRegs.GPR.r[_Rd_].UL[0], newpc);
+			MOV32ItoM((u32)&cpuRegs.GPR.r[_Rd_].UL[1], 0);
+		}
 	}
 
 	_clearNeededMMXregs();
