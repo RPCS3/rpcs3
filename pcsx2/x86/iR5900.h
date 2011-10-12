@@ -43,7 +43,7 @@ extern u32 s_nBlockCycles;		// cycles of current block recompiling
 #define REC_FUNC_DEL( f, delreg ) \
 	void rec##f( void ) \
 { \
-	if( (delreg) > 0 ) _deleteEEreg(delreg, 0); \
+	if( (delreg) > 0 ) _deleteEEreg(delreg, 1); \
 	recCall(Interp::f); \
 }
 
@@ -56,7 +56,7 @@ extern u32 s_nBlockCycles;		// cycles of current block recompiling
 #define REC_SYS_DEL( f, delreg ) \
    void rec##f( void ) \
    { \
-	   if( (delreg) > 0 ) _deleteEEreg(delreg, 0); \
+	   if( (delreg) > 0 ) _deleteEEreg(delreg, 1); \
 	   recBranchCall(Interp::f); \
    }
 
