@@ -45,13 +45,23 @@ void setupMacroOp(int mode, const char* opName) {
 		microVU0.prog.IRinfo.info[0].cFlag.lastWrite = 0xff;
 	}
 	if (mode & 0x10) { // Update Status/Mac Flags
-		microVU0.prog.IRinfo.info[0].sFlag.doFlag		= 1;
-		microVU0.prog.IRinfo.info[0].sFlag.doNonSticky	= 1;
-		microVU0.prog.IRinfo.info[0].sFlag.write		= 0;
-		microVU0.prog.IRinfo.info[0].sFlag.lastWrite	= 0;
-		microVU0.prog.IRinfo.info[0].mFlag.doFlag		= 1;
-		microVU0.prog.IRinfo.info[0].mFlag.write		= 0xff;
-		xMOV(gprF0, ptr32[&vu0Regs.VI[REG_STATUS_FLAG].UL]);
+		if ((mode & 0x80) && CHECK_VU_FLAGHACK) 
+		{
+			//Its doing a SUB and we have the hack on so Ace Combat sky will work.
+			//Some freaky stat flag thing going on here!
+		}
+		else
+		{
+			microVU0.prog.IRinfo.info[0].sFlag.doFlag		= 1;
+			microVU0.prog.IRinfo.info[0].sFlag.doNonSticky	= 1;
+			microVU0.prog.IRinfo.info[0].sFlag.write		= 0;
+			microVU0.prog.IRinfo.info[0].sFlag.lastWrite	= 0;
+			microVU0.prog.IRinfo.info[0].mFlag.doFlag		= 1;
+			microVU0.prog.IRinfo.info[0].mFlag.write		= 0xff;
+		
+			xMOV(gprF0, ptr32[&vu0Regs.VI[REG_STATUS_FLAG].UL]);
+		}
+		
 	}
 }
 
@@ -116,7 +126,7 @@ REC_COP2_mVU0(ADDAx,	"ADDAx",	0x10);
 REC_COP2_mVU0(ADDAy,	"ADDAy",	0x10);
 REC_COP2_mVU0(ADDAz,	"ADDAz",	0x10);
 REC_COP2_mVU0(ADDAw,	"ADDAw",	0x10);
-REC_COP2_mVU0(SUB,		"SUB",		0x10);
+REC_COP2_mVU0(SUB,		"SUB",		0x90); //Ace Combat sky
 REC_COP2_mVU0(SUBi,		"SUBi",		0x10);
 REC_COP2_mVU0(SUBq,		"SUBq",		0x11);
 REC_COP2_mVU0(SUBx,		"SUBx",		0x10);
