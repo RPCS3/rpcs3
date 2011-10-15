@@ -117,9 +117,11 @@ enum VifModes
 static const unsigned int VIF0intc = 4;
 static const unsigned int VIF1intc = 5;
 
-extern u32 g_vifCycles;
+extern u32 g_vif0Cycles;
+extern u32 g_vif1Cycles;
 extern u32 g_vu0Cycles;
 extern u32 g_vu1Cycles;
-extern u32 g_packetsizeonvu;
+extern u32 g_packetsizeonvu0;
+extern u32 g_packetsizeonvu1;
 extern void vif0FLUSH();
 extern void vif1FLUSH();

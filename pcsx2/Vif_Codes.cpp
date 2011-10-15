@@ -77,8 +77,8 @@ static __fi void vuExecMicro(int idx, u32 addr) {
 	else	  vu1ExecMicro(addr);
 
 	if (!idx || !THREAD_VU1) {
-		if (!idx) { g_vu0Cycles += (VU0.cycle-startcycles); g_packetsizeonvu = vif0.vifpacketsize; }
-		else      { g_vu1Cycles += (VU1.cycle-startcycles); g_packetsizeonvu = vif1.vifpacketsize; }
+		if (!idx) { g_vu0Cycles += (VU0.cycle-startcycles); g_packetsizeonvu0 = vif0.vifpacketsize; }
+		else      { g_vu1Cycles += (VU1.cycle-startcycles); g_packetsizeonvu1 = vif1.vifpacketsize; }
 	}
 	//DevCon.Warning("Ran VU%x, VU0 Cycles %x, VU1 Cycles %x, start %x cycle %x", idx, g_vu0Cycles, g_vu1Cycles, startcycles, VU1.cycle);
 	GetVifX.vifstalled = true;

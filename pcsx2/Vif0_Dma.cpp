@@ -19,21 +19,23 @@
 #include "VUmicro.h"
 #include "newVif.h"
 
+u32 g_vif0Cycles = 0;
+
 // Run VU0 until finish, don't add cycles to EE
 // because its vif stalling not the EE core...
 __fi void vif0FLUSH()
 {
-	if(g_packetsizeonvu > vif0.vifpacketsize && g_vu0Cycles > 0) 
+	if(g_packetsizeonvu0 > vif0.vifpacketsize && g_vu0Cycles > 0) 
 	{
 		//DevCon.Warning("Adding on same packet");
-		if( ((g_packetsizeonvu - vif0.vifpacketsize) >> 1) > g_vu0Cycles)
-			g_vu0Cycles -= (g_packetsizeonvu - vif0.vifpacketsize) >> 1;
+		if( ((g_packetsizeonvu0 - vif0.vifpacketsize) >> 1) > g_vu0Cycles)
+			g_vu0Cycles -= (g_packetsizeonvu0 - vif0.vifpacketsize) >> 1;
 		else g_vu0Cycles = 0;
 	}
 	if(g_vu0Cycles > 0)
 	{
-		//DevCon.Warning("Adding %x cycles to VIF0", g_vu1Cycles * BIAS);
-		g_vifCycles += g_vu0Cycles;
+		//DevCon.Warning("Adding %x cycles to VIF0", g_vu0Cycles * BIAS);
+		g_vif0Cycles += g_vu0Cycles;
 		g_vu0Cycles = 0;		
 	} 
 	g_vu0Cycles = 0;
@@ -46,7 +48,7 @@ __fi void vif0FLUSH()
 	int _cycles = VU0.cycle;
 	vu0Finish();
 	//DevCon.Warning("VIF0 adding %x cycles", (VU0.cycle - _cycles) * BIAS);
-	g_vifCycles += (VU0.cycle - _cycles) * BIAS;
+	g_vif0Cycles += (VU0.cycle - _cycles) * BIAS;
 	return;
 }
 
@@ -87,7 +89,7 @@ __fi void vif0SetupTransfer()
 		case VIF_NORMAL_TO_MEM_MODE:
 			vif0.inprogress = 1;
 			vif0.done = true;
-			g_vifCycles = 2;
+			g_vif0Cycles = 2;
 			break;
 
 		case VIF_CHAIN_MODE:
@@ -96,7 +98,7 @@ __fi void vif0SetupTransfer()
 			if (!(vif0ch.transfer("vif0 Tag", ptag))) return;
 
 			vif0ch.madr = ptag[1]._u32;            //MADR = ADDR field + SPR
-			g_vifCycles += 1; // Add 1 g_vifCycles from the QW read for the tag
+			g_vif0Cycles += 1; // Add 1 g_vifCycles from the QW read for the tag
 
 			// Transfer dma tag if tte is set
 
@@ -161,7 +163,7 @@ __fi void vif0Interrupt()
 {
 	VIF_LOG("vif0Interrupt: %8.8x", cpuRegs.cycle);
 
-	g_vifCycles = 0;
+	g_vif0Cycles = 0;
 
 	vif0Regs.stat.FQC = min(vif0ch.qwc, (u16)8);
 
@@ -201,7 +203,7 @@ __fi void vif0Interrupt()
 	{
 		_VIF0chain();
 		vif0Regs.stat.FQC = min(vif0ch.qwc, (u16)8);
-		CPU_INT(DMAC_VIF0, g_vifCycles);
+		CPU_INT(DMAC_VIF0, g_vif0Cycles);
 		return;
 	}
 
@@ -216,7 +218,7 @@ __fi void vif0Interrupt()
 
 		if ((vif0.inprogress & 0x1) == 0) vif0SetupTransfer();
 		vif0Regs.stat.FQC = min(vif0ch.qwc, (u16)8);
-		CPU_INT(DMAC_VIF0, g_vifCycles);
+		CPU_INT(DMAC_VIF0, g_vif0Cycles);
 		return;
 	}
 
@@ -233,7 +235,7 @@ __fi void vif0Interrupt()
 
 	vif0ch.chcr.STR = false;
 	vif0Regs.stat.FQC = min((u16)0x8, vif0ch.qwc);
-	g_vifCycles = 0;
+	g_vif0Cycles = 0;
 	hwDmacIrq(DMAC_VIF0);
 	vif0Regs.stat.FQC = 0;
 	DMA_LOG("VIF0 DMA End");
@@ -246,7 +248,7 @@ void dmaVIF0()
 	        vif0ch.chcr._u32, vif0ch.madr, vif0ch.qwc,
 	        vif0ch.tadr, vif0ch.asr0, vif0ch.asr1);
 
-	g_vifCycles = 0;
+	g_vif0Cycles = 0;
 	g_vu0Cycles = 0;
 	//if(vif0.irqoffset != 0 && vif0.vifstalled == true) DevCon.Warning("Offset on VIF0 start! offset %x, Progress %x", vif0.irqoffset, vif0.vifstalled);
 	/*vif0.irqoffset = 0;

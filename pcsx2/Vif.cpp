@@ -44,8 +44,12 @@ void vif1Reset()
 
 void SaveStateBase::vif0Freeze()
 {
-	FreezeTag("VIFdma");
-	Freeze(g_vifCycles); // Dunno if this one is needed, but whatever, it's small. :)
+	FreezeTag("VIF0dma");
+	
+	Freeze(g_vif0Cycles);
+	Freeze(g_vu0Cycles);
+	Freeze(g_packetsizeonvu0);
+	
 	Freeze(vif0);
 
 	Freeze(nVif[0].bSize);
@@ -54,6 +58,12 @@ void SaveStateBase::vif0Freeze()
 
 void SaveStateBase::vif1Freeze()
 {
+	FreezeTag("VIF1dma");
+	
+	Freeze(g_vif1Cycles);
+	Freeze(g_vu1Cycles);
+	Freeze(g_packetsizeonvu1);
+
 	Freeze(vif1);
 
 	Freeze(nVif[1].bSize);
@@ -134,7 +144,7 @@ __fi void vif0FBRST(u32 value) {
 		{
 			if (vif0.vifstalled)
 			{
-				g_vifCycles = 0;
+				g_vif0Cycles = 0;
 
 				// loop necessary for spiderman
 				//vif0ch.chcr.STR = true;
@@ -230,7 +240,7 @@ __fi void vif1FBRST(u32 value) {
 		{
 			if (vif1.vifstalled)
 			{
-				g_vifCycles = 0;
+				g_vif1Cycles = 0;
 				// loop necessary for spiderman
 				switch(dmacRegs.ctrl.MFD)
 				{
