@@ -715,11 +715,12 @@
     <ClInclude Include="..\..\Memory.h" />
     <ClInclude Include="..\..\vtlb.h" />
     <ClInclude Include="..\..\MTVU.h" />
-	<ClInclude Include="..\..\VU.h" />
+    <ClInclude Include="..\..\VU.h" />
     <ClInclude Include="..\..\VUmicro.h" />
     <ClInclude Include="..\..\x86\microVU.h" />
     <ClInclude Include="..\..\x86\microVU_IR.h" />
     <ClInclude Include="..\..\x86\microVU_Misc.h" />
+    <ClInclude Include="..\..\x86\microVU_Profiler.h" />
     <ClInclude Include="..\..\x86\sVU_Debug.h" />
     <ClInclude Include="..\..\x86\sVU_Micro.h" />
     <ClInclude Include="..\..\x86\sVU_zerorec.h" />

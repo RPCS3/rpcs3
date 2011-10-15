@@ -170,10 +170,10 @@ typedef Fntype_mVUrecInst* Fnptr_mVUrecInst;
 #define _mVUt template<int vuIndex>
 
 // Define Passes
-#define pass1 if (recPass == 0)
-#define pass2 if (recPass == 1)
-#define pass3 if (recPass == 2)
-#define pass4 if (recPass == 3)
+#define pass1 if (recPass == 0) // Analyze
+#define pass2 if (recPass == 1) // Recompile
+#define pass3 if (recPass == 2) // Logging
+#define pass4 if (recPass == 3) // Flag stuff
 
 // Upper Opcode Cases
 #define opCase1 if (opCase == 1) // Normal Opcodes

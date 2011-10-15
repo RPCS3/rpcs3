@@ -203,6 +203,7 @@ _mVUt void mVUcleanUp() {
 	if (!vuIndex || !THREAD_VU1) {
 		cpuRegs.cycle += std::min(mVU.cycles, 3000u) * EmuConfig.Speedhacks.VUCycleSteal;
 	}
+	mVU.profiler.Print();
 	//static int ax = 0; ax++;
 	//if (!(ax % 100000)) {
 	//	for (u32 i = 0; i < (mVU.progSize / 2); i++) {

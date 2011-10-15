@@ -45,14 +45,14 @@ void setupMacroOp(int mode, const char* opName) {
 		microVU0.prog.IRinfo.info[0].cFlag.lastWrite = 0xff;
 	}
 	if (mode & 0x10) { // Update Status/Mac Flags
-			microVU0.prog.IRinfo.info[0].sFlag.doFlag		= 1;
-			microVU0.prog.IRinfo.info[0].sFlag.doNonSticky	= 1;
-			microVU0.prog.IRinfo.info[0].sFlag.write		= 0;
-			microVU0.prog.IRinfo.info[0].sFlag.lastWrite	= 0;
-			microVU0.prog.IRinfo.info[0].mFlag.doFlag		= 1;
-			microVU0.prog.IRinfo.info[0].mFlag.write		= 0xff;
+		microVU0.prog.IRinfo.info[0].sFlag.doFlag		= 1;
+		microVU0.prog.IRinfo.info[0].sFlag.doNonSticky	= 1;
+		microVU0.prog.IRinfo.info[0].sFlag.write		= 0;
+		microVU0.prog.IRinfo.info[0].sFlag.lastWrite	= 0;
+		microVU0.prog.IRinfo.info[0].mFlag.doFlag		= 1;
+		microVU0.prog.IRinfo.info[0].mFlag.write		= 0xff;
 		
-			xMOV(gprF0, ptr32[&vu0Regs.VI[REG_STATUS_FLAG].UL]);
+		xMOV(gprF0, ptr32[&vu0Regs.VI[REG_STATUS_FLAG].UL]);
 	}
 }
 
@@ -304,9 +304,9 @@ static void recCTC2() {
 			xMOV(ptr32[&vu0Regs.VI[REG_R].UL], eax);
 			break;
 		case REG_STATUS_FLAG:
-			if (_Rt_) { // Denormalizes flag into gprF3
+			if (_Rt_) { // Denormalizes flag into eax (gprT1)
 				mVUallocSFLAGd(&cpuRegs.GPR.r[_Rt_].UL[0], 0);
-				xMOV(ptr32[&vu0Regs.VI[_Rd_].UL], gprF3);
+				xMOV(ptr32[&vu0Regs.VI[_Rd_].UL], eax);
 			}
 			else xMOV(ptr32[&vu0Regs.VI[_Rd_].UL], 0);
 			break;

@@ -15,6 +15,7 @@
 
 #pragma once
 //#define mVUlogProg // Dumps MicroPrograms to \logs\*.html
+//#define mVUprofileProg // Shows opcode statistics in console
 
 class AsciiFile;
 using namespace std;
@@ -33,6 +34,7 @@ using namespace x86Emitter;
 #include "x86emitter/x86emitter.h"
 #include "microVU_Misc.h"
 #include "microVU_IR.h"
+#include "microVU_Profiler.h"
 
 struct microBlockLink {
 	microBlock		block;
@@ -192,6 +194,7 @@ struct microVU {
 	u32 cacheSize;		// VU Cache Size
 
 	microProgManager			prog;		// Micro Program Data
+	microProfiler               profiler;   // Opcode Profiler
 	ScopedPtr<microRegAlloc>	regAlloc;	// Reg Alloc Class
 	ScopedPtr<AsciiFile>		logFile;	// Log File Pointer
 

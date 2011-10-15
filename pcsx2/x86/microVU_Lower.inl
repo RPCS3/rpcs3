@@ -82,6 +82,7 @@ mVUop(mVU_DIV) {
 		mVU.regAlloc->clearNeeded(Fs);
 		mVU.regAlloc->clearNeeded(Ft);
 		mVU.regAlloc->clearNeeded(t1);
+		mVU.profiler.EmitOp(opDIV);
 	}
 	pass3 { mVUlog("DIV Q, vf%02d%s, vf%02d%s", _Fs_, _Fsf_String, _Ft_, _Ftf_String); }
 }
@@ -99,6 +100,7 @@ mVUop(mVU_SQRT) {
 		writeQreg(Ft, mVUinfo.writeQ);
 
 		mVU.regAlloc->clearNeeded(Ft);
+		mVU.profiler.EmitOp(opSQRT);
 	}
 	pass3 { mVUlog("SQRT Q, vf%02d%s", _Ft_, _Ftf_String); }
 }
@@ -139,6 +141,7 @@ mVUop(mVU_RSQRT) {
 		mVU.regAlloc->clearNeeded(Fs);
 		mVU.regAlloc->clearNeeded(Ft);
 		mVU.regAlloc->clearNeeded(t1);
+		mVU.profiler.EmitOp(opRSQRT);
 	}
 	pass3 { mVUlog("RSQRT Q, vf%02d%s, vf%02d%s", _Fs_, _Fsf_String, _Ft_, _Ftf_String); }
 }
@@ -186,6 +189,7 @@ mVUop(mVU_EATAN) {
 		mVU.regAlloc->clearNeeded(Fs);
 		mVU.regAlloc->clearNeeded(t1);
 		mVU.regAlloc->clearNeeded(t2);
+		mVU.profiler.EmitOp(opEATAN);
 	}
 	pass3 { mVUlog("EATAN P"); }
 }
@@ -206,6 +210,7 @@ mVUop(mVU_EATANxy) {
 		mVU.regAlloc->clearNeeded(Fs);
 		mVU.regAlloc->clearNeeded(t1);
 		mVU.regAlloc->clearNeeded(t2);
+		mVU.profiler.EmitOp(opEATANxy);
 	}
 	pass3 { mVUlog("EATANxy P"); }
 }
@@ -226,6 +231,7 @@ mVUop(mVU_EATANxz) {
 		mVU.regAlloc->clearNeeded(Fs);
 		mVU.regAlloc->clearNeeded(t1);
 		mVU.regAlloc->clearNeeded(t2);
+		mVU.profiler.EmitOp(opEATANxz);
 	}
 	pass3 { mVUlog("EATANxz P"); }
 }
@@ -267,6 +273,7 @@ mVUop(mVU_EEXP) {
 		mVU.regAlloc->clearNeeded(Fs);
 		mVU.regAlloc->clearNeeded(t1);
 		mVU.regAlloc->clearNeeded(t2);
+		mVU.profiler.EmitOp(opEEXP);
 	}
 	pass3 { mVUlog("EEXP P"); }
 }
@@ -296,6 +303,7 @@ mVUop(mVU_ELENG) {
 		xSQRT.SS       (xmmPQ, xmmPQ);
 		xPSHUF.D       (xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opELENG);
 	}
 	pass3 { mVUlog("ELENG P"); }
 }
@@ -311,6 +319,7 @@ mVUop(mVU_ERCPR) {
 		xMOVSS        (xmmPQ, Fs);
 		xPSHUF.D      (xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opERCPR);
 	}
 	pass3 { mVUlog("ERCPR P"); }
 }
@@ -327,6 +336,7 @@ mVUop(mVU_ERLENG) {
 		xMOVSS         (xmmPQ, Fs);
 		xPSHUF.D       (xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opERLENG);
 	}
 	pass3 { mVUlog("ERLENG P"); }
 }
@@ -342,6 +352,7 @@ mVUop(mVU_ERSADD) {
 		xMOVSS         (xmmPQ, Fs);
 		xPSHUF.D       (xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opERSADD);
 	}
 	pass3 { mVUlog("ERSADD P"); }
 }
@@ -358,6 +369,7 @@ mVUop(mVU_ERSQRT) {
 		xMOVSS        (xmmPQ, Fs);
 		xPSHUF.D      (xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opERSQRT);
 	}
 	pass3 { mVUlog("ERSQRT P"); }
 }
@@ -370,6 +382,7 @@ mVUop(mVU_ESADD) {
 		mVU_sumXYZ(mVU, xmmPQ, Fs);
 		xPSHUF.D(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opESADD);
 	}
 	pass3 { mVUlog("ESADD P"); }
 }
@@ -406,6 +419,7 @@ mVUop(mVU_ESIN) {
 		mVU.regAlloc->clearNeeded(Fs);
 		mVU.regAlloc->clearNeeded(t1);
 		mVU.regAlloc->clearNeeded(t2);
+		mVU.profiler.EmitOp(opESIN);
 	}
 	pass3 { mVUlog("ESIN P"); }
 }
@@ -419,6 +433,7 @@ mVUop(mVU_ESQRT) {
 		xSQRT.SS(xmmPQ, Fs);
 		xPSHUF.D(xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opESQRT);
 	}
 	pass3 { mVUlog("ESQRT P"); }
 }
@@ -437,6 +452,7 @@ mVUop(mVU_ESUM) {
 		xPSHUF.D      (xmmPQ, xmmPQ, mVUinfo.writeP ? 0x27 : 0xC6); // Flip back
 		mVU.regAlloc->clearNeeded(Fs);
 		mVU.regAlloc->clearNeeded(t1);
+		mVU.profiler.EmitOp(opESUM);
 	}
 	pass3 { mVUlog("ESUM P"); }
 }
@@ -453,6 +469,7 @@ mVUop(mVU_FCAND) {
 		xADD(gprT1, 0xffffff);
 		xSHR(gprT1, 24);
 		mVUallocVIb(mVU, gprT1, 1);
+		mVU.profiler.EmitOp(opFCAND);
 	}
 	pass3 { mVUlog("FCAND vi01, $%x", _Imm24_); }
 	pass4 { mVUregs.needExactMatch |= 4; }
@@ -466,6 +483,7 @@ mVUop(mVU_FCEQ) {
 		xSUB(gprT1, 1);
 		xSHR(gprT1, 31);
 		mVUallocVIb(mVU, gprT1, 1);
+		mVU.profiler.EmitOp(opFCEQ);
 	}
 	pass3 { mVUlog("FCEQ vi01, $%x", _Imm24_); }
 	pass4 { mVUregs.needExactMatch |= 4; }
@@ -477,6 +495,7 @@ mVUop(mVU_FCGET) {
 		mVUallocCFLAGa(mVU, gprT1, cFLAG.read);
 		xAND(gprT1, 0xfff);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opFCGET);
 	}
 	pass3 { mVUlog("FCGET vi%02d", _Ft_);	   }
 	pass4 { mVUregs.needExactMatch |= 4; }
@@ -490,6 +509,7 @@ mVUop(mVU_FCOR) {
 		xADD(gprT1, 1);  // If 24 1's will make 25th bit 1, else 0
 		xSHR(gprT1, 24); // Get the 25th bit (also clears the rest of the garbage in the reg)
 		mVUallocVIb(mVU, gprT1, 1);
+		mVU.profiler.EmitOp(opFCOR);
 	}
 	pass3 { mVUlog("FCOR vi01, $%x", _Imm24_); }
 	pass4 { mVUregs.needExactMatch |= 4; }
@@ -500,6 +520,7 @@ mVUop(mVU_FCSET) {
 	pass2 {
 		xMOV(gprT1, _Imm24_);
 		mVUallocCFLAGb(mVU, gprT1, cFLAG.write);
+		mVU.profiler.EmitOp(opFCSET);
 	}
 	pass3 { mVUlog("FCSET $%x", _Imm24_); }
 }
@@ -515,6 +536,7 @@ mVUop(mVU_FMAND) {
 		mVUallocVIa(mVU, gprT2, _Is_);
 		xAND(gprT1b, gprT2b);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opFMAND);
 	}
 	pass3 { mVUlog("FMAND vi%02d, vi%02d", _Ft_, _Fs_); }
 	pass4 { mVUregs.needExactMatch |= 2; }
@@ -529,6 +551,7 @@ mVUop(mVU_FMEQ) {
 		xSUB(gprT1, 1);
 		xSHR(gprT1, 31);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opFMEQ);
 	}
 	pass3 { mVUlog("FMEQ vi%02d, vi%02d", _Ft_, _Fs_); }
 	pass4 { mVUregs.needExactMatch |= 2; }
@@ -541,6 +564,7 @@ mVUop(mVU_FMOR) {
 		mVUallocVIa(mVU, gprT2, _Is_);
 		xOR(gprT1b, gprT2b);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opFMOR);
 	}
 	pass3 { mVUlog("FMOR vi%02d, vi%02d", _Ft_, _Fs_); }
 	pass4 { mVUregs.needExactMatch |= 2; }
@@ -558,6 +582,7 @@ mVUop(mVU_FSAND) {
 		mVUallocSFLAGc(gprT1, gprT2, sFLAG.read);
 		xAND(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opFSAND);
 	}
 	pass3 { mVUlog("FSAND vi%02d, $%x", _Ft_, _Imm12_); }
 	pass4 { mVUregs.needExactMatch |= 1; }
@@ -569,6 +594,7 @@ mVUop(mVU_FSOR) {
 		mVUallocSFLAGc(gprT1, gprT2, sFLAG.read);
 		xOR(gprT1, _Imm12_);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opFSOR);
 	}
 	pass3 { mVUlog("FSOR vi%02d, $%x", _Ft_, _Imm12_); }
 	pass4 { mVUregs.needExactMatch |= 1; }
@@ -602,6 +628,7 @@ mVUop(mVU_FSEQ) {
 		xSUB(gprT1, 1);
 		xSHR(gprT1, 31);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opFSEQ);
 	}
 	pass3 { mVUlog("FSEQ vi%02d, $%x", _Ft_, _Imm12_); }
 	pass4 { mVUregs.needExactMatch |= 1; }
@@ -622,6 +649,7 @@ mVUop(mVU_FSSET) {
 		}
 		xAND(getFlagReg(sFLAG.write), 0xfff00); // Keep Non-Sticky Bits
 		if (imm) xOR(getFlagReg(sFLAG.write), imm);
+		mVU.profiler.EmitOp(opFSSET);
 	}
 	pass3 { mVUlog("FSSET $%x", _Imm12_); }
 }
@@ -640,6 +668,7 @@ mVUop(mVU_IADD) {
 		}
 		else xADD(gprT1b, gprT1b);
 		mVUallocVIb(mVU, gprT1, _Id_);
+		mVU.profiler.EmitOp(opIADD);
 	}
 	pass3 { mVUlog("IADD vi%02d, vi%02d, vi%02d", _Fd_, _Fs_, _Ft_); }
 }
@@ -650,6 +679,7 @@ mVUop(mVU_IADDI) {
 		mVUallocVIa(mVU, gprT1, _Is_);
 		xADD(gprT1b, _Imm5_);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opIADDI);
 	}
 	pass3 { mVUlog("IADDI vi%02d, vi%02d, %d", _Ft_, _Fs_, _Imm5_); }
 }
@@ -660,6 +690,7 @@ mVUop(mVU_IADDIU) {
 		mVUallocVIa(mVU, gprT1, _Is_);
 		xADD(gprT1b, _Imm15_);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opIADDIU);
 	}
 	pass3 { mVUlog("IADDIU vi%02d, vi%02d, %d", _Ft_, _Fs_, _Imm15_); }
 }
@@ -673,6 +704,7 @@ mVUop(mVU_IAND) {
 			xAND(gprT1, gprT2);
 		}
 		mVUallocVIb(mVU, gprT1, _Id_);
+		mVU.profiler.EmitOp(opIAND);
 	}
 	pass3 { mVUlog("IAND vi%02d, vi%02d, vi%02d", _Fd_, _Fs_, _Ft_); }
 }
@@ -686,6 +718,7 @@ mVUop(mVU_IOR) {
 			xOR(gprT1, gprT2);
 		}
 		mVUallocVIb(mVU, gprT1, _Id_);
+		mVU.profiler.EmitOp(opIOR);
 	}
 	pass3 { mVUlog("IOR vi%02d, vi%02d, vi%02d", _Fd_, _Fs_, _Ft_); }
 }
@@ -703,6 +736,7 @@ mVUop(mVU_ISUB) {
 			xXOR(gprT1, gprT1);
 			mVUallocVIb(mVU, gprT1, _Id_);
 		}
+		mVU.profiler.EmitOp(opISUB);
 	}
 	pass3 { mVUlog("ISUB vi%02d, vi%02d, vi%02d", _Fd_, _Fs_, _Ft_); }
 }
@@ -713,6 +747,7 @@ mVUop(mVU_ISUBIU) {
 		mVUallocVIa(mVU, gprT1, _Is_);
 		xSUB(gprT1b, _Imm15_);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opISUBIU);
 	}
 	pass3 { mVUlog("ISUBIU vi%02d, vi%02d, %d", _Ft_, _Fs_, _Imm15_); }
 }
@@ -733,6 +768,7 @@ mVUop(mVU_MFIR) {
 		xMOVDZX(Ft, gprT1);
 		if (!_XYZW_SS) { mVUunpack_xyzw(Ft, Ft, 0); }
 		mVU.regAlloc->clearNeeded(Ft);
+		mVU.profiler.EmitOp(opMFIR);
 	}
 	pass3 { mVUlog("MFIR.%s vf%02d, vi%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -743,6 +779,7 @@ mVUop(mVU_MFP) {
 		const xmm& Ft = mVU.regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		getPreg(mVU, Ft);
 		mVU.regAlloc->clearNeeded(Ft);
+		mVU.profiler.EmitOp(opMFP);
 	}
 	pass3 { mVUlog("MFP.%s vf%02d, P", _XYZW_String, _Ft_); }
 }
@@ -752,6 +789,7 @@ mVUop(mVU_MOVE) {
 	pass2 {
 		const xmm& Fs = mVU.regAlloc->allocReg(_Fs_, _Ft_, _X_Y_Z_W);
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opMOVE);
 	}
 	pass3 { mVUlog("MOVE.%s vf%02d, vf%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -765,6 +803,7 @@ mVUop(mVU_MR32) {
 		else		  xPSHUF.D(Ft, Fs, 0x39);
 		mVU.regAlloc->clearNeeded(Ft);
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opMR32);
 	}
 	pass3 { mVUlog("MR32.%s vf%02d, vf%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -780,6 +819,7 @@ mVUop(mVU_MTIR) {
 		xMOVD(gprT1, Fs);
 		mVUallocVIb(mVU, gprT1, _It_);
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opMTIR);
 	}
 	pass3 { mVUlog("MTIR vi%02d, vf%02d%s", _Ft_, _Fs_, _Fsf_String); }
 }
@@ -806,6 +846,7 @@ mVUop(mVU_ILW) {
 			ptr += getVUmem(_Imm11_);
 		xMOVZX(gprT1, ptr16[ptr]);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opILW);
 	}
 	pass3 { mVUlog("ILW.%s vi%02d, vi%02d + %d", _XYZW_String, _Ft_, _Fs_, _Imm11_); }
 }
@@ -825,6 +866,7 @@ mVUop(mVU_ILWR) {
 		}
 		xMOVZX(gprT1, ptr16[ptr]);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opILWR);
 	}
 	pass3 { mVUlog("ILWR.%s vi%02d, vi%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -853,6 +895,7 @@ mVUop(mVU_ISW) {
 		if (_Y) xMOV(ptr32[ptr+4], gprT1);
 		if (_Z) xMOV(ptr32[ptr+8], gprT1);
 		if (_W) xMOV(ptr32[ptr+12], gprT1);
+		mVU.profiler.EmitOp(opISW);
 	}
 	pass3 { mVUlog("ISW.%s vi%02d, vi%02d + %d", _XYZW_String, _Ft_, _Fs_, _Imm11_);  }
 }
@@ -873,6 +916,7 @@ mVUop(mVU_ISWR) {
 		if (_Y) xMOV(ptr32[ptr+4], gprT1);
 		if (_Z) xMOV(ptr32[ptr+8], gprT1);
 		if (_W) xMOV(ptr32[ptr+12], gprT1);
+		mVU.profiler.EmitOp(opISWR);
 	}
 	pass3 { mVUlog("ISWR.%s vi%02d, vi%02d", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -896,6 +940,7 @@ mVUop(mVU_LQ) {
 		const xmm& Ft = mVU.regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 		mVUloadReg(Ft, ptr, _X_Y_Z_W);
 		mVU.regAlloc->clearNeeded(Ft);
+		mVU.profiler.EmitOp(opLQ);
 	}
 	pass3 { mVUlog("LQ.%s vf%02d, vi%02d + %d", _XYZW_String, _Ft_, _Fs_, _Imm11_); }
 }
@@ -916,6 +961,7 @@ mVUop(mVU_LQD) {
 			mVUloadReg(Ft, ptr, _X_Y_Z_W);
 			mVU.regAlloc->clearNeeded(Ft);
 		}
+		mVU.profiler.EmitOp(opLQD);
 	}
 	pass3 { mVUlog("LQD.%s vf%02d, --vi%02d", _XYZW_String, _Ft_, _Is_); }
 }
@@ -937,6 +983,7 @@ mVUop(mVU_LQI) {
 			mVUloadReg(Ft, ptr, _X_Y_Z_W);
 			mVU.regAlloc->clearNeeded(Ft);
 		}
+		mVU.profiler.EmitOp(opLQI);
 	}
 	pass3 { mVUlog("LQI.%s vf%02d, vi%02d++", _XYZW_String, _Ft_, _Fs_); }
 }
@@ -960,6 +1007,7 @@ mVUop(mVU_SQ) {
 		const xmm& Fs = mVU.regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		mVUsaveReg(Fs, ptr, _X_Y_Z_W, 1);
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opSQ);
 	}
 	pass3 { mVUlog("SQ.%s vf%02d, vi%02d + %d", _XYZW_String, _Fs_, _Ft_, _Imm11_); }
 }
@@ -978,6 +1026,7 @@ mVUop(mVU_SQD) {
 		const xmm& Fs = mVU.regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		mVUsaveReg(Fs, ptr, _X_Y_Z_W, 1);
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opSQD);
 	}
 	pass3 { mVUlog("SQD.%s vf%02d, --vi%02d", _XYZW_String, _Fs_, _Ft_); }
 }
@@ -997,6 +1046,7 @@ mVUop(mVU_SQI) {
 		const xmm& Fs = mVU.regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		mVUsaveReg(Fs, ptr, _X_Y_Z_W, 1);
 		mVU.regAlloc->clearNeeded(Fs);
+		mVU.profiler.EmitOp(opSQI);
 	}
 	pass3 { mVUlog("SQI.%s vf%02d, vi%02d++", _XYZW_String, _Fs_, _Ft_); }
 }
@@ -1017,6 +1067,7 @@ mVUop(mVU_RINIT) {
 			mVU.regAlloc->clearNeeded(Fs);
 		}
 		else xMOV(ptr32[Rmem], 0x3f800000);
+		mVU.profiler.EmitOp(opRINIT);
 	}
 	pass3 { mVUlog("RINIT R, vf%02d%s", _Fs_, _Fsf_String); }
 }
@@ -1032,7 +1083,11 @@ static __fi void mVU_RGET_(mV, const x32& Rreg) {
 
 mVUop(mVU_RGET) {
 	pass1 { mVUanalyzeR2(mVU, _Ft_, 1); }
-	pass2 { xMOV(gprT1, ptr32[Rmem]); mVU_RGET_(mVU, gprT1); }
+	pass2 {
+		xMOV(gprT1, ptr32[Rmem]);
+		mVU_RGET_(mVU, gprT1);
+		mVU.profiler.EmitOp(opRGET);
+	}
 	pass3 { mVUlog("RGET.%s vf%02d, R", _XYZW_String, _Ft_); }
 }
 
@@ -1056,6 +1111,7 @@ mVUop(mVU_RNEXT) {
 		xOR (gprT3, 0x3f800000);
 		xMOV(ptr32[Rmem], gprT3);
 		mVU_RGET_(mVU,  gprT3);
+		mVU.profiler.EmitOp(opRNEXT);
 	}
 	pass3 { mVUlog("RNEXT.%s vf%02d, R", _XYZW_String, _Ft_); }
 }
@@ -1070,6 +1126,7 @@ mVUop(mVU_RXOR) {
 			xXOR(ptr32[Rmem],  gprT1);
 			mVU.regAlloc->clearNeeded(Fs);
 		}
+		mVU.profiler.EmitOp(opRXOR);
 	}
 	pass3 { mVUlog("RXOR R, vf%02d%s", _Fs_, _Fsf_String); }
 }
@@ -1080,11 +1137,13 @@ mVUop(mVU_RXOR) {
 
 mVUop(mVU_WAITP) {
 	pass1 { mVUstall = max(mVUstall, (u8)((mVUregs.p) ? (mVUregs.p - 1) : 0)); }
+	pass2 { mVU.profiler.EmitOp(opWAITP); }
 	pass3 { mVUlog("WAITP"); }
 }
 
 mVUop(mVU_WAITQ) {
 	pass1 { mVUstall = max(mVUstall, mVUregs.q); }
+	pass2 { mVU.profiler.EmitOp(opWAITQ); }
 	pass3 { mVUlog("WAITQ"); }
 }
 
@@ -1100,6 +1159,7 @@ mVUop(mVU_XTOP) {
 	pass2 {
 		xMOVZX(gprT1, ptr16[&mVU.getVifRegs().top]);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opXTOP);
 	}
 	pass3 { mVUlog("XTOP vi%02d", _Ft_); }
 }
@@ -1112,6 +1172,7 @@ mVUop(mVU_XITOP) {
 		xMOVZX(gprT1, ptr16[&mVU.getVifRegs().itop]);
 		xAND  (gprT1, isVU1 ? 0x3ff : 0xff);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opXITOP);
 	}
 	pass3 { mVUlog("XITOP vi%02d", _Ft_); }
 }
@@ -1155,6 +1216,7 @@ mVUop(mVU_XGKICK) {
 		elif (mVUinfo.doXGKICK)	{ mVU_XGKICK_DELAY(mVU, 1); mVUinfo.doXGKICK = 0; }
 		mVUallocVIa(mVU, gprT1, _Is_);
 		xMOV(ptr32[&mVU.VIxgkick], gprT1);
+		mVU.profiler.EmitOp(opXGKICK);
 	}
 	pass3 { mVUlog("XGKICK vi%02d", _Fs_); }
 }
@@ -1204,6 +1266,7 @@ mVUop(mVU_B) {
 	pass2 {
 		if (mVUlow.badBranch)  { xMOV(ptr32[&mVU.badBranch],  branchAddrN); }
 		if (mVUlow.evilBranch) { xMOV(ptr32[&mVU.evilBranch], branchAddr); }
+		mVU.profiler.EmitOp(opB);
 	}
 	pass3 { mVUlog("B [<a href=\"#addr%04x\">%04x</a>]", branchAddr, branchAddr); }
 }
@@ -1216,6 +1279,7 @@ mVUop(mVU_BAL) {
 		mVUallocVIb(mVU, gprT1, _It_);
 		if (mVUlow.badBranch)  { xMOV(ptr32[&mVU.badBranch],  branchAddrN); }
 		if (mVUlow.evilBranch) { xMOV(ptr32[&mVU.evilBranch], branchAddr); }
+		mVU.profiler.EmitOp(opBAL);
 	}
 	pass3 { mVUlog("BAL vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Ft_, branchAddr, branchAddr); }
 }
@@ -1232,6 +1296,7 @@ mVUop(mVU_IBEQ) {
 
 		if (!(isBadOrEvil))	xMOV(ptr32[&mVU.branch], gprT1);
 		else				condEvilBranch(mVU, Jcc_Equal);
+		mVU.profiler.EmitOp(opIBEQ);
 	}
 	pass3 { mVUlog("IBEQ vi%02d, vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Ft_, _Fs_, branchAddr, branchAddr); }
 }
@@ -1244,6 +1309,7 @@ mVUop(mVU_IBGEZ) {
 		else					mVUallocVIa(mVU, gprT1, _Is_);
 		if (!(isBadOrEvil))		xMOV(ptr32[&mVU.branch], gprT1);
 		else					condEvilBranch(mVU, Jcc_GreaterOrEqual);
+		mVU.profiler.EmitOp(opIBGEZ);
 	}
 	pass3 { mVUlog("IBGEZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
@@ -1256,6 +1322,7 @@ mVUop(mVU_IBGTZ) {
 		else					mVUallocVIa(mVU, gprT1, _Is_);
 		if (!(isBadOrEvil))		xMOV(ptr32[&mVU.branch], gprT1);
 		else					condEvilBranch(mVU, Jcc_Greater);
+		mVU.profiler.EmitOp(opIBGTZ);
 	}
 	pass3 { mVUlog("IBGTZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
@@ -1268,6 +1335,7 @@ mVUop(mVU_IBLEZ) {
 		else					mVUallocVIa(mVU, gprT1, _Is_);
 		if (!(isBadOrEvil))		xMOV(ptr32[&mVU.branch], gprT1);
 		else					condEvilBranch(mVU, Jcc_LessOrEqual);
+		mVU.profiler.EmitOp(opIBLEZ);
 	}
 	pass3 { mVUlog("IBLEZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
@@ -1280,6 +1348,7 @@ mVUop(mVU_IBLTZ) {
 		else					mVUallocVIa(mVU, gprT1, _Is_);
 		if (!(isBadOrEvil))		xMOV(ptr32[&mVU.branch], gprT1);
 		else					condEvilBranch(mVU, Jcc_Less);
+		mVU.profiler.EmitOp(opIBLTZ);
 	}
 	pass3 { mVUlog("IBLTZ vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Fs_, branchAddr, branchAddr); }
 }
@@ -1296,6 +1365,7 @@ mVUop(mVU_IBNE) {
 		
 		if (!(isBadOrEvil))	xMOV(ptr32[&mVU.branch], gprT1);
 		else				condEvilBranch(mVU, Jcc_NotEqual);
+		mVU.profiler.EmitOp(opIBNE);
 	}
 	pass3 { mVUlog("IBNE vi%02d, vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Ft_, _Fs_, branchAddr, branchAddr); }
 }
@@ -1318,7 +1388,7 @@ void normJumpPass2(mV) {
 mVUop(mVU_JR) {
 	mVUbranch = 9;
 	pass1 { mVUanalyzeJump(mVU, _Is_, 0, 0); }
-	pass2 { normJumpPass2(mVU); }
+	pass2 { normJumpPass2(mVU); mVU.profiler.EmitOp(opJR); }
 	pass3 { mVUlog("JR [vi%02d]", _Fs_); }
 }
 
@@ -1329,7 +1399,7 @@ mVUop(mVU_JALR) {
 		normJumpPass2(mVU);
 		xMOV(gprT1, bSaveAddr);
 		mVUallocVIb(mVU, gprT1, _It_);
+		mVU.profiler.EmitOp(opJALR);
 	}
 	pass3 { mVUlog("JALR vi%02d, [vi%02d]", _Ft_, _Fs_); }
 }
-

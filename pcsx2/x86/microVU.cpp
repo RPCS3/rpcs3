@@ -86,6 +86,7 @@ void mVUreset(microVU& mVU, bool resetReserve) {
 	// Clear All Program Data
 	//memset(&mVU.prog, 0, sizeof(mVU.prog));
 	memset(&mVU.prog.lpState, 0, sizeof(mVU.prog.lpState));
+	mVU.profiler.Reset(mVU.index);
 
 	// Program Variables
 	mVU.prog.cleared	=  1;
