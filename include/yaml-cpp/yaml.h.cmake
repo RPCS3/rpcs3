@@ -5,11 +5,20 @@
 #pragma once
 #endif
 
+@API_DEFINE@
 
 #include "yaml-cpp/parser.h"
 #include "yaml-cpp/emitter.h"
 #include "yaml-cpp/stlemitter.h"
 #include "yaml-cpp/exceptions.h"
+
+#ifdef YAML_CPP_OLD_API
+
+#include "yaml-cpp/old-api/node.h"
+#include "yaml-cpp/old-api/stlnode.h"
+#include "yaml-cpp/old-api/iterator.h"
+
+#else
 
 #include "yaml-cpp/node/node.h"
 #include "yaml-cpp/node/impl.h"
@@ -18,5 +27,7 @@
 #include "yaml-cpp/node/detail/impl.h"
 #include "yaml-cpp/node/parse.h"
 #include "yaml-cpp/node/emit.h"
+
+#endif // YAML_CPP_OLD_API
 
 #endif // YAML_H_62B23520_7C8E_11DE_8A39_0800200C9A66

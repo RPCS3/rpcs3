@@ -52,6 +52,16 @@ option(APPLE_UNIVERSAL_BIN "Apple: Build universal binary" OFF)
 option(MSVC_SHARED_RT "MSVC: Build with shared runtime libs (/MD)" ON)
 option(MSVC_STHREADED_RT "MSVC: Build with single-threaded static runtime libs (/ML until VS .NET 2003)" OFF)
 
+###
+### Configure the main header
+###
+if(YAML_CPP_BUILD_OLD_API)
+	set(API_DEFINE "#define YAML_CPP_OLD_API")
+else()
+	set(API_DEFINE "#undef YAML_CPP_OLD_API")
+endif()
+
+configure_file(${YAML_CPP_SOURCE_DIR}/include/yaml-cpp/yaml.h.cmake ${YAML_CPP_SOURCE_DIR}/include/yaml-cpp/yaml.h @ONLY)
 
 ###
 ### Sources, headers, directories and libs
@@ -79,22 +89,10 @@ if(YAML_CPP_BUILD_OLD_API)
 	list(APPEND public_headers ${common_public_headers} ${old_api_public_headers})
 	list(APPEND private_headers ${common_private_headers} ${old_api_private_headers})
 	add_definitions(-DYAML_CPP_OLD_API)
-
-	ADD_CUSTOM_COMMAND(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/include/yaml-cpp/yaml.h
-		COMMAND ${CMAKE_COMMAND} copy ${CMAKE_CURRENT_SOURCE_DIR}/include/yaml-cpp/yaml-old-api.h ${CMAKE_CURRENT_SOURCE_DIR}/include/yaml-cpp/yaml.h
-		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/yaml-cpp/yaml-old-api.h
-	)
 else()
 	list(APPEND sources ${common_sources} ${new_api_sources})
 	list(APPEND public_headers ${common_public_headers} ${new_api_public_headers})
 	list(APPEND private_headers ${common_private_headers} ${new_api_private_headers})
-
-	ADD_CUSTOM_COMMAND(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/include/yaml-cpp/yaml.h
-		COMMAND ${CMAKE_COMMAND} copy ${CMAKE_CURRENT_SOURCE_DIR}/include/yaml-cpp/yaml-new-api.h ${CMAKE_CURRENT_SOURCE_DIR}/include/yaml-cpp/yaml.h
-		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/yaml-cpp/yaml-new-api.h
-	)
 endif()
 
 if(YAML_CPP_BUILD_CONTRIB)
