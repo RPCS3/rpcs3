@@ -1,4 +1,4 @@
-#include "yaml-cpp/conversion.h"
+#include "yaml-cpp/old-api/conversion.h"
 #include <algorithm>
 
 ////////////////////////////////////////////////////////////////

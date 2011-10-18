@@ -1,5 +1,5 @@
 #include "yaml-cpp/old-api/node.h"
-#include "yaml-cpp/aliasmanager.h"
+#include "yaml-cpp/old-api/aliasmanager.h"
 #include "yaml-cpp/emitfromevents.h"
 #include "yaml-cpp/emitter.h"
 #include "yaml-cpp/eventhandler.h"

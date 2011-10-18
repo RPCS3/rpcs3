@@ -6,11 +6,11 @@
 #endif
 
 
-#include "yaml-cpp/conversion.h"
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/exceptions.h"
 #include "yaml-cpp/mark.h"
 #include "yaml-cpp/noncopyable.h"
+#include "yaml-cpp/old-api/conversion.h"
 #include "yaml-cpp/old-api/iterator.h"
 #include "yaml-cpp/old-api/ltnode.h"
 #include <iostream>
@@ -129,7 +129,7 @@ namespace YAML
 	};
 }
 
-#include "yaml-cpp/nodeimpl.h"
-#include "yaml-cpp/nodereadimpl.h"
+#include "yaml-cpp/old-api/nodeimpl.h"
+#include "yaml-cpp/old-api/nodereadimpl.h"
 
 #endif // NODE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
