@@ -16,9 +16,7 @@ namespace YAML
 	inline bool operator == (const _Null&, const _Null&) { return true; }
 	inline bool operator != (const _Null&, const _Null&) { return false; }
 	
-#if YAML_CPP_OLD_API
-	YAML_CPP_API bool IsNull(const Node& node);
-#endif
+	YAML_CPP_API bool IsNull(const Node& node); // old API only
 	
 	extern YAML_CPP_API _Null Null;
 }

@@ -32,9 +32,7 @@ namespace YAML
 		void Load(std::istream& in);
 		bool HandleNextDocument(EventHandler& eventHandler);
 		
-#if YAML_CPP_OLD_API
-		bool GetNextDocument(Node& document);
-#endif
+		bool GetNextDocument(Node& document); // old API only
 		
 		void PrintTokens(std::ostream& out);
 
