@@ -57,8 +57,6 @@ option(MSVC_STHREADED_RT "MSVC: Build with single-threaded static runtime libs (
 ###
 if(YAML_CPP_BUILD_OLD_API)
 	set(API_DEFINE "#define YAML_CPP_OLD_API")
-else()
-	set(API_DEFINE "#undef YAML_CPP_OLD_API")
 endif()
 
 configure_file(${YAML_CPP_SOURCE_DIR}/include/yaml-cpp/yaml.h.cmake ${YAML_CPP_SOURCE_DIR}/include/yaml-cpp/yaml.h @ONLY)

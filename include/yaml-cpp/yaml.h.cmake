@@ -5,6 +5,7 @@
 #pragma once
 #endif
 
+#undef YAML_CPP_OLD_API
 @API_DEFINE@
 
 #include "yaml-cpp/parser.h"

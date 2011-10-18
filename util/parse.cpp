@@ -37,7 +37,7 @@ public:
 void parse(std::istream& input)
 {
 	try {
-#if YAML_CPP_OLD_API
+#ifdef YAML_CPP_OLD_API
 		YAML::Parser parser(input);
 		YAML::Node doc;
 		while(parser.GetNextDocument(doc)) {

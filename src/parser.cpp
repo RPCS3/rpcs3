@@ -9,7 +9,7 @@
 #include <sstream>
 #include <cstdio>
 
-#if YAML_CPP_OLD_API
+#ifdef YAML_CPP_OLD_API
 #include "yaml-cpp/old-api/node.h"
 #include "old-api/nodebuilder.h"
 #endif
@@ -58,7 +58,7 @@ namespace YAML
 		return true;
 	}
 
-#if YAML_CPP_OLD_API
+#ifdef YAML_CPP_OLD_API
 	// GetNextDocument
 	// . Reads the next document in the queue (of tokens).
 	// . Throws a ParserException on error.
