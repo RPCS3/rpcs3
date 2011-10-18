@@ -64,6 +64,8 @@ configure_file(${YAML_CPP_SOURCE_DIR}/include/yaml-cpp/yaml.h.cmake ${YAML_CPP_S
 ###
 ### Sources, headers, directories and libs
 ###
+set(header_directory "include/yaml-cpp/")
+
 file(GLOB common_sources "src/[a-zA-Z]*.cpp")
 file(GLOB new_api_sources 
 	"src/node/[a-zA-Z]*.cpp"
@@ -294,10 +296,9 @@ endif()
 
 install(TARGETS yaml-cpp ${_INSTALL_DESTINATIONS})
 install(
-	FILES
-		${public_headers}
-		${contrib_public_headers}
+	DIRECTORY ${header_directory}
 	DESTINATION ${INCLUDE_INSTALL_DIR}
+	FILES_MATCHING PATTERN "*.h"
 )
 
 if(UNIX)
