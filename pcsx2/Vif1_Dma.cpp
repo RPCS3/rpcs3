@@ -25,21 +25,6 @@ u32 g_vif1Cycles = 0;
 
 __fi void vif1FLUSH()
 {
-	if(g_packetsizeonvu1 > vif1.vifpacketsize && g_vu1Cycles > 0) 
-	{
-		//DevCon.Warning("Adding on same packet");
-		if( ((g_packetsizeonvu1 - vif1.vifpacketsize) >> 1) > g_vu1Cycles)
-			g_vu1Cycles -= (g_packetsizeonvu1 - vif1.vifpacketsize) >> 1;
-		else g_vu1Cycles = 0;
-	}
-	if(g_vu1Cycles > 0)
-	{
-		//DevCon.Warning("Adding %x cycles to VIF1", g_vu1Cycles * BIAS);
-		g_vif1Cycles += g_vu1Cycles;
-		g_vu1Cycles = 0;
-		
-	} 
-	g_vu1Cycles = 0;//else DevCon.Warning("VIF1 Different Packet, how can i work this out :/");
 	if (VU0.VI[REG_VPU_STAT].UL & 0x100)
 	{
 		int _cycles = VU1.cycle;
@@ -344,7 +329,6 @@ __fi void vif1Interrupt()
 	vif1ch.chcr.STR = false;
 	vif1.vifstalled = false;
 	g_vif1Cycles = 0;
-	g_vu1Cycles = 0;
 	DMA_LOG("VIF1 DMA End");
 	hwDmacIrq(DMAC_VIF1);
 
@@ -364,7 +348,6 @@ void dmaVIF1()
 	vif1.vifstalled = false;	
 	vif1.inprogress = 0;*/
 	g_vif1Cycles = 0;
-	g_vu1Cycles = 0;
 
 #ifdef PCSX2_DEVBUILD
 	if (dmacRegs.ctrl.STD == STD_VIF1)
