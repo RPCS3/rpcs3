@@ -880,6 +880,17 @@ namespace Test
 				return false;
 			return true;
 		}
+		
+		bool SingleChar()
+		{
+			std::string input = "5";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			return doc.to<int>() == 5;
+		}
 	}
 	
 	namespace {
@@ -930,7 +941,7 @@ namespace Test
 			} else {
 				std::cout << "Parser test failed: " << name << "\n";
 				if(error != "")
-					std::cout << "Caught exception: " << error << "\n";
+					std::cout << "  Caught exception: " << error << "\n";
 			}
 			total++;
 		}
@@ -1098,7 +1109,7 @@ namespace Test
 			} else {
 				std::cout << "Parser test failed: " << name << "\n";
 				if(error != "")
-					std::cout << "Caught exception: " << error << "\n";
+					std::cout << "  Caught exception: " << error << "\n";
 			}
 			total++;
 		}
@@ -1159,6 +1170,7 @@ namespace Test
 		RunParserTest(&Parser::Infinity, "infinity", passed, total);
 		RunParserTest(&Parser::NaN, "NaN", passed, total);
 		RunParserTest(&Parser::NonConstKey, "non const key", passed, total);
+		RunParserTest(&Parser::SingleChar, "single char", passed, total);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed, total);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed, total);
