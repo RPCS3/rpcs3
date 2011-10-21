@@ -80,7 +80,7 @@ file(GLOB new_api_public_headers
 )
 file(GLOB old_api_public_headers "include/yaml-cpp/old-api/[a-zA-Z]*.h")
 
-file(GLOB common_private_headers "include/yaml-cpp/[a-zA-Z]*.h")
+file(GLOB common_private_headers "src/[a-zA-Z]*.h")
 file(GLOB new_api_private_headers "src/node/[a-zA-Z]*.h")
 file(GLOB old_api_private_headers "src/old-api/[a-zA-Z]*.h")
 
