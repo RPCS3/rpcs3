@@ -17,8 +17,6 @@
 
 namespace YAML
 {
-	static const size_t MAX_PARSER_PUSHBACK = 8;
-
 	class Stream: private noncopyable
 	{
 	public:
@@ -50,8 +48,6 @@ namespace YAML
 		Mark m_mark;
 		
 		CharacterSet m_charSet;
-		unsigned char m_bufPushback[MAX_PARSER_PUSHBACK];
-		mutable size_t m_nPushedBack;
 		mutable std::deque<char> m_readahead;
 		unsigned char* const m_pPrefetched;
 		mutable size_t m_nPrefetchedAvailable;

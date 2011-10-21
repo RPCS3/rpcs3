@@ -178,7 +178,7 @@ namespace YAML
 	}
 
 	Stream::Stream(std::istream& input)
-		: m_input(input), m_nPushedBack(0),
+		: m_input(input),
 		m_pPrefetched(new unsigned char[YAML_PREFETCH_SIZE]), 
 		m_nPrefetchedAvailable(0), m_nPrefetchedUsed(0)
 	{
@@ -192,18 +192,17 @@ namespace YAML
 		char_traits::int_type intro[4];
 		int nIntroUsed = 0;
 		UtfIntroState state = uis_start;
-		for (; !s_introFinalState[state]; ) {
+		for(; !s_introFinalState[state]; ) {
 			std::istream::int_type ch = input.get();
 			intro[nIntroUsed++] = ch;
 			UtfIntroCharType charType = IntroCharTypeOf(ch);
 			UtfIntroState newState = s_introTransitions[state][charType];
 			int nUngets = s_introUngetCount[state][charType];
-			if (nUngets > 0) {
-				for (; nUngets > 0; --nUngets) {
-					if (char_traits::eof() != intro[--nIntroUsed]) {
-						m_bufPushback[m_nPushedBack++] = 
-							char_traits::to_char_type(intro[nIntroUsed]);
-					}
+			if(nUngets > 0) {
+				input.clear();
+				for(; nUngets > 0; --nUngets) {
+					if(char_traits::eof() != intro[--nIntroUsed])
+						input.putback(char_traits::to_char_type(intro[nIntroUsed]));
 				}
 			}
 			state = newState;
@@ -398,11 +397,6 @@ namespace YAML
 
 	unsigned char Stream::GetNextByte() const
 	{
-		if (m_nPushedBack)
-		{
-			return m_bufPushback[--m_nPushedBack];
-		}
-
 		if (m_nPrefetchedUsed >= m_nPrefetchedAvailable)
 		{
 			std::streambuf *pBuf = m_input.rdbuf();
