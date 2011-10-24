@@ -438,7 +438,7 @@ int GPUState::PH_Line(GPUReg* r, int size)
 
 		for(int i = 1; i < size; i++)
 		{
-			if(r[i].u32 == 0x55555555)
+			if((r[i].u32 & 0xf000f000) == 0x50005000)
 			{
 				vertices = i - 1;
 			}
