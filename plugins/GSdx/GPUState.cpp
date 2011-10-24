@@ -413,6 +413,32 @@ int GPUState::PH_Polygon(GPUReg* r, int size)
 
 	for(int i = 0; i <= vertices - 3; i++)
 	{
+		// TODO: sse
+
+		int y0 = v[i + 0].XY.Y;
+		int y1 = v[i + 1].XY.Y;
+		int y2 = v[i + 2].XY.Y;
+
+		if(std::abs(y0 - y1) >= 512 
+		|| std::abs(y0 - y2) >= 512
+		|| std::abs(y1 - y2) >= 512)
+		{
+			continue;
+		}
+
+		int x0 = v[i + 0].XY.X;
+		int x1 = v[i + 1].XY.X;
+		int x2 = v[i + 2].XY.X;
+
+		if(std::abs(x0 - x1) >= 1024 
+		|| std::abs(x0 - x2) >= 1024
+		|| std::abs(x1 - x2) >= 1024)
+		{
+			continue;
+		}
+
+		//
+
 		for(int j = 0; j < 3; j++)
 		{
 			m_v = v[i + j];
@@ -635,49 +661,77 @@ int GPUState::PH_Read(GPUReg* r, int size)
 
 int GPUState::PH_Environment(GPUReg* r, int size)
 {
-	Flush(); // TODO: only call when something really changes
-
 	switch(r->PACKET.OPTION)
 	{
 	case 1: // draw mode setting
 
-		m_env.STATUS.TX = r->MODE.TX;
-		m_env.STATUS.TY = r->MODE.TY;
-		m_env.STATUS.ABR = r->MODE.ABR;
-		m_env.STATUS.TP = r->MODE.TP;
-		m_env.STATUS.DTD = r->MODE.DTD;
-		m_env.STATUS.DFE = r->MODE.DFE;
+		if(((m_env.STATUS.u32 ^ r->MODE.u32) & 0x7ff) != 0)
+		{
+			Flush();
+
+			m_env.STATUS.TX = r->MODE.TX;
+			m_env.STATUS.TY = r->MODE.TY;
+			m_env.STATUS.ABR = r->MODE.ABR;
+			m_env.STATUS.TP = r->MODE.TP;
+			m_env.STATUS.DTD = r->MODE.DTD;
+			m_env.STATUS.DFE = r->MODE.DFE;
+		}
 
 		return 1;
 
 	case 2: // texture window setting
 
-		m_env.TWIN = r->TWIN;
+		if(((m_env.TWIN.u32 ^ r->TWIN.u32) & 0xfffff) != 0)
+		{
+			Flush();
+
+			m_env.TWIN = r->TWIN;
+		}
 
 		return 1;
 
 	case 3: // set drawing area top left
 
-		m_env.DRAREATL = r->DRAREA;
+		if(((m_env.DRAREATL.u32 ^ r->DRAREA.u32) & 0xfffff) != 0)
+		{
+			Flush();
+
+			m_env.DRAREATL = r->DRAREA;
+		}
 
 		return 1;
 
 	case 4: // set drawing area bottom right
 
-		m_env.DRAREABR = r->DRAREA;
+		if(((m_env.DRAREABR.u32 ^ r->DRAREA.u32) & 0xfffff) != 0)
+		{
+			Flush();
+
+			m_env.DRAREABR = r->DRAREA;
+		}
 
 		return 1;
 
 	case 5: // drawing offset
 
-		m_env.DROFF = r->DROFF;
+		if(((m_env.DROFF.u32 ^ r->DROFF.u32) & 0x3fffff) != 0)
+		{
+			Flush();
+
+			m_env.DROFF = r->DROFF;
+		}
 
 		return 1;
 
 	case 6: // mask setting
 
-		m_env.STATUS.MD = r->MASK.MD;
-		m_env.STATUS.ME = r->MASK.ME;
+		if(m_env.STATUS.MD != r->MASK.MD || m_env.STATUS.ME != r->MASK.ME)
+		{
+			Flush();
+
+			m_env.STATUS.MD = r->MASK.MD;
+			m_env.STATUS.ME = r->MASK.ME;
+		}
 
 		return 1;
 	}

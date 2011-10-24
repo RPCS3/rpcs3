@@ -70,6 +70,6 @@ public:
 
 	float GetFPS()
 	{
-		return STATUS.ISPAL ? 50 : 59.94;
+		return STATUS.ISPAL ? 50.0f : 59.94f;
 	}
 };
