@@ -272,14 +272,14 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 		{
 			// Note: (start is inclusive, dest exclusive -- fixes DMC1 FMVs)
 
-			if ((Cores[i].IRQEnable && (Cores[i].IRQA >= TSA)) || (Cores[i].IRQA < TDA))
+			if (Cores[i].IRQEnable && (Cores[i].IRQA >= TSA || Cores[i].IRQA < TDA))
 			{
 				//ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
 				SetIrqCall(i);
 			}
 		}
 #else
-		if ((IRQEnable && (IRQA >= TSA)) || (IRQA < TDA))
+		if ((IRQEnable && (IRQA >= TSA || IRQA < TDA))
 		{
 			SetIrqCall(Index);
 		}
@@ -354,7 +354,7 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 
 		for( int i=0; i<2; i++ )
 		{
-			if ((Cores[i].IRQEnable && (Cores[i].IRQA >= TSA)) || (Cores[i].IRQA < TDA))
+			if (Cores[i].IRQEnable && (Cores[i].IRQA >= TSA || Cores[i].IRQA < TDA))
 			{
 				SetIrqCall(i);
 			}
@@ -470,7 +470,7 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 		for( int i=0; i<2; i++ )
 		{
-			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) || (Cores[i].IRQA < TDA) )
+			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA || Cores[i].IRQA < TDA) )
 			{
 				SetIrqCall(i);
 			}
