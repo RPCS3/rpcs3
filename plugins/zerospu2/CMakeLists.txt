@@ -12,6 +12,7 @@ set(Output zerospu2)
 set(CommonFlags
     -Wall
     -msse2
+    -Wno-write-strings
     )
 
 set(OptimizationFlags

@@ -12,6 +12,7 @@ set(Output spu2x-2.0.0)
 set(CommonFlags
     -fvisibility=hidden
     -Wall
+    -Wno-write-strings
     )
 
 set(OptimizationFlags

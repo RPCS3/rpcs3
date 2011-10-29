@@ -20,6 +20,8 @@ set(CommonFlags
     -Wno-unused-parameter
     -Wno-unused-value
     -Wunused-variable
+    -Wno-invalid-offsetof
+    -Wno-write-strings
     )
 
 set(OptimizationFlags

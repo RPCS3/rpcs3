@@ -11,6 +11,7 @@ set(Output PADnull)
 set(CommonFlags
     -fvisibility=hidden
     -Wall
+    -Wno-write-strings
     )
 
 set(OptimizationFlags

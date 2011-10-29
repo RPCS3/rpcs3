@@ -127,7 +127,7 @@ queue<keyEvent> ev_fifo;
 
 static int padVib0[2];
 static int padVib1[2];
-static int padVibC[2];
+//static int padVibC[2];
 static int padVibF[2][4];
 
 static void InitLibraryName()

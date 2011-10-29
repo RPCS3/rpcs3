@@ -93,9 +93,13 @@ typedef FnType_Void* Fnptr_Void;
 // --------------------------------------------------------------------------------------
 
 // Linux isn't set up for svn version numbers yet.
-#ifdef __LINUX__
+#if defined(__LINUX__) && !defined(LINUX_PRINT_SVN_NUMBER)
+#if !defined(SVN_REV) 
 #	define SVN_REV 0
+#endif
+#if !defined(SVN_MODS) 
 #	define SVN_MODS 0
+#endif
 #endif
 
 #if defined(_MSC_VER)

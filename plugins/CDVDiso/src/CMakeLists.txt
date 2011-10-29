@@ -12,6 +12,7 @@ set(Output CDVDiso)
 set(CommonFlags
     -fvisibility=hidden
     -Wall
+    -Wno-write-strings
     )
 
 set(OptimizationFlags

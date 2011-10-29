@@ -12,6 +12,7 @@ set(Output GSnull)
 set(CommonFlags
     -fvisibility=hidden
     -Wall
+    -Wno-write-strings
     )
 
 set(OptimizationFlags

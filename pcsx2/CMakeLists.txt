@@ -24,7 +24,8 @@ set(CommonFlags
 	-Wno-format
 	-Wno-unused-parameter
 	-Wno-unused-value
-	-Wno-unused-variable)
+	-Wno-unused-variable
+        -Wno-write-strings)
 
 # set warning flags
 set(DebugFlags
