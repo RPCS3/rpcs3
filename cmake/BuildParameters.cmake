@@ -104,6 +104,11 @@ set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
 
 #-------------------------------------------------------------------------------
+# Set some default compiler flag
+#-------------------------------------------------------------------------------
+set(DEFAULT_GCC_FLAG "-m32 -msse -msse2 -march=i686 -pthread -Wno-write-strings -Wno-invalid-offsetof")
+
+#-------------------------------------------------------------------------------
 # Allow user to set some default flags
 # Note: string STRIP must be used to remove trailing and leading spaces.
 #       See policy CMP0004
@@ -130,7 +135,7 @@ if(DEFINED USER_CMAKE_C_FLAGS)
     string(STRIP "${USER_CMAKE_C_FLAGS}" CMAKE_C_FLAGS)
 endif(DEFINED USER_CMAKE_C_FLAGS)
 # Use some default machine flags
-string(STRIP "${CMAKE_C_FLAGS} -m32 -msse -msse2 -march=i686 -pthread" CMAKE_C_FLAGS)
+string(STRIP "${CMAKE_C_FLAGS} ${DEFAULT_GCC_FLAG}" CMAKE_C_FLAGS)
 
 
 ### C++ flags
@@ -141,7 +146,7 @@ if(DEFINED USER_CMAKE_CXX_FLAGS)
     string(STRIP "${USER_CMAKE_CXX_FLAGS}" CMAKE_CXX_FLAGS)
 endif(DEFINED USER_CMAKE_CXX_FLAGS)
 # Use some default machine flags
-string(STRIP "${CMAKE_CXX_FLAGS} -m32 -msse -msse2 -march=i686 -pthread" CMAKE_CXX_FLAGS)
+string(STRIP "${CMAKE_CXX_FLAGS} ${DEFAULT_GCC_FLAG}" CMAKE_CXX_FLAGS)
 
 #-------------------------------------------------------------------------------
 # Default package option
