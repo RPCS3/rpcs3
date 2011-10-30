@@ -312,8 +312,6 @@ EXPORT_C_(s32) GSopen2( void* pDsp, u32 flags )
 {
 	FUNCLOG
 
-	bool err;
-
 	g_GSMultiThreaded = true;
 
 	ZZLog::WriteLn("Calling GSopen2.");

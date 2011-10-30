@@ -61,7 +61,7 @@ void OnCompress(GtkButton *button,  gpointer user_data)
 	u8 cdbuff[10*2352];
 	char Zfile[256];
 	const char *tmp;
-	int ret;
+	int ret = 0;
 	isoFile *src;
 	isoFile *dst;
 

@@ -12,7 +12,6 @@ set(Output dev9null-0.5.0)
 set(CommonFlags
     -fvisibility=hidden
     -Wall
-    -Wno-write-strings
     )
 
 set(OptimizationFlags

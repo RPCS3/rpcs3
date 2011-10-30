@@ -144,18 +144,20 @@ struct PluginConf
     int ReadInt(const std::string& item, int defval)
     {
         int value = defval;
+	int err = 0;
         std::string buf = item + " = %d\n";
 
-        if (ConfFile) fscanf(ConfFile, buf.c_str(), &value);
+        if (ConfFile) err=fscanf(ConfFile, buf.c_str(), &value);
 
         return value;
     }
 
     void WriteInt(std::string item, int value)
     {
+	int err = 0;
         std::string buf = item + " = %d\n";
 
-        if (ConfFile) fprintf(ConfFile, buf.c_str(), value);
+        if (ConfFile) err=fprintf(ConfFile, buf.c_str(), value);
     }
 };
 

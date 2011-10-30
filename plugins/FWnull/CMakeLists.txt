@@ -12,7 +12,6 @@ set(Output FWnull-0.7.0)
 set(CommonFlags
     -fvisibility=hidden
     -Wall
-    -Wno-write-strings
     )
 
 set(OptimizationFlags

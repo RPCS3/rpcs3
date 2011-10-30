@@ -11,17 +11,11 @@ set(Output GSdx-0.1.16)
 
 set(CommonFlags
     -D_LINUX
-    -pthread
     -fno-operator-names
     -mpreferred-stack-boundary=2
     -mfpmath=sse
-    -Wstrict-aliasing # Allow to track strict aliasing issue.
-    -Wno-format
-    -Wno-unused-parameter
-    -Wno-unused-value
+    #-Wstrict-aliasing # Allow to track strict aliasing issue.
     -Wunused-variable
-    -Wno-invalid-offsetof
-    -Wno-write-strings
     )
 
 set(OptimizationFlags

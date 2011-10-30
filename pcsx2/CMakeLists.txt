@@ -20,12 +20,7 @@ set(CommonFlags
 	-fno-tree-dse
 	-fno-strict-aliasing
     -Wstrict-aliasing # Allow to track strict aliasing issue.
-	-pipe
-	-Wno-format
-	-Wno-unused-parameter
-	-Wno-unused-value
-	-Wno-unused-variable
-        -Wno-write-strings)
+	-pipe)
 
 # set warning flags
 set(DebugFlags

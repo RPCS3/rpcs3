@@ -1,15 +1,18 @@
 ### Select the build type
 # Use Release/Devel/Debug     : -DCMAKE_BUILD_TYPE=Release|Devel|Debug
-# Enable/disable the stipping : -DCMAKE_BUILD_STRIP=TRUE|FALSE
+# Enable/disable the stripping : -DCMAKE_BUILD_STRIP=TRUE|FALSE
+
 ### Force the choice of 3rd party library in pcsx2 over system libraries
 # Use all         internal lib: -DFORCE_INTERNAL_ALL=TRUE
 # Use soundtouch  internal lib: -DFORCE_INTERNAL_SOUNDTOUCH=TRUE
 # Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
 # Use sdl1.3      internal lib: -DFORCE_INTERNAL_SDL=TRUE # Not supported yet
+
 ### GCC optimization options
 # control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
 # control C++ flags           : -DUSER_CMAKE_CXX_FLAGS="cxxflags"
 # control link flags          : -DUSER_CMAKE_LD_FLAGS="ldflags"
+
 ### Packaging options
 # Installation path           : -DPACKAGE_MODE=TRUE(follow FHS)|FALSE(local bin/)
 # Plugin installation path    : -DPLUGIN_DIR="/usr/lib/pcsx2"
@@ -104,9 +107,11 @@ set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
 set(CMAKE_SHARED_LIBRARY_CXX_FLAGS "")
 
 #-------------------------------------------------------------------------------
-# Set some default compiler flag
+# Set some default compiler flags
 #-------------------------------------------------------------------------------
-set(DEFAULT_GCC_FLAG "-m32 -msse -msse2 -march=i686 -pthread -Wno-write-strings -Wno-invalid-offsetof")
+set(DEFAULT_WARNINGS "-Wno-write-strings -Wno-format -Wno-unused-parameter -Wno-unused-value -Wstrict-aliasing")
+set(DEFAULT_GCC_FLAG "-m32 -msse -msse2 -march=i686 -pthread ${DEFAULT_WARNINGS}")
+set(DEFAULT_CPP_FLAG "${DEFAULT_GCC_FLAG} -Wno-invalid-offsetof")
 
 #-------------------------------------------------------------------------------
 # Allow user to set some default flags
@@ -146,7 +151,7 @@ if(DEFINED USER_CMAKE_CXX_FLAGS)
     string(STRIP "${USER_CMAKE_CXX_FLAGS}" CMAKE_CXX_FLAGS)
 endif(DEFINED USER_CMAKE_CXX_FLAGS)
 # Use some default machine flags
-string(STRIP "${CMAKE_CXX_FLAGS} ${DEFAULT_GCC_FLAG}" CMAKE_CXX_FLAGS)
+string(STRIP "${CMAKE_CXX_FLAGS} ${DEFAULT_CPP_FLAG}" CMAKE_CXX_FLAGS)
 
 #-------------------------------------------------------------------------------
 # Default package option
