@@ -46,7 +46,7 @@ int GSOpenWindow(void *pDsp, char *Title)
 
 	if(GShwnd == NULL)
 	{
-		GS_LOG("Failed to create window. Exiting...");
+		GSLog::WriteLn("Failed to create window. Exiting...");
 		return -1;
 	}
 

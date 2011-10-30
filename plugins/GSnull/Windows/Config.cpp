@@ -31,11 +31,12 @@ void SaveConfig()
 	if(!szTemp) return;
 	strcpy(szTemp, "\\inis\\gsnull.ini");
 	sprintf(szValue,"%u",Conf1->Log);
-    WritePrivateProfileString("Interface", "Logging",szValue,szIniFile);
+	WritePrivateProfileString("Interface", "Logging",szValue,szIniFile);
 
 }
 
-void LoadConfig() {
+void LoadConfig() 
+{
    FILE *fp;
 
 
@@ -48,7 +49,8 @@ void LoadConfig() {
 
 	if(!szTemp) return ;
 	strcpy(szTemp, "\\inis\\gsnull.ini");
-    fp=fopen("inis\\gsnull.ini","rt");//check if gsnull.ini really exists
+	fp=fopen("inis\\gsnull.ini","rt");//check if gsnull.ini really exists
+	
 	if (!fp)
 	{
 		CreateDirectory("inis",NULL);
@@ -57,6 +59,7 @@ void LoadConfig() {
 		SaveConfig();//save and return
 		return ;
 	}
+	
 	fclose(fp);
 	GetPrivateProfileString("Interface", "Logging", NULL, szValue, 20, szIniFile);
 	Conf1->Log = strtoul(szValue, NULL, 10);

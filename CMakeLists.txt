@@ -19,12 +19,12 @@ if(NOT PACKAGE_MODE)
             See http://code.google.com/p/pcsx2/wiki/ChrootAnd64bStatusLinux for more details.")
         else (EXISTS /etc/fedora-release)
         message(FATAL_ERROR "
-        PCSX2 does not support 64bits environment. Please install a 32bits chroot or a 32bits OS.
-        PCSX2 have neither no plan to support the 64bits architecture in the future.
-        It will need a complete rewrite of the core emulator and a lots of time
+        PCSX2 does not support a 64-bit environment. Please install a 32-bit chroot or a 32-bit OS.
+        PCSX2 has no plan to support a 64-bit architecture in the future.
+        It would need a complete rewrite of the core emulator and a lot of time.
 
-        However when linux distribution will support properly multi-arch package, it will
-        be at least possible to easily compile and install PCSX2 witout too much hassle (the chroot environment)")
+        However, when linux distribution properly supports multi-arch packages, it will
+        be at least possible to easily compile and install PCSX2 without too much hassle (the chroot environment).")
         endif (EXISTS /etc/fedora-release)
     endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
 endif(NOT PACKAGE_MODE)

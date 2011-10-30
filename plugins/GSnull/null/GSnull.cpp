@@ -17,20 +17,20 @@
 
 void OnKeyboardF5(int myShift)
 {
-	SysPrintf("F5 pressed!\n");
+	GSLog::WriteLn("F5 pressed!");
 }
 
 void OnKeyboardF6(int myShift)
 {
-	SysPrintf("F6 pressed!\n");
+	GSLog::WriteLn("F6 pressed!");
 }
 
 void OnKeyboardF7(int myShift)
 {
-	SysPrintf("F7 pressed!\n");
+	GSLog::WriteLn("F7 pressed!");
 }
 
 void OnKeyboardF9(int myShift)
 {
-	SysPrintf("F9 pressed!\n");
+	GSLog::WriteLn("F9 pressed!");
 }

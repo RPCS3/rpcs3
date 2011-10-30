@@ -41,6 +41,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 set(GSnullSources
 	GifTransfer.cpp
 	GS.cpp
+	GSLog.cpp
 	Registers.cpp)
 
 # GSnull headers

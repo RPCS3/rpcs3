@@ -33,13 +33,12 @@ const unsigned char revision = 0;
 const unsigned char build    = 1;    // increase that with each version
 
 static char *libraryName = "GSnull Driver";
-FILE *gsLog;
 Config conf;
 u32 GSKeyEvent = 0;
 bool GSShift = false, GSAlt = false;
 
 string s_strIniPath="inis";
-std::string s_strLogPath("logs");
+extern std::string s_strLogPath;
 const char* s_iniFilename = "GSnull.ini";
 GSVars gs;
 
@@ -69,35 +68,6 @@ EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 	return (version<<16) | (revision<<8) | build;
 }
 
-bool OpenLog() {
-    bool result = true;
-#ifdef GS_LOG
-    const std::string LogFile(s_strLogPath + "/GSnull.log");
-
-    gsLog = fopen(LogFile.c_str(), "w");
-    if (gsLog != NULL)
-        setvbuf(gsLog, NULL,  _IONBF, 0);
-    else {
-        SysMessage("Can't create log file %s\n", LogFile.c_str());
-        result = false;
-    }
-	GS_LOG("GSnull plugin version %d,%d\n",revision,build);
-	GS_LOG("GS init\n");
-#endif
-    return result;
-}
-
-void __Log(char *fmt, ...)
-{
-	va_list list;
-
-	if (!conf.Log || gsLog == NULL) return;
-
-	va_start(list, fmt);
-	vfprintf(gsLog, fmt, list);
-	va_end(list);
-}
-
 EXPORT_C_(void) GSprintf(int timeout, char *fmt, ...)
 {
 	va_list list;
@@ -107,21 +77,7 @@ EXPORT_C_(void) GSprintf(int timeout, char *fmt, ...)
 	vsprintf(msg, fmt, list);
 	va_end(list);
 
-	GS_LOG("GSprintf:%s", msg);
-	printf("GSprintf:%s", msg);
-}
-
-void SysPrintf(const char *fmt, ...)
-{
-	va_list list;
-	char msg[512];
-
-	va_start(list, fmt);
-	vsprintf(msg, fmt, list);
-	va_end(list);
-
-	GS_LOG(msg);
-	printf("GSnull:%s", msg);
+	GSLog::Print("GSprintf:%s", msg);
 }
 
 // basic funcs
@@ -136,40 +92,31 @@ EXPORT_C_(void) GSsetLogDir(const char* dir)
 	s_strLogPath = (dir==NULL) ? "logs" : dir;
 
 	// Reload the log file after updated the path
-	if (gsLog) {
-        fclose(gsLog);
-        gsLog = NULL;
-    }
-    OpenLog();
+	GSLog::Close();
+	GSLog::Open();
 }
 
 EXPORT_C_(s32) GSinit()
 {
 	LoadConfig();
 
-    OpenLog();
+	GSLog::Open();
 
-	SysPrintf("Initializing GSnull\n");
+	GSLog::WriteLn("Initializing GSnull.");
 	return 0;
 }
 
 EXPORT_C_(void) GSshutdown()
 {
-	SysPrintf("Shutting down GSnull\n");
+	GSLog::WriteLn("Shutting down GSnull.");
 	GSCloseWindow();
-
-#ifdef GS_LOG
-	if (gsLog) {
-        fclose(gsLog);
-        gsLog = NULL;
-    }
-#endif
+	GSLog::Close();
 }
 
 EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 {
 	int err = 0;
-	GS_LOG("GS open\n");
+	GSLog::WriteLn("GS open.");
 	//assert( GSirq != NULL );
 
 	err = GSOpenWindow(pDsp, Title);
@@ -178,14 +125,14 @@ EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 	ResetRegs();
 	SetMultithreaded();
 	InitPath();
-	SysPrintf("Opening GSnull\n");
+	GSLog::WriteLn("Opening GSnull.");
 	return err;
 }
 
 #ifdef USE_GSOPEN2
 EXPORT_C_(s32) GSopen2( void *pDsp, u32 flags )
 {
-	GS_LOG("GS open2\n");
+	GSLog::WriteLn("GS open2.");
 
     GSOpenWindow2(pDsp, flags);
 
@@ -194,14 +141,14 @@ EXPORT_C_(s32) GSopen2( void *pDsp, u32 flags )
 	ResetRegs();
 	SetMultithreaded();
 	InitPath();
-	SysPrintf("Opening GSnull (2)\n");
+	GSLog::WriteLn("Opening GSnull (2).");
 	return 0;
 }
 #endif
 
 EXPORT_C_(void) GSclose()
 {
-	SysPrintf("Closing GSnull\n");
+	GSLog::WriteLn("Closing GSnull.");
 
 	// Better to only close the window on Shutdown.  All the other plugins
 	// pretty much worked that way, and all old PCSX2 versions expect it as well.
@@ -220,7 +167,7 @@ EXPORT_C_(s32) GSfreeze(int mode, freezeData *data)
 
 EXPORT_C_(s32) GStest()
 {
-	SysPrintf("Testing GSnull\n");
+	GSLog::WriteLn("Testing GSnull.");
 	return 0;
 }
 
@@ -238,7 +185,7 @@ EXPORT_C_(void) GSgetLastTag(u64* ptag)
 
 EXPORT_C_(void) GSgifSoftReset(u32 mask)
 {
-	SysPrintf("Doing a soft reset of the GS plugin.\n");
+	GSLog::WriteLn("Doing a soft reset of the GS plugin.");
 }
 
 EXPORT_C_(void) GSreadFIFO(u64 *mem)
@@ -264,12 +211,12 @@ EXPORT_C_(void) GSchangeSaveState(int, const char* filename)
 EXPORT_C_(void) GSmakeSnapshot(char *path)
 {
 
-	SysPrintf("Taking a snapshot.\n");
+	GSLog::WriteLn("Taking a snapshot.");
 }
 
 EXPORT_C_(void) GSmakeSnapshot2(char *pathname, int* snapdone, int savejpg)
 {
-	SysPrintf("Taking a snapshot to %s.\n", pathname);
+	GSLog::WriteLn("Taking a snapshot to %s.", pathname);
 }
 
 EXPORT_C_(void) GSsetBaseMem(void*)
@@ -278,14 +225,14 @@ EXPORT_C_(void) GSsetBaseMem(void*)
 
 EXPORT_C_(void) GSsetGameCRC(int crc, int gameoptions)
 {
-	SysPrintf("Setting the crc to '%x' with 0x%x for options.\n", crc, gameoptions);
+	GSLog::WriteLn("Setting the crc to '%x' with 0x%x for options.", crc, gameoptions);
 }
 
 // controls frame skipping in the GS, if this routine isn't present, frame skipping won't be done
 EXPORT_C_(void) GSsetFrameSkip(int frameskip)
 {
 	SetFrameSkip(frameskip != 0);
-	SysPrintf("Frameskip set to %d.\n", frameskip);
+	GSLog::WriteLn("Frameskip set to %d.", frameskip);
 }
 
 // if start is 1, starts recording spu2 data, else stops
@@ -294,16 +241,16 @@ EXPORT_C_(void) GSsetFrameSkip(int frameskip)
 EXPORT_C_(int) GSsetupRecording(int start, void* pData)
 {
 	if (start)
-		SysPrintf("Pretending to record.\n");
+		GSLog::WriteLn("Pretending to record.");
 	else
-		SysPrintf("Pretending to stop recording.\n");
+		GSLog::WriteLn("Pretending to stop recording.");
 
 	return 1;
 }
 
 EXPORT_C_(void) GSreset()
 {
-	SysPrintf("Doing a reset of the GS plugin.");
+	GSLog::WriteLn("Doing a reset of the GS plugin.");
 }
 
 EXPORT_C_(void) GSwriteCSR(u32 value)

@@ -24,6 +24,9 @@
     <ClCompile Include="..\GS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\GSLog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\Linux\GSLinux.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

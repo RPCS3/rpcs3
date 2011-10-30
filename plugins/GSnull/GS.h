@@ -43,7 +43,11 @@ typedef struct _keyEvent keyEvent;
 #define EXPORT_C_(type) extern "C" __attribute__((externally_visible,visibility("default"))) type
 #endif
 
-#define GS_LOG __Log
+#define GS_LOG GSLog::Log
+
+extern const unsigned char version;
+extern const unsigned char revision;
+extern const unsigned char build;
 
 typedef struct
 {
@@ -68,15 +72,21 @@ typedef struct
 extern GSVars gs;
 
 extern Config conf;
-extern FILE *gsLog;
 extern u32 GSKeyEvent;
 extern bool GSShift, GSAlt;
 
 extern void (*GSirq)();
 
-extern void __Log(char *fmt, ...);
-extern void SysMessage(char *fmt, ...);
-extern void SysPrintf(const char *fmt, ...);
+namespace GSLog
+{
+	extern bool Open();
+	extern void Close();
+	extern void Log(char *fmt, ...);
+	extern void Message(char *fmt, ...);
+	extern void Print(const char *fmt, ...);
+	extern void WriteLn(const char *fmt, ...);
+};
+
 extern void SaveConfig();
 extern void LoadConfig();
 

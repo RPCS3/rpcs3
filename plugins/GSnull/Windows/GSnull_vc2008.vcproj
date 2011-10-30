@@ -161,6 +161,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\GSLog.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\Linux\GSLinux.cpp"
 				>
 				<FileConfiguration
