@@ -18,9 +18,6 @@ set(CommonFlags
 	-fno-strict-aliasing
 	-fno-tree-dse
 	-pipe
-	-Wno-format
-	-Wno-unused-parameter
-	-Wno-unused-value
 	-Wunused-variable)
 
 # set warning flags

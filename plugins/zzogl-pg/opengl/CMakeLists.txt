@@ -15,9 +15,6 @@ set(CommonFlags
     -fno-regmove
     -fno-strict-aliasing
     -Wstrict-aliasing # Allow to track strict aliasing issue.
-    -Wno-format
-    -Wno-unused-parameter
-    -Wno-unused-value
     -Wunused-variable
     )
 

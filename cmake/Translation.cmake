@@ -53,10 +53,16 @@ MACRO(GETTEXT_CREATE_TRANSLATIONS_PCSX2 _potFile _firstPoFileArg)
         GET_FILENAME_COMPONENT(_lang ${_abs_PATH} NAME_WE)
         SET(_gmoFile ${CMAKE_CURRENT_BINARY_DIR}/${_lang}__${_gmoBase}.gmo)
 
-        ADD_CUSTOM_COMMAND( OUTPUT ${_gmoFile}
-            COMMAND ${GETTEXT_MSGMERGE_EXECUTABLE} --quiet --update --backup=none -s ${_absFile} ${_absPotFile}
-            COMMAND ${GETTEXT_MSGFMT_EXECUTABLE} -o ${_gmoFile} ${_absFile}
-            DEPENDS ${_absPotFile} ${_absFile} )
+        IF (CMAKE_BUILD_PO)
+            ADD_CUSTOM_COMMAND( OUTPUT ${_gmoFile}
+                COMMAND ${GETTEXT_MSGMERGE_EXECUTABLE} --quiet --update --backup=none -s ${_absFile} ${_absPotFile}
+                COMMAND ${GETTEXT_MSGFMT_EXECUTABLE} -o ${_gmoFile} ${_absFile}
+                DEPENDS ${_absPotFile} ${_absFile} )
+        ELSE (CMAKE_BUILD_PO)
+            ADD_CUSTOM_COMMAND( OUTPUT ${_gmoFile}
+                COMMAND ${GETTEXT_MSGFMT_EXECUTABLE} -o ${_gmoFile} ${_absFile}
+                DEPENDS ${_absPotFile} ${_absFile} )
+        ENDIF (CMAKE_BUILD_PO)
 
         IF (PACKAGE_MODE)
             INSTALL(FILES ${_gmoFile} DESTINATION share/locale/${_lang}/LC_MESSAGES RENAME ${_potBasename}.mo)

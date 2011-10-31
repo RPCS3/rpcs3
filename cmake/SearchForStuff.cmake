@@ -185,6 +185,8 @@ if(wxWidgets_FOUND)
             if (EXISTS "/usr/lib/wx")
                 STRING(REGEX REPLACE "/usr/lib64/wx" "/usr/lib/wx" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
             endif (EXISTS "/usr/lib/wx")
+            # Multiarch ubuntu/debian
+            STRING(REGEX REPLACE "/usr/lib/x86_64-linux-gnu" "/usr/lib/i386-linux-gnu" wxWidgets_INCLUDE_DIRS "${wxWidgets_INCLUDE_DIRS}")
         endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
     endif(Linux)
 

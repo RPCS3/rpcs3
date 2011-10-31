@@ -1,6 +1,7 @@
 ### Select the build type
-# Use Release/Devel/Debug     : -DCMAKE_BUILD_TYPE=Release|Devel|Debug
+# Use Release/Devel/Debug      : -DCMAKE_BUILD_TYPE=Release|Devel|Debug
 # Enable/disable the stripping : -DCMAKE_BUILD_STRIP=TRUE|FALSE
+# generation .po based on src  : -DCMAKE_BUILD_PO=TRUE|FALSE
 
 ### Force the choice of 3rd party library in pcsx2 over system libraries
 # Use all         internal lib: -DFORCE_INTERNAL_ALL=TRUE
@@ -29,7 +30,6 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
 	message(STATUS "BuildType set to ${CMAKE_BUILD_TYPE} by default")
 endif(NOT CMAKE_BUILD_TYPE MATCHES "Debug|Devel|Release")
 
-# Set default strip option. Can be set with -DCMAKE_BUILD_STRIP=TRUE/FALSE
 if(NOT DEFINED CMAKE_BUILD_STRIP)
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         set(CMAKE_BUILD_STRIP TRUE)
@@ -39,6 +39,16 @@ if(NOT DEFINED CMAKE_BUILD_STRIP)
         message(STATUS "Disable the stripping by default in ${CMAKE_BUILD_TYPE} build !!!")
     endif(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif(NOT DEFINED CMAKE_BUILD_STRIP)
+
+if(NOT DEFINED CMAKE_BUILD_PO)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(CMAKE_BUILD_PO TRUE)
+        message(STATUS "Enable the building of po files by default in ${CMAKE_BUILD_TYPE} build !!!")
+    else(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(CMAKE_BUILD_PO FALSE)
+        message(STATUS "Disable the building of po files by default in ${CMAKE_BUILD_TYPE} build !!!")
+    endif(CMAKE_BUILD_TYPE STREQUAL "Release")
+endif(NOT DEFINED CMAKE_BUILD_PO)
 
 #-------------------------------------------------------------------------------
 # Select library system vs 3rdparty
