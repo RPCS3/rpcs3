@@ -1016,11 +1016,33 @@ u8 cdvdRead(u8 key)
 
 		case 0x08:  // STATUS
 			CDVD_LOG("cdvdRead08(Status) %x", cdvd.Status);
+
+#define SPINFLAGCHECK 1
+
+#if SPINFLAGCHECK
+            // Time Crisis 2, random Japanese horror game (rama) - check spin flag
+			// These games would also somewhat work with the fast CDVD speedhack
+			if( cdvd.Spinning ) {
+                return cdvd.Status | CDVD_STATUS_SPIN;
+			}
+            else
+#endif
+
 			return cdvd.Status;
 			break;
 
 		case 0x0A:  // STATUS
 			CDVD_LOG("cdvdRead0A(Status) %x", cdvd.Status);
+
+#if SPINFLAGCHECK
+            // Time Crisis 2, random Japanese horror game (rama) - check spin flag
+			// These games would also somewhat work with the fast CDVD speedhack
+			if( cdvd.Spinning ) {
+                return cdvd.Status | CDVD_STATUS_SPIN;
+			}
+            else
+#endif
+
 			return cdvd.Status;
 			break;
 
