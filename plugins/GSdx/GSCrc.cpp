@@ -60,6 +60,7 @@ CRC::Game CRC::m_games[] =
 	{0xDC2A467E, FFXII, EU, 0},
 	{0xCA284668, FFXII, EU, 0},
 	{0xC52B466E, FFXII, EU, 0}, //ES
+	{0xE5E71BF9, FFXII, FR, 0},
 	{0x280AD120, FFXII, JP, 0},
 	{0x08C1ED4D, HauntingGround, NoRegion, 0},
 	{0x2CD5794C, HauntingGround, EU, 0},
