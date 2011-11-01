@@ -790,6 +790,12 @@ namespace Test
 			desiredOutput = "apple: \":\"\nbanana: \":\"";
 		}
 		
+		void ColonAtEndOfScalarInFlow(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::Flow << YAML::BeginMap << YAML::Key << "C:" << YAML::Value << "C:" << YAML::EndMap;
+			desiredOutput = "{\"C:\": \"C:\"}";
+		}
+		
 		void BoolFormatting(YAML::Emitter& out, std::string& desiredOutput)
 		{
 			out << YAML::BeginSeq;
@@ -1068,6 +1074,7 @@ namespace Test
 		RunEmitterTest(&Emitter::EmptyBinary, "empty binary", passed, total);
 		RunEmitterTest(&Emitter::ColonAtEndOfScalar, "colon at end of scalar", passed, total);
 		RunEmitterTest(&Emitter::ColonAsScalar, "colon as scalar", passed, total);
+		RunEmitterTest(&Emitter::ColonAtEndOfScalarInFlow, "colon at end of scalar in flow", passed, total);
 		RunEmitterTest(&Emitter::BoolFormatting, "bool formatting", passed, total);
 		RunEmitterTest(&Emitter::DocStartAndEnd, "doc start and end", passed, total);
 		RunEmitterTest(&Emitter::ImplicitDocStart, "implicit doc start", passed, total);
