@@ -66,7 +66,7 @@ namespace YAML
 		const T to() const;
 
 		template <typename T>
-		friend YAML_CPP_API void operator >> (const Node& node, T& value);
+		friend YAML_CPP_API typename enable_if<is_scalar_convertible<T> >::type operator >> (const Node& node, T& value);
 
 		// retrieval for maps and sequences
 		template <typename T>

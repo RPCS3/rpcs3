@@ -14,6 +14,17 @@
 
 namespace YAML
 {
+	// traits for conversion
+	
+	template<typename T>
+	struct is_scalar_convertible { enum { value = is_numeric<T>::value }; };
+	
+	template<> struct is_scalar_convertible<std::string> { enum { value = true }; };
+	template<> struct is_scalar_convertible<bool> { enum { value = true }; };
+	template<> struct is_scalar_convertible<_Null> { enum { value = true }; };
+
+	// actual conversion
+	
 	inline bool Convert(const std::string& input, std::string& output) {
 		output = input;
 		return true;

@@ -20,7 +20,7 @@ namespace YAML
 	}
 
 	template <typename T>
-	inline void operator >> (const Node& node, T& value) {
+	inline typename enable_if<is_scalar_convertible<T> >::type operator >> (const Node& node, T& value) {
 		if(!ConvertScalar(node, value))
 			throw InvalidScalar(node.m_mark);
 	}
