@@ -115,7 +115,7 @@ int IPU_Fifo_Output::write(const u32 *value, uint size)
 		uint transsize = min(size, 8 - (uint)ipuRegs.ctrl.OFC);
 		if(!transsize) return 0;
 
-		ipuRegs.ctrl.OFC = transsize;
+		ipuRegs.ctrl.OFC += transsize;
 		size -= transsize;
 		while (transsize > 0)
 		{
