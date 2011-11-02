@@ -30,7 +30,7 @@ GSClut::GSClut(GSLocalMemory* mem)
 {
 	uint8* p = (uint8*)vmalloc(CLUT_ALLOC_SIZE, false);
 
-	m_clut = (uint16*)&p[0]; // 1k + 1k for buffer overruns (sfex: PSM == PSM_PSMT8, CPSM == PSM_PSMCT32, CSA != 0)
+	m_clut = (uint16*)&p[0]; // 1k + 1k for buffer overruns (TODO: wrap CSM2 writes, too)
 	m_buff32 = (uint32*)&p[2048]; // 1k
 	m_buff64 = (uint64*)&p[4096]; // 2k
 	m_write.dirty = true;
@@ -130,9 +130,9 @@ void GSClut::WriteCLUT32_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TE
 {
 	ALIGN_STACK(32);
 
-	ASSERT(TEX0.CSA == 0);
+	// ASSERT(TEX0.CSA == 0); // sfex
 
-	WriteCLUT_T32_I8_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T32_I8_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut);
 }
 
 void GSClut::WriteCLUT32_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
@@ -141,26 +141,26 @@ void GSClut::WriteCLUT32_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TE
 
 	ASSERT(TEX0.CSA < 16);
 
-	WriteCLUT_T32_I4_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T32_I4_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + ((TEX0.CSA & 15) << 4));
 }
 
 void GSClut::WriteCLUT16_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
 	ASSERT(TEX0.CSA < 16);
 
-	WriteCLUT_T16_I8_CSM1((uint16*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
+	WriteCLUT_T16_I8_CSM1((uint16*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + ((TEX0.CSA & 15) << 4));
 }
 
 void GSClut::WriteCLUT16_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	ASSERT(TEX0.CSA < 32);
-
 	WriteCLUT_T16_I4_CSM1((uint16*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16S_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	WriteCLUT_T16_I8_CSM1((uint16*)m_mem->BlockPtr16S(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
+	ASSERT(TEX0.CSA < 16);
+
+	WriteCLUT_T16_I8_CSM1((uint16*)m_mem->BlockPtr16S(0, 0, TEX0.CBP, 1), m_clut + ((TEX0.CSA & 15) << 4));
 }
 
 void GSClut::WriteCLUT16S_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
@@ -256,7 +256,6 @@ void GSClut::Read(const GIFRegTEX0& TEX0)
 			case PSM_PSMT4:
 			case PSM_PSMT4HL:
 			case PSM_PSMT4HH:
-				ASSERT(TEX0.CSA < 32);
 				clut += TEX0.CSA << 4;
 				ReadCLUT_T16_I4(clut, m_buff32, m_buff64);
 				break;
@@ -282,7 +281,7 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 			{
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
-				ASSERT(TEX0.CSA == 0);
+				// ASSERT(TEX0.CSA == 0); // sfex
 				ReadCLUT_T32_I8(clut, m_buff32);
 				break;
 			case PSM_PSMT4:
@@ -309,7 +308,6 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 			case PSM_PSMT4:
 			case PSM_PSMT4HL:
 			case PSM_PSMT4HH:
-				ASSERT(TEX0.CSA < 32);
 				clut += TEX0.CSA << 4;
 				// TODO: merge these functions
 				Expand16(clut, m_buff32, 16, TEXA);
