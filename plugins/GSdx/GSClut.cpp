@@ -223,7 +223,7 @@ void GSClut::Read(const GIFRegTEX0& TEX0)
 		m_read.TEX0 = TEX0;
 		m_read.dirty = false;
 
-		uint16* clut = m_clut + (TEX0.CSA << 4);
+		uint16* clut = m_clut;
 
 		if(TEX0.CPSM == PSM_PSMCT32 || TEX0.CPSM == PSM_PSMCT24)
 		{
@@ -231,11 +231,14 @@ void GSClut::Read(const GIFRegTEX0& TEX0)
 			{
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
+				ASSERT(TEX0.CSA == 0);
 				ReadCLUT_T32_I8(clut, m_buff32);
 				break;
 			case PSM_PSMT4:
 			case PSM_PSMT4HL:
 			case PSM_PSMT4HH:
+				//ASSERT(TEX0.CSA < 16);
+				clut += (TEX0.CSA & 15) << 4;
 				ReadCLUT_T32_I4(clut, m_buff32, m_buff64);
 				break;
 			}
@@ -246,11 +249,15 @@ void GSClut::Read(const GIFRegTEX0& TEX0)
 			{
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
+				ASSERT(TEX0.CSA < 16);
+				clut += (TEX0.CSA & 15) << 4;
 				ReadCLUT_T16_I8(clut, m_buff32);
 				break;
 			case PSM_PSMT4:
 			case PSM_PSMT4HL:
 			case PSM_PSMT4HH:
+				ASSERT(TEX0.CSA < 32);
+				clut += TEX0.CSA << 4;
 				ReadCLUT_T16_I4(clut, m_buff32, m_buff64);
 				break;
 			}
@@ -267,7 +274,7 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 		m_read.dirty = false;
 		m_read.adirty = true;
 
-		uint16* clut = m_clut + (TEX0.CSA << 4);
+		uint16* clut = m_clut;
 
 		if(TEX0.CPSM == PSM_PSMCT32 || TEX0.CPSM == PSM_PSMCT24)
 		{
@@ -275,11 +282,14 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 			{
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
+				ASSERT(TEX0.CSA == 0);
 				ReadCLUT_T32_I8(clut, m_buff32);
 				break;
 			case PSM_PSMT4:
 			case PSM_PSMT4HL:
 			case PSM_PSMT4HH:
+				//ASSERT(TEX0.CSA < 16); // Idol Janshi Suchie-Pai IV (highlighted menu item, mahjong tiles)
+				clut += (TEX0.CSA & 15) << 4;
 				// TODO: merge these functions
 				ReadCLUT_T32_I4(clut, m_buff32);
 				ExpandCLUT64_T32_I8(m_buff32, (uint64*)m_buff64); // sw renderer does not need m_buff64 anymore
@@ -292,11 +302,15 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 			{
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
+				ASSERT(TEX0.CSA < 16);
+				clut += (TEX0.CSA & 15) << 4;
 				Expand16(clut, m_buff32, 256, TEXA);
 				break;
 			case PSM_PSMT4:
 			case PSM_PSMT4HL:
 			case PSM_PSMT4HH:
+				ASSERT(TEX0.CSA < 32);
+				clut += TEX0.CSA << 4;
 				// TODO: merge these functions
 				Expand16(clut, m_buff32, 16, TEXA);
 				ExpandCLUT64_T32_I8(m_buff32, (uint64*)m_buff64); // sw renderer does not need m_buff64 anymore
