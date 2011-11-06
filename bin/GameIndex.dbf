@@ -1994,6 +1994,10 @@ Serial = SLUS-20071
 Name   = Dead or Alive 2
 Region = NTSC-U
 Compat = 1
+[patches]
+	// change TLSNDDRV RPC to blocking, better would be to move the wait to the top of the function
+	patch=0,EE,002b06ec,word,24060000
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20072
 Name   = MX 2002 - featuring Ricky Carmichael
@@ -25231,7 +25235,11 @@ Region = NTSC-J
 Serial = SLPS-25002
 Name   = Dead or Alive 2
 Region = NTSC-J
-Compat = 1
+Compat = 5
+[patches]
+	// change TLSNDDRV RPC to blocking, better would be to move the wait to the top of the function
+	patch=0,EE,00290408,word,24060000
+[/patches]
 ---------------------------------------------
 Serial = SLPS-25003
 Name   = Evergrace
