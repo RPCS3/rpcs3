@@ -339,6 +339,36 @@ static __fi float vuDouble(u32 f)
 }
 #endif
 
+static __fi float vuADD_TriAceHack(u32 a, u32 b) {
+	// On VU0 TriAce Games use ADDi and expects these bit-perfect results:
+	//if (a == 0xb3e2a619 && b == 0x42546666) return vuDouble(0x42546666);
+	//if (a == 0x8b5b19e9 && b == 0xc7f079b3) return vuDouble(0xc7f079b3);
+	if (a == 0x4b1ed4a8 && b == 0x43a02666) return vuDouble(0x4b1ed5e7);
+	//if (a == 0x7d1ca47b && b == 0x42f23333) return vuDouble(0x7d1ca47b);
+
+	// In the 3rd case, some other rounding error is giving us incorrect
+	// operands ('a' is wrong); and therefor an incorrect result.
+	// We're getting:        0x4b1ed4a8 + 0x43a02666 = 0x4b1ed5e8
+	// We should be getting: 0x4b1ed4a7 + 0x43a02666 = 0x4b1ed5e7
+	// microVU gets the correct operands and result. The interps likely
+	// don't get it due to rounding towards nearest in other calculations.
+
+	if (0) {
+		// microVU uses something like this to get TriAce games working,
+		// but VU interpreters don't seem to need it currently:
+		s32 aExp = (a >> 23) & 0xff;
+		s32 bExp = (b >> 23) & 0xff;
+		if (aExp - bExp >= 25) b &= 0x80000000;
+		if (aExp - bExp <=-25) a &= 0x80000000;
+		float ret = vuDouble(a) + vuDouble(b);
+		DevCon.WriteLn("aExp = %d, bExp = %d", aExp, bExp);
+		DevCon.WriteLn("0x%08x + 0x%08x = 0x%08x", a, b, (u32&)ret);
+		DevCon.WriteLn("%f + %f = %f", vuDouble(a), vuDouble(b), ret);
+		return ret;
+	}
+	return vuDouble(a) + vuDouble(b);
+}
+
 void _vuABS(VURegs * VU) {
 	if (_Ft_ == 0) return;
 
@@ -367,11 +397,21 @@ static __fi void _vuADDi(VURegs * VU) {
 	if (_Fd_ == 0) dst = &RDzero;
 	else dst = &VU->VF[_Fd_];
 
-	if (_X){ dst->i.x = VU_MACx_UPDATE(VU, vuDouble(VU->VF[_Fs_].i.x) + vuDouble(VU->VI[REG_I].UL));} else VU_MACx_CLEAR(VU);
-	if (_Y){ dst->i.y = VU_MACy_UPDATE(VU, vuDouble(VU->VF[_Fs_].i.y) + vuDouble(VU->VI[REG_I].UL));} else VU_MACy_CLEAR(VU);
-	if (_Z){ dst->i.z = VU_MACz_UPDATE(VU, vuDouble(VU->VF[_Fs_].i.z) + vuDouble(VU->VI[REG_I].UL));} else VU_MACz_CLEAR(VU);
-	if (_W){ dst->i.w = VU_MACw_UPDATE(VU, vuDouble(VU->VF[_Fs_].i.w) + vuDouble(VU->VI[REG_I].UL));} else VU_MACw_CLEAR(VU);
-	VU_STAT_UPDATE(VU);
+	if (!CHECK_VUADDSUBHACK) {
+		if (_X){ dst->i.x = VU_MACx_UPDATE(VU, vuDouble(VU->VF[_Fs_].i.x) + vuDouble(VU->VI[REG_I].UL));} else VU_MACx_CLEAR(VU);
+		if (_Y){ dst->i.y = VU_MACy_UPDATE(VU, vuDouble(VU->VF[_Fs_].i.y) + vuDouble(VU->VI[REG_I].UL));} else VU_MACy_CLEAR(VU);
+		if (_Z){ dst->i.z = VU_MACz_UPDATE(VU, vuDouble(VU->VF[_Fs_].i.z) + vuDouble(VU->VI[REG_I].UL));} else VU_MACz_CLEAR(VU);
+		if (_W){ dst->i.w = VU_MACw_UPDATE(VU, vuDouble(VU->VF[_Fs_].i.w) + vuDouble(VU->VI[REG_I].UL));} else VU_MACw_CLEAR(VU);
+		VU_STAT_UPDATE(VU);
+	}
+	else {
+		if (_X){ dst->i.x = VU_MACx_UPDATE(VU, vuADD_TriAceHack(VU->VF[_Fs_].i.x, VU->VI[REG_I].UL));} else VU_MACx_CLEAR(VU);
+		if (_Y){ dst->i.y = VU_MACy_UPDATE(VU, vuADD_TriAceHack(VU->VF[_Fs_].i.y, VU->VI[REG_I].UL));} else VU_MACy_CLEAR(VU);
+		if (_Z){ dst->i.z = VU_MACz_UPDATE(VU, vuADD_TriAceHack(VU->VF[_Fs_].i.z, VU->VI[REG_I].UL));} else VU_MACz_CLEAR(VU);
+		if (_W){ dst->i.w = VU_MACw_UPDATE(VU, vuADD_TriAceHack(VU->VF[_Fs_].i.w, VU->VI[REG_I].UL));} else VU_MACw_CLEAR(VU);
+		VU_STAT_UPDATE(VU);
+	}
+	
 }/*Reworked from define to function. asadr*/
 
 static __fi void _vuADDq(VURegs * VU) {
