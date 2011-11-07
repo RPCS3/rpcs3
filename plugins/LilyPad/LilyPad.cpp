@@ -20,7 +20,7 @@
 #define FORCE_UPDATE_LPARAM ((LPARAM)0x89437437)
 
 // LilyPad version.
-#define VERSION ((0<<8) | 10 | (0<<24))
+#define VERSION ((0<<8) | 11 | (0<<24))
 
 HINSTANCE hInst;
 HWND hWnd;
@@ -135,7 +135,7 @@ struct ButtonSum {
 	Stick sticks[3];
 };
 
-#define PAD_SAVE_STATE_VERSION	2
+#define PAD_SAVE_STATE_VERSION	3
 
 // Freeze data, for a single pad.  Basically has all pad state that
 // a PS2 can set.
@@ -1414,69 +1414,80 @@ keyEvent* CALLBACK PADkeyEvent() {
 }
 
 struct PadPluginFreezeData {
-	char format[8];
-	// Currently all different versions are incompatible.
-	// May split into major/minor with some compatibility rules.
-	u32 version;
-	// So when loading, know which plugin's settings I'm loading.
-	// Not a big deal.  Use a static variable when saving to figure it out.
-	u8 port;
-	// active slot for port
-	u8 slot;
-	PadFreezeData padData[4];
-	QueryInfo query;
+    char format[8];
+    // Currently all different versions are incompatible.
+    // May split into major/minor with some compatibility rules.
+    u32 version;
+    // So when loading, know which plugin's settings I'm loading.
+    // Not a big deal.  Use a static variable when saving to figure it out.
+    u8 port;
+    // active slot for port
+    u8 slot[2];
+    PadFreezeData padData[2][4];
+    QueryInfo query;
 };
 
 s32 CALLBACK PADfreeze(int mode, freezeData *data) {
-	if (mode == FREEZE_SIZE) {
-		data->size = sizeof(PadPluginFreezeData);
-	}
-	else if (mode == FREEZE_LOAD) {
-		PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
-		StopVibrate();
-		if (data->size != sizeof(PadPluginFreezeData) ||
-			pdata.version != PAD_SAVE_STATE_VERSION ||
-			strcmp(pdata.format, "PadMode")) return 0;
-		unsigned int port = pdata.port;
-		if (port >= 2) return 0;
-		if (pdata.query.port == port && pdata.query.slot < 4) {
-			query = pdata.query;
-		}
-		for (int slot=0; slot<4; slot++) {
-			u8 mode = pdata.padData[slot].mode;
-			if (mode != MODE_DIGITAL && mode != MODE_ANALOG && mode != MODE_DS2_NATIVE) {
-				break;
-			}
+    if (mode == FREEZE_SIZE) {
+        data->size = sizeof(PadPluginFreezeData);
+    }
+    else if (mode == FREEZE_LOAD) {
+        PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
+        StopVibrate();
+        if (data->size != sizeof(PadPluginFreezeData) ||
+            pdata.version != PAD_SAVE_STATE_VERSION ||
+            strcmp(pdata.format, "PadMode")) return 0;
 
-			// Not sure if the cast is strictly necessary, but feel safest with it there...
-			*(PadFreezeData*)&pads[port][slot] = pdata.padData[slot];
-		}
-		if (pdata.slot < 4)
-			slots[port] = pdata.slot;
-	}
-	else if (mode == FREEZE_SAVE) {
-		if (data->size != sizeof(PadPluginFreezeData)) return 0;
-		PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
-		static int nextPort = 0;
-		if (!portInitialized[nextPort]) nextPort ^= 1;
-		int port = nextPort;
-		if (!portInitialized[nextPort^1]) nextPort = 0;
-		else nextPort ^= 1;
+        if( pdata.port >= 2 ) return 0;
+        
+        query = pdata.query;
+        if (pdata.query.slot < 4) {
+            query = pdata.query;
+        }
+
+        // Tales of the Abyss - pad fix
+        // - restore data for both ports
+        for (int port=0; port<2; port++) {
+            for (int slot=0; slot<4; slot++) {
+                u8 mode = pdata.padData[port][slot].mode;
+
+                if (mode != MODE_DIGITAL && mode != MODE_ANALOG && mode != MODE_DS2_NATIVE) {
+                    break;
+                }
+
+                // Not sure if the cast is strictly necessary, but feel safest with it there...
+                *(PadFreezeData*)&pads[port][slot] = pdata.padData[port][slot];
+            }
+
+            if (pdata.slot[port] < 4)
+                slots[port] = pdata.slot[port];
+        }
+    }
+    else if (mode == FREEZE_SAVE) {
+        if (data->size != sizeof(PadPluginFreezeData)) return 0;
+        PadPluginFreezeData &pdata = *(PadPluginFreezeData*)(data->data);
 
 
-		memset(&pdata, 0, sizeof(pdata));
-		strcpy(pdata.format, "PadMode");
-		pdata.version = PAD_SAVE_STATE_VERSION;
-		pdata.port = port;
-		pdata.slot = slots[port];
-		pdata.query = query;
-		for (int slot=0; slot<4; slot++) {
-			pdata.padData[slot] = pads[port][slot];
-		}
-	}
-	else return -1;
-	return 0;
- }
+        // Tales of the Abyss - pad fix
+        // - PCSX2 only saves port0 (save #1), then port1 (save #2)
+
+        memset(&pdata, 0, sizeof(pdata));
+        strcpy(pdata.format, "PadMode");
+        pdata.version = PAD_SAVE_STATE_VERSION;
+        pdata.port = 0;
+        pdata.query = query;
+
+        for (int port=0; port<2; port++) {
+            for (int slot=0; slot<4; slot++) {
+                pdata.padData[port][slot] = pads[port][slot];
+            }
+
+            pdata.slot[port] = slots[port];
+        }
+    }
+    else return -1;
+    return 0;
+}
 
 u32 CALLBACK PADreadPort1 (PadDataS* pads) {
 	PADstartPoll(1);
