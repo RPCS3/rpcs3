@@ -790,7 +790,9 @@ __fi void cdvdReadInterrupt()
 		cdvd.RetryCntP = 0;
 		cdvd.Reading = 1;
 		cdvd.Readed = 1;
-		cdvd.Status = CDVD_STATUS_PAUSE; // check (rama)
+		//cdvd.Status = CDVD_STATUS_PAUSE; // check (rama)
+		cdvd.Status = CDVD_STATUS_READ | CDVD_STATUS_SPIN; // Time Crisis 2
+
 		cdvd.Sector = cdvd.SeekToSector;
 
 		CDVD_LOG( "Cdvd Seek Complete > Scheduling block read interrupt at iopcycle=%8.8x.",
@@ -861,7 +863,7 @@ __fi void cdvdReadInterrupt()
 		HW_DMA3_CHCR &= ~0x01000000;
 		psxDmaInterrupt(3);
 		cdvd.Ready = CDVD_READY2;
-
+		cdvd.Status = CDVD_STATUS_PAUSE; // Needed here but could be smth else than Pause (rama)
 		// All done! :D
 		return;
 	}
@@ -885,7 +887,8 @@ static uint cdvdStartSeek( uint newsector, CDVD_MODE_TYPE mode )
 	cdvd.Ready = CDVD_NOTREADY;
 	cdvd.Reading = 0;
 	cdvd.Readed = 0;
-	cdvd.Status = CDVD_STATUS_STOP;
+	//cdvd.Status = CDVD_STATUS_STOP;
+    cdvd.Status = CDVD_STATUS_SEEK | CDVD_STATUS_SPIN; // Time Crisis 2
 
 	if( !cdvd.Spinning )
 	{
@@ -918,7 +921,8 @@ static uint cdvdStartSeek( uint newsector, CDVD_MODE_TYPE mode )
 
 		if( delta == 0 )
 		{
-			cdvd.Status = CDVD_STATUS_PAUSE;
+			//cdvd.Status = CDVD_STATUS_PAUSE;
+			cdvd.Status = CDVD_STATUS_READ | CDVD_STATUS_SPIN; // Time Crisis 2
 			cdvd.Readed = 1; // Note: 1, not 0, as implied by the next comment. Need to look into this. --arcum42
 			cdvd.RetryCntP = 0;
 
@@ -1016,33 +1020,11 @@ u8 cdvdRead(u8 key)
 
 		case 0x08:  // STATUS
 			CDVD_LOG("cdvdRead08(Status) %x", cdvd.Status);
-
-#define SPINFLAGCHECK 1
-
-#if SPINFLAGCHECK
-            // Time Crisis 2, random Japanese horror game (rama) - check spin flag
-			// These games would also somewhat work with the fast CDVD speedhack
-			if( cdvd.Spinning ) {
-                return cdvd.Status | CDVD_STATUS_SPIN;
-			}
-            else
-#endif
-
 			return cdvd.Status;
 			break;
 
 		case 0x0A:  // STATUS
 			CDVD_LOG("cdvdRead0A(Status) %x", cdvd.Status);
-
-#if SPINFLAGCHECK
-            // Time Crisis 2, random Japanese horror game (rama) - check spin flag
-			// These games would also somewhat work with the fast CDVD speedhack
-			if( cdvd.Spinning ) {
-                return cdvd.Status | CDVD_STATUS_SPIN;
-			}
-            else
-#endif
-
 			return cdvd.Status;
 			break;
 
@@ -1169,7 +1151,8 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 	CDVD_LOG("cdvdWrite04: NCMD %s (%x) (ParamP = %x)", nCmdName[rt], rt, cdvd.ParamP);
 
 	cdvd.nCommand = rt;
-	cdvd.Status = CDVD_STATUS_STOP; // check (rama)
+	// Why fiddle with Status and PwOff here at all? (rama)
+	cdvd.Status = cdvd.Spinning ? CDVD_STATUS_SPIN : CDVD_STATUS_STOP; // checkme
 	cdvd.PwOff = Irq_None;		// good or bad?
 
 	switch (rt) {
