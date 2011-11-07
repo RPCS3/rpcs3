@@ -25,6 +25,21 @@ u32 g_vif0Cycles = 0;
 // because its vif stalling not the EE core...
 __fi void vif0FLUSH()
 {
+	if(g_packetsizeonvu0 > vif0.vifpacketsize && g_vu0Cycles > 0)
+	{
+		//DevCon.Warning("Adding on same packet");
+		if( ((g_packetsizeonvu0 - vif0.vifpacketsize) >> 1) > g_vu0Cycles)
+			g_vu0Cycles -= (g_packetsizeonvu0 - vif0.vifpacketsize) >> 1;
+		else g_vu0Cycles = 0;
+	}
+	if(g_vu0Cycles > 0)
+	{
+		//DevCon.Warning("Adding %x cycles to VIF0", g_vu0Cycles * BIAS);
+		g_vif0Cycles += g_vu0Cycles;
+		g_vu0Cycles = 0;
+	}
+	g_vu0Cycles = 0;
+
 	if (!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
 	if(VU0.flags & VUFLAG_MFLAGSET)
 	{
@@ -235,6 +250,7 @@ void dmaVIF0()
 	        vif0ch.tadr, vif0ch.asr0, vif0ch.asr1);
 
 	g_vif0Cycles = 0;
+	g_vu0Cycles = 0;
 	//if(vif0.irqoffset != 0 && vif0.vifstalled == true) DevCon.Warning("Offset on VIF0 start! offset %x, Progress %x", vif0.irqoffset, vif0.vifstalled);
 	/*vif0.irqoffset = 0;
 	vif0.vifstalled = false;

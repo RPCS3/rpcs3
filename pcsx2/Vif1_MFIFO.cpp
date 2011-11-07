@@ -20,7 +20,10 @@
 #include "Vif_Dma.h"
 
 u16 vifqwc = 0;
-
+u32 g_vu0Cycles = 0;
+u32 g_vu1Cycles = 0;
+u32 g_packetsizeonvu0 = 0;
+u32 g_packetsizeonvu1 = 0;
 
 static u32 qwctag(u32 mask)
 {
