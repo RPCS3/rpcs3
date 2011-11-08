@@ -553,7 +553,7 @@ EXPORT_C GSirqCallback(void (*irq)())
 	}
 }
 
-void pt(char* str){
+void pt(const char* str){
 	struct tm *current;
 	time_t now;
 	

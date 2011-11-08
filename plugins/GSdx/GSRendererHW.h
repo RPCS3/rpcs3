@@ -30,14 +30,7 @@
 template<class Vertex>
 class GSRendererHW : public GSRendererT<Vertex>
 {
-	int m_width;
-	int m_height;
-	int m_skip;
-	bool m_reset;
-	bool m_nativeres;
-	int m_upscale_multiplier;
-	int m_userhacks_skipdraw;
-
+protected:
 	using GSRendererT<Vertex>::m_vt;
 	using GSRendererT<Vertex>::m_count;
 	using GSRendererT<Vertex>::m_env;
@@ -54,6 +47,15 @@ class GSRendererHW : public GSRendererT<Vertex>
 	using GSRendererT<Vertex>::s_saven;
 	using GSRendererT<Vertex>::s_savez;
 	using GSRendererT<Vertex>::s_n;
+
+private:
+	int m_width;
+	int m_height;
+	int m_skip;
+	bool m_reset;
+	bool m_nativeres;
+	int m_upscale_multiplier;
+	int m_userhacks_skipdraw;
 
 	#pragma region hacks
 
