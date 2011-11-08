@@ -38,6 +38,23 @@ class GSRendererHW : public GSRendererT<Vertex>
 	int m_upscale_multiplier;
 	int m_userhacks_skipdraw;
 
+	using GSRendererT<Vertex>::m_vt;
+	using GSRendererT<Vertex>::m_count;
+	using GSRendererT<Vertex>::m_env;
+	using GSRendererT<Vertex>::m_context;
+	using GSRendererT<Vertex>::m_vertices;
+	using GSRendererT<Vertex>::m_dev;
+	using GSRendererT<Vertex>::PRIM;
+	using GSRendererT<Vertex>::m_mem;
+	using GSRendererT<Vertex>::m_regs;
+	using GSRendererT<Vertex>::m_perfmon;
+	using GSRendererT<Vertex>::m_game;
+	using GSRendererT<Vertex>::s_dump;
+	using GSRendererT<Vertex>::s_save;
+	using GSRendererT<Vertex>::s_saven;
+	using GSRendererT<Vertex>::s_savez;
+	using GSRendererT<Vertex>::s_n;
+
 	#pragma region hacks
 
 	typedef bool (GSRendererHW::*OI_Ptr)(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t);
@@ -264,7 +281,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FBW = m_context->FRAME.FBW;
 		uint32 FPSM = m_context->FRAME.PSM;
-		
+
 		if((FBP == 0x02800 || FBP == 0x02BC0) && FPSM == PSM_PSMCT24)	//0x2800 pal, 0x2bc0 ntsc
 		{
 			//half height buffer clear
@@ -272,11 +289,11 @@ class GSRendererHW : public GSRendererT<Vertex>
 
 			return false;
 		}
-		
+
 		return true;
 	}
 
-	bool OI_DigimonRumbleArena2(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)	
+	bool OI_DigimonRumbleArena2(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
@@ -293,7 +310,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 		return true;
 	}
 
-	bool OI_BlackHawkDown(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)	
+	bool OI_BlackHawkDown(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
@@ -309,11 +326,11 @@ class GSRendererHW : public GSRendererT<Vertex>
 		return true;
 	}
 
-	bool OI_StarWarsForceUnleashed(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)	
+	bool OI_StarWarsForceUnleashed(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
-		
+
 		if(!PRIM->TME)
 		{
 			if(FPSM == PSM_PSMCT24 && FBP == 0x2bc0)
@@ -330,29 +347,29 @@ class GSRendererHW : public GSRendererT<Vertex>
 				m_dev->ClearDepth(ds, 0);
 			}
 		}
-		
+
 		return true;
 	}
-	
-	bool OI_XmenOriginsWolverine(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)	
+
+	bool OI_XmenOriginsWolverine(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
-		
+
 		if(FBP == 0x0 && FPSM == PSM_PSMCT16)
 		{
 			//half height buffer clear
 			m_dev->ClearDepth(ds, 0);
 		}
-		
+
 		return true;
 	}
 
-	bool OI_CallofDutyFinalFronts(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)	
+	bool OI_CallofDutyFinalFronts(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
-		
+
 		if(FBP == 0x02300 && FPSM == PSM_PSMZ24)
 		{
 			//half height buffer clear
@@ -360,15 +377,15 @@ class GSRendererHW : public GSRendererT<Vertex>
 
 			return false;
 		}
-		
+
 		return true;
 	}
 
-	bool OI_SpyroNewBeginning(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)	
+	bool OI_SpyroNewBeginning(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
-		
+
 		if(!PRIM->TME)
 		{
 			if(FPSM == PSM_PSMCT24 && (FBP == 0x02800 || FBP == 0x02bc0))	//0x2800 pal, 0x2bc0 ntsc
@@ -386,15 +403,15 @@ class GSRendererHW : public GSRendererT<Vertex>
 				m_dev->ClearDepth(ds, 0);
 			}
 		}
-		
+
 		return true;
 	}
 
-	bool OI_SpyroEternalNight(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)	
+	bool OI_SpyroEternalNight(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
-		
+
 		if(!PRIM->TME)
 		{
 			if(FPSM == PSM_PSMCT24 && FBP == 0x2bc0)
@@ -412,7 +429,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 				m_dev->ClearDepth(ds, 0);
 			}
 		}
-		
+
 		return true;
 	}
 
@@ -420,13 +437,13 @@ class GSRendererHW : public GSRendererT<Vertex>
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FPSM = m_context->FRAME.PSM;
-		
+
 		if (FPSM == PSM_PSMCT32 && FBP == 0x01c00 && !m_context->TEST.ATE && m_vt.m_max.p.z == m_vt.m_min.p.z)
 		{
 			m_context->TEST.ZTST = ZTST_ALWAYS;
 			//m_dev->ClearDepth(ds, 0);
 		}
-		
+
 		return true;
 	}
 
@@ -460,7 +477,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 					for(int i = 0; i < 256; i++)
 					{
 						uint8 a = m_vertices[i]._a();
-						
+
 						m_vertices[i]._a() = a >= 0x80 ? 0xff : a * 2;
 
 						m_mem.WritePixel32(i & 15, i >> 4, m_vertices[i]._c0(), FBP, FBW);
@@ -546,13 +563,14 @@ class GSRendererHW : public GSRendererT<Vertex>
 
 	class Hacks
 	{
-		template<class T> struct HackEntry
+		template<class T> class HackEntry
 		{
+		public:
 			CRC::Title title;
 			CRC::Region region;
 			T func;
 
-			struct HackEntry(CRC::Title t, CRC::Region r, T f)
+			HackEntry(CRC::Title t, CRC::Region r, T f)
 			{
 				title = t;
 				region = r;
@@ -569,7 +587,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 				CRC::Title title = (CRC::Title)(key & 0xffffff);
 				CRC::Region region = (CRC::Region)(key >> 24);
 
-				for(list<HackEntry<T> >::iterator i = m_tbl.begin(); i != m_tbl.end(); i++)
+				for(typename list<HackEntry<T> >::iterator i = m_tbl.begin(); i != m_tbl.end(); i++)
 				{
 					if(i->title == title && (i->region == CRC::RegionCount || i->region == region))
 					{
@@ -622,7 +640,7 @@ class GSRendererHW : public GSRendererT<Vertex>
 			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::SpyroNewBeginning, CRC::RegionCount, &GSRendererHW::OI_SpyroNewBeginning));
 			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::SpyroEternalNight, CRC::RegionCount, &GSRendererHW::OI_SpyroEternalNight));
 			m_oi_list.push_back(HackEntry<OI_Ptr>(CRC::TalesOfLegendia, CRC::RegionCount, &GSRendererHW::OI_TalesOfLegendia));
-			
+
 			m_oo_list.push_back(HackEntry<OO_Ptr>(CRC::DBZBT2, CRC::RegionCount, &GSRendererHW::OO_DBZBT2));
 			m_oo_list.push_back(HackEntry<OO_Ptr>(CRC::MajokkoALaMode2, CRC::RegionCount, &GSRendererHW::OO_MajokkoALaMode2));
 
@@ -661,12 +679,12 @@ protected:
 
 		m_reset = true;
 
-		__super::Reset();
+		GSRendererT<Vertex>::Reset();
 	}
 
 	void VSync(int field)
 	{
-		__super::VSync(field);
+		GSRendererT<Vertex>::VSync(field);
 
 		m_tc->IncAge();
 		m_dev->AgePool();
@@ -685,7 +703,7 @@ protected:
 	{
 		m_tc->RemoveAll();
 
-		__super::ResetDevice();
+		GSRendererT<Vertex>::ResetDevice();
 	}
 
 	GSTexture* GetOutput(int i)
@@ -737,7 +755,7 @@ protected:
 	void Draw()
 	{
 #ifndef NO_CRC_HACKS
-		if(IsBadFrame(m_skip, m_userhacks_skipdraw)) return;
+		if(GSRendererT<Vertex>::IsBadFrame(m_skip, m_userhacks_skipdraw)) return;
 #endif
 
 		GSDrawingEnvironment& env = m_env;
@@ -753,8 +771,8 @@ protected:
 		TEX0.TBP0 = context->ZBUF.Block();
 		TEX0.TBW = context->FRAME.FBW;
 		TEX0.PSM = context->ZBUF.PSM;
-		
-		GSTextureCache::Target* ds = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::DepthStencil, m_context->DepthWrite());
+
+		GSTextureCache::Target* ds = m_tc->LookupTarget(TEX0, m_width, m_height, GSTextureCache::DepthStencil, context->DepthWrite());
 
 		if(!rt || !ds)
 		{
@@ -836,7 +854,7 @@ protected:
 
 		if(context->TEST.ATE && context->TEST.ATST != ATST_ALWAYS)
 		{
-			if(TryAlphaTest(fm, zm))
+			if(GSRendererT<Vertex>::TryAlphaTest(fm, zm))
 			{
 				context->TEST.ATST = ATST_ALWAYS;
 			}
@@ -857,20 +875,20 @@ protected:
 
 		//
 
-		GSVector4i r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(GSVector4i(m_context->scissor.in));
+		GSVector4i r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(GSVector4i(context->scissor.in));
 
 		if(fm != 0xffffffff)
 		{
 			rt->m_valid = rt->m_valid.runion(r);
 
-			m_tc->InvalidateVideoMem(m_context->offset.fb, r, false);
+			m_tc->InvalidateVideoMem(context->offset.fb, r, false);
 		}
 
 		if(zm != 0xffffffff)
 		{
 			ds->m_valid = ds->m_valid.runion(r);
 
-			m_tc->InvalidateVideoMem(m_context->offset.zb, r, false);
+			m_tc->InvalidateVideoMem(context->offset.zb, r, false);
 		}
 
 		//
@@ -965,7 +983,7 @@ public:
 
 	void SetGameCRC(uint32 crc, int options)
 	{
-		__super::SetGameCRC(crc, options);
+		GSRendererT<Vertex>::SetGameCRC(crc, options);
 
 		m_hacks.SetGame(m_game);
 
