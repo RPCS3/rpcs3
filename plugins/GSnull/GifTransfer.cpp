@@ -36,7 +36,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 	
 	while (size > 0)
 	{
-		//GS_LOG(_T("Transfer(%08x, %d) START\n"), pMem, size);
+		//GSLog::Writeln(_T("Transfer(%08x, %d) START\n"), pMem, size);
 		if (path->nloop == 0)
 		{
 			path->setTag(pMem);
@@ -93,7 +93,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 
 				case GIF_FLG_REGLIST:
 				{
-					//GS_Log("%8.8x%8.8x %d L", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
+					//GSLog::Writeln("%8.8x%8.8x %d L", ((u32*)&gs.regs)[1], *(u32*)&gs.regs, path->tag.nreg/4);
 
 					size *= 2;
 
@@ -115,7 +115,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 				case GIF_FLG_IMAGE2: // Used in the DirectX version, so we'll use it here too.
 				{
 					int len = min(size, path->nloop);
-					//GS_LOG("GIF_FLG_IMAGE(%d)=%d", gs.imageTransfer, len);
+					//GSLog::Writeln("GIF_FLG_IMAGE(%d)=%d", gs.imageTransfer, len);
 
 					switch (gs.imageTransfer)
 					{
@@ -152,7 +152,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 				}
 
 				default: // GIF_IMAGE
-					GS_LOG("*** WARNING **** Unexpected GIFTag flag.");
+					GSLog::WriteLn("*** WARNING **** Unexpected GIFTag flag.");
 					assert(0);
 					path->nloop = 0;
 					break;

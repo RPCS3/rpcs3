@@ -38,7 +38,6 @@ namespace GSLog
 	{
 		bool result = true;
 		
-		#ifdef GS_LOG
 		const std::string LogFile(s_strLogPath + "/GSnull.log");
 
 		gsLog = fopen(LogFile.c_str(), "w");
@@ -55,20 +54,17 @@ namespace GSLog
 		
 		WriteLn("GSnull plugin version %d,%d",revision,build);
 		WriteLn("GS init.");
-		#endif
 		
 		return result;
 	}
 	
 	void Close()
 	{
-		#ifdef GS_LOG
 		if (gsLog) 
 		{
 			fclose(gsLog);
 			gsLog = NULL;
 		}
-		#endif
 	}
 	
 	void Log(char *fmt, ...)
@@ -103,7 +99,7 @@ namespace GSLog
 		vsprintf(msg, fmt, list);
 		va_end(list);
 
-		GS_LOG(msg);
+		Log(msg);
 		fprintf(stderr, "GSnull:%s", msg);
 	}
 	
@@ -117,7 +113,7 @@ namespace GSLog
 		vsprintf(msg, fmt, list);
 		va_end(list);
 
-		GS_LOG(msg);
+		Log("%s\n", msg);
 		fprintf(stderr, "GSnull:%s\n", msg);
 	}
 };

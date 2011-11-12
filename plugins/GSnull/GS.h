@@ -43,7 +43,7 @@ typedef struct _keyEvent keyEvent;
 #define EXPORT_C_(type) extern "C" __attribute__((externally_visible,visibility("default"))) type
 #endif
 
-#define GS_LOG GSLog::Log
+//#define GS_LOG GSLog::Log
 
 extern const unsigned char version;
 extern const unsigned char revision;
