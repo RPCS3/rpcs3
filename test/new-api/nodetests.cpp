@@ -1,5 +1,6 @@
 #include "nodetests.h"
 #include "yaml-cpp/yaml.h"
+#include <iostream>
 
 namespace {
 	struct TEST {

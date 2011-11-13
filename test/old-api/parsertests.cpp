@@ -2,6 +2,7 @@
 #include "yaml-cpp/yaml.h"
 #include <sstream>
 #include <algorithm>
+#include <iostream>
 
 namespace Test
 {

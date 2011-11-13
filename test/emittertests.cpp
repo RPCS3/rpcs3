@@ -1,5 +1,6 @@
 #include "tests.h"
 #include "yaml-cpp/yaml.h"
+#include <iostream>
 
 namespace Test
 {
