@@ -268,6 +268,16 @@ namespace Test
 			YAML_ASSERT(node[true].as<bool>() == false);
 			return true;
 		}
+		
+		TEST AutoBoolConversion()
+		{
+			YAML::Node node;
+			node["foo"] = "bar";
+			YAML_ASSERT(static_cast<bool>(node["foo"]));
+			YAML_ASSERT(!node["monkey"]);
+			YAML_ASSERT(!!node["foo"]);
+			return true;
+		}
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -312,6 +322,7 @@ namespace Test
 		RunNodeTest(&Node::TempMapVariable, "temp map variable", passed, total);
 		RunNodeTest(&Node::TempMapVariableAlias, "temp map variable alias", passed, total);
 		RunNodeTest(&Node::Bool, "bool", passed, total);
+		RunNodeTest(&Node::AutoBoolConversion, "auto bool conversion", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

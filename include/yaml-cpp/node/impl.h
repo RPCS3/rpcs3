@@ -49,6 +49,11 @@ namespace YAML
 			m_pNode->set_null();
 		}
 	}
+	
+	inline bool Node::IsDefined() const
+	{
+		return m_pNode ? m_pNode->is_defined() : true;
+	}
 
 	inline NodeType::value Node::Type() const
 	{

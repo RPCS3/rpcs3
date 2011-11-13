@@ -10,6 +10,7 @@
 #include "yaml-cpp/node/ptr.h"
 #include "yaml-cpp/node/type.h"
 #include "yaml-cpp/node/detail/iterator_fwd.h"
+#include "yaml-cpp/node/detail/bool_type.h"
 #include <stdexcept>
 
 namespace YAML
@@ -29,10 +30,15 @@ namespace YAML
 		~Node();
 		
 		NodeType::value Type() const;
+		bool IsDefined() const;
 		bool IsNull() const { return Type() == NodeType::Null; }
 		bool IsScalar() const { return Type() == NodeType::Scalar; }
 		bool IsSequence() const { return Type() == NodeType::Sequence; }
 		bool IsMap() const { return Type() == NodeType::Map; }
+		
+		// bool conversions
+		YAML_CPP_OPERATOR_BOOL();
+		bool operator!() const { return !IsDefined(); }
 		
 		// access
 		template<typename T> const T as() const;
