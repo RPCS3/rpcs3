@@ -879,6 +879,9 @@ if(!m_dump)
 				if(tl != 0) m_vertices[0] = m_vertices[tl];
 				if(br != 1) m_vertices[1] = m_vertices[br];
 
+				m_vertices[0].t.u32[3] = m_v.XYZ.Z;
+				m_vertices[1].t.u32[3] = m_v.XYZ.Z;
+
 				m_count = 2;
 
 				uint32 tmp = PRIM->PRIM;

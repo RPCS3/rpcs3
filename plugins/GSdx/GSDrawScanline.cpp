@@ -116,7 +116,7 @@ void GSDrawScanline::DrawRect(const GSVector4i& r, const GSVertexSW& v)
 		const int* zbr = m_global.zbr;
 		const int* zbc = m_global.zbc;
 
-		uint32 z = (uint32)v.p.z;
+		uint32 z = v.t.u32[3]; // (uint32)v.p.z;
 
 		if(m_global.sel.zpsm != 2)
 		{
