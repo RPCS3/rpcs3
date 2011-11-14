@@ -127,6 +127,7 @@ namespace YAML
 	inline Emitter& operator << (Emitter& emitter, const std::string& v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, bool v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, char v) { return emitter.Write(v); }
+	inline Emitter& operator << (Emitter& emitter, unsigned char v) { return emitter.Write(static_cast<char>(v)); }
 	inline Emitter& operator << (Emitter& emitter, const _Alias& v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, const _Anchor& v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, const _Tag& v) { return emitter.Write(v); }
