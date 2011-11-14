@@ -123,6 +123,12 @@ void GSSetupPrimCodeGenerator::Depth()
 
 		if(m_en.z)
 		{
+			// uint32 z is bypassed in t.w
+
+			vmovdqa(xmm0, ptr[ecx + offsetof(GSVertexSW, t)]);
+			vpshufd(xmm0, xmm0, _MM_SHUFFLE(3, 3, 3, 3));
+
+/*			
 			// GSVector4 z = p.zzzz();
 
 			vshufps(xmm0, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
@@ -149,6 +155,7 @@ void GSSetupPrimCodeGenerator::Depth()
 
 				vcvttps2dq(xmm0, xmm0);
 			}
+*/			
 
 			vmovdqa(ptr[&m_local.p.z], xmm0);
 		}
