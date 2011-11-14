@@ -17,6 +17,7 @@ namespace YAML
 		bool WriteSingleQuotedString(ostream& out, const std::string& str);
 		bool WriteDoubleQuotedString(ostream& out, const std::string& str, bool escapeNonAscii);
 		bool WriteLiteralString(ostream& out, const std::string& str, int indent);
+		bool WriteChar(ostream& out, char ch);
 		bool WriteComment(ostream& out, const std::string& str, int postCommentIndent);
 		bool WriteAlias(ostream& out, const std::string& str);
 		bool WriteAnchor(ostream& out, const std::string& str);

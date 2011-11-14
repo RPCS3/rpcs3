@@ -733,6 +733,20 @@ namespace YAML
 		return *this;
 	}
 
+	Emitter& Emitter::Write(char ch)
+	{
+		if(!good())
+			return *this;
+		
+		PreAtomicWrite();
+		EmitSeparationIfNecessary();
+		
+		Utils::WriteChar(m_stream, ch);
+		
+		PostAtomicWrite();
+		return *this;
+	}
+
 	Emitter& Emitter::Write(const _Alias& alias)
 	{
 		if(!good())

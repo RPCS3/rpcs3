@@ -51,6 +51,7 @@ namespace YAML
 		// overloads of write
 		Emitter& Write(const std::string& str);
 		Emitter& Write(bool b);
+		Emitter& Write(char ch);
 		Emitter& Write(const _Alias& alias);
 		Emitter& Write(const _Anchor& anchor);
 		Emitter& Write(const _Tag& tag);
@@ -125,6 +126,7 @@ namespace YAML
 	// overloads of insertion
 	inline Emitter& operator << (Emitter& emitter, const std::string& v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, bool v) { return emitter.Write(v); }
+	inline Emitter& operator << (Emitter& emitter, char v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, const _Alias& v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, const _Anchor& v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, const _Tag& v) { return emitter.Write(v); }

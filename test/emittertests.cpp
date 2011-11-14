@@ -861,8 +861,21 @@ namespace Test
 			out << YAML::EndMap;
 			desiredOutput = "key: \"\"";
 		}
+		
+		void SingleChar(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginSeq;
+			out << 'a';
+			out << ':';
+			out << (char)0x10;
+			out << '\n';
+			out << ' ';
+			out << '\t';
+			out << YAML::EndSeq;
+			desiredOutput = "- a\n- \":\"\n- \"\\x10\"\n- \"\\n\"\n- \" \"\n- \"\\t\"";
+		}
 
-		////////////////////////////////////////////////////////////////////////////////////////////////////////
+	////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		
 		void ExtraEndSeq(YAML::Emitter& out, std::string& desiredError)
@@ -1080,6 +1093,7 @@ namespace Test
 		RunEmitterTest(&Emitter::DocStartAndEnd, "doc start and end", passed, total);
 		RunEmitterTest(&Emitter::ImplicitDocStart, "implicit doc start", passed, total);
 		RunEmitterTest(&Emitter::EmptyString, "empty string", passed, total);
+		RunEmitterTest(&Emitter::SingleChar, "single char", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);

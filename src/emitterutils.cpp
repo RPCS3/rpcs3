@@ -268,6 +268,26 @@ namespace YAML
 			return true;
 		}
 		
+		bool WriteChar(ostream& out, char ch)
+		{
+			if(('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))
+				out << ch;
+			else if((0x20 <= ch && ch <= 0x7e) || ch == ' ')
+				out << "\"" << ch << "\"";
+			else if(ch == '\t')
+				out << "\"\\t\"";
+			else if(ch == '\n')
+				out << "\"\\n\"";
+			else if(ch == '\b')
+				out << "\"\\b\"";
+			else {
+				out << "\"";
+				WriteDoubleQuoteEscapeSequence(out, ch);
+				out << "\"";
+			}
+			return true;
+		}
+
 		bool WriteComment(ostream& out, const std::string& str, int postCommentIndent)
 		{
 			const unsigned curIndent = out.col();
