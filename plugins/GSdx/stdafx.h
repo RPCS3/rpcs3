@@ -111,6 +111,10 @@ using namespace stdext;
 //#include <ext/hash_map>
 //#include <ext/hash_set>
 
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include <GL/glext.h>
+
 //using namespace __gnu_cxx;
 
 #define DIRECTORY_SEPARATOR '/'

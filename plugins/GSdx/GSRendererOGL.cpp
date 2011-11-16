@@ -1,6 +1,6 @@
 /*
+ *	Copyright (C) 2011-2011 Gregory hainaut
  *	Copyright (C) 2007-2009 Gabest
- *	http://www.gabest.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,21 +19,25 @@
  *
  */
 
-#pragma once
+#include "GSRendererOGL.h"
+#include "GSRenderer.h"
 
-#include "stdafx.h"
 
-struct GSSetting
+GSRendererOGL::GSRendererOGL()
+	// FIXME
+	//: GSRendererHW<GSVertexHWOGL>(new GSTextureCacheOGL(this))
+	: GSRendererHW<GSVertexHW11>(new GSTextureCacheOGL(this))
 {
-	uint32 id;
-	std::string name;
-	std::string note;
+	// TODO must be implementer with macro InitVertexKick(GSRendererOGL)
+	// template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
+	InitVertexKick(GSRendererOGL);
+}
 
+GSRendererOGL::~GSRendererOGL() { /* TODO */ }
 
-	GSSetting(uint32 id, const char* name, const char* note)
-	{
-		this->id = id;
-		this->name = name;
-		this->note = note;
-	}
-};
+bool GSRendererOGL::CreateDevice(GSDevice* dev) { /* TODO */ }
+
+template<uint32 prim, uint32 tme, uint32 fst>
+void GSRendererOGL::VertexKick(bool skip) { /* TODO */ }
+
+void GSRendererOGL::Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex) { /* TODO */ }

@@ -1,6 +1,6 @@
 /*
+ *	Copyright (C) 2011-2011 Gregory hainaut
  *	Copyright (C) 2007-2009 Gabest
- *	http://www.gabest.org
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,19 +21,23 @@
 
 #pragma once
 
-#include "stdafx.h"
+#include "GSTexture.h"
 
-struct GSSetting
+class GSTextureOGL : public GSTexture
 {
-	uint32 id;
-	std::string name;
-	std::string note;
+	private:
+		GLenum m_texture_target; // texture target: 2D, rectangle etc...
+		GLuint m_texture_id;	 // the texture id
+		int m_texture_unit;		 // the texture unit offset
 
+		void EnableUnit();
 
-	GSSetting(uint32 id, const char* name, const char* note)
-	{
-		this->id = id;
-		this->name = name;
-		this->note = note;
-	}
+	public:
+		explicit GSTextureOGL();
+		virtual ~GSTextureOGL();
+
+		bool Update(const GSVector4i& r, const void* data, int pitch);
+		bool Map(GSMap& m, const GSVector4i* r = NULL);
+		void Unmap();
+		bool Save(const string& fn, bool dds = false);
 };

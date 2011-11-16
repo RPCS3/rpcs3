@@ -39,6 +39,9 @@ static HRESULT s_hr = E_FAIL;
 
 #else
 
+#include "GSDeviceOGL.h"
+#include "GSRendererOGL.h"
+
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 
@@ -215,6 +218,7 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 		#endif
 		case 2: dev = new GSDeviceSDL(); break;
 		case 3: dev = new GSDeviceNull(); break;
+		case 4: dev = new GSDeviceOGL(); break;
 		}
 
 		if(dev == NULL)
@@ -227,11 +231,13 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			switch(renderer % 3)
 			{
 			default:
-			#ifdef _WINDOWS
 			case 0:
+			#ifdef _WINDOWS
 				s_gs = (renderer / 3) == 0 ? (GSRenderer*)new GSRendererDX9() : (GSRenderer*)new GSRendererDX11();
-				break;
+			#else
+				s_gs = (GSRenderer*)new GSRendererOGL();
 			#endif
+				break;
 			case 1:
 				s_gs = new GSRendererSW(threads);
 				break;

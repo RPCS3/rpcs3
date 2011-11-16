@@ -58,6 +58,7 @@ set(GSdxSources
     GSCodeBuffer.cpp
     GSCrc.cpp
     GSDevice.cpp
+    GSDeviceOGL.cpp
     GSDeviceSDL.cpp
 	GSDeviceSW.cpp
     GSDeviceNull.cpp
@@ -76,6 +77,7 @@ set(GSdxSources
     GSRasterizer.cpp
     GSRenderer.cpp
     GSRendererNull.cpp
+    GSRendererOGL.cpp
     GSRendererSW.cpp
     GSSetting.cpp
     GSSetupPrimCodeGenerator.cpp
@@ -88,6 +90,8 @@ set(GSdxSources
     GSTexture.cpp
     GSTextureCache.cpp
     GSTextureCacheSW.cpp
+    GSTextureCacheOGL.cpp
+    GSTextureOGL.cpp
     GSTextureNull.cpp
 	GSTextureSW.cpp
     GSThread.cpp
@@ -123,6 +127,7 @@ set(GSdxHeaders
     GSCodeBuffer.h
     GSCrc.h
     GSDevice.h
+    GSDeviceOGL.h
     GSDeviceNull.h
     GSDirtyRect.h
     GSDrawScanline.h
@@ -137,6 +142,8 @@ set(GSdxHeaders
     GSRenderer.h
     GSRendererNull.h
     GSRendererSW.h
+    GSRendererHW.h
+    GSRendererOGL.h
     GSScanlineEnvironment.h
     GSSetting.h
     GSSetupPrimCodeGenerator.h
@@ -145,6 +152,7 @@ set(GSdxHeaders
     GSTexture.h
     GSTextureCache.h
     GSTextureCacheSW.h
+    GSTextureCacheOGL.h
     GSTextureNull.h
     GSThread.h
     GSUtil.h

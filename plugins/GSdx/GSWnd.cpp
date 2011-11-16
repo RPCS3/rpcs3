@@ -376,6 +376,22 @@ bool GSWnd::Create(const string& title, int w, int h)
 #endif
 
 	m_managed = true;
+
+	// If the user request OpenGL acceleration, we take recent OGL version (4.2)
+	// We keep the default 2.1 version in SW mode (only DX11 capable card, are compatible with OGL4)
+	if ( theApp.GetConfig("renderer", 0) / 3 == 4 ) {
+		// Setup visual attribute
+		SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
+		SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
+		SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
+		SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 32 );
+		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+		SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
+		// Ask for an advance opengl version
+		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 4 );
+		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
+	}
+
 	m_window = SDL_CreateWindow(title.c_str(), 100, 100, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
 	// Get the X window from the newly created window

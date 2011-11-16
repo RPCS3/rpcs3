@@ -42,6 +42,7 @@ static void SysMessage(const char *fmt, ...)
 
 bool RunLinuxDialog()
 {
+	// FIXME need to add msaa option configuration
 	GtkWidget *dialog;
 	GtkWidget *main_frame, *main_box;
 	GtkWidget *render_label, *render_combo_box;
@@ -76,10 +77,25 @@ bool RunLinuxDialog()
 
 		if(!s.note.empty()) label += format(" (%s)", s.note.c_str());
 
+		// (dev only) for any NULL stuff
+		if (i >= 7 && i <= 9) label += " (debug only)";
+		// (experimental) for opengl stuff
+		if (i == 10 || i == 11) label += " (experimental)";
+
 		gtk_combo_box_append_text(GTK_COMBO_BOX(render_combo_box), label.c_str());
 	}
 
-	gtk_combo_box_set_active(GTK_COMBO_BOX(render_combo_box), 0);
+	int renderer_box_position = 0;
+	switch (theApp.GetConfig("renderer", 0)) {
+		// Note the value are based on m_gs_renderers vector on GSdx.cpp
+		case 7 : renderer_box_position = 0; break;
+		case 8 : renderer_box_position = 1; break;
+		case 10: renderer_box_position = 2; break;
+		case 11: renderer_box_position = 3; break;
+		case 12: renderer_box_position = 4; break;
+		case 13: renderer_box_position = 5; break;
+	}
+	gtk_combo_box_set_active(GTK_COMBO_BOX(render_combo_box), renderer_box_position );
 	gtk_container_add(GTK_CONTAINER(main_box), render_label);
 	gtk_container_add(GTK_CONTAINER(main_box), render_combo_box);
 
@@ -142,12 +158,22 @@ bool RunLinuxDialog()
 	if (return_value == GTK_RESPONSE_ACCEPT)
 	{
 		// Get all the settings from the dialog box.
+		if (gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box)) != -1) {
+			// FIXME test current opengl version supported through glxinfo (OpenGL version string:)
+			// Warn the user if 4.2 is not supported and switch back to basic SDL renderer
+			switch (gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box))) {
+				// Note the value are based on m_gs_renderers vector on GSdx.cpp
+				case 0: theApp.SetConfig("renderer", 7); break;
+				case 1: theApp.SetConfig("renderer", 8); break;
+				case 2: theApp.SetConfig("renderer", 10); break;
+				case 3: theApp.SetConfig("renderer", 11); break;
+				case 4: theApp.SetConfig("renderer", 12); break;
+				case 5: theApp.SetConfig("renderer", 13); break;
+			}
+		}
 
 		#if 0
 		// I'll put the right variable names in later.
-		if (gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box)) != -1)
-			renderer = gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box));
-
 		// Crash, for some interlace options
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box)) != -1)
 			theApp.SetConfig( "interlace", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box)) );
