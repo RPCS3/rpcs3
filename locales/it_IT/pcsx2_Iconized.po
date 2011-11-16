@@ -2,17 +2,17 @@
 # This file is distributed under the same license as the PCSX2 package.
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.8\n"
+"Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
-"PO-Revision-Date: 2011-04-30 14:57+0100\n"
-"Last-Translator: Leucos <leucos@live.it>\n"
+"POT-Creation-Date: 2011-11-16 20:16+0100\n"
+"PO-Revision-Date: 2011-10-05 21:01+0100\n"
+"Last-Translator: Leucos\n"
 "Language-Team: \n"
 "Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Poedit-KeywordsList: pxE;pxExpandMsg\n"
+"X-Poedit-KeywordsList: pxE;pxEt\n"
 "X-Poedit-SourceCharset: utf-8\n"
 "X-Poedit-Basepath: trunk\\\n"
 "X-Poedit-Language: Italian\n"
@@ -264,13 +264,17 @@ msgstr ""
 "predefinita associata alla modalità utente scelta in PCSX2."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:55
-#, fuzzy
 msgid "!ContextTip:Window:Zoom"
 msgstr ""
-"La sincronia verticale elimina il tearing dello schermo ma di solito ha un "
-"forte impatto sulle prestazioni. \n"
-"Normalmente viene applicata alla sola modalità a schermo intero e potrebbe "
-"non funzionare con tutti i plugin GS."
+"Zoom = 100: L'immagine riempie l'intera finestra senza tagli.\n"
+"Al di sopra/sotto di 100: Aumenta diminuisce lo Zoom\n"
+"0: Zoom automatico affinche siano rimosse i bordi neri (la proporzione "
+"aspetto viene mantenuta, parte dell'immagine è fuori dallo schermo).\n"
+"  NOTA: Alcuni giochi disegnano i propri bordi neri, che non saranno rimossi "
+"con '0'.\n"
+"\n"
+"Scorciatoie da tastiera : CTRL + Più (TN) : Aumenta Zoom, CTRL + Meno (TN): "
+"Diminuisci Zoom, CTRL + * (tast. num): Scambia i valori '100' e '0'"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:63
 msgid "!ContextTip:Window:Vsync"
@@ -299,7 +303,7 @@ msgstr ""
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:76
 msgid "!ContextTip:Window:HideMouse"
 msgstr ""
-"rSpunta questa opzione per forzare l'invisibilità del cursore all'interno "
+"Spunta questa opzione per forzare l'invisibilità del cursore all'interno "
 "della finestra GS. \n"
 "Utile se utilizzi il mouse come periferica di controllo principale nel "
 "gioco. Per impostazione \n"
@@ -343,13 +347,11 @@ msgstr ""
 " * Mana Khemia 1 (Going \"off campus\")"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:96
-#, fuzzy
 msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
 msgstr ""
 "Ha effetto in questi giochi:\n"
-" * Digital Devil Saga (corregge FMV e crash)\n"
-" * SSX (corregge errori nella grafica e crash)\n"
-" * Resident Evil: Dead Aim (causa texture alterate) "
+" * Test Drive Unlimited\n"
+" * Transformers"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid "!Panel:Gamefixes:Compat Warning"
@@ -510,7 +512,7 @@ msgstr ""
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "Aggiorna le Flag di stato solo nei blocchi che le leggeranno, invece che "
-"tutte le volte. Questo va bene \n"
+"ogni volta. Questo va bene \n"
 "per la maggior parte dei casi e superVU fa qualcosa del genere in maniera "
 "predefinita."
 
@@ -523,13 +525,14 @@ msgstr ""
 "qualche gioco..."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
-#, fuzzy
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr ""
-"Questo hack funziona al meglio nei giochi che utilizzano il registro di "
-"Stato INTC per attendere la sincronia verticale, principalmente i GdR non in "
-"3D. I giochi che non utilizzano questo metodo di sincronia verticale "
-"otterranno un aumento di velocità minimo se non nullo."
+"Esegue la VU1 in un thread separato (solo la microVU1). Generalmente si "
+"ottiene un aumento di velocità su CPU con 3 o più core.\n"
+"La maggior parte dei giochi non crea problemi, ma alcuni sono incompatibli e "
+"possono bloccarsi.\n"
+"Si possono invece verificare dei rallentamenti (specialmente con CPU dual-"
+"core) nel caso di giochi limitati dal thread GS ."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
 msgid "!ContextTip:Speedhacks:INTC"
@@ -584,7 +587,7 @@ msgstr ""
 "congiunzione ai salvataggi di stato: salva uno stato prima della scena "
 "ideale, quindi abilita questa opzione e ricarica il salvataggio di stato.\n"
 "\n"
-"Attenzione: Questa opzione può essere attivata durante l'esecuzione ma non "
+"Attenzione: Questa opzione può essere attivata durante l'esecuzione, ma non "
 "disattivata (la schermata visualizzata sarà in pratica spazzatura "
 "poligonale)."
 
@@ -602,118 +605,3 @@ msgstr ""
 "riservare il range di memoria specifico richiesto, non sarà quindi "
 "disponibile all'utilizzo. Questo non è un errore critico, dato che il "
 "ricompilatore sVU è obsoleto e in ogni caso dovresti utilizzare microVU. :)"
-
-#~ msgid "No reason given."
-#~ msgstr "Nessuna spiegazione data."
-
-#~ msgid "Threading activity: start, detach, sync, deletion, etc."
-#~ msgstr ""
-#~ "Attività dei thread: avvio, distacco, sincronizzazione, cancellazione, "
-#~ "ecc."
-
-#~ msgid "Includes idle event processing and some other uncommon event usages."
-#~ msgstr ""
-#~ "Include la processazione degli eventi d'inattività ed alcuni altri "
-#~ "utilizzi non comuni di eventi."
-
-#~ msgid ""
-#~ "The MTGS thread has become unresponsive while waiting for the GS plugin "
-#~ "to open."
-#~ msgstr ""
-#~ "Durante l'attesa per l'apertura del plugin GS il thread MTGS si è "
-#~ "bloccato."
-
-#~ msgid "Internal Memorycard Plugin failed to initialize."
-#~ msgstr "Non è stato possibile inizializzare il plugin interno Memory Card."
-
-#~ msgid "Safest"
-#~ msgstr "Sicura +"
-
-#~ msgid "Safe (faster)"
-#~ msgstr "Sicura (più veloce)"
-
-#~ msgid "Balanced"
-#~ msgstr "Bilanciata"
-
-#~ msgid "Aggressive"
-#~ msgstr "Aggressiva"
-
-#~ msgid "Aggressive plus"
-#~ msgstr "Aggressiva +"
-
-#~ msgid "Mostly Harmful"
-#~ msgstr "Quasi dannosa"
-
-#~ msgid "Fits a lot of log in a microcosmically small area."
-#~ msgstr "Infila un mucchio di log in un'area microcosmicamente piccola."
-
-#~ msgid "It's what I use (the programmer guy)."
-#~ msgstr "È quello che uso io (il tizio programmatore)."
-
-#~ msgid "Its nice and readable."
-#~ msgstr "È bello e leggibile."
-
-#~ msgid "In case you have a really high res display."
-#~ msgstr "Nel caso tu possieda uno schermo veramente ad alta risoluzione."
-
-#~ msgid "Default soft-tone color scheme."
-#~ msgstr "Schema predefinito a colori tenui."
-
-#~ msgid ""
-#~ "Classic black color scheme for people who enjoy having text seared into "
-#~ "their optic nerves."
-#~ msgstr ""
-#~ "Schema di colore nero classico, per la gente che si diverte ad avere il "
-#~ "testo marchiato a fuoco nei propri nervi ottici."
-
-#~ msgid ""
-#~ "When checked the log window will be visible over other foreground windows."
-#~ msgstr ""
-#~ "Quando questa opzione è attivata, la finestra di log sarà visibile sopra "
-#~ "le altre finestre attive."
-
-#~ msgid ""
-#~ "Always use this option if you want the safest and surest memory card "
-#~ "behavior."
-#~ msgstr ""
-#~ "Utilizza sempre questa opzione se desideri il comportamento delle memory "
-#~ "card più affidabile."
-
-#~ msgid "16 and 32 MB cards have roughly the same compatibility factor."
-#~ msgstr ""
-#~ "Le memory card da 16 e 32 MiB hanno grosso modo lo stesso fattore di "
-#~ "compatibilità."
-
-#~ msgid ""
-#~ "Use at your own risk.  Erratic memory card behavior is possible (though "
-#~ "unlikely)."
-#~ msgstr ""
-#~ "Utilizzala a tuo rischio e pericolo. È possibile che la memory card si "
-#~ "comporti \n"
-#~ "in modo imprevedibile (anche se non è un'eventualità così probabile)."
-
-#~ msgid "Logs events as they are passed to the PS2 virtual machine."
-#~ msgstr ""
-#~ "Mostra il log degli eventi come sono trasmessi alla macchina virtuale PS2."
-
-#~ msgid ""
-#~ "Error while parsing either NTSC or PAL framerate settings.  Settings must "
-#~ "be valid floating point numerics."
-#~ msgstr ""
-#~ "Errore nell'interpretazione dell'impostazione della frequenza dei "
-#~ "fotogrammi PAL o NTSC. L'impostazione deve avere un valore numerico con "
-#~ "virgola valido."
-
-#~ msgid ""
-#~ "For troubleshooting potential bugs in the MTGS only, as it is potentially "
-#~ "very slow."
-#~ msgstr ""
-#~ "Solo per rilevare eventuali bug nel MTGS, dato che potenzialmente è molto "
-#~ "lento."
-
-#~ msgid ""
-#~ "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
-#~ "components."
-#~ msgstr ""
-#~ "Disattiva completamente l'attività del plugin GS; ideale per fare un "
-#~ "benchmark dei componenti EEcore."
