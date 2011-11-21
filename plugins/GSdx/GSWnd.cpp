@@ -352,6 +352,8 @@ void GSWnd::Detach()
 	}
 }
 
+PFNGLTEXSTORAGE2DPROC glTexStorage2D_glew17 = NULL;
+
 bool GSWnd::Create(const string& title, int w, int h)
 {
 	if(m_window != NULL) return false;
@@ -405,6 +407,22 @@ bool GSWnd::Create(const string& title, int w, int h)
 	SDL_GetWindowWMInfo(m_window, &wminfo);
 	m_Xwindow = wminfo.info.x11.window;
 
+	// OpenGL mode
+	// FIXME : be sure that the window is map
+	if ( theApp.GetConfig("renderer", 0) / 3 == 4 ) {
+		// FIXME......
+		// GLEW's problem is that it calls glGetString(GL_EXTENSIONS) which causes GL_INVALID_ENUM on GL 3.2 forward compatible context as soon as glewInit() is called. It also doesn't fetch the function pointers. The solution is for GLEW to use glGetStringi instead.
+		// The current version of GLEW is 1.7.0 but they still haven't corrected it. The only fix is to use glewExperimental for now :
+		glewExperimental=true;
+		const int glew_ok = glewInit();
+		if (glew_ok != GLEW_OK)
+		{
+			// FIXME:proper logging
+			fprintf(stderr, "Failed to init glew\n");
+			return false;
+		}
+		glTexStorage2D_glew17 = (PFNGLTEXSTORAGE2DPROC)glXGetProcAddressARB((const GLubyte*)"glTexStorage2D");
+	}
 
 	return (m_window != NULL);
 }

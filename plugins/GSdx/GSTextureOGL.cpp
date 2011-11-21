@@ -23,7 +23,8 @@
 
 #include "GSTextureOGL.h"
 
-GSTextureOGL::GSTextureOGL(/* ID3D11Texture2D* texture */ )
+GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
+	: m_texture_unit(0)
 {
 	// *************************************************************
 	// Opengl world
@@ -63,6 +64,12 @@ GSTextureOGL::GSTextureOGL(/* ID3D11Texture2D* texture */ )
 	//		: m_type
 	//		: m_format
 	//		: m_msaa
+	m_size.x = w;
+	m_size.y = h;
+	m_format = format;
+	m_type   = type;
+	m_msaa   = msaa;
+
 	// == Might be useful to save
 	//		: m_texture_target (like GL_TEXTURE_2D, GL_TEXTURE_RECTANGLE etc...)
 	//		: m_texture_id (return by glGen*)
@@ -81,30 +88,68 @@ GSTextureOGL::GSTextureOGL(/* ID3D11Texture2D* texture */ )
 	//		glGetTexImage: read pixels of a bound texture
 	//		=> To allow map/unmap. I think we can use a pixel buffer (target GL_PIXEL_UNPACK_BUFFER)
 	//		http://www.opengl.org/wiki/Pixel_Buffer_Objects
-	// == Enable texture Unit
-	// EnableUnit();
-	// == Allocate space
-	// glRenderbufferStorageMultisample or glTexStorage2D
 
+	// Generate the buffer
+	switch (m_type) {
+		case GSTexture::RenderTarget:
+			// FIXME what is the real use case of this texture
+			// Maybe a texture will be better
+			glGenRenderbuffers(1, &m_texture_id);
+			m_texture_target = GL_RENDERBUFFER;
+			break;
+		case GSTexture::DepthStencil:
+			glGenRenderbuffers(1, &m_texture_id);
+			m_texture_target = GL_RENDERBUFFER;
+			break;
+		case GSTexture::Texture:
+			glGenTextures(1, &m_texture_id);
+			// FIXME, do we need rectangle (or better to use 2D texture)
+			//m_texture_target = GL_TEXTURE_2D;
+			m_texture_target = GL_TEXTURE_RECTANGLE;
+			// == For texture, the Unit must be selected
+			break;
+		case GSTexture::Offscreen:
+			//FIXME I not sure we need a pixel buffer object. It seems more a texture
+			// glGenBuffers(1, &m_texture_id);
+			// m_texture_target = GL_PIXEL_UNPACK_BUFFER;
+			assert(0);
+			// Note there is also a buffer texture!!!
+			// http://www.opengl.org/wiki/Buffer_Texture
+			// Note: in this case it must use in GLSL
+			// gvec texelFetch(gsampler sampler, ivec texCoord, int lod[, int sample]);
+			// corollary we can maybe use it for multisample stuff
+			break;
+		default: break;
+	}
 
-#if 0
-	m_texture->GetDevice(&m_dev);
-	m_texture->GetDesc(&m_desc);
+	uint msaa_level;
+	if (m_msaa) {
+		// FIXME  which level of MSAA
+		msaa_level = 1;
+	} else {
+		msaa_level = 0;
+	}
 
-	m_dev->GetImmediateContext(&m_ctx);
-
-	m_size.x = (int)m_desc.Width;
-	m_size.y = (int)m_desc.Height;
-
-	if(m_desc.BindFlags & D3D11_BIND_RENDER_TARGET) m_type = RenderTarget;
-	else if(m_desc.BindFlags & D3D11_BIND_DEPTH_STENCIL) m_type = DepthStencil;
-	else if(m_desc.BindFlags & D3D11_BIND_SHADER_RESOURCE) m_type = Texture;
-	else if(m_desc.Usage == D3D11_USAGE_STAGING) m_type = Offscreen;
-
-	m_format = (int)m_desc.Format;
-
-	m_msaa = m_desc.SampleDesc.Count > 1;
-#endif
+	// Allocate the buffer
+	switch (m_type) {
+		case GSTexture::RenderTarget:
+		case GSTexture::DepthStencil:
+			glBindRenderbuffer(m_texture_target, m_texture_id);
+			glRenderbufferStorageMultisample(m_texture_target, msaa_level, m_format, m_size.y, m_size.x);
+			break;
+		case GSTexture::Texture:
+			// FIXME
+			// Howto allocate the texture unit !!!
+			// In worst case the HW renderer seems to use 3 texture unit
+			// For the moment SW renderer only use 1 so don't bother
+			EnableUnit(0);
+			glTexStorage2D_glew17(m_texture_target, 0, m_format, m_size.y, m_size.x);
+			break;
+		case GSTexture::Offscreen:
+			assert(0);
+			break;
+		default: break;
+	}
 }
 
 GSTextureOGL::~GSTextureOGL()
@@ -112,28 +157,36 @@ GSTextureOGL::~GSTextureOGL()
 	// glDeleteTextures or glDeleteRenderbuffers
 }
 
-void GSTextureOGL::EnableUnit()
+void GSTextureOGL::Attach(GLenum attachment)
 {
-	// == For texture, the Unit must be selected
-	// glActiveTexture
-	// !!!!!!!!!! VERY BIG ISSUE, how to ensure that the different texture use different texture unit.
-	// I think we need to create a pool on GSdevice.
-	// 1/ this->m_device_ogl
-	// 2/ int GSDeviceOGL::get_free_texture_unit() called from GSTextureOGL constructor
-	// 3/ void GSDeviceOGL::release_texture_unit(int) called from GSDeviceOGL destructor
-	// Another (better) idea, will be to create a global static pool
-	//
-	// == Bind the texture or buffer
-	// glBindRenderbuffer or glBindTexture
-	//
-	// !!!!!!!!!! Maybe attach to the FBO but where to manage the FBO!!!
-	// Create a separare public method for attachment ???
+	if (m_type == GSTexture::DepthStencil)
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, m_texture_target, m_texture_id);
+	else
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
 }
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 {
 	// To update only a part of the texture you can use:
 	// glTexSubImage2D — specify a two-dimensional texture subimage
+	switch (m_type) {
+		case GSTexture::Texture:
+			// glTexSubImage2D specifies a two-dimensional subtexture for the current texture unit, specified with glActiveTexture.
+			// If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target 
+			//(see glBindBuffer) while a texture image is
+			// specified, data is treated as a byte offset into the buffer object's data store
+			// FIXME warning order of the y axis
+			// FIXME I'm not confident with GL_UNSIGNED_BYTE type
+			// FIXME add a state check
+			glBindTexture(m_texture_target, m_texture_id);
+			glTexSubImage2D(m_texture_target, 0, r.left, r.bottom, r.right-r.left, r.top-r.bottom, m_format, GL_UNSIGNED_BYTE, data);
+			break;
+		case GSTexture::RenderTarget:
+		case GSTexture::DepthStencil:
+		case GSTexture::Offscreen:
+			assert(0);
+			break;
+	}
 #if 0
 	if(m_dev && m_texture)
 	{
@@ -148,6 +201,25 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 #endif
 }
 
+void GSTextureOGL::EnableUnit(uint unit)
+{
+	switch (m_type) {
+		case GSTexture::RenderTarget:
+		case GSTexture::DepthStencil:
+		case GSTexture::Offscreen:
+			assert(0);
+			break;
+		case GSTexture::Texture:
+			// FIXME
+			// Howto allocate the texture unit !!!
+			// In worst case the HW renderer seems to use 3 texture unit
+			// For the moment SW renderer only use 1 so don't bother
+			glActiveTexture(GL_TEXTURE0 + unit);
+			glBindTexture(m_texture_target, m_texture_id);
+			break;
+	}
+}
+
 bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 {
 	// The function allow to modify the texture from the CPU
@@ -156,6 +228,8 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 	// I think in opengl we need to copy back the data to the RAM: glReadPixels — read a block of pixels from the frame buffer
 	//
 	// glMapBuffer — map a buffer object's data store
+	// Can be used on GL_PIXEL_UNPACK_BUFFER or GL_TEXTURE_BUFFER
+	return false;
 #if 0
 	if(r != NULL)
 	{

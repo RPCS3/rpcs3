@@ -28,16 +28,17 @@ class GSTextureOGL : public GSTexture
 	private:
 		GLenum m_texture_target; // texture target: 2D, rectangle etc...
 		GLuint m_texture_id;	 // the texture id
-		int m_texture_unit;		 // the texture unit offset
-
-		void EnableUnit();
+		uint m_texture_unit;		 // the texture unit offset
 
 	public:
-		explicit GSTextureOGL();
+		explicit GSTextureOGL(int type, int w, int h, bool msaa, int format);
 		virtual ~GSTextureOGL();
 
 		bool Update(const GSVector4i& r, const void* data, int pitch);
 		bool Map(GSMap& m, const GSVector4i* r = NULL);
 		void Unmap();
 		bool Save(const string& fn, bool dds = false);
+
+		void EnableUnit(uint unit);
+		void Attach(GLenum attachment);
 };

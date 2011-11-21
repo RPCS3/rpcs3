@@ -113,7 +113,13 @@ using namespace stdext;
 
 #include <GL/glew.h>
 #include <GL/gl.h>
+#include <GL/glx.h>
 #include <GL/glext.h>
+
+// Need to have glew 1.7 but Debian/Ubuntu is only 1.6
+// We will see later for the upgrade
+typedef void (GLAPIENTRY * PFNGLTEXSTORAGE2DPROC) (GLenum target, GLsizei levels, GLenum internalformat, GLsizei width, GLsizei height);
+extern PFNGLTEXSTORAGE2DPROC glTexStorage2D_glew17;
 
 //using namespace __gnu_cxx;
 

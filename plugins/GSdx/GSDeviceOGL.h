@@ -21,9 +21,11 @@
 
 #pragma once
 
+#include <fstream>
 #include "GSDevice.h"
 #include "GSTextureOGL.h"
 #include "GSdx.h"
+#include "../../3rdparty/SDL-1.3.0-5387/include/SDL.h"
 
 struct GSBlendStateOGL {
 	// Note: You can also select the index of the draw buffer for which to set the blend setting
@@ -31,13 +33,16 @@ struct GSBlendStateOGL {
 	bool   m_enable;
 	GLenum m_equation_RGB;
 	GLenum m_equation_ALPHA;
-	GLenum m_func_RGB;
-	GLenum m_func_ALPHA;
+	GLenum m_func_sRGB;
+	GLenum m_func_dRGB;
+	GLenum m_func_sALPHA;
+	GLenum m_func_dALPHA;
 };
 
 struct GSDepthStencilOGL {
 	bool m_depth_enable;
 	GLenum m_depth_func;
+	GLboolean m_depth_mask;
 	// Note front face and back can be split might. But it seems they have same parameter configuration
 	bool m_stencil_enable;
 	GLuint m_stencil_mask;
@@ -49,43 +54,46 @@ struct GSDepthStencilOGL {
 };
 
 struct GSUniformBufferOGL {
-	GLuint buffer;
-	GLuint index;
+	GLuint buffer;		// data object
+	GLuint index;		// GLSL slot
+	uint   byte_size;	// size of the data
+};
+
+struct GSInputLayout {
+	GLuint  index;
+	GLint   size;
+	GLenum  type;
+	GLsizei stride;
+	const GLvoid* offset;
 };
 
 class GSDeviceOGL : public GSDevice
 {
-	uint32 m_msaa;
+	uint32 m_msaa;				// Level of Msaa
 
-	// Vertex buffer: glGenBuffers, glBindBuffer GL_ARRAY_BUFFER
-	GLuint m_vb;			// buffer object
+	bool m_free_window;			
+	SDL_Window* m_window;		// pointer to the SDL window
+
+	GLuint m_vb;				// vertex buffer object
+	GLuint m_pipeline;			// pipeline to attach program shader
+	GLuint m_fbo;				// frame buffer container
 
 	struct {
-		GLuint ps[2];		// program object
-		GSUniformBufferOGL* cb;			// uniform buffer object
+		GLuint ps[2];			// program object
+		GSUniformBufferOGL* cb;	// uniform buffer object
 		GSBlendStateOGL* bs;
 	} m_merge;
 
 	struct {
-		GLuint ps[4];	// program object
+		GLuint ps[4];				// program object
 		GSUniformBufferOGL* cb;		// uniform buffer object
 	} m_interlace;
 
-	//struct
-	//{
-	//	CComPtr<ID3D11InputLayout> il;
-	//	CComPtr<ID3D11VertexShader> vs;		// program object
-	//	CComPtr<ID3D11PixelShader> ps[8];	// program object
-	//	CComPtr<ID3D11SamplerState> ln;
-	//	CComPtr<ID3D11SamplerState> pt;
-	//	CComPtr<ID3D11DepthStencilState> dss;
-	//	CComPtr<ID3D11BlendState> bs;		// no equivalent
-	//} m_convert;
-	struct
-	{
+	struct {
 		// Hum I think this one is useless. As far as I understand
 		// it only get the index name of GLSL-equivalent input attribut 
 		// ??? CComPtr<ID3D11InputLayout> il;
+		GSInputLayout il[2]; // description of the vertex array
 		GLuint vs;		// program object
 		GLuint ps[8];	// program object
 		GLuint ln;		// sampler object
@@ -94,11 +102,6 @@ class GSDeviceOGL : public GSDevice
 		GSBlendStateOGL* bs;
 	} m_convert;
 
-	// struct
-	// {
-	// 	CComPtr<ID3D11DepthStencilState> dss;
-	// 	CComPtr<ID3D11BlendState> bs;
-	// } m_date;
 	struct
 	{
 		GSDepthStencilOGL* dss;
@@ -133,8 +136,10 @@ class GSDeviceOGL : public GSDevice
 		// Hum I think those things can be dropped on OGL. It probably need an others architecture (see glVertexAttribPointer)
 		// size_t vb_stride;
 		// ID3D11InputLayout* layout;
+		GSInputLayout* layout;
 		GLenum topology; // (ie GL_TRIANGLES...)
 		GLuint vs; // program
+		GLuint cb; // uniform current buffer
 		GSUniformBufferOGL* vs_cb; // uniform buffer
 		GLuint gs; // program
 		// FIXME texture binding. Maybe not equivalent for the state but the best I could find.
@@ -152,6 +157,9 @@ class GSDeviceOGL : public GSDevice
 		// FIXME texture attachment in the FBO
 		// ID3D11RenderTargetView* rtv;
 		// ID3D11DepthStencilView* dsv;
+		GSTextureOGL* rtv;
+		GSTextureOGL* dsv;
+		GLuint	   fbo;
 	} m_state;
 
 	bool m_srv_changed;
@@ -219,11 +227,15 @@ class GSDeviceOGL : public GSDevice
 
 		void CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r);
 		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
-		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSUniformBufferOGL* ps_cb, bool linear);
-		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSUniformBufferOGL ps_cb, GSBlendStateOGL* bs, bool linear);
+		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSUniformBufferOGL* ps_cb, bool linear = true);
+		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSUniformBufferOGL* ps_cb, GSBlendStateOGL* bs, bool linear = true);
 
 		GSTexture* Resolve(GSTexture* t);
 
+		void CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program);
+
+		void IASetPrimitiveTopology(GLenum topology);
+		void IASetInputLayout(GSInputLayout* layout, int layout_nbr);
 		void IASetVertexBuffer(const void* vertices, size_t stride, size_t count);
 
 		void VSSetShader(GLuint vs, GSUniformBufferOGL* vs_cb);
