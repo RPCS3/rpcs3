@@ -277,6 +277,10 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 
 	int i = (y0011 == y1221).mask() & 7;
 
+	// if(i == 0) => y0 < y1 < y2
+	// if(i == 1) => y0 == y1 < y2
+	// if(i == 4) => y0 < y1 == y2
+
 	if(i == 7) return; // y0 == y1 == y2
 
 	GSVector4 tbf = y0011.xzxz(y1221).ceil();
@@ -338,14 +342,25 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 	dscan.c = _r.ywyw(_g).hsub(_b.ywyw(_a)); // dy0 * r1 - dy1 * r0, dy0 * g1 - dy1 * g0, dy0 * b1 - dy1 * b0, dy0 * a1 - dy1 * a0
 	dedge.c = _r.zxzx(_g).hsub(_b.zxzx(_a)); // dx1 * r0 - dx0 * r1, dx1 * g0 - dx0 * g1, dx1 * b0 - dx0 * b1, dx1 * a0 - dx0 * a1
 
-	GSVector4 x0;
-
-	switch(i)
+	if(i & 1)
 	{
-	case 0: // y0 < y1 < y2
-	case 4: // y0 < y1 == y2
+		if(tb.y < tb.w)
+		{
+			edge = v[1 - j];
 
-		x0 = v[0].p.xxxx();
+			GSVector4 dy = tbmax.xxxx() - edge.p.yyyy();
+
+			edge.p = edge.p.insert<0, 1>(v[j].p);
+			dedge.p = ddx[2 - (j << 1)].yzzw(dedge.p);
+
+			edge += dedge * dy;
+
+			DrawTriangleSection(tb.x, tb.w, edge, dedge, dscan, v[1 - j].p.xxxx());
+		}
+	}
+	else
+	{
+		GSVector4 x0 = v[0].p.xxxx();
 
 		if(tb.x < tb.z)
 		{
@@ -374,30 +389,6 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 
 			DrawTriangleSection(tb.y, tb.w, edge, dedge, dscan, v[1].p.xxxx());
 		}
-
-		break;
-
-	case 1: // y0 == y1 < y2
-
-		if(tb.y < tb.w)
-		{
-			edge = v[1 - j];
-
-			GSVector4 dy = tbmax.xxxx() - edge.p.yyyy();
-
-			edge.p = edge.p.insert<0, 1>(v[j].p);
-			dedge.p = ddx[2 - (j << 1)].yzzw(dedge.p);
-
-			edge += dedge * dy;
-
-			DrawTriangleSection(tb.x, tb.w, edge, dedge, dscan, v[1 - j].p.xxxx());
-		}
-
-		break;
-
-	default:
-
-		__assume(0);
 	}
 
 	Flush(v, dscan);

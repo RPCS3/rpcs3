@@ -1648,8 +1648,8 @@ void GSDrawScanlineCodeGenerator::WriteFrame()
 
 	if(m_sel.colclamp == 0)
 	{
-		// c[0] &= 0x000000ff;
-		// c[1] &= 0x000000ff;
+		// c[0] &= 0x00ff00ff;
+		// c[1] &= 0x00ff00ff;
 
 		vpcmpeqd(xmm15, xmm15);
 		vpsrlw(xmm15, 8);

@@ -80,3 +80,32 @@ void GPUDrawScanline::EndDraw(const GSRasterizerStats& stats, uint64 frame)
 {
 	m_ds_map.UpdateStats(stats, frame);
 }
+
+void GPUDrawScanline::PrintStats() 
+{
+	m_ds_map.PrintStats();
+}
+
+#ifndef JIT_DRAW
+
+void GPUDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan)
+{
+	// TODO
+}
+
+void GPUDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexSW& scan)
+{
+	// TODO
+}
+
+void GPUDrawScanline::DrawEdge(int pixels, int left, int top, const GSVertexSW& scan)
+{
+	// TODO
+}
+
+void GPUDrawScanline::DrawRect(const GSVector4i& r, const GSVertexSW& v)
+{
+	// TODO
+}
+
+#endif

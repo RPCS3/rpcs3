@@ -27,6 +27,9 @@
 #include "GSThread.h"
 #include "GSAlignedClass.h"
 
+// 
+#define JIT_DRAW
+
 __aligned(class, 32) GSRasterizerData
 {
 public:
@@ -62,10 +65,21 @@ public:
 	virtual void EndDraw(const GSRasterizerStats& stats, uint64 frame) = 0;
 	virtual void PrintStats() = 0;
 
+#ifdef JIT_DRAW
+
 	__forceinline void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan) {m_sp(vertices, dscan);}
 	__forceinline void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan) {m_ds(pixels, left, top, scan);}
 	__forceinline void DrawEdge(int pixels, int left, int top, const GSVertexSW& scan) {m_de(pixels, left, top, scan);}
 	__forceinline void DrawRect(const GSVector4i& r, const GSVertexSW& v) {(this->*m_dr)(r, v);}
+
+#else
+
+	virtual void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan) = 0;
+	virtual void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan) = 0;
+	virtual void DrawEdge(int pixels, int left, int top, const GSVertexSW& scan) = 0;
+	virtual void DrawRect(const GSVector4i& r, const GSVertexSW& v) = 0;
+	
+#endif
 
 	__forceinline bool IsEdge() const {return m_de != NULL;}
 	__forceinline bool IsRect() const {return m_dr != NULL;}

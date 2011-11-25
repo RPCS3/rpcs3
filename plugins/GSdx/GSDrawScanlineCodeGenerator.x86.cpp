@@ -343,6 +343,8 @@ void GSDrawScanlineCodeGenerator::Init()
 
 		if(m_sel.edge)
 		{
+			// m_local.temp.cov = GSVector4i::cast(v.t).zzzzh().wwww().srl16(9);
+
 			pshufhw(xmm3, xmm4, _MM_SHUFFLE(2, 2, 2, 2));
 			pshufd(xmm3, xmm3, _MM_SHUFFLE(3, 3, 3, 3));
 			psrlw(xmm3, 9);
@@ -1232,28 +1234,29 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 
 		movq(xmm4, ptr[&m_local.gd->t.minmax]);
 
-		movq(xmm2, ptr[&m_local.temp.uv[0].u32[0]]);
+		movdqa(xmm2, ptr[&m_local.temp.uv[0]]);
+		movdqa(xmm5, xmm2);
+		movdqa(xmm3, ptr[&m_local.temp.uv[1]]);
+		movdqa(xmm6, xmm3);
+
 		movd(xmm0, ptr[&m_local.temp.lod.i.u32[0]]); 
 		psrad(xmm2, xmm0);
 		movdqa(xmm1, xmm4);
 		psrlw(xmm1, xmm0);
 		movq(ptr[&m_local.temp.uv_minmax[0].u32[0]], xmm1);
 
-		movq(xmm3, ptr[&m_local.temp.uv[0].u32[2]]);
 		movd(xmm0, ptr[&m_local.temp.lod.i.u32[1]]);
-		psrad(xmm3, xmm0);
+		psrad(xmm5, xmm0);
 		movdqa(xmm1, xmm4);
 		psrlw(xmm1, xmm0);
 		movq(ptr[&m_local.temp.uv_minmax[1].u32[0]], xmm1);
 
-		movq(xmm5, ptr[&m_local.temp.uv[1].u32[0]]);
 		movd(xmm0, ptr[&m_local.temp.lod.i.u32[2]]);
-		psrad(xmm5, xmm0);
+		psrad(xmm3, xmm0);
 		movdqa(xmm1, xmm4);
 		psrlw(xmm1, xmm0);
 		movq(ptr[&m_local.temp.uv_minmax[0].u32[2]], xmm1);
 
-		movq(xmm6, ptr[&m_local.temp.uv[1].u32[2]]);
 		movd(xmm0, ptr[&m_local.temp.lod.i.u32[3]]);
 		psrad(xmm6, xmm0);
 		movdqa(xmm1, xmm4);
@@ -1261,10 +1264,10 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 		movq(ptr[&m_local.temp.uv_minmax[1].u32[2]], xmm1);
 
 		punpckldq(xmm2, xmm3);
-		punpckldq(xmm5, xmm6);
+		punpckhdq(xmm5, xmm6);
 		movdqa(xmm3, xmm2);
-		punpcklqdq(xmm2, xmm5);
-		punpckhqdq(xmm3, xmm5);
+		punpckldq(xmm2, xmm5);
+		punpckhdq(xmm3, xmm5);
 
 		movdqa(ptr[&m_local.temp.uv[0]], xmm2);
 		movdqa(ptr[&m_local.temp.uv[1]], xmm3);

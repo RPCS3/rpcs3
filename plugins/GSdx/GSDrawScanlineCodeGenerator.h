@@ -30,9 +30,6 @@ class GSDrawScanlineCodeGenerator : public GSCodeGenerator
 {
 	void operator = (const GSDrawScanlineCodeGenerator&);
 
-	static const GSVector4i m_test[8];
-	static const GSVector4 m_log2_coef[4];
-
 	GSScanlineSelector m_sel;
 	GSScanlineLocalData& m_local;
 
@@ -84,4 +81,7 @@ class GSDrawScanlineCodeGenerator : public GSCodeGenerator
 
 public:
 	GSDrawScanlineCodeGenerator(void* param, uint64 key, void* code, size_t maxsize);
+
+	static const GSVector4i m_test[8];
+	static const GSVector4 m_log2_coef[4];
 };
