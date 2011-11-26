@@ -352,8 +352,6 @@ void GSWnd::Detach()
 	}
 }
 
-PFNGLTEXSTORAGE2DPROC glTexStorage2D_glew17 = NULL;
-
 bool GSWnd::Create(const string& title, int w, int h)
 {
 	if(m_window != NULL) return false;
@@ -379,21 +377,6 @@ bool GSWnd::Create(const string& title, int w, int h)
 
 	m_managed = true;
 
-	// If the user request OpenGL acceleration, we take recent OGL version (4.2)
-	// We keep the default 2.1 version in SW mode (only DX11 capable card, are compatible with OGL4)
-	if ( theApp.GetConfig("renderer", 0) / 3 == 4 ) {
-		// Setup visual attribute
-		SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
-		SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
-		SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
-		SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 32 );
-		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-		SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
-		// Ask for an advance opengl version
-		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 4 );
-		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
-	}
-
 	m_window = SDL_CreateWindow(title.c_str(), 100, 100, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
 	// Get the X window from the newly created window
@@ -406,23 +389,6 @@ bool GSWnd::Create(const string& title, int w, int h)
 
 	SDL_GetWindowWMInfo(m_window, &wminfo);
 	m_Xwindow = wminfo.info.x11.window;
-
-	// OpenGL mode
-	// FIXME : be sure that the window is map
-	if ( theApp.GetConfig("renderer", 0) / 3 == 4 ) {
-		// FIXME......
-		// GLEW's problem is that it calls glGetString(GL_EXTENSIONS) which causes GL_INVALID_ENUM on GL 3.2 forward compatible context as soon as glewInit() is called. It also doesn't fetch the function pointers. The solution is for GLEW to use glGetStringi instead.
-		// The current version of GLEW is 1.7.0 but they still haven't corrected it. The only fix is to use glewExperimental for now :
-		glewExperimental=true;
-		const int glew_ok = glewInit();
-		if (glew_ok != GLEW_OK)
-		{
-			// FIXME:proper logging
-			fprintf(stderr, "Failed to init glew\n");
-			return false;
-		}
-		glTexStorage2D_glew17 = (PFNGLTEXSTORAGE2DPROC)glXGetProcAddressARB((const GLubyte*)"glTexStorage2D");
-	}
 
 	return (m_window != NULL);
 }

@@ -410,6 +410,9 @@ X11_GL_CreateContext(_THIS, SDL_Window * window)
                     _this->gl_config.major_version,
                     GLX_CONTEXT_MINOR_VERSION_ARB,
                     _this->gl_config.minor_version,
+                    //FIXME GREGORY
+                    // Request a debug context to ease opengl development
+                    GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
                     0
                 };
 

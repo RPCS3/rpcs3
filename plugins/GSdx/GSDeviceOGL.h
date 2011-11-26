@@ -37,6 +37,16 @@ struct GSBlendStateOGL {
 	GLenum m_func_dRGB;
 	GLenum m_func_sALPHA;
 	GLenum m_func_dALPHA;
+
+	GSBlendStateOGL() : m_enable(false)
+		, m_equation_RGB(0)
+		, m_equation_ALPHA(0)
+		, m_func_sRGB(0)
+		, m_func_dRGB(0)
+		, m_func_sALPHA(0)
+		, m_func_dALPHA(0)
+	{}
+
 };
 
 struct GSDepthStencilOGL {
@@ -51,12 +61,34 @@ struct GSDepthStencilOGL {
 	GLuint m_stencil_sfail_op;
 	GLuint m_stencil_spass_dfail_op;
 	GLuint m_stencil_spass_dpass_op;
+
+	GSDepthStencilOGL() : m_depth_enable(false)
+		, m_depth_func(0)
+		, m_depth_mask(0)
+		, m_stencil_enable(false)
+		, m_stencil_mask(0)
+		, m_stencil_func(0)
+		, m_stencil_ref(0)
+		, m_stencil_sfail_op(0)
+		, m_stencil_spass_dfail_op(0)
+		, m_stencil_spass_dpass_op(0)
+	{}
 };
 
 struct GSUniformBufferOGL {
 	GLuint buffer;		// data object
 	GLuint index;		// GLSL slot
 	uint   byte_size;	// size of the data
+
+	GSUniformBufferOGL(GLuint index, uint byte_size) : buffer(0)
+														, index(index)
+														, byte_size(byte_size)
+	{}
+
+	~GSUniformBufferOGL() {
+		if (buffer)
+			glDeleteBuffers(1, &buffer);
+	}
 };
 
 struct GSInputLayout {
@@ -73,6 +105,8 @@ class GSDeviceOGL : public GSDevice
 
 	bool m_free_window;			
 	SDL_Window* m_window;		// pointer to the SDL window
+	//SDL_GLContext m_context;	// current opengl context
+	SDL_Renderer* m_dummy_renderer; // ... crappy API ...
 
 	GLuint m_vb;				// vertex buffer object
 	GLuint m_pipeline;			// pipeline to attach program shader
@@ -196,6 +230,9 @@ class GSDeviceOGL : public GSDevice
 	PSConstantBuffer m_ps_cb_cache;
 #endif
 
+
+	void CheckDebugLog();
+	void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
 
 	protected:
 		GSTexture* CreateSurface(int type, int w, int h, bool msaa, int format);

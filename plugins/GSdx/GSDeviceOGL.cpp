@@ -31,22 +31,22 @@
 // void UseProgramStages( uint pipeline, bitfield stages, uint program );
 // ...
 // ...
-// 5/ Before the use of the program, we can validate it. (mandatory or not ?) 
+// 5/ Before the use of the program, we can validate it. (mandatory or not ?)
 // glValidateProgramPipeline
 //
 // ************************** BUILD METHOD 2
 // Humm, there is another solutions. You can setup function pointer in GLSL and configure them with OPENGL. shader_subroutine. glUseProgram must be replace with glUseProgramInstance in this case (and instance must be managed)
 //GL EXT: Overview
-//GL EXT: 
-//GL EXT:     This extension adds support to shaders for "indirect subroutine calls", 
+//GL EXT:
+//GL EXT:     This extension adds support to shaders for "indirect subroutine calls",
 //GL EXT:     where a single shader can include many subroutines and dynamically select
-//GL EXT:     through the API which subroutine is called from each call site. 
-//GL EXT:     Switching subroutines dynamically in this fashion can avoid the cost of 
+//GL EXT:     through the API which subroutine is called from each call site.
+//GL EXT:     Switching subroutines dynamically in this fashion can avoid the cost of
 //GL EXT:     recompiling and managing multiple shaders, while still retaining most of
 //GL EXT:     the performance of specialized shaders.
 //
 // ************************** Uniform buffer
-// // Note don't know how to chose block_binding_point (probably managed like texture unit 
+// // Note don't know how to chose block_binding_point (probably managed like texture unit
 // maybe any number will be fine)
 // index=glGetUniformBlockIndex(program, "BlockName");
 // glBindBufferBase(GL_UNIFORM_BUFFER, block_binding_point, some_buffer_object);
@@ -56,6 +56,8 @@
 GSDeviceOGL::GSDeviceOGL()
 	: m_free_window(false)
 	  , m_window(NULL)
+	  //, m_context(0)
+	  , m_dummy_renderer(NULL)
 	  , m_vb(0)
 	  , m_pipeline(0)
 	  , m_srv_changed(false)
@@ -71,10 +73,42 @@ GSDeviceOGL::GSDeviceOGL()
 
 GSDeviceOGL::~GSDeviceOGL()
 {
+	// Clean m_merge
+	for (uint i = 0; i < 2; i++)
+		glDeleteProgram(m_merge.ps[i]);
+	delete (m_merge.cb);
+	delete (m_merge.bs);
+	
+	// Clean m_interlace
+	for (uint i = 0; i < 2; i++)
+		glDeleteProgram(m_interlace.ps[i]);
+	delete (m_interlace.cb);
+
+	// Clean m_convert
+	glDeleteProgram(m_convert.vs);
+	for (uint i = 0; i < 2; i++)
+		glDeleteProgram(m_convert.ps[i]);
+	glDeleteSamplers(1, &m_convert.ln);
+	glDeleteSamplers(1, &m_convert.pt);
+	delete m_convert.dss;
+	delete m_convert.bs;
+
+	// Clean m_date
+	delete m_date.dss;
+	delete m_date.bs;
+
+	// Clean various opengl allocation
+	glDeleteBuffers(1, &m_vb);
+	glDeleteProgramPipelines(1, &m_pipeline);
+	glDeleteFramebuffers(1, &m_fbo);
+
+	// if(m_context)
+	// 	SDL_GL_DeleteContext(m_context);
+	if(m_dummy_renderer)
+		SDL_DestroyRenderer(m_dummy_renderer);
+
 	if(m_window != NULL && m_free_window)
-	{
 		SDL_DestroyWindow(m_window);
-	}
 }
 
 GSTexture* GSDeviceOGL::CreateSurface(int type, int w, int h, bool msaa, int format)
@@ -110,6 +144,8 @@ GSTexture* GSDeviceOGL::FetchSurface(int type, int w, int h, bool msaa, int form
 	return GSDevice::FetchSurface(type, w, h, msaa, format);
 }
 
+PFNGLTEXSTORAGE2DPROC glTexStorage2D_glew17 = NULL;
+
 bool GSDeviceOGL::Create(GSWnd* wnd)
 {
 	if (m_window == NULL) {
@@ -119,6 +155,51 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		assert(0);
 #endif
 	 	m_free_window = true;
+
+		// If the user request OpenGL acceleration, we take recent OGL version (4.2)
+		// We keep the default 2.1 version in SW mode (only DX11 capable card, are compatible with OGL4) if ( theApp.GetConfig("renderer", 0) / 3 == 4 ) {
+		// Setup visual attribute
+		SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
+		SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
+		SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
+		SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 32 );
+		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+		SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
+		// Ask for an advance opengl version
+		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 4 );
+		// FIXME AMD does not support yet 4.2...
+		//SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 1 );
+		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 1 );
+
+		// Window must be recreated to gain Opengl feature...
+		//SDL_RecreateWindow(m_window, SDL_GetWindowFlags(m_window) | SDL_WINDOW_OPENGL );
+		// Well actually you need to generate a full renderer to only have a context...
+		m_dummy_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED); // SDL_RENDERER_PRESENTVSYNC
+		// At least create the opengl context
+		// m_context = SDL_GL_CreateContext(m_window);
+
+
+		// FIXME......
+		// GLEW's problem is that it calls glGetString(GL_EXTENSIONS) which causes GL_INVALID_ENUM on GL 3.2 forward compatible context as soon as glewInit() is called. It also doesn't fetch the function pointers. The solution is for GLEW to use glGetStringi instead.
+		// The current version of GLEW is 1.7.0 but they still haven't corrected it. The only fix is to use glewExperimental for now :
+		//NOTE: I'm not sure experimental work on 1.6 ...
+		glewExperimental=true;
+		const int glew_ok = glewInit();
+		if (glew_ok != GLEW_OK)
+		{
+			// FIXME:proper logging
+			fprintf(stderr, "Error: Failed to init glew :%s\n", glewGetErrorString(glew_ok));
+			return false;
+		}
+		// FIXME upgrade to 4.2 when AMD drivers are ready
+		// Note need glew 1.7 too
+		if (!GLEW_VERSION_4_1) {
+			fprintf(stderr, "4.1 is not supported!\n");
+			return false;
+		}
+		
+		// Not yet supported by glew1.6
+		glTexStorage2D_glew17 = (PFNGLTEXSTORAGE2DPROC)glXGetProcAddressARB((const GLubyte*)"glTexStorage2D");
 	}
 
 #ifdef __LINUX__
@@ -126,6 +207,9 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// set the window size... So we send the m_window to the wnd object to allow some manipulation on it.
 	wnd->SetWindow(m_window);
 #endif
+
+	// FIXME disable it when code is ready
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 
 	// ****************************************************************
 	// Various object
@@ -138,7 +222,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// convert
 	// ****************************************************************
 
-	GSInputLayout il_convert[2] = 
+	GSInputLayout il_convert[2] =
 	{
 		{0, 4, GL_FLOAT, sizeof(GSVertexPT1), (const GLvoid*)offsetof(struct GSVertexPT1, p) },
 		{1, 2, GL_FLOAT, sizeof(GSVertexPT1), (const GLvoid*)offsetof(struct GSVertexPT1, t) },
@@ -199,12 +283,15 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	glSamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 	glSamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
 
+	m_convert.dss = new GSDepthStencilOGL();
+	m_convert.bs  = new GSBlendStateOGL();
+
 	// ****************************************************************
 	// merge
 	// ****************************************************************
-
-	m_merge.cb->index = 1;
-	m_merge.cb->byte_size = sizeof(MergeConstantBuffer);
+	m_merge.cb = new GSUniformBufferOGL(1, sizeof(MergeConstantBuffer));
+	//m_merge.cb->index = 1;
+	//m_merge.cb->byte_size = sizeof(MergeConstantBuffer);
 	glGenBuffers(1, &m_merge.cb->buffer);
 	glBindBuffer(GL_UNIFORM_BUFFER, m_merge.cb->buffer);
 	glBufferData(GL_UNIFORM_BUFFER, m_merge.cb->byte_size, NULL, GL_DYNAMIC_DRAW);
@@ -212,6 +299,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	for(int i = 0; i < countof(m_merge.ps); i++)
 		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge.ps[i]);
 
+	m_merge.bs = new GSBlendStateOGL();
 	m_merge.bs->m_enable         = true;
 	m_merge.bs->m_equation_RGB   = GL_FUNC_ADD;
 	m_merge.bs->m_equation_ALPHA = GL_FUNC_ADD;
@@ -223,8 +311,9 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// interlace
 	// ****************************************************************
-	m_interlace.cb->index = 2;
-	m_interlace.cb->byte_size = sizeof(InterlaceConstantBuffer);
+	m_interlace.cb = new GSUniformBufferOGL(2, sizeof(InterlaceConstantBuffer));
+	//m_interlace.cb->index = 2;
+	//m_interlace.cb->byte_size = sizeof(InterlaceConstantBuffer);
 	glGenBuffers(1, &m_interlace.cb->buffer);
 	glBindBuffer(GL_UNIFORM_BUFFER, m_interlace.cb->buffer);
 	glBufferData(GL_UNIFORM_BUFFER, m_interlace.cb->byte_size, NULL, GL_DYNAMIC_DRAW);
@@ -250,6 +339,13 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	rd.DepthClipEnable = false; // ???
 	rd.AntialiasedLineEnable = false;
 #endif
+
+
+	// ****************************************************************
+	// Finish window setup and backbuffer
+	// ****************************************************************
+	if(!GSDevice::Create(wnd))
+		return false;
 
 	GSVector4i rect = wnd->GetClientRect();
 	Reset(rect.z, rect.w);
@@ -401,7 +497,7 @@ bool GSDeviceOGL::Reset(int w, int h)
 
 	// TODO
 	// Opengl allocate the backbuffer with the window. The render is done in the backbuffer when
-	// there isn't any FBO. Only a dummy texture is created to easily detect when the rendering is done 
+	// there isn't any FBO. Only a dummy texture is created to easily detect when the rendering is done
 	// in the backbuffer
 	m_backbuffer = new GSTextureOGL(0, w, h, false, 0);
 
@@ -431,6 +527,8 @@ bool GSDeviceOGL::Reset(int w, int h)
 
 void GSDeviceOGL::Flip()
 {
+	// FIXME: disable it when code is working
+	CheckDebugLog();
 	// Warning it is not OGL dependent but application dependant (glx and so not portable)
 #if SDL_VERSION_ATLEAST(1,3,0)
 	SDL_GL_SwapWindow(m_window);
@@ -1047,4 +1145,83 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	*program = glCreateShaderProgramv(type, 1, (const char**)&sources);
 
 	free(sources);
+}
+
+void GSDeviceOGL::CheckDebugLog()
+{
+       unsigned int count = 64; // max. num. of messages that will be read from the log
+       int bufsize = 2048;
+       unsigned int* sources      = new unsigned int[count];
+       unsigned int* types        = new unsigned int[count];
+       unsigned int* ids   = new unsigned int[count];
+       unsigned int* severities = new unsigned int[count];
+       int* lengths = new int[count];
+       char* messageLog = new char[bufsize];
+
+       unsigned int retVal = glGetDebugMessageLogARB(count, bufsize, sources, types, ids, severities, lengths, messageLog);
+
+       if(retVal > 0)
+       {
+             unsigned int pos = 0;
+             for(unsigned int i=0; i<retVal; i++)
+             {
+                    DebugOutputToFile(sources[i], types[i], ids[i], severities[i],
+ &messageLog[pos]);
+                    pos += lengths[i];
+              }
+       }
+
+       delete [] sources;
+       delete [] types;
+       delete [] ids;
+       delete [] severities;
+       delete [] lengths;
+       delete [] messageLog;
+}
+
+void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message)
+{
+	FILE* f;
+	// FIXME properly log error
+	f = fopen("Debug.txt","a");
+	if(f)
+	{
+		char debSource[16], debType[20], debSev[5];
+		if(source == GL_DEBUG_SOURCE_API_ARB)
+			strcpy(debSource, "OpenGL");
+		else if(source == GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB)
+			strcpy(debSource, "Windows");
+		else if(source == GL_DEBUG_SOURCE_SHADER_COMPILER_ARB)
+			strcpy(debSource, "Shader Compiler");
+		else if(source == GL_DEBUG_SOURCE_THIRD_PARTY_ARB)
+			strcpy(debSource, "Third Party");
+		else if(source == GL_DEBUG_SOURCE_APPLICATION_ARB)
+			strcpy(debSource, "Application");
+		else if(source == GL_DEBUG_SOURCE_OTHER_ARB)
+			strcpy(debSource, "Other");
+
+		if(type == GL_DEBUG_TYPE_ERROR_ARB)
+			strcpy(debType, "Error");
+		else if(type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB)
+			strcpy(debType, "Deprecated behavior");
+		else if(type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB)
+			strcpy(debType, "Undefined behavior");
+		else if(type == GL_DEBUG_TYPE_PORTABILITY_ARB)
+			strcpy(debType, "Portability");
+		else if(type == GL_DEBUG_TYPE_PERFORMANCE_ARB)
+			strcpy(debType, "Performance");
+		else if(type == GL_DEBUG_TYPE_OTHER_ARB)
+			strcpy(debType, "Other");
+
+		if(severity == GL_DEBUG_SEVERITY_HIGH_ARB)
+			strcpy(debSev, "High");
+		else if(severity == GL_DEBUG_SEVERITY_MEDIUM_ARB)
+			strcpy(debSev, "Med");
+		else if(severity == GL_DEBUG_SEVERITY_LOW_ARB)
+			strcpy(debSev, "Low");
+
+		//fprintf(stderr,"Source:%s\tType:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debSource,debType,id,debSev,message);
+		fprintf(f,"Source:%s\tType:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debSource,debType,id,debSev,message);
+		fclose(f);
+	}
 }
