@@ -1,31 +1,31 @@
-#if 0
+//#version 420 // Keep it for editor detection
 
-Texture2D Texture;
-SamplerState Sampler;
+#ifdef FRAGMENT_SHADER
 
-cbuffer cb0
+layout(location = 0) in vec4 SV_Position;
+layout(location = 1) in vec2 TEXCOORD0;
+
+out vec4 SV_Target0;
+
+layout(std140, binding = 1) uniform cb0
 {
-	float4 BGColor;
+    vec4 BGColor;
 };
 
-struct PS_INPUT
-{
-	float4 p : SV_Position;
-	float2 t : TEXCOORD0;
-};
+layout(binding = 0) uniform sampler2D TextureSampler;
 
-float4 ps_main0(PS_INPUT input) : SV_Target0
+void ps_main0()
 {
-	float4 c = Texture.Sample(Sampler, input.t);
+    vec4 c = texture(TextureSampler, TEXCOORD0);
 	c.a = min(c.a * 2, 1);
-	return c;
+    SV_Target0 = c;
 }
 
-float4 ps_main1(PS_INPUT input) : SV_Target0
+void ps_main1()
 {
-	float4 c = Texture.Sample(Sampler, input.t);
+    vec4 c = texture(TextureSampler, TEXCOORD0);
 	c.a = BGColor.a;
-	return c;
+    SV_Target0 = c;
 }
 
 #endif

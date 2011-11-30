@@ -94,8 +94,12 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 		case GSTexture::RenderTarget:
 			// FIXME what is the real use case of this texture
 			// Maybe a texture will be better
-			glGenRenderbuffers(1, &m_texture_id);
-			m_texture_target = GL_RENDERBUFFER;
+			// glGenRenderbuffers(1, &m_texture_id);
+			// m_texture_target = GL_RENDERBUFFER;
+			// Buffer can not be read by shader and must be blit before. I see no point to use a render buffer
+			// when you can directly render on the texture. It said it could be faster...
+			glGenTextures(1, &m_texture_id);
+			m_texture_target = GL_TEXTURE_2D;
 			break;
 		case GSTexture::DepthStencil:
 			glGenRenderbuffers(1, &m_texture_id);
@@ -104,8 +108,8 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 		case GSTexture::Texture:
 			glGenTextures(1, &m_texture_id);
 			// FIXME, do we need rectangle (or better to use 2D texture)
-			//m_texture_target = GL_TEXTURE_2D;
-			m_texture_target = GL_TEXTURE_RECTANGLE;
+			m_texture_target = GL_TEXTURE_2D;
+			//m_texture_target = GL_TEXTURE_RECTANGLE;
 			// == For texture, the Unit must be selected
 			break;
 		case GSTexture::Offscreen:
@@ -132,18 +136,25 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 
 	// Allocate the buffer
 	switch (m_type) {
-		case GSTexture::RenderTarget:
 		case GSTexture::DepthStencil:
 			glBindRenderbuffer(m_texture_target, m_texture_id);
 			glRenderbufferStorageMultisample(m_texture_target, msaa_level, m_format, m_size.y, m_size.x);
 			break;
+		case GSTexture::RenderTarget:
 		case GSTexture::Texture:
 			// FIXME
 			// Howto allocate the texture unit !!!
 			// In worst case the HW renderer seems to use 3 texture unit
 			// For the moment SW renderer only use 1 so don't bother
 			EnableUnit(0);
-			glTexStorage2D_glew17(m_texture_target, 0, m_format, m_size.y, m_size.x);
+			// FIXME glTexStorage2D does not work yet on my system (4.2) extension but glTexImage2D seems ok
+			// glTexStorage2D_glew17(m_texture_target, 1, m_format, m_size.y, m_size.x);
+			// fprintf(stderr, "texture storage %d, %d\n", w, h);
+			if (m_format == GL_RGBA8) {
+				glTexImage2D(m_texture_target, 0, m_format, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+			}
+			else
+				assert(0);
 			break;
 		case GSTexture::Offscreen:
 			assert(0);
@@ -170,6 +181,7 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	// To update only a part of the texture you can use:
 	// glTexSubImage2D — specify a two-dimensional texture subimage
 	switch (m_type) {
+		case GSTexture::RenderTarget:
 		case GSTexture::Texture:
 			// glTexSubImage2D specifies a two-dimensional subtexture for the current texture unit, specified with glActiveTexture.
 			// If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target 
@@ -179,9 +191,13 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 			// FIXME I'm not confident with GL_UNSIGNED_BYTE type
 			// FIXME add a state check
 			glBindTexture(m_texture_target, m_texture_id);
-			glTexSubImage2D(m_texture_target, 0, r.left, r.bottom, r.right-r.left, r.top-r.bottom, m_format, GL_UNSIGNED_BYTE, data);
+			//void glTexSubImage2D(GLenum  target,  GLint  level,  GLint  xoffset,  GLint  yoffset,  GLsizei  width,  GLsizei  height,  GLenum  format,  GLenum  type,  const GLvoid *  data);
+			// fprintf(stderr, "texture coord %d, %d, %d, %d\n", r.x, r.y, r.z, r.w);
+			if (m_format == GL_RGBA8)
+				glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.z-r.x, r.w-r.y, GL_RGBA, GL_UNSIGNED_BYTE, data);
+			else
+				assert(0);
 			break;
-		case GSTexture::RenderTarget:
 		case GSTexture::DepthStencil:
 		case GSTexture::Offscreen:
 			assert(0);
@@ -204,11 +220,11 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 void GSTextureOGL::EnableUnit(uint unit)
 {
 	switch (m_type) {
-		case GSTexture::RenderTarget:
 		case GSTexture::DepthStencil:
 		case GSTexture::Offscreen:
 			assert(0);
 			break;
+		case GSTexture::RenderTarget:
 		case GSTexture::Texture:
 			// FIXME
 			// Howto allocate the texture unit !!!

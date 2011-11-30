@@ -50,6 +50,10 @@ struct GSVertexPT1
 {
 	GSVector4 p;
 	GSVector2 t;
+#ifdef _LINUX
+	//FIXME aligment issue
+	GSVector2 pad;
+#endif
 };
 
 struct GSVertexPT2

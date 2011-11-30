@@ -86,8 +86,7 @@ struct GSUniformBufferOGL {
 	{}
 
 	~GSUniformBufferOGL() {
-		if (buffer)
-			glDeleteBuffers(1, &buffer);
+		glDeleteBuffers(1, &buffer);
 	}
 };
 
@@ -280,7 +279,7 @@ class GSDeviceOGL : public GSDevice
 
 		void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
 		void PSSetShaderResource(int i, GSTexture* sr);
-		void PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2);
+		void PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2 = 0);
 		void PSSetShader(GLuint ps, GSUniformBufferOGL* ps_cb);
 
 		void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);

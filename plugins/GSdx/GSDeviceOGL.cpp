@@ -658,6 +658,8 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 	}
 
 	assert(0);
+	// GL_NV_copy_image seem like the good extension but not supported on AMD...
+
 	// FIXME attach the texture to the FBO
 	GSTextureOGL* st_ogl = (GSTextureOGL*) st;
 	GSTextureOGL* dt_ogl = (GSTextureOGL*) dt;
@@ -692,9 +694,6 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 // probably no difficult to convert when all helpers function will be done
 void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSUniformBufferOGL* ps_cb, GSBlendStateOGL* bs, bool linear)
 {
-	//TODO later
-	assert(0);
-#if 0
 	if(!st || !dt)
 	{
 		ASSERT(0);
@@ -718,7 +717,8 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	float right = dr.z * 2 / ds.x - 1.0f;
 	float bottom = 1.0f - dr.w * 2 / ds.y;
 
-	GSVertexPT1 vertices[] =
+	//FIXME aligment issue
+	GSVertexPT1 vertices[] __attribute__ ((aligned (16))) =
 	{
 		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(sr.x, sr.y)},
 		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(sr.z, sr.y)},
@@ -727,8 +727,8 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	};
 
 	IASetVertexBuffer(vertices, sizeof(vertices[0]), countof(vertices));
-	IASetInputLayout(m_convert.il);
-	IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	IASetInputLayout(m_convert.il, 2);
+	IASetPrimitiveTopology(GL_TRIANGLE_STRIP);
 
 	// vs
 
@@ -736,12 +736,12 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 
 	// gs
 
-	GSSetShader(NULL);
+	GSSetShader(0);
 
 	// ps
 
 	PSSetShaderResources(st, NULL);
-	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt, NULL);
+	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt, 0);
 	PSSetShader(ps, ps_cb);
 
 	//
@@ -753,7 +753,9 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	EndScene();
 
 	PSSetShaderResources(NULL, NULL);
-#endif
+
+	// FIXME: disable it when code is working
+	CheckDebugLog();
 }
 
 void GSDeviceOGL::DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c)
@@ -847,7 +849,7 @@ void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t stride, size_t 
 		glGenBuffers(1, &m_vb);
 		// FIXME: GL_DYNAMIC_DRAW vs GL_STREAM_DRAW !!!
 		glBindBuffer(GL_ARRAY_BUFFER, m_vb);
-		glBufferData(GL_ARRAY_BUFFER, m_vertices.limit, NULL, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, m_vertices.limit * stride, NULL, GL_DYNAMIC_DRAW);
 	}
 
 	// append data or go back to the beginning
@@ -959,8 +961,10 @@ void GSDeviceOGL::PSSetShader(GLuint ps, GSUniformBufferOGL* ps_cb)
 // glBindSampler(1 , sampler);
 	if (m_srv_changed || m_ss_changed) {
 		for (uint i=0 ; i < 3; i++) {
-			m_state.ps_srv[i]->EnableUnit(i);
-			glBindSampler(i, m_state.ps_ss[i]);
+			if (m_state.ps_srv[i] != NULL) {
+				m_state.ps_srv[i]->EnableUnit(i);
+				glBindSampler(i, m_state.ps_ss[i]);
+			}
 		}
 	}
 #if 0
@@ -1021,13 +1025,17 @@ void GSDeviceOGL::OMSetBlendState(GSBlendStateOGL* bs, float bf)
 		m_state.bs = bs;
 		m_state.bf = bf;
 
-		// FIXME: double check when blend stuff is complete
-		if (bs->m_func_sRGB == GL_CONSTANT_COLOR || bs->m_func_sRGB == GL_ONE_MINUS_CONSTANT_COLOR
-				|| bs->m_func_dRGB == GL_CONSTANT_COLOR || bs->m_func_dRGB == GL_ONE_MINUS_CONSTANT_COLOR)
-			glBlendColor(bf, bf, bf, 0);
+		if (bs->m_enable) {
+			glEnable(GL_BLEND);
+			// FIXME: double check when blend stuff is complete
+			if (bs->m_func_sRGB == GL_CONSTANT_COLOR || bs->m_func_sRGB == GL_ONE_MINUS_CONSTANT_COLOR
+					|| bs->m_func_dRGB == GL_CONSTANT_COLOR || bs->m_func_dRGB == GL_ONE_MINUS_CONSTANT_COLOR)
+				glBlendColor(bf, bf, bf, 0);
 
-		glBlendEquationSeparate(bs->m_equation_RGB, bs->m_equation_ALPHA);
-		glBlendFuncSeparate(bs->m_func_sRGB, bs->m_func_dRGB, bs->m_func_sALPHA, bs->m_func_dALPHA);
+			glBlendEquationSeparate(bs->m_equation_RGB, bs->m_equation_ALPHA);
+			glBlendFuncSeparate(bs->m_func_sRGB, bs->m_func_dRGB, bs->m_func_sALPHA, bs->m_func_dALPHA);
+		} else
+			glDisable(GL_BLEND);
 	}
 }
 
@@ -1087,7 +1095,11 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 	{
 		m_state.scissor = r;
 		// FIXME check position
-		glScissor(r.x, r.w, r.z-r.x, r.y-r.w);
+		// x = 0, 
+		// y = 0, 
+		// z = 512, 
+		// w = 512
+		glScissor(r.x, r.y, r.z-r.x, r.w-r.y);
 #if 0
 		m_ctx->RSSetScissorRects(1, r);
 #endif
@@ -1096,21 +1108,35 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 
 void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program)
 {
-	// Could be useful to filter ubber shader
+	// *****************************************************
+	// Build a header string
+	// *****************************************************
+	// First select the version (must be the first line so we need to generate it
+	std::string version = "#version 410\n#extension GL_ARB_shading_language_420pack: enable\n";
+
+	// Allow to puts several shader in 1 files
 	std::string shader_type;
 	switch (type) {
 		case GL_VERTEX_SHADER:
 			shader_type = "#define VERTEX_SHADER 1\n";
+			break;
 		case GL_GEOMETRY_SHADER:
 			shader_type = "#define GEOMETRY_SHADER 1\n";
+			break;
 		case GL_FRAGMENT_SHADER:
 			shader_type = "#define FRAGMENT_SHADER 1\n";
+			break;
+		default: assert(0);
 	}
 
-	// Select the entry point
+	// Select the entry point ie the main function
 	std::string entry_main = format("#define %s main\n", entry.c_str());
 
+	std::string header = version + shader_type + entry_main;
+
+	// *****************************************************
 	// Read the source file
+	// *****************************************************
 	std::string source;
 	std::string line;
 	// Each linux distributions have his rules for path so we give them the possibility to
@@ -1135,16 +1161,34 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 		fprintf(stderr, "Error opening %s: ", shader_file.c_str());
 	}
 
-	// Create a giant string with everythings
-	std::string full_source = shader_type + entry_main + source;
 
-	char* sources = (char*)malloc(full_source.size());
-	strncpy(sources, full_source.c_str(), full_source.size());
-	sources[full_source.size()] = '\0';
+	// Note it is better to separate header and source file to have the good line number
+	// in the glsl compiler report
+	const char** sources_array = (const char**)malloc(2*sizeof(char*));
+	char* source_str = (char*)malloc(source.size() + 1);
+	char* header_str = (char*)malloc(header.size() + 1);
+	sources_array[0] = header_str;
+	sources_array[1] = source_str;
 
-	*program = glCreateShaderProgramv(type, 1, (const char**)&sources);
+	source.copy(source_str, source.size(), 0);
+	source_str[source.size()] = '\0';
+	header.copy(header_str, header.size(), 0);
+	header_str[header.size()] = '\0';
 
-	free(sources);
+	*program = glCreateShaderProgramv(type, 2, sources_array);
+	free(source_str);
+	free(header_str);
+	free(sources_array);
+
+	// Print a nice debug log
+	GLint log_length = 0;
+	glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+
+	char* log = (char*)malloc(log_length);
+	glGetProgramInfoLog(*program, log_length, NULL, log);
+
+	fprintf(stderr, "%s", log);
+	free(log);
 }
 
 void GSDeviceOGL::CheckDebugLog()
@@ -1199,6 +1243,9 @@ void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsi
 			strcpy(debSource, "Application");
 		else if(source == GL_DEBUG_SOURCE_OTHER_ARB)
 			strcpy(debSource, "Other");
+		else
+			strcpy(debSource, "UNKNOW");
+
 
 		if(type == GL_DEBUG_TYPE_ERROR_ARB)
 			strcpy(debType, "Error");
@@ -1212,6 +1259,8 @@ void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsi
 			strcpy(debType, "Performance");
 		else if(type == GL_DEBUG_TYPE_OTHER_ARB)
 			strcpy(debType, "Other");
+		else
+			strcpy(debType, "UNKNOW");
 
 		if(severity == GL_DEBUG_SEVERITY_HIGH_ARB)
 			strcpy(debSev, "High");
