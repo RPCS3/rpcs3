@@ -121,7 +121,7 @@ void GPUDrawScanlineCodeGenerator::Init()
 {
 	mov(eax, dword[esp + _top]);
 
-	// uint16* fb = &m_local.vm[(top << (10 + m_sel.scalex)) + left];
+	// uint16* fb = (uint16*)m_global.vm + (top << (10 + sel.scalex)) + left;
 
 	mov(edi, eax);
 	shl(edi, 10 + m_sel.scalex);
@@ -134,7 +134,7 @@ void GPUDrawScanlineCodeGenerator::Init()
 
 	if(m_sel.dtd)
 	{
-		// dither = GSVector4i::load<false>(&s_dither[top & 3][left & 3]);
+		// dither = GSVector4i::load<false>(&m_dither[top & 3][left & 3]);
 
 		and(eax, 3);
 		shl(eax, 5);
@@ -741,7 +741,7 @@ void GPUDrawScanlineCodeGenerator::AlphaBlend()
 	// xmm7 = test
 	// xmm0, xmm2 = free
 
-	// GSVector4i r = (d & 0x001f001f) << 3;
+	// GSVector4i r = (fd & 0x001f001f) << 3;
 
 	pcmpeqd(xmm0, xmm0);
 	psrlw(xmm0, 11); // 0x001f

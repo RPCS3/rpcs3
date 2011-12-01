@@ -412,6 +412,8 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 				GSVector4i u, v, uv[2];
 				GSVector4i lodi, lodf;
 				GSVector4i minuv, maxuv;
+				GSVector4i addr00, addr01, addr10, addr11;
+				GSVector4i c00, c01, c10, c11;
 
 				if(sel.mmin)
 				{
@@ -529,12 +531,10 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 						GSVector4i y1 = uv1.uph16() << (sel.tw + 3);
 						GSVector4i x1 = uv1.upl16();
 
-						GSVector4i addr00 = y0 + x0;
-						GSVector4i addr01 = y0 + x1;
-						GSVector4i addr10 = y1 + x0;
-						GSVector4i addr11 = y1 + x1;
-
-						GSVector4i c00, c01, c10, c11;
+						addr00 = y0 + x0;
+						addr01 = y0 + x1;
+						addr10 = y1 + x0;
+						addr11 = y1 + x1;
 
 						if(sel.tlu)
 						{
@@ -582,9 +582,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 					}
 					else
 					{
-						GSVector4i addr00 = y0 + x0;
-					
-						GSVector4i c00;
+						addr00 = y0 + x0;
 
 						if(sel.tlu)
 						{
@@ -654,12 +652,10 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 							GSVector4i y1 = uv1.uph16() << (sel.tw + 3);
 							GSVector4i x1 = uv1.upl16();
 
-							GSVector4i addr00 = y0 + x0;
-							GSVector4i addr01 = y0 + x1;
-							GSVector4i addr10 = y1 + x0;
-							GSVector4i addr11 = y1 + x1;
-
-							GSVector4i c00, c01, c10, c11;
+							addr00 = y0 + x0;
+							addr01 = y0 + x1;
+							addr10 = y1 + x0;
+							addr11 = y1 + x1;
 
 							if(sel.tlu)
 							{
@@ -707,9 +703,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 						}
 						else
 						{
-							GSVector4i addr00 = y0 + x0;
-					
-							GSVector4i c00;
+							addr00 = y0 + x0;
 
 							if(sel.tlu)
 							{
@@ -797,12 +791,10 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 						GSVector4i y1 = uv1.uph16() << (sel.tw + 3);
 						GSVector4i x1 = uv1.upl16();
 
-						GSVector4i addr00 = y0 + x0;
-						GSVector4i addr01 = y0 + x1;
-						GSVector4i addr10 = y1 + x0;
-						GSVector4i addr11 = y1 + x1;
-					
-						GSVector4i c00, c01, c10, c11;
+						addr00 = y0 + x0;
+						addr01 = y0 + x1;
+						addr10 = y1 + x0;
+						addr11 = y1 + x1;
 
 						if(sel.tlu)
 						{
@@ -844,9 +836,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 					}
 					else
 					{
-						GSVector4i addr00 = y0 + x0;
-					
-						GSVector4i c00;
+						addr00 = y0 + x0;
 
 						if(sel.tlu)
 						{

@@ -552,7 +552,9 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 							for(int i = 0, j = m_count; i < j; i++)
 							{
-								v[i].t *= w;
+								GSVector4 t = v[i].t;
+
+								v[i].t = (t * w).xyzw(t);
 							}
 						}
 					}
@@ -562,10 +564,13 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 						for(int i = 0, j = m_count; i < j; i += 2)
 						{
-							GSVector4 w = v[i + 1].t.zzzz().rcpnr();
+							GSVector4 t0 = v[i + 0].t;
+							GSVector4 t1 = v[i + 1].t;
 
-							v[i + 0].t *= w;
-							v[i + 1].t *= w;
+							GSVector4 w = t1.zzzz().rcpnr();
+
+							v[i + 0].t = (t0 * w).xyzw(t0);
+							v[i + 1].t = (t1 * w).xyzw(t1);
 						}
 					}
 				}
@@ -582,7 +587,9 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 					for(int i = 0, j = m_count; i < j; i++)
 					{
-						v[i].t -= half;
+						GSVector4 t = v[i].t;
+
+						v[i].t = (t - half).xyzw(t);
 					}
 				}
 			}
