@@ -196,9 +196,12 @@ void GSRasterizer::DrawLine(const GSVertexSW* v)
 			{
 				GSVertexSW dscan = dv / dv.p.xxxx();
 
+				GSVector4 x0 = l.p.xxxx();
+				GSVector4 y0 = l.p.yyyy();
+
 				l.p = l.p.upl(r).xyzw(l.p); // r.x => l.y
 
-				DrawTriangleSection(p.y, p.y + 1, l, dl, dscan, l.p.xxxx());
+				DrawTriangleSection(p.y, p.y + 1, l, dl, dscan, x0, y0);
 
 				Flush(v, dscan);
 			}
@@ -348,14 +351,10 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 		{
 			edge = v[1 - j];
 
-			GSVector4 dy = tbmax.xxxx() - edge.p.yyyy();
-
 			edge.p = edge.p.insert<0, 1>(v[j].p);
 			dedge.p = ddx[2 - (j << 1)].yzzw(dedge.p);
 
-			edge += dedge * dy;
-
-			DrawTriangleSection(tb.x, tb.w, edge, dedge, dscan, v[1 - j].p.xxxx());
+			DrawTriangleSection(tb.x, tb.w, edge, dedge, dscan, v[1 - j].p.xxxx(), v[1 - j].p.yyyy());
 		}
 	}
 	else
@@ -366,28 +365,20 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 		{
 			edge = v[0];
 
-			GSVector4 dy = tbmax.xxxx() - edge.p.yyyy();
-
 			edge.p = edge.p.xxzw();
 			dedge.p = ddx[j].xyzw(dedge.p);
 
-			edge += dedge * dy;
-
-			DrawTriangleSection(tb.x, tb.z, edge, dedge, dscan, x0);
+			DrawTriangleSection(tb.x, tb.z, edge, dedge, dscan, x0, v[0].p.yyyy());
 		}
 
 		if(tb.y < tb.w)
 		{
 			edge = v[1];
 
-			GSVector4 dy = tbmax.zzzz() - edge.p.yyyy();
-
 			edge.p = (x0 + ddx[j] * dv[0].p.yyyy()).xyzw(edge.p);
 			dedge.p = ddx[2 - (j << 1)].yzzw(dedge.p);
 
-			edge += dedge * dy;
-
-			DrawTriangleSection(tb.y, tb.w, edge, dedge, dscan, v[1].p.xxxx());
+			DrawTriangleSection(tb.y, tb.w, edge, dedge, dscan, v[1].p.xxxx(), v[1].p.yyyy());
 		}
 	}
 
@@ -410,7 +401,7 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 	}
 }
 
-void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, const GSVertexSW& dedge, const GSVertexSW& dscan, const GSVector4& x0)
+void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, const GSVertexSW& dedge, const GSVertexSW& dscan, const GSVector4& x0, const GSVector4& y0)
 {
 	ASSERT(top < bottom);
 	ASSERT(edge.p.x <= edge.p.y);
@@ -419,11 +410,17 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, co
 
 	GSVector4 scissor = m_fscissor.xzxz();
 
+	GSVector4 prestep = GSVector4(top) - y0;
+
+	GSVertexSW o = dedge * prestep; 
+
 	while(1)
 	{
 		if(IsOneOfMyScanlines(top))
 		{
-			GSVector4 lrf = edge.p.ceil();
+			GSVertexSW scan = edge + o;
+			
+			GSVector4 lrf = scan.p.ceil();
 			GSVector4 l = lrf.max(scissor);
 			GSVector4 r = lrf.min(scissor);
 			GSVector4i lr = GSVector4i(l.xxyy(r));
@@ -437,15 +434,17 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, co
 			{
 				m_stats.pixels += pixels;
 
-				GSVector4 prestep = l.xxxx() - x0;
+				prestep = l.xxxx() - x0;
 
-				AddScanline(e++, pixels, left, top, edge + dscan * prestep);
+				AddScanline(e++, pixels, left, top, scan + dscan * prestep);
 			}
 		}
 
 		if(++top >= bottom) break;
 
-		edge += dedge;
+		// NOTE: it is more accurate to accumlate the offset, edge values (especially p.z) may become too large compared to dedge (example: 8000000 + 259.4 == 8000000 + 259.3)
+
+		o += dedge; 
 	}
 
 	m_edge.count += e - &m_edge.buff[m_edge.count];
