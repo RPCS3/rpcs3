@@ -256,7 +256,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 	GSScanlineSelector sel = m_global.sel;
 
 	GSVector4i test;
-	GSVector4 z;
+	GSVector4 zo;
 	GSVector4i f;
 	GSVector4 s, t, q;
 	GSVector4i uf, vf;
@@ -285,7 +285,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 		if(sel.zb)
 		{
-			z = scan.p.zzzz() + m_local.d[skip].z;
+			zo = m_local.d[skip].z;
 		}
 	}
 
@@ -361,6 +361,8 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 				if(!sel.sprite)
 				{
+					GSVector4 z = scan.p.zzzz() + zo;
+
 					if(sel.zoverflow)
 					{
 						zs = (GSVector4i(z * 0.5f) << 1) | (GSVector4i(z) & GSVector4i::x00000001());
@@ -1218,7 +1220,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 		{
 			if(sel.zb)
 			{
-				z += m_local.d4.z;
+				zo += m_local.d4.z;
 			}
 
 			if(sel.fwrite && sel.fge)

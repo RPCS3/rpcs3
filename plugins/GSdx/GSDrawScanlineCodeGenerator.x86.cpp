@@ -320,9 +320,10 @@ void GSDrawScanlineCodeGenerator::Init()
 				// z = vp.zzzz() + m_local.d[skip].z;
 
 				shufps(xmm0, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
-				addps(xmm0, ptr[edx + offsetof(GSScanlineLocalData::skip, z)]);
-
 				movaps(ptr[&m_local.temp.z], xmm0);
+				movaps(xmm2, ptr[edx + offsetof(GSScanlineLocalData::skip, z)]);
+				movaps(ptr[&m_local.temp.zo], xmm2);
+				addps(xmm0, xmm2);
 			}
 		}
 	}
@@ -462,9 +463,10 @@ void GSDrawScanlineCodeGenerator::Step()
 
 		if(m_sel.zb)
 		{
-			movaps(xmm0, ptr[&m_local.temp.z]);
+			movaps(xmm0, ptr[&m_local.temp.zo]);
 			addps(xmm0, ptr[&m_local.d4.z]);
-			movaps(ptr[&m_local.temp.z], xmm0);
+			movaps(ptr[&m_local.temp.zo], xmm0);
+			addps(xmm0, ptr[&m_local.temp.z]);
 		}
 
 		// f = f.add16(m_local.d4.f);
