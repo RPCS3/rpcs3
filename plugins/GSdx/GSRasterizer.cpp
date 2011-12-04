@@ -410,15 +410,11 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, co
 
 	GSVector4 scissor = m_fscissor.xzxz();
 
-	GSVector4 prestep = GSVector4(top) - y0;
-
-	GSVertexSW o = dedge * prestep; 
-
 	while(1)
 	{
 		if(IsOneOfMyScanlines(top))
 		{
-			GSVertexSW scan = edge + o;
+			GSVertexSW scan = edge + dedge * (GSVector4(top) - y0);
 			
 			GSVector4 lrf = scan.p.ceil();
 			GSVector4 l = lrf.max(scissor);
@@ -434,17 +430,13 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, co
 			{
 				m_stats.pixels += pixels;
 
-				prestep = l.xxxx() - x0;
+				GSVector4 prestep = l.xxxx() - x0;
 
 				AddScanline(e++, pixels, left, top, scan + dscan * prestep);
 			}
 		}
 
 		if(++top >= bottom) break;
-
-		// NOTE: it is more accurate to accumlate the offset, edge values (especially p.z) may become too large compared to dedge (example: 8000000 + 259.4 == 8000000 + 259.3)
-
-		o += dedge; 
 	}
 
 	m_edge.count += e - &m_edge.buff[m_edge.count];
