@@ -180,30 +180,40 @@ void GSRasterizer::DrawLine(const GSVertexSW* v)
 
 			GSVector4 mask = (v[0].p > v[1].p).xxxx();
 
-			GSVertexSW l, dl;
+			GSVertexSW scan;
 
-			l.p = v[0].p.blend32(v[1].p, mask);
-			l.t = v[0].t.blend32(v[1].t, mask);
-			l.c = v[0].c.blend32(v[1].c, mask);
+			scan.p = v[0].p.blend32(v[1].p, mask);
+			scan.t = v[0].t.blend32(v[1].t, mask);
+			scan.c = v[0].c.blend32(v[1].c, mask);
 
-			GSVector4 r;
+			GSVector4i p(scan.p);
 
-			r = v[1].p.blend32(v[0].p, mask);
-
-			GSVector4i p(l.p);
-
-			if(m_scissor.top <= p.y && p.y < m_scissor.bottom)
+			if(m_scissor.top <= p.y && p.y < m_scissor.bottom && IsOneOfMyScanlines(p.y))
 			{
-				GSVertexSW dscan = dv / dv.p.xxxx();
+				GSVector4 scissor = m_fscissor.xzxz();
+			
+				GSVector4 lrf = scan.p.upl(v[1].p.blend32(v[0].p, mask)).ceil();
+				GSVector4 l = lrf.max(scissor);
+				GSVector4 r = lrf.min(scissor);
+				GSVector4i lr = GSVector4i(l.xxyy(r));
 
-				GSVector4 x0 = l.p.xxxx();
-				GSVector4 y0 = l.p.yyyy();
+				int left = lr.extract32<0>();
+				int right = lr.extract32<2>();
 
-				l.p = l.p.upl(r).xyzw(l.p); // r.x => l.y
+				int pixels = right - left;
 
-				DrawTriangleSection(p.y, p.y + 1, l, dl, dscan, x0, y0);
+				if(pixels > 0)
+				{
+					m_stats.pixels += pixels;
 
-				Flush(v, dscan);
+					GSVertexSW dscan = dv / dv.p.xxxx();
+
+					scan += dscan * (l - scan.p).xxxx();
+
+					m_ds->SetupPrim(v, dscan);
+
+					m_ds->DrawScanline(pixels, left, p.y, scan);
+				}
 			}
 		}
 
