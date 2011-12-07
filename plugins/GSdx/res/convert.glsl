@@ -2,6 +2,12 @@
 
 #ifdef VERTEX_SHADER
 
+out gl_PerVertex {
+    vec4 gl_Position;
+    float gl_PointSize;
+    float gl_ClipDistance[];
+};
+
 layout(location = 0) in vec4 POSITION;
 layout(location = 1) in vec2 TEXCOORD0;
 
@@ -20,7 +26,7 @@ smooth layout(location = 1) out vec2 TEXCOORD0_OUT;
 void vs_main()
 {
     POSITION_OUT = POSITION;
-    TEXCOORD0_OUT = TEXCOORD0_OUT;
+    TEXCOORD0_OUT = TEXCOORD0;
     gl_Position = POSITION; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 }
 
@@ -32,7 +38,7 @@ void vs_main()
 layout(location = 0) in vec4 SV_Position;
 layout(location = 1) in vec2 TEXCOORD0;
 
-out vec4 SV_Target0;
+layout(location = 0) out vec4 SV_Target0;
 
 layout(binding = 0) uniform sampler2D TextureSampler;
 
@@ -87,6 +93,21 @@ void ps_main6() // diagonal
 
     SV_Target0 = c;
 }
+
+//void ps_main1()
+//{
+//    vec4 c = sample_c(TEXCOORD);
+//
+//	c.a *= 256.0f / 127; // hm, 0.5 won't give us 1.0 if we just multiply with 2
+//
+//	uvec4 i = uvec4(c * vec4(0x001f, 0x03e0, 0x7c00, 0x8000));
+//
+//#ifdef DEBUG_FRAG
+//    SV_Target0 = vec4(0.5,0.5,0.5,1.0);
+//#else
+//    SV_Target0 = (i.x & 0x001f) | (i.y & 0x03e0) | (i.z & 0x7c00) | (i.w & 0x8000);
+//#endif
+//}
 
 // Texture2D Texture;
 // SamplerState TextureSampler;

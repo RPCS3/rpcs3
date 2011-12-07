@@ -314,6 +314,11 @@ void GSWnd::HideFrame()
 GSWnd::GSWnd()
 	: m_window(NULL), m_Xwindow(0), m_XDisplay(NULL)
 {
+#ifdef KEEP_SDL
+	m_renderer = 2;
+#else
+	m_renderer = theApp.GetConfig("renderer", 0) / 3;
+#endif
 }
 
 GSWnd::~GSWnd()
@@ -334,6 +339,53 @@ bool GSWnd::Attach(void* handle, bool managed)
 	m_Xwindow = *(Window*)handle;
 	m_managed = managed;
 
+	if (m_renderer != 2) {
+		m_XDisplay = XOpenDisplay(NULL);
+
+		// Get visual information
+		int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
+			GLX_RED_SIZE, 8,
+			GLX_GREEN_SIZE, 8,
+			GLX_BLUE_SIZE, 8,
+			GLX_DEPTH_SIZE, 24,
+			None
+		};
+
+		PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
+		int fbcount = 0;
+		GLXFBConfig *fbc = glXChooseFBConfig(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl, &fbcount);
+		if (!fbc || fbcount < 1) return false;
+
+		glXCreateContextAttribsARBProc glXCreateContextAttribsARB = 0;
+		glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
+		if (!glXCreateContextAttribsARB) return false;
+
+		// Create a context
+		int context_attribs[] =
+		{
+			GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
+			GLX_CONTEXT_MINOR_VERSION_ARB, 1,
+				// FIXME : Request a debug context to ease opengl development
+				GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
+			0
+		};
+		m_context = glXCreateContextAttribsARB(m_XDisplay, fbc[0], 0, true, context_attribs);
+		XSync( m_XDisplay, false);
+
+		if (!m_context) return false;
+		glXMakeCurrent(m_XDisplay, m_Xwindow, m_context);
+
+		// Check the status
+		int glxMajorVersion, glxMinorVersion;
+		glXQueryVersion(m_XDisplay, &glxMajorVersion, &glxMinorVersion);
+		if (glXIsDirect(m_XDisplay, m_context))
+			fprintf(stderr, "glX-Version %d.%d with Direct Rendering\n", glxMajorVersion, glxMinorVersion);
+		else
+			fprintf(stderr, "glX-Version %d.%d with Indirect Rendering !!! It will be slow\n", glxMajorVersion, glxMinorVersion);
+
+	}
+
+
 	return true;
 }
 
@@ -341,10 +393,15 @@ void GSWnd::Detach()
 {
 	// Actually the destructor is not called when there is only a GSclose/GSshutdown
 	// The window still need to be closed
-	if(m_window != NULL && m_managed)
-	{
-		SDL_DestroyWindow(m_window);
-		m_window = NULL;
+	if (m_renderer == 2) {
+		if(m_window != NULL && m_managed)
+		{
+			SDL_DestroyWindow(m_window);
+			m_window = NULL;
+		}
+	} else {
+		glXMakeCurrent(m_XDisplay, m_Xwindow, 0);
+		if (m_context) glXDestroyContext(m_XDisplay, m_context);
 	}
 	if (m_XDisplay) {
 		XCloseDisplay(m_XDisplay);
@@ -425,7 +482,8 @@ GSVector4i GSWnd::GetClientRect()
 	// In real world...:
 	if (!m_XDisplay) m_XDisplay = XOpenDisplay(NULL);
 	XGetGeometry(m_XDisplay, m_Xwindow, &winDummy, &xDummy, &yDummy, &w, &h, &borderDummy, &depthDummy);
-	SDL_SetWindowSize(m_window, w, h);
+	if (m_renderer == 2)
+		SDL_SetWindowSize(m_window, w, h);
 
 	return GSVector4i(0, 0, (int)w, (int)h);
 }
@@ -445,23 +503,48 @@ bool GSWnd::SetWindowText(const char* title)
 	// but we not use this function anyway.
 	// FIXME: it does not feel a good solution -- Gregory
 	// NOte: it might be more thread safe to use a call to XGetGeometry
-	SDL_PumpEvents();
 	int x,y = 0;
-	SDL_GetWindowPosition(m_window, &x, &y);
-	if ( x && y )
-		SDL_SetWindowTitle(m_window, title);
+	if (m_renderer == 2) {
+		SDL_PumpEvents();
+		SDL_GetWindowPosition(m_window, &x, &y);
+		if ( x && y )
+			SDL_SetWindowTitle(m_window, title);
+	}
 
 	return true;
 }
 
+void GSWnd::Flip()
+{
+	if (m_renderer == 2) {
+#if SDL_VERSION_ATLEAST(1,3,0)
+	SDL_GL_SwapWindow(m_window);
+#else
+	SDL_GL_SwapBuffers();
+#endif
+	} else {
+		glXSwapBuffers(m_XDisplay, m_Xwindow);
+	}
+}
+
 void GSWnd::Show()
 {
-	SDL_ShowWindow(m_window);
+	if (m_renderer == 2) {
+		SDL_ShowWindow(m_window);
+	} else {
+		XMapRaised(m_XDisplay, m_Xwindow);
+		XFlush(m_XDisplay);
+	}
 }
 
 void GSWnd::Hide()
 {
-	SDL_HideWindow(m_window);
+	if (m_renderer == 2) {
+		SDL_HideWindow(m_window);
+	} else {
+		XUnmapWindow(m_XDisplay, m_Xwindow);
+		XFlush(m_XDisplay);
+	}
 }
 
 void GSWnd::HideFrame()

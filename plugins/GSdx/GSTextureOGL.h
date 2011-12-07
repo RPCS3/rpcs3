@@ -29,6 +29,8 @@ class GSTextureOGL : public GSTexture
 		GLenum m_texture_target; // texture target: 2D, rectangle etc...
 		GLuint m_texture_id;	 // the texture id
 		uint m_texture_unit;		 // the texture unit offset
+		uint m_extra_buffer_id;
+		bool m_extra_buffer_allocated;
 
 	public:
 		explicit GSTextureOGL(int type, int w, int h, bool msaa, int format);

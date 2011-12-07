@@ -24,7 +24,9 @@
 #include "GSTextureOGL.h"
 
 GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
-	: m_texture_unit(0)
+	: m_texture_unit(0),
+	  m_extra_buffer_id(0),
+	  m_extra_buffer_allocated(false)
 {
 	// *************************************************************
 	// Opengl world
@@ -123,8 +125,11 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 			// gvec texelFetch(gsampler sampler, ivec texCoord, int lod[, int sample]);
 			// corollary we can maybe use it for multisample stuff
 			break;
-		default: break;
+		default:
+			break;
 	}
+	// Extra buffer to handle various pixel transfer
+	glGenBuffers(1, &m_extra_buffer_id);
 
 	uint msaa_level;
 	if (m_msaa) {
@@ -178,31 +183,51 @@ void GSTextureOGL::Attach(GLenum attachment)
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 {
+	// static int update_count = 0;
+	// update_count++;
 	// To update only a part of the texture you can use:
 	// glTexSubImage2D — specify a two-dimensional texture subimage
-	switch (m_type) {
-		case GSTexture::RenderTarget:
-		case GSTexture::Texture:
-			// glTexSubImage2D specifies a two-dimensional subtexture for the current texture unit, specified with glActiveTexture.
-			// If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target 
-			//(see glBindBuffer) while a texture image is
-			// specified, data is treated as a byte offset into the buffer object's data store
-			// FIXME warning order of the y axis
-			// FIXME I'm not confident with GL_UNSIGNED_BYTE type
-			// FIXME add a state check
-			glBindTexture(m_texture_target, m_texture_id);
-			//void glTexSubImage2D(GLenum  target,  GLint  level,  GLint  xoffset,  GLint  yoffset,  GLsizei  width,  GLsizei  height,  GLenum  format,  GLenum  type,  const GLvoid *  data);
-			// fprintf(stderr, "texture coord %d, %d, %d, %d\n", r.x, r.y, r.z, r.w);
-			if (m_format == GL_RGBA8)
-				glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.z-r.x, r.w-r.y, GL_RGBA, GL_UNSIGNED_BYTE, data);
-			else
-				assert(0);
-			break;
-		case GSTexture::DepthStencil:
-		case GSTexture::Offscreen:
-			assert(0);
-			break;
+	if (m_type == GSTexture::DepthStencil || m_type == GSTexture::Offscreen) assert(0);
+
+	// glTexSubImage2D specifies a two-dimensional subtexture for the current texture unit, specified with glActiveTexture.
+	// If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target
+	//(see glBindBuffer) while a texture image is
+	// specified, data is treated as a byte offset into the buffer object's data store
+	// FIXME warning order of the y axis
+	// FIXME I'm not confident with GL_UNSIGNED_BYTE type
+	// FIXME add a state check
+
+	EnableUnit(0);
+
+	if (m_format != GL_RGBA8) assert(0);
+
+	// FIXME. That suck but I don't know how to do better for now. I think we need to create a texture buffer and directly upload the copy
+	// The case appears on SW mode. Src pitch is 2x dst pitch.
+	int rowbytes = r.width() << 2;
+	if (pitch != rowbytes) {
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_extra_buffer_id);
+
+		if (!m_extra_buffer_allocated) {
+			glBufferData(GL_PIXEL_UNPACK_BUFFER, m_size.x * m_size.y * 4, NULL, GL_STREAM_DRAW);
+			m_extra_buffer_allocated = true;
+		}
+
+		uint8* src = (uint8*) data;
+		uint8* dst = (uint8*) glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		for(int h = r.height(); h > 0; h--, src += pitch, dst += rowbytes)
+		{
+			memcpy(dst, src, rowbytes);
+		}
+		glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+
+		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, 0 /* offset in UNPACK BUFFER */);
+
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+	} else {
+		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
 	}
+
 #if 0
 	if(m_dev && m_texture)
 	{
@@ -283,10 +308,107 @@ void GSTextureOGL::Unmap()
 #endif
 }
 
-// If I'm correct, this function only dump some buffer. Debug only, still very useful!
-// Note: check zzogl implementation
+#ifndef _WINDOWS
+
+#pragma pack(push, 1)
+
+struct BITMAPFILEHEADER
+{
+	uint16 bfType;
+	uint32 bfSize;
+	uint16 bfReserved1;
+	uint16 bfReserved2;
+	uint32 bfOffBits;
+};
+
+struct BITMAPINFOHEADER
+{
+	uint32 biSize;
+	int32 biWidth;
+	int32 biHeight;
+	uint16 biPlanes;
+	uint16 biBitCount;
+	uint32 biCompression;
+	uint32 biSizeImage;
+	int32 biXPelsPerMeter;
+	int32 biYPelsPerMeter;
+	uint32 biClrUsed;
+	uint32 biClrImportant;
+};
+
+#define BI_RGB 0
+
+#pragma pack(pop)
+
+#endif
+
 bool GSTextureOGL::Save(const string& fn, bool dds)
 {
+	switch (m_type) {
+		case GSTexture::DepthStencil:
+		case GSTexture::Offscreen:
+			ASSERT(0);
+			break;
+		default: break;
+	}
+
+	// Collect the texture data
+	char* image = (char*)malloc(4 * m_size.x * m_size.y);
+	if (m_type) {
+		EnableUnit(0);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	} else {
+		// TODO backbuffer
+		glReadBuffer(GL_BACK);
+		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	}
+
+	// Build a BMP file
+	if(FILE* fp = fopen(fn.c_str(), "wb"))
+	{
+		BITMAPINFOHEADER bih;
+
+		memset(&bih, 0, sizeof(bih));
+
+		bih.biSize = sizeof(bih);
+		bih.biWidth = m_size.x;
+		bih.biHeight = m_size.y;
+		bih.biPlanes = 1;
+		bih.biBitCount = 32;
+		bih.biCompression = BI_RGB;
+		bih.biSizeImage = m_size.x * m_size.y << 2;
+
+		BITMAPFILEHEADER bfh;
+
+		memset(&bfh, 0, sizeof(bfh));
+
+		uint8* bfType = (uint8*)&bfh.bfType;
+
+		// bfh.bfType = 'MB';
+		bfType[0] = 0x42;
+		bfType[1] = 0x4d;
+		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
+		bfh.bfSize = bfh.bfOffBits + bih.biSizeImage;
+		bfh.bfReserved1 = bfh.bfReserved2 = 0;
+
+		fwrite(&bfh, 1, sizeof(bfh), fp);
+		fwrite(&bih, 1, sizeof(bih), fp);
+
+		uint32 pitch = 4 * m_size.x;
+		uint8* data = (uint8*)image + (m_size.y - 1) * pitch;
+
+		for(int h = m_size.y; h > 0; h--, data -= pitch)
+		{
+			fwrite(data, 1, m_size.x << 2, fp); // TODO: swap red-blue?
+		}
+
+		fclose(fp);
+
+		free(image);
+		return true;
+	}
+
+	return false;
 #if 0
 	CComPtr<ID3D11Resource> res;
 

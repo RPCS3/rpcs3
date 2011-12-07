@@ -103,13 +103,20 @@ class GSDeviceOGL : public GSDevice
 	uint32 m_msaa;				// Level of Msaa
 
 	bool m_free_window;			
+#ifdef KEEP_SDL
 	SDL_Window* m_window;		// pointer to the SDL window
+#else
+	GSWnd* m_window;		// pointer to the SDL window
+#endif
 	//SDL_GLContext m_context;	// current opengl context
 	SDL_Renderer* m_dummy_renderer; // ... crappy API ...
 
 	GLuint m_vb;				// vertex buffer object
 	GLuint m_pipeline;			// pipeline to attach program shader
 	GLuint m_fbo;				// frame buffer container
+
+	GLenum m_frag_back_buffer[1];
+	GLenum m_frag_rt_buffer[1];
 
 	struct {
 		GLuint ps[2];			// program object
@@ -170,6 +177,7 @@ class GSDeviceOGL : public GSDevice
 		// size_t vb_stride;
 		// ID3D11InputLayout* layout;
 		GSInputLayout* layout;
+		uint32 layout_nbr;
 		GLenum topology; // (ie GL_TRIANGLES...)
 		GLuint vs; // program
 		GLuint cb; // uniform current buffer
@@ -197,6 +205,7 @@ class GSDeviceOGL : public GSDevice
 
 	bool m_srv_changed;
 	bool m_ss_changed;
+	bool m_vb_changed;
 
 #if 0
 	CComPtr<ID3D11Device> m_dev;
@@ -229,6 +238,8 @@ class GSDeviceOGL : public GSDevice
 	PSConstantBuffer m_ps_cb_cache;
 #endif
 
+	//GLenum frag_back[1] = { GL_BACK };
+	//GLenum frag_target[1] = { GL_COLOR_ATTACHMENT0 }:
 
 	void CheckDebugLog();
 	void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);

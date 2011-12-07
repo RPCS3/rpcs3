@@ -91,12 +91,16 @@ public:
 #include "../../3rdparty/SDL-1.3.0-5387/include/SDL.h"
 #include "../../3rdparty/SDL-1.3.0-5387/include/SDL_syswm.h"
 
+typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXContext, bool, const int*);
+
 class GSWnd
 {
 	SDL_Window* m_window;
 	Window      m_Xwindow;
 	Display*    m_XDisplay;
 	bool m_managed;
+	int  m_renderer;
+	GLXContext   m_context;
 
 public:
 	GSWnd();
@@ -116,6 +120,7 @@ public:
 	void Show();
 	void Hide();
 	void HideFrame();
+	void Flip();
 };
 
 #endif

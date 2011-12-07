@@ -62,8 +62,13 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_pipeline(0)
 	  , m_srv_changed(false)
 	  , m_ss_changed(false)
+	  , m_vb_changed(false)
 {
 	m_msaa = theApp.GetConfig("msaa", 0);
+
+	m_frag_back_buffer[0] = GL_BACK_LEFT;
+	m_frag_rt_buffer[0] = GL_COLOR_ATTACHMENT0;
+
 	memset(&m_merge, 0, sizeof(m_merge));
 	memset(&m_interlace, 0, sizeof(m_interlace));
 	memset(&m_convert, 0, sizeof(m_convert));
@@ -102,13 +107,17 @@ GSDeviceOGL::~GSDeviceOGL()
 	glDeleteProgramPipelines(1, &m_pipeline);
 	glDeleteFramebuffers(1, &m_fbo);
 
+	// glXMakeCurrent(m_XDisplay, m_Xwindow, 0);
+	// if (m_context) glXDestroyContext(m_XDisplay, m_context);
 	// if(m_context)
 	// 	SDL_GL_DeleteContext(m_context);
+#ifdef KEEP_SDL
 	if(m_dummy_renderer)
 		SDL_DestroyRenderer(m_dummy_renderer);
 
 	if(m_window != NULL && m_free_window)
 		SDL_DestroyWindow(m_window);
+#endif
 }
 
 GSTexture* GSDeviceOGL::CreateSurface(int type, int w, int h, bool msaa, int format)
@@ -149,11 +158,8 @@ PFNGLTEXSTORAGE2DPROC glTexStorage2D_glew17 = NULL;
 bool GSDeviceOGL::Create(GSWnd* wnd)
 {
 	if (m_window == NULL) {
-#if SDL_VERSION_ATLEAST(1,3,0)
+#ifdef KEEP_SDL
 		m_window = SDL_CreateWindowFrom(wnd->GetHandle());
-#else
-		assert(0);
-#endif
 	 	m_free_window = true;
 
 		// If the user request OpenGL acceleration, we take recent OGL version (4.2)
@@ -168,7 +174,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		// Ask for an advance opengl version
 		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 4 );
 		// FIXME AMD does not support yet 4.2...
-		//SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 1 );
+		//SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
 		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 1 );
 
 		// Window must be recreated to gain Opengl feature...
@@ -177,7 +183,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		m_dummy_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED); // SDL_RENDERER_PRESENTVSYNC
 		// At least create the opengl context
 		// m_context = SDL_GL_CreateContext(m_window);
-
+#endif
 
 		// FIXME......
 		// GLEW's problem is that it calls glGetString(GL_EXTENSIONS) which causes GL_INVALID_ENUM on GL 3.2 forward compatible context as soon as glewInit() is called. It also doesn't fetch the function pointers. The solution is for GLEW to use glGetStringi instead.
@@ -202,10 +208,12 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		glTexStorage2D_glew17 = (PFNGLTEXSTORAGE2DPROC)glXGetProcAddressARB((const GLubyte*)"glTexStorage2D");
 	}
 
-#ifdef __LINUX__
+#ifdef KEEP_SDL
 	// In GSopen2, sdl failed to received any resize event. GSWnd::GetClientRect need to manually
 	// set the window size... So we send the m_window to the wnd object to allow some manipulation on it.
 	wnd->SetWindow(m_window);
+#else
+	m_window = wnd;
 #endif
 
 	// FIXME disable it when code is ready
@@ -529,13 +537,7 @@ void GSDeviceOGL::Flip()
 {
 	// FIXME: disable it when code is working
 	CheckDebugLog();
-	// Warning it is not OGL dependent but application dependant (glx and so not portable)
-#if SDL_VERSION_ATLEAST(1,3,0)
-	SDL_GL_SwapWindow(m_window);
-#else
-	SDL_GL_SwapBuffers();
-#endif
-
+	m_wnd->Flip();
 }
 
 void GSDeviceOGL::DrawPrimitive()
@@ -546,18 +548,29 @@ void GSDeviceOGL::DrawPrimitive()
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
 	GSTextureOGL* t_ogl = (GSTextureOGL*)t;
-	// FIXME I need to clarify this FBO attachment stuff
-	// I would like to avoid FBO for a basic clean operation
-	//glClearBufferfv(GL_COLOR, t_ogl->attachment(), c.v);
+	if (t == m_backbuffer) {
+		// FIXME need an assert
+		if (m_state.fbo) {
+			m_state.fbo = 0;
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
+		glClearBufferfv(GL_COLOR, GL_BACK, c.v);
+	} else {
+		// FIXME I need to clarify this FBO attachment stuff
+		// I would like to avoid FBO for a basic clean operation
+		if (!m_state.fbo) {
+			m_state.fbo = m_fbo;
+			glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+		}
+		t_ogl->Attach(GL_COLOR_ATTACHMENT0);
+		glClearBufferfv(GL_COLOR, 0, c.v);
+	}
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
 {
-	GSTextureOGL* t_ogl = (GSTextureOGL*)t;
 	GSVector4 color = GSVector4::rgba32(c) * (1.0f / 255);
-	// FIXME I need to clarify this FBO attachment stuff
-	// I would like to avoid FBO for a basic clean operation
-	//glClearBufferfv(GL_COLOR, t_ogl->attachment(), color.v);
+	ClearRenderTarget(t, color);
 }
 
 void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
@@ -691,9 +704,9 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	StretchRect(st, sr, dt, dr, ps, ps_cb, m_convert.bs, linear);
 }
 
-// probably no difficult to convert when all helpers function will be done
 void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSUniformBufferOGL* ps_cb, GSBlendStateOGL* bs, bool linear)
 {
+
 	if(!st || !dt)
 	{
 		ASSERT(0);
@@ -717,8 +730,7 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	float right = dr.z * 2 / ds.x - 1.0f;
 	float bottom = 1.0f - dr.w * 2 / ds.y;
 
-	//FIXME aligment issue
-	GSVertexPT1 vertices[] __attribute__ ((aligned (16))) =
+	GSVertexPT1 vertices[] =
 	{
 		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(sr.x, sr.y)},
 		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(sr.z, sr.y)},
@@ -745,6 +757,12 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	PSSetShader(ps, ps_cb);
 
 	//
+	// FIXME: disable it when code is working
+	glValidateProgramPipeline(m_pipeline);
+	GLint status;
+	glGetProgramPipelineiv(m_pipeline, GL_VALIDATE_STATUS, &status);
+	if (status != GL_TRUE)
+		fprintf(stderr, "Failed to validate the pipeline\n");
 
 	DrawPrimitive();
 
@@ -797,7 +815,6 @@ void GSDeviceOGL::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool lin
 		m_state.cb = m_interlace.cb->buffer;
 		glBindBuffer(GL_UNIFORM_BUFFER, m_interlace.cb->buffer);
 	}
-	// FIXME I'm not sure it will be happy with InterlaceConstantBuffer type
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, m_interlace.cb->byte_size, &cb);
 #if 0
 	m_ctx->UpdateSubresource(m_interlace.cb, 0, NULL, &cb, 0, 0);
@@ -842,6 +859,7 @@ void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t stride, size_t 
 		m_vertices.start = 0;
 		m_vertices.count = 0;
 		m_vertices.limit = std::max<int>(count * 3 / 2, 11000);
+
 	}
 
 	if(!m_vb)
@@ -850,6 +868,7 @@ void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t stride, size_t 
 		// FIXME: GL_DYNAMIC_DRAW vs GL_STREAM_DRAW !!!
 		glBindBuffer(GL_ARRAY_BUFFER, m_vb);
 		glBufferData(GL_ARRAY_BUFFER, m_vertices.limit * stride, NULL, GL_DYNAMIC_DRAW);
+		m_vb_changed = true;
 	}
 
 	// append data or go back to the beginning
@@ -867,12 +886,21 @@ void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t stride, size_t 
 
 void GSDeviceOGL::IASetInputLayout(GSInputLayout* layout, int layout_nbr)
 {
-	if(m_state.layout != layout)
+	if(m_state.layout != layout || m_state.layout_nbr != layout_nbr || m_vb_changed)
 	{
-		m_state.layout = layout;
+		// Remove old configuration.
+		for (int i = m_state.layout_nbr ; i > (m_state.layout_nbr - layout_nbr) ; i--) {
+			glDisableVertexAttribArray(i);
+		}
 
-		for (int i = 0; i < layout_nbr; i++)
-			glVertexAttribPointer(layout->index, layout->size, layout->type, GL_FALSE,  layout->stride, layout->offset);
+		for (int i = 0; i < layout_nbr; i++) {
+			glEnableVertexAttribArray(layout[i].index);
+			glVertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, GL_FALSE,  layout[i].stride, layout[i].offset);
+		}
+
+		m_vb_changed = false;
+		m_state.layout = layout;
+		m_state.layout_nbr = layout_nbr;
 	}
 }
 
@@ -1066,6 +1094,7 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 		if (m_state.fbo) {
 			m_state.fbo = 0;
 			glBindFramebuffer(GL_FRAMEBUFFER, 0); // render in the backbuffer
+			glDrawBuffers(1, m_frag_back_buffer);
 		}
 
 		assert(ds_ogl == NULL); // no depth-stencil without FBO
@@ -1073,6 +1102,7 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 		if (m_state.fbo != m_fbo) {
 			m_state.fbo = m_fbo;
 			glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+			glDrawBuffers(1, m_frag_rt_buffer);
 		}
 
 		assert(rt_ogl != NULL); // a render target must exists
@@ -1094,12 +1124,7 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 	if(!m_state.scissor.eq(r))
 	{
 		m_state.scissor = r;
-		// FIXME check position
-		// x = 0, 
-		// y = 0, 
-		// z = 512, 
-		// w = 512
-		glScissor(r.x, r.y, r.z-r.x, r.w-r.y);
+		glScissor( r.x, r.y, r.width(), r.height() );
 #if 0
 		m_ctx->RSSetScissorRects(1, r);
 #endif
@@ -1187,7 +1212,8 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	char* log = (char*)malloc(log_length);
 	glGetProgramInfoLog(*program, log_length, NULL, log);
 
-	fprintf(stderr, "%s", log);
+	fprintf(stderr, "%s (%s) :", glsl_file.c_str(), entry.c_str());
+	fprintf(stderr, "%s\n", log);
 	free(log);
 }
 

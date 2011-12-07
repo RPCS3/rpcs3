@@ -16,6 +16,7 @@ set(CommonFlags
     -mfpmath=sse
     #-Wstrict-aliasing # Allow to track strict aliasing issue.
     -Wunused-variable
+    -DKEEP_SDL
     )
 
 set(OptimizationFlags
@@ -196,6 +197,12 @@ endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 
 if(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
+    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/convert.glsl DESTINATION ${PLUGIN_DIR})
+    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/interlace.glsl DESTINATION ${PLUGIN_DIR})
+    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/merge.glsl DESTINATION ${PLUGIN_DIR})
 else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/convert.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/interlace.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/merge.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
 endif(PACKAGE_MODE)
