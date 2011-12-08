@@ -56,8 +56,6 @@
 GSDeviceOGL::GSDeviceOGL()
 	: m_free_window(false)
 	  , m_window(NULL)
-	  //, m_context(0)
-	  , m_dummy_renderer(NULL)
 	  , m_vb(0)
 	  , m_pipeline(0)
 	  , m_srv_changed(false)
@@ -65,9 +63,6 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_vb_changed(false)
 {
 	m_msaa = theApp.GetConfig("msaa", 0);
-
-	m_frag_back_buffer[0] = GL_BACK_LEFT;
-	m_frag_rt_buffer[0] = GL_COLOR_ATTACHMENT0;
 
 	memset(&m_merge, 0, sizeof(m_merge));
 	memset(&m_interlace, 0, sizeof(m_interlace));
@@ -106,18 +101,6 @@ GSDeviceOGL::~GSDeviceOGL()
 	glDeleteBuffers(1, &m_vb);
 	glDeleteProgramPipelines(1, &m_pipeline);
 	glDeleteFramebuffers(1, &m_fbo);
-
-	// glXMakeCurrent(m_XDisplay, m_Xwindow, 0);
-	// if (m_context) glXDestroyContext(m_XDisplay, m_context);
-	// if(m_context)
-	// 	SDL_GL_DeleteContext(m_context);
-#ifdef KEEP_SDL
-	if(m_dummy_renderer)
-		SDL_DestroyRenderer(m_dummy_renderer);
-
-	if(m_window != NULL && m_free_window)
-		SDL_DestroyWindow(m_window);
-#endif
 }
 
 GSTexture* GSDeviceOGL::CreateSurface(int type, int w, int h, bool msaa, int format)
@@ -153,38 +136,9 @@ GSTexture* GSDeviceOGL::FetchSurface(int type, int w, int h, bool msaa, int form
 	return GSDevice::FetchSurface(type, w, h, msaa, format);
 }
 
-PFNGLTEXSTORAGE2DPROC glTexStorage2D_glew17 = NULL;
-
 bool GSDeviceOGL::Create(GSWnd* wnd)
 {
 	if (m_window == NULL) {
-#ifdef KEEP_SDL
-		m_window = SDL_CreateWindowFrom(wnd->GetHandle());
-	 	m_free_window = true;
-
-		// If the user request OpenGL acceleration, we take recent OGL version (4.2)
-		// We keep the default 2.1 version in SW mode (only DX11 capable card, are compatible with OGL4) if ( theApp.GetConfig("renderer", 0) / 3 == 4 ) {
-		// Setup visual attribute
-		SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
-		SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
-		SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
-		SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 32 );
-		SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-		SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
-		// Ask for an advance opengl version
-		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 4 );
-		// FIXME AMD does not support yet 4.2...
-		//SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 2 );
-		SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 1 );
-
-		// Window must be recreated to gain Opengl feature...
-		//SDL_RecreateWindow(m_window, SDL_GetWindowFlags(m_window) | SDL_WINDOW_OPENGL );
-		// Well actually you need to generate a full renderer to only have a context...
-		m_dummy_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED); // SDL_RENDERER_PRESENTVSYNC
-		// At least create the opengl context
-		// m_context = SDL_GL_CreateContext(m_window);
-#endif
-
 		// FIXME......
 		// GLEW's problem is that it calls glGetString(GL_EXTENSIONS) which causes GL_INVALID_ENUM on GL 3.2 forward compatible context as soon as glewInit() is called. It also doesn't fetch the function pointers. The solution is for GLEW to use glGetStringi instead.
 		// The current version of GLEW is 1.7.0 but they still haven't corrected it. The only fix is to use glewExperimental for now :
@@ -203,18 +157,9 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 			fprintf(stderr, "4.1 is not supported!\n");
 			return false;
 		}
-		
-		// Not yet supported by glew1.6
-		glTexStorage2D_glew17 = (PFNGLTEXSTORAGE2DPROC)glXGetProcAddressARB((const GLubyte*)"glTexStorage2D");
 	}
 
-#ifdef KEEP_SDL
-	// In GSopen2, sdl failed to received any resize event. GSWnd::GetClientRect need to manually
-	// set the window size... So we send the m_window to the wnd object to allow some manipulation on it.
-	wnd->SetWindow(m_window);
-#else
 	m_window = wnd;
-#endif
 
 	// FIXME disable it when code is ready
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
@@ -226,6 +171,10 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	glBindProgramPipeline(m_pipeline);
 
 	glGenFramebuffers(1, &m_fbo);
+	// Setup FBO fragment output
+	OMSetFBO(m_fbo);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	OMSetFBO(0);
 	// ****************************************************************
 	// convert
 	// ****************************************************************
@@ -549,19 +498,13 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
 	GSTextureOGL* t_ogl = (GSTextureOGL*)t;
 	if (t == m_backbuffer) {
-		// FIXME need an assert
-		if (m_state.fbo) {
-			m_state.fbo = 0;
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		}
-		glClearBufferfv(GL_COLOR, GL_BACK, c.v);
+		// FIXME I really not sure
+		OMSetFBO(0);
+		glClearBufferfv(GL_COLOR, GL_LEFT, c.v);
 	} else {
 		// FIXME I need to clarify this FBO attachment stuff
 		// I would like to avoid FBO for a basic clean operation
-		if (!m_state.fbo) {
-			m_state.fbo = m_fbo;
-			glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-		}
+		OMSetFBO(m_fbo);
 		t_ogl->Attach(GL_COLOR_ATTACHMENT0);
 		glClearBufferfv(GL_COLOR, 0, c.v);
 	}
@@ -757,12 +700,6 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	PSSetShader(ps, ps_cb);
 
 	//
-	// FIXME: disable it when code is working
-	glValidateProgramPipeline(m_pipeline);
-	GLint status;
-	glGetProgramPipelineiv(m_pipeline, GL_VALIDATE_STATUS, &status);
-	if (status != GL_TRUE)
-		fprintf(stderr, "Failed to validate the pipeline\n");
 
 	DrawPrimitive();
 
@@ -771,9 +708,6 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	EndScene();
 
 	PSSetShaderResources(NULL, NULL);
-
-	// FIXME: disable it when code is working
-	CheckDebugLog();
 }
 
 void GSDeviceOGL::DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c)
@@ -865,9 +799,8 @@ void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t stride, size_t 
 	if(!m_vb)
 	{
 		glGenBuffers(1, &m_vb);
-		// FIXME: GL_DYNAMIC_DRAW vs GL_STREAM_DRAW !!!
 		glBindBuffer(GL_ARRAY_BUFFER, m_vb);
-		glBufferData(GL_ARRAY_BUFFER, m_vertices.limit * stride, NULL, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, m_vertices.limit * stride, NULL, GL_STREAM_DRAW);
 		m_vb_changed = true;
 	}
 
@@ -1018,6 +951,14 @@ void GSDeviceOGL::PSSetShader(GLuint ps, GSUniformBufferOGL* ps_cb)
 	}
 }
 
+void GSDeviceOGL::OMSetFBO(GLuint fbo)
+{
+	if (m_state.fbo != fbo) {
+		m_state.fbo = fbo;
+		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	}
+}
+
 void GSDeviceOGL::OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref)
 {
 	uint ref = sref;
@@ -1091,19 +1032,11 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 	GSTextureOGL* ds_ogl = (GSTextureOGL*)ds;
 
 	if (m_backbuffer == rt_ogl) {
-		if (m_state.fbo) {
-			m_state.fbo = 0;
-			glBindFramebuffer(GL_FRAMEBUFFER, 0); // render in the backbuffer
-			glDrawBuffers(1, m_frag_back_buffer);
-		}
+		OMSetFBO(0);
 
 		assert(ds_ogl == NULL); // no depth-stencil without FBO
 	} else {
-		if (m_state.fbo != m_fbo) {
-			m_state.fbo = m_fbo;
-			glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-			glDrawBuffers(1, m_frag_rt_buffer);
-		}
+		OMSetFBO(m_fbo);
 
 		assert(rt_ogl != NULL); // a render target must exists
 		rt_ogl->Attach(GL_COLOR_ATTACHMENT0);
@@ -1251,52 +1184,36 @@ void GSDeviceOGL::CheckDebugLog()
 
 void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message)
 {
-	FILE* f;
-	// FIXME properly log error
-	f = fopen("Debug.txt","a");
+	char debType[20], debSev[5];
+
+	if(type == GL_DEBUG_TYPE_ERROR_ARB)
+		strcpy(debType, "Error");
+	else if(type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB)
+		strcpy(debType, "Deprecated behavior");
+	else if(type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB)
+		strcpy(debType, "Undefined behavior");
+	else if(type == GL_DEBUG_TYPE_PORTABILITY_ARB)
+		strcpy(debType, "Portability");
+	else if(type == GL_DEBUG_TYPE_PERFORMANCE_ARB)
+		strcpy(debType, "Performance");
+	else if(type == GL_DEBUG_TYPE_OTHER_ARB)
+		strcpy(debType, "Other");
+	else
+		strcpy(debType, "UNKNOW");
+
+	if(severity == GL_DEBUG_SEVERITY_HIGH_ARB)
+		strcpy(debSev, "High");
+	else if(severity == GL_DEBUG_SEVERITY_MEDIUM_ARB)
+		strcpy(debSev, "Med");
+	else if(severity == GL_DEBUG_SEVERITY_LOW_ARB)
+		strcpy(debSev, "Low");
+
+	//fprintf(stderr,"Type:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debType,id,debSev,message);
+
+	FILE* f = fopen("Debug.txt","a");
 	if(f)
 	{
-		char debSource[16], debType[20], debSev[5];
-		if(source == GL_DEBUG_SOURCE_API_ARB)
-			strcpy(debSource, "OpenGL");
-		else if(source == GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB)
-			strcpy(debSource, "Windows");
-		else if(source == GL_DEBUG_SOURCE_SHADER_COMPILER_ARB)
-			strcpy(debSource, "Shader Compiler");
-		else if(source == GL_DEBUG_SOURCE_THIRD_PARTY_ARB)
-			strcpy(debSource, "Third Party");
-		else if(source == GL_DEBUG_SOURCE_APPLICATION_ARB)
-			strcpy(debSource, "Application");
-		else if(source == GL_DEBUG_SOURCE_OTHER_ARB)
-			strcpy(debSource, "Other");
-		else
-			strcpy(debSource, "UNKNOW");
-
-
-		if(type == GL_DEBUG_TYPE_ERROR_ARB)
-			strcpy(debType, "Error");
-		else if(type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB)
-			strcpy(debType, "Deprecated behavior");
-		else if(type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB)
-			strcpy(debType, "Undefined behavior");
-		else if(type == GL_DEBUG_TYPE_PORTABILITY_ARB)
-			strcpy(debType, "Portability");
-		else if(type == GL_DEBUG_TYPE_PERFORMANCE_ARB)
-			strcpy(debType, "Performance");
-		else if(type == GL_DEBUG_TYPE_OTHER_ARB)
-			strcpy(debType, "Other");
-		else
-			strcpy(debType, "UNKNOW");
-
-		if(severity == GL_DEBUG_SEVERITY_HIGH_ARB)
-			strcpy(debSev, "High");
-		else if(severity == GL_DEBUG_SEVERITY_MEDIUM_ARB)
-			strcpy(debSev, "Med");
-		else if(severity == GL_DEBUG_SEVERITY_LOW_ARB)
-			strcpy(debSev, "Low");
-
-		//fprintf(stderr,"Source:%s\tType:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debSource,debType,id,debSev,message);
-		fprintf(f,"Source:%s\tType:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debSource,debType,id,debSev,message);
+		fprintf(f,"Type:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debType,id,debSev,message);
 		fclose(f);
 	}
 }

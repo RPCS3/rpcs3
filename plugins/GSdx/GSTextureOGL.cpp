@@ -152,9 +152,6 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 			// In worst case the HW renderer seems to use 3 texture unit
 			// For the moment SW renderer only use 1 so don't bother
 			EnableUnit(0);
-			// FIXME glTexStorage2D does not work yet on my system (4.2) extension but glTexImage2D seems ok
-			// glTexStorage2D_glew17(m_texture_target, 1, m_format, m_size.y, m_size.x);
-			// fprintf(stderr, "texture storage %d, %d\n", w, h);
 			if (m_format == GL_RGBA8) {
 				glTexImage2D(m_texture_target, 0, m_format, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 			}

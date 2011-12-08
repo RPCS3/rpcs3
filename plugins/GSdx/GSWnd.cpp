@@ -314,11 +314,6 @@ void GSWnd::HideFrame()
 GSWnd::GSWnd()
 	: m_window(NULL), m_Xwindow(0), m_XDisplay(NULL)
 {
-#ifdef KEEP_SDL
-	m_renderer = 2;
-#else
-	m_renderer = theApp.GetConfig("renderer", 0) / 3;
-#endif
 }
 
 GSWnd::~GSWnd()
@@ -339,6 +334,7 @@ bool GSWnd::Attach(void* handle, bool managed)
 	m_Xwindow = *(Window*)handle;
 	m_managed = managed;
 
+	m_renderer = theApp.GetConfig("renderer", 0) / 3;
 	if (m_renderer != 2) {
 		m_XDisplay = XOpenDisplay(NULL);
 

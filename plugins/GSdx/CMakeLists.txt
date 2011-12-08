@@ -16,7 +16,6 @@ set(CommonFlags
     -mfpmath=sse
     #-Wstrict-aliasing # Allow to track strict aliasing issue.
     -Wunused-variable
-    -DKEEP_SDL
     )
 
 set(OptimizationFlags

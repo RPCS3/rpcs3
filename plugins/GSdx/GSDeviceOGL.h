@@ -25,7 +25,6 @@
 #include "GSDevice.h"
 #include "GSTextureOGL.h"
 #include "GSdx.h"
-#include "../../3rdparty/SDL-1.3.0-5387/include/SDL.h"
 
 struct GSBlendStateOGL {
 	// Note: You can also select the index of the draw buffer for which to set the blend setting
@@ -103,20 +102,11 @@ class GSDeviceOGL : public GSDevice
 	uint32 m_msaa;				// Level of Msaa
 
 	bool m_free_window;			
-#ifdef KEEP_SDL
-	SDL_Window* m_window;		// pointer to the SDL window
-#else
-	GSWnd* m_window;		// pointer to the SDL window
-#endif
-	//SDL_GLContext m_context;	// current opengl context
-	SDL_Renderer* m_dummy_renderer; // ... crappy API ...
+	GSWnd* m_window;
 
 	GLuint m_vb;				// vertex buffer object
 	GLuint m_pipeline;			// pipeline to attach program shader
 	GLuint m_fbo;				// frame buffer container
-
-	GLenum m_frag_back_buffer[1];
-	GLenum m_frag_rt_buffer[1];
 
 	struct {
 		GLuint ps[2];			// program object
@@ -293,6 +283,7 @@ class GSDeviceOGL : public GSDevice
 		void PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2 = 0);
 		void PSSetShader(GLuint ps, GSUniformBufferOGL* ps_cb);
 
+		void OMSetFBO(GLuint fbo);
 		void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);
 		void OMSetBlendState(GSBlendStateOGL* bs, float bf);
 		void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
