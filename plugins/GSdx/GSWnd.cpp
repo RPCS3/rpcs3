@@ -361,8 +361,9 @@ bool GSWnd::Attach(void* handle, bool managed)
 		{
 			GLX_CONTEXT_MAJOR_VERSION_ARB, 4,
 			GLX_CONTEXT_MINOR_VERSION_ARB, 1,
-				// FIXME : Request a debug context to ease opengl development
-				GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
+			// FIXME : Request a debug context to ease opengl development
+			// Note: don't support deprecated feature (pre openg 3.1)
+			GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB | GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
 			0
 		};
 		m_context = glXCreateContextAttribsARB(m_XDisplay, fbc[0], 0, true, context_attribs);

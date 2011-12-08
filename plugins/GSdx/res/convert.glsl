@@ -94,6 +94,20 @@ void ps_main6() // diagonal
     SV_Target0 = c;
 }
 
+// Avoid to log useless error compilation failure
+void ps_main1()
+{
+}
+void ps_main2()
+{
+}
+void ps_main3()
+{
+}
+void ps_main4()
+{
+}
+
 //void ps_main1()
 //{
 //    vec4 c = sample_c(TEXCOORD);

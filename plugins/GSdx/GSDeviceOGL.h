@@ -228,12 +228,6 @@ class GSDeviceOGL : public GSDevice
 	PSConstantBuffer m_ps_cb_cache;
 #endif
 
-	//GLenum frag_back[1] = { GL_BACK };
-	//GLenum frag_target[1] = { GL_COLOR_ATTACHMENT0 }:
-
-	void CheckDebugLog();
-	void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
-
 	protected:
 		GSTexture* CreateSurface(int type, int w, int h, bool msaa, int format);
 		GSTexture* FetchSurface(int type, int w, int h, bool msaa, int format);
@@ -243,6 +237,11 @@ class GSDeviceOGL : public GSDevice
 	public:
 		GSDeviceOGL();
 		virtual ~GSDeviceOGL();
+
+		static void DebugCallback(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, int length, const char* message, void* userParam);
+		void CheckDebugLog();
+		static void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
+
 
 		bool Create(GSWnd* wnd);
 		bool Reset(int w, int h);

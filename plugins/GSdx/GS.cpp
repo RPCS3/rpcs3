@@ -289,7 +289,8 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 
 #ifdef __LINUX__
 		// Get the Xwindow from dsp.
-		s_gs->m_wnd.Attach((void*)((uint32*)(dsp)+1), false);
+		if( !s_gs->m_wnd.Attach((void*)((uint32*)(dsp)+1), false) )
+			return -1;
 #else
 		s_gs->m_wnd.Attach(*dsp, false);
 #endif

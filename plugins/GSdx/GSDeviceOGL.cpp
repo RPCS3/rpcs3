@@ -159,10 +159,11 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		}
 	}
 
-	m_window = wnd;
-
 	// FIXME disable it when code is ready
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+	glDebugMessageCallbackARB(&GSDeviceOGL::DebugCallback, NULL);
+
+	m_window = wnd;
 
 	// ****************************************************************
 	// Various object
@@ -1149,6 +1150,12 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	fprintf(stderr, "%s\n", log);
 	free(log);
 }
+
+void GSDeviceOGL::DebugCallback(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, int length, const char* message, void* userParam)
+{
+	DebugOutputToFile(source, type, id, severity, message);
+}
+
 
 void GSDeviceOGL::CheckDebugLog()
 {
