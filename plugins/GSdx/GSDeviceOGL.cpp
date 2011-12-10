@@ -52,7 +52,7 @@
 // glBindBufferBase(GL_UNIFORM_BUFFER, block_binding_point, some_buffer_object);
 // glUniformBlockBinding(program, block_index, block_binding_point);
 
-
+//#define LOUD_DEBUGGING
 GSDeviceOGL::GSDeviceOGL()
 	: m_free_window(false)
 	  , m_window(NULL)
@@ -179,6 +179,11 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// convert
 	// ****************************************************************
+	
+	//  There isn't a default VAO in newer versions of OpenGL, so create one.
+	unsigned int vao = 0;
+	glGenVertexArrays(1,&vao);
+	glBindVertexArray(vao);
 
 	GSInputLayout il_convert[2] =
 	{
@@ -1206,7 +1211,7 @@ void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsi
 	else if(type == GL_DEBUG_TYPE_OTHER_ARB)
 		strcpy(debType, "Other");
 	else
-		strcpy(debType, "UNKNOW");
+		strcpy(debType, "UNKNOWN");
 
 	if(severity == GL_DEBUG_SEVERITY_HIGH_ARB)
 		strcpy(debSev, "High");
@@ -1215,7 +1220,9 @@ void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsi
 	else if(severity == GL_DEBUG_SEVERITY_LOW_ARB)
 		strcpy(debSev, "Low");
 
-	//fprintf(stderr,"Type:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debType,id,debSev,message);
+	#ifdef LOUD_DEBUGGING
+	fprintf(stderr,"Type:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debType,id,debSev,message);
+	#endif
 
 	FILE* f = fopen("Debug.txt","a");
 	if(f)

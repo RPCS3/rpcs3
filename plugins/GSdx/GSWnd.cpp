@@ -338,15 +338,26 @@ bool GSWnd::Attach(void* handle, bool managed)
 	if (m_renderer != 2) {
 		m_XDisplay = XOpenDisplay(NULL);
 
-		// Get visual information
-		int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
-			GLX_RED_SIZE, 8,
-			GLX_GREEN_SIZE, 8,
-			GLX_BLUE_SIZE, 8,
-			GLX_DEPTH_SIZE, 24,
-			None
-		};
-
+	  if ( !m_XDisplay )
+	  {
+	    fprintf( stderr, "Failed to open X display\n" );
+	    exit(1);
+	  }
+	
+	  // Get visual information
+	  static int attrListDbl[] =
+	    {
+	      GLX_X_RENDERABLE    , True,
+	      GLX_DRAWABLE_TYPE   , GLX_WINDOW_BIT,
+	      GLX_RENDER_TYPE     , GLX_RGBA_BIT,
+	      GLX_RED_SIZE        , 8,
+	      GLX_GREEN_SIZE      , 8,
+	      GLX_BLUE_SIZE       , 8,
+	      GLX_DEPTH_SIZE      , 24,
+	      GLX_DOUBLEBUFFER    , True,
+	      None
+	    };
+    
 		PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
 		int fbcount = 0;
 		GLXFBConfig *fbc = glXChooseFBConfig(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl, &fbcount);
@@ -364,7 +375,7 @@ bool GSWnd::Attach(void* handle, bool managed)
 			// FIXME : Request a debug context to ease opengl development
 			// Note: don't support deprecated feature (pre openg 3.1)
 			GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB | GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-			0
+			None
 		};
 		m_context = glXCreateContextAttribsARB(m_XDisplay, fbc[0], 0, true, context_attribs);
 		XSync( m_XDisplay, false);
@@ -381,7 +392,6 @@ bool GSWnd::Attach(void* handle, bool managed)
 			fprintf(stderr, "glX-Version %d.%d with Indirect Rendering !!! It will be slow\n", glxMajorVersion, glxMinorVersion);
 
 	}
-
 
 	return true;
 }
