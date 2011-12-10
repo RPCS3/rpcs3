@@ -363,8 +363,7 @@ bool GSWnd::Attach(void* handle, bool managed)
 		GLXFBConfig *fbc = glXChooseFBConfig(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl, &fbcount);
 		if (!fbc || fbcount < 1) return false;
 
-		glXCreateContextAttribsARBProc glXCreateContextAttribsARB = 0;
-		glXCreateContextAttribsARB = (glXCreateContextAttribsARBProc)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
+		PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
 		if (!glXCreateContextAttribsARB) return false;
 
 		// Create a context
@@ -407,7 +406,7 @@ void GSWnd::Detach()
 			m_window = NULL;
 		}
 	} else {
-		glXMakeCurrent(m_XDisplay, m_Xwindow, 0);
+		glXMakeCurrent(m_XDisplay, None, NULL);
 		if (m_context) glXDestroyContext(m_XDisplay, m_context);
 	}
 	if (m_XDisplay) {

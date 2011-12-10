@@ -91,8 +91,6 @@ public:
 #include "../../3rdparty/SDL-1.3.0-5387/include/SDL.h"
 #include "../../3rdparty/SDL-1.3.0-5387/include/SDL_syswm.h"
 
-typedef GLXContext (*glXCreateContextAttribsARBProc)(Display*, GLXFBConfig, GLXContext, bool, const int*);
-
 class GSWnd
 {
 	SDL_Window* m_window;

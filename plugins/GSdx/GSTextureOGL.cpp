@@ -22,6 +22,8 @@
 #pragma once
 
 #include "GSTextureOGL.h"
+static uint g_state_texture_unit = 0;
+static uint g_state_texture_id = 0;
 
 GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 	: m_texture_unit(0),
@@ -93,26 +95,14 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 
 	// Generate the buffer
 	switch (m_type) {
+		case GSTexture::Texture:
 		case GSTexture::RenderTarget:
-			// FIXME what is the real use case of this texture
-			// Maybe a texture will be better
-			// glGenRenderbuffers(1, &m_texture_id);
-			// m_texture_target = GL_RENDERBUFFER;
-			// Buffer can not be read by shader and must be blit before. I see no point to use a render buffer
-			// when you can directly render on the texture. It said it could be faster...
 			glGenTextures(1, &m_texture_id);
 			m_texture_target = GL_TEXTURE_2D;
 			break;
 		case GSTexture::DepthStencil:
 			glGenRenderbuffers(1, &m_texture_id);
 			m_texture_target = GL_RENDERBUFFER;
-			break;
-		case GSTexture::Texture:
-			glGenTextures(1, &m_texture_id);
-			// FIXME, do we need rectangle (or better to use 2D texture)
-			m_texture_target = GL_TEXTURE_2D;
-			//m_texture_target = GL_TEXTURE_RECTANGLE;
-			// == For texture, the Unit must be selected
 			break;
 		case GSTexture::Offscreen:
 			//FIXME I not sure we need a pixel buffer object. It seems more a texture
@@ -156,7 +146,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 				glTexImage2D(m_texture_target, 0, m_format, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 			}
 			else
-				assert(0);
+				assert(0); // TODO Later
 			break;
 		case GSTexture::Offscreen:
 			assert(0);
@@ -252,8 +242,16 @@ void GSTextureOGL::EnableUnit(uint unit)
 			// Howto allocate the texture unit !!!
 			// In worst case the HW renderer seems to use 3 texture unit
 			// For the moment SW renderer only use 1 so don't bother
-			glActiveTexture(GL_TEXTURE0 + unit);
-			glBindTexture(m_texture_target, m_texture_id);
+			if (g_state_texture_unit != unit) {
+				g_state_texture_unit = unit;
+				glActiveTexture(GL_TEXTURE0 + unit);
+				// When you change the texture unit, texture must be rebinded
+				g_state_texture_id = m_texture_id;
+				glBindTexture(m_texture_target, m_texture_id);
+			} else if (g_state_texture_id != m_texture_id) {
+				g_state_texture_id = m_texture_id;
+				glBindTexture(m_texture_target, m_texture_id);
+			}
 			break;
 	}
 }

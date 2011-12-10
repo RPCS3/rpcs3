@@ -107,6 +107,7 @@ class GSDeviceOGL : public GSDevice
 	GLuint m_vb;				// vertex buffer object
 	GLuint m_pipeline;			// pipeline to attach program shader
 	GLuint m_fbo;				// frame buffer container
+	uint32 m_sr_vb_offset;
 
 	struct {
 		GLuint ps[2];			// program object
@@ -123,7 +124,9 @@ class GSDeviceOGL : public GSDevice
 		// Hum I think this one is useless. As far as I understand
 		// it only get the index name of GLSL-equivalent input attribut 
 		// ??? CComPtr<ID3D11InputLayout> il;
-		GSInputLayout il[2]; // description of the vertex array
+		//GSInputLayout il[2]; // description of the vertex array
+		GLuint va;		// vertex array object
+		GLuint vb;		// vertex buffer
 		GLuint vs;		// program object
 		GLuint ps[8];	// program object
 		GLuint ln;		// sampler object
@@ -162,12 +165,13 @@ class GSDeviceOGL : public GSDevice
 	// } m_state;
 	struct
 	{
-		GLuint vb;
+		GLuint vb;  // vertex buffer
 		// Hum I think those things can be dropped on OGL. It probably need an others architecture (see glVertexAttribPointer)
 		// size_t vb_stride;
 		// ID3D11InputLayout* layout;
-		GSInputLayout* layout;
-		uint32 layout_nbr;
+		//GSInputLayout* layout;
+		//uint32 layout_nbr;
+		GLuint va;  // vertex array
 		GLenum topology; // (ie GL_TRIANGLES...)
 		GLuint vs; // program
 		GLuint cb; // uniform current buffer
@@ -195,7 +199,7 @@ class GSDeviceOGL : public GSDevice
 
 	bool m_srv_changed;
 	bool m_ss_changed;
-	bool m_vb_changed;
+	//bool m_vb_changed;
 
 #if 0
 	CComPtr<ID3D11Device> m_dev;
@@ -271,8 +275,10 @@ class GSDeviceOGL : public GSDevice
 		void CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program);
 
 		void IASetPrimitiveTopology(GLenum topology);
-		void IASetInputLayout(GSInputLayout* layout, int layout_nbr);
+		//void IASetInputLayout(GSInputLayout* layout, int layout_nbr);
 		void IASetVertexBuffer(const void* vertices, size_t stride, size_t count);
+		void IASetVertexBufferBind(GLuint vb);
+		void IASetVertexArrray(GLuint va);
 
 		void VSSetShader(GLuint vs, GSUniformBufferOGL* vs_cb);
 		void GSSetShader(GLuint gs);
