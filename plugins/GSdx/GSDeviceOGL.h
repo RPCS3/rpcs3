@@ -110,8 +110,8 @@ class GSDeviceOGL : public GSDevice
 	uint32 m_sr_vb_offset;
 
 	struct {
-		GLuint ps[2];			// program object
-		GSUniformBufferOGL* cb;	// uniform buffer object
+		GLuint ps[2];				 // program object
+		GSUniformBufferOGL* cb;		 // uniform buffer object
 		GSBlendStateOGL* bs;
 	} m_merge;
 
@@ -242,7 +242,6 @@ class GSDeviceOGL : public GSDevice
 		GSDeviceOGL();
 		virtual ~GSDeviceOGL();
 
-		static void DebugCallback(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, int length, const char* message, void* userParam);
 		void CheckDebugLog();
 		static void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
 

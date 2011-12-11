@@ -6,7 +6,7 @@ layout(location = 1) in vec2 TEXCOORD0;
 
 layout(location = 0) out vec4 SV_Target0;
 
-layout(std140, binding = 1) uniform cb0
+layout(std140, binding = 2) uniform cb0
 {
     vec2 ZrH;
     float hH;

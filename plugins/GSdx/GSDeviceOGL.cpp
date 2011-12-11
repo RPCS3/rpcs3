@@ -57,9 +57,9 @@ GSDeviceOGL::GSDeviceOGL()
 	: m_free_window(false)
 	  , m_window(NULL)
 	  , m_vb(0)
+	  , m_pipeline(0)
 	  , m_fbo(0)
 	  , m_sr_vb_offset(0)
-	  , m_pipeline(0)
 	  , m_srv_changed(false)
 	  , m_ss_changed(false)
 {
@@ -164,7 +164,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 
 	// FIXME disable it when code is ready
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-	glDebugMessageCallbackARB(&GSDeviceOGL::DebugCallback, NULL);
 
 	m_window = wnd;
 
@@ -265,8 +264,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// merge
 	// ****************************************************************
 	m_merge.cb = new GSUniformBufferOGL(1, sizeof(MergeConstantBuffer));
-	//m_merge.cb->index = 1;
-	//m_merge.cb->byte_size = sizeof(MergeConstantBuffer);
 	glGenBuffers(1, &m_merge.cb->buffer);
 	glBindBuffer(GL_UNIFORM_BUFFER, m_merge.cb->buffer);
 	glBufferData(GL_UNIFORM_BUFFER, m_merge.cb->byte_size, NULL, GL_DYNAMIC_DRAW);
@@ -287,8 +284,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// interlace
 	// ****************************************************************
 	m_interlace.cb = new GSUniformBufferOGL(2, sizeof(InterlaceConstantBuffer));
-	//m_interlace.cb->index = 2;
-	//m_interlace.cb->byte_size = sizeof(InterlaceConstantBuffer);
 	glGenBuffers(1, &m_interlace.cb->buffer);
 	glBindBuffer(GL_UNIFORM_BUFFER, m_interlace.cb->buffer);
 	glBufferData(GL_UNIFORM_BUFFER, m_interlace.cb->byte_size, NULL, GL_DYNAMIC_DRAW);
@@ -694,17 +689,29 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// ia
 	// ************************************
 
+
 	float left = dr.x * 2 / ds.x - 1.0f;
 	float top = 1.0f - dr.y * 2 / ds.y;
 	float right = dr.z * 2 / ds.x - 1.0f;
 	float bottom = 1.0f - dr.w * 2 / ds.y;
 
+	// Flip y axis only when we render in the backbuffer
+	// By default everything is render in the wrong order (ie dx).
+	// 1/ consistency between several pass rendering (interlace)
+	// 2/ in case some GSdx code expect thing in dx order.
+	// Only flipping the backbuffer is transparent (I hope)...
+	GSVector4 flip_sr = sr;
+	if (dt == m_backbuffer) {
+		flip_sr.y = 1.0f - sr.y;
+		flip_sr.w = 1.0f - sr.w;
+	}
+
 	GSVertexPT1 vertices[] =
 	{
-		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(sr.x, sr.y)},
-		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(sr.z, sr.y)},
-		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(sr.x, sr.w)},
-		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(sr.z, sr.w)},
+		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(flip_sr.x, flip_sr.y)},
+		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(flip_sr.z, flip_sr.y)},
+		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(flip_sr.x, flip_sr.w)},
+		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(flip_sr.z, flip_sr.w)},
 	};
 
 	IASetVertexArrray(m_convert.va);
@@ -767,9 +774,7 @@ void GSDeviceOGL::DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVect
 			glBindBuffer(GL_UNIFORM_BUFFER, m_merge.cb->buffer);
 		}
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, m_merge.cb->byte_size, &c.v);
-#if 0
-		m_ctx->UpdateSubresource(m_merge.cb, 0, NULL, &c, 0, 0);
-#endif
+
 		StretchRect(st[0], sr[0], dt, dr[0], m_merge.ps[mmod ? 1 : 0], m_merge.cb, m_merge.bs, true);
 	}
 }
@@ -791,9 +796,6 @@ void GSDeviceOGL::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool lin
 		glBindBuffer(GL_UNIFORM_BUFFER, m_interlace.cb->buffer);
 	}
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, m_interlace.cb->byte_size, &cb);
-#if 0
-	m_ctx->UpdateSubresource(m_interlace.cb, 0, NULL, &cb, 0, 0);
-#endif
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], m_interlace.cb, linear);
 }
@@ -1002,7 +1004,7 @@ void GSDeviceOGL::PSSetShader(GLuint ps, GSUniformBufferOGL* ps_cb)
 	}
 #endif
 
-	if(m_state.ps_cb != ps_cb)
+	if(m_state.ps_cb != ps_cb && ps_cb != NULL)
 	{
 		m_state.ps_cb = ps_cb;
 		glBindBufferBase(GL_UNIFORM_BUFFER, ps_cb->index, ps_cb->buffer);
@@ -1207,12 +1209,6 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	fprintf(stderr, "%s\n", log);
 	free(log);
 }
-
-void GSDeviceOGL::DebugCallback(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, int length, const char* message, void* userParam)
-{
-	DebugOutputToFile(source, type, id, severity, message);
-}
-
 
 void GSDeviceOGL::CheckDebugLog()
 {

@@ -174,12 +174,8 @@ bool RunLinuxDialog()
 			}
 		}
 
-		#if 0
-		// I'll put the right variable names in later.
-		// Crash, for some interlace options
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box)) != -1)
 			theApp.SetConfig( "interlace", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box)) );
-		#endif
 
 
 		theApp.SetConfig("swthreads", atoi((char*)gtk_entry_get_text(GTK_ENTRY(swthreads_text))) );

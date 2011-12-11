@@ -42,12 +42,12 @@ layout(location = 0) out vec4 SV_Target0;
 
 layout(binding = 0) uniform sampler2D TextureSampler;
 
-vec4 sample_c(vec2 uv)
+vec4 sample_c()
 {
-    return texture(TextureSampler, uv);
+    return texture(TextureSampler, vec2(TEXCOORD0.x,TEXCOORD0.y) );
 }
 
-vec4 ps_crt(vec2 uv, uint i)
+vec4 ps_crt(uint i)
 {
     vec4 mask[4] =
 	{
@@ -57,17 +57,17 @@ vec4 ps_crt(vec2 uv, uint i)
 		vec4(1, 1, 1, 0)
 	};
 
-	return sample_c(uv) * clamp((mask[i] + 0.5f), 0.0f, 1.0f);
+	return sample_c() * clamp((mask[i] + 0.5f), 0.0f, 1.0f);
 }
 
 void ps_main0()
 {
-    SV_Target0 = sample_c(TEXCOORD0);
+    SV_Target0 = sample_c();
 }
 
 void ps_main7()
 {
-    vec4 c = sample_c(TEXCOORD0);
+    vec4 c = sample_c();
 
 	c.a = dot(c.rgb, vec3(0.299, 0.587, 0.114));
 
@@ -76,11 +76,9 @@ void ps_main7()
 
 void ps_main5() // triangular
 {
-	//uint4 p = (uint4)input.p;
 	highp uvec4 p = uvec4(SV_Position);
 
-	// output.c = ps_crt(input, ((p.x + (p.y & 1) * 3) >> 1) % 3); 
-	vec4 c = ps_crt(TEXCOORD0, ((p.x + ((p.y >> 1) & 1) * 3) >> 1) % 3);
+	vec4 c = ps_crt(((p.x + ((p.y >> 1u) & 1u) * 3u) >> 1u) % 3u);
 
     SV_Target0 = c;
 }
@@ -89,7 +87,7 @@ void ps_main6() // diagonal
 {
 	uvec4 p = uvec4(SV_Position);
 
-	vec4 c = ps_crt(TEXCOORD0, (p.x + (p.y % 3)) % 3);
+	vec4 c = ps_crt((p.x + (p.y % 3)) % 3);
 
     SV_Target0 = c;
 }
@@ -110,7 +108,7 @@ void ps_main4()
 
 //void ps_main1()
 //{
-//    vec4 c = sample_c(TEXCOORD);
+//    vec4 c = sample_c();
 //
 //	c.a *= 256.0f / 127; // hm, 0.5 won't give us 1.0 if we just multiply with 2
 //
