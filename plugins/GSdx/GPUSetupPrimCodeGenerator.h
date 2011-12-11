@@ -28,8 +28,6 @@ class GPUSetupPrimCodeGenerator : public GSCodeGenerator
 {
 	void operator = (const GPUSetupPrimCodeGenerator&);
 
-	static const GSVector4 m_shift[3];
-
 	GPUScanlineSelector m_sel;
 	GPUScanlineLocalData& m_local;
 
@@ -37,4 +35,6 @@ class GPUSetupPrimCodeGenerator : public GSCodeGenerator
 
 public:
 	GPUSetupPrimCodeGenerator(void* param, uint32 key, void* code, size_t maxsize);
+
+	static const GSVector4 m_shift[3];
 };

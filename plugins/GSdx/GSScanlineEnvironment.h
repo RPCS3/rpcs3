@@ -146,8 +146,9 @@ __aligned(struct, 32) GSScanlineLocalData // per prim variables, each thread has
 
 	struct 
 	{
-		GSVector4i z, f;
-		GSVector4i s, t, q;
+		GSVector4 z, zo;
+		GSVector4i f;
+		GSVector4 s, t, q;
 		GSVector4i rb, ga;
 		GSVector4i zs, zd;
 		GSVector4i uf, vf;

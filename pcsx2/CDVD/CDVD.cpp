@@ -47,7 +47,12 @@ static __fi void SetResultSize(u8 size)
 static void CDVDREAD_INT(int eCycle)
 {
 	// Give it an arbitary FAST value. Good for ~5000kb/s in ULE when copying a file from CDVD to HDD
-	if (EmuConfig.Speedhacks.fastCDVD) eCycle = 3000;
+	// Keep long seeks out though, as games may try to push dmas while seeking. (Tales of the Abyss)
+	if (EmuConfig.Speedhacks.fastCDVD) {
+		if(eCycle < Cdvd_FullSeek_Cycles)
+			eCycle = 3000;
+	}
+	
 	PSX_INT(IopEvt_CdvdRead, eCycle);
 }
 
@@ -646,6 +651,11 @@ int cdvdReadSector() {
 		}
 		return -1;
 	}
+
+	//if( (HW_DMA3_CHCR & 0x01000000) == 0 ) {
+	//	// DMA3 problem?
+	//	Console.Warning( "CDVD READ - DMA3 transfer off (try again)\n" );
+	//}
 
 	// DMAs use physical addresses (air)
 	u8* mdest = iopPhysMem( HW_DMA3_MADR );

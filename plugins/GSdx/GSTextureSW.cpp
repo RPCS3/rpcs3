@@ -156,7 +156,16 @@ bool GSTextureSW::Save(const string& fn, bool dds)
 
 		for(int h = m_size.y; h > 0; h--, data -= m_pitch)
 		{
-			fwrite(data, 1, m_size.x << 2, fp); // TODO: swap red-blue?
+			for(int i = 0; i < m_size.x; i++)
+			{
+				uint32 c = ((uint32*)data)[i];
+
+				c = (c & 0xff00ff00) | ((c & 0x00ff0000) >> 16) | ((c & 0x000000ff) << 16);
+
+				fwrite(&c, 1, sizeof(c), fp);
+			}
+
+			// fwrite(data, 1, m_size.x << 2, fp); // TODO: swap red-blue?
 		}
 
 		fclose(fp);

@@ -43,5 +43,14 @@ public:
 
 	void BeginDraw(const void* param);
 	void EndDraw(const GSRasterizerStats& stats, uint64 frame);
-	void PrintStats() {m_ds_map.PrintStats();}
+	void PrintStats();
+
+#ifndef JIT_DRAW
+
+	void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan);
+	void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan);
+	void DrawEdge(int pixels, int left, int top, const GSVertexSW& scan);
+	void DrawRect(const GSVector4i& r, const GSVertexSW& v);
+
+#endif
 };
