@@ -175,13 +175,11 @@ class GSDeviceOGL : public GSDevice
 		GLenum topology; // (ie GL_TRIANGLES...)
 		GLuint vs; // program
 		GLuint cb; // uniform current buffer
-		GSUniformBufferOGL* vs_cb; // uniform buffer
 		GLuint gs; // program
 		// FIXME texture binding. Maybe not equivalent for the state but the best I could find.
 		GSTextureOGL* ps_srv[3];
 		// ID3D11ShaderResourceView* ps_srv[3];
 		GLuint ps; // program
-		GSUniformBufferOGL* ps_cb; // uniform buffer
 		GLuint ps_ss[3]; // sampler
 		GSVector2i viewport;
 		GSVector4i scissor;
@@ -266,8 +264,8 @@ class GSDeviceOGL : public GSDevice
 
 		void CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r);
 		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
-		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSUniformBufferOGL* ps_cb, bool linear = true);
-		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSUniformBufferOGL* ps_cb, GSBlendStateOGL* bs, bool linear = true);
+		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, bool linear = true);
+		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSBlendStateOGL* bs, bool linear = true);
 
 		GSTexture* Resolve(GSTexture* t);
 
@@ -279,13 +277,13 @@ class GSDeviceOGL : public GSDevice
 		void IASetVertexBufferBind(GLuint vb);
 		void IASetVertexArrray(GLuint va);
 
-		void VSSetShader(GLuint vs, GSUniformBufferOGL* vs_cb);
+		void VSSetShader(GLuint vs);
 		void GSSetShader(GLuint gs);
 
 		void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
 		void PSSetShaderResource(int i, GSTexture* sr);
 		void PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2 = 0);
-		void PSSetShader(GLuint ps, GSUniformBufferOGL* ps_cb);
+		void PSSetShader(GLuint ps);
 
 		void OMSetFBO(GLuint fbo);
 		void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);

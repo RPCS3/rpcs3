@@ -267,6 +267,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	glGenBuffers(1, &m_merge.cb->buffer);
 	glBindBuffer(GL_UNIFORM_BUFFER, m_merge.cb->buffer);
 	glBufferData(GL_UNIFORM_BUFFER, m_merge.cb->byte_size, NULL, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, m_merge.cb->index, m_merge.cb->buffer);
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge.ps[i]);
@@ -287,6 +288,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	glGenBuffers(1, &m_interlace.cb->buffer);
 	glBindBuffer(GL_UNIFORM_BUFFER, m_interlace.cb->buffer);
 	glBufferData(GL_UNIFORM_BUFFER, m_interlace.cb->byte_size, NULL, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, m_interlace.cb->index, m_interlace.cb->buffer);
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 		CompileShaderFromSource("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_interlace.ps[i]);
@@ -652,15 +654,15 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 
 void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
 {
-	StretchRect(st, sr, dt, dr, m_convert.ps[shader], NULL, linear);
+	StretchRect(st, sr, dt, dr, m_convert.ps[shader], linear);
 }
 
-void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSUniformBufferOGL* ps_cb, bool linear)
+void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, bool linear)
 {
-	StretchRect(st, sr, dt, dr, ps, ps_cb, m_convert.bs, linear);
+	StretchRect(st, sr, dt, dr, ps, m_convert.bs, linear);
 }
 
-void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSUniformBufferOGL* ps_cb, GSBlendStateOGL* bs, bool linear)
+void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSBlendStateOGL* bs, bool linear)
 {
 
 	if(!st || !dt)
@@ -727,7 +729,7 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// vs
 	// ************************************
 
-	VSSetShader(m_convert.vs, NULL);
+	VSSetShader(m_convert.vs);
 
 	// ************************************
 	// gs
@@ -741,7 +743,7 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 
 	PSSetShaderResources(st, NULL);
 	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt, 0);
-	PSSetShader(ps, ps_cb);
+	PSSetShader(ps);
 
 	// ************************************
 	// Draw
@@ -764,7 +766,7 @@ void GSDeviceOGL::DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVect
 
 	if(st[1] && !slbg)
 	{
-		StretchRect(st[1], sr[1], dt, dr[1], m_merge.ps[0], NULL, true);
+		StretchRect(st[1], sr[1], dt, dr[1], m_merge.ps[0]);
 	}
 
 	if(st[0])
@@ -775,7 +777,7 @@ void GSDeviceOGL::DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVect
 		}
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, m_merge.cb->byte_size, &c.v);
 
-		StretchRect(st[0], sr[0], dt, dr[0], m_merge.ps[mmod ? 1 : 0], m_merge.cb, m_merge.bs, true);
+		StretchRect(st[0], sr[0], dt, dr[0], m_merge.ps[mmod ? 1 : 0], m_merge.bs);
 	}
 }
 
@@ -797,7 +799,7 @@ void GSDeviceOGL::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool lin
 	}
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, m_interlace.cb->byte_size, &cb);
 
-	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], m_interlace.cb, linear);
+	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], linear);
 }
 
 // copy a multisample texture to a non-texture multisample. On opengl you need 2 FBO with different level of
@@ -905,18 +907,12 @@ void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)
 	}
 }
 
-void GSDeviceOGL::VSSetShader(GLuint vs, GSUniformBufferOGL* vs_cb)
+void GSDeviceOGL::VSSetShader(GLuint vs)
 {
 	if(m_state.vs != vs)
 	{
 		m_state.vs = vs;
 		glUseProgramStages(m_pipeline, GL_VERTEX_SHADER_BIT, vs);
-	}
-
-	if(m_state.vs_cb != vs_cb)
-	{
-		m_state.vs_cb = vs_cb;
-		glBindBufferBase(GL_UNIFORM_BUFFER, vs_cb->index, vs_cb->buffer);
 	}
 }
 
@@ -962,7 +958,7 @@ void GSDeviceOGL::PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2)
 	}
 }
 
-void GSDeviceOGL::PSSetShader(GLuint ps, GSUniformBufferOGL* ps_cb)
+void GSDeviceOGL::PSSetShader(GLuint ps)
 {
 
 	if(m_state.ps != ps)
@@ -1003,12 +999,6 @@ void GSDeviceOGL::PSSetShader(GLuint ps, GSUniformBufferOGL* ps_cb)
 		m_ss_changed = false;
 	}
 #endif
-
-	if(m_state.ps_cb != ps_cb && ps_cb != NULL)
-	{
-		m_state.ps_cb = ps_cb;
-		glBindBufferBase(GL_UNIFORM_BUFFER, ps_cb->index, ps_cb->buffer);
-	}
 }
 
 void GSDeviceOGL::OMSetFBO(GLuint fbo)
