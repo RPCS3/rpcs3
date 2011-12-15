@@ -157,7 +157,21 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 
 GSTextureOGL::~GSTextureOGL()
 {
-	// glDeleteTextures or glDeleteRenderbuffers
+	glDeleteBuffers(1, &m_extra_buffer_id);
+	switch (m_type) {
+		case GSTexture::Texture:
+		case GSTexture::RenderTarget:
+			glDeleteTextures(1, &m_texture_id);
+			break;
+		case GSTexture::DepthStencil:
+			glDeleteRenderbuffers(1, &m_texture_id);
+			break;
+		case GSTexture::Offscreen:
+			assert(0);
+			break;
+		default:
+			break;
+	}
 }
 
 void GSTextureOGL::Attach(GLenum attachment)
@@ -192,15 +206,19 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	// The case appears on SW mode. Src pitch is 2x dst pitch.
 	int rowbytes = r.width() << 2;
 	if (pitch != rowbytes) {
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_extra_buffer_id);
+		uint32 pbo_size = m_size.x * m_size.y * 4;
+		uint32 map_flags = GL_MAP_WRITE_BIT;
 
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_extra_buffer_id);
 		if (!m_extra_buffer_allocated) {
-			glBufferData(GL_PIXEL_UNPACK_BUFFER, m_size.x * m_size.y * 4, NULL, GL_STREAM_DRAW);
+			glBufferData(GL_PIXEL_UNPACK_BUFFER, pbo_size, NULL, GL_STREAM_DRAW);
 			m_extra_buffer_allocated = true;
+		} else {
+			GL_MAP_INVALIDATE_BUFFER_BIT;
 		}
 
 		uint8* src = (uint8*) data;
-		uint8* dst = (uint8*) glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+		uint8* dst = (uint8*) glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, pbo_size, map_flags);
 		for(int h = r.height(); h > 0; h--, src += pitch, dst += rowbytes)
 		{
 			memcpy(dst, src, rowbytes);

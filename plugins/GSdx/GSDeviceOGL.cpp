@@ -56,10 +56,9 @@
 GSDeviceOGL::GSDeviceOGL()
 	: m_free_window(false)
 	  , m_window(NULL)
-	  , m_vb(0)
 	  , m_pipeline(0)
 	  , m_fbo(0)
-	  , m_sr_vb_offset(0)
+	  , m_vb_sr(NULL)
 	  , m_srv_changed(false)
 	  , m_ss_changed(false)
 {
@@ -74,6 +73,9 @@ GSDeviceOGL::GSDeviceOGL()
 
 GSDeviceOGL::~GSDeviceOGL()
 {
+	// Clean vertex buffer state
+	delete (m_vb_sr);
+
 	// Clean m_merge
 	for (uint i = 0; i < 2; i++)
 		glDeleteProgram(m_merge.ps[i]);
@@ -86,8 +88,6 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete (m_interlace.cb);
 
 	// Clean m_convert
-	glDeleteVertexArrays(1, &m_convert.va);
-	glDeleteBuffers(1, &m_convert.vb);
 	glDeleteProgram(m_convert.vs);
 	for (uint i = 0; i < 2; i++)
 		glDeleteProgram(m_convert.ps[i]);
@@ -101,7 +101,6 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete m_date.bs;
 
 	// Clean various opengl allocation
-	glDeleteBuffers(1, &m_vb);
 	glDeleteProgramPipelines(1, &m_pipeline);
 	glDeleteFramebuffers(1, &m_fbo);
 }
@@ -180,31 +179,18 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	OMSetFBO(0);
 
 	// ****************************************************************
-	// convert
+	// Vertex buffer state
 	// ****************************************************************
-	
-	glGenVertexArrays(1, &m_convert.va);
-	IASetVertexArrray(m_convert.va);
-
-	glGenBuffers(1, &m_convert.vb);
-	IASetVertexBufferBind(m_convert.vb);
-	glBufferData(GL_ARRAY_BUFFER, 4 * 4 * sizeof(GSVertexPT1), NULL, GL_STREAM_DRAW);
-
 	GSInputLayout il_convert[2] =
 	{
 		{0, 4, GL_FLOAT, sizeof(GSVertexPT1), (const GLvoid*)offsetof(struct GSVertexPT1, p) },
 		{1, 2, GL_FLOAT, sizeof(GSVertexPT1), (const GLvoid*)offsetof(struct GSVertexPT1, t) },
 	};
+	m_vb_sr = new GSVertexBufferState(sizeof(GSVertexPT1), il_convert, countof(il_convert));
 
-	for (int i = 0; i < 2; i++) {
-		// Note this function need both a vertex array object and a GL_ARRAY_BUFFER buffer
-		glEnableVertexAttribArray(il_convert[i].index);
-		glVertexAttribPointer(il_convert[i].index, il_convert[i].size, il_convert[i].type, GL_FALSE,  il_convert[i].stride, il_convert[i].offset);
-	}
-	// Unbind to avoid issue with the setup of others parameters
-	IASetVertexArrray(0);
-	IASetVertexBufferBind(0);
-
+	// ****************************************************************
+	// convert
+	// ****************************************************************
 	CompileShaderFromSource("convert.glsl", "vs_main", GL_VERTEX_SHADER, &m_convert.vs);
 	for(int i = 0; i < countof(m_convert.ps); i++)
 		CompileShaderFromSource("convert.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_convert.ps[i]);
@@ -264,10 +250,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// merge
 	// ****************************************************************
 	m_merge.cb = new GSUniformBufferOGL(1, sizeof(MergeConstantBuffer));
-	glGenBuffers(1, &m_merge.cb->buffer);
-	glBindBuffer(GL_UNIFORM_BUFFER, m_merge.cb->buffer);
-	glBufferData(GL_UNIFORM_BUFFER, m_merge.cb->byte_size, NULL, GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, m_merge.cb->index, m_merge.cb->buffer);
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge.ps[i]);
@@ -285,10 +267,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// interlace
 	// ****************************************************************
 	m_interlace.cb = new GSUniformBufferOGL(2, sizeof(InterlaceConstantBuffer));
-	glGenBuffers(1, &m_interlace.cb->buffer);
-	glBindBuffer(GL_UNIFORM_BUFFER, m_interlace.cb->buffer);
-	glBufferData(GL_UNIFORM_BUFFER, m_interlace.cb->byte_size, NULL, GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, m_interlace.cb->index, m_interlace.cb->buffer);
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 		CompileShaderFromSource("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_interlace.ps[i]);
@@ -473,27 +451,6 @@ bool GSDeviceOGL::Reset(int w, int h)
 	// in the backbuffer
 	m_backbuffer = new GSTextureOGL(0, w, h, false, 0);
 
-#if 0
-	if(m_swapchain)
-	{
-		DXGI_SWAP_CHAIN_DESC scd;
-
-		memset(&scd, 0, sizeof(scd));
-
-		m_swapchain->GetDesc(&scd);
-		m_swapchain->ResizeBuffers(scd.BufferCount, w, h, scd.BufferDesc.Format, 0);
-
-		CComPtr<ID3D11Texture2D> backbuffer;
-
-		if(FAILED(m_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbuffer)))
-		{
-			return false;
-		}
-
-		m_backbuffer = new GSTexture11(backbuffer);
-	}
-#endif
-
 	return true;
 }
 
@@ -506,7 +463,7 @@ void GSDeviceOGL::Flip()
 
 void GSDeviceOGL::DrawPrimitive()
 {
-	glDrawArrays(m_state.topology, m_vertices.start, m_vertices.count);
+	glDrawArrays(m_state.topology, m_state.vb_state->start, m_state.vb_state->count);
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -716,14 +673,9 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(flip_sr.z, flip_sr.w)},
 	};
 
-	IASetVertexArrray(m_convert.va);
-	IASetVertexBufferBind(m_convert.vb);
-	// FIXME it will worth some benchmark.
-	// What is the faster always use the same. Or pack to difference emplacement. I'm afraid
-	// that in all case the GPU will be stall to wait the data
-	// Note maybe create a new buffer can be faster.
-	// m_sr_vb_offset = 0;
-	glBufferSubData(GL_ARRAY_BUFFER, m_sr_vb_offset * 4 * sizeof(GSVertexPT1) , sizeof(GSVertexPT1) * 4, vertices);
+	IASetVertexState(m_vb_sr);
+	IASetVertexBuffer(vertices, 4);
+	IASetPrimitiveTopology(GL_TRIANGLE_STRIP);
 
 	// ************************************
 	// vs
@@ -748,8 +700,7 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// ************************************
 	// Draw
 	// ************************************
-	glDrawArrays(GL_TRIANGLE_STRIP, m_sr_vb_offset * 4, 4);
-	m_sr_vb_offset = (m_sr_vb_offset + 1) & 0x3;
+	DrawPrimitive();
 
 	// ************************************
 	// End
@@ -771,11 +722,11 @@ void GSDeviceOGL::DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVect
 
 	if(st[0])
 	{
-		if (m_state.cb != m_merge.cb->buffer) {
-			m_state.cb = m_merge.cb->buffer;
-			glBindBuffer(GL_UNIFORM_BUFFER, m_merge.cb->buffer);
+		if (m_state.cb != m_merge.cb) {
+			m_state.cb = m_merge.cb;
+			m_state.cb->bind();
 		}
-		glBufferSubData(GL_UNIFORM_BUFFER, 0, m_merge.cb->byte_size, &c.v);
+		m_state.cb->upload(&c.v);
 
 		StretchRect(st[0], sr[0], dt, dr[0], m_merge.ps[mmod ? 1 : 0], m_merge.bs);
 	}
@@ -793,11 +744,11 @@ void GSDeviceOGL::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool lin
 	cb.ZrH = GSVector2(0, 1.0f / s.y);
 	cb.hH = s.y / 2;
 
-	if (m_state.cb != m_interlace.cb->buffer) {
-		m_state.cb = m_interlace.cb->buffer;
-		glBindBuffer(GL_UNIFORM_BUFFER, m_interlace.cb->buffer);
+	if (m_state.cb != m_interlace.cb) {
+		 m_state.cb = m_interlace.cb;
+		 m_state.cb->bind();
 	}
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, m_interlace.cb->byte_size, &cb);
+	m_state.cb->upload(&cb);
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], linear);
 }
@@ -823,88 +774,52 @@ GSTexture* GSDeviceOGL::Resolve(GSTexture* t)
 	return NULL;
 }
 
-void GSDeviceOGL::IASetVertexArrray(GLuint va)
+void GSDeviceOGL::EndScene()
 {
-	if (m_state.va != va) {
-		glBindVertexArray(va);
-		m_state.va = va;
+	m_state.vb_state->start += m_state.vb_state->count;
+	m_state.vb_state->count = 0;
+}
+
+void GSDeviceOGL::IASetVertexState(GSVertexBufferState* vb_state)
+{
+	if (m_state.vb_state != vb_state) {
+		m_state.vb_state = vb_state;
+		vb_state->bind();
 	}
 }
 
-void GSDeviceOGL::IASetVertexBufferBind(GLuint vb)
+void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t count)
 {
-	if (m_state.vb != vb) {
-		glBindBuffer(GL_ARRAY_BUFFER, vb);
-		m_state.vb = vb;
+	// Note: For an explanation of the map flag
+	// see http://www.opengl.org/wiki/Buffer_Object_Streaming
+	uint32 map_flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
+
+	GSVertexBufferState* vb = m_state.vb_state;
+	vb->count = count;
+
+	// Current GPU buffer is really too small need to realocate a new one
+	if (count > vb->limit) {
+		vb->allocate(std::max<int>(count * 3 / 2, 60000));
+
+	} else if (count > (vb->limit - vb->start) ) {
+		// Not enough left free room. Just go back at the beginning
+		vb->start = 0;
+
+		// Tell the driver that it can orphan previous buffer and restart from a scratch buffer.
+		// Technically the buffer will not be accessible by the application anymore but the
+		// GL will effectively remove it when draws call are finised.
+		map_flags |= GL_MAP_INVALIDATE_BUFFER_BIT;
+	} else {
+		// Tell the driver that it doesn't need to contain any valid buffer data, and that you promise to write the entire range you map
+		map_flags |= GL_MAP_INVALIDATE_RANGE_BIT;
 	}
+
+	vb->upload(vertices, map_flags);
 }
-
-void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t stride, size_t count)
-{
-	ASSERT(m_vertices.count == 0);
-
-	if(count * stride > m_vertices.limit * m_vertices.stride)
-	{
-		// Current GPU buffer is too small need to realocate a new one
-		if (m_vb) {
-			glDeleteBuffers(1, &m_vb);
-			m_vb = 0;
-		}
-
-		m_vertices.start = 0;
-		m_vertices.count = 0;
-		m_vertices.limit = std::max<int>(count * 3 / 2, 11000);
-		m_vertices.stride = stride;
-	}
-
-	if(!m_vb)
-	{
-		glGenBuffers(1, &m_vb);
-		IASetVertexBufferBind(m_vb);
-		// Allocate the buffer
-		glBufferData(GL_ARRAY_BUFFER, m_vertices.limit * m_vertices.stride, NULL, GL_STREAM_DRAW);
-		//m_vb_changed = true;
-	}
-
-	// append data or go back to the beginning
-	// Hum why we don't always go back to the beginning !!!
-	if(m_vertices.start + count > m_vertices.limit || stride != m_vertices.stride)
-		m_vertices.start = 0;
-
-	// Fill the buffer
-	glBufferSubData(GL_ARRAY_BUFFER, m_vertices.start * stride, count * stride, vertices);
-
-	m_vertices.count = count;
-}
-
-#if 0
-void GSDeviceOGL::IASetInputLayout(GSInputLayout* layout, int layout_nbr)
-{
-	if(m_state.layout != layout || m_state.layout_nbr != layout_nbr || m_vb_changed)
-	{
-		// Remove old configuration.
-		for (int i = m_state.layout_nbr ; i > (m_state.layout_nbr - layout_nbr) ; i--) {
-			glDisableVertexAttribArray(i);
-		}
-
-		for (int i = 0; i < layout_nbr; i++) {
-			glEnableVertexAttribArray(layout[i].index);
-			glVertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, GL_FALSE,  layout[i].stride, layout[i].offset);
-		}
-
-		m_vb_changed = false;
-		m_state.layout = layout;
-		m_state.layout_nbr = layout_nbr;
-	}
-}
-#endif
 
 void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)
 {
-	if(m_state.topology != topology)
-	{
-		m_state.topology = topology;
-	}
+	m_state.topology = topology;
 }
 
 void GSDeviceOGL::VSSetShader(GLuint vs)

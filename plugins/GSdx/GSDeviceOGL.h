@@ -74,15 +74,43 @@ struct GSDepthStencilOGL {
 	{}
 };
 
-struct GSUniformBufferOGL {
+class GSUniformBufferOGL {
 	GLuint buffer;		// data object
 	GLuint index;		// GLSL slot
-	uint   byte_size;	// size of the data
+	uint   size;	    // size of the data
 
-	GSUniformBufferOGL(GLuint index, uint byte_size) : buffer(0)
-														, index(index)
-														, byte_size(byte_size)
-	{}
+public:
+	GSUniformBufferOGL(GLuint index, uint size) : index(index)
+														, size(size)
+	{
+		glGenBuffers(1, &buffer);
+		bind();
+		allocate();
+		attach();
+	}
+
+	void bind()
+	{
+		glBindBuffer(GL_UNIFORM_BUFFER, buffer);
+	}
+
+	void allocate()
+	{
+		glBufferData(GL_UNIFORM_BUFFER, size, NULL, GL_STREAM_DRAW);
+	}
+
+	void attach()
+	{
+		glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer);
+	}
+
+	void upload(const void* src)
+	{
+		uint32 flags = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+		uint8* dst = (uint8*) glMapBufferRange(GL_UNIFORM_BUFFER, 0, size, flags);
+		memcpy(dst, src, size);
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
+	}
 
 	~GSUniformBufferOGL() {
 		glDeleteBuffers(1, &buffer);
@@ -97,6 +125,60 @@ struct GSInputLayout {
 	const GLvoid* offset;
 };
 
+struct GSVertexBufferState {
+	size_t stride;
+	size_t start;
+	size_t count;
+	size_t limit;
+	GLuint vb;
+	GLuint va;
+
+	GSVertexBufferState(size_t stride, GSInputLayout* layout, uint32 layout_nbr) : stride(stride)
+								  , count(0)
+	{
+		glGenBuffers(1, &vb);
+		glGenVertexArrays(1, &va);
+		bind();
+		allocate(60000); // Opengl works best with 1-4MB buffer. 60k element seems a good value.
+		set_internal_format(layout, layout_nbr);
+	}
+
+	void allocate(size_t new_limit)
+	{
+		start = 0;
+		limit = new_limit;
+		glBufferData(GL_ARRAY_BUFFER,  limit * stride, NULL, GL_STREAM_DRAW);
+	}
+
+	void bind()
+	{
+		glBindVertexArray(va);
+		glBindBuffer(GL_ARRAY_BUFFER, vb);
+	}
+
+	void upload(const void* src, uint32 flags)
+	{
+		uint8* dst = (uint8*) glMapBufferRange(GL_ARRAY_BUFFER, stride*start, stride*count, flags);
+		memcpy(dst, src, stride*count);
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+	}
+
+	void set_internal_format(GSInputLayout* layout, uint32 layout_nbr)
+	{
+		for (int i = 0; i < layout_nbr; i++) {
+			// Note this function need both a vertex array object and a GL_ARRAY_BUFFER buffer
+			glEnableVertexAttribArray(layout[i].index);
+			glVertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, GL_FALSE,  layout[i].stride, layout[i].offset);
+		}
+	}
+
+	~GSVertexBufferState()
+	{
+		glDeleteBuffers(1, &vb);
+		glDeleteVertexArrays(1, &va);
+	}
+};
+
 class GSDeviceOGL : public GSDevice
 {
 	uint32 m_msaa;				// Level of Msaa
@@ -104,10 +186,10 @@ class GSDeviceOGL : public GSDevice
 	bool m_free_window;			
 	GSWnd* m_window;
 
-	GLuint m_vb;				// vertex buffer object
 	GLuint m_pipeline;			// pipeline to attach program shader
 	GLuint m_fbo;				// frame buffer container
-	uint32 m_sr_vb_offset;
+
+	GSVertexBufferState* m_vb_sr; // vb_state for StretchRect
 
 	struct {
 		GLuint ps[2];				 // program object
@@ -121,12 +203,6 @@ class GSDeviceOGL : public GSDevice
 	} m_interlace;
 
 	struct {
-		// Hum I think this one is useless. As far as I understand
-		// it only get the index name of GLSL-equivalent input attribut 
-		// ??? CComPtr<ID3D11InputLayout> il;
-		//GSInputLayout il[2]; // description of the vertex array
-		GLuint va;		// vertex array object
-		GLuint vb;		// vertex buffer
 		GLuint vs;		// program object
 		GLuint ps[8];	// program object
 		GLuint ln;		// sampler object
@@ -141,40 +217,12 @@ class GSDeviceOGL : public GSDevice
 		GSBlendStateOGL* bs;
 	} m_date;
 
-	// struct
-	// {
-	// 	ID3D11Buffer* vb;
-	// 	size_t vb_stride;
-	// 	ID3D11InputLayout* layout;
-	// 	D3D11_PRIMITIVE_TOPOLOGY topology;
-	// 	ID3D11VertexShader* vs;
-	// 	ID3D11Buffer* vs_cb;
-	// 	ID3D11GeometryShader* gs;
-	// 	ID3D11ShaderResourceView* ps_srv[3];
-	// 	ID3D11PixelShader* ps;
-	// 	ID3D11Buffer* ps_cb;
-	// 	ID3D11SamplerState* ps_ss[3];
-	// 	GSVector2i viewport;
-	// 	GSVector4i scissor;
-	// 	ID3D11DepthStencilState* dss;
-	// 	uint8 sref;
-	// 	ID3D11BlendState* bs;
-	// 	float bf;
-	// 	ID3D11RenderTargetView* rtv;
-	// 	ID3D11DepthStencilView* dsv;
-	// } m_state;
 	struct
 	{
-		GLuint vb;  // vertex buffer
-		// Hum I think those things can be dropped on OGL. It probably need an others architecture (see glVertexAttribPointer)
-		// size_t vb_stride;
-		// ID3D11InputLayout* layout;
-		//GSInputLayout* layout;
-		//uint32 layout_nbr;
-		GLuint va;  // vertex array
+		GSVertexBufferState* vb_state;
 		GLenum topology; // (ie GL_TRIANGLES...)
 		GLuint vs; // program
-		GLuint cb; // uniform current buffer
+		GSUniformBufferOGL* cb; // uniform current buffer
 		GLuint gs; // program
 		// FIXME texture binding. Maybe not equivalent for the state but the best I could find.
 		GSTextureOGL* ps_srv[3];
@@ -197,7 +245,6 @@ class GSDeviceOGL : public GSDevice
 
 	bool m_srv_changed;
 	bool m_ss_changed;
-	//bool m_vb_changed;
 
 #if 0
 	CComPtr<ID3D11Device> m_dev;
@@ -271,11 +318,11 @@ class GSDeviceOGL : public GSDevice
 
 		void CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program);
 
+		void EndScene();
+
 		void IASetPrimitiveTopology(GLenum topology);
-		//void IASetInputLayout(GSInputLayout* layout, int layout_nbr);
-		void IASetVertexBuffer(const void* vertices, size_t stride, size_t count);
-		void IASetVertexBufferBind(GLuint vb);
-		void IASetVertexArrray(GLuint va);
+		void IASetVertexBuffer(const void* vertices, size_t count);
+		void IASetVertexState(GSVertexBufferState* vb_state);
 
 		void VSSetShader(GLuint vs);
 		void GSSetShader(GLuint gs);
