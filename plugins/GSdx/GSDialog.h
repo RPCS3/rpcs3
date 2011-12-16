@@ -40,6 +40,8 @@ public:
 	GSDialog(UINT id);
 	virtual ~GSDialog() {}
 
+	int GetId() const {return m_id;}
+
 	INT_PTR DoModal();
 
 	string GetText(UINT id);

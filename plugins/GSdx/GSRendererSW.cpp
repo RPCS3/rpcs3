@@ -782,25 +782,24 @@ void GSRendererSW::VertexKick(bool skip)
 
 	if(GSVertexSW* v = DrawingKick<prim>(skip, count))
 	{
+		GS_PRIM_CLASS primclass = GSUtil::GetPrimClass(prim);
+
 if(!m_dump)
 {
 		GSVector4 pmin, pmax;
 
-		switch(prim)
+		switch(primclass)
 		{
-		case GS_POINTLIST:
+		case GS_POINT_CLASS:
 			pmin = v[0].p;
 			pmax = v[0].p;
 			break;
-		case GS_LINELIST:
-		case GS_LINESTRIP:
-		case GS_SPRITE:
+		case GS_LINE_CLASS:
+		case GS_SPRITE_CLASS:
 			pmin = v[0].p.min(v[1].p);
 			pmax = v[0].p.max(v[1].p);
 			break;
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
+		case GS_TRIANGLE_CLASS:
 			pmin = v[0].p.min(v[1].p).min(v[2].p);
 			pmax = v[0].p.max(v[1].p).max(v[2].p);
 			break;
@@ -810,21 +809,17 @@ if(!m_dump)
 
 		GSVector4 test = (pmax < scissor) | (pmin > scissor.zwxy());
 
-		switch(prim)
+		switch(primclass)
 		{
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
-		case GS_SPRITE:
+		case GS_TRIANGLE_CLASS:
+		case GS_SPRITE_CLASS:
 			test |= pmin.ceil() == pmax.ceil();
 			break;
 		}
 
-		switch(prim)
+		switch(primclass)
 		{
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
+		case GS_TRIANGLE_CLASS:
 			// are in line or just two of them are the same (cross product == 0)
 			GSVector4 tmp = (v[1].p - v[0].p) * (v[2].p - v[0].p).yxwz();
 			test |= tmp == tmp.yxwz();
@@ -836,42 +831,26 @@ if(!m_dump)
 			return;
 		}
 }
-		switch(prim)
+		switch(primclass)
 		{
-		case GS_POINTLIST:
+		case GS_POINT_CLASS:
 			break;
-		case GS_LINELIST:
-		case GS_LINESTRIP:
+		case GS_LINE_CLASS:
 			if(PRIM->IIP == 0) {v[0].c = v[1].c;}
 			break;
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
+		case GS_TRIANGLE_CLASS:
 			if(PRIM->IIP == 0) {v[0].c = v[2].c; v[1].c = v[2].c;}
 			break;
-		case GS_SPRITE:
+		case GS_SPRITE_CLASS:
 			break;
 		}
 
 		if(m_count < 30 && m_count >= 3)
 		{
-			GSVertexSW* v = &m_vertices[m_count - 3];
-
 			int tl = 0;
 			int br = 0;
 
-			bool isquad = false;
-
-			switch(prim)
-			{
-			case GS_TRIANGLESTRIP:
-			case GS_TRIANGLEFAN:
-			case GS_TRIANGLELIST:
-				isquad = GSVertexSW::IsQuad(v, tl, br);
-				break;
-			}
-
-			if(isquad)
+			if(primclass == GS_TRIANGLE_CLASS && GSVertexSW::IsQuad(&m_vertices[m_count - 3], tl, br))
 			{
 				m_count -= 3;
 

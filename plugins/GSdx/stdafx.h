@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "config.h"
+
 #ifdef _WINDOWS
 
 // The following macros define the minimum required platform.  The minimum required platform
@@ -91,29 +93,29 @@ using namespace std;
 
 #ifdef _WINDOWS
 
-#include <hash_map>
-#include <hash_set>
+	#include <hash_map>
+	#include <hash_set>
 
-using namespace stdext;
+	using namespace stdext;
 
-#define vsnprintf _vsnprintf
-#define snprintf _snprintf
+	#define vsnprintf _vsnprintf
+	#define snprintf _snprintf
 
-#define DIRECTORY_SEPARATOR '\\'
+	#define DIRECTORY_SEPARATOR '\\'
 
 #else
 
-#define _BACKWARD_BACKWARD_WARNING_H
+	#define _BACKWARD_BACKWARD_WARNING_H
 
-#define hash_map map
-#define hash_set set
+	#define hash_map map
+	#define hash_set set
 
-//#include <ext/hash_map>
-//#include <ext/hash_set>
+	//#include <ext/hash_map>
+	//#include <ext/hash_set>
 
-//using namespace __gnu_cxx;
+	//using namespace __gnu_cxx;
 
-#define DIRECTORY_SEPARATOR '/'
+	#define DIRECTORY_SEPARATOR '/'
 
 #endif
 
@@ -276,61 +278,66 @@ typedef signed long long int64;
 
 #if !defined(_MSC_VER)
 
-#if !defined(HAVE_ALIGNED_MALLOC)
+	#if !defined(HAVE_ALIGNED_MALLOC)
 
-extern void* _aligned_malloc(size_t size, size_t alignment);
-extern void _aligned_free(void* p);
+	extern void* _aligned_malloc(size_t size, size_t alignment);
+	extern void _aligned_free(void* p);
 
-#endif
+	#endif
 
-// http://svn.reactos.org/svn/reactos/trunk/reactos/include/crt/mingw32/intrin_x86.h?view=markup
-// - the other intrin_x86.h of pcsx2 is not up to date, its _interlockedbittestandreset simply does not work.
+	// http://svn.reactos.org/svn/reactos/trunk/reactos/include/crt/mingw32/intrin_x86.h?view=markup
+	// - the other intrin_x86.h of pcsx2 is not up to date, its _interlockedbittestandreset simply does not work.
 
-__forceinline unsigned char _BitScanForward(unsigned long* const Index, const unsigned long Mask)
-{
-    __asm__("bsfl %[Mask], %[Index]" : [Index] "=r" (*Index) : [Mask] "mr" (Mask));
-    return Mask ? 1 : 0;
-}
+	__forceinline unsigned char _BitScanForward(unsigned long* const Index, const unsigned long Mask)
+	{
+		__asm__("bsfl %[Mask], %[Index]" : [Index] "=r" (*Index) : [Mask] "mr" (Mask));
+		return Mask ? 1 : 0;
+	}
 
-__forceinline unsigned char _interlockedbittestandreset(volatile long* a, const long b)
-{
-    unsigned char retval;
-    __asm__("lock; btrl %[b], %[a]; setb %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
-    return retval;
-}
+	__forceinline unsigned char _interlockedbittestandreset(volatile long* a, const long b)
+	{
+		unsigned char retval;
+		__asm__("lock; btrl %[b], %[a]; setb %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
+		return retval;
+	}
 
-__forceinline unsigned char _interlockedbittestandset(volatile long* a, const long b)
-{
-	unsigned char retval;
-	__asm__("lock; btsl %[b], %[a]; setc %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
-	return retval;
-}
+	__forceinline unsigned char _interlockedbittestandset(volatile long* a, const long b)
+	{
+		unsigned char retval;
+		__asm__("lock; btsl %[b], %[a]; setc %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
+		return retval;
+	}
 
-#ifdef __GNUC__
+	#ifdef __GNUC__
 
-__forceinline unsigned long long __rdtsc()
-{
-    #if defined(__amd64__) || defined(__x86_64__)
-    unsigned long long low, high;
-    __asm__ __volatile__("rdtsc" : "=a"(low), "=d"(high));
-    return low | (high << 32);
-    #else
-    unsigned long long retval;
-    __asm__ __volatile__("rdtsc" : "=A"(retval));
-    return retval;
-    #endif
-}
+	__forceinline unsigned long long __rdtsc()
+	{
+		#if defined(__amd64__) || defined(__x86_64__)
+		unsigned long long low, high;
+		__asm__ __volatile__("rdtsc" : "=a"(low), "=d"(high));
+		return low | (high << 32);
+		#else
+		unsigned long long retval;
+		__asm__ __volatile__("rdtsc" : "=A"(retval));
+		return retval;
+		#endif
+	}
 
-#endif
+	#endif
 
 #endif
 
 extern void* vmalloc(size_t size, bool code);
 extern void vmfree(void* ptr, size_t size);
 
-#define USE_UPSCALE_HACKS // Hacks intended to fix upscaling / rendering glitches in HW renderers
-//#define HW_NO_TEXTURE_CACHE // Slow but fixes a lot of bugs
-//#define NO_CRC_HACKS // Disable all game specific hacks
-#ifdef HW_NO_TEXTURE_CACHE
-	#define NO_CRC_HACKS
+#ifdef _WINDOWS
+
+	#ifdef ENABLE_VTUNE
+
+	#include <JITProfiling.h>
+
+	#pragma comment(lib, "jitprofiling.lib")
+
+	#endif
+
 #endif

@@ -27,9 +27,6 @@
 #include "GSThread.h"
 #include "GSAlignedClass.h"
 
-// 
-#define JIT_DRAW
-
 __aligned(class, 32) GSRasterizerData
 {
 public:
@@ -65,7 +62,7 @@ public:
 	virtual void EndDraw(const GSRasterizerStats& stats, uint64 frame) = 0;
 	virtual void PrintStats() = 0;
 
-#ifdef JIT_DRAW
+#ifdef ENABLE_JIT_RASTERIZER
 
 	__forceinline void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan) {m_sp(vertices, dscan);}
 	__forceinline void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan) {m_ds(pixels, left, top, scan);}
@@ -90,8 +87,8 @@ class IRasterizer
 public:
 	virtual ~IRasterizer() {}
 
+	virtual void Init(int id, int threads) = 0;
 	virtual void Draw(const GSRasterizerData* data) = 0;
-	virtual void SetThreadId(int id, int threads) = 0;
 	virtual void GetStats(GSRasterizerStats& stats) = 0;
 	virtual void PrintStats() = 0;
 };
@@ -116,11 +113,12 @@ protected:
 	void DrawTriangle(const GSVertexSW* v);
 	void DrawSprite(const GSVertexSW* v);
 
-	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& edge, const GSVertexSW& dedge, const GSVertexSW& dscan, const GSVector4& x0, const GSVector4& y0);
+	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& edge, const GSVertexSW& dedge, const GSVertexSW& dscan, const GSVector4& p0);
 
 	void DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, int orientation, int side);
 
 	__forceinline bool IsOneOfMyScanlines(int scanline) const;
+	__forceinline bool IsOneOfMyScanlines(int top, int bottom) const;
 	__forceinline void AddScanline(GSVertexSW* e, int pixels, int left, int top, const GSVertexSW& scan);
 	__forceinline void Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bool edge = false);
 
@@ -130,8 +128,8 @@ public:
 
 	// IRasterizer
 
+	void Init(int id, int threads);
 	void Draw(const GSRasterizerData* data);
-	void SetThreadId(int id, int threads);
 	void GetStats(GSRasterizerStats& stats);
 	void PrintStats() {m_ds->PrintStats();}
 };
@@ -178,9 +176,8 @@ public:
 		}
 	}
 
-	void Sync();
-
 	void Draw(const GSRasterizerData* data, int width, int height);
+	void Sync();
 	void GetStats(GSRasterizerStats& stats);
 	void PrintStats();
 };

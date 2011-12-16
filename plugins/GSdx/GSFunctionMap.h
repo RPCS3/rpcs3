@@ -168,14 +168,6 @@ public:
 	}
 };
 
-#if 0 // we can't legally distribute vtune libraries or headers
-#ifdef _WINDOWS
-
-#include "vtune/JITProfiling.h"
-
-#endif
-#endif
-
 template<class CG, class KEY, class VALUE>
 class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
 {
@@ -215,8 +207,7 @@ public:
 
 			m_cgmap[key] = ret;
 
-			#if 0 // we can't legally distribute vtune libraries or headers
-            #ifdef _WINDOWS
+			#ifdef ENABLE_VTUNE
 
 			// vtune method registration
 
@@ -254,7 +245,6 @@ public:
 */
 			}
 
-            #endif
 			#endif
 
 			delete cg;

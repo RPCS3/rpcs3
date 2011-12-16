@@ -63,7 +63,7 @@ public:
 
 	const Texture* Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r, uint32 tw0 = 0);
 
-	void InvalidateVideoMem(const GSOffset* o, const GSVector4i& r);
+	bool InvalidateVideoMem(const GSOffset* o, const GSVector4i& r);
 
 	void RemoveAll();
 	void RemoveAt(Texture* t);

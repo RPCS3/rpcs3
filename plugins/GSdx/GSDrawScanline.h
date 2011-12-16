@@ -56,7 +56,7 @@ public:
 
 	void DrawRect(const GSVector4i& r, const GSVertexSW& v);
 
-#ifndef JIT_DRAW
+#ifndef ENABLE_JIT_RASTERIZER
 	
 	void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan);
 	void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan);

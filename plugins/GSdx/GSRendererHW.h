@@ -756,7 +756,7 @@ protected:
 
 	void Draw()
 	{
-#ifndef NO_CRC_HACKS
+#ifndef DISABLE_CRC_HACKS
 		if(GSRendererT<Vertex>::IsBadFrame(m_skip, m_userhacks_skipdraw)) return;
 #endif
 
@@ -922,7 +922,7 @@ protected:
 
 			s_n++;
 		}
-#ifdef HW_NO_TEXTURE_CACHE
+#ifdef DISABLE_HW_TEXTURE_CACHE
 		m_tc->Read(rt, r);
 #endif
 	}

@@ -88,7 +88,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 
 	Target* dst = NULL;
 
-#ifdef HW_NO_TEXTURE_CACHE
+#ifdef DISABLE_HW_TEXTURE_CACHE
 	if( 0 )
 #else
 	if(src == NULL)
@@ -191,7 +191,7 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 		if(multiplier > 1) // it's limited to a maximum of 4 on reading the config
 		{
 
-#if 0 //#ifdef USE_UPSCALE_HACKS //not happy with this yet..
+#if 0 //#ifdef ENABLE_UPSCALE_HACKS //not happy with this yet..
 
 			float x = 1.0f;
 			float y = 1.0f;

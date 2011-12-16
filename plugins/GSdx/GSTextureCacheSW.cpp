@@ -135,8 +135,10 @@ const GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0
 	return t;
 }
 
-void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect)
+bool GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect)
 {
+	bool changed = false;
+
 	uint32 bp = o->bp;
 	uint32 bw = o->bw;
 	uint32 psm = o->psm;
@@ -163,6 +165,8 @@ void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& r
 
 					if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM))
 					{
+						changed = true;
+
 						if(t->m_repeating)
 						{
 							list<GSVector2i>& l = t->m_p2t[page];
@@ -183,6 +187,8 @@ void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& r
 			}
 		}
 	}
+
+	return changed;
 }
 
 void GSTextureCacheSW::RemoveAll()

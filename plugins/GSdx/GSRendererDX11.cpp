@@ -45,7 +45,7 @@ void GSRendererDX11::VertexKick(bool skip)
 
 	dst = *(GSVertexHW11*)&m_v;
 
-#ifdef USE_UPSCALE_HACKS
+#ifdef ENABLE_UPSCALE_HACKS
 
 	if(tme && fst)
 	{

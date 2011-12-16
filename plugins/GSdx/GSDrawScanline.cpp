@@ -105,7 +105,7 @@ void GSDrawScanline::PrintStats()
 	m_ds_map.PrintStats();
 }
 
-#ifndef JIT_DRAW
+#ifndef ENABLE_JIT_RASTERIZER
 
 void GSDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan)
 {

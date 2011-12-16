@@ -22,11 +22,6 @@
 #include "stdafx.h"
 #include "GSState.h"
 
-//#define DISABLE_BITMASKING
-//#define DISABLE_COLCLAMP
-//#define DISABLE_DATE
-//see stdafx.h for #define HW_NO_TEXTURE_CACHE and #define NO_CRC_HACKS
-
 //#define Offset_ST  // Fixes Persona3 mini map alignment which is off even in software rendering
 //#define Offset_UV  // Fixes / breaks various titles
 
@@ -1119,7 +1114,16 @@ void GSState::FlushWrite()
 
 	if(len <= 0) return;
 
-	int y = m_tr.y;
+	GSVector4i r;
+
+	r.left = m_env.TRXPOS.DSAX;
+	r.top = m_env.TRXPOS.DSAY;
+	r.right = r.left + m_env.TRXREG.RRW;
+	r.bottom = r.top + m_env.TRXREG.RRH;
+
+	InvalidateVideoMem(m_env.BITBLTBUF, r);
+	
+	//int y = m_tr.y;
 
 	GSLocalMemory::writeImage wi = GSLocalMemory::m_psm[m_env.BITBLTBUF.DPSM].wi;
 
@@ -1129,6 +1133,7 @@ void GSState::FlushWrite()
 
 	m_perfmon.Put(GSPerfMon::Swizzle, len);
 
+	/*
 	GSVector4i r;
 
 	r.left = m_env.TRXPOS.DSAX;
@@ -1137,6 +1142,7 @@ void GSState::FlushWrite()
 	r.bottom = std::min<int>(r.top + m_env.TRXREG.RRH, m_tr.x == r.left ? m_tr.y : m_tr.y + 1);
 
 	InvalidateVideoMem(m_env.BITBLTBUF, r);
+	*/
 /*
 	static int n = 0;
 	string s;
@@ -1174,12 +1180,6 @@ void GSState::Write(const uint8* mem, int len)
 
 		// printf("%d >= %d\n", len, m_tr.total);
 
-		(m_mem.*psm.wi)(m_tr.x, m_tr.y, mem, m_tr.total, m_env.BITBLTBUF, m_env.TRXPOS, m_env.TRXREG);
-
-		m_tr.start = m_tr.end = m_tr.total;
-
-		m_perfmon.Put(GSPerfMon::Swizzle, len);
-
 		GSVector4i r;
 
 		r.left = m_env.TRXPOS.DSAX;
@@ -1188,6 +1188,12 @@ void GSState::Write(const uint8* mem, int len)
 		r.bottom = r.top + m_env.TRXREG.RRH;
 
 		InvalidateVideoMem(m_env.BITBLTBUF, r);
+
+		(m_mem.*psm.wi)(m_tr.x, m_tr.y, mem, m_tr.total, m_env.BITBLTBUF, m_env.TRXPOS, m_env.TRXREG);
+
+		m_tr.start = m_tr.end = m_tr.total;
+
+		m_perfmon.Put(GSPerfMon::Swizzle, len);
 	}
 	else
 	{
@@ -3211,9 +3217,7 @@ bool GSC_JamesBondEverythingOrNothing(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
-
-//#define USE_DYNAMIC_CRC_HACK
-#ifdef USE_DYNAMIC_CRC_HACK
+#ifdef ENABLE_DYNAMIC_CRC_HACK
 
 #define DYNA_DLL_PATH "c:/dev/pcsx2/trunk/tools/dynacrchack/DynaCrcHack.dll"
 

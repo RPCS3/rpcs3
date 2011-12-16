@@ -45,7 +45,7 @@ public:
 	void EndDraw(const GSRasterizerStats& stats, uint64 frame);
 	void PrintStats();
 
-#ifndef JIT_DRAW
+#ifndef ENABLE_JIT_RASTERIZER
 
 	void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan);
 	void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan);

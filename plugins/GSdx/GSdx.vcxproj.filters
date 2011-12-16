@@ -644,6 +644,9 @@
     <ClInclude Include="GSDeviceSDL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\logo10.bmp">

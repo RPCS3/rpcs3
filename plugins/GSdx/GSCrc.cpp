@@ -366,7 +366,7 @@ CRC::Game CRC::Lookup(uint32 crc)
 			//	printf( "GSdx: excluding CRC hack for 0x%08x\n", m_games[i].crc );
 		}
 	}
-#ifndef NO_CRC_HACKS
+#ifndef DISABLE_CRC_HACKS
 	hash_map<uint32, Game*>::iterator i = m_map.find(crc);
 
 	if(i != m_map.end())

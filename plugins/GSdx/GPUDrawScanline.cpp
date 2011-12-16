@@ -86,7 +86,7 @@ void GPUDrawScanline::PrintStats()
 	m_ds_map.PrintStats();
 }
 
-#ifndef JIT_DRAW
+#ifndef ENABLE_JIT_RASTERIZER
 
 void GPUDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan)
 {
