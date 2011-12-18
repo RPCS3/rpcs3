@@ -76,14 +76,9 @@ void GPUDrawScanline::BeginDraw(const void* param)
 	m_sp = m_sp_map[sel];
 }
 
-void GPUDrawScanline::EndDraw(const GSRasterizerStats& stats, uint64 frame)
+void GPUDrawScanline::EndDraw(uint64 frame, uint64 ticks, int pixels)
 {
-	m_ds_map.UpdateStats(stats, frame);
-}
-
-void GPUDrawScanline::PrintStats() 
-{
-	m_ds_map.PrintStats();
+	m_ds_map.UpdateStats(frame, ticks, pixels);
 }
 
 #ifndef ENABLE_JIT_RASTERIZER

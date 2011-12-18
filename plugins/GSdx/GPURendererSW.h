@@ -27,7 +27,7 @@
 class GPURendererSW : public GPURendererT<GSVertexSW>
 {
 protected:
-	GSRasterizerList m_rl;
+	GSRasterizerList* m_rl;
 	GSTexture* m_texture;
 	uint32* m_output;
 

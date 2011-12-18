@@ -25,6 +25,7 @@
 GSTextureCacheSW::GSTextureCacheSW(GSState* state)
 	: m_state(state)
 {
+	memset(m_invalid, 0, sizeof(m_invalid));
 }
 
 GSTextureCacheSW::~GSTextureCacheSW()
@@ -32,7 +33,7 @@ GSTextureCacheSW::~GSTextureCacheSW()
 	RemoveAll();
 }
 
-const GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r, uint32 tw0)
+GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, uint32 tw0)
 {
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
@@ -76,36 +77,9 @@ const GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0
 
 		m_textures.insert(t);
 
-		__aligned(uint32, 16) pages[16];
-
-		((GSVector4i*)pages)[0] = GSVector4i::zero();
-		((GSVector4i*)pages)[1] = GSVector4i::zero();
-		((GSVector4i*)pages)[2] = GSVector4i::zero();
-		((GSVector4i*)pages)[3] = GSVector4i::zero();
-
-		GSVector2i bs = (TEX0.TBP0 & 31) == 0 ? psm.pgs : psm.bs;
-
-		int tw = 1 << TEX0.TW;
-		int th = 1 << TEX0.TH;
-
-		for(int y = 0; y < th; y += bs.y)
+		for(int i = 0; i < countof(t->m_pages); i++)
 		{
-			uint32 base = o->block.row[y >> 3];
-
-			for(int x = 0; x < tw; x += bs.x)
-			{
-				uint32 page = (base + o->block.col[x >> 3]) >> 5;
-
-				if(page < MAX_PAGES)
-				{
-					pages[page >> 5] |= 1 << (page & 31);
-				}
-			}
-		}
-
-		for(int i = 0; i < countof(pages); i++)
-		{
-			uint32 p = pages[i];
+			uint32 p = t->m_pages[i];
 
 			if(p != 0)
 			{
@@ -123,22 +97,11 @@ const GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0
 		}
 	}
 
-	if(!t->Update(r))
-	{
-		printf("!@#$\n"); // memory allocation may fail if the game is too hungry (tales of legendia fight transition/scene)
-
-		RemoveAt(t);
-
-		t = NULL;
-	}
-
 	return t;
 }
 
-bool GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect)
+void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect)
 {
-	bool changed = false;
-
 	uint32 bp = o->bp;
 	uint32 bw = o->bw;
 	uint32 psm = o->psm;
@@ -153,10 +116,12 @@ bool GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& r
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 page = (base + o->block.col[x >> 3]) >> 5;
+			uint32 page = (base + o->block.col[x >> 3]) >> 5; 
 
 			if(page < MAX_PAGES)
 			{
+				m_invalid[page >> 5] |= 1 << (page & 31); // remember which pages might be invalid for future texture updates
+
 				const list<Texture*>& map = m_map[page];
 
 				for(list<Texture*>::const_iterator i = map.begin(); i != map.end(); i++)
@@ -165,8 +130,6 @@ bool GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& r
 
 					if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM))
 					{
-						changed = true;
-
 						if(t->m_repeating)
 						{
 							list<GSVector2i>& l = t->m_p2t[page];
@@ -187,8 +150,6 @@ bool GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& r
 			}
 		}
 	}
-
-	return changed;
 }
 
 void GSTextureCacheSW::RemoveAll()
@@ -237,6 +198,24 @@ void GSTextureCacheSW::IncAge()
 	}
 }
 
+bool GSTextureCacheSW::CanUpdate(Texture* t)
+{
+	for(size_t i = 0; i < countof(m_invalid); i++)
+	{
+		if(m_invalid[i] & t->m_pages[i])
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void GSTextureCacheSW::ResetInvalidPages()
+{
+	memset(m_invalid, 0, sizeof(m_invalid));
+}
+
 //
 
 GSTextureCacheSW::Texture::Texture(GSState* state, const GSOffset* offset, uint32 tw0, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
@@ -252,7 +231,30 @@ GSTextureCacheSW::Texture::Texture(GSState* state, const GSOffset* offset, uint3
 	m_TEXA = TEXA;
 
 	memset(m_valid, 0, sizeof(m_valid));
+	memset(m_pages, 0, sizeof(m_pages));
 	
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
+
+	GSVector2i bs = (TEX0.TBP0 & 31) == 0 ? psm.pgs : psm.bs;
+
+	int tw = 1 << TEX0.TW;
+	int th = 1 << TEX0.TH;
+
+	for(int y = 0; y < th; y += bs.y)
+	{
+		uint32 base = offset->block.row[y >> 3];
+
+		for(int x = 0; x < tw; x += bs.x)
+		{
+			uint32 page = (base + offset->block.col[x >> 3]) >> 5;
+
+			if(page < MAX_PAGES)
+			{
+				m_pages[page >> 5] |= 1 << (page & 31);
+			}
+		}
+	}
+
 	m_repeating = m_TEX0.IsRepeating(); // repeating mode always works, it is just slightly slower
 
 	if(m_repeating)

@@ -29,12 +29,14 @@ GPURendererSW::GPURendererSW(GSDevice* dev, int threads)
 {
 	m_output = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 16);
 
-	m_rl.Create<GPUDrawScanline>(threads);
+	m_rl = GSRasterizerList::Create<GPUDrawScanline>(threads);
 }
 
 GPURendererSW::~GPURendererSW()
 {
 	delete m_texture;
+
+	delete m_rl;
 
 	_aligned_free(m_output);
 }
@@ -67,11 +69,33 @@ GSTexture* GPURendererSW::GetOutput()
 
 void GPURendererSW::Draw()
 {
+	class GPURasterizerData : public GSRasterizerData
+	{
+	public:
+		GPURasterizerData()
+		{
+			GPUScanlineGlobalData* gd = (GPUScanlineGlobalData*)_aligned_malloc(sizeof(GPUScanlineGlobalData), 32);
+
+			gd->clut = NULL;
+
+			param = gd;
+		}
+
+		virtual ~GPURasterizerData()
+		{
+			GPUScanlineGlobalData* gd = (GPUScanlineGlobalData*)param;
+
+			if(gd->clut) _aligned_free(gd->clut);
+
+			_aligned_free(gd);
+		}
+	};	
+
+	shared_ptr<GSRasterizerData> data(new GPURasterizerData());
+
+	GPUScanlineGlobalData& gd = *(GPUScanlineGlobalData*)data->param;
+
 	const GPUDrawingEnvironment& env = m_env;
-
-	//
-
-	GPUScanlineGlobalData gd;
 
 	gd.sel.key = 0;
 	gd.sel.iip = env.PRIM.IIP;
@@ -97,7 +121,11 @@ void GPURendererSW::Draw()
 		if(!t) {ASSERT(0); return;}
 
 		gd.tex = t;
-		gd.clut = m_mem.GetCLUT(env.STATUS.TP, env.CLUT.X, env.CLUT.Y);
+
+		gd.clut = (uint16*)_aligned_malloc(sizeof(uint16) * 256, 32);
+
+		memcpy(gd.clut, m_mem.GetCLUT(env.STATUS.TP, env.CLUT.X, env.CLUT.Y), sizeof(uint16) * (env.STATUS.TP == 0 ? 16 : 256));
+
 		gd.twin = GSVector4i(env.TWIN.TWW, env.TWIN.TWH, env.TWIN.TWX, env.TWIN.TWY);
 	}
 
@@ -108,25 +136,22 @@ void GPURendererSW::Draw()
 
 	gd.vm = m_mem.GetPixelAddress(0, 0);
 
-	//
+	data->vertices = (GSVertexSW*)_aligned_malloc(sizeof(GSVertexSW) * m_count, 16);
+	memcpy(data->vertices, m_vertices, sizeof(GSVertexSW) * m_count);
+	data->count = m_count;
 
-	GSRasterizerData data;
+	data->frame = m_perfmon.GetFrame();
 
-	data.vertices = m_vertices;
-	data.count = m_count;
-	data.frame = m_perfmon.GetFrame();
-	data.param = &gd;
-
-	data.scissor.left = (int)m_env.DRAREATL.X << m_scale.x;
-	data.scissor.top = (int)m_env.DRAREATL.Y << m_scale.y;
-	data.scissor.right = min((int)(m_env.DRAREABR.X + 1) << m_scale.x, m_mem.GetWidth());
-	data.scissor.bottom = min((int)(m_env.DRAREABR.Y + 1) << m_scale.y, m_mem.GetHeight());
+	data->scissor.left = (int)m_env.DRAREATL.X << m_scale.x;
+	data->scissor.top = (int)m_env.DRAREATL.Y << m_scale.y;
+	data->scissor.right = min((int)(m_env.DRAREABR.X + 1) << m_scale.x, m_mem.GetWidth());
+	data->scissor.bottom = min((int)(m_env.DRAREABR.Y + 1) << m_scale.y, m_mem.GetHeight());
 
 	switch(env.PRIM.TYPE)
 	{
-	case GPU_POLYGON: data.primclass = GS_TRIANGLE_CLASS; break;
-	case GPU_LINE: data.primclass = GS_LINE_CLASS; break;
-	case GPU_SPRITE: data.primclass = GS_SPRITE_CLASS; break;
+	case GPU_POLYGON: data->primclass = GS_TRIANGLE_CLASS; break;
+	case GPU_LINE: data->primclass = GS_LINE_CLASS; break;
+	case GPU_SPRITE: data->primclass = GS_SPRITE_CLASS; break;
 	default: __assume(0);
 	}
 
@@ -135,34 +160,34 @@ void GPURendererSW::Draw()
 	GSVector4 tl(+1e10f);
 	GSVector4 br(-1e10f);
 
+	GSVertexSW* v = data->vertices;
+
 	for(int i = 0, j = m_count; i < j; i++)
 	{
-		GSVector4 p = m_vertices[i].p;
+		GSVector4 p = v[i].p;
 
 		tl = tl.min(p);
 		br = br.max(p);
 	}
 
-	GSVector4i r = GSVector4i(tl.xyxy(br)).rintersect(data.scissor);
+	data->bbox = GSVector4i(tl.xyxy(br));
+
+	GSVector4i r = data->bbox.rintersect(data->scissor);
 
 	r.left >>= m_scale.x;
 	r.top >>= m_scale.y;
 	r.right >>= m_scale.x;
 	r.bottom >>= m_scale.y;
 
-	m_rl.Draw(&data, r.width(), r.height());
-
 	Invalidate(r);
 
-	m_rl.Sync();
+	m_rl->Queue(data);
 
-	GSRasterizerStats stats;
+	m_rl->Sync();
 
-	m_rl.GetStats(stats);
-
-	m_perfmon.Put(GSPerfMon::Draw, 1);
-	m_perfmon.Put(GSPerfMon::Prim, stats.prims);
-	m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
+	// TODO: m_perfmon.Put(GSPerfMon::Draw, 1);
+	// TODO: m_perfmon.Put(GSPerfMon::Prim, stats.prims);
+	// TODO: m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
 }
 
 void GPURendererSW::VertexKick()

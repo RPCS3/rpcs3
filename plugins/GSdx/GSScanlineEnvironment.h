@@ -107,15 +107,14 @@ __aligned(struct, 32) GSScanlineGlobalData // per batch variables, this is like 
 {
 	GSScanlineSelector sel;
 
-	// - the data of vm, tex, clut, dimx may change, multi-threaded drawing must be finished before that happens (an idea: remember which pages are used, sync when something needs to read or write them)
+	// - the data of vm, tex may change, multi-threaded drawing must be finished before that happens, clut and dimx are copies
 	// - tex is a cached texture, it may be recycled to free up memory, its absolute address cannot be compiled into code
 	// - row and column pointers are allocated once and never change or freed, thier address can be used directly
-	// - if in the future drawing does not have to be synchronized per batch, the rest of GSRasterizerData should be copied here, too (scissor, prim type, vertices)
 
 	void* vm;
 	const void* tex[7];
-	const uint32* clut;
-	const GSVector4i* dimx; 
+	uint32* clut;
+	GSVector4i* dimx; 
 
 	const int* fbr;
 	const int* zbr;

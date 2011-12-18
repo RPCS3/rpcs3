@@ -301,6 +301,11 @@ void GPUDrawScanlineCodeGenerator::SampleTexture()
 		return;
 	}
 
+	if(m_sel.tlu)
+	{
+		mov(edx, ptr[&m_local.gd->clut]);
+	}
+
 	// xmm2 = s
 	// xmm3 = t
 	// xmm7 = test
@@ -953,7 +958,7 @@ void GPUDrawScanlineCodeGenerator::ReadTexel(const Xmm& dst, const Xmm& addr)
 
 		if(m_sel.tlu) movzx(eax, byte[esi + eax]);
 
-		const Address& src = m_sel.tlu ? ptr[eax * 2 + (size_t)m_local.gd->clut] : ptr[esi + eax * 2];
+		const Address& src = m_sel.tlu ? ptr[edx + eax * 2] : ptr[esi + eax * 2];
 
 		if(i == 0) movd(dst, src);
 		else pinsrw(dst, src, (uint8)i);

@@ -25,6 +25,7 @@
 const GSVector4 g_pos_scale(1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
 
 GSRendererSW::GSRendererSW(int threads)
+	: m_fzb(NULL)
 {
 	InitVertexKick(GSRendererSW);
 
@@ -32,7 +33,7 @@ GSRendererSW::GSRendererSW(int threads)
 
 	memset(m_texture, 0, sizeof(m_texture));
 
-	m_rl.Create<GSDrawScanline>(threads);
+	m_rl = GSRasterizerList::Create<GSDrawScanline>(threads);
 
 	m_output = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32);
 }
@@ -45,6 +46,8 @@ GSRendererSW::~GSRendererSW()
 	{
 		delete m_texture[i];
 	}
+
+	delete m_rl;
 
 	_aligned_free(m_output);
 }
@@ -62,6 +65,10 @@ void GSRendererSW::Reset()
 void GSRendererSW::VSync(int field)
 {
 	GSRendererT<GSVertexSW>::VSync(field);
+
+	Sync(); // IncAge might delete a cached texture in use
+
+	// printf("m_sync_count = %d\n", m_rl->m_sync_count); m_rl->m_sync_count = 0;
 
 	m_tc->IncAge();
 
@@ -87,6 +94,8 @@ void GSRendererSW::ResetDevice()
 
 GSTexture* GSRendererSW::GetOutput(int i)
 {
+	Sync();
+
 	const GSRegDISPFB& DISPFB = m_regs->DISP[i].DISPFB;
 
 	int w = DISPFB.FBW * 64;
@@ -122,130 +131,95 @@ GSTexture* GSRendererSW::GetOutput(int i)
 
 void GSRendererSW::Draw()
 {
-	if(m_dump)
+	if(m_dump) m_dump.Object(m_vertices, m_count, m_vt.m_primclass);
+
+	// TODO: palette may be rendered (point-list in a few visual novels) and not ready by the time it needs to be loaded => vm to clut transfer (TEX0.CLD) should wait for the rasterizers to finish, if needed
+
+	if(m_fzb != m_context->offset.fzb) 
 	{
-		m_dump.Object(m_vertices, m_count, m_vt.m_primclass);
+		// rasterizers must write the same outputs at the same time, this makes sure each thread has its own private surface area 
+
+		// TODO: detect if frame/zbuf overlap eachother (?)
+
+		m_fzb = m_context->offset.fzb;
+
+		Sync();
 	}
 
-	GSScanlineGlobalData gd;
+	shared_ptr<GSRasterizerData> data(new GSRasterizerData2(this));
 
-	if(!GetScanlineGlobalData(gd))
+	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)data->param;
+
+	if(!GetScanlineGlobalData(*gd))
 	{
 		return;
 	}
 
-	if(!gd.sel.fwrite && !gd.sel.zwrite)
+	data->scissor = GSVector4i(m_context->scissor.in);
+	data->scissor.z = std::min<int>(data->scissor.z, (int)m_context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
+	data->bbox = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p));
+	data->primclass = m_vt.m_primclass;
+	data->vertices = (GSVertexSW*)_aligned_malloc(sizeof(GSVertexSW) * m_count, 16); // TODO: detach m_vertices and reallocate later?
+	memcpy(data->vertices, m_vertices, sizeof(GSVertexSW) * m_count); // TODO: m_vt.Update fetches all the vertices already, could also store them here
+	data->count = m_count;
+	data->solidrect = gd->sel.IsSolidRect();
+	data->frame = m_perfmon.GetFrame();
+
+	if(s_dump)
 	{
-		return;
+		if(data->solidrect) Sync();
+
+		((GSRasterizerData2*)data.get())->DumpInput();
 	}
 
-	if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
-	{
-		uint64 frame = m_perfmon.GetFrame();
+	m_rl->Queue(data);
 
-		string s;
+	GSVector4i r = data->bbox.rintersect(data->scissor);
 
-		if(s_save && s_n >= s_saven && PRIM->TME)
-		{
-			s = format("c:\\temp1\\_%05d_f%lld_tex_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
-
-			m_mem.SaveBMP(s, m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM, 1 << m_context->TEX0.TW, 1 << m_context->TEX0.TH);
-		}
-
-		s_n++;
-
-		if(s_save && s_n >= s_saven)
-		{
-			s = format("c:\\temp1\\_%05d_f%lld_rt0_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
-
-			m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);//GetFrameSize(1).cy);
-		}
-
-		if(s_savez && s_n >= s_saven)
-		{
-			s = format("c:\\temp1\\_%05d_f%lld_rz0_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
-
-			m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
-		}
-
-		s_n++;
-	}
-
-	GSVector4i scissor(m_context->scissor.in);
-	GSVector4i bbox = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p));
-	GSVector4i r = bbox.rintersect(scissor);
-	
-	GSRasterizerData data;
-
-	data.scissor = scissor;
-	data.scissor.z = std::min<int>(data.scissor.z, (int)m_context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
-	data.scissor_test = !bbox.eq(r);
-	data.primclass = m_vt.m_primclass;
-	data.vertices = m_vertices;
-	data.count = m_count;
-	data.frame = m_perfmon.GetFrame();
-	data.param = &gd;
-
-	m_rl.Draw(&data, r.width(), r.height());
-
-	if(gd.sel.fwrite)
+	if(gd->sel.fwrite)
 	{
 		m_tc->InvalidateVideoMem(m_context->offset.fb, r);
 	}
 
-	if(gd.sel.zwrite)
+	if(gd->sel.zwrite)
 	{
 		m_tc->InvalidateVideoMem(m_context->offset.zb, r);
 	}
 
-	// By only syncing here we can do the two InvalidateVideoMem calls free if the other threads finish
-	// their drawings later than this one (they usually do because they start on an event).
+	// Sync();
 
-	m_rl.Sync();
+	// TODO: m_perfmon.Put(GSPerfMon::Prim, stats.prims);
+	// TODO: m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
 
-	GSRasterizerStats stats;
-
-	m_rl.GetStats(stats);
-
-	m_perfmon.Put(GSPerfMon::Prim, stats.prims);
-	m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
-
-	if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
-	{
-		uint64 frame = m_perfmon.GetFrame();
-
-		string s;
-
-		if(s_save && s_n >= s_saven)
-		{
-			s = format("c:\\temp1\\_%05d_f%lld_rt1_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
-
-			m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);//GetFrameSize(1).cy);
-		}
-
-		if(s_savez && s_n >= s_saven)
-		{
-			s = format("c:\\temp1\\_%05d_f%lld_rz1_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
-
-			m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
-		}
-
-		s_n++;
-	}
-
+	/*
 	if(0)//stats.ticks > 5000000)
 	{
 		printf("* [%lld | %012llx] ticks %lld prims %d (%d) pixels %d (%d)\n",
-			m_perfmon.GetFrame(), gd.sel.key,
+			m_perfmon.GetFrame(), gd->sel.key,
 			stats.ticks,
 			stats.prims, stats.prims > 0 ? (int)(stats.ticks / stats.prims) : -1,
 			stats.pixels, stats.pixels > 0 ? (int)(stats.ticks / stats.pixels) : -1);
 	}
+	*/
+}
+
+void GSRendererSW::Sync()
+{
+	m_rl->Sync();
+
+	m_tc->ResetInvalidPages();
 }
 
 void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 {
 	m_tc->InvalidateVideoMem(m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM), r);
+
+	Sync(); // TODO: not needed if nothing uses the affected pages (this is the most frequently called Sync! get rid of it)
+}
+
+void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
+{
+	Sync(); // TODO: not needed if nothing uses the affected pages
 }
 
 #include "GSTextureSW.h"
@@ -257,7 +231,6 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 	const GS_PRIM_CLASS primclass = m_vt.m_primclass;
 
 	gd.vm = m_mem.m_vm8;
-	gd.dimx = env.dimx;
 
 	gd.fbr = context->offset.fb->pixel.row;
 	gd.zbr = context->offset.zb->pixel.row;
@@ -315,6 +288,11 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 	bool fwrite = fm != 0xffffffff;
 	bool ftest = gd.sel.atst != ATST_ALWAYS || context->TEST.DATE && context->FRAME.PSM != PSM_PSMCT24;
 
+	bool zwrite = zm != 0xffffffff;
+	bool ztest = context->TEST.ZTE && context->TEST.ZTST > ZTST_ALWAYS;
+
+	if(!fwrite && !zwrite) return false;
+
 	gd.sel.fwrite = fwrite;
 	gd.sel.ftest = ftest;
 
@@ -329,13 +307,20 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 		if(PRIM->TME)
 		{
-			gd.clut = m_mem.m_clut;
-
 			gd.sel.tfx = context->TEX0.TFX;
 			gd.sel.tcc = context->TEX0.TCC;
 			gd.sel.fst = PRIM->FST;
 			gd.sel.ltf = m_vt.IsLinear();
-			gd.sel.tlu = GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0;
+
+			if(GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0)
+			{
+				gd.sel.tlu = 1;
+
+				gd.clut = (uint32*)_aligned_malloc(sizeof(uint32) * 256, 32); // FIXME: might address uninitialized data of the texture (0xCD) that is not in 0-15 range for 4-bpp formats
+
+				memcpy(gd.clut, (const uint32*)m_mem.m_clut, sizeof(uint32) * GSLocalMemory::m_psm[context->TEX0.PSM].pal);
+			}
+
 			gd.sel.wms = context->CLAMP.WMS;
 			gd.sel.wmt = context->CLAMP.WMT;
 
@@ -346,13 +331,17 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				gd.sel.tfx = TFX_DECAL;
 			}
 
+			GSTextureCacheSW::Texture* t = m_tc->Lookup(context->TEX0, env.TEXA);
+
+			if(t == NULL) {ASSERT(0); return false;}
+
+			if(!m_tc->CanUpdate(t)) Sync();
+
 			GSVector4i r;
 
 			GetTextureMinMax(r, context->TEX0, context->CLAMP, gd.sel.ltf);
 
-			const GSTextureCacheSW::Texture* t = m_tc->Lookup(context->TEX0, env.TEXA, r);
-
-			if(t == NULL) {ASSERT(0); return false;}
+			if(!t->Update(r)) {ASSERT(0); return false;}
 
 			if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
 			{
@@ -495,13 +484,17 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 					m_vt.m_min.t *= 0.5f;
 					m_vt.m_max.t *= 0.5f;
 
+					GSTextureCacheSW::Texture* t = m_tc->Lookup(MIP_TEX0, env.TEXA, gd.sel.tw + 3);
+
+					if(t == NULL) {ASSERT(0); return false;}
+
+					if(!m_tc->CanUpdate(t)) Sync();
+
 					GSVector4i r;
 
 					GetTextureMinMax(r, MIP_TEX0, MIP_CLAMP, gd.sel.ltf);
 
-					const GSTextureCacheSW::Texture* t = m_tc->Lookup(MIP_TEX0, env.TEXA, r, gd.sel.tw + 3);
-
-					if(t == NULL) {ASSERT(0); return false;}
+					if(!t->Update(r)) {ASSERT(0); return false;}
 
 					gd.tex[i] = t->m_buff;
 
@@ -699,11 +692,16 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 		gd.sel.colclamp = env.COLCLAMP.CLAMP;
 		gd.sel.fba = context->FBA.FBA;
-		gd.sel.dthe = env.DTHE.DTHE;
-	}
 
-	bool zwrite = zm != 0xffffffff;
-	bool ztest = context->TEST.ZTE && context->TEST.ZTST > ZTST_ALWAYS;
+		if(env.DTHE.DTHE)
+		{
+			gd.sel.dthe = 1;
+
+			gd.dimx = (GSVector4i*)_aligned_malloc(sizeof(env.dimx), 32);
+
+			memcpy(gd.dimx, env.dimx, sizeof(env.dimx));
+		}
+	}
 
 	gd.sel.zwrite = zwrite;
 	gd.sel.ztest = ztest;

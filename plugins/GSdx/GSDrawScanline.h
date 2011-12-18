@@ -51,8 +51,7 @@ public:
 	// IDrawScanline
 
 	void BeginDraw(const void* param);
-	void EndDraw(const GSRasterizerStats& stats, uint64 frame);
-	void PrintStats();
+	void EndDraw(uint64 frame, uint64 ticks, int pixels);
 
 	void DrawRect(const GSVector4i& r, const GSVertexSW& v);
 

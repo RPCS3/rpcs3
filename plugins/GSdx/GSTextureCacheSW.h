@@ -39,13 +39,14 @@ public:
 		bool m_complete;
 		bool m_repeating;
 		list<GSVector2i>* m_p2t;
-		uint32 m_valid[MAX_PAGES]; 
+		uint32 m_valid[MAX_PAGES];
+		uint32 m_pages[16];
 
 		// m_valid
 		// fast mode: each uint32 bits map to the 32 blocks of that page
 		// repeating mode: 1 bpp image of the texture tiles (8x8), also having 512 elements is just a coincidence (worst case: (1024*1024)/(8*8)/(sizeof(uint32)*8))
 
-		explicit Texture(GSState* state, const GSOffset* offset, uint32 tw0, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA);
+		Texture(GSState* state, const GSOffset* offset, uint32 tw0, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA);
 		virtual ~Texture();
 
 		bool Update(const GSVector4i& r);
@@ -56,16 +57,20 @@ protected:
 	GSState* m_state;
 	hash_set<Texture*> m_textures;
 	list<Texture*> m_map[MAX_PAGES];
+	uint32 m_invalid[16];
 
 public:
 	GSTextureCacheSW(GSState* state);
 	virtual ~GSTextureCacheSW();
 
-	const Texture* Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r, uint32 tw0 = 0);
+	Texture* Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, uint32 tw0 = 0);
 
-	bool InvalidateVideoMem(const GSOffset* o, const GSVector4i& r);
+	void InvalidateVideoMem(const GSOffset* o, const GSVector4i& r);
 
 	void RemoveAll();
 	void RemoveAt(Texture* t);
 	void IncAge();
+
+	bool CanUpdate(Texture* t); 
+	void ResetInvalidPages();
 };
