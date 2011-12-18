@@ -191,7 +191,7 @@ public:
 		return rl;
 	}
 
-	size_t IsMultiThreaded() const {return size();}
+	bool IsMultiThreaded() const {return size() > 1;}
 
 	void Draw(shared_ptr<GSRasterizerData> data);
 
