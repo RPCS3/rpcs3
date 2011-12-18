@@ -127,14 +127,15 @@ protected:
 
 	void DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, int orientation, int side);
 
-	__forceinline bool IsOneOfMyScanlines(int scanline) const;
-	__forceinline bool IsOneOfMyScanlines(int top, int bottom) const;
 	__forceinline void AddScanline(GSVertexSW* e, int pixels, int left, int top, const GSVertexSW& scan);
 	__forceinline void Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bool edge = false);
 
 public:
 	GSRasterizer(IDrawScanline* ds, int id, int threads);
 	virtual ~GSRasterizer();
+
+	__forceinline bool IsOneOfMyScanlines(int scanline) const;
+	__forceinline bool IsOneOfMyScanlines(int top, int bottom) const;
 
 	void Draw(shared_ptr<GSRasterizerData> data);
 
@@ -169,6 +170,7 @@ class GSRasterizerList : public IRasterizer, protected vector<GSRasterizer*>
 {
 protected:
 	int m_count;
+	int m_dispatched;
 
 	GSRasterizerList();
 
@@ -188,6 +190,12 @@ public:
 
 		return rl;
 	}
+
+	size_t IsMultiThreaded() const {return size();}
+
+	void Draw(shared_ptr<GSRasterizerData> data);
+
+	// IRasterizer
 
 	void Queue(shared_ptr<GSRasterizerData> data);
 	void Sync();

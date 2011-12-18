@@ -57,7 +57,6 @@ protected:
 	GSState* m_state;
 	hash_set<Texture*> m_textures;
 	list<Texture*> m_map[MAX_PAGES];
-	uint32 m_invalid[16];
 
 public:
 	GSTextureCacheSW(GSState* state);
@@ -70,7 +69,4 @@ public:
 	void RemoveAll();
 	void RemoveAt(Texture* t);
 	void IncAge();
-
-	bool CanUpdate(Texture* t); 
-	void ResetInvalidPages();
 };

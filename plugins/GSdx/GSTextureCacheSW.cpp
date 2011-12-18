@@ -25,7 +25,6 @@
 GSTextureCacheSW::GSTextureCacheSW(GSState* state)
 	: m_state(state)
 {
-	memset(m_invalid, 0, sizeof(m_invalid));
 }
 
 GSTextureCacheSW::~GSTextureCacheSW()
@@ -102,11 +101,9 @@ GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, cons
 
 void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect)
 {
-	uint32 bp = o->bp;
-	uint32 bw = o->bw;
 	uint32 psm = o->psm;
 
-	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
+	GSVector2i bs = (o->bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
 	GSVector4i r = rect.ralign<Align_Outside>(bs);
 
@@ -120,8 +117,6 @@ void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& r
 
 			if(page < MAX_PAGES)
 			{
-				m_invalid[page >> 5] |= 1 << (page & 31); // remember which pages might be invalid for future texture updates
-
 				const list<Texture*>& map = m_map[page];
 
 				for(list<Texture*>::const_iterator i = map.begin(); i != map.end(); i++)
@@ -196,24 +191,6 @@ void GSTextureCacheSW::IncAge()
 			RemoveAt(t);
 		}
 	}
-}
-
-bool GSTextureCacheSW::CanUpdate(Texture* t)
-{
-	for(size_t i = 0; i < countof(m_invalid); i++)
-	{
-		if(m_invalid[i] & t->m_pages[i])
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-
-void GSTextureCacheSW::ResetInvalidPages()
-{
-	memset(m_invalid, 0, sizeof(m_invalid));
 }
 
 //

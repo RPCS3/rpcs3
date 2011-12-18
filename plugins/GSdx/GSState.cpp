@@ -613,6 +613,19 @@ void GSState::ApplyTEX0(int i, GIFRegTEX0& TEX0)
 
 	if(wt)
 	{
+		GIFRegBITBLTBUF BITBLTBUF;
+		
+		BITBLTBUF.SBP = TEX0.CBP;
+		BITBLTBUF.SBW = 1;
+		BITBLTBUF.SPSM = TEX0.CSM;
+
+		GSVector4i r = GSVector4i::zero();
+
+		r.right = GSLocalMemory::m_psm[TEX0.CPSM].pgs.x;
+		r.bottom = GSLocalMemory::m_psm[TEX0.CPSM].pgs.y;
+		
+		InvalidateLocalMem(BITBLTBUF, r);
+
 		m_mem.m_clut.Write(m_env.CTXT[i].TEX0, m_env.TEXCLUT);
 	}
 }

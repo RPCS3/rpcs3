@@ -64,14 +64,16 @@ bool GSRasterizer::IsOneOfMyScanlines(int scanline) const
 
 bool GSRasterizer::IsOneOfMyScanlines(int top, int bottom) const
 {
-	top >>= THREAD_HEIGHT;
-	bottom >>= THREAD_HEIGHT;
+	top = top >> THREAD_HEIGHT;
+	bottom = (bottom + (1 << THREAD_HEIGHT) - 1) >> THREAD_HEIGHT;
 
-	do
+	while(top < bottom)
 	{
-		if(m_myscanline[top]) return true;
+		if(m_myscanline[top++])
+		{
+			return true;
+		}
 	}
-	while(top++ < bottom);
 
 	return false;
 }
@@ -291,8 +293,6 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertices)
 	GSVector4 tbmax = tbf.max(m_fscissor.ywyw());
 	GSVector4 tbmin = tbf.min(m_fscissor.ywyw());
 	GSVector4i tb = GSVector4i(tbmax.xzyw(tbmin));
-
-	if(m_threads > 1 && !IsOneOfMyScanlines(tb.x, tb.w)) return;
 
 	dv[0] = v[1] - v[0];
 	dv[1] = v[2] - v[0];
@@ -845,6 +845,7 @@ void GSRasterizerMT::ThreadProc()
 GSRasterizerList::GSRasterizerList()
 	: m_sync_count(0)
 	, m_count(0)
+	, m_dispatched(0)
 {
 }
 
@@ -856,22 +857,34 @@ GSRasterizerList::~GSRasterizerList()
 	}
 }
 
+void GSRasterizerList::Draw(shared_ptr<GSRasterizerData> data)
+{
+	Sync();
+
+	front()->Draw(data);
+}
+
 void GSRasterizerList::Queue(shared_ptr<GSRasterizerData> data)
 {
-	// TODO: do not send data to every thread, try to bin them (based on bbox & scissor)
-
-	if(data->solidrect)
+	if(size() > 1)
 	{
-		Sync();
+		ASSERT(!data->solidrect); // should call Draw instead, but it will work anyway
 
-		front()->Draw(data);
-
-		return;
+		data->solidrect = false;
 	}
+
+	GSVector4i bbox = data->bbox.rintersect(data->scissor);
 
 	for(int i = 0; i < size(); i++)
 	{	
-		(*this)[i]->Queue(data); 
+		GSRasterizer* r = (*this)[i];
+
+		if(r->IsOneOfMyScanlines(bbox.top, bbox.bottom))
+		{
+			r->Queue(data);
+
+			m_dispatched++;
+		}
 	}
 
 	m_count++;
@@ -888,6 +901,9 @@ void GSRasterizerList::Sync()
 
 		m_sync_count++;
 
+		//printf("%d %d%%\n", m_count, 100 * m_dispatched / (m_count * size()));
+
 		m_count = 0;
+		m_dispatched = 0;
 	}
 }

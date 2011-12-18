@@ -29,13 +29,6 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 {
 	class GSRasterizerData2 : public GSRasterizerData
 	{
-		GSRenderer* renderer;
-		GIFRegFRAME FRAME;
-		GIFRegZBUF ZBUF;
-		GIFRegTEX0 TEX0;
-		uint32 TME;
-		GSVector2i framesize;
-
 	public:
 		GSRasterizerData2(GSRenderer* r)
 		{
@@ -45,13 +38,6 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 			gd->dimx = NULL;
 
 			param = gd;
-
-			renderer = r;
-			FRAME = r->m_context->FRAME;
-			ZBUF = r->m_context->ZBUF;
-			TEX0 = r->m_context->TEX0;
-			TME = r->PRIM->TME;
-			framesize = GSVector2i(r->GetFrameRect().width(), 512);
 		}
 
 		virtual ~GSRasterizerData2()
@@ -62,73 +48,6 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 			if(gd->dimx) _aligned_free(gd->dimx);
 
 			_aligned_free(gd);
-
-			DumpOutput();
-		}
-
-		// FIXME: not really possible to save whole input/output anymore, strips of the picture may lag in multi-threaded mode
-
-		void DumpInput()
-		{
-			if(!renderer->s_dump) return; // || !(m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0))
-
-			GSAutoLock l(&renderer->s_lock);
-
-			uint64 frame = renderer->m_perfmon.GetFrame();
-
-			string s;
-
-			if(renderer->s_save && renderer->s_n >= renderer->s_saven && TME)
-			{
-				s = format("c:\\temp1\\_%05d_f%lld_tex_%05x_%d.bmp", renderer->s_n, frame, (int)TEX0.TBP0, (int)TEX0.PSM);
-
-				renderer->m_mem.SaveBMP(s, TEX0.TBP0, TEX0.TBW, TEX0.PSM, 1 << TEX0.TW, 1 << TEX0.TH);
-			}
-
-			renderer->s_n++;
-
-			if(renderer->s_save && renderer->s_n >= renderer->s_saven)
-			{
-				s = format("c:\\temp1\\_%05d_f%lld_rt0_%05x_%d.bmp", renderer->s_n, frame, FRAME.Block(), FRAME.PSM);
-
-				renderer->m_mem.SaveBMP(s, FRAME.Block(), FRAME.FBW, FRAME.PSM, framesize.x, framesize.y);
-			}
-
-			if(renderer->s_savez && renderer->s_n >= renderer->s_saven)
-			{
-				s = format("c:\\temp1\\_%05d_f%lld_rz0_%05x_%d.bmp", renderer->s_n, frame, ZBUF.Block(), ZBUF.PSM);
-
-				renderer->m_mem.SaveBMP(s, ZBUF.Block(), FRAME.FBW, ZBUF.PSM, framesize.x, framesize.y);
-			}
-
-			renderer->s_n++;
-		}
-
-		void DumpOutput()
-		{
-			if(!renderer->s_dump) return; // || !(m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
-
-			GSAutoLock l(&renderer->s_lock);
-
-			uint64 frame = renderer->m_perfmon.GetFrame();
-
-			string s;
-
-			if(renderer->s_save && renderer->s_n >= renderer->s_saven)
-			{
-				s = format("c:\\temp1\\_%05d_f%lld_rt1_%05x_%d.bmp", renderer->s_n, frame, FRAME.Block(), FRAME.PSM);
-
-				renderer->m_mem.SaveBMP(s, FRAME.Block(), FRAME.FBW, FRAME.PSM, framesize.x, framesize.y);
-			}
-
-			if(renderer->s_savez && renderer->s_n >= renderer->s_saven)
-			{
-				s = format("c:\\temp1\\_%05d_f%lld_rz1_%05x_%d.bmp", renderer->s_n, frame, ZBUF.Block(), ZBUF.PSM);
-
-				renderer->m_mem.SaveBMP(s, ZBUF.Block(), FRAME.FBW, ZBUF.PSM, framesize.x, framesize.y);
-			}
-
-			renderer->s_n++;
 		}
 	};	
 
@@ -139,6 +58,8 @@ protected:
 	uint8* m_output;
 	bool m_reset;
 	GSPixelOffset4* m_fzb;
+	uint32 m_fzb_pages[16];
+	uint32 m_tex_pages[16];
 
 	void Reset();
 	void VSync(int field);
@@ -149,6 +70,10 @@ protected:
 	void Sync();
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
+
+	void InvalidatePages(const GSOffset* o, const GSVector4i& rect);
+	void InvalidatePages(const GSTextureCacheSW::Texture* t);
+	bool CheckPages(const GSOffset* o, const GSVector4i& rect);
 
 	bool GetScanlineGlobalData(GSScanlineGlobalData& gd);
 
