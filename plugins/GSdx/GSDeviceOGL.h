@@ -36,14 +36,22 @@ struct GSBlendStateOGL {
 	GLenum m_func_dRGB;
 	GLenum m_func_sALPHA;
 	GLenum m_func_dALPHA;
+	bool   m_r_msk;
+	bool   m_b_msk;
+	bool   m_g_msk;
+	bool   m_a_msk;
 
 	GSBlendStateOGL() : m_enable(false)
 		, m_equation_RGB(0)
-		, m_equation_ALPHA(0)
+		, m_equation_ALPHA(GL_FUNC_ADD)
 		, m_func_sRGB(0)
 		, m_func_dRGB(0)
-		, m_func_sALPHA(0)
-		, m_func_dALPHA(0)
+		, m_func_sALPHA(GL_ONE)
+		, m_func_dALPHA(GL_ZERO)
+		, m_r_msk(GL_TRUE)
+		, m_b_msk(GL_TRUE)
+		, m_g_msk(GL_TRUE)
+		, m_a_msk(GL_TRUE)
 	{}
 
 };
@@ -52,7 +60,7 @@ struct GSDepthStencilOGL {
 	bool m_depth_enable;
 	GLenum m_depth_func;
 	GLboolean m_depth_mask;
-	// Note front face and back can be split might. But it seems they have same parameter configuration
+	// Note front face and back might be split but it seems they have same parameter configuration
 	bool m_stencil_enable;
 	GLuint m_stencil_mask;
 	GLuint m_stencil_func;
@@ -65,13 +73,14 @@ struct GSDepthStencilOGL {
 		, m_depth_func(0)
 		, m_depth_mask(0)
 		, m_stencil_enable(false)
-		, m_stencil_mask(0)
+		, m_stencil_mask(1)
 		, m_stencil_func(0)
 		, m_stencil_ref(0)
-		, m_stencil_sfail_op(0)
-		, m_stencil_spass_dfail_op(0)
-		, m_stencil_spass_dpass_op(0)
+		, m_stencil_sfail_op(GL_KEEP)
+		, m_stencil_spass_dfail_op(GL_KEEP)
+		, m_stencil_spass_dpass_op(GL_KEEP)
 	{}
+
 };
 
 class GSUniformBufferOGL {
@@ -121,6 +130,7 @@ struct GSInputLayout {
 	GLuint  index;
 	GLint   size;
 	GLenum  type;
+	GLboolean normalize;
 	GLsizei stride;
 	const GLvoid* offset;
 };
@@ -168,7 +178,7 @@ struct GSVertexBufferState {
 		for (int i = 0; i < layout_nbr; i++) {
 			// Note this function need both a vertex array object and a GL_ARRAY_BUFFER buffer
 			glEnableVertexAttribArray(layout[i].index);
-			glVertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, GL_FALSE,  layout[i].stride, layout[i].offset);
+			glVertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].normalize,  layout[i].stride, layout[i].offset);
 		}
 	}
 
@@ -181,6 +191,241 @@ struct GSVertexBufferState {
 
 class GSDeviceOGL : public GSDevice
 {
+	public:
+	__aligned(struct, 32) VSConstantBuffer
+	{
+		GSVector4 VertexScale;
+		GSVector4 VertexOffset;
+		GSVector4 TextureScale;
+
+		VSConstantBuffer()
+		{
+			VertexScale = GSVector4::zero();
+			VertexOffset = GSVector4::zero();
+			TextureScale = GSVector4::zero();
+		}
+
+		__forceinline bool Update(const VSConstantBuffer* cb)
+		{
+			GSVector4i* a = (GSVector4i*)this;
+			GSVector4i* b = (GSVector4i*)cb;
+
+			GSVector4i b0 = b[0];
+			GSVector4i b1 = b[1];
+			GSVector4i b2 = b[2];
+
+			if(!((a[0] == b0) & (a[1] == b1) & (a[2] == b2)).alltrue())
+			{
+				a[0] = b0;
+				a[1] = b1;
+				a[2] = b2;
+
+				return true;
+			}
+
+			return false;
+		}
+	};
+
+	struct VSSelector
+	{
+		union
+		{
+			struct
+			{
+				uint32 bppz:2;
+				uint32 tme:1;
+				uint32 fst:1;
+				uint32 logz:1;
+				uint32 rtcopy:1;
+			};
+
+			uint32 key;
+		};
+
+		operator uint32() {return key & 0x3f;}
+
+		VSSelector() : key(0) {}
+	};
+
+	__aligned(struct, 32) PSConstantBuffer
+	{
+		GSVector4 FogColor_AREF;
+		GSVector4 HalfTexel;
+		GSVector4 WH;
+		GSVector4 MinMax;
+		GSVector4 MinF_TA;
+		GSVector4i MskFix;
+
+		PSConstantBuffer()
+		{
+			FogColor_AREF = GSVector4::zero();
+			HalfTexel = GSVector4::zero();
+			WH = GSVector4::zero();
+			MinMax = GSVector4::zero();
+			MinF_TA = GSVector4::zero();
+			MskFix = GSVector4i::zero();
+		}
+
+		__forceinline bool Update(const PSConstantBuffer* cb)
+		{
+			GSVector4i* a = (GSVector4i*)this;
+			GSVector4i* b = (GSVector4i*)cb;
+
+			GSVector4i b0 = b[0];
+			GSVector4i b1 = b[1];
+			GSVector4i b2 = b[2];
+			GSVector4i b3 = b[3];
+			GSVector4i b4 = b[4];
+			GSVector4i b5 = b[5];
+
+			if(!((a[0] == b0) /*& (a[1] == b1)*/ & (a[2] == b2) & (a[3] == b3) & (a[4] == b4) & (a[5] == b5)).alltrue()) // if WH matches HalfTexel does too
+			{
+				a[0] = b0;
+				a[1] = b1;
+				a[2] = b2;
+				a[3] = b3;
+				a[4] = b4;
+				a[5] = b5;
+
+				return true;
+			}
+
+			return false;
+		}
+	};
+
+	struct GSSelector
+	{
+		union
+		{
+			struct
+			{
+				uint32 iip:1;
+				uint32 prim:2;
+			};
+
+			uint32 key;
+		};
+
+		operator uint32() {return key & 0x7;}
+
+		GSSelector() : key(0) {}
+	};
+
+	struct PSSelector
+	{
+		union
+		{
+			struct
+			{
+				uint32 fst:1;
+				uint32 wms:2;
+				uint32 wmt:2;
+				uint32 fmt:3;
+				uint32 aem:1;
+				uint32 tfx:3;
+				uint32 tcc:1;
+				uint32 atst:3;
+				uint32 fog:1;
+				uint32 clr1:1;
+				uint32 fba:1;
+				uint32 aout:1;
+				uint32 rt:1;
+				uint32 ltf:1;
+				uint32 colclip:2;
+				uint32 date:2;
+			};
+
+			uint32 key;
+		};
+
+		operator uint32() {return key & 0x3ffffff;}
+
+		PSSelector() : key(0) {}
+	};
+
+	struct PSSamplerSelector
+	{
+		union
+		{
+			struct
+			{
+				uint32 tau:1;
+				uint32 tav:1;
+				uint32 ltf:1;
+			};
+
+			uint32 key;
+		};
+
+		operator uint32() {return key & 0x7;}
+
+		PSSamplerSelector() : key(0) {}
+	};
+
+	struct OMDepthStencilSelector
+	{
+		union
+		{
+			struct
+			{
+				uint32 ztst:2;
+				uint32 zwe:1;
+				uint32 date:1;
+				uint32 fba:1;
+			};
+
+			uint32 key;
+		};
+
+		operator uint32() {return key & 0x1f;}
+
+		OMDepthStencilSelector() : key(0) {}
+	};
+
+	struct OMBlendSelector
+	{
+		union
+		{
+			struct
+			{
+				uint32 abe:1;
+				uint32 a:2;
+				uint32 b:2;
+				uint32 c:2;
+				uint32 d:2;
+				uint32 wr:1;
+				uint32 wg:1;
+				uint32 wb:1;
+				uint32 wa:1;
+				uint32 negative:1;
+			};
+
+			struct
+			{
+				uint32 _pad:1;
+				uint32 abcd:8;
+				uint32 wrgba:4;
+			};
+
+			uint32 key;
+		};
+
+		operator uint32() {return key & 0x3fff;}
+
+		OMBlendSelector() : key(0) {}
+
+		bool IsCLR1() const
+		{
+			return (key & 0x19f) == 0x93; // abe == 1 && a == 1 && b == 2 && d == 1
+		}
+	};
+
+	struct D3D9Blend {int bogus, op, src, dst;};
+	static const D3D9Blend m_blendMapD3D9[3*3*3*3];
+
+	private:
 	uint32 m_msaa;				// Level of Msaa
 
 	bool m_free_window;			
@@ -189,6 +434,7 @@ class GSDeviceOGL : public GSDevice
 	GLuint m_pipeline;			// pipeline to attach program shader
 	GLuint m_fbo;				// frame buffer container
 
+	GSVertexBufferState* m_vb;	  // vb_state for HW renderer
 	GSVertexBufferState* m_vb_sr; // vb_state for StretchRect
 
 	struct {
@@ -210,6 +456,12 @@ class GSDeviceOGL : public GSDevice
 		GSDepthStencilOGL* dss;
 		GSBlendStateOGL* bs;
 	} m_convert;
+
+	struct 
+	{
+		GLuint ps;
+		GSUniformBufferOGL *cb;
+	} m_fxaa;
 
 	struct
 	{
@@ -253,89 +505,110 @@ class GSDeviceOGL : public GSDevice
 
 	CComPtr<ID3D11RasterizerState> m_rs;
 
-	struct 
-	{
-		CComPtr<ID3D11PixelShader> ps;
-		CComPtr<ID3D11Buffer> cb;
-	} m_fxaa;
-
 
 	// Shaders...
 
-	hash_map<uint32, GSVertexShader11 > m_vs;
-	CComPtr<ID3D11Buffer> m_vs_cb;
-	hash_map<uint32, CComPtr<ID3D11GeometryShader> > m_gs;
-	hash_map<uint32, CComPtr<ID3D11PixelShader> > m_ps;
-	CComPtr<ID3D11Buffer> m_ps_cb;
-	hash_map<uint32, CComPtr<ID3D11SamplerState> > m_ps_ss;
 	CComPtr<ID3D11SamplerState> m_palette_ss;
 	CComPtr<ID3D11SamplerState> m_rt_ss;
-	hash_map<uint32, CComPtr<ID3D11DepthStencilState> > m_om_dss;
-	hash_map<uint32, CComPtr<ID3D11BlendState> > m_om_bs;
+
+#endif
+	// hash_map<uint32, GSVertexShader11 > m_vs;
+	// hash_map<uint32, CComPtr<ID3D11GeometryShader> > m_gs;
+	// hash_map<uint32, CComPtr<ID3D11PixelShader> > m_ps;
+	// hash_map<uint32, CComPtr<ID3D11SamplerState> > m_ps_ss;
+	// hash_map<uint32, CComPtr<ID3D11DepthStencilState> > m_om_dss;
+	// hash_map<uint32, CComPtr<ID3D11BlendState> > m_om_bs;
+	hash_map<uint32, GLuint > m_vs;
+	hash_map<uint32, GLuint > m_gs;
+	hash_map<uint32, GLuint > m_ps;
+	hash_map<uint32, GLuint > m_ps_ss;
+	hash_map<uint32, GSDepthStencilOGL* > m_om_dss;
+	hash_map<uint32, GSBlendStateOGL* > m_om_bs;
+
+	//CComPtr<ID3D11SamplerState> m_palette_ss;
+	//CComPtr<ID3D11SamplerState> m_rt_ss;
+	GLuint m_palette_ss;
+	GLuint m_rt_ss;
+
+	//CComPtr<ID3D11Buffer> m_vs_cb;
+	//CComPtr<ID3D11Buffer> m_ps_cb;
+	GSUniformBufferOGL* m_vs_cb;
+	GSUniformBufferOGL* m_ps_cb;
 
 	VSConstantBuffer m_vs_cb_cache;
 	PSConstantBuffer m_ps_cb_cache;
-#endif
 
 	protected:
-		GSTexture* CreateSurface(int type, int w, int h, bool msaa, int format);
-		GSTexture* FetchSurface(int type, int w, int h, bool msaa, int format);
-		void DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c);
-		void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
+	GSTexture* CreateSurface(int type, int w, int h, bool msaa, int format);
+	GSTexture* FetchSurface(int type, int w, int h, bool msaa, int format);
+	void DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c);
+	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
 
 	public:
-		GSDeviceOGL();
-		virtual ~GSDeviceOGL();
+	GSDeviceOGL();
+	virtual ~GSDeviceOGL();
 
-		void CheckDebugLog();
-		static void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
+	void CheckDebugLog();
+	static void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
+
+	bool HasStencil() { return true; }
+	bool HasDepth32() { return true; }
+
+	bool Create(GSWnd* wnd);
+	bool Reset(int w, int h);
+	void Flip();
+
+	void DrawPrimitive();
+
+	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
+	void ClearRenderTarget(GSTexture* t, uint32 c);
+	void ClearDepth(GSTexture* t, float c);
+	void ClearStencil(GSTexture* t, uint8 c);
+
+	GSTexture* CreateRenderTarget(int w, int h, bool msaa, int format = 0);
+	GSTexture* CreateDepthStencil(int w, int h, bool msaa, int format = 0);
+	GSTexture* CreateTexture(int w, int h, int format = 0);
+	GSTexture* CreateOffscreen(int w, int h, int format = 0);
+
+	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
+
+	void CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r);
+	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
+	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, bool linear = true);
+	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSBlendStateOGL* bs, bool linear = true);
+
+	void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm);
+
+	GSTexture* Resolve(GSTexture* t);
+
+	void CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const std::string& macro_sel = "");
+
+	void EndScene();
+
+	void IASetPrimitiveTopology(GLenum topology);
+	void IASetVertexBuffer(const void* vertices, size_t count);
+	void IASetVertexState(GSVertexBufferState* vb_state);
+
+	void SetUniformBuffer(GSUniformBufferOGL* cb);
+
+	void VSSetShader(GLuint vs);
+	void GSSetShader(GLuint gs);
+
+	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
+	void PSSetShaderResource(int i, GSTexture* sr);
+	void PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2 = 0);
+	void PSSetShader(GLuint ps);
+
+	void OMSetFBO(GLuint fbo);
+	void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);
+	void OMSetBlendState(GSBlendStateOGL* bs, float bf);
+	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
 
 
-		bool Create(GSWnd* wnd);
-		bool Reset(int w, int h);
-		void Flip();
-
-		void DrawPrimitive();
-
-		void ClearRenderTarget(GSTexture* t, const GSVector4& c);
-		void ClearRenderTarget(GSTexture* t, uint32 c);
-		void ClearDepth(GSTexture* t, float c);
-		void ClearStencil(GSTexture* t, uint8 c);
-
-		GSTexture* CreateRenderTarget(int w, int h, bool msaa, int format = 0);
-		GSTexture* CreateDepthStencil(int w, int h, bool msaa, int format = 0);
-		GSTexture* CreateTexture(int w, int h, int format = 0);
-		GSTexture* CreateOffscreen(int w, int h, int format = 0);
-
-		GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
-
-		void CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r);
-		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader = 0, bool linear = true);
-		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, bool linear = true);
-		void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, GLuint ps, GSBlendStateOGL* bs, bool linear = true);
-
-		GSTexture* Resolve(GSTexture* t);
-
-		void CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program);
-
-		void EndScene();
-
-		void IASetPrimitiveTopology(GLenum topology);
-		void IASetVertexBuffer(const void* vertices, size_t count);
-		void IASetVertexState(GSVertexBufferState* vb_state);
-
-		void VSSetShader(GLuint vs);
-		void GSSetShader(GLuint gs);
-
-		void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
-		void PSSetShaderResource(int i, GSTexture* sr);
-		void PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2 = 0);
-		void PSSetShader(GLuint ps);
-
-		void OMSetFBO(GLuint fbo);
-		void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);
-		void OMSetBlendState(GSBlendStateOGL* bs, float bf);
-		void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
-
-
+	void CreateTextureFX();
+	void SetupIA(const void* vertices, int count, GLenum prim);
+	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
+	void SetupGS(GSSelector sel);
+	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
+	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 };

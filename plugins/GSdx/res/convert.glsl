@@ -20,8 +20,8 @@ layout(location = 1) in vec2 TEXCOORD0;
 //
 // The centroid qualifier only matters when multisampling. If this qualifier is not present, then the value is interpolated to the pixel's center, anywhere in the pixel, or to one of the pixel's samples. This sample may lie outside of the actual primitive being rendered, since a primitive can cover only part of a pixel's area. The centroid qualifier is used to prevent this; the interpolation point must fall within both the pixel's area and the primitive's area.
 // FIXME gl_Position
-smooth layout(location = 0) out vec4 POSITION_OUT;
-smooth layout(location = 1) out vec2 TEXCOORD0_OUT;
+layout(location = 0) out vec4 POSITION_OUT;
+layout(location = 1) out vec2 TEXCOORD0_OUT;
 
 void vs_main()
 {

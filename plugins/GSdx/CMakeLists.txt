@@ -16,6 +16,7 @@ set(CommonFlags
     -mfpmath=sse
     #-Wstrict-aliasing # Allow to track strict aliasing issue.
     -Wunused-variable
+    -std=c++0x
     )
 
 set(OptimizationFlags
@@ -91,6 +92,7 @@ set(GSdxSources
     GSTextureCache.cpp
     GSTextureCacheSW.cpp
     GSTextureCacheOGL.cpp
+    GSTextureFXOGL.cpp
     GSTextureOGL.cpp
     GSTextureNull.cpp
 	GSTextureSW.cpp
@@ -199,9 +201,10 @@ if(PACKAGE_MODE)
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/convert.glsl DESTINATION ${PLUGIN_DIR})
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/interlace.glsl DESTINATION ${PLUGIN_DIR})
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/merge.glsl DESTINATION ${PLUGIN_DIR})
+    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/tfx.glsl DESTINATION ${PLUGIN_DIR})
 else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/convert.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/interlace.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/merge.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/tfx.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
 endif(PACKAGE_MODE)
