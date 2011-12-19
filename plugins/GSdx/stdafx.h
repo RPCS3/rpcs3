@@ -92,6 +92,14 @@
 
 using namespace std;
 
+#ifdef __GNUC__
+
+#include <tr1/memory>
+
+using namespace std::tr1;
+
+#endif
+
 #ifdef _WINDOWS
 
 	#include <hash_map>

@@ -118,6 +118,8 @@
 		<Unit filename="GSRasterizer.h" />
 		<Unit filename="GSRenderer.cpp" />
 		<Unit filename="GSRenderer.h" />
+		<Unit filename="GSRendererHW.cpp" />
+		<Unit filename="GSRendererHW.h" />
 		<Unit filename="GSRendererNull.cpp" />
 		<Unit filename="GSRendererNull.h" />
 		<Unit filename="GSRendererSW.cpp" />

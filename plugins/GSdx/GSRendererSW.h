@@ -30,7 +30,7 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 	class GSRasterizerData2 : public GSRasterizerData
 	{
 	public:
-		GSRasterizerData2(GSRenderer* r)
+		GSRasterizerData2()
 		{
 			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)_aligned_malloc(sizeof(GSScanlineGlobalData), 32);
 
@@ -49,7 +49,7 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 
 			_aligned_free(gd);
 		}
-	};	
+	};
 
 protected:
 	GSRasterizerList* m_rl;
@@ -81,6 +81,6 @@ public:
 	GSRendererSW(int threads);
 	virtual ~GSRendererSW();
 
-	template<uint32 prim, uint32 tme, uint32 fst> 
+	template<uint32 prim, uint32 tme, uint32 fst>
 	void VertexKick(bool skip);
 };

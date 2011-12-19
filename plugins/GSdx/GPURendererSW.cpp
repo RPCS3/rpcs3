@@ -69,28 +69,6 @@ GSTexture* GPURendererSW::GetOutput()
 
 void GPURendererSW::Draw()
 {
-	class GPURasterizerData : public GSRasterizerData
-	{
-	public:
-		GPURasterizerData()
-		{
-			GPUScanlineGlobalData* gd = (GPUScanlineGlobalData*)_aligned_malloc(sizeof(GPUScanlineGlobalData), 32);
-
-			gd->clut = NULL;
-
-			param = gd;
-		}
-
-		virtual ~GPURasterizerData()
-		{
-			GPUScanlineGlobalData* gd = (GPUScanlineGlobalData*)param;
-
-			if(gd->clut) _aligned_free(gd->clut);
-
-			_aligned_free(gd);
-		}
-	};	
-
 	shared_ptr<GSRasterizerData> data(new GPURasterizerData());
 
 	GPUScanlineGlobalData& gd = *(GPUScanlineGlobalData*)data->param;

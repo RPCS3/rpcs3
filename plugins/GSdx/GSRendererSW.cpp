@@ -136,9 +136,9 @@ void GSRendererSW::Draw()
 {
 	if(m_dump) m_dump.Object(m_vertices, m_count, m_vt.m_primclass);
 
-	if(m_fzb != m_context->offset.fzb) 
+	if(m_fzb != m_context->offset.fzb)
 	{
-		// rasterizers must write the same outputs at the same time, this makes sure each thread has its own private surface area 
+		// rasterizers must write the same outputs at the same time, this makes sure each thread has its own private surface area
 
 		// TODO: detect if frame/zbuf overlap eachother (?)
 
@@ -147,7 +147,7 @@ void GSRendererSW::Draw()
 		Sync();
 	}
 
-	shared_ptr<GSRasterizerData> data(new GSRasterizerData2(this));
+	shared_ptr<GSRasterizerData> data(new GSRasterizerData2());
 
 	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)data->param;
 
@@ -310,7 +310,7 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 void GSRendererSW::InvalidatePages(const GSTextureCacheSW::Texture* t)
 {
 	//printf("tex %05x %d %d\n", t->m_TEX0.TBP0, t->m_TEX0.TBW, t->m_TEX0.PSM);
-			
+
 	for(size_t i = 0; i < countof(t->m_pages); i++)
 	{
 		if(m_fzb_pages[i] & t->m_pages[i]) // currently begin drawn to? => sync
@@ -338,7 +338,7 @@ void GSRendererSW::InvalidatePages(const GSOffset* o, const GSVector4i& rect)
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 page = (base + o->block.col[x >> 3]) >> 5; 
+			uint32 page = (base + o->block.col[x >> 3]) >> 5;
 
 			if(page < MAX_PAGES)
 			{
@@ -360,7 +360,7 @@ bool GSRendererSW::CheckPages(const GSOffset* o, const GSVector4i& rect)
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 page = (base + o->block.col[x >> 3]) >> 5; 
+			uint32 page = (base + o->block.col[x >> 3]) >> 5;
 
 			if(page < MAX_PAGES)
 			{
@@ -524,7 +524,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				// 011 p tri
 				// 100 l round
 				// 101 l tri
-			
+
 				if(m_vt.m_lod.x > 0)
 				{
 					gd.sel.ltf = context->TEX1.MMIN >> 2;
@@ -600,29 +600,29 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 				{
 					switch(i)
 					{
-					case 1: 
-						MIP_TEX0.TBP0 = context->MIPTBP1.TBP1; 
-						MIP_TEX0.TBW = context->MIPTBP1.TBW1; 
+					case 1:
+						MIP_TEX0.TBP0 = context->MIPTBP1.TBP1;
+						MIP_TEX0.TBW = context->MIPTBP1.TBW1;
 						break;
-					case 2: 
-						MIP_TEX0.TBP0 = context->MIPTBP1.TBP2; 
-						MIP_TEX0.TBW = context->MIPTBP1.TBW2; 
+					case 2:
+						MIP_TEX0.TBP0 = context->MIPTBP1.TBP2;
+						MIP_TEX0.TBW = context->MIPTBP1.TBW2;
 						break;
-					case 3: 
-						MIP_TEX0.TBP0 = context->MIPTBP1.TBP3; 
-						MIP_TEX0.TBW = context->MIPTBP1.TBW3; 
+					case 3:
+						MIP_TEX0.TBP0 = context->MIPTBP1.TBP3;
+						MIP_TEX0.TBW = context->MIPTBP1.TBW3;
 						break;
-					case 4: 
-						MIP_TEX0.TBP0 = context->MIPTBP2.TBP4; 
-						MIP_TEX0.TBW = context->MIPTBP2.TBW4; 
+					case 4:
+						MIP_TEX0.TBP0 = context->MIPTBP2.TBP4;
+						MIP_TEX0.TBW = context->MIPTBP2.TBW4;
 						break;
-					case 5: 
-						MIP_TEX0.TBP0 = context->MIPTBP2.TBP5; 
-						MIP_TEX0.TBW = context->MIPTBP2.TBW5; 
+					case 5:
+						MIP_TEX0.TBP0 = context->MIPTBP2.TBP5;
+						MIP_TEX0.TBW = context->MIPTBP2.TBW5;
 						break;
-					case 6: 
-						MIP_TEX0.TBP0 = context->MIPTBP2.TBP6; 
-						MIP_TEX0.TBW = context->MIPTBP2.TBW6; 
+					case 6:
+						MIP_TEX0.TBP0 = context->MIPTBP2.TBP6;
+						MIP_TEX0.TBW = context->MIPTBP2.TBW6;
 						break;
 					default:
 						__assume(0);
