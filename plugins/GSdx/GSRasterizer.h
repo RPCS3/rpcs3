@@ -142,6 +142,7 @@ public:
 	// IRasterizer
 
 	void Queue(shared_ptr<GSRasterizerData> data);
+	void Sync() {}
 };
 
 class GSRasterizerMT : public GSRasterizer, private GSThread
@@ -149,8 +150,7 @@ class GSRasterizerMT : public GSRasterizer, private GSThread
 protected:
 	volatile bool m_exit;
 	volatile bool m_break;
-	volatile bool m_ready;
-	GSAutoResetEvent m_draw;
+	GSEvent m_draw;
 	queue<shared_ptr<GSRasterizerData> > m_queue;
 	GSCritSec m_lock;
 
@@ -177,23 +177,26 @@ protected:
 public:
 	virtual ~GSRasterizerList();
 
-	template<class DS> static GSRasterizerList* Create(int threads)
+	template<class DS> static IRasterizer* Create(int threads)
 	{
-		GSRasterizerList* rl = new GSRasterizerList();
+		threads = std::max<int>(threads, 0);
 
-		threads = std::max<int>(threads, 1); // TODO: min(threads, number of cpu cores)
-
-		for(int i = 0; i < threads; i++)
+		if(threads == 0)
 		{
-			rl->push_back(new GSRasterizerMT(new DS(), i, threads));
+			return new GSRasterizer(new DS(), 0, 1);
 		}
+		else
+		{
+			GSRasterizerList* rl = new GSRasterizerList();
 
-		return rl;
+			for(int i = 0; i < threads; i++)
+			{
+				rl->push_back(new GSRasterizerMT(new DS(), i, threads));
+			}
+
+			return rl;
+		}
 	}
-
-	bool IsMultiThreaded() const {return size() > 1;}
-
-	void Draw(shared_ptr<GSRasterizerData> data);
 
 	// IRasterizer
 

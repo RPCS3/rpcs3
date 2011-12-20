@@ -547,6 +547,8 @@ GSPixelOffset4* GSLocalMemory::GetPixelOffset4(const GIFRegFRAME& FRAME, const G
 	return o;
 }
 
+static bool cmp_vec2x(const GSVector2i& a, const GSVector2i& b) {return a.x < b.x;}
+
 list<GSVector2i>* GSLocalMemory::GetPage2TileMap(const GIFRegTEX0& TEX0)
 {
 	uint32 hash = TEX0.TBP0 | (TEX0.TBW << 14) | (TEX0.PSM << 20) | (TEX0.TW << 26);
@@ -613,10 +615,18 @@ list<GSVector2i>* GSLocalMemory::GetPage2TileMap(const GIFRegTEX0& TEX0)
 			}
 		}
 
+		// sort by x and flip the mask (it will be used to erase a lot of bits in a loop, [x] &= ~y)
+
+		vector<GSVector2i> tmp;
+
 		for(hash_map<uint32, uint32>::iterator j = m.begin(); j != m.end(); j++)
 		{
-			p2t[page].push_back(GSVector2i(j->first, j->second));
+			tmp.push_back(GSVector2i(j->first, ~j->second));
 		}
+
+		std::sort(tmp.begin(), tmp.end(), cmp_vec2x);
+
+		p2t[page].insert(p2t[page].end(), tmp.begin(), tmp.end());
 	}
 
 	m_p2tmap[hash] = p2t;

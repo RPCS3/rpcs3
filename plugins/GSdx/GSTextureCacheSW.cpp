@@ -131,7 +131,7 @@ void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& r
 						
 							for(list<GSVector2i>::iterator j = l.begin(); j != l.end(); j++)
 							{
-								t->m_valid[j->x] &= ~j->y;
+								t->m_valid[j->x] &= j->y;
 							}
 						}
 						else

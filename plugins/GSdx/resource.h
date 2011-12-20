@@ -80,7 +80,7 @@
 #define IDR_MERGE_FX                    10002
 #define IDR_INTERLACE_FX                10003
 #define IDD_CONFIG2                     10004
-#define IDR_FXAA_FX						10005
+#define IDR_FXAA_FX                     10005
 
 // Next default values for new objects
 // 

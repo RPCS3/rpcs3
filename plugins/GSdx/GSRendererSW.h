@@ -52,7 +52,7 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 	};
 
 protected:
-	GSRasterizerList* m_rl;
+	IRasterizer* m_rl;
 	GSTextureCacheSW* m_tc;
 	GSTexture* m_texture[2];
 	uint8* m_output;
@@ -69,7 +69,7 @@ protected:
 	void Draw();
 	void Sync();
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
-	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
+	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut = false);
 
 	void InvalidatePages(const GSOffset* o, const GSVector4i& rect);
 	void InvalidatePages(const GSTextureCacheSW::Texture* t);

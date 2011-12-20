@@ -102,10 +102,10 @@ bool RunLinuxDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), interlace_label);
 	gtk_container_add(GTK_CONTAINER(main_box), interlace_combo_box);
 
-	swthreads_label = gtk_label_new("Software renderer threads:");
+	swthreads_label = gtk_label_new("Extra sw renderer threads:");
 	swthreads_text = gtk_entry_new();
 	char buf[5];
-	sprintf(buf, "%d", theApp.GetConfig("swthreads", 1));
+	sprintf(buf, "%d", theApp.GetConfig("extrathreads", 0));
 
 	gtk_entry_set_text(GTK_ENTRY(swthreads_text), buf);
 	gtk_container_add(GTK_CONTAINER(main_box), swthreads_label);

@@ -71,7 +71,7 @@ void GSRendererSW::VSync(int field)
 
 	Sync(); // IncAge might delete a cached texture in use
 
-	//printf("m_sync_count = %d\n", m_rl->m_sync_count); m_rl->m_sync_count = 0;
+	//printf("m_sync_count = %d\n", ((GSRasterizerList*)m_rl)->m_sync_count); ((GSRasterizerList*)m_rl)->m_sync_count = 0;
 
 	m_tc->IncAge();
 
@@ -178,66 +178,58 @@ void GSRendererSW::Draw()
 		m_tc->InvalidateVideoMem(m_context->offset.zb, r);
 	}
 
-	if(!m_rl->IsMultiThreaded() || data->solidrect || s_dump)
+	if(s_dump)
 	{
-		if(s_dump)
+		Sync();
+
+		uint64 frame = m_perfmon.GetFrame();
+
+		string s;
+
+		if(s_save && s_n >= s_saven && PRIM->TME)
 		{
-			uint64 frame = m_perfmon.GetFrame();
+			s = format("c:\\temp1\\_%05d_f%lld_tex_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
 
-			string s;
-
-			if(s_save && s_n >= s_saven && PRIM->TME)
-			{
-				s = format("c:\\temp1\\_%05d_f%lld_tex_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
-
-				m_mem.SaveBMP(s, m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM, 1 << m_context->TEX0.TW, 1 << m_context->TEX0.TH);
-			}
-
-			s_n++;
-
-			if(s_save && s_n >= s_saven)
-			{
-				s = format("c:\\temp1\\_%05d_f%lld_rt0_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
-
-				m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);
-			}
-
-			if(s_savez && s_n >= s_saven)
-			{
-				s = format("c:\\temp1\\_%05d_f%lld_rz0_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
-
-				m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
-			}
-
-			s_n++;
+			m_mem.SaveBMP(s, m_context->TEX0.TBP0, m_context->TEX0.TBW, m_context->TEX0.PSM, 1 << m_context->TEX0.TW, 1 << m_context->TEX0.TH);
 		}
 
-		m_rl->Draw(data);
+		s_n++;
+
+		if(s_save && s_n >= s_saven)
+		{
+			s = format("c:\\temp1\\_%05d_f%lld_rt0_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
+
+			m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);
+		}
+
+		if(s_savez && s_n >= s_saven)
+		{
+			s = format("c:\\temp1\\_%05d_f%lld_rz0_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
+
+			m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
+		}
+
+		s_n++;
+
+		m_rl->Queue(data);
 
 		Sync();
 
-		if(s_dump)
+		if(s_save && s_n >= s_saven)
 		{
-			uint64 frame = m_perfmon.GetFrame();
+			s = format("c:\\temp1\\_%05d_f%lld_rt1_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
 
-			string s;
-
-			if(s_save && s_n >= s_saven)
-			{
-				s = format("c:\\temp1\\_%05d_f%lld_rt1_%05x_%d.bmp", s_n, frame, m_context->FRAME.Block(), m_context->FRAME.PSM);
-
-				m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);
-			}
-
-			if(s_savez && s_n >= s_saven)
-			{
-				s = format("c:\\temp1\\_%05d_f%lld_rz1_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
-
-				m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
-			}
-
-			s_n++;
+			m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);
 		}
+
+		if(s_savez && s_n >= s_saven)
+		{
+			s = format("c:\\temp1\\_%05d_f%lld_rz1_%05x_%d.bmp", s_n, frame, m_context->ZBUF.Block(), m_context->ZBUF.PSM);
+
+			m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
+		}
+
+		s_n++;
 	}
 	else
 	{
@@ -252,8 +244,6 @@ void GSRendererSW::Draw()
 		{
 			InvalidatePages(m_context->offset.zb, r);
 		}
-
-		// Sync();
 	}
 
 	// TODO: m_perfmon.Put(GSPerfMon::Prim, stats.prims);
@@ -295,7 +285,7 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 	}
 }
 
-void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
+void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut)
 {
 	//printf("ilm %05x %d %d\n", BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM);
 

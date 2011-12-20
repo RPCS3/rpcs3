@@ -13,13 +13,11 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// English (United States) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -58,7 +56,7 @@ IDR_CONVERT_FX          RCDATA                  "res\\convert.fx"
 IDR_TFX_FX              RCDATA                  "res\\tfx.fx"
 IDR_MERGE_FX            RCDATA                  "res\\merge.fx"
 IDR_INTERLACE_FX        RCDATA                  "res\\interlace.fx"
-IDR_FXAA_FX			    RCDATA                  "res\\fxaa.fx"
+IDR_FXAA_FX             RCDATA                  "res\\fxaa.fx"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -104,9 +102,9 @@ BEGIN
     CONTROL         "",IDC_MSAA,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,109,261,11,14
     LTEXT           "HW Anti Aliasing",IDC_STATIC_TEXT_HWAA,18,261,53,8
     GROUPBOX        "D3D Enhancements (can cause glitches)",IDC_STATIC,7,117,175,66
-    LTEXT           "SW rend. threads:",IDC_STATIC,7,189,60,8
-    EDITTEXT        IDC_SWTHREADS_EDIT,71,187,35,13,ES_AUTOHSCROLL | ES_NUMBER
-    CONTROL         "",IDC_SWTHREADS,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,99,190,11,14
+    LTEXT           "Extra rendering threads:",IDC_STATIC,7,189,80,8
+    EDITTEXT        IDC_SWTHREADS_EDIT,89,187,35,13,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "",IDC_SWTHREADS,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,117,190,11,14
     CONTROL         "Texture filtering",IDC_FILTER,"Button",BS_AUTO3STATE | WS_TABSTOP,7,203,67,10
     CONTROL         "Logarithmic Z",IDC_LOGZ,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,89,204,58,10
     CONTROL         "Allow 8-bit textures",IDC_PALTEX,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,217,82,10
@@ -144,23 +142,23 @@ FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     CONTROL         2021,IDC_LOGO9,"Static",SS_BITMAP,7,7,175,44
     LTEXT           "Resolution:",IDC_STATIC,7,59,37,8
-    COMBOBOX        IDC_RESOLUTION,78,57,104,125,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_RESOLUTION,80,57,102,125,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Renderer:",IDC_STATIC,7,74,34,8
-    COMBOBOX        IDC_RENDERER,78,72,104,118,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_RENDERER,80,72,102,118,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Texture Filter (Del):",IDC_STATIC,7,90,64,8
-    COMBOBOX        IDC_FILTER,78,87,104,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_FILTER,80,87,102,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Dithering (End):",IDC_STATIC,7,105,52,8
-    COMBOBOX        IDC_DITHERING,78,102,104,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_DITHERING,80,102,102,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Aspect Ratio (PgDn):",IDC_STATIC,7,120,68,8
-    COMBOBOX        IDC_ASPECTRATIO,78,117,104,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Rendering Threads:",IDC_STATIC,7,157,64,8
-    EDITTEXT        IDC_SWTHREADS_EDIT,78,155,35,13,ES_AUTOHSCROLL | ES_NUMBER
+    COMBOBOX        IDC_ASPECTRATIO,80,117,102,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Extra Rend. Threads:",IDC_STATIC,7,157,70,8
+    EDITTEXT        IDC_SWTHREADS_EDIT,80,155,35,13,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_SWTHREADS,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,99,161,11,14
     DEFPUSHBUTTON   "OK",IDOK,43,178,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,96,178,50,14
     CONTROL         2022,IDC_LOGO11,"Static",SS_BITMAP,7,7,173,42
     LTEXT           "Internal Resolution:",IDC_STATIC,7,135,64,8
-    COMBOBOX        IDC_SCALE,78,132,104,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_SCALE,80,132,102,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL         "Windowed",IDC_WINDOWED,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,129,157,49,10
 END
 
@@ -181,9 +179,9 @@ BEGIN
     EDITTEXT        IDC_RESY_EDIT,130,132,35,13,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_RESY,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,154,130,11,14
     CONTROL         "Native",IDC_NATIVERES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,92,105,33,10
-    LTEXT           "Rendering threads:",IDC_STATIC,19,214,63,8
-    EDITTEXT        IDC_SWTHREADS_EDIT,87,212,35,13,ES_AUTOHSCROLL | ES_NUMBER
-    CONTROL         "",IDC_SWTHREADS,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,115,215,11,14
+    LTEXT           "Extra rendering threads:",IDC_STATIC,19,214,80,8
+    EDITTEXT        IDC_SWTHREADS_EDIT,102,212,35,13,ES_AUTOHSCROLL | ES_NUMBER
+    CONTROL         "",IDC_SWTHREADS,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS | UDS_NOTHOUSANDS,135,215,11,14
     COMBOBOX        IDC_UPSCALE_MULTIPLIER,92,117,74,98,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Or use Scaling:",IDC_STATIC,38,120,49,8
     LTEXT           "Original PS2 resolution :",IDC_STATIC,10,105,80,8
@@ -215,7 +213,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_CONFIG, DIALOG
     BEGIN
@@ -241,7 +239,7 @@ BEGIN
     BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 182
-        VERTGUIDE, 78
+        VERTGUIDE, 80
         VERTGUIDE, 182
         TOPMARGIN, 7
         BOTTOMMARGIN, 192
@@ -298,7 +296,7 @@ BEGIN
     END
 END
 
-#endif    // English (U.S.) resources
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
@@ -312,7 +310,6 @@ END
 #include "res/convert.fx"
 #include "res/interlace.fx"
 #include "res/merge.fx"
-#include "res/fxaa.fx"
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED

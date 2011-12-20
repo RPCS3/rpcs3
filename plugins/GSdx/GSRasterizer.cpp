@@ -24,8 +24,11 @@
 #include "stdafx.h"
 #include "GSRasterizer.h"
 
-#define THREAD_HEIGHT 5
-//#define THREAD_HEIGHT 1
+// - for more threads screen segments should be smaller to better distribute the pixels
+// - but not too small to keep the threading overhead low
+// - ideal value between 3 and 5, or log2(64 / number of threads)
+
+#define THREAD_HEIGHT 4
 
 GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads)
 	: m_ds(ds)
@@ -764,7 +767,6 @@ GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, int id, int threads)
 	: GSRasterizer(ds, id, threads)
 	, m_exit(false)
 	, m_break(true)
-	, m_ready(true)
 {
 	CreateThread();
 }
@@ -790,8 +792,6 @@ void GSRasterizerMT::Queue(shared_ptr<GSRasterizerData> data)
 	{
 		m_break = false;
 
-		m_ready = false;
-
 		m_draw.Set();
 	}
 }
@@ -801,8 +801,6 @@ void GSRasterizerMT::Sync()
 	while(!m_queue.empty()) _mm_pause();
 
 	m_break = true;
-
-	while(!m_ready) _mm_pause();
 }
 
 void GSRasterizerMT::ThreadProc()
@@ -815,26 +813,23 @@ void GSRasterizerMT::ThreadProc()
 		{
 			if(!m_queue.empty())
 			{
-				queue<shared_ptr<GSRasterizerData> > queue;
-
+				while(!m_queue.empty())
 				{
-					GSAutoLock l(&m_lock);
+					shared_ptr<GSRasterizerData> data;
 
-					// TODO: queue.swap(m_queue); // GCC
-
-					while(!m_queue.empty())
 					{
-						queue.push(m_queue.front());
+						GSAutoLock l(&m_lock);
+
+						data = m_queue.front();
+					}
+
+					Draw(data);
+
+					{
+						GSAutoLock l(&m_lock);
 
 						m_queue.pop();
 					}
-				}
-
-				while(!queue.empty())
-				{
-					Draw(queue.front());
-
-					queue.pop();
 				}
 			}
 			else
@@ -842,8 +837,6 @@ void GSRasterizerMT::ThreadProc()
 				_mm_pause();
 			}
 		}
-
-		m_ready = true;
 	}
 }
 
@@ -864,20 +857,15 @@ GSRasterizerList::~GSRasterizerList()
 	}
 }
 
-void GSRasterizerList::Draw(shared_ptr<GSRasterizerData> data)
-{
-	Sync();
-
-	front()->Draw(data);
-}
-
 void GSRasterizerList::Queue(shared_ptr<GSRasterizerData> data)
 {
-	if(size() > 1)
+	if(size() > 1 && data->solidrect) // TODO: clip to thread area and dispatch?
 	{
-		ASSERT(!data->solidrect); // should call Draw instead, but it will work anyway
+		Sync(); // complete previous drawings
 
-		data->solidrect = false;
+		front()->Draw(data);
+
+		return;
 	}
 
 	GSVector4i bbox = data->bbox.rintersect(data->scissor);

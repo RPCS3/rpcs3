@@ -317,6 +317,23 @@ typedef signed long long int64;
 		return retval;
 	}
 
+	__forceinline long _InterlockedExchangeAdd(volatile long* const Addend, const long Value)
+	{
+		long retval = Value;
+		__asm__("lock; xaddl %[retval], %[Addend]" : [retval] "+r" (retval) : [Addend] "m" (*Addend) : "memory");
+		return retval;
+	}
+
+	__forceinline long _InterlockedDecrement(volatile long* const lpAddend)
+	{
+		return _InterlockedExchangeAdd(lpAddend, -1) - 1;
+	}
+	
+	__forceinline long _InterlockedIncrement(volatile long* const lpAddend)
+	{
+		return _InterlockedExchangeAdd(lpAddend, 1) + 1;
+	}
+
 	#ifdef __GNUC__
 
 	__forceinline unsigned long long __rdtsc()

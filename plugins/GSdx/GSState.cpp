@@ -386,12 +386,12 @@ float GSState::GetFPS()
 
 // GIFPackedRegHandler*
 
-__forceinline void GSState::GIFPackedRegHandlerNull(const GIFPackedReg* r)
+__forceinline void GSState::GIFPackedRegHandlerNull(const GIFPackedReg* RESTRICT r)
 {
 	// ASSERT(0);
 }
 
-__forceinline void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* r)
+__forceinline void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* RESTRICT r)
 {
 	#if _M_SSE >= 0x301
 
@@ -418,7 +418,7 @@ __forceinline void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* r)
 	m_v.RGBAQ.Q = m_q;
 }
 
-__forceinline void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* r)
+__forceinline void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r)
 {
 	#if defined(_M_AMD64)
 
@@ -445,7 +445,7 @@ __forceinline void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* r)
 #endif
 }
 
-__forceinline void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* r)
+__forceinline void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r)
 {
 	#if _M_SSE >= 0x200
 
@@ -465,7 +465,7 @@ __forceinline void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* r)
 #endif
 }
 
-__forceinline void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* r)
+__forceinline void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* RESTRICT r)
 {
 	m_v.XYZ.X = r->XYZF2.X;
 	m_v.XYZ.Y = r->XYZF2.Y;
@@ -475,7 +475,7 @@ __forceinline void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* r)
 	VertexKick(r->XYZF2.ADC);
 }
 
-__forceinline void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* r)
+__forceinline void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* RESTRICT r)
 {
 	m_v.XYZ.X = r->XYZ2.X;
 	m_v.XYZ.Y = r->XYZ2.Y;
@@ -484,23 +484,23 @@ __forceinline void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* r)
 	VertexKick(r->XYZ2.ADC);
 }
 
-__forceinline void GSState::GIFPackedRegHandlerFOG(const GIFPackedReg* r)
+__forceinline void GSState::GIFPackedRegHandlerFOG(const GIFPackedReg* RESTRICT r)
 {
 	m_v.FOG.F = r->FOG.F;
 }
 
-__forceinline void GSState::GIFPackedRegHandlerA_D(const GIFPackedReg* r)
+__forceinline void GSState::GIFPackedRegHandlerA_D(const GIFPackedReg* RESTRICT r)
 {
 	(this->*m_fpGIFRegHandlers[r->A_D.ADDR])(&r->r);
 }
 
-__forceinline void GSState::GIFPackedRegHandlerNOP(const GIFPackedReg* r)
+__forceinline void GSState::GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r)
 {
 }
 
 // GIFRegHandler*
 
-void GSState::GIFRegHandlerNull(const GIFReg* r)
+void GSState::GIFRegHandlerNull(const GIFReg* RESTRICT r)
 {
 	// ASSERT(0);
 }
@@ -531,19 +531,19 @@ __forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
 	ResetPrim();
 }
 
-void GSState::GIFRegHandlerPRIM(const GIFReg* r)
+void GSState::GIFRegHandlerPRIM(const GIFReg* RESTRICT r)
 {
 	ALIGN_STACK(32);
 
 	ApplyPRIM(r->PRIM);
 }
 
-__forceinline void GSState::GIFRegHandlerRGBAQ(const GIFReg* r)
+__forceinline void GSState::GIFRegHandlerRGBAQ(const GIFReg* RESTRICT r)
 {
 	m_v.RGBAQ = (GSVector4i)r->RGBAQ;
 }
 
-__forceinline void GSState::GIFRegHandlerST(const GIFReg* r)
+__forceinline void GSState::GIFRegHandlerST(const GIFReg* RESTRICT r)
 {
 	m_v.ST = (GSVector4i)r->ST;
 
@@ -554,7 +554,7 @@ __forceinline void GSState::GIFRegHandlerST(const GIFReg* r)
 #endif
 }
 
-__forceinline void GSState::GIFRegHandlerUV(const GIFReg* r)
+__forceinline void GSState::GIFRegHandlerUV(const GIFReg* RESTRICT r)
 {
 	m_v.UV.u32[0] = r->UV.u32[0] & 0x3fff3fff;
 
@@ -564,7 +564,7 @@ __forceinline void GSState::GIFRegHandlerUV(const GIFReg* r)
 #endif
 }
 
-void GSState::GIFRegHandlerXYZF2(const GIFReg* r)
+void GSState::GIFRegHandlerXYZF2(const GIFReg* RESTRICT r)
 {
 /*
 	m_v.XYZ.X = r->XYZF.X;
@@ -579,7 +579,7 @@ void GSState::GIFRegHandlerXYZF2(const GIFReg* r)
 	VertexKick(false);
 }
 
-void GSState::GIFRegHandlerXYZ2(const GIFReg* r)
+void GSState::GIFRegHandlerXYZ2(const GIFReg* RESTRICT r)
 {
 	m_v.XYZ = (GSVector4i)r->XYZ;
 
@@ -624,13 +624,13 @@ void GSState::ApplyTEX0(int i, GIFRegTEX0& TEX0)
 		r.right = GSLocalMemory::m_psm[TEX0.CPSM].pgs.x;
 		r.bottom = GSLocalMemory::m_psm[TEX0.CPSM].pgs.y;
 		
-		InvalidateLocalMem(BITBLTBUF, r);
+		InvalidateLocalMem(BITBLTBUF, r, true);
 
 		m_mem.m_clut.Write(m_env.CTXT[i].TEX0, m_env.TEXCLUT);
 	}
 }
 
-template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* RESTRICT r)
 {
 	GIFRegTEX0 TEX0 = r->TEX0;
 
@@ -681,7 +681,7 @@ template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* r)
 	}
 }
 
-template<int i> void GSState::GIFRegHandlerCLAMP(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerCLAMP(const GIFReg* RESTRICT r)
 {
 	if(PRIM->CTXT == i && r->CLAMP != m_env.CTXT[i].CLAMP)
 	{
@@ -691,12 +691,12 @@ template<int i> void GSState::GIFRegHandlerCLAMP(const GIFReg* r)
 	m_env.CTXT[i].CLAMP = (GSVector4i)r->CLAMP;
 }
 
-void GSState::GIFRegHandlerFOG(const GIFReg* r)
+void GSState::GIFRegHandlerFOG(const GIFReg* RESTRICT r)
 {
 	m_v.FOG = (GSVector4i)r->FOG;
 }
 
-void GSState::GIFRegHandlerXYZF3(const GIFReg* r)
+void GSState::GIFRegHandlerXYZF3(const GIFReg* RESTRICT r)
 {
 /*
 	m_v.XYZ.X = r->XYZF.X;
@@ -711,18 +711,18 @@ void GSState::GIFRegHandlerXYZF3(const GIFReg* r)
 	VertexKick(true);
 }
 
-void GSState::GIFRegHandlerXYZ3(const GIFReg* r)
+void GSState::GIFRegHandlerXYZ3(const GIFReg* RESTRICT r)
 {
 	m_v.XYZ = (GSVector4i)r->XYZ;
 
 	VertexKick(true);
 }
 
-void GSState::GIFRegHandlerNOP(const GIFReg* r)
+void GSState::GIFRegHandlerNOP(const GIFReg* RESTRICT r)
 {
 }
 
-template<int i> void GSState::GIFRegHandlerTEX1(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerTEX1(const GIFReg* RESTRICT r)
 {
 	if(PRIM->CTXT == i && r->TEX1 != m_env.CTXT[i].TEX1)
 	{
@@ -732,7 +732,7 @@ template<int i> void GSState::GIFRegHandlerTEX1(const GIFReg* r)
 	m_env.CTXT[i].TEX1 = (GSVector4i)r->TEX1;
 }
 
-template<int i> void GSState::GIFRegHandlerTEX2(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerTEX2(const GIFReg* RESTRICT r)
 {
 	// m_env.CTXT[i].TEX2 = r->TEX2; // not used
 
@@ -749,7 +749,7 @@ template<int i> void GSState::GIFRegHandlerTEX2(const GIFReg* r)
 	ApplyTEX0(i, TEX0);
 }
 
-template<int i> void GSState::GIFRegHandlerXYOFFSET(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerXYOFFSET(const GIFReg* RESTRICT r)
 {
 	GSVector4i o = (GSVector4i)r->XYOFFSET & GSVector4i::x0000ffff();
 
@@ -763,7 +763,7 @@ template<int i> void GSState::GIFRegHandlerXYOFFSET(const GIFReg* r)
 	m_env.CTXT[i].UpdateScissor();
 }
 
-void GSState::GIFRegHandlerPRMODECONT(const GIFReg* r)
+void GSState::GIFRegHandlerPRMODECONT(const GIFReg* RESTRICT r)
 {
 	if(r->PRMODECONT != m_env.PRMODECONT)
 	{
@@ -781,7 +781,7 @@ void GSState::GIFRegHandlerPRMODECONT(const GIFReg* r)
 	UpdateVertexKick();
 }
 
-void GSState::GIFRegHandlerPRMODE(const GIFReg* r)
+void GSState::GIFRegHandlerPRMODE(const GIFReg* RESTRICT r)
 {
 	if(!m_env.PRMODECONT.AC)
 	{
@@ -797,7 +797,7 @@ void GSState::GIFRegHandlerPRMODE(const GIFReg* r)
 	UpdateVertexKick();
 }
 
-void GSState::GIFRegHandlerTEXCLUT(const GIFReg* r)
+void GSState::GIFRegHandlerTEXCLUT(const GIFReg* RESTRICT r)
 {
 	if(r->TEXCLUT != m_env.TEXCLUT)
 	{
@@ -807,7 +807,7 @@ void GSState::GIFRegHandlerTEXCLUT(const GIFReg* r)
 	m_env.TEXCLUT = (GSVector4i)r->TEXCLUT;
 }
 
-void GSState::GIFRegHandlerSCANMSK(const GIFReg* r)
+void GSState::GIFRegHandlerSCANMSK(const GIFReg* RESTRICT r)
 {
 	if(r->SCANMSK != m_env.SCANMSK)
 	{
@@ -817,7 +817,7 @@ void GSState::GIFRegHandlerSCANMSK(const GIFReg* r)
 	m_env.SCANMSK = (GSVector4i)r->SCANMSK;
 }
 
-template<int i> void GSState::GIFRegHandlerMIPTBP1(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerMIPTBP1(const GIFReg* RESTRICT r)
 {
 	if(PRIM->CTXT == i && r->MIPTBP1 != m_env.CTXT[i].MIPTBP1)
 	{
@@ -827,7 +827,7 @@ template<int i> void GSState::GIFRegHandlerMIPTBP1(const GIFReg* r)
 	m_env.CTXT[i].MIPTBP1 = (GSVector4i)r->MIPTBP1;
 }
 
-template<int i> void GSState::GIFRegHandlerMIPTBP2(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerMIPTBP2(const GIFReg* RESTRICT r)
 {
 	if(PRIM->CTXT == i && r->MIPTBP2 != m_env.CTXT[i].MIPTBP2)
 	{
@@ -837,7 +837,7 @@ template<int i> void GSState::GIFRegHandlerMIPTBP2(const GIFReg* r)
 	m_env.CTXT[i].MIPTBP2 = (GSVector4i)r->MIPTBP2;
 }
 
-void GSState::GIFRegHandlerTEXA(const GIFReg* r)
+void GSState::GIFRegHandlerTEXA(const GIFReg* RESTRICT r)
 {
 	if(r->TEXA != m_env.TEXA)
 	{
@@ -847,7 +847,7 @@ void GSState::GIFRegHandlerTEXA(const GIFReg* r)
 	m_env.TEXA = (GSVector4i)r->TEXA;
 }
 
-void GSState::GIFRegHandlerFOGCOL(const GIFReg* r)
+void GSState::GIFRegHandlerFOGCOL(const GIFReg* RESTRICT r)
 {
 	if(r->FOGCOL != m_env.FOGCOL)
 	{
@@ -857,12 +857,12 @@ void GSState::GIFRegHandlerFOGCOL(const GIFReg* r)
 	m_env.FOGCOL = (GSVector4i)r->FOGCOL;
 }
 
-void GSState::GIFRegHandlerTEXFLUSH(const GIFReg* r)
+void GSState::GIFRegHandlerTEXFLUSH(const GIFReg* RESTRICT r)
 {
 	// TRACE(_T("TEXFLUSH\n"));
 }
 
-template<int i> void GSState::GIFRegHandlerSCISSOR(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerSCISSOR(const GIFReg* RESTRICT r)
 {
 	if(PRIM->CTXT == i && r->SCISSOR != m_env.CTXT[i].SCISSOR)
 	{
@@ -874,7 +874,7 @@ template<int i> void GSState::GIFRegHandlerSCISSOR(const GIFReg* r)
 	m_env.CTXT[i].UpdateScissor();
 }
 
-template<int i> void GSState::GIFRegHandlerALPHA(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerALPHA(const GIFReg* RESTRICT r)
 {
 	ASSERT(r->ALPHA.A != 3);
 	ASSERT(r->ALPHA.B != 3);
@@ -893,7 +893,7 @@ template<int i> void GSState::GIFRegHandlerALPHA(const GIFReg* r)
 	m_env.CTXT[i].ALPHA.u32[0] = ((~m_env.CTXT[i].ALPHA.u32[0] >> 1) | 0xAA) & m_env.CTXT[i].ALPHA.u32[0];
 }
 
-void GSState::GIFRegHandlerDIMX(const GIFReg* r)
+void GSState::GIFRegHandlerDIMX(const GIFReg* RESTRICT r)
 {
 	bool update = false;
 
@@ -912,7 +912,7 @@ void GSState::GIFRegHandlerDIMX(const GIFReg* r)
 	}
 }
 
-void GSState::GIFRegHandlerDTHE(const GIFReg* r)
+void GSState::GIFRegHandlerDTHE(const GIFReg* RESTRICT r)
 {
 	if(r->DTHE != m_env.DTHE)
 	{
@@ -922,7 +922,7 @@ void GSState::GIFRegHandlerDTHE(const GIFReg* r)
 	m_env.DTHE = (GSVector4i)r->DTHE;
 }
 
-void GSState::GIFRegHandlerCOLCLAMP(const GIFReg* r)
+void GSState::GIFRegHandlerCOLCLAMP(const GIFReg* RESTRICT r)
 {
 	if(r->COLCLAMP != m_env.COLCLAMP)
 	{
@@ -935,7 +935,7 @@ void GSState::GIFRegHandlerCOLCLAMP(const GIFReg* r)
 #endif
 }
 
-template<int i> void GSState::GIFRegHandlerTEST(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerTEST(const GIFReg* RESTRICT r)
 {
 	if(PRIM->CTXT == i && r->TEST != m_env.CTXT[i].TEST)
 	{
@@ -948,7 +948,7 @@ template<int i> void GSState::GIFRegHandlerTEST(const GIFReg* r)
 #endif
 }
 
-void GSState::GIFRegHandlerPABE(const GIFReg* r)
+void GSState::GIFRegHandlerPABE(const GIFReg* RESTRICT r)
 {
 	if(r->PABE != m_env.PABE)
 	{
@@ -958,7 +958,7 @@ void GSState::GIFRegHandlerPABE(const GIFReg* r)
 	m_env.PABE = (GSVector4i)r->PABE;
 }
 
-template<int i> void GSState::GIFRegHandlerFBA(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerFBA(const GIFReg* RESTRICT r)
 {
 	if(PRIM->CTXT == i && r->FBA != m_env.CTXT[i].FBA)
 	{
@@ -968,7 +968,7 @@ template<int i> void GSState::GIFRegHandlerFBA(const GIFReg* r)
 	m_env.CTXT[i].FBA = (GSVector4i)r->FBA;
 }
 
-template<int i> void GSState::GIFRegHandlerFRAME(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerFRAME(const GIFReg* RESTRICT r)
 {
 	if(PRIM->CTXT == i && r->FRAME != m_env.CTXT[i].FRAME)
 	{
@@ -988,7 +988,7 @@ template<int i> void GSState::GIFRegHandlerFRAME(const GIFReg* r)
 #endif
 }
 
-template<int i> void GSState::GIFRegHandlerZBUF(const GIFReg* r)
+template<int i> void GSState::GIFRegHandlerZBUF(const GIFReg* RESTRICT r)
 {
 	GIFRegZBUF ZBUF = r->ZBUF;
 
@@ -1023,7 +1023,7 @@ template<int i> void GSState::GIFRegHandlerZBUF(const GIFReg* r)
 	m_env.CTXT[i].ZBUF = (GSVector4i)ZBUF;
 }
 
-void GSState::GIFRegHandlerBITBLTBUF(const GIFReg* r)
+void GSState::GIFRegHandlerBITBLTBUF(const GIFReg* RESTRICT r)
 {
 	if(r->BITBLTBUF != m_env.BITBLTBUF)
 	{
@@ -1043,7 +1043,7 @@ void GSState::GIFRegHandlerBITBLTBUF(const GIFReg* r)
 	}
 }
 
-void GSState::GIFRegHandlerTRXPOS(const GIFReg* r)
+void GSState::GIFRegHandlerTRXPOS(const GIFReg* RESTRICT r)
 {
 	if(r->TRXPOS != m_env.TRXPOS)
 	{
@@ -1053,7 +1053,7 @@ void GSState::GIFRegHandlerTRXPOS(const GIFReg* r)
 	m_env.TRXPOS = (GSVector4i)r->TRXPOS;
 }
 
-void GSState::GIFRegHandlerTRXREG(const GIFReg* r)
+void GSState::GIFRegHandlerTRXREG(const GIFReg* RESTRICT r)
 {
 	if(r->TRXREG != m_env.TRXREG)
 	{
@@ -1063,7 +1063,7 @@ void GSState::GIFRegHandlerTRXREG(const GIFReg* r)
 	m_env.TRXREG = (GSVector4i)r->TRXREG;
 }
 
-void GSState::GIFRegHandlerTRXDIR(const GIFReg* r)
+void GSState::GIFRegHandlerTRXDIR(const GIFReg* RESTRICT r)
 {
 	Flush();
 
@@ -1083,17 +1083,19 @@ void GSState::GIFRegHandlerTRXDIR(const GIFReg* r)
 	case 3:
 		ASSERT(0);
 		break;
+	default:
+		__assume(0);
 	}
 }
 
-void GSState::GIFRegHandlerHWREG(const GIFReg* r)
+void GSState::GIFRegHandlerHWREG(const GIFReg* RESTRICT r)
 {
 	ASSERT(m_env.TRXDIR.XDIR == 0); // host => local
 
 	Write((uint8*)r, 8); // haunting ground
 }
 
-void GSState::GIFRegHandlerSIGNAL(const GIFReg* r)
+void GSState::GIFRegHandlerSIGNAL(const GIFReg* RESTRICT r)
 {
 	m_regs->SIGLBLID.SIGID = (m_regs->SIGLBLID.SIGID & ~r->SIGNAL.IDMSK) | (r->SIGNAL.ID & r->SIGNAL.IDMSK);
 
@@ -1101,13 +1103,13 @@ void GSState::GIFRegHandlerSIGNAL(const GIFReg* r)
 	if(!m_regs->IMR.SIGMSK && m_irq) m_irq();
 }
 
-void GSState::GIFRegHandlerFINISH(const GIFReg* r)
+void GSState::GIFRegHandlerFINISH(const GIFReg* RESTRICT r)
 {
 	if(m_regs->CSR.wFINISH) m_regs->CSR.rFINISH = 1;
 	if(!m_regs->IMR.FINISHMSK && m_irq) m_irq();
 }
 
-void GSState::GIFRegHandlerLABEL(const GIFReg* r)
+void GSState::GIFRegHandlerLABEL(const GIFReg* RESTRICT r)
 {
 	m_regs->SIGLBLID.LBLID = (m_regs->SIGLBLID.LBLID & ~r->LABEL.IDMSK) | (r->LABEL.ID & r->LABEL.IDMSK);
 }
