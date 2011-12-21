@@ -110,10 +110,10 @@ GSDeviceOGL::~GSDeviceOGL()
 	glDeleteSamplers(1, &m_rt_ss);
 	delete m_vb;
 
-	for (auto it : m_vs) glDeleteProgram(it.second);
-	for (auto it : m_gs) glDeleteProgram(it.second);
-	for (auto it : m_ps) glDeleteProgram(it.second);
-	for (auto it : m_ps_ss) glDeleteSamplers(1, &it.second);
+	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) glDeleteProgram(it->second);
+	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) glDeleteProgram(it->second);
+	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) glDeleteProgram(it->second);
+	for (auto it = m_ps_ss.begin(); it != m_ps_ss.end() ; it++) glDeleteSamplers(1, &it->second);
 	m_vs.clear();
 	m_gs.clear();
 	m_ps.clear();
