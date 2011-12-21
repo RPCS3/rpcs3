@@ -100,7 +100,9 @@ namespace YAML
 	// assignment
 	inline bool Node::is(const Node& rhs) const
 	{
-		return m_pNode ? m_pNode->is(*rhs.m_pNode) : false;
+        if(!m_pNode || !rhs.m_pNode)
+            return false;
+		return m_pNode->is(*rhs.m_pNode);
 	}
 
 	template<typename T>

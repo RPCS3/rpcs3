@@ -279,6 +279,13 @@ namespace Test
 			YAML_ASSERT(!!node["foo"]);
 			return true;
 		}
+        
+        TEST Reassign()
+        {
+            YAML::Node node = YAML::Load("foo");
+            node = YAML::Node();
+            return true;
+        }
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -324,6 +331,7 @@ namespace Test
 		RunNodeTest(&Node::TempMapVariableAlias, "temp map variable alias", passed, total);
 		RunNodeTest(&Node::Bool, "bool", passed, total);
 		RunNodeTest(&Node::AutoBoolConversion, "auto bool conversion", passed, total);
+		RunNodeTest(&Node::Reassign, "reassign", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
