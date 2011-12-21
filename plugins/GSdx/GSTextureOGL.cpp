@@ -58,26 +58,14 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 	// glReadBuffer
 	// glBlitFramebuffer
 
+	// TODO: we can render directly into a texture so I'm not sure rendertarget are useful anymore !!!
 	// *************************************************************
-	// Doc
-	// It might need a texture structure to replace ID3D11Texture2D.
-	//
-	// == The function need to set (from parameter)
-	//		: m_size.x
-	//		: m_size.y
-	//		: m_type
-	//		: m_format
-	//		: m_msaa
 	m_size.x = w;
 	m_size.y = h;
 	m_format = format;
 	m_type   = type;
 	m_msaa   = msaa;
 
-	// == Might be useful to save
-	//		: m_texture_target (like GL_TEXTURE_2D, GL_TEXTURE_RECTANGLE etc...)
-	//		: m_texture_id (return by glGen*)
-	//
 	// == Then generate the texture or buffer.
 	// D3D11_BIND_RENDER_TARGET: Bind a texture as a render target for the output-merger stage.
 	//		=> glGenRenderbuffers with GL_COLOR_ATTACHMENTi (Hum glGenTextures might work too)

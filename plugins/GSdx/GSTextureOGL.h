@@ -43,4 +43,6 @@ class GSTextureOGL : public GSTexture
 
 		void EnableUnit(uint unit);
 		void Attach(GLenum attachment);
+
+		bool IsBackbuffer() { return (m_type == GSTexture::Backbuffer); }
 };

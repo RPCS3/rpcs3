@@ -170,12 +170,26 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 			fprintf(stderr, "Error: Failed to init glew :%s\n", glewGetErrorString(glew_ok));
 			return false;
 		}
-		// FIXME upgrade to 4.2 when AMD drivers are ready
-		// Note need glew 1.7 too
-		if (!GLEW_VERSION_4_1) {
-			fprintf(stderr, "4.1 is not supported!\n");
-			return false;
-		}
+		// Note: don't rely on glew to avoid to pull glew1.7
+		// Instead we just copy/adapt the 10 lines of code
+		// if (!GLEW_VERSION_4_2) {
+		// 	fprintf(stderr, "4.2 is not supported!\n");
+		// 	return false;
+		// }
+		const GLubyte* s;
+		s = glGetString(GL_VERSION);
+		if (s == NULL) return false;
+
+		GLuint dot;
+		while (s[dot] != '\0' && s[dot] != '.') dot++;
+		if (dot == 0) return false;
+
+		GLuint major = s[dot-1]-'0';
+		GLuint minor = s[dot+1]-'0';
+		if ( (major < 4) || ( major == 4 && minor < 2 ) ) return false;
+
+
+
 	}
 
 	// FIXME disable it when code is ready
@@ -465,7 +479,7 @@ bool GSDeviceOGL::Reset(int w, int h)
 	// Opengl allocate the backbuffer with the window. The render is done in the backbuffer when
 	// there isn't any FBO. Only a dummy texture is created to easily detect when the rendering is done
 	// in the backbuffer
-	m_backbuffer = new GSTextureOGL(0, w, h, false, 0);
+	m_backbuffer = new GSTextureOGL(0, w, h, false, GSTextureOGL::Backbuffer);
 
 	return true;
 }
@@ -484,8 +498,7 @@ void GSDeviceOGL::DrawPrimitive()
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
-	GSTextureOGL* t_ogl = (GSTextureOGL*)t;
-	if (t == m_backbuffer) {
+	if (static_cast<GSTextureOGL*>(t)->IsBackbuffer()) {
 		// FIXME I really not sure
 		OMSetFBO(0);
 		//glClearBufferfv(GL_COLOR, GL_LEFT, c.v);
@@ -497,7 +510,7 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 		// FIXME I need to clarify this FBO attachment stuff
 		// I would like to avoid FBO for a basic clean operation
 		OMSetFBO(m_fbo);
-		t_ogl->Attach(GL_COLOR_ATTACHMENT0);
+		static_cast<GSTextureOGL*>(t)->Attach(GL_COLOR_ATTACHMENT0);
 		glClearBufferfv(GL_COLOR, 0, c.v);
 	}
 }
@@ -544,6 +557,7 @@ GSTexture* GSDeviceOGL::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w
 {
 	// I'm not sure about the object type for offscreen buffer
 	// TODO later;
+
 	assert(0);
 
 	// Need to find format equivalent. Then I think it will be straight forward
@@ -680,7 +694,7 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// 2/ in case some GSdx code expect thing in dx order.
 	// Only flipping the backbuffer is transparent (I hope)...
 	GSVector4 flip_sr = sr;
-	if (dt == m_backbuffer) {
+	if (static_cast<GSTextureOGL*>(dt)->IsBackbuffer()) {
 		flip_sr.y = 1.0f - sr.y;
 		flip_sr.w = 1.0f - sr.w;
 	}
@@ -1073,20 +1087,17 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 		m_ctx->OMSetRenderTargets(1, &rtv, dsv);
 	}
 #endif
-	GSTextureOGL* rt_ogl = (GSTextureOGL*)rt;
-	GSTextureOGL* ds_ogl = (GSTextureOGL*)ds;
-
-	if (m_backbuffer == rt_ogl) {
+	if (static_cast<GSTextureOGL*>(rt)->IsBackbuffer()) {
 		OMSetFBO(0);
 
-		assert(ds_ogl == NULL); // no depth-stencil without FBO
+		assert(ds == NULL); // no depth-stencil without FBO
 	} else {
 		OMSetFBO(m_fbo);
 
-		assert(rt_ogl != NULL); // a render target must exists
-		rt_ogl->Attach(GL_COLOR_ATTACHMENT0);
-		if (ds_ogl != NULL)
-			ds_ogl->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
+		assert(rt != NULL); // a render target must exists
+		static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
+		if (ds != NULL)
+			static_cast<GSTextureOGL*>(ds)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
 	}
 
 	// Viewport -> glViewport
@@ -1115,7 +1126,8 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	// Build a header string
 	// *****************************************************
 	// First select the version (must be the first line so we need to generate it
-	std::string version = "#version 410\n#extension GL_ARB_shading_language_420pack: enable\n";
+	//std::string version = "#version 410\n#extension GL_ARB_shading_language_420pack: enable\n";
+	std::string version = "#version 420\n";
 
 	// Allow to puts several shader in 1 files
 	std::string shader_type;

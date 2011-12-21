@@ -39,6 +39,14 @@
 #define PS_DATE 0
 #endif
 
+struct vertex
+{
+    vec4 p;
+    vec4 t;
+    vec4 tp;
+    vec4 c;
+};
+
 #ifdef VERTEX_SHADER
 layout(location = 0) in vec2  i_t;
 layout(location = 1) in vec4  i_c;
@@ -47,13 +55,7 @@ layout(location = 3) in uvec2 i_p;
 layout(location = 4) in uint  i_z;
 layout(location = 5) in vec4  i_f;
 
-layout(location = 0) out VSout
-{
-    vec4 o_p;
-    vec4 o_t;
-    vec4 o_tp;
-    vec4 o_c;
-};
+layout(location = 0) out vertex OUT;
 
 out gl_PerVertex {
     vec4 gl_Position;
@@ -87,9 +89,9 @@ void vs_main()
 	
 	vec4 p = vec4(i_p, z, 0) - vec4(0.05f, 0.05f, 0, 0); 
 
-	o_p = p * VertexScale - VertexOffset;
+	OUT.p = p * VertexScale - VertexOffset;
 #if VS_RTCOPY
-	o_tp = (p * VertexScale - VertexOffset) * vec4(0.5, -0.5, 0, 0) + 0.5;
+	OUT.tp = (p * VertexScale - VertexOffset) * vec4(0.5, -0.5, 0, 0) + 0.5;
 #endif
     gl_Position = p; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 
@@ -97,23 +99,23 @@ void vs_main()
 	{
 		if(VS_FST != 0)
 		{
-			o_t.xy = i_t * TextureScale;
-			o_t.w = 1.0f;
+			OUT.t.xy = i_t * TextureScale;
+			OUT.t.w = 1.0f;
 		}
 		else
 		{
-			o_t.xy = i_t;
-			o_t.w = i_q;
+			OUT.t.xy = i_t;
+			OUT.t.w = i_q;
 		}
 	}
 	else
 	{
-		o_t.xy = vec2(0.0f, 0.0f);
-		o_t.w = 1.0f;
+		OUT.t.xy = vec2(0.0f, 0.0f);
+		OUT.t.w = 1.0f;
 	}
 
-	o_c = i_c;
-	o_t.z = i_f.a;
+	OUT.c = i_c;
+	OUT.t.z = i_f.a;
 }
 
 #endif
@@ -131,21 +133,9 @@ out gl_PerVertex {
     float gl_ClipDistance[];
 };
 
-layout(location = 0) in GSin
-{
-    vec4 p;
-    vec4 t;
-    vec4 tp;
-    vec4 c;
-} GSin[];
+layout(location = 0) in vertex GSin[];
 
-layout(location = 0) out GSout
-{
-    vec4 p;
-    vec4 t;
-    vec4 tp;
-    vec4 c;
-} GSout;
+layout(location = 0) out vertex GSout;
 
 #if GS_PRIM == 0
 layout(points) in;
@@ -201,14 +191,6 @@ void gs_main()
 layout(lines) in;
 layout(triangle_strip, max_vertices = 4) out;
 
-void set_output(uint i)
-{
-    GSout.p  = GSin[i].p;
-    GSout.t  = GSin[i].t;
-    GSout.tp = GSin[i].tp;
-    GSout.c  = GSin[i].c;
-}
-
 void gs_main()
 {
     // left top     => GSin[0];
@@ -216,7 +198,7 @@ void gs_main()
 
 
     // left top
-    set_output(0);
+	GSout = GSin[0];
 
     GSout.p.z = GSin[1].p.z;
     GSout.t.zw = GSin[1].t.zw;
@@ -227,7 +209,7 @@ void gs_main()
     EmitVertex();
 
     // left bottom
-    set_output(1);
+	GSout = GSin[1];
     gl_Position = gl_in[1].gl_Position; // FIXME is it useful
     gl_Position.x = GSin[0].p.x;
     GSout.p.x = GSin[0].p.x;
@@ -235,7 +217,7 @@ void gs_main()
     EmitVertex();
 
     // rigth top
-    set_output(1);
+	GSout = GSin[1];
     gl_Position = gl_in[1].gl_Position; // FIXME is it useful
     gl_Position.y = GSin[0].p.y;
     GSout.p.y = GSin[0].p.y;
@@ -243,7 +225,7 @@ void gs_main()
     EmitVertex();
 
     // rigth bottom
-    set_output(1);
+	GSout = GSin[1];
     gl_Position = GSin[1].p; // FIXME is it useful
     EmitVertex();
 
@@ -254,13 +236,7 @@ void gs_main()
 #endif
 
 #ifdef FRAGMENT_SHADER
-layout(location = 0) in PSin
-{
-    vec4 p;
-    vec4 t;
-    vec4 tp;
-    vec4 c;
-} PSin;
+layout(location = 0) in vertex PSin;
 
 // Same buffer but 2 colors for dual source blending
 layout(location = 0, index = 0) out vec4 SV_Target0;
@@ -401,7 +377,7 @@ vec4 sample_color(vec2 st, float q)
 	}
 	
 	vec4 t;
-	if(PS_FMT <= FMT_16 && PS_WMS < 3 && PS_WMT < 3)
+	if((PS_FMT <= FMT_16) && (PS_WMS < 3) && (PS_WMT < 3))
 	{
 		t = sample_c(clampuv(st));
 	}
@@ -603,6 +579,8 @@ vec4 ps_color()
 	{
         // FIXME !!!!
 		//c.rgb *= c.rgb < 128./255;
+		bvec3 factor = bvec3(128.0f/255.0f, 128.0f/255.0f, 128.0f/255.0f);
+		c.rgb *= vec3(factor);
 	}
 
 	if(PS_CLR1 != 0) // needed for Cd * (As/Ad/F + 1) blending modes
@@ -618,7 +596,6 @@ vec4 ps_color()
 void ps_main()
 {
 	vec4 c = ps_color();
-
 
     // FIXME: I'm not sure about the value of others field
 	// output.c1 = c.a * 2; // used for alpha blending
