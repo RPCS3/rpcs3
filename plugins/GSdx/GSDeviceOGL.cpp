@@ -103,6 +103,23 @@ GSDeviceOGL::~GSDeviceOGL()
 	// Clean various opengl allocation
 	glDeleteProgramPipelines(1, &m_pipeline);
 	glDeleteFramebuffers(1, &m_fbo);
+
+	// Delete HW FX
+	delete m_vs_cb;
+	delete m_ps_cb;
+	glDeleteSamplers(1, &m_rt_ss);
+	delete m_vb;
+
+	for (auto it : m_vs) glDeleteProgram(it.second);
+	for (auto it : m_gs) glDeleteProgram(it.second);
+	for (auto it : m_ps) glDeleteProgram(it.second);
+	for (auto it : m_ps_ss) glDeleteSamplers(1, &it.second);
+	m_vs.clear();
+	m_gs.clear();
+	m_ps.clear();
+	m_ps_ss.clear();
+	m_om_dss.clear();
+	m_om_bs.clear();
 }
 
 GSTexture* GSDeviceOGL::CreateSurface(int type, int w, int h, bool msaa, int format)
@@ -291,6 +308,50 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	rd.AntialiasedLineEnable = false;
 #endif
 
+	// TODO Later
+	// ****************************************************************
+	// fxaa (bonus)
+	// ****************************************************************
+	// FIXME need to define FXAA_GLSL_130 for the shader
+	// FIXME need to manually set the index...
+	// FIXME need dofxaa interface too
+	// m_fxaa.cb = new GSUniformBufferOGL(3, sizeof(FXAAConstantBuffer));
+	//CompileShaderFromSource("fxaa.fx", format("ps_main", i), GL_FRAGMENT_SHADER, &m_fxaa.ps);
+
+	// ****************************************************************
+	// date
+	// ****************************************************************
+
+	m_date.dss = new GSDepthStencilOGL();
+	m_date.dss->m_stencil_enable = true;
+	m_date.dss->m_stencil_func = GL_ALWAYS;
+	m_date.dss->m_stencil_spass_dpass_op = GL_REPLACE;
+	//memset(&dsd, 0, sizeof(dsd));
+
+	//dsd.DepthEnable = false;
+	//dsd.StencilEnable = true;
+	//dsd.StencilReadMask = 1;
+	//dsd.StencilWriteMask = 1;
+
+	//dsd.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	//dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+	//dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	//dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+
+	//m_dev->CreateDepthStencilState(&dsd, &m_date.dss);
+
+	// FIXME are the blend state really empty
+	m_date.bs = new GSBlendStateOGL();
+	//D3D11_BLEND_DESC blend;
+
+	//memset(&blend, 0, sizeof(blend));
+
+	//m_dev->CreateBlendState(&blend, &m_date.bs);
+
+	// ****************************************************************
+	// HW renderer shader
+	// ****************************************************************
+	CreateTextureFX();
 
 	// ****************************************************************
 	// Finish window setup and backbuffer
@@ -392,50 +453,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	}
 #endif
 
-	// TODO Later
-	// ****************************************************************
-	// fxaa (bonus)
-	// ****************************************************************
-	// FIXME need to define FXAA_GLSL_130 for the shader
-	// FIXME need to manually set the index...
-	// FIXME need dofxaa interface too
-	// m_fxaa.cb = new GSUniformBufferOGL(3, sizeof(FXAAConstantBuffer));
-	//CompileShaderFromSource("fxaa.fx", format("ps_main", i), GL_FRAGMENT_SHADER, &m_fxaa.ps);
-
-	// ****************************************************************
-	// date
-	// ****************************************************************
-
-	m_date.dss = new GSDepthStencilOGL();
-	m_date.dss->m_stencil_enable = true;
-	m_date.dss->m_stencil_func = GL_ALWAYS;
-	m_date.dss->m_stencil_spass_dpass_op = GL_REPLACE;
-	//memset(&dsd, 0, sizeof(dsd));
-
-	//dsd.DepthEnable = false;
-	//dsd.StencilEnable = true;
-	//dsd.StencilReadMask = 1;
-	//dsd.StencilWriteMask = 1;
-
-	//dsd.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	//dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-	//dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	//dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-
-	//m_dev->CreateDepthStencilState(&dsd, &m_date.dss);
-
-	// FIXME are the blend state really empty
-	m_date.bs = new GSBlendStateOGL();
-	//D3D11_BLEND_DESC blend;
-
-	//memset(&blend, 0, sizeof(blend));
-
-	//m_dev->CreateBlendState(&blend, &m_date.bs);
-
-	// ****************************************************************
-	// HW renderer shader
-	// ****************************************************************
-	CreateTextureFX();
+	return true;
 }
 
 bool GSDeviceOGL::Reset(int w, int h)
@@ -472,6 +490,9 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 		OMSetFBO(0);
 		//glClearBufferfv(GL_COLOR, GL_LEFT, c.v);
 		glClearBufferfv(GL_COLOR, 0, c.v);
+		// code for the old interface
+		// glClearColor(c.x, c.y, c.z, c.w);
+		// glClear(GL_COLOR_BUFFER_BIT);
 	} else {
 		// FIXME I need to clarify this FBO attachment stuff
 		// I would like to avoid FBO for a basic clean operation
