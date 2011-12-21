@@ -14,17 +14,14 @@ override_dh_auto_configure:
 	dh_auto_configure -- \
 		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		-DCMAKE_BUILD_STRIP=FALSE \
-		-DFORCE_INTERNAL_SOUNDTOUCH=FALSE \
+		-DXDG_STD=TRUE \
 		-DFORCE_INTERNAL_SDL=TRUE \
 		-DPACKAGE_MODE=TRUE
 
 clean:
 	dh_testdir
 	dh_testroot
-
 	dh_auto_clean
-	rm -fr obj-* # cmake stuff is not always removed (fixed in debhelper 8.9.4)
-
 	dh_clean
 
 override_dh_strip:

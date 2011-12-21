@@ -1,21 +1,22 @@
-Source: pcsx2-unstable
+Source: pcsx2.snapshot
 Section: contrib/games
 Priority: optional
 Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
-# WARNING we need dpkg-dev 1.15.7 to support dpkg-buildflags but ubunutu 10.04 have only 1.15.5.6...
 # WARNING Natty need at least cmake 2.8.5 (multiarch issue)
 Build-Depends: cmake (>= 2.8),
- debhelper (>= 7.0.50),
- dpkg-dev (>= 1.15.5.6),
- gcc-multilib [amd64],
- g++-multilib [amd64],
- ia32-libs-dev [amd64],
- lib32asound2-dev [amd64],
- lib32bz2-dev [amd64],
- lib32z1-dev (>= 1:1.2.3.3) [amd64],
+    debhelper (>= 7.0.50),
+    dpkg-dev (>= 1.15.7),
+    gcc-multilib [amd64],
+    g++-multilib [amd64],
+    ia32-libs-dev [amd64],
+    lib32asound2-dev [amd64],
+    lib32bz2-dev [amd64],
+    lib32z1-dev (>= 1:1.2.3.3) [amd64],
     libasound2-dev,
     libbz2-dev,
     libgl1-mesa-dev,
+# Future GSdx version will need glew1.6. Only Oneiric have it...
+#   libglew1.6-dev,
     libglew1.5-dev,
     libglu1-mesa-dev,
     libgtk2.0-dev (>= 2.16),
@@ -27,8 +28,7 @@ Build-Depends: cmake (>= 2.8),
     libwxgtk2.8-dev,
     libx11-dev,
     locales | locales-all,
-# Note lucid need nvidia-cg-toolkit-pcsx2 to be compatible with ppa   
-    nvidia-cg-toolkit-pcsx2 | nvidia-cg-toolkit (>= 3),
+    nvidia-cg-toolkit (>= 3),
     portaudio19-dev,
     zlib1g-dev (>= 1:1.2.3.3)
 Standards-Version: 3.9.2

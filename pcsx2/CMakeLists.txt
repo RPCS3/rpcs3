@@ -89,6 +89,10 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
 	add_definitions(${CommonFlags} ${OptimizationFlags} -DWX_PRECOMP -DNDEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
+if(XDG_STD)
+    add_definitions(-DXDG_STD)
+endif(XDG_STD)
+
 # In package mode always use pcsx2
 if(PACKAGE_MODE)
     set(Output pcsx2)
