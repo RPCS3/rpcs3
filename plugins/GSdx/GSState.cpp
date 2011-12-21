@@ -3462,7 +3462,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 	GetSkipCount gsc = map[m_game.title];
 	g_crc_region = m_game.region;
 
-#ifdef USE_DYNAMIC_CRC_HACK
+#ifdef ENABLE_DYNAMIC_CRC_HACK
 	bool res=false; if(IsInvokedDynamicCrcHack(fi, skip, g_crc_region, res)){ if( !res ) return false;	} else
 #endif
 	if(gsc && !gsc(fi, skip))
