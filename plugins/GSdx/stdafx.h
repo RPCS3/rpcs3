@@ -92,11 +92,19 @@
 
 using namespace std;
 
+#if defined(_MSC_VER) && _MSC_VER >= 1500 && _MSC_VER < 1600
+
+	#include <memory>
+
+	using namespace std::tr1;
+
+#endif
+
 #ifdef __GNUC__
 
-#include <tr1/memory>
+	#include <tr1/memory>
 
-using namespace std::tr1;
+	using namespace std::tr1;
 
 #endif
 
