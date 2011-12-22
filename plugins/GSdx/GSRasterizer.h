@@ -26,6 +26,7 @@
 #include "GSFunctionMap.h"
 #include "GSThread.h"
 #include "GSAlignedClass.h"
+#include "GSPerfMon.h"
 
 __aligned(class, 32) GSRasterizerData : public GSAlignedClass<32>
 {
@@ -36,6 +37,7 @@ public:
 	GSVertexSW* vertices;
 	int count;
 	bool solidrect;
+	bool syncpoint;
 	uint64 frame;
 	void* param;
 
@@ -43,6 +45,7 @@ public:
 		: vertices(NULL)
 		, count(0)
 		, solidrect(false)
+		, syncpoint(false)
 		, param(NULL)
 	{
 	}
@@ -52,7 +55,7 @@ public:
 		if(vertices != NULL) _aligned_free(vertices);
 
 		// derived class should free param and its members
-	} 
+	}
 };
 
 class IDrawScanline : public GSAlignedClass<32>
@@ -103,8 +106,6 @@ public:
 	virtual void Sync() = 0;
 };
 
-#include "GSPerfMon.h"
-
 __aligned(class, 32) GSRasterizer : public IRasterizer
 {
 protected:
@@ -148,58 +149,32 @@ public:
 	void Sync() {}
 };
 
-class GSRasterizerMT : public GSRasterizer, private GSThread
+class GSRasterizerList 
+	: public IRasterizer
+	, private GSJobQueue<shared_ptr<GSRasterizerData> >
 {
 protected:
-	volatile bool m_exit;
-	volatile bool m_break;
-	GSCritSec m_lock;
-	GSEvent m_draw;
-	queue<shared_ptr<GSRasterizerData> > m_queue;
+	class GSWorker : public GSJobQueue<shared_ptr<GSRasterizerData> >
+	{
+		GSRasterizer* m_r;
 
-	void ThreadProc();
+	public:
+		GSWorker(GSRasterizer* r);
+		virtual ~GSWorker();
 
-public:
-	GSRasterizerMT(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon);
-	virtual ~GSRasterizerMT();
+		// GSJobQueue
 
-	// IRasterizer
+		void Push(const shared_ptr<GSRasterizerData>& item);
+		void Process(shared_ptr<GSRasterizerData>& item);
+	};
 
-	void Queue(shared_ptr<GSRasterizerData> data);
-	void Sync();
-};
-
-#ifdef _WINDOWS
-
-class GSRasterizerMT2 : public GSRasterizer, private GSThread
-{
-protected:
-	SRWLOCK m_lock;
-	CONDITION_VARIABLE m_notempty;
-	CONDITION_VARIABLE m_empty;
-	queue<shared_ptr<GSRasterizerData> > m_queue;
-
-	void ThreadProc();
-
-public:
-	GSRasterizerMT2(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon);
-	virtual ~GSRasterizerMT2();
-
-	// IRasterizer
-
-	void Queue(shared_ptr<GSRasterizerData> data);
-	void Sync();
-};
-
-#endif
-
-class GSRasterizerList : public IRasterizer, protected vector<GSRasterizer*>
-{
-protected:
-	int m_count;
-	int m_dispatched;
+	vector<GSWorker*> m_workers;
 
 	GSRasterizerList();
+
+	// GSJobQueue
+
+	void Process(shared_ptr<GSRasterizerData>& item);
 
 public:
 	virtual ~GSRasterizerList();
@@ -216,38 +191,19 @@ public:
 		{
 			GSRasterizerList* rl = new GSRasterizerList();
 
-			#ifdef _WINDOWS
-
-			OSVERSIONINFOEX version;
-			memset(&version, 0, sizeof(version));
-			version.dwOSVersionInfoSize = sizeof(version);
-			GetVersionEx((OSVERSIONINFO*)&version);
-
-			if(version.dwMajorVersion >= 6)
-			{
-				for(int i = 0; i < threads; i++)
-				{
-					rl->push_back(new GSRasterizerMT2(new DS(), i, threads, perfmon));
-				}
-
-				return rl;
-			}
-
-			#endif
-
 			for(int i = 0; i < threads; i++)
 			{
-				rl->push_back(new GSRasterizerMT(new DS(), i, threads, perfmon));
+				rl->m_workers.push_back(new GSWorker(new GSRasterizer(new DS(), i, threads, perfmon)));
 			}
 
 			return rl;
 		}
 	}
 
+	int m_sync_count;
+
 	// IRasterizer
 
 	void Queue(shared_ptr<GSRasterizerData> data);
 	void Sync();
-
-	int m_sync_count;
 };

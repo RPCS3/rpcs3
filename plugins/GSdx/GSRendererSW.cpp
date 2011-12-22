@@ -67,7 +67,7 @@ void GSRendererSW::Reset()
 
 void GSRendererSW::VSync(int field)
 {
-	Sync(); // IncAge might delete a cached texture in use
+	Sync(0); // IncAge might delete a cached texture in use
 	/*
 	printf("CPU %d Sync %d W %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d\n",
 		m_perfmon.CPU(GSPerfMon::Main),
@@ -127,7 +127,7 @@ void GSRendererSW::ResetDevice()
 
 GSTexture* GSRendererSW::GetOutput(int i)
 {
-	Sync();
+	Sync(1);
 
 	const GSRegDISPFB& DISPFB = m_regs->DISP[i].DISPFB;
 
@@ -166,17 +166,6 @@ void GSRendererSW::Draw()
 {
 	if(m_dump) m_dump.Object(m_vertices, m_count, m_vt.m_primclass);
 
-	if(m_fzb != m_context->offset.fzb)
-	{
-		// rasterizers must write the same outputs at the same time, this makes sure each thread has its own private surface area
-
-		// TODO: detect if frame/zbuf overlap eachother (?)
-
-		m_fzb = m_context->offset.fzb;
-
-		Sync();
-	}
-
 	shared_ptr<GSRasterizerData> data(new GSRasterizerData2());
 
 	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)data->param;
@@ -196,6 +185,13 @@ void GSRendererSW::Draw()
 	data->solidrect = gd->sel.IsSolidRect();
 	data->frame = m_perfmon.GetFrame();
 
+	if(m_fzb != m_context->offset.fzb)
+	{
+		m_fzb = m_context->offset.fzb;
+
+		data->syncpoint = true;
+	}
+
 	GSVector4i r = data->bbox.rintersect(data->scissor);
 
 	if(gd->sel.fwrite)
@@ -210,7 +206,7 @@ void GSRendererSW::Draw()
 
 	if(s_dump)
 	{
-		Sync();
+		Sync(3);
 
 		uint64 frame = m_perfmon.GetFrame();
 
@@ -243,7 +239,7 @@ void GSRendererSW::Draw()
 
 		m_rl->Queue(data);
 
-		Sync();
+		Sync(4);
 
 		if(s_save && s_n >= s_saven)
 		{
@@ -291,9 +287,9 @@ void GSRendererSW::Draw()
 	*/
 }
 
-void GSRendererSW::Sync()
+void GSRendererSW::Sync(int reason)
 {
-	//printf("sync\n");
+	//printf("sync %d\n", reason);
 
 	GSPerfMonAutoTimer pmat(&m_perfmon, GSPerfMon::Sync);
 
@@ -313,7 +309,7 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 
 	if(CheckPages(o, r)) // check if the changing pages either used as a texture or a target
 	{
-		Sync();
+		Sync(5);
 	}
 }
 
@@ -325,7 +321,7 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 
 	if(CheckPages(o, r)) // TODO: only checking m_fzb_pages would be enough (read-backs are rare anyway)
 	{
-		Sync();
+		Sync(6);
 	}
 }
 
@@ -337,8 +333,10 @@ void GSRendererSW::InvalidatePages(const GSTextureCacheSW::Texture* t)
 	{
 		if(m_fzb_pages[i] & t->m_pages[i]) // currently being drawn to? => sync
 		{
-			Sync();
+			//
+			Sync(7);
 
+			//
 			return;
 		}
 

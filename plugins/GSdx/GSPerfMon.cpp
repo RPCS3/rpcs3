@@ -90,7 +90,7 @@ void GSPerfMon::Stop(int timer)
 
 int GSPerfMon::CPU(int timer, bool reset)
 {
-	int percent = m_total[timer] / 1000; // (int)(100 * m_total[timer] / (__rdtsc() - m_begin[timer]));
+	int percent = (int)(100 * m_total[timer] / (__rdtsc() - m_begin[timer]));
 
 	if(reset)
 	{

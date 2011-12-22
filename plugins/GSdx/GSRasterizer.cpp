@@ -766,183 +766,15 @@ void GSRasterizer::Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bo
 
 //
 
-GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon)
-	: GSRasterizer(ds, id, threads, perfmon)
-	, m_exit(false)
-	, m_break(true)
-{
-	CreateThread();
-}
-
-GSRasterizerMT::~GSRasterizerMT()
-{
-	m_break = true;
-
-	m_exit = true;
-
-	m_draw.Set();
-
-	CloseThread();
-}
-
-void GSRasterizerMT::Queue(shared_ptr<GSRasterizerData> data)
-{
-	GSAutoLock l(&m_lock);
-
-	m_queue.push(data);
-
-	if(m_break)
-	{
-		m_break = false;
-
-		m_draw.Set();
-	}
-}
-
-void GSRasterizerMT::Sync()
-{
-	while(!m_queue.empty()) _mm_pause();
-
-	m_break = true;
-}
-
-void GSRasterizerMT::ThreadProc()
-{
-	while(m_draw.Wait() && !m_exit)
-	{
-		// once we are running it is better to spin, jobs can be smaller than the cost of waking up every time
-
-		while(!m_break)
-		{
-			if(!m_queue.empty())
-			{
-				while(!m_queue.empty())
-				{
-					shared_ptr<GSRasterizerData> data;
-
-					{
-						GSAutoLock l(&m_lock);
-
-						data = m_queue.front();
-					}
-
-					Draw(data);
-
-					{
-						GSAutoLock l(&m_lock);
-
-						m_queue.pop();
-					}
-				}
-			}
-			else
-			{
-				_mm_pause();
-			}
-		}
-	}
-}
-
-#ifdef _WINDOWS
-
-GSRasterizerMT2::GSRasterizerMT2(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon)
-	: GSRasterizer(ds, id, threads, perfmon)
-{
-	InitializeSRWLock(&m_lock);
-	InitializeConditionVariable(&m_notempty);
-	InitializeConditionVariable(&m_empty);
-	
-	CreateThread();
-}
-
-GSRasterizerMT2::~GSRasterizerMT2()
-{
-	m_queue.push(shared_ptr<GSRasterizerData>());
-
-	WakeConditionVariable(&m_notempty);
-
-	CloseThread();
-}
-
-void GSRasterizerMT2::Queue(shared_ptr<GSRasterizerData> data)
-{
-	AcquireSRWLockExclusive(&m_lock);
-
-	m_queue.push(data);
-
-	ReleaseSRWLockExclusive(&m_lock);
-
-	WakeConditionVariable(&m_notempty);
-}
-
-void GSRasterizerMT2::Sync()
-{
-	AcquireSRWLockExclusive(&m_lock);
-
-	while(!m_queue.empty()) 
-	{
-		// TODO: instead of just waiting for the workers, help finishing their queues! 
-		// TODO: to do that, queues needs to be merged and id'ed, and threads must switch m_myscanline on the fly
-
-		GSPerfMonAutoTimer pmat(m_perfmon, GSPerfMon::WorkerSync0 + m_id);
-
-		SleepConditionVariableSRW(&m_empty, &m_lock, INFINITE, 0);
-	}
-
-	ReleaseSRWLockExclusive(&m_lock);
-}
-
-void GSRasterizerMT2::ThreadProc()
-{
-	AcquireSRWLockExclusive(&m_lock);
-
-	while(true)
-	{
-		while(m_queue.empty())
-		{
-			GSPerfMonAutoTimer pmat(m_perfmon, GSPerfMon::WorkerSleep0 + m_id);
-
-			SleepConditionVariableSRW(&m_notempty, &m_lock, INFINITE, 0);
-		}
-
-		shared_ptr<GSRasterizerData> data;
-
-		data = m_queue.front();
-
-		ReleaseSRWLockExclusive(&m_lock);
-
-		if(data == NULL)
-		{
-			break;
-		}
-
-		Draw(data);
-
-		AcquireSRWLockExclusive(&m_lock);
-
-		m_queue.pop();
-
-		if(m_queue.empty())
-		{
-			WakeConditionVariable(&m_empty);
-		}
-	}
-}
-
-#endif
-
-//
-
 GSRasterizerList::GSRasterizerList()
-	: m_sync_count(0)
-	, m_count(0)
-	, m_dispatched(0)
+	: GSJobQueue<shared_ptr<GSRasterizerData> >()
+	, m_sync_count(0)
 {
 }
 
 GSRasterizerList::~GSRasterizerList()
 {
-	for(vector<GSRasterizer*>::iterator i = begin(); i != end(); i++)
+	for(vector<GSWorker*>::iterator i = m_workers.begin(); i != m_workers.end(); i++)
 	{
 		delete *i;
 	}
@@ -950,46 +782,77 @@ GSRasterizerList::~GSRasterizerList()
 
 void GSRasterizerList::Queue(shared_ptr<GSRasterizerData> data)
 {
-	if(size() > 1 && data->solidrect) // TODO: clip to thread area and dispatch?
-	{
-		Sync(); // complete previous drawings
-
-		front()->Draw(data);
-
-		return;
-	}
-
-	GSVector4i bbox = data->bbox.rintersect(data->scissor);
-
-	for(int i = 0; i < size(); i++)
-	{
-		GSRasterizer* r = (*this)[i];
-
-		if(r->IsOneOfMyScanlines(bbox.top, bbox.bottom))
-		{
-			r->Queue(data);
-
-			m_dispatched++;
-		}
-	}
-
-	m_count++;
+	Push(data);
 }
 
 void GSRasterizerList::Sync()
 {
-	if(m_count > 0)
+	if(GetCount() == 0) return;
+
+	Wait(); // first dispatch all items to workers
+
+	for(size_t i = 0; i < m_workers.size(); i++)
 	{
-		for(int i = 0; i < size(); i++)
+		m_workers[i]->Wait(); // then wait all workers to finish their jobs
+	}
+
+	m_sync_count++;
+}
+
+void GSRasterizerList::Process(shared_ptr<GSRasterizerData>& item)
+{
+	if(m_workers.size() > 1 && item->solidrect) // TODO: clip to thread area and dispatch?
+	{
+		for(size_t i = 0; i < m_workers.size(); i++)
 		{
-			(*this)[i]->Sync();
+			m_workers[i]->Wait();
 		}
 
-		m_sync_count++;
+		m_workers.front()->Process(item);
 
-		//printf("%d %d%%\n", m_count, 100 * m_dispatched / (m_count * size()));
-
-		m_count = 0;
-		m_dispatched = 0;
+		return;
 	}
+
+	if(item->syncpoint)
+	{
+		for(size_t i = 0; i < m_workers.size(); i++)
+		{
+			m_workers[i]->Wait();
+		}
+	}
+
+	for(size_t i = 0; i < m_workers.size(); i++)
+	{
+		m_workers[i]->Push(item);
+	}
+}
+
+// GSRasterizerList::GSWorker
+
+GSRasterizerList::GSWorker::GSWorker(GSRasterizer* r) 
+	: GSJobQueue<shared_ptr<GSRasterizerData> >()
+	, m_r(r)
+{
+}
+
+GSRasterizerList::GSWorker::~GSWorker() 
+{
+	Wait();
+
+	delete m_r;
+}
+
+void GSRasterizerList::GSWorker::Push(const shared_ptr<GSRasterizerData>& item) 
+{
+	GSVector4i r = item->bbox.rintersect(item->scissor);
+
+	if(m_r->IsOneOfMyScanlines(r.top, r.bottom))
+	{
+		GSJobQueue<shared_ptr<GSRasterizerData> >::Push(item);
+	}
+}
+
+void GSRasterizerList::GSWorker::Process(shared_ptr<GSRasterizerData>& item) 
+{
+	m_r->Draw(item);
 }

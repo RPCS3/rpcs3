@@ -67,7 +67,7 @@ protected:
 	GSTexture* GetOutput(int i);
 
 	void Draw();
-	void Sync();
+	void Sync(int reason);
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut = false);
 

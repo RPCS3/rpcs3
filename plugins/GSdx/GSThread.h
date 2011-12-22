@@ -68,110 +68,6 @@ public:
     bool Wait() {return WaitForSingleObject(m_hEvent, INFINITE) == WAIT_OBJECT_0;}
 };
 
-// TODO: pthreads version (needs manual-reset event)
-
-template<
-	class T, 
-	class ENQUEUE_EVENT = GSEvent, 
-	class DEQUEUE_EVENT = GSEvent> 
-class GSQueue : public GSCritSec
-{
-	std::list<T> m_queue;
-	HANDLE m_put;
-	HANDLE m_get;
-	ENQUEUE_EVENT m_enqueue;
-	DEQUEUE_EVENT m_dequeue;
-	long m_count;
- 
-public:
-	GSQueue(long count) 
-		: m_enqueue(true)
-		, m_dequeue(true)
-		, m_count(count)
-	{
-		m_put = CreateSemaphore(NULL, count, count, NULL);
-		m_get = CreateSemaphore(NULL, 0, count, NULL);
-
-		m_dequeue.Set();
-	}
-
-	virtual ~GSQueue()
-	{
-		CloseHandle(m_put);
-		CloseHandle(m_get);
-	}
- 
-	size_t GetCount() const
-	{
-		// GSAutoLock cAutoLock(this);
- 
-		return m_queue.size();
-	}
- 
-	size_t GetMaxCount() const
-	{
-		// GSAutoLock cAutoLock(this);
- 
-		return (size_t)m_count;
-	}
- 
-	ENQUEUE_EVENT& GetEnqueueEvent()
-	{
-		return m_enqueue;
-	}
- 
-	DEQUEUE_EVENT& GetDequeueEvent()
-	{
-		return m_dequeue;
-	}
- 
-	void Enqueue(T item)
-	{
-		WaitForSingleObject(m_put, INFINITE);
- 
-		{
-			GSAutoLock cAutoLock(this);
- 
-			m_queue.push_back(item);
- 
-			m_enqueue.Set();
-			m_dequeue.Reset();
-		}
- 
-		ReleaseSemaphore(m_get, 1, NULL);
-	}
- 
-	T Dequeue()
-	{
-		T item;
- 
-		WaitForSingleObject(m_get, INFINITE);
- 
-		{
-			GSAutoLock cAutoLock(this);
- 
-			item = m_queue.front();
-
-			m_queue.pop_front();
- 
-			if(m_queue.empty())
-			{
-				m_enqueue.Reset();
-				m_dequeue.Set();
-			}
-		}
- 
-		ReleaseSemaphore(m_put, 1, NULL);
- 
-		return item;
-	}
-
-	T Peek() // lock on "this"
-	{
-		return m_queue.front();
-	}
-};
-
 #else
 
 #include <pthread.h>
@@ -262,4 +158,211 @@ public:
 		else while(!_interlockedbittestandreset(&m_sync, 0)) _mm_pause();
 		return true;
 	}
+};
+
+template<class T> class GSJobQueue : private GSThread
+{
+protected:
+	int m_count;
+	queue<T> m_queue;
+	volatile bool m_exit;
+	struct {GSCritSec lock; GSEvent notempty, empty;} m_ev;
+	#ifdef _WINDOWS
+	struct {SRWLOCK lock; CONDITION_VARIABLE notempty, empty; bool available;} m_cv;
+	#endif
+
+	void ThreadProc()
+	{
+		#ifdef _WINDOWS
+
+		if(m_cv.available)
+		{
+			AcquireSRWLockExclusive(&m_cv.lock);
+
+			while(true)
+			{
+				while(m_queue.empty())
+				{
+					SleepConditionVariableSRW(&m_cv.notempty, &m_cv.lock, INFINITE, 0);
+
+					if(m_exit) {ReleaseSRWLockExclusive(&m_cv.lock); return;}
+				}
+
+				{
+				T item = m_queue.front();
+
+				ReleaseSRWLockExclusive(&m_cv.lock);
+
+				Process(item);
+
+				AcquireSRWLockExclusive(&m_cv.lock);
+				}
+
+				m_queue.pop();
+
+				if(m_queue.empty())
+				{
+					WakeConditionVariable(&m_cv.empty);
+				}
+			}
+		}
+		else
+		{
+
+		#endif
+
+			while(m_ev.notempty.Wait())
+			{
+				if(m_exit) break;
+
+				while(!m_queue.empty())
+				{
+					T item;
+
+					{
+						GSAutoLock l(&m_ev.lock);
+
+						item = m_queue.front();
+					}
+
+					Process(item);
+
+					{
+						GSAutoLock l(&m_ev.lock);
+
+						m_queue.pop();
+					}
+				}
+			}
+
+		#ifdef _WINDOWS
+
+		}
+
+		#endif
+	}
+
+public:
+	GSJobQueue()
+		: m_count(0)
+		, m_exit(false)
+	{
+		m_cv.available = false;
+
+		#ifdef _WINDOWS
+
+		OSVERSIONINFOEX version;
+		memset(&version, 0, sizeof(version));
+		version.dwOSVersionInfoSize = sizeof(version);
+		GetVersionEx((OSVERSIONINFO*)&version);
+
+		if(version.dwMajorVersion >= 6)
+		{
+			InitializeSRWLock(&m_cv.lock);
+			InitializeConditionVariable(&m_cv.notempty);
+			InitializeConditionVariable(&m_cv.empty);
+			
+			m_cv.available = true;
+		}
+
+		#endif
+
+		CreateThread();
+	}
+	
+	virtual ~GSJobQueue()
+	{
+		m_exit = true;
+
+		#ifdef _WINDOWS
+
+		if(m_cv.available)
+		{
+			WakeConditionVariable(&m_cv.notempty);
+		}
+		else
+		{
+
+		#endif
+
+			m_ev.notempty.Set();
+
+		#ifdef _WINDOWS
+
+		}
+
+		#endif
+	}
+
+	int GetCount() const
+	{
+		return m_count;
+	}
+
+	virtual void Push(const T& item)
+	{
+		#ifdef _WINDOWS
+
+		if(m_cv.available)
+		{
+			AcquireSRWLockExclusive(&m_cv.lock);
+
+			m_queue.push(item);
+
+			ReleaseSRWLockExclusive(&m_cv.lock);
+
+			WakeConditionVariable(&m_cv.notempty);
+		}
+		else
+		{
+
+		#endif
+
+			GSAutoLock l(&m_ev.lock);
+
+			m_queue.push(item);
+
+			m_ev.notempty.Set();
+
+		#ifdef _WINDOWS
+
+		}
+
+		#endif
+
+		m_count++;
+	}
+
+	virtual void Wait()
+	{
+		#ifdef _WINDOWS
+
+		if(m_cv.available)
+		{
+			AcquireSRWLockExclusive(&m_cv.lock);
+
+			while(!m_queue.empty()) 
+			{
+				SleepConditionVariableSRW(&m_cv.empty, &m_cv.lock, INFINITE, 0);
+			}
+
+			ReleaseSRWLockExclusive(&m_cv.lock);
+		}
+		else
+		{
+
+		#endif
+
+			while(!m_queue.empty()) _mm_pause();
+
+		#ifdef _WINDOWS
+
+		}
+
+		#endif
+
+		m_count++;
+	}
+
+	virtual void Process(T& item) = 0;
 };
