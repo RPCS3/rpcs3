@@ -103,6 +103,9 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 			// gvec texelFetch(gsampler sampler, ivec texCoord, int lod[, int sample]);
 			// corollary we can maybe use it for multisample stuff
 			break;
+		case GSTexture::Backbuffer:
+			m_texture_target = 0;
+			m_texture_id = 0;
 		default:
 			break;
 	}

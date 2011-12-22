@@ -74,13 +74,11 @@ void vs_main()
 {
     uint z;
 	if(VS_BPPZ == 1) // 24
-	{
 		z = i_z & 0xffffff; 
-	}
 	else if(VS_BPPZ == 2) // 16
-	{
 		z = i_z & 0xffff;
-	}
+    else
+        z = i_z;
 
 	// pos -= 0.05 (1/320 pixel) helps avoiding rounding problems (integral part of pos is usually 5 digits, 0.05 is about as low as we can go)
 	// example: ceil(afterseveralvertextransformations(y = 133)) => 134 => line 133 stays empty
@@ -371,7 +369,7 @@ mat4 sample_4p(vec4 u)
 
 vec4 sample_color(vec2 st, float q)
 {
-	if(!PS_FST)
+	if(PS_FST == 0)
 	{
 		st /= q;
 	}

@@ -186,7 +186,10 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 
 		GLuint major = s[dot-1]-'0';
 		GLuint minor = s[dot+1]-'0';
-		if ( (major < 4) || ( major == 4 && minor < 2 ) ) return false;
+		// Note: 4.2 crash on latest nvidia drivers!
+		// So only check 4.1
+		// if ( (major < 4) || ( major == 4 && minor < 2 ) ) return false;
+		if ( (major < 4) || ( major == 4 && minor < 1 ) ) return false;
 
 
 
@@ -479,7 +482,7 @@ bool GSDeviceOGL::Reset(int w, int h)
 	// Opengl allocate the backbuffer with the window. The render is done in the backbuffer when
 	// there isn't any FBO. Only a dummy texture is created to easily detect when the rendering is done
 	// in the backbuffer
-	m_backbuffer = new GSTextureOGL(0, w, h, false, GSTextureOGL::Backbuffer);
+	m_backbuffer = new GSTextureOGL(GSTextureOGL::Backbuffer, w, h, false, 0);
 
 	return true;
 }
@@ -619,8 +622,11 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 		return;
 	}
 
+	// This function is useless on opengl. The only call I found copy the whole texture data to another one
 	assert(0);
+
 	// GL_NV_copy_image seem like the good extension but not supported on AMD...
+	// Maybe opengl 4.3 !
 
 	// FIXME attach the texture to the FBO
 	GSTextureOGL* st_ogl = (GSTextureOGL*) st;
