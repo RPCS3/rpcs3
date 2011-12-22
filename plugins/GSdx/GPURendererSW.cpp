@@ -29,7 +29,7 @@ GPURendererSW::GPURendererSW(GSDevice* dev, int threads)
 {
 	m_output = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 16);
 
-	m_rl = GSRasterizerList::Create<GPUDrawScanline>(threads);
+	m_rl = GSRasterizerList::Create<GPUDrawScanline>(threads, &m_perfmon);
 }
 
 GPURendererSW::~GPURendererSW()

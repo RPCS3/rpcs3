@@ -30,10 +30,11 @@
 
 #define THREAD_HEIGHT 4
 
-GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads)
+GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon)
 	: m_ds(ds)
 	, m_id(id)
 	, m_threads(threads)
+	, m_perfmon(perfmon)
 {
 	m_edge.buff = (GSVertexSW*)vmalloc(sizeof(GSVertexSW) * 2048, false);
 	m_edge.count = 0;
@@ -88,6 +89,8 @@ void GSRasterizer::Queue(shared_ptr<GSRasterizerData> data)
 
 void GSRasterizer::Draw(shared_ptr<GSRasterizerData> data)
 {
+	GSPerfMonAutoTimer pmat(m_perfmon, GSPerfMon::WorkerDraw0 + m_id);
+
 	m_ds->BeginDraw(data->param);
 
 	const GSVertexSW* vertices = data->vertices;
@@ -763,8 +766,8 @@ void GSRasterizer::Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bo
 
 //
 
-GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, int id, int threads)
-	: GSRasterizer(ds, id, threads)
+GSRasterizerMT::GSRasterizerMT(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon)
+	: GSRasterizer(ds, id, threads, perfmon)
 	, m_exit(false)
 	, m_break(true)
 {
@@ -839,6 +842,94 @@ void GSRasterizerMT::ThreadProc()
 		}
 	}
 }
+
+#ifdef _WINDOWS
+
+GSRasterizerMT2::GSRasterizerMT2(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon)
+	: GSRasterizer(ds, id, threads, perfmon)
+{
+	InitializeSRWLock(&m_lock);
+	InitializeConditionVariable(&m_notempty);
+	InitializeConditionVariable(&m_empty);
+	
+	CreateThread();
+}
+
+GSRasterizerMT2::~GSRasterizerMT2()
+{
+	m_queue.push(shared_ptr<GSRasterizerData>());
+
+	WakeConditionVariable(&m_notempty);
+
+	CloseThread();
+}
+
+void GSRasterizerMT2::Queue(shared_ptr<GSRasterizerData> data)
+{
+	AcquireSRWLockExclusive(&m_lock);
+
+	m_queue.push(data);
+
+	ReleaseSRWLockExclusive(&m_lock);
+
+	WakeConditionVariable(&m_notempty);
+}
+
+void GSRasterizerMT2::Sync()
+{
+	AcquireSRWLockExclusive(&m_lock);
+
+	while(!m_queue.empty()) 
+	{
+		// TODO: instead of just waiting for the workers, help finishing their queues! 
+		// TODO: to do that, queues needs to be merged and id'ed, and threads must switch m_myscanline on the fly
+
+		GSPerfMonAutoTimer pmat(m_perfmon, GSPerfMon::WorkerSync0 + m_id);
+
+		SleepConditionVariableSRW(&m_empty, &m_lock, INFINITE, 0);
+	}
+
+	ReleaseSRWLockExclusive(&m_lock);
+}
+
+void GSRasterizerMT2::ThreadProc()
+{
+	AcquireSRWLockExclusive(&m_lock);
+
+	while(true)
+	{
+		while(m_queue.empty())
+		{
+			GSPerfMonAutoTimer pmat(m_perfmon, GSPerfMon::WorkerSleep0 + m_id);
+
+			SleepConditionVariableSRW(&m_notempty, &m_lock, INFINITE, 0);
+		}
+
+		shared_ptr<GSRasterizerData> data;
+
+		data = m_queue.front();
+
+		ReleaseSRWLockExclusive(&m_lock);
+
+		if(data == NULL)
+		{
+			break;
+		}
+
+		Draw(data);
+
+		AcquireSRWLockExclusive(&m_lock);
+
+		m_queue.pop();
+
+		if(m_queue.empty())
+		{
+			WakeConditionVariable(&m_empty);
+		}
+	}
+}
+
+#endif
 
 //
 

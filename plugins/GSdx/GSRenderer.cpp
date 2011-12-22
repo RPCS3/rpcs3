@@ -289,7 +289,7 @@ void GSRenderer::SetVSync(bool enabled)
 
 void GSRenderer::VSync(int field)
 {
-	GSPerfMonAutoTimer pmat(m_perfmon);
+	GSPerfMonAutoTimer pmat(&m_perfmon);
 
 	m_perfmon.Put(GSPerfMon::Frame);
 

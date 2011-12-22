@@ -141,7 +141,7 @@ void GPUState::Invalidate(const GSVector4i& r)
 
 void GPUState::WriteData(const uint8* mem, uint32 size)
 {
-	GSPerfMonAutoTimer pmat(m_perfmon);
+	GSPerfMonAutoTimer pmat(&m_perfmon);
 
 	size <<= 2;
 
@@ -165,7 +165,7 @@ void GPUState::WriteData(const uint8* mem, uint32 size)
 
 void GPUState::ReadData(uint8* mem, uint32 size)
 {
-	GSPerfMonAutoTimer pmat(m_perfmon);
+	GSPerfMonAutoTimer pmat(&m_perfmon);
 
 	int remaining = m_read.bytes - m_read.cur;
 
@@ -194,7 +194,7 @@ void GPUState::ReadData(uint8* mem, uint32 size)
 
 void GPUState::WriteStatus(uint32 status)
 {
-	GSPerfMonAutoTimer pmat(m_perfmon);
+	GSPerfMonAutoTimer pmat(&m_perfmon);
 
 	uint32 b = status >> 24;
 
@@ -205,7 +205,7 @@ void GPUState::WriteStatus(uint32 status)
 
 uint32 GPUState::ReadStatus()
 {
-	GSPerfMonAutoTimer pmat(m_perfmon);
+	GSPerfMonAutoTimer pmat(&m_perfmon);
 
 	m_env.STATUS.LCF = ~m_env.STATUS.LCF; // ?
 

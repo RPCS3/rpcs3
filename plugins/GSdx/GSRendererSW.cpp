@@ -33,7 +33,7 @@ GSRendererSW::GSRendererSW(int threads)
 
 	memset(m_texture, 0, sizeof(m_texture));
 
-	m_rl = GSRasterizerList::Create<GSDrawScanline>(threads);
+	m_rl = GSRasterizerList::Create<GSDrawScanline>(threads, &m_perfmon);
 
 	m_output = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32);
 
@@ -67,11 +67,41 @@ void GSRendererSW::Reset()
 
 void GSRendererSW::VSync(int field)
 {
-	GSRendererT<GSVertexSW>::VSync(field);
-
 	Sync(); // IncAge might delete a cached texture in use
+	/*
+	printf("CPU %d Sync %d W %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d\n",
+		m_perfmon.CPU(GSPerfMon::Main),
+		m_perfmon.CPU(GSPerfMon::Sync),
+		m_perfmon.CPU(GSPerfMon::WorkerSync0),
+		m_perfmon.CPU(GSPerfMon::WorkerSleep0),
+		m_perfmon.CPU(GSPerfMon::WorkerDraw0),
+		m_perfmon.CPU(GSPerfMon::WorkerSync1),
+		m_perfmon.CPU(GSPerfMon::WorkerSleep1),
+		m_perfmon.CPU(GSPerfMon::WorkerDraw1),
+		m_perfmon.CPU(GSPerfMon::WorkerSync2),
+		m_perfmon.CPU(GSPerfMon::WorkerSleep2),
+		m_perfmon.CPU(GSPerfMon::WorkerDraw2),
+		m_perfmon.CPU(GSPerfMon::WorkerSync3),
+		m_perfmon.CPU(GSPerfMon::WorkerSleep3),
+		m_perfmon.CPU(GSPerfMon::WorkerDraw3),
+		m_perfmon.CPU(GSPerfMon::WorkerSync4),
+		m_perfmon.CPU(GSPerfMon::WorkerSleep4),
+		m_perfmon.CPU(GSPerfMon::WorkerDraw4),
+		m_perfmon.CPU(GSPerfMon::WorkerSync5),
+		m_perfmon.CPU(GSPerfMon::WorkerSleep5),
+		m_perfmon.CPU(GSPerfMon::WorkerDraw5),
+		m_perfmon.CPU(GSPerfMon::WorkerSync6),
+		m_perfmon.CPU(GSPerfMon::WorkerSleep6),
+		m_perfmon.CPU(GSPerfMon::WorkerDraw6),
+		m_perfmon.CPU(GSPerfMon::WorkerSync7),
+		m_perfmon.CPU(GSPerfMon::WorkerSleep7),
+		m_perfmon.CPU(GSPerfMon::WorkerDraw7));
 
-	//printf("m_sync_count = %d\n", ((GSRasterizerList*)m_rl)->m_sync_count); ((GSRasterizerList*)m_rl)->m_sync_count = 0;
+	//
+	printf("m_sync_count = %d\n", ((GSRasterizerList*)m_rl)->m_sync_count); ((GSRasterizerList*)m_rl)->m_sync_count = 0;
+	*/
+
+	GSRendererT<GSVertexSW>::VSync(field);
 
 	m_tc->IncAge();
 
@@ -265,6 +295,8 @@ void GSRendererSW::Sync()
 {
 	//printf("sync\n");
 
+	GSPerfMonAutoTimer pmat(&m_perfmon, GSPerfMon::Sync);
+
 	m_rl->Sync();
 
 	memset(m_tex_pages, 0, sizeof(m_tex_pages));
@@ -303,7 +335,7 @@ void GSRendererSW::InvalidatePages(const GSTextureCacheSW::Texture* t)
 
 	for(size_t i = 0; i < countof(t->m_pages); i++)
 	{
-		if(m_fzb_pages[i] & t->m_pages[i]) // currently begin drawn to? => sync
+		if(m_fzb_pages[i] & t->m_pages[i]) // currently being drawn to? => sync
 		{
 			Sync();
 

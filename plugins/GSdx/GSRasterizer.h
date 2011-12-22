@@ -103,9 +103,12 @@ public:
 	virtual void Sync() = 0;
 };
 
+#include "GSPerfMon.h"
+
 __aligned(class, 32) GSRasterizer : public IRasterizer
 {
 protected:
+	GSPerfMon* m_perfmon;
 	IDrawScanline* m_ds;
 	int m_id;
 	int m_threads;
@@ -131,7 +134,7 @@ protected:
 	__forceinline void Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bool edge = false);
 
 public:
-	GSRasterizer(IDrawScanline* ds, int id, int threads);
+	GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon);
 	virtual ~GSRasterizer();
 
 	__forceinline bool IsOneOfMyScanlines(int scanline) const;
@@ -150,14 +153,14 @@ class GSRasterizerMT : public GSRasterizer, private GSThread
 protected:
 	volatile bool m_exit;
 	volatile bool m_break;
+	GSCritSec m_lock;
 	GSEvent m_draw;
 	queue<shared_ptr<GSRasterizerData> > m_queue;
-	GSCritSec m_lock;
 
 	void ThreadProc();
 
 public:
-	GSRasterizerMT(IDrawScanline* ds, int id, int threads);
+	GSRasterizerMT(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon);
 	virtual ~GSRasterizerMT();
 
 	// IRasterizer
@@ -165,6 +168,30 @@ public:
 	void Queue(shared_ptr<GSRasterizerData> data);
 	void Sync();
 };
+
+#ifdef _WINDOWS
+
+class GSRasterizerMT2 : public GSRasterizer, private GSThread
+{
+protected:
+	SRWLOCK m_lock;
+	CONDITION_VARIABLE m_notempty;
+	CONDITION_VARIABLE m_empty;
+	queue<shared_ptr<GSRasterizerData> > m_queue;
+
+	void ThreadProc();
+
+public:
+	GSRasterizerMT2(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon);
+	virtual ~GSRasterizerMT2();
+
+	// IRasterizer
+
+	void Queue(shared_ptr<GSRasterizerData> data);
+	void Sync();
+};
+
+#endif
 
 class GSRasterizerList : public IRasterizer, protected vector<GSRasterizer*>
 {
@@ -177,21 +204,40 @@ protected:
 public:
 	virtual ~GSRasterizerList();
 
-	template<class DS> static IRasterizer* Create(int threads)
+	template<class DS> static IRasterizer* Create(int threads, GSPerfMon* perfmon)
 	{
 		threads = std::max<int>(threads, 0);
 
 		if(threads == 0)
 		{
-			return new GSRasterizer(new DS(), 0, 1);
+			return new GSRasterizer(new DS(), 0, 1, perfmon);
 		}
 		else
 		{
 			GSRasterizerList* rl = new GSRasterizerList();
 
+			#ifdef _WINDOWS
+
+			OSVERSIONINFOEX version;
+			memset(&version, 0, sizeof(version));
+			version.dwOSVersionInfoSize = sizeof(version);
+			GetVersionEx((OSVERSIONINFO*)&version);
+
+			if(version.dwMajorVersion >= 6)
+			{
+				for(int i = 0; i < threads; i++)
+				{
+					rl->push_back(new GSRasterizerMT2(new DS(), i, threads, perfmon));
+				}
+
+				return rl;
+			}
+
+			#endif
+
 			for(int i = 0; i < threads; i++)
 			{
-				rl->push_back(new GSRasterizerMT(new DS(), i, threads));
+				rl->push_back(new GSRasterizerMT(new DS(), i, threads, perfmon));
 			}
 
 			return rl;

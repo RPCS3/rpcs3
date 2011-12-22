@@ -1411,7 +1411,7 @@ void GSDrawScanline::DrawRect(const GSVector4i& r, const GSVertexSW& v)
 		}
 		else
 		{
-			if(m == 0)
+			if((m & 0xffff) == 0)
 			{
 				DrawRectT<uint16, false>(zbr, zbc, r, z, m);
 			}
@@ -1451,7 +1451,7 @@ void GSDrawScanline::DrawRect(const GSVector4i& r, const GSVertexSW& v)
 		{
 			c = ((c & 0xf8) >> 3) | ((c & 0xf800) >> 6) | ((c & 0xf80000) >> 9) | ((c & 0x80000000) >> 16);
 
-			if(m == 0)
+			if((m & 0xffff) == 0)
 			{
 				DrawRectT<uint16, false>(fbr, fbc, r, c, m);
 			}
@@ -1476,6 +1476,8 @@ void GSDrawScanline::DrawRectT(const int* RESTRICT row, const int* RESTRICT col,
 		color = color.xxzzlh();
 		mask = mask.xxzzlh();
 	}
+
+	if(masked) ASSERT(mask.u32[0] != 0);
 
 	color = color.andnot(mask);
 

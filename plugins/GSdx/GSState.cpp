@@ -1477,7 +1477,7 @@ void GSState::SoftReset(uint32 mask)
 
 void GSState::ReadFIFO(uint8* mem, int size)
 {
-	GSPerfMonAutoTimer pmat(m_perfmon);
+	GSPerfMonAutoTimer pmat(&m_perfmon);
 
 	Flush();
 
@@ -1498,7 +1498,7 @@ template void GSState::Transfer<3>(const uint8* mem, uint32 size);
 
 template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 {
-	GSPerfMonAutoTimer pmat(m_perfmon);
+	GSPerfMonAutoTimer pmat(&m_perfmon);
 
 	const uint8* start = mem;
 
