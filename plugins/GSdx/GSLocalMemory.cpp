@@ -466,30 +466,7 @@ GSOffset* GSLocalMemory::GetOffset(uint32 bp, uint32 bw, uint32 psm)
 		return i->second;
 	}
 
-	GSOffset* o = (GSOffset*)_aligned_malloc(sizeof(GSOffset), 32);
-
-	o->hash = hash;
-
-	pixelAddress bn = m_psm[psm].bn;
-
-	for(int i = 0; i < 256; i++)
-	{
-		o->block.row[i] = (short)bn(0, i << 3, bp, bw);
-	}
-
-	o->block.col = m_psm[psm].blockOffset;
-
-	pixelAddress pa = m_psm[psm].pa;
-
-	for(int i = 0; i < 4096; i++)
-	{
-		o->pixel.row[i] = (int)pa(0, i & 0x7ff, bp, bw);
-	}
-
-	for(int i = 0; i < 8; i++)
-	{
-		o->pixel.col[i] = m_psm[psm].rowOffset[i];
-	}
+	GSOffset* o = new GSOffset(bp, bw, psm);
 
 	m_omap[hash] = o;
 
@@ -1985,4 +1962,103 @@ void GSLocalMemory::SaveBMP(const string& fn, uint32 bp, uint32 bw, uint32 psm, 
 	}
 
 	_aligned_free(bits);
+}
+
+// GSOffset
+
+GSOffset::GSOffset(uint32 _bp, uint32 _bw, uint32 _psm)
+{
+	hash = _bp | (_bw << 14) | (_psm << 20);
+
+	GSLocalMemory::pixelAddress bn = GSLocalMemory::m_psm[_psm].bn;
+
+	for(int i = 0; i < 256; i++)
+	{
+		block.row[i] = (short)bn(0, i << 3, _bp, _bw);
+	}
+
+	block.col = GSLocalMemory::m_psm[_psm].blockOffset;
+
+	GSLocalMemory::pixelAddress pa = GSLocalMemory::m_psm[_psm].pa;
+
+	for(int i = 0; i < 4096; i++)
+	{
+		pixel.row[i] = (int)pa(0, i & 0x7ff, _bp, _bw);
+	}
+
+	for(int i = 0; i < 8; i++)
+	{
+		pixel.col[i] = GSLocalMemory::m_psm[_psm].rowOffset[i];
+	}
+}
+
+GSOffset::~GSOffset()
+{
+	for(hash_map<uint64, list<uint32>*>::iterator i = m_cache.begin(); i != m_cache.end(); i++)
+	{
+		delete i->second;
+	}
+}
+
+list<uint32>* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
+{
+	GSAutoLock lock(&m_lock);
+
+	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
+
+	GSVector4i r = rect.ralign<Align_Outside>(bs);
+
+	if(bbox != NULL) *bbox = r;
+
+	uint64 r_hash;
+
+	GSVector4i::storel(&r_hash, r.sra32(3).ps32()); // max 19-bit coordinates, should not be a problem (can shift right by 3 because it is mod8, smallest block size)
+
+	hash_map<uint64, list<uint32>*>::iterator i = m_cache.find(r_hash);
+
+	if(i != m_cache.end())
+	{
+		return i->second;
+	}
+
+	uint32 tmp[16];
+
+	memset(tmp, 0, sizeof(tmp));
+
+	for(int y = r.top; y < r.bottom; y += bs.y)
+	{
+		uint32 base = block.row[y >> 3];
+
+		for(int x = r.left; x < r.right; x += bs.x)
+		{
+			uint32 n = (base + block.col[x >> 3]) >> 5;
+
+			if(n < MAX_PAGES)
+			{
+				tmp[n >> 5] |= 1 << (n & 31);
+			}
+		}
+	}
+
+	list<uint32>* l = new list<uint32>();
+
+	for(int i = 0; i < countof(tmp); i++)
+	{
+		uint32 p = tmp[i];
+
+		if(p == 0) continue;
+
+		unsigned long j;
+
+		while(_BitScanForward(&j, p))
+		{
+			p ^= 1 << j;
+			
+			l->push_back((i << 5) + j);
+		}
+	}
+
+	m_cache[r_hash] = l;
+
+	return l;
 }

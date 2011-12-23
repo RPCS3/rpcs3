@@ -37,8 +37,8 @@ GSRendererSW::GSRendererSW(int threads)
 
 	m_output = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32);
 
-	memset(m_tex_pages, 0, sizeof(m_tex_pages));
 	memset(m_fzb_pages, 0, sizeof(m_fzb_pages));
+	memset(m_tex_pages, 0, sizeof(m_tex_pages));
 }
 
 GSRendererSW::~GSRendererSW()
@@ -166,7 +166,7 @@ void GSRendererSW::Draw()
 {
 	if(m_dump) m_dump.Object(m_vertices, m_count, m_vt.m_primclass);
 
-	shared_ptr<GSRasterizerData> data(new GSRasterizerData2());
+	shared_ptr<GSRasterizerData> data(new GSRasterizerData2(this));
 
 	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)data->param;
 
@@ -197,11 +197,15 @@ void GSRendererSW::Draw()
 	if(gd->sel.fwrite)
 	{
 		m_tc->InvalidateVideoMem(m_context->offset.fb, r);
+
+		UseTargetPages(m_context->offset.fb, r);
 	}
 
 	if(gd->sel.zwrite)
 	{
 		m_tc->InvalidateVideoMem(m_context->offset.zb, r);
+
+		UseTargetPages(m_context->offset.zb, r);
 	}
 
 	if(s_dump)
@@ -260,16 +264,6 @@ void GSRendererSW::Draw()
 	else
 	{
 		m_rl->Queue(data);
-
-		if(gd->sel.fwrite)
-		{
-			InvalidatePages(m_context->offset.fb, r);
-		}
-
-		if(gd->sel.zwrite)
-		{
-			InvalidatePages(m_context->offset.zb, r);
-		}
 	}
 
 	// TODO: m_perfmon.Put(GSPerfMon::Prim, stats.prims);
@@ -295,43 +289,77 @@ void GSRendererSW::Sync(int reason)
 
 	m_rl->Sync();
 
-	memset(m_tex_pages, 0, sizeof(m_tex_pages));
 	memset(m_fzb_pages, 0, sizeof(m_fzb_pages));
+	memset(m_tex_pages, 0, sizeof(m_tex_pages));
 }
 
 void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 {
-	//printf("ivm %05x %d %d\n", BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM);
-
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM);
 
 	m_tc->InvalidateVideoMem(o, r);
 
-	if(CheckPages(o, r)) // check if the changing pages either used as a texture or a target
+	// check if the changing pages either used as a texture or a target
+
+	list<uint32>* pages = o->GetPages(r);
+
+	for(list<uint32>::iterator i = pages->begin(); i != pages->end(); i++)
 	{
-		Sync(5);
+		uint32 page = *i;
+
+		if(m_fzb_pages[page] | (m_tex_pages[page >> 5] & (1 << (page & 31))))
+		{
+			Sync(5);
+
+			break;
+		}
 	}
 }
 
 void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut)
 {
-	//printf("ilm %05x %d %d\n", BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM);
-
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM);
 
-	if(CheckPages(o, r)) // TODO: only checking m_fzb_pages would be enough (read-backs are rare anyway)
+	list<uint32>* pages = o->GetPages(r);
+
+	for(list<uint32>::iterator i = pages->begin(); i != pages->end(); i++)
 	{
-		Sync(6);
+		uint32 page = *i;
+
+		if(m_fzb_pages[page])
+		{
+			Sync(6);
+
+			break;
+		}
 	}
 }
 
-void GSRendererSW::InvalidatePages(const GSTextureCacheSW::Texture* t)
+void GSRendererSW::UseTargetPages(GSOffset* o, const GSVector4i& rect)
 {
-	//printf("tex %05x %d %d\n", t->m_TEX0.TBP0, t->m_TEX0.TBW, t->m_TEX0.PSM);
+	list<uint32>* pages = o->GetPages(rect);
 
-	for(size_t i = 0; i < countof(t->m_pages); i++)
+	for(list<uint32>::iterator i = pages->begin(); i != pages->end(); i++)
 	{
-		if(m_fzb_pages[i] & t->m_pages[i]) // currently being drawn to? => sync
+		_InterlockedIncrement(&m_fzb_pages[*i]);
+	}
+}
+
+void GSRendererSW::ReleaseTargetPages(GSOffset* o, const GSVector4i& rect)
+{
+	list<uint32>* pages = o->GetPages(rect);
+
+	for(list<uint32>::iterator i = pages->begin(); i != pages->end(); i++)
+	{
+		_InterlockedDecrement(&m_fzb_pages[*i]);
+	}
+}
+
+void GSRendererSW::UseSourcePages(const GSTextureCacheSW::Texture* t)
+{
+	for(list<uint32>::const_iterator i = t->m_pages.n.begin(); i != t->m_pages.n.end(); i++)
+	{
+		if(m_fzb_pages[*i]) // currently being drawn to? => sync
 		{
 			//
 			Sync(7);
@@ -340,61 +368,12 @@ void GSRendererSW::InvalidatePages(const GSTextureCacheSW::Texture* t)
 			return;
 		}
 
-		m_tex_pages[i] |= t->m_pages[i]; // remember which texture pages are used
 	}
-}
 
-void GSRendererSW::InvalidatePages(const GSOffset* o, const GSVector4i& rect)
-{
-	//printf("fzb %05x %d %d\n", o->bp, o->bw, o->psm);
-
-	GSVector2i bs = (o->bp & 31) == 0 ? GSLocalMemory::m_psm[o->psm].pgs : GSLocalMemory::m_psm[o->psm].bs;
-
-	GSVector4i r = rect.ralign<Align_Outside>(bs);
-
-	for(int y = r.top; y < r.bottom; y += bs.y)
+	for(size_t i = 0; i < countof(t->m_pages.bm); i++)
 	{
-		uint32 base = o->block.row[y >> 3];
-
-		for(int x = r.left; x < r.right; x += bs.x)
-		{
-			uint32 page = (base + o->block.col[x >> 3]) >> 5;
-
-			if(page < MAX_PAGES)
-			{
-				m_fzb_pages[page >> 5] |= 1 << (page & 31);
-			}
-		}
+		m_tex_pages[i] |= t->m_pages.bm[i]; // remember which texture pages are used
 	}
-}
-
-bool GSRendererSW::CheckPages(const GSOffset* o, const GSVector4i& rect)
-{
-	GSVector2i bs = (o->bp & 31) == 0 ? GSLocalMemory::m_psm[o->psm].pgs : GSLocalMemory::m_psm[o->psm].bs;
-
-	GSVector4i r = rect.ralign<Align_Outside>(bs);
-
-	for(int y = r.top; y < r.bottom; y += bs.y)
-	{
-		uint32 base = o->block.row[y >> 3];
-
-		for(int x = r.left; x < r.right; x += bs.x)
-		{
-			uint32 page = (base + o->block.col[x >> 3]) >> 5;
-
-			if(page < MAX_PAGES)
-			{
-				uint32 mask = 1 << (page & 31);
-
-				if((m_tex_pages[page >> 5] | m_fzb_pages[page >> 5]) & mask)
-				{
-					return true;
-				}
-			}
-		}
-	}
-
-	return false;
 }
 
 #include "GSTextureSW.h"
@@ -510,7 +489,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 			if(t == NULL) {ASSERT(0); return false;}
 
-			InvalidatePages(t);
+			UseSourcePages(t);
 
 			GSVector4i r;
 
@@ -663,7 +642,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 					if(t == NULL) {ASSERT(0); return false;}
 
-					InvalidatePages(t);
+					UseSourcePages(t);
 
 					GSVector4i r;
 

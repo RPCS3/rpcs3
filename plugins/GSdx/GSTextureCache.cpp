@@ -289,18 +289,13 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 	return dst;
 }
 
-void GSTextureCache::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect, bool target)
+void GSTextureCache::InvalidateVideoMem(GSOffset* o, const GSVector4i& rect, bool target)
 {
-	// Fixme. Crashes Dual Hearts, maybe others as well. Was fine before r1549.
-	if (!o) return;
+	if(!o) return; // Fixme. Crashes Dual Hearts, maybe others as well. Was fine before r1549.
 
 	uint32 bp = o->bp;
 	uint32 bw = o->bw;
 	uint32 psm = o->psm;
-
-	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
-
-	GSVector4i r = rect.ralign<Align_Outside>(bs);
 
 	if(!target)
 	{
@@ -319,59 +314,55 @@ void GSTextureCache::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rec
 		}
 	}
 
+	GSVector4i r;
+
+	list<uint32>* pages = o->GetPages(rect, &r);
+
 	bool found = false;
 
-	for(int y = r.top; y < r.bottom; y += bs.y)
+	for(list<uint32>::iterator p = pages->begin(); p != pages->end(); p++)
 	{
-		uint32 base = o->block.row[y >> 3];
+		uint32 page = *p;
 
-		for(int x = r.left; x < r.right; x += bs.x)
+		const list<Source*>& m = m_src.m_map[page];
+
+		for(list<Source*>::const_iterator i = m.begin(); i != m.end(); )
 		{
-			uint32 page = (base + o->block.col[x >> 3]) >> 5;
+			list<Source*>::const_iterator j = i++;
 
-			if(page < MAX_PAGES)
+			Source* s = *j;
+
+			if(GSUtil::HasSharedBits(psm, s->m_TEX0.PSM))
 			{
-				const list<Source*>& m = m_src.m_map[page];
+				bool b = bp == s->m_TEX0.TBP0;
 
-				for(list<Source*>::const_iterator i = m.begin(); i != m.end(); )
+				if(!s->m_target)
 				{
-					list<Source*>::const_iterator j = i++;
-
-					Source* s = *j;
-
-					if(GSUtil::HasSharedBits(psm, s->m_TEX0.PSM))
+					if(s->m_repeating)
 					{
-						bool b = bp == s->m_TEX0.TBP0;
-
-						if(!s->m_target)
-						{
-							if(s->m_repeating)
-							{
-								list<GSVector2i>& l = s->m_p2t[page];
+						list<GSVector2i>& l = s->m_p2t[page];
 						
-								for(list<GSVector2i>::iterator k = l.begin(); k != l.end(); k++)
-								{
-									s->m_valid[k->x] &= k->y;
-								}
-							}
-							else
-							{
-								s->m_valid[page] = 0;
-							}
-
-							s->m_complete = false;
-
-							found = b;
-						}
-						else
+						for(list<GSVector2i>::iterator k = l.begin(); k != l.end(); k++)
 						{
-							// TODO
-
-							if(b)
-							{
-								m_src.RemoveAt(s);
-							}
+							s->m_valid[k->x] &= k->y;
 						}
+					}
+					else
+					{
+						s->m_valid[page] = 0;
+					}
+
+					s->m_complete = false;
+
+					found = b;
+				}
+				else
+				{
+					// TODO
+
+					if(b)
+					{
+						m_src.RemoveAt(s);
 					}
 				}
 			}
@@ -425,7 +416,7 @@ void GSTextureCache::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rec
 	}
 }
 
-void GSTextureCache::InvalidateLocalMem(const GSOffset* o, const GSVector4i& r)
+void GSTextureCache::InvalidateLocalMem(GSOffset* o, const GSVector4i& r)
 {
 	uint32 bp = o->bp;
 	uint32 psm = o->psm;

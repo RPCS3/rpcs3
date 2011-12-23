@@ -138,8 +138,9 @@ public:
 	GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon);
 	virtual ~GSRasterizer();
 
-	__forceinline bool IsOneOfMyScanlines(int scanline) const;
+	__forceinline bool IsOneOfMyScanlines(int top) const;
 	__forceinline bool IsOneOfMyScanlines(int top, int bottom) const;
+	__forceinline int FindMyNextScanline(int top) const;
 
 	void Draw(shared_ptr<GSRasterizerData> data);
 

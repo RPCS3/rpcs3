@@ -61,9 +61,9 @@ GSRasterizer::~GSRasterizer()
 	delete m_ds;
 }
 
-bool GSRasterizer::IsOneOfMyScanlines(int scanline) const
+bool GSRasterizer::IsOneOfMyScanlines(int top) const
 {
-	return m_myscanline[scanline >> THREAD_HEIGHT] != 0;
+	return m_myscanline[top >> THREAD_HEIGHT] != 0;
 }
 
 bool GSRasterizer::IsOneOfMyScanlines(int top, int bottom) const
@@ -82,6 +82,20 @@ bool GSRasterizer::IsOneOfMyScanlines(int top, int bottom) const
 	return false;
 }
 
+int GSRasterizer::FindMyNextScanline(int top) const
+{
+	int i = top >> THREAD_HEIGHT;
+
+	if(m_myscanline[i] == 0)
+	{
+		while(m_myscanline[++i] == 0);
+
+		top = i << THREAD_HEIGHT;
+	}
+
+	return top;
+}
+
 void GSRasterizer::Queue(shared_ptr<GSRasterizerData> data)
 {
 	Draw(data);
@@ -91,10 +105,12 @@ void GSRasterizer::Draw(shared_ptr<GSRasterizerData> data)
 {
 	GSPerfMonAutoTimer pmat(m_perfmon, GSPerfMon::WorkerDraw0 + m_id);
 
+	if(data->count == 0) return;
+
 	m_ds->BeginDraw(data->param);
 
 	const GSVertexSW* vertices = data->vertices;
-	const int count = data->count;
+	const GSVertexSW* vertices_end = data->vertices + data->count;
 
 	bool scissor_test = !data->bbox.eq(data->bbox.rintersect(data->scissor));
 
@@ -108,21 +124,39 @@ void GSRasterizer::Draw(shared_ptr<GSRasterizerData> data)
 	switch(data->primclass)
 	{
 	case GS_POINT_CLASS:
-		if(scissor_test) DrawPoint<true>(vertices, count);
-		else DrawPoint<false>(vertices, count);
+
+		if(scissor_test)
+		{
+			DrawPoint<true>(vertices, data->count);
+		}
+		else 
+		{
+			DrawPoint<false>(vertices, data->count);
+		}
+
 		break;
+
 	case GS_LINE_CLASS:
-		ASSERT(!(count & 1));
-		for(int i = 0; i < count; i += 2) DrawLine(&vertices[i]);
+		
+		do {DrawLine(vertices); vertices += 2;}
+		while(vertices < vertices_end);
+
 		break;
+
 	case GS_TRIANGLE_CLASS:
-		ASSERT(!(count % 3));
-		for(int i = 0; i < count; i += 3) DrawTriangle(&vertices[i]);
+		
+		do {DrawTriangle(vertices); vertices += 3;}
+		while(vertices < vertices_end);
+
 		break;
+
 	case GS_SPRITE_CLASS:
-		ASSERT(!(count & 1));
-		for(int i = 0; i < count; i += 2) DrawSprite(&vertices[i], data->solidrect);
+		
+		do {DrawSprite(vertices, data->solidrect); vertices += 2;}
+		while(vertices < vertices_end);
+
 		break;
+
 	default:
 		__assume(0);
 	}
@@ -417,36 +451,41 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, co
 
 	GSVector4 scissor = m_fscissor.xzxz();
 
-	do
+	top = FindMyNextScanline(top);
+	
+	while(top < bottom)
 	{
-		if(IsOneOfMyScanlines(top))
+		GSVector4 dy = GSVector4(top) - p0.yyyy();
+
+		GSVertexSW scan;
+
+		scan.p = edge.p + dedge.p * dy;
+
+		GSVector4 lrf = scan.p.ceil();
+		GSVector4 l = lrf.max(scissor);
+		GSVector4 r = lrf.min(scissor);
+		GSVector4i lr = GSVector4i(l.xxyy(r));
+
+		int left = lr.extract32<0>();
+		int right = lr.extract32<2>();
+
+		int pixels = right - left;
+
+		if(pixels > 0)
 		{
-			GSVector4 dy = GSVector4(top) - p0.yyyy();
+			scan.t = edge.t + dedge.t * dy;
+			scan.c = edge.c + dedge.c * dy;
 
-			GSVertexSW scan;
+			AddScanline(e++, pixels, left, top, scan + dscan * (l - p0).xxxx());
+		}
 
-			scan.p = edge.p + dedge.p * dy;
+		top++;
 
-			GSVector4 lrf = scan.p.ceil();
-			GSVector4 l = lrf.max(scissor);
-			GSVector4 r = lrf.min(scissor);
-			GSVector4i lr = GSVector4i(l.xxyy(r));
-
-			int left = lr.extract32<0>();
-			int right = lr.extract32<2>();
-
-			int pixels = right - left;
-
-			if(pixels > 0)
-			{
-				scan.t = edge.t + dedge.t * dy;
-				scan.c = edge.c + dedge.c * dy;
-
-				AddScanline(e++, pixels, left, top, scan + dscan * (l - p0).xxxx());
-			}
+		if(!IsOneOfMyScanlines(top))
+		{
+			top += (m_threads - 1) << THREAD_HEIGHT;
 		}
 	}
-	while(++top < bottom);
 
 	m_edge.count += e - &m_edge.buff[m_edge.count];
 }
@@ -782,7 +821,13 @@ GSRasterizerList::~GSRasterizerList()
 
 void GSRasterizerList::Queue(shared_ptr<GSRasterizerData> data)
 {
-	Push(data);
+	// disable dispatcher thread for now and pass-through directly, 
+	// would only be relevant if data->syncpoint was utilized more, 
+	// it would hide the syncing latency from the main gs thread
+
+	// Push(data); 
+
+	Process(data); m_count++;
 }
 
 void GSRasterizerList::Sync()

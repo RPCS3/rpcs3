@@ -143,8 +143,8 @@ public:
 	Target* LookupTarget(const GIFRegTEX0& TEX0, int w, int h, int type, bool used);
 	Target* LookupTarget(const GIFRegTEX0& TEX0, int w, int h);
 
-	void InvalidateVideoMem(const GSOffset* o, const GSVector4i& r, bool target = true);
-	void InvalidateLocalMem(const GSOffset* o, const GSVector4i& r);
+	void InvalidateVideoMem(GSOffset* o, const GSVector4i& r, bool target = true);
+	void InvalidateLocalMem(GSOffset* o, const GSVector4i& r);
 
 	void IncAge();
 	bool UserHacks_HalfPixelOffset;

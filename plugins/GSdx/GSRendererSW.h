@@ -29,8 +29,15 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 {
 	class GSRasterizerData2 : public GSRasterizerData
 	{
+		GSRendererSW* m_parent;
+		GSOffset* m_fb;
+		GSOffset* m_zb;
+
 	public:
-		GSRasterizerData2()
+		GSRasterizerData2(GSRendererSW* parent)
+			: m_parent(parent)
+			, m_fb(parent->m_context->offset.fb)
+			, m_zb(parent->m_context->offset.zb)
 		{
 			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)_aligned_malloc(sizeof(GSScanlineGlobalData), 32);
 
@@ -43,6 +50,18 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 		virtual ~GSRasterizerData2()
 		{
 			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)param;
+			
+			GSVector4i r = bbox.rintersect(scissor);
+				
+			if(gd->sel.fwrite)
+			{
+				m_parent->ReleaseTargetPages(m_fb, r);
+			}
+				
+			if(gd->sel.zwrite)
+			{
+				m_parent->ReleaseTargetPages(m_zb, r);
+			}
 
 			if(gd->clut) _aligned_free(gd->clut);
 			if(gd->dimx) _aligned_free(gd->dimx);
@@ -58,7 +77,7 @@ protected:
 	uint8* m_output;
 	bool m_reset;
 	GSPixelOffset4* m_fzb;
-	uint32 m_fzb_pages[16];
+	long m_fzb_pages[512];
 	uint32 m_tex_pages[16];
 
 	void Reset();
@@ -71,9 +90,9 @@ protected:
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut = false);
 
-	void InvalidatePages(const GSOffset* o, const GSVector4i& rect);
-	void InvalidatePages(const GSTextureCacheSW::Texture* t);
-	bool CheckPages(const GSOffset* o, const GSVector4i& rect);
+	void UseTargetPages(GSOffset* o, const GSVector4i& rect);
+	void ReleaseTargetPages(GSOffset* o, const GSVector4i& rect);
+	void UseSourcePages(const GSTextureCacheSW::Texture* t);
 
 	bool GetScanlineGlobalData(GSScanlineGlobalData& gd);
 
