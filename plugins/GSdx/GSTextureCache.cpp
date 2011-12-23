@@ -97,11 +97,14 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 		uint32 bp = TEX0.TBP0;
 		uint32 psm = TEX0.PSM;
 
-		// This should get looked at if you feel like hackfixing the texture cache.
-		// Checking for type < 1 (so no only RenderTarget, not DepthStencil get checked), it fixes the fog in Arc the Lad.
-		// Simply not doing this code at all makes a lot of previsouly missing stuff show (but breaks pretty much everything
-		// else.
-		for(int type = 0; type < 2 && dst == NULL; type++)
+		// Arc the Lad finds the wrong surface here when looking for a depth stencil.
+		// Since we're currently not caching depth stencils (check ToDo in CreateSource) we should not look for it here.
+		
+		// (Simply not doing this code at all makes a lot of previsouly missing stuff show (but breaks pretty much everything
+		// else.)
+		
+		//for(int type = 0; type < 2 && dst == NULL; type++)
+		for(int type = 0; type < 1 && dst == NULL; type++) // Only look for render target, no depth stencil
 		{
 			for(list<Target*>::iterator i = m_dst[type].begin(); i != m_dst[type].end(); i++)
 			{
