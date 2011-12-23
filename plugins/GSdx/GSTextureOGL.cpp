@@ -28,7 +28,7 @@ static uint g_state_texture_id = 0;
 GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 	: m_texture_unit(0),
 	  m_extra_buffer_id(0),
-	  m_extra_buffer_allocated(false)
+	  m_pbo_size(0)
 {
 	// *************************************************************
 	// Opengl world
@@ -83,6 +83,16 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 
 	// Generate the buffer
 	switch (m_type) {
+		case GSTexture::Offscreen:
+			//FIXME I not sure we need a pixel buffer object. It seems more a texture
+			// glGenBuffers(1, &m_texture_id);
+			// m_texture_target = GL_PIXEL_UNPACK_BUFFER;
+			// assert(0);
+			// Note there is also a buffer texture!!!
+			// http://www.opengl.org/wiki/Buffer_Texture
+			// Note: in this case it must use in GLSL
+			// gvec texelFetch(gsampler sampler, ivec texCoord, int lod[, int sample]);
+			// corollary we can maybe use it for multisample stuff
 		case GSTexture::Texture:
 		case GSTexture::RenderTarget:
 			glGenTextures(1, &m_texture_id);
@@ -92,16 +102,6 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 			glGenRenderbuffers(1, &m_texture_id);
 			m_texture_target = GL_RENDERBUFFER;
 			break;
-		case GSTexture::Offscreen:
-			//FIXME I not sure we need a pixel buffer object. It seems more a texture
-			// glGenBuffers(1, &m_texture_id);
-			// m_texture_target = GL_PIXEL_UNPACK_BUFFER;
-			assert(0);
-			// Note there is also a buffer texture!!!
-			// http://www.opengl.org/wiki/Buffer_Texture
-			// Note: in this case it must use in GLSL
-			// gvec texelFetch(gsampler sampler, ivec texCoord, int lod[, int sample]);
-			// corollary we can maybe use it for multisample stuff
 			break;
 		case GSTexture::Backbuffer:
 			m_texture_target = 0;
@@ -140,7 +140,12 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 				assert(0); // TODO Later
 			break;
 		case GSTexture::Offscreen:
-			assert(0);
+			if (m_type == GL_RGBA8) m_pbo_size = m_size.x * m_size.y * 4;
+			else if (m_type == GL_R16UI) m_pbo_size = m_size.x * m_size.y * 2;
+			else assert(0);
+
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, m_extra_buffer_id);
+			glBufferData(GL_PIXEL_PACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
 			break;
 		default: break;
 	}
@@ -197,19 +202,18 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	// The case appears on SW mode. Src pitch is 2x dst pitch.
 	int rowbytes = r.width() << 2;
 	if (pitch != rowbytes) {
-		uint32 pbo_size = m_size.x * m_size.y * 4;
 		uint32 map_flags = GL_MAP_WRITE_BIT;
 
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_extra_buffer_id);
-		if (!m_extra_buffer_allocated) {
-			glBufferData(GL_PIXEL_UNPACK_BUFFER, pbo_size, NULL, GL_STREAM_DRAW);
-			m_extra_buffer_allocated = true;
+		if (!m_pbo_size) {
+			m_pbo_size = m_size.x * m_size.y * 4;
+			glBufferData(GL_PIXEL_UNPACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
 		} else {
 			GL_MAP_INVALIDATE_BUFFER_BIT;
 		}
 
 		uint8* src = (uint8*) data;
-		uint8* dst = (uint8*) glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, pbo_size, map_flags);
+		uint8* dst = (uint8*) glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, m_pbo_size, map_flags);
 		for(int h = r.height(); h > 0; h--, src += pitch, dst += rowbytes)
 		{
 			memcpy(dst, src, rowbytes);
@@ -274,6 +278,26 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 	//
 	// glMapBuffer — map a buffer object's data store
 	// Can be used on GL_PIXEL_UNPACK_BUFFER or GL_TEXTURE_BUFFER
+	if (m_type == GSTexture::Offscreen) {
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, m_extra_buffer_id);
+		// FIXME It might be possible to only map a subrange of the texture based on r object
+
+		// Load the PBO
+		if (m_format == GL_R16UI)
+			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED, GL_UNSIGNED_SHORT, 0);
+		else if (m_format == GL_RGBA8)
+			glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+		else
+			assert(0);
+
+		// Give access from the CPU
+		uint32 map_flags = GL_MAP_READ_BIT;
+		m.bits = (uint8*) glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, m_pbo_size, map_flags);
+		m.pitch = m_size.x;
+
+		return true;
+	}
+
 	return false;
 #if 0
 	if(r != NULL)
@@ -302,14 +326,9 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 
 void GSTextureOGL::Unmap()
 {
-	// copy the texture to the GPU
-	// GLboolean glUnmapBuffer(GLenum target);
-#if 0
-	if(m_texture)
-	{
-		m_ctx->Unmap(m_texture, 0);
+	if (m_type == GSTexture::Offscreen) {
+		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 	}
-#endif
 }
 
 #ifndef _WINDOWS
@@ -358,13 +377,13 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 
 	// Collect the texture data
 	char* image = (char*)malloc(4 * m_size.x * m_size.y);
-	if (m_type) {
-		EnableUnit(0);
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-	} else {
+	if (IsBackbuffer()) {
 		// TODO backbuffer
 		glReadBuffer(GL_BACK);
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	} else {
+		EnableUnit(0);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	}
 
 	// Build a BMP file

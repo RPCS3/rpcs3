@@ -30,7 +30,7 @@ class GSTextureOGL : public GSTexture
 		GLuint m_texture_id;	 // the texture id
 		uint m_texture_unit;		 // the texture unit offset
 		uint m_extra_buffer_id;
-		bool m_extra_buffer_allocated;
+		int m_pbo_size;
 
 	public:
 		explicit GSTextureOGL(int type, int w, int h, bool msaa, int format);

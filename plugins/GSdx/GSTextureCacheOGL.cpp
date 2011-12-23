@@ -30,11 +30,9 @@ GSTextureCacheOGL::GSTextureCacheOGL(GSRenderer* r)
 
 void GSTextureCacheOGL::Read(Target* t, const GSVector4i& r)
 {
-	// Except format (CopyOffscreen method), everything else seem portable
-#if 0
 	if(t->m_type != RenderTarget)
 	{
-		// TODO
+		assert(0);
 
 		return;
 	}
@@ -63,7 +61,10 @@ void GSTextureCacheOGL::Read(Target* t, const GSVector4i& r)
 
 	GSVector4 src = GSVector4(r) * GSVector4(t->m_texture->GetScale()).xyxy() / GSVector4(t->m_texture->GetSize()).xyxy();
 
+	GLuint format = TEX0.PSM == PSM_PSMCT16 || TEX0.PSM == PSM_PSMCT16S ? GL_R16UI : GL_RGBA8;
+#if 0
 	DXGI_FORMAT format = TEX0.PSM == PSM_PSMCT16 || TEX0.PSM == PSM_PSMCT16S ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R8G8B8A8_UNORM;
+#endif
 
 	if(GSTexture* offscreen = m_renderer->m_dev->CopyOffscreen(t->m_texture, src, w, h, format))
 	{
@@ -94,8 +95,7 @@ void GSTextureCacheOGL::Read(Target* t, const GSVector4i& r)
 			offscreen->Unmap();
 		}
 
-		m_renderer->m_dev->Recycle(offscreen);
+		//m_renderer->m_dev->Recycle(offscreen);
 	}
-#endif
 }
 

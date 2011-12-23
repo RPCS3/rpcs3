@@ -526,12 +526,22 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
 
 void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 {
+	// FIXME I need to clarify this FBO attachment stuff
+	// I would like to avoid FBO for a basic clean operation
+	OMSetFBO(m_fbo);
+	static_cast<GSTextureOGL*>(t)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
+	// FIXME can you clean depth and stencil separately
 	glClearBufferfv(GL_DEPTH, 0, &c);
 }
 
 void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 {
+	// FIXME I need to clarify this FBO attachment stuff
+	// I would like to avoid FBO for a basic clean operation
+	OMSetFBO(m_fbo);
+	static_cast<GSTextureOGL*>(t)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
 	GLint color = c;
+	// FIXME can you clean depth and stencil separately
 	glClearBufferiv(GL_STENCIL, 0, &color);
 }
 
@@ -558,56 +568,45 @@ GSTexture* GSDeviceOGL::CreateOffscreen(int w, int h, int format)
 // blit a texture into an offscreen buffer
 GSTexture* GSDeviceOGL::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format)
 {
-	// I'm not sure about the object type for offscreen buffer
-	// TODO later;
-
-	assert(0);
-
-	// Need to find format equivalent. Then I think it will be straight forward
-
-	// A four-component, 32-bit unsigned-normalized-integer format that supports 8 bits per channel including alpha.
-	// DXGI_FORMAT_R8G8B8A8_UNORM <=> GL_RGBA8
-
-	// A single-component, 16-bit unsigned-integer format that supports 16 bits for the red channel
-	// DXGI_FORMAT_R16_UINT <=> GL_R16
-#if 0
 	GSTexture* dst = NULL;
 
-	if(format == 0)
-	{
-		format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	}
+	if(format == 0) format = GL_RGBA8;
 
-	if(format != DXGI_FORMAT_R8G8B8A8_UNORM && format != DXGI_FORMAT_R16_UINT)
+	if(format != GL_RGBA8 && format != GL_R16UI)
 	{
 		ASSERT(0);
 
 		return false;
 	}
 
-	if(GSTexture* rt = CreateRenderTarget(w, h, false, format))
+	// FIXME: I used directly an offscreen texture because they are the same on Opengl
+	//if(GSTexture* rt = CreateRenderTarget(w, h, false, format))
+	GSTexture* rt = CreateRenderTarget(w, h, false, format);
+	if(rt)
 	{
 		GSVector4 dr(0, 0, w, h);
 
 		if(GSTexture* src2 = src->IsMSAA() ? Resolve(src) : src)
 		{
-			StretchRect(src2, sr, rt, dr, m_convert.ps[format == DXGI_FORMAT_R16_UINT ? 1 : 0], NULL);
+			StretchRect(src2, sr, rt, dr, m_convert.ps[format == GL_R16UI ? 1 : 0]);
 
 			if(src2 != src) Recycle(src2);
 		}
 
+#if 0
 		dst = CreateOffscreen(w, h, format);
 
 		if(dst)
 		{
 			m_ctx->CopyResource(*(GSTexture11*)dst, *(GSTexture11*)rt);
 		}
+#endif
 
 		Recycle(rt);
 	}
 
-	return dst;
-#endif
+	//return dst;
+	return rt;
 }
 
 // Copy a sub part of a texture into another
@@ -622,12 +621,19 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 		return;
 	}
 
-	// This function is useless on opengl. The only call I found copy the whole texture data to another one
-	assert(0);
-
 	// GL_NV_copy_image seem like the good extension but not supported on AMD...
 	// Maybe opengl 4.3 !
+	// FIXME check those function work as expected
 
+	// Set the input of glCopyTexSubImage2D
+	static_cast<GSTextureOGL*>(st)->Attach(GL_COLOR_ATTACHMENT1);
+	glReadBuffer(GL_COLOR_ATTACHMENT1);
+
+	// Copy the full image
+	static_cast<GSTextureOGL*>(dt)->EnableUnit(0);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, dt->GetWidth(), dt->GetHeight());
+
+#if 0
 	// FIXME attach the texture to the FBO
 	GSTextureOGL* st_ogl = (GSTextureOGL*) st;
 	GSTextureOGL* dt_ogl = (GSTextureOGL*) dt;
@@ -643,6 +649,7 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 	//glCopyTexSubImage2D(dt_ogl.m_texture_target, 0, 0, 0, r.left, r.bottom, r.right-r.left, r.top-r.bottom);
 	// FIXME I'm not sure GL_TEXTURE_RECTANGLE is supported!!!
 	//glCopyTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, r.left, r.bottom, r.right-r.left, r.top-r.bottom);
+#endif
 #if 0
 	D3D11_BOX box = {r.left, r.top, 0, r.right, r.bottom, 1};
 	m_ctx->CopySubresourceRegion(*(GSTexture11*)dt, 0, 0, 0, 0, *(GSTexture11*)st, 0, &box);
@@ -819,7 +826,7 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 		// gs
 
-		GSSetShader(NULL);
+		GSSetShader(0);
 
 		// ps
 
@@ -1153,7 +1160,7 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	// Select the entry point ie the main function
 	std::string entry_main = format("#define %s main\n", entry.c_str());
 
-	std::string header = version + shader_type + entry_main;
+	std::string header = version + shader_type + entry_main + macro_sel;
 
 	// *****************************************************
 	// Read the source file
