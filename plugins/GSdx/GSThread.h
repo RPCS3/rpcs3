@@ -169,6 +169,21 @@ protected:
 	struct {GSCritSec lock; GSEvent notempty, empty;} m_ev;
 	#ifdef _WINDOWS
 	struct {SRWLOCK lock; CONDITION_VARIABLE notempty, empty; bool available;} m_cv;
+	HMODULE m_kernel32;
+	typedef void (WINAPI * InitializeConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
+	typedef void (WINAPI * WakeConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
+	typedef void (WINAPI * WakeAllConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
+	typedef void (WINAPI * SleepConditionVariableSRWPtr)(CONDITION_VARIABLE* ConditionVariable, SRWLOCK* SRWLock, DWORD dwMilliseconds, ULONG Flags);
+	typedef void (WINAPI * InitializeSRWLockPtr)(SRWLOCK* SRWLock);
+	typedef void (WINAPI * AcquireSRWLockExclusivePtr)(SRWLOCK* SRWLock);
+	typedef void (WINAPI * ReleaseSRWLockExclusivePtr)(SRWLOCK* SRWLock);
+	InitializeConditionVariablePtr pInitializeConditionVariable;
+	WakeConditionVariablePtr pWakeConditionVariable;
+	WakeAllConditionVariablePtr pWakeAllConditionVariable;
+	SleepConditionVariableSRWPtr pSleepConditionVariableSRW;
+	InitializeSRWLockPtr pInitializeSRWLock;;
+	AcquireSRWLockExclusivePtr pAcquireSRWLockExclusive;
+	ReleaseSRWLockExclusivePtr pReleaseSRWLockExclusive;
 	#endif
 
 	void ThreadProc()
@@ -177,32 +192,30 @@ protected:
 
 		if(m_cv.available)
 		{
-			AcquireSRWLockExclusive(&m_cv.lock);
+			pAcquireSRWLockExclusive(&m_cv.lock);
 
 			while(true)
 			{
 				while(m_queue.empty())
 				{
-					SleepConditionVariableSRW(&m_cv.notempty, &m_cv.lock, INFINITE, 0);
+					pSleepConditionVariableSRW(&m_cv.notempty, &m_cv.lock, INFINITE, 0);
 
-					if(m_exit) {ReleaseSRWLockExclusive(&m_cv.lock); return;}
+					if(m_exit) {pReleaseSRWLockExclusive(&m_cv.lock); return;}
 				}
 
-				{
 				T item = m_queue.front();
 
-				ReleaseSRWLockExclusive(&m_cv.lock);
+				pReleaseSRWLockExclusive(&m_cv.lock);
 
 				Process(item);
 
-				AcquireSRWLockExclusive(&m_cv.lock);
-				}
+				pAcquireSRWLockExclusive(&m_cv.lock);
 
 				m_queue.pop();
 
 				if(m_queue.empty())
 				{
-					WakeConditionVariable(&m_cv.empty);
+					pWakeConditionVariable(&m_cv.empty);
 				}
 			}
 		}
@@ -247,20 +260,25 @@ public:
 		: m_count(0)
 		, m_exit(false)
 	{
-		m_cv.available = false;
-
 		#ifdef _WINDOWS
 
-		OSVERSIONINFOEX version;
-		memset(&version, 0, sizeof(version));
-		version.dwOSVersionInfoSize = sizeof(version);
-		GetVersionEx((OSVERSIONINFO*)&version);
+		m_cv.available = false;
 
-		if(version.dwMajorVersion >= 6)
+		m_kernel32 = LoadLibrary("kernel32.dll");
+
+		pInitializeConditionVariable = (InitializeConditionVariablePtr)GetProcAddress(m_kernel32, "InitializeConditionVariable");
+		pWakeConditionVariable = (WakeConditionVariablePtr)GetProcAddress(m_kernel32, "WakeConditionVariable");
+		pWakeAllConditionVariable = (WakeAllConditionVariablePtr)GetProcAddress(m_kernel32, "WakeAllConditionVariable");
+		pSleepConditionVariableSRW = (SleepConditionVariableSRWPtr)GetProcAddress(m_kernel32, "SleepConditionVariableSRW");
+		pInitializeSRWLock = (InitializeSRWLockPtr)GetProcAddress(m_kernel32, "InitializeSRWLock");
+		pAcquireSRWLockExclusive = (AcquireSRWLockExclusivePtr)GetProcAddress(m_kernel32, "AcquireSRWLockExclusive");
+		pReleaseSRWLockExclusive = (ReleaseSRWLockExclusivePtr)GetProcAddress(m_kernel32, "ReleaseSRWLockExclusive");
+
+		if(pInitializeConditionVariable != NULL)
 		{
-			InitializeSRWLock(&m_cv.lock);
-			InitializeConditionVariable(&m_cv.notempty);
-			InitializeConditionVariable(&m_cv.empty);
+			pInitializeSRWLock(&m_cv.lock);
+			pInitializeConditionVariable(&m_cv.notempty);
+			pInitializeConditionVariable(&m_cv.empty);
 			
 			m_cv.available = true;
 		}
@@ -278,7 +296,7 @@ public:
 
 		if(m_cv.available)
 		{
-			WakeConditionVariable(&m_cv.notempty);
+			pWakeConditionVariable(&m_cv.notempty);
 		}
 		else
 		{
@@ -289,6 +307,11 @@ public:
 
 		#ifdef _WINDOWS
 
+		}
+
+		if(m_kernel32 != NULL)
+		{
+			FreeLibrary(m_kernel32); // lol, decrement the refcount anyway
 		}
 
 		#endif
@@ -305,13 +328,13 @@ public:
 
 		if(m_cv.available)
 		{
-			AcquireSRWLockExclusive(&m_cv.lock);
+			pAcquireSRWLockExclusive(&m_cv.lock);
 
 			m_queue.push(item);
 
-			ReleaseSRWLockExclusive(&m_cv.lock);
+			pReleaseSRWLockExclusive(&m_cv.lock);
 
-			WakeConditionVariable(&m_cv.notempty);
+			pWakeConditionVariable(&m_cv.notempty);
 		}
 		else
 		{
@@ -339,14 +362,14 @@ public:
 
 		if(m_cv.available)
 		{
-			AcquireSRWLockExclusive(&m_cv.lock);
+			pAcquireSRWLockExclusive(&m_cv.lock);
 
 			while(!m_queue.empty()) 
 			{
-				SleepConditionVariableSRW(&m_cv.empty, &m_cv.lock, INFINITE, 0);
+				pSleepConditionVariableSRW(&m_cv.empty, &m_cv.lock, INFINITE, 0);
 			}
 
-			ReleaseSRWLockExclusive(&m_cv.lock);
+			pReleaseSRWLockExclusive(&m_cv.lock);
 		}
 		else
 		{
