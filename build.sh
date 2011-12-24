@@ -18,7 +18,7 @@ for f in $args; do
 		flags="$flags -DCMAKE_BUILD_TYPE=Release"
 	fi
 	if [ "$f" = "clean" ] ; then
-		clean=true
+		clean_build=true
 	fi
 done 
 
@@ -35,7 +35,8 @@ fi
 cd build
 
 cmake $flags .. 2>&1 | tee -a ../install_log.txt 
-if [ $clean ]; then
+if [ $clean_build = true ]; then
+	echo "Doing a clean build."
 	make clean 2>&1 | tee -a ../install_log.txt 
 fi
 make 2>&1 | tee -a ../install_log.txt 
