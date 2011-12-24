@@ -304,7 +304,17 @@ void GSRendererSW::Sync(int reason)
 
 	m_rl->Sync();
 
-	memset(m_fzb_pages, 0, sizeof(m_fzb_pages));
+	// NOTE: m_fzb_pages is refcounted, zeroing is done automatically
+
+	#ifdef _DEBUG
+
+	for(size_t i = 0; i < countof(m_fzb_pages); i++)
+	{
+		ASSERT(m_fzb_pages[i] == 0);
+	}
+
+	#endif
+
 	memset(m_tex_pages, 0, sizeof(m_tex_pages));
 }
 
@@ -366,6 +376,8 @@ void GSRendererSW::ReleaseTargetPages(GSOffset* o, const GSVector4i& rect)
 
 	for(list<uint32>::iterator i = pages->begin(); i != pages->end(); i++)
 	{
+		ASSERT(m_fzb_pages[*i] > 0);
+
 		_InterlockedDecrement(&m_fzb_pages[*i]);
 	}
 }
@@ -374,15 +386,13 @@ void GSRendererSW::UseSourcePages(const GSTextureCacheSW::Texture* t)
 {
 	for(list<uint32>::const_iterator i = t->m_pages.n.begin(); i != t->m_pages.n.end(); i++)
 	{
-		if(m_fzb_pages[*i]) // currently being drawn to? => sync
+		if(m_fzb_pages[*i]) // currently being drawn to? => sync (could even spin and wait until it hits 0, not sure if it's worth though, or just create 512 condvars? :D)
 		{
-			//
 			Sync(7);
 
-			//
 			return;
 		}
-
+		
 	}
 
 	for(size_t i = 0; i < countof(t->m_pages.bm); i++)
@@ -518,7 +528,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 				string s;
 
-				if(s_save && s_n >= s_saven && PRIM->TME)
+				if(s_save && s_n >= s_saven)
 				{
 					s = format("c:\\temp1\\_%05d_f%lld_tex32_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
 

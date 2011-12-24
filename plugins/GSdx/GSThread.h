@@ -166,7 +166,7 @@ protected:
 	int m_count;
 	queue<T> m_queue;
 	volatile bool m_exit;
-	struct {GSCritSec lock; GSEvent notempty, empty;} m_ev;
+	struct {GSCritSec lock; GSEvent notempty; volatile long count;} m_ev;
 	#ifdef _WINDOWS
 	struct {SRWLOCK lock; CONDITION_VARIABLE notempty, empty; bool available;} m_cv;
 	HMODULE m_kernel32;
@@ -203,15 +203,19 @@ protected:
 					if(m_exit) {pReleaseSRWLockExclusive(&m_cv.lock); return;}
 				}
 
-				T item = m_queue.front();
+				{
+					// NOTE: this is scoped because we must make sure the last "item" is no longer around when Wait detects an empty queue
 
-				pReleaseSRWLockExclusive(&m_cv.lock);
+					T item = m_queue.front();
 
-				Process(item);
+					pReleaseSRWLockExclusive(&m_cv.lock);
 
-				pAcquireSRWLockExclusive(&m_cv.lock);
+					Process(item);
 
-				m_queue.pop();
+					pAcquireSRWLockExclusive(&m_cv.lock);
+
+					m_queue.pop();
+				}
 
 				if(m_queue.empty())
 				{
@@ -224,28 +228,36 @@ protected:
 
 		#endif
 
-			while(m_ev.notempty.Wait())
+			m_ev.lock.Lock();
+
+			while(true)
 			{
-				if(m_exit) break;
-
-				while(!m_queue.empty())
+				while(m_queue.empty())
 				{
-					T item;
+					m_ev.lock.Unlock();
 
-					{
-						GSAutoLock l(&m_ev.lock);
+					m_ev.notempty.Wait();
 
-						item = m_queue.front();
-					}
+					if(m_exit) {return;}
+
+					m_ev.lock.Lock();
+				}
+
+				{
+					// NOTE: this is scoped because we must make sure the last item is no longer around when Wait detects an empty queue
+
+					T item = m_queue.front();
+
+					m_ev.lock.Unlock();
 
 					Process(item);
 
-					{
-						GSAutoLock l(&m_ev.lock);
+					m_ev.lock.Lock();
 
-						m_queue.pop();
-					}
+					m_queue.pop();
 				}
+
+				_InterlockedDecrement(&m_ev.count);
 			}
 
 		#ifdef _WINDOWS
@@ -260,6 +272,8 @@ public:
 		: m_count(0)
 		, m_exit(false)
 	{
+		m_ev.count = 0;
+
 		#ifdef _WINDOWS
 
 		m_cv.available = false;
@@ -345,6 +359,8 @@ public:
 
 			m_queue.push(item);
 
+			_InterlockedIncrement(&m_ev.count);
+
 			m_ev.notempty.Set();
 
 		#ifdef _WINDOWS
@@ -375,8 +391,10 @@ public:
 		{
 
 		#endif
+			
+			// NOTE: it is the safest to have our own counter because m_queue.pop() might decrement its own before the last item runs out of its scope and gets destroyed (implementation dependent)
 
-			while(!m_queue.empty()) _mm_pause();
+			while(m_ev.count > 0) _mm_pause();
 
 		#ifdef _WINDOWS
 
