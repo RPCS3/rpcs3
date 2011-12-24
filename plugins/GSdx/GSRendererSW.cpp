@@ -192,6 +192,21 @@ void GSRendererSW::Draw()
 		data->syncpoint = true;
 	}
 
+	if(m_context->FRAME.Block() == m_context->ZBUF.Block())
+	{
+		// Writing the same address in a different format is incompatible with our screen splitting technique,
+		// it must not necessarily be done by the same batch, enough if there are two in the queue one after eachother, 
+		// first it writes frame buffer at address X, then as z buffer also at address X, due to format differences the 
+		// block layout in memory is not the same.
+		//
+		// Most of these situations are detected by the previous m_fzb != m_context->offset.fzb check, 
+		// but when FRAME.Block() == ZBUF.Block() and f/z writes are switched on/off mutually then offset.fzb stays the same.
+		//
+		// Bully: FBP/ZBP = 0x2300
+
+		data->syncpoint = true;
+	}
+
 	GSVector4i r = data->bbox.rintersect(data->scissor);
 
 	if(gd->sel.fwrite)
