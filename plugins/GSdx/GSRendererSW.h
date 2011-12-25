@@ -41,6 +41,8 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 		{
 			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)_aligned_malloc(sizeof(GSScanlineGlobalData), 32);
 
+			gd->sel.key = 0;
+
 			gd->clut = NULL;
 			gd->dimx = NULL;
 
@@ -55,12 +57,12 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 				
 			if(gd->sel.fwrite)
 			{
-				m_parent->ReleaseTargetPages(m_fb, r);
+				m_parent->ReleaseTargetPages(m_fb->GetPages(r), 0);
 			}
 				
 			if(gd->sel.zwrite)
 			{
-				m_parent->ReleaseTargetPages(m_zb, r);
+				m_parent->ReleaseTargetPages(m_zb->GetPages(r), 1);
 			}
 
 			if(gd->clut) _aligned_free(gd->clut);
@@ -77,7 +79,7 @@ protected:
 	uint8* m_output;
 	bool m_reset;
 	GSPixelOffset4* m_fzb;
-	long m_fzb_pages[512];
+	uint32 m_fzb_pages[512]; // uint16 frame/zbuf pages interleaved
 	uint32 m_tex_pages[16];
 
 	void Reset();
@@ -90,8 +92,8 @@ protected:
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut = false);
 
-	void UseTargetPages(GSOffset* o, const GSVector4i& rect);
-	void ReleaseTargetPages(GSOffset* o, const GSVector4i& rect);
+	void UseTargetPages(const list<uint32>* pages, int offset);
+	void ReleaseTargetPages(const list<uint32>* pages, int offset);
 	void UseSourcePages(const GSTextureCacheSW::Texture* t);
 
 	bool GetScanlineGlobalData(GSScanlineGlobalData& gd);

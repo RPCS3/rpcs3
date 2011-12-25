@@ -204,7 +204,7 @@ protected:
 				}
 
 				{
-					// NOTE: this is scoped because we must make sure the last "item" is no longer around when Wait detects an empty queue
+					// NOTE: this is scoped because we must make sure the last item is no longer around when Wait detects an empty queue
 
 					T item = m_queue.front();
 

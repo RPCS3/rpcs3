@@ -83,11 +83,9 @@ GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, cons
 	return t;
 }
 
-void GSTextureCacheSW::InvalidateVideoMem(GSOffset* o, const GSVector4i& rect)
+void GSTextureCacheSW::InvalidatePages(const list<uint32>* pages, uint32 psm)
 {
-	list<uint32>* pages = o->GetPages(rect);
-
-	for(list<uint32>::iterator p = pages->begin(); p != pages->end(); p++)
+	for(list<uint32>::const_iterator p = pages->begin(); p != pages->end(); p++)
 	{
 		uint32 page = *p;
 
@@ -97,7 +95,7 @@ void GSTextureCacheSW::InvalidateVideoMem(GSOffset* o, const GSVector4i& rect)
 		{
 			Texture* t = *i;
 
-			if(GSUtil::HasSharedBits(o->psm, t->m_TEX0.PSM))
+			if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM))
 			{
 				if(t->m_repeating)
 				{
@@ -185,7 +183,7 @@ GSTextureCacheSW::Texture::Texture(GSState* state, uint32 tw0, const GIFRegTEX0&
 
 	list<uint32>* pages = m_offset->GetPages(GSVector4i(0, 0, 1 << TEX0.TW, 1 << TEX0.TH));
 
-	for(list<uint32>::iterator i = pages->begin(); i != pages->end(); i++)
+	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 	{
 		uint32 page = *i;
 

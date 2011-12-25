@@ -185,6 +185,25 @@ void GSRendererSW::Draw()
 	data->solidrect = gd->sel.IsSolidRect();
 	data->frame = m_perfmon.GetFrame();
 
+	GSVector4i r = data->bbox.rintersect(data->scissor);
+
+	list<uint32>* fb_pages = m_context->offset.fb->GetPages(r);
+	list<uint32>* zb_pages = m_context->offset.zb->GetPages(r);
+
+	//
+
+	if(gd->sel.fwrite)
+	{
+		m_tc->InvalidatePages(fb_pages, m_context->offset.fb->psm);
+	}
+
+	if(gd->sel.zwrite)
+	{
+		m_tc->InvalidatePages(zb_pages, m_context->offset.zb->psm);
+	}
+
+	//
+
 	if(m_fzb != m_context->offset.fzb)
 	{
 		m_fzb = m_context->offset.fzb;
@@ -192,35 +211,39 @@ void GSRendererSW::Draw()
 		data->syncpoint = true;
 	}
 
-	if(m_context->FRAME.Block() == m_context->ZBUF.Block())
-	{
-		// Writing the same address in a different format is incompatible with our screen splitting technique,
-		// it must not necessarily be done by the same batch, enough if there are two in the queue one after eachother, 
-		// first it writes frame buffer at address X, then as z buffer also at address X, due to format differences the 
-		// block layout in memory is not the same.
-		//
-		// Most of these situations are detected by the previous m_fzb != m_context->offset.fzb check, 
-		// but when FRAME.Block() == ZBUF.Block() and f/z writes are switched on/off mutually then offset.fzb stays the same.
-		//
-		// Bully: FBP/ZBP = 0x2300
+	// - chross-check frame and z-buffer pages, they cannot overlap with eachother and with previous batches in queue
+	// - m_fzb filters out most of these cases, only have to be careful when the addresses stay the same and the output is mutually enabled/disabled and alternating (Bully FBP/ZBP = 0x2300)
 
-		data->syncpoint = true;
+	if(!data->syncpoint)
+	{
+		if(gd->sel.fwrite)
+		{
+			for(list<uint32>::iterator i = fb_pages->begin(); i != fb_pages->end(); i++)
+			{
+				if(m_fzb_pages[*i] & 0xffff0000) data->syncpoint = true; // already used as a z-buffer
+			}
+		}
 	}
 
-	GSVector4i r = data->bbox.rintersect(data->scissor);
+	if(!data->syncpoint)
+	{
+		if(gd->sel.zwrite)
+		{
+			for(list<uint32>::iterator i = zb_pages->begin(); i != zb_pages->end(); i++)
+			{
+				if(m_fzb_pages[*i] & 0x0000ffff) data->syncpoint = true; // already used as a frame buffer
+			}
+		}
+	}
 
 	if(gd->sel.fwrite)
 	{
-		m_tc->InvalidateVideoMem(m_context->offset.fb, r);
-
-		UseTargetPages(m_context->offset.fb, r);
+		UseTargetPages(fb_pages, 0);
 	}
 
 	if(gd->sel.zwrite)
 	{
-		m_tc->InvalidateVideoMem(m_context->offset.zb, r);
-
-		UseTargetPages(m_context->offset.zb, r);
+		UseTargetPages(zb_pages, 1);
 	}
 
 	if(s_dump)
@@ -322,13 +345,13 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 {
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM);
 
-	m_tc->InvalidateVideoMem(o, r);
+	list<uint32>* pages = o->GetPages(r);
+
+	m_tc->InvalidatePages(pages, o->psm);
 
 	// check if the changing pages either used as a texture or a target
 
-	list<uint32>* pages = o->GetPages(r);
-
-	for(list<uint32>::iterator i = pages->begin(); i != pages->end(); i++)
+	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 	{
 		uint32 page = *i;
 
@@ -347,11 +370,9 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 
 	list<uint32>* pages = o->GetPages(r);
 
-	for(list<uint32>::iterator i = pages->begin(); i != pages->end(); i++)
+	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 	{
-		uint32 page = *i;
-
-		if(m_fzb_pages[page])
+		if(m_fzb_pages[*i])
 		{
 			Sync(6);
 
@@ -360,25 +381,23 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 	}
 }
 
-void GSRendererSW::UseTargetPages(GSOffset* o, const GSVector4i& rect)
+void GSRendererSW::UseTargetPages(const list<uint32>* pages, int offset)
 {
-	list<uint32>* pages = o->GetPages(rect);
-
-	for(list<uint32>::iterator i = pages->begin(); i != pages->end(); i++)
+	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 	{
-		_InterlockedIncrement(&m_fzb_pages[*i]);
+		ASSERT(((short*)&m_fzb_pages[*i])[offset] < SHRT_MAX);
+
+		_InterlockedIncrement16((short*)&m_fzb_pages[*i] + offset);
 	}
 }
 
-void GSRendererSW::ReleaseTargetPages(GSOffset* o, const GSVector4i& rect)
+void GSRendererSW::ReleaseTargetPages(const list<uint32>* pages, int offset)
 {
-	list<uint32>* pages = o->GetPages(rect);
-
-	for(list<uint32>::iterator i = pages->begin(); i != pages->end(); i++)
+	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 	{
-		ASSERT(m_fzb_pages[*i] > 0);
+		ASSERT(((short*)&m_fzb_pages[*i])[offset] > 0);
 
-		_InterlockedDecrement(&m_fzb_pages[*i]);
+		_InterlockedDecrement16((short*)&m_fzb_pages[*i] + offset);
 	}
 }
 

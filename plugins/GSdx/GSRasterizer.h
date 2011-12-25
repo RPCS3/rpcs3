@@ -42,10 +42,14 @@ public:
 	void* param;
 
 	GSRasterizerData() 
-		: vertices(NULL)
+		: scissor(GSVector4i::zero())
+		, bbox(GSVector4i::zero())
+		, primclass(GS_INVALID_CLASS)
+		, vertices(NULL)
 		, count(0)
 		, solidrect(false)
 		, syncpoint(false)
+		, frame(0)
 		, param(NULL)
 	{
 	}

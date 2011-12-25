@@ -331,6 +331,13 @@ typedef signed long long int64;
 		__asm__("lock; xaddl %[retval], %[Addend]" : [retval] "+r" (retval) : [Addend] "m" (*Addend) : "memory");
 		return retval;
 	}
+	
+	__forceinline long _InterlockedExchangeAdd16(volatile short* const Addend, const short Value)
+	{
+		long retval = Value;
+		__asm__("lock; xaddw %[retval], %[Addend]" : [retval] "+r" (retval) : [Addend] "m" (*Addend) : "memory");
+		return retval;
+	}
 
 	__forceinline long _InterlockedDecrement(volatile long* const lpAddend)
 	{
@@ -340,6 +347,16 @@ typedef signed long long int64;
 	__forceinline long _InterlockedIncrement(volatile long* const lpAddend)
 	{
 		return _InterlockedExchangeAdd(lpAddend, 1) + 1;
+	}
+	
+	__forceinline short _InterlockedDecrement16(volatile short* const lpAddend)
+	{
+		return _InterlockedExchangeAdd16(lpAddend, -1) - 1;
+	}
+	
+	__forceinline short _InterlockedIncrement16(volatile short* const lpAddend)
+	{
+		return _InterlockedExchangeAdd16(lpAddend, 1) + 1;
 	}
 
 	#ifdef __GNUC__
