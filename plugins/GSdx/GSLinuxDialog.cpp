@@ -154,7 +154,7 @@ bool RunLinuxDialog()
 		#endif
 
 
-		theApp.SetConfig("swthreads", atoi((char*)gtk_entry_get_text(GTK_ENTRY(swthreads_text))) );
+		theApp.SetConfig("extrathreads", atoi((char*)gtk_entry_get_text(GTK_ENTRY(swthreads_text))) );
 
         theApp.SetConfig("filter", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(filter_check)));
         theApp.SetConfig("logz", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(logz_check)));

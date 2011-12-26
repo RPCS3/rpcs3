@@ -184,14 +184,16 @@ protected:
 	InitializeSRWLockPtr pInitializeSRWLock;;
 	AcquireSRWLockExclusivePtr pAcquireSRWLockExclusive;
 	ReleaseSRWLockExclusivePtr pReleaseSRWLockExclusive;
+	#elif defined(_LINUX)
+	struct {pthread_mutex_t lock; pthread_cond_t notempty, empty; bool available;} m_cv;
 	#endif
 
 	void ThreadProc()
 	{
-		#ifdef _WINDOWS
 
 		if(m_cv.available)
 		{
+		#ifdef _WINDOWS
 			pAcquireSRWLockExclusive(&m_cv.lock);
 
 			while(true)
@@ -222,12 +224,40 @@ protected:
 					pWakeConditionVariable(&m_cv.empty);
 				}
 			}
+		#elif defined(_LINUX)
+			pthread_mutex_lock(&m_cv.lock);
+
+			while(true)
+			{
+				while(m_queue.empty())
+				{
+					pthread_cond_wait(&m_cv.notempty, &m_cv.lock);
+
+					if(m_exit) {pthread_mutex_unlock(&m_cv.lock); return;}
+				}
+
+				{
+					// NOTE: this is scoped because we must make sure the last item is no longer around when Wait detects an empty queue
+					T item = m_queue.front();
+
+					pthread_mutex_unlock(&m_cv.lock);
+
+					Process(item);
+
+					pthread_mutex_lock(&m_cv.lock);
+
+					m_queue.pop();
+				}
+
+				if(m_queue.empty())
+				{
+					pthread_cond_signal(&m_cv.empty);
+				}
+			}
+		#endif
 		}
 		else
 		{
-
-		#endif
-
 			m_ev.lock.Lock();
 
 			while(true)
@@ -260,11 +290,7 @@ protected:
 				_InterlockedDecrement(&m_ev.count);
 			}
 
-		#ifdef _WINDOWS
-
 		}
-
-		#endif
 	}
 
 public:
@@ -297,6 +323,12 @@ public:
 			m_cv.available = true;
 		}
 
+		#elif defined(_LINUX)
+			m_cv.available = true;
+			// FIXME attribute
+			pthread_cond_init(&m_cv.notempty, NULL);
+			pthread_cond_init(&m_cv.empty, NULL);
+			pthread_mutex_init(&m_cv.lock, NULL);
 		#endif
 
 		CreateThread();
@@ -306,29 +338,32 @@ public:
 	{
 		m_exit = true;
 
-		#ifdef _WINDOWS
 
 		if(m_cv.available)
 		{
+		#ifdef _WINDOWS
 			pWakeConditionVariable(&m_cv.notempty);
+		#elif defined(_LINUX)
+			pthread_cond_signal(&m_cv.notempty);
+
+			pthread_mutex_destroy(&m_cv.lock);
+			pthread_cond_destroy(&m_cv.notempty);
+			pthread_cond_destroy(&m_cv.empty);
+		#endif
 		}
 		else
 		{
-
-		#endif
-
 			m_ev.notempty.Set();
-
-		#ifdef _WINDOWS
-
 		}
 
+
+		#ifdef _WINDOWS
 		if(m_kernel32 != NULL)
 		{
 			FreeLibrary(m_kernel32); // lol, decrement the refcount anyway
 		}
-
 		#endif
+
 	}
 
 	int GetCount() const
@@ -338,10 +373,10 @@ public:
 
 	virtual void Push(const T& item)
 	{
-		#ifdef _WINDOWS
 
 		if(m_cv.available)
 		{
+		#ifdef _WINDOWS
 			pAcquireSRWLockExclusive(&m_cv.lock);
 
 			m_queue.push(item);
@@ -349,11 +384,19 @@ public:
 			pReleaseSRWLockExclusive(&m_cv.lock);
 
 			pWakeConditionVariable(&m_cv.notempty);
+		#elif defined(_LINUX)
+			pthread_mutex_lock(&m_cv.lock);
+
+			m_queue.push(item);
+
+			pthread_mutex_unlock(&m_cv.lock);
+
+			pthread_cond_signal(&m_cv.notempty);
+		#endif
 		}
 		else
 		{
 
-		#endif
 
 			GSAutoLock l(&m_ev.lock);
 
@@ -362,22 +405,17 @@ public:
 			_InterlockedIncrement(&m_ev.count);
 
 			m_ev.notempty.Set();
-
-		#ifdef _WINDOWS
-
 		}
-
-		#endif
 
 		m_count++;
 	}
 
 	virtual void Wait()
 	{
-		#ifdef _WINDOWS
 
 		if(m_cv.available)
 		{
+		#ifdef _WINDOWS
 			pAcquireSRWLockExclusive(&m_cv.lock);
 
 			while(!m_queue.empty()) 
@@ -386,21 +424,25 @@ public:
 			}
 
 			pReleaseSRWLockExclusive(&m_cv.lock);
+		#elif defined(_LINUX)
+			pthread_mutex_lock(&m_cv.lock);
+
+			while(!m_queue.empty()) 
+			{
+				pthread_cond_wait(&m_cv.empty, &m_cv.lock);
+			}
+
+			pthread_mutex_unlock(&m_cv.lock);
+		#endif
 		}
 		else
 		{
-
-		#endif
 			
 			// NOTE: it is the safest to have our own counter because m_queue.pop() might decrement its own before the last item runs out of its scope and gets destroyed (implementation dependent)
 
 			while(m_ev.count > 0) _mm_pause();
 
-		#ifdef _WINDOWS
-
 		}
-
-		#endif
 
 		m_count++;
 	}
