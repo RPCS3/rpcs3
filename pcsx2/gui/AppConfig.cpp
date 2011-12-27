@@ -133,7 +133,12 @@ namespace PathDefs
 	{
 		switch( mode )
 		{
+#ifdef XDG_STD
+			// Move all user data file into central configuration directory (XDG_CONFIG_DIR)
+			case DocsFolder_User:	return GetUserLocalDataDir();
+#else
 			case DocsFolder_User:	return (wxDirName)Path::Combine( wxStandardPaths::Get().GetDocumentsDir(), pxGetAppName() );
+#endif
 			case DocsFolder_Custom: return CustomDocumentsFolder;
 
 			jNO_DEFAULT

@@ -26,8 +26,30 @@
 
 class GPURendererSW : public GPURendererT<GSVertexSW>
 {
+	class GPURasterizerData : public GSRasterizerData
+	{
+	public:
+		GPURasterizerData()
+		{
+			GPUScanlineGlobalData* gd = (GPUScanlineGlobalData*)_aligned_malloc(sizeof(GPUScanlineGlobalData), 32);
+
+			gd->clut = NULL;
+
+			param = gd;
+		}
+
+		virtual ~GPURasterizerData()
+		{
+			GPUScanlineGlobalData* gd = (GPUScanlineGlobalData*)param;
+
+			if(gd->clut) _aligned_free(gd->clut);
+
+			_aligned_free(gd);
+		}
+	};
+
 protected:
-	GSRasterizerList m_rl;
+	IRasterizer* m_rl;
 	GSTexture* m_texture;
 	uint32* m_output;
 

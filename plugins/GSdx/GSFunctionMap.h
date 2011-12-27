@@ -26,30 +26,13 @@
 #include "xbyak/xbyak.h"
 #include "xbyak/xbyak_util.h"
 
-struct GSRasterizerStats
-{
-	int64 ticks;
-	int prims, pixels;
-
-	GSRasterizerStats()
-	{
-		Reset();
-	}
-
-	void Reset()
-	{
-		ticks = 0;
-		pixels = prims = 0;
-	}
-};
-
 template<class KEY, class VALUE> class GSFunctionMap
 {
 protected:
 	struct ActivePtr
 	{
 		uint64 frame, frames;
-		int64 ticks, pixels;
+		uint64 ticks, pixels;
 		VALUE f;
 	};
 
@@ -101,7 +84,7 @@ public:
 		return m_active->f;
 	}
 
-	void UpdateStats(const GSRasterizerStats& stats, uint64 frame)
+	void UpdateStats(uint64 frame, uint64 ticks, int pixels)
 	{
 		if(m_active)
 		{
@@ -111,14 +94,14 @@ public:
 				m_active->frames++;
 			}
 
-			m_active->pixels += stats.pixels;
-			m_active->ticks += stats.ticks;
+			m_active->ticks += ticks;
+			m_active->pixels += pixels;
 		}
 	}
 
 	virtual void PrintStats()
 	{
-		int64 ttpf = 0;
+		uint64 ttpf = 0;
 
 		typename hash_map<KEY, ActivePtr*>::iterator i;
 
@@ -141,9 +124,9 @@ public:
 
 			if(p->frames > 0)
 			{
-				int64 tpp = p->pixels > 0 ? p->ticks / p->pixels : 0;
-				int64 tpf = p->frames > 0 ? p->ticks / p->frames : 0;
-				int64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
+				uint64 tpp = p->pixels > 0 ? p->ticks / p->pixels : 0;
+				uint64 tpf = p->frames > 0 ? p->ticks / p->frames : 0;
+				uint64 ppf = p->frames > 0 ? p->pixels / p->frames : 0;
 
 				printf("[%014llx]%c %6.2f%% | %5.2f%% | f %4lld | p %10lld | tpp %4lld | tpf %9lld | ppf %7lld\n",
 					(uint64)key, m_map.find(key) == m_map.end() ? '*' : ' ',
@@ -167,14 +150,6 @@ public:
 	{
 	}
 };
-
-#if 0 // we can't legally distribute vtune libraries or headers
-#ifdef _WINDOWS
-
-#include "vtune/JITProfiling.h"
-
-#endif
-#endif
 
 template<class CG, class KEY, class VALUE>
 class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
@@ -215,8 +190,7 @@ public:
 
 			m_cgmap[key] = ret;
 
-			#if 0 // we can't legally distribute vtune libraries or headers
-            #ifdef _WINDOWS
+			#ifdef ENABLE_VTUNE
 
 			// vtune method registration
 
@@ -254,7 +228,6 @@ public:
 */
 			}
 
-            #endif
 			#endif
 
 			delete cg;

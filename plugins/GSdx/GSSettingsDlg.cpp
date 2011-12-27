@@ -130,8 +130,8 @@ void GSSettingsDlg::OnInit()
 	SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETRANGE, 0, MAKELPARAM(16, 0));
 	SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("msaa", 0), 0));
 
-	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETRANGE, 0, MAKELPARAM(16, 1));
-	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("swthreads", 1), 0));
+	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETRANGE, 0, MAKELPARAM(16, 0));
+	SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("extrathreads", 0), 0));
 
 	UpdateControls();
 }
@@ -256,7 +256,11 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 			theApp.SetConfig("upscale_multiplier", 1);
 		}
 
-		theApp.SetConfig("windowed", (int)IsDlgButtonChecked(m_hWnd, IDC_WINDOWED));
+		if(GetId() == IDD_CONFIG) // TODO: other options may not be present in IDD_CONFIG2 as well
+		{
+			theApp.SetConfig("windowed", (int)IsDlgButtonChecked(m_hWnd, IDC_WINDOWED));			
+		}
+
 		theApp.SetConfig("filter", (int)IsDlgButtonChecked(m_hWnd, IDC_FILTER));
 		theApp.SetConfig("paltex", (int)IsDlgButtonChecked(m_hWnd, IDC_PALTEX));
 		theApp.SetConfig("vsync", (int)IsDlgButtonChecked(m_hWnd, IDC_VSYNC));
@@ -266,7 +270,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		theApp.SetConfig("nativeres", (int)IsDlgButtonChecked(m_hWnd, IDC_NATIVERES));
 		theApp.SetConfig("resx", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESX), UDM_GETPOS, 0, 0));
 		theApp.SetConfig("resy", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_GETPOS, 0, 0));
-		theApp.SetConfig("swthreads", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0));
+		theApp.SetConfig("extrathreads", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0));
 		theApp.SetConfig("msaa", (int)SendMessage(GetDlgItem(m_hWnd, IDC_MSAA), UDM_GETPOS, 0, 0));
 		// Hacks
 		theApp.SetConfig("UserHacks_AlphaHack", (int)IsDlgButtonChecked(m_hWnd, IDC_ALPHAHACK));

@@ -117,10 +117,10 @@ bool RunLinuxDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), interlace_label);
 	gtk_container_add(GTK_CONTAINER(main_box), interlace_combo_box);
 
-	swthreads_label = gtk_label_new("Software renderer threads:");
+	swthreads_label = gtk_label_new("Extra sw renderer threads:");
 	swthreads_text = gtk_entry_new();
 	char buf[5];
-	sprintf(buf, "%d", theApp.GetConfig("swthreads", 1));
+	sprintf(buf, "%d", theApp.GetConfig("extrathreads", 0));
 
 	gtk_entry_set_text(GTK_ENTRY(swthreads_text), buf);
 	gtk_container_add(GTK_CONTAINER(main_box), swthreads_label);
@@ -178,7 +178,7 @@ bool RunLinuxDialog()
 			theApp.SetConfig( "interlace", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box)) );
 
 
-		theApp.SetConfig("swthreads", atoi((char*)gtk_entry_get_text(GTK_ENTRY(swthreads_text))) );
+		theApp.SetConfig("extrathreads", atoi((char*)gtk_entry_get_text(GTK_ENTRY(swthreads_text))) );
 
         theApp.SetConfig("filter", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(filter_check)));
         theApp.SetConfig("logz", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(logz_check)));

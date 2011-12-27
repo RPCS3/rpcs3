@@ -17,6 +17,7 @@ set(CommonFlags
     #-Wstrict-aliasing # Allow to track strict aliasing issue.
     -Wunused-variable
     -std=c++0x
+    -fno-strict-aliasing
     )
 
 set(OptimizationFlags

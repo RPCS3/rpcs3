@@ -62,7 +62,7 @@ __aligned(struct, 32) GPUScanlineGlobalData
 
 	void* vm;
 	const void* tex;
-	const uint16* clut;
+	uint16* clut;
 	GSVector4i twin; // TWW, TWH, TWX, TWY
 };
 

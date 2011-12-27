@@ -117,7 +117,7 @@ void GSDeviceSW::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 class ShaderBase
 {
 protected:
-	GSVector4i Sample(const GSVector4i& c, const GSVector4i& uf, const GSVector4i& vf)
+	GSVector4i Sample(const GSVector4i& c, const GSVector4i& uf, const GSVector4i& vf) const
 	{
 		GSVector4i c0 = c.upl8();
 		GSVector4i c1 = c.uph8();
@@ -128,17 +128,17 @@ protected:
 		return c0;
 	}
 
-	GSVector4i Blend(const GSVector4i& c0, const GSVector4i& c1)
+	GSVector4i Blend(const GSVector4i& c0, const GSVector4i& c1) const
 	{
 		return c0.lerp16<0>(c1, c1.wwwwl().sll16(7));
 	}
 
-	GSVector4i Blend2x(const GSVector4i& c0, const GSVector4i& c1)
+	GSVector4i Blend2x(const GSVector4i& c0, const GSVector4i& c1) const
 	{
 		return c0.lerp16<0>(c1, c1.wwwwl().sll16(1).pu16().uph8().sll16(7)); // .sll16(1).pu16() => 2x, then clamp (...)
 	}
 
-	GSVector4i Blend(const GSVector4i& c0, const GSVector4i& c1, const GSVector4i& f)
+	GSVector4i Blend(const GSVector4i& c0, const GSVector4i& c1, const GSVector4i& f) const
 	{
 		return c0.lerp16<0>(c1, f);
 	}
@@ -147,12 +147,12 @@ protected:
 class ShaderCopy : public ShaderBase
 {
 public:
-	void operator() (uint32* RESTRICT dst, const GSVector4i& c, const GSVector4i& uf, const GSVector4i& vf)
+	void operator() (uint32* RESTRICT dst, const GSVector4i& c, const GSVector4i& uf, const GSVector4i& vf) const
 	{
 		*dst = Sample(c, uf, vf).pu16().extract32<0>();
 	}
 
-	void operator() (uint32* RESTRICT dst, uint32 c)
+	void operator() (uint32* RESTRICT dst, uint32 c) const
 	{
 		*dst = c;
 	}
@@ -161,12 +161,12 @@ public:
 class ShaderAlphaBlend : public ShaderBase
 {
 public:
-	void operator() (uint32* RESTRICT dst, const GSVector4i& c, const GSVector4i& uf, const GSVector4i& vf)
+	void operator() (uint32* RESTRICT dst, const GSVector4i& c, const GSVector4i& uf, const GSVector4i& vf) const
 	{
 		*dst = Blend(Sample(c, uf, vf), GSVector4i(*dst).uph8()).pu16().extract32<0>();
 	}
 
-	void operator() (uint32* RESTRICT dst, uint32 c)
+	void operator() (uint32* RESTRICT dst, uint32 c) const
 	{
 		*dst = Blend(GSVector4i(c), GSVector4i(*dst).uph8()).pu16().extract32<0>();
 	}
@@ -175,12 +175,12 @@ public:
 class ShaderAlpha2xBlend : public ShaderBase
 {
 public:
-	void operator() (uint32* RESTRICT dst, const GSVector4i& c, const GSVector4i& uf, const GSVector4i& vf)
+	void operator() (uint32* RESTRICT dst, const GSVector4i& c, const GSVector4i& uf, const GSVector4i& vf) const
 	{
 		*dst = Blend2x(Sample(c, uf, vf), GSVector4i(*dst).uph8()).pu16().extract32<0>();
 	}
 
-	void operator() (uint32* RESTRICT dst, uint32 c)
+	void operator() (uint32* RESTRICT dst, uint32 c) const
 	{
 		*dst = Blend2x(GSVector4i(c), GSVector4i(*dst).uph8()).pu16().extract32<0>();
 	}
@@ -196,18 +196,18 @@ public:
 		m_f = GSVector4i((f << 16) | f).xxxx().srl16(1);
 	}
 
-	void operator() (uint32* RESTRICT dst, const GSVector4i& c, const GSVector4i& uf, const GSVector4i& vf)
+	void operator() (uint32* RESTRICT dst, const GSVector4i& c, const GSVector4i& uf, const GSVector4i& vf) const
 	{
 		*dst = Blend(Sample(c, uf, vf), GSVector4i(*dst).uph8(), m_f).pu16().extract32<0>();
 	}
 
-	void operator() (uint32* RESTRICT dst, uint32 c)
+	void operator() (uint32* RESTRICT dst, uint32 c) const
 	{
 		*dst = Blend(GSVector4i(c), GSVector4i(*dst).uph8(), m_f).pu16().extract32<0>();
 	}
 };
 
-template<class SHADER> static void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, SHADER shader, bool linear)
+template<class SHADER> static void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, const SHADER& shader, bool linear)
 {
 	GSVector4i r(dr.ceil());
 

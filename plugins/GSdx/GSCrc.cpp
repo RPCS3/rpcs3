@@ -194,6 +194,7 @@ CRC::Game CRC::m_games[] =
 	{0xD71B57F4, Genji, US, 0},
 	{0xFADEBC45, Genji, EU, 0},
 	{0xB4776FC1, Genji, JP, 0},
+	{0x7D4EA48F, Genji, NoRegion, 0},
 	{0xE04EA200, StarOcean3, EU, 0},
 	{0x23A97857, StarOcean3, US, 0},
 	{0xBEC32D49, StarOcean3, JP, 0},
@@ -366,7 +367,7 @@ CRC::Game CRC::Lookup(uint32 crc)
 			//	printf( "GSdx: excluding CRC hack for 0x%08x\n", m_games[i].crc );
 		}
 	}
-#ifndef NO_CRC_HACKS
+#ifndef DISABLE_CRC_HACKS
 	hash_map<uint32, Game*>::iterator i = m_map.find(crc);
 
 	if(i != m_map.end())

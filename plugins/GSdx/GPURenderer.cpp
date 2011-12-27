@@ -127,7 +127,7 @@ bool GPURenderer::Merge()
 
 void GPURenderer::VSync()
 {
-	GSPerfMonAutoTimer pmat(m_perfmon);
+	GSPerfMonAutoTimer pmat(&m_perfmon);
 
 	m_perfmon.Put(GSPerfMon::Frame);
 

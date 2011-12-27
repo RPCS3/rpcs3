@@ -84,7 +84,7 @@ void GSRendererDX9::VertexKick(bool skip)
 		{
 			dst.t = m_v.GetUV();
 
-			#ifdef USE_UPSCALE_HACKS
+			#ifdef ENABLE_UPSCALE_HACKS
 
 			int Udiff = 0;
 			int Vdiff = 0;

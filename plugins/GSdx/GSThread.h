@@ -23,6 +23,22 @@
 
 #ifdef _WINDOWS
 
+typedef void (WINAPI * InitializeConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
+typedef void (WINAPI * WakeConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
+typedef void (WINAPI * WakeAllConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
+typedef void (WINAPI * SleepConditionVariableSRWPtr)(CONDITION_VARIABLE* ConditionVariable, SRWLOCK* SRWLock, DWORD dwMilliseconds, ULONG Flags);
+typedef void (WINAPI * InitializeSRWLockPtr)(SRWLOCK* SRWLock);
+typedef void (WINAPI * AcquireSRWLockExclusivePtr)(SRWLOCK* SRWLock);
+typedef void (WINAPI * ReleaseSRWLockExclusivePtr)(SRWLOCK* SRWLock);
+
+extern InitializeConditionVariablePtr pInitializeConditionVariable;
+extern WakeConditionVariablePtr pWakeConditionVariable;
+extern WakeAllConditionVariablePtr pWakeAllConditionVariable;
+extern SleepConditionVariableSRWPtr pSleepConditionVariableSRW;
+extern InitializeSRWLockPtr pInitializeSRWLock;;
+extern AcquireSRWLockExclusivePtr pAcquireSRWLockExclusive;
+extern ReleaseSRWLockExclusivePtr pReleaseSRWLockExclusive;
+
 class GSThread
 {
     DWORD m_ThreadId;
@@ -54,37 +70,51 @@ public:
     void Unlock() {LeaveCriticalSection(&m_cs);}
 };
 
-class GSAutoResetEvent
+class GSEvent
 {
 protected:
     HANDLE m_hEvent;
 
 public:
-	GSAutoResetEvent() {m_hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);}
-	~GSAutoResetEvent() {CloseHandle(m_hEvent);}
+	GSEvent(bool manual = false, bool initial = false) {m_hEvent = CreateEvent(NULL, manual, initial, NULL);}
+	~GSEvent() {CloseHandle(m_hEvent);}
 
     void Set() {SetEvent(m_hEvent);}
+	void Reset() {ResetEvent(m_hEvent);}
     bool Wait() {return WaitForSingleObject(m_hEvent, INFINITE) == WAIT_OBJECT_0;}
 };
-/*
-class GSAutoResetEvent
+
+class GSCondVarLock
 {
-protected:
-    long m_sync;
+	SRWLOCK m_lock;
 
 public:
-	GSAutoResetEvent() {m_sync = 0;}
-	~GSAutoResetEvent() {}
+	GSCondVarLock() {pInitializeSRWLock(&m_lock);}
 
-    void Set() {_interlockedbittestandset(&m_sync, 0);}
-    bool Wait() {while(!_interlockedbittestandreset(&m_sync, 0)) _mm_pause(); return true;}
+	void Lock() {pAcquireSRWLockExclusive(&m_lock);}
+	void Unlock() {pReleaseSRWLockExclusive(&m_lock);}
+		
+	operator SRWLOCK* () {return &m_lock;}
 };
-*/
+
+class GSCondVar
+{
+	CONDITION_VARIABLE m_cv;
+
+public:
+	GSCondVar() {pInitializeConditionVariable(&m_cv);}
+
+	void Set() {pWakeConditionVariable(&m_cv);}
+	void Wait(GSCondVarLock& lock) {pSleepConditionVariableSRW(&m_cv, lock, INFINITE, 0);}
+
+	operator CONDITION_VARIABLE* () {return &m_cv;}
+};
 
 #else
 
 #include <pthread.h>
 #include <semaphore.h>
+#include "GSdx.h"
 
 class GSThread
 {
@@ -113,7 +143,7 @@ public:
     GSCritSec()
     {
         pthread_mutexattr_init(&m_mutex_attr);
-        pthread_mutexattr_settype(&m_mutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+        pthread_mutexattr_settype(&m_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
         pthread_mutex_init(&m_mutex, &m_mutex_attr);
     }
 
@@ -128,17 +158,65 @@ public:
     void Unlock() {pthread_mutex_unlock(&m_mutex);}
 };
 
-class GSAutoResetEvent
+class GSEvent
 {
 protected:
     sem_t m_sem;
 
 public:
-    GSAutoResetEvent() {sem_init(&m_sem, 0, 0);}
-    ~GSAutoResetEvent() {sem_destroy(&m_sem);}
+    GSEvent() {sem_init(&m_sem, 0, 0);}
+    ~GSEvent() {sem_destroy(&m_sem);}
 
     void Set() {sem_post(&m_sem);}
     bool Wait() {return sem_wait(&m_sem) == 0;}
+};
+
+// Note except the mutex attribute the code is same as GSCritSec object
+class GSCondVarLock
+{
+    pthread_mutexattr_t m_mutex_attr;
+	pthread_mutex_t m_mutex;
+
+public:
+	GSCondVarLock() 
+	{
+        pthread_mutexattr_init(&m_mutex_attr);
+        pthread_mutexattr_settype(&m_mutex_attr, PTHREAD_MUTEX_NORMAL);
+        pthread_mutex_init(&m_mutex, &m_mutex_attr);
+	}
+	virtual ~GSCondVarLock() 
+	{
+		pthread_mutex_destroy(&m_mutex);
+        pthread_mutexattr_destroy(&m_mutex_attr);
+	}
+
+	void Lock() {pthread_mutex_lock(&m_mutex);}
+	void Unlock() {pthread_mutex_unlock(&m_mutex);}
+		
+	operator pthread_mutex_t* () {return &m_mutex;}
+};
+
+class GSCondVar
+{
+	pthread_cond_t m_cv;
+	pthread_condattr_t m_cv_attr;
+
+public:
+	GSCondVar() 
+	{
+		pthread_condattr_init(&m_cv_attr);
+		pthread_cond_init(&m_cv, &m_cv_attr);
+	}
+	virtual ~GSCondVar() 
+	{
+		pthread_condattr_destroy(&m_cv_attr);
+		pthread_cond_destroy(&m_cv);
+	}
+
+	void Set() {pthread_cond_signal(&m_cv);}
+	void Wait(GSCondVarLock& lock) {pthread_cond_wait(&m_cv, lock);}
+
+	operator pthread_cond_t* () {return &m_cv;}
 };
 
 #endif
@@ -151,4 +229,197 @@ protected:
 public:
     GSAutoLock(GSCritSec* cs) {m_cs = cs; m_cs->Lock();}
     ~GSAutoLock() {m_cs->Unlock();}
+};
+
+class GSEventSpin
+{
+protected:
+    volatile long m_sync;
+	volatile bool m_manual;
+
+public:
+	GSEventSpin(bool manual = false, bool initial = false) {m_sync = initial ? 1 : 0; m_manual = manual;}
+	~GSEventSpin() {}
+
+    void Set() {_interlockedbittestandset(&m_sync, 0);}
+	void Reset() {_interlockedbittestandreset(&m_sync, 0);}
+    bool Wait() 
+	{
+		if(m_manual) while(!m_sync) _mm_pause();
+		else while(!_interlockedbittestandreset(&m_sync, 0)) _mm_pause();
+		return true;
+	}
+};
+
+template<class T> class GSJobQueue : private GSThread
+{
+protected:
+	int m_count;
+	queue<T> m_queue;
+	volatile bool m_exit;
+	struct {GSCritSec lock; GSEvent notempty; volatile long count;} m_ev;
+	struct {GSCondVar notempty, empty; GSCondVarLock lock; bool available;} m_cv;
+
+	void ThreadProc()
+	{
+		if(m_cv.available)
+		{
+			m_cv.lock.Lock();
+
+			while(true)
+			{
+				while(m_queue.empty())
+				{
+					m_cv.notempty.Wait(m_cv.lock);
+
+					if(m_exit) {m_cv.lock.Unlock(); return;}
+				}
+
+				{
+					// NOTE: this is scoped because we must make sure the last item is no longer around when Wait detects an empty queue
+
+					T item = m_queue.front();
+
+					m_cv.lock.Unlock();
+
+					Process(item);
+
+					m_cv.lock.Lock();
+
+					m_queue.pop();
+				}
+
+				if(m_queue.empty())
+				{
+					m_cv.empty.Set();
+				}
+			}
+		}
+		else
+		{
+			m_ev.lock.Lock();
+
+			while(true)
+			{
+				while(m_queue.empty())
+				{
+					m_ev.lock.Unlock();
+
+					m_ev.notempty.Wait();
+
+					if(m_exit) {return;}
+
+					m_ev.lock.Lock();
+				}
+
+				{
+					// NOTE: this is scoped because we must make sure the last item is no longer around when Wait detects an empty queue
+
+					T item = m_queue.front();
+
+					m_ev.lock.Unlock();
+
+					Process(item);
+
+					m_ev.lock.Lock();
+
+					m_queue.pop();
+				}
+
+				_InterlockedDecrement(&m_ev.count);
+			}
+
+		}
+	}
+
+public:
+	GSJobQueue()
+		: m_count(0)
+		, m_exit(false)
+	{
+		m_ev.count = 0;
+
+		#ifdef _WINDOWS
+
+		m_cv.available = pInitializeConditionVariable != NULL;
+
+		#elif defined(_LINUX)
+	
+		//m_cv.available = true;
+		m_cv.available = !!theApp.GetConfig("condvar", 1);
+
+		#endif
+
+		CreateThread();
+	}
+	
+	virtual ~GSJobQueue()
+	{
+		m_exit = true;
+
+		if(m_cv.available)
+		{
+			m_cv.notempty.Set();
+		}
+		else
+		{
+			m_ev.notempty.Set();
+		}
+	}
+
+	int GetCount() const
+	{
+		return m_count;
+	}
+
+	virtual void Push(const T& item)
+	{
+		if(m_cv.available)
+		{
+			m_cv.lock.Lock();
+	
+			m_queue.push(item);
+
+			m_cv.lock.Unlock();
+
+			m_cv.notempty.Set();
+		}
+		else
+		{
+			GSAutoLock l(&m_ev.lock);
+
+			m_queue.push(item);
+
+			_InterlockedIncrement(&m_ev.count);
+
+			m_ev.notempty.Set();
+		}
+
+		m_count++;
+	}
+
+	virtual void Wait()
+	{
+		if(m_cv.available)
+		{
+			m_cv.lock.Lock();
+
+			while(!m_queue.empty()) 
+			{
+				m_cv.empty.Wait(m_cv.lock);
+			}
+
+			m_cv.lock.Unlock();
+		}
+		else
+		{
+			// NOTE: it is the safest to have our own counter because m_queue.pop() might decrement its own before the last item runs out of its scope and gets destroyed (implementation dependent)
+
+			while(m_ev.count > 0) _mm_pause();
+		}
+
+		m_count++;
+	}
+
+	virtual void Process(T& item) = 0;
 };

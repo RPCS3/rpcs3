@@ -18,6 +18,7 @@
 # Installation path           : -DPACKAGE_MODE=TRUE(follow FHS)|FALSE(local bin/)
 # Plugin installation path    : -DPLUGIN_DIR="/usr/lib/pcsx2"
 # Game DB installation path   : -DGAMEINDEX_DIR="/var/games/pcsx2"
+# Follow XDG standard         : -DXDG_STD=TRUE|FALSE
 #-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
@@ -60,11 +61,7 @@ if(FORCE_INTERNAL_ALL)
 endif(FORCE_INTERNAL_ALL)
 
 if(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
-    set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
-    message(STATUS "Use internal version of Soundtouch by default.
-    Note: There have been issues in the past with sound quality depending on the version of Soundtouch
-    Use -DFORCE_INTERNAL_SOUNDTOUCH=FALSE at your own risk")
-    # set(FORCE_INTERNAL_SOUNDTOUCH FALSE)
+    set(FORCE_INTERNAL_SOUNDTOUCH FALSE)
 endif(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
 
 if(NOT DEFINED FORCE_INTERNAL_ZLIB)
@@ -78,6 +75,10 @@ if (FORCE_INTERNAL_SDL)
     message(STATUS "Internal SDL is a development snapshot of libsdl 1.3
     Crashes can be expected and no support will be provided")
 endif (FORCE_INTERNAL_SDL)
+
+if (NOT DEFINED XDG_STD)
+    set(XDG_STD FALSE)
+endif (NOT DEFINED XDG_STD)
 
 #-------------------------------------------------------------------------------
 # Control GCC flags

@@ -76,17 +76,12 @@ void GPUDrawScanline::BeginDraw(const void* param)
 	m_sp = m_sp_map[sel];
 }
 
-void GPUDrawScanline::EndDraw(const GSRasterizerStats& stats, uint64 frame)
+void GPUDrawScanline::EndDraw(uint64 frame, uint64 ticks, int pixels)
 {
-	m_ds_map.UpdateStats(stats, frame);
+	m_ds_map.UpdateStats(frame, ticks, pixels);
 }
 
-void GPUDrawScanline::PrintStats() 
-{
-	m_ds_map.PrintStats();
-}
-
-#ifndef JIT_DRAW
+#ifndef ENABLE_JIT_RASTERIZER
 
 void GPUDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan)
 {

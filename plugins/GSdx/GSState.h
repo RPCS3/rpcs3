@@ -37,70 +37,72 @@
 
 class GSState : public GSAlignedClass<32>
 {
-	typedef void (GSState::*GIFPackedRegHandler)(const GIFPackedReg* r);
+	// RESTRICT prevents multiple loads of the same part of the register when accessing its bitfields (the compiler is happy to know that memory writes in-between will not go there)
+
+	typedef void (GSState::*GIFPackedRegHandler)(const GIFPackedReg* RESTRICT r);
 
 	GIFPackedRegHandler m_fpGIFPackedRegHandlers[16];
 
-	void GIFPackedRegHandlerNull(const GIFPackedReg* r);
-	void GIFPackedRegHandlerRGBA(const GIFPackedReg* r);
-	void GIFPackedRegHandlerSTQ(const GIFPackedReg* r);
-	void GIFPackedRegHandlerUV(const GIFPackedReg* r);
-	void GIFPackedRegHandlerXYZF2(const GIFPackedReg* r);
-	void GIFPackedRegHandlerXYZ2(const GIFPackedReg* r);
-	void GIFPackedRegHandlerFOG(const GIFPackedReg* r);
-	void GIFPackedRegHandlerA_D(const GIFPackedReg* r);
-	void GIFPackedRegHandlerNOP(const GIFPackedReg* r);
+	void GIFPackedRegHandlerNull(const GIFPackedReg* RESTRICT r);
+	void GIFPackedRegHandlerRGBA(const GIFPackedReg* RESTRICT r);
+	void GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r);
+	void GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r);
+	void GIFPackedRegHandlerXYZF2(const GIFPackedReg* RESTRICT r);
+	void GIFPackedRegHandlerXYZ2(const GIFPackedReg* RESTRICT r);
+	void GIFPackedRegHandlerFOG(const GIFPackedReg* RESTRICT r);
+	void GIFPackedRegHandlerA_D(const GIFPackedReg* RESTRICT r);
+	void GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r);
 
-	typedef void (GSState::*GIFRegHandler)(const GIFReg* r);
+	typedef void (GSState::*GIFRegHandler)(const GIFReg* RESTRICT r);
 
 	GIFRegHandler m_fpGIFRegHandlers[256];
 
 	void ApplyTEX0(int i, GIFRegTEX0& TEX0);
 	void ApplyPRIM(const GIFRegPRIM& PRIM);
 
-	void GIFRegHandlerNull(const GIFReg* r);
-	void GIFRegHandlerPRIM(const GIFReg* r);
-	void GIFRegHandlerRGBAQ(const GIFReg* r);
-	void GIFRegHandlerST(const GIFReg* r);
-	void GIFRegHandlerUV(const GIFReg* r);
-	void GIFRegHandlerXYZF2(const GIFReg* r);
-	void GIFRegHandlerXYZ2(const GIFReg* r);
-	template<int i> void GIFRegHandlerTEX0(const GIFReg* r);
-	template<int i> void GIFRegHandlerCLAMP(const GIFReg* r);
-	void GIFRegHandlerFOG(const GIFReg* r);
-	void GIFRegHandlerXYZF3(const GIFReg* r);
-	void GIFRegHandlerXYZ3(const GIFReg* r);
-	void GIFRegHandlerNOP(const GIFReg* r);
-	template<int i> void GIFRegHandlerTEX1(const GIFReg* r);
-	template<int i> void GIFRegHandlerTEX2(const GIFReg* r);
-	template<int i> void GIFRegHandlerXYOFFSET(const GIFReg* r);
-	void GIFRegHandlerPRMODECONT(const GIFReg* r);
-	void GIFRegHandlerPRMODE(const GIFReg* r);
-	void GIFRegHandlerTEXCLUT(const GIFReg* r);
-	void GIFRegHandlerSCANMSK(const GIFReg* r);
-	template<int i> void GIFRegHandlerMIPTBP1(const GIFReg* r);
-	template<int i> void GIFRegHandlerMIPTBP2(const GIFReg* r);
-	void GIFRegHandlerTEXA(const GIFReg* r);
-	void GIFRegHandlerFOGCOL(const GIFReg* r);
-	void GIFRegHandlerTEXFLUSH(const GIFReg* r);
-	template<int i> void GIFRegHandlerSCISSOR(const GIFReg* r);
-	template<int i> void GIFRegHandlerALPHA(const GIFReg* r);
-	void GIFRegHandlerDIMX(const GIFReg* r);
-	void GIFRegHandlerDTHE(const GIFReg* r);
-	void GIFRegHandlerCOLCLAMP(const GIFReg* r);
-	template<int i> void GIFRegHandlerTEST(const GIFReg* r);
-	void GIFRegHandlerPABE(const GIFReg* r);
-	template<int i> void GIFRegHandlerFBA(const GIFReg* r);
-	template<int i> void GIFRegHandlerFRAME(const GIFReg* r);
-	template<int i> void GIFRegHandlerZBUF(const GIFReg* r);
-	void GIFRegHandlerBITBLTBUF(const GIFReg* r);
-	void GIFRegHandlerTRXPOS(const GIFReg* r);
-	void GIFRegHandlerTRXREG(const GIFReg* r);
-	void GIFRegHandlerTRXDIR(const GIFReg* r);
-	void GIFRegHandlerHWREG(const GIFReg* r);
-	void GIFRegHandlerSIGNAL(const GIFReg* r);
-	void GIFRegHandlerFINISH(const GIFReg* r);
-	void GIFRegHandlerLABEL(const GIFReg* r);
+	void GIFRegHandlerNull(const GIFReg* RESTRICT r);
+	void GIFRegHandlerPRIM(const GIFReg* RESTRICT r);
+	void GIFRegHandlerRGBAQ(const GIFReg* RESTRICT r);
+	void GIFRegHandlerST(const GIFReg* RESTRICT r);
+	void GIFRegHandlerUV(const GIFReg* RESTRICT r);
+	void GIFRegHandlerXYZF2(const GIFReg* RESTRICT r);
+	void GIFRegHandlerXYZ2(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerTEX0(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerCLAMP(const GIFReg* RESTRICT r);
+	void GIFRegHandlerFOG(const GIFReg* RESTRICT r);
+	void GIFRegHandlerXYZF3(const GIFReg* RESTRICT r);
+	void GIFRegHandlerXYZ3(const GIFReg* RESTRICT r);
+	void GIFRegHandlerNOP(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerTEX1(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerTEX2(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerXYOFFSET(const GIFReg* RESTRICT r);
+	void GIFRegHandlerPRMODECONT(const GIFReg* RESTRICT r);
+	void GIFRegHandlerPRMODE(const GIFReg* RESTRICT r);
+	void GIFRegHandlerTEXCLUT(const GIFReg* RESTRICT r);
+	void GIFRegHandlerSCANMSK(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerMIPTBP1(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerMIPTBP2(const GIFReg* RESTRICT r);
+	void GIFRegHandlerTEXA(const GIFReg* RESTRICT r);
+	void GIFRegHandlerFOGCOL(const GIFReg* RESTRICT r);
+	void GIFRegHandlerTEXFLUSH(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerSCISSOR(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerALPHA(const GIFReg* RESTRICT r);
+	void GIFRegHandlerDIMX(const GIFReg* RESTRICT r);
+	void GIFRegHandlerDTHE(const GIFReg* RESTRICT r);
+	void GIFRegHandlerCOLCLAMP(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerTEST(const GIFReg* RESTRICT r);
+	void GIFRegHandlerPABE(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerFBA(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerFRAME(const GIFReg* RESTRICT r);
+	template<int i> void GIFRegHandlerZBUF(const GIFReg* RESTRICT r);
+	void GIFRegHandlerBITBLTBUF(const GIFReg* RESTRICT r);
+	void GIFRegHandlerTRXPOS(const GIFReg* RESTRICT r);
+	void GIFRegHandlerTRXREG(const GIFReg* RESTRICT r);
+	void GIFRegHandlerTRXDIR(const GIFReg* RESTRICT r);
+	void GIFRegHandlerHWREG(const GIFReg* RESTRICT r);
+	void GIFRegHandlerSIGNAL(const GIFReg* RESTRICT r);
+	void GIFRegHandlerFINISH(const GIFReg* RESTRICT r);
+	void GIFRegHandlerLABEL(const GIFReg* RESTRICT r);
 
 	int m_version;
 	int m_sssize;
@@ -206,7 +208,7 @@ public:
 	virtual void FlushPrim() = 0;
 	virtual void ResetPrim() = 0;
 	virtual void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r) {}
-	virtual void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r) {}
+	virtual void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut = false) {}
 
 	void Move();
 	void Write(const uint8* mem, int len);

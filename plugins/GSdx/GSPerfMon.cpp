@@ -23,14 +23,14 @@
 #include "GSPerfMon.h"
 
 GSPerfMon::GSPerfMon()
-	: m_total(0)
-	, m_begin(0)
-	, m_frame(0)
+	: m_frame(0)
 	, m_lastframe(0)
 	, m_count(0)
 {
 	memset(m_counters, 0, sizeof(m_counters));
 	memset(m_stats, 0, sizeof(m_stats));
+	memset(m_total, 0, sizeof(m_total));
+	memset(m_begin, 0, sizeof(m_begin));
 }
 
 void GSPerfMon::Put(counter_t c, double val)
@@ -69,32 +69,35 @@ void GSPerfMon::Update()
 	memset(m_counters, 0, sizeof(m_counters));
 }
 
-void GSPerfMon::Start()
+void GSPerfMon::Start(int timer)
 {
-	m_start = __rdtsc();
+	m_start[timer] = __rdtsc();
 
-	if(m_begin == 0)
+	if(m_begin[timer] == 0)
 	{
-		m_begin = m_start;
+		m_begin[timer] = m_start[timer];
 	}
 }
 
-void GSPerfMon::Stop()
+void GSPerfMon::Stop(int timer)
 {
-	if(m_start > 0)
+	if(m_start[timer] > 0)
 	{
-		m_total += __rdtsc() - m_start;
-		m_start = 0;
+		m_total[timer] += __rdtsc() - m_start[timer];
+		m_start[timer] = 0;
 	}
 }
 
-int GSPerfMon::CPU()
+int GSPerfMon::CPU(int timer, bool reset)
 {
-	int percent = (int)(100 * m_total / (__rdtsc() - m_begin));
+	int percent = (int)(100 * m_total[timer] / (__rdtsc() - m_begin[timer]));
 
-	m_begin = 0;
-	m_start = 0;
-	m_total = 0;
+	if(reset)
+	{
+		m_begin[timer] = 0;
+		m_start[timer] = 0;
+		m_total[timer] = 0;
+	}
 
 	return percent;
 }

@@ -127,14 +127,14 @@ protected:
 
 	// TODO: virtual void Write(Source* s, const GSVector4i& r) = 0;
 	// TODO: virtual void Write(Target* t, const GSVector4i& r) = 0;
-#ifndef HW_NO_TEXTURE_CACHE
+#ifndef DISABLE_HW_TEXTURE_CACHE
 	virtual void Read(Target* t, const GSVector4i& r) = 0;
 #endif
 
 public:
 	GSTextureCache(GSRenderer* r);
 	virtual ~GSTextureCache();
-#ifdef HW_NO_TEXTURE_CACHE
+#ifdef DISABLE_HW_TEXTURE_CACHE
 	virtual void Read(Target* t, const GSVector4i& r) = 0;
 #endif
 	void RemoveAll();
@@ -143,8 +143,8 @@ public:
 	Target* LookupTarget(const GIFRegTEX0& TEX0, int w, int h, int type, bool used);
 	Target* LookupTarget(const GIFRegTEX0& TEX0, int w, int h);
 
-	void InvalidateVideoMem(const GSOffset* o, const GSVector4i& r, bool target = true);
-	void InvalidateLocalMem(const GSOffset* o, const GSVector4i& r);
+	void InvalidateVideoMem(GSOffset* o, const GSVector4i& r, bool target = true);
+	void InvalidateLocalMem(GSOffset* o, const GSVector4i& r);
 
 	void IncAge();
 	bool UserHacks_HalfPixelOffset;

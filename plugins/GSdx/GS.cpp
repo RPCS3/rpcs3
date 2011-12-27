@@ -193,7 +193,7 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 
 	if(threads == -1)
 	{
-		threads = theApp.GetConfig("swthreads", 1);
+		threads = theApp.GetConfig("extrathreads", 0);
 	}
 
 	try
@@ -775,6 +775,8 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 		long start = ftell(fp);
 
 		GSvsync(1);
+
+		Sleep(100);
 
 		bool exit = false;
 

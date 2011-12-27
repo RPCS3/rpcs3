@@ -747,16 +747,18 @@ protected:
 		m_tc->InvalidateVideoMem(m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM), r);
 	}
 
-	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
+	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut = false)
 	{
 		// printf("[%d] InvalidateLocalMem %d,%d - %d,%d %05x (%d)\n", (int)m_perfmon.GetFrame(), r.left, r.top, r.right, r.bottom, (int)BITBLTBUF.SBP, (int)BITBLTBUF.SPSM);
 
+		if(clut) return; // FIXME
+		
 		m_tc->InvalidateLocalMem(m_mem.GetOffset(BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM), r);
 	}
 
 	void Draw()
 	{
-#ifndef NO_CRC_HACKS
+#ifndef DISABLE_CRC_HACKS
 		if(GSRendererT<Vertex>::IsBadFrame(m_skip, m_userhacks_skipdraw)) return;
 #endif
 
@@ -922,7 +924,7 @@ protected:
 
 			s_n++;
 		}
-#ifdef HW_NO_TEXTURE_CACHE
+#ifdef DISABLE_HW_TEXTURE_CACHE
 		m_tc->Read(rt, r);
 #endif
 	}

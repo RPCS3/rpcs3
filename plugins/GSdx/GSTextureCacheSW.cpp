@@ -32,7 +32,7 @@ GSTextureCacheSW::~GSTextureCacheSW()
 	RemoveAll();
 }
 
-const GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r, uint32 tw0)
+GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, uint32 tw0)
 {
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
@@ -70,116 +70,48 @@ const GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0
 
 	if(t == NULL)
 	{
-		const GSOffset* o = m_state->m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
-
-		t = new Texture(m_state, o, tw0, TEX0, TEXA);
+		t = new Texture(m_state, tw0, TEX0, TEXA);
 
 		m_textures.insert(t);
 
-		__aligned(uint32, 16) pages[16];
-
-		((GSVector4i*)pages)[0] = GSVector4i::zero();
-		((GSVector4i*)pages)[1] = GSVector4i::zero();
-		((GSVector4i*)pages)[2] = GSVector4i::zero();
-		((GSVector4i*)pages)[3] = GSVector4i::zero();
-
-		GSVector2i bs = (TEX0.TBP0 & 31) == 0 ? psm.pgs : psm.bs;
-
-		int tw = 1 << TEX0.TW;
-		int th = 1 << TEX0.TH;
-
-		for(int y = 0; y < th; y += bs.y)
+		for(list<uint32>::iterator i = t->m_pages.n.begin(); i != t->m_pages.n.end(); i++)
 		{
-			uint32 base = o->block.row[y >> 3];
-
-			for(int x = 0; x < tw; x += bs.x)
-			{
-				uint32 page = (base + o->block.col[x >> 3]) >> 5;
-
-				if(page < MAX_PAGES)
-				{
-					pages[page >> 5] |= 1 << (page & 31);
-				}
-			}
+			m_map[*i].push_front(t);
 		}
-
-		for(int i = 0; i < countof(pages); i++)
-		{
-			uint32 p = pages[i];
-
-			if(p != 0)
-			{
-				list<Texture*>* m = &m_map[i << 5];
-
-				unsigned long j;
-
-				while(_BitScanForward(&j, p))
-				{
-					p ^= 1 << j;
-
-					m[j].push_front(t);
-				}
-			}
-		}
-	}
-
-	if(!t->Update(r))
-	{
-		printf("!@#$\n"); // memory allocation may fail if the game is too hungry (tales of legendia fight transition/scene)
-
-		RemoveAt(t);
-
-		t = NULL;
 	}
 
 	return t;
 }
 
-void GSTextureCacheSW::InvalidateVideoMem(const GSOffset* o, const GSVector4i& rect)
+void GSTextureCacheSW::InvalidatePages(const list<uint32>* pages, uint32 psm)
 {
-	uint32 bp = o->bp;
-	uint32 bw = o->bw;
-	uint32 psm = o->psm;
-
-	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
-
-	GSVector4i r = rect.ralign<Align_Outside>(bs);
-
-	for(int y = r.top; y < r.bottom; y += bs.y)
+	for(list<uint32>::const_iterator p = pages->begin(); p != pages->end(); p++)
 	{
-		uint32 base = o->block.row[y >> 3];
+		uint32 page = *p;
 
-		for(int x = r.left; x < r.right; x += bs.x)
+		const list<Texture*>& map = m_map[page];
+
+		for(list<Texture*>::const_iterator i = map.begin(); i != map.end(); i++)
 		{
-			uint32 page = (base + o->block.col[x >> 3]) >> 5;
+			Texture* t = *i;
 
-			if(page < MAX_PAGES)
+			if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM))
 			{
-				const list<Texture*>& map = m_map[page];
-
-				for(list<Texture*>::const_iterator i = map.begin(); i != map.end(); i++)
+				if(t->m_repeating)
 				{
-					Texture* t = *i;
-
-					if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM))
-					{
-						if(t->m_repeating)
-						{
-							list<GSVector2i>& l = t->m_p2t[page];
+					list<GSVector2i>& l = t->m_p2t[page];
 						
-							for(list<GSVector2i>::iterator j = l.begin(); j != l.end(); j++)
-							{
-								t->m_valid[j->x] &= ~j->y;
-							}
-						}
-						else
-						{
-							t->m_valid[page] = 0;
-						}
-
-						t->m_complete = false;
+					for(list<GSVector2i>::iterator j = l.begin(); j != l.end(); j++)
+					{
+						t->m_valid[j->x] &= j->y;
 					}
 				}
+				else
+				{
+					t->m_valid[page] = 0;
+				}
+
+				t->m_complete = false;
 			}
 		}
 	}
@@ -233,9 +165,8 @@ void GSTextureCacheSW::IncAge()
 
 //
 
-GSTextureCacheSW::Texture::Texture(GSState* state, const GSOffset* offset, uint32 tw0, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
+GSTextureCacheSW::Texture::Texture(GSState* state, uint32 tw0, const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 	: m_state(state)
-	, m_offset(offset)
 	, m_buff(NULL)
 	, m_tw(tw0)
 	, m_age(0)
@@ -246,7 +177,20 @@ GSTextureCacheSW::Texture::Texture(GSState* state, const GSOffset* offset, uint3
 	m_TEXA = TEXA;
 
 	memset(m_valid, 0, sizeof(m_valid));
-	
+	memset(m_pages.bm, 0, sizeof(m_pages.bm));
+
+	m_offset = m_state->m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
+
+	list<uint32>* pages = m_offset->GetPages(GSVector4i(0, 0, 1 << TEX0.TW, 1 << TEX0.TH));
+
+	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+	{
+		uint32 page = *i;
+
+		m_pages.bm[page >> 5] |= 1 << (page & 31);
+		m_pages.n.push_back(page);
+	}
+
 	m_repeating = m_TEX0.IsRepeating(); // repeating mode always works, it is just slightly slower
 
 	if(m_repeating)

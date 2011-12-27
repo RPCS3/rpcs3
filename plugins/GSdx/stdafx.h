@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "config.h"
+
 #ifdef _WINDOWS
 
 // The following macros define the minimum required platform.  The minimum required platform
@@ -69,6 +71,17 @@
 
 #endif
 
+// put these into vc9/common7/ide/usertype.dat to have them highlighted
+
+typedef unsigned char uint8;
+typedef signed char int8;
+typedef unsigned short uint16;
+typedef signed short int16;
+typedef unsigned int uint32;
+typedef signed int int32;
+typedef unsigned long long uint64;
+typedef signed long long int64;
+
 // stdc
 
 #include <stddef.h>
@@ -85,40 +98,106 @@
 #include <list>
 #include <map>
 #include <set>
+#include <queue>
 #include <algorithm>
 
 using namespace std;
 
+#if defined(_MSC_VER) && _MSC_VER >= 1500 && _MSC_VER < 1600
+
+	#include <memory>
+
+	using namespace std::tr1;
+
+#endif
+
+#ifdef __GNUC__
+
+	#include <memory>
+
+#endif
+
 #ifdef _WINDOWS
 
-#include <hash_map>
-#include <hash_set>
+	#include <hash_map>
+	#include <hash_set>
 
-using namespace stdext;
+	using namespace stdext;
 
-#define vsnprintf _vsnprintf
-#define snprintf _snprintf
+	// hashing algoritms at: http://www.cris.com/~Ttwang/tech/inthash.htm
+	// default hash_compare does ldiv and other crazy stuff to reduce speed
 
-#define DIRECTORY_SEPARATOR '\\'
+	template<> class hash_compare<uint32>
+	{
+	public:
+		enum {bucket_size = 1};
+
+		size_t operator()(uint32 key) const
+		{
+			key += ~(key << 15);
+			key ^= (key >> 10);
+			key += (key << 3);
+			key ^= (key >> 6);
+			key += ~(key << 11);
+			key ^= (key >> 16);
+
+			return (size_t)key;
+		}
+
+		bool operator()(uint32 a, uint32 b) const
+		{
+			return a < b;
+		}
+	};
+
+	template<> class hash_compare<uint64>
+	{
+	public:
+		enum {bucket_size = 1};
+
+		size_t operator()(uint64 key) const
+		{
+			key += ~(key << 32);
+			key ^= (key >> 22);
+			key += ~(key << 13);
+			key ^= (key >> 8);
+			key += (key << 3);
+			key ^= (key >> 15);
+			key += ~(key << 27);
+			key ^= (key >> 31);
+
+			return (size_t)key;
+		}
+
+		bool operator()(uint64 a, uint64 b) const
+		{
+			return a < b;
+		}
+	};
+
+	#define vsnprintf _vsnprintf
+	#define snprintf _snprintf
+
+	#define DIRECTORY_SEPARATOR '\\'
 
 #else
 
-#define _BACKWARD_BACKWARD_WARNING_H
+	#define _BACKWARD_BACKWARD_WARNING_H
 
-#define hash_map map
-#define hash_set set
+	#define hash_map map
+	#define hash_set set
 
-//#include <ext/hash_map>
-//#include <ext/hash_set>
+	//#include <ext/hash_map>
+	//#include <ext/hash_set>
 
-#include <GL/glew.h>
-#include <GL/gl.h>
-#include <GL/glx.h>
-#include <GL/glext.h>
+	#include <GL/glew.h>
+	#include <GL/gl.h>
+	#include <GL/glx.h>
+	#include <GL/glext.h>
+	
+	//using namespace __gnu_cxx;
 
-//using namespace __gnu_cxx;
-
-#define DIRECTORY_SEPARATOR '/'
+	#define DIRECTORY_SEPARATOR '/'
 
 #endif
 
@@ -156,19 +235,6 @@ struct delete_second {template<class T> void operator()(T& p) {delete p.second;}
 struct aligned_free_object {template<class T> void operator()(T& p) {_aligned_free(p);}};
 struct aligned_free_first {template<class T> void operator()(T& p) {_aligned_free(p.first);}};
 struct aligned_free_second {template<class T> void operator()(T& p) {_aligned_free(p.second);}};
-
-// syntactic sugar
-
-// put these into vc9/common7/ide/usertype.dat to have them highlighted
-
-typedef unsigned char uint8;
-typedef signed char int8;
-typedef unsigned short uint16;
-typedef signed short int16;
-typedef unsigned int uint32;
-typedef signed int int32;
-typedef unsigned long long uint64;
-typedef signed long long int64;
 
 #define countof(a) (sizeof(a) / sizeof(a[0]))
 
@@ -281,61 +347,100 @@ typedef signed long long int64;
 
 #if !defined(_MSC_VER)
 
-#if !defined(HAVE_ALIGNED_MALLOC)
+	#if !defined(HAVE_ALIGNED_MALLOC)
 
-extern void* _aligned_malloc(size_t size, size_t alignment);
-extern void _aligned_free(void* p);
+	extern void* _aligned_malloc(size_t size, size_t alignment);
+	extern void _aligned_free(void* p);
 
-#endif
+	#endif
 
-// http://svn.reactos.org/svn/reactos/trunk/reactos/include/crt/mingw32/intrin_x86.h?view=markup
-// - the other intrin_x86.h of pcsx2 is not up to date, its _interlockedbittestandreset simply does not work.
+	// http://svn.reactos.org/svn/reactos/trunk/reactos/include/crt/mingw32/intrin_x86.h?view=markup
+	// - the other intrin_x86.h of pcsx2 is not up to date, its _interlockedbittestandreset simply does not work.
 
-__forceinline unsigned char _BitScanForward(unsigned long* const Index, const unsigned long Mask)
-{
-    __asm__("bsfl %[Mask], %[Index]" : [Index] "=r" (*Index) : [Mask] "mr" (Mask));
-    return Mask ? 1 : 0;
-}
+	__forceinline unsigned char _BitScanForward(unsigned long* const Index, const unsigned long Mask)
+	{
+		__asm__("bsfl %[Mask], %[Index]" : [Index] "=r" (*Index) : [Mask] "mr" (Mask));
+		return Mask ? 1 : 0;
+	}
 
-__forceinline unsigned char _interlockedbittestandreset(volatile long* a, const long b)
-{
-    unsigned char retval;
-    __asm__("lock; btrl %[b], %[a]; setb %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
-    return retval;
-}
+	__forceinline unsigned char _interlockedbittestandreset(volatile long* a, const long b)
+	{
+		unsigned char retval;
+		__asm__("lock; btrl %[b], %[a]; setb %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
+		return retval;
+	}
 
-__forceinline unsigned char _interlockedbittestandset(volatile long* a, const long b)
-{
-	unsigned char retval;
-	__asm__("lock; btsl %[b], %[a]; setc %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
-	return retval;
-}
+	__forceinline unsigned char _interlockedbittestandset(volatile long* a, const long b)
+	{
+		unsigned char retval;
+		__asm__("lock; btsl %[b], %[a]; setc %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
+		return retval;
+	}
 
-#ifdef __GNUC__
+	__forceinline long _InterlockedExchangeAdd(volatile long* const Addend, const long Value)
+	{
+		long retval = Value;
+		__asm__("lock; xaddl %[retval], %[Addend]" : [retval] "+r" (retval) : [Addend] "m" (*Addend) : "memory");
+		return retval;
+	}
+	
+	__forceinline long _InterlockedExchangeAdd16(volatile short* const Addend, const short Value)
+	{
+		long retval = Value;
+		__asm__("lock; xaddw %[retval], %[Addend]" : [retval] "+r" (retval) : [Addend] "m" (*Addend) : "memory");
+		return retval;
+	}
 
-__forceinline unsigned long long __rdtsc()
-{
-    #if defined(__amd64__) || defined(__x86_64__)
-    unsigned long long low, high;
-    __asm__ __volatile__("rdtsc" : "=a"(low), "=d"(high));
-    return low | (high << 32);
-    #else
-    unsigned long long retval;
-    __asm__ __volatile__("rdtsc" : "=A"(retval));
-    return retval;
-    #endif
-}
+	__forceinline long _InterlockedDecrement(volatile long* const lpAddend)
+	{
+		return _InterlockedExchangeAdd(lpAddend, -1) - 1;
+	}
+	
+	__forceinline long _InterlockedIncrement(volatile long* const lpAddend)
+	{
+		return _InterlockedExchangeAdd(lpAddend, 1) + 1;
+	}
+	
+	__forceinline short _InterlockedDecrement16(volatile short* const lpAddend)
+	{
+		return _InterlockedExchangeAdd16(lpAddend, -1) - 1;
+	}
+	
+	__forceinline short _InterlockedIncrement16(volatile short* const lpAddend)
+	{
+		return _InterlockedExchangeAdd16(lpAddend, 1) + 1;
+	}
 
-#endif
+	#ifdef __GNUC__
+
+	__forceinline unsigned long long __rdtsc()
+	{
+		#if defined(__amd64__) || defined(__x86_64__)
+		unsigned long long low, high;
+		__asm__ __volatile__("rdtsc" : "=a"(low), "=d"(high));
+		return low | (high << 32);
+		#else
+		unsigned long long retval;
+		__asm__ __volatile__("rdtsc" : "=A"(retval));
+		return retval;
+		#endif
+	}
+
+	#endif
 
 #endif
 
 extern void* vmalloc(size_t size, bool code);
 extern void vmfree(void* ptr, size_t size);
 
-#define USE_UPSCALE_HACKS // Hacks intended to fix upscaling / rendering glitches in HW renderers
-//#define HW_NO_TEXTURE_CACHE // Slow but fixes a lot of bugs
-//#define NO_CRC_HACKS // Disable all game specific hacks
-#ifdef HW_NO_TEXTURE_CACHE
-	#define NO_CRC_HACKS
+#ifdef _WINDOWS
+
+	#ifdef ENABLE_VTUNE
+
+	#include <JITProfiling.h>
+
+	#pragma comment(lib, "jitprofiling.lib")
+
+	#endif
+
 #endif

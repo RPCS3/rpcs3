@@ -67,6 +67,7 @@ public:
 	bool s_save;
 	bool s_savez;
 	int s_saven;
+	GSCritSec s_lock;
 
 public:
 	GSRenderer();

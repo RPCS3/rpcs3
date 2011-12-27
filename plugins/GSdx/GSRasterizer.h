@@ -26,22 +26,47 @@
 #include "GSFunctionMap.h"
 #include "GSThread.h"
 #include "GSAlignedClass.h"
+#include "GSPerfMon.h"
 
-// 
-#define JIT_DRAW
-
-__aligned(class, 32) GSRasterizerData
+__aligned(class, 32) GSRasterizerData : public GSAlignedClass<32>
 {
 public:
 	GSVector4i scissor;
-	bool scissor_test;
+	GSVector4i bbox;
 	GS_PRIM_CLASS primclass;
-	const GSVertexSW* vertices;
+	GSVertexSW* vertices;
 	int count;
+	bool solidrect;
+	bool syncpoint;
 	uint64 frame;
-	const void* param;
+	void* param;
 
-	GSRasterizerData() : scissor_test(true) {}
+	// drawing stats
+
+	volatile long ticks;
+	volatile long pixels;
+
+	GSRasterizerData() 
+		: scissor(GSVector4i::zero())
+		, bbox(GSVector4i::zero())
+		, primclass(GS_INVALID_CLASS)
+		, vertices(NULL)
+		, count(0)
+		, solidrect(false)
+		, syncpoint(false)
+		, frame(0)
+		, param(NULL)
+		, ticks(0)
+		, pixels(0)
+	{
+	}
+
+	virtual ~GSRasterizerData() 
+	{
+		if(vertices != NULL) _aligned_free(vertices);
+
+		// derived class should free param and its members
+	}
 };
 
 class IDrawScanline : public GSAlignedClass<32>
@@ -62,10 +87,9 @@ public:
 	virtual ~IDrawScanline() {}
 
 	virtual void BeginDraw(const void* param) = 0;
-	virtual void EndDraw(const GSRasterizerStats& stats, uint64 frame) = 0;
-	virtual void PrintStats() = 0;
+	virtual void EndDraw(uint64 frame, uint64 ticks, int pixels) = 0;
 
-#ifdef JIT_DRAW
+#ifdef ENABLE_JIT_RASTERIZER
 
 	__forceinline void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan) {m_sp(vertices, dscan);}
 	__forceinline void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan) {m_ds(pixels, left, top, scan);}
@@ -81,32 +105,30 @@ public:
 	
 #endif
 
-	__forceinline bool IsEdge() const {return m_de != NULL;}
-	__forceinline bool IsRect() const {return m_dr != NULL;}
+	__forceinline bool HasEdge() const {return m_de != NULL;}
 };
 
-class IRasterizer
+class IRasterizer : public GSAlignedClass<32>
 {
 public:
 	virtual ~IRasterizer() {}
 
-	virtual void Draw(const GSRasterizerData* data) = 0;
-	virtual void SetThreadId(int id, int threads) = 0;
-	virtual void GetStats(GSRasterizerStats& stats) = 0;
-	virtual void PrintStats() = 0;
+	virtual void Queue(shared_ptr<GSRasterizerData> data) = 0;
+	virtual void Sync() = 0;
 };
 
-__aligned(class, 32) GSRasterizer : public GSAlignedClass<32>, public IRasterizer
+__aligned(class, 32) GSRasterizer : public IRasterizer
 {
 protected:
+	GSPerfMon* m_perfmon;
 	IDrawScanline* m_ds;
 	int m_id;
 	int m_threads;
 	uint8* m_myscanline;
-	GSRasterizerStats m_stats;
 	GSVector4i m_scissor;
 	GSVector4 m_fscissor;
 	struct {GSVertexSW* buff; int count;} m_edge;
+	int m_pixels;
 
 	typedef void (GSRasterizer::*DrawPrimPtr)(const GSVertexSW* v, int count);
 
@@ -114,73 +136,86 @@ protected:
 	void DrawPoint(const GSVertexSW* v, int count);
 	void DrawLine(const GSVertexSW* v);
 	void DrawTriangle(const GSVertexSW* v);
-	void DrawSprite(const GSVertexSW* v);
+	void DrawSprite(const GSVertexSW* v, bool solidrect);
 
-	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& edge, const GSVertexSW& dedge, const GSVertexSW& dscan, const GSVector4& x0, const GSVector4& y0);
+	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& edge, const GSVertexSW& dedge, const GSVertexSW& dscan, const GSVector4& p0);
 
 	void DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, int orientation, int side);
 
-	__forceinline bool IsOneOfMyScanlines(int scanline) const;
 	__forceinline void AddScanline(GSVertexSW* e, int pixels, int left, int top, const GSVertexSW& scan);
 	__forceinline void Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bool edge = false);
 
 public:
-	GSRasterizer(IDrawScanline* ds);
+	GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon);
 	virtual ~GSRasterizer();
 
-	// IRasterizer
+	__forceinline bool IsOneOfMyScanlines(int top) const;
+	__forceinline bool IsOneOfMyScanlines(int top, int bottom) const;
+	__forceinline int FindMyNextScanline(int top) const;
 
-	void Draw(const GSRasterizerData* data);
-	void SetThreadId(int id, int threads);
-	void GetStats(GSRasterizerStats& stats);
-	void PrintStats() {m_ds->PrintStats();}
-};
-
-class GSRasterizerMT : public GSRasterizer, private GSThread
-{
-protected:
-	volatile long& m_sync;
-	GSAutoResetEvent m_draw;
-	const GSRasterizerData* m_data;
-
-	void ThreadProc();
-
-public:
-	GSRasterizerMT(IDrawScanline* ds, volatile long& sync);
-	virtual ~GSRasterizerMT();
+	void Draw(shared_ptr<GSRasterizerData> data);
 
 	// IRasterizer
 
-	void Draw(const GSRasterizerData* data);
+	void Queue(shared_ptr<GSRasterizerData> data);
+	void Sync() {}
 };
 
-class GSRasterizerList : protected vector<IRasterizer*>
+class GSRasterizerList 
+	: public IRasterizer
+	, private GSJobQueue<shared_ptr<GSRasterizerData> >
 {
 protected:
-	volatile long m_sync;
-	GSRasterizerStats m_stats;
-	int64 m_start;
-	int m_threads;
+	class GSWorker : public GSJobQueue<shared_ptr<GSRasterizerData> >
+	{
+		GSRasterizer* m_r;
 
-public:
+	public:
+		GSWorker(GSRasterizer* r);
+		virtual ~GSWorker();
+
+		// GSJobQueue
+
+		void Push(const shared_ptr<GSRasterizerData>& item);
+		void Process(shared_ptr<GSRasterizerData>& item);
+	};
+
+	vector<GSWorker*> m_workers;
+
 	GSRasterizerList();
+
+	// GSJobQueue
+
+	void Process(shared_ptr<GSRasterizerData>& item);
+
+public:
 	virtual ~GSRasterizerList();
 
-	template<class DS> void Create(int threads)
+	template<class DS> static IRasterizer* Create(int threads, GSPerfMon* perfmon)
 	{
-		threads = std::max<int>(threads, 1); // TODO: min(threads, number of cpu cores)
+		threads = std::max<int>(threads, 0);
 
-		push_back(new GSRasterizer(new DS()));
-
-		for(int i = 1; i < threads; i++)
+		if(threads == 0)
 		{
-			push_back(new GSRasterizerMT(new DS(), m_sync));
+			return new GSRasterizer(new DS(), 0, 1, perfmon);
+		}
+		else
+		{
+			GSRasterizerList* rl = new GSRasterizerList();
+
+			for(int i = 0; i < threads; i++)
+			{
+				rl->m_workers.push_back(new GSWorker(new GSRasterizer(new DS(), i, threads, perfmon)));
+			}
+
+			return rl;
 		}
 	}
 
-	void Sync();
+	int m_sync_count;
 
-	void Draw(const GSRasterizerData* data, int width, int height);
-	void GetStats(GSRasterizerStats& stats);
-	void PrintStats();
+	// IRasterizer
+
+	void Queue(shared_ptr<GSRasterizerData> data);
+	void Sync();
 };
