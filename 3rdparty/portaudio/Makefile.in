@@ -18,7 +18,7 @@ libdir = @libdir@
 includedir = @includedir@
 CC = @CC@
 CXX = @CXX@
-CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src/common -I$(top_srcdir)/src/os/unix @CFLAGS@ @DEFS@
+CFLAGS = @CFLAGS@ @DEFS@
 LIBS = @LIBS@
 AR = @AR@
 RANLIB = @RANLIB@
@@ -67,9 +67,23 @@ LOOPBACK_OBJS = \
 	qa/loopback/src/write_wav.o \
 	qa/loopback/src/paqa.o
 	
-TESTS = \
+EXAMPLES = \
+	bin/pa_devs \
+	bin/pa_fuzz \
+	bin/paex_pink \
+	bin/paex_read_write_wire \
+	bin/paex_record \
+	bin/paex_saw \
+	bin/paex_sine \
+	bin/paex_write_sine \
+	bin/paex_write_sine_nonint
+
+SELFTESTS = \
 	bin/paqa_devs \
 	bin/paqa_errs \
+	bin/paqa_latency
+	
+TESTS = \
 	bin/patest1 \
 	bin/patest_buffer \
 	bin/patest_callbackstop \
@@ -85,15 +99,9 @@ TESTS = \
 	bin/patest_mono \
 	bin/patest_multi_sine \
 	bin/patest_out_underflow \
-	bin/patest_pink \
 	bin/patest_prime \
-	bin/patest_read_record \
-	bin/patest_read_write_wire \
-	bin/patest_record \
 	bin/patest_ringmix \
-	bin/patest_saw \
 	bin/patest_sine8 \
-	bin/patest_sine \
 	bin/patest_sine_channelmaps \
 	bin/patest_sine_formats \
 	bin/patest_sine_time \
@@ -105,10 +113,6 @@ TESTS = \
 	bin/patest_two_rates \
 	bin/patest_underflow \
 	bin/patest_wire \
-	bin/patest_write_sine \
-	bin/patest_write_sine_nonint \
-	bin/pa_devs \
-	bin/pa_fuzz \
 	bin/pa_minlat
 
 # Most of these don't compile yet.  Put them in TESTS, above, if
@@ -151,9 +155,13 @@ SRC_DIRS = \
 SUBDIRS =
 @ENABLE_CXX_TRUE@SUBDIRS += bindings/cpp
 
-all: lib/$(PALIB) all-recursive tests
+all: lib/$(PALIB) all-recursive tests examples selftests
 
 tests: bin-stamp $(TESTS)
+
+examples: bin-stamp $(EXAMPLES)
+
+selftests: bin-stamp $(SELFTESTS)
 
 loopback: bin-stamp bin/paloopback
 
@@ -165,6 +173,14 @@ lib/$(PALIB): lib-stamp $(LTOBJS) $(MAKEFILE) $(PAINC)
 $(ALL_TESTS): bin/%: lib/$(PALIB) $(MAKEFILE) $(PAINC) test/%.c
 	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(top_srcdir)/test/$*.c lib/$(PALIB) $(LIBS)
 	@WITH_ASIO_TRUE@  $(LIBTOOL) --mode=link --tag=CXX $(CXX) -o $@ $(CXXFLAGS) $(top_srcdir)/test/$*.c lib/$(PALIB) $(LIBS)
+
+$(EXAMPLES): bin/%: lib/$(PALIB) $(MAKEFILE) $(PAINC) examples/%.c
+	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(top_srcdir)/examples/$*.c lib/$(PALIB) $(LIBS)
+	@WITH_ASIO_TRUE@  $(LIBTOOL) --mode=link --tag=CXX $(CXX) -o $@ $(CXXFLAGS) $(top_srcdir)/examples/$*.c lib/$(PALIB) $(LIBS)
+
+$(SELFTESTS): bin/%: lib/$(PALIB) $(MAKEFILE) $(PAINC) qa/%.c
+	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(top_srcdir)/qa/$*.c lib/$(PALIB) $(LIBS)
+	@WITH_ASIO_TRUE@  $(LIBTOOL) --mode=link --tag=CXX $(CXX) -o $@ $(CXXFLAGS) $(top_srcdir)/qa/$*.c lib/$(PALIB) $(LIBS)
 
 bin/paloopback: lib/$(PALIB) $(MAKEFILE) $(PAINC) $(LOOPBACK_OBJS)
 	@WITH_ASIO_FALSE@ $(LIBTOOL) --mode=link $(CC) -o $@ $(CFLAGS) $(LOOPBACK_OBJS) lib/$(PALIB) $(LIBS)

@@ -7,33 +7,45 @@
 */
 
 /**
+ @internal
  @defgroup common_src Source code common to all implementations
 */
 
 /**
+ @internal
  @defgroup win_src Source code common to all Windows implementations
 */
 
 /**
+ @internal
  @defgroup unix_src Source code common to all Unix implementations
 */
 
 /**
+ @internal
  @defgroup macosx_src Source code common to all Macintosh implementations
 */
 
 /**
+ @internal
  @defgroup hostapi_src Source code for specific Host APIs
 */
 
 /**
- @defgroup test_src Test and example programs
+ @internal
+ @defgroup test_src Test programs
 */
 
 /**
- @page srcguide A guide to the PortAudio sources.
+ @defgroup examples_src Example programs demonstrating PortAudio usage
+*/
+
+/**
+ @internal
+ @page srcguide A guide to the PortAudio sources
 
  - \ref public_header
+ - \ref examples_src
  - \ref common_src
  - \ref win_src
  - \ref unix_src
