@@ -114,6 +114,7 @@ public:
 
 #include <pthread.h>
 #include <semaphore.h>
+#include "GSdx.h"
 
 class GSThread
 {
@@ -142,7 +143,7 @@ public:
     GSCritSec()
     {
         pthread_mutexattr_init(&m_mutex_attr);
-        pthread_mutexattr_settype(&m_mutex_attr, PTHREAD_MUTEX_RECURSIVE_NP);
+        pthread_mutexattr_settype(&m_mutex_attr, PTHREAD_MUTEX_RECURSIVE);
         pthread_mutex_init(&m_mutex, &m_mutex_attr);
     }
 
@@ -170,27 +171,47 @@ public:
     bool Wait() {return sem_wait(&m_sem) == 0;}
 };
 
+// Note except the mutex attribute the code is same as GSCritSec object
 class GSCondVarLock
 {
-	pthread_mutex_t m_lock;
+    pthread_mutexattr_t m_mutex_attr;
+	pthread_mutex_t m_mutex;
 
 public:
-	GSCondVarLock() {pthread_mutex_init(&m_lock, NULL);}
-	virtual ~GSCondVarLock() {pthread_mutex_destroy(&m_lock);}
+	GSCondVarLock() 
+	{
+        pthread_mutexattr_init(&m_mutex_attr);
+        pthread_mutexattr_settype(&m_mutex_attr, PTHREAD_MUTEX_NORMAL);
+        pthread_mutex_init(&m_mutex, &m_mutex_attr);
+	}
+	virtual ~GSCondVarLock() 
+	{
+		pthread_mutex_destroy(&m_mutex);
+        pthread_mutexattr_destroy(&m_mutex_attr);
+	}
 
-	void Lock() {pthread_mutex_lock(&m_lock);}
-	void Unlock() {pthread_mutex_unlock(&m_lock);}
+	void Lock() {pthread_mutex_lock(&m_mutex);}
+	void Unlock() {pthread_mutex_unlock(&m_mutex);}
 		
-	operator pthread_mutex_t* () {return &m_lock;}
+	operator pthread_mutex_t* () {return &m_mutex;}
 };
 
 class GSCondVar
 {
 	pthread_cond_t m_cv;
+	pthread_condattr_t m_cv_attr;
 
 public:
-	GSCondVar() {pthread_cond_init(&m_cv, NULL);}
-	virtual ~GSCondVar() {pthread_cond_destroy(&m_cv);}
+	GSCondVar() 
+	{
+		pthread_condattr_init(&m_cv_attr);
+		pthread_cond_init(&m_cv, &m_cv_attr);
+	}
+	virtual ~GSCondVar() 
+	{
+		pthread_condattr_destroy(&m_cv_attr);
+		pthread_cond_destroy(&m_cv);
+	}
 
 	void Set() {pthread_cond_signal(&m_cv);}
 	void Wait(GSCondVarLock& lock) {pthread_cond_wait(&m_cv, lock);}
@@ -324,7 +345,8 @@ public:
 
 		#elif defined(_LINUX)
 	
-		m_cv.available = true;
+		//m_cv.available = true;
+		m_cv.available = !!theApp.GetConfig("condvar", 1);
 
 		#endif
 
