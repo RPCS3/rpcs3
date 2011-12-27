@@ -41,7 +41,7 @@ namespace soundtouch
 
 // This will be brought in later anyways, but if we bring it in now, it'll avoid
 // warnings about redefining __LINUX__.
-#include "Utilities/Dependencies.h"
+#include "Utilities/Dependencies.h" 
 #include "Pcsx2Defs.h"
 #include "Pcsx2Types.h"
 
