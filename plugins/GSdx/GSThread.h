@@ -189,7 +189,7 @@ class GSCondVar
 	pthread_cond_t m_cv;
 
 public:
-	GSCondVar() {pthread_cond_init(&m_cv);}
+	GSCondVar() {pthread_cond_init(&m_cv, NULL);}
 	virtual ~GSCondVar() {pthread_cond_destroy(&m_cv);}
 
 	void Set() {pthread_cond_signal(&m_cv);}
