@@ -2567,6 +2567,9 @@ bool GSC_SimpsonsGame(const GSFrameInfo& fi, int& skip)
 
 bool GSC_Genji(const GSFrameInfo& fi, int& skip)
 {
+	if( !skip && fi.TME && (fi.FBP == 0x700 || fi.FBP == 0x0) && fi.TBP0 == 0x1500 && fi.TPSM )
+		skip=1;
+
 	if(skip == 0)
 	{
 		if(fi.TME && fi.FBP == 0x01500 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00e00 && fi.TPSM == PSM_PSMZ16)
