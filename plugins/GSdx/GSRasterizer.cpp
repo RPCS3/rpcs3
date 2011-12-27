@@ -163,6 +163,9 @@ void GSRasterizer::Draw(shared_ptr<GSRasterizerData> data)
 
 	uint64 ticks = __rdtsc() - start;
 
+	_InterlockedExchangeAdd(&data->ticks, ticks);
+	_InterlockedExchangeAdd(&data->pixels, m_pixels);
+
 	m_ds->EndDraw(data->frame, ticks, m_pixels);
 }
 

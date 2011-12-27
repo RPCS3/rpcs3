@@ -592,7 +592,11 @@ void GSState::ApplyTEX0(int i, GIFRegTEX0& TEX0)
 
 	bool wt = m_mem.m_clut.WriteTest(TEX0, m_env.TEXCLUT);
 
-	if(wt || PRIM->CTXT == i && TEX0 != m_env.CTXT[i].TEX0)
+	// clut loading already covered with WriteTest, for drawing only have to check CPSM and CSA (MGS3 intro skybox would be drawn piece by piece without this)
+
+	uint64 mask = 0x1f78001c3fffffffull; // TBP0 TBW PSM TW TCC TFX CPSM CSA
+
+	if(wt || PRIM->CTXT == i && ((TEX0.u64 ^ m_env.CTXT[i].TEX0.u64) & mask))
 	{
 		Flush();
 	}
@@ -743,7 +747,9 @@ template<int i> void GSState::GIFRegHandlerTEX2(const GIFReg* RESTRICT r)
 	//    TFX, TCC, TH, TW, TBW, and TBP0
 
 	uint64 mask = 0xFFFFFFE003F00000ull; // TEX2 bits
+
 	GIFRegTEX0 TEX0;
+	
 	TEX0.u64 = (m_env.CTXT[i].TEX0.u64 & ~mask) | (r->u64 & mask);
 
 	ApplyTEX0(i, TEX0);

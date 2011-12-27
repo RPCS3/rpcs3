@@ -30,8 +30,6 @@
 
 class GSOffset : public GSAlignedClass<32>
 {
-	GSCritSec m_lock; // GetPages could be called from multiple threads
-
 	hash_map<uint64, list<uint32>*> m_cache;
 
 public:

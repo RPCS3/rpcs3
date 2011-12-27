@@ -23,6 +23,22 @@
 
 #ifdef _WINDOWS
 
+typedef void (WINAPI * InitializeConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
+typedef void (WINAPI * WakeConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
+typedef void (WINAPI * WakeAllConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
+typedef void (WINAPI * SleepConditionVariableSRWPtr)(CONDITION_VARIABLE* ConditionVariable, SRWLOCK* SRWLock, DWORD dwMilliseconds, ULONG Flags);
+typedef void (WINAPI * InitializeSRWLockPtr)(SRWLOCK* SRWLock);
+typedef void (WINAPI * AcquireSRWLockExclusivePtr)(SRWLOCK* SRWLock);
+typedef void (WINAPI * ReleaseSRWLockExclusivePtr)(SRWLOCK* SRWLock);
+
+extern InitializeConditionVariablePtr pInitializeConditionVariable;
+extern WakeConditionVariablePtr pWakeConditionVariable;
+extern WakeAllConditionVariablePtr pWakeAllConditionVariable;
+extern SleepConditionVariableSRWPtr pSleepConditionVariableSRW;
+extern InitializeSRWLockPtr pInitializeSRWLock;;
+extern AcquireSRWLockExclusivePtr pAcquireSRWLockExclusive;
+extern ReleaseSRWLockExclusivePtr pReleaseSRWLockExclusive;
+
 class GSThread
 {
     DWORD m_ThreadId;
@@ -66,6 +82,32 @@ public:
     void Set() {SetEvent(m_hEvent);}
 	void Reset() {ResetEvent(m_hEvent);}
     bool Wait() {return WaitForSingleObject(m_hEvent, INFINITE) == WAIT_OBJECT_0;}
+};
+
+class GSCondVarLock
+{
+	SRWLOCK m_lock;
+
+public:
+	GSCondVarLock() {pInitializeSRWLock(&m_lock);}
+
+	void Lock() {pAcquireSRWLockExclusive(&m_lock);}
+	void Unlock() {pReleaseSRWLockExclusive(&m_lock);}
+		
+	operator SRWLOCK* () {return &m_lock;}
+};
+
+class GSCondVar
+{
+	CONDITION_VARIABLE m_cv;
+
+public:
+	GSCondVar() {pInitializeConditionVariable(&m_cv);}
+
+	void Set() {pWakeConditionVariable(&m_cv);}
+	void Wait(GSCondVarLock& lock) {pSleepConditionVariableSRW(&m_cv, lock, INFINITE, 0);}
+
+	operator CONDITION_VARIABLE* () {return &m_cv;}
 };
 
 #else
@@ -128,6 +170,34 @@ public:
     bool Wait() {return sem_wait(&m_sem) == 0;}
 };
 
+class GSCondVarLock
+{
+	pthread_mutex_t m_lock;
+
+public:
+	GSCondVarLock() {pthread_mutex_init(&m_lock, NULL);}
+	virtual ~GSCondVarLock() {pthread_mutex_destroy(&m_lock);}
+
+	void Lock() {pthread_mutex_lock(&m_lock);}
+	void Unlock() {pthread_mutex_unlock(&m_lock);}
+		
+	operator pthread_mutex_t* () {return &m_lock;}
+};
+
+class GSCondVar
+{
+	pthread_cond_t m_cv;
+
+public:
+	GSCondVar() {pthread_cond_init(&m_cv);}
+	virtual ~GSCondVar() {pthread_cond_destroy(&m_cv);}
+
+	void Set() {pthread_cond_signal(&m_cv);}
+	void Wait(GSCondVarLock& lock) {pthread_cond_wait(&m_cv, lock);}
+
+	operator pthread_cond_t* () {return &m_cv;}
+};
+
 #endif
 
 class GSAutoLock
@@ -167,42 +237,21 @@ protected:
 	queue<T> m_queue;
 	volatile bool m_exit;
 	struct {GSCritSec lock; GSEvent notempty; volatile long count;} m_ev;
-	#ifdef _WINDOWS
-	struct {SRWLOCK lock; CONDITION_VARIABLE notempty, empty; bool available;} m_cv;
-	HMODULE m_kernel32;
-	typedef void (WINAPI * InitializeConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
-	typedef void (WINAPI * WakeConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
-	typedef void (WINAPI * WakeAllConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
-	typedef void (WINAPI * SleepConditionVariableSRWPtr)(CONDITION_VARIABLE* ConditionVariable, SRWLOCK* SRWLock, DWORD dwMilliseconds, ULONG Flags);
-	typedef void (WINAPI * InitializeSRWLockPtr)(SRWLOCK* SRWLock);
-	typedef void (WINAPI * AcquireSRWLockExclusivePtr)(SRWLOCK* SRWLock);
-	typedef void (WINAPI * ReleaseSRWLockExclusivePtr)(SRWLOCK* SRWLock);
-	InitializeConditionVariablePtr pInitializeConditionVariable;
-	WakeConditionVariablePtr pWakeConditionVariable;
-	WakeAllConditionVariablePtr pWakeAllConditionVariable;
-	SleepConditionVariableSRWPtr pSleepConditionVariableSRW;
-	InitializeSRWLockPtr pInitializeSRWLock;;
-	AcquireSRWLockExclusivePtr pAcquireSRWLockExclusive;
-	ReleaseSRWLockExclusivePtr pReleaseSRWLockExclusive;
-	#elif defined(_LINUX)
-	struct {pthread_mutex_t lock; pthread_cond_t notempty, empty; bool available;} m_cv;
-	#endif
+	struct {GSCondVar notempty, empty; GSCondVarLock lock; bool available;} m_cv;
 
 	void ThreadProc()
 	{
-
 		if(m_cv.available)
 		{
-		#ifdef _WINDOWS
-			pAcquireSRWLockExclusive(&m_cv.lock);
+			m_cv.lock.Lock();
 
 			while(true)
 			{
 				while(m_queue.empty())
 				{
-					pSleepConditionVariableSRW(&m_cv.notempty, &m_cv.lock, INFINITE, 0);
+					m_cv.notempty.Wait(m_cv.lock);
 
-					if(m_exit) {pReleaseSRWLockExclusive(&m_cv.lock); return;}
+					if(m_exit) {m_cv.lock.Unlock(); return;}
 				}
 
 				{
@@ -210,51 +259,20 @@ protected:
 
 					T item = m_queue.front();
 
-					pReleaseSRWLockExclusive(&m_cv.lock);
+					m_cv.lock.Unlock();
 
 					Process(item);
 
-					pAcquireSRWLockExclusive(&m_cv.lock);
+					m_cv.lock.Lock();
 
 					m_queue.pop();
 				}
 
 				if(m_queue.empty())
 				{
-					pWakeConditionVariable(&m_cv.empty);
+					m_cv.empty.Set();
 				}
 			}
-		#elif defined(_LINUX)
-			pthread_mutex_lock(&m_cv.lock);
-
-			while(true)
-			{
-				while(m_queue.empty())
-				{
-					pthread_cond_wait(&m_cv.notempty, &m_cv.lock);
-
-					if(m_exit) {pthread_mutex_unlock(&m_cv.lock); return;}
-				}
-
-				{
-					// NOTE: this is scoped because we must make sure the last item is no longer around when Wait detects an empty queue
-					T item = m_queue.front();
-
-					pthread_mutex_unlock(&m_cv.lock);
-
-					Process(item);
-
-					pthread_mutex_lock(&m_cv.lock);
-
-					m_queue.pop();
-				}
-
-				if(m_queue.empty())
-				{
-					pthread_cond_signal(&m_cv.empty);
-				}
-			}
-		#endif
 		}
 		else
 		{
@@ -302,33 +320,12 @@ public:
 
 		#ifdef _WINDOWS
 
-		m_cv.available = false;
-
-		m_kernel32 = LoadLibrary("kernel32.dll");
-
-		pInitializeConditionVariable = (InitializeConditionVariablePtr)GetProcAddress(m_kernel32, "InitializeConditionVariable");
-		pWakeConditionVariable = (WakeConditionVariablePtr)GetProcAddress(m_kernel32, "WakeConditionVariable");
-		pWakeAllConditionVariable = (WakeAllConditionVariablePtr)GetProcAddress(m_kernel32, "WakeAllConditionVariable");
-		pSleepConditionVariableSRW = (SleepConditionVariableSRWPtr)GetProcAddress(m_kernel32, "SleepConditionVariableSRW");
-		pInitializeSRWLock = (InitializeSRWLockPtr)GetProcAddress(m_kernel32, "InitializeSRWLock");
-		pAcquireSRWLockExclusive = (AcquireSRWLockExclusivePtr)GetProcAddress(m_kernel32, "AcquireSRWLockExclusive");
-		pReleaseSRWLockExclusive = (ReleaseSRWLockExclusivePtr)GetProcAddress(m_kernel32, "ReleaseSRWLockExclusive");
-
-		if(pInitializeConditionVariable != NULL)
-		{
-			pInitializeSRWLock(&m_cv.lock);
-			pInitializeConditionVariable(&m_cv.notempty);
-			pInitializeConditionVariable(&m_cv.empty);
-			
-			m_cv.available = true;
-		}
+		m_cv.available = pInitializeConditionVariable != NULL;
 
 		#elif defined(_LINUX)
-			m_cv.available = true;
-			// FIXME attribute
-			pthread_cond_init(&m_cv.notempty, NULL);
-			pthread_cond_init(&m_cv.empty, NULL);
-			pthread_mutex_init(&m_cv.lock, NULL);
+	
+		m_cv.available = true;
+
 		#endif
 
 		CreateThread();
@@ -338,32 +335,14 @@ public:
 	{
 		m_exit = true;
 
-
 		if(m_cv.available)
 		{
-		#ifdef _WINDOWS
-			pWakeConditionVariable(&m_cv.notempty);
-		#elif defined(_LINUX)
-			pthread_cond_signal(&m_cv.notempty);
-
-			pthread_mutex_destroy(&m_cv.lock);
-			pthread_cond_destroy(&m_cv.notempty);
-			pthread_cond_destroy(&m_cv.empty);
-		#endif
+			m_cv.notempty.Set();
 		}
 		else
 		{
 			m_ev.notempty.Set();
 		}
-
-
-		#ifdef _WINDOWS
-		if(m_kernel32 != NULL)
-		{
-			FreeLibrary(m_kernel32); // lol, decrement the refcount anyway
-		}
-		#endif
-
 	}
 
 	int GetCount() const
@@ -373,31 +352,18 @@ public:
 
 	virtual void Push(const T& item)
 	{
-
 		if(m_cv.available)
 		{
-		#ifdef _WINDOWS
-			pAcquireSRWLockExclusive(&m_cv.lock);
-
+			m_cv.lock.Lock();
+	
 			m_queue.push(item);
 
-			pReleaseSRWLockExclusive(&m_cv.lock);
+			m_cv.lock.Unlock();
 
-			pWakeConditionVariable(&m_cv.notempty);
-		#elif defined(_LINUX)
-			pthread_mutex_lock(&m_cv.lock);
-
-			m_queue.push(item);
-
-			pthread_mutex_unlock(&m_cv.lock);
-
-			pthread_cond_signal(&m_cv.notempty);
-		#endif
+			m_cv.notempty.Set();
 		}
 		else
 		{
-
-
 			GSAutoLock l(&m_ev.lock);
 
 			m_queue.push(item);
@@ -412,36 +378,22 @@ public:
 
 	virtual void Wait()
 	{
-
 		if(m_cv.available)
 		{
-		#ifdef _WINDOWS
-			pAcquireSRWLockExclusive(&m_cv.lock);
+			m_cv.lock.Lock();
 
 			while(!m_queue.empty()) 
 			{
-				pSleepConditionVariableSRW(&m_cv.empty, &m_cv.lock, INFINITE, 0);
+				m_cv.empty.Wait(m_cv.lock);
 			}
 
-			pReleaseSRWLockExclusive(&m_cv.lock);
-		#elif defined(_LINUX)
-			pthread_mutex_lock(&m_cv.lock);
-
-			while(!m_queue.empty()) 
-			{
-				pthread_cond_wait(&m_cv.empty, &m_cv.lock);
-			}
-
-			pthread_mutex_unlock(&m_cv.lock);
-		#endif
+			m_cv.lock.Unlock();
 		}
 		else
 		{
-			
 			// NOTE: it is the safest to have our own counter because m_queue.pop() might decrement its own before the last item runs out of its scope and gets destroyed (implementation dependent)
 
 			while(m_ev.count > 0) _mm_pause();
-
 		}
 
 		m_count++;

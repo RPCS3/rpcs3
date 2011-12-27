@@ -71,6 +71,17 @@
 
 #endif
 
+// put these into vc9/common7/ide/usertype.dat to have them highlighted
+
+typedef unsigned char uint8;
+typedef signed char int8;
+typedef unsigned short uint16;
+typedef signed short int16;
+typedef unsigned int uint32;
+typedef signed int int32;
+typedef unsigned long long uint64;
+typedef signed long long int64;
+
 // stdc
 
 #include <stddef.h>
@@ -114,6 +125,57 @@ using namespace std;
 	#include <hash_set>
 
 	using namespace stdext;
+
+	// hashing algoritms at: http://www.cris.com/~Ttwang/tech/inthash.htm
+	// default hash_compare does ldiv and other crazy stuff to reduce speed
+
+	template<> class hash_compare<uint32>
+	{
+	public:
+		enum {bucket_size = 1};
+
+		size_t operator()(uint32 key) const
+		{
+			key += ~(key << 15);
+			key ^= (key >> 10);
+			key += (key << 3);
+			key ^= (key >> 6);
+			key += ~(key << 11);
+			key ^= (key >> 16);
+
+			return (size_t)key;
+		}
+
+		bool operator()(uint32 a, uint32 b) const
+		{
+			return a < b;
+		}
+	};
+
+	template<> class hash_compare<uint64>
+	{
+	public:
+		enum {bucket_size = 1};
+
+		size_t operator()(uint64 key) const
+		{
+			key += ~(key << 32);
+			key ^= (key >> 22);
+			key += ~(key << 13);
+			key ^= (key >> 8);
+			key += (key << 3);
+			key ^= (key >> 15);
+			key += ~(key << 27);
+			key ^= (key >> 31);
+
+			return (size_t)key;
+		}
+
+		bool operator()(uint64 a, uint64 b) const
+		{
+			return a < b;
+		}
+	};
 
 	#define vsnprintf _vsnprintf
 	#define snprintf _snprintf
@@ -170,19 +232,6 @@ struct delete_second {template<class T> void operator()(T& p) {delete p.second;}
 struct aligned_free_object {template<class T> void operator()(T& p) {_aligned_free(p);}};
 struct aligned_free_first {template<class T> void operator()(T& p) {_aligned_free(p.first);}};
 struct aligned_free_second {template<class T> void operator()(T& p) {_aligned_free(p.second);}};
-
-// syntactic sugar
-
-// put these into vc9/common7/ide/usertype.dat to have them highlighted
-
-typedef unsigned char uint8;
-typedef signed char int8;
-typedef unsigned short uint16;
-typedef signed short int16;
-typedef unsigned int uint32;
-typedef signed int int32;
-typedef unsigned long long uint64;
-typedef signed long long int64;
 
 #define countof(a) (sizeof(a) / sizeof(a[0]))
 

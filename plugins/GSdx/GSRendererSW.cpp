@@ -166,7 +166,19 @@ void GSRendererSW::Draw()
 {
 	if(m_dump) m_dump.Object(m_vertices, m_count, m_vt.m_primclass);
 
-	shared_ptr<GSRasterizerData> data(new GSRasterizerData2(this));
+	GSVector4i scissor = GSVector4i(m_context->scissor.in);
+	GSVector4i bbox = GSVector4i(m_vt.m_min.p.floor().xyxy(m_vt.m_max.p.ceil()));
+
+	scissor.z = std::min<int>(scissor.z, (int)m_context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
+	
+	GSVector4i r = bbox.rintersect(scissor);
+
+	list<uint32>* fb_pages = m_context->offset.fb->GetPages(r);
+	list<uint32>* zb_pages = m_context->offset.zb->GetPages(r);
+
+	GSRasterizerData2* data2 = new GSRasterizerData2(this, fb_pages, zb_pages);
+
+	shared_ptr<GSRasterizerData> data(data2);
 
 	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)data->param;
 
@@ -175,20 +187,14 @@ void GSRendererSW::Draw()
 		return;
 	}
 
-	data->scissor = GSVector4i(m_context->scissor.in);
-	data->scissor.z = std::min<int>(data->scissor.z, (int)m_context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
-	data->bbox = GSVector4i(m_vt.m_min.p.floor().xyxy(m_vt.m_max.p.ceil()));
+	data->scissor = scissor;
+	data->bbox = bbox;
 	data->primclass = m_vt.m_primclass;
 	data->vertices = (GSVertexSW*)_aligned_malloc(sizeof(GSVertexSW) * m_count, 16); // TODO: detach m_vertices and reallocate later?
 	memcpy(data->vertices, m_vertices, sizeof(GSVertexSW) * m_count); // TODO: m_vt.Update fetches all the vertices already, could also store them here
 	data->count = m_count;
 	data->solidrect = gd->sel.IsSolidRect();
 	data->frame = m_perfmon.GetFrame();
-
-	GSVector4i r = data->bbox.rintersect(data->scissor);
-
-	list<uint32>* fb_pages = m_context->offset.fb->GetPages(r);
-	list<uint32>* zb_pages = m_context->offset.zb->GetPages(r);
 
 	//
 
@@ -202,7 +208,7 @@ void GSRendererSW::Draw()
 		m_tc->InvalidatePages(zb_pages, m_context->offset.zb->psm);
 	}
 
-	//
+	// set data->syncpoint
 
 	if(m_fzb != m_context->offset.fzb)
 	{
@@ -220,7 +226,12 @@ void GSRendererSW::Draw()
 		{
 			for(list<uint32>::iterator i = fb_pages->begin(); i != fb_pages->end(); i++)
 			{
-				if(m_fzb_pages[*i] & 0xffff0000) data->syncpoint = true; // already used as a z-buffer
+				if(m_fzb_pages[*i] & 0xffff0000) // already used as a z-buffer
+				{
+					data->syncpoint = true;
+					
+					break;
+				}
 			}
 		}
 	}
@@ -231,20 +242,21 @@ void GSRendererSW::Draw()
 		{
 			for(list<uint32>::iterator i = zb_pages->begin(); i != zb_pages->end(); i++)
 			{
-				if(m_fzb_pages[*i] & 0x0000ffff) data->syncpoint = true; // already used as a frame buffer
+				if(m_fzb_pages[*i] & 0x0000ffff) // already used as a frame buffer
+				{
+					data->syncpoint = true;
+
+					break;
+				}
 			}
 		}
 	}
 
-	if(gd->sel.fwrite)
-	{
-		UseTargetPages(fb_pages, 0);
-	}
+	//
 
-	if(gd->sel.zwrite)
-	{
-		UseTargetPages(zb_pages, 1);
-	}
+	data2->UseTargetPages();
+
+	//
 
 	if(s_dump)
 	{
@@ -304,8 +316,17 @@ void GSRendererSW::Draw()
 		m_rl->Queue(data);
 	}
 
-	// TODO: m_perfmon.Put(GSPerfMon::Prim, stats.prims);
-	// TODO: m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
+	int prims = 0;
+	
+	switch(data->primclass)
+	{
+	case GS_POINT_CLASS: prims = data->count; break;
+	case GS_LINE_CLASS: prims = data->count / 2; break;
+	case GS_TRIANGLE_CLASS: prims = data->count / 3; break;
+	case GS_SPRITE_CLASS: prims = data->count / 2; break;
+	}
+
+	m_perfmon.Put(GSPerfMon::Prim, prims);
 
 	/*
 	if(0)//stats.ticks > 5000000)
@@ -328,15 +349,6 @@ void GSRendererSW::Sync(int reason)
 	m_rl->Sync();
 
 	// NOTE: m_fzb_pages is refcounted, zeroing is done automatically
-
-	#ifdef _DEBUG
-
-	for(size_t i = 0; i < countof(m_fzb_pages); i++)
-	{
-		ASSERT(m_fzb_pages[i] == 0);
-	}
-
-	#endif
 
 	memset(m_tex_pages, 0, sizeof(m_tex_pages));
 }

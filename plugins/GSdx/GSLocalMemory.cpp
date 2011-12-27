@@ -2002,8 +2002,6 @@ GSOffset::~GSOffset()
 
 list<uint32>* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
 {
-	GSAutoLock lock(&m_lock);
-
 	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
 	GSVector4i r = rect.ralign<Align_Outside>(bs);

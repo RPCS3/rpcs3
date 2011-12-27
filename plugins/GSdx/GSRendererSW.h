@@ -30,14 +30,16 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 	class GSRasterizerData2 : public GSRasterizerData
 	{
 		GSRendererSW* m_parent;
-		GSOffset* m_fb;
-		GSOffset* m_zb;
+		const list<uint32>* m_fb_pages;
+		const list<uint32>* m_zb_pages;
+		bool m_using_pages;
 
 	public:
-		GSRasterizerData2(GSRendererSW* parent)
+		GSRasterizerData2(GSRendererSW* parent, const list<uint32>* fb_pages, const list<uint32>* zb_pages)
 			: m_parent(parent)
-			, m_fb(parent->m_context->offset.fb)
-			, m_zb(parent->m_context->offset.zb)
+			, m_fb_pages(fb_pages)
+			, m_zb_pages(zb_pages)
+			, m_using_pages(false)
 		{
 			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)_aligned_malloc(sizeof(GSScanlineGlobalData), 32);
 
@@ -51,24 +53,54 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 
 		virtual ~GSRasterizerData2()
 		{
+			ReleaseTargetPages();
+
 			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)param;
-			
-			GSVector4i r = bbox.rintersect(scissor);
-				
-			if(gd->sel.fwrite)
-			{
-				m_parent->ReleaseTargetPages(m_fb->GetPages(r), 0);
-			}
-				
-			if(gd->sel.zwrite)
-			{
-				m_parent->ReleaseTargetPages(m_zb->GetPages(r), 1);
-			}
 
 			if(gd->clut) _aligned_free(gd->clut);
 			if(gd->dimx) _aligned_free(gd->dimx);
 
 			_aligned_free(gd);
+
+			m_parent->m_perfmon.Put(GSPerfMon::Fillrate, pixels);
+		}
+
+		void UseTargetPages()
+		{
+			if(m_using_pages) {ASSERT(0); return;}
+
+			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)param;
+				
+			if(gd->sel.fwrite)
+			{
+				m_parent->UseTargetPages(m_fb_pages, 0);
+			}
+				
+			if(gd->sel.zwrite)
+			{
+				m_parent->UseTargetPages(m_zb_pages, 1);
+			}
+
+			m_using_pages = true;
+		}
+
+		void ReleaseTargetPages()
+		{
+			if(!m_using_pages) {ASSERT(0); return;}
+
+			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)param;
+				
+			if(gd->sel.fwrite)
+			{
+				m_parent->ReleaseTargetPages(m_fb_pages, 0);
+			}
+				
+			if(gd->sel.zwrite)
+			{
+				m_parent->ReleaseTargetPages(m_zb_pages, 1);
+			}
+
+			m_using_pages = false;
 		}
 	};
 

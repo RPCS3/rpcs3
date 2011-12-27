@@ -22,6 +22,44 @@
 #include "stdafx.h"
 #include "GSThread.h"
 
+#ifdef _WINDOWS
+
+InitializeConditionVariablePtr pInitializeConditionVariable;
+WakeConditionVariablePtr pWakeConditionVariable;
+WakeAllConditionVariablePtr pWakeAllConditionVariable;
+SleepConditionVariableSRWPtr pSleepConditionVariableSRW;
+InitializeSRWLockPtr pInitializeSRWLock;;
+AcquireSRWLockExclusivePtr pAcquireSRWLockExclusive;
+ReleaseSRWLockExclusivePtr pReleaseSRWLockExclusive;
+
+class InitCondVar
+{
+	HMODULE m_kernel32;
+
+public:
+	InitCondVar()
+	{
+		m_kernel32 = LoadLibrary("kernel32.dll"); // should not call LoadLibrary from DllMain, but kernel32.dll is the only one guaranteed to be loaded already
+
+		pInitializeConditionVariable = (InitializeConditionVariablePtr)GetProcAddress(m_kernel32, "InitializeConditionVariable");
+		pWakeConditionVariable = (WakeConditionVariablePtr)GetProcAddress(m_kernel32, "WakeConditionVariable");
+		pWakeAllConditionVariable = (WakeAllConditionVariablePtr)GetProcAddress(m_kernel32, "WakeAllConditionVariable");
+		pSleepConditionVariableSRW = (SleepConditionVariableSRWPtr)GetProcAddress(m_kernel32, "SleepConditionVariableSRW");
+		pInitializeSRWLock = (InitializeSRWLockPtr)GetProcAddress(m_kernel32, "InitializeSRWLock");
+		pAcquireSRWLockExclusive = (AcquireSRWLockExclusivePtr)GetProcAddress(m_kernel32, "AcquireSRWLockExclusive");
+		pReleaseSRWLockExclusive = (ReleaseSRWLockExclusivePtr)GetProcAddress(m_kernel32, "ReleaseSRWLockExclusive");
+	}
+	
+	virtual ~InitCondVar()
+	{
+		FreeLibrary(m_kernel32);
+	}
+};
+
+static InitCondVar s_icv;
+
+#endif
+
 GSThread::GSThread()
 {
     #ifdef _WINDOWS

@@ -41,6 +41,11 @@ public:
 	uint64 frame;
 	void* param;
 
+	// drawing stats
+
+	volatile long ticks;
+	volatile long pixels;
+
 	GSRasterizerData() 
 		: scissor(GSVector4i::zero())
 		, bbox(GSVector4i::zero())
@@ -51,6 +56,8 @@ public:
 		, syncpoint(false)
 		, frame(0)
 		, param(NULL)
+		, ticks(0)
+		, pixels(0)
 	{
 	}
 
