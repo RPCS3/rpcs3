@@ -30,8 +30,6 @@
 
 class GSOffset : public GSAlignedClass<32>
 {
-	hash_map<uint64, list<uint32>*> m_cache;
-
 public:
 	__aligned(struct, 32) Block
 	{
@@ -53,7 +51,7 @@ public:
 	GSOffset(uint32 bp, uint32 bw, uint32 psm);
 	virtual ~GSOffset();
 
-	list<uint32>* GetPages(const GSVector4i& rect, GSVector4i* bbox = NULL);
+	vector<uint32>* GetPages(const GSVector4i& rect, GSVector4i* bbox = NULL);
 };
 
 struct GSPixelOffset4

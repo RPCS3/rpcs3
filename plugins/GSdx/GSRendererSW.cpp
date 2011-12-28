@@ -159,9 +159,6 @@ void GSRendererSW::Draw()
 	
 	GSVector4i r = bbox.rintersect(scissor);
 
-	list<uint32>* fb_pages = m_context->offset.fb->GetPages(r);
-	list<uint32>* zb_pages = m_context->offset.zb->GetPages(r);
-
 	shared_ptr<GSRasterizerData> data(new GSRasterizerData2(this));
 
 	GSRasterizerData2* data2 = (GSRasterizerData2*)data.get();
@@ -184,13 +181,20 @@ void GSRendererSW::Draw()
 
 	//
 
+	vector<uint32>* fb_pages = NULL;
+	vector<uint32>* zb_pages = NULL;
+
 	if(gd->sel.fwrite)
 	{
+		fb_pages = m_context->offset.fb->GetPages(r);
+
 		m_tc->InvalidatePages(fb_pages, m_context->offset.fb->psm);
 	}
 
 	if(gd->sel.zwrite)
 	{
+		zb_pages = m_context->offset.zb->GetPages(r);
+
 		m_tc->InvalidatePages(zb_pages, m_context->offset.zb->psm);
 	}
 
@@ -210,7 +214,7 @@ void GSRendererSW::Draw()
 	{
 		if(gd->sel.fwrite)
 		{
-			for(list<uint32>::iterator i = fb_pages->begin(); i != fb_pages->end(); i++)
+			for(vector<uint32>::iterator i = fb_pages->begin(); i != fb_pages->end(); i++)
 			{
 				if(m_fzb_pages[*i] & 0xffff0000) // already used as a z-buffer
 				{
@@ -226,7 +230,7 @@ void GSRendererSW::Draw()
 	{
 		if(gd->sel.zwrite)
 		{
-			for(list<uint32>::iterator i = zb_pages->begin(); i != zb_pages->end(); i++)
+			for(vector<uint32>::iterator i = zb_pages->begin(); i != zb_pages->end(); i++)
 			{
 				if(m_fzb_pages[*i] & 0x0000ffff) // already used as a frame buffer
 				{
@@ -339,13 +343,13 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 {
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM);
 
-	list<uint32>* pages = o->GetPages(r);
+	vector<uint32>* pages = o->GetPages(r);
 
 	m_tc->InvalidatePages(pages, o->psm);
 
 	// check if the changing pages either used as a texture or a target
 
-	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+	for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 	{
 		uint32 page = *i;
 		
@@ -358,15 +362,17 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 			break;
 		}
 	}
+
+	delete pages;
 }
 
 void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut)
 {
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM);
 
-	list<uint32>* pages = o->GetPages(r);
+	vector<uint32>* pages = o->GetPages(r);
 
-	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+	for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 	{
 		//while(m_fzb_pages[*i]) _mm_pause();
 
@@ -377,13 +383,15 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 			break;
 		}
 	}
+
+	delete pages;
 }
 
-void GSRendererSW::UsePages(const list<uint32>* pages, int type)
+void GSRendererSW::UsePages(const vector<uint32>* pages, int type)
 {
 	if(type < 2)
 	{
-		for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 		{
 			ASSERT(((short*)&m_fzb_pages[*i])[type] < SHRT_MAX);
 
@@ -392,7 +400,7 @@ void GSRendererSW::UsePages(const list<uint32>* pages, int type)
 	}
 	else
 	{
-		for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 		{
 			//while(m_fzb_pages[*i]) _mm_pause();
 
@@ -404,7 +412,7 @@ void GSRendererSW::UsePages(const list<uint32>* pages, int type)
 			}
 		}
 
-		for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 		{
 			ASSERT(m_tex_pages[*i] < SHRT_MAX);
 
@@ -413,11 +421,11 @@ void GSRendererSW::UsePages(const list<uint32>* pages, int type)
 	}
 }
 
-void GSRendererSW::ReleasePages(const list<uint32>* pages, int type)
+void GSRendererSW::ReleasePages(const vector<uint32>* pages, int type)
 {
 	if(type < 2)
 	{
-		for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 		{
 			ASSERT(((short*)&m_fzb_pages[*i])[type] > 0);
 
@@ -426,7 +434,7 @@ void GSRendererSW::ReleasePages(const list<uint32>* pages, int type)
 	}
 	else
 	{
-		for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 		{
 			ASSERT(m_tex_pages[*i] > 0);
 
@@ -1139,6 +1147,9 @@ GSRendererSW::GSRasterizerData2::~GSRasterizerData2()
 		}
 	}
 
+	delete m_fb_pages;
+	delete m_zb_pages;
+
 	for(size_t i = 0; i < countof(m_tex_pages) && m_tex_pages[i] != NULL; i++)
 	{
 		m_parent->ReleasePages(m_tex_pages[i], 2);
@@ -1154,7 +1165,7 @@ GSRendererSW::GSRasterizerData2::~GSRasterizerData2()
 	m_parent->m_perfmon.Put(GSPerfMon::Fillrate, pixels);
 }
 
-void GSRendererSW::GSRasterizerData2::UseTargetPages(const list<uint32>* fb_pages, const list<uint32>* zb_pages)
+void GSRendererSW::GSRasterizerData2::UseTargetPages(const vector<uint32>* fb_pages, const vector<uint32>* zb_pages)
 {
 	if(m_using_pages) return;
 
@@ -1180,7 +1191,7 @@ void GSRendererSW::GSRasterizerData2::UseSourcePages(GSTextureCacheSW::Texture* 
 {
 	ASSERT(m_tex_pages[level] == NULL);
 
-	const list<uint32>* pages = t->m_pages.n;
+	const vector<uint32>* pages = t->m_pages.n;
 
 	m_tex_pages[level] = pages;
 

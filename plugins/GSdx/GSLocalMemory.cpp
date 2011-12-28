@@ -1994,13 +1994,9 @@ GSOffset::GSOffset(uint32 _bp, uint32 _bw, uint32 _psm)
 
 GSOffset::~GSOffset()
 {
-	for(hash_map<uint64, list<uint32>*>::iterator i = m_cache.begin(); i != m_cache.end(); i++)
-	{
-		delete i->second;
-	}
 }
 
-list<uint32>* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
+vector<uint32>* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
 {
 	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
@@ -2008,16 +2004,11 @@ list<uint32>* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
 
 	if(bbox != NULL) *bbox = r;
 
-	uint64 r_hash;
+	vector<uint32>* pages = new vector<uint32>();
 
-	GSVector4i::storel(&r_hash, r.sra32(3).ps32()); // max 19-bit coordinates, should not be a problem (can shift right by 3 because it is mod8, smallest block size)
-
-	hash_map<uint64, list<uint32>*>::iterator i = m_cache.find(r_hash);
-
-	if(i != m_cache.end())
-	{
-		return i->second;
-	}
+	// 32-bpp worst case: (w * h) / (64 * 32), it can be a bit more if we are only block-aligned (bp & 31) != 0
+	
+	pages->reserve(((r.width() * r.height()) >> 11) + 2); 
 
 	uint32 tmp[16];
 
@@ -2033,30 +2024,18 @@ list<uint32>* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
 
 			if(n < MAX_PAGES)
 			{
-				tmp[n >> 5] |= 1 << (n & 31);
+				uint32& row = tmp[n >> 5];
+				uint32 col = 1 << (n & 31);
+
+				if((row & col) == 0)
+				{
+					row |= col;
+
+					pages->push_back(n);
+				}
 			}
 		}
 	}
 
-	list<uint32>* l = new list<uint32>();
-
-	for(int i = 0; i < countof(tmp); i++)
-	{
-		uint32 p = tmp[i];
-
-		if(p == 0) continue;
-
-		unsigned long j;
-
-		while(_BitScanForward(&j, p))
-		{
-			p ^= 1 << j;
-			
-			l->push_back((i << 5) + j);
-		}
-	}
-
-	m_cache[r_hash] = l;
-
-	return l;
+	return pages;
 }

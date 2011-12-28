@@ -30,16 +30,16 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 	class GSRasterizerData2 : public GSRasterizerData
 	{
 		GSRendererSW* m_parent;
-		const list<uint32>* m_fb_pages;
-		const list<uint32>* m_zb_pages;
-		const list<uint32>* m_tex_pages[7];
+		const vector<uint32>* m_fb_pages;
+		const vector<uint32>* m_zb_pages;
+		const vector<uint32>* m_tex_pages[7];
 		bool m_using_pages;
 
 	public:
 		GSRasterizerData2(GSRendererSW* parent);
 		virtual ~GSRasterizerData2();
 
-		void UseTargetPages(const list<uint32>* fb_pages, const list<uint32>* zb_pages);
+		void UseTargetPages(const vector<uint32>* fb_pages, const vector<uint32>* zb_pages);
 		void UseSourcePages(GSTextureCacheSW::Texture* t, int level);
 	};
 
@@ -63,8 +63,8 @@ protected:
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut = false);
 
-	void UsePages(const list<uint32>* pages, int type);
-	void ReleasePages(const list<uint32>* pages, int type);
+	void UsePages(const vector<uint32>* pages, int type);
+	void ReleasePages(const vector<uint32>* pages, int type);
 
 	bool GetScanlineGlobalData(GSRasterizerData2* data2);
 
