@@ -114,19 +114,23 @@ void Panels::FramelimiterPanel::ApplyConfigToGui( AppConfig& configToApply, int 
 	const AppConfig::FramerateOptions& appfps( configToApply.Framerate );
 	const Pcsx2Config::GSOptions& gsconf( configToApply.EmuOptions.GS );
 
-	if( ! (flags & AppConfig::APPLY_FLAG_FROM_PRESET) )	//Presets don't control this: only change if config doesn't come from preset.
+	if( ! (flags & AppConfig::APPLY_FLAG_FROM_PRESET) ){	//Presets don't control these: only change if config doesn't come from preset.
+	
 		m_check_LimiterDisable->SetValue( !gsconf.FrameLimitEnable );
 
-	m_spin_NominalPct	->SetValue( appfps.NominalScalar.Raw );
-	m_spin_TurboPct		->SetValue( appfps.TurboScalar.Raw );
-	m_spin_SlomoPct		->SetValue( appfps.SlomoScalar.Raw );
+		m_spin_TurboPct		->SetValue( appfps.TurboScalar.Raw );
+		m_spin_SlomoPct		->SetValue( appfps.SlomoScalar.Raw );
+
+		m_spin_TurboPct		->Enable( 1 );
+		m_spin_SlomoPct		->Enable( 1 );
+	}
 
 	m_text_BaseNtsc		->ChangeValue( gsconf.FramerateNTSC.ToString() );
 	m_text_BasePal		->ChangeValue( gsconf.FrameratePAL.ToString() );
 
+	m_spin_NominalPct	->SetValue( appfps.NominalScalar.Raw );
 	m_spin_NominalPct	->Enable(!configToApply.EnablePresets);
-	m_spin_TurboPct		->Enable(!configToApply.EnablePresets);
-	m_spin_SlomoPct		->Enable(!configToApply.EnablePresets);
+
 	// Vsync timing controls only on devel builds / via manual ini editing
 #ifdef PCSX2_DEVBUILD
 	m_text_BaseNtsc		->Enable(!configToApply.EnablePresets);
