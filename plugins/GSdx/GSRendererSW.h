@@ -32,76 +32,15 @@ class GSRendererSW : public GSRendererT<GSVertexSW>
 		GSRendererSW* m_parent;
 		const list<uint32>* m_fb_pages;
 		const list<uint32>* m_zb_pages;
+		const list<uint32>* m_tex_pages[7];
 		bool m_using_pages;
 
 	public:
-		GSRasterizerData2(GSRendererSW* parent, const list<uint32>* fb_pages, const list<uint32>* zb_pages)
-			: m_parent(parent)
-			, m_fb_pages(fb_pages)
-			, m_zb_pages(zb_pages)
-			, m_using_pages(false)
-		{
-			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)_aligned_malloc(sizeof(GSScanlineGlobalData), 32);
+		GSRasterizerData2(GSRendererSW* parent);
+		virtual ~GSRasterizerData2();
 
-			gd->sel.key = 0;
-
-			gd->clut = NULL;
-			gd->dimx = NULL;
-
-			param = gd;
-		}
-
-		virtual ~GSRasterizerData2()
-		{
-			ReleaseTargetPages();
-
-			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)param;
-
-			if(gd->clut) _aligned_free(gd->clut);
-			if(gd->dimx) _aligned_free(gd->dimx);
-
-			_aligned_free(gd);
-
-			m_parent->m_perfmon.Put(GSPerfMon::Fillrate, pixels);
-		}
-
-		void UseTargetPages()
-		{
-			if(m_using_pages) {ASSERT(0); return;}
-
-			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)param;
-				
-			if(gd->sel.fwrite)
-			{
-				m_parent->UseTargetPages(m_fb_pages, 0);
-			}
-				
-			if(gd->sel.zwrite)
-			{
-				m_parent->UseTargetPages(m_zb_pages, 1);
-			}
-
-			m_using_pages = true;
-		}
-
-		void ReleaseTargetPages()
-		{
-			if(!m_using_pages) {ASSERT(0); return;}
-
-			GSScanlineGlobalData* gd = (GSScanlineGlobalData*)param;
-				
-			if(gd->sel.fwrite)
-			{
-				m_parent->ReleaseTargetPages(m_fb_pages, 0);
-			}
-				
-			if(gd->sel.zwrite)
-			{
-				m_parent->ReleaseTargetPages(m_zb_pages, 1);
-			}
-
-			m_using_pages = false;
-		}
+		void UseTargetPages(const list<uint32>* fb_pages, const list<uint32>* zb_pages);
+		void UseSourcePages(GSTextureCacheSW::Texture* t, int level);
 	};
 
 protected:
@@ -112,7 +51,7 @@ protected:
 	bool m_reset;
 	GSPixelOffset4* m_fzb;
 	uint32 m_fzb_pages[512]; // uint16 frame/zbuf pages interleaved
-	uint32 m_tex_pages[16];
+	uint16 m_tex_pages[512];
 
 	void Reset();
 	void VSync(int field);
@@ -124,11 +63,10 @@ protected:
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut = false);
 
-	void UseTargetPages(const list<uint32>* pages, int offset);
-	void ReleaseTargetPages(const list<uint32>* pages, int offset);
-	void UseSourcePages(const GSTextureCacheSW::Texture* t);
+	void UsePages(const list<uint32>* pages, int type);
+	void ReleasePages(const list<uint32>* pages, int type);
 
-	bool GetScanlineGlobalData(GSScanlineGlobalData& gd);
+	bool GetScanlineGlobalData(GSRasterizerData2* data2);
 
 public:
 	GSRendererSW(int threads);

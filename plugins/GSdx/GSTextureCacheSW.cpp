@@ -74,7 +74,7 @@ GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, cons
 
 		m_textures.insert(t);
 
-		for(list<uint32>::iterator i = t->m_pages.n.begin(); i != t->m_pages.n.end(); i++)
+		for(list<uint32>::const_iterator i = t->m_pages.n->begin(); i != t->m_pages.n->end(); i++)
 		{
 			m_map[*i].push_front(t);
 		}
@@ -181,14 +181,13 @@ GSTextureCacheSW::Texture::Texture(GSState* state, uint32 tw0, const GIFRegTEX0&
 
 	m_offset = m_state->m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
 
-	list<uint32>* pages = m_offset->GetPages(GSVector4i(0, 0, 1 << TEX0.TW, 1 << TEX0.TH));
+	m_pages.n = m_offset->GetPages(GSVector4i(0, 0, 1 << TEX0.TW, 1 << TEX0.TH));
 
-	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+	for(list<uint32>::const_iterator i = m_pages.n->begin(); i != m_pages.n->end(); i++)
 	{
 		uint32 page = *i;
 
 		m_pages.bm[page >> 5] |= 1 << (page & 31);
-		m_pages.n.push_back(page);
 	}
 
 	m_repeating = m_TEX0.IsRepeating(); // repeating mode always works, it is just slightly slower

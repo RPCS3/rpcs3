@@ -40,7 +40,7 @@ public:
 		bool m_repeating;
 		list<GSVector2i>* m_p2t;
 		uint32 m_valid[MAX_PAGES];
-		struct {uint32 bm[16]; list<uint32> n;} m_pages;
+		struct {uint32 bm[16]; const list<uint32>* n;} m_pages;
 
 		// m_valid
 		// fast mode: each uint32 bits map to the 32 blocks of that page

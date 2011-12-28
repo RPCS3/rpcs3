@@ -68,34 +68,20 @@ void GSRendererSW::Reset()
 void GSRendererSW::VSync(int field)
 {
 	Sync(0); // IncAge might delete a cached texture in use
+
 	/*
-	printf("CPU %d Sync %d W %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d | %d %d %d\n",
+	int draw[8], sum = 0;
+
+	for(int i = 0; i < countof(draw); i++)
+	{
+		draw[i] = m_perfmon.CPU(GSPerfMon::WorkerDraw0 + i);
+		sum += draw[i];
+	}
+
+	printf("CPU %d Sync %d W %d %d %d %d %d %d %d %d (%d)\n",
 		m_perfmon.CPU(GSPerfMon::Main),
 		m_perfmon.CPU(GSPerfMon::Sync),
-		m_perfmon.CPU(GSPerfMon::WorkerSync0),
-		m_perfmon.CPU(GSPerfMon::WorkerSleep0),
-		m_perfmon.CPU(GSPerfMon::WorkerDraw0),
-		m_perfmon.CPU(GSPerfMon::WorkerSync1),
-		m_perfmon.CPU(GSPerfMon::WorkerSleep1),
-		m_perfmon.CPU(GSPerfMon::WorkerDraw1),
-		m_perfmon.CPU(GSPerfMon::WorkerSync2),
-		m_perfmon.CPU(GSPerfMon::WorkerSleep2),
-		m_perfmon.CPU(GSPerfMon::WorkerDraw2),
-		m_perfmon.CPU(GSPerfMon::WorkerSync3),
-		m_perfmon.CPU(GSPerfMon::WorkerSleep3),
-		m_perfmon.CPU(GSPerfMon::WorkerDraw3),
-		m_perfmon.CPU(GSPerfMon::WorkerSync4),
-		m_perfmon.CPU(GSPerfMon::WorkerSleep4),
-		m_perfmon.CPU(GSPerfMon::WorkerDraw4),
-		m_perfmon.CPU(GSPerfMon::WorkerSync5),
-		m_perfmon.CPU(GSPerfMon::WorkerSleep5),
-		m_perfmon.CPU(GSPerfMon::WorkerDraw5),
-		m_perfmon.CPU(GSPerfMon::WorkerSync6),
-		m_perfmon.CPU(GSPerfMon::WorkerSleep6),
-		m_perfmon.CPU(GSPerfMon::WorkerDraw6),
-		m_perfmon.CPU(GSPerfMon::WorkerSync7),
-		m_perfmon.CPU(GSPerfMon::WorkerSleep7),
-		m_perfmon.CPU(GSPerfMon::WorkerDraw7));
+		draw[0], draw[1], draw[2], draw[3], draw[4], draw[5], draw[6], draw[7], sum);
 
 	//
 	printf("m_sync_count = %d\n", ((GSRasterizerList*)m_rl)->m_sync_count); ((GSRasterizerList*)m_rl)->m_sync_count = 0;
@@ -176,16 +162,16 @@ void GSRendererSW::Draw()
 	list<uint32>* fb_pages = m_context->offset.fb->GetPages(r);
 	list<uint32>* zb_pages = m_context->offset.zb->GetPages(r);
 
-	GSRasterizerData2* data2 = new GSRasterizerData2(this, fb_pages, zb_pages);
+	shared_ptr<GSRasterizerData> data(new GSRasterizerData2(this));
 
-	shared_ptr<GSRasterizerData> data(data2);
+	GSRasterizerData2* data2 = (GSRasterizerData2*)data.get();
 
-	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)data->param;
-
-	if(!GetScanlineGlobalData(*gd))
+	if(!GetScanlineGlobalData(data2))
 	{
 		return;
 	}
+
+	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)data->param;
 
 	data->scissor = scissor;
 	data->bbox = bbox;
@@ -254,7 +240,7 @@ void GSRendererSW::Draw()
 
 	//
 
-	data2->UseTargetPages();
+	data2->UseTargetPages(fb_pages, zb_pages);
 
 	//
 
@@ -347,10 +333,6 @@ void GSRendererSW::Sync(int reason)
 	GSPerfMonAutoTimer pmat(&m_perfmon, GSPerfMon::Sync);
 
 	m_rl->Sync();
-
-	// NOTE: m_fzb_pages is refcounted, zeroing is done automatically
-
-	memset(m_tex_pages, 0, sizeof(m_tex_pages));
 }
 
 void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
@@ -366,8 +348,10 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 	{
 		uint32 page = *i;
+		
+		//while(m_fzb_pages[page] | m_tex_pages[page]) _mm_pause();
 
-		if(m_fzb_pages[page] | (m_tex_pages[page >> 5] & (1 << (page & 31))))
+		if(m_fzb_pages[page] | m_tex_pages[page])
 		{
 			Sync(5);
 
@@ -384,6 +368,8 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 
 	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 	{
+		//while(m_fzb_pages[*i]) _mm_pause();
+
 		if(m_fzb_pages[*i])
 		{
 			Sync(6);
@@ -393,49 +379,68 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 	}
 }
 
-void GSRendererSW::UseTargetPages(const list<uint32>* pages, int offset)
+void GSRendererSW::UsePages(const list<uint32>* pages, int type)
 {
-	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+	if(type < 2)
 	{
-		ASSERT(((short*)&m_fzb_pages[*i])[offset] < SHRT_MAX);
-
-		_InterlockedIncrement16((short*)&m_fzb_pages[*i] + offset);
-	}
-}
-
-void GSRendererSW::ReleaseTargetPages(const list<uint32>* pages, int offset)
-{
-	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
-	{
-		ASSERT(((short*)&m_fzb_pages[*i])[offset] > 0);
-
-		_InterlockedDecrement16((short*)&m_fzb_pages[*i] + offset);
-	}
-}
-
-void GSRendererSW::UseSourcePages(const GSTextureCacheSW::Texture* t)
-{
-	for(list<uint32>::const_iterator i = t->m_pages.n.begin(); i != t->m_pages.n.end(); i++)
-	{
-		if(m_fzb_pages[*i]) // currently being drawn to? => sync (could even spin and wait until it hits 0, not sure if it's worth though, or just create 512 condvars? :D)
+		for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
 		{
-			Sync(7);
+			ASSERT(((short*)&m_fzb_pages[*i])[type] < SHRT_MAX);
 
-			return;
+			_InterlockedIncrement16((short*)&m_fzb_pages[*i] + type);
 		}
-		
 	}
-
-	for(size_t i = 0; i < countof(t->m_pages.bm); i++)
+	else
 	{
-		m_tex_pages[i] |= t->m_pages.bm[i]; // remember which texture pages are used
+		for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		{
+			//while(m_fzb_pages[*i]) _mm_pause();
+
+			if(m_fzb_pages[*i]) // currently being drawn to? => sync (could even spin and wait until it hits 0, not sure if it's worth though, or just create 512 condvars? :D)
+			{
+				Sync(7);
+
+				break;
+			}
+		}
+
+		for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		{
+			ASSERT(m_tex_pages[*i] < SHRT_MAX);
+
+			_InterlockedIncrement16((short*)&m_tex_pages[*i]); // remember which texture pages are used
+		}
+	}
+}
+
+void GSRendererSW::ReleasePages(const list<uint32>* pages, int type)
+{
+	if(type < 2)
+	{
+		for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		{
+			ASSERT(((short*)&m_fzb_pages[*i])[type] > 0);
+
+			_InterlockedDecrement16((short*)&m_fzb_pages[*i] + type);
+		}
+	}
+	else
+	{
+		for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		{
+			ASSERT(m_tex_pages[*i] > 0);
+
+			_InterlockedDecrement16((short*)&m_tex_pages[*i]);
+		}
 	}
 }
 
 #include "GSTextureSW.h"
 
-bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
+bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 {
+	GSScanlineGlobalData& gd = *(GSScanlineGlobalData*)data2->param;
+
 	const GSDrawingEnvironment& env = m_env;
 	const GSDrawingContext* context = m_context;
 	const GS_PRIM_CLASS primclass = m_vt.m_primclass;
@@ -545,7 +550,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 			if(t == NULL) {ASSERT(0); return false;}
 
-			UseSourcePages(t);
+			data2->UseSourcePages(t, 0);
 
 			GSVector4i r;
 
@@ -698,7 +703,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSScanlineGlobalData& gd)
 
 					if(t == NULL) {ASSERT(0); return false;}
 
-					UseSourcePages(t);
+					data2->UseSourcePages(t, i);
 
 					GSVector4i r;
 
@@ -1095,4 +1100,89 @@ if(!m_dump)
 
 		// Flush();
 	}
+}
+
+// GSRendererSW::GSRasterizerData2
+
+GSRendererSW::GSRasterizerData2::GSRasterizerData2(GSRendererSW* parent)
+	: m_parent(parent)
+	, m_fb_pages(NULL)
+	, m_zb_pages(NULL)
+	, m_using_pages(false)
+{
+	memset(m_tex_pages, 0, sizeof(m_tex_pages));
+
+	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)_aligned_malloc(sizeof(GSScanlineGlobalData), 32);
+
+	gd->sel.key = 0;
+
+	gd->clut = NULL;
+	gd->dimx = NULL;
+
+	param = gd;
+}
+
+GSRendererSW::GSRasterizerData2::~GSRasterizerData2()
+{
+	if(m_using_pages)
+	{
+		GSScanlineGlobalData* gd = (GSScanlineGlobalData*)param;
+
+		if(gd->sel.fwrite)
+		{
+			m_parent->ReleasePages(m_fb_pages, 0);
+		}
+
+		if(gd->sel.zwrite)
+		{
+			m_parent->ReleasePages(m_zb_pages, 1);
+		}
+	}
+
+	for(size_t i = 0; i < countof(m_tex_pages) && m_tex_pages[i] != NULL; i++)
+	{
+		m_parent->ReleasePages(m_tex_pages[i], 2);
+	}
+
+	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)param;
+
+	if(gd->clut) _aligned_free(gd->clut);
+	if(gd->dimx) _aligned_free(gd->dimx);
+
+	_aligned_free(gd);
+
+	m_parent->m_perfmon.Put(GSPerfMon::Fillrate, pixels);
+}
+
+void GSRendererSW::GSRasterizerData2::UseTargetPages(const list<uint32>* fb_pages, const list<uint32>* zb_pages)
+{
+	if(m_using_pages) return;
+
+	m_fb_pages = fb_pages;
+	m_zb_pages = zb_pages;
+
+	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)param;
+
+	if(gd->sel.fwrite)
+	{
+		m_parent->UsePages(fb_pages, 0);
+	}
+
+	if(gd->sel.zwrite)
+	{
+		m_parent->UsePages(zb_pages, 1);
+	}
+
+	m_using_pages = true;
+}
+
+void GSRendererSW::GSRasterizerData2::UseSourcePages(GSTextureCacheSW::Texture* t, int level)
+{
+	ASSERT(m_tex_pages[level] == NULL);
+
+	const list<uint32>* pages = t->m_pages.n;
+
+	m_tex_pages[level] = pages;
+
+	m_parent->UsePages(pages, 2);
 }
