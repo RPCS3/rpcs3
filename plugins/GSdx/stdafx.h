@@ -130,7 +130,11 @@ using namespace std;
 	template<> class hash_compare<uint32>
 	{
 	public:
+		#if _MSC_VER >= 1500 && _MSC_VER < 1600
+		enum {bucket_size = 4, min_buckets = 8};
+		#else
 		enum {bucket_size = 1};
+		#endif
 
 		size_t operator()(uint32 key) const
 		{
@@ -153,7 +157,11 @@ using namespace std;
 	template<> class hash_compare<uint64>
 	{
 	public:
+		#if _MSC_VER >= 1500 && _MSC_VER < 1600
+		enum {bucket_size = 4, min_buckets = 8};
+		#else
 		enum {bucket_size = 1};
+		#endif
 
 		size_t operator()(uint64 key) const
 		{

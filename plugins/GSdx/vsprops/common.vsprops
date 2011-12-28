@@ -9,6 +9,7 @@
 	<Tool
 		Name="VCCLCompilerTool"
 		EnableIntrinsicFunctions="true"
+		AdditionalIncludeDirectories="&quot;$(VTUNE_AMPLIFIER_XE_2011_DIR)include&quot;"
 		PreprocessorDefinitions="_WINDOWS;_WIN32_WINNT=0x500"
 		FloatingPointModel="2"
 		RuntimeTypeInfo="false"
@@ -19,6 +20,7 @@
 	<Tool
 		Name="VCLinkerTool"
 		AdditionalDependencies="d3d11.lib d3dx11.lib d3d10_1.lib d3dx10.lib d3d9.lib d3dx9.lib dxguid.lib winmm.lib strmiids.lib xinput.lib"
+		AdditionalLibraryDirectories="&quot;$(VTUNE_AMPLIFIER_XE_2011_DIR)lib32&quot;"
 		DelayLoadDLLs="d3d9.dll;d3dx9_43.dll;d3d11.dll;d3dx11_43.dll"
 		GenerateDebugInformation="true"
 		SubSystem="2"
