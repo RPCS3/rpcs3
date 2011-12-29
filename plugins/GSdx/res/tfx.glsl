@@ -86,12 +86,13 @@ void vs_main()
 	// example: 133.0625 (133 + 1/16) should start from line 134, ceil(133.0625 - 0.05) still above 133
 	
 	vec4 p = vec4(i_p, z, 0) - vec4(0.05f, 0.05f, 0, 0); 
+	vec4 final_p = p * VertexScale - VertexOffset;
 
-	OUT.p = p * VertexScale - VertexOffset;
+	OUT.p = final_p;
+    gl_Position = final_p; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 #if VS_RTCOPY
-	OUT.tp = (p * VertexScale - VertexOffset) * vec4(0.5, -0.5, 0, 0) + 0.5;
+	OUT.tp = final_p * vec4(0.5, -0.5, 0, 0) + 0.5;
 #endif
-    gl_Position = p; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 
 	if(VS_TME != 0)
 	{
@@ -237,8 +238,13 @@ void gs_main()
 layout(location = 0) in vertex PSin;
 
 // Same buffer but 2 colors for dual source blending
-layout(location = 0, index = 0) out vec4 SV_Target0;
-layout(location = 0, index = 1) out vec4 SV_Target1;
+//FIXME
+#if 1
+	layout(location = 0, index = 0) out vec4 SV_Target0;
+	layout(location = 0, index = 1) out vec4 SV_Target1;
+#else
+	layout(location = 0)		    out vec4 SV_Target;
+#endif
 
 layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
@@ -583,8 +589,6 @@ vec4 ps_color()
 
 	if(PS_CLR1 != 0) // needed for Cd * (As/Ad/F + 1) blending modes
 	{
-        // FIXME: I'm not sure about the value of others field
-		//c.rgb = 1.0f; 
 		c.rgb = vec3(1.0f, 1.0f, 1.0f); 
 	}
 
@@ -593,6 +597,8 @@ vec4 ps_color()
 
 void ps_main()
 {
+	//FIXME
+#if 1
 	vec4 c = ps_color();
 
     // FIXME: I'm not sure about the value of others field
@@ -611,5 +617,11 @@ void ps_main()
 	}
 
     SV_Target0 = c;
+
+    //SV_Target0 = vec4(1.0f,0.0f,0.0f, 1.0f);
+    //SV_Target1 = vec4(1.0f,0.0f,0.0f, 1.0f);
+#else
+    SV_Target = vec4(1.0f,0.0f,0.0f, 1.0f);
+#endif
 }
 #endif

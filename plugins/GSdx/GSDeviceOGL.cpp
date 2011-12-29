@@ -53,6 +53,15 @@
 // glUniformBlockBinding(program, block_index, block_binding_point);
 
 //#define LOUD_DEBUGGING
+//#define DUMP_START (380)
+#define DUMP_LENGTH (20)
+
+#ifdef DUMP_START
+static uint32 g_draw_count = 0;
+static uint32 g_frame_count = 0;		
+#endif
+
+
 GSDeviceOGL::GSDeviceOGL()
 	: m_free_window(false)
 	  , m_window(NULL)
@@ -492,11 +501,43 @@ void GSDeviceOGL::Flip()
 	// FIXME: disable it when code is working
 	CheckDebugLog();
 	m_wnd->Flip();
+#ifdef DUMP_START
+	g_frame_count++;
+#endif
 }
 
 void GSDeviceOGL::DrawPrimitive()
 {
 	glDrawArrays(m_state.topology, m_state.vb_state->start, m_state.vb_state->count);
+#ifdef DUMP_START
+	if (g_draw_count > DUMP_START && g_draw_count < (DUMP_START+DUMP_LENGTH)) {
+		for (auto i = 0 ; i < 3 ; i++) {
+			if (m_state.ps_srv[i] != NULL) {
+				m_state.ps_srv[i]->Save(format("/tmp/in_%d__%d.bmp", g_draw_count, i),false);
+			}
+		}
+		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_%d.bmp", g_draw_count),false);
+		if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/out_%d_ds.bmp", g_draw_count),false);
+
+		string topo;
+		switch (m_state.topology) {
+			case GL_TRIANGLE_STRIP: topo = "triangle_strip"; break;
+			case GL_TRIANGLES: topo = "triangle"; break;
+			case GL_LINES: topo = "line"; break;
+			case GL_POINTS: topo = "point"; break;
+			default: topo = "!!!!";
+		}
+		fprintf(stderr, "Draw %d (Frame %d), %d elem of %s\n", g_draw_count, g_frame_count, m_state.vb_state->count, topo.c_str() );
+		fprintf(stderr, "vs: %d ; gs: %d ; ps: %d\n", m_state.vs, m_state.gs, m_state.ps);
+		fprintf(stderr, "Blend: %d, Depth: %d, Stencil: %d \n",m_state.bs->m_enable, m_state.dss->m_depth_enable, m_state.dss->m_stencil_enable);
+
+		//fprintf(stderr, "type: %d, format: 0x%x\n", m_state.rtv->GetType(), m_state.rtv->GetFormat());
+		fprintf(stderr, "\n");
+
+	}
+
+	g_draw_count++;
+#endif
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -941,6 +982,7 @@ void GSDeviceOGL::GSSetShader(GLuint gs)
 	if(m_state.gs != gs)
 	{
 		m_state.gs = gs;
+		// FIXME AMD driver bug !!!!!!!!
 		glUseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, gs);
 	}
 }
@@ -954,9 +996,7 @@ void GSDeviceOGL::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 
 void GSDeviceOGL::PSSetShaderResource(int i, GSTexture* sr)
 {
-	GSTextureOGL* srv = NULL;
-
-	if(sr) srv = (GSTextureOGL*)sr;
+	GSTextureOGL* srv = static_cast<GSTextureOGL*>(sr);
 
 	if(m_state.ps_srv[i] != srv)
 	{
@@ -1082,24 +1122,11 @@ void GSDeviceOGL::OMSetBlendState(GSBlendStateOGL* bs, float bf)
 
 void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor)
 {
-	// attach render&depth  to the FBO
 	// Hum, need to separate 2 case, Render target fbo and render target backbuffer
 	// Or maybe blit final result to the backbuffer
-#if 0
-	ID3D11RenderTargetView* rtv = NULL;
-	ID3D11DepthStencilView* dsv = NULL;
+	m_state.rtv = static_cast<GSTextureOGL*>(rt);
+	m_state.dsv = static_cast<GSTextureOGL*>(ds);
 
-	if(rt) rtv = *(GSTexture11*)rt;
-	if(ds) dsv = *(GSTexture11*)ds;
-
-	if(m_state.rtv != rtv || m_state.dsv != dsv)
-	{
-		m_state.rtv = rtv;
-		m_state.dsv = dsv;
-
-		m_ctx->OMSetRenderTargets(1, &rtv, dsv);
-	}
-#endif
 	if (static_cast<GSTextureOGL*>(rt)->IsBackbuffer()) {
 		OMSetFBO(0);
 
@@ -1108,7 +1135,16 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 		OMSetFBO(m_fbo);
 
 		assert(rt != NULL); // a render target must exists
-		static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
+
+		// FIXME DEBUG special case for GL_R16UI
+		if (rt->GetFormat() == GL_R16UI) {
+			glDrawBuffer(GL_COLOR_ATTACHMENT1);
+			static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT1);
+		} else {
+			glDrawBuffer(GL_COLOR_ATTACHMENT0);
+			static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
+		}
+
 		if (ds != NULL)
 			static_cast<GSTextureOGL*>(ds)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
 	}
@@ -1215,7 +1251,8 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	char* log = (char*)malloc(log_length);
 	glGetProgramInfoLog(*program, log_length, NULL, log);
 
-	fprintf(stderr, "%s (%s) :", glsl_file.c_str(), entry.c_str());
+	fprintf(stderr, "%s (entry %s, prog %d) :", glsl_file.c_str(), entry.c_str(), *program);
+	fprintf(stderr, "\n%s", macro_sel.c_str());
 	fprintf(stderr, "%s\n", log);
 	free(log);
 }

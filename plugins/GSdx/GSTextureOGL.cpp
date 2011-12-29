@@ -146,6 +146,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, m_extra_buffer_id);
 			glBufferData(GL_PIXEL_PACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 			break;
 		default: break;
 	}
@@ -295,6 +296,8 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 		m.bits = (uint8*) glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, m_pbo_size, map_flags);
 		m.pitch = m_size.x;
 
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
 		return true;
 	}
 
@@ -367,20 +370,21 @@ struct BITMAPINFOHEADER
 
 bool GSTextureOGL::Save(const string& fn, bool dds)
 {
-	switch (m_type) {
-		case GSTexture::DepthStencil:
-		case GSTexture::Offscreen:
-			ASSERT(0);
-			break;
-		default: break;
-	}
+	// Code not yet working
+	if (IsDss()) return false;
 
 	// Collect the texture data
-	char* image = (char*)malloc(4 * m_size.x * m_size.y);
+	uint32 pitch = 4 * m_size.x;
+	if (IsDss()) pitch *= 2;
+	char* image = (char*)malloc(pitch * m_size.y);
+
 	if (IsBackbuffer()) {
 		// TODO backbuffer
 		glReadBuffer(GL_BACK);
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
+	} else if(IsDss()) {
+		Attach(GL_DEPTH_STENCIL_ATTACHMENT);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, image);
 	} else {
 		EnableUnit(0);
 		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
@@ -417,12 +421,29 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 		fwrite(&bfh, 1, sizeof(bfh), fp);
 		fwrite(&bih, 1, sizeof(bih), fp);
 
-		uint32 pitch = 4 * m_size.x;
 		uint8* data = (uint8*)image + (m_size.y - 1) * pitch;
 
 		for(int h = m_size.y; h > 0; h--, data -= pitch)
 		{
-			fwrite(data, 1, m_size.x << 2, fp); // TODO: swap red-blue?
+			if (IsDss()) {
+				// Only get the depth and convert it to an integer
+				uint8* better_data = data;
+				for (int w = m_size.x; w > 0; w--, better_data += 8) {
+					float* input = (float*)better_data;
+					uint32 depth = (uint32)ldexpf(*input, 32);
+					fwrite(&depth, 1, 4, fp);
+				}
+			} else {
+				// swap red and blue
+				uint8* better_data = data;
+				for (int w = m_size.x; w > 0; w--, better_data += 4) {
+					uint8 red = better_data[2];
+					better_data[2] = better_data[0];
+					better_data[0] = red;
+					fwrite(better_data, 1, 4, fp);
+				}
+			}
+			// fwrite(data, 1, m_size.x << 2, fp); // TODO: swap red-blue?
 		}
 
 		fclose(fp);

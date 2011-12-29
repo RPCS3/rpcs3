@@ -87,10 +87,12 @@ class GSUniformBufferOGL {
 	GLuint buffer;		// data object
 	GLuint index;		// GLSL slot
 	uint   size;	    // size of the data
+	const GLenum target;
 
 public:
 	GSUniformBufferOGL(GLuint index, uint size) : index(index)
-														, size(size)
+												  , size(size)
+												  ,target(GL_UNIFORM_BUFFER)
 	{
 		glGenBuffers(1, &buffer);
 		bind();
@@ -100,25 +102,25 @@ public:
 
 	void bind()
 	{
-		glBindBuffer(GL_UNIFORM_BUFFER, buffer);
+		glBindBuffer(target, buffer);
 	}
 
 	void allocate()
 	{
-		glBufferData(GL_UNIFORM_BUFFER, size, NULL, GL_STREAM_DRAW);
+		glBufferData(target, size, NULL, GL_STREAM_DRAW);
 	}
 
 	void attach()
 	{
-		glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer);
+		glBindBufferBase(target, index, buffer);
 	}
 
 	void upload(const void* src)
 	{
 		uint32 flags = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-		uint8* dst = (uint8*) glMapBufferRange(GL_UNIFORM_BUFFER, 0, size, flags);
+		uint8* dst = (uint8*) glMapBufferRange(target, 0, size, flags);
 		memcpy(dst, src, size);
-		glUnmapBuffer(GL_UNIFORM_BUFFER);
+		glUnmapBuffer(target);
 	}
 
 	~GSUniformBufferOGL() {
@@ -178,7 +180,10 @@ struct GSVertexBufferState {
 		for (int i = 0; i < layout_nbr; i++) {
 			// Note this function need both a vertex array object and a GL_ARRAY_BUFFER buffer
 			glEnableVertexAttribArray(layout[i].index);
-			glVertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].normalize,  layout[i].stride, layout[i].offset);
+			if (layout[i].type == GL_UNSIGNED_INT || layout[i].type == GL_UNSIGNED_SHORT)
+				glVertexAttribIPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].stride, layout[i].offset);
+			else
+				glVertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].normalize,  layout[i].stride, layout[i].offset);
 		}
 	}
 

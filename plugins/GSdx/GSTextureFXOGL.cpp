@@ -106,10 +106,9 @@ void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 	// *************************************************************
 	// Dynamic
 	// *************************************************************
-	if(m_vs_cb_cache.Update(cb))
-	{
+	if(m_vs_cb_cache.Update(cb)) {
 		SetUniformBuffer(m_vs_cb);
-		m_vs_cb->upload(&cb);
+		m_vs_cb->upload(cb);
 	}
 
 	VSSetShader(i->second);
@@ -178,10 +177,9 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 	// *************************************************************
 	// Dynamic
 	// *************************************************************
-	if(m_ps_cb_cache.Update(cb))
-	{
+	if(m_ps_cb_cache.Update(cb)) {
 		SetUniformBuffer(m_ps_cb);
-		m_ps_cb->upload(&cb);
+		m_ps_cb->upload(cb);
 	}
 
 	GLuint ss0, ss1;

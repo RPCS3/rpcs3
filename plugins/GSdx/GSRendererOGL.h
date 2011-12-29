@@ -215,6 +215,7 @@ class GSRendererOGL : public GSRendererHW<GSVertexHW11>
 				}
 			}
 
+			// FIXME Opengl support half pixel center (as dx10). Code could be easier!!!
 			GSDeviceOGL::VSConstantBuffer vs_cb;
 
 			float sx = 2.0f * rtscale.x / (rtsize.x << 4);
@@ -242,6 +243,7 @@ class GSRendererOGL : public GSRendererHW<GSVertexHW11>
 
 			vs_cb.VertexScale  = GSVector4(sx, -sy, ldexpf(1, -32), 0.0f);
 			vs_cb.VertexOffset = GSVector4(ox * sx + ox2 + 1, -(oy * sy + oy2 + 1), 0.0f, -1.0f);
+			// END of FIXME
 
 			// gs
 

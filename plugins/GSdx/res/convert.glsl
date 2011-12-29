@@ -39,6 +39,7 @@ layout(location = 0) in vec4 SV_Position;
 layout(location = 1) in vec2 TEXCOORD0;
 
 layout(location = 0) out vec4 SV_Target0;
+layout(location = 1) out uint SV_Target1;
 
 layout(binding = 0) uniform sampler2D TextureSampler;
 
@@ -63,6 +64,17 @@ vec4 ps_crt(uint i)
 void ps_main0()
 {
     SV_Target0 = sample_c();
+}
+
+void ps_main1()
+{
+    vec4 c = sample_c();
+
+	c.a *= 256.0f / 127.0f; // hm, 0.5 won't give us 1.0 if we just multiply with 2
+
+	highp uvec4 i = uvec4(c * vec4(0x001f, 0x03e0, 0x7c00, 0x8000));
+
+    SV_Target1 = (i.x & 0x001f) | (i.y & 0x03e0) | (i.z & 0x7c00) | (i.w & 0x8000);
 }
 
 void ps_main7()
@@ -93,9 +105,6 @@ void ps_main6() // diagonal
 }
 
 // Avoid to log useless error compilation failure
-void ps_main1()
-{
-}
 void ps_main2()
 {
 }
@@ -106,20 +115,6 @@ void ps_main4()
 {
 }
 
-//void ps_main1()
-//{
-//    vec4 c = sample_c();
-//
-//	c.a *= 256.0f / 127; // hm, 0.5 won't give us 1.0 if we just multiply with 2
-//
-//	uvec4 i = uvec4(c * vec4(0x001f, 0x03e0, 0x7c00, 0x8000));
-//
-//#ifdef DEBUG_FRAG
-//    SV_Target0 = vec4(0.5,0.5,0.5,1.0);
-//#else
-//    SV_Target0 = (i.x & 0x001f) | (i.y & 0x03e0) | (i.z & 0x7c00) | (i.w & 0x8000);
-//#endif
-//}
 
 // Texture2D Texture;
 // SamplerState TextureSampler;
