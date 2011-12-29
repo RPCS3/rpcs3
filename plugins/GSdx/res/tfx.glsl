@@ -603,7 +603,7 @@ void ps_main()
 
     // FIXME: I'm not sure about the value of others field
 	// output.c1 = c.a * 2; // used for alpha blending
-    SV_Target1 = vec4(c.a*2, c.a*2, c.a*2, c.a * 2);
+    SV_Target0 = vec4(c.a*2, c.a*2, c.a*2, c.a * 2);
 
 	if(PS_AOUT != 0) // 16 bit output
 	{
@@ -616,10 +616,10 @@ void ps_main()
 		if(c.a < 0.5) c.a += 0.5;
 	}
 
-    SV_Target0 = c;
+    SV_Target1 = c;
 
     //SV_Target0 = vec4(1.0f,0.0f,0.0f, 1.0f);
-    //SV_Target1 = vec4(1.0f,0.0f,0.0f, 1.0f);
+    //SV_Target1 = vec4(0.0f,1.0f,0.0f, 1.0f);
 #else
     SV_Target = vec4(1.0f,0.0f,0.0f, 1.0f);
 #endif
