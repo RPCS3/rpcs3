@@ -180,10 +180,16 @@ struct GSVertexBufferState {
 		for (int i = 0; i < layout_nbr; i++) {
 			// Note this function need both a vertex array object and a GL_ARRAY_BUFFER buffer
 			glEnableVertexAttribArray(layout[i].index);
-			if (layout[i].type == GL_UNSIGNED_INT || layout[i].type == GL_UNSIGNED_SHORT)
-				glVertexAttribIPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].stride, layout[i].offset);
-			else
-				glVertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].normalize,  layout[i].stride, layout[i].offset);
+			switch (layout[i].type) {
+				case GL_UNSIGNED_SHORT:
+				case GL_UNSIGNED_INT:
+					// Rule: when shader use integral (not normalized) you must use glVertexAttribIPointer (note the extra I)
+					glVertexAttribIPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].stride, layout[i].offset);
+					break;
+				default:
+					glVertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].normalize,  layout[i].stride, layout[i].offset);
+					break;
+			}
 		}
 	}
 

@@ -53,8 +53,10 @@
 // glUniformBlockBinding(program, block_index, block_binding_point);
 
 //#define LOUD_DEBUGGING
-//#define DUMP_START (380)
-#define DUMP_LENGTH (20)
+#define SHADER_DEBUG
+//#define DUMP_START (500)
+//#define DUMP_LENGTH (40)
+//#define DUMP_ONLY_FRAME  (112)
 
 #ifdef DUMP_START
 static uint32 g_draw_count = 0;
@@ -508,16 +510,27 @@ void GSDeviceOGL::Flip()
 
 void GSDeviceOGL::DrawPrimitive()
 {
-	glDrawArrays(m_state.topology, m_state.vb_state->start, m_state.vb_state->count);
 #ifdef DUMP_START
-	if (g_draw_count > DUMP_START && g_draw_count < (DUMP_START+DUMP_LENGTH)) {
+	bool dump_me = false;
+	if ( (g_draw_count > DUMP_START && g_draw_count < (DUMP_START+DUMP_LENGTH)) )
+		dump_me = true;
+#ifdef DUMP_ONLY_FRAME
+	if (DUMP_ONLY_FRAME != 0 && DUMP_ONLY_FRAME == g_frame_count)
+		dump_me = true;
+	else if (DUMP_ONLY_FRAME != 0)
+		dump_me = false;
+#endif
+#endif
+	
+	// DUMP INPUT
+#ifdef DUMP_START
+	if ( dump_me ) {
 		for (auto i = 0 ; i < 3 ; i++) {
 			if (m_state.ps_srv[i] != NULL) {
-				m_state.ps_srv[i]->Save(format("/tmp/in_%d__%d.bmp", g_draw_count, i),false);
+				m_state.ps_srv[i]->Save(format("/tmp/in_%d__%d.bmp", g_draw_count, i));
 			}
 		}
-		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_%d.bmp", g_draw_count),false);
-		if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/out_%d_ds.bmp", g_draw_count),false);
+		if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_in_%d.bmp", g_draw_count));
 
 		string topo;
 		switch (m_state.topology) {
@@ -530,18 +543,41 @@ void GSDeviceOGL::DrawPrimitive()
 		fprintf(stderr, "Draw %d (Frame %d), %d elem of %s\n", g_draw_count, g_frame_count, m_state.vb_state->count, topo.c_str() );
 		fprintf(stderr, "vs: %d ; gs: %d ; ps: %d\n", m_state.vs, m_state.gs, m_state.ps);
 		fprintf(stderr, "Blend: %d, Depth: %d, Stencil: %d \n",m_state.bs->m_enable, m_state.dss->m_depth_enable, m_state.dss->m_stencil_enable);
+	}
+#endif
 
-		//fprintf(stderr, "type: %d, format: 0x%x\n", m_state.rtv->GetType(), m_state.rtv->GetFormat());
+	glDrawArrays(m_state.topology, m_state.vb_state->start, m_state.vb_state->count);
+
+	// DUMP OUTPUT
+#ifdef DUMP_START
+	if ( dump_me ) {
+		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_%d.bmp", g_draw_count));
+		if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
+
 		fprintf(stderr, "\n");
 
 	}
 
 	g_draw_count++;
 #endif
+
+
+	// FIXME AMD driver bug workaround
+	// You cannot unattach shader. So destroy everythings and recreate the shader pipeline...
+	// Slow and painful...
+	glBindProgramPipeline(0);
+	glDeleteProgramPipelines(1, &m_pipeline);
+	m_state.gs = 0;
+	m_state.ps = 0;
+	m_state.vs = 0;
+
+	glGenProgramPipelines(1, &m_pipeline);
+	glBindProgramPipeline(m_pipeline);
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
+	GLuint fbo_old = m_state.fbo;
 	if (static_cast<GSTextureOGL*>(t)->IsBackbuffer()) {
 		// FIXME I really not sure
 		OMSetFBO(0);
@@ -557,6 +593,7 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 		static_cast<GSTextureOGL*>(t)->Attach(GL_COLOR_ATTACHMENT0);
 		glClearBufferfv(GL_COLOR, 0, c.v);
 	}
+	OMSetFBO(fbo_old);
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
@@ -567,16 +604,19 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
 
 void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 {
+	GLuint fbo_old = m_state.fbo;
 	// FIXME I need to clarify this FBO attachment stuff
 	// I would like to avoid FBO for a basic clean operation
 	OMSetFBO(m_fbo);
 	static_cast<GSTextureOGL*>(t)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
 	// FIXME can you clean depth and stencil separately
 	glClearBufferfv(GL_DEPTH, 0, &c);
+	OMSetFBO(fbo_old);
 }
 
 void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 {
+	GLuint fbo_old = m_state.fbo;
 	// FIXME I need to clarify this FBO attachment stuff
 	// I would like to avoid FBO for a basic clean operation
 	OMSetFBO(m_fbo);
@@ -584,6 +624,7 @@ void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 	GLint color = c;
 	// FIXME can you clean depth and stencil separately
 	glClearBufferiv(GL_STENCIL, 0, &color);
+	OMSetFBO(fbo_old);
 }
 
 GSTexture* GSDeviceOGL::CreateRenderTarget(int w, int h, bool msaa, int format)
@@ -665,6 +706,11 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 	// GL_NV_copy_image seem like the good extension but not supported on AMD...
 	// Maybe opengl 4.3 !
 	// FIXME check those function work as expected
+	
+	// FIXME FBO
+	GLuint fbo_old = m_state.fbo;
+	OMSetFBO(m_fbo);
+
 
 	// Set the input of glCopyTexSubImage2D
 	static_cast<GSTextureOGL*>(st)->Attach(GL_COLOR_ATTACHMENT1);
@@ -673,6 +719,8 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 	// Copy the full image
 	static_cast<GSTextureOGL*>(dt)->EnableUnit(0);
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, dt->GetWidth(), dt->GetHeight());
+
+	OMSetFBO(fbo_old);
 
 #if 0
 	// FIXME attach the texture to the FBO
@@ -879,6 +927,9 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 		//
 
+#ifdef DUMP_START
+		fprintf(stderr, "draw date!!!\n");
+#endif
 		DrawPrimitive();
 
 		//
@@ -982,7 +1033,6 @@ void GSDeviceOGL::GSSetShader(GLuint gs)
 	if(m_state.gs != gs)
 	{
 		m_state.gs = gs;
-		// FIXME AMD driver bug !!!!!!!!
 		glUseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, gs);
 	}
 }
@@ -1244,6 +1294,7 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	free(header_str);
 	free(sources_array);
 
+#ifdef SHADER_DEBUG
 	// Print a nice debug log
 	GLint log_length = 0;
 	glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
@@ -1254,6 +1305,7 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	fprintf(stderr, "%s (entry %s, prog %d) :", glsl_file.c_str(), entry.c_str(), *program);
 	fprintf(stderr, "\n%s", macro_sel.c_str());
 	fprintf(stderr, "%s\n", log);
+#endif
 	free(log);
 }
 

@@ -87,6 +87,9 @@ void vs_main()
 	
 	vec4 p = vec4(i_p, z, 0) - vec4(0.05f, 0.05f, 0, 0); 
 	vec4 final_p = p * VertexScale - VertexOffset;
+    // FIXME
+    // FLIP vertically
+    final_p.y *= -1.0f;
 
 	OUT.p = final_p;
     gl_Position = final_p; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
@@ -132,7 +135,10 @@ out gl_PerVertex {
     float gl_ClipDistance[];
 };
 
-layout(location = 0) in vertex GSin[];
+// FIXME
+// AMD Driver bug again !!!!
+//layout(location = 0) in vertex GSin[];
+in vertex GSin[];
 
 layout(location = 0) out vertex GSout;
 
@@ -188,45 +194,58 @@ void gs_main()
 
 #elif GS_PRIM == 3
 layout(lines) in;
-layout(triangle_strip, max_vertices = 4) out;
+layout(triangle_strip, max_vertices = 6) out;
 
 void gs_main()
 {
     // left top     => GSin[0];
     // right bottom => GSin[1];
+    vertex rb = GSin[1];
+    vertex lt = GSin[0];
 
-
-    // left top
-	GSout = GSin[0];
-
-    GSout.p.z = GSin[1].p.z;
-    GSout.t.zw = GSin[1].t.zw;
-    gl_Position = GSout.p; // FIXME is it useful
+    lt.p.z = rb.p.z;
+    lt.t.zw = rb.t.zw;
 	#if GS_IIP == 0
-	GSout.c = GSin[1].c;
+	lt.c = rb.c;
 	#endif
+
+    vertex lb = rb;
+	lb.p.x = lt.p.x;
+	lb.t.x = lt.t.x;
+
+    vertex rt = rb;
+	rt.p.y = lt.p.y;
+	rt.t.y = lt.t.y;
+
+    // Triangle 1
+    gl_Position = lt.p;
+    GSout = lt;
     EmitVertex();
 
-    // left bottom
-	GSout = GSin[1];
-    gl_Position = gl_in[1].gl_Position; // FIXME is it useful
-    gl_Position.x = GSin[0].p.x;
-    GSout.p.x = GSin[0].p.x;
-    GSout.t.x = GSin[0].t.x;
+    gl_Position = lb.p;
+    GSout = lb;
     EmitVertex();
 
-    // rigth top
-	GSout = GSin[1];
-    gl_Position = gl_in[1].gl_Position; // FIXME is it useful
-    gl_Position.y = GSin[0].p.y;
-    GSout.p.y = GSin[0].p.y;
-    GSout.t.y = GSin[0].t.y;
+    gl_Position = rt.p;
+    GSout = rt;
     EmitVertex();
 
-    // rigth bottom
-	GSout = GSin[1];
-    gl_Position = GSin[1].p; // FIXME is it useful
+	EndPrimitive();
+
+	// Triangle 2
+    gl_Position = lb.p;
+    GSout = lb;
     EmitVertex();
+
+    gl_Position = rt.p;
+    GSout = rt;
+    EmitVertex();
+
+    gl_Position = rb.p;
+    GSout = rb;
+    EmitVertex();
+
+    EndPrimitive();
 
 }
 
@@ -238,13 +257,8 @@ void gs_main()
 layout(location = 0) in vertex PSin;
 
 // Same buffer but 2 colors for dual source blending
-//FIXME
-#if 1
-	layout(location = 0, index = 0) out vec4 SV_Target0;
-	layout(location = 0, index = 1) out vec4 SV_Target1;
-#else
-	layout(location = 0)		    out vec4 SV_Target;
-#endif
+layout(location = 0, index = 0) out vec4 SV_Target0;
+layout(location = 0, index = 1) out vec4 SV_Target1;
 
 layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
@@ -264,7 +278,10 @@ layout(std140, binding = 5) uniform cb1
 
 vec4 sample_c(vec2 uv)
 {
+    // FIXME I'm not sure it is a good solution to flip texture
 	return texture(TextureSampler, uv);
+    //FIXME another way to FLIP vertically
+	//return texture(TextureSampler, vec2(uv.x, 1.0f-uv.y) );
 }
 
 vec4 sample_p(float u)
@@ -598,7 +615,6 @@ vec4 ps_color()
 void ps_main()
 {
 	//FIXME
-#if 1
 	vec4 c = ps_color();
 
     // FIXME: I'm not sure about the value of others field
@@ -620,8 +636,5 @@ void ps_main()
 
     //SV_Target0 = vec4(1.0f,0.0f,0.0f, 1.0f);
     //SV_Target1 = vec4(0.0f,1.0f,0.0f, 1.0f);
-#else
-    SV_Target = vec4(1.0f,0.0f,0.0f, 1.0f);
-#endif
 }
 #endif

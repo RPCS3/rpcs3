@@ -95,13 +95,9 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 			// corollary we can maybe use it for multisample stuff
 		case GSTexture::Texture:
 		case GSTexture::RenderTarget:
+		case GSTexture::DepthStencil:
 			glGenTextures(1, &m_texture_id);
 			m_texture_target = GL_TEXTURE_2D;
-			break;
-		case GSTexture::DepthStencil:
-			glGenRenderbuffers(1, &m_texture_id);
-			m_texture_target = GL_RENDERBUFFER;
-			break;
 			break;
 		case GSTexture::Backbuffer:
 			m_texture_target = 0;
@@ -123,8 +119,8 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 	// Allocate the buffer
 	switch (m_type) {
 		case GSTexture::DepthStencil:
-			glBindRenderbuffer(m_texture_target, m_texture_id);
-			glRenderbufferStorageMultisample(m_texture_target, msaa_level, m_format, m_size.y, m_size.x);
+			EnableUnit(1);
+			glTexImage2D(m_texture_target, 0, m_format, w, h, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, NULL);
 			break;
 		case GSTexture::RenderTarget:
 		case GSTexture::Texture:
@@ -155,28 +151,12 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 GSTextureOGL::~GSTextureOGL()
 {
 	glDeleteBuffers(1, &m_extra_buffer_id);
-	switch (m_type) {
-		case GSTexture::Texture:
-		case GSTexture::RenderTarget:
-			glDeleteTextures(1, &m_texture_id);
-			break;
-		case GSTexture::DepthStencil:
-			glDeleteRenderbuffers(1, &m_texture_id);
-			break;
-		case GSTexture::Offscreen:
-			assert(0);
-			break;
-		default:
-			break;
-	}
+	glDeleteTextures(1, &m_texture_id);
 }
 
 void GSTextureOGL::Attach(GLenum attachment)
 {
-	if (m_type == GSTexture::DepthStencil)
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, m_texture_target, m_texture_id);
-	else
-		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
 }
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
@@ -245,28 +225,21 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 
 void GSTextureOGL::EnableUnit(uint unit)
 {
-	switch (m_type) {
-		case GSTexture::DepthStencil:
-		case GSTexture::Offscreen:
-			assert(0);
-			break;
-		case GSTexture::RenderTarget:
-		case GSTexture::Texture:
-			// FIXME
-			// Howto allocate the texture unit !!!
-			// In worst case the HW renderer seems to use 3 texture unit
-			// For the moment SW renderer only use 1 so don't bother
-			if (g_state_texture_unit != unit) {
-				g_state_texture_unit = unit;
-				glActiveTexture(GL_TEXTURE0 + unit);
-				// When you change the texture unit, texture must be rebinded
-				g_state_texture_id = m_texture_id;
-				glBindTexture(m_texture_target, m_texture_id);
-			} else if (g_state_texture_id != m_texture_id) {
-				g_state_texture_id = m_texture_id;
-				glBindTexture(m_texture_target, m_texture_id);
-			}
-			break;
+	if (!IsBackbuffer()) {
+		// FIXME
+		// Howto allocate the texture unit !!!
+		// In worst case the HW renderer seems to use 3 texture unit
+		// For the moment SW renderer only use 1 so don't bother
+		if (g_state_texture_unit != unit) {
+			g_state_texture_unit = unit;
+			glActiveTexture(GL_TEXTURE0 + unit);
+			// When you change the texture unit, texture must be rebinded
+			g_state_texture_id = m_texture_id;
+			glBindTexture(m_texture_target, m_texture_id);
+		} else if (g_state_texture_id != m_texture_id) {
+			g_state_texture_id = m_texture_id;
+			glBindTexture(m_texture_target, m_texture_id);
+		}
 	}
 }
 
@@ -303,13 +276,6 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 
 	return false;
 #if 0
-	if(r != NULL)
-	{
-		// ASSERT(0); // not implemented
-
-		return false;
-	}
-
 	if(m_texture && m_desc.Usage == D3D11_USAGE_STAGING)
 	{
 		D3D11_MAPPED_SUBRESOURCE map;
@@ -370,24 +336,20 @@ struct BITMAPINFOHEADER
 
 bool GSTextureOGL::Save(const string& fn, bool dds)
 {
-	// Code not yet working
-	if (IsDss()) return false;
-
 	// Collect the texture data
 	uint32 pitch = 4 * m_size.x;
 	if (IsDss()) pitch *= 2;
 	char* image = (char*)malloc(pitch * m_size.y);
 
 	if (IsBackbuffer()) {
-		// TODO backbuffer
 		glReadBuffer(GL_BACK);
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	} else if(IsDss()) {
-		Attach(GL_DEPTH_STENCIL_ATTACHMENT);
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, image);
+		EnableUnit(1);
+		glGetTexImage(m_texture_target, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, image);
 	} else {
 		EnableUnit(0);
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+		glGetTexImage(m_texture_target, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	}
 
 	// Build a BMP file
@@ -430,8 +392,11 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 				uint8* better_data = data;
 				for (int w = m_size.x; w > 0; w--, better_data += 8) {
 					float* input = (float*)better_data;
+					// FIXME how to dump 32 bits value into 8bits component color
 					uint32 depth = (uint32)ldexpf(*input, 32);
-					fwrite(&depth, 1, 4, fp);
+					uint8 small_depth = depth >> 24;
+					uint8 better_data[4] = {small_depth, small_depth, small_depth, 0 };
+					fwrite(&better_data, 1, 4, fp);
 				}
 			} else {
 				// swap red and blue
@@ -443,7 +408,6 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 					fwrite(better_data, 1, 4, fp);
 				}
 			}
-			// fwrite(data, 1, m_size.x << 2, fp); // TODO: swap red-blue?
 		}
 
 		fclose(fp);
@@ -453,61 +417,5 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 	}
 
 	return false;
-#if 0
-	CComPtr<ID3D11Resource> res;
-
-	if(m_desc.BindFlags & D3D11_BIND_DEPTH_STENCIL)
-	{
-		HRESULT hr;
-
-		D3D11_TEXTURE2D_DESC desc;
-
-		memset(&desc, 0, sizeof(desc));
-
-		m_texture->GetDesc(&desc);
-
-		desc.Usage = D3D11_USAGE_STAGING;
-		desc.BindFlags = 0;
-		desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-
-		CComPtr<ID3D11Texture2D> src, dst;
-
-		hr = m_dev->CreateTexture2D(&desc, NULL, &src);
-
-		m_ctx->CopyResource(src, m_texture);
-
-		desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-		hr = m_dev->CreateTexture2D(&desc, NULL, &dst);
-
-		D3D11_MAPPED_SUBRESOURCE sm, dm;
-
-		hr = m_ctx->Map(src, 0, D3D11_MAP_READ, 0, &sm);
-		hr = m_ctx->Map(dst, 0, D3D11_MAP_WRITE, 0, &dm);
-
-		uint8* s = (uint8*)sm.pData;
-		uint8* d = (uint8*)dm.pData;
-
-		for(uint32 y = 0; y < desc.Height; y++, s += sm.RowPitch, d += dm.RowPitch)
-		{
-			for(uint32 x = 0; x < desc.Width; x++)
-			{
-				((uint32*)d)[x] = (uint32)(ldexpf(((float*)s)[x*2], 32));
-			}
-		}
-
-		m_ctx->Unmap(src, 0);
-		m_ctx->Unmap(dst, 0);
-
-		res = dst;
-	}
-	else
-	{
-		res = m_texture;
-	}
-
-	return SUCCEEDED(D3DX11SaveTextureToFile(m_ctx, res, dds ? D3DX11_IFF_DDS : D3DX11_IFF_BMP, fn.c_str()));
-#endif
 }
 
