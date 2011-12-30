@@ -26,8 +26,7 @@ static uint g_state_texture_unit = 0;
 static uint g_state_texture_id = 0;
 
 GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
-	: m_texture_unit(0),
-	  m_extra_buffer_id(0),
+	: m_extra_buffer_id(0),
 	  m_pbo_size(0)
 {
 	// *************************************************************
@@ -120,7 +119,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 	switch (m_type) {
 		case GSTexture::DepthStencil:
 			EnableUnit(1);
-			glTexImage2D(m_texture_target, 0, m_format, w, h, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, NULL);
+			glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, NULL);
 			break;
 		case GSTexture::RenderTarget:
 		case GSTexture::Texture:
@@ -130,7 +129,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 			// For the moment SW renderer only use 1 so don't bother
 			EnableUnit(0);
 			if (m_format == GL_RGBA8) {
-				glTexImage2D(m_texture_target, 0, m_format, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 			}
 			else
 				assert(0); // TODO Later
@@ -161,54 +160,27 @@ void GSTextureOGL::Attach(GLenum attachment)
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 {
-	// static int update_count = 0;
-	// update_count++;
-	// To update only a part of the texture you can use:
-	// glTexSubImage2D — specify a two-dimensional texture subimage
 	if (m_type == GSTexture::DepthStencil || m_type == GSTexture::Offscreen) assert(0);
 
-	// glTexSubImage2D specifies a two-dimensional subtexture for the current texture unit, specified with glActiveTexture.
-	// If a non-zero named buffer object is bound to the GL_PIXEL_UNPACK_BUFFER target
-	//(see glBindBuffer) while a texture image is
-	// specified, data is treated as a byte offset into the buffer object's data store
 	// FIXME warning order of the y axis
 	// FIXME I'm not confident with GL_UNSIGNED_BYTE type
-	// FIXME add a state check
 
 	EnableUnit(0);
 
-	if (m_format != GL_RGBA8) assert(0);
-
-	// FIXME. That suck but I don't know how to do better for now. I think we need to create a texture buffer and directly upload the copy
-	// The case appears on SW mode. Src pitch is 2x dst pitch.
-	int rowbytes = r.width() << 2;
-	if (pitch != rowbytes) {
-		uint32 map_flags = GL_MAP_WRITE_BIT;
-
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, m_extra_buffer_id);
-		if (!m_pbo_size) {
-			m_pbo_size = m_size.x * m_size.y * 4;
-			glBufferData(GL_PIXEL_UNPACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
-		} else {
-			GL_MAP_INVALIDATE_BUFFER_BIT;
-		}
-
-		uint8* src = (uint8*) data;
-		uint8* dst = (uint8*) glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, m_pbo_size, map_flags);
-		for(int h = r.height(); h > 0; h--, src += pitch, dst += rowbytes)
-		{
-			memcpy(dst, src, rowbytes);
-		}
-		glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
-
-		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, 0 /* offset in UNPACK BUFFER */);
-
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-
-	} else {
-		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
+	if (m_format != GL_RGBA8) {
+		fprintf(stderr, "wrong pixel format\n");
+		assert(0);
 	}
 
+	// pitch could be different of width*element_size
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch>>2);
+	// FIXME : it crash on colin mcrae rally 3 (others game too) when the size is 16
+	//if (m_size.x != 16)
+	glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Restore default behavior
+
+	return true;
 #if 0
 	if(m_dev && m_texture)
 	{

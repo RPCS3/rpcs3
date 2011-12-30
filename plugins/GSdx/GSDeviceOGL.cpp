@@ -54,8 +54,8 @@
 
 //#define LOUD_DEBUGGING
 #define SHADER_DEBUG
-//#define DUMP_START (500)
-//#define DUMP_LENGTH (40)
+//#define DUMP_START (13000)
+//#define DUMP_LENGTH (200)
 //#define DUMP_ONLY_FRAME  (112)
 
 #ifdef DUMP_START
@@ -219,9 +219,9 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 
 	glGenFramebuffers(1, &m_fbo);
 	// Setup FBO fragment output
-	OMSetFBO(m_fbo);
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-	OMSetFBO(0);
+	// OMSetFBO(m_fbo);
+	// glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	// OMSetFBO(0);
 
 	// ****************************************************************
 	// Vertex buffer state
@@ -706,11 +706,10 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 	// GL_NV_copy_image seem like the good extension but not supported on AMD...
 	// Maybe opengl 4.3 !
 	// FIXME check those function work as expected
-	
+
 	// FIXME FBO
 	GLuint fbo_old = m_state.fbo;
 	OMSetFBO(m_fbo);
-
 
 	// Set the input of glCopyTexSubImage2D
 	static_cast<GSTextureOGL*>(st)->Attach(GL_COLOR_ATTACHMENT1);
@@ -1012,6 +1011,8 @@ void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t count)
 	}
 
 	vb->upload(vertices, map_flags);
+	// FIXME: disable it when code is working
+	CheckDebugLog();
 }
 
 void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)

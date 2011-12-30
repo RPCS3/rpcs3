@@ -171,6 +171,12 @@ struct GSVertexBufferState {
 	void upload(const void* src, uint32 flags)
 	{
 		uint8* dst = (uint8*) glMapBufferRange(GL_ARRAY_BUFFER, stride*start, stride*count, flags);
+#ifdef OGL_DEBUG
+		if (dst == NULL) {
+			fprintf(stderr, "CRITICAL ERROR map failed for vb !!!\n");
+			return;
+		}
+#endif
 		memcpy(dst, src, stride*count);
 		glUnmapBuffer(GL_ARRAY_BUFFER);
 	}

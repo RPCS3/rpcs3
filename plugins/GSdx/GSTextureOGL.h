@@ -28,7 +28,6 @@ class GSTextureOGL : public GSTexture
 	private:
 		GLenum m_texture_target; // texture target: 2D, rectangle etc...
 		GLuint m_texture_id;	 // the texture id
-		uint m_texture_unit;		 // the texture unit offset
 		uint m_extra_buffer_id;
 		int m_pbo_size;
 

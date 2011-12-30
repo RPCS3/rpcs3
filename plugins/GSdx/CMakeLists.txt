@@ -18,6 +18,7 @@ set(CommonFlags
     -Wunused-variable
     -std=c++0x
     -fno-strict-aliasing
+    -DOGL_DEBUG
     )
 
 set(OptimizationFlags
@@ -28,7 +29,7 @@ set(OptimizationFlags
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
     # add defines
-    add_definitions(${CommonFlags} -g -Wall)
+    add_definitions(${CommonFlags} -DOGL_DEBUG -g -Wall)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
