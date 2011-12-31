@@ -85,8 +85,9 @@ void GSRendererSW::VSync(int field)
 
 	//
 	printf("m_sync_count = %d\n", ((GSRasterizerList*)m_rl)->m_sync_count); ((GSRasterizerList*)m_rl)->m_sync_count = 0;
-	*/
-
+	printf("m_syncpoint_count = %d\n", ((GSRasterizerList*)m_rl)->m_syncpoint_count); ((GSRasterizerList*)m_rl)->m_syncpoint_count = 0;
+	printf("m_solidrect_count = %d\n", ((GSRasterizerList*)m_rl)->m_solidrect_count); ((GSRasterizerList*)m_rl)->m_solidrect_count = 0;
+*/	
 	GSRendererT<GSVertexSW>::VSync(field);
 
 	m_tc->IncAge();
@@ -513,7 +514,12 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 
 	bool zwrite = zm != 0xffffffff;
 	bool ztest = context->TEST.ZTE && context->TEST.ZTST > ZTST_ALWAYS;
-
+	/*
+	printf("%05x %d %05x %d %05x %d %dx%d\n", 
+		fwrite || ftest ? m_context->FRAME.Block() : 0xfffff, m_context->FRAME.PSM,
+		zwrite || ztest ? m_context->ZBUF.Block() : 0xfffff, m_context->ZBUF.PSM,
+		PRIM->TME ? m_context->TEX0.TBP0 : 0xfffff, m_context->TEX0.PSM, (int)m_context->TEX0.TW, (int)m_context->TEX0.TH);
+	*/
 	if(!fwrite && !zwrite) return false;
 
 	gd.sel.fwrite = fwrite;
@@ -1003,24 +1009,25 @@ void GSRendererSW::VertexKick(bool skip)
 
 	if(GSVertexSW* v = DrawingKick<prim>(skip, count))
 	{
-		GS_PRIM_CLASS primclass = GSUtil::GetPrimClass(prim);
-
 if(!m_dump)
 {
 		GSVector4 pmin, pmax;
 
-		switch(primclass)
+		switch(prim)
 		{
-		case GS_POINT_CLASS:
+		case GS_POINTLIST:
 			pmin = v[0].p;
 			pmax = v[0].p;
 			break;
-		case GS_LINE_CLASS:
-		case GS_SPRITE_CLASS:
+		case GS_LINELIST:
+		case GS_LINESTRIP:
+		case GS_SPRITE:
 			pmin = v[0].p.min(v[1].p);
 			pmax = v[0].p.max(v[1].p);
 			break;
-		case GS_TRIANGLE_CLASS:
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
 			pmin = v[0].p.min(v[1].p).min(v[2].p);
 			pmax = v[0].p.max(v[1].p).max(v[2].p);
 			break;
@@ -1030,17 +1037,21 @@ if(!m_dump)
 
 		GSVector4 test = (pmax < scissor) | (pmin > scissor.zwxy());
 
-		switch(primclass)
+		switch(prim)
 		{
-		case GS_TRIANGLE_CLASS:
-		case GS_SPRITE_CLASS:
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+		case GS_SPRITE:
 			test |= pmin.ceil() == pmax.ceil();
 			break;
 		}
 
-		switch(primclass)
+		switch(prim)
 		{
-		case GS_TRIANGLE_CLASS:
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
 			// are in line or just two of them are the same (cross product == 0)
 			GSVector4 tmp = (v[1].p - v[0].p) * (v[2].p - v[0].p).yxwz();
 			test |= tmp == tmp.yxwz();
@@ -1052,26 +1063,42 @@ if(!m_dump)
 			return;
 		}
 }
-		switch(primclass)
+		switch(prim)
 		{
-		case GS_POINT_CLASS:
+		case GS_POINTLIST:
 			break;
-		case GS_LINE_CLASS:
+		case GS_LINELIST:
+		case GS_LINESTRIP:
 			if(PRIM->IIP == 0) {v[0].c = v[1].c;}
 			break;
-		case GS_TRIANGLE_CLASS:
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
 			if(PRIM->IIP == 0) {v[0].c = v[2].c; v[1].c = v[2].c;}
 			break;
-		case GS_SPRITE_CLASS:
+		case GS_SPRITE:
 			break;
 		}
 
 		if(m_count < 30 && m_count >= 3)
 		{
+			GSVertexSW* v = &m_vertices[m_count - 3];
+
 			int tl = 0;
 			int br = 0;
 
-			if(primclass == GS_TRIANGLE_CLASS && GSVertexSW::IsQuad(&m_vertices[m_count - 3], tl, br))
+			bool isquad = false;
+
+			switch(prim)
+			{
+			case GS_TRIANGLESTRIP:
+			case GS_TRIANGLEFAN:
+			case GS_TRIANGLELIST:
+				isquad = GSVertexSW::IsQuad(v, tl, br);
+				break;
+			}
+
+			if(isquad)
 			{
 				m_count -= 3;
 

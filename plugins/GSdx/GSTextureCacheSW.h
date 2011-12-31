@@ -38,7 +38,7 @@ public:
 		uint32 m_age;
 		bool m_complete;
 		bool m_repeating;
-		list<GSVector2i>* m_p2t;
+		vector<GSVector2i>* m_p2t;
 		uint32 m_valid[MAX_PAGES];
 		struct {uint32 bm[16]; const vector<uint32>* n;} m_pages;
 

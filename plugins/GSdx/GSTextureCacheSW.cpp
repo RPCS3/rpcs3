@@ -97,18 +97,20 @@ void GSTextureCacheSW::InvalidatePages(const vector<uint32>* pages, uint32 psm)
 
 			if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM))
 			{
+				uint32* RESTRICT valid = t->m_valid;
+
 				if(t->m_repeating)
 				{
-					list<GSVector2i>& l = t->m_p2t[page];
-						
-					for(list<GSVector2i>::iterator j = l.begin(); j != l.end(); j++)
+					vector<GSVector2i>& l = t->m_p2t[page];
+
+					for(vector<GSVector2i>::iterator j = l.begin(); j != l.end(); j++)
 					{
-						t->m_valid[j->x] &= j->y;
+						valid[j->x] &= j->y;
 					}
 				}
 				else
 				{
-					t->m_valid[page] = 0;
+					valid[page] = 0;
 				}
 
 				t->m_complete = false;

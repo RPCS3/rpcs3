@@ -126,7 +126,8 @@ protected:
 	int m_threads;
 	uint8* m_myscanline;
 	GSVector4i m_scissor;
-	GSVector4 m_fscissor;
+	GSVector4 m_fscissor_x;
+	GSVector4 m_fscissor_y;
 	struct {GSVertexSW* buff; int count;} m_edge;
 	int m_pixels;
 
@@ -213,6 +214,8 @@ public:
 	}
 
 	int m_sync_count;
+	int m_syncpoint_count;
+	int m_solidrect_count;
 
 	// IRasterizer
 

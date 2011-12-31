@@ -156,7 +156,7 @@ protected:
 
 	hash_map<uint32, GSOffset*> m_omap;
 	hash_map<uint32, GSPixelOffset4*> m_po4map;
-	hash_map<uint32, list<GSVector2i>*> m_p2tmap;
+	hash_map<uint64, vector<GSVector2i>*> m_p2tmap;
 
 public:
 	GSLocalMemory();
@@ -164,7 +164,7 @@ public:
 
 	GSOffset* GetOffset(uint32 bp, uint32 bw, uint32 psm);
 	GSPixelOffset4* GetPixelOffset4(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF);
-	list<GSVector2i>* GetPage2TileMap(const GIFRegTEX0& TEX0);
+	vector<GSVector2i>* GetPage2TileMap(const GIFRegTEX0& TEX0);
 
 	// address
 
