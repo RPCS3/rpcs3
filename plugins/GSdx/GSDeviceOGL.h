@@ -128,7 +128,7 @@ public:
 	}
 };
 
-struct GSInputLayout {
+struct GSInputLayoutOGL {
 	GLuint  index;
 	GLint   size;
 	GLenum  type;
@@ -137,51 +137,73 @@ struct GSInputLayout {
 	const GLvoid* offset;
 };
 
-struct GSVertexBufferState {
-	size_t stride;
-	size_t start;
-	size_t count;
-	size_t limit;
-	GLuint vb;
-	GLuint va;
-
-	GSVertexBufferState(size_t stride, GSInputLayout* layout, uint32 layout_nbr) : stride(stride)
-								  , count(0)
-	{
-		glGenBuffers(1, &vb);
-		glGenVertexArrays(1, &va);
-		bind();
-		allocate(60000); // Opengl works best with 1-4MB buffer. 60k element seems a good value.
-		set_internal_format(layout, layout_nbr);
-	}
+class GSVertexBufferStateOGL {
+	size_t m_stride;
+	size_t m_start;
+	size_t m_count;
+	size_t m_limit;
+	GLuint m_vb;
+	GLuint m_va;
+	const GLenum m_target;
 
 	void allocate(size_t new_limit)
 	{
-		start = 0;
-		limit = new_limit;
-		glBufferData(GL_ARRAY_BUFFER,  limit * stride, NULL, GL_STREAM_DRAW);
+		m_start = 0;
+		m_limit = new_limit;
+		glBufferData(m_target,  m_limit * m_stride, NULL, GL_STREAM_DRAW);
+	}
+
+public:
+	GSVertexBufferStateOGL(size_t stride, GSInputLayoutOGL* layout, uint32 layout_nbr)
+		: m_stride(stride)
+		  , m_count(0)
+		  , m_target(GL_ARRAY_BUFFER)
+	{
+		glGenBuffers(1, &m_vb);
+		glGenVertexArrays(1, &m_va);
+		bind();
+		allocate(60000); // Opengl works best with 1-4MB buffer. 60k element seems a good value. Note stride is 32
+		set_internal_format(layout, layout_nbr);
 	}
 
 	void bind()
 	{
-		glBindVertexArray(va);
-		glBindBuffer(GL_ARRAY_BUFFER, vb);
+		glBindVertexArray(m_va);
+		glBindBuffer(m_target, m_vb);
 	}
 
-	void upload(const void* src, uint32 flags)
+	void upload(const void* src, uint32 count)
 	{
-		uint8* dst = (uint8*) glMapBufferRange(GL_ARRAY_BUFFER, stride*start, stride*count, flags);
-#ifdef OGL_DEBUG
-		if (dst == NULL) {
-			fprintf(stderr, "CRITICAL ERROR map failed for vb !!!\n");
-			return;
+		m_count = count;
+
+		// Note: For an explanation of the map flag
+		// see http://www.opengl.org/wiki/Buffer_Object_Streaming
+		uint32 map_flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
+
+		// Current GPU buffer is really too small need to allocate a new one
+		if (m_count > m_limit) {
+			allocate(std::max<int>(count * 3 / 2, 60000));
+
+		} else if (m_count > (m_limit - m_start) ) {
+			// Not enough left free room. Just go back at the beginning
+			m_start = 0;
+
+			// Tell the driver that it can orphan previous buffer and restart from a scratch buffer.
+			// Technically the buffer will not be accessible by the application anymore but the
+			// GL will effectively remove it when draws call are finised.
+			map_flags |= GL_MAP_INVALIDATE_BUFFER_BIT;
+		} else {
+			// Tell the driver that it doesn't need to contain any valid buffer data, and that you promise to write the entire range you map
+			map_flags |= GL_MAP_INVALIDATE_RANGE_BIT;
 		}
-#endif
-		memcpy(dst, src, stride*count);
-		glUnmapBuffer(GL_ARRAY_BUFFER);
+
+		// Upload the data to the buffer
+		uint8* dst = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
+		memcpy(dst, src, m_stride*m_count);
+		glUnmapBuffer(m_target);
 	}
 
-	void set_internal_format(GSInputLayout* layout, uint32 layout_nbr)
+	void set_internal_format(GSInputLayoutOGL* layout, uint32 layout_nbr)
 	{
 		for (int i = 0; i < layout_nbr; i++) {
 			// Note this function need both a vertex array object and a GL_ARRAY_BUFFER buffer
@@ -199,10 +221,21 @@ struct GSVertexBufferState {
 		}
 	}
 
-	~GSVertexBufferState()
+	void draw_arrays(GLenum topology)
 	{
-		glDeleteBuffers(1, &vb);
-		glDeleteVertexArrays(1, &va);
+		glDrawArrays(topology, m_start, m_count);
+	}
+
+	void draw_done()
+	{
+		m_start += m_count;
+		m_count = 0;
+	}
+
+	~GSVertexBufferStateOGL()
+	{
+		glDeleteBuffers(1, &m_vb);
+		glDeleteVertexArrays(1, &m_va);
 	}
 };
 
@@ -451,8 +484,8 @@ class GSDeviceOGL : public GSDevice
 	GLuint m_pipeline;			// pipeline to attach program shader
 	GLuint m_fbo;				// frame buffer container
 
-	GSVertexBufferState* m_vb;	  // vb_state for HW renderer
-	GSVertexBufferState* m_vb_sr; // vb_state for StretchRect
+	GSVertexBufferStateOGL* m_vb;	  // vb_state for HW renderer
+	GSVertexBufferStateOGL* m_vb_sr; // vb_state for StretchRect
 
 	struct {
 		GLuint ps[2];				 // program object
@@ -488,7 +521,7 @@ class GSDeviceOGL : public GSDevice
 
 	struct
 	{
-		GSVertexBufferState* vb_state;
+		GSVertexBufferStateOGL* vb_state;
 		GLenum topology; // (ie GL_TRIANGLES...)
 		GLuint vs; // program
 		GSUniformBufferOGL* cb; // uniform current buffer
@@ -604,7 +637,7 @@ class GSDeviceOGL : public GSDevice
 
 	void IASetPrimitiveTopology(GLenum topology);
 	void IASetVertexBuffer(const void* vertices, size_t count);
-	void IASetVertexState(GSVertexBufferState* vb_state);
+	void IASetVertexState(GSVertexBufferStateOGL* vb_state);
 
 	void SetUniformBuffer(GSUniformBufferOGL* cb);
 

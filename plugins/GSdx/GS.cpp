@@ -396,11 +396,28 @@ EXPORT_C GSwriteCSR(uint32 csr)
 
 EXPORT_C GSreadFIFO(uint8* mem)
 {
+#ifdef _LINUX
+	// FIXME: double check which thread call this function
+	// See fifo2 issue below
+	if (theApp.GetConfig("renderer", 0) == 12) {
+		fprintf(stderr, "Disable FIFO1 on opengl\n");
+	}
+#endif
 	s_gs->ReadFIFO(mem, 1);
 }
 
 EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 {
+#ifdef _LINUX
+	// FIXME called from EE core thread not MTGS which cause
+	// invalidate data for opengl
+	if (theApp.GetConfig("renderer", 0) == 12) {
+#ifdef OGL_DEBUG
+		fprintf(stderr, "Disable FIFO2 on opengl\n");
+#endif
+		return;
+	}
+#endif
 	s_gs->ReadFIFO(mem, size);
 }
 

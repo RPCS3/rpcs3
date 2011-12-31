@@ -175,8 +175,20 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	// pitch could be different of width*element_size
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch>>2);
 	// FIXME : it crash on colin mcrae rally 3 (others game too) when the size is 16
-	//if (m_size.x != 16)
+	//fprintf(stderr, "Texture %dx%d with a pitch of %d\n", m_size.x, m_size.y, pitch >>2);
+	//fprintf(stderr, "Box (%d,%d)x(%d,%d)\n", r.x, r.y, r.width(), r.height());
+
 	glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
+#if 0
+	//if (m_size.x != 16)
+	if (r.width() > 16 && r.height() > 16)
+		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
+	else {
+		fprintf(stderr, "skip texture upload\n");
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Restore default behavior
+		return false;
+	}
+#endif
 
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Restore default behavior
 

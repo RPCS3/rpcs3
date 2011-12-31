@@ -226,12 +226,12 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// Vertex buffer state
 	// ****************************************************************
-	GSInputLayout il_convert[2] =
+	GSInputLayoutOGL il_convert[2] =
 	{
 		{0, 4, GL_FLOAT, GL_FALSE, sizeof(GSVertexPT1), (const GLvoid*)offsetof(struct GSVertexPT1, p) },
 		{1, 2, GL_FLOAT, GL_FALSE, sizeof(GSVertexPT1), (const GLvoid*)offsetof(struct GSVertexPT1, t) },
 	};
-	m_vb_sr = new GSVertexBufferState(sizeof(GSVertexPT1), il_convert, countof(il_convert));
+	m_vb_sr = new GSVertexBufferStateOGL(sizeof(GSVertexPT1), il_convert, countof(il_convert));
 
 	// ****************************************************************
 	// convert
@@ -546,7 +546,7 @@ void GSDeviceOGL::DrawPrimitive()
 	}
 #endif
 
-	glDrawArrays(m_state.topology, m_state.vb_state->start, m_state.vb_state->count);
+	m_state.vb_state->draw_arrays(m_state.topology);
 
 	// DUMP OUTPUT
 #ifdef DUMP_START
@@ -964,8 +964,7 @@ GSTexture* GSDeviceOGL::Resolve(GSTexture* t)
 
 void GSDeviceOGL::EndScene()
 {
-	m_state.vb_state->start += m_state.vb_state->count;
-	m_state.vb_state->count = 0;
+	m_state.vb_state->draw_done();
 }
 
 void GSDeviceOGL::SetUniformBuffer(GSUniformBufferOGL* cb)
@@ -976,7 +975,7 @@ void GSDeviceOGL::SetUniformBuffer(GSUniformBufferOGL* cb)
 	}
 }
 
-void GSDeviceOGL::IASetVertexState(GSVertexBufferState* vb_state)
+void GSDeviceOGL::IASetVertexState(GSVertexBufferStateOGL* vb_state)
 {
 	if (m_state.vb_state != vb_state) {
 		m_state.vb_state = vb_state;
@@ -986,33 +985,7 @@ void GSDeviceOGL::IASetVertexState(GSVertexBufferState* vb_state)
 
 void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t count)
 {
-	// Note: For an explanation of the map flag
-	// see http://www.opengl.org/wiki/Buffer_Object_Streaming
-	uint32 map_flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
-
-	GSVertexBufferState* vb = m_state.vb_state;
-	vb->count = count;
-
-	// Current GPU buffer is really too small need to realocate a new one
-	if (count > vb->limit) {
-		vb->allocate(std::max<int>(count * 3 / 2, 60000));
-
-	} else if (count > (vb->limit - vb->start) ) {
-		// Not enough left free room. Just go back at the beginning
-		vb->start = 0;
-
-		// Tell the driver that it can orphan previous buffer and restart from a scratch buffer.
-		// Technically the buffer will not be accessible by the application anymore but the
-		// GL will effectively remove it when draws call are finised.
-		map_flags |= GL_MAP_INVALIDATE_BUFFER_BIT;
-	} else {
-		// Tell the driver that it doesn't need to contain any valid buffer data, and that you promise to write the entire range you map
-		map_flags |= GL_MAP_INVALIDATE_RANGE_BIT;
-	}
-
-	vb->upload(vertices, map_flags);
-	// FIXME: disable it when code is working
-	CheckDebugLog();
+	m_state.vb_state->upload(vertices, count);
 }
 
 void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)

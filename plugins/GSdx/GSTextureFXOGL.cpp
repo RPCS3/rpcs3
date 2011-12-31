@@ -61,7 +61,7 @@ void GSDeviceOGL::CreateTextureFX()
 	//float4 c : COLOR0;
 	//float4 f : COLOR1;
 
-	GSInputLayout vert_format[6] =
+	GSInputLayoutOGL vert_format[6] =
 	{
 		// FIXME
 		{0 , 2 , GL_FLOAT          , GL_FALSE , sizeof(GSVertexHW11) , (const GLvoid*)(0) }  ,
@@ -72,7 +72,7 @@ void GSDeviceOGL::CreateTextureFX()
 		// note: there is a 32 bits pad
 		{5 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(GSVertexHW11) , (const GLvoid*)(28) } ,
 	};
-	m_vb = new GSVertexBufferState(sizeof(GSVertexHW11), vert_format, countof(vert_format));
+	m_vb = new GSVertexBufferStateOGL(sizeof(GSVertexHW11), vert_format, countof(vert_format));
 }
 
 void GSDeviceOGL::SetupIA(const void* vertices, int count, GLenum prim)
