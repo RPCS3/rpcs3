@@ -39,6 +39,7 @@ class GSTextureOGL : public GSTexture
 		bool Map(GSMap& m, const GSVector4i* r = NULL);
 		void Unmap();
 		bool Save(const string& fn, bool dds = false);
+		void Save(const string& fn, const void* image, uint32 pitch);
 
 		void EnableUnit(uint unit);
 		void Attach(GLenum attachment);

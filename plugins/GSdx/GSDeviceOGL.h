@@ -54,6 +54,13 @@ struct GSBlendStateOGL {
 		, m_a_msk(GL_TRUE)
 	{}
 
+	void debug()
+	{
+		if (!m_enable) return;
+		fprintf(stderr,"Blend RGB: %x src:%x dst:%x\n", m_equation_RGB, m_func_sRGB, m_func_dRGB);
+		fprintf(stderr,"Blend ALPHA: %x src:%x dst:%x\n", m_equation_ALPHA, m_func_sALPHA, m_func_dALPHA);
+		fprintf(stderr,"Mask. R:%d B:%d G:%d A:%d\n", m_r_msk, m_b_msk, m_g_msk, m_a_msk);
+	}
 };
 
 struct GSDepthStencilOGL {
@@ -81,6 +88,11 @@ struct GSDepthStencilOGL {
 		, m_stencil_spass_dpass_op(GL_KEEP)
 	{}
 
+	void debug_depth()
+	{
+		if (!m_depth_enable) return;
+		fprintf(stderr, "Depth %x, %x\n", m_depth_func, m_depth_mask);
+	}
 };
 
 class GSUniformBufferOGL {
@@ -503,6 +515,7 @@ class GSDeviceOGL : public GSDevice
 		GLuint ps[8];	// program object
 		GLuint ln;		// sampler object
 		GLuint pt;		// sampler object
+		GLuint gs;
 		GSDepthStencilOGL* dss;
 		GSBlendStateOGL* bs;
 	} m_convert;

@@ -19,6 +19,7 @@ set(CommonFlags
     -std=c++0x
     -fno-strict-aliasing
     -DOGL_DEBUG
+	-DAMD_DRIVER_WORKAROUND
     )
 
 set(OptimizationFlags

@@ -54,8 +54,8 @@
 
 //#define LOUD_DEBUGGING
 #define SHADER_DEBUG
-//#define DUMP_START (13000)
-//#define DUMP_LENGTH (200)
+//#define DUMP_START (70)
+//#define DUMP_LENGTH (130)
 //#define DUMP_ONLY_FRAME  (112)
 
 #ifdef DUMP_START
@@ -237,6 +237,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// convert
 	// ****************************************************************
 	CompileShaderFromSource("convert.glsl", "vs_main", GL_VERTEX_SHADER, &m_convert.vs);
+	CompileShaderFromSource("convert.glsl", "gs_main", GL_GEOMETRY_SHADER, &m_convert.gs);
 	for(int i = 0; i < countof(m_convert.ps); i++)
 		CompileShaderFromSource("convert.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_convert.ps[i]);
 
@@ -540,9 +541,11 @@ void GSDeviceOGL::DrawPrimitive()
 			case GL_POINTS: topo = "point"; break;
 			default: topo = "!!!!";
 		}
-		fprintf(stderr, "Draw %d (Frame %d), %d elem of %s\n", g_draw_count, g_frame_count, m_state.vb_state->count, topo.c_str() );
+		fprintf(stderr, "Draw %d (Frame %d), %d elem of %s\n", g_draw_count, g_frame_count, /*m_state.vb_state->count*/ 0, topo.c_str() );
 		fprintf(stderr, "vs: %d ; gs: %d ; ps: %d\n", m_state.vs, m_state.gs, m_state.ps);
 		fprintf(stderr, "Blend: %d, Depth: %d, Stencil: %d \n",m_state.bs->m_enable, m_state.dss->m_depth_enable, m_state.dss->m_stencil_enable);
+		m_state.bs->debug();
+		m_state.dss->debug_depth();
 	}
 #endif
 
@@ -560,19 +563,6 @@ void GSDeviceOGL::DrawPrimitive()
 
 	g_draw_count++;
 #endif
-
-
-	// FIXME AMD driver bug workaround
-	// You cannot unattach shader. So destroy everythings and recreate the shader pipeline...
-	// Slow and painful...
-	glBindProgramPipeline(0);
-	glDeleteProgramPipelines(1, &m_pipeline);
-	m_state.gs = 0;
-	m_state.ps = 0;
-	m_state.vs = 0;
-
-	glGenProgramPipelines(1, &m_pipeline);
-	glBindProgramPipeline(m_pipeline);
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -822,7 +812,11 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// gs
 	// ************************************
 
+#ifdef AMD_DRIVER_WORKAROUND
+	GSSetShader(m_convert.gs);
+#else
 	GSSetShader(0);
+#endif
 
 	// ************************************
 	// ps
@@ -914,7 +908,12 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 		// gs
 
+#ifdef AMD_DRIVER_WORKAROUND
+		GSSetShader(m_convert.gs);
+#else
 		GSSetShader(0);
+#endif
+
 
 		// ps
 
@@ -1044,7 +1043,6 @@ void GSDeviceOGL::PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2)
 
 void GSDeviceOGL::PSSetShader(GLuint ps)
 {
-
 	if(m_state.ps != ps)
 	{
 		m_state.ps = ps;
@@ -1279,8 +1277,8 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	fprintf(stderr, "%s (entry %s, prog %d) :", glsl_file.c_str(), entry.c_str(), *program);
 	fprintf(stderr, "\n%s", macro_sel.c_str());
 	fprintf(stderr, "%s\n", log);
-#endif
 	free(log);
+#endif
 }
 
 void GSDeviceOGL::CheckDebugLog()

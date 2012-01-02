@@ -55,7 +55,7 @@ layout(location = 3) in uvec2 i_p;
 layout(location = 4) in uint  i_z;
 layout(location = 5) in vec4  i_f;
 
-layout(location = 0) out vertex OUT;
+layout(location = 0) out vertex VSout;
 
 out gl_PerVertex {
     vec4 gl_Position;
@@ -91,33 +91,33 @@ void vs_main()
     // FLIP vertically
     final_p.y *= -1.0f;
 
-	OUT.p = final_p;
+	VSout.p = final_p;
     gl_Position = final_p; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 #if VS_RTCOPY
-	OUT.tp = final_p * vec4(0.5, -0.5, 0, 0) + 0.5;
+	VSout.tp = final_p * vec4(0.5, -0.5, 0, 0) + 0.5;
 #endif
 
 	if(VS_TME != 0)
 	{
 		if(VS_FST != 0)
 		{
-			OUT.t.xy = i_t * TextureScale;
-			OUT.t.w = 1.0f;
+			VSout.t.xy = i_t * TextureScale;
+			VSout.t.w = 1.0f;
 		}
 		else
 		{
-			OUT.t.xy = i_t;
-			OUT.t.w = i_q;
+			VSout.t.xy = i_t;
+			VSout.t.w = i_q;
 		}
 	}
 	else
 	{
-		OUT.t.xy = vec2(0.0f, 0.0f);
-		OUT.t.w = 1.0f;
+		VSout.t.xy = vec2(0.0f, 0.0f);
+		VSout.t.w = 1.0f;
 	}
 
-	OUT.c = i_c;
-	OUT.t.z = i_f.a;
+	VSout.c = i_c;
+	VSout.t.z = i_f.a;
 }
 
 #endif
@@ -633,8 +633,5 @@ void ps_main()
 	}
 
     SV_Target1 = c;
-
-    //SV_Target0 = vec4(1.0f,0.0f,0.0f, 1.0f);
-    //SV_Target1 = vec4(0.0f,1.0f,0.0f, 1.0f);
 }
 #endif

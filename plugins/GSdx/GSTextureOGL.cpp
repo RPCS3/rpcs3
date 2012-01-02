@@ -22,8 +22,8 @@
 #pragma once
 
 #include "GSTextureOGL.h"
-static uint g_state_texture_unit = 0;
-static uint g_state_texture_id = 0;
+static int g_state_texture_unit = -1;
+static int g_state_texture_id = -1;
 
 GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 	: m_extra_buffer_id(0),
@@ -317,6 +317,68 @@ struct BITMAPINFOHEADER
 #pragma pack(pop)
 
 #endif
+void GSTextureOGL::Save(const string& fn, const void* image, uint32 pitch)
+{
+	// Build a BMP file
+	FILE* fp = fopen(fn.c_str(), "wb");
+
+	BITMAPINFOHEADER bih;
+
+	memset(&bih, 0, sizeof(bih));
+
+	bih.biSize = sizeof(bih);
+	bih.biWidth = m_size.x;
+	bih.biHeight = m_size.y;
+	bih.biPlanes = 1;
+	bih.biBitCount = 32;
+	bih.biCompression = BI_RGB;
+	bih.biSizeImage = m_size.x * m_size.y << 2;
+
+	BITMAPFILEHEADER bfh;
+
+	memset(&bfh, 0, sizeof(bfh));
+
+	uint8* bfType = (uint8*)&bfh.bfType;
+
+	// bfh.bfType = 'MB';
+	bfType[0] = 0x42;
+	bfType[1] = 0x4d;
+	bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
+	bfh.bfSize = bfh.bfOffBits + bih.biSizeImage;
+	bfh.bfReserved1 = bfh.bfReserved2 = 0;
+
+	fwrite(&bfh, 1, sizeof(bfh), fp);
+	fwrite(&bih, 1, sizeof(bih), fp);
+
+	uint8* data = (uint8*)image + (m_size.y - 1) * pitch;
+
+	for(int h = m_size.y; h > 0; h--, data -= pitch)
+	{
+		if (IsDss()) {
+			// Only get the depth and convert it to an integer
+			uint8* better_data = data;
+			for (int w = m_size.x; w > 0; w--, better_data += 8) {
+				float* input = (float*)better_data;
+				// FIXME how to dump 32 bits value into 8bits component color
+				uint32 depth = (uint32)ldexpf(*input, 32);
+				uint8 small_depth = depth >> 24;
+				uint8 better_data[4] = {small_depth, small_depth, small_depth, 0 };
+				fwrite(&better_data, 1, 4, fp);
+			}
+		} else {
+			// swap red and blue
+			uint8* better_data = data;
+			for (int w = m_size.x; w > 0; w--, better_data += 4) {
+				uint8 red = better_data[2];
+				better_data[2] = better_data[0];
+				better_data[0] = red;
+				fwrite(better_data, 1, 4, fp);
+			}
+		}
+	}
+
+	fclose(fp);
+}
 
 bool GSTextureOGL::Save(const string& fn, bool dds)
 {
@@ -325,6 +387,8 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 	if (IsDss()) pitch *= 2;
 	char* image = (char*)malloc(pitch * m_size.y);
 
+	// FIXME instead of swapping manually B and R maybe you can request the driver to do it
+	// for us
 	if (IsBackbuffer()) {
 		glReadBuffer(GL_BACK);
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
@@ -336,70 +400,9 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 		glGetTexImage(m_texture_target, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	}
 
-	// Build a BMP file
-	if(FILE* fp = fopen(fn.c_str(), "wb"))
-	{
-		BITMAPINFOHEADER bih;
+	Save(fn, image, pitch);
+	free(image);
 
-		memset(&bih, 0, sizeof(bih));
-
-		bih.biSize = sizeof(bih);
-		bih.biWidth = m_size.x;
-		bih.biHeight = m_size.y;
-		bih.biPlanes = 1;
-		bih.biBitCount = 32;
-		bih.biCompression = BI_RGB;
-		bih.biSizeImage = m_size.x * m_size.y << 2;
-
-		BITMAPFILEHEADER bfh;
-
-		memset(&bfh, 0, sizeof(bfh));
-
-		uint8* bfType = (uint8*)&bfh.bfType;
-
-		// bfh.bfType = 'MB';
-		bfType[0] = 0x42;
-		bfType[1] = 0x4d;
-		bfh.bfOffBits = sizeof(bfh) + sizeof(bih);
-		bfh.bfSize = bfh.bfOffBits + bih.biSizeImage;
-		bfh.bfReserved1 = bfh.bfReserved2 = 0;
-
-		fwrite(&bfh, 1, sizeof(bfh), fp);
-		fwrite(&bih, 1, sizeof(bih), fp);
-
-		uint8* data = (uint8*)image + (m_size.y - 1) * pitch;
-
-		for(int h = m_size.y; h > 0; h--, data -= pitch)
-		{
-			if (IsDss()) {
-				// Only get the depth and convert it to an integer
-				uint8* better_data = data;
-				for (int w = m_size.x; w > 0; w--, better_data += 8) {
-					float* input = (float*)better_data;
-					// FIXME how to dump 32 bits value into 8bits component color
-					uint32 depth = (uint32)ldexpf(*input, 32);
-					uint8 small_depth = depth >> 24;
-					uint8 better_data[4] = {small_depth, small_depth, small_depth, 0 };
-					fwrite(&better_data, 1, 4, fp);
-				}
-			} else {
-				// swap red and blue
-				uint8* better_data = data;
-				for (int w = m_size.x; w > 0; w--, better_data += 4) {
-					uint8 red = better_data[2];
-					better_data[2] = better_data[0];
-					better_data[0] = red;
-					fwrite(better_data, 1, 4, fp);
-				}
-			}
-		}
-
-		fclose(fp);
-
-		free(image);
-		return true;
-	}
-
-	return false;
+	return true;
 }
 

@@ -1,5 +1,12 @@
 //#version 420 // Keep it for editor detection
 
+struct vertex_basic
+{
+    vec4 p;
+    vec2 t;
+};
+
+
 #ifdef VERTEX_SHADER
 
 out gl_PerVertex {
@@ -19,24 +26,54 @@ layout(location = 1) in vec2 TEXCOORD0;
 // smooth, the default, means to do perspective-correct interpolation.
 //
 // The centroid qualifier only matters when multisampling. If this qualifier is not present, then the value is interpolated to the pixel's center, anywhere in the pixel, or to one of the pixel's samples. This sample may lie outside of the actual primitive being rendered, since a primitive can cover only part of a pixel's area. The centroid qualifier is used to prevent this; the interpolation point must fall within both the pixel's area and the primitive's area.
-// FIXME gl_Position
-layout(location = 0) out vec4 POSITION_OUT;
-layout(location = 1) out vec2 TEXCOORD0_OUT;
+layout(location = 0) out vertex_basic VSout;
 
 void vs_main()
 {
-    POSITION_OUT = POSITION;
-    TEXCOORD0_OUT = TEXCOORD0;
+    VSout.p = POSITION;
+    VSout.t = TEXCOORD0;
     gl_Position = POSITION; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 }
 
 #endif
 
+#ifdef GEOMETRY_SHADER
+in gl_PerVertex {
+    vec4 gl_Position;
+    float gl_PointSize;
+    float gl_ClipDistance[];
+} gl_in[];
+
+out gl_PerVertex {
+    vec4 gl_Position;
+    float gl_PointSize;
+    float gl_ClipDistance[];
+};
+
+// FIXME
+// AMD Driver bug again !!!!
+//layout(location = 0) in vertex GSin[];
+in vertex_basic GSin[];
+
+layout(location = 0) out vertex_basic GSout;
+layout(triangles) in;
+layout(triangle_strip, max_vertices = 3) out;
+
+void gs_main()
+{
+    for(int i = 0; i < gl_in.length(); i++) {
+        gl_Position = gl_in[i].gl_Position;
+        GSout = GSin[i];
+        EmitVertex();
+    }
+    EndPrimitive();
+}
+#endif
+
 #ifdef FRAGMENT_SHADER
 // NOTE: pixel can be clip with "discard"
 
-layout(location = 0) in vec4 SV_Position;
-layout(location = 1) in vec2 TEXCOORD0;
+layout(location = 0) in vertex_basic PSin;
 
 layout(location = 0) out vec4 SV_Target0;
 layout(location = 1) out uint SV_Target1;
@@ -45,7 +82,7 @@ layout(binding = 0) uniform sampler2D TextureSampler;
 
 vec4 sample_c()
 {
-    return texture(TextureSampler, vec2(TEXCOORD0.x,TEXCOORD0.y) );
+    return texture(TextureSampler, PSin.t );
 }
 
 vec4 ps_crt(uint i)
@@ -88,7 +125,7 @@ void ps_main7()
 
 void ps_main5() // triangular
 {
-	highp uvec4 p = uvec4(SV_Position);
+	highp uvec4 p = uvec4(PSin.p);
 
 	vec4 c = ps_crt(((p.x + ((p.y >> 1u) & 1u) * 3u) >> 1u) % 3u);
 
@@ -97,7 +134,7 @@ void ps_main5() // triangular
 
 void ps_main6() // diagonal
 {
-	uvec4 p = uvec4(SV_Position);
+	uvec4 p = uvec4(PSin.p);
 
 	vec4 c = ps_crt((p.x + (p.y % 3)) % 3);
 
