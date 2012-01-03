@@ -118,10 +118,12 @@ public:
 			case GL_ONE: return "ONE";
 			case GL_ZERO: return "ZERO";
 			case GL_SRC1_ALPHA: return "SRC1 ALPHA";
+			case GL_SRC_ALPHA: return "SRC ALPHA";
 			case GL_ONE_MINUS_DST_ALPHA: return "1 - DST ALPHA";
 			case GL_DST_ALPHA: return "DST ALPHA";
 			case GL_DST_COLOR:	return "DST COLOR";
 			case GL_ONE_MINUS_SRC1_ALPHA: return "1 - SRC1 ALPHA";
+			case GL_ONE_MINUS_SRC_ALPHA: return "1 - SRC ALPHA";
 			case GL_CONSTANT_COLOR: return "CST";
 			case GL_ONE_MINUS_CONSTANT_COLOR: return "1 - CST";
 			default: return "UKN";
@@ -283,6 +285,7 @@ class GSVertexBufferStateOGL {
 	GLuint m_vb;
 	GLuint m_va;
 	const GLenum m_target;
+	GLenum m_topology;
 
 	void allocate(size_t new_limit)
 	{
@@ -359,9 +362,9 @@ public:
 		}
 	}
 
-	void draw_arrays(GLenum topology)
+	void draw_arrays()
 	{
-		glDrawArrays(topology, m_start, m_count);
+		glDrawArrays(m_topology, m_start, m_count);
 	}
 
 	void draw_done()
@@ -370,12 +373,38 @@ public:
 		m_count = 0;
 	}
 
-	uint32 get_count() { return m_count; }
+	void SetTopology(GLenum topology) { m_topology = topology; }
 
 	~GSVertexBufferStateOGL()
 	{
 		glDeleteBuffers(1, &m_vb);
 		glDeleteVertexArrays(1, &m_va);
+	}
+
+	void debug()
+	{
+		uint32 element;
+		string topo;
+		switch (m_topology) {
+			case GL_POINTS:
+				element = m_count;
+				topo = "point";
+				break;
+			case GL_LINES:
+				element = m_count/2;
+				topo = "line";
+				break;
+			case GL_TRIANGLES: 
+				element = m_count/3;
+				topo = "triangle";
+				break;
+			case GL_TRIANGLE_STRIP:
+				element = m_count - 3;
+				topo = "triangle strip";
+				break;
+		}
+		fprintf(stderr, "%d elements of %s\n", element, topo.c_str());
+
 	}
 };
 
@@ -662,8 +691,7 @@ class GSDeviceOGL : public GSDevice
 
 	struct
 	{
-		GSVertexBufferStateOGL* vb_state;
-		GLenum topology; // (ie GL_TRIANGLES...)
+		GSVertexBufferStateOGL* vb;
 		GLuint vs; // program
 		GSUniformBufferOGL* cb; // uniform current buffer
 		GLuint gs; // program
@@ -778,7 +806,7 @@ class GSDeviceOGL : public GSDevice
 
 	void IASetPrimitiveTopology(GLenum topology);
 	void IASetVertexBuffer(const void* vertices, size_t count);
-	void IASetVertexState(GSVertexBufferStateOGL* vb_state);
+	void IASetVertexState(GSVertexBufferStateOGL* vb);
 
 	void SetUniformBuffer(GSUniformBufferOGL* cb);
 

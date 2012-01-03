@@ -257,8 +257,12 @@ void gs_main()
 layout(location = 0) in vertex PSin;
 
 // Same buffer but 2 colors for dual source blending
+#ifndef DISABLE_DUAL_BLEND
 layout(location = 0, index = 1) out vec4 SV_Target0;
 layout(location = 0, index = 0) out vec4 SV_Target1;
+#else
+layout(location = 0) out vec4 SV_Target1;
+#endif
 
 layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
@@ -619,7 +623,9 @@ void ps_main()
 
     // FIXME: I'm not sure about the value of others field
 	// output.c1 = c.a * 2; // used for alpha blending
+#ifndef DISABLE_DUAL_BLEND
     SV_Target0 = vec4(c.a*2, c.a*2, c.a*2, c.a * 2);
+#endif
 
 	if(PS_AOUT != 0) // 16 bit output
 	{

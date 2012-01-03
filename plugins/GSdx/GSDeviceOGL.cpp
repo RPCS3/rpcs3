@@ -54,9 +54,12 @@
 
 //#define LOUD_DEBUGGING
 #define SHADER_DEBUG
-#define DUMP_START (70)
-#define DUMP_LENGTH (130)
+//#define DUMP_START (70)
+//#define DUMP_LENGTH (130)
 //#define DUMP_ONLY_FRAME  (112)
+
+// It seems dual blending does not work (at least on AMD) 
+//#define DISABLE_DUAL_BLEND
 
 #ifdef DUMP_START
 static uint32 g_draw_count = 0;
@@ -527,22 +530,15 @@ void GSDeviceOGL::DrawPrimitive()
 		}
 		if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_in_%d.bmp", g_draw_count));
 
-		string topo;
-		switch (m_state.topology) {
-			case GL_TRIANGLE_STRIP: topo = "triangle_strip"; break;
-			case GL_TRIANGLES: topo = "triangle"; break;
-			case GL_LINES: topo = "line"; break;
-			case GL_POINTS: topo = "point"; break;
-			default: topo = "!!!!";
-		}
-		fprintf(stderr, "Draw %d (Frame %d), %d elem of %s\n", g_draw_count, g_frame_count, m_state.vb_state->get_count(), topo.c_str() );
+		fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
 		fprintf(stderr, "vs: %d ; gs: %d ; ps: %d\n", m_state.vs, m_state.gs, m_state.ps);
+		m_state.vb->debug();
 		m_state.bs->debug();
 		m_state.dss->debug();
 	}
 #endif
 
-	m_state.vb_state->draw_arrays(m_state.topology);
+	m_state.vb->draw_arrays();
 
 	// DUMP OUTPUT
 #ifdef DUMP_START
@@ -956,7 +952,7 @@ GSTexture* GSDeviceOGL::Resolve(GSTexture* t)
 
 void GSDeviceOGL::EndScene()
 {
-	m_state.vb_state->draw_done();
+	m_state.vb->draw_done();
 }
 
 void GSDeviceOGL::SetUniformBuffer(GSUniformBufferOGL* cb)
@@ -967,22 +963,22 @@ void GSDeviceOGL::SetUniformBuffer(GSUniformBufferOGL* cb)
 	}
 }
 
-void GSDeviceOGL::IASetVertexState(GSVertexBufferStateOGL* vb_state)
+void GSDeviceOGL::IASetVertexState(GSVertexBufferStateOGL* vb)
 {
-	if (m_state.vb_state != vb_state) {
-		m_state.vb_state = vb_state;
-		vb_state->bind();
+	if (m_state.vb != vb) {
+		m_state.vb = vb;
+		vb->bind();
 	}
 }
 
 void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t count)
 {
-	m_state.vb_state->upload(vertices, count);
+	m_state.vb->upload(vertices, count);
 }
 
 void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)
 {
-	m_state.topology = topology;
+	m_state.vb->SetTopology(topology);
 }
 
 void GSDeviceOGL::VSSetShader(GLuint vs)
@@ -1190,6 +1186,9 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	std::string entry_main = format("#define %s main\n", entry.c_str());
 
 	std::string header = version + shader_type + entry_main + macro_sel;
+#ifdef DISABLE_DUAL_BLEND
+	header += "#define DISABLE_DUAL_BLEND 1\n";
+#endif
 
 	// *****************************************************
 	// Read the source file
@@ -1343,13 +1342,19 @@ void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsi
 
 #define D3DBLEND_ONE			GL_ONE
 #define D3DBLEND_ZERO			GL_ZERO
-#define D3DBLEND_SRCALPHA		GL_SRC1_ALPHA
 #define D3DBLEND_INVDESTALPHA	GL_ONE_MINUS_DST_ALPHA
 #define D3DBLEND_DESTALPHA		GL_DST_ALPHA
 #define D3DBLEND_DESTCOLOR		GL_DST_COLOR
-#define D3DBLEND_INVSRCALPHA	GL_ONE_MINUS_SRC1_ALPHA
 #define D3DBLEND_BLENDFACTOR	GL_CONSTANT_COLOR
 #define D3DBLEND_INVBLENDFACTOR GL_ONE_MINUS_CONSTANT_COLOR
+
+#ifdef DISABLE_DUAL_BLEND
+	#define D3DBLEND_SRCALPHA		GL_SRC_ALPHA
+	#define D3DBLEND_INVSRCALPHA	GL_ONE_MINUS_SRC_ALPHA
+#else
+	#define D3DBLEND_SRCALPHA		GL_SRC1_ALPHA
+	#define D3DBLEND_INVSRCALPHA	GL_ONE_MINUS_SRC1_ALPHA
+#endif
                         
 const GSDeviceOGL::D3D9Blend GSDeviceOGL::m_blendMapD3D9[3*3*3*3] =
 {
