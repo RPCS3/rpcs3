@@ -203,8 +203,20 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		// Note: 4.2 crash on latest nvidia drivers!
 		// So only check 4.1
 		// if ( (major < 4) || ( major == 4 && minor < 2 ) ) return false;
-		if ( (major < 4) || ( major == 4 && minor < 1 ) ) return false;
+		// if ( (major < 4) || ( major == 4 && minor < 1 ) ) return false;
+		if ( (major < 3) || ( major == 3 && minor < 3 ) ) {
+			fprintf(stderr, "OPENGL 3.3 is not supported\n");
+			return false;
+		}
 
+		if ( !glewIsSupported("GL_ARB_separate_shader_objects")) {
+			fprintf(stderr, "GL_ARB_separate_shader_objects is not supported\n");
+			return false;
+		}
+		if ( !glewIsSupported("GL_ARB_shading_language_420pack")) {
+			fprintf(stderr, "GL_ARB_shading_language_420pack is not supported\n");
+			return false;
+		}
 
 
 	}
@@ -1164,8 +1176,8 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	// Build a header string
 	// *****************************************************
 	// First select the version (must be the first line so we need to generate it
-	//std::string version = "#version 410\n#extension GL_ARB_shading_language_420pack: enable\n";
-	std::string version = "#version 420\n";
+	std::string version = "#version 330\n#extension GL_ARB_shading_language_420pack: enable\n#extension GL_ARB_separate_shader_objects : enable\n";
+	//std::string version = "#version 420\n";
 
 	// Allow to puts several shader in 1 files
 	std::string shader_type;
