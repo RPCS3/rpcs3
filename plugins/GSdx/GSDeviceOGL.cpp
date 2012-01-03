@@ -54,8 +54,8 @@
 
 //#define LOUD_DEBUGGING
 #define SHADER_DEBUG
-//#define DUMP_START (70)
-//#define DUMP_LENGTH (130)
+#define DUMP_START (70)
+#define DUMP_LENGTH (130)
 //#define DUMP_ONLY_FRAME  (112)
 
 #ifdef DUMP_START
@@ -302,13 +302,8 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge.ps[i]);
 
 	m_merge.bs = new GSBlendStateOGL();
-	m_merge.bs->m_enable         = true;
-	m_merge.bs->m_equation_RGB   = GL_FUNC_ADD;
-	m_merge.bs->m_equation_ALPHA = GL_FUNC_ADD;
-	m_merge.bs->m_func_sRGB      = GL_SRC_ALPHA;
-	m_merge.bs->m_func_dRGB      = GL_ONE_MINUS_SRC_ALPHA;
-	m_merge.bs->m_func_sALPHA    = GL_ONE;
-	m_merge.bs->m_func_dALPHA    = GL_ZERO;
+	m_merge.bs->EnableBlend();
+	m_merge.bs->SetRGB(GL_FUNC_ADD, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// ****************************************************************
 	// interlace
@@ -352,9 +347,8 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 
 	m_date.dss = new GSDepthStencilOGL();
-	m_date.dss->m_stencil_enable = true;
-	m_date.dss->m_stencil_func = GL_ALWAYS;
-	m_date.dss->m_stencil_spass_dpass_op = GL_REPLACE;
+	m_date.dss->EnableStencil();
+	m_date.dss->SetStencil(GL_ALWAYS, GL_REPLACE);
 	//memset(&dsd, 0, sizeof(dsd));
 
 	//dsd.DepthEnable = false;
@@ -541,11 +535,10 @@ void GSDeviceOGL::DrawPrimitive()
 			case GL_POINTS: topo = "point"; break;
 			default: topo = "!!!!";
 		}
-		fprintf(stderr, "Draw %d (Frame %d), %d elem of %s\n", g_draw_count, g_frame_count, /*m_state.vb_state->count*/ 0, topo.c_str() );
+		fprintf(stderr, "Draw %d (Frame %d), %d elem of %s\n", g_draw_count, g_frame_count, m_state.vb_state->get_count(), topo.c_str() );
 		fprintf(stderr, "vs: %d ; gs: %d ; ps: %d\n", m_state.vs, m_state.gs, m_state.ps);
-		fprintf(stderr, "Blend: %d, Depth: %d, Stencil: %d \n",m_state.bs->m_enable, m_state.dss->m_depth_enable, m_state.dss->m_stencil_enable);
 		m_state.bs->debug();
-		m_state.dss->debug_depth();
+		m_state.dss->debug();
 	}
 #endif
 
@@ -1095,50 +1088,28 @@ void GSDeviceOGL::OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref)
 {
 	uint ref = sref;
 
-	if(m_state.dss != dss || m_state.sref != sref)
-	{
+	if(m_state.dss != dss) {
 		m_state.dss = dss;
 		m_state.sref = sref;
 
-		if (dss->m_depth_enable) {
-			glEnable(GL_DEPTH_TEST);
-			glDepthFunc(dss->m_depth_func);
-			glDepthMask(dss->m_depth_mask);
-		} else
-			glDisable(GL_DEPTH_TEST);
+		dss->SetupDepth();
+		dss->SetupStencil(sref);
 
-		if (dss->m_stencil_enable) {
-			glEnable(GL_STENCIL_TEST);
-			glStencilFunc(dss->m_stencil_func, ref, dss->m_stencil_mask);
-			glStencilOp(dss->m_stencil_sfail_op, dss->m_stencil_spass_dfail_op, dss->m_stencil_spass_dpass_op);
-		} else
-			glDisable(GL_STENCIL_TEST);
+	} else if (m_state.sref != sref) {
+		m_state.sref = sref;
+
+		dss->SetupStencil(sref);
 	}
 }
 
 void GSDeviceOGL::OMSetBlendState(GSBlendStateOGL* bs, float bf)
 {
-	// DX:Blend factor D3D11_BLEND_BLEND_FACTOR | D3D11_BLEND_INV_BLEND_FACTOR
-	// OPENGL: GL_CONSTANT_COLOR | GL_ONE_MINUS_CONSTANT_COLOR
-	// Note factor must be set before by glBlendColor
-	if(m_state.bs != bs || m_state.bf != bf)
+	if( m_state.bs != bs || (m_state.bf != bf && bs->HasConstantFactor()) )
 	{
 		m_state.bs = bs;
 		m_state.bf = bf;
 
-		glColorMask(bs->m_r_msk, bs->m_g_msk, bs->m_b_msk, bs->m_a_msk);
-
-		if (bs->m_enable) {
-			glEnable(GL_BLEND);
-			// FIXME: double check when blend stuff is complete
-			if (bs->m_func_sRGB == GL_CONSTANT_COLOR || bs->m_func_sRGB == GL_ONE_MINUS_CONSTANT_COLOR
-					|| bs->m_func_dRGB == GL_CONSTANT_COLOR || bs->m_func_dRGB == GL_ONE_MINUS_CONSTANT_COLOR)
-				glBlendColor(bf, bf, bf, 0);
-
-			glBlendEquationSeparate(bs->m_equation_RGB, bs->m_equation_ALPHA);
-			glBlendFuncSeparate(bs->m_func_sRGB, bs->m_func_dRGB, bs->m_func_sALPHA, bs->m_func_dALPHA);
-		} else
-			glDisable(GL_BLEND);
+		bs->SetupBlend(bf);
 	}
 }
 

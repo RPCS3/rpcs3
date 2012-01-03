@@ -265,9 +265,8 @@ void GSDeviceOGL::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, ui
 
 		if (dssel.date)
 		{
-			dss->m_stencil_enable = true;
-			dss->m_stencil_func = GL_EQUAL;
-			dss->m_stencil_spass_dpass_op = GL_KEEP;
+			dss->EnableStencil();
+			dss->SetStencil(GL_EQUAL, GL_KEEP);
 		}
 
 		if(dssel.ztst != ZTST_ALWAYS || dssel.zwe)
@@ -279,9 +278,8 @@ void GSDeviceOGL::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, ui
 				GL_GEQUAL,
 				GL_GREATER
 			};
-			dss->m_depth_enable = true;
-			dss->m_depth_mask = dssel.zwe ? GL_TRUE : GL_FALSE;
-			dss->m_depth_func = ztst[dssel.ztst];
+			dss->EnableDepth();
+			dss->SetDepth(ztst[dssel.ztst], dssel.zwe);
 		}
 
 		m_om_dss[dssel] = dss;
@@ -302,32 +300,19 @@ void GSDeviceOGL::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, ui
 	{
 		GSBlendStateOGL* bs = new GSBlendStateOGL();
 
-		bs->m_enable = bsel.abe;
-
 		if(bsel.abe)
 		{
 			int i = ((bsel.a * 3 + bsel.b) * 3 + bsel.c) * 3 + bsel.d;
-			bs->m_equation_RGB = m_blendMapD3D9[i].op;
-			bs->m_func_sRGB	   = m_blendMapD3D9[i].src;
-			bs->m_func_dRGB	   = m_blendMapD3D9[i].dst;
 
-			// Not very good but I don't wanna write another 81 row table
-			if(bsel.negative)
-			{
-				if(bs->m_equation_RGB == GL_FUNC_ADD)
-					bs->m_equation_RGB = GL_FUNC_REVERSE_SUBTRACT;
-				else if(bs->m_equation_RGB == GL_FUNC_REVERSE_SUBTRACT)
-					bs->m_equation_RGB = GL_FUNC_ADD;
-				else
-					; // god knows, best just not to mess with it for now
-			}
+			bs->EnableBlend();
+			bs->SetRGB(m_blendMapD3D9[i].op, m_blendMapD3D9[i].src, m_blendMapD3D9[i].dst);
 
 			if(m_blendMapD3D9[i].bogus == 1)
 			{
 				if (bsel.a == 0)
-					bs->m_func_sRGB = GL_ONE;
+					bs->SetRGB(m_blendMapD3D9[i].op, GL_ONE, m_blendMapD3D9[i].dst);
 				else
-					bs->m_func_dRGB = GL_ONE;
+					bs->SetRGB(m_blendMapD3D9[i].op, m_blendMapD3D9[i].src, GL_ONE);
 
 				const string afixstr = format("%d >> 7", afix);
 				const char *col[3] = {"Cs", "Cd", "0"};
@@ -337,13 +322,11 @@ void GSDeviceOGL::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, ui
 				fprintf(stderr, "Impossible blend for D3D: (%s - %s) * %s + %s\n", col[bsel.a], col[bsel.b], alpha[bsel.c], col[bsel.d]);
 			}
 
-
+			// Not very good but I don't wanna write another 81 row table
+			if(bsel.negative) bs->RevertOp();
 		}
 
-		bs->m_r_msk = bsel.wr;
-		bs->m_g_msk = bsel.wg;
-		bs->m_b_msk = bsel.wb;
-		bs->m_a_msk = bsel.wa;
+		bs->SetMask(bsel.wr, bsel.wg, bsel.wb, bsel.wa);
 
 		m_om_bs[bsel] = bs;
 		j = m_om_bs.find(bsel);

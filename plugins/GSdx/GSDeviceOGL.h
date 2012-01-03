@@ -26,7 +26,7 @@
 #include "GSTextureOGL.h"
 #include "GSdx.h"
 
-struct GSBlendStateOGL {
+class GSBlendStateOGL {
 	// Note: You can also select the index of the draw buffer for which to set the blend setting
 	// We will keep basic the first try
 	bool   m_enable;
@@ -40,6 +40,9 @@ struct GSBlendStateOGL {
 	bool   m_b_msk;
 	bool   m_g_msk;
 	bool   m_a_msk;
+	bool   constant_factor;
+
+public:
 
 	GSBlendStateOGL() : m_enable(false)
 		, m_equation_RGB(0)
@@ -52,18 +55,89 @@ struct GSBlendStateOGL {
 		, m_b_msk(GL_TRUE)
 		, m_g_msk(GL_TRUE)
 		, m_a_msk(GL_TRUE)
+		, constant_factor(true)
 	{}
+
+	void SetRGB(GLenum op, GLenum src, GLenum dst)
+	{
+		m_equation_RGB = op;
+		m_func_sRGB = src;
+		m_func_dRGB = dst;
+		if (IsConstant(src) || IsConstant(dst)) constant_factor = true;
+	}
+
+	void SetALPHA(GLenum op, GLenum src, GLenum dst)
+	{
+		m_equation_ALPHA = op;
+		m_func_sALPHA = src;
+		m_func_dALPHA = dst;
+	}
+
+	void SetMask(bool r, bool g, bool b, bool a) { m_r_msk = r; m_g_msk = g; m_b_msk = b; m_a_msk = a; }
+
+	void RevertOp()
+	{
+		if(m_equation_RGB == GL_FUNC_ADD)
+			m_equation_RGB = GL_FUNC_REVERSE_SUBTRACT;
+		else if(m_equation_RGB == GL_FUNC_REVERSE_SUBTRACT)
+			m_equation_RGB = GL_FUNC_ADD;
+	}
+
+	void EnableBlend() { m_enable = true;}
+
+	bool IsConstant(GLenum factor) { return ((factor == GL_CONSTANT_COLOR) || (factor == GL_ONE_MINUS_CONSTANT_COLOR)); }
+
+	bool HasConstantFactor() { return constant_factor; }
+
+	void SetupColorMask()
+	{
+		glColorMask(m_r_msk, m_g_msk, m_b_msk, m_a_msk);
+	}
+
+	void SetupBlend(float factor)
+	{
+		SetupColorMask();
+
+		if (m_enable) {
+			glEnable(GL_BLEND);
+			if (HasConstantFactor()) glBlendColor(factor, factor, factor, 0);
+
+			glBlendEquationSeparate(m_equation_RGB, m_equation_ALPHA);
+			glBlendFuncSeparate(m_func_sRGB, m_func_dRGB, m_func_sALPHA, m_func_dALPHA);
+		} else {
+			glDisable(GL_BLEND);
+		}
+	}
+
+	char* NameOfParam(GLenum p)
+	{
+		switch (p) {
+			case GL_FUNC_ADD: return "ADD";
+			case GL_FUNC_SUBTRACT: return "SUB";
+			case GL_FUNC_REVERSE_SUBTRACT: return "REV SUB";
+			case GL_ONE: return "ONE";
+			case GL_ZERO: return "ZERO";
+			case GL_SRC1_ALPHA: return "SRC1 ALPHA";
+			case GL_ONE_MINUS_DST_ALPHA: return "1 - DST ALPHA";
+			case GL_DST_ALPHA: return "DST ALPHA";
+			case GL_DST_COLOR:	return "DST COLOR";
+			case GL_ONE_MINUS_SRC1_ALPHA: return "1 - SRC1 ALPHA";
+			case GL_CONSTANT_COLOR: return "CST";
+			case GL_ONE_MINUS_CONSTANT_COLOR: return "1 - CST";
+			default: return "UKN";
+		}
+		return "UKN";
+	}
 
 	void debug()
 	{
 		if (!m_enable) return;
-		fprintf(stderr,"Blend RGB: %x src:%x dst:%x\n", m_equation_RGB, m_func_sRGB, m_func_dRGB);
-		fprintf(stderr,"Blend ALPHA: %x src:%x dst:%x\n", m_equation_ALPHA, m_func_sALPHA, m_func_dALPHA);
+		fprintf(stderr,"Blend op: %s; src:%s; dst:%s\n", NameOfParam(m_equation_RGB), NameOfParam(m_func_sRGB), NameOfParam(m_func_dRGB));
 		fprintf(stderr,"Mask. R:%d B:%d G:%d A:%d\n", m_r_msk, m_b_msk, m_g_msk, m_a_msk);
 	}
 };
 
-struct GSDepthStencilOGL {
+class GSDepthStencilOGL {
 	bool m_depth_enable;
 	GLenum m_depth_func;
 	GLboolean m_depth_mask;
@@ -75,6 +149,23 @@ struct GSDepthStencilOGL {
 	GLuint m_stencil_sfail_op;
 	GLuint m_stencil_spass_dfail_op;
 	GLuint m_stencil_spass_dpass_op;
+
+	char* NameOfParam(GLenum p)
+	{
+		switch(p) {
+			case GL_NEVER: return "NEVER";
+			case GL_ALWAYS: return "ALWAYS";
+			case GL_GEQUAL: return "GEQUAL";
+			case GL_GREATER: return "GREATER";
+			case GL_KEEP: return "KEEP";
+			case GL_EQUAL: return "EQUAL";
+			case GL_REPLACE: return "REPLACE";
+			default: return "UKN";
+		}
+		return "UKN";
+	}
+
+public:
 
 	GSDepthStencilOGL() : m_depth_enable(false)
 		, m_depth_func(0)
@@ -88,10 +179,45 @@ struct GSDepthStencilOGL {
 		, m_stencil_spass_dpass_op(GL_KEEP)
 	{}
 
+	void EnableDepth() { m_depth_enable = true; }
+	void EnableStencil() { m_stencil_enable = true; }
+
+	void SetDepth(GLenum func, GLboolean mask) { m_depth_func = func; m_depth_mask = mask; }
+	void SetStencil(GLuint func, GLuint pass) { m_stencil_func = func; m_stencil_spass_dpass_op = pass; }
+
+	void SetupDepth()
+	{
+		if (m_depth_enable) {
+			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(m_depth_func);
+			glDepthMask(m_depth_mask);
+		} else
+			glDisable(GL_DEPTH_TEST);
+	}
+
+	void SetupStencil(uint8 sref)
+	{
+		uint ref = sref;
+		if (m_stencil_enable) {
+			glEnable(GL_STENCIL_TEST);
+			glStencilFunc(m_stencil_func, ref, m_stencil_mask);
+			glStencilOp(m_stencil_sfail_op, m_stencil_spass_dfail_op, m_stencil_spass_dpass_op);
+		} else
+			glDisable(GL_STENCIL_TEST);
+	}
+
+	void debug() { debug_depth(); debug_stencil(); }
+
 	void debug_depth()
 	{
 		if (!m_depth_enable) return;
-		fprintf(stderr, "Depth %x, %x\n", m_depth_func, m_depth_mask);
+		fprintf(stderr, "Depth %s. Mask %x\n", NameOfParam(m_depth_func), m_depth_mask);
+	}
+
+	void debug_stencil()
+	{
+		if (!m_stencil_enable) return;
+		fprintf(stderr, "Stencil %s. Both pass op %s\n", NameOfParam(m_stencil_func), NameOfParam(m_stencil_spass_dpass_op));
 	}
 };
 
@@ -243,6 +369,8 @@ public:
 		m_start += m_count;
 		m_count = 0;
 	}
+
+	uint32 get_count() { return m_count; }
 
 	~GSVertexBufferStateOGL()
 	{
