@@ -56,9 +56,10 @@
 #define SHADER_DEBUG
 //#define DUMP_START (70)
 //#define DUMP_LENGTH (130)
-//#define DUMP_ONLY_FRAME  (112)
+//#define PRINT_FRAME_NUMBER
+//#define ONLY_LINES
 
-// It seems dual blending does not work (at least on AMD) 
+// It seems dual blending does not work on AMD !!!
 //#define DISABLE_DUAL_BLEND
 
 #ifdef DUMP_START
@@ -337,6 +338,10 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// FIXME enable it when multisample code will be here
 	// DX: rd.MultisampleEnable = true;
 	glDisable(GL_MULTISAMPLE);
+#ifdef ONLY_LINES
+	glLineWidth(5.0);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+#endif
 	// Hum I don't know for those options but let's hope there are not activated
 #if 0
 	rd.FrontCounterClockwise = false;
@@ -513,6 +518,9 @@ void GSDeviceOGL::Flip()
 	// FIXME: disable it when code is working
 	CheckDebugLog();
 	m_wnd->Flip();
+#ifdef PRINT_FRAME_NUMBER
+	fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
+#endif
 #ifdef DUMP_START
 	g_frame_count++;
 #endif
@@ -522,14 +530,8 @@ void GSDeviceOGL::DrawPrimitive()
 {
 #ifdef DUMP_START
 	bool dump_me = false;
-	if ( (g_draw_count > DUMP_START && g_draw_count < (DUMP_START+DUMP_LENGTH)) )
+	if ( (g_frame_count > DUMP_START && g_frame_count < (DUMP_START+DUMP_LENGTH)) )
 		dump_me = true;
-#ifdef DUMP_ONLY_FRAME
-	if (DUMP_ONLY_FRAME != 0 && DUMP_ONLY_FRAME == g_frame_count)
-		dump_me = true;
-	else if (DUMP_ONLY_FRAME != 0)
-		dump_me = false;
-#endif
 #endif
 	
 	// DUMP INPUT

@@ -88,12 +88,18 @@ public:
 };
 */
 #include <X11/Xlib.h>
+#ifdef ENABLE_SDL_DEV
 #include "../../3rdparty/SDL-1.3.0-5387/include/SDL.h"
 #include "../../3rdparty/SDL-1.3.0-5387/include/SDL_syswm.h"
+#endif
 
 class GSWnd
 {
+#ifdef ENABLE_SDL_DEV
 	SDL_Window* m_window;
+#else
+	void* m_window;
+#endif
 	Window      m_Xwindow;
 	Display*    m_XDisplay;
 	bool m_managed;
@@ -113,7 +119,9 @@ public:
 	void* GetHandle() {return (void*)m_Xwindow;}
 	GSVector4i GetClientRect();
 	bool SetWindowText(const char* title);
+#ifdef ENABLE_SDL_DEV
 	void SetWindow(SDL_Window* current_window) { if (current_window) m_window = current_window; }
+#endif
 
 	void Show();
 	void Hide();

@@ -121,13 +121,13 @@ endif(GTK2_FOUND)
 #			-X11
 #           -PCSX2 SDL
 #---------------------------------------
-if(OPENGL_FOUND AND X11_FOUND AND projectSDL)
+if(OPENGL_FOUND AND X11_FOUND)
     set(GSdx TRUE)
-else(OPENGL_FOUND AND X11_FOUND AND projectSDL)
+else(OPENGL_FOUND AND X11_FOUND)
 	set(GSdx FALSE)
     message(STATUS "Skip build of GSdx: miss some dependencies")
     message(STATUS "${msg_dep_gsdx}")
-endif(OPENGL_FOUND AND X11_FOUND AND projectSDL)
+endif(OPENGL_FOUND AND X11_FOUND)
 #---------------------------------------
 
 #---------------------------------------

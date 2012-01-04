@@ -136,6 +136,7 @@ EXPORT_C_(int) GSinit()
 
 #endif
 
+#ifdef ENABLE_SDL_DEV
 	if(!SDL_WasInit(SDL_INIT_VIDEO))
 	{
 		if(SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -143,6 +144,7 @@ EXPORT_C_(int) GSinit()
 			return -1;
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -155,7 +157,9 @@ EXPORT_C GSshutdown()
 
 	s_renderer = -1;
 
+#ifdef ENABLE_SDL_DEV
 	SDL_Quit();
+#endif
 
 #ifdef _WINDOWS
 
@@ -216,7 +220,11 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 		case 0: dev = new GSDevice9(); break;
 		case 1: dev = new GSDevice11(); break;
 		#endif
+		#ifdef ENABLE_SDL_DEV
 		case 2: dev = new GSDeviceSDL(); break;
+		#else
+		case 2: dev = NULL; break;
+		#endif
 		case 3: dev = new GSDeviceNull(); break;
 		case 4: dev = new GSDeviceOGL(); break;
 		}
@@ -287,7 +295,7 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 	{
 		s_gs->SetMultithreaded(true);
 
-#ifdef __LINUX__
+#ifdef _LINUX
 		// Get the Xwindow from dsp.
 		if( !s_gs->m_wnd.Attach((void*)((uint32*)(dsp)+1), false) )
 			return -1;
@@ -325,7 +333,8 @@ EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 
 	int retval = _GSopen(dsp, NULL, renderer);
 
-	s_gs->SetAspectRatio(0);	 // PCSX2 manages the aspect ratios
+	if (s_gs != NULL)
+		s_gs->SetAspectRatio(0);	 // PCSX2 manages the aspect ratios
 
 	return retval;
 }

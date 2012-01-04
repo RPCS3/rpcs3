@@ -18,7 +18,7 @@ set(CommonFlags
     -Wunused-variable
     -std=c++0x
     -fno-strict-aliasing
-    -DOGL_DEBUG
+    -DOGL_DEBUG # FIXME remove me when code is ready
 	-DAMD_DRIVER_WORKAROUND
     )
 
@@ -27,21 +27,22 @@ set(OptimizationFlags
     -DNDEBUG
     )
 
+if(projectSDL)
+    add_definitions(-DENABLE_SDL_DEV)
+endif(projectSDL)
+
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-    # add defines
     add_definitions(${CommonFlags} -DOGL_DEBUG -g -Wall)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
-    # add defines
     add_definitions(${CommonFlags} ${OptimizationFlags} -g -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
-    # add defines
     add_definitions(${CommonFlags} ${OptimizationFlags} -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
@@ -188,8 +189,9 @@ add_library(${Output} SHARED
 # link target with X11
 target_link_libraries(${Output} ${X11_LIBRARIES})
 
-# link target with SDL
-target_link_libraries(${Output} ${SDL_LIBRARY})
+if(projectSDL)
+    target_link_libraries(${Output} ${SDL_LIBRARY})
+endif(projectSDL)
 
 # link target with glew
 target_link_libraries(${Output} ${GLEW_LIBRARY})

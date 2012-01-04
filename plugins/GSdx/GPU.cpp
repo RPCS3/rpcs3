@@ -118,7 +118,9 @@ EXPORT_C_(int32) GPUopen(void* hWnd)
 	case 0: s_gpu = new GPURendererSW(new GSDevice9(), threads); break;
 	case 1: s_gpu = new GPURendererSW(new GSDevice11(), threads); break;
 	#endif
+	#ifdef ENABLE_SDL_DEV
 	case 2: s_gpu = new GPURendererSW(new GSDeviceSDL(), threads); break;
+	#endif
 	case 3: s_gpu = new GPURendererSW(new GSDeviceNull(), threads); break;
 	//case 4: s_gpu = new GPURendererNull(new GSDeviceNull()); break;
 	}

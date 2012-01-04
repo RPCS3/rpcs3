@@ -408,7 +408,7 @@ public:
 				topo = "triangle";
 				break;
 			case GL_TRIANGLE_STRIP:
-				element = m_count - 3;
+				element = m_count - 2;
 				topo = "triangle strip";
 				break;
 		}

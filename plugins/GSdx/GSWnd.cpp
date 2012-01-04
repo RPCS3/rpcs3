@@ -318,11 +318,13 @@ GSWnd::GSWnd()
 
 GSWnd::~GSWnd()
 {
+#ifdef ENABLE_SDL_DEV
 	if(m_window != NULL && m_managed)
 	{
 		SDL_DestroyWindow(m_window);
 		m_window = NULL;
 	}
+#endif
 	if (m_XDisplay) {
 		XCloseDisplay(m_XDisplay);
 		m_XDisplay = NULL;
@@ -402,11 +404,13 @@ void GSWnd::Detach()
 	// Actually the destructor is not called when there is only a GSclose/GSshutdown
 	// The window still need to be closed
 	if (m_renderer == 2) {
+#ifdef ENABLE_SDL_DEV
 		if(m_window != NULL && m_managed)
 		{
 			SDL_DestroyWindow(m_window);
 			m_window = NULL;
 		}
+#endif
 	} else {
 		glXMakeCurrent(m_XDisplay, None, NULL);
 		if (m_context) glXDestroyContext(m_XDisplay, m_context);
@@ -419,6 +423,7 @@ void GSWnd::Detach()
 
 bool GSWnd::Create(const string& title, int w, int h)
 {
+#ifdef ENABLE_SDL_DEV
 	if(m_window != NULL) return false;
 
 	if(w <= 0 || h <= 0) {
@@ -456,10 +461,14 @@ bool GSWnd::Create(const string& title, int w, int h)
 	m_Xwindow = wminfo.info.x11.window;
 
 	return (m_window != NULL);
+#else
+	return false;
+#endif
 }
 
 Display* GSWnd::GetDisplay()
 {
+#ifdef ENABLE_SDL_DEV
 	SDL_SysWMinfo wminfo;
 
 	memset(&wminfo, 0, sizeof(wminfo));
@@ -470,6 +479,9 @@ Display* GSWnd::GetDisplay()
 	SDL_GetWindowWMInfo(m_window, &wminfo);
 
 	return wminfo.subsystem == SDL_SYSWM_X11 ? wminfo.info.x11.display : NULL;
+#else
+	return NULL;
+#endif
 }
 
 GSVector4i GSWnd::GetClientRect()
@@ -490,8 +502,10 @@ GSVector4i GSWnd::GetClientRect()
 	// In real world...:
 	if (!m_XDisplay) m_XDisplay = XOpenDisplay(NULL);
 	XGetGeometry(m_XDisplay, m_Xwindow, &winDummy, &xDummy, &yDummy, &w, &h, &borderDummy, &depthDummy);
+#ifdef ENABLE_SDL_DEV
 	if (m_renderer == 2)
 		SDL_SetWindowSize(m_window, w, h);
+#endif
 
 	return GSVector4i(0, 0, (int)w, (int)h);
 }
@@ -501,6 +515,7 @@ GSVector4i GSWnd::GetClientRect()
 
 bool GSWnd::SetWindowText(const char* title)
 {
+#if ENABLE_SDL_DEV
 	if (!m_managed) return true;
 
 	// Do not find anyway to check the current fullscreen status
@@ -519,16 +534,19 @@ bool GSWnd::SetWindowText(const char* title)
 			SDL_SetWindowTitle(m_window, title);
 	}
 
+#endif
 	return true;
 }
 
 void GSWnd::Flip()
 {
 	if (m_renderer == 2) {
+#ifdef ENABLE_SDL_DEV
 #if SDL_VERSION_ATLEAST(1,3,0)
 	SDL_GL_SwapWindow(m_window);
 #else
 	SDL_GL_SwapBuffers();
+#endif
 #endif
 	} else {
 		glXSwapBuffers(m_XDisplay, m_Xwindow);
@@ -538,7 +556,9 @@ void GSWnd::Flip()
 void GSWnd::Show()
 {
 	if (m_renderer == 2) {
+#ifdef ENABLE_SDL_DEV
 		SDL_ShowWindow(m_window);
+#endif
 	} else {
 		XMapRaised(m_XDisplay, m_Xwindow);
 		XFlush(m_XDisplay);
@@ -548,7 +568,9 @@ void GSWnd::Show()
 void GSWnd::Hide()
 {
 	if (m_renderer == 2) {
+#ifdef ENABLE_SDL_DEV
 		SDL_HideWindow(m_window);
+#endif
 	} else {
 		XUnmapWindow(m_XDisplay, m_Xwindow);
 		XFlush(m_XDisplay);

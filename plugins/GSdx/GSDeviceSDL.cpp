@@ -22,6 +22,7 @@
 #include "stdafx.h"
 #include "GSDeviceSDL.h"
 
+#ifdef ENABLE_SDL_DEV
 GSDeviceSDL::GSDeviceSDL()
 	: m_free_window(false)
 	, m_window(NULL)
@@ -230,3 +231,4 @@ void GSDeviceSDL::Flip()
 {
 	SDL_RenderPresent(m_renderer);
 }
+#endif
