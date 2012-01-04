@@ -111,7 +111,7 @@ void ps_main1()
 
 	highp uvec4 i = uvec4(c * vec4(0x001f, 0x03e0, 0x7c00, 0x8000));
 
-    SV_Target1 = (i.x & 0x001f) | (i.y & 0x03e0) | (i.z & 0x7c00) | (i.w & 0x8000);
+    SV_Target1 = (i.x & uint(0x001f)) | (i.y & uint(0x03e0)) | (i.z & uint(0x7c00)) | (i.w & uint(0x8000));
 }
 
 void ps_main7()
@@ -136,7 +136,7 @@ void ps_main6() // diagonal
 {
 	uvec4 p = uvec4(PSin.p);
 
-	vec4 c = ps_crt((p.x + (p.y % 3)) % 3);
+	vec4 c = ps_crt((p.x + (p.y % 3u)) % 3u);
 
     SV_Target0 = c;
 }
