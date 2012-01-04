@@ -215,7 +215,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		}
 		if ( !glewIsSupported("GL_ARB_shading_language_420pack")) {
 			fprintf(stderr, "GL_ARB_shading_language_420pack is not supported\n");
-			return false;
+			//return false;
 		}
 
 

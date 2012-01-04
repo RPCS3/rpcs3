@@ -74,9 +74,9 @@ void vs_main()
 {
     uint z;
 	if(VS_BPPZ == 1) // 24
-		z = i_z & 0xffffff; 
+		z = i_z & uint(0xffffff);
 	else if(VS_BPPZ == 2) // 16
-		z = i_z & 0xffff;
+		z = i_z & uint(0xffff);
     else
         z = i_z;
 
@@ -312,7 +312,7 @@ vec4 wrapuv(vec4 uv)
 		}
 		else if(PS_WMS == 3)
 		{
-			uv_out = vec4(((ivec4(uv * WH.xyxy) & MskFix.xyxy) | MskFix.zwzw) / WH.xyxy);
+			uv_out = vec4(((ivec4(uv * WH.xyxy) & ivec4(MskFix.xyxy)) | ivec4(MskFix.zwzw)) / WH.xyxy);
 		}
 	}
 	else
@@ -323,7 +323,7 @@ vec4 wrapuv(vec4 uv)
 		}
 		else if(PS_WMS == 3)
 		{
-			uv_out.xz = vec2(((ivec2(uv.xz * WH.xx) & MskFix.xx) | MskFix.zz) / WH.xx);
+			uv_out.xz = vec2(((ivec2(uv.xz * WH.xx) & ivec2(MskFix.xx)) | ivec2(MskFix.zz)) / WH.xx);
 		}
 		if(PS_WMT == 2)
 		{
@@ -331,7 +331,7 @@ vec4 wrapuv(vec4 uv)
 		}
 		else if(PS_WMT == 3)
 		{
-			uv_out.yw = vec2(((ivec2(uv.yw * WH.yy) & MskFix.yy) | MskFix.ww) / WH.yy);
+			uv_out.yw = vec2(((ivec2(uv.yw * WH.yy) & ivec2(MskFix.yy)) | ivec2(MskFix.ww)) / WH.yy);
 		}
 	}
 	

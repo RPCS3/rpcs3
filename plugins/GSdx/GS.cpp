@@ -413,9 +413,9 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 	// invalidate data for opengl
 	if (theApp.GetConfig("renderer", 0) == 12) {
 #ifdef OGL_DEBUG
-		fprintf(stderr, "Disable FIFO2 on opengl\n");
+		fprintf(stderr, "Disable FIFO2(%d) on opengl\n", size);
 #endif
-		return;
+		//return;
 	}
 #endif
 	s_gs->ReadFIFO(mem, size);

@@ -315,6 +315,11 @@ public:
 
 	void upload(const void* src, uint32 count)
 	{
+		GLint b_size = -1;
+		glGetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
+		
+		if (b_size <= 0) return;
+		
 		m_count = count;
 
 		// Note: For an explanation of the map flag
@@ -337,9 +342,13 @@ public:
 			// Tell the driver that it doesn't need to contain any valid buffer data, and that you promise to write the entire range you map
 			map_flags |= GL_MAP_INVALIDATE_RANGE_BIT;
 		}
-
+		
 		// Upload the data to the buffer
 		uint8* dst = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
+		if (dst == NULL) {
+			fprintf(stderr, "CRITICAL ERROR map failed for vb!!!\n");
+			return;
+		}
 		memcpy(dst, src, m_stride*m_count);
 		glUnmapBuffer(m_target);
 	}
