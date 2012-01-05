@@ -131,7 +131,7 @@ protected:
 
 	GSVertex m_v;
 	float m_q;
-	struct {uint8* buff; size_t head, tail, maxcount, stride, n;} m_vertex;
+	struct {uint8* buff; size_t head, tail, maxcount, stride, n; uint8* tmp;} m_vertex;
 	struct {uint32* buff; size_t tail;} m_index;
 
 	typedef void (GSState::*DrawingKickPtr)(uint32 skip);

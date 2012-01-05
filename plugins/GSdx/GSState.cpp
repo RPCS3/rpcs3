@@ -42,6 +42,7 @@ GSState::GSState(GSVertexTrace* vt, size_t vertex_stride)
 	memset(&m_index, 0, sizeof(m_index));
 
 	m_vertex.stride = vertex_stride;
+	m_vertex.tmp = (uint8*)_aligned_malloc(vertex_stride * 2, 32);
 
 	GrowVertexBuffer();
 
@@ -116,6 +117,8 @@ GSState::GSState(GSVertexTrace* vt, size_t vertex_stride)
 
 GSState::~GSState()
 {
+	_aligned_free(m_vertex.tmp);
+
 	if(m_vertex.buff) _aligned_free(m_vertex.buff);
 	if(m_index.buff) _aligned_free(m_index.buff);
 }
@@ -1203,6 +1206,34 @@ void GSState::FlushPrim()
 {
 	if(m_index.tail > 0)
 	{
+		uint8* buff = m_vertex.tmp;
+
+		size_t stride = m_vertex.stride;
+		size_t head = m_vertex.head;
+		size_t tail = m_vertex.tail;
+		
+		switch(PRIM->PRIM)
+		{
+		case GS_LINESTRIP:
+			memcpy(&buff[0], &m_vertex.buff[stride * head], stride);
+			break;
+		case GS_TRIANGLESTRIP:
+			memcpy(&buff[0], &m_vertex.buff[stride * head], stride * 2);
+			break;
+		case GS_TRIANGLEFAN:
+			memcpy(&buff[0], &m_vertex.buff[stride * head], stride);
+			memcpy(&buff[stride], &m_vertex.buff[stride * (tail - 1)], stride);
+			break;
+		case GS_POINTLIST:
+		case GS_LINELIST:
+		case GS_TRIANGLELIST:
+		case GS_SPRITE:
+		case GS_INVALID:
+			break;
+		default:
+			__assume(0);
+		}
+
 		if(GSLocalMemory::m_psm[m_context->FRAME.PSM].fmt < 3 && GSLocalMemory::m_psm[m_context->ZBUF.PSM].fmt < 3)
 		{
 			// FIXME: berserk fpsm = 27 (8H)
@@ -1212,11 +1243,39 @@ void GSState::FlushPrim()
 			m_perfmon.Put(GSPerfMon::Draw, 1);
 			m_perfmon.Put(GSPerfMon::Prim, m_index.tail / GSUtil::GetVertexCount(PRIM->PRIM));
 		}
-	}
 
-	m_vertex.head = 0;
-	m_vertex.tail = 0;
-	m_index.tail = 0;
+		switch(PRIM->PRIM)
+		{
+		case GS_LINESTRIP:
+			memcpy(&m_vertex.buff[0], &buff[0], stride);
+			m_vertex.tail = 1;
+			break;
+		case GS_TRIANGLESTRIP:
+			memcpy(&m_vertex.buff[0], &buff[0], stride * 2);
+			m_vertex.tail = 2;
+			break;
+		case GS_TRIANGLEFAN:
+			memcpy(&m_vertex.buff[0], &buff[0], stride * 2);
+			m_vertex.tail = 2;
+			break;
+		case GS_POINTLIST:
+		case GS_LINELIST:
+		case GS_TRIANGLELIST:
+		case GS_SPRITE:
+		case GS_INVALID:
+			m_vertex.tail = 0;
+			break;
+		default:
+			__assume(0);
+		}
+
+		m_vertex.head = 0;
+		m_index.tail = 0;
+	}
+	else
+	{
+		m_vertex.head = m_vertex.tail = 0;
+	}
 }
 
 //
