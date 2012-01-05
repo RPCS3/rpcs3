@@ -529,7 +529,6 @@
     <ClCompile Include="GSPerfMon.cpp" />
     <ClCompile Include="GSRasterizer.cpp">
       <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release AVX|x64'">AssemblyAndSourceCode</AssemblerOutput>
-      <AssemblerOutput Condition="'$(Configuration)|$(Platform)'=='Release AVX|Win32'">AssemblyAndSourceCode</AssemblerOutput>
     </ClCompile>
     <ClCompile Include="GSRenderer.cpp" />
     <ClCompile Include="GSRendererDX.cpp" />

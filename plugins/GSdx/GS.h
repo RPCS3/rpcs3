@@ -638,8 +638,8 @@ REG64_(GIFReg, FINISH)
 REG_END
 
 REG64_(GIFReg, FOG)
-	uint8 _PAD1[4+3];
-	uint8 F:8;
+	uint8 _PAD1[7];
+	uint8 F;
 REG_END
 
 REG64_(GIFReg, FOGCOL)
@@ -1030,7 +1030,9 @@ REG128_(GIFPacked, XYZF2)
 	uint32 _PAD6:3;
 	uint32 ADC:1;
 	uint32 _PAD7:16;
-REG_END
+REG_END2
+	uint32 Skip() const {return u32[3] & 0x8000;}
+REG_END2
 
 REG128_(GIFPacked, XYZ2)
 	uint16 X;
@@ -1041,7 +1043,9 @@ REG128_(GIFPacked, XYZ2)
 	uint32 _PAD3:15;
 	uint32 ADC:1;
 	uint32 _PAD4:16;
-REG_END
+REG_END2
+	uint32 Skip() const {return u32[3] & 0x8000;}
+REG_END2
 
 REG128_(GIFPacked, FOG)
 	uint32 _PAD1;

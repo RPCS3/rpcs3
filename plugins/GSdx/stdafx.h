@@ -363,34 +363,43 @@ struct aligned_free_second {template<class T> void operator()(T& p) {_aligned_fr
 	__forceinline unsigned char _BitScanForward(unsigned long* const Index, const unsigned long Mask)
 	{
 		__asm__("bsfl %[Mask], %[Index]" : [Index] "=r" (*Index) : [Mask] "mr" (Mask));
+		
 		return Mask ? 1 : 0;
 	}
 
 	__forceinline unsigned char _interlockedbittestandreset(volatile long* a, const long b)
 	{
 		unsigned char retval;
+		
 		__asm__("lock; btrl %[b], %[a]; setb %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
+		
 		return retval;
 	}
 
 	__forceinline unsigned char _interlockedbittestandset(volatile long* a, const long b)
 	{
 		unsigned char retval;
+		
 		__asm__("lock; btsl %[b], %[a]; setc %b[retval]" : [retval] "=q" (retval), [a] "+m" (*a) : [b] "Ir" (b) : "memory");
+		
 		return retval;
 	}
 
 	__forceinline long _InterlockedExchangeAdd(volatile long* const Addend, const long Value)
 	{
 		long retval = Value;
+		
 		__asm__("lock; xaddl %[retval], %[Addend]" : [retval] "+r" (retval) : [Addend] "m" (*Addend) : "memory");
+		
 		return retval;
 	}
 	
 	__forceinline long _InterlockedExchangeAdd16(volatile short* const Addend, const short Value)
 	{
 		long retval = Value;
+		
 		__asm__("lock; xaddw %[retval], %[Addend]" : [retval] "+r" (retval) : [Addend] "m" (*Addend) : "memory");
+		
 		return retval;
 	}
 

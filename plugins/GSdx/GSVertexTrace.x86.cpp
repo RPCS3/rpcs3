@@ -27,12 +27,13 @@
 using namespace Xbyak;
 
 static const int _args = 0;
-static const int _count = _args + 4; // rcx
-static const int _v = _args + 8; // rdx
-static const int _min = _args + 12; // r8
-static const int _max = _args + 16; // r9
+static const int _count = _args + 8; // rcx
+static const int _vertex = _args + 12; // rdx
+static const int _index = _args + 16; // r8
+static const int _min = _args + 20; // r9
+static const int _max = _args + 24; // _args + 4
 
-GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxsize)
+GSVertexTraceSW::CG::CG(const void* param, uint32 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)
 {
 	uint32 primclass = (key >> 0) & 3;
@@ -56,6 +57,8 @@ GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxs
 		n = 3;
 		break;
 	}
+
+	push(ebx);
 
 	// min.p = FLT_MAX;
 	// max.p = -FLT_MAX;
@@ -86,7 +89,8 @@ GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxs
 
 	// for(int i = 0; i < count; i += step) {
 
-	mov(edx, dword[esp + _v]);
+	mov(edx, dword[esp + _vertex]);
+	mov(ebx, dword[esp + _index]);
 	mov(ecx, dword[esp + _count]);
 
 	align(16);
@@ -95,18 +99,24 @@ GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxs
 
 	if(tme && !fst && primclass == GS_SPRITE_CLASS)
 	{
-		movaps(xmm1, ptr[edx + 1 * sizeof(GSVertexSW) + offsetof(GSVertexSW, t)]);
+		mov(eax, ptr[ebx + 1 * sizeof(uint32)]);
+		shl(eax, 6); // * sizeof(GSVertexSW)
+
+		movaps(xmm1, ptr[edx + eax + offsetof(GSVertexSW, t)]);
 		shufps(xmm1, xmm1, _MM_SHUFFLE(2, 2, 2, 2));
 	}
 
 	for(int j = 0; j < n; j++)
 	{
+		mov(eax, ptr[ebx + j * sizeof(uint32)]);
+		shl(eax, 6); // * sizeof(GSVertexSW)
+
 		if(color && (iip || j == n - 1))
 		{
 			// min.c = min.c.minv(v[i + j].c);
 			// max.c = max.c.maxv(v[i + j].c);
 
-			movaps(xmm0, ptr[edx + j * sizeof(GSVertexSW) + offsetof(GSVertexSW, c)]);
+			movaps(xmm0, ptr[edx + eax + offsetof(GSVertexSW, c)]);
 
 			minps(xmm2, xmm0);
 			maxps(xmm3, xmm0);
@@ -115,7 +125,7 @@ GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxs
 		// min.p = min.p.minv(v[i + j].p);
 		// max.p = max.p.maxv(v[i + j].p);
 
-		movaps(xmm0, ptr[edx + j * sizeof(GSVertexSW) + offsetof(GSVertexSW, p)]);
+		movaps(xmm0, ptr[edx + eax + offsetof(GSVertexSW, p)]);
 
 		minps(xmm4, xmm0);
 		maxps(xmm5, xmm0);
@@ -125,7 +135,7 @@ GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxs
 			// min.t = min.t.minv(v[i + j].t);
 			// max.t = max.t.maxv(v[i + j].t);
 
-			movaps(xmm0, ptr[edx + j * sizeof(GSVertexSW) + offsetof(GSVertexSW, t)]);
+			movaps(xmm0, ptr[edx + eax + offsetof(GSVertexSW, t)]);
 
 			if(!fst)
 			{
@@ -144,7 +154,7 @@ GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxs
 		}
 	}
 
-	add(edx, n * sizeof(GSVertexSW));
+	add(ebx, n * sizeof(uint32));
 	sub(ecx, n);
 
 	jg("loop");
@@ -174,10 +184,12 @@ GSVertexTrace::CGSW::CGSW(const void* param, uint32 key, void* code, size_t maxs
 		movaps(ptr[edx + offsetof(GSVertexTrace::Vertex, t)], xmm7);
 	}
 
+	pop(ebx);
+
 	ret();
 }
 
-GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t maxsize)
+GSVertexTraceDX9::CG::CG(const void* param, uint32 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)
 {
 	uint32 primclass = (key >> 0) & 3;
@@ -203,6 +215,8 @@ GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t ma
 		n = 6;
 		break;
 	}
+
+	push(ebx);
 
 	// min.p = FLT_MAX;
 	// max.p = -FLT_MAX;
@@ -233,7 +247,8 @@ GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t ma
 
 	// for(int i = 0; i < count; i += step) {
 
-	mov(edx, dword[esp + _v]);
+	mov(edx, dword[esp + _vertex]);
+	mov(ebx, dword[esp + _index]);
 	mov(ecx, dword[esp + _count]);
 
 	align(16);
@@ -242,16 +257,22 @@ GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t ma
 
 	if(tme && !fst && primclass == GS_SPRITE_CLASS)
 	{
-		movaps(xmm1, ptr[edx + 5 * sizeof(GSVertexHW9) + offsetof(GSVertexHW9, p)]);
+		mov(eax, ptr[ebx + 1 * sizeof(uint32)]);
+		shl(eax, 5); // * sizeof(GSVertexHW9)
+
+		movaps(xmm1, ptr[edx + eax + offsetof(GSVertexHW9, p)]);
 		shufps(xmm1, xmm1, _MM_SHUFFLE(3, 3, 3, 3));
 	}
 
 	for(int j = 0; j < n; j++)
 	{
+		mov(eax, ptr[ebx + j * sizeof(uint32)]);
+		shl(eax, 5); // * sizeof(GSVertexHW9)
+
 		// min.p = min.p.minv(v[i + j].p);
 		// max.p = max.p.maxv(v[i + j].p);
 
-		movaps(xmm0, ptr[edx + j * sizeof(GSVertexHW9) + offsetof(GSVertexHW9, p)]);
+		movaps(xmm0, ptr[edx + eax + offsetof(GSVertexHW9, p)]);
 
 		minps(xmm4, xmm0);
 		maxps(xmm5, xmm0);
@@ -264,7 +285,7 @@ GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t ma
 
 		if(color && (iip || j == n - 1) || tme)
 		{
-			movaps(xmm0, ptr[edx + j * sizeof(GSVertexHW9) + offsetof(GSVertexHW9, t)]);
+			movaps(xmm0, ptr[edx + eax + offsetof(GSVertexHW9, t)]);
 		}
 
 		if(color && (iip || j == n - 1))
@@ -295,7 +316,7 @@ GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t ma
 		}
 	}
 
-	add(edx, n * sizeof(GSVertexHW9));
+	add(ebx, n * sizeof(uint32));
 	sub(ecx, n);
 
 	jg("loop");
@@ -351,10 +372,12 @@ GSVertexTrace::CGHW9::CGHW9(const void* param, uint32 key, void* code, size_t ma
 		movaps(ptr[edx + offsetof(GSVertexTrace::Vertex, t)], xmm7);
 	}
 
+	pop(ebx);
+
 	ret();
 }
 
-GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t maxsize)
+GSVertexTraceDX11::CG::CG(const void* param, uint32 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)
 {
 	uint32 primclass = (key >> 0) & 3;
@@ -378,6 +401,8 @@ GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t 
 		n = 3;
 		break;
 	}
+
+	push(ebx);
 
 	// min.p = FLT_MAX;
 	// max.p = -FLT_MAX;
@@ -408,7 +433,8 @@ GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t 
 
 	// for(int i = 0; i < count; i += step) {
 
-	mov(edx, dword[esp + _v]);
+	mov(edx, dword[esp + _vertex]);
+	mov(ebx, dword[esp + _index]);
 	mov(ecx, dword[esp + _count]);
 
 	align(16);
@@ -417,9 +443,12 @@ GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t 
 
 	for(int j = 0; j < n; j++)
 	{
+		mov(eax, ptr[ebx + j * sizeof(uint32)]);
+		shl(eax, 5); // * sizeof(GSVertexHW11)
+
 		if(color && (iip || j == n - 1) || tme)
 		{
-			movaps(xmm0, ptr[edx + j * sizeof(GSVertexHW11)]);
+			movaps(xmm0, ptr[edx + eax]);
 		}
 
 		if(color && (iip || j == n - 1))
@@ -448,7 +477,7 @@ GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t 
 			maxps(xmm7, xmm0);
 		}
 
-		movdqa(xmm0, ptr[edx + j * sizeof(GSVertexHW11) + 16]);
+		movdqa(xmm0, ptr[edx + eax + 16]);
 
 		if(m_cpu.has(util::Cpu::tSSE41))
 		{
@@ -469,7 +498,7 @@ GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t 
 		maxps(xmm5, xmm1);
 	}
 
-	add(edx, n * sizeof(GSVertexHW11));
+	add(ebx, n * sizeof(uint32));
 	sub(ecx, n);
 
 	jg("loop");
@@ -524,6 +553,8 @@ GSVertexTrace::CGHW11::CGHW11(const void* param, uint32 key, void* code, size_t 
 		movaps(ptr[eax + offsetof(GSVertexTrace::Vertex, t)], xmm6);
 		movaps(ptr[edx + offsetof(GSVertexTrace::Vertex, t)], xmm7);
 	}
+
+	pop(ebx);
 
 	ret();
 }

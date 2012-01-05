@@ -74,18 +74,18 @@ GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, cons
 
 		m_textures.insert(t);
 
-		for(vector<uint32>::const_iterator i = t->m_pages.n->begin(); i != t->m_pages.n->end(); i++)
+		for(const uint32* p = t->m_pages.n; *p != GSOffset::EOP; p++)
 		{
-			m_map[*i].push_front(t);
+			m_map[*p].push_front(t);
 		}
 	}
 
 	return t;
 }
 
-void GSTextureCacheSW::InvalidatePages(const vector<uint32>* pages, uint32 psm)
+void GSTextureCacheSW::InvalidatePages(const uint32* pages, uint32 psm)
 {
-	for(vector<uint32>::const_iterator p = pages->begin(); p != pages->end(); p++)
+	for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 	{
 		uint32 page = *p;
 
@@ -185,9 +185,9 @@ GSTextureCacheSW::Texture::Texture(GSState* state, uint32 tw0, const GIFRegTEX0&
 
 	m_pages.n = m_offset->GetPages(GSVector4i(0, 0, 1 << TEX0.TW, 1 << TEX0.TH));
 
-	for(vector<uint32>::const_iterator i = m_pages.n->begin(); i != m_pages.n->end(); i++)
+	for(const uint32* p = m_pages.n; *p != GSOffset::EOP; p++)
 	{
-		uint32 page = *i;
+		uint32 page = *p;
 
 		m_pages.bm[page >> 5] |= 1 << (page & 31);
 	}
@@ -202,7 +202,7 @@ GSTextureCacheSW::Texture::Texture(GSState* state, uint32 tw0, const GIFRegTEX0&
 
 GSTextureCacheSW::Texture::~Texture()
 {
-	delete m_pages.n;
+	delete [] m_pages.n;
 
 	if(m_buff)
 	{

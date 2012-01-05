@@ -72,7 +72,8 @@ protected:
 	GSTexture* m_fxaa;
 	GSTexture* m_1x1;
 	GSTexture* m_current;
-	struct {size_t stride, start, count, limit;} m_vertices;
+	struct {size_t stride, start, count, limit;} m_vertex;
+	struct {size_t start, count, limit;} m_index;
 	unsigned int m_frame; // for ageing the pool
 
 	virtual GSTexture* CreateSurface(int type, int w, int h, bool msaa, int format) = 0;
@@ -101,6 +102,7 @@ public:
 
 	virtual void BeginScene() {}
 	virtual void DrawPrimitive() {};
+	virtual void DrawIndexedPrimitive() {}
 	virtual void EndScene();
 
 	virtual void ClearRenderTarget(GSTexture* t, const GSVector4& c) {}

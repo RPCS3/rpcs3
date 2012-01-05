@@ -46,10 +46,7 @@ Regs data (id == 3)
 class GSDump
 {
 	FILE* m_gs;
-	FILE* m_obj;
 	int m_frames;
-	int m_objects;
-	int m_vertices;
 
 public:
 	GSDump();
@@ -60,6 +57,5 @@ public:
 	void ReadFIFO(uint32 size);
 	void Transfer(int index, const uint8* mem, size_t size);
 	void VSync(int field, bool last, const GSPrivRegSet* regs);
-	void Object(GSVertexSW* vertices, int count, GS_PRIM_CLASS primclass);
 	operator bool() {return m_gs != NULL;}
 };

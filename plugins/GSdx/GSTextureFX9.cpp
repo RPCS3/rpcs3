@@ -61,9 +61,10 @@ GSTexture* GSDevice9::CreateMskFix(uint32 size, uint32 msk, uint32 fix)
 	return t;
 }
 
-void GSDevice9::SetupIA(const void* vertices, int count, int prim)
+void GSDevice9::SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim)
 {
-	IASetVertexBuffer(vertices, sizeof(GSVertexHW9), count);
+	IASetVertexBuffer(vertex, sizeof(GSVertexHW9), vertex_count);
+	IASetIndexBuffer(index, index_count);
 	IASetPrimitiveTopology((D3DPRIMITIVETYPE)prim);
 }
 

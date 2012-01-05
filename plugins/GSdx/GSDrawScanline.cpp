@@ -87,7 +87,7 @@ void GSDrawScanline::BeginDraw(const void* param)
 	sel.tcc = m_global.sel.tcc;
 	sel.fst = m_global.sel.fst;
 	sel.fge = m_global.sel.fge;
-	sel.sprite = m_global.sel.sprite;
+	sel.prim = m_global.sel.prim;
 	sel.fb = m_global.sel.fb;
 	sel.zb = m_global.sel.zb;
 	sel.zoverflow = m_global.sel.zoverflow;
@@ -102,7 +102,7 @@ void GSDrawScanline::EndDraw(uint64 frame, uint64 ticks, int pixels)
 
 #ifndef ENABLE_JIT_RASTERIZER
 
-void GSDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan)
+void GSDrawScanline::SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dscan)
 {
 	GSScanlineSelector sel = m_global.sel;
 
@@ -115,7 +115,7 @@ void GSDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dsc
 
 	if(has_z || has_f)
 	{
-		if(!sel.sprite)
+		if(sel.prim != GS_SPRITE_CLASS)
 		{
 			if(has_f)
 			{
@@ -145,12 +145,12 @@ void GSDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dsc
 		{
 			if(has_f)
 			{
-				m_local.p.f = GSVector4i(vertices[0].p).zzzzh().zzzz();
+				m_local.p.f = GSVector4i(vertex.p).zzzzh().zzzz();
 			}
 
 			if(has_z)
 			{
-				m_local.p.z = vertices[0].t.u32[3]; // uint32 z is bypassed in t.w
+				m_local.p.z = vertex.t.u32[3]; // uint32 z is bypassed in t.w
 			}
 		}
 	}
@@ -234,7 +234,7 @@ void GSDrawScanline::SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dsc
 		}
 		else
 		{
-			GSVector4i c = GSVector4i(vertices[0].c);
+			GSVector4i c = GSVector4i(vertex.c);
 
 			c = c.upl16(c.zwxy());
 
@@ -271,7 +271,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 	test = GSDrawScanlineCodeGenerator::m_test[skip] | GSDrawScanlineCodeGenerator::m_test[7 + (steps & (steps >> 31))];
 
-	if(!sel.sprite)
+	if(sel.prim != GS_SPRITE_CLASS)
 	{
 		if(sel.fwrite && sel.fge)
 		{
@@ -300,7 +300,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 				GSVector4i u = vt.xxxx() + GSVector4i::cast(m_local.d[skip].s);
 				GSVector4i v = vt.yyyy(); 
 				
-				if(!sel.sprite || sel.mmin)
+				if(sel.prim != GS_SPRITE_CLASS || sel.mmin)
 				{
 					v += GSVector4i::cast(m_local.d[skip].t);
 				}
@@ -354,7 +354,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 			{
 				za = fza_base->y + fza_offset->y;
 
-				if(!sel.sprite)
+				if(sel.prim != GS_SPRITE_CLASS)
 				{
 					GSVector4 z = scan.p.zzzz() + zo;
 
@@ -754,7 +754,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 					{
 						uf = u.xxzzlh().srl16(1);
 					
-						if(!sel.sprite)
+						if(sel.prim != GS_SPRITE_CLASS)
 						{
 							vf = v.xxzzlh().srl16(1);
 						}
@@ -936,7 +936,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 			if(sel.fwrite && sel.fge)
 			{
-				GSVector4i fog = !sel.sprite ? f : m_local.p.f;
+				GSVector4i fog = sel.prim != GS_SPRITE_CLASS ? f : m_local.p.f;
 
 				rb = m_global.frb.lerp16<0>(rb, fog);
 				ga = m_global.fga.lerp16<0>(ga, fog).mix16(ga);
@@ -1211,7 +1211,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 		fza_offset++;
 
-		if(!sel.sprite)
+		if(sel.prim != GS_SPRITE_CLASS)
 		{
 			if(sel.zb)
 			{
@@ -1234,7 +1234,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 					s = GSVector4::cast(GSVector4i::cast(s) + stq.xxxx());
 					
-					if(!sel.sprite || sel.mmin)
+					if(sel.prim != GS_SPRITE_CLASS || sel.mmin)
 					{
 						t = GSVector4::cast(GSVector4i::cast(t) + stq.yyyy());
 					}

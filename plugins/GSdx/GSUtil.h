@@ -29,6 +29,7 @@ public:
 	static const char* GetLibName();
 
 	static GS_PRIM_CLASS GetPrimClass(uint32 prim);
+	static int GetVertexCount(uint32 prim);
 
 	static bool HasSharedBits(uint32 spsm, uint32 dpsm);
 	static bool HasSharedBits(uint32 sbp, uint32 spsm, uint32 dbp, uint32 dpsm);

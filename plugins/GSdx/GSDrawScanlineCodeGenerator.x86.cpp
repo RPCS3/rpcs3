@@ -287,7 +287,7 @@ void GSDrawScanlineCodeGenerator::Init()
 	lea(edi, ptr[ebx * 2]);
 	add(edi, ptr[&m_local.gd->fzbc]);
 
-	if(!m_sel.sprite && (m_sel.fwrite && m_sel.fge || m_sel.zb) || m_sel.fb && (m_sel.edge || m_sel.tfx != TFX_NONE || m_sel.iip))
+	if(m_sel.prim != GS_SPRITE_CLASS && (m_sel.fwrite && m_sel.fge || m_sel.zb) || m_sel.fb && (m_sel.edge || m_sel.tfx != TFX_NONE || m_sel.iip))
 	{
 		// edx = &m_local.d[skip]
 
@@ -298,7 +298,7 @@ void GSDrawScanlineCodeGenerator::Init()
 		mov(ebx, ptr[esp + _v]);
 	}
 
-	if(!m_sel.sprite)
+	if(m_sel.prim != GS_SPRITE_CLASS)
 	{
 		if(m_sel.fwrite && m_sel.fge || m_sel.zb)
 		{
@@ -370,7 +370,7 @@ void GSDrawScanlineCodeGenerator::Init()
 
 				paddd(xmm2, ptr[edx + offsetof(GSScanlineLocalData::skip, s)]);
 
-				if(!m_sel.sprite || m_sel.mmin)
+				if(m_sel.prim != GS_SPRITE_CLASS || m_sel.mmin)
 				{
 					paddd(xmm3, ptr[edx + offsetof(GSScanlineLocalData::skip, t)]);
 				}
@@ -458,7 +458,7 @@ void GSDrawScanlineCodeGenerator::Step()
 
 	add(edi, 8);
 
-	if(!m_sel.sprite)
+	if(m_sel.prim != GS_SPRITE_CLASS)
 	{
 		// z += m_local.d4.z;
 
@@ -504,7 +504,7 @@ void GSDrawScanlineCodeGenerator::Step()
 				paddd(xmm2, ptr[&m_local.temp.s]);
 				movdqa(ptr[&m_local.temp.s], xmm2);
 
-				if(!m_sel.sprite || m_sel.mmin)
+				if(m_sel.prim != GS_SPRITE_CLASS || m_sel.mmin)
 				{
 					pshufd(xmm3, xmm4, _MM_SHUFFLE(1, 1, 1, 1));
 					paddd(xmm3, ptr[&m_local.temp.t]);
@@ -602,7 +602,7 @@ void GSDrawScanlineCodeGenerator::TestZ(const Xmm& temp1, const Xmm& temp2)
 
 	// GSVector4i zs = zi;
 
-	if(!m_sel.sprite)
+	if(m_sel.prim != GS_SPRITE_CLASS)
 	{
 		if(m_sel.zoverflow)
 		{
@@ -738,7 +738,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		psrlw(xmm0, 1);
 		movdqa(ptr[&m_local.temp.uf], xmm0);
 
-		if(!m_sel.sprite)
+		if(m_sel.prim != GS_SPRITE_CLASS)
 		{
 			// GSVector4i vf = v.xxzzlh().srl16(1);
 
@@ -2341,7 +2341,7 @@ void GSDrawScanlineCodeGenerator::Fog()
 	// rb = m_local.gd->frb.lerp16<0>(rb, f);
 	// ga = m_local.gd->fga.lerp16<0>(ga, f).mix16(ga);
 
-	movdqa(xmm0, ptr[!m_sel.sprite ? &m_local.temp.f : &m_local.p.f]);
+	movdqa(xmm0, ptr[m_sel.prim != GS_SPRITE_CLASS ? &m_local.temp.f : &m_local.p.f]);
 	movdqa(xmm1, xmm6);
 
 	movdqa(xmm2, ptr[&m_local.gd->frb]);
@@ -2464,7 +2464,7 @@ void GSDrawScanlineCodeGenerator::WriteZBuf()
 
 	bool fast = m_sel.ztest && m_sel.zpsm < 2;
 
-	movdqa(xmm1, ptr[!m_sel.sprite ? &m_local.temp.zs : &m_local.p.z]);
+	movdqa(xmm1, ptr[m_sel.prim != GS_SPRITE_CLASS ? &m_local.temp.zs : &m_local.p.z]);
 
 	if(fast)
 	{

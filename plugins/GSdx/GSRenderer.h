@@ -24,8 +24,6 @@
 #include "GSdx.h"
 #include "GSWnd.h"
 #include "GSState.h"
-#include "GSVertexTrace.h"
-#include "GSVertexList.h"
 #include "GSCapture.h"
 
 class GSRenderer : public GSState
@@ -49,15 +47,6 @@ protected:
 
 	virtual GSTexture* GetOutput(int i) = 0;
 
-	GSVertexTrace m_vt;
-
-	// following functions need m_vt to be initialized
-
-	void GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFRegCLAMP& CLAMP, bool linear);
-	void GetAlphaMinMax();
-	bool TryAlphaTest(uint32& fm, uint32& zm);
-	bool IsOpaque();
-
 public:
 	GSWnd m_wnd;
 	GSDevice* m_dev;
@@ -67,10 +56,9 @@ public:
 	bool s_save;
 	bool s_savez;
 	int s_saven;
-	GSCritSec s_lock;
 
 public:
-	GSRenderer();
+	GSRenderer(GSVertexTrace* vt, size_t vertex_stride);
 	virtual ~GSRenderer();
 
 	virtual bool CreateWnd(const string& title, int w, int h);
@@ -93,157 +81,4 @@ public:
 	GSCritSec m_pGSsetTitle_Crit;
 
 	char m_GStitleInfoBuffer[128];
-};
-
-template<class Vertex> class GSRendererT : public GSRenderer
-{
-protected:
-	Vertex* m_vertices;
-	int m_count;
-	int m_maxcount;
-	GSVertexList<Vertex> m_vl;
-
-	void Reset()
-	{
-		m_count = 0;
-		m_vl.RemoveAll();
-
-		GSRenderer::Reset();
-	}
-
-	void ResetPrim()
-	{
-		m_vl.RemoveAll();
-	}
-
-	void FlushPrim()
-	{
-		if(m_count == 0) return;
-
-		if(GSLocalMemory::m_psm[m_context->FRAME.PSM].fmt < 3 && GSLocalMemory::m_psm[m_context->ZBUF.PSM].fmt < 3)
-		{
-			// FIXME: berserk fpsm = 27 (8H)
-
-			if(!m_dev->IsLost())
-			{
-				m_vt.Update(m_vertices, m_count, GSUtil::GetPrimClass(PRIM->PRIM));
-
-				Draw();
-			}
-
-			m_perfmon.Put(GSPerfMon::Draw, 1);
-		}
-
-		m_count = 0;
-	}
-
-	void GrowVertexBuffer()
-	{
-		int maxcount = std::max<int>(m_maxcount * 3 / 2, 10000);
-		Vertex* vertices = (Vertex*)_aligned_malloc(sizeof(Vertex) * maxcount, 16);
-
-	    if(m_vertices != NULL)
-		{
-			memcpy(vertices, m_vertices, sizeof(Vertex) * m_maxcount);
-			_aligned_free(m_vertices);
-		}
-
-		m_vertices = vertices;
-		m_maxcount = maxcount - 100;
-	}
-
-	// Returns a pointer to the drawing vertex. Can return NULL!
-
-	template<uint32 prim> __forceinline Vertex* DrawingKick(bool skip, int& count)
-	{
-		switch(prim)
-		{
-		case GS_POINTLIST: count = 1; break;
-		case GS_LINELIST: count = 2; break;
-		case GS_LINESTRIP: count = 2; break;
-		case GS_TRIANGLELIST: count = 3; break;
-		case GS_TRIANGLESTRIP: count = 3; break;
-		case GS_TRIANGLEFAN: count = 3; break;
-		case GS_SPRITE: count = 2; break;
-		case GS_INVALID: count = 1; break;
-		default: __assume(0);
-		}
-
-		if(m_vl.GetCount() < count)
-		{
-			return NULL;
-		}
-
-		if(m_count >= m_maxcount)
-		{
-			GrowVertexBuffer();
-		}
-
-		Vertex* v = &m_vertices[m_count];
-
-		switch(prim)
-		{
-		case GS_POINTLIST:
-			m_vl.GetAt(0, v[0]);
-			m_vl.RemoveAll();
-			break;
-		case GS_LINELIST:
-			m_vl.GetAt(0, v[0]);
-			m_vl.GetAt(1, v[1]);
-			m_vl.RemoveAll();
-			break;
-		case GS_LINESTRIP:
-			m_vl.GetAt(0, v[0]);
-			m_vl.GetAt(1, v[1]);
-			m_vl.RemoveAt(0, 1);
-			break;
-		case GS_TRIANGLELIST:
-			m_vl.GetAt(0, v[0]);
-			m_vl.GetAt(1, v[1]);
-			m_vl.GetAt(2, v[2]);
-			m_vl.RemoveAll();
-			break;
-		case GS_TRIANGLESTRIP:
-			m_vl.GetAt(0, v[0]);
-			m_vl.GetAt(1, v[1]);
-			m_vl.GetAt(2, v[2]);
-			m_vl.RemoveAt(0, 2);
-			break;
-		case GS_TRIANGLEFAN:
-			m_vl.GetAt(0, v[0]);
-			m_vl.GetAt(1, v[1]);
-			m_vl.GetAt(2, v[2]);
-			m_vl.RemoveAt(1, 1);
-			break;
-		case GS_SPRITE:
-			m_vl.GetAt(0, v[0]);
-			m_vl.GetAt(1, v[1]);
-			m_vl.RemoveAll();
-			break;
-		case GS_INVALID:
-			ASSERT(0);
-			m_vl.RemoveAll();
-			return NULL;
-		default:
-			__assume(0);
-		}
-
-		return !skip ? v : NULL;
-	}
-
-	virtual void Draw() = 0;
-
-public:
-	GSRendererT()
-		: GSRenderer()
-		, m_vertices(NULL)
-		, m_count(0)
-		, m_maxcount(0)
-	{
-	}
-
-	virtual ~GSRendererT()
-	{
-		if(m_vertices) _aligned_free(m_vertices);
-	}
 };

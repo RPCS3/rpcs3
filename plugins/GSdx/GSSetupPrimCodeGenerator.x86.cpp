@@ -29,7 +29,7 @@ using namespace Xbyak;
 
 void GSSetupPrimCodeGenerator::Generate()
 {
-	if((m_en.z || m_en.f) && !m_sel.sprite || m_en.t || m_en.c && m_sel.iip)
+	if((m_en.z || m_en.f) && m_sel.prim != GS_SPRITE_CLASS || m_en.t || m_en.c && m_sel.iip)
 	{
 		for(int i = 0; i < 5; i++)
 		{
@@ -53,7 +53,7 @@ void GSSetupPrimCodeGenerator::Depth()
 		return;
 	}
 
-	if(!m_sel.sprite)
+	if(m_sel.prim != GS_SPRITE_CLASS)
 	{
 		// GSVector4 p = dscan.p;
 
@@ -112,7 +112,7 @@ void GSSetupPrimCodeGenerator::Depth()
 	}
 	else
 	{
-		// GSVector4 p = vertices[0].p;
+		// GSVector4 p = vertex.p;
 
 		movaps(xmm0, ptr[ecx + offsetof(GSVertexSW, p)]);
 
@@ -327,7 +327,7 @@ void GSSetupPrimCodeGenerator::Color()
 	}
 	else
 	{
-		// GSVector4i c = GSVector4i(vertices[0].c);
+		// GSVector4i c = GSVector4i(vertex.c);
 
 		cvttps2dq(xmm0, ptr[ecx + offsetof(GSVertexSW, c)]);
 

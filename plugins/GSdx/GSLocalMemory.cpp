@@ -1992,7 +1992,7 @@ GSOffset::~GSOffset()
 {
 }
 
-vector<uint32>* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
+uint32* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
 {
 	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
@@ -2000,23 +2000,37 @@ vector<uint32>* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
 
 	if(bbox != NULL) *bbox = r;
 
-	vector<uint32>* pages = new vector<uint32>();
+	// worst case: 
+	// bp page-aligned: (w * h) / (64 * 32)
+	// bp block-aligned: (w * h) / (8 * 8)
 
-	// 32-bpp worst case: (w * h) / (64 * 32), it can be a bit more if we are only block-aligned (bp & 31) != 0
+	int size = r.width() * r.height();
 	
-	pages->reserve(((r.width() * r.height()) >> 11) + 2); 
+	int limit = std::min<int>((size >> ((bp & 31) != 0 ? 6 : 11)) + 2, MAX_PAGES) + 1;
 
-	uint32 tmp[16];
+	uint32* pages = new uint32[limit];
 
-	memset(tmp, 0, sizeof(tmp));
+	__aligned(uint32, 16) tmp[16];
 
+	((GSVector4i*)tmp)[0] = GSVector4i::zero();
+	((GSVector4i*)tmp)[1] = GSVector4i::zero();
+	((GSVector4i*)tmp)[2] = GSVector4i::zero();
+	((GSVector4i*)tmp)[3] = GSVector4i::zero();
+
+	r = r.sra32(3);
+
+	bs.x >>= 3;
+	bs.y >>= 3;
+
+	uint32* RESTRICT p = pages;
+	
 	for(int y = r.top; y < r.bottom; y += bs.y)
 	{
-		uint32 base = block.row[y >> 3];
+		uint32 base = block.row[y];
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 n = (base + block.col[x >> 3]) >> 5;
+			uint32 n = (base + block.col[x]) >> 5;
 
 			if(n < MAX_PAGES)
 			{
@@ -2027,11 +2041,15 @@ vector<uint32>* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
 				{
 					row |= col;
 
-					pages->push_back(n);
+					*p++ = n;
 				}
 			}
 		}
 	}
+
+	*p++ = EOP;
+
+	ASSERT(p - pages <= limit);
 
 	return pages;
 }

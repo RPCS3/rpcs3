@@ -61,12 +61,12 @@ union GSScanlineSelector
 		uint32 colclamp:1; // 43
 		uint32 fba:1; // 44
 		uint32 dthe:1; // 45
-		uint32 sprite:1; // 46
-		uint32 edge:1; // 47
+		uint32 prim:2; // 46
 
-		uint32 tw:3; // 48 (encodes values between 3 -> 10, texture cache makes sure it is at least 3)
-		uint32 lcm:1; // 49
-		uint32 mmin:2; // 50
+		uint32 edge:1; // 48
+		uint32 tw:3; // 49 (encodes values between 3 -> 10, texture cache makes sure it is at least 3)
+		uint32 lcm:1; // 50
+		uint32 mmin:2; // 51
 	};
 
 	struct
@@ -92,7 +92,7 @@ union GSScanlineSelector
 
 	bool IsSolidRect() const
 	{
-		return sprite
+		return prim == GS_SPRITE_CLASS
 			&& iip == 0
 			&& tfx == TFX_NONE
 			&& abe == 0

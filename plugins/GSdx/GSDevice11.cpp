@@ -352,7 +352,12 @@ void GSDevice11::Flip()
 
 void GSDevice11::DrawPrimitive()
 {
-	m_ctx->Draw(m_vertices.count, m_vertices.start);
+	m_ctx->Draw(m_vertex.count, m_vertex.start);
+}
+
+void GSDevice11::DrawIndexedPrimitive()
+{
+	m_ctx->DrawIndexed(m_index.count, m_index.start, m_vertex.start);
 }
 
 void GSDevice11::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -709,18 +714,18 @@ void GSDevice11::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vert
 	}
 }
 
-void GSDevice11::IASetVertexBuffer(const void* vertices, size_t stride, size_t count)
+void GSDevice11::IASetVertexBuffer(const void* vertex, size_t stride, size_t count)
 {
-	ASSERT(m_vertices.count == 0);
+	ASSERT(m_vertex.count == 0);
 
-	if(count * stride > m_vertices.limit * m_vertices.stride)
+	if(count * stride > m_vertex.limit * m_vertex.stride)
 	{
 		m_vb_old = m_vb;
 		m_vb = NULL;
 
-		m_vertices.start = 0;
-		m_vertices.count = 0;
-		m_vertices.limit = std::max<int>(count * 3 / 2, 11000);
+		m_vertex.start = 0;
+		m_vertex.count = 0;
+		m_vertex.limit = std::max<int>(count * 3 / 2, 11000);
 	}
 
 	if(m_vb == NULL)
@@ -730,7 +735,7 @@ void GSDevice11::IASetVertexBuffer(const void* vertices, size_t stride, size_t c
 		memset(&bd, 0, sizeof(bd));
 
 		bd.Usage = D3D11_USAGE_DYNAMIC;
-		bd.ByteWidth = m_vertices.limit * stride;
+		bd.ByteWidth = m_vertex.limit * stride;
 		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
@@ -743,9 +748,9 @@ void GSDevice11::IASetVertexBuffer(const void* vertices, size_t stride, size_t c
 
 	D3D11_MAP type = D3D11_MAP_WRITE_NO_OVERWRITE;
 
-	if(m_vertices.start + count > m_vertices.limit || stride != m_vertices.stride)
+	if(m_vertex.start + count > m_vertex.limit || stride != m_vertex.stride)
 	{
-		m_vertices.start = 0;
+		m_vertex.start = 0;
 
 		type = D3D11_MAP_WRITE_DISCARD;
 	}
@@ -754,13 +759,13 @@ void GSDevice11::IASetVertexBuffer(const void* vertices, size_t stride, size_t c
 
 	if(SUCCEEDED(m_ctx->Map(m_vb, 0, type, 0, &m)))
 	{
-		GSVector4i::storent((uint8*)m.pData + m_vertices.start * stride, vertices, count * stride);
+		GSVector4i::storent((uint8*)m.pData + m_vertex.start * stride, vertex, count * stride);
 
 		m_ctx->Unmap(m_vb, 0);
 	}
 
-	m_vertices.count = count;
-	m_vertices.stride = stride;
+	m_vertex.count = count;
+	m_vertex.stride = stride;
 
 	IASetVertexBuffer(m_vb, stride);
 }
@@ -776,6 +781,70 @@ void GSDevice11::IASetVertexBuffer(ID3D11Buffer* vb, size_t stride)
 		uint32 offset = 0;
 
 		m_ctx->IASetVertexBuffers(0, 1, &vb, &stride2, &offset);
+	}
+}
+
+void GSDevice11::IASetIndexBuffer(const void* index, size_t count)
+{
+	ASSERT(m_index.count == 0);
+
+	if(count > m_index.limit)
+	{
+		m_ib_old = m_ib;
+		m_ib = NULL;
+
+		m_index.count = 0;
+		m_index.limit = std::max<int>(count * 3 / 2, 11000);
+	}
+
+	if(m_ib == NULL)
+	{
+		D3D11_BUFFER_DESC bd;
+
+		memset(&bd, 0, sizeof(bd));
+
+		bd.Usage = D3D11_USAGE_DYNAMIC;
+		bd.ByteWidth = m_index.limit * sizeof(uint32);
+		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+		HRESULT hr;
+
+		hr = m_dev->CreateBuffer(&bd, NULL, &m_ib);
+
+		if(FAILED(hr)) return;
+	}
+
+	D3D11_MAP type = D3D11_MAP_WRITE_NO_OVERWRITE;
+
+	if(m_index.start + count > m_index.limit)
+	{
+		m_index.start = 0;
+
+		type = D3D11_MAP_WRITE_DISCARD;
+	}
+
+	D3D11_MAPPED_SUBRESOURCE m;
+
+	if(SUCCEEDED(m_ctx->Map(m_ib, 0, type, 0, &m)))
+	{
+		memcpy((uint8*)m.pData + m_index.start * sizeof(uint32), index, count * sizeof(uint32));
+
+		m_ctx->Unmap(m_ib, 0);
+	}
+
+	m_index.count = count;
+
+	IASetIndexBuffer(m_ib);
+}
+
+void GSDevice11::IASetIndexBuffer(ID3D11Buffer* ib)
+{
+	if(m_state.ib != ib)
+	{
+		m_state.ib = ib;
+
+		m_ctx->IASetIndexBuffer(ib, DXGI_FORMAT_R32_UINT, 0);
 	}
 }
 

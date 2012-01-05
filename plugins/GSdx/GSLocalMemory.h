@@ -51,7 +51,9 @@ public:
 	GSOffset(uint32 bp, uint32 bw, uint32 psm);
 	virtual ~GSOffset();
 
-	vector<uint32>* GetPages(const GSVector4i& rect, GSVector4i* bbox = NULL);
+	enum {EOP = 0xffffffff};
+
+	uint32* GetPages(const GSVector4i& rect, GSVector4i* bbox = NULL);
 };
 
 struct GSPixelOffset4

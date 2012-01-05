@@ -45,6 +45,8 @@ class GSDevice11 : public GSDeviceDX
 	CComPtr<IDXGISwapChain> m_swapchain;
 	CComPtr<ID3D11Buffer> m_vb;
 	CComPtr<ID3D11Buffer> m_vb_old;
+	CComPtr<ID3D11Buffer> m_ib;
+	CComPtr<ID3D11Buffer> m_ib_old;
 
 	bool m_srv_changed, m_ss_changed;
 
@@ -52,6 +54,7 @@ class GSDevice11 : public GSDeviceDX
 	{
 		ID3D11Buffer* vb;
 		size_t vb_stride;
+		ID3D11Buffer* ib;
 		ID3D11InputLayout* layout;
 		D3D11_PRIMITIVE_TOPOLOGY topology;
 		ID3D11VertexShader* vs;
@@ -141,6 +144,7 @@ public:
 	void SetExclusive(bool isExcl);
 
 	void DrawPrimitive();
+	void DrawIndexedPrimitive();
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
 	void ClearRenderTarget(GSTexture* t, uint32 c);
@@ -162,8 +166,10 @@ public:
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D11PixelShader* ps, ID3D11Buffer* ps_cb, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D11PixelShader* ps, ID3D11Buffer* ps_cb, ID3D11BlendState* bs, bool linear = true);
 
-	void IASetVertexBuffer(const void* vertices, size_t stride, size_t count);
+	void IASetVertexBuffer(const void* vertex, size_t stride, size_t count);
 	void IASetVertexBuffer(ID3D11Buffer* vb, size_t stride);
+	void IASetIndexBuffer(const void* index, size_t count);
+	void IASetIndexBuffer(ID3D11Buffer* ib);
 	void IASetInputLayout(ID3D11InputLayout* layout);
 	void IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY topology);
 	void VSSetShader(ID3D11VertexShader* vs, ID3D11Buffer* vs_cb);
@@ -176,7 +182,7 @@ public:
 	void OMSetBlendState(ID3D11BlendState* bs, float bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
 
-	void SetupIA(const void* vertices, int count, int prim);
+	void SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim);
 	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
 	void SetupGS(GSSelector sel);
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);

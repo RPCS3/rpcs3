@@ -26,7 +26,7 @@
 #include "GSDrawingContext.h"
 #include "GSDrawingEnvironment.h"
 #include "GSVertex.h"
-#include "GSVertexList.h"
+#include "GSVertexTrace.h"
 #include "GSUtil.h"
 #include "GSPerfMon.h"
 #include "GSVector.h"
@@ -126,49 +126,53 @@ class GSState : public GSAlignedClass<32>
 
 	} m_tr;
 
-	void FlushWrite();
-
 protected:
 	bool IsBadFrame(int& skip, int UserHacks_SkipDraw);
 
-	typedef void (GSState::*VertexKickPtr)(bool skip);
+	GSVertex m_v;
+	float m_q;
+	struct {uint8* buff; size_t head, tail, maxcount, stride, n;} m_vertex;
+	struct {uint32* buff; size_t tail;} m_index;
 
-	VertexKickPtr m_vk[8][2][2];
-	VertexKickPtr m_vkf;
+	typedef void (GSState::*DrawingKickPtr)(uint32 skip);
+	typedef void (GSState::*ConvertVertexPtr)(void* RESTRICT vertex, size_t index);
 
-	#define InitVertexKick3(T, P, N, M) \
-		m_vk[P][N][M] = (VertexKickPtr)(void (T::*)(bool))&T::VertexKick<P, N, M>;
+	DrawingKickPtr m_dk[8], m_dkf;
+	ConvertVertexPtr m_cv[8][2][2], m_cvf; // [PRIM][TME][FST]
 
-	#define InitVertexKick2(T, P) \
-		InitVertexKick3(T, P, 0, 0) \
-		InitVertexKick3(T, P, 0, 1) \
-		InitVertexKick3(T, P, 1, 0) \
-		InitVertexKick3(T, P, 1, 1) \
+	#define InitConvertVertex2(T, P) \
+		m_cv[P][0][0] = (ConvertVertexPtr)&T::ConvertVertex<P, 0, 0>; \
+		m_cv[P][0][1] = (ConvertVertexPtr)&T::ConvertVertex<P, 0, 1>; \
+		m_cv[P][1][0] = (ConvertVertexPtr)&T::ConvertVertex<P, 1, 0>; \
+		m_cv[P][1][1] = (ConvertVertexPtr)&T::ConvertVertex<P, 1, 1>; \
 
-	#define InitVertexKick(T) \
-		InitVertexKick2(T, GS_POINTLIST) \
-		InitVertexKick2(T, GS_LINELIST) \
-		InitVertexKick2(T, GS_LINESTRIP) \
-		InitVertexKick2(T, GS_TRIANGLELIST) \
-		InitVertexKick2(T, GS_TRIANGLESTRIP) \
-		InitVertexKick2(T, GS_TRIANGLEFAN) \
-		InitVertexKick2(T, GS_SPRITE) \
-		InitVertexKick2(T, GS_INVALID) \
+	#define InitConvertVertex(T) \
+		InitConvertVertex2(T, GS_POINTLIST) \
+		InitConvertVertex2(T, GS_LINELIST) \
+		InitConvertVertex2(T, GS_LINESTRIP) \
+		InitConvertVertex2(T, GS_TRIANGLELIST) \
+		InitConvertVertex2(T, GS_TRIANGLESTRIP) \
+		InitConvertVertex2(T, GS_TRIANGLEFAN) \
+		InitConvertVertex2(T, GS_SPRITE) \
+		InitConvertVertex2(T, GS_INVALID) \
 
-	void UpdateVertexKick()
-	{
-		m_vkf = m_vk[PRIM->PRIM][PRIM->TME][PRIM->FST];
-	}
+	virtual void UpdateVertexKick();
 
-	void VertexKickNull(bool skip)
-	{
-		ASSERT(0);
-	}
+	void GrowVertexBuffer();
 
-	void VertexKick(bool skip)
-	{
-		(this->*m_vkf)(skip);
-	}
+	void VertexKick(uint32 skip);
+	
+	template<uint32 prim> 
+	void DrawingKick(uint32 skip);
+
+	// following functions need m_vt to be initialized
+
+	GSVertexTrace* m_vt;
+
+	void GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFRegCLAMP& CLAMP, bool linear);
+	void GetAlphaMinMax();
+	bool TryAlphaTest(uint32& fm, uint32& zm);
+	bool IsOpaque();
 
 public:
 	GIFPath m_path[4];
@@ -177,10 +181,6 @@ public:
 	GSLocalMemory m_mem;
 	GSDrawingEnvironment m_env;
 	GSDrawingContext* m_context;
-	GSVertex m_v;
-	float m_q;
-	uint32 m_vprim;
-
 	GSPerfMon m_perfmon;
 	uint32 m_crc;
 	int m_options;
@@ -190,7 +190,7 @@ public:
 	GSDump m_dump;
 
 public:
-	GSState();
+	GSState(GSVertexTrace* vt, size_t vertex_stride);
 	virtual ~GSState();
 
 	void ResetHandlers();
@@ -205,8 +205,9 @@ public:
 
 	virtual void Reset();
 	virtual void Flush();
-	virtual void FlushPrim() = 0;
-	virtual void ResetPrim() = 0;
+	virtual void FlushPrim();
+	virtual void FlushWrite();
+	virtual void Draw() = 0;
 	virtual void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r) {}
 	virtual void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut = false) {}
 

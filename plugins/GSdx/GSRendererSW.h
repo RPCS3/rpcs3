@@ -25,21 +25,21 @@
 #include "GSTextureCacheSW.h"
 #include "GSDrawScanline.h"
 
-class GSRendererSW : public GSRendererT<GSVertexSW>
+class GSRendererSW : public GSRenderer
 {
 	class GSRasterizerData2 : public GSRasterizerData
 	{
 		GSRendererSW* m_parent;
-		const vector<uint32>* m_fb_pages;
-		const vector<uint32>* m_zb_pages;
-		const vector<uint32>* m_tex_pages[7];
+		const uint32* m_fb_pages;
+		const uint32* m_zb_pages;
+		const uint32* m_tex_pages[7];
 		bool m_using_pages;
 
 	public:
 		GSRasterizerData2(GSRendererSW* parent);
 		virtual ~GSRasterizerData2();
 
-		void UseTargetPages(const vector<uint32>* fb_pages, const vector<uint32>* zb_pages);
+		void UseTargetPages(const uint32* fb_pages, const uint32* zb_pages);
 		void UseSourcePages(GSTextureCacheSW::Texture* t, int level);
 	};
 
@@ -63,15 +63,37 @@ protected:
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);
 	void InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut = false);
 
-	void UsePages(const vector<uint32>* pages, int type);
-	void ReleasePages(const vector<uint32>* pages, int type);
+	void UsePages(const uint32* pages, int type);
+	void ReleasePages(const uint32* pages, int type);
 
 	bool GetScanlineGlobalData(GSRasterizerData2* data2);
+
+	typedef size_t (GSState::*ConvertIndexPtr)(uint32* RESTRICT dst, const uint32* RESTRICT src, int count);
+
+	ConvertIndexPtr m_ci[8], m_cif;
+
+	#define InitConvertIndex2(P) \
+		m_ci[P] = (ConvertIndexPtr)&GSRendererSW::ConvertIndex<P>; \
+
+	#define InitConvertIndex() \
+		InitConvertIndex2(GS_POINTLIST) \
+		InitConvertIndex2(GS_LINELIST) \
+		InitConvertIndex2(GS_LINESTRIP) \
+		InitConvertIndex2(GS_TRIANGLELIST) \
+		InitConvertIndex2(GS_TRIANGLESTRIP) \
+		InitConvertIndex2(GS_TRIANGLEFAN) \
+		InitConvertIndex2(GS_SPRITE) \
+		InitConvertIndex2(GS_INVALID) \
+
+	template<uint32 prim, uint32 tme, uint32 fst> 
+	void ConvertVertex(GSVertexSW* RESTRICT vertex, size_t index);
+
+	template<uint32 prim>
+	size_t ConvertIndex(uint32* RESTRICT dst, const uint32* RESTRICT src, int count);
+
+	void UpdateVertexKick();
 
 public:
 	GSRendererSW(int threads);
 	virtual ~GSRendererSW();
-
-	template<uint32 prim, uint32 tme, uint32 fst>
-	void VertexKick(bool skip);
 };

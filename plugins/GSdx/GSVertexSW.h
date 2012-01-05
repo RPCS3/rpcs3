@@ -23,7 +23,7 @@
 
 #include "GSVector.h"
 
-__aligned(struct, 16) GSVertexSW
+__aligned(struct, 32) GSVertexSW
 {
 	GSVector4 p, t, c;
 

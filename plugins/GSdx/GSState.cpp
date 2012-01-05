@@ -25,18 +25,37 @@
 //#define Offset_ST  // Fixes Persona3 mini map alignment which is off even in software rendering
 //#define Offset_UV  // Fixes / breaks various titles
 
-GSState::GSState()
+GSState::GSState(GSVertexTrace* vt, size_t vertex_stride)
 	: m_version(6)
 	, m_mt(false)
 	, m_irq(NULL)
 	, m_path3hack(0)
 	, m_regs(NULL)
-	, m_q(1.0f)
-	, m_vprim(1)
 	, m_crc(0)
 	, m_options(0)
 	, m_frameskip(0)
+	, m_vt(vt)
 {
+	memset(&m_v, 0, sizeof(m_v));
+	m_q = 1.0f;
+	memset(&m_vertex, 0, sizeof(m_vertex));
+	memset(&m_index, 0, sizeof(m_index));
+
+	m_vertex.stride = vertex_stride;
+
+	GrowVertexBuffer();
+
+	m_dk[GS_POINTLIST] = (DrawingKickPtr)&GSState::DrawingKick<GS_POINTLIST>;
+	m_dk[GS_LINELIST] = (DrawingKickPtr)&GSState::DrawingKick<GS_LINELIST>;
+	m_dk[GS_LINESTRIP] = (DrawingKickPtr)&GSState::DrawingKick<GS_LINESTRIP>;
+	m_dk[GS_TRIANGLELIST] = (DrawingKickPtr)&GSState::DrawingKick<GS_TRIANGLELIST>;
+	m_dk[GS_TRIANGLESTRIP] = (DrawingKickPtr)&GSState::DrawingKick<GS_TRIANGLESTRIP>;
+	m_dk[GS_TRIANGLEFAN] = (DrawingKickPtr)&GSState::DrawingKick<GS_TRIANGLEFAN>;
+	m_dk[GS_SPRITE] = (DrawingKickPtr)&GSState::DrawingKick<GS_SPRITE>;
+	m_dk[GS_INVALID] = (DrawingKickPtr)&GSState::DrawingKick<GS_INVALID>;
+
+	memset(m_cv, 0, sizeof(m_cv));
+
 	m_sssize = 0;
 
 	m_sssize += sizeof(m_version);
@@ -78,7 +97,7 @@ GSState::GSState()
 	m_sssize += sizeof(m_v.ST);
 	m_sssize += sizeof(m_v.UV);
 	m_sssize += sizeof(m_v.XYZ);
-	m_sssize += sizeof(m_v.FOG);
+	m_sssize += sizeof(m_v.FOG); // obsolete
 
 	m_sssize += sizeof(m_tr.x);
 	m_sssize += sizeof(m_tr.y);
@@ -97,6 +116,8 @@ GSState::GSState()
 
 GSState::~GSState()
 {
+	if(m_vertex.buff) _aligned_free(m_vertex.buff);
+	if(m_index.buff) _aligned_free(m_index.buff);
 }
 
 void GSState::SetRegsMem(uint8* basemem)
@@ -195,6 +216,10 @@ void GSState::Reset()
 	m_env.Reset();
 
 	m_context = &m_env.CTXT[0];
+
+	m_vertex.head = 0;
+	m_vertex.tail = 0;
+	m_index.tail = 0;
 }
 
 void GSState::ResetHandlers()
@@ -472,7 +497,7 @@ __forceinline void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* RESTRIC
 	m_v.XYZ.Z = r->XYZF2.Z;
 	m_v.FOG.F = r->XYZF2.F;
 
-	VertexKick(r->XYZF2.ADC);
+	VertexKick(r->XYZF2.Skip());
 }
 
 __forceinline void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* RESTRICT r)
@@ -481,7 +506,7 @@ __forceinline void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* RESTRICT
 	m_v.XYZ.Y = r->XYZ2.Y;
 	m_v.XYZ.Z = r->XYZ2.Z;
 
-	VertexKick(r->XYZ2.ADC);
+	VertexKick(r->XYZ2.Skip());
 }
 
 __forceinline void GSState::GIFPackedRegHandlerFOG(const GIFPackedReg* RESTRICT r)
@@ -509,7 +534,7 @@ __forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
 {
 	// ASSERT(r->PRIM.PRIM < 7);
 
-	if(GSUtil::GetPrimClass(m_env.PRIM.PRIM) == GSUtil::GetPrimClass(prim.PRIM))
+	if(GSUtil::GetPrimClass(m_env.PRIM.PRIM) == GSUtil::GetPrimClass(prim.PRIM)) // NOTE: assume strips/fans are converted to lists
 	{
 		if((m_env.PRIM.u32[0] ^ prim.u32[0]) & 0x7f8) // all fields except PRIM
 		{
@@ -528,7 +553,7 @@ __forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
 
 	UpdateVertexKick();
 
-	ResetPrim();
+	m_vertex.head = m_vertex.tail = m_index.tail > 0 ? m_index.buff[m_index.tail - 1] + 1 : 0; // remove unused vertices from the end of the vertex buffer
 }
 
 void GSState::GIFRegHandlerPRIM(const GIFReg* RESTRICT r)
@@ -559,8 +584,8 @@ __forceinline void GSState::GIFRegHandlerUV(const GIFReg* RESTRICT r)
 	m_v.UV.u32[0] = r->UV.u32[0] & 0x3fff3fff;
 
 #ifdef Offset_UV
-	m_v.UV.U = min((uint16)m_v.UV.U, (uint16)(m_v.UV.U - 4U));
-	m_v.UV.V = min((uint16)m_v.UV.V, (uint16)(m_v.UV.V - 4U));
+	m_v.UV.U = min((uint16)m_v.UV.U, (uint16)(m_v._UV.U - 4U));
+	m_v.UV.V = min((uint16)m_v.UV.V, (uint16)(m_v._UV.V - 4U));
 #endif
 }
 
@@ -576,14 +601,14 @@ void GSState::GIFRegHandlerXYZF2(const GIFReg* RESTRICT r)
 	m_v.XYZ.u32[1] = r->XYZF.u32[1] & 0x00ffffff;
 	m_v.FOG.u32[1] = r->XYZF.u32[1] & 0xff000000;
 
-	VertexKick(false);
+	VertexKick(0);
 }
 
 void GSState::GIFRegHandlerXYZ2(const GIFReg* RESTRICT r)
 {
 	m_v.XYZ = (GSVector4i)r->XYZ;
 
-	VertexKick(false);
+	VertexKick(0);
 }
 
 void GSState::ApplyTEX0(int i, GIFRegTEX0& TEX0)
@@ -697,7 +722,7 @@ template<int i> void GSState::GIFRegHandlerCLAMP(const GIFReg* RESTRICT r)
 
 void GSState::GIFRegHandlerFOG(const GIFReg* RESTRICT r)
 {
-	m_v.FOG = (GSVector4i)r->FOG;
+	m_v.FOG.u32[1] = r->FOG.u32[1];
 }
 
 void GSState::GIFRegHandlerXYZF3(const GIFReg* RESTRICT r)
@@ -712,14 +737,14 @@ void GSState::GIFRegHandlerXYZF3(const GIFReg* RESTRICT r)
 	m_v.XYZ.u32[1] = r->XYZF.u32[1] & 0x00ffffff;
 	m_v.FOG.u32[1] = r->XYZF.u32[1] & 0xff000000;
 
-	VertexKick(true);
+	VertexKick(1);
 }
 
 void GSState::GIFRegHandlerXYZ3(const GIFReg* RESTRICT r)
 {
 	m_v.XYZ = (GSVector4i)r->XYZ;
 
-	VertexKick(true);
+	VertexKick(1);
 }
 
 void GSState::GIFRegHandlerNOP(const GIFReg* RESTRICT r)
@@ -1172,6 +1197,26 @@ void GSState::FlushWrite()
 		r.left, r.top, r.right, r.bottom);
 	m_mem.SaveBMP(s, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, r.right, r.bottom);
 */
+}
+
+void GSState::FlushPrim()
+{
+	if(m_index.tail > 0)
+	{
+		if(GSLocalMemory::m_psm[m_context->FRAME.PSM].fmt < 3 && GSLocalMemory::m_psm[m_context->ZBUF.PSM].fmt < 3)
+		{
+			// FIXME: berserk fpsm = 27 (8H)
+
+			Draw();
+
+			m_perfmon.Put(GSPerfMon::Draw, 1);
+			m_perfmon.Put(GSPerfMon::Prim, m_index.tail / GSUtil::GetVertexCount(PRIM->PRIM));
+		}
+	}
+
+	m_vertex.head = 0;
+	m_vertex.tail = 0;
+	m_index.tail = 0;
 }
 
 //
@@ -1879,6 +1924,446 @@ void GSState::SetGameCRC(uint32 crc, int options)
 	m_crc = crc;
 	m_options = options;
 	m_game = CRC::Lookup(crc);
+}
+
+//
+
+void GSState::UpdateVertexKick() 
+{
+	m_dkf = m_dk[PRIM->PRIM];
+	m_cvf = m_cv[PRIM->PRIM][PRIM->TME][PRIM->FST];
+	m_vertex.n = GSUtil::GetVertexCount(PRIM->PRIM);
+}
+
+void GSState::GrowVertexBuffer()
+{
+	int maxcount = std::max<int>(m_vertex.maxcount * 3 / 2, 10000);
+
+	uint8* vertex = (uint8*)_aligned_malloc(m_vertex.stride * maxcount, 16);
+	uint32* index = (uint32*)_aligned_malloc(sizeof(uint32) * maxcount * 3, 16); // worst case is slightly less than vertex number * 3
+
+	if(m_vertex.buff != NULL)
+	{
+		memcpy(vertex, m_vertex.buff, m_vertex.stride * m_vertex.tail);
+
+		_aligned_free(m_vertex.buff);
+	}
+
+	if(m_index.buff != NULL)
+	{
+		memcpy(index, m_index.buff, sizeof(uint32) * m_index.tail);
+		
+		_aligned_free(m_index.buff);
+	}
+
+	m_vertex.buff = vertex;
+	m_vertex.maxcount = maxcount - 100; // -100 because skipped vertices don't trigger growing the vertex buffer (VertexKick should be as fast as possible)
+	m_index.buff = index;
+}
+
+void GSState::VertexKick(uint32 skip)
+{
+	(this->*m_cvf)(m_vertex.buff, m_vertex.tail);
+
+	if(++m_vertex.tail - m_vertex.head >= m_vertex.n)
+	{
+		(this->*m_dkf)(skip);
+	}
+}
+
+template<uint32 prim> 
+void GSState::DrawingKick(uint32 skip)
+{
+	size_t head = m_vertex.head;
+	size_t tail = m_vertex.tail;
+
+	if(skip)
+	{
+		switch(prim)
+		{
+		case GS_POINTLIST:
+		case GS_LINELIST:
+		case GS_TRIANGLELIST:
+		case GS_SPRITE:
+		case GS_INVALID: 
+			m_vertex.tail = head; 
+			break;
+		case GS_LINESTRIP:
+		case GS_TRIANGLESTRIP:
+			m_vertex.head = head + 1; 
+			break;
+		case GS_TRIANGLEFAN:
+			break;
+		default: 
+			__assume(0);
+		}
+
+		return;
+	}
+
+	if(tail >= m_vertex.maxcount)
+	{
+		GrowVertexBuffer();
+	}
+
+	uint32* RESTRICT buff = &m_index.buff[m_index.tail];
+
+	switch(prim)
+	{
+	case GS_POINTLIST:
+		buff[0] = head + 0;
+		m_vertex.head = head + 1;
+		m_index.tail += 1;
+		break;
+	case GS_LINELIST:
+		buff[0] = head + 0;
+		buff[1] = head + 1;
+		m_vertex.head = head + 2;
+		m_index.tail += 2;
+		break;
+	case GS_LINESTRIP:
+		buff[0] = head + 0;
+		buff[1] = head + 1;
+		m_vertex.head = head + 1;
+		m_index.tail += 2;
+		break;
+	case GS_TRIANGLELIST:
+		buff[0] = head + 0;
+		buff[1] = head + 1;
+		buff[2] = head + 2;
+		m_vertex.head = head + 3;
+		m_index.tail += 3;
+		break;
+	case GS_TRIANGLESTRIP:		
+		buff[0] = head + 0;
+		buff[1] = head + 1;
+		buff[2] = head + 2;
+		m_vertex.head = head + 1;
+		m_index.tail += 3;
+		break;
+	case GS_TRIANGLEFAN:
+		buff[0] = head + 0;
+		buff[1] = tail - 2;
+		buff[2] = tail - 1;
+		m_index.tail += 3;			
+		break;
+	case GS_SPRITE:			
+		buff[0] = head + 0;
+		buff[1] = head + 1;
+		m_vertex.head = head + 2;
+		m_index.tail += 2;
+		break;
+	case GS_INVALID:			
+		m_vertex.tail = head;
+		break;
+	default:
+		__assume(0);
+	}
+}
+
+void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFRegCLAMP& CLAMP, bool linear)
+{
+	int tw = TEX0.TW;
+	int th = TEX0.TH;
+
+	int w = 1 << tw;
+	int h = 1 << th;
+
+	GSVector4i tr(0, 0, w, h);
+
+	int wms = CLAMP.WMS;
+	int wmt = CLAMP.WMT;
+
+	int minu = (int)CLAMP.MINU;
+	int minv = (int)CLAMP.MINV;
+	int maxu = (int)CLAMP.MAXU;
+	int maxv = (int)CLAMP.MAXV;
+
+	GSVector4i vr = tr;
+
+	switch(wms)
+	{
+	case CLAMP_REPEAT:
+		break;
+	case CLAMP_CLAMP:
+		break;
+	case CLAMP_REGION_CLAMP:
+		if(vr.x < minu) vr.x = minu;
+		if(vr.z > maxu + 1) vr.z = maxu + 1;
+		break;
+	case CLAMP_REGION_REPEAT:
+		vr.x = maxu;
+		vr.z = vr.x + (minu + 1);
+		break;
+	default:
+		__assume(0);
+	}
+
+	switch(wmt)
+	{
+	case CLAMP_REPEAT:
+		break;
+	case CLAMP_CLAMP:
+		break;
+	case CLAMP_REGION_CLAMP:
+		if(vr.y < minv) vr.y = minv;
+		if(vr.w > maxv + 1) vr.w = maxv + 1;
+		break;
+	case CLAMP_REGION_REPEAT:
+		vr.y = maxv;
+		vr.w = vr.y + (minv + 1);
+		break;
+	default:
+		__assume(0);
+	}
+
+	if(wms + wmt < 6)
+	{
+		GSVector4 st = m_vt->m_min.t.xyxy(m_vt->m_max.t);
+
+		if(linear)
+		{
+			st += GSVector4(-0x8000, 0x8000).xxyy();
+		}
+
+		GSVector4i uv = GSVector4i(st).sra32(16);
+
+		GSVector4i u, v;
+
+		int mask = 0;
+
+		if(wms == CLAMP_REPEAT || wmt == CLAMP_REPEAT)
+		{
+			u = uv & GSVector4i::xffffffff().srl32(32 - tw);
+			v = uv & GSVector4i::xffffffff().srl32(32 - th);
+
+			GSVector4i uu = uv.sra32(tw);
+			GSVector4i vv = uv.sra32(th);
+
+			mask = (uu.upl32(vv) == uu.uph32(vv)).mask();
+		}
+
+		uv = uv.rintersect(tr);
+
+		switch(wms)
+		{
+		case CLAMP_REPEAT:
+			if(mask & 0x000f) {if(vr.x < u.x) vr.x = u.x; if(vr.z > u.z + 1) vr.z = u.z + 1;}
+			break;
+		case CLAMP_CLAMP:
+		case CLAMP_REGION_CLAMP:
+			if(vr.x < uv.x) vr.x = uv.x;
+			if(vr.z > uv.z + 1) vr.z = uv.z + 1;
+			break;
+		case CLAMP_REGION_REPEAT:
+			break;
+		default:
+			__assume(0);
+		}
+
+		switch(wmt)
+		{
+		case CLAMP_REPEAT:
+			if(mask & 0xf000) {if(vr.y < v.y) vr.y = v.y; if(vr.w > v.w + 1) vr.w = v.w + 1;}
+			break;
+		case CLAMP_CLAMP:
+		case CLAMP_REGION_CLAMP:
+			if(vr.y < uv.y) vr.y = uv.y;
+			if(vr.w > uv.w + 1) vr.w = uv.w + 1;
+			break;
+		case CLAMP_REGION_REPEAT:
+			break;
+		default:
+			__assume(0);
+		}
+	}
+
+	r = vr.rintersect(tr);
+}
+
+void GSState::GetAlphaMinMax()
+{
+	if(m_vt->m_alpha.valid)
+	{
+		return;
+	}
+
+	const GSDrawingEnvironment& env = m_env;
+	const GSDrawingContext* context = m_context;
+
+	GSVector4i a = m_vt->m_min.c.uph32(m_vt->m_max.c).zzww();
+
+	if(PRIM->TME && context->TEX0.TCC)
+	{
+		switch(GSLocalMemory::m_psm[context->TEX0.PSM].fmt)
+		{
+		case 0:
+			a.y = 0;
+			a.w = 0xff;
+			break;
+		case 1:
+			a.y = env.TEXA.AEM ? 0 : env.TEXA.TA0;
+			a.w = env.TEXA.TA0;
+			break;
+		case 2:
+			a.y = env.TEXA.AEM ? 0 : min(env.TEXA.TA0, env.TEXA.TA1);
+			a.w = max(env.TEXA.TA0, env.TEXA.TA1);
+			break;
+		case 3:
+			m_mem.m_clut.GetAlphaMinMax32(a.y, a.w);
+			break;
+		default:
+			__assume(0);
+		}
+
+		switch(context->TEX0.TFX)
+		{
+		case TFX_MODULATE:
+			a.x = (a.x * a.y) >> 7;
+			a.z = (a.z * a.w) >> 7;
+			if(a.x > 0xff) a.x = 0xff;
+			if(a.z > 0xff) a.z = 0xff;
+			break;
+		case TFX_DECAL:
+			a.x = a.y;
+			a.z = a.w;
+			break;
+		case TFX_HIGHLIGHT:
+			a.x = a.x + a.y;
+			a.z = a.z + a.w;
+			if(a.x > 0xff) a.x = 0xff;
+			if(a.z > 0xff) a.z = 0xff;
+			break;
+		case TFX_HIGHLIGHT2:
+			a.x = a.y;
+			a.z = a.w;
+			break;
+		default:
+			__assume(0);
+		}
+	}
+
+	m_vt->m_alpha.min = a.x;
+	m_vt->m_alpha.max = a.z;
+	m_vt->m_alpha.valid = true;
+}
+
+bool GSState::TryAlphaTest(uint32& fm, uint32& zm)
+{
+	const GSDrawingContext* context = m_context;
+
+	bool pass = true;
+
+	if(context->TEST.ATST == ATST_NEVER)
+	{
+		pass = false;
+	}
+	else if(context->TEST.ATST != ATST_ALWAYS)
+	{
+		GetAlphaMinMax();
+
+		int amin = m_vt->m_alpha.min;
+		int amax = m_vt->m_alpha.max;
+
+		int aref = context->TEST.AREF;
+
+		switch(context->TEST.ATST)
+		{
+		case ATST_NEVER:
+			pass = false;
+			break;
+		case ATST_ALWAYS:
+			pass = true;
+			break;
+		case ATST_LESS:
+			if(amax < aref) pass = true;
+			else if(amin >= aref) pass = false;
+			else return false;
+			break;
+		case ATST_LEQUAL:
+			if(amax <= aref) pass = true;
+			else if(amin > aref) pass = false;
+			else return false;
+			break;
+		case ATST_EQUAL:
+			if(amin == aref && amax == aref) pass = true;
+			else if(amin > aref || amax < aref) pass = false;
+			else return false;
+			break;
+		case ATST_GEQUAL:
+			if(amin >= aref) pass = true;
+			else if(amax < aref) pass = false;
+			else return false;
+			break;
+		case ATST_GREATER:
+			if(amin > aref) pass = true;
+			else if(amax <= aref) pass = false;
+			else return false;
+			break;
+		case ATST_NOTEQUAL:
+			if(amin == aref && amax == aref) pass = false;
+			else if(amin > aref || amax < aref) pass = true;
+			else return false;
+			break;
+		default:
+			__assume(0);
+		}
+	}
+
+	if(!pass)
+	{
+		switch(context->TEST.AFAIL)
+		{
+		case AFAIL_KEEP: fm = zm = 0xffffffff; break;
+		case AFAIL_FB_ONLY: zm = 0xffffffff; break;
+		case AFAIL_ZB_ONLY: fm = 0xffffffff; break;
+		case AFAIL_RGB_ONLY: fm |= 0xff000000; zm = 0xffffffff; break;
+		default: __assume(0);
+		}
+	}
+
+	return true;
+}
+
+bool GSState::IsOpaque()
+{
+	if(PRIM->AA1)
+	{
+		return false;
+	}
+
+	if(!PRIM->ABE)
+	{
+		return true;
+	}
+
+	const GSDrawingContext* context = m_context;
+
+	int amin = 0, amax = 0xff;
+
+	if(context->ALPHA.A != context->ALPHA.B)
+	{
+		if(context->ALPHA.C == 0)
+		{
+			GetAlphaMinMax();
+
+			amin = m_vt->m_alpha.min;
+			amax = m_vt->m_alpha.max;
+		}
+		else if(context->ALPHA.C == 1)
+		{
+			if(context->FRAME.PSM == PSM_PSMCT24 || context->FRAME.PSM == PSM_PSMZ24)
+			{
+				amin = amax = 0x80;
+			}
+		}
+		else if(context->ALPHA.C == 2)
+		{
+			amin = amax = context->ALPHA.FIX;
+		}
+	}
+
+	return context->ALPHA.IsOpaque(amin, amax);
 }
 
 // GSTransferBuffer

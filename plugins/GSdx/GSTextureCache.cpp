@@ -319,11 +319,11 @@ void GSTextureCache::InvalidateVideoMem(GSOffset* o, const GSVector4i& rect, boo
 
 	GSVector4i r;
 
-	vector<uint32>* pages = o->GetPages(rect, &r);
+	const uint32* pages = o->GetPages(rect, &r);
 
 	bool found = false;
 
-	for(vector<uint32>::iterator p = pages->begin(); p != pages->end(); p++)
+	for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 	{
 		uint32 page = *p;
 
@@ -374,7 +374,7 @@ void GSTextureCache::InvalidateVideoMem(GSOffset* o, const GSVector4i& rect, boo
 		}
 	}
 
-	delete pages;
+	delete [] pages;
 
 	if(!target) return;
 

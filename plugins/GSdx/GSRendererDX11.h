@@ -25,16 +25,22 @@
 #include "GSVertexHW.h"
 #include "GSTextureCache11.h"
 
-class GSRendererDX11 : public GSRendererDX<GSVertexHW11>
+class GSRendererDX11 : public GSRendererDX
 {
 protected:
-	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	template<uint32 prim, uint32 tme, uint32 fst>
+	void ConvertVertex(GSVertexHW11* RESTRICT vertex, size_t index);
+	void Draw();
+	void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+
+	int GetPosX(const void* vertex) const {return (int)((const GSVertexHW11*)vertex)->p.x;}
+	int GetPosY(const void* vertex) const {return (int)((const GSVertexHW11*)vertex)->p.y;}
+	uint32 GetColor(const void* vertex) const {return ((const GSVertexHW11*)vertex)->c0;}
+	void SetColor(void* vertex, uint32 c) const {((GSVertexHW11*)vertex)->c0 = c;}
 
 public:
 	GSRendererDX11();
 	virtual ~GSRendererDX11() {}
 
 	bool CreateDevice(GSDevice* dev);
-
-	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 };

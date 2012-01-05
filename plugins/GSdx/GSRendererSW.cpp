@@ -25,9 +25,11 @@
 const GSVector4 g_pos_scale(1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
 
 GSRendererSW::GSRendererSW(int threads)
-	: m_fzb(NULL)
+	: GSRenderer(new GSVertexTraceSW(this), sizeof(GSVertexSW))
+	, m_fzb(NULL)
 {
-	InitVertexKick(GSRendererSW);
+	InitConvertVertex(GSRendererSW);
+	InitConvertIndex();
 
 	m_tc = new GSTextureCacheSW(this);
 
@@ -62,7 +64,7 @@ void GSRendererSW::Reset()
 
 	m_reset = true;
 
-	GSRendererT<GSVertexSW>::Reset();
+	GSRenderer::Reset();
 }
 
 void GSRendererSW::VSync(int field)
@@ -88,7 +90,7 @@ void GSRendererSW::VSync(int field)
 	printf("m_syncpoint_count = %d\n", ((GSRasterizerList*)m_rl)->m_syncpoint_count); ((GSRasterizerList*)m_rl)->m_syncpoint_count = 0;
 	printf("m_solidrect_count = %d\n", ((GSRasterizerList*)m_rl)->m_solidrect_count); ((GSRasterizerList*)m_rl)->m_solidrect_count = 0;
 */	
-	GSRendererT<GSVertexSW>::VSync(field);
+	GSRenderer::VSync(field);
 
 	m_tc->IncAge();
 
@@ -149,41 +151,187 @@ GSTexture* GSRendererSW::GetOutput(int i)
 	return m_texture[i];
 }
 
+template<uint32 prim, uint32 tme, uint32 fst>
+void GSRendererSW::ConvertVertex(GSVertexSW* RESTRICT vertex, size_t index)
+{
+	GSVertexSW* RESTRICT v = &vertex[index];
+
+	GSVector4i xy = GSVector4i::load((int)m_v.XYZ.u32[0]).upl16() - m_context->XYOFFSET;
+	GSVector4i zf = GSVector4i((int)std::min<uint32>(m_v.XYZ.Z, 0xffffff00), m_v.FOG.F); // NOTE: larger values of z may roll over to 0 when converting back to uint32 later
+
+	v->p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
+
+	if(tme)
+	{
+		GSVector4 t;
+
+		if(fst)
+		{
+			t = GSVector4(GSVector4i::load(m_v.UV.u32[0]).upl16() << (16 - 4));
+		}
+		else
+		{
+			t = GSVector4(m_v.ST.S, m_v.ST.T) * GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH);
+			t = t.xyxy(GSVector4::load(m_v.RGBAQ.Q));
+		}
+
+		v->t = t;
+	}
+
+	v->c = GSVector4::rgba32(m_v.RGBAQ.u32[0], 7);
+
+	if(prim == GS_SPRITE)
+	{
+		v->t.u32[3] = m_v.XYZ.Z;
+	}
+}
+
+template<uint32 prim>
+size_t GSRendererSW::ConvertIndex(uint32* RESTRICT dst, const uint32* RESTRICT src, int count)
+{
+	// memcpy(dst, src, sizeof(uint32) * count); return;
+
+	// TODO: IsQuad
+
+	const GSVertexSW* RESTRICT v = (GSVertexSW*)m_vertex.buff;
+
+	GSVector4 scissor = m_context->scissor.ex;
+
+	const uint32* src_end = src + count;
+	uint32* dst_base = dst;
+
+	while(src < src_end)
+	{
+		GSVector4 pmin, pmax;
+
+		switch(prim)
+		{
+		case GS_POINTLIST:
+			pmin = v[src[0]].p;
+			pmax = v[src[0]].p;
+			break;
+		case GS_LINELIST:
+		case GS_LINESTRIP:
+		case GS_SPRITE:
+			pmin = v[src[0]].p.min(v[src[1]].p);
+			pmax = v[src[0]].p.max(v[src[1]].p);
+			break;
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+			pmin = v[src[0]].p.min(v[src[1]].p).min(v[src[2]].p);
+			pmax = v[src[0]].p.max(v[src[1]].p).max(v[src[2]].p);
+			break;
+		default:
+			__assume(0);
+		}
+
+		GSVector4 test = (pmax < scissor) | (pmin > scissor.zwxy());
+		GSVector4 tmp;
+
+		switch(prim)
+		{
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+			// are in line or just two of them are the same (cross product == 0)
+			tmp = (v[src[1]].p - v[src[0]].p) * (v[src[2]].p - v[src[0]].p).yxwz();
+			test |= tmp == tmp.yxwz();
+			break;
+		}
+
+		switch(prim)
+		{
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+		case GS_SPRITE:
+			test |= pmin.ceil() == pmax.ceil();
+			break;
+		}
+
+		bool pass = test.xyxy().allfalse();
+
+		switch(prim)
+		{
+		case GS_POINTLIST:
+			if(pass) {dst[0] = src[0]; dst++;}
+			src++;
+			break;
+		case GS_LINELIST:
+		case GS_LINESTRIP:
+		case GS_SPRITE:
+			if(pass) {dst[0] = src[0]; dst[1] = src[1]; dst += 2;}
+			src += 2;
+			break;
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+			if(pass) {dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2]; dst += 3;}
+			src += 3;
+			break;
+		default:
+			__assume(0);
+		}
+	}
+
+	return dst - dst_base;
+}
+
+void GSRendererSW::UpdateVertexKick() 
+{
+	GSRenderer::UpdateVertexKick();
+
+	m_cif = m_ci[PRIM->PRIM];
+}
+
 void GSRendererSW::Draw()
 {
-	if(m_dump) m_dump.Object(m_vertices, m_count, m_vt.m_primclass);
-
-	GSVector4i scissor = GSVector4i(m_context->scissor.in);
-	GSVector4i bbox = GSVector4i(m_vt.m_min.p.floor().xyxy(m_vt.m_max.p.ceil()));
-
-	scissor.z = std::min<int>(scissor.z, (int)m_context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
-	
-	GSVector4i r = bbox.rintersect(scissor);
+	const GSDrawingContext* context = m_context;
 
 	shared_ptr<GSRasterizerData> data(new GSRasterizerData2(this));
 
+	data->primclass = GSUtil::GetPrimClass(PRIM->PRIM);
+	data->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_vertex.tail + sizeof(uint32) * m_index.tail, 32);
+	data->vertex = (GSVertexSW*)data->buff;
+	data->vertex_count = m_vertex.tail;
+	data->index = (uint32*)(data->buff + sizeof(GSVertexSW) * m_vertex.tail);
+	data->index_count = (this->*m_cif)(data->index, m_index.buff, m_index.tail);
+
+	m_perfmon.Put(GSPerfMon::PrimNotRendered, (m_index.tail - data->index_count) / GSUtil::GetVertexCount(PRIM->PRIM));
+
+	if(data->index_count == 0) return;
+
+	// TODO: merge these
+
+	memcpy(data->vertex, m_vertex.buff, sizeof(GSVertexSW) * m_vertex.tail);
+
+	m_vt->Update(data->vertex, data->index, data->index_count, data->primclass);
+
+	//
+
 	GSRasterizerData2* data2 = (GSRasterizerData2*)data.get();
 
-	if(!GetScanlineGlobalData(data2))
-	{
-		return;
-	}
+	if(!GetScanlineGlobalData(data2)) return;
 
 	GSScanlineGlobalData* gd = (GSScanlineGlobalData*)data->param;
 
+	GSVector4i scissor = GSVector4i(context->scissor.in);
+	GSVector4i bbox = GSVector4i(m_vt->m_min.p.floor().xyxy(m_vt->m_max.p.ceil()));
+
+	scissor.z = std::min<int>(scissor.z, (int)context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
+	
 	data->scissor = scissor;
 	data->bbox = bbox;
-	data->primclass = m_vt.m_primclass;
-	data->vertices = (GSVertexSW*)_aligned_malloc(sizeof(GSVertexSW) * m_count, 16); // TODO: detach m_vertices and reallocate later?
-	memcpy(data->vertices, m_vertices, sizeof(GSVertexSW) * m_count); // TODO: m_vt.Update fetches all the vertices already, could also store them here
-	data->count = m_count;
 	data->solidrect = gd->sel.IsSolidRect();
 	data->frame = m_perfmon.GetFrame();
 
 	//
 
-	vector<uint32>* fb_pages = NULL;
-	vector<uint32>* zb_pages = NULL;
+	uint32* fb_pages = NULL;
+	uint32* zb_pages = NULL;
+
+	GSVector4i r = bbox.rintersect(scissor);
 
 	if(gd->sel.fwrite)
 	{
@@ -215,9 +363,9 @@ void GSRendererSW::Draw()
 	{
 		if(gd->sel.fwrite)
 		{
-			for(vector<uint32>::iterator i = fb_pages->begin(); i != fb_pages->end(); i++)
+			for(const uint32* p = fb_pages; *p != GSOffset::EOP; p++)
 			{
-				if(m_fzb_pages[*i] & 0xffff0000) // already used as a z-buffer
+				if(m_fzb_pages[*p] & 0xffff0000) // already used as a z-buffer
 				{
 					data->syncpoint = true;
 					
@@ -231,9 +379,9 @@ void GSRendererSW::Draw()
 	{
 		if(gd->sel.zwrite)
 		{
-			for(vector<uint32>::iterator i = zb_pages->begin(); i != zb_pages->end(); i++)
+			for(const uint32* p = zb_pages; *p != GSOffset::EOP; p++)
 			{
-				if(m_fzb_pages[*i] & 0x0000ffff) // already used as a frame buffer
+				if(m_fzb_pages[*p] & 0x0000ffff) // already used as a frame buffer
 				{
 					data->syncpoint = true;
 
@@ -307,18 +455,6 @@ void GSRendererSW::Draw()
 		m_rl->Queue(data);
 	}
 
-	int prims = 0;
-	
-	switch(data->primclass)
-	{
-	case GS_POINT_CLASS: prims = data->count; break;
-	case GS_LINE_CLASS: prims = data->count / 2; break;
-	case GS_TRIANGLE_CLASS: prims = data->count / 3; break;
-	case GS_SPRITE_CLASS: prims = data->count / 2; break;
-	}
-
-	m_perfmon.Put(GSPerfMon::Prim, prims);
-
 	/*
 	if(0)//stats.ticks > 5000000)
 	{
@@ -344,15 +480,15 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 {
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM);
 
-	vector<uint32>* pages = o->GetPages(r);
+	uint32* pages = o->GetPages(r);
 
 	m_tc->InvalidatePages(pages, o->psm);
 
 	// check if the changing pages either used as a texture or a target
 
-	for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+	for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 	{
-		uint32 page = *i;
+		uint32 page = *p;
 		
 		//while(m_fzb_pages[page] | m_tex_pages[page]) _mm_pause();
 
@@ -364,20 +500,20 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 		}
 	}
 
-	delete pages;
+	delete [] pages;
 }
 
 void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut)
 {
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM);
 
-	vector<uint32>* pages = o->GetPages(r);
+	uint32* pages = o->GetPages(r);
 
-	for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+	for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 	{
-		//while(m_fzb_pages[*i]) _mm_pause();
+		//while(m_fzb_pages[*p]) _mm_pause();
 
-		if(m_fzb_pages[*i])
+		if(m_fzb_pages[*p])
 		{
 			Sync(6);
 
@@ -385,27 +521,27 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 		}
 	}
 
-	delete pages;
+	delete [] pages;
 }
 
-void GSRendererSW::UsePages(const vector<uint32>* pages, int type)
+void GSRendererSW::UsePages(const uint32* pages, int type)
 {
 	if(type < 2)
 	{
-		for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 		{
-			ASSERT(((short*)&m_fzb_pages[*i])[type] < SHRT_MAX);
+			ASSERT(((short*)&m_fzb_pages[*p])[type] < SHRT_MAX);
 
-			_InterlockedIncrement16((short*)&m_fzb_pages[*i] + type);
+			_InterlockedIncrement16((short*)&m_fzb_pages[*p] + type);
 		}
 	}
 	else
 	{
-		for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 		{
-			//while(m_fzb_pages[*i]) _mm_pause();
+			//while(m_fzb_pages[*p]) _mm_pause();
 
-			if(m_fzb_pages[*i]) // currently being drawn to? => sync (could even spin and wait until it hits 0, not sure if it's worth though, or just create 512 condvars? :D)
+			if(m_fzb_pages[*p]) // currently being drawn to? => sync (could even spin and wait until it hits 0, not sure if it's worth though, or just create 512 condvars? :D)
 			{
 				Sync(7);
 
@@ -413,33 +549,33 @@ void GSRendererSW::UsePages(const vector<uint32>* pages, int type)
 			}
 		}
 
-		for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 		{
-			ASSERT(m_tex_pages[*i] < SHRT_MAX);
+			ASSERT(m_tex_pages[*p] < SHRT_MAX);
 
-			_InterlockedIncrement16((short*)&m_tex_pages[*i]); // remember which texture pages are used
+			_InterlockedIncrement16((short*)&m_tex_pages[*p]); // remember which texture pages are used
 		}
 	}
 }
 
-void GSRendererSW::ReleasePages(const vector<uint32>* pages, int type)
+void GSRendererSW::ReleasePages(const uint32* pages, int type)
 {
 	if(type < 2)
 	{
-		for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 		{
-			ASSERT(((short*)&m_fzb_pages[*i])[type] > 0);
+			ASSERT(((short*)&m_fzb_pages[*p])[type] > 0);
 
-			_InterlockedDecrement16((short*)&m_fzb_pages[*i] + type);
+			_InterlockedDecrement16((short*)&m_fzb_pages[*p] + type);
 		}
 	}
 	else
 	{
-		for(vector<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+		for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 		{
-			ASSERT(m_tex_pages[*i] > 0);
+			ASSERT(m_tex_pages[*p] > 0);
 
-			_InterlockedDecrement16((short*)&m_tex_pages[*i]);
+			_InterlockedDecrement16((short*)&m_tex_pages[*p]);
 		}
 	}
 }
@@ -452,7 +588,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 
 	const GSDrawingEnvironment& env = m_env;
 	const GSDrawingContext* context = m_context;
-	const GS_PRIM_CLASS primclass = m_vt.m_primclass;
+	const GS_PRIM_CLASS primclass = m_vt->m_primclass;
 
 	gd.vm = m_mem.m_vm8;
 
@@ -470,7 +606,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 	gd.sel.atst = ATST_ALWAYS;
 	gd.sel.tfx = TFX_NONE;
 	gd.sel.ababcd = 255;
-	gd.sel.sprite = primclass == GS_SPRITE_CLASS ? 1 : 0;
+	gd.sel.prim = primclass;
 
 	uint32 fm = context->FRAME.FBMSK;
 	uint32 zm = context->ZBUF.ZMSK || context->TEST.ZTE == 0 ? 0xffffffff : 0;
@@ -529,7 +665,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 	{
 		gd.sel.fpsm = GSLocalMemory::m_psm[context->FRAME.PSM].fmt;
 
-		if((primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS) && m_vt.m_eq.rgba != 0xffff)
+		if((primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS) && m_vt->m_eq.rgba != 0xffff)
 		{
 			gd.sel.iip = PRIM->IIP;
 		}
@@ -539,7 +675,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 			gd.sel.tfx = context->TEX0.TFX;
 			gd.sel.tcc = context->TEX0.TCC;
 			gd.sel.fst = PRIM->FST;
-			gd.sel.ltf = m_vt.IsLinear();
+			gd.sel.ltf = m_vt->IsLinear();
 
 			if(GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0)
 			{
@@ -553,7 +689,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 			gd.sel.wms = context->CLAMP.WMS;
 			gd.sel.wmt = context->CLAMP.WMT;
 
-			if(gd.sel.tfx == TFX_MODULATE && gd.sel.tcc && m_vt.m_eq.rgba == 0xffff && m_vt.m_min.c.eq(GSVector4i(128)))
+			if(gd.sel.tfx == TFX_MODULATE && gd.sel.tcc && m_vt->m_eq.rgba == 0xffff && m_vt->m_min.c.eq(GSVector4i(128)))
 			{
 				// modulate does not do anything when vertex color is 0x80
 
@@ -572,7 +708,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 
 			if(!t->Update(r)) {ASSERT(0); return false;}
 
-			if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
+			if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt->m_lod.x > 0)
 			{
 				uint64 frame = m_perfmon.GetFrame();
 
@@ -589,7 +725,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 			gd.tex[0] = t->m_buff;
 			gd.sel.tw = t->m_tw - 3;
 
-			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt.m_lod.y > 0)
+			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt->m_lod.y > 0)
 			{
 				// TEX1.MMIN
 				// 000 p
@@ -599,13 +735,13 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 				// 100 l round
 				// 101 l tri
 
-				if(m_vt.m_lod.x > 0)
+				if(m_vt->m_lod.x > 0)
 				{
 					gd.sel.ltf = context->TEX1.MMIN >> 2;
 				}
 				else
 				{
-					// TODO: isbilinear(mmag) != isbilinear(mmin) && m_vt.m_lod.x <= 0 && m_vt.m_lod.y > 0
+					// TODO: isbilinear(mmag) != isbilinear(mmin) && m_vt->m_lod.x <= 0 && m_vt->m_lod.y > 0
 				}
 
 				gd.sel.mmin = (context->TEX1.MMIN & 1) + 1; // 1: round, 2: tri
@@ -614,9 +750,9 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 				int mxl = (std::min<int>((int)context->TEX1.MXL, 6) << 16);
 				int k = context->TEX1.K << 12;
 
-				if((int)m_vt.m_lod.x >= (int)context->TEX1.MXL)
+				if((int)m_vt->m_lod.x >= (int)context->TEX1.MXL)
 				{
-					k = (int)m_vt.m_lod.x << 16; // set lod to max level
+					k = (int)m_vt->m_lod.x << 16; // set lod to max level
 
 					gd.sel.lcm = 1; // lod is constant
 					gd.sel.mmin = 1; // tri-linear is meaningless
@@ -630,7 +766,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 				if(gd.sel.fst)
 				{
 					ASSERT(gd.sel.lcm == 1);
-					ASSERT(((m_vt.m_min.t.uph(m_vt.m_max.t) == GSVector4::zero()).mask() & 3) == 3); // ratchet and clank (menu)
+					ASSERT(((m_vt->m_min.t.uph(m_vt->m_max.t) == GSVector4::zero()).mask() & 3) == 3); // ratchet and clank (menu)
 
 					gd.sel.lcm = 1;
 				}
@@ -659,8 +795,8 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 				GIFRegTEX0 MIP_TEX0 = context->TEX0;
 				GIFRegCLAMP MIP_CLAMP = context->CLAMP;
 
-				GSVector4 tmin = m_vt.m_min.t;
-				GSVector4 tmax = m_vt.m_max.t;
+				GSVector4 tmin = m_vt->m_min.t;
+				GSVector4 tmax = m_vt->m_max.t;
 
 				static int s_counter = 0;
 
@@ -710,8 +846,8 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 					MIP_CLAMP.MAXU >>= 1;
 					MIP_CLAMP.MAXV >>= 1;
 
-					m_vt.m_min.t *= 0.5f;
-					m_vt.m_max.t *= 0.5f;
+					m_vt->m_min.t *= 0.5f;
+					m_vt->m_max.t *= 0.5f;
 
 					GSTextureCacheSW::Texture* t = m_tc->Lookup(MIP_TEX0, env.TEXA, gd.sel.tw + 3);
 
@@ -753,8 +889,8 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 
 				s_counter++;
 
-				m_vt.m_min.t = tmin;
-				m_vt.m_max.t = tmax;
+				m_vt->m_min.t = tmin;
+				m_vt->m_max.t = tmax;
 			}
 			else
 			{
@@ -762,17 +898,19 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 				{
 					// skip per pixel division if q is constant
 
-					GSVertexSW* v = m_vertices;
+					GSVertexSW* RESTRICT v = data2->vertex;
 
-					if(m_vt.m_eq.q)
+					if(m_vt->m_eq.q)
 					{
 						gd.sel.fst = 1;
 
-						if(v[0].t.z != 1.0f)
-						{
-							GSVector4 w = v[0].t.zzzz().rcpnr();
+						const GSVector4& t = v[data2->index[0]].t;
 
-							for(int i = 0, j = m_count; i < j; i++)
+						if(t.z != 1.0f)
+						{
+							GSVector4 w = t.zzzz().rcpnr();
+
+							for(int i = 0, j = data2->vertex_count; i < j; i++)
 							{
 								GSVector4 t = v[i].t;
 
@@ -784,7 +922,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 					{
 						gd.sel.fst = 1;
 
-						for(int i = 0, j = m_count; i < j; i += 2)
+						for(int i = 0, j = data2->vertex_count; i < j; i += 2)
 						{
 							GSVector4 t0 = v[i + 0].t;
 							GSVector4 t1 = v[i + 1].t;
@@ -805,9 +943,9 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 
 					GSVector4 half(0x8000, 0x8000);
 
-					GSVertexSW* v = m_vertices;
+					GSVertexSW* RESTRICT v = data2->vertex;
 
-					for(int i = 0, j = m_count; i < j; i++)
+					for(int i = 0, j = data2->vertex_count; i < j; i++)
 					{
 						GSVector4 t = v[i].t;
 
@@ -939,7 +1077,7 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 	{
 		gd.sel.zpsm = GSLocalMemory::m_psm[context->ZBUF.PSM].fmt;
 		gd.sel.ztst = ztest ? context->TEST.ZTST : ZTST_ALWAYS;
-		gd.sel.zoverflow = GSVector4i(m_vt.m_max.p).z == 0x80000000;
+		gd.sel.zoverflow = GSVector4i(m_vt->m_max.p).z == 0x80000000;
 	}
 
 	gd.fm = GSVector4i(fm);
@@ -968,176 +1106,6 @@ bool GSRendererSW::GetScanlineGlobalData(GSRasterizerData2* data2)
 
 	return true;
 }
-
-template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererSW::VertexKick(bool skip)
-{
-	const GSDrawingContext* context = m_context;
-
-	GSVertexSW& dst = m_vl.AddTail();
-
-	GSVector4i xy = GSVector4i::load((int)m_v.XYZ.u32[0]).upl16() - context->XYOFFSET;
-	GSVector4i zf = GSVector4i((int)std::min<uint32>(m_v.XYZ.Z, 0xffffff00), m_v.FOG.F); // NOTE: larger values of z may roll over to 0 when converting back to uint32 later
-
-	dst.p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
-
-	if(tme)
-	{
-		GSVector4 t;
-
-		if(fst)
-		{
-			t = GSVector4(((GSVector4i)m_v.UV).upl16() << (16 - 4));
-		}
-		else
-		{
-			t = GSVector4(m_v.ST.S, m_v.ST.T) * GSVector4(0x10000 << context->TEX0.TW, 0x10000 << context->TEX0.TH);
-			t = t.xyxy(GSVector4::load(m_v.RGBAQ.Q));
-		}
-
-		dst.t = t;
-	}
-
-	dst.c = GSVector4::rgba32(m_v.RGBAQ.u32[0], 7);
-
-	if(prim == GS_SPRITE)
-	{
-		dst.t.u32[3] = m_v.XYZ.Z;
-	}
-
-	int count = 0;
-
-	if(GSVertexSW* v = DrawingKick<prim>(skip, count))
-	{
-if(!m_dump)
-{
-		GSVector4 pmin, pmax;
-
-		switch(prim)
-		{
-		case GS_POINTLIST:
-			pmin = v[0].p;
-			pmax = v[0].p;
-			break;
-		case GS_LINELIST:
-		case GS_LINESTRIP:
-		case GS_SPRITE:
-			pmin = v[0].p.min(v[1].p);
-			pmax = v[0].p.max(v[1].p);
-			break;
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
-			pmin = v[0].p.min(v[1].p).min(v[2].p);
-			pmax = v[0].p.max(v[1].p).max(v[2].p);
-			break;
-		}
-
-		GSVector4 scissor = context->scissor.ex;
-
-		GSVector4 test = (pmax < scissor) | (pmin > scissor.zwxy());
-
-		switch(prim)
-		{
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
-		case GS_SPRITE:
-			test |= pmin.ceil() == pmax.ceil();
-			break;
-		}
-
-		switch(prim)
-		{
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
-			// are in line or just two of them are the same (cross product == 0)
-			GSVector4 tmp = (v[1].p - v[0].p) * (v[2].p - v[0].p).yxwz();
-			test |= tmp == tmp.yxwz();
-			break;
-		}
-
-		if(test.mask() & 3)
-		{
-			return;
-		}
-}
-		switch(prim)
-		{
-		case GS_POINTLIST:
-			break;
-		case GS_LINELIST:
-		case GS_LINESTRIP:
-			if(PRIM->IIP == 0) {v[0].c = v[1].c;}
-			break;
-		case GS_TRIANGLELIST:
-		case GS_TRIANGLESTRIP:
-		case GS_TRIANGLEFAN:
-			if(PRIM->IIP == 0) {v[0].c = v[2].c; v[1].c = v[2].c;}
-			break;
-		case GS_SPRITE:
-			break;
-		}
-
-		if(m_count < 30 && m_count >= 3)
-		{
-			GSVertexSW* v = &m_vertices[m_count - 3];
-
-			int tl = 0;
-			int br = 0;
-
-			bool isquad = false;
-
-			switch(prim)
-			{
-			case GS_TRIANGLESTRIP:
-			case GS_TRIANGLEFAN:
-			case GS_TRIANGLELIST:
-				isquad = GSVertexSW::IsQuad(v, tl, br);
-				break;
-			}
-
-			if(isquad)
-			{
-				m_count -= 3;
-
-				if(m_count > 0)
-				{
-					tl += m_count;
-					br += m_count;
-
-					Flush();
-				}
-
-				if(tl != 0) m_vertices[0] = m_vertices[tl];
-				if(br != 1) m_vertices[1] = m_vertices[br];
-
-				m_vertices[0].t.u32[3] = m_v.XYZ.Z;
-				m_vertices[1].t.u32[3] = m_v.XYZ.Z;
-
-				m_count = 2;
-
-				uint32 tmp = PRIM->PRIM;
-				PRIM->PRIM = GS_SPRITE;
-
-				Flush();
-
-				PRIM->PRIM = tmp;
-
-				m_perfmon.Put(GSPerfMon::Quad, 1);
-
-				return;
-			}
-		}
-
-		m_count += count;
-
-		// Flush();
-	}
-}
-
-// GSRendererSW::GSRasterizerData2
 
 GSRendererSW::GSRasterizerData2::GSRasterizerData2(GSRendererSW* parent)
 	: m_parent(parent)
@@ -1192,7 +1160,7 @@ GSRendererSW::GSRasterizerData2::~GSRasterizerData2()
 	m_parent->m_perfmon.Put(GSPerfMon::Fillrate, pixels);
 }
 
-void GSRendererSW::GSRasterizerData2::UseTargetPages(const vector<uint32>* fb_pages, const vector<uint32>* zb_pages)
+void GSRendererSW::GSRasterizerData2::UseTargetPages(const uint32* fb_pages, const uint32* zb_pages)
 {
 	if(m_using_pages) return;
 
@@ -1218,9 +1186,7 @@ void GSRendererSW::GSRasterizerData2::UseSourcePages(GSTextureCacheSW::Texture* 
 {
 	ASSERT(m_tex_pages[level] == NULL);
 
-	const vector<uint32>* pages = t->m_pages.n;
+	m_tex_pages[level] = t->m_pages.n;
 
-	m_tex_pages[level] = pages;
-
-	m_parent->UsePages(pages, 2);
+	m_parent->UsePages(t->m_pages.n, 2);
 }

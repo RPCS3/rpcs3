@@ -35,7 +35,7 @@ public:
 	
 	enum counter_t 
 	{
-		Frame, Prim, Draw, Swizzle, Unswizzle, Fillrate, Quad, 
+		Frame, Prim, PrimNotRendered, Draw, Swizzle, Unswizzle, Fillrate, Quad, 
 		CounterLast,
 	};
 

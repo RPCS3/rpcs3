@@ -352,8 +352,10 @@ bool GSDevice9::Reset(int w, int h)
 	m_vb = NULL;
 	m_vb_old = NULL;
 
-	m_vertices.start = 0;
-	m_vertices.count = 0;
+	m_vertex.start = 0;
+	m_vertex.count = 0;
+	m_index.start = 0;
+	m_index.count = 0;
 
 	if(m_state.vs_cb) _aligned_free(m_state.vs_cb);
 	if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
@@ -510,25 +512,52 @@ void GSDevice9::DrawPrimitive()
 
 	switch(m_state.topology)
 	{
-    case D3DPT_TRIANGLELIST:
-		prims = m_vertices.count / 3;
+    case D3DPT_POINTLIST:
+		prims = m_vertex.count;
 		break;
     case D3DPT_LINELIST:
-		prims = m_vertices.count / 2;
+		prims = m_vertex.count / 2;
 		break;
-    case D3DPT_POINTLIST:
-		prims = m_vertices.count;
+    case D3DPT_LINESTRIP:
+		prims = m_vertex.count - 1;
+		break;
+    case D3DPT_TRIANGLELIST:
+		prims = m_vertex.count / 3;
 		break;
     case D3DPT_TRIANGLESTRIP:
     case D3DPT_TRIANGLEFAN:
-		prims = m_vertices.count - 2;
+		prims = m_vertex.count - 2;
 		break;
-    case D3DPT_LINESTRIP:
-		prims = m_vertices.count - 1;
-		break;
+	default:
+		__assume(0);
 	}
 
-	m_dev->DrawPrimitive(m_state.topology, m_vertices.start, prims);
+	m_dev->DrawPrimitive(m_state.topology, m_vertex.start, prims);
+}
+
+void GSDevice9::DrawIndexedPrimitive()
+{
+	int prims = 0;
+
+	switch(m_state.topology)
+	{
+    case D3DPT_POINTLIST:
+		prims = m_index.count;
+		break;
+    case D3DPT_LINELIST:
+    case D3DPT_LINESTRIP:
+		prims = m_index.count / 2;
+		break;
+    case D3DPT_TRIANGLELIST:
+    case D3DPT_TRIANGLESTRIP:
+    case D3DPT_TRIANGLEFAN:
+		prims = m_index.count / 3;
+		break;
+	default:
+		__assume(0);
+	}
+
+	m_dev->DrawIndexedPrimitive(m_state.topology, m_vertex.start, 0, m_index.count, m_index.start, prims);
 }
 
 void GSDevice9::EndScene()
@@ -881,49 +910,49 @@ void GSDevice9::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* verti
 	}
 }
 
-void GSDevice9::IASetVertexBuffer(const void* vertices, size_t stride, size_t count)
+void GSDevice9::IASetVertexBuffer(const void* vertex, size_t stride, size_t count)
 {
-	ASSERT(m_vertices.count == 0);
+	ASSERT(m_vertex.count == 0);
 
-	if(count * stride > m_vertices.limit * m_vertices.stride)
+	if(count * stride > m_vertex.limit * m_vertex.stride)
 	{
 		m_vb_old = m_vb;
 		m_vb = NULL;
 
-		m_vertices.start = 0;
-		m_vertices.count = 0;
-		m_vertices.limit = std::max<int>(count * 3 / 2, 10000);
+		m_vertex.start = 0;
+		m_vertex.count = 0;
+		m_vertex.limit = std::max<int>(count * 3 / 2, 10000);
 	}
 
 	if(m_vb == NULL)
 	{
 		HRESULT hr;
 
-		hr = m_dev->CreateVertexBuffer(m_vertices.limit * stride, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &m_vb, NULL);
+		hr = m_dev->CreateVertexBuffer(m_vertex.limit * stride, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &m_vb, NULL);
 
 		if(FAILED(hr)) return;
 	}
 
 	uint32 flags = D3DLOCK_NOOVERWRITE;
 
-	if(m_vertices.start + count > m_vertices.limit || stride != m_vertices.stride)
+	if(m_vertex.start + count > m_vertex.limit || stride != m_vertex.stride)
 	{
-		m_vertices.start = 0;
+		m_vertex.start = 0;
 
 		flags = D3DLOCK_DISCARD;
 	}
 
-	void* v = NULL;
+	void* ptr = NULL;
 
-	if(SUCCEEDED(m_vb->Lock(m_vertices.start * stride, count * stride, &v, flags)))
+	if(SUCCEEDED(m_vb->Lock(m_vertex.start * stride, count * stride, &ptr, flags)))
 	{
-		GSVector4i::storent(v, vertices, count * stride);
+		GSVector4i::storent(ptr, vertex, count * stride);
 
 		m_vb->Unlock();
 	}
 
-	m_vertices.count = count;
-	m_vertices.stride = stride;
+	m_vertex.count = count;
+	m_vertex.stride = stride;
 
 	IASetVertexBuffer(m_vb, stride);
 }
@@ -936,6 +965,61 @@ void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride)
 		m_state.vb_stride = stride;
 
 		m_dev->SetStreamSource(0, vb, 0, stride);
+	}
+}
+
+void GSDevice9::IASetIndexBuffer(const void* index, size_t count)
+{
+	ASSERT(m_index.count == 0);
+
+	if(count > m_index.limit)
+	{
+		m_ib_old = m_ib;
+		m_ib = NULL;
+
+		m_index.count = 0;
+		m_index.limit = std::max<int>(count * 3 / 2, 11000);
+	}
+
+	if(m_ib == NULL)
+	{
+		HRESULT hr;
+
+		hr = m_dev->CreateIndexBuffer(m_index.limit * sizeof(uint32), D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, D3DFMT_INDEX32, D3DPOOL_DEFAULT, &m_ib, NULL);
+
+		if(FAILED(hr)) return;
+	}
+
+	uint32 flags = D3DLOCK_NOOVERWRITE;
+
+	if(m_index.start + count > m_index.limit)
+	{
+		m_index.start = 0;
+
+		flags = D3DLOCK_DISCARD;
+	}
+
+	void* ptr = NULL;
+
+	if(SUCCEEDED(m_ib->Lock(m_index.start * sizeof(uint32), count * sizeof(uint32), &ptr, flags)))
+	{
+		memcpy(ptr, index, count * sizeof(uint32));
+
+		m_ib->Unlock();
+	}
+
+	m_index.count = count;
+
+	IASetIndexBuffer(m_ib);
+}
+
+void GSDevice9::IASetIndexBuffer(IDirect3DIndexBuffer9* ib)
+{
+	if(m_state.ib != ib)
+	{
+		m_state.ib = ib;
+
+		m_dev->SetIndices(ib);
 	}
 }
 

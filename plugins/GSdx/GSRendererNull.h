@@ -23,26 +23,33 @@
 
 #include "GSRenderer.h"
 
-class GSRendererNull : public GSRendererT<GSVertexNull>
+class GSRendererNull : public GSRenderer
 {
+	class GSVertexTraceNull : public GSVertexTrace
+	{
+	public:
+		GSVertexTraceNull(const GSState* state) : GSVertexTrace(state) {}
+	};
+
 protected:
+	template<uint32 prim, uint32 tme, uint32 fst> 
+	void ConvertVertex(GSVertexSW* RESTRICT vertex, size_t index)
+	{
+	}
+
 	void Draw()
 	{
 	}
 
-	GSTexture* GetOutput(int i)
+	GSTexture* GetOutput(int i) 
 	{
 		return NULL;
 	}
 
 public:
-	GSRendererNull()
-		: GSRendererT<GSVertexNull>()
+	GSRendererNull() 
+		: GSRenderer(new GSVertexTraceNull(this), sizeof(GSVertexNull)) 
 	{
-		InitVertexKick(GSRendererNull);
-	}
-
-	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip)
-	{
+		InitConvertVertex(GSRendererNull);
 	}
 };

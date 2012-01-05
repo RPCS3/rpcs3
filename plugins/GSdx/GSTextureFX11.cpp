@@ -82,9 +82,10 @@ bool GSDevice11::CreateTextureFX()
 	return true;
 }
 
-void GSDevice11::SetupIA(const void* vertices, int count, int prim)
+void GSDevice11::SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim)
 {
-	IASetVertexBuffer(vertices, sizeof(GSVertexHW11), count);
+	IASetVertexBuffer(vertex, sizeof(GSVertexHW11), vertex_count);
+	IASetIndexBuffer(index, index_count);
 	IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)prim);
 }
 

@@ -34,8 +34,11 @@ public:
 	GSVector4i scissor;
 	GSVector4i bbox;
 	GS_PRIM_CLASS primclass;
-	GSVertexSW* vertices;
-	int count;
+	uint8* buff;
+	GSVertexSW* vertex;
+	int vertex_count;
+	uint32* index;
+	int index_count;
 	bool solidrect;
 	bool syncpoint;
 	uint64 frame;
@@ -50,8 +53,11 @@ public:
 		: scissor(GSVector4i::zero())
 		, bbox(GSVector4i::zero())
 		, primclass(GS_INVALID_CLASS)
-		, vertices(NULL)
-		, count(0)
+		, buff(NULL)
+		, vertex(NULL)
+		, vertex_count(0)
+		, index(NULL)
+		, index_count(0)
 		, solidrect(false)
 		, syncpoint(false)
 		, frame(0)
@@ -63,7 +69,7 @@ public:
 
 	virtual ~GSRasterizerData() 
 	{
-		if(vertices != NULL) _aligned_free(vertices);
+		if(buff != NULL) _aligned_free(buff);
 
 		// derived class should free param and its members
 	}
@@ -72,7 +78,7 @@ public:
 class IDrawScanline : public GSAlignedClass<32>
 {
 public:
-	typedef void (__fastcall *SetupPrimPtr)(const GSVertexSW* vertices, const GSVertexSW& dscan);
+	typedef void (__fastcall *SetupPrimPtr)(const GSVertexSW& vertex, const GSVertexSW& dscan);
 	typedef void (__fastcall *DrawScanlinePtr)(int pixels, int left, int top, const GSVertexSW& scan);
 	typedef void (IDrawScanline::*DrawRectPtr)(const GSVector4i& r, const GSVertexSW& v); // TODO: jit
 
@@ -91,14 +97,14 @@ public:
 
 #ifdef ENABLE_JIT_RASTERIZER
 
-	__forceinline void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan) {m_sp(vertices, dscan);}
+	__forceinline void SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dscan) {m_sp(vertex, dscan);}
 	__forceinline void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan) {m_ds(pixels, left, top, scan);}
 	__forceinline void DrawEdge(int pixels, int left, int top, const GSVertexSW& scan) {m_de(pixels, left, top, scan);}
 	__forceinline void DrawRect(const GSVector4i& r, const GSVertexSW& v) {(this->*m_dr)(r, v);}
 
 #else
 
-	virtual void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan) = 0;
+	virtual void SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dscan) = 0;
 	virtual void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan) = 0;
 	virtual void DrawEdge(int pixels, int left, int top, const GSVertexSW& scan) = 0;
 	virtual void DrawRect(const GSVector4i& r, const GSVertexSW& v) = 0;
@@ -134,17 +140,17 @@ protected:
 	typedef void (GSRasterizer::*DrawPrimPtr)(const GSVertexSW* v, int count);
 
 	template<bool scissor_test> 
-	void DrawPoint(const GSVertexSW* v, int count);
-	void DrawLine(const GSVertexSW* v);
-	void DrawTriangle(const GSVertexSW* v);
-	void DrawSprite(const GSVertexSW* v, bool solidrect);
+	void DrawPoint(const GSVertexSW* vertex, int vertex_count, const uint32* index, int index_count);
+	void DrawLine(const GSVertexSW* vertex, const uint32* index);
+	void DrawTriangle(const GSVertexSW* vertex, const uint32* index);
+	void DrawSprite(const GSVertexSW* vertex, const uint32* index, bool solidrect);
 
 	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& edge, const GSVertexSW& dedge, const GSVertexSW& dscan, const GSVector4& p0);
 
 	void DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, int orientation, int side);
 
 	__forceinline void AddScanline(GSVertexSW* e, int pixels, int left, int top, const GSVertexSW& scan);
-	__forceinline void Flush(const GSVertexSW* vertices, const GSVertexSW& dscan, bool edge = false);
+	__forceinline void Flush(const GSVertexSW& vertex, const GSVertexSW& dscan, bool edge = false);
 
 public:
 	GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon);
