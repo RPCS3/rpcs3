@@ -317,9 +317,9 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_PALTEX), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_LOGZ), dx9 && hw && GSDevice9::GetMaxDepth(m_lastValidMsaa) < 32);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_FBA), dx9 && hw);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_AA1), sw);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS_EDIT), sw);
-		EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS), sw);
+		//EnableWindow(GetDlgItem(m_hWnd, IDC_AA1), sw); // Let uers set software params regardless of renderer used 
+		//EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS_EDIT), sw);
+		//EnableWindow(GetDlgItem(m_hWnd, IDC_SWTHREADS), sw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAA), hw);
 
