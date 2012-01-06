@@ -100,8 +100,9 @@ class GSWnd
 #else
 	void* m_window;
 #endif
-	Window      m_Xwindow;
-	Display*    m_XDisplay;
+	Window       m_Xwindow;
+	Display*     m_XDisplay;
+
 	bool m_managed;
 	int  m_renderer;
 	GLXContext   m_context;
@@ -122,6 +123,11 @@ public:
 #ifdef ENABLE_SDL_DEV
 	void SetWindow(SDL_Window* current_window) { if (current_window) m_window = current_window; }
 #endif
+
+	bool CreateContext(int major, int minor);
+	void AttachContext();
+	void DetachContext();
+	void CheckContext();
 
 	void Show();
 	void Hide();

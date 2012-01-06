@@ -331,6 +331,74 @@ GSWnd::~GSWnd()
 	}
 }
 
+bool GSWnd::CreateContext(int major, int minor)
+{
+	if ( !m_XDisplay || !m_Xwindow )
+	{
+		fprintf( stderr, "Wrong X11 display/window\n" );
+		exit(1);
+	}
+
+	// Get visual information
+	static int attrListDbl[] =
+	{
+		GLX_X_RENDERABLE    , True,
+		GLX_DRAWABLE_TYPE   , GLX_WINDOW_BIT,
+		GLX_RENDER_TYPE     , GLX_RGBA_BIT,
+		GLX_RED_SIZE        , 8,
+		GLX_GREEN_SIZE      , 8,
+		GLX_BLUE_SIZE       , 8,
+		GLX_DEPTH_SIZE      , 24,
+		GLX_DOUBLEBUFFER    , True,
+		None
+	};
+
+	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
+	int fbcount = 0;
+	GLXFBConfig *fbc = glXChooseFBConfig(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl, &fbcount);
+	if (!fbc || fbcount < 1) return false;
+
+	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
+	if (!glXCreateContextAttribsARB) return false;
+
+	// Create a context
+	int context_attribs[] =
+	{
+		GLX_CONTEXT_MAJOR_VERSION_ARB, major,
+		GLX_CONTEXT_MINOR_VERSION_ARB, minor,
+		// FIXME : Request a debug context to ease opengl development
+		// Note: don't support deprecated feature (pre openg 3.1)
+		//GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB | GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+		GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
+		None
+	};
+
+	m_context = glXCreateContextAttribsARB(m_XDisplay, fbc[0], 0, true, context_attribs);
+	if (!m_context) return false;
+
+	XSync( m_XDisplay, false);
+}
+
+void GSWnd::AttachContext()
+{
+	glXMakeCurrent(m_XDisplay, m_Xwindow, m_context);
+}
+
+void GSWnd::DetachContext()
+{
+	glXMakeCurrent(m_XDisplay, None, NULL);
+}
+
+void GSWnd::CheckContext()
+{
+	int glxMajorVersion, glxMinorVersion;
+	glXQueryVersion(m_XDisplay, &glxMajorVersion, &glxMinorVersion);
+	if (glXIsDirect(m_XDisplay, m_context))
+		fprintf(stderr, "glX-Version %d.%d with Direct Rendering\n", glxMajorVersion, glxMinorVersion);
+	else
+		fprintf(stderr, "glX-Version %d.%d with Indirect Rendering !!! It will be slow\n", glxMajorVersion, glxMinorVersion);
+}
+
 bool GSWnd::Attach(void* handle, bool managed)
 {
 	m_Xwindow = *(Window*)handle;
@@ -340,60 +408,12 @@ bool GSWnd::Attach(void* handle, bool managed)
 	if (m_renderer != 2) {
 		m_XDisplay = XOpenDisplay(NULL);
 
-	  if ( !m_XDisplay )
-	  {
-	    fprintf( stderr, "Failed to open X display\n" );
-	    exit(1);
-	  }
-	
-	  // Get visual information
-	  static int attrListDbl[] =
-	    {
-	      GLX_X_RENDERABLE    , True,
-	      GLX_DRAWABLE_TYPE   , GLX_WINDOW_BIT,
-	      GLX_RENDER_TYPE     , GLX_RGBA_BIT,
-	      GLX_RED_SIZE        , 8,
-	      GLX_GREEN_SIZE      , 8,
-	      GLX_BLUE_SIZE       , 8,
-	      GLX_DEPTH_SIZE      , 24,
-	      GLX_DOUBLEBUFFER    , True,
-	      None
-	    };
-    
-		PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
-		int fbcount = 0;
-		GLXFBConfig *fbc = glXChooseFBConfig(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl, &fbcount);
-		if (!fbc || fbcount < 1) return false;
+		// Note: 4.2 crash on latest nvidia drivers!
+		if (!CreateContext(3, 3)) return false;
 
-		PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
-		if (!glXCreateContextAttribsARB) return false;
+		AttachContext();
 
-		// Create a context
-		int context_attribs[] =
-		{
-			GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-			// Note: 4.2 crash on latest nvidia drivers!
-			GLX_CONTEXT_MINOR_VERSION_ARB, 3,
-			// FIXME : Request a debug context to ease opengl development
-			// Note: don't support deprecated feature (pre openg 3.1)
-			//GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB | GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-			GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
-			None
-		};
-		m_context = glXCreateContextAttribsARB(m_XDisplay, fbc[0], 0, true, context_attribs);
-		XSync( m_XDisplay, false);
-
-		if (!m_context) return false;
-		glXMakeCurrent(m_XDisplay, m_Xwindow, m_context);
-
-		// Check the status
-		int glxMajorVersion, glxMinorVersion;
-		glXQueryVersion(m_XDisplay, &glxMajorVersion, &glxMinorVersion);
-		if (glXIsDirect(m_XDisplay, m_context))
-			fprintf(stderr, "glX-Version %d.%d with Direct Rendering\n", glxMajorVersion, glxMinorVersion);
-		else
-			fprintf(stderr, "glX-Version %d.%d with Indirect Rendering !!! It will be slow\n", glxMajorVersion, glxMinorVersion);
-
+		CheckContext();
 	}
 
 	return true;
@@ -412,7 +432,7 @@ void GSWnd::Detach()
 		}
 #endif
 	} else {
-		glXMakeCurrent(m_XDisplay, None, NULL);
+		DetachContext();
 		if (m_context) glXDestroyContext(m_XDisplay, m_context);
 	}
 	if (m_XDisplay) {
@@ -462,7 +482,43 @@ bool GSWnd::Create(const string& title, int w, int h)
 
 	return (m_window != NULL);
 #else
-	return false;
+
+	// note this part must be only executed when replaying .gs debug file
+	m_managed = true;
+
+	m_XDisplay = XOpenDisplay(NULL);
+
+	int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
+		GLX_RED_SIZE, 8,
+		GLX_GREEN_SIZE, 8,
+		GLX_BLUE_SIZE, 8,
+		GLX_DEPTH_SIZE, 24,
+		None
+	};
+	XVisualInfo* vi = glXChooseVisual(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl);
+
+	/* create a color map */
+	XSetWindowAttributes attr;
+	attr.colormap = XCreateColormap(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
+						   vi->visual, AllocNone);
+	attr.border_pixel = 0;
+    attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
+        StructureNotifyMask | SubstructureRedirectMask | SubstructureNotifyMask |
+        EnterWindowMask | LeaveWindowMask | FocusChangeMask ;
+
+    // Create a window at the last position/size
+    m_Xwindow = XCreateWindow(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
+            0 , 0 , w, h, 0, vi->depth, InputOutput, vi->visual,
+            CWBorderPixel | CWColormap | CWEventMask, &attr);
+
+	XMapWindow (m_XDisplay, m_Xwindow);
+	XFree(vi);
+
+	if (!CreateContext(3, 3)) return false;
+
+	AttachContext();
+
+	return (m_Xwindow != 0);
 #endif
 }
 
@@ -480,7 +536,8 @@ Display* GSWnd::GetDisplay()
 
 	return wminfo.subsystem == SDL_SYSWM_X11 ? wminfo.info.x11.display : NULL;
 #else
-	return NULL;
+	// note this part must be only executed when replaying .gs debug file
+	return m_XDisplay;
 #endif
 }
 

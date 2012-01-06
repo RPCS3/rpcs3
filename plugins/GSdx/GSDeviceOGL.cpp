@@ -195,7 +195,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		s = glGetString(GL_VERSION);
 		if (s == NULL) return false;
 
-		GLuint dot;
+		GLuint dot = 0;
 		while (s[dot] != '\0' && s[dot] != '.') dot++;
 		if (dot == 0) return false;
 

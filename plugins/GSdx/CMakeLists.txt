@@ -8,6 +8,8 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 # plugin name
 set(Output GSdx-0.1.16)
+set(Replay pcsx2_GSReplayLoader)
+set(Static GSdx-static)
 
 set(CommonFlags
     -D_LINUX
@@ -179,38 +181,47 @@ set(GSdxHeaders
     xbyak/xbyak_util.h
     )
 
-# add additional include directories
 include_directories(.)
 
-# add library
-add_library(${Output} SHARED
-    ${GSdxSources}
-    ${GSdxHeaders}
-    )
+add_library(${Output} SHARED ${GSdxSources} ${GSdxHeaders})
 
-# link target with X11
+add_library(${Static} STATIC ${GSdxSources} ${GSdxHeaders})
+
+add_executable(${Replay} linux_replay.cpp)
+
 target_link_libraries(${Output} ${X11_LIBRARIES})
+target_link_libraries(${Output} ${GLEW_LIBRARY})
+target_link_libraries(${Output} ${OPENGL_LIBRARIES})
 
 if(projectSDL)
     target_link_libraries(${Output} ${SDL_LIBRARY})
 endif(projectSDL)
 
-# link target with glew
-target_link_libraries(${Output} ${GLEW_LIBRARY})
+target_link_libraries(${Replay} ${OPENGL_LIBRARIES})
+target_link_libraries(${Replay} ${X11_LIBRARIES})
+target_link_libraries(${Replay} ${GLEW_LIBRARY})
+target_link_libraries(${Replay} ${GTK2_LIBRARIES})
+target_link_libraries(${Replay} ${Static})
 
-# User flags options
+
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
     target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
 endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 
 if(PACKAGE_MODE)
+    install(TARGETS ${Replay} DESTINATION bin)
+
     install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
+
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/convert.glsl DESTINATION ${PLUGIN_DIR})
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/interlace.glsl DESTINATION ${PLUGIN_DIR})
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/merge.glsl DESTINATION ${PLUGIN_DIR})
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/tfx.glsl DESTINATION ${PLUGIN_DIR})
 else(PACKAGE_MODE)
+    install(TARGETS ${Replay} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/convert.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/interlace.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/merge.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)

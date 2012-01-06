@@ -1084,3 +1084,190 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 }
 
 #endif
+
+#ifdef _LINUX
+
+// Note
+EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
+{
+
+
+// lpszCmdLine:
+//   First parameter is the renderer.
+//   Second parameter is the gs file to load and run.
+
+//EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
+#if 0
+	int renderer = -1;
+
+	{
+		char* start = lpszCmdLine;
+		char* end = NULL;
+		long n = strtol(lpszCmdLine, &end, 10);
+		if(end > start) {renderer = n; lpszCmdLine = end;}
+	}
+
+	while(*lpszCmdLine == ' ') lpszCmdLine++;
+
+	::SetPriorityClass(::GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+#endif
+
+	if(FILE* fp = fopen(lpszCmdLine, "rb"))
+	{
+		//Console console("GSdx", true);
+
+		GSinit();
+
+		uint8 regs[0x2000];
+		GSsetBaseMem(regs);
+
+		s_vsync = !!theApp.GetConfig("vsync", 0);
+
+		void* hWnd = NULL;
+
+		_GSopen((void**)&hWnd, "", renderer);
+
+		uint32 crc;
+		fread(&crc, 4, 1, fp);
+		GSsetGameCRC(crc, 0);
+
+		GSFreezeData fd;
+		fread(&fd.size, 4, 1, fp);
+		fd.data = new uint8[fd.size];
+		fread(fd.data, fd.size, 1, fp);
+		GSfreeze(FREEZE_LOAD, &fd);
+		delete [] fd.data;
+
+		fread(regs, 0x2000, 1, fp);
+
+		long start = ftell(fp);
+
+		GSvsync(1);
+
+		struct Packet {uint8 type, param; uint32 size, addr; vector<uint8> buff;};
+
+		list<Packet*> packets;
+		vector<uint8> buff;
+		int type;
+
+		while((type = fgetc(fp)) != EOF)
+		{
+			Packet* p = new Packet();
+
+			p->type = (uint8)type;
+
+			switch(type)
+			{
+			case 0:
+
+				p->param = (uint8)fgetc(fp);
+
+				fread(&p->size, 4, 1, fp);
+
+				switch(p->param)
+				{
+				case 0:
+					p->buff.resize(0x4000);
+					p->addr = 0x4000 - p->size;
+					fread(&p->buff[p->addr], p->size, 1, fp);
+					break;
+				case 1:
+				case 2:
+				case 3:
+					p->buff.resize(p->size);
+					fread(&p->buff[0], p->size, 1, fp);
+					break;
+				}
+
+				break;
+
+			case 1:
+
+				p->param = (uint8)fgetc(fp);
+
+				break;
+
+			case 2:
+
+				fread(&p->size, 4, 1, fp);
+
+				break;
+
+			case 3:
+
+				p->buff.resize(0x2000);
+
+				fread(&p->buff[0], 0x2000, 1, fp);
+
+				break;
+			}
+
+			packets.push_back(p);
+		}
+
+		sleep(30);
+		// FIXME too slow :p
+		// sleep(100);
+
+		//while(IsWindowVisible(hWnd))
+		//FIXME map?
+		while(true)
+		{
+			for(auto i = packets.begin(); i != packets.end(); i++)
+			{
+				Packet* p = *i;
+
+				switch(p->type)
+				{
+				case 0:
+
+					switch(p->param)
+					{
+					case 0: GSgifTransfer1(&p->buff[0], p->addr); break;
+					case 1: GSgifTransfer2(&p->buff[0], p->size / 16); break;
+					case 2: GSgifTransfer3(&p->buff[0], p->size / 16); break;
+					case 3: GSgifTransfer(&p->buff[0], p->size / 16); break;
+					}
+
+					break;
+
+				case 1:
+
+					GSvsync(p->param);
+
+					break;
+
+				case 2:
+
+					if(buff.size() < p->size) buff.resize(p->size);
+
+					GSreadFIFO2(&buff[0], p->size / 16);
+
+					break;
+
+				case 3:
+
+					memcpy(regs, &p->buff[0], 0x2000);
+
+					break;
+				}
+			}
+		}
+
+		for(auto i = packets.begin(); i != packets.end(); i++)
+		{
+			delete *i;
+		}
+
+		packets.clear();
+
+		sleep(100);
+
+		GSclose();
+		GSshutdown();
+
+		fclose(fp);
+	}
+}
+#endif
+
