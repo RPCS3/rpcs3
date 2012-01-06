@@ -1205,7 +1205,7 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 			packets.push_back(p);
 		}
 
-		sleep(30);
+		sleep(10);
 		// FIXME too slow :p
 		// sleep(100);
 

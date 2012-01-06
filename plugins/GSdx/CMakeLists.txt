@@ -192,7 +192,6 @@ add_executable(${Replay} linux_replay.cpp)
 target_link_libraries(${Output} ${X11_LIBRARIES})
 target_link_libraries(${Output} ${GLEW_LIBRARY})
 target_link_libraries(${Output} ${OPENGL_LIBRARIES})
-
 if(projectSDL)
     target_link_libraries(${Output} ${SDL_LIBRARY})
 endif(projectSDL)
@@ -202,6 +201,9 @@ target_link_libraries(${Replay} ${X11_LIBRARIES})
 target_link_libraries(${Replay} ${GLEW_LIBRARY})
 target_link_libraries(${Replay} ${GTK2_LIBRARIES})
 target_link_libraries(${Replay} ${Static})
+if(projectSDL)
+    target_link_libraries(${Replay} ${SDL_LIBRARY})
+endif(projectSDL)
 
 
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
