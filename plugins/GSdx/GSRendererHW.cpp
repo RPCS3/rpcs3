@@ -411,16 +411,16 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 
 	if(lines == 0)
 	{
-		if(m_vt->m_primclass == GS_LINE_CLASS && (m_vertex.tail == 448 * 2 || m_vertex.tail == 512 * 2))
+		if(m_vt->m_primclass == GS_LINE_CLASS && (m_vertex.next == 448 * 2 || m_vertex.next == 512 * 2))
 		{
-			lines = m_vertex.tail / 2;
+			lines = m_vertex.next / 2;
 		}
 	}
 	else
 	{
 		if(m_vt->m_primclass == GS_POINT_CLASS)
 		{
-			if(m_vertex.tail >= 16 * 512)
+			if(m_vertex.next >= 16 * 512)
 			{
 				// incoming pixels are stored in columns, one column is 16x512, total res 448x512 or 448x454
 
@@ -431,7 +431,7 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 
 				const uint8* RESTRICT v = m_vertex.buff;
 
-				for(int i = (int)m_vertex.tail; i >= 0; i--, v += m_vertex.stride)
+				for(int i = (int)m_vertex.next; i >= 0; i--, v += m_vertex.stride)
 				{
 					int x = (GetPosX(v) - ox) >> 4;
 					int y = (GetPosY(v) - oy) >> 4;
@@ -448,7 +448,7 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 		}
 		else if(m_vt->m_primclass == GS_LINE_CLASS)
 		{
-			if(m_vertex.tail == lines * 2)
+			if(m_vertex.next == lines * 2)
 			{
 				// normally, this step would copy the video onto screen with 512 texture mapped horizontal lines,
 				// but we use the stored video data to create a new texture, and replace the lines with two triangles
@@ -459,8 +459,8 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 
 				t->m_texture->Update(GSVector4i(0, 0, 448, lines), video, 448 * 4);
 
-				memcpy(&m_vertex.buff[m_vertex.stride * 2], &m_vertex.buff[m_vertex.stride * (m_vertex.tail - 2)], m_vertex.stride);
-				memcpy(&m_vertex.buff[m_vertex.stride * 3], &m_vertex.buff[m_vertex.stride * (m_vertex.tail - 1)], m_vertex.stride);
+				memcpy(&m_vertex.buff[m_vertex.stride * 2], &m_vertex.buff[m_vertex.stride * (m_vertex.next - 2)], m_vertex.stride);
+				memcpy(&m_vertex.buff[m_vertex.stride * 3], &m_vertex.buff[m_vertex.stride * (m_vertex.next - 1)], m_vertex.stride);
 
 				m_index.buff[0] = 0;
 				m_index.buff[1] = 1;
@@ -469,7 +469,7 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 				m_index.buff[4] = 2;
 				m_index.buff[5] = 3;
 
-				m_vertex.head = m_vertex.tail = 4;
+				m_vertex.head = m_vertex.tail = m_vertex.next = 4;
 				m_index.tail = 6;
 
 				m_vt->Update(m_vertex.buff, m_index.buff, m_index.tail, GS_TRIANGLE_CLASS);
@@ -506,7 +506,7 @@ bool GSRendererHW::OI_MetalSlug6(GSTexture* rt, GSTexture* ds, GSTextureCache::S
 
 	uint8* RESTRICT v = m_vertex.buff;
 
-	for(int i = (int)m_vertex.tail; i >= 0; i--, v += m_vertex.stride)
+	for(int i = (int)m_vertex.next; i >= 0; i--, v += m_vertex.stride)
 	{
 		uint32 c = GetColor(v);
 
@@ -815,7 +815,7 @@ bool GSRendererHW::OI_PointListPalette(GSTexture* rt, GSTexture* ds, GSTextureCa
 
 		if(FBP >= 0x03f40 && (FBP & 0x1f) == 0)
 		{
-			if(m_vertex.tail == 16)
+			if(m_vertex.next == 16)
 			{
 				uint8* RESTRICT v = m_vertex.buff;
 
@@ -835,7 +835,7 @@ bool GSRendererHW::OI_PointListPalette(GSTexture* rt, GSTexture* ds, GSTextureCa
 
 				return false;
 			}
-			else if(m_vertex.tail == 256)
+			else if(m_vertex.next == 256)
 			{
 				uint8* RESTRICT v = m_vertex.buff;
 

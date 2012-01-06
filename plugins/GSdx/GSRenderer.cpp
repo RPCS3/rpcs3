@@ -333,7 +333,7 @@ void GSRenderer::VSync(int field)
 				theApp.m_gs_interlace[m_interlace].name.c_str(),
 				theApp.m_gs_aspectratio[m_aspectratio].name.c_str(),
 				(int)m_perfmon.Get(GSPerfMon::Quad),
-				(int)(m_perfmon.Get(GSPerfMon::Prim) - m_perfmon.Get(GSPerfMon::PrimNotRendered)),
+				(int)m_perfmon.Get(GSPerfMon::Prim),
 				(int)m_perfmon.Get(GSPerfMon::Draw),
 				m_perfmon.CPU(),
 				m_perfmon.Get(GSPerfMon::Swizzle) / 1024,
@@ -515,7 +515,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			return;
 		case VK_F7:
 			m_shader = (m_shader + 3 + step) % 3;
-			printf("GSdx: Set shader %d (%s).\n", (int)m_shader);
+			printf("GSdx: Set shader %d.\n", (int)m_shader);
 			return;
 		case VK_DELETE:
 			m_aa1 = !m_aa1;

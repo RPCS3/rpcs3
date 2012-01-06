@@ -35,8 +35,8 @@ protected:
 	} m_fba;
 
 	template<uint32 prim, uint32 tme, uint32 fst>
-	void ConvertVertex(GSVertexHW9* RESTRICT vertex, size_t index);
-	void Draw();
+	void ConvertVertex(size_t dst_index, size_t src_index);
+
 	void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 	void UpdateFBA(GSTexture* rt);
 

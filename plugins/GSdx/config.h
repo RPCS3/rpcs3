@@ -1,6 +1,7 @@
 #pragma once
 
-//#define ENABLE_VTUNE
+//
+#define ENABLE_VTUNE
 
 #define ENABLE_JIT_RASTERIZER
 

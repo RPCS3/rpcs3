@@ -331,7 +331,7 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 	uint8 afix = context->ALPHA.FIX;
 
 	dev->SetupOM(om_dssel, om_bsel, afix);
-	dev->SetupIA(m_vertex.buff, m_vertex.tail, m_index.buff, m_index.tail, m_topology);
+	dev->SetupIA(m_vertex.buff, m_vertex.next, m_index.buff, m_index.tail, m_topology);
 	dev->SetupVS(vs_sel, &vs_cb);
 	dev->SetupGS(gs_sel);
 	dev->SetupPS(ps_sel, &ps_cb, ps_ssel);

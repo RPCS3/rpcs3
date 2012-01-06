@@ -72,21 +72,8 @@ protected:
 
 	ConvertIndexPtr m_ci[8], m_cif;
 
-	#define InitConvertIndex2(P) \
-		m_ci[P] = (ConvertIndexPtr)&GSRendererSW::ConvertIndex<P>; \
-
-	#define InitConvertIndex() \
-		InitConvertIndex2(GS_POINTLIST) \
-		InitConvertIndex2(GS_LINELIST) \
-		InitConvertIndex2(GS_LINESTRIP) \
-		InitConvertIndex2(GS_TRIANGLELIST) \
-		InitConvertIndex2(GS_TRIANGLESTRIP) \
-		InitConvertIndex2(GS_TRIANGLEFAN) \
-		InitConvertIndex2(GS_SPRITE) \
-		InitConvertIndex2(GS_INVALID) \
-
 	template<uint32 prim, uint32 tme, uint32 fst> 
-	void ConvertVertex(GSVertexSW* RESTRICT vertex, size_t index);
+	void ConvertVertex(size_t dst_index, size_t src_index);
 
 	template<uint32 prim>
 	size_t ConvertIndex(uint32* RESTRICT dst, const uint32* RESTRICT src, int count);

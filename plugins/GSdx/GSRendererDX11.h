@@ -29,8 +29,7 @@ class GSRendererDX11 : public GSRendererDX
 {
 protected:
 	template<uint32 prim, uint32 tme, uint32 fst>
-	void ConvertVertex(GSVertexHW11* RESTRICT vertex, size_t index);
-	void Draw();
+	void ConvertVertex(size_t dst_index, size_t src_index);
 	void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 
 	int GetPosX(const void* vertex) const {return (int)((const GSVertexHW11*)vertex)->p.x;}

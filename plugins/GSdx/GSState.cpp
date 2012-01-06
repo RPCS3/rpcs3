@@ -41,19 +41,21 @@ GSState::GSState(GSVertexTrace* vt, size_t vertex_stride)
 	memset(&m_vertex, 0, sizeof(m_vertex));
 	memset(&m_index, 0, sizeof(m_index));
 
+	ASSERT(vertex_stride >= sizeof(GSVertex));
+
 	m_vertex.stride = vertex_stride;
 	m_vertex.tmp = (uint8*)_aligned_malloc(vertex_stride * 2, 32);
 
 	GrowVertexBuffer();
 
-	m_dk[GS_POINTLIST] = (DrawingKickPtr)&GSState::DrawingKick<GS_POINTLIST>;
-	m_dk[GS_LINELIST] = (DrawingKickPtr)&GSState::DrawingKick<GS_LINELIST>;
-	m_dk[GS_LINESTRIP] = (DrawingKickPtr)&GSState::DrawingKick<GS_LINESTRIP>;
-	m_dk[GS_TRIANGLELIST] = (DrawingKickPtr)&GSState::DrawingKick<GS_TRIANGLELIST>;
-	m_dk[GS_TRIANGLESTRIP] = (DrawingKickPtr)&GSState::DrawingKick<GS_TRIANGLESTRIP>;
-	m_dk[GS_TRIANGLEFAN] = (DrawingKickPtr)&GSState::DrawingKick<GS_TRIANGLEFAN>;
-	m_dk[GS_SPRITE] = (DrawingKickPtr)&GSState::DrawingKick<GS_SPRITE>;
-	m_dk[GS_INVALID] = (DrawingKickPtr)&GSState::DrawingKick<GS_INVALID>;
+	m_vk[GS_POINTLIST] = (VertexKickPtr)&GSState::VertexKick<GS_POINTLIST>;
+	m_vk[GS_LINELIST] = (VertexKickPtr)&GSState::VertexKick<GS_LINELIST>;
+	m_vk[GS_LINESTRIP] = (VertexKickPtr)&GSState::VertexKick<GS_LINESTRIP>;
+	m_vk[GS_TRIANGLELIST] = (VertexKickPtr)&GSState::VertexKick<GS_TRIANGLELIST>;
+	m_vk[GS_TRIANGLESTRIP] = (VertexKickPtr)&GSState::VertexKick<GS_TRIANGLESTRIP>;
+	m_vk[GS_TRIANGLEFAN] = (VertexKickPtr)&GSState::VertexKick<GS_TRIANGLEFAN>;
+	m_vk[GS_SPRITE] = (VertexKickPtr)&GSState::VertexKick<GS_SPRITE>;
+	m_vk[GS_INVALID] = (VertexKickPtr)&GSState::VertexKick<GS_INVALID>;
 
 	memset(m_cv, 0, sizeof(m_cv));
 
@@ -222,6 +224,7 @@ void GSState::Reset()
 
 	m_vertex.head = 0;
 	m_vertex.tail = 0;
+	m_vertex.next = 0;
 	m_index.tail = 0;
 }
 
@@ -500,7 +503,7 @@ __forceinline void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* RESTRIC
 	m_v.XYZ.Z = r->XYZF2.Z;
 	m_v.FOG.F = r->XYZF2.F;
 
-	VertexKick(r->XYZF2.Skip());
+	(this->*m_vkf)(r->XYZF2.Skip());
 }
 
 __forceinline void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* RESTRICT r)
@@ -509,7 +512,7 @@ __forceinline void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* RESTRICT
 	m_v.XYZ.Y = r->XYZ2.Y;
 	m_v.XYZ.Z = r->XYZ2.Z;
 
-	VertexKick(r->XYZ2.Skip());
+	(this->*m_vkf)(r->XYZ2.Skip());
 }
 
 __forceinline void GSState::GIFPackedRegHandlerFOG(const GIFPackedReg* RESTRICT r)
@@ -556,7 +559,9 @@ __forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
 
 	UpdateVertexKick();
 
-	m_vertex.head = m_vertex.tail = m_index.tail > 0 ? m_index.buff[m_index.tail - 1] + 1 : 0; // remove unused vertices from the end of the vertex buffer
+	ASSERT(m_index.tail == 0 || m_index.buff[m_index.tail - 1] + 1 == m_vertex.next);
+
+	m_vertex.head = m_vertex.tail = m_vertex.next; // remove unused vertices from the end of the vertex buffer
 }
 
 void GSState::GIFRegHandlerPRIM(const GIFReg* RESTRICT r)
@@ -604,14 +609,14 @@ void GSState::GIFRegHandlerXYZF2(const GIFReg* RESTRICT r)
 	m_v.XYZ.u32[1] = r->XYZF.u32[1] & 0x00ffffff;
 	m_v.FOG.u32[1] = r->XYZF.u32[1] & 0xff000000;
 
-	VertexKick(0);
+	(this->*m_vkf)(0);
 }
 
 void GSState::GIFRegHandlerXYZ2(const GIFReg* RESTRICT r)
 {
 	m_v.XYZ = (GSVector4i)r->XYZ;
 
-	VertexKick(0);
+	(this->*m_vkf)(0);
 }
 
 void GSState::ApplyTEX0(int i, GIFRegTEX0& TEX0)
@@ -740,14 +745,14 @@ void GSState::GIFRegHandlerXYZF3(const GIFReg* RESTRICT r)
 	m_v.XYZ.u32[1] = r->XYZF.u32[1] & 0x00ffffff;
 	m_v.FOG.u32[1] = r->XYZF.u32[1] & 0xff000000;
 
-	VertexKick(1);
+	(this->*m_vkf)(1);
 }
 
 void GSState::GIFRegHandlerXYZ3(const GIFReg* RESTRICT r)
 {
 	m_v.XYZ = (GSVector4i)r->XYZ;
 
-	VertexKick(1);
+	(this->*m_vkf)(1);
 }
 
 void GSState::GIFRegHandlerNOP(const GIFReg* RESTRICT r)
@@ -1215,14 +1220,15 @@ void GSState::FlushPrim()
 		switch(PRIM->PRIM)
 		{
 		case GS_LINESTRIP:
-			memcpy(&buff[0], &m_vertex.buff[stride * head], stride);
+			if(tail > head + 0) memcpy(&buff[stride * 0], &m_vertex.buff[stride * (head + 0)], stride);
 			break;
 		case GS_TRIANGLESTRIP:
-			memcpy(&buff[0], &m_vertex.buff[stride * head], stride * 2);
+			if(tail > head + 0) memcpy(&buff[stride * 0], &m_vertex.buff[stride * (head + 0)], stride);
+			if(tail > head + 1) memcpy(&buff[stride * 1], &m_vertex.buff[stride * (head + 1)], stride);
 			break;
 		case GS_TRIANGLEFAN:
-			memcpy(&buff[0], &m_vertex.buff[stride * head], stride);
-			memcpy(&buff[stride], &m_vertex.buff[stride * (tail - 1)], stride);
+			if(tail > head + 0) memcpy(&buff[stride * 0], &m_vertex.buff[stride * (head + 0)], stride);
+			if(tail > head + 1) memcpy(&buff[stride * 1], &m_vertex.buff[stride * (tail - 1)], stride);
 			break;
 		case GS_POINTLIST:
 		case GS_LINELIST:
@@ -1244,38 +1250,37 @@ void GSState::FlushPrim()
 			m_perfmon.Put(GSPerfMon::Prim, m_index.tail / GSUtil::GetVertexCount(PRIM->PRIM));
 		}
 
+		m_vertex.tail = 0;
+
 		switch(PRIM->PRIM)
 		{
 		case GS_LINESTRIP:
-			memcpy(&m_vertex.buff[0], &buff[0], stride);
-			m_vertex.tail = 1;
+			if(tail > head + 0) {memcpy(&m_vertex.buff[stride * 0], &buff[stride * 0], stride); m_vertex.tail++;}
 			break;
 		case GS_TRIANGLESTRIP:
-			memcpy(&m_vertex.buff[0], &buff[0], stride * 2);
-			m_vertex.tail = 2;
-			break;
 		case GS_TRIANGLEFAN:
-			memcpy(&m_vertex.buff[0], &buff[0], stride * 2);
-			m_vertex.tail = 2;
+			if(tail > head + 0) {memcpy(&m_vertex.buff[stride * 0], &buff[stride * 0], stride); m_vertex.tail++;}
+			if(tail > head + 1) {memcpy(&m_vertex.buff[stride * 1], &buff[stride * 1], stride); m_vertex.tail++;}
 			break;
 		case GS_POINTLIST:
 		case GS_LINELIST:
 		case GS_TRIANGLELIST:
 		case GS_SPRITE:
 		case GS_INVALID:
-			m_vertex.tail = 0;
 			break;
 		default:
 			__assume(0);
 		}
 
-		m_vertex.head = 0;
 		m_index.tail = 0;
 	}
 	else
 	{
-		m_vertex.head = m_vertex.tail = 0;
+		m_vertex.tail = 0;
 	}
+
+	m_vertex.head = 0;
+	m_vertex.next = 0;
 }
 
 //
@@ -1989,9 +1994,8 @@ void GSState::SetGameCRC(uint32 crc, int options)
 
 void GSState::UpdateVertexKick() 
 {
-	m_dkf = m_dk[PRIM->PRIM];
+	m_vkf = m_vk[PRIM->PRIM];
 	m_cvf = m_cv[PRIM->PRIM][PRIM->TME][PRIM->FST];
-	m_vertex.n = GSUtil::GetVertexCount(PRIM->PRIM);
 }
 
 void GSState::GrowVertexBuffer()
@@ -2020,23 +2024,95 @@ void GSState::GrowVertexBuffer()
 	m_index.buff = index;
 }
 
-void GSState::VertexKick(uint32 skip)
-{
-	(this->*m_cvf)(m_vertex.buff, m_vertex.tail);
-
-	if(++m_vertex.tail - m_vertex.head >= m_vertex.n)
-	{
-		(this->*m_dkf)(skip);
-	}
-}
+static uint32 s_tmp[4];
+static size_t s_tmp_i = 0;
+static GSVector4i s_tmp_zw_sign = GSVector4i::x80000000().sll<8>();
 
 template<uint32 prim> 
-void GSState::DrawingKick(uint32 skip)
+void GSState::VertexKick(uint32 skip)
 {
+	s_tmp[s_tmp_i++ & 3] = m_v.XYZ.u32[0];
+
 	size_t head = m_vertex.head;
 	size_t tail = m_vertex.tail;
+	size_t next = m_vertex.next;
+	
+	*(GSVertex*)&m_vertex.buff[m_vertex.stride * tail] = m_v;
 
-	if(skip)
+	size_t n = 0;
+
+	switch(prim)
+	{
+	case GS_POINTLIST: n = 1; break;
+	case GS_LINELIST: n = 2; break;
+	case GS_LINESTRIP: n = 2; break;
+	case GS_TRIANGLELIST: n = 3; break;
+	case GS_TRIANGLESTRIP: n = 3; break;
+	case GS_TRIANGLEFAN: n = 3; break;
+	case GS_SPRITE: n = 2; break;
+	case GS_INVALID: n = 1; break;
+	}
+
+	m_vertex.tail = ++tail;
+
+	size_t m = tail - head;
+
+	if(m < n)
+	{
+		return;
+	}
+
+	if(skip == 0)
+	{
+		int p0 = (int)s_tmp[(s_tmp_i + 1) & 3];
+		int p1 = (int)s_tmp[(s_tmp_i + 2) & 3];
+		int p2 = (int)s_tmp[(s_tmp_i + 3) & 3];
+		int p3 = (int)s_tmp[(s_tmp_i - m) & 3];
+
+		GSVector4i p(p0, p1, p2, p3);
+		
+		GSVector4i v0, v1, v2, v3;
+
+		v1 = p.upl16();
+		v3 = p.uph16();
+
+		v0 = v1.xyxy();
+		v1 = v1.zwzw();
+		v2 = v3.xyxy();
+		v3 = v3.zwzw();
+
+		GSVector4i s = m_context->scissor.dx10;
+		GSVector4i sm = s_tmp_zw_sign;
+
+		GSVector4 cross;
+
+		switch(prim)
+		{
+		case GS_POINTLIST:
+			skip = ((v2 - s) ^ sm).mask() & 0x8888;
+			break;
+		case GS_LINELIST:
+		case GS_LINESTRIP:
+		case GS_SPRITE:
+			skip = (((v1 - s) ^ sm) & ((v2 - s) ^ sm)).mask() & 0x8888;
+			skip |= p1 == p2;
+			break;
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+			skip = (((v0 - s) ^ sm) & ((v1 - s) ^ sm) & ((v2 - s) ^ sm)).mask() & 0x8888;
+			cross = (GSVector4(v1) - GSVector4(v0)) * (GSVector4(v2) - GSVector4(v0)).yxyx();
+			skip |= (cross == cross.yxyx()).mask();
+			break;
+		case GS_TRIANGLEFAN:
+			if(m > 4) break; // s_tmp only knows about the last 4 vertices, head could be far behind
+			skip = (((v1 - s) ^ sm) & ((v2 - s) ^ sm) & ((v3 - s) ^ sm)).mask() & 0x8888;
+			cross = (GSVector4(v1) - GSVector4(v3)) * (GSVector4(v2) - GSVector4(v3)).yxyx();
+			skip |= (cross == cross.yxyx()).mask();
+			break;
+		}
+	}
+
+	if(skip != 0)
 	{
 		switch(prim)
 		{
@@ -2049,7 +2125,7 @@ void GSState::DrawingKick(uint32 skip)
 			break;
 		case GS_LINESTRIP:
 		case GS_TRIANGLESTRIP:
-			m_vertex.head = head + 1; 
+			m_vertex.head = head + 1;
 			break;
 		case GS_TRIANGLEFAN:
 			break;
@@ -2067,50 +2143,78 @@ void GSState::DrawingKick(uint32 skip)
 
 	uint32* RESTRICT buff = &m_index.buff[m_index.tail];
 
+	size_t src_index = head;
+
 	switch(prim)
 	{
 	case GS_POINTLIST:
 		buff[0] = head + 0;
 		m_vertex.head = head + 1;
+		m_vertex.next = head + 1;
 		m_index.tail += 1;
+		(this->*m_cvf)(head, head);
 		break;
 	case GS_LINELIST:
 		buff[0] = head + 0;
 		buff[1] = head + 1;
 		m_vertex.head = head + 2;
+		m_vertex.next = head + 2;
 		m_index.tail += 2;
+		(this->*m_cvf)(head + 0, head + 0);
+		(this->*m_cvf)(head + 1, head + 1);
 		break;
 	case GS_LINESTRIP:
+		if(next < head) {head = next; m_vertex.tail = next + 2;}
 		buff[0] = head + 0;
 		buff[1] = head + 1;
 		m_vertex.head = head + 1;
+		m_vertex.next = head + 2;
 		m_index.tail += 2;
+		if(head + 0 >= next) (this->*m_cvf)(head + 0, src_index + 0);
+		if(head + 1 >= next) (this->*m_cvf)(head + 1, src_index + 1);
 		break;
 	case GS_TRIANGLELIST:
 		buff[0] = head + 0;
 		buff[1] = head + 1;
 		buff[2] = head + 2;
 		m_vertex.head = head + 3;
+		m_vertex.next = head + 3;
 		m_index.tail += 3;
+		(this->*m_cvf)(head + 0, head + 0);
+		(this->*m_cvf)(head + 1, head + 1);
+		(this->*m_cvf)(head + 2, head + 2);
 		break;
-	case GS_TRIANGLESTRIP:		
+	case GS_TRIANGLESTRIP:
+		if(next < head) {head = next; m_vertex.tail = next + 3;}
 		buff[0] = head + 0;
 		buff[1] = head + 1;
 		buff[2] = head + 2;
 		m_vertex.head = head + 1;
+		m_vertex.next = head + 3;
 		m_index.tail += 3;
+		if(src_index + 0 >= next) (this->*m_cvf)(head + 0, src_index + 0);
+		if(src_index + 1 >= next) (this->*m_cvf)(head + 1, src_index + 1);
+		if(src_index + 2 >= next) (this->*m_cvf)(head + 2, src_index + 2);
 		break;
 	case GS_TRIANGLEFAN:
+		// TODO: remove gaps
 		buff[0] = head + 0;
 		buff[1] = tail - 2;
 		buff[2] = tail - 1;
-		m_index.tail += 3;			
+		m_vertex.next = tail;
+		m_index.tail += 3;
+		if(head >= next) (this->*m_cvf)(head, head);
+		if(tail - 2 >= next) (this->*m_cvf)(tail - 2, tail - 2);
+		if(tail - 1 >= next) (this->*m_cvf)(tail - 1, tail - 1);
 		break;
-	case GS_SPRITE:			
+	case GS_SPRITE:	
 		buff[0] = head + 0;
 		buff[1] = head + 1;
 		m_vertex.head = head + 2;
+		m_vertex.next = head + 2;
 		m_index.tail += 2;
+		(this->*m_cvf)(head + 0, head + 0);
+		(this->*m_cvf)(head + 1, head + 1);
 		break;
 	case GS_INVALID:			
 		m_vertex.tail = head;

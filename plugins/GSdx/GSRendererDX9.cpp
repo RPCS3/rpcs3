@@ -58,17 +58,20 @@ bool GSRendererDX9::CreateDevice(GSDevice* dev)
 }
 
 template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererDX9::ConvertVertex(GSVertexHW9* RESTRICT vertex, size_t index)
+void GSRendererDX9::ConvertVertex(size_t dst_index, size_t src_index)
 {
-	GSVector4 p = GSVector4(((GSVector4i)m_v.XYZ).upl16());
+	GSVertex* s = (GSVertex*)((GSVertexHW9*)m_vertex.buff + src_index);
+	GSVertexHW9* d = (GSVertexHW9*)m_vertex.buff + dst_index;
+
+	GSVector4 p = GSVector4(GSVector4i::load(s->XYZ.u32[0]).upl16());
 
 	if(tme && !fst)
 	{
-		p = p.xyxy(GSVector4((float)m_v.XYZ.Z, m_v.RGBAQ.Q));
+		p = p.xyxy(GSVector4((float)s->XYZ.Z, s->RGBAQ.Q));
 	}
 	else
 	{
-		p = p.xyxy(GSVector4::load((float)m_v.XYZ.Z));
+		p = p.xyxy(GSVector4::load((float)s->XYZ.Z));
 	}
 
 	GSVector4 t = GSVector4::zero();
@@ -77,27 +80,18 @@ void GSRendererDX9::ConvertVertex(GSVertexHW9* RESTRICT vertex, size_t index)
 	{
 		if(fst)
 		{
-			t = GSVector4(GSVector4i::load(m_v.UV.u32[0]).upl16());
+			t = GSVector4(GSVector4i::load(s->UV.u32[0]).upl16());
 		}
 		else
 		{
-			t = GSVector4::loadl(&m_v.ST);
+			t = GSVector4::loadl(&s->ST);
 		}
 	}
 
-	t = t.xyxy(GSVector4::cast(GSVector4i(m_v.RGBAQ.u32[0], m_v.FOG.u32[1])));
+	t = t.xyxy(GSVector4::cast(GSVector4i(s->RGBAQ.u32[0], s->FOG.u32[1])));
 
-	GSVertexHW9* RESTRICT dst = (GSVertexHW9*)&vertex[index];
-
-	dst->p = p;
-	dst->t = t;
-}
-
-void GSRendererDX9::Draw()
-{
-	// TODO: remove invisible prims here
-
-	__super::Draw();
+	d->p = p;
+	d->t = t;
 }
 
 void GSRendererDX9::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
@@ -155,9 +149,9 @@ void GSRendererDX9::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 		// assume vertices are tightly packed and sequentially indexed (it should be the case)
 
-		if(m_vertex.tail >= 2)
+		if(m_vertex.next >= 2)
 		{
-			size_t count = m_vertex.tail;
+			size_t count = m_vertex.next;
 
 			int i = (int)count * 2 - 4;
 			GSVertexHW9* s = (GSVertexHW9*)&m_vertex.buff[sizeof(GSVertexHW9) * count] - 2;
@@ -195,7 +189,7 @@ void GSRendererDX9::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 				index[5] = i + 3;
 			}
 
-			m_vertex.head = m_vertex.tail = count * 2;
+			m_vertex.head = m_vertex.tail = m_vertex.next = count * 2;
 			m_index.tail = count * 3;
 		}
 

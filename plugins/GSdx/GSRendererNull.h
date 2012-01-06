@@ -33,7 +33,7 @@ class GSRendererNull : public GSRenderer
 
 protected:
 	template<uint32 prim, uint32 tme, uint32 fst> 
-	void ConvertVertex(GSVertexSW* RESTRICT vertex, size_t index)
+	void ConvertVertex(size_t dst_index, size_t src_index)
 	{
 	}
 
@@ -48,7 +48,7 @@ protected:
 
 public:
 	GSRendererNull() 
-		: GSRenderer(new GSVertexTraceNull(this), sizeof(GSVertexNull)) 
+		: GSRenderer(new GSVertexTraceNull(this), sizeof(GSVertex)) 
 	{
 		InitConvertVertex(GSRendererNull);
 	}

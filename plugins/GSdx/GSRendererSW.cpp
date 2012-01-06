@@ -29,7 +29,15 @@ GSRendererSW::GSRendererSW(int threads)
 	, m_fzb(NULL)
 {
 	InitConvertVertex(GSRendererSW);
-	InitConvertIndex();
+
+	m_ci[GS_POINTLIST] = (ConvertIndexPtr)&GSRendererSW::ConvertIndex<GS_POINTLIST>;
+	m_ci[GS_LINELIST] = (ConvertIndexPtr)&GSRendererSW::ConvertIndex<GS_LINELIST>;
+	m_ci[GS_LINESTRIP] = (ConvertIndexPtr)&GSRendererSW::ConvertIndex<GS_LINESTRIP>;
+	m_ci[GS_TRIANGLELIST] = (ConvertIndexPtr)&GSRendererSW::ConvertIndex<GS_TRIANGLELIST>;
+	m_ci[GS_TRIANGLESTRIP] = (ConvertIndexPtr)&GSRendererSW::ConvertIndex<GS_TRIANGLESTRIP>;
+	m_ci[GS_TRIANGLEFAN] = (ConvertIndexPtr)&GSRendererSW::ConvertIndex<GS_TRIANGLEFAN>;
+	m_ci[GS_SPRITE] = (ConvertIndexPtr)&GSRendererSW::ConvertIndex<GS_SPRITE>;
+	m_ci[GS_INVALID] = (ConvertIndexPtr)&GSRendererSW::ConvertIndex<GS_INVALID>;
 
 	m_tc = new GSTextureCacheSW(this);
 
@@ -152,51 +160,56 @@ GSTexture* GSRendererSW::GetOutput(int i)
 }
 
 template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererSW::ConvertVertex(GSVertexSW* RESTRICT vertex, size_t index)
+void GSRendererSW::ConvertVertex(size_t dst_index, size_t src_index)
 {
-	GSVertexSW* RESTRICT v = &vertex[index];
+	GSVertex* s = (GSVertex*)((GSVertexSW*)m_vertex.buff + src_index);
+	GSVertexSW* d = (GSVertexSW*)m_vertex.buff + dst_index;
 
-	GSVector4i xy = GSVector4i::load((int)m_v.XYZ.u32[0]).upl16() - m_context->XYOFFSET;
-	GSVector4i zf = GSVector4i((int)std::min<uint32>(m_v.XYZ.Z, 0xffffff00), m_v.FOG.F); // NOTE: larger values of z may roll over to 0 when converting back to uint32 later
+	uint32 z = s->XYZ.Z;
 
-	v->p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
+	GSVector4i xy = GSVector4i::load((int)s->XYZ.u32[0]).upl16() - (GSVector4i)m_context->XYOFFSET;
+	GSVector4i zf = GSVector4i((int)std::min<uint32>(z, 0xffffff00), s->FOG.F); // NOTE: larger values of z may roll over to 0 when converting back to uint32 later
+
+	GSVector4 p, t, c;
+
+	p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
 
 	if(tme)
 	{
-		GSVector4 t;
-
 		if(fst)
 		{
-			t = GSVector4(GSVector4i::load(m_v.UV.u32[0]).upl16() << (16 - 4));
+			t = GSVector4(GSVector4i::load(s->UV.u32[0]).upl16() << (16 - 4));
 		}
 		else
 		{
-			t = GSVector4(m_v.ST.S, m_v.ST.T) * GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH);
-			t = t.xyxy(GSVector4::load(m_v.RGBAQ.Q));
+			t = GSVector4(s->ST.S, s->ST.T) * GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH);
+			t = t.xyxy(GSVector4::load(s->RGBAQ.Q));
 		}
-
-		v->t = t;
 	}
 
-	v->c = GSVector4::rgba32(m_v.RGBAQ.u32[0], 7);
+	c = GSVector4::rgba32(s->RGBAQ.u32[0], 7);
+
+	d->p = p;
+	d->c = c;
+	d->t = t;
 
 	if(prim == GS_SPRITE)
 	{
-		v->t.u32[3] = m_v.XYZ.Z;
+		d->t.u32[3] = z;
 	}
 }
 
 template<uint32 prim>
 size_t GSRendererSW::ConvertIndex(uint32* RESTRICT dst, const uint32* RESTRICT src, int count)
 {
-	// memcpy(dst, src, sizeof(uint32) * count); return;
+	//
+	memcpy(dst, src, sizeof(uint32) * count); return count;
 
 	// TODO: IsQuad
 
-	const GSVertexSW* RESTRICT v = (GSVertexSW*)m_vertex.buff;
-
 	GSVector4 scissor = m_context->scissor.ex;
 
+	const GSVertexSW* RESTRICT v = (GSVertexSW*)m_vertex.buff;
 	const uint32* src_end = src + count;
 	uint32* dst_base = dst;
 
@@ -222,13 +235,12 @@ size_t GSRendererSW::ConvertIndex(uint32* RESTRICT dst, const uint32* RESTRICT s
 			pmin = v[src[0]].p.min(v[src[1]].p).min(v[src[2]].p);
 			pmax = v[src[0]].p.max(v[src[1]].p).max(v[src[2]].p);
 			break;
-		default:
-			__assume(0);
 		}
 
-		GSVector4 test = (pmax < scissor) | (pmin > scissor.zwxy());
+		GSVector4 test = GSVector4::zero(); // (pmax < scissor) | (pmin > scissor.zwxy());
+		/*
 		GSVector4 tmp;
-
+		
 		switch(prim)
 		{
 		case GS_TRIANGLELIST:
@@ -239,7 +251,7 @@ size_t GSRendererSW::ConvertIndex(uint32* RESTRICT dst, const uint32* RESTRICT s
 			test |= tmp == tmp.yxwz();
 			break;
 		}
-
+		*/
 		switch(prim)
 		{
 		case GS_TRIANGLELIST:
@@ -249,7 +261,7 @@ size_t GSRendererSW::ConvertIndex(uint32* RESTRICT dst, const uint32* RESTRICT s
 			test |= pmin.ceil() == pmax.ceil();
 			break;
 		}
-
+		
 		bool pass = test.xyxy().allfalse();
 
 		switch(prim)
@@ -270,8 +282,6 @@ size_t GSRendererSW::ConvertIndex(uint32* RESTRICT dst, const uint32* RESTRICT s
 			if(pass) {dst[0] = src[0]; dst[1] = src[1]; dst[2] = src[2]; dst += 3;}
 			src += 3;
 			break;
-		default:
-			__assume(0);
 		}
 	}
 
@@ -292,19 +302,19 @@ void GSRendererSW::Draw()
 	shared_ptr<GSRasterizerData> data(new GSRasterizerData2(this));
 
 	data->primclass = GSUtil::GetPrimClass(PRIM->PRIM);
-	data->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_vertex.tail + sizeof(uint32) * m_index.tail, 32);
+	data->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_vertex.next + sizeof(uint32) * m_index.tail, 32);
 	data->vertex = (GSVertexSW*)data->buff;
-	data->vertex_count = m_vertex.tail;
-	data->index = (uint32*)(data->buff + sizeof(GSVertexSW) * m_vertex.tail);
+	data->vertex_count = m_vertex.next;
+	data->index = (uint32*)(data->buff + sizeof(GSVertexSW) * m_vertex.next);
 	data->index_count = (this->*m_cif)(data->index, m_index.buff, m_index.tail);
 
-	m_perfmon.Put(GSPerfMon::PrimNotRendered, (m_index.tail - data->index_count) / GSUtil::GetVertexCount(PRIM->PRIM));
+	m_index.tail = data->index_count;
 
 	if(data->index_count == 0) return;
 
 	// TODO: merge these
 
-	memcpy(data->vertex, m_vertex.buff, sizeof(GSVertexSW) * m_vertex.tail);
+	memcpy(data->vertex, m_vertex.buff, sizeof(GSVertexSW) * m_vertex.next);
 
 	m_vt->Update(data->vertex, data->index, data->index_count, data->primclass);
 

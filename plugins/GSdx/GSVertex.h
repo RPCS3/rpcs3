@@ -63,9 +63,4 @@ struct GSVertexPT2
 	GSVector2 t[2];
 };
 
-struct GSVertexNull
-{
-	GSVector4 p;
-};
-
 #pragma pack(pop)

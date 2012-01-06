@@ -131,13 +131,13 @@ protected:
 
 	GSVertex m_v;
 	float m_q;
-	struct {uint8* buff; size_t head, tail, maxcount, stride, n; uint8* tmp;} m_vertex;
+	struct {uint8* buff; size_t head, tail, next, maxcount, stride, n; uint8* tmp;} m_vertex; // head: first vertex, tail: last vertex + 1, next: last indexed + 1
 	struct {uint32* buff; size_t tail;} m_index;
 
-	typedef void (GSState::*DrawingKickPtr)(uint32 skip);
-	typedef void (GSState::*ConvertVertexPtr)(void* RESTRICT vertex, size_t index);
+	typedef void (GSState::*VertexKickPtr)(uint32 skip);
+	typedef void (GSState::*ConvertVertexPtr)(size_t dst_index, size_t src_index);
 
-	DrawingKickPtr m_dk[8], m_dkf;
+	VertexKickPtr m_vk[8], m_vkf;
 	ConvertVertexPtr m_cv[8][2][2], m_cvf; // [PRIM][TME][FST]
 
 	#define InitConvertVertex2(T, P) \
@@ -160,10 +160,8 @@ protected:
 
 	void GrowVertexBuffer();
 
-	void VertexKick(uint32 skip);
-	
 	template<uint32 prim> 
-	void DrawingKick(uint32 skip);
+	void VertexKick(uint32 skip);
 
 	// following functions need m_vt to be initialized
 

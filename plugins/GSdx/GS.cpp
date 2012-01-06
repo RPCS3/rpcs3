@@ -884,6 +884,7 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 
 
 		/*
+		vector<uint8> buff;
 		bool exit = false;
 
 		int round = 0;

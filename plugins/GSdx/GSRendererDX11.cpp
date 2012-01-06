@@ -39,10 +39,13 @@ bool GSRendererDX11::CreateDevice(GSDevice* dev)
 }
 
 template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererDX11::ConvertVertex(GSVertexHW11* RESTRICT vertex, size_t index)
+void GSRendererDX11::ConvertVertex(size_t dst_index, size_t src_index)
 {
-	GSVector4i v0(m_v.m[0]);
-	GSVector4i v1(m_v.m[1]);
+	GSVertex* s = (GSVertex*)((GSVertexHW11*)m_vertex.buff + src_index);
+	GSVertexHW11* d = (GSVertexHW11*)m_vertex.buff + dst_index;
+
+	GSVector4i v0 = ((GSVector4i*)s)[0];
+	GSVector4i v1 = ((GSVector4i*)s)[1];
 
 	if(tme && fst)
 	{
@@ -51,17 +54,8 @@ void GSRendererDX11::ConvertVertex(GSVertexHW11* RESTRICT vertex, size_t index)
 		v0 = GSVector4i::cast(GSVector4(v1.uph16()).xyzw(GSVector4::cast(v0))); // uv => st
 	}
 
-	GSVector4i* RESTRICT dst = (GSVector4i*)&vertex[index];
-
-	dst[0] = v0;
-	dst[1] = v1;
-}
-
-void GSRendererDX11::Draw()
-{
-	// TODO: remove invisible prims here
-
-	__super::Draw();
+	((GSVector4i*)d)[0] = v0;
+	((GSVector4i*)d)[1] = v1;
 }
 
 void GSRendererDX11::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
