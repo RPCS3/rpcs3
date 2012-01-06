@@ -1992,7 +1992,7 @@ GSOffset::~GSOffset()
 {
 }
 
-uint32* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
+uint32* GSOffset::GetPages(const GSVector4i& rect, uint32* pages, GSVector4i* bbox)
 {
 	GSVector2i bs = (bp & 31) == 0 ? GSLocalMemory::m_psm[psm].pgs : GSLocalMemory::m_psm[psm].bs;
 
@@ -2006,9 +2006,14 @@ uint32* GSOffset::GetPages(const GSVector4i& rect, GSVector4i* bbox)
 
 	int size = r.width() * r.height();
 	
-	int limit = std::min<int>((size >> ((bp & 31) != 0 ? 6 : 11)) + 2, MAX_PAGES) + 1;
+	int limit = MAX_PAGES + 1;
 
-	uint32* pages = new uint32[limit];
+	if(pages == NULL)
+	{
+		limit = std::min<int>((size >> ((bp & 31) != 0 ? 6 : 11)) + 2, MAX_PAGES) + 1;
+
+		pages = new uint32[limit];
+	}
 
 	__aligned(uint32, 16) tmp[16];
 

@@ -490,13 +490,15 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 {
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM);
 
-	uint32* pages = o->GetPages(r);
+	uint32* RESTRICT p = m_tmp_pages;
+	
+	o->GetPages(r, p);
 
-	m_tc->InvalidatePages(pages, o->psm);
+	m_tc->InvalidatePages(p, o->psm);
 
 	// check if the changing pages either used as a texture or a target
 
-	for(const uint32* p = pages; *p != GSOffset::EOP; p++)
+	for(; *p != GSOffset::EOP; p++)
 	{
 		uint32 page = *p;
 		
@@ -509,17 +511,17 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 			break;
 		}
 	}
-
-	delete [] pages;
 }
 
 void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut)
 {
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM);
 
-	uint32* pages = o->GetPages(r);
+	uint32* RESTRICT p = m_tmp_pages;
+	
+	o->GetPages(r, p);
 
-	for(const uint32* p = pages; *p != GSOffset::EOP; p++)
+	for(; *p != GSOffset::EOP; p++)
 	{
 		//while(m_fzb_pages[*p]) _mm_pause();
 
@@ -530,8 +532,6 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 			break;
 		}
 	}
-
-	delete [] pages;
 }
 
 void GSRendererSW::UsePages(const uint32* pages, int type)

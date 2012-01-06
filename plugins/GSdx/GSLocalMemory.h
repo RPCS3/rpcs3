@@ -53,7 +53,7 @@ public:
 
 	enum {EOP = 0xffffffff};
 
-	uint32* GetPages(const GSVector4i& rect, GSVector4i* bbox = NULL);
+	uint32* GetPages(const GSVector4i& rect, uint32* pages = NULL, GSVector4i* bbox = NULL);
 };
 
 struct GSPixelOffset4

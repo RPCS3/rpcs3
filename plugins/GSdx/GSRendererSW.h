@@ -52,6 +52,7 @@ protected:
 	GSPixelOffset4* m_fzb;
 	uint32 m_fzb_pages[512]; // uint16 frame/zbuf pages interleaved
 	uint16 m_tex_pages[512];
+	uint32 m_tmp_pages[512 + 1];
 
 	void Reset();
 	void VSync(int field);
