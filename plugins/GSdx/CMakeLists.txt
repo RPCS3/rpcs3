@@ -28,22 +28,24 @@ set(OptimizationFlags
     )
 
 if(projectSDL)
-    add_definitions(-DENABLE_SDL_DEV)
+    set(SDLFlags -DENABLE_SDL_DEV)
+else(projectSDL)
+    set(SDLFlags "")
 endif(projectSDL)
 
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-    add_definitions(${CommonFlags} -DOGL_DEBUG -g -Wall)
+    add_definitions(${CommonFlags} ${SDLFlags} -DOGL_DEBUG -g -Wall)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
-    add_definitions(${CommonFlags} ${OptimizationFlags} -g -W)
+    add_definitions(${CommonFlags} ${SDLFlags} ${OptimizationFlags} -g -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
-    add_definitions(${CommonFlags} ${OptimizationFlags} -W)
+    add_definitions(${CommonFlags} ${SDLFlags} ${OptimizationFlags} -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 set(GSdxSources

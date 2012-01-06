@@ -27,6 +27,8 @@ GSRenderer::GSRenderer()
 	, m_vt(this)
 	, m_dev(NULL)
 	, m_shader(0)
+	, m_shift_key(false)
+	, m_control_key(false)
 {
 	m_GStitleInfoBuffer[0] = 0;
 
@@ -407,6 +409,10 @@ void GSRenderer::VSync(int field)
 
 		shift = !!(::GetAsyncKeyState(VK_SHIFT) & 0x8000);
 
+		#else
+
+		shift = m_shift_key;
+
 		#endif
 
 		if(!m_dump && shift)
@@ -439,6 +445,10 @@ void GSRenderer::VSync(int field)
             #ifdef _WINDOWS
 
             control = !!(::GetAsyncKeyState(VK_CONTROL) & 0x8000);
+
+			#else
+
+			control = m_control_key;
 
             #endif
 
@@ -500,9 +510,9 @@ void GSRenderer::EndCapture()
 
 void GSRenderer::KeyEvent(GSKeyEventData* e)
 {
+#ifdef _WINDOWS
 	if(e->type == KEYPRESS)
 	{
-	    #ifdef _WINDOWS
 
 		int step = (::GetAsyncKeyState(VK_SHIFT) & 0x8000) ? -1 : 1;
 
@@ -534,12 +544,63 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			return;
 		}
 
-		#else
-
-		// TODO: linux
-
-		#endif
 	}
+#else
+	if(e->type == KEYPRESS)
+	{
+		int step = m_shift_key ? -1 : 1;
+
+		switch(e->key)
+		{
+		case XK_F5:
+			m_interlace = (m_interlace + 7 + step) % 7;
+			fprintf(stderr, "GSdx: Set deinterlace mode to %d (%s).\n", (int)m_interlace, theApp.m_gs_interlace.at(m_interlace).name.c_str());
+			return;
+		case XK_F6:
+			if( m_wnd.IsManaged() )
+				m_aspectratio = (m_aspectratio + 3 + step) % 3;
+			return;
+		case XK_F7:
+			m_shader = (m_shader + 3 + step) % 3;
+			fprintf(stderr,"GSdx: Set shader %d.\n", (int)m_shader);
+			return;
+		case XK_Delete:
+			m_aa1 = !m_aa1;
+			fprintf(stderr,"GSdx: (Software) aa1 is now %s.\n", m_aa1 ? "enabled" : "disabled");
+			return;
+		case XK_Insert:
+			m_mipmap = !m_mipmap;
+			fprintf(stderr,"GSdx: (Software) mipmapping is now %s.\n", m_mipmap ? "enabled" : "disabled");
+			return;
+		case XK_Prior:
+			m_fxaa = !m_fxaa;
+			fprintf(stderr,"GSdx: fxaa is now %s.\n", m_fxaa ? "enabled" : "disabled");
+			return;
+		case XK_Shift_L:
+		case XK_Shift_R:
+			m_shift_key = true;
+			return;
+		case XK_Control_L:
+		case XK_Control_R:
+			m_control_key = true;
+			return;
+		}
+
+	} else if(e->type == KEYRELEASE)
+	{
+		switch(e->key)
+		{
+			case XK_Shift_L:
+			case XK_Shift_R:
+				m_shift_key = false;
+				return;
+			case XK_Control_L:
+			case XK_Control_R:
+				m_control_key = false;
+				return;
+		}
+	}
+#endif
 }
 
 void GSRenderer::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFRegCLAMP& CLAMP, bool linear)
