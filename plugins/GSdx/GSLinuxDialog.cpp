@@ -47,7 +47,7 @@ bool RunLinuxDialog()
 	GtkWidget *render_label, *render_combo_box;
 	GtkWidget *interlace_label, *interlace_combo_box;
 	GtkWidget *swthreads_label, *swthreads_text;
-	GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check, *win_check, *msaa_check;
+	GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check, *win_check, *msaa_check, *native_res_check;
 	int return_value;
 
 	/* Create the widgets */
@@ -134,7 +134,8 @@ bool RunLinuxDialog()
 	aa_check = gtk_check_button_new_with_label("Edge anti-aliasing");
 	win_check = gtk_check_button_new_with_label("Disable Effects Processing");
 	msaa_check = gtk_check_button_new_with_label("Enable MultiSample AA (not yet implemented)");
-
+	native_res_check = gtk_check_button_new_with_label("Native Resolution");
+	
 	gtk_container_add(GTK_CONTAINER(main_box), filter_check);
 	gtk_container_add(GTK_CONTAINER(main_box), logz_check);
 	gtk_container_add(GTK_CONTAINER(main_box), paltex_check);
@@ -142,6 +143,7 @@ bool RunLinuxDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), aa_check);
 	gtk_container_add(GTK_CONTAINER(main_box), win_check);
 	gtk_container_add(GTK_CONTAINER(main_box), msaa_check);
+	gtk_container_add(GTK_CONTAINER(main_box), native_res_check);
 
 	// Filter should be 3 states, not 2.
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(filter_check), theApp.GetConfig("filter", 1));
@@ -151,6 +153,7 @@ bool RunLinuxDialog()
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(aa_check), theApp.GetConfig("aa1", 0));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(win_check), theApp.GetConfig("windowed", 1));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(msaa_check), theApp.GetConfig("msaa", 0));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(native_res_check), theApp.GetConfig("nativeres", 0));
 
 	gtk_container_add (GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_frame);
 	gtk_widget_show_all (dialog);
@@ -159,6 +162,13 @@ bool RunLinuxDialog()
 
 	if (return_value == GTK_RESPONSE_ACCEPT)
 	{
+		int mode_height = 0, mode_width = 0;
+		
+		mode_width = theApp.GetConfig("ModeWidth", 640);
+		mode_height = theApp.GetConfig("ModeHeight", 480);
+		theApp.SetConfig("ModeHeight", mode_height);
+		theApp.SetConfig("ModeWidth", mode_width);
+		
 		// Get all the settings from the dialog box.
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box)) != -1) {
 			// FIXME test current opengl version supported through glxinfo (OpenGL version string:)
@@ -180,13 +190,14 @@ bool RunLinuxDialog()
 
 		theApp.SetConfig("extrathreads", atoi((char*)gtk_entry_get_text(GTK_ENTRY(swthreads_text))) );
 
-        theApp.SetConfig("filter", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(filter_check)));
-        theApp.SetConfig("logz", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(logz_check)));
-        theApp.SetConfig("paltex", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(paltex_check)));
-        theApp.SetConfig("fba", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fba_check)));
-        theApp.SetConfig("aa1", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(aa_check)));
-        theApp.SetConfig("windowed", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win_check)));
-        theApp.SetConfig("msaa", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(msaa_check)));
+		theApp.SetConfig("filter", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(filter_check)));
+		theApp.SetConfig("logz", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(logz_check)));
+		theApp.SetConfig("paltex", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(paltex_check)));
+		theApp.SetConfig("fba", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fba_check)));
+		theApp.SetConfig("aa1", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(aa_check)));
+		theApp.SetConfig("windowed", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(win_check)));
+		theApp.SetConfig("msaa", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(msaa_check)));
+		theApp.SetConfig("nativeres", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(native_res_check)));
 
 		gtk_widget_destroy (dialog);
 

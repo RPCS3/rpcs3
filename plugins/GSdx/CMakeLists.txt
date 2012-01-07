@@ -205,6 +205,13 @@ if(projectSDL)
     target_link_libraries(${Replay} ${SDL_LIBRARY})
 endif(projectSDL)
 
+target_link_libraries(${Static} ${OPENGL_LIBRARIES})
+target_link_libraries(${Static} ${X11_LIBRARIES})
+target_link_libraries(${Static} ${GLEW_LIBRARY})
+target_link_libraries(${Static} ${GTK2_LIBRARIES})
+if(projectSDL)
+    target_link_libraries(${Static} ${SDL_LIBRARY})
+endif(projectSDL)
 
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
     target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
