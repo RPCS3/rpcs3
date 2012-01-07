@@ -21,7 +21,7 @@ namespace YAML
 		friend class NodeBuilder;
 		friend class NodeEvents;
 		friend class detail::node_data;
-		template<typename, typename, typename> friend class detail::iterator_base;
+		template<typename> friend class detail::iterator_base;
 		
 		Node();
 		explicit Node(NodeType::value type);

@@ -23,7 +23,7 @@ namespace YAML
 
 		template<typename Key>
 		struct get_idx<Key, typename boost::enable_if<boost::is_unsigned<Key> >::type> {
-			static node *get(const std::vector<node *>& sequence, const Key& key, shared_memory_holder pMemory) {
+			static node *get(const std::vector<node *>& sequence, const Key& key, shared_memory_holder /* pMemory */) {
 				return key < sequence.size() ? sequence[key] : 0;
 			}
 

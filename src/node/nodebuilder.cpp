@@ -31,21 +31,21 @@ namespace YAML
 	{
 	}
 	
-	void NodeBuilder::OnNull(const Mark& mark, anchor_t anchor)
+	void NodeBuilder::OnNull(const Mark& /* mark */, anchor_t anchor)
 	{
 		detail::node& node = Push(anchor);
 		node.set_null();
 		Pop();
 	}
 	
-	void NodeBuilder::OnAlias(const Mark& /*mark*/, anchor_t anchor)
+	void NodeBuilder::OnAlias(const Mark& /* mark */, anchor_t anchor)
 	{
 		detail::node& node = *m_anchors[anchor];
 		Push(node);
 		Pop();
 	}
 	
-	void NodeBuilder::OnScalar(const Mark& mark, const std::string& tag, anchor_t anchor, const std::string& value)
+	void NodeBuilder::OnScalar(const Mark& /* mark */, const std::string& tag, anchor_t anchor, const std::string& value)
 	{
 		detail::node& node = Push(anchor);
 		node.set_scalar(value);
@@ -53,7 +53,7 @@ namespace YAML
 		Pop();
 	}
 	
-	void NodeBuilder::OnSequenceStart(const Mark& mark, const std::string& tag, anchor_t anchor)
+	void NodeBuilder::OnSequenceStart(const Mark& /* mark */, const std::string& tag, anchor_t anchor)
 	{
 		detail::node& node = Push(anchor);
 		node.set_tag(tag);
@@ -65,7 +65,7 @@ namespace YAML
 		Pop();
 	}
 	
-	void NodeBuilder::OnMapStart(const Mark& mark, const std::string& tag, anchor_t anchor)
+	void NodeBuilder::OnMapStart(const Mark& /* mark */, const std::string& tag, anchor_t anchor)
 	{
 		detail::node& node = Push(anchor);
 		node.set_type(NodeType::Map);

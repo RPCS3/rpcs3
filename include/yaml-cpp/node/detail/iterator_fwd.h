@@ -16,7 +16,7 @@ namespace YAML
 	class node;
 	
 	namespace detail {
-		class iterator_value;
+		struct iterator_value;
 		template<typename V> class iterator_base;
 	}
 
