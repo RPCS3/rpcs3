@@ -117,7 +117,9 @@ GtkWidget* CreateMsaaComboBox()
 GtkWidget *render_combo_box;
 GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check,  *native_res_check;
 GtkWidget *msaa_combo_box, *resx_spin, *resy_spin;
-		
+
+GtkWidget *hack_alpha_check, *hack_offset_check, *hack_skidraw_spin;
+
 void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 {
 	int render_type;
@@ -178,6 +180,8 @@ bool RunLinuxDialog()
 	GtkWidget *hw_table, *res_frame, *hw_frame, *sw_frame;
 	GtkWidget *interlace_combo_box, *threads_spin;
 	GtkWidget *interlace_label, *threads_label, *native_label,  *msaa_label, *rexy_label, *render_label;
+	
+	GtkWidget *hack_skipdraw_label, *hack_box, *hack_frame;
 	int return_value;
 	
 	GdkPixbuf* logo_pixmap;
@@ -214,10 +218,14 @@ bool RunLinuxDialog()
 	sw_frame = gtk_frame_new ("Software Mode Settings");
 	gtk_container_add(GTK_CONTAINER(sw_frame), sw_box);
 	
+	// The hack frame and container.
+	hack_box = gtk_hbox_new(false, 5);
+	hack_frame = gtk_frame_new ("Hacks");
+	gtk_container_add(GTK_CONTAINER(hack_frame), hack_box);
+	
 	// Grab a logo, to make things look nice.
 	logo_pixmap = gdk_pixbuf_from_pixdata(&gsdx_ogl_logo, false, NULL);
 	logo_image = gtk_image_new_from_pixbuf(logo_pixmap);
-	//gtk_container_add(GTK_CONTAINER(main_box), logo_image);
 	gtk_box_pack_start(GTK_BOX(main_box), logo_image, true, true, 0);
 	
 	// Create the renderer combo box and label, and stash them in a box.
@@ -266,6 +274,17 @@ bool RunLinuxDialog()
 	gtk_box_pack_start(GTK_BOX(resxy_box), resx_spin, false, false, 5);
 	gtk_box_pack_start(GTK_BOX(resxy_box), resy_spin, false, false, 5);
 	
+	// Create our hack settings.
+	hack_alpha_check = gtk_check_button_new_with_label("Alpha Hack");
+	hack_offset_check = gtk_check_button_new_with_label("Offset Hack");
+	hack_skipdraw_label = gtk_label_new("Skipdraw:");
+	hack_skidraw_spin = gtk_spin_button_new_with_range(0,1000,1);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(hack_skidraw_spin), theApp.GetConfig("UserHacks_SkipDraw", 0));
+	gtk_box_pack_start(GTK_BOX(hack_box), hack_alpha_check, false, false, 5);
+	gtk_box_pack_start(GTK_BOX(hack_box), hack_offset_check, false, false, 5);
+	gtk_box_pack_start(GTK_BOX(hack_box), hack_skipdraw_label, false, false, 5);
+	gtk_box_pack_start(GTK_BOX(hack_box), hack_skidraw_spin, false, false, 0);
+	
 	// Create our checkboxes.
 	filter_check = gtk_check_button_new_with_label("Texture Filtering");
 	logz_check = gtk_check_button_new_with_label("Logarithmic Z");
@@ -281,6 +300,9 @@ bool RunLinuxDialog()
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fba_check), theApp.GetConfig("fba", 1));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(aa_check), theApp.GetConfig("aa1", 0));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(native_res_check), theApp.GetConfig("nativeres", 0));
+	
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_alpha_check), theApp.GetConfig("UserHacks_AlphaHack", 0));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_offset_check), theApp.GetConfig("UserHacks_HalfPixelOffset", 0));
 	
 	// Populate all those boxes we created earlier with widgets.
 	gtk_container_add(GTK_CONTAINER(res_box), native_box);
@@ -302,6 +324,11 @@ bool RunLinuxDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), res_frame);
 	gtk_container_add(GTK_CONTAINER(main_box), hw_frame);
 	gtk_container_add(GTK_CONTAINER(main_box), sw_frame);
+	
+	if (!!theApp.GetConfig("allowHacks", 0))
+	{
+		gtk_container_add(GTK_CONTAINER(main_box), hack_frame);
+	}
 
 	g_signal_connect(render_combo_box, "changed", G_CALLBACK(toggle_widget_states), NULL);
 	g_signal_connect(msaa_combo_box, "changed", G_CALLBACK(toggle_widget_states), NULL);
@@ -351,6 +378,10 @@ bool RunLinuxDialog()
 		theApp.SetConfig("msaa", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(msaa_combo_box)));
 		theApp.SetConfig("resx", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(resx_spin)));
 		theApp.SetConfig("resy", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(resy_spin)));
+		
+		theApp.SetConfig("UserHacks_SkipDraw", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(hack_skidraw_spin)));
+		theApp.SetConfig("UserHacks_HalfPixelOffset", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_offset_check)));
+		theApp.SetConfig("UserHacks_AlphaHack", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_alpha_check)));
 		
 		// Let's just be windowed for the moment.
 		theApp.SetConfig("windowed", 1);
