@@ -96,6 +96,23 @@ GtkWidget* CreateInterlaceComboBox()
 	return interlace_combo_box;
 }
 
+GtkWidget* CreateMsaaComboBox()
+{
+	GtkWidget  *msaa_combo_box;
+	msaa_combo_box = gtk_combo_box_new_text ();
+	
+	// For now, let's just put in the same vaues that show up in the windows combo box.
+	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "Custom");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "2x");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "3x");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "4x");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "5x");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "6x");
+
+	gtk_combo_box_set_active(GTK_COMBO_BOX(msaa_combo_box), theApp.GetConfig("msaa", 0));
+	return msaa_combo_box;
+}
+
 bool RunLinuxDialog()
 {
 	GtkWidget *dialog;
@@ -105,7 +122,8 @@ bool RunLinuxDialog()
 	GtkWidget *render_label, *render_combo_box;
 	GtkWidget *interlace_label, *interlace_combo_box;
 	GtkWidget *threads_label, *threads_spin;
-	GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check,  *native_res_check, *native_label, *native_box;
+	GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check,  *native_res_check;
+	GtkWidget *native_label, *native_box, *msaa_label, *msaa_combo_box, *msaa_box, *rexy_label, *resx_spin, *resy_spin, *resxy_box;
 	GtkWidget *hw_table, *renderer_box, *interlace_box, *threads_box;
 	int return_value;
 
@@ -170,6 +188,23 @@ bool RunLinuxDialog()
 	gtk_box_pack_start(GTK_BOX(native_box), native_label, false, false, 5);
 	gtk_box_pack_start(GTK_BOX(native_box), native_res_check, false, false, 5);
 	
+	msaa_label = gtk_label_new("Or Use Scaling (broken):");
+	msaa_combo_box = CreateMsaaComboBox();
+	msaa_box = gtk_hbox_new(false, 5);
+	gtk_box_pack_start(GTK_BOX(msaa_box), msaa_label, false, false, 5);
+	gtk_box_pack_start(GTK_BOX(msaa_box), msaa_combo_box, false, false, 5);
+	
+	rexy_label = gtk_label_new("Custom Resolution:");
+	resx_spin = gtk_spin_button_new_with_range(256,8192,1);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(resx_spin), theApp.GetConfig("resx", 1024));
+	resy_spin = gtk_spin_button_new_with_range(256,8192,1);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(resy_spin), theApp.GetConfig("resy", 1024));
+	resxy_box = gtk_hbox_new(false, 5);
+	gtk_box_pack_start(GTK_BOX(resxy_box), rexy_label, false, false, 5);
+	gtk_box_pack_start(GTK_BOX(resxy_box), resx_spin, false, false, 5);
+	gtk_box_pack_start(GTK_BOX(resxy_box), resy_spin, false, false, 5);
+	
+	
 	// Create our checkboxes.
 	filter_check = gtk_check_button_new_with_label("Texture Filtering");
 	logz_check = gtk_check_button_new_with_label("Logarithmic Z");
@@ -188,6 +223,8 @@ bool RunLinuxDialog()
 	
 	// Populate all those boxes we created earlier with widgets.
 	gtk_container_add(GTK_CONTAINER(res_box), native_box);
+	gtk_container_add(GTK_CONTAINER(res_box), msaa_box);
+	gtk_container_add(GTK_CONTAINER(res_box), resxy_box);
 	
 	gtk_container_add(GTK_CONTAINER(sw_box), threads_box);
 	gtk_container_add(GTK_CONTAINER(sw_box), aa_check);
@@ -235,7 +272,7 @@ bool RunLinuxDialog()
 		}
 
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box)) != -1)
-			theApp.SetConfig( "interlace", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box)) );
+			theApp.SetConfig( "interlace", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(interlace_combo_box)));
 
 		theApp.SetConfig("extrathreads", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(threads_spin)));
 
@@ -246,9 +283,12 @@ bool RunLinuxDialog()
 		theApp.SetConfig("aa1", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(aa_check)));
 		theApp.SetConfig("nativeres", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(native_res_check)));
 		
-		//These aren't actually shown in the windows version, so I'll take them out of the dialog for the moment.
+		theApp.SetConfig("msaa", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(msaa_combo_box)));
+		theApp.SetConfig("resx", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(resx_spin)));
+		theApp.SetConfig("resy", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(resy_spin)));
+		
+		// Let's just be windowed for the moment.
 		theApp.SetConfig("windowed", 1);
-		theApp.SetConfig("msaa", 0);
 
 		gtk_widget_destroy (dialog);
 
