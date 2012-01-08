@@ -22,6 +22,7 @@
 #include "stdafx.h"
 #include <gtk/gtk.h>
 #include "GSdx.h"
+#include "GSLinuxLogo.h"
 
 static void SysMessage(const char *fmt, ...)
 {
@@ -178,7 +179,10 @@ bool RunLinuxDialog()
 	GtkWidget *interlace_combo_box, *threads_spin;
 	GtkWidget *interlace_label, *threads_label, *native_label,  *msaa_label, *rexy_label, *render_label;
 	int return_value;
-
+	
+	GdkPixbuf* logo_pixmap;
+	GtkWidget *logo_image;
+	
 	/* Create the widgets */
 	dialog = gtk_dialog_new_with_buttons (
 		"GSdx Config",
@@ -209,6 +213,12 @@ bool RunLinuxDialog()
 	sw_box = gtk_vbox_new(false, 5);
 	sw_frame = gtk_frame_new ("Software Mode Settings");
 	gtk_container_add(GTK_CONTAINER(sw_frame), sw_box);
+	
+	// Grab a logo, to make things look nice.
+	logo_pixmap = gdk_pixbuf_from_pixdata(&gsdx_ogl_logo, false, NULL);
+	logo_image = gtk_image_new_from_pixbuf(logo_pixmap);
+	//gtk_container_add(GTK_CONTAINER(main_box), logo_image);
+	gtk_box_pack_start(GTK_BOX(main_box), logo_image, true, true, 0);
 	
 	// Create the renderer combo box and label, and stash them in a box.
 	render_label = gtk_label_new ("Renderer:");

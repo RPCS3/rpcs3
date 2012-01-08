@@ -146,6 +146,7 @@ set(GSdxHeaders
     GSDrawingEnvironment.h
     GSDump.h
     GSFunctionMap.h
+    GSLinuxLogo.h
     GSLocalMemory.h
     GSPerfMon.h
     GSRasterizer.h
