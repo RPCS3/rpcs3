@@ -113,18 +113,70 @@ GtkWidget* CreateMsaaComboBox()
 	return msaa_combo_box;
 }
 
+GtkWidget *render_combo_box;
+GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check,  *native_res_check;
+GtkWidget *msaa_combo_box, *resx_spin, *resy_spin;
+		
+void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
+{
+	int render_type;
+	bool hardware_render = false, software_render = false, sdl_render = false, null_render = false;
+	
+	render_type = gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box));
+	hardware_render = (render_type == 1 || render_type == 4 || render_type == 7 || render_type == 13);
+	
+	if (hardware_render)
+	{
+		gtk_widget_set_sensitive(filter_check, true);
+		gtk_widget_set_sensitive(logz_check, true);
+		gtk_widget_set_sensitive(paltex_check, true);
+		gtk_widget_set_sensitive(fba_check, true);
+		gtk_widget_set_sensitive(native_res_check, true);
+		
+		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(native_res_check)))
+		{
+			gtk_widget_set_sensitive(msaa_combo_box, false);
+			gtk_widget_set_sensitive(resx_spin, false);
+			gtk_widget_set_sensitive(resy_spin, false);
+		}
+		else
+		{
+			gtk_widget_set_sensitive(msaa_combo_box, true);
+			
+			if (gtk_combo_box_get_active(GTK_COMBO_BOX(msaa_combo_box)) == 0)
+			{
+				gtk_widget_set_sensitive(resx_spin, true);
+				gtk_widget_set_sensitive(resy_spin, true);
+			}
+			else
+			{
+				gtk_widget_set_sensitive(resx_spin, false);
+				gtk_widget_set_sensitive(resy_spin, false);
+			}
+		}
+	}
+	else
+	{
+		gtk_widget_set_sensitive(filter_check, false);
+		gtk_widget_set_sensitive(logz_check, false);
+		gtk_widget_set_sensitive(paltex_check, false);
+		gtk_widget_set_sensitive(fba_check, false);
+		
+		gtk_widget_set_sensitive(native_res_check, false);
+		gtk_widget_set_sensitive(msaa_combo_box, false);
+		gtk_widget_set_sensitive(resx_spin, false);
+		gtk_widget_set_sensitive(resy_spin, false);
+	}
+}
+
 bool RunLinuxDialog()
 {
 	GtkWidget *dialog;
-	
 	GtkWidget *main_box, *res_box, *hw_box, *sw_box;
-	GtkWidget *res_frame, *hw_frame, *sw_frame;
-	GtkWidget *render_label, *render_combo_box;
-	GtkWidget *interlace_label, *interlace_combo_box;
-	GtkWidget *threads_label, *threads_spin;
-	GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check,  *native_res_check;
-	GtkWidget *native_label, *native_box, *msaa_label, *msaa_combo_box, *msaa_box, *rexy_label, *resx_spin, *resy_spin, *resxy_box;
-	GtkWidget *hw_table, *renderer_box, *interlace_box, *threads_box;
+	GtkWidget  *native_box, *msaa_box, *resxy_box, *renderer_box, *interlace_box, *threads_box;
+	GtkWidget *hw_table, *res_frame, *hw_frame, *sw_frame;
+	GtkWidget *interlace_combo_box, *threads_spin;
+	GtkWidget *interlace_label, *threads_label, *native_label,  *msaa_label, *rexy_label, *render_label;
 	int return_value;
 
 	/* Create the widgets */
@@ -204,13 +256,12 @@ bool RunLinuxDialog()
 	gtk_box_pack_start(GTK_BOX(resxy_box), resx_spin, false, false, 5);
 	gtk_box_pack_start(GTK_BOX(resxy_box), resy_spin, false, false, 5);
 	
-	
 	// Create our checkboxes.
 	filter_check = gtk_check_button_new_with_label("Texture Filtering");
 	logz_check = gtk_check_button_new_with_label("Logarithmic Z");
 	paltex_check = gtk_check_button_new_with_label("Allow 8 bit textures");
 	fba_check = gtk_check_button_new_with_label("Alpha correction (FBA)");
-	aa_check = gtk_check_button_new_with_label("Edge anti-aliasing");
+	aa_check = gtk_check_button_new_with_label("Edge anti-aliasing (AA1)");
 	
 	// Set the checkboxes.
 	// Filter should have 3 states, not 2.
@@ -242,9 +293,13 @@ bool RunLinuxDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), hw_frame);
 	gtk_container_add(GTK_CONTAINER(main_box), sw_frame);
 
+	g_signal_connect(render_combo_box, "changed", G_CALLBACK(toggle_widget_states), NULL);
+	g_signal_connect(msaa_combo_box, "changed", G_CALLBACK(toggle_widget_states), NULL);
+	g_signal_connect(native_res_check, "toggled", G_CALLBACK(toggle_widget_states), NULL);
 	// Put the box in the dialog and show it to the world.
 	gtk_container_add (GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_box);
 	gtk_widget_show_all (dialog);
+	toggle_widget_states(NULL, NULL);
 	return_value = gtk_dialog_run (GTK_DIALOG (dialog));
 
 	if (return_value == GTK_RESPONSE_ACCEPT)
