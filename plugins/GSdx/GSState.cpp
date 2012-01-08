@@ -2133,15 +2133,15 @@ void GSState::GrowVertexBuffer()
 	}
 
 	m_vertex.buff = vertex;
-	m_vertex.maxcount = maxcount - 100; // -100 because skipped vertices don't trigger growing the vertex buffer (VertexKick should be as fast as possible)
+	m_vertex.maxcount = maxcount - 3; // -3 to have some space at the end of the buffer before DrawingKick can grow it
 	m_index.buff = index;
 }
-
-static GSVector4i s_zw_sign = GSVector4i::x80000000().sll<8>();
 
 template<uint32 prim> 
 __forceinline void GSState::VertexKick(uint32 skip)
 {
+	ASSERT(m_vertex.tail < m_vertex.maxcount);
+
 	size_t head = m_vertex.head;
 	size_t tail = m_vertex.tail;
 	size_t next = m_vertex.next;
@@ -2260,13 +2260,14 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		case GS_TRIANGLELIST:
 		case GS_SPRITE:
 		case GS_INVALID: 
-			m_vertex.tail = head; 
+			m_vertex.tail = head; // no need to check or grow the buffer length
 			break;
 		case GS_LINESTRIP:
 		case GS_TRIANGLESTRIP:
 			m_vertex.head = head + 1;
-			break;
+			// fall through
 		case GS_TRIANGLEFAN:
+			if(tail >= m_vertex.maxcount) GrowVertexBuffer(); // in case too many vertices were skipped
 			break;
 		default: 
 			__assume(0);
@@ -2275,10 +2276,7 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		return;
 	}
 
-	if(tail >= m_vertex.maxcount)
-	{
-		GrowVertexBuffer();
-	}
+	if(tail >= m_vertex.maxcount) GrowVertexBuffer();
 
 	uint32* RESTRICT buff = &m_index.buff[m_index.tail];
 

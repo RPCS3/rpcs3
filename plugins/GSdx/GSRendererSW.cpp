@@ -808,19 +808,19 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				{
 					// skip per pixel division if q is constant
 
-					GSVertexSW* RESTRICT v = (GSVertexSW*)m_vertex.buff;// data->vertex;
+					GSVertexSW* RESTRICT v = (GSVertexSW*)m_vertex.buff;
 
 					if(m_vt->m_eq.q)
 					{
 						gd.sel.fst = 1;
 
-						const GSVector4& t = v[m_index.buff[0]].t; // v[data->index[0]].t;
+						const GSVector4& t = v[m_index.buff[0]].t;
 
 						if(t.z != 1.0f)
 						{
 							GSVector4 w = t.zzzz().rcpnr();
 
-							for(int i = 0, j = m_vertex.next/*data->vertex_count*/; i < j; i++)
+							for(int i = 0, j = m_vertex.next; i < j; i++)
 							{
 								GSVector4 t = v[i].t;
 
@@ -832,7 +832,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 					{
 						gd.sel.fst = 1;
 
-						for(int i = 0, j = m_vertex.next/*data->vertex_count*/; i < j; i += 2)
+						for(int i = 0, j = m_vertex.next; i < j; i += 2)
 						{
 							GSVector4 t0 = v[i + 0].t;
 							GSVector4 t1 = v[i + 1].t;
@@ -853,9 +853,9 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 					GSVector4 half(0x8000, 0x8000);
 
-					GSVertexSW* RESTRICT v = (GSVertexSW*)m_vertex.buff;// data->vertex;
+					GSVertexSW* RESTRICT v = (GSVertexSW*)m_vertex.buff;
 
-					for(int i = 0, j = m_vertex.next/*data->vertex_count*/; i < j; i++)
+					for(int i = 0, j = m_vertex.next; i < j; i++)
 					{
 						GSVector4 t = v[i].t;
 
