@@ -24,6 +24,12 @@
 #include "GSdx.h"
 #include "GSLinuxLogo.h"
 
+GtkWidget *msaa_combo_box, *render_combo_box, *filter_combo_box;
+GtkWidget *logz_check, *paltex_check, *fba_check, *aa_check,  *native_res_check;
+GtkWidget *resx_spin, *resy_spin;
+
+GtkWidget *hack_alpha_check, *hack_offset_check, *hack_skidraw_spin;
+
 static void SysMessage(const char *fmt, ...)
 {
 	va_list list;
@@ -79,8 +85,8 @@ GtkWidget* CreateRenderComboBox()
 
 GtkWidget* CreateInterlaceComboBox()
 {
-	GtkWidget  *interlace_combo_box;
-	interlace_combo_box = gtk_combo_box_new_text ();
+	GtkWidget  *combo_box;
+	combo_box = gtk_combo_box_new_text ();
 
 	for(size_t i = 0; i < theApp.m_gs_interlace.size(); i++)
 	{
@@ -90,35 +96,42 @@ GtkWidget* CreateInterlaceComboBox()
 
 		if(!s.note.empty()) label += format(" (%s)", s.note.c_str());
 
-		gtk_combo_box_append_text(GTK_COMBO_BOX(interlace_combo_box), label.c_str());
+		gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), label.c_str());
 	}
 
-	gtk_combo_box_set_active(GTK_COMBO_BOX(interlace_combo_box), theApp.GetConfig("interlace", 0));
-	return interlace_combo_box;
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo_box), theApp.GetConfig("interlace", 0));
+	return combo_box;
 }
 
 GtkWidget* CreateMsaaComboBox()
 {
-	GtkWidget  *msaa_combo_box;
-	msaa_combo_box = gtk_combo_box_new_text ();
+	GtkWidget  *combo_box;
+	combo_box = gtk_combo_box_new_text ();
 	
 	// For now, let's just put in the same vaues that show up in the windows combo box.
-	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "Custom");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "2x");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "3x");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "4x");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "5x");
-	gtk_combo_box_append_text(GTK_COMBO_BOX(msaa_combo_box), "6x");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "Custom");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "2x");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "3x");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "4x");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "5x");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "6x");
 
-	gtk_combo_box_set_active(GTK_COMBO_BOX(msaa_combo_box), theApp.GetConfig("msaa", 0));
-	return msaa_combo_box;
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo_box), theApp.GetConfig("msaa", 0));
+	return combo_box;
 }
 
-GtkWidget *render_combo_box;
-GtkWidget *filter_check, *logz_check, *paltex_check, *fba_check, *aa_check,  *native_res_check;
-GtkWidget *msaa_combo_box, *resx_spin, *resy_spin;
+GtkWidget* CreateFilterComboBox()
+{
+	GtkWidget  *combo_box;
+	combo_box = gtk_combo_box_new_text ();
+	
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "Off");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "Normal");
+	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "Forced");
 
-GtkWidget *hack_alpha_check, *hack_offset_check, *hack_skidraw_spin;
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo_box), theApp.GetConfig("filter", 0));
+	return combo_box;
+}
 
 void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 {
@@ -130,7 +143,7 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 	
 	if (hardware_render)
 	{
-		gtk_widget_set_sensitive(filter_check, true);
+		gtk_widget_set_sensitive(filter_combo_box, true);
 		gtk_widget_set_sensitive(logz_check, true);
 		gtk_widget_set_sensitive(paltex_check, true);
 		gtk_widget_set_sensitive(fba_check, true);
@@ -160,7 +173,7 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 	}
 	else
 	{
-		gtk_widget_set_sensitive(filter_check, false);
+		gtk_widget_set_sensitive(filter_combo_box, false);
 		gtk_widget_set_sensitive(logz_check, false);
 		gtk_widget_set_sensitive(paltex_check, false);
 		gtk_widget_set_sensitive(fba_check, false);
@@ -176,10 +189,10 @@ bool RunLinuxDialog()
 {
 	GtkWidget *dialog;
 	GtkWidget *main_box, *res_box, *hw_box, *sw_box;
-	GtkWidget  *native_box, *msaa_box, *resxy_box, *renderer_box, *interlace_box, *threads_box;
+	GtkWidget  *native_box, *msaa_box, *resxy_box, *renderer_box, *interlace_box, *threads_box, *filter_box;
 	GtkWidget *hw_table, *res_frame, *hw_frame, *sw_frame;
 	GtkWidget *interlace_combo_box, *threads_spin;
-	GtkWidget *interlace_label, *threads_label, *native_label,  *msaa_label, *rexy_label, *render_label;
+	GtkWidget *interlace_label, *threads_label, *native_label,  *msaa_label, *rexy_label, *render_label, *filter_label;
 	
 	GtkWidget *hack_skipdraw_label, *hack_box, *hack_frame;
 	int return_value;
@@ -243,6 +256,13 @@ bool RunLinuxDialog()
 	gtk_box_pack_start(GTK_BOX(interlace_box), interlace_label, false, false, 5);
 	gtk_box_pack_start(GTK_BOX(interlace_box), interlace_combo_box, false, false, 5);
 
+	// Create the filter combo box.
+	filter_label = gtk_label_new ("Texture Filtering:");
+	filter_combo_box = CreateFilterComboBox();
+	filter_box = gtk_hbox_new(false, 5);
+	gtk_box_pack_start(GTK_BOX(filter_box), filter_label, false, false, 5);
+	gtk_box_pack_start(GTK_BOX(filter_box), filter_combo_box, false, false, 0);
+	
 	// Create the threading spin box and label, and stash them in a box. (Yes, we do a lot of that.)
 	threads_label = gtk_label_new("Extra rendering threads:");
 	threads_spin = gtk_spin_button_new_with_range(0,100,1);
@@ -286,15 +306,12 @@ bool RunLinuxDialog()
 	gtk_box_pack_start(GTK_BOX(hack_box), hack_skidraw_spin, false, false, 0);
 	
 	// Create our checkboxes.
-	filter_check = gtk_check_button_new_with_label("Texture Filtering");
 	logz_check = gtk_check_button_new_with_label("Logarithmic Z");
 	paltex_check = gtk_check_button_new_with_label("Allow 8 bit textures");
 	fba_check = gtk_check_button_new_with_label("Alpha correction (FBA)");
 	aa_check = gtk_check_button_new_with_label("Edge anti-aliasing (AA1)");
 	
 	// Set the checkboxes.
-	// Filter should have 3 states, not 2.
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(filter_check), theApp.GetConfig("filter", 1));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(logz_check), theApp.GetConfig("logz", 1));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(paltex_check), theApp.GetConfig("paltex", 0));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fba_check), theApp.GetConfig("fba", 1));
@@ -313,7 +330,7 @@ bool RunLinuxDialog()
 	gtk_container_add(GTK_CONTAINER(sw_box), aa_check);
 	
 	// Tables are strange. The numbers are for their position: left, right, top, bottom.
-	gtk_table_attach_defaults(GTK_TABLE(hw_table), filter_check, 0, 1, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(hw_table), filter_box, 0, 1, 0, 1);
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), logz_check, 1, 2, 0, 1);
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), paltex_check, 0, 1, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), fba_check, 1, 2, 1, 2);
@@ -368,7 +385,7 @@ bool RunLinuxDialog()
 
 		theApp.SetConfig("extrathreads", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(threads_spin)));
 
-		theApp.SetConfig("filter", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(filter_check)));
+		theApp.SetConfig("filter", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(filter_combo_box)));
 		theApp.SetConfig("logz", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(logz_check)));
 		theApp.SetConfig("paltex", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(paltex_check)));
 		theApp.SetConfig("fba", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fba_check)));
