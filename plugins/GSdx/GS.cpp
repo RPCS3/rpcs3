@@ -1205,13 +1205,14 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 			packets.push_back(p);
 		}
 
-		sleep(10);
+		sleep(1);
 		// FIXME too slow :p
 		// sleep(100);
 
 		//while(IsWindowVisible(hWnd))
 		//FIXME map?
-		while(true)
+		bool finished = false;
+		while(!finished)
 		{
 			for(auto i = packets.begin(); i != packets.end(); i++)
 			{
@@ -1252,6 +1253,9 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 					break;
 				}
 			}
+
+			sleep(5);
+			finished = true;
 		}
 
 		for(auto i = packets.begin(); i != packets.end(); i++)
@@ -1261,7 +1265,7 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 
 		packets.clear();
 
-		sleep(100);
+		sleep(1);
 
 		GSclose();
 		GSshutdown();

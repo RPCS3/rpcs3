@@ -25,23 +25,13 @@
 static int g_state_texture_unit = -1;
 static int g_state_texture_id = -1;
 
-GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
+GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint fbo_read)
 	: m_extra_buffer_id(0),
 	  m_pbo_size(0)
 {
 	// *************************************************************
 	// Opengl world
 
-	// http://www.opengl.org/wiki/Renderbuffer_Object
-	// render:	constructor -> glGenRenderbuffers, glDeleteRenderbuffers
-	//			info		-> glGetRenderbufferParameteriv, glIsRenderbuffer
-	//		    binding		-> glBindRenderbuffer (only 1 target), glFramebufferRenderbuffer (attach actually)
-	//			setup param -> glRenderbufferStorageMultisample (after this call the buffer is unitialized)
-	//
-	// the only way to use a renderbuffer object is to attach it to a Framebuffer Object. After you bind that
-	// FBO to the context, and set up the draw or read buffers appropriately, you can use pixel transfer operations
-	// to read and write to it. Of course, you can also render to it. The standard glClear function will also clear the appropriate buffer.
-	//
 	// Render work in parallal with framebuffer object (FBO) http://www.opengl.org/wiki/Framebuffer_Objects
 	// render are attached to FBO through : glFramebufferRenderbuffer. You can query the number of colorattachement with GL_MAX_COLOR_ATTACHMENTS
 	// FBO   :  constructor -> glGenFramebuffers, glDeleteFramebuffers
@@ -57,28 +47,13 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format)
 	// glReadBuffer
 	// glBlitFramebuffer
 
-	// TODO: we can render directly into a texture so I'm not sure rendertarget are useful anymore !!!
 	// *************************************************************
 	m_size.x = w;
 	m_size.y = h;
 	m_format = format;
 	m_type   = type;
 	m_msaa   = msaa;
-
-	// == Then generate the texture or buffer.
-	// D3D11_BIND_RENDER_TARGET: Bind a texture as a render target for the output-merger stage.
-	//		=> glGenRenderbuffers with GL_COLOR_ATTACHMENTi (Hum glGenTextures might work too)
-	// D3D11_BIND_DEPTH_STENCIL: Bind a texture as a depth-stencil target for the output-merger stage.
-	//		=> glGenRenderbuffers with GL_DEPTH_STENCIL_ATTACHMENT
-	// D3D11_BIND_SHADER_RESOURCE: Bind a buffer or texture to a shader stage
-	//		=> glGenTextures
-	// D3D11_USAGE_STAGING: A resource that supports data transfer (copy) from the GPU to the CPU.
-	//		glGenTextures
-	//		glReadPixels seems to use a framebuffer. In this case you can setup the source
-	//		with glReadBuffer(GL_COLOR_ATTACHMENTi)
-	//		glGetTexImage: read pixels of a bound texture
-	//		=> To allow map/unmap. I think we can use a pixel buffer (target GL_PIXEL_UNPACK_BUFFER)
-	//		http://www.opengl.org/wiki/Pixel_Buffer_Objects
+	m_fbo_read = fbo_read;
 
 	// Generate the buffer
 	switch (m_type) {
@@ -396,8 +371,15 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 		EnableUnit(1);
 		glGetTexImage(m_texture_target, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, image);
 	} else {
-		EnableUnit(0);
-		glGetTexImage(m_texture_target, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
+
+		EnableUnit(1);
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, m_texture_target, m_texture_id, 0);
+
+		glReadBuffer(GL_COLOR_ATTACHMENT1);
+		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	}
 
 	Save(fn, image, pitch);

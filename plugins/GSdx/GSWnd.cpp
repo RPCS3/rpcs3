@@ -572,7 +572,7 @@ GSVector4i GSWnd::GetClientRect()
 
 bool GSWnd::SetWindowText(const char* title)
 {
-#if ENABLE_SDL_DEV
+#ifdef ENABLE_SDL_DEV
 	if (!m_managed) return true;
 
 	// Do not find anyway to check the current fullscreen status

@@ -30,9 +30,10 @@ class GSTextureOGL : public GSTexture
 		GLuint m_texture_id;	 // the texture id
 		uint m_extra_buffer_id;
 		int m_pbo_size;
+		GLuint m_fbo_read;
 
 	public:
-		explicit GSTextureOGL(int type, int w, int h, bool msaa, int format);
+		explicit GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint fbo_read);
 		virtual ~GSTextureOGL();
 
 		bool Update(const GSVector4i& r, const void* data, int pitch);

@@ -45,22 +45,16 @@
 //GL EXT:     recompiling and managing multiple shaders, while still retaining most of
 //GL EXT:     the performance of specialized shaders.
 //
-// ************************** Uniform buffer
-// // Note don't know how to chose block_binding_point (probably managed like texture unit
-// maybe any number will be fine)
-// index=glGetUniformBlockIndex(program, "BlockName");
-// glBindBufferBase(GL_UNIFORM_BUFFER, block_binding_point, some_buffer_object);
-// glUniformBlockBinding(program, block_index, block_binding_point);
 
-//#define LOUD_DEBUGGING
+#define LOUD_DEBUGGING
 #define SHADER_DEBUG
-//#define DUMP_START (70)
-//#define DUMP_LENGTH (130)
+#define DUMP_START (500)
+#define DUMP_LENGTH (5)
 //#define PRINT_FRAME_NUMBER
 //#define ONLY_LINES
 
 // It seems dual blending does not work on AMD !!!
-//#define DISABLE_DUAL_BLEND
+#define DISABLE_DUAL_BLEND
 
 #ifdef DUMP_START
 static uint32 g_draw_count = 0;
@@ -73,13 +67,14 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_window(NULL)
 	  , m_pipeline(0)
 	  , m_fbo(0)
+	  , m_fbo_read(0)
 	  , m_vb_sr(NULL)
 	  , m_srv_changed(false)
 	  , m_ss_changed(false)
 {
 	m_msaa = theApp.GetConfig("msaa", 0);
 
-	memset(&m_merge, 0, sizeof(m_merge));
+	memset(&m_merge_obj, 0, sizeof(m_merge_obj));
 	memset(&m_interlace, 0, sizeof(m_interlace));
 	memset(&m_convert, 0, sizeof(m_convert));
 	memset(&m_date, 0, sizeof(m_date));
@@ -91,11 +86,11 @@ GSDeviceOGL::~GSDeviceOGL()
 	// Clean vertex buffer state
 	delete (m_vb_sr);
 
-	// Clean m_merge
+	// Clean m_merge_obj
 	for (uint i = 0; i < 2; i++)
-		glDeleteProgram(m_merge.ps[i]);
-	delete (m_merge.cb);
-	delete (m_merge.bs);
+		glDeleteProgram(m_merge_obj.ps[i]);
+	delete (m_merge_obj.cb);
+	delete (m_merge_obj.bs);
 	
 	// Clean m_interlace
 	for (uint i = 0; i < 2; i++)
@@ -118,6 +113,7 @@ GSDeviceOGL::~GSDeviceOGL()
 	// Clean various opengl allocation
 	glDeleteProgramPipelines(1, &m_pipeline);
 	glDeleteFramebuffers(1, &m_fbo);
+	glDeleteFramebuffers(1, &m_fbo_read);
 
 	// Delete HW FX
 	delete m_vs_cb;
@@ -141,7 +137,7 @@ GSTexture* GSDeviceOGL::CreateSurface(int type, int w, int h, bool msaa, int for
 {
 	// A wrapper to call GSTextureOGL, with the different kind of parameter
 	GSTextureOGL* t = NULL;
-	t = new GSTextureOGL(type, w, h, msaa, format);
+	t = new GSTextureOGL(type, w, h, msaa, format, m_fbo_read);
 
 	switch(type)
 	{
@@ -234,6 +230,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	glBindProgramPipeline(m_pipeline);
 
 	glGenFramebuffers(1, &m_fbo);
+	glGenFramebuffers(1, &m_fbo_read);
 	// Setup FBO fragment output
 	// OMSetFBO(m_fbo);
 	// glDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -312,14 +309,14 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// merge
 	// ****************************************************************
-	m_merge.cb = new GSUniformBufferOGL(1, sizeof(MergeConstantBuffer));
+	m_merge_obj.cb = new GSUniformBufferOGL(1, sizeof(MergeConstantBuffer));
 
-	for(int i = 0; i < countof(m_merge.ps); i++)
-		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge.ps[i]);
+	for(int i = 0; i < countof(m_merge_obj.ps); i++)
+		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge_obj.ps[i]);
 
-	m_merge.bs = new GSBlendStateOGL();
-	m_merge.bs->EnableBlend();
-	m_merge.bs->SetRGB(GL_FUNC_ADD, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	m_merge_obj.bs = new GSBlendStateOGL();
+	m_merge_obj.bs->EnableBlend();
+	m_merge_obj.bs->SetRGB(GL_FUNC_ADD, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	// ****************************************************************
 	// interlace
@@ -508,7 +505,7 @@ bool GSDeviceOGL::Reset(int w, int h)
 	// Opengl allocate the backbuffer with the window. The render is done in the backbuffer when
 	// there isn't any FBO. Only a dummy texture is created to easily detect when the rendering is done
 	// in the backbuffer
-	m_backbuffer = new GSTextureOGL(GSTextureOGL::Backbuffer, w, h, false, 0);
+	m_backbuffer = new GSTextureOGL(GSTextureOGL::Backbuffer, w, h, false, 0, m_fbo_read);
 
 	return true;
 }
@@ -542,7 +539,8 @@ void GSDeviceOGL::DrawPrimitive()
 				m_state.ps_srv[i]->Save(format("/tmp/in_%d__%d.bmp", g_draw_count, i));
 			}
 		}
-		if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_in_%d.bmp", g_draw_count));
+		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/in_current_out_%d.bmp", g_draw_count));
+		//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_in_%d.bmp", g_draw_count));
 
 		fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
 		fprintf(stderr, "vs: %d ; gs: %d ; ps: %d\n", m_state.vs, m_state.gs, m_state.ps);
@@ -558,7 +556,7 @@ void GSDeviceOGL::DrawPrimitive()
 #ifdef DUMP_START
 	if ( dump_me ) {
 		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_%d.bmp", g_draw_count));
-		if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
+		//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
 
 		fprintf(stderr, "\n");
 
@@ -849,15 +847,15 @@ void GSDeviceOGL::DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVect
 
 	if(st[1] && !slbg)
 	{
-		StretchRect(st[1], sr[1], dt, dr[1], m_merge.ps[0]);
+		StretchRect(st[1], sr[1], dt, dr[1], m_merge_obj.ps[0]);
 	}
 
 	if(st[0])
 	{
-		SetUniformBuffer(m_merge.cb);
-		m_merge.cb->upload(&c.v);
+		SetUniformBuffer(m_merge_obj.cb);
+		m_merge_obj.cb->upload(&c.v);
 
-		StretchRect(st[0], sr[0], dt, dr[0], m_merge.ps[mmod ? 1 : 0], m_merge.bs);
+		StretchRect(st[0], sr[0], dt, dr[0], m_merge_obj.ps[mmod ? 1 : 0], m_merge_obj.bs);
 	}
 }
 

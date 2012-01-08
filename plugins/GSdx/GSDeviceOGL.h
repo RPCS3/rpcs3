@@ -41,6 +41,7 @@ class GSBlendStateOGL {
 	bool   m_g_msk;
 	bool   m_a_msk;
 	bool   constant_factor;
+	float  debug_factor;
 
 public:
 
@@ -55,7 +56,7 @@ public:
 		, m_b_msk(GL_TRUE)
 		, m_g_msk(GL_TRUE)
 		, m_a_msk(GL_TRUE)
-		, constant_factor(true)
+		, constant_factor(false)
 	{}
 
 	void SetRGB(GLenum op, GLenum src, GLenum dst)
@@ -100,7 +101,10 @@ public:
 
 		if (m_enable) {
 			glEnable(GL_BLEND);
-			if (HasConstantFactor()) glBlendColor(factor, factor, factor, 0);
+			if (HasConstantFactor()) {
+				debug_factor = factor;
+				glBlendColor(factor, factor, factor, 0);
+			}
 
 			glBlendEquationSeparate(m_equation_RGB, m_equation_ALPHA);
 			glBlendFuncSeparate(m_func_sRGB, m_func_dRGB, m_func_sALPHA, m_func_dALPHA);
@@ -135,6 +139,7 @@ public:
 	{
 		if (!m_enable) return;
 		fprintf(stderr,"Blend op: %s; src:%s; dst:%s\n", NameOfParam(m_equation_RGB), NameOfParam(m_func_sRGB), NameOfParam(m_func_dRGB));
+		if (HasConstantFactor()) fprintf(stderr, "Blend constant: %f\n", debug_factor);
 		fprintf(stderr,"Mask. R:%d B:%d G:%d A:%d\n", m_r_msk, m_b_msk, m_g_msk, m_a_msk);
 	}
 };
@@ -315,10 +320,12 @@ public:
 
 	void upload(const void* src, uint32 count)
 	{
+#ifdef OGL_DEBUG
 		GLint b_size = -1;
 		glGetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
 		
 		if (b_size <= 0) return;
+#endif
 		
 		m_count = count;
 
@@ -345,10 +352,12 @@ public:
 		
 		// Upload the data to the buffer
 		uint8* dst = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
+#ifdef OGL_DEBUG
 		if (dst == NULL) {
 			fprintf(stderr, "CRITICAL ERROR map failed for vb!!!\n");
 			return;
 		}
+#endif
 		memcpy(dst, src, m_stride*m_count);
 		glUnmapBuffer(m_target);
 	}
@@ -412,7 +421,7 @@ public:
 				topo = "triangle strip";
 				break;
 		}
-		fprintf(stderr, "%d elements of %s\n", element, topo.c_str());
+		fprintf(stderr, "%d primitives of %s\n", element, topo.c_str());
 
 	}
 };
@@ -661,6 +670,7 @@ class GSDeviceOGL : public GSDevice
 
 	GLuint m_pipeline;			// pipeline to attach program shader
 	GLuint m_fbo;				// frame buffer container
+	GLuint m_fbo_read;			// frame buffer container only for reading
 
 	GSVertexBufferStateOGL* m_vb;	  // vb_state for HW renderer
 	GSVertexBufferStateOGL* m_vb_sr; // vb_state for StretchRect
@@ -669,7 +679,7 @@ class GSDeviceOGL : public GSDevice
 		GLuint ps[2];				 // program object
 		GSUniformBufferOGL* cb;		 // uniform buffer object
 		GSBlendStateOGL* bs;
-	} m_merge;
+	} m_merge_obj;
 
 	struct {
 		GLuint ps[4];				// program object
