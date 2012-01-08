@@ -35,6 +35,7 @@ GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* pe
 	, m_id(id)
 	, m_threads(threads)
 	, m_perfmon(perfmon)
+	, m_pixels(0)
 {
 	m_edge.buff = (GSVertexSW*)vmalloc(sizeof(GSVertexSW) * 2048, false);
 	m_edge.count = 0;
@@ -98,16 +99,28 @@ int GSRasterizer::FindMyNextScanline(int top) const
 
 void GSRasterizer::Queue(shared_ptr<GSRasterizerData> data)
 {
-	Draw(data);
+	Draw(data.get());
 }
 
-void GSRasterizer::Draw(shared_ptr<GSRasterizerData> data)
+int GSRasterizer::GetPixels(bool reset) 
+{
+	int pixels = m_pixels;
+	
+	if(reset)
+	{
+		m_pixels = 0;
+	}
+
+	return pixels;
+}
+
+void GSRasterizer::Draw(GSRasterizerData* data)
 {
 	GSPerfMonAutoTimer pmat(m_perfmon, GSPerfMon::WorkerDraw0 + m_id);
 
 	if(data->vertex != NULL && data->vertex_count == 0 || data->index != NULL && data->index_count == 0) return;
 
-	m_ds->BeginDraw(data->param);
+	m_ds->BeginDraw(data);
 
 	const GSVertexSW* vertex = data->vertex;
 	const GSVertexSW* vertex_end = data->vertex + data->vertex_count;
@@ -122,8 +135,6 @@ void GSRasterizer::Draw(shared_ptr<GSRasterizerData> data)
 	m_scissor = data->scissor;
 	m_fscissor_x = GSVector4(data->scissor).xzxz();
 	m_fscissor_y = GSVector4(data->scissor).ywyw();
-
-	m_pixels = 0;
 
 	uint64 start = __rdtsc();
 
@@ -192,9 +203,6 @@ void GSRasterizer::Draw(shared_ptr<GSRasterizerData> data)
 	}
 
 	uint64 ticks = __rdtsc() - start;
-
-	_InterlockedExchangeAdd(&data->ticks, (long)ticks);
-	_InterlockedExchangeAdd(&data->pixels, m_pixels);
 
 	m_ds->EndDraw(data->frame, ticks, m_pixels);
 }
@@ -907,6 +915,18 @@ void GSRasterizerList::Sync()
 	m_sync_count++;
 }
 
+int GSRasterizerList::GetPixels(bool reset) 
+{
+	int pixels = 0;
+	
+	for(size_t i = 0; i < m_workers.size(); i++)
+	{
+		pixels += m_workers[i]->GetPixels(reset);
+	}
+
+	return pixels;
+}
+
 void GSRasterizerList::Process(shared_ptr<GSRasterizerData>& item)
 {
 	if(item->solidrect)
@@ -945,6 +965,11 @@ GSRasterizerList::GSWorker::~GSWorker()
 	delete m_r;
 }
 
+int GSRasterizerList::GSWorker::GetPixels(bool reset)
+{
+	return m_r->GetPixels(reset);
+}
+
 void GSRasterizerList::GSWorker::Push(const shared_ptr<GSRasterizerData>& item) 
 {
 	GSVector4i r = item->bbox.rintersect(item->scissor);
@@ -957,5 +982,5 @@ void GSRasterizerList::GSWorker::Push(const shared_ptr<GSRasterizerData>& item)
 
 void GSRasterizerList::GSWorker::Process(shared_ptr<GSRasterizerData>& item) 
 {
-	m_r->Draw(item);
+	m_r->Draw(item.get());
 }

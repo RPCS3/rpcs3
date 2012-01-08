@@ -37,7 +37,7 @@ __aligned(struct, 32) GSVertex
 			GIFRegST ST;
 			GIFRegRGBAQ RGBAQ;
 			GIFRegXYZ XYZ;
-			union {GIFRegUV UV; GIFRegFOG FOG;}; // UV.u32[0] | FOG.u32[1]
+			uint32 UV, FOG;
 		};
 
 		__m128i m[2];

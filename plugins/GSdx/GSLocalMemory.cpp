@@ -1301,13 +1301,13 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 {
 	if(len <= 0) return;
 
-	uint8* pb = (uint8*)dst;
-	uint16* pw = (uint16*)dst;
-	uint32* pd = (uint32*)dst;
+	uint8* RESTRICT pb = (uint8*)dst;
+	uint16* RESTRICT pw = (uint16*)dst;
+	uint32* RESTRICT pd = (uint32*)dst;
 
 	uint32 bp = BITBLTBUF.SBP;
 	uint32 bw = BITBLTBUF.SBW;
-	psm_t* psm = &m_psm[BITBLTBUF.SPSM];
+	psm_t* RESTRICT psm = &m_psm[BITBLTBUF.SPSM];
 
 	int x = tx;
 	int y = ty;
@@ -1319,16 +1319,26 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 	case PSM_PSMCT32:
 	case PSM_PSMZ32:
 
+		// MGS1 intro, fade effect between two scenes (airplane outside-inside transition)
+
 		len /= 4;
 
 		while(len > 0)
 		{
-			uint32 addr = psm->pa(0, y, bp, bw);
-			int* offset = psm->rowOffset[y & 7];
+			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint32* RESTRICT ps = &m_vm32[psm->pa(0, y, bp, bw)];
+
+			for(int ex4 = ex - 4; len >= 4 && x <= ex4; len -= 4, x += 4, pd += 4)
+			{
+				pd[0] = ps[offset[x + 0]];
+				pd[1] = ps[offset[x + 1]];
+				pd[2] = ps[offset[x + 2]];
+				pd[3] = ps[offset[x + 3]];
+			}
 
 			for(; len > 0 && x < ex; len--, x++, pd++)
 			{
-				*pd = ReadPixel32(addr + offset[x]);
+				*pd = ps[offset[x]];
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1343,16 +1353,16 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 
 		while(len > 0)
 		{
-			uint32 addr = psm->pa(0, y, bp, bw);
-			int* offset = psm->rowOffset[y & 7];
+			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint32* RESTRICT ps = &m_vm32[psm->pa(0, y, bp, bw)];
 
 			for(; len > 0 && x < ex; len--, x++, pb += 3)
 			{
-				uint32 c = ReadPixel32(addr + offset[x]);
+				uint32 c = ps[offset[x]];
 
-				pb[0] = ((uint8*)&c)[0];
-				pb[1] = ((uint8*)&c)[1];
-				pb[2] = ((uint8*)&c)[2];
+				pb[0] = (uint8)(c);
+				pb[1] = (uint8)(c >> 8);
+				pb[2] = (uint8)(c >> 16);
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1369,12 +1379,20 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 
 		while(len > 0)
 		{
-			uint32 addr = psm->pa(0, y, bp, bw);
-			int* offset = psm->rowOffset[y & 7];
+			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint16* RESTRICT ps = &m_vm16[psm->pa(0, y, bp, bw)];
+
+			for(int ex4 = ex - 4; len >= 4 && x <= ex4; len -= 4, x += 4, pw += 4)
+			{
+				pw[0] = ps[offset[x + 0]];
+				pw[1] = ps[offset[x + 1]];
+				pw[2] = ps[offset[x + 2]];
+				pw[3] = ps[offset[x + 3]];
+			}
 
 			for(; len > 0 && x < ex; len--, x++, pw++)
 			{
-				*pw = ReadPixel16(addr + offset[x]);
+				*pw = ps[offset[x]];
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1386,12 +1404,20 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 
 		while(len > 0)
 		{
-			uint32 addr = psm->pa(0, y, bp, bw);
-			int* offset = psm->rowOffset[y & 7];
+			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint8* RESTRICT ps = &m_vm8[psm->pa(0, y, bp, bw)];
+
+			for(int ex4 = ex - 4; len >= 4 && x <= ex4; len -= 4, x += 4, pb += 4)
+			{
+				pb[0] = ps[offset[x + 0]];
+				pb[1] = ps[offset[x + 1]];
+				pb[2] = ps[offset[x + 2]];
+				pb[3] = ps[offset[x + 3]];
+			}
 
 			for(; len > 0 && x < ex; len--, x++, pb++)
 			{
-				*pb = ReadPixel8(addr + offset[x]);
+				*pb = ps[offset[x]];
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1404,7 +1430,7 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 		while(len > 0)
 		{
 			uint32 addr = psm->pa(0, y, bp, bw);
-			int* offset = psm->rowOffset[y & 7];
+			int* RESTRICT offset = psm->rowOffset[y & 7];
 
 			for(; len > 0 && x < ex; len--, x += 2, pb++)
 			{
@@ -1420,12 +1446,20 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 
 		while(len > 0)
 		{
-			uint32 addr = psm->pa(0, y, bp, bw);
-			int* offset = psm->rowOffset[y & 7];
+			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint32* RESTRICT ps = &m_vm32[psm->pa(0, y, bp, bw)];
+
+			for(int ex4 = ex - 4; len >= 4 && x <= ex4; len -= 4, x += 4, pb += 4)
+			{
+				pb[0] = (uint8)(ps[offset[x + 0]] >> 24);
+				pb[1] = (uint8)(ps[offset[x + 1]] >> 24);
+				pb[2] = (uint8)(ps[offset[x + 2]] >> 24);
+				pb[3] = (uint8)(ps[offset[x + 3]] >> 24);
+			}
 
 			for(; len > 0 && x < ex; len--, x++, pb++)
 			{
-				*pb = ReadPixel8H(addr + offset[x]);
+				*pb = (uint8)(ps[offset[x]] >> 24);
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1437,12 +1471,15 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 
 		while(len > 0)
 		{
-			uint32 addr = psm->pa(0, y, bp, bw);
 			int* offset = psm->rowOffset[y & 7];
+			uint32* RESTRICT ps = &m_vm32[psm->pa(0, y, bp, bw)];
 
 			for(; len > 0 && x < ex; len--, x += 2, pb++)
 			{
-				*pb = ReadPixel4HL(addr + offset[x + 0]) | (ReadPixel4HL(addr + offset[x + 1]) << 4);
+				uint32 c0 = (ps[offset[x + 0]] >> 24) & 0x0f;
+				uint32 c1 = (ps[offset[x + 1]] >> 20) & 0xf0;
+
+				*pb = (uint8)(c0 | c1);
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1454,12 +1491,15 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 
 		while(len > 0)
 		{
-			uint32 addr = psm->pa(0, y, bp, bw);
-			int* offset = psm->rowOffset[y & 7];
+			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint32* RESTRICT ps = &m_vm32[psm->pa(0, y, bp, bw)];
 
 			for(; len > 0 && x < ex; len--, x += 2, pb++)
 			{
-				*pb = ReadPixel4HH(addr + offset[x + 0]) | (ReadPixel4HH(addr + offset[x + 1]) << 4);
+				uint32 c0 = (ps[offset[x + 0]] >> 28) & 0x0f;
+				uint32 c1 = (ps[offset[x + 1]] >> 24) & 0xf0;
+
+				*pb = (uint8)(c0 | c1);
 			}
 
 			if(x == ex) {x = sx; y++;}

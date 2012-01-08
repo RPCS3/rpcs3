@@ -1021,7 +1021,6 @@ REG128_(GIFPacked, XYZF2)
 	uint16 _PAD1;
 	uint16 Y;
 	uint16 _PAD2;
-
 	uint32 _PAD3:4;
 	uint32 Z:24;
 	uint32 _PAD4:4;
@@ -1097,19 +1096,24 @@ __aligned(struct, 32) GIFPath
 		GSVector4i::store<true>(&tag, v);
 		reg = 0;
 		regs = v.uph8(v >> 4) & 0x0f0f0f0f;
-		nreg = tag.NREG;
+		nreg = tag.NREG ? tag.NREG : 16;
 		nloop = tag.NLOOP;
-		adonly = nreg == 1 && regs.u8[0] == GIF_REG_A_D;
+		adonly = regs.eq8(GSVector4i(0x0e0e0e0e)).mask() == (1 << nreg) - 1;
 	}
 
 	__forceinline uint8 GetReg()
 	{
-		return regs.u8[reg]; // GET_GIF_REG(tag, reg);
+		return regs.u8[reg];
+	}
+
+	__forceinline uint8 GetReg(uint32 index)
+	{
+		return regs.u8[index];
 	}
 
 	__forceinline bool StepReg()
 	{
-		if((++reg & 0xf) == nreg)
+		if(++reg == nreg)
 		{
 			reg = 0;
 

@@ -36,9 +36,9 @@ GSDrawScanline::~GSDrawScanline()
 {
 }
 
-void GSDrawScanline::BeginDraw(const void* param)
+void GSDrawScanline::BeginDraw(const GSRasterizerData* data)
 {
-	memcpy(&m_global, param, sizeof(m_global));
+	memcpy(&m_global, &((const SharedData*)data)->global, sizeof(m_global));
 
 	if(m_global.sel.mmin && m_global.sel.lcm)
 	{
@@ -101,6 +101,8 @@ void GSDrawScanline::EndDraw(uint64 frame, uint64 ticks, int pixels)
 }
 
 #ifndef ENABLE_JIT_RASTERIZER
+
+// FIXME: something's not right with the sky in burnout 3
 
 void GSDrawScanline::SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dscan)
 {

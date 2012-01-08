@@ -27,17 +27,17 @@
 
 class GSRendererSW : public GSRenderer
 {
-	class GSRasterizerData2 : public GSRasterizerData
+	class SharedData : public GSDrawScanline::SharedData
 	{
 		GSRendererSW* m_parent;
 		const uint32* m_fb_pages;
 		const uint32* m_zb_pages;
-		const uint32* m_tex_pages[7];
+		const uint32* m_tex_pages[7 + 1]; // NULL terminated
 		bool m_using_pages;
 
 	public:
-		GSRasterizerData2(GSRendererSW* parent);
-		virtual ~GSRasterizerData2();
+		SharedData(GSRendererSW* parent);
+		virtual ~SharedData();
 
 		void UseTargetPages(const uint32* fb_pages, const uint32* zb_pages);
 		void UseSourcePages(GSTextureCacheSW::Texture* t, int level);
@@ -67,19 +67,10 @@ protected:
 	void UsePages(const uint32* pages, int type);
 	void ReleasePages(const uint32* pages, int type);
 
-	bool GetScanlineGlobalData(GSRasterizerData2* data2);
-
-	typedef size_t (GSState::*ConvertIndexPtr)(uint32* RESTRICT dst, const uint32* RESTRICT src, int count);
-
-	ConvertIndexPtr m_ci[8], m_cif;
+	bool GetScanlineGlobalData(SharedData* data);
 
 	template<uint32 prim, uint32 tme, uint32 fst> 
 	void ConvertVertex(size_t dst_index, size_t src_index);
-
-	template<uint32 prim>
-	size_t ConvertIndex(uint32* RESTRICT dst, const uint32* RESTRICT src, int count);
-
-	void UpdateVertexKick();
 
 public:
 	GSRendererSW(int threads);

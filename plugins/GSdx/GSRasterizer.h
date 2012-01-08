@@ -42,12 +42,6 @@ public:
 	bool solidrect;
 	bool syncpoint;
 	uint64 frame;
-	void* param;
-
-	// drawing stats
-
-	volatile long ticks;
-	volatile long pixels;
 
 	GSRasterizerData() 
 		: scissor(GSVector4i::zero())
@@ -61,17 +55,12 @@ public:
 		, solidrect(false)
 		, syncpoint(false)
 		, frame(0)
-		, param(NULL)
-		, ticks(0)
-		, pixels(0)
 	{
 	}
 
 	virtual ~GSRasterizerData() 
 	{
 		if(buff != NULL) _aligned_free(buff);
-
-		// derived class should free param and its members
 	}
 };
 
@@ -92,7 +81,7 @@ public:
 	IDrawScanline() : m_sp(NULL), m_ds(NULL), m_de(NULL), m_dr(NULL) {}
 	virtual ~IDrawScanline() {}
 
-	virtual void BeginDraw(const void* param) = 0;
+	virtual void BeginDraw(const GSRasterizerData* data) = 0;
 	virtual void EndDraw(uint64 frame, uint64 ticks, int pixels) = 0;
 
 #ifdef ENABLE_JIT_RASTERIZER
@@ -121,6 +110,7 @@ public:
 
 	virtual void Queue(shared_ptr<GSRasterizerData> data) = 0;
 	virtual void Sync() = 0;
+	virtual int GetPixels(bool reset = true) = 0;
 };
 
 __aligned(class, 32) GSRasterizer : public IRasterizer
@@ -160,12 +150,13 @@ public:
 	__forceinline bool IsOneOfMyScanlines(int top, int bottom) const;
 	__forceinline int FindMyNextScanline(int top) const;
 
-	void Draw(shared_ptr<GSRasterizerData> data);
+	void Draw(GSRasterizerData* data);
 
 	// IRasterizer
 
 	void Queue(shared_ptr<GSRasterizerData> data);
 	void Sync() {}
+	int GetPixels(bool reset);
 };
 
 class GSRasterizerList 
@@ -180,6 +171,8 @@ protected:
 	public:
 		GSWorker(GSRasterizer* r);
 		virtual ~GSWorker();
+
+		int GetPixels(bool reset);
 
 		// GSJobQueue
 
@@ -227,4 +220,5 @@ public:
 
 	void Queue(shared_ptr<GSRasterizerData> data);
 	void Sync();
+	int GetPixels(bool reset);
 };

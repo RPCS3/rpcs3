@@ -80,7 +80,7 @@ void GSRendererDX9::ConvertVertex(size_t dst_index, size_t src_index)
 	{
 		if(fst)
 		{
-			t = GSVector4(GSVector4i::load(s->UV.u32[0]).upl16());
+			t = GSVector4(GSVector4i::load(s->UV).upl16());
 		}
 		else
 		{
@@ -88,7 +88,7 @@ void GSRendererDX9::ConvertVertex(size_t dst_index, size_t src_index)
 		}
 	}
 
-	t = t.xyxy(GSVector4::cast(GSVector4i(s->RGBAQ.u32[0], s->FOG.u32[1])));
+	t = t.xyxy(GSVector4::cast(GSVector4i(s->RGBAQ.u32[0], s->FOG)));
 
 	d->p = p;
 	d->t = t;

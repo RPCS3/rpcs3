@@ -618,7 +618,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	}
 
 	output.c = input.c;
-	output.t.z = input.f.a;
+	output.t.z = input.f.r;
 
 	return output;
 }
@@ -765,7 +765,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	}
 
 	output.c = input.c;
-	output.t.z = input.f.a;
+	output.t.z = input.f.b;
 	
 	return output;
 }

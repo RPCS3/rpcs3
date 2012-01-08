@@ -270,22 +270,29 @@ bool GSTextureCacheSW::Texture::Update(const GSVector4i& rect)
 
 	uint8* dst = (uint8*)m_buff + pitch * r.top;
 
+	int block_pitch = pitch * bs.y;
+
+	r = r.srl32(3);
+
+	bs.x >>= 3;
+	bs.y >>= 3;
+
+	shift += 3;
+
 	if(m_repeating)
 	{
-		for(int y = r.top, block_pitch = pitch * bs.y; y < r.bottom; y += bs.y, dst += block_pitch)
+		for(int y = r.top; y < r.bottom; y += bs.y, dst += block_pitch)
 		{
-			uint32 base = o->block.row[y >> 3];
+			uint32 base = o->block.row[y];
 
 			for(int x = r.left, i = (y << 7) + x; x < r.right; x += bs.x, i += bs.x)
 			{
-				uint32 block = base + o->block.col[x >> 3];
+				uint32 block = base + o->block.col[x];
 
 				if(block < MAX_BLOCKS)
 				{
-					uint32 addr = i >> 3;
-
-					uint32 row = addr >> 5;
-					uint32 col = 1 << (addr & 31);
+					uint32 row = i >> 5;
+					uint32 col = 1 << (i & 31);
 
 					if((m_valid[row] & col) == 0)
 					{
@@ -301,13 +308,13 @@ bool GSTextureCacheSW::Texture::Update(const GSVector4i& rect)
 	}
 	else
 	{
-		for(int y = r.top, block_pitch = pitch * bs.y; y < r.bottom; y += bs.y, dst += block_pitch)
+		for(int y = r.top; y < r.bottom; y += bs.y, dst += block_pitch)
 		{
-			uint32 base = o->block.row[y >> 3];
+			uint32 base = o->block.row[y];
 
 			for(int x = r.left; x < r.right; x += bs.x)
 			{
-				uint32 block = base + o->block.col[x >> 3];
+				uint32 block = base + o->block.col[x];
 
 				if(block < MAX_BLOCKS)
 				{

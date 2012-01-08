@@ -69,9 +69,11 @@ GSTexture* GPURendererSW::GetOutput()
 
 void GPURendererSW::Draw()
 {
-	shared_ptr<GSRasterizerData> data(new GPURasterizerData());
+	GPUDrawScanline::SharedData* sd = new GPUDrawScanline::SharedData();
 
-	GPUScanlineGlobalData& gd = *(GPUScanlineGlobalData*)data->param;
+	shared_ptr<GSRasterizerData> data(sd);
+
+	GPUScanlineGlobalData& gd = sd->global;
 
 	const GPUDrawingEnvironment& env = m_env;
 
@@ -169,7 +171,7 @@ void GPURendererSW::Draw()
 
 	m_perfmon.Put(GSPerfMon::Draw, 1);
 	m_perfmon.Put(GSPerfMon::Prim, prims);
-	m_perfmon.Put(GSPerfMon::Fillrate, data->pixels);
+	m_perfmon.Put(GSPerfMon::Fillrate, m_rl->GetPixels());
 }
 
 void GPURendererSW::VertexKick()

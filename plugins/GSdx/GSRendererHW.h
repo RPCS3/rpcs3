@@ -33,7 +33,6 @@ private:
 	int m_height;
 	int m_skip;
 	bool m_reset;
-	bool m_nativeres;
 	int m_upscale_multiplier;
 	int m_userhacks_skipdraw;
 	

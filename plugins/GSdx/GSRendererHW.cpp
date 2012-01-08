@@ -31,7 +31,6 @@ GSRendererHW::GSRendererHW(GSVertexTrace* vt, size_t vertex_stride, GSTextureCac
 	, m_reset(false)
 	, m_upscale_multiplier(1)
 {
-	m_nativeres = !!theApp.GetConfig("nativeres", 0);
 	m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", 1);
 	m_userhacks_skipdraw = theApp.GetConfig("UserHacks_SkipDraw", 0);
 
@@ -52,7 +51,10 @@ GSRendererHW::GSRendererHW(GSVertexTrace* vt, size_t vertex_stride, GSTextureCac
 			m_height = 512 * m_upscale_multiplier; // 448 is also common, but this is not always detected right.
 		}
 	}
-	else m_upscale_multiplier = 1;
+	else
+	{
+		m_upscale_multiplier = 1;
+	}
 }
 
 GSRendererHW::~GSRendererHW()
@@ -172,8 +174,6 @@ void GSRendererHW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 void GSRendererHW::Draw()
 {
 	if(m_dev->IsLost()) return;
-
-	m_vt->Update(m_vertex.buff, m_index.buff, m_index.tail, GSUtil::GetPrimClass(PRIM->PRIM));
 
 	#ifndef DISABLE_CRC_HACKS
 	
@@ -459,8 +459,10 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 
 				t->m_texture->Update(GSVector4i(0, 0, 448, lines), video, 448 * 4);
 
-				memcpy(&m_vertex.buff[m_vertex.stride * 2], &m_vertex.buff[m_vertex.stride * (m_vertex.next - 2)], m_vertex.stride);
-				memcpy(&m_vertex.buff[m_vertex.stride * 3], &m_vertex.buff[m_vertex.stride * (m_vertex.next - 1)], m_vertex.stride);
+				size_t stride = m_vertex.stride;
+
+				memcpy(&m_vertex.buff[stride * 2], &m_vertex.buff[stride * (m_vertex.next - 2)], stride);
+				memcpy(&m_vertex.buff[stride * 3], &m_vertex.buff[stride * (m_vertex.next - 1)], stride);
 
 				m_index.buff[0] = 0;
 				m_index.buff[1] = 1;
