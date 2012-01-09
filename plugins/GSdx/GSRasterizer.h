@@ -67,7 +67,7 @@ public:
 class IDrawScanline : public GSAlignedClass<32>
 {
 public:
-	typedef void (__fastcall *SetupPrimPtr)(const GSVertexSW& vertex, const GSVertexSW& dscan);
+	typedef void (*SetupPrimPtr)(const GSVertexSW* vertex, const uint32* index, const GSVertexSW& dscan);
 	typedef void (__fastcall *DrawScanlinePtr)(int pixels, int left, int top, const GSVertexSW& scan);
 	typedef void (IDrawScanline::*DrawRectPtr)(const GSVector4i& r, const GSVertexSW& v); // TODO: jit
 
@@ -86,14 +86,14 @@ public:
 
 #ifdef ENABLE_JIT_RASTERIZER
 
-	__forceinline void SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dscan) {m_sp(vertex, dscan);}
+	__forceinline void SetupPrim(const GSVertexSW* vertex, const uint32* index, const GSVertexSW& dscan) {m_sp(vertex, index, dscan);}
 	__forceinline void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan) {m_ds(pixels, left, top, scan);}
 	__forceinline void DrawEdge(int pixels, int left, int top, const GSVertexSW& scan) {m_de(pixels, left, top, scan);}
 	__forceinline void DrawRect(const GSVector4i& r, const GSVertexSW& v) {(this->*m_dr)(r, v);}
 
 #else
 
-	virtual void SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dscan) = 0;
+	virtual void SetupPrim(const GSVertexSW* vertex, const uint32* index, const GSVertexSW& dscan) = 0;
 	virtual void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan) = 0;
 	virtual void DrawEdge(int pixels, int left, int top, const GSVertexSW& scan) = 0;
 	virtual void DrawRect(const GSVector4i& r, const GSVertexSW& v) = 0;
@@ -140,7 +140,7 @@ protected:
 	void DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, int orientation, int side);
 
 	__forceinline void AddScanline(GSVertexSW* e, int pixels, int left, int top, const GSVertexSW& scan);
-	__forceinline void Flush(const GSVertexSW& vertex, const GSVertexSW& dscan, bool edge = false);
+	__forceinline void Flush(const GSVertexSW* vertex, const uint32* index, const GSVertexSW& dscan, bool edge = false);
 
 public:
 	GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon);

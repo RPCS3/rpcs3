@@ -104,7 +104,7 @@ void GSDrawScanline::EndDraw(uint64 frame, uint64 ticks, int pixels)
 
 // FIXME: something's not right with the sky in burnout 3
 
-void GSDrawScanline::SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dscan)
+void GSDrawScanline::SetupPrim(const GSVertexSW* vertex, const uint32* index, const GSVertexSW& dscan)
 {
 	GSScanlineSelector sel = m_global.sel;
 
@@ -147,12 +147,12 @@ void GSDrawScanline::SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dscan
 		{
 			if(has_f)
 			{
-				m_local.p.f = GSVector4i(vertex.p).zzzzh().zzzz();
+				m_local.p.f = GSVector4i(vertex[index[1]].p).zzzzh().zzzz();
 			}
 
 			if(has_z)
 			{
-				m_local.p.z = vertex.t.u32[3]; // uint32 z is bypassed in t.w
+				m_local.p.z = vertex[index[1]].t.u32[3]; // uint32 z is bypassed in t.w
 			}
 		}
 	}
@@ -236,7 +236,17 @@ void GSDrawScanline::SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dscan
 		}
 		else
 		{
-			GSVector4i c = GSVector4i(vertex.c);
+			int last = 0;
+			
+			switch(sel.prim)
+			{
+			case GS_POINT_CLASS: last = 0; break;
+			case GS_LINE_CLASS: last = 1; break;
+			case GS_TRIANGLE_CLASS: last = 2; break;
+			case GS_SPRITE_CLASS: last = 1; break;
+			}
+
+			GSVector4i c = GSVector4i(vertex[index[last]].c);
 
 			c = c.upl16(c.zwxy());
 

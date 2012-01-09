@@ -26,12 +26,12 @@
 
 using namespace Xbyak;
 
-static const int _args = 0;
-static const int _count = _args + 8; // rcx
-static const int _vertex = _args + 12; // rdx
-static const int _index = _args + 16; // r8
-static const int _min = _args + 20; // r9
-static const int _max = _args + 24; // _args + 4
+static const int _args = 4;
+static const int _count = _args + 4; // rcx
+static const int _vertex = _args + 8; // rdx
+static const int _index = _args + 12; // r8
+static const int _min = _args + 16; // r9
+static const int _max = _args + 20; // _args + 4
 
 GSVertexTraceSW::CG::CG(const void* param, uint32 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)

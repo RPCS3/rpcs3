@@ -206,8 +206,6 @@ void GSRendererSW::Draw()
 
 	if(!GetScanlineGlobalData(sd)) return;
 
-	//
-
 	data->primclass = m_vt->m_primclass;
 	data->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_vertex.next + sizeof(uint32) * m_index.tail, 32);
 	data->vertex = (GSVertexSW*)data->buff;
@@ -217,6 +215,11 @@ void GSRendererSW::Draw()
 
 	memcpy(data->vertex, m_vertex.buff, sizeof(GSVertexSW) * m_vertex.next);
 	memcpy(data->index, m_index.buff, sizeof(uint32) * m_index.tail);
+
+	for(size_t i = 0; i < m_index.tail; i++)
+	{
+		ASSERT(((GSVertexSW*)m_vertex.buff + m_index.buff[i])->_pad.u32[0] == 0x12345678);
+	}
 
 	//
 

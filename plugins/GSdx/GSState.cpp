@@ -499,13 +499,6 @@ void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r)
 template<uint32 prim, uint32 adc>
 void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* RESTRICT r)
 {
-	if(adc) 
-	{
-		// not sure what the difference is between this and XYZF2 with ADC bit set
-
-		//printf("XYZF3 X %d Y %d Z %d F %d ADC %d\n", r->XYZF2.X, r->XYZF2.Y, r->XYZF2.Z, r->XYZF2.F, r->XYZF2.ADC); 
-	}
-
 	/*
 	m_v.XYZ.X = r->XYZF2.X;
 	m_v.XYZ.Y = r->XYZF2.Y;
@@ -525,12 +518,6 @@ void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* RESTRICT r)
 template<uint32 prim, uint32 adc>
 void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* RESTRICT r)
 {
-	if(adc)
-	{
-		// not sure what the difference is between this and XYZ2 with ADC bit set
-
-		//printf("XYZ3 X %d Y %d Z %d ADC %d\n", r->XYZ2.X, r->XYZ2.Y, r->XYZ2.Z, r->XYZ2.ADC); 
-	}
 /*
 	m_v.XYZ.X = r->XYZ2.X;
 	m_v.XYZ.Y = r->XYZ2.Y;
@@ -585,11 +572,16 @@ __forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
 	m_env.PRIM = (GSVector4i)prim;
 	m_env.PRMODE._PRIM = prim.PRIM;
 
-	m_context = &m_env.CTXT[PRIM->CTXT];
+	UpdateContext();
 
 	UpdateVertexKick();
 
 	ASSERT(m_index.tail == 0 || m_index.buff[m_index.tail - 1] + 1 == m_vertex.next);
+
+	if(m_index.tail == 0)
+	{
+		m_vertex.next = 0;
+	}
 
 	m_vertex.head = m_vertex.tail = m_vertex.next; // remove unused vertices from the end of the vertex buffer
 }
@@ -821,6 +813,8 @@ template<int i> void GSState::GIFRegHandlerXYOFFSET(const GIFReg* RESTRICT r)
 	m_env.CTXT[i].XYOFFSET = o;
 
 	m_env.CTXT[i].UpdateScissor();
+
+	UpdateScissor();
 }
 
 void GSState::GIFRegHandlerPRMODECONT(const GIFReg* RESTRICT r)
@@ -836,7 +830,7 @@ void GSState::GIFRegHandlerPRMODECONT(const GIFReg* RESTRICT r)
 
 	// if(PRIM->PRIM == 7) printf("Invalid PRMODECONT/PRIM\n");
 
-	m_context = &m_env.CTXT[PRIM->CTXT];
+	UpdateContext();
 
 	UpdateVertexKick();
 }
@@ -852,7 +846,7 @@ void GSState::GIFRegHandlerPRMODE(const GIFReg* RESTRICT r)
 	m_env.PRMODE = (GSVector4i)r->PRMODE;
 	m_env.PRMODE._PRIM = _PRIM;
 
-	m_context = &m_env.CTXT[PRIM->CTXT];
+	UpdateContext();
 
 	UpdateVertexKick();
 }
@@ -932,6 +926,8 @@ template<int i> void GSState::GIFRegHandlerSCISSOR(const GIFReg* RESTRICT r)
 	m_env.CTXT[i].SCISSOR = (GSVector4i)r->SCISSOR;
 
 	m_env.CTXT[i].UpdateScissor();
+
+	UpdateScissor();
 }
 
 template<int i> void GSState::GIFRegHandlerALPHA(const GIFReg* RESTRICT r)
@@ -1268,14 +1264,20 @@ void GSState::FlushPrim()
 		size_t stride = m_vertex.stride;
 		size_t head = m_vertex.head;
 		size_t tail = m_vertex.tail;
-		
+		size_t next = m_vertex.next;
+
 		if(tail > head)
 		{
 			switch(PRIM->PRIM)
 			{
+			case GS_POINTLIST:
+				break;
+			case GS_LINELIST:
 			case GS_LINESTRIP:
+			case GS_SPRITE:
 				if(tail > head + 0) memcpy(&buff[stride * 0], &m_vertex.buff[stride * (head + 0)], stride);
 				break;
+			case GS_TRIANGLELIST:
 			case GS_TRIANGLESTRIP:
 				if(tail > head + 0) memcpy(&buff[stride * 0], &m_vertex.buff[stride * (head + 0)], stride);
 				if(tail > head + 1) memcpy(&buff[stride * 1], &m_vertex.buff[stride * (head + 1)], stride);
@@ -1284,10 +1286,6 @@ void GSState::FlushPrim()
 				if(tail > head + 0) memcpy(&buff[stride * 0], &m_vertex.buff[stride * (head + 0)], stride);
 				if(tail > head + 1) memcpy(&buff[stride * 1], &m_vertex.buff[stride * (tail - 1)], stride);
 				break;
-			case GS_POINTLIST:
-			case GS_LINELIST:
-			case GS_TRIANGLELIST:
-			case GS_SPRITE:
 			case GS_INVALID:
 				break;
 			default:
@@ -1307,40 +1305,37 @@ void GSState::FlushPrim()
 			m_perfmon.Put(GSPerfMon::Prim, m_index.tail / GSUtil::GetVertexCount(PRIM->PRIM));
 		}
 
+		m_index.tail = 0;
+
 		m_vertex.head = 0;
 		m_vertex.tail = 0;
+		m_vertex.next = 0;
 
 		if(tail > head)
 		{
 			switch(PRIM->PRIM)
 			{
+			case GS_POINTLIST:
+				break;
+			case GS_LINELIST:
 			case GS_LINESTRIP:
+			case GS_SPRITE:
 				if(tail > head + 0) {memcpy(&m_vertex.buff[stride * 0], &buff[stride * 0], stride); m_vertex.tail++;}
 				break;
+			case GS_TRIANGLELIST:
 			case GS_TRIANGLESTRIP:
 			case GS_TRIANGLEFAN:
 				if(tail > head + 0) {memcpy(&m_vertex.buff[stride * 0], &buff[stride * 0], stride); m_vertex.tail++;}
 				if(tail > head + 1) {memcpy(&m_vertex.buff[stride * 1], &buff[stride * 1], stride); m_vertex.tail++;}
 				break;
-			case GS_POINTLIST:
-			case GS_LINELIST:
-			case GS_TRIANGLELIST:
-			case GS_SPRITE:
 			case GS_INVALID:
 				break;
 			default:
 				__assume(0);
 			}
-		}
 
-		m_vertex.next = m_vertex.tail;
-		m_index.tail = 0;
-	}
-	else
-	{
-		m_vertex.head = 0;
-		m_vertex.tail = 0;
-		m_vertex.next = 0;
+			m_vertex.next = next > head ? next - head : 0;
+		}
 	}
 }
 
@@ -2064,7 +2059,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 
 	PRIM = !m_env.PRMODECONT.AC ? (GIFRegPRIM*)&m_env.PRMODE : &m_env.PRIM;
 
-	m_context = &m_env.CTXT[PRIM->CTXT];
+	UpdateContext();
 
 	UpdateVertexKick();
 
@@ -2080,6 +2075,8 @@ int GSState::Defrost(const GSFreezeData* fd)
 		m_env.CTXT[i].offset.fzb = m_mem.GetPixelOffset4(m_env.CTXT[i].FRAME, m_env.CTXT[i].ZBUF);
 	}
 
+	UpdateScissor();
+
 m_perfmon.SetFrame(5000);
 
 	return 0;
@@ -2093,6 +2090,19 @@ void GSState::SetGameCRC(uint32 crc, int options)
 }
 
 //
+
+void GSState::UpdateContext()
+{
+	m_context = &m_env.CTXT[PRIM->CTXT];
+
+	UpdateScissor();
+}
+
+void GSState::UpdateScissor()
+{
+	m_scissor = m_context->scissor.ofex;
+	m_ofxy = m_context->scissor.ofxy;
+}
 
 void GSState::UpdateVertexKick() 
 {
@@ -2157,7 +2167,7 @@ __forceinline void GSState::VertexKick(uint32 skip)
 	tailptr[0] = v0;
 	tailptr[1] = v1;
 
-	m_vertex.xy[xy_tail & 3] = GSVector4(v1.upl32(v1.add16(GSVector4i::x000f()).srl16(4)).upl16());
+	m_vertex.xy[xy_tail & 3] = GSVector4(v1.upl32(v1.sub16(GSVector4i::load(m_ofxy)).sra16(4)).upl16()); // zw not sign extended, only useful for eq tests
 
 	#ifdef _DEBUG
 	memset(&tailptr[2], 0, m_vertex.stride - sizeof(GSVertex));
@@ -2221,9 +2231,7 @@ __forceinline void GSState::VertexKick(uint32 skip)
 			break;
 		}
 
-		GSVector4 scissor = m_context->scissor.dx9;
-
-		GSVector4 test = pmax < scissor | pmin > scissor.zwxy(); 
+		GSVector4 test = pmax < m_scissor | pmin > m_scissor.zwxy(); 
 		
 		switch(prim)
 		{

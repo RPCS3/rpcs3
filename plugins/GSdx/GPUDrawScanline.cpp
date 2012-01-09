@@ -83,7 +83,7 @@ void GPUDrawScanline::EndDraw(uint64 frame, uint64 ticks, int pixels)
 
 #ifndef ENABLE_JIT_RASTERIZER
 
-void GPUDrawScanline::SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dscan)
+void GPUDrawScanline::SetupPrim(const GSVertexSW* vertex, const uint32* index, const GSVertexSW& dscan)
 {
 	GPUScanlineSelector sel = m_global.sel;
 
@@ -93,7 +93,7 @@ void GPUDrawScanline::SetupPrim(const GSVertexSW& vertex, const GSVertexSW& dsca
 	{
 		if(sel.sprite)
 		{
-			GSVector4i t = (GSVector4i(vertex.t) >> 8) - GSVector4i::x00000001();
+			GSVector4i t = (GSVector4i(vertex[index[1]].t) >> 8) - GSVector4i::x00000001();
 
 			t = t.ps32(t);
 			t = t.upl16(t);

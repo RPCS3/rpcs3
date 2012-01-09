@@ -41,12 +41,11 @@ public:
 	GIFRegFRAME		FRAME;
 	GIFRegZBUF		ZBUF;
 
-	__aligned(struct, 32)
+	struct
 	{
-		GSVector4i dx10;
-		GSVector4 dx9;
 		GSVector4 in;
-		GSVector4 ex;
+		GSVector4 ofex;
+		uint32 ofxy;
 	} scissor;
 
 	struct
@@ -83,13 +82,11 @@ public:
 
 	void UpdateScissor()
 	{
-		scissor.dx10 = GSVector4i(
+		scissor.ofex = GSVector4(
 			(int)((SCISSOR.SCAX0 << 4) + XYOFFSET.OFX),
 			(int)((SCISSOR.SCAY0 << 4) + XYOFFSET.OFY),
 			(int)((SCISSOR.SCAX1 << 4) + XYOFFSET.OFX),
 			(int)((SCISSOR.SCAY1 << 4) + XYOFFSET.OFY));
-
-		scissor.dx9 = GSVector4(scissor.dx10);
 
 		scissor.in = GSVector4(
 			(int)SCISSOR.SCAX0,
@@ -97,11 +94,10 @@ public:
 			(int)SCISSOR.SCAX1 + 1,
 			(int)SCISSOR.SCAY1 + 1);
 
-		scissor.ex = GSVector4(
-			(int)SCISSOR.SCAX0,
-			(int)SCISSOR.SCAY0,
-			(int)SCISSOR.SCAX1,
-			(int)SCISSOR.SCAY1);
+		uint16 ofx = (uint16)XYOFFSET.OFX - 15;
+		uint16 ofy = (uint16)XYOFFSET.OFY - 15;
+
+		scissor.ofxy = ((ofy << 16) | ofx); // ceil(xy) => (xy - offset + 15) >> 4 => (xy - [offset - 15]) >> 4
 	}
 
 	bool DepthRead() const

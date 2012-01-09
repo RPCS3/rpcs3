@@ -131,6 +131,8 @@ protected:
 
 	GSVertex m_v;
 	float m_q;
+	GSVector4 m_scissor;
+	uint32 m_ofxy;
 	
 	struct 
 	{
@@ -167,6 +169,9 @@ protected:
 		InitConvertVertex2(T, GS_TRIANGLEFAN) \
 		InitConvertVertex2(T, GS_SPRITE) \
 		InitConvertVertex2(T, GS_INVALID) \
+
+	void UpdateContext();
+	void UpdateScissor();
 
 	virtual void UpdateVertexKick();
 
