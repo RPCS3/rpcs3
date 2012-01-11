@@ -1,5 +1,6 @@
 #include "emitterstate.h"
 #include "yaml-cpp/exceptions.h"
+#include <limits>
 
 namespace YAML
 {
@@ -21,6 +22,8 @@ namespace YAML
 		m_seqFmt.set(Block);
 		m_mapFmt.set(Block);
 		m_mapKeyFmt.set(Auto);
+        m_floatPrecision.set(6);
+        m_doublePrecision.set(15);
 	}
 	
 	EmitterState::~EmitterState()
@@ -261,5 +264,21 @@ namespace YAML
 				return false;
 		}
 	}
+
+    bool EmitterState::SetFloatPrecision(unsigned value, FMT_SCOPE scope)
+    {
+        if(value > std::numeric_limits<float>::digits10)
+            return false;
+        _Set(m_floatPrecision, value, scope);
+        return true;
+    }
+    
+    bool EmitterState::SetDoublePrecision(unsigned value, FMT_SCOPE scope)
+    {
+        if(value > std::numeric_limits<double>::digits10)
+            return false;
+        _Set(m_doublePrecision, value, scope);
+        return true;
+    }
 }
 

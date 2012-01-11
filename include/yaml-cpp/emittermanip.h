@@ -135,6 +135,25 @@ namespace YAML
 	inline _Binary Binary(const unsigned char *data, std::size_t size) {
 		return _Binary(data, size);
 	}
+    
+    struct _Precision {
+        _Precision(int floatPrecision_, int doublePrecision_): floatPrecision(floatPrecision_), doublePrecision(doublePrecision_) {}
+        
+        int floatPrecision;
+        int doublePrecision;
+    };
+    
+    inline _Precision FloatPrecision(unsigned n) {
+        return _Precision(n, -1);
+    }
+
+    inline _Precision DoublePrecision(unsigned n) {
+        return _Precision(-1, n);
+    }
+
+    inline _Precision Precision(unsigned n) {
+        return _Precision(n, n);
+    }
 }
 
 #endif // EMITTERMANIP_H_62B23520_7C8E_11DE_8A39_0800200C9A66

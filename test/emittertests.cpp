@@ -874,7 +874,24 @@ namespace Test
 			out << YAML::EndSeq;
 			desiredOutput = "- a\n- \":\"\n- \"\\x10\"\n- \"\\n\"\n- \" \"\n- \"\\t\"";
 		}
+        
+        void DefaultPrecision(YAML::Emitter& out, std::string& desiredOutput)
+        {
+            out << YAML::BeginSeq;
+            out << 1.234f;
+            out << 3.14159265358979;
+            out << YAML::EndSeq;
+            desiredOutput = "- 1.234\n- 3.14159265358979";
+        }
 
+        void SetPrecision(YAML::Emitter& out, std::string& desiredOutput)
+        {
+            out << YAML::BeginSeq;
+            out << YAML::FloatPrecision(3) << 1.234f;
+            out << YAML::DoublePrecision(6) << 3.14159265358979;
+            out << YAML::EndSeq;
+            desiredOutput = "- 1.23\n- 3.14159";
+        }
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		
@@ -1094,6 +1111,8 @@ namespace Test
 		RunEmitterTest(&Emitter::ImplicitDocStart, "implicit doc start", passed, total);
 		RunEmitterTest(&Emitter::EmptyString, "empty string", passed, total);
 		RunEmitterTest(&Emitter::SingleChar, "single char", passed, total);
+		RunEmitterTest(&Emitter::DefaultPrecision, "default precision", passed, total);
+		RunEmitterTest(&Emitter::SetPrecision, "set precision", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);

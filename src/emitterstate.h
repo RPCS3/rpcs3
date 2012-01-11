@@ -145,6 +145,11 @@ namespace YAML
 		
 		bool SetMapKeyFormat(EMITTER_MANIP value, FMT_SCOPE scope);
 		EMITTER_MANIP GetMapKeyFormat() const { return m_mapKeyFmt.get(); }
+        
+        bool SetFloatPrecision(unsigned value, FMT_SCOPE scope);
+        unsigned GetFloatPrecision() const { return m_floatPrecision.get(); }
+        bool SetDoublePrecision(unsigned value, FMT_SCOPE scope);
+        unsigned GetDoublePrecision() const { return m_doublePrecision.get(); }
 		
 	private:
 		template <typename T>
@@ -169,6 +174,8 @@ namespace YAML
 		Setting<EMITTER_MANIP> m_seqFmt;
 		Setting<EMITTER_MANIP> m_mapFmt;
 		Setting<EMITTER_MANIP> m_mapKeyFmt;
+        Setting<unsigned> m_floatPrecision;
+        Setting<unsigned> m_doublePrecision;
 		
 		SettingChanges m_modifiedSettings;
 		SettingChanges m_globalModifiedSettings;

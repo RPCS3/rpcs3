@@ -43,10 +43,13 @@ namespace YAML
 		bool SetIndent(unsigned n);
 		bool SetPreCommentIndent(unsigned n);
 		bool SetPostCommentIndent(unsigned n);
+        bool SetFloatPrecision(unsigned n);
+        bool SetDoublePrecision(unsigned n);
 		
 		// local setters
 		Emitter& SetLocalValue(EMITTER_MANIP value);
 		Emitter& SetLocalIndent(const _Indent& indent);
+        Emitter& SetLocalPrecision(const _Precision& precision);
 		
 		// overloads of write
 		Emitter& Write(const std::string& str);
@@ -70,6 +73,10 @@ namespace YAML
 		void PreWriteStreamable(std::stringstream& str);
 		void PostWriteIntegralType(const std::stringstream& str);
 		void PostWriteStreamable(const std::stringstream& str);
+        
+        template<typename T> void SetStreamablePrecision(std::stringstream&) {}
+        unsigned GetFloatPrecision() const;
+        unsigned GetDoublePrecision() const;
 	
 	private:
 		void PreAtomicWrite();
@@ -118,11 +125,24 @@ namespace YAML
 		
 		std::stringstream str;
 		PreWriteStreamable(str);
+        SetStreamablePrecision<T>(str);
 		str << value;
 		PostWriteStreamable(str);
 		return *this;
 	}
 	
+    template<>
+    inline void Emitter::SetStreamablePrecision<float>(std::stringstream& str)
+    {
+		str.precision(GetFloatPrecision());
+    }
+
+    template<>
+    inline void Emitter::SetStreamablePrecision<double>(std::stringstream& str)
+    {
+		str.precision(GetDoublePrecision());
+    }
+
 	// overloads of insertion
 	inline Emitter& operator << (Emitter& emitter, const std::string& v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, bool v) { return emitter.Write(v); }
@@ -156,6 +176,10 @@ namespace YAML
 	inline Emitter& operator << (Emitter& emitter, _Indent indent) {
 		return emitter.SetLocalIndent(indent);
 	}
+    
+    inline Emitter& operator << (Emitter& emitter, _Precision precision) {
+        return emitter.SetLocalPrecision(precision);
+    }
 }
 
 #endif // EMITTER_H_62B23520_7C8E_11DE_8A39_0800200C9A66

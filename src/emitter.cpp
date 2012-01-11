@@ -93,6 +93,16 @@ namespace YAML
 	{
 		return m_pState->SetPostCommentIndent(n, GLOBAL);
 	}
+    
+    bool Emitter::SetFloatPrecision(unsigned n)
+    {
+        return m_pState->SetFloatPrecision(n, GLOBAL);
+    }
+
+    bool Emitter::SetDoublePrecision(unsigned n)
+    {
+        return m_pState->SetDoublePrecision(n, GLOBAL);
+    }
 
 	// SetLocalValue
 	// . Either start/end a group, or set a modifier locally
@@ -144,6 +154,15 @@ namespace YAML
 		m_pState->SetIndent(indent.value, LOCAL);
 		return *this;
 	}
+
+    Emitter& Emitter::SetLocalPrecision(const _Precision& precision)
+    {
+        if(precision.floatPrecision >= 0)
+            m_pState->SetFloatPrecision(precision.floatPrecision, LOCAL);
+        if(precision.doublePrecision >= 0)
+            m_pState->SetDoublePrecision(precision.doublePrecision, LOCAL);
+        return *this;
+    }
 
 	// GotoNextPreAtomicState
 	// . Runs the state machine, emitting if necessary, and returns 'true' if done (i.e., ready to emit an atom)
@@ -661,12 +680,21 @@ namespace YAML
 		}
 	}
 
-	void Emitter::PreWriteStreamable(std::stringstream& str)
+	void Emitter::PreWriteStreamable(std::stringstream&)
 	{
 		PreAtomicWrite();
 		EmitSeparationIfNecessary();
-		str.precision(15);
 	}
+
+    unsigned Emitter::GetFloatPrecision() const
+    {
+        return m_pState->GetFloatPrecision();
+    }
+    
+    unsigned Emitter::GetDoublePrecision() const
+    {
+        return m_pState->GetDoublePrecision();
+    }
 
 	void Emitter::PostWriteIntegralType(const std::stringstream& str)
 	{
