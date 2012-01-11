@@ -545,12 +545,12 @@ namespace Test
 		void CommentInFlowMap(YAML::Emitter& out, std::string& desiredOutput)
 		{
 			out << YAML::Flow << YAML::BeginMap;
-			out << YAML::Key << "foo" << YAML::Comment("foo!") << YAML::Value << "foo value";
+			out << YAML::Key << "foo" << YAML::Value << "foo value";
 			out << YAML::Key << "bar" << YAML::Value << "bar value" << YAML::Comment("bar!");
-			out << YAML::Key << "baz" << YAML::Comment("baz!") << YAML::Value << "baz value" << YAML::Comment("baz!");
+			out << YAML::Key << "baz" << YAML::Value << "baz value" << YAML::Comment("baz!");
 			out << YAML::EndMap;
 			
-			desiredOutput = "{foo  # foo!\n: foo value, bar: bar value  # bar!\n, baz  # baz!\n: baz value  # baz!\n}";
+			desiredOutput = "{foo: foo value, bar: bar value  # bar!\n, baz: baz value  # baz!\n}";
 		}
 
 		void Indentation(YAML::Emitter& out, std::string& desiredOutput)
@@ -737,9 +737,9 @@ namespace Test
 		{
 			out << YAML::Flow << YAML::BeginMap;
 			out << YAML::Key << "a" << YAML::Value << "foo" << YAML::Newline;
-			out << YAML::Key << "b" << YAML::Newline << YAML::Value << "bar";
+			out << YAML::Key << "b" << YAML::Value << "bar";
 			out << YAML::EndMap;
-			desiredOutput = "{a: foo\n, b\n: bar}";
+			desiredOutput = "{a: foo\n, b: bar}";
 		}
 		
 		void LotsOfNewlines(YAML::Emitter& out, std::string& desiredOutput)
