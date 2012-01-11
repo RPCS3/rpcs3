@@ -892,7 +892,16 @@ namespace Test
             out << YAML::EndSeq;
             desiredOutput = "- 1.23\n- 3.14159";
         }
-	////////////////////////////////////////////////////////////////////////////////////////////////////////
+        
+        void DashInBlockContext(YAML::Emitter& out, std::string& desiredOutput)
+        {
+            out << YAML::BeginMap;
+            out << YAML::Key << "key" << YAML::Value << "-";
+            out << YAML::EndMap;
+            desiredOutput = "key: \"-\"";
+        }
+        
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		
 		void ExtraEndSeq(YAML::Emitter& out, std::string& desiredError)
@@ -995,7 +1004,7 @@ namespace Test
 					YAML::Node node;
 					parser.GetNextDocument(node);
 #else
-					// Parse with the new API
+//                    YAML::Node node = YAML::Load(output);
 #endif
 					
 					passed++;
@@ -1113,6 +1122,7 @@ namespace Test
 		RunEmitterTest(&Emitter::SingleChar, "single char", passed, total);
 		RunEmitterTest(&Emitter::DefaultPrecision, "default precision", passed, total);
 		RunEmitterTest(&Emitter::SetPrecision, "set precision", passed, total);
+		RunEmitterTest(&Emitter::DashInBlockContext, "dash in block context", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);
