@@ -1004,7 +1004,7 @@ namespace Test
 					YAML::Node node;
 					parser.GetNextDocument(node);
 #else
-//                    YAML::Node node = YAML::Load(output);
+                    YAML::Node node = YAML::Load(output);
 #endif
 					
 					passed++;
