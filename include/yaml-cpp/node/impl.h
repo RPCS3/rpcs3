@@ -29,6 +29,10 @@ namespace YAML
 		Assign(rhs);
 	}
 	
+    inline Node::Node(const detail::iterator_value& rhs): m_pMemory(rhs.m_pMemory), m_pNode(rhs.m_pNode)
+    {
+    }
+
 	inline Node::Node(const Node& rhs): m_pMemory(rhs.m_pMemory), m_pNode(rhs.m_pNode)
 	{
 	}

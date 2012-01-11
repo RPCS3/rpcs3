@@ -26,6 +26,7 @@ namespace YAML
 		Node();
 		explicit Node(NodeType::value type);
 		template<typename T> explicit Node(const T& rhs);
+        explicit Node(const detail::iterator_value& rhs);
 		Node(const Node& rhs);
 		~Node();
 		
