@@ -892,6 +892,17 @@ namespace Test
 			
 			return doc.to<int>() == 5;
 		}
+        
+        bool QuotedNewline()
+        {
+            std::string input = "foo: \"\\n\"";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+			return doc["foo"].to<std::string>() == "\n";
+        }
 	}
 	
 	namespace {
@@ -1172,6 +1183,7 @@ namespace Test
 		RunParserTest(&Parser::NaN, "NaN", passed, total);
 		RunParserTest(&Parser::NonConstKey, "non const key", passed, total);
 		RunParserTest(&Parser::SingleChar, "single char", passed, total);
+		RunParserTest(&Parser::QuotedNewline, "quoted newline", passed, total);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed, total);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed, total);
