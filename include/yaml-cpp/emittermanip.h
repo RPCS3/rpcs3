@@ -143,15 +143,15 @@ namespace YAML
         int doublePrecision;
     };
     
-    inline _Precision FloatPrecision(unsigned n) {
+    inline _Precision FloatPrecision(int n) {
         return _Precision(n, -1);
     }
 
-    inline _Precision DoublePrecision(unsigned n) {
+    inline _Precision DoublePrecision(int n) {
         return _Precision(-1, n);
     }
 
-    inline _Precision Precision(unsigned n) {
+    inline _Precision Precision(int n) {
         return _Precision(n, n);
     }
 }

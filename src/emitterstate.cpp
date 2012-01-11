@@ -265,17 +265,17 @@ namespace YAML
 		}
 	}
 
-    bool EmitterState::SetFloatPrecision(unsigned value, FMT_SCOPE scope)
+    bool EmitterState::SetFloatPrecision(int value, FMT_SCOPE scope)
     {
-        if(value > std::numeric_limits<float>::digits10)
+        if(value < 0 || value > std::numeric_limits<float>::digits10)
             return false;
         _Set(m_floatPrecision, value, scope);
         return true;
     }
     
-    bool EmitterState::SetDoublePrecision(unsigned value, FMT_SCOPE scope)
+    bool EmitterState::SetDoublePrecision(int value, FMT_SCOPE scope)
     {
-        if(value > std::numeric_limits<double>::digits10)
+        if(value < 0 || value > std::numeric_limits<double>::digits10)
             return false;
         _Set(m_doublePrecision, value, scope);
         return true;
