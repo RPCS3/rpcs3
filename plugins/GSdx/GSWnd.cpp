@@ -212,105 +212,6 @@ void GSWnd::HideFrame()
 
 #else
 
-/*
-GSWnd::GSWnd()
-	: m_display(NULL)
-	, m_window(0)
-	, m_managed(true)
-	, m_frame(true)
-{
-}
-
-GSWnd::~GSWnd()
-{
-	if(m_display != NULL)
-	{
-		if(m_window != 0)
-		{
-			XDestroyWindow(m_display, m_window);
-		}
-
-		XCloseDisplay(m_display);
-	}
-}
-
-bool GSWnd::Create(const string& title, int w, int h)
-{
-	if(m_display != NULL) return false;
-
-	if(!XInitThreads()) return false;
-
-	m_display = XOpenDisplay(0);
-
-	if(m_display == NULL) return false;
-
-	m_window = XCreateSimpleWindow(m_display, RootWindow(m_display, 0), 0, 0, 640, 480, 0, BlackPixel(m_display, 0), BlackPixel(m_display, 0));
-
-	XFlush(m_display);
-
-	return true;
-}
-
-GSVector4i GSWnd::GetClientRect()
-{
-	int x, y;
-	unsigned int w, h;
-	unsigned int border, depth;
-	Window root;
-
-	XLockDisplay(m_display);
-	XGetGeometry(m_display, m_window, &root, &x, &y, &w, &h, &border, &depth);
-	XUnlockDisplay(m_display);
-
-	return GSVector4i(0, 0, w, h);
-}
-
-// Returns FALSE if the window has no title, or if th window title is under the strict
-// management of the emulator.
-
-bool GSWnd::SetWindowText(const char* title)
-{
-	if(!m_managed) return false;
-
-        XTextProperty p;
-
-        p.value = (unsigned char*)title;
-        p.encoding = XA_STRING;
-        p.format = 8;
-        p.nitems = strlen(title);
-
-        XSetWMName(m_display, m_window, &p);
-        XFlush(m_display);
-
-	return m_frame;
-}
-
-void GSWnd::Show()
-{
-	if(!m_managed) return;
-
-	XMapWindow(m_display, m_window);
-	XFlush(m_display);
-}
-
-void GSWnd::Hide()
-{
-	if(!m_managed) return;
-
-	XUnmapWindow(m_display, m_window);
-	XFlush(m_display);
-}
-
-void GSWnd::HideFrame()
-{
-	if(!m_managed) return;
-
-	// TODO
-
-	m_frame = false;
-}
-*/
-
 GSWnd::GSWnd()
 	: m_window(NULL), m_Xwindow(0), m_XDisplay(NULL)
 {
@@ -443,7 +344,6 @@ void GSWnd::Detach()
 
 bool GSWnd::Create(const string& title, int w, int h)
 {
-#ifdef ENABLE_SDL_DEV
 	if(m_window != NULL) return false;
 
 	if(w <= 0 || h <= 0) {
@@ -451,75 +351,78 @@ bool GSWnd::Create(const string& title, int w, int h)
 		h = theApp.GetConfig("ModeHeight", 480);
 	}
 
+	m_managed = true;
+
+	if (m_renderer == 2) {
+#ifdef ENABLE_SDL_DEV
+
 #ifdef _LINUX
-	// When you reconfigure the plugins during the play, SDL is shutdown so SDL_GetNumVideoDisplays return 0
-	// and the plugins is badly closed. NOTE: SDL is initialized in SDL_CreateWindow.
-	//
-	// I'm not sure this sanity check is still useful, normally (I hope) SDL_CreateWindow will return a null
-	// hence a false for this current function.
-	// For the moment do an init -- Gregory
-	if(!SDL_WasInit(SDL_INIT_VIDEO))
-		if(SDL_Init(SDL_INIT_VIDEO) < 0) return false;
+		// When you reconfigure the plugins during the play, SDL is shutdown so SDL_GetNumVideoDisplays return 0
+		// and the plugins is badly closed. NOTE: SDL is initialized in SDL_CreateWindow.
+		//
+		// I'm not sure this sanity check is still useful, normally (I hope) SDL_CreateWindow will return a null
+		// hence a false for this current function.
+		// For the moment do an init -- Gregory
+		if(!SDL_WasInit(SDL_INIT_VIDEO))
+			if(SDL_Init(SDL_INIT_VIDEO) < 0) return false;
 
-    // Sanity check; if there aren't any video displays available, we can't create a window.
-    if (SDL_GetNumVideoDisplays() <= 0) return false;
+		// Sanity check; if there aren't any video displays available, we can't create a window.
+		if (SDL_GetNumVideoDisplays() <= 0) return false;
 #endif
 
-	m_managed = true;
+		m_window = SDL_CreateWindow(title.c_str(), 100, 100, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
-	m_window = SDL_CreateWindow(title.c_str(), 100, 100, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+		// Get the X window from the newly created window
+		// It would be needed to get the current size
+		SDL_SysWMinfo wminfo;
+		memset(&wminfo, 0, sizeof(wminfo));
 
-	// Get the X window from the newly created window
-	// It would be needed to get the current size
-	SDL_SysWMinfo wminfo;
-	memset(&wminfo, 0, sizeof(wminfo));
+		wminfo.version.major = SDL_MAJOR_VERSION;
+		wminfo.version.minor = SDL_MINOR_VERSION;
 
-	wminfo.version.major = SDL_MAJOR_VERSION;
-	wminfo.version.minor = SDL_MINOR_VERSION;
+		SDL_GetWindowWMInfo(m_window, &wminfo);
+		m_Xwindow = wminfo.info.x11.window;
 
-	SDL_GetWindowWMInfo(m_window, &wminfo);
-	m_Xwindow = wminfo.info.x11.window;
-
-	return (m_window != NULL);
-#else
-
-	// note this part must be only executed when replaying .gs debug file
-	m_managed = true;
-
-	m_XDisplay = XOpenDisplay(NULL);
-
-	int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
-		GLX_RED_SIZE, 8,
-		GLX_GREEN_SIZE, 8,
-		GLX_BLUE_SIZE, 8,
-		GLX_DEPTH_SIZE, 24,
-		None
-	};
-	XVisualInfo* vi = glXChooseVisual(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl);
-
-	/* create a color map */
-	XSetWindowAttributes attr;
-	attr.colormap = XCreateColormap(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
-						   vi->visual, AllocNone);
-	attr.border_pixel = 0;
-    attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
-        StructureNotifyMask | SubstructureRedirectMask | SubstructureNotifyMask |
-        EnterWindowMask | LeaveWindowMask | FocusChangeMask ;
-
-    // Create a window at the last position/size
-    m_Xwindow = XCreateWindow(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
-            0 , 0 , w, h, 0, vi->depth, InputOutput, vi->visual,
-            CWBorderPixel | CWColormap | CWEventMask, &attr);
-
-	XMapWindow (m_XDisplay, m_Xwindow);
-	XFree(vi);
-
-	if (!CreateContext(3, 3)) return false;
-
-	AttachContext();
-
-	return (m_Xwindow != 0);
 #endif
+		return (m_window != NULL);
+
+	} else {
+
+		// note this part must be only executed when replaying .gs debug file
+		m_XDisplay = XOpenDisplay(NULL);
+
+		int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
+			GLX_RED_SIZE, 8,
+			GLX_GREEN_SIZE, 8,
+			GLX_BLUE_SIZE, 8,
+			GLX_DEPTH_SIZE, 24,
+			None
+		};
+		XVisualInfo* vi = glXChooseVisual(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl);
+
+		/* create a color map */
+		XSetWindowAttributes attr;
+		attr.colormap = XCreateColormap(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
+				vi->visual, AllocNone);
+		attr.border_pixel = 0;
+		attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
+			StructureNotifyMask | SubstructureRedirectMask | SubstructureNotifyMask |
+			EnterWindowMask | LeaveWindowMask | FocusChangeMask ;
+
+		// Create a window at the last position/size
+		m_Xwindow = XCreateWindow(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
+				0 , 0 , w, h, 0, vi->depth, InputOutput, vi->visual,
+				CWBorderPixel | CWColormap | CWEventMask, &attr);
+
+		XMapWindow (m_XDisplay, m_Xwindow);
+		XFree(vi);
+
+		if (!CreateContext(3, 3)) return false;
+
+		AttachContext();
+
+		return (m_Xwindow != 0);
+	}
 }
 
 Display* GSWnd::GetDisplay()
@@ -572,8 +475,10 @@ GSVector4i GSWnd::GetClientRect()
 
 bool GSWnd::SetWindowText(const char* title)
 {
-#ifdef ENABLE_SDL_DEV
 	if (!m_managed) return true;
+
+	if (m_renderer == 2) {
+#ifdef ENABLE_SDL_DEV
 
 	// Do not find anyway to check the current fullscreen status
 	// Better than nothing heuristic, check the window position. Fullscreen = (0,0)
@@ -583,15 +488,27 @@ bool GSWnd::SetWindowText(const char* title)
 	// but we not use this function anyway.
 	// FIXME: it does not feel a good solution -- Gregory
 	// NOte: it might be more thread safe to use a call to XGetGeometry
-	int x,y = 0;
-	if (m_renderer == 2) {
+		int x,y = 0;
 		SDL_PumpEvents();
 		SDL_GetWindowPosition(m_window, &x, &y);
 		if ( x && y )
 			SDL_SetWindowTitle(m_window, title);
-	}
 
 #endif
+	} else {
+		XTextProperty prop;
+
+		memset(&prop, 0, sizeof(prop));
+
+		char* ptitle = (char*)title;
+		if (XStringListToTextProperty(&ptitle, 1, &prop)) {
+			XSetWMName(m_XDisplay, m_Xwindow, &prop);
+		}
+
+		XFree(prop.value);
+		XFlush(m_XDisplay);
+	}
+
 	return true;
 }
 

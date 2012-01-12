@@ -1087,6 +1087,17 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 #ifdef _LINUX
 
+#include <sys/time.h>
+#include <sys/timeb.h>	// ftime(), struct timeb
+
+inline unsigned long timeGetTime()
+{
+	timeb t;
+	ftime(&t);
+
+	return (unsigned long)(t.time*1000 + t.millitm);
+}
+
 // Note
 EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 {
@@ -1206,14 +1217,14 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 		}
 
 		sleep(1);
-		// FIXME too slow :p
-		// sleep(100);
 
 		//while(IsWindowVisible(hWnd))
 		//FIXME map?
 		bool finished = false;
 		while(!finished)
 		{
+			unsigned long start = timeGetTime();
+			unsigned long frame_number = 0;
 			for(auto i = packets.begin(); i != packets.end(); i++)
 			{
 				Packet* p = *i;
@@ -1235,6 +1246,7 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 				case 1:
 
 					GSvsync(p->param);
+					frame_number++;
 
 					break;
 
@@ -1253,10 +1265,14 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 					break;
 				}
 			}
+			unsigned long end = timeGetTime();
+			fprintf(stderr, "The %d frames of the scene was render on %dms\n", frame_number, end - start);
+			fprintf(stderr, "A means of %fms by frame\n", (float)(end - start)/(float)frame_number);
 
-			sleep(5);
+			sleep(1);
 			finished = true;
 		}
+
 
 		for(auto i = packets.begin(); i != packets.end(); i++)
 		{

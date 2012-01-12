@@ -21,45 +21,15 @@
 
 #include "GSDeviceOGL.h"
 
-// Various Note: separate build of shader
-// ************************** BUILD METHOD 1
-// 1/ create a stand alone prog
-// uint CreateShaderProgramv( enum type, sizei count, const char **strings );
-// 2/ Create various prog pipeline (maybe 1 foreach combination or only 1)
-// glGenProgramPipelines
-// 3/ Attach a program to a pipeline
-// void UseProgramStages( uint pipeline, bitfield stages, uint program );
-// ...
-// ...
-// 5/ Before the use of the program, we can validate it. (mandatory or not ?)
-// glValidateProgramPipeline
-//
-// ************************** BUILD METHOD 2
-// Humm, there is another solutions. You can setup function pointer in GLSL and configure them with OPENGL. shader_subroutine. glUseProgram must be replace with glUseProgramInstance in this case (and instance must be managed)
-//GL EXT: Overview
-//GL EXT:
-//GL EXT:     This extension adds support to shaders for "indirect subroutine calls",
-//GL EXT:     where a single shader can include many subroutines and dynamically select
-//GL EXT:     through the API which subroutine is called from each call site.
-//GL EXT:     Switching subroutines dynamically in this fashion can avoid the cost of
-//GL EXT:     recompiling and managing multiple shaders, while still retaining most of
-//GL EXT:     the performance of specialized shaders.
-//
-
-#define LOUD_DEBUGGING
-#define SHADER_DEBUG
-#define DUMP_START (500)
-#define DUMP_LENGTH (5)
+//#define LOUD_DEBUGGING
 //#define PRINT_FRAME_NUMBER
 //#define ONLY_LINES
 
 // It seems dual blending does not work on AMD !!!
 #define DISABLE_DUAL_BLEND
 
-#ifdef DUMP_START
 static uint32 g_draw_count = 0;
-static uint32 g_frame_count = 0;		
-#endif
+static uint32 g_frame_count = 1;		
 
 
 GSDeviceOGL::GSDeviceOGL()
@@ -231,10 +201,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 
 	glGenFramebuffers(1, &m_fbo);
 	glGenFramebuffers(1, &m_fbo_read);
-	// Setup FBO fragment output
-	// OMSetFBO(m_fbo);
-	// glDrawBuffer(GL_COLOR_ATTACHMENT0);
-	// OMSetFBO(0);
 
 	// ****************************************************************
 	// Vertex buffer state
@@ -518,28 +484,30 @@ void GSDeviceOGL::Flip()
 #ifdef PRINT_FRAME_NUMBER
 	fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
 #endif
-#ifdef DUMP_START
-	g_frame_count++;
+#ifdef OGL_DEBUG
+	if (theApp.GetConfig("debug_ogl_dump", 0) != 0)
+		g_frame_count++;
 #endif
 }
 
 void GSDeviceOGL::DrawPrimitive()
 {
-#ifdef DUMP_START
+#ifdef OGL_DEBUG
 	bool dump_me = false;
-	if ( (g_frame_count > DUMP_START && g_frame_count < (DUMP_START+DUMP_LENGTH)) )
-		dump_me = true;
+	uint32 start = theApp.GetConfig("debug_ogl_dump", 0);
+	uint32 length = theApp.GetConfig("debug_ogl_dump_length", 5);
+	if ( (start != 0 && g_frame_count >= start && g_frame_count < (start + length)) ) dump_me = true;
 #endif
 	
 	// DUMP INPUT
-#ifdef DUMP_START
+#ifdef OGL_DEBUG
 	if ( dump_me ) {
 		for (auto i = 0 ; i < 3 ; i++) {
 			if (m_state.ps_srv[i] != NULL) {
-				m_state.ps_srv[i]->Save(format("/tmp/in_%d__%d.bmp", g_draw_count, i));
+				m_state.ps_srv[i]->Save(format("/tmp/in_f%d__d%d__%d.bmp", g_frame_count, g_draw_count, i));
 			}
 		}
-		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/in_current_out_%d.bmp", g_draw_count));
+		//if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/in_current_out_%d.bmp", g_draw_count));
 		//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_in_%d.bmp", g_draw_count));
 
 		fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
@@ -553,9 +521,9 @@ void GSDeviceOGL::DrawPrimitive()
 	m_state.vb->draw_arrays();
 
 	// DUMP OUTPUT
-#ifdef DUMP_START
+#ifdef OGL_DEBUG
 	if ( dump_me ) {
-		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_%d.bmp", g_draw_count));
+		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_f%d__d%d.bmp", g_frame_count, g_draw_count));
 		//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
 
 		fprintf(stderr, "\n");
@@ -926,9 +894,6 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 		//
 
-#ifdef DUMP_START
-		fprintf(stderr, "draw date!!!\n");
-#endif
 		DrawPrimitive();
 
 		//
@@ -1067,21 +1032,6 @@ void GSDeviceOGL::PSSetShader(GLuint ps)
 			}
 		}
 	}
-#if 0
-	if (m_srv_changed)
-	{
-		m_ctx->PSSetShaderResources(0, 3, m_state.ps_srv);
-
-		m_srv_changed = false;
-	}
-
-	if(m_ss_changed)
-	{
-		m_ctx->PSSetSamplers(0, 3, m_state.ps_ss);
-
-		m_ss_changed = false;
-	}
-#endif
 }
 
 void GSDeviceOGL::OMSetFBO(GLuint fbo)
@@ -1164,9 +1114,6 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 	{
 		m_state.scissor = r;
 		glScissor( r.x, r.y, r.width(), r.height() );
-#if 0
-		m_ctx->RSSetScissorRects(1, r);
-#endif
 	}
 }
 
@@ -1176,7 +1123,7 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	// Build a header string
 	// *****************************************************
 	// First select the version (must be the first line so we need to generate it
-	std::string version = "#version 330\n#extension GL_ARB_shading_language_420pack: enable\n#extension GL_ARB_separate_shader_objects : enable\n";
+	std::string version = "#version 330\n#extension GL_ARB_shading_language_420pack: require\n#extension GL_ARB_separate_shader_objects : require\n";
 	//std::string version = "#version 420\n";
 
 	// Allow to puts several shader in 1 files
@@ -1248,19 +1195,19 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	free(header_str);
 	free(sources_array);
 
-#ifdef SHADER_DEBUG
-	// Print a nice debug log
-	GLint log_length = 0;
-	glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+	if (theApp.GetConfig("debug_ogl_shader", 1) == 1) {
+		// Print a nice debug log
+		GLint log_length = 0;
+		glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
 
-	char* log = (char*)malloc(log_length);
-	glGetProgramInfoLog(*program, log_length, NULL, log);
+		char* log = (char*)malloc(log_length);
+		glGetProgramInfoLog(*program, log_length, NULL, log);
 
-	fprintf(stderr, "%s (entry %s, prog %d) :", glsl_file.c_str(), entry.c_str(), *program);
-	fprintf(stderr, "\n%s", macro_sel.c_str());
-	fprintf(stderr, "%s\n", log);
-	free(log);
-#endif
+		fprintf(stderr, "%s (entry %s, prog %d) :", glsl_file.c_str(), entry.c_str(), *program);
+		fprintf(stderr, "\n%s", macro_sel.c_str());
+		fprintf(stderr, "%s\n", log);
+		free(log);
+	}
 }
 
 void GSDeviceOGL::CheckDebugLog()

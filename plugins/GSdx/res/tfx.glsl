@@ -623,9 +623,8 @@ void ps_main()
 
     // FIXME: I'm not sure about the value of others field
 	// output.c1 = c.a * 2; // used for alpha blending
-#ifndef DISABLE_DUAL_BLEND
-    SV_Target0 = vec4(c.a*2, c.a*2, c.a*2, c.a * 2);
-#endif
+
+	float alpha = c.a * 2;
 
 	if(PS_AOUT != 0) // 16 bit output
 	{
@@ -638,6 +637,9 @@ void ps_main()
 		if(c.a < 0.5) c.a += 0.5;
 	}
 
+#ifndef DISABLE_DUAL_BLEND
+    SV_Target0 = vec4(alpha, alpha, alpha, alpha);
+#endif
     SV_Target1 = c;
 }
 #endif
