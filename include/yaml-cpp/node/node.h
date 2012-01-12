@@ -22,6 +22,7 @@ namespace YAML
 		friend class NodeEvents;
 		friend class detail::node_data;
 		template<typename> friend class detail::iterator_base;
+        template<typename T, typename S> friend struct as_if;
 		
 		Node();
 		explicit Node(NodeType::value type);
@@ -43,6 +44,7 @@ namespace YAML
 		
 		// access
 		template<typename T> const T as() const;
+		template<typename T, typename S> const T as(const S& fallback) const;
 		const std::string& Scalar() const;
 		const std::string& Tag() const;
 		void SetTag(const std::string& tag);

@@ -286,6 +286,18 @@ namespace Test
             node = YAML::Node();
             return true;
         }
+        
+        TEST FallbackValues()
+        {
+            YAML::Node node = YAML::Load("foo: bar\nx: 2");
+            YAML_ASSERT(node["foo"].as<std::string>() == "bar");
+            YAML_ASSERT(node["foo"].as<std::string>("hello") == "bar");
+            YAML_ASSERT(node["baz"].as<std::string>("hello") == "hello");
+            YAML_ASSERT(node["x"].as<int>() == 2);
+            YAML_ASSERT(node["x"].as<int>(5) == 2);
+            YAML_ASSERT(node["y"].as<int>(5) == 5);
+            return true;
+        }
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -332,6 +344,7 @@ namespace Test
 		RunNodeTest(&Node::Bool, "bool", passed, total);
 		RunNodeTest(&Node::AutoBoolConversion, "auto bool conversion", passed, total);
 		RunNodeTest(&Node::Reassign, "reassign", passed, total);
+		RunNodeTest(&Node::FallbackValues, "fallback values", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

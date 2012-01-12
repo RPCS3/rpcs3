@@ -65,26 +65,77 @@ namespace YAML
 	}
 	
 	// access
+    
+    // template helpers
+    template<typename T, typename S>
+    struct as_if {
+        explicit as_if(const Node& node_): node(node_) {}
+        const Node& node;
+        
+        const T operator()(const S& fallback) const {
+            if(!node.m_pNode)
+                return fallback;
+            
+            T t;
+            if(convert<T>::decode(node, t))
+                return t;
+            return fallback;
+        }
+    };
+    
+    template<typename S>
+    struct as_if<std::string, S> {
+        explicit as_if(const Node& node_): node(node_) {}
+        const Node& node;
+        
+        const std::string operator()(const S& fallback) const {
+            if(node.Type() != NodeType::Scalar)
+                return fallback;
+            return node.Scalar();
+        }
+    };
+    
+    template<typename T>
+    struct as_if<T, void> {
+        explicit as_if(const Node& node_): node(node_) {}
+        const Node& node;
+        
+        const T operator()() const {
+            if(!node.m_pNode)
+                throw std::runtime_error("Unable to convert to type");
+			
+            T t;
+            if(convert<T>::decode(node, t))
+                return t;
+            throw std::runtime_error("Unable to convert to type");
+        }
+    };
+    
+    template<>
+    struct as_if<std::string, void> {
+        explicit as_if(const Node& node_): node(node_) {}
+        const Node& node;
+        
+        const std::string operator()() const {
+            if(node.Type() != NodeType::Scalar)
+                throw std::runtime_error("Unable to convert to string, not a scalar");
+            return node.Scalar();
+        }
+    };
+    
+    // access functions
 	template<typename T>
 	inline const T Node::as() const
 	{
-		if(!m_pNode)
-			throw std::runtime_error("Unable to convert to type");
-			
-		T t;
-		if(convert<T>::decode(*this, t))
-			return t;
-		throw std::runtime_error("Unable to convert to type");
-	}
-	
-	template<>
-	inline const std::string Node::as() const
-	{
-		if(Type() != NodeType::Scalar)
-			throw std::runtime_error("Unable to convert to string, not a scalar");
-		return Scalar();
+        return as_if<T, void>(*this)();
 	}
 
+    template<typename T, typename S>
+    inline const T Node::as(const S& fallback) const
+    {
+        return as_if<T, S>(*this)(fallback);
+    }
+    
 	inline const std::string& Node::Scalar() const
 	{
 		return m_pNode ? m_pNode->scalar() : detail::node_data::empty_scalar;
