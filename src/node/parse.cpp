@@ -4,6 +4,7 @@
 #include "yaml-cpp/parser.h"
 #include "nodebuilder.h"
 
+#include <fstream>
 #include <sstream>
 
 namespace YAML
@@ -26,6 +27,11 @@ namespace YAML
 		
 		return builder.Root();
 	}
+
+    Node LoadFile(const std::string& filename) {
+        std::ifstream fin(filename.c_str());
+        return Load(fin);
+    }
 
 	std::vector<Node> LoadAll(const std::string& input) {
 		std::stringstream stream(input);
@@ -50,4 +56,9 @@ namespace YAML
 		
 		return docs;
 	}
+
+    std::vector<Node> LoadAllFromFile(const std::string& filename) {
+        std::ifstream fin(filename.c_str());
+        return LoadAll(fin);
+    }
 }

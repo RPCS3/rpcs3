@@ -16,10 +16,12 @@ namespace YAML
 	Node Load(const std::string& input);
 	Node Load(const char *input);
 	Node Load(std::istream& input);
+    Node LoadFile(const std::string& filename);
 
 	std::vector<Node> LoadAll(const std::string& input);
 	std::vector<Node> LoadAll(const char *input);
 	std::vector<Node> LoadAll(std::istream& input);
+    std::vector<Node> LoadAllFromFile(const std::string& filename);
 }
 
 #endif // VALUE_PARSE_H_62B23520_7C8E_11DE_8A39_0800200C9A66
