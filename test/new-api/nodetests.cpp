@@ -303,7 +303,7 @@ namespace Test
         
         TEST NumericConversion()
         {
-            YAML::Node node = YAML::Load("[1.5, 1, .nan, .inf, -.inf]");
+            YAML::Node node = YAML::Load("[1.5, 1, .nan, .inf, -.inf, 0x15, 015]");
             YAML_ASSERT(node[0].as<float>() == 1.5f);
             YAML_ASSERT(node[0].as<double>() == 1.5);
             YAML_ASSERT_THROWS(node[0].as<int>(), std::runtime_error);
@@ -312,6 +312,8 @@ namespace Test
             YAML_ASSERT(node[2].as<float>() != node[2].as<float>());
             YAML_ASSERT(node[3].as<float>() == std::numeric_limits<float>::infinity());
             YAML_ASSERT(node[4].as<float>() == -std::numeric_limits<float>::infinity());
+            YAML_ASSERT(node[5].as<int>() == 21);
+            YAML_ASSERT(node[6].as<int>() == 13);
             return true;
         }
 	}
