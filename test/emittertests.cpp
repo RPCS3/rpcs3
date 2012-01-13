@@ -901,6 +901,16 @@ namespace Test
             desiredOutput = "key: \"-\"";
         }
         
+        void HexAndOct(YAML::Emitter& out, std::string& desiredOutput)
+        {
+            out << YAML::Flow << YAML::BeginSeq;
+            out << 31;
+            out << YAML::Hex << 31;
+            out << YAML::Oct << 31;
+            out << YAML::EndSeq;
+            desiredOutput = "[31, 0x1f, 037]";
+        }
+        
         ////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		
@@ -1123,6 +1133,7 @@ namespace Test
 		RunEmitterTest(&Emitter::DefaultPrecision, "default precision", passed, total);
 		RunEmitterTest(&Emitter::SetPrecision, "set precision", passed, total);
 		RunEmitterTest(&Emitter::DashInBlockContext, "dash in block context", passed, total);
+		RunEmitterTest(&Emitter::HexAndOct, "hex and oct", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);

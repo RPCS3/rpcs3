@@ -670,9 +670,11 @@ namespace YAML
 				str << std::dec;
 				break;
 			case Hex:
+                str << "0x";
 				str << std::hex;
 				break;
-				case Oct:
+			case Oct:
+                str << "0";
 				str << std::oct;
 				break;
 			default:
