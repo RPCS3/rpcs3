@@ -903,7 +903,24 @@ namespace Test
 			
 			return doc["foo"].to<std::string>() == "\n";
         }
-	}
+
+        bool DoubleAsInt()
+		{
+			std::string input = "1.5";
+			std::stringstream stream(input);
+			YAML::Parser parser(stream);
+			YAML::Node doc;
+			parser.GetNextDocument(doc);
+			
+            try {
+                doc.to<int>();
+            } catch(const YAML::InvalidScalar& e) {
+                return true;
+            }
+            
+            return false;
+		}
+    }
 	
 	namespace {
 		void RunScalarParserTest(void (*test)(std::string&, std::string&), const std::string& name, int& passed, int& total) {
@@ -1184,6 +1201,7 @@ namespace Test
 		RunParserTest(&Parser::NonConstKey, "non const key", passed, total);
 		RunParserTest(&Parser::SingleChar, "single char", passed, total);
 		RunParserTest(&Parser::QuotedNewline, "quoted newline", passed, total);
+		RunParserTest(&Parser::DoubleAsInt, "double as int", passed, total);
 		
 		RunEncodingTest(&EncodeToUtf8, false, "UTF-8, no BOM", passed, total);
 		RunEncodingTest(&EncodeToUtf8, true, "UTF-8 with BOM", passed, total);
