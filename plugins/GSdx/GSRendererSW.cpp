@@ -89,8 +89,7 @@ void GSRendererSW::VSync(int field)
 	//
 	printf("m_sync_count = %d\n", ((GSRasterizerList*)m_rl)->m_sync_count); ((GSRasterizerList*)m_rl)->m_sync_count = 0;
 	printf("m_syncpoint_count = %d\n", ((GSRasterizerList*)m_rl)->m_syncpoint_count); ((GSRasterizerList*)m_rl)->m_syncpoint_count = 0;
-	printf("m_solidrect_count = %d\n", ((GSRasterizerList*)m_rl)->m_solidrect_count); ((GSRasterizerList*)m_rl)->m_solidrect_count = 0;
-*/	
+	*/
 	GSRenderer::VSync(field);
 
 	m_tc->IncAge();
@@ -198,28 +197,37 @@ void GSRendererSW::ConvertVertex(size_t dst_index, size_t src_index)
 	}
 }
 
+#define LOG 0
+
+FILE* s_fp = LOG ? fopen("c:\\temp1\\_.txt", "w") : NULL;
+
 void GSRendererSW::Draw()
 {
 	SharedData* sd = new SharedData(this);
 
 	shared_ptr<GSRasterizerData> data(sd);
 
-	if(!GetScanlineGlobalData(sd)) return;
+	sd->primclass = m_vt->m_primclass;
+	sd->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_vertex.next + sizeof(uint32) * m_index.tail, 32);
+	sd->vertex = (GSVertexSW*)sd->buff;
+	sd->vertex_count = m_vertex.next;
+	sd->index = (uint32*)(sd->buff + sizeof(GSVertexSW) * m_vertex.next);
+	sd->index_count = m_index.tail;
 
-	data->primclass = m_vt->m_primclass;
-	data->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_vertex.next + sizeof(uint32) * m_index.tail, 32);
-	data->vertex = (GSVertexSW*)data->buff;
-	data->vertex_count = m_vertex.next;
-	data->index = (uint32*)(data->buff + sizeof(GSVertexSW) * m_vertex.next);
-	data->index_count = m_index.tail;
-
-	memcpy(data->vertex, m_vertex.buff, sizeof(GSVertexSW) * m_vertex.next);
-	memcpy(data->index, m_index.buff, sizeof(uint32) * m_index.tail);
+	memcpy(sd->vertex, m_vertex.buff, sizeof(GSVertexSW) * m_vertex.next);
+	memcpy(sd->index, m_index.buff, sizeof(uint32) * m_index.tail);
 
 	for(size_t i = 0; i < m_index.tail; i++)
 	{
 		ASSERT(((GSVertexSW*)m_vertex.buff + m_index.buff[i])->_pad.u32[0] == 0x12345678);
 	}
+
+	// TODO: delay texture update, do it later along with the syncing on the dispatcher thread, then this thread does not have to wait and can continue assembling more jobs
+	// TODO: if(any texture page is used as a target) GSRasterizerData::syncpoint = true;
+	// TODO: virtual void GSRasterizerData::Update() {texture[all levels]->Update();}, call it from the dispatcher thread before sending to workers
+	// TODO: m_tc->InvalidatePages must be called after texture->Update, move that inside GSRasterizerData::Update too
+
+	if(!GetScanlineGlobalData(sd)) return; 
 
 	//
 
@@ -232,10 +240,9 @@ void GSRendererSW::Draw()
 
 	scissor.z = std::min<int>(scissor.z, (int)context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
 	
-	data->scissor = scissor;
-	data->bbox = bbox;
-	data->solidrect = gd.sel.IsSolidRect();
-	data->frame = m_perfmon.GetFrame();
+	sd->scissor = scissor;
+	sd->bbox = bbox;
+	sd->frame = m_perfmon.GetFrame();
 
 	//
 
@@ -262,41 +269,75 @@ void GSRendererSW::Draw()
 
 	if(m_fzb != context->offset.fzb)
 	{
-		m_fzb = context->offset.fzb;
+		// hmm, what if "r" gets bigger next time and slips through unchecked, need to trace that too
 
-		data->syncpoint = true;
-	}
+		sd->syncpoint = true; // TODO
 
-	// - chross-check frame and z-buffer pages, they cannot overlap with eachother and with previous batches in queue
-	// - m_fzb filters out most of these cases, only have to be careful when the addresses stay the same and the output is mutually enabled/disabled and alternating (Bully FBP/ZBP = 0x2300)
-
-	if(!data->syncpoint)
-	{
-		if(gd.sel.fwrite)
+		if(!sd->syncpoint)
 		{
-			for(const uint32* p = fb_pages; *p != GSOffset::EOP; p++)
+			if(fb_pages == NULL)
 			{
-				if(m_fzb_pages[*p] & 0xffff0000) // already used as a z-buffer
+				fb_pages = context->offset.fb->GetPages(r);
+			}
+
+			if(CheckTargetPages<0xffffffff>(fb_pages))
+			{
+				sd->syncpoint = true;
+
+				if(LOG) fprintf(s_fp, "syncpoint 0\n");
+			}
+		}
+
+		if(!sd->syncpoint)
+		{
+			if(zb_pages == NULL)
+			{
+				zb_pages = context->offset.zb->GetPages(r);
+			}
+
+			if(CheckTargetPages<0xffffffff>(zb_pages))
+			{
+				sd->syncpoint = true;
+
+				if(LOG) fprintf(s_fp, "syncpoint 1\n");
+			}
+		}
+
+		if(!sd->syncpoint)
+		{
+			if(LOG) fprintf(s_fp, "no syncpoint *\n");
+		}
+
+		m_fzb = context->offset.fzb;
+	}
+	else
+	{
+		// chross-check frame and z-buffer pages, they cannot overlap with eachother and with previous batches in queue,
+		// m_fzb filters out most of these cases, only have to be careful when the addresses stay the same and the output 
+		// is mutually enabled/disabled and alternating (Bully FBP/ZBP = 0x2300)
+
+		if(!sd->syncpoint)
+		{
+			if(gd.sel.fwrite)
+			{
+				if(CheckTargetPages<0xffff0000>(fb_pages)) // already used as a z-buffer
 				{
-					data->syncpoint = true;
-					
-					break;
+					sd->syncpoint = true;
+
+					if(LOG) fprintf(s_fp, "syncpoint 2\n");
 				}
 			}
 		}
-	}
 
-	if(!data->syncpoint)
-	{
-		if(gd.sel.zwrite)
+		if(!sd->syncpoint)
 		{
-			for(const uint32* p = zb_pages; *p != GSOffset::EOP; p++)
+			if(gd.sel.zwrite)
 			{
-				if(m_fzb_pages[*p] & 0x0000ffff) // already used as a frame buffer
+				if(CheckTargetPages<0x0000ffff>(zb_pages)) // already used as a frame buffer
 				{
-					data->syncpoint = true;
+					sd->syncpoint = true;
 
-					break;
+					if(LOG) fprintf(s_fp, "syncpoint 3\n");
 				}
 			}
 		}
@@ -363,6 +404,12 @@ void GSRendererSW::Draw()
 	}
 	else
 	{
+		if(LOG) fprintf(s_fp, "queue %05x %d %05x %d %05x %d %dx%d | %d %d %d\n",
+			m_context->FRAME.Block(), m_context->FRAME.PSM,
+			m_context->ZBUF.Block(), m_context->ZBUF.PSM,
+			PRIM->TME ? m_context->TEX0.TBP0 : 0xfffff, m_context->TEX0.PSM, (int)m_context->TEX0.TW, (int)m_context->TEX0.TH, 
+			PRIM->PRIM, sd->vertex_count, sd->index_count);
+
 		m_rl->Queue(data);
 	}
 
@@ -384,7 +431,15 @@ void GSRendererSW::Sync(int reason)
 
 	GSPerfMonAutoTimer pmat(&m_perfmon, GSPerfMon::Sync);
 
+	uint64 t = __rdtsc();
+
 	m_rl->Sync();
+
+	s_n++;
+
+	t = __rdtsc() - t;
+
+	if(LOG) fprintf(s_fp, "sync n=%d r=%d t=%lld p=%d %c\n", s_n, reason, t, m_rl->GetPixels(), t > 10000000 ? '*' : ' ');
 
 	m_perfmon.Put(GSPerfMon::Fillrate, m_rl->GetPixels());
 }
@@ -396,8 +451,6 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 	uint32* RESTRICT p = m_tmp_pages;
 	
 	o->GetPages(r, p);
-
-	m_tc->InvalidatePages(p, o->psm);
 
 	// check if the changing pages either used as a texture or a target
 
@@ -414,6 +467,8 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 			break;
 		}
 	}
+
+	m_tc->InvalidatePages(m_tmp_pages, o->psm); // if texture update runs on a thread and Sync(5) happens then this must come later
 }
 
 void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut)
@@ -491,6 +546,19 @@ void GSRendererSW::ReleasePages(const uint32* pages, int type)
 			_InterlockedDecrement16((short*)&m_tex_pages[*p]);
 		}
 	}
+}
+
+template<uint32 mask> bool GSRendererSW::CheckTargetPages(const uint32* pages)
+{
+	for(const uint32* p = pages; *p != GSOffset::EOP; p++)
+	{
+		if(mask != 0xffffffff ? (m_fzb_pages[*p] & mask) : m_fzb_pages[*p])
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 #include "GSTextureSW.h"
@@ -811,19 +879,19 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				{
 					// skip per pixel division if q is constant
 
-					GSVertexSW* RESTRICT v = (GSVertexSW*)m_vertex.buff;
+					GSVertexSW* RESTRICT v = data->vertex;
 
 					if(m_vt->m_eq.q)
 					{
 						gd.sel.fst = 1;
 
-						const GSVector4& t = v[m_index.buff[0]].t;
+						const GSVector4& t = v[data->index[0]].t;
 
 						if(t.z != 1.0f)
 						{
 							GSVector4 w = t.zzzz().rcpnr();
 
-							for(int i = 0, j = m_vertex.next; i < j; i++)
+							for(int i = 0, j = data->vertex_count; i < j; i++)
 							{
 								GSVector4 t = v[i].t;
 
@@ -835,7 +903,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 					{
 						gd.sel.fst = 1;
 
-						for(int i = 0, j = m_vertex.next; i < j; i += 2)
+						for(int i = 0, j = data->vertex_count; i < j; i += 2)
 						{
 							GSVector4 t0 = v[i + 0].t;
 							GSVector4 t1 = v[i + 1].t;
@@ -856,9 +924,9 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 					GSVector4 half(0x8000, 0x8000);
 
-					GSVertexSW* RESTRICT v = (GSVertexSW*)m_vertex.buff;
+					GSVertexSW* RESTRICT v = data->vertex;
 
-					for(int i = 0, j = m_vertex.next; i < j; i++)
+					for(int i = 0, j = data->vertex_count; i < j; i++)
 					{
 						GSVector4 t = v[i].t;
 
@@ -1051,12 +1119,12 @@ GSRendererSW::SharedData::~SharedData()
 
 	delete m_fb_pages;
 	delete m_zb_pages;
-
+	
 	for(size_t i = 0; i < countof(m_tex_pages) && m_tex_pages[i] != NULL; i++)
 	{
 		m_parent->ReleasePages(m_tex_pages[i], 2);
 	}
-
+	
 	if(global.clut) _aligned_free(global.clut);
 	if(global.dimx) _aligned_free(global.dimx);
 }

@@ -28,8 +28,14 @@
 
 #define PLUGIN_VERSION 16
 
-#define MAX_PAGES 512
-#define MAX_BLOCKS 16384
+#define VM_SIZE 4194304
+#define PAGE_SIZE 8192
+#define BLOCK_SIZE 256
+#define COLUMN_SIZE 64
+
+#define MAX_PAGES (VM_SIZE / PAGE_SIZE)
+#define MAX_BLOCKS (VM_SIZE / BLOCK_SIZE)
+#define MAX_COLUMNS (VM_SIZE / COLUMN_SIZE)
 
 //if defined, will send much info in reply to the API title info queri from PCSX2
 //default should be undefined

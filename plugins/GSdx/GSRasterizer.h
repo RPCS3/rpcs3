@@ -39,7 +39,6 @@ public:
 	int vertex_count;
 	uint32* index;
 	int index_count;
-	bool solidrect;
 	bool syncpoint;
 	uint64 frame;
 
@@ -52,7 +51,6 @@ public:
 		, vertex_count(0)
 		, index(NULL)
 		, index_count(0)
-		, solidrect(false)
 		, syncpoint(false)
 		, frame(0)
 	{
@@ -101,6 +99,7 @@ public:
 #endif
 
 	__forceinline bool HasEdge() const {return m_de != NULL;}
+	__forceinline bool IsSolidRect() const {return m_dr != NULL;}
 };
 
 class IRasterizer : public GSAlignedClass<32>
@@ -133,7 +132,7 @@ protected:
 	void DrawPoint(const GSVertexSW* vertex, int vertex_count, const uint32* index, int index_count);
 	void DrawLine(const GSVertexSW* vertex, const uint32* index);
 	void DrawTriangle(const GSVertexSW* vertex, const uint32* index);
-	void DrawSprite(const GSVertexSW* vertex, const uint32* index, bool solidrect);
+	void DrawSprite(const GSVertexSW* vertex, const uint32* index);
 
 	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& edge, const GSVertexSW& dedge, const GSVertexSW& dscan, const GSVector4& p0);
 
@@ -214,7 +213,6 @@ public:
 
 	int m_sync_count;
 	int m_syncpoint_count;
-	int m_solidrect_count;
 
 	// IRasterizer
 

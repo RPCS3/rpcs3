@@ -500,6 +500,11 @@ GSPixelOffset4* GSLocalMemory::GetPixelOffset4(const GIFRegFRAME& FRAME, const G
 	GSPixelOffset4* o = (GSPixelOffset4*)_aligned_malloc(sizeof(GSPixelOffset4), 32);
 
 	o->hash = hash;
+	o->fbp = fbp;
+	o->zbp = zbp;
+	o->fpsm = fpsm;
+	o->zpsm = zpsm;
+	o->bw = bw;
 
 	pixelAddress fpa = m_psm[fpsm].pa;
 	pixelAddress zpa = m_psm[zpsm].pa;

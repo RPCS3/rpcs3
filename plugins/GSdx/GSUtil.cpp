@@ -161,6 +161,16 @@ int GSUtil::GetVertexCount(uint32 prim)
 	return s_maps.VertexCountField[prim];
 }
 
+const uint32* GSUtil::HasSharedBitsPtr(uint32 dpsm)
+{
+	return s_maps.SharedBitsField[dpsm];
+}
+
+bool GSUtil::HasSharedBits(uint32 spsm, const uint32* RESTRICT ptr)
+{
+	return (ptr[spsm >> 5] & (1 << (spsm & 0x1f))) == 0;
+}
+
 bool GSUtil::HasSharedBits(uint32 spsm, uint32 dpsm)
 {
 	return (s_maps.SharedBitsField[dpsm][spsm >> 5] & (1 << (spsm & 0x1f))) == 0;

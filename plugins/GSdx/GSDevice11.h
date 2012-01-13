@@ -64,6 +64,7 @@ class GSDevice11 : public GSDeviceDX
 		ID3D11PixelShader* ps;
 		ID3D11Buffer* ps_cb;
 		ID3D11SamplerState* ps_ss[3];
+		ID3D11ComputeShader* cs;
 		GSVector2i viewport;
 		GSVector4i scissor;
 		ID3D11DepthStencilState* dss;
@@ -145,6 +146,7 @@ public:
 
 	void DrawPrimitive();
 	void DrawIndexedPrimitive();
+	void Dispatch(uint32 x, uint32 y, uint32 z);
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
 	void ClearRenderTarget(GSTexture* t, uint32 c);
@@ -178,6 +180,9 @@ public:
 	void PSSetShaderResource(int i, GSTexture* sr);
 	void PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb);
 	void PSSetSamplerState(ID3D11SamplerState* ss0, ID3D11SamplerState* ss1, ID3D11SamplerState* ss2 = NULL);
+	void CSSetShaderSRV(int i, ID3D11ShaderResourceView* srv);
+	void CSSetShaderUAV(int i, ID3D11UnorderedAccessView* uav);
+	void CSSetShader(ID3D11ComputeShader* cs);
 	void OMSetDepthStencilState(ID3D11DepthStencilState* dss, uint8 sref);
 	void OMSetBlendState(ID3D11BlendState* bs, float bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
@@ -195,8 +200,10 @@ public:
 	operator ID3D11Device*() {return m_dev;}
 	operator ID3D11DeviceContext*() {return m_ctx;}
 
-	HRESULT CompileShader(uint32 id, const string& entry, D3D11_SHADER_MACRO* macro, ID3D11VertexShader** vs, D3D11_INPUT_ELEMENT_DESC* layout, int count, ID3D11InputLayout** il);
-	HRESULT CompileShader(uint32 id, const string& entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs);
-	HRESULT CompileShader(uint32 id, const string& entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps);
+	HRESULT CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11VertexShader** vs, D3D11_INPUT_ELEMENT_DESC* layout, int count, ID3D11InputLayout** il);
+	HRESULT CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs);
+	HRESULT CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps);
+	HRESULT CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs);
+	HRESULT CompileShader(const char* fn, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs);
 };
 

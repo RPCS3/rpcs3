@@ -66,6 +66,7 @@ protected:
 
 	void UsePages(const uint32* pages, int type);
 	void ReleasePages(const uint32* pages, int type);
+	template<uint32 mask> bool CheckTargetPages(const uint32* pages);
 
 	bool GetScanlineGlobalData(SharedData* data);
 

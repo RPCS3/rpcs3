@@ -64,11 +64,15 @@ GSRasterizer::~GSRasterizer()
 
 bool GSRasterizer::IsOneOfMyScanlines(int top) const
 {
+	ASSERT(top >= 0 && top < 2048);
+
 	return m_myscanline[top >> THREAD_HEIGHT] != 0;
 }
 
 bool GSRasterizer::IsOneOfMyScanlines(int top, int bottom) const
 {
+	ASSERT(top >= 0 && top < 2048 && bottom >= 0 && bottom < 2048);
+
 	top = top >> THREAD_HEIGHT;
 	bottom = (bottom + (1 << THREAD_HEIGHT) - 1) >> THREAD_HEIGHT;
 
@@ -187,12 +191,12 @@ void GSRasterizer::Draw(GSRasterizerData* data)
 		
 		if(index != NULL)
 		{
-			do {DrawSprite(vertex, index, data->solidrect); index += 2;}
+			do {DrawSprite(vertex, index); index += 2;}
 			while(index < index_end);
 		}
 		else
 		{
-			do {DrawSprite(vertex, tmp_index, data->solidrect); vertex += 2;}
+			do {DrawSprite(vertex, tmp_index); vertex += 2;}
 			while(vertex < vertex_end);
 		}
 
@@ -407,7 +411,7 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertex, const uint32* index)
 	GSVector4 tbf = y0011.xzxz(y1221).ceil();
 	GSVector4 tbmax = tbf.max(m_fscissor_y);
 	GSVector4 tbmin = tbf.min(m_fscissor_y);
-	GSVector4i tb = GSVector4i(tbmax.xzyw(tbmin));
+	GSVector4i tb = GSVector4i(tbmax.xzyw(tbmin)); // max(y0, t) max(y1, t) min(y1, b) min(y2, b)
 
 	dv[0] = v1 - v0;
 	dv[1] = v2 - v0;
@@ -565,7 +569,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, co
 	m_edge.count += e - &m_edge.buff[m_edge.count];
 }
 
-void GSRasterizer::DrawSprite(const GSVertexSW* vertex, const uint32* index, bool solidrect)
+void GSRasterizer::DrawSprite(const GSVertexSW* vertex, const uint32* index)
 {
 	const GSVertexSW& v0 = vertex[index[0]];
 	const GSVertexSW& v1 = vertex[index[1]];
@@ -589,7 +593,7 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertex, const uint32* index, boo
 
 	GSVertexSW scan = v[0];
 
-	if(solidrect)
+	if(m_ds->IsSolidRect())
 	{
 		if(m_threads == 1)
 		{
@@ -904,7 +908,6 @@ GSRasterizerList::GSRasterizerList()
 	: GSJobQueue<shared_ptr<GSRasterizerData> >()
 	, m_sync_count(0)
 	, m_syncpoint_count(0)
-	, m_solidrect_count(0)
 {
 }
 
@@ -955,11 +958,6 @@ int GSRasterizerList::GetPixels(bool reset)
 
 void GSRasterizerList::Process(shared_ptr<GSRasterizerData>& item)
 {
-	if(item->solidrect)
-	{
-		m_solidrect_count++;
-	}
-
 	if(item->syncpoint)
 	{
 		for(size_t i = 0; i < m_workers.size(); i++)

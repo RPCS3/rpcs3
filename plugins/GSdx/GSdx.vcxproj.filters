@@ -324,6 +324,9 @@
     <ClCompile Include="GSDrawScanlineCodeGenerator.x86.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSRendererCS.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GS.h">
@@ -647,6 +650,9 @@
     <ClInclude Include="config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSRendererCS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\logo10.bmp">
@@ -675,6 +681,9 @@
     </None>
     <None Include="GSdx.def" />
     <None Include="res\fxaa.fx">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="res\cs.fx">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

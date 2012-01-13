@@ -63,6 +63,7 @@ struct GSPixelOffset4
 	GSVector2i row[2048]; // f yn | z yn (n = 0 1 2 ...)
 	GSVector2i col[512]; // f xn | z xn (n = 0 4 8 ...)
 	uint32 hash;
+	uint32 fbp, zbp, fpsm, zpsm, bw;
 };
 
 class GSLocalMemory : public GSBlock

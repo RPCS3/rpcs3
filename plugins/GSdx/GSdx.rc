@@ -57,6 +57,7 @@ IDR_TFX_FX              RCDATA                  "res\\tfx.fx"
 IDR_MERGE_FX            RCDATA                  "res\\merge.fx"
 IDR_INTERLACE_FX        RCDATA                  "res\\interlace.fx"
 IDR_FXAA_FX             RCDATA                  "res\\fxaa.fx"
+IDR_CS_FX				RCDATA                  "res\\cs.fx"
 
 /////////////////////////////////////////////////////////////////////////////
 //

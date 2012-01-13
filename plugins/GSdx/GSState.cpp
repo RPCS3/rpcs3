@@ -671,11 +671,6 @@ template<int i> void GSState::ApplyTEX0(GIFRegTEX0& TEX0)
 
 	TEX0.CPSM &= 0xa; // 1010b
 
-	if((TEX0.TBW & 1) && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT4))
-	{
-		TEX0.TBW &= ~1; // GS User 2.6
-	}
-
 	if((TEX0.u32[0] ^ m_env.CTXT[i].TEX0.u32[0]) & 0x3ffffff) // TBP0 TBW PSM
 	{
 		m_env.CTXT[i].offset.tex = m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
@@ -708,6 +703,13 @@ template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* RESTRICT r)
 
 	if(TEX0.TW > 10) TEX0.TW = 10;
 	if(TEX0.TH > 10) TEX0.TH = 10;
+
+	if((TEX0.TBW & 1) && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT4))
+	{
+		ASSERT(TEX0.TBW == 1); // TODO
+
+		TEX0.TBW &= ~1; // GS User 2.6
+	}
 
 	ApplyTEX0<i>(TEX0);
 
@@ -1265,32 +1267,34 @@ void GSState::FlushPrim()
 		size_t head = m_vertex.head;
 		size_t tail = m_vertex.tail;
 		size_t next = m_vertex.next;
+		size_t unused = 0;
 
 		if(tail > head)
 		{
 			switch(PRIM->PRIM)
 			{
 			case GS_POINTLIST:
+				ASSERT(0);
 				break;
 			case GS_LINELIST:
 			case GS_LINESTRIP:
 			case GS_SPRITE:
-				if(tail > head + 0) memcpy(&buff[stride * 0], &m_vertex.buff[stride * (head + 0)], stride);
-				break;
 			case GS_TRIANGLELIST:
 			case GS_TRIANGLESTRIP:
-				if(tail > head + 0) memcpy(&buff[stride * 0], &m_vertex.buff[stride * (head + 0)], stride);
-				if(tail > head + 1) memcpy(&buff[stride * 1], &m_vertex.buff[stride * (head + 1)], stride);
+				unused = tail - head;
+				memcpy(buff, &m_vertex.buff[stride * head], stride * unused);
 				break;
 			case GS_TRIANGLEFAN:
-				if(tail > head + 0) memcpy(&buff[stride * 0], &m_vertex.buff[stride * (head + 0)], stride);
-				if(tail > head + 1) memcpy(&buff[stride * 1], &m_vertex.buff[stride * (tail - 1)], stride);
+				memcpy(buff, &m_vertex.buff[stride * head], stride); unused = 1;
+				if(tail - 1 > head) {memcpy(&buff[stride], &m_vertex.buff[stride * (tail - 1)], stride); unused = 2;}
 				break;
 			case GS_INVALID:
 				break;
 			default:
 				__assume(0);
 			}
+				
+			ASSERT(unused < GSUtil::GetVertexCount(PRIM->PRIM));
 		}
 
 		if(GSLocalMemory::m_psm[m_context->FRAME.PSM].fmt < 3 && GSLocalMemory::m_psm[m_context->ZBUF.PSM].fmt < 3)
@@ -1308,33 +1312,18 @@ void GSState::FlushPrim()
 		m_index.tail = 0;
 
 		m_vertex.head = 0;
-		m_vertex.tail = 0;
-		m_vertex.next = 0;
 
-		if(tail > head)
+		if(unused > 0)
 		{
-			switch(PRIM->PRIM)
-			{
-			case GS_POINTLIST:
-				break;
-			case GS_LINELIST:
-			case GS_LINESTRIP:
-			case GS_SPRITE:
-				if(tail > head + 0) {memcpy(&m_vertex.buff[stride * 0], &buff[stride * 0], stride); m_vertex.tail++;}
-				break;
-			case GS_TRIANGLELIST:
-			case GS_TRIANGLESTRIP:
-			case GS_TRIANGLEFAN:
-				if(tail > head + 0) {memcpy(&m_vertex.buff[stride * 0], &buff[stride * 0], stride); m_vertex.tail++;}
-				if(tail > head + 1) {memcpy(&m_vertex.buff[stride * 1], &buff[stride * 1], stride); m_vertex.tail++;}
-				break;
-			case GS_INVALID:
-				break;
-			default:
-				__assume(0);
-			}
+			memcpy(m_vertex.buff, buff, stride * unused);
 
+			m_vertex.tail = unused;
 			m_vertex.next = next > head ? next - head : 0;
+		}
+		else
+		{
+			m_vertex.tail = 0;
+			m_vertex.next = 0;
 		}
 	}
 }
@@ -1380,6 +1369,15 @@ void GSState::Write(const uint8* mem, int len)
 		m_tr.start = m_tr.end = m_tr.total;
 
 		m_perfmon.Put(GSPerfMon::Swizzle, len);
+
+		/*
+		static int n = 0;
+		string s;
+		s = format("c:\\temp1\\[%04d]_%05x_%d_%d_%d_%d_%d_%d.bmp",
+			n++, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM,
+			r.left, r.top, r.right, r.bottom);
+		m_mem.SaveBMP(s, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, r.right, r.bottom);
+		*/
 	}
 	else
 	{

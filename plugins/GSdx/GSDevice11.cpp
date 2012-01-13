@@ -144,7 +144,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	for(int i = 0; i < countof(m_convert.ps); i++)
 	{
-		hr = CompileShader(IDR_CONVERT_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
+		hr = CompileShader(IDR_CONVERT_FX, format("ps_main%d", i).c_str(), NULL, &m_convert.ps[i]);
 	}
 
 	memset(&dsd, 0, sizeof(dsd));
@@ -172,7 +172,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 	{
-		hr = CompileShader(IDR_MERGE_FX, format("ps_main%d", i), NULL, &m_merge.ps[i]);
+		hr = CompileShader(IDR_MERGE_FX, format("ps_main%d", i).c_str(), NULL, &m_merge.ps[i]);
 	}
 
 	memset(&bsd, 0, sizeof(bsd));
@@ -200,7 +200,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 	{
-		hr = CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
+		hr = CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i).c_str(), NULL, &m_interlace.ps[i]);
 	}
 
 	// fxaa
@@ -358,6 +358,11 @@ void GSDevice11::DrawPrimitive()
 void GSDevice11::DrawIndexedPrimitive()
 {
 	m_ctx->DrawIndexed(m_index.count, m_index.start, m_vertex.start);
+}
+
+void GSDevice11::Dispatch(uint32 x, uint32 y, uint32 z)
+{
+	m_ctx->Dispatch(x, y, z);
 }
 
 void GSDevice11::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -937,7 +942,7 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 		m_ctx->PSSetShader(ps, NULL, 0);
 	}
 
-	if (m_srv_changed)
+	if(m_srv_changed)
 	{
 		m_ctx->PSSetShaderResources(0, 3, m_state.ps_srv);
 
@@ -956,6 +961,38 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 		m_state.ps_cb = ps_cb;
 
 		m_ctx->PSSetConstantBuffers(0, 1, &ps_cb);
+	}
+}
+
+void GSDevice11::CSSetShaderSRV(int i, ID3D11ShaderResourceView* srv)
+{
+	// TODO: if(m_state.cs_srv[i] != srv)
+	{
+		// TODO: m_state.cs_srv[i] = srv;
+
+		m_ctx->CSSetShaderResources(i, 1, &srv);
+	}
+}
+
+void GSDevice11::CSSetShaderUAV(int i, ID3D11UnorderedAccessView* uav)
+{
+	// TODO: if(m_state.cs_uav[i] != uav)
+	{
+		// TODO: m_state.cs_uav[i] = uav;
+
+		// uint32 count[] = {-1};
+
+		m_ctx->CSSetUnorderedAccessViews(i, 1, &uav, NULL);
+	}
+}
+
+void GSDevice11::CSSetShader(ID3D11ComputeShader* cs)
+{
+	if(m_state.cs != cs)
+	{
+		m_state.cs = cs;
+
+		m_ctx->CSSetShader(cs, NULL, 0);
 	}
 }
 
@@ -1027,7 +1064,7 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 	}
 }
 
-HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_MACRO* macro, ID3D11VertexShader** vs, D3D11_INPUT_ELEMENT_DESC* layout, int count, ID3D11InputLayout** il)
+HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11VertexShader** vs, D3D11_INPUT_ELEMENT_DESC* layout, int count, ID3D11InputLayout** il)
 {
 	HRESULT hr;
 
@@ -1037,7 +1074,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 
 	CComPtr<ID3D11Blob> shader, error;
 
-    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.vs.c_str(), 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry, m_shader.vs.c_str(), 0, 0, NULL, &shader, &error, NULL);
 
 	if(error)
 	{
@@ -1066,7 +1103,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 	return hr;
 }
 
-HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs)
+HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs)
 {
 	HRESULT hr;
 
@@ -1076,7 +1113,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 
 	CComPtr<ID3D11Blob> shader, error;
 
-    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.gs.c_str(), 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry, m_shader.gs.c_str(), 0, 0, NULL, &shader, &error, NULL);
 
 	if(error)
 	{
@@ -1098,7 +1135,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 	return hr;
 }
 
-HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps)
+HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps)
 {
 	HRESULT hr;
 
@@ -1108,7 +1145,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 
 	CComPtr<ID3D11Blob> shader, error;
 
-    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry.c_str(), m_shader.ps.c_str(), 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry, m_shader.ps.c_str(), 0, 0, NULL, &shader, &error, NULL);
 
 	if(error)
 	{
@@ -1120,7 +1157,71 @@ HRESULT GSDevice11::CompileShader(uint32 id, const string& entry, D3D11_SHADER_M
 		return hr;
 	}
 
-	hr = m_dev->CreatePixelShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(),NULL,  ps);
+	hr = m_dev->CreatePixelShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(),NULL, ps);
+
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	return hr;
+}
+
+HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs)
+{
+	HRESULT hr;
+
+	vector<D3D11_SHADER_MACRO> m;
+
+	PrepareShaderMacro(m, macro);
+
+	CComPtr<ID3D11Blob> shader, error;
+
+    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry, m_shader.ps.c_str(), 0, 0, NULL, &shader, &error, NULL);
+
+	if(error)
+	{
+		printf("%s\n", (const char*)error->GetBufferPointer());
+	}
+
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	hr = m_dev->CreateComputeShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(),NULL, cs);
+
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	return hr;
+}
+
+HRESULT GSDevice11::CompileShader(const char* fn, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs)
+{
+	HRESULT hr;
+
+	vector<D3D11_SHADER_MACRO> m;
+
+	PrepareShaderMacro(m, macro);
+
+	CComPtr<ID3D11Blob> shader, error;
+
+    hr = D3DX11CompileFromFile(fn, &m[0], NULL, entry, m_shader.cs.c_str(), 0, 0, NULL, &shader, &error, NULL);
+
+	if(error)
+	{
+		printf("%s\n", (const char*)error->GetBufferPointer());
+	}
+
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	hr = m_dev->CreateComputeShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(),NULL, cs);
 
 	if(FAILED(hr))
 	{

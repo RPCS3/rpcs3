@@ -33,6 +33,7 @@
 #include "GSRendererDX11.h"
 #include "GSDevice9.h"
 #include "GSDevice11.h"
+#include "GSRendererCS.h"
 #include "GSSettingsDlg.h"
 
 static HRESULT s_hr = E_FAIL;
@@ -206,41 +207,64 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			s_gs = NULL;
 		}
 
-		switch(renderer / 3)
+		if(renderer == 12)
 		{
-		default:
-		#ifdef _WINDOWS
-		case 0: dev = new GSDevice9(); break;
-		case 1: dev = new GSDevice11(); break;
-		#endif
-		case 2: dev = new GSDeviceSDL(); break;
-		case 3: dev = new GSDeviceNull(); break;
-		}
+			#ifdef _WINDOWS
+	
+			dev = new GSDevice11();
 
-		if(dev == NULL)
-		{
-			return -1;
-		}
+			if(dev == NULL)
+			{
+				return -1;
+			}
 
-		if(s_gs == NULL)
+			if(s_gs == NULL)
+			{
+				s_gs = new GSRendererCS();
+
+				s_renderer = renderer;
+			}
+
+			#endif
+		}
+		else
 		{
-			switch(renderer % 3)
+			switch(renderer / 3)
 			{
 			default:
 			#ifdef _WINDOWS
-			case 0:
-				s_gs = (renderer / 3) == 0 ? (GSRenderer*)new GSRendererDX9() : (GSRenderer*)new GSRendererDX11();
-				break;
+			case 0: dev = new GSDevice9(); break;
+			case 1: dev = new GSDevice11(); break;
 			#endif
-			case 1:
-				s_gs = new GSRendererSW(threads);
-				break;
-			case 2:
-				s_gs = new GSRendererNull();
-				break;
+			case 2: dev = new GSDeviceSDL(); break;
+			case 3: dev = new GSDeviceNull(); break;
 			}
 
-			s_renderer = renderer;
+			if(dev == NULL)
+			{
+				return -1;
+			}
+
+			if(s_gs == NULL)
+			{
+				switch(renderer % 3)
+				{
+				default:
+				#ifdef _WINDOWS
+				case 0:
+					s_gs = (renderer / 3) == 0 ? (GSRenderer*)new GSRendererDX9() : (GSRenderer*)new GSRendererDX11();
+					break;
+				#endif
+				case 1:
+					s_gs = new GSRendererSW(threads);
+					break;
+				case 2:
+					s_gs = new GSRendererNull();
+					break;
+				}
+
+				s_renderer = renderer;
+			}
 		}
 	}
 	catch(std::exception& ex)
