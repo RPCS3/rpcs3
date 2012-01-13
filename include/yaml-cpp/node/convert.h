@@ -9,6 +9,7 @@
 #include "yaml-cpp/node/node.h"
 #include "yaml-cpp/node/iterator.h"
 #include "yaml-cpp/null.h"
+#include <limits>
 #include <list>
 #include <map>
 #include <sstream>
@@ -16,6 +17,20 @@
 
 namespace YAML
 {
+    namespace conversion {
+        inline bool IsInfinity(const std::string& input) {
+            return input == ".inf" || input == ".Inf" || input == ".INF" || input == "+.inf" || input == "+.Inf" || input == "+.INF";
+        }
+        
+        inline bool IsNegativeInfinity(const std::string& input) {
+            return input == "-.inf" || input == "-.Inf" || input == "-.INF";
+        }
+        
+        inline bool IsNaN(const std::string& input) {
+            return input == ".nan" || input == ".NaN" || input == ".NAN";
+        }
+    }
+    
 	// std::string
 	template<>
 	struct convert<std::string> {
@@ -54,9 +69,27 @@ namespace YAML
 		static bool decode(const Node& node, type& rhs) {\
 			if(node.Type() != NodeType::Scalar)\
 				return false;\
-			std::stringstream stream(node.Scalar());\
-			stream >> rhs;\
-			return !!stream;\
+            const std::string& input = node.Scalar();\
+			std::stringstream stream(input);\
+            stream.unsetf(std::ios::dec);\
+			if((stream >> rhs) && (stream >> std::ws).eof())\
+                return true;\
+            if(std::numeric_limits<type>::has_infinity) {\
+                if(conversion::IsInfinity(input)) {\
+                    rhs = std::numeric_limits<type>::infinity();\
+                    return true;\
+                } else if(conversion::IsNegativeInfinity(input)) {\
+                    rhs = -std::numeric_limits<type>::infinity();\
+                    return true;\
+                }\
+            }\
+            \
+            if(std::numeric_limits<type>::has_quiet_NaN && conversion::IsNaN(input)) {\
+                rhs = std::numeric_limits<type>::quiet_NaN();\
+                return true;\
+            }\
+            \
+            return false;\
 		}\
 	}
 	

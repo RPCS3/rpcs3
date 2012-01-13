@@ -15,6 +15,8 @@ namespace {
 
 #define YAML_ASSERT(cond) do { if(!(cond)) return "  Assert failed: " #cond; } while(false)
 
+#define YAML_ASSERT_THROWS(cond, exc) do { try { (cond); return "  Expression did not throw: " #cond; } catch(const exc&) {} catch(...) { return "  Expression threw something other than " #exc ": " #cond; } } while(false)
+
 namespace Test
 {
 	namespace Node
@@ -298,6 +300,20 @@ namespace Test
             YAML_ASSERT(node["y"].as<int>(5) == 5);
             return true;
         }
+        
+        TEST NumericConversion()
+        {
+            YAML::Node node = YAML::Load("[1.5, 1, .nan, .inf, -.inf]");
+            YAML_ASSERT(node[0].as<float>() == 1.5f);
+            YAML_ASSERT(node[0].as<double>() == 1.5);
+            YAML_ASSERT_THROWS(node[0].as<int>(), std::runtime_error);
+            YAML_ASSERT(node[1].as<int>() == 1);
+            YAML_ASSERT(node[1].as<float>() == 1.0f);
+            YAML_ASSERT(node[2].as<float>() != node[2].as<float>());
+            YAML_ASSERT(node[3].as<float>() == std::numeric_limits<float>::infinity());
+            YAML_ASSERT(node[4].as<float>() == -std::numeric_limits<float>::infinity());
+            return true;
+        }
 	}
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -345,6 +361,7 @@ namespace Test
 		RunNodeTest(&Node::AutoBoolConversion, "auto bool conversion", passed, total);
 		RunNodeTest(&Node::Reassign, "reassign", passed, total);
 		RunNodeTest(&Node::FallbackValues, "fallback values", passed, total);
+		RunNodeTest(&Node::NumericConversion, "numeric conversion", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
