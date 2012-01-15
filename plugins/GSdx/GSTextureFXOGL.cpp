@@ -75,10 +75,11 @@ void GSDeviceOGL::CreateTextureFX()
 	m_vb = new GSVertexBufferStateOGL(sizeof(GSVertexHW11), vert_format, countof(vert_format));
 }
 
-void GSDeviceOGL::SetupIA(const void* vertices, int count, GLenum prim)
+void GSDeviceOGL::SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim)
 {
 	IASetVertexState(m_vb);
-	IASetVertexBuffer(vertices, count);
+	IASetVertexBuffer(vertex, vertex_count);
+	IASetIndexBuffer(index, index_count);
 	IASetPrimitiveTopology(prim);
 }
 

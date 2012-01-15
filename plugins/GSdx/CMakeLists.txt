@@ -83,6 +83,7 @@ set(GSdxSources
     GSPerfMon.cpp
     GSRasterizer.cpp
     GSRenderer.cpp
+    GSRendererHW.cpp
     GSRendererNull.cpp
     GSRendererOGL.cpp
     GSRendererSW.cpp

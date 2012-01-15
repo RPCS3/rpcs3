@@ -490,17 +490,13 @@ void GSDeviceOGL::Flip()
 #endif
 }
 
-void GSDeviceOGL::DrawPrimitive()
+void GSDeviceOGL::DebugInput()
 {
-#ifdef OGL_DEBUG
 	bool dump_me = false;
 	uint32 start = theApp.GetConfig("debug_ogl_dump", 0);
 	uint32 length = theApp.GetConfig("debug_ogl_dump_length", 5);
 	if ( (start != 0 && g_frame_count >= start && g_frame_count < (start + length)) ) dump_me = true;
-#endif
-	
-	// DUMP INPUT
-#ifdef OGL_DEBUG
+
 	if ( dump_me ) {
 		for (auto i = 0 ; i < 3 ; i++) {
 			if (m_state.ps_srv[i] != NULL) {
@@ -516,12 +512,15 @@ void GSDeviceOGL::DrawPrimitive()
 		m_state.bs->debug();
 		m_state.dss->debug();
 	}
-#endif
+}
 
-	m_state.vb->draw_arrays();
+void GSDeviceOGL::DebugOutput()
+{
+	bool dump_me = false;
+	uint32 start = theApp.GetConfig("debug_ogl_dump", 0);
+	uint32 length = theApp.GetConfig("debug_ogl_dump_length", 5);
+	if ( (start != 0 && g_frame_count >= start && g_frame_count < (start + length)) ) dump_me = true;
 
-	// DUMP OUTPUT
-#ifdef OGL_DEBUG
 	if ( dump_me ) {
 		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_f%d__d%d.bmp", g_frame_count, g_draw_count));
 		//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
@@ -529,7 +528,32 @@ void GSDeviceOGL::DrawPrimitive()
 		fprintf(stderr, "\n");
 
 	}
+}
 
+void GSDeviceOGL::DrawPrimitive()
+{
+#ifdef OGL_DEBUG
+	DebugInput();
+#endif
+
+	m_state.vb->DrawPrimitive();
+
+#ifdef OGL_DEBUG
+	DebugOutput();
+	g_draw_count++;
+#endif
+}
+
+void GSDeviceOGL::DrawIndexedPrimitive()
+{
+#ifdef OGL_DEBUG
+	DebugInput();
+#endif
+
+	m_state.vb->DrawIndexedPrimitive();
+
+#ifdef OGL_DEBUG
+	DebugOutput();
 	g_draw_count++;
 #endif
 }
@@ -929,7 +953,7 @@ GSTexture* GSDeviceOGL::Resolve(GSTexture* t)
 
 void GSDeviceOGL::EndScene()
 {
-	m_state.vb->draw_done();
+	m_state.vb->EndScene();
 }
 
 void GSDeviceOGL::SetUniformBuffer(GSUniformBufferOGL* cb)
@@ -950,7 +974,12 @@ void GSDeviceOGL::IASetVertexState(GSVertexBufferStateOGL* vb)
 
 void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t count)
 {
-	m_state.vb->upload(vertices, count);
+	m_state.vb->UploadVB(vertices, count);
+}
+
+void GSDeviceOGL::IASetIndexBuffer(const void* index, size_t count)
+{
+	m_state.vb->UploadIB(index, count);
 }
 
 void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)

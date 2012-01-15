@@ -37,5 +37,5 @@ int main ( int argc, char *argv[] )
   if ( argc != 3 ) help();
 
   GSsetSettingsDir(argv[1]);
-  GSReplay(argv[2], 12);
+  GSReplay(argv[2], 15);
 }
