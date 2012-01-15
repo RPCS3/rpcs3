@@ -117,7 +117,7 @@ void vs_main()
 	}
 
 	VSout.c = i_c;
-	VSout.t.z = i_f.a;
+	VSout.t.z = i_f.r;
 }
 
 #endif

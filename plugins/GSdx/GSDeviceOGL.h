@@ -313,7 +313,7 @@ class GSVertexBufferStateOGL {
 		{
 			m_start = 0;
 			m_limit = new_limit;
-			glBufferData(GL_ARRAY_BUFFER,  m_limit * m_stride, NULL, GL_STREAM_DRAW);
+			glBufferData(m_target,  m_limit * m_stride, NULL, GL_STREAM_DRAW);
 		}
 
 		void bind()
@@ -382,6 +382,11 @@ class GSVertexBufferStateOGL {
 		}
 
 		size_t GetStart() { return m_start; }
+
+		void debug() 
+		{
+			fprintf(stderr, "data buffer: start %d, count %d\n", m_start, m_count);
+		}
 
 	} *m_vb, *m_ib;
 
@@ -504,27 +509,24 @@ public:
 
 	void debug()
 	{
-		uint32 element = 0;
 		string topo;
 		switch (m_topology) {
 			case GL_POINTS:
-				//element = m_count;
 				topo = "point";
 				break;
 			case GL_LINES:
-				//element = m_count/2;
 				topo = "line";
 				break;
 			case GL_TRIANGLES: 
-				//element = m_count/3;
 				topo = "triangle";
 				break;
 			case GL_TRIANGLE_STRIP:
-				//element = m_count - 2;
 				topo = "triangle strip";
 				break;
 		}
-		fprintf(stderr, "%d primitives of %s\n", element, topo.c_str());
+		m_vb->debug();
+		m_ib->debug();
+		fprintf(stderr, "primitives of %s\n", topo.c_str());
 
 	}
 };
