@@ -28,8 +28,14 @@
 
 #define PLUGIN_VERSION 16
 
-#define MAX_PAGES 512
-#define MAX_BLOCKS 16384
+#define VM_SIZE 4194304
+#define PAGE_SIZE 8192
+#define BLOCK_SIZE 256
+#define COLUMN_SIZE 64
+
+#define MAX_PAGES (VM_SIZE / PAGE_SIZE)
+#define MAX_BLOCKS (VM_SIZE / BLOCK_SIZE)
+#define MAX_COLUMNS (VM_SIZE / COLUMN_SIZE)
 
 //if defined, will send much info in reply to the API title info queri from PCSX2
 //default should be undefined
@@ -638,8 +644,8 @@ REG64_(GIFReg, FINISH)
 REG_END
 
 REG64_(GIFReg, FOG)
-	uint8 _PAD1[4+3];
-	uint8 F:8;
+	uint8 _PAD1[7];
+	uint8 F;
 REG_END
 
 REG64_(GIFReg, FOGCOL)
@@ -1021,7 +1027,6 @@ REG128_(GIFPacked, XYZF2)
 	uint16 _PAD1;
 	uint16 Y;
 	uint16 _PAD2;
-
 	uint32 _PAD3:4;
 	uint32 Z:24;
 	uint32 _PAD4:4;
@@ -1030,7 +1035,9 @@ REG128_(GIFPacked, XYZF2)
 	uint32 _PAD6:3;
 	uint32 ADC:1;
 	uint32 _PAD7:16;
-REG_END
+REG_END2
+	uint32 Skip() const {return u32[3] & 0x8000;}
+REG_END2
 
 REG128_(GIFPacked, XYZ2)
 	uint16 X;
@@ -1041,7 +1048,9 @@ REG128_(GIFPacked, XYZ2)
 	uint32 _PAD3:15;
 	uint32 ADC:1;
 	uint32 _PAD4:16;
-REG_END
+REG_END2
+	uint32 Skip() const {return u32[3] & 0x8000;}
+REG_END2
 
 REG128_(GIFPacked, FOG)
 	uint32 _PAD1;
@@ -1093,19 +1102,24 @@ __aligned(struct, 32) GIFPath
 		GSVector4i::store<true>(&tag, v);
 		reg = 0;
 		regs = v.uph8(v >> 4) & 0x0f0f0f0f;
-		nreg = tag.NREG;
+		nreg = tag.NREG ? tag.NREG : 16;
 		nloop = tag.NLOOP;
-		adonly = nreg == 1 && regs.u8[0] == GIF_REG_A_D;
+		adonly = regs.eq8(GSVector4i(0x0e0e0e0e)).mask() == (1 << nreg) - 1;
 	}
 
 	__forceinline uint8 GetReg()
 	{
-		return regs.u8[reg]; // GET_GIF_REG(tag, reg);
+		return regs.u8[reg];
+	}
+
+	__forceinline uint8 GetReg(uint32 index)
+	{
+		return regs.u8[index];
 	}
 
 	__forceinline bool StepReg()
 	{
-		if((++reg & 0xf) == nreg)
+		if(++reg == nreg)
 		{
 			reg = 0;
 

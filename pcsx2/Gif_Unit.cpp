@@ -135,8 +135,10 @@ void SaveStateBase::gifPathFreeze(u32 path) {
 	pxAssertDev(!gifPath.gsPack.readAmount,     "GS Pack readAmount should be 0!");
 	pxAssertDev(!gifPath.GetPendingGSPackets(), "MTVU GS Pack Queue should be 0!");
 
-	if (IsSaving()) { // Move all the buffered data to the start of buffer
-		gifPath.RealignPacket(); // May add readAmount which we need to clear on load
+	if (!gifPath.isMTVU()) { // FixMe: savestate freeze bug (Gust games) with MTVU enabled
+		if (IsSaving()) { // Move all the buffered data to the start of buffer
+			gifPath.RealignPacket(); // May add readAmount which we need to clear on load
+		}
 	}
 	u8* bufferPtr = gifPath.buffer; // Backup current buffer ptr
 	Freeze(gifPath.mtvu.fakePackets);

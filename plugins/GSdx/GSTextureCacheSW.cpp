@@ -74,18 +74,18 @@ GSTextureCacheSW::Texture* GSTextureCacheSW::Lookup(const GIFRegTEX0& TEX0, cons
 
 		m_textures.insert(t);
 
-		for(list<uint32>::iterator i = t->m_pages.n.begin(); i != t->m_pages.n.end(); i++)
+		for(const uint32* p = t->m_pages.n; *p != GSOffset::EOP; p++)
 		{
-			m_map[*i].push_front(t);
+			m_map[*p].push_front(t);
 		}
 	}
 
 	return t;
 }
 
-void GSTextureCacheSW::InvalidatePages(const list<uint32>* pages, uint32 psm)
+void GSTextureCacheSW::InvalidatePages(const uint32* pages, uint32 psm)
 {
-	for(list<uint32>::const_iterator p = pages->begin(); p != pages->end(); p++)
+	for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 	{
 		uint32 page = *p;
 
@@ -95,20 +95,22 @@ void GSTextureCacheSW::InvalidatePages(const list<uint32>* pages, uint32 psm)
 		{
 			Texture* t = *i;
 
-			if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM))
+			if(GSUtil::HasSharedBits(psm, t->m_sharedbits))
 			{
+				uint32* RESTRICT valid = t->m_valid;
+
 				if(t->m_repeating)
 				{
-					list<GSVector2i>& l = t->m_p2t[page];
-						
-					for(list<GSVector2i>::iterator j = l.begin(); j != l.end(); j++)
+					vector<GSVector2i>& l = t->m_p2t[page];
+
+					for(vector<GSVector2i>::iterator j = l.begin(); j != l.end(); j++)
 					{
-						t->m_valid[j->x] &= j->y;
+						valid[j->x] &= j->y;
 					}
 				}
 				else
 				{
-					t->m_valid[page] = 0;
+					valid[page] = 0;
 				}
 
 				t->m_complete = false;
@@ -179,16 +181,17 @@ GSTextureCacheSW::Texture::Texture(GSState* state, uint32 tw0, const GIFRegTEX0&
 	memset(m_valid, 0, sizeof(m_valid));
 	memset(m_pages.bm, 0, sizeof(m_pages.bm));
 
+	m_sharedbits = GSUtil::HasSharedBitsPtr(m_TEX0.PSM);
+
 	m_offset = m_state->m_mem.GetOffset(TEX0.TBP0, TEX0.TBW, TEX0.PSM);
 
-	list<uint32>* pages = m_offset->GetPages(GSVector4i(0, 0, 1 << TEX0.TW, 1 << TEX0.TH));
+	m_pages.n = m_offset->GetPages(GSVector4i(0, 0, 1 << TEX0.TW, 1 << TEX0.TH));
 
-	for(list<uint32>::const_iterator i = pages->begin(); i != pages->end(); i++)
+	for(const uint32* p = m_pages.n; *p != GSOffset::EOP; p++)
 	{
-		uint32 page = *i;
+		uint32 page = *p;
 
 		m_pages.bm[page >> 5] |= 1 << (page & 31);
-		m_pages.n.push_back(page);
 	}
 
 	m_repeating = m_TEX0.IsRepeating(); // repeating mode always works, it is just slightly slower
@@ -201,6 +204,8 @@ GSTextureCacheSW::Texture::Texture(GSState* state, uint32 tw0, const GIFRegTEX0&
 
 GSTextureCacheSW::Texture::~Texture()
 {
+	delete [] m_pages.n;
+
 	if(m_buff)
 	{
 		_aligned_free(m_buff);
@@ -267,22 +272,29 @@ bool GSTextureCacheSW::Texture::Update(const GSVector4i& rect)
 
 	uint8* dst = (uint8*)m_buff + pitch * r.top;
 
+	int block_pitch = pitch * bs.y;
+
+	r = r.srl32(3);
+
+	bs.x >>= 3;
+	bs.y >>= 3;
+
+	shift += 3;
+
 	if(m_repeating)
 	{
-		for(int y = r.top, block_pitch = pitch * bs.y; y < r.bottom; y += bs.y, dst += block_pitch)
+		for(int y = r.top; y < r.bottom; y += bs.y, dst += block_pitch)
 		{
-			uint32 base = o->block.row[y >> 3];
+			uint32 base = o->block.row[y];
 
 			for(int x = r.left, i = (y << 7) + x; x < r.right; x += bs.x, i += bs.x)
 			{
-				uint32 block = base + o->block.col[x >> 3];
+				uint32 block = base + o->block.col[x];
 
 				if(block < MAX_BLOCKS)
 				{
-					uint32 addr = i >> 3;
-
-					uint32 row = addr >> 5;
-					uint32 col = 1 << (addr & 31);
+					uint32 row = i >> 5;
+					uint32 col = 1 << (i & 31);
 
 					if((m_valid[row] & col) == 0)
 					{
@@ -298,13 +310,13 @@ bool GSTextureCacheSW::Texture::Update(const GSVector4i& rect)
 	}
 	else
 	{
-		for(int y = r.top, block_pitch = pitch * bs.y; y < r.bottom; y += bs.y, dst += block_pitch)
+		for(int y = r.top; y < r.bottom; y += bs.y, dst += block_pitch)
 		{
-			uint32 base = o->block.row[y >> 3];
+			uint32 base = o->block.row[y];
 
 			for(int x = r.left; x < r.right; x += bs.x)
 			{
-				uint32 block = base + o->block.col[x >> 3];
+				uint32 block = base + o->block.col[x];
 
 				if(block < MAX_BLOCKS)
 				{

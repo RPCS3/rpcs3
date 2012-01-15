@@ -25,7 +25,7 @@
 #include "GSVertexHW.h"
 #include "GSTextureCache9.h"
 
-class GSRendererDX9 : public GSRendererDX<GSVertexHW9>
+class GSRendererDX9 : public GSRendererDX
 {
 protected:
 	struct
@@ -34,14 +34,20 @@ protected:
 		Direct3DBlendState9 bs;
 	} m_fba;
 
-	void Draw(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	template<uint32 prim, uint32 tme, uint32 fst>
+	void ConvertVertex(size_t dst_index, size_t src_index);
+
+	void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 	void UpdateFBA(GSTexture* rt);
+
+	int GetPosX(const void* vertex) const {return (int)((const GSVertexHW9*)vertex)->p.x;}
+	int GetPosY(const void* vertex) const {return (int)((const GSVertexHW9*)vertex)->p.y;}
+	uint32 GetColor(const void* vertex) const {return ((const GSVertexHW9*)vertex)->t.u32[2];}
+	void SetColor(void* vertex, uint32 c) const {((GSVertexHW9*)vertex)->t.u32[2] = c;}
 
 public:
 	GSRendererDX9();
 	virtual ~GSRendererDX9() {}
 
 	bool CreateDevice(GSDevice* dev);
-
-	template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 };

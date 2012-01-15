@@ -1,5 +1,5 @@
 /*
- * $Id: pa_linux_alsa.c 1691 2011-05-26 20:19:19Z aknudsen $
+ * $Id: pa_linux_alsa.c 1798 2011-12-08 19:43:29Z alan_horstmann $
  * PortAudio Portable Real-Time Audio Library
  * Latest Version at: http://www.portaudio.com
  * ALSA implementation by Joshua Haberman and Arve Knudsen
@@ -957,10 +957,10 @@ typedef struct
 
 HwDevInfo predefinedNames[] = {
     { "center_lfe", NULL, 0, 1, 0 },
-/* { "default", NULL, 0, 1, 0 }, */
-/* { "dmix", NULL, 0, 1, 0 }, */
+/* { "default", NULL, 0, 1, 1 }, */
+    { "dmix", NULL, 0, 1, 0 },
 /* { "dpl", NULL, 0, 1, 0 }, */
-/* { "dsnoop", NULL, 0, 1, 0 }, */
+/* { "dsnoop", NULL, 0, 0, 1 }, */
     { "front", NULL, 0, 1, 0 },
     { "iec958", NULL, 0, 1, 0 },
 /* { "modem", NULL, 0, 1, 0 }, */

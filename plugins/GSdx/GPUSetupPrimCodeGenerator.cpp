@@ -27,6 +27,11 @@
 
 using namespace Xbyak;
 
+static const int _args = 0;
+static const int _vertex = _args + 4;
+static const int _index = _args + 8;
+static const int _dscan = _args + 12;
+
 GPUSetupPrimCodeGenerator::GPUSetupPrimCodeGenerator(void* param, uint32 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)
 	, m_local(*(GPUScanlineLocalData*)param)
@@ -50,7 +55,12 @@ void GPUSetupPrimCodeGenerator::Generate()
 		{
 			// t = (GSVector4i(vertices[1].t) >> 8) - GSVector4i::x00000001();
 
-			cvttps2dq(xmm1, ptr[ecx + sizeof(GSVertexSW) * 1 + offsetof(GSVertexSW, t)]);
+			mov(ecx, ptr[esp + _index]);
+			mov(ecx, ptr[ecx + sizeof(uint32) * 1]);
+			shl(ecx, 6); // * sizeof(GSVertexSW)
+			add(ecx, ptr[esp + _vertex]);
+
+			cvttps2dq(xmm1, ptr[ecx + offsetof(GSVertexSW, t)]);
 			psrld(xmm1, 8);
 			psrld(xmm0, 31);
 			psubd(xmm1, xmm0);
@@ -86,6 +96,8 @@ void GPUSetupPrimCodeGenerator::Generate()
 
 	if(m_sel.tme || m_sel.iip && m_sel.tfx != 3)
 	{
+		mov(edx, dword[esp + _dscan]);
+
 		for(int i = 0; i < 3; i++)
 		{
 			movaps(Xmm(5 + i), ptr[&m_shift[i]]);

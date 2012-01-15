@@ -275,19 +275,15 @@ protected:
 					if(m_exit) {m_cv.lock.Unlock(); return;}
 				}
 
-				{
-					// NOTE: this is scoped because we must make sure the last item is no longer around when Wait detects an empty queue
+				T& item = m_queue.front();
 
-					T item = m_queue.front();
+				m_cv.lock.Unlock();
 
-					m_cv.lock.Unlock();
+				Process(item);
 
-					Process(item);
+				m_cv.lock.Lock();
 
-					m_cv.lock.Lock();
-
-					m_queue.pop();
-				}
+				m_queue.pop();
 
 				if(m_queue.empty())
 				{
@@ -312,23 +308,18 @@ protected:
 					m_ev.lock.Lock();
 				}
 
-				{
-					// NOTE: this is scoped because we must make sure the last item is no longer around when Wait detects an empty queue
+				T& item = m_queue.front();
 
-					T item = m_queue.front();
+				m_ev.lock.Unlock();
 
-					m_ev.lock.Unlock();
+				Process(item);
 
-					Process(item);
+				m_ev.lock.Lock();
 
-					m_ev.lock.Lock();
-
-					m_queue.pop();
-				}
+				m_queue.pop();
 
 				_InterlockedDecrement(&m_ev.count);
 			}
-
 		}
 	}
 

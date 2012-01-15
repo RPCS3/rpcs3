@@ -91,6 +91,7 @@ static class GSUtilMaps
 {
 public:
 	uint8 PrimClassField[8];
+	uint8 VertexCountField[8];
 	uint32 CompatibleBitsField[64][2];
 	uint32 SharedBitsField[64][2];
 
@@ -104,6 +105,15 @@ public:
 		PrimClassField[GS_TRIANGLEFAN] = GS_TRIANGLE_CLASS;
 		PrimClassField[GS_SPRITE] = GS_SPRITE_CLASS;
 		PrimClassField[GS_INVALID] = GS_INVALID_CLASS;
+
+		VertexCountField[GS_POINTLIST] = 1;
+		VertexCountField[GS_LINELIST] = 2;
+		VertexCountField[GS_LINESTRIP] = 2;
+		VertexCountField[GS_TRIANGLELIST] = 3;
+		VertexCountField[GS_TRIANGLESTRIP] = 3;
+		VertexCountField[GS_TRIANGLEFAN] = 3;
+		VertexCountField[GS_SPRITE] = 2;
+		VertexCountField[GS_INVALID] = 1;
 
 		memset(CompatibleBitsField, 0, sizeof(CompatibleBitsField));
 
@@ -144,6 +154,21 @@ public:
 GS_PRIM_CLASS GSUtil::GetPrimClass(uint32 prim)
 {
 	return (GS_PRIM_CLASS)s_maps.PrimClassField[prim];
+}
+
+int GSUtil::GetVertexCount(uint32 prim)
+{
+	return s_maps.VertexCountField[prim];
+}
+
+const uint32* GSUtil::HasSharedBitsPtr(uint32 dpsm)
+{
+	return s_maps.SharedBitsField[dpsm];
+}
+
+bool GSUtil::HasSharedBits(uint32 spsm, const uint32* RESTRICT ptr)
+{
+	return (ptr[spsm >> 5] & (1 << (spsm & 0x1f))) == 0;
 }
 
 bool GSUtil::HasSharedBits(uint32 spsm, uint32 dpsm)
@@ -321,7 +346,7 @@ static bool DXUTDelayLoadDXGI()
 
 bool GSUtil::CheckDirect3D11Level(D3D_FEATURE_LEVEL& level)
 {
-	HRESULT hr;
+	HRESULT hr = S_OK;
 
 	level = (D3D_FEATURE_LEVEL)0;
 

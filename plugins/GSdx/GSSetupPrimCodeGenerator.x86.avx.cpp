@@ -27,10 +27,17 @@
 
 using namespace Xbyak;
 
+static const int _args = 0;
+static const int _vertex = _args + 4;
+static const int _index = _args + 8;
+static const int _dscan = _args + 12;
+
 void GSSetupPrimCodeGenerator::Generate()
 {
-	if((m_en.z || m_en.f) && !m_sel.sprite || m_en.t || m_en.c && m_sel.iip)
+	if((m_en.z || m_en.f) && m_sel.prim != GS_SPRITE_CLASS || m_en.t || m_en.c && m_sel.iip)
 	{
+		mov(edx, dword[esp + _dscan]);
+
 		for(int i = 0; i < 5; i++)
 		{
 			vmovaps(Xmm(3 + i), ptr[&m_shift[i]]);
@@ -53,7 +60,7 @@ void GSSetupPrimCodeGenerator::Depth()
 		return;
 	}
 
-	if(!m_sel.sprite)
+	if(m_sel.prim != GS_SPRITE_CLASS)
 	{
 		// GSVector4 p = dscan.p;
 
@@ -107,7 +114,12 @@ void GSSetupPrimCodeGenerator::Depth()
 	}
 	else
 	{
-		// GSVector4 p = vertices[0].p;
+		// GSVector4 p = vertex[index[1]].p;
+
+		mov(ecx, ptr[esp + _index]);
+		mov(ecx, ptr[ecx + sizeof(uint32) * 1]);
+		shl(ecx, 6); // * sizeof(GSVertexSW)
+		add(ecx, ptr[esp + _vertex]);
 
 		vmovaps(xmm0, ptr[ecx + offsetof(GSVertexSW, p)]);
 
@@ -312,7 +324,25 @@ void GSSetupPrimCodeGenerator::Color()
 	}
 	else
 	{
-		// GSVector4i c = GSVector4i(vertices[0].c);
+		// GSVector4i c = GSVector4i(vertex[index[last].c);
+
+		int last = 0;
+
+		switch(m_sel.prim)
+		{
+		case GS_POINT_CLASS: last = 0; break;
+		case GS_LINE_CLASS: last = 1; break;
+		case GS_TRIANGLE_CLASS: last = 2; break;
+		case GS_SPRITE_CLASS: last = 1; break;
+		}
+
+		if(!(m_sel.prim == GS_SPRITE_CLASS && (m_en.z || m_en.f))) // if this is a sprite, the last vertex was already loaded in Depth()
+		{
+			mov(ecx, ptr[esp + _index]);
+			mov(ecx, ptr[ecx + sizeof(uint32) * last]);
+			shl(ecx, 6); // * sizeof(GSVertexSW)
+			add(ecx, ptr[esp + _vertex]);
+		}
 
 		vcvttps2dq(xmm0, ptr[ecx + offsetof(GSVertexSW, c)]);
 

@@ -82,6 +82,8 @@ class GSDevice9 : public GSDeviceDX
 	CComPtr<IDirect3DSwapChain9> m_swapchain;
 	CComPtr<IDirect3DVertexBuffer9> m_vb;
 	CComPtr<IDirect3DVertexBuffer9> m_vb_old;
+	CComPtr<IDirect3DIndexBuffer9> m_ib;
+	CComPtr<IDirect3DIndexBuffer9> m_ib_old;
 	bool m_lost;
 	D3DFORMAT m_depth_format;
 
@@ -89,6 +91,7 @@ class GSDevice9 : public GSDeviceDX
 	{
 		IDirect3DVertexBuffer9* vb;
 		size_t vb_stride;
+		IDirect3DIndexBuffer9* ib;
 		IDirect3DVertexDeclaration9* layout;
 		D3DPRIMITIVETYPE topology;
 		IDirect3DVertexShader9* vs;
@@ -169,6 +172,7 @@ public:
 
 	void BeginScene();
 	void DrawPrimitive();
+	void DrawIndexedPrimitive();
 	void EndScene();
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
@@ -191,8 +195,10 @@ public:
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, bool linear = true);
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear = true);
 
-	void IASetVertexBuffer(const void* vertices, size_t stride, size_t count);
+	void IASetVertexBuffer(const void* vertex, size_t stride, size_t count);
 	void IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride);
+	void IASetIndexBuffer(const void* index, size_t count);
+	void IASetIndexBuffer(IDirect3DIndexBuffer9* ib);
 	void IASetInputLayout(IDirect3DVertexDeclaration9* layout);
 	void IASetPrimitiveTopology(D3DPRIMITIVETYPE topology);
 	void VSSetShader(IDirect3DVertexShader9* vs, const float* vs_cb, int vs_cb_len);
@@ -210,7 +216,7 @@ public:
 	HRESULT CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il);
 	HRESULT CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps);
 
-	void SetupIA(const void* vertices, int count, int prim);
+	void SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim);
 	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
 	void SetupGS(GSSelector sel) {}
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);

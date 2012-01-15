@@ -29,6 +29,14 @@
 
 class GSDrawScanline : public IDrawScanline
 {
+public:
+	class SharedData : public GSRasterizerData
+	{
+	public:
+		GSScanlineGlobalData global;
+	};
+
+protected:
 	GSScanlineGlobalData m_global;
 	GSScanlineLocalData m_local;
 
@@ -50,14 +58,14 @@ public:
 
 	// IDrawScanline
 
-	void BeginDraw(const void* param);
+	void BeginDraw(const GSRasterizerData* data);
 	void EndDraw(uint64 frame, uint64 ticks, int pixels);
 
 	void DrawRect(const GSVector4i& r, const GSVertexSW& v);
 
 #ifndef ENABLE_JIT_RASTERIZER
 	
-	void SetupPrim(const GSVertexSW* vertices, const GSVertexSW& dscan);
+	void SetupPrim(const GSVertexSW* vertex, const uint32* index, const GSVertexSW& dscan);
 	void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan);
 	void DrawEdge(int pixels, int left, int top, const GSVertexSW& scan);
 

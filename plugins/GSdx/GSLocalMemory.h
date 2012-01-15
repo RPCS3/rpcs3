@@ -30,8 +30,6 @@
 
 class GSOffset : public GSAlignedClass<32>
 {
-	hash_map<uint64, list<uint32>*> m_cache;
-
 public:
 	__aligned(struct, 32) Block
 	{
@@ -53,7 +51,9 @@ public:
 	GSOffset(uint32 bp, uint32 bw, uint32 psm);
 	virtual ~GSOffset();
 
-	list<uint32>* GetPages(const GSVector4i& rect, GSVector4i* bbox = NULL);
+	enum {EOP = 0xffffffff};
+
+	uint32* GetPages(const GSVector4i& rect, uint32* pages = NULL, GSVector4i* bbox = NULL);
 };
 
 struct GSPixelOffset4
@@ -63,6 +63,7 @@ struct GSPixelOffset4
 	GSVector2i row[2048]; // f yn | z yn (n = 0 1 2 ...)
 	GSVector2i col[512]; // f xn | z xn (n = 0 4 8 ...)
 	uint32 hash;
+	uint32 fbp, zbp, fpsm, zpsm, bw;
 };
 
 class GSLocalMemory : public GSBlock
@@ -158,7 +159,7 @@ protected:
 
 	hash_map<uint32, GSOffset*> m_omap;
 	hash_map<uint32, GSPixelOffset4*> m_po4map;
-	hash_map<uint32, list<GSVector2i>*> m_p2tmap;
+	hash_map<uint64, vector<GSVector2i>*> m_p2tmap;
 
 public:
 	GSLocalMemory();
@@ -166,7 +167,7 @@ public:
 
 	GSOffset* GetOffset(uint32 bp, uint32 bw, uint32 psm);
 	GSPixelOffset4* GetPixelOffset4(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF);
-	list<GSVector2i>* GetPage2TileMap(const GIFRegTEX0& TEX0);
+	vector<GSVector2i>* GetPage2TileMap(const GIFRegTEX0& TEX0);
 
 	// address
 

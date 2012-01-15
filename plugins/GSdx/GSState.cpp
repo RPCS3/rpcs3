@@ -21,22 +21,38 @@
 
 #include "stdafx.h"
 #include "GSState.h"
+#include "GSdx.h"
 
 //#define Offset_ST  // Fixes Persona3 mini map alignment which is off even in software rendering
 //#define Offset_UV  // Fixes / breaks various titles
 
-GSState::GSState()
+GSState::GSState(GSVertexTrace* vt, size_t vertex_stride)
 	: m_version(6)
 	, m_mt(false)
 	, m_irq(NULL)
 	, m_path3hack(0)
 	, m_regs(NULL)
-	, m_q(1.0f)
-	, m_vprim(1)
 	, m_crc(0)
 	, m_options(0)
 	, m_frameskip(0)
+	, m_vt(vt)
 {
+	m_nativeres = !!theApp.GetConfig("nativeres", 0);
+
+	memset(&m_v, 0, sizeof(m_v));
+	m_q = 1.0f;
+	memset(&m_vertex, 0, sizeof(m_vertex));
+	memset(&m_index, 0, sizeof(m_index));
+
+	ASSERT(vertex_stride >= sizeof(GSVertex));
+
+	m_vertex.stride = vertex_stride;
+	m_vertex.tmp = (uint8*)_aligned_malloc(m_vertex.stride * 2, 32);
+
+	GrowVertexBuffer();
+
+	memset(m_cv, 0, sizeof(m_cv));
+
 	m_sssize = 0;
 
 	m_sssize += sizeof(m_version);
@@ -77,8 +93,9 @@ GSState::GSState()
 	m_sssize += sizeof(m_v.RGBAQ);
 	m_sssize += sizeof(m_v.ST);
 	m_sssize += sizeof(m_v.UV);
-	m_sssize += sizeof(m_v.XYZ);
 	m_sssize += sizeof(m_v.FOG);
+	m_sssize += sizeof(m_v.XYZ);
+	m_sssize += sizeof(GIFReg); // obsolete
 
 	m_sssize += sizeof(m_tr.x);
 	m_sssize += sizeof(m_tr.y);
@@ -97,6 +114,10 @@ GSState::GSState()
 
 GSState::~GSState()
 {
+	_aligned_free(m_vertex.tmp);
+
+	if(m_vertex.buff) _aligned_free(m_vertex.buff);
+	if(m_index.buff) _aligned_free(m_index.buff);
 }
 
 void GSState::SetRegsMem(uint8* basemem)
@@ -163,24 +184,26 @@ void GSState::SetFrameSkip(int skip)
 	}
 	else
 	{
-		m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerXYZF2;
-		m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerXYZ2;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerXYZF2<GS_INVALID, 0>;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerXYZ2<GS_INVALID, 0>;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = &GSState::GIFPackedRegHandlerXYZF2<GS_INVALID, 1>;
+		m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = &GSState::GIFPackedRegHandlerXYZ2<GS_INVALID, 1>;
 		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<0>;
 		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<1>;
 		m_fpGIFPackedRegHandlers[GIF_REG_FOG] = &GSState::GIFPackedRegHandlerFOG;
-		m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerXYZF3;
-		m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerXYZ3;
 
 		m_fpGIFRegHandlers[GIF_A_D_REG_PRIM] = &GSState::GIFRegHandlerPRIM;
 		m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GSState::GIFRegHandlerRGBAQ;
 		m_fpGIFRegHandlers[GIF_A_D_REG_ST] = &GSState::GIFRegHandlerST;
 		m_fpGIFRegHandlers[GIF_A_D_REG_UV] = &GSState::GIFRegHandlerUV;
-		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2] = &GSState::GIFRegHandlerXYZF2;
-		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2] = &GSState::GIFRegHandlerXYZ2;
-		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3] = &GSState::GIFRegHandlerXYZF3;
-		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = &GSState::GIFRegHandlerXYZ3;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2] = &GSState::GIFRegHandlerXYZF2<GS_INVALID, 0>;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2] = &GSState::GIFRegHandlerXYZ2<GS_INVALID, 0>;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3] = &GSState::GIFRegHandlerXYZF2<GS_INVALID, 1>;
+		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = &GSState::GIFRegHandlerXYZ2<GS_INVALID, 1>;
 		m_fpGIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GSState::GIFRegHandlerPRMODECONT;
 		m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE] = &GSState::GIFRegHandlerPRMODE;
+
+		UpdateVertexKick();
 	}
 }
 
@@ -195,6 +218,11 @@ void GSState::Reset()
 	m_env.Reset();
 
 	m_context = &m_env.CTXT[0];
+
+	m_vertex.head = 0;
+	m_vertex.tail = 0;
+	m_vertex.next = 0;
+	m_index.tail = 0;
 }
 
 void GSState::ResetHandlers()
@@ -208,17 +236,32 @@ void GSState::ResetHandlers()
 	m_fpGIFPackedRegHandlers[GIF_REG_RGBA] = &GSState::GIFPackedRegHandlerRGBA;
 	m_fpGIFPackedRegHandlers[GIF_REG_STQ] = &GSState::GIFPackedRegHandlerSTQ;
 	m_fpGIFPackedRegHandlers[GIF_REG_UV] = &GSState::GIFPackedRegHandlerUV;
-	m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerXYZF2;
-	m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerXYZ2;
 	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_1] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerTEX0<0>;
 	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_2] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerTEX0<1>;
 	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<0>;
 	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<1>;
 	m_fpGIFPackedRegHandlers[GIF_REG_FOG] = &GSState::GIFPackedRegHandlerFOG;
-	m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerXYZF3;
-	m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerXYZ3;
 	m_fpGIFPackedRegHandlers[GIF_REG_A_D] = &GSState::GIFPackedRegHandlerA_D;
 	m_fpGIFPackedRegHandlers[GIF_REG_NOP] = &GSState::GIFPackedRegHandlerNOP;
+
+	#define SetHandlerXYZ(P) \
+		m_fpGIFPackedRegHandlerXYZ[P][0] = &GSState::GIFPackedRegHandlerXYZF2<P, 0>; \
+		m_fpGIFPackedRegHandlerXYZ[P][1] = &GSState::GIFPackedRegHandlerXYZF2<P, 1>; \
+		m_fpGIFPackedRegHandlerXYZ[P][2] = &GSState::GIFPackedRegHandlerXYZ2<P, 0>; \
+		m_fpGIFPackedRegHandlerXYZ[P][3] = &GSState::GIFPackedRegHandlerXYZ2<P, 1>; \
+		m_fpGIFRegHandlerXYZ[P][0] = &GSState::GIFRegHandlerXYZF2<P, 0>; \
+		m_fpGIFRegHandlerXYZ[P][1] = &GSState::GIFRegHandlerXYZF2<P, 1>; \
+		m_fpGIFRegHandlerXYZ[P][2] = &GSState::GIFRegHandlerXYZ2<P, 0>; \
+		m_fpGIFRegHandlerXYZ[P][3] = &GSState::GIFRegHandlerXYZ2<P, 1>; \
+
+	SetHandlerXYZ(GS_POINTLIST);
+	SetHandlerXYZ(GS_LINELIST);
+	SetHandlerXYZ(GS_LINESTRIP);
+	SetHandlerXYZ(GS_TRIANGLELIST);
+	SetHandlerXYZ(GS_TRIANGLESTRIP);
+	SetHandlerXYZ(GS_TRIANGLEFAN);
+	SetHandlerXYZ(GS_SPRITE);
+	SetHandlerXYZ(GS_INVALID);
 
 	for(size_t i = 0; i < countof(m_fpGIFRegHandlers); i++)
 	{
@@ -229,15 +272,11 @@ void GSState::ResetHandlers()
 	m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GSState::GIFRegHandlerRGBAQ;
 	m_fpGIFRegHandlers[GIF_A_D_REG_ST] = &GSState::GIFRegHandlerST;
 	m_fpGIFRegHandlers[GIF_A_D_REG_UV] = &GSState::GIFRegHandlerUV;
-	m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2] = &GSState::GIFRegHandlerXYZF2;
-	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2] = &GSState::GIFRegHandlerXYZ2;
 	m_fpGIFRegHandlers[GIF_A_D_REG_TEX0_1] = &GSState::GIFRegHandlerTEX0<0>;
 	m_fpGIFRegHandlers[GIF_A_D_REG_TEX0_2] = &GSState::GIFRegHandlerTEX0<1>;
 	m_fpGIFRegHandlers[GIF_A_D_REG_CLAMP_1] = &GSState::GIFRegHandlerCLAMP<0>;
 	m_fpGIFRegHandlers[GIF_A_D_REG_CLAMP_2] = &GSState::GIFRegHandlerCLAMP<1>;
 	m_fpGIFRegHandlers[GIF_A_D_REG_FOG] = &GSState::GIFRegHandlerFOG;
-	m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3] = &GSState::GIFRegHandlerXYZF3;
-	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = &GSState::GIFRegHandlerXYZ3;
 	m_fpGIFRegHandlers[GIF_A_D_REG_NOP] = &GSState::GIFRegHandlerNOP;
 	m_fpGIFRegHandlers[GIF_A_D_REG_TEX1_1] = &GSState::GIFRegHandlerTEX1<0>;
 	m_fpGIFRegHandlers[GIF_A_D_REG_TEX1_2] = &GSState::GIFRegHandlerTEX1<1>;
@@ -386,12 +425,12 @@ float GSState::GetFPS()
 
 // GIFPackedRegHandler*
 
-__forceinline void GSState::GIFPackedRegHandlerNull(const GIFPackedReg* RESTRICT r)
+void GSState::GIFPackedRegHandlerNull(const GIFPackedReg* RESTRICT r)
 {
 	// ASSERT(0);
 }
 
-__forceinline void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* RESTRICT r)
+void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* RESTRICT r)
 {
 	#if _M_SSE >= 0x301
 
@@ -418,7 +457,7 @@ __forceinline void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* RESTRICT
 	m_v.RGBAQ.Q = m_q;
 }
 
-__forceinline void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r)
+void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r)
 {
 	#if defined(_M_AMD64)
 
@@ -445,19 +484,11 @@ __forceinline void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT 
 #endif
 }
 
-__forceinline void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r)
+void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r)
 {
-	#if _M_SSE >= 0x200
-
 	GSVector4i v = GSVector4i::loadl(r) & GSVector4i::x00003fff();
-	m_v.UV.u32[0] = (uint32)GSVector4i::store(v.ps32(v));
 
-	#else
-
-	m_v.UV.U = r->UV.U;
-	m_v.UV.V = r->UV.V;
-
-	#endif
+	m_v.UV = (uint32)GSVector4i::store(v.ps32(v));
 
 #ifdef Offset_UV
 	m_v.UV.U = min((uint16)m_v.UV.U, (uint16)(m_v.UV.U - 4U));
@@ -465,36 +496,53 @@ __forceinline void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r
 #endif
 }
 
-__forceinline void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* RESTRICT r)
+template<uint32 prim, uint32 adc>
+void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* RESTRICT r)
 {
+	/*
 	m_v.XYZ.X = r->XYZF2.X;
 	m_v.XYZ.Y = r->XYZF2.Y;
 	m_v.XYZ.Z = r->XYZF2.Z;
-	m_v.FOG.F = r->XYZF2.F;
+	m_v.FOG = r->XYZF2.F;
+	*/
+	GSVector4i xy = GSVector4i::loadl(&r->u64[0]);
+	GSVector4i zf = GSVector4i::loadl(&r->u64[1]);
+	xy = xy.upl16(xy.srl<4>()).upl32(GSVector4i::loadl(&m_v.UV));
+	zf = zf.srl32(4) & GSVector4i::x00ffffff().upl32(GSVector4i::x000000ff());
 
-	VertexKick(r->XYZF2.ADC);
+	m_v.m[1] = xy.upl32(zf);
+
+	VertexKick<prim>(adc ? 1 : r->XYZF2.Skip());
 }
 
-__forceinline void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* RESTRICT r)
+template<uint32 prim, uint32 adc>
+void GSState::GIFPackedRegHandlerXYZ2(const GIFPackedReg* RESTRICT r)
 {
+/*
 	m_v.XYZ.X = r->XYZ2.X;
 	m_v.XYZ.Y = r->XYZ2.Y;
 	m_v.XYZ.Z = r->XYZ2.Z;
+*/
+	GSVector4i xy = GSVector4i::loadl(&r->u64[0]);
+	GSVector4i z = GSVector4i::loadl(&r->u64[1]);
+	GSVector4i xyz = xy.upl16(xy.srl<4>()).upl32(z);
 
-	VertexKick(r->XYZ2.ADC);
+	m_v.m[1] = xyz.upl64(GSVector4i::loadl(&m_v.UV));
+
+	VertexKick<prim>(adc ? 1 : r->XYZ2.Skip());
 }
 
-__forceinline void GSState::GIFPackedRegHandlerFOG(const GIFPackedReg* RESTRICT r)
+void GSState::GIFPackedRegHandlerFOG(const GIFPackedReg* RESTRICT r)
 {
-	m_v.FOG.F = r->FOG.F;
+	m_v.FOG = r->FOG.F;
 }
 
-__forceinline void GSState::GIFPackedRegHandlerA_D(const GIFPackedReg* RESTRICT r)
+void GSState::GIFPackedRegHandlerA_D(const GIFPackedReg* RESTRICT r)
 {
 	(this->*m_fpGIFRegHandlers[r->A_D.ADDR])(&r->r);
 }
 
-__forceinline void GSState::GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r)
+void GSState::GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r)
 {
 }
 
@@ -509,7 +557,7 @@ __forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
 {
 	// ASSERT(r->PRIM.PRIM < 7);
 
-	if(GSUtil::GetPrimClass(m_env.PRIM.PRIM) == GSUtil::GetPrimClass(prim.PRIM))
+	if(GSUtil::GetPrimClass(m_env.PRIM.PRIM) == GSUtil::GetPrimClass(prim.PRIM)) // NOTE: assume strips/fans are converted to lists
 	{
 		if((m_env.PRIM.u32[0] ^ prim.u32[0]) & 0x7f8) // all fields except PRIM
 		{
@@ -524,11 +572,18 @@ __forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
 	m_env.PRIM = (GSVector4i)prim;
 	m_env.PRMODE._PRIM = prim.PRIM;
 
-	m_context = &m_env.CTXT[PRIM->CTXT];
+	UpdateContext();
 
 	UpdateVertexKick();
 
-	ResetPrim();
+	ASSERT(m_index.tail == 0 || m_index.buff[m_index.tail - 1] + 1 == m_vertex.next);
+
+	if(m_index.tail == 0)
+	{
+		m_vertex.next = 0;
+	}
+
+	m_vertex.head = m_vertex.tail = m_vertex.next; // remove unused vertices from the end of the vertex buffer
 }
 
 void GSState::GIFRegHandlerPRIM(const GIFReg* RESTRICT r)
@@ -538,12 +593,12 @@ void GSState::GIFRegHandlerPRIM(const GIFReg* RESTRICT r)
 	ApplyPRIM(r->PRIM);
 }
 
-__forceinline void GSState::GIFRegHandlerRGBAQ(const GIFReg* RESTRICT r)
+void GSState::GIFRegHandlerRGBAQ(const GIFReg* RESTRICT r)
 {
 	m_v.RGBAQ = (GSVector4i)r->RGBAQ;
 }
 
-__forceinline void GSState::GIFRegHandlerST(const GIFReg* RESTRICT r)
+void GSState::GIFRegHandlerST(const GIFReg* RESTRICT r)
 {
 	m_v.ST = (GSVector4i)r->ST;
 
@@ -554,9 +609,9 @@ __forceinline void GSState::GIFRegHandlerST(const GIFReg* RESTRICT r)
 #endif
 }
 
-__forceinline void GSState::GIFRegHandlerUV(const GIFReg* RESTRICT r)
+void GSState::GIFRegHandlerUV(const GIFReg* RESTRICT r)
 {
-	m_v.UV.u32[0] = r->UV.u32[0] & 0x3fff3fff;
+	m_v.UV = r->UV.u32[0] & 0x3fff3fff;
 
 #ifdef Offset_UV
 	m_v.UV.U = min((uint16)m_v.UV.U, (uint16)(m_v.UV.U - 4U));
@@ -564,6 +619,7 @@ __forceinline void GSState::GIFRegHandlerUV(const GIFReg* RESTRICT r)
 #endif
 }
 
+template<uint32 prim, uint32 adc>
 void GSState::GIFRegHandlerXYZF2(const GIFReg* RESTRICT r)
 {
 /*
@@ -572,21 +628,33 @@ void GSState::GIFRegHandlerXYZF2(const GIFReg* RESTRICT r)
 	m_v.XYZ.Z = r->XYZF.Z;
 	m_v.FOG.F = r->XYZF.F;
 */
+	
+/*
 	m_v.XYZ.u32[0] = r->XYZF.u32[0];
 	m_v.XYZ.u32[1] = r->XYZF.u32[1] & 0x00ffffff;
-	m_v.FOG.u32[1] = r->XYZF.u32[1] & 0xff000000;
+	m_v.FOG = r->XYZF.u32[1] >> 24;
+*/
 
-	VertexKick(false);
+	GSVector4i xyzf = GSVector4i::loadl(&r->XYZF);
+	GSVector4i xyz = xyzf & (GSVector4i::xffffffff().upl32(GSVector4i::x00ffffff()));
+	GSVector4i uvf = GSVector4i::loadl(&m_v.UV).upl32(xyzf.srl32(24).srl<4>());
+	
+	m_v.m[1] = xyz.upl64(uvf);
+
+	VertexKick<prim>(adc);
 }
 
+template<uint32 prim, uint32 adc>
 void GSState::GIFRegHandlerXYZ2(const GIFReg* RESTRICT r)
 {
-	m_v.XYZ = (GSVector4i)r->XYZ;
+	// m_v.XYZ = (GSVector4i)r->XYZ;
 
-	VertexKick(false);
+	m_v.m[1] = GSVector4i::load(&r->XYZ, &m_v.UV);
+
+	VertexKick<prim>(adc);
 }
 
-void GSState::ApplyTEX0(int i, GIFRegTEX0& TEX0)
+template<int i> void GSState::ApplyTEX0(GIFRegTEX0& TEX0)
 {
 	// even if TEX0 did not change, a new palette may have been uploaded and will overwrite the currently queued for drawing
 
@@ -602,11 +670,6 @@ void GSState::ApplyTEX0(int i, GIFRegTEX0& TEX0)
 	}
 
 	TEX0.CPSM &= 0xa; // 1010b
-
-	if((TEX0.TBW & 1) && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT4))
-	{
-		TEX0.TBW &= ~1; // GS User 2.6
-	}
 
 	if((TEX0.u32[0] ^ m_env.CTXT[i].TEX0.u32[0]) & 0x3ffffff) // TBP0 TBW PSM
 	{
@@ -641,7 +704,14 @@ template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* RESTRICT r)
 	if(TEX0.TW > 10) TEX0.TW = 10;
 	if(TEX0.TH > 10) TEX0.TH = 10;
 
-	ApplyTEX0(i, TEX0);
+	if((TEX0.TBW & 1) && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT4))
+	{
+		ASSERT(TEX0.TBW == 1); // TODO
+
+		TEX0.TBW &= ~1; // GS User 2.6
+	}
+
+	ApplyTEX0<i>(TEX0);
 
 	if(m_env.CTXT[i].TEX1.MTBA)
 	{
@@ -697,29 +767,7 @@ template<int i> void GSState::GIFRegHandlerCLAMP(const GIFReg* RESTRICT r)
 
 void GSState::GIFRegHandlerFOG(const GIFReg* RESTRICT r)
 {
-	m_v.FOG = (GSVector4i)r->FOG;
-}
-
-void GSState::GIFRegHandlerXYZF3(const GIFReg* RESTRICT r)
-{
-/*
-	m_v.XYZ.X = r->XYZF.X;
-	m_v.XYZ.Y = r->XYZF.Y;
-	m_v.XYZ.Z = r->XYZF.Z;
-	m_v.FOG.F = r->XYZF.F;
-*/
-	m_v.XYZ.u32[0] = r->XYZF.u32[0];
-	m_v.XYZ.u32[1] = r->XYZF.u32[1] & 0x00ffffff;
-	m_v.FOG.u32[1] = r->XYZF.u32[1] & 0xff000000;
-
-	VertexKick(true);
-}
-
-void GSState::GIFRegHandlerXYZ3(const GIFReg* RESTRICT r)
-{
-	m_v.XYZ = (GSVector4i)r->XYZ;
-
-	VertexKick(true);
+	m_v.FOG = r->FOG.F;
 }
 
 void GSState::GIFRegHandlerNOP(const GIFReg* RESTRICT r)
@@ -752,7 +800,7 @@ template<int i> void GSState::GIFRegHandlerTEX2(const GIFReg* RESTRICT r)
 	
 	TEX0.u64 = (m_env.CTXT[i].TEX0.u64 & ~mask) | (r->u64 & mask);
 
-	ApplyTEX0(i, TEX0);
+	ApplyTEX0<i>(TEX0);
 }
 
 template<int i> void GSState::GIFRegHandlerXYOFFSET(const GIFReg* RESTRICT r)
@@ -767,6 +815,8 @@ template<int i> void GSState::GIFRegHandlerXYOFFSET(const GIFReg* RESTRICT r)
 	m_env.CTXT[i].XYOFFSET = o;
 
 	m_env.CTXT[i].UpdateScissor();
+
+	UpdateScissor();
 }
 
 void GSState::GIFRegHandlerPRMODECONT(const GIFReg* RESTRICT r)
@@ -782,7 +832,7 @@ void GSState::GIFRegHandlerPRMODECONT(const GIFReg* RESTRICT r)
 
 	// if(PRIM->PRIM == 7) printf("Invalid PRMODECONT/PRIM\n");
 
-	m_context = &m_env.CTXT[PRIM->CTXT];
+	UpdateContext();
 
 	UpdateVertexKick();
 }
@@ -798,7 +848,7 @@ void GSState::GIFRegHandlerPRMODE(const GIFReg* RESTRICT r)
 	m_env.PRMODE = (GSVector4i)r->PRMODE;
 	m_env.PRMODE._PRIM = _PRIM;
 
-	m_context = &m_env.CTXT[PRIM->CTXT];
+	UpdateContext();
 
 	UpdateVertexKick();
 }
@@ -878,6 +928,8 @@ template<int i> void GSState::GIFRegHandlerSCISSOR(const GIFReg* RESTRICT r)
 	m_env.CTXT[i].SCISSOR = (GSVector4i)r->SCISSOR;
 
 	m_env.CTXT[i].UpdateScissor();
+
+	UpdateScissor();
 }
 
 template<int i> void GSState::GIFRegHandlerALPHA(const GIFReg* RESTRICT r)
@@ -1174,6 +1226,108 @@ void GSState::FlushWrite()
 */
 }
 
+void GSState::FlushPrim()
+{
+	if(m_index.tail > 0)
+	{
+		if(0)
+		{
+			uint8* buff = new uint8[m_vertex.next];
+
+			memset(buff, 0, m_vertex.next);
+
+			for(size_t i = 0; i < m_index.tail; i++)
+			{
+				ASSERT(m_index.buff[i] < m_vertex.next);
+
+				buff[m_index.buff[i]] = 1;
+			}
+
+			size_t count = 0;
+
+			for(size_t i = 0; i < m_vertex.next; i++)
+			{
+				if(buff[i] == 0)
+				{
+					count++;
+				}
+			}
+
+			if(count > 0)
+			{
+				printf("unref %lld %d/%d\n", m_perfmon.GetFrame(), count, m_vertex.next);
+			}
+
+			delete [] buff;
+		}
+
+		uint8* buff = m_vertex.tmp;
+
+		size_t stride = m_vertex.stride;
+		size_t head = m_vertex.head;
+		size_t tail = m_vertex.tail;
+		size_t next = m_vertex.next;
+		size_t unused = 0;
+
+		if(tail > head)
+		{
+			switch(PRIM->PRIM)
+			{
+			case GS_POINTLIST:
+				ASSERT(0);
+				break;
+			case GS_LINELIST:
+			case GS_LINESTRIP:
+			case GS_SPRITE:
+			case GS_TRIANGLELIST:
+			case GS_TRIANGLESTRIP:
+				unused = tail - head;
+				memcpy(buff, &m_vertex.buff[stride * head], stride * unused);
+				break;
+			case GS_TRIANGLEFAN:
+				memcpy(buff, &m_vertex.buff[stride * head], stride); unused = 1;
+				if(tail - 1 > head) {memcpy(&buff[stride], &m_vertex.buff[stride * (tail - 1)], stride); unused = 2;}
+				break;
+			case GS_INVALID:
+				break;
+			default:
+				__assume(0);
+			}
+				
+			ASSERT(unused < GSUtil::GetVertexCount(PRIM->PRIM));
+		}
+
+		if(GSLocalMemory::m_psm[m_context->FRAME.PSM].fmt < 3 && GSLocalMemory::m_psm[m_context->ZBUF.PSM].fmt < 3)
+		{
+			// FIXME: berserk fpsm = 27 (8H)
+
+			m_vt->Update(m_vertex.buff, m_index.buff, m_index.tail, GSUtil::GetPrimClass(PRIM->PRIM));
+
+			Draw();
+
+			m_perfmon.Put(GSPerfMon::Draw, 1);
+			m_perfmon.Put(GSPerfMon::Prim, m_index.tail / GSUtil::GetVertexCount(PRIM->PRIM));
+		}
+
+		m_index.tail = 0;
+
+		m_vertex.head = 0;
+
+		if(unused > 0)
+		{
+			memcpy(m_vertex.buff, buff, stride * unused);
+
+			m_vertex.tail = unused;
+			m_vertex.next = next > head ? next - head : 0;
+		}
+		else
+		{
+			m_vertex.tail = 0;
+			m_vertex.next = 0;
+		}
+	}
+}
+
 //
 
 void GSState::Write(const uint8* mem, int len)
@@ -1215,6 +1369,15 @@ void GSState::Write(const uint8* mem, int len)
 		m_tr.start = m_tr.end = m_tr.total;
 
 		m_perfmon.Put(GSPerfMon::Swizzle, len);
+
+		/*
+		static int n = 0;
+		string s;
+		s = format("c:\\temp1\\[%04d]_%05x_%d_%d_%d_%d_%d_%d.bmp",
+			n++, (int)m_env.BITBLTBUF.DBP, (int)m_env.BITBLTBUF.DBW, (int)m_env.BITBLTBUF.DPSM,
+			r.left, r.top, r.right, r.bottom);
+		m_mem.SaveBMP(s, m_env.BITBLTBUF.DBP, m_env.BITBLTBUF.DBW, m_env.BITBLTBUF.DPSM, r.right, r.bottom);
+		*/
 	}
 	else
 	{
@@ -1535,23 +1698,60 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 		}
 		else
 		{
+			uint32 total;
+
 			switch(path.tag.FLG)
 			{
 			case GIF_FLG_PACKED:
 
-				// first try a shortcut for a very common case
+				// get to the start of the loop
 
-				if(path.adonly && size >= path.nloop)
+				if(path.reg != 0)
 				{
-					size -= path.nloop;
-
 					do
 					{
-						(this->*m_fpGIFRegHandlers[((GIFPackedReg*)mem)->A_D.ADDR])(&((GIFPackedReg*)mem)->r);
+						(this->*m_fpGIFPackedRegHandlers[path.GetReg()])((GIFPackedReg*)mem);
 
 						mem += sizeof(GIFPackedReg);
+						size--;
 					}
-					while(--path.nloop > 0);
+					while(path.StepReg() && size > 0 && path.reg != 0);
+				}
+
+				// all data available? usually is
+
+				total = path.nloop * path.nreg;
+
+				if(size >= total)
+				{
+					size -= total;
+
+					if(path.adonly)
+					{
+						do
+						{
+							(this->*m_fpGIFRegHandlers[((GIFPackedReg*)mem)->A_D.ADDR])(&((GIFPackedReg*)mem)->r);
+
+							mem += sizeof(GIFPackedReg);
+						}
+						while(--total > 0);
+					}
+					else
+					{
+						uint32 reg = 0;
+
+						do
+						{
+							(this->*m_fpGIFPackedRegHandlers[path.GetReg(reg++)])((GIFPackedReg*)mem);
+
+							mem += sizeof(GIFPackedReg);
+
+							reg = reg & ((int)(reg - path.nreg) >> 31); // resets reg back to 0 when it becomes equal to path.nreg
+						}
+						while(--total > 0);
+					}
+
+					path.nloop = 0;
 				}
 				else
 				{
@@ -1568,6 +1768,8 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 				break;
 
 			case GIF_FLG_REGLIST:
+
+				// TODO: do it similar to packed operation
 
 				size *= 2;
 
@@ -1739,8 +1941,9 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 	WriteState(data, &m_v.RGBAQ);
 	WriteState(data, &m_v.ST);
 	WriteState(data, &m_v.UV);
-	WriteState(data, &m_v.XYZ);
 	WriteState(data, &m_v.FOG);
+	WriteState(data, &m_v.XYZ);
+	data += sizeof(GIFReg); // obsolite
 	WriteState(data, &m_tr.x);
 	WriteState(data, &m_tr.y);
 	WriteState(data, m_mem.m_vm8, m_mem.m_vmsize);
@@ -1833,8 +2036,9 @@ int GSState::Defrost(const GSFreezeData* fd)
 	ReadState(&m_v.RGBAQ, data);
 	ReadState(&m_v.ST, data);
 	ReadState(&m_v.UV, data);
-	ReadState(&m_v.XYZ, data);
 	ReadState(&m_v.FOG, data);
+	ReadState(&m_v.XYZ, data);
+	data += sizeof(GIFReg); // obsolite
 	ReadState(&m_tr.x, data);
 	ReadState(&m_tr.y, data);
 	ReadState(m_mem.m_vm8, data, m_mem.m_vmsize);
@@ -1853,7 +2057,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 
 	PRIM = !m_env.PRMODECONT.AC ? (GIFRegPRIM*)&m_env.PRMODE : &m_env.PRIM;
 
-	m_context = &m_env.CTXT[PRIM->CTXT];
+	UpdateContext();
 
 	UpdateVertexKick();
 
@@ -1869,6 +2073,8 @@ int GSState::Defrost(const GSFreezeData* fd)
 		m_env.CTXT[i].offset.fzb = m_mem.GetPixelOffset4(m_env.CTXT[i].FRAME, m_env.CTXT[i].ZBUF);
 	}
 
+	UpdateScissor();
+
 m_perfmon.SetFrame(5000);
 
 	return 0;
@@ -1879,6 +2085,605 @@ void GSState::SetGameCRC(uint32 crc, int options)
 	m_crc = crc;
 	m_options = options;
 	m_game = CRC::Lookup(crc);
+}
+
+//
+
+void GSState::UpdateContext()
+{
+	m_context = &m_env.CTXT[PRIM->CTXT];
+
+	UpdateScissor();
+}
+
+void GSState::UpdateScissor()
+{
+	m_scissor = m_context->scissor.ofex;
+	m_ofxy = m_context->scissor.ofxy;
+}
+
+void GSState::UpdateVertexKick() 
+{
+	uint32 prim = PRIM->PRIM;
+
+	m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = m_fpGIFPackedRegHandlerXYZ[prim][0];
+	m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = m_fpGIFPackedRegHandlerXYZ[prim][1];
+	m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = m_fpGIFPackedRegHandlerXYZ[prim][2];
+	m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = m_fpGIFPackedRegHandlerXYZ[prim][3];
+
+	m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2] = m_fpGIFRegHandlerXYZ[prim][0];
+	m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3] = m_fpGIFRegHandlerXYZ[prim][1];
+	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2] = m_fpGIFRegHandlerXYZ[prim][2];
+	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = m_fpGIFRegHandlerXYZ[prim][3];
+
+	m_cvf = m_cv[prim][PRIM->TME][PRIM->FST];
+}
+
+void GSState::GrowVertexBuffer()
+{
+	int maxcount = std::max<int>(m_vertex.maxcount * 3 / 2, 10000);
+
+	uint8* vertex = (uint8*)_aligned_malloc(m_vertex.stride * maxcount, 16);
+	uint32* index = (uint32*)_aligned_malloc(sizeof(uint32) * maxcount * 3, 16); // worst case is slightly less than vertex number * 3
+
+	if(m_vertex.buff != NULL)
+	{
+		memcpy(vertex, m_vertex.buff, m_vertex.stride * m_vertex.tail);
+
+		_aligned_free(m_vertex.buff);
+	}
+
+	if(m_index.buff != NULL)
+	{
+		memcpy(index, m_index.buff, sizeof(uint32) * m_index.tail);
+		
+		_aligned_free(m_index.buff);
+	}
+
+	m_vertex.buff = vertex;
+	m_vertex.maxcount = maxcount - 3; // -3 to have some space at the end of the buffer before DrawingKick can grow it
+	m_index.buff = index;
+}
+
+template<uint32 prim> 
+__forceinline void GSState::VertexKick(uint32 skip)
+{
+	ASSERT(m_vertex.tail < m_vertex.maxcount);
+
+	size_t head = m_vertex.head;
+	size_t tail = m_vertex.tail;
+	size_t next = m_vertex.next;
+	size_t xy_tail = m_vertex.xy_tail;
+
+	// callers should write XYZUVF to m_v.m[1] in one piece to have this load store-forwarded, either by the cpu or the compiler when this function is inlined
+
+	GSVector4i v0(m_v.m[0]);
+	GSVector4i v1(m_v.m[1]); 
+
+	GSVector4i* RESTRICT tailptr = (GSVector4i*)&m_vertex.buff[m_vertex.stride * tail];
+
+	tailptr[0] = v0;
+	tailptr[1] = v1;
+
+	m_vertex.xy[xy_tail & 3] = GSVector4(v1.upl32(v1.sub16(GSVector4i::load(m_ofxy)).sra16(4)).upl16()); // zw not sign extended, only useful for eq tests
+
+	#ifdef _DEBUG
+	memset(&tailptr[2], 0, m_vertex.stride - sizeof(GSVertex));
+	#endif
+
+	m_vertex.tail = ++tail;
+	m_vertex.xy_tail = ++xy_tail;
+
+	size_t n = 0;
+
+	switch(prim)
+	{
+	case GS_POINTLIST: n = 1; break;
+	case GS_LINELIST: n = 2; break;
+	case GS_LINESTRIP: n = 2; break;
+	case GS_TRIANGLELIST: n = 3; break;
+	case GS_TRIANGLESTRIP: n = 3; break;
+	case GS_TRIANGLEFAN: n = 3; break;
+	case GS_SPRITE: n = 2; break;
+	case GS_INVALID: n = 1; break;
+	}
+
+	size_t m = tail - head;
+
+	if(m < n)
+	{
+		return;
+	}
+
+	if(skip == 0 && (prim != GS_TRIANGLEFAN || m <= 4)) // m_vertex.xy only knows about the last 4 vertices, head could be far behind for fan
+	{
+		GSVector4 v0, v1, v2, v3;
+
+		v0 = m_vertex.xy[(xy_tail + 1) & 3]; // T-3
+		v1 = m_vertex.xy[(xy_tail + 2) & 3]; // T-2
+		v2 = m_vertex.xy[(xy_tail + 3) & 3]; // T-1
+		v3 = m_vertex.xy[(xy_tail - m) & 3]; // H
+
+		GSVector4 pmin, pmax, cross;
+
+		switch(prim)
+		{
+		case GS_POINTLIST:
+			pmin = v2;
+			pmax = v2;
+			break;
+		case GS_LINELIST:
+		case GS_LINESTRIP:
+		case GS_SPRITE:
+			pmin = v2.min(v1);
+			pmax = v2.max(v1);
+			break;
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+			pmin = v2.min(v1.min(v0));
+			pmax = v2.max(v1.max(v0));
+			break;
+		case GS_TRIANGLEFAN:
+			pmin = v2.min(v1.min(v3));
+			pmax = v2.max(v1.max(v3));
+			break;
+		}
+
+		GSVector4 test = pmax < m_scissor | pmin > m_scissor.zwxy(); 
+		
+		switch(prim)
+		{
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+		case GS_TRIANGLEFAN:
+		case GS_SPRITE:
+			test |= m_nativeres ? (pmin == pmax).zwzw() : pmin == pmax;
+			break;
+		}
+
+		switch(prim)
+		{
+		case GS_TRIANGLELIST:
+		case GS_TRIANGLESTRIP:
+			cross = (v2 - v1) * (v2 - v0).yxwz();
+			test |= cross == cross.yxwz();
+			break;
+		case GS_TRIANGLEFAN:
+			cross = (v2 - v1) * (v2 - v3).yxwz();
+			test |= cross == cross.yxwz();
+			break;
+		}
+		
+		skip |= test.mask() & 3;
+	}
+
+	if(skip != 0)
+	{
+		switch(prim)
+		{
+		case GS_POINTLIST:
+		case GS_LINELIST:
+		case GS_TRIANGLELIST:
+		case GS_SPRITE:
+		case GS_INVALID: 
+			m_vertex.tail = head; // no need to check or grow the buffer length
+			break;
+		case GS_LINESTRIP:
+		case GS_TRIANGLESTRIP:
+			m_vertex.head = head + 1;
+			// fall through
+		case GS_TRIANGLEFAN:
+			if(tail >= m_vertex.maxcount) GrowVertexBuffer(); // in case too many vertices were skipped
+			break;
+		default: 
+			__assume(0);
+		}
+
+		return;
+	}
+
+	if(tail >= m_vertex.maxcount) GrowVertexBuffer();
+
+	uint32* RESTRICT buff = &m_index.buff[m_index.tail];
+
+	size_t src_index = head;
+
+	switch(prim)
+	{
+	case GS_POINTLIST:
+		buff[0] = head + 0;
+		m_vertex.head = head + 1;
+		m_vertex.next = head + 1;
+		m_index.tail += 1;
+		(this->*m_cvf)(head, head);
+		break;
+	case GS_LINELIST:
+		buff[0] = head + 0;
+		buff[1] = head + 1;
+		m_vertex.head = head + 2;
+		m_vertex.next = head + 2;
+		m_index.tail += 2;
+		(this->*m_cvf)(head + 0, head + 0);
+		(this->*m_cvf)(head + 1, head + 1);
+		break;
+	case GS_LINESTRIP:
+		if(next < head) {head = next; m_vertex.tail = next + 2;}
+		buff[0] = head + 0;
+		buff[1] = head + 1;
+		m_vertex.head = head + 1;
+		m_vertex.next = head + 2;
+		m_index.tail += 2;
+		if(head + 0 >= next) (this->*m_cvf)(head + 0, src_index + 0);
+		/*if(head + 1 >= next)*/ (this->*m_cvf)(head + 1, src_index + 1); // this is always a new vertex
+		break;
+	case GS_TRIANGLELIST:
+		buff[0] = head + 0;
+		buff[1] = head + 1;
+		buff[2] = head + 2;
+		m_vertex.head = head + 3;
+		m_vertex.next = head + 3;
+		m_index.tail += 3;
+		(this->*m_cvf)(head + 0, head + 0);
+		(this->*m_cvf)(head + 1, head + 1);
+		(this->*m_cvf)(head + 2, head + 2);
+		break;
+	case GS_TRIANGLESTRIP:
+		if(next < head) {head = next; m_vertex.tail = next + 3;}
+		buff[0] = head + 0;
+		buff[1] = head + 1;
+		buff[2] = head + 2;
+		m_vertex.head = head + 1;
+		m_vertex.next = head + 3;
+		m_index.tail += 3;
+		if(src_index + 0 >= next) (this->*m_cvf)(head + 0, src_index + 0);
+		if(src_index + 1 >= next) (this->*m_cvf)(head + 1, src_index + 1);
+		/*if(src_index + 2 >= next)*/ (this->*m_cvf)(head + 2, src_index + 2); // this is always a new vertex
+		break;
+	case GS_TRIANGLEFAN:
+		// TODO: remove gaps, next == head && head < tail - 3 || next > head && next < tail - 2 (very rare)
+		buff[0] = head + 0;
+		buff[1] = tail - 2;
+		buff[2] = tail - 1;
+		m_vertex.next = tail;
+		m_index.tail += 3;
+		if(head >= next) (this->*m_cvf)(head, head);
+		if(tail - 2 >= next) (this->*m_cvf)(tail - 2, tail - 2);
+		/*if(tail - 1 >= next)*/ (this->*m_cvf)(tail - 1, tail - 1); // this is always a new vertex
+		break;
+	case GS_SPRITE:	
+		buff[0] = head + 0;
+		buff[1] = head + 1;
+		m_vertex.head = head + 2;
+		m_vertex.next = head + 2;
+		m_index.tail += 2;
+		(this->*m_cvf)(head + 0, head + 0);
+		(this->*m_cvf)(head + 1, head + 1);
+		break;
+	case GS_INVALID:			
+		m_vertex.tail = head;
+		break;
+	default:
+		__assume(0);
+	}
+}
+
+void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFRegCLAMP& CLAMP, bool linear)
+{
+	int tw = TEX0.TW;
+	int th = TEX0.TH;
+
+	int w = 1 << tw;
+	int h = 1 << th;
+
+	GSVector4i tr(0, 0, w, h);
+
+	int wms = CLAMP.WMS;
+	int wmt = CLAMP.WMT;
+
+	int minu = (int)CLAMP.MINU;
+	int minv = (int)CLAMP.MINV;
+	int maxu = (int)CLAMP.MAXU;
+	int maxv = (int)CLAMP.MAXV;
+
+	GSVector4i vr = tr;
+
+	switch(wms)
+	{
+	case CLAMP_REPEAT:
+		break;
+	case CLAMP_CLAMP:
+		break;
+	case CLAMP_REGION_CLAMP:
+		if(vr.x < minu) vr.x = minu;
+		if(vr.z > maxu + 1) vr.z = maxu + 1;
+		break;
+	case CLAMP_REGION_REPEAT:
+		vr.x = maxu;
+		vr.z = vr.x + (minu + 1);
+		break;
+	default:
+		__assume(0);
+	}
+
+	switch(wmt)
+	{
+	case CLAMP_REPEAT:
+		break;
+	case CLAMP_CLAMP:
+		break;
+	case CLAMP_REGION_CLAMP:
+		if(vr.y < minv) vr.y = minv;
+		if(vr.w > maxv + 1) vr.w = maxv + 1;
+		break;
+	case CLAMP_REGION_REPEAT:
+		vr.y = maxv;
+		vr.w = vr.y + (minv + 1);
+		break;
+	default:
+		__assume(0);
+	}
+
+	if(wms + wmt < 6)
+	{
+		GSVector4 st = m_vt->m_min.t.xyxy(m_vt->m_max.t);
+
+		if(linear)
+		{
+			st += GSVector4(-0x8000, 0x8000).xxyy();
+		}
+
+		GSVector4i uv = GSVector4i(st).sra32(16);
+
+		GSVector4i u, v;
+
+		int mask = 0;
+
+		if(wms == CLAMP_REPEAT || wmt == CLAMP_REPEAT)
+		{
+			u = uv & GSVector4i::xffffffff().srl32(32 - tw);
+			v = uv & GSVector4i::xffffffff().srl32(32 - th);
+
+			GSVector4i uu = uv.sra32(tw);
+			GSVector4i vv = uv.sra32(th);
+
+			mask = (uu.upl32(vv) == uu.uph32(vv)).mask();
+		}
+
+		uv = uv.rintersect(tr);
+
+		switch(wms)
+		{
+		case CLAMP_REPEAT:
+			if(mask & 0x000f) {if(vr.x < u.x) vr.x = u.x; if(vr.z > u.z + 1) vr.z = u.z + 1;}
+			break;
+		case CLAMP_CLAMP:
+		case CLAMP_REGION_CLAMP:
+			if(vr.x < uv.x) vr.x = uv.x;
+			if(vr.z > uv.z + 1) vr.z = uv.z + 1;
+			break;
+		case CLAMP_REGION_REPEAT:
+			break;
+		default:
+			__assume(0);
+		}
+
+		switch(wmt)
+		{
+		case CLAMP_REPEAT:
+			if(mask & 0xf000) {if(vr.y < v.y) vr.y = v.y; if(vr.w > v.w + 1) vr.w = v.w + 1;}
+			break;
+		case CLAMP_CLAMP:
+		case CLAMP_REGION_CLAMP:
+			if(vr.y < uv.y) vr.y = uv.y;
+			if(vr.w > uv.w + 1) vr.w = uv.w + 1;
+			break;
+		case CLAMP_REGION_REPEAT:
+			break;
+		default:
+			__assume(0);
+		}
+	}
+
+	vr = vr.rintersect(tr);
+
+	if(vr.rempty())
+	{
+		// NOTE: this can happen when texcoords are all outside the texture or clamping area is zero, but we can't 
+		// let the texture cache update nothing, the sampler will still need a single texel from the border somewhere
+		// examples: 
+		// - ICO opening menu (texture looks like the miniature silhouette of everything except the sky)
+		// - THPS (no visible problems)
+		// - NFSMW (strange rectangles on screen, might be unrelated)
+
+		vr = (vr + GSVector4i(-1, +1).xxyy()).rintersect(tr);
+	}
+
+	r = vr;
+}
+
+void GSState::GetAlphaMinMax()
+{
+	if(m_vt->m_alpha.valid)
+	{
+		return;
+	}
+
+	const GSDrawingEnvironment& env = m_env;
+	const GSDrawingContext* context = m_context;
+
+	GSVector4i a = m_vt->m_min.c.uph32(m_vt->m_max.c).zzww();
+
+	if(PRIM->TME && context->TEX0.TCC)
+	{
+		switch(GSLocalMemory::m_psm[context->TEX0.PSM].fmt)
+		{
+		case 0:
+			a.y = 0;
+			a.w = 0xff;
+			break;
+		case 1:
+			a.y = env.TEXA.AEM ? 0 : env.TEXA.TA0;
+			a.w = env.TEXA.TA0;
+			break;
+		case 2:
+			a.y = env.TEXA.AEM ? 0 : min(env.TEXA.TA0, env.TEXA.TA1);
+			a.w = max(env.TEXA.TA0, env.TEXA.TA1);
+			break;
+		case 3:
+			m_mem.m_clut.GetAlphaMinMax32(a.y, a.w);
+			break;
+		default:
+			__assume(0);
+		}
+
+		switch(context->TEX0.TFX)
+		{
+		case TFX_MODULATE:
+			a.x = (a.x * a.y) >> 7;
+			a.z = (a.z * a.w) >> 7;
+			if(a.x > 0xff) a.x = 0xff;
+			if(a.z > 0xff) a.z = 0xff;
+			break;
+		case TFX_DECAL:
+			a.x = a.y;
+			a.z = a.w;
+			break;
+		case TFX_HIGHLIGHT:
+			a.x = a.x + a.y;
+			a.z = a.z + a.w;
+			if(a.x > 0xff) a.x = 0xff;
+			if(a.z > 0xff) a.z = 0xff;
+			break;
+		case TFX_HIGHLIGHT2:
+			a.x = a.y;
+			a.z = a.w;
+			break;
+		default:
+			__assume(0);
+		}
+	}
+
+	m_vt->m_alpha.min = a.x;
+	m_vt->m_alpha.max = a.z;
+	m_vt->m_alpha.valid = true;
+}
+
+bool GSState::TryAlphaTest(uint32& fm, uint32& zm)
+{
+	const GSDrawingContext* context = m_context;
+
+	bool pass = true;
+
+	if(context->TEST.ATST == ATST_NEVER)
+	{
+		pass = false;
+	}
+	else if(context->TEST.ATST != ATST_ALWAYS)
+	{
+		GetAlphaMinMax();
+
+		int amin = m_vt->m_alpha.min;
+		int amax = m_vt->m_alpha.max;
+
+		int aref = context->TEST.AREF;
+
+		switch(context->TEST.ATST)
+		{
+		case ATST_NEVER:
+			pass = false;
+			break;
+		case ATST_ALWAYS:
+			pass = true;
+			break;
+		case ATST_LESS:
+			if(amax < aref) pass = true;
+			else if(amin >= aref) pass = false;
+			else return false;
+			break;
+		case ATST_LEQUAL:
+			if(amax <= aref) pass = true;
+			else if(amin > aref) pass = false;
+			else return false;
+			break;
+		case ATST_EQUAL:
+			if(amin == aref && amax == aref) pass = true;
+			else if(amin > aref || amax < aref) pass = false;
+			else return false;
+			break;
+		case ATST_GEQUAL:
+			if(amin >= aref) pass = true;
+			else if(amax < aref) pass = false;
+			else return false;
+			break;
+		case ATST_GREATER:
+			if(amin > aref) pass = true;
+			else if(amax <= aref) pass = false;
+			else return false;
+			break;
+		case ATST_NOTEQUAL:
+			if(amin == aref && amax == aref) pass = false;
+			else if(amin > aref || amax < aref) pass = true;
+			else return false;
+			break;
+		default:
+			__assume(0);
+		}
+	}
+
+	if(!pass)
+	{
+		switch(context->TEST.AFAIL)
+		{
+		case AFAIL_KEEP: fm = zm = 0xffffffff; break;
+		case AFAIL_FB_ONLY: zm = 0xffffffff; break;
+		case AFAIL_ZB_ONLY: fm = 0xffffffff; break;
+		case AFAIL_RGB_ONLY: fm |= 0xff000000; zm = 0xffffffff; break;
+		default: __assume(0);
+		}
+	}
+
+	return true;
+}
+
+bool GSState::IsOpaque()
+{
+	if(PRIM->AA1)
+	{
+		return false;
+	}
+
+	if(!PRIM->ABE)
+	{
+		return true;
+	}
+
+	const GSDrawingContext* context = m_context;
+
+	int amin = 0, amax = 0xff;
+
+	if(context->ALPHA.A != context->ALPHA.B)
+	{
+		if(context->ALPHA.C == 0)
+		{
+			GetAlphaMinMax();
+
+			amin = m_vt->m_alpha.min;
+			amax = m_vt->m_alpha.max;
+		}
+		else if(context->ALPHA.C == 1)
+		{
+			if(context->FRAME.PSM == PSM_PSMCT24 || context->FRAME.PSM == PSM_PSMZ24)
+			{
+				amin = amax = 0x80;
+			}
+		}
+		else if(context->ALPHA.C == 2)
+		{
+			amin = amax = context->ALPHA.FIX;
+		}
+	}
+
+	return context->ALPHA.IsOpaque(amin, amax);
 }
 
 // GSTransferBuffer

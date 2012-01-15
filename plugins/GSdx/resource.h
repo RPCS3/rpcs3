@@ -81,12 +81,13 @@
 #define IDR_INTERLACE_FX                10003
 #define IDD_CONFIG2                     10004
 #define IDR_FXAA_FX                     10005
+#define IDR_CS_FX						10006
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        10006
+#define _APS_NEXT_RESOURCE_VALUE        10007
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         2050
 #define _APS_NEXT_SYMED_VALUE           5000

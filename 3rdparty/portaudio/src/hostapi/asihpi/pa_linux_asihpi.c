@@ -1,12 +1,16 @@
 /*
+ * $Id:$
  * PortAudio Portable Real-Time Audio Library
  * Latest Version at: http://www.portaudio.com
+ * AudioScience HPI implementation by Fred Gleason, Ludwig Schwardt and
+ * Eliot Blennerhassett
  *
- * PortAudio v18 version of AudioScience HPI driver by Fred Gleason <fredg@salemradiolabs.com>
- * PortAudio v19 version of AudioScience HPI driver by Ludwig Schwardt <schwardt@sun.ac.za>
+ * Copyright (c) 2003 Fred Gleason <fredg@salemradiolabs.com>
+ * Copyright (c) 2005,2006 Ludwig Schwardt <schwardt@sun.ac.za>
+ * Copyright (c) 2011 Eliot Blennerhassett <eblennerhassett@audioscience.com>
  *
- * Copyright (c) 2003 Fred Gleason
- * Copyright (c) 2005,2006 Ludwig Schwardt
+ * Based on the Open Source API proposed by Ross Bencina
+ * Copyright (c) 1999-2008 Ross Bencina, Phil Burk
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -61,7 +65,7 @@
 
  Documentation for the HPI API can be found at:
 
-     http://www.audioscience.com/internet/download/sdk/spchpi.pdf
+     http://www.audioscience.com/internet/download/sdk/hpi_usermanual_html/html/index.html
 
  The Linux HPI driver itself (a kernel module + library) can be downloaded from:
 
@@ -134,8 +138,6 @@
 
  Output buffer priming via the user callback (i.e. paPrimeOutputBuffersUsingStreamCallback
  and friends) is not implemented yet. All output is primed with silence.
-
- Please send bug reports etc. to Ludwig Schwardt <schwardt@sun.ac.za>
  */
 
 #include <unistd.h>
@@ -193,7 +195,7 @@
 /** Check return value of HPI function, and map it to PaError */
 #define PA_ASIHPI_UNLESS_(expr, paError) \
     do { \
-        HW16 hpiError = (expr); \
+        hpi_err_t hpiError = (expr); \
         /* If HPI error occurred */ \
         if( UNLIKELY( hpiError ) ) \
         { \
@@ -265,8 +267,6 @@ typedef struct PaAsiHpiHostApiRepresentation
     /* implementation specific data goes here */
 
     PaHostApiIndex hostApiIndex;
-    /** HPI subsystem pointer */
-    HPI_HSUBSYS *subSys;
 }
 PaAsiHpiHostApiRepresentation;
 
@@ -280,20 +280,18 @@ typedef struct PaAsiHpiDeviceInfo
 
     /* implementation specific data goes here */
 
-    /** HPI subsystem (required for most HPI calls) */
-    HPI_HSUBSYS *subSys;
     /** Adapter index */
-    HW16 adapterIndex;
+    uint16_t adapterIndex;
     /** Adapter model number (hex) */
-    HW16 adapterType;
+    uint16_t adapterType;
     /** Adapter HW/SW version */
-    HW16 adapterVersion;
+    uint16_t adapterVersion;
     /** Adapter serial number */
-    HW32 adapterSerialNumber;
+    uint32_t adapterSerialNumber;
     /** Stream number */
-    HW16 streamIndex;
+    uint16_t streamIndex;
     /** 0=Input, 1=Output (HPI streams are either input or output but not both) */
-    HW16 streamIsOutput;
+    uint16_t streamIsOutput;
 }
 PaAsiHpiDeviceInfo;
 
@@ -328,27 +326,25 @@ typedef struct PaAsiHpiStreamComponent
 {
     /** Device information (HPI handles, etc) */
     PaAsiHpiDeviceInfo *hpiDevice;
-    /** Stream handle, as passed to HPI interface.
-     HACK: we assume types HPI_HISTREAM and HPI_HOSTREAM are the same...
-     (both are HW32 up to version 3.00 of ASIHPI, and hopefully they stay that way) */
-    HPI_HISTREAM hpiStream;
+    /** Stream handle, as passed to HPI interface. */
+    hpi_handle_t hpiStream;
     /** Stream format, as passed to HPI interface */
-    HPI_FORMAT hpiFormat;
+    struct hpi_format hpiFormat;
     /** Number of bytes per frame, derived from hpiFormat and saved for convenience */
-    HW32 bytesPerFrame;
+    uint32_t bytesPerFrame;
     /** Size of hardware (on-card) buffer of stream in bytes */
-    HW32 hardwareBufferSize;
+    uint32_t hardwareBufferSize;
     /** Size of host (BBM) buffer of stream in bytes (if used) */
-    HW32 hostBufferSize;
+    uint32_t hostBufferSize;
     /** Upper limit on the utilization of output stream buffer (both hardware and host).
      This prevents large latencies in an output-only stream with a potentially huge buffer
      and a fast data generator, which would otherwise keep the hardware buffer filled to
      capacity. See also the "Hardware Buffering=off" option in the AudioScience WAV driver. */
-    HW32 outputBufferCap;
+    uint32_t outputBufferCap;
     /** Sample buffer (halfway station between HPI and buffer processor) */
-    HW8 *tempBuffer;
+    uint8_t *tempBuffer;
     /** Sample buffer size, in bytes */
-    HW32 tempBufferSize;
+    uint32_t tempBufferSize;
 }
 PaAsiHpiStreamComponent;
 
@@ -369,7 +365,7 @@ typedef struct PaAsiHpiStream
     PaAsiHpiStreamComponent *input, *output;
 
     /** Polling interval (in milliseconds) */
-    HW32 pollingInterval;
+    uint32_t pollingInterval;
     /** Are we running in callback mode? */
     int callbackMode;
     /** Number of frames to transfer at a time to/from HPI */
@@ -401,23 +397,23 @@ PaAsiHpiStream;
 typedef struct PaAsiHpiStreamInfo
 {
     /** HPI stream state (HPI_STATE_STOPPED, HPI_STATE_PLAYING, etc.) */
-    HW16 state;
+    uint16_t state;
     /** Size (in bytes) of recording/playback data buffer in HPI driver */
-    HW32 bufferSize;
+    uint32_t bufferSize;
     /** Amount of data (in bytes) available in the buffer */
-    HW32 dataSize;
+    uint32_t dataSize;
     /** Number of frames played/recorded since last stream reset */
-    HW32 frameCounter;
+    uint32_t frameCounter;
     /** Amount of data (in bytes) in hardware (on-card) buffer.
      This differs from dataSize if bus mastering (BBM) is used, which introduces another
      driver-level buffer to which dataSize/bufferSize then refers. */
-    HW32 auxDataSize;
+    uint32_t auxDataSize;
     /** Total number of data frames currently buffered by HPI driver (host + hw buffers) */
-    HW32 totalBufferedData;
+    uint32_t totalBufferedData;
     /** Size of immediately available data (for input) or space (for output) in frames.
      This only checks the first-level buffer (typically host buffer). This amount can be
      transferred immediately. */
-    HW32 availableFrames;
+    uint32_t availableFrames;
     /** Indicates that hardware buffer is getting too full */
     int overflow;
     /** Indicates that hardware buffer is getting too empty */
@@ -479,21 +475,21 @@ static void *CallbackThreadFunc( void *userData );
 
 /* Functions specific to this API */
 static PaError PaAsiHpi_BuildDeviceList( PaAsiHpiHostApiRepresentation *hpiHostApi );
-static HW16 PaAsiHpi_PaToHpiFormat( PaSampleFormat paFormat );
-static PaSampleFormat PaAsiHpi_HpiToPaFormat( HW16 hpiFormat );
+static uint16_t PaAsiHpi_PaToHpiFormat( PaSampleFormat paFormat );
+static PaSampleFormat PaAsiHpi_HpiToPaFormat( uint16_t hpiFormat );
 static PaError PaAsiHpi_CreateFormat( struct PaUtilHostApiRepresentation *hostApi,
                                       const PaStreamParameters *parameters, double sampleRate,
-                                      PaAsiHpiDeviceInfo **hpiDevice, HPI_FORMAT *hpiFormat );
+                                      PaAsiHpiDeviceInfo **hpiDevice, struct hpi_format *hpiFormat );
 static PaError PaAsiHpi_OpenInput( struct PaUtilHostApiRepresentation *hostApi,
-                                   const PaAsiHpiDeviceInfo *hpiDevice, const HPI_FORMAT *hpiFormat,
-                                   HPI_HISTREAM *hpiStream );
+                                   const PaAsiHpiDeviceInfo *hpiDevice, const struct hpi_format *hpiFormat,
+                                   hpi_handle_t *hpiStream );
 static PaError PaAsiHpi_OpenOutput( struct PaUtilHostApiRepresentation *hostApi,
-                                    const PaAsiHpiDeviceInfo *hpiDevice, const HPI_FORMAT *hpiFormat,
-                                    HPI_HOSTREAM *hpiStream );
+                                    const PaAsiHpiDeviceInfo *hpiDevice, const struct hpi_format *hpiFormat,
+                                    hpi_handle_t *hpiStream );
 static PaError PaAsiHpi_GetStreamInfo( PaAsiHpiStreamComponent *streamComp, PaAsiHpiStreamInfo *info );
 static void PaAsiHpi_StreamComponentDump( PaAsiHpiStreamComponent *streamComp, PaAsiHpiStream *stream );
 static void PaAsiHpi_StreamDump( PaAsiHpiStream *stream );
-static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, HW32 pollingInterval,
+static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, uint32_t pollingInterval,
                                       unsigned long framesPerPaHostBuffer, PaTime suggestedLatency );
 static PaError PaAsiHpi_PrimeOutputWithSilence( PaAsiHpiStream *stream );
 static PaError PaAsiHpi_StartStream( PaAsiHpiStream *stream, int outputPrimed );
@@ -529,43 +525,38 @@ static PaError PaAsiHpi_BuildDeviceList( PaAsiHpiHostApiRepresentation *hpiHostA
     PaUtilHostApiRepresentation *hostApi = &hpiHostApi->baseHostApiRep;
     PaHostApiInfo *baseApiInfo = &hostApi->info;
     PaAsiHpiDeviceInfo *hpiDeviceList;
-    HW16 adapterList[ HPI_MAX_ADAPTERS ];
-    HW16 numAdapters;
-    HW16 hpiError = 0;
+    int numAdapters;
+    hpi_err_t hpiError = 0;
     int i, j, deviceCount = 0, deviceIndex = 0;
 
     assert( hpiHostApi );
-    assert( hpiHostApi->subSys );
 
-    /* Look for adapters (not strictly necessary, as AdapterOpen can do the same, but this */
-    /* way we have less errors since we do not try to open adapters we know aren't there) */
     /* Errors not considered critical here (subsystem may report 0 devices), but report them */
     /* in debug mode. */
-    PA_ASIHPI_UNLESS_( HPI_SubSysFindAdapters( hpiHostApi->subSys, &numAdapters,
-                       adapterList, HPI_MAX_ADAPTERS ), paNoError );
+    PA_ASIHPI_UNLESS_( HPI_SubSysGetNumAdapters( NULL, &numAdapters), paNoError );
 
-    /* First open and count the number of devices (= number of streams), to ease memory allocation */
-    for( i=0; i < HPI_MAX_ADAPTERS; ++i )
+    for( i=0; i < numAdapters; ++i )
     {
-        HW16 inStreams, outStreams;
-        HW16 version;
-        HW32 serial;
-        HW16 type;
+        uint16_t inStreams, outStreams;
+        uint16_t version;
+        uint32_t serial;
+        uint16_t type;
+        uint32_t idx;
 
-        /* If no adapter found at this index, skip it */
-        if( adapterList[i] == 0 )
+        hpiError = HPI_SubSysGetAdapter(NULL, i, &idx, &type);
+        if (hpiError)
             continue;
 
         /* Try to open adapter */
-        hpiError = HPI_AdapterOpen( hpiHostApi->subSys, i );
+        hpiError = HPI_AdapterOpen( NULL, idx );
         /* Report error and skip to next device on failure */
         if( hpiError )
         {
             PA_ASIHPI_REPORT_ERROR_( hpiError );
             continue;
         }
-        hpiError = HPI_AdapterGetInfo( hpiHostApi->subSys, i,
-                                       &outStreams, &inStreams, &version, &serial, &type );
+        hpiError = HPI_AdapterGetInfo( NULL, idx, &outStreams, &inStreams,
+					&version, &serial, &type );
         /* Skip to next device on failure */
         if( hpiError )
         {
@@ -597,19 +588,20 @@ static PaError PaAsiHpi_BuildDeviceList( PaAsiHpiHostApiRepresentation *hpiHostA
                     paInsufficientMemory );
 
         /* Now query devices again for information */
-        for( i=0; i < HPI_MAX_ADAPTERS; ++i )
+        for( i=0; i < numAdapters; ++i )
         {
-            HW16 inStreams, outStreams;
-            HW16 version;
-            HW32 serial;
-            HW16 type;
+            uint16_t inStreams, outStreams;
+            uint16_t version;
+            uint32_t serial;
+            uint16_t type;
+            uint32_t idx;
 
-            /* If no adapter found at this index, skip it */
-            if( adapterList[i] == 0 )
+            hpiError = HPI_SubSysGetAdapter( NULL, i, &idx, &type );
+            if (hpiError)
                 continue;
 
             /* Assume adapter is still open from previous round */
-            hpiError = HPI_AdapterGetInfo( hpiHostApi->subSys, i,
+            hpiError = HPI_AdapterGetInfo( NULL, idx,
                                            &outStreams, &inStreams, &version, &serial, &type );
             /* Report error and skip to next device on failure */
             if( hpiError )
@@ -620,7 +612,7 @@ static PaError PaAsiHpi_BuildDeviceList( PaAsiHpiHostApiRepresentation *hpiHostA
             else
             {
                 PA_DEBUG(( "Found HPI Adapter ID=%4X Idx=%d #In=%d #Out=%d S/N=%d HWver=%c%d DSPver=%03d\n",
-                           type, i, inStreams, outStreams, serial,
+                           type, idx, inStreams, outStreams, serial,
                            ((version>>3)&0xf)+'A',                  /* Hw version major */
                            version&0x7,                             /* Hw version minor */
                            ((version>>13)*100)+((version>>7)&0x3f)  /* DSP code version */
@@ -637,8 +629,7 @@ static PaError PaAsiHpi_BuildDeviceList( PaAsiHpiHostApiRepresentation *hpiHostA
 
                 memset( hpiDevice, 0, sizeof(PaAsiHpiDeviceInfo) );
                 /* Set implementation-specific device details */
-                hpiDevice->subSys = hpiHostApi->subSys;
-                hpiDevice->adapterIndex = i;
+                hpiDevice->adapterIndex = idx;
                 hpiDevice->adapterType = type;
                 hpiDevice->adapterVersion = version;
                 hpiDevice->adapterSerialNumber = serial;
@@ -680,8 +671,7 @@ static PaError PaAsiHpi_BuildDeviceList( PaAsiHpiHostApiRepresentation *hpiHostA
 
                 memset( hpiDevice, 0, sizeof(PaAsiHpiDeviceInfo) );
                 /* Set implementation-specific device details */
-                hpiDevice->subSys = hpiHostApi->subSys;
-                hpiDevice->adapterIndex = i;
+                hpiDevice->adapterIndex = idx;
                 hpiDevice->adapterType = type;
                 hpiDevice->adapterVersion = version;
                 hpiDevice->adapterSerialNumber = serial;
@@ -740,32 +730,31 @@ PaError PaAsiHpi_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiInd
     PaAsiHpiHostApiRepresentation *hpiHostApi = NULL;
     PaHostApiInfo *baseApiInfo;
 
+    /* Try to initialize HPI subsystem */
+    if (!HPI_SubSysCreate())
+    {
+        /* the V19 development docs say that if an implementation
+         * detects that it cannot be used, it should return a NULL
+         * interface and paNoError */
+        PA_DEBUG(( "Could not open HPI interface\n" ));
+
+	*hostApi = NULL;
+        return paNoError;
+    }
+    else
+    {
+        uint32_t hpiVersion;
+        PA_ASIHPI_UNLESS_( HPI_SubSysGetVersionEx( NULL, &hpiVersion ), paUnanticipatedHostError );
+        PA_DEBUG(( "HPI interface v%d.%02d.%02d\n",
+                   hpiVersion >> 16,  (hpiVersion >> 8) & 0x0F, (hpiVersion & 0x0F) ));
+    }
+
     /* Allocate host API structure */
     PA_UNLESS_( hpiHostApi = (PaAsiHpiHostApiRepresentation*) PaUtil_AllocateMemory(
                                  sizeof(PaAsiHpiHostApiRepresentation) ), paInsufficientMemory );
     PA_UNLESS_( hpiHostApi->allocations = PaUtil_CreateAllocationGroup(), paInsufficientMemory );
 
     hpiHostApi->hostApiIndex = hostApiIndex;
-    hpiHostApi->subSys = NULL;
-
-    /* Try to initialize HPI subsystem */
-    if( ( hpiHostApi->subSys = HPI_SubSysCreate() ) == NULL)
-    {
-        /* the V19 development docs say that if an implementation
-         * detects that it cannot be used, it should return a NULL
-         * interface and paNoError */
-        PA_DEBUG(( "Could not open HPI interface\n" ));
-        result = paNoError;
-        *hostApi = NULL;
-        goto error;
-    }
-    else
-    {
-        HW32 hpiVersion;
-        PA_ASIHPI_UNLESS_( HPI_SubSysGetVersion( hpiHostApi->subSys, &hpiVersion ), paUnanticipatedHostError );
-        PA_DEBUG(( "HPI interface v%d.%02d\n",
-                   hpiVersion >> 8, 10*((hpiVersion & 0xF0) >> 4) + (hpiVersion & 0x0F) ));
-    }
 
     *hostApi = &hpiHostApi->baseHostApiRep;
     baseApiInfo = &((*hostApi)->info);
@@ -799,8 +788,8 @@ PaError PaAsiHpi_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiInd
 
     return result;
 error:
-    /* Clean up memory */
-    Terminate( (PaUtilHostApiRepresentation *)hpiHostApi );
+    if (hpiHostApi)
+        PaUtil_FreeMemory( hpiHostApi );
     return result;
 }
 
@@ -820,25 +809,22 @@ static void Terminate( struct PaUtilHostApiRepresentation *hostApi )
     if( hpiHostApi )
     {
         /* Get rid of HPI-specific structures */
-        if( hpiHostApi->subSys )
+        uint16_t lastAdapterIndex = HPI_MAX_ADAPTERS;
+        /* Iterate through device list and close adapters */
+        for( i=0; i < hostApi->info.deviceCount; ++i )
         {
-            HW16 lastAdapterIndex = HPI_MAX_ADAPTERS;
-            /* Iterate through device list and close adapters */
-            for( i=0; i < hostApi->info.deviceCount; ++i )
+            PaAsiHpiDeviceInfo *hpiDevice = (PaAsiHpiDeviceInfo *) hostApi->deviceInfos[ i ];
+            /* Close adapter only if it differs from previous one */
+            if( hpiDevice->adapterIndex != lastAdapterIndex )
             {
-                PaAsiHpiDeviceInfo *hpiDevice = (PaAsiHpiDeviceInfo *) hostApi->deviceInfos[ i ];
-                /* Close adapter only if it differs from previous one */
-                if( hpiDevice->adapterIndex != lastAdapterIndex )
-                {
-                    /* Ignore errors (report only during debugging) */
-                    PA_ASIHPI_UNLESS_( HPI_AdapterClose( hpiHostApi->subSys,
-                                                         hpiDevice->adapterIndex ), paNoError );
-                    lastAdapterIndex = hpiDevice->adapterIndex;
-                }
+                /* Ignore errors (report only during debugging) */
+                PA_ASIHPI_UNLESS_( HPI_AdapterClose( NULL,
+                                                     hpiDevice->adapterIndex ), paNoError );
+                lastAdapterIndex = hpiDevice->adapterIndex;
             }
-            /* Finally dismantle HPI subsystem */
-            HPI_SubSysFree( hpiHostApi->subSys );
         }
+        /* Finally dismantle HPI subsystem */
+        HPI_SubSysFree( NULL );
 
         if( hpiHostApi->allocations )
         {
@@ -859,7 +845,7 @@ error:
 
  @return HPI sample format
  */
-static HW16 PaAsiHpi_PaToHpiFormat( PaSampleFormat paFormat )
+static uint16_t PaAsiHpi_PaToHpiFormat( PaSampleFormat paFormat )
 {
     /* Ignore interleaving flag */
     switch( paFormat & ~paNonInterleaved )
@@ -893,7 +879,7 @@ static HW16 PaAsiHpi_PaToHpiFormat( PaSampleFormat paFormat )
 
  @return PortAudio sample format
  */
-static PaSampleFormat PaAsiHpi_HpiToPaFormat( HW16 hpiFormat )
+static PaSampleFormat PaAsiHpi_HpiToPaFormat( uint16_t hpiFormat )
 {
     switch( hpiFormat )
     {
@@ -938,11 +924,11 @@ static PaSampleFormat PaAsiHpi_HpiToPaFormat( HW16 hpiFormat )
  */
 static PaError PaAsiHpi_CreateFormat( struct PaUtilHostApiRepresentation *hostApi,
                                       const PaStreamParameters *parameters, double sampleRate,
-                                      PaAsiHpiDeviceInfo **hpiDevice, HPI_FORMAT *hpiFormat )
+                                      PaAsiHpiDeviceInfo **hpiDevice, struct hpi_format *hpiFormat )
 {
     int maxChannelCount = 0;
     PaSampleFormat hostSampleFormat = 0;
-    HW16 hpiError = 0;
+    hpi_err_t hpiError = 0;
 
     /* Unless alternate device specification is supported, reject the use of
        paUseHostApiSpecificDeviceSpecification */
@@ -979,9 +965,9 @@ static PaError PaAsiHpi_CreateFormat( struct PaUtilHostApiRepresentation *hostAp
     hostSampleFormat = PaUtil_SelectClosestAvailableFormat(PA_ASIHPI_AVAILABLE_FORMATS_,
                        parameters->sampleFormat );
     /* Setup format + info objects */
-    hpiError = HPI_FormatCreate( hpiFormat, (HW16)parameters->channelCount,
+    hpiError = HPI_FormatCreate( hpiFormat, (uint16_t)parameters->channelCount,
                                  PaAsiHpi_PaToHpiFormat( hostSampleFormat ),
-                                 (HW32)sampleRate, 0, 0 );
+                                 (uint32_t)sampleRate, 0, 0 );
     if( hpiError )
     {
         PA_ASIHPI_REPORT_ERROR_( hpiError );
@@ -1016,25 +1002,25 @@ static PaError PaAsiHpi_CreateFormat( struct PaUtilHostApiRepresentation *hostAp
  @return PortAudio error code (typically indicating a problem with stream format or device)
 */
 static PaError PaAsiHpi_OpenInput( struct PaUtilHostApiRepresentation *hostApi,
-                                   const PaAsiHpiDeviceInfo *hpiDevice, const HPI_FORMAT *hpiFormat,
-                                   HPI_HISTREAM *hpiStream )
+                                   const PaAsiHpiDeviceInfo *hpiDevice, const struct hpi_format *hpiFormat,
+                                   hpi_handle_t *hpiStream )
 {
     PaAsiHpiHostApiRepresentation *hpiHostApi = (PaAsiHpiHostApiRepresentation*)hostApi;
     PaError result = paNoError;
-    HW16 hpiError = 0;
+    hpi_err_t hpiError = 0;
 
     /* Catch misplaced output devices, as they typically have 0 input channels */
     PA_UNLESS_( !hpiDevice->streamIsOutput, paInvalidChannelCount );
     /* Try to open input stream */
-    PA_ASIHPI_UNLESS_( HPI_InStreamOpen( hpiHostApi->subSys, hpiDevice->adapterIndex,
+    PA_ASIHPI_UNLESS_( HPI_InStreamOpen( NULL, hpiDevice->adapterIndex,
                                          hpiDevice->streamIndex, hpiStream ), paDeviceUnavailable );
     /* Set input format (checking it in the process) */
     /* Could also use HPI_InStreamQueryFormat, but this economizes the process */
-    hpiError = HPI_InStreamSetFormat( hpiHostApi->subSys, *hpiStream, (HPI_FORMAT*)hpiFormat );
+    hpiError = HPI_InStreamSetFormat( NULL, *hpiStream, (struct hpi_format*)hpiFormat );
     if( hpiError )
     {
         PA_ASIHPI_REPORT_ERROR_( hpiError );
-        PA_ASIHPI_UNLESS_( HPI_InStreamClose( hpiHostApi->subSys, *hpiStream ), paNoError );
+        PA_ASIHPI_UNLESS_( HPI_InStreamClose( NULL, *hpiStream ), paNoError );
         switch( hpiError )
         {
         case HPI_ERROR_INVALID_FORMAT:
@@ -1071,25 +1057,25 @@ error:
  @return PortAudio error code (typically indicating a problem with stream format or device)
 */
 static PaError PaAsiHpi_OpenOutput( struct PaUtilHostApiRepresentation *hostApi,
-                                    const PaAsiHpiDeviceInfo *hpiDevice, const HPI_FORMAT *hpiFormat,
-                                    HPI_HOSTREAM *hpiStream )
+                                    const PaAsiHpiDeviceInfo *hpiDevice, const struct hpi_format *hpiFormat,
+                                    hpi_handle_t *hpiStream )
 {
     PaAsiHpiHostApiRepresentation *hpiHostApi = (PaAsiHpiHostApiRepresentation*)hostApi;
     PaError result = paNoError;
-    HW16 hpiError = 0;
+    hpi_err_t hpiError = 0;
 
     /* Catch misplaced input devices, as they typically have 0 output channels */
     PA_UNLESS_( hpiDevice->streamIsOutput, paInvalidChannelCount );
     /* Try to open output stream */
-    PA_ASIHPI_UNLESS_( HPI_OutStreamOpen( hpiHostApi->subSys, hpiDevice->adapterIndex,
+    PA_ASIHPI_UNLESS_( HPI_OutStreamOpen( NULL, hpiDevice->adapterIndex,
                                           hpiDevice->streamIndex, hpiStream ), paDeviceUnavailable );
 
     /* Check output format (format is set on first write to output stream) */
-    hpiError = HPI_OutStreamQueryFormat( hpiHostApi->subSys, *hpiStream, (HPI_FORMAT*)hpiFormat );
+    hpiError = HPI_OutStreamQueryFormat( NULL, *hpiStream, (struct hpi_format*)hpiFormat );
     if( hpiError )
     {
         PA_ASIHPI_REPORT_ERROR_( hpiError );
-        PA_ASIHPI_UNLESS_( HPI_OutStreamClose( hpiHostApi->subSys, *hpiStream ), paNoError );
+        PA_ASIHPI_UNLESS_( HPI_OutStreamClose( NULL, *hpiStream ), paNoError );
         switch( hpiError )
         {
         case HPI_ERROR_INVALID_FORMAT:
@@ -1135,12 +1121,12 @@ static PaError IsFormatSupported( struct PaUtilHostApiRepresentation *hostApi,
     PaError result = paFormatIsSupported;
     PaAsiHpiHostApiRepresentation *hpiHostApi = (PaAsiHpiHostApiRepresentation*)hostApi;
     PaAsiHpiDeviceInfo *hpiDevice = NULL;
-    HPI_FORMAT hpiFormat;
+    struct hpi_format hpiFormat;
 
     /* Input stream */
     if( inputParameters )
     {
-        HPI_HISTREAM hpiStream;
+        hpi_handle_t hpiStream;
         PA_DEBUG(( "%s: Checking input params: dev=%d, sr=%d, chans=%d, fmt=%d\n",
                    __FUNCTION__, inputParameters->device, (int)sampleRate,
                    inputParameters->channelCount, inputParameters->sampleFormat ));
@@ -1150,13 +1136,13 @@ static PaError IsFormatSupported( struct PaUtilHostApiRepresentation *hostApi,
         /* Open stream to further check format */
         PA_ENSURE_( PaAsiHpi_OpenInput( hostApi, hpiDevice, &hpiFormat, &hpiStream ) );
         /* Close stream again */
-        PA_ASIHPI_UNLESS_( HPI_InStreamClose( hpiHostApi->subSys, hpiStream ), paNoError );
+        PA_ASIHPI_UNLESS_( HPI_InStreamClose( NULL, hpiStream ), paNoError );
     }
 
     /* Output stream */
     if( outputParameters )
     {
-        HPI_HOSTREAM hpiStream;
+        hpi_handle_t hpiStream;
         PA_DEBUG(( "%s: Checking output params: dev=%d, sr=%d, chans=%d, fmt=%d\n",
                    __FUNCTION__, outputParameters->device, (int)sampleRate,
                    outputParameters->channelCount, outputParameters->sampleFormat ));
@@ -1166,7 +1152,7 @@ static PaError IsFormatSupported( struct PaUtilHostApiRepresentation *hostApi,
         /* Open stream to further check format */
         PA_ENSURE_( PaAsiHpi_OpenOutput( hostApi, hpiDevice, &hpiFormat, &hpiStream ) );
         /* Close stream again */
-        PA_ASIHPI_UNLESS_( HPI_OutStreamClose( hpiHostApi->subSys, hpiStream ), paNoError );
+        PA_ASIHPI_UNLESS_( HPI_OutStreamClose( NULL, hpiStream ), paNoError );
     }
 
 error:
@@ -1188,9 +1174,9 @@ error:
 static PaError PaAsiHpi_GetStreamInfo( PaAsiHpiStreamComponent *streamComp, PaAsiHpiStreamInfo *info )
 {
     PaError result = paDeviceUnavailable;
-    HW16 state;
-    HW32 bufferSize, dataSize, frameCounter, auxDataSize, threshold;
-    HW32 hwBufferSize, hwDataSize;
+    uint16_t state;
+    uint32_t bufferSize, dataSize, frameCounter, auxDataSize, threshold;
+    uint32_t hwBufferSize, hwDataSize;
 
     assert( streamComp );
     assert( info );
@@ -1212,14 +1198,14 @@ static PaError PaAsiHpi_GetStreamInfo( PaAsiHpiStreamComponent *streamComp, PaAs
         /* Obtain detailed stream info (either input or output) */
         if( streamComp->hpiDevice->streamIsOutput )
         {
-            PA_ASIHPI_UNLESS_( HPI_OutStreamGetInfoEx( streamComp->hpiDevice->subSys,
+            PA_ASIHPI_UNLESS_( HPI_OutStreamGetInfoEx( NULL,
                                streamComp->hpiStream,
                                &state, &bufferSize, &dataSize, &frameCounter,
                                &auxDataSize ), paUnanticipatedHostError );
         }
         else
         {
-            PA_ASIHPI_UNLESS_( HPI_InStreamGetInfoEx( streamComp->hpiDevice->subSys,
+            PA_ASIHPI_UNLESS_( HPI_InStreamGetInfoEx( NULL,
                                streamComp->hpiStream,
                                &state, &bufferSize, &dataSize, &frameCounter,
                                &auxDataSize ), paUnanticipatedHostError );
@@ -1479,7 +1465,7 @@ static void PaAsiHpi_StreamDump( PaAsiHpiStream *stream )
 
  @return PortAudio error code (possibly paBufferTooBig or paInsufficientMemory)
  */
-static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, HW32 pollingInterval,
+static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, uint32_t pollingInterval,
                                       unsigned long framesPerPaHostBuffer, PaTime suggestedLatency )
 {
     PaError result = paNoError;
@@ -1499,8 +1485,8 @@ static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, HW32 
     /* Check if BBM (background bus mastering) is to be enabled */
     if( PA_ASIHPI_USE_BBM_ )
     {
-        HW32 bbmBufferSize = 0, preLatencyBufferSize = 0;
-        HW16 hpiError = 0;
+        uint32_t bbmBufferSize = 0, preLatencyBufferSize = 0;
+        hpi_err_t hpiError = 0;
         PaTime pollingOverhead;
 
         /* Check overhead of Pa_Sleep() call (minimum sleep duration in ms -> OS dependent) */
@@ -1510,7 +1496,7 @@ static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, HW32 
         PA_DEBUG(( "polling overhead = %f ms (length of 0-second sleep)\n", pollingOverhead ));
         /* Obtain minimum recommended size for host buffer (in bytes) */
         PA_ASIHPI_UNLESS_( HPI_StreamEstimateBufferSize( &streamComp->hpiFormat,
-                           pollingInterval + (HW32)ceil( pollingOverhead ),
+                           pollingInterval + (uint32_t)ceil( pollingOverhead ),
                            &bbmBufferSize ), paUnanticipatedHostError );
         /* BBM places more stringent requirements on buffer size (see description */
         /* of HPI_StreamEstimateBufferSize in HPI API document) */
@@ -1528,27 +1514,26 @@ static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, HW32 
             {
                 /* Save old buffer size, to be retried if new size proves too big */
                 preLatencyBufferSize = bbmBufferSize;
-                bbmBufferSize = (HW32)ceil( suggestedLatency * streamComp->bytesPerFrame
+                bbmBufferSize = (uint32_t)ceil( suggestedLatency * streamComp->bytesPerFrame
                                             * streamComp->hpiFormat.dwSampleRate );
             }
         }
         /* Choose closest memory block boundary (HPI API document states that
         "a buffer size of Nx4096 - 20 makes the best use of memory"
         (under the entry for HPI_StreamEstimateBufferSize)) */
-        bbmBufferSize = ((HW32)ceil((bbmBufferSize + 20)/4096.0))*4096 - 20;
+        bbmBufferSize = ((uint32_t)ceil((bbmBufferSize + 20)/4096.0))*4096 - 20;
         streamComp->hostBufferSize = bbmBufferSize;
         /* Allocate BBM host buffer (this enables bus mastering transfers in background) */
         if( streamComp->hpiDevice->streamIsOutput )
-            hpiError = HPI_OutStreamHostBufferAllocate( streamComp->hpiDevice->subSys,
+            hpiError = HPI_OutStreamHostBufferAllocate( NULL,
                        streamComp->hpiStream,
                        bbmBufferSize );
         else
-            hpiError = HPI_InStreamHostBufferAllocate( streamComp->hpiDevice->subSys,
+            hpiError = HPI_InStreamHostBufferAllocate( NULL,
                        streamComp->hpiStream,
                        bbmBufferSize );
         if( hpiError )
         {
-            PA_ASIHPI_REPORT_ERROR_( hpiError );
             /* Indicate that BBM is disabled */
             streamComp->hostBufferSize = 0;
             /* Retry with smaller buffer size (transfers will still work, but not via BBM) */
@@ -1561,11 +1546,11 @@ static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, HW32 
                                preLatencyBufferSize, bbmBufferSize ));
                     bbmBufferSize = preLatencyBufferSize;
                     if( streamComp->hpiDevice->streamIsOutput )
-                        hpiError = HPI_OutStreamHostBufferAllocate( streamComp->hpiDevice->subSys,
+                        hpiError = HPI_OutStreamHostBufferAllocate( NULL,
                                    streamComp->hpiStream,
                                    bbmBufferSize );
                     else
-                        hpiError = HPI_InStreamHostBufferAllocate( streamComp->hpiDevice->subSys,
+                        hpiError = HPI_InStreamHostBufferAllocate( NULL,
                                    streamComp->hpiStream,
                                    bbmBufferSize );
                     /* Another round of error checking */
@@ -1598,8 +1583,10 @@ static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, HW32 
             }
             /* If BBM not supported, foreground transfers will be used, but not a show-stopper */
             /* Anything else is an error */
-            else if( hpiError != HPI_ERROR_INVALID_OPERATION )
+            else if (( hpiError != HPI_ERROR_INVALID_OPERATION ) &&
+		     ( hpiError != HPI_ERROR_INVALID_FUNC ))
             {
+                PA_ASIHPI_REPORT_ERROR_( hpiError );
                 result = paUnanticipatedHostError;
                 goto error;
             }
@@ -1623,7 +1610,7 @@ static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, HW32 
         PaTime latency = suggestedLatency > 0.0 ? suggestedLatency :
                          streamComp->hpiDevice->baseDeviceInfo.defaultHighOutputLatency;
         streamComp->outputBufferCap =
-            (HW32)ceil( latency * streamComp->bytesPerFrame * streamComp->hpiFormat.dwSampleRate );
+            (uint32_t)ceil( latency * streamComp->bytesPerFrame * streamComp->hpiFormat.dwSampleRate );
         /* The cap should not be too small, to prevent underflow */
         if( streamComp->outputBufferCap < 4*paHostBufferSize )
             streamComp->outputBufferCap = 4*paHostBufferSize;
@@ -1635,7 +1622,7 @@ static PaError PaAsiHpi_SetupBuffers( PaAsiHpiStreamComponent *streamComp, HW32 
     /* Temp buffer size should be multiple of PA host buffer size (or 1x, if using fixed blocks) */
     streamComp->tempBufferSize = paHostBufferSize;
     /* Allocate temp buffer */
-    PA_UNLESS_( streamComp->tempBuffer = (HW8 *)PaUtil_AllocateMemory( streamComp->tempBufferSize ),
+    PA_UNLESS_( streamComp->tempBuffer = (uint8_t *)PaUtil_AllocateMemory( streamComp->tempBufferSize ),
                 paInsufficientMemory );
 error:
     return result;
@@ -1725,7 +1712,7 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
      By keeping the frames a multiple of 4, this is ensured even for 8-bit mono sound. */
     framesPerHostBuffer = (framesPerHostBuffer / 4) * 4;
     /* Polling is based on time length (in milliseconds) of user-requested block size */
-    stream->pollingInterval = (HW32)ceil( 1000.0*framesPerHostBuffer/sampleRate );
+    stream->pollingInterval = (uint32_t)ceil( 1000.0*framesPerHostBuffer/sampleRate );
     assert( framesPerHostBuffer > 0 );
 
     /* Open underlying streams, check formats and allocate buffers */
@@ -1890,7 +1877,7 @@ static PaError CloseStream( PaStream *s )
         /* Close HPI stream (freeing BBM host buffer in the process, if used) */
         if( stream->input->hpiStream )
         {
-            PA_ASIHPI_UNLESS_( HPI_InStreamClose( stream->input->hpiDevice->subSys,
+            PA_ASIHPI_UNLESS_( HPI_InStreamClose( NULL,
                                                   stream->input->hpiStream ), paUnanticipatedHostError );
         }
         /* Free temp buffer and stream component */
@@ -1902,7 +1889,7 @@ static PaError CloseStream( PaStream *s )
         /* Close HPI stream (freeing BBM host buffer in the process, if used) */
         if( stream->output->hpiStream )
         {
-            PA_ASIHPI_UNLESS_( HPI_OutStreamClose( stream->output->hpiDevice->subSys,
+            PA_ASIHPI_UNLESS_( HPI_OutStreamClose( NULL,
                                                    stream->output->hpiStream ), paUnanticipatedHostError );
         }
         /* Free temp buffer and stream component */
@@ -1933,9 +1920,6 @@ static PaError PaAsiHpi_PrimeOutputWithSilence( PaAsiHpiStream *stream )
     PaAsiHpiStreamComponent *out;
     PaUtilZeroer *zeroer;
     PaSampleFormat outputFormat;
-#if (HPI_VER < HPI_VERSION_CONSTRUCTOR( 3, 5, 5 ))
-    HPI_DATA data;
-#endif
     assert( stream );
     out = stream->output;
     /* Only continue if stream has output channels */
@@ -1944,28 +1928,19 @@ static PaError PaAsiHpi_PrimeOutputWithSilence( PaAsiHpiStream *stream )
     assert( out->tempBuffer );
 
     /* Clear all existing data in hardware playback buffer */
-    PA_ASIHPI_UNLESS_( HPI_OutStreamReset( out->hpiDevice->subSys,
+    PA_ASIHPI_UNLESS_( HPI_OutStreamReset( NULL,
                                            out->hpiStream ), paUnanticipatedHostError );
     /* Fill temp buffer with silence */
     outputFormat = PaAsiHpi_HpiToPaFormat( out->hpiFormat.wFormat );
     zeroer = PaUtil_SelectZeroer( outputFormat );
     zeroer(out->tempBuffer, 1, out->tempBufferSize / Pa_GetSampleSize(outputFormat) );
     /* Write temp buffer to hardware fifo twice, to get started */
-#if (HPI_VER >= HPI_VERSION_CONSTRUCTOR( 3, 5, 5 ))
-    PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( out->hpiDevice->subSys, out->hpiStream, 
+    PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( NULL, out->hpiStream,
                                               out->tempBuffer, out->tempBufferSize, &out->hpiFormat),
                                               paUnanticipatedHostError );
-    PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( out->hpiDevice->subSys, out->hpiStream, 
+    PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( NULL, out->hpiStream,
                                               out->tempBuffer, out->tempBufferSize, &out->hpiFormat),
                                               paUnanticipatedHostError );
-#else
-    PA_ASIHPI_UNLESS_( HPI_DataCreate( &data, &out->hpiFormat, out->tempBuffer, out->tempBufferSize ),
-                       paUnanticipatedHostError );
-    PA_ASIHPI_UNLESS_( HPI_OutStreamWrite( out->hpiDevice->subSys,
-                                           out->hpiStream, &data ), paUnanticipatedHostError );
-    PA_ASIHPI_UNLESS_( HPI_OutStreamWrite( out->hpiDevice->subSys,
-                                           out->hpiStream, &data ), paUnanticipatedHostError );
-#endif
 error:
     return result;
 }
@@ -1989,7 +1964,7 @@ static PaError PaAsiHpi_StartStream( PaAsiHpiStream *stream, int outputPrimed )
 
     if( stream->input )
     {
-        PA_ASIHPI_UNLESS_( HPI_InStreamStart( stream->input->hpiDevice->subSys,
+        PA_ASIHPI_UNLESS_( HPI_InStreamStart( NULL,
                                               stream->input->hpiStream ), paUnanticipatedHostError );
     }
     if( stream->output )
@@ -1999,7 +1974,7 @@ static PaError PaAsiHpi_StartStream( PaAsiHpiStream *stream, int outputPrimed )
             /* Buffer isn't primed, so load stream with silence */
             PA_ENSURE_( PaAsiHpi_PrimeOutputWithSilence( stream ) );
         }
-        PA_ASIHPI_UNLESS_( HPI_OutStreamStart( stream->output->hpiDevice->subSys,
+        PA_ASIHPI_UNLESS_( HPI_OutStreamStart( NULL,
                                                stream->output->hpiStream ), paUnanticipatedHostError );
     }
     stream->state = paAsiHpiActiveState;
@@ -2071,7 +2046,7 @@ static PaError PaAsiHpi_StopStream( PaAsiHpiStream *stream, int abort )
     /* Input channels */
     if( stream->input )
     {
-        PA_ASIHPI_UNLESS_( HPI_InStreamReset( stream->input->hpiDevice->subSys,
+        PA_ASIHPI_UNLESS_( HPI_InStreamReset( NULL,
                                               stream->input->hpiStream ), paUnanticipatedHostError );
     }
     /* Output channels */
@@ -2097,7 +2072,7 @@ static PaError PaAsiHpi_StopStream( PaAsiHpiStream *stream, int abort )
                 Pa_Sleep( (long)ceil( timeLeft ) );
             }
         }
-        PA_ASIHPI_UNLESS_( HPI_OutStreamReset( stream->output->hpiDevice->subSys,
+        PA_ASIHPI_UNLESS_( HPI_OutStreamReset( NULL,
                                                stream->output->hpiStream ), paUnanticipatedHostError );
     }
 
@@ -2315,7 +2290,7 @@ static PaError PaAsiHpi_WaitForFrames( PaAsiHpiStream *stream, unsigned long *fr
     PaError result = paNoError;
     double sampleRate;
     unsigned long framesTarget;
-    HW32 outputData = 0, outputSpace = 0, inputData = 0, framesLeft = 0;
+    uint32_t outputData = 0, outputSpace = 0, inputData = 0, framesLeft = 0;
 
     assert( stream );
     assert( stream->input || stream->output );
@@ -2484,11 +2459,8 @@ static PaError PaAsiHpi_BeginProcessing( PaAsiHpiStream *stream, unsigned long *
     if( stream->input )
     {
         PaAsiHpiStreamInfo info;
-	
-#if (HPI_VER < HPI_VERSION_CONSTRUCTOR( 3, 5, 5 ))
-        HPI_DATA data;
-#endif
-        HW32 framesToGet = *numFrames;
+
+        uint32_t framesToGet = *numFrames;
 
         /* Check for overflows and underflows yet again */
         PA_ENSURE_( PaAsiHpi_GetStreamInfo( stream->input, &info ) );
@@ -2513,22 +2485,12 @@ static PaError PaAsiHpi_BeginProcessing( PaAsiHpiStream *stream, unsigned long *
                    stream->input->tempBufferSize / Pa_GetSampleSize(inputFormat) );
         }
 
-#if (HPI_VER >= HPI_VERSION_CONSTRUCTOR( 3, 5, 5 ))
         /* Read block of data into temp buffer */
-        PA_ASIHPI_UNLESS_( HPI_InStreamReadBuf( stream->input->hpiDevice->subSys,
-                                             stream->input->hpiStream, 
+        PA_ASIHPI_UNLESS_( HPI_InStreamReadBuf( NULL,
+                                             stream->input->hpiStream,
                                              stream->input->tempBuffer,
                                              framesToGet * stream->input->bytesPerFrame),
                            paUnanticipatedHostError );
-#else
-        /* Setup HPI data structure around temp buffer */
-        HPI_DataCreate( &data, &stream->input->hpiFormat, stream->input->tempBuffer,
-                        framesToGet * stream->input->bytesPerFrame );
-        /* Read block of data into temp buffer */
-        PA_ASIHPI_UNLESS_( HPI_InStreamRead( stream->input->hpiDevice->subSys,
-                                             stream->input->hpiStream, &data ),
-                           paUnanticipatedHostError );
-#endif
         /* Register temp buffer with buffer processor (always FULL buffer) */
         PaUtil_SetInputFrameCount( &stream->bufferProcessor, *numFrames );
         /* HPI interface only allows interleaved channels */
@@ -2572,9 +2534,6 @@ static PaError PaAsiHpi_EndProcessing( PaAsiHpiStream *stream, unsigned long num
     if( stream->output )
     {
         PaAsiHpiStreamInfo info;
-#if (HPI_VER < HPI_VERSION_CONSTRUCTOR( 3, 5, 5 ))
-        HPI_DATA data;
-#endif
         /* Check for underflows after the (potentially time-consuming) callback */
         PA_ENSURE_( PaAsiHpi_GetStreamInfo( stream->output, &info ) );
         if( info.underflow )
@@ -2582,23 +2541,13 @@ static PaError PaAsiHpi_EndProcessing( PaAsiHpiStream *stream, unsigned long num
             *cbFlags |= paOutputUnderflow;
         }
 
-#if (HPI_VER >= HPI_VERSION_CONSTRUCTOR( 3, 5, 5 ))
         /* Write temp buffer to HPI stream */
-        PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( stream->output->hpiDevice->subSys,
-                                           stream->output->hpiStream, 
+        PA_ASIHPI_UNLESS_( HPI_OutStreamWriteBuf( NULL,
+                                           stream->output->hpiStream,
                                            stream->output->tempBuffer,
-                                           numFrames * stream->output->bytesPerFrame, 
+                                           numFrames * stream->output->bytesPerFrame,
                                            &stream->output->hpiFormat),
                            paUnanticipatedHostError );
-#else
-        /* Setup HPI data structure around temp buffer */
-        HPI_DataCreate( &data, &stream->output->hpiFormat, stream->output->tempBuffer,
-                        numFrames * stream->output->bytesPerFrame );
-        /* Write temp buffer to HPI stream */
-        PA_ASIHPI_UNLESS_( HPI_OutStreamWrite( stream->output->hpiDevice->subSys,
-                                               stream->output->hpiStream, &data ),
-                           paUnanticipatedHostError );
-#endif
     }
 
 error:

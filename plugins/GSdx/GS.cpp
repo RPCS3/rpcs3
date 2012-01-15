@@ -33,6 +33,7 @@
 #include "GSRendererDX11.h"
 #include "GSDevice9.h"
 #include "GSDevice11.h"
+#include "GSRendererCS.h"
 #include "GSSettingsDlg.h"
 
 static HRESULT s_hr = E_FAIL;
@@ -213,48 +214,69 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			s_gs = NULL;
 		}
 
-		switch(renderer / 3)
+		if(renderer == 12)
 		{
-		default:
-		#ifdef _WINDOWS
-		case 0: dev = new GSDevice9(); break;
-		case 1: dev = new GSDevice11(); break;
-		#endif
-		#ifdef ENABLE_SDL_DEV
-		case 2: dev = new GSDeviceSDL(); break;
-		#else
-		case 2: dev = NULL; break;
-		#endif
-		case 3: dev = new GSDeviceNull(); break;
-		case 4: dev = new GSDeviceOGL(); break;
-		}
-
-		if(dev == NULL)
-		{
-			return -1;
-		}
-
-		if(s_gs == NULL)
-		{
-			switch(renderer % 3)
-			{
-			default:
-			case 0:
 			#ifdef _WINDOWS
-				s_gs = (renderer / 3) == 0 ? (GSRenderer*)new GSRendererDX9() : (GSRenderer*)new GSRendererDX11();
-			#else
-				s_gs = (GSRenderer*)new GSRendererOGL();
-			#endif
-				break;
-			case 1:
-				s_gs = new GSRendererSW(threads);
-				break;
-			case 2:
-				s_gs = new GSRendererNull();
-				break;
+	
+			dev = new GSDevice11();
+
+			if(dev == NULL)
+			{
+				return -1;
 			}
 
-			s_renderer = renderer;
+			if(s_gs == NULL)
+			{
+				s_gs = new GSRendererCS();
+
+				s_renderer = renderer;
+			}
+
+			#endif
+		}
+		else
+		{
+			switch(renderer / 3)
+			{
+				default:
+				#ifdef _WINDOWS
+				case 0: dev = new GSDevice9(); break;
+				case 1: dev = new GSDevice11(); break;
+				#endif
+				#ifdef ENABLE_SDL_DEV
+				case 2: dev = new GSDeviceSDL(); break;
+				#endif
+				case 3: dev = new GSDeviceNull(); break;
+				case 5: dev = new GSDeviceOGL(); break;
+			}
+
+			if(dev == NULL)
+			{
+				return -1;
+			}
+
+			if(s_gs == NULL)
+			{
+				switch(renderer % 3)
+				{
+					default:
+					case 0:
+#ifdef _WINDOWS
+						s_gs = (renderer / 3) == 0 ? (GSRenderer*)new GSRendererDX9() : (GSRenderer*)new GSRendererDX11();
+#else
+						s_gs = (GSRenderer*)new GSRendererOGL();
+#endif
+						break;
+					case 1:
+						s_gs = new GSRendererSW(threads);
+						break;
+					case 2:
+						s_gs = new GSRendererNull();
+						break;
+				}
+
+				s_renderer = renderer;
+			}
 		}
 	}
 	catch(std::exception& ex)
@@ -768,8 +790,6 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 
 	::SetPriorityClass(::GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
-	vector<uint8> buff;
-
 	if(FILE* fp = fopen(lpszCmdLine, "rb"))
 	{
 		Console console("GSdx", true);
@@ -802,9 +822,127 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 
 		GSvsync(1);
 
+		struct Packet {uint8 type, param; uint32 size, addr; vector<uint8> buff;};
+
+		list<Packet*> packets;
+		vector<uint8> buff;
+		int type;
+
+		while((type = fgetc(fp)) != EOF)
+		{
+			Packet* p = new Packet();
+
+			p->type = (uint8)type;
+
+			switch(type)
+			{
+			case 0:
+				
+				p->param = (uint8)fgetc(fp);
+
+				fread(&p->size, 4, 1, fp);
+
+				switch(p->param)
+				{
+				case 0:
+					p->buff.resize(0x4000);
+					p->addr = 0x4000 - p->size;
+					fread(&p->buff[p->addr], p->size, 1, fp);
+					break;
+				case 1:
+				case 2:
+				case 3:
+					p->buff.resize(p->size);
+					fread(&p->buff[0], p->size, 1, fp);
+					break;
+				}
+
+				break;
+
+			case 1:
+
+				p->param = (uint8)fgetc(fp);
+
+				break;
+
+			case 2:
+
+				fread(&p->size, 4, 1, fp);
+
+				break;
+
+			case 3:
+
+				p->buff.resize(0x2000);
+
+				fread(&p->buff[0], 0x2000, 1, fp);
+
+				break;
+			}
+
+			packets.push_back(p);
+		}
+
 		Sleep(100);
 
+		while(IsWindowVisible(hWnd))
+		{
+			for(list<Packet*>::iterator i = packets.begin(); i != packets.end(); i++)
+			{
+				Packet* p = *i;
+
+				switch(p->type)
+				{
+				case 0:
+
+					switch(p->param)
+					{
+					case 0: GSgifTransfer1(&p->buff[0], p->addr); break;
+					case 1: GSgifTransfer2(&p->buff[0], p->size / 16); break;
+					case 2: GSgifTransfer3(&p->buff[0], p->size / 16); break;
+					case 3: GSgifTransfer(&p->buff[0], p->size / 16); break;
+					}
+
+					break;
+
+				case 1:
+
+					GSvsync(p->param);
+
+					break;
+
+				case 2:
+
+					if(buff.size() < p->size) buff.resize(p->size);
+
+					GSreadFIFO2(&buff[0], p->size / 16);
+
+					break;
+
+				case 3:
+
+					memcpy(regs, &p->buff[0], 0x2000);
+
+					break;
+				}
+			}
+		}
+
+		for(list<Packet*>::iterator i = packets.begin(); i != packets.end(); i++)
+		{
+			delete *i;
+		}
+
+		packets.clear();
+
+		Sleep(100);
+
+
+		/*
+		vector<uint8> buff;
 		bool exit = false;
+
+		int round = 0;
 
 		while(!exit)
 		{
@@ -819,6 +957,7 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 			case EOF:
 				fseek(fp, start, 0);
 				exit = !IsWindowVisible(hWnd);
+				//exit = ++round == 60;
 				break;
 
 			case 0:
@@ -871,6 +1010,7 @@ EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
 				break;
 			}
 		}
+		*/
 
 		GSclose();
 		GSshutdown();

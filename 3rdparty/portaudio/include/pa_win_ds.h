@@ -61,24 +61,21 @@ typedef struct PaWinDirectSoundStreamInfo{
     PaHostApiTypeId hostApiType;    /**< paDirectSound */
     unsigned long version;          /**< 2 */
 
-    unsigned long flags;
+    unsigned long flags;            /**< enable other features of this struct */
 
-    /* low-level latency setting support
-       Control the size of host buffers in order to set latency. They will 
-        be used instead of the generic parameters to Pa_OpenStream() if 
-        flags contains the paWinDirectSoundUseLowLevelLatencyParameters
-        flag.
+    /** 
+       low-level latency setting support
+       Sets the size of the DirectSound host buffer.
+       When flags contains the paWinDirectSoundUseLowLevelLatencyParameters
+       this size will be used instead of interpreting the generic latency 
+       parameters to Pa_OpenStream(). If the flag is not set this value is ignored.
 
-        If PaWinDirectSoundStreamInfo structures with paWinDirectSoundUseLowLevelLatencyParameters
-        are supplied for both input and output in a full duplex stream, then the
-        input and output framesPerBuffer must be the same, or the larger of the
-        two must be a multiple of the smaller, otherwise a
-        paIncompatibleHostApiSpecificStreamInfo error will be returned from
-        Pa_OpenStream().
+       If the stream is a full duplex stream the implementation requires that
+       the values of framesPerBuffer for input and output match (if both are specified).
     */
-    unsigned long framesPerBuffer;  /* NOT IMPLEMENTED see http://www.portaudio.com/trac/ticket/129 */
+    unsigned long framesPerBuffer;
 
-    /*
+    /**
         support for WAVEFORMATEXTENSIBLE channel masks. If flags contains
         paWinDirectSoundUseChannelMask this allows you to specify which speakers 
         to address in a multichannel stream. Constants for channelMask

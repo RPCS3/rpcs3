@@ -1,4 +1,3 @@
-
 [This file contains the template for the SPU2-X code rights license.  For the full
  rant-like preamble of the LGPL, see GPL.txt and LGPL.txt -- both lisences apply,
  with the LGPL as a subset extension of the GPL.]

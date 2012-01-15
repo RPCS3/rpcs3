@@ -120,7 +120,11 @@ typedef struct PaMacCoreDeviceProperties
     UInt32 bufferFrameSize;
     // UInt32 streamLatency; // Seems to be the same as deviceLatency!?
     UInt32 deviceLatency;
-    /* Current device sample rate. May change! */
+    /* Current device sample rate. May change! 
+       These are initialized to the nominal device sample rate, 
+       and updated with the actual sample rate, when/where available. 
+       Note that these are the *device* sample rates, prior to any required 
+       SR conversion. */
     Float64 sampleRate;
     Float64 samplePeriod; // reciprocal
 }
@@ -166,10 +170,6 @@ typedef struct PaMacCoreStream
        ACTIVE           = 3  /* The stream is active and running. */
     } state;
     double sampleRate;
-    //these may be different from the stream sample rate due to SR conversion:
-    double outDeviceSampleRate;
-    double inDeviceSampleRate;
-	
     PaMacCoreDeviceProperties  inputProperties;
     PaMacCoreDeviceProperties  outputProperties;
     

@@ -28,10 +28,58 @@ const GSVector4 GSVertexTrace::s_minmax(FLT_MAX, -FLT_MAX);
 
 GSVertexTrace::GSVertexTrace(const GSState* state)
 	: m_state(state)
-	, m_map_sw("VertexTraceSW", NULL)
-	, m_map_hw9("VertexTraceHW9", NULL)
-	, m_map_hw11("VertexTraceHW11", NULL)
 {
+}
+
+void GSVertexTrace::Update(const void* vertex, const uint32* index, int count, GS_PRIM_CLASS primclass)
+{
+	m_eq.value = (m_min.c == m_max.c).mask() | ((m_min.p == m_max.p).mask() << 16) | ((m_min.t == m_max.t).mask() << 20);
+
+	m_alpha.valid = false;
+
+	if(m_state->PRIM->TME)
+	{
+		const GIFRegTEX1& TEX1 = m_state->m_context->TEX1;
+
+		m_filter.mmag = TEX1.IsMagLinear();
+		m_filter.mmin = TEX1.IsMinLinear();
+
+		if(TEX1.MXL == 0) // MXL == 0 => MMIN ignored, tested it on ps2
+		{
+			m_filter.linear = m_filter.mmag;
+
+			return;
+		}
+
+		float K = (float)TEX1.K / 16;
+
+		if(TEX1.LCM == 0 && m_state->PRIM->FST == 0) // FST == 1 => Q is not interpolated
+		{
+			// LOD = log2(1/|Q|) * (1 << L) + K
+
+			GSVector4::storel(&m_lod, m_max.t.uph(m_min.t).log2(3).neg() * (float)(1 << TEX1.L) + K);
+
+			if(m_lod.x > m_lod.y) {float tmp = m_lod.x; m_lod.x = m_lod.y; m_lod.y = tmp;}
+		}
+		else
+		{
+			m_lod.x = K;
+			m_lod.y = K;
+		}
+
+		if(m_lod.y <= 0)
+		{
+			m_filter.linear = m_filter.mmag;
+		}
+		else if(m_lod.x > 0)
+		{
+			m_filter.linear = m_filter.mmin;
+		}
+		else
+		{
+			m_filter.linear = m_filter.mmag | m_filter.mmin;
+		}
+	}
 }
 
 uint32 GSVertexTrace::Hash(GS_PRIM_CLASS primclass)
@@ -48,66 +96,28 @@ uint32 GSVertexTrace::Hash(GS_PRIM_CLASS primclass)
 	return hash;
 }
 
-void GSVertexTrace::UpdateLOD()
+GSVertexTraceSW::GSVertexTraceSW(const GSState* state)
+	: GSVertexTrace(state)
+	, m_map("VertexTraceSW", NULL)
 {
-	if(!m_state->PRIM->TME) return;
-
-	const GIFRegTEX1& TEX1 = m_state->m_context->TEX1;
-
-	m_filter.mmag = TEX1.IsMagLinear();
-	m_filter.mmin = TEX1.IsMinLinear();
-
-	if(TEX1.MXL == 0) // MXL == 0 => MMIN ignored, tested it on ps2
-	{
-		m_filter.linear = m_filter.mmag;
-
-		return;
-	}
-
-	float K = (float)TEX1.K / 16;
-
-	if(TEX1.LCM == 0 && m_state->PRIM->FST == 0) // FST == 1 => Q is not interpolated
-	{
-		// LOD = log2(1/|Q|) * (1 << L) + K
-
-		GSVector4::storel(&m_lod, m_max.t.uph(m_min.t).log2(3).neg() * (float)(1 << TEX1.L) + K);
-
-		if(m_lod.x > m_lod.y) {float tmp = m_lod.x; m_lod.x = m_lod.y; m_lod.y = tmp;}
-	}
-	else
-	{
-		m_lod.x = K;
-		m_lod.y = K;
-	}
-
-	if(m_lod.y <= 0)
-	{
-		m_filter.linear = m_filter.mmag;
-	}
-	else if(m_lod.x > 0)
-	{
-		m_filter.linear = m_filter.mmin;
-	}
-	else
-	{
-		m_filter.linear = m_filter.mmag | m_filter.mmin;
-	}
 }
 
-void GSVertexTrace::Update(const GSVertexSW* v, int count, GS_PRIM_CLASS primclass)
+void GSVertexTraceSW::Update(const void* vertex, const uint32* index, int count, GS_PRIM_CLASS primclass)
 {
-	m_map_sw[Hash(primclass)](count, v, m_min, m_max);
+	m_map[Hash(primclass)](count, vertex, index, m_min, m_max);
 
-	m_eq.value = (m_min.c == m_max.c).mask() | ((m_min.p == m_max.p).mask() << 16) | ((m_min.t == m_max.t).mask() << 20);
-
-	m_alpha.valid = false;
-
-	UpdateLOD();
+	GSVertexTrace::Update(vertex, index, count, primclass);
 }
 
-void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primclass)
+GSVertexTraceDX9::GSVertexTraceDX9(const GSState* state)
+	: GSVertexTrace(state)
+	, m_map("VertexTraceHW9", NULL)
 {
-	m_map_hw9[Hash(primclass)](count, v, m_min, m_max);
+}
+
+void GSVertexTraceDX9::Update(const void* vertex, const uint32* index, int count, GS_PRIM_CLASS primclass)
+{
+	m_map[Hash(primclass)](count, vertex, index, m_min, m_max);
 
 	const GSDrawingContext* context = m_state->m_context;
 
@@ -132,16 +142,18 @@ void GSVertexTrace::Update(const GSVertexHW9* v, int count, GS_PRIM_CLASS primcl
 		m_max.t *= s;
 	}
 
-	m_eq.value = (m_min.c == m_max.c).mask() | ((m_min.p == m_max.p).mask() << 16) | ((m_min.t == m_max.t).mask() << 20);
-
-	m_alpha.valid = false;
-
-	UpdateLOD();
+	GSVertexTrace::Update(vertex, index, count, primclass);
 }
 
-void GSVertexTrace::Update(const GSVertexHW11* v, int count, GS_PRIM_CLASS primclass)
+GSVertexTraceDX11::GSVertexTraceDX11(const GSState* state)
+	: GSVertexTrace(state)
+	, m_map("VertexTraceHW11", NULL)
 {
-	m_map_hw11[Hash(primclass)](count, v, m_min, m_max);
+}
+
+void GSVertexTraceDX11::Update(const void* vertex, const uint32* index, int count, GS_PRIM_CLASS primclass)
+{
+	m_map[Hash(primclass)](count, vertex, index, m_min, m_max);
 
 	const GSDrawingContext* context = m_state->m_context;
 
@@ -166,10 +178,6 @@ void GSVertexTrace::Update(const GSVertexHW11* v, int count, GS_PRIM_CLASS primc
 		m_max.t *= s;
 	}
 
-	m_eq.value = (m_min.c == m_max.c).mask() | ((m_min.p == m_max.p).mask() << 16) | ((m_min.t == m_max.t).mask() << 20);
-
-	m_alpha.valid = false;
-
-	UpdateLOD();
+	GSVertexTrace::Update(vertex, index, count, primclass);
 }
 

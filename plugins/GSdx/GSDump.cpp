@@ -24,10 +24,7 @@
 
 GSDump::GSDump()
 	: m_gs(NULL)
-	, m_obj(NULL)
 	, m_frames(0)
-	, m_objects(0)
-	, m_vertices(0)
 {
 }
 
@@ -39,11 +36,8 @@ GSDump::~GSDump()
 void GSDump::Open(const string& fn, uint32 crc, const GSFreezeData& fd, const GSPrivRegSet* regs)
 {
 	m_gs = fopen((fn + ".gs").c_str(), "wb");
-	m_obj = fopen((fn + ".obj").c_str(), "wt");
 
 	m_frames = 0;
-	m_objects = 0;
-	m_vertices = 0;
 
 	if(m_gs)
 	{
@@ -57,7 +51,6 @@ void GSDump::Open(const string& fn, uint32 crc, const GSFreezeData& fd, const GS
 void GSDump::Close()
 {
 	if(m_gs) {fclose(m_gs); m_gs = NULL;}
-	if(m_obj) {fclose(m_obj); m_obj = NULL;}
 }
 
 void GSDump::Transfer(int index, const uint8* mem, size_t size)
@@ -93,70 +86,6 @@ void GSDump::VSync(int field, bool last, const GSPrivRegSet* regs)
 		if((++m_frames & 1) == 0 && last)
 		{
 			Close();
-		}
-	}
-}
-
-void GSDump::Object(GSVertexSW* vertices, int count, GS_PRIM_CLASS primclass)
-{
-	if(m_obj)
-	{
-		switch(primclass)
-		{
-		case GS_POINT_CLASS:
-
-			// TODO
-
-			break;
-
-		case GS_LINE_CLASS:
-
-			// TODO
-
-			break;
-
-		case GS_TRIANGLE_CLASS:
-
-			for(int i = 0; i < count; i++)
-			{
-				float x = vertices[i].p.x;
-				float y = vertices[i].p.y;
-				float z = vertices[i].p.z;
-
-				fprintf(m_obj, "v %f %f %f\n", x, y, z);
-			}
-
-			for(int i = 0; i < count; i++)
-			{
-				fprintf(m_obj, "vt %f %f %f\n", vertices[i].t.x, vertices[i].t.y, vertices[i].t.z);
-			}
-
-			for(int i = 0; i < count; i++)
-			{
-				fprintf(m_obj, "vn %f %f %f\n", 0.0f, 0.0f, 0.0f);
-			}
-
-			fprintf(m_obj, "g f%d_o%d_p%d_v%d\n", m_frames, m_objects, primclass, count);
-
-			for(int i = 0; i < count; i += 3)
-			{
-				int a = m_vertices + i + 1;
-				int b = m_vertices + i + 2;
-				int c = m_vertices + i + 3;
-
-				fprintf(m_obj, "f %d/%d/%d %d/%d/%d %d/%d/%d\n", a, a, a, b, b, b, c, c, c);
-			}
-
-			m_vertices += count;
-			m_objects++;
-
-			break;
-
-		case GS_SPRITE_CLASS:
-
-			// TODO
-
-			break;
 		}
 	}
 }

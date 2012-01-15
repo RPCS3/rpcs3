@@ -44,15 +44,30 @@ class GSBlock
 public:
 	template<int i, bool aligned, uint32 mask> __forceinline static void WriteColumn32(uint8* RESTRICT dst, const uint8* RESTRICT src, int srcpitch)
 	{
-		const GSVector4i* s0 = (const GSVector4i*)&src[srcpitch * 0];
-		const GSVector4i* s1 = (const GSVector4i*)&src[srcpitch * 1];
+		GSVector4i v0, v1, v2, v3;
 
-		GSVector4i v0 = GSVector4i::load<aligned>(&s0[0]);
-		GSVector4i v1 = GSVector4i::load<aligned>(&s0[1]);
-		GSVector4i v2 = GSVector4i::load<aligned>(&s1[0]);
-		GSVector4i v3 = GSVector4i::load<aligned>(&s1[1]);
+		if(aligned)
+		{
+			const GSVector4i* s0 = (const GSVector4i*)&src[srcpitch * 0];
+			const GSVector4i* s1 = (const GSVector4i*)&src[srcpitch * 1];
 
-		GSVector4i::sw64(v0, v2, v1, v3);
+			v0 = GSVector4i::load<aligned>(&s0[0]);
+			v1 = GSVector4i::load<aligned>(&s0[1]);
+			v2 = GSVector4i::load<aligned>(&s1[0]);
+			v3 = GSVector4i::load<aligned>(&s1[1]);
+
+			GSVector4i::sw64(v0, v2, v1, v3);
+		}
+		else
+		{
+			const uint8* s0 = &src[srcpitch * 0];
+			const uint8* s1 = &src[srcpitch * 1];
+
+			v0 = GSVector4i::load(&s0[0], &s1[0]);
+			v1 = GSVector4i::load(&s0[8], &s1[8]);
+			v2 = GSVector4i::load(&s0[16], &s1[16]);
+			v3 = GSVector4i::load(&s0[24], &s1[24]);
+		}
 
 		if(mask == 0xffffffff)
 		{
@@ -264,14 +279,26 @@ public:
 
 	template<int i, bool aligned> __forceinline static void ReadColumn32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		const GSVector4i* s = (const GSVector4i*)src;
+		GSVector4i v0, v1, v2, v3;
 
-		GSVector4i v0 = s[i * 4 + 0];
-		GSVector4i v1 = s[i * 4 + 1];
-		GSVector4i v2 = s[i * 4 + 2];
-		GSVector4i v3 = s[i * 4 + 3];
+		if(aligned)
+		{
+			const GSVector4i* s = (const GSVector4i*)src;
+		
+			v0 = s[i * 4 + 0];
+			v1 = s[i * 4 + 1];
+			v2 = s[i * 4 + 2];
+			v3 = s[i * 4 + 3];
 
-		GSVector4i::sw64(v0, v1, v2, v3);
+			GSVector4i::sw64(v0, v1, v2, v3);
+		}
+		else
+		{
+			v0 = GSVector4i::load(&src[i * 64 + 0], &src[i * 64 + 16]);
+			v1 = GSVector4i::load(&src[i * 64 + 32], &src[i * 64 + 48]);
+			v2 = GSVector4i::load(&src[i * 64 + 8], &src[i * 64 + 24]);
+			v3 = GSVector4i::load(&src[i * 64 + 40], &src[i * 64 + 56]);
+		}
 
 		GSVector4i* d0 = (GSVector4i*)&dst[dstpitch * 0];
 		GSVector4i* d1 = (GSVector4i*)&dst[dstpitch * 1];

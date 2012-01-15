@@ -23,9 +23,9 @@
 
 #include "GSVector.h"
 
-__aligned(struct, 16) GSVertexSW
+__aligned(struct, 32) GSVertexSW
 {
-	GSVector4 p, t, c;
+	GSVector4 p, t, c, _pad;
 
 	__forceinline GSVertexSW() {}
 	__forceinline GSVertexSW(const GSVertexSW& v) {*this = v;}

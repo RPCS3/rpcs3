@@ -35,7 +35,8 @@ GSDevice::GSDevice()
 	, m_1x1(NULL)
 	, m_frame(0)
 {
-	memset(&m_vertices, 0, sizeof(m_vertices));
+	memset(&m_vertex, 0, sizeof(m_vertex));
+	memset(&m_index, 0, sizeof(m_index));
 }
 
 GSDevice::~GSDevice()
@@ -135,8 +136,10 @@ GSTexture* GSDevice::FetchSurface(int type, int w, int h, bool msaa, int format)
 
 void GSDevice::EndScene()
 {
-	m_vertices.start += m_vertices.count;
-	m_vertices.count = 0;
+	m_vertex.start += m_vertex.count;
+	m_vertex.count = 0;
+	m_index.start += m_index.count;
+	m_index.count = 0;
 }
 
 void GSDevice::Recycle(GSTexture* t)

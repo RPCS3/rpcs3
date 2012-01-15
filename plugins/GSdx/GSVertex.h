@@ -30,15 +30,20 @@
 
 __aligned(struct, 32) GSVertex
 {
-	GIFRegST ST;
-	GIFRegRGBAQ RGBAQ;
-	GIFRegXYZ XYZ;
-	GIFRegFOG FOG;
-	GIFRegUV UV;
+	union
+	{
+		struct
+		{
+			GIFRegST ST;
+			GIFRegRGBAQ RGBAQ;
+			GIFRegXYZ XYZ;
+			uint32 UV, FOG;
+		};
 
-	GSVertex() {memset(this, 0, sizeof(*this));}
+		__m128i m[2];
+	};
 
-	GSVector4 GetUV() const {return GSVector4(GSVector4i::load(UV.u32[0]).upl16());}
+	void operator = (const GSVertex& v) {m[0] = v.m[0]; m[1] = v.m[1];}
 };
 
 struct GSVertexP
@@ -56,11 +61,6 @@ struct GSVertexPT2
 {
 	GSVector4 p;
 	GSVector2 t[2];
-};
-
-struct GSVertexNull
-{
-	GSVector4 p;
 };
 
 #pragma pack(pop)

@@ -319,11 +319,13 @@ void GSTextureCache::InvalidateVideoMem(GSOffset* o, const GSVector4i& rect, boo
 
 	GSVector4i r;
 
-	list<uint32>* pages = o->GetPages(rect, &r);
+	uint32* pages = (uint32*)m_temp;
+	
+	o->GetPages(rect, pages, &r);
 
 	bool found = false;
 
-	for(list<uint32>::iterator p = pages->begin(); p != pages->end(); p++)
+	for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 	{
 		uint32 page = *p;
 
@@ -337,22 +339,24 @@ void GSTextureCache::InvalidateVideoMem(GSOffset* o, const GSVector4i& rect, boo
 
 			if(GSUtil::HasSharedBits(psm, s->m_TEX0.PSM))
 			{
+				uint32* RESTRICT valid = s->m_valid;
+
 				bool b = bp == s->m_TEX0.TBP0;
 
 				if(!s->m_target)
 				{
 					if(s->m_repeating)
 					{
-						list<GSVector2i>& l = s->m_p2t[page];
+						vector<GSVector2i>& l = s->m_p2t[page];
 						
-						for(list<GSVector2i>::iterator k = l.begin(); k != l.end(); k++)
+						for(vector<GSVector2i>::iterator k = l.begin(); k != l.end(); k++)
 						{
-							s->m_valid[k->x] &= k->y;
+							valid[k->x] &= k->y;
 						}
 					}
 					else
 					{
-						s->m_valid[page] = 0;
+						valid[page] = 0;
 					}
 
 					s->m_complete = false;

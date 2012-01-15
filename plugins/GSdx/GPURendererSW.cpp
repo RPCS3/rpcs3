@@ -69,9 +69,11 @@ GSTexture* GPURendererSW::GetOutput()
 
 void GPURendererSW::Draw()
 {
-	shared_ptr<GSRasterizerData> data(new GPURasterizerData());
+	GPUDrawScanline::SharedData* sd = new GPUDrawScanline::SharedData();
 
-	GPUScanlineGlobalData& gd = *(GPUScanlineGlobalData*)data->param;
+	shared_ptr<GSRasterizerData> data(sd);
+
+	GPUScanlineGlobalData& gd = sd->global;
 
 	const GPUDrawingEnvironment& env = m_env;
 
@@ -114,22 +116,26 @@ void GPURendererSW::Draw()
 
 	gd.vm = m_mem.GetPixelAddress(0, 0);
 
-	data->vertices = (GSVertexSW*)_aligned_malloc(sizeof(GSVertexSW) * m_count, 16);
-	memcpy(data->vertices, m_vertices, sizeof(GSVertexSW) * m_count);
-	data->count = m_count;
-
-	data->frame = m_perfmon.GetFrame();
-
 	data->scissor.left = (int)m_env.DRAREATL.X << m_scale.x;
 	data->scissor.top = (int)m_env.DRAREATL.Y << m_scale.y;
 	data->scissor.right = min((int)(m_env.DRAREABR.X + 1) << m_scale.x, m_mem.GetWidth());
 	data->scissor.bottom = min((int)(m_env.DRAREABR.Y + 1) << m_scale.y, m_mem.GetHeight());
+	
+	data->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_count, 16);
+	data->vertex = (GSVertexSW*)data->buff;
+	data->vertex_count = m_count;
+
+	memcpy(data->vertex, m_vertices, sizeof(GSVertexSW) * m_count);
+	
+	data->frame = m_perfmon.GetFrame();
+
+	int prims = 0;
 
 	switch(env.PRIM.TYPE)
 	{
-	case GPU_POLYGON: data->primclass = GS_TRIANGLE_CLASS; break;
-	case GPU_LINE: data->primclass = GS_LINE_CLASS; break;
-	case GPU_SPRITE: data->primclass = GS_SPRITE_CLASS; break;
+	case GPU_POLYGON: data->primclass = GS_TRIANGLE_CLASS; prims = data->vertex_count / 3; break;
+	case GPU_LINE: data->primclass = GS_LINE_CLASS; prims = data->vertex_count / 2; break;
+	case GPU_SPRITE: data->primclass = GS_SPRITE_CLASS; prims = data->vertex_count / 2; break;
 	default: __assume(0);
 	}
 
@@ -138,9 +144,9 @@ void GPURendererSW::Draw()
 	GSVector4 tl(+1e10f);
 	GSVector4 br(-1e10f);
 
-	GSVertexSW* v = data->vertices;
+	GSVertexSW* v = data->vertex;
 
-	for(int i = 0, j = m_count; i < j; i++)
+	for(int i = 0, j = data->vertex_count; i < j; i++)
 	{
 		GSVector4 p = v[i].p;
 
@@ -163,9 +169,9 @@ void GPURendererSW::Draw()
 
 	m_rl->Sync();
 
-	// TODO: m_perfmon.Put(GSPerfMon::Draw, 1);
-	// TODO: m_perfmon.Put(GSPerfMon::Prim, stats.prims);
-	// TODO: m_perfmon.Put(GSPerfMon::Fillrate, stats.pixels);
+	m_perfmon.Put(GSPerfMon::Draw, 1);
+	m_perfmon.Put(GSPerfMon::Prim, prims);
+	m_perfmon.Put(GSPerfMon::Fillrate, m_rl->GetPixels());
 }
 
 void GPURendererSW::VertexKick()

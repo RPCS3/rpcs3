@@ -28,9 +28,8 @@ public:
 	{
 		Main, 
 		Sync, 
-		WorkerDraw0, WorkerDraw1, WorkerDraw2, WorkerDraw3, WorkerDraw4, WorkerDraw5, WorkerDraw6, WorkerDraw7, WorkerDraw8, WorkerDraw9, WorkerDraw10, WorkerDraw11, WorkerDraw12, WorkerDraw13, WorkerDraw14, WorkerDraw15, 
-		WorkerSync0, WorkerSync1, WorkerSync2, WorkerSync3, WorkerSync4, WorkerSync5, WorkerSync6, WorkerSync7, WorkerSync8, WorkerSync9, WorkerSync10, WorkerSync11, WorkerSync12, WorkerSync13, WorkerSync14, WorkerSync15, 
-		WorkerSleep0, WorkerSleep1, WorkerSleep2, WorkerSleep3, WorkerSleep4, WorkerSleep5, WorkerSleep6, WorkerSleep7, WorkerSleep8, WorkerSleep9, WorkerSleep10, WorkerSleep11, WorkerSleep12, WorkerSleep13, WorkerSleep14, WorkerSleep15, 
+		WorkerDraw0, WorkerDraw1, WorkerDraw2, WorkerDraw3, WorkerDraw4, WorkerDraw5, WorkerDraw6, WorkerDraw7, 
+		WorkerDraw8, WorkerDraw9, WorkerDraw10, WorkerDraw11, WorkerDraw12, WorkerDraw13, WorkerDraw14, WorkerDraw15, 
 		TimerLast,
 	};
 	
