@@ -101,19 +101,18 @@ void GSRendererHW::Reset()
 
 void GSRendererHW::VSync(int field)
 {
-	GSRenderer::VSync(field);
-
-	m_tc->IncAge();
-	m_dev->AgePool();
-
-	m_skip = 0;
-
 	if(m_reset)
 	{
 		m_tc->RemoveAll();
 
 		m_reset = false;
 	}
+
+	GSRenderer::VSync(field);
+
+	m_tc->IncAge();
+
+	m_skip = 0;
 }
 
 void GSRendererHW::ResetDevice()

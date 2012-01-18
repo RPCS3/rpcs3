@@ -257,7 +257,7 @@ bool GSRenderer::Merge(int field)
 		{
 			int field2 = 1 - ((m_interlace - 1) & 1);
 			int mode = (m_interlace - 1) >> 1;
-
+			
 			m_dev->Interlace(ds, field ^ field2, mode, tex[1] ? tex[1]->GetScale().y : tex[0]->GetScale().y);
 		}
 
@@ -304,6 +304,8 @@ void GSRenderer::VSync(int field)
 		ResetDevice();
 	}
 
+	m_dev->AgePool();
+
 	// osd
 
 	if((m_perfmon.GetFrame() & 0x1f) == 0)
@@ -332,7 +334,7 @@ void GSRenderer::VSync(int field)
 				s2.c_str(),
 				theApp.m_gs_interlace[m_interlace].name.c_str(),
 				theApp.m_gs_aspectratio[m_aspectratio].name.c_str(),
-				(int)m_perfmon.Get(GSPerfMon::Quad),
+				(int)m_perfmon.Get(GSPerfMon::SyncPoint),
 				(int)m_perfmon.Get(GSPerfMon::Prim),
 				(int)m_perfmon.Get(GSPerfMon::Draw),
 				m_perfmon.CPU(),

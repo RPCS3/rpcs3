@@ -209,6 +209,9 @@ void GSState::SetFrameSkip(int skip)
 
 void GSState::Reset()
 {
+	printf("GS reset\n");
+
+	memset(m_mem.m_vm8, 0, m_mem.m_vmsize); 
 	memset(&m_path[0], 0, sizeof(m_path[0]) * countof(m_path));
 	memset(&m_v, 0, sizeof(m_v));
 
@@ -253,6 +256,7 @@ void GSState::ResetHandlers()
 		m_fpGIFRegHandlerXYZ[P][1] = &GSState::GIFRegHandlerXYZF2<P, 1>; \
 		m_fpGIFRegHandlerXYZ[P][2] = &GSState::GIFRegHandlerXYZ2<P, 0>; \
 		m_fpGIFRegHandlerXYZ[P][3] = &GSState::GIFRegHandlerXYZ2<P, 1>; \
+		m_fpGIFPackedRegHandlerSTQRGBAXYZF2[P] = &GSState::GIFPackedRegHandlerSTQRGBAXYZF2<P>; \
 
 	SetHandlerXYZ(GS_POINTLIST);
 	SetHandlerXYZ(GS_LINELIST);
@@ -544,6 +548,36 @@ void GSState::GIFPackedRegHandlerA_D(const GIFPackedReg* RESTRICT r)
 
 void GSState::GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r)
 {
+}
+
+template<uint32 prim>
+void GSState::GIFPackedRegHandlerSTQRGBAXYZF2(const GIFPackedReg* RESTRICT r, uint32 size)
+{
+	ASSERT(size > 0 && size % 3 == 0);
+
+	const GIFPackedReg* RESTRICT r_end = r + size;
+
+	while(r < r_end)
+	{
+		GSVector4i st = GSVector4i::loadl(&r[0].u64[0]);
+		GSVector4i q = GSVector4i::loadl(&r[0].u64[1]);
+		GSVector4i rgba = (GSVector4i::load<false>(&r[1]) & GSVector4i::x000000ff()).ps32().pu16();
+
+		m_v.m[0] = st.upl64(rgba.upl32(q));
+
+		GSVector4i xy = GSVector4i::loadl(&r[2].u64[0]);
+		GSVector4i zf = GSVector4i::loadl(&r[2].u64[1]);
+		xy = xy.upl16(xy.srl<4>()).upl32(GSVector4i::loadl(&m_v.UV));
+		zf = zf.srl32(4) & GSVector4i::x00ffffff().upl32(GSVector4i::x000000ff());
+
+		m_v.m[1] = xy.upl32(zf);
+
+		VertexKick<prim>(r[2].XYZF2.Skip());
+
+		r += 3;
+	}
+
+	m_q = r[-3].STQ.Q; // remember the last one, STQ outputs this to the temp Q each time
 }
 
 // GIFRegHandler*
@@ -1037,7 +1071,8 @@ template<int i> void GSState::GIFRegHandlerFRAME(const GIFReg* RESTRICT r)
 	{
 		m_env.CTXT[i].offset.fb = m_mem.GetOffset(r->FRAME.Block(), r->FRAME.FBW, r->FRAME.PSM);
 		m_env.CTXT[i].offset.zb = m_mem.GetOffset(m_env.CTXT[i].ZBUF.Block(), r->FRAME.FBW, m_env.CTXT[i].ZBUF.PSM);
-		m_env.CTXT[i].offset.fzb = m_mem.GetPixelOffset4(r->FRAME, m_env.CTXT[i].ZBUF);
+		m_env.CTXT[i].offset.fzb = m_mem.GetPixelOffset(r->FRAME, m_env.CTXT[i].ZBUF);
+		m_env.CTXT[i].offset.fzb4 = m_mem.GetPixelOffset4(r->FRAME, m_env.CTXT[i].ZBUF);
 	}
 	
 	m_env.CTXT[i].FRAME = (GSVector4i)r->FRAME;
@@ -1075,7 +1110,8 @@ template<int i> void GSState::GIFRegHandlerZBUF(const GIFReg* RESTRICT r)
 	if((m_env.CTXT[i].ZBUF.u32[0] ^ ZBUF.u32[0]) & 0x3f0001ff) // ZBP PSM
 	{
 		m_env.CTXT[i].offset.zb = m_mem.GetOffset(ZBUF.Block(), m_env.CTXT[i].FRAME.FBW, ZBUF.PSM);
-		m_env.CTXT[i].offset.fzb = m_mem.GetPixelOffset4(m_env.CTXT[i].FRAME, ZBUF);
+		m_env.CTXT[i].offset.fzb = m_mem.GetPixelOffset(m_env.CTXT[i].FRAME, ZBUF);
+		m_env.CTXT[i].offset.fzb4 = m_mem.GetPixelOffset4(m_env.CTXT[i].FRAME, ZBUF);
 	}
 
 	m_env.CTXT[i].ZBUF = (GSVector4i)ZBUF;
@@ -1726,8 +1762,28 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 				{
 					size -= total;
 
-					if(path.adonly)
+					switch(path.type)
 					{
+					case GIFPath::TYPE_UNKNOWN:
+
+						{
+							uint32 reg = 0;
+
+							do
+							{
+								(this->*m_fpGIFPackedRegHandlers[path.GetReg(reg++)])((GIFPackedReg*)mem);
+
+								mem += sizeof(GIFPackedReg);
+
+								reg = reg & ((int)(reg - path.nreg) >> 31); // resets reg back to 0 when it becomes equal to path.nreg
+							}
+							while(--total > 0);
+						}
+
+						break;
+
+					case GIFPath::TYPE_ADONLY: // very common
+
 						do
 						{
 							(this->*m_fpGIFRegHandlers[((GIFPackedReg*)mem)->A_D.ADDR])(&((GIFPackedReg*)mem)->r);
@@ -1735,20 +1791,20 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 							mem += sizeof(GIFPackedReg);
 						}
 						while(--total > 0);
-					}
-					else
-					{
-						uint32 reg = 0;
 
-						do
-						{
-							(this->*m_fpGIFPackedRegHandlers[path.GetReg(reg++)])((GIFPackedReg*)mem);
+						break;
+					
+					case GIFPath::TYPE_STQRGBAXYZF2: // majority of the vertices are formatted like this
 
-							mem += sizeof(GIFPackedReg);
+						(this->*m_fpGIFPackedRegHandlersC[GIF_REG_STQRGBAXYZF2])((GIFPackedReg*)mem, total);
 
-							reg = reg & ((int)(reg - path.nreg) >> 31); // resets reg back to 0 when it becomes equal to path.nreg
-						}
-						while(--total > 0);
+						mem += total * sizeof(GIFPackedReg);
+
+						break;
+
+					default:
+
+						__assume(0);
 					}
 
 					path.nloop = 0;
@@ -2070,7 +2126,8 @@ int GSState::Defrost(const GSFreezeData* fd)
 		m_env.CTXT[i].offset.fb = m_mem.GetOffset(m_env.CTXT[i].FRAME.Block(), m_env.CTXT[i].FRAME.FBW, m_env.CTXT[i].FRAME.PSM);
 		m_env.CTXT[i].offset.zb = m_mem.GetOffset(m_env.CTXT[i].ZBUF.Block(), m_env.CTXT[i].FRAME.FBW, m_env.CTXT[i].ZBUF.PSM);
 		m_env.CTXT[i].offset.tex = m_mem.GetOffset(m_env.CTXT[i].TEX0.TBP0, m_env.CTXT[i].TEX0.TBW, m_env.CTXT[i].TEX0.PSM);
-		m_env.CTXT[i].offset.fzb = m_mem.GetPixelOffset4(m_env.CTXT[i].FRAME, m_env.CTXT[i].ZBUF);
+		m_env.CTXT[i].offset.fzb = m_mem.GetPixelOffset(m_env.CTXT[i].FRAME, m_env.CTXT[i].ZBUF);
+		m_env.CTXT[i].offset.fzb4 = m_mem.GetPixelOffset4(m_env.CTXT[i].FRAME, m_env.CTXT[i].ZBUF);
 	}
 
 	UpdateScissor();
@@ -2115,6 +2172,8 @@ void GSState::UpdateVertexKick()
 	m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3] = m_fpGIFRegHandlerXYZ[prim][1];
 	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2] = m_fpGIFRegHandlerXYZ[prim][2];
 	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = m_fpGIFRegHandlerXYZ[prim][3];
+
+	m_fpGIFPackedRegHandlersC[GIF_REG_STQRGBAXYZF2] = m_fpGIFPackedRegHandlerSTQRGBAXYZF2[prim];
 
 	m_cvf = m_cv[prim][PRIM->TME][PRIM->FST];
 }

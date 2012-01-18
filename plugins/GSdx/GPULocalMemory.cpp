@@ -28,8 +28,8 @@ const GSVector4i GPULocalMemory::m_xxbx(0x00007c00);
 const GSVector4i GPULocalMemory::m_xgxx(0x000003e0);
 const GSVector4i GPULocalMemory::m_rxxx(0x0000001f);
 
-#define VM_SIZE ((1 << (12 + 11)) * sizeof(uint16))
-#define VM_ALLOC_SIZE (VM_SIZE * 2)
+#define VM_REAL_SIZE ((1 << (12 + 11)) * sizeof(uint16))
+#define VM_ALLOC_SIZE (VM_REAL_SIZE * 2)
 #define TEX_ALLOC_SIZE (256 * 256 * (1 + 1 + 4) * 32)
 
 GPULocalMemory::GPULocalMemory()
@@ -39,7 +39,7 @@ GPULocalMemory::GPULocalMemory()
 
 	//
 
-	int size = VM_SIZE;
+	int size = VM_REAL_SIZE;
 
 	m_vm = (uint16*)vmalloc(VM_ALLOC_SIZE, false);
 

@@ -109,6 +109,7 @@ public:
 
 	virtual void Queue(shared_ptr<GSRasterizerData> data) = 0;
 	virtual void Sync() = 0;
+	virtual bool IsSynced() const = 0;
 	virtual int GetPixels(bool reset = true) = 0;
 };
 
@@ -119,7 +120,7 @@ protected:
 	IDrawScanline* m_ds;
 	int m_id;
 	int m_threads;
-	uint8* m_myscanline;
+	uint8* m_scanline;
 	GSVector4i m_scissor;
 	GSVector4 m_fscissor_x;
 	GSVector4 m_fscissor_y;
@@ -155,12 +156,12 @@ public:
 
 	void Queue(shared_ptr<GSRasterizerData> data);
 	void Sync() {}
+	bool IsSynced() const {return true;}
 	int GetPixels(bool reset);
 };
 
 class GSRasterizerList 
 	: public IRasterizer
-	, private GSJobQueue<shared_ptr<GSRasterizerData> >
 {
 protected:
 	class GSWorker : public GSJobQueue<shared_ptr<GSRasterizerData> >
@@ -175,17 +176,14 @@ protected:
 
 		// GSJobQueue
 
-		void Push(const shared_ptr<GSRasterizerData>& item);
 		void Process(shared_ptr<GSRasterizerData>& item);
 	};
 
+	GSPerfMon* m_perfmon;
 	vector<GSWorker*> m_workers;
+	uint8* m_scanline;
 
-	GSRasterizerList();
-
-	// GSJobQueue
-
-	void Process(shared_ptr<GSRasterizerData>& item);
+	GSRasterizerList(int threads, GSPerfMon* perfmon);
 
 public:
 	virtual ~GSRasterizerList();
@@ -200,7 +198,7 @@ public:
 		}
 		else
 		{
-			GSRasterizerList* rl = new GSRasterizerList();
+			GSRasterizerList* rl = new GSRasterizerList(threads, perfmon);
 
 			for(int i = 0; i < threads; i++)
 			{
@@ -211,12 +209,10 @@ public:
 		}
 	}
 
-	int m_sync_count;
-	int m_syncpoint_count;
-
 	// IRasterizer
 
 	void Queue(shared_ptr<GSRasterizerData> data);
 	void Sync();
+	bool IsSynced() const;
 	int GetPixels(bool reset);
 };

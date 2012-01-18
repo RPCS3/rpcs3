@@ -40,7 +40,7 @@ GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* pe
 	m_edge.buff = (GSVertexSW*)vmalloc(sizeof(GSVertexSW) * 2048, false);
 	m_edge.count = 0;
 
-	m_myscanline = (uint8*)_aligned_malloc((2048 >> THREAD_HEIGHT) + 16, 64);
+	m_scanline = (uint8*)_aligned_malloc((2048 >> THREAD_HEIGHT) + 16, 64);
 
 	int row = 0;
 
@@ -48,14 +48,14 @@ GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* pe
 	{
 		for(int i = 0; i < threads; i++, row++)
 		{
-			m_myscanline[row] = i == id ? 1 : 0;
+			m_scanline[row] = i == id ? 1 : 0;
 		}
 	}
 }
 
 GSRasterizer::~GSRasterizer()
 {
-	_aligned_free(m_myscanline);
+	_aligned_free(m_scanline);
 
 	if(m_edge.buff != NULL) vmfree(m_edge.buff, sizeof(GSVertexSW) * 2048);
 
@@ -66,7 +66,7 @@ bool GSRasterizer::IsOneOfMyScanlines(int top) const
 {
 	ASSERT(top >= 0 && top < 2048);
 
-	return m_myscanline[top >> THREAD_HEIGHT] != 0;
+	return m_scanline[top >> THREAD_HEIGHT] != 0;
 }
 
 bool GSRasterizer::IsOneOfMyScanlines(int top, int bottom) const
@@ -78,7 +78,7 @@ bool GSRasterizer::IsOneOfMyScanlines(int top, int bottom) const
 
 	while(top < bottom)
 	{
-		if(m_myscanline[top++])
+		if(m_scanline[top++])
 		{
 			return true;
 		}
@@ -91,9 +91,9 @@ int GSRasterizer::FindMyNextScanline(int top) const
 {
 	int i = top >> THREAD_HEIGHT;
 
-	if(m_myscanline[i] == 0)
+	if(m_scanline[i] == 0)
 	{
-		while(m_myscanline[++i] == 0);
+		while(m_scanline[++i] == 0);
 
 		top = i << THREAD_HEIGHT;
 	}
@@ -904,11 +904,20 @@ void GSRasterizer::Flush(const GSVertexSW* vertex, const uint32* index, const GS
 
 //
 
-GSRasterizerList::GSRasterizerList()
-	: GSJobQueue<shared_ptr<GSRasterizerData> >()
-	, m_sync_count(0)
-	, m_syncpoint_count(0)
+GSRasterizerList::GSRasterizerList(int threads, GSPerfMon* perfmon)
+	: m_perfmon(perfmon)
 {
+	m_scanline = (uint8*)_aligned_malloc((2048 >> THREAD_HEIGHT) + 16, 64);
+
+	int row = 0;
+
+	while(row < (2048 >> THREAD_HEIGHT))
+	{
+		for(int i = 0; i < threads; i++, row++)
+		{
+			m_scanline[row] = i;
+		}
+	}
 }
 
 GSRasterizerList::~GSRasterizerList()
@@ -917,31 +926,54 @@ GSRasterizerList::~GSRasterizerList()
 	{
 		delete *i;
 	}
+
+	_aligned_free(m_scanline);
 }
 
 void GSRasterizerList::Queue(shared_ptr<GSRasterizerData> data)
 {
-	// disable dispatcher thread for now and pass-through directly, 
-	// would only be relevant if data->syncpoint was utilized more, 
-	// it would hide the syncing latency from the main gs thread
+	if(data->syncpoint)
+	{
+		Sync();
+	}
 
-	// Push(data); 
+	GSVector4i r = data->bbox.rintersect(data->scissor);
 
-	Process(data); m_count++;
+	ASSERT(r.top >= 0 && r.top < 2048 && r.bottom >= 0 && r.bottom < 2048);
+
+	int top = r.top >> THREAD_HEIGHT;
+	int bottom = std::min<int>((r.bottom + (1 << THREAD_HEIGHT) - 1) >> THREAD_HEIGHT, top + m_workers.size());
+
+	while(top < bottom)
+	{
+		m_workers[m_scanline[top++]]->Push(data);
+	}
 }
 
 void GSRasterizerList::Sync()
 {
-	if(GetCount() == 0) return;
+	if(!IsSynced())
+	{
+		for(size_t i = 0; i < m_workers.size(); i++)
+		{
+			m_workers[i]->Wait();
+		}
 
-	Wait(); // first dispatch all items to workers
+		m_perfmon->Put(GSPerfMon::SyncPoint, 1);
+	}
+}
 
+bool GSRasterizerList::IsSynced() const
+{
 	for(size_t i = 0; i < m_workers.size(); i++)
 	{
-		m_workers[i]->Wait(); // then wait all workers to finish their jobs
+		if(!m_workers[i]->IsEmpty())
+		{
+			return false;
+		}
 	}
 
-	m_sync_count++;
+	return true;
 }
 
 int GSRasterizerList::GetPixels(bool reset) 
@@ -954,24 +986,6 @@ int GSRasterizerList::GetPixels(bool reset)
 	}
 
 	return pixels;
-}
-
-void GSRasterizerList::Process(shared_ptr<GSRasterizerData>& item)
-{
-	if(item->syncpoint)
-	{
-		for(size_t i = 0; i < m_workers.size(); i++)
-		{
-			m_workers[i]->Wait();
-		}
-
-		m_syncpoint_count++;
-	}
-
-	for(size_t i = 0; i < m_workers.size(); i++)
-	{
-		m_workers[i]->Push(item);
-	}
 }
 
 // GSRasterizerList::GSWorker
@@ -992,16 +1006,6 @@ GSRasterizerList::GSWorker::~GSWorker()
 int GSRasterizerList::GSWorker::GetPixels(bool reset)
 {
 	return m_r->GetPixels(reset);
-}
-
-void GSRasterizerList::GSWorker::Push(const shared_ptr<GSRasterizerData>& item) 
-{
-	GSVector4i r = item->bbox.rintersect(item->scissor);
-
-	if(m_r->IsOneOfMyScanlines(r.top, r.bottom))
-	{
-		GSJobQueue<shared_ptr<GSRasterizerData> >::Push(item);
-	}
 }
 
 void GSRasterizerList::GSWorker::Process(shared_ptr<GSRasterizerData>& item) 

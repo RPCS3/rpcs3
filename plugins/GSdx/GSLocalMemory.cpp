@@ -473,6 +473,62 @@ GSOffset* GSLocalMemory::GetOffset(uint32 bp, uint32 bw, uint32 psm)
 	return o;
 }
 
+GSPixelOffset* GSLocalMemory::GetPixelOffset(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF)
+{
+	uint32 fbp = FRAME.Block();
+	uint32 zbp = ZBUF.Block();
+	uint32 fpsm = FRAME.PSM;
+	uint32 zpsm = ZBUF.PSM;
+	uint32 bw = FRAME.FBW;
+
+	ASSERT(m_psm[fpsm].trbpp > 8 || m_psm[zpsm].trbpp > 8);
+
+	// "(psm & 0x0f) ^ ((psm & 0xf0) >> 2)" creates 4 bit unique identifiers for render target formats (only)
+
+	uint32 fpsm_hash = (fpsm & 0x0f) ^ ((fpsm & 0x30) >> 2);
+	uint32 zpsm_hash = (zpsm & 0x0f) ^ ((zpsm & 0x30) >> 2);
+
+	uint32 hash = (FRAME.FBP << 0) | (ZBUF.ZBP << 9) | (bw << 18) | (fpsm_hash << 24) | (zpsm_hash << 28);
+
+	hash_map<uint32, GSPixelOffset*>::iterator i = m_pomap.find(hash);
+
+	if(i != m_pomap.end())
+	{
+		return i->second;
+	}
+
+	GSPixelOffset* o = (GSPixelOffset*)_aligned_malloc(sizeof(GSPixelOffset), 32);
+
+	o->hash = hash;
+	o->fbp = fbp;
+	o->zbp = zbp;
+	o->fpsm = fpsm;
+	o->zpsm = zpsm;
+	o->bw = bw;
+
+	pixelAddress fpa = m_psm[fpsm].pa;
+	pixelAddress zpa = m_psm[zpsm].pa;
+
+	int fs = m_psm[fpsm].bpp >> 5;
+	int zs = m_psm[zpsm].bpp >> 5;
+
+	for(int i = 0; i < 2048; i++)
+	{
+		o->row[i].x = (int)fpa(0, i, fbp, bw) << fs;
+		o->row[i].y = (int)zpa(0, i, zbp, bw) << zs;
+	}
+
+	for(int i = 0; i < 2048; i++)
+	{
+		o->col[i].x = m_psm[fpsm].rowOffset[0][i] << fs;
+		o->col[i].y = m_psm[zpsm].rowOffset[0][i] << zs;
+	}
+
+	m_pomap[hash] = o;
+
+	return o;
+}
+
 GSPixelOffset4* GSLocalMemory::GetPixelOffset4(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF)
 {
 	uint32 fbp = FRAME.Block();

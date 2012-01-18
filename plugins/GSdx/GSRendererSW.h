@@ -48,8 +48,9 @@ protected:
 	GSTextureCacheSW* m_tc;
 	GSTexture* m_texture[2];
 	uint8* m_output;
-	bool m_reset;
 	GSPixelOffset4* m_fzb;
+	GSVector4i m_fzb_bbox;
+	uint32 m_fzb_cur_pages[16];
 	uint32 m_fzb_pages[512]; // uint16 frame/zbuf pages interleaved
 	uint16 m_tex_pages[512];
 	uint32 m_tmp_pages[512 + 1];
@@ -66,7 +67,7 @@ protected:
 
 	void UsePages(const uint32* pages, int type);
 	void ReleasePages(const uint32* pages, int type);
-	template<uint32 mask> bool CheckTargetPages(const uint32* pages);
+	bool CheckTargetPages(const uint32* fb_pages, const uint32* zb_pages, const GSVector4i& r);
 
 	bool GetScanlineGlobalData(SharedData* data);
 

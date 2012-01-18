@@ -1025,6 +1025,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSRendererCS.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSRendererDX.cpp"
 				>
 			</File>
@@ -1628,6 +1632,10 @@
 			</File>
 			<File
 				RelativePath=".\GSRenderer.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSRendererCS.h"
 				>
 			</File>
 			<File

@@ -90,6 +90,11 @@ enum GIF_REG
 	GIF_REG_NOP		= 0x0f,
 };
 
+enum GIF_REG_COMPLEX
+{
+	GIF_REG_STQRGBAXYZF2 = 0x00,
+};
+
 enum GIF_A_D_REG
 {
 	GIF_A_D_REG_PRIM		= 0x00,
@@ -1093,8 +1098,10 @@ __aligned(struct, 32) GIFPath
 	uint32 reg;
 	uint32 nreg;
 	uint32 nloop;
-	uint32 adonly;
+	uint32 type;
 	GSVector4i regs;
+
+	enum {TYPE_UNKNOWN, TYPE_ADONLY, TYPE_STQRGBAXYZF2};
 
 	void SetTag(const void* mem)
 	{
@@ -1104,7 +1111,9 @@ __aligned(struct, 32) GIFPath
 		regs = v.uph8(v >> 4) & 0x0f0f0f0f;
 		nreg = tag.NREG ? tag.NREG : 16;
 		nloop = tag.NLOOP;
-		adonly = regs.eq8(GSVector4i(0x0e0e0e0e)).mask() == (1 << nreg) - 1;
+		type = TYPE_UNKNOWN;
+		if(regs.u32[0] == 0x00040102 && nreg == 3) type = TYPE_STQRGBAXYZF2;
+		else if(regs.eq8(GSVector4i(0x0e0e0e0e)).mask() == (1 << nreg) - 1) type = TYPE_ADONLY;
 	}
 
 	__forceinline uint8 GetReg()

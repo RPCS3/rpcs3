@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "GSdx.h"
+
 #ifdef _WINDOWS
 
 typedef void (WINAPI * InitializeConditionVariablePtr)(CONDITION_VARIABLE* ConditionVariable);
@@ -29,7 +31,7 @@ typedef void (WINAPI * WakeAllConditionVariablePtr)(CONDITION_VARIABLE* Conditio
 typedef void (WINAPI * SleepConditionVariableSRWPtr)(CONDITION_VARIABLE* ConditionVariable, SRWLOCK* SRWLock, DWORD dwMilliseconds, ULONG Flags);
 typedef void (WINAPI * InitializeSRWLockPtr)(SRWLOCK* SRWLock);
 typedef void (WINAPI * AcquireSRWLockExclusivePtr)(SRWLOCK* SRWLock);
-typedef void (WINAPI * ReleaseSRWLockExclusivePtr)(SRWLOCK* SRWLock);
+typedef BOOLEAN (WINAPI * TryAcquireSRWLockExclusivePtr)(SRWLOCK* SRWLock);typedef void (WINAPI * ReleaseSRWLockExclusivePtr)(SRWLOCK* SRWLock);
 
 extern InitializeConditionVariablePtr pInitializeConditionVariable;
 extern WakeConditionVariablePtr pWakeConditionVariable;
@@ -37,7 +39,7 @@ extern WakeAllConditionVariablePtr pWakeAllConditionVariable;
 extern SleepConditionVariableSRWPtr pSleepConditionVariableSRW;
 extern InitializeSRWLockPtr pInitializeSRWLock;;
 extern AcquireSRWLockExclusivePtr pAcquireSRWLockExclusive;
-extern ReleaseSRWLockExclusivePtr pReleaseSRWLockExclusive;
+extern TryAcquireSRWLockExclusivePtr pTryAcquireSRWLockExclusive;extern ReleaseSRWLockExclusivePtr pReleaseSRWLockExclusive;
 
 class GSThread
 {
@@ -92,7 +94,7 @@ public:
 	GSCondVarLock() {pInitializeSRWLock(&m_lock);}
 
 	void Lock() {pAcquireSRWLockExclusive(&m_lock);}
-	void Unlock() {pReleaseSRWLockExclusive(&m_lock);}
+	bool TryLock() {return pTryAcquireSRWLockExclusive(&m_lock) == TRUE;}	void Unlock() {pReleaseSRWLockExclusive(&m_lock);}
 		
 	operator SRWLOCK* () {return &m_lock;}
 };
@@ -114,7 +116,6 @@ public:
 
 #include <pthread.h>
 #include <semaphore.h>
-#include "GSdx.h"
 
 class GSThread
 {
@@ -191,6 +192,7 @@ public:
 	}
 
 	void Lock() {pthread_mutex_lock(&m_mutex);}
+	bool TryLock() {return pthread_mutex_trylock(&m_mutex) == 0;}
 	void Unlock() {pthread_mutex_unlock(&m_mutex);}
 		
 	operator pthread_mutex_t* () {return &m_mutex;}
@@ -254,10 +256,10 @@ public:
 template<class T> class GSJobQueue : private GSThread
 {
 protected:
-	int m_count;
 	queue<T> m_queue;
+	volatile long m_count; // NOTE: it is the safest to have our own counter because m_queue.pop() might decrement its own before the last item runs out of its scope and gets destroyed (implementation dependent)
 	volatile bool m_exit;
-	struct {GSCritSec lock; GSEvent notempty; volatile long count;} m_ev;
+	struct {GSCritSec lock; GSEvent notempty;} m_ev;
 	struct {GSCondVar notempty, empty; GSCondVarLock lock; bool available;} m_cv;
 
 	void ThreadProc()
@@ -284,6 +286,8 @@ protected:
 				m_cv.lock.Lock();
 
 				m_queue.pop();
+
+				m_count--;
 
 				if(m_queue.empty())
 				{
@@ -318,7 +322,7 @@ protected:
 
 				m_queue.pop();
 
-				_InterlockedDecrement(&m_ev.count);
+				m_count--;
 			}
 		}
 	}
@@ -328,16 +332,14 @@ public:
 		: m_count(0)
 		, m_exit(false)
 	{
-		m_ev.count = 0;
+		m_cv.available = !!theApp.GetConfig("condvar", 1);
 
 		#ifdef _WINDOWS
 
-		m_cv.available = pInitializeConditionVariable != NULL;
-
-		#elif defined(_LINUX)
-	
-		//m_cv.available = true;
-		m_cv.available = !!theApp.GetConfig("condvar", 1);
+		if(pInitializeConditionVariable == NULL) 
+		{
+			m_cv.available = false;
+		}
 
 		#endif
 
@@ -358,18 +360,22 @@ public:
 		}
 	}
 
-	int GetCount() const
+	bool IsEmpty() const
 	{
-		return m_count;
+		ASSERT(m_count >= 0);
+
+		return m_count == 0;
 	}
 
-	virtual void Push(const T& item)
+	void Push(const T& item)
 	{
 		if(m_cv.available)
 		{
 			m_cv.lock.Lock();
 	
 			m_queue.push(item);
+
+			m_count++;
 
 			m_cv.lock.Unlock();
 
@@ -381,35 +387,34 @@ public:
 
 			m_queue.push(item);
 
-			_InterlockedIncrement(&m_ev.count);
+			m_count++;
 
 			m_ev.notempty.Set();
 		}
-
-		m_count++;
 	}
 
-	virtual void Wait()
+	void Wait()
 	{
 		if(m_cv.available)
 		{
-			m_cv.lock.Lock();
-
-			while(!m_queue.empty()) 
+			if(m_count > 0)
 			{
-				m_cv.empty.Wait(m_cv.lock);
-			}
+				m_cv.lock.Lock();
 
-			m_cv.lock.Unlock();
+				while(!m_queue.empty()) 
+				{
+					m_cv.empty.Wait(m_cv.lock);
+				}
+
+				ASSERT(m_count == 0);
+	
+				m_cv.lock.Unlock();
+			}
 		}
 		else
 		{
-			// NOTE: it is the safest to have our own counter because m_queue.pop() might decrement its own before the last item runs out of its scope and gets destroyed (implementation dependent)
-
-			while(m_ev.count > 0) _mm_pause();
+			while(m_count > 0) _mm_pause();
 		}
-
-		m_count++;
 	}
 
 	virtual void Process(T& item) = 0;

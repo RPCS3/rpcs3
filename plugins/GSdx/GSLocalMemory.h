@@ -56,6 +56,16 @@ public:
 	uint32* GetPages(const GSVector4i& rect, uint32* pages = NULL, GSVector4i* bbox = NULL);
 };
 
+struct GSPixelOffset
+{
+	// 16 bit offsets (m_vm16[...])
+
+	GSVector2i row[2048]; // f yn | z yn
+	GSVector2i col[2048]; // f xn | z xn
+	uint32 hash;
+	uint32 fbp, zbp, fpsm, zpsm, bw;
+};
+
 struct GSPixelOffset4
 {
 	// 16 bit offsets (m_vm16[...])
@@ -158,6 +168,7 @@ protected:
 	//
 
 	hash_map<uint32, GSOffset*> m_omap;
+	hash_map<uint32, GSPixelOffset*> m_pomap;
 	hash_map<uint32, GSPixelOffset4*> m_po4map;
 	hash_map<uint64, vector<GSVector2i>*> m_p2tmap;
 
@@ -166,6 +177,7 @@ public:
 	virtual ~GSLocalMemory();
 
 	GSOffset* GetOffset(uint32 bp, uint32 bw, uint32 psm);
+	GSPixelOffset* GetPixelOffset(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF);
 	GSPixelOffset4* GetPixelOffset4(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF);
 	vector<GSVector2i>* GetPage2TileMap(const GIFRegTEX0& TEX0);
 

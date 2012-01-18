@@ -729,7 +729,6 @@ void GSDevice11::IASetVertexBuffer(const void* vertex, size_t stride, size_t cou
 		m_vb = NULL;
 
 		m_vertex.start = 0;
-		m_vertex.count = 0;
 		m_vertex.limit = std::max<int>(count * 3 / 2, 11000);
 	}
 
@@ -798,7 +797,7 @@ void GSDevice11::IASetIndexBuffer(const void* index, size_t count)
 		m_ib_old = m_ib;
 		m_ib = NULL;
 
-		m_index.count = 0;
+		m_index.start = 0;
 		m_index.limit = std::max<int>(count * 3 / 2, 11000);
 	}
 
@@ -904,7 +903,11 @@ void GSDevice11::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 {
 	PSSetShaderResource(0, sr0);
 	PSSetShaderResource(1, sr1);
-	PSSetShaderResource(2, NULL);
+
+	for(int i = 2; i < countof(m_state.ps_srv); i++)
+	{
+		PSSetShaderResource(i, NULL);
+	}
 }
 
 void GSDevice11::PSSetShaderResource(int i, GSTexture* sr)
@@ -912,6 +915,13 @@ void GSDevice11::PSSetShaderResource(int i, GSTexture* sr)
 	ID3D11ShaderResourceView* srv = NULL;
 
 	if(sr) srv = *(GSTexture11*)sr;
+
+	PSSetShaderResourceView(i, srv);
+}
+
+void GSDevice11::PSSetShaderResourceView(int i, ID3D11ShaderResourceView* srv)
+{
+	ASSERT(i < countof(m_state.ps_srv));
 
 	if(m_state.ps_srv[i] != srv)
 	{
@@ -944,14 +954,14 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 
 	if(m_srv_changed)
 	{
-		m_ctx->PSSetShaderResources(0, 3, m_state.ps_srv);
+		m_ctx->PSSetShaderResources(0, countof(m_state.ps_srv), m_state.ps_srv);
 
 		m_srv_changed = false;
 	}
 
 	if(m_ss_changed)
 	{
-		m_ctx->PSSetSamplers(0, 3, m_state.ps_ss);
+		m_ctx->PSSetSamplers(0, countof(m_state.ps_ss), m_state.ps_ss);
 
 		m_ss_changed = false;
 	}
@@ -1036,6 +1046,8 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 		m_ctx->OMSetRenderTargets(1, &rtv, dsv);
 	}
 
+	memset(m_state.uav, 0, sizeof(m_state.uav));
+
 	if(m_state.viewport != rt->GetSize())
 	{
 		m_state.viewport = rt->GetSize();
@@ -1055,6 +1067,52 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 	}
 
 	GSVector4i r = scissor ? *scissor : GSVector4i(rt->GetSize()).zwxy();
+
+	if(!m_state.scissor.eq(r))
+	{
+		m_state.scissor = r;
+
+		m_ctx->RSSetScissorRects(1, r);
+	}
+}
+
+void GSDevice11::OMSetRenderTargets(const GSVector2i& rtsize, ID3D11UnorderedAccessView** uav, int count, const GSVector4i* scissor)
+{
+	for(int i = 0; i < count; i++)
+	{
+		if(m_state.uav[i] != uav[i])
+		{
+			memcpy(m_state.uav, uav, sizeof(uav[0]) * count);
+			memset(m_state.uav + count, 0, sizeof(m_state.uav) - sizeof(uav[0]) * count);
+
+			m_ctx->OMSetRenderTargetsAndUnorderedAccessViews(0, NULL, NULL, 0, count, uav, NULL);
+
+			break;
+		}
+	}
+
+	m_state.rtv = NULL;
+	m_state.dsv = NULL;
+
+	if(m_state.viewport != rtsize)
+	{
+		m_state.viewport = rtsize;
+
+		D3D11_VIEWPORT vp;
+
+		memset(&vp, 0, sizeof(vp));
+
+		vp.TopLeftX = 0;
+		vp.TopLeftY = 0;
+		vp.Width = (float)rtsize.x;
+		vp.Height = (float)rtsize.y;
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+
+		m_ctx->RSSetViewports(1, &vp);
+	}
+
+	GSVector4i r = scissor ? *scissor : GSVector4i(rtsize).zwxy();
 
 	if(!m_state.scissor.eq(r))
 	{
@@ -1126,6 +1184,38 @@ HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MAC
 	}
 
 	hr = m_dev->CreateGeometryShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(), NULL, gs);
+
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	return hr;
+}
+
+HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs, D3D11_SO_DECLARATION_ENTRY* layout, int count)
+{
+	HRESULT hr;
+
+	vector<D3D11_SHADER_MACRO> m;
+
+	PrepareShaderMacro(m, macro);
+
+	CComPtr<ID3D11Blob> shader, error;
+
+    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry, m_shader.gs.c_str(), 0, 0, NULL, &shader, &error, NULL);
+
+	if(error)
+	{
+		printf("%s\n", (const char*)error->GetBufferPointer());
+	}
+
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	hr = m_dev->CreateGeometryShaderWithStreamOutput((void*)shader->GetBufferPointer(), shader->GetBufferSize(), layout, count, NULL, 0, D3D11_SO_NO_RASTERIZED_STREAM, NULL, gs);
 
 	if(FAILED(hr))
 	{
