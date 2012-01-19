@@ -170,6 +170,8 @@ public:
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, ID3D11PixelShader* ps, ID3D11Buffer* ps_cb, ID3D11BlendState* bs, bool linear = true);
 
 	void IASetVertexBuffer(const void* vertex, size_t stride, size_t count);
+	bool IAMapVertexBuffer(void** vertex, size_t stride, size_t count);
+	void IAUnmapVertexBuffer();
 	void IASetVertexBuffer(ID3D11Buffer* vb, size_t stride);
 	void IASetIndexBuffer(const void* index, size_t count);
 	void IASetIndexBuffer(ID3D11Buffer* ib);
@@ -190,7 +192,6 @@ public:
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
 	void OMSetRenderTargets(const GSVector2i& rtsize, ID3D11UnorderedAccessView** uav, int count, const GSVector4i* scissor = NULL);
 
-	void SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim);
 	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
 	void SetupGS(GSSelector sel);
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);

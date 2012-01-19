@@ -196,6 +196,8 @@ public:
 	void StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, IDirect3DPixelShader9* ps, const float* ps_cb, int ps_cb_len, Direct3DBlendState9* bs, bool linear = true);
 
 	void IASetVertexBuffer(const void* vertex, size_t stride, size_t count);
+	bool IAMapVertexBuffer(void** vertex, size_t stride, size_t count);
+	void IAUnmapVertexBuffer();
 	void IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride);
 	void IASetIndexBuffer(const void* index, size_t count);
 	void IASetIndexBuffer(IDirect3DIndexBuffer9* ib);
@@ -216,7 +218,6 @@ public:
 	HRESULT CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il);
 	HRESULT CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps);
 
-	void SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim);
 	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
 	void SetupGS(GSSelector sel) {}
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);

@@ -25,9 +25,8 @@
 #include "resource.h"
 
 GSRendererDX11::GSRendererDX11()
-	: GSRendererDX(new GSVertexTraceDX11(this), sizeof(GSVertexHW11), new GSTextureCache11(this), GSVector2(-0.5f, -0.5f))
+	: GSRendererDX(new GSTextureCache11(this), GSVector2(-0.5f, -0.5f))
 {
-	InitConvertVertex(GSRendererDX11);
 }
 
 bool GSRendererDX11::CreateDevice(GSDevice* dev)
@@ -38,43 +37,40 @@ bool GSRendererDX11::CreateDevice(GSDevice* dev)
 	return true;
 }
 
-template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererDX11::ConvertVertex(size_t dst_index, size_t src_index)
-{
-	GSVertex* s = (GSVertex*)((GSVertexHW11*)m_vertex.buff + src_index);
-	GSVertexHW11* d = (GSVertexHW11*)m_vertex.buff + dst_index;
-
-	GSVector4i v0 = ((GSVector4i*)s)[0];
-	GSVector4i v1 = ((GSVector4i*)s)[1];
-
-	if(tme && fst)
-	{
-		// TODO: modify VertexTrace and the shaders to read uv from v1.u16[0], v1.u16[1], then this step is not needed
-
-		v0 = GSVector4i::cast(GSVector4(v1.uph16()).xyzw(GSVector4::cast(v0))); // uv => st
-	}
-
-	((GSVector4i*)d)[0] = v0;
-	((GSVector4i*)d)[1] = v1;
-}
-
 void GSRendererDX11::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 {
-	switch(m_vt->m_primclass)
+	GSDevice11* dev = (GSDevice11*)m_dev;
+
+	void* ptr = NULL;
+
+	if(dev->IAMapVertexBuffer(&ptr, sizeof(GSVertex), m_vertex.next))
+	{
+		GSVector4i::storent(ptr, m_vertex.buff, sizeof(GSVertex) * m_vertex.next);
+
+		dev->IAUnmapVertexBuffer();
+	}
+
+	dev->IASetIndexBuffer(m_index.buff, m_index.tail);
+
+	D3D11_PRIMITIVE_TOPOLOGY t;
+
+	switch(m_vt.m_primclass)
 	{
 	case GS_POINT_CLASS:
-		m_topology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
+		t = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
 		break;
 	case GS_LINE_CLASS:
 	case GS_SPRITE_CLASS:
-		m_topology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+		t = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 		break;
 	case GS_TRIANGLE_CLASS:
-		m_topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		t = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		break;
 	default:
 		__assume(0);
 	}
+	
+	dev->IASetPrimitiveTopology(t);
 
 	__super::DrawPrims(rt, ds, tex);
 }

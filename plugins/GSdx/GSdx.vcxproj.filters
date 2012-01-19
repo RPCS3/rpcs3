@@ -288,18 +288,6 @@
     <ClCompile Include="GSDeviceSDL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GSVertexTrace.x64.avx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GSVertexTrace.x64.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GSVertexTrace.x86.avx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GSVertexTrace.x86.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="GSSetupPrimCodeGenerator.x64.avx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

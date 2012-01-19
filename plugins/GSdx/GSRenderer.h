@@ -58,7 +58,7 @@ public:
 	int s_saven;
 
 public:
-	GSRenderer(GSVertexTrace* vt, size_t vertex_stride);
+	GSRenderer();
 	virtual ~GSRenderer();
 
 	virtual bool CreateWnd(const string& title, int w, int h);

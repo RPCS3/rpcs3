@@ -25,9 +25,8 @@
 #include "resource.h"
 
 GSRendererDX9::GSRendererDX9()
-	: GSRendererDX(new GSVertexTraceDX9(this), sizeof(GSVertexHW9), new GSTextureCache9(this))
+	: GSRendererDX(new GSTextureCache9(this))
 {
-	InitConvertVertex(GSRendererDX9);
 }
 
 bool GSRendererDX9::CreateDevice(GSDevice* dev)
@@ -57,56 +56,21 @@ bool GSRendererDX9::CreateDevice(GSDevice* dev)
 	return true;
 }
 
-template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererDX9::ConvertVertex(size_t dst_index, size_t src_index)
-{
-	GSVertex* s = (GSVertex*)((GSVertexHW9*)m_vertex.buff + src_index);
-	GSVertexHW9* d = (GSVertexHW9*)m_vertex.buff + dst_index;
-
-	GSVector4 p = GSVector4(GSVector4i::load(s->XYZ.u32[0]).upl16());
-
-	if(tme && !fst)
-	{
-		p = p.xyxy(GSVector4((float)s->XYZ.Z, s->RGBAQ.Q));
-	}
-	else
-	{
-		p = p.xyxy(GSVector4::load((float)s->XYZ.Z));
-	}
-
-	GSVector4 t = GSVector4::zero();
-
-	if(tme)
-	{
-		if(fst)
-		{
-			t = GSVector4(GSVector4i::load(s->UV).upl16());
-		}
-		else
-		{
-			t = GSVector4::loadl(&s->ST);
-		}
-	}
-
-	t = t.xyxy(GSVector4::cast(GSVector4i(s->RGBAQ.u32[0], s->FOG)));
-
-	d->p = p;
-	d->t = t;
-}
-
 void GSRendererDX9::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 {
-	switch(m_vt->m_primclass)
+	D3DPRIMITIVETYPE topology;
+
+	switch(m_vt.m_primclass)
 	{
 	case GS_POINT_CLASS:
 
-		m_topology = D3DPT_POINTLIST;
+		topology = D3DPT_POINTLIST;
 
 		break;
 
 	case GS_LINE_CLASS:
 
-		m_topology = D3DPT_LINELIST;
+		topology = D3DPT_LINELIST;
 
 		if(PRIM->IIP == 0)
 		{
@@ -122,7 +86,7 @@ void GSRendererDX9::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	case GS_TRIANGLE_CLASS:
 
-		m_topology = D3DPT_TRIANGLELIST;
+		topology = D3DPT_TRIANGLELIST;
 
 		if(PRIM->IIP == 0)
 		{
@@ -138,7 +102,7 @@ void GSRendererDX9::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	case GS_SPRITE_CLASS:
 
-		m_topology = D3DPT_TRIANGLELIST;
+		topology = D3DPT_TRIANGLELIST;
 
 		// each sprite converted to quad needs twice the space
 
@@ -154,29 +118,35 @@ void GSRendererDX9::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 			size_t count = m_vertex.next;
 
 			int i = (int)count * 2 - 4;
-			GSVertexHW9* s = (GSVertexHW9*)&m_vertex.buff[sizeof(GSVertexHW9) * count] - 2;
-			GSVertexHW9* q = (GSVertexHW9*)&m_vertex.buff[sizeof(GSVertexHW9) * (count * 2)] - 4;
-			uint32* RESTRICT index = &m_index.buff[count * 3] - 6;
+			GSVertex* s = &m_vertex.buff[count - 2];
+			GSVertex* q = &m_vertex.buff[count * 2 - 4];
+			uint32* RESTRICT index = &m_index.buff[count * 3 - 6];
 		
 			for(; i >= 0; i -= 4, s -= 2, q -= 4, index -= 6) 
 			{
-				GSVertexHW9 v0 = s[0];
-				GSVertexHW9 v1 = s[1];
+				GSVertex v0 = s[0];
+				GSVertex v1 = s[1];
 
-				v0.p = v0.p.xyzw(v1.p); // z, q
-				v0.t = v0.t.xyzw(v1.t); // c, f
+				v0.RGBAQ = v1.RGBAQ;
+				v0.XYZ.Z = v1.XYZ.Z;
+				v0.FOG = v1.FOG;
 
 				q[0] = v0;
 				q[3] = v1;
 
-				// swap x, s
+				// swap x, s, u
 
-				GSVector4 p = v0.p.insert<0, 0>(v1.p);
-				GSVector4 t = v0.t.insert<0, 0>(v1.t);
-				v1.p = v1.p.insert<0, 0>(v0.p);
-				v1.t = v1.t.insert<0, 0>(v0.t);
-				v0.p = p;
-				v0.t = t;
+				uint16 x = v0.XYZ.X;
+				v0.XYZ.X = v1.XYZ.X;
+				v1.XYZ.X = x;
+
+				float s = v0.ST.S;
+				v0.ST.S = v1.ST.S;
+				v1.ST.S = s;
+
+				uint16 u = v0.U;
+				v0.U = v1.U;
+				v1.U = u;
 
 				q[1] = v0;
 				q[2] = v1;
@@ -199,7 +169,56 @@ void GSRendererDX9::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		__assume(0);
 	}
 
-	(*(GSDevice9*)m_dev)->SetRenderState(D3DRS_SHADEMODE, PRIM->IIP ? D3DSHADE_GOURAUD : D3DSHADE_FLAT); // TODO
+	GSDevice9* dev = (GSDevice9*)m_dev;
+
+	(*dev)->SetRenderState(D3DRS_SHADEMODE, PRIM->IIP ? D3DSHADE_GOURAUD : D3DSHADE_FLAT); // TODO
+
+	void* ptr = NULL;
+
+	if(dev->IAMapVertexBuffer(&ptr, sizeof(GSVertexHW9), m_vertex.next))
+	{
+		GSVertex* RESTRICT s = (GSVertex*)m_vertex.buff;
+		GSVertexHW9* RESTRICT d = (GSVertexHW9*)ptr;
+
+		for(int i = 0; i < m_vertex.next; i++, s++, d++)
+		{
+			GSVector4 p = GSVector4(GSVector4i::load(s->XYZ.u32[0]).upl16());
+
+			if(PRIM->TME && !PRIM->FST)
+			{
+				p = p.xyxy(GSVector4((float)s->XYZ.Z, s->RGBAQ.Q));
+			}
+			else
+			{
+				p = p.xyxy(GSVector4::load((float)s->XYZ.Z));
+			}
+
+			GSVector4 t = GSVector4::zero();
+
+			if(PRIM->TME)
+			{
+				if(PRIM->FST)
+				{
+					t = GSVector4(GSVector4i::load(s->UV).upl16());
+				}
+				else
+				{
+					t = GSVector4::loadl(&s->ST);
+				}
+			}
+
+			t = t.xyxy(GSVector4::cast(GSVector4i(s->RGBAQ.u32[0], s->FOG)));
+
+			d->p = p;
+			d->t = t;
+		}
+
+		dev->IAUnmapVertexBuffer();
+	}
+
+	dev->IASetIndexBuffer(m_index.buff, m_index.tail);
+
+	dev->IASetPrimitiveTopology(topology);
 
 	__super::DrawPrims(rt, ds, tex);
 }
@@ -220,7 +239,7 @@ void GSRendererDX9::UpdateFBA(GSTexture* rt)
 	GSVector4 s = GSVector4(rt->GetScale().x / rt->GetWidth(), rt->GetScale().y / rt->GetHeight());
 	GSVector4 o = GSVector4(-1.0f, 1.0f);
 
-	GSVector4 src = ((m_vt->m_min.p.xyxy(m_vt->m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
+	GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
 	GSVector4 dst = src * 2.0f + o.xxxx();
 
 	GSVertexPT1 vertices[] =

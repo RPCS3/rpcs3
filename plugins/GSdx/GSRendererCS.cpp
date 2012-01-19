@@ -23,11 +23,9 @@
 #include "GSRendererCS.h"
 
 GSRendererCS::GSRendererCS()
-	: GSRenderer(new GSVertexTraceDX11(this), sizeof(GSVertexHW11))
+	: GSRenderer()
 {
 	m_nativeres = true;
-
-	InitConvertVertex(GSRendererCS);
 
 	memset(m_vm_valid, 0, sizeof(m_vm_valid));
 }
@@ -233,26 +231,6 @@ GSTexture* GSRendererCS::GetOutput(int i)
 	return NULL;
 }
 
-template<uint32 prim, uint32 tme, uint32 fst> 
-void GSRendererCS::ConvertVertex(size_t dst_index, size_t src_index)
-{
-	GSVertex* s = (GSVertex*)((GSVertexHW11*)m_vertex.buff + src_index);
-	GSVertexHW11* d = (GSVertexHW11*)m_vertex.buff + dst_index;
-
-	GSVector4i v0 = ((GSVector4i*)s)[0];
-	GSVector4i v1 = ((GSVector4i*)s)[1];
-
-	if(tme && fst)
-	{
-		// TODO: modify VertexTrace to read uv from v1.u16[0], v1.u16[1], then this step is not needed
-
-		v0 = GSVector4i::cast(GSVector4(v1.uph16()).xyzw(GSVector4::cast(v0))); // uv => st
-	}
-
-	((GSVector4i*)d)[0] = v0;
-	((GSVector4i*)d)[1] = v1;
-}
-
 void GSRendererCS::Draw()
 {
 	GSDrawingEnvironment& env = m_env;
@@ -260,7 +238,7 @@ void GSRendererCS::Draw()
 
 	GSVector2i rtsize(2048, 2048);
 	GSVector4i scissor = GSVector4i(context->scissor.in).rintersect(GSVector4i(rtsize).zwxy());
-	GSVector4i bbox = GSVector4i(m_vt->m_min.p.floor().xyxy(m_vt->m_max.p.ceil()));
+	GSVector4i bbox = GSVector4i(m_vt.m_min.p.floor().xyxy(m_vt.m_max.p.ceil()));
 	GSVector4i r = bbox.rintersect(scissor);
 
 	uint32 fm = context->FRAME.FBMSK;
@@ -286,7 +264,7 @@ void GSRendererCS::Draw()
 
 		GSVector4i r;
 
-		GetTextureMinMax(r, context->TEX0, context->CLAMP, m_vt->IsLinear());
+		GetTextureMinMax(r, context->TEX0, context->CLAMP, m_vt.IsLinear());
 
 		// TODO: unswizzle pages of r to a texture, check m_vm_valid, bit not set cpu->gpu, set gpu->gpu
 
@@ -317,7 +295,7 @@ void GSRendererCS::Draw()
 
 	D3D11_PRIMITIVE_TOPOLOGY topology;
 
-	switch(m_vt->m_primclass)
+	switch(m_vt.m_primclass)
 	{
 	case GS_POINT_CLASS:
 		topology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
@@ -333,7 +311,7 @@ void GSRendererCS::Draw()
 		__assume(0);
 	}
 
-	dev->IASetVertexBuffer(m_vertex.buff, sizeof(GSVertexHW11), m_vertex.next);
+	dev->IASetVertexBuffer(m_vertex.buff, sizeof(GSVertex), m_vertex.next);
 	dev->IASetIndexBuffer(m_index.buff, m_index.tail);
 	dev->IASetPrimitiveTopology(topology);
 
@@ -407,7 +385,7 @@ void GSRendererCS::Draw()
 	GSSelector gs_sel;
 
 	gs_sel.iip = PRIM->IIP;
-	gs_sel.prim = m_vt->m_primclass;
+	gs_sel.prim = m_vt.m_primclass;
 
 	CComPtr<ID3D11GeometryShader> gs;
 

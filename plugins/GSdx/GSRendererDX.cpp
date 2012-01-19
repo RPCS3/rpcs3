@@ -23,10 +23,9 @@
 #include "GSRendererDX.h"
 #include "GSDeviceDX.h"
 
-GSRendererDX::GSRendererDX(GSVertexTrace* vt, size_t vertex_stride, GSTextureCache* tc, const GSVector2& pixelcenter)
-	: GSRendererHW(vt, vertex_stride, tc)
+GSRendererDX::GSRendererDX(GSTextureCache* tc, const GSVector2& pixelcenter)
+	: GSRendererHW(tc)
 	, m_pixelcenter(pixelcenter)
-	, m_topology(-1)
 {
 	m_logz = !!theApp.GetConfig("logz", 0);
 	m_fba = !!theApp.GetConfig("fba", 1);
@@ -61,7 +60,7 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 			GSVector4 s = GSVector4(rtscale.x / rtsize.x, rtscale.y / rtsize.y);
 			GSVector4 o = GSVector4(-1.0f, 1.0f);
 
-			GSVector4 src = ((m_vt->m_min.p.xyxy(m_vt->m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
+			GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
 			GSVector4 dst = src * 2.0f + o.xxxx();
 
 			GSVertexPT1 vertices[] =
@@ -111,7 +110,7 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 
 	if(!IsOpaque())
 	{
-		om_bsel.abe = PRIM->ABE || PRIM->AA1 && m_vt->m_primclass == GS_LINE_CLASS;
+		om_bsel.abe = PRIM->ABE || PRIM->AA1 && m_vt.m_primclass == GS_LINE_CLASS;
 
 		om_bsel.a = context->ALPHA.A;
 		om_bsel.b = context->ALPHA.B;
@@ -154,11 +153,11 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 	{
 		if(context->ZBUF.PSM == PSM_PSMZ24)
 		{
-			if(m_vt->m_max.p.z > 0xffffff)
+			if(m_vt.m_max.p.z > 0xffffff)
 			{
-				ASSERT(m_vt->m_min.p.z > 0xffffff);
+				ASSERT(m_vt.m_min.p.z > 0xffffff);
 				// Fixme :Following conditional fixes some dialog frame in Wild Arms 3, but may not be what was intended.
-				if (m_vt->m_min.p.z > 0xffffff)
+				if (m_vt.m_min.p.z > 0xffffff)
 				{
 					vs_sel.bppz = 1;
 					om_dssel.ztst = ZTST_ALWAYS;
@@ -167,11 +166,11 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 		}
 		else if(context->ZBUF.PSM == PSM_PSMZ16 || context->ZBUF.PSM == PSM_PSMZ16S)
 		{
-			if(m_vt->m_max.p.z > 0xffff)
+			if(m_vt.m_max.p.z > 0xffff)
 			{
-				ASSERT(m_vt->m_min.p.z > 0xffff); // sfex capcom logo
+				ASSERT(m_vt.m_min.p.z > 0xffff); // sfex capcom logo
 				// Fixme : Same as above, I guess.
-				if (m_vt->m_min.p.z > 0xffff)
+				if (m_vt.m_min.p.z > 0xffff)
 				{
 					vs_sel.bppz = 2;
 					om_dssel.ztst = ZTST_ALWAYS;
@@ -213,7 +212,7 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 	GSDeviceDX::GSSelector gs_sel;
 
 	gs_sel.iip = PRIM->IIP;
-	gs_sel.prim = m_vt->m_primclass;
+	gs_sel.prim = m_vt.m_primclass;
 
 	// ps
 
@@ -281,7 +280,7 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
-		ps_sel.ltf = m_filter == 2 ? m_vt->IsLinear() : m_filter;
+		ps_sel.ltf = m_filter == 2 ? m_vt.IsLinear() : m_filter;
 		ps_sel.rt = tex->m_target;
 
 		int w = tex->m_texture->GetWidth();
@@ -331,7 +330,6 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 	uint8 afix = context->ALPHA.FIX;
 
 	dev->SetupOM(om_dssel, om_bsel, afix);
-	dev->SetupIA(m_vertex.buff, m_vertex.next, m_index.buff, m_index.tail, m_topology);
 	dev->SetupVS(vs_sel, &vs_cb);
 	dev->SetupGS(gs_sel);
 	dev->SetupPS(ps_sel, &ps_cb, ps_ssel);

@@ -37,45 +37,4 @@ __aligned(struct, 32) GSVertexHW9
 	GSVertexHW9& operator = (GSVertexHW9& v) {t = v.t; p = v.p; return *this;}
 };
 
-__aligned(union, 32) GSVertexHW11
-{
-	struct
-	{
-		union
-		{
-			struct {float x, y;} t;
-			GIFRegST ST;
-		};
-
-		union
-		{
-			union {struct {uint8 r, g, b, a; float q;}; uint32 c0;};
-			GIFRegRGBAQ RGBAQ;
-		};
-
-		union
-		{
-			struct {union {struct {uint16 x, y;}; uint32 xy;}; uint32 z;} p;
-			GIFRegXYZ XYZ;
-		};
-
-		union
-		{
-			struct {uint32 _pad; union {struct {uint8 ta0, ta1, res, f;}; uint32 c1;};};
-			GIFRegFOG FOG;
-		};
-	};
-
-	GSVertexHW11& operator = (GSVertexHW11& v) 
-	{
-		GSVector4i* RESTRICT src = (GSVector4i*)&v;
-		GSVector4i* RESTRICT dst = (GSVector4i*)this;
-
-		dst[0] = src[0];
-		dst[1] = src[1];
-		
-		return *this;
-	}
-};
-
 #pragma pack(pop)

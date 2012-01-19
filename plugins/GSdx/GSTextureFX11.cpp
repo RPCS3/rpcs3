@@ -82,13 +82,6 @@ bool GSDevice11::CreateTextureFX()
 	return true;
 }
 
-void GSDevice11::SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim)
-{
-	IASetVertexBuffer(vertex, sizeof(GSVertexHW11), vertex_count);
-	IASetIndexBuffer(index, index_count);
-	IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)prim);
-}
-
 void GSDevice11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
 	hash_map<uint32, GSVertexShader11 >::const_iterator i = m_vs.find(sel);
@@ -118,6 +111,7 @@ void GSDevice11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 			{"TEXCOORD", 1, DXGI_FORMAT_R32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			{"POSITION", 0, DXGI_FORMAT_R16G16_UINT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			{"POSITION", 1, DXGI_FORMAT_R32_UINT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"TEXCOORD", 2, DXGI_FORMAT_R16G16_UINT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			{"COLOR", 1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0},
 		};
 

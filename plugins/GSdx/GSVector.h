@@ -79,6 +79,9 @@ class GSVector4;
 
 __aligned(class, 16) GSVector4i
 {
+	static const GSVector4i m_xff[16];
+	static const GSVector4i m_x0f[16];
+
 public:
 	union
 	{
@@ -2343,6 +2346,9 @@ public:
 	__forceinline static GSVector4i xfff8(const GSVector4i& v) {return xffffffff(v).sll16( 3);}
 	__forceinline static GSVector4i xfffc(const GSVector4i& v) {return xffffffff(v).sll16( 2);}
 	__forceinline static GSVector4i xfffe(const GSVector4i& v) {return xffffffff(v).sll16( 1);}
+
+	__forceinline static GSVector4i xff(int n) {return m_xff[n];}
+	__forceinline static GSVector4i x0f(int n) {return m_x0f[n];}
 };
 
 __aligned(class, 16) GSVector4

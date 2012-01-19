@@ -26,7 +26,7 @@
 //#define Offset_ST  // Fixes Persona3 mini map alignment which is off even in software rendering
 //#define Offset_UV  // Fixes / breaks various titles
 
-GSState::GSState(GSVertexTrace* vt, size_t vertex_stride)
+GSState::GSState()
 	: m_version(6)
 	, m_mt(false)
 	, m_irq(NULL)
@@ -35,7 +35,7 @@ GSState::GSState(GSVertexTrace* vt, size_t vertex_stride)
 	, m_crc(0)
 	, m_options(0)
 	, m_frameskip(0)
-	, m_vt(vt)
+	, m_vt(this)
 {
 	m_nativeres = !!theApp.GetConfig("nativeres", 0);
 
@@ -44,14 +44,7 @@ GSState::GSState(GSVertexTrace* vt, size_t vertex_stride)
 	memset(&m_vertex, 0, sizeof(m_vertex));
 	memset(&m_index, 0, sizeof(m_index));
 
-	ASSERT(vertex_stride >= sizeof(GSVertex));
-
-	m_vertex.stride = vertex_stride;
-	m_vertex.tmp = (uint8*)_aligned_malloc(m_vertex.stride * 2, 32);
-
 	GrowVertexBuffer();
-
-	memset(m_cv, 0, sizeof(m_cv));
 
 	m_sssize = 0;
 
@@ -114,8 +107,6 @@ GSState::GSState(GSVertexTrace* vt, size_t vertex_stride)
 
 GSState::~GSState()
 {
-	_aligned_free(m_vertex.tmp);
-
 	if(m_vertex.buff) _aligned_free(m_vertex.buff);
 	if(m_index.buff) _aligned_free(m_index.buff);
 }
@@ -211,7 +202,7 @@ void GSState::Reset()
 {
 	printf("GS reset\n");
 
-	memset(m_mem.m_vm8, 0, m_mem.m_vmsize); 
+	// FIXME: memset(m_mem.m_vm8, 0, m_mem.m_vmsize); // bios logo not shown cut in half after reset, missing graphics in GoW after first FMV
 	memset(&m_path[0], 0, sizeof(m_path[0]) * countof(m_path));
 	memset(&m_v, 0, sizeof(m_v));
 
@@ -1274,40 +1265,8 @@ void GSState::FlushPrim()
 {
 	if(m_index.tail > 0)
 	{
-		if(0)
-		{
-			uint8* buff = new uint8[m_vertex.next];
+		GSVertex buff[2];
 
-			memset(buff, 0, m_vertex.next);
-
-			for(size_t i = 0; i < m_index.tail; i++)
-			{
-				ASSERT(m_index.buff[i] < m_vertex.next);
-
-				buff[m_index.buff[i]] = 1;
-			}
-
-			size_t count = 0;
-
-			for(size_t i = 0; i < m_vertex.next; i++)
-			{
-				if(buff[i] == 0)
-				{
-					count++;
-				}
-			}
-
-			if(count > 0)
-			{
-				printf("unref %lld %d/%d\n", m_perfmon.GetFrame(), count, m_vertex.next);
-			}
-
-			delete [] buff;
-		}
-
-		uint8* buff = m_vertex.tmp;
-
-		size_t stride = m_vertex.stride;
 		size_t head = m_vertex.head;
 		size_t tail = m_vertex.tail;
 		size_t next = m_vertex.next;
@@ -1326,11 +1285,11 @@ void GSState::FlushPrim()
 			case GS_TRIANGLELIST:
 			case GS_TRIANGLESTRIP:
 				unused = tail - head;
-				memcpy(buff, &m_vertex.buff[stride * head], stride * unused);
+				memcpy(buff, &m_vertex.buff[head], sizeof(GSVertex) * unused);
 				break;
 			case GS_TRIANGLEFAN:
-				memcpy(buff, &m_vertex.buff[stride * head], stride); unused = 1;
-				if(tail - 1 > head) {memcpy(&buff[stride], &m_vertex.buff[stride * (tail - 1)], stride); unused = 2;}
+				buff[0] = m_vertex.buff[head]; unused = 1;
+				if(tail - 1 > head) {buff[1] = m_vertex.buff[tail - 1]; unused = 2;}
 				break;
 			case GS_INVALID:
 				break;
@@ -1345,7 +1304,7 @@ void GSState::FlushPrim()
 		{
 			// FIXME: berserk fpsm = 27 (8H)
 
-			m_vt->Update(m_vertex.buff, m_index.buff, m_index.tail, GSUtil::GetPrimClass(PRIM->PRIM));
+			m_vt.Update(m_vertex.buff, m_index.buff, m_index.tail, GSUtil::GetPrimClass(PRIM->PRIM));
 
 			Draw();
 
@@ -1359,7 +1318,7 @@ void GSState::FlushPrim()
 
 		if(unused > 0)
 		{
-			memcpy(m_vertex.buff, buff, stride * unused);
+			memcpy(m_vertex.buff, buff, sizeof(GSVertex) * unused);
 
 			m_vertex.tail = unused;
 			m_vertex.next = next > head ? next - head : 0;
@@ -2182,20 +2141,18 @@ void GSState::UpdateVertexKick()
 	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = m_fpGIFRegHandlerXYZ[prim][3];
 
 	m_fpGIFPackedRegHandlersC[GIF_REG_STQRGBAXYZF2] = m_fpGIFPackedRegHandlerSTQRGBAXYZF2[prim];
-
-	m_cvf = m_cv[prim][PRIM->TME][PRIM->FST];
 }
 
 void GSState::GrowVertexBuffer()
 {
 	int maxcount = std::max<int>(m_vertex.maxcount * 3 / 2, 10000);
 
-	uint8* vertex = (uint8*)_aligned_malloc(m_vertex.stride * maxcount, 16);
+	GSVertex* vertex = (GSVertex*)_aligned_malloc(sizeof(GSVertex) * maxcount, 16);
 	uint32* index = (uint32*)_aligned_malloc(sizeof(uint32) * maxcount * 3, 16); // worst case is slightly less than vertex number * 3
 
 	if(m_vertex.buff != NULL)
 	{
-		memcpy(vertex, m_vertex.buff, m_vertex.stride * m_vertex.tail);
+		memcpy(vertex, m_vertex.buff, sizeof(GSVertex) * m_vertex.tail);
 
 		_aligned_free(m_vertex.buff);
 	}
@@ -2227,16 +2184,12 @@ __forceinline void GSState::VertexKick(uint32 skip)
 	GSVector4i v0(m_v.m[0]);
 	GSVector4i v1(m_v.m[1]); 
 
-	GSVector4i* RESTRICT tailptr = (GSVector4i*)&m_vertex.buff[m_vertex.stride * tail];
+	GSVector4i* RESTRICT tailptr = (GSVector4i*)&m_vertex.buff[tail];
 
 	tailptr[0] = v0;
 	tailptr[1] = v1;
 
 	m_vertex.xy[xy_tail & 3] = GSVector4(v1.upl32(v1.sub16(GSVector4i::load(m_ofxy)).sra16(4)).upl16()); // zw not sign extended, only useful for eq tests
-
-	#ifdef _DEBUG
-	memset(&tailptr[2], 0, m_vertex.stride - sizeof(GSVertex));
-	#endif
 
 	m_vertex.tail = ++tail;
 	m_vertex.xy_tail = ++xy_tail;
@@ -2353,8 +2306,6 @@ __forceinline void GSState::VertexKick(uint32 skip)
 
 	uint32* RESTRICT buff = &m_index.buff[m_index.tail];
 
-	size_t src_index = head;
-
 	switch(prim)
 	{
 	case GS_POINTLIST:
@@ -2362,7 +2313,6 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		m_vertex.head = head + 1;
 		m_vertex.next = head + 1;
 		m_index.tail += 1;
-		(this->*m_cvf)(head, head);
 		break;
 	case GS_LINELIST:
 		buff[0] = head + 0;
@@ -2370,18 +2320,20 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		m_vertex.head = head + 2;
 		m_vertex.next = head + 2;
 		m_index.tail += 2;
-		(this->*m_cvf)(head + 0, head + 0);
-		(this->*m_cvf)(head + 1, head + 1);
 		break;
 	case GS_LINESTRIP:
-		if(next < head) {head = next; m_vertex.tail = next + 2;}
+		if(next < head) 
+		{
+			m_vertex.buff[next + 0] = m_vertex.buff[head + 0];
+			m_vertex.buff[next + 1] = m_vertex.buff[head + 1];
+			head = next; 
+			m_vertex.tail = next + 2;
+		}
 		buff[0] = head + 0;
 		buff[1] = head + 1;
 		m_vertex.head = head + 1;
 		m_vertex.next = head + 2;
 		m_index.tail += 2;
-		if(head + 0 >= next) (this->*m_cvf)(head + 0, src_index + 0);
-		/*if(head + 1 >= next)*/ (this->*m_cvf)(head + 1, src_index + 1); // this is always a new vertex
 		break;
 	case GS_TRIANGLELIST:
 		buff[0] = head + 0;
@@ -2390,21 +2342,22 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		m_vertex.head = head + 3;
 		m_vertex.next = head + 3;
 		m_index.tail += 3;
-		(this->*m_cvf)(head + 0, head + 0);
-		(this->*m_cvf)(head + 1, head + 1);
-		(this->*m_cvf)(head + 2, head + 2);
 		break;
 	case GS_TRIANGLESTRIP:
-		if(next < head) {head = next; m_vertex.tail = next + 3;}
+		if(next < head) 
+		{
+			m_vertex.buff[next + 0] = m_vertex.buff[head + 0];
+			m_vertex.buff[next + 1] = m_vertex.buff[head + 1];
+			m_vertex.buff[next + 2] = m_vertex.buff[head + 2];
+			head = next; 
+			m_vertex.tail = next + 3;
+		}
 		buff[0] = head + 0;
 		buff[1] = head + 1;
 		buff[2] = head + 2;
 		m_vertex.head = head + 1;
 		m_vertex.next = head + 3;
 		m_index.tail += 3;
-		if(src_index + 0 >= next) (this->*m_cvf)(head + 0, src_index + 0);
-		if(src_index + 1 >= next) (this->*m_cvf)(head + 1, src_index + 1);
-		/*if(src_index + 2 >= next)*/ (this->*m_cvf)(head + 2, src_index + 2); // this is always a new vertex
 		break;
 	case GS_TRIANGLEFAN:
 		// TODO: remove gaps, next == head && head < tail - 3 || next > head && next < tail - 2 (very rare)
@@ -2413,9 +2366,6 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		buff[2] = tail - 1;
 		m_vertex.next = tail;
 		m_index.tail += 3;
-		if(head >= next) (this->*m_cvf)(head, head);
-		if(tail - 2 >= next) (this->*m_cvf)(tail - 2, tail - 2);
-		/*if(tail - 1 >= next)*/ (this->*m_cvf)(tail - 1, tail - 1); // this is always a new vertex
 		break;
 	case GS_SPRITE:	
 		buff[0] = head + 0;
@@ -2423,10 +2373,8 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		m_vertex.head = head + 2;
 		m_vertex.next = head + 2;
 		m_index.tail += 2;
-		(this->*m_cvf)(head + 0, head + 0);
-		(this->*m_cvf)(head + 1, head + 1);
 		break;
-	case GS_INVALID:			
+	case GS_INVALID:
 		m_vertex.tail = head;
 		break;
 	default:
@@ -2492,7 +2440,7 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 
 	if(wms + wmt < 6)
 	{
-		GSVector4 st = m_vt->m_min.t.xyxy(m_vt->m_max.t);
+		GSVector4 st = m_vt.m_min.t.xyxy(m_vt.m_max.t);
 
 		if(linear)
 		{
@@ -2570,7 +2518,7 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 
 void GSState::GetAlphaMinMax()
 {
-	if(m_vt->m_alpha.valid)
+	if(m_vt.m_alpha.valid)
 	{
 		return;
 	}
@@ -2578,7 +2526,7 @@ void GSState::GetAlphaMinMax()
 	const GSDrawingEnvironment& env = m_env;
 	const GSDrawingContext* context = m_context;
 
-	GSVector4i a = m_vt->m_min.c.uph32(m_vt->m_max.c).zzww();
+	GSVector4i a = m_vt.m_min.c.uph32(m_vt.m_max.c).zzww();
 
 	if(PRIM->TME && context->TEX0.TCC)
 	{
@@ -2630,9 +2578,9 @@ void GSState::GetAlphaMinMax()
 		}
 	}
 
-	m_vt->m_alpha.min = a.x;
-	m_vt->m_alpha.max = a.z;
-	m_vt->m_alpha.valid = true;
+	m_vt.m_alpha.min = a.x;
+	m_vt.m_alpha.max = a.z;
+	m_vt.m_alpha.valid = true;
 }
 
 bool GSState::TryAlphaTest(uint32& fm, uint32& zm)
@@ -2649,8 +2597,8 @@ bool GSState::TryAlphaTest(uint32& fm, uint32& zm)
 	{
 		GetAlphaMinMax();
 
-		int amin = m_vt->m_alpha.min;
-		int amax = m_vt->m_alpha.max;
+		int amin = m_vt.m_alpha.min;
+		int amax = m_vt.m_alpha.max;
 
 		int aref = context->TEST.AREF;
 
@@ -2734,8 +2682,8 @@ bool GSState::IsOpaque()
 		{
 			GetAlphaMinMax();
 
-			amin = m_vt->m_alpha.min;
-			amax = m_vt->m_alpha.max;
+			amin = m_vt.m_alpha.min;
+			amax = m_vt.m_alpha.max;
 		}
 		else if(context->ALPHA.C == 1)
 		{

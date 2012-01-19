@@ -120,9 +120,6 @@ class GSRendererCS : public GSRenderer
 	bool GetOffsetBuffer(OffsetBuffer** fzbo);
 
 protected:
-	template<uint32 prim, uint32 tme, uint32 fst> 
-	void ConvertVertex(size_t dst_index, size_t src_index);
-	
 	bool CreateDevice(GSDevice* dev);
 	void VSync(int field);
 	GSTexture* GetOutput(int i);

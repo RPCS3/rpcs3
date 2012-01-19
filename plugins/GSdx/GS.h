@@ -1103,13 +1103,13 @@ __aligned(struct, 32) GIFPath
 
 	enum {TYPE_UNKNOWN, TYPE_ADONLY, TYPE_STQRGBAXYZF2};
 
-	void SetTag(const void* mem)
+	__forceinline void SetTag(const void* mem)
 	{
 		GSVector4i v = GSVector4i::load<false>(mem);
 		GSVector4i::store<true>(&tag, v);
 		reg = 0;
-		regs = v.uph8(v >> 4) & 0x0f0f0f0f;
 		nreg = tag.NREG ? tag.NREG : 16;
+		regs = v.uph8(v >> 4) & GSVector4i::x0f(nreg);
 		nloop = tag.NLOOP;
 		type = TYPE_UNKNOWN;
 		if(regs.u32[0] == 0x00040102 && nreg == 3) type = TYPE_STQRGBAXYZF2;

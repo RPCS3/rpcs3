@@ -126,11 +126,6 @@ private:
 
 	} m_hacks;
 
-	virtual int GetPosX(const void* vertex) const = 0;
-	virtual int GetPosY(const void* vertex) const = 0;
-	virtual uint32 GetColor(const void* vertex) const = 0;
-	virtual void SetColor(void* vertex, uint32 c) const = 0;
-
 	#pragma endregion
 
 protected:
@@ -139,7 +134,7 @@ protected:
 	virtual void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex) = 0;
 
 public:
-	GSRendererHW(GSVertexTrace* vt, size_t vertex_stride, GSTextureCache* tc);
+	GSRendererHW(GSTextureCache* tc);
 	virtual ~GSRendererHW();
 
 	void SetGameCRC(uint32 crc, int options);

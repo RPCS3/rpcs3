@@ -71,9 +71,6 @@ protected:
 
 	bool GetScanlineGlobalData(SharedData* data);
 
-	template<uint32 prim, uint32 tme, uint32 fst> 
-	void ConvertVertex(size_t dst_index, size_t src_index);
-
 public:
 	GSRendererSW(int threads);
 	virtual ~GSRendererSW();

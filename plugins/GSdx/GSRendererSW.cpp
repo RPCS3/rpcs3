@@ -29,11 +29,8 @@ static FILE* s_fp = LOG ? fopen("c:\\temp1\\_.txt", "w") : NULL;
 const GSVector4 g_pos_scale(1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
 
 GSRendererSW::GSRendererSW(int threads)
-	: GSRenderer(new GSVertexTraceSW(this), sizeof(GSVertexSW))
-	, m_fzb(NULL)
+	: m_fzb(NULL)
 {
-	InitConvertVertex(GSRendererSW);
-
 	m_nativeres = true; // ignore ini, sw is always native
 
 	m_tc = new GSTextureCacheSW(this);
@@ -233,72 +230,66 @@ GSTexture* GSRendererSW::GetOutput(int i)
 	return m_texture[i];
 }
 
-template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererSW::ConvertVertex(size_t dst_index, size_t src_index)
-{
-	GSVertex* s = (GSVertex*)((GSVertexSW*)m_vertex.buff + src_index);
-	GSVertexSW* d = (GSVertexSW*)m_vertex.buff + dst_index;
-
-	ASSERT(d->_pad.u32[0] != 0x12345678);
-
-	uint32 z = s->XYZ.Z;
-
-	GSVector4i xy = GSVector4i::load((int)s->XYZ.u32[0]).upl16() - (GSVector4i)m_context->XYOFFSET;
-	GSVector4i zf = GSVector4i((int)std::min<uint32>(z, 0xffffff00), s->FOG); // NOTE: larger values of z may roll over to 0 when converting back to uint32 later
-
-	GSVector4 p, t, c;
-
-	p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
-
-	if(tme)
-	{
-		if(fst)
-		{
-			t = GSVector4(GSVector4i::load(s->UV).upl16() << (16 - 4));
-		}
-		else
-		{
-			t = GSVector4(s->ST.S, s->ST.T) * GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH);
-			t = t.xyxy(GSVector4::load(s->RGBAQ.Q));
-		}
-	}
-
-	c = GSVector4::rgba32(s->RGBAQ.u32[0], 7);
-
-	d->p = p;
-	d->c = c;
-	d->t = t;
-
-	#ifdef _DEBUG
-	d->_pad.u32[0] = 0x12345678; // means trouble if this has already been set, should only convert each vertex once
-	#endif
-
-	if(prim == GS_SPRITE)
-	{
-		d->t.u32[3] = z;
-	}
-}
-
 void GSRendererSW::Draw()
 {
 	SharedData* sd = new SharedData(this);
 
 	shared_ptr<GSRasterizerData> data(sd);
 
-	sd->primclass = m_vt->m_primclass;
+	sd->primclass = m_vt.m_primclass;
 	sd->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_vertex.next + sizeof(uint32) * m_index.tail, 32);
 	sd->vertex = (GSVertexSW*)sd->buff;
 	sd->vertex_count = m_vertex.next;
 	sd->index = (uint32*)(sd->buff + sizeof(GSVertexSW) * m_vertex.next);
 	sd->index_count = m_index.tail;
 
-	memcpy(sd->vertex, m_vertex.buff, sizeof(GSVertexSW) * m_vertex.next);
-	memcpy(sd->index, m_index.buff, sizeof(uint32) * m_index.tail);
-
-	for(size_t i = 0; i < m_index.tail; i++)
 	{
-		ASSERT(((GSVertexSW*)m_vertex.buff + m_index.buff[i])->_pad.u32[0] == 0x12345678);
+		// TODO: template, JIT
+
+		GSVertex* RESTRICT s = m_vertex.buff;
+		GSVertexSW* RESTRICT d = sd->vertex;
+
+		GSVector4i o = (GSVector4i)m_context->XYOFFSET;
+		GSVector4 tsize = GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH);
+
+		for(size_t i = 0; i < m_vertex.next; i++, s++, d++)
+		{
+			uint32 z = s->XYZ.Z;
+
+			GSVector4i xy = GSVector4i::load((int)s->XYZ.u32[0]).upl16() - o;
+			GSVector4i zf = GSVector4i((int)std::min<uint32>(z, 0xffffff00), s->FOG); // NOTE: larger values of z may roll over to 0 when converting back to uint32 later
+
+			GSVector4 p, t, c;
+
+			p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
+
+			if(PRIM->TME)
+			{
+				if(PRIM->FST)
+				{
+					t = GSVector4(GSVector4i::load(s->UV).upl16() << (16 - 4));
+				}
+				else
+				{
+					t = GSVector4(s->ST.S, s->ST.T) * tsize;
+					t = t.xyxy(GSVector4::load(s->RGBAQ.Q));
+				}
+			}
+
+			c = GSVector4::rgba32(s->RGBAQ.u32[0], 7);
+
+			d->p = p;
+			d->c = c;
+			d->t = t;
+
+			if(sd->primclass == GS_SPRITE_CLASS)
+			{
+				d->t.u32[3] = z;
+			}
+		}
 	}
+
+	memcpy(sd->index, m_index.buff, sizeof(uint32) * m_index.tail);
 
 	// TODO: delay texture update, do it later along with the syncing on the dispatcher thread, then this thread does not have to wait and can continue assembling more jobs
 	// TODO: if(any texture page is used as a target) GSRasterizerData::syncpoint = true;
@@ -314,7 +305,7 @@ void GSRendererSW::Draw()
 	GSScanlineGlobalData& gd = sd->global;
 
 	GSVector4i scissor = GSVector4i(context->scissor.in);
-	GSVector4i bbox = GSVector4i(m_vt->m_min.p.floor().xyxy(m_vt->m_max.p.ceil()));
+	GSVector4i bbox = GSVector4i(m_vt.m_min.p.floor().xyxy(m_vt.m_max.p.ceil()));
 
 	scissor.z = std::min<int>(scissor.z, (int)context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
 	
@@ -713,7 +704,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 	const GSDrawingEnvironment& env = m_env;
 	const GSDrawingContext* context = m_context;
-	const GS_PRIM_CLASS primclass = m_vt->m_primclass;
+	const GS_PRIM_CLASS primclass = m_vt.m_primclass;
 
 	gd.vm = m_mem.m_vm8;
 
@@ -790,7 +781,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 	{
 		gd.sel.fpsm = GSLocalMemory::m_psm[context->FRAME.PSM].fmt;
 
-		if((primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS) && m_vt->m_eq.rgba != 0xffff)
+		if((primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS) && m_vt.m_eq.rgba != 0xffff)
 		{
 			gd.sel.iip = PRIM->IIP;
 		}
@@ -800,7 +791,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 			gd.sel.tfx = context->TEX0.TFX;
 			gd.sel.tcc = context->TEX0.TCC;
 			gd.sel.fst = PRIM->FST;
-			gd.sel.ltf = m_vt->IsLinear();
+			gd.sel.ltf = m_vt.IsLinear();
 
 			if(GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0)
 			{
@@ -814,7 +805,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 			gd.sel.wms = context->CLAMP.WMS;
 			gd.sel.wmt = context->CLAMP.WMT;
 
-			if(gd.sel.tfx == TFX_MODULATE && gd.sel.tcc && m_vt->m_eq.rgba == 0xffff && m_vt->m_min.c.eq(GSVector4i(128)))
+			if(gd.sel.tfx == TFX_MODULATE && gd.sel.tcc && m_vt.m_eq.rgba == 0xffff && m_vt.m_min.c.eq(GSVector4i(128)))
 			{
 				// modulate does not do anything when vertex color is 0x80
 
@@ -833,7 +824,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 			if(!t->Update(r)) {ASSERT(0); return false;}
 
-			if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt->m_lod.x > 0)
+			if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt.m_lod.x > 0)
 			{
 				uint64 frame = m_perfmon.GetFrame();
 
@@ -850,7 +841,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 			gd.tex[0] = t->m_buff;
 			gd.sel.tw = t->m_tw - 3;
 
-			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt->m_lod.y > 0)
+			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt.m_lod.y > 0)
 			{
 				// TEX1.MMIN
 				// 000 p
@@ -860,13 +851,13 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				// 100 l round
 				// 101 l tri
 
-				if(m_vt->m_lod.x > 0)
+				if(m_vt.m_lod.x > 0)
 				{
 					gd.sel.ltf = context->TEX1.MMIN >> 2;
 				}
 				else
 				{
-					// TODO: isbilinear(mmag) != isbilinear(mmin) && m_vt->m_lod.x <= 0 && m_vt->m_lod.y > 0
+					// TODO: isbilinear(mmag) != isbilinear(mmin) && m_vt.m_lod.x <= 0 && m_vt.m_lod.y > 0
 				}
 
 				gd.sel.mmin = (context->TEX1.MMIN & 1) + 1; // 1: round, 2: tri
@@ -875,9 +866,9 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				int mxl = (std::min<int>((int)context->TEX1.MXL, 6) << 16);
 				int k = context->TEX1.K << 12;
 
-				if((int)m_vt->m_lod.x >= (int)context->TEX1.MXL)
+				if((int)m_vt.m_lod.x >= (int)context->TEX1.MXL)
 				{
-					k = (int)m_vt->m_lod.x << 16; // set lod to max level
+					k = (int)m_vt.m_lod.x << 16; // set lod to max level
 
 					gd.sel.lcm = 1; // lod is constant
 					gd.sel.mmin = 1; // tri-linear is meaningless
@@ -891,7 +882,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				if(gd.sel.fst)
 				{
 					ASSERT(gd.sel.lcm == 1);
-					ASSERT(((m_vt->m_min.t.uph(m_vt->m_max.t) == GSVector4::zero()).mask() & 3) == 3); // ratchet and clank (menu)
+					ASSERT(((m_vt.m_min.t.uph(m_vt.m_max.t) == GSVector4::zero()).mask() & 3) == 3); // ratchet and clank (menu)
 
 					gd.sel.lcm = 1;
 				}
@@ -920,8 +911,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				GIFRegTEX0 MIP_TEX0 = context->TEX0;
 				GIFRegCLAMP MIP_CLAMP = context->CLAMP;
 
-				GSVector4 tmin = m_vt->m_min.t;
-				GSVector4 tmax = m_vt->m_max.t;
+				GSVector4 tmin = m_vt.m_min.t;
+				GSVector4 tmax = m_vt.m_max.t;
 
 				static int s_counter = 0;
 
@@ -971,8 +962,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 					MIP_CLAMP.MAXU >>= 1;
 					MIP_CLAMP.MAXV >>= 1;
 
-					m_vt->m_min.t *= 0.5f;
-					m_vt->m_max.t *= 0.5f;
+					m_vt.m_min.t *= 0.5f;
+					m_vt.m_max.t *= 0.5f;
 
 					GSTextureCacheSW::Texture* t = m_tc->Lookup(MIP_TEX0, env.TEXA, gd.sel.tw + 3);
 
@@ -1014,8 +1005,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 				s_counter++;
 
-				m_vt->m_min.t = tmin;
-				m_vt->m_max.t = tmax;
+				m_vt.m_min.t = tmin;
+				m_vt.m_max.t = tmax;
 			}
 			else
 			{
@@ -1025,7 +1016,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 					GSVertexSW* RESTRICT v = data->vertex;
 
-					if(m_vt->m_eq.q)
+					if(m_vt.m_eq.q)
 					{
 						gd.sel.fst = 1;
 
@@ -1202,7 +1193,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 	{
 		gd.sel.zpsm = GSLocalMemory::m_psm[context->ZBUF.PSM].fmt;
 		gd.sel.ztst = ztest ? context->TEST.ZTST : ZTST_ALWAYS;
-		gd.sel.zoverflow = GSVector4i(m_vt->m_max.p).z == 0x80000000;
+		gd.sel.zoverflow = GSVector4i(m_vt.m_max.p).z == 0x80000000;
 	}
 
 	gd.fm = GSVector4i(fm);

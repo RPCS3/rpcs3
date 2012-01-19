@@ -721,6 +721,18 @@ void GSDevice11::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vert
 
 void GSDevice11::IASetVertexBuffer(const void* vertex, size_t stride, size_t count)
 {
+	void* ptr = NULL;
+
+	if(IAMapVertexBuffer(&ptr, stride, count))
+	{
+		GSVector4i::storent(ptr, vertex, count * stride);
+
+		IAUnmapVertexBuffer();
+	}
+}
+
+bool GSDevice11::IAMapVertexBuffer(void** vertex, size_t stride, size_t count)
+{
 	ASSERT(m_vertex.count == 0);
 
 	if(count * stride > m_vertex.limit * m_vertex.stride)
@@ -747,7 +759,7 @@ void GSDevice11::IASetVertexBuffer(const void* vertex, size_t stride, size_t cou
 
 		hr = m_dev->CreateBuffer(&bd, NULL, &m_vb);
 
-		if(FAILED(hr)) return;
+		if(FAILED(hr)) return false;
 	}
 
 	D3D11_MAP type = D3D11_MAP_WRITE_NO_OVERWRITE;
@@ -761,17 +773,24 @@ void GSDevice11::IASetVertexBuffer(const void* vertex, size_t stride, size_t cou
 
 	D3D11_MAPPED_SUBRESOURCE m;
 
-	if(SUCCEEDED(m_ctx->Map(m_vb, 0, type, 0, &m)))
+	if(FAILED(m_ctx->Map(m_vb, 0, type, 0, &m)))
 	{
-		GSVector4i::storent((uint8*)m.pData + m_vertex.start * stride, vertex, count * stride);
-
-		m_ctx->Unmap(m_vb, 0);
+		return false;
 	}
+
+	*vertex = (uint8*)m.pData + m_vertex.start * stride;
 
 	m_vertex.count = count;
 	m_vertex.stride = stride;
 
-	IASetVertexBuffer(m_vb, stride);
+	return true;
+}
+
+void GSDevice11::IAUnmapVertexBuffer()
+{
+	m_ctx->Unmap(m_vb, 0);
+
+	IASetVertexBuffer(m_vb, m_vertex.stride);
 }
 
 void GSDevice11::IASetVertexBuffer(ID3D11Buffer* vb, size_t stride)

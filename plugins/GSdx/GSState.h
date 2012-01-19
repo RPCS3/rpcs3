@@ -143,12 +143,10 @@ protected:
 	
 	struct 
 	{
-		uint8* buff; 
-		size_t stride;
+		GSVertex* buff; 
 		size_t head, tail, next, maxcount; // head: first vertex, tail: last vertex + 1, next: last indexed + 1
 		GSVector4 xy[4]; 
 		size_t xy_tail;
-		uint8* tmp; 
 	} m_vertex; 
 
 	struct 
@@ -156,26 +154,6 @@ protected:
 		uint32* buff; 
 		size_t tail;
 	} m_index;
-
-	typedef void (GSState::*ConvertVertexPtr)(size_t dst_index, size_t src_index);
-
-	ConvertVertexPtr m_cv[8][2][2], m_cvf; // [PRIM][TME][FST]
-
-	#define InitConvertVertex2(T, P) \
-		m_cv[P][0][0] = (ConvertVertexPtr)&T::ConvertVertex<P, 0, 0>; \
-		m_cv[P][0][1] = (ConvertVertexPtr)&T::ConvertVertex<P, 0, 1>; \
-		m_cv[P][1][0] = (ConvertVertexPtr)&T::ConvertVertex<P, 1, 0>; \
-		m_cv[P][1][1] = (ConvertVertexPtr)&T::ConvertVertex<P, 1, 1>; \
-
-	#define InitConvertVertex(T) \
-		InitConvertVertex2(T, GS_POINTLIST) \
-		InitConvertVertex2(T, GS_LINELIST) \
-		InitConvertVertex2(T, GS_LINESTRIP) \
-		InitConvertVertex2(T, GS_TRIANGLELIST) \
-		InitConvertVertex2(T, GS_TRIANGLESTRIP) \
-		InitConvertVertex2(T, GS_TRIANGLEFAN) \
-		InitConvertVertex2(T, GS_SPRITE) \
-		InitConvertVertex2(T, GS_INVALID) \
 
 	void UpdateContext();
 	void UpdateScissor();
@@ -189,7 +167,7 @@ protected:
 
 	// following functions need m_vt to be initialized
 
-	GSVertexTrace* m_vt;
+	GSVertexTrace m_vt;
 
 	void GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFRegCLAMP& CLAMP, bool linear);
 	void GetAlphaMinMax();
@@ -213,7 +191,7 @@ public:
 	bool m_nativeres;
 
 public:
-	GSState(GSVertexTrace* vt, size_t vertex_stride);
+	GSState();
 	virtual ~GSState();
 
 	void ResetHandlers();

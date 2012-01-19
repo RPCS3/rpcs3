@@ -22,9 +22,8 @@
 #include "stdafx.h"
 #include "GSRenderer.h"
 
-GSRenderer::GSRenderer(GSVertexTrace* vt, size_t vertex_stride)
-	: GSState(vt, vertex_stride)
-	, m_dev(NULL)
+GSRenderer::GSRenderer()
+	: m_dev(NULL)
 	, m_shader(0)
 {
 	m_GStitleInfoBuffer[0] = 0;

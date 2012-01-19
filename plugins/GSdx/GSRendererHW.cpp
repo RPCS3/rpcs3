@@ -22,9 +22,8 @@
 #include "stdafx.h"
 #include "GSRendererHW.h"
 
-GSRendererHW::GSRendererHW(GSVertexTrace* vt, size_t vertex_stride, GSTextureCache* tc)
-	: GSRenderer(vt, vertex_stride)
-	, m_tc(tc)
+GSRendererHW::GSRendererHW(GSTextureCache* tc)
+	: m_tc(tc)
 	, m_width(1024)
 	, m_height(1024)
 	, m_skip(0)
@@ -211,7 +210,7 @@ void GSRendererHW::Draw()
 
 		GSVector4i r;
 
-		GetTextureMinMax(r, context->TEX0, context->CLAMP, m_vt->IsLinear());
+		GetTextureMinMax(r, context->TEX0, context->CLAMP, m_vt.IsLinear());
 
 		tex = m_tc->LookupSource(context->TEX0, env.TEXA, r);
 
@@ -298,7 +297,7 @@ void GSRendererHW::Draw()
 
 	//
 
-	GSVector4i r = GSVector4i(m_vt->m_min.p.xyxy(m_vt->m_max.p)).rintersect(GSVector4i(context->scissor.in));
+	GSVector4i r = GSVector4i(m_vt.m_min.p.xyxy(m_vt.m_max.p)).rintersect(GSVector4i(context->scissor.in));
 
 	if(fm != 0xffffffff)
 	{
@@ -410,14 +409,14 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 
 	if(lines == 0)
 	{
-		if(m_vt->m_primclass == GS_LINE_CLASS && (m_vertex.next == 448 * 2 || m_vertex.next == 512 * 2))
+		if(m_vt.m_primclass == GS_LINE_CLASS && (m_vertex.next == 448 * 2 || m_vertex.next == 512 * 2))
 		{
 			lines = m_vertex.next / 2;
 		}
 	}
 	else
 	{
-		if(m_vt->m_primclass == GS_POINT_CLASS)
+		if(m_vt.m_primclass == GS_POINT_CLASS)
 		{
 			if(m_vertex.next >= 16 * 512)
 			{
@@ -428,14 +427,14 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 				int ox = m_context->XYOFFSET.OFX;
 				int oy = m_context->XYOFFSET.OFY;
 
-				const uint8* RESTRICT v = m_vertex.buff;
+				const GSVertex* RESTRICT v = m_vertex.buff;
 
-				for(int i = (int)m_vertex.next; i >= 0; i--, v += m_vertex.stride)
+				for(int i = (int)m_vertex.next; i >= 0; i--, v++)
 				{
-					int x = (GetPosX(v) - ox) >> 4;
-					int y = (GetPosY(v) - oy) >> 4;
+					int x = (v->XYZ.X - ox) >> 4;
+					int y = (v->XYZ.Y - oy) >> 4;
 
-					video[(y << 8) + (y << 7) + (y << 6) + x] = GetColor(v);
+					video[(y << 8) + (y << 7) + (y << 6) + x] = v->RGBAQ.u32[0];
 				}
 
 				return false;
@@ -445,7 +444,7 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 				lines = 0;
 			}
 		}
-		else if(m_vt->m_primclass == GS_LINE_CLASS)
+		else if(m_vt.m_primclass == GS_LINE_CLASS)
 		{
 			if(m_vertex.next == lines * 2)
 			{
@@ -458,10 +457,8 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 
 				t->m_texture->Update(GSVector4i(0, 0, 448, lines), video, 448 * 4);
 
-				size_t stride = m_vertex.stride;
-
-				memcpy(&m_vertex.buff[stride * 2], &m_vertex.buff[stride * (m_vertex.next - 2)], stride);
-				memcpy(&m_vertex.buff[stride * 3], &m_vertex.buff[stride * (m_vertex.next - 1)], stride);
+				m_vertex.buff[2] = m_vertex.buff[m_vertex.next - 2];
+				m_vertex.buff[3] = m_vertex.buff[m_vertex.next - 1];
 
 				m_index.buff[0] = 0;
 				m_index.buff[1] = 1;
@@ -473,7 +470,7 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 				m_vertex.head = m_vertex.tail = m_vertex.next = 4;
 				m_index.tail = 6;
 
-				m_vt->Update(m_vertex.buff, m_index.buff, m_index.tail, GS_TRIANGLE_CLASS);
+				m_vt.Update(m_vertex.buff, m_index.buff, m_index.tail, GS_TRIANGLE_CLASS);
 			}
 			else
 			{
@@ -505,11 +502,11 @@ bool GSRendererHW::OI_MetalSlug6(GSTexture* rt, GSTexture* ds, GSTextureCache::S
 {
 	// missing red channel fix (looks alright in pcsx2 r5000+)
 
-	uint8* RESTRICT v = m_vertex.buff;
+	GSVertex* RESTRICT v = m_vertex.buff;
 
-	for(int i = (int)m_vertex.next; i >= 0; i--, v += m_vertex.stride)
+	for(int i = (int)m_vertex.next; i >= 0; i--, v++)
 	{
-		uint32 c = GetColor(v);
+		uint32 c = v->RGBAQ.u32[0];
 
 		uint32 r = (c >> 0) & 0xff;
 		uint32 g = (c >> 8) & 0xff;
@@ -517,11 +514,11 @@ bool GSRendererHW::OI_MetalSlug6(GSTexture* rt, GSTexture* ds, GSTextureCache::S
 
 		if(r == 0 && g != 0 && b != 0)
 		{
-			SetColor(v, (c & 0xffffff00) | ((g + b + 1) >> 1));
+			v->RGBAQ.u32[0] = (c & 0xffffff00) | ((g + b + 1) >> 1);
 		}
 	}
 
-	m_vt->Update(m_vertex.buff, m_index.buff, m_index.tail, m_vt->m_primclass);
+	m_vt.Update(m_vertex.buff, m_index.buff, m_index.tail, m_vt.m_primclass);
 	
 	return true;
 }
@@ -701,7 +698,7 @@ bool GSRendererHW::OI_StarWarsForceUnleashed(GSTexture* rt, GSTexture* ds, GSTex
 	}
 	else if(PRIM->TME)
 	{
-		if((FBP == 0x0 || FBP == 0x01180) && FPSM == PSM_PSMCT32 && (m_vt->m_max.p.z == m_vt->m_min.p.z && m_vt->m_max.p.z == 0))
+		if((FBP == 0x0 || FBP == 0x01180) && FPSM == PSM_PSMCT32 && (m_vt.m_eq.z && m_vt.m_max.p.z == 0))
 		{
 			m_dev->ClearDepth(ds, 0);
 		}
@@ -757,7 +754,7 @@ bool GSRendererHW::OI_SpyroNewBeginning(GSTexture* rt, GSTexture* ds, GSTextureC
 	}
 	else if(PRIM->TME)
 	{
-		if((FBP == 0x0 || FBP == 0x01180) && FPSM == PSM_PSMCT32 && (m_vt->m_max.p.z == m_vt->m_min.p.z && m_vt->m_min.p.z == 0x0))
+		if((FBP == 0x0 || FBP == 0x01180) && FPSM == PSM_PSMCT32 && (m_vt.m_eq.z && m_vt.m_min.p.z == 0))
 		{
 			m_dev->ClearDepth(ds, 0);
 		}
@@ -783,7 +780,7 @@ bool GSRendererHW::OI_SpyroEternalNight(GSTexture* rt, GSTexture* ds, GSTextureC
 	}
 	else if(PRIM->TME)
 	{
-		if((FBP == 0x0 || FBP == 0x01180) && FPSM == PSM_PSMCT32 && (m_vt->m_max.p.z == m_vt->m_min.p.z && m_vt->m_min.p.z == 0x0))
+		if((FBP == 0x0 || FBP == 0x01180) && FPSM == PSM_PSMCT32 && (m_vt.m_eq.z && m_vt.m_min.p.z == 0))
 		{
 			m_dev->ClearDepth(ds, 0);
 		}
@@ -797,7 +794,7 @@ bool GSRendererHW::OI_TalesOfLegendia(GSTexture* rt, GSTexture* ds, GSTextureCac
 	uint32 FBP = m_context->FRAME.Block();
 	uint32 FPSM = m_context->FRAME.PSM;
 
-	if (FPSM == PSM_PSMCT32 && FBP == 0x01c00 && !m_context->TEST.ATE && m_vt->m_max.p.z == m_vt->m_min.p.z)
+	if (FPSM == PSM_PSMCT32 && FBP == 0x01c00 && !m_context->TEST.ATE && m_vt.m_eq.z)
 	{
 		m_context->TEST.ZTST = ZTST_ALWAYS;
 		//m_dev->ClearDepth(ds, 0);
@@ -809,7 +806,7 @@ bool GSRendererHW::OI_TalesOfLegendia(GSTexture* rt, GSTexture* ds, GSTextureCac
 
 bool GSRendererHW::OI_PointListPalette(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 {
-	if(m_vt->m_primclass == GS_POINT_CLASS && !PRIM->TME)
+	if(m_vt.m_primclass == GS_POINT_CLASS && !PRIM->TME)
 	{
 		uint32 FBP = m_context->FRAME.Block();
 		uint32 FBW = m_context->FRAME.FBW;
@@ -818,16 +815,16 @@ bool GSRendererHW::OI_PointListPalette(GSTexture* rt, GSTexture* ds, GSTextureCa
 		{
 			if(m_vertex.next == 16)
 			{
-				uint8* RESTRICT v = m_vertex.buff;
+				GSVertex* RESTRICT v = m_vertex.buff;
 
-				for(int i = 0; i < 16; i++, v += m_vertex.stride)
+				for(int i = 0; i < 16; i++, v++)
 				{
-					uint32 c = GetColor(v);
+					uint32 c = v->RGBAQ.u32[0];
 					uint32 a = c >> 24;
 
 					c = (a >= 0x80 ? 0xff000000 : (a << 25)) | (c & 0x00ffffff);
 
-					SetColor(v, c);
+					v->RGBAQ.u32[0] = c;
 
 					m_mem.WritePixel32(i & 7, i >> 3, c, FBP, FBW);
 				}
@@ -838,16 +835,16 @@ bool GSRendererHW::OI_PointListPalette(GSTexture* rt, GSTexture* ds, GSTextureCa
 			}
 			else if(m_vertex.next == 256)
 			{
-				uint8* RESTRICT v = m_vertex.buff;
+				GSVertex* RESTRICT v = m_vertex.buff;
 
-				for(int i = 0; i < 256; i++, v += m_vertex.stride)
+				for(int i = 0; i < 256; i++, v++)
 				{
-					uint32 c = GetColor(v);
+					uint32 c = v->RGBAQ.u32[0];
 					uint32 a = c >> 24;
 
 					c = (a >= 0x80 ? 0xff000000 : (a << 25)) | (c & 0x00ffffff);
 
-					SetColor(v, c);
+					v->RGBAQ.u32[0] = c;
 
 					m_mem.WritePixel32(i & 15, i >> 4, c, FBP, FBW);
 				}

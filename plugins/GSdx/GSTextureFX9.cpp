@@ -61,13 +61,6 @@ GSTexture* GSDevice9::CreateMskFix(uint32 size, uint32 msk, uint32 fix)
 	return t;
 }
 
-void GSDevice9::SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim)
-{
-	IASetVertexBuffer(vertex, sizeof(GSVertexHW9), vertex_count);
-	IASetIndexBuffer(index, index_count);
-	IASetPrimitiveTopology((D3DPRIMITIVETYPE)prim);
-}
-
 void GSDevice9::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
 	hash_map<uint32, GSVertexShader9>::const_iterator i = m_vs.find(sel);
