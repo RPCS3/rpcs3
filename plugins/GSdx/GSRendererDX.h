@@ -33,6 +33,7 @@ class GSRendererDX : public GSRendererHW
 
 protected:
 	virtual void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	virtual void SetupIA() = 0;
 	virtual void UpdateFBA(GSTexture* rt) {}
 
 public:

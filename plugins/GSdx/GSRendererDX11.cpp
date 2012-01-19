@@ -37,7 +37,7 @@ bool GSRendererDX11::CreateDevice(GSDevice* dev)
 	return true;
 }
 
-void GSRendererDX11::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+void GSRendererDX11::SetupIA()
 {
 	GSDevice11* dev = (GSDevice11*)m_dev;
 
@@ -71,6 +71,4 @@ void GSRendererDX11::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sou
 	}
 	
 	dev->IASetPrimitiveTopology(t);
-
-	__super::DrawPrims(rt, ds, tex);
 }

@@ -28,7 +28,7 @@
 class GSRendererDX11 : public GSRendererDX
 {
 protected:
-	void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	void SetupIA();
 
 public:
 	GSRendererDX11();

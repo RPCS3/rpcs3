@@ -56,7 +56,7 @@ bool GSRendererDX9::CreateDevice(GSDevice* dev)
 	return true;
 }
 
-void GSRendererDX9::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+void GSRendererDX9::SetupIA()
 {
 	D3DPRIMITIVETYPE topology;
 
@@ -219,8 +219,6 @@ void GSRendererDX9::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	dev->IASetIndexBuffer(m_index.buff, m_index.tail);
 
 	dev->IASetPrimitiveTopology(topology);
-
-	__super::DrawPrims(rt, ds, tex);
 }
 
 void GSRendererDX9::UpdateFBA(GSTexture* rt)

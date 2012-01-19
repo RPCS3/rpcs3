@@ -34,7 +34,7 @@ protected:
 		Direct3DBlendState9 bs;
 	} m_fba;
 
-	void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	void SetupIA();
 	void UpdateFBA(GSTexture* rt);
 
 public:
