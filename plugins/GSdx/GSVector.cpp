@@ -22,8 +22,9 @@
 #include "stdafx.h"
 #include "GSVector.h"
 
-const GSVector4i GSVector4i::m_xff[16] = 
+const GSVector4i GSVector4i::m_xff[17] = 
 {
+	GSVector4i(0x00000000, 0x00000000, 0x00000000, 0x00000000), 
 	GSVector4i(0x000000ff, 0x00000000, 0x00000000, 0x00000000), 
 	GSVector4i(0x0000ffff, 0x00000000, 0x00000000, 0x00000000), 
 	GSVector4i(0x00ffffff, 0x00000000, 0x00000000, 0x00000000), 
@@ -42,8 +43,9 @@ const GSVector4i GSVector4i::m_xff[16] =
 	GSVector4i(0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff),
 };
 
-const GSVector4i GSVector4i::m_x0f[16] =
+const GSVector4i GSVector4i::m_x0f[17] =
 {
+	GSVector4i(0x00000000, 0x00000000, 0x00000000, 0x00000000), 
 	GSVector4i(0x0000000f, 0x00000000, 0x00000000, 0x00000000), 
 	GSVector4i(0x00000f0f, 0x00000000, 0x00000000, 0x00000000), 
 	GSVector4i(0x000f0f0f, 0x00000000, 0x00000000, 0x00000000), 

@@ -140,6 +140,8 @@ void GSVertexTrace::FindMinMax(const void* vertex, const uint32* index, int coun
 	GSVector4i cmin = GSVector4i::xffffffff();
 	GSVector4i cmax = GSVector4i::zero();
 
+	// TODO: SSE41 has integer min/max, use that for xy/z/uv/f
+
 	const GSVertex* RESTRICT v = (GSVertex*)vertex;
 
 	for(int i = 0; i < count; i += n)

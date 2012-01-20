@@ -79,8 +79,8 @@ class GSVector4;
 
 __aligned(class, 16) GSVector4i
 {
-	static const GSVector4i m_xff[16];
-	static const GSVector4i m_x0f[16];
+	static const GSVector4i m_xff[17];
+	static const GSVector4i m_x0f[17];
 
 public:
 	union

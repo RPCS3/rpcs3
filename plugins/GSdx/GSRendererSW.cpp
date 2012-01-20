@@ -250,10 +250,12 @@ void GSRendererSW::Draw()
 		GSVertexSW* RESTRICT d = sd->vertex;
 
 		GSVector4i o = (GSVector4i)m_context->XYOFFSET;
-		GSVector4 tsize = GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH);
+		GSVector4 tsize = GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH, 1, 0);
 
 		for(size_t i = 0; i < m_vertex.next; i++, s++, d++)
 		{
+			// TODO: load xyzuvf in one piece
+
 			uint32 z = s->XYZ.Z;
 
 			GSVector4i xy = GSVector4i::load((int)s->XYZ.u32[0]).upl16() - o;
@@ -263,6 +265,8 @@ void GSRendererSW::Draw()
 
 			p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
 
+			GSVector4 stcq = GSVector4::load<true>(&s->m[0]); // s t rgba q
+
 			if(PRIM->TME)
 			{
 				if(PRIM->FST)
@@ -271,12 +275,11 @@ void GSRendererSW::Draw()
 				}
 				else
 				{
-					t = GSVector4(s->ST.S, s->ST.T) * tsize;
-					t = t.xyxy(GSVector4::load(s->RGBAQ.Q));
+					t = stcq.xyww() * tsize;
 				}
 			}
 
-			c = GSVector4::rgba32(s->RGBAQ.u32[0], 7);
+			c = GSVector4(GSVector4i::cast(stcq).zzzz().u8to32() << 7);
 
 			d->p = p;
 			d->c = c;
@@ -284,7 +287,7 @@ void GSRendererSW::Draw()
 
 			if(sd->primclass == GS_SPRITE_CLASS)
 			{
-				d->t.u32[3] = z;
+				d->t.u32[3] = z; // TODO: store this to the 4th unused GSVector4?
 			}
 		}
 	}
