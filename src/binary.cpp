@@ -1,43 +1,46 @@
 #include "yaml-cpp/binary.h"
-#include "yaml-cpp/ostream.h"
 
 namespace YAML
 {
     static const char encoding[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-    void WriteBase64(ostream& out, const unsigned char *data, std::size_t size)
+    std::string EncodeBase64(const unsigned char *data, std::size_t size)
     {
         const char PAD = '=';
         
-        out << "\"";
+        std::string ret;
+        ret.resize(4 * size / 3 + 3);
+        char *out = &ret[0];
+        
         std::size_t chunks = size / 3;
         std::size_t remainder = size % 3;
         
         for(std::size_t i=0;i<chunks;i++, data += 3) {
-            out << encoding[data[0] >> 2];
-            out << encoding[((data[0] & 0x3) << 4) | (data[1] >> 4)];
-            out << encoding[((data[1] & 0xf) << 2) | (data[2] >> 6)];
-            out << encoding[data[2] & 0x3f];
+            *out++ = encoding[data[0] >> 2];
+            *out++ = encoding[((data[0] & 0x3) << 4) | (data[1] >> 4)];
+            *out++ = encoding[((data[1] & 0xf) << 2) | (data[2] >> 6)];
+            *out++ = encoding[data[2] & 0x3f];
         }
         
         switch(remainder) {
             case 0:
                 break;
             case 1:
-                out << encoding[data[0] >> 2];
-                out << encoding[((data[0] & 0x3) << 4)];
-                out << PAD;
-                out << PAD;
+                *out++ = encoding[data[0] >> 2];
+                *out++ = encoding[((data[0] & 0x3) << 4)];
+                *out++ = PAD;
+                *out++ = PAD;
                 break;
             case 2:
-                out << encoding[data[0] >> 2];
-                out << encoding[((data[0] & 0x3) << 4) | (data[1] >> 4)];
-                out << encoding[((data[1] & 0xf) << 2)];
-                out << PAD;
+                *out++ = encoding[data[0] >> 2];
+                *out++ = encoding[((data[0] & 0x3) << 4) | (data[1] >> 4)];
+                *out++ = encoding[((data[1] & 0xf) << 2)];
+                *out++ = PAD;
                 break;
         }
         
-        out << "\"";
+        ret.resize(out - &ret[0]);
+        return ret;
     }
     
     static const unsigned char decoding[] = {
@@ -59,7 +62,7 @@ namespace YAML
         255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,
     };
 
-    std::vector<unsigned char> ReadBase64(const std::string& input)
+    std::vector<unsigned char> DecodeBase64(const std::string& input)
     {
         typedef std::vector<unsigned char> ret_type;
         if(input.empty())

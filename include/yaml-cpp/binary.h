@@ -5,14 +5,13 @@
 #pragma once
 #endif
 
+#include <string>
 #include <vector>
 
 namespace YAML
 {
-    class ostream;
-    
-    void WriteBase64(ostream& out, const unsigned char *data, std::size_t size);
-    std::vector<unsigned char> ReadBase64(const std::string& input);
+    std::string EncodeBase64(const unsigned char *data, std::size_t size);
+    std::vector<unsigned char> DecodeBase64(const std::string& input);
     
     class Binary {
     public:

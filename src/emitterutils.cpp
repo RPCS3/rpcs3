@@ -370,7 +370,7 @@ namespace YAML
 
 		bool WriteBinary(ostream& out, const Binary& binary)
 		{
-            WriteBase64(out, binary.data(), binary.size());
+            WriteDoubleQuotedString(out, EncodeBase64(binary.data(), binary.size()), false);
             return true;
 		}
 	}
