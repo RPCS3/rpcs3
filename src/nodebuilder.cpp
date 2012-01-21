@@ -1,6 +1,6 @@
-#include "old-api/nodebuilder.h"
+#include "nodebuilder.h"
 #include "yaml-cpp/mark.h"
-#include "yaml-cpp/old-api/node.h"
+#include "yaml-cpp/node.h"
 #include <cassert>
 
 namespace YAML

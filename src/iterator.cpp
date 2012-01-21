@@ -1,4 +1,4 @@
-#include "yaml-cpp/old-api/node.h"
+#include "yaml-cpp/node.h"
 #include "yaml-cpp/exceptions.h"
 #include "iterpriv.h"
 

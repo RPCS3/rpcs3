@@ -1,5 +1,5 @@
 #include "yaml-cpp/null.h"
-#include "yaml-cpp/old-api/node.h"
+#include "yaml-cpp/node.h"
 
 namespace YAML
 {

@@ -56,18 +56,9 @@ option(MSVC_STHREADED_RT "MSVC: Build with single-threaded static runtime libs (
 ###
 set(header_directory "include/yaml-cpp/")
 
-file(GLOB common_sources "src/[a-zA-Z]*.cpp")
-file(GLOB old_api_sources "src/old-api/[a-zA-Z]*.cpp")
-
-file(GLOB common_public_headers "include/yaml-cpp/[a-zA-Z]*.h")
-file(GLOB old_api_public_headers "include/yaml-cpp/old-api/[a-zA-Z]*.h")
-
-file(GLOB common_private_headers "src/[a-zA-Z]*.h")
-file(GLOB old_api_private_headers "src/old-api/[a-zA-Z]*.h")
-
-list(APPEND sources ${common_sources} ${old_api_sources})
-list(APPEND public_headers ${common_public_headers} ${old_api_public_headers})
-list(APPEND private_headers ${common_private_headers} ${old_api_private_headers})
+file(GLOB sources "src/[a-zA-Z]*.cpp")
+file(GLOB public_headers "include/yaml-cpp/[a-zA-Z]*.h")
+file(GLOB private_headers "src/[a-zA-Z]*.h")
 
 if(YAML_CPP_BUILD_CONTRIB)
 	file(GLOB contrib_sources "src/contrib/[a-zA-Z]*.cpp")
