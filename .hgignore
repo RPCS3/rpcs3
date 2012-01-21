@@ -1,2 +1,1 @@
 syntax: glob
-include/yaml-cpp/yaml.h
