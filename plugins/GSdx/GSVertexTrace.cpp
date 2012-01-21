@@ -225,10 +225,20 @@ void GSVertexTrace::FindMinMax(const void* vertex, const uint32* index, int coun
 		m_min.t = tmin * s;
 		m_max.t = tmax * s;
 	}
+	else
+	{
+		m_min.t = GSVector4::zero();
+		m_max.t = GSVector4::zero();
+	}
 
 	if(color)
 	{
 		m_min.c = cmin.zzzz().u8to32();
 		m_max.c = cmax.zzzz().u8to32();
+	}
+	else
+	{
+		m_min.c = GSVector4i::zero();
+		m_max.c = GSVector4i::zero();
 	}
 }

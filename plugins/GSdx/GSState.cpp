@@ -166,6 +166,7 @@ void GSState::SetFrameSkip(int skip)
 		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = &GSState::GIFRegHandlerNOP;
 
 		m_fpGIFPackedRegHandlersC[GIF_REG_STQRGBAXYZF2] = &GSState::GIFPackedRegHandlerNOP;
+		m_fpGIFPackedRegHandlersC[GIF_REG_STQRGBAXYZ2] = &GSState::GIFPackedRegHandlerNOP;
 	}
 	else
 	{
@@ -223,6 +224,7 @@ void GSState::ResetHandlers()
 		m_fpGIFRegHandlerXYZ[P][2] = &GSState::GIFRegHandlerXYZ2<P, 0>; \
 		m_fpGIFRegHandlerXYZ[P][3] = &GSState::GIFRegHandlerXYZ2<P, 1>; \
 		m_fpGIFPackedRegHandlerSTQRGBAXYZF2[P] = &GSState::GIFPackedRegHandlerSTQRGBAXYZF2<P>; \
+		m_fpGIFPackedRegHandlerSTQRGBAXYZ2[P] = &GSState::GIFPackedRegHandlerSTQRGBAXYZ2<P>; \
 
 	SetHandlerXYZ(GS_POINTLIST);
 	SetHandlerXYZ(GS_LINELIST);
@@ -340,6 +342,8 @@ GSVector4i GSState::GetFrameRect(int i)
 
 GSVector2i GSState::GetDeviceSize(int i)
 {
+	// TODO: return (m_regs->SMODE1.CMOD & 1) ? GSVector2i(640, 576) : GSVector2i(640, 480);
+
 	// TODO: other params of SMODE1 should affect the true device display size
 
 	// TODO2: pal games at 60Hz
@@ -533,6 +537,33 @@ void GSState::GIFPackedRegHandlerSTQRGBAXYZF2(const GIFPackedReg* RESTRICT r, ui
 		m_v.m[1] = xy.upl32(zf); // TODO: only store the last one
 
 		VertexKick<prim>(r[2].XYZF2.Skip());
+
+		r += 3;
+	}
+}
+
+template<uint32 prim>
+void GSState::GIFPackedRegHandlerSTQRGBAXYZ2(const GIFPackedReg* RESTRICT r, uint32 size)
+{
+	ASSERT(size > 0 && size % 3 == 0);
+
+	const GIFPackedReg* RESTRICT r_end = r + size;
+
+	while(r < r_end)
+	{
+		GSVector4i st = GSVector4i::loadl(&r[0].u64[0]);
+		GSVector4i q = GSVector4i::loadl(&r[0].u64[1]);
+		GSVector4i rgba = (GSVector4i::load<false>(&r[1]) & GSVector4i::x000000ff()).ps32().pu16();
+
+		m_v.m[0] = st.upl64(rgba.upl32(q)); // TODO: only store the last one
+
+		GSVector4i xy = GSVector4i::loadl(&r[2].u64[0]);
+		GSVector4i z = GSVector4i::loadl(&r[2].u64[1]);
+		GSVector4i xyz = xy.upl16(xy.srl<4>()).upl32(z);
+
+		m_v.m[1] = xyz.upl64(GSVector4i::loadl(&m_v.UV)); // TODO: only store the last one
+
+		VertexKick<prim>(r[2].XYZ2.Skip());
 
 		r += 3;
 	}
@@ -1633,6 +1664,8 @@ template void GSState::Transfer<1>(const uint8* mem, uint32 size);
 template void GSState::Transfer<2>(const uint8* mem, uint32 size);
 template void GSState::Transfer<3>(const uint8* mem, uint32 size);
 
+static hash_map<uint64, uint64> s_tags;
+
 template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 {
 	GSPerfMonAutoTimer pmat(&m_perfmon);
@@ -1646,6 +1679,15 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 		if(path.nloop == 0)
 		{
 			path.SetTag(mem);
+
+			if(0)
+			{
+				uint64 hash;
+				if(path.tag.NREG < 8) hash = path.tag.u32[2] & ((1 << path.tag.NREG * 4) - 1);
+				else if(path.tag.NREG < 16) {hash = path.tag.u32[2]; ((uint32*)&hash)[1] = path.tag.u32[3] & ((1 << (path.tag.NREG - 8) * 4) - 1);}
+				else hash = path.tag.u64[1];
+				s_tags[hash] += path.nloop * path.nreg;
+			}
 
 			mem += sizeof(GIFTag);
 			size--;
@@ -1729,6 +1771,14 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 					case GIFPath::TYPE_STQRGBAXYZF2: // majority of the vertices are formatted like this
 
 						(this->*m_fpGIFPackedRegHandlersC[GIF_REG_STQRGBAXYZF2])((GIFPackedReg*)mem, total);
+
+						mem += total * sizeof(GIFPackedReg);
+
+						break;
+
+					case GIFPath::TYPE_STQRGBAXYZ2:
+
+						(this->*m_fpGIFPackedRegHandlersC[GIF_REG_STQRGBAXYZ2])((GIFPackedReg*)mem, total);
 
 						mem += total * sizeof(GIFPackedReg);
 
@@ -2093,6 +2143,8 @@ void GSState::UpdateScissor()
 
 void GSState::UpdateVertexKick() 
 {
+	if(m_frameskip) return;
+
 	uint32 prim = PRIM->PRIM;
 
 	m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = m_fpGIFPackedRegHandlerXYZ[prim][0];
@@ -2106,6 +2158,7 @@ void GSState::UpdateVertexKick()
 	m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = m_fpGIFRegHandlerXYZ[prim][3];
 
 	m_fpGIFPackedRegHandlersC[GIF_REG_STQRGBAXYZF2] = m_fpGIFPackedRegHandlerSTQRGBAXYZF2[prim];
+	m_fpGIFPackedRegHandlersC[GIF_REG_STQRGBAXYZ2] = m_fpGIFPackedRegHandlerSTQRGBAXYZ2[prim];
 }
 
 void GSState::GrowVertexBuffer()

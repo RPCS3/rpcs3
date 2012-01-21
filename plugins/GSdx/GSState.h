@@ -61,10 +61,12 @@ class GSState : public GSAlignedClass<32>
 
 	typedef void (GSState::*GIFPackedRegHandlerC)(const GIFPackedReg* RESTRICT r, uint32 size);
 
-	GIFPackedRegHandlerC m_fpGIFPackedRegHandlersC[1];
+	GIFPackedRegHandlerC m_fpGIFPackedRegHandlersC[2];
 	GIFPackedRegHandlerC m_fpGIFPackedRegHandlerSTQRGBAXYZF2[8];
+	GIFPackedRegHandlerC m_fpGIFPackedRegHandlerSTQRGBAXYZ2[8];
 
 	template<uint32 prim> void GIFPackedRegHandlerSTQRGBAXYZF2(const GIFPackedReg* RESTRICT r, uint32 size);
+	template<uint32 prim> void GIFPackedRegHandlerSTQRGBAXYZ2(const GIFPackedReg* RESTRICT r, uint32 size);
 	void GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r, uint32 size);
 
 	template<int i> void ApplyTEX0(GIFRegTEX0& TEX0);

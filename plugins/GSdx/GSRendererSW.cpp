@@ -131,9 +131,28 @@ void GSRendererSW::VSync(int field)
 			m_regs->PMODE.ALP
 			);
 
-		fprintf(s_fp, "SMODE1 %08x_%08x\n", 
-			m_regs->SMODE1.u32[0],
-			m_regs->SMODE1.u32[1]
+		fprintf(s_fp, "SMODE1 CLKSEL=%d CMOD=%d EX=%d GCONT=%d LC=%d NVCK=%d PCK2=%d PEHS=%d PEVS=%d PHS=%d PRST=%d PVS=%d RC=%d SINT=%d SLCK=%d SLCK2=%d SPML=%d T1248=%d VCKSEL=%d VHP=%d XPCK=%d\n",
+			m_regs->SMODE1.CLKSEL,
+			m_regs->SMODE1.CMOD,
+			m_regs->SMODE1.EX,
+			m_regs->SMODE1.GCONT,
+			m_regs->SMODE1.LC,
+			m_regs->SMODE1.NVCK,
+			m_regs->SMODE1.PCK2,
+			m_regs->SMODE1.PEHS,
+			m_regs->SMODE1.PEVS,
+			m_regs->SMODE1.PHS,
+			m_regs->SMODE1.PRST,
+			m_regs->SMODE1.PVS,
+			m_regs->SMODE1.RC,
+			m_regs->SMODE1.SINT,
+			m_regs->SMODE1.SLCK,
+			m_regs->SMODE1.SLCK2,
+			m_regs->SMODE1.SPML,
+			m_regs->SMODE1.T1248,
+			m_regs->SMODE1.VCKSEL,
+			m_regs->SMODE1.VHP,
+			m_regs->SMODE1.XPCK
 			);
 
 		fprintf(s_fp, "SMODE2 INT=%d FFMD=%d DPMS=%d\n", 
@@ -485,7 +504,7 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 		{
 			if(m_fzb_pages[*p])
 			{
-				Sync(6);
+				Sync(7);
 
 				break;
 			}
@@ -581,7 +600,7 @@ void GSRendererSW::CheckDependencies(SharedData* sd)
 
 	if(source_syncpoint) 
 	{
-		Sync(7);
+		Sync(8);
 	}
 
 	sd->UseSourcePages();
@@ -598,7 +617,7 @@ void GSRendererSW::CheckDependencies(SharedData* sd)
 
 	if(target_syncpoint)
 	{
-		Sync(8);
+		Sync(9);
 	}
 }
 
@@ -653,7 +672,7 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 				return true;
 			}
 
-			if(LOG) {fprintf(s_fp, "no syncpoint *\n"); fflush(s_fp);}
+			//if(LOG) {fprintf(s_fp, "no syncpoint *\n"); fflush(s_fp);}
 		}
 	}
 	else
@@ -759,7 +778,7 @@ bool GSRendererSW::CheckSourcePages(SharedData* sd)
 		for(size_t i = 0; sd->m_tex[i].t != NULL; i++)
 		{
 			sd->m_tex[i].t->m_offset->GetPages(sd->m_tex[i].r, m_tmp_pages); 
-			
+
 			uint32* pages = m_tmp_pages; // sd->m_tex[i].t->m_pages.n;
 
 			for(const uint32* p = pages; *p != GSOffset::EOP; p++)
@@ -1337,9 +1356,16 @@ void GSRendererSW::SharedData::UseSourcePages()
 	{
 		m_parent->UsePages(m_tex[i].t->m_pages.n, 2);
 
-		m_tex[i].t->Update(m_tex[i].r); // TODO: check return value, false (out-of-memory) then disable texturing
+		if(m_tex[i].t->Update(m_tex[i].r))
+		{
+			global.tex[i] = m_tex[i].t->m_buff;
+		}
+		else
+		{
+			printf("GSdx: out-of-memory, texturing temporarily disabled\n");
 
-		global.tex[i] = m_tex[i].t->m_buff;
+			global.sel.tfx = TFX_NONE;
+		}
 
 		// TODO
 		/*

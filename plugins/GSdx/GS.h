@@ -92,7 +92,8 @@ enum GIF_REG
 
 enum GIF_REG_COMPLEX
 {
-	GIF_REG_STQRGBAXYZF2 = 0x00,
+	GIF_REG_STQRGBAXYZF2	= 0x00,
+	GIF_REG_STQRGBAXYZ2		= 0x01,
 };
 
 enum GIF_A_D_REG
@@ -1101,19 +1102,58 @@ __aligned(struct, 32) GIFPath
 	uint32 type;
 	GSVector4i regs;
 
-	enum {TYPE_UNKNOWN, TYPE_ADONLY, TYPE_STQRGBAXYZF2};
+	enum {TYPE_UNKNOWN, TYPE_ADONLY, TYPE_STQRGBAXYZF2, TYPE_STQRGBAXYZ2};
 
 	__forceinline void SetTag(const void* mem)
 	{
 		GSVector4i v = GSVector4i::load<false>(mem);
 		GSVector4i::store<true>(&tag, v);
+
 		reg = 0;
 		nreg = tag.NREG ? tag.NREG : 16;
 		regs = v.uph8(v >> 4) & GSVector4i::x0f(nreg);
 		nloop = tag.NLOOP;
-		if(regs.u32[0] == 0x00040102 && nreg == 3) type = TYPE_STQRGBAXYZF2;
-		else if(regs.eq8(GSVector4i(0x0e0e0e0e)).mask() == (1 << nreg) - 1) type = TYPE_ADONLY;
-		else type = TYPE_UNKNOWN;
+		type = TYPE_UNKNOWN;
+
+		if(tag.FLG == GIF_FLG_PACKED)
+		{
+			if(regs.eq8(GSVector4i(0x0e0e0e0e)).mask() == (1 << nreg) - 1)
+			{
+				type = TYPE_ADONLY;
+			}
+			else
+			{
+				switch(nreg)
+				{
+				case 1: break;
+				case 2: break;
+				case 3:
+					if(regs.u32[0] == 0x00040102) type = TYPE_STQRGBAXYZF2; // many games, TODO: formats mixed with NOPs (xeno2: 040f010f02, 04010f020f, mgs3: 04010f0f02, 0401020f0f, 04010f020f)
+					if(regs.u32[0] == 0x00050102) type = TYPE_STQRGBAXYZ2; // GoW (has other crazy formats, like ...030503050103)
+					// TODO: common types with UV instead
+					break;
+				case 4: break;
+				case 5: break;
+				case 6: break;
+				case 7: break;
+				case 8: break;
+				case 9:
+					if(regs.u32[0] == 0x02040102 && regs.u32[1] == 0x01020401 && regs.u32[2] == 0x00000004) {type = TYPE_STQRGBAXYZF2; nreg = 3; nloop *= 3;} // ffx
+					break;
+				case 10: break;
+				case 11: break;
+				case 12:
+					if(regs.u32[0] == 0x02040102 && regs.u32[1] == 0x01020401 && regs.u32[2] == 0x04010204) {type = TYPE_STQRGBAXYZF2; nreg = 3; nloop *= 4;} // dq8 (not many, mostly 040102)
+					break;
+				case 13: break;
+				case 14: break;
+				case 15: break;
+				case 16: break;
+				default:
+					__assume(0);
+				}
+			}
+		}
 	}
 
 	__forceinline uint8 GetReg()
