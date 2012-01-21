@@ -2915,6 +2915,11 @@ public:
 		return GSVector4(aligned ? _mm_load_ps((const float*)p) : _mm_loadu_ps((const float*)p));
 	}
 
+	__forceinline static void storent(void* p, const GSVector4& v)
+	{
+		_mm_stream_ps((float*)p, v.m);
+	}
+
 	__forceinline static void storel(void* p, const GSVector4& v)
 	{
 		_mm_store_sd((double*)p, _mm_castps_pd(v.m));

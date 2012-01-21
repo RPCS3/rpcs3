@@ -29,19 +29,29 @@ class GSRendererSW : public GSRenderer
 {
 	class SharedData : public GSDrawScanline::SharedData
 	{
+	public:
 		GSRendererSW* m_parent;
 		const uint32* m_fb_pages;
 		const uint32* m_zb_pages;
-		const uint32* m_tex_pages[7 + 1]; // NULL terminated
 		bool m_using_pages;
+		__aligned(struct, 16) {GSVector4i r; GSTextureCacheSW::Texture* t;} m_tex[7 + 1]; // NULL terminated
 
 	public:
 		SharedData(GSRendererSW* parent);
 		virtual ~SharedData();
 
 		void UseTargetPages(const uint32* fb_pages, const uint32* zb_pages);
-		void UseSourcePages(GSTextureCacheSW::Texture* t, int level);
+
+		void SetSource(GSTextureCacheSW::Texture* t, const GSVector4i& r, int level);
+		void UseSourcePages();
 	};
+
+	typedef void (GSRendererSW::*ConvertVertexBufferPtr)(GSVertexSW* RESTRICT dst, const GSVertex* RESTRICT src, size_t count);
+
+	ConvertVertexBufferPtr m_cvb[4][2][2];
+
+	template<uint32 primclass, uint32 tme, uint32 fst>
+	void ConvertVertexBuffer(GSVertexSW* RESTRICT dst, const GSVertex* RESTRICT src, size_t count);
 
 protected:
 	IRasterizer* m_rl;
@@ -67,7 +77,10 @@ protected:
 
 	void UsePages(const uint32* pages, int type);
 	void ReleasePages(const uint32* pages, int type);
+
+	void CheckDependencies(SharedData* sd);
 	bool CheckTargetPages(const uint32* fb_pages, const uint32* zb_pages, const GSVector4i& r);
+	bool CheckSourcePages(SharedData* sd);
 
 	bool GetScanlineGlobalData(SharedData* data);
 

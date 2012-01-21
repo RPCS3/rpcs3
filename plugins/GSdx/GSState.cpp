@@ -40,9 +40,10 @@ GSState::GSState()
 	m_nativeres = !!theApp.GetConfig("nativeres", 0);
 
 	memset(&m_v, 0, sizeof(m_v));
-	m_q = 1.0f;
 	memset(&m_vertex, 0, sizeof(m_vertex));
 	memset(&m_index, 0, sizeof(m_index));
+
+	m_v.RGBAQ.Q = 1.0f;
 
 	GrowVertexBuffer();
 
@@ -94,7 +95,7 @@ GSState::GSState()
 	m_sssize += sizeof(m_tr.y);
 	m_sssize += m_mem.m_vmsize;
 	m_sssize += (sizeof(m_path[0].tag) + sizeof(m_path[0].reg)) * countof(m_path);
-	m_sssize += sizeof(m_q);
+	m_sssize += sizeof(float); // obsolite
 
 	PRIM = &m_env.PRIM;
 //	CSR->rREV = 0x20;
@@ -156,44 +157,18 @@ void GSState::SetFrameSkip(int skip)
 	{
 		m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerNOP;
 		m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerNOP;
-		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = &GSState::GIFPackedRegHandlerNOP;
-		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = &GSState::GIFPackedRegHandlerNOP;
-		m_fpGIFPackedRegHandlers[GIF_REG_FOG] = &GSState::GIFPackedRegHandlerNOP;
 		m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = &GSState::GIFPackedRegHandlerNOP;
 		m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = &GSState::GIFPackedRegHandlerNOP;
 
-		m_fpGIFRegHandlers[GIF_A_D_REG_PRIM] = &GSState::GIFRegHandlerNOP;
-		m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GSState::GIFRegHandlerNOP;
-		m_fpGIFRegHandlers[GIF_A_D_REG_ST] = &GSState::GIFRegHandlerNOP;
-		m_fpGIFRegHandlers[GIF_A_D_REG_UV] = &GSState::GIFRegHandlerNOP;
 		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2] = &GSState::GIFRegHandlerNOP;
 		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2] = &GSState::GIFRegHandlerNOP;
 		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3] = &GSState::GIFRegHandlerNOP;
 		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = &GSState::GIFRegHandlerNOP;
-		m_fpGIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GSState::GIFRegHandlerNOP;
-		m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE] = &GSState::GIFRegHandlerNOP;
+
+		m_fpGIFPackedRegHandlersC[GIF_REG_STQRGBAXYZF2] = &GSState::GIFPackedRegHandlerNOP;
 	}
 	else
 	{
-		m_fpGIFPackedRegHandlers[GIF_REG_XYZF2] = &GSState::GIFPackedRegHandlerXYZF2<GS_INVALID, 0>;
-		m_fpGIFPackedRegHandlers[GIF_REG_XYZ2] = &GSState::GIFPackedRegHandlerXYZ2<GS_INVALID, 0>;
-		m_fpGIFPackedRegHandlers[GIF_REG_XYZF3] = &GSState::GIFPackedRegHandlerXYZF2<GS_INVALID, 1>;
-		m_fpGIFPackedRegHandlers[GIF_REG_XYZ3] = &GSState::GIFPackedRegHandlerXYZ2<GS_INVALID, 1>;
-		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<0>;
-		m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_2] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<1>;
-		m_fpGIFPackedRegHandlers[GIF_REG_FOG] = &GSState::GIFPackedRegHandlerFOG;
-
-		m_fpGIFRegHandlers[GIF_A_D_REG_PRIM] = &GSState::GIFRegHandlerPRIM;
-		m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GSState::GIFRegHandlerRGBAQ;
-		m_fpGIFRegHandlers[GIF_A_D_REG_ST] = &GSState::GIFRegHandlerST;
-		m_fpGIFRegHandlers[GIF_A_D_REG_UV] = &GSState::GIFRegHandlerUV;
-		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF2] = &GSState::GIFRegHandlerXYZF2<GS_INVALID, 0>;
-		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ2] = &GSState::GIFRegHandlerXYZ2<GS_INVALID, 0>;
-		m_fpGIFRegHandlers[GIF_A_D_REG_XYZF3] = &GSState::GIFRegHandlerXYZF2<GS_INVALID, 1>;
-		m_fpGIFRegHandlers[GIF_A_D_REG_XYZ3] = &GSState::GIFRegHandlerXYZ2<GS_INVALID, 1>;
-		m_fpGIFRegHandlers[GIF_A_D_REG_PRMODECONT] = &GSState::GIFRegHandlerPRMODECONT;
-		m_fpGIFRegHandlers[GIF_A_D_REG_PRMODE] = &GSState::GIFRegHandlerPRMODE;
-
 		UpdateVertexKick();
 	}
 }
@@ -442,22 +417,13 @@ void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* RESTRICT r)
 
 	m_v.RGBAQ.u32[0] = (uint32)GSVector4i::store(v);
 
-	#elif _M_SSE >= 0x200
+	#else
 
 	GSVector4i v = GSVector4i::load<false>(r) & GSVector4i::x000000ff();
 
 	m_v.RGBAQ.u32[0] = v.rgba32();
 
-	#else
-
-	m_v.RGBAQ.R = r->RGBA.R;
-	m_v.RGBAQ.G = r->RGBA.G;
-	m_v.RGBAQ.B = r->RGBA.B;
-	m_v.RGBAQ.A = r->RGBA.A;
-
 	#endif
-
-	m_v.RGBAQ.Q = m_q;
 }
 
 void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r)
@@ -466,19 +432,14 @@ void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r)
 
 	m_v.ST.u64 = r->u64[0];
 
-	#elif _M_SSE >= 0x200
+	#else
 
 	GSVector4i v = GSVector4i::loadl(r);
 	GSVector4i::storel(&m_v.ST.u64, v);
 
-	#else
-
-	m_v.ST.S = r->STQ.S;
-	m_v.ST.T = r->STQ.T;
-
 	#endif
 
-	m_q = r->STQ.Q;
+	m_v.RGBAQ.Q = r->STQ.Q;
 	
 #ifdef Offset_ST
 	GIFRegTEX0 TEX0 = m_context->TEX0;
@@ -562,21 +523,23 @@ void GSState::GIFPackedRegHandlerSTQRGBAXYZF2(const GIFPackedReg* RESTRICT r, ui
 		GSVector4i q = GSVector4i::loadl(&r[0].u64[1]);
 		GSVector4i rgba = (GSVector4i::load<false>(&r[1]) & GSVector4i::x000000ff()).ps32().pu16();
 
-		m_v.m[0] = st.upl64(rgba.upl32(q));
+		m_v.m[0] = st.upl64(rgba.upl32(q)); // TODO: only store the last one
 
 		GSVector4i xy = GSVector4i::loadl(&r[2].u64[0]);
 		GSVector4i zf = GSVector4i::loadl(&r[2].u64[1]);
 		xy = xy.upl16(xy.srl<4>()).upl32(GSVector4i::loadl(&m_v.UV));
 		zf = zf.srl32(4) & GSVector4i::x00ffffff().upl32(GSVector4i::x000000ff());
 
-		m_v.m[1] = xy.upl32(zf);
+		m_v.m[1] = xy.upl32(zf); // TODO: only store the last one
 
 		VertexKick<prim>(r[2].XYZF2.Skip());
 
 		r += 3;
 	}
+}
 
-	m_q = r[-3].STQ.Q; // remember the last one, STQ outputs this to the temp Q each time
+void GSState::GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r, uint32 size)
+{
 }
 
 // GIFRegHandler*
@@ -719,8 +682,10 @@ template<int i> void GSState::ApplyTEX0(GIFRegTEX0& TEX0)
 		BITBLTBUF.SBW = 1;
 		BITBLTBUF.SPSM = TEX0.CSM;
 
-		GSVector4i r = GSVector4i::zero();
+		GSVector4i r;
 
+		r.left = 0;
+		r.top = 0;
 		r.right = GSLocalMemory::m_psm[TEX0.CPSM].pgs.x;
 		r.bottom = GSLocalMemory::m_psm[TEX0.CPSM].pgs.y;
 		
@@ -1644,7 +1609,7 @@ void GSState::SoftReset(uint32 mask)
 
 	m_env.TRXDIR.XDIR = 3; //-1 ; set it to invalid value
 
-	m_q = 1;
+	m_v.RGBAQ.Q = 1.0f;
 }
 
 void GSState::ReadFIFO(uint8* mem, int size)
@@ -1687,7 +1652,7 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 
 			if(path.nloop > 0) // eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and values other than the EOP field are disregarded."
 			{
-				m_q = 1.0f;
+				m_v.RGBAQ.Q = 1.0f;
 
 				// ASSERT(!(path.tag.PRE && path.tag.FLG == GIF_FLG_REGLIST)); // kingdom hearts
 
@@ -1980,7 +1945,7 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 		WriteState(data, &m_path[i].reg);
 	}
 
-	WriteState(data, &m_q);
+	data += sizeof(float); // obsolite
 
 	return 0;
 }
@@ -2076,7 +2041,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 		m_path[i].SetTag(&m_path[i].tag); // expand regs
 	}
 
-	ReadState(&m_q, data);
+	data += sizeof(float); // obsolite
 
 	PRIM = !m_env.PRMODECONT.AC ? (GIFRegPRIM*)&m_env.PRMODE : &m_env.PRIM;
 

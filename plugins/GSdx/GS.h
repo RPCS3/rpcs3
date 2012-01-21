@@ -1111,9 +1111,9 @@ __aligned(struct, 32) GIFPath
 		nreg = tag.NREG ? tag.NREG : 16;
 		regs = v.uph8(v >> 4) & GSVector4i::x0f(nreg);
 		nloop = tag.NLOOP;
-		type = TYPE_UNKNOWN;
 		if(regs.u32[0] == 0x00040102 && nreg == 3) type = TYPE_STQRGBAXYZF2;
 		else if(regs.eq8(GSVector4i(0x0e0e0e0e)).mask() == (1 << nreg) - 1) type = TYPE_ADONLY;
+		else type = TYPE_UNKNOWN;
 	}
 
 	__forceinline uint8 GetReg()

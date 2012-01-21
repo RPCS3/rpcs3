@@ -932,11 +932,6 @@ GSRasterizerList::~GSRasterizerList()
 
 void GSRasterizerList::Queue(shared_ptr<GSRasterizerData> data)
 {
-	if(data->syncpoint)
-	{
-		Sync();
-	}
-
 	GSVector4i r = data->bbox.rintersect(data->scissor);
 
 	ASSERT(r.top >= 0 && r.top < 2048 && r.bottom >= 0 && r.bottom < 2048);

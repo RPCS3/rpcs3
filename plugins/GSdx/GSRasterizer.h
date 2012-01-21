@@ -39,7 +39,6 @@ public:
 	int vertex_count;
 	uint32* index;
 	int index_count;
-	bool syncpoint;
 	uint64 frame;
 
 	GSRasterizerData() 
@@ -51,7 +50,6 @@ public:
 		, vertex_count(0)
 		, index(NULL)
 		, index_count(0)
-		, syncpoint(false)
 		, frame(0)
 	{
 	}

@@ -65,6 +65,7 @@ class GSState : public GSAlignedClass<32>
 	GIFPackedRegHandlerC m_fpGIFPackedRegHandlerSTQRGBAXYZF2[8];
 
 	template<uint32 prim> void GIFPackedRegHandlerSTQRGBAXYZF2(const GIFPackedReg* RESTRICT r, uint32 size);
+	void GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r, uint32 size);
 
 	template<int i> void ApplyTEX0(GIFRegTEX0& TEX0);
 	void ApplyPRIM(const GIFRegPRIM& PRIM);
@@ -137,7 +138,6 @@ protected:
 	bool IsBadFrame(int& skip, int UserHacks_SkipDraw);
 
 	GSVertex m_v;
-	float m_q;
 	GSVector4 m_scissor;
 	uint32 m_ofxy;
 	
