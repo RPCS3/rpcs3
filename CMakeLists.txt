@@ -35,7 +35,6 @@ enable_testing()
 ## Project stuff
 option(YAML_CPP_BUILD_TOOLS "Enable testing and parse tools" ON)
 option(YAML_CPP_BUILD_CONTRIB "Enable contrib stuff in library" ON)
-option(YAML_CPP_BUILD_OLD_API "Enable building the old API" ON)
 
 ## Build options
 # --> General
@@ -53,49 +52,22 @@ option(MSVC_SHARED_RT "MSVC: Build with shared runtime libs (/MD)" ON)
 option(MSVC_STHREADED_RT "MSVC: Build with single-threaded static runtime libs (/ML until VS .NET 2003)" OFF)
 
 ###
-### Configure the main header
-###
-if(YAML_CPP_BUILD_OLD_API)
-	set(API_DEFINE "#define YAML_CPP_OLD_API")
-endif()
-
-configure_file(${YAML_CPP_SOURCE_DIR}/include/yaml-cpp/yaml.h.cmake ${YAML_CPP_SOURCE_DIR}/include/yaml-cpp/yaml.h @ONLY)
-
-###
 ### Sources, headers, directories and libs
 ###
 set(header_directory "include/yaml-cpp/")
 
 file(GLOB common_sources "src/[a-zA-Z]*.cpp")
-file(GLOB new_api_sources 
-	"src/node/[a-zA-Z]*.cpp"
-	"src/node/detail/[a-zA-Z]*.cpp"
-)
 file(GLOB old_api_sources "src/old-api/[a-zA-Z]*.cpp")
 
 file(GLOB common_public_headers "include/yaml-cpp/[a-zA-Z]*.h")
-file(GLOB new_api_public_headers
-	"include/yaml-cpp/node/[a-zA-Z]*.h"
-	"include/yaml-cpp/node/detail/[a-zA-Z]*.h"
-)
 file(GLOB old_api_public_headers "include/yaml-cpp/old-api/[a-zA-Z]*.h")
 
 file(GLOB common_private_headers "src/[a-zA-Z]*.h")
-file(GLOB new_api_private_headers "src/node/[a-zA-Z]*.h")
 file(GLOB old_api_private_headers "src/old-api/[a-zA-Z]*.h")
 
-if(YAML_CPP_BUILD_OLD_API)
-	list(APPEND sources ${common_sources} ${old_api_sources})
-	list(APPEND public_headers ${common_public_headers} ${old_api_public_headers})
-	list(APPEND private_headers ${common_private_headers} ${old_api_private_headers})
-	add_definitions(-DYAML_CPP_OLD_API)
-else()
-	find_package(Boost REQUIRED)
-	include_directories(${Boost_INCLUDE_DIRS})
-	list(APPEND sources ${common_sources} ${new_api_sources})
-	list(APPEND public_headers ${common_public_headers} ${new_api_public_headers})
-	list(APPEND private_headers ${common_private_headers} ${new_api_private_headers})
-endif()
+list(APPEND sources ${common_sources} ${old_api_sources})
+list(APPEND public_headers ${common_public_headers} ${old_api_public_headers})
+list(APPEND private_headers ${common_private_headers} ${old_api_private_headers})
 
 if(YAML_CPP_BUILD_CONTRIB)
 	file(GLOB contrib_sources "src/contrib/[a-zA-Z]*.cpp")

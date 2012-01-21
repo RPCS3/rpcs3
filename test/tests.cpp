@@ -22,11 +22,6 @@ namespace Test
 
 		if(!RunSpecTests())
 			passed = false;
-
-#ifndef YAML_CPP_OLD_API
-		if(!RunNodeTests())
-			passed = false;
-#endif
 		
 		if(passed)
 			std::cout << "All tests passed!\n";

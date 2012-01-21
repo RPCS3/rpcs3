@@ -1,6 +1,8 @@
 #include "yaml-cpp/parser.h"
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/exceptions.h"
+#include "yaml-cpp/old-api/node.h"
+#include "old-api/nodebuilder.h"
 #include "directives.h"
 #include "scanner.h"
 #include "singledocparser.h"
@@ -8,11 +10,6 @@
 #include "token.h"
 #include <sstream>
 #include <cstdio>
-
-#ifdef YAML_CPP_OLD_API
-#include "yaml-cpp/old-api/node.h"
-#include "old-api/nodebuilder.h"
-#endif
 
 namespace YAML
 {
@@ -58,7 +55,6 @@ namespace YAML
 		return true;
 	}
 
-#ifdef YAML_CPP_OLD_API
 	// GetNextDocument
 	// . Reads the next document in the queue (of tokens).
 	// . Throws a ParserException on error.
@@ -67,7 +63,6 @@ namespace YAML
 		NodeBuilder builder(document);
 		return HandleNextDocument(builder);
 	}
-#endif
 
 	// ParseDirectives
 	// . Reads any directives that are next in the queue.
