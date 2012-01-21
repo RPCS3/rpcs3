@@ -7,6 +7,7 @@
 
 
 #include "yaml-cpp/dll.h"
+#include "yaml-cpp/binary.h"
 #include "yaml-cpp/emittermanip.h"
 #include "yaml-cpp/ostream.h"
 #include "yaml-cpp/noncopyable.h"
@@ -60,7 +61,7 @@ namespace YAML
 		Emitter& Write(const _Tag& tag);
 		Emitter& Write(const _Comment& comment);
 		Emitter& Write(const _Null& null);
-		Emitter& Write(const _Binary& binary);
+		Emitter& Write(const Binary& binary);
 		
 		template <typename T>
 		Emitter& WriteIntegralType(T value);
@@ -153,7 +154,7 @@ namespace YAML
 	inline Emitter& operator << (Emitter& emitter, const _Tag& v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, const _Comment& v) { return emitter.Write(v); }
 	inline Emitter& operator << (Emitter& emitter, const _Null& v) { return emitter.Write(v); }
-	inline Emitter& operator << (Emitter& emitter, const _Binary& b) { return emitter.Write(b); }
+	inline Emitter& operator << (Emitter& emitter, const Binary& b) { return emitter.Write(b); }
 
 	inline Emitter& operator << (Emitter& emitter, const char *v) { return emitter.Write(std::string(v)); }
 

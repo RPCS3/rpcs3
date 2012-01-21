@@ -125,16 +125,6 @@ namespace YAML
 	inline _Comment Comment(const std::string content) {
 		return _Comment(content);
 	}
-	
-	struct _Binary {
-		_Binary(const unsigned char *data_, std::size_t size_): data(data_), size(size_) {}
-		const unsigned char *data;
-		std::size_t size;
-	};
-	
-	inline _Binary Binary(const unsigned char *data, std::size_t size) {
-		return _Binary(data, size);
-	}
     
     struct _Precision {
         _Precision(int floatPrecision_, int doublePrecision_): floatPrecision(floatPrecision_), doublePrecision(doublePrecision_) {}

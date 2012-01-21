@@ -865,7 +865,7 @@ namespace YAML
 		return *this;
 	}
 
-	Emitter& Emitter::Write(const _Binary& binary)
+	Emitter& Emitter::Write(const Binary& binary)
 	{
 		Write(SecondaryTag("binary"));
 
@@ -874,7 +874,7 @@ namespace YAML
 		
 		PreAtomicWrite();
 		EmitSeparationIfNecessary();
-		Utils::WriteBinary(m_stream, binary.data, binary.size);
+		Utils::WriteBinary(m_stream, binary);
 		PostAtomicWrite();
 		return *this;
 	}
