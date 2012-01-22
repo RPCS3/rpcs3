@@ -133,14 +133,22 @@ void GSVertexTrace::FindMinMax(const void* vertex, const uint32* index, int coun
 		break;
 	}
 
-	GSVector4 pmin = s_minmax.xxxx();
-	GSVector4 pmax = s_minmax.yyyy();
 	GSVector4 tmin = s_minmax.xxxx();
 	GSVector4 tmax = s_minmax.yyyy();
 	GSVector4i cmin = GSVector4i::xffffffff();
 	GSVector4i cmax = GSVector4i::zero();
 
-	// TODO: SSE41 has integer min/max, use that for xy/z/uv/f
+	#if _M_SSE >= 0x401
+
+	GSVector4i pmin = GSVector4i::xffffffff();
+	GSVector4i pmax = GSVector4i::zero();
+
+	#else
+
+	GSVector4 pmin = s_minmax.xxxx();
+	GSVector4 pmax = s_minmax.yyyy();
+	
+	#endif
 
 	const GSVertex* RESTRICT v = (GSVertex*)vertex;
 
@@ -198,18 +206,29 @@ void GSVertexTrace::FindMinMax(const void* vertex, const uint32* index, int coun
 			GSVector4i xy = xyzf.upl16();
 			GSVector4i z = xyzf.yyyy().srl32(1);
 
+			#if _M_SSE >= 0x401
+
+			GSVector4i p = xy.blend16<0xf0>(z.uph32(!sprite ? xyzf : f));
+
+			pmin = pmin.min_u32(p);
+			pmax = pmax.max_u32(p);
+
+			#else
+
 			GSVector4 p = GSVector4(xy.upl64(z.upl32(!sprite ? xyzf.wwww() : f)));
 
 			pmin = pmin.min(p);
 			pmax = pmax.max(p);
+
+			#endif
 		}
 	}
 
 	GSVector4 o(context->XYOFFSET);
 	GSVector4 s(1.0f / 16, 1.0f / 16, 2.0f, 1.0f);
 
-	m_min.p = (pmin - o) * s;
-	m_max.p = (pmax - o) * s;
+	m_min.p = (GSVector4(pmin) - o) * s;
+	m_max.p = (GSVector4(pmax) - o) * s;
 
 	if(tme)
 	{

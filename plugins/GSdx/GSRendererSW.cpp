@@ -462,13 +462,21 @@ void GSRendererSW::Sync(int reason)
 	{
 		s_n++;
 
-		std::string s = format("c:\\temp1\\_%05d_f%lld_rt1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), m_context->FRAME.Block(), m_context->FRAME.PSM);
+		std::string s;
+		
+		if(s_save)
+		{
+			s = format("c:\\temp1\\_%05d_f%lld_rt1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), m_context->FRAME.Block(), m_context->FRAME.PSM);
 
-		m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);
+			m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);
+		}
 
-		s = format("c:\\temp1\\_%05d_f%lld_zb1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), m_context->ZBUF.Block(), m_context->ZBUF.PSM);
+		if(s_savez)
+		{
+			s = format("c:\\temp1\\_%05d_f%lld_zb1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), m_context->ZBUF.Block(), m_context->ZBUF.PSM);
 
-		m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
+			m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
+		}
 	}
 
 	t = __rdtsc() - t;
@@ -490,6 +498,8 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 
 	if(!m_rl->IsSynced())
 	{
+		if(LOG) {fprintf(s_fp, "w %05x %d %d\n", BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM); fflush(s_fp);}
+
 		for(uint32* RESTRICT p = m_tmp_pages; *p != GSOffset::EOP; p++)
 		{
 			if(m_fzb_pages[*p] | m_tex_pages[*p])
@@ -508,6 +518,8 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 {
 	if(!m_rl->IsSynced())
 	{
+		if(LOG) {fprintf(s_fp, "r %05x %d %d\n", BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM); fflush(s_fp);}
+
 		GSOffset* o = m_mem.GetOffset(BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM);
 
 		o->GetPages(r, m_tmp_pages);
@@ -575,12 +587,12 @@ void GSRendererSW::CheckDependencies(SharedData* sd)
 	uint32* fb_pages = NULL;
 	uint32* zb_pages = NULL;
 
-	if(sd->global.sel.fwrite)
+	if(sd->global.sel.fb)
 	{
 		fb_pages = m_context->offset.fb->GetPages(r);
 	}
 
-	if(sd->global.sel.zwrite)
+	if(sd->global.sel.zb)
 	{
 		zb_pages = m_context->offset.zb->GetPages(r);
 	}
@@ -637,8 +649,8 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 {
 	bool synced = m_rl->IsSynced();
 	
-	bool fwrite = fb_pages != NULL;
-	bool zwrite = zb_pages != NULL;
+	bool fb = fb_pages != NULL;
+	bool zb = zb_pages != NULL;
 
 	if(m_fzb != m_context->offset.fzb4)
 	{
@@ -755,7 +767,7 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 			// chross-check frame and z-buffer pages, they cannot overlap with eachother and with previous batches in queue,
 			// have to be careful when the two buffers are mutually enabled/disabled and alternating (Bully FBP/ZBP = 0x2300)
 
-			if(fwrite)
+			if(fb)
 			{
 				for(const uint32* p = fb_pages; *p != GSOffset::EOP; p++)
 				{
@@ -768,7 +780,7 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 				}
 			}
 
-			if(zwrite)
+			if(zb)
 			{
 				for(const uint32* p = zb_pages; *p != GSOffset::EOP; p++)
 				{
@@ -780,18 +792,6 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 					}
 				}
 			}
-		}
-	}
-
-	if(!synced)
-	{
-		// FIXME: DMC3 (FBP == ZBP == 0x01000)
-
-		if(fwrite && zwrite && m_context->FRAME.FBP == m_context->ZBUF.ZBP)
-		{
-			if(LOG) {fprintf(s_fp, "syncpoint 4\n"); fflush(s_fp);}
-
-			return true;
 		}
 	}
 
@@ -1324,12 +1324,12 @@ GSRendererSW::SharedData::~SharedData()
 {
 	if(m_using_pages)
 	{
-		if(global.sel.fwrite)
+		if(global.sel.fb)
 		{
 			m_parent->ReleasePages(m_fb_pages, 0);
 		}
 
-		if(global.sel.zwrite)
+		if(global.sel.zb)
 		{
 			m_parent->ReleasePages(m_zb_pages, 1);
 		}
@@ -1354,12 +1354,12 @@ void GSRendererSW::SharedData::UseTargetPages(const uint32* fb_pages, const uint
 	m_fb_pages = fb_pages;
 	m_zb_pages = zb_pages;
 
-	if(global.sel.fwrite)
+	if(global.sel.fb)
 	{
 		m_parent->UsePages(fb_pages, 0);
 	}
 
-	if(global.sel.zwrite)
+	if(global.sel.zb)
 	{
 		m_parent->UsePages(zb_pages, 1);
 	}
