@@ -263,10 +263,18 @@ GSTexture* GSRendererSW::GetOutput(int i)
 template<uint32 primclass, uint32 tme, uint32 fst>
 void GSRendererSW::ConvertVertexBuffer(GSVertexSW* RESTRICT dst, const GSVertex* RESTRICT src, size_t count)
 {
+	size_t i = m_vertex.next;
+
 	GSVector4i o = (GSVector4i)m_context->XYOFFSET;
 	GSVector4 tsize = GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH, 1, 0);
 
-	for(size_t i = 0; i < m_vertex.next; i++, src++, dst++)
+	#if _M_SSE >= 0x501
+
+	// TODO: process vertices in pairs, when AVX2 becomes available
+
+	#endif
+	
+	for(; i > 0; i--, src++, dst++)
 	{
 		GSVector4 stcq = GSVector4::load<true>(&src->m[0]); // s t rgba q
 
@@ -364,9 +372,9 @@ void GSRendererSW::Draw()
 
 	CheckDependencies(sd);
 
-	if(LOG) {fprintf(s_fp, "queue %05x %d %05x %d %05x %d %dx%d | %d %d %d\n",
-		m_context->FRAME.Block(), m_context->FRAME.PSM,
-		m_context->ZBUF.Block(), m_context->ZBUF.PSM,
+	if(LOG) {fprintf(s_fp, "queue %05x %d (%d) %05x %d (%d) %05x %d %dx%d | %d %d %d\n",
+		m_context->FRAME.Block(), m_context->FRAME.PSM, gd.sel.fwrite, 
+		m_context->ZBUF.Block(), m_context->ZBUF.PSM, gd.sel.zwrite,
 		PRIM->TME ? m_context->TEX0.TBP0 : 0xfffff, m_context->TEX0.PSM, (int)m_context->TEX0.TW, (int)m_context->TEX0.TH, 
 		PRIM->PRIM, sd->vertex_count, sd->index_count); fflush(s_fp);}
 
@@ -450,13 +458,17 @@ void GSRendererSW::Sync(int reason)
 
 	m_rl->Sync();
 
-	if(0)
+	if(0) if(LOG)
 	{
+		s_n++;
+
 		std::string s = format("c:\\temp1\\_%05d_f%lld_rt1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), m_context->FRAME.Block(), m_context->FRAME.PSM);
 
 		m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);
 
-		s_n++;
+		s = format("c:\\temp1\\_%05d_f%lld_zb1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), m_context->ZBUF.Block(), m_context->ZBUF.PSM);
+
+		m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
 	}
 
 	t = __rdtsc() - t;
@@ -624,6 +636,9 @@ void GSRendererSW::CheckDependencies(SharedData* sd)
 bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pages, const GSVector4i& r)
 {
 	bool synced = m_rl->IsSynced();
+	
+	bool fwrite = fb_pages != NULL;
+	bool zwrite = zb_pages != NULL;
 
 	if(m_fzb != m_context->offset.fzb4)
 	{
@@ -740,7 +755,7 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 			// chross-check frame and z-buffer pages, they cannot overlap with eachother and with previous batches in queue,
 			// have to be careful when the two buffers are mutually enabled/disabled and alternating (Bully FBP/ZBP = 0x2300)
 
-			if(fb_pages)
+			if(fwrite)
 			{
 				for(const uint32* p = fb_pages; *p != GSOffset::EOP; p++)
 				{
@@ -753,7 +768,7 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 				}
 			}
 
-			if(zb_pages)
+			if(zwrite)
 			{
 				for(const uint32* p = zb_pages; *p != GSOffset::EOP; p++)
 				{
@@ -765,6 +780,18 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 					}
 				}
 			}
+		}
+	}
+
+	if(!synced)
+	{
+		// FIXME: DMC3 (FBP == ZBP == 0x01000)
+
+		if(fwrite && zwrite && m_context->FRAME.FBP == m_context->ZBUF.ZBP)
+		{
+			if(LOG) {fprintf(s_fp, "syncpoint 4\n"); fflush(s_fp);}
+
+			return true;
 		}
 	}
 
