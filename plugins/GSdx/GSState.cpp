@@ -36,6 +36,7 @@ GSState::GSState()
 	, m_options(0)
 	, m_frameskip(0)
 	, m_vt(this)
+	, m_q(1.0f)
 {
 	m_nativeres = !!theApp.GetConfig("nativeres", 0);
 
@@ -95,7 +96,7 @@ GSState::GSState()
 	m_sssize += sizeof(m_tr.y);
 	m_sssize += m_mem.m_vmsize;
 	m_sssize += (sizeof(m_path[0].tag) + sizeof(m_path[0].reg)) * countof(m_path);
-	m_sssize += sizeof(float); // obsolite
+	m_sssize += sizeof(m_q);
 
 	PRIM = &m_env.PRIM;
 //	CSR->rREV = 0x20;
@@ -428,6 +429,8 @@ void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* RESTRICT r)
 	m_v.RGBAQ.u32[0] = v.rgba32();
 
 	#endif
+
+	m_v.RGBAQ.Q = m_q;
 }
 
 void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r)
@@ -443,7 +446,7 @@ void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r)
 
 	#endif
 
-	m_v.RGBAQ.Q = r->STQ.Q;
+	m_q = r->STQ.Q;
 	
 #ifdef Offset_ST
 	GIFRegTEX0 TEX0 = m_context->TEX0;
@@ -540,6 +543,8 @@ void GSState::GIFPackedRegHandlerSTQRGBAXYZF2(const GIFPackedReg* RESTRICT r, ui
 
 		r += 3;
 	}
+
+	m_q = r[-3].STQ.Q; // remember the last one, STQ outputs this to the temp Q each time
 }
 
 template<uint32 prim>
@@ -567,6 +572,8 @@ void GSState::GIFPackedRegHandlerSTQRGBAXYZ2(const GIFPackedReg* RESTRICT r, uin
 
 		r += 3;
 	}
+
+	m_q = r[-3].STQ.Q; // remember the last one, STQ outputs this to the temp Q each time
 }
 
 void GSState::GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r, uint32 size)
@@ -1640,7 +1647,7 @@ void GSState::SoftReset(uint32 mask)
 
 	m_env.TRXDIR.XDIR = 3; //-1 ; set it to invalid value
 
-	m_v.RGBAQ.Q = 1.0f;
+	m_q = 1.0f;
 }
 
 void GSState::ReadFIFO(uint8* mem, int size)
@@ -1694,7 +1701,7 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 
 			if(path.nloop > 0) // eeuser 7.2.2. GIFtag: "... when NLOOP is 0, the GIF does not output anything, and values other than the EOP field are disregarded."
 			{
-				m_v.RGBAQ.Q = 1.0f;
+				m_q = 1.0f;
 
 				// ASSERT(!(path.tag.PRE && path.tag.FLG == GIF_FLG_REGLIST)); // kingdom hearts
 
@@ -1995,7 +2002,7 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 		WriteState(data, &m_path[i].reg);
 	}
 
-	data += sizeof(float); // obsolite
+	WriteState(data, &m_q);
 
 	return 0;
 }
@@ -2091,7 +2098,7 @@ int GSState::Defrost(const GSFreezeData* fd)
 		m_path[i].SetTag(&m_path[i].tag); // expand regs
 	}
 
-	data += sizeof(float); // obsolite
+	ReadState(&m_q, data);
 
 	PRIM = !m_env.PRMODECONT.AC ? (GIFRegPRIM*)&m_env.PRMODE : &m_env.PRIM;
 

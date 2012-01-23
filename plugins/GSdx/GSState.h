@@ -140,6 +140,7 @@ protected:
 	bool IsBadFrame(int& skip, int UserHacks_SkipDraw);
 
 	GSVertex m_v;
+	float m_q;
 	GSVector4 m_scissor;
 	uint32 m_ofxy;
 	
