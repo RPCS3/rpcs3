@@ -737,8 +737,13 @@ template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* RESTRICT r)
 {
 	GIFRegTEX0 TEX0 = r->TEX0;
 
-	if(TEX0.TW > 10) TEX0.TW = 10;
-	if(TEX0.TH > 10) TEX0.TH = 10;
+	// Tokyo Xtreme Racer Drift 2, TW/TH == 0, PRIM->FST == 1
+	// Just setting the max texture size to make the texture cache allocate some surface. 
+	// The vertex trace will narrow the updated area down to the minimum, upper-left 8x8 
+	// for a single letter, but it may address the whole thing if it wants to.
+
+	if(TEX0.TW > 10 || TEX0.TW == 0) TEX0.TW = 10;
+	if(TEX0.TH > 10 || TEX0.TH == 0) TEX0.TH = 10;
 
 	if((TEX0.TBW & 1) && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT4))
 	{
