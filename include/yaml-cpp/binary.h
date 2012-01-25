@@ -18,7 +18,7 @@ namespace YAML
     class Binary {
     public:
         Binary(): m_unownedData(0), m_unownedSize(0) {}
-        Binary(const unsigned char *data, std::size_t size): m_unownedData(data), m_unownedSize(size) {}
+        Binary(const unsigned char *data_, std::size_t size_): m_unownedData(data_), m_unownedSize(size_) {}
         
         bool owned() const { return !m_unownedData; }
         std::size_t size() const { return owned() ? m_data.size() : m_unownedSize; }
