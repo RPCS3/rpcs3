@@ -64,7 +64,9 @@ class GSDevice11 : public GSDeviceDX
 		ID3D11PixelShader* ps;
 		ID3D11Buffer* ps_cb;
 		ID3D11SamplerState* ps_ss[3];
+		ID3D11ShaderResourceView* cs_srv[16];
 		ID3D11ComputeShader* cs;
+		ID3D11Buffer* cs_cb;
 		GSVector2i viewport;
 		GSVector4i scissor;
 		ID3D11DepthStencilState* dss;
@@ -73,7 +75,6 @@ class GSDevice11 : public GSDeviceDX
 		float bf;
 		ID3D11RenderTargetView* rtv;
 		ID3D11DepthStencilView* dsv;
-		ID3D11UnorderedAccessView* uav[8];
 	} m_state;
 
 public: // TODO
@@ -147,6 +148,7 @@ public:
 
 	void DrawPrimitive();
 	void DrawIndexedPrimitive();
+	void DrawIndexedPrimitive(int offset, int count);
 	void Dispatch(uint32 x, uint32 y, uint32 z);
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
@@ -186,11 +188,11 @@ public:
 	void PSSetSamplerState(ID3D11SamplerState* ss0, ID3D11SamplerState* ss1, ID3D11SamplerState* ss2 = NULL);
 	void CSSetShaderSRV(int i, ID3D11ShaderResourceView* srv);
 	void CSSetShaderUAV(int i, ID3D11UnorderedAccessView* uav);
-	void CSSetShader(ID3D11ComputeShader* cs);
+	void CSSetShader(ID3D11ComputeShader* cs, ID3D11Buffer* cs_cb);
 	void OMSetDepthStencilState(ID3D11DepthStencilState* dss, uint8 sref);
 	void OMSetBlendState(ID3D11BlendState* bs, float bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
-	void OMSetRenderTargets(const GSVector2i& rtsize, ID3D11UnorderedAccessView** uav, int count, const GSVector4i* scissor = NULL);
+	void OMSetRenderTargets(const GSVector2i& rtsize, int count, ID3D11UnorderedAccessView** uav, uint32* counters, const GSVector4i* scissor = NULL);
 
 	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
 	void SetupGS(GSSelector sel);

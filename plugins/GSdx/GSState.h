@@ -70,7 +70,7 @@ class GSState : public GSAlignedClass<32>
 	void GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r, uint32 size);
 
 	template<int i> void ApplyTEX0(GIFRegTEX0& TEX0);
-	void ApplyPRIM(const GIFRegPRIM& PRIM);
+	void ApplyPRIM(uint32 prim);
 
 	void GIFRegHandlerNull(const GIFReg* RESTRICT r);
 	void GIFRegHandlerPRIM(const GIFReg* RESTRICT r);

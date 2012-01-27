@@ -103,6 +103,7 @@ public:
 	virtual void BeginScene() {}
 	virtual void DrawPrimitive() {};
 	virtual void DrawIndexedPrimitive() {}
+	virtual void DrawIndexedPrimitive(int offset, int count) {}
 	virtual void EndScene();
 
 	virtual void ClearRenderTarget(GSTexture* t, const GSVector4& c) {}

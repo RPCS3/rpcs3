@@ -389,6 +389,8 @@ void GSClut::GetAlphaMinMax32(int& amin, int& amax)
 
 void GSClut::WriteCLUT_T32_I8_CSM1(const uint32* RESTRICT src, uint16* RESTRICT clut)
 {
+	// 4 blocks
+
 	for(int i = 0; i < 64; i += 16)
 	{
 		WriteCLUT_T32_I4_CSM1(&src[i +   0], &clut[i * 2 +   0]);
@@ -400,6 +402,8 @@ void GSClut::WriteCLUT_T32_I8_CSM1(const uint32* RESTRICT src, uint16* RESTRICT 
 
 __forceinline void GSClut::WriteCLUT_T32_I4_CSM1(const uint32* RESTRICT src, uint16* RESTRICT clut)
 {
+	// 1 block
+
 	GSVector4i* s = (GSVector4i*)src;
 	GSVector4i* d = (GSVector4i*)clut;
 
@@ -420,6 +424,8 @@ __forceinline void GSClut::WriteCLUT_T32_I4_CSM1(const uint32* RESTRICT src, uin
 
 void GSClut::WriteCLUT_T16_I8_CSM1(const uint16* RESTRICT src, uint16* RESTRICT clut)
 {
+	// 2 blocks
+
 	GSVector4i* s = (GSVector4i*)src;
 	GSVector4i* d = (GSVector4i*)clut;
 
@@ -443,6 +449,8 @@ void GSClut::WriteCLUT_T16_I8_CSM1(const uint16* RESTRICT src, uint16* RESTRICT 
 
 __forceinline void GSClut::WriteCLUT_T16_I4_CSM1(const uint16* RESTRICT src, uint16* RESTRICT clut)
 {
+	// 1 block (half)
+
 	for(int i = 0; i < 16; i++)
 	{
 		clut[i] = src[clutTableT16I4[i]];

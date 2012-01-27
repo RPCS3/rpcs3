@@ -98,8 +98,6 @@ bool GSDevice11::Create(GSWnd* wnd)
 	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, levels, countof(levels), D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
 	// hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, flags, NULL, 0, D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
 
-	//return false;
-
 	if(FAILED(hr)) return false;
 
 	if(!SetFeatureLevel(level, true))
@@ -358,6 +356,13 @@ void GSDevice11::DrawPrimitive()
 void GSDevice11::DrawIndexedPrimitive()
 {
 	m_ctx->DrawIndexed(m_index.count, m_index.start, m_vertex.start);
+}
+
+void GSDevice11::DrawIndexedPrimitive(int offset, int count)
+{
+	ASSERT(offset + count <= m_index.count);
+
+	m_ctx->DrawIndexed(count, m_index.start + offset, m_vertex.start);
 }
 
 void GSDevice11::Dispatch(uint32 x, uint32 y, uint32 z)
@@ -995,9 +1000,9 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 
 void GSDevice11::CSSetShaderSRV(int i, ID3D11ShaderResourceView* srv)
 {
-	// TODO: if(m_state.cs_srv[i] != srv)
+	if(m_state.cs_srv[i] != srv)
 	{
-		// TODO: m_state.cs_srv[i] = srv;
+		m_state.cs_srv[i] = srv;
 
 		m_ctx->CSSetShaderResources(i, 1, &srv);
 	}
@@ -1005,23 +1010,27 @@ void GSDevice11::CSSetShaderSRV(int i, ID3D11ShaderResourceView* srv)
 
 void GSDevice11::CSSetShaderUAV(int i, ID3D11UnorderedAccessView* uav)
 {
-	// TODO: if(m_state.cs_uav[i] != uav)
-	{
-		// TODO: m_state.cs_uav[i] = uav;
+	uint32 counters[8];
+		
+	memset(counters, 0, sizeof(counters));
 
-		// uint32 count[] = {-1};
-
-		m_ctx->CSSetUnorderedAccessViews(i, 1, &uav, NULL);
-	}
+	m_ctx->CSSetUnorderedAccessViews(i, 1, &uav, counters);
 }
 
-void GSDevice11::CSSetShader(ID3D11ComputeShader* cs)
+void GSDevice11::CSSetShader(ID3D11ComputeShader* cs, ID3D11Buffer* cs_cb)
 {
 	if(m_state.cs != cs)
 	{
 		m_state.cs = cs;
 
 		m_ctx->CSSetShader(cs, NULL, 0);
+	}
+
+	if(m_state.cs_cb != cs_cb)
+	{
+		m_state.cs_cb = cs_cb;
+
+		m_ctx->CSSetConstantBuffers(0, 1, &cs_cb);
 	}
 }
 
@@ -1065,8 +1074,6 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 		m_ctx->OMSetRenderTargets(1, &rtv, dsv);
 	}
 
-	memset(m_state.uav, 0, sizeof(m_state.uav));
-
 	if(m_state.viewport != rt->GetSize())
 	{
 		m_state.viewport = rt->GetSize();
@@ -1095,20 +1102,9 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 	}
 }
 
-void GSDevice11::OMSetRenderTargets(const GSVector2i& rtsize, ID3D11UnorderedAccessView** uav, int count, const GSVector4i* scissor)
+void GSDevice11::OMSetRenderTargets(const GSVector2i& rtsize, int count, ID3D11UnorderedAccessView** uav, uint32* counters, const GSVector4i* scissor)
 {
-	for(int i = 0; i < count; i++)
-	{
-		if(m_state.uav[i] != uav[i])
-		{
-			memcpy(m_state.uav, uav, sizeof(uav[0]) * count);
-			memset(m_state.uav + count, 0, sizeof(m_state.uav) - sizeof(uav[0]) * count);
-
-			m_ctx->OMSetRenderTargetsAndUnorderedAccessViews(0, NULL, NULL, 0, count, uav, NULL);
-
-			break;
-		}
-	}
+	m_ctx->OMSetRenderTargetsAndUnorderedAccessViews(0, NULL, NULL, 0, count, uav, counters);
 
 	m_state.rtv = NULL;
 	m_state.dsv = NULL;
@@ -1286,7 +1282,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MAC
 
 	CComPtr<ID3D11Blob> shader, error;
 
-    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry, m_shader.ps.c_str(), 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry, m_shader.cs.c_str(), 0, 0, NULL, &shader, &error, NULL);
 
 	if(error)
 	{

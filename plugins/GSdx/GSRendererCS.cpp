@@ -22,16 +22,28 @@
 #include "stdafx.h"
 #include "GSRendererCS.h"
 
+#define PS_BATCH_SIZE 512
+
 GSRendererCS::GSRendererCS()
 	: GSRenderer()
 {
 	m_nativeres = true;
 
 	memset(m_vm_valid, 0, sizeof(m_vm_valid));
+
+	memset(m_texture, 0, sizeof(m_texture));
+
+	m_output = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32);
 }
 
 GSRendererCS::~GSRendererCS()
 {
+	for(int i = 0; i < countof(m_texture); i++)
+	{
+		delete m_texture[i];
+	}
+
+	_aligned_free(m_output);
 }
 
 bool GSRendererCS::CreateDevice(GSDevice* dev_unk)
@@ -47,6 +59,7 @@ bool GSRendererCS::CreateDevice(GSDevice* dev_unk)
 	D3D11_BUFFER_DESC bd;
 	D3D11_TEXTURE2D_DESC td;
 	D3D11_UNORDERED_ACCESS_VIEW_DESC uavd;
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvd;
 
 	D3D_FEATURE_LEVEL level;
 
@@ -58,8 +71,6 @@ bool GSRendererCS::CreateDevice(GSDevice* dev_unk)
 	GSDevice11* dev = (GSDevice11*)dev_unk;
 
 	ID3D11DeviceContext* ctx = *dev;
-
-	delete dev->CreateRenderTarget(1024, 1024, false);
 
 	// empty depth stencil state
 
@@ -99,6 +110,92 @@ bool GSRendererCS::CreateDevice(GSDevice* dev_unk)
 	hr = (*dev)->CreateSamplerState(&sd, &m_ss);
 
 	if(FAILED(hr)) return false;
+
+	// link buffer
+
+	memset(&bd, 0, sizeof(bd));
+
+	bd.ByteWidth = 256 << 20; // 256 MB w00t
+	bd.StructureByteStride = sizeof(uint32) * 4; // c, z, id, next
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+
+	hr = (*dev)->CreateBuffer(&bd, NULL, &m_lb);
+
+	{
+		uint32 data[] = {0, 0, 0xffffffff, 0};
+
+		D3D11_BOX box;
+		memset(&box, 0, sizeof(box));
+		box.right = sizeof(data);
+		box.bottom = 1;
+		box.back = 1;
+
+		ctx->UpdateSubresource(m_lb, 0, &box, data, 0, 0);
+	}
+
+	if(FAILED(hr)) return false;
+
+	memset(&uavd, 0, sizeof(uavd));
+
+	uavd.Format = DXGI_FORMAT_UNKNOWN;
+	uavd.Buffer.NumElements = bd.ByteWidth / bd.StructureByteStride;
+	uavd.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_COUNTER;
+	uavd.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+
+	hr = (*dev)->CreateUnorderedAccessView(m_lb, &uavd, &m_lb_uav);
+
+	if(FAILED(hr)) return false;
+
+	memset(&srvd, 0, sizeof(srvd));
+
+	srvd.Format = DXGI_FORMAT_UNKNOWN;
+	srvd.Buffer.NumElements = bd.ByteWidth / bd.StructureByteStride;
+	srvd.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+
+	hr = (*dev)->CreateShaderResourceView(m_lb, &srvd, &m_lb_srv);
+
+	if(FAILED(hr)) return false;
+
+	// start offset buffer
+
+	memset(&bd, 0, sizeof(bd));
+
+	bd.ByteWidth = sizeof(uint32) * 2048 * 2048; // index
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
+	bd.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
+
+	hr = (*dev)->CreateBuffer(&bd, NULL, &m_sob);
+
+	if(FAILED(hr)) return false;
+
+	memset(&uavd, 0, sizeof(uavd));
+
+	uavd.Format = DXGI_FORMAT_R32_TYPELESS;
+	uavd.Buffer.NumElements = bd.ByteWidth / sizeof(uint32);
+	uavd.Buffer.Flags =  D3D11_BUFFER_UAV_FLAG_RAW;
+	uavd.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
+
+	hr = (*dev)->CreateUnorderedAccessView(m_sob, &uavd, &m_sob_uav);
+
+	if(FAILED(hr)) return false;
+
+	memset(&srvd, 0, sizeof(srvd));
+
+	srvd.Format = DXGI_FORMAT_R32_TYPELESS;
+	srvd.BufferEx.NumElements = bd.ByteWidth / sizeof(uint32);
+	srvd.BufferEx.Flags = D3D11_BUFFEREX_SRV_FLAG_RAW;
+	srvd.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
+
+	hr = (*dev)->CreateShaderResourceView(m_sob, &srvd, &m_sob_srv);
+
+	if(FAILED(hr)) return false;
+
+	const uint32 tmp = 0;
+
+	ctx->ClearUnorderedAccessViewUint(m_sob_uav, &tmp); // initial clear, next time Draw should restore it in Step 2
 
 	// video memory (4MB)
 
@@ -190,6 +287,17 @@ bool GSRendererCS::CreateDevice(GSDevice* dev_unk)
 
 	if(FAILED(hr)) return false;
 
+	// PS
+
+	D3D11_SHADER_MACRO macro[] =
+	{
+		{NULL, NULL},
+	};
+
+	hr = dev->CompileShader(IDR_CS_FX, "ps_main0", macro, &m_ps0); 
+
+	if(FAILED(hr)) return false;
+
 	// PSConstantBuffer
 
 	memset(&bd, 0, sizeof(bd));
@@ -204,17 +312,17 @@ bool GSRendererCS::CreateDevice(GSDevice* dev_unk)
 
 	//
 
-	memset(&bd, 0, sizeof(bd));
-
-	bd.ByteWidth = 14 * sizeof(float) * 200000;
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.BindFlags = D3D11_BIND_STREAM_OUTPUT | D3D11_BIND_SHADER_RESOURCE;
-
-	hr = (*dev)->CreateBuffer(&bd, NULL, &m_sob);
-
-	//
-
 	return true;
+}
+
+void GSRendererCS::ResetDevice()
+{
+	for(int i = 0; i < countof(m_texture); i++)
+	{
+		delete m_texture[i];
+
+		m_texture[i] = NULL;
+	}
 }
 
 void GSRendererCS::VSync(int field)
@@ -228,7 +336,40 @@ GSTexture* GSRendererCS::GetOutput(int i)
 {
 	// TODO: create a compute shader which unswizzles the frame from m_vm to the output texture
 
-	return NULL;
+	const GSRegDISPFB& DISPFB = m_regs->DISP[i].DISPFB;
+
+	int w = DISPFB.FBW * 64;
+	int h = GetFrameRect(i).bottom;
+
+	// TODO: round up bottom
+
+	if(m_dev->ResizeTexture(&m_texture[i], w, h))
+	{
+		const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[DISPFB.PSM];
+
+		GSVector4i r(0, 0, w, h);
+		GSVector4i r2 = r.ralign<Align_Outside>(psm.bs);
+
+		GSOffset* o = m_mem.GetOffset(DISPFB.Block(), DISPFB.FBW, DISPFB.PSM);
+
+		Read(o, r2, false);
+
+		(m_mem.*psm.rtx)(o, r2, m_output, 1024 * 4, m_env.TEXA);
+
+		m_texture[i]->Update(r, m_output, 1024 * 4);
+
+		if(s_dump)
+		{
+			if(s_save && s_n >= s_saven)
+			{
+				m_texture[i]->Save(format("c:\\temp1\\_%05d_f%lld_fr%d_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), i, (int)DISPFB.Block(), (int)DISPFB.PSM));
+			}
+
+			s_n++;
+		}
+	}
+
+	return m_texture[i];
 }
 
 void GSRendererCS::Draw()
@@ -256,7 +397,9 @@ void GSRendererCS::Draw()
 		Write(context->offset.zb, r);
 
 		// TODO: m_tc->InvalidateVideoMem(context->offset.zb, r, false);
-	}	
+	}
+
+	// TODO: if(24-bit) fm/zm |= 0xff000000;
 
 	if(PRIM->TME)
 	{
@@ -281,16 +424,20 @@ void GSRendererCS::Draw()
 
 	ID3D11DeviceContext* ctx = *dev;
 
+	//
+
 	dev->BeginScene();
 
 	// SetupOM
 
-	ID3D11UnorderedAccessView* uavs[] = {m_vm_uav};
-
 	dev->OMSetDepthStencilState(m_dss, 0);
 	dev->OMSetBlendState(m_bs, 0);
-	dev->OMSetRenderTargets(rtsize, uavs, countof(uavs), &scissor);
 	
+	ID3D11UnorderedAccessView* uavs[] = {m_vm_uav, m_lb_uav, m_sob_uav};
+	uint32 counters[] = {1, 0, 0};
+
+	dev->OMSetRenderTargets(rtsize, countof(uavs), uavs, counters, &scissor);
+
 	// SetupIA
 
 	D3D11_PRIMITIVE_TOPOLOGY topology;
@@ -311,9 +458,18 @@ void GSRendererCS::Draw()
 		__assume(0);
 	}
 
-	dev->IASetVertexBuffer(m_vertex.buff, sizeof(GSVertex), m_vertex.next);
-	dev->IASetIndexBuffer(m_index.buff, m_index.tail);
-	dev->IASetPrimitiveTopology(topology);
+	GSVector4i r2 = bbox.add32(GSVector4i(-1, -1, 1, 1)).rintersect(scissor);
+
+	m_vertex.buff[m_vertex.next + 0].XYZ.X = context->XYOFFSET.OFX + (r2.left << 4);
+	m_vertex.buff[m_vertex.next + 0].XYZ.Y = context->XYOFFSET.OFY + (r2.top << 4);
+	m_vertex.buff[m_vertex.next + 1].XYZ.X = context->XYOFFSET.OFX + (r2.right << 4);
+	m_vertex.buff[m_vertex.next + 1].XYZ.Y = context->XYOFFSET.OFY + (r2.bottom << 4);
+	
+	m_index.buff[m_index.tail + 0] = m_vertex.next + 0;
+	m_index.buff[m_index.tail + 1] = m_vertex.next + 1;
+
+	dev->IASetVertexBuffer(m_vertex.buff, sizeof(GSVertex), m_vertex.next + 2);
+	dev->IASetIndexBuffer(m_index.buff, m_index.tail + 2);
 
 	// SetupVS
 
@@ -337,9 +493,15 @@ void GSRendererCS::Draw()
 	//vs_cb.VertexOffset = GSVector4(ox * sx, oy * sy, 0.0f, -1.0f);
 
 	{
-		hash_map<uint32, GSVertexShader11 >::const_iterator i = m_vs.find(vs_sel);
+		GSVertexShader11 vs;
 
-		if(i == m_vs.end())
+		hash_map<uint32, GSVertexShader11>::const_iterator i = m_vs.find(vs_sel);
+
+		if(i != m_vs.end())
+		{
+			vs = i->second;
+		}
+		else
 		{
 			string str[2];
 
@@ -364,20 +526,16 @@ void GSRendererCS::Draw()
 				{"COLOR", 1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			};
 
-			GSVertexShader11 vs;
-
 			dev->CompileShader(IDR_CS_FX, "vs_main", macro, &vs.vs, layout, countof(layout), &vs.il);
 
 			m_vs[vs_sel] = vs;
-
-			i = m_vs.find(vs_sel);
 		}
 
 		ctx->UpdateSubresource(m_vs_cb, 0, NULL, &vs_cb, 0, 0); // TODO: only update if changed
 
-		dev->VSSetShader(i->second.vs, m_vs_cb);
+		dev->VSSetShader(vs.vs, m_vs_cb);
 
-		dev->IASetInputLayout(i->second.il);
+		dev->IASetInputLayout(vs.il);
 	}
 
 	// SetupGS
@@ -385,23 +543,25 @@ void GSRendererCS::Draw()
 	GSSelector gs_sel;
 
 	gs_sel.iip = PRIM->IIP;
-	gs_sel.prim = m_vt.m_primclass;
 
-	CComPtr<ID3D11GeometryShader> gs;
+	CComPtr<ID3D11GeometryShader> gs[2];
 
+	for(int j = 0; j < 2; j++)
 	{
+		gs_sel.prim = j == 0 ? m_vt.m_primclass : GS_SPRITE_CLASS;
+
 		hash_map<uint32, CComPtr<ID3D11GeometryShader> >::const_iterator i = m_gs.find(gs_sel);
 
 		if(i != m_gs.end())
 		{
-			gs = i->second;
+			gs[j] = i->second;
 		}
 		else
 		{
 			string str[2];
 
 			str[0] = format("%d", gs_sel.iip);
-			str[1] = format("%d", gs_sel.prim);
+			str[1] = format("%d", j == 0 ? gs_sel.prim : GS_SPRITE_CLASS);
 
 			D3D11_SHADER_MACRO macro[] =
 			{
@@ -409,140 +569,111 @@ void GSRendererCS::Draw()
 				{"GS_PRIM", str[1].c_str()},
 				{NULL, NULL},
 			};
-			/*
-			D3D11_SO_DECLARATION_ENTRY layout[] =
-			{
-				{0, "SV_Position", 0, 0, 4, 0},
-				{0, "TEXCOORD", 0, 0, 2, 0},
-				{0, "TEXCOORD", 1, 0, 4, 0},
-				{0, "COLOR", 0, 0, 4, 0},
-			};
-			*/
-			dev->CompileShader(IDR_CS_FX, "gs_main", macro, &gs);//, layout, countof(layout));
 
-			m_gs[gs_sel] = gs;
+			dev->CompileShader(IDR_CS_FX, "gs_main", macro, &gs[j]);
+
+			m_gs[gs_sel] = gs[j];
 		}
 	}
 
-	dev->GSSetShader(gs);
-
 	// SetupPS
-
-	PSSelector ps_sel;
-	PSConstantBuffer ps_cb;
-
-	hash_map<uint32, CComPtr<ID3D11PixelShader> >::const_iterator i = m_ps.find(ps_sel);
-
-	if(i == m_ps.end())
-	{
-		string str[15];
-
-		str[0] = format("%d", 0);
-
-		D3D11_SHADER_MACRO macro[] =
-		{
-			{"PS_TODO", str[0].c_str()},
-			{NULL, NULL},
-		};
-
-		CComPtr<ID3D11PixelShader> ps;
-
-		dev->CompileShader(IDR_CS_FX, "ps_main", macro, &ps);
-
-		m_ps[ps_sel] = ps;
-
-		i = m_ps.find(ps_sel);
-	}
-
-	ctx->UpdateSubresource(m_ps_cb, 0, NULL, &ps_cb, 0, 0); // TODO: only update if changed
 
 	dev->PSSetSamplerState(m_ss, NULL, NULL);
 
-	dev->PSSetShader(i->second, m_ps_cb);
+	PSSelector ps_sel;
 
-	// Offset
+	ps_sel.fpsm = context->FRAME.PSM;
+	ps_sel.zpsm = context->ZBUF.PSM;
+
+	CComPtr<ID3D11PixelShader> ps[2] = {m_ps0, NULL};
+
+	hash_map<uint32, CComPtr<ID3D11PixelShader> >::const_iterator i = m_ps1.find(ps_sel);
+
+	if(i != m_ps1.end())
+	{
+		ps[1] = i->second;
+	}
+	else
+	{
+		string str[15];
+
+		str[0] = format("%d", PS_BATCH_SIZE);
+		str[1] = format("%d", context->FRAME.PSM);
+		str[2] = format("%d", context->ZBUF.PSM);
+
+		D3D11_SHADER_MACRO macro[] =
+		{
+			{"PS_BATCH_SIZE", str[0].c_str()},
+			{"PS_FPSM", str[1].c_str()},
+			{"PS_ZPSM", str[2].c_str()},
+			{NULL, NULL},
+		};
+
+		dev->CompileShader(IDR_CS_FX, "ps_main1", macro, &ps[1]);
+
+		m_ps1[ps_sel] = ps[1];
+	}
+
+	PSConstantBuffer ps_cb;
+
+	ps_cb.fm = fm;
+	ps_cb.zm = zm;
+
+	ctx->UpdateSubresource(m_ps_cb, 0, NULL, &ps_cb, 0, 0); // TODO: only update if changed
 
 	OffsetBuffer* fzbo = NULL;
 	
 	GetOffsetBuffer(&fzbo);
 
-	dev->PSSetShaderResourceView(0, fzbo->row_view);
-	dev->PSSetShaderResourceView(1, fzbo->col_view);
+	dev->PSSetShaderResourceView(0, fzbo->row_srv);
+	dev->PSSetShaderResourceView(1, fzbo->col_srv);
+	// TODO: palette, texture
 
-	// TODO: 2 palette
-	// TODO: 3, 4, ... texture levels
+	int step = PS_BATCH_SIZE * GSUtil::GetVertexCount(PRIM->PRIM);
 
-	//ID3D11Buffer* tmp[] = {m_sob};
+	for(int i = 0; i < m_index.tail; i += step)
+	{
+		dev->IASetPrimitiveTopology(topology);
+		dev->GSSetShader(gs[0]);
+		dev->PSSetShader(ps[0], m_ps_cb);
+		dev->DrawIndexedPrimitive(i, std::min<int>(m_index.tail - i, step));
 
-	//ctx->SOSetTargets(countof(tmp), tmp, NULL);
+		dev->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+		dev->GSSetShader(gs[1]);
+		dev->PSSetShader(ps[1], m_ps_cb);
+		dev->DrawIndexedPrimitive(m_index.tail, 2);
 
-	dev->DrawIndexedPrimitive();
+		//printf("%d/%d, %d %d %d %d\n", i, m_index.tail, r2.x, r2.y, r2.z, r2.w);
+	}
 
-	//ctx->SOSetTargets(0, NULL, NULL);
+	dev->EndScene();
 
 	if(0)
 	{
-		HRESULT hr;
-
-		D3D11_BUFFER_DESC bd;
-
-		memset(&bd, 0, sizeof(bd));
-
-		bd.ByteWidth = 14 * sizeof(float) * 200000;
-		bd.Usage = D3D11_USAGE_STAGING;
-		bd.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-
-		CComPtr<ID3D11Buffer> sob;
-
-		hr = (*dev)->CreateBuffer(&bd, NULL, &sob);
-
-		ctx->CopyResource(sob, m_sob);
-
-		D3D11_MAPPED_SUBRESOURCE map;
-
-		if(SUCCEEDED(ctx->Map(sob, 0, D3D11_MAP_READ, 0, &map)))
-		{
-			float* f = (float*)map.pData;
-
-			for(int i = 0; i < 12; i++, f += 14)
-			printf("%f %f %f %f\n%f %f\n%f %f %f %f\n%f %f %f %f\n", 
-				f[0], f[1], f[2], f[3],
-				f[4], f[5],
-				f[6], f[7], f[8], f[9],
-				f[10], f[11], f[12], f[13]);
-
-			ctx->Unmap(sob, 0);
-		}
-
-	}
-
-	if(1)
-	{
-		//Read(m_mem.GetOffset(0, 16, PSM_PSMCT32), GSVector4i(0, 0, 1024, 1024), false);
-
+		std::string s;
+		/*
+		s = format("c:\\temp1\\_%05d_f%lld_fb0_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), 0, 0);
+		m_mem.SaveBMP(s, 0, 16, PSM_PSMCT32, 1024, 1024);
+		Read(m_mem.GetOffset(0, 16, PSM_PSMCT32), GSVector4i(0, 0, 1024, 1024), false);
+		*/
 		//
 		if(fm != 0xffffffff) Read(context->offset.fb, r, false);
 		//
 		if(zm != 0xffffffff) Read(context->offset.zb, r, false);
 
-		std::string s;
-
 		s = format("c:\\temp1\\_%05d_f%lld_rt1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), m_context->FRAME.Block(), m_context->FRAME.PSM);
-
-		//
 		m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);
 
 		s = format("c:\\temp1\\_%05d_f%lld_zt1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), m_context->ZBUF.Block(), m_context->ZBUF.PSM);
-
-		//
 		m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
 
-		//m_mem.SaveBMP(s, 0, 16, PSM_PSMCT32, 1024, 1024);
+		/*
+		s = format("c:\\temp1\\_%05d_f%lld_fb1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), 0, 0);
+		m_mem.SaveBMP(s, 0, 16, PSM_PSMCT32, 1024, 1024);
+		*/
 
 		s_n++;
 	}
-
-	dev->EndScene();
 }
 
 void GSRendererCS::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
@@ -715,11 +846,11 @@ bool GSRendererCS::GetOffsetBuffer(OffsetBuffer** fzbo)
 		srvd.Buffer.FirstElement = 0;
 		srvd.Buffer.NumElements = 2048;
 
-		hr = (*dev)->CreateShaderResourceView(ob.row, &srvd, &ob.row_view);
+		hr = (*dev)->CreateShaderResourceView(ob.row, &srvd, &ob.row_srv);
 
 		if(FAILED(hr)) return false;
 
-		hr = (*dev)->CreateShaderResourceView(ob.col, &srvd, &ob.col_view);
+		hr = (*dev)->CreateShaderResourceView(ob.col, &srvd, &ob.col_srv);
 
 		if(FAILED(hr)) return false;
 

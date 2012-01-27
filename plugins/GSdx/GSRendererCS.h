@@ -74,25 +74,33 @@ class GSRendererCS : public GSRenderer
 		{
 			struct
 			{
-				uint32 TODO:1;
+				uint32 fpsm:6;
+				uint32 zpsm:6;
 			};
 
 			uint32 key;
 		};
 
-		operator uint32() {return key & 0x1;}
+		operator uint32() {return key & 0x3ff;}
 
 		PSSelector() : key(0) {}
 	};
 
 	__aligned(struct, 32) PSConstantBuffer
 	{
-		GSVector4 TODO;
+		uint32 fm;
+		uint32 zm;
 	};
 
 	CComPtr<ID3D11DepthStencilState> m_dss;
 	CComPtr<ID3D11BlendState> m_bs;
 	CComPtr<ID3D11SamplerState> m_ss;
+	CComPtr<ID3D11Buffer> m_lb;
+	CComPtr<ID3D11UnorderedAccessView> m_lb_uav;
+	CComPtr<ID3D11ShaderResourceView> m_lb_srv;
+	CComPtr<ID3D11Buffer> m_sob;
+	CComPtr<ID3D11UnorderedAccessView> m_sob_uav;
+	CComPtr<ID3D11ShaderResourceView> m_sob_srv;
 	CComPtr<ID3D11Buffer> m_vm;
 	//CComPtr<ID3D11Texture2D> m_vm;
 	CComPtr<ID3D11UnorderedAccessView> m_vm_uav;
@@ -102,9 +110,9 @@ class GSRendererCS : public GSRenderer
 	hash_map<uint32, GSVertexShader11 > m_vs;
 	CComPtr<ID3D11Buffer> m_vs_cb;
 	hash_map<uint32, CComPtr<ID3D11GeometryShader> > m_gs;
-	hash_map<uint32, CComPtr<ID3D11PixelShader> > m_ps;
+	CComPtr<ID3D11PixelShader> m_ps0;
+	hash_map<uint32, CComPtr<ID3D11PixelShader> > m_ps1;
 	CComPtr<ID3D11Buffer> m_ps_cb;
-	CComPtr<ID3D11Buffer> m_sob;
 
 	void Write(GSOffset* o, const GSVector4i& r);
 	void Read(GSOffset* o, const GSVector4i& r, bool invalidate);
@@ -112,7 +120,7 @@ class GSRendererCS : public GSRenderer
 	struct OffsetBuffer
 	{
 		CComPtr<ID3D11Buffer> row, col;
-		CComPtr<ID3D11ShaderResourceView> row_view, col_view;
+		CComPtr<ID3D11ShaderResourceView> row_srv, col_srv;
 	};
 
 	hash_map<uint32, OffsetBuffer> m_offset;
@@ -120,7 +128,11 @@ class GSRendererCS : public GSRenderer
 	bool GetOffsetBuffer(OffsetBuffer** fzbo);
 
 protected:
+	GSTexture* m_texture[2];
+	uint8* m_output;
+
 	bool CreateDevice(GSDevice* dev);
+	void ResetDevice();
 	void VSync(int field);
 	GSTexture* GetOutput(int i);
 	void Draw();

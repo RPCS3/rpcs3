@@ -587,13 +587,13 @@ void GSState::GIFRegHandlerNull(const GIFReg* RESTRICT r)
 	// ASSERT(0);
 }
 
-__forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
+__forceinline void GSState::ApplyPRIM(uint32 prim)
 {
 	// ASSERT(r->PRIM.PRIM < 7);
 
-	if(GSUtil::GetPrimClass(m_env.PRIM.PRIM) == GSUtil::GetPrimClass(prim.PRIM)) // NOTE: assume strips/fans are converted to lists
+	if(GSUtil::GetPrimClass(m_env.PRIM.PRIM) == GSUtil::GetPrimClass(prim & 7)) // NOTE: assume strips/fans are converted to lists
 	{
-		if((m_env.PRIM.u32[0] ^ prim.u32[0]) & 0x7f8) // all fields except PRIM
+		if((m_env.PRIM.u32[0] ^ prim) & 0x7f8) // all fields except PRIM
 		{
 			Flush();
 		}
@@ -603,8 +603,8 @@ __forceinline void GSState::ApplyPRIM(const GIFRegPRIM& prim)
 		Flush();
 	}
 
-	m_env.PRIM = (GSVector4i)prim;
-	m_env.PRMODE._PRIM = prim.PRIM;
+	m_env.PRIM.u32[0] = prim;
+	m_env.PRMODE._PRIM = prim;
 
 	UpdateContext();
 
@@ -624,7 +624,7 @@ void GSState::GIFRegHandlerPRIM(const GIFReg* RESTRICT r)
 {
 	ALIGN_STACK(32);
 
-	ApplyPRIM(r->PRIM);
+	ApplyPRIM(r->PRIM.u32[0]);
 }
 
 void GSState::GIFRegHandlerRGBAQ(const GIFReg* RESTRICT r)
@@ -715,19 +715,49 @@ template<int i> void GSState::ApplyTEX0(GIFRegTEX0& TEX0)
 	if(wt)
 	{
 		GIFRegBITBLTBUF BITBLTBUF;
-		
-		BITBLTBUF.SBP = TEX0.CBP;
-		BITBLTBUF.SBW = 1;
-		BITBLTBUF.SPSM = TEX0.CSM;
-
 		GSVector4i r;
 
-		r.left = 0;
-		r.top = 0;
-		r.right = GSLocalMemory::m_psm[TEX0.CPSM].pgs.x;
-		r.bottom = GSLocalMemory::m_psm[TEX0.CPSM].pgs.y;
+		if(TEX0.CSM == 0)
+		{
+			BITBLTBUF.SBP = TEX0.CBP;
+			BITBLTBUF.SBW = 1;
+			BITBLTBUF.SPSM = TEX0.CSM;
+
+			r.left = 0;
+			r.top = 0;
+			r.right = GSLocalMemory::m_psm[TEX0.CPSM].bs.x;
+			r.bottom = GSLocalMemory::m_psm[TEX0.CPSM].bs.y;
+
+			int blocks = 4;
+
+			if(GSLocalMemory::m_psm[TEX0.CPSM].bpp == 16)
+			{
+				blocks >>= 1;
+			}
+
+			if(GSLocalMemory::m_psm[TEX0.PSM].bpp == 4)
+			{
+				blocks >>= 1;
+			}
 		
-		InvalidateLocalMem(BITBLTBUF, r, true);
+			for(int i = 0; i < blocks; i++, BITBLTBUF.SBP++)
+			{
+				InvalidateLocalMem(BITBLTBUF, r, true);
+			}
+		}
+		else
+		{
+			BITBLTBUF.SBP = TEX0.CBP;
+			BITBLTBUF.SBW = m_env.TEXCLUT.CBW;
+			BITBLTBUF.SPSM = TEX0.CSM;
+
+			r.left = m_env.TEXCLUT.COU;
+			r.top = m_env.TEXCLUT.COV;
+			r.right = r.left + GSLocalMemory::m_psm[TEX0.CPSM].pal;
+			r.bottom = r.top + 1;
+		
+			InvalidateLocalMem(BITBLTBUF, r, true);
+		}
 
 		m_mem.m_clut.Write(m_env.CTXT[i].TEX0, m_env.TEXCLUT);
 	}
@@ -1694,10 +1724,11 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 
 			if(0)
 			{
+				GIFTag* t = (GIFTag*)mem;
 				uint64 hash;
-				if(path.tag.NREG < 8) hash = path.tag.u32[2] & ((1 << path.tag.NREG * 4) - 1);
-				else if(path.tag.NREG < 16) {hash = path.tag.u32[2]; ((uint32*)&hash)[1] = path.tag.u32[3] & ((1 << (path.tag.NREG - 8) * 4) - 1);}
-				else hash = path.tag.u64[1];
+				if(t->NREG < 8) hash = t->u32[2] & ((1 << t->NREG * 4) - 1);
+				else if(t->NREG < 16) {hash = t->u32[2]; ((uint32*)&hash)[1] = t->u32[3] & ((1 << (t->NREG - 8) * 4) - 1);}
+				else hash = t->u64[1];
 				s_tags[hash] += path.nloop * path.nreg;
 			}
 
@@ -1712,9 +1743,7 @@ template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 
 				if(path.tag.PRE && path.tag.FLG == GIF_FLG_PACKED)
 				{
-					GIFRegPRIM r;
-					r.u64 = path.tag.PRIM;
-					ApplyPRIM(r);
+					ApplyPRIM(path.tag.PRIM);
 				}
 			}
 		}
@@ -2002,6 +2031,12 @@ int GSState::Freeze(GSFreezeData* fd, bool sizeonly)
 	{
 		m_path[i].tag.NREG = m_path[i].nreg;
 		m_path[i].tag.NLOOP = m_path[i].nloop;
+		m_path[i].tag.REGS = 0;
+
+		for(size_t j = 0; j < countof(m_path[i].regs.u8); j++)
+		{
+			m_path[i].tag.u32[2 + (j >> 3)] |= m_path[i].regs.u8[j] << ((j & 7) << 2);
+		}
 
 		WriteState(data, &m_path[i].tag);
 		WriteState(data, &m_path[i].reg);

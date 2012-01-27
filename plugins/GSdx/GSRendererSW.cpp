@@ -490,6 +490,8 @@ void GSRendererSW::Sync(int reason)
 
 void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 {
+	if(LOG) {fprintf(s_fp, "w %05x %d %d, %d %d %d %d\n", BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM, r.x, r.y, r.z, r.w); fflush(s_fp);}
+	
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM);
 
 	o->GetPages(r, m_tmp_pages);
@@ -498,8 +500,6 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 
 	if(!m_rl->IsSynced())
 	{
-		if(LOG) {fprintf(s_fp, "w %05x %d %d\n", BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM); fflush(s_fp);}
-
 		for(uint32* RESTRICT p = m_tmp_pages; *p != GSOffset::EOP; p++)
 		{
 			if(m_fzb_pages[*p] | m_tex_pages[*p])
@@ -516,10 +516,10 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 
 void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut)
 {
+	if(LOG) {fprintf(s_fp, "r %05x %d %d, %d %d %d %d\n", BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM, r.x, r.y, r.z, r.w); fflush(s_fp);}
+
 	if(!m_rl->IsSynced())
 	{
-		if(LOG) {fprintf(s_fp, "r %05x %d %d\n", BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM); fflush(s_fp);}
-
 		GSOffset* o = m_mem.GetOffset(BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM);
 
 		o->GetPages(r, m_tmp_pages);
@@ -814,6 +814,8 @@ bool GSRendererSW::CheckSourcePages(SharedData* sd)
 
 				if(m_fzb_pages[*p]) // currently being drawn to? => sync
 				{
+					if(LOG) fprintf(s_fp, "r=8 %05x\n", *p << 5);
+
 					return true;
 				}
 			}
@@ -1395,20 +1397,19 @@ void GSRendererSW::SharedData::UseSourcePages()
 		}
 
 		// TODO
-		/*
-		if(s_dump)
+		
+		if(m_parent->s_dump)
 		{
-			uint64 frame = m_perfmon.GetFrame();
+			uint64 frame = m_parent->m_perfmon.GetFrame();
 
 			string s;
 
-			if(s_save && s_n >= s_saven)
+			if(m_parent->s_save && m_parent->s_n >= m_parent->s_saven)
 			{
-				s = format("c:\\temp1\\_%05d_f%lld_tex%d_%05x_%d.bmp", s_n, frame, i, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
+				s = format("c:\\temp1\\_%05d_f%lld_tex%d_%05x_%d.bmp", m_parent->s_n, frame, i, (int)m_parent->m_context->TEX0.TBP0, (int)m_parent->m_context->TEX0.PSM);
 
-				sd->m_tex[i].t->Save(s);
+				m_tex[i].t->Save(s);
 			}
 		}
-		*/
 	}
 }

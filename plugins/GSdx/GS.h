@@ -1096,9 +1096,9 @@ REG_SET_END
 __aligned(struct, 32) GIFPath
 {
 	GIFTag tag;
-	uint32 reg;
-	uint32 nreg;
 	uint32 nloop;
+	uint32 nreg;
+	uint32 reg;
 	uint32 type;
 	GSVector4i regs;
 
@@ -1106,13 +1106,26 @@ __aligned(struct, 32) GIFPath
 
 	__forceinline void SetTag(const void* mem)
 	{
-		GSVector4i v = GSVector4i::load<false>(mem);
-		GSVector4i::store<true>(&tag, v);
+		const GIFTag* RESTRICT src = (const GIFTag*)mem;
 
+		// the compiler has a hard time not reloading every time a field of src is accessed
+
+		uint32 a = src->u32[0];
+		uint32 b = src->u32[1];
+
+		tag.u32[0] = a;
+		tag.u32[1] = b;
+
+		nloop = a & 0x7fff;
+
+		if(nloop == 0) return;
+
+		GSVector4i v = GSVector4i::loadl(&src->REGS); // REGS not stored to tag.REGS, only into this->regs, restored before saving the state though
+
+		nreg = (b & 0xf0000000) ? (b >> 28) : 16; // src->NREG
+		regs = v.upl8(v >> 4) & GSVector4i::x0f(nreg);
 		reg = 0;
-		nreg = tag.NREG ? tag.NREG : 16;
-		regs = v.uph8(v >> 4) & GSVector4i::x0f(nreg);
-		nloop = tag.NLOOP;
+
 		type = TYPE_UNKNOWN;
 
 		if(tag.FLG == GIF_FLG_PACKED)
