@@ -69,7 +69,7 @@ cbuffer PSConstantBuffer : register(c0)
 
 struct FragmentLinkItem
 {
-    uint c, z, id, next;
+	uint c, z, id, next;
 };
 
 RWByteAddressBuffer VideoMemory : register(u0);
@@ -146,9 +146,9 @@ void gs_main(line VS_OUTPUT input[2], inout LineStream<GS_OUTPUT> stream, uint i
 		output.c = input[i].c;
 		output.id = id;
 
-		#if GS_IIP == 0
+#if GS_IIP == 0
 		if(i != 1) output.c = input[1].c;
-		#endif
+#endif
 
 		stream.Append(output);
 	}
@@ -170,9 +170,9 @@ void gs_main(triangle VS_OUTPUT input[3], inout TriangleStream<GS_OUTPUT> stream
 		output.c = input[i].c;
 		output.id = id;
 
-		#if GS_IIP == 0
+#if GS_IIP == 0
 		if(i != 2) output.c = input[2].c;
-		#endif
+#endif
 
 		stream.Append(output);
 	}
@@ -192,9 +192,9 @@ void gs_main(line VS_OUTPUT input[2], inout TriangleStream<GS_OUTPUT> stream, ui
 	lt.c = input[0].c;
 	lt.id = id;
 
-	#if GS_IIP == 0
+#if GS_IIP == 0
 	lt.c = input[1].c;
-	#endif
+#endif
 
 	rb.p = input[1].p;
 	rb.z = input[1].z;
@@ -268,23 +268,23 @@ void ps_main0(GS_OUTPUT input)
 	uint x = (uint)input.p.x;
 	uint y = (uint)input.p.y;
 
-    uint tail = FragmentLinkBuffer.IncrementCounter();
+	uint tail = FragmentLinkBuffer.IncrementCounter();
 
-    uint index = (y << 11) + x;
+	uint index = (y << 11) + x;
 	uint next = 0;
 
 	StartOffsetBuffer.InterlockedExchange(index * 4, tail, next);
 
-    FragmentLinkItem item;
-	
+	FragmentLinkItem item;
+
 	// TODO: preprocess color (tfx, alpha test), z-test
 
 	item.c = CompressColor32(input.c);
 	item.z = (uint)(input.z.y * 0x10000 + input.z.x);
 	item.id = input.id;
-    item.next = next;
+	item.next = next;
 
-    FragmentLinkBuffer[tail] = item;
+	FragmentLinkBuffer[tail] = item;
 }
 
 void ps_main1(GS_OUTPUT input)
@@ -293,7 +293,7 @@ void ps_main1(GS_OUTPUT input)
 
 	// sort fragments
 
-    uint StartOffsetIndex = (pos.y << 11) + pos.x;
+	uint StartOffsetIndex = (pos.y << 11) + pos.x;
 
 	int index[PS_BATCH_SIZE];
 	int count = 0;
@@ -303,7 +303,7 @@ void ps_main1(GS_OUTPUT input)
 	StartOffsetBuffer.Store(StartOffsetIndex * 4, 0);
 
 	[allow_uav_condition]
-    while(next != 0)
+	while(next != 0)
 	{
 		index[count++] = next;
 
@@ -313,8 +313,8 @@ void ps_main1(GS_OUTPUT input)
 	int N2 = 1 << (int)(ceil(log2(count)));
 
 	[allow_uav_condition]
-    for(int i = count; i < N2; i++)
-    {
+	for(int i = count; i < N2; i++)
+	{
 		index[i] = 0;
 	}
 
@@ -330,7 +330,7 @@ void ps_main1(GS_OUTPUT input)
 				uint i_id = FragmentLinkBuffer[index[i]].id;
 
 				int ixj = i ^ j;
-				
+
 				if(ixj > i)
 				{
 					uint ixj_id = FragmentLinkBuffer[index[ixj]].id;
@@ -363,7 +363,7 @@ void ps_main1(GS_OUTPUT input)
 
 	[allow_uav_condition]
 	while(--count >= 0)
-    {
+	{
 		FragmentLinkItem f = FragmentLinkBuffer[index[count]];
 
 		// TODO
@@ -374,7 +374,7 @@ void ps_main1(GS_OUTPUT input)
 			sz = f.z;
 		}
 	}
-	
+
 	uint c = sc; // (dc & ~WriteMask.x) | (sc & WriteMask.x);
 	uint z = 0;//sz; //(dz & ~WriteMask.y) | (sz & WriteMask.y);
 

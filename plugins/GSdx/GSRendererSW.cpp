@@ -338,6 +338,8 @@ void GSRendererSW::ConvertVertexBuffer(GSVertexSW* RESTRICT dst, const GSVertex*
 
 void GSRendererSW::Draw()
 {
+	const GSDrawingContext* context = m_context;
+
 	SharedData* sd = new SharedData(this);
 
 	shared_ptr<GSRasterizerData> data(sd);
@@ -353,16 +355,11 @@ void GSRendererSW::Draw()
 
 	memcpy(sd->index, m_index.buff, sizeof(uint32) * m_index.tail);
 
-	if(!GetScanlineGlobalData(sd)) return; 
-
-	//
-
-	const GSDrawingContext* context = m_context;
-
-	GSScanlineGlobalData& gd = sd->global;
+	if(!GetScanlineGlobalData(sd)) return;
 
 	GSVector4i scissor = GSVector4i(context->scissor.in);
 	GSVector4i bbox = GSVector4i(m_vt.m_min.p.floor().xyxy(m_vt.m_max.p.ceil()));
+	GSVector4i r = bbox.rintersect(scissor);
 
 	scissor.z = std::min<int>(scissor.z, (int)context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
 	
@@ -370,7 +367,42 @@ void GSRendererSW::Draw()
 	sd->bbox = bbox;
 	sd->frame = m_perfmon.GetFrame();
 
-	CheckDependencies(sd);
+	//
+
+	GSScanlineGlobalData& gd = sd->global;
+
+	uint32* fb_pages = NULL;
+	uint32* zb_pages = NULL;
+
+	if(sd->global.sel.fb)
+	{
+		fb_pages = m_context->offset.fb->GetPages(r);
+	}
+
+	if(sd->global.sel.zb)
+	{
+		zb_pages = m_context->offset.zb->GetPages(r);
+	}
+
+	// check if there is an overlap between this and previous targets
+
+	if(CheckTargetPages(fb_pages, zb_pages, r))
+	{
+		sd->m_syncpoint = SharedData::SyncTarget;
+	}
+
+	// check if the texture is not part of a target currently in use
+
+	if(CheckSourcePages(sd))
+	{
+		sd->m_syncpoint = SharedData::SyncSource;
+	}
+
+	// addref source and target pages
+
+	sd->UsePages(fb_pages, m_context->offset.fb->psm, zb_pages, m_context->offset.zb->psm);
+
+	//
 
 	if(LOG) {fprintf(s_fp, "queue %05x %d (%d) %05x %d (%d) %05x %d %dx%d | %d %d %d\n",
 		m_context->FRAME.Block(), m_context->FRAME.PSM, gd.sel.fwrite, 
@@ -411,7 +443,7 @@ void GSRendererSW::Draw()
 
 		s_n++;
 
-		m_rl->Queue(data);
+		Queue(data);
 
 		Sync(4);
 
@@ -433,7 +465,7 @@ void GSRendererSW::Draw()
 	}
 	else
 	{
-		m_rl->Queue(data);
+		Queue(data);
 	}
 
 	/*
@@ -446,6 +478,39 @@ void GSRendererSW::Draw()
 			stats.pixels, stats.pixels > 0 ? (int)(stats.ticks / stats.pixels) : -1);
 	}
 	*/
+}
+
+void GSRendererSW::Queue(shared_ptr<GSRasterizerData>& item)
+{
+	SharedData* sd = (SharedData*)item.get();
+
+	if(sd->m_syncpoint == SharedData::SyncSource) 
+	{
+		m_rl->Sync();
+	}
+
+	// update previously invalidated parts
+
+	sd->UpdateSource();
+
+	// invalidate new parts rendered onto
+
+	if(sd->global.sel.fwrite)
+	{
+		m_tc->InvalidatePages(sd->m_fb_pages, sd->m_fpsm);
+	}
+
+	if(sd->global.sel.zwrite)
+	{
+		m_tc->InvalidatePages(sd->m_zb_pages, sd->m_zpsm);
+	}
+
+	if(sd->m_syncpoint == SharedData::SyncTarget)
+	{
+		m_rl->Sync();
+	}
+
+	m_rl->Queue(item);
 }
 
 void GSRendererSW::Sync(int reason)
@@ -577,71 +642,6 @@ void GSRendererSW::ReleasePages(const uint32* pages, int type)
 
 			_InterlockedDecrement16((short*)&m_tex_pages[*p]);
 		}
-	}
-}
-
-void GSRendererSW::CheckDependencies(SharedData* sd)
-{
-	GSVector4i r = sd->bbox.rintersect(sd->scissor);
-
-	uint32* fb_pages = NULL;
-	uint32* zb_pages = NULL;
-
-	if(sd->global.sel.fb)
-	{
-		fb_pages = m_context->offset.fb->GetPages(r);
-	}
-
-	if(sd->global.sel.zb)
-	{
-		zb_pages = m_context->offset.zb->GetPages(r);
-	}
-
-	// check if there is an overlap between this and previous targets
-
-	bool target_syncpoint = false;
-
-	if(CheckTargetPages(fb_pages, zb_pages, r))
-	{
-		target_syncpoint = true;
-	}
-
-	// check if the texture is not part of a target currently in use
-
-	bool source_syncpoint = false;
-
-	if(CheckSourcePages(sd))
-	{
-		source_syncpoint = true;
-		target_syncpoint = false;
-	}
-
-	// addref target pages
-
-	sd->UseTargetPages(fb_pages, zb_pages);
-
-	// addref texture pages and update previously invalidated parts
-
-	if(source_syncpoint) 
-	{
-		Sync(8);
-	}
-
-	sd->UseSourcePages();
-
-	if(sd->global.sel.fwrite)
-	{
-		m_tc->InvalidatePages(fb_pages, m_context->offset.fb->psm);
-	}
-
-	if(sd->global.sel.zwrite)
-	{
-		m_tc->InvalidatePages(zb_pages, m_context->offset.zb->psm);
-	}
-
-	if(target_syncpoint)
-	{
-		Sync(9);
 	}
 }
 
@@ -1313,6 +1313,7 @@ GSRendererSW::SharedData::SharedData(GSRendererSW* parent)
 	, m_fb_pages(NULL)
 	, m_zb_pages(NULL)
 	, m_using_pages(false)
+	, m_syncpoint(SyncNone)
 {
 	m_tex[0].t = NULL;
 
@@ -1324,37 +1325,15 @@ GSRendererSW::SharedData::SharedData(GSRendererSW* parent)
 
 GSRendererSW::SharedData::~SharedData()
 {
-	if(m_using_pages)
-	{
-		if(global.sel.fb)
-		{
-			m_parent->ReleasePages(m_fb_pages, 0);
-		}
+	ReleasePages();
 
-		if(global.sel.zb)
-		{
-			m_parent->ReleasePages(m_zb_pages, 1);
-		}
-	}
-
-	delete [] m_fb_pages;
-	delete [] m_zb_pages;
-	
-	for(size_t i = 0; m_tex[i].t != NULL; i++)
-	{
-		m_parent->ReleasePages(m_tex[i].t->m_pages.n, 2);
-	}
-	
 	if(global.clut) _aligned_free(global.clut);
 	if(global.dimx) _aligned_free(global.dimx);
 }
 
-void GSRendererSW::SharedData::UseTargetPages(const uint32* fb_pages, const uint32* zb_pages)
+void GSRendererSW::SharedData::UsePages(const uint32* fb_pages, int fpsm, const uint32* zb_pages, int zpsm)
 {
 	if(m_using_pages) return;
-
-	m_fb_pages = fb_pages;
-	m_zb_pages = zb_pages;
 
 	if(global.sel.fb)
 	{
@@ -1366,7 +1345,45 @@ void GSRendererSW::SharedData::UseTargetPages(const uint32* fb_pages, const uint
 		m_parent->UsePages(zb_pages, 1);
 	}
 
+	for(size_t i = 0; m_tex[i].t != NULL; i++)
+	{
+		m_parent->UsePages(m_tex[i].t->m_pages.n, 2);
+	}
+
+	m_fb_pages = fb_pages;
+	m_zb_pages = zb_pages;
+	m_fpsm = fpsm;
+	m_zpsm = zpsm;
+
 	m_using_pages = true;
+}
+
+void GSRendererSW::SharedData::ReleasePages()
+{
+	if(!m_using_pages) return;
+
+	if(global.sel.fb)
+	{
+		m_parent->ReleasePages(m_fb_pages, 0);
+	}
+
+	if(global.sel.zb)
+	{
+		m_parent->ReleasePages(m_zb_pages, 1);
+	}
+
+	for(size_t i = 0; m_tex[i].t != NULL; i++)
+	{
+		m_parent->ReleasePages(m_tex[i].t->m_pages.n, 2);
+	}
+
+	delete [] m_fb_pages;
+	delete [] m_zb_pages;
+
+	m_fb_pages = NULL;
+	m_zb_pages = NULL;
+
+	m_using_pages = false;
 }
 
 void GSRendererSW::SharedData::SetSource(GSTextureCacheSW::Texture* t, const GSVector4i& r, int level)
@@ -1379,12 +1396,10 @@ void GSRendererSW::SharedData::SetSource(GSTextureCacheSW::Texture* t, const GSV
 	m_tex[level + 1].t = NULL;
 }
 
-void GSRendererSW::SharedData::UseSourcePages()
+void GSRendererSW::SharedData::UpdateSource()
 {
 	for(size_t i = 0; m_tex[i].t != NULL; i++)
 	{
-		m_parent->UsePages(m_tex[i].t->m_pages.n, 2);
-
 		if(m_tex[i].t->Update(m_tex[i].r))
 		{
 			global.tex[i] = m_tex[i].t->m_buff;

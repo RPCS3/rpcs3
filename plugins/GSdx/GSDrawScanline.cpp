@@ -1492,6 +1492,7 @@ void GSDrawScanline::DrawRectT(const int* RESTRICT row, const int* RESTRICT col,
 	if(masked) ASSERT(mask.u32[0] != 0);
 
 	color = color.andnot(mask);
+	c = color.extract32<0>();
 
 	GSVector4i br = r.ralign<Align_Inside>(GSVector2i(8 * 4 / sizeof(T), 8));
 
