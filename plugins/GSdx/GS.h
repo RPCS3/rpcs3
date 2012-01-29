@@ -827,7 +827,16 @@ union
 	};
 };
 REG_END2
-	__forceinline bool IsRepeating() {return (1 << TW) > (int)(TBW << 6) || (PSM == PSM_PSMT8 || PSM == PSM_PSMT4) && TBW == 1;}
+	__forceinline bool IsRepeating() 
+	{
+		if(TBW < 2)
+		{
+			if(PSM == PSM_PSMT8) return TW > 7 || TH > 6;
+			if(PSM == PSM_PSMT4) return TW > 7 || TH > 7;
+		}
+
+		return (TBW << 6) < (1u << TW);
+	}
 REG_END2
 
 REG64_(GIFReg, TEX1)

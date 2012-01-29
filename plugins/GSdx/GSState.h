@@ -193,6 +193,12 @@ public:
 	GSDump m_dump;
 	bool m_nativeres;
 
+	int s_n;
+	bool s_dump;
+	bool s_save;
+	bool s_savez;
+	int s_saven;
+
 public:
 	GSState();
 	virtual ~GSState();

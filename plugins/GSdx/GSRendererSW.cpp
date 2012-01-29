@@ -1176,8 +1176,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				gd.t.mask.u32[0] = 0;
 				break;
 			case CLAMP_REGION_REPEAT:
-				gd.t.min.u16[0] = gd.t.minmax.u16[0] = context->CLAMP.MINU;
-				gd.t.max.u16[0] = gd.t.minmax.u16[2] = context->CLAMP.MAXU;
+				gd.t.min.u16[0] = gd.t.minmax.u16[0] = context->CLAMP.MINU & (tw - 1);
+				gd.t.max.u16[0] = gd.t.minmax.u16[2] = context->CLAMP.MAXU & (tw - 1);
 				gd.t.mask.u32[0] = 0xffffffff;
 				break;
 			default:
@@ -1202,8 +1202,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				gd.t.mask.u32[2] = 0;
 				break;
 			case CLAMP_REGION_REPEAT:
-				gd.t.min.u16[4] = gd.t.minmax.u16[1] = context->CLAMP.MINV;
-				gd.t.max.u16[4] = gd.t.minmax.u16[3] = context->CLAMP.MAXV;
+				gd.t.min.u16[4] = gd.t.minmax.u16[1] = context->CLAMP.MINV & (th - 1); // skygunner main menu water texture 64x64, MINV = 127
+				gd.t.max.u16[4] = gd.t.minmax.u16[3] = context->CLAMP.MAXV & (th - 1);
 				gd.t.mask.u32[2] = 0xffffffff;
 				break;
 			default:

@@ -380,7 +380,8 @@ void GSDrawScanlineCodeGenerator::Init()
 					{
 						vpshuflw(xmm6, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
 						vpshufhw(xmm6, xmm6, _MM_SHUFFLE(2, 2, 0, 0));
-						vpsrlw(xmm6, 1);
+						vpsrlw(xmm6, 16 - GS_BILINEAR_PRECISION);
+						if(GS_BILINEAR_PRECISION < 15) vpsllw(xmm6, 15 - GS_BILINEAR_PRECISION);
 						vmovdqa(ptr[&m_local.temp.vf], xmm6);
 					}
 				}
@@ -730,7 +731,8 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 		vpshuflw(xmm0, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 		vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-		vpsrlw(xmm0, 1);
+		vpsrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
+		if(GS_BILINEAR_PRECISION < 15) vpsllw(xmm0, 15 - GS_BILINEAR_PRECISION);
 		vmovdqa(ptr[&m_local.temp.uf], xmm0);
 
 		if(m_sel.prim != GS_SPRITE_CLASS)
@@ -739,7 +741,8 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 			vpshuflw(xmm0, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
 			vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-			vpsrlw(xmm0, 1);
+			vpsrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
+			if(GS_BILINEAR_PRECISION < 15) vpsllw(xmm0, 15 - GS_BILINEAR_PRECISION);
 			vmovdqa(ptr[&m_local.temp.vf], xmm0);
 		}
 	}
@@ -1283,14 +1286,16 @@ return;
 	
 		vpshuflw(xmm0, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 		vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-		vpsrlw(xmm0, 1);
+		vpsrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
+		if(GS_BILINEAR_PRECISION < 15) vpsllw(xmm0, 15 - GS_BILINEAR_PRECISION);
 		vmovdqa(ptr[&m_local.temp.uf], xmm0);
 
 		// GSVector4i vf = v.xxzzlh().srl16(1);
 
 		vpshuflw(xmm0, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
 		vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-		vpsrlw(xmm0, 1);
+		vpsrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
+		if(GS_BILINEAR_PRECISION < 15) vpsllw(xmm0, 15 - GS_BILINEAR_PRECISION);
 		vmovdqa(ptr[&m_local.temp.vf], xmm0);
 	}
 
@@ -1524,14 +1529,16 @@ return;
 	
 			vpshuflw(xmm0, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 			vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-			vpsrlw(xmm0, 1);
+			vpsrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
+			if(GS_BILINEAR_PRECISION < 15) vpsllw(xmm0, 15 - GS_BILINEAR_PRECISION);
 			vmovdqa(ptr[&m_local.temp.uf], xmm0);
 
 			// GSVector4i vf = v.xxzzlh().srl16(1);
 
 			vpshuflw(xmm0, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
 			vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-			vpsrlw(xmm0, 1);
+			vpsrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
+			if(GS_BILINEAR_PRECISION < 15) vpsllw(xmm0, 15 - GS_BILINEAR_PRECISION);
 			vmovdqa(ptr[&m_local.temp.vf], xmm0);
 		}
 

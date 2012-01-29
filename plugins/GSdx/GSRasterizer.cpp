@@ -444,28 +444,18 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertex, const uint32* index)
 
 	GSVector4 dxy01c = dxy01 * cross;
 
-	GSVector4 _z = dxy01c * dv[1].p.zzzz(dv[0].p); // dx0 * z1, dy0 * z1, dx1 * z0, dy1 * z0
-	GSVector4 _f = dxy01c * dv[1].p.wwww(dv[0].p); // dx0 * f1, dy0 * f1, dx1 * f0, dy1 * f0
+	/*
+	dscan = dv[1] * dxy01c.yyyy() - dv[0] * dxy01c.wwww();
+	dedge = dv[0] * dxy01c.zzzz() - dv[1] * dxy01c.xxxx();
+	*/
 
-	GSVector4 _zf = _z.ywyw(_f).hsub(_z.zxzx(_f)); // dy0 * z1 - dy1 * z0, dy0 * f1 - dy1 * f0, dx1 * z0 - dx0 * z1, dx1 * f0 - dx0 * f1
+	dscan.p = dv[1].p * dxy01c.yyyy() - dv[0].p * dxy01c.wwww();
+	dscan.t = dv[1].t * dxy01c.yyyy() - dv[0].t * dxy01c.wwww();
+	dscan.c = dv[1].c * dxy01c.yyyy() - dv[0].c * dxy01c.wwww();
 
-	dscan.p = _zf.zwxy(); // dy0 * z1 - dy1 * z0, dy0 * f1 - dy1 * f0
-	dedge.p = _zf; // dx1 * z0 - dx0 * z1, dx1 * f0 - dx0 * f1
-
-	GSVector4 _s = dxy01c * dv[1].t.xxxx(dv[0].t); // dx0 * s1, dy0 * s1, dx1 * s0, dy1 * s0
-	GSVector4 _t = dxy01c * dv[1].t.yyyy(dv[0].t); // dx0 * t1, dy0 * t1, dx1 * t0, dy1 * t0
-	GSVector4 _q = dxy01c * dv[1].t.zzzz(dv[0].t); // dx0 * q1, dy0 * q1, dx1 * q0, dy1 * q0
-
-	dscan.t = _s.ywyw(_t).hsub(_q.ywyw()); // dy0 * s1 - dy1 * s0, dy0 * t1 - dy1 * t0, dy0 * q1 - dy1 * q0
-	dedge.t = _s.zxzx(_t).hsub(_q.zxzx()); // dx1 * s0 - dx0 * s1, dx1 * t0 - dx0 * t1, dx1 * q0 - dx0 * q1
-
-	GSVector4 _r = dxy01c * dv[1].c.xxxx(dv[0].c); // dx0 * r1, dy0 * r1, dx1 * r0, dy1 * r0
-	GSVector4 _g = dxy01c * dv[1].c.yyyy(dv[0].c); // dx0 * g1, dy0 * g1, dx1 * g0, dy1 * g0
-	GSVector4 _b = dxy01c * dv[1].c.zzzz(dv[0].c); // dx0 * b1, dy0 * b1, dx1 * b0, dy1 * b0
-	GSVector4 _a = dxy01c * dv[1].c.wwww(dv[0].c); // dx0 * a1, dy0 * a1, dx1 * a0, dy1 * a0
-
-	dscan.c = _r.ywyw(_g).hsub(_b.ywyw(_a)); // dy0 * r1 - dy1 * r0, dy0 * g1 - dy1 * g0, dy0 * b1 - dy1 * b0, dy0 * a1 - dy1 * a0
-	dedge.c = _r.zxzx(_g).hsub(_b.zxzx(_a)); // dx1 * r0 - dx0 * r1, dx1 * g0 - dx0 * g1, dx1 * b0 - dx0 * b1, dx1 * a0 - dx0 * a1
+	dedge.p = dv[0].p * dxy01c.zzzz() - dv[1].p * dxy01c.xxxx();
+	dedge.t = dv[0].t * dxy01c.zzzz() - dv[1].t * dxy01c.xxxx();
+	dedge.c = dv[0].c * dxy01c.zzzz() - dv[1].c * dxy01c.xxxx();
 
 	if(m1 & 1)
 	{
@@ -555,7 +545,13 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, co
 			scan.t = edge.t + dedge.t * dy;
 			scan.c = edge.c + dedge.c * dy;
 
-			AddScanline(e++, pixels, left, top, scan + dscan * (l - p0).xxxx());
+			GSVector4 prestep = (l - p0).xxxx();
+
+			scan.p += dscan.p * prestep;
+			scan.t += dscan.t * prestep;
+			scan.c += dscan.c * prestep;
+
+			AddScanline(e++, pixels, left, top, scan);
 		}
 
 		top++;

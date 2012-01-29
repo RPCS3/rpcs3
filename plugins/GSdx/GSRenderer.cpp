@@ -35,12 +35,6 @@ GSRenderer::GSRenderer()
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
 	m_mipmap = !!theApp.GetConfig("mipmap", 1);
 	m_fxaa = !!theApp.GetConfig("fxaa", 0);
-
-	s_n = 0;
-	s_dump = !!theApp.GetConfig("dump", 0);
-	s_save = !!theApp.GetConfig("save", 0);
-	s_savez = !!theApp.GetConfig("savez", 0);
-	s_saven = theApp.GetConfig("saven", 0);
 }
 
 GSRenderer::~GSRenderer()

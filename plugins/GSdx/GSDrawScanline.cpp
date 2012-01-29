@@ -318,7 +318,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 				}
 				else if(sel.ltf)
 				{
-					vf = v.xxzzlh().srl16(1);
+					vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
 				}
 
 				s = GSVector4::cast(u);
@@ -508,8 +508,8 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 						u -= 0x8000;
 						v -= 0x8000;
 
-						uf = u.xxzzlh().srl16(1);
-						vf = v.xxzzlh().srl16(1);
+						uf = u.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
+						vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
 					}
 
 					GSVector4i uv0 = u.sra32(16).ps32(v.sra32(16));
@@ -629,8 +629,8 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 							u -= 0x8000;
 							v -= 0x8000;
 
-							uf = u.xxzzlh().srl16(1);
-							vf = v.xxzzlh().srl16(1);
+							uf = u.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
+							vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
 						}
 
 						GSVector4i uv0 = u.sra32(16).ps32(v.sra32(16));
@@ -764,11 +764,11 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 					if(sel.ltf)
 					{
-						uf = u.xxzzlh().srl16(1);
+						uf = u.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
 					
 						if(sel.prim != GS_SPRITE_CLASS)
 						{
-							vf = v.xxzzlh().srl16(1);
+							vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
 						}
 					}
 

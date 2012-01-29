@@ -24,6 +24,8 @@
 #include "GSLocalMemory.h"
 #include "GSVector.h"
 
+#define GS_BILINEAR_PRECISION 4 // max precision 15, but several games like okami, rogue galaxy, dq8 break above 4
+
 union GSScanlineSelector
 {
 	struct

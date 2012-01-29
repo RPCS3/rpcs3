@@ -51,12 +51,6 @@ public:
 	GSWnd m_wnd;
 	GSDevice* m_dev;
 
-	int s_n;
-	bool s_dump;
-	bool s_save;
-	bool s_savez;
-	int s_saven;
-
 public:
 	GSRenderer();
 	virtual ~GSRenderer();

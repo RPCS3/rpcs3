@@ -105,6 +105,12 @@ GSState::GSState()
 	Reset();
 
 	ResetHandlers();
+
+	s_n = 0;
+	s_dump = !!theApp.GetConfig("dump", 0);
+	s_save = !!theApp.GetConfig("save", 0);
+	s_savez = !!theApp.GetConfig("savez", 0);
+	s_saven = theApp.GetConfig("saven", 0);
 }
 
 GSState::~GSState()
