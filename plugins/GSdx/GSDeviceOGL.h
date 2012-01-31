@@ -801,20 +801,17 @@ class GSDeviceOGL : public GSDevice
 		GSBlendStateOGL* bs;
 	} m_convert;
 
-	struct 
-	{
+	struct {
 		GLuint ps;
 		GSUniformBufferOGL *cb;
 	} m_fxaa;
 
-	struct
-	{
+	struct {
 		GSDepthStencilOGL* dss;
 		GSBlendStateOGL* bs;
 	} m_date;
 
-	struct
-	{
+	struct {
 		GSVertexBufferStateOGL* vb;
 		GLuint vs; // program
 		GSUniformBufferOGL* cb; // uniform current buffer
@@ -841,26 +838,6 @@ class GSDeviceOGL : public GSDevice
 	bool m_srv_changed;
 	bool m_ss_changed;
 
-#if 0
-	CComPtr<ID3D11Device> m_dev;
-	CComPtr<ID3D11DeviceContext> m_ctx;
-	CComPtr<IDXGISwapChain> m_swapchain;
-
-	CComPtr<ID3D11RasterizerState> m_rs;
-
-
-	// Shaders...
-
-	CComPtr<ID3D11SamplerState> m_palette_ss;
-	CComPtr<ID3D11SamplerState> m_rt_ss;
-
-#endif
-	// hash_map<uint32, GSVertexShader11 > m_vs;
-	// hash_map<uint32, CComPtr<ID3D11GeometryShader> > m_gs;
-	// hash_map<uint32, CComPtr<ID3D11PixelShader> > m_ps;
-	// hash_map<uint32, CComPtr<ID3D11SamplerState> > m_ps_ss;
-	// hash_map<uint32, CComPtr<ID3D11DepthStencilState> > m_om_dss;
-	// hash_map<uint32, CComPtr<ID3D11BlendState> > m_om_bs;
 	hash_map<uint32, GLuint > m_vs;
 	hash_map<uint32, GLuint > m_gs;
 	hash_map<uint32, GLuint > m_ps;
@@ -868,13 +845,9 @@ class GSDeviceOGL : public GSDevice
 	hash_map<uint32, GSDepthStencilOGL* > m_om_dss;
 	hash_map<uint32, GSBlendStateOGL* > m_om_bs;
 
-	//CComPtr<ID3D11SamplerState> m_palette_ss;
-	//CComPtr<ID3D11SamplerState> m_rt_ss;
 	GLuint m_palette_ss;
 	GLuint m_rt_ss;
 
-	//CComPtr<ID3D11Buffer> m_vs_cb;
-	//CComPtr<ID3D11Buffer> m_ps_cb;
 	GSUniformBufferOGL* m_vs_cb;
 	GSUniformBufferOGL* m_ps_cb;
 

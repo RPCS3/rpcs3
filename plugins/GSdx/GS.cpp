@@ -1360,8 +1360,8 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 
 		//while(IsWindowVisible(hWnd))
 		//FIXME map?
-		bool finished = false;
-		while(!finished)
+		int finished = 2;
+		while(finished > 0)
 		{
 			unsigned long start = timeGetTime();
 			unsigned long frame_number = 0;
@@ -1410,7 +1410,7 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 			fprintf(stderr, "A means of %fms by frame\n", (float)(end - start)/(float)frame_number);
 
 			sleep(1);
-			finished = true;
+			finished--;
 		}
 
 

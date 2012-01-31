@@ -26,7 +26,7 @@
 //#define ONLY_LINES
 
 // It seems dual blending does not work on AMD !!!
-#define DISABLE_DUAL_BLEND
+//#define DISABLE_DUAL_BLEND
 
 static uint32 g_draw_count = 0;
 static uint32 g_frame_count = 1;		
@@ -49,6 +49,10 @@ GSDeviceOGL::GSDeviceOGL()
 	memset(&m_convert, 0, sizeof(m_convert));
 	memset(&m_date, 0, sizeof(m_date));
 	memset(&m_state, 0, sizeof(m_state));
+
+	// Reset the debug file
+	FILE* f = fopen("Debug.txt","w");
+	fclose(f);
 }
 
 GSDeviceOGL::~GSDeviceOGL()
@@ -522,7 +526,11 @@ void GSDeviceOGL::DebugOutput()
 	if ( (start != 0 && g_frame_count >= start && g_frame_count < (start + length)) ) dump_me = true;
 
 	if ( dump_me ) {
-		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_f%d__d%d.bmp", g_frame_count, g_draw_count));
+		if (m_state.rtv == m_backbuffer) {
+			if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_f%d__d%d__back.bmp", g_frame_count, g_draw_count));
+		} else {
+			if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_f%d__d%d__tex.bmp", g_frame_count, g_draw_count));
+		}
 		//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
 
 		fprintf(stderr, "\n");
@@ -689,6 +697,18 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 	// GL_NV_copy_image seem like the good extension but not supported on AMD...
 	// Maybe opengl 4.3 !
 	// FIXME check those function work as expected
+	// FIXME: it is an NVIDIA extension. Hopefully lastest AMD driver support it too.
+	// An EXT extensions might be release later.
+	// void CopyImageSubDataNV(
+    //         uint srcName, enum srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
+	//     uint dstName, enum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
+	//     sizei width, sizei height, sizei depth);
+	glCopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), GL_TEXTURE_2D, 
+			0, r.x, r.y, 0,
+			static_cast<GSTextureOGL*>(dt)->GetID(), GL_TEXTURE_2D,
+			0, r.x, r.y, 0,
+			r.width(), r.height(), 1);
+#if 0
 
 	// FIXME FBO
 	GLuint fbo_old = m_state.fbo;
@@ -703,24 +723,8 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, dt->GetWidth(), dt->GetHeight());
 
 	OMSetFBO(fbo_old);
-
-#if 0
-	// FIXME attach the texture to the FBO
-	GSTextureOGL* st_ogl = (GSTextureOGL*) st;
-	GSTextureOGL* dt_ogl = (GSTextureOGL*) dt;
-	dt_ogl->Attach(GL_COLOR_ATTACHMENT0);
-	st_ogl->Attach(GL_COLOR_ATTACHMENT1);
-
-	glReadBuffer(GL_COLOR_ATTACHMENT1);
-	// FIXME I'not sure how to select the destination
-	//	const GLenum draw_buffer[1] = { GL_COLOR_ATTACHMENT0 };
-	//	glDrawBuffers(draw_buffer);
-	dt_ogl->EnableUnit(0);
-	// FIXME need acess of target and it probably need to be same for both
-	//glCopyTexSubImage2D(dt_ogl.m_texture_target, 0, 0, 0, r.left, r.bottom, r.right-r.left, r.top-r.bottom);
-	// FIXME I'm not sure GL_TEXTURE_RECTANGLE is supported!!!
-	//glCopyTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, r.left, r.bottom, r.right-r.left, r.top-r.bottom);
 #endif
+
 #if 0
 	D3D11_BOX box = {r.left, r.top, 0, r.right, r.bottom, 1};
 	m_ctx->CopySubresourceRegion(*(GSTexture11*)dt, 0, 0, 0, 0, *(GSTexture11*)st, 0, &box);
@@ -790,6 +794,8 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(flip_sr.x, flip_sr.w)},
 		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(flip_sr.z, flip_sr.w)},
 	};
+	//fprintf(stderr, "A:%fx%f B:%fx%f\n", left, top, bottom, right);
+	//fprintf(stderr, "SR: %f %f %f %f\n", sr.x, sr.y, sr.z, sr.w);
 
 	IASetVertexState(m_vb_sr);
 	IASetVertexBuffer(vertices, 4);
@@ -871,8 +877,6 @@ void GSDeviceOGL::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool lin
 
 void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm)
 {
-	assert(0);
-
 	const GSVector2i& size = rt->GetSize();
 
 	if(GSTexture* t = CreateRenderTarget(size.x, size.y, rt->IsMSAA()))
@@ -1009,7 +1013,7 @@ void GSDeviceOGL::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 {
 	PSSetShaderResource(0, sr0);
 	PSSetShaderResource(1, sr1);
-	PSSetShaderResource(2, NULL);
+	//PSSetShaderResource(2, NULL);
 }
 
 void GSDeviceOGL::PSSetShaderResource(int i, GSTexture* sr)
@@ -1026,11 +1030,12 @@ void GSDeviceOGL::PSSetShaderResource(int i, GSTexture* sr)
 
 void GSDeviceOGL::PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2)
 {
-	if(m_state.ps_ss[0] != ss0 || m_state.ps_ss[1] != ss1 || m_state.ps_ss[2] != ss2)
+	if(m_state.ps_ss[0] != ss0 || m_state.ps_ss[1] != ss1)
+	//if(m_state.ps_ss[0] != ss0 || m_state.ps_ss[1] != ss1 || m_state.ps_ss[2] != ss2)
 	{
 		m_state.ps_ss[0] = ss0;
 		m_state.ps_ss[1] = ss1;
-		m_state.ps_ss[2] = ss2;
+		//m_state.ps_ss[2] = ss2;
 
 		m_ss_changed = true;
 	}
@@ -1054,7 +1059,7 @@ void GSDeviceOGL::PSSetShader(GLuint ps)
 // 4/ set the sampler state
 // glBindSampler(1 , sampler);
 	if (m_srv_changed || m_ss_changed) {
-		for (uint i=0 ; i < 3; i++) {
+		for (uint i=0 ; i < 1; i++) {
 			if (m_state.ps_srv[i] != NULL) {
 				m_state.ps_srv[i]->EnableUnit(i);
 				glBindSampler(i, m_state.ps_ss[i]);
@@ -1129,14 +1134,12 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 			static_cast<GSTextureOGL*>(ds)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
 	}
 
-	// Viewport -> glViewport
 	if(m_state.viewport != rt->GetSize())
 	{
 		m_state.viewport = rt->GetSize();
 		glViewport(0, 0, rt->GetWidth(), rt->GetHeight());
 	}
 
-	// Scissor -> glScissor (note must be enabled)
 	GSVector4i r = scissor ? *scissor : GSVector4i(rt->GetSize()).zwxy();
 
 	if(!m_state.scissor.eq(r))

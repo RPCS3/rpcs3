@@ -19,7 +19,7 @@ set(CommonFlags
     -std=c++0x
     -fno-strict-aliasing
     -DOGL_DEBUG # FIXME remove me when code is ready
-	-DAMD_DRIVER_WORKAROUND
+    -DAMD_DRIVER_WORKAROUND
     )
 
 set(OptimizationFlags

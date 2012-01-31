@@ -93,7 +93,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 	// Allocate the buffer
 	switch (m_type) {
 		case GSTexture::DepthStencil:
-			EnableUnit(1);
+			EnableUnit(2);
 			glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, NULL);
 			break;
 		case GSTexture::RenderTarget:
@@ -102,7 +102,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 			// Howto allocate the texture unit !!!
 			// In worst case the HW renderer seems to use 3 texture unit
 			// For the moment SW renderer only use 1 so don't bother
-			EnableUnit(0);
+			EnableUnit(2);
 			if (m_format == GL_RGBA8) {
 				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 			}
@@ -140,7 +140,7 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	// FIXME warning order of the y axis
 	// FIXME I'm not confident with GL_UNSIGNED_BYTE type
 
-	EnableUnit(0);
+	EnableUnit(2);
 
 	if (m_format != GL_RGBA8) {
 		fprintf(stderr, "wrong pixel format\n");
@@ -368,12 +368,12 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 		glReadBuffer(GL_BACK);
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	} else if(IsDss()) {
-		EnableUnit(1);
+		EnableUnit(2);
 		glGetTexImage(m_texture_target, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, image);
 	} else {
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 
-		EnableUnit(1);
+		EnableUnit(2);
 		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, m_texture_target, m_texture_id, 0);
 
 		glReadBuffer(GL_COLOR_ATTACHMENT1);

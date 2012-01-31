@@ -47,4 +47,6 @@ class GSTextureOGL : public GSTexture
 
 		bool IsBackbuffer() { return (m_type == GSTexture::Backbuffer); }
 		bool IsDss() { return (m_type == GSTexture::DepthStencil); }
+
+		GLuint GetID() { return m_texture_id; }
 };

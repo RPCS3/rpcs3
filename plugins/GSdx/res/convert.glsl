@@ -141,62 +141,27 @@ void ps_main6() // diagonal
     SV_Target0 = c;
 }
 
-// Avoid to log useless error compilation failure
 void ps_main2()
 {
+    if((sample_c().a - 128.0f / 255) < 0) // >= 0x80 pass
+        discard;
+
+    SV_Target0 = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 void ps_main3()
 {
+    if((127.95f / 255 - sample_c().a) <0) // < 0x80 pass (== 0x80 should not pass)
+        discard;
+
+    SV_Target0 = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 }
 void ps_main4()
 {
+    // FIXME mod and fmod are different when value are negative
+    // 	output.c = fmod(sample_c(input.t) * 255 + 0.5f, 256) / 255;
+    vec4 c = mod(sample_c() * 255 + 0.5f, 256) / 255;
+
+    SV_Target0 = c;
 }
-
-
-// Texture2D Texture;
-// SamplerState TextureSampler;
-//
-// uint ps_main1(PS_INPUT input) : SV_Target0
-// {
-// 	float4 c = sample_c(input.t);
-//
-// 	c.a *= 256.0f / 127; // hm, 0.5 won't give us 1.0 if we just multiply with 2
-//
-// 	uint4 i = c * float4(0x001f, 0x03e0, 0x7c00, 0x8000);
-//
-// 	return (i.x & 0x001f) | (i.y & 0x03e0) | (i.z & 0x7c00) | (i.w & 0x8000);
-// }
-//
-// PS_OUTPUT ps_main2(PS_INPUT input)
-// {
-// 	PS_OUTPUT output;
-//
-// 	clip(sample_c(input.t).a - 128.0f / 255); // >= 0x80 pass
-//
-// 	output.c = 0;
-//
-// 	return output;
-// }
-//
-// PS_OUTPUT ps_main3(PS_INPUT input)
-// {
-// 	PS_OUTPUT output;
-//
-// 	clip(127.95f / 255 - sample_c(input.t).a); // < 0x80 pass (== 0x80 should not pass)
-//
-// 	output.c = 0;
-//
-// 	return output;
-// }
-//
-// PS_OUTPUT ps_main4(PS_INPUT input)
-// {
-// 	PS_OUTPUT output;
-//
-// 	output.c = fmod(sample_c(input.t) * 255 + 0.5f, 256) / 255;
-//
-// 	return output;
-// }
-//
 
 #endif

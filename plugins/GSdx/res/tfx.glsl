@@ -637,9 +637,9 @@ void ps_main()
 		if(c.a < 0.5) c.a += 0.5;
 	}
 
+    SV_Target1 = c;
 #ifndef DISABLE_DUAL_BLEND
     SV_Target0 = vec4(alpha, alpha, alpha, alpha);
 #endif
-    SV_Target1 = c;
 }
 #endif
