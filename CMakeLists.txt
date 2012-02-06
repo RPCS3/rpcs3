@@ -57,7 +57,11 @@ include(SelectPcsx2Plugins)
 # add additional project-wide include directories
 include_directories(${PROJECT_SOURCE_DIR}/common/include
 					${PROJECT_SOURCE_DIR}/common/include/Utilities
-					${PROJECT_SOURCE_DIR}/common/include/x86emitter)
+					${PROJECT_SOURCE_DIR}/common/include/x86emitter
+                    # WORKAROUND Some issue with multiarch on Debian/Ubuntu
+                    /usr/include/i386-linux-gnu
+                    /usr/include/x86_64-linux-gnu
+                    )
 
 # make the translation
 if(EXISTS "${PROJECT_SOURCE_DIR}/locales")

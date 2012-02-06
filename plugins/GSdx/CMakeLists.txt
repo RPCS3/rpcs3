@@ -96,10 +96,6 @@ set(GSdxSources
     GSUtil.cpp
     GSVector.cpp
     GSVertexTrace.cpp
-    GSVertexTrace.x64.avx.cpp
-    GSVertexTrace.x86.cpp
-    GSVertexTrace.x86.avx.cpp
-    GSVertexTrace.x64.cpp
     GSWnd.cpp
     GSdx.cpp
     stdafx.cpp

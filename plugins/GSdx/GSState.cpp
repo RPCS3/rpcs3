@@ -746,7 +746,7 @@ template<int i> void GSState::ApplyTEX0(GIFRegTEX0& TEX0)
 				blocks >>= 1;
 			}
 		
-			for(int i = 0; i < blocks; i++, BITBLTBUF.SBP++)
+			for(int j = 0; j < blocks; j++, BITBLTBUF.SBP++)
 			{
 				InvalidateLocalMem(BITBLTBUF, r, true);
 			}

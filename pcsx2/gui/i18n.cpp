@@ -169,6 +169,11 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 		case wxLANGUAGE_CHINESE_SINGAPORE    : return wxLANGUAGE_CHINESE_SIMPLIFIED;
 
 		case wxLANGUAGE_SAMI                 : 
+		// The correct fallback for Sami would be
+		// however, currently wxWidgets (2.9.3) only supports wxLANGUAGE_SAMI.
+		//  case: wxLANGUAGE_SAMI_LULE_SWEDEN :
+		//  case: wxLANGUAGE_SAMI_NORTHERN_SWEDEN :
+		//  case: wxLANGUAGE_SAMI_SOUTHERN_SWEDEN :
 		case wxLANGUAGE_SWEDISH_FINLAND      : return wxLANGUAGE_SWEDISH;
 
 		case wxLANGUAGE_PORTUGUESE           : return wxLANGUAGE_PORTUGUESE_BRAZILIAN;
@@ -178,7 +183,29 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 		case wxLANGUAGE_GERMAN_BELGIUM       : 
 		case wxLANGUAGE_GERMAN_LIECHTENSTEIN : 
 		case wxLANGUAGE_GERMAN_LUXEMBOURG    : 
+		// Currently wxWidgets (2.9.3) doesn't support Sorbian.
+		//  case wxLANGUAGE_LOWER_SORBIAN :
+		//  case wxLANGUAGE_UPPER_SORBIAN :
 		case wxLANGUAGE_GERMAN_SWISS         : return wxLANGUAGE_GERMAN;
+
+		case wxLANGUAGE_SPANISH_ARGENTINA:
+		case wxLANGUAGE_SPANISH_BOLIVIA:
+		case wxLANGUAGE_SPANISH_CHILE:
+		case wxLANGUAGE_SPANISH_COLOMBIA:
+		case wxLANGUAGE_SPANISH_COSTA_RICA:
+		case wxLANGUAGE_SPANISH_DOMINICAN_REPUBLIC:
+		case wxLANGUAGE_SPANISH_ECUADOR:
+		case wxLANGUAGE_SPANISH_EL_SALVADOR:
+		case wxLANGUAGE_SPANISH_GUATEMALA:
+		case wxLANGUAGE_SPANISH_HONDURAS:
+		case wxLANGUAGE_SPANISH_MEXICAN:
+		case wxLANGUAGE_SPANISH_NICARAGUA:
+		case wxLANGUAGE_SPANISH_PANAMA:
+		case wxLANGUAGE_SPANISH_PARAGUAY:
+		case wxLANGUAGE_SPANISH_PERU:
+		case wxLANGUAGE_SPANISH_PUERTO_RICO:
+		case wxLANGUAGE_SPANISH_URUGUAY:
+		case wxLANGUAGE_SPANISH_VENEZUELA: return wxLANGUAGE_SPANISH_MODERN;
 
 		case wxLANGUAGE_ITALIAN_SWISS        : return wxLANGUAGE_ITALIAN;
 		
