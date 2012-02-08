@@ -355,6 +355,16 @@ void GSRendererSW::Draw()
 
 	memcpy(sd->index, m_index.buff, sizeof(uint32) * m_index.tail);
 
+	GSVector4i scissor = GSVector4i(context->scissor.in);
+	GSVector4i bbox = GSVector4i(m_vt.m_min.p.floor().xyxy(m_vt.m_max.p.ceil()));
+	GSVector4i r = bbox.rintersect(scissor);
+
+	scissor.z = std::min<int>(scissor.z, (int)context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
+	
+	sd->scissor = scissor;
+	sd->bbox = bbox;
+	sd->frame = m_perfmon.GetFrame();
+
 	if(!GetScanlineGlobalData(sd)) return;
 
 	if(0) if(LOG)
@@ -378,16 +388,6 @@ void GSRendererSW::Draw()
 			}
 		}
 	}
-
-	GSVector4i scissor = GSVector4i(context->scissor.in);
-	GSVector4i bbox = GSVector4i(m_vt.m_min.p.floor().xyxy(m_vt.m_max.p.ceil()));
-	GSVector4i r = bbox.rintersect(scissor);
-
-	scissor.z = std::min<int>(scissor.z, (int)context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
-	
-	sd->scissor = scissor;
-	sd->bbox = bbox;
-	sd->frame = m_perfmon.GetFrame();
 
 	//
 
