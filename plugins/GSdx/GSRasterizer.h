@@ -30,6 +30,8 @@
 
 __aligned(class, 32) GSRasterizerData : public GSAlignedClass<32>
 {
+	static int s_counter;
+
 public:
 	GSVector4i scissor;
 	GSVector4i bbox;
@@ -40,6 +42,9 @@ public:
 	uint32* index;
 	int index_count;
 	uint64 frame;
+	uint64 start;
+	int pixels;
+	int counter;
 
 	GSRasterizerData() 
 		: scissor(GSVector4i::zero())
@@ -51,7 +56,10 @@ public:
 		, index(NULL)
 		, index_count(0)
 		, frame(0)
+		, start(0)
+		, pixels(0)
 	{
+		counter = s_counter++;
 	}
 
 	virtual ~GSRasterizerData() 

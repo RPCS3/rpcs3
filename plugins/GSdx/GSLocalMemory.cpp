@@ -342,55 +342,55 @@ GSLocalMemory::GSLocalMemory()
 
 	m_psm[PSM_PSMCT24].rtx = &GSLocalMemory::ReadTexture24;
 	m_psm[PSM_PSMCT16].rtx = &GSLocalMemory::ReadTexture16;
-	m_psm[PSM_PSMCT16S].rtx = &GSLocalMemory::ReadTexture16S;
+	m_psm[PSM_PSMCT16S].rtx = &GSLocalMemory::ReadTexture16;
 	m_psm[PSM_PSMT8].rtx = &GSLocalMemory::ReadTexture8;
 	m_psm[PSM_PSMT4].rtx = &GSLocalMemory::ReadTexture4;
 	m_psm[PSM_PSMT8H].rtx = &GSLocalMemory::ReadTexture8H;
 	m_psm[PSM_PSMT4HL].rtx = &GSLocalMemory::ReadTexture4HL;
 	m_psm[PSM_PSMT4HH].rtx = &GSLocalMemory::ReadTexture4HH;
-	m_psm[PSM_PSMZ32].rtx = &GSLocalMemory::ReadTexture32Z;
-	m_psm[PSM_PSMZ24].rtx = &GSLocalMemory::ReadTexture24Z;
-	m_psm[PSM_PSMZ16].rtx = &GSLocalMemory::ReadTexture16Z;
-	m_psm[PSM_PSMZ16S].rtx = &GSLocalMemory::ReadTexture16SZ;
+	m_psm[PSM_PSMZ32].rtx = &GSLocalMemory::ReadTexture32;
+	m_psm[PSM_PSMZ24].rtx = &GSLocalMemory::ReadTexture24;
+	m_psm[PSM_PSMZ16].rtx = &GSLocalMemory::ReadTexture16;
+	m_psm[PSM_PSMZ16S].rtx = &GSLocalMemory::ReadTexture16;
 
 	m_psm[PSM_PSMCT24].rtxP = &GSLocalMemory::ReadTexture24;
 	m_psm[PSM_PSMCT16].rtxP = &GSLocalMemory::ReadTexture16;
-	m_psm[PSM_PSMCT16S].rtxP = &GSLocalMemory::ReadTexture16S;
+	m_psm[PSM_PSMCT16S].rtxP = &GSLocalMemory::ReadTexture16;
 	m_psm[PSM_PSMT8].rtxP = &GSLocalMemory::ReadTexture8P;
 	m_psm[PSM_PSMT4].rtxP = &GSLocalMemory::ReadTexture4P;
 	m_psm[PSM_PSMT8H].rtxP = &GSLocalMemory::ReadTexture8HP;
 	m_psm[PSM_PSMT4HL].rtxP = &GSLocalMemory::ReadTexture4HLP;
 	m_psm[PSM_PSMT4HH].rtxP = &GSLocalMemory::ReadTexture4HHP;
-	m_psm[PSM_PSMZ32].rtxP = &GSLocalMemory::ReadTexture32Z;
-	m_psm[PSM_PSMZ24].rtxP = &GSLocalMemory::ReadTexture24Z;
-	m_psm[PSM_PSMZ16].rtxP = &GSLocalMemory::ReadTexture16Z;
-	m_psm[PSM_PSMZ16S].rtxP = &GSLocalMemory::ReadTexture16SZ;
+	m_psm[PSM_PSMZ32].rtxP = &GSLocalMemory::ReadTexture32;
+	m_psm[PSM_PSMZ24].rtxP = &GSLocalMemory::ReadTexture24;
+	m_psm[PSM_PSMZ16].rtxP = &GSLocalMemory::ReadTexture16;
+	m_psm[PSM_PSMZ16S].rtxP = &GSLocalMemory::ReadTexture16;
 
 	m_psm[PSM_PSMCT24].rtxb = &GSLocalMemory::ReadTextureBlock24;
 	m_psm[PSM_PSMCT16].rtxb = &GSLocalMemory::ReadTextureBlock16;
-	m_psm[PSM_PSMCT16S].rtxb = &GSLocalMemory::ReadTextureBlock16S;
+	m_psm[PSM_PSMCT16S].rtxb = &GSLocalMemory::ReadTextureBlock16;
 	m_psm[PSM_PSMT8].rtxb = &GSLocalMemory::ReadTextureBlock8;
 	m_psm[PSM_PSMT4].rtxb = &GSLocalMemory::ReadTextureBlock4;
 	m_psm[PSM_PSMT8H].rtxb = &GSLocalMemory::ReadTextureBlock8H;
 	m_psm[PSM_PSMT4HL].rtxb = &GSLocalMemory::ReadTextureBlock4HL;
 	m_psm[PSM_PSMT4HH].rtxb = &GSLocalMemory::ReadTextureBlock4HH;
-	m_psm[PSM_PSMZ32].rtxb = &GSLocalMemory::ReadTextureBlock32Z;
-	m_psm[PSM_PSMZ24].rtxb = &GSLocalMemory::ReadTextureBlock24Z;
-	m_psm[PSM_PSMZ16].rtxb = &GSLocalMemory::ReadTextureBlock16Z;
-	m_psm[PSM_PSMZ16S].rtxb = &GSLocalMemory::ReadTextureBlock16SZ;
+	m_psm[PSM_PSMZ32].rtxb = &GSLocalMemory::ReadTextureBlock32;
+	m_psm[PSM_PSMZ24].rtxb = &GSLocalMemory::ReadTextureBlock24;
+	m_psm[PSM_PSMZ16].rtxb = &GSLocalMemory::ReadTextureBlock16;
+	m_psm[PSM_PSMZ16S].rtxb = &GSLocalMemory::ReadTextureBlock16;
 
 	m_psm[PSM_PSMCT24].rtxbP = &GSLocalMemory::ReadTextureBlock24;
 	m_psm[PSM_PSMCT16].rtxbP = &GSLocalMemory::ReadTextureBlock16;
-	m_psm[PSM_PSMCT16S].rtxbP = &GSLocalMemory::ReadTextureBlock16S;
+	m_psm[PSM_PSMCT16S].rtxbP = &GSLocalMemory::ReadTextureBlock16;
 	m_psm[PSM_PSMT8].rtxbP = &GSLocalMemory::ReadTextureBlock8P;
 	m_psm[PSM_PSMT4].rtxbP = &GSLocalMemory::ReadTextureBlock4P;
 	m_psm[PSM_PSMT8H].rtxbP = &GSLocalMemory::ReadTextureBlock8HP;
 	m_psm[PSM_PSMT4HL].rtxbP = &GSLocalMemory::ReadTextureBlock4HLP;
 	m_psm[PSM_PSMT4HH].rtxbP = &GSLocalMemory::ReadTextureBlock4HHP;
-	m_psm[PSM_PSMZ32].rtxbP = &GSLocalMemory::ReadTextureBlock32Z;
-	m_psm[PSM_PSMZ24].rtxbP = &GSLocalMemory::ReadTextureBlock24Z;
-	m_psm[PSM_PSMZ16].rtxbP = &GSLocalMemory::ReadTextureBlock16Z;
-	m_psm[PSM_PSMZ16S].rtxbP = &GSLocalMemory::ReadTextureBlock16SZ;
+	m_psm[PSM_PSMZ32].rtxbP = &GSLocalMemory::ReadTextureBlock32;
+	m_psm[PSM_PSMZ24].rtxbP = &GSLocalMemory::ReadTextureBlock24;
+	m_psm[PSM_PSMZ16].rtxbP = &GSLocalMemory::ReadTextureBlock16;
+	m_psm[PSM_PSMZ16S].rtxbP = &GSLocalMemory::ReadTextureBlock16;
 
 	m_psm[PSM_PSMCT16].bpp = m_psm[PSM_PSMCT16S].bpp = 16;
 	m_psm[PSM_PSMT8].bpp = 8;
@@ -1606,28 +1606,22 @@ void GSLocalMemory::ReadTexture24(const GSOffset* RESTRICT o, const GSVector4i& 
 
 void GSLocalMemory::ReadTexture16(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
 {
-	__aligned(uint16, 32) block[16 * 8];
-
-	FOREACH_BLOCK_START(r, 16, 8, 32)
+	if(TEXA.AEM)
 	{
-		ReadBlock16<true>(src, (uint8*)block, sizeof(block) / 8);
-
-		ExpandBlock16(block, dst, dstpitch, TEXA);
+		FOREACH_BLOCK_START(r, 16, 8, 32)
+		{
+			ReadAndExpandBlock16<true>(src, dst, dstpitch, TEXA);
+		}
+		FOREACH_BLOCK_END
 	}
-	FOREACH_BLOCK_END
-}
-
-void GSLocalMemory::ReadTexture16S(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
-{
-	__aligned(uint16, 32) block[16 * 8];
-
-	FOREACH_BLOCK_START(r, 16, 8, 32)
+	else
 	{
-		ReadBlock16<true>(src, (uint8*)block, sizeof(block) / 8);
-
-		ExpandBlock16(block, dst, dstpitch, TEXA);
+		FOREACH_BLOCK_START(r, 16, 8, 32)
+		{
+			ReadAndExpandBlock16<false>(src, dst, dstpitch, TEXA);
+		}
+		FOREACH_BLOCK_END
 	}
-	FOREACH_BLOCK_END
 }
 
 void GSLocalMemory::ReadTexture8(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
@@ -1685,61 +1679,6 @@ void GSLocalMemory::ReadTexture4HH(const GSOffset* RESTRICT o, const GSVector4i&
 	FOREACH_BLOCK_END
 }
 
-void GSLocalMemory::ReadTexture32Z(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
-{
-	FOREACH_BLOCK_START(r, 8, 8, 32)
-	{
-		ReadBlock32<true>(src, dst, dstpitch);
-	}
-	FOREACH_BLOCK_END
-}
-
-void GSLocalMemory::ReadTexture24Z(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
-{
-	if(TEXA.AEM)
-	{
-		FOREACH_BLOCK_START(r, 8, 8, 32)
-		{
-			ReadAndExpandBlock24<true>(src, dst, dstpitch, TEXA);
-		}
-		FOREACH_BLOCK_END
-	}
-	else
-	{
-		FOREACH_BLOCK_START(r, 8, 8, 32)
-		{
-			ReadAndExpandBlock24<false>(src, dst, dstpitch, TEXA);
-		}
-		FOREACH_BLOCK_END
-	}
-}
-
-void GSLocalMemory::ReadTexture16Z(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
-{
-	__aligned(uint16, 32) block[16 * 8];
-
-	FOREACH_BLOCK_START(r, 16, 8, 32)
-	{
-		ReadBlock16<true>(src, (uint8*)block, sizeof(block) / 8);
-
-		ExpandBlock16(block, dst, dstpitch, TEXA);
-	}
-	FOREACH_BLOCK_END
-}
-
-void GSLocalMemory::ReadTexture16SZ(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA)
-{
-	__aligned(uint16, 32) block[16 * 8];
-
-	FOREACH_BLOCK_START(r, 16, 8, 32)
-	{
-		ReadBlock16<true>(src, (uint8*)block, sizeof(block) / 8);
-
-		ExpandBlock16(block, dst, dstpitch, TEXA);
-	}
-	FOREACH_BLOCK_END
-}
-
 ///////////////////
 
 void GSLocalMemory::ReadTextureBlock32(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
@@ -1765,20 +1704,16 @@ void GSLocalMemory::ReadTextureBlock24(uint32 bp, uint8* dst, int dstpitch, cons
 
 void GSLocalMemory::ReadTextureBlock16(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
 {
-	__aligned(uint16, 32) block[16 * 8];
+	ALIGN_STACK(32);
 
-	ReadBlock16<true>(BlockPtr(bp), (uint8*)block, sizeof(block) / 8);
-
-	ExpandBlock16(block, dst, dstpitch, TEXA);
-}
-
-void GSLocalMemory::ReadTextureBlock16S(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
-{
-	__aligned(uint16, 32) block[16 * 8];
-
-	ReadBlock16<true>(BlockPtr(bp), (uint8*)block, sizeof(block) / 8);
-
-	ExpandBlock16(block, dst, dstpitch, TEXA);
+	if(TEXA.AEM)
+	{
+		ReadAndExpandBlock16<true>(BlockPtr(bp), dst, dstpitch, TEXA);
+	}
+	else
+	{
+		ReadAndExpandBlock16<false>(BlockPtr(bp), dst, dstpitch, TEXA);
+	}
 }
 
 void GSLocalMemory::ReadTextureBlock8(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
@@ -1814,45 +1749,6 @@ void GSLocalMemory::ReadTextureBlock4HH(uint32 bp, uint8* dst, int dstpitch, con
 	ALIGN_STACK(32);
 
 	ReadAndExpandBlock4HH_32(BlockPtr(bp), dst, dstpitch, m_clut);
-}
-
-void GSLocalMemory::ReadTextureBlock32Z(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
-{
-	ALIGN_STACK(32);
-
-	ReadBlock32<true>(BlockPtr(bp), dst, dstpitch);
-}
-
-void GSLocalMemory::ReadTextureBlock24Z(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
-{
-	ALIGN_STACK(32);
-
-	if(TEXA.AEM)
-	{
-		ReadAndExpandBlock24<true>(BlockPtr(bp), dst, dstpitch, TEXA);
-	}
-	else
-	{
-		ReadAndExpandBlock24<false>(BlockPtr(bp), dst, dstpitch, TEXA);
-	}
-}
-
-void GSLocalMemory::ReadTextureBlock16Z(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
-{
-	__aligned(uint16, 32) block[16 * 8];
-
-	ReadBlock16<true>(BlockPtr(bp), (uint8*)block, sizeof(block) / 8);
-
-	ExpandBlock16(block, dst, dstpitch, TEXA);
-}
-
-void GSLocalMemory::ReadTextureBlock16SZ(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
-{
-	__aligned(uint16, 32) block[16 * 8];
-
-	ReadBlock16<true>(BlockPtr(bp), (uint8*)block, sizeof(block) / 8);
-
-	ExpandBlock16(block, dst, dstpitch, TEXA);
 }
 
 ///////////////////

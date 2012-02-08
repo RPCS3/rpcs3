@@ -37,6 +37,7 @@ GSState::GSState()
 	, m_frameskip(0)
 	, m_vt(this)
 	, m_q(1.0f)
+	, m_texflush(true)
 {
 	m_nativeres = !!theApp.GetConfig("nativeres", 0);
 
@@ -200,6 +201,8 @@ void GSState::Reset()
 	m_vertex.tail = 0;
 	m_vertex.next = 0;
 	m_index.tail = 0;
+
+	m_texflush = true;
 }
 
 void GSState::ResetHandlers()
@@ -992,7 +995,7 @@ void GSState::GIFRegHandlerFOGCOL(const GIFReg* RESTRICT r)
 
 void GSState::GIFRegHandlerTEXFLUSH(const GIFReg* RESTRICT r)
 {
-	// TRACE(_T("TEXFLUSH\n"));
+	m_texflush = true;
 }
 
 template<int i> void GSState::GIFRegHandlerSCISSOR(const GIFReg* RESTRICT r)

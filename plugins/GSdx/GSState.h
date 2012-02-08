@@ -143,6 +143,7 @@ protected:
 	float m_q;
 	GSVector4 m_scissor;
 	uint32 m_ofxy;
+	bool m_texflush;
 	
 	struct 
 	{

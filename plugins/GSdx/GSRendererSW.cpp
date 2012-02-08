@@ -357,6 +357,28 @@ void GSRendererSW::Draw()
 
 	if(!GetScanlineGlobalData(sd)) return;
 
+	if(0) if(LOG)
+	{
+		int n = GSUtil::GetVertexCount(PRIM->PRIM);
+		
+		for(int i = 0, j = 0; i < m_index.tail; i += n, j++)
+		{
+			for(int k = 0; k < n; k++)
+			{
+				GSVertex* v = &m_vertex.buff[m_index.buff[i + k]];
+				GSVertex* vn = &m_vertex.buff[m_index.buff[i + n - 1]];
+				
+				fprintf(s_fp, "%d:%d %f %f %f %f\n", 
+					j, k,
+					(float)(v->XYZ.X - context->XYOFFSET.OFX) / 16,
+					(float)(v->XYZ.Y - context->XYOFFSET.OFY) / 16,
+					PRIM->FST ? (float)(v->U) / 16 : v->ST.S / (PRIM->PRIM == GS_SPRITE ? vn->RGBAQ.Q : v->RGBAQ.Q),
+					PRIM->FST ? (float)(v->V) / 16 : v->ST.T / (PRIM->PRIM == GS_SPRITE ? vn->RGBAQ.Q : v->RGBAQ.Q)
+					);
+			}
+		}
+	}
+
 	GSVector4i scissor = GSVector4i(context->scissor.in);
 	GSVector4i bbox = GSVector4i(m_vt.m_min.p.floor().xyxy(m_vt.m_max.p.ceil()));
 	GSVector4i r = bbox.rintersect(scissor);
@@ -404,11 +426,17 @@ void GSRendererSW::Draw()
 
 	//
 
-	if(LOG) {fprintf(s_fp, "queue %05x %d (%d) %05x %d (%d) %05x %d %dx%d | %d %d %d\n",
-		m_context->FRAME.Block(), m_context->FRAME.PSM, gd.sel.fwrite, 
-		m_context->ZBUF.Block(), m_context->ZBUF.PSM, gd.sel.zwrite,
-		PRIM->TME ? m_context->TEX0.TBP0 : 0xfffff, m_context->TEX0.PSM, (int)m_context->TEX0.TW, (int)m_context->TEX0.TH, 
-		PRIM->PRIM, sd->vertex_count, sd->index_count); fflush(s_fp);}
+	if(LOG) 
+	{
+		fprintf(s_fp, "[%d] queue %05x %d (%d) %05x %d (%d) %05x %d %dx%d (%d %d %d) | %d %d %d\n",
+			sd->counter,
+			m_context->FRAME.Block(), m_context->FRAME.PSM, gd.sel.fwrite, 
+			m_context->ZBUF.Block(), m_context->ZBUF.PSM, gd.sel.zwrite,
+			PRIM->TME ? m_context->TEX0.TBP0 : 0xfffff, m_context->TEX0.PSM, (int)m_context->TEX0.TW, (int)m_context->TEX0.TH, m_context->TEX0.CSM, m_context->TEX0.CPSM, m_context->TEX0.CSA,
+			PRIM->PRIM, sd->vertex_count, sd->index_count); 
+
+		fflush(s_fp);
+	}
 
 	if(s_dump)
 	{
@@ -581,7 +609,7 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 
 void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut)
 {
-	if(LOG) {fprintf(s_fp, "r %05x %d %d, %d %d %d %d\n", BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM, r.x, r.y, r.z, r.w); fflush(s_fp);}
+	if(LOG) {fprintf(s_fp, "%s %05x %d %d, %d %d %d %d\n", clut ? "rp" : "r", BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM, r.x, r.y, r.z, r.w); fflush(s_fp);}
 
 	if(!m_rl->IsSynced())
 	{
@@ -814,8 +842,6 @@ bool GSRendererSW::CheckSourcePages(SharedData* sd)
 
 				if(m_fzb_pages[*p]) // currently being drawn to? => sync
 				{
-					if(LOG) fprintf(s_fp, "r=8 %05x\n", *p << 5);
-
 					return true;
 				}
 			}
@@ -864,7 +890,10 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 	if(PRIM->TME)
 	{
-		m_mem.m_clut.Read32(context->TEX0, env.TEXA);
+		if(GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0)
+		{
+			m_mem.m_clut.Read32(context->TEX0, env.TEXA);
+		}
 	}
 
 	if(context->TEST.ATE)
@@ -1305,6 +1334,23 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 		gd.zm |= GSVector4i::xffff0000();
 	}
 
+	if(gd.sel.prim == GS_SPRITE_CLASS && !gd.sel.ftest && !gd.sel.ztest && data->bbox.eq(data->bbox.rintersect(data->scissor)))
+	{
+		gd.sel.notest = 1;
+
+		uint32 ofx = context->XYOFFSET.OFX;
+
+		for(int i = 0, j = m_vertex.tail; i < j; i++)
+		{
+			if((((m_vertex.buff[i].XYZ.X - ofx) + 15) >> 4) & 3) // aligned to 4
+			{
+				gd.sel.notest = 0;
+			
+				break;
+			}
+		}
+	}
+
 	return true;
 }
 
@@ -1329,6 +1375,14 @@ GSRendererSW::SharedData::~SharedData()
 
 	if(global.clut) _aligned_free(global.clut);
 	if(global.dimx) _aligned_free(global.dimx);
+
+	if(LOG) {fprintf(s_fp, "[%d] done t=%lld p=%d | %d %d %d | %08x_%08x\n", 
+		counter, 
+		__rdtsc() - start, pixels,
+		primclass, vertex_count, index_count,
+		global.sel.hi, global.sel.lo 
+		); 
+	fflush(s_fp);}
 }
 
 void GSRendererSW::SharedData::UsePages(const uint32* fb_pages, int fpsm, const uint32* zb_pages, int zpsm)
@@ -1421,7 +1475,7 @@ void GSRendererSW::SharedData::UpdateSource()
 
 			if(m_parent->s_save && m_parent->s_n >= m_parent->s_saven)
 			{
-				s = format("c:\\temp1\\_%05d_f%lld_tex%d_%05x_%d.bmp", m_parent->s_n, frame, i, (int)m_parent->m_context->TEX0.TBP0, (int)m_parent->m_context->TEX0.PSM);
+				s = format("c:\\temp1\\_%05d_f%lld_tex%d_%05x_%d.bmp", m_parent->s_n - 2, frame, i, (int)m_parent->m_context->TEX0.TBP0, (int)m_parent->m_context->TEX0.PSM);
 
 				m_tex[i].t->Save(s);
 			}

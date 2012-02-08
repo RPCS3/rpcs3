@@ -28,10 +28,13 @@ InitializeConditionVariablePtr pInitializeConditionVariable;
 WakeConditionVariablePtr pWakeConditionVariable;
 WakeAllConditionVariablePtr pWakeAllConditionVariable;
 SleepConditionVariableSRWPtr pSleepConditionVariableSRW;
-InitializeSRWLockPtr pInitializeSRWLock;;
+InitializeSRWLockPtr pInitializeSRWLock;
 AcquireSRWLockExclusivePtr pAcquireSRWLockExclusive;
 TryAcquireSRWLockExclusivePtr pTryAcquireSRWLockExclusive;
 ReleaseSRWLockExclusivePtr pReleaseSRWLockExclusive;
+AcquireSRWLockSharedPtr pAcquireSRWLockShared;
+TryAcquireSRWLockSharedPtr pTryAcquireSRWLockShared;
+ReleaseSRWLockSharedPtr pReleaseSRWLockShared;
 
 class InitCondVar
 {
@@ -50,6 +53,9 @@ public:
 		pAcquireSRWLockExclusive = (AcquireSRWLockExclusivePtr)GetProcAddress(m_kernel32, "AcquireSRWLockExclusive");
 		pTryAcquireSRWLockExclusive = (TryAcquireSRWLockExclusivePtr)GetProcAddress(m_kernel32, "TryAcquireSRWLockExclusive");
 		pReleaseSRWLockExclusive = (ReleaseSRWLockExclusivePtr)GetProcAddress(m_kernel32, "ReleaseSRWLockExclusive");
+		pAcquireSRWLockShared = (AcquireSRWLockSharedPtr)GetProcAddress(m_kernel32, "AcquireSRWLockShared");
+		pTryAcquireSRWLockShared = (TryAcquireSRWLockSharedPtr)GetProcAddress(m_kernel32, "TryAcquireSRWLockShared");
+		pReleaseSRWLockShared = (ReleaseSRWLockSharedPtr)GetProcAddress(m_kernel32, "ReleaseSRWLockShared");
 	}
 	
 	virtual ~InitCondVar()

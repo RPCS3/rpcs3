@@ -30,6 +30,8 @@
 
 #define THREAD_HEIGHT 4
 
+int GSRasterizerData::s_counter = 0;
+
 GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon)
 	: m_ds(ds)
 	, m_id(id)
@@ -124,6 +126,8 @@ void GSRasterizer::Draw(GSRasterizerData* data)
 
 	if(data->vertex != NULL && data->vertex_count == 0 || data->index != NULL && data->index_count == 0) return;
 
+	data->start = __rdtsc();
+
 	m_ds->BeginDraw(data);
 
 	const GSVertexSW* vertex = data->vertex;
@@ -139,8 +143,6 @@ void GSRasterizer::Draw(GSRasterizerData* data)
 	m_scissor = data->scissor;
 	m_fscissor_x = GSVector4(data->scissor).xzxz();
 	m_fscissor_y = GSVector4(data->scissor).ywyw();
-
-	uint64 start = __rdtsc();
 
 	switch(data->primclass)
 	{
@@ -206,7 +208,9 @@ void GSRasterizer::Draw(GSRasterizerData* data)
 		__assume(0);
 	}
 
-	uint64 ticks = __rdtsc() - start;
+	data->pixels = m_pixels;
+
+	uint64 ticks = __rdtsc() - data->start;
 
 	m_ds->EndDraw(data->frame, ticks, m_pixels);
 }
