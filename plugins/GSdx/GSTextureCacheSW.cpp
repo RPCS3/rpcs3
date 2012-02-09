@@ -178,6 +178,11 @@ GSTextureCacheSW::Texture::Texture(GSState* state, uint32 tw0, const GIFRegTEX0&
 	m_TEX0 = TEX0;
 	m_TEXA = TEXA;
 
+	if(m_tw == 0)
+	{
+		m_tw = std::max<int>(m_TEX0.TW, GSLocalMemory::m_psm[m_TEX0.PSM].pal == 0 ? 3 : 5); // makes one row 32 bytes at least, matches the smallest block size that is allocated for m_buff
+	}
+
 	memset(m_valid, 0, sizeof(m_valid));
 	memset(m_pages.bm, 0, sizeof(m_pages.bm));
 
@@ -239,17 +244,6 @@ bool GSTextureCacheSW::Texture::Update(const GSVector4i& rect)
 
 	if(m_buff == NULL)
 	{
-		uint32 tw0 = std::max<int>(m_TEX0.TW, 5 - shift); // makes one row 32 bytes at least, matches the smallest block size that is allocated for m_buff
-
-		if(m_tw == 0)
-		{
-			m_tw = tw0;
-		}
-		else
-		{
-			ASSERT(m_tw >= tw0);
-		}
-
 		uint32 pitch = (1 << m_tw) << shift;
 		
 		m_buff = _aligned_malloc(pitch * th * 4, 32);

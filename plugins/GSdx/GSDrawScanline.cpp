@@ -91,6 +91,7 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data)
 	sel.fb = m_global.sel.fb;
 	sel.zb = m_global.sel.zb;
 	sel.zoverflow = m_global.sel.zoverflow;
+	sel.notest = m_global.sel.notest;
 
 	m_sp = m_sp_map[sel];
 }
@@ -272,16 +273,23 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 	// Init
 
-	int skip = left & 3;
+	int skip, steps;
 
-	left -= skip;
-
-	int steps = pixels + skip - 4;
+	if(!sel.notest)
+	{
+		skip = left & 3;
+		steps = pixels + skip - 4;
+		left -= skip;
+		test = GSDrawScanlineCodeGenerator::m_test[skip] | GSDrawScanlineCodeGenerator::m_test[7 + (steps & (steps >> 31))];
+	}
+	else
+	{
+		skip = 0;
+		steps = pixels - 4;
+	}
 
 	const GSVector2i* fza_base = &m_global.fzbr[top];
 	const GSVector2i* fza_offset = &m_global.fzbc[left >> 2];
-
-	test = GSDrawScanlineCodeGenerator::m_test[skip] | GSDrawScanlineCodeGenerator::m_test[7 + (steps & (steps >> 31))];
 
 	if(sel.prim != GS_SPRITE_CLASS)
 	{
@@ -318,7 +326,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 				}
 				else if(sel.ltf)
 				{
-					vf = v.xxzzlh().srl16(1);
+					vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
 				}
 
 				s = GSVector4::cast(u);
@@ -508,8 +516,8 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 						u -= 0x8000;
 						v -= 0x8000;
 
-						uf = u.xxzzlh().srl16(1);
-						vf = v.xxzzlh().srl16(1);
+						uf = u.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
+						vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
 					}
 
 					GSVector4i uv0 = u.sra32(16).ps32(v.sra32(16));
@@ -629,8 +637,8 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 							u -= 0x8000;
 							v -= 0x8000;
 
-							uf = u.xxzzlh().srl16(1);
-							vf = v.xxzzlh().srl16(1);
+							uf = u.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
+							vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
 						}
 
 						GSVector4i uv0 = u.sra32(16).ps32(v.sra32(16));
@@ -764,11 +772,11 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 					if(sel.ltf)
 					{
-						uf = u.xxzzlh().srl16(1);
+						uf = u.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
 					
 						if(sel.prim != GS_SPRITE_CLASS)
 						{
-							vf = v.xxzzlh().srl16(1);
+							vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
 						}
 					}
 
@@ -1000,27 +1008,30 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 			int fzm = 0;
 
-			if(sel.fwrite)
+			if(!sel.notest)
 			{
-				fm |= test;
-			}
+				if(sel.fwrite)
+				{
+					fm |= test;
+				}
 
-			if(sel.zwrite)
-			{
-				zm |= test;
-			}
+				if(sel.zwrite)
+				{
+					zm |= test;
+				}
 
-			if(sel.fwrite && sel.zwrite)
-			{
-				fzm = ~(fm == GSVector4i::xffffffff()).ps32(zm == GSVector4i::xffffffff()).mask();
-			}
-			else if(sel.fwrite)
-			{
-				fzm = ~(fm == GSVector4i::xffffffff()).ps32().mask();
-			}
-			else if(sel.zwrite)
-			{
-				fzm = ~(zm == GSVector4i::xffffffff()).ps32().mask();
+				if(sel.fwrite && sel.zwrite)
+				{
+					fzm = ~(fm == GSVector4i::xffffffff()).ps32(zm == GSVector4i::xffffffff()).mask();
+				}
+				else if(sel.fwrite)
+				{
+					fzm = ~(fm == GSVector4i::xffffffff()).ps32().mask();
+				}
+				else if(sel.zwrite)
+				{
+					fzm = ~(zm == GSVector4i::xffffffff()).ps32().mask();
+				}
 			}
 
 			// WriteZBuf
@@ -1030,16 +1041,39 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 				if(sel.ztest && sel.zpsm < 2)
 				{
 					zs = zs.blend8(zd, zm);
+				}
 
-					if(fzm & 0x0f00) GSVector4i::storel((uint8*)m_global.vm + za * 2, zs);
-					if(fzm & 0xf000) GSVector4i::storeh((uint8*)m_global.vm + za * 2 + 16, zs);
+				bool fast = sel.ztest ? sel.zpsm < 2 : sel.zpsm == 0 && sel.notest;
+
+				if(sel.notest)
+				{
+					if(fast)
+					{
+						GSVector4i::storel((uint8*)m_global.vm + za * 2, zs);
+						GSVector4i::storeh((uint8*)m_global.vm + za * 2 + 16, zs);
+					}
+					else
+					{
+						WritePixel(zs, za, 0, sel.zpsm);
+						WritePixel(zs, za, 1, sel.zpsm);
+						WritePixel(zs, za, 2, sel.zpsm);
+						WritePixel(zs, za, 3, sel.zpsm);
+					}
 				}
 				else
 				{
-					if(fzm & 0x0300) WritePixel(zs, za, 0, sel.zpsm);
-					if(fzm & 0x0c00) WritePixel(zs, za, 1, sel.zpsm);
-					if(fzm & 0x3000) WritePixel(zs, za, 2, sel.zpsm);
-					if(fzm & 0xc000) WritePixel(zs, za, 3, sel.zpsm);
+					if(fast)
+					{
+						if(fzm & 0x0f00) GSVector4i::storel((uint8*)m_global.vm + za * 2, zs);
+						if(fzm & 0xf000) GSVector4i::storeh((uint8*)m_global.vm + za * 2 + 16, zs);
+					}
+					else
+					{
+						if(fzm & 0x0300) WritePixel(zs, za, 0, sel.zpsm);
+						if(fzm & 0x0c00) WritePixel(zs, za, 1, sel.zpsm);
+						if(fzm & 0x3000) WritePixel(zs, za, 2, sel.zpsm);
+						if(fzm & 0xc000) WritePixel(zs, za, 3, sel.zpsm);
+					}
 				}
 			}
 
@@ -1197,17 +1231,37 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 					fs = fs.blend(fd, fm);
 				}
 
-				if(sel.rfb && sel.fpsm < 2)
+				bool fast = sel.rfb ? sel.fpsm < 2 : sel.fpsm == 0 && sel.notest;
+
+				if(sel.notest)
 				{
-					if(fzm & 0x000f) GSVector4i::storel((uint8*)m_global.vm + fa * 2, fs);
-					if(fzm & 0x00f0) GSVector4i::storeh((uint8*)m_global.vm + fa * 2 + 16, fs);
+					if(fast)
+					{
+						GSVector4i::storel((uint8*)m_global.vm + fa * 2, fs);
+						GSVector4i::storeh((uint8*)m_global.vm + fa * 2 + 16, fs);
+					}
+					else
+					{
+						WritePixel(fs, fa, 0, sel.fpsm);
+						WritePixel(fs, fa, 1, sel.fpsm);
+						WritePixel(fs, fa, 2, sel.fpsm);
+						WritePixel(fs, fa, 3, sel.fpsm);
+					}
 				}
 				else
 				{
-					if(fzm & 0x0003) WritePixel(fs, fa, 0, sel.fpsm);
-					if(fzm & 0x000c) WritePixel(fs, fa, 1, sel.fpsm);
-					if(fzm & 0x0030) WritePixel(fs, fa, 2, sel.fpsm);
-					if(fzm & 0x00c0) WritePixel(fs, fa, 3, sel.fpsm);
+					if(fast)
+					{
+						if(fzm & 0x000f) GSVector4i::storel((uint8*)m_global.vm + fa * 2, fs);
+						if(fzm & 0x00f0) GSVector4i::storeh((uint8*)m_global.vm + fa * 2 + 16, fs);
+					}
+					else
+					{
+						if(fzm & 0x0003) WritePixel(fs, fa, 0, sel.fpsm);
+						if(fzm & 0x000c) WritePixel(fs, fa, 1, sel.fpsm);
+						if(fzm & 0x0030) WritePixel(fs, fa, 2, sel.fpsm);
+						if(fzm & 0x00c0) WritePixel(fs, fa, 3, sel.fpsm);
+					}
 				}
 			}
 		}
@@ -1273,7 +1327,10 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 			}
 		}
 
-		test = GSDrawScanlineCodeGenerator::m_test[7 + (steps & (steps >> 31))];
+		if(!sel.notest)
+		{
+			test = GSDrawScanlineCodeGenerator::m_test[7 + (steps & (steps >> 31))];
+		}
 	}
 }
 
@@ -1492,6 +1549,7 @@ void GSDrawScanline::DrawRectT(const int* RESTRICT row, const int* RESTRICT col,
 	if(masked) ASSERT(mask.u32[0] != 0);
 
 	color = color.andnot(mask);
+	c = color.extract32<0>();
 
 	GSVector4i br = r.ralign<Align_Inside>(GSVector2i(8 * 4 / sizeof(T), 8));
 

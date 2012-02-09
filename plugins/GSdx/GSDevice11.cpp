@@ -98,8 +98,6 @@ bool GSDevice11::Create(GSWnd* wnd)
 	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, levels, countof(levels), D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
 	// hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, flags, NULL, 0, D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
 
-	//return false;
-
 	if(FAILED(hr)) return false;
 
 	if(!SetFeatureLevel(level, true))
@@ -358,6 +356,13 @@ void GSDevice11::DrawPrimitive()
 void GSDevice11::DrawIndexedPrimitive()
 {
 	m_ctx->DrawIndexed(m_index.count, m_index.start, m_vertex.start);
+}
+
+void GSDevice11::DrawIndexedPrimitive(int offset, int count)
+{
+	ASSERT(offset + count <= m_index.count);
+
+	m_ctx->DrawIndexed(count, m_index.start + offset, m_vertex.start);
 }
 
 void GSDevice11::Dispatch(uint32 x, uint32 y, uint32 z)
@@ -721,6 +726,18 @@ void GSDevice11::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vert
 
 void GSDevice11::IASetVertexBuffer(const void* vertex, size_t stride, size_t count)
 {
+	void* ptr = NULL;
+
+	if(IAMapVertexBuffer(&ptr, stride, count))
+	{
+		GSVector4i::storent(ptr, vertex, count * stride);
+
+		IAUnmapVertexBuffer();
+	}
+}
+
+bool GSDevice11::IAMapVertexBuffer(void** vertex, size_t stride, size_t count)
+{
 	ASSERT(m_vertex.count == 0);
 
 	if(count * stride > m_vertex.limit * m_vertex.stride)
@@ -729,7 +746,6 @@ void GSDevice11::IASetVertexBuffer(const void* vertex, size_t stride, size_t cou
 		m_vb = NULL;
 
 		m_vertex.start = 0;
-		m_vertex.count = 0;
 		m_vertex.limit = std::max<int>(count * 3 / 2, 11000);
 	}
 
@@ -748,7 +764,7 @@ void GSDevice11::IASetVertexBuffer(const void* vertex, size_t stride, size_t cou
 
 		hr = m_dev->CreateBuffer(&bd, NULL, &m_vb);
 
-		if(FAILED(hr)) return;
+		if(FAILED(hr)) return false;
 	}
 
 	D3D11_MAP type = D3D11_MAP_WRITE_NO_OVERWRITE;
@@ -762,17 +778,24 @@ void GSDevice11::IASetVertexBuffer(const void* vertex, size_t stride, size_t cou
 
 	D3D11_MAPPED_SUBRESOURCE m;
 
-	if(SUCCEEDED(m_ctx->Map(m_vb, 0, type, 0, &m)))
+	if(FAILED(m_ctx->Map(m_vb, 0, type, 0, &m)))
 	{
-		GSVector4i::storent((uint8*)m.pData + m_vertex.start * stride, vertex, count * stride);
-
-		m_ctx->Unmap(m_vb, 0);
+		return false;
 	}
+
+	*vertex = (uint8*)m.pData + m_vertex.start * stride;
 
 	m_vertex.count = count;
 	m_vertex.stride = stride;
 
-	IASetVertexBuffer(m_vb, stride);
+	return true;
+}
+
+void GSDevice11::IAUnmapVertexBuffer()
+{
+	m_ctx->Unmap(m_vb, 0);
+
+	IASetVertexBuffer(m_vb, m_vertex.stride);
 }
 
 void GSDevice11::IASetVertexBuffer(ID3D11Buffer* vb, size_t stride)
@@ -798,7 +821,7 @@ void GSDevice11::IASetIndexBuffer(const void* index, size_t count)
 		m_ib_old = m_ib;
 		m_ib = NULL;
 
-		m_index.count = 0;
+		m_index.start = 0;
 		m_index.limit = std::max<int>(count * 3 / 2, 11000);
 	}
 
@@ -904,7 +927,11 @@ void GSDevice11::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 {
 	PSSetShaderResource(0, sr0);
 	PSSetShaderResource(1, sr1);
-	PSSetShaderResource(2, NULL);
+
+	for(int i = 2; i < countof(m_state.ps_srv); i++)
+	{
+		PSSetShaderResource(i, NULL);
+	}
 }
 
 void GSDevice11::PSSetShaderResource(int i, GSTexture* sr)
@@ -912,6 +939,13 @@ void GSDevice11::PSSetShaderResource(int i, GSTexture* sr)
 	ID3D11ShaderResourceView* srv = NULL;
 
 	if(sr) srv = *(GSTexture11*)sr;
+
+	PSSetShaderResourceView(i, srv);
+}
+
+void GSDevice11::PSSetShaderResourceView(int i, ID3D11ShaderResourceView* srv)
+{
+	ASSERT(i < countof(m_state.ps_srv));
 
 	if(m_state.ps_srv[i] != srv)
 	{
@@ -944,14 +978,14 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 
 	if(m_srv_changed)
 	{
-		m_ctx->PSSetShaderResources(0, 3, m_state.ps_srv);
+		m_ctx->PSSetShaderResources(0, countof(m_state.ps_srv), m_state.ps_srv);
 
 		m_srv_changed = false;
 	}
 
 	if(m_ss_changed)
 	{
-		m_ctx->PSSetSamplers(0, 3, m_state.ps_ss);
+		m_ctx->PSSetSamplers(0, countof(m_state.ps_ss), m_state.ps_ss);
 
 		m_ss_changed = false;
 	}
@@ -966,9 +1000,9 @@ void GSDevice11::PSSetShader(ID3D11PixelShader* ps, ID3D11Buffer* ps_cb)
 
 void GSDevice11::CSSetShaderSRV(int i, ID3D11ShaderResourceView* srv)
 {
-	// TODO: if(m_state.cs_srv[i] != srv)
+	if(m_state.cs_srv[i] != srv)
 	{
-		// TODO: m_state.cs_srv[i] = srv;
+		m_state.cs_srv[i] = srv;
 
 		m_ctx->CSSetShaderResources(i, 1, &srv);
 	}
@@ -976,23 +1010,27 @@ void GSDevice11::CSSetShaderSRV(int i, ID3D11ShaderResourceView* srv)
 
 void GSDevice11::CSSetShaderUAV(int i, ID3D11UnorderedAccessView* uav)
 {
-	// TODO: if(m_state.cs_uav[i] != uav)
-	{
-		// TODO: m_state.cs_uav[i] = uav;
+	uint32 counters[8];
+		
+	memset(counters, 0, sizeof(counters));
 
-		// uint32 count[] = {-1};
-
-		m_ctx->CSSetUnorderedAccessViews(i, 1, &uav, NULL);
-	}
+	m_ctx->CSSetUnorderedAccessViews(i, 1, &uav, counters);
 }
 
-void GSDevice11::CSSetShader(ID3D11ComputeShader* cs)
+void GSDevice11::CSSetShader(ID3D11ComputeShader* cs, ID3D11Buffer* cs_cb)
 {
 	if(m_state.cs != cs)
 	{
 		m_state.cs = cs;
 
 		m_ctx->CSSetShader(cs, NULL, 0);
+	}
+
+	if(m_state.cs_cb != cs_cb)
+	{
+		m_state.cs_cb = cs_cb;
+
+		m_ctx->CSSetConstantBuffers(0, 1, &cs_cb);
 	}
 }
 
@@ -1055,6 +1093,41 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 	}
 
 	GSVector4i r = scissor ? *scissor : GSVector4i(rt->GetSize()).zwxy();
+
+	if(!m_state.scissor.eq(r))
+	{
+		m_state.scissor = r;
+
+		m_ctx->RSSetScissorRects(1, r);
+	}
+}
+
+void GSDevice11::OMSetRenderTargets(const GSVector2i& rtsize, int count, ID3D11UnorderedAccessView** uav, uint32* counters, const GSVector4i* scissor)
+{
+	m_ctx->OMSetRenderTargetsAndUnorderedAccessViews(0, NULL, NULL, 0, count, uav, counters);
+
+	m_state.rtv = NULL;
+	m_state.dsv = NULL;
+
+	if(m_state.viewport != rtsize)
+	{
+		m_state.viewport = rtsize;
+
+		D3D11_VIEWPORT vp;
+
+		memset(&vp, 0, sizeof(vp));
+
+		vp.TopLeftX = 0;
+		vp.TopLeftY = 0;
+		vp.Width = (float)rtsize.x;
+		vp.Height = (float)rtsize.y;
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+
+		m_ctx->RSSetViewports(1, &vp);
+	}
+
+	GSVector4i r = scissor ? *scissor : GSVector4i(rtsize).zwxy();
 
 	if(!m_state.scissor.eq(r))
 	{
@@ -1135,6 +1208,38 @@ HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MAC
 	return hr;
 }
 
+HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs, D3D11_SO_DECLARATION_ENTRY* layout, int count)
+{
+	HRESULT hr;
+
+	vector<D3D11_SHADER_MACRO> m;
+
+	PrepareShaderMacro(m, macro);
+
+	CComPtr<ID3D11Blob> shader, error;
+
+    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry, m_shader.gs.c_str(), 0, 0, NULL, &shader, &error, NULL);
+
+	if(error)
+	{
+		printf("%s\n", (const char*)error->GetBufferPointer());
+	}
+
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	hr = m_dev->CreateGeometryShaderWithStreamOutput((void*)shader->GetBufferPointer(), shader->GetBufferSize(), layout, count, NULL, 0, D3D11_SO_NO_RASTERIZED_STREAM, NULL, gs);
+
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	return hr;
+}
+
 HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps)
 {
 	HRESULT hr;
@@ -1177,7 +1282,7 @@ HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MAC
 
 	CComPtr<ID3D11Blob> shader, error;
 
-    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry, m_shader.ps.c_str(), 0, 0, NULL, &shader, &error, NULL);
+    hr = D3DX11CompileFromResource(theApp.GetModuleHandle(), MAKEINTRESOURCE(id), NULL, &m[0], NULL, entry, m_shader.cs.c_str(), 0, 0, NULL, &shader, &error, NULL);
 
 	if(error)
 	{

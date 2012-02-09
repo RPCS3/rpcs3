@@ -22,9 +22,8 @@
 #include "stdafx.h"
 #include "GSRenderer.h"
 
-GSRenderer::GSRenderer(GSVertexTrace* vt, size_t vertex_stride)
-	: GSState(vt, vertex_stride)
-	, m_dev(NULL)
+GSRenderer::GSRenderer()
+	: m_dev(NULL)
 	, m_shader(0)
 	, m_shift_key(false)
 	, m_control_key(false)
@@ -38,12 +37,6 @@ GSRenderer::GSRenderer(GSVertexTrace* vt, size_t vertex_stride)
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
 	m_mipmap = !!theApp.GetConfig("mipmap", 1);
 	m_fxaa = !!theApp.GetConfig("fxaa", 0);
-
-	s_n = 0;
-	s_dump = !!theApp.GetConfig("dump", 0);
-	s_save = !!theApp.GetConfig("save", 0);
-	s_savez = !!theApp.GetConfig("savez", 0);
-	s_saven = theApp.GetConfig("saven", 0);
 }
 
 GSRenderer::~GSRenderer()
@@ -259,7 +252,7 @@ bool GSRenderer::Merge(int field)
 		{
 			int field2 = 1 - ((m_interlace - 1) & 1);
 			int mode = (m_interlace - 1) >> 1;
-
+			
 			m_dev->Interlace(ds, field ^ field2, mode, tex[1] ? tex[1]->GetScale().y : tex[0]->GetScale().y);
 		}
 
@@ -306,6 +299,8 @@ void GSRenderer::VSync(int field)
 		ResetDevice();
 	}
 
+	m_dev->AgePool();
+
 	// osd
 
 	if((m_perfmon.GetFrame() & 0x1f) == 0)
@@ -334,7 +329,7 @@ void GSRenderer::VSync(int field)
 				s2.c_str(),
 				theApp.m_gs_interlace[m_interlace].name.c_str(),
 				theApp.m_gs_aspectratio[m_aspectratio].name.c_str(),
-				(int)m_perfmon.Get(GSPerfMon::Quad),
+				(int)m_perfmon.Get(GSPerfMon::SyncPoint),
 				(int)m_perfmon.Get(GSPerfMon::Prim),
 				(int)m_perfmon.Get(GSPerfMon::Draw),
 				m_perfmon.CPU(),

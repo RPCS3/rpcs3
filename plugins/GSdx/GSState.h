@@ -59,8 +59,18 @@ class GSState : public GSAlignedClass<32>
 	GIFRegHandler m_fpGIFRegHandlers[256];
 	GIFRegHandler m_fpGIFRegHandlerXYZ[8][4];
 
+	typedef void (GSState::*GIFPackedRegHandlerC)(const GIFPackedReg* RESTRICT r, uint32 size);
+
+	GIFPackedRegHandlerC m_fpGIFPackedRegHandlersC[2];
+	GIFPackedRegHandlerC m_fpGIFPackedRegHandlerSTQRGBAXYZF2[8];
+	GIFPackedRegHandlerC m_fpGIFPackedRegHandlerSTQRGBAXYZ2[8];
+
+	template<uint32 prim> void GIFPackedRegHandlerSTQRGBAXYZF2(const GIFPackedReg* RESTRICT r, uint32 size);
+	template<uint32 prim> void GIFPackedRegHandlerSTQRGBAXYZ2(const GIFPackedReg* RESTRICT r, uint32 size);
+	void GIFPackedRegHandlerNOP(const GIFPackedReg* RESTRICT r, uint32 size);
+
 	template<int i> void ApplyTEX0(GIFRegTEX0& TEX0);
-	void ApplyPRIM(const GIFRegPRIM& PRIM);
+	void ApplyPRIM(uint32 prim);
 
 	void GIFRegHandlerNull(const GIFReg* RESTRICT r);
 	void GIFRegHandlerPRIM(const GIFReg* RESTRICT r);
@@ -133,15 +143,14 @@ protected:
 	float m_q;
 	GSVector4 m_scissor;
 	uint32 m_ofxy;
+	bool m_texflush;
 	
 	struct 
 	{
-		uint8* buff; 
-		size_t stride;
+		GSVertex* buff; 
 		size_t head, tail, next, maxcount; // head: first vertex, tail: last vertex + 1, next: last indexed + 1
 		GSVector4 xy[4]; 
 		size_t xy_tail;
-		uint8* tmp; 
 	} m_vertex; 
 
 	struct 
@@ -149,26 +158,6 @@ protected:
 		uint32* buff; 
 		size_t tail;
 	} m_index;
-
-	typedef void (GSState::*ConvertVertexPtr)(size_t dst_index, size_t src_index);
-
-	ConvertVertexPtr m_cv[8][2][2], m_cvf; // [PRIM][TME][FST]
-
-	#define InitConvertVertex2(T, P) \
-		m_cv[P][0][0] = (ConvertVertexPtr)&T::ConvertVertex<P, 0, 0>; \
-		m_cv[P][0][1] = (ConvertVertexPtr)&T::ConvertVertex<P, 0, 1>; \
-		m_cv[P][1][0] = (ConvertVertexPtr)&T::ConvertVertex<P, 1, 0>; \
-		m_cv[P][1][1] = (ConvertVertexPtr)&T::ConvertVertex<P, 1, 1>; \
-
-	#define InitConvertVertex(T) \
-		InitConvertVertex2(T, GS_POINTLIST) \
-		InitConvertVertex2(T, GS_LINELIST) \
-		InitConvertVertex2(T, GS_LINESTRIP) \
-		InitConvertVertex2(T, GS_TRIANGLELIST) \
-		InitConvertVertex2(T, GS_TRIANGLESTRIP) \
-		InitConvertVertex2(T, GS_TRIANGLEFAN) \
-		InitConvertVertex2(T, GS_SPRITE) \
-		InitConvertVertex2(T, GS_INVALID) \
 
 	void UpdateContext();
 	void UpdateScissor();
@@ -182,7 +171,7 @@ protected:
 
 	// following functions need m_vt to be initialized
 
-	GSVertexTrace* m_vt;
+	GSVertexTrace m_vt;
 
 	void GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFRegCLAMP& CLAMP, bool linear);
 	void GetAlphaMinMax();
@@ -205,8 +194,14 @@ public:
 	GSDump m_dump;
 	bool m_nativeres;
 
+	int s_n;
+	bool s_dump;
+	bool s_save;
+	bool s_savez;
+	int s_saven;
+
 public:
-	GSState(GSVertexTrace* vt, size_t vertex_stride);
+	GSState();
 	virtual ~GSState();
 
 	void ResetHandlers();

@@ -53,7 +53,8 @@ public:
 		GSOffset* fb;
 		GSOffset* zb;
 		GSOffset* tex;
-		GSPixelOffset4* fzb;
+		GSPixelOffset* fzb;
+		GSPixelOffset4* fzb4;
 	} offset;
 
 	GSDrawingContext()

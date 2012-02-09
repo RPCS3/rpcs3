@@ -26,28 +26,114 @@
 
 class GSRendererCS : public GSRenderer
 {
-	class GSVertexTraceCS : public GSVertexTrace
+	struct VSSelector
 	{
-	public:
-		GSVertexTraceCS(const GSState* state) : GSVertexTrace(state) {}
+		union
+		{
+			struct
+			{
+				uint32 tme:1;
+				uint32 fst:1;
+			};
+
+			uint32 key;
+		};
+
+		operator uint32() {return key & 0x3;}
+
+		VSSelector() : key(0) {}
 	};
 
+	__aligned(struct, 32) VSConstantBuffer
+	{
+		GSVector4 VertexScale;
+		GSVector4 VertexOffset;
+	};
+
+	struct GSSelector
+	{
+		union
+		{
+			struct
+			{
+				uint32 iip:1;
+				uint32 prim:2;
+			};
+
+			uint32 key;
+		};
+
+		operator uint32() {return key & 0x7;}
+
+		GSSelector() : key(0) {}
+	};
+
+	struct PSSelector
+	{
+		union
+		{
+			struct
+			{
+				uint32 fpsm:6;
+				uint32 zpsm:6;
+			};
+
+			uint32 key;
+		};
+
+		operator uint32() {return key & 0x3ff;}
+
+		PSSelector() : key(0) {}
+	};
+
+	__aligned(struct, 32) PSConstantBuffer
+	{
+		uint32 fm;
+		uint32 zm;
+	};
+
+	CComPtr<ID3D11DepthStencilState> m_dss;
+	CComPtr<ID3D11BlendState> m_bs;
+	CComPtr<ID3D11SamplerState> m_ss;
+	CComPtr<ID3D11Buffer> m_lb;
+	CComPtr<ID3D11UnorderedAccessView> m_lb_uav;
+	CComPtr<ID3D11ShaderResourceView> m_lb_srv;
+	CComPtr<ID3D11Buffer> m_sob;
+	CComPtr<ID3D11UnorderedAccessView> m_sob_uav;
+	CComPtr<ID3D11ShaderResourceView> m_sob_srv;
 	CComPtr<ID3D11Buffer> m_vm;
+	//CComPtr<ID3D11Texture2D> m_vm;
 	CComPtr<ID3D11UnorderedAccessView> m_vm_uav;
-	CComPtr<ID3D11Buffer> m_vb;
-	CComPtr<ID3D11Buffer> m_ib;
-	CComPtr<ID3D11Buffer> m_pb;
-	hash_map<uint32, CComPtr<ID3D11ComputeShader> > m_cs;
 	uint32 m_vm_valid[16];
+	CComPtr<ID3D11Buffer> m_pb;
+	//CComPtr<ID3D11Texture2D> m_pb;
+	hash_map<uint32, GSVertexShader11 > m_vs;
+	CComPtr<ID3D11Buffer> m_vs_cb;
+	hash_map<uint32, CComPtr<ID3D11GeometryShader> > m_gs;
+	CComPtr<ID3D11PixelShader> m_ps0;
+	hash_map<uint32, CComPtr<ID3D11PixelShader> > m_ps1;
+	CComPtr<ID3D11Buffer> m_ps_cb;
 
 	void Write(GSOffset* o, const GSVector4i& r);
 	void Read(GSOffset* o, const GSVector4i& r, bool invalidate);
-	
+
+	struct OffsetBuffer
+	{
+		CComPtr<ID3D11Buffer> row, col;
+		CComPtr<ID3D11ShaderResourceView> row_srv, col_srv;
+	};
+
+	hash_map<uint32, OffsetBuffer> m_offset;
+
+	bool GetOffsetBuffer(OffsetBuffer** fzbo);
+
 protected:
-	template<uint32 prim, uint32 tme, uint32 fst> 
-	void ConvertVertex(size_t dst_index, size_t src_index);
+	GSTexture* m_texture[2];
+	uint8* m_output;
 
 	bool CreateDevice(GSDevice* dev);
+	void ResetDevice();
+	void VSync(int field);
 	GSTexture* GetOutput(int i);
 	void Draw();
 	void InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r);

@@ -38,11 +38,14 @@ public:
 protected:
 	const GSState* m_state;
 
-	uint32 Hash(GS_PRIM_CLASS primclass);
-
-	typedef void (*VertexTracePtr)(int count, const void* vertex, const uint32* index, Vertex& min, Vertex& max);
-
 	static const GSVector4 s_minmax;
+
+	typedef void (GSVertexTrace::*FindMinMaxPtr)(const void* vertex, const uint32* index, int count);
+
+	FindMinMaxPtr m_fmm[2][2][2][2][4];
+
+	template<GS_PRIM_CLASS primclass, uint32 iip, uint32 tme, uint32 fst, uint32 color>
+	void FindMinMax(const void* vertex, const uint32* index, int count);
 
 public:
 	GS_PRIM_CLASS m_primclass;
@@ -69,55 +72,7 @@ public:
 	GSVertexTrace(const GSState* state);
 	virtual ~GSVertexTrace() {}
 
-	virtual void Update(const void* vertex, const uint32* index, int count, GS_PRIM_CLASS primclass);
+	void Update(const void* vertex, const uint32* index, int count, GS_PRIM_CLASS primclass);
 
 	bool IsLinear() const {return m_filter.linear;}
-};
-
-__aligned(class, 32) GSVertexTraceSW : public GSVertexTrace
-{
-	class CG : public GSCodeGenerator
-	{
-	public:
-		CG(const void* param, uint32 key, void* code, size_t maxsize);
-	};
-
-	GSCodeGeneratorFunctionMap<CG, uint32, VertexTracePtr> m_map;
-
-public:
-	GSVertexTraceSW(const GSState* state);
-
-	void Update(const void* vertex, const uint32* index, int count, GS_PRIM_CLASS primclass);
-};
-
-__aligned(class, 32) GSVertexTraceDX9 : public GSVertexTrace
-{
-	class CG : public GSCodeGenerator
-	{
-	public:
-		CG(const void* param, uint32 key, void* code, size_t maxsize);
-	};
-
-	GSCodeGeneratorFunctionMap<CG, uint32, VertexTracePtr> m_map;
-
-public:
-	GSVertexTraceDX9(const GSState* state);
-
-	void Update(const void* vertex, const uint32* index, int count, GS_PRIM_CLASS primclass);
-};
-
-__aligned(class, 32) GSVertexTraceDX11 : public GSVertexTrace
-{
-	class CG : public GSCodeGenerator
-	{
-	public:
-		CG(const void* param, uint32 key, void* code, size_t maxsize);
-	};
-
-	GSCodeGeneratorFunctionMap<CG, uint32, VertexTracePtr> m_map;
-
-public:
-	GSVertexTraceDX11(const GSState* state);
-
-	void Update(const void* vertex, const uint32* index, int count, GS_PRIM_CLASS primclass);
 };

@@ -5649,6 +5649,7 @@ Serial = SLUS-20911
 Name   = Shin Megami Tensei - Nocturne
 Region = NTSC-U
 Compat = 5
+eeRoundMode = 0 // Ladder glitch in "Assembly of Nihilo B11" level
 ---------------------------------------------
 Serial = SLUS-20912
 Name   = Superbikes TT
@@ -10338,6 +10339,7 @@ Region = NTSC-U
 Serial = SLUS-28045
 Name   = Shin Megami Tensei - Nocturne [Trade Demo]
 Region = NTSC-U
+eeRoundMode = 0 // Ladder glitch in "Assembly of Nihilo B11" level
 ---------------------------------------------
 Serial = SLUS-28046
 Name   = Guilty Gear Isuka [Trade Demo]
@@ -13611,6 +13613,7 @@ Region = NTSC-K
 Serial = SLKA-25160
 Name   = Shin Megami Tensei III - Nocturne Maniax
 Region = NTSC-K
+eeRoundMode = 0 // Ladder glitch in "Assembly of Nihilo B11" level
 ---------------------------------------------
 Serial = SLKA-25165
 Name   = Mobile Suit Gundam - Seed Destiny - Rengou vs. Z.A.F.T. II Plus
@@ -17250,10 +17253,12 @@ Region = NTSC-J
 Serial = SLPM-65241
 Name   = Shin Megami Tensei 3 - Nocturne [Limited Edition]
 Region = NTSC-J
+eeRoundMode = 0 // Ladder glitch in "Assembly of Nihilo B11" level
 ---------------------------------------------
 Serial = SLPM-65242
 Name   = Shin Megami Tensei 3 - Nocturne
 Region = NTSC-J
+eeRoundMode = 0 // Ladder glitch in "Assembly of Nihilo B11" level
 ---------------------------------------------
 Serial = SLPM-65243
 Name   = Densha de Go! Professional 2
@@ -18019,11 +18024,13 @@ Region = NTSC-J
 Serial = SLPM-65461
 Name   = Shin Megami Tensei 3 - Nocturne - Maniacs
 Region = NTSC-J
+eeRoundMode = 0 // Ladder glitch in "Assembly of Nihilo B11" level
 ---------------------------------------------
 Serial = SLPM-65462
 Name   = Shin Megami Tensei 3 - Nocturne - Maniacs
 Region = NTSC-J
 Compat = 5
+eeRoundMode = 0 // Ladder glitch in "Assembly of Nihilo B11" level
 ---------------------------------------------
 Serial = SLPM-65463
 Name   = Rocky
@@ -23700,6 +23707,7 @@ Region = NTSC-J
 Serial = SLPM-74205
 Name   = Shin Megami Tensei III - Nocturne [PlayStation 2 The Best]
 Region = NTSC-J
+eeRoundMode = 0 // Ladder glitch in "Assembly of Nihilo B11" level
 ---------------------------------------------
 Serial = SLPM-74206
 Name   = Onimusha [PlayStation 2 The Best]

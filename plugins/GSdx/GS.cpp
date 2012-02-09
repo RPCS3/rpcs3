@@ -214,7 +214,7 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			s_gs = NULL;
 		}
 
-		if(renderer == 12)
+		if(renderer == 15)
 		{
 			#ifdef _WINDOWS
 	
@@ -225,12 +225,11 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 				return -1;
 			}
 
-			if(s_gs == NULL)
-			{
-				s_gs = new GSRendererCS();
+			delete s_gs;
 
-				s_renderer = renderer;
-			}
+			s_gs = new GSRendererCS();
+
+			s_renderer = renderer;
 
 			#endif
 		}

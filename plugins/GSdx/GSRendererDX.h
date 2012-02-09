@@ -32,13 +32,12 @@ class GSRendererDX : public GSRendererHW
 	bool UserHacks_AlphaHack;
 
 protected:
-	int m_topology;
-
 	virtual void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	virtual void SetupIA() = 0;
 	virtual void UpdateFBA(GSTexture* rt) {}
 
 public:
-	GSRendererDX(GSVertexTrace* vt, size_t vertex_stride, GSTextureCache* tc, const GSVector2& pixelcenter = GSVector2(0, 0));
+	GSRendererDX(GSTextureCache* tc, const GSVector2& pixelcenter = GSVector2(0, 0));
 	virtual ~GSRendererDX();
 
 };

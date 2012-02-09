@@ -912,6 +912,18 @@ void GSDevice9::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* verti
 
 void GSDevice9::IASetVertexBuffer(const void* vertex, size_t stride, size_t count)
 {
+	void* ptr = NULL;
+
+	if(IAMapVertexBuffer(&ptr, stride, count))
+	{
+		GSVector4i::storent(ptr, vertex, count * stride);
+
+		IAUnmapVertexBuffer();
+	}
+}
+
+bool GSDevice9::IAMapVertexBuffer(void** vertex, size_t stride, size_t count)
+{
 	ASSERT(m_vertex.count == 0);
 
 	if(count * stride > m_vertex.limit * m_vertex.stride)
@@ -930,7 +942,7 @@ void GSDevice9::IASetVertexBuffer(const void* vertex, size_t stride, size_t coun
 
 		hr = m_dev->CreateVertexBuffer(m_vertex.limit * stride, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, D3DPOOL_DEFAULT, &m_vb, NULL);
 
-		if(FAILED(hr)) return;
+		if(FAILED(hr)) return false;
 	}
 
 	uint32 flags = D3DLOCK_NOOVERWRITE;
@@ -942,19 +954,22 @@ void GSDevice9::IASetVertexBuffer(const void* vertex, size_t stride, size_t coun
 		flags = D3DLOCK_DISCARD;
 	}
 
-	void* ptr = NULL;
-
-	if(SUCCEEDED(m_vb->Lock(m_vertex.start * stride, count * stride, &ptr, flags)))
+	if(FAILED(m_vb->Lock(m_vertex.start * stride, count * stride, vertex, flags)))
 	{
-		GSVector4i::storent(ptr, vertex, count * stride);
-
-		m_vb->Unlock();
+		return false;
 	}
 
 	m_vertex.count = count;
 	m_vertex.stride = stride;
 
-	IASetVertexBuffer(m_vb, stride);
+	return true;
+}
+
+void GSDevice9::IAUnmapVertexBuffer()
+{
+	m_vb->Unlock();
+
+	IASetVertexBuffer(m_vb, m_vertex.stride);
 }
 
 void GSDevice9::IASetVertexBuffer(IDirect3DVertexBuffer9* vb, size_t stride)

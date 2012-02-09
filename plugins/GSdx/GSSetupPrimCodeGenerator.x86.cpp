@@ -38,7 +38,7 @@ void GSSetupPrimCodeGenerator::Generate()
 	{
 		mov(edx, dword[esp + _dscan]);
 
-		for(int i = 0; i < 5; i++)
+		for(int i = 0; i < (m_sel.notest ? 2 : 5); i++)
 		{
 			movaps(Xmm(3 + i), ptr[&m_shift[i]]);
 		}
@@ -82,7 +82,7 @@ void GSSetupPrimCodeGenerator::Depth()
 			pshufhw(xmm2, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 			movdqa(ptr[&m_local.d4.f], xmm2);
 
-			for(int i = 0; i < 4; i++)
+			for(int i = 0; i < (m_sel.notest ? 1 : 4); i++)
 			{
 				// m_local.d[i].f = GSVector4i(df * m_shift[i]).xxzzlh();
 
@@ -107,7 +107,7 @@ void GSSetupPrimCodeGenerator::Depth()
 			mulps(xmm1, xmm3);
 			movdqa(ptr[&m_local.d4.z], xmm1);
 
-			for(int i = 0; i < 4; i++)
+			for(int i = 0; i < (m_sel.notest ? 1 : 4); i++)
 			{
 				// m_local.d[i].z = dz * m_shift[i];
 
@@ -144,36 +144,6 @@ void GSSetupPrimCodeGenerator::Depth()
 
 			movdqa(xmm0, ptr[ecx + offsetof(GSVertexSW, t)]);
 			pshufd(xmm0, xmm0, _MM_SHUFFLE(3, 3, 3, 3));
-			
-			/*
-			// GSVector4 z = p.zzzz();
-
-			shufps(xmm0, xmm0, _MM_SHUFFLE(2, 2, 2, 2));
-
-			if(m_sel.zoverflow)
-			{
-				// m_local.p.z = (GSVector4i(z * 0.5f) << 1) | (GSVector4i(z) & GSVector4i::x00000001());
-
-				movaps(xmm1, ptr[&GSVector4::m_half]);
-				mulps(xmm1, xmm0);
-				cvttps2dq(xmm1, xmm1);
-				pslld(xmm1, 1);
-
-				cvttps2dq(xmm0, xmm0);
-				pcmpeqd(xmm2, xmm2);
-				psrld(xmm2, 31);
-				pand(xmm0, xmm2);
-
-				por(xmm0, xmm1);
-			}
-			else
-			{
-				// m_local.p.z = GSVector4i(z);
-
-				cvttps2dq(xmm0, xmm0);
-			}
-			*/
-
 			movdqa(ptr[&m_local.p.z], xmm0);
 		}
 	}
@@ -217,7 +187,7 @@ void GSSetupPrimCodeGenerator::Texture()
 		movaps(xmm1, xmm0);
 		shufps(xmm1, xmm1, (uint8)_MM_SHUFFLE(j, j, j, j));
 
-		for(int i = 0; i < 4; i++)
+		for(int i = 0; i < (m_sel.notest ? 1 : 4); i++)
 		{
 			// GSVector4 v = ds/dt * m_shift[i];
 
@@ -282,7 +252,7 @@ void GSSetupPrimCodeGenerator::Color()
 		shufps(xmm0, xmm0, _MM_SHUFFLE(0, 0, 0, 0));
 		shufps(xmm1, xmm1, _MM_SHUFFLE(2, 2, 2, 2));
 
-		for(int i = 0; i < 4; i++)
+		for(int i = 0; i < (m_sel.notest ? 1 : 4); i++)
 		{
 			// GSVector4i r = GSVector4i(dr * m_shift[i]).ps32();
 
@@ -315,7 +285,7 @@ void GSSetupPrimCodeGenerator::Color()
 		shufps(xmm0, xmm0, _MM_SHUFFLE(1, 1, 1, 1));
 		shufps(xmm1, xmm1, _MM_SHUFFLE(3, 3, 3, 3));
 
-		for(int i = 0; i < 4; i++)
+		for(int i = 0; i < (m_sel.notest ? 1 : 4); i++)
 		{
 			// GSVector4i g = GSVector4i(dg * m_shift[i]).ps32();
 

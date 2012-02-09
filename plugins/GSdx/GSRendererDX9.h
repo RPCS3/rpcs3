@@ -34,16 +34,8 @@ protected:
 		Direct3DBlendState9 bs;
 	} m_fba;
 
-	template<uint32 prim, uint32 tme, uint32 fst>
-	void ConvertVertex(size_t dst_index, size_t src_index);
-
-	void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
+	void SetupIA();
 	void UpdateFBA(GSTexture* rt);
-
-	int GetPosX(const void* vertex) const {return (int)((const GSVertexHW9*)vertex)->p.x;}
-	int GetPosY(const void* vertex) const {return (int)((const GSVertexHW9*)vertex)->p.y;}
-	uint32 GetColor(const void* vertex) const {return ((const GSVertexHW9*)vertex)->t.u32[2];}
-	void SetColor(void* vertex, uint32 c) const {((GSVertexHW9*)vertex)->t.u32[2] = c;}
 
 public:
 	GSRendererDX9();

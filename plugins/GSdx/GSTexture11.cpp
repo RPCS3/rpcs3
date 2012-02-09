@@ -167,6 +167,18 @@ GSTexture11::operator ID3D11ShaderResourceView*()
 	return m_srv;
 }
 
+GSTexture11::operator ID3D11UnorderedAccessView*()
+{
+	if(!m_uav && m_dev && m_texture)
+	{
+		ASSERT(!m_msaa);
+
+		m_dev->CreateUnorderedAccessView(m_texture, NULL, &m_uav);
+	}
+
+	return m_uav;
+}
+
 GSTexture11::operator ID3D11RenderTargetView*()
 {
 	ASSERT(m_dev);

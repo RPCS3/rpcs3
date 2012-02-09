@@ -22,14 +22,15 @@
 #include "stdafx.h"
 #include "GSRendererSW.h"
 
+#define LOG 0
+
+static FILE* s_fp = LOG ? fopen("c:\\temp1\\_.txt", "w") : NULL;
+
 const GSVector4 g_pos_scale(1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
 
 GSRendererSW::GSRendererSW(int threads)
-	: GSRenderer(new GSVertexTraceSW(this), sizeof(GSVertexSW))
-	, m_fzb(NULL)
+	: m_fzb(NULL)
 {
-	InitConvertVertex(GSRendererSW);
-
 	m_nativeres = true; // ignore ini, sw is always native
 
 	m_tc = new GSTextureCacheSW(this);
@@ -42,6 +43,17 @@ GSRendererSW::GSRendererSW(int threads)
 
 	memset(m_fzb_pages, 0, sizeof(m_fzb_pages));
 	memset(m_tex_pages, 0, sizeof(m_tex_pages));
+
+	#define InitCVB(P) \
+		m_cvb[P][0][0] = &GSRendererSW::ConvertVertexBuffer<P, 0, 0>; \
+		m_cvb[P][0][1] = &GSRendererSW::ConvertVertexBuffer<P, 0, 1>; \
+		m_cvb[P][1][0] = &GSRendererSW::ConvertVertexBuffer<P, 1, 0>; \
+		m_cvb[P][1][1] = &GSRendererSW::ConvertVertexBuffer<P, 1, 1>; \
+
+	InitCVB(GS_POINT_CLASS);
+	InitCVB(GS_LINE_CLASS);
+	InitCVB(GS_TRIANGLE_CLASS);
+	InitCVB(GS_SPRITE_CLASS);
 }
 
 GSRendererSW::~GSRendererSW()
@@ -60,10 +72,9 @@ GSRendererSW::~GSRendererSW()
 
 void GSRendererSW::Reset()
 {
-	// TODO: GSreset can come from the main thread too => crash
-	// m_tc->RemoveAll();
+	Sync(-1);
 
-	m_reset = true;
+	m_tc->RemoveAll();
 
 	GSRenderer::Reset();
 }
@@ -71,6 +82,112 @@ void GSRendererSW::Reset()
 void GSRendererSW::VSync(int field)
 {
 	Sync(0); // IncAge might delete a cached texture in use
+
+	if(0) if(LOG)
+	{
+		fprintf(s_fp, "%lld\n", m_perfmon.GetFrame());
+
+		GSVector4i dr = GetDisplayRect();
+		GSVector4i fr = GetFrameRect();
+		GSVector2i ds = GetDeviceSize();
+
+		fprintf(s_fp, "dr %d %d %d %d, fr %d %d %d %d, ds %d %d\n",
+			dr.x, dr.y, dr.z, dr.w,
+			fr.x, fr.y, fr.z, fr.w,
+			ds.x, ds.y);
+
+		for(int i = 0; i < 2; i++)
+		{
+			if(i == 0 && !m_regs->PMODE.EN1) continue;
+			if(i == 1 && !m_regs->PMODE.EN2) continue;
+
+			fprintf(s_fp, "DISPFB[%d] BP=%05x BW=%d PSM=%d DBX=%d DBY=%d\n", 
+				i,
+				m_regs->DISP[i].DISPFB.Block(),
+				m_regs->DISP[i].DISPFB.FBW,
+				m_regs->DISP[i].DISPFB.PSM,
+				m_regs->DISP[i].DISPFB.DBX,
+				m_regs->DISP[i].DISPFB.DBY
+				);
+
+			fprintf(s_fp, "DISPLAY[%d] DX=%d DY=%d DW=%d DH=%d MAGH=%d MAGV=%d\n", 
+				i,
+				m_regs->DISP[i].DISPLAY.DX,
+				m_regs->DISP[i].DISPLAY.DY,
+				m_regs->DISP[i].DISPLAY.DW,
+				m_regs->DISP[i].DISPLAY.DH,
+				m_regs->DISP[i].DISPLAY.MAGH,
+				m_regs->DISP[i].DISPLAY.MAGV
+				);
+		}
+
+		fprintf(s_fp, "PMODE EN1=%d EN2=%d CRTMD=%d MMOD=%d AMOD=%d SLBG=%d ALP=%d\n", 
+			m_regs->PMODE.EN1,
+			m_regs->PMODE.EN2,
+			m_regs->PMODE.CRTMD,
+			m_regs->PMODE.MMOD,
+			m_regs->PMODE.AMOD,
+			m_regs->PMODE.SLBG,
+			m_regs->PMODE.ALP
+			);
+
+		fprintf(s_fp, "SMODE1 CLKSEL=%d CMOD=%d EX=%d GCONT=%d LC=%d NVCK=%d PCK2=%d PEHS=%d PEVS=%d PHS=%d PRST=%d PVS=%d RC=%d SINT=%d SLCK=%d SLCK2=%d SPML=%d T1248=%d VCKSEL=%d VHP=%d XPCK=%d\n",
+			m_regs->SMODE1.CLKSEL,
+			m_regs->SMODE1.CMOD,
+			m_regs->SMODE1.EX,
+			m_regs->SMODE1.GCONT,
+			m_regs->SMODE1.LC,
+			m_regs->SMODE1.NVCK,
+			m_regs->SMODE1.PCK2,
+			m_regs->SMODE1.PEHS,
+			m_regs->SMODE1.PEVS,
+			m_regs->SMODE1.PHS,
+			m_regs->SMODE1.PRST,
+			m_regs->SMODE1.PVS,
+			m_regs->SMODE1.RC,
+			m_regs->SMODE1.SINT,
+			m_regs->SMODE1.SLCK,
+			m_regs->SMODE1.SLCK2,
+			m_regs->SMODE1.SPML,
+			m_regs->SMODE1.T1248,
+			m_regs->SMODE1.VCKSEL,
+			m_regs->SMODE1.VHP,
+			m_regs->SMODE1.XPCK
+			);
+
+		fprintf(s_fp, "SMODE2 INT=%d FFMD=%d DPMS=%d\n", 
+			m_regs->SMODE2.INT,
+			m_regs->SMODE2.FFMD,
+			m_regs->SMODE2.DPMS
+			);
+
+		fprintf(s_fp, "SRFSH %08x_%08x\n", 
+			m_regs->SRFSH.u32[0],
+			m_regs->SRFSH.u32[1]
+			);
+
+		fprintf(s_fp, "SYNCH1 %08x_%08x\n", 
+			m_regs->SYNCH1.u32[0],
+			m_regs->SYNCH1.u32[1]
+			);
+
+		fprintf(s_fp, "SYNCH2 %08x_%08x\n", 
+			m_regs->SYNCH2.u32[0],
+			m_regs->SYNCH2.u32[1]
+			);
+
+		fprintf(s_fp, "SYNCV %08x_%08x\n", 
+			m_regs->SYNCV.u32[0],
+			m_regs->SYNCV.u32[1]
+			);
+
+		fprintf(s_fp, "CSR %08x_%08x\n", 
+			m_regs->CSR.u32[0],
+			m_regs->CSR.u32[1]
+			);
+
+		fflush(s_fp);
+	}
 
 	/*
 	int draw[8], sum = 0;
@@ -87,19 +204,11 @@ void GSRendererSW::VSync(int field)
 		draw[0], draw[1], draw[2], draw[3], draw[4], draw[5], draw[6], draw[7], sum);
 
 	//
-	printf("m_sync_count = %d\n", ((GSRasterizerList*)m_rl)->m_sync_count); ((GSRasterizerList*)m_rl)->m_sync_count = 0;
-	printf("m_syncpoint_count = %d\n", ((GSRasterizerList*)m_rl)->m_syncpoint_count); ((GSRasterizerList*)m_rl)->m_syncpoint_count = 0;
 	*/
+
 	GSRenderer::VSync(field);
 
 	m_tc->IncAge();
-
-	if(m_reset)
-	{
-		m_tc->RemoveAll();
-
-		m_reset = false;
-	}
 
 	// if((m_perfmon.GetFrame() & 255) == 0) m_rl.PrintStats();
 }
@@ -151,92 +260,104 @@ GSTexture* GSRendererSW::GetOutput(int i)
 	return m_texture[i];
 }
 
-template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererSW::ConvertVertex(size_t dst_index, size_t src_index)
+template<uint32 primclass, uint32 tme, uint32 fst>
+void GSRendererSW::ConvertVertexBuffer(GSVertexSW* RESTRICT dst, const GSVertex* RESTRICT src, size_t count)
 {
-	GSVertex* s = (GSVertex*)((GSVertexSW*)m_vertex.buff + src_index);
-	GSVertexSW* d = (GSVertexSW*)m_vertex.buff + dst_index;
+	size_t i = m_vertex.next;
 
-	ASSERT(d->_pad.u32[0] != 0x12345678);
+	GSVector4i o = (GSVector4i)m_context->XYOFFSET;
+	GSVector4 tsize = GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH, 1, 0);
 
-	uint32 z = s->XYZ.Z;
+	#if _M_SSE >= 0x501
 
-	GSVector4i xy = GSVector4i::load((int)s->XYZ.u32[0]).upl16() - (GSVector4i)m_context->XYOFFSET;
-	GSVector4i zf = GSVector4i((int)std::min<uint32>(z, 0xffffff00), s->FOG); // NOTE: larger values of z may roll over to 0 when converting back to uint32 later
+	// TODO: process vertices in pairs, when AVX2 becomes available
 
-	GSVector4 p, t, c;
-
-	p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
-
-	if(tme)
-	{
-		if(fst)
-		{
-			t = GSVector4(GSVector4i::load(s->UV).upl16() << (16 - 4));
-		}
-		else
-		{
-			t = GSVector4(s->ST.S, s->ST.T) * GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH);
-			t = t.xyxy(GSVector4::load(s->RGBAQ.Q));
-		}
-	}
-
-	c = GSVector4::rgba32(s->RGBAQ.u32[0], 7);
-
-	d->p = p;
-	d->c = c;
-	d->t = t;
-
-	#ifdef _DEBUG
-	d->_pad.u32[0] = 0x12345678; // means trouble if this has already been set, should only convert each vertex once
 	#endif
-
-	if(prim == GS_SPRITE)
+	
+	for(; i > 0; i--, src++, dst++)
 	{
-		d->t.u32[3] = z;
+		GSVector4 stcq = GSVector4::load<true>(&src->m[0]); // s t rgba q
+
+		#if _M_SSE >= 0x401
+
+		GSVector4i xyzuvf(src->m[1]);
+
+		GSVector4i xy = xyzuvf.upl16() - o;
+		GSVector4i zf = xyzuvf.ywww().min_u32(GSVector4i::xffffff00());
+
+		#else
+
+		uint32 z = src->XYZ.Z;
+
+		GSVector4i xy = GSVector4i::load((int)src->XYZ.u32[0]).upl16() - o;
+		GSVector4i zf = GSVector4i((int)std::min<uint32>(z, 0xffffff00), src->FOG); // NOTE: larger values of z may roll over to 0 when converting back to uint32 later
+
+		#endif
+
+		dst->p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
+		dst->c = GSVector4(GSVector4i::cast(stcq).zzzz().u8to32() << 7);
+
+		GSVector4 t;
+
+		if(tme)
+		{
+			if(fst)
+			{
+				#if _M_SSE >= 0x401
+
+				t = GSVector4(xyzuvf.uph16() << (16 - 4));
+					
+				#else
+
+				t = GSVector4(GSVector4i::load(src->UV).upl16() << (16 - 4));
+
+				#endif
+			}
+			else
+			{
+				t = stcq.xyww() * tsize;
+			}
+		}
+
+		if(primclass == GS_SPRITE_CLASS)
+		{
+			#if _M_SSE >= 0x401
+
+			t = t.insert<1, 3>(GSVector4::cast(xyzuvf));
+				
+			#else
+				
+			t = t.insert<0, 3>(GSVector4::cast(GSVector4i::load(z)));
+
+			#endif
+		}
+
+		dst->t = t;
 	}
 }
 
-#define LOG 0
-
-FILE* s_fp = LOG ? fopen("c:\\temp1\\_.txt", "w") : NULL;
-
 void GSRendererSW::Draw()
 {
+	const GSDrawingContext* context = m_context;
+
 	SharedData* sd = new SharedData(this);
 
 	shared_ptr<GSRasterizerData> data(sd);
 
-	sd->primclass = m_vt->m_primclass;
+	sd->primclass = m_vt.m_primclass;
 	sd->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_vertex.next + sizeof(uint32) * m_index.tail, 32);
 	sd->vertex = (GSVertexSW*)sd->buff;
 	sd->vertex_count = m_vertex.next;
 	sd->index = (uint32*)(sd->buff + sizeof(GSVertexSW) * m_vertex.next);
 	sd->index_count = m_index.tail;
 
-	memcpy(sd->vertex, m_vertex.buff, sizeof(GSVertexSW) * m_vertex.next);
+	(this->*m_cvb[m_vt.m_primclass][PRIM->TME][PRIM->FST])(sd->vertex, m_vertex.buff, m_vertex.next);
+
 	memcpy(sd->index, m_index.buff, sizeof(uint32) * m_index.tail);
 
-	for(size_t i = 0; i < m_index.tail; i++)
-	{
-		ASSERT(((GSVertexSW*)m_vertex.buff + m_index.buff[i])->_pad.u32[0] == 0x12345678);
-	}
-
-	// TODO: delay texture update, do it later along with the syncing on the dispatcher thread, then this thread does not have to wait and can continue assembling more jobs
-	// TODO: if(any texture page is used as a target) GSRasterizerData::syncpoint = true;
-	// TODO: virtual void GSRasterizerData::Update() {texture[all levels]->Update();}, call it from the dispatcher thread before sending to workers
-	// TODO: m_tc->InvalidatePages must be called after texture->Update, move that inside GSRasterizerData::Update too
-
-	if(!GetScanlineGlobalData(sd)) return; 
-
-	//
-
-	const GSDrawingContext* context = m_context;
-
-	GSScanlineGlobalData& gd = sd->global;
-
 	GSVector4i scissor = GSVector4i(context->scissor.in);
-	GSVector4i bbox = GSVector4i(m_vt->m_min.p.floor().xyxy(m_vt->m_max.p.ceil()));
+	GSVector4i bbox = GSVector4i(m_vt.m_min.p.floor().xyxy(m_vt.m_max.p.ceil()));
+	GSVector4i r = bbox.rintersect(scissor);
 
 	scissor.z = std::min<int>(scissor.z, (int)context->FRAME.FBW * 64); // TODO: find a game that overflows and check which one is the right behaviour
 	
@@ -244,110 +365,78 @@ void GSRendererSW::Draw()
 	sd->bbox = bbox;
 	sd->frame = m_perfmon.GetFrame();
 
+	if(!GetScanlineGlobalData(sd)) return;
+
+	if(0) if(LOG)
+	{
+		int n = GSUtil::GetVertexCount(PRIM->PRIM);
+		
+		for(int i = 0, j = 0; i < m_index.tail; i += n, j++)
+		{
+			for(int k = 0; k < n; k++)
+			{
+				GSVertex* v = &m_vertex.buff[m_index.buff[i + k]];
+				GSVertex* vn = &m_vertex.buff[m_index.buff[i + n - 1]];
+				
+				fprintf(s_fp, "%d:%d %f %f %f %f\n", 
+					j, k,
+					(float)(v->XYZ.X - context->XYOFFSET.OFX) / 16,
+					(float)(v->XYZ.Y - context->XYOFFSET.OFY) / 16,
+					PRIM->FST ? (float)(v->U) / 16 : v->ST.S / (PRIM->PRIM == GS_SPRITE ? vn->RGBAQ.Q : v->RGBAQ.Q),
+					PRIM->FST ? (float)(v->V) / 16 : v->ST.T / (PRIM->PRIM == GS_SPRITE ? vn->RGBAQ.Q : v->RGBAQ.Q)
+					);
+			}
+		}
+	}
+
 	//
+
+	GSScanlineGlobalData& gd = sd->global;
 
 	uint32* fb_pages = NULL;
 	uint32* zb_pages = NULL;
 
-	GSVector4i r = bbox.rintersect(scissor);
-
-	if(gd.sel.fwrite)
+	if(sd->global.sel.fb)
 	{
-		fb_pages = context->offset.fb->GetPages(r);
-
-		m_tc->InvalidatePages(fb_pages, context->offset.fb->psm);
+		fb_pages = m_context->offset.fb->GetPages(r);
 	}
 
-	if(gd.sel.zwrite)
+	if(sd->global.sel.zb)
 	{
-		zb_pages = context->offset.zb->GetPages(r);
-
-		m_tc->InvalidatePages(zb_pages, context->offset.zb->psm);
+		zb_pages = m_context->offset.zb->GetPages(r);
 	}
 
-	// set data->syncpoint
+	// check if there is an overlap between this and previous targets
 
-	if(m_fzb != context->offset.fzb)
+	if(CheckTargetPages(fb_pages, zb_pages, r))
 	{
-		// hmm, what if "r" gets bigger next time and slips through unchecked, need to trace that too
-
-		sd->syncpoint = true; // TODO
-
-		if(!sd->syncpoint)
-		{
-			if(fb_pages == NULL)
-			{
-				fb_pages = context->offset.fb->GetPages(r);
-			}
-
-			if(CheckTargetPages<0xffffffff>(fb_pages))
-			{
-				sd->syncpoint = true;
-
-				if(LOG) fprintf(s_fp, "syncpoint 0\n");
-			}
-		}
-
-		if(!sd->syncpoint)
-		{
-			if(zb_pages == NULL)
-			{
-				zb_pages = context->offset.zb->GetPages(r);
-			}
-
-			if(CheckTargetPages<0xffffffff>(zb_pages))
-			{
-				sd->syncpoint = true;
-
-				if(LOG) fprintf(s_fp, "syncpoint 1\n");
-			}
-		}
-
-		if(!sd->syncpoint)
-		{
-			if(LOG) fprintf(s_fp, "no syncpoint *\n");
-		}
-
-		m_fzb = context->offset.fzb;
+		sd->m_syncpoint = SharedData::SyncTarget;
 	}
-	else
+
+	// check if the texture is not part of a target currently in use
+
+	if(CheckSourcePages(sd))
 	{
-		// chross-check frame and z-buffer pages, they cannot overlap with eachother and with previous batches in queue,
-		// m_fzb filters out most of these cases, only have to be careful when the addresses stay the same and the output 
-		// is mutually enabled/disabled and alternating (Bully FBP/ZBP = 0x2300)
-
-		if(!sd->syncpoint)
-		{
-			if(gd.sel.fwrite)
-			{
-				if(CheckTargetPages<0xffff0000>(fb_pages)) // already used as a z-buffer
-				{
-					sd->syncpoint = true;
-
-					if(LOG) fprintf(s_fp, "syncpoint 2\n");
-				}
-			}
-		}
-
-		if(!sd->syncpoint)
-		{
-			if(gd.sel.zwrite)
-			{
-				if(CheckTargetPages<0x0000ffff>(zb_pages)) // already used as a frame buffer
-				{
-					sd->syncpoint = true;
-
-					if(LOG) fprintf(s_fp, "syncpoint 3\n");
-				}
-			}
-		}
+		sd->m_syncpoint = SharedData::SyncSource;
 	}
+
+	// addref source and target pages
+
+	sd->UsePages(fb_pages, m_context->offset.fb->psm, zb_pages, m_context->offset.zb->psm);
 
 	//
 
-	sd->UseTargetPages(fb_pages, zb_pages);
+	if(LOG) 
+	{
+		fprintf(s_fp, "[%d] queue %05x %d (%d) %05x %d (%d) %05x %d %dx%d (%d %d %d) | %d %d %d\n",
+			sd->counter,
+			m_context->FRAME.Block(), m_context->FRAME.PSM, gd.sel.fwrite, 
+			m_context->ZBUF.Block(), m_context->ZBUF.PSM, gd.sel.zwrite,
+			PRIM->TME ? m_context->TEX0.TBP0 : 0xfffff, m_context->TEX0.PSM, (int)m_context->TEX0.TW, (int)m_context->TEX0.TH, m_context->TEX0.CSM, m_context->TEX0.CPSM, m_context->TEX0.CSA,
+			PRIM->PRIM, sd->vertex_count, sd->index_count); 
 
-	//
+		fflush(s_fp);
+	}
 
 	if(s_dump)
 	{
@@ -382,7 +471,7 @@ void GSRendererSW::Draw()
 
 		s_n++;
 
-		m_rl->Queue(data);
+		Queue(data);
 
 		Sync(4);
 
@@ -404,13 +493,7 @@ void GSRendererSW::Draw()
 	}
 	else
 	{
-		if(LOG) fprintf(s_fp, "queue %05x %d %05x %d %05x %d %dx%d | %d %d %d\n",
-			m_context->FRAME.Block(), m_context->FRAME.PSM,
-			m_context->ZBUF.Block(), m_context->ZBUF.PSM,
-			PRIM->TME ? m_context->TEX0.TBP0 : 0xfffff, m_context->TEX0.PSM, (int)m_context->TEX0.TW, (int)m_context->TEX0.TH, 
-			PRIM->PRIM, sd->vertex_count, sd->index_count);
-
-		m_rl->Queue(data);
+		Queue(data);
 	}
 
 	/*
@@ -425,6 +508,39 @@ void GSRendererSW::Draw()
 	*/
 }
 
+void GSRendererSW::Queue(shared_ptr<GSRasterizerData>& item)
+{
+	SharedData* sd = (SharedData*)item.get();
+
+	if(sd->m_syncpoint == SharedData::SyncSource) 
+	{
+		m_rl->Sync();
+	}
+
+	// update previously invalidated parts
+
+	sd->UpdateSource();
+
+	// invalidate new parts rendered onto
+
+	if(sd->global.sel.fwrite)
+	{
+		m_tc->InvalidatePages(sd->m_fb_pages, sd->m_fpsm);
+	}
+
+	if(sd->global.sel.zwrite)
+	{
+		m_tc->InvalidatePages(sd->m_zb_pages, sd->m_zpsm);
+	}
+
+	if(sd->m_syncpoint == SharedData::SyncTarget)
+	{
+		m_rl->Sync();
+	}
+
+	m_rl->Queue(item);
+}
+
 void GSRendererSW::Sync(int reason)
 {
 	//printf("sync %d\n", reason);
@@ -435,36 +551,56 @@ void GSRendererSW::Sync(int reason)
 
 	m_rl->Sync();
 
-	s_n++;
+	if(0) if(LOG)
+	{
+		s_n++;
+
+		std::string s;
+		
+		if(s_save)
+		{
+			s = format("c:\\temp1\\_%05d_f%lld_rt1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), m_context->FRAME.Block(), m_context->FRAME.PSM);
+
+			m_mem.SaveBMP(s, m_context->FRAME.Block(), m_context->FRAME.FBW, m_context->FRAME.PSM, GetFrameRect().width(), 512);
+		}
+
+		if(s_savez)
+		{
+			s = format("c:\\temp1\\_%05d_f%lld_zb1_%05x_%d.bmp", s_n, m_perfmon.GetFrame(), m_context->ZBUF.Block(), m_context->ZBUF.PSM);
+
+			m_mem.SaveBMP(s, m_context->ZBUF.Block(), m_context->FRAME.FBW, m_context->ZBUF.PSM, GetFrameRect().width(), 512);
+		}
+	}
 
 	t = __rdtsc() - t;
 
-	if(LOG) fprintf(s_fp, "sync n=%d r=%d t=%lld p=%d %c\n", s_n, reason, t, m_rl->GetPixels(), t > 10000000 ? '*' : ' ');
+	int pixels = m_rl->GetPixels();
 
-	m_perfmon.Put(GSPerfMon::Fillrate, m_rl->GetPixels());
+	if(LOG) {fprintf(s_fp, "sync n=%d r=%d t=%lld p=%d %c\n", s_n, reason, t, pixels, t > 10000000 ? '*' : ' '); fflush(s_fp);}
+
+	m_perfmon.Put(GSPerfMon::Fillrate, pixels);
 }
 
 void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r)
 {
+	if(LOG) {fprintf(s_fp, "w %05x %d %d, %d %d %d %d\n", BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM, r.x, r.y, r.z, r.w); fflush(s_fp);}
+	
 	GSOffset* o = m_mem.GetOffset(BITBLTBUF.DBP, BITBLTBUF.DBW, BITBLTBUF.DPSM);
 
-	uint32* RESTRICT p = m_tmp_pages;
-	
-	o->GetPages(r, p);
+	o->GetPages(r, m_tmp_pages);
 
 	// check if the changing pages either used as a texture or a target
 
-	for(; *p != GSOffset::EOP; p++)
+	if(!m_rl->IsSynced())
 	{
-		uint32 page = *p;
-		
-		//while(m_fzb_pages[page] | m_tex_pages[page]) _mm_pause();
-
-		if(m_fzb_pages[page] | m_tex_pages[page])
+		for(uint32* RESTRICT p = m_tmp_pages; *p != GSOffset::EOP; p++)
 		{
-			Sync(5);
+			if(m_fzb_pages[*p] | m_tex_pages[*p])
+			{
+				Sync(5);
 
-			break;
+				break;
+			}
 		}
 	}
 
@@ -473,21 +609,22 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 
 void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GSVector4i& r, bool clut)
 {
-	GSOffset* o = m_mem.GetOffset(BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM);
+	if(LOG) {fprintf(s_fp, "%s %05x %d %d, %d %d %d %d\n", clut ? "rp" : "r", BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM, r.x, r.y, r.z, r.w); fflush(s_fp);}
 
-	uint32* RESTRICT p = m_tmp_pages;
-	
-	o->GetPages(r, p);
-
-	for(; *p != GSOffset::EOP; p++)
+	if(!m_rl->IsSynced())
 	{
-		//while(m_fzb_pages[*p]) _mm_pause();
+		GSOffset* o = m_mem.GetOffset(BITBLTBUF.SBP, BITBLTBUF.SBW, BITBLTBUF.SPSM);
 
-		if(m_fzb_pages[*p])
+		o->GetPages(r, m_tmp_pages);
+
+		for(uint32* RESTRICT p = m_tmp_pages; *p != GSOffset::EOP; p++)
 		{
-			Sync(6);
+			if(m_fzb_pages[*p])
+			{
+				Sync(7);
 
-			break;
+				break;
+			}
 		}
 	}
 }
@@ -505,18 +642,6 @@ void GSRendererSW::UsePages(const uint32* pages, int type)
 	}
 	else
 	{
-		for(const uint32* p = pages; *p != GSOffset::EOP; p++)
-		{
-			//while(m_fzb_pages[*p]) _mm_pause();
-
-			if(m_fzb_pages[*p]) // currently being drawn to? => sync (could even spin and wait until it hits 0, not sure if it's worth though, or just create 512 condvars? :D)
-			{
-				Sync(7);
-
-				break;
-			}
-		}
-
 		for(const uint32* p = pages; *p != GSOffset::EOP; p++)
 		{
 			ASSERT(m_tex_pages[*p] < SHRT_MAX);
@@ -548,13 +673,178 @@ void GSRendererSW::ReleasePages(const uint32* pages, int type)
 	}
 }
 
-template<uint32 mask> bool GSRendererSW::CheckTargetPages(const uint32* pages)
+bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pages, const GSVector4i& r)
 {
-	for(const uint32* p = pages; *p != GSOffset::EOP; p++)
+	bool synced = m_rl->IsSynced();
+	
+	bool fb = fb_pages != NULL;
+	bool zb = zb_pages != NULL;
+
+	if(m_fzb != m_context->offset.fzb4)
 	{
-		if(mask != 0xffffffff ? (m_fzb_pages[*p] & mask) : m_fzb_pages[*p])
+		// targets changed, check everything
+
+		m_fzb = m_context->offset.fzb4;
+		m_fzb_bbox = r;
+
+		if(fb_pages == NULL) fb_pages = m_context->offset.fb->GetPages(r);
+		if(zb_pages == NULL) zb_pages = m_context->offset.zb->GetPages(r);
+
+		memset(m_fzb_cur_pages, 0, sizeof(m_fzb_cur_pages));
+
+		uint32 used = 0;
+
+		for(const uint32* p = fb_pages; *p != GSOffset::EOP; p++)
 		{
-			return true;
+			uint32 i = *p;
+
+			uint32 row = i >> 5;
+			uint32 col = 1 << (i & 31);
+			
+			m_fzb_cur_pages[row] |= col;
+
+			used |= m_fzb_pages[i];
+		}
+
+		for(const uint32* p = zb_pages; *p != GSOffset::EOP; p++)
+		{
+			uint32 i = *p;
+			
+			uint32 row = i >> 5;
+			uint32 col = 1 << (i & 31);
+			
+			m_fzb_cur_pages[row] |= col;
+
+			used |= m_fzb_pages[i];
+		}
+
+		if(!synced)
+		{
+			if(used)
+			{
+				if(LOG) {fprintf(s_fp, "syncpoint 0\n"); fflush(s_fp);}
+
+				return true;
+			}
+
+			//if(LOG) {fprintf(s_fp, "no syncpoint *\n"); fflush(s_fp);}
+		}
+	}
+	else
+	{
+		// same target, only check new areas and cross-rendering between frame and z-buffer
+
+		GSVector4i bbox = m_fzb_bbox.runion(r);
+
+		bool check = !m_fzb_bbox.eq(bbox);
+
+		m_fzb_bbox = bbox;
+
+		if(check)
+		{
+			// drawing area is larger than previous time, check new parts only to avoid false positives (m_fzb_cur_pages guards)
+
+			if(fb_pages == NULL) fb_pages = m_context->offset.fb->GetPages(r);
+			if(zb_pages == NULL) zb_pages = m_context->offset.zb->GetPages(r);
+
+			uint32 used = 0;
+
+			for(const uint32* p = fb_pages; *p != GSOffset::EOP; p++)
+			{
+				uint32 i = *p;
+
+				uint32 row = i >> 5;
+				uint32 col = 1 << (i & 31);
+			
+				if((m_fzb_cur_pages[row] & col) == 0)
+				{
+					m_fzb_cur_pages[row] |= col;
+
+					used |= m_fzb_pages[i];
+				}
+			}
+
+			for(const uint32* p = zb_pages; *p != GSOffset::EOP; p++)
+			{
+				uint32 i = *p;
+
+				uint32 row = i >> 5;
+				uint32 col = 1 << (i & 31);
+			
+				if((m_fzb_cur_pages[row] & col) == 0)
+				{
+					m_fzb_cur_pages[row] |= col;
+
+					used |= m_fzb_pages[i];
+				}
+			}
+
+			if(!synced)
+			{
+				if(used)
+				{
+					if(LOG) {fprintf(s_fp, "syncpoint 1\n"); fflush(s_fp);}
+
+					return true;
+				}
+			}
+		}
+
+		if(!synced)
+		{
+			// chross-check frame and z-buffer pages, they cannot overlap with eachother and with previous batches in queue,
+			// have to be careful when the two buffers are mutually enabled/disabled and alternating (Bully FBP/ZBP = 0x2300)
+
+			if(fb)
+			{
+				for(const uint32* p = fb_pages; *p != GSOffset::EOP; p++)
+				{
+					if(m_fzb_pages[*p] & 0xffff0000)
+					{
+						if(LOG) {fprintf(s_fp, "syncpoint 2\n"); fflush(s_fp);}
+
+						return true;
+					}
+				}
+			}
+
+			if(zb)
+			{
+				for(const uint32* p = zb_pages; *p != GSOffset::EOP; p++)
+				{
+					if(m_fzb_pages[*p] & 0x0000ffff)
+					{
+						if(LOG) {fprintf(s_fp, "syncpoint 3\n"); fflush(s_fp);}
+
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+bool GSRendererSW::CheckSourcePages(SharedData* sd)
+{
+	if(!m_rl->IsSynced())
+	{
+		for(size_t i = 0; sd->m_tex[i].t != NULL; i++)
+		{
+			sd->m_tex[i].t->m_offset->GetPages(sd->m_tex[i].r, m_tmp_pages); 
+
+			uint32* pages = m_tmp_pages; // sd->m_tex[i].t->m_pages.n;
+
+			for(const uint32* p = pages; *p != GSOffset::EOP; p++)
+			{
+				// TODO: 8H 4HL 4HH texture at the same place as the render target (24 bit, or 32-bit where the alpha channel is masked, Valkyrie Profile 2)
+
+				if(m_fzb_pages[*p]) // currently being drawn to? => sync
+				{
+					return true;
+				}
+			}
 		}
 	}
 
@@ -569,7 +859,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 	const GSDrawingEnvironment& env = m_env;
 	const GSDrawingContext* context = m_context;
-	const GS_PRIM_CLASS primclass = m_vt->m_primclass;
+	const GS_PRIM_CLASS primclass = m_vt.m_primclass;
 
 	gd.vm = m_mem.m_vm8;
 
@@ -577,8 +867,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 	gd.zbr = context->offset.zb->pixel.row;
 	gd.fbc = context->offset.fb->pixel.col[0];
 	gd.zbc = context->offset.zb->pixel.col[0];
-	gd.fzbr = context->offset.fzb->row;
-	gd.fzbc = context->offset.fzb->col;
+	gd.fzbr = context->offset.fzb4->row;
+	gd.fzbc = context->offset.fzb4->col;
 
 	gd.sel.key = 0;
 
@@ -600,7 +890,10 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 	if(PRIM->TME)
 	{
-		m_mem.m_clut.Read32(context->TEX0, env.TEXA);
+		if(GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0)
+		{
+			m_mem.m_clut.Read32(context->TEX0, env.TEXA);
+		}
 	}
 
 	if(context->TEST.ATE)
@@ -646,7 +939,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 	{
 		gd.sel.fpsm = GSLocalMemory::m_psm[context->FRAME.PSM].fmt;
 
-		if((primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS) && m_vt->m_eq.rgba != 0xffff)
+		if((primclass == GS_LINE_CLASS || primclass == GS_TRIANGLE_CLASS) && m_vt.m_eq.rgba != 0xffff)
 		{
 			gd.sel.iip = PRIM->IIP;
 		}
@@ -656,7 +949,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 			gd.sel.tfx = context->TEX0.TFX;
 			gd.sel.tcc = context->TEX0.TCC;
 			gd.sel.fst = PRIM->FST;
-			gd.sel.ltf = m_vt->IsLinear();
+			gd.sel.ltf = m_vt.IsLinear();
 
 			if(GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0)
 			{
@@ -670,7 +963,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 			gd.sel.wms = context->CLAMP.WMS;
 			gd.sel.wmt = context->CLAMP.WMT;
 
-			if(gd.sel.tfx == TFX_MODULATE && gd.sel.tcc && m_vt->m_eq.rgba == 0xffff && m_vt->m_min.c.eq(GSVector4i(128)))
+			if(gd.sel.tfx == TFX_MODULATE && gd.sel.tcc && m_vt.m_eq.rgba == 0xffff && m_vt.m_min.c.eq(GSVector4i(128)))
 			{
 				// modulate does not do anything when vertex color is 0x80
 
@@ -681,32 +974,15 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 			if(t == NULL) {ASSERT(0); return false;}
 
-			data->UseSourcePages(t, 0);
-
 			GSVector4i r;
 
 			GetTextureMinMax(r, context->TEX0, context->CLAMP, gd.sel.ltf);
 
-			if(!t->Update(r)) {ASSERT(0); return false;}
+			data->SetSource(t, r, 0);
 
-			if(s_dump)// && m_context->TEX1.MXL > 0 && m_context->TEX1.MMIN >= 2 && m_context->TEX1.MMIN <= 5 && m_vt->m_lod.x > 0)
-			{
-				uint64 frame = m_perfmon.GetFrame();
-
-				string s;
-
-				if(s_save && s_n >= s_saven)
-				{
-					s = format("c:\\temp1\\_%05d_f%lld_tex32_%05x_%d.bmp", s_n, frame, (int)m_context->TEX0.TBP0, (int)m_context->TEX0.PSM);
-
-					t->Save(s);
-				}
-			}
-
-			gd.tex[0] = t->m_buff;
 			gd.sel.tw = t->m_tw - 3;
 
-			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt->m_lod.y > 0)
+			if(m_mipmap && context->TEX1.MXL > 0 && context->TEX1.MMIN >= 2 && context->TEX1.MMIN <= 5 && m_vt.m_lod.y > 0)
 			{
 				// TEX1.MMIN
 				// 000 p
@@ -716,13 +992,13 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				// 100 l round
 				// 101 l tri
 
-				if(m_vt->m_lod.x > 0)
+				if(m_vt.m_lod.x > 0)
 				{
 					gd.sel.ltf = context->TEX1.MMIN >> 2;
 				}
 				else
 				{
-					// TODO: isbilinear(mmag) != isbilinear(mmin) && m_vt->m_lod.x <= 0 && m_vt->m_lod.y > 0
+					// TODO: isbilinear(mmag) != isbilinear(mmin) && m_vt.m_lod.x <= 0 && m_vt.m_lod.y > 0
 				}
 
 				gd.sel.mmin = (context->TEX1.MMIN & 1) + 1; // 1: round, 2: tri
@@ -731,9 +1007,9 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				int mxl = (std::min<int>((int)context->TEX1.MXL, 6) << 16);
 				int k = context->TEX1.K << 12;
 
-				if((int)m_vt->m_lod.x >= (int)context->TEX1.MXL)
+				if((int)m_vt.m_lod.x >= (int)context->TEX1.MXL)
 				{
-					k = (int)m_vt->m_lod.x << 16; // set lod to max level
+					k = (int)m_vt.m_lod.x << 16; // set lod to max level
 
 					gd.sel.lcm = 1; // lod is constant
 					gd.sel.mmin = 1; // tri-linear is meaningless
@@ -747,7 +1023,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				if(gd.sel.fst)
 				{
 					ASSERT(gd.sel.lcm == 1);
-					ASSERT(((m_vt->m_min.t.uph(m_vt->m_max.t) == GSVector4::zero()).mask() & 3) == 3); // ratchet and clank (menu)
+					ASSERT(((m_vt.m_min.t.uph(m_vt.m_max.t) == GSVector4::zero()).mask() & 3) == 3); // ratchet and clank (menu)
 
 					gd.sel.lcm = 1;
 				}
@@ -776,8 +1052,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				GIFRegTEX0 MIP_TEX0 = context->TEX0;
 				GIFRegCLAMP MIP_CLAMP = context->CLAMP;
 
-				GSVector4 tmin = m_vt->m_min.t;
-				GSVector4 tmax = m_vt->m_max.t;
+				GSVector4 tmin = m_vt.m_min.t;
+				GSVector4 tmax = m_vt.m_max.t;
 
 				static int s_counter = 0;
 
@@ -827,51 +1103,24 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 					MIP_CLAMP.MAXU >>= 1;
 					MIP_CLAMP.MAXV >>= 1;
 
-					m_vt->m_min.t *= 0.5f;
-					m_vt->m_max.t *= 0.5f;
+					m_vt.m_min.t *= 0.5f;
+					m_vt.m_max.t *= 0.5f;
 
 					GSTextureCacheSW::Texture* t = m_tc->Lookup(MIP_TEX0, env.TEXA, gd.sel.tw + 3);
 
 					if(t == NULL) {ASSERT(0); return false;}
 
-					data->UseSourcePages(t, i);
-
 					GSVector4i r;
 
 					GetTextureMinMax(r, MIP_TEX0, MIP_CLAMP, gd.sel.ltf);
 
-					if(!t->Update(r)) {ASSERT(0); return false;}
-
-					gd.tex[i] = t->m_buff;
-
-					if(0)
-					//if(context->TEX0.TH > context->TEX0.TW)
-					//if(s_n >= s_saven && s_n < s_saven + 3)
-					//if(context->TEX0.TBP0 >= 0x2b80 && context->TEX0.TBW == 2 && context->TEX0.PSM == PSM_PSMT4)
-					{
-						t->Save(format("c:/temp1/%08d_%05x_%d.bmp", s_counter, context->TEX0.TBP0, i));
-						/*
-						GIFRegTEX0 TEX0 = MIP_TEX0;
-						TEX0.TBP0 = context->TEX0.TBP0;
-						do
-						{
-							TEX0.TBP0++;
-							const GSTextureCacheSW::Texture* t = m_tc->Lookup(TEX0, env.TEXA, r, gd.sel.tw + 3);
-							if(t == NULL) {ASSERT(0); return false;}
-							t->Save(format("c:/temp1/%08d_%05x_%d.bmp", s_counter, TEX0.TBP0, i));
-						}
-						while(TEX0.TBP0 < 0x3fff);
-						*/
-
-						int i = 0;
-					}
-
+					data->SetSource(t, r, i);
 				}
 
 				s_counter++;
 
-				m_vt->m_min.t = tmin;
-				m_vt->m_max.t = tmax;
+				m_vt.m_min.t = tmin;
+				m_vt.m_max.t = tmax;
 			}
 			else
 			{
@@ -881,7 +1130,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 					GSVertexSW* RESTRICT v = data->vertex;
 
-					if(m_vt->m_eq.q)
+					if(m_vt.m_eq.q)
 					{
 						gd.sel.fst = 1;
 
@@ -956,8 +1205,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				gd.t.mask.u32[0] = 0;
 				break;
 			case CLAMP_REGION_REPEAT:
-				gd.t.min.u16[0] = gd.t.minmax.u16[0] = context->CLAMP.MINU;
-				gd.t.max.u16[0] = gd.t.minmax.u16[2] = context->CLAMP.MAXU;
+				gd.t.min.u16[0] = gd.t.minmax.u16[0] = context->CLAMP.MINU & (tw - 1);
+				gd.t.max.u16[0] = gd.t.minmax.u16[2] = context->CLAMP.MAXU & (tw - 1);
 				gd.t.mask.u32[0] = 0xffffffff;
 				break;
 			default:
@@ -982,8 +1231,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 				gd.t.mask.u32[2] = 0;
 				break;
 			case CLAMP_REGION_REPEAT:
-				gd.t.min.u16[4] = gd.t.minmax.u16[1] = context->CLAMP.MINV;
-				gd.t.max.u16[4] = gd.t.minmax.u16[3] = context->CLAMP.MAXV;
+				gd.t.min.u16[4] = gd.t.minmax.u16[1] = context->CLAMP.MINV & (th - 1); // skygunner main menu water texture 64x64, MINV = 127
+				gd.t.max.u16[4] = gd.t.minmax.u16[3] = context->CLAMP.MAXV & (th - 1);
 				gd.t.mask.u32[2] = 0xffffffff;
 				break;
 			default:
@@ -1058,7 +1307,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 	{
 		gd.sel.zpsm = GSLocalMemory::m_psm[context->ZBUF.PSM].fmt;
 		gd.sel.ztst = ztest ? context->TEST.ZTST : ZTST_ALWAYS;
-		gd.sel.zoverflow = GSVector4i(m_vt->m_max.p).z == 0x80000000;
+		gd.sel.zoverflow = GSVector4i(m_vt.m_max.p).z == 0x80000000;
 	}
 
 	gd.fm = GSVector4i(fm);
@@ -1085,6 +1334,23 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 		gd.zm |= GSVector4i::xffff0000();
 	}
 
+	if(gd.sel.prim == GS_SPRITE_CLASS && !gd.sel.ftest && !gd.sel.ztest && data->bbox.eq(data->bbox.rintersect(data->scissor)))
+	{
+		gd.sel.notest = 1;
+
+		uint32 ofx = context->XYOFFSET.OFX;
+
+		for(int i = 0, j = m_vertex.tail; i < j; i++)
+		{
+			if((((m_vertex.buff[i].XYZ.X - ofx) + 15) >> 4) & 3) // aligned to 4
+			{
+				gd.sel.notest = 0;
+			
+				break;
+			}
+		}
+	}
+
 	return true;
 }
 
@@ -1093,8 +1359,9 @@ GSRendererSW::SharedData::SharedData(GSRendererSW* parent)
 	, m_fb_pages(NULL)
 	, m_zb_pages(NULL)
 	, m_using_pages(false)
+	, m_syncpoint(SyncNone)
 {
-	m_tex_pages[0] = NULL;
+	m_tex[0].t = NULL;
 
 	global.sel.key = 0;
 
@@ -1104,57 +1371,114 @@ GSRendererSW::SharedData::SharedData(GSRendererSW* parent)
 
 GSRendererSW::SharedData::~SharedData()
 {
-	if(m_using_pages)
-	{
-		if(global.sel.fwrite)
-		{
-			m_parent->ReleasePages(m_fb_pages, 0);
-		}
+	ReleasePages();
 
-		if(global.sel.zwrite)
-		{
-			m_parent->ReleasePages(m_zb_pages, 1);
-		}
-	}
-
-	delete m_fb_pages;
-	delete m_zb_pages;
-	
-	for(size_t i = 0; i < countof(m_tex_pages) && m_tex_pages[i] != NULL; i++)
-	{
-		m_parent->ReleasePages(m_tex_pages[i], 2);
-	}
-	
 	if(global.clut) _aligned_free(global.clut);
 	if(global.dimx) _aligned_free(global.dimx);
+
+	if(LOG) {fprintf(s_fp, "[%d] done t=%lld p=%d | %d %d %d | %08x_%08x\n", 
+		counter, 
+		__rdtsc() - start, pixels,
+		primclass, vertex_count, index_count,
+		global.sel.hi, global.sel.lo 
+		); 
+	fflush(s_fp);}
 }
 
-void GSRendererSW::SharedData::UseTargetPages(const uint32* fb_pages, const uint32* zb_pages)
+void GSRendererSW::SharedData::UsePages(const uint32* fb_pages, int fpsm, const uint32* zb_pages, int zpsm)
 {
 	if(m_using_pages) return;
 
-	m_fb_pages = fb_pages;
-	m_zb_pages = zb_pages;
-
-	if(global.sel.fwrite)
+	if(global.sel.fb)
 	{
 		m_parent->UsePages(fb_pages, 0);
 	}
 
-	if(global.sel.zwrite)
+	if(global.sel.zb)
 	{
 		m_parent->UsePages(zb_pages, 1);
 	}
 
+	for(size_t i = 0; m_tex[i].t != NULL; i++)
+	{
+		m_parent->UsePages(m_tex[i].t->m_pages.n, 2);
+	}
+
+	m_fb_pages = fb_pages;
+	m_zb_pages = zb_pages;
+	m_fpsm = fpsm;
+	m_zpsm = zpsm;
+
 	m_using_pages = true;
 }
 
-void GSRendererSW::SharedData::UseSourcePages(GSTextureCacheSW::Texture* t, int level)
+void GSRendererSW::SharedData::ReleasePages()
 {
-	ASSERT(m_tex_pages[level] == NULL);
+	if(!m_using_pages) return;
 
-	m_tex_pages[level] = t->m_pages.n;
-	m_tex_pages[level + 1] = NULL;
+	if(global.sel.fb)
+	{
+		m_parent->ReleasePages(m_fb_pages, 0);
+	}
 
-	m_parent->UsePages(t->m_pages.n, 2);
+	if(global.sel.zb)
+	{
+		m_parent->ReleasePages(m_zb_pages, 1);
+	}
+
+	for(size_t i = 0; m_tex[i].t != NULL; i++)
+	{
+		m_parent->ReleasePages(m_tex[i].t->m_pages.n, 2);
+	}
+
+	delete [] m_fb_pages;
+	delete [] m_zb_pages;
+
+	m_fb_pages = NULL;
+	m_zb_pages = NULL;
+
+	m_using_pages = false;
+}
+
+void GSRendererSW::SharedData::SetSource(GSTextureCacheSW::Texture* t, const GSVector4i& r, int level)
+{
+	ASSERT(m_tex[level].t == NULL);
+
+	m_tex[level].t = t;
+	m_tex[level].r = r;
+
+	m_tex[level + 1].t = NULL;
+}
+
+void GSRendererSW::SharedData::UpdateSource()
+{
+	for(size_t i = 0; m_tex[i].t != NULL; i++)
+	{
+		if(m_tex[i].t->Update(m_tex[i].r))
+		{
+			global.tex[i] = m_tex[i].t->m_buff;
+		}
+		else
+		{
+			printf("GSdx: out-of-memory, texturing temporarily disabled\n");
+
+			global.sel.tfx = TFX_NONE;
+		}
+
+		// TODO
+		
+		if(m_parent->s_dump)
+		{
+			uint64 frame = m_parent->m_perfmon.GetFrame();
+
+			string s;
+
+			if(m_parent->s_save && m_parent->s_n >= m_parent->s_saven)
+			{
+				s = format("c:\\temp1\\_%05d_f%lld_tex%d_%05x_%d.bmp", m_parent->s_n - 2, frame, i, (int)m_parent->m_context->TEX0.TBP0, (int)m_parent->m_context->TEX0.PSM);
+
+				m_tex[i].t->Save(s);
+			}
+		}
+	}
 }

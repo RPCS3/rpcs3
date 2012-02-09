@@ -56,6 +56,16 @@ public:
 	uint32* GetPages(const GSVector4i& rect, uint32* pages = NULL, GSVector4i* bbox = NULL);
 };
 
+struct GSPixelOffset
+{
+	// 16 bit offsets (m_vm16[...])
+
+	GSVector2i row[2048]; // f yn | z yn
+	GSVector2i col[2048]; // f xn | z xn
+	uint32 hash;
+	uint32 fbp, zbp, fpsm, zpsm, bw;
+};
+
 struct GSPixelOffset4
 {
 	// 16 bit offsets (m_vm16[...])
@@ -158,6 +168,7 @@ protected:
 	//
 
 	hash_map<uint32, GSOffset*> m_omap;
+	hash_map<uint32, GSPixelOffset*> m_pomap;
 	hash_map<uint32, GSPixelOffset4*> m_po4map;
 	hash_map<uint64, vector<GSVector2i>*> m_p2tmap;
 
@@ -166,6 +177,7 @@ public:
 	virtual ~GSLocalMemory();
 
 	GSOffset* GetOffset(uint32 bp, uint32 bw, uint32 psm);
+	GSPixelOffset* GetPixelOffset(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF);
 	GSPixelOffset4* GetPixelOffset4(const GIFRegFRAME& FRAME, const GIFRegZBUF& ZBUF);
 	vector<GSVector2i>* GetPage2TileMap(const GIFRegTEX0& TEX0);
 
@@ -863,32 +875,22 @@ public:
 	void ReadTexture32(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
 	void ReadTexture24(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
 	void ReadTexture16(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
-	void ReadTexture16S(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
 	void ReadTexture8(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
 	void ReadTexture4(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
 	void ReadTexture8H(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
 	void ReadTexture4HL(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
 	void ReadTexture4HH(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
-	void ReadTexture32Z(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
-	void ReadTexture24Z(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
-	void ReadTexture16Z(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
-	void ReadTexture16SZ(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
 
 	void ReadTexture(const GSOffset* RESTRICT o, const GSVector4i& r, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA);
 
 	void ReadTextureBlock32(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 	void ReadTextureBlock24(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 	void ReadTextureBlock16(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
-	void ReadTextureBlock16S(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 	void ReadTextureBlock8(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 	void ReadTextureBlock4(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 	void ReadTextureBlock8H(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 	void ReadTextureBlock4HL(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 	void ReadTextureBlock4HH(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
-	void ReadTextureBlock32Z(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
-	void ReadTextureBlock24Z(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
-	void ReadTextureBlock16Z(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
-	void ReadTextureBlock16SZ(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const;
 
 	// pal ? 8 : 32
 

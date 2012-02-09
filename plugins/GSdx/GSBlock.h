@@ -884,7 +884,7 @@ public:
 		}
 	}
 
-	static void ExpandBlock16(const uint16* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA) // do not inline, uses too many xmm regs
+	template<bool AEM> static void ExpandBlock16(const uint16* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA) // do not inline, uses too many xmm regs
 	{
 		const GSVector4i* s = (const GSVector4i*)src;
 
@@ -895,44 +895,36 @@ public:
 		GSVector4i bm = m_xxbx;
 		GSVector4i l, h;
 
-		if(TEXA.AEM)
+		for(int i = 0; i < 8; i++, dst += dstpitch)
 		{
-			for(int i = 0; i < 8; i++, dst += dstpitch)
+			GSVector4i v0 = s[i * 2 + 0];
+
+			l = v0.upl16(v0);
+			h = v0.uph16(v0);
+
+			if(AEM)
 			{
-				GSVector4i v0 = s[i * 2 + 0];
-
-				l = v0.upl16(v0);
-				h = v0.uph16(v0);
-
 				((GSVector4i*)dst)[0] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA0.blend8(TA1, l.sra16(15)).andnot(l == GSVector4i::zero());
 				((GSVector4i*)dst)[1] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend8(TA1, h.sra16(15)).andnot(h == GSVector4i::zero());
+			}
+			else
+			{
+				((GSVector4i*)dst)[0] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA0.blend(TA1, l.sra16(15));
+				((GSVector4i*)dst)[1] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend(TA1, h.sra16(15));
+			}
 
-				GSVector4i v1 = s[i * 2 + 1];
+			GSVector4i v1 = s[i * 2 + 1];
 
-				l = v1.upl16(v1);
-				h = v1.uph16(v1);
+			l = v1.upl16(v1);
+			h = v1.uph16(v1);
 
+			if(AEM)
+			{
 				((GSVector4i*)dst)[2] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA0.blend8(TA1, l.sra16(15)).andnot(l == GSVector4i::zero());
 				((GSVector4i*)dst)[3] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend8(TA1, h.sra16(15)).andnot(h == GSVector4i::zero());
 			}
-		}
-		else
-		{
-			for(int i = 0; i < 8; i++, dst += dstpitch)
+			else
 			{
-				GSVector4i v0 = s[i * 2 + 0];
-
-				l = v0.upl16(v0);
-				h = v0.uph16(v0);
-
-				((GSVector4i*)dst)[0] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA0.blend(TA1, l.sra16(15));
-				((GSVector4i*)dst)[1] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend(TA1, h.sra16(15));
-
-				GSVector4i v1 = s[i * 2 + 1];
-
-				l = v1.upl16(v1);
-				h = v1.uph16(v1);
-
 				((GSVector4i*)dst)[2] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA0.blend(TA1, l.sra16(15));
 				((GSVector4i*)dst)[3] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend(TA1, h.sra16(15));
 			}
@@ -1431,6 +1423,56 @@ public:
 				d1[1] = v3 | TA0;
 			}
 		}
+	}
+	template<bool AEM> __forceinline static GSVector4i Expand16to32(const GSVector4i& c, const GSVector4i& TA0, const GSVector4i& TA1)
+	{
+		return ((c & m_rxxx) << 3) | ((c & m_xgxx) << 6) | ((c & m_xxbx) << 9) | (AEM ? TA0.blend8(TA1, c.sra16(15)).andnot(c == GSVector4i::zero()) : TA0.blend(TA1, c.sra16(15)));
+	}
+
+	template<bool AEM> __forceinline static void ReadAndExpandBlock16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA)
+	{
+		#if 0 // not faster
+		
+		const GSVector4i* s = (const GSVector4i*)src;
+
+		GSVector4i TA0(TEXA.TA0 << 24);
+		GSVector4i TA1(TEXA.TA1 << 24);
+
+		for(int i = 0; i < 4; i++, dst += dstpitch * 2)
+		{
+			GSVector4i v0 = s[i * 4 + 0];
+			GSVector4i v1 = s[i * 4 + 1];
+			GSVector4i v2 = s[i * 4 + 2];
+			GSVector4i v3 = s[i * 4 + 3];
+
+			GSVector4i::sw16(v0, v1, v2, v3);
+			GSVector4i::sw32(v0, v1, v2, v3);
+			GSVector4i::sw16(v0, v2, v1, v3);
+
+			GSVector4i* d0 = (GSVector4i*)&dst[dstpitch * 0];
+
+			d0[0] = Expand16to32<AEM>(v0.upl16(v0), TA0, TA1);
+			d0[1] = Expand16to32<AEM>(v0.uph16(v0), TA0, TA1);
+			d0[2] = Expand16to32<AEM>(v1.upl16(v1), TA0, TA1);
+			d0[3] = Expand16to32<AEM>(v1.uph16(v1), TA0, TA1);
+			
+			GSVector4i* d1 = (GSVector4i*)&dst[dstpitch * 1];
+
+			d1[0] = Expand16to32<AEM>(v2.upl16(v2), TA0, TA1);
+			d1[1] = Expand16to32<AEM>(v2.uph16(v2), TA0, TA1);
+			d1[2] = Expand16to32<AEM>(v3.upl16(v3), TA0, TA1);
+			d1[3] = Expand16to32<AEM>(v3.uph16(v3), TA0, TA1);
+		}
+
+		#else
+		
+		__aligned(uint16, 32) block[16 * 8];
+	
+		ReadBlock16<true>(src, (uint8*)block, sizeof(block) / 8);
+
+		ExpandBlock16<AEM>(block, dst, dstpitch, TEXA);
+
+		#endif
 	}
 
 	__forceinline static void ReadAndExpandBlock8_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
