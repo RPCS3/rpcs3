@@ -134,6 +134,16 @@ protected:
 		memcpy_fast(dest, &buffer[read_pos], size);
 		incReadPos(size_u32(size));
 	}
+	__fi void ReadRegs(VIFregisters* dest) {
+		VIFregistersMTVU* src = (VIFregistersMTVU*)&buffer[read_pos];
+		dest->cycle = src->cycle;
+		dest->mode = src->mode;
+		dest->num = src->num;
+		dest->mask = src->mask;
+		dest->itop = src->itop;
+		dest->top = src->top;
+		incReadPos(size_u32(sizeof(VIFregistersMTVU)));
+	}
 
 	__fi void Write(u32 val) {
 		GetWritePtr()[0] = val;
@@ -142,6 +152,16 @@ protected:
 	__fi void Write(void* src, u32 size) { // Size in bytes
 		memcpy_fast(GetWritePtr(), src, size);
 		write_offset += size_u32(size);
+	}
+	__fi void WriteRegs(VIFregisters* src) {
+		VIFregistersMTVU* dest = (VIFregistersMTVU*)GetWritePtr();
+		dest->cycle = src->cycle;
+		dest->mode = src->mode;
+		dest->num = src->num;
+		dest->mask = src->mask;
+		dest->top = src->top;
+		dest->itop = src->itop;
+		write_offset += size_u32(sizeof(VIFregistersMTVU));
 	}
 
 	void ExecuteTaskInThread() {
@@ -192,7 +212,7 @@ protected:
 					case MTVU_VIF_UNPACK: {
 						u32 vif_copy_size = (uptr)&vif.StructEnd - (uptr)&vif.tag;
 						Read(&vif.tag, vif_copy_size);
-						Read(&vifRegs, sizeof(vifRegs));
+						ReadRegs(&vifRegs);
 						u32 size = Read();
 						MTVU_Unpack(&buffer[read_pos], vifRegs);
 						incReadPos(size_u32(size));
@@ -252,10 +272,10 @@ public:
 	void VifUnpack(vifStruct& _vif, VIFregisters& _vifRegs, u8* data, u32 size) {
 		MTVU_LOG("MTVU - VifUnpack!");
 		u32 vif_copy_size = (uptr)&_vif.StructEnd - (uptr)&_vif.tag;
-		ReserveSpace(1 + size_u32(vif_copy_size) + size_u32(sizeof(_vifRegs)) + 1 + size_u32(size));
+		ReserveSpace(1 + size_u32(vif_copy_size) + size_u32(sizeof(VIFregistersMTVU)) + 1 + size_u32(size));
 		Write(MTVU_VIF_UNPACK);
 		Write(&_vif.tag, vif_copy_size);
-		Write(&_vifRegs, sizeof(_vifRegs));
+		WriteRegs(&_vifRegs);
 		Write(size);
 		Write(data, size);
 		incWritePos();

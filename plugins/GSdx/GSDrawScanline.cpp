@@ -103,8 +103,6 @@ void GSDrawScanline::EndDraw(uint64 frame, uint64 ticks, int pixels)
 
 #ifndef ENABLE_JIT_RASTERIZER
 
-// FIXME: something's not right with the sky in burnout 3
-
 void GSDrawScanline::SetupPrim(const GSVertexSW* vertex, const uint32* index, const GSVertexSW& dscan)
 {
 	GSScanlineSelector sel = m_global.sel;
@@ -1177,6 +1175,15 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 					case 0: ga = ga.add16(gas); break;
 					case 1: ga = ga.add16(gad); break;
 					case 2: break;
+					}
+				}
+				else
+				{
+					switch(sel.abd)
+					{
+					case 0: break;
+					case 1: ga = gad; break;
+					case 2: ga = GSVector4i::zero(); break;
 					}
 				}
 

@@ -215,6 +215,15 @@ struct VIFregisters {
 	u32 addr;
 };
 
+struct VIFregistersMTVU {
+	vifCycle cycle; //data write cycle
+	u32 mode;
+	u32 num;
+	u32 mask;
+	u32 itop;
+	u32 top;       // Not used in VIF0
+};
+
 static VIFregisters& vif0Regs = (VIFregisters&)eeHw[0x3800];
 static VIFregisters& vif1Regs = (VIFregisters&)eeHw[0x3C00];
 
