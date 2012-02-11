@@ -323,11 +323,22 @@ class GSVertexBufferStateOGL {
 
 		void upload(const void* src, uint32 count)
 		{
+			// Upload the data to the buffer
+			void* dst;
+			if (Map(&dst, count)) {
+				// FIXME which one to use
+				// GSVector4i::storent(dst, src, m_count * m_stride);
+				memcpy(dst, src, m_stride*m_count);
+				Unmap();
+			}
+		}
+
+		bool Map(void** pointer, uint32 count ) {
 #ifdef OGL_DEBUG
 			GLint b_size = -1;
 			glGetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
 
-			if (b_size <= 0) return;
+			if (b_size <= 0) return false;
 #endif
 
 			m_count = count;
@@ -338,7 +349,7 @@ class GSVertexBufferStateOGL {
 
 			// Current GPU buffer is really too small need to allocate a new one
 			if (m_count > m_limit) {
-				allocate(std::max<int>(count * 3 / 2, m_default_size));
+				allocate(std::max<int>(m_count * 3 / 2, m_default_size));
 
 			} else if (m_count > (m_limit - m_start) ) {
 				// Not enough left free room. Just go back at the beginning
@@ -354,16 +365,18 @@ class GSVertexBufferStateOGL {
 			}
 
 			// Upload the data to the buffer
-			uint8* dst = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
+			*pointer = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
+			//fprintf(stderr, "Map %x from %d to %d\n", *pointer, m_start, m_start+m_count);
 #ifdef OGL_DEBUG
-			if (dst == NULL) {
+			if (*pointer == NULL) {
 				fprintf(stderr, "CRITICAL ERROR map failed for vb!!!\n");
-				return;
+				return false;
 			}
 #endif
-			memcpy(dst, src, m_stride*m_count);
-			glUnmapBuffer(m_target);
+			return true;
 		}
+
+		void Unmap() { glUnmapBuffer(m_target); }
 
 		void EndScene()
 		{
@@ -379,6 +392,11 @@ class GSVertexBufferStateOGL {
 		void Draw(GLenum mode, GLint basevertex)
 		{
 			glDrawElementsBaseVertex(mode, m_count, GL_UNSIGNED_INT, (void*)(m_start * m_stride), basevertex);
+		}
+
+		void Draw(GLenum mode, GLint basevertex, int offset, int count)
+		{
+			glDrawElementsBaseVertex(mode, count, GL_UNSIGNED_INT, (void*)((m_start + offset) * m_stride), basevertex);
 		}
 
 		size_t GetStart() { return m_start; }
@@ -416,52 +434,6 @@ public:
 		m_vb->bind();
 	}
 
-#if 0
-	void upload(const void* src, uint32 count)
-	{
-#ifdef OGL_DEBUG
-		GLint b_size = -1;
-		glGetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
-		
-		if (b_size <= 0) return;
-#endif
-		
-		m_count = count;
-
-		// Note: For an explanation of the map flag
-		// see http://www.opengl.org/wiki/Buffer_Object_Streaming
-		uint32 map_flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
-
-		// Current GPU buffer is really too small need to allocate a new one
-		if (m_count > m_limit) {
-			allocate(std::max<int>(count * 3 / 2, 60000));
-
-		} else if (m_count > (m_limit - m_start) ) {
-			// Not enough left free room. Just go back at the beginning
-			m_start = 0;
-
-			// Tell the driver that it can orphan previous buffer and restart from a scratch buffer.
-			// Technically the buffer will not be accessible by the application anymore but the
-			// GL will effectively remove it when draws call are finised.
-			map_flags |= GL_MAP_INVALIDATE_BUFFER_BIT;
-		} else {
-			// Tell the driver that it doesn't need to contain any valid buffer data, and that you promise to write the entire range you map
-			map_flags |= GL_MAP_INVALIDATE_RANGE_BIT;
-		}
-		
-		// Upload the data to the buffer
-		uint8* dst = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
-#ifdef OGL_DEBUG
-		if (dst == NULL) {
-			fprintf(stderr, "CRITICAL ERROR map failed for vb!!!\n");
-			return;
-		}
-#endif
-		memcpy(dst, src, m_stride*m_count);
-		glUnmapBuffer(m_target);
-	}
-#endif
-
 	void set_internal_format(GSInputLayoutOGL* layout, uint32 layout_nbr)
 	{
 		for (int i = 0; i < layout_nbr; i++) {
@@ -490,17 +462,17 @@ public:
 
 	void DrawIndexedPrimitive() { m_ib->Draw(m_topology, m_vb->GetStart() ); }
 
+	void DrawIndexedPrimitive(int offset, int count) { m_ib->Draw(m_topology, m_vb->GetStart(), offset, count ); }
+
 	void SetTopology(GLenum topology) { m_topology = topology; }
 
-	void UploadVB(const void* vertices, size_t count)
-	{
-		m_vb->upload(vertices, count);
-	}
+	void UploadVB(const void* vertices, size_t count) { m_vb->upload(vertices, count); }
 
-	void UploadIB(const void* index, size_t count)
-	{
-		m_ib->upload(index, count);
-	}
+	void UploadIB(const void* index, size_t count) { m_ib->upload(index, count); }
+
+	bool MapVB(void **pointer, size_t count) { return m_vb->Map(pointer, count); }
+
+	void UnmapVB() { m_vb->Unmap(); }
 
 	~GSVertexBufferStateOGL()
 	{
@@ -878,6 +850,7 @@ class GSDeviceOGL : public GSDevice
 
 	void DrawPrimitive();
 	void DrawIndexedPrimitive();
+	void DrawIndexedPrimitive(int offset, int count);
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
 	void ClearRenderTarget(GSTexture* t, uint32 c);
@@ -906,8 +879,10 @@ class GSDeviceOGL : public GSDevice
 
 	void IASetPrimitiveTopology(GLenum topology);
 	void IASetVertexBuffer(const void* vertices, size_t count);
+	bool IAMapVertexBuffer(void** vertex, size_t stride, size_t count);
+	void IAUnmapVertexBuffer();
 	void IASetIndexBuffer(const void* index, size_t count);
-	void IASetVertexState(GSVertexBufferStateOGL* vb);
+	void IASetVertexState(GSVertexBufferStateOGL* vb = NULL);
 
 	void SetUniformBuffer(GSUniformBufferOGL* cb);
 

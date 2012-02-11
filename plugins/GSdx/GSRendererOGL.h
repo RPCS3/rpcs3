@@ -40,21 +40,11 @@ class GSRendererOGL : public GSRendererHW
 		bool UserHacks_AlphaHack;
 
 	protected:
-		GLenum m_topology;
-
-		template<uint32 prim, uint32 tme, uint32 fst>
-		void ConvertVertex(size_t dst_index, size_t src_index);
-
-		int GetPosX(const void* vertex) const {return (int)((const GSVertexHW11*)vertex)->p.x;}
-		int GetPosY(const void* vertex) const {return (int)((const GSVertexHW11*)vertex)->p.y;}
-		uint32 GetColor(const void* vertex) const {return ((const GSVertexHW11*)vertex)->c0;}
-		void SetColor(void* vertex, uint32 c) const {((GSVertexHW11*)vertex)->c0 = c;}
+		void SetupIA();
 
 	public:
 		GSRendererOGL();
 		virtual ~GSRendererOGL() {};
-
-		template<uint32 prim, uint32 tme, uint32 fst> void VertexKick(bool skip);
 
 		bool CreateDevice(GSDevice* dev);
 

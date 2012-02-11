@@ -61,26 +61,19 @@ void GSDeviceOGL::CreateTextureFX()
 	//float4 c : COLOR0;
 	//float4 f : COLOR1;
 
-	GSInputLayoutOGL vert_format[6] =
+	GSInputLayoutOGL vert_format[] =
 	{
 		// FIXME
-		{0 , 2 , GL_FLOAT          , GL_FALSE , sizeof(GSVertexHW11) , (const GLvoid*)(0) }  ,
-		{1 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(GSVertexHW11) , (const GLvoid*)(8) }  ,
-		{2 , 1 , GL_FLOAT          , GL_FALSE , sizeof(GSVertexHW11) , (const GLvoid*)(12) } ,
-		{3 , 2 , GL_UNSIGNED_SHORT , GL_FALSE , sizeof(GSVertexHW11) , (const GLvoid*)(16) } ,
-		{4 , 1 , GL_UNSIGNED_INT   , GL_FALSE , sizeof(GSVertexHW11) , (const GLvoid*)(20) } ,
+		{0 , 2 , GL_FLOAT          , GL_FALSE , sizeof(GSVertex) , (const GLvoid*)(0) }  ,
+		{1 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(GSVertex) , (const GLvoid*)(8) }  ,
+		{2 , 1 , GL_FLOAT          , GL_FALSE , sizeof(GSVertex) , (const GLvoid*)(12) } ,
+		{3 , 2 , GL_UNSIGNED_SHORT , GL_FALSE , sizeof(GSVertex) , (const GLvoid*)(16) } ,
+		{4 , 1 , GL_UNSIGNED_INT   , GL_FALSE , sizeof(GSVertex) , (const GLvoid*)(20) } ,
 		// note: there is a 32 bits pad
-		{5 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(GSVertexHW11) , (const GLvoid*)(28) } ,
+		{5 , 2 , GL_UNSIGNED_SHORT , GL_FALSE , sizeof(GSVertex) , (const GLvoid*)(24) } ,
+		{6 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(GSVertex) , (const GLvoid*)(28) } ,
 	};
-	m_vb = new GSVertexBufferStateOGL(sizeof(GSVertexHW11), vert_format, countof(vert_format));
-}
-
-void GSDeviceOGL::SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim)
-{
-	IASetVertexState(m_vb);
-	IASetVertexBuffer(vertex, vertex_count);
-	IASetIndexBuffer(index, index_count);
-	IASetPrimitiveTopology(prim);
+	m_vb = new GSVertexBufferStateOGL(sizeof(GSVertex), vert_format, countof(vert_format));
 }
 
 void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)

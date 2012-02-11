@@ -536,6 +536,7 @@ void GSDeviceOGL::DebugOutput()
 		fprintf(stderr, "\n");
 
 	}
+	CheckDebugLog();
 }
 
 void GSDeviceOGL::DrawPrimitive()
@@ -566,6 +567,20 @@ void GSDeviceOGL::DrawIndexedPrimitive()
 #endif
 }
 
+void GSDeviceOGL::DrawIndexedPrimitive(int offset, int count)
+{
+	ASSERT(offset + count <= m_index.count);
+#ifdef OGL_DEBUG
+	DebugInput();
+#endif
+
+	m_state.vb->DrawIndexedPrimitive(offset, count);
+#ifdef OGL_DEBUG
+	DebugOutput();
+	g_draw_count++;
+#endif
+}
+
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
 	GLuint fbo_old = m_state.fbo;
@@ -578,9 +593,15 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 		// glClearColor(c.x, c.y, c.z, c.w);
 		// glClear(GL_COLOR_BUFFER_BIT);
 	} else {
-		// FIXME I need to clarify this FBO attachment stuff
+		// FIXME1 I need to clarify this FBO attachment stuff
 		// I would like to avoid FBO for a basic clean operation
 		OMSetFBO(m_fbo);
+		// FIXME2:
+		// it would be better to attach the texture to another slot (like 3)
+		// but it crash for an unknow reason
+		// The following error appears "glClearBufferfv failed because the currently set GL_DRAW_FRAMEBUFFER binding has incomplete status"
+		// Maybe glDrawBuffer must be updated but it does not solve the crash...
+		// FIXME3: I still have another crash on GOW...
 		static_cast<GSTextureOGL*>(t)->Attach(GL_COLOR_ATTACHMENT0);
 		glClearBufferfv(GL_COLOR, 0, c.v);
 	}
@@ -970,6 +991,8 @@ void GSDeviceOGL::SetUniformBuffer(GSUniformBufferOGL* cb)
 
 void GSDeviceOGL::IASetVertexState(GSVertexBufferStateOGL* vb)
 {
+	if (vb == NULL) vb = m_vb;
+
 	if (m_state.vb != vb) {
 		m_state.vb = vb;
 		vb->bind();
@@ -979,6 +1002,16 @@ void GSDeviceOGL::IASetVertexState(GSVertexBufferStateOGL* vb)
 void GSDeviceOGL::IASetVertexBuffer(const void* vertices, size_t count)
 {
 	m_state.vb->UploadVB(vertices, count);
+}
+
+bool GSDeviceOGL::IAMapVertexBuffer(void** vertex, size_t stride, size_t count)
+{
+	return m_state.vb->MapVB(vertex, count);
+}
+
+void GSDeviceOGL::IAUnmapVertexBuffer()
+{
+	m_state.vb->UnmapVB();
 }
 
 void GSDeviceOGL::IASetIndexBuffer(const void* index, size_t count)
@@ -1073,6 +1106,8 @@ void GSDeviceOGL::OMSetFBO(GLuint fbo)
 	if (m_state.fbo != fbo) {
 		m_state.fbo = fbo;
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		// FIXME DEBUG
+		//if (fbo) fprintf(stderr, "FB status %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 	}
 }
 
@@ -1277,6 +1312,7 @@ void GSDeviceOGL::CheckDebugLog()
 void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message)
 {
 	char debType[20], debSev[5];
+	static int sev_counter = 0;
 
 	if(type == GL_DEBUG_TYPE_ERROR_ARB)
 		strcpy(debType, "Error");
@@ -1293,23 +1329,26 @@ void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsi
 	else
 		strcpy(debType, "UNKNOWN");
 
-	if(severity == GL_DEBUG_SEVERITY_HIGH_ARB)
+	if(severity == GL_DEBUG_SEVERITY_HIGH_ARB) {
 		strcpy(debSev, "High");
+		sev_counter++;
+	}
 	else if(severity == GL_DEBUG_SEVERITY_MEDIUM_ARB)
 		strcpy(debSev, "Med");
 	else if(severity == GL_DEBUG_SEVERITY_LOW_ARB)
 		strcpy(debSev, "Low");
 
 	#ifdef LOUD_DEBUGGING
-	fprintf(stderr,"Type:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debType,id,debSev,message);
+	fprintf(stderr,"Type:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debType, g_draw_count, debSev,message);
 	#endif
 
 	FILE* f = fopen("Debug.txt","a");
 	if(f)
 	{
-		fprintf(f,"Type:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debType,id,debSev,message);
+		fprintf(f,"Type:%s\tID:%d\tSeverity:%s\tMessage:%s\n", debType, g_draw_count, debSev,message);
 		fclose(f);
 	}
+	//if (sev_counter > 2) assert(0);
 }
 
 // (A - B) * C + D

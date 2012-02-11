@@ -76,8 +76,8 @@ GtkWidget* CreateRenderComboBox()
 		case 8 : renderer_box_position = 1; break;
 		case 10: renderer_box_position = 2; break;
 		case 11: renderer_box_position = 3; break;
-		case 15: renderer_box_position = 4; break;
-		case 16: renderer_box_position = 5; break;
+		case 12: renderer_box_position = 4; break;
+		case 13: renderer_box_position = 5; break;
 	}
 	gtk_combo_box_set_active(GTK_COMBO_BOX(render_combo_box), renderer_box_position);
 	return render_combo_box;
@@ -375,8 +375,8 @@ bool RunLinuxDialog()
 				case 1: theApp.SetConfig("renderer", 8); break;
 				case 2: theApp.SetConfig("renderer", 10); break;
 				case 3: theApp.SetConfig("renderer", 11); break;
-				case 4: theApp.SetConfig("renderer", 15); break;
-				case 5: theApp.SetConfig("renderer", 16); break;
+				case 4: theApp.SetConfig("renderer", 12); break;
+				case 5: theApp.SetConfig("renderer", 13); break;
 			}
 		}
 

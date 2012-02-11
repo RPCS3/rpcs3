@@ -182,6 +182,8 @@ public:
     void Lock() {pthread_mutex_lock(&m_mutex);}
     bool TryLock() {return pthread_mutex_trylock(&m_mutex) == 0;}
     void Unlock() {pthread_mutex_unlock(&m_mutex);}
+
+	operator pthread_mutex_t* () {return &m_mutex;}
 };
 
 class GSEvent : public IGSEvent

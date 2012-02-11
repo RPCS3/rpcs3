@@ -48,12 +48,13 @@ struct vertex
 };
 
 #ifdef VERTEX_SHADER
-layout(location = 0) in vec2  i_t;
+layout(location = 0) in vec2  i_st;
 layout(location = 1) in vec4  i_c;
 layout(location = 2) in float i_q;
 layout(location = 3) in uvec2 i_p;
 layout(location = 4) in uint  i_z;
-layout(location = 5) in vec4  i_f;
+layout(location = 5) in uvec2 i_uv;
+layout(location = 6) in vec4  i_f;
 
 layout(location = 0) out vertex VSout;
 
@@ -101,12 +102,14 @@ void vs_main()
 	{
 		if(VS_FST != 0)
 		{
-			VSout.t.xy = i_t * TextureScale;
+			//VSout.t.xy = i_t * TextureScale;
+			VSout.t.xy = i_uv * TextureScale;
 			VSout.t.w = 1.0f;
 		}
 		else
 		{
-			VSout.t.xy = i_t;
+			//VSout.t.xy = i_t;
+			VSout.t.xy = i_st;
 			VSout.t.w = i_q;
 		}
 	}

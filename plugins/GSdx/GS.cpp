@@ -246,7 +246,7 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 				case 2: dev = new GSDeviceSDL(); break;
 				#endif
 				case 3: dev = new GSDeviceNull(); break;
-				case 5: dev = new GSDeviceOGL(); break;
+				case 4: dev = new GSDeviceOGL(); break;
 			}
 
 			if(dev == NULL)
@@ -429,11 +429,15 @@ EXPORT_C GSreadFIFO(uint8* mem)
 #ifdef _LINUX
 	// FIXME: double check which thread call this function
 	// See fifo2 issue below
-	if (theApp.GetConfig("renderer", 0) == 12) {
+	if (theApp.GetConfig("renderer", 0) / 3 == 4) {
 		fprintf(stderr, "Disable FIFO1 on opengl\n");
 	}
 #endif
+	s_gs->m_wnd.AttachContext();
+
 	s_gs->ReadFIFO(mem, 1);
+
+	s_gs->m_wnd.DetachContext();
 }
 
 EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
@@ -441,14 +445,18 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 #ifdef _LINUX
 	// FIXME called from EE core thread not MTGS which cause
 	// invalidate data for opengl
-	if (theApp.GetConfig("renderer", 0) == 12) {
+	if (theApp.GetConfig("renderer", 0) / 3 == 4) {
 #ifdef OGL_DEBUG
 		fprintf(stderr, "Disable FIFO2(%d) on opengl\n", size);
 #endif
 		//return;
 	}
 #endif
+	s_gs->m_wnd.AttachContext();
+
 	s_gs->ReadFIFO(mem, size);
+
+	s_gs->m_wnd.DetachContext();
 }
 
 EXPORT_C GSgifTransfer(const uint8* mem, uint32 size)

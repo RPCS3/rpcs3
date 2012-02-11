@@ -24,15 +24,12 @@
 
 
 GSRendererOGL::GSRendererOGL()
-	: GSRendererHW(new GSVertexTraceDX11(this), sizeof(GSVertexHW11), new GSTextureCacheOGL(this))
-	  , m_topology(0)
+	: GSRendererHW(new GSTextureCacheOGL(this))
 {
 	m_logz = !!theApp.GetConfig("logz", 0);
 	m_fba = !!theApp.GetConfig("fba", 1);
 	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0);
 	m_pixelcenter = GSVector2(-0.5f, -0.5f);
-
-	InitConvertVertex(GSRendererOGL);
 }
 
 bool GSRendererOGL::CreateDevice(GSDevice* dev)
@@ -43,44 +40,47 @@ bool GSRendererOGL::CreateDevice(GSDevice* dev)
 	return true;
 }
 
-template<uint32 prim, uint32 tme, uint32 fst>
-void GSRendererOGL::ConvertVertex(size_t dst_index, size_t src_index)
+void GSRendererOGL::SetupIA()
 {
-	GSVertex* s = (GSVertex*)((GSVertexHW11*)m_vertex.buff + src_index);
-	GSVertexHW11* d = (GSVertexHW11*)m_vertex.buff + dst_index;
+	GSDeviceOGL* dev = (GSDeviceOGL*)m_dev;
 
-	GSVector4i v0 = ((GSVector4i*)s)[0];
-	GSVector4i v1 = ((GSVector4i*)s)[1];
+	void* ptr = NULL;
 
-	if(tme && fst)
+	dev->IASetVertexState();
+
+	if(dev->IAMapVertexBuffer(&ptr, sizeof(GSVertex), m_vertex.next))
 	{
-		// TODO: modify VertexTrace and the shaders to read uv from v1.u16[0], v1.u16[1], then this step is not needed
+		GSVector4i::storent(ptr, m_vertex.buff, sizeof(GSVertex) * m_vertex.next);
 
-		v0 = GSVector4i::cast(GSVector4(v1.uph16()).xyzw(GSVector4::cast(v0))); // uv => st
+		dev->IAUnmapVertexBuffer();
 	}
 
-	((GSVector4i*)d)[0] = v0;
-	((GSVector4i*)d)[1] = v1;
-}
+	dev->IASetIndexBuffer(m_index.buff, m_index.tail);
 
-void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
-{
-	switch(m_vt->m_primclass)
+	GLenum t;
+
+	switch(m_vt.m_primclass)
 	{
 	case GS_POINT_CLASS:
-		m_topology = GL_POINTS;
+		t = GL_POINTS;
 		break;
 	case GS_LINE_CLASS:
 	case GS_SPRITE_CLASS:
-		m_topology = GL_LINES;
+		t = GL_LINES;
 		break;
 	case GS_TRIANGLE_CLASS:
-		m_topology = GL_TRIANGLES;
+		t = GL_TRIANGLES;
 		break;
 	default:
 		__assume(0);
 	}
 
+	dev->IASetPrimitiveTopology(t);
+}
+
+
+void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
+{
 	GSDrawingEnvironment& env = m_env;
 	GSDrawingContext* context = m_context;
 
@@ -103,7 +103,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 			GSVector4 s = GSVector4(rtscale.x / rtsize.x, rtscale.y / rtsize.y);
 			GSVector4 o = GSVector4(-1.0f, 1.0f);
 
-			GSVector4 src = ((m_vt->m_min.p.xyxy(m_vt->m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
+			GSVector4 src = ((m_vt.m_min.p.xyxy(m_vt.m_max.p) + o.xxyy()) * s.xyxy()).sat(o.zzyy());
 			GSVector4 dst = src * 2.0f + o.xxxx();
 
 			GSVertexPT1 vertices[] =
@@ -163,7 +163,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	if(!IsOpaque())
 	{
-		om_bsel.abe = PRIM->ABE || PRIM->AA1 && m_vt->m_primclass == GS_LINE_CLASS;
+		om_bsel.abe = PRIM->ABE || PRIM->AA1 && m_vt.m_primclass == GS_LINE_CLASS;
 
 		om_bsel.a = context->ALPHA.A;
 		om_bsel.b = context->ALPHA.B;
@@ -207,11 +207,11 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	{
 		if(context->ZBUF.PSM == PSM_PSMZ24)
 		{
-			if(m_vt->m_max.p.z > 0xffffff)
+			if(m_vt.m_max.p.z > 0xffffff)
 			{
-				ASSERT(m_vt->m_min.p.z > 0xffffff);
+				ASSERT(m_vt.m_min.p.z > 0xffffff);
 				// Fixme :Following conditional fixes some dialog frame in Wild Arms 3, but may not be what was intended.
-				if (m_vt->m_min.p.z > 0xffffff)
+				if (m_vt.m_min.p.z > 0xffffff)
 				{
 					vs_sel.bppz = 1;
 					om_dssel.ztst = ZTST_ALWAYS;
@@ -220,11 +220,11 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		}
 		else if(context->ZBUF.PSM == PSM_PSMZ16 || context->ZBUF.PSM == PSM_PSMZ16S)
 		{
-			if(m_vt->m_max.p.z > 0xffff)
+			if(m_vt.m_max.p.z > 0xffff)
 			{
-				ASSERT(m_vt->m_min.p.z > 0xffff); // sfex capcom logo
+				ASSERT(m_vt.m_min.p.z > 0xffff); // sfex capcom logo
 				// Fixme : Same as above, I guess.
-				if (m_vt->m_min.p.z > 0xffff)
+				if (m_vt.m_min.p.z > 0xffff)
 				{
 					vs_sel.bppz = 2;
 					om_dssel.ztst = ZTST_ALWAYS;
@@ -268,7 +268,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	GSDeviceOGL::GSSelector gs_sel;
 
 	gs_sel.iip = PRIM->IIP;
-	gs_sel.prim = m_vt->m_primclass;
+	gs_sel.prim = m_vt.m_primclass;
 
 	// ps
 
@@ -288,7 +288,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		}
 	}
 
-	if (env.COLCLAMP.CLAMP == 0 && /* hack */ !tex && PRIM->PRIM != GS_POINTLIST)
+	if(env.COLCLAMP.CLAMP == 0 && /* hack */ !tex && PRIM->PRIM != GS_POINTLIST)
 	{
 		ps_sel.colclip = 1;
 	}
@@ -336,7 +336,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
-		ps_sel.ltf = m_filter == 2 ? m_vt->IsLinear() : m_filter;
+		ps_sel.ltf = m_filter == 2 ? m_vt.IsLinear() : m_filter;
 		ps_sel.rt = tex->m_target;
 
 		int w = tex->m_texture->GetWidth();
@@ -385,8 +385,9 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	uint8 afix = context->ALPHA.FIX;
 
+	SetupIA();
+
 	dev->SetupOM(om_dssel, om_bsel, afix);
-	dev->SetupIA(m_vertex.buff, m_vertex.next, m_index.buff, m_index.tail, m_topology);
 	dev->SetupVS(vs_sel, &vs_cb);
 	dev->SetupGS(gs_sel);
 	dev->SetupPS(ps_sel, &ps_cb, ps_ssel);

@@ -103,11 +103,16 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 			// In worst case the HW renderer seems to use 3 texture unit
 			// For the moment SW renderer only use 1 so don't bother
 			EnableUnit(2);
-			if (m_format == GL_RGBA8) {
+			if (m_format == GL_RGBA8)
 				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-			}
-			else
+			else if (m_format == GL_R16UI)
+				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, NULL);
+			else if (m_format == GL_R8)
+				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+			else {
+				fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
 				assert(0); // TODO Later
+			}
 			break;
 		case GSTexture::Offscreen:
 			if (m_type == GL_RGBA8) m_pbo_size = m_size.x * m_size.y * 4;
@@ -130,7 +135,10 @@ GSTextureOGL::~GSTextureOGL()
 
 void GSTextureOGL::Attach(GLenum attachment)
 {
+	//fprintf(stderr, "format %d,%x\n", m_type, m_format);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
+	// FIXME DEBUG
+	//fprintf(stderr, "FB status %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 }
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
@@ -142,18 +150,22 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 
 	EnableUnit(2);
 
-	if (m_format != GL_RGBA8) {
-		fprintf(stderr, "wrong pixel format\n");
-		assert(0);
-	}
-
 	// pitch could be different of width*element_size
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch>>2);
 	// FIXME : it crash on colin mcrae rally 3 (others game too) when the size is 16
 	//fprintf(stderr, "Texture %dx%d with a pitch of %d\n", m_size.x, m_size.y, pitch >>2);
 	//fprintf(stderr, "Box (%d,%d)x(%d,%d)\n", r.x, r.y, r.width(), r.height());
 
-	glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
+	if (m_format == GL_RGBA8)
+		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
+	else if (m_format == GL_R16UI)
+		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RED_INTEGER, GL_R16UI, data);
+	else if (m_format == GL_R8)
+		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RED, GL_R8, data);
+	else {
+		fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
+		assert(0);
+	}
 #if 0
 	//if (m_size.x != 16)
 	if (r.width() > 16 && r.height() > 16)
@@ -216,12 +228,16 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 		// FIXME It might be possible to only map a subrange of the texture based on r object
 
 		// Load the PBO
-		if (m_format == GL_R16UI)
-			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED, GL_UNSIGNED_SHORT, 0);
-		else if (m_format == GL_RGBA8)
+		if (m_format == GL_RGBA8)
 			glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-		else
+		else if (m_format == GL_R16UI)
+			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED_INTEGER, GL_UNSIGNED_SHORT, 0);
+		else if (m_format == GL_R8)
+			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED, GL_UNSIGNED_BYTE, 0);
+		else {
+			fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
 			assert(0);
+		}
 
 		// Give access from the CPU
 		uint32 map_flags = GL_MAP_READ_BIT;

@@ -62,6 +62,7 @@ void GSTextureCacheOGL::Read(Target* t, const GSVector4i& r)
 	GSVector4 src = GSVector4(r) * GSVector4(t->m_texture->GetScale()).xyxy() / GSVector4(t->m_texture->GetSize()).xyxy();
 
 	GLuint format = TEX0.PSM == PSM_PSMCT16 || TEX0.PSM == PSM_PSMCT16S ? GL_R16UI : GL_RGBA8;
+	//if (format == GL_R16UI) fprintf(stderr, "Format 16 bits integer\n");
 #if 0
 	DXGI_FORMAT format = TEX0.PSM == PSM_PSMCT16 || TEX0.PSM == PSM_PSMCT16S ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R8G8B8A8_UNORM;
 #endif
