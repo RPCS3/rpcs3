@@ -471,8 +471,8 @@ void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r)
 	m_v.UV = (uint32)GSVector4i::store(v.ps32(v));
 
 #ifdef Offset_UV
-	m_v.UV.U = min((uint16)m_v.UV.U, (uint16)(m_v.UV.U - 4U));
-	m_v.UV.V = min((uint16)m_v.UV.V, (uint16)(m_v.UV.V - 4U));
+	m_v.U = min((uint16)m_v.U, (uint16)(m_v.U - 4U));
+	m_v.V = min((uint16)m_v.V, (uint16)(m_v.V - 4U));
 #endif
 }
 
@@ -657,8 +657,8 @@ void GSState::GIFRegHandlerUV(const GIFReg* RESTRICT r)
 	m_v.UV = r->UV.u32[0] & 0x3fff3fff;
 
 #ifdef Offset_UV
-	m_v.UV.U = min((uint16)m_v.UV.U, (uint16)(m_v.UV.U - 4U));
-	m_v.UV.V = min((uint16)m_v.UV.V, (uint16)(m_v.UV.V - 4U));
+	m_v.U = min((uint16)m_v.U, (uint16)(m_v.U - 4U));
+	m_v.V = min((uint16)m_v.V, (uint16)(m_v.V - 4U));
 #endif
 }
 
