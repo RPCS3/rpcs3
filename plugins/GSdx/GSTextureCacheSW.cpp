@@ -131,25 +131,6 @@ void GSTextureCacheSW::RemoveAll()
 	}
 }
 
-void GSTextureCacheSW::RemoveAt(Texture* t)
-{
-	m_textures.erase(t);
-
-	for(uint32 start = t->m_TEX0.TBP0 >> 5, end = countof(m_map) - 1; start <= end; start++)
-	{
-		list<Texture*>& m = m_map[start];
-
-		for(list<Texture*>::iterator i = m.begin(); i != m.end(); )
-		{
-			list<Texture*>::iterator j = i++;
-
-			if(*j == t) {m.erase(j); break;}
-		}
-	}
-
-	delete t;
-}
-
 void GSTextureCacheSW::IncAge()
 {
 	for(hash_set<Texture*>::iterator i = m_textures.begin(); i != m_textures.end(); )
@@ -158,9 +139,23 @@ void GSTextureCacheSW::IncAge()
 
 		Texture* t = *j;
 
-		if(++t->m_age > 30)
+		if(++t->m_age > 10)
 		{
-			RemoveAt(t);
+			m_textures.erase(j);
+
+			for(const uint32* p = t->m_pages.n; *p != GSOffset::EOP; p++)
+			{
+				list<Texture*>& m = m_map[*p];
+
+				for(list<Texture*>::iterator i = m.begin(); i != m.end(); )
+				{
+					list<Texture*>::iterator j = i++;
+
+					if(*j == t) {m.erase(j); break;}
+				}
+			}
+
+			delete t;
 		}
 	}
 }

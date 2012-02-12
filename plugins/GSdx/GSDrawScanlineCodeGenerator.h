@@ -71,6 +71,7 @@ class GSDrawScanlineCodeGenerator : public GSCodeGenerator
 
 	void modulate16(const Xmm& a, const Operand& f, int shift);
 	void lerp16(const Xmm& a, const Xmm& b, const Xmm& f, int shift);
+	void lerp16_4(const Xmm& a, const Xmm& b, const Xmm& f);
 	void mix16(const Xmm& a, const Xmm& b, const Xmm& temp);
 	void clamp16(const Xmm& a, const Xmm& temp);
 	void alltrue();

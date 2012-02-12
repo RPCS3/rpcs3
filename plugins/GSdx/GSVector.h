@@ -1004,6 +1004,13 @@ public:
 		return d.add16(a.sub16(b).modulate16<shift>(c));
 	}
 
+	__forceinline GSVector4i lerp16_4(const GSVector4i& a, const GSVector4i& f) const
+	{
+		// (a - this) * f >> 4 + this (a, this: 8-bit, f: 4-bit)
+
+		return add16(a.sub16(*this).mul16l(f).sra16(4));
+	}
+
 	template<int shift> __forceinline GSVector4i modulate16(const GSVector4i& f) const
 	{
 		// a * f << shift

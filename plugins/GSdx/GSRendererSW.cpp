@@ -680,6 +680,8 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 	bool fb = fb_pages != NULL;
 	bool zb = zb_pages != NULL;
 
+	bool res = false;
+
 	if(m_fzb != m_context->offset.fzb4)
 	{
 		// targets changed, check everything
@@ -724,7 +726,7 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 			{
 				if(LOG) {fprintf(s_fp, "syncpoint 0\n"); fflush(s_fp);}
 
-				return true;
+				res = true;
 			}
 
 			//if(LOG) {fprintf(s_fp, "no syncpoint *\n"); fflush(s_fp);}
@@ -785,7 +787,7 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 				{
 					if(LOG) {fprintf(s_fp, "syncpoint 1\n"); fflush(s_fp);}
 
-					return true;
+					res = true;
 				}
 			}
 		}
@@ -795,7 +797,7 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 			// chross-check frame and z-buffer pages, they cannot overlap with eachother and with previous batches in queue,
 			// have to be careful when the two buffers are mutually enabled/disabled and alternating (Bully FBP/ZBP = 0x2300)
 
-			if(fb)
+			if(fb && !res)
 			{
 				for(const uint32* p = fb_pages; *p != GSOffset::EOP; p++)
 				{
@@ -803,12 +805,14 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 					{
 						if(LOG) {fprintf(s_fp, "syncpoint 2\n"); fflush(s_fp);}
 
-						return true;
+						res = true;
+
+						break;
 					}
 				}
 			}
 
-			if(zb)
+			if(zb && !res)
 			{
 				for(const uint32* p = zb_pages; *p != GSOffset::EOP; p++)
 				{
@@ -816,14 +820,19 @@ bool GSRendererSW::CheckTargetPages(const uint32* fb_pages, const uint32* zb_pag
 					{
 						if(LOG) {fprintf(s_fp, "syncpoint 3\n"); fflush(s_fp);}
 
-						return true;
+						res = true;
+
+						break;
 					}
 				}
 			}
 		}
 	}
 
-	return false;
+	if(!fb && fb_pages != NULL) delete [] fb_pages;
+	if(!zb && zb_pages != NULL) delete [] zb_pages;
+
+	return res;
 }
 
 bool GSRendererSW::CheckSourcePages(SharedData* sd)
@@ -1334,7 +1343,7 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 		gd.zm |= GSVector4i::xffff0000();
 	}
 
-	if(gd.sel.prim == GS_SPRITE_CLASS && !gd.sel.ftest && !gd.sel.ztest && data->bbox.eq(data->bbox.rintersect(data->scissor)))
+	if(gd.sel.prim == GS_SPRITE_CLASS && !gd.sel.ftest && !gd.sel.ztest && data->bbox.eq(data->bbox.rintersect(data->scissor))) // TODO: check scissor horizontally only
 	{
 		gd.sel.notest = 1;
 
