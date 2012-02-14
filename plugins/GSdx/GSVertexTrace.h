@@ -32,7 +32,7 @@ class GSState;
 __aligned(class, 32) GSVertexTrace : public GSAlignedClass<32>
 {
 public:
-	struct Vertex {GSVector4i c; GSVector4 p, t;}; // t.xy * 0x10000
+	struct Vertex {GSVector4i c; GSVector4 p, t;};
 	struct VertexAlpha {int min, max; bool valid;};
 
 protected:

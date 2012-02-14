@@ -455,11 +455,11 @@ void GSVertexTrace::FindMinMax(const void* vertex, const uint32* index, int coun
 	{
 		if(fst)
 		{
-			s = GSVector4(1 << (16 - 4), 1).xxyy();
+			s = GSVector4(1.0f / 16, 1.0f).xxyy();
 		}
 		else
 		{
-			s = GSVector4(0x10000 << context->TEX0.TW, 0x10000 << context->TEX0.TH, 1, 1);
+			s = GSVector4(1 << context->TEX0.TW, 1 << context->TEX0.TH, 1, 1);
 		}
 
 		m_min.t = tmin * s;

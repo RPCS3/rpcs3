@@ -426,21 +426,9 @@ void GSRendererSW::Draw()
 
 	//
 
-	if(LOG) 
-	{
-		fprintf(s_fp, "[%d] queue %05x %d (%d) %05x %d (%d) %05x %d %dx%d (%d %d %d) | %d %d %d\n",
-			sd->counter,
-			m_context->FRAME.Block(), m_context->FRAME.PSM, gd.sel.fwrite, 
-			m_context->ZBUF.Block(), m_context->ZBUF.PSM, gd.sel.zwrite,
-			PRIM->TME ? m_context->TEX0.TBP0 : 0xfffff, m_context->TEX0.PSM, (int)m_context->TEX0.TW, (int)m_context->TEX0.TH, m_context->TEX0.CSM, m_context->TEX0.CPSM, m_context->TEX0.CSA,
-			PRIM->PRIM, sd->vertex_count, sd->index_count); 
-
-		fflush(s_fp);
-	}
-
 	if(s_dump)
 	{
-		Sync(3);
+		Sync(2);
 
 		uint64 frame = m_perfmon.GetFrame();
 
@@ -473,7 +461,7 @@ void GSRendererSW::Draw()
 
 		Queue(data);
 
-		Sync(4);
+		Sync(3);
 
 		if(s_save && s_n >= s_saven)
 		{
@@ -514,12 +502,33 @@ void GSRendererSW::Queue(shared_ptr<GSRasterizerData>& item)
 
 	if(sd->m_syncpoint == SharedData::SyncSource) 
 	{
-		m_rl->Sync();
+		Sync(4);
 	}
 
 	// update previously invalidated parts
 
 	sd->UpdateSource();
+
+	if(sd->m_syncpoint == SharedData::SyncTarget)
+	{
+		Sync(5);
+	}
+
+	if(LOG)
+	{
+		GSScanlineGlobalData& gd = ((SharedData*)item.get())->global;
+
+		fprintf(s_fp, "[%d] queue %05x %d (%d) %05x %d (%d) %05x %d %dx%d (%d %d %d) | %d %d %d\n",
+			sd->counter,
+			m_context->FRAME.Block(), m_context->FRAME.PSM, gd.sel.fwrite, 
+			m_context->ZBUF.Block(), m_context->ZBUF.PSM, gd.sel.zwrite,
+			PRIM->TME ? m_context->TEX0.TBP0 : 0xfffff, m_context->TEX0.PSM, (int)m_context->TEX0.TW, (int)m_context->TEX0.TH, m_context->TEX0.CSM, m_context->TEX0.CPSM, m_context->TEX0.CSA,
+			PRIM->PRIM, sd->vertex_count, sd->index_count); 
+
+		fflush(s_fp);
+	}
+
+	m_rl->Queue(item);
 
 	// invalidate new parts rendered onto
 
@@ -532,13 +541,6 @@ void GSRendererSW::Queue(shared_ptr<GSRasterizerData>& item)
 	{
 		m_tc->InvalidatePages(sd->m_zb_pages, sd->m_zpsm);
 	}
-
-	if(sd->m_syncpoint == SharedData::SyncTarget)
-	{
-		m_rl->Sync();
-	}
-
-	m_rl->Queue(item);
 }
 
 void GSRendererSW::Sync(int reason)
@@ -597,7 +599,7 @@ void GSRendererSW::InvalidateVideoMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 		{
 			if(m_fzb_pages[*p] | m_tex_pages[*p])
 			{
-				Sync(5);
+				Sync(6);
 
 				break;
 			}
@@ -1066,12 +1068,6 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 				static int s_counter = 0;
 
-				if(0)
-				//if(context->TEX0.TH > context->TEX0.TW)
-				//if(s_n >= s_saven && s_n < s_saven + 3)
-				//if(context->TEX0.TBP0 >= 0x2b80 && context->TEX0.TBW == 2 && context->TEX0.PSM == PSM_PSMT4)
-				t->Save(format("c:/temp1/%08d_%05x_0.bmp", s_counter, context->TEX0.TBP0));
-
 				for(int i = 1, j = std::min<int>((int)context->TEX1.MXL, 6); i <= j; i++)
 				{
 					switch(i)
@@ -1473,20 +1469,36 @@ void GSRendererSW::SharedData::UpdateSource()
 
 			global.sel.tfx = TFX_NONE;
 		}
+	}
 
-		// TODO
+	// TODO
 		
-		if(m_parent->s_dump)
+	if(m_parent->s_dump)
+	{
+		uint64 frame = m_parent->m_perfmon.GetFrame();
+
+		string s;
+
+		if(m_parent->s_save && m_parent->s_n >= m_parent->s_saven)
 		{
-			uint64 frame = m_parent->m_perfmon.GetFrame();
-
-			string s;
-
-			if(m_parent->s_save && m_parent->s_n >= m_parent->s_saven)
+			for(size_t i = 0; m_tex[i].t != NULL; i++)
 			{
 				s = format("c:\\temp1\\_%05d_f%lld_tex%d_%05x_%d.bmp", m_parent->s_n - 2, frame, i, (int)m_parent->m_context->TEX0.TBP0, (int)m_parent->m_context->TEX0.PSM);
 
 				m_tex[i].t->Save(s);
+			}
+
+			if(global.clut != NULL)
+			{
+				GSTextureSW* t = new GSTextureSW(0, 256, 1);
+
+				t->Update(GSVector4i(0, 0, 256, 1), global.clut, sizeof(uint32) * 256);
+
+				s = format("c:\\temp1\\_%05d_f%lld_texp_%05x_%d.bmp", m_parent->s_n - 2, frame, (int)m_parent->m_context->TEX0.TBP0, (int)m_parent->m_context->TEX0.PSM);
+
+				t->Save(s);
+
+				delete t;
 			}
 		}
 	}

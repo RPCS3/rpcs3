@@ -363,7 +363,7 @@ bool GSTextureCacheSW::Texture::Save(const string& fn, bool dds) const
 			{
 				for(int i = 0; i < w; i++)
 				{
-					((uint32*)m.bits)[i] = clut[((uint8*)src)[i]];
+					((uint32*)m.bits)[i] = clut[src[i]];
 				}
 			}
 		}
