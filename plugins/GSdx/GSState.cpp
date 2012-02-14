@@ -2525,7 +2525,7 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 			st += GSVector4(-0.5f, 0.5f).xxyy();
 		}
 
-		GSVector4i uv = GSVector4i(st);
+		GSVector4i uv = GSVector4i(st.floor());
 
 		GSVector4i u, v;
 
