@@ -444,18 +444,14 @@ void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* RESTRICT r)
 
 void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r)
 {
-	#if defined(_M_AMD64)
+	GSVector4i st = GSVector4i::loadl(&r->u64[0]);
+	GSVector4i q = GSVector4i::loadl(&r->u64[1]);
 
-	m_v.ST.u64 = r->u64[0];
+	GSVector4i::storel(&m_v.ST, st);
 
-	#else
-
-	GSVector4i v = GSVector4i::loadl(r);
-	GSVector4i::storel(&m_v.ST.u64, v);
-
-	#endif
-
-	m_q = r->STQ.Q;
+	q = q.blend8(GSVector4i::cast(GSVector4::m_one), q == GSVector4i::zero()); // character shadow in Vexx, q = 0 (st also 0 on the first 16 vertices), setting it to 1.0f to avoid div by zero later
+	
+	*(int*)&m_q = GSVector4i::store(q); 
 	
 #ifdef Offset_ST
 	GIFRegTEX0 TEX0 = m_context->TEX0;
@@ -539,6 +535,8 @@ void GSState::GIFPackedRegHandlerSTQRGBAXYZF2(const GIFPackedReg* RESTRICT r, ui
 		GSVector4i q = GSVector4i::loadl(&r[0].u64[1]);
 		GSVector4i rgba = (GSVector4i::load<false>(&r[1]) & GSVector4i::x000000ff()).ps32().pu16();
 
+		q = q.blend8(GSVector4i::cast(GSVector4::m_one), q == GSVector4i::zero()); // see GIFPackedRegHandlerSTQ
+
 		m_v.m[0] = st.upl64(rgba.upl32(q)); // TODO: only store the last one
 
 		GSVector4i xy = GSVector4i::loadl(&r[2].u64[0]);
@@ -568,6 +566,8 @@ void GSState::GIFPackedRegHandlerSTQRGBAXYZ2(const GIFPackedReg* RESTRICT r, uin
 		GSVector4i st = GSVector4i::loadl(&r[0].u64[0]);
 		GSVector4i q = GSVector4i::loadl(&r[0].u64[1]);
 		GSVector4i rgba = (GSVector4i::load<false>(&r[1]) & GSVector4i::x000000ff()).ps32().pu16();
+
+		q = q.blend8(GSVector4i::cast(GSVector4::m_one), q == GSVector4i::zero()); // see GIFPackedRegHandlerSTQ
 
 		m_v.m[0] = st.upl64(rgba.upl32(q)); // TODO: only store the last one
 
@@ -638,7 +638,11 @@ void GSState::GIFRegHandlerPRIM(const GIFReg* RESTRICT r)
 
 void GSState::GIFRegHandlerRGBAQ(const GIFReg* RESTRICT r)
 {
-	m_v.RGBAQ = (GSVector4i)r->RGBAQ;
+	GSVector4i rgbaq = (GSVector4i)r->RGBAQ;
+
+	rgbaq = rgbaq.upl32(rgbaq.blend8(GSVector4i::cast(GSVector4::m_one), rgbaq == GSVector4i::zero()).yyyy()); // see GIFPackedRegHandlerSTQ
+
+	m_v.RGBAQ = rgbaq;
 }
 
 void GSState::GIFRegHandlerST(const GIFReg* RESTRICT r)
