@@ -780,13 +780,31 @@ template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* RESTRICT r)
 {
 	GIFRegTEX0 TEX0 = r->TEX0;
 
-	// Tokyo Xtreme Racer Drift 2, TW/TH == 0, PRIM->FST == 1
-	// Just setting the max texture size to make the texture cache allocate some surface. 
-	// The vertex trace will narrow the updated area down to the minimum, upper-left 8x8 
-	// for a single letter, but it may address the whole thing if it wants to.
+	int tw = (int)TEX0.TW;
+	int th = (int)TEX0.TH;
 
-	if(TEX0.TW > 10 || TEX0.TW == 0) TEX0.TW = 10;
-	if(TEX0.TH > 10 || TEX0.TH == 0) TEX0.TH = 10;
+	if(tw > 10) tw = 10;
+	if(th > 10) th = 10;
+
+	if(PRIM->FST)
+	{
+		// Tokyo Xtreme Racer Drift 2, TW/TH == 0
+		// Just setting the max texture size to make the texture cache allocate some surface. 
+		// The vertex trace will narrow the updated area down to the minimum, upper-left 8x8 
+		// for a single letter, but it may address the whole thing if it wants to.
+
+		if(tw == 0) tw = 10;
+		if(th == 0) th = 10;
+	}
+	else
+	{
+		// Yakuza, TW/TH == 0
+		// The minimap is drawn using solid colors, the texture is really a 1x1 white texel, 
+		// modulated by the vertex color. Cannot change the dimension because S/T are normalized.
+	}
+
+	TEX0.TW = tw;
+	TEX0.TH = th;
 
 	if((TEX0.TBW & 1) && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT4))
 	{
