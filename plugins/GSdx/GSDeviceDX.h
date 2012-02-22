@@ -173,7 +173,7 @@ public:
 				uint32 ltf:1;
 				uint32 colclip:2;
 				uint32 date:2;
-				uint32 spritehack;
+				uint32 spritehack:1;
 			};
 
 			uint32 key;
