@@ -280,8 +280,9 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
-		ps_sel.ltf = m_filter == 2 ? m_vt.IsLinear() : m_filter;
+		ps_sel.ltf = m_filter == 2 ? m_vt.IsLinear() : m_filter;		
 		ps_sel.rt = tex->m_target;
+		ps_sel.spritehack = tex->m_spritehack_t;
 
 		int w = tex->m_texture->GetWidth();
 		int h = tex->m_texture->GetHeight();

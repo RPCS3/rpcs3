@@ -109,6 +109,7 @@ void GSSettingsDlg::OnInit()
 	// Hacks
 	CheckDlgButton(m_hWnd, IDC_ALPHAHACK, theApp.GetConfig("UserHacks_AlphaHack", 0));
 	CheckDlgButton(m_hWnd, IDC_OFFSETHACK, theApp.GetConfig("UserHacks_HalfPixelOffset", 0));
+	CheckDlgButton(m_hWnd, IDC_SPRITEHACK, theApp.GetConfig("UserHacks_SpriteHack", 0));
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETRANGE, 0, MAKELPARAM(1000, 0));
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("UserHacks_SkipDraw", 0), 0));
 
@@ -275,6 +276,7 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		// Hacks
 		theApp.SetConfig("UserHacks_AlphaHack", (int)IsDlgButtonChecked(m_hWnd, IDC_ALPHAHACK));
 		theApp.SetConfig("UserHacks_HalfPixelOffset", (int)IsDlgButtonChecked(m_hWnd, IDC_OFFSETHACK));
+		theApp.SetConfig("UserHacks_SpriteHack", (int)IsDlgButtonChecked(m_hWnd, IDC_SPRITEHACK));
 		theApp.SetConfig("UserHacks_SkipDraw", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_GETPOS, 0, 0));
 	}
 
@@ -287,6 +289,7 @@ void GSSettingsDlg::UpdateControls()
 	INT_PTR i;
 
 	bool allowHacks = !!theApp.GetConfig("allowHacks", 0);
+	theApp.SetConfig("allowHacks", (int)allowHacks);
 
 	int scaling = 1; // in case reading the combo doesn't work, enable the custom res control anyway
 
@@ -324,12 +327,14 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAA), hw);
 
 		//ShowWindow(GetDlgItem(m_hWnd, IDC_USERHACKS), allowHacks && hw) ? SW_SHOW : SW_HIDE;  //Don't disable the "Hacks" frame
+		ShowWindow(GetDlgItem(m_hWnd, IDC_HACKDISABLED), !(allowHacks && hw)) ? SW_SHOW : SW_HIDE;
 		ShowWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 		ShowWindow(GetDlgItem(m_hWnd, IDC_MSAA), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 		ShowWindow(GetDlgItem(m_hWnd, IDC_STATIC_TEXT_HWAA), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 		
 		ShowWindow(GetDlgItem(m_hWnd, IDC_ALPHAHACK), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 		ShowWindow(GetDlgItem(m_hWnd, IDC_OFFSETHACK), allowHacks && hw) ? SW_SHOW : SW_HIDE;
+		ShowWindow(GetDlgItem(m_hWnd, IDC_SPRITEHACK), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 		
 		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACKEDIT), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), allowHacks && hw) ? SW_SHOW : SW_HIDE;
