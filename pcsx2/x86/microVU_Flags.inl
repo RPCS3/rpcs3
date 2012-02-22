@@ -290,7 +290,7 @@ __fi void mVUsetupFlags(mV, microFlagCycles& mFC) {
 		branch = 0;												\
 	}															\
 	else if (branch == 5) { /*JR/JARL*/							\
-		if(!CHECK_VU_BLOCKHACK && (sCount+found<4)) {			\
+		if(sCount+found<4) {			\
 			mVUregs.needExactMatch |= 7;						\
 		}														\
 		break;													\

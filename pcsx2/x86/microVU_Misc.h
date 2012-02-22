@@ -359,13 +359,6 @@ static const bool doJumpAsSameProgram = 0; // Set to 1 to treat jumps as same pr
 // This hack only updates the Status Flag on blocks that will read it.
 // Most blocks do not read status flags, so this is a big speedup.
 
-// Block Flag Instance No-Propagation Hack
-#define CHECK_VU_BLOCKHACK (EmuConfig.Speedhacks.vuBlockHack)
-// There are times when it is unknown if future blocks will need old
-// flag instance data (due to indirect jumps). This hack assumes
-// that they won't need old flag data. This effectively removes a lot
-// of end-of-block flag instance shuffling, causing nice speedups.
-
 // Min/Max Speed Hack
 #define CHECK_VU_MINMAXHACK	0 //(EmuConfig.Speedhacks.vuMinMax)
 // This hack uses SSE min/max instructions instead of emulated "logical min/max"
