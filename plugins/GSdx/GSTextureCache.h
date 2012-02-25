@@ -119,7 +119,7 @@ protected:
 	SourceMap m_src;
 	list<Target*> m_dst[2];
 	bool m_paltex;
-	bool m_spritehack;
+	int m_spritehack;
 	uint8* m_temp;
 
 	virtual Source* CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* t = NULL);

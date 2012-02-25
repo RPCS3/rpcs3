@@ -25,7 +25,7 @@
 GSTextureCache::GSTextureCache(GSRenderer* r)
 	: m_renderer(r)
 {
-	m_spritehack = !!theApp.GetConfig("UserHacks_SpriteHack", 0);
+	m_spritehack = theApp.GetConfig("UserHacks_SpriteHack", 0);
 	m_paltex = !!theApp.GetConfig("paltex", 0);
 
 	m_temp = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32);
@@ -585,8 +585,13 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 	if(dst == NULL)
 	{
-		if(m_spritehack && TEX0.CPSM == 2 && (TEX0.PSM == 19 || TEX0.PSM == 27)) 
+		if(m_spritehack && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT8H)) 
+		{
 			src->m_spritehack_t = true;
+			
+			if(m_spritehack == 2 && TEX0.CPSM != PSM_PSMCT16) 
+				src->m_spritehack_t = false;		
+		}			
 		else
 			src->m_spritehack_t = false;
 		
