@@ -897,8 +897,9 @@ static uint cdvdStartSeek( uint newsector, CDVD_MODE_TYPE mode )
 	cdvd.Ready = CDVD_NOTREADY;
 	cdvd.Reading = 0;
 	cdvd.Readed = 0;
-	//cdvd.Status = CDVD_STATUS_STOP;
-    cdvd.Status = CDVD_STATUS_SEEK | CDVD_STATUS_SPIN; // Time Crisis 2
+	//cdvd.Status = CDVD_STATUS_STOP; // before r4961
+    //cdvd.Status = CDVD_STATUS_SEEK | CDVD_STATUS_SPIN; // Time Crisis 2 // but breaks ICO NTSC
+	cdvd.Status = CDVD_STATUS_PAUSE; // best so far in my tests (rama)
 
 	if( !cdvd.Spinning )
 	{
