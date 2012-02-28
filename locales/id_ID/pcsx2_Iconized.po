@@ -1,0 +1,328 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR PCSX2_Dev_Team
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PCSX2 0.9.8 r4560\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2012-02-28 12:25+0100\n"
+"PO-Revision-Date: 2012-01-13 16:56+0700\n"
+"Last-Translator: \n"
+"Language-Team: ikazu <ikazu.kevin@gmail.com>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxE\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: trunk\\\n"
+"X-Poedit-Language: Indonesian\n"
+"X-Poedit-Country: INDONESIA\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: common/src/Utilities/Exceptions.cpp:254
+msgid "!Notice:VirtualMemoryMap"
+msgstr "!Pemberitahuan:MapVirtualMemory"
+
+#: pcsx2/CDVD/CDVD.cpp:390
+msgid "!Notice:PsxDisc"
+msgstr "!Pemberitahuan:DiscPsx"
+
+#: pcsx2/System.cpp:114
+msgid "!Notice:Recompiler:VirtualMemoryAlloc"
+msgstr "!Pemberitahuan:Recompiler:AlokasiMemoriVirtual"
+
+#: pcsx2/System.cpp:348
+msgid "!Notice:EmuCore::MemoryForVM"
+msgstr "!Pemberitahuan:CoreEmu::MemoriUntukMesinVirtual"
+
+#: pcsx2/gui/AppInit.cpp:43
+msgid "!Notice:Startup:NoSSE2"
+msgstr "!Pemberitahuan:Startup:NoSSE2"
+
+#: pcsx2/gui/AppInit.cpp:162
+msgid "!Notice:RecompilerInit:Header"
+msgstr "!Pemberitahuan:InitRecompiler:Header"
+
+#: pcsx2/gui/AppInit.cpp:211
+msgid "!Notice:RecompilerInit:Footer"
+msgstr "!Pemberitahuan:InitRecompiler:Footer"
+
+#: pcsx2/gui/AppMain.cpp:546
+msgid "!Notice:BiosDumpRequired"
+msgstr "!Pemberitahuan:DumpBiosDiperlukan"
+
+#: pcsx2/gui/AppMain.cpp:629
+msgid "!Notice Error:Thread Deadlock Actions"
+msgstr "!Pemberitahuan Eror:Aksi Deadlock Pada Trit"
+
+#: pcsx2/gui/AppUserMode.cpp:57
+msgid "!Notice:PortableModeRights"
+msgstr "!Pemberitahuan:KekuasaanModePortable"
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
+msgid "!ContextTip:ChangingNTFS"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+#, fuzzy
+msgid "!ContextTip:Folders:Settings"
+msgstr "!Panel:Folders:Pengaturan"
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
+msgid "!Panel:Folders:Settings"
+msgstr "!Panel:Folders:Pengaturan"
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
+msgid "!Wizard:Welcome"
+msgstr "!Wizard:Selamat Datang"
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
+msgid "!Wizard:Bios:Tutorial"
+msgstr "!Wizard:Bios:Tutorial"
+
+#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
+msgid "!Notice:ImportExistingSettings"
+msgstr "!Pemberitahuan:ImporPengaturanYangAda"
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
+msgid "!Panel:Mcd:NtfsCompress"
+msgstr "!Panel:Mcd:NtfsCompress"
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
+msgid "!Panel:Mcd:EnableEjection"
+msgstr "!Panel:Mcd:AkifkanEjection"
+
+#: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
+msgid "!Panel:StuckThread:Heading"
+msgstr "!Panel:TritSangkut:Heading"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+#, fuzzy
+msgid "!Panel:HasHacksOverrides"
+msgstr "!Panel:Speedhacks:PenampakanSebagian"
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+msgid "!Notice:Tooltip:Presets:Checkbox"
+msgstr ""
+
+#: pcsx2/gui/IsoDropTarget.cpp:28
+msgid "!Notice:ConfirmSysReset"
+msgstr "!Pemberitahuan:KonfirmasiResetSistem"
+
+#: pcsx2/gui/MainMenuClicks.cpp:106
+msgid "!Notice:DeleteSettings"
+msgstr "!Pemberitahuan:HapusPengaturan"
+
+#: pcsx2/gui/MemoryCardFile.cpp:78
+msgid "!Notice:Mcd:HasBeenDisabled"
+msgstr "!Pemberitahuan:Mcd:TelahDiNonaktifkan"
+
+#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
+msgid "!Notice:BIOS:InvalidSelection"
+msgstr "!Pemberitahuan:BIOS:PilihanTidakValid"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:111
+msgid "!Panel:EE/IOP:Heading"
+msgstr "!Panel:EE/IOP:Heading"
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:178
+msgid "!Panel:VUs:Heading"
+msgstr "!Panel:VUs:Heading"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:69
+msgid "!Notice:DirPicker:CreatePath"
+msgstr "!Pemberitahuan:PilihanDirektori:BuatLokasi"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
+#, fuzzy
+msgid "!ContextTip:DirPicker:UseDefault"
+msgstr "!Pemberitahuan:PilihanDirektori:BuatLokasi"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:55
+msgid "!ContextTip:Window:Zoom"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Vsync"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:76
+msgid "!ContextTip:Window:HideMouse"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:82
+msgid "!ContextTip:Window:Fullscreen"
+msgstr ""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:93
+msgid "!ContextTip:Window:HideGS"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+msgid "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
+msgid "!ContextTip:Gamefixes:DMA Busy hack"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
+msgid "!Panel:Gamefixes:Compat Warning"
+msgstr "!Panel:PerbaikanPermainan:Peringatan Compat"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+msgid "!Notice:Mcd:Delete"
+msgstr "!Pemberitahuan:Mcd:Hapus"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:758
+msgid "!Notice:Mcd:CantDuplicate"
+msgstr "!Pemberitahuan:Mcd:TidakBisaDuplikat"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:801
+msgid "!Notice:Mcd:Copy Failed"
+msgstr "!Pemberitahuan:Mcd:Salin Gagal"
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+msgid "!Panel:Usermode:Explained"
+msgstr "!Panel:Modepengguna:Terjelaskan"
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:41
+msgid "!Panel:Usermode:Warning"
+msgstr "!Panel:Modepengguna:Peringatan"
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:40
+#, fuzzy
+msgid "!ContextTip:Folders:Savestates"
+msgstr "!Panel:Folders:Pengaturan"
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:50
+msgid "!ContextTip:Folders:Snapshots"
+msgstr ""
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:60
+msgid "!ContextTip:Folders:Logs"
+msgstr ""
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+msgid "!Notice:PluginSelector:ConfirmShutdown"
+msgstr "!Pemberitahuan:PilihanPlugin:KonfirmasiMatikan"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
+msgid "!Notice:PluginSelector:ApplyFailed"
+msgstr "!Pemberitahuan:PilihanPlugin:GagalTerapkan"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
+#, fuzzy
+msgid "!Panel:Speedhacks:EECycleX1"
+msgstr "!Panel:Speedhacks:PenampakanSebagian"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
+#, fuzzy
+msgid "!Panel:Speedhacks:EECycleX2"
+msgstr "!Panel:Speedhacks:PenampakanSebagian"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
+#, fuzzy
+msgid "!Panel:Speedhacks:EECycleX3"
+msgstr "!Panel:Speedhacks:PenampakanSebagian"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+#, fuzzy
+msgid "!Panel:Speedhacks:VUCycleStealOff"
+msgstr "!Panel:Speedhacks:PenampakanSebagian"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
+#, fuzzy
+msgid "!Panel:Speedhacks:VUCycleSteal1"
+msgstr "!Panel:Speedhacks:PenampakanSebagian"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
+#, fuzzy
+msgid "!Panel:Speedhacks:VUCycleSteal2"
+msgstr "!Panel:Speedhacks:PenampakanSebagian"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
+#, fuzzy
+msgid "!Panel:Speedhacks:VUCycleSteal3"
+msgstr "!Panel:Speedhacks:PenampakanSebagian"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
+msgid "!Panel:Speedhacks:Overview"
+msgstr "!Panel:Speedhacks:PenampakanSebagian"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
+msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
+msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+msgid "!ContextTip:Speedhacks:vuFlagHack"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#, fuzzy
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr "!Panel:Speedhacks:PenampakanSebagian"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
+msgid "!ContextTip:Speedhacks:INTC"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
+msgid "!ContextTip:Speedhacks:BIFC0"
+msgstr ""
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
+msgid "!ContextTip:Speedhacks:fastCDVD"
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:37
+msgid "!ContextTip:Framelimiter:Disable"
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
+msgid "!Panel:Frameskip:Heading"
+msgstr "!Panel:Frameskip:Heading"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
+msgid "!ContextTip:GS:SyncMTGS"
+msgstr ""
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
+msgid "!ContextTip:GS:DisableOutput"
+msgstr ""
+
+#: pcsx2/vtlb.cpp:710
+msgid "!Notice:HostVmReserve"
+msgstr "!Pemberitahuan:HostVmReserve"
+
+#: pcsx2/x86/sVU_zerorec.cpp:363
+msgid "!Notice:superVU:VirtualMemoryAlloc"
+msgstr "!Pemberitahuan:superVU:AlokasiMemoriVirtual"
