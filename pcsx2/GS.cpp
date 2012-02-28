@@ -79,7 +79,7 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 		SIGNAL_IMR_Pending = false;
 #else
 		GUNIT_WARN("GUNIT_WARN: csr.RESET");
-		Console.Warning( "csr.RESET" );
+		//Console.Warning( "csr.RESET" );
 		//gifUnit.Reset(true); // Don't think gif should be reset...
 		gifUnit.gsSIGNAL.queued = false;
 		GetMTGS().SendSimplePacket(GS_RINGTYPE_RESET, 0, 0, 0);
@@ -425,6 +425,7 @@ __fi void gsFrameSkip()
 //We got away with it before i think due to our awful GS timing, but now we have it right (ish)
 void gsPostVsyncStart()
 {
+	//gifUnit.FlushToMTGS();  // Needed for some (broken?) homebrew game loaders
 	CSRreg.SwapField();
 	GetMTGS().PostVsyncStart();
 }
