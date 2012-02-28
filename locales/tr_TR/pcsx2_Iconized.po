@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
+"POT-Creation-Date: 2012-02-28 12:20+0100\n"
 "PO-Revision-Date: 2011-04-08 19:53+0200\n"
 "Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
@@ -27,7 +27,7 @@ msgstr ""
 msgid "!Notice:VirtualMemoryMap"
 msgstr "!Notice:VirtualMemoryMap"
 
-#: pcsx2/CDVD/CDVD.cpp:385
+#: pcsx2/CDVD/CDVD.cpp:390
 msgid "!Notice:PsxDisc"
 msgstr "!Notice:PsxDisc"
 
@@ -273,28 +273,24 @@ msgstr "!ContextTip:Speedhacks:EECycleRate Slider"
 msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
 msgstr "!ContextTip:Speedhacks:VUCycleStealing Slider"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr "!ContextTip:Speedhacks:vuFlagHack"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr "!ContextTip:Speedhacks:vuBlockHack"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
 #, fuzzy
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr "!ContextTip:Speedhacks:vuMinMax"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr "!ContextTip:Speedhacks:INTC"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr "!ContextTip:Speedhacks:BIFC0"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr "!ContextTip:Speedhacks:fastCDVD"
 
@@ -302,15 +298,15 @@ msgstr "!ContextTip:Speedhacks:fastCDVD"
 msgid "!ContextTip:Framelimiter:Disable"
 msgstr "!ContextTip:Framelimiter:Disable"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
 msgid "!Panel:Frameskip:Heading"
 msgstr "!Panel:Frameskip:Heading"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr "!ContextTip:GS:SyncMTGS"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
 msgid "!ContextTip:GS:DisableOutput"
 msgstr "!ContextTip:GS:DisableOutput"
 
@@ -321,6 +317,9 @@ msgstr "!Notice:HostVmReserve"
 #: pcsx2/x86/sVU_zerorec.cpp:363
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr "!Notice:superVU:VirtualMemoryAlloc"
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr "!ContextTip:Speedhacks:vuBlockHack"
 
 #~ msgid "No reason given."
 #~ msgstr "Sebep belirtilmemiş."

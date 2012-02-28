@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-11-16 20:15+0100\n"
+"POT-Creation-Date: 2012-02-28 12:20+0100\n"
 "PO-Revision-Date: 2011-11-16 12:28+0100\n"
 "Last-Translator: Georg Ronnert <pgert@yahoo.se>\n"
 "Language-Team: \n"
@@ -196,7 +196,7 @@ msgstr ""
 msgid "Unloaded Plugin"
 msgstr "Oladdat insticksprogram"
 
-#: pcsx2/SaveState.cpp:339
+#: pcsx2/SaveState.cpp:342
 msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr ""
 "Kan inte ladda sparpunkten. Den är av en okänd eller ostödjande version."
@@ -359,31 +359,31 @@ msgstr ""
 "Sparpunkten blev inte ordentligt sparad. Den tillfälliga filen skapades "
 "framgångsrikt med kunde inte flyttas till sin slutliga viloplats."
 
-#: pcsx2/gui/AppConfig.cpp:837
+#: pcsx2/gui/AppConfig.cpp:842
 msgid "Safest"
 msgstr "Säkrast"
 
-#: pcsx2/gui/AppConfig.cpp:838
+#: pcsx2/gui/AppConfig.cpp:843
 msgid "Safe (faster)"
 msgstr "Säkert (snabare)"
 
-#: pcsx2/gui/AppConfig.cpp:839
+#: pcsx2/gui/AppConfig.cpp:844
 msgid "Balanced"
 msgstr "Balanserat"
 
-#: pcsx2/gui/AppConfig.cpp:840
+#: pcsx2/gui/AppConfig.cpp:845
 msgid "Aggressive"
 msgstr "Aggressivt"
 
-#: pcsx2/gui/AppConfig.cpp:841
+#: pcsx2/gui/AppConfig.cpp:846
 msgid "Aggressive plus"
 msgstr "Aggressivt plus"
 
-#: pcsx2/gui/AppConfig.cpp:842
+#: pcsx2/gui/AppConfig.cpp:847
 msgid "Mostly Harmful"
 msgstr "Mest Skadligt"
 
-#: pcsx2/gui/AppConfig.cpp:999 pcsx2/gui/AppConfig.cpp:1005
+#: pcsx2/gui/AppConfig.cpp:1007 pcsx2/gui/AppConfig.cpp:1013
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr ""
 "Misslyckades att skriva över befintlig inställningsfil; tillstånd nekades."
@@ -2404,20 +2404,10 @@ msgstr ""
 "[Rekommenderas]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:166
-msgid "mVU Block Hack"
-msgstr "mVU Block Hack"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
-msgid ""
-"Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
-msgstr ""
-"Bra Uppsnabbning och Hög Förenlighet; kan orsaka dålig grafik, SPS, etc..."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "MTVU (Multi-Threaded microVU1)"
 msgstr "MTVU (Multi-Trådad microVU1)"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
 msgid ""
 "Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
 "cores]"
@@ -2425,15 +2415,15 @@ msgstr ""
 "Bra Uppsnabbning och Hög Förenlighet; kan orsaka att det hänger sig... "
 "[Rekommenderas för 3+ kärnor]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:183
 msgid "Other Hacks"
 msgstr "Andra Hackisar"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:193
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:185
 msgid "Enable INTC Spin Detection"
 msgstr "Möjliggör INTC Rotationsuppfattning"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:186
 msgid ""
 "Huge speedup for some games, with almost no compatibility side effects. "
 "[Recommended]"
@@ -2441,22 +2431,22 @@ msgstr ""
 "Enorm uppsnabbning för vissa spel, med nästan inga förenlighetsbieffekter. "
 "[Rekommenderas]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:196
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:188
 msgid "Enable Wait Loop Detection"
 msgstr "Möjliggör Vänta Loop Uppfattning"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:197
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:189
 msgid ""
 "Moderate speedup for some games, with no known side effects. [Recommended]"
 msgstr ""
 "Måttlig uppsnabbning för vissa spel, med inga kända bieffekter. "
 "[Rekommenderas]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
 msgid "Enable fast CDVD"
 msgstr "Möjliggör snabb CDVD"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:192
 msgid "Fast disc access, less loading times. [Not Recommended]"
 msgstr "Snabb disktillgång, färre laddningsgånger. [Rekommenderas Ej]"
 
@@ -2515,7 +2505,7 @@ msgstr "FPS"
 msgid "PAL Framerate:"
 msgstr "PAL Bildfrekvens:"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:162
+#: pcsx2/gui/Panels/VideoPanel.cpp:166
 msgid ""
 "Error while parsing either NTSC or PAL framerate settings.  Settings must be "
 "valid floating point numerics."
@@ -2523,19 +2513,19 @@ msgstr ""
 "Fel under tolkning av antingen NTSC eller PAL bildfrekvensinstälningar.  "
 "Inställningarna måste vara giltliga flyttalsnummer."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:180
+#: pcsx2/gui/Panels/VideoPanel.cpp:184
 msgid "Disabled [default]"
 msgstr "Förhindrad [förval]"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:184
+#: pcsx2/gui/Panels/VideoPanel.cpp:188
 msgid "Skip when on Turbo only (TAB to enable)"
 msgstr "Hoppa över endast vid Turbo (TAB för att möjliggöra)"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:188
+#: pcsx2/gui/Panels/VideoPanel.cpp:192
 msgid "Constant skipping"
 msgstr "Konstant överhoppande"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:190
+#: pcsx2/gui/Panels/VideoPanel.cpp:194
 msgid ""
 "Normal and Turbo limit rates skip frames.  Slow motion mode will still "
 "disable frameskipping."
@@ -2543,19 +2533,19 @@ msgstr ""
 "Normal och Turbobegränsad beräknad bildöverhoppning. Ultrarapidsläge "
 "förhindrar fortfarande bildöverhoppning."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:213
+#: pcsx2/gui/Panels/VideoPanel.cpp:217
 msgid "Frames to Draw"
 msgstr "Bilder att Rita"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:218
+#: pcsx2/gui/Panels/VideoPanel.cpp:222
 msgid "Frames to Skip"
 msgstr "Bilder att Hoppa över"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:294
+#: pcsx2/gui/Panels/VideoPanel.cpp:298
 msgid "Use Synchronized MTGS"
 msgstr "Använd Synkroniserad MTGS"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:295
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
 msgid ""
 "For troubleshooting potential bugs in the MTGS only, as it is potentially "
 "very slow."
@@ -2563,11 +2553,11 @@ msgstr ""
 "Enbart för att problemlösa eventuella fel inom \n"
 "MTGS, eftersom det möjligen är mycket långsamt."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:298
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
 msgid "Disable all GS output"
 msgstr "Förhindra all GS utgång"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
+#: pcsx2/gui/Panels/VideoPanel.cpp:303
 msgid ""
 "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
 "components."
@@ -2575,11 +2565,11 @@ msgstr ""
 "Förhindrar helt all GS-insticksprogramsaktivitet; \n"
 "idealt som utgångspunkt för EE-kärnkomponenter."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:316
+#: pcsx2/gui/Panels/VideoPanel.cpp:320
 msgid "Frame Skipping"
 msgstr "Bildöverhoppande"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:319
+#: pcsx2/gui/Panels/VideoPanel.cpp:323
 msgid "Framelimiter"
 msgstr "Bildbegränsare"
 
@@ -2662,6 +2652,14 @@ msgid ""
 msgstr ""
 "%s Förlängningar ej funna. microVU kräven en värd-CPU med MMX, SSE, och SSE2 "
 "förlängningar."
+
+#~ msgid "mVU Block Hack"
+#~ msgstr "mVU Block Hack"
+
+#~ msgid ""
+#~ "Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
+#~ msgstr ""
+#~ "Bra Uppsnabbning och Hög Förenlighet; kan orsaka dålig grafik, SPS, etc..."
 
 #~ msgid "Enable game fixes"
 #~ msgstr "Möjliggör spelfixar"

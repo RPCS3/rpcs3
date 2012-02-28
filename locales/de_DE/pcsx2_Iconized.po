@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
+"POT-Creation-Date: 2012-02-28 12:20+0100\n"
 "PO-Revision-Date: 2011-04-09 01:11+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
@@ -24,7 +24,7 @@ msgstr ""
 "Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher "
 "wird von anderen Programmen / DLLs belegt."
 
-#: pcsx2/CDVD/CDVD.cpp:385
+#: pcsx2/CDVD/CDVD.cpp:390
 msgid "!Notice:PsxDisc"
 msgstr "PlayStation 1 (PSX) Spiele werden von PCSX2 noch nicht unterstützt!"
 
@@ -361,28 +361,24 @@ msgstr ""
 "\"Stiehlt\" der PS2 CPU einige Zyklen bei jeder VU Programmausführung. "
 "Geschwindigkeitsgewinn bei reduzierter Kompatibilität."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr "Lässt einige VU Statusflags aus. Sicher."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr "Kann die Geschwindigkeit leicht erhöhen. In FFX kontraproduktiv!"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
 #, fuzzy
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr "Funktioniert nicht mit Gran Turismo 4 oder Tekken 5."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr "Kann gefahrlos aktiviert werden."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr "Kann gefahrlos aktiviert werden."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "Einige Spiele erwarten ein standardkonformes (langsam lesendes) DVD "
@@ -394,17 +390,17 @@ msgstr ""
 "Deaktiviert den Framelimiter. Das Spiel läuft so schnell wie es dein Rechner "
 "ermöglicht."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
 msgid "!Panel:Frameskip:Heading"
 msgstr ""
 "Aufgrund des spezifischen Designs der PS2 ist ein akkurates Frameskipping "
 "nicht möglich. Versuche die Werte anzupassen oder benutze Speedhacks."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr "Nur für das Debugging aktivieren. Sehr langsam."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 "Entfernt störende Faktoren von der Grafikkarte oder Treiberproblemen. Nur "
@@ -421,6 +417,9 @@ msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "Der SuperVU Recompiler konnte nicht genügend virtuellen Speicher allokieren. "
 "Versuche es mit microVU!"
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr "Kann die Geschwindigkeit leicht erhöhen. In FFX kontraproduktiv!"
 
 #~ msgid "No reason given."
 #~ msgstr "Kein Grund angegeben."

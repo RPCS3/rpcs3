@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
+"POT-Creation-Date: 2012-02-28 12:20+0100\n"
 "PO-Revision-Date: 2011-04-30 10:48+0900\n"
 "Last-Translator: oreore\n"
 "Language-Team: \n"
@@ -28,7 +28,7 @@ msgid "!Notice:VirtualMemoryMap"
 msgstr ""
 "十分な仮想メモリがありません。もしくは他のプロセスやDLLによって予約済みです。"
 
-#: pcsx2/CDVD/CDVD.cpp:385
+#: pcsx2/CDVD/CDVD.cpp:390
 msgid "!Notice:PsxDisc"
 msgstr ""
 "PCSX2 は Playstation のゲームをサポートしていません。プレイしたい場合は "
@@ -460,19 +460,13 @@ msgstr ""
 "す。\n"
 "高い設定にするほどｻｲｸﾙｽﾃｨｰﾘﾝｸﾞを行う量が増加します。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "常時ではなくブロックされた時のみフラグステータスを更新します。\n"
 "ほとんどの安全であり、SuperVUにも同様の動作をさせます。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr ""
-"遠い将来にインスタンスデータの古いフラグを必要としないと仮定しています。\n"
-"かなり安全なはずです。どんなゲームに不具合が起きるかは不明ですが..."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
 #, fuzzy
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr ""
@@ -480,14 +474,14 @@ msgstr ""
 "ゲームに最適です。\n"
 "効果がなかった場合には使用しないでください。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "このhackは主に非3D系RPGにある INTC ステータスレジスタを使用しVSYNC待ちをする"
 "ゲームに最適です。\n"
 "効果がなかった場合には使用しないでください。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "主にEEのカーネル空間のアドレス 0x81FC0 のアイドルループ処理を対象にしていま"
@@ -497,7 +491,7 @@ msgstr ""
 "このようなループを1度だけ繰り返したあと、次のイベントかﾀｲﾑｽﾗｲｽの終りのいずれ"
 "か早いほうに進みます。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "この問題を抱えている既知のゲーム用の設定。\n"
@@ -509,19 +503,19 @@ msgstr ""
 "フレームリミットを無効にした場合、スローモーションモードとターボモードは使用"
 "できません。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
 msgid "!Panel:Frameskip:Heading"
 msgstr ""
 "注意！PS2はハードの設計上正確なフレームスキップはできません。よって一部のゲー"
 "ムでは深刻なグラフィックのエラーが発生します。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr ""
 "映像の不具合の原因が MTGS スレッドの同期によるものだと思われる場合有効にして"
 "ください。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 "MTGSスレッドかGPUオーバーヘッドによって発生されたベンチマークノイズを除去しま"
@@ -548,6 +542,11 @@ msgstr ""
 "利用不可能になるでしょう。致命的なエラーではありませんが、sVU リコンパイラは"
 "もう廃れたため、\n"
 "お代わりにとにかくmicroVUを使用するべきでしょう。（笑）"
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr ""
+#~ "遠い将来にインスタンスデータの古いフラグを必要としないと仮定しています。\n"
+#~ "かなり安全なはずです。どんなゲームに不具合が起きるかは不明ですが..."
 
 #~ msgid "No reason given."
 #~ msgstr "不明な理由"

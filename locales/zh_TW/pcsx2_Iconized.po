@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-28 20:27+0200\n"
+"POT-Creation-Date: 2012-02-28 12:20+0100\n"
 "PO-Revision-Date: 2011-09-09 11:52+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
@@ -24,7 +24,7 @@ msgstr ""
 "可用的虛擬記憶體不足，\n"
 "或必備的虛擬記憶體映射已經被其他處理程序、服務，或 DLL 保留。"
 
-#: pcsx2/CDVD/CDVD.cpp:385
+#: pcsx2/CDVD/CDVD.cpp:390
 msgid "!Notice:PsxDisc"
 msgstr ""
 "PCSX2 不支援 Playstation 遊戲光碟。\n"
@@ -435,33 +435,27 @@ msgstr ""
 "滑桿控制著 VU 從 EE 偷竊的週期的數目。\n"
 "數值愈高，遊戲執行的每一個 VU 微程式從 EE 偷的就愈多。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "僅對讀取狀態旗標的塊，更新狀態旗標，取代一直更新狀態旗標。\n"
 "大部分時間是安全的，Super VU 預設做類似的事情。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr ""
-"假定遙遠未來的塊不需要舊的旗標實例資料。\n"
-"非常安全。不曉得會不會令遊戲不正常..."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr ""
 "microVU1 獨佔一個執行緒。對於 3 核或更多核的 CPU，通常會提升遊戲速度。\n"
 "對於大多數遊戲是安全的。但是少數遊戲不相容可能會遊戲停止回應。\n"
 "對顯示卡要求高的遊戲，可能會降低遊戲速度（尤其在雙核心 CPU 上）。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "對於使用 INTC 狀態暫存器等待垂直同步的遊戲，表現最好。\n"
 "主要包括 RPG 遊戲非 3D 的標題。\n"
 "不使用此垂直同步方式的遊戲，將會有少量或沒有速度提升。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "主要把核心內位址 0x81FC0 的 EE 空閒循環作為目標。\n"
@@ -470,7 +464,7 @@ msgstr ""
 "這樣的循環重複一次之後，取決於哪個先到：\n"
 "我們前進到下次事件或處理器時間片段的結束。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "查閱 HDLoader 相容性列表，以確定已知使用這個選項會出現問題的遊戲。\n"
@@ -480,20 +474,20 @@ msgstr ""
 msgid "!ContextTip:Framelimiter:Disable"
 msgstr "注意：當畫框限制停用時，渦輪加速和慢動作無法使用。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
 msgid "!Panel:Frameskip:Heading"
 msgstr ""
 "注意：\n"
 "由於 PS2 的硬體設計，精確的跳框是不可能的。\n"
 "啟用跳框將導致一些遊戲出現嚴重的圖形錯誤。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr ""
 "啟用這個選項，若您認為多執行緒圖形模式執行緒的同步正在導致模擬器當掉或圖形錯"
 "誤。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 "移除任何由多執行緒圖形模式的執行緒過載或 GPU 過載引起的效能測試產生的噪音。\n"
@@ -517,6 +511,11 @@ msgstr ""
 "SuperVU 無法留住所需要的指定的記憶體範圍，SuperVU 不可用。\n"
 "這不是嚴重的錯誤，因為 SuperVU 是過時的。無論如何，您應該使用 microVU 代"
 "替。：）"
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr ""
+#~ "假定遙遠未來的塊不需要舊的旗標實例資料。\n"
+#~ "非常安全。不曉得會不會令遊戲不正常..."
 
 #~ msgid "!ContextTip:Window:FullscreenExclusive"
 #~ msgstr ""

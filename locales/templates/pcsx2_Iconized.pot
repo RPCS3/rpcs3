@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-11-16 20:17+0100\n"
+"POT-Creation-Date: 2012-02-28 12:20+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -26,7 +26,7 @@ msgstr ""
 msgid "!Notice:VirtualMemoryMap"
 msgstr ""
 
-#: pcsx2/CDVD/CDVD.cpp:385
+#: pcsx2/CDVD/CDVD.cpp:390
 msgid "!Notice:PsxDisc"
 msgstr ""
 
@@ -270,27 +270,23 @@ msgstr ""
 msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
 msgstr ""
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr ""
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr ""
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 
@@ -298,15 +294,15 @@ msgstr ""
 msgid "!ContextTip:Framelimiter:Disable"
 msgstr ""
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
 msgid "!Panel:Frameskip:Heading"
 msgstr ""
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr ""
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 

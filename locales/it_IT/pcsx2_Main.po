@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-11-16 20:15+0100\n"
+"POT-Creation-Date: 2012-02-28 12:20+0100\n"
 "PO-Revision-Date: 2011-10-05 21:01+0100\n"
 "Last-Translator: Leucos\n"
 "Language-Team: \n"
@@ -200,7 +200,7 @@ msgstr "Non è stato possibile inizializzare il plugin interno Memory Card."
 msgid "Unloaded Plugin"
 msgstr "Plugin Scaricato"
 
-#: pcsx2/SaveState.cpp:339
+#: pcsx2/SaveState.cpp:342
 msgid "Cannot load savestate.  It is of an unknown or unsupported version."
 msgstr ""
 "Impossibile caricare il salvataggio di stato. Appartiene ad una versione "
@@ -378,31 +378,31 @@ msgstr ""
 "temporaneo è stato creato con successo ma non è stato possibile spostarlo "
 "nel suo ultimo luogo di riposo."
 
-#: pcsx2/gui/AppConfig.cpp:837
+#: pcsx2/gui/AppConfig.cpp:842
 msgid "Safest"
 msgstr "Sicura +"
 
-#: pcsx2/gui/AppConfig.cpp:838
+#: pcsx2/gui/AppConfig.cpp:843
 msgid "Safe (faster)"
 msgstr "Sicura (più veloce)"
 
-#: pcsx2/gui/AppConfig.cpp:839
+#: pcsx2/gui/AppConfig.cpp:844
 msgid "Balanced"
 msgstr "Bilanciata"
 
-#: pcsx2/gui/AppConfig.cpp:840
+#: pcsx2/gui/AppConfig.cpp:845
 msgid "Aggressive"
 msgstr "Aggressiva"
 
-#: pcsx2/gui/AppConfig.cpp:841
+#: pcsx2/gui/AppConfig.cpp:846
 msgid "Aggressive plus"
 msgstr "Aggressiva +"
 
-#: pcsx2/gui/AppConfig.cpp:842
+#: pcsx2/gui/AppConfig.cpp:847
 msgid "Mostly Harmful"
 msgstr "Quasi dannosa"
 
-#: pcsx2/gui/AppConfig.cpp:999 pcsx2/gui/AppConfig.cpp:1005
+#: pcsx2/gui/AppConfig.cpp:1007 pcsx2/gui/AppConfig.cpp:1013
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr ""
 "Sovrascrittura del file impostazioni esistente fallita: permesso negato."
@@ -2467,21 +2467,10 @@ msgstr ""
 "grafica... [consigliato]"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:166
-msgid "mVU Block Hack"
-msgstr "microVU Block Hack"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
-msgid ""
-"Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
-msgstr ""
-"Buon aumento di velocità ed alta compatibilità. Può causare problemi nella "
-"grafica, SPS, ecc..."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "MTVU (Multi-Threaded microVU1)"
 msgstr "MTVU (microVU1 multi-threaded)"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
 msgid ""
 "Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
 "cores]"
@@ -2489,15 +2478,15 @@ msgstr ""
 "Buon aumento di velocità ed alta compatibilità. Può causare blocchi nei "
 "giochi... [consigliato, solo se possiedi 3 o più core]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:183
 msgid "Other Hacks"
 msgstr "Altri Hack"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:193
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:185
 msgid "Enable INTC Spin Detection"
 msgstr "Attiva rilevamento Spin INTC (INTC Spin Detection)"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:194
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:186
 msgid ""
 "Huge speedup for some games, with almost no compatibility side effects. "
 "[Recommended]"
@@ -2505,22 +2494,22 @@ msgstr ""
 "Grande aumento di velocità per alcuni giochi, con quasi nessun effetto "
 "negativo sulla compatibilità. [consigliato]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:196
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:188
 msgid "Enable Wait Loop Detection"
 msgstr "Attiva rilevamento ciclo d'inattività (Wait Loop Detection)"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:197
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:189
 msgid ""
 "Moderate speedup for some games, with no known side effects. [Recommended]"
 msgstr ""
 "Aumento di velocità moderato per alcuni giochi, nessun effetto collaterale "
 "noto. [consigliato]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:199
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
 msgid "Enable fast CDVD"
 msgstr "Attiva CDVD veloce (fast CDVD)"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:192
 msgid "Fast disc access, less loading times. [Not Recommended]"
 msgstr ""
 "Accesso rapido al disco, tempi di caricamento inferiori. [non consigliato]"
@@ -2580,7 +2569,7 @@ msgstr "FPS"
 msgid "PAL Framerate:"
 msgstr "Frequenza fotogrammi PAL:"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:162
+#: pcsx2/gui/Panels/VideoPanel.cpp:166
 msgid ""
 "Error while parsing either NTSC or PAL framerate settings.  Settings must be "
 "valid floating point numerics."
@@ -2588,19 +2577,19 @@ msgstr ""
 "Errore nell'interpretazione dell'impostazione della frequenza dei fotogrammi "
 "PAL o NTSC. L'impostazione deve avere un valore numerico con virgola valido."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:180
+#: pcsx2/gui/Panels/VideoPanel.cpp:184
 msgid "Disabled [default]"
 msgstr "Disattivato [predefinito]"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:184
+#: pcsx2/gui/Panels/VideoPanel.cpp:188
 msgid "Skip when on Turbo only (TAB to enable)"
 msgstr "Salta solo in modalità Turbo (TAB per attivare)"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:188
+#: pcsx2/gui/Panels/VideoPanel.cpp:192
 msgid "Constant skipping"
 msgstr "Salto costante"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:190
+#: pcsx2/gui/Panels/VideoPanel.cpp:194
 msgid ""
 "Normal and Turbo limit rates skip frames.  Slow motion mode will still "
 "disable frameskipping."
@@ -2608,19 +2597,19 @@ msgstr ""
 "In modalità Normale e Turbo i fotogrammi saranno saltati. Nella modalità\n"
 "Rallentatore il salto dei fotogrammi sarà comunque disattivato."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:213
+#: pcsx2/gui/Panels/VideoPanel.cpp:217
 msgid "Frames to Draw"
 msgstr "Fotogrammi da disegnare"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:218
+#: pcsx2/gui/Panels/VideoPanel.cpp:222
 msgid "Frames to Skip"
 msgstr "Fotogrammi da saltare"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:294
+#: pcsx2/gui/Panels/VideoPanel.cpp:298
 msgid "Use Synchronized MTGS"
 msgstr "Utilizza MTGS (Multi Threaded GS) sincronizzato"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:295
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
 msgid ""
 "For troubleshooting potential bugs in the MTGS only, as it is potentially "
 "very slow."
@@ -2628,11 +2617,11 @@ msgstr ""
 "Solo per rilevare eventuali bug nel MTGS, dato che potenzialmente è molto "
 "lento."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:298
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
 msgid "Disable all GS output"
 msgstr "Disabilita tutto l'output GS"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
+#: pcsx2/gui/Panels/VideoPanel.cpp:303
 msgid ""
 "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
 "components."
@@ -2640,11 +2629,11 @@ msgstr ""
 "Disattiva completamente l'attività del plugin GS; ideale per fare un "
 "benchmark dei componenti EEcore."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:316
+#: pcsx2/gui/Panels/VideoPanel.cpp:320
 msgid "Frame Skipping"
 msgstr "Salto Fotogrammi"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:319
+#: pcsx2/gui/Panels/VideoPanel.cpp:323
 msgid "Framelimiter"
 msgstr "Limitatore Fotogrammi"
 
@@ -2734,3 +2723,12 @@ msgid ""
 msgstr ""
 "Estensioni %s non trovate.  microVU richiede una CPU del sistema host con "
 "estensioni MMX, SSE ed SSE2."
+
+#~ msgid "mVU Block Hack"
+#~ msgstr "microVU Block Hack"
+
+#~ msgid ""
+#~ "Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
+#~ msgstr ""
+#~ "Buon aumento di velocità ed alta compatibilità. Può causare problemi "
+#~ "nella grafica, SPS, ecc..."
