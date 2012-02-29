@@ -336,7 +336,7 @@ void GSDevice::ShadeBoost()
 		GSVector4 sr(0, 0, 1, 1);
 		GSVector4 dr(0, 0, s.x, s.y);
 
-		StretchRect(m_current, sr, m_shadeboost, dr, 7, false);
+		StretchRect(m_current, sr, m_shadeboost, dr, 0, false);
 		DoShadeBoost(m_shadeboost, m_current);
 	}
 }
