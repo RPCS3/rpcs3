@@ -1,28 +1,33 @@
 #ifdef SHADER_MODEL // make safe to include in resource file to enforce dependency
 
-float4 ConvertYUV(float4 color)
+/*
+** Contrast, saturation, brightness
+** Code of this function is from TGM's shader pack
+** http://irrlicht.sourceforge.net/phpBB2/viewtopic.php?t=21057
+*/
+
+// For all settings: 1.0 = 100% 0.5=50% 1.5 = 150% 
+float4 ContrastSaturationBrightness(float4 color) // Ported to HLSL
 {
-	float4 color2 = color;
+	const float sat = SB_SATURATION / 50.0;
+	const float brt = SB_BRIGHTNESS / 50.0;
+	const float con = SB_CONTRAST / 50.0;
+	
+	// Increase or decrease theese values to adjust r, g and b color channels seperately
+	const float AvgLumR = 0.5;
+	const float AvgLumG = 0.5;
+	const float AvgLumB = 0.5;
+	
+	const float3 LumCoeff = float3(0.2125, 0.7154, 0.0721);
+	
+	float3 AvgLumin = float3(AvgLumR, AvgLumG, AvgLumB);
+	float3 brtColor = color.rgb * brt;
+	float3 intensity = dot(brtColor, LumCoeff);
+	float3 satColor = lerp(intensity, brtColor, sat);
+	float3 conColor = lerp(AvgLumin, satColor, con);
 
-	float fSat = SB_SATURATION / 100.0;
-	float fBrt = SB_BRIGHTNESS / 100.0;
-	float fCont = SB_CONTRAST / 100.0;
-
-	float gY = color.r*0.299+color.g*0.587+color.b*0.114;
-	float gCr = ( color.r-gY )*0.713*(0.5+fSat);
-	float gCb = ( color.b-gY )*0.565*(0.5+fSat);
-
-	gY = gY*(0.5+fCont);
-
-	color2.r = gY + 1.40252*gCr;
-	color2.g = gY - 0.714403*gCr - 0.343731*gCb;
-	color2.b = gY + 1.76991*gCb;
-
-	color2.r = color2.r*(0.5+fBrt);
-	color2.g = color2.g*(0.5+fBrt);
-	color2.b = color2.b*(0.5+fBrt);
-
-	return color2;
+	color.rgb = conColor;	
+	return color;
 }
 
 #if SHADER_MODEL >= 0x400
@@ -44,7 +49,7 @@ struct PS_INPUT
 float4 ps_main(PS_INPUT input) : SV_Target0
 {
 	float4 c = Texture.Sample(Sampler, input.t);
-	return ConvertYUV(c);
+	return ContrastSaturationBrightness(c);
 }
 
 
@@ -64,7 +69,7 @@ struct PS_INPUT
 float4 ps_main(PS_INPUT input) : COLOR
 {
 	float4 c = tex2D(Texture, input.t);
-	return ConvertYUV(c);
+	return ContrastSaturationBrightness(c);
 }
 
 #endif
