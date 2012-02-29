@@ -110,6 +110,10 @@ void GSSettingsDlg::OnInit()
 	CheckDlgButton(m_hWnd, IDC_ALPHAHACK, theApp.GetConfig("UserHacks_AlphaHack", 0));
 	CheckDlgButton(m_hWnd, IDC_OFFSETHACK, theApp.GetConfig("UserHacks_HalfPixelOffset", 0));
 	CheckDlgButton(m_hWnd, IDC_SPRITEHACK, theApp.GetConfig("UserHacks_SpriteHack", 0));
+
+	// Shade Boost
+	CheckDlgButton(m_hWnd, IDC_SHADEBOOST, theApp.GetConfig("ShadeBoost", 0));
+
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETRANGE, 0, MAKELPARAM(1000, 0));
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("UserHacks_SkipDraw", 0), 0));
 
@@ -220,6 +224,14 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 	{
 		UpdateControls();
 	}
+	else if(id == IDC_SHADEBOOST && code == BN_CLICKED)
+	{
+		UpdateControls();
+	}
+	else if(id == IDC_SHADEBUTTON && code == BN_CLICKED)
+	{
+		ShadeBoostDlg.DoModal();
+	}
 	else if(id == IDOK)
 	{
 		INT_PTR data;
@@ -278,6 +290,9 @@ bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 		theApp.SetConfig("UserHacks_HalfPixelOffset", (int)IsDlgButtonChecked(m_hWnd, IDC_OFFSETHACK));
 		theApp.SetConfig("UserHacks_SpriteHack", (int)IsDlgButtonChecked(m_hWnd, IDC_SPRITEHACK));
 		theApp.SetConfig("UserHacks_SkipDraw", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_GETPOS, 0, 0));
+
+		// Shade Boost
+		theApp.SetConfig("ShadeBoost", (int)IsDlgButtonChecked(m_hWnd, IDC_SHADEBOOST));
 	}
 
 	return __super::OnCommand(hWnd, id, code);
@@ -326,6 +341,9 @@ void GSSettingsDlg::UpdateControls()
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), hw);
 		EnableWindow(GetDlgItem(m_hWnd, IDC_MSAA), hw);
 
+		// Shade Boost
+		EnableWindow(GetDlgItem(m_hWnd, IDC_SHADEBUTTON), IsDlgButtonChecked(m_hWnd, IDC_SHADEBOOST) == BST_CHECKED);	
+
 		//ShowWindow(GetDlgItem(m_hWnd, IDC_USERHACKS), allowHacks && hw) ? SW_SHOW : SW_HIDE;  //Don't disable the "Hacks" frame
 		ShowWindow(GetDlgItem(m_hWnd, IDC_HACKDISABLED), !(allowHacks && hw)) ? SW_SHOW : SW_HIDE;
 		ShowWindow(GetDlgItem(m_hWnd, IDC_MSAAEDIT), allowHacks && hw) ? SW_SHOW : SW_HIDE;
@@ -340,4 +358,111 @@ void GSSettingsDlg::UpdateControls()
 		ShowWindow(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 		ShowWindow(GetDlgItem(m_hWnd, IDC_STATIC_TEXT_SKIPDRAW), allowHacks && hw) ? SW_SHOW : SW_HIDE;
 	}
+}
+
+
+GSShadeBostDlg::GSShadeBostDlg() : 
+	GSDialog(IDD_SHADEBOOST)	
+{}
+
+
+void GSShadeBostDlg::OnInit()
+{
+	contrast = theApp.GetConfig("ShadeBoost_Contrast", 50);
+	brightness = theApp.GetConfig("ShadeBoost_Brightness", 50);
+	saturation = theApp.GetConfig("ShadeBoost_Saturation", 50);
+
+	UpdateControls();
+}
+
+void GSShadeBostDlg::UpdateControls()
+{
+	SendMessage(GetDlgItem(m_hWnd, IDC_SATURATION_SLIDER), TBM_SETRANGE, TRUE, MAKELONG(0, 100));
+	SendMessage(GetDlgItem(m_hWnd, IDC_BRIGHTNESS_SLIDER), TBM_SETRANGE, TRUE, MAKELONG(0, 100));
+	SendMessage(GetDlgItem(m_hWnd, IDC_CONTRAST_SLIDER), TBM_SETRANGE, TRUE, MAKELONG(0, 100));
+
+	SendMessage(GetDlgItem(m_hWnd, IDC_SATURATION_SLIDER), TBM_SETPOS, TRUE, saturation);
+	SendMessage(GetDlgItem(m_hWnd, IDC_BRIGHTNESS_SLIDER), TBM_SETPOS, TRUE, brightness);
+	SendMessage(GetDlgItem(m_hWnd, IDC_CONTRAST_SLIDER), TBM_SETPOS, TRUE, contrast);
+
+	char text[8] = {0};
+
+	sprintf(text, "%d", saturation);
+	SetDlgItemText(m_hWnd, IDC_SATURATION_TEXT, text);
+	sprintf(text, "%d", brightness);
+	SetDlgItemText(m_hWnd, IDC_BRIGHTNESS_TEXT, text);
+	sprintf(text, "%d", contrast);
+	SetDlgItemText(m_hWnd, IDC_CONTRAST_TEXT, text);
+}
+
+
+bool GSShadeBostDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
+{
+
+	switch(message)
+	{
+	case WM_HSCROLL:	
+	{											
+		if((HWND)lParam == GetDlgItem(m_hWnd, IDC_SATURATION_SLIDER)) 
+		{	
+			char text[8] = {0};
+
+			saturation = SendMessage(GetDlgItem(m_hWnd, IDC_SATURATION_SLIDER),TBM_GETPOS,0,0);			
+				
+			sprintf(text, "%d", saturation);
+			SetDlgItemText(m_hWnd, IDC_SATURATION_TEXT, text);
+		}
+		else if((HWND)lParam == GetDlgItem(m_hWnd, IDC_BRIGHTNESS_SLIDER)) 
+		{	
+			char text[8] = {0};
+
+			brightness = SendMessage(GetDlgItem(m_hWnd, IDC_BRIGHTNESS_SLIDER),TBM_GETPOS,0,0);			
+				
+			sprintf(text, "%d", brightness);
+			SetDlgItemText(m_hWnd, IDC_BRIGHTNESS_TEXT, text);
+		}
+		else if((HWND)lParam == GetDlgItem(m_hWnd, IDC_CONTRAST_SLIDER)) 
+		{	
+			char text[8] = {0};
+
+			contrast = SendMessage(GetDlgItem(m_hWnd, IDC_CONTRAST_SLIDER),TBM_GETPOS,0,0);
+							
+			sprintf(text, "%d", contrast);
+			SetDlgItemText(m_hWnd, IDC_CONTRAST_TEXT, text);
+		}
+	} break;
+
+	case WM_COMMAND:
+	{
+		int id = LOWORD(wParam);
+
+		switch(id)
+		{
+		case IDOK: 
+		{
+			theApp.SetConfig("ShadeBoost_Contrast", contrast);
+			theApp.SetConfig("ShadeBoost_Brightness", brightness);
+			theApp.SetConfig("ShadeBoost_Saturation", saturation);
+			EndDialog(m_hWnd, id);		
+		} break;
+
+		case IDRESET:
+		{
+			contrast = 50;
+			brightness = 50;
+			saturation = 50;
+
+			UpdateControls();
+		} break;
+		}
+
+	} break;
+
+	case WM_CLOSE:EndDialog(m_hWnd, IDCANCEL); break;
+
+	default: return false;
+	}
+	
+
+	return true;
 }

@@ -1680,6 +1680,7 @@
     <None Include="res\convert.fx" />
     <None Include="res\interlace.fx" />
     <None Include="res\merge.fx" />
+    <None Include="res\shadeboost.fx" />
     <None Include="res\tfx.fx" />
     <None Include="baseclasses\activex.rcv" />
     <None Include="baseclasses\activex.ver" />

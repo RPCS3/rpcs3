@@ -35,6 +35,7 @@ GSRenderer::GSRenderer()
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
 	m_mipmap = !!theApp.GetConfig("mipmap", 1);
 	m_fxaa = !!theApp.GetConfig("fxaa", 0);
+	m_shadeboost = !!theApp.GetConfig("ShadeBoost", 0);
 }
 
 GSRenderer::~GSRenderer()
@@ -252,6 +253,11 @@ bool GSRenderer::Merge(int field)
 			int mode = (m_interlace - 1) >> 1;
 			
 			m_dev->Interlace(ds, field ^ field2, mode, tex[1] ? tex[1]->GetScale().y : tex[0]->GetScale().y);
+		}
+
+		if(m_shadeboost)
+		{
+			m_dev->ShadeBoost();
 		}
 
 		if(m_fxaa)

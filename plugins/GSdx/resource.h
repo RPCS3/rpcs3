@@ -76,6 +76,15 @@
 #define IDC_STATIC10                    2049
 #define IDC_HACKDISABLED                2050
 #define IDC_SPRITEHACK                  2051
+#define IDRESET                         2052
+#define IDC_SATURATION_SLIDER           2053
+#define IDC_BRIGHTNESS_SLIDER           2055
+#define IDC_CONTRAST_SLIDER             2056
+#define IDC_SHADEBUTTON                 2058
+#define IDC_SHADEBOOST                  2059
+#define IDC_SATURATION_TEXT             2061
+#define IDC_BRIGHTNESS_TEXT             2062
+#define IDC_CONTRAST_TEXT               2063
 #define IDC_COLORSPACE                  3000
 #define IDR_CONVERT_FX                  10000
 #define IDR_TFX_FX                      10001
@@ -83,15 +92,17 @@
 #define IDR_INTERLACE_FX                10003
 #define IDD_CONFIG2                     10004
 #define IDR_FXAA_FX                     10005
-#define IDR_CS_FX						10006
+#define IDR_CS_FX                       10006
+#define IDD_SHADEBOOST                  10007
+#define IDR_SHADEBOOST_FX               10009
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        10007
+#define _APS_NEXT_RESOURCE_VALUE        10011
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         2052
+#define _APS_NEXT_CONTROL_VALUE         2064
 #define _APS_NEXT_SYMED_VALUE           5000
 #endif
 #endif

@@ -37,6 +37,7 @@ class GSDevice11 : public GSDeviceDX
 	void DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c);
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
 	void DoFXAA(GSTexture* st, GSTexture* dt);
+	void DoShadeBoost(GSTexture* st, GSTexture* dt);
 
 	//
 
@@ -109,6 +110,12 @@ public: // TODO
 		CComPtr<ID3D11PixelShader> ps;
 		CComPtr<ID3D11Buffer> cb;
 	} m_fxaa;
+
+	struct 
+	{
+		CComPtr<ID3D11PixelShader> ps;
+		CComPtr<ID3D11Buffer> cb;
+	} m_shadeboost;
 
 	struct
 	{

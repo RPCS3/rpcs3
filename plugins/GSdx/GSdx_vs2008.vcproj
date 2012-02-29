@@ -1709,6 +1709,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\res\shadeboost.fx"
+				>
+			</File>
+			<File
 				RelativePath=".\res\tfx.fx"
 				>
 			</File>

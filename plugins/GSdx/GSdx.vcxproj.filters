@@ -674,6 +674,9 @@
     <None Include="res\cs.fx">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="res\shadeboost.fx">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="GSdx.rc">

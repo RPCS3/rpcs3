@@ -24,6 +24,22 @@
 #include "GSDialog.h"
 #include "GSSetting.h"
 
+class GSShadeBostDlg : public GSDialog
+{
+	int saturation;
+	int brightness;
+	int contrast;
+
+	void UpdateControls();
+
+protected:
+	void OnInit();
+	bool OnMessage(UINT message, WPARAM wParam, LPARAM lParam);	
+
+public:
+	GSShadeBostDlg();
+};
+
 class GSSettingsDlg : public GSDialog
 {
 	list<D3DDISPLAYMODE> m_modes;
@@ -36,6 +52,9 @@ protected:
 	bool OnCommand(HWND hWnd, UINT id, UINT code);
 
 	uint32 m_lastValidMsaa; // used to revert to previous dialog value if the user changed to invalid one, or lesser one and canceled
+
+	// Shade Boost
+	GSShadeBostDlg ShadeBoostDlg;
 
 public:
 	GSSettingsDlg(bool isOpen2);
