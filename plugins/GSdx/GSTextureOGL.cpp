@@ -26,7 +26,7 @@ static int g_state_texture_unit = -1;
 static int g_state_texture_id = -1;
 
 GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint fbo_read)
-	: m_extra_buffer_id(0),
+	: m_pbo_id(0),
 	  m_pbo_size(0)
 {
 	// *************************************************************
@@ -48,8 +48,11 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 	// glBlitFramebuffer
 
 	// *************************************************************
-	m_size.x = w;
-	m_size.y = h;
+	// m_size.x = w;
+	// m_size.y = h;
+	// FIXME
+	m_size.x = max(1,w);
+	m_size.y = max(1,h);
 	m_format = format;
 	m_type   = type;
 	m_msaa   = msaa;
@@ -80,7 +83,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 			break;
 	}
 	// Extra buffer to handle various pixel transfer
-	glGenBuffers(1, &m_extra_buffer_id);
+	glGenBuffers(1, &m_pbo_id);
 
 	uint msaa_level;
 	if (m_msaa) {
@@ -93,16 +96,30 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 	// Allocate the buffer
 	switch (m_type) {
 		case GSTexture::DepthStencil:
-			EnableUnit(2);
+			EnableUnit(0);
 			glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, NULL);
 			break;
+
+		case GSTexture::Offscreen:
+			// Allocate a pbo with the texture
+			if (m_format == GL_RGBA8) m_pbo_size = m_size.x * m_size.y * 4;
+			else if (m_format == GL_R16UI) m_pbo_size = m_size.x * m_size.y * 2;
+			else {
+				fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
+				assert(0); // TODO Later
+			}
+
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo_id);
+			glBufferData(GL_PIXEL_PACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
 		case GSTexture::RenderTarget:
 		case GSTexture::Texture:
 			// FIXME
 			// Howto allocate the texture unit !!!
 			// In worst case the HW renderer seems to use 3 texture unit
 			// For the moment SW renderer only use 1 so don't bother
-			EnableUnit(2);
+			EnableUnit(0);
 			if (m_format == GL_RGBA8)
 				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 			else if (m_format == GL_R16UI)
@@ -114,22 +131,13 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 				assert(0); // TODO Later
 			}
 			break;
-		case GSTexture::Offscreen:
-			if (m_type == GL_RGBA8) m_pbo_size = m_size.x * m_size.y * 4;
-			else if (m_type == GL_R16UI) m_pbo_size = m_size.x * m_size.y * 2;
-			else assert(0);
-
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, m_extra_buffer_id);
-			glBufferData(GL_PIXEL_PACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-			break;
 		default: break;
 	}
 }
 
 GSTextureOGL::~GSTextureOGL()
 {
-	glDeleteBuffers(1, &m_extra_buffer_id);
+	glDeleteBuffers(1, &m_pbo_id);
 	glDeleteTextures(1, &m_texture_id);
 }
 
@@ -148,7 +156,7 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	// FIXME warning order of the y axis
 	// FIXME I'm not confident with GL_UNSIGNED_BYTE type
 
-	EnableUnit(2);
+	EnableUnit(0);
 
 	// pitch could be different of width*element_size
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch>>2);
@@ -224,29 +232,41 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 	// glMapBuffer — map a buffer object's data store
 	// Can be used on GL_PIXEL_UNPACK_BUFFER or GL_TEXTURE_BUFFER
 	if (m_type == GSTexture::Offscreen) {
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, m_extra_buffer_id);
-		// FIXME It might be possible to only map a subrange of the texture based on r object
+		// Bind the texture to the read framebuffer to avoid any disturbance
+		EnableUnit(0);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_texture_target, m_texture_id, 0);
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
 
-		// Load the PBO
-		if (m_format == GL_RGBA8)
+		// FIXME It might be possible to only read a subrange of the texture based on r object
+		// Load the PBO with the data
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo_id);
+		if (m_format == GL_RGBA8) {
+			glPixelStorei(GL_PACK_ALIGNMENT, 4);
 			glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-		else if (m_format == GL_R16UI)
+		} else if (m_format == GL_R16UI) {
+			glPixelStorei(GL_PACK_ALIGNMENT, 2);
 			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED_INTEGER, GL_UNSIGNED_SHORT, 0);
-		else if (m_format == GL_R8)
+		} else if (m_format == GL_R8) {
+			glPixelStorei(GL_PACK_ALIGNMENT, 1);
 			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED, GL_UNSIGNED_BYTE, 0);
-		else {
+		} else {
 			fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
 			assert(0);
 		}
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
 		// Give access from the CPU
-		uint32 map_flags = GL_MAP_READ_BIT;
-		m.bits = (uint8*) glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, m_pbo_size, map_flags);
+		m.bits = (uint8*) glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, m_pbo_size, GL_MAP_READ_BIT);
 		m.pitch = m_size.x;
 
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-
-		return true;
+		if ( m.bits ) {
+			return true;
+		} else {
+			fprintf(stderr, "bad mapping of the pbo\n");
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			return false;
+		}
 	}
 
 	return false;
@@ -272,6 +292,8 @@ void GSTextureOGL::Unmap()
 {
 	if (m_type == GSTexture::Offscreen) {
 		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
 	}
 }
 
@@ -377,30 +399,45 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 	uint32 pitch = 4 * m_size.x;
 	if (IsDss()) pitch *= 2;
 	char* image = (char*)malloc(pitch * m_size.y);
+	bool status = true;
 
 	// FIXME instead of swapping manually B and R maybe you can request the driver to do it
 	// for us
 	if (IsBackbuffer()) {
-		glReadBuffer(GL_BACK);
+		//glReadBuffer(GL_BACK);
+		//glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	} else if(IsDss()) {
-		EnableUnit(2);
+		EnableUnit(0);
 		glGetTexImage(m_texture_target, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, image);
 	} else {
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 
-		EnableUnit(2);
-		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, m_texture_target, m_texture_id, 0);
+		EnableUnit(0);
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_texture_target, m_texture_id, 0);
 
-		glReadBuffer(GL_COLOR_ATTACHMENT1);
-		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		if (m_format == GL_RGBA8)
+			glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
+		else if (m_format == GL_R16UI)
+		{
+			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED_INTEGER, GL_UNSIGNED_SHORT, image);
+			// Not supported in Save function
+			status = false;
+		}
+		else if (m_format == GL_R8)
+		{
+			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED, GL_UNSIGNED_BYTE, image);
+			// Not supported in Save function
+			status = false;
+		}
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	}
 
-	Save(fn, image, pitch);
+	if (status) Save(fn, image, pitch);
 	free(image);
 
-	return true;
+	return status;
 }
 

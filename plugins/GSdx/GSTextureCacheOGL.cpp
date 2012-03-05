@@ -96,7 +96,7 @@ void GSTextureCacheOGL::Read(Target* t, const GSVector4i& r)
 			offscreen->Unmap();
 		}
 
-		//m_renderer->m_dev->Recycle(offscreen);
+		m_renderer->m_dev->Recycle(offscreen);
 	}
 }
 

@@ -21,6 +21,10 @@
 
 #include "GSDeviceOGL.h"
 
+// TODO performance cost to investigate
+// Texture attachment/glDrawBuffer. For the moment it set every draw and potentially multiple time (first time in clear, second time in rendering)
+//  Attachment 1 is only used with the GL_16UI format
+
 //#define LOUD_DEBUGGING
 //#define PRINT_FRAME_NUMBER
 //#define ONLY_LINES
@@ -507,7 +511,7 @@ void GSDeviceOGL::DebugInput()
 				m_state.ps_srv[i]->Save(format("/tmp/in_f%d__d%d__%d.bmp", g_frame_count, g_draw_count, i));
 			}
 		}
-		//if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/in_current_out_%d.bmp", g_draw_count));
+		//if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/target_f%d__d%d__tex.bmp", g_frame_count, g_draw_count));
 		//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_in_%d.bmp", g_draw_count));
 
 		fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
@@ -520,6 +524,8 @@ void GSDeviceOGL::DebugInput()
 
 void GSDeviceOGL::DebugOutput()
 {
+	CheckDebugLog();
+
 	bool dump_me = false;
 	uint32 start = theApp.GetConfig("debug_ogl_dump", 0);
 	uint32 length = theApp.GetConfig("debug_ogl_dump_length", 5);
@@ -536,7 +542,6 @@ void GSDeviceOGL::DebugOutput()
 		fprintf(stderr, "\n");
 
 	}
-	CheckDebugLog();
 }
 
 void GSDeviceOGL::DrawPrimitive()
@@ -596,12 +601,7 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 		// FIXME1 I need to clarify this FBO attachment stuff
 		// I would like to avoid FBO for a basic clean operation
 		OMSetFBO(m_fbo);
-		// FIXME2:
-		// it would be better to attach the texture to another slot (like 3)
-		// but it crash for an unknow reason
-		// The following error appears "glClearBufferfv failed because the currently set GL_DRAW_FRAMEBUFFER binding has incomplete status"
-		// Maybe glDrawBuffer must be updated but it does not solve the crash...
-		// FIXME3: I still have another crash on GOW...
+		glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		static_cast<GSTextureOGL*>(t)->Attach(GL_COLOR_ATTACHMENT0);
 		glClearBufferfv(GL_COLOR, 0, c.v);
 	}
@@ -673,8 +673,8 @@ GSTexture* GSDeviceOGL::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w
 		return false;
 	}
 
-	// FIXME: I used directly an offscreen texture because they are the same on Opengl
-	//if(GSTexture* rt = CreateRenderTarget(w, h, false, format))
+	// FIXME: It is possible to bypass completely offscreen-buffer on opengl but it needs some re-thinking of the code.
+	// For the moment mimic dx11 
 	GSTexture* rt = CreateRenderTarget(w, h, false, format);
 	if(rt)
 	{
@@ -687,9 +687,12 @@ GSTexture* GSDeviceOGL::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w
 			if(src2 != src) Recycle(src2);
 		}
 
-#if 0
+
+		GSVector4i dor(0, 0, w, h);
 		dst = CreateOffscreen(w, h, format);
 
+		if (dst) CopyRect(rt, dst, dor);
+#if 0
 		if(dst)
 		{
 			m_ctx->CopyResource(*(GSTexture11*)dst, *(GSTexture11*)rt);
@@ -699,8 +702,8 @@ GSTexture* GSDeviceOGL::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w
 		Recycle(rt);
 	}
 
-	//return dst;
-	return rt;
+	return dst;
+	//return rt;
 }
 
 // Copy a sub part of a texture into another
@@ -724,27 +727,11 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
     //         uint srcName, enum srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
 	//     uint dstName, enum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
 	//     sizei width, sizei height, sizei depth);
-	glCopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), GL_TEXTURE_2D, 
+	glCopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), static_cast<GSTextureOGL*>(st)->GetTarget(), 
 			0, r.x, r.y, 0,
-			static_cast<GSTextureOGL*>(dt)->GetID(), GL_TEXTURE_2D,
+			static_cast<GSTextureOGL*>(dt)->GetID(), static_cast<GSTextureOGL*>(dt)->GetTarget(),
 			0, r.x, r.y, 0,
 			r.width(), r.height(), 1);
-#if 0
-
-	// FIXME FBO
-	GLuint fbo_old = m_state.fbo;
-	OMSetFBO(m_fbo);
-
-	// Set the input of glCopyTexSubImage2D
-	static_cast<GSTextureOGL*>(st)->Attach(GL_COLOR_ATTACHMENT1);
-	glReadBuffer(GL_COLOR_ATTACHMENT1);
-
-	// Copy the full image
-	static_cast<GSTextureOGL*>(dt)->EnableUnit(0);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, dt->GetWidth(), dt->GetHeight());
-
-	OMSetFBO(fbo_old);
-#endif
 
 #if 0
 	D3D11_BOX box = {r.left, r.top, 0, r.right, r.bottom, 1};

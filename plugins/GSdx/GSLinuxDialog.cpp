@@ -62,10 +62,27 @@ GtkWidget* CreateRenderComboBox()
 
 		if(!s.note.empty()) label += format(" (%s)", s.note.c_str());
 
-		// (dev only) for any NULL stuff
-		if (i >= 7 && i <= 9) label += " (debug only)";
-		// (experimental) for opengl stuff
-		if (i == 10 || i == 11) label += " (experimental)";
+		// Add some tags to ease users selection
+		switch (i) {
+			// better use opengl instead of SDL
+			case 6:
+				label += " (deprecated)";
+				break;
+
+			// (dev only) for any NULL stuff
+			case 7:
+			case 8:
+			case 9:
+				label += " (debug only)";
+				break;
+
+			//  opengl harware is not yet finished
+			case 10:
+				label += " (experimental)";
+				break;
+			default:
+				break;
+		}
 
 		gtk_combo_box_append_text(GTK_COMBO_BOX(render_combo_box), label.c_str());
 	}

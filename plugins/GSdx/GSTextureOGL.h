@@ -28,7 +28,7 @@ class GSTextureOGL : public GSTexture
 	private:
 		GLenum m_texture_target; // texture target: 2D, rectangle etc...
 		GLuint m_texture_id;	 // the texture id
-		uint m_extra_buffer_id;
+		uint m_pbo_id;
 		int m_pbo_size;
 		GLuint m_fbo_read;
 
@@ -49,4 +49,5 @@ class GSTextureOGL : public GSTexture
 		bool IsDss() { return (m_type == GSTexture::DepthStencil); }
 
 		GLuint GetID() { return m_texture_id; }
+		GLenum GetTarget() { return m_texture_target; }
 };
