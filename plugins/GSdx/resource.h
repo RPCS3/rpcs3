@@ -1,3 +1,7 @@
+//{{NO_DEPENDENCIES}}
+// Microsoft Visual C++ generated include file.
+// Used by GSdx.rc
+//
 /*
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
@@ -19,10 +23,6 @@
  *
  */
 
-//{{NO_DEPENDENCIES}}
-// Microsoft Visual C++ generated include file.
-// Used by GSdx.rc
-//
 #define IDC_NATIVERES                   2001
 #define IDC_VSYNC                       2002
 #define IDC_PALTEX                      2003

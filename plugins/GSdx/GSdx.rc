@@ -42,7 +42,7 @@ BEGIN
     "#include ""res/interlace.fx""\r\n"
     "#include ""res/merge.fx""\r\0"
     "#include ""res/fxaa.fx""\r\0"
-	"#include ""res/shadeboost.fx""\r\0"
+    "#include ""res/shadeboost.fx""\r\0"
 END
 
 #endif    // APSTUDIO_INVOKED
@@ -58,7 +58,7 @@ IDR_TFX_FX              RCDATA                  "res\\tfx.fx"
 IDR_MERGE_FX            RCDATA                  "res\\merge.fx"
 IDR_INTERLACE_FX        RCDATA                  "res\\interlace.fx"
 IDR_FXAA_FX             RCDATA                  "res\\fxaa.fx"
-IDR_CS_FX				RCDATA                  "res\\cs.fx"
+IDR_CS_FX               RCDATA                  "res\\cs.fx"
 IDR_SHADEBOOST_FX       RCDATA                  "res\\shadeboost.fx"
 
 /////////////////////////////////////////////////////////////////////////////
@@ -245,6 +245,14 @@ END
 #ifdef APSTUDIO_INVOKED
 GUIDELINES DESIGNINFO
 BEGIN
+    IDD_SHADEBOOST, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 309
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 122
+    END
+
     IDD_CONFIG, DIALOG
     BEGIN
         LEFTMARGIN, 7
@@ -282,14 +290,6 @@ BEGIN
         VERTGUIDE, 87
         TOPMARGIN, 6
         BOTTOMMARGIN, 335
-    END
-
-	IDD_SHADEBOOST, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 309
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 122
     END
 END
 #endif    // APSTUDIO_INVOKED
