@@ -40,6 +40,23 @@ public:
 	GSShadeBostDlg();
 };
 
+class GSHacksDlg : public GSDialog
+{
+	unsigned short cb2msaa[17];
+	unsigned short msaa2cb[17];
+	
+	bool isdx9;
+
+	void UpdateControls();
+
+protected:
+	void OnInit();
+	bool OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
+
+public:
+	GSHacksDlg();
+};
+
 class GSSettingsDlg : public GSDialog
 {
 	list<D3DDISPLAYMODE> m_modes;
@@ -55,6 +72,7 @@ protected:
 
 	// Shade Boost
 	GSShadeBostDlg ShadeBoostDlg;
+	GSHacksDlg HacksDlg;
 
 public:
 	GSSettingsDlg(bool isOpen2);

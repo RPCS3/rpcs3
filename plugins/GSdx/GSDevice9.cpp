@@ -137,9 +137,9 @@ uint32 GSDevice9::GetMaxDepth(uint32 msaa = 0)
 
 void GSDevice9::ForceValidMsaaConfig()
 {
-	if(0 == GetMaxDepth(theApp.GetConfig("msaa", 0)))
+	if(0 == GetMaxDepth(theApp.GetConfig("UserHacks_MSAA", 0)))
 	{
-		theApp.SetConfig("msaa", 0); // replace invalid msaa value in ini file with 0.
+		theApp.SetConfig("UserHacks_MSAA", 0); // replace invalid msaa value in ini file with 0.
 	}
 };
 
