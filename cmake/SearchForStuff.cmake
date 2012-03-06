@@ -61,6 +61,7 @@ if(NOT FORCE_INTERNAL_SOUNDTOUCH)
     include(FindSoundTouch)
 endif(NOT FORCE_INTERNAL_SOUNDTOUCH)
 include(FindSparseHash)
+include(FindSparseHash_NEW)
 
 # Note for include_directory: The order is important to avoid a mess between include file from your system and the one of pcsx2
 # If you include first 3rdparty, all 3rdpary include will have a higer priority...
@@ -166,6 +167,11 @@ endif(SOUNDTOUCH_FOUND AND NOT projectSoundTouch)
 if(SPARSEHASH_FOUND)
 	include_directories(${SPARSEHASH_INCLUDE_DIR})
 endif(SPARSEHASH_FOUND)
+if(SPARSEHASH_NEW_FOUND)
+    include_directories(${SPARSEHASH_NEW_INCLUDE_DIR})
+    # allow to build parts that depend on sparsehash
+    set(SPARSEHASH_FOUND TRUE)
+endif(SPARSEHASH_NEW_FOUND)
 
 # Wx
 if(wxWidgets_FOUND)

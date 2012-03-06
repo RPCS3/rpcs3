@@ -22,6 +22,10 @@ set(CommonFlags
     -Wstrict-aliasing # Allow to track strict aliasing issue.
 	-pipe)
 
+if (SPARSEHASH_NEW_FOUND)
+    set(CommonFlags "${CommonFlags} -DSPARSEHASH_NEW_INCLUDE_DIR ")
+endif (SPARSEHASH_NEW_FOUND)
+
 # set warning flags
 set(DebugFlags
 	-W

@@ -15,10 +15,18 @@
 
 #pragma once
 
+// They move include file in version 2.0.2 of google sparsehash...
+#ifdef SPARSEHASH_NEW_INCLUDE_DIR
+#include <sparsehash/type_traits.h>
+#include <sparsehash/dense_hash_set>
+#include <sparsehash/dense_hash_map>
+#include <sparsehash/internal/densehashtable.h>
+#else
 #include <google/type_traits.h>
 #include <google/dense_hash_set>
 #include <google/dense_hash_map>
 #include <google/sparsehash/densehashtable.h>
+#endif
 
 #include <wx/string.h>
 
