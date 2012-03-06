@@ -145,6 +145,9 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 	vs_sel.logz = dev->HasDepth32() ? 0 : m_logz ? 1 : 0;
 	vs_sel.rtcopy = !!rtcopy;
 
+	if(tex) vs_sel.wildhack = tex->m_wildhack_t;
+	else vs_sel.wildhack = 0;
+
 	// The real GS appears to do no masking based on the Z buffer format and writing larger Z values
 	// than the buffer supports seems to be an error condition on the real GS, causing it to crash.
 	// We are probably receiving bad coordinates from VU1 in these cases.

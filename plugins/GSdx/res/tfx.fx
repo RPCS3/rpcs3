@@ -13,6 +13,7 @@
 #define VS_BPPZ 0
 #define VS_TME 1
 #define VS_FST 1
+#define VS_WILDHACK 0
 #endif
 
 #ifndef GS_IIP
@@ -620,7 +621,13 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	{
 		if(VS_FST)
 		{
+			#if VS_WILDHACK == 1
+			output.t.xy = (input.uv & 0x3FEF) * TextureScale;
+			#elif VS_WILDHACK == 2
+			output.t.xy = (input.uv & 0x3FF7) * TextureScale;
+			#else
 			output.t.xy = input.uv * TextureScale;
+			#endif
 			output.t.w = 1.0f;
 		}
 		else
@@ -767,7 +774,13 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	{
 		if(VS_FST)
 		{
+			#if VS_WILDHACK == 1
+			output.t.xy = (input.t & 0x3FEF) * TextureScale;
+			#elif VS_WILDHACK == 2
+			output.t.xy = (input.t & 0x3FF7) * TextureScale;
+			#else
 			output.t.xy = input.t * TextureScale;
+			#endif
 			output.t.w = 1.0f;
 		}
 		else

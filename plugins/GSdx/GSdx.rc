@@ -74,14 +74,14 @@ IDB_LOGO10              BITMAP                  "res\\logo10.bmp"
 // Dialog
 //
 
-IDD_HACKS DIALOGEX 0, 0, 316, 133
+IDD_HACKS DIALOGEX 0, 0, 315, 203
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Hacks Configuration"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,259,112,50,14
-    GROUPBOX        "Hack",IDC_STATIC,7,7,76,100
-    GROUPBOX        "Description",IDC_STATIC,86,7,223,100
+    DEFPUSHBUTTON   "OK",IDOK,258,182,50,14
+    GROUPBOX        "Hack",IDC_STATIC,7,7,76,165
+    GROUPBOX        "Description",IDC_STATIC,85,7,223,165
     LTEXT           "MSAA",IDC_STATIC,14,20,20,8
     LTEXT           "Skipdraw",IDC_STATIC,14,37,30,8
     EDITTEXT        IDC_SKIPDRAWHACKEDIT,45,35,24,14,ES_RIGHT | ES_AUTOHSCROLL
@@ -94,8 +94,10 @@ BEGIN
     LTEXT           "Works around some shadow problems",IDC_STATIC,92,54,120,8
     LTEXT           "May fix displaced fog or blend effects",IDC_STATIC,92,71,117,8
     LTEXT           "Fixes character sprites in some 2D games",IDC_STATIC,92,88,129,8
-    LTEXT           "USE AT YOUR OWN RISK!",IDC_STATIC,7,115,84,8,WS_DISABLED
+    LTEXT           "USE AT YOUR OWN RISK!",IDC_STATIC,7,182,84,8,WS_DISABLED
     COMBOBOX        IDC_MSAACB,35,18,44,63,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "WildArmsOffset",IDC_WILDHACK,"Button",BS_AUTO3STATE | WS_TABSTOP,14,105,64,10
+    LTEXT           "Lowers GS precission. Can fix text in Wild Arms and others.",IDC_STATIC,92,105,200,11
 END
 
 IDD_SHADEBOOST DIALOGEX 0, 0, 316, 129
@@ -256,9 +258,9 @@ BEGIN
     IDD_HACKS, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 309
+        RIGHTMARGIN, 308
         TOPMARGIN, 7
-        BOTTOMMARGIN, 126
+        BOTTOMMARGIN, 196
     END
 
     IDD_SHADEBOOST, DIALOG
