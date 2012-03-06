@@ -31,7 +31,7 @@ GSRendererHW::GSRendererHW(GSTextureCache* tc)
 	, m_upscale_multiplier(1)
 {
 	m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", 1);
-	m_userhacks_skipdraw = theApp.GetConfig("UserHacks_SkipDraw", 0);
+	m_userhacks_skipdraw = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_SkipDraw", 0) : 0;
 
 	if(!m_nativeres)
 	{

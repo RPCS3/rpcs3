@@ -29,8 +29,8 @@ GSRendererDX::GSRendererDX(GSTextureCache* tc, const GSVector2& pixelcenter)
 {
 	m_logz = !!theApp.GetConfig("logz", 0);
 	m_fba = !!theApp.GetConfig("fba", 1);
-	//UserHacks_HalfPixelOffset = !!theApp.GetConfig("UserHacks_HalfPixelOffset", 0);
-	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0);
+
+	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0) && !!theApp.GetConfig("UserHacks", 0);
 }
 
 GSRendererDX::~GSRendererDX()

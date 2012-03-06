@@ -25,12 +25,12 @@
 GSTextureCache::GSTextureCache(GSRenderer* r)
 	: m_renderer(r)
 {
-	m_spritehack = theApp.GetConfig("UserHacks_SpriteHack", 0);
+	m_spritehack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_SpriteHack", 0) : 0;
+	UserHacks_HalfPixelOffset = !!theApp.GetConfig("UserHacks", 0) && !!theApp.GetConfig("UserHacks_HalfPixelOffset", 0);
+
 	m_paltex = !!theApp.GetConfig("paltex", 0);
 
 	m_temp = (uint8*)_aligned_malloc(1024 * 1024 * sizeof(uint32), 32);
-
-	UserHacks_HalfPixelOffset = !!theApp.GetConfig("UserHacks_HalfPixelOffset", 0);
 }
 
 GSTextureCache::~GSTextureCache()

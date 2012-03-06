@@ -28,7 +28,7 @@ class GSRendererDX : public GSRendererHW
 	GSVector2 m_pixelcenter;
 	bool m_logz;
 	bool m_fba;
-	//bool UserHacks_HalfPixelOffset;
+
 	bool UserHacks_AlphaHack;
 
 protected:
