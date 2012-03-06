@@ -24,7 +24,6 @@
 #include "GSdx.h"
 
 //#define Offset_ST  // Fixes Persona3 mini map alignment which is off even in software rendering
-//#define Offset_UV  // Fixes / breaks various titles
 
 GSState::GSState()
 	: m_version(6)
@@ -465,11 +464,6 @@ void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r)
 	GSVector4i v = GSVector4i::loadl(r) & GSVector4i::x00003fff();
 
 	m_v.UV = (uint32)GSVector4i::store(v.ps32(v));
-
-#ifdef Offset_UV
-	m_v.U = min((uint16)m_v.U, (uint16)(m_v.U - 4U));
-	m_v.V = min((uint16)m_v.V, (uint16)(m_v.V - 4U));
-#endif
 }
 
 template<uint32 prim, uint32 adc>
@@ -659,11 +653,6 @@ void GSState::GIFRegHandlerST(const GIFReg* RESTRICT r)
 void GSState::GIFRegHandlerUV(const GIFReg* RESTRICT r)
 {
 	m_v.UV = r->UV.u32[0] & 0x3fff3fff;
-
-#ifdef Offset_UV
-	m_v.U = min((uint16)m_v.U, (uint16)(m_v.U - 4U));
-	m_v.V = min((uint16)m_v.V, (uint16)(m_v.V - 4U));
-#endif
 }
 
 template<uint32 prim, uint32 adc>

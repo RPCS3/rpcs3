@@ -775,9 +775,11 @@ VS_OUTPUT vs_main(VS_INPUT input)
 		if(VS_FST)
 		{
 			#if VS_WILDHACK == 1
-			output.t.xy = (input.t & 0x3FEF) * TextureScale;
+            output.t.x = (input.t.x >= 16.0 ? input.t.x - 16.0 : input.t.x) * TextureScale.x;
+            output.t.y = (input.t.y >= 16.0 ? input.t.y - 16.0 : input.t.y) * TextureScale.y;
 			#elif VS_WILDHACK == 2
-			output.t.xy = (input.t & 0x3FF7) * TextureScale;
+            output.t.x = (input.t.x >= 8.0 ? input.t.x - 8.0 : input.t.x) * TextureScale.x;
+            output.t.y = (input.t.y >= 8.0 ? input.t.y - 8.0 : input.t.y) * TextureScale.y;
 			#else
 			output.t.xy = input.t * TextureScale;
 			#endif
