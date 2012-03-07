@@ -411,7 +411,7 @@ void GSHacksDlg::OnInit()
 		cb2msaa[j] = i;
 		
 		char text[32] = {0};
-		sprintf(text, "%dx ????", i);
+		sprintf(text, "%dx ", i);
 
 		SendMessage(GetDlgItem(m_hWnd, IDC_MSAACB), CB_ADDSTRING, 0, (LPARAM)text);
 	}
@@ -425,15 +425,70 @@ void GSHacksDlg::OnInit()
 
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETRANGE, 0, MAKELPARAM(1000, 0));
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("UserHacks_SkipDraw", 0), 0));
+
+
+    // Hacks descriptions
+    SetWindowText(GetDlgItem(m_hWnd, IDC_HACK_DESCRIPTION), ""); // Blank it
+
+    sprintf(Hack[HK_MSAA].description, "Multisample Anti-Aliasing\n\nEnables hardware Anti-Aliasing. Needs lots of memory."
+                                       " The Z-24 modes might need to have LogarithmicZ to compensate for the bits lost (DX9 mode).");
+    sprintf(Hack[HK_SKIPDRAW].description, "Skipdraw\n\nSkips drawing n surfaces completely. "
+                                       "Use it, for example, to try and get rid of messed up post processing effects."
+                                       " Try values between 1 and 100.");
+    sprintf(Hack[HK_ALPHA].description, "Alpha Hack\n\nDifferent alpha handling. Works around some shadow problems.");
+    sprintf(Hack[HK_OFFSET].description, "Halfpixel\n\nMight fix some misaligned fog, bloom, or blend effect.");
+    sprintf(Hack[HK_SPRITE].description, "Sprite Hack\n\nHelps getting rid of black inner lines in some filtered sprites."
+                                        " Half option should be the preferred one, for Mana Khemia and ArTonelico for example."
+                                        " Full should be used for Tales of Destiny.");
+    sprintf(Hack[HK_WILD].description, "WildArms\n\nLowers the GS precission to avoid gaps between pixels when"
+                                       " upscaling. Full option fixes the text on WildArms games, while Half option might improve portraits"
+                                       " in ArTonelico for example.");
+
+    SetNotHover(-1);
 }
 
 void GSHacksDlg::UpdateControls()
 {}
 
-bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
+void GSHacksDlg::SetNotHover(int skip)
 {
-	switch(message)
+    for(int i=0; i<HK_SIZE; i++)
+    {
+        if(skip == i) continue;
+        Hack[i].isHovered = false;
+    }
+}
+
+bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
+{	    
+    switch(message)
 	{
+    case WM_MOUSEMOVE:
+    {        
+        POINTS pos = MAKEPOINTS(lParam);
+
+        if(pos.x >= 20 && pos.x <= 120)
+        {
+            int isHovering = -1;
+            
+            if(pos.y >= 28 && pos.y <= 52) isHovering = HK_MSAA;
+            else if(pos.y >= 54 && pos.y <= 82) isHovering = HK_SKIPDRAW;
+            else if(pos.y >= 84 && pos.y <= 106) isHovering = HK_ALPHA;
+            else if(pos.y >= 112 && pos.y <= 134) isHovering = HK_OFFSET;
+            else if(pos.y >= 140 && pos.y <= 164) isHovering = HK_SPRITE;
+            else if (pos.y >= 168 && pos.y <= 190) isHovering = HK_WILD;
+
+            if(isHovering > -1 && !Hack[isHovering].isHovered)
+            {
+                Hack[isHovering].isHovered = true;
+                SetWindowText(GetDlgItem(m_hWnd, IDC_HACK_DESCRIPTION), Hack[isHovering].description);
+                SetNotHover(isHovering);
+            }
+        }
+
+
+    } break;
+
 	case WM_COMMAND:
 	{
 		int id = LOWORD(wParam);

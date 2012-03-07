@@ -89,15 +89,10 @@ BEGIN
     CONTROL         "Alpha",IDC_ALPHAHACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,54,34,10
     CONTROL         "Half-pixel Offset",IDC_OFFSETHACK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,14,71,65,10
     CONTROL         "Sprite",IDC_SPRITEHACK,"Button",BS_AUTO3STATE | WS_TABSTOP,14,88,35,10
-    LTEXT           "It tickles your GPU's fancy",IDC_STATIC,92,20,82,8
-    LTEXT           "Makes Kratos a sad panda. Don't try with values over 9000.",IDC_STATIC,92,37,187,8
-    LTEXT           "Works around some shadow problems",IDC_STATIC,92,54,120,8
-    LTEXT           "May fix displaced fog or blend effects",IDC_STATIC,92,71,117,8
-    LTEXT           "Fixes character sprites in some 2D games",IDC_STATIC,92,88,129,8
     LTEXT           "USE AT YOUR OWN RISK!",IDC_STATIC,7,182,84,8,WS_DISABLED
     COMBOBOX        IDC_MSAACB,35,18,44,63,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL         "WildArmsOffset",IDC_WILDHACK,"Button",BS_AUTO3STATE | WS_TABSTOP,14,105,64,10
-    LTEXT           "Lowers GS precission. Can fix text in Wild Arms and others.",IDC_STATIC,92,105,200,11
+    LTEXT           "TEXT_GOES_HERE",IDC_HACK_DESCRIPTION,92,20,209,145
 END
 
 IDD_SHADEBOOST DIALOGEX 0, 0, 316, 129

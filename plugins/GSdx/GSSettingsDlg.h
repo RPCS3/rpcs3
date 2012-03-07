@@ -47,7 +47,25 @@ class GSHacksDlg : public GSDialog
 	
 	bool isdx9;
 
+    enum
+    {
+        HK_MSAA,
+        HK_SKIPDRAW,
+        HK_ALPHA,
+        HK_OFFSET,
+        HK_SPRITE,
+        HK_WILD,
+        HK_SIZE
+    };
+
+    struct
+    {
+        bool isHovered;
+        char description[1024];
+    } Hack[HK_SIZE];
+
 	void UpdateControls();
+    void SetNotHover(int i);
 
 protected:
 	void OnInit();
