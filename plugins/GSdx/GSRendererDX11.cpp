@@ -45,8 +45,17 @@ void GSRendererDX11::SetupIA()
 
 	if(dev->IAMapVertexBuffer(&ptr, sizeof(GSVertex), m_vertex.next))
 	{
-		GSVector4i::storent(ptr, m_vertex.buff, sizeof(GSVertex) * m_vertex.next);
-
+        GSVector4i::storent(ptr, m_vertex.buff, sizeof(GSVertex) * m_vertex.next);
+        
+        if(UserHacks_WildHack && !isPackedUV_HackFlag)
+        {
+            GSVertex* RESTRICT d = (GSVertex*)ptr;
+        
+            for(unsigned int i = 0; i < m_vertex.next; i++, d++)
+                if(PRIM->TME && PRIM->FST)
+                    d->UV &= UserHacks_WildHack == 1 ? 0x3FEF3FEF : 0x3FF73FF7;
+        }
+        
 		dev->IAUnmapVertexBuffer();
 	}
 

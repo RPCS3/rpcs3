@@ -36,6 +36,8 @@ protected:
 	virtual void SetupIA() = 0;
 	virtual void UpdateFBA(GSTexture* rt) {}
 
+    int UserHacks_WildHack;
+
 public:
 	GSRendererDX(GSTextureCache* tc, const GSVector2& pixelcenter = GSVector2(0, 0));
 	virtual ~GSRendererDX();

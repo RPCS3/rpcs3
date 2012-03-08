@@ -76,7 +76,6 @@ public:
 		bool m_complete;
 		bool m_repeating;
 		bool m_spritehack_t;
-		int m_wildhack_t;
 		vector<GSVector2i>* m_p2t;
 
 	public:
@@ -121,7 +120,6 @@ protected:
 	list<Target*> m_dst[2];
 	bool m_paltex;
 	int m_spritehack;
-	int m_wildhack;
 	uint8* m_temp;
 
 	virtual Source* CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* t = NULL);

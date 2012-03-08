@@ -194,6 +194,8 @@ public:
 	GSDump m_dump;
 	bool m_nativeres;
 
+    bool isPackedUV_HackFlag;
+
 	int s_n;
 	bool s_dump;
 	bool s_save;

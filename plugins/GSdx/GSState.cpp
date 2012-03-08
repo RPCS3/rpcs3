@@ -464,6 +464,8 @@ void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r)
 	GSVector4i v = GSVector4i::loadl(r) & GSVector4i::x00003fff();
 
 	m_v.UV = (uint32)GSVector4i::store(v.ps32(v));
+
+    isPackedUV_HackFlag = true;
 }
 
 template<uint32 prim, uint32 adc>
@@ -652,7 +654,9 @@ void GSState::GIFRegHandlerST(const GIFReg* RESTRICT r)
 
 void GSState::GIFRegHandlerUV(const GIFReg* RESTRICT r)
 {
-	m_v.UV = r->UV.u32[0] & 0x3fff3fff;
+    m_v.UV = r->UV.u32[0] & 0x3fff3fff;
+
+    isPackedUV_HackFlag = false;
 }
 
 template<uint32 prim, uint32 adc>

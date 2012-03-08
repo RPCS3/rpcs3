@@ -88,13 +88,12 @@ void GSDevice11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 
 	if(i == m_vs.end())
 	{
-		string str[5];
+		string str[4];
 
 		str[0] = format("%d", sel.bppz);
 		str[1] = format("%d", sel.tme);
 		str[2] = format("%d", sel.fst);
 		str[3] = format("%d", sel.rtcopy);
-		str[4] = format("%d", sel.wildhack);
 
 		D3D11_SHADER_MACRO macro[] =
 		{
@@ -102,7 +101,6 @@ void GSDevice11::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 			{"VS_TME", str[1].c_str()},
 			{"VS_FST", str[2].c_str()},
 			{"VS_RTCOPY", str[3].c_str()},
-			{"VS_WILDHACK", str[4].c_str()},
 			{NULL, NULL},
 		};
 

@@ -308,6 +308,7 @@ CRC::Game CRC::m_games[] =
 	{0x60A42FF5, MidnightClub3, US, 0},	//remix
 	{0x4B1A0FFA, XmenOriginsWolverine, US, 0},
 	{0xBFF3DBCB, CallofDutyFinalFronts, US, 0},
+	{0xB78A5F5A, CallofDutyFinalFronts, EU, 0},
 	{0xD03D4C77, SpyroNewBeginning, US, 0},
 	{0x0EE5646B, SpyroNewBeginning, EU, 0},
 	{0x7ACF7E03, SpyroNewBeginning, NoRegion, 0},

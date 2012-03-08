@@ -199,7 +199,15 @@ void GSRendererDX9::SetupIA()
 			{
 				if(PRIM->FST)
 				{
-					t = GSVector4(GSVector4i::load(s->UV).upl16());
+                    if(UserHacks_WildHack && !isPackedUV_HackFlag)
+                    {
+                        t = GSVector4(GSVector4i::load(UserHacks_WildHack == 1? 
+                                s->UV & 0x3FEF3FEF : s->UV & 0x3FF73FF7).upl16());
+                        
+                        //printf("GSDX: %08X | D3D9(%d) %s\n", s->UV & 0x3FEF3FEF, m_vertex.next, i == 0 ? "*" : "");
+                    }
+                    else
+                        t = GSVector4(GSVector4i::load(s->UV).upl16());
 				}
 				else
 				{

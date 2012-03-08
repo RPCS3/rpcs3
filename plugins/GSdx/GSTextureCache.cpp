@@ -26,7 +26,7 @@ GSTextureCache::GSTextureCache(GSRenderer* r)
 	: m_renderer(r)
 {
 	m_spritehack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_SpriteHack", 0) : 0;
-	m_wildhack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_WildHack", 0) : 0;
+	
 	UserHacks_HalfPixelOffset = !!theApp.GetConfig("UserHacks", 0) && !!theApp.GetConfig("UserHacks_HalfPixelOffset", 0);
 
 	m_paltex = !!theApp.GetConfig("paltex", 0);
@@ -583,8 +583,6 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	int tp = TEX0.TBW << 6;
 
 	bool hack = false;
-
-	src->m_wildhack_t = m_wildhack; // dunno where to put it really, but works fine here.
 
 	if(dst == NULL)
 	{
