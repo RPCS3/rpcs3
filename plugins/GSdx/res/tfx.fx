@@ -412,20 +412,8 @@ float4 sample(float2 st, float q)
 		}
 
 		if(PS_LTF)
-		{
-			#if PS_SPRITEHACK
-			c[0].rgb *= c[0].a;
-			c[1].rgb *= c[1].a;
-			c[2].rgb *= c[2].a;
-			c[3].rgb *= c[3].a;
-			#endif
-			
+		{	
 			t = lerp(lerp(c[0], c[1], dd.x), lerp(c[2], c[3], dd.x), dd.y);
-			
-			#if PS_SPRITEHACK
-			t.rgb /= t.a;
-			if(t.a < 0.25) t.a = 0;
-			#endif
 		}
 		else
 		{
@@ -435,10 +423,6 @@ float4 sample(float2 st, float q)
 	
 	if(PS_FMT == FMT_32)
 	{
-		#if PS_SPRITEHACK
-		if(t.a < 0.25) t.a = 0;
-		#endif
-		
 		#if SHADER_MODEL <= 0x300
 		if(PS_RT) t.a *= 128.0f / 255;
 		#endif
@@ -532,14 +516,19 @@ void atst(float4 c)
 	{
 		// nothing to do
 	}
-	else if(PS_ATST == 2 || PS_ATST == 3) // l, le
+	else if(PS_ATST == 2) // l
+	{
+		#if PS_SPRITEHACK == 0
+		clip(AREF - a);
+		#endif				
+	}
+	else if(PS_ATST == 3) // le
 	{
 		clip(AREF - a);
 	}
 	else if(PS_ATST == 4) // e
 	{
-		clip(0.5f - abs(a - AREF));
-	}
+		clip(0.5f - abs(a - AREF));	}
 	else if(PS_ATST == 5 || PS_ATST == 6) // ge, g
 	{
 		clip(a - AREF);
