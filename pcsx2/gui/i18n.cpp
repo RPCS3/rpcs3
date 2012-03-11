@@ -209,11 +209,11 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 
 		case wxLANGUAGE_ITALIAN_SWISS        : return wxLANGUAGE_ITALIAN;
 
-		case LANGUAGE_FRENCH_BELGIAN:
-		case LANGUAGE_FRENCH_CANADIAN:
-		case LANGUAGE_FRENCH_LUXEMBOURG:
-		case LANGUAGE_FRENCH_MONACO:
-		case LANGUAGE_FRENCH_SWISS: return LANGUAGE_FRENCH;
+		case wxLANGUAGE_FRENCH_BELGIAN:
+		case wxLANGUAGE_FRENCH_CANADIAN:
+		case wxLANGUAGE_FRENCH_LUXEMBOURG:
+		case wxLANGUAGE_FRENCH_MONACO:
+		case wxLANGUAGE_FRENCH_SWISS: return wxLANGUAGE_FRENCH;
 
 		default                              : break;
 	}
