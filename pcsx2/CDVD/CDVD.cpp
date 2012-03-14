@@ -70,7 +70,6 @@ static void cdvdSetIrq( uint id = (1<<Irq_CommandComplete) )
 {
 	cdvd.PwOff |= id;
 	iopIntcIrq( 2 );
-	hwIntcIrq(INTC_SBUS);
 	psxSetNextBranchDelta( 20 );
 }
 
@@ -779,7 +778,6 @@ __fi void cdvdActionInterrupt()
 
 	cdvd.PwOff |= 1<<Irq_CommandComplete;
 	psxHu32(0x1070)|= 0x4;
-	hwIntcIrq(INTC_SBUS);
 }
 
 // inlined due to being referenced in only one place.
@@ -868,7 +866,6 @@ __fi void cdvdReadInterrupt()
 	{
 		cdvd.PwOff |= 1<<Irq_CommandComplete;
 		psxHu32(0x1070)|= 0x4;
-		hwIntcIrq(INTC_SBUS);
 
 		HW_DMA3_CHCR &= ~0x01000000;
 		psxDmaInterrupt(3);

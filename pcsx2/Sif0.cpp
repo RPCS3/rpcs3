@@ -359,7 +359,6 @@ __fi void dmaSIF0()
 	// (as it should always be at the beginning of a DMA).  using "if iop is busy" flags breaks Tom Clancy Rainbow Six.
 	// Legend of Legaia doesn't throw a warning either :)
 	sif0.ee.end = false;
-        //hwIntcIrq(INTC_SBUS); // not sure, so let's not
-		SIF0Dma();
+	SIF0Dma();
 
 }
