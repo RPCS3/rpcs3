@@ -1149,8 +1149,8 @@ template<int i> void GSState::GIFRegHandlerZBUF(const GIFReg* RESTRICT r)
 	if(ZBUF.u32[0] == 0)
 	{
 		// during startup all regs are cleared to 0 (by the bios or something), so we mask z until this register becomes valid
-
-		ZBUF.ZMSK = 1;
+		// edit: breaks Grandia Xtreme and sounds like a bad idea generally. What was the intend?
+		//ZBUF.ZMSK = 1;
 	}
 
 	ZBUF.PSM |= 0x30;
