@@ -268,7 +268,7 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 		{
 			// HACK: try to find something close to the base pointer
 
-			if(t->m_TEX0.TBP0 <= bp && bp < t->m_TEX0.TBP0 + 0x700 && (!dst || t->m_TEX0.TBP0 >= dst->m_TEX0.TBP0))
+			if(t->m_TEX0.TBP0 <= bp && bp < t->m_TEX0.TBP0 + 0xe00 && (!dst || t->m_TEX0.TBP0 >= dst->m_TEX0.TBP0))
 			{
 				dst = t;
 			}
