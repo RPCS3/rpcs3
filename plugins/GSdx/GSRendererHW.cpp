@@ -433,7 +433,9 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 				{
 					int x = (v->XYZ.X - ox) >> 4;
 					int y = (v->XYZ.Y - oy) >> 4;
-
+					
+					if (x >= 448 || y >= (int)lines) return false; // sigh
+					
 					video[(y << 8) + (y << 7) + (y << 6) + x] = v->RGBAQ.u32[0];
 				}
 
