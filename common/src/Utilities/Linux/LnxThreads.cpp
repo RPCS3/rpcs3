@@ -17,6 +17,7 @@
 #include "../PrecompiledHeader.h"
 #include "PersistentThread.h"
 #include <sys/prctl.h>
+#include <unistd.h>
 
 // We wont need this until we actually have this more then just stubbed out, so I'm commenting this out
 // to remove an unneeded dependency.

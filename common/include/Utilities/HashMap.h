@@ -602,8 +602,8 @@ public:
 	HashMap( const Key& emptyKey, const Key& deletedKey, int initialCapacity=33 ) :
 		google::dense_hash_map<Key, T, HashFunctor>( initialCapacity )
 	{
-		set_empty_key( emptyKey );
-		set_deleted_key( deletedKey );
+		this->set_empty_key( emptyKey );
+		this->set_deleted_key( deletedKey );
 	}
 
 	/// <summary>
@@ -616,7 +616,7 @@ public:
 	/// </remarks>
 	bool TryGetValue( const Key& key, T& outval ) const
 	{
-		const_iterator iter( find(key) );
+		const_iterator iter( this->find(key) );
 		if( iter != end() )
 		{
 			outval = iter->second;
