@@ -805,6 +805,7 @@ class GSDeviceOGL : public GSDevice
 		GSTextureOGL* rtv;
 		GSTextureOGL* dsv;
 		GLuint	   fbo;
++		GLenum	   draw;
 	} m_state;
 
 	bool m_srv_changed;
@@ -840,6 +841,7 @@ class GSDeviceOGL : public GSDevice
 	static void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
 	void DebugOutput();
 	void DebugInput();
+	void DebugBB();
 
 	bool HasStencil() { return true; }
 	bool HasDepth32() { return true; }
@@ -894,7 +896,7 @@ class GSDeviceOGL : public GSDevice
 	void PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2 = 0);
 	void PSSetShader(GLuint ps);
 
-	void OMSetFBO(GLuint fbo);
+	void OMSetFBO(GLuint fbo, GLenum buffer = GL_COLOR_ATTACHMENT0);
 	void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);
 	void OMSetBlendState(GSBlendStateOGL* bs, float bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);

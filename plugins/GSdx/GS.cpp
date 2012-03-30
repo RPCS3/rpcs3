@@ -1269,6 +1269,13 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 
 	::SetPriorityClass(::GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 #endif
+	// Allow to easyly switch between SW/HW renderer
+	renderer = theApp.GetConfig("renderer", 12);
+	if (renderer != 12 && renderer != 13)
+	{
+		fprintf(stderr, "wrong renderer selected %d\n", renderer);
+		return;
+	}
 
 	if(FILE* fp = fopen(lpszCmdLine, "rb"))
 	{

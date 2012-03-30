@@ -488,7 +488,9 @@ void GSDeviceOGL::Flip()
 {
 	// FIXME: disable it when code is working
 	CheckDebugLog();
+
 	m_wnd->Flip();
+
 #ifdef PRINT_FRAME_NUMBER
 	fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
 #endif
@@ -498,6 +500,33 @@ void GSDeviceOGL::Flip()
 #endif
 }
 
+void GSDeviceOGL::DebugBB()
+{
+	bool dump_me = false;
+	uint32 start = theApp.GetConfig("debug_ogl_dump", 0);
+	uint32 length = theApp.GetConfig("debug_ogl_dump_length", 5);
+	if ( (start != 0 && g_frame_count >= start && g_frame_count < (start + length)) ) dump_me = true;
+
+	if (!dump_me) return;
+
+	GLuint fbo_old = m_state.fbo;
+	OMSetFBO(m_fbo);
+
+	GSVector2i size = m_backbuffer->GetSize();
+	GSTexture* rt = CreateRenderTarget(size.x, size.y, false);
+
+	static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
+
+	glBlitFramebuffer(0, 0, size.x, size.y,
+			0, 0, size.x, size.y,
+			GL_COLOR_BUFFER_BIT, GL_NEAREST);
+
+	rt->Save(format("/tmp/out_f%d__d%d__bb.bmp", g_frame_count, g_draw_count));
+
+	delete rt;
+	OMSetFBO(fbo_old);
+}
+
 void GSDeviceOGL::DebugInput()
 {
 	bool dump_me = false;
@@ -505,21 +534,21 @@ void GSDeviceOGL::DebugInput()
 	uint32 length = theApp.GetConfig("debug_ogl_dump_length", 5);
 	if ( (start != 0 && g_frame_count >= start && g_frame_count < (start + length)) ) dump_me = true;
 
-	if ( dump_me ) {
-		for (auto i = 0 ; i < 3 ; i++) {
-			if (m_state.ps_srv[i] != NULL) {
-				m_state.ps_srv[i]->Save(format("/tmp/in_f%d__d%d__%d.bmp", g_frame_count, g_draw_count, i));
-			}
-		}
-		//if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/target_f%d__d%d__tex.bmp", g_frame_count, g_draw_count));
-		//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_in_%d.bmp", g_draw_count));
+	if (!dump_me) return;
 
-		fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
-		fprintf(stderr, "vs: %d ; gs: %d ; ps: %d\n", m_state.vs, m_state.gs, m_state.ps);
-		m_state.vb->debug();
-		m_state.bs->debug();
-		m_state.dss->debug();
+	for (auto i = 0 ; i < 3 ; i++) {
+		if (m_state.ps_srv[i] != NULL) {
+			m_state.ps_srv[i]->Save(format("/tmp/in_f%d__d%d__%d.bmp", g_frame_count, g_draw_count, i));
+		}
 	}
+	//if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/target_f%d__d%d__tex.bmp", g_frame_count, g_draw_count));
+	//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_in_%d.bmp", g_draw_count));
+
+	fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
+	fprintf(stderr, "vs: %d ; gs: %d ; ps: %d\n", m_state.vs, m_state.gs, m_state.ps);
+	m_state.vb->debug();
+	m_state.bs->debug();
+	m_state.dss->debug();
 }
 
 void GSDeviceOGL::DebugOutput()
@@ -531,17 +560,17 @@ void GSDeviceOGL::DebugOutput()
 	uint32 length = theApp.GetConfig("debug_ogl_dump_length", 5);
 	if ( (start != 0 && g_frame_count >= start && g_frame_count < (start + length)) ) dump_me = true;
 
-	if ( dump_me ) {
-		if (m_state.rtv == m_backbuffer) {
-			if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_f%d__d%d__back.bmp", g_frame_count, g_draw_count));
-		} else {
-			if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_f%d__d%d__tex.bmp", g_frame_count, g_draw_count));
-		}
-		//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
+	if (!dump_me) return;
 
-		fprintf(stderr, "\n");
-
+	if (m_state.rtv == m_backbuffer) {
+		m_state.rtv->Save(format("/tmp/out_f%d__d%d__back.bmp", g_frame_count, g_draw_count));
+	} else {
+		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_f%d__d%d__tex.bmp", g_frame_count, g_draw_count));
 	}
+	//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
+
+	fprintf(stderr, "\n");
+	//DebugBB();
 }
 
 void GSDeviceOGL::DrawPrimitive()
@@ -580,6 +609,7 @@ void GSDeviceOGL::DrawIndexedPrimitive(int offset, int count)
 #endif
 
 	m_state.vb->DrawIndexedPrimitive(offset, count);
+
 #ifdef OGL_DEBUG
 	DebugOutput();
 	g_draw_count++;
@@ -601,7 +631,6 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 		// FIXME1 I need to clarify this FBO attachment stuff
 		// I would like to avoid FBO for a basic clean operation
 		OMSetFBO(m_fbo);
-		glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		static_cast<GSTextureOGL*>(t)->Attach(GL_COLOR_ATTACHMENT0);
 		glClearBufferfv(GL_COLOR, 0, c.v);
 	}
@@ -1088,7 +1117,7 @@ void GSDeviceOGL::PSSetShader(GLuint ps)
 	}
 }
 
-void GSDeviceOGL::OMSetFBO(GLuint fbo)
+void GSDeviceOGL::OMSetFBO(GLuint fbo, GLenum buffer)
 {
 	if (m_state.fbo != fbo) {
 		m_state.fbo = fbo;
@@ -1096,6 +1125,12 @@ void GSDeviceOGL::OMSetFBO(GLuint fbo)
 		// FIXME DEBUG
 		//if (fbo) fprintf(stderr, "FB status %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 	}
+
+	if (m_state.draw != buffer) {
+		m_state.draw = buffer;
+		glDrawBuffer(buffer);
+	}
+
 }
 
 void GSDeviceOGL::OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref)
@@ -1135,20 +1170,19 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 	m_state.dsv = static_cast<GSTextureOGL*>(ds);
 
 	if (static_cast<GSTextureOGL*>(rt)->IsBackbuffer()) {
+		assert(ds == NULL); // no depth-stencil without FBO
+
 		OMSetFBO(0);
 
-		assert(ds == NULL); // no depth-stencil without FBO
 	} else {
-		OMSetFBO(m_fbo);
-
 		assert(rt != NULL); // a render target must exists
 
 		// FIXME DEBUG special case for GL_R16UI
 		if (rt->GetFormat() == GL_R16UI) {
-			glDrawBuffer(GL_COLOR_ATTACHMENT1);
+			OMSetFBO(m_fbo, GL_COLOR_ATTACHMENT1);
 			static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT1);
 		} else {
-			glDrawBuffer(GL_COLOR_ATTACHMENT0);
+			OMSetFBO(m_fbo, GL_COLOR_ATTACHMENT0);
 			static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
 		}
 

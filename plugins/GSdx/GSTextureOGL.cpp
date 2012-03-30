@@ -120,6 +120,11 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 			// In worst case the HW renderer seems to use 3 texture unit
 			// For the moment SW renderer only use 1 so don't bother
 			EnableUnit(0);
+			// Did we need to setup a default sampler of the texture now?
+			// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 			if (m_format == GL_RGBA8)
 				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 			else if (m_format == GL_R16UI)
@@ -144,7 +149,7 @@ GSTextureOGL::~GSTextureOGL()
 void GSTextureOGL::Attach(GLenum attachment)
 {
 	//fprintf(stderr, "format %d,%x\n", m_type, m_format);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
 	// FIXME DEBUG
 	//fprintf(stderr, "FB status %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
 }
