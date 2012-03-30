@@ -189,20 +189,6 @@ endif(SDL_FOUND)
 #---------------------------------------
 
 #---------------------------------------
-#			zeropad
-#---------------------------------------
-# requires: -SDL
-#---------------------------------------
-if(SDL_FOUND)
-	set(zeropad TRUE)
-else(SDL_FOUND)
-	set(zeropad FALSE)
-    message(STATUS "Skip build of zeropad: miss some dependencies")
-    message(STATUS "${msg_dep_zeropad}")
-endif(SDL_FOUND)
-#---------------------------------------
-
-#---------------------------------------
 #			SPU2null
 #---------------------------------------
 if(GTK2_FOUND)
@@ -235,7 +221,10 @@ endif(ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND AND common_libs)
 #			-PortAudio
 #---------------------------------------
 if(SOUNDTOUCH_FOUND AND ALSA_FOUND)
-	set(zerospu2 TRUE)
+    set(zerospu2 TRUE)
+    # Comment the next line, if you want to compile spu2x
+	set(zerospu2 FALSE)
+    message(STATUS "Don't build zerospu2. It is super-seeded by spu2x")
 else(SOUNDTOUCH_FOUND AND ALSA_FOUND)
 	set(zerospu2 FALSE)
     message(STATUS "Skip build of zerospu2: miss some dependencies")

@@ -23,7 +23,7 @@ Build-Depends: cmake (>= 2.8),
     libx11-dev,
     locales | locales-all,
 # package was split in precise to allow multiarch support
-    libcg |nvidia-cg-toolkit (>= 3),
+    libcg, nvidia-cg-toolkit (>= 3),
     portaudio19-dev,
     zlib1g-dev (>= 1:1.2.3.3)
 Standards-Version: 3.9.2
@@ -49,7 +49,7 @@ Package: pcsx2-plugins-unstable
 Architecture: i386
 # manually add nvidia-cg-toolkit for zzogl (cg pacakge does not provide symbol or shlibs files)
 Depends: ${shlibs:Depends}, ${misc:Depends},
-    nvidia-cg-toolkit-pcsx2 | nvidia-cg-toolkit (>= 2.1)
+    libcg | nvidia-cg-toolkit (>= 2.1)
 Recommends: pcsx2-unstable (>= ${binary:Version}),
 Conflicts: pcsx2-plugins,
     pcsx2-data-unstable
