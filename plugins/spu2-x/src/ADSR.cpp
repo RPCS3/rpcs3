@@ -196,21 +196,23 @@ void V_VolumeSlide::Update()
 
 	if( Increment == 0x7f ) return;
 
+	s32 value = abs(Value);
+
 	if (Mode & VOLFLAG_DECREMENT)
 	{
 		// Decrement
 
 		if(Mode & VOLFLAG_EXPONENTIAL)
 		{
-			u32 off = InvExpOffsets[(Value>>28)&7];
-			Value -= PsxRates[(Increment^0x7f)-0x1b+off+32];
+			u32 off = InvExpOffsets[(value>>28)&7];
+			value -= PsxRates[(Increment^0x7f)-0x1b+off+32];
 		}
 		else
-			Value -= PsxRates[(Increment^0x7f)-0xf+32];
+			value -= PsxRates[(Increment^0x7f)-0xf+32];
 
-		if (Value < 0)
+		if (value < 0)
 		{
-			Value = 0;
+			value = 0;
 			Mode = 0;	// disable slide
 		}
 	}
@@ -220,16 +222,18 @@ void V_VolumeSlide::Update()
 		// Pseudo-exponential increments, as done by the SPU2 (really!)
 		// Above 75% slides slow, below 75% slides fast.  It's exponential, pseudo'ly speaking.
 
-		if( (Mode & VOLFLAG_EXPONENTIAL) && (Value>=0x60000000))
-			Value += PsxRates[(Increment^0x7f)-0x18+32];
+		if( (Mode & VOLFLAG_EXPONENTIAL) && (value>=0x60000000))
+			value += PsxRates[(Increment^0x7f)-0x18+32];
 		else
 			// linear / Pseudo below 75% (they're the same)
-			Value += PsxRates[(Increment^0x7f)-0x10+32];
+			value += PsxRates[(Increment^0x7f)-0x10+32];
 
-		if( Value < 0 )		// wrapped around the "top"?
+		if( value < 0 )		// wrapped around the "top"?
 		{
-			Value = 0x7fffffff;
+			value = 0x7fffffff;
 			Mode = 0; // disable slide
 		}
 	}
+	
+	Value = (Value < 0) ? -value : value;
 }
