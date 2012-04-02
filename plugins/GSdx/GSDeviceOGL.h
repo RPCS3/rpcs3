@@ -805,7 +805,7 @@ class GSDeviceOGL : public GSDevice
 		GSTextureOGL* rtv;
 		GSTextureOGL* dsv;
 		GLuint	   fbo;
-+		GLenum	   draw;
+ 		GLenum	   draw;
 	} m_state;
 
 	bool m_srv_changed;
