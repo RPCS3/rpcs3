@@ -23,6 +23,7 @@
 #include "Elfheader.h"
 #include "Patch.h"
 #include "SysThreads.h"
+#include "MTVU.h"
 
 #include "Utilities/PageFaultSource.h"
 #include "Utilities/TlsVariable.inl"
@@ -278,6 +279,8 @@ void SysCoreThread::OnCleanupInThread()
 	m_hasActiveMachine		= false;
 	m_resetVirtualMachine	= true;
 
+	// FIXME: temporary workaround for deadlock on exit, which actually should be a crash
+	vu1Thread.WaitVU();
 	GetCorePlugins().Close();
 	GetCorePlugins().Shutdown();
 
