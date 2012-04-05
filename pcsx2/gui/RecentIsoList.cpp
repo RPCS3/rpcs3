@@ -122,6 +122,12 @@ void RecentIsoManager::Repopulate()
 	m_Separator = m_Menu->AppendSeparator();
 	
 	// The following line is important
+	// Update: It also makes debug WX assert on Windows. Can we review wether this is needed in Linux at all?
+	// Below is a version that doesn't trigger the assert (WX on Windows complains about an empty string), but 
+	// ideally this line should get removed.
+
+	//wxString temp = L"isupresswarnings";
+	//m_Menu->Remove( m_Menu->Append( -1, temp ) );
 	m_Menu->Remove( m_Menu->Append( -1, wxEmptyString ) );
 	
 	//Note: the internal recent iso list (m_Items) has the most recent item last (also at the INI file)
