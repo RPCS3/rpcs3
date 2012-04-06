@@ -426,7 +426,7 @@ __fi void gsFrameSkip()
 void gsPostVsyncStart()
 {
 	//gifUnit.FlushToMTGS();  // Needed for some (broken?) homebrew game loaders
-	CSRreg.SwapField();
+	
 	GetMTGS().PostVsyncStart();
 }
 

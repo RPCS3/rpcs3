@@ -406,6 +406,8 @@ static __fi void VSyncEnd(u32 sCycle)
 	if (gates) rcntEndGate(true, sCycle); // Counters End Gate Code
 	frameLimit(); // limit FPS
 
+	//Do this here, breaks Dynasty Warriors otherwise.
+	CSRreg.SwapField();
 	// This doesn't seem to be needed here.  Games only seem to break with regard to the
 	// vsyncstart irq.
 	//cpuRegs.eCycle[30] = 2;
