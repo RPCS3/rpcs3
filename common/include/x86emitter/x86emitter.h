@@ -57,8 +57,10 @@
 // insisting on "mov eax, immaddr; call eax".  Likewise, GCC fails to optimize it also, unless
 // the typecast is explicitly inlined.  These macros account for these problems.
 //
+// But it turns out that MSVC is quite capable of optimising important code out of existance
+// if we use these macros in our PGO builds, so it's better just to live with the inefficient call.
 
-#ifdef _MSC_VER
+#ifdef _MSC_HAS_FIXED_INLINE_ASM_PGO
 
 #	define CallAddress( ptr ) \
 		__asm{ call offset ptr }
