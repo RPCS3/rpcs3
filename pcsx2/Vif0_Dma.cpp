@@ -25,31 +25,11 @@ u32 g_vif0Cycles = 0;
 // because its vif stalling not the EE core...
 __fi void vif0FLUSH()
 {
-	if(g_packetsizeonvu0 > vif0.vifpacketsize && g_vu0Cycles > 0)
+	if(vif0Regs.stat.VEW == true)
 	{
-		//DevCon.Warning("Adding on same packet");
-		if( ((g_packetsizeonvu0 - vif0.vifpacketsize) >> 1) > g_vu0Cycles)
-			g_vu0Cycles -= (g_packetsizeonvu0 - vif0.vifpacketsize) >> 1;
-		else g_vu0Cycles = 0;
-	}
-	if(g_vu0Cycles > 0)
-	{
-		//DevCon.Warning("Adding %x cycles to VIF0", g_vu0Cycles * BIAS);
-		g_vif0Cycles += g_vu0Cycles;
-		g_vu0Cycles = 0;
-	}
-	g_vu0Cycles = 0;
-
-	if (!(VU0.VI[REG_VPU_STAT].UL & 1)) return;
-	if(VU0.flags & VUFLAG_MFLAGSET)
-	{
+		vif0.waitforvu = true;
 		vif0.vifstalled = true;
-		return;
 	}
-	int _cycles = VU0.cycle;
-	vu0Finish();
-	//DevCon.Warning("VIF0 adding %x cycles", (VU0.cycle - _cycles) * BIAS);
-	g_vif0Cycles += (VU0.cycle - _cycles) * BIAS;
 	return;
 }
 
@@ -160,6 +140,27 @@ __fi void vif0SetupTransfer()
 	}
 }
 
+__fi void vif0VUFinish()
+{
+	if ((VU0.VI[REG_VPU_STAT].UL & 1))
+	{
+		int _cycles = VU0.cycle;
+		//DevCon.Warning("Finishing VU0");
+		vu0Finish();
+		_cycles = VU0.cycle - _cycles;
+		//DevCon.Warning("Finishing VU0 %d cycles", _cycles);
+		CPU_INT(VIF_VU0_FINISH, _cycles * BIAS); 
+		return;
+	}
+	vif0Regs.stat.VEW = false;
+	if(vif0.waitforvu == true)
+	{
+		vif0.waitforvu = false;
+		ExecuteVU(0);
+	}
+	//DevCon.Warning("VU0 state cleared");
+}
+
 __fi void vif0Interrupt()
 {
 	VIF_LOG("vif0Interrupt: %8.8x", cpuRegs.cycle);
@@ -190,6 +191,12 @@ __fi void vif0Interrupt()
 		}
 	}
 
+	if(vif0.waitforvu == true)
+	{
+		//DevCon.Warning("Waiting on VU0");
+		CPU_INT(DMAC_VIF0, 16);
+		return;
+	}
 	//Must go after the Stall, incase it's still in progress, GTC africa likes to see it still transferring.
 	if (vif0.cmd) 
 	{
@@ -250,7 +257,6 @@ void dmaVIF0()
 	        vif0ch.tadr, vif0ch.asr0, vif0ch.asr1);
 
 	g_vif0Cycles = 0;
-	g_vu0Cycles = 0;
 	//if(vif0.irqoffset != 0 && vif0.vifstalled == true) DevCon.Warning("Offset on VIF0 start! offset %x, Progress %x", vif0.irqoffset, vif0.vifstalled);
 	/*vif0.irqoffset = 0;
 	vif0.vifstalled = false;

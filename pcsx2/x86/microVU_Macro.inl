@@ -232,7 +232,8 @@ INTERPRETATE_COP2_FUNC(CALLMSR);
 void _setupBranchTest(u32*(jmpType)(u32), bool isLikely) {
 	printCOP2("COP2 Branch");
 	_eeFlushAllUnused();
-	TEST32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, 0x100);
+	TEST32ItoM((uptr)&vif1Regs.stat._u32, 0x4);
+	//TEST32ItoM((uptr)&VU0.VI[REG_VPU_STAT].UL, 0x100);
 	recDoBranchImm(jmpType(0), isLikely);
 }
 

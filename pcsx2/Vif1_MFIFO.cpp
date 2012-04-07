@@ -20,10 +20,6 @@
 #include "Vif_Dma.h"
 
 u16 vifqwc = 0;
-u32 g_vu0Cycles = 0;
-u32 g_vu1Cycles = 0;
-u32 g_packetsizeonvu0 = 0;
-u32 g_packetsizeonvu1 = 0;
 
 static u32 qwctag(u32 mask)
 {
@@ -266,6 +262,12 @@ void vifMFIFOInterrupt()
 			CPU_INT(DMAC_MFIFO_VIF, 128);
 			return;
 		}
+	}
+	if(vif1.waitforvu == true)
+	{
+	//	DevCon.Warning("Waiting on VU1 MFIFO");
+		CPU_INT(DMAC_MFIFO_VIF, 16);
+		return;
 	}
 
 	// We need to check the direction, if it is downloading from the GS,

@@ -292,7 +292,7 @@ static __fi void _cpuTestInterrupts()
 	// The following ints are rarely called.  Encasing them in a conditional
 	// as follows helps speed up most games.
 
-	if( cpuRegs.interrupt & 0xF19 ) // Bits 0 3 4 8 9 10 11 ( 111100011001 )
+	if( cpuRegs.interrupt & 0x60F19 ) // Bits 0 3 4 8 9 10 11 17 18( 1100000111100011001 )
 	{
 		TESTINT(DMAC_VIF0,		vif0Interrupt);
 
@@ -304,6 +304,9 @@ static __fi void _cpuTestInterrupts()
 
 		TESTINT(DMAC_MFIFO_VIF, vifMFIFOInterrupt);
 		TESTINT(DMAC_MFIFO_GIF, gifMFIFOInterrupt);
+
+		TESTINT(VIF_VU0_FINISH, vif0VUFinish);
+		TESTINT(VIF_VU1_FINISH, vif1VUFinish);
 	}
 }
 

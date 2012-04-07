@@ -76,12 +76,28 @@ static __fi void vuExecMicro(int idx, u32 addr) {
 	if (!idx) vu0ExecMicro(addr);
 	else	  vu1ExecMicro(addr);
 
-	if (!idx || !THREAD_VU1) {
-		if (!idx) { g_vu0Cycles += (VU0.cycle-startcycles); g_packetsizeonvu0 = vif0.vifpacketsize; }
-		else      { g_vu1Cycles += (VU1.cycle-startcycles); g_packetsizeonvu1 = vif1.vifpacketsize; }
-	}
+	if (!idx) { startcycles = ((VU0.cycle-startcycles) + ( vif0ch.qwc - (vif0.vifpacketsize >> 2) )); CPU_INT(VIF_VU0_FINISH, startcycles * BIAS); }
+	else      { startcycles = ((VU1.cycle-startcycles) + ( vif1ch.qwc - (vif1.vifpacketsize >> 2) )); CPU_INT(VIF_VU1_FINISH, startcycles * BIAS); }
+
+
 	//DevCon.Warning("Ran VU%x, VU0 Cycles %x, VU1 Cycles %x, start %x cycle %x", idx, g_vu0Cycles, g_vu1Cycles, startcycles, VU1.cycle);
-	GetVifX.vifstalled = true;
+	//GetVifX.vifstalled = true;
+}
+
+void ExecuteVU(int idx)
+{
+	vifStruct& vifX = GetVifX;
+
+	if((vifX.cmd & 0x7f) == 0x17)
+	{
+		vuExecMicro(idx, -1);
+		vifX.cmd = 0;
+	}
+	else if((vifX.cmd & 0x7f) == 0x14 || (vifX.cmd & 0x7f) == 0x15)
+	{
+		vuExecMicro(idx, (u16)(vifXRegs.code) << 3);
+		vifX.cmd = 0;
+	}
 }
 
 //------------------------------------------------------------------
@@ -174,14 +190,14 @@ vifOp(vifCode_FlushA) {
 					//p3.state= GIF_PATH_IDLE; // Does any game need this anymore?
 					DevCon.Warning("Vif FlushA - path3 has no more data, but didn't EOP");
 				}
-				else { // Path 3 hasn't finished its current gs packet
+				/*else { // Path 3 hasn't finished its current gs packet
 					if (gifUnit.stat.APATH != 3 && gifUnit.Path3Masked()) {
 						gifUnit.stat.APATH  = 3; // Hack: Force path 3 to finish (persona 3 needs this)
 						//DevCon.Warning("Vif FlushA - Forcing path3 to finish current packet");
 					}
 					gifInterrupt();    // Feed path3 some gif dma data
 					gifUnit.Execute(); // Execute path3 in-case gifInterrupt() didn't...
-				}
+				}*/
 				if (p3.state != GIF_PATH_IDLE) {
 					doStall = true; // If path3 still isn't finished...
 				}
@@ -245,7 +261,7 @@ vifOp(vifCode_MPG) {
 		int    vifNum =  (u8)(vifXRegs.code >> 16);
 		vifX.tag.addr = (u16)(vifXRegs.code <<  3) & (idx ? 0x3fff : 0xfff);
 		vifX.tag.size = vifNum ? (vifNum*2) : 512;
-		//vifFlush(idx);
+		vifFlush(idx);
 		return 1;
 	}
 	pass2 {
@@ -275,7 +291,15 @@ vifOp(vifCode_MPG) {
 
 vifOp(vifCode_MSCAL) {
 	vifStruct& vifX = GetVifX;
-	pass1 { vifFlush(idx); vuExecMicro(idx, (u16)(vifXRegs.code) << 3); vifX.cmd = 0;}
+	pass1 { 
+		vifFlush(idx); 
+
+		if(vifX.waitforvu == false)
+		{
+			vuExecMicro(idx, (u16)(vifXRegs.code) << 3); 
+			vifX.cmd = 0;
+		}
+	}
 	pass3 { VifCodeLog("MSCAL"); }
 	return 0;
 }
@@ -290,7 +314,8 @@ vifOp(vifCode_MSCALF) {
 			vif1Regs.stat.VGW = true;
 			vifX.vifstalled   = true;
 		}
-		else {
+		if(vifX.waitforvu == false)
+		{
 			vuExecMicro(idx, (u16)(vifXRegs.code) << 3);
 			vifX.cmd = 0;
 		}
@@ -301,7 +326,14 @@ vifOp(vifCode_MSCALF) {
 
 vifOp(vifCode_MSCNT) {
 	vifStruct& vifX = GetVifX;
-	pass1 { vifFlush(idx); vuExecMicro(idx, -1); vifX.cmd = 0; }
+	pass1 { 
+		vifFlush(idx); 
+		if(vifX.waitforvu == false)
+		{
+			vuExecMicro(idx, -1);
+			vifX.cmd = 0;
+		}
+	}
 	pass3 { VifCodeLog("MSCNT"); }
 	return 0;
 }

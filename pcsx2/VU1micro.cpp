@@ -50,9 +50,10 @@ void vu1Finish() {
 
 void __fastcall vu1ExecMicro(u32 addr)
 {
+	vif1Regs.stat.VEW = true;
+
 	if (THREAD_VU1) {
 		vu1Thread.ExecuteVU(addr, vif1Regs.top, vif1Regs.itop);
-		vif1Regs.stat.VEW        = false;
 		VU0.VI[REG_VPU_STAT].UL &= ~0xFF00;
 		return;
 	}
@@ -64,7 +65,6 @@ void __fastcall vu1ExecMicro(u32 addr)
 	VU0.VI[REG_VPU_STAT].UL &= ~0xFF00;
 	VU0.VI[REG_VPU_STAT].UL |=  0x0100;
 
-	vif1Regs.stat.VEW = true;
 	if ((s32)addr != -1) VU1.VI[REG_TPC].UL = addr;
 	_vuExecMicroDebug(VU1);
 

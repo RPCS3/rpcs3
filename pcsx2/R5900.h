@@ -405,8 +405,10 @@ enum EE_EventType
 	DMAC_STALL_SIS		= 13, // SIS
 	DMAC_MFIFO_EMPTY	= 14, // MEIS
 	DMAC_BUS_ERROR	= 15,      // BEIS
-
-	DMAC_GIF_UNIT
+	
+	DMAC_GIF_UNIT,
+	VIF_VU0_FINISH,
+	VIF_VU1_FINISH
 };
 
 extern void CPU_INT( EE_EventType n, s32 ecycle );
