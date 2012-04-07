@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-02-28 12:20+0100\n"
+"POT-Creation-Date: 2012-04-07 11:42+0200\n"
 "PO-Revision-Date: 2011-08-13 16:51+0700\n"
 "Last-Translator: Wei Mingzhi <whistler@openoffice.org>\n"
 "Language-Team: \n"
@@ -26,7 +26,7 @@ msgid "!Notice:VirtualMemoryMap"
 msgstr ""
 "没有足够的虚拟内存可用，或所需的虚拟内存映射已经被其它进程、服务或 DLL 保留。"
 
-#: pcsx2/CDVD/CDVD.cpp:390
+#: pcsx2/CDVD/CDVD.cpp:389
 msgid "!Notice:PsxDisc"
 msgstr ""
 "PCSX2 不支持 Playstation 1 游戏。如果您想模拟 PS1 游戏请下载一个 PS1 模拟器，"

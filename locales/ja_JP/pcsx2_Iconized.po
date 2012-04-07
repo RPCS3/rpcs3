@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-03-10 20:38+0100\n"
+"POT-Creation-Date: 2012-04-07 11:42+0200\n"
 "PO-Revision-Date: 2012-03-05 08:12+0900\n"
 "Last-Translator: DeltaHF\n"
 "Language-Team: DeltaHF\n"
@@ -29,7 +29,7 @@ msgstr ""
 "仮想メモリが不足しているか、必要な仮想メモリは既に他のプロセス、サービス、DLL"
 "に割り当てられています。"
 
-#: pcsx2/CDVD/CDVD.cpp:390
+#: pcsx2/CDVD/CDVD.cpp:389
 msgid "!Notice:PsxDisc"
 msgstr ""
 "プレイステーション１のディスクはPCSX2でサポートされていません。 \n"
