@@ -266,7 +266,7 @@ void vifMFIFOInterrupt()
 	if(vif1.waitforvu == true)
 	{
 	//	DevCon.Warning("Waiting on VU1 MFIFO");
-		CPU_INT(DMAC_MFIFO_VIF, 16);
+		//CPU_INT(DMAC_MFIFO_VIF, 16);
 		return;
 	}
 

@@ -157,6 +157,9 @@ __fi void vif0VUFinish()
 	{
 		vif0.waitforvu = false;
 		ExecuteVU(0);
+		//Make sure VIF0 isnt already scheduled to spin.
+		if(!(cpuRegs.interrupt & 0x1))
+			vif0Interrupt();
 	}
 	//DevCon.Warning("VU0 state cleared");
 }
@@ -194,7 +197,7 @@ __fi void vif0Interrupt()
 	if(vif0.waitforvu == true)
 	{
 		//DevCon.Warning("Waiting on VU0");
-		CPU_INT(DMAC_VIF0, 16);
+		//CPU_INT(DMAC_VIF0, 16);
 		return;
 	}
 	//Must go after the Stall, incase it's still in progress, GTC africa likes to see it still transferring.

@@ -229,6 +229,14 @@ __fi void vif1VUFinish()
 	{
 		vif1.waitforvu = false;
 		ExecuteVU(1);
+		//Check if VIF is already scheduled to interrupt, if it's waiting, kick it :P
+		if((cpuRegs.interrupt & (1<<DMAC_VIF1 | 1 << DMAC_MFIFO_VIF)) == 0 && vif1ch.chcr.STR == true)
+		{
+			if(dmacRegs.ctrl.MFD == MFD_VIF1)
+				vifMFIFOInterrupt();
+			else
+				vif1Interrupt();
+		}
 	}
 	
 	//DevCon.Warning("VU1 state cleared");
@@ -269,7 +277,7 @@ __fi void vif1Interrupt()
 	if(vif1.waitforvu == true)
 	{
 		//DevCon.Warning("Waiting on VU1");
-		CPU_INT(DMAC_VIF1, 16);
+		//CPU_INT(DMAC_VIF1, 16);
 		return;
 	}
 	if (!vif1ch.chcr.STR) Console.WriteLn("Vif1 running when CHCR == %x", vif1ch.chcr._u32);
@@ -316,6 +324,11 @@ __fi void vif1Interrupt()
 
 		if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
 		if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
+		if(vif1.waitforvu == true)
+		{
+			//DevCon.Warning("Waiting on VU1");
+			return;
+		}
 	}
 	
 

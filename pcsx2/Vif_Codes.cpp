@@ -81,7 +81,7 @@ static __fi void vuExecMicro(int idx, u32 addr) {
 
 
 	//DevCon.Warning("Ran VU%x, VU0 Cycles %x, VU1 Cycles %x, start %x cycle %x", idx, g_vu0Cycles, g_vu1Cycles, startcycles, VU1.cycle);
-	//GetVifX.vifstalled = true;
+	GetVifX.vifstalled = true;
 }
 
 void ExecuteVU(int idx)

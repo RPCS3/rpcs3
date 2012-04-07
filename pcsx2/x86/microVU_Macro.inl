@@ -317,6 +317,7 @@ static void recCTC2() {
 			}
 			else xXOR(ecx, ecx);
 			xCALL(vu1ExecMicro);
+			xCALL(vif1VUFinish);
 			break;
 		case REG_FBRST:
 			if (!_Rt_) { 
