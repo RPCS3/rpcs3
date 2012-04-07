@@ -19,8 +19,7 @@
 
 #include <winnt.h>
 
-
-int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
+static int DoSysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 {
 	if( eps->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION )
 		return EXCEPTION_CONTINUE_SEARCH;
@@ -31,6 +30,21 @@ int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
 	Threading::ScopedLock lock(PageFault_Mutex);
 	Source_PageFault->Dispatch( PageFaultInfo( (uptr)eps->ExceptionRecord->ExceptionInformation[1] ) );
 	return Source_PageFault->WasHandled() ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
+}
+
+int SysPageFaultExceptionFilter( EXCEPTION_POINTERS* eps )
+{
+	// Prevent recursive exception filtering by catching the exception from the filter here.
+	// In the event that the filter causes an access violation (happened during shutdown
+	// because Source_PageFault was deallocated), this will allow the debugger to catch the
+	// exception.
+	// TODO: find a reliable way to debug the filter itself, I've come up with a few ways that
+	// work but I don't fully understand why some do and some don't.
+	__try {
+		return DoSysPageFaultExceptionFilter(eps);
+	} __except (GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
+		return EXCEPTION_CONTINUE_SEARCH;
+	}
 }
 
 void _platform_InstallSignalHandler()
