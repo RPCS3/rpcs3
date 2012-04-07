@@ -339,7 +339,7 @@ void GLWindow::Force43Ratio()
         s32 new_width = (4*height)/3;
         // do not bother to resize for 5 pixels. Avoid a loop
         // due to round value
-        if ( abs(new_width - width) > 5) {
+        if ( ABS(new_width - width) > 5) {
             width = new_width;
             conf.width = new_width;
             // resize the window

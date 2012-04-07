@@ -23,7 +23,6 @@
 #ifdef _WIN32
 #define GL_WIN32_WINDOW
 #else
-#define USE_GSOPEN2
 #define GL_X11_WINDOW
 #endif
 

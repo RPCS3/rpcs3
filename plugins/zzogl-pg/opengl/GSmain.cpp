@@ -35,6 +35,7 @@ extern void SaveSnapshot(const char* filename);
 GLWindow GLWin;
 GSinternal gs;
 GSconf conf;
+GSDump g_dump;
 
 int ppf, g_GSMultiThreaded, CurrentSavestate = 0;
 int g_LastCRC = 0, g_TransferredToGPU = 0, s_frameskipping = 0;
@@ -385,12 +386,11 @@ void CALLBACK GSchangeSaveState(int newstate, const char* filename)
 	SaveStateExists = (access(SaveStateFile, 0) == 0);
 }
 
-void CALLBACK GSmakeSnapshot(char *path)
+static bool get_snapshot_filename(char *filename, char* path, const char* extension)
 {
 	FUNCLOG
 
 	FILE *bmpfile;
-	char filename[256];
 	u32 snapshotnr = 0;
 
 	// increment snapshot value & try to get filename
@@ -399,7 +399,7 @@ void CALLBACK GSmakeSnapshot(char *path)
 	{
 		snapshotnr++;
 
-		sprintf(filename, "%s/snap%03ld.%s", path, snapshotnr, (conf.zz_options.tga_snap) ? "bmp" : "jpg");
+		sprintf(filename, "%s/snap%03ld.%s", path, snapshotnr, extension);
 
 		bmpfile = fopen(filename, "rb");
 
@@ -420,13 +420,21 @@ void CALLBACK GSmakeSnapshot(char *path)
 		mkdir(path, 0777);
 #endif
 
-		if ((bmpfile = fopen(filename, "wb")) == NULL) return;
+		if ((bmpfile = fopen(filename, "wb")) == NULL) return false;
 	}
 
 	fclose(bmpfile);
 
-	// get the bits
-	SaveSnapshot(filename);
+	return true;
+}
+
+void CALLBACK GSmakeSnapshot(char *path)
+{
+	FUNCLOG
+
+	char filename[256];
+	if (get_snapshot_filename(filename, path, (conf.zz_options.tga_snap) ? "bmp" : "jpg"))
+		SaveSnapshot(filename);
 }
 
 // I'll probably move this somewhere else later, but it's got a ton of dependencies.
@@ -474,6 +482,25 @@ void CALLBACK GSvsync(int interlace)
 
 	static u32 dwTime = timeGetTime();
 	static int nToNextUpdate = 1;
+#ifdef _DEBUG
+	if (conf.dump & 0x1) {
+		freezeData fd;
+		fd.size = ZZSave(NULL);
+		s8* payload = (s8*)malloc(fd.size);
+		fd.data = payload;
+		 
+		ZZSave(fd.data);
+
+		char filename[256];
+		// FIXME, there is probably a better solution than /tmp ...
+		// A possibility will be to save the path from GSmakeSnapshot but you still need to call
+		// GSmakeSnapshot first.
+		if (get_snapshot_filename(filename, "/tmp", "gs"))
+			g_dump.Open(filename, g_LastCRC, fd, g_pBasePS2Mem);
+		conf.dump--;
+	}
+	g_dump.VSync(interlace, (conf.dump == 0), g_pBasePS2Mem);
+#endif
 
 	GL_REPORT_ERRORD();
 
@@ -529,6 +556,7 @@ void CALLBACK GSvsync(int interlace)
 
 #endif
 	GL_REPORT_ERRORD();
+
 }
 
 void CALLBACK GSreadFIFO(u64 *pMem)
@@ -536,6 +564,9 @@ void CALLBACK GSreadFIFO(u64 *pMem)
 	FUNCLOG
 
 	//ZZLog::GS_Log("Calling GSreadFIFO.");
+#ifdef _DEBUG
+	g_dump.ReadFIFO(1);
+#endif
 
 	TransferLocalHost((u32*)pMem, 1);
 }
@@ -545,6 +576,9 @@ void CALLBACK GSreadFIFO2(u64 *pMem, int qwc)
 	FUNCLOG
 
 	//ZZLog::GS_Log("Calling GSreadFIFO2.");
+#ifdef _DEBUG
+	g_dump.ReadFIFO(qwc);
+#endif
 
 	TransferLocalHost((u32*)pMem, qwc);
 }
@@ -586,3 +620,182 @@ s32 CALLBACK GSfreeze(int mode, freezeData *data)
 
 	return 0;
 }
+
+#ifdef __LINUX__
+
+struct Packet 
+{
+	u8 type, param;
+	u32 size, addr;
+	vector<u32> buff;
+};
+
+EXPORT_C_(void) GSReplay(char* lpszCmdLine)
+{
+	if(FILE* fp = fopen(lpszCmdLine, "rb"))
+	{
+		GSinit();
+
+		u8 regs[0x2000];
+		GSsetBaseMem(regs);
+
+		//s_vsync = !!theApp.GetConfig("vsync", 0);
+
+		void* hWnd = NULL;
+
+		//_GSopen((void**)&hWnd, "", renderer);
+		GSopen((void**)&hWnd, "", 0);
+
+		u32 crc;
+		fread(&crc, 4, 1, fp);
+		GSsetGameCRC(crc, 0);
+
+		freezeData fd;
+		fread(&fd.size, 4, 1, fp);
+		fd.data = new s8[fd.size];
+		fread(fd.data, fd.size, 1, fp);
+		GSfreeze(FREEZE_LOAD, &fd);
+		delete [] fd.data;
+
+		fread(regs, 0x2000, 1, fp);
+
+		long start = ftell(fp);
+
+		GSvsync(1);
+
+		list<Packet*> packets;
+		vector<u8> buff;
+		int type;
+
+		while((type = fgetc(fp)) != EOF)
+		{
+			Packet* p = new Packet();
+
+			p->type = (u8)type;
+
+			switch(type)
+			{
+			case 0:
+
+				p->param = (u8)fgetc(fp);
+
+				fread(&p->size, 4, 1, fp);
+
+				switch(p->param)
+				{
+				case 0:
+					p->buff.resize(0x4000);
+					p->addr = 0x4000 - p->size;
+					fread(&p->buff[p->addr], p->size, 1, fp);
+					break;
+				case 1:
+				case 2:
+				case 3:
+					p->buff.resize(p->size);
+					fread(&p->buff[0], p->size, 1, fp);
+					break;
+				}
+
+				break;
+
+			case 1:
+
+				p->param = (u8)fgetc(fp);
+
+				break;
+
+			case 2:
+
+				fread(&p->size, 4, 1, fp);
+
+				break;
+
+			case 3:
+
+				p->buff.resize(0x2000);
+
+				fread(&p->buff[0], 0x2000, 1, fp);
+
+				break;
+
+			default: assert(0);
+			}
+
+			packets.push_back(p);
+		}
+
+		sleep(1);
+
+		//while(IsWindowVisible(hWnd))
+		//FIXME map?
+		int finished = 2;
+		while(finished > 0)
+		{
+			unsigned long start = timeGetTime();
+			unsigned long frame_number = 0;
+			for(list<Packet*>::iterator i = packets.begin(); i != packets.end(); i++)
+			{
+				Packet* p = *i;
+
+				switch(p->type)
+				{
+				case 0:
+
+					switch(p->param)
+					{
+					case 0: GSgifTransfer1(&p->buff[0], p->addr); break;
+					case 1: GSgifTransfer2(&p->buff[0], p->size / 16); break;
+					case 2: GSgifTransfer3(&p->buff[0], p->size / 16); break;
+					case 3: GSgifTransfer(&p->buff[0], p->size / 16); break;
+					}
+
+					break;
+
+				case 1:
+
+					GSvsync(p->param);
+					frame_number++;
+
+					break;
+
+				case 2:
+
+					if(buff.size() < p->size) buff.resize(p->size);
+
+					// FIXME
+					// GSreadFIFO2(&buff[0], p->size / 16);
+
+					break;
+
+				case 3:
+
+					memcpy(regs, &p->buff[0], 0x2000);
+
+					break;
+				}
+			}
+			unsigned long end = timeGetTime();
+			fprintf(stderr, "The %d frames of the scene was render on %dms\n", frame_number, end - start);
+			fprintf(stderr, "A means of %fms by frame\n", (float)(end - start)/(float)frame_number);
+
+			sleep(1);
+			finished--;
+		}
+
+
+		for(list<Packet*>::iterator i = packets.begin(); i != packets.end(); i++)
+		{
+			delete *i;
+		}
+
+		packets.clear();
+
+		sleep(1);
+
+		GSclose();
+		GSshutdown();
+
+		fclose(fp);
+	}
+}
+#endif

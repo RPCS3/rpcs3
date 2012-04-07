@@ -37,6 +37,8 @@ const char* pbilinear[] = { "off", "normal", "forced" };
 
 extern void SetAA(int mode);
 
+extern bool dump_enable;
+
 void ProcessBilinear()
 {
 	FUNCLOG
@@ -110,6 +112,37 @@ void ProcessWireFrame()
 	ZZLog::WriteToScreen(strtitle);
 }
 
+void ProcessFrameDump()
+{
+	FUNCLOG
+
+	conf.dump = 1;
+
+	char strtitle[256];
+	sprintf(strtitle, "GS dump-frame");
+		
+	ZZLog::WriteToScreen(strtitle);
+	SaveConfig();
+}
+
+void ProcessVideoDump()
+{
+	FUNCLOG
+
+	char strtitle[256];
+
+	if (conf.dump != 0) {
+		sprintf(strtitle, "Stop GS dump-video");
+		conf.dump = 0;
+	} else {
+		sprintf(strtitle, "Start GS dump-video");
+		conf.dump = 3;
+	}
+		
+	ZZLog::WriteToScreen(strtitle);
+	SaveConfig();
+}
+
 void ProcessHackSetting(bool reverse)
 {
 	FUNCLOG
@@ -168,11 +201,19 @@ void OnFKey(int key, int shift)
 				ProcessWireFrame();
 			break;
 		case 9:
+#ifdef _DEBUG
+			// Fn keys are a bit overload... I don't have a better idea --Gregory
+			if (shift)
+				ProcessVideoDump();
+			else
+				ProcessFrameDump();
+#else
 			if (shift) 
 				ProcessHackSetting(true);
 			else
 				ProcessHackSetting(false);
 			break;
+#endif
 		default:
 			break;
 	}

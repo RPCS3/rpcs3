@@ -46,6 +46,7 @@ set(zzoglSources
     GifTransfer.cpp
     GLWin32.cpp
     GLWinX11.cpp
+    GSDump.cpp
     GSmain.cpp
     HostMemory.cpp
     Mem.cpp
@@ -82,6 +83,7 @@ set(zzoglHeaders
     GifTransfer.h
     # glprocs.h
     GS.h
+    GSDump.h
     HostMemory.h
     Mem.h
     Mem_Swizzle.h
@@ -141,6 +143,9 @@ add_library(${Output} SHARED
     ${zzoglLinuxSources}
     ${zzoglLinuxHeaders})
 
+# Trick that allow to compile zzogl with GSOPEN2 and the replayer with GSOPEN
+set_target_properties(${Output} PROPERTIES COMPILE_DEFINITIONS USE_GSOPEN2)
+
 # link target with project internal libraries
 target_link_libraries(${Output} Utilities)
 
@@ -170,4 +175,46 @@ if(PACKAGE_MODE)
 else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
     install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+endif(PACKAGE_MODE)
+
+################################### Replay Loader
+set(Replay pcsx2_ZZReplayLoader)
+set(Static zzogl-static)
+
+add_library(${Static} STATIC
+    ${zzoglSources}
+    ${zzoglHeaders}
+    ${zzoglSSources}
+    ${zzoglShaderSources}
+    ${zzoglLinuxSources}
+    ${zzoglLinuxHeaders})
+
+target_link_libraries(${Static} Utilities)
+target_link_libraries(${Static} ${CG_LIBRARIES})
+target_link_libraries(${Static} ${GLEW_LIBRARY})
+target_link_libraries(${Static} ${OPENGL_LIBRARIES})
+target_link_libraries(${Static} ${X11_LIBRARIES})
+target_link_libraries(${Static} ${JPEG_LIBRARIES})
+
+add_executable(${Replay} linux_replay.cpp)
+
+target_link_libraries(${Replay} ${Static})
+target_link_libraries(${Replay} Utilities)
+target_link_libraries(${Replay} ${CG_LIBRARIES})
+target_link_libraries(${Replay} ${GLEW_LIBRARY})
+target_link_libraries(${Replay} ${OPENGL_LIBRARIES})
+target_link_libraries(${Replay} ${X11_LIBRARIES})
+target_link_libraries(${Replay} ${JPEG_LIBRARIES})
+
+target_link_libraries(${Replay} ${GTK2_LIBRARIES})
+target_link_libraries(${Replay} ${ZLIB_LIBRARIES})
+
+if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+    target_link_libraries(${Replay} "${USER_CMAKE_LD_FLAGS}")
+endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+
+if(PACKAGE_MODE)
+    install(TARGETS ${Replay} DESTINATION bin)
+else(PACKAGE_MODE)
+    install(TARGETS ${Replay} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
 endif(PACKAGE_MODE)

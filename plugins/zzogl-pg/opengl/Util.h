@@ -43,6 +43,11 @@
 #include <GL/glx.h>
 #include <gtk/gtk.h>
 
+#include <cstring>
+#include <string>
+#include <vector>
+#include <list>
+
 #endif
 
 #define GSdefs
@@ -60,6 +65,7 @@ extern "C" char* CALLBACK PS2EgetLibName(void);
 
 #include "ZZoglMath.h"
 #include "Profile.h"
+#include "GSDump.h"
 
 #include "Utilities/MemcpyFast.h"
 #define memcpy_amd memcpy_fast
@@ -133,6 +139,7 @@ typedef struct
 	u32 SkipDraw;
 	u32 log;
 	u32 disableHacks;
+	int dump;
 	
 	void incAA() { aa++; if (aa > 4) aa = 0; }
 	void decAA() { aa--; if (aa > 4) aa = 4; } // u8 is unsigned, so negative value is 255.
