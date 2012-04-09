@@ -1,0 +1,97 @@
+/** @page compile_windows Building Portaudio for Windows using Microsoft Visual Studio
+@ingroup tutorial
+
+Below is a list of steps to build PortAudio into a dll and lib file. The resulting dll file may contain all five current win32 PortAudio APIs: MME, DirectSound, WASAPI, WDM/KS and ASIO, depending on the preprocessor definitions set in step 9 below.
+
+PortAudio can be compiled using Visual C++ Express Edition which is available free from Microsoft. If you do not already have a C++ development environment, simply download and install. These instructions have been observed to succeed using Visual Studio 2010 as well.
+
+1) PortAudio for Windows requires the files <i>dsound.h</i> and <i>dsconf.h</i>. Download and install the DirectX SDK from http://www.microsoft.com/downloads/details.aspx?displaylang=en&FamilyID=3021d52b-514e-41d3-ad02-438a3ba730ba to obtain these files. If you installed the DirectX SDK then the !DirectSound libraries and header files should be found automatically by Visual !Studio/Visual C++. If you get an error saying dsound.h or dsconf.h is missing, you can declare these paths by hand.  Alternatively, you can copy dsound.h and dsconf.h to portaudio\\include. There should also be a file named ''dsound.lib'' in C:\\Program Files\\Microsoft SDKs\\Windows\\v6.0A\\Lib.
+
+2) For ASIO support, download the ASIO SDK from Steinberg at http://www.steinberg.net/en/company/developer.html. The SDK is free but you will need to set up a developer account with Steinberg. Copy the entire ASIOSDK2 folder into src\\hostapi\\asio\\. Rename it from ASIOSDK2 to ASIOSDK. To build without ASIO (or other host API) see the "Building without ASIO support" section below.
+
+3) If you have Visual Studio 6.0, 7.0(VC.NET/2001) or 7.1(VC.2003), open portaudio.dsp and convert if needed.
+
+4) If you have Visual Studio 2005, Visual C++ 2008 Express Edition or Visual Studio 2010, double click the portaudio.sln file located in build\\msvc\\. Doing so will open Visual Studio or Visual C++. Click "Finish" if a wizard appears. The sln file contains four configurations: Win32 and Win64 in both Release and Debug variants.
+
+@section comp_win1 For Visual Studio 2005, Visual C++ 2008 Express Edition or Visual Studio 2010
+
+5) Open Project -> portaudio Properties and select "Configuration Properties" in the tree view.
+
+6) Select "all configurations" in the "Configurations" combo box above. Select "All Platforms" in the "Platforms" combo box.
+
+7) Now set a few options:
+
+C/C++ -> Optimization -> Omit frame pointers = Yes
+
+C/C++ -> Code Generation -> Runtime library = /MT
+
+Optional: C/C++ -> Code Generation -> Floating point model = fast
+
+NOTE: For most users it is not necessary to explicitly set the structure member alignment; the default should work fine. However some languages require, for example, 4-byte alignment. If you are having problems with portaudio.h structure members not being properly read or written to, it may be necessary to explicitly set this value by going to C/C++ -> Code Generation -> Struct member alignment and setting it to an appropriate value (four is a common value). If your compiler is configurable, you should ensure that it is set to use the same structure member alignment value as used for the PortAudio build.
+
+Click "Ok" when you have finished setting these parameters.
+
+@section comp_win2 Preprocessor Definitions
+
+Since the preprocessor definitions are different for each configuration and platform, you'll need to edit these individually for each configuration/platform combination that you want to modify using the "Configurations" and "Platforms" combo boxes.
+
+8) To suppress PortAudio runtime debug console output, go to Project -> Properties -> Configuration Properties -> C/C++ -> Preprocessor. In the field 'Preprocessor Definitions', find PA_ENABLE_DEBUG_OUTPUT and remove it. The console will not output debug messages.
+
+9) Also in the preprocessor definitions you need to explicitly define the audio APIs you wish to use. For Windows the available API definitions are:
+
+PA_USE_ASIO[[BR]]
+PA_USE_DS (DirectSound)[[BR]]
+PA_USE_WMME (MME)[[BR]]
+PA_USE_WASAPI[[BR]]
+PA_USE_WDMKS[[BR]]
+PA_USE_SKELETON
+
+For each of these, the value of 0 indicates that support for this API should not be included. The value 1 indicates that support for this API should be included.
+
+@section comp_win3 Building
+
+As when setting Preprocessor definitions, building is a per-configuration per-platform process. Follow these instructions for each configuration/platform combination that you're interested in.
+
+10) From the Build menu click Build -> Build solution. For 32-bit compilations, the dll file created by this process (portaudio_x86.dll) can be found in the directory build\\msvc\\Win32\\Release. For 64-bit compilations, the dll file is called portaudio_x64.dll, and is found in the directory build\\msvc\\x64\\Release.
+
+11) Now, any project which requires portaudio can be linked with portaudio_x86.lib (or _x64) and include the relevant headers (portaudio.h, and/or pa_asio.h , pa_x86_plain_converters.h) You may want to add/remove some DLL entry points. Right now those 6 entries are not from portaudio.h:
+
+(from portaudio.def)
+@code
+...
+PaAsio_GetAvailableLatencyValues    @50
+PaAsio_ShowControlPanel             @51
+PaUtil_InitializeX86PlainConverters @52
+PaAsio_GetInputChannelName          @53
+PaAsio_GetOutputChannelName         @54
+PaUtil_SetLogPrintFunction          @55
+@endcode
+
+@section comp_win4 Building without ASIO support
+
+To build PortAudio without ASIO support you need to:
+
+1) Make sure your project doesn't try to build any ASIO SDK files. If you're using one of the shipped projects, remove the ASIO related files from the project.
+
+2) Make sure your project doesn't try to build the PortAudio ASIO implementation files:
+
+src\\hostapi\\pa_asio.cpp src\\hostapi\\iasiothiscallresolver.cpp
+
+If you're using one of the shipped projects, remove them from the project.
+
+3) Define the preprocessor symbols in the project properties as described in step 9 above. In VS2005 this can be accomplished by selecting
+Project Properties -> Configuration Properties -> C/C++ -> Preprocessor -> Preprocessor Definitions. Omitting PA_USE_ASIO or setting it to 0 stops src\\os\\win\\pa_win_hostapis.c from trying to initialize the PortAudio ASIO implementation.
+
+4) Remove PaAsio_* entry points from portaudio.def
+
+
+-----
+David Viens, davidv@plogue.com
+
+Updated by Chris on 5/26/2011
+
+Improvements by John Clements on 12/15/2011
+
+Back to the Tutorial: \ref tutorial_start
+
+*/

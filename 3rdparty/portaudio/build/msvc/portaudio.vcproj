@@ -943,6 +943,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\pa_win_wdmks.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\pa_win_wmme.h"
 				>
 			</File>

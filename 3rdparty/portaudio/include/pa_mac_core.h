@@ -124,6 +124,19 @@ AudioDeviceID PaMacCore_GetStreamOutputDevice( PaStream* s );
  */
 const char *PaMacCore_GetChannelName( int device, int channelIndex, bool input );
 
+    
+/** Retrieve the range of legal native buffer sizes for the specificed device, in sample frames.
+ 
+ @param device The global index of the PortAudio device about which the query is being made.
+ @param minBufferSizeFrames A pointer to the location which will receive the minimum buffer size value.
+ @param maxBufferSizeFrames A pointer to the location which will receive the maximum buffer size value.
+ 
+ @see kAudioDevicePropertyBufferFrameSizeRange in the CoreAudio SDK.
+ */
+PaError PaMacCore_GetBufferSizeRange( PaDeviceIndex device,
+                                       long *minBufferSizeFrames, long *maxBufferSizeFrames );
+
+
 /**
  * Flags
  */

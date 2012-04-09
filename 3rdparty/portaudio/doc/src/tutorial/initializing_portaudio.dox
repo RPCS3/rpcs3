@@ -1,0 +1,29 @@
+/** @page initializing_portaudio Initializing PortAudio
+@ingroup tutorial
+
+@section tut_init1 Initializing PortAudio
+
+Before making any other calls to PortAudio, you 'must' call Pa_Initialize(). This will trigger a scan of available devices which can be queried later. Like most PA functions, it will return a result of type paError. If the result is not paNoError, then an error has occurred.
+@code
+err = Pa_Initialize();
+if( err != paNoError ) goto error;
+@endcode
+
+You can get a text message that explains the error message by passing it to Pa_GetErrorText( err ). For Example:
+
+@code
+printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+@endcode
+
+It is also important, when you are done with PortAudio, to Terminate it:
+
+@code
+err = Pa_Terminate();
+if( err != paNoError )
+   printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+@endcode
+
+
+Previous: \ref writing_a_callback | Next: \ref open_default_stream
+
+*/
