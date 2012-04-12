@@ -222,7 +222,7 @@ endif(ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND AND common_libs)
 #---------------------------------------
 if(SOUNDTOUCH_FOUND AND ALSA_FOUND)
     set(zerospu2 TRUE)
-    # Comment the next line, if you want to compile spu2x
+    # Comment the next line, if you want to compile zerospu2
 	set(zerospu2 FALSE)
     message(STATUS "Don't build zerospu2. It is super-seeded by spu2x")
 else(SOUNDTOUCH_FOUND AND ALSA_FOUND)
