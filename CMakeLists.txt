@@ -79,9 +79,6 @@ if(common_libs)
     add_subdirectory(common/src/x86emitter)
 endif(common_libs)
 
-# make tools
-add_subdirectory(tools)
-
 # make pcsx2
 if(EXISTS "${PROJECT_SOURCE_DIR}/pcsx2" AND pcsx2_core)
     add_subdirectory(pcsx2)
