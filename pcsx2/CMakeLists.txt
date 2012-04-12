@@ -654,13 +654,13 @@ add_executable(${Output}
 ### Generate the resources files
 file(MAKE_DIRECTORY ${res_bin})
 
-add_custom_command(OUTPUT  "${res_bin}/Dualshock.h"  COMMAND "${PROJECT_SOURCE_DIR}/linux_various/hex2h.pl" "${res_src}/Dualshock.jpg" "${res_bin}/Dualshock" )
+add_custom_command(OUTPUT  "${res_bin}/Dualshock.h"  COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/hex2h.pl "${res_src}/Dualshock.jpg" "${res_bin}/Dualshock" )
 
 foreach(res_file IN ITEMS
         AppIcon16 AppIcon32 AppIcon64 BackgroundLogo ButtonIcon_Camera
         ConfigIcon_Appearance ConfigIcon_Cpu ConfigIcon_Gamefixes ConfigIcon_MemoryCard
         ConfigIcon_Paths ConfigIcon_Plugins ConfigIcon_Speedhacks ConfigIcon_Video)
-    add_custom_command(OUTPUT  "${res_bin}/${res_file}.h" COMMAND "${PROJECT_SOURCE_DIR}/linux_various/hex2h.pl" "${res_src}/${res_file}.png" "${res_bin}/${res_file}" )
+    add_custom_command(OUTPUT  "${res_bin}/${res_file}.h" COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/hex2h.pl "${res_src}/${res_file}.png" "${res_bin}/${res_file}" )
 endforeach(res_file IN ITEMS
         AppIcon16 AppIcon32 AppIcon64 BackgroundLogo ButtonIcon_Camera
         ConfigIcon_Appearance ConfigIcon_Cpu ConfigIcon_Gamefixes ConfigIcon_MemoryCard
