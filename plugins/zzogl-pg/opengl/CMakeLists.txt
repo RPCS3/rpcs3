@@ -164,6 +164,14 @@ target_link_libraries(${Output} ${X11_LIBRARIES})
 # link target with jpeg
 target_link_libraries(${Output} ${JPEG_LIBRARIES})
 
+if(Linux)
+	# link target with gtk2
+	target_link_libraries(${Output} ${GTK2_LIBRARIES})
+endif(Linux)
+
+# link target with zlib
+target_link_libraries(${Output} ${ZLIB_LIBRARIES})
+
 # User flags options
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
     target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
