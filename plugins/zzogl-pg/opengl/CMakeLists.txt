@@ -5,6 +5,10 @@ if(NOT TOP_CMAKE_WAS_SOURCED)
     It is advice to delete all wrongly generated cmake stuff => CMakeFiles & CMakeCache.txt")
 endif(NOT TOP_CMAKE_WAS_SOURCED)
 
+# Allow to build the shader files
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders")
+    add_subdirectory(ZeroGSShaders)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders")
 
 # plugin name
 set(Output zzogl-0.3.0)

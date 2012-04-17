@@ -26,6 +26,9 @@
 #include <cstdio>
 #include <vector>
 
+#define ZZshProgram 		CGprogram
+#define ZZshContext		CGcontext
+
 using namespace std;
 
 #define NUM_FILTERS 2 // texture filtering
