@@ -389,7 +389,8 @@ CRC::Game CRC::Lookup(uint32 crc)
 	if(m_map.empty())
 	{
 		string exclusions = theApp.GetConfig( "CrcHacksExclusions", "" );
-		printf( "GSdx: CrcHacksExclusions: %s\n", exclusions.c_str() );
+		if (exclusions.length() != 0)
+			printf( "GSdx: CrcHacksExclusions: %s\n", exclusions.c_str() );
 
 		for(int i = 0; i < countof(m_games); i++)
 		{

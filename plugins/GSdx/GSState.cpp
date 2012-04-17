@@ -183,7 +183,7 @@ void GSState::SetFrameSkip(int skip)
 
 void GSState::Reset()
 {
-	printf("GSdx info: GS reset\n");
+	//printf("GSdx info: GS reset\n");
 
 	// FIXME: memset(m_mem.m_vm8, 0, m_mem.m_vmsize); // bios logo not shown cut in half after reset, missing graphics in GoW after first FMV
 	memset(&m_path[0], 0, sizeof(m_path[0]) * countof(m_path));

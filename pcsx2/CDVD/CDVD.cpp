@@ -765,7 +765,7 @@ __fi void cdvdActionInterrupt()
 
 		case cdvdAction_Break:
 			// Make sure the cdvd action state is pretty well cleared:
-			DevCon.Warning("CDVD Break Call");
+			DevCon.WriteLn("CDVD Break Call");
 			cdvd.Reading = 0;
 			cdvd.Readed = 0;
 			cdvd.Ready  = CDVD_READY2;		// should be CDVD_READY1 or something else?

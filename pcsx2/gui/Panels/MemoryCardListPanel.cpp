@@ -53,7 +53,7 @@ bool EnumerateMemoryCard( McdSlotItem& dest, const wxFileName& filename, const w
 	const wxString fullpath( filename.GetFullPath() );
 	if( !filename.FileExists() ) return false;
 
-	DevCon.WriteLn( fullpath );
+	//DevCon.WriteLn( fullpath );
 	wxFFile mcdFile( fullpath );
 	if( !mcdFile.IsOpened() ) return false;	// wx should log the error for us.
 	if( mcdFile.Length() < (1024*528) )
@@ -1095,10 +1095,10 @@ void Panels::MemoryCardListPanel_Simple::ReadFilesAtMcdFolder(){
 			currentCardFile.Slot		= -1;
 			currentCardFile.IsEnabled	= false;
 			m_allFilesystemCards.push_back(currentCardFile);
-			DevCon.WriteLn(L"Enumerated file: '%s'", currentCardFile.Filename.GetFullName().c_str() );
+			//DevCon.WriteLn(L"Enumerated file: '%s'", currentCardFile.Filename.GetFullName().c_str() );
 		}
-		else
-			DevCon.WriteLn(L"MCD folder card file skipped: '%s'", memcardList[i].c_str() );
+		/*else
+			DevCon.WriteLn(L"MCD folder card file skipped: '%s'", memcardList[i].c_str() );*/
 	}
 }
 

@@ -429,7 +429,7 @@ struct Gif_Unit {
 			Gif_Tag gifTag(&pMem[offset & memMask]);
 			incTag(offset, curSize, 16 + gifTag.len); // Tag + Data length
 			if (pathIdx == GIF_PATH_1 && curSize >= 0x4000) {
-				Console.Warning("Gif Unit - GS packet size exceeded VU memory size!");
+				DevCon.Warning("Gif Unit - GS packet size exceeded VU memory size!");
 				return 0; // Bios does this... (Fixed if you delay vu1's xgkick by 103 vu cycles)
 			}
 			if (curSize >= size) return size;

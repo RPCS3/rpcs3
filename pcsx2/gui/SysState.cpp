@@ -280,14 +280,14 @@ static void CheckVersion( pxInputStream& thr )
 	if( savever > g_SaveVersion )
 		throw Exception::SaveStateLoadError( thr.GetStreamName() )
 			.SetDiagMsg(pxsFmt( L"Savestate uses an unsupported or unknown savestate version.\n(PCSX2 ver=%x, state ver=%x)", g_SaveVersion, savever ))
-			.SetUserMsg(_("Cannot load this savestate.  The state is from an incompatible edition of PCSX2 that is either newer than this version, or is no longer supported."));
+			.SetUserMsg(_("Cannot load this savestate.  The state is an unsupported version."));
 
 	// check for a "minor" version incompatibility; which happens if the savestate being loaded is a newer version
 	// than the emulator recognizes.  99% chance that trying to load it will just corrupt emulation or crash.
 	if( (savever >> 16) != (g_SaveVersion >> 16) )
 		throw Exception::SaveStateLoadError( thr.GetStreamName() )
-			.SetDiagMsg(pxsFmt( L"Savestate uses an unknown (future?!) savestate version.\n(PCSX2 ver=%x, state ver=%x)", g_SaveVersion, savever ))
-			.SetUserMsg(_("Cannot load this savestate. The state is an unsupported version, likely created by a newer edition of PCSX2."));
+			.SetDiagMsg(pxsFmt( L"Savestate uses an unknown savestate version.\n(PCSX2 ver=%x, state ver=%x)", g_SaveVersion, savever ))
+			.SetUserMsg(_("Cannot load this savestate. The state is an unsupported version."));
 };
 
 // --------------------------------------------------------------------------------------
