@@ -134,6 +134,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\GSDump.cpp" />
     <ClCompile Include="..\ZZClut.cpp" />
     <ClCompile Include="..\ZZoglDrawing.cpp" />
     <ClCompile Include="..\ZZoglFlushHack.cpp" />
@@ -187,6 +188,7 @@
     <None Include="..\ps2hw.dat" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\GSDump.h" />
     <ClInclude Include="aviUtil.h" />
     <ClInclude Include="..\GifTransfer.h" />
     <ClInclude Include="..\CRC.h" />

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1253"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="9,00"
 	Name="ZZOgl"
 	ProjectGUID="{2D4E85B2-F47F-4D65-B091-701E5C031DAC}"
 	RootNamespace="ZZogl"
@@ -266,6 +266,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\GSDump.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\GSmain.cpp"
 				>
 			</File>
@@ -427,6 +431,10 @@
 			</File>
 			<File
 				RelativePath="..\GS.h"
+				>
+			</File>
+			<File
+				RelativePath="..\GSDump.h"
 				>
 			</File>
 			<File

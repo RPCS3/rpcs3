@@ -111,6 +111,9 @@
     <ClCompile Include="..\ZZoglFlushHack.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\GSDump.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="GSsoftdx.def">
@@ -195,6 +198,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\ZZLog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\GSDump.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
