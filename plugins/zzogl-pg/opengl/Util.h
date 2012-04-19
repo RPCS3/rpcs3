@@ -58,10 +58,12 @@
 #include "CRC.h"
 #include "ZZLog.h"
 
+#ifdef _WIN32
 // need C definitions -- no mangling please!
 extern "C" u32   CALLBACK PS2EgetLibType(void);
 extern "C" u32   CALLBACK PS2EgetLibVersion2(u32 type);
 extern "C" char* CALLBACK PS2EgetLibName(void);
+#endif
 
 #include "ZZoglMath.h"
 #include "Profile.h"

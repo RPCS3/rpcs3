@@ -89,8 +89,7 @@ int ZZSave(s8* pbydata)
 	return 0;
 }
 
-extern u32 s_uFramebuffer;
-extern int g_nCurVBOIndex;
+extern u32 g_nCurVBOIndex;
 
 bool ZZLoad(s8* pbydata)
 {
@@ -163,7 +162,7 @@ bool ZZLoad(s8* pbydata)
 
 		icurctx = -1;
 
-		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, s_uFramebuffer);   // switch to the backbuffer
+		FB::Bind();   // switch to the backbuffer
 		SetFogColor(gs.fogcol);
 
 		GL_REPORT_ERRORD();

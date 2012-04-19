@@ -27,7 +27,7 @@
 		<Project filename="plugins/zerospu2/Linux/ZeroSPU2.cbp">
 			<Depends filename="3rdparty/SoundTouch/SoundTouch.cbp" />
 		</Project>
-		<Project filename="plugins/zzogl-pg/opengl/Linux/zzogl-pg/zzogl-pg.cbp" />
+		<Project filename="plugins/zzogl-pg/opengl/Linux/zzogl-pg/zzogl-pg.cbp" active="1" />
 		<Project filename="plugins/GSdx/GSdx.gcc.cbp" active="1" />
 		<Project filename="3rdparty/SDL-1.3.0-5387/SDL-1.3/SDL-1.3.cbp" />
 	</Workspace>

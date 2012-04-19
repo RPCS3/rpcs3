@@ -20,9 +20,6 @@
 #ifndef __GSREGS_H__
 #define __GSREGS_H__
 
-
-#ifdef USE_OLD_REGS
-
 enum GIF_REG
 {
 	GIF_REG_PRIM	= 0x00,
@@ -193,7 +190,7 @@ enum GS_ATST
 	ATST_EQUAL		= 4,
 	ATST_GEQUAL		= 5,
 	ATST_GREATER	= 6,
-	ATST_NOTEQUAL	= 7,
+	ATST_NOTEQUAL	= 7
 };
 
 enum GS_AFAIL
@@ -201,9 +198,24 @@ enum GS_AFAIL
 	AFAIL_KEEP		= 0,
 	AFAIL_FB_ONLY	= 1,
 	AFAIL_ZB_ONLY	= 2,
-	AFAIL_RGB_ONLY	= 3,
+	AFAIL_RGB_ONLY	= 3
+};
+ 
+enum GS_TFX
+{
+	TFX_MODULATE	= 0,
+	TFX_DECAL		= 1,
+	TFX_HIGHLIGHT	= 2,
+	TFX_HIGHLIGHT2	= 3
 };
 
+enum GS_CLAMP
+{
+	CLAMP_REPEAT		= 0,
+	CLAMP_CLAMP			= 1,
+	CLAMP_REGION_CLAMP	= 2,
+	CLAMP_REGION_REPEAT	= 3
+};
 // GIFReg
 
 REG64_(GIFReg, ALPHA)
@@ -763,7 +775,8 @@ REG128_SET(GIFPackedReg)
 	GIFPackedNOP	NOP;
 REG_SET_END
 
-
+// This register stores the background color. Theoretically it'd get blended with the image in some cases, but we don't appear to be
+// using it. See PMODE->SLBG. GSDx *is* using it.
 REG64_(GSReg, BGCOLOR)
 	u32 R:8;
 	u32 G:8;
@@ -772,12 +785,15 @@ REG64_(GSReg, BGCOLOR)
 	u32 _PAD2:32;
 REG_END
 
+// This register switches the direction of Fifo. 0 - Host -> Local; 1 - Local -> Host. Fifo is supposed to be empty at the time.
+// Unchecked by GSdx or ZZOgl.
 REG64_(GSReg, BUSDIR)
 	u32 DIR:1;
 	u32 _PAD1:31;
 	u32 _PAD2:32;
 REG_END
 
+// Mostly looks handled by pcsx2.
 REG64_(GSReg, CSR)
 	u32 SIGNAL:1;
 	u32 FINISH:1;
@@ -798,6 +814,12 @@ REG64_(GSReg, CSR)
 	u32 _PAD3:32;
 REG_END
 
+// Settings for whichever circuit we're using. (Again, see PMODE.)
+//    --  FBP - Frame Buffer Pointer. address / 2048.
+//    --  FBW - Frame Buffer Width. width / 64.
+//    --  PSM - psm, but 5 bit. 0 - PSMCT32; 1 - PSMCT24; 2 - PSMCT16; 10 - PSMCT16S; 18  - PS-GPU24?
+//    --  DBX - Upper left x coords of rectangle.
+//    --  DBY - Upper left y coords of rectangle.
 REG64_(GSReg, DISPFB) // (-1/2)
 	u32 FBP:9;
 	u32 FBW:6;
@@ -807,6 +829,14 @@ REG64_(GSReg, DISPFB) // (-1/2)
 	u32 DBY:11;
 	u32 _PAD2:10;
 REG_END
+
+// Settings for whichever display we're using.
+//    --  DX - X position in the display area.
+//    --  DY - Y position in the display area.
+//    --  MAGH - Horizontal Magnification; x1 - x16.
+//    --  MAGV - Vertical Magnification; x1 - x16.
+//    --  DW - Display Area Width - 1.
+//    --  DH - Display Area Height - 1.
 
 REG64_(GSReg, DISPLAY) // (-1/2)
 	u32 DX:12;
@@ -818,6 +848,16 @@ REG64_(GSReg, DISPLAY) // (-1/2)
 	u32 DH:11;
 	u32 _PAD2:9;
 REG_END
+
+// This register has settings for the frame buffer when writing back. These next three registers are unused in ZZOgl & GSDx.
+//   --  EXBP - Base pointer of the buffer / 64.
+//   --  EXBW - Width of the buffer / 64.
+//   --  FBIN - Whether we use OUT1 or OUT2. 0 - 1; 1 - 2.
+//   --  WFFMD - Interlace Mode; 0 - Field; 1 - Frame.
+//   --  EMODA - When processing an input alpha value; 0 - write it as is; 1 Convert from RGB to luminence value Y. 2 - Same as 1, only /2. 3 - 0.
+//   --  EMODC - When processing an input color value; 0 - write it as is; 1 Convert from RGB to luminence value Y. 2 - Convert to YCbCr. 3 - Write Alpha to RGB.
+//   --  WDX - X coords.
+//   --  WDY - Y coords.
 
 REG64_(GSReg, EXTBUF)
 	u32 EXBP:14;
@@ -832,6 +872,14 @@ REG64_(GSReg, EXTBUF)
 	u32 _PAD2:10;
 REG_END
 
+// Sets where you read when the write above is performed.
+//   --  SX - X coords.
+//   --  SX - Y coords.
+//   --  SMPH - Horiz Sampling rate.
+//   --  SMPV -  Vert Sampling rate.
+//   --  WW - Rect Width - 1
+//   --  WH - Rect Height - 1
+
 REG64_(GSReg, EXTDATA)
 	u32 SX:12;
 	u32 SY:11;
@@ -843,11 +891,13 @@ REG64_(GSReg, EXTDATA)
 	u32 _PAD2:9;
 REG_END
 
+// Starts or stops the aforementioned write.
 REG64_(GSReg, EXTWRITE)
 	u32 WRITE;
 	u32 _PAD2:32;
 REG_END
 
+// Pcsx2 handles this.
 REG64_(GSReg, IMR)
 	u32 _PAD1:8;
 	u32 SIGMSK:1;
@@ -858,6 +908,16 @@ REG64_(GSReg, IMR)
 	u32 _PAD2:19;
 	u32 _PAD3:32;
 REG_END
+
+// The fields of PMODE are:
+//    --  EN1 - Read Circuit 1; 0 - off, 1 - on.
+//    --  EN2 - Read Circuit 2; 0 - off, 1 - on.
+//    --  CRTMD - Always 1.
+//    --  MMOD - For Alpha blending, the selection is: 0 - The Alpha value of circuit 1, 1 - The ALP register value.
+//    --  AMOD - The OUT1 Alpha value selection: 0 - Read circuit 1, 1 - Read Circuit 2.
+//    --  SLBG - The Alpha blending type: 0 - blended with the output of Read circuit 1, 1 - blended with the background color.
+//    --  ALP - The fixed Alpha value.
+//
 
 REG64_(GSReg, PMODE)
 	u32 EN1:1;
@@ -871,11 +931,13 @@ REG64_(GSReg, PMODE)
 	u32 _PAD1:32;
 REG_END
 
+// Pcsx2 handles this.
 REG64_(GSReg, SIGLBLID)
 	u32 SIGID:32;
 	u32 LBLID:32;
 REG_END
 
+// Not sure about this one...
 REG64_(GSReg, SMODE1)
 	u32 RC:3;
 	u32 LC:7;
@@ -901,6 +963,11 @@ REG64_(GSReg, SMODE1)
 	u32 _PAD1:27;
 REG_END
 
+// The fields of SMODE2 are:
+//    --  INT - 0 for non-interlaced; 1 for interlaced.
+//    --  FFMD - 0 for field mode (read every other line); 1 for frame mode (read every line)
+//    --  DPMS - VESA DPMS mode setting; 0 - on, 1 - standby, 2 - suspend, 3 - off.
+//
 REG64_(GSReg, SMODE2)
 	u32 INT:1;
 	u32 FFMD:1;
@@ -913,6 +980,8 @@ REG64_(GSReg, SIGBLID)
 	u32 SIGID;
 	u32 LBLID;
 REG_END
+
+extern u8* g_pBasePS2Mem;
 
 #define PMODE ((GSRegPMODE*)(g_pBasePS2Mem+0x0000))
 #define SMODE1 ((GSRegSMODE1*)(g_pBasePS2Mem+0x0010))
@@ -942,6 +1011,21 @@ REG_END
 
 #define GET_GSFPS (((SMODE1->CMOD&1) ? 50 : 60) / (SMODE2->INT ? 1 : 2))
 
+static __forceinline GSRegDISPLAY* Display_Reg(int circuit)
+{
+	return (circuit) ? DISPLAY2 : DISPLAY1;
+}
+
+static __forceinline GSRegDISPFB* Dispfb_Reg(int circuit)
+{
+	return (circuit) ? DISPFB2 : DISPFB1;
+}
+
+static __forceinline bool Circuit_Enabled(int circuit)
+{
+	return (circuit) ? PMODE->EN2 : PMODE->EN1;
+}
+
 extern void WriteTempRegs();
 extern void SetFrameSkip(bool skip);
 extern void ResetRegs();
@@ -958,7 +1042,4 @@ void FlushBoth();
 // called on a primitive switch
 void Prim();
 
-#else
-#include "NewRegs.h"
-#endif
 #endif

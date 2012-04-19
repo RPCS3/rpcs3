@@ -34,6 +34,9 @@
 
 #define VB_BUFFERSIZE			   0x4000
 
+extern void FlushIfNecesary(void* ptr);
+extern bool g_bSaveZUpdate;
+
 // all textures have this width
 extern int GPU_TEXWIDTH;
 extern float g_fiGPU_TEXWIDTH;
@@ -101,10 +104,10 @@ class CRenderTarget
 			TS_Virtual = 4, // currently not mapped to memory
 			TS_FeedbackReady = 8, // feedback effect is ready and doesn't need to be updated
 			TS_NeedConvert32 = 16,
-			TS_NeedConvert16 = 32,
+			TS_NeedConvert16 = 32
 		};
-		inline float4 DefaultBitBltPos();
-		inline float4 DefaultBitBltTex();
+		float4 DefaultBitBltPos();
+		float4 DefaultBitBltTex();
 
 	private:
 		void _CreateFeedback();
@@ -310,9 +313,12 @@ class CRenderTargetMngr
 			return ptarg;
 		}
 
-		static void DestroyTarg(CRenderTarget* ptarg);
+		void DestroyTarg(CRenderTarget* ptarg);
 		void PrintTargets();
 		MAPTARGETS mapTargets, mapDummyTargs;
+	private:
+		
+		void DestroyAllTargetsHelper(void* ptr);
 };
 
 class CMemoryTargetMngr
@@ -487,108 +493,6 @@ inline u32 GetFrameKeyDummy(CRenderTarget* frame)
 	return GetFrameKeyDummy(frame->fbp, frame->fbw, frame->fbh, frame->psm);
 }
 
-#include "Mem.h"
-
-static __forceinline void DrawTriangleArray()
-{
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	GL_REPORT_ERRORD();
-}
-
-static __forceinline void DrawBuffers(GLenum *buffer)
-{
-	if (glDrawBuffers != NULL) 
-	{
-		glDrawBuffers(1, buffer);
-	}
-
-	GL_REPORT_ERRORD();
-}
-
-static __forceinline void FBTexture(int attach, int id = 0)
-{
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT + attach, GL_TEXTURE_RECTANGLE_NV, id, 0);
-	GL_REPORT_ERRORD();
-}
-
-static __forceinline void ResetRenderTarget(int index)
-{
-	FBTexture(index);
-}
-
-static __forceinline void Texture2D(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
-{
-	glTexImage2D(GL_TEXTURE_2D, 0, iFormat, width, height, 0, format, type, pixels);
-}
-
-static __forceinline void Texture2D(GLint iFormat, GLenum format, GLenum type, const GLvoid* pixels)
-{
-	glTexImage2D(GL_TEXTURE_2D, 0, iFormat, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, format, type, pixels);
-}
-
-static __forceinline void Texture3D(GLint iFormat, GLint width, GLint height, GLint depth, GLenum format, GLenum type, const GLvoid* pixels)
-{
-	glTexImage3D(GL_TEXTURE_3D, 0, iFormat, width, height, depth, 0, format, type, pixels);
-}
-	
-static __forceinline void TextureRect(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
-{
-	glTexImage2D(GL_TEXTURE_RECTANGLE_NV, 0, iFormat, width, height, 0, format, type, pixels);
-}
-
-static __forceinline void TextureRect2(GLint iFormat, GLint width, GLint height, GLenum format, GLenum type, const GLvoid* pixels)
-{
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, iFormat, width, height, 0, format, type, pixels);
-}
-
-static __forceinline void TextureRect(GLenum attach, GLuint id = 0)
-{
-	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, attach, GL_RENDERBUFFER_EXT, id);
-}
-
-static __forceinline void setTex2DFilters(GLint type)
-{
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, type);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, type);
-}
-
-static __forceinline void setTex2DWrap(GLint type)
-{
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, type);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, type);
-}
-
-static __forceinline void setTex3DFilters(GLint type)
-{
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, type);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, type);
-}
-
-static __forceinline void setTex3DWrap(GLint type)
-{
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, type);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, type);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, type);
-}
-
-static __forceinline void setRectFilters(GLint type)
-{
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MAG_FILTER, type);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_MIN_FILTER, type);
-}
-
-static __forceinline void setRectWrap(GLint type)
-{
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_S, type);
-	glTexParameteri(GL_TEXTURE_RECTANGLE_NV, GL_TEXTURE_WRAP_T, type);
-}
-
-static __forceinline void setRectWrap2(GLint type)
-{
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, type);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, type);
-}
-
 //------------------------ Inlines -------------------------
 
 // Calculate maximum height for target
@@ -603,5 +507,13 @@ inline int get_maxheight(int fbp, int fbw, int psm)
 
 	return ret;
 }
+
+// memory size for one row of texture. It depends on width of texture and number of bytes
+// per pixel
+inline u32 Pitch(int fbw) { return (RW(fbw) * 4) ; }
+
+// memory size of whole texture. It is number of rows multiplied by memory size of row
+inline u32 Tex_Memory_Size(int fbw, int fbh) { return (RH(fbh) * Pitch(fbw)); }
+
 
 #endif

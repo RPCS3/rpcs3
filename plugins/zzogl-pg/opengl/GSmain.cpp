@@ -22,6 +22,7 @@
 #include "Profile.h"
 #include "GLWin.h"
 #include "ZZoglFlushHack.h"
+#include "ZZoglShaders.h"
 
 
 using namespace std;
@@ -82,7 +83,7 @@ extern int ZZSave(s8* pbydata);
 extern bool ZZLoad(s8* pbydata);
 
 // switches the render target to the real target, flushes the current render targets and renders the real image
-extern void RenderCRTC(int interlace);
+extern void RenderCRTC();
 
 #if defined(_WIN32) && defined(_DEBUG)
 HANDLE g_hCurrentThread = NULL;
@@ -91,37 +92,37 @@ HANDLE g_hCurrentThread = NULL;
 extern int VALIDATE_THRESH;
 extern u32 TEXDESTROY_THRESH;
 
-u32 CALLBACK PS2EgetLibType()
+EXPORT_C_(u32) PS2EgetLibType()
 {
 	return PS2E_LT_GS;
 }
 
-char* CALLBACK PS2EgetLibName()
+EXPORT_C_(char*) PS2EgetLibName()
 {
 	return libraryName;
 }
 
-u32 CALLBACK PS2EgetLibVersion2(u32 type)
+EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 {
 	return (zgsversion << 16) | (zgsrevision << 8) | zgsbuild | (zgsminor << 24);
 }
 
-void CALLBACK GSsetBaseMem(void* pmem)
+EXPORT_C_(void) GSsetBaseMem(void* pmem)
 {
 	g_pBasePS2Mem = (u8*)pmem;
 }
 
-void CALLBACK GSsetSettingsDir(const char* dir)
+EXPORT_C_(void) GSsetSettingsDir(const char* dir)
 {
 	s_strIniPath = (dir == NULL) ? wxString(L"inis") : wxString(dir, wxConvFile);
 }
 
-void CALLBACK GSsetLogDir(const char* dir)
+EXPORT_C_(void) GSsetLogDir(const char* dir)
 {
 	ZZLog::SetDir(dir);
 }
 
-void CALLBACK GSsetGameCRC(int crc, int options)
+EXPORT_C_(void) GSsetGameCRC(int crc, int options)
 {
     // build a list of function pointer for GetSkipCount (SkipDraw)
 	static GetSkipCount GSC_list[NUMBER_OF_TITLES];
@@ -217,7 +218,7 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 	ListHacks();
 }
 
-void CALLBACK GSsetFrameSkip(int frameskip)
+EXPORT_C_(void) GSsetFrameSkip(int frameskip)
 {
 	FUNCLOG
 	s_frameskipping |= frameskip;
@@ -232,7 +233,7 @@ void CALLBACK GSsetFrameSkip(int frameskip)
 	}
 }
 
-void CALLBACK GSreset()
+EXPORT_C_(void) GSreset()
 {
 	FUNCLOG
 
@@ -242,11 +243,11 @@ void CALLBACK GSreset()
 
 	gs.prac = 1;
 	prim = &gs._prim[0];
-	gs.imageTransfer = -1;
+	gs.transferring = false;
 	gs.q = 1;
 }
 
-void CALLBACK GSgifSoftReset(u32 mask)
+EXPORT_C_(void) GSgifSoftReset(u32 mask)
 {
 	FUNCLOG
 
@@ -254,11 +255,11 @@ void CALLBACK GSgifSoftReset(u32 mask)
 	if (mask & 2) memset(&gs.path[1], 0, sizeof(gs.path[1]));
 	if (mask & 4) memset(&gs.path[2], 0, sizeof(gs.path[2]));
 
-	gs.imageTransfer = -1;
+	gs.transferring = false;
 	gs.q = 1;
 }
 
-s32 CALLBACK GSinit()
+EXPORT_C_(s32) GSinit()
 {
 	FUNCLOG
 
@@ -281,7 +282,7 @@ __forceinline void InitMisc()
 	ResetRegs();
 }
 
-s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
+EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 {
 	FUNCLOG
 
@@ -337,32 +338,34 @@ EXPORT_C_(s32) GSopen2( void* pDsp, u32 flags )
 }
 #endif
 
-void CALLBACK GSshutdown()
+EXPORT_C_(void) GSshutdown()
 {
 	FUNCLOG
 
 	ZZLog::Close();
 }
-void CALLBACK GSclose()
+EXPORT_C_(void) GSclose()
 {
 	FUNCLOG
 
 	ZZDestroy();
 	GLWin.CloseWindow();
 
+	// Free alocated memory. We could close plugin without closing pcsx2, so we SHOULD free all allocated resources
+	ZZshExitCleaning();
 	SaveStateFile = NULL;
 	SaveStateExists = true; // default value
     g_LastCRC = 0;
 }
 
-void CALLBACK GSirqCallback(void (*callback)())
+EXPORT_C_(void) GSirqCallback(void (*callback)())
 {
 	FUNCLOG
 
 	GSirq = callback;
 }
 
-void CALLBACK GSwriteCSR(u32 write)
+EXPORT_C_(void) GSwriteCSR(u32 write)
 {
 	FUNCLOG
 
@@ -373,7 +376,7 @@ void CALLBACK GSwriteCSR(u32 write)
 #define access _access
 #endif
 
-void CALLBACK GSchangeSaveState(int newstate, const char* filename)
+EXPORT_C_(void) GSchangeSaveState(int newstate, const char* filename)
 {
 	FUNCLOG
 
@@ -428,7 +431,7 @@ static bool get_snapshot_filename(char *filename, char* path, const char* extens
 	return true;
 }
 
-void CALLBACK GSmakeSnapshot(char *path)
+EXPORT_C_(void) GSmakeSnapshot(char *path)
 {
 	FUNCLOG
 
@@ -474,7 +477,16 @@ static __forceinline void SetGSTitle()
 	GLWin.SetTitle(strtitle);
 }
 
-void CALLBACK GSvsync(int interlace)
+// This isn't implemented for some reason? Adding a field for it for the moment, till I get a chance to look closer.
+EXPORT_C_(void) GSsetVsync(int enabled)
+{
+	FUNCLOG
+
+	ZZLog::Debug_Log("Setting VSync to 0x%x.", enabled);
+	gs.vsync = enabled;
+}
+
+EXPORT_C_(void) GSvsync(int current_interlace)
 {
 	FUNCLOG
 
@@ -506,8 +518,9 @@ void CALLBACK GSvsync(int interlace)
 
 	g_nRealFrame++;
 
-	// !interlace? Hmmm... Fixme.
-	RenderCRTC(!interlace);
+	// The value passed seems to either be 0 or 0x2000, and we want 0 or 1. Perhaps !! would be better...
+	gs.interlace = !current_interlace;
+	RenderCRTC();
 
 	GLWin.ProcessEvents();
 
@@ -559,7 +572,7 @@ void CALLBACK GSvsync(int interlace)
 
 }
 
-void CALLBACK GSreadFIFO(u64 *pMem)
+EXPORT_C_(void) GSreadFIFO(u64 *pMem)
 {
 	FUNCLOG
 
@@ -571,7 +584,7 @@ void CALLBACK GSreadFIFO(u64 *pMem)
 	TransferLocalHost((u32*)pMem, 1);
 }
 
-void CALLBACK GSreadFIFO2(u64 *pMem, int qwc)
+EXPORT_C_(void) GSreadFIFO2(u64 *pMem, int qwc)
 {
 	FUNCLOG
 
@@ -583,7 +596,7 @@ void CALLBACK GSreadFIFO2(u64 *pMem, int qwc)
 	TransferLocalHost((u32*)pMem, qwc);
 }
 
-int CALLBACK GSsetupRecording(int start, void* pData)
+EXPORT_C_(int) GSsetupRecording(int start, void* pData)
 {
 	FUNCLOG
 
@@ -595,7 +608,7 @@ int CALLBACK GSsetupRecording(int start, void* pData)
 	return 1;
 }
 
-s32 CALLBACK GSfreeze(int mode, freezeData *data)
+EXPORT_C_(s32) GSfreeze(int mode, freezeData *data)
 {
 	FUNCLOG
 

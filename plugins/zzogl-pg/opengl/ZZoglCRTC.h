@@ -21,10 +21,7 @@
 #define ZZOGLCRTC_H_INCLUDED
 
 #include <stdlib.h>
-
 #include "targets.h"
-
-#define INTERLACE_COUNT (bInterlace && interlace == (conf.interlace))
 
 #ifdef _WIN32
 extern HDC		hDC;	   // Private GDI Device Context

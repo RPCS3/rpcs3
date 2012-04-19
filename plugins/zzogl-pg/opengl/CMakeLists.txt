@@ -45,6 +45,14 @@ if(CMAKE_BUILD_TYPE STREQUAL Release)
     add_definitions(${CommonFlags} ${OptimizationFlags} -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
+# Select the shader API 
+if(GLSL_API)
+	add_definitions(-DGLSL_API)
+else(GLSL_API)
+	add_definitions(-DNVIDIA_CG_API)
+endif(GLSL_API)
+
+
 # zzogl sources
 set(zzoglSources
     GifTransfer.cpp
@@ -54,17 +62,17 @@ set(zzoglSources
     GSmain.cpp
     HostMemory.cpp
     Mem.cpp
-    # memcpy_amd.cpp
     Mem_Swizzle.cpp
     Mem_Tables.cpp
     Profile.cpp
     rasterfont.cpp
-    NewRegs.cpp
     Regs.cpp
     targets.cpp
-    x86.cpp
     zerogs.cpp
     zpipe.cpp
+    ZZDepthTargets.cpp
+    ZZMemoryTargets.cpp
+    ZZRenderTargets.cpp
     ZZClut.cpp
     ZZHacks.cpp
     ZZKeyboard.cpp
@@ -74,8 +82,10 @@ set(zzoglSources
     ZZoglCRTC.cpp
     ZZoglFlush.cpp
     ZZoglFlushHack.cpp
+    ZZoglMem.cpp
     ZZoglSave.cpp
     ZZoglShaders.cpp
+    ZZoglShadersGLSL.cpp
     ZZoglShoots.cpp
     ZZoglVB.cpp
     )
@@ -94,7 +104,6 @@ set(zzoglHeaders
     Mem_Transmit.h
     Profile.h
     rasterfont.h
-    NewRegs.h
     Regs.h
     targets.h
     Util.h
@@ -102,20 +111,18 @@ set(zzoglHeaders
     zerogs.h
     zpipe.h
     ZZClut.h
+    ZZoglFlush.h
     ZZGl.h
     ZZHacks.h
     ZZoglDrawing.h
     ZZLog.h
     ZZoglCRTC.h
     ZZoglMath.h
+    ZZoglMem.h
     ZZoglShaders.h
     ZZoglShoots.h
     ZZoglVB.h
     )
-
-# zzogl S sources
-set(zzoglSSources
-    x86-32.S)
 
 # zzogl shader sources
 set(zzoglShaderSources
@@ -131,9 +138,6 @@ set(zzoglLinuxSources
 set(zzoglLinuxHeaders
     Linux/Linux.h)
 
-# change language of .S-files to c++
-set_source_files_properties(${zzoglSSources} PROPERTIES LANGUAGE CXX)
-
 # add additional include directories
 include_directories(.
     Linux)
@@ -142,7 +146,6 @@ include_directories(.
 add_library(${Output} SHARED
     ${zzoglSources}
     ${zzoglHeaders}
-    ${zzoglSSources}
     ${zzoglShaderSources}
     ${zzoglLinuxSources}
     ${zzoglLinuxHeaders})
@@ -154,7 +157,9 @@ set_target_properties(${Output} PROPERTIES COMPILE_DEFINITIONS USE_GSOPEN2)
 target_link_libraries(${Output} Utilities)
 
 # link target with Cg
-target_link_libraries(${Output} ${CG_LIBRARIES})
+if(NOT GLSP_API)
+	target_link_libraries(${Output} ${CG_LIBRARIES})
+endif(NOT GLSP_API)
 
 # link target with glew
 target_link_libraries(${Output} ${GLEW_LIBRARY})
@@ -183,10 +188,18 @@ endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 
 if(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${PLUGIN_DIR})
+    if(GLSL_API)
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.glsl DESTINATION ${PLUGIN_DIR})
+    else(GLSL_API)
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${PLUGIN_DIR})
+    endif(GLSL_API)
 else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    if(GLSL_API)
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    else(GLSL_API)
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    endif(GLSL_API)
 endif(PACKAGE_MODE)
 
 ################################### Replay Loader

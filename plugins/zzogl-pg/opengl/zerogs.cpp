@@ -43,7 +43,7 @@ void HandleGLError()
 {
 	FUNCLOG
 	// check the error status of this framebuffer */
-	GLenum error = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+	GLenum error = FB::State();
 
 	// if error != GL_FRAMEBUFFER_COMPLETE_EXT, there's an error of some sort
 
@@ -210,7 +210,7 @@ void SetAA(int mode)
 //	GL_REPORT_ERROR();
 //
 //	fAlpha = 1;
-//	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);   // switch to the backbuffer
+//	FB::Unbind();   // switch to the backbuffer
 //
 //	DisableAllgl() ;
 //	SetShaderCaller("RenderCustom");
@@ -311,7 +311,7 @@ void ExtWrite()
 //  else if (PSMT_ISHALF(texframe.psm)) bpp = 2;
 //
 //  // get the start and end addresses of the buffer
-//  GetRectMemAddress(start, end, texframe.psm, 0, 0, texframe.tw, texframe.th, texframe.tbp0, texframe.tbw);
+//  GetRectMemAddressZero(start, end, texframe.psm, texframe.tw, texframe.th, texframe.tbp0, texframe.tbw);
 }
 
 ////////////

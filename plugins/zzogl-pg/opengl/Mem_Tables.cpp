@@ -250,6 +250,92 @@ u32 g_pageTable16SZ[64][64];
 u32 g_pageTable8[64][128];
 u32 g_pageTable4[128][128];
 
+
+//maximum PSM is 58, so our arrays have 58 + 1 = 59 elements
+
+// This table is used for fasr access to memory storage data. Field meaning is following:
+// 0 -- the number (1 << [psm][0]) is number of pixels per storage format. It's  0 if stored 1 pixel, 1 for 2 pixels (16-bit), 2 for 4 pixels (PSMT8) and 3 for 8 (PSMT4)
+// 5 -- is 3 - [psm][0]. Just for speed
+// 3, 4 -- size-1 of pageTable for psm. It used to clump x, y otside boundaries.
+// 1, 2 -- the number (1 << [psm][1]) and (1 << [psm[2]]) is also size of pageTable. So [psm][3] = (1 << [psm][1]) - 1
+//	Also note, that [psm][1] =  5 + ([psm][0] + 1) / 2, and [psm][2] = 6 + [psm][0] / 2.
+// 6 -- pixel mask, (1 << [psm][5]) - 1, if be used to word, it leave only bytes for pixel formay
+// 7 -- starting position of data in word, PSMT8H, 4HL, 4HH are stored data not from the begining.
+u32 ZZ_DT[MAX_PSM][TABLE_WIDTH] = {
+	{0, 5, 6,  31,  63, 3, 0xffffffff, 0}, // 0 PSMCT32	
+	{0, 5, 6,  31,  63, 3, 0x00ffffff, 0}, // 1 PSMCT24
+	{1, 6, 6,  63,  63, 2, 0x0000ffff, 0}, // 2 PSMCT16
+	{0, }, // 3
+	{0, }, // 4
+	{0, }, // 5
+	{0, }, // 6
+	{0, }, // 7
+	{0, }, // 8
+	{0, }, // 9
+	{1, 6, 6,  63,  63, 2, 0x0000ffff, 0}, // 10 PSMCT16S
+ 	{0, }, // 11
+	{0, }, // 12
+	{0, }, // 13
+	{0, }, // 14
+	{0, }, // 15
+	{0, }, // 16
+	{0, }, // 17
+	{0, }, // 18
+	{2, 6, 7,  63, 127, 1, 0x000000ff, 0}, // 19 PSMT8
+	{3, 7, 7, 127, 127, 0, 0x0000000f, 0}, // 20 PSMT4
+	{0, }, // 21
+	{0, }, // 22
+	{0, }, // 23
+	{0, }, // 24
+	{0, }, // 25
+	{0, }, // 26
+	{0, 5, 6,  31,  63, 3, 0x000000ff, 24}, // 27 PSMT8H
+	{0, }, // 28
+	{0, }, // 29
+	{0, }, // 30
+	{0, }, // 31
+	{0, }, // 32
+	{0, }, // 33
+	{0, }, // 34
+	{0, }, // 35
+	{0, 5, 6,  31,  63, 3, 0x0000000f, 24}, // 36 PSMT4HL
+	{0, }, // 37
+	{0, }, // 38
+	{0, }, // 39
+	{0, }, // 40
+	{0, }, // 41
+	{0, }, // 42
+	{0, }, // 43
+	{0, 5, 6,  31,  63, 3, 0x0000000f, 28}, // 44 PSMT4HH
+	{0, }, // 45
+	{0, }, // 46
+	{0, }, // 47
+	{0, 5, 6,  31,  63, 3, 0xffffffff, 0}, // 48 PSMCT32Z
+	{0, 5, 6,  31,  63, 3, 0x00ffffff, 0}, // 49 PSMCT24Z
+	{1, 6, 6,  63,  63, 2, 0x0000ffff, 0}, // 50 PSMCT16Z
+	{0, }, // 51
+	{0, }, // 52
+	{0, }, // 53
+	{0, }, // 54
+	{0, }, // 55
+	{0, }, // 56
+	{0, }, // 57
+	{1, 6, 6,  63,  63, 2, 0x0000ffff, 0}, // 58 PSMCT16SZ
+	{0, }, // 59
+	{0, }, // 60
+	{0, }, // 61
+	{0, }, // 62
+	{0, }, // 63
+};
+
+
+//maxium PSM is 58, so our arrays have 58 + 1 = 59 elements
+u32** g_pageTable[MAX_PSM] = {NULL,};
+u32** g_blockTable[MAX_PSM] = {NULL, };
+u32** g_columnTable[MAX_PSM] = {NULL, };
+u32 g_pageTable2[MAX_PSM][127][127] = {0, };
+u32** g_pageTableNew[MAX_PSM] = {NULL,};
+
 /* PSM reference array
 { 	32, 24, 16, NULL, NULL, NULL, NULL, NULL,
 	NULL, NULL, 16S, NULL, NULL, NULL, NULL, NULL,

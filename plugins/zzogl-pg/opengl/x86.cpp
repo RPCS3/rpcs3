@@ -22,8 +22,12 @@
 #include "x86.h"
 
 #if defined(ZEROGS_SSE2)
-#include <emmintrin.h>
+#include <immintrin.h>
 #endif
+
+
+// Note: all codes of this files is deprecated. Keeping for reference.
+
 
 // swizzling
 

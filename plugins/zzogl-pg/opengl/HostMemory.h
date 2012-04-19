@@ -96,7 +96,10 @@ inline u8* _MemoryAddress(int x)
 }
 
 extern void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h, int bp, int bw);
-
+extern void GetRectMemAddress(int& start, int& end, int psm, Point p, Size s, int bp, int bw);
+extern void GetRectMemAddress(int& start, int& end, int psm, int x, int y, Size s, int bp, int bw);
+extern void GetRectMemAddressZero(int& start, int& end, int psm, int w, int h, int bp, int bw);
+extern void GetRectMemAddressZero(int& start, int& end, int psm, Size s, int bp, int bw);
 
 // called when trxdir is accessed. If host is involved, transfers memory to temp buffer byTransferBuf.
 // Otherwise performs the transfer. TODO: Perhaps divide the transfers into chunks?
@@ -107,8 +110,5 @@ extern void InitTransferLocalHost();
 extern void TransferLocalHost(void* pbyMem, u32 nQWordSize);
 
 extern void TransferLocalLocal();
-
-extern void TerminateLocalHost();
-extern void TerminateHostLocal();
 
 #endif // HOSTMEMORY_H_INCLUDED

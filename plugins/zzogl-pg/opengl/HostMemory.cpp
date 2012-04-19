@@ -18,8 +18,6 @@
  */
 
 #include "GS.h"
-#include <Cg/cg.h>
-#include <Cg/cgGL.h>
 
 #include <stdlib.h>
 #include "Mem.h"
@@ -117,14 +115,14 @@ void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h
 
     if (PSMT_ISZTEX(psm))
     {
-        // Somehow, I doubt this code is right. I'll have to look into it. For the moment, I'm keeping it the
-        // way it was. --arcum42
-
+    	// This still needs an eye kept on it.
         const BLOCK& b = m_Blocks[psm];
-
-        bw = (bw + b.width - 1) / b.width;
-        start = bp * 256 + ((y / b.height) * bw + (x / b.width)) * 0x2000;
-        end = bp * 256  + (((y + h - 1) / b.height) * bw + (x + w + b.width - 1) / b.width) * 0x2000;
+		const int x2 = x + w + b.width - 1;
+		const int y2 = y + h - 1;
+        bw = bw / b.width;
+        
+        start = (bp + ((y / b.height) * bw + (x / b.width)) * 0x20) * 0x100;
+        end = (bp + ((y2 / b.height) * bw + (x2 / b.width)) * 0x20) * 0x100;
         return;
     }
  
@@ -139,46 +137,101 @@ void GetRectMemAddress(int& start, int& end, int psm, int x, int y, int w, int h
     }
     else
     {
-        // This is what it used to do, which doesn't seem right.
-        // Keeping it for reference, in case removing it breaks anything.
+        start /= 2;
+        end /= 2;
+    }
+}
+
+// Same as GetRectMemAddress, except that we know x & y are zero, so it's simplified a bit.
+void GetRectMemAddressZero(int& start, int& end, int psm, int w, int h, int bp, int bw)
+{
+    FUNCLOG
+    u32 bits = 0;
+
+    if (m_Blocks[psm].bpp == 0)
+    {
+        ZZLog::Error_Log("ZeroGS: Bad psm 0x%x.", psm);
+        start = 0;
+        end = MEMORY_END;
+        return;
+    }
+
+    if (PSMT_ISZTEX(psm))
+    {
+    	// This still needs an eye kept on it.
+        const BLOCK& b = m_Blocks[psm];
+		const int x2 = w + b.width - 1;
+		const int y2 = h - 1;
+        bw = bw / b.width;
+        
+		start = bp * 0x100;
+        end = (bp + ((y2 / b.height) * bw + (x2 / b.width)) * 0x20) * 0x100;
+        return;
+    }
  
-        //int newx = ((x + w - 1 + 31) & ~31) - 1;
-        //int newy = ((y + h - 1 + 15) & ~15) - 1;
-        //start = getPixelAddress4(x, y, bp, bw) / 2;
-        //end = (getPixelAddress4(max(newx, x), max(newy, y), bp, bw) + 2) / 2;
+    bits = PSMT_BITS_NUM(psm);
+    start = getPixelFun[psm](0, 0, bp, bw);
+    end = getPixelFun[psm](w - 1, h - 1, bp, bw) + 1;
  
+    if (bits > 0)
+    {
+        start *= bits;
+        end *= bits;
+    }
+    else
+    {
         start /= 2;
         end /= 2;
     }
 }
  
+
+void GetRectMemAddress(int& start, int& end, int psm, Point p, Size s, int bp, int bw)
+{
+	GetRectMemAddress(start, end, psm, p.x, p.y, s.w, s.h, bp, bw);
+}
+
+void GetRectMemAddress(int& start, int& end, int psm, int x, int y, Size s, int bp, int bw)
+{
+	GetRectMemAddress(start, end, psm, x, y, s.w, s.h, bp, bw);
+}
+
+void GetRectMemAddressZero(int& start, int& end, int psm, Size s, int bp, int bw)
+{
+	GetRectMemAddressZero(start, end, psm, s.w, s.h, bp, bw);
+}
+
 void InitTransferHostLocal()
 {
     FUNCLOG
  
 #if defined(_DEBUG)
     // Xenosaga 1.
-    if (gs.trxpos.dx + gs.imageWnew > gs.dstbuf.bw)
-        ZZLog::Debug_Log("Transfer error, width exceeded. (0x%x > 0X%x)", gs.trxpos.dx + gs.imageWnew, gs.dstbuf.bw);
+    if (gs.trxpos.dx + gs.imageNew.w > gs.dstbuf.bw)
+        ZZLog::Debug_Log("Transfer error, width exceeded. (0x%x > 0X%x)", gs.trxpos.dx + gs.imageNew.w, gs.dstbuf.bw);
 #endif
  
     //bool bHasFlushed = false;
  
-    gs.imageX = gs.trxpos.dx;
-    gs.imageY = gs.trxpos.dy;
+    gs.image.x = gs.trxpos.dx;
+    gs.image.y = gs.trxpos.dy;
  
-    gs.imageEndX = gs.imageX + gs.imageWnew;
-    gs.imageEndY = gs.imageY + gs.imageHnew;
+    gs.imageEnd.x = gs.image.x + gs.imageNew.w;
+    gs.imageEnd.y = gs.image.y + gs.imageNew.h;
  
-    assert(gs.imageEndX < 2048 && gs.imageEndY < 2048);
+    assert(gs.imageEnd.x < 2048 && gs.imageEnd.y < 2048);
  
     // This needs to be looked in to, since psm should *not* be 63.
     // hack! viewful joe
-    if (gs.dstbuf.psm == 63) gs.dstbuf.psm = 0;
+    if (gs.dstbuf.psm == 63) 
+    {
+    	ZZLog::WriteLn("gs.dstbuf.psm set to 0!");
+    	gs.dstbuf.psm = 0;
+    }
  
     int start, end;
  
-    GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
+    GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageNew, gs.dstbuf.bp, gs.dstbuf.bw);
  
     if (end > MEMORY_END)
     {
@@ -189,7 +242,7 @@ void InitTransferHostLocal()
         // MEMORY_END is 0x400000...
  
         ZZLog::Warn_Log("Init host local out of bounds! (end == 0x%x)", end);
-        //gs.imageTransfer = -1;
+		//gs.transferring = false;
         end = MEMORY_END;
     }
  
@@ -198,17 +251,18 @@ void InitTransferHostLocal()
     if (vb[0].nCount > 0) Flush(0);
     if (vb[1].nCount > 0) Flush(1);
  
-    //ZZLog::Prim_Log("trans: bp:%x x:%x y:%x w:%x h:%x\n", gs.dstbuf.bp, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew);
+    //ZZLog::Prim_Log("trans: bp:%x x:%x y:%x w:%x h:%x\n", gs.dstbuf.bp, gs.trxpos.dx, gs.trxpos.dy, gs.imageNew.w, gs.imageNew.h);
 }
  
 void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 {
     FUNCLOG
  
-    int start, end;
+    int start = -1, end = -1;
  
-    GetRectMemAddress(start, end, gs.dstbuf.psm, gs.imageX, gs.imageY, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
- 
+    GetRectMemAddress(start, end, gs.dstbuf.psm, gs.image, gs.imageNew, gs.dstbuf.bp, gs.dstbuf.bw);
+	
+	if ((start == -1) || (end == -1)) ZZLog::WriteLn("start == %d, end == %d", start, end);
     assert(start < gs_imageEnd);
     end = gs_imageEnd;
  
@@ -272,8 +326,8 @@ void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
     {
         tex0Info t;
         t.tbp0 = gs.dstbuf.bp;
-        t.tw = gs.imageWnew;
-        t.th = gs.imageHnew;
+        t.tw = gs.imageNew.w;
+        t.th = gs.imageNew.h;
         t.tbw = gs.dstbuf.bw;
         t.psm = gs.dstbuf.psm;
         SaveTex(&t, 0);
@@ -285,24 +339,24 @@ void TransferHostLocal(const void* pbyMem, u32 nQWordSize)
 void InitTransferLocalHost()
 {
     FUNCLOG
-    assert(gs.trxpos.sx + gs.imageWnew <= 2048 && gs.trxpos.sy + gs.imageHnew <= 2048);
+    assert(gs.trxpos.sx + gs.imageNew.w <= 2048 && gs.trxpos.sy + gs.imageNew.h <= 2048);
  
 #if defined(_DEBUG)
-    if (gs.trxpos.sx + gs.imageWnew > gs.srcbuf.bw)
-        ZZLog::Debug_Log("Transfer error, width exceeded. (0x%x > 0x%x)", gs.trxpos.sx + gs.imageWnew, gs.srcbuf.bw);
+    if (gs.trxpos.sx + gs.imageNew.w > gs.srcbuf.bw)
+        ZZLog::Debug_Log("Transfer error, width exceeded. (0x%x > 0x%x)", gs.trxpos.sx + gs.imageNew.w, gs.srcbuf.bw);
 #endif
  
-    gs.imageX = gs.trxpos.sx;
-    gs.imageY = gs.trxpos.sy;
+    gs.image.x = gs.trxpos.sx;
+    gs.image.y = gs.trxpos.sy;
  
-    gs.imageEndX = gs.imageX + gs.imageWnew;
-    gs.imageEndY = gs.imageY + gs.imageHnew;
+    gs.imageEnd.x = gs.image.x + gs.imageNew.w;
+    gs.imageEnd.y = gs.image.y + gs.imageNew.h;
  
     s_vTransferCache.resize(0);
  
     int start, end;
  
-    GetRectMemAddress(start, end, gs.srcbuf.psm, gs.trxpos.sx, gs.trxpos.sy, gs.imageWnew, gs.imageHnew, gs.srcbuf.bp, gs.srcbuf.bw);
+    GetRectMemAddress(start, end, gs.srcbuf.psm, gs.trxpos.sx, gs.trxpos.sy, gs.imageNew, gs.srcbuf.bp, gs.srcbuf.bw);
  
     ResolveInRange(start, end);
 }
@@ -316,16 +370,16 @@ void TransferLocalHost(void* pbyMem, u32 nQWordSize, int& x, int& y, u8 *pstart)
     T* pbuf = (T*)pbyMem;
     u32 nSize = nQWordSize * 16 / sizeof(T);
  
-    for (; i < gs.imageEndY; ++i)
+    for (; i < gs.imageEnd.y; ++i)
     {
-        for (; j < gs.imageEndX && nSize > 0; ++j, --nSize)
+        for (; j < gs.imageEnd.x && nSize > 0; ++j, --nSize)
         {
             *pbuf++ = rp(pstart, j % 2048, i % 2048, gs.srcbuf.bw);
         }
  
-        if (j >= gs.imageEndX)
+        if (j >= gs.imageEnd.x)
         {
-            assert(j == gs.imageEndX);
+            assert(j == gs.imageEnd.x);
             j = gs.trxpos.sx;
         }
         else
@@ -344,9 +398,9 @@ void TransferLocalHost_24(void* pbyMem, u32 nQWordSize, int& x, int& y, u8 *psta
     u8* pbuf = (u8*)pbyMem;
     u32 nSize = nQWordSize * 16 / 3;
  
-    for (; i < gs.imageEndY; ++i)
+    for (; i < gs.imageEnd.y; ++i)
     {
-        for (; j < gs.imageEndX && nSize > 0; ++j, --nSize)
+        for (; j < gs.imageEnd.x && nSize > 0; ++j, --nSize)
         {
             u32 p = rp(pstart, j % 2048, i % 2048, gs.srcbuf.bw);
             pbuf[0] = (u8)p;
@@ -355,9 +409,9 @@ void TransferLocalHost_24(void* pbyMem, u32 nQWordSize, int& x, int& y, u8 *psta
             pbuf += 3;
         }
  
-        if (j >= gs.imageEndX)
+        if (j >= gs.imageEnd.x)
         {
-            assert(j == gs.imageEndX);
+            assert(j == gs.imageEnd.x);
             j = gs.trxpos.sx;
         }
         else
@@ -372,34 +426,34 @@ void TransferLocalHost_24(void* pbyMem, u32 nQWordSize, int& x, int& y, u8 *psta
 void TransferLocalHost(void* pbyMem, u32 nQWordSize)
 {
     FUNCLOG
-    assert(gs.imageTransfer == 1);
+    assert(gs.imageTransfer == XFER_LOCAL_TO_HOST);
  
     u8* pstart = g_pbyGSMemory + 256 * gs.srcbuf.bp;
  
     switch(PSMT_BITMODE(gs.srcbuf.psm))
     {
-    case 0:
-        TransferLocalHost<u32>(pbyMem, nQWordSize, gs.imageY, gs.imageX, pstart);
-        break;
-    case 1:
-        TransferLocalHost_24(pbyMem, nQWordSize, gs.imageY, gs.imageX, pstart);
-        break;
-    case 2:
-        TransferLocalHost<u16>(pbyMem, nQWordSize, gs.imageY, gs.imageX, pstart);
-        break;
-    case 3:
-        TransferLocalHost<u8>(pbyMem, nQWordSize, gs.imageY, gs.imageX, pstart);
-        break;
-    default:
-        assert(0);
-        break;
+		case 0:
+			TransferLocalHost<u32>(pbyMem, nQWordSize, gs.image.y, gs.image.x, pstart);
+			break;
+		case 1:
+			TransferLocalHost_24(pbyMem, nQWordSize, gs.image.y, gs.image.x, pstart);
+			break;
+		case 2:
+			TransferLocalHost<u16>(pbyMem, nQWordSize, gs.image.y, gs.image.x, pstart);
+			break;
+		case 3:
+			TransferLocalHost<u8>(pbyMem, nQWordSize, gs.image.y, gs.image.x, pstart);
+			break;
+		default:
+			assert(0);
+			break;
     }
  
-    if (gs.imageY >= gs.imageEndY)
+    if (gs.image.y >= gs.imageEnd.y)
     {
-        ZZLog::Error_Log("gs.imageY >= gs.imageEndY!");
-        assert(gs.imageY == gs.imageEndY);
-        gs.imageTransfer = -1;
+        ZZLog::Error_Log("gs.image.y >= gs.imageEnd.y!");
+        assert(gs.image.y == gs.imageEnd.y);
+		gs.transferring = false;
     }
 }
  
@@ -411,11 +465,11 @@ __forceinline void _TransferLocalLocal()
     u8* pSrcBuf = g_pbyGSMemory + gs.srcbuf.bp * 256;
     u8* pDstBuf = g_pbyGSMemory + gs.dstbuf.bp * 256;
     u32 widthlimit = 4;
-    u32 maxX = gs.trxpos.sx + gs.imageWnew;
-    u32 maxY = gs.trxpos.sy + gs.imageHnew;
+    u32 maxX = gs.trxpos.sx + gs.imageNew.w;
+    u32 maxY = gs.trxpos.sy + gs.imageNew.h;
  
     if (PSMT_BITMODE(gs.srcbuf.psm) == 0) widthlimit = 2;
-    if ((gs.imageWnew & widthlimit) != 0) return;
+    if ((gs.imageNew.w & widthlimit) != 0) return;
  
     for(u32 i = gs.trxpos.sy, i2 = gs.trxpos.dy; i < maxY; i++, i2++)
     {
@@ -447,10 +501,10 @@ __forceinline void _TransferLocalLocal_4()
     _getPixelAddress_0 gdp = getPixelFun_0[gs.dstbuf.psm];
     u8* pSrcBuf = g_pbyGSMemory + gs.srcbuf.bp * 256;
     u8* pDstBuf = g_pbyGSMemory + gs.dstbuf.bp * 256;
-    u32 maxX = gs.trxpos.sx + gs.imageWnew;
-    u32 maxY = gs.trxpos.sy + gs.imageHnew;
+    u32 maxX = gs.trxpos.sx + gs.imageNew.w;
+    u32 maxY = gs.trxpos.sy + gs.imageNew.h;
  
-    assert((gs.imageWnew % 8) == 0);
+    assert((gs.imageNew.w % 8) == 0);
  
     for(u32 i = gs.trxpos.sy, i2 = gs.trxpos.dy; i < maxY; ++i, ++i2)
     {
@@ -498,21 +552,21 @@ void TransferLocalLocal()
     FUNCLOG
  
     //ZZLog::Error_Log("I'z in your code, transferring your memory...");
-    assert(gs.imageTransfer == 2);
-    assert(gs.trxpos.sx + gs.imageWnew < 2048 && gs.trxpos.sy + gs.imageHnew < 2048);
-    assert(gs.trxpos.dx + gs.imageWnew < 2048 && gs.trxpos.dy + gs.imageHnew < 2048);
+    assert(gs.imageTransfer == XFER_LOCAL_TO_LOCAL);
+    assert(gs.trxpos.sx + gs.imageNew.w < 2048 && gs.trxpos.sy + gs.imageNew.h < 2048);
+    assert(gs.trxpos.dx + gs.imageNew.w < 2048 && gs.trxpos.dy + gs.imageNew.h < 2048);
     assert((gs.srcbuf.psm&0x7) == (gs.dstbuf.psm&0x7));
  
-    if (gs.trxpos.sx + gs.imageWnew > gs.srcbuf.bw)
-        ZZLog::Debug_Log("Transfer error, src width exceeded.(0x%x > 0x%x)", gs.trxpos.sx + gs.imageWnew, gs.srcbuf.bw);
+    if (gs.trxpos.sx + gs.imageNew.w > gs.srcbuf.bw)
+        ZZLog::Debug_Log("Transfer error, src width exceeded.(0x%x > 0x%x)", gs.trxpos.sx + gs.imageNew.w, gs.srcbuf.bw);
  
-    if (gs.trxpos.dx + gs.imageWnew > gs.dstbuf.bw)
-        ZZLog::Debug_Log("Transfer error, dst width exceeded.(0x%x > 0x%x)", gs.trxpos.dx + gs.imageWnew, gs.dstbuf.bw);
+    if (gs.trxpos.dx + gs.imageNew.w > gs.dstbuf.bw)
+        ZZLog::Debug_Log("Transfer error, dst width exceeded.(0x%x > 0x%x)", gs.trxpos.dx + gs.imageNew.w, gs.dstbuf.bw);
  
     int srcstart, srcend, dststart, dstend;
  
-    GetRectMemAddress(srcstart, srcend, gs.srcbuf.psm, gs.trxpos.sx, gs.trxpos.sy, gs.imageWnew, gs.imageHnew, gs.srcbuf.bp, gs.srcbuf.bw);
-    GetRectMemAddress(dststart, dstend, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
+    GetRectMemAddress(srcstart, srcend, gs.srcbuf.psm, gs.trxpos.sx, gs.trxpos.sy, gs.imageNew, gs.srcbuf.bp, gs.srcbuf.bw);
+    GetRectMemAddress(dststart, dstend, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageNew, gs.dstbuf.bp, gs.dstbuf.bw);
  
     // resolve the targs
     ResolveInRange(srcstart, srcend);
@@ -547,32 +601,20 @@ void TransferLocalLocal()
     {
         tex0Info t;
         t.tbp0 = gs.dstbuf.bp;
-        t.tw = gs.imageWnew;
-        t.th = gs.imageHnew;
+        t.tw = gs.imageNew.w;
+        t.th = gs.imageNew.h;
         t.tbw = gs.dstbuf.bw;
         t.psm = gs.dstbuf.psm;
         SaveTex(&t, 0);
  
         t.tbp0 = gs.srcbuf.bp;
-        t.tw = gs.imageWnew;
-        t.th = gs.imageHnew;
+        t.tw = gs.imageNew.w;
+        t.th = gs.imageNew.h;
         t.tbw = gs.srcbuf.bw;
         t.psm = gs.srcbuf.psm;
         SaveTex(&t, 0);
     }
  
 #endif
-}
- 
-__forceinline void TerminateLocalHost() 
-{
-	FUNCLOG
-	//ZZLog::Error_Log("Terminate Local Host!");
-}
-
-__forceinline void TerminateHostLocal() 
-{
-	FUNCLOG
-	gs.imageTransfer = -1;
 }
 

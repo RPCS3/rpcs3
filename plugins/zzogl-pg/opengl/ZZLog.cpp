@@ -27,7 +27,7 @@ extern GSconf conf;
 using namespace std;
 
 static list<MESSAGE> listMsgs;
-
+const char* logging_prefix = "ZZOgl-PG";
 void ProcessMessages()
 {
 	FUNCLOG
@@ -130,12 +130,14 @@ void _Log(const char *str)
 
 void _WriteToConsole(const char *str)
 {
-	fprintf(stderr,"ZZogl-PG: %s", str);
+	fprintf(stderr,"%s:  ", logging_prefix);
+	fprintf(stderr,"%s", str);
 }
 
 void _Print(const char *str)
 {
-	fprintf(stderr,"ZZogl-PG: %s", str);
+	fprintf(stderr,"%s:  ", logging_prefix);
+	fprintf(stderr,"%s", str);
 
 	if (IsLogging()) fprintf(gsLog, str);
 }
@@ -169,7 +171,7 @@ void WriteToConsole(const char *fmt, ...)
 
 	va_start(list, fmt);
 
-	fprintf(stderr, "ZZogl-PG: ");
+	fprintf(stderr, "%s:  ", logging_prefix);
 	vfprintf(stderr, fmt, list);
 	va_end(list);
 }
@@ -182,7 +184,7 @@ void Print(const char *fmt, ...)
 
 	if (IsLogging()) vfprintf(gsLog, fmt, list);
 	
-	fprintf(stderr, "ZZogl-PG: ");
+	fprintf(stderr, "%s:  ", logging_prefix);
 	vfprintf(stderr, fmt, list);
 
 	va_end(list);
@@ -197,7 +199,7 @@ void WriteLn(const char *fmt, ...)
 
 	if (IsLogging()) vfprintf(gsLog, fmt, list);
 	
-	fprintf(stderr, "ZZogl-PG: ");
+	fprintf(stderr, "%s:  ", logging_prefix);
 	vfprintf(stderr, fmt, list);
 	va_end(list);
 	fprintf(stderr,"\n");
@@ -237,7 +239,7 @@ void Prim_Log(const char *fmt, ...)
 	{
 		if (IsLogging()) vfprintf(gsLog, fmt, list);
 
-		fprintf(stderr, "ZZogl-PG(PRIM): ");
+		fprintf(stderr, "%s(PRIM):  ", logging_prefix);
 		vfprintf(stderr, fmt, list);
 
 		vprintf(fmt, list);
@@ -262,7 +264,7 @@ void GS_Log(const char *fmt, ...)
 		fprintf(gsLog, "\n");
 	}
 	
-	fprintf(stderr, "ZZogl-PG: ");
+	fprintf(stderr, "%s:  ", logging_prefix);
 	vfprintf(stderr, fmt, list);
 	fprintf(stderr, "\n");
 	
@@ -283,7 +285,7 @@ void Warn_Log(const char *fmt, ...)
 		fprintf(gsLog, "\n");
 	}
 
-	fprintf(stderr, "ZZogl-PG:  ");
+	fprintf(stderr, "%s(Warning):  ", logging_prefix);
 	vfprintf(stderr, fmt, list);
 	fprintf(stderr, "\n");
 	
@@ -304,7 +306,7 @@ void Dev_Log(const char *fmt, ...)
 		fprintf(gsLog, "\n");
 	}
 
-	fprintf(stderr, "ZZogl-PG:  ");
+	fprintf(stderr, "%s:  ", logging_prefix);
 	vfprintf(stderr, fmt, list);
 	fprintf(stderr, "\n");
 	
@@ -325,7 +327,7 @@ void Debug_Log(const char *fmt, ...)
 		fprintf(gsLog, "\n");
 	}
 
-	fprintf(stderr, "ZZogl-PG:  ");
+	fprintf(stderr, "%s:  ", logging_prefix);
 	vfprintf(stderr, fmt, list);
 	fprintf(stderr, "\n");
 	
@@ -345,7 +347,7 @@ void Error_Log(const char *fmt, ...)
 		fprintf(gsLog, "\n");
 	}
 
-	fprintf(stderr, "ZZogl-PG:  ");
+	fprintf(stderr, "%s:  ", logging_prefix);
 	vfprintf(stderr, fmt, list);
 	fprintf(stderr, "\n");
 	
