@@ -11,7 +11,7 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders")
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders")
 
 # plugin name
-set(Output zzogl-0.3.0)
+set(Output zzogl-0.4.0)
 
 set(CommonFlags
     -pthread

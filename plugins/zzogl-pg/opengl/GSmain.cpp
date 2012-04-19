@@ -58,7 +58,7 @@ extern const char* pbilinear[];
 // statistics
 u32 g_nGenVars = 0, g_nTexVars = 0, g_nAlphaVars = 0, g_nResolve = 0;
 
-#define VER 3
+#define VER 4
 const unsigned char zgsversion	= PS2E_GS_VERSION;
 unsigned char zgsrevision = 0; // revision and build gives plugin version
 unsigned char zgsbuild	= VER;
