@@ -7,7 +7,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 
 
 # plugin name
-set(Output zzogl-shader)
+set(Output zzogl-cg-shader)
 
 set(CommonFlags
     -pthread

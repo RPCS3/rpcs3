@@ -511,7 +511,7 @@ EXPORT_C_(void) GSvsync(int current_interlace)
 			g_dump.Open(filename, g_LastCRC, fd, g_pBasePS2Mem);
 		conf.dump--;
 	}
-	g_dump.VSync(interlace, (conf.dump == 0), g_pBasePS2Mem);
+	g_dump.VSync(current_interlace, (conf.dump == 0), g_pBasePS2Mem);
 #endif
 
 	GL_REPORT_ERRORD();

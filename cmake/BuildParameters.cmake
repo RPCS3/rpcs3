@@ -188,6 +188,6 @@ endif(PACKAGE_MODE)
 #-------------------------------------------------------------------------------
 # Select nvidia cg shader api by default
 #-------------------------------------------------------------------------------
-if(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
+if(NOT DEFINED GLSL_API)
 	set(GLSL_API FALSE)
-endif(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
+endif(NOT DEFINED GLSL_API)
