@@ -15,9 +15,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectName>ZZOgl</ProjectName>
-    <ProjectGuid>{2D4E85B2-F47F-4D65-B091-701E5C031DAC}</ProjectGuid>
-    <RootNamespace>ZZogl</RootNamespace>
+    <ProjectName>ZZOgl-cg</ProjectName>
+    <ProjectGuid>{019773FA-2DAA-4C12-9511-BD2D4EB2A718}</ProjectGuid>
+    <RootNamespace>ZZogl-cg</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -136,13 +136,8 @@
   <ItemGroup>
     <ClCompile Include="..\GSDump.cpp" />
     <ClCompile Include="..\ZZClut.cpp" />
-    <ClCompile Include="..\ZZDepthTargets.cpp" />
-    <ClCompile Include="..\ZZMemoryTargets.cpp" />
     <ClCompile Include="..\ZZoglDrawing.cpp" />
     <ClCompile Include="..\ZZoglFlushHack.cpp" />
-    <ClCompile Include="..\ZZoglMem.cpp" />
-    <ClCompile Include="..\ZZoglShadersGLSL.cpp" />
-    <ClCompile Include="..\ZZRenderTargets.cpp" />
     <ClCompile Include="Conf.cpp" />
     <ClCompile Include="..\GifTransfer.cpp" />
     <ClCompile Include="..\glprocs.c" />
@@ -194,8 +189,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\GSDump.h" />
-    <ClInclude Include="..\ZZoglFlush.h" />
-    <ClInclude Include="..\ZZoglMem.h" />
     <ClInclude Include="aviUtil.h" />
     <ClInclude Include="..\GifTransfer.h" />
     <ClInclude Include="..\CRC.h" />

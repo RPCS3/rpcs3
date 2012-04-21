@@ -24,10 +24,7 @@
 #include "Mem.h"
 #include "targets.h"
 #include "ZZClut.h"
-
-#ifdef ZEROGS_SSE2
-#include <immintrin.h>
-#endif
+#include "Util.h"
 
 extern int g_TransferredToGPU;
 

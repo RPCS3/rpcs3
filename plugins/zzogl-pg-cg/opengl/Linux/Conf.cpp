@@ -27,7 +27,7 @@
 
 void SaveConfig()
 {
-	const wxString iniFile_s(Path::Combine(s_strIniPath, L"zzogl-pg.ini"));
+	const wxString iniFile_s(Path::Combine(s_strIniPath, L"zzogl-pg-cg.ini"));
 	std::string iniFile = std::string(iniFile_s.mb_str());
 	
 	FILE* f = fopen(iniFile.c_str(), "w");
@@ -68,7 +68,7 @@ void LoadConfig()
 	conf.height = 600;
 	conf.disableHacks = 0;
 
-	const wxString iniFile_s(Path::Combine(s_strIniPath, L"zzogl-pg.ini"));
+	const wxString iniFile_s(Path::Combine(s_strIniPath, L"zzogl-pg-cg.ini"));
 	std::string iniFile = std::string(iniFile_s.mb_str());
 
 	FILE* f = fopen(iniFile.c_str(), "r");

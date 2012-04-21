@@ -27,10 +27,8 @@
 #include "ZZoglShaders.h"
 #include "ZZClut.h"
 #include "ZZoglVB.h"
+#include "Util.h"
 
-#ifdef ZEROGS_SSE2
-#include <immintrin.h>
-#endif
 
 extern int g_TransferredToGPU;
 extern int s_nResolved;

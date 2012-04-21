@@ -114,21 +114,6 @@
     <ClCompile Include="..\GSDump.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\ZZDepthTargets.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\ZZMemoryTargets.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\ZZRenderTargets.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\ZZoglMem.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\ZZoglShadersGLSL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="GSsoftdx.def">
@@ -218,12 +203,6 @@
     <ClInclude Include="..\GSDump.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\ZZoglFlush.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\ZZoglMem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="zerogs.rc">
@@ -235,4 +214,4 @@
       <Filter>Source Files</Filter>
     </CustomBuild>
   </ItemGroup>
-</Project>
+</Project>

@@ -64,11 +64,11 @@ unsigned char zgsbuild	= VER;
 unsigned char zgsminor = 0;
 
 #ifdef _DEBUG
-char *libraryName	 = "ZZ Ogl PG (Debug) ";
+char *libraryName	 = "ZZ Ogl PG CG (Debug) ";
 #elif defined(ZEROGS_DEVBUILD)
-char *libraryName	 = "ZZ Ogl PG (Dev)";
+char *libraryName	 = "ZZ Ogl PG CG (Dev) ";
 #else
-char *libraryName	 = "ZZ Ogl PG ";
+char *libraryName	 = "ZZ Ogl PG CG ";
 #endif
 
 extern int g_nPixelShaderVer, g_nFrameRender, g_nFramesSkipped;

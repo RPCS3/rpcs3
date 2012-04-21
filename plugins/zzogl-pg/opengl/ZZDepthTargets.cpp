@@ -27,10 +27,7 @@
 #include "ZZoglShaders.h"
 #include "ZZClut.h"
 #include "ZZoglVB.h"
-
-#ifdef ZEROGS_SSE2
-#include <immintrin.h>
-#endif
+#include "Util.h"
 
 extern bool g_bUpdateStencil;
 

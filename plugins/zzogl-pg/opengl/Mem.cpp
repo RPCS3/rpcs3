@@ -21,12 +21,10 @@
 #include "Mem.h"
 #include "targets.h"
 #include "x86.h"
+#include "Util.h"
 
 #include "Mem_Transmit.h"
 #include "Mem_Swizzle.h"
-#ifdef ZEROGS_SSE2
-#include <immintrin.h>
-#endif
 
 #ifdef ZZNORMAL_MEMORY
 

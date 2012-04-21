@@ -20,10 +20,7 @@
 #include "GS.h"
 #include "Mem.h"
 #include "x86.h"
-
-#if defined(ZEROGS_SSE2)
-#include <immintrin.h>
-#endif
+#include "Util.h"
 
 
 // Note: all codes of this files is deprecated. Keeping for reference.

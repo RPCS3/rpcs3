@@ -20,9 +20,7 @@
 #include "GS.h"
 #include "Mem.h"
 #include "Mem_Swizzle.h"
-#ifdef ZEROGS_SSE2
-#include <immintrin.h>
-#endif
+#include "Util.h"
 
 // WARNING a sfence instruction must be call after SwizzleBlock sse2 function
 

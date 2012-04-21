@@ -32,6 +32,9 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include "glprocs.h"
+#ifdef ZEROGS_SSE2
+#include <emmintrin.h>
+#endif
 
 #else // linux basic definitions
 
@@ -47,6 +50,10 @@
 #include <string>
 #include <vector>
 #include <list>
+
+#ifdef ZEROGS_SSE2
+#include <immintrin.h>
+#endif
 
 #endif
 

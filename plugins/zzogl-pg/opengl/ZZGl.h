@@ -129,6 +129,26 @@ extern void (APIENTRY *zgsBlendEquationSeparateEXT)(GLenum, GLenum);
 extern void (APIENTRY *zgsBlendFuncSeparateEXT)(GLenum, GLenum, GLenum, GLenum);
 #endif
 
+// GL prototypes
+extern PFNGLISRENDERBUFFEREXTPROC glIsRenderbufferEXT;
+extern PFNGLBINDRENDERBUFFEREXTPROC glBindRenderbufferEXT;
+extern PFNGLDELETERENDERBUFFERSEXTPROC glDeleteRenderbuffersEXT;
+extern PFNGLGENRENDERBUFFERSEXTPROC glGenRenderbuffersEXT;
+extern PFNGLRENDERBUFFERSTORAGEEXTPROC glRenderbufferStorageEXT;
+extern PFNGLGETRENDERBUFFERPARAMETERIVEXTPROC glGetRenderbufferParameterivEXT;
+extern PFNGLISFRAMEBUFFEREXTPROC glIsFramebufferEXT;
+extern PFNGLBINDFRAMEBUFFEREXTPROC glBindFramebufferEXT;
+extern PFNGLDELETEFRAMEBUFFERSEXTPROC glDeleteFramebuffersEXT;
+extern PFNGLGENFRAMEBUFFERSEXTPROC glGenFramebuffersEXT;
+extern PFNGLCHECKFRAMEBUFFERSTATUSEXTPROC glCheckFramebufferStatusEXT;
+extern PFNGLFRAMEBUFFERTEXTURE1DEXTPROC glFramebufferTexture1DEXT;
+extern PFNGLFRAMEBUFFERTEXTURE2DEXTPROC glFramebufferTexture2DEXT;
+extern PFNGLFRAMEBUFFERTEXTURE3DEXTPROC glFramebufferTexture3DEXT;
+extern PFNGLFRAMEBUFFERRENDERBUFFEREXTPROC glFramebufferRenderbufferEXT;
+extern PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVEXTPROC glGetFramebufferAttachmentParameterivEXT;
+extern PFNGLGENERATEMIPMAPEXTPROC glGenerateMipmapEXT;
+extern PFNGLDRAWBUFFERSPROC glDrawBuffers;
+
 static __forceinline void DrawTriangleArray()
 {
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -315,25 +335,5 @@ static __forceinline void GL_BLENDEQ_ALPHA(GLenum eq)
 	s_alphaeq = eq;
 	zgsBlendEquationSeparateEXT(s_rgbeq, s_alphaeq);
 }
-
-// GL prototypes
-extern PFNGLISRENDERBUFFEREXTPROC glIsRenderbufferEXT;
-extern PFNGLBINDRENDERBUFFEREXTPROC glBindRenderbufferEXT;
-extern PFNGLDELETERENDERBUFFERSEXTPROC glDeleteRenderbuffersEXT;
-extern PFNGLGENRENDERBUFFERSEXTPROC glGenRenderbuffersEXT;
-extern PFNGLRENDERBUFFERSTORAGEEXTPROC glRenderbufferStorageEXT;
-extern PFNGLGETRENDERBUFFERPARAMETERIVEXTPROC glGetRenderbufferParameterivEXT;
-extern PFNGLISFRAMEBUFFEREXTPROC glIsFramebufferEXT;
-extern PFNGLBINDFRAMEBUFFEREXTPROC glBindFramebufferEXT;
-extern PFNGLDELETEFRAMEBUFFERSEXTPROC glDeleteFramebuffersEXT;
-extern PFNGLGENFRAMEBUFFERSEXTPROC glGenFramebuffersEXT;
-extern PFNGLCHECKFRAMEBUFFERSTATUSEXTPROC glCheckFramebufferStatusEXT;
-extern PFNGLFRAMEBUFFERTEXTURE1DEXTPROC glFramebufferTexture1DEXT;
-extern PFNGLFRAMEBUFFERTEXTURE2DEXTPROC glFramebufferTexture2DEXT;
-extern PFNGLFRAMEBUFFERTEXTURE3DEXTPROC glFramebufferTexture3DEXT;
-extern PFNGLFRAMEBUFFERRENDERBUFFEREXTPROC glFramebufferRenderbufferEXT;
-extern PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVEXTPROC glGetFramebufferAttachmentParameterivEXT;
-extern PFNGLGENERATEMIPMAPEXTPROC glGenerateMipmapEXT;
-extern PFNGLDRAWBUFFERSPROC glDrawBuffers;
 
 #endif // ZZGL_H_INCLUDED

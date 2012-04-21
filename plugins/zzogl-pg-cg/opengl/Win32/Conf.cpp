@@ -10,7 +10,7 @@ extern HINSTANCE hInst;
 void SaveConfig()
 {
 	wxChar szValue[256];
-	const wxString iniFile(Path::Combine(s_strIniPath, L"zzogl-pg.ini"));
+	const wxString iniFile(Path::Combine(s_strIniPath, L"zzogl-pg-cg.ini"));
 
 	wxSprintf(szValue, L"%u", conf.interlace);
 	WritePrivateProfileString(L"Settings", L"Interlace", szValue, iniFile);
@@ -33,7 +33,7 @@ void SaveConfig()
 void LoadConfig()
 {
 	wxChar szValue[256];
-	const wxString iniFile(Path::Combine(s_strIniPath, L"zzogl-pg.ini"));
+	const wxString iniFile(Path::Combine(s_strIniPath, L"zzogl-pg-cg.ini"));
 
 	memset(&conf, 0, sizeof(conf));
 	conf.interlace = 0; // on, mode 1

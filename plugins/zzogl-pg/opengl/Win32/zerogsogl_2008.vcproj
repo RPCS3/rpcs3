@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="windows-1253"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="ZZOgl"
 	ProjectGUID="{2D4E85B2-F47F-4D65-B091-701E5C031DAC}"
 	RootNamespace="ZZogl"
@@ -290,10 +290,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\NewRegs.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\Profile.cpp"
 				>
 			</File>
@@ -361,6 +357,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZDepthTargets.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZHacks.cpp"
 				>
 			</File>
@@ -370,6 +370,10 @@
 			</File>
 			<File
 				RelativePath="..\ZZLog.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZMemoryTargets.cpp"
 				>
 			</File>
 			<File
@@ -393,6 +397,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZoglMem.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZoglSave.cpp"
 				>
 			</File>
@@ -401,11 +409,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZoglShadersGLSL.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZoglShoots.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\ZZoglVB.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZRenderTargets.cpp"
 				>
 			</File>
 		</Filter>
@@ -534,11 +550,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZoglFlush.h"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZoglFlushHack.h"
 				>
 			</File>
 			<File
 				RelativePath="..\ZZoglMath.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglMem.h"
 				>
 			</File>
 			<File
@@ -584,11 +608,11 @@
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\ps2hw.dat"
+			RelativePath="..\ps2hw.dat"
 			>
 		</File>
 		<File
-			RelativePath="..\ps2hw.dat"
+			RelativePath=".\ps2hw.dat"
 			>
 		</File>
 	</Files>
