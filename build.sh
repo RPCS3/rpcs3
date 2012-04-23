@@ -53,7 +53,8 @@ if [ $clean_build = true ]; then
 	echo "Doing a clean build."
 	make clean 2>&1 | tee -a ../install_log.txt 
 fi
-make 2>&1 | tee -a ../install_log.txt 
+CORE=`grep -w -c processor /proc/cpuinfo`
+make -j $CORE 2>&1 | tee -a ../install_log.txt 
 make install 2>&1 | tee -a ../install_log.txt 
 
 cd ..
