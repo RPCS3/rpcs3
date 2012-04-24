@@ -428,7 +428,7 @@ void GSHacksDlg::OnInit()
 
 
 	// Hacks descriptions
-	SetWindowText(GetDlgItem(m_hWnd, IDC_HACK_DESCRIPTION), ""); // Blank it
+	SetWindowText(GetDlgItem(m_hWnd, IDC_HACK_DESCRIPTION), "Hover over an item to get a description.");
 }
 
 void GSHacksDlg::UpdateControls()
@@ -459,32 +459,32 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 			case IDC_SKIPDRAWHACKEDIT:
 			case IDC_STATIC_SKIPDRAW:
 				helpstr = "Skipdraw\n\nSkips drawing n surfaces completely. "
-						  "Use it, for example, to try and get rid of messed up post processing effects."
+						  "Use it, for example, to try and get rid of bad post processing effects."
 						  " Try values between 1 and 100.";
 				break;
 			case IDC_ALPHAHACK:
-				helpstr = "Alpha Hack\n\nDifferent alpha handling. Works around some shadow problems.";
+				helpstr = "Alpha Hack\n\nDifferent alpha handling. Can work around some shadow problems.";
 				break;
 			case IDC_OFFSETHACK:
 				helpstr = "Halfpixel\n\nMight fix some misaligned fog, bloom, or blend effect.";
 				break;
 			case IDC_SPRITEHACK:
 				helpstr = "Sprite Hack\n\nHelps getting rid of black inner lines in some filtered sprites."
-						  " Half option should be the preferred one, for Mana Khemia and ArTonelico for example."
-						  " Full should be used for Tales of Destiny.";
+						  " Half option is the preferred one. Use it for Mana Khemia or ArTonelico for example."
+						  " Full can be used for Tales of Destiny.";
 				break;
 			case IDC_WILDHACK:
 				helpstr = "WildArms\n\nLowers the GS precission to avoid gaps between pixels when"
 						  " upscaling. Full option fixes the text on WildArms games, while Half option might improve portraits"
-						  " in ArTonelico for example.";
+						  " in ArTonelico.";
 				break;
 			case IDC_MSAACB:
 			case IDC_STATIC_MSAA:
 				helpstr = "Multisample Anti-Aliasing\n\nEnables hardware Anti-Aliasing. Needs lots of memory."
-						  " The Z-24 modes might need to have LogarithmicZ to compensate for the bits lost (DX9 mode).";
+						  " The Z-24 modes might need to have LogarithmicZ to compensate for the bits lost (only in DX9 mode).";
 				break;
 			default:
-				helpstr = "";
+				helpstr = "Hover over an item to get a description.";
 				break;
 		}
 
