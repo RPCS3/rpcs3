@@ -967,7 +967,7 @@ void SysCorePlugins::Load( PluginsEnum_t pid, const wxString& srcfile )
 {
 	ScopedLock lock( m_mtx_PluginStatus );
 	pxAssert( (uint)pid < PluginId_Count );
-	Console.Indent().WriteLn( L"Binding %s\t: %s ", tbl_PluginInfo[pid].GetShortname().c_str(), srcfile.c_str() );
+	Console.Indent().WriteLn( L"Binding %4s: %s ", tbl_PluginInfo[pid].GetShortname().c_str(), srcfile.c_str() );
 	m_info[pid] = new PluginStatus_t( pid, srcfile );
 }
 

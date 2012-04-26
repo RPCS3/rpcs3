@@ -23,7 +23,6 @@ void dev9Interrupt()
 	if ((dev9Handler != NULL) && (dev9Handler() != 1)) return;
 
 	iopIntcIrq(13);
-	hwIntcIrq(INTC_SBUS);
 }
 
 void dev9Irq(int cycles)
@@ -36,7 +35,6 @@ void usbInterrupt()
 	if (usbHandler != NULL && (usbHandler() != 1)) return;
 
 	iopIntcIrq(22);
-	hwIntcIrq(INTC_SBUS);
 }
 
 void usbIrq(int cycles)
@@ -47,7 +45,6 @@ void usbIrq(int cycles)
 void fwIrq()
 {
 	iopIntcIrq(24);
-	hwIntcIrq(INTC_SBUS);
 }
 
 void spu2Irq()
@@ -56,7 +53,6 @@ void spu2Irq()
 		Console.Warning("spu2Irq");
 	#endif
 	iopIntcIrq(9);
-	hwIntcIrq(INTC_SBUS);
 }
 
 void iopIntcIrq(uint irqType)

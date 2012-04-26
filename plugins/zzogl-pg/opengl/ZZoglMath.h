@@ -212,7 +212,7 @@ typedef Vector4<float> float4;
 
 // Reimplement, swiping a bunch of code from GSdx and adapting it. (specifically GSVector.h)
 // This doesn't include more then half of the functions in there, as well as some of the structs...
-#include <xmmintrin.h>
+#include "Util.h"
 
 #include "Pcsx2Types.h"
 

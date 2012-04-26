@@ -1,0 +1,77 @@
+/** @page compile_linux Building Portaudio for Linux
+@ingroup tutorial
+
+<i>Note: this page has not been reviewed, and may contain errors.</i>
+
+@section comp_linux1 Installing ALSA Development Kit
+
+The OSS sound API is very old and not well supported. It is recommended that you use the ALSA sound API.
+The PortAudio configure script will look for the ALSA SDK. You can install the ALSA SDK on Ubuntu using:
+
+@code
+sudo apt-get install libasound-dev
+@endcode
+
+You might need to use yum, or some other package manager, instead of apt-get on your machine.
+If you do not install ALSA then you might get a message when testing that says you have no audio devices.
+
+You can find out more about ALSA here: http://www.alsa-project.org/
+
+@section comp_linux2 Configuring and Compiling PortAudio
+
+You can build PortAudio in Linux Environments using the standard configure/make tools:
+
+@code
+./configure && make
+@endcode
+
+That will build PortAudio using Jack, ALSA and OSS in whatever combination they are found on your system. For example, if you have Jack and OSS but not ALSA, it will build using Jack and OSS but not ALSA. This step also builds a number of tests, which can be found in the bin directory of PortAudio. It's a good idea to run some of these tests to make sure PortAudio is working correctly.
+
+@section comp_linux3 Using PortAudio in your Projects
+
+To use PortAudio in your apps, you can simply install the .so files:
+
+@code
+make install
+@endcode
+
+Projects built this way will expect PortAudio to be installed on target systems in order to run. If you want to build a more self-contained binary, you may use the libportaudio.a file:
+
+@code
+cp lib/.libs/libportaudio.a /YOUR/PROJECT/DIR
+@endcode
+
+You may also need to copy portaudio.h, located in the include/ directory of PortAudio into your project. Note that you will usually need to link with the approriate libraries that you used, such as ALSA and JACK, as well as with librt and libpthread. For example:
+
+@code
+gcc -lrt -lasound -ljack -lpthread -o YOUR_BINARY main.c libportaudio.a
+@endcode
+
+@section comp_linux4 Linux Extensions
+
+Note that the ALSA PortAudio back-end adds a few extensions to the standard API that you may take advantage of. To use these functions be sure to include the pa_linux_alsa.h file found in the include file in the PortAudio folder. This file contains further documentation on the following functions:
+
+ PaAlsaStreamInfo/PaAlsa_InitializeStreamInfo::
+  Objects of the !PaAlsaStreamInfo type may be used for the !hostApiSpecificStreamInfo attribute of a !PaStreamParameters object, in order to specify the name of an ALSA device to open directly. Specify the device via !PaAlsaStreamInfo.deviceString, after initializing the object with PaAlsa_InitializeStreamInfo.
+ 
+ PaAlsa_EnableRealtimeScheduling::
+  PA ALSA supports real-time scheduling of the audio callback thread (using the FIFO pthread scheduling policy), via the extension PaAlsa_EnableRealtimeScheduling. Call this on the stream before starting it with the <i>enableScheduling</i> parameter set to true or false, to enable or disable this behaviour respectively.
+ 
+ PaAlsa_GetStreamInputCard::
+  Use this function to get the ALSA-lib card index of the stream's input device.
+ 
+ PaAlsa_GetStreamOutputCard::
+  Use this function to get the ALSA-lib card index of the stream's output device.
+
+Of particular importance is PaAlsa_EnableRealtimeScheduling, which allows ALSA to run at a high priority to prevent ordinary processes on the system from preempting audio playback. Without this, low latency audio playback will be irregular and will contain frequent drop-outs.
+
+@section comp_linux5 Linux Debugging
+
+Eliot Blennerhassett writes:
+
+On linux build, use e.g. "libtool gdb bin/patest_sine8" to debug that program.
+This is because on linux bin/patest_sine8 is a libtool shell script that wraps 
+bin/.libs/patest_sine8  and allows it to find the appropriate libraries within 
+the build tree.
+
+*/

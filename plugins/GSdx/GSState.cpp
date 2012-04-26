@@ -24,7 +24,6 @@
 #include "GSdx.h"
 
 //#define Offset_ST  // Fixes Persona3 mini map alignment which is off even in software rendering
-//#define Offset_UV  // Fixes / breaks various titles
 
 GSState::GSState()
 	: m_version(6)
@@ -184,7 +183,7 @@ void GSState::SetFrameSkip(int skip)
 
 void GSState::Reset()
 {
-	printf("GS reset\n");
+	//printf("GSdx info: GS reset\n");
 
 	// FIXME: memset(m_mem.m_vm8, 0, m_mem.m_vmsize); // bios logo not shown cut in half after reset, missing graphics in GoW after first FMV
 	memset(&m_path[0], 0, sizeof(m_path[0]) * countof(m_path));
@@ -444,18 +443,14 @@ void GSState::GIFPackedRegHandlerRGBA(const GIFPackedReg* RESTRICT r)
 
 void GSState::GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r)
 {
-	#if defined(_M_AMD64)
+	GSVector4i st = GSVector4i::loadl(&r->u64[0]);
+	GSVector4i q = GSVector4i::loadl(&r->u64[1]);
 
-	m_v.ST.u64 = r->u64[0];
+	GSVector4i::storel(&m_v.ST, st);
 
-	#else
-
-	GSVector4i v = GSVector4i::loadl(r);
-	GSVector4i::storel(&m_v.ST.u64, v);
-
-	#endif
-
-	m_q = r->STQ.Q;
+	q = q.blend8(GSVector4i::cast(GSVector4::m_one), q == GSVector4i::zero()); // character shadow in Vexx, q = 0 (st also 0 on the first 16 vertices), setting it to 1.0f to avoid div by zero later
+	
+	*(int*)&m_q = GSVector4i::store(q); 
 	
 #ifdef Offset_ST
 	GIFRegTEX0 TEX0 = m_context->TEX0;
@@ -470,10 +465,7 @@ void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r)
 
 	m_v.UV = (uint32)GSVector4i::store(v.ps32(v));
 
-#ifdef Offset_UV
-	m_v.UV.U = min((uint16)m_v.UV.U, (uint16)(m_v.UV.U - 4U));
-	m_v.UV.V = min((uint16)m_v.UV.V, (uint16)(m_v.UV.V - 4U));
-#endif
+    isPackedUV_HackFlag = true;
 }
 
 template<uint32 prim, uint32 adc>
@@ -539,6 +531,8 @@ void GSState::GIFPackedRegHandlerSTQRGBAXYZF2(const GIFPackedReg* RESTRICT r, ui
 		GSVector4i q = GSVector4i::loadl(&r[0].u64[1]);
 		GSVector4i rgba = (GSVector4i::load<false>(&r[1]) & GSVector4i::x000000ff()).ps32().pu16();
 
+		q = q.blend8(GSVector4i::cast(GSVector4::m_one), q == GSVector4i::zero()); // see GIFPackedRegHandlerSTQ
+
 		m_v.m[0] = st.upl64(rgba.upl32(q)); // TODO: only store the last one
 
 		GSVector4i xy = GSVector4i::loadl(&r[2].u64[0]);
@@ -568,6 +562,8 @@ void GSState::GIFPackedRegHandlerSTQRGBAXYZ2(const GIFPackedReg* RESTRICT r, uin
 		GSVector4i st = GSVector4i::loadl(&r[0].u64[0]);
 		GSVector4i q = GSVector4i::loadl(&r[0].u64[1]);
 		GSVector4i rgba = (GSVector4i::load<false>(&r[1]) & GSVector4i::x000000ff()).ps32().pu16();
+
+		q = q.blend8(GSVector4i::cast(GSVector4::m_one), q == GSVector4i::zero()); // see GIFPackedRegHandlerSTQ
 
 		m_v.m[0] = st.upl64(rgba.upl32(q)); // TODO: only store the last one
 
@@ -638,7 +634,11 @@ void GSState::GIFRegHandlerPRIM(const GIFReg* RESTRICT r)
 
 void GSState::GIFRegHandlerRGBAQ(const GIFReg* RESTRICT r)
 {
-	m_v.RGBAQ = (GSVector4i)r->RGBAQ;
+	GSVector4i rgbaq = (GSVector4i)r->RGBAQ;
+
+	rgbaq = rgbaq.upl32(rgbaq.blend8(GSVector4i::cast(GSVector4::m_one), rgbaq == GSVector4i::zero()).yyyy()); // see GIFPackedRegHandlerSTQ
+
+	m_v.RGBAQ = rgbaq;
 }
 
 void GSState::GIFRegHandlerST(const GIFReg* RESTRICT r)
@@ -654,12 +654,9 @@ void GSState::GIFRegHandlerST(const GIFReg* RESTRICT r)
 
 void GSState::GIFRegHandlerUV(const GIFReg* RESTRICT r)
 {
-	m_v.UV = r->UV.u32[0] & 0x3fff3fff;
+    m_v.UV = r->UV.u32[0] & 0x3fff3fff;
 
-#ifdef Offset_UV
-	m_v.UV.U = min((uint16)m_v.UV.U, (uint16)(m_v.UV.U - 4U));
-	m_v.UV.V = min((uint16)m_v.UV.V, (uint16)(m_v.UV.V - 4U));
-#endif
+    isPackedUV_HackFlag = false;
 }
 
 template<uint32 prim, uint32 adc>
@@ -776,13 +773,31 @@ template<int i> void GSState::GIFRegHandlerTEX0(const GIFReg* RESTRICT r)
 {
 	GIFRegTEX0 TEX0 = r->TEX0;
 
-	// Tokyo Xtreme Racer Drift 2, TW/TH == 0, PRIM->FST == 1
-	// Just setting the max texture size to make the texture cache allocate some surface. 
-	// The vertex trace will narrow the updated area down to the minimum, upper-left 8x8 
-	// for a single letter, but it may address the whole thing if it wants to.
+	int tw = (int)TEX0.TW;
+	int th = (int)TEX0.TH;
 
-	if(TEX0.TW > 10 || TEX0.TW == 0) TEX0.TW = 10;
-	if(TEX0.TH > 10 || TEX0.TH == 0) TEX0.TH = 10;
+	if(tw > 10) tw = 10;
+	if(th > 10) th = 10;
+
+	if(PRIM->FST)
+	{
+		// Tokyo Xtreme Racer Drift 2, TW/TH == 0
+		// Just setting the max texture size to make the texture cache allocate some surface. 
+		// The vertex trace will narrow the updated area down to the minimum, upper-left 8x8 
+		// for a single letter, but it may address the whole thing if it wants to.
+
+		if(tw == 0) tw = 10;
+		if(th == 0) th = 10;
+	}
+	else
+	{
+		// Yakuza, TW/TH == 0
+		// The minimap is drawn using solid colors, the texture is really a 1x1 white texel, 
+		// modulated by the vertex color. Cannot change the dimension because S/T are normalized.
+	}
+
+	TEX0.TW = tw;
+	TEX0.TH = th;
 
 	if((TEX0.TBW & 1) && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT4))
 	{
@@ -1134,8 +1149,8 @@ template<int i> void GSState::GIFRegHandlerZBUF(const GIFReg* RESTRICT r)
 	if(ZBUF.u32[0] == 0)
 	{
 		// during startup all regs are cleared to 0 (by the bios or something), so we mask z until this register becomes valid
-
-		ZBUF.ZMSK = 1;
+		// edit: breaks Grandia Xtreme and sounds like a bad idea generally. What was the intend?
+		//ZBUF.ZMSK = 1;
 	}
 
 	ZBUF.PSM |= 0x30;
@@ -2518,10 +2533,10 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 
 		if(linear)
 		{
-			st += GSVector4(-0x8000, 0x8000).xxyy();
+			st += GSVector4(-0.5f, 0.5f).xxyy();
 		}
 
-		GSVector4i uv = GSVector4i(st).sra32(16);
+		GSVector4i uv = GSVector4i(st.floor());
 
 		GSVector4i u, v;
 

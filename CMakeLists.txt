@@ -79,9 +79,6 @@ if(common_libs)
     add_subdirectory(common/src/x86emitter)
 endif(common_libs)
 
-# make tools
-add_subdirectory(tools)
-
 # make pcsx2
 if(EXISTS "${PROJECT_SOURCE_DIR}/pcsx2" AND pcsx2_core)
     add_subdirectory(pcsx2)
@@ -100,5 +97,5 @@ if(PACKAGE_MODE)
     INSTALL(FILES "${PROJECT_SOURCE_DIR}/linux_various/pcsx2.xpm" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/pixmaps")
     INSTALL(FILES "${PROJECT_SOURCE_DIR}/bin/docs/PCSX2_FAQ_0.9.8.pdf" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/doc/pcsx2")
     INSTALL(FILES "${PROJECT_SOURCE_DIR}/bin/docs/PCSX2_Readme_0.9.8.pdf" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/doc/pcsx2")
-    INSTALL(FILES "${PROJECT_SOURCE_DIR}/bin/docs/pcsx2.man" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/man/man1/")
+    INSTALL(FILES "${PROJECT_SOURCE_DIR}/bin/docs/pcsx2.1" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/man/man1/")
 endif(PACKAGE_MODE)

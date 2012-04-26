@@ -24,8 +24,6 @@
 #include "GSLocalMemory.h"
 #include "GSVector.h"
 
-#define GS_BILINEAR_PRECISION 4 // max precision 15, but several games like okami, rogue galaxy, dq8 break above 4
-
 union GSScanlineSelector
 {
 	struct
@@ -70,6 +68,7 @@ union GSScanlineSelector
 		uint32 lcm:1; // 52
 		uint32 mmin:2; // 53
 		uint32 notest:1; // 54 (no ztest, no atest, no date, no scissor test, and horizontally aligned to 4 pixels)
+		// TODO: 1D texture flag? could save 2 texture reads and 4 lerps with bilinear, and also the texture coordinate clamp/wrap code in one direction
 	};
 
 	struct

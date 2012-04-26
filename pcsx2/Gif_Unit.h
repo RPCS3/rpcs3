@@ -429,7 +429,7 @@ struct Gif_Unit {
 			Gif_Tag gifTag(&pMem[offset & memMask]);
 			incTag(offset, curSize, 16 + gifTag.len); // Tag + Data length
 			if (pathIdx == GIF_PATH_1 && curSize >= 0x4000) {
-				Console.Warning("Gif Unit - GS packet size exceeded VU memory size!");
+				DevCon.Warning("Gif Unit - GS packet size exceeded VU memory size!");
 				return 0; // Bios does this... (Fixed if you delay vu1's xgkick by 103 vu cycles)
 			}
 			if (curSize >= size) return size;
@@ -583,7 +583,8 @@ struct Gif_Unit {
 
 	bool CanDoP3Slice() { return stat.IMT == 1 && gifPath[GIF_PATH_3].state == GIF_PATH_IMAGE; }
 	bool CanDoGif()		{ return stat.PSE == 0 && (CHECK_GIFREVERSEHACK ? 1 : stat.DIR == 0) && gsSIGNAL.queued == 0; }
-	bool Path3Masked()  { return stat.M3R || stat.M3P; }
+	//Mask stops the next packet which hasnt started from transferring
+	bool Path3Masked()  { return ((stat.M3R || stat.M3P) && (gifPath[GIF_PATH_3].state == GIF_PATH_IDLE)); }
 
 	void PrintInfo(bool printP1=1, bool printP2=1, bool printP3=1) {
 		u32 a = checkPaths(1,1,1), b = checkQueued(1,1,1);

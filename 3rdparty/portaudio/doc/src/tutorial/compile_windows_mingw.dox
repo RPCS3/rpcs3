@@ -1,0 +1,53 @@
+/** @page compile_windows_mingw Building Portaudio for Windows with MinGW
+@ingroup tutorial
+
+@section comp_mingw1 Portaudio for Windows With MinGW
+
+<i>The following document is still being reviewed</i>
+
+= MinGW/MSYS =
+
+From the [http://www.mingw.org MinGW projectpage]:
+
+MinGW: A collection of freely available and freely distributable
+Windows specific header files and import libraries, augmenting
+the GNU Compiler Collection, (GCC), and its associated
+tools, (GNU binutils). MinGW provides a complete Open Source
+programming tool set which is suitable for the development of
+native Windows programs that do not depend on any 3rd-party C
+runtime DLLs.
+
+MSYS: A Minimal SYStem providing a POSIX compatible Bourne shell
+environment, with a small collection of UNIX command line
+tools. Primarily developed as a means to execute the configure
+scripts and Makefiles used to build Open Source software, but
+also useful as a general purpose command line interface to
+replace Windows cmd.exe.
+
+MinGW provides a compiler/linker toolchain while MSYS is required
+to actually run the PortAudio configure script.
+
+Once MinGW and MSYS are installed (see the [http://www.mingw.org/MinGWiki MinGW-Wiki]) open an MSYS shell and run the famous:
+
+@code
+./configure
+make
+make install
+@endcode
+
+The above should create a working version though you might want to
+provide '--prefix=<path-to-install-dir>' to configure.
+
+'./configure --help' gives details as to what can be tinkered with.
+
+--- Mikael Magnusson
+
+To update your copy or check out a fresh copy of the source
+
+[wiki:UsingThePortAudioSvnRepository  SVN instructions]
+
+--- Bob !McGwier
+
+Back to the Tutorial: \ref tutorial_start
+
+*/

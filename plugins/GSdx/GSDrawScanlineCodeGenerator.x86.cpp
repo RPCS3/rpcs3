@@ -389,8 +389,7 @@ void GSDrawScanlineCodeGenerator::Init()
 					{
 						pshuflw(xmm6, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
 						pshufhw(xmm6, xmm6, _MM_SHUFFLE(2, 2, 0, 0));
-						psrlw(xmm6, 16 - GS_BILINEAR_PRECISION);
-						if(GS_BILINEAR_PRECISION < 15) psllw(xmm6, 15 - GS_BILINEAR_PRECISION);
+						psrlw(xmm6, 12);
 						movdqa(ptr[&m_local.temp.vf], xmm6);
 					}
 				}
@@ -748,8 +747,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 		pshuflw(xmm0, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 		pshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-		psrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
-		if(GS_BILINEAR_PRECISION < 15) psllw(xmm0, 15 - GS_BILINEAR_PRECISION);
+		psrlw(xmm0, 12);
 		movdqa(ptr[&m_local.temp.uf], xmm0);
 
 		if(m_sel.prim != GS_SPRITE_CLASS)
@@ -758,8 +756,7 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 
 			pshuflw(xmm0, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
 			pshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-			psrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
-			if(GS_BILINEAR_PRECISION < 15) psllw(xmm0, 15 - GS_BILINEAR_PRECISION);
+			psrlw(xmm0, 12);
 			movdqa(ptr[&m_local.temp.vf], xmm0);
 		}
 	}
@@ -891,11 +888,11 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// xmm5 = c11
 		// xmm7 = used
 
-		// rb00 = rb00.lerp16<0>(rb01, uf);
-		// ga00 = ga00.lerp16<0>(ga01, uf);
+		// rb00 = rb00.lerp_4(rb01, uf);
+		// ga00 = ga00.lerp_4(ga01, uf);
 
-		lerp16(xmm3, xmm2, xmm0, 0);
-		lerp16(xmm4, xmm6, xmm0, 0);
+		lerp16_4(xmm3, xmm2, xmm0);
+		lerp16_4(xmm4, xmm6, xmm0);
 
 		// xmm0 = uf
 		// xmm3 = rb00
@@ -930,11 +927,11 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// xmm6 = ga11
 		// xmm7 = used
 
-		// rb10 = rb10.lerp16<0>(rb11, uf);
-		// ga10 = ga10.lerp16<0>(ga11, uf);
+		// rb10 = rb10.lerp_4(rb11, uf);
+		// ga10 = ga10.lerp_4(ga11, uf);
 
-		lerp16(xmm5, xmm1, xmm0, 0);
-		lerp16(xmm6, xmm2, xmm0, 0);
+		lerp16_4(xmm5, xmm1, xmm0);
+		lerp16_4(xmm6, xmm2, xmm0);
 
 		// xmm3 = rb00
 		// xmm4 = ga00
@@ -943,13 +940,13 @@ void GSDrawScanlineCodeGenerator::SampleTexture()
 		// xmm0, xmm1, xmm2 = free
 		// xmm7 = used
 
-		// rb00 = rb00.lerp16<0>(rb10, vf);
-		// ga00 = ga00.lerp16<0>(ga10, vf);
+		// rb00 = rb00.lerp_4(rb10, vf);
+		// ga00 = ga00.lerp_4(ga10, vf);
 
 		movdqa(xmm0, ptr[&m_local.temp.vf]);
 
-		lerp16(xmm5, xmm3, xmm0, 0);
-		lerp16(xmm6, xmm4, xmm0, 0);
+		lerp16_4(xmm5, xmm3, xmm0);
+		lerp16_4(xmm6, xmm4, xmm0);
 	}
 	else
 	{
@@ -1353,16 +1350,14 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 	
 		pshuflw(xmm0, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 		pshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-		psrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
-		if(GS_BILINEAR_PRECISION < 15) psllw(xmm0, 15 - GS_BILINEAR_PRECISION);
+		psrlw(xmm0, 12);
 		movdqa(ptr[&m_local.temp.uf], xmm0);
 
 		// GSVector4i vf = v.xxzzlh().srl16(1);
 
 		pshuflw(xmm0, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
 		pshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-		psrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
-		if(GS_BILINEAR_PRECISION < 15) psllw(xmm0, 15 - GS_BILINEAR_PRECISION);
+		psrlw(xmm0, 12);
 		movdqa(ptr[&m_local.temp.vf], xmm0);
 	}
 
@@ -1493,11 +1488,11 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 		// xmm5 = c11
 		// xmm7 = used
 
-		// rb00 = rb00.lerp16<0>(rb01, uf);
-		// ga00 = ga00.lerp16<0>(ga01, uf);
+		// rb00 = rb00.lerp_4(rb01, uf);
+		// ga00 = ga00.lerp_4(ga01, uf);
 
-		lerp16(xmm3, xmm2, xmm0, 0);
-		lerp16(xmm4, xmm6, xmm0, 0);
+		lerp16_4(xmm3, xmm2, xmm0);
+		lerp16_4(xmm4, xmm6, xmm0);
 
 		// xmm0 = uf
 		// xmm3 = rb00
@@ -1532,11 +1527,11 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 		// xmm6 = ga11
 		// xmm7 = used
 
-		// rb10 = rb10.lerp16<0>(rb11, uf);
-		// ga10 = ga10.lerp16<0>(ga11, uf);
+		// rb10 = rb10.lerp_4(rb11, uf);
+		// ga10 = ga10.lerp_4(ga11, uf);
 
-		lerp16(xmm5, xmm1, xmm0, 0);
-		lerp16(xmm6, xmm2, xmm0, 0);
+		lerp16_4(xmm5, xmm1, xmm0);
+		lerp16_4(xmm6, xmm2, xmm0);
 
 		// xmm3 = rb00
 		// xmm4 = ga00
@@ -1545,13 +1540,13 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 		// xmm0, xmm1, xmm2 = free
 		// xmm7 = used
 
-		// rb00 = rb00.lerp16<0>(rb10, vf);
-		// ga00 = ga00.lerp16<0>(ga10, vf);
+		// rb00 = rb00.lerp_4(rb10, vf);
+		// ga00 = ga00.lerp_4(ga10, vf);
 
 		movdqa(xmm0, ptr[&m_local.temp.vf]);
 
-		lerp16(xmm5, xmm3, xmm0, 0);
-		lerp16(xmm6, xmm4, xmm0, 0);
+		lerp16_4(xmm5, xmm3, xmm0);
+		lerp16_4(xmm6, xmm4, xmm0);
 	}
 	else
 	{
@@ -1608,16 +1603,14 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 	
 			pshuflw(xmm0, xmm2, _MM_SHUFFLE(2, 2, 0, 0));
 			pshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-			psrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
-			if(GS_BILINEAR_PRECISION < 15) psllw(xmm0, 15 - GS_BILINEAR_PRECISION);
+			psrlw(xmm0, 12);
 			movdqa(ptr[&m_local.temp.uf], xmm0);
 
 			// GSVector4i vf = v.xxzzlh().srl16(1);
 
 			pshuflw(xmm0, xmm3, _MM_SHUFFLE(2, 2, 0, 0));
 			pshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-			psrlw(xmm0, 16 - GS_BILINEAR_PRECISION);
-			if(GS_BILINEAR_PRECISION < 15) psllw(xmm0, 15 - GS_BILINEAR_PRECISION);
+			psrlw(xmm0, 12);
 			movdqa(ptr[&m_local.temp.vf], xmm0);
 		}
 
@@ -1748,11 +1741,11 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 			// xmm5 = c11
 			// xmm7 = used
 
-			// rb00 = rb00.lerp16<0>(rb01, uf);
-			// ga00 = ga00.lerp16<0>(ga01, uf);
+			// rb00 = rb00.lerp_4(rb01, uf);
+			// ga00 = ga00.lerp_4(ga01, uf);
 
-			lerp16(xmm3, xmm2, xmm0, 0);
-			lerp16(xmm4, xmm6, xmm0, 0);
+			lerp16_4(xmm3, xmm2, xmm0);
+			lerp16_4(xmm4, xmm6, xmm0);
 
 			// xmm0 = uf
 			// xmm3 = rb00
@@ -1787,11 +1780,11 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 			// xmm6 = ga11
 			// xmm7 = used
 
-			// rb10 = rb10.lerp16<0>(rb11, uf);
-			// ga10 = ga10.lerp16<0>(ga11, uf);
+			// rb10 = rb10.lerp_4(rb11, uf);
+			// ga10 = ga10.lerp_4(ga11, uf);
 
-			lerp16(xmm5, xmm1, xmm0, 0);
-			lerp16(xmm6, xmm2, xmm0, 0);
+			lerp16_4(xmm5, xmm1, xmm0);
+			lerp16_4(xmm6, xmm2, xmm0);
 
 			// xmm3 = rb00
 			// xmm4 = ga00
@@ -1800,13 +1793,13 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 			// xmm0, xmm1, xmm2 = free
 			// xmm7 = used
 
-			// rb00 = rb00.lerp16<0>(rb10, vf);
-			// ga00 = ga00.lerp16<0>(ga10, vf);
+			// rb00 = rb00.lerp_4(rb10, vf);
+			// ga00 = ga00.lerp_4(ga10, vf);
 
 			movdqa(xmm0, ptr[&m_local.temp.vf]);
 
-			lerp16(xmm5, xmm3, xmm0, 0);
-			lerp16(xmm6, xmm4, xmm0, 0);
+			lerp16_4(xmm5, xmm3, xmm0);
+			lerp16_4(xmm6, xmm4, xmm0);
 		}
 		else
 		{

@@ -201,6 +201,36 @@ bool GSDevice11::Create(GSWnd* wnd)
 		hr = CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i).c_str(), NULL, &m_interlace.ps[i]);
 	}
 
+	// Shade Boost	
+
+	int ShadeBoost_Contrast = theApp.GetConfig("ShadeBoost_Contrast", 50);
+	int ShadeBoost_Brightness = theApp.GetConfig("ShadeBoost_Brightness", 50);
+	int ShadeBoost_Saturation = theApp.GetConfig("ShadeBoost_Saturation", 50);
+		
+	string str[3];		
+		
+	str[0] = format("%d", ShadeBoost_Saturation);
+	str[1] = format("%d", ShadeBoost_Brightness);
+	str[2] = format("%d", ShadeBoost_Contrast);
+
+	D3D11_SHADER_MACRO macro[] =
+	{			
+		{"SB_SATURATION", str[0].c_str()},
+		{"SB_BRIGHTNESS", str[1].c_str()},
+		{"SB_CONTRAST", str[2].c_str()},
+		{NULL, NULL},
+	};
+
+	memset(&bd, 0, sizeof(bd));
+
+	bd.ByteWidth = sizeof(ShadeBoostConstantBuffer);
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+
+	hr = m_dev->CreateBuffer(&bd, NULL, &m_shadeboost.cb);
+
+	hr = CompileShader(IDR_SHADEBOOST_FX, "ps_main", macro, &m_shadeboost.ps);
+
 	// fxaa
 
 	memset(&bd, 0, sizeof(bd));
@@ -668,6 +698,23 @@ void GSDevice11::DoFXAA(GSTexture* st, GSTexture* dt)
 
 	//st->Save("c:\\temp1\\1.bmp");
 	//dt->Save("c:\\temp1\\2.bmp");
+}
+
+void GSDevice11::DoShadeBoost(GSTexture* st, GSTexture* dt)
+{
+	GSVector2i s = dt->GetSize();
+
+	GSVector4 sr(0, 0, 1, 1);
+	GSVector4 dr(0, 0, s.x, s.y);
+
+	ShadeBoostConstantBuffer cb;
+
+	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
+	cb.rcpFrameOpt = GSVector4::zero();
+
+	m_ctx->UpdateSubresource(m_shadeboost.cb, 0, NULL, &cb, 0, 0);
+
+	StretchRect(st, sr, dt, dr, m_shadeboost.ps, m_shadeboost.cb, true);
 }
 
 void GSDevice11::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm)

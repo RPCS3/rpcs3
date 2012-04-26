@@ -72,6 +72,7 @@ struct vifStruct {
 	bool done;
 	bool vifstalled;
 	bool stallontag;
+	bool waitforvu;
 
 	// GS registers used for calculating the size of the last local->host transfer initiated on the GS
 	// Transfer size calculation should be restricted to GS emulation in the future
@@ -89,11 +90,13 @@ extern __aligned16 vifStruct  vif0, vif1;
 
 _vifT extern u32 vifRead32(u32 mem);
 _vifT extern bool vifWrite32(u32 mem, u32 value);
-
+void ExecuteVU(int idx);
 extern void vif0Interrupt();
+extern void vif0VUFinish();
 extern void vif0Reset();
 
 extern void vif1Interrupt();
+extern void vif1VUFinish();
 extern void vif1Reset();
 
 typedef int __fastcall FnType_VifCmdHandler(int pass, const u32 *data);
@@ -119,10 +122,6 @@ static const unsigned int VIF1intc = 5;
 
 extern u32 g_vif0Cycles;
 extern u32 g_vif1Cycles;
-extern u32 g_vu0Cycles;
-extern u32 g_vu1Cycles;
-extern u32 g_packetsizeonvu0;
-extern u32 g_packetsizeonvu1;
 
 extern void vif0FLUSH();
 extern void vif1FLUSH();

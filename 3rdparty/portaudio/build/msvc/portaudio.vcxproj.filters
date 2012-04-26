@@ -175,5 +175,8 @@
     <ClInclude Include="..\..\src\os\win\pa_win_coinitialize.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\pa_win_wdmks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

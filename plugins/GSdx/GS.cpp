@@ -347,8 +347,17 @@ EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 	{
 #ifdef _WINDOWS
 		D3D_FEATURE_LEVEL level;
+		int best_sw_renderer = GSUtil::CheckDirect3D11Level(level) && level >= D3D_FEATURE_LEVEL_10_0 ? 4 : 1; // dx11 / dx9 sw
 
-		renderer = GSUtil::CheckDirect3D11Level(level) && level >= D3D_FEATURE_LEVEL_10_0 ? 4 : 1; // dx11 / dx9 sw
+		switch(renderer){
+			// Use alternative renderer (SW if currently using HW renderer, and vice versa, keeping the same DX level)
+			case 1: renderer = 0; break; // DX9:  SW to HW
+			case 0: renderer = 1; break; // DX9:  HW to SW
+			case 4: renderer = 3; break; // DX11: SW to HW
+			case 3: renderer = 4; break; // DX11: HW to SW
+			default: renderer = best_sw_renderer; // If wasn't using DX (e.g. SDL), use best SW renderer.
+		}
+
 #endif
 	}
 

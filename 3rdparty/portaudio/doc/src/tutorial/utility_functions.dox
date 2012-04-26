@@ -1,0 +1,69 @@
+/** @page utility_functions Utility Functions
+@ingroup tutorial
+
+In addition to the functions described elsewhere in this tutorial, PortAudio provides a number of Utility functions that are useful in a variety of circumstances. 
+You'll want to read the portaudio.h reference, which documents the entire V19 API for details, but we'll try to cover the basics here.
+
+@section tut_util2 Version Information
+
+PortAudio offers two functions to determine the PortAudio Version. This is most useful when you are using PortAudio as a dynamic library, but it may also be useful at other times.
+
+@code
+int             Pa_GetVersion (void)
+const char *    Pa_GetVersionText (void)
+@endcode
+
+@section tut_util3 Error Text
+
+PortAudio allows you to get error text from an error number.
+
+@code
+const char *    Pa_GetErrorText (PaError errorCode)
+@endcode
+
+@section tut_util4 Stream State
+
+PortAudio Streams exist in 3 states: Active, Stopped, and Callback Stopped. If a stream is in callback stopped state, you'll need to stop it before you can start it again. If you need to query the state of a PortAudio stream, there are two functions for doing so:
+
+@code
+PaError     Pa_IsStreamStopped (PaStream *stream)
+PaError     Pa_IsStreamActive (PaStream *stream)
+@endcode
+
+@section tut_util5 Stream Info
+
+If you need to retrieve info about a given stream, such as latency, and sample rate info, there's a function for that too:
+
+@code
+const PaStreamInfo *    Pa_GetStreamInfo (PaStream *stream)
+@endcode
+
+@section tut_util6 Stream Time
+
+If you need to synchronise other activities such as display updates or MIDI output with the PortAudio callback you need to know the current time according to the same timebase used by the stream callback timestamps.
+
+@code
+PaTime  Pa_GetStreamTime (PaStream *stream)
+@endcode
+
+@section tut_util6CPU Usage
+
+To determine how much CPU is being used by the callback, use these:
+
+@code
+double  Pa_GetStreamCpuLoad (PaStream *stream)
+@endcode
+
+@section tut_util7 Other utilities
+
+These functions allow you to determine the size of a sample from its format and sleep for a given amount of time. The sleep function should not be used for precise timing or synchronization because it makes few guarantees about the exact length of time it waits. It is most useful for testing.
+
+@code
+PaError Pa_GetSampleSize (PaSampleFormat format)
+void    Pa_Sleep (long msec)
+@endcode
+
+
+Previous: \ref terminating_portaudio | Next: \ref querying_devices
+
+*/

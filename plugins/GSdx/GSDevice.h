@@ -55,6 +55,15 @@ public:
 	FXAAConstantBuffer() {memset(this, 0, sizeof(*this));}
 };
 
+class ShadeBoostConstantBuffer
+{
+public:
+	GSVector4 rcpFrame;
+	GSVector4 rcpFrameOpt;
+
+	ShadeBoostConstantBuffer() {memset(this, 0, sizeof(*this));}
+};
+
 #pragma pack(pop)
 
 class GSDevice : public GSAlignedClass<32>
@@ -70,6 +79,7 @@ protected:
 	GSTexture* m_weavebob;
 	GSTexture* m_blend;
 	GSTexture* m_fxaa;
+	GSTexture* m_shadeboost;
 	GSTexture* m_1x1;
 	GSTexture* m_current;
 	struct {size_t stride, start, count, limit;} m_vertex;
@@ -82,6 +92,7 @@ protected:
 	virtual void DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c) = 0;
 	virtual void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset) = 0;
 	virtual void DoFXAA(GSTexture* st, GSTexture* dt) {}
+	virtual void DoShadeBoost(GSTexture* st, GSTexture* dt) {}
 
 public:
 	GSDevice();
@@ -134,6 +145,7 @@ public:
 	void Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVector2i& fs, bool slbg, bool mmod, const GSVector4& c);
 	void Interlace(const GSVector2i& ds, int field, int mode, float yoffset);
 	void FXAA();
+	void ShadeBoost();
 
 	bool ResizeTexture(GSTexture** t, int w, int h);
 

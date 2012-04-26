@@ -27,7 +27,7 @@ static int path1_count = 0;
 
 static int nPath3Hack = 0;
 
-void CALLBACK GSgetLastTag(u64* ptag)
+EXPORT_C_(void) GSgetLastTag(u64* ptag)
 {
 	FUNCLOG
 
@@ -76,6 +76,8 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 
 #ifdef _DEBUG
 	gifTransferLog(index, pMem, size);
+
+	g_dump.Transfer(index, (const u8*)pMem, size);
 #endif
 
 	while (size > 0)
@@ -163,32 +165,36 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 				{
 					int len = min(size, path->nloop);
 					//ZZLog::Error_Log("GIF_FLG_IMAGE(%d)=%d", gs.imageTransfer, len);
-
-					switch (gs.imageTransfer)
+					
+					if (gs.transferring)
 					{
-						case 0:
-							TransferHostLocal(pMem, len * 4);
-							break;
+						switch (gs.imageTransfer)
+						{
+							case XFER_HOST_TO_LOCAL:
+								TransferHostLocal(pMem, len * 4);
+								break;
 
-						case 1:
-							// This can't happen; downloads can not be started or performed as part of
-							// a GIFtag operation.  They're an entirely separate process that can only be
-							// done through the ReverseFIFO transfer (aka ReadFIFO). --air
-							assert(0);
-							//TransferLocalHost(pMem, len);
-							break;
+							case XFER_LOCAL_TO_HOST:
+								// This can't happen; downloads can not be started or performed as part of
+								// a GIFtag operation.  They're an entirely separate process that can only be
+								// done through the ReverseFIFO transfer (aka ReadFIFO). --air
+								assert(0);
+								//TransferLocalHost(pMem, len);
+								break;
 
-						case 2:
-							//TransferLocalLocal();
-							break;
+							case XFER_LOCAL_TO_LOCAL:
+								//TransferLocalLocal();
+								break;
 
-						case 3:
-							//assert(0);
-							break;
+							case XFER_DEACTIVATED:
+								//assert(0);
+								break;
 
-						default:
-							//assert(0);
-							break;
+							default:
+								//assert(0);
+								break;
+						}
+						
 					}
 
 					pMem += len * 4;
@@ -234,7 +240,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 	}
 }
 
-void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
+EXPORT_C_(void) GSgifTransfer1(u32 *pMem, u32 addr)
 {
 	FUNCLOG
 
@@ -248,7 +254,7 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 	_GSgifTransfer<0>((u32*)((u8*)pMem + addr), (0x4000 - addr) / 16);
 }
 
-void CALLBACK GSgifTransfer2(u32 *pMem, u32 size)
+EXPORT_C_(void) GSgifTransfer2(u32 *pMem, u32 size)
 {
 	FUNCLOG
 
@@ -257,7 +263,7 @@ void CALLBACK GSgifTransfer2(u32 *pMem, u32 size)
 	_GSgifTransfer<1>(const_cast<u32*>(pMem), size);
 }
 
-void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
+EXPORT_C_(void) GSgifTransfer3(u32 *pMem, u32 size)
 {
 	FUNCLOG
 
@@ -266,7 +272,7 @@ void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
 	_GSgifTransfer<2>(const_cast<u32*>(pMem), size);
 }
 
-void CALLBACK GSgifTransfer(const u32 *pMem, u32 size)
+EXPORT_C_(void) GSgifTransfer(const u32 *pMem, u32 size)
 {
 	FUNCLOG
 

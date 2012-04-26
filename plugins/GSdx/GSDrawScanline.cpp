@@ -103,8 +103,6 @@ void GSDrawScanline::EndDraw(uint64 frame, uint64 ticks, int pixels)
 
 #ifndef ENABLE_JIT_RASTERIZER
 
-// FIXME: something's not right with the sky in burnout 3
-
 void GSDrawScanline::SetupPrim(const GSVertexSW* vertex, const uint32* index, const GSVertexSW& dscan)
 {
 	GSScanlineSelector sel = m_global.sel;
@@ -326,7 +324,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 				}
 				else if(sel.ltf)
 				{
-					vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
+					vf = v.xxzzlh().srl16(12);
 				}
 
 				s = GSVector4::cast(u);
@@ -516,8 +514,8 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 						u -= 0x8000;
 						v -= 0x8000;
 
-						uf = u.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
-						vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
+						uf = u.xxzzlh().srl16(12);
+						vf = v.xxzzlh().srl16(12);
 					}
 
 					GSVector4i uv0 = u.sra32(16).ps32(v.sra32(16));
@@ -583,19 +581,19 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 						GSVector4i rb01 = c01.sll16(8).srl16(8);
 						GSVector4i ga01 = c01.srl16(8);
 
-						rb00 = rb00.lerp16<0>(rb01, uf);
-						ga00 = ga00.lerp16<0>(ga01, uf);
+						rb00 = rb00.lerp16_4(rb01, uf);
+						ga00 = ga00.lerp16_4(ga01, uf);
 
 						GSVector4i rb10 = c10.sll16(8).srl16(8);
 						GSVector4i ga10 = c10.srl16(8);
 						GSVector4i rb11 = c11.sll16(8).srl16(8);
 						GSVector4i ga11 = c11.srl16(8);
 
-						rb10 = rb10.lerp16<0>(rb11, uf);
-						ga10 = ga10.lerp16<0>(ga11, uf);
+						rb10 = rb10.lerp16_4(rb11, uf);
+						ga10 = ga10.lerp16_4(ga11, uf);
 
-						rb = rb00.lerp16<0>(rb10, vf);
-						ga = ga00.lerp16<0>(ga10, vf);
+						rb = rb00.lerp16_4(rb10, vf);
+						ga = ga00.lerp16_4(ga10, vf);
 					}
 					else
 					{
@@ -637,8 +635,8 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 							u -= 0x8000;
 							v -= 0x8000;
 
-							uf = u.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
-							vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
+							uf = u.xxzzlh().srl16(12);
+							vf = v.xxzzlh().srl16(12);
 						}
 
 						GSVector4i uv0 = u.sra32(16).ps32(v.sra32(16));
@@ -704,19 +702,19 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 							GSVector4i rb01 = c01.sll16(8).srl16(8);
 							GSVector4i ga01 = c01.srl16(8);
 
-							rb00 = rb00.lerp16<0>(rb01, uf);
-							ga00 = ga00.lerp16<0>(ga01, uf);
+							rb00 = rb00.lerp16_4(rb01, uf);
+							ga00 = ga00.lerp16_4(ga01, uf);
 
 							GSVector4i rb10 = c10.sll16(8).srl16(8);
 							GSVector4i ga10 = c10.srl16(8);
 							GSVector4i rb11 = c11.sll16(8).srl16(8);
 							GSVector4i ga11 = c11.srl16(8);
 
-							rb10 = rb10.lerp16<0>(rb11, uf);
-							ga10 = ga10.lerp16<0>(ga11, uf);
+							rb10 = rb10.lerp16_4(rb11, uf);
+							ga10 = ga10.lerp16_4(ga11, uf);
 
-							rb2 = rb00.lerp16<0>(rb10, vf);
-							ga2 = ga00.lerp16<0>(ga10, vf);
+							rb2 = rb00.lerp16_4(rb10, vf);
+							ga2 = ga00.lerp16_4(ga10, vf);
 						}
 						else
 						{
@@ -747,7 +745,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 						rb = rb.lerp16<0>(rb2, lodf);
 						ga = ga.lerp16<0>(ga2, lodf);
-					}				
+					}
 				}
 				else
 				{
@@ -772,11 +770,11 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 					if(sel.ltf)
 					{
-						uf = u.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
+						uf = u.xxzzlh().srl16(12);
 					
 						if(sel.prim != GS_SPRITE_CLASS)
 						{
-							vf = v.xxzzlh().srl16(16 - GS_BILINEAR_PRECISION).sll16(15 - GS_BILINEAR_PRECISION);
+							vf = v.xxzzlh().srl16(12);
 						}
 					}
 
@@ -837,19 +835,19 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 						GSVector4i rb01 = c01.sll16(8).srl16(8);
 						GSVector4i ga01 = c01.srl16(8);
 
-						rb00 = rb00.lerp16<0>(rb01, uf);
-						ga00 = ga00.lerp16<0>(ga01, uf);
+						rb00 = rb00.lerp16_4(rb01, uf);
+						ga00 = ga00.lerp16_4(ga01, uf);
 
 						GSVector4i rb10 = c10.sll16(8).srl16(8);
 						GSVector4i ga10 = c10.srl16(8);
 						GSVector4i rb11 = c11.sll16(8).srl16(8);
 						GSVector4i ga11 = c11.srl16(8);
 
-						rb10 = rb10.lerp16<0>(rb11, uf);
-						ga10 = ga10.lerp16<0>(ga11, uf);
+						rb10 = rb10.lerp16_4(rb11, uf);
+						ga10 = ga10.lerp16_4(ga11, uf);
 
-						rb = rb00.lerp16<0>(rb10, vf);
-						ga = ga00.lerp16<0>(ga10, vf);
+						rb = rb00.lerp16_4(rb10, vf);
+						ga = ga00.lerp16_4(ga10, vf);
 					}
 					else
 					{
@@ -1177,6 +1175,15 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 					case 0: ga = ga.add16(gas); break;
 					case 1: ga = ga.add16(gad); break;
 					case 2: break;
+					}
+				}
+				else
+				{
+					switch(sel.abd)
+					{
+					case 0: break;
+					case 1: ga = gad; break;
+					case 2: ga = GSVector4i::zero(); break;
 					}
 				}
 

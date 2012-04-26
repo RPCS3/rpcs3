@@ -25,7 +25,7 @@
 
 GSDeviceDX::GSDeviceDX()
 {
-	m_msaa = theApp.GetConfig("msaa", 0);
+	m_msaa = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_MSAA", 0) : 0;
 
 	m_msaa_desc.Count = 1;
 	m_msaa_desc.Quality = 0;

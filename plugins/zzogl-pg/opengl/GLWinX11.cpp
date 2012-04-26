@@ -198,13 +198,24 @@ void GLWindow::CreateContextGL()
 	GLXFBConfig *framebuffer_config = glXChooseFBConfig(glDisplay, DefaultScreen(glDisplay), NULL, &fbcount);
 	if (!framebuffer_config or !fbcount) return;
 
+#if 1
 	// At least create a 3.0 context with compatibility profile
 	int attribs[] = {
 		GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
 		GLX_CONTEXT_MINOR_VERSION_ARB, 0,
+		// GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
 		GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
 		0
 	};
+#else
+	// Create a 3.2 core context without compatibility profile
+	int attribs[] = {
+		GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
+		GLX_CONTEXT_MINOR_VERSION_ARB, 2,
+		GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+		0
+	};
+#endif
 	GLXContext context_temp = glXCreateContextAttribsARB(glDisplay, framebuffer_config[0], NULL, true, attribs);
 	if (context_temp) {
 		ZZLog::Error_Log("Create a 3.0 opengl context");
@@ -339,7 +350,7 @@ void GLWindow::Force43Ratio()
         s32 new_width = (4*height)/3;
         // do not bother to resize for 5 pixels. Avoid a loop
         // due to round value
-        if ( abs(new_width - width) > 5) {
+        if ( ABS(new_width - width) > 5) {
             width = new_width;
             conf.width = new_width;
             // resize the window

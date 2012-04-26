@@ -68,6 +68,5 @@ public:
 	void InvalidatePages(const uint32* pages, uint32 psm);
 
 	void RemoveAll();
-	void RemoveAt(Texture* t);
 	void IncAge();
 };

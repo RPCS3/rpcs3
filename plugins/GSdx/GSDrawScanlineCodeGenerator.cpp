@@ -97,6 +97,25 @@ void GSDrawScanlineCodeGenerator::lerp16(const Xmm& a, const Xmm& b, const Xmm& 
 	#endif
 }
 
+void GSDrawScanlineCodeGenerator::lerp16_4(const Xmm& a, const Xmm& b, const Xmm& f)
+{
+	#if _M_SSE >= 0x500
+
+	vpsubw(a, b);
+	vpmullw(a, f);
+	vpsraw(a, 4);
+	vpaddw(a, b);
+
+	#else
+
+	psubw(a, b);
+	pmullw(a, f);
+	psraw(a, 4);
+	paddw(a, b);
+
+	#endif
+}
+
 void GSDrawScanlineCodeGenerator::mix16(const Xmm& a, const Xmm& b, const Xmm& temp)
 {
 	#if _M_SSE >= 0x500

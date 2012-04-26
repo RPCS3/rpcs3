@@ -6,11 +6,15 @@ set(msg_dep_pcsx2       "check these libraries -> wxWidgets (>=2.8.10), gtk2 (>=
 set(msg_dep_cdvdiso     "check these libraries -> bzip2 (>=1.0.5), gtk2 (>=2.16)")
 set(msg_dep_zerogs      "check these libraries -> glew (>=1.5), opengl, X11, nvidia-cg-toolkit (>=2.1)")
 set(msg_dep_gsdx        "check these libraries -> opengl, X11, pcsx2 SDL")
-set(msg_dep_zzogl       "check these libraries -> glew (>=1.5), jpeg (>=6.2), opengl, X11, nvidia-cg-toolkit (>=2.1), pcsx2 common libs")
 set(msg_dep_onepad      "check these libraries -> sdl (>=1.2)")
 set(msg_dep_zeropad     "check these libraries -> sdl (>=1.2)")
 set(msg_dep_spu2x       "check these libraries -> soundtouch (>=1.5), alsa, portaudio (>=1.9), pcsx2 common libs")
 set(msg_dep_zerospu2    "check these libraries -> soundtouch (>=1.5), alsa")
+if(GLSP_API)
+	set(msg_dep_zzogl       "check these libraries -> glew (>=1.5), jpeg (>=6.2), opengl, X11, pcsx2 common libs")
+else(GLSP_API)
+	set(msg_dep_zzogl       "check these libraries -> glew (>=1.5), jpeg (>=6.2), opengl, X11, nvidia-cg-toolkit (>=2.1), pcsx2 common libs")
+endif(GLSP_API)
 
 #-------------------------------------------------------------------------------
 #								Pcsx2 core & common libs
@@ -153,17 +157,17 @@ endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND)
 # requires:	-GLEW
 #			-OpenGL
 #			-X11
-#			-CG
+#			-CG (only with cg build
 #			-JPEG
 #           -common_libs
 #---------------------------------------
-if(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND JPEG_FOUND AND common_libs)
+if((GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND JPEG_FOUND AND common_libs) AND (CG_FOUND OR GLSL_API))
 	set(zzogl TRUE)
-else(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND JPEG_FOUND AND common_libs)
+else((GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND JPEG_FOUND AND common_libs) AND (CG_FOUND OR GLSL_API))
 	set(zzogl FALSE)
     message(STATUS "Skip build of zzogl: miss some dependencies")
     message(STATUS "${msg_dep_zzogl}")
-endif(GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND CG_FOUND AND JPEG_FOUND AND common_libs)
+endif((GLEW_FOUND AND OPENGL_FOUND AND X11_FOUND AND JPEG_FOUND AND common_libs) AND (CG_FOUND OR GLSL_API))
 #---------------------------------------
 
 #---------------------------------------
@@ -185,20 +189,6 @@ else(SDL_FOUND)
 	set(onepad FALSE)
     message(STATUS "Skip build of onepad: miss some dependencies")
     message(STATUS "${msg_dep_onepad}")
-endif(SDL_FOUND)
-#---------------------------------------
-
-#---------------------------------------
-#			zeropad
-#---------------------------------------
-# requires: -SDL
-#---------------------------------------
-if(SDL_FOUND)
-	set(zeropad TRUE)
-else(SDL_FOUND)
-	set(zeropad FALSE)
-    message(STATUS "Skip build of zeropad: miss some dependencies")
-    message(STATUS "${msg_dep_zeropad}")
 endif(SDL_FOUND)
 #---------------------------------------
 
@@ -235,7 +225,10 @@ endif(ALSA_FOUND AND PORTAUDIO_FOUND AND SOUNDTOUCH_FOUND AND common_libs)
 #			-PortAudio
 #---------------------------------------
 if(SOUNDTOUCH_FOUND AND ALSA_FOUND)
-	set(zerospu2 TRUE)
+    set(zerospu2 TRUE)
+    # Comment the next line, if you want to compile zerospu2
+	set(zerospu2 FALSE)
+    message(STATUS "Don't build zerospu2. It is super-seeded by spu2x")
 else(SOUNDTOUCH_FOUND AND ALSA_FOUND)
 	set(zerospu2 FALSE)
     message(STATUS "Skip build of zerospu2: miss some dependencies")

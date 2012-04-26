@@ -16,11 +16,14 @@
 				<Compiler>
 					<Add option="-Wall" />
 					<Add option="-g" />
+					<Add option="-I/opt/cg/include" />
+					<Add option="-L/opt/cg/lib" />
 					<Add option="-DZEROGS_DEVBUILD" />
 					<Add option="-D_DEBUG" />
 				</Compiler>
 				<Linker>
 					<Add library="../../../../../deps/debug/libUtilities.a" />
+					<Add library="Cg" />
 				</Linker>
 			</Target>
 			<Target title="Devel">
@@ -33,12 +36,15 @@
 				<Compiler>
 					<Add option="-O2" />
 					<Add option="-g" />
+					<Add option="-I/opt/cg/include" />
+					<Add option="-L/opt/cg/lib" />
 					<Add option="-W" />
 					<Add option="-DZEROGS_DEVBUILD" />
 					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add library="../../../../../deps/release/libUtilities.a" />
+					<Add library="Cg" />
 				</Linker>
 			</Target>
 			<Target title="Release">
@@ -50,9 +56,68 @@
 				<Option createStaticLib="1" />
 				<Compiler>
 					<Add option="-O2" />
+					<Add option="-I/opt/cg/include" />
+					<Add option="-L/opt/cg/lib" />
 					<Add option="-W" />
 					<Add option="-DRELEASE_TO_PUBLIC" />
 					<Add option="-DNDEBUG" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add library="../../../../../deps/release/libUtilities.a" />
+					<Add library="Cg" />
+				</Linker>
+			</Target>
+			<Target title="GLSL - Debug">
+				<Option output="../../../../../bin/plugins/ZZOgl-PG-GLSL-dbg.so" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-Wall" />
+					<Add option="-g" />
+					<Add option="-DZEROGS_DEVBUILD" />
+					<Add option="-D_DEBUG" />
+					<Add option="-DGLSL_API" />
+				</Compiler>
+				<Linker>
+					<Add library="../../../../../deps/debug/libUtilities.a" />
+				</Linker>
+			</Target>
+			<Target title="GLSL - Devel">
+				<Option output="../../../../../bin/plugins/ZZOgl-PG-GLSL-dev" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-g" />
+					<Add option="-W" />
+					<Add option="-DZEROGS_DEVBUILD" />
+					<Add option="-DNDEBUG" />
+					<Add option="-DGLSL_API" />
+				</Compiler>
+				<Linker>
+					<Add library="../../../../../deps/release/libUtilities.a" />
+				</Linker>
+			</Target>
+			<Target title="GLSL - Release">
+				<Option output="../../../../../bin/plugins/ZZOgl-PG-GLSL" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-W" />
+					<Add option="-DRELEASE_TO_PUBLIC" />
+					<Add option="-DNDEBUG" />
+					<Add option="-DGLSL_API" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -68,8 +133,6 @@
 			<Add option="-Wno-unused-value" />
 			<Add option="-Wunused-variable" />
 			<Add option="-m32" />
-			<Add option="-I/opt/cg/include" />
-			<Add option="-L/opt/cg/lib" />
 			<Add option="-msse2" />
 			<Add option="-fno-regmove" />
 			<Add option="-fno-strict-aliasing" />
@@ -96,10 +159,10 @@
 			<Add library="z" />
 			<Add library="dl" />
 			<Add library="stdc++" />
-			<Add library="Cg" />
 		</Linker>
 		<ExtraCommands>
 			<Add after="cp $(PROJECT_DIR)/../../ps2hw.dat $(TARGET_OUTPUT_DIR)/" />
+			<Add after="cp $(PROJECT_DIR)/../../ps2hw.glsl $(TARGET_OUTPUT_DIR)/" />
 			<Mode after="always" />
 		</ExtraCommands>
 		<Unit filename="../../CRC.h" />
@@ -121,8 +184,6 @@
 		<Unit filename="../../Mem_Swizzle.h" />
 		<Unit filename="../../Mem_Tables.cpp" />
 		<Unit filename="../../Mem_Transmit.h" />
-		<Unit filename="../../NewRegs.cpp" />
-		<Unit filename="../../NewRegs.h" />
 		<Unit filename="../../Profile.cpp" />
 		<Unit filename="../../Profile.h" />
 		<Unit filename="../../Regs.cpp" />
@@ -147,24 +208,29 @@
 		</Unit>
 		<Unit filename="../../ZZClut.cpp" />
 		<Unit filename="../../ZZClut.h" />
+		<Unit filename="../../ZZDepthTargets.cpp" />
 		<Unit filename="../../ZZGl.h" />
 		<Unit filename="../../ZZHacks.cpp" />
 		<Unit filename="../../ZZHacks.h" />
 		<Unit filename="../../ZZKeyboard.cpp" />
 		<Unit filename="../../ZZLog.cpp" />
 		<Unit filename="../../ZZLog.h" />
+		<Unit filename="../../ZZMemoryTargets.cpp" />
+		<Unit filename="../../ZZRenderTargets.cpp" />
 		<Unit filename="../../ZZoglCRTC.cpp" />
 		<Unit filename="../../ZZoglCRTC.h" />
 		<Unit filename="../../ZZoglCreate.cpp" />
 		<Unit filename="../../ZZoglDrawing.cpp" />
 		<Unit filename="../../ZZoglDrawing.h" />
 		<Unit filename="../../ZZoglFlush.cpp" />
+		<Unit filename="../../ZZoglFlush.h" />
 		<Unit filename="../../ZZoglFlushHack.cpp" />
 		<Unit filename="../../ZZoglFlushHack.h" />
 		<Unit filename="../../ZZoglMath.h" />
 		<Unit filename="../../ZZoglSave.cpp" />
 		<Unit filename="../../ZZoglShaders.cpp" />
 		<Unit filename="../../ZZoglShaders.h" />
+		<Unit filename="../../ZZoglShadersGLSL.cpp" />
 		<Unit filename="../../ZZoglShoots.cpp" />
 		<Unit filename="../../ZZoglShoots.h" />
 		<Unit filename="../../ZZoglVB.cpp" />

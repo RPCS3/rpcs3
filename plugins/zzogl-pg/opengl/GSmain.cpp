@@ -22,6 +22,7 @@
 #include "Profile.h"
 #include "GLWin.h"
 #include "ZZoglFlushHack.h"
+#include "ZZoglShaders.h"
 
 
 using namespace std;
@@ -35,6 +36,7 @@ extern void SaveSnapshot(const char* filename);
 GLWindow GLWin;
 GSinternal gs;
 GSconf conf;
+GSDump g_dump;
 
 int ppf, g_GSMultiThreaded, CurrentSavestate = 0;
 int g_LastCRC = 0, g_TransferredToGPU = 0, s_frameskipping = 0;
@@ -56,7 +58,7 @@ extern const char* pbilinear[];
 // statistics
 u32 g_nGenVars = 0, g_nTexVars = 0, g_nAlphaVars = 0, g_nResolve = 0;
 
-#define VER 3
+#define VER 4
 const unsigned char zgsversion	= PS2E_GS_VERSION;
 unsigned char zgsrevision = 0; // revision and build gives plugin version
 unsigned char zgsbuild	= VER;
@@ -81,7 +83,7 @@ extern int ZZSave(s8* pbydata);
 extern bool ZZLoad(s8* pbydata);
 
 // switches the render target to the real target, flushes the current render targets and renders the real image
-extern void RenderCRTC(int interlace);
+extern void RenderCRTC();
 
 #if defined(_WIN32) && defined(_DEBUG)
 HANDLE g_hCurrentThread = NULL;
@@ -90,37 +92,37 @@ HANDLE g_hCurrentThread = NULL;
 extern int VALIDATE_THRESH;
 extern u32 TEXDESTROY_THRESH;
 
-u32 CALLBACK PS2EgetLibType()
+EXPORT_C_(u32) PS2EgetLibType()
 {
 	return PS2E_LT_GS;
 }
 
-char* CALLBACK PS2EgetLibName()
+EXPORT_C_(char*) PS2EgetLibName()
 {
 	return libraryName;
 }
 
-u32 CALLBACK PS2EgetLibVersion2(u32 type)
+EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
 {
 	return (zgsversion << 16) | (zgsrevision << 8) | zgsbuild | (zgsminor << 24);
 }
 
-void CALLBACK GSsetBaseMem(void* pmem)
+EXPORT_C_(void) GSsetBaseMem(void* pmem)
 {
 	g_pBasePS2Mem = (u8*)pmem;
 }
 
-void CALLBACK GSsetSettingsDir(const char* dir)
+EXPORT_C_(void) GSsetSettingsDir(const char* dir)
 {
 	s_strIniPath = (dir == NULL) ? wxString(L"inis") : wxString(dir, wxConvFile);
 }
 
-void CALLBACK GSsetLogDir(const char* dir)
+EXPORT_C_(void) GSsetLogDir(const char* dir)
 {
 	ZZLog::SetDir(dir);
 }
 
-void CALLBACK GSsetGameCRC(int crc, int options)
+EXPORT_C_(void) GSsetGameCRC(int crc, int options)
 {
     // build a list of function pointer for GetSkipCount (SkipDraw)
 	static GetSkipCount GSC_list[NUMBER_OF_TITLES];
@@ -216,7 +218,7 @@ void CALLBACK GSsetGameCRC(int crc, int options)
 	ListHacks();
 }
 
-void CALLBACK GSsetFrameSkip(int frameskip)
+EXPORT_C_(void) GSsetFrameSkip(int frameskip)
 {
 	FUNCLOG
 	s_frameskipping |= frameskip;
@@ -231,7 +233,7 @@ void CALLBACK GSsetFrameSkip(int frameskip)
 	}
 }
 
-void CALLBACK GSreset()
+EXPORT_C_(void) GSreset()
 {
 	FUNCLOG
 
@@ -241,11 +243,11 @@ void CALLBACK GSreset()
 
 	gs.prac = 1;
 	prim = &gs._prim[0];
-	gs.imageTransfer = -1;
+	gs.transferring = false;
 	gs.q = 1;
 }
 
-void CALLBACK GSgifSoftReset(u32 mask)
+EXPORT_C_(void) GSgifSoftReset(u32 mask)
 {
 	FUNCLOG
 
@@ -253,11 +255,11 @@ void CALLBACK GSgifSoftReset(u32 mask)
 	if (mask & 2) memset(&gs.path[1], 0, sizeof(gs.path[1]));
 	if (mask & 4) memset(&gs.path[2], 0, sizeof(gs.path[2]));
 
-	gs.imageTransfer = -1;
+	gs.transferring = false;
 	gs.q = 1;
 }
 
-s32 CALLBACK GSinit()
+EXPORT_C_(s32) GSinit()
 {
 	FUNCLOG
 
@@ -280,7 +282,7 @@ __forceinline void InitMisc()
 	ResetRegs();
 }
 
-s32 CALLBACK GSopen(void *pDsp, char *Title, int multithread)
+EXPORT_C_(s32) GSopen(void *pDsp, char *Title, int multithread)
 {
 	FUNCLOG
 
@@ -336,32 +338,34 @@ EXPORT_C_(s32) GSopen2( void* pDsp, u32 flags )
 }
 #endif
 
-void CALLBACK GSshutdown()
+EXPORT_C_(void) GSshutdown()
 {
 	FUNCLOG
 
 	ZZLog::Close();
 }
-void CALLBACK GSclose()
+EXPORT_C_(void) GSclose()
 {
 	FUNCLOG
 
 	ZZDestroy();
 	GLWin.CloseWindow();
 
+	// Free alocated memory. We could close plugin without closing pcsx2, so we SHOULD free all allocated resources
+	ZZshExitCleaning();
 	SaveStateFile = NULL;
 	SaveStateExists = true; // default value
     g_LastCRC = 0;
 }
 
-void CALLBACK GSirqCallback(void (*callback)())
+EXPORT_C_(void) GSirqCallback(void (*callback)())
 {
 	FUNCLOG
 
 	GSirq = callback;
 }
 
-void CALLBACK GSwriteCSR(u32 write)
+EXPORT_C_(void) GSwriteCSR(u32 write)
 {
 	FUNCLOG
 
@@ -372,7 +376,7 @@ void CALLBACK GSwriteCSR(u32 write)
 #define access _access
 #endif
 
-void CALLBACK GSchangeSaveState(int newstate, const char* filename)
+EXPORT_C_(void) GSchangeSaveState(int newstate, const char* filename)
 {
 	FUNCLOG
 
@@ -385,12 +389,11 @@ void CALLBACK GSchangeSaveState(int newstate, const char* filename)
 	SaveStateExists = (access(SaveStateFile, 0) == 0);
 }
 
-void CALLBACK GSmakeSnapshot(char *path)
+static bool get_snapshot_filename(char *filename, char* path, const char* extension)
 {
 	FUNCLOG
 
 	FILE *bmpfile;
-	char filename[256];
 	u32 snapshotnr = 0;
 
 	// increment snapshot value & try to get filename
@@ -399,7 +402,7 @@ void CALLBACK GSmakeSnapshot(char *path)
 	{
 		snapshotnr++;
 
-		sprintf(filename, "%s/snap%03ld.%s", path, snapshotnr, (conf.zz_options.tga_snap) ? "bmp" : "jpg");
+		sprintf(filename, "%s/snap%03ld.%s", path, snapshotnr, extension);
 
 		bmpfile = fopen(filename, "rb");
 
@@ -420,13 +423,21 @@ void CALLBACK GSmakeSnapshot(char *path)
 		mkdir(path, 0777);
 #endif
 
-		if ((bmpfile = fopen(filename, "wb")) == NULL) return;
+		if ((bmpfile = fopen(filename, "wb")) == NULL) return false;
 	}
 
 	fclose(bmpfile);
 
-	// get the bits
-	SaveSnapshot(filename);
+	return true;
+}
+
+EXPORT_C_(void) GSmakeSnapshot(char *path)
+{
+	FUNCLOG
+
+	char filename[256];
+	if (get_snapshot_filename(filename, path, (conf.zz_options.tga_snap) ? "bmp" : "jpg"))
+		SaveSnapshot(filename);
 }
 
 // I'll probably move this somewhere else later, but it's got a ton of dependencies.
@@ -466,7 +477,16 @@ static __forceinline void SetGSTitle()
 	GLWin.SetTitle(strtitle);
 }
 
-void CALLBACK GSvsync(int interlace)
+// This isn't implemented for some reason? Adding a field for it for the moment, till I get a chance to look closer.
+EXPORT_C_(void) GSsetVsync(int enabled)
+{
+	FUNCLOG
+
+	ZZLog::Debug_Log("Setting VSync to 0x%x.", enabled);
+	gs.vsync = enabled;
+}
+
+EXPORT_C_(void) GSvsync(int current_interlace)
 {
 	FUNCLOG
 
@@ -474,13 +494,33 @@ void CALLBACK GSvsync(int interlace)
 
 	static u32 dwTime = timeGetTime();
 	static int nToNextUpdate = 1;
+#ifdef _DEBUG
+	if (conf.dump & 0x1) {
+		freezeData fd;
+		fd.size = ZZSave(NULL);
+		s8* payload = (s8*)malloc(fd.size);
+		fd.data = payload;
+		 
+		ZZSave(fd.data);
+
+		char filename[256];
+		// FIXME, there is probably a better solution than /tmp ...
+		// A possibility will be to save the path from GSmakeSnapshot but you still need to call
+		// GSmakeSnapshot first.
+		if (get_snapshot_filename(filename, "/tmp", "gs"))
+			g_dump.Open(filename, g_LastCRC, fd, g_pBasePS2Mem);
+		conf.dump--;
+	}
+	g_dump.VSync(current_interlace, (conf.dump == 0), g_pBasePS2Mem);
+#endif
 
 	GL_REPORT_ERRORD();
 
 	g_nRealFrame++;
 
-	// !interlace? Hmmm... Fixme.
-	RenderCRTC(!interlace);
+	// The value passed seems to either be 0 or 0x2000, and we want 0 or 1. Perhaps !! would be better...
+	gs.interlace = !current_interlace;
+	RenderCRTC();
 
 	GLWin.ProcessEvents();
 
@@ -529,27 +569,34 @@ void CALLBACK GSvsync(int interlace)
 
 #endif
 	GL_REPORT_ERRORD();
+
 }
 
-void CALLBACK GSreadFIFO(u64 *pMem)
+EXPORT_C_(void) GSreadFIFO(u64 *pMem)
 {
 	FUNCLOG
 
 	//ZZLog::GS_Log("Calling GSreadFIFO.");
+#ifdef _DEBUG
+	g_dump.ReadFIFO(1);
+#endif
 
 	TransferLocalHost((u32*)pMem, 1);
 }
 
-void CALLBACK GSreadFIFO2(u64 *pMem, int qwc)
+EXPORT_C_(void) GSreadFIFO2(u64 *pMem, int qwc)
 {
 	FUNCLOG
 
 	//ZZLog::GS_Log("Calling GSreadFIFO2.");
+#ifdef _DEBUG
+	g_dump.ReadFIFO(qwc);
+#endif
 
 	TransferLocalHost((u32*)pMem, qwc);
 }
 
-int CALLBACK GSsetupRecording(int start, void* pData)
+EXPORT_C_(int) GSsetupRecording(int start, void* pData)
 {
 	FUNCLOG
 
@@ -561,7 +608,7 @@ int CALLBACK GSsetupRecording(int start, void* pData)
 	return 1;
 }
 
-s32 CALLBACK GSfreeze(int mode, freezeData *data)
+EXPORT_C_(s32) GSfreeze(int mode, freezeData *data)
 {
 	FUNCLOG
 
@@ -586,3 +633,182 @@ s32 CALLBACK GSfreeze(int mode, freezeData *data)
 
 	return 0;
 }
+
+#ifdef __LINUX__
+
+struct Packet 
+{
+	u8 type, param;
+	u32 size, addr;
+	vector<u32> buff;
+};
+
+EXPORT_C_(void) GSReplay(char* lpszCmdLine)
+{
+	if(FILE* fp = fopen(lpszCmdLine, "rb"))
+	{
+		GSinit();
+
+		u8 regs[0x2000];
+		GSsetBaseMem(regs);
+
+		//s_vsync = !!theApp.GetConfig("vsync", 0);
+
+		void* hWnd = NULL;
+
+		//_GSopen((void**)&hWnd, "", renderer);
+		GSopen((void**)&hWnd, "", 0);
+
+		u32 crc;
+		fread(&crc, 4, 1, fp);
+		GSsetGameCRC(crc, 0);
+
+		freezeData fd;
+		fread(&fd.size, 4, 1, fp);
+		fd.data = new s8[fd.size];
+		fread(fd.data, fd.size, 1, fp);
+		GSfreeze(FREEZE_LOAD, &fd);
+		delete [] fd.data;
+
+		fread(regs, 0x2000, 1, fp);
+
+		long start = ftell(fp);
+
+		GSvsync(1);
+
+		list<Packet*> packets;
+		vector<u8> buff;
+		int type;
+
+		while((type = fgetc(fp)) != EOF)
+		{
+			Packet* p = new Packet();
+
+			p->type = (u8)type;
+
+			switch(type)
+			{
+			case 0:
+
+				p->param = (u8)fgetc(fp);
+
+				fread(&p->size, 4, 1, fp);
+
+				switch(p->param)
+				{
+				case 0:
+					p->buff.resize(0x4000);
+					p->addr = 0x4000 - p->size;
+					fread(&p->buff[p->addr], p->size, 1, fp);
+					break;
+				case 1:
+				case 2:
+				case 3:
+					p->buff.resize(p->size);
+					fread(&p->buff[0], p->size, 1, fp);
+					break;
+				}
+
+				break;
+
+			case 1:
+
+				p->param = (u8)fgetc(fp);
+
+				break;
+
+			case 2:
+
+				fread(&p->size, 4, 1, fp);
+
+				break;
+
+			case 3:
+
+				p->buff.resize(0x2000);
+
+				fread(&p->buff[0], 0x2000, 1, fp);
+
+				break;
+
+			default: assert(0);
+			}
+
+			packets.push_back(p);
+		}
+
+		sleep(1);
+
+		//while(IsWindowVisible(hWnd))
+		//FIXME map?
+		int finished = 2;
+		while(finished > 0)
+		{
+			unsigned long start = timeGetTime();
+			unsigned long frame_number = 0;
+			for(list<Packet*>::iterator i = packets.begin(); i != packets.end(); i++)
+			{
+				Packet* p = *i;
+
+				switch(p->type)
+				{
+				case 0:
+
+					switch(p->param)
+					{
+					case 0: GSgifTransfer1(&p->buff[0], p->addr); break;
+					case 1: GSgifTransfer2(&p->buff[0], p->size / 16); break;
+					case 2: GSgifTransfer3(&p->buff[0], p->size / 16); break;
+					case 3: GSgifTransfer(&p->buff[0], p->size / 16); break;
+					}
+
+					break;
+
+				case 1:
+
+					GSvsync(p->param);
+					frame_number++;
+
+					break;
+
+				case 2:
+
+					if(buff.size() < p->size) buff.resize(p->size);
+
+					// FIXME
+					// GSreadFIFO2(&buff[0], p->size / 16);
+
+					break;
+
+				case 3:
+
+					memcpy(regs, &p->buff[0], 0x2000);
+
+					break;
+				}
+			}
+			unsigned long end = timeGetTime();
+			fprintf(stderr, "The %d frames of the scene was render on %dms\n", frame_number, end - start);
+			fprintf(stderr, "A means of %fms by frame\n", (float)(end - start)/(float)frame_number);
+
+			sleep(1);
+			finished--;
+		}
+
+
+		for(list<Packet*>::iterator i = packets.begin(); i != packets.end(); i++)
+		{
+			delete *i;
+		}
+
+		packets.clear();
+
+		sleep(1);
+
+		GSclose();
+		GSshutdown();
+
+		fclose(fp);
+	}
+}
+#endif

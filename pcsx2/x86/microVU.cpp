@@ -293,7 +293,7 @@ void recMicroVU0::Reserve() {
 void recMicroVU1::Reserve() {
 	if (AtomicExchange(m_Reserved, 1) == 0) {
 		mVUinit(microVU1, 1);
-		vu1Thread.InitThread();
+		vu1Thread.Start();
 	}
 }
 

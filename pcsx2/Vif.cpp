@@ -47,8 +47,6 @@ void SaveStateBase::vif0Freeze()
 	FreezeTag("VIF0dma");
 	
 	Freeze(g_vif0Cycles);
-	Freeze(g_vu0Cycles);
-	Freeze(g_packetsizeonvu0);
 
 	Freeze(vif0);
 
@@ -61,8 +59,6 @@ void SaveStateBase::vif1Freeze()
 	FreezeTag("VIF1dma");
 	
 	Freeze(g_vif1Cycles);
-	Freeze(g_vu1Cycles);
-	Freeze(g_packetsizeonvu1);
 
 	Freeze(vif1);
 

@@ -21,12 +21,12 @@
 #include "Mem.h"
 #include "targets.h"
 #include "x86.h"
+#include "Util.h"
 
 #include "Mem_Transmit.h"
 #include "Mem_Swizzle.h"
-#ifdef ZEROGS_SSE2
-#include <emmintrin.h>
-#endif
+
+#ifdef ZZNORMAL_MEMORY
 
 BLOCK m_Blocks[0x40]; // do so blocks are indexable
 
@@ -53,41 +53,41 @@ u8* pstart;
 template <class T>
 static __forceinline const T* AlignOnBlockBoundry(TransferData data, TransferFuncts fun, Point alignedPt, int& endY, const T* pbuf)
 {
-	bool bCanAlign = ((MOD_POW2(gs.trxpos.dx, data.blockwidth) == 0) && (gs.imageX == gs.trxpos.dx) &&
+	bool bCanAlign = ((MOD_POW2(gs.trxpos.dx, data.blockwidth) == 0) && (gs.image.x == gs.trxpos.dx) &&
 					  (alignedPt.y > endY) && (alignedPt.x > gs.trxpos.dx));
 
-	if ((gs.imageEndX - gs.trxpos.dx) % data.widthlimit)
+	if ((gs.imageEnd.x - gs.trxpos.dx) % data.widthlimit)
 	{
 		/* hack */
 		int testwidth = (int)nSize -
-						(gs.imageEndY - gs.imageY) * (gs.imageEndX - gs.trxpos.dx)
-						+ (gs.imageX - gs.trxpos.dx);
+						(gs.imageEnd.y - gs.image.y) * (gs.imageEnd.x - gs.trxpos.dx)
+						+ (gs.image.x - gs.trxpos.dx);
 
 		if ((testwidth <= data.widthlimit) && (testwidth >= -data.widthlimit))
 		{
 			/* don't transfer */
-			/*ZZLog::Debug_Log("Bad texture %s: %d %d %d", #psm, gs.trxpos.dx, gs.imageEndX, nQWordSize);*/
+			/*ZZLog::Debug_Log("Bad texture %s: %d %d %d", #psm, gs.trxpos.dx, gs.imageEnd.x, nQWordSize);*/
 			//ZZLog::Error_Log("Bad texture: testwidth = %d; data.widthlimit = %d", testwidth, data.widthlimit);
-			gs.imageTransfer = -1;
+			gs.transferring = false;
 		}
 
 		bCanAlign = false;
 	}
 
 	/* first align on block boundary */
-	if (MOD_POW2(gs.imageY, data.blockheight) || !bCanAlign)
+	if (MOD_POW2(gs.image.y, data.blockheight) || !bCanAlign)
 	{
 		u32 transwidth;
 
 		if (!bCanAlign)
-			endY = gs.imageEndY; /* transfer the whole image */
+			endY = gs.imageEnd.y; /* transfer the whole image */
 		else
-			assert(endY < gs.imageEndY);  /* part of alignment condition */
+			assert(endY < gs.imageEnd.y);  /* part of alignment condition */
 
-		if (((gs.imageEndX - gs.trxpos.dx) % data.widthlimit) || ((gs.imageEndX - gs.imageX) % data.widthlimit))
+		if (((gs.imageEnd.x - gs.trxpos.dx) % data.widthlimit) || ((gs.imageEnd.x - gs.image.x) % data.widthlimit))
 		{
 			/* transmit with a width of 1 */
-			transwidth = (1 + (DSTPSM == PSMT4));
+			transwidth = (1 + (gs.dstbuf.psm == PSMT4));
 		}
 		else
 		{
@@ -98,7 +98,7 @@ static __forceinline const T* AlignOnBlockBoundry(TransferData data, TransferFun
 
 		if (pbuf == NULL) return NULL;
 
-		if (nSize == 0 || tempY == gs.imageEndY) return NULL;
+		if (nSize == 0 || tempY == gs.imageEnd.y) return NULL;
 	}
 
 	return pbuf;
@@ -112,14 +112,14 @@ static __forceinline const T* TransferAligningToBlocks(TransferData data, Transf
 	_SwizzleBlock swizzle;
 
 	/* can align! */
-	pitch = gs.imageEndX - gs.trxpos.dx;
+	pitch = gs.imageEnd.x - gs.trxpos.dx;
 	area = pitch * data.blockheight;
-	fracX = gs.imageEndX - alignedPt.x;
+	fracX = gs.imageEnd.x - alignedPt.x;
 
 	/* on top of checking whether pbuf is aligned, make sure that the width is at least aligned to its limits (due to bugs in pcsx2) */
 	bAligned = !((uptr)pbuf & 0xf) && (TransPitch(pitch, data.transfersize) & 0xf) == 0;
 
-	if (bAligned || ((DSTPSM == PSMCT24) || (DSTPSM == PSMT8H) || (DSTPSM == PSMT4HH) || (DSTPSM == PSMT4HL)))
+	if (bAligned || ((gs.dstbuf.psm == PSMCT24) || (gs.dstbuf.psm == PSMT8H) || (gs.dstbuf.psm == PSMT4HH) || (gs.dstbuf.psm == PSMT4HL)))
 		swizzle = (fun.Swizzle);
 	else
 		swizzle = (fun.Swizzle_u);
@@ -140,7 +140,7 @@ static __forceinline const T* TransferAligningToBlocks(TransferData data, Transf
 #endif
 
 		/* transfer the rest */
-		if (alignedPt.x < gs.imageEndX)
+		if (alignedPt.x < gs.imageEnd.x)
 		{
 			pbuf = TransmitHostLocalX<T>(data.psm, fun.wp, data.widthlimit, data.blockheight, alignedPt.x, pbuf);
 
@@ -161,19 +161,19 @@ static __forceinline const T* TransferAligningToBlocks(TransferData data, Transf
 
 static __forceinline int FinishTransfer(TransferData data, int nLeftOver)
 {
-	if (tempY >= gs.imageEndY)
+	if (tempY >= gs.imageEnd.y)
 	{
-		assert(gs.imageTransfer == -1 || tempY == gs.imageEndY);
-		gs.imageTransfer = -1;
+		assert( gs.transferring == false || tempY == gs.imageEnd.y);
+		gs.transferring = false;
 		/*int start, end;
-		GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageWnew, gs.imageHnew, gs.dstbuf.bp, gs.dstbuf.bw);
+		GetRectMemAddress(start, end, gs.dstbuf.psm, gs.trxpos.dx, gs.trxpos.dy, gs.imageNew, gs.dstbuf.bp, gs.dstbuf.bw);
 		g_MemTargs.ClearRange(start, end);*/
 	}
 	else
 	{
 		/* update new params */
-		gs.imageY = tempY;
-		gs.imageX = tempX;
+		gs.image.y = tempY;
+		gs.image.x = tempX;
 	}
 
 	return (nSize * TransPitch(2, data.transfersize) + nLeftOver) / 2;
@@ -182,23 +182,23 @@ static __forceinline int FinishTransfer(TransferData data, int nLeftOver)
 template <class T>
 static __forceinline int RealTransfer(u32 psm, const void* pbyMem, u32 nQWordSize)
 {
-	assert(gs.imageTransfer == 0);
+	assert(gs.imageTransfer == XFER_HOST_TO_LOCAL);
 	TransferData data = tData[psm];
 	TransferFuncts fun(psm);
 	pstart = g_pbyGSMemory + gs.dstbuf.bp * 256;
 	const T* pbuf = (const T*)pbyMem;
 	const int tp2 = TransPitch(2, data.transfersize);
 	int nLeftOver = (nQWordSize * 4 * 2) % tp2;
-	tempY = gs.imageY;
-	tempX = gs.imageX;
+	tempY = gs.image.y;
+	tempX = gs.image.x;
 	Point alignedPt;
 
 	nSize = (nQWordSize * 4 * 2) / tp2;
-	nSize = min(nSize, gs.imageWnew * gs.imageHnew);
+	nSize = min(nSize, gs.imageNew.w * gs.imageNew.h);
 
-	int endY = ROUND_UPPOW2(gs.imageY, data.blockheight);
-	alignedPt.y = ROUND_DOWNPOW2(gs.imageEndY, data.blockheight);
-	alignedPt.x = ROUND_DOWNPOW2(gs.imageEndX, data.blockwidth);
+	int endY = ROUND_UPPOW2(gs.image.y, data.blockheight);
+	alignedPt.y = ROUND_DOWNPOW2(gs.imageEnd.y, data.blockheight);
+	alignedPt.x = ROUND_DOWNPOW2(gs.imageEnd.x, data.blockwidth);
 
 	pbuf = AlignOnBlockBoundry<T>(data, fun, alignedPt, endY, pbuf);
 
@@ -210,12 +210,12 @@ static __forceinline int RealTransfer(u32 psm, const void* pbyMem, u32 nQWordSiz
 
 	if (TransPitch(nSize, data.transfersize) / 4 > 0)
 	{
-		pbuf = TransmitHostLocalY<T>(psm, fun.wp, data.widthlimit, gs.imageEndY, pbuf);
+		pbuf = TransmitHostLocalY<T>(psm, fun.wp, data.widthlimit, gs.imageEnd.y, pbuf);
 
 		if (pbuf == NULL) return FinishTransfer(data, nLeftOver);
 
 		/* sometimes wrong sizes are sent (tekken tag) */
-		assert(gs.imageTransfer == -1 || TransPitch(nSize, data.transfersize) / 4 <= 2);
+		assert(gs.transferring == false || TransPitch(nSize, data.transfersize) / 4 <= 2);
 	}
 
 	return FinishTransfer(data, nLeftOver);
@@ -382,3 +382,5 @@ void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, in
 	m_Blocks[PSMT4] = b;
 	m_Blocks[PSMT4].SetFun(PSMT4);
 }
+
+#endif

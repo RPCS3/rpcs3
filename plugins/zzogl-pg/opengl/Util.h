@@ -32,6 +32,9 @@
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include "glprocs.h"
+#ifdef ZEROGS_SSE2
+#include <emmintrin.h>
+#endif
 
 #else // linux basic definitions
 
@@ -43,6 +46,15 @@
 #include <GL/glx.h>
 #include <gtk/gtk.h>
 
+#include <cstring>
+#include <string>
+#include <vector>
+#include <list>
+
+#ifdef ZEROGS_SSE2
+#include <immintrin.h>
+#endif
+
 #endif
 
 #define GSdefs
@@ -53,13 +65,16 @@
 #include "CRC.h"
 #include "ZZLog.h"
 
+#ifdef _WIN32
 // need C definitions -- no mangling please!
 extern "C" u32   CALLBACK PS2EgetLibType(void);
 extern "C" u32   CALLBACK PS2EgetLibVersion2(u32 type);
 extern "C" char* CALLBACK PS2EgetLibName(void);
+#endif
 
 #include "ZZoglMath.h"
 #include "Profile.h"
+#include "GSDump.h"
 
 #include "Utilities/MemcpyFast.h"
 #define memcpy_amd memcpy_fast
@@ -133,6 +148,7 @@ typedef struct
 	u32 SkipDraw;
 	u32 log;
 	u32 disableHacks;
+	int dump;
 	
 	void incAA() { aa++; if (aa > 4) aa = 0; }
 	void decAA() { aa--; if (aa > 4) aa = 4; } // u8 is unsigned, so negative value is 255.

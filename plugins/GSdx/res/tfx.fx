@@ -36,6 +36,7 @@
 #define PS_LTF 1
 #define PS_COLCLIP 0
 #define PS_DATE 0
+#define PS_SPRITEHACK 0
 #endif
 
 struct VS_INPUT
@@ -411,7 +412,7 @@ float4 sample(float2 st, float q)
 		}
 
 		if(PS_LTF)
-		{
+		{	
 			t = lerp(lerp(c[0], c[1], dd.x), lerp(c[2], c[3], dd.x), dd.y);
 		}
 		else
@@ -515,14 +516,19 @@ void atst(float4 c)
 	{
 		// nothing to do
 	}
-	else if(PS_ATST == 2 || PS_ATST == 3) // l, le
+	else if(PS_ATST == 2) // l
+	{
+		#if PS_SPRITEHACK == 0
+		clip(AREF - a);
+		#endif				
+	}
+	else if(PS_ATST == 3) // le
 	{
 		clip(AREF - a);
 	}
 	else if(PS_ATST == 4) // e
 	{
-		clip(0.5f - abs(a - AREF));
-	}
+		clip(0.5f - abs(a - AREF));	}
 	else if(PS_ATST == 5 || PS_ATST == 6) // ge, g
 	{
 		clip(a - AREF);
@@ -750,7 +756,7 @@ VS_OUTPUT vs_main(VS_INPUT input)
 	{
 		if(VS_FST)
 		{
-			output.t.xy = input.t * TextureScale;
+            output.t.xy = input.t * TextureScale;
 			output.t.w = 1.0f;
 		}
 		else

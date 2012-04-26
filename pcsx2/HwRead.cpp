@@ -203,7 +203,7 @@ mem16_t __fastcall hwRead16_page_0F_INTC_HACK(u32 mem)
 	u32 ret32 = _hwRead32<0x0f, true>(mem & ~0x03);
 	u16 ret16 = ((u16*)&ret32)[(mem>>1) & 0x01];
 
-	eeHwTraceLog( mem, ret16, "Read" );
+	eeHwTraceLog( mem, ret16, true );
 	return ret16;
 }
 

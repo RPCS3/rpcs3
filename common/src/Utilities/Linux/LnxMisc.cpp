@@ -17,6 +17,7 @@
 
 #include <ctype.h>
 #include <time.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <wx/utils.h>
 

@@ -221,6 +221,7 @@ GSLocalMemory::GSLocalMemory()
 		m_psm[i].pgs = GSVector2i(64, 32);
 		for(int j = 0; j < 8; j++) m_psm[i].rowOffset[j] = rowOffset32;
 		m_psm[i].blockOffset = blockOffset32;
+		m_psm[i].msk = 0xff;
 	}
 
 	m_psm[PSM_PSMCT16].pa = &GSLocalMemory::PixelAddress16;
@@ -440,6 +441,12 @@ GSLocalMemory::GSLocalMemory()
 	m_psm[PSM_PSMZ24].blockOffset = blockOffset32Z;
 	m_psm[PSM_PSMZ16].blockOffset = blockOffset16Z;
 	m_psm[PSM_PSMZ16S].blockOffset = blockOffset16SZ;
+
+	m_psm[PSM_PSMCT24].msk = 0x3f;
+	m_psm[PSM_PSMZ24].msk = 0x3f;
+	m_psm[PSM_PSMT8H].msk = 0xc0;
+	m_psm[PSM_PSMT4HL].msk = 0x40;
+	m_psm[PSM_PSMT4HH].msk = 0x80;
 }
 
 GSLocalMemory::~GSLocalMemory()
@@ -447,6 +454,7 @@ GSLocalMemory::~GSLocalMemory()
 	vmfree(m_vm8, m_vmsize * 2);
 
 	for_each(m_omap.begin(), m_omap.end(), aligned_free_second());
+	for_each(m_pomap.begin(), m_pomap.end(), aligned_free_second());
 	for_each(m_po4map.begin(), m_po4map.end(), aligned_free_second());
 
 	for(hash_map<uint64, vector<GSVector2i>*>::iterator i = m_p2tmap.begin(); i != m_p2tmap.end(); i++)

@@ -48,6 +48,7 @@ protected:
 	bool m_mipmap;
 	bool m_framelimit;
 	bool m_fxaa;
+	bool m_shadeboost;
 
 	virtual GSTexture* GetOutput(int i) = 0;
 

@@ -70,7 +70,6 @@ static void cdvdSetIrq( uint id = (1<<Irq_CommandComplete) )
 {
 	cdvd.PwOff |= id;
 	iopIntcIrq( 2 );
-	hwIntcIrq(INTC_SBUS);
 	psxSetNextBranchDelta( 20 );
 }
 
@@ -766,7 +765,7 @@ __fi void cdvdActionInterrupt()
 
 		case cdvdAction_Break:
 			// Make sure the cdvd action state is pretty well cleared:
-			DevCon.Warning("CDVD Break Call");
+			DevCon.WriteLn("CDVD Break Call");
 			cdvd.Reading = 0;
 			cdvd.Readed = 0;
 			cdvd.Ready  = CDVD_READY2;		// should be CDVD_READY1 or something else?
@@ -779,7 +778,6 @@ __fi void cdvdActionInterrupt()
 
 	cdvd.PwOff |= 1<<Irq_CommandComplete;
 	psxHu32(0x1070)|= 0x4;
-	hwIntcIrq(INTC_SBUS);
 }
 
 // inlined due to being referenced in only one place.
@@ -868,7 +866,6 @@ __fi void cdvdReadInterrupt()
 	{
 		cdvd.PwOff |= 1<<Irq_CommandComplete;
 		psxHu32(0x1070)|= 0x4;
-		hwIntcIrq(INTC_SBUS);
 
 		HW_DMA3_CHCR &= ~0x01000000;
 		psxDmaInterrupt(3);
@@ -897,8 +894,9 @@ static uint cdvdStartSeek( uint newsector, CDVD_MODE_TYPE mode )
 	cdvd.Ready = CDVD_NOTREADY;
 	cdvd.Reading = 0;
 	cdvd.Readed = 0;
-	//cdvd.Status = CDVD_STATUS_STOP;
-    cdvd.Status = CDVD_STATUS_SEEK | CDVD_STATUS_SPIN; // Time Crisis 2
+	//cdvd.Status = CDVD_STATUS_STOP; // before r4961
+    //cdvd.Status = CDVD_STATUS_SEEK | CDVD_STATUS_SPIN; // Time Crisis 2 // but breaks ICO NTSC
+	cdvd.Status = CDVD_STATUS_PAUSE; // best so far in my tests (rama)
 
 	if( !cdvd.Spinning )
 	{

@@ -21,10 +21,6 @@
 #include "Mem.h"
 #include "Util.h"
 
-#if defined(ZEROGS_SSE2)
-#include <emmintrin.h>
-#endif
-
 // Local Clut buffer:
 // It supports both 32 bits and 16 bits colors formats. The size of the buffer is 1KBytes.
 // The 16 bits entries are arranged in 2 columns. One row is a 32 bits colors.

@@ -20,16 +20,10 @@
 #include "GS.h"
 #include "Mem.h"
 #include "Mem_Swizzle.h"
-#ifdef ZEROGS_SSE2
-#include <emmintrin.h>
-#endif
+#include "Util.h"
 
 // WARNING a sfence instruction must be call after SwizzleBlock sse2 function
 
-// Current port of the ASM function to intrinsic
-#define INTRINSIC_PORT_16
-#define INTRINSIC_PORT_8
-#define INTRINSIC_PORT_4
 #ifdef ZEROGS_SSE2
 static const __aligned16 u32 mask_24b_H[4] = {0xFF000000, 0x0000FFFF, 0xFF000000, 0x0000FFFF};
 static const __aligned16 u32 mask_24b_L[4] = {0x00FFFFFF, 0x00000000, 0x00FFFFFF, 0x00000000};
@@ -501,29 +495,17 @@ __forceinline void SwizzleBlock24(u8 *dst, u8 *src, int pitch)
 
 __forceinline void SwizzleBlock16(u8 *dst, u8 *src, int pitch)
 {
-#ifdef INTRINSIC_PORT_16
 	SwizzleBlock16_sse2_I<true>(dst, src, pitch);
-#else
-	SwizzleBlock16_sse2(dst, src, pitch);
-#endif
 }
 
 __forceinline void SwizzleBlock8(u8 *dst, u8 *src, int pitch)
 {
-#ifdef INTRINSIC_PORT_8
 	SwizzleBlock8_sse2_I<true>(dst, src, pitch);
-#else
-	SwizzleBlock8_sse2(dst, src, pitch);
-#endif
 }
 
 __forceinline void SwizzleBlock4(u8 *dst, u8 *src, int pitch)
 {
-#ifdef INTRINSIC_PORT_4
 	SwizzleBlock4_sse2_I<true>(dst, src, pitch);
-#else
-	SwizzleBlock4_sse2(dst, src, pitch);
-#endif
 }
 
 __forceinline void SwizzleBlock32u(u8 *dst, u8 *src, int pitch)
@@ -533,29 +515,17 @@ __forceinline void SwizzleBlock32u(u8 *dst, u8 *src, int pitch)
 
 __forceinline void SwizzleBlock16u(u8 *dst, u8 *src, int pitch)
 {
-#ifdef INTRINSIC_PORT_16
 	SwizzleBlock16_sse2_I<false>(dst, src, pitch);
-#else
-	SwizzleBlock16u_sse2(dst, src, pitch);
-#endif
 }
 
 __forceinline void SwizzleBlock8u(u8 *dst, u8 *src, int pitch)
 {
-#ifdef INTRINSIC_PORT_8
 	SwizzleBlock8_sse2_I<false>(dst, src, pitch);
-#else
-	SwizzleBlock8u_sse2(dst, src, pitch);
-#endif
 }
 
 __forceinline void SwizzleBlock4u(u8 *dst, u8 *src, int pitch)
 {
-#ifdef INTRINSIC_PORT_4
 	SwizzleBlock4_sse2_I<false>(dst, src, pitch);
-#else
-	SwizzleBlock4u_sse2(dst, src, pitch);
-#endif
 }
 
 __forceinline void SwizzleBlock8H(u8 *dst, u8 *src, int pitch)

@@ -28,13 +28,15 @@ class GSRendererDX : public GSRendererHW
 	GSVector2 m_pixelcenter;
 	bool m_logz;
 	bool m_fba;
-	//bool UserHacks_HalfPixelOffset;
+
 	bool UserHacks_AlphaHack;
 
 protected:
 	virtual void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 	virtual void SetupIA() = 0;
 	virtual void UpdateFBA(GSTexture* rt) {}
+
+    int UserHacks_WildHack;
 
 public:
 	GSRendererDX(GSTextureCache* tc, const GSVector2& pixelcenter = GSVector2(0, 0));

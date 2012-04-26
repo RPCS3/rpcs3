@@ -1,0 +1,31 @@
+/* $Id: $
+
+   !!! @GENERATED_MESSAGE@ !!!
+
+   Header file configured by CMake to convert CMake options/vars to macros. It is done this way because if set via
+   preprocessor options, MSVC f.i. has no way of knowing when an option (or var) changes as there is no dependency chain.
+   
+   The generated "options_cmake.h" should be included like so:
+   
+   #ifdef PORTAUDIO_CMAKE_GENERATED
+   #include "options_cmake.h"
+   #endif
+   
+   so that non-CMake build environments are left intact.
+   
+   Source template: cmake_support/options_cmake.h.in
+*/
+
+#ifdef _WIN32
+#if defined(PA_USE_ASIO) || defined(PA_USE_DS) || defined(PA_USE_WMME) || defined(PA_USE_WASAPI) || defined(PA_USE_WDMKS)
+#error "This header needs to be included before pa_hostapi.h!!"
+#endif
+
+#cmakedefine01 PA_USE_ASIO
+#cmakedefine01 PA_USE_DS
+#cmakedefine01 PA_USE_WMME
+#cmakedefine01 PA_USE_WASAPI
+#cmakedefine01 PA_USE_WDMKS
+#else
+#error "Platform currently not supported by CMake script"
+#endif

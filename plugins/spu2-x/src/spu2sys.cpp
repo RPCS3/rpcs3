@@ -134,7 +134,7 @@ void V_Core::Init( int index )
 	if (!c)
 	{
 		WetGate.ExtL = 0;
-		WetGate.ExtL = 0;
+		WetGate.ExtR = 0;
 	}
 
 	Regs.MMIX		= c ? 0xFFC : 0xFF0; // PS2 confirmed (f3c and f30 after BIOS ran, ffc and ff0 after sdinit)

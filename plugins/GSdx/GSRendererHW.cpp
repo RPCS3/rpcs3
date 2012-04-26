@@ -31,7 +31,7 @@ GSRendererHW::GSRendererHW(GSTextureCache* tc)
 	, m_upscale_multiplier(1)
 {
 	m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", 1);
-	m_userhacks_skipdraw = theApp.GetConfig("UserHacks_SkipDraw", 0);
+	m_userhacks_skipdraw = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_SkipDraw", 0) : 0;
 
 	if(!m_nativeres)
 	{
@@ -424,16 +424,18 @@ bool GSRendererHW::OI_FFXII(GSTexture* rt, GSTexture* ds, GSTextureCache::Source
 
 				if(!video) video = new uint32[512 * 512];
 
-				int ox = m_context->XYOFFSET.OFX;
-				int oy = m_context->XYOFFSET.OFY;
+				int ox = m_context->XYOFFSET.OFX - 8;
+				int oy = m_context->XYOFFSET.OFY - 8;
 
 				const GSVertex* RESTRICT v = m_vertex.buff;
 
-				for(int i = (int)m_vertex.next; i >= 0; i--, v++)
+				for(int i = (int)m_vertex.next; i > 0; i--, v++)
 				{
 					int x = (v->XYZ.X - ox) >> 4;
 					int y = (v->XYZ.Y - oy) >> 4;
-
+					
+					if (x < 0 || x >= 448 || y < 0 || y >= (int)lines) return false; // le sigh
+					
 					video[(y << 8) + (y << 7) + (y << 6) + x] = v->RGBAQ.u32[0];
 				}
 
@@ -504,7 +506,7 @@ bool GSRendererHW::OI_MetalSlug6(GSTexture* rt, GSTexture* ds, GSTextureCache::S
 
 	GSVertex* RESTRICT v = m_vertex.buff;
 
-	for(int i = (int)m_vertex.next; i >= 0; i--, v++)
+	for(int i = (int)m_vertex.next; i > 0; i--, v++)
 	{
 		uint32 c = v->RGBAQ.u32[0];
 

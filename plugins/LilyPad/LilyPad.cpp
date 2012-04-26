@@ -1428,7 +1428,13 @@ struct PadPluginFreezeData {
 };
 
 s32 CALLBACK PADfreeze(int mode, freezeData *data) {
-    if (mode == FREEZE_SIZE) {
+    if (!data)
+	{
+		printf("LilyPad savestate null pointer!\n");
+		return -1;
+	}
+	
+	if (mode == FREEZE_SIZE) {
         data->size = sizeof(PadPluginFreezeData);
     }
     else if (mode == FREEZE_LOAD) {

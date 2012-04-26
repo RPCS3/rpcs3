@@ -79,7 +79,7 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 		SIGNAL_IMR_Pending = false;
 #else
 		GUNIT_WARN("GUNIT_WARN: csr.RESET");
-		Console.Warning( "csr.RESET" );
+		//Console.Warning( "csr.RESET" );
 		//gifUnit.Reset(true); // Don't think gif should be reset...
 		gifUnit.gsSIGNAL.queued = false;
 		GetMTGS().SendSimplePacket(GS_RINGTYPE_RESET, 0, 0, 0);
@@ -173,7 +173,8 @@ static __fi void _gsSMODEwrite( u32 mem, u32 value )
 	switch (mem)
 	{
 		case GS_SMODE1:
-			gsSetRegionMode( ((value & 0x6000) == 0x6000) ? Region_PAL : Region_NTSC );
+			// ToDo: There's other flags determining which mode to set. The only tested one so far is the PAL / NTSC one.
+			gsSetRegionMode( ((value & 0x6000) == 0x6000) ? Region_PAL : (value & 0x400000) ? Region_NTSC_PROGRESSIVE : Region_NTSC );
 		break;
 
 		case GS_SMODE2:
@@ -425,7 +426,8 @@ __fi void gsFrameSkip()
 //We got away with it before i think due to our awful GS timing, but now we have it right (ish)
 void gsPostVsyncStart()
 {
-	CSRreg.SwapField();
+	//gifUnit.FlushToMTGS();  // Needed for some (broken?) homebrew game loaders
+	
 	GetMTGS().PostVsyncStart();
 }
 

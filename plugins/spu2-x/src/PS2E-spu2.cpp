@@ -656,6 +656,13 @@ EXPORT_C_(int) SPU2setupRecording(int start, void* pData)
 
 EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 {
+	jASSUME( data != NULL );
+	if ( !data )
+	{
+		printf("SPU2-X savestate null pointer!\n");
+		return -1;
+	}
+
 	if( mode == FREEZE_SIZE )
 	{
 		data->size = Savestate::SizeIt();
@@ -663,9 +670,13 @@ EXPORT_C_(s32) SPU2freeze(int mode, freezeData *data)
 	}
 
 	jASSUME( mode == FREEZE_LOAD || mode == FREEZE_SAVE );
-	jASSUME( data != NULL );
 
-	if( data->data == NULL ) return -1;
+	if( data->data == NULL )
+	{
+		printf("SPU2-X savestate null pointer!\n");
+		return -1;
+	}
+
 	Savestate::DataBlock& spud = (Savestate::DataBlock&)*(data->data);
 
 	switch( mode )

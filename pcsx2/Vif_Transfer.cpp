@@ -122,14 +122,13 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 
 	transferred += size - vifX.vifpacketsize;
 
-	if (!idx) {
-		g_packetsizeonvu0 = size;
-		g_vif0Cycles +=((transferred * BIAS) >> 2) ; /* guessing */
-	}
-	else {
-		g_packetsizeonvu1 = size;
-		g_vif1Cycles +=((transferred * BIAS) >> 2) ; /* guessing */
-	}
+	//Make this a minimum of 1 cycle so if it's the end of the packet it doesnt just fall through.
+	//Metal Saga can do this, just to be safe :)
+	if (!idx) g_vif0Cycles += max(1, (int)((transferred * BIAS) >> 2));
+	else	  g_vif1Cycles += max(1, (int)((transferred * BIAS) >> 2));
+
+
+	/*
 	if(!idx && g_vu0Cycles > 0) {
 		if  (g_vif0Cycles <  g_vu0Cycles) g_vu0Cycles -= g_vif0Cycles;
 		elif(g_vif0Cycles >= g_vu0Cycles) g_vu0Cycles  = 0;
@@ -138,7 +137,8 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 		if  (g_vif1Cycles <  g_vu1Cycles) g_vu1Cycles -= g_vif1Cycles;
 		elif(g_vif1Cycles >= g_vu1Cycles) g_vu1Cycles  = 0;
 	}
-
+	*/
+	
 	vifX.irqoffset = transferred % 4; // cannot lose the offset
 
 	if (!TTE) {// *WARNING* - Tags CAN have interrupts! so lets just ignore the dma modifying stuffs (GT4)

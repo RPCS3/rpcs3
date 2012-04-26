@@ -21,7 +21,7 @@
 #define __GS_H__
 
 
-#define USE_OLD_REGS
+#define ZZNORMAL_MEMORY
 
 #include "Util.h"
 #include "GifTransfer.h"
@@ -38,6 +38,8 @@ extern float fFPS;
 #endif
 
 extern int g_LastCRC;
+
+#define VB_NUMBUFFERS			   512 // number of vbo buffer allocated
 
 struct Vector_16F
 {
@@ -132,21 +134,22 @@ extern GSconf conf;
 
 // PSM values
 // PSM types == Texture Storage Format
-enum PSM_value
-{
-	PSMCT32		= 0,		// 00 0000
-	PSMCT24		= 1,		// 00 0001
-	PSMCT16		= 2,		// 00 0010
-	PSMCT16S	= 10,		// 00 1010
-	PSMT8		= 19,		// 01 0011
-	PSMT4		= 20,		// 01 0100
-	PSMT8H		= 27,		// 01 1011
-	PSMT4HL		= 36,		// 10 0100
-	PSMT4HH		= 44,		// 10 1100
-	PSMT32Z		= 48,		// 11 0000
-	PSMT24Z		= 49,		// 11 0001
-	PSMT16Z		= 50,		// 11 0010
-	PSMT16SZ	= 58,		// 11 1010
+enum PSM_value{
+	PSMCT32		= 0,		// 000000
+	PSMCT24		= 1,		// 000001
+	PSMCT16		= 2,		// 000010
+	PSMCT16S	= 10,		// 001010
+	PSMT8		= 19,		// 010011
+	PSMT4		= 20,		// 010100
+	PSMT8H		= 27,		// 011011
+	PSMT4HL		= 36,		// 100100
+	PSMT4HH		= 44,		// 101100
+	PSMT32Z		= 48,		// 110000
+	PSMT24Z		= 49,		// 110001
+	PSMT16Z		= 50,		// 110010
+	PSMT16SZ	= 58,		// 111010
+
+	PSMT_BAD_PSM 	= 63		// for every unknown psm.
 };
 
 // Check target bit mode. PSMCT32 and 32Z return 0, 24 and 24Z - 1
@@ -461,7 +464,6 @@ typedef struct
 {
 	u16 aem;
 	u8 ta[2];
-	float fta[2];
 } texaInfo;
 
 typedef struct
@@ -503,6 +505,14 @@ typedef struct
 	int fba;
 } fbaInfo;
 
+enum transfer_types
+{
+	XFER_HOST_TO_LOCAL = 0,
+	XFER_LOCAL_TO_HOST = 1,
+	XFER_LOCAL_TO_LOCAL = 2,
+	XFER_DEACTIVATED = 3
+};
+
 typedef struct
 {
 	Vertex gsvertex[4]; // circular buffer that contains the vertex
@@ -537,15 +547,20 @@ typedef struct
 	texaInfo texa;
 	trxposInfo trxpos, trxposnew;
 
-	int imageWtemp, imageHtemp;
-
 	int imageTransfer;
-	int imageWnew, imageHnew, imageX, imageY, imageEndX, imageEndY;
+	bool transferring;
+	
+	Point image, imageEnd;
+	Size imageNew, imageTemp;
 
 	pathInfo path[4];
 	GIFRegDIMX dimx;
 	GSMemory mem;
 	GSClut clut_buffer;
+	
+	// Subject to change.
+	int vsync, interlace;
+	
 	int primNext(int inc = 1)
 	{
         // Note: ArraySize(gsvertex) == 2^n => modulo is replaced by an and instruction
@@ -615,7 +630,7 @@ static __forceinline u32 RGBA16to32(u16 c)
 		   (((c) & 0x8000) ? 0xff000000 : 0);
 }
 
-#if 0
+#ifndef ZZNORMAL_MEMORY
 // converts float16 [0,1] to BYTE [0,255] (assumes value is in range, otherwise will take lower 8bits)
 // f is a u16
 static __forceinline u16 Float16ToBYTE(u16 f)
@@ -983,5 +998,40 @@ inline void CluttingForFlushedTex(tex0Info* tex0, u32 Data, int ictx)
 //                         60   56   52
 #define CPSM_CSA_BITMASK 0x1f780000
 #define CPSM_CSA_NOTMASK 0xe0870000
+
+// I'll find a good place for these later.
+
+extern PSM_value PSM_value_Table[64];
+extern bool allowed_psm[256];				// in ZZoglMem.cpp.cpp
+inline void FillAlowedPsnTable() {
+
+	allowed_psm[PSMCT32] = true;
+	allowed_psm[PSMCT24] = true;
+	allowed_psm[PSMCT16] = true;
+	allowed_psm[PSMCT16S] = true;
+	allowed_psm[PSMT8] = true;
+	allowed_psm[PSMT4] = true;
+	allowed_psm[PSMT8H] = true;
+	allowed_psm[PSMT4HH] = true;
+	allowed_psm[PSMT4HL] = true;
+	allowed_psm[PSMT32Z] = true;
+	allowed_psm[PSMT24Z] = true;
+	allowed_psm[PSMT16Z] = true;
+	allowed_psm[PSMT16SZ] = true;
+	
+	PSM_value_Table[PSMCT32]  = PSMCT32;
+	PSM_value_Table[PSMCT24]  = PSMCT24;
+	PSM_value_Table[PSMCT16]  = PSMCT16;
+	PSM_value_Table[PSMCT16S] = PSMCT16S;
+	PSM_value_Table[PSMT8]    = PSMT8;
+	PSM_value_Table[PSMT4]    = PSMT4;
+	PSM_value_Table[PSMT8H]   = PSMT8H;
+	PSM_value_Table[PSMT4HH]  = PSMT4HH;
+	PSM_value_Table[PSMT4HL]  = PSMT4HL;
+	PSM_value_Table[PSMT32Z]  = PSMT32Z;
+	PSM_value_Table[PSMT24Z]  = PSMT24Z;
+	PSM_value_Table[PSMT16Z]  = PSMT16Z;
+	PSM_value_Table[PSMT16SZ] = PSMT16SZ;
+};
 
 #endif

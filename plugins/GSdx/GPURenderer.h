@@ -36,6 +36,7 @@ protected:
 	int m_aspectratio;
 	bool m_vsync;
 	bool m_fxaa;
+	bool m_shadeboost;
 	GSVector2i m_scale;
 
 	virtual void ResetDevice() {}

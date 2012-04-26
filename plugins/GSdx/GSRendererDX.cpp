@@ -29,8 +29,9 @@ GSRendererDX::GSRendererDX(GSTextureCache* tc, const GSVector2& pixelcenter)
 {
 	m_logz = !!theApp.GetConfig("logz", 0);
 	m_fba = !!theApp.GetConfig("fba", 1);
-	//UserHacks_HalfPixelOffset = !!theApp.GetConfig("UserHacks_HalfPixelOffset", 0);
-	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0);
+
+	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0) && !!theApp.GetConfig("UserHacks", 0);
+    UserHacks_WildHack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_WildHack", 0) : 0;
 }
 
 GSRendererDX::~GSRendererDX()
@@ -280,8 +281,9 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
-		ps_sel.ltf = m_filter == 2 ? m_vt.IsLinear() : m_filter;
+		ps_sel.ltf = m_filter == 2 ? m_vt.IsLinear() : m_filter;		
 		ps_sel.rt = tex->m_target;
+		ps_sel.spritehack = tex->m_spritehack_t;
 
 		int w = tex->m_texture->GetWidth();
 		int h = tex->m_texture->GetHeight();

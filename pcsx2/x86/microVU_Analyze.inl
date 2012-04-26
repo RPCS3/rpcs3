@@ -364,7 +364,7 @@ __fi void mVUanalyzeXGkick(mV, int Fs, int xCycles) {
 static void analyzeBranchVI(mV, int xReg, bool& infoVar) {
 	if (!xReg) return;
 	if (mVUstall) { // I assume a stall on branch means the vi reg is not modified directly b4 the branch...
-		DevCon.Warning("microVU%d: Warning %d cycle stall on branch instruction [%04x]", getIndex, mVUstall, xPC);
+		DevCon.Warning("microVU%d: %d cycle stall on branch instruction [%04x]", getIndex, mVUstall, xPC);
 		return;
 	}
 	int i, j = 0;
@@ -374,7 +374,7 @@ static void analyzeBranchVI(mV, int xReg, bool& infoVar) {
 	incPC2(-2);
 	for (i = 0; i < iEnd && cyc < iEnd; i++) {
 		if (i && mVUstall) {
-			DevCon.Warning("microVU%d: Warning Branch VI-Delay with %d cycle stall (%d) [%04x]", getIndex, mVUstall, i, xPC);
+			DevCon.Warning("microVU%d: Branch VI-Delay with %d cycle stall (%d) [%04x]", getIndex, mVUstall, i, xPC);
 		}
 		if (i == mVUcount) {
 			bool warn = 0;
@@ -385,12 +385,12 @@ static void analyzeBranchVI(mV, int xReg, bool& infoVar) {
 				infoVar = 1;
 				j = i; i++;
 			}
-			if (warn) DevCon.Warning("microVU%d: Warning Branch VI-Delay with small block (%d) [%04x]", getIndex, i, xPC);
+			if (warn) DevCon.Warning("microVU%d: Branch VI-Delay with small block (%d) [%04x]", getIndex, i, xPC);
 			break; // if (warn), we don't have enough information to always guarantee the correct result.
 		}
 		if ((mVUlow.VI_write.reg == xReg) && mVUlow.VI_write.used) {
 			if (mVUlow.readFlags) {
-				if (i) DevCon.Warning("microVU%d: Warning Branch VI-Delay with Read Flags Set (%d) [%04x]", getIndex, i, xPC);
+				if (i) DevCon.Warning("microVU%d: Branch VI-Delay with Read Flags Set (%d) [%04x]", getIndex, i, xPC);
 				break; // Not sure if on the above "if (i)" case, if we need to "continue" or if we should "break"
 			}
 			j = i;
@@ -465,14 +465,14 @@ __ri int mVUbranchCheck(mV) {
 			mVUregs.flagInfo   = 0;
 			mVUregs.fullFlags0 = 0;
 			mVUregs.fullFlags1 = 0;
-			DevCon.Warning("microVU%d Warning: %s in %s delay slot! [%04x]", mVU.index,
+			DevCon.Warning("microVU%d: %s in %s delay slot! [%04x]", mVU.index,
 							branchSTR[mVUlow.branch&0xf], branchSTR[branchType&0xf], xPC);
 			return 1;
 		}
 		else {
 			incPC(2);
 			mVUlow.isNOP = 1;
-			DevCon.Warning("microVU%d Warning: %s in %s delay slot! [%04x]", mVU.index,
+			DevCon.Warning("microVU%d: %s in %s delay slot! [%04x]", mVU.index,
 							branchSTR[mVUlow.branch&0xf], branchSTR[branchType&0xf], xPC);
 			return 0;
 		}

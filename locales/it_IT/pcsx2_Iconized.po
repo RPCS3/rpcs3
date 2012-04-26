@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-11-16 20:16+0100\n"
+"POT-Creation-Date: 2012-04-07 11:42+0200\n"
 "PO-Revision-Date: 2011-10-05 21:01+0100\n"
 "Last-Translator: Leucos\n"
 "Language-Team: \n"
@@ -26,7 +26,7 @@ msgstr ""
 "Non c'è abbastanza memoria virtuale disponibile o gli spazi della memoria "
 "virtuale necessari sono già stati riservati ad altri processi, servizi o DLL."
 
-#: pcsx2/CDVD/CDVD.cpp:385
+#: pcsx2/CDVD/CDVD.cpp:389
 msgid "!Notice:PsxDisc"
 msgstr ""
 "I dischi di gioco per PlayStation non sono supportati in PCSX2. Se desideri "
@@ -508,7 +508,7 @@ msgstr ""
 "Valori più alti aumentano il numero di cicli 'rubati' dall'EE per ogni "
 "microprogramma VU eseguito dal gioco."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "Aggiorna le Flag di stato solo nei blocchi che le leggeranno, invece che "
@@ -516,15 +516,7 @@ msgstr ""
 "per la maggior parte dei casi e superVU fa qualcosa del genere in maniera "
 "predefinita."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr ""
-"Prevede che nel futuro prossimo i blocchi non avranno bisogno della vecchia "
-"Flag 'instance data'. \n"
-"Questo dovrebbe essere abbastanza sicuro. Non si sa se crea problemi in "
-"qualche gioco..."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr ""
 "Esegue la VU1 in un thread separato (solo la microVU1). Generalmente si "
@@ -534,7 +526,7 @@ msgstr ""
 "Si possono invece verificare dei rallentamenti (specialmente con CPU dual-"
 "core) nel caso di giochi limitati dal thread GS ."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "Questo hack funziona al meglio nei giochi che utilizzano il registro di "
@@ -542,7 +534,7 @@ msgstr ""
 "3D. I giochi che non utilizzano questo metodo di sincronia verticale "
 "otterranno un aumento di velocità minimo se non nullo."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "L'obiettivo principale è l'idle loop (ciclo per inattività) dell'EE "
@@ -553,7 +545,7 @@ msgstr ""
 "successivo o alla fine del tempo riservato al processore, qualunque venga "
 "prima."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "Controlla la lista compatibilità di HDLoader per sapere quali giochi creano "
@@ -566,20 +558,20 @@ msgstr ""
 "Nota che quando il Limitatore Fotogrammi è disattivato anche le modalità "
 "Turbo e Rallentatore non saranno più disponibili."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
 msgid "!Panel:Frameskip:Heading"
 msgstr ""
 "Avviso: a causa del design hardware della PS2, un salto dei fotogrammi "
 "preciso non è possibile. La sua attivazione può causare gravi errori grafici "
 "in alcuni giochi."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr ""
 "Attiva questa opzione se pensi che la perdita di sincrona del thread MTGS "
 "sia la causa di crash o problemi grafici."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 "Nei benchmark, permette di rimuovere ogni interferenza causata dal thread "
@@ -605,3 +597,10 @@ msgstr ""
 "riservare il range di memoria specifico richiesto, non sarà quindi "
 "disponibile all'utilizzo. Questo non è un errore critico, dato che il "
 "ricompilatore sVU è obsoleto e in ogni caso dovresti utilizzare microVU. :)"
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr ""
+#~ "Prevede che nel futuro prossimo i blocchi non avranno bisogno della "
+#~ "vecchia Flag 'instance data'. \n"
+#~ "Questo dovrebbe essere abbastanza sicuro. Non si sa se crea problemi in "
+#~ "qualche gioco..."

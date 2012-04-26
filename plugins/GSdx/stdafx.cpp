@@ -74,6 +74,7 @@ void vmfree(void* ptr, size_t size)
 #else
 
 #include <sys/mman.h>
+#include <unistd.h>
 
 void* vmalloc(size_t size, bool code)
 {

@@ -922,9 +922,8 @@ bool AppConfig::IsOkApplyPreset(int n)
 		case 4 :	//set EE cyclerate to 2 clicks (maximum)
 					eeUsed?0:(eeUsed=true, EmuOptions.Speedhacks.EECycleRate = 2);
 
-		case 3 :	//Set VU cycle steal to 1 click, enable (m)vuBlockHack, set VU clamp mode to 'none'
+		case 3 :	//Set VU cycle steal to 1 click, set VU clamp mode to 'none'
 					vuUsed?0:(vuUsed=true, EmuOptions.Speedhacks.VUCycleSteal = 1);
-					EmuOptions.Speedhacks.vuBlockHack		  = true;
 					EmuOptions.Cpu.Recompiler.vuOverflow	  =
 					EmuOptions.Cpu.Recompiler.vuExtraOverflow =
 					EmuOptions.Cpu.Recompiler.vuSignOverflow = false; //VU Clamp mode to 'none'

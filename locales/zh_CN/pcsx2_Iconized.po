@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-09-24 20:29+0800\n"
+"POT-Creation-Date: 2012-04-07 11:42+0200\n"
 "PO-Revision-Date: 2011-08-13 16:51+0700\n"
 "Last-Translator: Wei Mingzhi <whistler@openoffice.org>\n"
 "Language-Team: \n"
@@ -26,7 +26,7 @@ msgid "!Notice:VirtualMemoryMap"
 msgstr ""
 "没有足够的虚拟内存可用，或所需的虚拟内存映射已经被其它进程、服务或 DLL 保留。"
 
-#: pcsx2/CDVD/CDVD.cpp:385
+#: pcsx2/CDVD/CDVD.cpp:389
 msgid "!Notice:PsxDisc"
 msgstr ""
 "PCSX2 不支持 Playstation 1 游戏。如果您想模拟 PS1 游戏请下载一个 PS1 模拟器，"
@@ -390,39 +390,33 @@ msgstr ""
 "此选项控制 VU 单元从情感引擎挪用的时钟周期数目。较高数值将增加各个被游戏执行"
 "的 VU 微程序从 EE 挪用的周期数目。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "仅在标志位被读取时更新，而不是总是更新。此选项通常是安全的，Super VU 默认会以"
 "相似的方式处理。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr ""
-"假定未来的块不需要旧的标志实例数据。这应该是安全的。是否导致游戏出现问题仍然"
-"未知。"
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr ""
 "在单独的线程是运行 VU1 (仅限 microVU1)。通常在三核以上 CPU 中有提速效果。此选"
 "项对大多数游戏是安全的，但一部分游戏可能不兼容或导致没有响应。对于受限于 GS "
 "的游戏，可能会造成性能下降 (特别是在双核 CPU 上)。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "此选项对于使用 INTC 状态寄存器来等待垂直同步的游戏效果较好，包括一些主要的 "
 "3D RPG 游戏。对于不使用此方法的游戏没有提速效果。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "主要针对位于内核地址 0x81FC0 的 EE 空闲循环，此 Hack 试图检测循环体在一个另外"
 "的模拟单元计划的事件处理过程之前不保证产生相同结果的循环。在一次循环体执行之"
 "后，将下一事件的时间或处理器的时间片结束时间 (孰早) 做出更新。"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "请参看 HDLoader 兼容性列表以获取启用此项会出现问题的游戏列表。(通常标记为需"
@@ -432,16 +426,16 @@ msgstr ""
 msgid "!ContextTip:Framelimiter:Disable"
 msgstr "注意: 如限帧被禁用，快速模式和慢动作模式将不可用。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
 msgid "!Panel:Frameskip:Heading"
 msgstr ""
 "注意: 由于 PS2 硬件设计，不可能准确跳帧。启用此选项可能在游戏中导致图像错误。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr "如您认为 MTGS 线程同步导致崩溃或图像错误，请启用此项。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 "禁用全部由 MTGS 线程或 GPU 开销导致的测试信息。此选项可与即时存档配合使用: 在"
@@ -460,6 +454,11 @@ msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr ""
 "内存溢出: SuperVU 重编译器无法保留所需的指定内存范围，且将不可用。这不是一个"
 "严重错误，sVU 重编译器已过时，您应该使用 microVU。:)"
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr ""
+#~ "假定未来的块不需要旧的标志实例数据。这应该是安全的。是否导致游戏出现问题仍"
+#~ "然未知。"
 
 #~ msgid "!Notice:Mcd:Overwrite"
 #~ msgstr ""

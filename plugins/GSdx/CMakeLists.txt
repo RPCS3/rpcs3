@@ -189,6 +189,10 @@ if(projectSDL)
     target_link_libraries(${Output} ${SDL_LIBRARY})
 endif(projectSDL)
 
+if(Linux)
+	target_link_libraries(${Output} ${GTK2_LIBRARIES})
+endif(Linux)
+
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
     target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
 endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

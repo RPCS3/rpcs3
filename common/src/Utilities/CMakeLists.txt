@@ -20,6 +20,10 @@ set(CommonFlags
 	-pipe
 	-Wunused-variable)
 
+if (SPARSEHASH_NEW_FOUND)
+    set(CommonFlags "${CommonFlags} -DSPARSEHASH_NEW_INCLUDE_DIR ")
+endif (SPARSEHASH_NEW_FOUND)
+
 # set warning flags
 set(DebugFlags
 	-g

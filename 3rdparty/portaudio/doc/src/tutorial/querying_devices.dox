@@ -1,0 +1,111 @@
+/** @page querying_devices Enumerating and Querying PortAudio Devices
+@ingroup tutorial
+
+@section tut_query1 Querying Devices
+
+It is often fine to use the default device as we did previously in this tutorial, but there are times when you'll want to explicitly choose the device from a list of available devices on the system. To see a working example of this, check out pa_devs.c in the tests/ directory of the PortAudio source code. To do so, you'll need to first initialize PortAudio and Query for the number of Devices:
+
+@code
+    int numDevices;
+
+    numDevices = Pa_GetDeviceCount();
+    if( numDevices < 0 )
+    {
+        printf( "ERROR: Pa_CountDevices returned 0x%x\n", numDevices );
+        err = numDevices;
+        goto error;
+    }
+@endcode
+
+
+If you want to get information about each device, simply loop through as follows:
+
+@code
+    const   PaDeviceInfo *deviceInfo;
+
+    for( i=0; i<numDevices; i++ )
+    {
+        deviceInfo = Pa_GetDeviceInfo( i );
+        ...
+    }
+@endcode
+
+The Pa_DeviceInfo structure contains a wealth of information such as the name of the devices, the default latency associated with the devices and more. The structure ihas the following fields:
+
+@code
+int 	structVersion
+const char * 	name
+PaHostApiIndex 	hostApi
+int 	maxInputChannels
+int 	maxOutputChannels
+PaTime 	defaultLowInputLatency
+PaTime 	defaultLowOutputLatency
+PaTime 	defaultHighInputLatency
+PaTime 	defaultHighOutputLatency
+double 	defaultSampleRate
+@endcode
+
+You may notice that you can't determine, from this information alone, whether or not a particular sample rate is supported. This is because some devices support ranges of sample rates, others support, a list of sample rates, and still others support some sample rates and number of channels combinations but not others. To get around this, PortAudio offers a function for testing a particular device with a given format:
+
+@code
+    const PaStreamParameters *inputParameters;
+    const PaStreamParameters *outputParameters;
+    double desiredSampleRate;
+    ...
+    PaError err;
+
+    err = Pa_IsFormatSupported( inputParameters, outputParameters, desiredSampleRate );
+    if( err == paFormatIsSupported )
+    {
+       printf( "Hooray!\n");
+    }
+    else
+    {
+       printf("Too Bad.\n");
+    }
+@endcode
+
+Filling in the inputParameters and outputParameters fields is shown in a moment.
+
+Once you've found a configuration you like, or one you'd like to go ahead and try, you can open the stream by filling in the PaStreamParameters structures, and calling Pa_OpenStream:
+
+@code
+    double srate = ... ;
+    PaStream *stream;
+    unsigned long framesPerBuffer = ... ; //could be paFramesPerBufferUnspecified, in which case PortAudio will do its best to manage it for you, but, on some platforms, the framesPerBuffer will change in each call to the callback
+    PaStreamParameters outputParameters;
+    PaStreamParameters inputParameters;
+
+    bzero( &inputParameters, sizeof( inputParameters ) ); //not necessary if you are filling in all the fields
+    inputParameters.channelCount = inChan;
+    inputParameters.device = inDevNum;
+    inputParameters.hostApiSpecificStreamInfo = NULL;
+    inputParameters.sampleFormat = paFloat32;
+    inputParameters.suggestedLatency = Pa_GetDeviceInfo(inDevNum)->defaultLowInputLatency ;
+    inputParameters.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
+
+
+    bzero( &outputParameters, sizeof( outputParameters ) ); //not necessary if you are filling in all the fields
+    outputParameters.channelCount = outChan;
+    outputParameters.device = outDevNum;
+    outputParameters.hostApiSpecificStreamInfo = NULL;
+    outputParameters.sampleFormat = paFloat32;
+    outputParameters.suggestedLatency = Pa_GetDeviceInfo(outDevNum)->defaultLowOutputLatency ;
+    outputParameters.hostApiSpecificStreamInfo = NULL; //See you specific host's API docs for info on using this field
+
+    err = Pa_OpenStream(
+                    &stream,
+                    &inputParameters,
+                    &outputParameters,
+                    srate,
+                    framesPerBuffer,
+                    paNoFlag, //flags that can be used to define dither, clip settings and more
+                    portAudioCallback, //your callback function
+                    (void *)this ); //data to be passed to callback. In C++, it is frequently (void *)this
+    //don't forget to check errors!
+@endcode
+
+
+Previous: \ref utility_functions | Next: \ref blocking_read_write
+
+*/

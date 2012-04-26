@@ -208,7 +208,13 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 		case wxLANGUAGE_SPANISH_VENEZUELA: return wxLANGUAGE_SPANISH_MODERN;
 
 		case wxLANGUAGE_ITALIAN_SWISS        : return wxLANGUAGE_ITALIAN;
-		
+
+		case wxLANGUAGE_FRENCH_BELGIAN:
+		case wxLANGUAGE_FRENCH_CANADIAN:
+		case wxLANGUAGE_FRENCH_LUXEMBOURG:
+		case wxLANGUAGE_FRENCH_MONACO:
+		case wxLANGUAGE_FRENCH_SWISS: return wxLANGUAGE_FRENCH;
+
 		default                              : break;
 	}
 	return wxLangId;

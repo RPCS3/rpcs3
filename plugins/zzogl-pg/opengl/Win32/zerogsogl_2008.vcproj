@@ -266,6 +266,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\GSDump.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\GSmain.cpp"
 				>
 			</File>
@@ -283,10 +287,6 @@
 			</File>
 			<File
 				RelativePath="..\Mem_Tables.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\NewRegs.cpp"
 				>
 			</File>
 			<File
@@ -357,6 +357,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZDepthTargets.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZHacks.cpp"
 				>
 			</File>
@@ -366,6 +370,10 @@
 			</File>
 			<File
 				RelativePath="..\ZZLog.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZMemoryTargets.cpp"
 				>
 			</File>
 			<File
@@ -389,6 +397,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZoglMem.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZoglSave.cpp"
 				>
 			</File>
@@ -397,11 +409,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZoglShadersGLSL.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZoglShoots.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\ZZoglVB.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZRenderTargets.cpp"
 				>
 			</File>
 		</Filter>
@@ -427,6 +447,10 @@
 			</File>
 			<File
 				RelativePath="..\GS.h"
+				>
+			</File>
+			<File
+				RelativePath="..\GSDump.h"
 				>
 			</File>
 			<File
@@ -526,11 +550,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\ZZoglFlush.h"
+				>
+			</File>
+			<File
 				RelativePath="..\ZZoglFlushHack.h"
 				>
 			</File>
 			<File
 				RelativePath="..\ZZoglMath.h"
+				>
+			</File>
+			<File
+				RelativePath="..\ZZoglMem.h"
 				>
 			</File>
 			<File
@@ -576,11 +608,11 @@
 			</File>
 		</Filter>
 		<File
-			RelativePath=".\ps2hw.dat"
+			RelativePath="..\ps2hw.dat"
 			>
 		</File>
 		<File
-			RelativePath="..\ps2hw.dat"
+			RelativePath=".\ps2hw.dat"
 			>
 		</File>
 	</Files>

@@ -22,6 +22,7 @@
 #include <sys/mman.h>
 #include <signal.h>
 #include <errno.h>
+#include <unistd.h>
 
 extern void SignalExit(int sig);
 

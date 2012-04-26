@@ -8,6 +8,7 @@
 # Use soundtouch  internal lib: -DFORCE_INTERNAL_SOUNDTOUCH=TRUE
 # Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
 # Use sdl1.3      internal lib: -DFORCE_INTERNAL_SDL=TRUE # Not supported yet
+# Use GLSL API(else NVIDIA_CG): -DGLSL_API=TRUE
 
 ### GCC optimization options
 # control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
@@ -183,3 +184,10 @@ if(PACKAGE_MODE)
     # Compile all source codes with these 2 defines
     add_definitions(-DPLUGIN_DIR_COMPILATION=${PLUGIN_DIR} -DGAMEINDEX_DIR_COMPILATION=${GAMEINDEX_DIR})
 endif(PACKAGE_MODE)
+
+#-------------------------------------------------------------------------------
+# Select nvidia cg shader api by default
+#-------------------------------------------------------------------------------
+if(NOT DEFINED GLSL_API)
+	set(GLSL_API FALSE)
+endif(NOT DEFINED GLSL_API)

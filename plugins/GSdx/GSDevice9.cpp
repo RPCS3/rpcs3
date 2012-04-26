@@ -137,9 +137,9 @@ uint32 GSDevice9::GetMaxDepth(uint32 msaa = 0)
 
 void GSDevice9::ForceValidMsaaConfig()
 {
-	if(0 == GetMaxDepth(theApp.GetConfig("msaa", 0)))
+	if(0 == GetMaxDepth(theApp.GetConfig("UserHacks_MSAA", 0)))
 	{
-		theApp.SetConfig("msaa", 0); // replace invalid msaa value in ini file with 0.
+		theApp.SetConfig("UserHacks_MSAA", 0); // replace invalid msaa value in ini file with 0.
 	}
 };
 
@@ -281,6 +281,28 @@ bool GSDevice9::Create(GSWnd* wnd)
 	{
 		CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
+
+	// Shade Boost	
+
+	int ShadeBoost_Contrast = theApp.GetConfig("ShadeBoost_Contrast", 50);
+	int ShadeBoost_Brightness = theApp.GetConfig("ShadeBoost_Brightness", 50);
+	int ShadeBoost_Saturation = theApp.GetConfig("ShadeBoost_Saturation", 50);
+		
+	string str[3];		
+		
+	str[0] = format("%d", ShadeBoost_Saturation);
+	str[1] = format("%d", ShadeBoost_Brightness);
+	str[2] = format("%d", ShadeBoost_Contrast);
+
+	D3DXMACRO macro[] =
+	{			
+		{"SB_SATURATION", str[0].c_str()},
+		{"SB_BRIGHTNESS", str[1].c_str()},
+		{"SB_CONTRAST", str[2].c_str()},
+		{NULL, NULL},
+	};
+
+	CompileShader(IDR_SHADEBOOST_FX, "ps_main", macro, &m_shadeboost.ps);	
 
 	// fxaa
 
@@ -858,6 +880,21 @@ void GSDevice9::DoFXAA(GSTexture* st, GSTexture* dt)
 	cb.rcpFrameOpt = GSVector4::zero();
 
 	StretchRect(st, sr, dt, dr, m_fxaa.ps, (const float*)&cb, 2, true);
+}
+
+void GSDevice9::DoShadeBoost(GSTexture* st, GSTexture* dt)
+{
+	GSVector2i s = dt->GetSize();
+
+	GSVector4 sr(0, 0, 1, 1);
+	GSVector4 dr(0, 0, s.x, s.y);
+
+	ShadeBoostConstantBuffer cb;
+
+	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
+	cb.rcpFrameOpt = GSVector4::zero();
+
+	StretchRect(st, sr, dt, dr, m_shadeboost.ps, (const float*)&cb, 1, true);
 }
 
 void GSDevice9::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm)

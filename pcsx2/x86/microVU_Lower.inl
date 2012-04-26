@@ -949,13 +949,14 @@ mVUop(mVU_LQD) {
 	pass1 { mVUanalyzeLQ(mVU, _Ft_, _Is_, 1); }
 	pass2 {
 		xAddressVoid ptr(mVU.regs().Mem);
-		if (_Is_) {
+		if (_Is_ || isVU0) { // Access VU1 regs mem-map in !_Is_ case
 			mVUallocVIa(mVU, gprT2, _Is_);
 			xSUB(gprT2b, 1);
-			mVUallocVIb(mVU, gprT2, _Is_);
+			if (_Is_) mVUallocVIb(mVU, gprT2, _Is_);
 			mVUaddrFix (mVU, gprT2);
 			ptr += gprT2;
 		}
+		else ptr += (0xffff & (mVU.microMemSize-8));
 		if (!mVUlow.noWriteVF) {
 			const xmm& Ft = mVU.regAlloc->allocReg(-1, _Ft_, _X_Y_Z_W);
 			mVUloadReg(Ft, ptr, _X_Y_Z_W);
@@ -1016,13 +1017,14 @@ mVUop(mVU_SQD) {
 	pass1 { mVUanalyzeSQ(mVU, _Fs_, _It_, 1); }
 	pass2 {
 		xAddressVoid ptr(mVU.regs().Mem);
-		if (_It_) {
+		if (_It_ || isVU0) {// Access VU1 regs mem-map in !_It_ case
 			mVUallocVIa(mVU, gprT2, _It_);
 			xSUB(gprT2b, 1);
-			mVUallocVIb(mVU, gprT2, _It_);
+			if (_It_) mVUallocVIb(mVU, gprT2, _It_);
 			mVUaddrFix (mVU, gprT2);
 			ptr += gprT2;
 		}
+		else ptr += (0xffff & (mVU.microMemSize-8));
 		const xmm& Fs = mVU.regAlloc->allocReg(_Fs_, 0, _X_Y_Z_W);
 		mVUsaveReg(Fs, ptr, _X_Y_Z_W, 1);
 		mVU.regAlloc->clearNeeded(Fs);

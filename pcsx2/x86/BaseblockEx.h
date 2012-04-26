@@ -127,9 +127,6 @@ public:
 
 	void clear()
 	{
-		if(blocks) {
-			memset(blocks, 0, sizeof(blocks));
-		}
 		_Size = 0;
 	}
 

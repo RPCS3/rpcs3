@@ -163,20 +163,12 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	m_check_vuFlagHack = new pxCheckBox( vuHacksPanel, _("mVU Flag Hack"),
 		_("Good Speedup and High Compatibility; may cause bad graphics... [Recommended]" ) );
 
-	m_check_vuBlockHack = new pxCheckBox( vuHacksPanel, _("mVU Block Hack"),
-		_("Good Speedup and High Compatibility; may cause bad graphics, SPS, etc...") );
-
 	m_check_vuThread = new pxCheckBox( vuHacksPanel, _("MTVU (Multi-Threaded microVU1)"),
 		_("Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ cores]") );
 
 	m_check_vuFlagHack->SetToolTip( pxEt( "!ContextTip:Speedhacks:vuFlagHack",
 		L"Updates Status Flags only on blocks which will read them, instead of all the time. "
 		L"This is safe most of the time, and Super VU does something similar by default."
-	) );
-
-	m_check_vuBlockHack->SetToolTip( pxEt( "!ContextTip:Speedhacks:vuBlockHack",
-		L"Assumes that very far into future blocks will not need old flag instance data. "
-		L"This should be pretty safe. It is unknown if this breaks any game..."
 	) );
 
 	m_check_vuThread->SetToolTip( pxEt( "!ContextTip:Speedhacks:vuThread",
@@ -234,7 +226,6 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 	*vuSliderPanel	+= m_msg_vustealer		| sliderFlags;
 
 	*vuHacksPanel	+= m_check_vuFlagHack;
-	*vuHacksPanel	+= m_check_vuBlockHack;
 	*vuHacksPanel	+= m_check_vuThread;
 	//*vuHacksPanel	+= 57; // Aligns left and right boxes in default language and font size
 
@@ -313,7 +304,6 @@ void Panels::SpeedHacksPanel::ApplyConfigToGui( AppConfig& configToApply, int fl
 	SetVUcycleSliderMsg();
 
 	m_check_vuFlagHack	->SetValue(opts.vuFlagHack);
-	m_check_vuBlockHack	->SetValue(opts.vuBlockHack);
 	m_check_vuThread	->SetValue(opts.vuThread);
 	m_check_intc		->SetValue(opts.IntcStat);
 	m_check_waitloop	->SetValue(opts.WaitLoop);
@@ -343,7 +333,6 @@ void Panels::SpeedHacksPanel::Apply()
 	opts.fastCDVD			= m_check_fastCDVD->GetValue();
 	opts.IntcStat			= m_check_intc->GetValue();
 	opts.vuFlagHack			= m_check_vuFlagHack->GetValue();
-	opts.vuBlockHack		= m_check_vuBlockHack->GetValue();
 	opts.vuThread			= m_check_vuThread->GetValue();
 
 	// If the user has a command line override specified, we need to disable it

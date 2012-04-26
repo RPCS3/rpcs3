@@ -38,6 +38,7 @@ GPURenderer::GPURenderer(GSDevice* dev)
 	m_vsync = !!theApp.GetConfig("vsync", 0);
 	m_fxaa = !!theApp.GetConfig("fxaa", 0);
 	m_scale = m_mem.GetScale();
+	m_shadeboost = !!theApp.GetConfig("ShadeBoost", 0);
 
 	#ifdef _WINDOWS
 
@@ -117,6 +118,11 @@ bool GPURenderer::Merge()
 
 	m_dev->Merge(st, sr, dr, s, 1, 1, GSVector4(0, 0, 0, 1));
 
+	if(m_shadeboost)
+	{
+		m_dev->ShadeBoost();
+	}
+	
 	if(m_fxaa)
 	{
 		m_dev->FXAA();

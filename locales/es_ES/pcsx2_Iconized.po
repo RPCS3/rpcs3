@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-10-05 20:13+0200\n"
+"POT-Creation-Date: 2012-04-07 11:42+0200\n"
 "PO-Revision-Date: 2011-09-28 21:51+0100\n"
 "Last-Translator: Víctor González <pajaroloco_2@hotmail.com>\n"
 "Language-Team: \n"
@@ -31,7 +31,7 @@ msgstr ""
 "memoria virtual necesarias ya las han reservado otros procesos, servicios o "
 "DLLs."
 
-#: pcsx2/CDVD/CDVD.cpp:385
+#: pcsx2/CDVD/CDVD.cpp:389
 msgid "!Notice:PsxDisc"
 msgstr ""
 "PCSX2 no admite discos de juego de PlayStation 1.  Si quieres emular juegos "
@@ -496,7 +496,7 @@ msgstr ""
 "EmotionEngine.  Un valor alto aumenta el número de ciclos robados del EE a "
 "cada microprograma del VU que utiliza el juego."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "Actualiza las etiquetas de estado sólo en los bloques que podrán leerse, en "
@@ -504,15 +504,7 @@ msgstr ""
 "Generalmente es la opción más segura, y Super VU ya hace algo parecido de "
 "forma predeterminada."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr ""
-"Asume que en lo profundo de los bloques futuros no necesitarán estos datos "
-"de instancia antiguos.\n"
-"Debería ser una opción muy segura. No se sabe si dañará la emulación de "
-"algún juego..."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr ""
 "Ejecuta VU1 en un hilo dedicado (sólo microVU1). Suele aumentar la velocidad "
@@ -522,7 +514,7 @@ msgstr ""
 "En el caso de los juegos limitados por GS, podría ralentizarlos (sobre todo "
 "en CPUs de doble núcleo)."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "Este arreglo funciona mejor en juegos que utilizan el registro de estado "
@@ -530,7 +522,7 @@ msgstr ""
 "RPGs que no son 3D. Los juegos que no utilizan este método de sincronía "
 "vertical no recibirán aumentos de velocidad con este arreglo."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "Al apuntar directamente al bucle de espera del EE en la dirección 0x81FC0 "
@@ -540,7 +532,7 @@ msgstr ""
 "bucles, aumentamos el tiempo del siguiente evento o el final del espacio de "
 "tiempo del procesador, en función de lo que llegue primero."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "Comprueba las listas de compatibilidad del HDLoader para saber qué juegos "
@@ -553,20 +545,20 @@ msgstr ""
 "Observa que al desactivar la limitación de fotogramas, los modos Turbo y "
 "Velocidad lenta no estarán disponibles."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
 msgid "!Panel:Frameskip:Heading"
 msgstr ""
 "Aviso: Debido al diseño del hardware de PS2, es imposible hacer un salto de "
 "fotogramas preciso.\n"
 "Activarlo causará serios fallos visuales en varios juegos."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr ""
 "Activa esta opción si crees que la sincronía de hilos MTGS provoca caídas o "
 "fallos gráficos."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 "Elimina cualquier ruido de benchmark provocado por el hilo MTGS o la "
@@ -591,3 +583,10 @@ msgstr ""
 "los rangos de memoria concretos que son necesarios, y no podrá ser "
 "utilizado.  Este no es un error crítico, ya que el recompilador SuperVU es "
 "obsoleto, y deberías utilizar en su lugar microVU."
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr ""
+#~ "Asume que en lo profundo de los bloques futuros no necesitarán estos "
+#~ "datos de instancia antiguos.\n"
+#~ "Debería ser una opción muy segura. No se sabe si dañará la emulación de "
+#~ "algún juego..."

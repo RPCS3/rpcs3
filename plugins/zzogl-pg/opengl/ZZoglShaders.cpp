@@ -17,7 +17,12 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-//#ifdef NVIDIA_CG_API 		// This code is only for NVIDIA cg-toolkit API
+// By default enable nvidia cg api
+#if !defined(GLSL_API) && !defined(NVIDIA_CG_API)
+#define NVIDIA_CG_API
+#endif
+
+#ifdef NVIDIA_CG_API 		// This code is only for NVIDIA cg-toolkit API
 // ZZogl Shader manipulation functions.
 
 //------------------- Includes
@@ -75,7 +80,7 @@ const static char* g_pTexTypes[] = { "32", "tex32", "clut32", "tex32to16", "tex1
 #endif
 const char* g_pShaders[4] = { "full", "reduced", "accurate", "accurate-reduced" };
 
-// ----------------- Global Variables 
+// ----------------- Global Variables
 
 ZZshContext	g_cgcontext;
 ZZshProfile 	cgvProf, cgfProf;
@@ -85,10 +90,10 @@ ZZshProgram 	pvs[16] = {NULL};
 ZZshProgram 	g_vsprog = 0, g_psprog = 0;							// 2 -- ZZ
 ZZshParameter 	g_vparamPosXY[2] = {0}, g_fparamFogColor = 0;
 
-#ifdef DEVBUILD
-char* EFFECT_NAME;		// All this variables used for testing and set manually
-char* EFFECT_DIR;
-#endif
+//#ifdef DEVBUILD
+extern char* EFFECT_NAME;		// All this variables used for testing and set manually
+extern char* EFFECT_DIR;
+//#endif
 
 bool g_bCRTCBilinear = true;
 
@@ -96,13 +101,8 @@ float4 g_vdepth, vlogz;
 FRAGMENTSHADER ppsBitBlt[2], ppsBitBltDepth, ppsOne;
 FRAGMENTSHADER ppsBaseTexture, ppsConvert16to32, ppsConvert32to16;
 FRAGMENTSHADER ppsRegular[4], ppsTexture[NUM_SHADERS];
-FRAGMENTSHADER ppsCRTC[2], ppsCRTC24[2], ppsCRTCTarg[2];
+FRAGMENTSHADER ppsCRTC[2], /*ppsCRTC24[2],*/ ppsCRTCTarg[2];
 VERTEXSHADER pvsBitBlt;
-
-extern u32 ptexBlocks;		// holds information on block tiling. It's texture number in OpenGL -- if 0 than such texture
-extern u32 ptexConv16to32;	// does not exists. This textures should be created on start and released on finish.  
-extern u32 ptexBilinearBlocks;
-extern u32 ptexConv32to16;
 
 inline bool LoadEffects();
 extern bool s_bWriteDepth;
@@ -141,14 +141,14 @@ void HandleCgError(ZZshContext ctx, ZZshError err, void* appdata)
 {
 	ZZLog::Error_Log("%s->%s: %s\n", ShaderCallerName, ShaderHandleName, cgGetErrorString(err));
 	const char* listing = cgGetLastListing(g_cgcontext);
-	if (listing != NULL) 
+	if (listing != NULL)
 		ZZLog::Debug_Log("	last listing: %s\n", listing);
 }
 
 bool ZZshStartUsingShaders() {
 	cgSetErrorHandler(HandleCgError, NULL);
 	g_cgcontext = cgCreateContext();
-				
+
 	cgvProf = CG_PROFILE_ARBVP1;
 	cgfProf = CG_PROFILE_ARBFP1;
 	cgGLEnableProfile(cgvProf);
@@ -194,8 +194,12 @@ bool ZZshStartUsingShaders() {
 	ZZLog::GS_Log("Creating extra effects.");
 	B_G(ZZshLoadExtraEffects(), return false);
 
-	ZZLog::GS_Log("using %s shaders\n", g_pShaders[g_nPixelShaderVer]);	
+	ZZLog::GS_Log("using %s shaders\n", g_pShaders[g_nPixelShaderVer]);
 	return true;
+}
+
+void ZZshExitCleaning() {
+	// nothing to do with cg
 }
 
 // open shader file according to build target
@@ -272,7 +276,7 @@ void ZZshSetParameter4fv(ZZshParameter param, const float* v, const char* name) 
 	cgGLSetParameter4fv(param, v);
 }
 
-void ZZshSetParameter4fv(ZZshProgram prog, ZZshParameter param, const float* v, const char* name) {	
+void ZZshSetParameter4fv(ZZshProgram prog, ZZshParameter param, const float* v, const char* name) {
 	ShaderHandleName = name;
 	cgGLSetParameter4fv(param, v);
 }
@@ -313,15 +317,15 @@ void ZZshDefaultOneColor( FRAGMENTSHADER ptr ) {
 
 void ZZshSetVertexShader(ZZshProgram prog) {
 	if ((prog) != g_vsprog) {
-		cgGLBindProgram(prog); 
-		g_vsprog = prog; 
+		cgGLBindProgram(prog);
+		g_vsprog = prog;
 	}
 }
 
 void ZZshSetPixelShader(ZZshProgram prog) {
 	if ((prog) != g_psprog) {
-		cgGLBindProgram(prog); 
-		g_psprog = prog; 
+		cgGLBindProgram(prog);
+		g_psprog = prog;
 	}
 }
 
@@ -447,7 +451,7 @@ void SetupVertexProgramParameters(ZZshProgram prog, int context)
 		vlogz = float4( 1.0f, 0.0f, 0.0f, 0.0f);
 	}
 	else {
-		g_vdepth = float4( 256.0f*65536.0f, 65536.0f, 256.0f, 65536.0f*65536.0f);	
+		g_vdepth = float4( 256.0f*65536.0f, 65536.0f, 256.0f, 65536.0f*65536.0f);
 		vlogz = float4( 0.0f, 1.0f, 0.0f, 0.0f);
 	}
 
@@ -458,7 +462,7 @@ void SetupVertexProgramParameters(ZZshProgram prog, int context)
 		p = cgGetNamedParameter(prog, "g_fZMin"); // Switch to flat-z when needed
 		if( p != NULL && cgIsParameterUsed(p, prog) == CG_TRUE )  {
 			//ZZLog::Error_Log("Use flat-z\n");
-			cgGLSetParameter4fv(p, vlogz);			
+			cgGLSetParameter4fv(p, vlogz);
 		}
 		else
 			ZZLog::Error_Log("Shader file version is outdated! Only log-Z is possible.");
@@ -483,6 +487,48 @@ void SetupVertexProgramParameters(ZZshProgram prog, int context)
 }
 
 #ifndef DEVBUILD
+#if 0
+static __forceinline void LOAD_VS(int Index, ZZshProgram prog)
+{
+	assert(mapShaderResources.find(Index) != mapShaderResources.end());
+	header = mapShaderResources[Index];
+	assert((header) != NULL && (header)->index == (Index));
+	prog = cgCreateProgram(g_cgcontext, CG_OBJECT, (char*)(s_lpShaderResources + (header)->offset), cgvProf, NULL, NULL);
+	if (!cgIsProgram(prog)) 
+	{
+		ZZLog::Error_Log("Failed to load vs %d: \n%s", Index, cgGetLastListing(g_cgcontext));
+		return false;
+	}
+	cgGLLoadProgram(prog);
+	
+	if (cgGetError() != CG_NO_ERROR) ZZLog::Error_Log("Failed to load program %d.", Index);
+	SetupVertexProgramParameters(prog, !!(Index&SH_CONTEXT1));	
+}
+
+
+static __forceinline void LOAD_VS(int Index, FRAGMENTSHADER fragment)
+{
+	bLoadSuccess = true;
+	assert(mapShaderResources.find(Index) != mapShaderResources.end());
+	header = mapShaderResources[Index];
+	fragment.prog = cgCreateProgram(g_cgcontext, CG_OBJECT, (char*)(s_lpShaderResources + (header)->offset), cgfProf, NULL, NULL);
+	if (!cgIsProgram(fragment.prog)) 
+	{
+		ZZLog::Error_Log("Failed to load ps %d: \n%s", Index, cgGetLastListing(g_cgcontext));
+		return false;
+	}
+	
+	cgGLLoadProgram(fragment.prog);
+	
+	if (cgGetError() != CG_NO_ERROR) 
+	{
+		ZZLog::Error_Log("failed to load program %d.", Index);
+		bLoadSuccess = false;
+	}
+	
+	SetupFragmentProgramParameters(&fragment, !!(Index&SH_CONTEXT1), 0);
+}
+#endif
 
 #define LOAD_VS(Index, prog) {						  \
 	assert( mapShaderResources.find(Index) != mapShaderResources.end() ); \
@@ -569,7 +615,7 @@ bool ZZshLoadExtraEffects()
 //			pvs[2*i+8] = pvs[2*i+8+1] = NULL;
 //		}
 	}
-	
+
 	LOAD_VS(SH_BITBLTVS, pvsBitBlt.prog);
 	pvsBitBlt.sBitBltPos = cgGetNamedParameter(pvsBitBlt.prog, "g_fBitBltPos");
 	pvsBitBlt.sBitBltTex = cgGetNamedParameter(pvsBitBlt.prog, "g_fBitBltTex");
@@ -596,7 +642,7 @@ bool ZZshLoadExtraEffects()
 	LOAD_PS(SH_BITBLTDEPTHPS, ppsBitBltDepth);
 	LOAD_PS(SH_CRTCTARGPS, ppsCRTCTarg[0]);
 	LOAD_PS(SH_CRTCTARGINTERPS, ppsCRTCTarg[1]);
-	
+
 	g_bCRTCBilinear = true;
 	LOAD_PS(SH_CRTCPS, ppsCRTC[0]);
 	if( !bLoadSuccess ) {
@@ -611,9 +657,9 @@ bool ZZshLoadExtraEffects()
 
 	if( !bLoadSuccess )
 		ZZLog::Error_Log("Failed to create CRTC shaders.");
-	
-	LOAD_PS(SH_CRTC24PS, ppsCRTC24[0]);
-	LOAD_PS(SH_CRTC24INTERPS, ppsCRTC24[1]);
+
+//	LOAD_PS(SH_CRTC24PS, ppsCRTC24[0]);
+//	LOAD_PS(SH_CRTC24INTERPS, ppsCRTC24[1]);
 	LOAD_PS(SH_ZEROPS, ppsOne);
 	LOAD_PS(SH_BASETEXTUREPS, ppsBaseTexture);
 	LOAD_PS(SH_CONVERT16TO32PS, ppsConvert16to32);
@@ -645,13 +691,13 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 		texwrap = TEXWRAP_REPEAT_CLAMP;
 
 	int index = GET_SHADER_INDEX(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, context, 0);
-	
+
 	assert( index < ArraySize(ppsTexture) );
 	FRAGMENTSHADER* pf = ppsTexture+index;
-	
+
 	if( pbFailed != NULL ) *pbFailed = false;
 
-	if( pf->prog != NULL ) 
+	if( pf->prog != NULL )
 		return pf;
 
 	if( (g_nPixelShaderVer & SHADER_ACCURATE) && mapShaderResources.find(index+NUM_SHADERS*SHADER_ACCURATE) != mapShaderResources.end() )
@@ -684,7 +730,7 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 
 	return NULL;
 }
-	
+
 #else // not RELEASE_TO_PUBLIC
 
 #define LOAD_VS(name, prog, shaderver) { \
@@ -793,9 +839,9 @@ bool ZZshLoadExtraEffects()
 	}
 
 	LOAD_PS("BitBltDepthPS", ppsBitBltDepth, cgfProf);
-	LOAD_PS("CRTCTargPS", ppsCRTCTarg[0], cgfProf); 
+	LOAD_PS("CRTCTargPS", ppsCRTCTarg[0], cgfProf);
 	LOAD_PS("CRTCTargInterPS", ppsCRTCTarg[1], cgfProf);
-	
+
 	g_bCRTCBilinear = true;
 	LOAD_PS("CRTCPS", ppsCRTC[0], cgfProf);
 	if( !bLoadSuccess ) {
@@ -810,8 +856,8 @@ bool ZZshLoadExtraEffects()
 
 	if( !bLoadSuccess )
 		ZZLog::Error_Log("Failed to create CRTC shaders.");
-	
-	LOAD_PS("CRTC24PS", ppsCRTC24[0], cgfProf); LOAD_PS("CRTC24InterPS", ppsCRTC24[1], cgfProf);
+
+//	LOAD_PS("CRTC24PS", ppsCRTC24[0], cgfProf); LOAD_PS("CRTC24InterPS", ppsCRTC24[1], cgfProf);
 	LOAD_PS("ZeroPS", ppsOne, cgfProf);
 	LOAD_PS("BaseTexturePS", ppsBaseTexture, cgfProf);
 	LOAD_PS("Convert16to32PS", ppsConvert16to32, cgfProf);
@@ -828,7 +874,7 @@ bool ZZshLoadExtraEffects()
 FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed)
 {
 	int texwrap;
-	
+
 	assert( texfilter < NUM_FILTERS );
 	//assert( g_nPixelShaderVer == SHADER_30 );
 	if( clamp.wms == clamp.wmt ) {
@@ -851,9 +897,9 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 
 	FRAGMENTSHADER* pf = ppsTexture+index;
 
-	if( pf->prog != NULL ) 
+	if( pf->prog != NULL )
 		return pf;
-	
+
 	pf->prog = LoadShaderFromType(EFFECT_DIR, EFFECT_NAME, type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, g_nPixelShaderVer, context);
 
 	if( pf->prog != NULL ) {
@@ -886,4 +932,4 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 
 #endif // RELEASE_TO_PUBLIC
 
-//#endif // NVIDIA_CG_API
+#endif // NVIDIA_CG_API

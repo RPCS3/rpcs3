@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="ZZOgl-PG" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="../../../../../bin/plugins/ZZOgl-PG-dbg.so" prefix_auto="0" extension_auto="0" />
+				<Option object_output="obj/Debug/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-Wall" />
+					<Add option="-g" />
+					<Add option="-DZEROGS_DEVBUILD" />
+					<Add option="-D_DEBUG" />
+				</Compiler>
+				<Linker>
+					<Add library="../../../../../deps/debug/libUtilities.a" />
+				</Linker>
+			</Target>
+			<Target title="Devel">
+				<Option output="../../../../../bin/plugins/ZZOgl-PG-dev" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-g" />
+					<Add option="-W" />
+					<Add option="-DZEROGS_DEVBUILD" />
+					<Add option="-DNDEBUG" />
+				</Compiler>
+				<Linker>
+					<Add library="../../../../../deps/release/libUtilities.a" />
+				</Linker>
+			</Target>
+			<Target title="Release">
+				<Option output="../../../../../bin/plugins/ZZOgl-PG" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="3" />
+				<Option compiler="gcc" />
+				<Option createDefFile="1" />
+				<Option createStaticLib="1" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-W" />
+					<Add option="-DRELEASE_TO_PUBLIC" />
+					<Add option="-DNDEBUG" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add library="../../../../../deps/release/libUtilities.a" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="`pkg-config gtk+-2.0 --cflags`" />
+			<Add option="`wx-config  --version=2.8 --static=no --unicode=yes --cflags`" />
+			<Add option="-Wno-format" />
+			<Add option="-Wno-unused-parameter" />
+			<Add option="-Wno-unused-value" />
+			<Add option="-Wunused-variable" />
+			<Add option="-m32" />
+			<Add option="-I/opt/cg/include" />
+			<Add option="-L/opt/cg/lib" />
+			<Add option="-msse2" />
+			<Add option="-fno-regmove" />
+			<Add option="-fno-strict-aliasing" />
+			<Add option="-DZEROGS_SSE2" />
+			<Add option="-DGDK_DISABLE_DEPRECATED" />
+			<Add option="-DGTK_DISABLE_DEPRECATED" />
+			<Add option="-DGTK_DISABLE_SINGLE_INCLUDES" />
+			<Add option="-DGSEAL_ENABLE" />
+			<Add directory="../../Linux" />
+			<Add directory="../../../opengl" />
+			<Add directory="../../../../../common/include" />
+			<Add directory="../../../../../3rdparty" />
+			<Add directory="../../../../../common/include/Utilities" />
+		</Compiler>
+		<Linker>
+			<Add option="`pkg-config gtk+-2.0 --libs`" />
+			<Add option="-shared" />
+			<Add library="GL" />
+			<Add library="X11" />
+			<Add library="CgGL" />
+			<Add library="jpeg" />
+			<Add library="GLEW" />
+			<Add library="GLU" />
+			<Add library="z" />
+			<Add library="dl" />
+			<Add library="stdc++" />
+			<Add library="Cg" />
+		</Linker>
+		<ExtraCommands>
+			<Add after="cp $(PROJECT_DIR)/../../ps2hw.dat $(TARGET_OUTPUT_DIR)/" />
+			<Mode after="always" />
+		</ExtraCommands>
+		<Unit filename="../../CRC.h" />
+		<Unit filename="../../GLWin.h" />
+		<Unit filename="../../GLWin32.cpp" />
+		<Unit filename="../../GLWinX11.cpp" />
+		<Unit filename="../../GS.h" />
+		<Unit filename="../../GSmain.cpp" />
+		<Unit filename="../../GifTransfer.cpp" />
+		<Unit filename="../../GifTransfer.h" />
+		<Unit filename="../../HostMemory.cpp" />
+		<Unit filename="../../HostMemory.h" />
+		<Unit filename="../Conf.cpp" />
+		<Unit filename="../Linux.cpp" />
+		<Unit filename="../Linux.h" />
+		<Unit filename="../../Mem.cpp" />
+		<Unit filename="../../Mem.h" />
+		<Unit filename="../../Mem_Swizzle.cpp" />
+		<Unit filename="../../Mem_Swizzle.h" />
+		<Unit filename="../../Mem_Tables.cpp" />
+		<Unit filename="../../Mem_Transmit.h" />
+		<Unit filename="../../NewRegs.cpp" />
+		<Unit filename="../../NewRegs.h" />
+		<Unit filename="../../Profile.cpp" />
+		<Unit filename="../../Profile.h" />
+		<Unit filename="../../Regs.cpp" />
+		<Unit filename="../../Regs.h" />
+		<Unit filename="../../Util.h" />
+		<Unit filename="../../Win32/Conf.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../Win32/Win32.cpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../Win32/Win32.h" />
+		<Unit filename="../../Win32/aviUtil.h" />
+		<Unit filename="../../Win32/resource.h" />
+		<Unit filename="../../Win32/resrc1.h" />
+		<Unit filename="../../Win32/wglext.h" />
+		<Unit filename="../../Win32/zerogs.rc">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="../../ZZClut.cpp" />
+		<Unit filename="../../ZZClut.h" />
+		<Unit filename="../../ZZGl.h" />
+		<Unit filename="../../ZZHacks.cpp" />
+		<Unit filename="../../ZZHacks.h" />
+		<Unit filename="../../ZZKeyboard.cpp" />
+		<Unit filename="../../ZZLog.cpp" />
+		<Unit filename="../../ZZLog.h" />
+		<Unit filename="../../ZZoglCRTC.cpp" />
+		<Unit filename="../../ZZoglCRTC.h" />
+		<Unit filename="../../ZZoglCreate.cpp" />
+		<Unit filename="../../ZZoglDrawing.cpp" />
+		<Unit filename="../../ZZoglDrawing.h" />
+		<Unit filename="../../ZZoglFlush.cpp" />
+		<Unit filename="../../ZZoglFlushHack.cpp" />
+		<Unit filename="../../ZZoglFlushHack.h" />
+		<Unit filename="../../ZZoglMath.h" />
+		<Unit filename="../../ZZoglSave.cpp" />
+		<Unit filename="../../ZZoglShaders.cpp" />
+		<Unit filename="../../ZZoglShaders.h" />
+		<Unit filename="../../ZZoglShoots.cpp" />
+		<Unit filename="../../ZZoglShoots.h" />
+		<Unit filename="../../ZZoglVB.cpp" />
+		<Unit filename="../../ZZoglVB.h" />
+		<Unit filename="../../common.h" />
+		<Unit filename="../../glprocs.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../glprocs.h" />
+		<Unit filename="../../rasterfont.cpp" />
+		<Unit filename="../../rasterfont.h" />
+		<Unit filename="../../targets.cpp" />
+		<Unit filename="../../targets.h" />
+		<Unit filename="../../x86-32.S" />
+		<Unit filename="../../x86.cpp" />
+		<Unit filename="../../x86.h" />
+		<Unit filename="../../zerogs.cpp" />
+		<Unit filename="../../zerogs.h" />
+		<Unit filename="../../zpipe.cpp" />
+		<Unit filename="../../zpipe.h" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+			<envvars />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

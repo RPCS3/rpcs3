@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2011-10-05 20:13+0200\n"
+"POT-Creation-Date: 2012-04-07 11:42+0200\n"
 "PO-Revision-Date: 2011-09-28 21:55+0100\n"
 "Last-Translator: Miseru99 <miseru99@hotmail.com>\n"
 "Language-Team: Miseru99 <miseru99@hotmail.com>\n"
@@ -30,7 +30,7 @@ msgstr ""
 "została\n"
 "już zarezerwowana przez inny process, usługę lub DLL."
 
-#: pcsx2/CDVD/CDVD.cpp:385
+#: pcsx2/CDVD/CDVD.cpp:389
 msgid "!Notice:PsxDisc"
 msgstr ""
 "Gry z Playstation nie są obsługiwane przez PCSX2. Jeśli chcesz emulować gry "
@@ -490,7 +490,7 @@ msgstr ""
 "ilość skradzionych cykli używanych na każdy mikroprogram uruchamiany przez "
 "grę."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:172
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr ""
 "Uaktualnia Flagi Statusu tylko na blokach, które je odczytują zamiast cały "
@@ -498,15 +498,7 @@ msgstr ""
 "Jest to bezpieczne w większości przypadków, SuperVU robi coś podobnego w "
 "standardzie."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
-msgid "!ContextTip:Speedhacks:vuBlockHack"
-msgstr ""
-"Zakłada iż w bardzo dalekiej przyszłości, bloki nie będą potrzebować starych "
-"instancji danych flag.\n"
-"Powinno to być w miarę bezpieczne, nie jest wiadome czy przeszkadza "
-"jakiejkolwiek grze."
-
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:182
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
 msgid "!ContextTip:Speedhacks:vuThread"
 msgstr ""
 "Dodaje osobny wątek dla VU1(działa tylko z microVU1). Najczęściej oznacza to "
@@ -516,7 +508,7 @@ msgstr ""
 "Na gry ograniczone wątkiem GS może to mieć odwrotny skutek, szczególnie przy "
 "2-rdzeniowych procesorach."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:203
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr ""
 "Ta łatka działa najlepiej z grami, które używają zapisu stanu INTC do "
@@ -524,7 +516,7 @@ msgstr ""
 "głównie wszelkie nie zrobione w 3D RPGi. Inne gry nie będą miały z tego "
 "żadnego, lub minimalny pożytek."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:208
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr ""
 "Ta łatka namierza bezczynne pętle o adresie 0x81FC0 w jądrze EE. Stara się "
@@ -533,7 +525,7 @@ msgstr ""
 "odtwarza je\n"
 "dopiero gdy to zdarzenie nastąpi."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:215
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr ""
 "Sprawdź listę kompatybilności HDLoader'a aby zobaczyć które gry mają z tą "
@@ -546,7 +538,7 @@ msgstr ""
 "Miej na uwadze, że przy wyłączonym limicie klatek animacji,\n"
 "tryby Przyspieszony i Spowolniony nie będą dostępne."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:223
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
 msgid "!Panel:Frameskip:Heading"
 msgstr ""
 "Uwaga: Ze względu na architekturę PS2,\n"
@@ -555,13 +547,13 @@ msgstr ""
 "Włączenie tej opcji z całą pewnością BĘDZIE\n"
 " powodowało masę błędów graficznych w wielu grach."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr ""
 "Użyj tej opcji jeśli podejrzewasz, że synchronizacja wątku MTGS\n"
 "odpowiada za zawieszanie się lub graficzne błędy w jakiejś grze."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
 msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 "Usuwa wszelkie nieprawidłowości spowodowane przez wątek MTGS lub GPU. "
@@ -589,3 +581,10 @@ msgstr ""
 "ilości pamięci i nie będzie działać. To nie jest błąd krytyczny, gdyż sVU "
 "jest zbędny i tak czy siak\n"
 "powinieneś użyć rekompilatora microVU.:3"
+
+#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
+#~ msgstr ""
+#~ "Zakłada iż w bardzo dalekiej przyszłości, bloki nie będą potrzebować "
+#~ "starych instancji danych flag.\n"
+#~ "Powinno to być w miarę bezpieczne, nie jest wiadome czy przeszkadza "
+#~ "jakiejkolwiek grze."

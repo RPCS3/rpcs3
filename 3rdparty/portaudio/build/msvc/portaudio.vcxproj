@@ -639,6 +639,7 @@
     <ClInclude Include="..\..\include\pa_win_ds.h" />
     <ClInclude Include="..\..\include\pa_win_wasapi.h" />
     <ClInclude Include="..\..\include\pa_win_waveformat.h" />
+    <ClInclude Include="..\..\include\pa_win_wdmks.h" />
     <ClInclude Include="..\..\include\pa_win_wmme.h" />
     <ClInclude Include="..\..\include\portaudio.h" />
     <ClInclude Include="..\..\src\os\win\pa_win_coinitialize.h" />

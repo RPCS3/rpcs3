@@ -83,6 +83,10 @@
 ---------------------------------------------
 -- Game List
 ---------------------------------------------
+Serial = PBPX-95201
+Name   = Underwater Unit
+Region = NTSC-K
+---------------------------------------------
 Serial = PBPX-95503
 Name   = Gran Turismo 3 - A-Spec [PS2 Bundle]
 Region = NTSC-U
@@ -11854,6 +11858,20 @@ Serial = SCAJ-30011
 Name   = God of War II
 Region = NTSC-E
 ---------------------------------------------
+Serial = SCKA-10006
+Name   = Come on Baby
+Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-20004
+Name   = Sly Cooper and the Thievius Raccoonus
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SCKA-20008
+Name   = Tales of Destiny 2
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SCKA-20009
 Name   = R-Type Final
 Region = NTSC-K
@@ -11864,8 +11882,36 @@ Serial = SCKA-20010
 Name   = Jak II
 Region = NTSC-K
 ---------------------------------------------
+Serial = SCKA-20011
+Name   = Ratchet and Clank 2
+Region = NTSC-K
+---------------------------------------------
 Serial = SCKA-20012
 Name   = Ark the Lad - jeongryeongui Hwanghon
+Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-20014
+Name   = Dark Claud 2
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SCKA-20015
+Name   = Time Crisis 3
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SCKA-20016
+Name   = Soul Calibur 2
+Region = NTSC-K
+Compat = 5
+vuClampMode = 2		//SPS(Spikey Polygon Syndrome) solution
+---------------------------------------------
+Serial = SCKA-20018
+Name   = The Getaway
+Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-20019
+Name   = Siren
 Region = NTSC-K
 ---------------------------------------------
 Serial = SCKA-20020
@@ -11873,6 +11919,15 @@ Name   = SOCOM II - U.S. Navy SEALs
 Region = NTSC-K
 Compat = 5
 VIF1StallHack = 1		//HUD
+---------------------------------------------
+Serial = SCKA-20022
+Name   = Gran Turismo 4 Prologue
+Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-20023
+Name   = Fatal Frame 2
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SCKA-20025
 Name   = Katamari Damacy
@@ -11882,6 +11937,11 @@ SkipMPEGHack = 1
 Serial = SCKA-20026
 Name   = Gungrave O.D.
 Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-20027
+Name   = Ghost in the Shell - Stand Alone Complex
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SCKA-20028
 Name   = Ico [PlayStation2 Big Hit Series]
@@ -11915,12 +11975,25 @@ Serial = SCKA-20038
 Name   = Time Crisis - Crisis Zone
 Region = NTSC-K
 ---------------------------------------------
+Serial = SCKA-20039
+Name   = Tekken Nina Williams In Death By Degree
+Region = NTSC-K
+---------------------------------------------
 Serial = SCKA-20040
 Name   = Jak 3
 Region = NTSC-K
 ---------------------------------------------
 Serial = SCKA-20043
 Name   = Magna Carta
+Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-20044
+Name   = Sly Cooper 2 Band of Thieves
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SCKA-20047
+Name   = Armored Core Nine Breaker
 Region = NTSC-K
 ---------------------------------------------
 Serial = SCKA-20048
@@ -11935,11 +12008,17 @@ eeClampMode = 1
 Serial = SCKA-20050
 Name   = Tales of Legendia
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SCKA-20051
 Name   = Minna Daisuki Katamari Damacy
 Region = NTSC-K
 SkipMPEGHack = 1
+---------------------------------------------
+Serial = SCKA-20052
+Name   = Genji
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SCKA-20053
 Name   = SOCOM II - U.S. Navy SEALs [PlayStation 2 Big Hit Series]
@@ -11966,6 +12045,7 @@ Region = NTSC-K
 Serial = SCKA-20059
 Name   = Soul Calibur III
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SCKA-20060
 Name   = Ratchet - Deadlocked
@@ -11974,13 +12054,23 @@ Region = NTSC-K
 Serial = SCKA-20061
 Name   = Wanda to Kyozou (Shadow of the Colossus)
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SCKA-20062
 Name   = Ape Escape 3
 Region = NTSC-K
 ---------------------------------------------
+Serial = SCKA-20063
+Name   = Sly Cooper 3 Honor Among Thieves
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SCKA-20064
 Name   = SOCOM 3 - U.S. Navy SEALs
+Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-20069
+Name   = Siren 2
 Region = NTSC-K
 ---------------------------------------------
 Serial = SCKA-20070
@@ -12022,8 +12112,17 @@ Serial = SCKA-20087
 Name   = Shin Onimusha - Dawn of Dreams [Disc2of2]
 Region = NTSC-K
 ---------------------------------------------
+Serial = SCKA-20090
+Name   = God Hand
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SCKA-20092
 Name   = K-1 World Grand Prix 2006
+Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-20096
+Name   = Barnyard
 Region = NTSC-K
 ---------------------------------------------
 Serial = SCKA-20099
@@ -12053,9 +12152,33 @@ Serial = SCKA-20117
 Name   = Super Robot Taisen OG - Original Generations Gaiden
 Region = NTSC-K
 ---------------------------------------------
+Serial = SCKA-20120
+Name   = Ratchet and Clank
+Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-20132
+Name   = Shin Megami Tensei - Persona 4
+Region = NTSC-K
+Compat = 5
+VuClipFlagHack = 1
+---------------------------------------------
 Serial = SCKA-24008
 Name   = SOCOM - U.S. Navy SEALs
 Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-30001
+Name   = Gran Turismo 4
+Region = NTSC-K
+---------------------------------------------
+Serial = SCKA-30002
+Name   = God of War
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SCKA-30006
+Name   = God of War 2
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SCPS-11001
 Name   = I.Q. Remix
@@ -13229,9 +13352,50 @@ Serial = SCPS-55903
 Name   = Gran Turismo - Concept 2002 Tokyo-Geneva
 Region = NTSC-J
 ---------------------------------------------
+Serial = SCPS-56001
+Name   = Ico
+Region = NTSC-K
+Compat = 5
+eeClampMode = 2 // Otherwise freezes in various spots, check full intro
+vuClampMode = 1	// Otherwise camera gets stuck off the player in various spots.
+---------------------------------------------
+Serial = SCPS-56002
+Name   = Tekken Tag Tournament
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SCPS-56005
+Name   = Gran Turismo Concept 2002 Tokyo-Seoul
+Region = NTSC-K
+---------------------------------------------
+Serial = SCPS-56006
+Name   = Tekken 4
+Region = NTSC-K
+Compat = 5
+[patches = 35B4028B]
+	comment=patches by Shadow Lady
+	//IPU BUSY! fix...
+	patch=0,EE,00290b24,word,24200001
+	patch=0,EE,00290d24,word,00000000
+[/patches]
+---------------------------------------------
+Serial = SCPS-56008
+Name   = Fatal Frame
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SCPS-56011
 Name   = U - Underwater Unit
 Region = NTSC-J
+---------------------------------------------
+Serial = SCPS-56012
+Name   = Raw Danger
+Region = NTSC-K
+---------------------------------------------
+Serial = SCPS-56014
+Name   = Gungrave
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SCPS-56015
 Name   = Ninja Assault
@@ -13491,6 +13655,10 @@ Serial = SLAJ-35003
 Name   = Sakura Taisen - Atsuki Chishioni Ni
 Region = NTSC-Unk
 ---------------------------------------------
+Serial = SLKA-15003
+Name   = Shikigami no Shiro II
+Region = NTSC-K
+---------------------------------------------
 Serial = SLKA-15004
 Name   = Gunbird - Premium Package
 Region = NTSC-J
@@ -13500,9 +13668,36 @@ Name   = Strikers 1945 III
 Region = NTSC-J
 Compat = 5
 ---------------------------------------------
+Serial = SLKA-15007
+Name   = GrowLanser2
+Region = NTSC-K
+Compat = 5
+OPHFLagHack = 1
+---------------------------------------------
 Serial = SLKA-15008
 Name   = Choro Q HG2
 Region = NTSC-E-F-G
+---------------------------------------------
+Serial = SLKA-15021
+Name   = GrowLanser3
+Region = NTSC-K
+Compat = 5
+OPHFLagHack = 1
+---------------------------------------------
+Serial = SLKA-15032
+Name   = Gradius V
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25012
+Name   = Davil May Cry 2 Dante
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25013
+Name   = Davil May Cry 2 Lucia
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25015
 Name   = Evolution Skateboarding
@@ -13511,10 +13706,20 @@ Region = NTSC-K
 Serial = SLKA-25021
 Name   = Shinobi
 Region = NTSC-M3
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25024
+Name   = Lilo & Stitch Experiment
+Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25026
 Name   = Chaos Legion
 Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25033
+Name   = Gregory Horror Show
+Region = NTSC-K
+Compat = 1
 ---------------------------------------------
 Serial = SLKA-25035
 Name   = Mobile Suit Gundam - Lost War Chronicles
@@ -13524,13 +13729,36 @@ Serial = SLKA-25038
 Name   = Gun Survivor 4 - Biohazard - Heroes Never Die
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25041
+Name   = Armored Core 3 Silent Line
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25042
+Name   = Tamamayu Monogatari 2 Horobi no Mushi
+Region = NTSC-K
+---------------------------------------------
 Serial = SLKA-25043
 Name   = Virtua Fighter 4 - Evolution
 Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25046
+Name   = Dragonball Z
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25048
+Name   = Makai Senki Disgaea
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25049
 Name   = Metal Slug 3
 Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25051
+Name   = Clock Tower 3
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25052
 Name   = Air Ranger 2 - Rescue Helicopter
@@ -13540,17 +13768,50 @@ Serial = SLKA-25060
 Name   = I.Q. Remix+ - Intelligent Qube
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25062
+Name   = Dragonball Z 2
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SLKA-25063
 Name   = Kaido Battle
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25064
+Name   = Tenchu 3 Wrath of Heaven
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25066
+Name   = Zone of The Enders 2nd Runner SE
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25067
+Name   = Unlimited Saga
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25070
 Name   = Guity Gear XX Reload - The Midnight Carnival
 Region = NTSC-J-K
 ---------------------------------------------
+Serial = SLKA-25071
+Name   = Tantei Jinguji Saburo 8 Inocent Black
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SLKA-25077
 Name   = Culdicept II - Expansion
 Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25081
+Name   = SD Gundam G Generation Neo
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25082
+Name   = Castlevania Lament of Innocence
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25087
 Name   = FIFA Soccer 2004
@@ -13561,12 +13822,29 @@ Serial = SLKA-25091
 Name   = Hanjuku Hero vs. 3D
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25092
+Name   = Onimusha Buraiden
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25093
+Name   = Onimusha 3 Demon Siege
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25100
+Name   = Dragon Quest V Dragon Quarter
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SLKA-25103
 Name   = Neon Genesis Evangelion 2
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25112
 Name   = King of Fighters 2001, The
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25115
+Name   = Rockman X7
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25125
@@ -13581,6 +13859,10 @@ Serial = SLKA-25131
 Name   = Project Altered Beast
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25132
+Name   = Mobile Suit Gundam Encounters in Space
+Region = NTSC-K
+---------------------------------------------
 Serial = SLKA-25133
 Name   = AirForce Delta Strike
 Region = NTSC-K
@@ -13590,6 +13872,11 @@ Serial = SLKA-25134
 Name   = NBA Street v3
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25135
+Name   = Kunoichi
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SLKA-25139
 Name   = Fu-un Shinsengumi
 Region = NTSC-K
@@ -13597,6 +13884,12 @@ Region = NTSC-K
 Serial = SLKA-25144
 Name   = Final Fantasy X-2
 Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25149
+Name   = Silent Hill 4 The Room
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25150
 Name   = Bujingai
@@ -13608,6 +13901,10 @@ Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25153
 Name   = Winning Eleven 10 - Liveware Edition
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25159
+Name   = Astro Boy
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25160
@@ -13629,8 +13926,25 @@ Serial = SLKA-25167
 Name   = King of Fighters XI, The
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25170
+Name   = SD Gundam G Generation Seed
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25171
+Name   = Guon
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SLKA-25175
 Name   = Transformers
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25181
+Name   = Energy Airforce Aim Strike
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25182
+Name   = Hajime no Ippo2 Victorious Road
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25183
@@ -13641,12 +13955,26 @@ Serial = SLKA-25186
 Name   = King of Fighters, The - Maximum Impact [Limited Edition]
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25198
+Name   = Tenchu Kurenai
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SLKA-25199
 Name   = Kengo 3
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25200
 Name   = SSX 3 [PlayStation 2 - Big Hit Series]
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25201
+Name   = Armored Core Nexus Evolution DISC1
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25202
+Name   = Armored Core Nexus Revolution DISC2
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25204
@@ -13660,6 +13988,7 @@ Region = NTSC-K
 Serial = SLKA-25207
 Name   = Sakura Taisen V - Episode 0 - Samurai Girl of Wild
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25208
 Name   = From TV Animation - One Piece - Round the Land!
@@ -13668,6 +13997,7 @@ Region = NTSC-K
 Serial = SLKA-25213
 Name   = Berserk
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25214
 Name   = Final Fantasy X - International [PlayStation 2 - Big Hit Series]
@@ -13690,9 +14020,37 @@ Serial = SLKA-25218
 Name   = Hitman - Contracts
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25219
+Name   = Monster Hunter G
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25221
+Name   = Busin Zero
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25222
+Name   = Rockman X8
+Region = NTSC-K
+---------------------------------------------
 Serial = SLKA-25224
 Name   = Detective Saburou Jinguji 9 - Kind of Blue
 Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25225
+Name   = Dororo
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25227
+Name   = Neo Contra
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25232
+Name   = Naruto Naruthimetto Hero International
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25233
 Name   = Sonic - Mega Collection Plus
@@ -13704,6 +14062,10 @@ Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25244
 Name   = WWE SmackDown! vs. Raw
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25246
+Name   = Bard's Tale
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLKA-25249
@@ -13718,6 +14080,12 @@ Serial = SLKA-25252
 Name   = Forgotten Realms - Demon Stone
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25254
+Name   = Digimon Rumble Arena 2
+Region = NTSC-K
+Compat = 5
+FpuCompareHack = 1
+---------------------------------------------
 Serial = SLKA-25255
 Name   = Mobile Suit Gundam - Seed - Never Ending Tomorrow
 Region = NTSC-K
@@ -13725,6 +14093,11 @@ Region = NTSC-K
 Serial = SLKA-25257
 Name   = Fu-un Bakumatsu Den
 Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25258
+Name   = The Story of the Hero Yoshitsune
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25259
 Name   = Swords of Destiny
@@ -13775,6 +14148,7 @@ Region = NTSC-K
 Serial = SLKA-25284
 Name   = Sakura Taisen 3
 Region = NTSC-K
+Compat = 1
 ---------------------------------------------
 Serial = SLKA-25287
 Name   = Metal Slug 4&5
@@ -13811,11 +14185,29 @@ Region = NTSC-K
 Serial = SLKA-25300
 Name   = Digital Devil Saga [Special Package]
 Region = NTSC-J-K
+Compat = 5
 EETimingHack = 1
+---------------------------------------------
+Serial = SLKA-25301
+Name   = Digital Devil Saga - Avatar Tuner 2
+Region = NTSC-K
+Compat = 5
+EETimingHack = 1
+---------------------------------------------
+Serial = SLKA-25307
+Name   = Dragonball Z Sparking
+Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25311
 Name   = Marvel Nemesis - Rise of the Imperfects
 Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25313
+Name   = Naruto - Uzumaki Chronicles
+Region = NTSC-K
+Compat = 5
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLKA-25317
 Name   = Shin Sangoku Musou 3 [PlayStation 2 - Big Hit Series]
@@ -13839,6 +14231,12 @@ Serial = SLKA-25323
 Name   = SSX On Tour
 Region = NTSC-J-K
 ---------------------------------------------
+Serial = SLKA-25328
+Name   = Castlevania - Curse of Dakness
+Region = NTSC-K
+Compat = 5
+vuClampMode = 0		//SPS with microVU
+---------------------------------------------
 Serial = SLKA-25329
 Name   = Shin Sangoku Musou 4 - Moushouden
 Region = NTSC-K
@@ -13859,6 +14257,10 @@ Serial = SLKA-25342
 Name   = Ryu ga Gotoku
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25351
+Name   = One Piece Pirates Carnival
+Region = NTSC-K
+---------------------------------------------
 Serial = SLKA-25352
 Name   = Full Metal Alchemist - Dream Carnival
 Region = NTSC-K
@@ -13866,18 +14268,34 @@ Region = NTSC-K
 Serial = SLKA-25353
 Name   = Metal Gear Solid 3 - Subsistance [Limited Edition] [Disc1of2]
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25354
 Name   = Metal Gear Solid 3 - Subsistance [Limited Edition] [Disc2of2]
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25359
 Name   = Winning Eleven 9 - Liveware Edition
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25361
+Name   = Keroro Gunsou MeroMero Battle Royale Z
+Region = NTSC-K
+---------------------------------------------
 Serial = SLKA-25364
 Name   = Mobile Suit Gundam - Climax U.C.
 Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25365
+Name   = WWE Smack Down Vs RAW 2008
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25366
+Name   = Naruto - Uzumaki Chronicles 2
+Region = NTSC-K
+Compat = 5
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLKA-25375
 Name   = Transformers - The Game
@@ -13887,13 +14305,20 @@ Serial = SLKA-25381
 Name   = Winning Eleven 10
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25384
+Name   = Blazing Souls
+Region = NTSC-K
+---------------------------------------------
 Serial = SLKA-25388
 Name   = One Piece - Grand Adventure
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25389
 Name   = Shinobido Imashime
 Region = NTSC-K
+Compat = 5
+eeClampMode = 3 //Otherwise freezes in some spot
 ---------------------------------------------
 Serial = SLKA-25390
 Name   = Shin Sangoku Musou 4 - Empires
@@ -13903,6 +14328,11 @@ Serial = SLKA-25396
 Name   = FIFA '07
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25397
+Name   = Dragon Ball Z Sparking NEO
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SLKA-25406
 Name   = King of Fighters, The - Maximum Impact - Regulation A
 Region = NTSC-K
@@ -13910,6 +14340,7 @@ Region = NTSC-K
 Serial = SLKA-25407
 Name   = DragonBall Z - Sparkling! Meteor
 Region = NTSC-K
+Compat = 5
 ---------------------------------------------
 Serial = SLKA-25413
 Name   = SD Gundam G - Generation Spirits
@@ -13924,8 +14355,36 @@ Serial = SLKA-25424
 Name   = SNK Arcade Classics Vol.1
 Region = NTSC-K
 ---------------------------------------------
+Serial = SLKA-25443
+Name   = Musou Orochi Maou Sairin
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-25477
+Name   = World Soccer Winning Eleven 2011
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-25480
+Name   = World Soccer Winning Eleven 2012
+Region = NTSC-K
+---------------------------------------------
+Serial = SLKA-35001
+Name   = Metal Gear Solid 2 Substance
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SLKA-35003
 Name   = Sakura Taisen - Atsuki Chishioni
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-35004
+Name   = Sakura Wars 5 So Long My Love
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLKA-35005
+Name   = Shin Sangoku Musou 5 Special
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLPM-55005
@@ -16509,6 +16968,19 @@ Serial = SLPM-62780
 Name   = Fantasy Zone Complete Collection
 Region = NTSC-J
 Compat = 5
+---------------------------------------------
+Serial = SLPM-64504
+Name   = Maximo
+Region = NTSC-K
+---------------------------------------------
+Serial = SLPM-64522
+Name   = La Pucelle
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLPM-64523
+Name   = Marvel Vs Capcom 2
+Region = NTSC-K
 ---------------------------------------------
 Serial = SLPM-64525
 Name   = Guilty Gear X Plus "By Your Side"
@@ -23603,21 +24075,70 @@ Serial = SLPM-67015
 Name   = School Days LxH
 Region = NTSC-J
 ---------------------------------------------
+Serial = SLPM-67502
+Name   = Devil May Cry
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
+Serial = SLPM-67507
+Name   = Onimusha Warlords
+Region = NTSC-K
+---------------------------------------------
+Serial = SLPM-67508
+Name   = Gitaroo Man
+Region = NTSC-K
+Compat = 5
+eeRoundMode = 1
+vuRoundMode = 3
+---------------------------------------------
 Serial = SLPM-67513
 Name   = Final Fantasy X International
 Region = NTSC-K
 IPUWaitHack = 1
 ---------------------------------------------
+Serial = SLPM-67514
+Name   = Kessen
+Region = NTSC-K
+---------------------------------------------
+Serial = SLPM-67518
+Name   = Onimusha 2 Samurai's Destiny
+Region = NTSC-K
+---------------------------------------------
+Serial = SLPM-67524
+Name   = Armored Core 3
+Region = NTSC-K
+---------------------------------------------
 Serial = SLPM-67528
 Name   = Hajime no Ippo - Victorious Boxers [Championship Edition]
+Region = NTSC-K
+---------------------------------------------
+Serial = SLPM-67529
+Name   = Gun Survivor 3 Dino Crisis
+Region = NTSC-K
+---------------------------------------------
+Serial = SLPM-67531
+Name   = Kessen 2
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLPM-67535
 Name   = Memories Of
 Region = NTSC-J-K
 ---------------------------------------------
+Serial = SLPM-67536
+Name   = Senkaiden Hoshin Engi
+Region = NTSC-K
+---------------------------------------------
+Serial = SLPM-67540
+Name   = Auto Modellista
+Region = NTSC-K
+Compat = 5
+---------------------------------------------
 Serial = SLPM-67546
 Name   = Lord of the Rings - The Two Towers
+Region = NTSC-K
+---------------------------------------------
+Serial = SLPM-64549
+Name   = Shikigami no Shiro
 Region = NTSC-K
 ---------------------------------------------
 Serial = SLPM-67552

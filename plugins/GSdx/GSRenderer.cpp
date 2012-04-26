@@ -37,6 +37,7 @@ GSRenderer::GSRenderer()
 	m_aa1 = !!theApp.GetConfig("aa1", 0);
 	m_mipmap = !!theApp.GetConfig("mipmap", 1);
 	m_fxaa = !!theApp.GetConfig("fxaa", 0);
+	m_shadeboost = !!theApp.GetConfig("ShadeBoost", 0);
 }
 
 GSRenderer::~GSRenderer()
@@ -95,7 +96,7 @@ bool GSRenderer::Merge(int field)
 
 			baseline = min(dr[i].top, baseline);
 
-			// printf("[%d]: %d %d %d %d, %d %d %d %d\n", i, fr[i], dr[i]);
+			//printf("[%d]: %d %d %d %d, %d %d %d %d\n", i, fr[i].x,fr[i].y,fr[i].z,fr[i].w , dr[i].x,dr[i].y,dr[i].z,dr[i].w);
 		}
 	}
 
@@ -250,10 +251,23 @@ bool GSRenderer::Merge(int field)
 
 		if(m_regs->SMODE2.INT && m_interlace > 0)
 		{
-			int field2 = 1 - ((m_interlace - 1) & 1);
-			int mode = (m_interlace - 1) >> 1;
-			
-			m_dev->Interlace(ds, field ^ field2, mode, tex[1] ? tex[1]->GetScale().y : tex[0]->GetScale().y);
+			if (m_interlace == 7 && m_regs->SMODE2.FFMD == 1) // Auto interlace enabled / Odd frame interlace setting
+			{
+				int field2 = 0;
+				int mode = 2;
+				m_dev->Interlace(ds, field ^ field2, mode, tex[1] ? tex[1]->GetScale().y : tex[0]->GetScale().y);
+			}
+			else
+			{
+				int field2 = 1 - ((m_interlace - 1) & 1);
+				int mode = (m_interlace - 1) >> 1;
+				m_dev->Interlace(ds, field ^ field2, mode, tex[1] ? tex[1]->GetScale().y : tex[0]->GetScale().y);
+			}
+		}
+
+		if(m_shadeboost)
+		{
+			m_dev->ShadeBoost();
 		}
 
 		if(m_fxaa)
@@ -519,7 +533,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 		switch(e->key)
 		{
 		case VK_F5:
-			m_interlace = (m_interlace + 7 + step) % 7;
+			m_interlace = (m_interlace + 8 + step) % 8;
 			printf("GSdx: Set deinterlace mode to %d (%s).\n", (int)m_interlace, theApp.m_gs_interlace.at(m_interlace).name.c_str());
 			return;
 		case VK_F6:
