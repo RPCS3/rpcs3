@@ -173,7 +173,8 @@ static __fi void _gsSMODEwrite( u32 mem, u32 value )
 	switch (mem)
 	{
 		case GS_SMODE1:
-			gsSetRegionMode( ((value & 0x6000) == 0x6000) ? Region_PAL : Region_NTSC );
+			// ToDo: There's other flags determining which mode to set. The only tested one so far is the PAL / NTSC one.
+			gsSetRegionMode( ((value & 0x6000) == 0x6000) ? Region_PAL : (value & 0x400000) ? Region_NTSC_PROGRESSIVE : Region_NTSC );
 		break;
 
 		case GS_SMODE2:

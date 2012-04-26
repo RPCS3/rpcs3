@@ -94,7 +94,7 @@ bool GSRenderer::Merge(int field)
 
 			baseline = min(dr[i].top, baseline);
 
-			// printf("[%d]: %d %d %d %d, %d %d %d %d\n", i, fr[i], dr[i]);
+			//printf("[%d]: %d %d %d %d, %d %d %d %d\n", i, fr[i].x,fr[i].y,fr[i].z,fr[i].w , dr[i].x,dr[i].y,dr[i].z,dr[i].w);
 		}
 	}
 

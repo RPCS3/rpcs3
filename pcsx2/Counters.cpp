@@ -209,6 +209,12 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, Fixed100 framesPerSecond, u32 
 	u64 Scanline	= Frame / scansPerFrame;
 	u64 hBlank		= Scanline / 2;
 	u64 hRender		= Scanline - hBlank;
+	
+	if ( gsRegionMode == Region_NTSC_PROGRESSIVE )
+	{
+		hBlank /= 2;
+		hRender /= 2;
+	}
 
 	info->Framerate	= framesPerSecond;
 	info->Render	= (u32)(Render/10000);
@@ -226,12 +232,14 @@ static void vSyncInfoCalc( vSyncTimingInfo* info, Fixed100 framesPerSecond, u32 
 	else if( ( hBlank - info->hBlank ) >= 5000 ) info->hBlank++;
 
 	// Calculate accumulative hSync rounding error per half-frame:
+	if ( gsRegionMode != Region_NTSC_PROGRESSIVE ) // gets off the chart in that mode
 	{
-	u32 hSyncCycles = ((info->hRender + info->hBlank) * scansPerFrame) / 2;
-	u32 vSyncCycles = (info->Render + info->Blank);
-	info->hSyncError = vSyncCycles - hSyncCycles;
+		u32 hSyncCycles = ((info->hRender + info->hBlank) * scansPerFrame) / 2;
+		u32 vSyncCycles = (info->Render + info->Blank);
+		info->hSyncError = vSyncCycles - hSyncCycles;
+		//Console.Warning("%d",info->hSyncError);
 	}
-
+	else info->hSyncError = 0;
 	// Note: In NTSC modes there is some small rounding error in the vsync too,
 	// however it would take thousands of frames for it to amount to anything and
 	// is thus not worth the effort at this time.
@@ -256,17 +264,25 @@ u32 UpdateVSyncRate()
 		framerate = EmuConfig.GS.FrameratePAL / 2;
 		scanlines = SCANLINES_TOTAL_PAL;
 	}
-	else
+	else if ( gsRegionMode == Region_NTSC )
 	{
 		isCustom = (EmuConfig.GS.FramerateNTSC != 59.94);
 		framerate = EmuConfig.GS.FramerateNTSC / 2;
+		scanlines = SCANLINES_TOTAL_NTSC;
+	}
+	else if ( gsRegionMode == Region_NTSC_PROGRESSIVE )
+	{
+		isCustom = (EmuConfig.GS.FramerateNTSC != 59.94);
+		framerate = 30; // Cheating here to avoid a complex change to the below "vSyncInfo.Framerate != framerate" branch
 		scanlines = SCANLINES_TOTAL_NTSC;
 	}
 
 	if( vSyncInfo.Framerate != framerate )
 	{
 		vSyncInfoCalc( &vSyncInfo, framerate, scanlines );
-		Console.WriteLn( Color_Green, "(UpdateVSyncRate) Mode Changed to %s.", ( gsRegionMode == Region_PAL ) ? "PAL" : "NTSC" );
+		Console.WriteLn( Color_Green, "(UpdateVSyncRate) Mode Changed to %s.", ( gsRegionMode == Region_PAL ) ? "PAL" : 
+			( gsRegionMode == Region_NTSC ) ? "NTSC" : "Progressive Scan" );
+		
 		if( isCustom )
 			Console.Indent().WriteLn( Color_StrongGreen, "... with user configured refresh rate: %.02f Hz", framerate.ToFloat() );
 	}

@@ -220,7 +220,8 @@ struct GSRegSIGBLID
 enum GS_RegionMode
 {
 	Region_NTSC,
-	Region_PAL
+	Region_PAL,
+	Region_NTSC_PROGRESSIVE
 };
 
 extern GS_RegionMode gsRegionMode;
