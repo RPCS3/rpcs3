@@ -37,6 +37,7 @@
 #define PS_LTF 1
 #define PS_COLCLIP 0
 #define PS_DATE 0
+#define PS_SPRITEHACK 0
 #endif
 
 struct vertex
@@ -554,7 +555,16 @@ void atst(vec4 c)
 	{
 		// nothing to do
 	}
-	else if(PS_ATST == 2 || PS_ATST == 3) // l, le
+	else if(PS_ATST == 2)
+	{
+	}
+	else if(PS_ATST == 2 ) // l
+	{
+		if (PS_SPRITEHACK == 0)
+			if ((AREF - a) < 0.0f)
+				discard;
+	}
+	else if(PS_ATST == 2 ) // le
 	{
 		if ((AREF - a) < 0.0f)
             discard;

@@ -552,6 +552,7 @@ class GSDeviceOGL : public GSDevice
 				uint32 fst:1;
 				uint32 logz:1;
 				uint32 rtcopy:1;
+				uint32 wildhack:2;
 			};
 
 			uint32 key;
@@ -649,6 +650,7 @@ class GSDeviceOGL : public GSDevice
 				uint32 ltf:1;
 				uint32 colclip:2;
 				uint32 date:2;
+				uint32 spritehack:1;
 			};
 
 			uint32 key;
@@ -783,6 +785,14 @@ class GSDeviceOGL : public GSDevice
 		GSBlendStateOGL* bs;
 	} m_date;
 
+	struct 
+	{
+		GLuint ps;
+		GSUniformBufferOGL *cb;
+	} m_shadeboost;
+
+
+
 	struct {
 		GSVertexBufferStateOGL* vb;
 		GLuint vs; // program
@@ -832,6 +842,7 @@ class GSDeviceOGL : public GSDevice
 	GSTexture* FetchSurface(int type, int w, int h, bool msaa, int format);
 	void DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c);
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
+	void DoShadeBoost(GSTexture* st, GSTexture* dt);
 
 	public:
 	GSDeviceOGL();

@@ -28,7 +28,8 @@ GSRendererOGL::GSRendererOGL()
 {
 	m_logz = !!theApp.GetConfig("logz", 0);
 	m_fba = !!theApp.GetConfig("fba", 1);
-	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0);
+	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0) && !!theApp.GetConfig("UserHacks", 0);
+	UserHacks_WildHack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_WildHack", 0) : 0;
 	m_pixelcenter = GSVector2(-0.5f, -0.5f);
 }
 
@@ -51,6 +52,15 @@ void GSRendererOGL::SetupIA()
 	if(dev->IAMapVertexBuffer(&ptr, sizeof(GSVertex), m_vertex.next))
 	{
 		GSVector4i::storent(ptr, m_vertex.buff, sizeof(GSVertex) * m_vertex.next);
+        
+        if(UserHacks_WildHack && !isPackedUV_HackFlag)
+        {
+            GSVertex* RESTRICT d = (GSVertex*)ptr;
+        
+            for(unsigned int i = 0; i < m_vertex.next; i++, d++)
+                if(PRIM->TME && PRIM->FST)
+                    d->UV &= UserHacks_WildHack == 1 ? 0x3FEF3FEF : 0x3FF73FF7;
+        }
 
 		dev->IAUnmapVertexBuffer();
 	}

@@ -200,17 +200,15 @@ endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 if(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
 
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/convert.glsl DESTINATION ${PLUGIN_DIR})
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/interlace.glsl DESTINATION ${PLUGIN_DIR})
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/merge.glsl DESTINATION ${PLUGIN_DIR})
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/tfx.glsl DESTINATION ${PLUGIN_DIR})
+    foreach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/${glsl} DESTINATION ${PLUGIN_DIR})
+    endforeach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
 else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
 
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/convert.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/interlace.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/merge.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/tfx.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    foreach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/${glsl} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    endforeach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
 endif(PACKAGE_MODE)
 
 ################################### Replay Loader

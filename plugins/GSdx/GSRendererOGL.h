@@ -38,6 +38,7 @@ class GSRendererOGL : public GSRendererHW
 		bool m_logz;
 		bool m_fba;
 		bool UserHacks_AlphaHack;
+		int UserHacks_WildHack;
 
 	protected:
 		void SetupIA();

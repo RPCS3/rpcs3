@@ -46,7 +46,7 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_srv_changed(false)
 	  , m_ss_changed(false)
 {
-	m_msaa = theApp.GetConfig("msaa", 0);
+	m_msaa = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_MSAA", 0) : 0;
 
 	memset(&m_merge_obj, 0, sizeof(m_merge_obj));
 	memset(&m_interlace, 0, sizeof(m_interlace));
@@ -299,6 +299,19 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 		CompileShaderFromSource("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_interlace.ps[i]);
+	// ****************************************************************
+	// Shade boost
+	// ****************************************************************
+	m_shadeboost.cb = new GSUniformBufferOGL(6, sizeof(ShadeBoostConstantBuffer));
+
+	int ShadeBoost_Contrast = theApp.GetConfig("ShadeBoost_Contrast", 50);
+	int ShadeBoost_Brightness = theApp.GetConfig("ShadeBoost_Brightness", 50);
+	int ShadeBoost_Saturation = theApp.GetConfig("ShadeBoost_Saturation", 50);
+	std::string macro = format("#define SB_SATURATION %d\n", ShadeBoost_Saturation)
+		+ format("#define SB_BRIGHTNESS %d\n", ShadeBoost_Brightness)
+		+ format("#define SB_CONTRAST %d\n", ShadeBoost_Contrast);
+
+	CompileShaderFromSource("shadeboost.glsl", "ps_main", GL_FRAGMENT_SHADER, &m_shadeboost.ps, macro);
 
 	// ****************************************************************
 	// rasterization configuration
@@ -910,6 +923,24 @@ void GSDeviceOGL::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool lin
 	m_interlace.cb->upload(&cb);
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], linear);
+}
+
+void GSDeviceOGL::DoShadeBoost(GSTexture* st, GSTexture* dt)
+{
+	GSVector2i s = dt->GetSize();
+
+	GSVector4 sr(0, 0, 1, 1);
+	GSVector4 dr(0, 0, s.x, s.y);
+
+	ShadeBoostConstantBuffer cb;
+
+	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
+	cb.rcpFrameOpt = GSVector4::zero();
+
+	SetUniformBuffer(m_shadeboost.cb);
+	m_shadeboost.cb->upload(&cb);
+
+	StretchRect(st, sr, dt, dr, m_shadeboost.ps, m_shadeboost.cb);
 }
 
 void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm)

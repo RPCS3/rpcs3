@@ -163,7 +163,8 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 			+ format("#define PS_AOUT %d\n", sel.aout)
 			+ format("#define PS_LTF %d\n", sel.ltf)
 			+ format("#define PS_COLCLIP %d\n", sel.colclip)
-			+ format("#define PS_DATE %d\n", sel.date);
+			+ format("#define PS_DATE %d\n", sel.date)
+			+ format("#define PS_SPRITEHACK %d\n", sel.spritehack);
 
 		CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &ps, macro);
 
