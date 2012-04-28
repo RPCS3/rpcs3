@@ -246,7 +246,9 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 				case 2: dev = new GSDeviceSDL(); break;
 				#endif
 				case 3: dev = new GSDeviceNull(); break;
+				#ifdef _LINUX
 				case 4: dev = new GSDeviceOGL(); break;
+				#endif
 			}
 
 			if(dev == NULL)
