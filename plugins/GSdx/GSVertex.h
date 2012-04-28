@@ -52,7 +52,7 @@ struct GSVertexP
 	GSVector4 p;
 };
 
-struct GSVertexPT1
+__aligned(struct, 32) GSVertexPT1
 {
 	GSVector4 p;
 	GSVector2 t;

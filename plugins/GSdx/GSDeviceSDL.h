@@ -21,6 +21,8 @@
 
 #pragma once
 
+#ifdef ENABLE_SDL_DEV
+
 #include "GSDeviceSW.h"
 #include "../../3rdparty/SDL-1.3.0-5387/include/SDL.h"
 
@@ -53,3 +55,4 @@ public:
 	void Present(GSTexture* st, GSTexture* dt, const GSVector4& dr, int shader = 0);
 	void Flip();
 };
+#endif

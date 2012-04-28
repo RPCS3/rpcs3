@@ -88,15 +88,24 @@ public:
 };
 */
 #include <X11/Xlib.h>
+#ifdef ENABLE_SDL_DEV
 #include "../../3rdparty/SDL-1.3.0-5387/include/SDL.h"
 #include "../../3rdparty/SDL-1.3.0-5387/include/SDL_syswm.h"
+#endif
 
 class GSWnd
 {
+#ifdef ENABLE_SDL_DEV
 	SDL_Window* m_window;
-	Window      m_Xwindow;
-	Display*    m_XDisplay;
+#else
+	void* m_window;
+#endif
+	Window       m_Xwindow;
+	Display*     m_XDisplay;
+
 	bool m_managed;
+	int  m_renderer;
+	GLXContext   m_context;
 
 public:
 	GSWnd();
@@ -111,11 +120,19 @@ public:
 	void* GetHandle() {return (void*)m_Xwindow;}
 	GSVector4i GetClientRect();
 	bool SetWindowText(const char* title);
+#ifdef ENABLE_SDL_DEV
 	void SetWindow(SDL_Window* current_window) { if (current_window) m_window = current_window; }
+#endif
+
+	bool CreateContext(int major, int minor);
+	void AttachContext();
+	void DetachContext();
+	void CheckContext();
 
 	void Show();
 	void Hide();
 	void HideFrame();
+	void Flip();
 };
 
 #endif

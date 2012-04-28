@@ -18,23 +18,38 @@ flags=""
 args="$@"
 clean_build=false
 
-for f in $args; do
-	if [ "$f" = "gsdx" ] ; then
-		flags="$flags -DFORCE_INTERNAL_SDL=TRUE"
-	fi
-	if [ "$f" = "dev" ] ; then
-		flags="$flags -DCMAKE_BUILD_TYPE=Devel"
-	fi
-	if [ "$f" = "debug" ] ; then
-		flags="$flags -DCMAKE_BUILD_TYPE=Debug"
-	fi
-	if [ "$f" = "release" ] ; then
-		flags="$flags -DCMAKE_BUILD_TYPE=Release"
-	fi
-	if [ "$f" = "clean" ] ; then
-		clean_build=true
-	fi
-done 
+for f in $*
+do
+	case $f in
+		--sdl13)
+			flags="$flags -DFORCE_INTERNAL_SDL=TRUE"
+			;;
+		--dev)
+			flags="$flags -DCMAKE_BUILD_TYPE=Devel"
+			;;
+		--devel)
+			flags="$flags -DCMAKE_BUILD_TYPE=Devel"
+			;;
+		--debug)
+			flags="$flags -DCMAKE_BUILD_TYPE=Debug"
+			;;
+		--release)
+			flags="$flags -DCMAKE_BUILD_TYPE=Release"
+			;;
+		--clean)
+			clean_build=true
+			;;
+		*)
+			# unknown option
+			echo "Valid options are:"
+			echo "--dev / --devel - Build pcsx2 as a Development build."
+			echo "--debug - Build pcsx2 as a Debug build."
+			echo "--release - Build pcsx2 as a Release build."
+			echo "--clean - Do a clean build."
+			echo "--sdl13 - Use the internal copy of sdl (needed for gsdx to use sdl)."
+			exit 1;;
+  	esac
+done
 
 rm install_log.txt
 

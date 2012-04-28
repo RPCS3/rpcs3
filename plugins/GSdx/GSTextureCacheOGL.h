@@ -1,4 +1,5 @@
 /*
+ *	Copyright (C) 2011-2011 Gregory hainaut
  *	Copyright (C) 2007-2009 Gabest
  *	http://www.gabest.org
  *
@@ -21,19 +22,16 @@
 
 #pragma once
 
-#include "stdafx.h"
+#include "GSTextureCache.h"
+#include "GSDeviceOGL.h"
 
-struct GSSetting
+class GSTextureCacheOGL : public GSTextureCache
 {
-	uint32 id;
-	std::string name;
-	std::string note;
+protected:
+	int Get8bitFormat() { return GL_R8; /* TODO return DXGI_FORMAT_A8_UNORM;*/}
 
+	void Read(Target* t, const GSVector4i& r);
 
-	GSSetting(uint32 id, const char* name, const char* note)
-	{
-		this->id = id;
-		this->name = name;
-		this->note = note;
-	}
+public:
+	GSTextureCacheOGL(GSRenderer* r);
 };

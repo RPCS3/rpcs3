@@ -35,6 +35,10 @@ class GSRenderer : public GSState
 
 	bool Merge(int field);
 
+	// Only used on linux
+	bool m_shift_key;
+	bool m_control_key;
+
 protected:
 	int m_interlace;
 	int m_aspectratio;

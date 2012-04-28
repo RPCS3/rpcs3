@@ -40,6 +40,9 @@ static HRESULT s_hr = E_FAIL;
 
 #else
 
+#include "GSDeviceOGL.h"
+#include "GSRendererOGL.h"
+
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 
@@ -134,6 +137,7 @@ EXPORT_C_(int) GSinit()
 
 #endif
 
+#ifdef ENABLE_SDL_DEV
 	if(!SDL_WasInit(SDL_INIT_VIDEO))
 	{
 		if(SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -141,6 +145,7 @@ EXPORT_C_(int) GSinit()
 			return -1;
 		}
 	}
+#endif
 
 	return 0;
 }
@@ -153,7 +158,9 @@ EXPORT_C GSshutdown()
 
 	s_renderer = -1;
 
+#ifdef ENABLE_SDL_DEV
 	SDL_Quit();
+#endif
 
 #ifdef _WINDOWS
 
@@ -231,12 +238,15 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			switch(renderer / 3)
 			{
 			default:
-			#ifdef _WINDOWS
-			case 0: dev = new GSDevice9(); break;
-			case 1: dev = new GSDevice11(); break;
-			#endif
-			case 2: dev = new GSDeviceSDL(); break;
-			case 3: dev = new GSDeviceNull(); break;
+				#ifdef _WINDOWS
+				case 0: dev = new GSDevice9(); break;
+				case 1: dev = new GSDevice11(); break;
+				#endif
+				#ifdef ENABLE_SDL_DEV
+				case 2: dev = new GSDeviceSDL(); break;
+				#endif
+				case 3: dev = new GSDeviceNull(); break;
+				case 4: dev = new GSDeviceOGL(); break;
 			}
 
 			if(dev == NULL)
@@ -249,11 +259,13 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 				switch(renderer % 3)
 				{
 				default:
-				#ifdef _WINDOWS
 				case 0:
+#ifdef _WINDOWS
 					s_gs = (renderer / 3) == 0 ? (GSRenderer*)new GSRendererDX9() : (GSRenderer*)new GSRendererDX11();
+#else
+					s_gs = (GSRenderer*)new GSRendererOGL();
+#endif
 					break;
-				#endif
 				case 1:
 					s_gs = new GSRendererSW(threads);
 					break;
@@ -304,9 +316,10 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 	{
 		s_gs->SetMultithreaded(true);
 
-#ifdef __LINUX__
+#ifdef _LINUX
 		// Get the Xwindow from dsp.
-		s_gs->m_wnd.Attach((void*)((uint32*)(dsp)+1), false);
+		if( !s_gs->m_wnd.Attach((void*)((uint32*)(dsp)+1), false) )
+			return -1;
 #else
 		s_gs->m_wnd.Attach(*dsp, false);
 #endif
@@ -350,7 +363,8 @@ EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 
 	int retval = _GSopen(dsp, NULL, renderer);
 
-	s_gs->SetAspectRatio(0);	 // PCSX2 manages the aspect ratios
+	if (s_gs != NULL)
+		s_gs->SetAspectRatio(0);	 // PCSX2 manages the aspect ratios
 
 	return retval;
 }
@@ -421,12 +435,41 @@ EXPORT_C GSwriteCSR(uint32 csr)
 
 EXPORT_C GSreadFIFO(uint8* mem)
 {
+#ifdef _LINUX
+	// FIXME: double check which thread call this function
+	// See fifo2 issue below
+	if (theApp.GetConfig("renderer", 0) / 3 == 4) {
+		fprintf(stderr, "Disable FIFO1 on opengl\n");
+	}
+	s_gs->m_wnd.AttachContext();
+#endif
+
 	s_gs->ReadFIFO(mem, 1);
+
+#ifdef _LINUX
+	s_gs->m_wnd.DetachContext();
+#endif
 }
 
 EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 {
+#ifdef _LINUX
+	// FIXME called from EE core thread not MTGS which cause
+	// invalidate data for opengl
+	if (theApp.GetConfig("renderer", 0) / 3 == 4) {
+#ifdef OGL_DEBUG
+		fprintf(stderr, "Disable FIFO2(%d) on opengl\n", size);
+#endif
+		//return;
+	}
+	s_gs->m_wnd.AttachContext();
+#endif
+
 	s_gs->ReadFIFO(mem, size);
+
+#ifdef _LINUX
+	s_gs->m_wnd.DetachContext();
+#endif
 }
 
 EXPORT_C GSgifTransfer(const uint8* mem, uint32 size)
@@ -1201,3 +1244,217 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 }
 
 #endif
+
+#ifdef _LINUX
+
+#include <sys/time.h>
+#include <sys/timeb.h>	// ftime(), struct timeb
+
+inline unsigned long timeGetTime()
+{
+	timeb t;
+	ftime(&t);
+
+	return (unsigned long)(t.time*1000 + t.millitm);
+}
+
+// Note
+EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
+{
+
+
+// lpszCmdLine:
+//   First parameter is the renderer.
+//   Second parameter is the gs file to load and run.
+
+//EXPORT_C GSReplay(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow)
+#if 0
+	int renderer = -1;
+
+	{
+		char* start = lpszCmdLine;
+		char* end = NULL;
+		long n = strtol(lpszCmdLine, &end, 10);
+		if(end > start) {renderer = n; lpszCmdLine = end;}
+	}
+
+	while(*lpszCmdLine == ' ') lpszCmdLine++;
+
+	::SetPriorityClass(::GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+#endif
+	// Allow to easyly switch between SW/HW renderer
+	renderer = theApp.GetConfig("renderer", 12);
+	if (renderer != 12 && renderer != 13)
+	{
+		fprintf(stderr, "wrong renderer selected %d\n", renderer);
+		return;
+	}
+
+	if(FILE* fp = fopen(lpszCmdLine, "rb"))
+	{
+		//Console console("GSdx", true);
+
+		GSinit();
+
+		uint8 regs[0x2000];
+		GSsetBaseMem(regs);
+
+		s_vsync = !!theApp.GetConfig("vsync", 0);
+
+		void* hWnd = NULL;
+
+		_GSopen((void**)&hWnd, "", renderer);
+
+		uint32 crc;
+		fread(&crc, 4, 1, fp);
+		GSsetGameCRC(crc, 0);
+
+		GSFreezeData fd;
+		fread(&fd.size, 4, 1, fp);
+		fd.data = new uint8[fd.size];
+		fread(fd.data, fd.size, 1, fp);
+		GSfreeze(FREEZE_LOAD, &fd);
+		delete [] fd.data;
+
+		fread(regs, 0x2000, 1, fp);
+
+		long start = ftell(fp);
+
+		GSvsync(1);
+
+		struct Packet {uint8 type, param; uint32 size, addr; vector<uint8> buff;};
+
+		list<Packet*> packets;
+		vector<uint8> buff;
+		int type;
+
+		while((type = fgetc(fp)) != EOF)
+		{
+			Packet* p = new Packet();
+
+			p->type = (uint8)type;
+
+			switch(type)
+			{
+			case 0:
+
+				p->param = (uint8)fgetc(fp);
+
+				fread(&p->size, 4, 1, fp);
+
+				switch(p->param)
+				{
+				case 0:
+					p->buff.resize(0x4000);
+					p->addr = 0x4000 - p->size;
+					fread(&p->buff[p->addr], p->size, 1, fp);
+					break;
+				case 1:
+				case 2:
+				case 3:
+					p->buff.resize(p->size);
+					fread(&p->buff[0], p->size, 1, fp);
+					break;
+				}
+
+				break;
+
+			case 1:
+
+				p->param = (uint8)fgetc(fp);
+
+				break;
+
+			case 2:
+
+				fread(&p->size, 4, 1, fp);
+
+				break;
+
+			case 3:
+
+				p->buff.resize(0x2000);
+
+				fread(&p->buff[0], 0x2000, 1, fp);
+
+				break;
+			}
+
+			packets.push_back(p);
+		}
+
+		sleep(1);
+
+		//while(IsWindowVisible(hWnd))
+		//FIXME map?
+		int finished = 2;
+		while(finished > 0)
+		{
+			unsigned long start = timeGetTime();
+			unsigned long frame_number = 0;
+			for(auto i = packets.begin(); i != packets.end(); i++)
+			{
+				Packet* p = *i;
+
+				switch(p->type)
+				{
+				case 0:
+
+					switch(p->param)
+					{
+					case 0: GSgifTransfer1(&p->buff[0], p->addr); break;
+					case 1: GSgifTransfer2(&p->buff[0], p->size / 16); break;
+					case 2: GSgifTransfer3(&p->buff[0], p->size / 16); break;
+					case 3: GSgifTransfer(&p->buff[0], p->size / 16); break;
+					}
+
+					break;
+
+				case 1:
+
+					GSvsync(p->param);
+					frame_number++;
+
+					break;
+
+				case 2:
+
+					if(buff.size() < p->size) buff.resize(p->size);
+
+					GSreadFIFO2(&buff[0], p->size / 16);
+
+					break;
+
+				case 3:
+
+					memcpy(regs, &p->buff[0], 0x2000);
+
+					break;
+				}
+			}
+			unsigned long end = timeGetTime();
+			fprintf(stderr, "The %d frames of the scene was render on %dms\n", frame_number, end - start);
+			fprintf(stderr, "A means of %fms by frame\n", (float)(end - start)/(float)frame_number);
+
+			sleep(1);
+			finished--;
+		}
+
+
+		for(auto i = packets.begin(); i != packets.end(); i++)
+		{
+			delete *i;
+		}
+
+		packets.clear();
+
+		sleep(1);
+
+		GSclose();
+		GSshutdown();
+
+		fclose(fp);
+	}
+}
+#endif
+

@@ -1,6 +1,5 @@
 /*
- *	Copyright (C) 2007-2009 Gabest
- *	http://www.gabest.org
+ *	Copyright (C) 20011-2012 Hainaut gregory
  *
  *  This Program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,21 +18,24 @@
  *
  */
 
-#pragma once
-
 #include "stdafx.h"
 
-struct GSSetting
+EXPORT_C GSsetSettingsDir(const char* dir);
+EXPORT_C GSReplay(char* lpszCmdLine, int renderer);
+
+
+void help()
 {
-	uint32 id;
-	std::string name;
-	std::string note;
+	fprintf(stderr, "Loader gs file\n");
+	fprintf(stderr, "ARG1 Ini directory\n");
+	fprintf(stderr, "ARG2 .gs file\n");
+	exit(1);
+}
 
+int main ( int argc, char *argv[] )
+{
+  if ( argc != 3 ) help();
 
-	GSSetting(uint32 id, const char* name, const char* note)
-	{
-		this->id = id;
-		this->name = name;
-		this->note = note;
-	}
-};
+  GSsetSettingsDir(argv[1]);
+  GSReplay(argv[2], 12);
+}
