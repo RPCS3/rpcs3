@@ -441,12 +441,14 @@ EXPORT_C GSreadFIFO(uint8* mem)
 	if (theApp.GetConfig("renderer", 0) / 3 == 4) {
 		fprintf(stderr, "Disable FIFO1 on opengl\n");
 	}
-#endif
 	s_gs->m_wnd.AttachContext();
+#endif
 
 	s_gs->ReadFIFO(mem, 1);
 
+#ifdef _LINUX
 	s_gs->m_wnd.DetachContext();
+#endif
 }
 
 EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
@@ -460,12 +462,14 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 #endif
 		//return;
 	}
-#endif
 	s_gs->m_wnd.AttachContext();
+#endif
 
 	s_gs->ReadFIFO(mem, size);
 
+#ifdef _LINUX
 	s_gs->m_wnd.DetachContext();
+#endif
 }
 
 EXPORT_C GSgifTransfer(const uint8* mem, uint32 size)
