@@ -25,10 +25,11 @@
 #include "GSLinuxLogo.h"
 
 GtkWidget *msaa_combo_box, *render_combo_box, *filter_combo_box;
-GtkWidget *logz_check, *paltex_check, *fba_check, *aa_check,  *native_res_check;
+GtkWidget *shadeboost_check, *paltex_check, *fba_check, *aa_check,  *native_res_check;
+GtkWidget *sb_contrast, *sb_brightness, *sb_saturation;
 GtkWidget *resx_spin, *resy_spin;
 
-GtkWidget *hack_alpha_check, *hack_offset_check, *hack_skidraw_spin;
+GtkWidget *hack_alpha_check, *hack_offset_check, *hack_skipdraw_spin, *hack_msaa_check, *hack_sprite_check, * hack_wild_check, *hack_enble_check;
 
 static void SysMessage(const char *fmt, ...)
 {
@@ -161,7 +162,7 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 	if (hardware_render)
 	{
 		gtk_widget_set_sensitive(filter_combo_box, true);
-		gtk_widget_set_sensitive(logz_check, true);
+		gtk_widget_set_sensitive(shadeboost_check, true);
 		gtk_widget_set_sensitive(paltex_check, true);
 		gtk_widget_set_sensitive(fba_check, true);
 		gtk_widget_set_sensitive(native_res_check, true);
@@ -187,11 +188,15 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 				gtk_widget_set_sensitive(resy_spin, false);
 			}
 		}
+
+		gtk_widget_set_sensitive(sb_brightness,true);
+		gtk_widget_set_sensitive(sb_saturation,true);
+		gtk_widget_set_sensitive(sb_contrast,true);
 	}
 	else
 	{
 		gtk_widget_set_sensitive(filter_combo_box, false);
-		gtk_widget_set_sensitive(logz_check, false);
+		gtk_widget_set_sensitive(shadeboost_check, false);
 		gtk_widget_set_sensitive(paltex_check, false);
 		gtk_widget_set_sensitive(fba_check, false);
 		
@@ -199,6 +204,10 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 		gtk_widget_set_sensitive(msaa_combo_box, false);
 		gtk_widget_set_sensitive(resx_spin, false);
 		gtk_widget_set_sensitive(resy_spin, false);
+
+		gtk_widget_set_sensitive(sb_brightness,false);
+		gtk_widget_set_sensitive(sb_saturation,false);
+		gtk_widget_set_sensitive(sb_contrast,false);
 	}
 }
 
@@ -211,7 +220,7 @@ bool RunLinuxDialog()
 	GtkWidget *interlace_combo_box, *threads_spin;
 	GtkWidget *interlace_label, *threads_label, *native_label,  *msaa_label, *rexy_label, *render_label, *filter_label;
 	
-	GtkWidget *hack_skipdraw_label, *hack_box, *hack_frame;
+	GtkWidget *hack_table, *hack_skipdraw_label, *hack_box, *hack_frame;
 	int return_value;
 	
 	GdkPixbuf* logo_pixmap;
@@ -240,7 +249,7 @@ bool RunLinuxDialog()
 	hw_box = gtk_vbox_new(false, 5);
 	hw_frame = gtk_frame_new ("Hardware Mode Settings");
 	gtk_container_add(GTK_CONTAINER(hw_frame), hw_box);
-	hw_table = gtk_table_new(2,2, false);
+	hw_table = gtk_table_new(5,2, false);
 	gtk_container_add(GTK_CONTAINER(hw_box), hw_table);
 	
 	// The software mode frame and container. (It doesn't have enough in it for a table.)
@@ -252,6 +261,8 @@ bool RunLinuxDialog()
 	hack_box = gtk_hbox_new(false, 5);
 	hack_frame = gtk_frame_new ("Hacks");
 	gtk_container_add(GTK_CONTAINER(hack_frame), hack_box);
+	hack_table = gtk_table_new(3,3, false);
+	gtk_container_add(GTK_CONTAINER(hack_box), hack_table);
 	
 	// Grab a logo, to make things look nice.
 	logo_pixmap = gdk_pixbuf_from_pixdata(&gsdx_ogl_logo, false, NULL);
@@ -310,26 +321,35 @@ bool RunLinuxDialog()
 	gtk_box_pack_start(GTK_BOX(resxy_box), rexy_label, false, false, 5);
 	gtk_box_pack_start(GTK_BOX(resxy_box), resx_spin, false, false, 5);
 	gtk_box_pack_start(GTK_BOX(resxy_box), resy_spin, false, false, 5);
-	
+
 	// Create our hack settings.
 	hack_alpha_check = gtk_check_button_new_with_label("Alpha Hack");
 	hack_offset_check = gtk_check_button_new_with_label("Offset Hack");
 	hack_skipdraw_label = gtk_label_new("Skipdraw:");
-	hack_skidraw_spin = gtk_spin_button_new_with_range(0,1000,1);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(hack_skidraw_spin), theApp.GetConfig("UserHacks_SkipDraw", 0));
-	gtk_box_pack_start(GTK_BOX(hack_box), hack_alpha_check, false, false, 5);
-	gtk_box_pack_start(GTK_BOX(hack_box), hack_offset_check, false, false, 5);
-	gtk_box_pack_start(GTK_BOX(hack_box), hack_skipdraw_label, false, false, 5);
-	gtk_box_pack_start(GTK_BOX(hack_box), hack_skidraw_spin, false, false, 0);
-	
+	hack_skipdraw_spin = gtk_spin_button_new_with_range(0,1000,1);
+	hack_enble_check = gtk_check_button_new_with_label("Enable User Hacks");
+	hack_wild_check = gtk_check_button_new_with_label("Wild arm Hack");
+	hack_sprite_check = gtk_check_button_new_with_label("Sprite Hack");
+	hack_msaa_check = gtk_check_button_new_with_label("Msaa Hack");
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(hack_skipdraw_spin), theApp.GetConfig("UserHacks_SkipDraw", 0));
+	// Tables are strange. The numbers are for their position: left, right, top, bottom.
+	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_alpha_check, 0, 1, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_offset_check, 1, 2, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_sprite_check, 0, 1, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_wild_check, 1, 2, 1, 2);
+	// Note: MSAA is not implemented yet. I disable it to make the table square
+	//gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_msaa_check, 2, 3, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_skipdraw_label, 0, 1, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_skipdraw_spin, 1, 2, 2, 3);
+
 	// Create our checkboxes.
-	logz_check = gtk_check_button_new_with_label("Logarithmic Z");
+	shadeboost_check = gtk_check_button_new_with_label("Shade boost");
 	paltex_check = gtk_check_button_new_with_label("Allow 8 bit textures");
 	fba_check = gtk_check_button_new_with_label("Alpha correction (FBA)");
 	aa_check = gtk_check_button_new_with_label("Edge anti-aliasing (AA1)");
 	
 	// Set the checkboxes.
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(logz_check), theApp.GetConfig("logz", 1));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(shadeboost_check), theApp.GetConfig("shadeboost", 1));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(paltex_check), theApp.GetConfig("paltex", 0));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fba_check), theApp.GetConfig("fba", 1));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(aa_check), theApp.GetConfig("aa1", 0));
@@ -337,6 +357,27 @@ bool RunLinuxDialog()
 	
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_alpha_check), theApp.GetConfig("UserHacks_AlphaHack", 0));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_offset_check), theApp.GetConfig("UserHacks_HalfPixelOffset", 0));
+
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_enble_check), theApp.GetConfig("UserHacks", 0));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_msaa_check), theApp.GetConfig("UserHacks_MSAA", 0));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_wild_check), theApp.GetConfig("UserHacks_WildHack", 0));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_sprite_check), theApp.GetConfig("UserHacks_SpriteHack", 0));
+
+	// Shadeboost scale
+	sb_brightness = gtk_hscale_new_with_range(0, 200, 10);
+	GtkWidget* sb_brightness_label = gtk_label_new("Shade Boost Brightness");
+	gtk_scale_set_value_pos(GTK_SCALE(sb_brightness), GTK_POS_RIGHT);
+	gtk_range_set_value(GTK_RANGE(sb_brightness), theApp.GetConfig("ShadeBoost_Brightness", 50));
+
+	sb_contrast = gtk_hscale_new_with_range(0, 200, 10);
+	GtkWidget* sb_contrast_label = gtk_label_new("Shade Boost Contrast");
+	gtk_scale_set_value_pos(GTK_SCALE(sb_contrast), GTK_POS_RIGHT);
+	gtk_range_set_value(GTK_RANGE(sb_contrast), theApp.GetConfig("ShadeBoost_Contrast", 50));
+
+	sb_saturation = gtk_hscale_new_with_range(0, 200, 10);
+	GtkWidget* sb_saturation_label = gtk_label_new("Shade Boost Saturation");
+	gtk_scale_set_value_pos(GTK_SCALE(sb_saturation), GTK_POS_RIGHT);
+	gtk_range_set_value(GTK_RANGE(sb_saturation), theApp.GetConfig("ShadeBoost_Saturation", 50));
 	
 	// Populate all those boxes we created earlier with widgets.
 	gtk_container_add(GTK_CONTAINER(res_box), native_box);
@@ -348,9 +389,16 @@ bool RunLinuxDialog()
 	
 	// Tables are strange. The numbers are for their position: left, right, top, bottom.
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), filter_box, 0, 1, 0, 1);
-	gtk_table_attach_defaults(GTK_TABLE(hw_table), logz_check, 1, 2, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(hw_table), shadeboost_check, 1, 2, 0, 1);
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), paltex_check, 0, 1, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), fba_check, 1, 2, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_brightness_label, 0, 1, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_brightness, 1, 2, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_contrast_label, 0, 1, 3, 4);
+	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_contrast, 1, 2, 3, 4);
+	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_saturation_label, 0, 1, 4, 5);
+	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_saturation, 1, 2, 4, 5);
+
 	
 	// Put everything in the big box.
 	gtk_container_add(GTK_CONTAINER(main_box), renderer_box);
@@ -359,7 +407,7 @@ bool RunLinuxDialog()
 	gtk_container_add(GTK_CONTAINER(main_box), hw_frame);
 	gtk_container_add(GTK_CONTAINER(main_box), sw_frame);
 	
-	if (!!theApp.GetConfig("allowHacks", 0))
+	if (!!theApp.GetConfig("UserHacks", 0))
 	{
 		gtk_container_add(GTK_CONTAINER(main_box), hack_frame);
 	}
@@ -403,19 +451,28 @@ bool RunLinuxDialog()
 		theApp.SetConfig("extrathreads", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(threads_spin)));
 
 		theApp.SetConfig("filter", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(filter_combo_box)));
-		theApp.SetConfig("logz", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(logz_check)));
+		theApp.SetConfig("shadeboost", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(shadeboost_check)));
 		theApp.SetConfig("paltex", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(paltex_check)));
 		theApp.SetConfig("fba", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fba_check)));
 		theApp.SetConfig("aa1", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(aa_check)));
 		theApp.SetConfig("nativeres", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(native_res_check)));
 		
+		theApp.SetConfig("ShadeBoost_Saturation", (int)gtk_range_get_value(GTK_RANGE(sb_saturation)));
+		theApp.SetConfig("ShadeBoost_Brightness", (int)gtk_range_get_value(GTK_RANGE(sb_brightness)));
+		theApp.SetConfig("ShadeBoost_Contrast", (int)gtk_range_get_value(GTK_RANGE(sb_contrast)));
+
 		theApp.SetConfig("msaa", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(msaa_combo_box)));
 		theApp.SetConfig("resx", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(resx_spin)));
 		theApp.SetConfig("resy", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(resy_spin)));
 		
-		theApp.SetConfig("UserHacks_SkipDraw", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(hack_skidraw_spin)));
+		theApp.SetConfig("UserHacks_SkipDraw", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(hack_skipdraw_spin)));
 		theApp.SetConfig("UserHacks_HalfPixelOffset", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_offset_check)));
 		theApp.SetConfig("UserHacks_AlphaHack", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_alpha_check)));
+
+		theApp.SetConfig("UserHacks_MSAA", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_msaa_check)));
+		theApp.SetConfig("UserHacks_WildHack", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_wild_check)));
+		theApp.SetConfig("UserHacks_SpriteHack", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_sprite_check)));
+		theApp.SetConfig("UserHacks", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_enble_check)));
 		
 		// Let's just be windowed for the moment.
 		theApp.SetConfig("windowed", 1);
