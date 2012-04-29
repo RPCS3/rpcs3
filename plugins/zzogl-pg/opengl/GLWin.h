@@ -47,6 +47,7 @@ class GLWindow
 		void GetWindowSize();
         void UpdateGrabKey();
         void Force43Ratio();
+		bool CreateContextGL(int, int);
 		void CreateContextGL();
 #endif
 		bool fullScreen, doubleBuffered;

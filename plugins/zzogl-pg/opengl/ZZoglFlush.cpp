@@ -2123,7 +2123,7 @@ inline void NeedFactor(int w)
 template<bool SIGN, bool NEED_FACTOR>
 __forceinline int Set_Alpha_Color_Factor(const alphaInfo& a)
 {
-    int usec;
+    int usec = 0;
     switch(a.c)
     {
         case 0:

@@ -20,6 +20,7 @@ set(CommonFlags
     -fno-strict-aliasing
     -Wstrict-aliasing # Allow to track strict aliasing issue.
     -Wunused-variable
+    #-DOGL4_LOG        # Easier for development
     )
 
 set(OptimizationFlags

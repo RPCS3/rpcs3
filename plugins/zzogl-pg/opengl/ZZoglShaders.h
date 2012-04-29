@@ -292,20 +292,52 @@ inline void ResetShaderCounters() {
 //	g_vsprog = g_psprog = sZero;
 }
 
+
+/////////////////////////////////////////////////////////////////
+// Improvement:
+//  * store the location of uniform. Avoid to call glGetUniformLocation a lots of time
+//  * Use separate shader build pipeline: current code emulate this behavior but with the recent opengl4
+//	  it would be much more easier to code it.
+/////////////////////////////////////////////////////////////////
+
+// GLSL: Stub
 extern bool ZZshCheckProfilesSupport();
+
+// Try various Shader to choose supported configuration
+// g_nPixelShaderVer -> SHADER_ACCURATE and SHADER_REDUCED
+// Honestly we can probably stop supporting those cards.
 extern bool ZZshStartUsingShaders();
+
+// Open the shader file into an source array
 extern bool ZZshCreateOpenShadersFile();
+
+// Those 2 functions are used to stop/start shader. The idea is to draw the HUD text.
+// Enable is not implemented and it is likely to stop everythings
 extern void ZZshGLDisableProfile();
 extern void ZZshGLEnableProfile();
+
+// Set the Uniform parameter in host (NOT GL)
+// Param seem to be an absolute index inside a table of uniform
 extern void ZZshSetParameter4fv(ZZshShaderLink prog, ZZshParameter param, const float* v, const char* name);
 extern void ZZshSetParameter4fv(ZZshParameter param, const float* v, const char* name);
 extern void ZZshSetParameter4fvWithRetry(ZZshParameter* param, ZZshShaderLink prog, const float* v, const char* name);
+
+// Set the Texture parameter in host (NOT GL)
 extern void ZZshGLSetTextureParameter(ZZshShaderLink prog, ZZshParameter param, GLuint texobj, const char* name);
 extern void ZZshGLSetTextureParameter(ZZshParameter param, GLuint texobj, const char* name);
+
+// Set a default value for 1 uniform in host (NOT GL)
 extern void ZZshDefaultOneColor( FRAGMENTSHADER ptr );
+
+// Link then run with the new Vertex/Fragment Shader
 extern void ZZshSetVertexShader(ZZshShaderLink prog);
 extern void ZZshSetPixelShader(ZZshShaderLink prog);
+
+// Compile standalone Fragment/Vertex shader program
+// Note It also init all the Uniform parameter in host (NOT GL)
 extern bool ZZshLoadExtraEffects();
+
+// Clean some stuff on exit
 extern void ZZshExitCleaning();
 
 extern FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);

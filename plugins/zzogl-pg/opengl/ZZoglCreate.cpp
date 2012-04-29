@@ -147,10 +147,12 @@ inline bool CreateImportantCheck()
 #ifndef _WIN32
 	int const glew_ok = glewInit();
 
-	if (glew_ok != GLEW_OK)
-	{
+	if (glew_ok != GLEW_OK) {
 		ZZLog::Error_Log("glewInit() is not ok!");
 		bSuccess = false;
+	} else {
+		const GLubyte* gl_version = glGetString(GL_VERSION);
+		ZZLog::Error_Log("Supported Opengl version : %s\n", gl_version);
 	}
 
 #endif
@@ -772,6 +774,10 @@ bool ZZCreate(int _width, int _height)
 	vb[1].Init(VB_BUFFERSIZE);
 
 	g_vsprog = g_psprog = sZero;
+
+#ifdef OGL4_LOG
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+#endif
 
 	if (glGetError() == GL_NO_ERROR)
 	{

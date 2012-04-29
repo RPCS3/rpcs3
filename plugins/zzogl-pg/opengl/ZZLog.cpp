@@ -61,6 +61,7 @@ namespace ZZLog
 {
 std::string s_strLogPath("logs");
 FILE *gsLog;
+FILE *gsLogGL; // I create a separate file because it could be very verbose
 
 bool IsLogging()
 {
@@ -72,12 +73,20 @@ bool IsLogging()
 void Open() 
 {
     const std::string LogFile(s_strLogPath + "/GSzzogl.log");
+    const std::string LogFileGL(s_strLogPath + "/GSzzogl_GL.log");
 
     gsLog = fopen(LogFile.c_str(), "w");
     if (gsLog != NULL)
         setvbuf(gsLog, NULL,  _IONBF, 0);
     else 
         SysMessage("Can't create log file %s\n", LogFile.c_str());
+
+    gsLogGL = fopen(LogFileGL.c_str(), "w");
+    if (gsLogGL != NULL)
+        setvbuf(gsLogGL, NULL,  _IONBF, 0);
+    else
+        SysMessage("Can't create log file %s\n", LogFileGL.c_str());
+
 
 }
 
@@ -86,6 +95,10 @@ void Close()
 	if (gsLog != NULL) {
         fclose(gsLog);
         gsLog = NULL;
+    }
+	if (gsLogGL != NULL) {
+        fclose(gsLogGL);
+        gsLogGL = NULL;
     }
 }
 
@@ -353,4 +366,83 @@ void Error_Log(const char *fmt, ...)
 	
 	va_end(list);
 }
+
+#define LOUD_DEBUGGING
+
+#ifdef OGL4_LOG
+void Check_GL_Error()
+{
+       unsigned int count = 64; // max. num. of messages that will be read from the log
+       int bufsize = 2048;
+       unsigned int* sources      = new unsigned int[count];
+       unsigned int* types        = new unsigned int[count];
+       unsigned int* ids   = new unsigned int[count];
+       unsigned int* severities = new unsigned int[count];
+       int* lengths = new int[count];
+       char* messageLog = new char[bufsize];
+       unsigned int retVal = glGetDebugMessageLogARB(count, bufsize, sources, types, ids, severities, lengths, messageLog);
+
+       if(retVal > 0)
+       {
+             unsigned int pos = 0;
+             for(unsigned int i=0; i<retVal; i++)
+             {
+                    GL_Error_Log(sources[i], types[i], ids[i], severities[i],
+ &messageLog[pos]);
+                    pos += lengths[i];
+              }
+       }
+
+       delete [] sources;
+       delete [] types;
+       delete [] ids;
+       delete [] severities;
+       delete [] lengths;
+       delete [] messageLog;
+}
+
+void GL_Error_Log(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message)
+{
+	char debType[20], debSev[5];
+	static int sev_counter = 0;
+
+	if(type == GL_DEBUG_TYPE_ERROR_ARB)
+		strcpy(debType, "Error");
+	else if(type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB)
+		strcpy(debType, "Deprecated behavior");
+	else if(type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB)
+		strcpy(debType, "Undefined behavior");
+	else if(type == GL_DEBUG_TYPE_PORTABILITY_ARB)
+		strcpy(debType, "Portability");
+	else if(type == GL_DEBUG_TYPE_PERFORMANCE_ARB)
+		strcpy(debType, "Performance");
+	else if(type == GL_DEBUG_TYPE_OTHER_ARB)
+		strcpy(debType, "Other");
+	else
+		strcpy(debType, "UNKNOWN");
+
+	if(severity == GL_DEBUG_SEVERITY_HIGH_ARB) {
+		strcpy(debSev, "High");
+		sev_counter++;
+	}
+	else if(severity == GL_DEBUG_SEVERITY_MEDIUM_ARB)
+		strcpy(debSev, "Med");
+	else if(severity == GL_DEBUG_SEVERITY_LOW_ARB)
+		strcpy(debSev, "Low");
+
+	#ifdef LOUD_DEBUGGING
+	fprintf(stderr,"Type:%s\tSeverity:%s\tMessage:%s\n", debType, debSev,message);
+	#endif
+
+	if(gsLogGL)
+	{
+		fprintf(gsLogGL,"Type:%s\tSeverity:%s\tMessage:%s\n", debType, debSev,message);
+	}
+	//if (sev_counter > 2) assert(0);
+}
+#else
+void Check_GL_Error() {}
+void GL_Error_Log(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message) {}
+#endif
+
 };

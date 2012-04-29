@@ -333,6 +333,7 @@ EXPORT_C_(s32) GSopen2( void* pDsp, u32 flags )
 
 	InitMisc();
 	ZZLog::GS_Log("GSopen2 finished.");
+	ZZLog::Check_GL_Error();
 	return 0;
 	
 }

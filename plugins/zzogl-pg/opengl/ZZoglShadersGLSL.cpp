@@ -456,7 +456,7 @@ inline ZZshProgram madeProgram(ZZshShader shader, ZZshShader shader2, char* name
 	return prog;
 }
 
-void PutParametersInProgam(int start, int finish) {
+static void PutParametersInProgam(int start, int finish) {
 	for (int i = start; i < finish; i++) {
 		ZZshParamInfo param = UniformsIndex[i];
 		GLint location = glGetUniformLocation(ZZshMainProgram, param.ShName);
@@ -517,7 +517,7 @@ void PutSInProgam(int start, int finish) {
 	GL_REPORT_ERRORD();
 }
 
-bool ValidateProgram(ZZshProgram Prog) {
+static bool ValidateProgram(ZZshProgram Prog) {
 	GLint isValid;
 	glGetProgramiv(Prog, GL_VALIDATE_STATUS, &isValid);
 
@@ -532,7 +532,7 @@ bool ValidateProgram(ZZshProgram Prog) {
 	return (isValid != 0); 
 }
 
-void PutParametersAndRun(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
+static void PutParametersAndRun(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	UNIFORM_ERROR_LOG("Run program %s(%d) \t+\t%s(%d)", ShaderNames[vs->Shader], vs->Shader, ShaderNames[ps->Shader], ps->Shader);
 
 	glUseProgram(ZZshMainProgram);	
@@ -554,7 +554,7 @@ void PutParametersAndRun(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	GL_REPORT_ERRORD();
 }
 
-void CreateAndRunMain(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
+static void CreateNewProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	ZZLog::Error_Log("\n--->  New shader program %d, %s(%d) \t+\t%s(%d).", ZZshMainProgram, ShaderNames[vs->Shader], vs->Shader, ShaderNames[ps->Shader], ps->Shader);
 
 	if (vs->Shader != 0)
@@ -569,9 +569,6 @@ void CreateAndRunMain(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	}
 
 	GL_REPORT_ERRORD();
-
-       	PutParametersAndRun(vs, ps);	
-	GL_REPORT_ERRORD();
 }
 
 inline bool ZZshCheckShaderCompatibility(VERTEXSHADER* vs, FRAGMENTSHADER* ps) { 
@@ -582,7 +579,7 @@ inline bool ZZshCheckShaderCompatibility(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	return (vs->ShaderType == ps->ShaderType);
 }
 
-void ZZshSetShader(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
+static void ZZshSetShader(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	if (!ZZshCheckShaderCompatibility(vs, ps)) 				// We don't need to link uncompatible shaders
 		return;	
 
@@ -592,14 +589,16 @@ void ZZshSetShader(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	if (vss !=0 && pss != 0) {
 		if (CompiledPrograms[vss][pss] != 0 && glIsProgram(CompiledPrograms[vss][pss])) {
 			ZZshMainProgram = CompiledPrograms[vs->Shader][ps->Shader];
-			PutParametersAndRun(vs, ps);
 		}
 		else {
 			ZZshProgram NewProgram = glCreateProgram();
 			ZZshMainProgram = NewProgram;
 			CompiledPrograms[vss][pss] = NewProgram;
-			CreateAndRunMain(vs, ps) ;
+			CreateNewProgram(vs, ps) ;
 		}
+
+		PutParametersAndRun(vs, ps);	
+		GL_REPORT_ERRORD();
 	}
 }
 
@@ -637,8 +636,7 @@ inline int SetUniformParam(ZZshProgram prog, ZZshParameter* param, const char* n
 
 		NumActiveUniforms++;  		
 	}
-	else 
-		*param = -1; 
+	else *param = -1; 
 	return p;
 }
 
@@ -666,7 +664,7 @@ char* AddContextToName(const char* name, int context) {
 	return newname;
 }
 
-void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
+static void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
 {
 	// uniform parameters
 	GLint p;
@@ -782,7 +780,7 @@ static __forceinline void GlslHeaderString(char* header_string, const char* name
 	sprintf(header_string, "#version %d\n#define %s main\n%s\n", GLSL_VERSION, name, depth);
 }
 
-static __forceinline bool LOAD_VS(char* DefineString, const char* name, VERTEXSHADER vertex, int shaderver, ZZshProfile context, const char* depth)
+static __forceinline bool LOAD_VS(char* DefineString, const char* name, VERTEXSHADER& vertex, int shaderver, ZZshProfile context, const char* depth)
 {
 	bool flag;
 	char temp[200];
@@ -794,7 +792,7 @@ static __forceinline bool LOAD_VS(char* DefineString, const char* name, VERTEXSH
 	return flag;
 }
 
-static __forceinline bool LOAD_PS(char* DefineString, const char* name, FRAGMENTSHADER fragment, int shaderver, ZZshProfile context, const char* depth)
+static __forceinline bool LOAD_PS(char* DefineString, const char* name, FRAGMENTSHADER& fragment, int shaderver, ZZshProfile context, const char* depth)
 {
 	bool flag;
 	char temp[200];

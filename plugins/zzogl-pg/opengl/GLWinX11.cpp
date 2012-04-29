@@ -174,54 +174,74 @@ void GLWindow::GetGLXVersion()
 
 }
 
+bool GLWindow::CreateContextGL(int major, int minor)
+{
+	if (!glDisplay) return false;
+
+	if (major <= 2) {
+		context = glXCreateContext(glDisplay, vi, NULL, GL_TRUE);
+		return true;
+	}
+
+	// Get visual information
+	static int attrListDbl[] =
+	{
+		GLX_X_RENDERABLE    , True,
+		GLX_DRAWABLE_TYPE   , GLX_WINDOW_BIT,
+		GLX_RENDER_TYPE     , GLX_RGBA_BIT,
+		GLX_RED_SIZE        , 8,
+		GLX_GREEN_SIZE      , 8,
+		GLX_BLUE_SIZE       , 8,
+		GLX_DEPTH_SIZE      , 24,
+		GLX_DOUBLEBUFFER    , True,
+		None
+	};
+
+	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
+	int fbcount = 0;
+	GLXFBConfig *fbc = glXChooseFBConfig(glDisplay, DefaultScreen(glDisplay), attrListDbl, &fbcount);
+	if (!fbc || fbcount < 1) return false;
+
+	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
+	if (!glXCreateContextAttribsARB) return false;
+
+	// Create a context
+	int context_attribs[] =
+	{
+		GLX_CONTEXT_MAJOR_VERSION_ARB, major,
+		GLX_CONTEXT_MINOR_VERSION_ARB, minor,
+		// Keep compatibility for old cruft
+		GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
+		//GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB | GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+		// FIXME : Request a debug context to ease opengl development
+		GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
+		None
+	};
+
+	context = glXCreateContextAttribsARB(glDisplay, fbc[0], 0, true, context_attribs);
+	if (!context) return false;
+
+	XSync( glDisplay, false);
+
+	return true;
+}
+
 void GLWindow::CreateContextGL()
 {
-	if (!glDisplay) return;
-
-	// Create a 2.0 opengl context. My understanding, you need it to call the gl function to get the 3.0 context
-    context = glXCreateContext(glDisplay, vi, NULL, GL_TRUE);
-
-	// FIXME
-	// On Geforce7, the context 3.0 creation crashes with BadAlloc (insufficient resources for operation)
-	// So until a better solution is found, keep the 2.0 context -- Gregory
-	return;
-
-	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC) glXGetProcAddress((GLubyte *) "glXCreateContextAttribsARB");
-	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
-	if (!glXCreateContextAttribsARB or !glXChooseFBConfig) {
-		ZZLog::Error_Log("No support of OpenGL 3.0\n");
-		return;
-	}
-
-	// Note this part seems linux specific
-	int fbcount = 0;
-	GLXFBConfig *framebuffer_config = glXChooseFBConfig(glDisplay, DefaultScreen(glDisplay), NULL, &fbcount);
-	if (!framebuffer_config or !fbcount) return;
-
-#if 1
-	// At least create a 3.0 context with compatibility profile
-	int attribs[] = {
-		GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-		GLX_CONTEXT_MINOR_VERSION_ARB, 0,
-		// GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
-		GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
-		0
-	};
+#ifdef OGL4_LOG
+	// We need to define a debug context. So we need at a 3.0 context (if not 3.2)
+	CreateContextGL(4, 1);
 #else
-	// Create a 3.2 core context without compatibility profile
-	int attribs[] = {
-		GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-		GLX_CONTEXT_MINOR_VERSION_ARB, 2,
-		GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
-		0
-	};
+	// FIXME there was some issue with previous context creation on Geforce7. Code was rewritten
+	// for GSdx unfortunately it was not tested on Geforce7 so keep the 2.0 context for now.
+#if 0
+	if (! CreateContextGL(3, 0) )
+		CreateContextGL(2, 0);
+#else
+	CreateContextGL(2, 0);
 #endif
-	GLXContext context_temp = glXCreateContextAttribsARB(glDisplay, framebuffer_config[0], NULL, true, attribs);
-	if (context_temp) {
-		ZZLog::Error_Log("Create a 3.0 opengl context");
-		glXDestroyContext(glDisplay, context);
-		context = context_temp;
-	}
+
+#endif
 }
 
 #ifdef USE_GSOPEN2
@@ -231,8 +251,9 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 
 	if (!CreateVisual()) return false;
 
-	// connect the glx-context to the window
+
 	CreateContextGL();
+	// connect the glx-context to the window
 	glXMakeCurrent(glDisplay, glWindow, context);
 
 	GetGLXVersion();
@@ -289,6 +310,8 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 void GLWindow::SwapGLBuffers()
 {
 	if (glGetError() != GL_NO_ERROR) ZZLog::Debug_Log("glError before swap!");
+	ZZLog::Check_GL_Error();
+
 	// FIXME I think we need to flush when there is only 1 visual buffer
 	glXSwapBuffers(glDisplay, glWindow);
 	// glClear(GL_COLOR_BUFFER_BIT);

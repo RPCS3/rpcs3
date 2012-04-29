@@ -126,7 +126,7 @@ float2 ps2memcoord(float2 realtex)
 
 #ifdef ACCURATE_DECOMPRESSION
 	off.zw = texture(g_sBlocks, g_fTexBlock[CTX].xy*fblock + g_fTexBlock[CTX].zw).ar;
-	off.x = dot(off.xy, g_fTexOffset[CTX].xy); 
+	off.x = dot(off.xy, g_fTexOffset[CTX].xy);
 	float r = g_fTexOffset[CTX].w;
 	float f = fract(off.x);
 	float fadd = g_fTexOffset[CTX].z * off.z;
@@ -369,14 +369,14 @@ decl_ps2shade_##num(_tex32) \
 decl_ps2shade_##num(_clut32) \
 decl_ps2shade_##num(_tex32to16) \
 decl_ps2shade_##num(_tex16to8h) \
-decl_ps2shade_##num(_tex16to32h) 
+decl_ps2shade_##num(_tex16to32h)
 
 // nearest
 #define decl_ps2shade_0(bit) \
 float4 ps2shade0##bit( TEX_DECL tex) \
 { \
     return tex2DPS##bit( ps2addr(TEX_XY)); \
-} 
+}
 
 // do fast memcoord4 calcs when textures behave well
 #ifdef REPEAT
@@ -405,7 +405,7 @@ half4 BilinearFilter##bit(float2 tex0) \
 	half4 c2 = texture(g_sMemory[CTX], off1.xy); \
 	half4 c3 = texture(g_sMemory[CTX], off1.zw); \
 	return mix( mix(c0, c1, vec4(ffrac.x)), mix(c2, c3, ffrac.x), vec4(ffrac.y) ); \
-} 
+}
 
 decl_BilinearFilter(_32, ps2addr)
 decl_BilinearFilter(_tex32, ps2addr)
@@ -422,35 +422,35 @@ decl_BilinearFilter(_tex16to32h, ps2addr)
 half4 ps2shade1##bit(TEX_DECL tex) \
 { \
 	return BilinearFilter##bit(TEX_XY); \
-} 
+}
 
 // nearest, mip nearest
 #define decl_ps2shade_2(bit) \
 half4 ps2shade2##bit(TEX_DECL tex) \
 { \
     return tex2DPS##bit( ps2addr(TEX_XY)); \
-} 
+}
 
 // nearest, mip linear
 #define decl_ps2shade_3(bit) \
 half4 ps2shade3##bit(TEX_DECL tex) \
 { \
     return tex2DPS##bit(ps2addr(TEX_XY)); \
-} 
+}
 
 // linear, mip nearest
 #define decl_ps2shade_4(bit) \
 half4 ps2shade4##bit(TEX_DECL tex) \
 { \
     return BilinearFilter##bit(TEX_XY); \
-} 
+}
 
 // linear, mip linear
 #define decl_ps2shade_5(bit) \
 half4 ps2shade5##bit(TEX_DECL tex) \
 { \
     return BilinearFilter##bit(TEX_XY); \
-} 
+}
 
 decl_ps2shade(0)
 decl_ps2shade(1)
@@ -507,7 +507,7 @@ void Texture##num##bit##PS() \
 { \
 	gl_FragData[0] = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(gl_TexCoord[0]), gl_Color)); \
 	gl_FragData[1] = gl_TexCoord[1]; \
-} 
+}
 
 #else
 
@@ -515,7 +515,7 @@ void Texture##num##bit##PS() \
 void Texture##num##bit##PS() \
 { \
 	gl_FragData[0] = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(gl_TexCoord[0]), gl_Color)); \
-} 
+}
 
 #endif
 
@@ -525,7 +525,7 @@ DECL_TEXPS(num, _32) \
 DECL_TEXPS(num, _tex32) \
 DECL_TEXPS(num, _clut32) \
 DECL_TEXPS(num, _tex32to16) \
-DECL_TEXPS(num, _tex16to8h) 
+DECL_TEXPS(num, _tex16to8h)
 
 DECL_TEXPS_(0)
 DECL_TEXPS_(1)
@@ -551,7 +551,7 @@ void TextureFog##num##bit##PS() \
 	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(gl_TexCoord[1].x)); \
 	gl_FragData[0] = ps2FinalColor(c); \
    	gl_FragData[1] = gl_TexCoord[2]; \
-} 
+}
 
 #else
 
@@ -561,7 +561,7 @@ void TextureFog##num##bit##PS() \
 	half4 c = ps2CalcShade(ps2shade##num##bit(gl_TexCoord[0]), gl_Color); \
 	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(gl_TexCoord[1].x)); \
 	gl_FragData[0] = ps2FinalColor(c); \
-} 
+}
 
 #endif
 
@@ -570,7 +570,7 @@ DECL_TEXFOGPS(num, _32) \
 DECL_TEXFOGPS(num, _tex32) \
 DECL_TEXFOGPS(num, _clut32) \
 DECL_TEXFOGPS(num, _tex32to16) \
-DECL_TEXFOGPS(num, _tex16to8h) 
+DECL_TEXFOGPS(num, _tex16to8h)
 
 DECL_TEXFOGPS_(0)
 DECL_TEXFOGPS_(1)
@@ -624,17 +624,17 @@ void BitBltDepthMRTPS() {
 	gl_FragDepth = (log(g_fc0.y + dot(data, g_fBitBltZ)) * g_fOneColor.w) * g_fZMin.y + dot(data, g_fBitBltZ) * g_fZMin.x ;
 }
 
-/*static const float BlurKernel[9] = {
-	0.027601,
-	0.066213,
-	0.123701,
-	0.179952,
-	0.205065,
-	0.179952,
-	0.123701,
-	0.066213,
-	0.027601
-};*/
+// static const float BlurKernel[9] = {
+// 	0.027601,
+// 	0.066213,
+// 	0.123701,
+// 	0.179952,
+// 	0.205065,
+// 	0.179952,
+// 	0.123701,
+// 	0.066213,
+// 	0.027601
+// };
 
 half4 BilinearFloat16(float2 tex0)
 {
@@ -644,7 +644,7 @@ half4 BilinearFloat16(float2 tex0)
 void CRTCTargInterPS() {
 	float finter = texture(g_sInterlace, gl_TexCoord[1].yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
 	float4 c = BilinearFloat16(gl_TexCoord[0].xy);
-	c.w = ( g_fc0.w*c.w * g_fOneColor.x + g_fOneColor.y ) * finter;	
+	c.w = ( g_fc0.w*c.w * g_fOneColor.x + g_fOneColor.y ) * finter;
 	gl_FragData[0] = c;
 }
 
@@ -715,7 +715,7 @@ void Convert16to32PS() {
 
 	if (ffrac.x > g_fTexOffset[CTX].x*g_fc0.w)
 		tex0.x += g_fTexOffset[CTX].x*g_fc0.w;
-	if (tex0.x >= g_fc0.y) 
+	if (tex0.x >= g_fc0.y)
 		tex0 += g_fTexOffset[CTX].zw;
 
 	float4 lower = texture(g_sSrcFinal, tex0);
@@ -747,7 +747,7 @@ void Convert32to16PS() {
 	float2 uv = upper ? color.xw : color.zy;
 	gl_FragData[0] = texture(g_sConv16to32, uv*g_fPageOffset[CTX].xy+g_fPageOffset[CTX].zw)*g_fTexDims[CTX].xxxy;
 }
-#endif 			//FRAGMENT_SHADER 
+#endif 			//FRAGMENT_SHADER
 
 #ifdef VERTEX_SHADER
 
@@ -755,7 +755,7 @@ float4 OutPosition(float4 vertex) {
 	float4 Position;
 	Position.xy = gl_Vertex.xy * g_fPosXY[CTX].xy + g_fPosXY[CTX].zw;
 	Position.z = (log(g_fc0.y + dot(g_fZ, gl_SecondaryColor.zyxw)) * g_fZNorm.x + g_fZNorm.y) * g_fZMin.y + dot(g_fZ, gl_SecondaryColor.zyxw) * g_fZMin.x ;
-	Position.w = g_fc0.y; 
+	Position.w = g_fc0.y;
 	return Position;
 }
 
@@ -808,5 +808,4 @@ void BitBltVS() {
 	gl_TexCoord[1].xy = position.xy * g_fBitBltTrans.xy + g_fBitBltTrans.zw;
 }
 
-#endif VERTEX_SHADER
-
+#endif

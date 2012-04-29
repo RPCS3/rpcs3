@@ -95,6 +95,8 @@ static bool SPAM_PASS;
 #define B_RETURNX(x, rtype)			{ if( !(x) ) { ZZLog::Error_Log("%s:%d: %s", __FILE__, (u32)__LINE__, #x); return (##rtype); } }
 #define B_G(x, action)			{ if( !(x) ) { ZZLog::Error_Log("%s:%d: %s", __FILE__, (u32)__LINE__, #x); action; } }
 
+#ifndef OGL4_LOG
+
 #define GL_REPORT_ERROR() \
 { \
 	GLenum err = glGetError(); \
@@ -117,6 +119,11 @@ static bool SPAM_PASS;
 }
 #else
 #	define GL_REPORT_ERRORD()
+#endif
+
+#else
+#define GL_REPORT_ERROR()
+#define GL_REPORT_ERRORD()
 #endif
 
 
@@ -196,6 +203,10 @@ extern void Debug_Log(const char *fmt, ...);
 extern void Dev_Log(const char *fmt, ...);
 extern void Warn_Log(const char *fmt, ...);
 extern void Error_Log(const char *fmt, ...);
+
+extern void Check_GL_Error();
+extern void GL_Error_Log(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
+
 };
 
 #endif // ZZLOG_H_INCLUDED

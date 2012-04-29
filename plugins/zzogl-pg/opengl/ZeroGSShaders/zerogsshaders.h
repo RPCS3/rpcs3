@@ -55,7 +55,7 @@ static __forceinline int GET_SHADER_INDEX(int type, int texfilter, int texwrap, 
 
 extern ZZshContext g_cgcontext;
 
-static __forceinline CGprogram LoadShaderFromType(const char* srcdir, const char* srcfile, int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int ps, int context)
+static CGprogram LoadShaderFromType(const char* srcdir, const char* srcfile, int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int ps, int context)
 {
 	assert( texwrap < NUM_TEXWRAPS);
 	assert( type < NUM_TYPES );
