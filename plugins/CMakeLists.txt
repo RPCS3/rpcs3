@@ -117,9 +117,9 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg" AND zzogl)
 endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg" AND zzogl)
 
 # make zzogl-pg
-if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg-cg" AND zzogl)
+if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg-cg" AND zzoglcg AND EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg" AND zzogl)
 	add_subdirectory(zzogl-pg-cg/opengl)
-endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg-cg" AND zzogl)
+endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg-cg" AND zzoglcg AND EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg" AND zzogl)
 
 # make zeropad
 if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zeropad" AND zeropad)

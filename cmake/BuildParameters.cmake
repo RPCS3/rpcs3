@@ -2,6 +2,8 @@
 # Use Release/Devel/Debug      : -DCMAKE_BUILD_TYPE=Release|Devel|Debug
 # Enable/disable the stripping : -DCMAKE_BUILD_STRIP=TRUE|FALSE
 # generation .po based on src  : -DCMAKE_BUILD_PO=TRUE|FALSE
+# Rebuild the ps2hw.dat file   : -DREBUILD_SHADER=TRUE
+# Build the Replay Loaders     : -DBUILD_REPLAY_LOADERS=TRUE|FALSE
 
 ### Force the choice of 3rd party library in pcsx2 over system libraries
 # Use all         internal lib: -DFORCE_INTERNAL_ALL=TRUE
@@ -191,3 +193,17 @@ endif(PACKAGE_MODE)
 if(NOT DEFINED GLSL_API)
 	set(GLSL_API FALSE)
 endif(NOT DEFINED GLSL_API)
+
+#-------------------------------------------------------------------------------
+# Use the precompiled shader file by default
+#-------------------------------------------------------------------------------
+if(NOT DEFINED REBUILD_SHADER)
+	set(REBUILD_SHADER FALSE)
+endif(NOT DEFINED REBUILD_SHADER)
+
+#-------------------------------------------------------------------------------
+# Build the replay loaders by default
+#-------------------------------------------------------------------------------
+if(NOT DEFINED BUILD_REPLAY_LOADERS)
+	set(BUILD_REPLAY_LOADERS TRUE)
+endif(NOT DEFINED BUILD_REPLAY_LOADERS)

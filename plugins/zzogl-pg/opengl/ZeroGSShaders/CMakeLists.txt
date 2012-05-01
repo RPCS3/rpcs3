@@ -67,9 +67,7 @@ add_custom_command(TARGET ${Output} POST_BUILD
     )
 
 if(PACKAGE_MODE)
-    install(TARGETS ${Output} DESTINATION bin)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ps2hw_cmake.dat DESTINATION ${PLUGIN_DIR})
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ps2hw_cmake.dat DESTINATION ${PLUGIN_DIR} RENAME ps2hw.dat)
 else(PACKAGE_MODE)
-    install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ps2hw_cmake.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ps2hw_cmake.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins RENAME ps2hw.dat)
 endif(PACKAGE_MODE)

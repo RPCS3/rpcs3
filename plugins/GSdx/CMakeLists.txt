@@ -212,42 +212,44 @@ else(PACKAGE_MODE)
 endif(PACKAGE_MODE)
 
 ################################### Replay Loader
-set(Replay pcsx2_GSReplayLoader)
-set(Static GSdx-static)
+if(BUILD_REPLAY_LOADERS)
+	set(Replay pcsx2_GSReplayLoader)
+	set(Static GSdx-static)
 
-# We can have separate option for gsdx inside the player. It will only
-# cost a 2nd rebuild of gsdx...
-#add_definitions(${CommonFlags} ${SDLFlags} ${OptimizationFlags} -W)
+	# We can have separate option for gsdx inside the player. It will only
+	# cost a 2nd rebuild of gsdx...
+	#add_definitions(${CommonFlags} ${SDLFlags} ${OptimizationFlags} -W)
 
-add_library(${Static} STATIC ${GSdxSources} ${GSdxHeaders})
+	add_library(${Static} STATIC ${GSdxSources} ${GSdxHeaders})
 
-add_executable(${Replay} linux_replay.cpp)
+	add_executable(${Replay} linux_replay.cpp)
 
-target_link_libraries(${Static} ${OPENGL_LIBRARIES})
-target_link_libraries(${Static} ${X11_LIBRARIES})
-target_link_libraries(${Static} ${GLEW_LIBRARY})
-target_link_libraries(${Static} ${GTK2_LIBRARIES})
-if(projectSDL)
-    target_link_libraries(${Static} ${SDL_LIBRARY})
-endif(projectSDL)
+	target_link_libraries(${Static} ${OPENGL_LIBRARIES})
+	target_link_libraries(${Static} ${X11_LIBRARIES})
+	target_link_libraries(${Static} ${GLEW_LIBRARY})
+	target_link_libraries(${Static} ${GTK2_LIBRARIES})
+	if(projectSDL)
+	    target_link_libraries(${Static} ${SDL_LIBRARY})
+	endif(projectSDL)
 
-target_link_libraries(${Replay} ${Static})
-# Warning others lib must be linked after GSdx...
-target_link_libraries(${Replay} ${OPENGL_LIBRARIES})
-target_link_libraries(${Replay} ${X11_LIBRARIES})
-target_link_libraries(${Replay} ${GLEW_LIBRARY})
-target_link_libraries(${Replay} ${GTK2_LIBRARIES})
-if(projectSDL)
-    target_link_libraries(${Replay} ${SDL_LIBRARY})
-endif(projectSDL)
+	target_link_libraries(${Replay} ${Static})
+	# Warning others lib must be linked after GSdx...
+	target_link_libraries(${Replay} ${OPENGL_LIBRARIES})
+	target_link_libraries(${Replay} ${X11_LIBRARIES})
+	target_link_libraries(${Replay} ${GLEW_LIBRARY})
+	target_link_libraries(${Replay} ${GTK2_LIBRARIES})
+	if(projectSDL)
+	    target_link_libraries(${Replay} ${SDL_LIBRARY})
+	endif(projectSDL)
 
 
-if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
-    target_link_libraries(${Replay} "${USER_CMAKE_LD_FLAGS}")
-endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+	if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+	    target_link_libraries(${Replay} "${USER_CMAKE_LD_FLAGS}")
+	endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 
-if(PACKAGE_MODE)
-    install(TARGETS ${Replay} DESTINATION bin)
-else(PACKAGE_MODE)
-    install(TARGETS ${Replay} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-endif(PACKAGE_MODE)
+	if(PACKAGE_MODE)
+	    install(TARGETS ${Replay} DESTINATION bin)
+	else(PACKAGE_MODE)
+	    install(TARGETS ${Replay} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+	endif(PACKAGE_MODE)
+endif(BUILD_REPLAY_LOADERS)

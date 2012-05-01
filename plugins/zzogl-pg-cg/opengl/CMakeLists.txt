@@ -5,11 +5,6 @@ if(NOT TOP_CMAKE_WAS_SOURCED)
     It is advice to delete all wrongly generated cmake stuff => CMakeFiles & CMakeCache.txt")
 endif(NOT TOP_CMAKE_WAS_SOURCED)
 
-# Allow to build the shader files
-if(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders")
-    add_subdirectory(ZeroGSShaders)
-endif(EXISTS "${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders")
-
 # plugin name
 set(Output zzogl-cg-0.3.0)
 
@@ -183,50 +178,50 @@ endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 
 if(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${PLUGIN_DIR})
 else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-    install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
 endif(PACKAGE_MODE)
 
 ################################### Replay Loader
-set(Replay pcsx2_ZZCGReplayLoader)
-set(Static zzogl-cg-static)
+if(BUILD_REPLAY_LOADERS)
+	set(Replay pcsx2_ZZCGReplayLoader)
+	set(Static zzogl-cg-static)
 
-add_library(${Static} STATIC
-    ${zzoglSources}
-    ${zzoglHeaders}
-    ${zzoglSSources}
-    ${zzoglShaderSources}
-    ${zzoglLinuxSources}
-    ${zzoglLinuxHeaders})
+	add_library(${Static} STATIC
+	    ${zzoglSources}
+	    ${zzoglHeaders}
+	    ${zzoglSSources}
+	    ${zzoglShaderSources}
+	    ${zzoglLinuxSources}
+	    ${zzoglLinuxHeaders})
 
-target_link_libraries(${Static} Utilities)
-target_link_libraries(${Static} ${CG_LIBRARIES})
-target_link_libraries(${Static} ${GLEW_LIBRARY})
-target_link_libraries(${Static} ${OPENGL_LIBRARIES})
-target_link_libraries(${Static} ${X11_LIBRARIES})
-target_link_libraries(${Static} ${JPEG_LIBRARIES})
+	target_link_libraries(${Static} Utilities)
+	target_link_libraries(${Static} ${CG_LIBRARIES})
+	target_link_libraries(${Static} ${GLEW_LIBRARY})
+	target_link_libraries(${Static} ${OPENGL_LIBRARIES})
+	target_link_libraries(${Static} ${X11_LIBRARIES})
+	target_link_libraries(${Static} ${JPEG_LIBRARIES})
 
-add_executable(${Replay} linux_replay.cpp)
+	add_executable(${Replay} linux_replay.cpp)
 
-target_link_libraries(${Replay} ${Static})
-target_link_libraries(${Replay} Utilities)
-target_link_libraries(${Replay} ${CG_LIBRARIES})
-target_link_libraries(${Replay} ${GLEW_LIBRARY})
-target_link_libraries(${Replay} ${OPENGL_LIBRARIES})
-target_link_libraries(${Replay} ${X11_LIBRARIES})
-target_link_libraries(${Replay} ${JPEG_LIBRARIES})
+	target_link_libraries(${Replay} ${Static})
+	target_link_libraries(${Replay} Utilities)
+	target_link_libraries(${Replay} ${CG_LIBRARIES})
+	target_link_libraries(${Replay} ${GLEW_LIBRARY})
+	target_link_libraries(${Replay} ${OPENGL_LIBRARIES})
+	target_link_libraries(${Replay} ${X11_LIBRARIES})
+	target_link_libraries(${Replay} ${JPEG_LIBRARIES})
 
-target_link_libraries(${Replay} ${GTK2_LIBRARIES})
-target_link_libraries(${Replay} ${ZLIB_LIBRARIES})
+	target_link_libraries(${Replay} ${GTK2_LIBRARIES})
+	target_link_libraries(${Replay} ${ZLIB_LIBRARIES})
 
-if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
-    target_link_libraries(${Replay} "${USER_CMAKE_LD_FLAGS}")
-endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+	if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
+	    target_link_libraries(${Replay} "${USER_CMAKE_LD_FLAGS}")
+	endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 
-if(PACKAGE_MODE)
-    install(TARGETS ${Replay} DESTINATION bin)
-else(PACKAGE_MODE)
-    install(TARGETS ${Replay} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-endif(PACKAGE_MODE)
+	if(PACKAGE_MODE)
+	    install(TARGETS ${Replay} DESTINATION bin)
+	else(PACKAGE_MODE)
+	    install(TARGETS ${Replay} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+	endif(PACKAGE_MODE)
+endif(BUILD_REPLAY_LOADERS)

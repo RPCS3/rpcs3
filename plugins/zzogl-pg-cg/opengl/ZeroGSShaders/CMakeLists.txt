@@ -59,17 +59,3 @@ target_link_libraries(${Output} ${OPENGL_LIBRARIES})
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
     target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
 endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
-
-# Now build the shader
-add_custom_command(TARGET ${Output} POST_BUILD
-    COMMAND ${Output} ps2hw.fx ${CMAKE_CURRENT_BINARY_DIR}/ps2hw_cmake.dat
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl
-    )
-
-if(PACKAGE_MODE)
-    install(TARGETS ${Output} DESTINATION bin)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ps2hw_cmake.dat DESTINATION ${PLUGIN_DIR})
-else(PACKAGE_MODE)
-    install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ps2hw_cmake.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-endif(PACKAGE_MODE)
