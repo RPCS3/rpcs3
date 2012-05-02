@@ -194,7 +194,26 @@ void GSState::Reset()
 
 	m_env.Reset();
 
-	m_context = &m_env.CTXT[0];
+	PRIM = !m_env.PRMODECONT.AC ? (GIFRegPRIM*)&m_env.PRMODE : &m_env.PRIM;
+
+	UpdateContext();
+
+	UpdateVertexKick();
+
+	m_env.UpdateDIMX();
+
+	for(size_t i = 0; i < 2; i++)
+	{
+		m_env.CTXT[i].UpdateScissor();
+
+		m_env.CTXT[i].offset.fb = m_mem.GetOffset(m_env.CTXT[i].FRAME.Block(), m_env.CTXT[i].FRAME.FBW, m_env.CTXT[i].FRAME.PSM);
+		m_env.CTXT[i].offset.zb = m_mem.GetOffset(m_env.CTXT[i].ZBUF.Block(), m_env.CTXT[i].FRAME.FBW, m_env.CTXT[i].ZBUF.PSM);
+		m_env.CTXT[i].offset.tex = m_mem.GetOffset(m_env.CTXT[i].TEX0.TBP0, m_env.CTXT[i].TEX0.TBW, m_env.CTXT[i].TEX0.PSM);
+		m_env.CTXT[i].offset.fzb = m_mem.GetPixelOffset(m_env.CTXT[i].FRAME, m_env.CTXT[i].ZBUF);
+		m_env.CTXT[i].offset.fzb4 = m_mem.GetPixelOffset4(m_env.CTXT[i].FRAME, m_env.CTXT[i].ZBUF);
+	}
+
+	UpdateScissor();
 
 	m_vertex.head = 0;
 	m_vertex.tail = 0;
