@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-03-10 20:38+0100\n"
+"POT-Creation-Date: 2012-05-02 19:45+0200\n"
 "PO-Revision-Date: 2012-03-08 11:42-0000\n"
 "Last-Translator: goldeng <odakawoi@yahoo.fr>\n"
 "Language-Team: goldeng <odakawoi@yahoo.fr>\n"
@@ -2616,20 +2616,18 @@ msgid "Framelimiter"
 msgstr "Framelimiter"
 
 #: pcsx2/gui/SysState.cpp:283
-msgid ""
-"Cannot load this savestate.  The state is from an incompatible edition of "
-"PCSX2 that is either newer than this version, or is no longer supported."
+#, fuzzy
+msgid "Cannot load this savestate.  The state is an unsupported version."
 msgstr ""
-"Impossible de charger cette sauvegarde. L'emplacement provient d'une version "
-"de PCSX2 incompatible (trop ancienne, ou nouvelle)."
+"Impossible de charger la sauvegarde. Elle n'est pas supportée par cette "
+"version du logiciel."
 
 #: pcsx2/gui/SysState.cpp:290
-msgid ""
-"Cannot load this savestate. The state is an unsupported version, likely "
-"created by a newer edition of PCSX2."
+#, fuzzy
+msgid "Cannot load this savestate. The state is an unsupported version."
 msgstr ""
-"Impossible de charger cette sauvegarde. L'emplacement n'est pas supporté car "
-"il a sûrement été créé à partir d'une version de PCSX2 non-gérée."
+"Impossible de charger la sauvegarde. Elle n'est pas supportée par cette "
+"version du logiciel."
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
@@ -2697,6 +2695,20 @@ msgid ""
 msgstr ""
 "%s extensions non trouvées. microVU nécessite un CPU qui gère les extensions "
 "MMX, SSE et SSE2."
+
+#~ msgid ""
+#~ "Cannot load this savestate.  The state is from an incompatible edition of "
+#~ "PCSX2 that is either newer than this version, or is no longer supported."
+#~ msgstr ""
+#~ "Impossible de charger cette sauvegarde. L'emplacement provient d'une "
+#~ "version de PCSX2 incompatible (trop ancienne, ou nouvelle)."
+
+#~ msgid ""
+#~ "Cannot load this savestate. The state is an unsupported version, likely "
+#~ "created by a newer edition of PCSX2."
+#~ msgstr ""
+#~ "Impossible de charger cette sauvegarde. L'emplacement n'est pas supporté "
+#~ "car il a sûrement été créé à partir d'une version de PCSX2 non-gérée."
 
 #~ msgid "mVU Block Hack"
 #~ msgstr "mVU Block Hack"

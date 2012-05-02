@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-02-28 12:20+0100\n"
+"POT-Creation-Date: 2012-05-02 19:45+0200\n"
 "PO-Revision-Date: 2011-04-09 16:40+0200\n"
 "Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
@@ -2536,20 +2536,18 @@ msgid "Framelimiter"
 msgstr "Kare Sınırlama"
 
 #: pcsx2/gui/SysState.cpp:283
-msgid ""
-"Cannot load this savestate.  The state is from an incompatible edition of "
-"PCSX2 that is either newer than this version, or is no longer supported."
+#, fuzzy
+msgid "Cannot load this savestate.  The state is an unsupported version."
 msgstr ""
-"Yüklü konum yüklenemiyor. Dosya büyük ihtimalle farklı bir PCSX2 sürümüyle "
-"kaydedilmiş."
+"Kayıt konumu yüklenemiyor. Dosya bilinmeyen ya da desteklenmeyen bir sürüme "
+"ait."
 
 #: pcsx2/gui/SysState.cpp:290
-msgid ""
-"Cannot load this savestate. The state is an unsupported version, likely "
-"created by a newer edition of PCSX2."
+#, fuzzy
+msgid "Cannot load this savestate. The state is an unsupported version."
 msgstr ""
-"Yüklü konum yüklenemiyor. Dosya büyük ihtimalle farklı bir PCSX2 sürümüyle "
-"kaydedilmiş."
+"Kayıt konumu yüklenemiyor. Dosya bilinmeyen ya da desteklenmeyen bir sürüme "
+"ait."
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
@@ -2615,6 +2613,20 @@ msgid ""
 msgstr ""
 "%s Uzantıları bulunamıyor. microVU MMX, SSE ve SSE2 destekleyen bir işlemci "
 "gerektirir."
+
+#~ msgid ""
+#~ "Cannot load this savestate.  The state is from an incompatible edition of "
+#~ "PCSX2 that is either newer than this version, or is no longer supported."
+#~ msgstr ""
+#~ "Yüklü konum yüklenemiyor. Dosya büyük ihtimalle farklı bir PCSX2 "
+#~ "sürümüyle kaydedilmiş."
+
+#~ msgid ""
+#~ "Cannot load this savestate. The state is an unsupported version, likely "
+#~ "created by a newer edition of PCSX2."
+#~ msgstr ""
+#~ "Yüklü konum yüklenemiyor. Dosya büyük ihtimalle farklı bir PCSX2 "
+#~ "sürümüyle kaydedilmiş."
 
 #~ msgid "mVU Block Hack"
 #~ msgstr "mVU Block Hack"

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-02-28 12:20+0100\n"
+"POT-Creation-Date: 2012-05-02 19:45+0200\n"
 "PO-Revision-Date: 2011-09-24 20:32+0800\n"
 "Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
 "Language-Team: \n"
@@ -2461,20 +2461,14 @@ msgid "Framelimiter"
 msgstr "限帧"
 
 #: pcsx2/gui/SysState.cpp:283
-msgid ""
-"Cannot load this savestate.  The state is from an incompatible edition of "
-"PCSX2 that is either newer than this version, or is no longer supported."
-msgstr ""
-"无法读取即时存档。即时存档是由一个不兼容的 PCSX2 版本 (或新或旧) 创建的，或已"
-"经不再支持。"
+#, fuzzy
+msgid "Cannot load this savestate.  The state is an unsupported version."
+msgstr "无法加载即时存档。存档为一个未知或不支持的版本。"
 
 #: pcsx2/gui/SysState.cpp:290
-msgid ""
-"Cannot load this savestate. The state is an unsupported version, likely "
-"created by a newer edition of PCSX2."
-msgstr ""
-"无法读取即时存档。即时存档是一个不支持的版本。可能是由一个较新版本的 PCSX2 创"
-"建。"
+#, fuzzy
+msgid "Cannot load this savestate. The state is an unsupported version."
+msgstr "无法加载即时存档。存档为一个未知或不支持的版本。"
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
@@ -2532,6 +2526,20 @@ msgid ""
 "%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and "
 "SSE2 extensions."
 msgstr "%s 扩展未找到。microVU 需要一个带有 MMX, SSE 及 SSE2 扩展的主机 CPU。"
+
+#~ msgid ""
+#~ "Cannot load this savestate.  The state is from an incompatible edition of "
+#~ "PCSX2 that is either newer than this version, or is no longer supported."
+#~ msgstr ""
+#~ "无法读取即时存档。即时存档是由一个不兼容的 PCSX2 版本 (或新或旧) 创建的，"
+#~ "或已经不再支持。"
+
+#~ msgid ""
+#~ "Cannot load this savestate. The state is an unsupported version, likely "
+#~ "created by a newer edition of PCSX2."
+#~ msgstr ""
+#~ "无法读取即时存档。即时存档是一个不支持的版本。可能是由一个较新版本的 "
+#~ "PCSX2 创建。"
 
 #~ msgid "mVU Block Hack"
 #~ msgstr "mVU 数据块 Hack"

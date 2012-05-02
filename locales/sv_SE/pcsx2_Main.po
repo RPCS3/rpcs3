@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-02-28 13:06+0100\n"
+"POT-Creation-Date: 2012-05-02 19:45+0200\n"
 "PO-Revision-Date: 2012-02-28 12:54+0100\n"
 "Last-Translator: Georg Ronnert <pgert@yahoo.se>\n"
 "Language-Team: \n"
@@ -2585,20 +2585,18 @@ msgid "Framelimiter"
 msgstr "Bildbegränsare"
 
 #: pcsx2/gui/SysState.cpp:283
-msgid ""
-"Cannot load this savestate.  The state is from an incompatible edition of "
-"PCSX2 that is either newer than this version, or is no longer supported."
+#, fuzzy
+msgid "Cannot load this savestate.  The state is an unsupported version."
 msgstr ""
-"Kan inte att ladda denna sparpunkt; den är från en oförenlig utgåva av PCSX2 "
-"som antingen är nyare än denna eller som inte längre stödjes."
+"Kan inte ladda sparpunkten eftersom den är av en okänd eller ostödjandes "
+"version."
 
 #: pcsx2/gui/SysState.cpp:290
-msgid ""
-"Cannot load this savestate. The state is an unsupported version, likely "
-"created by a newer edition of PCSX2."
+#, fuzzy
+msgid "Cannot load this savestate. The state is an unsupported version."
 msgstr ""
-"Kan inte ladda denna sparpunkt; den är av en ostödjandes version och "
-"troligen skapad av en nyare utgåva av PCSX2."
+"Kan inte ladda sparpunkten eftersom den är av en okänd eller ostödjandes "
+"version."
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
@@ -2664,6 +2662,20 @@ msgid ""
 msgstr ""
 "%s förlängningar ej funna. microVU kräver en värd-CPU med "
 "instruktionsuppsättningarna MMX, SSE, och SSE2."
+
+#~ msgid ""
+#~ "Cannot load this savestate.  The state is from an incompatible edition of "
+#~ "PCSX2 that is either newer than this version, or is no longer supported."
+#~ msgstr ""
+#~ "Kan inte att ladda denna sparpunkt; den är från en oförenlig utgåva av "
+#~ "PCSX2 som antingen är nyare än denna eller som inte längre stödjes."
+
+#~ msgid ""
+#~ "Cannot load this savestate. The state is an unsupported version, likely "
+#~ "created by a newer edition of PCSX2."
+#~ msgstr ""
+#~ "Kan inte ladda denna sparpunkt; den är av en ostödjandes version och "
+#~ "troligen skapad av en nyare utgåva av PCSX2."
 
 #~ msgid "mVU Block Hack"
 #~ msgstr "mVU Block Hack"

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-02-28 12:20+0100\n"
+"POT-Creation-Date: 2012-05-02 19:45+0200\n"
 "PO-Revision-Date: 2011-04-25 19:40+0100\n"
 "Last-Translator: Bukhartsev Dmitriy <bukhartsev.dm@gmail.com>\n"
 "Language-Team: Kein <kein-of@yandex.ru>\n"
@@ -2616,20 +2616,18 @@ msgid "Framelimiter"
 msgstr "Лимит кадров"
 
 #: pcsx2/gui/SysState.cpp:283
-msgid ""
-"Cannot load this savestate.  The state is from an incompatible edition of "
-"PCSX2 that is either newer than this version, or is no longer supported."
+#, fuzzy
+msgid "Cannot load this savestate.  The state is an unsupported version."
 msgstr ""
-"Ошибка загрузки быстрого сохранения. Данное сохранение либо устарело, либо "
-"от более новой версии PCSX2."
+"Ошибка загрузки быстрого сохранения. Его версия неизвестна или не "
+"поддерживается."
 
 #: pcsx2/gui/SysState.cpp:290
-msgid ""
-"Cannot load this savestate. The state is an unsupported version, likely "
-"created by a newer edition of PCSX2."
+#, fuzzy
+msgid "Cannot load this savestate. The state is an unsupported version."
 msgstr ""
-"Ошибка загрузки файла быстрого сохранения - версия файла сохранения не "
-"поддерживается. Возможно, он был создан более новой версией PCSX2."
+"Ошибка загрузки быстрого сохранения. Его версия неизвестна или не "
+"поддерживается."
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
@@ -2698,6 +2696,20 @@ msgid ""
 msgstr ""
 "Расширение %s не обнаружено. microVU-рекомпилятору необходим процессор с "
 "поддержкой инструкций MMX, SSE, и SSE2."
+
+#~ msgid ""
+#~ "Cannot load this savestate.  The state is from an incompatible edition of "
+#~ "PCSX2 that is either newer than this version, or is no longer supported."
+#~ msgstr ""
+#~ "Ошибка загрузки быстрого сохранения. Данное сохранение либо устарело, "
+#~ "либо от более новой версии PCSX2."
+
+#~ msgid ""
+#~ "Cannot load this savestate. The state is an unsupported version, likely "
+#~ "created by a newer edition of PCSX2."
+#~ msgstr ""
+#~ "Ошибка загрузки файла быстрого сохранения - версия файла сохранения не "
+#~ "поддерживается. Возможно, он был создан более новой версией PCSX2."
 
 #~ msgid "mVU Block Hack"
 #~ msgstr "mVU Block Hack"

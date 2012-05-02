@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-02-28 12:20+0100\n"
+"POT-Creation-Date: 2012-05-02 19:45+0200\n"
 "PO-Revision-Date: 2011-09-28 22:22+0100\n"
 "Last-Translator: Miseru99 <miseru99@hotmail.com>\n"
 "Language-Team: Miseru99 <miseru99@hotmail.com>\n"
@@ -2588,20 +2588,18 @@ msgid "Framelimiter"
 msgstr "Limiter Klatek Animacji"
 
 #: pcsx2/gui/SysState.cpp:283
-msgid ""
-"Cannot load this savestate.  The state is from an incompatible edition of "
-"PCSX2 that is either newer than this version, or is no longer supported."
+#, fuzzy
+msgid "Cannot load this savestate.  The state is an unsupported version."
 msgstr ""
-"Nie można wczytać tego zapisu. Pochodzi on z niekompatybilnej wersji PCSX2. "
-"Nowszej, Starszej lub Nieobsługiwanej."
+"Nie można wgrać zapisanej gry. Pochodzi z nieznanej lub nieobsługiwanej "
+"wersji."
 
 #: pcsx2/gui/SysState.cpp:290
-msgid ""
-"Cannot load this savestate. The state is an unsupported version, likely "
-"created by a newer edition of PCSX2."
+#, fuzzy
+msgid "Cannot load this savestate. The state is an unsupported version."
 msgstr ""
-"Nie można wczytać tego zapisu. Pochodzi on z niekompatybilnej zapewne "
-"Nowszej wersji PCSX2."
+"Nie można wgrać zapisanej gry. Pochodzi z nieznanej lub nieobsługiwanej "
+"wersji."
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
@@ -2671,6 +2669,20 @@ msgid ""
 msgstr ""
 "Rozszerzenia %s nie znalezione.  Recompilator microVU wymaga procesora "
 "obsługującego rozszerzenia MMX, SSE oraz SSE2."
+
+#~ msgid ""
+#~ "Cannot load this savestate.  The state is from an incompatible edition of "
+#~ "PCSX2 that is either newer than this version, or is no longer supported."
+#~ msgstr ""
+#~ "Nie można wczytać tego zapisu. Pochodzi on z niekompatybilnej wersji "
+#~ "PCSX2. Nowszej, Starszej lub Nieobsługiwanej."
+
+#~ msgid ""
+#~ "Cannot load this savestate. The state is an unsupported version, likely "
+#~ "created by a newer edition of PCSX2."
+#~ msgstr ""
+#~ "Nie można wczytać tego zapisu. Pochodzi on z niekompatybilnej zapewne "
+#~ "Nowszej wersji PCSX2."
 
 #~ msgid "mVU Block Hack"
 #~ msgstr "mVU Block Hack"

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-03-10 20:38+0100\n"
+"POT-Creation-Date: 2012-05-02 19:45+0200\n"
 "PO-Revision-Date: 2011-12-17 01:36+0900\n"
 "Last-Translator: DeltaHF\n"
 "Language-Team: DeltaHF\n"
@@ -2552,20 +2552,16 @@ msgid "Framelimiter"
 msgstr "フレームリミッタ"
 
 #: pcsx2/gui/SysState.cpp:283
-msgid ""
-"Cannot load this savestate.  The state is from an incompatible edition of "
-"PCSX2 that is either newer than this version, or is no longer supported."
+#, fuzzy
+msgid "Cannot load this savestate.  The state is an unsupported version."
 msgstr ""
-"セーブステートをロードできませんでした。ステートは、互換性の無いPCSX2のもの"
-"で、バージョンが新しいか、サポートされていません。"
+"セーブステートをロードできません。未知又はサポートされないバージョンです。"
 
 #: pcsx2/gui/SysState.cpp:290
-msgid ""
-"Cannot load this savestate. The state is an unsupported version, likely "
-"created by a newer edition of PCSX2."
+#, fuzzy
+msgid "Cannot load this savestate. The state is an unsupported version."
 msgstr ""
-"セーブステートをロードできませんでした。ステートは、サポートされていません。"
-"より新しいバージョンのPCSX2で作成されたようです。"
+"セーブステートをロードできません。未知又はサポートされないバージョンです。"
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
@@ -2633,6 +2629,20 @@ msgid ""
 msgstr ""
 "%s 拡張命令がみつかりません。 microVUは MMX、SSE、及びSSE2 拡張命令を最低限備"
 "えたCPUが必要です。"
+
+#~ msgid ""
+#~ "Cannot load this savestate.  The state is from an incompatible edition of "
+#~ "PCSX2 that is either newer than this version, or is no longer supported."
+#~ msgstr ""
+#~ "セーブステートをロードできませんでした。ステートは、互換性の無いPCSX2のも"
+#~ "ので、バージョンが新しいか、サポートされていません。"
+
+#~ msgid ""
+#~ "Cannot load this savestate. The state is an unsupported version, likely "
+#~ "created by a newer edition of PCSX2."
+#~ msgstr ""
+#~ "セーブステートをロードできませんでした。ステートは、サポートされていませ"
+#~ "ん。より新しいバージョンのPCSX2で作成されたようです。"
 
 #~ msgid "mVU Block Hack"
 #~ msgstr "mVU Block Hack"

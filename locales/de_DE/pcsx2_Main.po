@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-02-28 12:20+0100\n"
+"POT-Creation-Date: 2012-05-02 19:45+0200\n"
 "PO-Revision-Date: 2011-04-09 01:44+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
@@ -2534,20 +2534,18 @@ msgid "Framelimiter"
 msgstr "FPS Limitierung"
 
 #: pcsx2/gui/SysState.cpp:283
-msgid ""
-"Cannot load this savestate.  The state is from an incompatible edition of "
-"PCSX2 that is either newer than this version, or is no longer supported."
+#, fuzzy
+msgid "Cannot load this savestate.  The state is an unsupported version."
 msgstr ""
-"Kann diesen Savestate nicht laden. Der State ist von einer inkompatiblem "
-"PCSX2 Version."
+"Kann Savestate nicht laden. Er ist von einer unbekannten, nicht "
+"unterstützten Version."
 
 #: pcsx2/gui/SysState.cpp:290
-msgid ""
-"Cannot load this savestate. The state is an unsupported version, likely "
-"created by a newer edition of PCSX2."
+#, fuzzy
+msgid "Cannot load this savestate. The state is an unsupported version."
 msgstr ""
-"Kann den State nicht laden. Der State ist möglicherweise von einer neueren "
-"Version von PCSX2."
+"Kann Savestate nicht laden. Er ist von einer unbekannten, nicht "
+"unterstützten Version."
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
@@ -2615,6 +2613,20 @@ msgid ""
 msgstr ""
 "%s Erweiterungen nicht gefunden. MicroVU benötigt einen Prozessor mit MMX, "
 "SSE und SSE2 Erweiterungen."
+
+#~ msgid ""
+#~ "Cannot load this savestate.  The state is from an incompatible edition of "
+#~ "PCSX2 that is either newer than this version, or is no longer supported."
+#~ msgstr ""
+#~ "Kann diesen Savestate nicht laden. Der State ist von einer inkompatiblem "
+#~ "PCSX2 Version."
+
+#~ msgid ""
+#~ "Cannot load this savestate. The state is an unsupported version, likely "
+#~ "created by a newer edition of PCSX2."
+#~ msgstr ""
+#~ "Kann den State nicht laden. Der State ist möglicherweise von einer "
+#~ "neueren Version von PCSX2."
 
 #~ msgid "mVU Block Hack"
 #~ msgstr "mVU Block Hack"
