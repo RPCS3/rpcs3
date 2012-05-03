@@ -910,6 +910,7 @@ bool AppConfig::IsOkApplyPreset(int n)
 	EmuOptions.Speedhacks			= default_Pcsx2Config.Speedhacks;
 	EmuOptions.Speedhacks.bitset	= 0; //Turn off individual hacks to make it visually clear they're not used.
 	EmuOptions.Speedhacks.vuThread	= original_SpeedHacks.vuThread; // MTVU is not modified by presets
+	EnableSpeedHacks = true;
 
 	//Actual application of current preset over the base settings which all presets use (mostly pcsx2's default values).
 	//The presets themselves might need some voodoo tuning to be even more useful. Currently they mostly modify Speedhacks.
@@ -937,7 +938,6 @@ bool AppConfig::IsOkApplyPreset(int n)
 					//EmuOptions.Gamefixes.EETimingHack = true;
 
 		case 1 :	//Recommended speed hacks.
-					EnableSpeedHacks = true;
 					EmuOptions.Speedhacks.IntcStat = true;
 					EmuOptions.Speedhacks.WaitLoop = true;
 					EmuOptions.Speedhacks.vuFlagHack = true;
