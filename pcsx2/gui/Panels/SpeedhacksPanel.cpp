@@ -269,9 +269,7 @@ Panels::SpeedHacksPanel::SpeedHacksPanel( wxWindow* parent )
 
 void Panels::SpeedHacksPanel::EnableStuff( AppConfig* configToUse )
 {
-	//Console.WriteLn("SpeedHacksPanel::EnableStuff: Using %s", configToUse?"Object":"NULL");
 	if( !configToUse ) configToUse = g_Conf;
-	//Console.WriteLn("SpeedHacksPanel::EnableStuff: EnabledPresets: %s", configToUse->EnablePresets?"true":"false");
 	wxSizerItemList& items( s_table->GetChildren() );
 
 	wxSizerItemList::iterator it	= items.begin();
@@ -279,7 +277,7 @@ void Panels::SpeedHacksPanel::EnableStuff( AppConfig* configToUse )
 
 	while( it != end )
 	{
-		(*it)->GetWindow()->Enable( m_check_Enable->GetValue() && !configToUse->EnablePresets);
+		(*it)->GetWindow()->Enable( m_check_Enable->GetValue());
 		++it;
 	}
 }
@@ -295,19 +293,22 @@ void Panels::SpeedHacksPanel::ApplyConfigToGui( AppConfig& configToApply, int fl
 	const bool enabled = configToApply.EnableSpeedHacks;
 	Pcsx2Config::SpeedhackOptions& opts=configToApply.EmuOptions.Speedhacks;
 
-	m_check_Enable		->SetValue( !!enabled );
+	m_check_Enable		->SetValue( !!enabled ).Enable(!configToApply.EnablePresets);
 
 	m_slider_eecycle	->SetValue( opts.EECycleRate + 1 );
 	m_slider_vustealer	->SetValue( opts.VUCycleSteal );
+	m_slider_eecycle->Enable(!configToApply.EnablePresets);
+	m_slider_vustealer->Enable(!configToApply.EnablePresets);
 
 	SetEEcycleSliderMsg();
 	SetVUcycleSliderMsg();
 
-	m_check_vuFlagHack	->SetValue(opts.vuFlagHack);
-	m_check_vuThread	->SetValue(opts.vuThread);
-	m_check_intc		->SetValue(opts.IntcStat);
-	m_check_waitloop	->SetValue(opts.WaitLoop);
-	m_check_fastCDVD	->SetValue(opts.fastCDVD);
+	m_check_vuFlagHack	->SetValue(opts.vuFlagHack).Enable(!configToApply.EnablePresets);
+	if( !(flags & AppConfig::APPLY_FLAG_FROM_PRESET) )
+		m_check_vuThread	->SetValue(opts.vuThread);
+	m_check_intc		->SetValue(opts.IntcStat).Enable(!configToApply.EnablePresets);
+	m_check_waitloop	->SetValue(opts.WaitLoop).Enable(!configToApply.EnablePresets);
+	m_check_fastCDVD	->SetValue(opts.fastCDVD).Enable(!configToApply.EnablePresets);
 
 	EnableStuff( &configToApply );
 
@@ -315,8 +316,6 @@ void Panels::SpeedHacksPanel::ApplyConfigToGui( AppConfig& configToApply, int fl
 	Layout();
 
 	//Console.WriteLn("SpeedHacksPanel::ApplyConfigToGui: EnabledPresets: %s", configToApply.EnablePresets?"true":"false");
-
-	this->Enable(!configToApply.EnablePresets);
 }
 
 

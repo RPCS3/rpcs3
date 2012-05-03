@@ -869,8 +869,9 @@ bool AppConfig::IsOkApplyPreset(int n)
 	//Console.WriteLn("Applying Preset %d ...", n);
 
 	//Have some original and default values at hand to be used later.
-	Pcsx2Config::GSOptions  original_GS = EmuOptions.GS;
-	AppConfig::FramerateOptions	original_Framerate = Framerate;
+	Pcsx2Config::GSOptions        original_GS = EmuOptions.GS;
+	AppConfig::FramerateOptions	  original_Framerate = Framerate;
+	Pcsx2Config::SpeedhackOptions original_SpeedHacks = EmuOptions.Speedhacks;
 	AppConfig				default_AppConfig;
 	Pcsx2Config				default_Pcsx2Config;
 
@@ -880,7 +881,7 @@ bool AppConfig::IsOkApplyPreset(int n)
 	//			2. The panels should not apply values which the presets don't control if the value is initiated by a preset.
 	//			Currently controlled by the presets:
 	//			- AppConfig:	Framerate (except turbo/slowmo factors), EnableSpeedHacks, EnableGameFixes.
-	//			- EmuOptions:	Cpu, Gamefixes, SpeedHacks, EnablePatches, GS (except for FrameLimitEnable, VsyncEnable and ManagedVsync).
+	//			- EmuOptions:	Cpu, Gamefixes, SpeedHacks (except mtvu), EnablePatches, GS (except for FrameLimitEnable, VsyncEnable and ManagedVsync).
 	//
 	//			This essentially currently covers all the options on all the panels except for framelimiter which isn't
 	//			controlled by the presets, and the entire GSWindow panel which also isn't controlled by presets
@@ -908,7 +909,7 @@ bool AppConfig::IsOkApplyPreset(int n)
 	EmuOptions.Gamefixes			= default_Pcsx2Config.Gamefixes;
 	EmuOptions.Speedhacks			= default_Pcsx2Config.Speedhacks;
 	EmuOptions.Speedhacks.bitset	= 0; //Turn off individual hacks to make it visually clear they're not used.
-
+	EmuOptions.Speedhacks.vuThread	= original_SpeedHacks.vuThread; // MTVU is not modified by presets
 
 	//Actual application of current preset over the base settings which all presets use (mostly pcsx2's default values).
 	//The presets themselves might need some voodoo tuning to be even more useful. Currently they mostly modify Speedhacks.
