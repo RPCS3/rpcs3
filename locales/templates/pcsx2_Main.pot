@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-05-02 19:45+0200\n"
+"POT-Creation-Date: 2012-05-07 17:47+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -316,7 +316,7 @@ msgstr ""
 msgid "Mostly Harmful"
 msgstr ""
 
-#: pcsx2/gui/AppConfig.cpp:1007 pcsx2/gui/AppConfig.cpp:1013
+#: pcsx2/gui/AppConfig.cpp:1008 pcsx2/gui/AppConfig.cpp:1014
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr ""
 

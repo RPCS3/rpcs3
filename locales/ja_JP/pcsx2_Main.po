@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-05-02 19:45+0200\n"
+"POT-Creation-Date: 2012-05-07 17:46+0200\n"
 "PO-Revision-Date: 2011-12-17 01:36+0900\n"
 "Last-Translator: DeltaHF\n"
 "Language-Team: DeltaHF\n"
@@ -382,7 +382,7 @@ msgstr "アクティブプラス"
 msgid "Mostly Harmful"
 msgstr "ほぼ無益"
 
-#: pcsx2/gui/AppConfig.cpp:1007 pcsx2/gui/AppConfig.cpp:1013
+#: pcsx2/gui/AppConfig.cpp:1008 pcsx2/gui/AppConfig.cpp:1014
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "既存の設定ファイルの上書きに失敗しました。権限がありません。"
 

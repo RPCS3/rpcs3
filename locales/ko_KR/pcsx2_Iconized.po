@@ -1,0 +1,517 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR PCSX2 Dev Team
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PCSX2 0.9.9\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2012-05-07 17:46+0200\n"
+"PO-Revision-Date: 2012-04-25 15:30+0900\n"
+"Last-Translator: 99skull <99skull@gmail.com>\n"
+"Language-Team: 99skull <99skull@gmail.com>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxE;pxEt\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: trunk\\\n"
+"X-Poedit-Language: Korean\n"
+"X-Poedit-Country: KOREA, REPUBLIC OF\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: common/src/Utilities/Exceptions.cpp:254
+msgid "!Notice:VirtualMemoryMap"
+msgstr ""
+"이용가능한 충분한 가상 메모리가 없거나, 또는 필요한 가상 메모리 매핑이 이미 "
+"다른 프로세서, 서비스 또는 DLL에 의해 예정되어 있습니다."
+
+#: pcsx2/CDVD/CDVD.cpp:389
+msgid "!Notice:PsxDisc"
+msgstr ""
+"주의! PS1 게임 디스크는 PCSX2에서 지원되지 않습니다. 만약 PS1 게임 구동을 원"
+"하면 ePSXe 또는 PCSX 같은 에뮬레이터를 다운받아야 합니다."
+
+#: pcsx2/System.cpp:114
+msgid "!Notice:Recompiler:VirtualMemoryAlloc"
+msgstr ""
+"주의! 이 리컴파일러가 내부캐시를 위한 인접한 메모리 예약을 할 수 없습니다. "
+"이 에러는 낮은 가상 메모리 또는 작거나 사용할 수 없는 스왑파일 때문에 일어납"
+"니다. 또는 많은 메모리를 점유하는 다른 프로그램 때문에도 일어납니다. PCSX2 리"
+"컴파일러를 위한 캐시크기를 기본값으로 줄이고 다시 시도할 수 있습니다."
+
+#: pcsx2/System.cpp:348
+msgid "!Notice:EmuCore::MemoryForVM"
+msgstr ""
+"주의! PCSX2가 PS2 가상머신에 필요함 메모리를 할당할 수 없습니다. 메모리를 확"
+"보하고 다시 시도해 주세요."
+
+#: pcsx2/gui/AppInit.cpp:43
+msgid "!Notice:Startup:NoSSE2"
+msgstr ""
+"경고! 컴퓨터가 PCSX2 리컴파일러와 플러그인이 요구하는, SSE2를 지원하지 않습니"
+"다. 당신의 선택은 제한되고, 에뮬레이터는 *매우* 느려집니다."
+
+#: pcsx2/gui/AppInit.cpp:162
+msgid "!Notice:RecompilerInit:Header"
+msgstr "경고: 설정된 PS2 리컴파일러 일부가 초기화 실패해서 사용할 수 없습니다:"
+
+#: pcsx2/gui/AppInit.cpp:211
+msgid "!Notice:RecompilerInit:Footer"
+msgstr ""
+"주의! 리컴파일러는 PCSX2 구동에 꼭 필요하지 않습니다, 그러나 일반적으로 에뮬"
+"레이션 속도를 크게 높여줍니다. 에러를 해결하려면 위의 리컴파일러를 수동으로 "
+"다시 사용하게 해야 합니다."
+
+#: pcsx2/gui/AppMain.cpp:546
+msgid "!Notice:BiosDumpRequired"
+msgstr ""
+"PCSX2를 구동하려면 PS2 바이오스가 필요합니다. 법적인 이유로, 당신은 *반드시* "
+"소유한(빌린것은 안됨) 실제 PS2 기계에서 얻어야 합니다. 자세한 설명은 포럼의 "
+"질문답변에 문의하세요."
+
+#: pcsx2/gui/AppMain.cpp:629
+msgid "!Notice Error:Thread Deadlock Actions"
+msgstr ""
+"주의! 에러:스레드 교착상태\n"
+"스레드를 계속 기다리려면 '무시'\n"
+"스레드를 취소하려면 '취소'\n"
+"PCSX2를 즉시 종료하려면 '종료'"
+
+#: pcsx2/gui/AppUserMode.cpp:57
+msgid "!Notice:PortableModeRights"
+msgstr ""
+"이 폴더들을 생성하고 그것에 쓸 수 있는 유저권한이 있는지 확인해 주세요. 그렇"
+"지 않으면 필요한 폴더들을 만들 수 있는 (관리자) 권한으로 높인 후 PCSX2를 재구"
+"동하세요. 만약 이 컴퓨터에서 권한을 높일 수 없다면, 유저문서 모드(아래 버튼 "
+"클릭)로 전환할 필요가 있습니다."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
+msgid "!ContextTip:ChangingNTFS"
+msgstr ""
+"NTFS 압축은 윈도우 탐색기에서 파일속성 부분에서 수동으로 언제든지 바꿀 수 있"
+"습니다."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+msgid "!ContextTip:Folders:Settings"
+msgstr ""
+"이곳은 대부분의 플러그인(일부 오래된 플러그인은 해당 안함)에 의해 만들어진 설"
+"정파일을 PCSX2가 저장하는 폴더입니다."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
+msgid "!Panel:Folders:Settings"
+msgstr ""
+"여기서 PCSX2 설정을 위해 특정 폴더를 선택할 수 있습니다. 만약 해당 폴더에 "
+"PCSX2 설정이 존재하면, 가져오거나 덮어쓸건지 물어보게 됩니다."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
+msgid "!Wizard:Welcome"
+msgstr ""
+"이 마법사는 플러그인, 메모리카드와 바이오스 설정을 도와줄 것입니다. 설치가 처"
+"음 이라면 readme 파일과 설정가이드를 읽어보는 걸 권장합니다."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
+msgid "!Wizard:Bios:Tutorial"
+msgstr ""
+"PCSX2는 구동하려면 *합법적인* PS2 바이오스 사본이 필요합니다.\n"
+"친구나 인터넷을 통해 얻은 사본은 이용해서는 안됩니다.\n"
+"플스2 기기에서 *본인이* 바이오스를 덤프해야만 합니다."
+
+#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
+msgid "!Notice:ImportExistingSettings"
+msgstr ""
+"주의! 기존설정 가져오기\n"
+"기존 %s 설정이 설정폴더에서 발견되었습니다. 이 설정을 가져오거나 그것으로 %s "
+"기본값을 덮어쓰겠습니까?"
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
+msgid "!Panel:Mcd:NtfsCompress"
+msgstr ""
+"NTFS 압축은 내장되어 있고, 빠르고, 완전히 믿을만합니다;  그리고 보통 메모리카"
+"드를 매우 잘 압축합니다(이 옵션을 매우 권장합니다)."
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
+msgid "!Panel:Mcd:EnableEjection"
+msgstr ""
+"상태저장을 불러온 뒤 메모리카드 내용을 강제로 재정렬 해서 메모리카드 손상을 "
+"피합니다. 모든 게임에 호환되지는 않습니다(기타 히어로)."
+
+#: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
+msgid "!Panel:StuckThread:Heading"
+msgstr ""
+"스레드 '%s'가 응답하지 않습니다. 교착상태에 빠졌거나, 단지 *매우* 느리게 동작"
+"하는 것일 수 있습니다."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid "!Panel:HasHacksOverrides"
+msgstr ""
+"경고! 당신은 설정을 덮어쓰는 커맨드라인 옵션으로 PCSX2를 동작하고 있습니다. "
+"이 커맨드라인 옵션은 설정 다이얼로그에 반영되지 않고, 어떤 변화를 적용하려 해"
+"도 되지 않을 것입니다."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr ""
+"경고! 당신은 설정된 플러그인 또는 폴더 설정을 덮어쓰는 커맨드라인 옵션으로 "
+"PCSX2를 동작하고 있습니다. 이 커맨드라인 옵션은 설정 다이얼로그에 반영되지 않"
+"고, 어떤 변화를 적용하려 해도 되지 않을 것입니다."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+"프리셋을 스피드핵, 일부 리컴파일러 옵션, 속도를 올린다고 알려진 일부 게임수정"
+"에 적용합니다.\n"
+"알려진 중요 게임수정이 자동으로 적용됩니다.\n"
+"\n"
+"프리셋 정보:\n"
+"1 -   가장 정확한 에뮬레이션 그러나 또한 가장 느립니다.\n"
+"3 --> 균형잡힌 스피드핵과 호환성을 적용합니다.\n"
+"4 -   일부 좀 더 공격적인 핵을 적용.\n"
+"6 -   너무 많은 핵을 써서 아마도 대부분의 게임에서 느려질 것입니다."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+msgid "!Notice:Tooltip:Presets:Checkbox"
+msgstr ""
+"프리셋을 스피드핵, 일부 리컴파일러 옵션, 속도를 올린다고 알려진 일부 게임수정"
+"에 적용합니다.\n"
+"알려진 중요 게임수정이 자동으로 적용됩니다.\n"
+"\n"
+"--> 수동으로 설정을 변경하려면 체크해제(현재 프리셋을 기본으로)"
+
+#: pcsx2/gui/IsoDropTarget.cpp:28
+msgid "!Notice:ConfirmSysReset"
+msgstr ""
+"이 동작은 기존의 PS2 가상머신 상태를 리셋할 것입니다; 현재 모든 과정을 잃게 "
+"됩니다. 괜찮습니까?"
+
+#: pcsx2/gui/MainMenuClicks.cpp:106
+msgid "!Notice:DeleteSettings"
+msgstr ""
+"이 명령은 %s 설정을 지우고 최초의 설정마법사를 재시작하도록 합니다. 이 동작 "
+"후에 %s 를 수동으로 재시작할 필요가 있습니다.\n"
+"\n"
+"경고! 확인을 누르면 %s 의 *모든* 설정을 지우고 강제로 프로그램을 종료하기 때"
+"문에 현재 에뮬레이션 과정을 잃어 버립니다. 정말 괜찮겠습니까?\n"
+"\n"
+"(주의: 플러그인 설정은 영향받지 않습니다)"
+
+#: pcsx2/gui/MemoryCardFile.cpp:78
+msgid "!Notice:Mcd:HasBeenDisabled"
+msgstr ""
+"PS2 슬롯 %d 가 자동으로 사용안함으로 되었습니다. 문제를 고치고\n"
+"메인메뉴의 설정:메모리카드를 통해서 언제든 재사용할 수 있습니다."
+
+#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
+msgid "!Notice:BIOS:InvalidSelection"
+msgstr ""
+"유효한 바이오스를 선택해주세요. 만약 유효한 선택을 할 수 없다면, 취소를 눌러"
+"서 설정창을 닫으세요."
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:111
+msgid "!Panel:EE/IOP:Heading"
+msgstr "주의! 대부분의 게임들은 기본설정으로 잘 구동됩니다."
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:178
+msgid "!Panel:VUs:Heading"
+msgstr "주의! 대부분의 게임들은 기본설정으로 잘 구동됩니다."
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:69
+msgid "!Notice:DirPicker:CreatePath"
+msgstr "특정한 경로/폴더가 없습니다. 만들겠습니까?"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
+msgid "!ContextTip:DirPicker:UseDefault"
+msgstr ""
+"이것이 체크되면 이 폴더가 자동으로 PCSX2의 현재 유저모드 설정과 관계된 기본값"
+"이 됩니다."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:55
+msgid "!ContextTip:Window:Zoom"
+msgstr ""
+"줌 = 100: 전체 이미지를 자르지 않고 창크기에 맞춥니다.\n"
+"100 이상/이하: 줌 인/아웃\n"
+"0: 검은바가 사라질 때까지(화면비율 유지, 이미지 일부가 창 밖으로 나감) 자동으"
+"로 줌-인.\n"
+"  주의: 일부 게임들은 원래 화면에 검은바가 있고, 이것은 '0'으로 제거되지 않습"
+"니다.\n"
+"\n"
+"키보드: CTRL + NUMPAD-플러스: 줌-인, CTRL + NUMPAD-마이너스: 줌-아웃, CTRL + "
+"NUMPAD-별표: 100/0 전환\""
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Vsync"
+msgstr ""
+"수직동기는 화면 붕괴현상(tearing)을 제거하지만 일반적으로 큰 성능저하가 있습"
+"니다. 이것은 보통 전체화면 모드에만 사용하고, 모든 GS 플러그인에서 동작하지"
+"는 않습니다."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr ""
+"프레임비율이 정확히 최대속도일 때만 수직동기를 사용합니다. 속도가 떨어지면, "
+"수직동기는 성능저하를 피하기 위해 꺼집니다.\n"
+"주의: 이것은 현재 DX10/11 하드웨어 렌더링으로 설정된 GSdx 플러그인에서만 잘 "
+"동작합니다. 다른 플러그인 또는 다른 렌더링 모드는 이것을 무시하거나 모드가 바"
+"뀔 때마다 깜빡거리는 검은 화면을 만듭니다."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:76
+msgid "!ContextTip:Window:HideMouse"
+msgstr ""
+"마우스 커서를 GS 창 안에서 안보이게 하려면 체크하세요; 마우스를 게임에서 주"
+"된 컨트롤러로 사용할 때 유용합니다. 기본설정에 의해 마우스는 움직임이 없으면 "
+"2초 뒤에 자동으로 숨겨집니다."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:82
+msgid "!ContextTip:Window:Fullscreen"
+msgstr ""
+"에뮬레이션을 시작할 때 또는 일시중지후 계속할 때 자동으로 전체화면 모드로 전"
+"환되게 합니다. 이 옵션과 관계없이 언제라도 alt-enter 로 전체화면 전환이 가능"
+"합니다."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:93
+msgid "!ContextTip:Window:HideGS"
+msgstr ""
+"ESC키 또는 에뮬레이터 중지를 눌렀을 때 크고 거슬리는 GS 창을 완전히 숨겨줍니"
+"다."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr ""
+"영향을 받는다고 알려진 게임들:\n"
+" * 디지털 데빌 사가 (FMV 와 멈춤을 수정)\n"
+" * SSX (그래픽 문제와 멈춤을 수정)\n"
+" * 레지던트 이블: Dead Aim (알아보기 힘든 텍스쳐 발생)"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+msgid "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr ""
+"영향을 받는다고 알려진 게임들:\n"
+" * 블리치 블레이드 배틀러\n"
+" * 그로우랜서 2, 3\n"
+" * 위저드리\n"
+" * 나루토 우즈마키인전, 나뭇잎스피릿"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
+msgid "!ContextTip:Gamefixes:DMA Busy hack"
+msgstr ""
+"영향을 받는다고 알려진 게임들:\n"
+" * 마나 케미아1(\"캠퍼스를 나갈\" 때)"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
+msgstr ""
+"영향을 받는다고 알려진 게임들:\n"
+" * 테스트 드라이브 언리미티드\n"
+" * 트랜스포머"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
+msgid "!Panel:Gamefixes:Compat Warning"
+msgstr ""
+"게임수정들은 일부 게임에서 잘못된 에뮬레이션을 바로잡을 수 있습니다.\n"
+"그것들은 또한 호환성 또는 성능 문제를 일으킬 수도 있습니다.\n"
+"\n"
+"이것 대신 메인메뉴의 '자동 게임 수정'을 사용하는 것이 좋고, 이곳은 놔두세요\n"
+"('자동'의 의미: 일부 게임에 검증된 특정한 설정을 선택적으로 사용하는 것)"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+msgid "!Notice:Mcd:Delete"
+msgstr ""
+"포맷된 메모리카드 '%s' 를 지우려고 합니다. 카드의 모든 데이터가 사라집니다! "
+"정말로 지우는게 확실합니까?"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:758
+msgid "!Notice:Mcd:CantDuplicate"
+msgstr "실패: 복사는 오직 빈 PS2-포트 또는 파일 시스템에만 허용됩니다."
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:801
+msgid "!Notice:Mcd:Copy Failed"
+msgstr "실패: 대상 메모리카드 '%s' 가 사용중 입니다."
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+msgid "!Panel:Usermode:Explained"
+msgstr ""
+"PCSX2 유저레벨 문서(메모리카드, 스냅샷, 설정 그리고 상태저장)를 위해 아래에 "
+"원하는 기본 위치를 선택해 주세요. 이 폴더 위치는 설정창을 이용해서 언제든 변"
+"경될 수 있습니다."
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:41
+msgid "!Panel:Usermode:Warning"
+msgstr ""
+"PCSX2 유저레벨 문서(메모리카드, 스냅샷, 설정 그리고 상태저장)를 위해 여기에 "
+"원하는 기본 위치를 선택해 주세요. 이 옵션은 오직 설치 기본값으로 사용하기 위"
+"해 설정된 표준경로에만 영향을 미칩니다."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:40
+msgid "!ContextTip:Folders:Savestates"
+msgstr ""
+"이 폴더는 상태저장을 저장할 곳입니다; 메뉴/툴바 또는 F1/F3(저장/로드) 로 만들"
+"어지는 상태저장파일을 저장."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:50
+msgid "!ContextTip:Folders:Snapshots"
+msgstr ""
+"이 폴더는 스냅샷을 저장할 곳입니다. 실제 스냅샷 이미지 포맷과 스타일은 사용되"
+"는 GS 플러그인에 따라 달라집니다."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:60
+msgid "!ContextTip:Folders:Logs"
+msgstr ""
+"이 폴더는 로그파일과 진단용 덤프파일을 저장할 곳입니다. 대부분의 플러그인들"
+"은 이 폴더를 사용할 것입니다, 그러나 일부 오래된 플러그인들은 이것을 무시할 "
+"수 있습니다."
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+msgid "!Notice:PluginSelector:ConfirmShutdown"
+msgstr ""
+"경고! 플러그인 변경은 완전 종료와 PS2 가상머신의 리셋이 필요합니다. PCSX2는 "
+"상태를 저장하고 복구하려고 할 것입니다, 그러나 새로 선택된 플러그인이 호환성"
+"이 없어 회복에 실패하면, 현재 과정을 잃어버리게 됩니다.\n"
+"\n"
+"정말로 지금 설정을 적용하겠습니까? "
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
+msgid "!Notice:PluginSelector:ApplyFailed"
+msgstr ""
+"모든 플러그인은 %s 구동을 위해 적합하게 선택되어야 합니다. 만약 플러그인이 없"
+"거나 %s 설치가 불완전해서 적합한 선택을 할 수 없다면, 취소를 눌러서 설정창을 "
+"닫으세요."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
+msgid "!Panel:Speedhacks:EECycleX1"
+msgstr ""
+"1 - 기본 사이클비율. 이것이 실제 PS2 이모션엔진(EE)의 실제 속도에 가장 가깝습"
+"니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
+msgid "!Panel:Speedhacks:EECycleX2"
+msgstr ""
+"2 - EE의 사이클비율을 33% 감소시킵니다. 높은 호환성으로 대부분의 게임에서 약"
+"간의 속도상승을 가져옵니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
+msgid "!Panel:Speedhacks:EECycleX3"
+msgstr ""
+"3 - EE의 사이클비율을 50% 감소시킵니다. 적당한 속도상승이 있지만, 많은 동영상"
+"에서 음성끊김을 *일으킬* 수 있습니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+msgid "!Panel:Speedhacks:VUCycleStealOff"
+msgstr "0 - VU사이클 훔치기를 사용 안합니다. 가장 호환성이 높은 설정!"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
+msgid "!Panel:Speedhacks:VUCycleSteal1"
+msgstr ""
+"1 - 약간의 VU사이클 훔치기. 더 낮은 호환성, 그러나 대분의 게임에서 약간의 속"
+"도상승이 있습니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
+msgid "!Panel:Speedhacks:VUCycleSteal2"
+msgstr ""
+"2 - 적당한 VU사이클 훔치기. 호환성이 많이 낮아짐, 그러나 일부 게임에서 상당"
+"한 속도상승이 있습니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
+msgid "!Panel:Speedhacks:VUCycleSteal3"
+msgstr ""
+"3 - 최대로 VU사이클 훔치기. 제한적으로 유용함, 대부분의 게임에서 화면을 깜빡"
+"이게 하거나 느리게 만듭니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
+msgid "!Panel:Speedhacks:Overview"
+msgstr ""
+"스피드핵은 보통 에뮬레이션 속도를 증가시키지만, 그래픽문제, 소리깨짐, 거짓 "
+"FPS 표시를 일으킵니다. 에뮬레이션에 문제가 발생하면, 제일 먼저 이것을 끄세요."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
+msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+msgstr ""
+"슬라이더의 값을 높게 설정할수록 효과적으로 이모션엔진(EE)의 R5900 cpu의 클럭"
+"속도를 감소시킵니다, 그리고 일반적으로 실제 PS2 하드웨어의 최대성능을 이용하"
+"지 않는 게임에서 큰 속도상승을 가져옵니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
+msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+msgstr ""
+"이 슬라이더는 이모션엔진(EE)에서 벡터유닛(VU)이 훔쳐올 사이클 양을 조절합니"
+"다. 값을 높일수록 게임구동 중 각각의 VU 마이크로프로그램이 EE에서 훔치는 사이"
+"클 수가 증가합니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+msgid "!ContextTip:Speedhacks:vuFlagHack"
+msgstr ""
+"상태 플래그를 항상 업데이트 하지 않고, 블럭을 읽어들일 때만 업데이트합니다. "
+"이것은 대부분의 경우 안전하고, 슈퍼VU는 기본적으로 비슷한 동작을 합니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr ""
+"VU1이 자신의 스레드에서만 동작합니다(마이크로VU1 만 해당). 일반적으로 3개 이"
+"상의 코어를 가진 CPU에서 속도가 상승합니다. 이것은 대부분의 게임에서 안전하지"
+"만, 소수의 호환되지 않는 게임에서는 멈출 수 있습니다. GS가 제한된 게임의 경"
+"우, 속도가 느려질 수 있습니다.(특히 듀얼코어 CPU에서)"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
+msgid "!ContextTip:Speedhacks:INTC"
+msgstr ""
+"이 핵은 주로 3D가 아닌 RPG게임을 포함해서, 수직동기 대기를 위해 INTC 상태 레"
+"지스터를 사용하는 게임에서 잘 동작합니다. 이런 수직동기 방법을 사용하지 않는 "
+"게임들은 이 핵으로 약간 혹은 전혀 속도상승이 없습니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
+msgid "!ContextTip:Speedhacks:BIFC0"
+msgstr ""
+"주로 커널의 0x81FC0 주소에 있는 EE 유휴루프를 대상으로 합니다, 이 핵은 예정"
+"된 이벤트가 다른 유닛의 에뮬레이션을 발생시키기 전까지, 모든 반복처리를 위해"
+"서 같은 머신 상태를 유지하도록 보장하는 형태의 루프를 찾습니다. 그러한 루프"
+"의 일회 반복 후에, 다음 이벤트까지의 시간 또는 어느 쪽이든 먼저 오는 프로세서"
+"의 타임 슬라이스의 종료까지의 시간을 줄입니다."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
+msgid "!ContextTip:Speedhacks:fastCDVD"
+msgstr ""
+"하드로더에 문제있는 것으로 알려진 게임의 하드로더 호환성 리스트를 체크합니다."
+"(종종 필요에 따라 '모드1' 또는 '느린 DVD'로 표시됩니다)"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:37
+msgid "!ContextTip:Framelimiter:Disable"
+msgstr ""
+"프레임제한이 사용 안될 때, 터보와 슬로우 모드도 사용할 수 없음을 주의하세요."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
+msgid "!Panel:Frameskip:Heading"
+msgstr ""
+"주의! PS2 하드웨어 디자인 때문에, 정확한 프레임 생략은 불가능합니다. 이것을 "
+"사용하면 일부게임에서 심각한 그래픽문제를 일으킬 수 있습니다."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
+msgid "!ContextTip:GS:SyncMTGS"
+msgstr ""
+"만약 MTGS 스레드 동기화가 멈춤이나 그래픽문제를 일으킨다고 생각되면 이것을 사"
+"용하세요."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
+msgid "!ContextTip:GS:DisableOutput"
+msgstr ""
+"MTGS 스레드나 GPU 오버헤드에 의한 어떤 벤치마크 장애요소를 제거합니다. 이 옵"
+"션은 상태저장과 같이 사용되는 것이 가장 좋습니다:\n"
+"원하는 장면에서 상태를 저장하고, 이 옵션을 켠후, 상태저장을 불러옵니다.\n"
+"\n"
+"경고: 이 옵션은 상황에 따라 사용될 수 있지만 보통은 상황에 따라 사용될 수 없"
+"습니다.(보통은 비디오 화면이 지저분해짐)"
+
+#: pcsx2/vtlb.cpp:710
+msgid "!Notice:HostVmReserve"
+msgstr ""
+"PCSX2를 구동하기에 시스템의 가상 자원이 너무 낮습니다. 이것은 작거나 사용할 "
+"수 없는 스왑파일 때문에 일어나거나, 또는 리소스를 점유하는 다른 프로그램 때문"
+"에 일어납니다."
+
+#: pcsx2/x86/sVU_zerorec.cpp:363
+msgid "!Notice:superVU:VirtualMemoryAlloc"
+msgstr ""
+"메모리 부족(혹은 그 비슷한 종류): 슈퍼VU 리컴파일러가 필요한 범위의 특정 메모"
+"리를 확보하지 못했습니다, 그래서 사용할 수 없습니다. 이것은 치명적인 에러는 "
+"아닙니다, 슈퍼VU는 예전 것이니, 대신에 마이크로VU를 쓰세요. :)"
