@@ -432,7 +432,11 @@ void CRenderTarget::Update(int context, CRenderTarget* pdepth)
 		// Fix in r133 -- FFX movies and Gust backgrounds!
 		//SetTexVariablesInt(0, 0*(AA.x || AA.y) ? 2 : 0, texframe, false, &ppsBitBlt[!!s_AAx], 1);
 		SetTexVariablesInt(0, 0, texframe, false, &ppsBitBlt[bit_idx], 1);
+#ifdef GLSL4_API
+		ZZshGLSetTextureParameter(ppsBitBlt[bit_idx].prog, ppsBitBlt[bit_idx].sMemory[context], vb[0].pmemtarg->ptex->tex, "BitBlt.memory");
+#else
 		ZZshGLSetTextureParameter(ppsBitBlt[bit_idx].prog, ppsBitBlt[bit_idx].sMemory, vb[0].pmemtarg->ptex->tex, "BitBlt.memory");
+#endif
 
 		v = float4(1, 1, 0.0f, 0.0f);
 		ZZshSetParameter4fv(pvsBitBlt.prog, pvsBitBlt.sBitBltTex, v, "g_fBitBltTex");

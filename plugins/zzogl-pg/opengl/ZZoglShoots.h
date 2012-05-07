@@ -22,14 +22,21 @@
 
 void SaveSnapshot(const char* filename);
 bool SaveRenderTarget(const char* filename, int width, int height, int jpeg);
-bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height);
+bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height, int ext_format = 0);
 bool SaveJPEG(const char* filename, int width, int height, const void* pdata, int quality);
 bool SaveTGA(const char* filename, int width, int height, void* pdata);
+bool SaveBMP(const char* filename, int width, int height, void* pdata);
 void Stop_Avi();
 void Delete_Avi_Capture();
 
 void StartCapture();
 void StopCapture();
 void CaptureFrame();
+
+enum {
+	EXT_TGA = 0,
+	EXT_BMP = 1,
+	EXT_JPG = 2
+};
 
 #endif // ZZOGLSHOOTS_H_INCLUDED

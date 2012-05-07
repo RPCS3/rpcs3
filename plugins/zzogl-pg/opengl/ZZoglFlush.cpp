@@ -688,7 +688,7 @@ inline float4 FlushSetPageOffset(FRAGMENTSHADER* pfragment, int shadertype, CRen
 	// zoe2
 	if (PSMT_ISZTEX(ptextarg->psm)) vpageoffset.w = -1.0f;
 
-	ZZshSetParameter4fv(pfragment->fPageOffset, vpageoffset, "g_fPageOffset");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fPageOffset, vpageoffset, "g_fPageOffset");
 
 	return vpageoffset;
 }
@@ -706,7 +706,7 @@ inline float4 FlushSetTexOffset(FRAGMENTSHADER* pfragment, int shadertype, VB& c
 		v.y = 16.0f / (float)curvb.tex0.th;
 		v.z = 0.5f * v.x;
 		v.w = 0.5f * v.y;
-		ZZshSetParameter4fv(pfragment->fTexOffset, v, "g_fTexOffset");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexOffset, v, "g_fTexOffset");
 	}
 	else if (shadertype == 4)
 	{
@@ -715,7 +715,7 @@ inline float4 FlushSetTexOffset(FRAGMENTSHADER* pfragment, int shadertype, VB& c
 		v.y = 16.0f / (float)ptextarg->fbh;
 		v.z = -1;
 		v.w = 8.0f / (float)ptextarg->fbh;
-		ZZshSetParameter4fv(pfragment->fTexOffset, v, "g_fTexOffset");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexOffset, v, "g_fTexOffset");
 	}
 
 	return v;
@@ -749,7 +749,7 @@ inline float4 FlushTextureDims(FRAGMENTSHADER* pfragment, int shadertype, VB& cu
 	if (shadertype == 4)
 		vTexDims.z += 8.0f;
 
-	ZZshSetParameter4fv(pfragment->fTexDims, vTexDims, "g_fTexDims");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fTexDims, vTexDims, "g_fTexDims");
 
 	return vTexDims;
 }
@@ -799,7 +799,7 @@ inline FRAGMENTSHADER* FlushUseExistRenderTarget(VB& curvb, CRenderTarget* ptext
 	float4 vTexDims = FlushTextureDims(pfragment, shadertype, curvb, ptextarg);
 
 	if (pfragment->sCLUT != NULL && ptexclut != 0)
-		ZZshGLSetTextureParameter(pfragment->sCLUT, ptexclut, "CLUT");
+		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sCLUT, ptexclut, "CLUT");
 
 	FlushApplyResizeFilter(curvb, dwFilterOpts, ptextarg, context);
 
@@ -846,13 +846,17 @@ inline void FlushSetTexture(VB& curvb, FRAGMENTSHADER* pfragment, CRenderTarget*
 
 	// have to enable the texture parameters(curtest.atst)
 	if( curvb.ptexClamp[0] != 0 ) 
-		ZZshGLSetTextureParameter(pfragment->sBitwiseANDX, curvb.ptexClamp[0], "Clamp 0");
+		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sBitwiseANDX, curvb.ptexClamp[0], "Clamp 0");
 	
 	if( curvb.ptexClamp[1] != 0 ) 
-		ZZshGLSetTextureParameter(pfragment->sBitwiseANDY, curvb.ptexClamp[1], "Clamp 1");
+		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sBitwiseANDY, curvb.ptexClamp[1], "Clamp 1");
 	
 	if( pfragment->sMemory != NULL && s_ptexCurSet[context] != 0) 
-		ZZshGLSetTextureParameter(pfragment->sMemory, s_ptexCurSet[context], "Clamp memory");
+#ifdef GLSL4_API
+		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sMemory[context], s_ptexCurSet[context], "Clamp memory");
+#else
+		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sMemory, s_ptexCurSet[context], "Clamp memory");
+#endif
 }
 
 // Reset program and texture variables;
@@ -975,7 +979,7 @@ inline void AlphaRenderFBA(VB& curvb, FRAGMENTSHADER* pfragment)
 	// needs to be before RenderAlphaTest
 	if ((gs.pabe) || (curvb.fba.fba && !ZZOglGet_fbmHighByte(curvb.frame.fbm)) || (s_bDestAlphaTest && bCanRenderStencil))
 	{
-		RenderFBA(curvb, pfragment->sOneColor);
+		RenderFBA(curvb, pfragment);
 	}
 
 }
@@ -990,7 +994,7 @@ inline u32 AlphaRenderAlpha(VB& curvb, const pixTest curtest, FRAGMENTSHADER* pf
 		if ((bNeedBlendFactorInAlpha || ((curtest.ate && curtest.atst > ATST_ALWAYS) && (curtest.aref > 0x80))))
 		{
 			// need special stencil processing for the alpha
-			RenderAlphaTest(curvb, pfragment->sOneColor);
+			RenderAlphaTest(curvb, pfragment);
 			dwUsingSpecialTesting = 1;
 		}
 
@@ -1003,13 +1007,13 @@ inline u32 AlphaRenderAlpha(VB& curvb, const pixTest curtest, FRAGMENTSHADER* pf
 			v.w *= 255;
 		}
 
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 	}
 	else
 	{
 		// not using blending so set to defaults
 		float4 v = exactcolor ? float4(1, 510 * 255.0f / 256.0f, 0, 0) : float4(1, 2 * 255.0f / 256.0f, 0, 0);
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 
 	}
 
@@ -1100,7 +1104,7 @@ inline void AlphaPabe(VB& curvb, FRAGMENTSHADER* pfragment, int exactcolor)
 
 		if (exactcolor) v.y *= 255;
 
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 
 		Draw(curvb);
 
@@ -1169,7 +1173,7 @@ inline void AlphaFailureTestJob(VB& curvb, const pixTest curtest,  FRAGMENTSHADE
 
 		if (exactcolor) { v.y *= 255; v.w *= 255; }
 
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 
 		glEnable(GL_BLEND);
 		GL_STENCILFUNC(GL_EQUAL, s_stencilref | STENCIL_FBA, s_stencilmask | STENCIL_FBA);
@@ -1193,7 +1197,7 @@ inline void AlphaFailureTestJob(VB& curvb, const pixTest curtest,  FRAGMENTSHADE
 
 		if (exactcolor) v.y *= 255;
 
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 
 		Draw(curvb);
 
@@ -1245,7 +1249,7 @@ inline void AlphaSpecialTesting(VB& curvb, FRAGMENTSHADER* pfragment, u32 dwUsin
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
 		float4 v = float4(0, exactcolor ? 510.0f : 2.0f, 0, 0);
-		ZZshSetParameter4fv(pfragment->sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 		Draw(curvb);
 
 		// don't need to restore
@@ -1260,7 +1264,7 @@ inline void AlphaDestinationTest(VB& curvb, FRAGMENTSHADER* pfragment)
 	{
 		if (curvb.fba.fba)
 		{
-			ProcessFBA(curvb, pfragment->sOneColor);
+			ProcessFBA(curvb, pfragment);
 		}
 		else if (s_bDestAlphaTest && bCanRenderStencil)
 		{
@@ -1383,7 +1387,7 @@ void FlushIfNecesary(void* ptr)
 	if (vb[1].prndr == ptr || vb[1].pdepth == ptr) Flush(1);
 }
 
-inline void RenderFBA(const VB& curvb, ZZshParameter sOneColor)
+inline void RenderFBA(const VB& curvb, FRAGMENTSHADER* pfragment)
 {
 	// add fba to all pixels
 	GL_STENCILFUNC(GL_ALWAYS, STENCIL_FBA, 0xff);
@@ -1404,7 +1408,7 @@ inline void RenderFBA(const VB& curvb, ZZshParameter sOneColor)
 
 	float4 v(1,2,0,0);
 
-	ZZshSetParameter4fv(sOneColor, v, "g_fOneColor");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 
 	Draw(curvb);
 
@@ -1427,7 +1431,7 @@ inline void RenderFBA(const VB& curvb, ZZshParameter sOneColor)
 	GL_ZTEST(curvb.test.zte);
 }
 
-__forceinline void RenderAlphaTest(const VB& curvb, ZZshParameter sOneColor)
+__forceinline void RenderAlphaTest(const VB& curvb, FRAGMENTSHADER* pfragment )
 {
 	if (!g_bUpdateStencil) return;
 
@@ -1443,7 +1447,7 @@ __forceinline void RenderAlphaTest(const VB& curvb, ZZshParameter sOneColor)
 
 	float4 v(1,2,0,0);
 
-	ZZshSetParameter4fv(sOneColor, v, "g_fOneColor");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 
 	// or a 1 to the stencil buffer wherever alpha passes
 	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
@@ -1467,7 +1471,7 @@ __forceinline void RenderAlphaTest(const VB& curvb, ZZshParameter sOneColor)
 	if (curvb.test.ate && curvb.test.atst > ATST_ALWAYS && curvb.test.aref > 0x80)
 	{
 		v = float4(1,1,0,0);
-		ZZshSetParameter4fv(sOneColor, v, "g_fOneColor");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
 		glAlphaFunc(g_dwAlphaCmp[curvb.test.atst], AlphaReferedValue(curvb.test.aref));
 	}
 
@@ -1565,7 +1569,7 @@ inline void ProcessStencil(const VB& curvb)
 	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 }
 
-__forceinline void ProcessFBA(const VB& curvb, ZZshParameter sOneColor)
+__forceinline void ProcessFBA(const VB& curvb, FRAGMENTSHADER* pfragment )
 {
 	if ((curvb.frame.fbm&0x80000000)) return;
 
@@ -1590,8 +1594,12 @@ __forceinline void ProcessFBA(const VB& curvb, ZZshParameter sOneColor)
 	GL_BLEND_ALPHA(GL_ONE, GL_ONE);
 	GL_BLENDEQ_ALPHA(GL_FUNC_ADD);
 
-	float f = 1;
-	ZZshSetParameter4fv(sOneColor, &f, "g_fOneColor");
+	// FIXME: Seem dangerous
+	// float f = 1;
+	// ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, &f, "g_fOneColor");
+	float4 v = float4(1,1,0,0);
+	ZZshSetParameter4fv(pfragment->prog, pfragment->sOneColor, v, "g_fOneColor");
+
 	ZZshSetPixelShader(ppsOne.prog);
 	Draw(curvb);
 	glDisable(GL_ALPHA_TEST);
@@ -1840,11 +1848,10 @@ void SetTexClamping(int context, FRAGMENTSHADER* pfragment)
 	}
 
 	if (pfragment->fTexWrapMode != 0)
-		ZZshSetParameter4fv(pfragment->fTexWrapMode, v, "g_fTexWrapMode");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexWrapMode, v, "g_fTexWrapMode");
 
 	if (pfragment->fClampExts != 0)
-		ZZshSetParameter4fv(pfragment->fClampExts, v2, "g_fClampExts");
-
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fClampExts, v2, "g_fClampExts");
 
 }
 
@@ -1917,15 +1924,15 @@ void SetTexVariables(int context, FRAGMENTSHADER* pfragment)
 		valpha.z = (tex0.tfx == TFX_HIGHLIGHT2);
 		valpha.w = (tex0.tcc == 0) || (tex0.tcc == 1 && tex0.tfx == TFX_HIGHLIGHT);
 
-		ZZshSetParameter4fv(pfragment->fTexAlpha, valpha, "g_fTexAlpha");
-		ZZshSetParameter4fv(pfragment->fTexAlpha2, valpha2, "g_fTexAlpha2");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexAlpha, valpha, "g_fTexAlpha");
+		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexAlpha2, valpha2, "g_fTexAlpha2");
 
 		if (IsAlphaTestExpansion(tex0))
 		{
 			float4 vblack;
 			vblack.x = vblack.y = vblack.z = vblack.w = 10;
 			if (tex0.tcc && gs.texa.aem && psm == PSMCT24) vblack.w = 0;
-			ZZshSetParameter4fv(pfragment->fTestBlack, vblack, "g_fTestBlack");
+			ZZshSetParameter4fv(pfragment->prog, pfragment->fTestBlack, vblack, "g_fTestBlack");
 		}
 
 		SetTexClamping(context, pfragment);
@@ -2025,11 +2032,11 @@ void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool Ch
 		v.z *= b.bpp * (1 / 32.0f);
 	}
 
-	ZZshSetParameter4fv(pfragment->fTexDims, vTexDims, "g_fTexDims");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fTexDims, vTexDims, "g_fTexDims");
 
 //	ZZshSetParameter4fv(pfragment->fTexBlock, b.vTexBlock, "g_fTexBlock"); // I change it, and it's working. Seems casting from float4 to float[4] is ok.
-	ZZshSetParameter4fv(pfragment->fTexBlock, &b.vTexBlock.x, "g_fTexBlock");
-	ZZshSetParameter4fv(pfragment->fTexOffset, v, "g_fTexOffset");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fTexBlock, &b.vTexBlock.x, "g_fTexBlock");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fTexOffset, v, "g_fTexOffset");
 
 	// get hardware texture dims
 	//int texheight = pmemtarg->texH;
@@ -2049,7 +2056,7 @@ void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool Ch
 			v.w = 0.5f;*/
 	v.w = 0.5f;
 
-	ZZshSetParameter4fv(pfragment->fPageOffset, v, "g_fPageOffset");
+	ZZshSetParameter4fv(pfragment->prog, pfragment->fPageOffset, v, "g_fPageOffset");
 
 	if (force)
 		s_ptexCurSet[context] = pmemtarg->ptex->tex;

@@ -108,11 +108,11 @@ void SetAlphaVariables(const alphaInfo& ainfo);					// zzz
 
 inline void SetAlphaTestInt(pixTest curtest);
 
-inline void RenderAlphaTest(const VB& curvb, ZZshParameter sOneColor);
+inline void RenderAlphaTest(const VB& curvb, FRAGMENTSHADER* pfragment);
 inline void RenderStencil(const VB& curvb, u32 dwUsingSpecialTesting);
 inline void ProcessStencil(const VB& curvb);
-inline void RenderFBA(const VB& curvb, ZZshParameter sOneColor);
-inline void ProcessFBA(const VB& curvb, ZZshParameter sOneColor);			// zz
+inline void RenderFBA(const VB& curvb, FRAGMENTSHADER* pfragment);
+inline void ProcessFBA(const VB& curvb, FRAGMENTSHADER* pfragment);			// zz
 
 void SetContextTarget(int context);
 

@@ -26,6 +26,7 @@
 #include "Util.h"
 #include "GifTransfer.h"
 #include "HostMemory.h"
+#include "ZZoglShoots.h"
 
 using namespace std;
 
@@ -422,7 +423,7 @@ union tex_0_info
 #define TEX_HIGHLIGHT 2
 #define TEX_HIGHLIGHT2 3
 
-bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height);
+//bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height, int ext_format = 0);
 extern void SaveTex(tex0Info* ptex, int usevid);
 extern char* NamedSaveTex(tex0Info* ptex, int usevid);
 

@@ -101,7 +101,7 @@ bool SaveRenderTarget(const char* filename, int width, int height, int jpeg)
 }
 
 // Save selected texture as TGA
-bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height)
+bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int height, int ext_format)
 {
 	vector<u32> data(width*height);
 	glBindTexture(textarget, tex);
@@ -109,7 +109,19 @@ bool SaveTexture(const char* filename, u32 textarget, u32 tex, int width, int he
 
 	if (glGetError() != GL_NO_ERROR) return false;
 
-	return SaveTGA(filename, width, height, &data[0]);
+	if (ext_format == EXT_BMP)
+		return SaveBMP(filename, width, height, &data[0]);
+	else if (ext_format == EXT_TGA)
+		return SaveTGA(filename, width, height, &data[0]);
+	else
+		return false;
+}
+
+// Save image as BMP
+bool SaveBMP(const char* filename, int width, int height, void* pdata)
+{
+	// FIXME
+	assert(0);
 }
 
 // save image as JPEG

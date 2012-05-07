@@ -656,7 +656,13 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	v = RenderSetTargetInvTex(texframe.tw, texframe.th, CRTC_RENDER);
 	float4 valpha = RenderGetForClip(texframe.psm, CRTC_RENDER);
 
+#ifdef GLSL4_API
+	// FIXME context
+	int context = 0;
+	ZZshGLSetTextureParameter(curr_ppsCRTC()->prog, curr_ppsCRTC()->sMemory[context], vb[0].pmemtarg->ptex->tex, "CRTC memory");
+#else
 	ZZshGLSetTextureParameter(curr_ppsCRTC()->prog, curr_ppsCRTC()->sMemory, vb[0].pmemtarg->ptex->tex, "CRTC memory");
+#endif
 	RenderCreateInterlaceTex(texframe.th, CRTC_RENDER_TARG);
 	ZZshSetPixelShader(curr_ppsCRTC()->prog);
 	

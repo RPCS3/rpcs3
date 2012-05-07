@@ -20,7 +20,6 @@ set(CommonFlags
     -fno-strict-aliasing
     -Wstrict-aliasing # Allow to track strict aliasing issue.
     -Wunused-variable
-    #-DOGL4_LOG        # Easier for development
     )
 
 set(OptimizationFlags
@@ -31,7 +30,7 @@ set(OptimizationFlags
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
     # add defines
-    add_definitions(${CommonFlags} -g -Wall -D_DEBUG)
+	add_definitions(${CommonFlags} -g -Wall -D_DEBUG)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
@@ -48,7 +47,8 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # Select the shader API 
 if(GLSL_API)
-	add_definitions(-DGLSL_API)
+    add_definitions(-DGLSL_API -DGLSL4_API -DOGL4_LOG)
+    #add_definitions(-DGLSL_API)
 else(GLSL_API)
 	add_definitions(-DNVIDIA_CG_API)
 endif(GLSL_API)
@@ -87,6 +87,7 @@ set(zzoglSources
     ZZoglSave.cpp
     ZZoglShaders.cpp
     ZZoglShadersGLSL.cpp
+    ZZoglShadersGLSL4.cpp
     ZZoglShoots.cpp
     ZZoglVB.cpp
     )
@@ -190,7 +191,8 @@ endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 if(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
     if(GLSL_API)
-        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.glsl DESTINATION ${PLUGIN_DIR})
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.glsl DESTINATION ${GLSL_SHADER_DIR})
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw_gl4.glsl DESTINATION ${GLSL_SHADER_DIR})
     else(GLSL_API)
         if(NOT REBUILD_SHADER)
             install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${PLUGIN_DIR})
@@ -200,6 +202,7 @@ else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
     if(GLSL_API)
         install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw_gl4.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
     else(GLSL_API)
         if(NOT REBUILD_SHADER)
             install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)

@@ -276,13 +276,13 @@ void ZZshSetParameter4fv(ZZshParameter param, const float* v, const char* name) 
 	cgGLSetParameter4fv(param, v);
 }
 
-void ZZshSetParameter4fv(ZZshProgram prog, ZZshParameter param, const float* v, const char* name) {
+void ZZshSetParameter4fv(ZZshProgram& prog, ZZshParameter param, const float* v, const char* name) {
 	ShaderHandleName = name;
 	cgGLSetParameter4fv(param, v);
 }
 
 // The same stuff, but also with retry of param, name should be USED name of param for prog.
-void ZZshSetParameter4fvWithRetry(ZZshParameter* param, ZZshProgram prog, const float* v, const char* name) {
+void ZZshSetParameter4fvWithRetry(ZZshParameter* param, ZZshProgram& prog, const float* v, const char* name) {
 	if (param != NULL)
 		ZZshSetParameter4fv(prog, param[0], v, name);
 	else
@@ -303,7 +303,7 @@ void ZZshGLSetTextureParameter(ZZshProgram prog, ZZshParameter param, GLuint tex
 }
 
 // Used sometimes for color 1.
-void ZZshDefaultOneColor( FRAGMENTSHADER ptr ) {
+void ZZshDefaultOneColor( FRAGMENTSHADER& ptr ) {
 	ShaderHandleName = "Set Default One color";
 	float4 v = float4 ( 1, 1, 1, 1 );
 	ZZshSetParameter4fv( ptr.prog, ptr.sOneColor, v, "DefaultOne");
