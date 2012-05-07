@@ -1275,10 +1275,10 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	std::string line;
 	// Each linux distributions have his rules for path so we give them the possibility to
 	// change it with compilation flags. -- Gregory
-#ifdef PLUGIN_DIR_COMPILATION
-#define xPLUGIN_DIR_str(s) PLUGIN_DIR_str(s)
-#define PLUGIN_DIR_str(s) #s
-	const std::string shader_file = string(xPLUGIN_DIR_str(PLUGIN_DIR_COMPILATION)) + '/' + glsl_file;
+#ifdef GLSL_SHADER_DIR_COMPILATION
+#define xGLSL_SHADER_DIR_str(s) GLSL_SHADER_DIR_str(s)
+#define GLSL_SHADER_DIR_str(s) #s
+	const std::string shader_file = string(xGLSL_SHADER_DIR_str(GLSL_SHADER_DIR_COMPILATION)) + '/' + glsl_file;
 #else
 	const std::string shader_file = string("plugins/") + glsl_file;
 #endif

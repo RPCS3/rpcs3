@@ -7,12 +7,7 @@ SET(FIND_LIBRARY_USE_LIB64_PATHS FALSE)
 ## Linux only libraries
 if(Linux)
     # Most plugins (if not all) and PCSX2 core need gtk2, so set the required flags
-    #
-    # Warning: because of multiarch Ubuntu move /usr/lib/glib-2.0/include/glibconfig.h to /usr/lib/i386-linux-gnu/glib-2.0/include/glibconfig.h
-    # So as temporary work around, I copy the FindGTK2 module inside pcsx2 and add the /usr/lib/i386-linux-gnu path... -- Gregory
-    #
-    # find_package(GTK2 REQUIRED gtk)
-    find_package(GTK2_pcsx2 REQUIRED gtk)
+    find_package(GTK2 REQUIRED gtk)
     if(GTK2_FOUND)
         # From version 2.21.3 gtk moved gdk-pixbuf into a separate module
         # Cmake need to be fixed. For the moment uses a manual detection.
