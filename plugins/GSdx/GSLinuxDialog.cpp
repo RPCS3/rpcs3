@@ -67,11 +67,15 @@ GtkWidget* CreateRenderComboBox()
 		switch (i) {
 			// better use opengl instead of SDL
 			case 6:
+			case 7:
+#ifdef ENABLE_SDL_DEV
 				label += " (deprecated)";
+#else
+				label += " (removed)";
+#endif
 				break;
 
 			// (dev only) for any NULL stuff
-			case 7:
 			case 8:
 			case 9:
 				label += " (debug only)";
@@ -90,12 +94,17 @@ GtkWidget* CreateRenderComboBox()
 
 	switch (theApp.GetConfig("renderer", 0)) {
 		// Note the value are based on m_gs_renderers vector on GSdx.cpp
+#ifdef ENABLE_SDL_DEV
 		case 7 : renderer_box_position = 0; break;
 		case 8 : renderer_box_position = 1; break;
+#endif
 		case 10: renderer_box_position = 2; break;
 		case 11: renderer_box_position = 3; break;
 		case 12: renderer_box_position = 4; break;
 		case 13: renderer_box_position = 5; break;
+
+		// Fallback to openGL SW
+		default: renderer_box_position = 5; break;
 	}
 	gtk_combo_box_set_active(GTK_COMBO_BOX(render_combo_box), renderer_box_position);
 	return render_combo_box;
@@ -157,7 +166,7 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 	bool hardware_render = false, software_render = false, sdl_render = false, null_render = false;
 	
 	render_type = gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box));
-	hardware_render = (render_type == 1 || render_type == 4 || render_type == 7 || render_type == 13);
+	hardware_render = ((render_type % 3) == 1);
 	
 	if (hardware_render)
 	{
@@ -432,16 +441,19 @@ bool RunLinuxDialog()
 		
 		// Get all the settings from the dialog box.
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box)) != -1) {
-			// FIXME test current opengl version supported through glxinfo (OpenGL version string:)
-			// Warn the user if 4.2 is not supported and switch back to basic SDL renderer
+			// Note the value are based on m_gs_renderers vector on GSdx.cpp
 			switch (gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box))) {
-				// Note the value are based on m_gs_renderers vector on GSdx.cpp
+#ifdef ENABLE_SDL_DEV
 				case 0: theApp.SetConfig("renderer", 7); break;
 				case 1: theApp.SetConfig("renderer", 8); break;
+#endif
 				case 2: theApp.SetConfig("renderer", 10); break;
 				case 3: theApp.SetConfig("renderer", 11); break;
 				case 4: theApp.SetConfig("renderer", 12); break;
 				case 5: theApp.SetConfig("renderer", 13); break;
+
+				// Fallback to SW opengl
+				default: theApp.SetConfig("renderer", 13); break;
 			}
 		}
 

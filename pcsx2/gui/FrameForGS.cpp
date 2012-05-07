@@ -516,6 +516,12 @@ GSPanel* GSFrame::GetViewport()
 
 void GSFrame::OnUpdateTitle( wxTimerEvent& evt )
 {
+#ifdef __LINUX__
+	// Important Linux note: When the title is set in fullscreen the window is redrawn. Unfortunately
+	// an intermediate white screen appears too which leads to a very annoying flickering.
+	if (IsFullScreen()) return;
+#endif
+
 	double fps = wxGetApp().FpsManager.GetFramerate();
 
 	char gsDest[128];
