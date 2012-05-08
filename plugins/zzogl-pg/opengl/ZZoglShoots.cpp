@@ -122,6 +122,7 @@ bool SaveBMP(const char* filename, int width, int height, void* pdata)
 {
 	// FIXME
 	assert(0);
+	return false;
 }
 
 // save image as JPEG

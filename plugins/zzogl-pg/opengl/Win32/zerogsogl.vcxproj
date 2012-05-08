@@ -142,6 +142,7 @@
     <ClCompile Include="..\ZZoglFlushHack.cpp" />
     <ClCompile Include="..\ZZoglMem.cpp" />
     <ClCompile Include="..\ZZoglShadersGLSL.cpp" />
+    <ClCompile Include="..\ZZoglShadersGLSL4.cpp" />
     <ClCompile Include="..\ZZRenderTargets.cpp" />
     <ClCompile Include="Conf.cpp" />
     <ClCompile Include="..\GifTransfer.cpp" />

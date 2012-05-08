@@ -129,6 +129,9 @@
     <ClCompile Include="..\ZZoglShadersGLSL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\ZZoglShadersGLSL4.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="GSsoftdx.def">
