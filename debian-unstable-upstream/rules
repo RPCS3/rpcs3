@@ -1,5 +1,4 @@
 #!/usr/bin/make -f
-# -*- makefile -*-
 
 # Uncomment this to turn on verbose mode. 
 # export DH_VERBOSE=1
@@ -15,20 +14,15 @@ override_dh_auto_configure:
 		-DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE) \
 		-DCMAKE_BUILD_STRIP=FALSE \
 		-DXDG_STD=TRUE \
-		-DFORCE_INTERNAL_SDL=TRUE \
 		-DPACKAGE_MODE=TRUE
-
-clean:
-	dh_testdir
-	dh_testroot
-	dh_auto_clean
-	dh_clean
 
 override_dh_strip:
 	dh_strip --package=pcsx2-unstable --dbg-package=pcsx2-unstable-dbg
-	dh_strip --package=pcsx2-plugins-unstable --dbg-package=pcsx2-plugins-unstable-dbg
 
+override_dh_makeshlibs:
+
+clean:
+	dh_auto_clean
+	dh_clean
 %:
-	dh $@ --parallel
-
-.PHONY: clean
+	dh $@

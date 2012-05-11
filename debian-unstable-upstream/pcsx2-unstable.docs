@@ -1,1 +1,2 @@
 debian/tmp/usr/share/doc/pcsx2
+bin/docs/*.pdf

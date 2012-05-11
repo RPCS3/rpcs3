@@ -1,9 +1,0 @@
-* policy bin2cpp tool ??
-    May be we could pregenerate the file in the upstream tar ball!!
-
-* copyright and doc stuff
-    Lots of work to do here....
-    * need to add copyrigh info in Cmake file
-
-## 64 bit
-=> see multiarch

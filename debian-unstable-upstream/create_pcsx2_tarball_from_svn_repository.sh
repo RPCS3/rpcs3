@@ -105,7 +105,7 @@ echo "Downloading pcsx2 source revision ${SVN_CO_VERSION}"
 mkdir -p $ROOT_DIR;
 (cd $ROOT_DIR; 
     get_svn_file CMakeLists.txt;
-    get_svn_dir common cmake locales pcsx2 tools;
+    get_svn_dir common cmake locales pcsx2;
     get_svn_dir debian-unstable-upstream linux_various;
 echo "Done")
 
@@ -125,18 +125,18 @@ mkdir -p $ROOT_DIR/plugins
     # get_svn_dir plugins/CDVDnull plugins/CDVDiso;
     get_svn_dir plugins/PadNull plugins/onepad;
     get_svn_dir plugins/SPU2null plugins/spu2-x;
-    get_svn_dir plugins/GSnull plugins/zzogl-pg plugins/GSdx;
+    get_svn_dir plugins/GSnull plugins/zzogl-pg plugins/zzogl-pg-cg plugins/GSdx;
     get_svn_dir plugins/dev9null plugins/FWnull plugins/USBnull;
 echo "Note: some plugins are more or less deprecated CDVDisoEFP, CDVDlinuz, Zerogs, Zeropad ...";
 echo "Done")
 
 ## Download the internal sdl 1.3 for gsdx
-echo "Downloading 3rdpary SDL 1.3 (need by gsdx) revision ${SVN_CO_VERSION}"
-mkdir -p $ROOT_DIR/3rdparty
-(cd $ROOT_DIR/3rdparty/;
-    get_svn_file 3rdparty/CMakeLists.txt;
-    get_svn_dir 3rdparty/SDL-1.3.0-5387;)
-echo "Done"
+# echo "Downloading 3rdpary SDL 1.3 (need by gsdx) revision ${SVN_CO_VERSION}"
+# mkdir -p $ROOT_DIR/3rdparty
+# (cd $ROOT_DIR/3rdparty/;
+#     get_svn_file 3rdparty/CMakeLists.txt;
+#     get_svn_dir 3rdparty/SDL-1.3.0-5387;)
+# echo "Done"
     
 
 ## Installation
@@ -147,22 +147,12 @@ cp -r $ROOT_DIR $NEW_DIR
 
 echo "Remove .svn directories"
 find $NEW_DIR -name ".svn" -type d -exec rm -fr {} \; 2> /dev/null
-echo "Remove old build system (scripts and autotools)"
-find $NEW_DIR -name "build.sh" -exec rm -f {} \;
-find $NEW_DIR -name "install-sh" -exec rm -f {} \;
-find $NEW_DIR -name "depcomp" -exec rm -f {} \;
-find $NEW_DIR -name "missing" -exec rm -f {} \;
-find $NEW_DIR -name "aclocal.m4" -exec rm -f {} \;
-find $NEW_DIR -name "configure.ac" -exec rm -f {} \;
-find $NEW_DIR -name "Makefile.am" -exec rm -f {} \;
 echo "Remove windows files (useless & copyright issues)"
 find $NEW_DIR -iname "windows" -type d -exec rm -fr {} \; 2> /dev/null
 find $NEW_DIR -name "Win32" -type d -exec rm -fr {} \; 2> /dev/null
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/Win32"
-rm -fr "${NEW_DIR}/tools/GSDumpGUI"
 rm -fr "${NEW_DIR}/common/vsprops"
 echo "Remove useless files (copyright issues)"
-rm -fr "${NEW_DIR}/pcsx2/3rdparty" # useless link which annoy me
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders"
 rm -fr "${NEW_DIR}/common/src/Utilities/x86/MemcpyFast.cpp"
 rm -fr "${NEW_DIR}/plugins/GSdx/baseclasses"

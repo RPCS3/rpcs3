@@ -1,4 +1,7 @@
 usr/bin/pcsx2
+usr/lib/games/pcsx2
 usr/share/applications/pcsx2.desktop
 usr/share/pixmaps/pcsx2.xpm
+usr/share/locale usr/share/
 var/games/pcsx2
+usr/share/games/pcsx2

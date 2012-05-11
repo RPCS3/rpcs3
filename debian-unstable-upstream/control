@@ -3,14 +3,13 @@ Section: contrib/games
 Priority: optional
 Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
 # WARNING Natty need at least cmake 2.8.5 (multiarch issue)
-Build-Depends: cmake (>= 2.8),
-    debhelper (>= 7.0.50),
+Build-Depends: cmake (>= 2.8.5),
+    debhelper (>= 9),
     dpkg-dev (>= 1.15.7),
     libasound2-dev,
     libbz2-dev,
     libgl1-mesa-dev,
 # Future GSdx version will need glew1.6. Only Oneiric have it...
-#   libglew1.6-dev,
     libglew-dev (>= 1.6)| libglew1.5-dev,
     libglu1-mesa-dev,
     libgtk2.0-dev (>= 2.16),
@@ -26,17 +25,24 @@ Build-Depends: cmake (>= 2.8),
     libcg, nvidia-cg-toolkit (>= 3),
     portaudio19-dev,
     zlib1g-dev (>= 1:1.2.3.3)
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
 Homepage: http://pcsx2.net/
 
 Package: pcsx2-unstable
 Architecture: i386
+# manually add nvidia-cg-toolkit for zzogl (cg pacakge does not provide symbol or shlibs files)
+# recommand libasound for alsa plugin for pulseaudio
 Depends: ${shlibs:Depends}, ${misc:Depends},
-    pcsx2-plugins-unstable (>= ${binary:Version})
+    libcg | nvidia-cg-toolkit (>= 2.1),
+Recommends: libasound2-plugins
 Conflicts: pcsx2,
-    pcsx2-data-unstable
-Replaces: pcsx2-data-unstable
-Description: Playstation 2 emulator
+    pcsx2-data-unstable,
+    pcsx2-l10n-unstable,
+    pcsx2-plugins-unstable
+Replaces: pcsx2-data-unstable,
+    pcsx2-l10n-unstable,
+    pcsx2-plugins-unstable
+Description: Playstation 2 emulator.
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
  .
  WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
@@ -45,31 +51,15 @@ Description: Playstation 2 emulator
  .
  This package includes the main binary file.
 
-Package: pcsx2-plugins-unstable
-Architecture: i386
-# manually add nvidia-cg-toolkit for zzogl (cg pacakge does not provide symbol or shlibs files)
-Depends: ${shlibs:Depends}, ${misc:Depends},
-    libcg | nvidia-cg-toolkit (>= 2.1)
-Recommends: pcsx2-unstable (>= ${binary:Version}),
-Conflicts: pcsx2-plugins,
-    pcsx2-data-unstable
-Replaces: pcsx2-data-unstable
-Description: Various plugins for PCSX2
- PCSX2 is a PlayStation 2 emulator for Windows and Linux.
- .
- WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
- this instruction set, it does not have enough horse power to run this emulator
- anyway.
- .
- This package includes the plugins for PCSX2.
-
 Package: pcsx2-unstable-dbg
 Section: contrib/debug
 Priority: extra
 Architecture: i386
 Depends: ${misc:Depends}, pcsx2-unstable (= ${binary:Version})
-Conflicts: pcsx2-dbg
-Description: Debug symbols for pcsx2
+Conflicts: pcsx2-dbg,
+    pcsx2-plugins-unstable-dbg
+Replaces: pcsx2-plugins-unstable-dbg
+Description: Debug symbols for pcsx2.
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
  .
  WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
@@ -78,32 +68,3 @@ Description: Debug symbols for pcsx2
  .
  This package contains the debug symbols for PCSX2.
 
-Package: pcsx2-plugins-unstable-dbg
-Section: contrib/debug
-Priority: extra
-Architecture: i386
-Depends: ${misc:Depends}, pcsx2-plugins-unstable (= ${binary:Version})
-Conflicts: pcsx2-plugins-dbg
-Description: Debug symbols of the pcsx2-plugins
- PCSX2 is a PlayStation 2 emulator for Windows and Linux.
- .
- WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
- this instruction set, it does not have enough horse power to run this emulator
- anyway.
- .
- This package contains the debug symbols for the PCSX2 plugins.
-
-Package: pcsx2-l10n-unstable
-Section: contrib/localization
-Architecture: all
-Depends: ${misc:Depends}
-Recommends: pcsx2-unstable (>= ${source:Version})
-Conflicts: pcsx2-l10n
-Description: Language files for PCSX2
- PCSX2 is a PlayStation 2 emulator for Windows and Linux.
- .
- WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
- this instruction set, it does not have enough horse power to run this emulator
- anyway.
- .
- This package contains the localization of the emulator in various languages.
