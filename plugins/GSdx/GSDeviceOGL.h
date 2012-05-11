@@ -919,4 +919,6 @@ class GSDeviceOGL : public GSDevice
 	void SetupGS(GSSelector sel);
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
+
+	GLuint glCreateShaderProgramv_AMD_BUG_WORKAROUND(GLenum  type,  GLsizei  count,  const char ** strings);
 };

@@ -261,12 +261,8 @@ void gs_main()
 layout(location = 0) in vertex PSin;
 
 // Same buffer but 2 colors for dual source blending
-#ifndef DISABLE_DUAL_BLEND
-layout(location = 0, index = 1) out vec4 SV_Target0;
-layout(location = 0, index = 0) out vec4 SV_Target1;
-#else
-layout(location = 0) out vec4 SV_Target1;
-#endif
+layout(location = 0, index = 0) out vec4 SV_Target0;
+layout(location = 0, index = 1) out vec4 SV_Target1;
 
 layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
@@ -650,9 +646,7 @@ void ps_main()
 		if(c.a < 0.5) c.a += 0.5;
 	}
 
-    SV_Target1 = c;
-#ifndef DISABLE_DUAL_BLEND
-    SV_Target0 = vec4(alpha, alpha, alpha, alpha);
-#endif
+    SV_Target0 = c;
+    SV_Target1 = vec4(alpha, alpha, alpha, alpha);
 }
 #endif
