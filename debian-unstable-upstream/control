@@ -42,7 +42,7 @@ Conflicts: pcsx2,
 Replaces: pcsx2-data-unstable,
     pcsx2-l10n-unstable,
     pcsx2-plugins-unstable
-Description: Playstation 2 emulator.
+Description: Playstation 2 emulator
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
  .
  WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
@@ -59,7 +59,7 @@ Depends: ${misc:Depends}, pcsx2-unstable (= ${binary:Version})
 Conflicts: pcsx2-dbg,
     pcsx2-plugins-unstable-dbg
 Replaces: pcsx2-plugins-unstable-dbg
-Description: Debug symbols for pcsx2.
+Description: Debug symbols for pcsx2
  PCSX2 is a PlayStation 2 emulator for Windows and Linux.
  .
  WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support

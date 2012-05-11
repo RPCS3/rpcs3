@@ -3,4 +3,4 @@
 #    - Upstream code uses the ebx register so it's not compliant with PIC.
 #    - Impacts the performance too much.
 #    - Only plugins. No package will link to them.
-pcsx2-plugins-unstable: shlib-with-non-pic-code
+: shlib-with-non-pic-code

@@ -3,4 +3,4 @@
     section="Applications/Emulators" \
     title="pcsx2" \
     longtitle="A playstation 2 emulators" \
-    command="/usr/bin/pcsx2"
+    command="/usr/games/pcsx2"
