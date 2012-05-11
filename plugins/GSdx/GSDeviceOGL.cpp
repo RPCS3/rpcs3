@@ -52,8 +52,10 @@ GSDeviceOGL::GSDeviceOGL()
 	memset(&m_state, 0, sizeof(m_state));
 
 	// Reset the debug file
+	#ifdef OGL_DEBUG
 	FILE* f = fopen("Debug.txt","w");
 	fclose(f);
+	#endif
 }
 
 GSDeviceOGL::~GSDeviceOGL()
@@ -497,7 +499,9 @@ bool GSDeviceOGL::Reset(int w, int h)
 void GSDeviceOGL::Flip()
 {
 	// FIXME: disable it when code is working
+	#ifdef OGL_DEBUG
 	CheckDebugLog();
+	#endif
 
 	m_wnd->Flip();
 

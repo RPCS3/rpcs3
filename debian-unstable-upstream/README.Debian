@@ -1,15 +1,72 @@
-    pcsx2 for debian
-=========================
+------------------------------
+Package information for PCSX2
+------------------------------
 
-* This version has some major modifications against the default upstream code.
-    -> documents are stored in $XDG_CONFIG_HOME instead of $HOME/pcsx2
+ * The reasons given by upstream as to why they remove -fPIC are the following:
+   - Code only supports the i386 architecture.
+   - Code uses the ebx register and this is not compliant with -fPIC.
+   - The use of -fPIC negatively impacts the performance of the program.
+   - The .so file are not shared libraries but plug-ins. No program should try
+     to link with them.
 
-* Documentation needs some love. Feel free to help.
+------------------------------------------
+Information about the plug-ins for video
+------------------------------------------
 
-* -fPIC option was removed for multiple reasons.
-    - Code only supports the x86 architecture.
-    - Upstream code uses the ebx register so it's not compliant with PIC.
-    - Impacts the performance too much.
-    - Only plugins. No package will link to them.
+ * The zzogl plug-in comes in two flavors:
+   - The Nvidia Cg version which requires the non-free nvidia-cg-toolkit
+     package. Since this package contains GPL-2+ code this plug-in can't be
+     distributed without an GPL exception allowing linking with non-free
+     libraries. If the user desires to try this flavor of the plug-in he/she
+     must:
+     + Install the nvidia-cg-dev or nvidia-cg-toolkit package from non-free.
+     + Pass "-DGLSL_API=FALSE" to dh_auto_configure in the rules file.
+     + Add "usr/lib/*/games/pcsx2/*.dat /usr/share/games/pcsx2/" to the install
+       file.
+     + Compile the program using dpkg-buildpackage.
+     This plug-in currently provides the greatest compatibility with video cards
+     and drivers. It currently works with open source drivers like radeon R600.
+   - The OpenGL Shading Language (GLSL) version which currently only works with
+     AMD video cards but support for other cards is being worked on.
 
- -- Gregory Hainaut <gregory.hainaut@gmail.com>  Sat, 24 Apr 2010 23:11:10 +0200
+ * The GSdx plug-in currently only supports the OpenGL software renderer.
+
+ * The GSdx and zzogl GLSL plug-ins currently require a video card that supports
+   at least OpenGL 3.0. A noninclusive list of cards that support OpenGL 3.0 is:
+   - Radeon HD series (except HD2300)
+   - GeForce 8, 9, 100-series, 200-series, 300-series, 400-series and 500-series
+   - Intel Sandy Bridge HD Graphics 2000 and 3000
+
+ * Currently only the proprietary drivers for AMD and Nvidia have support for
+   OpenGL 3.0 and above. The GSdx and/or zzogl GLSL plug-ins use the following 
+   extensions/commands that may or may not be completely implemented in the open
+   source video stack:
+   - OpenGL 3.0
+     + glClearBuffer
+     + glGetStringi
+     + glVertexAttribI
+     + GLX_ARB_create_context
+     + GL_APPLE_vertex_array_object
+     + GL_ARB_framebuffer_object
+   - OpenGL 3.1
+     + GL_ARB_texture_rectangle (zzogl)
+     + GL_ARB_uniform_buffer_object
+   - OpenGL 3.2
+     + GL_ARB_geometry_shader4 (GSdx)
+     + GL_ARB_draw_elements_base_vertex
+     + GLX_ARB_create_context_profile
+   - OpenGL 3.3
+     + GL_ARB_blend_func_extended (GSdx)
+     + GL_ARB_explicit_attrib_location
+     + GL_ARB_sampler_objects (GSdx)
+   - OpenGL 4.1
+     + GL_ARB_separate_shader_objects
+   - OpenGL 4.2
+     + GL_ARB_map_buffer_alignment
+     + GL_ARB_shading_language_420pack
+     + GL_ARB_texture_storage
+   - Extensions that may get included in future versions:
+     + GL_NV_copy_image
+   The current status for the open source drivers can be found at:
+   - http://cgit.freedesktop.org/mesa/mesa/tree/docs/GL3.txt
+

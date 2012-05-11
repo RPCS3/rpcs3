@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2012-04-07 11:42+0200\n"
-"PO-Revision-Date: 2011-04-08 19:53+0200\n"
-"Last-Translator: PyramidHead <atiamar@hotmail.com>\n"
+"PO-Revision-Date: 2012-05-08 19:05+0100\n"
+"Last-Translator: Gregory Hainaut <gregory.hainaut@gmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
@@ -24,126 +24,157 @@ msgstr ""
 "X-Poedit-SearchPath-1: common\n"
 
 #: common/src/Utilities/Exceptions.cpp:254
+#, fuzzy
 msgid "!Notice:VirtualMemoryMap"
 msgstr "!Notice:VirtualMemoryMap"
 
 #: pcsx2/CDVD/CDVD.cpp:389
+#, fuzzy
 msgid "!Notice:PsxDisc"
 msgstr "!Notice:PsxDisc"
 
 #: pcsx2/System.cpp:114
+#, fuzzy
 msgid "!Notice:Recompiler:VirtualMemoryAlloc"
 msgstr "!Notice:Recompiler:VirtualMemoryAlloc"
 
 #: pcsx2/System.cpp:348
+#, fuzzy
 msgid "!Notice:EmuCore::MemoryForVM"
 msgstr "!Notice:EmuCore::MemoryForVM"
 
 #: pcsx2/gui/AppInit.cpp:43
+#, fuzzy
 msgid "!Notice:Startup:NoSSE2"
 msgstr "!Notice:Startup:NoSSE2"
 
 #: pcsx2/gui/AppInit.cpp:162
+#, fuzzy
 msgid "!Notice:RecompilerInit:Header"
 msgstr "!Notice:RecompilerInit:Header"
 
 #: pcsx2/gui/AppInit.cpp:211
+#, fuzzy
 msgid "!Notice:RecompilerInit:Footer"
 msgstr "!Notice:RecompilerInit:Footer"
 
 #: pcsx2/gui/AppMain.cpp:546
+#, fuzzy
 msgid "!Notice:BiosDumpRequired"
 msgstr "!Notice:BiosDumpRequired"
 
 #: pcsx2/gui/AppMain.cpp:629
+#, fuzzy
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr "!Notice Error:Thread Deadlock Actions"
 
 #: pcsx2/gui/AppUserMode.cpp:57
+#, fuzzy
 msgid "!Notice:PortableModeRights"
 msgstr "!Notice:PortableModeRights"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
+#, fuzzy
 msgid "!ContextTip:ChangingNTFS"
 msgstr "!ContextTip:ChangingNTFS"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+#, fuzzy
 msgid "!ContextTip:Folders:Settings"
 msgstr "!ContextTip:Folders:Settings"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
+#, fuzzy
 msgid "!Panel:Folders:Settings"
 msgstr "!Panel:Folders:Settings"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
+#, fuzzy
 msgid "!Wizard:Welcome"
 msgstr "!Wizard:Welcome"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
+#, fuzzy
 msgid "!Wizard:Bios:Tutorial"
 msgstr "!Wizard:Bios:Tutorial"
 
 #: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
+#, fuzzy
 msgid "!Notice:ImportExistingSettings"
 msgstr "!Notice:ImportExistingSettings"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
+#, fuzzy
 msgid "!Panel:Mcd:NtfsCompress"
 msgstr "!Panel:Mcd:NtfsCompress"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
+#, fuzzy
 msgid "!Panel:Mcd:EnableEjection"
 msgstr "!Panel:Mcd:EnableEjection"
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
+#, fuzzy
 msgid "!Panel:StuckThread:Heading"
 msgstr "!Panel:StuckThread:Heading"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+#, fuzzy
 msgid "!Panel:HasHacksOverrides"
 msgstr "!Panel:HasHacksOverrides"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+#, fuzzy
 msgid "!Panel:HasPluginsOverrides"
 msgstr "!Panel:HasPluginsOverrides"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+#, fuzzy
 msgid "!Notice:Tooltip:Presets:Slider"
 msgstr "!Notice:Tooltip:Presets:Slider"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+#, fuzzy
 msgid "!Notice:Tooltip:Presets:Checkbox"
 msgstr "!Notice:Tooltip:Presets:Checkbox"
 
 #: pcsx2/gui/IsoDropTarget.cpp:28
+#, fuzzy
 msgid "!Notice:ConfirmSysReset"
 msgstr "!Notice:ConfirmSysReset"
 
 #: pcsx2/gui/MainMenuClicks.cpp:106
+#, fuzzy
 msgid "!Notice:DeleteSettings"
 msgstr "!Notice:DeleteSettings"
 
 #: pcsx2/gui/MemoryCardFile.cpp:78
+#, fuzzy
 msgid "!Notice:Mcd:HasBeenDisabled"
 msgstr "!Notice:Mcd:HasBeenDisabled"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
+#, fuzzy
 msgid "!Notice:BIOS:InvalidSelection"
 msgstr "!Notice:BIOS:InvalidSelection"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:111
+#, fuzzy
 msgid "!Panel:EE/IOP:Heading"
 msgstr "!Panel:EE/IOP:Heading"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:178
+#, fuzzy
 msgid "!Panel:VUs:Heading"
 msgstr "!Panel:VUs:Heading"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:69
+#, fuzzy
 msgid "!Notice:DirPicker:CreatePath"
 msgstr "!Notice:DirPicker:CreatePath"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:158
+#, fuzzy
 msgid "!ContextTip:DirPicker:UseDefault"
 msgstr "!ContextTip:DirPicker:UseDefault"
 
@@ -153,34 +184,42 @@ msgid "!ContextTip:Window:Zoom"
 msgstr "!ContextTip:Window:Vsync"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+#, fuzzy
 msgid "!ContextTip:Window:Vsync"
 msgstr "!ContextTip:Window:Vsync"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+#, fuzzy
 msgid "!ContextTip:Window:ManagedVsync"
 msgstr "!ContextTip:Window:ManagedVsync"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:76
+#, fuzzy
 msgid "!ContextTip:Window:HideMouse"
 msgstr "!ContextTip:Window:HideMouse"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:82
+#, fuzzy
 msgid "!ContextTip:Window:Fullscreen"
 msgstr "!ContextTip:Window:Fullscreen"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:93
+#, fuzzy
 msgid "!ContextTip:Window:HideGS"
 msgstr "!ContextTip:Window:HideGS"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+#, fuzzy
 msgid "!ContextTip:Gamefixes:EE Timing Hack"
 msgstr "!ContextTip:Gamefixes:EE Timing Hack"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+#, fuzzy
 msgid "!ContextTip:Gamefixes:OPH Flag hack"
 msgstr "!ContextTip:Gamefixes:OPH Flag hack"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:89
+#, fuzzy
 msgid "!ContextTip:Gamefixes:DMA Busy hack"
 msgstr "!ContextTip:Gamefixes:DMA Busy hack"
 
@@ -190,90 +229,112 @@ msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
 msgstr "!ContextTip:Gamefixes:OPH Flag hack"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:119
+#, fuzzy
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr "!Panel:Gamefixes:Compat Warning"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+#, fuzzy
 msgid "!Notice:Mcd:Delete"
 msgstr "!Notice:Mcd:Delete"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:758
+#, fuzzy
 msgid "!Notice:Mcd:CantDuplicate"
 msgstr "!Notice:Mcd:CantDuplicate"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:801
+#, fuzzy
 msgid "!Notice:Mcd:Copy Failed"
 msgstr "!Notice:Mcd:Copy Failed"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+#, fuzzy
 msgid "!Panel:Usermode:Explained"
 msgstr "!Panel:Usermode:Explained"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:41
+#, fuzzy
 msgid "!Panel:Usermode:Warning"
 msgstr "!Panel:Usermode:Warning"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:40
+#, fuzzy
 msgid "!ContextTip:Folders:Savestates"
 msgstr "!ContextTip:Folders:Savestates"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:50
+#, fuzzy
 msgid "!ContextTip:Folders:Snapshots"
 msgstr "!ContextTip:Folders:Snapshots"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:60
+#, fuzzy
 msgid "!ContextTip:Folders:Logs"
 msgstr "!ContextTip:Folders:Logs"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+#, fuzzy
 msgid "!Notice:PluginSelector:ConfirmShutdown"
 msgstr "!Notice:PluginSelector:ConfirmShutdown"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
+#, fuzzy
 msgid "!Notice:PluginSelector:ApplyFailed"
 msgstr "!Notice:PluginSelector:ApplyFailed"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
+#, fuzzy
 msgid "!Panel:Speedhacks:EECycleX1"
 msgstr "!Panel:Speedhacks:EECycleX1"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
+#, fuzzy
 msgid "!Panel:Speedhacks:EECycleX2"
 msgstr "!Panel:Speedhacks:EECycleX2"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
+#, fuzzy
 msgid "!Panel:Speedhacks:EECycleX3"
 msgstr "!Panel:Speedhacks:EECycleX3"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+#, fuzzy
 msgid "!Panel:Speedhacks:VUCycleStealOff"
 msgstr "!Panel:Speedhacks:VUCycleStealOff"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
+#, fuzzy
 msgid "!Panel:Speedhacks:VUCycleSteal1"
 msgstr "!Panel:Speedhacks:VUCycleSteal1"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
+#, fuzzy
 msgid "!Panel:Speedhacks:VUCycleSteal2"
 msgstr "!Panel:Speedhacks:VUCycleSteal2"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
+#, fuzzy
 msgid "!Panel:Speedhacks:VUCycleSteal3"
 msgstr "!Panel:Speedhacks:VUCycleSteal3"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
+#, fuzzy
 msgid "!Panel:Speedhacks:Overview"
 msgstr "!Panel:Speedhacks:Overview"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
+#, fuzzy
 msgid "!ContextTip:Speedhacks:EECycleRate Slider"
 msgstr "!ContextTip:Speedhacks:EECycleRate Slider"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
+#, fuzzy
 msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
 msgstr "!ContextTip:Speedhacks:VUCycleStealing Slider"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+#, fuzzy
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr "!ContextTip:Speedhacks:vuFlagHack"
 
@@ -283,38 +344,47 @@ msgid "!ContextTip:Speedhacks:vuThread"
 msgstr "!ContextTip:Speedhacks:vuMinMax"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
+#, fuzzy
 msgid "!ContextTip:Speedhacks:INTC"
 msgstr "!ContextTip:Speedhacks:INTC"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
+#, fuzzy
 msgid "!ContextTip:Speedhacks:BIFC0"
 msgstr "!ContextTip:Speedhacks:BIFC0"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
+#, fuzzy
 msgid "!ContextTip:Speedhacks:fastCDVD"
 msgstr "!ContextTip:Speedhacks:fastCDVD"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:37
+#, fuzzy
 msgid "!ContextTip:Framelimiter:Disable"
 msgstr "!ContextTip:Framelimiter:Disable"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:227
+#, fuzzy
 msgid "!Panel:Frameskip:Heading"
 msgstr "!Panel:Frameskip:Heading"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:306
+#, fuzzy
 msgid "!ContextTip:GS:SyncMTGS"
 msgstr "!ContextTip:GS:SyncMTGS"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:310
+#, fuzzy
 msgid "!ContextTip:GS:DisableOutput"
 msgstr "!ContextTip:GS:DisableOutput"
 
 #: pcsx2/vtlb.cpp:710
+#, fuzzy
 msgid "!Notice:HostVmReserve"
 msgstr "!Notice:HostVmReserve"
 
 #: pcsx2/x86/sVU_zerorec.cpp:363
+#, fuzzy
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr "!Notice:superVU:VirtualMemoryAlloc"
 
