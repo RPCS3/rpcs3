@@ -413,8 +413,13 @@ inline bool ZZshCheckShaderCompatibility(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 }
 
 static void ZZshSetShader(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
-	if (!ZZshCheckShaderCompatibility(vs, ps)) 				// We don't need to link uncompatible shaders
+	if (vs == NULL || ps == NULL) return;
+
+	UNIFORM_ERROR_LOG("SHADER: %s(%d) \t+\t%s(%d)", ShaderNames[vs->program], vs->program, ShaderNames[ps->program], ps->program);
+	if (!ZZshCheckShaderCompatibility(vs, ps)) { 				// We don't need to link uncompatible shaders
 		return;
+	}
+
 
 	int vss = (vs!=NULL)?vs->program:0;
 	int pss = (ps!=NULL)?ps->program:0;

@@ -1,5 +1,22 @@
 //#version 420 Keep it for text editor detection
-// Cg Shaders for PS2 GS emulation
+
+//  ZZ Open GL graphics plugin
+//  Copyright (c)2009-2010 zeydlitz@gmail.com, arcum42@gmail.com, gregory.hainaut@gmail.com
+//  Based on Zerofrog's ZeroGS KOSMOS (c)2005-2008
+// 
+//  This program is free software; you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation; either version 2 of the License, or
+//  (at your option) any later version.
+// 
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+// 
+//  You should have received a copy of the GNU General Public License
+//  along with this program; if not, write to the Free Software
+//  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 // divides by z for every pixel, instead of in vertex shader
 // fixes kh textures
@@ -7,7 +24,7 @@
 #extension ARB_texture_rectangle: require
 #extension GL_ARB_shading_language_420pack: require
 #extension GL_ARB_separate_shader_objects : require
-// Set with version
+// Set with version macro
 // #define GL_compatibility_profile 1
 
 
@@ -55,18 +72,65 @@
 #define float4 vec4
 
 ////////////////////////////////////////////////////////////////////
-// INPUT
+// INPUT/OUTPUT
 ////////////////////////////////////////////////////////////////////
+// NOTE: Future optimization tex.w is normally useless (in cg it is a float3) so it can contains the fog value
+struct vertex
+{
+    vec4 color;
+    TEX_DECL tex;
+    vec4 z;
+    float fog;
+};
+
+// VS input (from VBO)
+//
+// glColorPointer -> gl_Color (color)
+// glSecondaryColorPointerEXT -> gl_SecondaryColor (it seems just a way to have another parameter in shader)
+// glTexCoordPointer -> gl_MultiTexCoord0 (tex coord)
+// glVertexPointer -> gl_Vertex (position)
+// 
+// VS Output (to PS)
+// gl_Position (must be kept)
+// vertex
+//
+// FS input (from VS)
+// vertex
+// 
+// FS output
+// gl_FragData[0]
+// gl_FragData[1]
+
+
 #ifdef VERTEX_SHADER
+// The standard GL3 core interface
+out gl_PerVertex {
+    invariant vec4 gl_Position;
+    float gl_PointSize;
+    float gl_ClipDistance[];
+};
+
+// FIXME: deprecated variable
+// not supported in VS
+// in vec4 gl_Color;
+// in vec4 gl_SecondaryColor;
+
+layout(location = 0) out vertex VSout;
+
+/////// return ZZ_SH_CRTC;
+// otex0 -> tex
+// ointerpos -> z
+
 #endif
 
 #ifdef FRAGMENT_SHADER
-//in gl_PerFragment {
-//	in float gl_FogFragCoord;
-//	in vec4 gl_TexCoord[];
-//	in vec4 gl_Color;
-//	in vec4 gl_SecondaryColor;
-//};
+
+layout(location = 0) in vertex PSin;
+
+// NOTE: Basic s/gl_FragData[X]/FragDataX/ I think
+// FIXME: host only do glDrawBuffers of 1 buffers not 2. I think this is a major bug
+layout(location = 0) out vec4 FragData0;
+layout(location = 1) out vec4 FragData1;
 
 #endif
 
@@ -547,8 +611,8 @@ half4 ps2FinalColor(half4 col)
 
 void RegularPS() {
 	// whenever outputting depth, make sure to mult by 255/256 and 1
-	gl_FragData[0] = ps2FinalColor(gl_Color);
-	DOZWRITE(gl_FragData[1] = gl_TexCoord[0];)
+	gl_FragData[0] = ps2FinalColor(PSin.color);
+	DOZWRITE(gl_FragData[1] = PSin.z;)
 }
 
 #ifdef WRITE_DEPTH
@@ -556,8 +620,8 @@ void RegularPS() {
 #define DECL_TEXPS(num, bit) \
 void Texture##num##bit##PS() \
 { \
-	gl_FragData[0] = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(gl_TexCoord[0]), gl_Color)); \
-	gl_FragData[1] = gl_TexCoord[1]; \
+	gl_FragData[0] = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color)); \
+	gl_FragData[1] = PSin.z; \
 }
 
 #else
@@ -565,7 +629,7 @@ void Texture##num##bit##PS() \
 #define DECL_TEXPS(num, bit) \
 void Texture##num##bit##PS() \
 { \
-	gl_FragData[0] = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(gl_TexCoord[0]), gl_Color)); \
+	gl_FragData[0] = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color)); \
 }
 
 #endif
@@ -587,10 +651,10 @@ DECL_TEXPS_(5)
 
 void RegularFogPS() {
 	half4 c;
-	c.xyz = mix(g_fFogColor.xyz, gl_Color.xyz, vec3(gl_TexCoord[0].x));
-	c.w = gl_Color.w;
+	c.xyz = mix(g_fFogColor.xyz, PSin.color.xyz, vec3(PSin.fog));
+	c.w = PSin.color.w;
 	gl_FragData[0] = ps2FinalColor(c);
-   	DOZWRITE(gl_FragData[1] = gl_TexCoord[1];)
+   	DOZWRITE(gl_FragData[1] = PSin.z;)
 }
 
 #ifdef WRITE_DEPTH
@@ -598,10 +662,10 @@ void RegularFogPS() {
 #define DECL_TEXFOGPS(num, bit) \
 void TextureFog##num##bit##PS() \
 { \
-	half4 c = ps2CalcShade(ps2shade##num##bit(gl_TexCoord[0]), gl_Color); \
-	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(gl_TexCoord[1].x)); \
+	half4 c = ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color); \
+	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(PSin.fog)); \
 	gl_FragData[0] = ps2FinalColor(c); \
-   	gl_FragData[1] = gl_TexCoord[2]; \
+   	gl_FragData[1] = PSin.z; \
 }
 
 #else
@@ -609,8 +673,8 @@ void TextureFog##num##bit##PS() \
 #define DECL_TEXFOGPS(num, bit) \
 void TextureFog##num##bit##PS() \
 { \
-	half4 c = ps2CalcShade(ps2shade##num##bit(gl_TexCoord[0]), gl_Color); \
-	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(gl_TexCoord[1].x)); \
+	half4 c = ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color); \
+	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(PSin.fog)); \
 	gl_FragData[0] = ps2FinalColor(c); \
 }
 
@@ -652,24 +716,24 @@ half4 BilinearBitBlt(float2 tex0)
 }
 
 void BitBltPS() {
-	gl_FragData[0] = texture(g_sMemory, ps2memcoord(gl_TexCoord[0].xy).xy)*g_fOneColor.xxxy;
+	gl_FragData[0] = texture(g_sMemory, ps2memcoord(PSin.tex.xy).xy)*g_fOneColor.xxxy;
 }
 
 // used when AA
 void BitBltAAPS() {
-	gl_FragData[0] = BilinearBitBlt(gl_TexCoord[0].xy) * g_fOneColor.xxxy;
+	gl_FragData[0] = BilinearBitBlt(PSin.tex.xy) * g_fOneColor.xxxy;
 }
 
 void BitBltDepthPS() {
 	vec4 data;
-	data = texture(g_sMemory, ps2memcoord(gl_TexCoord[0].xy));
+	data = texture(g_sMemory, ps2memcoord(PSin.tex.xy));
 	gl_FragData[0] = data + g_fZBias.y;
 	gl_FragDepth   = (log(g_fc0.y + dot(data, g_fBitBltZ)) * g_fOneColor.w) * g_fZMin.y + dot(data, g_fBitBltZ) * g_fZMin.x ;
 }
 
 void BitBltDepthMRTPS() {
 	vec4 data;
-	data = texture(g_sMemory, ps2memcoord(gl_TexCoord[0].xy));
+	data = texture(g_sMemory, ps2memcoord(PSin.tex.xy));
 	gl_FragData[0] = data + g_fZBias.y;
 	gl_FragData[1].x = g_fc0.x;
 	gl_FragDepth = (log(g_fc0.y + dot(data, g_fBitBltZ)) * g_fOneColor.w) * g_fZMin.y + dot(data, g_fBitBltZ) * g_fZMin.x ;
@@ -693,21 +757,21 @@ half4 BilinearFloat16(float2 tex0)
 }
 
 void CRTCTargInterPS() {
-	float finter = texture(g_sInterlace, gl_TexCoord[1].yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
-	float4 c = BilinearFloat16(gl_TexCoord[0].xy);
+	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
+	float4 c = BilinearFloat16(PSin.tex.xy);
 	c.w = ( g_fc0.w*c.w * g_fOneColor.x + g_fOneColor.y ) * finter;
 	gl_FragData[0] = c;
 }
 
 void CRTCTargPS() {
-	float4 c = BilinearFloat16(gl_TexCoord[0].xy);
+	float4 c = BilinearFloat16(PSin.tex.xy);
 	c.w = g_fc0.w * c.w * g_fOneColor.x + g_fOneColor.y;
 	gl_FragData[0] = c;
 }
 
 void CRTCInterPS() {
-	float finter = texture(g_sInterlace, gl_TexCoord[1].yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
-	float2 filtcoord = trunc(gl_TexCoord[0].xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
+	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
+	float2 filtcoord = trunc(PSin.tex.xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
 	half4 c = BilinearBitBlt(filtcoord);
 	c.w = (c.w * g_fOneColor.x + g_fOneColor.y)*finter;
 	gl_FragData[0] = c;
@@ -715,14 +779,14 @@ void CRTCInterPS() {
 
 // simpler
 void CRTCInterPS_Nearest() {
-	float finter = texture(g_sInterlace, gl_TexCoord[1].yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
-	half4 c = texture(g_sMemory, ps2memcoord(gl_TexCoord[0].xy).xy);
+	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
+	half4 c = texture(g_sMemory, ps2memcoord(PSin.tex.xy).xy);
 	c.w = (c.w * g_fOneColor.x + g_fOneColor.y)*finter;
 	gl_FragData[0] = c;
 }
 
 void CRTCPS() {
-	float2 filtcoord = gl_TexCoord[0].xy * g_fInvTexDims.xy+g_fInvTexDims.zw;
+	float2 filtcoord = PSin.tex.xy * g_fInvTexDims.xy+g_fInvTexDims.zw;
 	half4 c = BilinearBitBlt(filtcoord);
 	c.w = c.w * g_fOneColor.x + g_fOneColor.y;
 	gl_FragData[0] = c;
@@ -730,14 +794,14 @@ void CRTCPS() {
 
 // simpler
 void CRTCPS_Nearest() {
-	half4 c = texture(g_sMemory, ps2memcoord(gl_TexCoord[0].xy).xy);
+	half4 c = texture(g_sMemory, ps2memcoord(PSin.tex.xy).xy);
 	c.w = c.w * g_fOneColor.x + g_fOneColor.y;
 	gl_FragData[0] = c;
 }
 
 void CRTC24InterPS() {
-	float finter = texture(g_sInterlace, gl_TexCoord[1].yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
-	float2 filtcoord = trunc(gl_TexCoord[0].xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
+	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
+	float2 filtcoord = trunc(PSin.tex.xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
 
 	half4 c = texture(g_sMemory, ps2memcoord(filtcoord).xy);
 	c.w = (c.w * g_fOneColor.x + g_fOneColor.y)*finter;
@@ -745,7 +809,7 @@ void CRTC24InterPS() {
 }
 
 void CRTC24PS() {
-	float2 filtcoord = trunc(gl_TexCoord[0].xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
+	float2 filtcoord = trunc(PSin.tex.xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
 	half4 c = texture(g_sMemory, ps2memcoord(filtcoord).xy);
 	c.w = c.w * g_fOneColor.x + g_fOneColor.y;
 	gl_FragData[0] = c;
@@ -756,13 +820,13 @@ void ZeroPS() {
 }
 
 void BaseTexturePS() {
-	gl_FragData[0] = texture(g_sSrcFinal, gl_TexCoord[0].xy) * g_fOneColor;
+	gl_FragData[0] = texture(g_sSrcFinal, PSin.tex.xy) * g_fOneColor;
 }
 
 void Convert16to32PS() {
 	float4 final;
-	float2 ffrac = mod ( gl_TexCoord[0].xy + g_fTexDims.zw, g_fTexOffset.xy);
-	float2 tex0 = g_fTexDims.xy * gl_TexCoord[0].xy - ffrac * g_fc0.yw;
+	float2 ffrac = mod ( PSin.tex.xy + g_fTexDims.zw, g_fTexOffset.xy);
+	float2 tex0 = g_fTexDims.xy * PSin.tex.xy - ffrac * g_fc0.yw;
 
 	if (ffrac.x > g_fTexOffset.x*g_fc0.w)
 		tex0.x += g_fTexOffset.x*g_fc0.w;
@@ -783,8 +847,8 @@ void Convert16to32PS() {
 // so every other 8 pixels, use the upper bits instead of lower
 void Convert32to16PS() {
 	bool upper = false;
-	float2 ffrac = mod(gl_TexCoord[0].xy + g_fTexDims.zw, g_fTexOffset.xy);
-	float2 tex0 = g_fc0.ww * (gl_TexCoord[0].xy + ffrac);
+	float2 ffrac = mod(PSin.tex.xy + g_fTexDims.zw, g_fTexOffset.xy);
+	float2 tex0 = g_fc0.ww * (PSin.tex.xy + ffrac);
 	if( ffrac.x > g_fTexOffset.z ) {
 		tex0.x -= g_fTexOffset.z;
 		upper = true;
@@ -813,40 +877,45 @@ float4 OutPosition(float4 vertex) {
 // just smooth shadering
 void RegularVS() {
 	gl_Position = OutPosition(gl_Vertex);
-	gl_FrontColor = gl_Color;
-	DOZWRITE(gl_TexCoord[0] = gl_SecondaryColor * g_fZBias.x + g_fZBias.y; gl_TexCoord[0].w = g_fc0.y;)
+	VSout.color = gl_Color;
+	DOZWRITE(VSout.z = gl_SecondaryColor * g_fZBias.x + g_fZBias.y;)
+    DOZWRITE(VSout.z.w = g_fc0.y;)
 }
 
 // diffuse texture mapping
 void TextureVS() {
 	gl_Position = OutPosition(gl_Vertex);
- 	gl_FrontColor = gl_Color;
+	VSout.color = gl_Color;
 #ifdef PERSPECTIVE_CORRECT_TEX
-	gl_TexCoord[0].xyz = gl_MultiTexCoord0.xyz;
+	VSout.tex.xyz = gl_MultiTexCoord0.xyz;
 #else
-	gl_TexCoord[0].xy = gl_MultiTexCoord0.xy/gl_MultiTexCoord0.z;
+	VSout.tex.xy = gl_MultiTexCoord0.xy/gl_MultiTexCoord0.z;
 #endif
- 	DOZWRITE(gl_TexCoord[1] = gl_SecondaryColor * g_fZBias.x + g_fZBias.y; gl_TexCoord[1].w = g_fc0.y;)
+ 	DOZWRITE(VSout.z = gl_SecondaryColor * g_fZBias.x + g_fZBias.y;)
+    DOZWRITE(VSout.z.w = g_fc0.y;)
 }
 
 void RegularFogVS() {
 	float4 position = OutPosition(gl_Vertex);
 	gl_Position = position;
-	gl_FrontColor = gl_Color;
-    	gl_TexCoord[0].x = position.z * g_fBilinear.w;
-	DOZWRITE(gl_TexCoord[1] = gl_SecondaryColor * g_fZBias.x + g_fZBias.y; gl_TexCoord[1].w = g_fc0.y;)
+	VSout.color = gl_Color;
+    VSout.fog = position.z * g_fBilinear.w;
+	DOZWRITE(VSout.z = gl_SecondaryColor * g_fZBias.x + g_fZBias.y;)
+    DOZWRITE(VSout.z.w = g_fc0.y;)
 }
 
 void TextureFogVS() {
-	gl_Position = OutPosition(gl_Vertex);
-	gl_FrontColor = gl_Color;
+	float4 position = OutPosition(gl_Vertex);
+	gl_Position = position;
+	VSout.color = gl_Color;
 #ifdef PERSPECTIVE_CORRECT_TEX
-    	gl_TexCoord[0].xyz = gl_MultiTexCoord0.xyz;
+	VSout.tex.xyz = gl_MultiTexCoord0.xyz;
 #else
-	gl_TexCoord[0].xy  = gl_MultiTexCoord0.xy / gl_MultiTexCoord0.z;
+	VSout.tex.xy = gl_MultiTexCoord0.xy/gl_MultiTexCoord0.z;
 #endif
-	gl_TexCoord[1].x = gl_Vertex.z * g_fBilinear.w;
-    	DOZWRITE(gl_TexCoord[2] = gl_SecondaryColor * g_fZBias.x + g_fZBias.y; gl_TexCoord[2].w = g_fc0.y;)
+    VSout.fog = position.z * g_fBilinear.w;
+	DOZWRITE(VSout.z = gl_SecondaryColor * g_fZBias.x + g_fZBias.y;)
+    DOZWRITE(VSout.z.w = g_fc0.y;)
 }
 
 void BitBltVS() {
@@ -855,8 +924,8 @@ void BitBltVS() {
 	position.zw = g_fc0.xy;
 	gl_Position = position;
 
-	gl_TexCoord[0].xy = gl_MultiTexCoord0.xy * g_fBitBltTex.xy + g_fBitBltTex.zw;
-	gl_TexCoord[1].xy = position.xy * g_fBitBltTrans.xy + g_fBitBltTrans.zw;
+	VSout.tex.xy = gl_MultiTexCoord0.xy * g_fBitBltTex.xy + g_fBitBltTex.zw;
+	VSout.z.xy = position.xy * g_fBitBltTrans.xy + g_fBitBltTrans.zw;
 }
 
 #endif

@@ -33,131 +33,134 @@ struct GSInputLayoutOGL {
 	const GLvoid* offset;
 };
 
-class GSVertexBufferStateOGL {
-	class GSBufferOGL {
-		size_t m_stride;
-		size_t m_start;
-		size_t m_count;
-		size_t m_limit;
-		GLenum m_target;
-		GLuint m_buffer;
-		size_t m_default_size;
+class GSBufferOGL {
+	size_t m_stride;
+	size_t m_start;
+	size_t m_count;
+	size_t m_limit;
+	GLenum m_target;
+	GLuint m_buffer;
+	size_t m_default_size;
 
-		public: 
-		GSBufferOGL(GLenum target, size_t stride) : 
-			  m_stride(stride)
-			, m_start(0)
-			, m_count(0)
-			, m_limit(0)
-			, m_target(target)
-		{
-			glGenBuffers(1, &m_buffer);
-			// Opengl works best with 1-4MB buffer.
-			m_default_size = 2 * 1024 * 1024 / m_stride;
+	public: 
+	GSBufferOGL(GLenum target, size_t stride) : 
+		m_stride(stride)
+		, m_start(0)
+		, m_count(0)
+		, m_limit(0)
+		, m_target(target)
+	{
+		glGenBuffers(1, &m_buffer);
+		// Opengl works best with 1-4MB buffer.
+		m_default_size = 2 * 1024 * 1024 / m_stride;
+	}
+
+	~GSBufferOGL() { glDeleteBuffers(1, &m_buffer); }
+
+	void allocate() { allocate(m_default_size); }
+
+	void allocate(size_t new_limit)
+	{
+		m_start = 0;
+		m_limit = new_limit;
+		glBufferData(m_target,  m_limit * m_stride, NULL, GL_STREAM_DRAW);
+	}
+
+	void bind()
+	{
+		glBindBuffer(m_target, m_buffer);
+	}
+
+	void upload(const void* src, uint32 count)
+	{
+		// Upload the data to the buffer
+		void* dst;
+		if (Map(&dst, count)) {
+			// FIXME which one to use
+			// GSVector4i::storent(dst, src, m_count * m_stride);
+			memcpy(dst, src, m_stride*m_count);
+			Unmap();
 		}
+	}
 
-		~GSBufferOGL() { glDeleteBuffers(1, &m_buffer); }
+	bool Map(void** pointer, uint32 count ) {
+#ifdef OGL_DEBUG
+		GLint b_size = -1;
+		glGetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
 
-		void allocate() { allocate(m_default_size); }
+		if (b_size <= 0) return false;
+#endif
 
-		void allocate(size_t new_limit)
-		{
+		m_count = count;
+
+		// Note: For an explanation of the map flag
+		// see http://www.opengl.org/wiki/Buffer_Object_Streaming
+		uint32 map_flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
+
+		// Current GPU buffer is really too small need to allocate a new one
+		if (m_count > m_limit) {
+			allocate(std::max<int>(m_count * 3 / 2, m_default_size));
+
+		} else if (m_count > (m_limit - m_start) ) {
+			// Not enough left free room. Just go back at the beginning
 			m_start = 0;
-			m_limit = new_limit;
-			glBufferData(m_target,  m_limit * m_stride, NULL, GL_STREAM_DRAW);
+
+			// Tell the driver that it can orphan previous buffer and restart from a scratch buffer.
+			// Technically the buffer will not be accessible by the application anymore but the
+			// GL will effectively remove it when draws call are finised.
+			map_flags |= GL_MAP_INVALIDATE_BUFFER_BIT;
+		} else {
+			// Tell the driver that it doesn't need to contain any valid buffer data, and that you promise to write the entire range you map
+			map_flags |= GL_MAP_INVALIDATE_RANGE_BIT;
 		}
 
-		void bind()
-		{
-			glBindBuffer(m_target, m_buffer);
-		}
-
-		void upload(const void* src, uint32 count)
-		{
-			// Upload the data to the buffer
-			void* dst;
-			if (Map(&dst, count)) {
-				// FIXME which one to use
-				// GSVector4i::storent(dst, src, m_count * m_stride);
-				memcpy(dst, src, m_stride*m_count);
-				Unmap();
-			}
-		}
-
-		bool Map(void** pointer, uint32 count ) {
+		// Upload the data to the buffer
+		*pointer = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
+		//fprintf(stderr, "Map %x from %d to %d\n", *pointer, m_start, m_start+m_count);
 #ifdef OGL_DEBUG
-			GLint b_size = -1;
-			glGetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
-
-			if (b_size <= 0) return false;
+		if (*pointer == NULL) {
+			fprintf(stderr, "CRITICAL ERROR map failed for vb!!!\n");
+			return false;
+		}
 #endif
+		return true;
+	}
 
-			m_count = count;
+	void Unmap() { glUnmapBuffer(m_target); }
 
-			// Note: For an explanation of the map flag
-			// see http://www.opengl.org/wiki/Buffer_Object_Streaming
-			uint32 map_flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT;
+	void EndScene()
+	{
+		m_start += m_count;
+		m_count = 0;
+	}
 
-			// Current GPU buffer is really too small need to allocate a new one
-			if (m_count > m_limit) {
-				allocate(std::max<int>(m_count * 3 / 2, m_default_size));
+	void Draw(GLenum mode)
+	{
+		glDrawArrays(mode, m_start, m_count);
+	}
 
-			} else if (m_count > (m_limit - m_start) ) {
-				// Not enough left free room. Just go back at the beginning
-				m_start = 0;
+	void Draw(GLenum mode, GLint basevertex)
+	{
+		glDrawElementsBaseVertex(mode, m_count, GL_UNSIGNED_INT, (void*)(m_start * m_stride), basevertex);
+	}
 
-				// Tell the driver that it can orphan previous buffer and restart from a scratch buffer.
-				// Technically the buffer will not be accessible by the application anymore but the
-				// GL will effectively remove it when draws call are finised.
-				map_flags |= GL_MAP_INVALIDATE_BUFFER_BIT;
-			} else {
-				// Tell the driver that it doesn't need to contain any valid buffer data, and that you promise to write the entire range you map
-				map_flags |= GL_MAP_INVALIDATE_RANGE_BIT;
-			}
+	void Draw(GLenum mode, GLint basevertex, int offset, int count)
+	{
+		glDrawElementsBaseVertex(mode, count, GL_UNSIGNED_INT, (void*)((m_start + offset) * m_stride), basevertex);
+	}
 
-			// Upload the data to the buffer
-			*pointer = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
-			//fprintf(stderr, "Map %x from %d to %d\n", *pointer, m_start, m_start+m_count);
-#ifdef OGL_DEBUG
-			if (*pointer == NULL) {
-				fprintf(stderr, "CRITICAL ERROR map failed for vb!!!\n");
-				return false;
-			}
-#endif
-			return true;
-		}
+	size_t GetStart() { return m_start; }
 
-		void Unmap() { glUnmapBuffer(m_target); }
+	void debug() 
+	{
+		fprintf(stderr, "data buffer: start %d, count %d\n", m_start, m_count);
+	}
 
-		void EndScene()
-		{
-			m_start += m_count;
-			m_count = 0;
-		}
+};
 
-		void Draw(GLenum mode)
-		{
-			glDrawArrays(mode, m_start, m_count);
-		}
-
-		void Draw(GLenum mode, GLint basevertex)
-		{
-			glDrawElementsBaseVertex(mode, m_count, GL_UNSIGNED_INT, (void*)(m_start * m_stride), basevertex);
-		}
-
-		void Draw(GLenum mode, GLint basevertex, int offset, int count)
-		{
-			glDrawElementsBaseVertex(mode, count, GL_UNSIGNED_INT, (void*)((m_start + offset) * m_stride), basevertex);
-		}
-
-		size_t GetStart() { return m_start; }
-
-		void debug() 
-		{
-			fprintf(stderr, "data buffer: start %d, count %d\n", m_start, m_count);
-		}
-
-	} *m_vb, *m_ib;
+class GSVertexBufferStateOGL {
+	GSBufferOGL *m_vb;
+	GSBufferOGL *m_ib;
 
 	GLuint m_va;
 	GLenum m_topology;
@@ -228,6 +231,8 @@ public:
 	~GSVertexBufferStateOGL()
 	{
 		glDeleteVertexArrays(1, &m_va);
+		delete m_vb;
+		delete m_ib;
 	}
 
 	void debug()
