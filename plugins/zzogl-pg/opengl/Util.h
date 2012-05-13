@@ -72,6 +72,16 @@ extern "C" u32   CALLBACK PS2EgetLibVersion2(u32 type);
 extern "C" char* CALLBACK PS2EgetLibName(void);
 #endif
 
+// Allow easy copy/past between GSdx and zzogl
+typedef unsigned char uint8;
+typedef signed char int8;
+typedef unsigned short uint16;
+typedef signed short int16;
+typedef unsigned int uint32;
+typedef signed int int32;
+typedef unsigned long long uint64;
+typedef signed long long int64;
+
 #include "ZZoglMath.h"
 #include "Profile.h"
 #include "GSDump.h"

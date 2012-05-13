@@ -38,7 +38,7 @@ void GSDeviceOGL::CreateTextureFX()
 	glSamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glSamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	// FIXME which value for GL_TEXTURE_MIN_LOD
-	glSamplerParameteri(m_rt_ss, GL_TEXTURE_MAX_LOD, FLT_MAX);
+	glSamplerParameterf(m_rt_ss, GL_TEXTURE_MAX_LOD, FLT_MAX);
 	// FIXME: seems there is 2 possibility in opengl
 	// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	// glSamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_NONE);
@@ -225,7 +225,7 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 			glSamplerParameteri(ss0, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 			// FIXME which value for GL_TEXTURE_MIN_LOD
-			glSamplerParameteri(m_rt_ss, GL_TEXTURE_MAX_LOD, FLT_MAX);
+			glSamplerParameterf(m_rt_ss, GL_TEXTURE_MAX_LOD, FLT_MAX);
 			// FIXME: seems there is 2 possibility in opengl
 			// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 			// glSamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_NONE);

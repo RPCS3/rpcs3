@@ -224,7 +224,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	CompileShaderFromSource("convert.glsl", "vs_main", GL_VERTEX_SHADER, &m_convert.vs);
 	CompileShaderFromSource("convert.glsl", "gs_main", GL_GEOMETRY_SHADER, &m_convert.gs);
-	for(int i = 0; i < countof(m_convert.ps); i++)
+	for(uint i = 0; i < countof(m_convert.ps); i++)
 		CompileShaderFromSource("convert.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_convert.ps[i]);
 
 	// Note the following object are initialized to 0 so disabled.
@@ -252,7 +252,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	glSamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glSamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	// FIXME which value for GL_TEXTURE_MIN_LOD
-	glSamplerParameteri(m_convert.ln, GL_TEXTURE_MAX_LOD, FLT_MAX);
+	glSamplerParameterf(m_convert.ln, GL_TEXTURE_MAX_LOD, FLT_MAX);
 	// FIXME: seems there is 2 possibility in opengl
 	// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	// glSamplerParameteri(m_convert.ln, GL_TEXTURE_COMPARE_MODE, GL_NONE);
@@ -268,7 +268,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	glSamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glSamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	// FIXME which value for GL_TEXTURE_MIN_LOD
-	glSamplerParameteri(m_convert.pt, GL_TEXTURE_MAX_LOD, FLT_MAX);
+	glSamplerParameterf(m_convert.pt, GL_TEXTURE_MAX_LOD, FLT_MAX);
 	// FIXME: seems there is 2 possibility in opengl
 	// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	// glSamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_MODE, GL_NONE);
@@ -284,7 +284,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	m_merge_obj.cb = new GSUniformBufferOGL(1, sizeof(MergeConstantBuffer));
 
-	for(int i = 0; i < countof(m_merge_obj.ps); i++)
+	for(uint i = 0; i < countof(m_merge_obj.ps); i++)
 		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge_obj.ps[i]);
 
 	m_merge_obj.bs = new GSBlendStateOGL();
@@ -296,7 +296,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	m_interlace.cb = new GSUniformBufferOGL(2, sizeof(InterlaceConstantBuffer));
 
-	for(int i = 0; i < countof(m_interlace.ps); i++)
+	for(uint i = 0; i < countof(m_interlace.ps); i++)
 		CompileShaderFromSource("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_interlace.ps[i]);
 	// ****************************************************************
 	// Shade boost
@@ -1167,8 +1167,6 @@ void GSDeviceOGL::OMSetFBO(GLuint fbo, GLenum buffer)
 
 void GSDeviceOGL::OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref)
 {
-	uint ref = sref;
-
 	if(m_state.dss != dss) {
 		m_state.dss = dss;
 		m_state.sref = sref;

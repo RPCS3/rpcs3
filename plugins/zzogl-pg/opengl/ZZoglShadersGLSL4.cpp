@@ -93,9 +93,6 @@ ZZshProgram	ZZshMainProgram;
 char*		ZZshSource;			// Shader's source data.
 off_t		ZZshSourceSize;
 
-extern char* EFFECT_NAME;				// All this variables used for testing and set manually
-extern char* EFFECT_DIR;
-
 bool g_bCRTCBilinear = true;
 
 float4 g_vdepth, vlogz;
@@ -109,37 +106,23 @@ VERTEXSHADER pvsBitBlt;
 inline bool LoadEffects();
 extern bool s_bWriteDepth;
 
-struct SHADERHEADER
-{
-	unsigned int index, offset, size; // if highest bit of index is set, pixel shader
-};
-map<int, SHADERHEADER*> mapShaderResources;
-
 // Debug variable, store name of the function that call the shader.
 const char* ShaderCallerName = "";
 const char* ShaderHandleName = "";
 
 int NumActiveUniforms, NumGlobalUniforms;
-ZZshParamInfo UniformsIndex[MAX_ACTIVE_UNIFORMS] = {qZero};
 const char* ShaderNames[MAX_ACTIVE_SHADERS] = {""};
 ZZshShaderType ShaderTypes[MAX_ACTIVE_SHADERS] = {ZZ_SH_NONE};
 
 ZZshProgram CompiledPrograms[MAX_ACTIVE_SHADERS][MAX_ACTIVE_SHADERS] = {{0}};
-const char* TextureUnits[NUMBER_OF_SAMPLERS] =
-	{"g_sMemory[0]", 	"g_sMemory[1]", 	"g_sSrcFinal", 		"g_sBitwiseANDX", 	"g_sBitwiseANDY",  "g_sInterlace", \
-		"g_sCLUT", 		"g_sBlocks", 		"g_sBilinearBlocks", 		"g_sConv16to32", 	"g_sConv32to16"};
-ZZshPARAMTYPE TextureTypes[NUMBER_OF_SAMPLERS] =
-	{ZZ_TEXTURE_RECT, 	ZZ_TEXTURE_RECT, 	ZZ_TEXTURE_RECT, 	ZZ_TEXTURE_RECT, 	ZZ_TEXTURE_RECT, 	ZZ_TEXTURE_RECT, \
-		ZZ_TEXTURE_2D, 		ZZ_TEXTURE_2D, 		ZZ_TEXTURE_2D,			ZZ_TEXTURE_2D,		 ZZ_TEXTURE_3D} ;
 
-#ifdef GLSL4_API
+// new for GLSL4
 GSUniformBufferOGL *constant_buffer;
 GSUniformBufferOGL *common_buffer;
 GSUniformBufferOGL *vertex_buffer;
 GSUniformBufferOGL *fragment_buffer;
 
 COMMONSHADER g_cs;
-#endif
 
 //------------------ Code
 
@@ -160,28 +143,6 @@ void HandleCgError(ZZshContext ctx, ZZshError err, void* appdata)
 	if (listing != NULL)
 		ZZLog::Debug_Log("	last listing: %s", listing);
 */
-}
-
-float ZeroFloat4[4] = {0};
-
-inline void SettleFloat(float* f, const float* v) {
-	f[0] = v[0];
-	f[1] = v[1];
-	f[2] = v[2];
-	f[3] = v[3];
-}
-
-inline ZZshParamInfo ParamInfo(const char* ShName, ZZshPARAMTYPE type, const float fvalue[], GLuint sampler, GLint texid, bool Constant, bool Settled) {
-	ZZshParamInfo x;
-	x.ShName = new char[MAX_UNIFORM_NAME_SIZE];
-	x.ShName = ShName;
-	x.type = type;
-	SettleFloat(x.fvalue, fvalue);
-	x.sampler = sampler;
-	x.texid = texid;
-	x.Constant = Constant;
-	x.Settled = Settled;
-	return x;
 }
 
 bool ZZshStartUsingShaders() {
@@ -331,25 +292,6 @@ void ZZshDefaultOneColor( FRAGMENTSHADER& ptr ) {
 const GLchar * EmptyVertex = "void main(void) {gl_Position = ftransform();}";
 const GLchar * EmptyFragment = "void main(void) {gl_FragColor = gl_Color;}";
 
-inline ZZshProgram UseEmptyProgram(const char* name, GLenum shaderType) {
-	GLuint shader = glCreateShader(shaderType);
-	if (shaderType == GL_VERTEX_SHADER)
-		glShaderSource(shader, 1, &EmptyVertex, NULL);
-	else
-		glShaderSource(shader, 1, &EmptyFragment, NULL);
-
-	glCompileShader(shader);
-	ZZshProgram prog = glCreateProgram();
-	glAttachShader(prog, shader);
-	glLinkProgram(prog);
-	if( !glIsProgram(prog) || glGetError() != GL_NO_ERROR ) {
-		ZZLog::Error_Log("Failed to load empty shader for %s:", name);
-		return -1;
-	}
-	ZZLog::Error_Log("Used Empty program for %s... Ok.",name);
-	return prog;
-}
-
 ZZshShaderType ZZshGetShaderType(const char* name) {
 	if (strncmp(name, "TextureFog", 10) == 0) return ZZ_SH_TEXTURE_FOG;
 	if (strncmp(name, "Texture", 7) == 0) return ZZ_SH_TEXTURE;
@@ -381,10 +323,10 @@ inline bool GetCompilationLog(GLuint shader) {
 	if (CompileStatus == GL_TRUE)
 		return true;
 
-	int* lenght, infologlength;
+	int lenght, infologlength;
 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infologlength);
 	char* InfoLog = new char[infologlength];
-	glGetShaderInfoLog(shader, infologlength, lenght, InfoLog);
+	glGetShaderInfoLog(shader, infologlength, &lenght, InfoLog);
 	ZZLog::Error_Log("Compiling... %d:\t %s", shader, InfoLog);
 
 	return false;
@@ -413,6 +355,10 @@ inline bool CompileShader(ZZshProgram& shader, const char* DefineString, const c
 }
 
 inline bool LoadShaderFromFile(ZZshShader& shader, const char* DefineString, const char* name, GLenum ShaderType) {			// Linux specific, as I presume
+
+	// Emit annotation for apitrace 
+	// if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, DefineString);
+
 	if (!CompileShader(shader, DefineString, name, ShaderType)) {
 		ZZLog::Error_Log("Failed to compile shader for %s: ", name);
 	       	return false;
@@ -454,10 +400,10 @@ static bool ValidateProgram(ZZshProgram Prog) {
 
 	if (!isValid) {
 		glValidateProgram(Prog);
-		int* lenght, infologlength;
+		int lenght, infologlength;
 		glGetProgramiv(Prog, GL_INFO_LOG_LENGTH, &infologlength);
 		char* InfoLog = new char[infologlength];
-		glGetProgramInfoLog(Prog, infologlength, lenght, InfoLog);
+		glGetProgramInfoLog(Prog, infologlength, &lenght, InfoLog);
 		ZZLog::Error_Log("Validation %d... %d:\t %s", Prog, infologlength, InfoLog);
 	}
 	return (isValid != 0);
@@ -542,8 +488,14 @@ void ZZshSetPixelShader(ZZshShaderLink prog) {
 
 //------------------------------------------------------------------------------------------------------------------
 
-#ifdef GLSL4_API
 static void init_shader() {
+	// TODO:
+	// Note it would be more clever to allocate buffer inside SHADER class
+	// Add a dirty flags to avoid to upload twice same data...
+	// You need to attach() properly the uniform buffer;
+	// Note: don't put GSUniformBuffer creation inside constructor of static object (context won't 
+	// be set to call gl command)
+	
 	// Warning put same order than GLSL
 	constant_buffer = new GSUniformBufferOGL(0, sizeof(ConstantUniform));
 	common_buffer = new GSUniformBufferOGL(1, sizeof(GlobalUniform));
@@ -565,55 +517,13 @@ static void PutParametersInProgam(VERTEXSHADER* vs, FRAGMENTSHADER* ps, int cont
 	fragment_buffer->bind();
 	fragment_buffer->upload((void*)&ps->uniform_buffer[context]);
 
-	// FIXME DEBUG
-#ifdef _DEBUG
-	GLint cb_idx = glGetUniformBlockIndex(ZZshMainProgram, "constant_buffer");
-	GLint co_idx = glGetUniformBlockIndex(ZZshMainProgram, "common_buffer");
-	GLint fb_idx = glGetUniformBlockIndex(ZZshMainProgram, "fragment_buffer");
-	GLint vb_idx = glGetUniformBlockIndex(ZZshMainProgram, "vertex_buffer");
-
-	GLint debug;
-
-	ZZLog::Error_Log("NEW !!!");
-	if (cb_idx != GL_INVALID_INDEX) {
-		glGetActiveUniformBlockiv(ZZshMainProgram, cb_idx, GL_UNIFORM_BLOCK_BINDING, &debug);
-		ZZLog::Error_Log("cb active  : %d", debug);
-		glGetActiveUniformBlockiv(ZZshMainProgram, cb_idx,  GL_UNIFORM_BLOCK_DATA_SIZE, &debug);
-		ZZLog::Error_Log("size : %d", debug);
-	}
-
-	if (co_idx != GL_INVALID_INDEX) {
-		glGetActiveUniformBlockiv(ZZshMainProgram, co_idx, GL_UNIFORM_BLOCK_BINDING, &debug);
-		ZZLog::Error_Log("co active  : %d", debug);
-		glGetActiveUniformBlockiv(ZZshMainProgram, co_idx,  GL_UNIFORM_BLOCK_DATA_SIZE, &debug);
-		ZZLog::Error_Log("size : %d", debug);
-	}
-
-	if (vb_idx != GL_INVALID_INDEX) {
-		glGetActiveUniformBlockiv(ZZshMainProgram, vb_idx, GL_UNIFORM_BLOCK_BINDING, &debug);
-		ZZLog::Error_Log("vb active  : %d", debug);
-		glGetActiveUniformBlockiv(ZZshMainProgram, vb_idx,  GL_UNIFORM_BLOCK_DATA_SIZE, &debug);
-		ZZLog::Error_Log("size : %d", debug);
-	}
-
-	if (fb_idx != GL_INVALID_INDEX) {
-		glGetActiveUniformBlockiv(ZZshMainProgram, fb_idx, GL_UNIFORM_BLOCK_BINDING, &debug);
-		ZZLog::Error_Log("fb active  : %d", debug);
-		glGetActiveUniformBlockiv(ZZshMainProgram, fb_idx,  GL_UNIFORM_BLOCK_DATA_SIZE, &debug);
-		ZZLog::Error_Log("size : %d", debug);
-	}
-#endif
-
 	g_cs.enable_texture();
 	ps->enable_texture(context);
 }
 
-#endif
-
 static void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
 {
 	// uniform parameters
-	GLint p;
 	pf->prog.link = (void*)pf;			// Setting autolink
 	pf->prog.isFragment = true;			// Setting autolink
 	pf->ShaderType = ShaderTypes[pf->Shader];
@@ -628,7 +538,6 @@ static void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int 
 
 void SetupVertexProgramParameters(VERTEXSHADER* pf, int context)
 {
-	GLint p;
 	pf->prog.link = (void*)pf;			// Setting autolink
 	pf->prog.isFragment = false;			// Setting autolink
 	pf->ShaderType = ShaderTypes[pf->Shader];
@@ -637,12 +546,12 @@ void SetupVertexProgramParameters(VERTEXSHADER* pf, int context)
 }
 
 //const int GLSL_VERSION = 130;  			// Sampler2DRect appear in 1.3
-const int GLSL_VERSION = 420;
+const int GLSL_VERSION = 330;
 
 // We use strictly compilation from source for GSLS
 static __forceinline void GlslHeaderString(char* header_string, const char* name, const char* depth)
 {
-	sprintf(header_string, "#version %d\n#define %s main\n%s\n", GLSL_VERSION, name, depth);
+	sprintf(header_string, "#version %d compatibility\n#define %s main\n%s\n", GLSL_VERSION, name, depth);
 }
 
 static __forceinline bool LOAD_VS(char* DefineString, const char* name, VERTEXSHADER& vertex, int shaderver, ZZshProfile context, const char* depth)
@@ -702,7 +611,6 @@ bool ZZshLoadExtraEffects() {
 		pvs[i] = pvsStore[i].prog;
 
 	if (!LOAD_VS(DefineString, "BitBltVS", pvsBitBlt, cgvProf, 0, "")) bLoadSuccess = false;
-	GLint p;
 	GL_REPORT_ERRORD();
 
 	if (!LOAD_PS(DefineString, "RegularPS", ppsRegular[0], cgfProf, 0, "")) bLoadSuccess = false;
@@ -755,13 +663,10 @@ bool ZZshLoadExtraEffects() {
 
 const static char* g_pPsTexWrap[] = { "#define REPEAT 1\n", "#define CLAMP 1\n", "#define REGION_REPEAT 1\n", "" };
 
-static ZZshShader LoadShaderFromType(const char* srcdir, const char* srcfile, int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int ps, int context) {
+static ZZshShader LoadShaderFromType(int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int ps, int context) {
 
 	assert( texwrap < NUM_TEXWRAPS);
 	assert( type < NUM_TYPES );
-	//ZZLog::Error_Log("\n");
-
-	ZZshProgram prog;
 
 	char* name = new char[MAX_SHADER_NAME_SIZE];
 	sprintf(name, "Texture%s%d_%sPS", fog?"Fog":"", texfilter, g_pTexTypes[type]);
@@ -818,7 +723,7 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 	{
 		return pf;
 	}
-	pf->Shader = LoadShaderFromType(EFFECT_DIR, EFFECT_NAME, type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, g_nPixelShaderVer, context);
+	pf->Shader = LoadShaderFromType(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, g_nPixelShaderVer, context);
 
 	if (ZZshExistProgram(pf)) {
 		SetupFragmentProgramParameters(pf, context, type);
@@ -840,4 +745,4 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 	return NULL;
 }
 
-#endif // GLSL_API
+#endif // GLSL4_API

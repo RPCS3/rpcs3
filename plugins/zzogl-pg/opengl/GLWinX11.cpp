@@ -230,7 +230,7 @@ void GLWindow::CreateContextGL()
 {
 #if defined(OGL4_LOG) || defined(GLSL4_API)
 	// We need to define a debug context. So we need at a 3.0 context (if not 3.2 actually)
-	CreateContextGL(4, 2);
+	CreateContextGL(3, 3);
 #else
 	// FIXME there was some issue with previous context creation on Geforce7. Code was rewritten
 	// for GSdx unfortunately it was not tested on Geforce7 so keep the 2.0 context for now.

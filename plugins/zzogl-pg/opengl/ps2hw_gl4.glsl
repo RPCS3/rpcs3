@@ -5,7 +5,12 @@
 // fixes kh textures
 
 #extension ARB_texture_rectangle: require
-#define GL_compatibility_profile 1
+#extension GL_ARB_shading_language_420pack: require
+#extension GL_ARB_separate_shader_objects : require
+// Set with version
+// #define GL_compatibility_profile 1
+
+
 #define PERSPECTIVE_CORRECT_TEX
 
 // When writting GLSL code we should change variables in code according to denominator

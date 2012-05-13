@@ -59,6 +59,10 @@ inline bool ZZshActiveParameter(ZZshParameter param) {return (param !=NULL); }
 
 #endif					// end NVIDIA cg-toolkit API
 
+#ifdef GLSL4_API
+#include "GSUniformBufferOGL.h"
+#endif
+
 #ifdef GLSL_API
 
 enum ZZshPARAMTYPE {
@@ -117,53 +121,6 @@ enum {
 	ZZSH_CTX_1   = 1,
 	ZZSH_CTX_ALL = 2
 };
-
-class GSUniformBufferOGL {
-	GLuint buffer;		// data object
-	GLuint index;		// GLSL slot
-	uint   size;	    // size of the data
-	const GLenum target;
-
-public:
-	GSUniformBufferOGL(GLuint index, uint size) : index(index)
-												  , size(size)
-												  ,target(GL_UNIFORM_BUFFER)
-	{
-		glGenBuffers(1, &buffer);
-		bind();
-		allocate();
-		attach();
-	}
-
-	void bind()
-	{
-		glBindBuffer(target, buffer);
-	}
-
-	void allocate()
-	{
-		glBufferData(target, size, NULL, GL_STREAM_DRAW);
-	}
-
-	void attach()
-	{
-		glBindBufferBase(target, index, buffer);
-	}
-
-	void upload(const void* src)
-	{
-		u32 flags = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-		u8* dst = (u8*) glMapBufferRange(target, 0, size, flags);
-		memcpy(dst, src, size);
-		glUnmapBuffer(target);
-	}
-
-	~GSUniformBufferOGL() {
-		glDeleteBuffers(1, &buffer);
-	}
-};
-
-
 
 // Note A nice template could be better
 // Warning order is important for buffer (see GLSL)
