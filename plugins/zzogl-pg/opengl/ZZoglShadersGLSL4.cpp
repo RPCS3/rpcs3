@@ -70,7 +70,6 @@
 #define NOCONTEXT		0
 #define NUMBER_OF_SAMPLERS 	11
 #define MAX_SHADER_NAME_SIZE	25
-#define MAX_UNIFORM_NAME_SIZE	20
 #define DEFINE_STRING_SIZE	256
 //------------------ Constants
 
@@ -89,7 +88,6 @@ u8* 		s_lpShaderResources = NULL;
 ZZshShaderLink 	pvs[16] = {sZero}, g_vsprog = sZero, g_psprog = sZero;							// 2 -- ZZ
 ZZshParameter 	g_vparamPosXY[2] = {pZero}, g_fparamFogColor = pZero;
 
-ZZshProgram	ZZshMainProgram;
 char*		ZZshSource;			// Shader's source data.
 off_t		ZZshSourceSize;
 
@@ -110,7 +108,6 @@ extern bool s_bWriteDepth;
 const char* ShaderCallerName = "";
 const char* ShaderHandleName = "";
 
-int NumActiveUniforms, NumGlobalUniforms;
 const char* ShaderNames[MAX_ACTIVE_SHADERS] = {""};
 ZZshShaderType ShaderTypes[MAX_ACTIVE_SHADERS] = {ZZ_SH_NONE};
 
@@ -123,6 +120,7 @@ GSUniformBufferOGL *vertex_buffer;
 GSUniformBufferOGL *fragment_buffer;
 
 COMMONSHADER g_cs;
+static GLuint s_pipeline = 0;
 
 //------------------ Code
 
@@ -177,12 +175,6 @@ bool ZZshStartUsingShaders() {
 			ZZLog::Error_Log("Basic shader test failed.");
 		}
 	}
-	ZZshMainProgram = glCreateProgram();
-	NumActiveUniforms = 0;
-	//SetGlobalUniform(&g_fparamFogColor, "g_fFogColor");
-	//SetGlobalUniform(&g_vparamPosXY[0], "g_fPosXY[0]");
-	//SetGlobalUniform(&g_vparamPosXY[1], NOCONTEXT?"g_fPosXY[1]":"g_fPosXY[0]");
-	//NumGlobalUniforms = NumActiveUniforms;
 
 	if (g_nPixelShaderVer & SHADER_REDUCED)
 		conf.bilinear = 0;
@@ -229,14 +221,17 @@ void ZZshExitCleaning() {
 	delete common_buffer;
 	delete vertex_buffer;
 	delete fragment_buffer;
+
+	glDeleteProgramPipelines(1, &s_pipeline);
 }
 
 // Disable CG
 void ZZshGLDisableProfile() {			// This stop all other shader programs from running;
-	glUseProgram(0);
+	glBindProgramPipeline(0);
 }
 //Enable CG
 void ZZshGLEnableProfile() {
+	glBindProgramPipeline(s_pipeline);
 }
 //-------------------------------------------------------------------------------------
 
@@ -301,105 +296,35 @@ ZZshShaderType ZZshGetShaderType(const char* name) {
 	return ZZ_SH_CRTC;
 }
 
-inline ZZshShader UseEmptyShader(const char* name, GLenum shaderType) {
-	GLuint shader = glCreateShader(shaderType);
-	if (shaderType == GL_VERTEX_SHADER)
-		glShaderSource(shader, 1, &EmptyVertex, NULL);
-	else
-		glShaderSource(shader, 1, &EmptyFragment, NULL);
-
-	glCompileShader(shader);
-
-	ShaderNames[shader] = name;
-	ShaderTypes[shader] = ZZshGetShaderType(name);
-
-	ZZLog::Error_Log("Used Empty shader for %s... Ok.",name);
-	return shader;
-}
-
-inline bool GetCompilationLog(GLuint shader) {
-	GLint CompileStatus;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &CompileStatus);
-	if (CompileStatus == GL_TRUE)
-		return true;
-
-	int lenght, infologlength;
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infologlength);
-	char* InfoLog = new char[infologlength];
-	glGetShaderInfoLog(shader, infologlength, &lenght, InfoLog);
-	ZZLog::Error_Log("Compiling... %d:\t %s", shader, InfoLog);
-
-	return false;
-}
-
-inline bool CompileShader(ZZshProgram& shader, const char* DefineString, const char* name, GLenum shaderType) {
-	const GLchar* ShaderSource[2];
-	ShaderSource[0] = (const GLchar*)DefineString;
-	ShaderSource[1] = (const GLchar*)ZZshSource;
-
-	shader = glCreateShader(shaderType);
-	glShaderSource(shader, 2, &ShaderSource[0], NULL);
-	glCompileShader(shader);
-	ZZLog::Debug_Log("Creating shader %d for %s", shader, name);
-
-	if (!GetCompilationLog(shader)) {
-		ZZLog::Error_Log("Failed to compile shader for %s:", name);
-		return false;
-	}
-
-	ShaderTypes[shader] = ZZshGetShaderType(name);
-	ShaderNames[shader] = name;
-
-	GL_REPORT_ERRORD();
-	return true;
-}
-
-inline bool LoadShaderFromFile(ZZshShader& shader, const char* DefineString, const char* name, GLenum ShaderType) {			// Linux specific, as I presume
-
-	// Emit annotation for apitrace 
-	// if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, DefineString);
-
-	if (!CompileShader(shader, DefineString, name, ShaderType)) {
-		ZZLog::Error_Log("Failed to compile shader for %s: ", name);
-	       	return false;
-	}
-
-	ZZLog::Error_Log("Used shader for %s... Ok",name);
-	return true;
-}
-
-inline bool GetLinkLog(ZZshProgram prog) {
-	GLint LinkStatus;
-	glGetProgramiv(prog, GL_LINK_STATUS, &LinkStatus);
-
-	int unif, atrib;
-	glGetProgramiv(prog, GL_ACTIVE_UNIFORMS, &unif);
-	glGetProgramiv(prog, GL_ACTIVE_ATTRIBUTES, &atrib);
-	UNIFORM_ERROR_LOG("Uniforms %d, attributes %d", unif, atrib);
-
-	if (LinkStatus == GL_TRUE && glIsProgram(prog)) return true;
-
+inline bool GetCompilationLog(ZZshProgram program) {
 #if	defined(DEVBUILD) || defined(_DEBUG)
-	int* lenght, infologlength;
-	glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &infologlength);
-	char* InfoLog = new char[infologlength];
-	glGetProgramInfoLog(prog, infologlength, lenght, InfoLog);
-	if (!infologlength == 0)
-		ZZLog::Error_Log("Linking %d... %d:\t %s", prog, infologlength, InfoLog);
+	GLint log_length = 0;
+	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &log_length);
+
+	char* log = new char[log_length];
+	glGetProgramInfoLog(program, log_length, NULL, log);
+
+	GLint CompileStatus;
+	glGetProgramiv(program, GL_LINK_STATUS, &CompileStatus);
+	if (CompileStatus == GL_FALSE) {
+		ZZLog::Error_Log("Compiling... %d:\t %s", program, log);
+		delete [] log;
+		return false;
+	} 
+
+	delete [] log;
 #endif
-
-	return false;
-
+	return true;
 }
-
-//-------------------------------------------------------------------------------------
 
 static bool ValidateProgram(ZZshProgram Prog) {
+#if	defined(DEVBUILD) || defined(_DEBUG)
 	GLint isValid;
+
+	glValidateProgram(Prog);
 	glGetProgramiv(Prog, GL_VALIDATE_STATUS, &isValid);
 
 	if (!isValid) {
-		glValidateProgram(Prog);
 		int lenght, infologlength;
 		glGetProgramiv(Prog, GL_INFO_LOG_LENGTH, &infologlength);
 		char* InfoLog = new char[infologlength];
@@ -407,40 +332,74 @@ static bool ValidateProgram(ZZshProgram Prog) {
 		ZZLog::Error_Log("Validation %d... %d:\t %s", Prog, infologlength, InfoLog);
 	}
 	return (isValid != 0);
+#else
+	return true;
+#endif
 }
 
-static void PutParametersAndRun(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
-	UNIFORM_ERROR_LOG("Run program %s(%d) \t+\t%s(%d)", ShaderNames[vs->Shader], vs->Shader, ShaderNames[ps->Shader], ps->Shader);
-
-	glUseProgram(ZZshMainProgram);
-	if (glGetError() != GL_NO_ERROR) {
-		ZZLog::Error_Log("Something weird happened on Linking stage.");
-
-		glUseProgram(0);
-		return;
+inline bool CompileShader(ZZshProgram& program, const char* DefineString, const char* name, GLenum shaderType, bool empty = false) {
+	const GLchar* ShaderSource[2];
+	ShaderSource[0] = (const GLchar*)DefineString;
+	// FIXME, can maybe replaced with the program 0 it will used default fixed stage
+	if (empty)
+	{
+		if(shaderType == GL_VERTEX_SHADER)
+			ShaderSource[1] = EmptyVertex;
+		else
+			ShaderSource[1] = EmptyFragment;
+		ZZLog::Error_Log("Used Empty shader for %s... Ok.",name);
 	}
+	else
+		ShaderSource[1] = (const GLchar*)ZZshSource;
+
+	program = glCreateShaderProgramv(shaderType, 2, &ShaderSource[0]);
+
+	ZZLog::Debug_Log("Creating program %d for %s", program, name);
+
+	if (!GetCompilationLog(program)) {
+		ZZLog::Error_Log("Failed to compile shader for %s:", name);
+		return false;
+	}
+
+	ShaderTypes[program] = ZZshGetShaderType(name);
+	ShaderNames[program] = name;
+
+	GL_REPORT_ERRORD();
+
+	if (!ValidateProgram(program)) return false;
+
+	return true;
+}
+
+inline bool LoadShaderFromFile(ZZshProgram& program, const char* DefineString, const char* name, GLenum ShaderType, bool empty = false) {			// Linux specific, as I presume
+
+	// Emit annotation for apitrace 
+	// if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, DefineString);
+
+	if (!CompileShader(program, DefineString, name, ShaderType, empty)) {
+		ZZLog::Error_Log("Failed to compile shader for %s: ", name);
+		return false;
+	}
+
+	ZZLog::Error_Log("Used shader for %s... Ok",name);
+	return true;
+}
+
+//-------------------------------------------------------------------------------------
+
+static void PutParametersAndRun(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
+	UNIFORM_ERROR_LOG("Run program %s(%d) \t+\t%s(%d)", ShaderNames[vs->program], vs->program, ShaderNames[ps->program], ps->program);
 
 	// FIXME context argument
 	int context = 0;
-	PutParametersInProgam(vs, ps, context);
+	PutParametersInProgram(vs, ps, context);
 
-	ValidateProgram(ZZshMainProgram);
-	GL_REPORT_ERRORD();
-}
-
-static void CreateNewProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
-	ZZLog::Error_Log("\n--->  New shader program %d, %s(%d) \t+\t%s(%d).", ZZshMainProgram, ShaderNames[vs->Shader], vs->Shader, ShaderNames[ps->Shader], ps->Shader);
-
-	if (vs->Shader != 0)
-		glAttachShader(ZZshMainProgram, vs->Shader);
-	if (ps->Shader != 0)
-		glAttachShader(ZZshMainProgram, ps->Shader);
-
-	glLinkProgram(ZZshMainProgram);
-	if (!GetLinkLog(ZZshMainProgram)) {
-		ZZLog::Error_Log("Main program linkage error, don't use any shader for this stage.");
-		return;
-	}
+#if	defined(DEVBUILD) || defined(_DEBUG)
+	glValidateProgramPipeline(s_pipeline);
+	GLint isValid;
+	glGetProgramPipelineiv(s_pipeline, GL_VALIDATE_STATUS, &isValid);
+	if (!isValid) ZZLog::Error_Log("Something weird happened on pipeline validation.");
+#endif
 
 	GL_REPORT_ERRORD();
 }
@@ -457,19 +416,12 @@ static void ZZshSetShader(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	if (!ZZshCheckShaderCompatibility(vs, ps)) 				// We don't need to link uncompatible shaders
 		return;
 
-	int vss = (vs!=NULL)?vs->Shader:0;
-	int pss = (ps!=NULL)?ps->Shader:0;
+	int vss = (vs!=NULL)?vs->program:0;
+	int pss = (ps!=NULL)?ps->program:0;
 
 	if (vss !=0 && pss != 0) {
-		if (CompiledPrograms[vss][pss] != 0 && glIsProgram(CompiledPrograms[vss][pss])) {
-			ZZshMainProgram = CompiledPrograms[vs->Shader][ps->Shader];
-		}
-		else {
-			ZZshProgram NewProgram = glCreateProgram();
-			ZZshMainProgram = NewProgram;
-			CompiledPrograms[vss][pss] = NewProgram;
-			CreateNewProgram(vs, ps) ;
-		}
+		glUseProgramStages(s_pipeline, GL_VERTEX_SHADER_BIT, vs->program);
+		glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ps->program);
 
 		PutParametersAndRun(vs, ps);
 		GL_REPORT_ERRORD();
@@ -504,9 +456,13 @@ static void init_shader() {
 
 	constant_buffer->bind();
 	constant_buffer->upload((void*)&g_cs.uniform_buffer_constant);
+
+	
+	glGenProgramPipelines(1, &s_pipeline);
+	glBindProgramPipeline(s_pipeline);
 }
 
-static void PutParametersInProgam(VERTEXSHADER* vs, FRAGMENTSHADER* ps, int context) {
+static void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps, int context) {
 
 	common_buffer->bind();
 	common_buffer->upload((void*)&g_cs.uniform_buffer[context]);
@@ -540,7 +496,7 @@ void SetupVertexProgramParameters(VERTEXSHADER* pf, int context)
 {
 	pf->prog.link = (void*)pf;			// Setting autolink
 	pf->prog.isFragment = false;			// Setting autolink
-	pf->ShaderType = ShaderTypes[pf->Shader];
+	pf->ShaderType = ShaderTypes[pf->program];
 
 	GL_REPORT_ERRORD();
 }
@@ -561,7 +517,7 @@ static __forceinline bool LOAD_VS(char* DefineString, const char* name, VERTEXSH
 	GlslHeaderString(temp, name, depth);
 	sprintf(DefineString, "%s#define VERTEX_SHADER 1\n#define CTX %d\n", temp, context * NOCONTEXT);
 	//ZZLog::WriteLn("Define for VS == '%s'", DefineString);
-	flag = LoadShaderFromFile(vertex.Shader, DefineString, name, GL_VERTEX_SHADER);
+	flag = LoadShaderFromFile(vertex.program, DefineString, name, GL_VERTEX_SHADER);
 	SetupVertexProgramParameters(&vertex, context);
 	return flag;
 }
@@ -574,7 +530,7 @@ static __forceinline bool LOAD_PS(char* DefineString, const char* name, FRAGMENT
 	sprintf(DefineString, "%s#define FRAGMENT_SHADER 1\n#define CTX %d\n", temp, context * NOCONTEXT);
 	//ZZLog::WriteLn("Define for PS == '%s'", DefineString);
 
-	flag = LoadShaderFromFile(fragment.Shader, DefineString, name, GL_FRAGMENT_SHADER);
+	flag = LoadShaderFromFile(fragment.program, DefineString, name, GL_FRAGMENT_SHADER);
 	SetupFragmentProgramParameters(&fragment, context, 0);
 	return flag;
 }
@@ -663,7 +619,7 @@ bool ZZshLoadExtraEffects() {
 
 const static char* g_pPsTexWrap[] = { "#define REPEAT 1\n", "#define CLAMP 1\n", "#define REGION_REPEAT 1\n", "" };
 
-static ZZshShader LoadShaderFromType(int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int ps, int context) {
+static ZZshProgram LoadShaderFromType(int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int ps, int context) {
 
 	assert( texwrap < NUM_TEXWRAPS);
 	assert( type < NUM_TYPES );
@@ -683,14 +639,14 @@ static ZZshShader LoadShaderFromType(int type, int texfilter, int texwrap, int f
 	GlslHeaderString(temp, name, AddWrap);
 	sprintf(DefineString, "%s#define FRAGMENT_SHADER 1\n%s%s%s%s\n#define CTX %d\n", temp, AddDepth, AddAEM, AddExcolor, AddAccurate, context * NOCONTEXT);
 
-	ZZshShader shader;
-	if (!CompileShader(shader, DefineString, name, GL_FRAGMENT_SHADER))
-		return UseEmptyShader(name, GL_FRAGMENT_SHADER);
+	ZZshProgram program;
+	if (!LoadShaderFromFile(program, DefineString, name, GL_FRAGMENT_SHADER))
+		return LoadShaderFromFile(program, DefineString, name, GL_FRAGMENT_SHADER, true);
 
 	ZZLog::Debug_Log("Used shader for type:%d filter:%d wrap:%d for:%d depth:%d aem:%d color:%d decompression:%d ctx:%d... Ok \n", type, texfilter, texwrap, fog, writedepth, testaem, exactcolor, ps, context);
 
 	GL_REPORT_ERRORD();
-	return shader;
+	return program;
 }
 
 FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed)
@@ -723,7 +679,7 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 	{
 		return pf;
 	}
-	pf->Shader = LoadShaderFromType(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, g_nPixelShaderVer, context);
+	pf->program = LoadShaderFromType(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, g_nPixelShaderVer, context);
 
 	if (ZZshExistProgram(pf)) {
 		SetupFragmentProgramParameters(pf, context, type);

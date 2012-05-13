@@ -362,7 +362,9 @@ struct SamplerParam {
 
 struct FRAGMENTSHADER
 {
-	FRAGMENTSHADER() : prog(sZero) , Shader(0)
+	FRAGMENTSHADER() : prog(sZero) 
+					  , Shader(0)
+					  , program(0)
 					  , sFinal(2)
 					  , sBitwiseANDX(3)
 					  , sBitwiseANDY(4)
@@ -402,6 +404,7 @@ struct FRAGMENTSHADER
 
 	ZZshShaderLink prog;						// it link to FRAGMENTSHADER structure, for compability between GLSL and CG
 	ZZshShader Shader; // useless with separate build
+	ZZshProgram program;
 	ZZshShaderType ShaderType;					// Not every PS and VS are used together, only compatible ones.
 
 	FragmentUniform uniform_buffer[ZZSH_CTX_ALL];
@@ -541,7 +544,7 @@ struct VERTEXSHADER
 struct VERTEXSHADER
 {
 
-	VERTEXSHADER() : prog(sZero), Shader(0)
+	VERTEXSHADER() : prog(sZero), program(0)
 	//: prog(sZero), Shader(0), sBitBltPos(pZero), sBitBltTex(pZero) {}
 	{
 		sBitBltPos = (ZZshParameter)offsetof(struct VertexUniform, g_fBitBltPos) /4;
@@ -556,7 +559,7 @@ struct VERTEXSHADER
 	VertexUniform uniform_buffer[ZZSH_CTX_ALL];
 
 	ZZshShaderLink prog;
-	ZZshShader Shader; // useless with separate build
+	ZZshProgram program;
 	ZZshShaderType ShaderType;
 
 	ZZshParameter sBitBltPos, sBitBltTex, fBitBltTrans;		 // vertex shader constants
@@ -613,9 +616,14 @@ inline bool ZZshExistProgram(FRAGMENTSHADER* pf) {return (pf->prog != NULL); };	
 inline bool ZZshExistProgram(VERTEXSHADER* pf) {return (pf->prog != NULL); };
 inline bool ZZshExistProgram(ZZshShaderLink prog) {return (prog != NULL); };
 #endif
-#ifdef GLSL_API
+#if defined(GLSL_API) && !defined(GLSL4_API)
 inline bool ZZshExistProgram(FRAGMENTSHADER* pf) {return (pf->Shader != 0); };
 inline bool ZZshExistProgram(VERTEXSHADER* pf) {return (pf->Shader != 0); };
+inline bool ZZshExistProgram(ZZshShaderLink prog) {return (prog.link != NULL); }		// This is used for pvs mainly. No NULL means that we do LOAD_VS
+#endif
+#if defined(GLSL4_API)
+inline bool ZZshExistProgram(FRAGMENTSHADER* pf) {return (pf->program != 0); };
+inline bool ZZshExistProgram(VERTEXSHADER* pf) {return (pf->program != 0); };
 inline bool ZZshExistProgram(ZZshShaderLink prog) {return (prog.link != NULL); }		// This is used for pvs mainly. No NULL means that we do LOAD_VS
 #endif
 
@@ -699,7 +707,7 @@ extern GSUniformBufferOGL *vertex_buffer;
 extern GSUniformBufferOGL *fragment_buffer;
 
 static void init_shader();
-static void PutParametersInProgam(VERTEXSHADER* vs, FRAGMENTSHADER* ps, int context);
+static void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps, int context);
 
 #endif
 
