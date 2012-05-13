@@ -682,6 +682,9 @@ bool ZZCreate(int _width, int _height)
 
 	glBufferDataARB(GL_ARRAY_BUFFER, 4*sizeof(VertexGPU), &verts[0], GL_STATIC_DRAW);
 
+	// FIXME Done inside ZZoglShadersGLSL4 for the moment
+	// Move it later
+#ifndef GLSL4_API
 	// setup the default vertex declaration
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glClientActiveTexture(GL_TEXTURE0);
@@ -689,6 +692,7 @@ bool ZZCreate(int _width, int _height)
 	glEnableClientState(GL_SECONDARY_COLOR_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 	GL_REPORT_ERROR();
+#endif
 
 	// some cards don't support this
 //	glClientActiveTexture(GL_TEXTURE0);

@@ -103,17 +103,16 @@ struct vertex
 
 
 #ifdef VERTEX_SHADER
-// The standard GL3 core interface
 out gl_PerVertex {
     invariant vec4 gl_Position;
     float gl_PointSize;
     float gl_ClipDistance[];
 };
 
-// FIXME: deprecated variable
-// not supported in VS
-// in vec4 gl_Color;
-// in vec4 gl_SecondaryColor;
+layout(location = 0) in uvec2 Vert;
+layout(location = 1) in vec4  Color;
+layout(location = 2) in vec4 SecondaryColor;
+layout(location = 3) in vec3 TexCoord;
 
 layout(location = 0) out vertex VSout;
 
@@ -866,65 +865,65 @@ void Convert32to16PS() {
 
 #ifdef VERTEX_SHADER
 
-float4 OutPosition(float4 vertex) {
+float4 OutPosition() {
 	float4 Position;
-	Position.xy = gl_Vertex.xy * g_fPosXY.xy + g_fPosXY.zw;
-	Position.z = (log(g_fc0.y + dot(g_fZ, gl_SecondaryColor.zyxw)) * g_fZNorm.x + g_fZNorm.y) * g_fZMin.y + dot(g_fZ, gl_SecondaryColor.zyxw) * g_fZMin.x ;
+	Position.xy = Vert.xy * g_fPosXY.xy + g_fPosXY.zw;
+	Position.z = (log(g_fc0.y + dot(g_fZ, SecondaryColor.zyxw)) * g_fZNorm.x + g_fZNorm.y) * g_fZMin.y + dot(g_fZ, SecondaryColor.zyxw) * g_fZMin.x ;
 	Position.w = g_fc0.y;
 	return Position;
 }
 
 // just smooth shadering
 void RegularVS() {
-	gl_Position = OutPosition(gl_Vertex);
-	VSout.color = gl_Color;
-	DOZWRITE(VSout.z = gl_SecondaryColor * g_fZBias.x + g_fZBias.y;)
+	gl_Position = OutPosition();
+	VSout.color = Color;
+	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
     DOZWRITE(VSout.z.w = g_fc0.y;)
 }
 
 // diffuse texture mapping
 void TextureVS() {
-	gl_Position = OutPosition(gl_Vertex);
-	VSout.color = gl_Color;
+	gl_Position = OutPosition();
+	VSout.color = Color;
 #ifdef PERSPECTIVE_CORRECT_TEX
-	VSout.tex.xyz = gl_MultiTexCoord0.xyz;
+	VSout.tex.xyz = TexCoord.xyz;
 #else
-	VSout.tex.xy = gl_MultiTexCoord0.xy/gl_MultiTexCoord0.z;
+	VSout.tex.xy = TexCoord.xy/TexCoord.z;
 #endif
- 	DOZWRITE(VSout.z = gl_SecondaryColor * g_fZBias.x + g_fZBias.y;)
+ 	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
     DOZWRITE(VSout.z.w = g_fc0.y;)
 }
 
 void RegularFogVS() {
-	float4 position = OutPosition(gl_Vertex);
+	float4 position = OutPosition();
 	gl_Position = position;
-	VSout.color = gl_Color;
+	VSout.color = Color;
     VSout.fog = position.z * g_fBilinear.w;
-	DOZWRITE(VSout.z = gl_SecondaryColor * g_fZBias.x + g_fZBias.y;)
+	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
     DOZWRITE(VSout.z.w = g_fc0.y;)
 }
 
 void TextureFogVS() {
-	float4 position = OutPosition(gl_Vertex);
+	float4 position = OutPosition();
 	gl_Position = position;
-	VSout.color = gl_Color;
+	VSout.color = Color;
 #ifdef PERSPECTIVE_CORRECT_TEX
-	VSout.tex.xyz = gl_MultiTexCoord0.xyz;
+	VSout.tex.xyz = TexCoord.xyz;
 #else
-	VSout.tex.xy = gl_MultiTexCoord0.xy/gl_MultiTexCoord0.z;
+	VSout.tex.xy = TexCoord.xy/TexCoord.z;
 #endif
     VSout.fog = position.z * g_fBilinear.w;
-	DOZWRITE(VSout.z = gl_SecondaryColor * g_fZBias.x + g_fZBias.y;)
+	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
     DOZWRITE(VSout.z.w = g_fc0.y;)
 }
 
 void BitBltVS() {
 	vec4 position;
-	position.xy = gl_Vertex.xy * g_fBitBltPos.xy + g_fBitBltPos.zw;
+	position.xy = Vert.xy * g_fBitBltPos.xy + g_fBitBltPos.zw;
 	position.zw = g_fc0.xy;
 	gl_Position = position;
 
-	VSout.tex.xy = gl_MultiTexCoord0.xy * g_fBitBltTex.xy + g_fBitBltTex.zw;
+	VSout.tex.xy = TexCoord.xy * g_fBitBltTex.xy + g_fBitBltTex.zw;
 	VSout.z.xy = position.xy * g_fBitBltTrans.xy + g_fBitBltTrans.zw;
 }
 

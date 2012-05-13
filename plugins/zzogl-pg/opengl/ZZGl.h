@@ -87,10 +87,12 @@ static __forceinline void GL_STENCILFUNC_SET()
 // sets the data stream
 static __forceinline void SET_STREAM()
 {
+#ifndef GLSL4_API
 	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(VertexGPU), (void*)8);
 	glSecondaryColorPointerEXT(4, GL_UNSIGNED_BYTE, sizeof(VertexGPU), (void*)12);
 	glTexCoordPointer(3, GL_FLOAT, sizeof(VertexGPU), (void*)16);
 	glVertexPointer(4, GL_SHORT, sizeof(VertexGPU), (void*)0);
+#endif
 }
 
 // global alpha blending settings

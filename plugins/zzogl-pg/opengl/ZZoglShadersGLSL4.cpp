@@ -118,6 +118,7 @@ GSUniformBufferOGL *constant_buffer;
 GSUniformBufferOGL *common_buffer;
 GSUniformBufferOGL *vertex_buffer;
 GSUniformBufferOGL *fragment_buffer;
+GSVertexBufferStateOGL *vertex_array;
 
 COMMONSHADER g_cs;
 static GLuint s_pipeline = 0;
@@ -168,8 +169,6 @@ bool ZZshStartUsingShaders() {
 		g_nPixelShaderVer = SHADER_ACCURATE|SHADER_REDUCED;
 
 		pfrag = ZZshLoadShadeEffect(0, 0, 1, 1, 0, temp, 0, &bFailed);
-		if( pfrag != NULL )
-			glLinkProgram(pfrag->Shader);
 		if( bFailed || pfrag == NULL || glGetError() != GL_NO_ERROR) {
 			g_nPixelShaderVer = SHADER_REDUCED;
 			ZZLog::Error_Log("Basic shader test failed.");
@@ -221,6 +220,8 @@ void ZZshExitCleaning() {
 	delete common_buffer;
 	delete vertex_buffer;
 	delete fragment_buffer;
+
+	delete vertex_array;
 
 	glDeleteProgramPipelines(1, &s_pipeline);
 }
@@ -405,17 +406,20 @@ static void PutParametersAndRun(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 }
 
 inline bool ZZshCheckShaderCompatibility(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
-	if (vs == NULL) return false;
 	if (vs->ShaderType == ZZ_SH_ZERO) return true;			// ZeroPS is compatible with everything
-	if (ps == NULL) return false;
 
 	return (vs->ShaderType == ps->ShaderType);
 }
 
 static void ZZshSetShader(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
-	if (vs == NULL || ps == NULL) return;
+	if (vs == NULL || ps == NULL) {
+		// if (vs == NULL) fprintf(stderr, "VS is null !!! \n");
+		// if (ps == NULL) fprintf(stderr, "PS is null !!! \n");
+		return;
+	}
 
-	UNIFORM_ERROR_LOG("SHADER: %s(%d) \t+\t%s(%d)", ShaderNames[vs->program], vs->program, ShaderNames[ps->program], ps->program);
+	// FIXME all Shader are compatible now
+	// I keep for the moment to avoid useless running of the program
 	if (!ZZshCheckShaderCompatibility(vs, ps)) { 				// We don't need to link uncompatible shaders
 		return;
 	}
@@ -461,10 +465,21 @@ static void init_shader() {
 
 	constant_buffer->bind();
 	constant_buffer->upload((void*)&g_cs.uniform_buffer_constant);
-
 	
 	glGenProgramPipelines(1, &s_pipeline);
 	glBindProgramPipeline(s_pipeline);
+
+	// FIXME maybe GL_UNSIGNED_SHORT could be better than GL_SHORT
+	GSInputLayoutOGL vert_format[] =
+	{
+		{0 , 4 , GL_SHORT          , GL_FALSE , sizeof(VertexGPU) , (const GLvoid*)(0) }  , // vertex
+		{1 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(VertexGPU) , (const GLvoid*)(8) }  , // color
+		{2 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE , sizeof(VertexGPU) , (const GLvoid*)(12) } , // z value. FIXME WTF 4 unsigned byte, why not a full integer
+		{3 , 3 , GL_FLOAT          , GL_FALSE , sizeof(VertexGPU) , (const GLvoid*)(16) } , // tex coord
+	};
+
+	vertex_array = new GSVertexBufferStateOGL(sizeof(VertexGPU), vert_format, 4);
+
 }
 
 static void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps, int context) {
@@ -487,7 +502,7 @@ static void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int 
 	// uniform parameters
 	pf->prog.link = (void*)pf;			// Setting autolink
 	pf->prog.isFragment = true;			// Setting autolink
-	pf->ShaderType = ShaderTypes[pf->Shader];
+	pf->ShaderType = ShaderTypes[pf->program];
 
 	g_cs.set_texture(g_cs.sBlocks, ptexBlocks);
 	g_cs.set_texture(g_cs.sConv16to32, ptexConv16to32);

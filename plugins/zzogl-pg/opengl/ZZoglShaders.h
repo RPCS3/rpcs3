@@ -61,6 +61,7 @@ inline bool ZZshActiveParameter(ZZshParameter param) {return (param !=NULL); }
 
 #ifdef GLSL4_API
 #include "GSUniformBufferOGL.h"
+#include "GSVertexArrayOGL.h"
 #endif
 
 #ifdef GLSL_API
@@ -363,7 +364,6 @@ struct SamplerParam {
 struct FRAGMENTSHADER
 {
 	FRAGMENTSHADER() : prog(sZero) 
-					  , Shader(0)
 					  , program(0)
 					  , sFinal(2)
 					  , sBitwiseANDX(3)
@@ -403,7 +403,6 @@ struct FRAGMENTSHADER
 	}
 
 	ZZshShaderLink prog;						// it link to FRAGMENTSHADER structure, for compability between GLSL and CG
-	ZZshShader Shader; // useless with separate build
 	ZZshProgram program;
 	ZZshShaderType ShaderType;					// Not every PS and VS are used together, only compatible ones.
 
@@ -705,6 +704,7 @@ extern GSUniformBufferOGL *constant_buffer;
 extern GSUniformBufferOGL *common_buffer;
 extern GSUniformBufferOGL *vertex_buffer;
 extern GSUniformBufferOGL *fragment_buffer;
+extern GSVertexBufferStateOGL *vertex_array;
 
 static void init_shader();
 static void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps, int context);
