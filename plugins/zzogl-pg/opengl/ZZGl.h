@@ -151,8 +151,14 @@ extern PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVEXTPROC glGetFramebufferAttachmen
 extern PFNGLGENERATEMIPMAPEXTPROC glGenerateMipmapEXT;
 extern PFNGLDRAWBUFFERSPROC glDrawBuffers;
 
+#ifdef GLSL4_API
+#include "ZZoglShaders.h"
+#endif
 static __forceinline void DrawTriangleArray()
 {
+#ifdef GLSL4_API
+	ZZshSetupShader();
+#endif
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	GL_REPORT_ERRORD();
 }

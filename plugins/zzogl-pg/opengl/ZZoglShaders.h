@@ -404,7 +404,6 @@ struct FRAGMENTSHADER
 
 	ZZshShaderLink prog;						// it link to FRAGMENTSHADER structure, for compability between GLSL and CG
 	ZZshProgram program;
-	ZZshShaderType ShaderType;					// Not every PS and VS are used together, only compatible ones.
 	uint context;
 
 	FragmentUniform uniform_buffer[ZZSH_CTX_ALL];
@@ -576,7 +575,6 @@ struct VERTEXSHADER
 
 	ZZshShaderLink prog;
 	ZZshProgram program;
-	ZZshShaderType ShaderType;
 	uint	context;
 
 	ZZshParameter sBitBltPos, sBitBltTex, fBitBltTrans;		 // vertex shader constants
@@ -729,6 +727,7 @@ extern GSVertexBufferStateOGL *vertex_array;
 extern void init_shader();
 extern void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps);
 extern void init_shader();
+extern void ZZshSetupShader();
 
 #endif
 

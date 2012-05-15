@@ -71,6 +71,8 @@
 #define NUMBER_OF_SAMPLERS 	11
 #define MAX_SHADER_NAME_SIZE	25
 #define DEFINE_STRING_SIZE	256
+
+// #define ENABLE_MARKER // Fire some marker for opengl Debugger (apitrace, gdebugger)
 //------------------ Constants
 
 // Used in a logarithmic Z-test, as (1-o(1))/log(MAX_U32).
@@ -109,7 +111,6 @@ const char* ShaderCallerName = "";
 const char* ShaderHandleName = "";
 
 const char* ShaderNames[MAX_ACTIVE_SHADERS] = {""};
-ZZshShaderType ShaderTypes[MAX_ACTIVE_SHADERS] = {ZZ_SH_NONE};
 
 ZZshProgram CompiledPrograms[MAX_ACTIVE_SHADERS][MAX_ACTIVE_SHADERS] = {{0}};
 
@@ -239,11 +240,23 @@ void ZZshGLEnableProfile() {
 
 // The same function for texture, also to cgGLEnable
 void ZZshGLSetTextureParameter(ZZshParameter param, GLuint texobj, const char* name) {
+#ifdef ENABLE_MARKER
+	char* debug = new char[100];
+	sprintf(debug, "CS: texture %d, param %d", texobj, param);
+	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
+#endif
+
 	g_cs.set_texture(param, texobj);
 }
 
 void ZZshGLSetTextureParameter(ZZshShaderLink prog, ZZshParameter param, GLuint texobj, const char* name) {
 	FRAGMENTSHADER* shader = (FRAGMENTSHADER*)prog.link;
+#ifdef ENABLE_MARKER
+	char* debug = new char[100];
+	sprintf(debug, "FS(%d):texture %d, param %d", shader->program, texobj, param);
+	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
+#endif
+
 	shader->set_texture(param, texobj);
 }
 
@@ -258,10 +271,20 @@ void ZZshSetParameter4fv(ZZshShaderLink& prog, ZZshParameter param, const float*
 		VERTEXSHADER* shader = (VERTEXSHADER*)prog.link;
 		shader->ZZshSetParameter4fv(param, v);
 	}
+#ifdef ENABLE_MARKER
+	char* debug = new char[100];
+	sprintf(debug, "prog: uniform (%s) (%f)", name, *v);
+	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
+#endif
 }
 
 void ZZshSetParameter4fv(ZZshParameter param, const float* v, const char* name) {
 	g_cs.ZZshSetParameter4fv(param, v);
+#ifdef ENABLE_MARKER
+	char* debug = new char[100];
+	sprintf(debug, "CS: uniform (%s) (%f)", name, *v);
+	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
+#endif
 }
 
 // The same stuff, but also with retry of param, name should be USED name of param for prog.
@@ -287,15 +310,6 @@ void ZZshDefaultOneColor( FRAGMENTSHADER& ptr ) {
 
 const GLchar * EmptyVertex = "void main(void) {gl_Position = ftransform();}";
 const GLchar * EmptyFragment = "void main(void) {gl_FragColor = gl_Color;}";
-
-ZZshShaderType ZZshGetShaderType(const char* name) {
-	if (strncmp(name, "TextureFog", 10) == 0) return ZZ_SH_TEXTURE_FOG;
-	if (strncmp(name, "Texture", 7) == 0) return ZZ_SH_TEXTURE;
-	if (strncmp(name, "RegularFog", 10) == 0) return ZZ_SH_REGULAR_FOG;
-	if (strncmp(name, "Regular", 7) == 0) return ZZ_SH_REGULAR;
-	if (strncmp(name, "Zero", 4) == 0) return ZZ_SH_ZERO;
-	return ZZ_SH_CRTC;
-}
 
 inline bool GetCompilationLog(ZZshProgram program) {
 #if	defined(DEVBUILD) || defined(_DEBUG)
@@ -362,7 +376,6 @@ inline bool CompileShader(ZZshProgram& program, const char* DefineString, const 
 		return false;
 	}
 
-	ShaderTypes[program] = ZZshGetShaderType(name);
 	ShaderNames[program] = name;
 
 	GL_REPORT_ERRORD();
@@ -373,9 +386,6 @@ inline bool CompileShader(ZZshProgram& program, const char* DefineString, const 
 }
 
 inline bool LoadShaderFromFile(ZZshProgram& program, const char* DefineString, const char* name, GLenum ShaderType, bool empty = false) {			// Linux specific, as I presume
-
-	// Emit annotation for apitrace 
-	// if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, DefineString);
 
 	if (!CompileShader(program, DefineString, name, ShaderType, empty)) {
 		ZZLog::Error_Log("Failed to compile shader for %s: ", name);
@@ -403,47 +413,24 @@ static void PutParametersAndRun(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	GL_REPORT_ERRORD();
 }
 
-inline bool ZZshCheckShaderCompatibility(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
-	if (vs->ShaderType == ZZ_SH_ZERO) return true;			// ZeroPS is compatible with everything
+void ZZshSetupShader() {
+	VERTEXSHADER* vs = (VERTEXSHADER*)g_vsprog.link;
+	FRAGMENTSHADER* ps = (FRAGMENTSHADER*)g_psprog.link;
 
-	return (vs->ShaderType == ps->ShaderType);
+	if (vs == NULL || ps == NULL) return;
+
+	PutParametersAndRun(vs, ps);
 }
 
 static void ZZshSetShader(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
-	if (vs == NULL || ps == NULL) {
-		// if (vs == NULL) fprintf(stderr, "VS is null !!! \n");
-		// if (ps == NULL) fprintf(stderr, "PS is null !!! \n");
-		return;
-	}
+	if (vs == NULL || ps == NULL) return;
 
-	// FIXME all Shader are compatible now
-	// I keep for the moment to avoid useless running of the program
-	if (!ZZshCheckShaderCompatibility(vs, ps)) { 				// We don't need to link uncompatible shaders
-		return;
-	}
+	FRAGMENTSHADER* debug = ps;
 
-
-	int vss = (vs!=NULL)?vs->program:0;
-	int pss = (ps!=NULL)?ps->program:0;
-
-	if (vss !=0 && pss != 0) {
-		FRAGMENTSHADER* debug = ps;
-
-		glUseProgramStages(s_pipeline, GL_VERTEX_SHADER_BIT, vs->program);
-		glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ps->program);
-		PutParametersAndRun(vs, ps);
-		// // FIXME DEBUG PS SHADER
-		// if (ps->ShaderType == ZZ_SH_TEXTURE) {
-		// 	glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ppsDebug2.program);
-
-		// 	PutParametersAndRun(vs, &ppsDebug2);
-
-		// } else {
-		// 	glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ps->program);
-		// 	PutParametersAndRun(vs, ps);
-		// }
-		GL_REPORT_ERRORD();
-	}
+	glUseProgramStages(s_pipeline, GL_VERTEX_SHADER_BIT, vs->program);
+	glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ps->program);
+	//PutParametersAndRun(vs, ps);
+	GL_REPORT_ERRORD();
 }
 
 void ZZshSetVertexShader(ZZshShaderLink prog) {
@@ -496,6 +483,13 @@ void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	fragment_buffer->upload((void*)&ps->uniform_buffer[ps->context]);
 
 	g_cs.enable_texture();
+
+#ifdef ENABLE_MARKER
+	char* debug = new char[100];
+	sprintf(debug, "FS(%d): enable texture", ps->program);
+	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
+#endif
+
 	ps->enable_texture();
 }
 
@@ -504,7 +498,6 @@ static void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int 
 	// uniform parameters
 	pf->prog.link = (void*)pf;			// Setting autolink
 	pf->prog.isFragment = true;			// Setting autolink
-	pf->ShaderType = ShaderTypes[pf->program];
 	pf->context = context;
 
 
@@ -514,7 +507,6 @@ void SetupVertexProgramParameters(VERTEXSHADER* pf, int context)
 {
 	pf->prog.link = (void*)pf;			// Setting autolink
 	pf->prog.isFragment = false;			// Setting autolink
-	pf->ShaderType = ShaderTypes[pf->program];
 	pf->context = context;
 }
 

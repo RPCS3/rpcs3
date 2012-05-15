@@ -836,7 +836,9 @@ void ZZDestroy()
         vb_buffer_allocated = false; // mark the buffer unallocated
 	}
 
+#ifdef GLSL4_API
 	delete vertex_array;
+#endif
 
 	g_nCurVBOIndex = 0;
 	

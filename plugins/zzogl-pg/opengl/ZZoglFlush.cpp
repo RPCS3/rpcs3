@@ -89,6 +89,9 @@ int icurctx = -1;
 
 void Draw(const VB& curvb)
 {
+#ifdef GLSL4_API
+	ZZshSetupShader();
+#endif
 	glDrawArrays(primtype[curvb.curprim.prim], 0, curvb.nCount);
 }
 
@@ -851,8 +854,14 @@ inline void FlushSetTexture(VB& curvb, FRAGMENTSHADER* pfragment, CRenderTarget*
 	if( curvb.ptexClamp[1] != 0 ) 
 		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sBitwiseANDY, curvb.ptexClamp[1], "Clamp 1");
 	
+	// FIXME condition is a bit strange for GLSL
+#ifdef GLSL4_API
+	if( s_ptexCurSet[context] != 0) 
+		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sMemory, s_ptexCurSet[context], "Clamp memory");
+#else
 	if( pfragment->sMemory != NULL && s_ptexCurSet[context] != 0) 
 		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sMemory, s_ptexCurSet[context], "Clamp memory");
+#endif
 }
 
 // Reset program and texture variables;
