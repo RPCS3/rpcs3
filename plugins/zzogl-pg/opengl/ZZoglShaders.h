@@ -136,7 +136,7 @@ struct GlobalUniform {
 		};
 		float linear[2*4];
 	};
-	void SettleFloat(int indice, const float* v) {
+	void SettleFloat(uint indice, const float* v) {
 		assert(indice >= 0);
 		assert(indice + 3 < sizeof(linear));
 		linear[indice+0] = v[0];
@@ -162,7 +162,7 @@ struct ConstantUniform {
 		};
 		float linear[8*4];
 	};
-	void SettleFloat(int indice, const float* v) {
+	void SettleFloat(uint indice, const float* v) {
 		assert(indice >= 0);
 		assert(indice + 3 < sizeof(linear));
 		linear[indice+0] = v[0];
@@ -190,7 +190,7 @@ struct FragmentUniform {
 		};
 		float linear[13*4];
 	};
-	void SettleFloat(int indice, const float* v) {
+	void SettleFloat(uint indice, const float* v) {
 		assert(indice >= 0);
 		assert(indice + 3 < sizeof(linear));
 		linear[indice+0] = v[0];
@@ -208,7 +208,7 @@ struct VertexUniform {
 		};
 		float linear[3*4];
 	};
-	void SettleFloat(int indice, const float* v) {
+	void SettleFloat(uint indice, const float* v) {
 		assert(indice >= 0);
 		assert(indice + 3 < sizeof(linear) / 4);
 		linear[indice+0] = v[0];
@@ -356,8 +356,8 @@ struct SamplerParam {
 		}
 	}
 
-	void set_texture(GLuint texid) {
-		texid = texid;
+	void set_texture(GLuint new_texid) {
+		texid = new_texid;
 	}
 };
 
@@ -365,6 +365,8 @@ struct FRAGMENTSHADER
 {
 	FRAGMENTSHADER() : prog(sZero) 
 					  , program(0)
+					  , context(0)
+					  , sMemory(0) // dual context need 2 slots
 					  , sFinal(2)
 					  , sBitwiseANDX(3)
 					  , sBitwiseANDY(4)
@@ -386,15 +388,13 @@ struct FRAGMENTSHADER
 		fTestBlack   = (ZZshParameter)offsetof(struct FragmentUniform, g_fTestBlack) /4;
 		fPageOffset  = (ZZshParameter)offsetof(struct FragmentUniform, g_fPageOffset) /4;
 
-		sMemory[ZZSH_CTX_0]  = 0;
-		sMemory[ZZSH_CTX_1]  = 1;
 		//sFinal               = 2;
 		//sBitwiseANDX         = 3;
 		//sBitwiseANDY         = 4;
 		//sInterlace           = 5;
 		//sCLUT                = 6;
-		samplers[sMemory[ZZSH_CTX_0]].set_unit(0);
-		samplers[sMemory[ZZSH_CTX_1]].set_unit(0); // Dual context. Use same unit
+		samplers[sMemory+0].set_unit(0);
+		samplers[sMemory+1].set_unit(0); // Dual context. Use same unit
 		samplers[sFinal].set_unit(1);
 		samplers[sBitwiseANDX].set_unit(6);
 		samplers[sBitwiseANDY].set_unit(7);
@@ -405,11 +405,12 @@ struct FRAGMENTSHADER
 	ZZshShaderLink prog;						// it link to FRAGMENTSHADER structure, for compability between GLSL and CG
 	ZZshProgram program;
 	ZZshShaderType ShaderType;					// Not every PS and VS are used together, only compatible ones.
+	uint context;
 
 	FragmentUniform uniform_buffer[ZZSH_CTX_ALL];
 
 	// sampler
-	ZZshParameter sMemory[ZZSH_CTX_ALL];
+	const ZZshParameter sMemory;
 	const ZZshParameter sFinal, sBitwiseANDX, sBitwiseANDY, sInterlace, sCLUT;
 	SamplerParam samplers[7];
 
@@ -421,22 +422,32 @@ struct FRAGMENTSHADER
 	string filename;
 #endif
 
-	void ZZshSetParameter4fv(ZZshParameter param, const float* v, int context = ZZSH_CTX_ALL) {
-		if (context < ZZSH_CTX_ALL)
+	void ZZshSetParameter4fv(ZZshParameter param, const float* v) {
+		if (IsDualContext(param))
 			uniform_buffer[context].SettleFloat((int) param, v);
 		else
 			for ( int i = 0; i < ZZSH_CTX_ALL ; i++)
 				uniform_buffer[i].SettleFloat((int) param, v);
 	}
 
-	void enable_texture(int context) {
-		samplers[0+context].enable_texture();
+	bool IsDualContext(ZZshParameter param) {
+		if (param == sInvTexDims || param == sBitBltZ || param == sOneColor)
+			return false;
+		else
+			return true;
+	}
+
+	void enable_texture() {
+		samplers[0+context].enable_texture(); // sMemory is dual context
 		for (int i = 2; i < 7; i++)
 			samplers[i].enable_texture();
 	}
 
 	void set_texture(ZZshParameter param, GLuint texid) {
-		samplers[param].set_texture(texid);
+		if (param == 0) // sMemory is dual context
+			samplers[0+context].set_texture(texid);
+		else
+			samplers[param].set_texture(texid);
 	}
 };
 #endif
@@ -444,7 +455,8 @@ struct FRAGMENTSHADER
 #ifdef GLSL4_API
 struct COMMONSHADER
 {
-	COMMONSHADER() : sBlocks(0)
+	COMMONSHADER() : context(0)
+					 , sBlocks(0)
 					 , sBilinearBlocks(1)
 					 , sConv16to32(2)
 				     , sConv32to16(3)
@@ -499,6 +511,7 @@ struct COMMONSHADER
 
 	ZZshParameter g_fparamFogColor, g_vparamPosXY;
 	ZZshParameter g_fBilinear, g_fZBias, g_fc0, g_fMult, g_fZ, g_fZMin, g_fZNorm, g_fExactColor;
+	uint context;
 
 	GlobalUniform	uniform_buffer[ZZSH_CTX_ALL];
 	ConstantUniform uniform_buffer_constant;
@@ -507,12 +520,17 @@ struct COMMONSHADER
 	const ZZshParameter sBlocks, sBilinearBlocks, sConv16to32, sConv32to16;
 	SamplerParam samplers[4];
 
-	void ZZshSetParameter4fv(ZZshParameter param, const float* v, int context = ZZSH_CTX_ALL) {
-		if (context < ZZSH_CTX_ALL)
+	void ZZshSetParameter4fv(ZZshParameter param, const float* v) {
+		if (IsDualContext(param))
 			uniform_buffer[context].SettleFloat((int) param, v);
 		else
 			for ( int i = 0; i < ZZSH_CTX_ALL ; i++)
 				uniform_buffer[i].SettleFloat((int) param, v);
+	}
+
+	bool IsDualContext(ZZshParameter param) {
+		if (param == g_vparamPosXY) return true;
+		else return false;
 	}
 
 	void set_texture(ZZshParameter param, GLuint texid) {
@@ -543,8 +561,7 @@ struct VERTEXSHADER
 struct VERTEXSHADER
 {
 
-	VERTEXSHADER() : prog(sZero), program(0)
-	//: prog(sZero), Shader(0), sBitBltPos(pZero), sBitBltTex(pZero) {}
+	VERTEXSHADER() : prog(sZero), program(0), context(0)
 	{
 		sBitBltPos = (ZZshParameter)offsetof(struct VertexUniform, g_fBitBltPos) /4;
 		sBitBltTex = (ZZshParameter)offsetof(struct VertexUniform, g_fBitBltTex) /4;
@@ -560,16 +577,19 @@ struct VERTEXSHADER
 	ZZshShaderLink prog;
 	ZZshProgram program;
 	ZZshShaderType ShaderType;
+	uint	context;
 
 	ZZshParameter sBitBltPos, sBitBltTex, fBitBltTrans;		 // vertex shader constants
 
-	void ZZshSetParameter4fv(ZZshParameter param, const float* v, int context = ZZSH_CTX_ALL) {
-		if (context < ZZSH_CTX_ALL)
+	void ZZshSetParameter4fv(ZZshParameter param, const float* v) {
+		if (IsDualContext(param))
 			uniform_buffer[context].SettleFloat((int) param, v);
 		else
 			for ( int i = 0; i < ZZSH_CTX_ALL ; i++)
 				uniform_buffer[i].SettleFloat((int) param, v);
 	}
+
+	bool IsDualContext(ZZshParameter param) { return false;}
 
 };
 #endif
@@ -706,8 +726,9 @@ extern GSUniformBufferOGL *vertex_buffer;
 extern GSUniformBufferOGL *fragment_buffer;
 extern GSVertexBufferStateOGL *vertex_array;
 
-static void init_shader();
-static void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps, int context);
+extern void init_shader();
+extern void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps);
+extern void init_shader();
 
 #endif
 

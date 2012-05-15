@@ -109,7 +109,7 @@ out gl_PerVertex {
     float gl_ClipDistance[];
 };
 
-layout(location = 0) in uvec2 Vert;
+layout(location = 0) in ivec2 Vert;
 layout(location = 1) in vec4  Color;
 layout(location = 2) in vec4 SecondaryColor;
 layout(location = 3) in vec3 TexCoord;
@@ -610,8 +610,8 @@ half4 ps2FinalColor(half4 col)
 
 void RegularPS() {
 	// whenever outputting depth, make sure to mult by 255/256 and 1
-	gl_FragData[0] = ps2FinalColor(PSin.color);
-	DOZWRITE(gl_FragData[1] = PSin.z;)
+	FragData0 = ps2FinalColor(PSin.color);
+	DOZWRITE(FragData1 = PSin.z;)
 }
 
 #ifdef WRITE_DEPTH
@@ -619,8 +619,8 @@ void RegularPS() {
 #define DECL_TEXPS(num, bit) \
 void Texture##num##bit##PS() \
 { \
-	gl_FragData[0] = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color)); \
-	gl_FragData[1] = PSin.z; \
+	FragData0 = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color)); \
+	FragData1 = PSin.z; \
 }
 
 #else
@@ -628,7 +628,7 @@ void Texture##num##bit##PS() \
 #define DECL_TEXPS(num, bit) \
 void Texture##num##bit##PS() \
 { \
-	gl_FragData[0] = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color)); \
+	FragData0 = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color)); \
 }
 
 #endif
@@ -652,8 +652,8 @@ void RegularFogPS() {
 	half4 c;
 	c.xyz = mix(g_fFogColor.xyz, PSin.color.xyz, vec3(PSin.fog));
 	c.w = PSin.color.w;
-	gl_FragData[0] = ps2FinalColor(c);
-   	DOZWRITE(gl_FragData[1] = PSin.z;)
+	FragData0 = ps2FinalColor(c);
+   	DOZWRITE(FragData1 = PSin.z;)
 }
 
 #ifdef WRITE_DEPTH
@@ -663,8 +663,8 @@ void TextureFog##num##bit##PS() \
 { \
 	half4 c = ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color); \
 	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(PSin.fog)); \
-	gl_FragData[0] = ps2FinalColor(c); \
-   	gl_FragData[1] = PSin.z; \
+	FragData0 = ps2FinalColor(c); \
+   	FragData1 = PSin.z; \
 }
 
 #else
@@ -674,7 +674,7 @@ void TextureFog##num##bit##PS() \
 { \
 	half4 c = ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color); \
 	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(PSin.fog)); \
-	gl_FragData[0] = ps2FinalColor(c); \
+	FragData0 = ps2FinalColor(c); \
 }
 
 #endif
@@ -715,26 +715,26 @@ half4 BilinearBitBlt(float2 tex0)
 }
 
 void BitBltPS() {
-	gl_FragData[0] = texture(g_sMemory, ps2memcoord(PSin.tex.xy).xy)*g_fOneColor.xxxy;
+	FragData0 = texture(g_sMemory, ps2memcoord(PSin.tex.xy).xy)*g_fOneColor.xxxy;
 }
 
 // used when AA
 void BitBltAAPS() {
-	gl_FragData[0] = BilinearBitBlt(PSin.tex.xy) * g_fOneColor.xxxy;
+	FragData0 = BilinearBitBlt(PSin.tex.xy) * g_fOneColor.xxxy;
 }
 
 void BitBltDepthPS() {
 	vec4 data;
 	data = texture(g_sMemory, ps2memcoord(PSin.tex.xy));
-	gl_FragData[0] = data + g_fZBias.y;
+	FragData0 = data + g_fZBias.y;
 	gl_FragDepth   = (log(g_fc0.y + dot(data, g_fBitBltZ)) * g_fOneColor.w) * g_fZMin.y + dot(data, g_fBitBltZ) * g_fZMin.x ;
 }
 
 void BitBltDepthMRTPS() {
 	vec4 data;
 	data = texture(g_sMemory, ps2memcoord(PSin.tex.xy));
-	gl_FragData[0] = data + g_fZBias.y;
-	gl_FragData[1].x = g_fc0.x;
+	FragData0 = data + g_fZBias.y;
+	FragData1.x = g_fc0.x;
 	gl_FragDepth = (log(g_fc0.y + dot(data, g_fBitBltZ)) * g_fOneColor.w) * g_fZMin.y + dot(data, g_fBitBltZ) * g_fZMin.x ;
 }
 
@@ -759,13 +759,15 @@ void CRTCTargInterPS() {
 	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
 	float4 c = BilinearFloat16(PSin.tex.xy);
 	c.w = ( g_fc0.w*c.w * g_fOneColor.x + g_fOneColor.y ) * finter;
-	gl_FragData[0] = c;
+	FragData0 = c;
 }
 
 void CRTCTargPS() {
 	float4 c = BilinearFloat16(PSin.tex.xy);
+	// FIXME DEBUG: to validate tex coord on blit
+	//vec4 c = vec4(PSin.tex.x/512.0f, PSin.tex.y/512.0f, 0.0, 1.0);
 	c.w = g_fc0.w * c.w * g_fOneColor.x + g_fOneColor.y;
-	gl_FragData[0] = c;
+	FragData0 = c;
 }
 
 void CRTCInterPS() {
@@ -773,7 +775,7 @@ void CRTCInterPS() {
 	float2 filtcoord = trunc(PSin.tex.xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
 	half4 c = BilinearBitBlt(filtcoord);
 	c.w = (c.w * g_fOneColor.x + g_fOneColor.y)*finter;
-	gl_FragData[0] = c;
+	FragData0 = c;
 }
 
 // simpler
@@ -781,21 +783,21 @@ void CRTCInterPS_Nearest() {
 	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
 	half4 c = texture(g_sMemory, ps2memcoord(PSin.tex.xy).xy);
 	c.w = (c.w * g_fOneColor.x + g_fOneColor.y)*finter;
-	gl_FragData[0] = c;
+	FragData0 = c;
 }
 
 void CRTCPS() {
 	float2 filtcoord = PSin.tex.xy * g_fInvTexDims.xy+g_fInvTexDims.zw;
 	half4 c = BilinearBitBlt(filtcoord);
 	c.w = c.w * g_fOneColor.x + g_fOneColor.y;
-	gl_FragData[0] = c;
+	FragData0 = c;
 }
 
 // simpler
 void CRTCPS_Nearest() {
 	half4 c = texture(g_sMemory, ps2memcoord(PSin.tex.xy).xy);
 	c.w = c.w * g_fOneColor.x + g_fOneColor.y;
-	gl_FragData[0] = c;
+	FragData0 = c;
 }
 
 void CRTC24InterPS() {
@@ -804,22 +806,30 @@ void CRTC24InterPS() {
 
 	half4 c = texture(g_sMemory, ps2memcoord(filtcoord).xy);
 	c.w = (c.w * g_fOneColor.x + g_fOneColor.y)*finter;
-	gl_FragData[0] = c;
+	FragData0 = c;
 }
 
 void CRTC24PS() {
 	float2 filtcoord = trunc(PSin.tex.xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
 	half4 c = texture(g_sMemory, ps2memcoord(filtcoord).xy);
 	c.w = c.w * g_fOneColor.x + g_fOneColor.y;
-	gl_FragData[0] = c;
+	FragData0 = c;
 }
 
 void ZeroPS() {
-	gl_FragData[0] = g_fOneColor;
+	FragData0 = g_fOneColor;
+}
+
+void ZeroDebugPS() {
+	FragData0 = vec4(0.0, 1.0, 0.0, 1.0);
+}
+
+void ZeroDebug2PS() {
+	FragData0 = vec4(1.0, 0.0, 0.0, 1.0);
 }
 
 void BaseTexturePS() {
-	gl_FragData[0] = texture(g_sSrcFinal, PSin.tex.xy) * g_fOneColor;
+	FragData0 = texture(g_sSrcFinal, PSin.tex.xy) * g_fOneColor;
 }
 
 void Convert16to32PS() {
@@ -838,7 +848,7 @@ void Convert16to32PS() {
 	final.zy = texture(g_sConv32to16, lower.zyx).xy + lower.ww*g_fPageOffset.zw;
 	final.xw = texture(g_sConv32to16, upper.zyx).xy + upper.ww*g_fPageOffset.zw;
 
-	gl_FragData[0]= final;
+	FragData0= final;
 }
 
 // use when texture is not tiled and converting from 32bit to 16bit
@@ -859,7 +869,7 @@ void Convert32to16PS() {
 
 	half4 color = texture(g_sSrcFinal, tex0*g_fTexDims.xy)*g_fc0.yyyw;
 	float2 uv = upper ? color.xw : color.zy;
-	gl_FragData[0] = texture(g_sConv16to32, uv*g_fPageOffset.xy+g_fPageOffset.zw)*g_fTexDims.xxxy;
+	FragData0 = texture(g_sConv16to32, uv*g_fPageOffset.xy+g_fPageOffset.zw)*g_fTexDims.xxxy;
 }
 #endif 			//FRAGMENT_SHADER
 

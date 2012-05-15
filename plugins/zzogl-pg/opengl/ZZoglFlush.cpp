@@ -852,11 +852,7 @@ inline void FlushSetTexture(VB& curvb, FRAGMENTSHADER* pfragment, CRenderTarget*
 		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sBitwiseANDY, curvb.ptexClamp[1], "Clamp 1");
 	
 	if( pfragment->sMemory != NULL && s_ptexCurSet[context] != 0) 
-#ifdef GLSL4_API
-		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sMemory[context], s_ptexCurSet[context], "Clamp memory");
-#else
 		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sMemory, s_ptexCurSet[context], "Clamp memory");
-#endif
 }
 
 // Reset program and texture variables;

@@ -203,11 +203,7 @@ void CDepthTarget::Update(int context, CRenderTarget* prndr)
 
 	// write color and zero out stencil buf, always 0 context!
 	SetTexVariablesInt(0, 0, texframe, false, &ppsBitBltDepth, 1);
-#ifdef GLSL4_API
-	ZZshGLSetTextureParameter(ppsBitBltDepth.prog, ppsBitBltDepth.sMemory[context], vb[0].pmemtarg->ptex->tex, "BitBltDepth");
-#else
 	ZZshGLSetTextureParameter(ppsBitBltDepth.prog, ppsBitBltDepth.sMemory, vb[0].pmemtarg->ptex->tex, "BitBltDepth");
-#endif
 
 	float4 v = DefaultBitBltPos();
 

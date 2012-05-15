@@ -196,6 +196,8 @@ public:
 			switch (layout[i].type) {
 				case GL_UNSIGNED_SHORT:
 				case GL_UNSIGNED_INT:
+				case GL_SHORT:
+				case GL_INT:
 					// Rule: when shader use integral (not normalized) you must use glVertexAttribIPointer (note the extra I)
 					glVertexAttribIPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].stride, layout[i].offset);
 					break;

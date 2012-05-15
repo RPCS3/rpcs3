@@ -574,6 +574,19 @@ bool ZZCreate(int _width, int _height)
 
 	GL_REPORT_ERROR();
 
+#ifdef GLSL4_API
+	// FIXME maybe GL_UNSIGNED_SHORT could be better than GL_SHORT
+	GSInputLayoutOGL vert_format[] =
+	{
+		{0 , 4 , GL_SHORT          , GL_FALSE , sizeof(VertexGPU) , (const GLvoid*)(0) }  , // vertex
+		{1 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(VertexGPU) , (const GLvoid*)(8) }  , // color
+		{2 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE , sizeof(VertexGPU) , (const GLvoid*)(12) } , // z value. FIXME WTF 4 unsigned byte, why not a full integer
+		{3 , 3 , GL_FLOAT          , GL_FALSE , sizeof(VertexGPU) , (const GLvoid*)(16) } , // tex coord
+	};
+
+	vertex_array = new GSVertexBufferStateOGL(sizeof(VertexGPU), vert_format, 4);
+#endif
+
 	g_nCurVBOIndex = 0;
 
     if (!vb_buffer_allocated) {
@@ -582,6 +595,9 @@ bool ZZCreate(int _width, int _height)
         {
             glBindBuffer(GL_ARRAY_BUFFER, g_vboBuffers[i]);
             glBufferData(GL_ARRAY_BUFFER, 0x100*sizeof(VertexGPU), NULL, GL_STREAM_DRAW);
+#ifdef GLSL4_API
+			vertex_array->set_internal_format(vert_format, 4);
+#endif
         }
         vb_buffer_allocated = true; // mark the buffer allocated
     }
@@ -663,6 +679,9 @@ bool ZZCreate(int _width, int _height)
 	// fill a simple rect
 	glGenBuffers(1, &vboRect);
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
+#ifdef GLSL4_API
+	vertex_array->set_internal_format(vert_format, 4);
+#endif
 
 	vector<VertexGPU> verts(4);
 
@@ -682,8 +701,6 @@ bool ZZCreate(int _width, int _height)
 
 	glBufferDataARB(GL_ARRAY_BUFFER, 4*sizeof(VertexGPU), &verts[0], GL_STATIC_DRAW);
 
-	// FIXME Done inside ZZoglShadersGLSL4 for the moment
-	// Move it later
 #ifndef GLSL4_API
 	// setup the default vertex declaration
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -818,6 +835,8 @@ void ZZDestroy()
 		glDeleteBuffers((GLsizei)ArraySize(g_vboBuffers), g_vboBuffers);
         vb_buffer_allocated = false; // mark the buffer unallocated
 	}
+
+	delete vertex_array;
 
 	g_nCurVBOIndex = 0;
 	

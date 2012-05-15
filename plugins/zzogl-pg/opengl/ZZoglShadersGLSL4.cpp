@@ -123,6 +123,9 @@ GSVertexBufferStateOGL *vertex_array;
 COMMONSHADER g_cs;
 static GLuint s_pipeline = 0;
 
+FRAGMENTSHADER ppsDebug;
+FRAGMENTSHADER ppsDebug2;
+
 //------------------ Code
 
 inline int GET_SHADER_INDEX(int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int context, int ps) {
@@ -221,8 +224,6 @@ void ZZshExitCleaning() {
 	delete vertex_buffer;
 	delete fragment_buffer;
 
-	delete vertex_array;
-
 	glDeleteProgramPipelines(1, &s_pipeline);
 }
 
@@ -280,7 +281,6 @@ void ZZshDefaultOneColor( FRAGMENTSHADER& ptr ) {
 	ShaderHandleName = "Set Default One colot";
 	float4 v = float4 ( 1, 1, 1, 1 );
 	//ZZshSetParameter4fv(ptr.prog, ptr.sOneColor, v, "DegaultOne");
-	// FIXME context
 	ptr.ZZshSetParameter4fv(ptr.sOneColor, v);
 }
 //-------------------------------------------------------------------------------------
@@ -391,9 +391,7 @@ inline bool LoadShaderFromFile(ZZshProgram& program, const char* DefineString, c
 static void PutParametersAndRun(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	UNIFORM_ERROR_LOG("Run program %s(%d) \t+\t%s(%d)", ShaderNames[vs->program], vs->program, ShaderNames[ps->program], ps->program);
 
-	// FIXME context argument
-	int context = 0;
-	PutParametersInProgram(vs, ps, context);
+	PutParametersInProgram(vs, ps);
 
 #if	defined(DEVBUILD) || defined(_DEBUG)
 	glValidateProgramPipeline(s_pipeline);
@@ -429,10 +427,21 @@ static void ZZshSetShader(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	int pss = (ps!=NULL)?ps->program:0;
 
 	if (vss !=0 && pss != 0) {
+		FRAGMENTSHADER* debug = ps;
+
 		glUseProgramStages(s_pipeline, GL_VERTEX_SHADER_BIT, vs->program);
 		glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ps->program);
-
 		PutParametersAndRun(vs, ps);
+		// // FIXME DEBUG PS SHADER
+		// if (ps->ShaderType == ZZ_SH_TEXTURE) {
+		// 	glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ppsDebug2.program);
+
+		// 	PutParametersAndRun(vs, &ppsDebug2);
+
+		// } else {
+		// 	glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ps->program);
+		// 	PutParametersAndRun(vs, ps);
+		// }
 		GL_REPORT_ERRORD();
 	}
 }
@@ -449,7 +458,7 @@ void ZZshSetPixelShader(ZZshShaderLink prog) {
 
 //------------------------------------------------------------------------------------------------------------------
 
-static void init_shader() {
+void init_shader() {
 	// TODO:
 	// Note it would be more clever to allocate buffer inside SHADER class
 	// Add a dirty flags to avoid to upload twice same data...
@@ -465,36 +474,29 @@ static void init_shader() {
 
 	constant_buffer->bind();
 	constant_buffer->upload((void*)&g_cs.uniform_buffer_constant);
+
+	g_cs.set_texture(g_cs.sBlocks, ptexBlocks);
+	g_cs.set_texture(g_cs.sConv16to32, ptexConv16to32);
+	g_cs.set_texture(g_cs.sConv32to16, ptexConv32to16);
+	g_cs.set_texture(g_cs.sBilinearBlocks, ptexBilinearBlocks);
 	
 	glGenProgramPipelines(1, &s_pipeline);
 	glBindProgramPipeline(s_pipeline);
-
-	// FIXME maybe GL_UNSIGNED_SHORT could be better than GL_SHORT
-	GSInputLayoutOGL vert_format[] =
-	{
-		{0 , 4 , GL_SHORT          , GL_FALSE , sizeof(VertexGPU) , (const GLvoid*)(0) }  , // vertex
-		{1 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(VertexGPU) , (const GLvoid*)(8) }  , // color
-		{2 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE , sizeof(VertexGPU) , (const GLvoid*)(12) } , // z value. FIXME WTF 4 unsigned byte, why not a full integer
-		{3 , 3 , GL_FLOAT          , GL_FALSE , sizeof(VertexGPU) , (const GLvoid*)(16) } , // tex coord
-	};
-
-	vertex_array = new GSVertexBufferStateOGL(sizeof(VertexGPU), vert_format, 4);
-
 }
 
-static void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps, int context) {
+void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 
 	common_buffer->bind();
-	common_buffer->upload((void*)&g_cs.uniform_buffer[context]);
+	common_buffer->upload((void*)&g_cs.uniform_buffer[g_cs.context]);
 
 	vertex_buffer->bind();
-	vertex_buffer->upload((void*)&vs->uniform_buffer[context]);
+	vertex_buffer->upload((void*)&vs->uniform_buffer[vs->context]);
 
 	fragment_buffer->bind();
-	fragment_buffer->upload((void*)&ps->uniform_buffer[context]);
+	fragment_buffer->upload((void*)&ps->uniform_buffer[ps->context]);
 
 	g_cs.enable_texture();
-	ps->enable_texture(context);
+	ps->enable_texture();
 }
 
 static void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
@@ -503,13 +505,9 @@ static void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int 
 	pf->prog.link = (void*)pf;			// Setting autolink
 	pf->prog.isFragment = true;			// Setting autolink
 	pf->ShaderType = ShaderTypes[pf->program];
+	pf->context = context;
 
-	g_cs.set_texture(g_cs.sBlocks, ptexBlocks);
-	g_cs.set_texture(g_cs.sConv16to32, ptexConv16to32);
-	g_cs.set_texture(g_cs.sConv32to16, ptexConv32to16);
-	g_cs.set_texture(g_cs.sBilinearBlocks, ptexBilinearBlocks);
 
-	GL_REPORT_ERRORD();
 }
 
 void SetupVertexProgramParameters(VERTEXSHADER* pf, int context)
@@ -517,8 +515,7 @@ void SetupVertexProgramParameters(VERTEXSHADER* pf, int context)
 	pf->prog.link = (void*)pf;			// Setting autolink
 	pf->prog.isFragment = false;			// Setting autolink
 	pf->ShaderType = ShaderTypes[pf->program];
-
-	GL_REPORT_ERRORD();
+	pf->context = context;
 }
 
 //const int GLSL_VERSION = 130;  			// Sampler2DRect appear in 1.3
@@ -535,10 +532,10 @@ static __forceinline bool LOAD_VS(char* DefineString, const char* name, VERTEXSH
 	bool flag;
 	char temp[200];
 	GlslHeaderString(temp, name, depth);
-	sprintf(DefineString, "%s#define VERTEX_SHADER 1\n#define CTX %d\n", temp, context * NOCONTEXT);
+	sprintf(DefineString, "%s#define VERTEX_SHADER 1\n", temp);
 	//ZZLog::WriteLn("Define for VS == '%s'", DefineString);
 	flag = LoadShaderFromFile(vertex.program, DefineString, name, GL_VERTEX_SHADER);
-	SetupVertexProgramParameters(&vertex, context);
+	SetupVertexProgramParameters(&vertex, context * NOCONTEXT);
 	return flag;
 }
 
@@ -547,11 +544,11 @@ static __forceinline bool LOAD_PS(char* DefineString, const char* name, FRAGMENT
 	bool flag;
 	char temp[200];
 	GlslHeaderString(temp, name, depth);
-	sprintf(DefineString, "%s#define FRAGMENT_SHADER 1\n#define CTX %d\n", temp, context * NOCONTEXT);
+	sprintf(DefineString, "%s#define FRAGMENT_SHADER 1\n", temp);
 	//ZZLog::WriteLn("Define for PS == '%s'", DefineString);
 
 	flag = LoadShaderFromFile(fragment.program, DefineString, name, GL_FRAGMENT_SHADER);
-	SetupFragmentProgramParameters(&fragment, context, 0);
+	SetupFragmentProgramParameters(&fragment, context * NOCONTEXT, 0);
 	return flag;
 }
 
@@ -632,6 +629,10 @@ bool ZZshLoadExtraEffects() {
 	if (!LOAD_PS(DefineString, "BaseTexturePS", ppsBaseTexture, cgfProf, 0, "")) bLoadSuccess = false;
 	if (!LOAD_PS(DefineString, "Convert16to32PS", ppsConvert16to32, cgfProf, 0, "")) bLoadSuccess = false;
 	if (!LOAD_PS(DefineString, "Convert32to16PS", ppsConvert32to16, cgfProf, 0, "")) bLoadSuccess = false;
+
+	// DEBUG
+	if (!LOAD_PS(DefineString, "ZeroDebugPS", ppsDebug, cgfProf, 0, "")) bLoadSuccess = false;
+	if (!LOAD_PS(DefineString, "ZeroDebug2PS", ppsDebug2, cgfProf, 0, "")) bLoadSuccess = false;
 
 	GL_REPORT_ERRORD();
 	return true;
