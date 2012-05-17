@@ -2,15 +2,14 @@ Source: pcsx2.snapshot
 Section: contrib/games
 Priority: optional
 Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
-# WARNING Natty need at least cmake 2.8.5 (multiarch issue)
 Build-Depends: cmake (>= 2.8.5),
-    debhelper (>= 9),
+    debhelper (>= 8.9),
     dpkg-dev (>= 1.15.7),
     libasound2-dev,
     libbz2-dev,
     libgl1-mesa-dev,
-# Future GSdx version will need glew1.6. Only Oneiric have it...
-    libglew-dev (>= 1.6)| libglew1.5-dev,
+# GSdx need glew1.6 and would love glew1.7
+    libglew-dev (>= 1.6)| libglew1.6-dev,
     libglu1-mesa-dev,
     libgtk2.0-dev (>= 2.16),
     libjpeg-dev,
@@ -33,7 +32,7 @@ Architecture: i386
 # manually add nvidia-cg-toolkit for zzogl (cg pacakge does not provide symbol or shlibs files)
 # recommand libasound for alsa plugin for pulseaudio
 Depends: ${shlibs:Depends}, ${misc:Depends},
-    libcg | nvidia-cg-toolkit (>= 2.1),
+    libcg | nvidia-cg-toolkit (>= 2.1)
 Recommends: libasound2-plugins
 Conflicts: pcsx2,
     pcsx2-data-unstable,
@@ -48,8 +47,6 @@ Description: Playstation 2 emulator
  WARNING: It requires a CPU with SSE2 instructions. If your CPU does not support
  this instruction set, it does not have enough horse power to run this emulator
  anyway.
- .
- This package includes the main binary file.
 
 Package: pcsx2-unstable-dbg
 Section: contrib/debug
