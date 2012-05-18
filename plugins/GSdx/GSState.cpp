@@ -3108,6 +3108,10 @@ bool GSC_ICO(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 1;
 		}
+		else if(fi.TME && fi.FBP == 0x0800 && (fi.TBP0 == 0x2800 || fi.TBP0 ==0x2c00) && fi.TPSM ==0  && fi.FBMSK == 0)
+		{
+			skip = 1; //重影
+		}
 	}
 	else
 	{
@@ -3258,6 +3262,10 @@ bool GSC_ResidentEvil4(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 176;
 		}
+		else if(fi.TME && fi.FBP ==0x03100 && (fi.TBP0==0x2a00 ||fi.TBP0==0x3480) && fi.TPSM ==0  && fi.FBMSK == 0)
+		{
+			skip = 1; //重影
+		}
 	}
 
 	return true;
@@ -3267,9 +3275,26 @@ bool GSC_Spartan(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && fi.FBP == 0x02000 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT32)
+		if(g_crc_region == CRC::NoRegion &&fi.TME && fi.FBP == 0x02000 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x00000 && fi.TPSM == PSM_PSMCT32)
 		{
 			skip = 107;
+		}
+		if(g_crc_region == CRC::JP && fi.TME && fi.FBP == 0x02180 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x2180 && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 3;
+		}
+		else
+		{
+				if(fi.TME)
+				{
+					// depth textures (bully, mgs3s1 intro, Front Mission 5)
+					if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+						// General, often problematic post processing
+						(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+					{
+						skip = 1;
+					}
+				}
 		}
 	}
 
@@ -3297,7 +3322,11 @@ bool GSC_Drakengard2(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && fi.FBP == 0x026c0 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x00a00 && fi.TPSM == PSM_PSMCT32)
+		if(g_crc_region == CRC::CH && fi.TME && fi.FBP == 0x026c0  && fi.TBP0 == 0x00a00 && fi.FPSM ==2)
+		{
+			skip =34;
+		}
+		if((g_crc_region == CRC::US || g_crc_region == CRC::EU) && fi.TME && fi.FBP == 0x026c0 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x00a00 && fi.TPSM == PSM_PSMCT32)
 		{
 			skip = 64;
 		}
@@ -3318,9 +3347,13 @@ bool GSC_Tekken5(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 2;
 		}
-		else if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32 && fi.FBMSK == 0x00FFFFFF)
+		else if(fi.TME)
 		{
-			skip = 5;	//city at sunset's... sun...
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+				{
+					skip = 24;
+				}
 		}
 	}
 	
@@ -3395,6 +3428,14 @@ bool GSC_GodOfWar2(const GSFrameInfo& fi, int& skip)
 				&& ((fi.TZTST == 2 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 1 && fi.FBMSK == 0x00FFFFFF) || (fi.TZTST == 3 && fi.FBMSK == 0xFF000000)))
 			{
 					skip = 1; // wall of fog
+			}
+			else if(fi.TPSM == PSM_PSMCT24 && fi.TME && (fi.FBP ==0x1300 ) && (fi.TBP0 ==0x0F00 || fi.TBP0 ==0x1300 || fi.TBP0==0x2b00)) // || fi.FBP == 0x0100 //消水下黑線跟光源
+			{
+				skip = 1; // 重影
+			}
+			else if(fi.TPSM == PSM_PSMCT24 && fi.TME && (fi.FBP ==0x0100 ) && (fi.TBP0==0x2b00 || fi.TBP0==0x2e80)) //480P下2e80 
+			{
+				skip = 1; // 水下黑線
 			}
 		}
 	}
@@ -3508,7 +3549,15 @@ bool GSC_Genji(const GSFrameInfo& fi, int& skip)
 	{
 		if(fi.TME && fi.FBP == 0x01500 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x00e00 && fi.TPSM == PSM_PSMZ16)
 		{
-			skip = 6; //
+			skip = 6; //左上方缺塊
+		}	
+		else if(fi.TPSM == PSM_PSMCT24 && fi.TME ==0x0001 && fi.TBP0==fi.FBP)
+		{
+			skip = 1; // 模糊
+		}
+		else if(fi.TPSM == PSM_PSMT8H && fi.FBMSK == 0)
+		{
+			skip = 1; //白霧
 		}
 	}
 	else
@@ -3545,11 +3594,11 @@ bool GSC_ValkyrieProfile2(const GSFrameInfo& fi, int& skip)
 		/*if(fi.TME && (fi.FBP == 0x018c0 || fi.FBP == 0x02180) && fi.FPSM == fi.TPSM && fi.TBP0 >= 0x03200 && fi.TPSM == PSM_PSMCT32)	//NTSC only, !(fi.TBP0 == 0x03580 || fi.TBP0 == 0x03960)
 		{
 			skip = 1;	//red garbage in lost forest, removes other effects...
-		}
+		}*/
 		if(fi.TME && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
 		{
-			skip = 1;	//garbage in cutscenes, doesn't remove completely, better use "Alpha Hack"
-		}*/
+			skip = 1; // CMV的豎紋
+        }
 		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4HH)
 		{
 			skip = 1000; //
@@ -3570,7 +3619,11 @@ bool GSC_RadiataStories(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4HH)
+		if(fi.TME && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
+        {
+			skip = 1; // CMV的豎紋
+        }
+		else if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4HH)
 		{
 			skip = 1000; //
 		}
@@ -3598,8 +3651,34 @@ bool GSC_HauntingGround(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 1; // bloom
 		}
-		else if(fi.TME && fi.FBP == fi.TBP0 && fi.TBP0 == 0x3000 && fi.FBMSK == 0xFFFFFF &&
-			GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
+		else if(fi.TME && (fi.FBP ==0x2200) && (fi.TBP0 ==0x3a80) && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1; // 模糊
+		}
+		else if(fi.FBP ==0x2200 && fi.TBP0==0x3000 && fi.TPSM == PSM_PSMT8H && fi.FBMSK == 0)
+		{
+			skip = 1; //霧
+		}
+		else if(fi.TME)
+		{
+			// depth textures (bully, mgs3s1 intro, Front Mission 5)
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				// General, often problematic post processing
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+			{
+				skip = 1;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool GSC_EvangelionJo(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.TBP0 == 0x2BC0 || (fi.FBP == 0 || fi.FBP == 0x1180) && (fi.FPSM | fi.TPSM) == 0)
 		{
 			skip = 1;
 		}
@@ -3612,9 +3691,141 @@ bool GSC_SuikodenTactics(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(!fi.TME && fi.TPSM == PSM_PSMT8H && fi.FPSM == 0 && fi.FBMSK == 0x0FF000000 && fi.TBP0 == 0 && GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
+		if( !fi.TME && fi.TPSM == PSM_PSMT8H && fi.FPSM == 0 &&
+			fi.FBMSK == 0x0FF000000 && fi.TBP0 == 0 && GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM))
 		{
 			skip = 4;
+		}
+	}
+
+	return true;
+}
+
+bool GSC_CaptainTsubasa(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x1C00 && !fi.FBMSK)
+			{
+				skip = 1;
+			}
+	}
+	return true;
+}
+
+bool GSC_Oneechanbara2Special(const GSFrameInfo& fi, int& skip)
+{
+// 高分辨率下重影
+	if(skip == 0)
+	{
+		if(fi.TPSM == PSM_PSMCT24 && fi.TME && fi.FBP == 0x01180)
+		{
+			skip = 1; // 重影
+		}
+	}
+
+	return true;
+}
+
+bool GSC_NarutimateAccel(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x3800 && fi.TBP0 == 0 && (fi.FPSM | fi.TPSM) == 0)
+			{
+				skip = 105;
+			}
+		else if(!fi.TME && fi.FBP == 0x3800 && fi.TBP0 == 0x1E00 && fi.FPSM == 0 && fi.TPSM == 49 && fi.FBMSK == 0xFF000000)
+			{
+				skip = 1;
+			}
+	}
+	else
+	{
+		if(fi.FBP == 0 && fi.TBP0 == 0x3800 && fi.TME && (fi.FPSM | fi.TPSM) == 0)
+		{
+			skip = 1;
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_Naruto(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x3800 && fi.TBP0 == 0 && (fi.FPSM | fi.TPSM) == 0)
+			{
+				skip = 105;
+			}
+		else if(!fi.TME && fi.FBP == 0x3800 && fi.TBP0 == 0x1E00 && fi.FPSM == 0 && fi.TPSM == 49 && fi.FBMSK == 0xFF000000)
+			{
+				skip = 0;
+			}
+	}
+	else
+	{
+		if(fi.FBP == 0 && fi.TBP0 == 0x3800 && fi.TME && (fi.FPSM | fi.TPSM) == 0)
+		{
+			skip = 1;
+		}
+	}
+	
+	return true;
+}
+
+
+bool GSC_EternalPoison(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TPSM == PSM_PSMCT16S && fi.TBP0 == 0x3200)
+		{
+			skip = 1; //陰影
+		}
+	}
+	return true;
+}
+
+bool GSC_LegoBatman(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.TPSM == PSM_PSMZ16 && fi.FPSM == PSM_PSMCT16 && fi.FBMSK == 0x00000)
+		{
+			skip = 3; //去黑霧
+		}
+	}
+	return true;
+}
+
+bool GSC_SakuraTaisen(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(!fi.TME && (fi.FBP == 0x0 || fi.FBP == 0x1180) && (fi.TBP0!=0x3fc0 && fi.TBP0!=0x3c9a && fi.TBP0 !=0x3dec /*fi.TBP0 ==0x38d0 || fi.TBP0==0x3912 ||fi.TBP0==0x3bdc ||fi.TBP0==0x3ab3 ||fi.TBP0<=0x3a92*/) && fi.FPSM == PSM_PSMCT32 && (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4) && (fi.FBMSK == 0x00FFFFFF || !fi.FBMSK))
+		{
+			skip = 0; //3dec 3fc0 3c9a
+		}
+		if(!fi.TME && (fi.FBP | fi.TBP0) !=0 && (fi.FBP | fi.TBP0) !=0x1180 && (fi.FBP | fi.TBP0) !=0x3be0 && (fi.FBP | fi.TBP0) !=0x3c80 && fi.TBP0!=0x3c9a  && (fi.FBP | fi.TBP0) !=0x3d80 && fi.TBP0 !=0x3dec&& fi.FPSM == PSM_PSMCT32 && (fi.FBMSK==0))
+		{
+			skip =0; //3dec 3fc0 3c9a
+		}
+		if(!fi.TME && (fi.FBP | fi.TBP0) !=0 && (fi.FBP | fi.TBP0) !=0x1180 && (fi.FBP | fi.TBP0) !=0x3be0 && (fi.FBP | fi.TBP0) !=0x3c80 && (fi.FBP | fi.TBP0) !=0x3d80 && fi.TBP0!=0x3c9a && fi.TBP0 !=0x3de && fi.FPSM == PSM_PSMCT32 && (fi.FBMSK==0))
+		{
+			skip =1; //3dec 3fc0 3c9a
+		}
+		else if(fi.TME && (fi.FBP == 0 || fi.FBP == 0x1180) && fi.TBP0 == 0x35B8 && fi.TPSM == PSM_PSMT4)
+		{
+			skip = 1;
+		}
+		else
+		{
+			if(!fi.TME && (fi.FBP | fi.TBP0) ==0x38d0 && fi.FPSM == PSM_PSMCT32 )
+			{
+				skip = 1; //3dec 3fc0 3c9a
+			}
 		}
 	}
 
@@ -3671,6 +3882,97 @@ bool GSC_Sly2(const GSFrameInfo& fi, int& skip)
 		}
 	}
 	
+	return true;
+}
+
+bool GSC_ShadowofRome(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.FBP && fi.TPSM == PSM_PSMT8H && ( fi.FBMSK ==0x00FFFFFF))
+		{
+			skip =1; //霧
+		}
+		else if(fi.TME ==0x0001 && (fi.TBP0==0x1300 || fi.TBP0==0x0f00) && fi.FBMSK>=0xFFFFFF)
+		{
+			skip = 1; //樹林霧和水紋
+		}		
+		else if(fi.TME && (fi.FBP >=0x0) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 ==0x0160 ||fi.TBP0==0x01e0 || fi.TBP0<=0x0800) && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 1; //速度
+		}
+		else if(fi.TME && (fi.TBP0==0x0700) && (fi.TPSM == PSM_PSMCT32 || fi.TPSM == PSM_PSMCT24))
+		{
+			skip = 1; //模糊
+		} 
+	}
+	
+	return true;
+}
+
+bool GSC_FFXII(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME)
+		{
+			// depth textures (bully, mgs3s1 intro, Front Mission 5)
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				// General, often problematic post processing
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+			{
+				skip = 1;
+			}
+		}
+	}
+	return true;
+}
+
+bool GSC_FFX2(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME)
+		{
+			// depth textures (bully, mgs3s1 intro, Front Mission 5)
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				// General, often problematic post processing
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+			{
+				skip = 1;
+			}
+		}
+	}
+	return true;
+}
+
+bool GSC_FFX(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME)
+		{
+			// depth textures (bully, mgs3s1 intro, Front Mission 5)
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				// General, often problematic post processing
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+			{
+				skip = 1;
+			}
+		}
+	}
+	return true;
+}
+
+bool GSC_ArctheLad(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		/*if(fi.TPSM == PSM_PSMT8H && fi.FBMSK >= 0xFFFFFFF)
+		{
+			skip = 1;
+		}*/
+	}
 	return true;
 }
 
@@ -3843,7 +4145,7 @@ bool GSC_Castlevania(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(fi.TME && fi.FBP == 0x00000 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMCT16S && fi.FBMSK == 0x00FFFFFF)
+		if(fi.TME && fi.FBP == 0 && fi.TBP0 && fi.TPSM == 10 && fi.FBMSK == 0xFFFFFF)
 		{
 			skip = 2;
 		}
@@ -3876,6 +4178,96 @@ bool GSC_Black(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_CrashNburn(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME)
+		{
+			// depth textures (bully, mgs3s1 intro, Front Mission 5)
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				// General, often problematic post processing
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+			{
+				skip = 1;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool GSC_TombRaider(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x01000 && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1; 
+		}
+	}
+	return true;
+}
+
+bool GSC_TombRaiderLegend(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x01000 && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32 && (fi.TBP0 == 0x2b60 ||fi.TBP0 == 0x2b80 || fi.TBP0 == 0x2E60 ||fi.TBP0 ==0x3020 ||fi.TBP0 == 0x3200 || fi.TBP0 == 0x3320))
+		{
+			skip = 1; //花屏
+		}
+		else if(fi.TPSM == PSM_PSMCT32 && (fi.TPSM | fi.FBP)==0x2fa0 && (fi.TBP0==0x2bc0 ) && fi.FBMSK ==0)  
+		{
+			skip = 2; // 花屏
+		}
+		
+		
+	}// ||fi.TBP0 ==0x2F00
+
+	return true;
+}
+
+bool GSC_TombRaiderUnderWorld(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP == 0x01000 && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32 && (fi.TBP0 == 0x2B60 /*|| fi.TBP0 == 0x2EFF || fi.TBP0 ==0x2F00 || fi.TBP0 == 0x3020*/ || fi.TBP0 >= 0x2C01 && fi.TBP0!=0x3029 && fi.TBP0!=0x302d))
+		{
+			skip = 1; //花屏
+		}
+		else if(fi.TPSM == PSM_PSMCT32 && (fi.TPSM | fi.FBP)==0x2c00 && (fi.TBP0 ==0x0ee0) && fi.FBMSK ==0)  
+		{
+			skip = 2; // 水下黑屏
+		}
+		/*else if(fi.TPSM == PSM_PSMCT16 && (fi.TPSM | fi.FBP)>=0x0 && (fi.TBP0 >=0x0) && fi.FBMSK ==0)  
+		{
+			skip = 600; // 加速
+		}*/
+	}
+
+	return true;
+}
+
+bool GSC_SSX3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME)
+		{
+			// depth textures (bully, mgs3s1 intro, Front Mission 5)
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				// General, often problematic post processing
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+			{
+				skip = 1;
+			}
+		}
+	}
+
+	return true;
+}
+
 bool GSC_FFVIIDoC(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -3892,6 +4284,29 @@ bool GSC_FFVIIDoC(const GSFrameInfo& fi, int& skip)
 	
 	return true;
 }
+
+bool GSC_DevilMayCry3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+
+		if(fi.TME && fi.FBP == 0x01800 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x01000 && fi.TPSM == PSM_PSMZ16)
+		{
+			skip = 32;
+		}
+		if(fi.TME && fi.FBP == 0x01800 && fi.FPSM == PSM_PSMZ32 && fi.TBP0 == 0x0800 && fi.TPSM == PSM_PSMT8H)
+		{
+			skip = 16;
+		}
+		if(fi.TME && fi.FBP == 0x01800 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x0 && fi.TPSM == PSM_PSMT8H)
+		{
+			skip = 24;
+		}
+	}
+	
+	return true;
+}
+
 
 bool GSC_StarWarsForceUnleashed(const GSFrameInfo& fi, int& skip)
 {
@@ -3955,28 +4370,6 @@ bool GSC_BlackHawkDown(const GSFrameInfo& fi, int& skip)
 		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT8)
 		{
 			skip = 5;	//night filter
-		}
-	}
-	
-	return true;
-}
-
-bool GSC_DevilMayCry3(const GSFrameInfo& fi, int& skip)
-{
-	if(skip == 0)
-	{
-
-		if(fi.TME && fi.FBP == 0x01800 && fi.FPSM == PSM_PSMCT16 && fi.TBP0 == 0x01000 && fi.TPSM == PSM_PSMZ16)
-		{
-			skip = 32;
-		}
-		if(fi.TME && fi.FBP == 0x01800 && fi.FPSM == PSM_PSMZ32 && fi.TBP0 == 0x0800 && fi.TPSM == PSM_PSMT8H)
-		{
-			skip = 16;
-		}
-		if(fi.TME && fi.FBP == 0x01800 && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x0 && fi.TPSM == PSM_PSMT8H)
-		{
-			skip = 24;
 		}
 	}
 	
@@ -4062,6 +4455,18 @@ bool GSC_TalesOfLegendia(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 2;
 		}
+		if(fi.TME && fi.FBP && fi.FPSM == PSM_PSMCT32 && fi.TBP0 == 0x3d80)
+		{
+			skip = 1; //左上方缺塊2a00
+		}	
+		if(fi.TME && fi.FBP ==0x1c00 && (fi.TBP0==0x2e80 ||fi.TBP0==0x2d80) && fi.TPSM ==0  && fi.FBMSK == 0xff000000)
+		{
+			skip = 1; //重影
+		}	
+		if(!fi.TME && fi.FBP ==0x2a00 && (fi.TBP0==0x1C00 ) && fi.TPSM ==0  && fi.FBMSK == 0x00FFFFFF)
+		{
+			skip = 1; //中毒圖層錯位
+		}
 	}
 		
 	return true;
@@ -4084,9 +4489,30 @@ bool GSC_Kunoichi(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
 	{
-		if(!fi.TME && (fi.FBP == 0x0 || fi.FBP == 0x00700 || fi.FBP == 0x00800) && fi.FPSM == PSM_PSMCT32 && (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4) && fi.FBMSK == 0x00FFFFFF)
+		if(!fi.TME && (fi.FBP == 0x0 || fi.FBP == 0x00700 || fi.FBP == 0x00800) && fi.FPSM == PSM_PSMCT32 && fi.FBMSK == 0x00FFFFFF)
 		{
 			skip = 3;
+		}
+		if(fi.TME && (fi.FBP ==0x0700 || fi.FBP==0) && fi.TBP0==0x0e00 && fi.TPSM ==0  && fi.FBMSK == 0)
+		{
+			skip = 1; //殺陣黑屏
+		}
+		if(fi.TME)
+		{
+			// depth textures (bully, mgs3s1 intro, Front Mission 5)
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				// General, often problematic post processing
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+			{
+				skip = 1;
+			}
+		}
+	}
+	else
+	{
+		if(fi.TME && (fi.FBP == 0x0e00) && fi.FPSM == PSM_PSMCT32 && fi.FBMSK == 0xFF000000)
+		{
+			skip = 0;
 		}
 	}
 		
@@ -4166,6 +4592,427 @@ bool GSC_JamesBondEverythingOrNothing(const GSFrameInfo& fi, int& skip)
 		}
 	}
 	
+	return true;
+}
+
+bool GSC_ZettaiZetsumeiToshi2(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+			if(fi.TME  && fi.TPSM == PSM_PSMCT16S  && (fi.FBMSK >= 0x6FFFFFFF || fi.FBMSK ==0) )
+			{
+				skip = 1000;
+			}
+			else if(fi.TME  && fi.TPSM == PSM_PSMCT32 && fi.FBMSK == 0xFF000000)
+			{
+				skip = 2; // 霧
+ 			}
+			else if((fi.FBP | fi.TBP0)&& fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x3FFF)
+			{
+				skip = 1000;
+			}
+			
+	}
+	else 		
+	{
+			if(!fi.TME && fi.TPSM == PSM_PSMCT32  && fi.FBP==0x1180 && fi.TBP0==0x1180 && (fi.FBMSK ==0))
+			{
+				skip = 0; //
+			}
+			if(fi.TME && fi.TPSM == PSM_PSMT4  && fi.FBP && (fi.TBP0!=0x3753))
+			{
+				skip = 0; //
+			}
+			if(fi.TME && fi.TPSM == PSM_PSMT8H && fi.FBP ==0x22e0 && fi.TBP0 ==0x36e0 )
+			{
+				skip = 0; //
+			}
+			if(!fi.TME  && fi.TPSM == PSM_PSMT8H && fi.FBP ==0x22e0 )
+			{
+				skip = 0; //
+			}
+			if(fi.TME  && fi.TPSM == PSM_PSMT8 && (fi.FBP==0x1180 || fi.FBP==0) && (fi.TBP0 !=0x3764 && fi.TBP0!=0x370f))
+			{
+				skip = 0; //
+			}
+			if(fi.TME && fi.TPSM == PSM_PSMCT16S && (fi.FBP==0x1180 ))
+			{
+				skip = 2; //
+			}
+			
+	}
+	
+	return true;
+}
+
+bool GSC_ShinOnimusha(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		
+		if(fi.TME && fi.FBP == 0x001000 && (fi.TBP0 ==0 || fi.TBP0 == 0x0800) && fi.TPSM == PSM_PSMT8H && fi.FBMSK == 0x00FFFFFF)
+		{
+			skip = 0; //水波紋 沒必要了?
+		}		
+		else if(fi.TPSM == PSM_PSMCT24 && fi.TME && fi.FBP == 0x01000) // || fi.FBP == 0x00000
+		{
+			skip = 28; // 重影28 30 56 64 
+		}
+		else if(fi.FBP && fi.TPSM == PSM_PSMT8H && fi.FBMSK == 0xFFFFFF)
+		{
+			skip = 0; //24 33 40 92白霧 沒必要了?
+		}
+		else if(fi.TPSM == PSM_PSMT8H && fi.FBMSK == 0xFF000000)
+		{
+			skip = 1; //撿東西時的白霧
+		}
+		else if(fi.TME && (fi.TBP0 ==0x1400 || fi.TBP0 ==0x1000 ||fi.TBP0 == 0x1200) && (fi.TPSM == PSM_PSMCT32 || fi.TPSM == PSM_PSMCT24))
+		{
+			skip = 1;
+		} //消除泛光過度 水紋等光影
+		
+	}
+	
+	return true;
+}
+
+bool GSC_XE3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TPSM == PSM_PSMT8H && fi.FBMSK >= 0xEFFFFFFF)
+		{
+			skip = 73; //動畫
+		}
+		else if(fi.TME && fi.FBP ==0x03800 && fi.TBP0 && fi.TPSM ==0  && fi.FBMSK == 0)
+		{
+			skip = 1; //重影
+		}
+		/*else if(fi.TPSM ==0x00000 && PSM_PSMCT24 && fi.TME && fi.FBP == 0x03800)
+		{
+			skip = 1 ; // 光源
+		}*/
+		/*else if(fi.TME ==0  && (fi.FBP ==0 ) && fi.FPSM == PSM_PSMCT32 && ( fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4) && (fi.FBMSK == 0x00FFFFFF || fi.FBMSK == 0xFF000000))
+		{
+			skip = 1; //去黑暗
+		}*/
+		else
+		{
+				if(fi.TME)
+				{
+					// depth textures (bully, mgs3s1 intro, Front Mission 5)
+					if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+						// General, often problematic post processing
+						(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+					{
+						skip = 1;
+					}
+				}
+		}
+	}
+	return true;
+}
+
+bool GSC_GetaWay(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if((fi.FBP ==0 || fi.FBP ==0x1180)&& fi.TPSM == PSM_PSMT8H && fi.FBMSK == 0)
+		{
+			skip = 1;
+		}
+	}
+
+	return true;
+}
+
+bool GSC_SakuraWarsSoLongMyLove(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME==0 && fi.FBP != fi.TBP0 && fi.TBP0 && fi.FBMSK == 0x00FFFFFF)
+		{
+			skip = 3; //去黑暗
+		}
+		else if(fi.TME==0 && fi.FBP == fi.TBP0 && (fi.TBP0 ==0x1200 ||fi.TBP0 ==0x1180 ||fi.TBP0 ==0) && fi.FBMSK == 0x00FFFFFF)
+		{
+			skip = 3; //去黑暗
+		}	
+		else if(fi.TME && (fi.FBP ==0 || fi.FBP ==0x1180) && fi.FPSM == PSM_PSMCT32 && fi.TBP0 ==0x3F3F && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 1; //機甲泛光
+		}
+	}
+
+	return true;
+}
+
+bool GSC_FightingBeautyWulong(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.TBP0 ==0x0700 || fi.TBP0 ==0x0a80) && (fi.TPSM == PSM_PSMCT32 || fi.TPSM == PSM_PSMCT24))
+		{
+			skip = 1;
+		} //消除模糊
+	}
+
+	return true;
+}
+
+bool GSC_TouristTrophy(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP >= 0x02f00 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x01180) && fi.TPSM == PSM_PSMT8) 
+		{
+			skip = 770;	
+		}
+		if(fi.TME && fi.FBP >= 0x02de0 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 ==0 || fi.TBP0==0x1a40 ||fi.TBP0 ==0x2300) && fi.TPSM == PSM_PSMT8)
+		{
+			skip = 770; //480P
+		}
+	}
+
+	return true;
+}
+
+bool GSC_GTASanAndreas(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP ==0x0a00 || fi.FBP ==0x08c0) && (fi.TBP0 ==0x1b80 || fi.TBP0 ==0x1a40) && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1; // 重影跟水波紋
+		}
+	}
+
+	return true;
+}
+
+bool GSC_FrontMission5(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TPSM == PSM_PSMT8H && fi.FBMSK == 0)
+		{
+			skip = 1; //動畫
+		}
+		if(fi.TME && (fi.FBP ==0x1000) && (fi.TBP0 ==0x2e00 || fi.TBP0 ==0x3200) && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1; //影子fi.TBP0 ==0x1f00
+		}
+	}
+
+	return true;
+}
+
+bool GSC_GodHand(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP ==0x0) && (fi.TBP0 ==0x2800) && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1; // 模糊
+		}
+	}
+
+	return true;
+}
+
+bool GSC_KnightsOfTheTemple2(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TPSM == PSM_PSMT8H && fi.FBMSK == 0)
+		{
+			skip = 1; //重影
+		}
+		else if(fi.TPSM ==0x00000 && PSM_PSMCT24 && fi.TME && (fi.FBP ==0x3400 ||fi.FBP==0x3a00))
+		{
+			skip = 1 ; //光源
+		}
+	}
+
+	return true;
+}
+
+bool GSC_UltramanFightingEvolution(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP==0x2a00 && fi.FPSM == PSM_PSMZ24 && fi.TBP0 == 0x1c00 && fi.TPSM == PSM_PSMZ24)
+		{
+			skip = 5; // blur 不損光源
+		}
+	}
+
+	return true;
+}
+
+bool GSC_RogueGalaxy(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.TBP0==0x2c40) && (fi.TPSM == PSM_PSMCT32 || fi.TPSM == PSM_PSMCT24))
+		{
+			skip = 1; //場景閃爍
+		} 
+		
+	}
+
+	return true;
+}
+
+bool GSC_DeathByDegreesTekkenNinaWilliams(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP ==0 ) && fi.TBP0==0x34a0 && (fi.TPSM == PSM_PSMCT32))
+		{
+			skip = 1; //去動畫窗格
+		}
+		else if((fi.FBP ==0x3500)&& fi.TPSM == PSM_PSMT8 && fi.FBMSK == 0xFFFF00FF)
+		{
+			skip = 4; //水下白霧
+		}
+	}
+	if(fi.TME)
+		{
+			if((fi.FBP | fi.TBP0 | fi.FPSM | fi.TPSM) && (fi.FBMSK == 0x00FFFFFF ))
+			{
+				skip = 1; //動畫速度
+			}
+		}
+	return true;
+}
+
+bool GSC_AlpineRacer3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(!fi.TME && fi.FBP == 0 && fi.TBP0>=0 && (fi.TPSM >= 0 ) && (fi.FBMSK ==0x0001 ||fi.FBMSK == 0x00FFFFFF))
+		{
+			skip = 2; //去黑暗
+		}
+	}
+
+	return true;
+}
+
+bool GSC_HummerBadlands(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP ==0x0a00) && (fi.TBP0 ==0x03200 || fi.TBP0==0x3700) && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1; //影子
+		}
+	}
+
+	return true;
+}
+
+bool GSC_SengokuBasara(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME  && (fi.TBP0==0x1800 ) && fi.FBMSK==0xFF000000)
+		{
+			skip = 1; //霧
+		}
+	}
+
+	return true;
+}
+
+bool GSC_Grandia3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP ==0x0 || fi.FBP ==0x0e00) && (fi.TBP0 ==0x2a00 ||fi.TBP0==0x0e00 ||fi.TBP0==0) && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT32)
+		{
+			skip = 1; // 模糊
+		}
+	}
+	
+
+	return true;
+}
+
+bool GSC_FinalFightStreetwise(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(!fi.TME && (fi.FBP == 0 || fi.FBP == 0x08c0) && fi.FPSM == PSM_PSMCT32 && (fi.TPSM == PSM_PSMT8 || fi.TPSM == PSM_PSMT4) && fi.FBMSK == 0x00FFFFFF)
+		{
+			skip = 3;
+		}
+	}
+
+	return true;
+}
+
+bool GSC_TalesofSymphonia(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP >= 0) && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 == 0x2bc0 || fi.TBP0 <= 0x0200) && (fi.FBMSK==0xFF000000 ||fi.FBMSK==0x00FFFFFF))
+		{
+			skip = 1; //fi.FBMSK==0造成動畫黑屏,加速戰鬥速度
+		}
+		if(fi.TME  && (fi.TBP0==0x1180 || fi.TBP0==0x1a40 || fi.TBP0==0x2300) && fi.FBMSK>=0xFF000000)
+		{
+			skip = 1; //過場殘影
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_SoulCalibur3(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME)
+		{
+			// depth textures (bully, mgs3s1 intro, Front Mission 5)
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				// General, often problematic post processing
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+			{
+				skip = 2;
+			}
+		}
+	}
+	
+	return true;
+}
+
+bool GSC_Simple2000Vol114(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{	
+		if(fi.TME==0 && (fi.FBP==0x1500) && (fi.TBP0==0x2c97 || fi.TBP0==0x2ace || fi.TBP0==0x03d0 || fi.TBP0==0x2448) && (fi.FBMSK == 0x0000))
+		{
+			skip = 1; //去影子
+		}
+		if(fi.TME && (fi.FBP==0x0e00) && (fi.TBP0==0x1000) && (fi.FBMSK == 0x0000))
+		{
+			skip = 1; //去迷霧
+		}
+	}
+	return true;
+}
+bool GSC_UrbanReign(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME && fi.FBP==0x0000 && fi.TBP0==0x3980 && fi.FPSM==fi.TPSM && fi.TPSM == PSM_PSMCT32 && fi.TPSM ==0  && fi.FBMSK == 0x0)
+		{
+			skip = 1; //黑影
+		}
+	}
 	return true;
 }
 
@@ -4356,11 +5203,24 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::ValkyrieProfile2] = GSC_ValkyrieProfile2;
 		map[CRC::RadiataStories] = GSC_RadiataStories;
 		map[CRC::HauntingGround] = GSC_HauntingGround;
+		map[CRC::EvangelionJo] = GSC_EvangelionJo;
 		map[CRC::SuikodenTactics] = GSC_SuikodenTactics;
+		map[CRC::CaptainTsubasa] = GSC_CaptainTsubasa;
+		map[CRC::Oneechanbara2Special] = GSC_Oneechanbara2Special;
+		map[CRC::NarutimateAccel] = GSC_NarutimateAccel;
+		map[CRC::Naruto] = GSC_Naruto;
+		map[CRC::EternalPoison] = GSC_EternalPoison;
+		map[CRC::LegoBatman] = GSC_LegoBatman;
+		map[CRC::SakuraTaisen] = GSC_SakuraTaisen;
 		map[CRC::TenchuWoH] = GSC_Tenchu;
 		map[CRC::TenchuFS] = GSC_Tenchu;
 		map[CRC::Sly3] = GSC_Sly3;
 		map[CRC::Sly2] = GSC_Sly2;
+		map[CRC::ShadowofRome] = GSC_ShadowofRome;
+		map[CRC::FFXII] = GSC_FFXII;
+		map[CRC::FFX2] = GSC_FFX2;
+		map[CRC::FFX] = GSC_FFX;
+		map[CRC::ArctheLad] = GSC_ArctheLad;
 		map[CRC::DemonStone] = GSC_DemonStone;
 		map[CRC::BigMuthaTruckers] = GSC_BigMuthaTruckers;
 		map[CRC::TimeSplitters2] = GSC_TimeSplitters2;
@@ -4372,6 +5232,11 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::BleachBladeBattlers] = GSC_BleachBladeBattlers;
 		map[CRC::CastlevaniaCoD] = GSC_Castlevania;
 		map[CRC::CastlevaniaLoI] = GSC_Castlevania;
+		map[CRC::CrashNburn] = GSC_CrashNburn;
+		map[CRC::TombRaiderUnderworld] = GSC_TombRaiderUnderWorld;
+		map[CRC::TombRaiderAnniversary] = GSC_TombRaider;
+		map[CRC::TombRaiderLegend] = GSC_TombRaiderLegend;
+		map[CRC::SSX3] = GSC_SSX3;
 		map[CRC::Black] = GSC_Black;
 		map[CRC::FFVIIDoC] = GSC_FFVIIDoC;
 		map[CRC::StarWarsForceUnleashed] = GSC_StarWarsForceUnleashed;
@@ -4392,6 +5257,30 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::Yakuza2] = GSC_Yakuza2;
 		map[CRC::SkyGunner] = GSC_SkyGunner;
 		map[CRC::JamesBondEverythingOrNothing] = GSC_JamesBondEverythingOrNothing;
+		map[CRC::ZettaiZetsumeiToshi2] = GSC_ZettaiZetsumeiToshi2;
+		map[CRC::ShinOnimusha] = GSC_ShinOnimusha;
+		map[CRC::XE3] = GSC_XE3;
+		map[CRC::GetaWay] = GSC_GetaWay;
+		map[CRC::GetaWayBlackMonday] = GSC_GetaWay;
+		map[CRC::SakuraWarsSoLongMyLove] = GSC_SakuraWarsSoLongMyLove;
+		map[CRC::FightingBeautyWulong] = GSC_FightingBeautyWulong;
+		map[CRC::TouristTrophy] = GSC_TouristTrophy;
+		map[CRC::GTASanAndreas] = GSC_GTASanAndreas;
+		map[CRC::FrontMission5] = GSC_FrontMission5;
+		map[CRC::GodHand] = GSC_GodHand;
+		map[CRC::KnightsOfTheTemple2] = GSC_KnightsOfTheTemple2;
+		map[CRC::UltramanFightingEvolution] = GSC_UltramanFightingEvolution;
+		map[CRC::RogueGalaxy] = GSC_RogueGalaxy;
+		map[CRC::DeathByDegreesTekkenNinaWilliams] = GSC_DeathByDegreesTekkenNinaWilliams;
+		map[CRC::AlpineRacer3] = GSC_AlpineRacer3;
+		map[CRC::HummerBadlands] = GSC_HummerBadlands;
+		map[CRC::SengokuBasara] = GSC_SengokuBasara;
+		map[CRC::Grandia3] = GSC_Grandia3;
+		map[CRC::FinalFightStreetwise] = GSC_FinalFightStreetwise;
+		map[CRC::TalesofSymphonia] = GSC_TalesofSymphonia;
+		map[CRC::SoulCalibur3] = GSC_SoulCalibur3;
+		map[CRC::Simple2000Vol114] = GSC_Simple2000Vol114;
+		map[CRC::UrbanReign] = GSC_UrbanReign;
 	}
 
 	// TODO: just set gsc in SetGameCRC once
