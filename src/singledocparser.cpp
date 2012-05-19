@@ -253,7 +253,6 @@ namespace YAML
 				throw ParserException(Mark::null(), ErrorMsg::END_OF_MAP_FLOW);
 			
 			Token& token = m_scanner.peek();
-            const Mark mark = token.mark;
 			// first check for end
 			if(token.type == Token::FLOW_MAP_END) {
 				m_scanner.pop();
@@ -265,7 +264,7 @@ namespace YAML
 				m_scanner.pop();
 				HandleNode(eventHandler);
 			} else {
-				eventHandler.OnNull(mark, NullAnchor);
+				eventHandler.OnNull(token.mark, NullAnchor);
 			}
 			
 			// now grab value (optional)
@@ -273,7 +272,7 @@ namespace YAML
 				m_scanner.pop();
 				HandleNode(eventHandler);
 			} else {
-				eventHandler.OnNull(mark, NullAnchor);
+				eventHandler.OnNull(token.mark, NullAnchor);
 			}
 			
 			// now eat the separator (or could be a map end, which we ignore - but if it's neither, then it's a bad node)

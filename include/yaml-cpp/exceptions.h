@@ -55,6 +55,13 @@ namespace YAML
 		const char * const AMBIGUOUS_ANCHOR       = "cannot assign the same alias to multiple nodes";
 		const char * const UNKNOWN_ANCHOR         = "the referenced anchor is not defined";
 
+		const char * const INVALID_SCALAR         = "invalid scalar";
+		const char * const KEY_NOT_FOUND          = "key not found";
+        const char * const BAD_CONVERSION         = "bad conversion";
+		const char * const BAD_DEREFERENCE        = "bad dereference";
+        const char * const BAD_SUBSCRIPT          = "operator[] call on a scalar";
+        const char * const BAD_PUSHBACK           = "appending to a non-sequence";
+		
 		const char * const UNMATCHED_GROUP_TAG    = "unmatched group tag";
 		const char * const UNEXPECTED_END_SEQ     = "unexpected end sequence token";
 		const char * const UNEXPECTED_END_MAP     = "unexpected end map token";
@@ -66,6 +73,24 @@ namespace YAML
 		const char * const EXPECTED_VALUE_TOKEN   = "expected value token";
 		const char * const UNEXPECTED_KEY_TOKEN   = "unexpected key token";
 		const char * const UNEXPECTED_VALUE_TOKEN = "unexpected value token";
+
+		template <typename T>
+		inline const std::string KEY_NOT_FOUND_WITH_KEY(const T&, typename disable_if<is_numeric<T> >::type * = 0) {
+			return KEY_NOT_FOUND;
+		}
+
+		inline const std::string KEY_NOT_FOUND_WITH_KEY(const std::string& key) {
+			std::stringstream stream;
+			stream << KEY_NOT_FOUND << ": " << key;
+			return stream.str();
+		}
+		
+		template <typename T>
+		inline const std::string KEY_NOT_FOUND_WITH_KEY(const T& key, typename enable_if<is_numeric<T> >::type * = 0) {
+			std::stringstream stream;
+			stream << KEY_NOT_FOUND << ": " << key;
+			return stream.str();
+		}
 	}
 
 	class Exception: public std::runtime_error {
@@ -91,6 +116,72 @@ namespace YAML
 			: Exception(mark_, msg_) {}
 	};
 
+	class RepresentationException: public Exception {
+	public:
+		RepresentationException(const Mark& mark_, const std::string& msg_)
+			: Exception(mark_, msg_) {}
+	};
+
+	// representation exceptions
+	class InvalidScalar: public RepresentationException {
+	public:
+		InvalidScalar(const Mark& mark_)
+			: RepresentationException(mark_, ErrorMsg::INVALID_SCALAR) {}
+	};
+
+	class KeyNotFound: public RepresentationException {
+	public:
+		template <typename T>
+		KeyNotFound(const Mark& mark_, const T& key_)
+			: RepresentationException(mark_, ErrorMsg::KEY_NOT_FOUND_WITH_KEY(key_)) {}
+	};
+	
+	template <typename T>
+	class TypedKeyNotFound: public KeyNotFound {
+	public:
+		TypedKeyNotFound(const Mark& mark_, const T& key_)
+			: KeyNotFound(mark_, key_), key(key_) {}
+		virtual ~TypedKeyNotFound() throw() {}
+
+		T key;
+	};
+
+	template <typename T>
+	inline TypedKeyNotFound <T> MakeTypedKeyNotFound(const Mark& mark, const T& key) {
+		return TypedKeyNotFound <T> (mark, key);
+	}
+
+	class BadConversion: public RepresentationException {
+	public:
+		BadConversion()
+        : RepresentationException(Mark::null(), ErrorMsg::BAD_CONVERSION) {}
+	};
+
+    template<typename T>
+	class TypedBadConversion: public BadConversion {
+	public:
+		TypedBadConversion()
+        : BadConversion() {}
+	};
+
+	class BadDereference: public RepresentationException {
+	public:
+		BadDereference()
+		: RepresentationException(Mark::null(), ErrorMsg::BAD_DEREFERENCE) {}
+	};
+
+	class BadSubscript: public RepresentationException {
+	public:
+		BadSubscript()
+		: RepresentationException(Mark::null(), ErrorMsg::BAD_SUBSCRIPT) {}
+	};
+
+	class BadPushback: public RepresentationException {
+	public:
+		BadPushback()
+		: RepresentationException(Mark::null(), ErrorMsg::BAD_PUSHBACK) {}
+	};
+	
 	class EmitterException: public Exception {
 	public:
 		EmitterException(const std::string& msg_)

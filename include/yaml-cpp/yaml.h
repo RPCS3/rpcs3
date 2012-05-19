@@ -10,4 +10,12 @@
 #include "yaml-cpp/stlemitter.h"
 #include "yaml-cpp/exceptions.h"
 
+#include "yaml-cpp/node/node.h"
+#include "yaml-cpp/node/impl.h"
+#include "yaml-cpp/node/convert.h"
+#include "yaml-cpp/node/iterator.h"
+#include "yaml-cpp/node/detail/impl.h"
+#include "yaml-cpp/node/parse.h"
+#include "yaml-cpp/node/emit.h"
+
 #endif // YAML_H_62B23520_7C8E_11DE_8A39_0800200C9A66
