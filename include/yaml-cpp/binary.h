@@ -10,8 +10,6 @@
 
 namespace YAML
 {
-    class Node;
-    
     std::string EncodeBase64(const unsigned char *data, std::size_t size);
     std::vector<unsigned char> DecodeBase64(const std::string& input);
     
@@ -59,8 +57,6 @@ namespace YAML
         const unsigned char *m_unownedData;
         std::size_t m_unownedSize;
     };
-    
-    void operator >> (const Node& node, Binary& binary);
 }
 
 #endif // BASE64_H_62B23520_7C8E_11DE_8A39_0800200C9A66

@@ -1,5 +1,4 @@
 #include "yaml-cpp/binary.h"
-#include "yaml-cpp/node.h"
 
 namespace YAML
 {
@@ -90,13 +89,5 @@ namespace YAML
         
         ret.resize(out - &ret[0]);
         return ret;
-    }
-
-    void operator >> (const Node& node, Binary& binary)
-    {
-        std::string scalar;
-        node.GetScalar(scalar);
-        std::vector<unsigned char> data = DecodeBase64(scalar);
-        binary.swap(data);
     }
 }

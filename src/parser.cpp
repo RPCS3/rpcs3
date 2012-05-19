@@ -1,7 +1,6 @@
 #include "yaml-cpp/parser.h"
 #include "yaml-cpp/eventhandler.h"
 #include "yaml-cpp/exceptions.h"
-#include "yaml-cpp/node.h"
 #include "directives.h"
 #include "scanner.h"
 #include "singledocparser.h"
