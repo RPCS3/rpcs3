@@ -147,10 +147,7 @@ namespace Test {
     MockEventHandler handler;\
     std::stringstream stream(ex);\
     YAML::Parser parser(stream);\
-    parser.HandleNextDocument(handler)
-    
-#define HANDLE_NEXT(ex)\
-    parser.HandleNextDocument(handler)
+    while(parser.HandleNextDocument(handler))\
     
 #define EXPECT_DOC_START()\
     do {\
@@ -220,103 +217,359 @@ namespace Test {
 		// 2.2
 		TEST MappingScalarsToScalars()
         {
-            return "  not written yet";
+            HANDLE(ex2_2);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "hr");
+            EXPECT_SCALAR("?", 0, "65");
+            EXPECT_SCALAR("?", 0, "avg");
+            EXPECT_SCALAR("?", 0, "0.278");
+            EXPECT_SCALAR("?", 0, "rbi");
+            EXPECT_SCALAR("?", 0, "147");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.3
 		TEST MappingScalarsToSequences()
         {
-            return "  not written yet";
+            HANDLE(ex2_3);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "american");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Boston Red Sox");
+            EXPECT_SCALAR("?", 0, "Detroit Tigers");
+            EXPECT_SCALAR("?", 0, "New York Yankees");
+            EXPECT_SEQ_END();
+            EXPECT_SCALAR("?", 0, "national");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "New York Mets");
+            EXPECT_SCALAR("?", 0, "Chicago Cubs");
+            EXPECT_SCALAR("?", 0, "Atlanta Braves");
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.4
 		TEST SequenceOfMappings()
         {
-            return "  not written yet";
+            HANDLE(ex2_4);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "name");
+            EXPECT_SCALAR("?", 0, "Mark McGwire");
+            EXPECT_SCALAR("?", 0, "hr");
+            EXPECT_SCALAR("?", 0, "65");
+            EXPECT_SCALAR("?", 0, "avg");
+            EXPECT_SCALAR("?", 0, "0.278");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "name");
+            EXPECT_SCALAR("?", 0, "Sammy Sosa");
+            EXPECT_SCALAR("?", 0, "hr");
+            EXPECT_SCALAR("?", 0, "63");
+            EXPECT_SCALAR("?", 0, "avg");
+            EXPECT_SCALAR("?", 0, "0.288");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.5
 		TEST SequenceOfSequences()
         {
-            return "  not written yet";
+            HANDLE(ex2_5);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "name");
+            EXPECT_SCALAR("?", 0, "hr");
+            EXPECT_SCALAR("?", 0, "avg");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Mark McGwire");
+            EXPECT_SCALAR("?", 0, "65");
+            EXPECT_SCALAR("?", 0, "0.278");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Sammy Sosa");
+            EXPECT_SCALAR("?", 0, "63");
+            EXPECT_SCALAR("?", 0, "0.288");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.6
 		TEST MappingOfMappings()
         {
-            return "  not written yet";
+            HANDLE(ex2_6);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Mark McGwire");
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "hr");
+            EXPECT_SCALAR("?", 0, "65");
+            EXPECT_SCALAR("?", 0, "avg");
+            EXPECT_SCALAR("?", 0, "0.278");
+            EXPECT_MAP_END();
+            EXPECT_SCALAR("?", 0, "Sammy Sosa");
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "hr");
+            EXPECT_SCALAR("?", 0, "63");
+            EXPECT_SCALAR("?", 0, "avg");
+            EXPECT_SCALAR("?", 0, "0.288");
+            EXPECT_MAP_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.7
 		TEST TwoDocumentsInAStream()
         {
-            return "  not written yet";
+            HANDLE(ex2_7);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Mark McGwire");
+            EXPECT_SCALAR("?", 0, "Sammy Sosa");
+            EXPECT_SCALAR("?", 0, "Ken Griffey");
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Chicago Cubs");
+            EXPECT_SCALAR("?", 0, "St Louis Cardinals");
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
         
 		// 2.8
 		TEST PlayByPlayFeed()
         {
-            return "  not written yet";
+            HANDLE(ex2_8);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "time");
+            EXPECT_SCALAR("?", 0, "20:03:20");
+            EXPECT_SCALAR("?", 0, "player");
+            EXPECT_SCALAR("?", 0, "Sammy Sosa");
+            EXPECT_SCALAR("?", 0, "action");
+            EXPECT_SCALAR("?", 0, "strike (miss)");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "time");
+            EXPECT_SCALAR("?", 0, "20:03:47");
+            EXPECT_SCALAR("?", 0, "player");
+            EXPECT_SCALAR("?", 0, "Sammy Sosa");
+            EXPECT_SCALAR("?", 0, "action");
+            EXPECT_SCALAR("?", 0, "grand slam");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.9
 		TEST SingleDocumentWithTwoComments()
         {
-            return "  not written yet";
+            HANDLE(ex2_9);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "hr");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Mark McGwire");
+            EXPECT_SCALAR("?", 0, "Sammy Sosa");
+            EXPECT_SEQ_END();
+            EXPECT_SCALAR("?", 0, "rbi");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Sammy Sosa");
+            EXPECT_SCALAR("?", 0, "Ken Griffey");
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.10
 		TEST SimpleAnchor()
         {
-            return "  not written yet";
+            HANDLE(ex2_10);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "hr");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Mark McGwire");
+            EXPECT_SCALAR("?", 1, "Sammy Sosa");
+            EXPECT_SEQ_END();
+            EXPECT_SCALAR("?", 0, "rbi");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_ALIAS(1);
+            EXPECT_SCALAR("?", 0, "Ken Griffey");
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.11
 		TEST MappingBetweenSequences()
         {
-            return "  not written yet";
+            HANDLE(ex2_11);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Detroit Tigers");
+            EXPECT_SCALAR("?", 0, "Chicago cubs");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "2001-07-23");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "New York Yankees");
+            EXPECT_SCALAR("?", 0, "Atlanta Braves");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "2001-07-02");
+            EXPECT_SCALAR("?", 0, "2001-08-12");
+            EXPECT_SCALAR("?", 0, "2001-08-14");
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.12
 		TEST CompactNestedMapping()
         {
-            return "  not written yet";
+            HANDLE(ex2_12);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "item");
+            EXPECT_SCALAR("?", 0, "Super Hoop");
+            EXPECT_SCALAR("?", 0, "quantity");
+            EXPECT_SCALAR("?", 0, "1");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "item");
+            EXPECT_SCALAR("?", 0, "Basketball");
+            EXPECT_SCALAR("?", 0, "quantity");
+            EXPECT_SCALAR("?", 0, "4");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "item");
+            EXPECT_SCALAR("?", 0, "Big Shoes");
+            EXPECT_SCALAR("?", 0, "quantity");
+            EXPECT_SCALAR("?", 0, "1");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.13
 		TEST InLiteralsNewlinesArePreserved()
         {
-            return "  not written yet";
+            HANDLE(ex2_13);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0,
+                          "\\//||\\/||\n"
+                          "// ||  ||__");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.14
 		TEST InFoldedScalarsNewlinesBecomeSpaces()
         {
-            return "  not written yet";
+            HANDLE(ex2_14);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "Mark McGwire's year was crippled by a knee injury.");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.15
 		TEST FoldedNewlinesArePreservedForMoreIndentedAndBlankLines()
         {
-            return "  not written yet";
+            HANDLE(ex2_15);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0,
+                          "Sammy Sosa completed another fine season with great stats.\n"
+                          "\n"
+                          "  63 Home Runs\n"
+                          "  0.288 Batting Average\n"
+                          "\n"
+                          "What a year!");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.16
 		TEST IndentationDeterminesScope()
         {
-            return "  not written yet";
+            HANDLE(ex2_16);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "name");
+            EXPECT_SCALAR("?", 0, "Mark McGwire");
+            EXPECT_SCALAR("?", 0, "accomplishment");
+            EXPECT_SCALAR("!", 0, "Mark set a major league home run record in 1998.\n");
+            EXPECT_SCALAR("?", 0, "stats");
+            EXPECT_SCALAR("!", 0,
+                          "65 Home Runs\n"
+                          "0.278 Batting Average\n");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.17
 		TEST QuotedScalars()
         {
-            return "  not written yet";
+            HANDLE(ex2_17);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "unicode");
+            EXPECT_SCALAR("!", 0, "Sosa did fine.\u263A");
+            EXPECT_SCALAR("?", 0, "control");
+            EXPECT_SCALAR("!", 0, "\b1998\t1999\t2000\n");
+            EXPECT_SCALAR("?", 0, "hex esc");
+            EXPECT_SCALAR("!", 0, "\x0d\x0a is \r\n");
+            EXPECT_SCALAR("?", 0, "single");
+            EXPECT_SCALAR("!", 0, "\"Howdy!\" he cried.");
+            EXPECT_SCALAR("?", 0, "quoted");
+            EXPECT_SCALAR("!", 0, " # Not a 'comment'.");
+            EXPECT_SCALAR("?", 0, "tie-fighter");
+            EXPECT_SCALAR("!", 0, "|\\-*-/|");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.18
 		TEST MultiLineFlowScalars()
         {
-            return "  not written yet";
+            HANDLE(ex2_18);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "plain");
+            EXPECT_SCALAR("?", 0, "This unquoted scalar spans many lines.");
+            EXPECT_SCALAR("?", 0, "quoted");
+            EXPECT_SCALAR("!", 0, "So does this quoted scalar.\n");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// TODO: 2.19 - 2.22 schema tags
@@ -324,37 +577,228 @@ namespace Test {
 		// 2.23
 		TEST VariousExplicitTags()
         {
-            return "  not written yet";
+            HANDLE(ex2_23);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "not-date");
+            EXPECT_SCALAR("tag:yaml.org,2002:str", 0, "2002-04-28");
+            EXPECT_SCALAR("?", 0, "picture");
+            EXPECT_SCALAR("tag:yaml.org,2002:binary", 0,
+                          "R0lGODlhDAAMAIQAAP//9/X\n"
+                          "17unp5WZmZgAAAOfn515eXv\n"
+                          "Pz7Y6OjuDg4J+fn5OTk6enp\n"
+                          "56enmleECcgggoBADs=\n");
+            EXPECT_SCALAR("?", 0, "application specific tag");
+            EXPECT_SCALAR("!something", 0,
+                          "The semantics of the tag\n"
+                          "above may be different for\n"
+                          "different documents.");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.24
 		TEST GlobalTags()
         {
-            return "  not written yet";
+            HANDLE(ex2_24);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("tag:clarkevans.com,2002:shape", 0);
+            EXPECT_MAP_START("tag:clarkevans.com,2002:circle", 0);
+            EXPECT_SCALAR("?", 0, "center");
+            EXPECT_MAP_START("?", 1);
+            EXPECT_SCALAR("?", 0, "x");
+            EXPECT_SCALAR("?", 0, "73");
+            EXPECT_SCALAR("?", 0, "y");
+            EXPECT_SCALAR("?", 0, "129");
+            EXPECT_MAP_END();
+            EXPECT_SCALAR("?", 0, "radius");
+            EXPECT_SCALAR("?", 0, "7");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("tag:clarkevans.com,2002:line", 0);
+            EXPECT_SCALAR("?", 0, "start");
+            EXPECT_ALIAS(1);
+            EXPECT_SCALAR("?", 0, "finish");
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "x");
+            EXPECT_SCALAR("?", 0, "89");
+            EXPECT_SCALAR("?", 0, "y");
+            EXPECT_SCALAR("?", 0, "102");
+            EXPECT_MAP_END();
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("tag:clarkevans.com,2002:label", 0);
+            EXPECT_SCALAR("?", 0, "start");
+            EXPECT_ALIAS(1);
+            EXPECT_SCALAR("?", 0, "color");
+            EXPECT_SCALAR("?", 0, "0xFFEEBB");
+            EXPECT_SCALAR("?", 0, "text");
+            EXPECT_SCALAR("?", 0, "Pretty vector drawing.");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.25
 		TEST UnorderedSets()
         {
-            return "  not written yet";
+            HANDLE(ex2_25);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("tag:yaml.org,2002:set", 0);
+            EXPECT_SCALAR("?", 0, "Mark McGwire");
+            EXPECT_NULL(0);
+            EXPECT_SCALAR("?", 0, "Sammy Sosa");
+            EXPECT_NULL(0);
+            EXPECT_SCALAR("?", 0, "Ken Griffey");
+            EXPECT_NULL(0);
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.26
 		TEST OrderedMappings()
         {
-            return "  not written yet";
+            HANDLE(ex2_26);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("tag:yaml.org,2002:omap", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Mark McGwire");
+            EXPECT_SCALAR("?", 0, "65");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Sammy Sosa");
+            EXPECT_SCALAR("?", 0, "63");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Ken Griffey");
+            EXPECT_SCALAR("?", 0, "58");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.27
 		TEST Invoice()
         {
-            return "  not written yet";
+            HANDLE(ex2_27);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("tag:clarkevans.com,2002:invoice", 0);
+            EXPECT_SCALAR("?", 0, "invoice");
+            EXPECT_SCALAR("?", 0, "34843");
+            EXPECT_SCALAR("?", 0, "date");
+            EXPECT_SCALAR("?", 0, "2001-01-23");
+            EXPECT_SCALAR("?", 0, "bill-to");
+            EXPECT_MAP_START("?", 1);
+            EXPECT_SCALAR("?", 0, "given");
+            EXPECT_SCALAR("?", 0, "Chris");
+            EXPECT_SCALAR("?", 0, "family");
+            EXPECT_SCALAR("?", 0, "Dumars");
+            EXPECT_SCALAR("?", 0, "address");
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "lines");
+            EXPECT_SCALAR("!", 0,
+                          "458 Walkman Dr.\n"
+                          "Suite #292\n");
+            EXPECT_SCALAR("?", 0, "city");
+            EXPECT_SCALAR("?", 0, "Royal Oak");
+            EXPECT_SCALAR("?", 0, "state");
+            EXPECT_SCALAR("?", 0, "MI");
+            EXPECT_SCALAR("?", 0, "postal");
+            EXPECT_SCALAR("?", 0, "48046");
+            EXPECT_MAP_END();
+            EXPECT_MAP_END();
+            EXPECT_SCALAR("?", 0, "ship-to");
+            EXPECT_ALIAS(1);
+            EXPECT_SCALAR("?", 0, "product");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "sku");
+            EXPECT_SCALAR("?", 0, "BL394D");
+            EXPECT_SCALAR("?", 0, "quantity");
+            EXPECT_SCALAR("?", 0, "4");
+            EXPECT_SCALAR("?", 0, "description");
+            EXPECT_SCALAR("?", 0, "Basketball");
+            EXPECT_SCALAR("?", 0, "price");
+            EXPECT_SCALAR("?", 0, "450.00");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "sku");
+            EXPECT_SCALAR("?", 0, "BL4438H");
+            EXPECT_SCALAR("?", 0, "quantity");
+            EXPECT_SCALAR("?", 0, "1");
+            EXPECT_SCALAR("?", 0, "description");
+            EXPECT_SCALAR("?", 0, "Super Hoop");
+            EXPECT_SCALAR("?", 0, "price");
+            EXPECT_SCALAR("?", 0, "2392.00");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_SCALAR("?", 0, "tax");
+            EXPECT_SCALAR("?", 0, "251.42");
+            EXPECT_SCALAR("?", 0, "total");
+            EXPECT_SCALAR("?", 0, "4443.52");
+            EXPECT_SCALAR("?", 0, "comments");
+            EXPECT_SCALAR("?", 0, "Late afternoon is best. Backup contact is Nancy Billsmer @ 338-4338.");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 2.28
 		TEST LogFile()
         {
-            return "  not written yet";
+            HANDLE(ex2_28);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Time");
+            EXPECT_SCALAR("?", 0, "2001-11-23 15:01:42 -5");
+            EXPECT_SCALAR("?", 0, "User");
+            EXPECT_SCALAR("?", 0, "ed");
+            EXPECT_SCALAR("?", 0, "Warning");
+            EXPECT_SCALAR("?", 0, "This is an error message for the log file");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Time");
+            EXPECT_SCALAR("?", 0, "2001-11-23 15:02:31 -5");
+            EXPECT_SCALAR("?", 0, "User");
+            EXPECT_SCALAR("?", 0, "ed");
+            EXPECT_SCALAR("?", 0, "Warning");
+            EXPECT_SCALAR("?", 0, "A slightly different error message.");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Date");
+            EXPECT_SCALAR("?", 0, "2001-11-23 15:03:17 -5");
+            EXPECT_SCALAR("?", 0, "User");
+            EXPECT_SCALAR("?", 0, "ed");
+            EXPECT_SCALAR("?", 0, "Fatal");
+            EXPECT_SCALAR("?", 0, "Unknown variable \"bar\"");
+            EXPECT_SCALAR("?", 0, "Stack");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "file");
+            EXPECT_SCALAR("?", 0, "TopClass.py");
+            EXPECT_SCALAR("?", 0, "line");
+            EXPECT_SCALAR("?", 0, "23");
+            EXPECT_SCALAR("?", 0, "code");
+            EXPECT_SCALAR("!", 0, "x = MoreObject(\"345\\n\")\n");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "file");
+            EXPECT_SCALAR("?", 0, "MoreClass.py");
+            EXPECT_SCALAR("?", 0, "line");
+            EXPECT_SCALAR("?", 0, "58");
+            EXPECT_SCALAR("?", 0, "code");
+            EXPECT_SCALAR("!", 0, "foo = bar");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// TODO: 5.1 - 5.2 BOM
