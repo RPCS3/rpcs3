@@ -37,13 +37,8 @@ public:
 void parse(std::istream& input)
 {
 	try {
-		YAML::Parser parser(input);
-		YAML::Node doc;
-		while(parser.GetNextDocument(doc)) {
-			YAML::Emitter emitter;
-			emitter << doc;
-			std::cout << emitter.c_str() << "\n";
-		}
+		YAML::Node doc = YAML::Load(input);
+		std::cout << doc << "\n";
 	} catch(const YAML::Exception& e) {
 		std::cerr << e.what() << "\n";
 	}
