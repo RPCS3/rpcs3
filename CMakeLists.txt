@@ -22,7 +22,7 @@ include(CheckCXXCompilerFlag)
 project(YAML_CPP)
 
 set(YAML_CPP_VERSION_MAJOR "0")
-set(YAML_CPP_VERSION_MINOR "3")
+set(YAML_CPP_VERSION_MINOR "5")
 set(YAML_CPP_VERSION_PATCH "0")
 set(YAML_CPP_VERSION "${YAML_CPP_VERSION_MAJOR}.${YAML_CPP_VERSION_MINOR}.${YAML_CPP_VERSION_PATCH}")
 
@@ -57,7 +57,7 @@ option(MSVC_STHREADED_RT "MSVC: Build with single-threaded static runtime libs (
 set(header_directory "include/yaml-cpp/")
 
 file(GLOB sources "src/[a-zA-Z]*.cpp")
-file(GLOB public_headers "include/yaml-cpp/[a-zA-Z]*.h")
+file(GLOB_RECURSE public_headers "include/yaml-cpp/[a-zA-Z]*.h")
 file(GLOB private_headers "src/[a-zA-Z]*.h")
 
 if(YAML_CPP_BUILD_CONTRIB)
@@ -77,8 +77,11 @@ if(VERBOSE)
 	message(STATUS "contrib_private_headers: ${contrib_private_headers}")
 endif()
 
-include_directories(${YAML_CPP_SOURCE_DIR}/include)
 include_directories(${YAML_CPP_SOURCE_DIR}/src)
+include_directories(${YAML_CPP_SOURCE_DIR}/include)
+
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
 
 
 ###
