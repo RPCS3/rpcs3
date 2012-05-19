@@ -4970,6 +4970,25 @@ bool GSC_TalesofSymphonia(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_SoulCalibur2(const GSFrameInfo& fi, int& skip)
+{
+	if(skip == 0)
+	{
+		if(fi.TME)
+		{
+			// depth textures (bully, mgs3s1 intro, Front Mission 5)
+			if( (fi.TPSM == PSM_PSMZ32 || fi.TPSM == PSM_PSMZ24 || fi.TPSM == PSM_PSMZ16 || fi.TPSM == PSM_PSMZ16S) ||
+				// General, often problematic post processing
+				(GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)) )
+			{
+				skip = 2;
+			}
+		}
+	}
+	
+	return true;
+}
+
 bool GSC_SoulCalibur3(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -5286,6 +5305,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::Grandia3] = GSC_Grandia3;
 		map[CRC::FinalFightStreetwise] = GSC_FinalFightStreetwise;
 		map[CRC::TalesofSymphonia] = GSC_TalesofSymphonia;
+		map[CRC::SoulCalibur2] = GSC_SoulCalibur2;
 		map[CRC::SoulCalibur3] = GSC_SoulCalibur3;
 		map[CRC::Simple2000Vol114] = GSC_Simple2000Vol114;
 		map[CRC::UrbanReign] = GSC_UrbanReign;

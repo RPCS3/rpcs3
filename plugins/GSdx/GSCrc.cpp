@@ -102,7 +102,6 @@ CRC::Game CRC::m_games[] =
 	{0x983C53D2, DBZBT3, NoRegion, 0},
 	{0x983C53D3, DBZBT3, NoRegion, 0},
 	{0x9B0E119F, DBZBT3, KO, 0}, //DragonBall Z Sparking Meteo
-	{0xF28D21F1, DBZBT3, JP, 0},
 	{0x72B3802A, SFEX3, US, 0},
 	{0x71521863, SFEX3, US, 0},
 	{0x28703748, Bully, US, 0},
@@ -127,6 +126,7 @@ CRC::Game CRC::m_games[] =
 	{0x2DF2C1EA, ICO, KO, 0},
 	{0x5C991F4E, ICO, NoRegion, 0},
 	{0x7ACF7E03, ICO, NoRegion, 0},
+	{0x788D8B4F, ICO, EU, 0},
 	{0x29C28734, ICO, CH, 0},
 	{0xAEAD1CA3, GT4, JP, 0},
 	{0x30E41D93, GT4, KO, 0},
@@ -187,7 +187,6 @@ CRC::Game CRC::m_games[] =
 	{0xDF1AF973, GodOfWar, NoRegion, 0},
 	{0xD6385328, GodOfWar, NoRegion, 0},
 	{0x1A85E924, GodOfWar, NoRegion, 0}, //天幻1+2，不能同時使用
-	{0xCA052D22, GodOfWar, JP, 0},
 	{0x608ACBD3, GodOfWar, CH, 0}, //完美漢化修改版
 	{0x2F123FD8, GodOfWar2, RU, 0},
 	{0x2F123FD8, GodOfWar2, US, 0},
@@ -197,9 +196,7 @@ CRC::Game CRC::m_games[] =
 	{0xF8CD3DF6, GodOfWar2, NoRegion, 0},
 	{0x0B82BFF7, GodOfWar2, NoRegion, 0},
 	{0x5990866F, GodOfWar2, NoRegion, 0},
-	{0xE96E55BD, GodOfWar2, JP, 0},
 	{0xC4C4FD5F, GodOfWar2, CH, 0},
-	{0x5990866f, GodOfWar2, NoRegion, 0},
 	{0xDCD9A9F7, GodOfWar2, NoRegion, 0},
 	{0xFA0DF523, GodOfWar2, CH, 0}, //完美漢化修改版D5
 	{0x9FEE3466, GodOfWar2, CH, 0}, //完美漢化修改版D9
@@ -261,7 +258,6 @@ CRC::Game CRC::m_games[] =
 	{0xE47C1A9C, SMTDDS2, JP, ZWriteMustNotClear},		// SMT Digital Devil Saga 2
 	{0x0B8AB37B, RozenMaidenGebetGarden, JP, 0},
 	{0x1CC39DBD, SuikodenTactics, US, 0},
-	{0xB808413B, SuikodenTactics, JP, 0}, //幻想水滸傳狂想曲
 	{0x3E205556, SuikodenTactics, EU, 0},
 	{0xB808413B, SuikodenTactics, JP, 0},
 	{0x64C58FB4, TenchuFS, US, 0},
@@ -338,15 +334,9 @@ CRC::Game CRC::m_games[] =
 	{0xE01F57EC, LegoBatman, US, 0}, //樂高蝙蝠俠
 	{0xE0347841, XE3, JP, 0}, //異域傳說3
 	{0xA4E88698, XE3, CH, 0},
-	{0x25FC361B, DevilMayCry3, US, 0},	//SE
-	{0x2F7D8AD5, DevilMayCry3, US, 0},
-	{0x0BED0AF9, DevilMayCry3, US, 0},
+	{0x2088950A, XE3, US, 0},
 	{0x79B8A95F, DevilMayCry3, US, 0},
-	{0x18C9343F, DevilMayCry3, EU, 0},	//SE
-	{0x7ADCB24A, DevilMayCry3, EU, 0},
 	{0x7F3D692D, DevilMayCry3, CH, 0},
-	{0x79C952B0, DevilMayCry3, JP, 0},	//SE
-	{0x7F3DDEAB, DevilMayCry3, JP, 0},
 	{0x1A85E924, DevilMayCry3, CH, 0}, //惡魔獵人3三合一中文特別版
 	{0x0a8ef911, ArctheLad, US, 0}, //亞克傳承-精靈之黃昏
 	{0x2C5E7DEA, ArctheLad, CH, 0},
@@ -415,7 +405,6 @@ CRC::Game CRC::m_games[] =
 	{0x98C7B76D, NanoBreaker, US, 0},
 	{0x7098BE76, NanoBreaker, KO, 0},
 	{0x9B89F425, NanoBreaker, EU, 0},
-	{0xA79B0491, NanoBreaker, JP, 0}, //奈米殺神
 	{0x519E816B, Kunoichi, US, 0},	//Nightshade
 	{0x3FB419FD, Kunoichi, JP, 0},
 	{0x086D198E, Kunoichi, CH, 0},
@@ -435,6 +424,7 @@ CRC::Game CRC::m_games[] =
 	{0xB799A60C, SkyGunner, NoRegion, 0},
 	{0x6848699B, JamesBondEverythingOrNothing, US, 0},
 	{0xF7FB054C, Siren, CH, 0}, //死魂曲
+	{0x47C2C34A, Siren, KO, 0},
 	{0x90F4B057, ZettaiZetsumeiToshi2, CH, 0},
 	{0xC988ECBB, ZettaiZetsumeiToshi2, JP, 0},
 	{0x81CA29BE, VF4EVO, EU, 0},
@@ -443,6 +433,7 @@ CRC::Game CRC::m_games[] =
 	{0xAB01411F, VF4EVO, JP, 0},
 	{0xE11DFA28, Dororo, CH, 0},
 	{0x89954774, Dororo, US, 0},
+	{0xFDA2F2DF, Dororo, KO, 0},
 	{0xBD17248E, ShinOnimusha, JP, 0},
 	{0xBE17248E, ShinOnimusha, JP, 0},
 	{0xB817248E, ShinOnimusha, JP, 0},
@@ -452,10 +443,13 @@ CRC::Game CRC::m_games[] =
 	{0xE21404E2, GetaWay, US, 0},
 	{0xE78971DF, GetaWayBlackMonday, US, 0},
 	{0x1130BF23, SakuraTaisen, CH, 0}, //櫻花大戰熾熱之血
+	{0x4FAE8B83, SakuraTaisen, KO, 0},
 	{0xEF06DBD6, SakuraWarsSoLongMyLove, JP, 0}, //櫻花大戰5
 	{0xDD41054D, SakuraWarsSoLongMyLove, US, 0}, //櫻花大戰5
+	{0xC2E3A7A4, SakuraWarsSoLongMyLove, KO, 0},
 	{0x4A4B623A, FightingBeautyWulong, JP,0}, //格鬥美神武龍
 	{0x5AC7E79C, TouristTrophy, CH, 0}, //摩拖車浪漫旅
+	{0xFF9C0E93, TouristTrophy, US, 0},
 	{0xA1B3F232, GTASanAndreas, EU, 0}, //俠盜獵車手聖安地列斯
 	{0x399A49CA, GTASanAndreas, US, 0}, 
 	{0x60FE139C, GTASanAndreas, JP, 0}, 
@@ -464,11 +458,13 @@ CRC::Game CRC::m_games[] =
 	{0xCB783836, FrontMission5, JP, 0},
 	{0xAEDAEE99, GodHand, JP, 0}, 
 	{0x6FB69282, GodHand, US, 0},
+	{0x924C4AA6, GodHand, KO, 0},
 	{0x9637D496, KnightsOfTheTemple2, JP, 0}, //聖堂騎士團2
 	{0x4E811100, UltramanFightingEvolution, JP, 0}, //超能力霸王戰鬥進化重生
 	{0x0643F90C, RogueGalaxy, US, 0}, //俠盜銀河
 	{0xCDEE4B19, RogueGalaxy, JP, 0},
 	{0xF7F181C3, DeathByDegreesTekkenNinaWilliams, CH, 0}, //鐵拳妮娜
+	{0xF088FA5B, DeathByDegreesTekkenNinaWilliams, KO, 0},
 	{0x771C3B47, AlpineRacer3, JP, 0}, //阿爾卑斯山滑雪大賽3
 	{0x449E1F6B, HummerBadlands, US, 0}, 
 	{0xAEA1B3AD, SengokuBasara, JP, 0},
@@ -480,9 +476,12 @@ CRC::Game CRC::m_games[] =
 	{0xC4D0FACC, SDGundamGGeneration, JP, 0}, //世紀戰役
 	{0xBBDE6926, SDGundamGGeneration, JP, 0}, //戰魂
 	{0x49D60A00, SDGundamGGeneration, JP, 0}, //NEO
+	{0x83AFB38A, SoulCalibur2, KO, 0},
+	{0xE1B01308, SoulCalibur2, US, 0},
 	{0xFB8554A0, SoulCalibur3, JP, 0},
 	{0x027C604C, SoulCalibur3, US, 0},
 	{0x24090A12, SoulCalibur3, EU, 0},
+	{0x37B99B14, SoulCalibur3, KO, 0},
 	{0xFC0F8A5B, Simple2000Vol114, JP, 0},
 	{0x0098F740, SeintoSeiya, NoRegion, 0}, //聖鬥士星矢-黃道十二宮
 	{0xBDD9BAAD, UrbanReign, US, 0}, //街頭爭霸
@@ -515,13 +514,23 @@ CRC::Game CRC::Lookup(uint32 crc)
 		if (exclusions.length() != 0)
 			printf( "GSdx: CrcHacksExclusions: %s\n", exclusions.c_str() );
 
+		int crcDups = 0;
 		for(int i = 0; i < countof(m_games); i++)
 		{
-			if( !IsCrcExcluded( exclusions, m_games[i].crc ) )
-			m_map[m_games[i].crc] = &m_games[i];
+			if( !IsCrcExcluded( exclusions, m_games[i].crc ) ){
+				if(m_map[m_games[i].crc]){
+					printf("[FIXME] GSdx: Duplicate CRC: 0x%x: (game-id/region-id) %d/%d overrides %d/%d\n"
+						, m_games[i].crc, m_games[i].title, m_games[i].region, m_map[m_games[i].crc]->title, m_map[m_games[i].crc]->region);
+					crcDups++;
+				}
+				
+				m_map[m_games[i].crc] = &m_games[i];
+			}
 			//else
 			//	printf( "GSdx: excluding CRC hack for 0x%08x\n", m_games[i].crc );
 		}
+		if(crcDups)
+			printf("[FIXME] GSdx: Duplicate CRC: Overall: %d\n", crcDups);
 	}
 #ifndef DISABLE_CRC_HACKS
 	hash_map<uint32, Game*>::iterator i = m_map.find(crc);

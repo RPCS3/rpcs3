@@ -169,6 +169,7 @@ public:
 		TalesofSymphonia,
 		TalesofDestiny,
 		SDGundamGGeneration,
+		SoulCalibur2,
 		SoulCalibur3,
 		Simple2000Vol114,
 		SeintoSeiya,
