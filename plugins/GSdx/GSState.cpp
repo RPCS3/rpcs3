@@ -5037,8 +5037,6 @@ bool GSC_UrbanReign(const GSFrameInfo& fi, int& skip)
 
 #ifdef ENABLE_DYNAMIC_CRC_HACK
 
-#define DYNA_DLL_PATH "c:/dev/pcsx2/trunk/tools/dynacrchack/DynaCrcHack.dll"
-
 #include <sys/stat.h>
 /***************************************************************************
 	AutoReloadLibrary : Automatically reloads a dll if the file was modified.

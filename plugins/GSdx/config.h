@@ -26,6 +26,7 @@
 #define ENABLE_JIT_RASTERIZER
 
 //#define ENABLE_DYNAMIC_CRC_HACK
+#define DYNA_DLL_PATH "c:/dev/pcsx2/trunk/tools/dynacrchack/DynaCrcHack.dll"
 
 #define ENABLE_UPSCALE_HACKS // Hacks intended to fix upscaling / rendering glitches in HW renderers
 
