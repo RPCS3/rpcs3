@@ -31,9 +31,7 @@ namespace YAML
 
 		void Load(std::istream& in);
 		bool HandleNextDocument(EventHandler& eventHandler);
-		
-		bool GetNextDocument(Node& document); // old API only
-		
+
 		void PrintTokens(std::ostream& out);
 
 	private:

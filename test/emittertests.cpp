@@ -1,5 +1,6 @@
 #include "tests.h"
 #include "yaml-cpp/yaml.h"
+#include "yaml-cpp/eventhandler.h"
 #include <iostream>
 
 namespace Test
@@ -999,6 +1000,21 @@ namespace Test
 	}
 	
 	namespace {
+        class NullEventHandler: public YAML::EventHandler {
+            virtual void OnDocumentStart(const YAML::Mark&) {}
+            virtual void OnDocumentEnd() {}
+            
+            virtual void OnNull(const YAML::Mark&, YAML::anchor_t) {}
+            virtual void OnAlias(const YAML::Mark&, YAML::anchor_t) {}
+            virtual void OnScalar(const YAML::Mark&, const std::string&, YAML::anchor_t, const std::string&) {}
+            
+            virtual void OnSequenceStart(const YAML::Mark&, const std::string&, YAML::anchor_t) {}
+            virtual void OnSequenceEnd() {}
+            
+            virtual void OnMapStart(const YAML::Mark&, const std::string&, YAML::anchor_t) {}
+            virtual void OnMapEnd() {}
+        };
+        
 		void RunEmitterTest(void (*test)(YAML::Emitter&, std::string&), const std::string& name, int& passed, int& total) {
 			YAML::Emitter out;
 			std::string desiredOutput;
@@ -1010,8 +1026,8 @@ namespace Test
 				try {
 					std::stringstream stream(output);
 					YAML::Parser parser;
-					YAML::Node node;
-					parser.GetNextDocument(node);
+                    NullEventHandler handler;
+                    parser.HandleNextDocument(handler);
 					passed++;
 				} catch(const YAML::Exception& e) {
 					std::cout << "Emitter test failed: " << name << "\n";

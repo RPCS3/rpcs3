@@ -1,8 +1,8 @@
 file(GLOB test_headers [a-z]*.h)
 file(GLOB test_sources [a-z]*.cpp)
-file(GLOB test_old_api_sources old-api/[a-z]*.cpp)
+file(GLOB test_core_sources core/[a-z]*.cpp)
 
-list(APPEND test_sources ${test_old_api_sources})
+list(APPEND test_sources ${test_core_sources})
 
 include_directories(${YAML_CPP_SOURCE_DIR}/test)
 
