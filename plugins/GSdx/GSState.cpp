@@ -5120,25 +5120,33 @@ public:
 // result contains the result of the hack call.
 
 typedef uint32 (__cdecl* DynaHackType)(uint32, uint32, uint32, uint32, uint32, uint32, uint32, int32*, uint32, int32);
+typedef uint32 (__cdecl* DynaHackType2)(uint32, uint32, uint32, uint32, uint32, uint32, uint32, int32*, uint32, int32, uint32); // Also accept CRC
 
-bool IsInvokedDynamicCrcHack( GSFrameInfo &fi, int& skip, int region, bool &result )
+bool IsInvokedDynamicCrcHack( GSFrameInfo &fi, int& skip, int region, bool &result, uint32 crc )
 {
 	static AutoReloadLibrary dll( DYNA_DLL_PATH );
 	static DynaHackType dllFunc = NULL;
+	static DynaHackType2 dllFunc2 = NULL;
 
 	if( dll.isChanged() )
 	{
-		dllFunc = (DynaHackType)dll.GetSymbolAddress( "DynamicCrcHack" );
-		printf( "GSdx: Dynamic CRC-hacks: %s\n", dllFunc?
-			"Loaded OK    (-> overriding internal hacks)" : "Not available    (-> using internal hacks)");
+		dllFunc  = (DynaHackType)dll.GetSymbolAddress( "DynamicCrcHack" );
+		dllFunc2 = (DynaHackType2)dll.GetSymbolAddress( "DynamicCrcHack2" );
+		printf( "GSdx: Dynamic CRC-hacks%s: %s\n", 
+			((dllFunc && !dllFunc2)?" [Old dynaDLL - No CRC support]":""),
+			dllFunc? "Loaded OK        (-> overriding internal hacks)" :
+					 "Not available    (-> using internal hacks)");
 	}
 	
-	if( !dllFunc )
+	if( !dllFunc2 && !dllFunc )
 		return false;
 	
 	int32	skip32 = skip;
 	bool	hasSharedBits = GSUtil::HasSharedBits(fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM);
-	result	= dllFunc( fi.FBP, fi.FPSM, fi.FBMSK, fi.TBP0, fi.TPSM, fi.TZTST, (uint32)fi.TME, &skip32, (uint32)region, (uint32)(hasSharedBits?1:0) )?true:false;
+	if(dllFunc2)
+		result	= dllFunc2( fi.FBP, fi.FPSM, fi.FBMSK, fi.TBP0, fi.TPSM, fi.TZTST, (uint32)fi.TME, &skip32, (uint32)region, (uint32)(hasSharedBits?1:0), crc )?true:false;
+	else
+		result	= dllFunc( fi.FBP, fi.FPSM, fi.FBMSK, fi.TBP0, fi.TPSM, fi.TZTST, (uint32)fi.TME, &skip32, (uint32)region, (uint32)(hasSharedBits?1:0) )?true:false;
 	skip	= skip32;
 
 	return true;
@@ -5289,7 +5297,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 	g_crc_region = m_game.region;
 
 #ifdef ENABLE_DYNAMIC_CRC_HACK
-	bool res=false; if(IsInvokedDynamicCrcHack(fi, skip, g_crc_region, res)){ if( !res ) return false;	} else
+	bool res=false; if(IsInvokedDynamicCrcHack(fi, skip, g_crc_region, res, m_crc)){ if( !res ) return false;	} else
 #endif
 	if(gsc && !gsc(fi, skip))
 	{

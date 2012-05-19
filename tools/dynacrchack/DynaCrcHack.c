@@ -33,6 +33,7 @@
 
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 
 //some common tokens not available in C
@@ -53,7 +54,7 @@ enum GS_PSM{PSM_PSMCT32=0,PSM_PSMCT24=1,PSM_PSMCT16=2,PSM_PSMCT16S=10,PSM_PSMT8=
 #define skip (*pSkip)
 #define GSUtil_HasSharedBits(a,b,c,d) sharedBits
 #define GSC_AnyGame(a,b) _GSC_AnyGame()
-GSFrameInfo fi; int* pSkip; uint32 g_crc_region; uint32 sharedBits;
+GSFrameInfo fi; int* pSkip; uint32 g_crc_region; uint32 sharedBits; uint32 g_crc;
 
 //utils
 const int MODE_3_DELAY = 750;	// ms
@@ -61,7 +62,11 @@ void dprintf(const char* format, ...);
 void dings(const int n);
 bool isCornerTriggered();
 bool IsIn(const DWORD val, ...);
-#define END 0x72951413
+// END is a magic number, if we have such CRC - meh
+#define END (0x72951413)
+#define IsCRC(...) (g_crc!=END && IsIn(g_crc, __VA_ARGS__, END))
+// C99 syntax for variadic macro: #define FOO(fmt, ...) printf(fmt, __VA_ARGS__) // empty list not supported
+// empty list is possible by suppressing prior comma by using ##__VA_ARGS__
 
 
 // ---------- Configuration ---------------------------------
@@ -85,7 +90,7 @@ bool GSC_AnyGame( const GSFrameInfo& fi, int& skip )
 {
 
 //Example: MGS3 CRC hack copied directly from GSState.cpp (see the Notes section exceptions):
-
+if( IsCRC(0x086273D2, 0x26A6E286, 0x9F185CE1) ){ // 3 first MGS3 CRCs from GSCrc.c
 	if(skip == 0)
 	{
 		if(fi.TME && fi.FBP == 0x02000 && fi.FPSM == PSM_PSMCT32 && (fi.TBP0 == 0x00000 || fi.TBP0 == 0x01000) && fi.TPSM == PSM_PSMCT24)
@@ -120,17 +125,19 @@ bool GSC_AnyGame( const GSFrameInfo& fi, int& skip )
 	return true;
 }
 
+}
+
 /*********** Dynamic CRC hack code ends here *****************/
 
 
 // Prints to the Debugger's output window or to DebugView ( http://technet.microsoft.com/en-us/sysinternals/bb896647 )
 void dprintf( const char* format, ...)
 {
-	#define BUFSIZ 2048
-	char buffer[BUFSIZ];
+	#define _BUFSIZ 2048
+	char buffer[_BUFSIZ];
 	va_list args;
 	va_start( args, format );
-	if( 0 > vsnprintf( buffer, BUFSIZ, format, args ) )
+	if( 0 > vsnprintf( buffer, _BUFSIZ, format, args ) )
 		sprintf( buffer, "%s","<too-long-to-print>\n" );
 	OutputDebugString( buffer );
 	va_end( args );
@@ -200,24 +207,70 @@ bool preProcess_isAbort()
 }
 
 
+DWORD WINAPI thread_PrintStats( LPVOID lpParam );
+typedef struct _stats {	uint32 overall, changed, skipped, nextPrint;} Stats;
+
 #define DLL_EXPORT __declspec(dllexport)
 
-#define CRC_HACK DynamicCrcHack
+#define CRC_HACK     DynamicCrcHack2
+#define CRC_HACK_OLD DynamicCrcHack
 #if INITIAL_MODE == 0
 	#define CRC_HACK Voldemort
+	#define CRC_HACK_OLD Voldemort
 #endif
 DLL_EXPORT bool CRC_HACK (uint32 FBP, uint32 FPSM, uint32 FBMSK, uint32 TBP0, uint32 TPSM, uint32 TZTST,
-                          uint32 TME, int* _pSkip, uint32 _g_crc_region, uint32 _sharedBits)
+                          uint32 TME, int* _pSkip, uint32 _g_crc_region, uint32 _sharedBits, uint32 _crc)
 {
+
+	static Stats stat={overall:0, changed:0, skipped:0, nextPrint:0};
+
+	DWORD now=GetTickCount();
+	if(stat.nextPrint <= now){
+		dprintf("DH: Overall: %5d, skipped: %5d, actions:%5d\n", stat.overall, stat.skipped, stat.changed);
+		stat.overall=stat.changed=stat.skipped=0;
+		stat.nextPrint=now+1000;
+	}
+	
+	stat.overall++;
+	
 	if(preProcess_isAbort())	// Process dings if required
 		return true;			// Abort hack depending on mode
 
 	fi.FBP=FBP; fi.FPSM=FPSM; fi.FBMSK=FBMSK; fi.TBP0=TBP0; fi.TPSM=TPSM; fi.TZTST=TZTST; fi.TME=TME;
-	pSkip=_pSkip; g_crc_region=_g_crc_region; sharedBits=_sharedBits;
+	pSkip=_pSkip; g_crc_region=_g_crc_region; sharedBits=_sharedBits; g_crc = _crc;
 
-	return _GSC_AnyGame();
+	int pre=skip;
+	bool res=_GSC_AnyGame();
+	int post=skip;
+
+	if(skip) stat.skipped++;
+	
+	if(post!=pre) stat.changed++;
+	
+	return res;
+		
 }
 
+DLL_EXPORT bool CRC_HACK_OLD (uint32 FBP, uint32 FPSM, uint32 FBMSK, uint32 TBP0, uint32 TPSM, uint32 TZTST,
+                          uint32 TME, int* _pSkip, uint32 _g_crc_region, uint32 _sharedBits)
+{
+	return CRC_HACK(FBP, FPSM, FBMSK, TBP0, TPSM, TZTST, TME,_pSkip, _g_crc_region,_sharedBits, END);
+}
+
+char* v[]={
+	"DLL_PROCESS_DETACH",
+	"DLL_PROCESS_ATTACH",
+	"DLL_THREAD_ATTACH",
+	"DLL_THREAD_DETACH"
+};
+BOOL WINAPI DllMain (HANDLE hDll, DWORD dwReason, LPVOID lpReserved)
+{
+	if (dwReason<4)
+		dprintf("DllMain: %s\n", v[dwReason]);
+	else
+		dprintf("DllMain: %d\n", dwReason);
+	return TRUE;
+}
 /*-------------------- Notes- -------------------------------*\
 
     1. If required, Use CRC_<region> instead of CRC::<region> (e.g. CRC_US instead of CRC::US)
@@ -229,6 +282,10 @@ DLL_EXPORT bool CRC_HACK (uint32 FBP, uint32 FPSM, uint32 FBMSK, uint32 TBP0, ui
        - Note: GSUtil_HasSharedBits supports only these arguments: (fi.FBP, fi.FPSM, fi.TBP0, fi.TPSM)
 
     3. When copying the code back to GSState.cpp, remember to restore CRC::.. and GSUtil::...
+
+    4. GSdx v5215 onwards also sends the CRC of the game (even if it's not defined at GSdx).
+       You can test the CRC using IsCRC(0x12345678) or, for few CRCs: IsCRC(0x12345678, 0x87654321, ...)
+       NOTE: with GSdx v5214 and before: IsCRC(...) always returns false.
 
 \*----------------------------------------------------------*/
 
