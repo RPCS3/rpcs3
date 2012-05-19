@@ -28,6 +28,7 @@
     version 1.1 - initial release
     Version 1.2 - better GSdx integration, Bugfix.
     Version 1.4 - Configuration, few utils, Cleanups (dll API is unchanged)
+    version 1.5 - Supports CRC passed from GSdx and util IsCRC(crc1 [, crc2, ...])
 
 \*----------------------------------------------------------*/
 
