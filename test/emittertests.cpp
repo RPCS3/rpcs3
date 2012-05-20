@@ -912,6 +912,32 @@ namespace Test
             desiredOutput = "[31, 0x1f, 037]";
         }
         
+        void CompactMapWithNewline(YAML::Emitter& out, std::string& desiredOutput)
+        {
+            out << YAML::Comment("Characteristics");
+            out << YAML::BeginSeq;
+            out << YAML::BeginMap;
+            out << YAML::Key << "color" << YAML::Value << "blue";
+            out << YAML::Key << "height" << YAML::Value << 120;
+            out << YAML::EndMap;
+            out << YAML::Newline << YAML::Newline;
+            out << YAML::Comment("Skills");
+            out << YAML::BeginMap;
+            out << YAML::Key << "attack" << YAML::Value << 23;
+            out << YAML::Key << "intelligence" << YAML::Value << 56;
+            out << YAML::EndMap;
+            out << YAML::EndSeq;
+            
+            desiredOutput =
+            "# Characteristics\n"
+            "- color: blue\n"
+            "  height: 120\n"
+            "\n"
+            "# Skills\n"
+            "- attack: 23\n"
+            "  intelligence: 56";
+        }
+        
         ////////////////////////////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		
@@ -1145,6 +1171,7 @@ namespace Test
 		RunEmitterTest(&Emitter::SetPrecision, "set precision", passed, total);
 		RunEmitterTest(&Emitter::DashInBlockContext, "dash in block context", passed, total);
 		RunEmitterTest(&Emitter::HexAndOct, "hex and oct", passed, total);
+		RunEmitterTest(&Emitter::CompactMapWithNewline, "compact map with newline", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);
