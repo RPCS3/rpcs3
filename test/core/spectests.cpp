@@ -961,175 +961,394 @@ namespace Test {
 		// 6.1
 		TEST IndentationSpaces()
         {
-            return "  not written yet";
+            HANDLE(ex6_1);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Not indented");
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "By one space");
+            EXPECT_SCALAR("!", 0, "By four\n  spaces\n");
+            EXPECT_SCALAR("?", 0, "Flow style");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "By two");
+            EXPECT_SCALAR("?", 0, "Also by two");
+            EXPECT_SCALAR("?", 0, "Still by two");
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.2
 		TEST IndentationIndicators()
         {
-            return "  not written yet";
+            HANDLE(ex6_2);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "a");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "b");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "c");
+            EXPECT_SCALAR("?", 0, "d");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.3
 		TEST SeparationSpaces()
         {
-            return "  not written yet";
+            HANDLE(ex6_3);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "foo");
+            EXPECT_SCALAR("?", 0, "bar");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "baz");
+            EXPECT_SCALAR("?", 0, "baz");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.4
 		TEST LinePrefixes()
         {
-            return "  not written yet";
+            HANDLE(ex6_4);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "plain");
+            EXPECT_SCALAR("?", 0, "text lines");
+            EXPECT_SCALAR("?", 0, "quoted");
+            EXPECT_SCALAR("!", 0, "text lines");
+            EXPECT_SCALAR("?", 0, "block");
+            EXPECT_SCALAR("!", 0, "text\n \tlines\n");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.5
 		TEST EmptyLines()
         {
-            return "  not written yet";
+            HANDLE(ex6_5);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "Folding");
+            EXPECT_SCALAR("!", 0, "Empty line\nas a line feed");
+            EXPECT_SCALAR("?", 0, "Chomping");
+            EXPECT_SCALAR("!", 0, "Clipped empty lines\n");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.6
 		TEST LineFolding()
         {
-            return "  not written yet";
+            HANDLE(ex6_6);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "trimmed\n\n\nas space");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.7
 		TEST BlockFolding()
         {
-            return "  not written yet";
+            HANDLE(ex6_7);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "foo \n\n\t bar\n\nbaz\n");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.8
 		TEST FlowFolding()
         {
-            return "  not written yet";
+            HANDLE(ex6_8);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, " foo\nbar\nbaz ");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.9
 		TEST SeparatedComment()
         {
-            return "  not written yet";
+            HANDLE(ex6_9);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "key");
+            EXPECT_SCALAR("?", 0, "value");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.10
 		TEST CommentLines()
         {
-            return "  not written yet";
+            HANDLE(ex6_10);
+            DONE();
         }
 		
 		// 6.11
 		TEST MultiLineComments()
         {
-            return "  not written yet";
+            HANDLE(ex6_11);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "key");
+            EXPECT_SCALAR("?", 0, "value");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
         
 		// 6.12
 		TEST SeparationSpacesII()
         {
-            return "  not written yet";
+            HANDLE(ex6_12);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "first");
+            EXPECT_SCALAR("?", 0, "Sammy");
+            EXPECT_SCALAR("?", 0, "last");
+            EXPECT_SCALAR("?", 0, "Sosa");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "hr");
+            EXPECT_SCALAR("?", 0, "65");
+            EXPECT_SCALAR("?", 0, "avg");
+            EXPECT_SCALAR("?", 0, "0.278");
+            EXPECT_MAP_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.13
 		TEST ReservedDirectives()
         {
-            return "  not written yet";
+            HANDLE(ex6_13);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "foo");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.14
 		TEST YAMLDirective()
         {
-            return "  not written yet";
+            HANDLE(ex6_14);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "foo");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.15
 		TEST InvalidRepeatedYAMLDirective()
         {
-            return "  not written yet";
+            try {
+                HANDLE(ex6_15);
+			} catch(const YAML::ParserException& e) {
+				if(e.msg == YAML::ErrorMsg::REPEATED_YAML_DIRECTIVE)
+					return true;
+                
+				throw;
+			}
+			
+			return "  No exception was thrown";
         }
 		
 		// 6.16
 		TEST TagDirective()
         {
-            return "  not written yet";
+            HANDLE(ex6_16);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("tag:yaml.org,2002:str", 0, "foo");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.17
 		TEST InvalidRepeatedTagDirective()
         {
-            return "  not written yet";
+            try {
+                HANDLE(ex6_17);
+			} catch(const YAML::ParserException& e) {
+				if(e.msg == YAML::ErrorMsg::REPEATED_TAG_DIRECTIVE)
+					return true;
+				
+				throw;
+			}
+            
+			return "  No exception was thrown";
         }
 		
 		// 6.18
 		TEST PrimaryTagHandle()
         {
-            return "  not written yet";
+            HANDLE(ex6_18);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!foo", 0, "bar");
+            EXPECT_DOC_END();
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("tag:example.com,2000:app/foo", 0, "bar");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.19
 		TEST SecondaryTagHandle()
         {
-            return "  not written yet";
+            HANDLE(ex6_19);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("tag:example.com,2000:app/int", 0, "1 - 3");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.20
 		TEST TagHandles()
         {
-            return "  not written yet";
+            HANDLE(ex6_20);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("tag:example.com,2000:app/foo", 0, "bar");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.21
 		TEST LocalTagPrefix()
         {
-            return "  not written yet";
+            HANDLE(ex6_21);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!my-light", 0, "fluorescent");
+            EXPECT_DOC_END();
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!my-light", 0, "green");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.22
 		TEST GlobalTagPrefix()
         {
-            return "  not written yet";
+            HANDLE(ex6_22);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("tag:example.com,2000:app/foo", 0, "bar");
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.23
 		TEST NodeProperties()
         {
-            return "  not written yet";
+            HANDLE(ex6_23);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("tag:yaml.org,2002:str", 1, "foo");
+            EXPECT_SCALAR("tag:yaml.org,2002:str", 0, "bar");
+            EXPECT_SCALAR("?", 2, "baz");
+            EXPECT_ALIAS(1);
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.24
 		TEST VerbatimTags()
         {
-            return "  not written yet";
+            HANDLE(ex6_24);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("tag:yaml.org,2002:str", 0, "foo");
+            EXPECT_SCALAR("!bar", 0, "baz");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.25
 		TEST InvalidVerbatimTags()
         {
-            return "  not written yet";
+            HANDLE(ex6_25);
+            return "  not implemented yet";
         }
 		
 		// 6.26
 		TEST TagShorthands()
         {
-            return "  not written yet";
+            HANDLE(ex6_26);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("!local", 0, "foo");
+            EXPECT_SCALAR("tag:yaml.org,2002:str", 0, "bar");
+            EXPECT_SCALAR("tag:example.com,2000:app/tag%21", 0, "baz");
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.27
 		TEST InvalidTagShorthands()
         {
-            return "  not written yet";
+			bool threw = false;
+			try {
+				HANDLE(ex6_27a);
+			} catch(const YAML::ParserException& e) {
+				threw = true;
+				if(e.msg != YAML::ErrorMsg::TAG_WITH_NO_SUFFIX)
+					throw;
+			}
+			
+			if(!threw)
+				return "  No exception was thrown for a tag with no suffix";
+            
+			HANDLE(ex6_27b); // TODO: should we reject this one (since !h! is not declared)?
+			return "  not implemented yet";
         }
 		
 		// 6.28
 		TEST NonSpecificTags()
         {
-            return "  not written yet";
+            HANDLE(ex6_28);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("!", 0, "12");
+            EXPECT_SCALAR("?", 0, "12");
+            EXPECT_SCALAR("!", 0, "12");
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 6.29
 		TEST NodeAnchors()
         {
-            return "  not written yet";
+            HANDLE(ex6_29);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "First occurrence");
+            EXPECT_SCALAR("?", 1, "Value");
+            EXPECT_SCALAR("?", 0, "Second occurrence");
+            EXPECT_ALIAS(1);
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.1
