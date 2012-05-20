@@ -1760,133 +1760,376 @@ namespace Test {
 		// 8.1
 		TEST BlockScalarHeader()
         {
-            return "  not written yet";
+            HANDLE(ex8_1);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("!", 0, "literal\n");
+            EXPECT_SCALAR("!", 0, " folded\n");
+            EXPECT_SCALAR("!", 0, "keep\n\n");
+            EXPECT_SCALAR("!", 0, " strip");
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.2
 		TEST BlockIndentationHeader()
         {
-            return "  not written yet";
+            HANDLE(ex8_2);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("!", 0, "detected\n");
+            EXPECT_SCALAR("!", 0, "\n\n# detected\n");
+            EXPECT_SCALAR("!", 0, " explicit\n");
+            EXPECT_SCALAR("!", 0, "\t\ndetected\n");
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.3
 		TEST InvalidBlockScalarIndentationIndicators()
         {
-            return "  not written yet";
+			{
+				bool threw = false;
+				try {
+					HANDLE(ex8_3a);
+				} catch(const YAML::Exception& e) {
+					if(e.msg != YAML::ErrorMsg::END_OF_SEQ)
+						throw;
+					
+					threw = true;
+				}
+				
+				if(!threw)
+					return "  no exception thrown for less indented auto-detecting indentation for a literal block scalar";
+			}
+			
+			{
+				bool threw = false;
+				try {
+					HANDLE(ex8_3b);
+				} catch(const YAML::Exception& e) {
+					if(e.msg != YAML::ErrorMsg::END_OF_SEQ)
+						throw;
+					
+					threw = true;
+				}
+				
+				if(!threw)
+					return "  no exception thrown for less indented auto-detecting indentation for a folded block scalar";
+			}
+			
+			{
+				bool threw = false;
+				try {
+					HANDLE(ex8_3c);
+				} catch(const YAML::Exception& e) {
+					if(e.msg != YAML::ErrorMsg::END_OF_SEQ)
+						throw;
+					
+					threw = true;
+				}
+				
+				if(!threw)
+					return "  no exception thrown for less indented explicit indentation for a literal block scalar";
+			}
+			
+			return true;
         }
 		
 		// 8.4
 		TEST ChompingFinalLineBreak()
         {
-            return "  not written yet";
+            HANDLE(ex8_4);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "strip");
+            EXPECT_SCALAR("!", 0, "text");
+            EXPECT_SCALAR("?", 0, "clip");
+            EXPECT_SCALAR("!", 0, "text\n");
+            EXPECT_SCALAR("?", 0, "keep");
+            EXPECT_SCALAR("!", 0, "text\n");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.5
 		TEST ChompingTrailingLines()
         {
-            return "  not written yet";
+            HANDLE(ex8_5);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "strip");
+            EXPECT_SCALAR("!", 0, "# text");
+            EXPECT_SCALAR("?", 0, "clip");
+            EXPECT_SCALAR("!", 0, "# text\n");
+            EXPECT_SCALAR("?", 0, "keep");
+            EXPECT_SCALAR("!", 0, "# text\n"); // Note: I believe this is a bug in the YAML spec - it should be "# text\n\n"
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.6
 		TEST EmptyScalarChomping()
         {
-            return "  not written yet";
+            HANDLE(ex8_6);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "strip");
+            EXPECT_SCALAR("!", 0, "");
+            EXPECT_SCALAR("?", 0, "clip");
+            EXPECT_SCALAR("!", 0, "");
+            EXPECT_SCALAR("?", 0, "keep");
+            EXPECT_SCALAR("!", 0, "\n");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.7
 		TEST LiteralScalar()
         {
-            return "  not written yet";
+            HANDLE(ex8_7);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "literal\n\ttext\n");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.8
 		TEST LiteralContent()
         {
-            return "  not written yet";
+            HANDLE(ex8_8);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "\n\nliteral\n \n\ntext\n");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.9
 		TEST FoldedScalar()
         {
-            return "  not written yet";
+            HANDLE(ex8_9);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "folded text\n");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.10
 		TEST FoldedLines()
         {
-            return "  not written yet";
+            HANDLE(ex8_10);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.11
 		TEST MoreIndentedLines()
         {
-            return "  not written yet";
+            HANDLE(ex8_11);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.12
 		TEST EmptySeparationLines()
         {
-            return "  not written yet";
+            HANDLE(ex8_12);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.13
 		TEST FinalEmptyLines()
         {
-            return "  not written yet";
+            HANDLE(ex8_13);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "\nfolded line\nnext line\n  * bullet\n\n  * list\n  * lines\n\nlast line\n");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.14
 		TEST BlockSequence()
         {
-            return "  not written yet";
+            HANDLE(ex8_14);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "block sequence");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "one");
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "two");
+            EXPECT_SCALAR("?", 0, "three");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.15
 		TEST BlockSequenceEntryTypes()
         {
-            return "  not written yet";
+            HANDLE(ex8_15);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_NULL(0);
+            EXPECT_SCALAR("!", 0, "block node\n");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "one");
+            EXPECT_SCALAR("?", 0, "two");
+            EXPECT_SEQ_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "one");
+            EXPECT_SCALAR("?", 0, "two");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.16
 		TEST BlockMappings()
         {
-            return "  not written yet";
+            HANDLE(ex8_16);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "block mapping");
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "key");
+            EXPECT_SCALAR("?", 0, "value");
+            EXPECT_MAP_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.17
 		TEST ExplicitBlockMappingEntries()
         {
-            return "  not written yet";
+            HANDLE(ex8_17);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "explicit key");
+            EXPECT_NULL(0);
+            EXPECT_SCALAR("!", 0, "block key\n");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "one");
+            EXPECT_SCALAR("?", 0, "two");
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.18
 		TEST ImplicitBlockMappingEntries()
         {
-            return "  not written yet";
+            HANDLE(ex8_18);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "plain key");
+            EXPECT_SCALAR("?", 0, "in-line value");
+            EXPECT_NULL(0);
+            EXPECT_NULL(0);
+            EXPECT_SCALAR("!", 0, "quoted key");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "entry");
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.19
 		TEST CompactBlockMappings()
         {
-            return "  not written yet";
+            HANDLE(ex8_19);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "sun");
+            EXPECT_SCALAR("?", 0, "yellow");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "earth");
+            EXPECT_SCALAR("?", 0, "blue");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "moon");
+            EXPECT_SCALAR("?", 0, "white");
+            EXPECT_MAP_END();
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.20
 		TEST BlockNodeTypes()
         {
-            return "  not written yet";
+            HANDLE(ex8_20);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("!", 0, "flow in block");
+            EXPECT_SCALAR("!", 0, "Block scalar\n");
+            EXPECT_MAP_START("tag:yaml.org,2002:map", 0);
+            EXPECT_SCALAR("?", 0, "foo");
+            EXPECT_SCALAR("?", 0, "bar");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.21
 		TEST BlockScalarNodes()
         {
-            return "  not written yet";
+            HANDLE(ex8_21);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "literal");
+            EXPECT_SCALAR("!", 0, "value"); // Note: I believe this is a bug in the YAML spec - it should be "value\n"
+            EXPECT_SCALAR("?", 0, "folded");
+            EXPECT_SCALAR("!foo", 0, "value");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.22
 		TEST BlockCollectionNodes()
         {
-            return "  not written yet";
+            HANDLE(ex8_22);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "sequence");
+            EXPECT_SEQ_START("tag:yaml.org,2002:seq", 0);
+            EXPECT_SCALAR("?", 0, "entry");
+            EXPECT_SEQ_START("tag:yaml.org,2002:seq", 0);
+            EXPECT_SCALAR("?", 0, "nested");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_END();
+            EXPECT_SCALAR("?", 0, "mapping");
+            EXPECT_MAP_START("tag:yaml.org,2002:map", 0);
+            EXPECT_SCALAR("?", 0, "foo");
+            EXPECT_SCALAR("?", 0, "bar");
+            EXPECT_MAP_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 	}
 }
