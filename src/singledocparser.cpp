@@ -57,7 +57,7 @@ namespace YAML
 		
 		// special case: a value node by itself must be a map, with no header
 		if(m_scanner.peek().type == Token::VALUE) {
-			eventHandler.OnMapStart(mark, "", NullAnchor);
+			eventHandler.OnMapStart(mark, "?", NullAnchor);
 			HandleMap(eventHandler);
 			eventHandler.OnMapEnd();
 			return;
