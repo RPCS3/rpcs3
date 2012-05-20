@@ -1354,145 +1354,407 @@ namespace Test {
 		// 7.1
 		TEST AliasNodes()
         {
-            return "  not written yet";
+            HANDLE(ex7_1);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "First occurrence");
+            EXPECT_SCALAR("?", 1, "Foo");
+            EXPECT_SCALAR("?", 0, "Second occurrence");
+            EXPECT_ALIAS(1);
+            EXPECT_SCALAR("?", 0, "Override anchor");
+            EXPECT_SCALAR("?", 2, "Bar");
+            EXPECT_SCALAR("?", 0, "Reuse anchor");
+            EXPECT_ALIAS(2);
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.2
 		TEST EmptyNodes()
         {
-            return "  not written yet";
+            HANDLE(ex7_2);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "foo");
+            EXPECT_SCALAR("tag:yaml.org,2002:str", 0, "");
+            EXPECT_SCALAR("tag:yaml.org,2002:str", 0, "");
+            EXPECT_SCALAR("?", 0, "bar");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.3
 		TEST CompletelyEmptyNodes()
         {
-            return "  not written yet";
+            HANDLE(ex7_3);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "foo");
+            EXPECT_NULL(0);
+            EXPECT_NULL(0);
+            EXPECT_SCALAR("?", 0, "bar");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.4
 		TEST DoubleQuotedImplicitKeys()
         {
-            return "  not written yet";
+            HANDLE(ex7_4);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("!", 0, "implicit block key");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("!", 0, "implicit flow key");
+            EXPECT_SCALAR("?", 0, "value");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.5
 		TEST DoubleQuotedLineBreaks()
         {
-            return "  not written yet";
+            HANDLE(ex7_5);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "folded to a space,\nto a line feed, or \t \tnon-content");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.6
 		TEST DoubleQuotedLines()
         {
-            return "  not written yet";
+            HANDLE(ex7_6);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, " 1st non-empty\n2nd non-empty 3rd non-empty ");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.7
 		TEST SingleQuotedCharacters()
         {
-            return "  not written yet";
+            HANDLE(ex7_7);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "here's to \"quotes\"");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.8
 		TEST SingleQuotedImplicitKeys()
         {
-            return "  not written yet";
+            HANDLE(ex7_8);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("!", 0, "implicit block key");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("!", 0, "implicit flow key");
+            EXPECT_SCALAR("?", 0, "value");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.9
 		TEST SingleQuotedLines()
         {
-            return "  not written yet";
+            HANDLE(ex7_9);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, " 1st non-empty\n2nd non-empty 3rd non-empty ");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.10
 		TEST PlainCharacters()
         {
-            return "  not written yet";
+            HANDLE(ex7_10);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "::vector");
+            EXPECT_SCALAR("!", 0, ": - ()");
+            EXPECT_SCALAR("?", 0, "Up, up, and away!");
+            EXPECT_SCALAR("?", 0, "-123");
+            EXPECT_SCALAR("?", 0, "http://example.com/foo#bar");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "::vector");
+            EXPECT_SCALAR("!", 0, ": - ()");
+            EXPECT_SCALAR("!", 0, "Up, up, and away!");
+            EXPECT_SCALAR("?", 0, "-123");
+            EXPECT_SCALAR("?", 0, "http://example.com/foo#bar");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.11
 		TEST PlainImplicitKeys()
         {
-            return "  not written yet";
+            HANDLE(ex7_11);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "implicit block key");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "implicit flow key");
+            EXPECT_SCALAR("?", 0, "value");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.12
 		TEST PlainLines()
         {
-            return "  not written yet";
+            HANDLE(ex7_12);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("?", 0, "1st non-empty\n2nd non-empty 3rd non-empty");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.13
 		TEST FlowSequence()
         {
-            return "  not written yet";
+            HANDLE(ex7_13);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "one");
+            EXPECT_SCALAR("?", 0, "two");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "three");
+            EXPECT_SCALAR("?", 0, "four");
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.14
 		TEST FlowSequenceEntries()
         {
-            return "  not written yet";
+            HANDLE(ex7_14);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("!", 0, "double quoted");
+            EXPECT_SCALAR("!", 0, "single quoted");
+            EXPECT_SCALAR("?", 0, "plain text");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "nested");
+            EXPECT_SEQ_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "single");
+            EXPECT_SCALAR("?", 0, "pair");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.15
 		TEST FlowMappings()
         {
-            return "  not written yet";
+            HANDLE(ex7_15);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "one");
+            EXPECT_SCALAR("?", 0, "two");
+            EXPECT_SCALAR("?", 0, "three");
+            EXPECT_SCALAR("?", 0, "four");
+            EXPECT_MAP_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "five");
+            EXPECT_SCALAR("?", 0, "six");
+            EXPECT_SCALAR("?", 0, "seven");
+            EXPECT_SCALAR("?", 0, "eight");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.16
 		TEST FlowMappingEntries()
         {
-            return "  not written yet";
+            HANDLE(ex7_16);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "explicit");
+            EXPECT_SCALAR("?", 0, "entry");
+            EXPECT_SCALAR("?", 0, "implicit");
+            EXPECT_SCALAR("?", 0, "entry");
+            EXPECT_NULL(0);
+            EXPECT_NULL(0);
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.17
 		TEST FlowMappingSeparateValues()
         {
-            return "  not written yet";
+            HANDLE(ex7_17);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "unquoted");
+            EXPECT_SCALAR("!", 0, "separate");
+            EXPECT_SCALAR("?", 0, "http://foo.com");
+            EXPECT_NULL(0);
+            EXPECT_SCALAR("?", 0, "omitted value");
+            EXPECT_NULL(0);
+            EXPECT_NULL(0);
+            EXPECT_SCALAR("?", 0, "omitted key");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.18
 		TEST FlowMappingAdjacentValues()
         {
-            return "  not written yet";
+            HANDLE(ex7_18);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("!", 0, "adjacent");
+            EXPECT_SCALAR("?", 0, "value");
+            EXPECT_SCALAR("!", 0, "readable");
+            EXPECT_SCALAR("?", 0, "value");
+            EXPECT_SCALAR("!", 0, "empty");
+            EXPECT_NULL(0);
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.19
 		TEST SinglePairFlowMappings()
         {
-            return "  not written yet";
+            HANDLE(ex7_19);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "foo");
+            EXPECT_SCALAR("?", 0, "bar");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.20
 		TEST SinglePairExplicitEntry()
         {
-            return "  not written yet";
+            HANDLE(ex7_20);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "foo bar");
+            EXPECT_SCALAR("?", 0, "baz");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.21
 		TEST SinglePairImplicitEntries()
         {
-            return "  not written yet";
+            HANDLE(ex7_21);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "YAML");
+            EXPECT_SCALAR("?", 0, "separate");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_NULL(0);
+            EXPECT_SCALAR("?", 0, "empty key entry");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "JSON");
+            EXPECT_SCALAR("?", 0, "like");
+            EXPECT_MAP_END();
+            EXPECT_SCALAR("?", 0, "adjacent");
+            EXPECT_MAP_END();
+            EXPECT_SEQ_END();
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.22
 		TEST InvalidImplicitKeys()
         {
-            return "  not written yet";
+            try {
+                HANDLE(ex7_22);
+            } catch(const YAML::Exception& e) {
+				if(e.msg == YAML::ErrorMsg::END_OF_SEQ_FLOW)
+					return true;
+				
+				throw;
+			}
+			return "  no exception thrown";
         }
 		
 		// 7.23
 		TEST FlowContent()
         {
-            return "  not written yet";
+            HANDLE(ex7_23);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "a");
+            EXPECT_SCALAR("?", 0, "b");
+            EXPECT_SEQ_END();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "a");
+            EXPECT_SCALAR("?", 0, "b");
+            EXPECT_MAP_END();
+            EXPECT_SCALAR("!", 0, "a");
+            EXPECT_SCALAR("!", 0, "b");
+            EXPECT_SCALAR("?", 0, "c");
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 7.24
 		TEST FlowNodes()
         {
-            return "  not written yet";
+            HANDLE(ex7_24);
+            EXPECT_DOC_START();
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("tag:yaml.org,2002:str", 0, "a");
+            EXPECT_SCALAR("!", 0, "b");
+            EXPECT_SCALAR("!", 1, "c");
+            EXPECT_ALIAS(1);
+            EXPECT_SCALAR("tag:yaml.org,2002:str", 0, "");
+            EXPECT_SEQ_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 8.1
