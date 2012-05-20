@@ -7,6 +7,12 @@
 #define YAML_ASSERT(cond) do { if(!(cond)) return "  Assert failed: " #cond; } while(false)
 
 namespace Test {
+    std::string Quote(const std::string& text) {
+        YAML::Emitter out;
+        out << YAML::DoubleQuoted << text;
+        return out.c_str();
+    }
+    
     struct Event {
         enum Type { DocStart, DocEnd, Null, Alias, Scalar, SeqStart, SeqEnd, MapStart, MapEnd };
         
@@ -31,13 +37,13 @@ namespace Test {
                 case Alias:
                     return out << "Alias(" << anchor << ")";
                 case Scalar:
-                    return out << "Scalar(" << tag << ", " << anchor << ", " << scalar << ")";
+                    return out << "Scalar(" << Quote(tag) << ", " << anchor << ", " << Quote(scalar) << ")";
                 case SeqStart:
-                    return out << "SeqStart(" << tag << ", " << anchor << ")";
+                    return out << "SeqStart(" << Quote(tag) << ", " << anchor << ")";
                 case SeqEnd:
                     return out << "SeqEnd";
                 case MapStart:
-                    return out << "MapStart(" << tag << ", " << anchor << ")";
+                    return out << "MapStart(" << Quote(tag) << ", " << anchor << ")";
                 case MapEnd:
                     return out << "MapEnd";
             }
@@ -110,30 +116,30 @@ namespace Test {
                 if(i >= m_expectedEvents.size()) {
                     std::stringstream out;
                     for(std::size_t j=0;j<i;j++) {
-                        out << m_expectedEvents[j] << "\n";
+                        out << "  " << m_expectedEvents[j] << "\n";
                     }
-                    out << "EXPECTED: (no event expected)\n";
-                    out << "ACTUAL  : " << m_actualEvents[i] << "\n";
+                    out << "  EXPECTED: (no event expected)\n";
+                    out << "  ACTUAL  : " << m_actualEvents[i] << "\n";
                     return out.str().c_str();
                 }
 
                 if(i >= m_actualEvents.size()) {
                     std::stringstream out;
                     for(std::size_t j=0;j<i;j++) {
-                        out << m_expectedEvents[j] << "\n";
+                        out << "  " << m_expectedEvents[j] << "\n";
                     }
-                    out << "EXPECTED: " << m_expectedEvents[i] << "\n";
-                    out << "ACTUAL  : (no event recorded)\n";
+                    out << "  EXPECTED: " << m_expectedEvents[i] << "\n";
+                    out << "  ACTUAL  : (no event recorded)\n";
                     return out.str().c_str();
                 }
                 
                 if(m_expectedEvents[i] != m_actualEvents[i]) {
                     std::stringstream out;
                     for(std::size_t j=0;j<i;j++) {
-                        out << m_expectedEvents[j] << "\n";
+                        out << "  " <<  m_expectedEvents[j] << "\n";
                     }
-                    out << "EXPECTED: " << m_expectedEvents[i] << "\n";
-                    out << "ACTUAL  : " << m_actualEvents[i] << "\n";
+                    out << "  EXPECTED: " << m_expectedEvents[i] << "\n";
+                    out << "  ACTUAL  : " << m_actualEvents[i] << "\n";
                     return out.str().c_str();
                 }
             }
