@@ -4,6 +4,8 @@
 #include "yaml-cpp/eventhandler.h"
 #include <cassert>
 
+#define YAML_ASSERT(cond) do { if(!(cond)) return "  Assert failed: " #cond; } while(false)
+
 namespace Test {
     struct Event {
         enum Type { DocStart, DocEnd, Null, Alias, Scalar, SeqStart, SeqEnd, MapStart, MapEnd };
@@ -806,37 +808,99 @@ namespace Test {
 		// 5.3
 		TEST BlockStructureIndicators()
         {
-            return "  not written yet";
+            HANDLE(ex5_3);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "sequence");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "one");
+            EXPECT_SCALAR("?", 0, "two");
+            EXPECT_SEQ_END();
+            EXPECT_SCALAR("?", 0, "mapping");
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "sky");
+            EXPECT_SCALAR("?", 0, "blue");
+            EXPECT_SCALAR("?", 0, "sea");
+            EXPECT_SCALAR("?", 0, "green");
+            EXPECT_MAP_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 5.4
 		TEST FlowStructureIndicators()
         {
-            return "  not written yet";
+            HANDLE(ex5_4);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "sequence");
+            EXPECT_SEQ_START("?", 0);
+            EXPECT_SCALAR("?", 0, "one");
+            EXPECT_SCALAR("?", 0, "two");
+            EXPECT_SEQ_END();
+            EXPECT_SCALAR("?", 0, "mapping");
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "sky");
+            EXPECT_SCALAR("?", 0, "blue");
+            EXPECT_SCALAR("?", 0, "sea");
+            EXPECT_SCALAR("?", 0, "green");
+            EXPECT_MAP_END();
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 5.5
 		TEST CommentIndicator()
         {
-            return "  not written yet";
+            HANDLE(ex5_5);
+            DONE();
         }
 		
 		// 5.6
 		TEST NodePropertyIndicators()
         {
-            return "  not written yet";
+            HANDLE(ex5_6);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "anchored");
+            EXPECT_SCALAR("!local", 1, "value");
+            EXPECT_SCALAR("?", 0, "alias");
+            EXPECT_ALIAS(1);
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 5.7
 		TEST BlockScalarIndicators()
         {
-            return "  not written yet";
+            HANDLE(ex5_7);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "literal");
+            EXPECT_SCALAR("!", 0, "some\ntext\n");
+            EXPECT_SCALAR("?", 0, "folded");
+            EXPECT_SCALAR("!", 0, "some text\n");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 5.8
 		TEST QuotedScalarIndicators()
         {
-            return "  not written yet";
+            HANDLE(ex5_8);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "single");
+            EXPECT_SCALAR("!", 0, "text");
+            EXPECT_SCALAR("?", 0, "double");
+            EXPECT_SCALAR("!", 0, "text");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// TODO: 5.9 directive
@@ -845,25 +909,53 @@ namespace Test {
 		// 5.11
 		TEST LineBreakCharacters()
         {
-            return "  not written yet";
+            HANDLE(ex5_11);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0,
+                          "Line break (no glyph)\n"
+                          "Line break (glyphed)\n");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 5.12
 		TEST TabsAndSpaces()
         {
-            return "  not written yet";
+            HANDLE(ex5_12);
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "quoted");
+            EXPECT_SCALAR("!", 0, "Quoted\t");
+            EXPECT_SCALAR("?", 0, "block");
+            EXPECT_SCALAR("!", 0,
+                          "void main() {\n"
+                          "\tprintf(\"Hello, world!\\n\");\n"
+                          "}");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 5.13
 		TEST EscapedCharacters()
         {
-            return "  not written yet";
+            HANDLE(ex5_13);
+            EXPECT_DOC_START();
+            EXPECT_SCALAR("!", 0, "Fun with \x5C \x22 \x07 \x08 \x1B \x0C \x0A \x0D \x09 \x0B " + std::string("\x00", 1) + " \x20 \xA0 \x85 \xe2\x80\xa8 \xe2\x80\xa9 A A A");
+            EXPECT_DOC_END();
+            DONE();
         }
 		
 		// 5.14
 		TEST InvalidEscapedCharacters()
         {
-            return "  not written yet";
+            try {
+                HANDLE(ex5_14);
+            } catch(const YAML::ParserException& e) {
+				YAML_ASSERT(e.msg == std::string(YAML::ErrorMsg::INVALID_ESCAPE) + "c");
+				return true;
+			}
+            return "  no exception caught";
         }
 		
 		// 6.1
