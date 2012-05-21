@@ -16,23 +16,10 @@
 
 namespace YAML
 {
-	enum FMT_SCOPE {
-		LOCAL,
-		GLOBAL
-	};
-	
-	enum GROUP_TYPE {
-		GT_NONE,
-		GT_SEQ,
-		GT_MAP
-	};
-	
-	enum FLOW_TYPE {
-		FT_NONE,
-		FT_FLOW,
-		FT_BLOCK
-	};
-	
+	struct FmtScope { enum value { Local, Global }; };
+	struct GroupType { enum value { None, Seq, Map }; };
+	struct FlowType { enum value { None, Flow, Block }; };
+
 	enum NODE_STATE {
 		NS_START,
 		NS_READY_FOR_ATOM,
@@ -93,11 +80,11 @@ namespace YAML
 		void SetLocalValue(EMITTER_MANIP value);
 		
 		// group handling
-		void BeginGroup(GROUP_TYPE type);
-		void EndGroup(GROUP_TYPE type);
+		void BeginGroup(GroupType::value type);
+		void EndGroup(GroupType::value type);
 		
-		GROUP_TYPE GetCurGroupType() const;
-		FLOW_TYPE GetCurGroupFlowType() const;
+		GroupType::value GetCurGroupType() const;
+        FlowType::value GetCurGroupFlowType() const;
 		int GetCurIndent() const { return m_curIndent; }
 		
 		bool CurrentlyInLongKey();
@@ -114,46 +101,46 @@ namespace YAML
 		void ClearModifiedSettings();
 
 		// formatters
-		bool SetOutputCharset(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetOutputCharset(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetOutputCharset() const { return m_charset.get(); }
 
-		bool SetStringFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetStringFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetStringFormat() const { return m_strFmt.get(); }
 		
-		bool SetBoolFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetBoolFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetBoolFormat() const { return m_boolFmt.get(); }
 
-		bool SetBoolLengthFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetBoolLengthFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetBoolLengthFormat() const { return m_boolLengthFmt.get(); }
 
-		bool SetBoolCaseFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetBoolCaseFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetBoolCaseFormat() const { return m_boolCaseFmt.get(); }
 
-		bool SetIntFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetIntFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetIntFormat() const { return m_intFmt.get(); }
 
-		bool SetIndent(unsigned value, FMT_SCOPE scope);
+		bool SetIndent(unsigned value, FmtScope::value scope);
 		int GetIndent() const { return m_indent.get(); }
 		
-		bool SetPreCommentIndent(unsigned value, FMT_SCOPE scope);
+		bool SetPreCommentIndent(unsigned value, FmtScope::value scope);
 		int GetPreCommentIndent() const { return m_preCommentIndent.get(); }
-		bool SetPostCommentIndent(unsigned value, FMT_SCOPE scope);
+		bool SetPostCommentIndent(unsigned value, FmtScope::value scope);
 		int GetPostCommentIndent() const { return m_postCommentIndent.get(); }
 		
-		bool SetFlowType(GROUP_TYPE groupType, EMITTER_MANIP value, FMT_SCOPE scope);
-		EMITTER_MANIP GetFlowType(GROUP_TYPE groupType) const;
+		bool SetFlowType(GroupType::value groupType, EMITTER_MANIP value, FmtScope::value scope);
+		EMITTER_MANIP GetFlowType(GroupType::value groupType) const;
 		
-		bool SetMapKeyFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetMapKeyFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetMapKeyFormat() const { return m_mapKeyFmt.get(); }
         
-        bool SetFloatPrecision(int value, FMT_SCOPE scope);
+        bool SetFloatPrecision(int value, FmtScope::value scope);
         unsigned GetFloatPrecision() const { return m_floatPrecision.get(); }
-        bool SetDoublePrecision(int value, FMT_SCOPE scope);
+        bool SetDoublePrecision(int value, FmtScope::value scope);
         unsigned GetDoublePrecision() const { return m_doublePrecision.get(); }
 		
 	private:
 		template <typename T>
-		void _Set(Setting<T>& fmt, T value, FMT_SCOPE scope);
+		void _Set(Setting<T>& fmt, T value, FmtScope::value scope);
 		
 	private:
 		// basic state ok?
@@ -181,9 +168,9 @@ namespace YAML
 		SettingChanges m_globalModifiedSettings;
 		
 		struct Group {
-			Group(GROUP_TYPE type_): type(type_), usingLongKey(false), indent(0) {}
+			Group(GroupType::value type_): type(type_), usingLongKey(false), indent(0) {}
 			
-			GROUP_TYPE type;
+            GroupType::value type;
 			EMITTER_MANIP flow;
 			bool usingLongKey;
 			int indent;
@@ -198,12 +185,12 @@ namespace YAML
 	};
 
 	template <typename T>
-	void EmitterState::_Set(Setting<T>& fmt, T value, FMT_SCOPE scope) {
+	void EmitterState::_Set(Setting<T>& fmt, T value, FmtScope::value scope) {
 		switch(scope) {
-			case LOCAL:
+			case FmtScope::Local:
 				m_modifiedSettings.push(fmt.set(value));
 				break;
-			case GLOBAL:
+			case FmtScope::Global:
 				fmt.set(value);
 				m_globalModifiedSettings.push(fmt.set(value));  // this pushes an identity set, so when we restore,
 				                                                // it restores to the value here, and not the previous one

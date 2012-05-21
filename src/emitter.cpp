@@ -39,69 +39,69 @@ namespace YAML
 	// global setters
 	bool Emitter::SetOutputCharset(EMITTER_MANIP value)
 	{
-		return m_pState->SetOutputCharset(value, GLOBAL);
+		return m_pState->SetOutputCharset(value, FmtScope::Global);
 	}
 
 	bool Emitter::SetStringFormat(EMITTER_MANIP value)
 	{
-		return m_pState->SetStringFormat(value, GLOBAL);
+		return m_pState->SetStringFormat(value, FmtScope::Global);
 	}
 	
 	bool Emitter::SetBoolFormat(EMITTER_MANIP value)
 	{
 		bool ok = false;
-		if(m_pState->SetBoolFormat(value, GLOBAL))
+		if(m_pState->SetBoolFormat(value, FmtScope::Global))
 			ok = true;
-		if(m_pState->SetBoolCaseFormat(value, GLOBAL))
+		if(m_pState->SetBoolCaseFormat(value, FmtScope::Global))
 			ok = true;
-		if(m_pState->SetBoolLengthFormat(value, GLOBAL))
+		if(m_pState->SetBoolLengthFormat(value, FmtScope::Global))
 			ok = true;
 		return ok;
 	}
 	
 	bool Emitter::SetIntBase(EMITTER_MANIP value)
 	{
-		return m_pState->SetIntFormat(value, GLOBAL);
+		return m_pState->SetIntFormat(value, FmtScope::Global);
 	}
 	
 	bool Emitter::SetSeqFormat(EMITTER_MANIP value)
 	{
-		return m_pState->SetFlowType(GT_SEQ, value, GLOBAL);
+		return m_pState->SetFlowType(GroupType::Seq, value, FmtScope::Global);
 	}
 	
 	bool Emitter::SetMapFormat(EMITTER_MANIP value)
 	{
 		bool ok = false;
-		if(m_pState->SetFlowType(GT_MAP, value, GLOBAL))
+		if(m_pState->SetFlowType(GroupType::Map, value, FmtScope::Global))
 			ok = true;
-		if(m_pState->SetMapKeyFormat(value, GLOBAL))
+		if(m_pState->SetMapKeyFormat(value, FmtScope::Global))
 			ok = true;
 		return ok;
 	}
 	
 	bool Emitter::SetIndent(unsigned n)
 	{
-		return m_pState->SetIndent(n, GLOBAL);
+		return m_pState->SetIndent(n, FmtScope::Global);
 	}
 	
 	bool Emitter::SetPreCommentIndent(unsigned n)
 	{
-		return m_pState->SetPreCommentIndent(n, GLOBAL);
+		return m_pState->SetPreCommentIndent(n, FmtScope::Global);
 	}
 	
 	bool Emitter::SetPostCommentIndent(unsigned n)
 	{
-		return m_pState->SetPostCommentIndent(n, GLOBAL);
+		return m_pState->SetPostCommentIndent(n, FmtScope::Global);
 	}
     
     bool Emitter::SetFloatPrecision(unsigned n)
     {
-        return m_pState->SetFloatPrecision(n, GLOBAL);
+        return m_pState->SetFloatPrecision(n, FmtScope::Global);
     }
 
     bool Emitter::SetDoublePrecision(unsigned n)
     {
-        return m_pState->SetDoublePrecision(n, GLOBAL);
+        return m_pState->SetDoublePrecision(n, FmtScope::Global);
     }
 
 	// SetLocalValue
@@ -151,16 +151,16 @@ namespace YAML
 	
 	Emitter& Emitter::SetLocalIndent(const _Indent& indent)
 	{
-		m_pState->SetIndent(indent.value, LOCAL);
+		m_pState->SetIndent(indent.value, FmtScope::Local);
 		return *this;
 	}
 
     Emitter& Emitter::SetLocalPrecision(const _Precision& precision)
     {
         if(precision.floatPrecision >= 0)
-            m_pState->SetFloatPrecision(precision.floatPrecision, LOCAL);
+            m_pState->SetFloatPrecision(precision.floatPrecision, FmtScope::Local);
         if(precision.doublePrecision >= 0)
-            m_pState->SetDoublePrecision(precision.doublePrecision, LOCAL);
+            m_pState->SetDoublePrecision(precision.doublePrecision, FmtScope::Local);
         return *this;
     }
 
@@ -400,7 +400,7 @@ namespace YAML
 		PreAtomicWrite();
 		
 		EMITTER_STATE curState = m_pState->GetCurState();
-		EMITTER_MANIP flowType = m_pState->GetFlowType(GT_SEQ);
+		EMITTER_MANIP flowType = m_pState->GetFlowType(GroupType::Seq);
 		if(flowType == Block) {
 			if(curState == ES_WRITING_BLOCK_SEQ_ENTRY ||
 			   curState == ES_WRITING_BLOCK_MAP_KEY || curState == ES_WRITING_BLOCK_MAP_VALUE ||
@@ -419,7 +419,7 @@ namespace YAML
 		} else
 			assert(false);
 
-		m_pState->BeginGroup(GT_SEQ);
+		m_pState->BeginGroup(GroupType::Seq);
 	}
 	
 	// EmitEndSeq
@@ -428,12 +428,12 @@ namespace YAML
 		if(!good())
 			return;
 		
-		if(m_pState->GetCurGroupType() != GT_SEQ)
+		if(m_pState->GetCurGroupType() != GroupType::Seq)
 			return m_pState->SetError(ErrorMsg::UNEXPECTED_END_SEQ);
 		
 		EMITTER_STATE curState = m_pState->GetCurState();
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
-		if(flowType == FT_BLOCK) {
+		FlowType::value flowType = m_pState->GetCurGroupFlowType();
+		if(flowType == FlowType::Block) {
 			// Note: block sequences are *not* allowed to be empty, but we convert it
 			//       to a flow sequence if it is
 			assert(curState == ES_DONE_WITH_BLOCK_SEQ_ENTRY || curState == ES_WAITING_FOR_BLOCK_SEQ_ENTRY);
@@ -445,7 +445,7 @@ namespace YAML
 
 				m_stream << "[]";
 			}
-		} else if(flowType == FT_FLOW) {
+		} else if(flowType == FlowType::Flow) {
 			// Note: flow sequences are allowed to be empty
 			assert(curState == ES_DONE_WITH_FLOW_SEQ_ENTRY || curState == ES_WAITING_FOR_FLOW_SEQ_ENTRY);
 			m_stream << "]";
@@ -453,7 +453,7 @@ namespace YAML
 			assert(false);
 		
 		m_pState->PopState();
-		m_pState->EndGroup(GT_SEQ);
+		m_pState->EndGroup(GroupType::Seq);
 
 		PostAtomicWrite();
 	}
@@ -470,7 +470,7 @@ namespace YAML
 		PreAtomicWrite();
 
 		EMITTER_STATE curState = m_pState->GetCurState();
-		EMITTER_MANIP flowType = m_pState->GetFlowType(GT_MAP);
+		EMITTER_MANIP flowType = m_pState->GetFlowType(GroupType::Map);
 		if(flowType == Block) {
 			if(curState == ES_WRITING_BLOCK_SEQ_ENTRY ||
 			   curState == ES_WRITING_BLOCK_MAP_KEY || curState == ES_WRITING_BLOCK_MAP_VALUE ||
@@ -489,7 +489,7 @@ namespace YAML
 		} else
 			assert(false);
 		
-		m_pState->BeginGroup(GT_MAP);
+		m_pState->BeginGroup(GroupType::Map);
 	}
 	
 	// EmitEndMap
@@ -498,12 +498,12 @@ namespace YAML
 		if(!good())
 			return;
 		
-		if(m_pState->GetCurGroupType() != GT_MAP)
+		if(m_pState->GetCurGroupType() != GroupType::Map)
 			return m_pState->SetError(ErrorMsg::UNEXPECTED_END_MAP);
 
 		EMITTER_STATE curState = m_pState->GetCurState();
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
-		if(flowType == FT_BLOCK) {
+		FlowType::value flowType = m_pState->GetCurGroupFlowType();
+		if(flowType == FlowType::Block) {
 			// Note: block sequences are *not* allowed to be empty, but we convert it
 			//       to a flow sequence if it is
 			assert(curState == ES_DONE_WITH_BLOCK_MAP_VALUE || curState == ES_WAITING_FOR_BLOCK_MAP_ENTRY);
@@ -514,7 +514,7 @@ namespace YAML
 				m_stream << IndentTo(curIndent);
 				m_stream << "{}";
 			}
-		} else if(flowType == FT_FLOW) {
+		} else if(flowType == FlowType::Flow) {
 			// Note: flow maps are allowed to be empty
 			assert(curState == ES_DONE_WITH_FLOW_MAP_VALUE || curState == ES_WAITING_FOR_FLOW_MAP_ENTRY);
 			EmitSeparationIfNecessary();
@@ -523,7 +523,7 @@ namespace YAML
 			assert(false);
 		
 		m_pState->PopState();
-		m_pState->EndGroup(GT_MAP);
+		m_pState->EndGroup(GroupType::Map);
 		
 		PostAtomicWrite();
 	}
@@ -535,19 +535,19 @@ namespace YAML
 			return;
 		
 		EMITTER_STATE curState = m_pState->GetCurState();
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
+        FlowType::value flowType = m_pState->GetCurGroupFlowType();
 		if(curState != ES_WAITING_FOR_BLOCK_MAP_ENTRY && curState != ES_DONE_WITH_BLOCK_MAP_VALUE
 		   && curState != ES_WAITING_FOR_FLOW_MAP_ENTRY && curState != ES_DONE_WITH_FLOW_MAP_VALUE)
 			return m_pState->SetError(ErrorMsg::UNEXPECTED_KEY_TOKEN);
 
-		if(flowType == FT_BLOCK) {
+		if(flowType == FlowType::Block) {
 			if(curState == ES_DONE_WITH_BLOCK_MAP_VALUE)
 				m_stream << '\n';
 			unsigned curIndent = m_pState->GetCurIndent();
 			m_stream << IndentTo(curIndent);
 			m_pState->UnsetSeparation();
 			m_pState->SwitchState(ES_WAITING_FOR_BLOCK_MAP_KEY);
-		} else if(flowType == FT_FLOW) {
+		} else if(flowType == FlowType::Flow) {
 			EmitSeparationIfNecessary();
 			if(curState == ES_DONE_WITH_FLOW_MAP_VALUE) {
 				m_stream << ',';
@@ -572,11 +572,11 @@ namespace YAML
 			return;
 
 		EMITTER_STATE curState = m_pState->GetCurState();
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
+		FlowType::value flowType = m_pState->GetCurGroupFlowType();
 		if(curState != ES_DONE_WITH_BLOCK_MAP_KEY && curState != ES_DONE_WITH_FLOW_MAP_KEY)
 			return m_pState->SetError(ErrorMsg::UNEXPECTED_VALUE_TOKEN);
 
-		if(flowType == FT_BLOCK) {
+		if(flowType == FlowType::Block) {
 			if(m_pState->CurrentlyInLongKey()) {
 				m_stream << '\n';
 				m_stream << IndentTo(m_pState->GetCurIndent());
@@ -584,7 +584,7 @@ namespace YAML
 				m_pState->RequireSoftSeparation();
 			}
 			m_pState->SwitchState(ES_WAITING_FOR_BLOCK_MAP_VALUE);
-		} else if(flowType == FT_FLOW) {
+		} else if(flowType == FlowType::Flow) {
 			m_pState->SwitchState(ES_WAITING_FOR_FLOW_MAP_VALUE);
 		} else
 			assert(false);
@@ -604,8 +604,8 @@ namespace YAML
 
 	bool Emitter::CanEmitNewline() const
 	{
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
-		if(flowType == FT_BLOCK && m_pState->CurrentlyInLongKey())
+		FlowType::value flowType = m_pState->GetCurGroupFlowType();
+		if(flowType == FlowType::Block && m_pState->CurrentlyInLongKey())
 			return true;
 
 		EMITTER_STATE curState = m_pState->GetCurState();
@@ -621,7 +621,7 @@ namespace YAML
 			return *this;
 		
 		// literal scalars must use long keys
-		if(m_pState->GetStringFormat() == Literal && m_pState->GetCurGroupFlowType() != FT_FLOW)
+		if(m_pState->GetStringFormat() == Literal && m_pState->GetCurGroupFlowType() != FlowType::Flow)
 			m_pState->StartLongKey();
 		
 		PreAtomicWrite();
@@ -629,12 +629,12 @@ namespace YAML
 		
 		bool escapeNonAscii = m_pState->GetOutputCharset() == EscapeNonAscii;
 		EMITTER_MANIP strFmt = m_pState->GetStringFormat();
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
+        FlowType::value flowType = m_pState->GetCurGroupFlowType();
 		unsigned curIndent = m_pState->GetCurIndent();
 
 		switch(strFmt) {
 			case Auto:
-				Utils::WriteString(m_stream, str, flowType == FT_FLOW, escapeNonAscii);
+				Utils::WriteString(m_stream, str, flowType == FlowType::Flow, escapeNonAscii);
 				break;
 			case SingleQuoted:
 				if(!Utils::WriteSingleQuotedString(m_stream, str)) {
@@ -646,8 +646,8 @@ namespace YAML
 				Utils::WriteDoubleQuotedString(m_stream, str, escapeNonAscii);
 				break;
 			case Literal:
-				if(flowType == FT_FLOW)
-					Utils::WriteString(m_stream, str, flowType == FT_FLOW, escapeNonAscii);
+				if(flowType == FlowType::Flow)
+					Utils::WriteString(m_stream, str, flowType == FlowType::Flow, escapeNonAscii);
 				else
 					Utils::WriteLiteralString(m_stream, str, curIndent + m_pState->GetIndent());
 				break;

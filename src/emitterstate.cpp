@@ -35,18 +35,18 @@ namespace YAML
 	// . Only the ones that make sense will be accepted
 	void EmitterState::SetLocalValue(EMITTER_MANIP value)
 	{
-		SetOutputCharset(value, LOCAL);
-		SetStringFormat(value, LOCAL);
-		SetBoolFormat(value, LOCAL);
-		SetBoolCaseFormat(value, LOCAL);
-		SetBoolLengthFormat(value, LOCAL);
-		SetIntFormat(value, LOCAL);
-		SetFlowType(GT_SEQ, value, LOCAL);
-		SetFlowType(GT_MAP, value, LOCAL);
-		SetMapKeyFormat(value, LOCAL);
+		SetOutputCharset(value, FmtScope::Local);
+		SetStringFormat(value, FmtScope::Local);
+		SetBoolFormat(value, FmtScope::Local);
+		SetBoolCaseFormat(value, FmtScope::Local);
+		SetBoolLengthFormat(value, FmtScope::Local);
+		SetIntFormat(value, FmtScope::Local);
+		SetFlowType(GroupType::Seq, value, FmtScope::Local);
+		SetFlowType(GroupType::Map, value, FmtScope::Local);
+		SetMapKeyFormat(value, FmtScope::Local);
 	}
 	
-	void EmitterState::BeginGroup(GROUP_TYPE type)
+	void EmitterState::BeginGroup(GroupType::value type)
 	{
 		unsigned lastIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
 		m_curIndent += lastIndent;
@@ -64,7 +64,7 @@ namespace YAML
 		m_groups.push(pGroup);
 	}
 	
-	void EmitterState::EndGroup(GROUP_TYPE type)
+	void EmitterState::EndGroup(GroupType::value type)
 	{
 		if(m_groups.empty())
 			return SetError(ErrorMsg::UNMATCHED_GROUP_TAG);
@@ -86,20 +86,20 @@ namespace YAML
 		m_globalModifiedSettings.restore();
 	}
 		
-	GROUP_TYPE EmitterState::GetCurGroupType() const
+	GroupType::value EmitterState::GetCurGroupType() const
 	{
 		if(m_groups.empty())
-			return GT_NONE;
+			return GroupType::None;
 		
 		return m_groups.top().type;
 	}
 	
-	FLOW_TYPE EmitterState::GetCurGroupFlowType() const
+    FlowType::value EmitterState::GetCurGroupFlowType() const
 	{
 		if(m_groups.empty())
-			return FT_NONE;
+			return FlowType::None;
 		
-		return (m_groups.top().flow == Flow ? FT_FLOW : FT_BLOCK);
+		return (m_groups.top().flow == Flow ? FlowType::Flow : FlowType::Block);
 	}
 	
 	bool EmitterState::CurrentlyInLongKey()
@@ -126,7 +126,7 @@ namespace YAML
 		m_modifiedSettings.clear();
 	}
 
-	bool EmitterState::SetOutputCharset(EMITTER_MANIP value, FMT_SCOPE scope)
+	bool EmitterState::SetOutputCharset(EMITTER_MANIP value, FmtScope::value scope)
 	{
 		switch(value) {
 			case EmitNonAscii:
@@ -138,7 +138,7 @@ namespace YAML
 		}
 	}
 	
-	bool EmitterState::SetStringFormat(EMITTER_MANIP value, FMT_SCOPE scope)
+	bool EmitterState::SetStringFormat(EMITTER_MANIP value, FmtScope::value scope)
 	{
 		switch(value) {
 			case Auto:
@@ -152,7 +152,7 @@ namespace YAML
 		}
 	}
 	
-	bool EmitterState::SetBoolFormat(EMITTER_MANIP value, FMT_SCOPE scope)
+	bool EmitterState::SetBoolFormat(EMITTER_MANIP value, FmtScope::value scope)
 	{
 		switch(value) {
 			case OnOffBool:
@@ -165,7 +165,7 @@ namespace YAML
 		}
 	}
 
-	bool EmitterState::SetBoolLengthFormat(EMITTER_MANIP value, FMT_SCOPE scope)
+	bool EmitterState::SetBoolLengthFormat(EMITTER_MANIP value, FmtScope::value scope)
 	{
 		switch(value) {
 			case LongBool:
@@ -177,7 +177,7 @@ namespace YAML
 		}
 	}
 
-	bool EmitterState::SetBoolCaseFormat(EMITTER_MANIP value, FMT_SCOPE scope)
+	bool EmitterState::SetBoolCaseFormat(EMITTER_MANIP value, FmtScope::value scope)
 	{
 		switch(value) {
 			case UpperCase:
@@ -190,7 +190,7 @@ namespace YAML
 		}
 	}
 
-	bool EmitterState::SetIntFormat(EMITTER_MANIP value, FMT_SCOPE scope)
+	bool EmitterState::SetIntFormat(EMITTER_MANIP value, FmtScope::value scope)
 	{
 		switch(value) {
 			case Dec:
@@ -203,7 +203,7 @@ namespace YAML
 		}
 	}
 
-	bool EmitterState::SetIndent(unsigned value, FMT_SCOPE scope)
+	bool EmitterState::SetIndent(unsigned value, FmtScope::value scope)
 	{
 		if(value == 0)
 			return false;
@@ -212,7 +212,7 @@ namespace YAML
 		return true;
 	}
 
-	bool EmitterState::SetPreCommentIndent(unsigned value, FMT_SCOPE scope)
+	bool EmitterState::SetPreCommentIndent(unsigned value, FmtScope::value scope)
 	{
 		if(value == 0)
 			return false;
@@ -221,7 +221,7 @@ namespace YAML
 		return true;
 	}
 	
-	bool EmitterState::SetPostCommentIndent(unsigned value, FMT_SCOPE scope)
+	bool EmitterState::SetPostCommentIndent(unsigned value, FmtScope::value scope)
 	{
 		if(value == 0)
 			return false;
@@ -230,30 +230,30 @@ namespace YAML
 		return true;
 	}
 
-	bool EmitterState::SetFlowType(GROUP_TYPE groupType, EMITTER_MANIP value, FMT_SCOPE scope)
+	bool EmitterState::SetFlowType(GroupType::value groupType, EMITTER_MANIP value, FmtScope::value scope)
 	{
 		switch(value) {
 			case Block:
 			case Flow:
-				_Set(groupType == GT_SEQ ? m_seqFmt : m_mapFmt, value, scope);
+				_Set(groupType == GroupType::Seq ? m_seqFmt : m_mapFmt, value, scope);
 				return true;
 			default:
 				return false;
 		}
 	}
 
-	EMITTER_MANIP EmitterState::GetFlowType(GROUP_TYPE groupType) const
+	EMITTER_MANIP EmitterState::GetFlowType(GroupType::value groupType) const
 	{
 		// force flow style if we're currently in a flow
-		FLOW_TYPE flowType = GetCurGroupFlowType();
-		if(flowType == FT_FLOW)
+        FlowType::value flowType = GetCurGroupFlowType();
+		if(flowType == FlowType::Flow)
 			return Flow;
 		
-		// otherwise, go with what's asked of use
-		return (groupType == GT_SEQ ? m_seqFmt.get() : m_mapFmt.get());
+		// otherwise, go with what's asked of us
+		return (groupType == GroupType::Seq ? m_seqFmt.get() : m_mapFmt.get());
 	}
 	
-	bool EmitterState::SetMapKeyFormat(EMITTER_MANIP value, FMT_SCOPE scope)
+	bool EmitterState::SetMapKeyFormat(EMITTER_MANIP value, FmtScope::value scope)
 	{
 		switch(value) {
 			case Auto:
@@ -265,7 +265,7 @@ namespace YAML
 		}
 	}
 
-    bool EmitterState::SetFloatPrecision(int value, FMT_SCOPE scope)
+    bool EmitterState::SetFloatPrecision(int value, FmtScope::value scope)
     {
         if(value < 0 || value > std::numeric_limits<float>::digits10)
             return false;
@@ -273,7 +273,7 @@ namespace YAML
         return true;
     }
     
-    bool EmitterState::SetDoublePrecision(int value, FMT_SCOPE scope)
+    bool EmitterState::SetDoublePrecision(int value, FmtScope::value scope)
     {
         if(value < 0 || value > std::numeric_limits<double>::digits10)
             return false;
