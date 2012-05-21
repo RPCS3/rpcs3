@@ -13,6 +13,7 @@
 #include <vector>
 #include <stack>
 #include <memory>
+#include <stdexcept>
 
 namespace YAML
 {
@@ -29,15 +30,18 @@ namespace YAML
 		// basic state checking
 		bool good() const { return m_isGood; }
 		const std::string GetLastError() const { return m_lastError; }
-		void SetError(const std::string& error) { m_isGood = false; m_lastError = error; }
+		void SetError(const std::string& error) { throw std::runtime_error(error); m_isGood = false; m_lastError = error; }
 		
-		// group handling
+		// node handling
+        void BeginScalar();
 		void BeginGroup(GroupType::value type);
 		void EndGroup(GroupType::value type);
 		
-		GroupType::value GetCurGroupType() const;
-        FlowType::value GetCurGroupFlowType() const;
-		int GetCurIndent() const { return m_curIndent; }
+		GroupType::value CurGroupType() const;
+        FlowType::value CurGroupFlowType() const;
+		int CurIndent() const { return m_curIndent; }
+        bool HasAnchor() const { return m_hasAnchor; }
+        bool HasTag() const { return m_hasTag; }
 
 		void ClearModifiedSettings();
 
@@ -84,6 +88,8 @@ namespace YAML
 	private:
 		template <typename T>
 		void _Set(Setting<T>& fmt, T value, FmtScope::value scope);
+        
+        void BeginNode();
 		
 	private:
 		// basic state ok?
@@ -109,17 +115,20 @@ namespace YAML
 		SettingChanges m_globalModifiedSettings;
 		
 		struct Group {
-			Group(GroupType::value type_): type(type_), indent(0) {}
+			explicit Group(GroupType::value type_): type(type_), indent(0), childCount(0) {}
 			
             GroupType::value type;
 			EMITTER_MANIP flow;
 			int indent;
+            std::size_t childCount;
 			
 			SettingChanges modifiedSettings;
 		};
 
 		ptr_stack<Group> m_groups;
 		unsigned m_curIndent;
+        bool m_hasAnchor;
+        bool m_hasTag;
 	};
 
 	template <typename T>

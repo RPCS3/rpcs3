@@ -4,7 +4,7 @@
 
 namespace YAML
 {
-	EmitterState::EmitterState(): m_isGood(true), m_curIndent(0)
+	EmitterState::EmitterState(): m_isGood(true), m_curIndent(0), m_hasAnchor(false), m_hasTag(false)
 	{
 		// set default global manipulators
 		m_charset.set(EmitNonAscii);
@@ -43,8 +43,24 @@ namespace YAML
 		SetMapKeyFormat(value, FmtScope::Local);
 	}
 	
+    void EmitterState::BeginNode()
+    {
+        if(!m_groups.empty())
+            m_groups.top().childCount++;
+        
+        m_hasAnchor = false;
+        m_hasTag = false;
+    }
+
+    void EmitterState::BeginScalar()
+    {
+        BeginNode();
+    }
+
 	void EmitterState::BeginGroup(GroupType::value type)
 	{
+        BeginNode();
+
 		unsigned lastIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
 		m_curIndent += lastIndent;
 		
@@ -82,7 +98,7 @@ namespace YAML
 		m_globalModifiedSettings.restore();
 	}
 		
-	GroupType::value EmitterState::GetCurGroupType() const
+	GroupType::value EmitterState::CurGroupType() const
 	{
 		if(m_groups.empty())
 			return GroupType::None;
@@ -90,7 +106,7 @@ namespace YAML
 		return m_groups.top().type;
 	}
 	
-    FlowType::value EmitterState::GetCurGroupFlowType() const
+    FlowType::value EmitterState::CurGroupFlowType() const
 	{
 		if(m_groups.empty())
 			return FlowType::None;
@@ -222,8 +238,7 @@ namespace YAML
 	EMITTER_MANIP EmitterState::GetFlowType(GroupType::value groupType) const
 	{
 		// force flow style if we're currently in a flow
-        FlowType::value flowType = GetCurGroupFlowType();
-		if(flowType == FlowType::Flow)
+		if(CurGroupFlowType() == FlowType::Flow)
 			return Flow;
 		
 		// otherwise, go with what's asked of us

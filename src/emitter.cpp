@@ -131,10 +131,8 @@ namespace YAML
 				EmitEndMap();
 				break;
 			case Key:
-				EmitKey();
-				break;
 			case Value:
-				EmitValue();
+                // deprecated (these can be deduced by the parity of nodes in a map)
 				break;
 			case TagByKind:
 				EmitKindTag();
@@ -169,6 +167,20 @@ namespace YAML
 	{
 		if(!good())
 			return;
+        
+        if(m_pState->CurGroupType() != GroupType::None) {
+			m_pState->SetError("Unexpected begin document");
+			return;
+        }
+        
+        if(m_pState->HasAnchor() || m_pState->HasTag()) {
+			m_pState->SetError("Unexpected begin document");
+			return;
+        }
+        
+        if(m_stream.col() > 0)
+            m_stream << "\n";
+        m_stream << "---\n";
 	}
 	
 	// EmitEndDoc
@@ -176,6 +188,20 @@ namespace YAML
 	{
 		if(!good())
 			return;
+        
+        if(m_pState->CurGroupType() != GroupType::None) {
+			m_pState->SetError("Unexpected begin document");
+			return;
+        }
+        
+        if(m_pState->HasAnchor() || m_pState->HasTag()) {
+			m_pState->SetError("Unexpected begin document");
+			return;
+        }
+        
+        if(m_stream.col() > 0)
+            m_stream << "\n";
+        m_stream << "...\n";
 	}
 
 	// EmitBeginSeq
@@ -183,6 +209,8 @@ namespace YAML
 	{
 		if(!good())
 			return;
+        
+        m_pState->BeginGroup(GroupType::Seq);
 	}
 	
 	// EmitEndSeq
@@ -190,6 +218,8 @@ namespace YAML
 	{
 		if(!good())
 			return;
+        
+        m_pState->EndGroup(GroupType::Seq);
 	}
 	
 	// EmitBeginMap
@@ -197,27 +227,18 @@ namespace YAML
 	{
 		if(!good())
 			return;
+
+        m_pState->BeginGroup(GroupType::Map);
 	}
 	
 	// EmitEndMap
 	void Emitter::EmitEndMap()
 	{
 		if(!good())
-			return;	}
-	
-	// EmitKey
-	void Emitter::EmitKey()
-	{
-		if(!good())
 			return;
-	}
-	
-	// EmitValue
-	void Emitter::EmitValue()
-	{
-		if(!good())
-			return;
-	}
+
+        m_pState->EndGroup(GroupType::Map);
+    }
 
 	// EmitNewline
 	void Emitter::EmitNewline()
@@ -238,6 +259,9 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
+        
+        m_pState->BeginScalar();
+        
 		return *this;
 	}
 
@@ -291,6 +315,8 @@ namespace YAML
 		if(!good())
 			return *this;
 
+        m_pState->BeginScalar();
+
 		return *this;
 	}
 
@@ -298,6 +324,8 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
+
+        m_pState->BeginScalar();
 
 		return *this;
 	}
@@ -307,6 +335,8 @@ namespace YAML
 		if(!good())
 			return *this;
 
+        m_pState->BeginScalar();
+
 		return *this;
 	}
 	
@@ -314,6 +344,8 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
+
+        m_pState->BeginScalar();
 
 		return *this;
 	}
@@ -323,6 +355,7 @@ namespace YAML
 		if(!good())
 			return *this;
 
+        m_pState->BeginScalar();
         
 		return *this;
 	}
@@ -337,6 +370,8 @@ namespace YAML
 		if(!good())
 			return *this;
 
+        m_pState->BeginScalar();
+
 		return *this;
 	}
 
@@ -344,6 +379,8 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
+
+        m_pState->BeginScalar();
 
 		return *this;
 	}
@@ -354,6 +391,8 @@ namespace YAML
 
 		if(!good())
 			return *this;
+
+        m_pState->BeginScalar();
 
 		return *this;
 	}

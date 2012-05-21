@@ -81,8 +81,6 @@ namespace YAML
 		void EmitEndSeq();
 		void EmitBeginMap();
 		void EmitEndMap();
-		void EmitKey();
-		void EmitValue();
 		void EmitNewline();
 		void EmitKindTag();
 		void EmitTag(bool verbatim, const _Tag& tag);
