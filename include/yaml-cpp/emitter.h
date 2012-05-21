@@ -85,6 +85,13 @@ namespace YAML
 		void EmitKindTag();
 		void EmitTag(bool verbatim, const _Tag& tag);
 		
+        void PrepareNode();
+        void PrepareTopNode();
+        void FlowSeqPrepareNode();
+        void BlockSeqPrepareNode();
+        void FlowMapPrepareNode();
+        void BlockMapPrepareNode();
+        
 		const char *ComputeFullBoolName(bool b) const;
 		bool CanEmitNewline() const;
 		

@@ -210,6 +210,8 @@ namespace YAML
 		if(!good())
 			return;
         
+        PrepareNode();
+        
         m_pState->BeginGroup(GroupType::Seq);
 	}
 	
@@ -228,6 +230,8 @@ namespace YAML
 		if(!good())
 			return;
 
+        PrepareNode();
+        
         m_pState->BeginGroup(GroupType::Map);
 	}
 	
@@ -252,6 +256,61 @@ namespace YAML
         return false;
 	}
 
+    // Put the stream in a state so we can simply write the next node
+    // E.g., if we're in a sequence, write the "- "
+    void Emitter::PrepareNode()
+    {
+        switch(m_pState->CurGroupType()) {
+            case GroupType::None:
+                PrepareTopNode();
+                break;
+            case GroupType::Seq:
+                switch(m_pState->CurGroupFlowType()) {
+                    case FlowType::Flow:
+                        FlowSeqPrepareNode();
+                        break;
+                    case FlowType::Block:
+                        BlockSeqPrepareNode();
+                        break;
+                    case FlowType::None:
+                        assert(false);
+                }
+                break;
+            case GroupType::Map:
+                switch(m_pState->CurGroupFlowType()) {
+                    case FlowType::Flow:
+                        FlowMapPrepareNode();
+                        break;
+                    case FlowType::Block:
+                        BlockMapPrepareNode();
+                        break;
+                    case FlowType::None:
+                        assert(false);
+                }
+                break;
+        }
+    }
+    
+    void Emitter::PrepareTopNode()
+    {
+    }
+    
+    void Emitter::FlowSeqPrepareNode()
+    {
+    }
+
+    void Emitter::BlockSeqPrepareNode()
+    {
+    }
+    
+    void Emitter::FlowMapPrepareNode()
+    {
+    }
+
+    void Emitter::BlockMapPrepareNode()
+    {
+    }
+
 	// *******************************************************************************************
 	// overloads of Write
 	
@@ -259,6 +318,8 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
+        
+        PrepareNode();
         
         m_pState->BeginScalar();
         
