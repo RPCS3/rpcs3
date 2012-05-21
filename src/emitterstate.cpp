@@ -4,11 +4,8 @@
 
 namespace YAML
 {
-	EmitterState::EmitterState(): m_isGood(true), m_curIndent(0), m_requiresSoftSeparation(false), m_requiresHardSeparation(false)
+	EmitterState::EmitterState(): m_isGood(true), m_curIndent(0)
 	{
-		// start up
-		m_stateStack.push(ES_WAITING_FOR_DOC);
-		
 		// set default global manipulators
 		m_charset.set(EmitNonAscii);
 		m_strFmt.set(Auto);
@@ -59,7 +56,6 @@ namespace YAML
 		// set up group
 		pGroup->flow = GetFlowType(type);
 		pGroup->indent = GetIndent();
-		pGroup->usingLongKey = (GetMapKeyFormat() == LongKey ? true : false);
 
 		m_groups.push(pGroup);
 	}
@@ -100,25 +96,6 @@ namespace YAML
 			return FlowType::None;
 		
 		return (m_groups.top().flow == Flow ? FlowType::Flow : FlowType::Block);
-	}
-	
-	bool EmitterState::CurrentlyInLongKey()
-	{
-		if(m_groups.empty())
-			return false;
-		return m_groups.top().usingLongKey;
-	}
-	
-	void EmitterState::StartLongKey()
-	{
-		if(!m_groups.empty())
-			m_groups.top().usingLongKey = true;
-	}
-	
-	void EmitterState::StartSimpleKey()
-	{
-		if(!m_groups.empty())
-			m_groups.top().usingLongKey = false;
 	}
 
 	void EmitterState::ClearModifiedSettings()

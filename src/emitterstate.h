@@ -20,46 +20,6 @@ namespace YAML
 	struct GroupType { enum value { None, Seq, Map }; };
 	struct FlowType { enum value { None, Flow, Block }; };
 
-	enum NODE_STATE {
-		NS_START,
-		NS_READY_FOR_ATOM,
-		NS_END
-	};
-	
-	enum EMITTER_STATE {
-		ES_WAITING_FOR_DOC,
-		ES_WRITING_DOC,
-		ES_DONE_WITH_DOC,
-		
-		// block seq
-		ES_WAITING_FOR_BLOCK_SEQ_ENTRY,
-		ES_WRITING_BLOCK_SEQ_ENTRY,
-		ES_DONE_WITH_BLOCK_SEQ_ENTRY,
-		
-		// flow seq
-		ES_WAITING_FOR_FLOW_SEQ_ENTRY,
-		ES_WRITING_FLOW_SEQ_ENTRY,
-		ES_DONE_WITH_FLOW_SEQ_ENTRY,
-		
-		// block map
-		ES_WAITING_FOR_BLOCK_MAP_ENTRY,
-		ES_WAITING_FOR_BLOCK_MAP_KEY,
-		ES_WRITING_BLOCK_MAP_KEY,
-		ES_DONE_WITH_BLOCK_MAP_KEY,
-		ES_WAITING_FOR_BLOCK_MAP_VALUE,
-		ES_WRITING_BLOCK_MAP_VALUE,
-		ES_DONE_WITH_BLOCK_MAP_VALUE,
-		
-		// flow map
-		ES_WAITING_FOR_FLOW_MAP_ENTRY,
-		ES_WAITING_FOR_FLOW_MAP_KEY,
-		ES_WRITING_FLOW_MAP_KEY,
-		ES_DONE_WITH_FLOW_MAP_KEY,
-		ES_WAITING_FOR_FLOW_MAP_VALUE,
-		ES_WRITING_FLOW_MAP_VALUE,
-		ES_DONE_WITH_FLOW_MAP_VALUE
-	};
-	
 	class EmitterState
 	{
 	public:
@@ -71,14 +31,6 @@ namespace YAML
 		const std::string GetLastError() const { return m_lastError; }
 		void SetError(const std::string& error) { m_isGood = false; m_lastError = error; }
 		
-		// main state of the machine
-		EMITTER_STATE GetCurState() const { return m_stateStack.top(); }
-		void SwitchState(EMITTER_STATE state) { PopState(); PushState(state); }
-		void PushState(EMITTER_STATE state) { m_stateStack.push(state); }
-		void PopState() { m_stateStack.pop(); }
-		
-		void SetLocalValue(EMITTER_MANIP value);
-		
 		// group handling
 		void BeginGroup(GroupType::value type);
 		void EndGroup(GroupType::value type);
@@ -86,21 +38,12 @@ namespace YAML
 		GroupType::value GetCurGroupType() const;
         FlowType::value GetCurGroupFlowType() const;
 		int GetCurIndent() const { return m_curIndent; }
-		
-		bool CurrentlyInLongKey();
-		void StartLongKey();
-		void StartSimpleKey();
-
-		bool RequiresSoftSeparation() const { return m_requiresSoftSeparation; }
-		bool RequiresHardSeparation() const { return m_requiresHardSeparation; }
-		void RequireSoftSeparation() { m_requiresSoftSeparation = true; }
-		void RequireHardSeparation() { m_requiresSoftSeparation = true; m_requiresHardSeparation = true; }
-		void ForceHardSeparation() { m_requiresSoftSeparation = false; }
-		void UnsetSeparation() { m_requiresSoftSeparation = false; m_requiresHardSeparation = false; }
 
 		void ClearModifiedSettings();
 
 		// formatters
+		void SetLocalValue(EMITTER_MANIP value);
+
 		bool SetOutputCharset(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetOutputCharset() const { return m_charset.get(); }
 
@@ -148,8 +91,6 @@ namespace YAML
 		std::string m_lastError;
 		
 		// other state
-		std::stack<EMITTER_STATE> m_stateStack;
-		
 		Setting<EMITTER_MANIP> m_charset;
 		Setting<EMITTER_MANIP> m_strFmt;
 		Setting<EMITTER_MANIP> m_boolFmt;
@@ -168,11 +109,10 @@ namespace YAML
 		SettingChanges m_globalModifiedSettings;
 		
 		struct Group {
-			Group(GroupType::value type_): type(type_), usingLongKey(false), indent(0) {}
+			Group(GroupType::value type_): type(type_), indent(0) {}
 			
             GroupType::value type;
 			EMITTER_MANIP flow;
-			bool usingLongKey;
 			int indent;
 			
 			SettingChanges modifiedSettings;
@@ -180,8 +120,6 @@ namespace YAML
 
 		ptr_stack<Group> m_groups;
 		unsigned m_curIndent;
-		bool m_requiresSoftSeparation;
-		bool m_requiresHardSeparation;
 	};
 
 	template <typename T>

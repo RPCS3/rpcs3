@@ -70,21 +70,11 @@ namespace YAML
 		Emitter& WriteStreamable(T value);
 
 	private:
-		void PreWriteIntegralType(std::stringstream& str);
-		void PreWriteStreamable(std::stringstream& str);
-		void PostWriteIntegralType(const std::stringstream& str);
-		void PostWriteStreamable(const std::stringstream& str);
-        
         template<typename T> void SetStreamablePrecision(std::stringstream&) {}
         unsigned GetFloatPrecision() const;
         unsigned GetDoublePrecision() const;
 	
 	private:
-		void PreAtomicWrite();
-		bool GotoNextPreAtomicState();
-		void PostAtomicWrite();
-		void EmitSeparationIfNecessary();
-		
 		void EmitBeginDoc();
 		void EmitEndDoc();
 		void EmitBeginSeq();
@@ -111,10 +101,6 @@ namespace YAML
 		if(!good())
 			return *this;
 		
-		std::stringstream str;
-		PreWriteIntegralType(str);
-		str << value;
-		PostWriteIntegralType(str);
 		return *this;
 	}
 
@@ -124,11 +110,6 @@ namespace YAML
 		if(!good())
 			return *this;
 		
-		std::stringstream str;
-		PreWriteStreamable(str);
-        SetStreamablePrecision<T>(str);
-		str << value;
-		PostWriteStreamable(str);
 		return *this;
 	}
 	
