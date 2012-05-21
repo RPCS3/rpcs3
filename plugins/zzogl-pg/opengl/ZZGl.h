@@ -84,6 +84,9 @@ static __forceinline void GL_STENCILFUNC_SET()
 	glStencilFunc(s_stencilfunc, s_stencilref, s_stencilmask); 
 }
 
+#ifdef GLSL4_API
+#include "ZZoglShaders.h"
+#endif
 // sets the data stream
 static __forceinline void SET_STREAM()
 {
@@ -92,6 +95,8 @@ static __forceinline void SET_STREAM()
 	glSecondaryColorPointerEXT(4, GL_UNSIGNED_BYTE, sizeof(VertexGPU), (void*)12);
 	glTexCoordPointer(3, GL_FLOAT, sizeof(VertexGPU), (void*)16);
 	glVertexPointer(4, GL_SHORT, sizeof(VertexGPU), (void*)0);
+#else
+	vertex_array->set_internal_format();
 #endif
 }
 

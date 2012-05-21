@@ -3,17 +3,17 @@
 //  ZZ Open GL graphics plugin
 //  Copyright (c)2009-2010 zeydlitz@gmail.com, arcum42@gmail.com, gregory.hainaut@gmail.com
 //  Based on Zerofrog's ZeroGS KOSMOS (c)2005-2008
-// 
+//
 //  This program is free software; you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
 //  the Free Software Foundation; either version 2 of the License, or
 //  (at your option) any later version.
-// 
+//
 //  This program is distributed in the hope that it will be useful,
 //  but WITHOUT ANY WARRANTY; without even the implied warranty of
 //  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //  GNU General Public License for more details.
-// 
+//
 //  You should have received a copy of the GNU General Public License
 //  along with this program; if not, write to the Free Software
 //  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
@@ -89,14 +89,14 @@ struct vertex
 // glSecondaryColorPointerEXT -> gl_SecondaryColor (it seems just a way to have another parameter in shader)
 // glTexCoordPointer -> gl_MultiTexCoord0 (tex coord)
 // glVertexPointer -> gl_Vertex (position)
-// 
+//
 // VS Output (to PS)
 // gl_Position (must be kept)
 // vertex
 //
 // FS input (from VS)
 // vertex
-// 
+//
 // FS output
 // gl_FragData[0]
 // gl_FragData[1]
@@ -110,7 +110,7 @@ out gl_PerVertex {
 };
 
 layout(location = 0) in ivec2 Vert;
-layout(location = 1) in vec4  Color;
+layout(location = 1) in vec4 Color;
 layout(location = 2) in vec4 SecondaryColor;
 layout(location = 3) in vec3 TexCoord;
 
@@ -126,7 +126,6 @@ layout(location = 0) out vertex VSout;
 
 layout(location = 0) in vertex PSin;
 
-// NOTE: Basic s/gl_FragData[X]/FragDataX/ I think
 // FIXME: host only do glDrawBuffers of 1 buffers not 2. I think this is a major bug
 layout(location = 0) out vec4 FragData0;
 layout(location = 1) out vec4 FragData1;
@@ -603,6 +602,7 @@ half4 ps2FinalColor(half4 col)
 half4 ps2FinalColor(half4 col)
 {
 	return col * g_fOneColor.xxxy + g_fOneColor.zzzw;
+	//return vec4(1.0f,0.0f,1.0f, 0.8f);
 }
 #endif
 
@@ -765,7 +765,7 @@ void CRTCTargInterPS() {
 void CRTCTargPS() {
 	float4 c = BilinearFloat16(PSin.tex.xy);
 	// FIXME DEBUG: to validate tex coord on blit
-	//vec4 c = vec4(PSin.tex.x/512.0f, PSin.tex.y/512.0f, 0.0, 1.0);
+	//c = vec4(PSin.tex.x/512.0f, PSin.tex.y/512.0f, 0.0, 1.0);
 	c.w = g_fc0.w * c.w * g_fOneColor.x + g_fOneColor.y;
 	FragData0 = c;
 }
@@ -821,11 +821,12 @@ void ZeroPS() {
 }
 
 void ZeroDebugPS() {
-	FragData0 = vec4(0.0, 1.0, 0.0, 1.0);
+	FragData0 = vec4(0.0, 1.0, 0.0, 0.5);
+	//FragData0 = vec4(PSin.position.x, PSin.position.y, 1.0, 0.5);
 }
 
 void ZeroDebug2PS() {
-	FragData0 = vec4(1.0, 0.0, 0.0, 1.0);
+	FragData0 = vec4(1.0, 0.0, 0.0, 0.5);
 }
 
 void BaseTexturePS() {
@@ -876,30 +877,37 @@ void Convert32to16PS() {
 #ifdef VERTEX_SHADER
 
 float4 OutPosition() {
-	float4 Position;
-	Position.xy = Vert.xy * g_fPosXY.xy + g_fPosXY.zw;
-	Position.z = (log(g_fc0.y + dot(g_fZ, SecondaryColor.zyxw)) * g_fZNorm.x + g_fZNorm.y) * g_fZMin.y + dot(g_fZ, SecondaryColor.zyxw) * g_fZMin.x ;
-	Position.w = g_fc0.y;
-	return Position;
+	float4 position;
+	position.xy = vec2(Vert.xy) * g_fPosXY.xy + g_fPosXY.zw;
+	position.z = (log(g_fc0.y + dot(g_fZ, SecondaryColor.zyxw)) * g_fZNorm.x + g_fZNorm.y) * g_fZMin.y + dot(g_fZ, SecondaryColor.zyxw) * g_fZMin.x ;
+	position.w = g_fc0.y;
+	return position;
 }
 
 // just smooth shadering
 void RegularVS() {
-	gl_Position = OutPosition();
+	float4 position = OutPosition();
+	gl_Position = position;
+
 	VSout.color = Color;
+
 	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
     DOZWRITE(VSout.z.w = g_fc0.y;)
 }
 
 // diffuse texture mapping
 void TextureVS() {
-	gl_Position = OutPosition();
+	float4 position = OutPosition();
+	gl_Position = position;
+
 	VSout.color = Color;
+
 #ifdef PERSPECTIVE_CORRECT_TEX
 	VSout.tex.xyz = TexCoord.xyz;
 #else
 	VSout.tex.xy = TexCoord.xy/TexCoord.z;
 #endif
+
  	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
     DOZWRITE(VSout.z.w = g_fc0.y;)
 }
@@ -907,8 +915,11 @@ void TextureVS() {
 void RegularFogVS() {
 	float4 position = OutPosition();
 	gl_Position = position;
+
 	VSout.color = Color;
+
     VSout.fog = position.z * g_fBilinear.w;
+
 	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
     DOZWRITE(VSout.z.w = g_fc0.y;)
 }
@@ -916,20 +927,24 @@ void RegularFogVS() {
 void TextureFogVS() {
 	float4 position = OutPosition();
 	gl_Position = position;
+
 	VSout.color = Color;
+
 #ifdef PERSPECTIVE_CORRECT_TEX
 	VSout.tex.xyz = TexCoord.xyz;
 #else
 	VSout.tex.xy = TexCoord.xy/TexCoord.z;
 #endif
+
     VSout.fog = position.z * g_fBilinear.w;
+
 	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
     DOZWRITE(VSout.z.w = g_fc0.y;)
 }
 
 void BitBltVS() {
 	vec4 position;
-	position.xy = Vert.xy * g_fBitBltPos.xy + g_fBitBltPos.zw;
+	position.xy = vec2(Vert.xy) * g_fBitBltPos.xy + g_fBitBltPos.zw;
 	position.zw = g_fc0.xy;
 	gl_Position = position;
 

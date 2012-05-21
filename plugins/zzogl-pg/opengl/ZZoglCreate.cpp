@@ -40,7 +40,6 @@ typedef void (APIENTRYP _PFNSWAPINTERVAL)(int);
 
 map<string, GLbyte> mapGLExtensions;
 
-extern bool LoadEffects();
 extern bool ZZshLoadExtraEffects();
 extern FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
 
@@ -575,10 +574,9 @@ bool ZZCreate(int _width, int _height)
 	GL_REPORT_ERROR();
 
 #ifdef GLSL4_API
-	// FIXME maybe GL_UNSIGNED_SHORT could be better than GL_SHORT
 	GSInputLayoutOGL vert_format[] =
 	{
-		{0 , 4 , GL_SHORT          , GL_FALSE , sizeof(VertexGPU) , (const GLvoid*)(0) }  , // vertex
+		{0 , 2 , GL_SHORT , GL_FALSE , sizeof(VertexGPU) , (const GLvoid*)(0) }  , // vertex
 		{1 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(VertexGPU) , (const GLvoid*)(8) }  , // color
 		{2 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE , sizeof(VertexGPU) , (const GLvoid*)(12) } , // z value. FIXME WTF 4 unsigned byte, why not a full integer
 		{3 , 3 , GL_FLOAT          , GL_FALSE , sizeof(VertexGPU) , (const GLvoid*)(16) } , // tex coord
@@ -596,7 +594,7 @@ bool ZZCreate(int _width, int _height)
             glBindBuffer(GL_ARRAY_BUFFER, g_vboBuffers[i]);
             glBufferData(GL_ARRAY_BUFFER, 0x100*sizeof(VertexGPU), NULL, GL_STREAM_DRAW);
 #ifdef GLSL4_API
-			vertex_array->set_internal_format(vert_format, 4);
+			vertex_array->set_internal_format();
 #endif
         }
         vb_buffer_allocated = true; // mark the buffer allocated
@@ -680,7 +678,7 @@ bool ZZCreate(int _width, int _height)
 	glGenBuffers(1, &vboRect);
 	glBindBuffer(GL_ARRAY_BUFFER, vboRect);
 #ifdef GLSL4_API
-	vertex_array->set_internal_format(vert_format, 4);
+	vertex_array->set_internal_format();
 #endif
 
 	vector<VertexGPU> verts(4);

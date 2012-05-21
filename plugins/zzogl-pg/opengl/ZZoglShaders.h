@@ -137,8 +137,7 @@ struct GlobalUniform {
 		float linear[2*4];
 	};
 	void SettleFloat(uint indice, const float* v) {
-		assert(indice >= 0);
-		assert(indice + 3 < sizeof(linear));
+		assert(indice + 3 < 2*4);
 		linear[indice+0] = v[0];
 		linear[indice+1] = v[1];
 		linear[indice+2] = v[2];
@@ -163,8 +162,7 @@ struct ConstantUniform {
 		float linear[8*4];
 	};
 	void SettleFloat(uint indice, const float* v) {
-		assert(indice >= 0);
-		assert(indice + 3 < sizeof(linear));
+		assert(indice + 3 < 8*4);
 		linear[indice+0] = v[0];
 		linear[indice+1] = v[1];
 		linear[indice+2] = v[2];
@@ -191,8 +189,7 @@ struct FragmentUniform {
 		float linear[13*4];
 	};
 	void SettleFloat(uint indice, const float* v) {
-		assert(indice >= 0);
-		assert(indice + 3 < sizeof(linear));
+		assert(indice + 3 < 13*4);
 		linear[indice+0] = v[0];
 		linear[indice+1] = v[1];
 		linear[indice+2] = v[2];
@@ -209,8 +206,7 @@ struct VertexUniform {
 		float linear[3*4];
 	};
 	void SettleFloat(uint indice, const float* v) {
-		assert(indice >= 0);
-		assert(indice + 3 < sizeof(linear) / 4);
+		assert(indice + 3 <  3*4);
 		linear[indice+0] = v[0];
 		linear[indice+1] = v[1];
 		linear[indice+2] = v[2];
@@ -340,8 +336,7 @@ struct SamplerParam {
 
 	SamplerParam() : unit(-1), texid(0), target(0) {}
 
-	void set_unit(int new_unit = 0) {
-		assert(new_unit >= 0);
+	void set_unit(int new_unit) {
 		assert(new_unit < 10);
 		unit = new_unit;
 		target = g_texture_target[new_unit];
@@ -358,6 +353,10 @@ struct SamplerParam {
 
 	void set_texture(GLuint new_texid) {
 		texid = new_texid;
+	}
+
+	void release_texture() {
+		texid = 0;
 	}
 };
 
@@ -393,7 +392,7 @@ struct FRAGMENTSHADER
 		//sBitwiseANDY         = 4;
 		//sInterlace           = 5;
 		//sCLUT                = 6;
-		samplers[sMemory+0].set_unit(0);
+		samplers[sMemory].set_unit(0);
 		samplers[sMemory+1].set_unit(0); // Dual context. Use same unit
 		samplers[sFinal].set_unit(1);
 		samplers[sBitwiseANDX].set_unit(6);
@@ -437,16 +436,25 @@ struct FRAGMENTSHADER
 	}
 
 	void enable_texture() {
-		samplers[0+context].enable_texture(); // sMemory is dual context
+		samplers[sMemory+context].enable_texture(); // sMemory is dual context
 		for (int i = 2; i < 7; i++)
 			samplers[i].enable_texture();
 	}
 
 	void set_texture(ZZshParameter param, GLuint texid) {
-		if (param == 0) // sMemory is dual context
-			samplers[0+context].set_texture(texid);
+		if (param == sMemory) // sMemory is dual context
+			samplers[sMemory+context].set_texture(texid);
 		else
 			samplers[param].set_texture(texid);
+	}
+
+	void release_prog() {
+		if(program) {
+			glDeleteProgram(program);
+			program = 0;
+		}
+		for (uint i = 0; i < 7 ; i++)
+			samplers[i].release_texture();
 	}
 };
 #endif

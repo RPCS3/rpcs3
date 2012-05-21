@@ -124,8 +124,8 @@ GSVertexBufferStateOGL *vertex_array;
 COMMONSHADER g_cs;
 static GLuint s_pipeline = 0;
 
-FRAGMENTSHADER ppsDebug;
-FRAGMENTSHADER ppsDebug2;
+//FRAGMENTSHADER ppsDebug;
+//FRAGMENTSHADER ppsDebug2;
 
 //------------------ Code
 
@@ -392,7 +392,7 @@ inline bool LoadShaderFromFile(ZZshProgram& program, const char* DefineString, c
 		return false;
 	}
 
-	ZZLog::Error_Log("Used shader for %s... Ok",name);
+	ZZLog::Error_Log("Compile shader for %s... Ok",name);
 	return true;
 }
 
@@ -422,25 +422,22 @@ void ZZshSetupShader() {
 	PutParametersAndRun(vs, ps);
 }
 
-static void ZZshSetShader(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
-	if (vs == NULL || ps == NULL) return;
-
-	FRAGMENTSHADER* debug = ps;
-
-	glUseProgramStages(s_pipeline, GL_VERTEX_SHADER_BIT, vs->program);
-	glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ps->program);
-	//PutParametersAndRun(vs, ps);
-	GL_REPORT_ERRORD();
-}
-
 void ZZshSetVertexShader(ZZshShaderLink prog) {
 	g_vsprog = prog;
-	ZZshSetShader((VERTEXSHADER*)(g_vsprog.link), (FRAGMENTSHADER*)(g_psprog.link)) ;
+
+	VERTEXSHADER* vs = (VERTEXSHADER*)g_vsprog.link;
+	if (!vs) return;
+
+	glUseProgramStages(s_pipeline, GL_VERTEX_SHADER_BIT, vs->program);
 }
 
 void ZZshSetPixelShader(ZZshShaderLink prog) {
 	g_psprog = prog;
-	ZZshSetShader((VERTEXSHADER*)(g_vsprog.link), (FRAGMENTSHADER*)(g_psprog.link)) ;
+
+	FRAGMENTSHADER* ps = (FRAGMENTSHADER*)g_psprog.link;
+	if (!ps) return;
+
+	glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ps->program);
 }
 
 //------------------------------------------------------------------------------------------------------------------
@@ -482,14 +479,13 @@ void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	fragment_buffer->bind();
 	fragment_buffer->upload((void*)&ps->uniform_buffer[ps->context]);
 
-	g_cs.enable_texture();
-
 #ifdef ENABLE_MARKER
 	char* debug = new char[100];
 	sprintf(debug, "FS(%d): enable texture", ps->program);
 	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
 #endif
 
+	g_cs.enable_texture();
 	ps->enable_texture();
 }
 
@@ -547,13 +543,8 @@ static __forceinline bool LOAD_PS(char* DefineString, const char* name, FRAGMENT
 inline bool LoadEffects()
 {
 	// clear the textures
-	for(u32 i = 0; i < ArraySize(ppsTexture); ++i) {
-		SAFE_RELEASE_PROG(ppsTexture[i].prog);
-	}
-
-#ifndef _DEBUG
-	memset(ppsTexture, 0, sizeof(ppsTexture));
-#endif
+	for(u32 i = 0; i < ArraySize(ppsTexture); ++i)
+		ppsTexture[i].release_prog();
 
 	return true;
 }
@@ -623,8 +614,8 @@ bool ZZshLoadExtraEffects() {
 	if (!LOAD_PS(DefineString, "Convert32to16PS", ppsConvert32to16, cgfProf, 0, "")) bLoadSuccess = false;
 
 	// DEBUG
-	if (!LOAD_PS(DefineString, "ZeroDebugPS", ppsDebug, cgfProf, 0, "")) bLoadSuccess = false;
-	if (!LOAD_PS(DefineString, "ZeroDebug2PS", ppsDebug2, cgfProf, 0, "")) bLoadSuccess = false;
+	// if (!LOAD_PS(DefineString, "ZeroDebugPS", ppsDebug, cgfProf, 0, "")) bLoadSuccess = false;
+	// if (!LOAD_PS(DefineString, "ZeroDebug2PS", ppsDebug2, cgfProf, 0, "")) bLoadSuccess = false;
 
 	GL_REPORT_ERRORD();
 	return true;
@@ -656,7 +647,7 @@ static ZZshProgram LoadShaderFromType(int type, int texfilter, int texwrap, int 
 	if (!LoadShaderFromFile(program, DefineString, name, GL_FRAGMENT_SHADER))
 		return LoadShaderFromFile(program, DefineString, name, GL_FRAGMENT_SHADER, true);
 
-	ZZLog::Debug_Log("Used shader for type:%d filter:%d wrap:%d for:%d depth:%d aem:%d color:%d decompression:%d ctx:%d... Ok \n", type, texfilter, texwrap, fog, writedepth, testaem, exactcolor, ps, context);
+	ZZLog::Debug_Log("Create new shader for type:%d filter:%d wrap:%d for:%d depth:%d aem:%d color:%d decompression:%d ctx:%d... Ok \n", type, texfilter, texwrap, fog, writedepth, testaem, exactcolor, ps, context);
 
 	GL_REPORT_ERRORD();
 	return program;
@@ -699,6 +690,7 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 		GL_REPORT_ERRORD();
 
 		if( glGetError() != GL_NO_ERROR ) {
+				ZZLog::Check_GL_Error();
 				ZZLog::Error_Log("Failed to load shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
 				if (pbFailed != NULL ) *pbFailed = true;
 				return pf;
