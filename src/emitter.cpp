@@ -536,10 +536,13 @@ namespace YAML
 		if(!good())
 			return *this;
         
-        PrepareNode(EmitterNodeType::Scalar);
-        
 		const bool escapeNonAscii = m_pState->GetOutputCharset() == EscapeNonAscii;
         const StringFormat::value strFormat = Utils::ComputeStringFormat(str, m_pState->GetStringFormat(), m_pState->CurGroupFlowType(), escapeNonAscii);
+        
+        if(strFormat == StringFormat::Literal)
+            m_pState->SetMapKeyFormat(YAML::LongKey, FmtScope::Local);
+        
+        PrepareNode(EmitterNodeType::Scalar);
         
         switch(strFormat) {
             case StringFormat::Plain:
