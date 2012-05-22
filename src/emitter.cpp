@@ -371,6 +371,9 @@ namespace YAML
         const unsigned curIndent = m_pState->CurIndent();
         const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
         const std::size_t childCount = m_pState->CurGroupChildCount();
+        
+        if(child == EmitterNodeType::None)
+            return;
 
         if(!m_pState->HasBegunNode()) {
             if(childCount > 0) {
@@ -400,9 +403,11 @@ namespace YAML
         const unsigned curIndent = m_pState->CurIndent();
         const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
 
-        if(false /* was long key */) {
-        } else {
-            m_stream << ":";
+        if(!m_pState->HasBegunNode()) {
+            if(false /* was long key */) {
+            } else {
+                m_stream << ":";
+            }
         }
         
         switch(child) {
