@@ -5,10 +5,7 @@ int main()
 {
     YAML::Emitter out;
     out << YAML::BeginMap;
-    out << YAML::BeginMap;
-    out << "a" << "b";
-    out << YAML::EndMap;
-    out << YAML::BeginMap;
+    out << YAML::LongKey << "a" << "b";
     out << "a" << "b";
     out << YAML::EndMap;
     out << YAML::EndMap;

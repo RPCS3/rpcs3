@@ -402,7 +402,7 @@ namespace YAML
             case EmitterNodeType::Scalar:
             case EmitterNodeType::FlowSeq:
             case EmitterNodeType::FlowMap:
-                SpaceOrIndentTo(m_pState->HasBegunContent(), curIndent);
+                SpaceOrIndentTo(true, curIndent);
                 break;
             case EmitterNodeType::BlockSeq:
             case EmitterNodeType::BlockMap:
