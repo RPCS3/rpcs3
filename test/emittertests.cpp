@@ -540,7 +540,7 @@ namespace Test
 		{
 			out << YAML::Flow << YAML::BeginSeq << "foo" << YAML::Comment("foo!") << "bar" << YAML::EndSeq;
 			
-			desiredOutput = "[foo  # foo!\n, bar]";
+			desiredOutput = "[foo,  # foo!\nbar]";
 		}
 
 		void CommentInFlowMap(YAML::Emitter& out, std::string& desiredOutput)
@@ -551,7 +551,7 @@ namespace Test
 			out << YAML::Key << "baz" << YAML::Value << "baz value" << YAML::Comment("baz!");
 			out << YAML::EndMap;
 			
-			desiredOutput = "{foo: foo value, bar: bar value  # bar!\n, baz: baz value  # baz!\n}";
+			desiredOutput = "{foo: foo value, bar: bar value,  # bar!\nbaz: baz value  # baz!\n}";
 		}
 
 		void Indentation(YAML::Emitter& out, std::string& desiredOutput)
@@ -721,7 +721,7 @@ namespace Test
 			out << YAML::Flow << YAML::BeginSeq;
 			out << "a" << YAML::Newline << "b" << "c" << YAML::Newline << "d";
 			out << YAML::EndSeq;
-			desiredOutput = "[a\n, b, c\n, d]";
+			desiredOutput = "[a,\nb, c,\nd]";
 		}
 
 		void NewlineInBlockMap(YAML::Emitter& out, std::string& desiredOutput)
@@ -731,7 +731,7 @@ namespace Test
 			out << YAML::Key << "b" << YAML::Newline << YAML::Value << "bar";
 			out << YAML::LongKey << YAML::Key << "c" << YAML::Newline << YAML::Value << "car";
 			out << YAML::EndMap;
-			desiredOutput = "a: foo\n\nb: bar\n? c\n\n: car";
+			desiredOutput = "a: foo\nb:\n  bar\n? c\n\n: car";
 		}
 		
 		void NewlineInFlowMap(YAML::Emitter& out, std::string& desiredOutput)
@@ -740,7 +740,7 @@ namespace Test
 			out << YAML::Key << "a" << YAML::Value << "foo" << YAML::Newline;
 			out << YAML::Key << "b" << YAML::Value << "bar";
 			out << YAML::EndMap;
-			desiredOutput = "{a: foo\n, b: bar}";
+			desiredOutput = "{a: foo,\nb: bar}";
 		}
 		
 		void LotsOfNewlines(YAML::Emitter& out, std::string& desiredOutput)
@@ -756,7 +756,7 @@ namespace Test
 			out << YAML::LongKey << YAML::Key << "f" << YAML::Newline << YAML::Value << "foo";
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
-			desiredOutput = "- a\n\n-\n  - b\n  - c\n\n\n-\n  d: e\n  ? f\n\n  : foo";
+			desiredOutput = "- a\n\n-\n  - b\n  - c\n\n\n-\n  d:\n    e\n  ? f\n\n  : foo";
 		}
 		
 		void Binary(YAML::Emitter& out, std::string& desiredOutput)
