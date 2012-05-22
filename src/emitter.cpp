@@ -512,7 +512,19 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
+        
+        if(m_pState->HasAnchor() || m_pState->HasTag()) {
+            m_pState->SetError(ErrorMsg::INVALID_ALIAS);
+            return *this;
+        }
 
+        PrepareNode(EmitterNodeType::Scalar);
+
+		if(!Utils::WriteAlias(m_stream, alias.content)) {
+			m_pState->SetError(ErrorMsg::INVALID_ALIAS);
+			return *this;
+		}
+        
         m_pState->BeginScalar();
 
 		return *this;
