@@ -551,7 +551,7 @@ namespace Test
 			out << YAML::Key << "baz" << YAML::Value << "baz value" << YAML::Comment("baz!");
 			out << YAML::EndMap;
 			
-			desiredOutput = "{foo: foo value, bar: bar value,  # bar!\nbaz: baz value  # baz!\n}";
+			desiredOutput = "{foo: foo value, bar: bar value,  # bar!\nbaz: baz value,  # baz!\n}";
 		}
 
 		void Indentation(YAML::Emitter& out, std::string& desiredOutput)
@@ -598,7 +598,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- key 1: value 1\n  key 2: [a, b, c]\n- ? [1, 2]\n  :\n    a: b";
+			desiredOutput = "- key 1: value 1\n  key 2: [a, b, c]\n- [1, 2]:\n    a: b";
 		}
 
 		void Null(YAML::Emitter& out, std::string& desiredOutput)
