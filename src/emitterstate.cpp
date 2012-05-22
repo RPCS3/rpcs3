@@ -65,8 +65,16 @@ namespace YAML
             return;
         
         assert(m_groups.top().type == GroupType::Map);
-        assert(m_groups.top().flowType == FlowType::Block);
         m_groups.top().longKey = true;
+    }
+    
+    void EmitterState::ForceFlow()
+    {
+        assert(!m_groups.empty());
+        if(m_groups.empty())
+            return;
+        
+        m_groups.top().flowType = FlowType::Flow;
     }
 
     void EmitterState::StartedNode()

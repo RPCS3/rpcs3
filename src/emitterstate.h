@@ -38,6 +38,7 @@ namespace YAML
         void SetTag();
         void SetNonContent();
         void SetLongKey();
+        void ForceFlow();
         void StartedScalar();
 		void StartedGroup(GroupType::value type);
 		void EndedGroup(GroupType::value type);

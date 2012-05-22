@@ -221,6 +221,9 @@ namespace YAML
 		if(!good())
 			return;
         
+        if(m_pState->CurGroupChildCount() == 0)
+            m_pState->ForceFlow();
+        
         if(m_pState->CurGroupFlowType() == FlowType::Flow) {
             if(m_stream.comment())
                 m_stream << "\n";
@@ -249,6 +252,18 @@ namespace YAML
 	{
 		if(!good())
 			return;
+
+        if(m_pState->CurGroupChildCount() == 0)
+            m_pState->ForceFlow();
+        
+        if(m_pState->CurGroupFlowType() == FlowType::Flow) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(m_pState->CurIndent());
+            if(m_pState->CurGroupChildCount() == 0)
+                m_stream << "{";
+            m_stream << "}";
+        }
 
         m_pState->EndedGroup(GroupType::Map);
     }
@@ -390,6 +405,87 @@ namespace YAML
     
     void Emitter::FlowMapPrepareNode(EmitterNodeType::value child)
     {
+        if(m_pState->CurGroupChildCount() % 2 == 0) {
+            if(m_pState->GetMapKeyFormat() == LongKey)
+                m_pState->SetLongKey();
+            
+            if(m_pState->CurGroupLongKey())
+                FlowMapPrepareLongKey(child);
+            else
+                FlowMapPrepareSimpleKey(child);
+        } else {
+            if(m_pState->CurGroupLongKey())
+                FlowMapPrepareLongKeyValue(child);
+            else
+                FlowMapPrepareSimpleKeyValue(child);
+        }
+    }
+
+    void Emitter::FlowMapPrepareLongKey(EmitterNodeType::value child)
+    {
+    }
+    
+    void Emitter::FlowMapPrepareLongKeyValue(EmitterNodeType::value child)
+    {
+    }
+    
+    void Emitter::FlowMapPrepareSimpleKey(EmitterNodeType::value child)
+    {
+        const unsigned curIndent = m_pState->CurIndent();
+        const unsigned lastIndent = m_pState->LastIndent();
+        
+        if(!m_pState->HasBegunNode()) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(lastIndent);
+            if(m_pState->CurGroupChildCount() == 0)
+                m_stream << "{";
+            else
+                m_stream << ",";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, curIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                assert(false);
+                break;
+        }
+    }
+    
+    void Emitter::FlowMapPrepareSimpleKeyValue(EmitterNodeType::value child)
+    {
+        const unsigned curIndent = m_pState->CurIndent();
+        const unsigned lastIndent = m_pState->LastIndent();
+        
+        if(!m_pState->HasBegunNode()) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(lastIndent);
+            m_stream << ":";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, curIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                assert(false);
+                break;
+        }
     }
 
     void Emitter::BlockMapPrepareNode(EmitterNodeType::value child)

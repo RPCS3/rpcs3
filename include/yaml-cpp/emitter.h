@@ -93,11 +93,19 @@ namespace YAML
         void PrepareTopNode(EmitterNodeType::value child);
         void FlowSeqPrepareNode(EmitterNodeType::value child);
         void BlockSeqPrepareNode(EmitterNodeType::value child);
+
         void FlowMapPrepareNode(EmitterNodeType::value child);
+
+        void FlowMapPrepareLongKey(EmitterNodeType::value child);
+        void FlowMapPrepareLongKeyValue(EmitterNodeType::value child);
+        void FlowMapPrepareSimpleKey(EmitterNodeType::value child);
+        void FlowMapPrepareSimpleKeyValue(EmitterNodeType::value child);
+
         void BlockMapPrepareNode(EmitterNodeType::value child);
+
         void BlockMapPrepareLongKey(EmitterNodeType::value child);
-        void BlockMapPrepareSimpleKey(EmitterNodeType::value child);
         void BlockMapPrepareLongKeyValue(EmitterNodeType::value child);
+        void BlockMapPrepareSimpleKey(EmitterNodeType::value child);
         void BlockMapPrepareSimpleKeyValue(EmitterNodeType::value child);
         
         void SpaceOrIndentTo(bool requireSpace, unsigned indent);
