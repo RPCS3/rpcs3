@@ -92,6 +92,8 @@ namespace YAML
         void BlockSeqPrepareNode(EmitterNodeType::value child);
         void FlowMapPrepareNode(EmitterNodeType::value child);
         void BlockMapPrepareNode(EmitterNodeType::value child);
+        void BlockMapPrepareKey(EmitterNodeType::value child);
+        void BlockMapPrepareValue(EmitterNodeType::value child);
         
         void SpaceOrIndentTo(bool requireSpace, unsigned indent);
         
