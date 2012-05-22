@@ -61,8 +61,8 @@ namespace YAML
 	{
         BeginNode();
 
-		unsigned lastIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
-		m_curIndent += lastIndent;
+		const int lastGroupIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
+		m_curIndent += lastGroupIndent;
 		
 		std::auto_ptr<Group> pGroup(new Group(type));
 		
@@ -113,6 +113,11 @@ namespace YAML
 		
 		return (m_groups.top().flow == Flow ? FlowType::Flow : FlowType::Block);
 	}
+
+    int EmitterState::CurGroupIndent() const
+    {
+        return m_groups.empty() ? 0 : m_groups.top().indent;
+    }
 
 	void EmitterState::ClearModifiedSettings()
 	{

@@ -312,6 +312,13 @@ namespace YAML
 
     void Emitter::BlockSeqPrepareNode()
     {
+        const unsigned curIndent = m_pState->CurIndent();
+        if(m_stream.col() > curIndent) {
+            m_stream << "\n";
+        }
+        m_stream << IndentTo(curIndent);
+        m_stream << "-";
+        m_stream << IndentTo(curIndent + m_pState->CurGroupIndent());
     }
     
     void Emitter::FlowMapPrepareNode()

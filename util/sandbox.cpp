@@ -4,7 +4,10 @@
 int main()
 {
     YAML::Emitter out;
+    out << YAML::BeginSeq;
     out << "foo";
+    out << "bar";
+    out << YAML::EndSeq;
     
     std::cout << out.c_str() << "\n";
     return 0;
