@@ -188,6 +188,14 @@ namespace YAML
         return m_groups.empty() ? false : m_groups.top().longKey;
     }
 
+    int EmitterState::LastIndent() const
+    {
+        if(m_groups.size() <= 1)
+            return 0;
+        
+        return m_curIndent - m_groups.top(-1).indent;
+    }
+
 	void EmitterState::ClearModifiedSettings()
 	{
 		m_modifiedSettings.clear();

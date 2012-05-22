@@ -51,6 +51,7 @@ namespace YAML
         std::size_t CurGroupChildCount() const;
         bool CurGroupLongKey() const;
 
+        int LastIndent() const;
 		int CurIndent() const { return m_curIndent; }
         bool HasAnchor() const { return m_hasAnchor; }
         bool HasTag() const { return m_hasTag; }

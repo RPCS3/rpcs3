@@ -4,11 +4,10 @@
 int main()
 {
     YAML::Emitter out;
-    out << YAML::BeginMap;
-    out << YAML::LongKey << "a" << "b";
+    out << YAML::Flow;
+    out << YAML::BeginSeq;
     out << "a" << "b";
-    out << YAML::EndMap;
-    out << YAML::EndMap;
+    out << YAML::EndSeq;
     
     std::cout << out.c_str() << "\n";
     return 0;

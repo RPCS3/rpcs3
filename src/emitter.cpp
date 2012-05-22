@@ -221,6 +221,15 @@ namespace YAML
 		if(!good())
 			return;
         
+        if(m_pState->CurGroupFlowType() == FlowType::Flow) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(m_pState->CurIndent());
+            if(m_pState->CurGroupChildCount() == 0)
+                m_stream << "[";
+            m_stream << "]";
+        }
+        
         m_pState->EndedGroup(GroupType::Seq);
 	}
 	
@@ -315,6 +324,33 @@ namespace YAML
     
     void Emitter::FlowSeqPrepareNode(EmitterNodeType::value child)
     {
+        const unsigned curIndent = m_pState->CurIndent();
+        const unsigned lastIndent = m_pState->LastIndent();
+
+        if(!m_pState->HasBegunNode()) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(lastIndent);
+            if(m_pState->CurGroupChildCount() == 0)
+                m_stream << "[";
+            else
+                m_stream << ",";
+        }
+
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, curIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                assert(false);
+                break;
+        }
     }
 
     void Emitter::BlockSeqPrepareNode(EmitterNodeType::value child)
