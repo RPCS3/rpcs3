@@ -593,7 +593,6 @@ namespace YAML
     void Emitter::BlockMapPrepareLongKeyValue(EmitterNodeType::value child)
     {
         const unsigned curIndent = m_pState->CurIndent();
-        const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
         
         if(child == EmitterNodeType::None)
             return;
