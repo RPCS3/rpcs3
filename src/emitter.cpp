@@ -337,6 +337,8 @@ namespace YAML
                 m_stream << "\n";
                 break;
             case EmitterNodeType::BlockMap:
+                if(m_pState->HasBegunNode())
+                    m_stream << "\n";
                 break;
         }
     }
