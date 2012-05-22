@@ -11,9 +11,10 @@ int main()
     out << YAML::BeginMap << YAML::Comment("b");
     out << "pens" << YAML::Comment("foo") << "a" << YAML::Comment("bar");
     out << "pencils" << "b";
-    out << YAML::EndMap;
+    out << YAML::EndMap << YAML::Comment("monkey");
     out << "item 2";
     out << YAML::EndSeq;
+    out << YAML::Comment("end");
     
     std::cout << out.c_str() << "\n";
     return 0;
