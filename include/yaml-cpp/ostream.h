@@ -18,11 +18,13 @@ namespace YAML
 		
 		void reserve(unsigned size);
 		void put(char ch);
+        void set_comment() { m_comment = true; }
 		const char *str() const { return m_buffer; }
 		
 		unsigned row() const { return m_row; }
 		unsigned col() const { return m_col; }
 		unsigned pos() const { return m_pos; }
+        bool comment() const { return m_comment; }
 		
 	private:
 		char *m_buffer;
@@ -30,6 +32,7 @@ namespace YAML
 		unsigned m_size;
 		
 		unsigned m_row, m_col;
+        bool m_comment;
 	};
 	
 	ostream& operator << (ostream& out, const char *str);

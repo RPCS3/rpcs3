@@ -4,6 +4,7 @@
 int main()
 {
     YAML::Emitter out;
+    out << YAML::Comment("Hello");
     out << YAML::BeginSeq;
     out << "item 1";
     out << YAML::BeginMap;

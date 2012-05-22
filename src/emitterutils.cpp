@@ -333,15 +333,18 @@ namespace YAML
 		{
 			const unsigned curIndent = out.col();
 			out << "#" << Indentation(postCommentIndent);
+            out.set_comment();
 			int codePoint;
 			for(std::string::const_iterator i = str.begin();
 				GetNextCodePointAndAdvance(codePoint, i, str.end());
 				)
 			{
-				if(codePoint == '\n')
+				if(codePoint == '\n') {
 					out << "\n" << IndentTo(curIndent) << "#" << Indentation(postCommentIndent);
-				else
+                    out.set_comment();
+				} else {
 					WriteCodePoint(out, codePoint);
+                }
 			}
 			return true;
 		}

@@ -589,7 +589,13 @@ namespace YAML
 		if(!good())
 			return *this;
 
-        m_pState->StartedScalar();
+        PrepareNode(EmitterNodeType::None);
+        
+		if(m_stream.col() > 0)
+			m_stream << Indentation(m_pState->GetPreCommentIndent());
+		Utils::WriteComment(m_stream, comment.content, m_pState->GetPostCommentIndent());
+
+        m_pState->SetNonContent();
 
 		return *this;
 	}
