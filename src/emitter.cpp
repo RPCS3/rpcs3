@@ -293,6 +293,17 @@ namespace YAML
     
     void Emitter::PrepareTopNode()
     {
+        const bool hasAnchor = m_pState->HasAnchor();
+        const bool hasTag = m_pState->HasTag();
+        
+        if(!hasAnchor && !hasTag && m_stream.pos() > 0) {
+            EmitBeginDoc();
+        }
+        
+        // TODO: if we were writing null, and
+        // we wanted it blank, we wouldn't want a space
+        if(hasAnchor || hasTag)
+            m_stream << " ";
     }
     
     void Emitter::FlowSeqPrepareNode()
@@ -321,6 +332,24 @@ namespace YAML
         
         PrepareNode();
         
+		const bool escapeNonAscii = m_pState->GetOutputCharset() == EscapeNonAscii;
+        const StringFormat::value strFormat = Utils::ComputeStringFormat(str, m_pState->GetStringFormat(), m_pState->CurGroupFlowType(), escapeNonAscii);
+        
+        switch(strFormat) {
+            case StringFormat::Plain:
+                m_stream << str;
+                break;
+            case StringFormat::SingleQuoted:
+                Utils::WriteSingleQuotedString(m_stream, str);
+                break;
+            case StringFormat::DoubleQuoted:
+                Utils::WriteDoubleQuotedString(m_stream, str, escapeNonAscii);
+                break;
+            case StringFormat::Literal:
+                Utils::WriteLiteralString(m_stream, str, m_pState->CurIndent() + m_pState->GetIndent());
+                break;
+        }
+
         m_pState->BeginScalar();
         
 		return *this;

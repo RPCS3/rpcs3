@@ -128,12 +128,12 @@ namespace YAML
 				}
 			}
 			
-			bool IsValidPlainScalar(const std::string& str, bool inFlow, bool allowOnlyAscii) {
+			bool IsValidPlainScalar(const std::string& str, FlowType::value flowType, bool allowOnlyAscii) {
 				if(str.empty())
 					return false;
 				
 				// first check the start
-				const RegEx& start = (inFlow ? Exp::PlainScalarInFlow() : Exp::PlainScalar());
+				const RegEx& start = (flowType == FlowType::Flow ? Exp::PlainScalarInFlow() : Exp::PlainScalar());
 				if(!start.Matches(str))
 					return false;
 				
@@ -142,7 +142,7 @@ namespace YAML
 					return false;
 
 				// then check until something is disallowed
-				const RegEx& disallowed = (inFlow ? Exp::EndScalarInFlow() : Exp::EndScalar())
+				const RegEx& disallowed = (flowType == FlowType::Flow ? Exp::EndScalarInFlow() : Exp::EndScalar())
 				                          || (Exp::BlankOrBreak() + Exp::Comment())
 				                          || Exp::NotPrintable()
 				                          || Exp::Utf8_ByteOrderMark()
@@ -152,7 +152,7 @@ namespace YAML
 				while(buffer) {
 					if(disallowed.Matches(buffer))
 						return false;
-					if(allowOnlyAscii && (0x7F < static_cast<unsigned char>(buffer[0]))) 
+					if(allowOnlyAscii && (0x80 <= static_cast<unsigned char>(buffer[0]))) 
 						return false;
 					++buffer;
 				}
@@ -160,7 +160,32 @@ namespace YAML
 				return true;
 			}
 
-			void WriteDoubleQuoteEscapeSequence(ostream& out, int codePoint) {
+			bool IsValidSingleQuotedScalar(const std::string& str, bool escapeNonAscii)
+            {
+                // TODO: check for non-printable characters?
+                for(std::size_t i=0;i<str.size();i++) {
+                    if(escapeNonAscii && (0x80 <= static_cast<unsigned char>(str[i])))
+                       return false;
+                    if(str[i] == '\n')
+                        return false;
+                }
+                return true;
+			}
+            
+            bool IsValidLiteralScalar(const std::string& str, FlowType::value flowType, bool escapeNonAscii)
+            {
+                if(flowType == FlowType::Flow)
+                    return false;
+
+                // TODO: check for non-printable characters?
+                for(std::size_t i=0;i<str.size();i++) {
+                    if(escapeNonAscii && (0x80 <= static_cast<unsigned char>(str[i])))
+                        return false;
+                }
+                return true;
+            }
+			
+            void WriteDoubleQuoteEscapeSequence(ostream& out, int codePoint) {
 				static const char hexDigits[] = "0123456789abcdef";
 
 				char escSeq[] = "\\U00000000";
@@ -198,15 +223,30 @@ namespace YAML
 			}
 		}
 		
-		bool WriteString(ostream& out, const std::string& str, bool inFlow, bool escapeNonAscii)
-		{
-			if(IsValidPlainScalar(str, inFlow, escapeNonAscii)) {
-				out << str;
-				return true;
-			} else
-				return WriteDoubleQuotedString(out, str, escapeNonAscii);
-		}
-		
+        StringFormat::value ComputeStringFormat(const std::string& str, EMITTER_MANIP strFormat, FlowType::value flowType, bool escapeNonAscii)
+        {
+            switch(strFormat) {
+                case Auto:
+                    if(IsValidPlainScalar(str, flowType, escapeNonAscii))
+                        return StringFormat::Plain;
+                    return StringFormat::DoubleQuoted;
+                case SingleQuoted:
+                    if(IsValidSingleQuotedScalar(str, escapeNonAscii))
+                        return StringFormat::SingleQuoted;
+                    return StringFormat::DoubleQuoted;
+                case DoubleQuoted:
+                    return StringFormat::DoubleQuoted;
+                case Literal:
+                    if(IsValidLiteralScalar(str, flowType, escapeNonAscii))
+                        return StringFormat::Literal;
+                    return StringFormat::DoubleQuoted;
+                default:
+                    break;
+            }
+
+            return StringFormat::DoubleQuoted;
+        }
+
 		bool WriteSingleQuotedString(ostream& out, const std::string& str)
 		{
 			out << "'";
