@@ -358,22 +358,22 @@ namespace YAML
 
     void Emitter::BlockMapPrepareNode(EmitterNodeType::value child)
     {
-        const std::size_t childCount = m_pState->CurGroupChildCount();
-        
-       if(childCount % 2 == 0) {
-           if(m_pState->GetMapKeyFormat() == LongKey || child == EmitterNodeType::BlockSeq || child == EmitterNodeType::BlockMap)
-               m_pState->SetLongKey();
-           
-           if(m_pState->CurGroupLongKey())
-               BlockMapPrepareLongKey(child);
-           else
-               BlockMapPrepareSimpleKey(child);
-       } else {
-           if(m_pState->CurGroupLongKey())
-               BlockMapPrepareLongKeyValue(child);
-           else
-               BlockMapPrepareSimpleKeyValue(child);
-       }
+        if(m_pState->CurGroupChildCount() % 2 == 0) {
+            if(m_pState->GetMapKeyFormat() == LongKey)
+                m_pState->SetLongKey();
+            if(child == EmitterNodeType::BlockSeq || child == EmitterNodeType::BlockMap)
+                m_pState->SetLongKey();
+            
+            if(m_pState->CurGroupLongKey())
+                BlockMapPrepareLongKey(child);
+            else
+                BlockMapPrepareSimpleKey(child);
+        } else {
+            if(m_pState->CurGroupLongKey())
+                BlockMapPrepareLongKeyValue(child);
+            else
+                BlockMapPrepareSimpleKeyValue(child);
+        }
     }
     
     void Emitter::BlockMapPrepareLongKey(EmitterNodeType::value child)
@@ -410,6 +410,34 @@ namespace YAML
         }
     }
 
+    void Emitter::BlockMapPrepareLongKeyValue(EmitterNodeType::value child)
+    {
+        const unsigned curIndent = m_pState->CurIndent();
+        const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
+        
+        if(child == EmitterNodeType::None)
+            return;
+
+        if(!m_pState->HasBegunContent()) {
+            m_stream << "\n";
+            m_stream << IndentTo(curIndent);
+            m_stream << ":";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                SpaceOrIndentTo(true, nextIndent);
+                break;
+        }
+    }
+
     void Emitter::BlockMapPrepareSimpleKey(EmitterNodeType::value child)
     {
         const unsigned curIndent = m_pState->CurIndent();
@@ -438,31 +466,7 @@ namespace YAML
                 break;
         }
     }
-
-    void Emitter::BlockMapPrepareLongKeyValue(EmitterNodeType::value child)
-    {
-        const unsigned curIndent = m_pState->CurIndent();
-        const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
-
-        if(!m_pState->HasBegunNode()) {
-        }
-        
-        switch(child) {
-            case EmitterNodeType::None:
-                break;
-            case EmitterNodeType::Property:
-            case EmitterNodeType::Scalar:
-            case EmitterNodeType::FlowSeq:
-            case EmitterNodeType::FlowMap:
-                SpaceOrIndentTo(true, nextIndent);
-                break;
-            case EmitterNodeType::BlockSeq:
-            case EmitterNodeType::BlockMap:
-                m_stream << "\n";
-                break;
-        }
-    }
-
+    
     void Emitter::BlockMapPrepareSimpleKeyValue(EmitterNodeType::value child)
     {
         const unsigned curIndent = m_pState->CurIndent();

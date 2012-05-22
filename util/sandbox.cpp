@@ -8,7 +8,9 @@ int main()
     out << YAML::BeginMap;
     out << "a" << "b";
     out << YAML::EndMap;
-    out << "c";
+    out << YAML::BeginMap;
+    out << "a" << "b";
+    out << YAML::EndMap;
     out << YAML::EndMap;
     
     std::cout << out.c_str() << "\n";
