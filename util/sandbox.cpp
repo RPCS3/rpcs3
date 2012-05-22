@@ -4,19 +4,13 @@
 int main()
 {
     YAML::Emitter out;
-    out << YAML::Anchor("monkey") << YAML::LocalTag("a");
     out << YAML::BeginSeq;
-    out << "foo";
-    out << YAML::LocalTag("hi") << "bar";
-    out << YAML::Anchor("asdf") << YAML::BeginMap;
-    out << "a" << "b" << "c";
-    out << YAML::Anchor("a") << YAML::BeginMap;
-    out << YAML::Anchor("d") << "a" << "b";
+    out << "item 1";
+    out << YAML::BeginMap;
+    out << "pens" << "a";
+    out << "pencils" << "b";
     out << YAML::EndMap;
-    out << YAML::EndMap;
-    out << YAML::LocalTag("hi") << YAML::BeginSeq;
-    out << "a" << "b" << YAML::Alias("monkey");
-    out << YAML::EndSeq;
+    out << "item 2";
     out << YAML::EndSeq;
     
     std::cout << out.c_str() << "\n";

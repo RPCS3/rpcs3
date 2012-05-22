@@ -299,7 +299,7 @@ namespace YAML
             case EmitterNodeType::FlowMap:
                 // TODO: if we were writing null, and
                 // we wanted it blank, we wouldn't want a space
-                if(m_pState->HasBegunNode())
+                if(m_pState->HasBegunContent())
                     m_stream << " ";
                 break;
             case EmitterNodeType::BlockSeq:
@@ -332,16 +332,16 @@ namespace YAML
             case EmitterNodeType::Scalar:
             case EmitterNodeType::FlowSeq:
             case EmitterNodeType::FlowMap:
-                if(m_stream.col() < nextIndent)
-                    m_stream << IndentTo(nextIndent);
-                else
+                if(m_pState->HasBegunContent())
                     m_stream << " ";
+                else
+                    m_stream << IndentTo(nextIndent);
                 break;
             case EmitterNodeType::BlockSeq:
                 m_stream << "\n";
                 break;
             case EmitterNodeType::BlockMap:
-                if(m_pState->HasBegunNode())
+                if(m_pState->HasBegunContent())
                     m_stream << "\n";
                 break;
         }
@@ -381,10 +381,10 @@ namespace YAML
                 case EmitterNodeType::Scalar:
                 case EmitterNodeType::FlowSeq:
                 case EmitterNodeType::FlowMap:
-                    if(m_stream.col() < curIndent)
-                        m_stream << IndentTo(curIndent);
-                    else
+                    if(m_pState->HasBegunContent())
                         m_stream << " ";
+                    else
+                        m_stream << IndentTo(curIndent);
                     break;
                 case EmitterNodeType::BlockSeq:
                 case EmitterNodeType::BlockMap:
@@ -397,10 +397,7 @@ namespace YAML
                 case EmitterNodeType::Scalar:
                 case EmitterNodeType::FlowSeq:
                 case EmitterNodeType::FlowMap:
-                    if(m_stream.col() < nextIndent)
-                        m_stream << IndentTo(nextIndent);
-                    else
-                        m_stream << " ";
+                    m_stream << " ";
                     break;
                 case EmitterNodeType::BlockSeq:
                 case EmitterNodeType::BlockMap:

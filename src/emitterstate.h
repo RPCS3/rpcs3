@@ -31,7 +31,7 @@ namespace YAML
 		// basic state checking
 		bool good() const { return m_isGood; }
 		const std::string GetLastError() const { return m_lastError; }
-		void SetError(const std::string& error) { throw std::runtime_error(error); m_isGood = false; m_lastError = error; }
+		void SetError(const std::string& error) { m_isGood = false; m_lastError = error; }
 		
 		// node handling
         void SetAnchor();
@@ -53,6 +53,7 @@ namespace YAML
         bool HasAnchor() const { return m_hasAnchor; }
         bool HasTag() const { return m_hasTag; }
         bool HasBegunNode() const { return m_hasAnchor || m_hasTag || m_hasNonContent; }
+        bool HasBegunContent() const { return m_hasAnchor || m_hasTag; }
 
 		void ClearModifiedSettings();
 
