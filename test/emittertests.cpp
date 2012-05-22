@@ -986,43 +986,6 @@ namespace Test
 			out << YAML::Alias("new\nline");
 			out << YAML::EndSeq;
 		}
-
-		void MissingKey(YAML::Emitter& out, std::string& desiredError)
-		{
-			desiredError = YAML::ErrorMsg::EXPECTED_KEY_TOKEN;
-			
-			out << YAML::BeginMap;
-			out << YAML::Key << "key" << YAML::Value << "value";
-			out << "missing key" << YAML::Value << "value";
-			out << YAML::EndMap;
-		}
-		
-		void MissingValue(YAML::Emitter& out, std::string& desiredError)
-		{
-			desiredError = YAML::ErrorMsg::EXPECTED_VALUE_TOKEN;
-			
-			out << YAML::BeginMap;
-			out << YAML::Key << "key" << "value";
-			out << YAML::EndMap;
-		}
-
-		void UnexpectedKey(YAML::Emitter& out, std::string& desiredError)
-		{
-			desiredError = YAML::ErrorMsg::UNEXPECTED_KEY_TOKEN;
-			
-			out << YAML::BeginSeq;
-			out << YAML::Key << "hi";
-			out << YAML::EndSeq;
-		}
-		
-		void UnexpectedValue(YAML::Emitter& out, std::string& desiredError)
-		{
-			desiredError = YAML::ErrorMsg::UNEXPECTED_VALUE_TOKEN;
-			
-			out << YAML::BeginSeq;
-			out << YAML::Value << "hi";
-			out << YAML::EndSeq;
-		}
 	}
 	
 	namespace {
@@ -1178,10 +1141,6 @@ namespace Test
 		RunEmitterErrorTest(&Emitter::BadSingleQuoted, "bad single quoted string", passed, total);
 		RunEmitterErrorTest(&Emitter::InvalidAnchor, "invalid anchor", passed, total);
 		RunEmitterErrorTest(&Emitter::InvalidAlias, "invalid alias", passed, total);
-		RunEmitterErrorTest(&Emitter::MissingKey, "missing key", passed, total);
-		RunEmitterErrorTest(&Emitter::MissingValue, "missing value", passed, total);
-		RunEmitterErrorTest(&Emitter::UnexpectedKey, "unexpected key", passed, total);
-		RunEmitterErrorTest(&Emitter::UnexpectedValue, "unexpected value", passed, total);
 		RunEmitterErrorTest(&Emitter::BadLocalTag, "bad local tag", passed, total);
 
 		std::cout << "Emitter tests: " << passed << "/" << total << " passed\n";

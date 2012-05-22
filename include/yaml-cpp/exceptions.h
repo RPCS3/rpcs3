@@ -62,10 +62,6 @@ namespace YAML
 		const char * const INVALID_ANCHOR         = "invalid anchor";
 		const char * const INVALID_ALIAS          = "invalid alias";
 		const char * const INVALID_TAG            = "invalid tag";
-		const char * const EXPECTED_KEY_TOKEN     = "expected key token";
-		const char * const EXPECTED_VALUE_TOKEN   = "expected value token";
-		const char * const UNEXPECTED_KEY_TOKEN   = "unexpected key token";
-		const char * const UNEXPECTED_VALUE_TOKEN = "unexpected value token";
 	}
 
 	class Exception: public std::runtime_error {
