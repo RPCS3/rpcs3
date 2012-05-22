@@ -295,7 +295,7 @@ __fi void vif1Interrupt()
 			//NFSHPS stalls when the whole packet has gone across (it stalls in the last 32bit cmd)
 			//In this case VIF will end
 			vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);
-			if(vif1ch.qwc > 0 || !vif1.done)	
+			if((vif1ch.qwc > 0 || !vif1.done) && !CHECK_VIF1STALLHACK)	
 			{
 				VIF_LOG("VIF1 Stalled");
 				return;
