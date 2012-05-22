@@ -160,6 +160,7 @@ namespace YAML
         bool m_hasAnchor;
         bool m_hasTag;
         bool m_hasNonContent;
+        std::size_t m_docCount;
 	};
 
 	template <typename T>

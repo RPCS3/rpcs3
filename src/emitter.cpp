@@ -280,6 +280,7 @@ namespace YAML
             case EmitterNodeType::BlockMap:
                 BlockMapPrepareNode(child);
                 break;
+            case EmitterNodeType::Property:
             case EmitterNodeType::Scalar:
                 assert(false);
                 break;
@@ -288,12 +289,14 @@ namespace YAML
     
     void Emitter::PrepareTopNode(EmitterNodeType::value child)
     {
-        if(!m_pState->HasBegunNode() && m_stream.pos() > 0) {
-            EmitBeginDoc();
+        if(m_pState->CurGroupChildCount() > 0 && m_stream.pos() > 0) {
+            if(child != EmitterNodeType::None)
+                EmitBeginDoc();
         }
         
         switch(child) {
             case EmitterNodeType::None:
+            case EmitterNodeType::Property:
             case EmitterNodeType::Scalar:
             case EmitterNodeType::FlowSeq:
             case EmitterNodeType::FlowMap:
@@ -329,6 +332,7 @@ namespace YAML
         
         switch(child) {
             case EmitterNodeType::None:
+            case EmitterNodeType::Property:
             case EmitterNodeType::Scalar:
             case EmitterNodeType::FlowSeq:
             case EmitterNodeType::FlowMap:
@@ -378,6 +382,7 @@ namespace YAML
             // key
             switch(child) {
                 case EmitterNodeType::None:
+                case EmitterNodeType::Property:
                 case EmitterNodeType::Scalar:
                 case EmitterNodeType::FlowSeq:
                 case EmitterNodeType::FlowMap:
@@ -394,6 +399,7 @@ namespace YAML
             // value
             switch(child) {
                 case EmitterNodeType::None:
+                case EmitterNodeType::Property:
                 case EmitterNodeType::Scalar:
                 case EmitterNodeType::FlowSeq:
                 case EmitterNodeType::FlowMap:
@@ -537,7 +543,7 @@ namespace YAML
             return *this;
         }
 
-        PrepareNode(EmitterNodeType::None);
+        PrepareNode(EmitterNodeType::Property);
 
 		if(!Utils::WriteAnchor(m_stream, anchor.content)) {
 			m_pState->SetError(ErrorMsg::INVALID_ANCHOR);
@@ -559,7 +565,7 @@ namespace YAML
             return *this;
         }
         
-        PrepareNode(EmitterNodeType::None);
+        PrepareNode(EmitterNodeType::Property);
         
 		bool success = false;
 		if(tag.type == _Tag::Type::Verbatim)

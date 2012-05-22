@@ -4,7 +4,7 @@
 
 namespace YAML
 {
-	EmitterState::EmitterState(): m_isGood(true), m_curIndent(0), m_hasAnchor(false), m_hasTag(false), m_hasNonContent(false)
+	EmitterState::EmitterState(): m_isGood(true), m_curIndent(0), m_hasAnchor(false), m_hasTag(false), m_hasNonContent(false), m_docCount(0)
 	{
 		// set default global manipulators
 		m_charset.set(EmitNonAscii);
@@ -60,7 +60,9 @@ namespace YAML
 
     void EmitterState::StartedNode()
     {
-        if(!m_groups.empty())
+        if(m_groups.empty())
+            m_docCount++;
+        else
             m_groups.top().childCount++;
         
         m_hasAnchor = false;
@@ -161,7 +163,7 @@ namespace YAML
 
     std::size_t EmitterState::CurGroupChildCount() const
     {
-        return m_groups.empty() ? 0 : m_groups.top().childCount;
+        return m_groups.empty() ? m_docCount : m_groups.top().childCount;
     }
 
 	void EmitterState::ClearModifiedSettings()
