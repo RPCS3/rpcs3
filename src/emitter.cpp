@@ -615,7 +615,13 @@ namespace YAML
 			return *this;
 
         PrepareNode(EmitterNodeType::Scalar);
-        m_stream << ComputeFullBoolName(b);
+
+		const char *name = ComputeFullBoolName(b);
+		if(m_pState->GetBoolLengthFormat() == ShortBool)
+			m_stream << name[0];
+		else
+			m_stream << name;
+
         StartedScalar();
 
 		return *this;
