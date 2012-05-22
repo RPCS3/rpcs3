@@ -40,6 +40,7 @@ namespace YAML
 		GroupType::value CurGroupType() const;
         FlowType::value CurGroupFlowType() const;
         int CurGroupIndent() const;
+        std::size_t CurGroupChildCount() const;
 		int CurIndent() const { return m_curIndent; }
         bool HasAnchor() const { return m_hasAnchor; }
         bool HasTag() const { return m_hasTag; }

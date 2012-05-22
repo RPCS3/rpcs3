@@ -119,6 +119,11 @@ namespace YAML
         return m_groups.empty() ? 0 : m_groups.top().indent;
     }
 
+    std::size_t EmitterState::CurGroupChildCount() const
+    {
+        return m_groups.empty() ? 0 : m_groups.top().childCount;
+    }
+
 	void EmitterState::ClearModifiedSettings()
 	{
 		m_modifiedSettings.clear();

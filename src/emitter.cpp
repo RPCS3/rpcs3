@@ -313,12 +313,14 @@ namespace YAML
     void Emitter::BlockSeqPrepareNode()
     {
         const unsigned curIndent = m_pState->CurIndent();
-        if(m_stream.col() > curIndent) {
-            m_stream << "\n";
+        if(!m_pState->HasTag() && !m_pState->HasAnchor()) {
+            if(m_pState->CurGroupChildCount() > 0) {
+                m_stream << "\n";
+            }
+            m_stream << IndentTo(curIndent);
+            m_stream << "-";
+            m_stream << IndentTo(curIndent + m_pState->CurGroupIndent());
         }
-        m_stream << IndentTo(curIndent);
-        m_stream << "-";
-        m_stream << IndentTo(curIndent + m_pState->CurGroupIndent());
     }
     
     void Emitter::FlowMapPrepareNode()
