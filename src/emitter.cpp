@@ -436,6 +436,31 @@ namespace YAML
         m_stream << IndentTo(indent);
     }
 
+    void Emitter::PrepareIntegralStream(std::stringstream& stream) const
+    {
+		
+		switch(m_pState->GetIntFormat()) {
+			case Dec:
+				stream << std::dec;
+				break;
+			case Hex:
+                stream << "0x";
+				stream << std::hex;
+				break;
+			case Oct:
+                stream << "0";
+				stream << std::oct;
+				break;
+			default:
+				assert(false);
+		}
+    }
+
+    void Emitter::StartedScalar()
+    {
+        m_pState->StartedScalar();
+    }
+
 	// *******************************************************************************************
 	// overloads of Write
 	
@@ -464,7 +489,7 @@ namespace YAML
                 break;
         }
 
-        m_pState->StartedScalar();
+        StartedScalar();
         
 		return *this;
 	}
@@ -521,7 +546,7 @@ namespace YAML
 
         PrepareNode(EmitterNodeType::Scalar);
         m_stream << ComputeFullBoolName(b);
-        m_pState->StartedScalar();
+        StartedScalar();
 
 		return *this;
 	}
@@ -533,7 +558,7 @@ namespace YAML
 
         PrepareNode(EmitterNodeType::Scalar);
         m_stream << ch;
-        m_pState->StartedScalar();
+        StartedScalar();
 
 		return *this;
 	}
@@ -555,7 +580,7 @@ namespace YAML
 			return *this;
 		}
         
-        m_pState->StartedScalar();
+        StartedScalar();
 
 		return *this;
 	}
@@ -639,7 +664,7 @@ namespace YAML
 			return *this;
 
         // TODO
-        m_pState->StartedScalar();
+        StartedScalar();
 
 		return *this;
 	}
@@ -653,7 +678,7 @@ namespace YAML
 
         PrepareNode(EmitterNodeType::Scalar);
 		Utils::WriteBinary(m_stream, binary);
-        m_pState->StartedScalar();
+        StartedScalar();
 
 		return *this;
 	}

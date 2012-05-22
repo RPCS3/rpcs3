@@ -10,7 +10,7 @@ int main()
     out << YAML::Anchor("a") << YAML::Comment("anchor") << "item 1" << YAML::Comment("a");
     out << YAML::BeginMap << YAML::Comment("b");
     out << "pens" << YAML::Comment("foo") << "a" << YAML::Comment("bar");
-    out << "pencils" << "b";
+    out << "pencils" << 15;
     out << YAML::EndMap << YAML::Comment("monkey");
     out << "item 2";
     out << YAML::EndSeq;

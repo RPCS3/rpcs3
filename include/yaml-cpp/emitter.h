@@ -74,6 +74,9 @@ namespace YAML
         template<typename T> void SetStreamablePrecision(std::stringstream&) {}
         unsigned GetFloatPrecision() const;
         unsigned GetDoublePrecision() const;
+        
+        void PrepareIntegralStream(std::stringstream& stream) const;
+        void StartedScalar();
 	
 	private:
 		void EmitBeginDoc();
@@ -111,6 +114,15 @@ namespace YAML
 		if(!good())
 			return *this;
 		
+        PrepareNode(EmitterNodeType::Scalar);
+
+        std::stringstream stream;
+        PrepareIntegralStream(stream);
+        stream << value;
+        m_stream << stream.str();
+        
+        StartedScalar();
+
 		return *this;
 	}
 
