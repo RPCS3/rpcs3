@@ -210,7 +210,7 @@ namespace YAML
 		if(!good())
 			return;
         
-        PrepareNode();
+        PrepareNode(m_pState->NextGroupType(GroupType::Seq));
         
         m_pState->BeginGroup(GroupType::Seq);
 	}
@@ -230,7 +230,7 @@ namespace YAML
 		if(!good())
 			return;
 
-        PrepareNode();
+        PrepareNode(m_pState->NextGroupType(GroupType::Map));
         
         m_pState->BeginGroup(GroupType::Map);
 	}
@@ -258,40 +258,31 @@ namespace YAML
 
     // Put the stream in a state so we can simply write the next node
     // E.g., if we're in a sequence, write the "- "
-    void Emitter::PrepareNode()
+    void Emitter::PrepareNode(EmitterNodeType::value child)
     {
-        switch(m_pState->CurGroupType()) {
-            case GroupType::None:
-                PrepareTopNode();
+        switch(m_pState->CurGroupNodeType()) {
+            case EmitterNodeType::None:
+                PrepareTopNode(child);
                 break;
-            case GroupType::Seq:
-                switch(m_pState->CurGroupFlowType()) {
-                    case FlowType::Flow:
-                        FlowSeqPrepareNode();
-                        break;
-                    case FlowType::Block:
-                        BlockSeqPrepareNode();
-                        break;
-                    case FlowType::None:
-                        assert(false);
-                }
+            case EmitterNodeType::FlowSeq:
+                FlowSeqPrepareNode(child);
                 break;
-            case GroupType::Map:
-                switch(m_pState->CurGroupFlowType()) {
-                    case FlowType::Flow:
-                        FlowMapPrepareNode();
-                        break;
-                    case FlowType::Block:
-                        BlockMapPrepareNode();
-                        break;
-                    case FlowType::None:
-                        assert(false);
-                }
+            case EmitterNodeType::BlockSeq:
+                BlockSeqPrepareNode(child);
+                break;
+            case EmitterNodeType::FlowMap:
+                FlowMapPrepareNode(child);
+                break;
+            case EmitterNodeType::BlockMap:
+                BlockMapPrepareNode(child);
+                break;
+            case EmitterNodeType::Scalar:
+                assert(false);
                 break;
         }
     }
     
-    void Emitter::PrepareTopNode()
+    void Emitter::PrepareTopNode(EmitterNodeType::value child)
     {
         const bool hasAnchor = m_pState->HasAnchor();
         const bool hasTag = m_pState->HasTag();
@@ -306,11 +297,11 @@ namespace YAML
             m_stream << " ";
     }
     
-    void Emitter::FlowSeqPrepareNode()
+    void Emitter::FlowSeqPrepareNode(EmitterNodeType::value child)
     {
     }
 
-    void Emitter::BlockSeqPrepareNode()
+    void Emitter::BlockSeqPrepareNode(EmitterNodeType::value child)
     {
         const unsigned curIndent = m_pState->CurIndent();
         if(!m_pState->HasTag() && !m_pState->HasAnchor()) {
@@ -319,16 +310,26 @@ namespace YAML
             }
             m_stream << IndentTo(curIndent);
             m_stream << "-";
-            m_stream << IndentTo(curIndent + m_pState->CurGroupIndent());
         }
     }
     
-    void Emitter::FlowMapPrepareNode()
+    void Emitter::FlowMapPrepareNode(EmitterNodeType::value child)
     {
     }
 
-    void Emitter::BlockMapPrepareNode()
+    void Emitter::BlockMapPrepareNode(EmitterNodeType::value child)
     {
+        if(!m_pState->HasTag() && !m_pState->HasAnchor()) {
+            const std::size_t childCount = m_pState->CurGroupChildCount();
+            if(childCount % 2 == 0) {
+                // key
+                if(childCount > 0) {
+                    m_stream << "\n";
+                }
+            } else {
+                // value
+            }
+        }
     }
 
 	// *******************************************************************************************
@@ -339,7 +340,7 @@ namespace YAML
 		if(!good())
 			return *this;
         
-        PrepareNode();
+        PrepareNode(EmitterNodeType::Scalar);
         
 		const bool escapeNonAscii = m_pState->GetOutputCharset() == EscapeNonAscii;
         const StringFormat::value strFormat = Utils::ComputeStringFormat(str, m_pState->GetStringFormat(), m_pState->CurGroupFlowType(), escapeNonAscii);

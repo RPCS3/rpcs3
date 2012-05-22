@@ -52,6 +52,25 @@ namespace YAML
         m_hasTag = false;
     }
 
+    EmitterNodeType::value EmitterState::NextGroupType(GroupType::value type) const
+    {
+        if(type == GroupType::Seq) {
+            if(GetFlowType(type) == Block)
+                return EmitterNodeType::BlockSeq;
+            else
+                return EmitterNodeType::FlowSeq;
+        } else {
+            if(GetFlowType(type) == Block)
+                return EmitterNodeType::BlockMap;
+            else
+                return EmitterNodeType::FlowMap;
+        }
+        
+        // can't happen
+        assert(false);
+        return EmitterNodeType::None;
+    }
+    
     void EmitterState::BeginScalar()
     {
         BeginNode();
@@ -70,7 +89,10 @@ namespace YAML
 		pGroup->modifiedSettings = m_modifiedSettings;
 
 		// set up group
-		pGroup->flow = GetFlowType(type);
+        if(GetFlowType(type) == Block)
+            pGroup->flowType = FlowType::Block;
+        else
+            pGroup->flowType = FlowType::Flow;
 		pGroup->indent = GetIndent();
 
 		m_groups.push(pGroup);
@@ -97,21 +119,23 @@ namespace YAML
 		// by a local setting we just popped, so we need to restore them
 		m_globalModifiedSettings.restore();
 	}
-		
-	GroupType::value EmitterState::CurGroupType() const
+
+    EmitterNodeType::value EmitterState::CurGroupNodeType() const
+    {
+        if(m_groups.empty())
+            return EmitterNodeType::None;
+        
+        return m_groups.top().NodeType();
+    }
+
+    GroupType::value EmitterState::CurGroupType() const
 	{
-		if(m_groups.empty())
-			return GroupType::None;
-		
-		return m_groups.top().type;
+        return m_groups.empty() ? GroupType::None : m_groups.top().type;
 	}
 	
     FlowType::value EmitterState::CurGroupFlowType() const
 	{
-		if(m_groups.empty())
-			return FlowType::None;
-		
-		return (m_groups.top().flow == Flow ? FlowType::Flow : FlowType::Block);
+        return m_groups.empty() ? FlowType::None : m_groups.top().flowType;
 	}
 
     int EmitterState::CurGroupIndent() const

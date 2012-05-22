@@ -8,6 +8,7 @@
 
 #include "ptr_stack.h"
 #include "setting.h"
+#include "yaml-cpp/emitterdef.h"
 #include "yaml-cpp/emittermanip.h"
 #include <cassert>
 #include <vector>
@@ -36,11 +37,15 @@ namespace YAML
         void BeginScalar();
 		void BeginGroup(GroupType::value type);
 		void EndGroup(GroupType::value type);
-		
+
+        EmitterNodeType::value NextGroupType(GroupType::value type) const;
+        EmitterNodeType::value CurGroupNodeType() const;
+
 		GroupType::value CurGroupType() const;
         FlowType::value CurGroupFlowType() const;
         int CurGroupIndent() const;
         std::size_t CurGroupChildCount() const;
+
 		int CurIndent() const { return m_curIndent; }
         bool HasAnchor() const { return m_hasAnchor; }
         bool HasTag() const { return m_hasTag; }
@@ -120,11 +125,29 @@ namespace YAML
 			explicit Group(GroupType::value type_): type(type_), indent(0), childCount(0) {}
 			
             GroupType::value type;
-			EMITTER_MANIP flow;
+            FlowType::value flowType;
 			int indent;
             std::size_t childCount;
 			
 			SettingChanges modifiedSettings;
+            
+            EmitterNodeType::value NodeType() const {
+                if(type == GroupType::Seq) {
+                    if(flowType == FlowType::Flow)
+                        return EmitterNodeType::FlowSeq;
+                    else
+                        return EmitterNodeType::BlockSeq;
+                } else {
+                    if(flowType == FlowType::Flow)
+                        return EmitterNodeType::FlowMap;
+                    else
+                        return EmitterNodeType::BlockMap;
+                }
+
+                // can't get here
+                assert(false);
+                return EmitterNodeType::None;
+            }
 		};
 
 		ptr_stack<Group> m_groups;

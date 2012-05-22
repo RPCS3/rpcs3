@@ -8,6 +8,7 @@
 
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/binary.h"
+#include "yaml-cpp/emitterdef.h"
 #include "yaml-cpp/emittermanip.h"
 #include "yaml-cpp/ostream.h"
 #include "yaml-cpp/noncopyable.h"
@@ -85,12 +86,12 @@ namespace YAML
 		void EmitKindTag();
 		void EmitTag(bool verbatim, const _Tag& tag);
 		
-        void PrepareNode();
-        void PrepareTopNode();
-        void FlowSeqPrepareNode();
-        void BlockSeqPrepareNode();
-        void FlowMapPrepareNode();
-        void BlockMapPrepareNode();
+        void PrepareNode(EmitterNodeType::value child);
+        void PrepareTopNode(EmitterNodeType::value child);
+        void FlowSeqPrepareNode(EmitterNodeType::value child);
+        void BlockSeqPrepareNode(EmitterNodeType::value child);
+        void FlowMapPrepareNode(EmitterNodeType::value child);
+        void BlockMapPrepareNode(EmitterNodeType::value child);
         
 		const char *ComputeFullBoolName(bool b) const;
 		bool CanEmitNewline() const;

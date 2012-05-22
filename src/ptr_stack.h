@@ -38,7 +38,10 @@ public:
 	}
 	T& top() { return *m_data.back(); }
 	const T& top() const { return *m_data.back(); }
-	
+
+	T& top(std::ptrdiff_t diff) { return **(m_data.end() - 1 + diff); }
+	const T& top(std::ptrdiff_t diff) const { return **(m_data.end() - 1 + diff); }
+
 private:
 	std::vector<T*> m_data;
 };
