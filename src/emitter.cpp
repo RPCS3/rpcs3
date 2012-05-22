@@ -249,11 +249,15 @@ namespace YAML
 	{
 		if(!good())
 			return;
+        
+        PrepareNode(m_pState->NextGroupType(GroupType::None));
+        m_stream << "\n";
+        m_pState->SetNonContent();
 	}
 
 	bool Emitter::CanEmitNewline() const
 	{
-        return false;
+        return true;
 	}
 
     // Put the stream in a state so we can simply write the next node

@@ -36,6 +36,7 @@ namespace YAML
 		// node handling
         void SetAnchor();
         void SetTag();
+        void SetNonContent();
         void BeginScalar();
 		void BeginGroup(GroupType::value type);
 		void EndGroup(GroupType::value type);
@@ -51,7 +52,7 @@ namespace YAML
 		int CurIndent() const { return m_curIndent; }
         bool HasAnchor() const { return m_hasAnchor; }
         bool HasTag() const { return m_hasTag; }
-        bool HasBegunNode() const { return m_hasAnchor || m_hasTag; }
+        bool HasBegunNode() const { return m_hasAnchor || m_hasTag || m_hasNonContent; }
 
 		void ClearModifiedSettings();
 
@@ -157,6 +158,7 @@ namespace YAML
 		unsigned m_curIndent;
         bool m_hasAnchor;
         bool m_hasTag;
+        bool m_hasNonContent;
 	};
 
 	template <typename T>

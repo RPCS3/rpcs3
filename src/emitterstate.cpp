@@ -4,7 +4,7 @@
 
 namespace YAML
 {
-	EmitterState::EmitterState(): m_isGood(true), m_curIndent(0), m_hasAnchor(false), m_hasTag(false)
+	EmitterState::EmitterState(): m_isGood(true), m_curIndent(0), m_hasAnchor(false), m_hasTag(false), m_hasNonContent(false)
 	{
 		// set default global manipulators
 		m_charset.set(EmitNonAscii);
@@ -53,6 +53,11 @@ namespace YAML
         m_hasTag = true;
     }
 
+    void EmitterState::SetNonContent()
+    {
+        m_hasNonContent = true;
+    }
+
     void EmitterState::BeginNode()
     {
         if(!m_groups.empty())
@@ -60,6 +65,7 @@ namespace YAML
         
         m_hasAnchor = false;
         m_hasTag = false;
+        m_hasNonContent = false;
     }
 
     EmitterNodeType::value EmitterState::NextGroupType(GroupType::value type) const

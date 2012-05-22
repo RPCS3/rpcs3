@@ -9,7 +9,10 @@ int main()
     out << "foo";
     out << YAML::LocalTag("hi") << "bar";
     out << YAML::Anchor("asdf") << YAML::BeginMap;
-    out << "a" << "b" << "c" << "d";
+    out << "a" << "b" << "c" << YAML::Newline;
+    out << YAML::Anchor("a") << YAML::BeginMap;
+    out << "a" << "b";
+    out << YAML::EndMap;
     out << YAML::EndMap;
     out << YAML::LocalTag("hi") << YAML::BeginSeq;
     out << "a" << "b";
