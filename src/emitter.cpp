@@ -813,7 +813,7 @@ namespace YAML
 			return *this;
 
         PrepareNode(EmitterNodeType::Scalar);
-        m_stream << ch;
+        Utils::WriteChar(m_stream, ch);
         StartedScalar();
 
 		return *this;

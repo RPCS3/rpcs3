@@ -4,7 +4,9 @@
 int main()
 {
     YAML::Emitter out;
-    out << YAML::DoubleQuoted << "Hello, World!\n";
+    out << YAML::BeginSeq;
+    out << ':';
+    out << YAML::EndSeq;
     
     std::cout << out.c_str() << "\n";
     return 0;
