@@ -918,7 +918,10 @@ namespace YAML
 		if(!good())
 			return *this;
 
-        // TODO
+        PrepareNode(EmitterNodeType::Scalar);
+        
+        m_stream << "~";
+
         StartedScalar();
 
 		return *this;
