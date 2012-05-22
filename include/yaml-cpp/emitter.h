@@ -93,6 +93,8 @@ namespace YAML
         void FlowMapPrepareNode(EmitterNodeType::value child);
         void BlockMapPrepareNode(EmitterNodeType::value child);
         
+        void SpaceOrIndentTo(bool requireSpace, unsigned indent);
+        
 		const char *ComputeFullBoolName(bool b) const;
 		bool CanEmitNewline() const;
 		

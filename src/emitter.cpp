@@ -322,8 +322,11 @@ namespace YAML
         const unsigned curIndent = m_pState->CurIndent();
         const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
         
-        if(!m_pState->HasBegunNode()) {
-            if(m_pState->CurGroupChildCount() > 0) {
+        if(child == EmitterNodeType::None)
+            return;
+        
+        if(!m_pState->HasBegunContent()) {
+            if(m_pState->CurGroupChildCount() > 0 || m_stream.comment()) {
                 m_stream << "\n";
             }
             m_stream << IndentTo(curIndent);
@@ -332,20 +335,18 @@ namespace YAML
         
         switch(child) {
             case EmitterNodeType::None:
+                break;
             case EmitterNodeType::Property:
             case EmitterNodeType::Scalar:
             case EmitterNodeType::FlowSeq:
             case EmitterNodeType::FlowMap:
-                if(m_pState->HasBegunContent())
-                    m_stream << " ";
-                else
-                    m_stream << IndentTo(nextIndent);
+                SpaceOrIndentTo(m_pState->HasBegunContent(), nextIndent);
                 break;
             case EmitterNodeType::BlockSeq:
                 m_stream << "\n";
                 break;
             case EmitterNodeType::BlockMap:
-                if(m_pState->HasBegunContent())
+                if(m_pState->HasBegunContent() || m_stream.comment())
                     m_stream << "\n";
                 break;
         }
@@ -382,14 +383,12 @@ namespace YAML
             // key
             switch(child) {
                 case EmitterNodeType::None:
+                    break;
                 case EmitterNodeType::Property:
                 case EmitterNodeType::Scalar:
                 case EmitterNodeType::FlowSeq:
                 case EmitterNodeType::FlowMap:
-                    if(m_pState->HasBegunContent())
-                        m_stream << " ";
-                    else
-                        m_stream << IndentTo(curIndent);
+                    SpaceOrIndentTo(m_pState->HasBegunContent(), curIndent);
                     break;
                 case EmitterNodeType::BlockSeq:
                 case EmitterNodeType::BlockMap:
@@ -399,11 +398,12 @@ namespace YAML
             // value
             switch(child) {
                 case EmitterNodeType::None:
+                    break;
                 case EmitterNodeType::Property:
                 case EmitterNodeType::Scalar:
                 case EmitterNodeType::FlowSeq:
                 case EmitterNodeType::FlowMap:
-                    m_stream << " ";
+                    SpaceOrIndentTo(true, nextIndent);
                     break;
                 case EmitterNodeType::BlockSeq:
                 case EmitterNodeType::BlockMap:
@@ -411,6 +411,17 @@ namespace YAML
                     break;
             }
         }
+    }
+
+    // SpaceOrIndentTo
+    // . Prepares for some more content by proper spacing
+    void Emitter::SpaceOrIndentTo(bool requireSpace, unsigned indent)
+    {
+        if(m_stream.comment())
+            m_stream << "\n";
+        if(m_stream.col() > 0 && requireSpace)
+            m_stream << " ";
+        m_stream << IndentTo(indent);
     }
 
 	// *******************************************************************************************
