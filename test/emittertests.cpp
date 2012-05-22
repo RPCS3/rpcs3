@@ -564,7 +564,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "-   key 1: value 1\n    key 2:\n        - a\n        - b\n        - c";
+			desiredOutput = "-   key 1: value 1\n    key 2:\n        -   a\n        -   b\n        -   c";
 		}
 
 		void SimpleGlobalSettings(YAML::Emitter& out, std::string& desiredOutput)
