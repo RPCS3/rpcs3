@@ -191,7 +191,7 @@ namespace Test
 			out << YAML::Value << "demon";
 			out << YAML::EndMap;
 			
-			desiredOutput = "?\n  - 1\n  - 3\n: monster\n? [2, 0]\n: demon";
+			desiredOutput = "? - 1\n  - 3\n: monster\n? [2, 0]\n: demon";
 		}
 
 		void AutoLongKey(YAML::Emitter& out, std::string& desiredOutput)
@@ -205,7 +205,7 @@ namespace Test
 			out << YAML::Value << "angel";
 			out << YAML::EndMap;
 			
-			desiredOutput = "?\n  - 1\n  - 3\n: monster\n? [2, 0]\n: demon\nthe origin: angel";
+			desiredOutput = "? - 1\n  - 3\n: monster\n? [2, 0]\n: demon\nthe origin: angel";
 		}
 		
 		void ScalarFormat(YAML::Emitter& out, std::string& desiredOutput)
@@ -257,7 +257,7 @@ namespace Test
 			out << "total value";
 			out << YAML::EndMap;
 			
-			desiredOutput = "?\n  key: value\n  next key: next value\n: total value";
+			desiredOutput = "? key: value\n  next key: next value\n: total value";
 		}
 		
 		void AliasAndAnchor(YAML::Emitter& out, std::string& desiredOutput)
