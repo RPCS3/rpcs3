@@ -212,7 +212,7 @@ namespace YAML
         
         PrepareNode(m_pState->NextGroupType(GroupType::Seq));
         
-        m_pState->BeginGroup(GroupType::Seq);
+        m_pState->StartedGroup(GroupType::Seq);
 	}
 	
 	// EmitEndSeq
@@ -221,7 +221,7 @@ namespace YAML
 		if(!good())
 			return;
         
-        m_pState->EndGroup(GroupType::Seq);
+        m_pState->EndedGroup(GroupType::Seq);
 	}
 	
 	// EmitBeginMap
@@ -232,7 +232,7 @@ namespace YAML
 
         PrepareNode(m_pState->NextGroupType(GroupType::Map));
         
-        m_pState->BeginGroup(GroupType::Map);
+        m_pState->StartedGroup(GroupType::Map);
 	}
 	
 	// EmitEndMap
@@ -241,7 +241,7 @@ namespace YAML
 		if(!good())
 			return;
 
-        m_pState->EndGroup(GroupType::Map);
+        m_pState->EndedGroup(GroupType::Map);
     }
 
 	// EmitNewline
@@ -438,7 +438,7 @@ namespace YAML
                 break;
         }
 
-        m_pState->BeginScalar();
+        m_pState->StartedScalar();
         
 		return *this;
 	}
@@ -493,7 +493,7 @@ namespace YAML
 		if(!good())
 			return *this;
 
-        m_pState->BeginScalar();
+        m_pState->StartedScalar();
 
 		return *this;
 	}
@@ -503,7 +503,7 @@ namespace YAML
 		if(!good())
 			return *this;
 
-        m_pState->BeginScalar();
+        m_pState->StartedScalar();
 
 		return *this;
 	}
@@ -525,7 +525,7 @@ namespace YAML
 			return *this;
 		}
         
-        m_pState->BeginScalar();
+        m_pState->StartedScalar();
 
 		return *this;
 	}
@@ -592,7 +592,7 @@ namespace YAML
 		if(!good())
 			return *this;
 
-        m_pState->BeginScalar();
+        m_pState->StartedScalar();
 
 		return *this;
 	}
@@ -602,7 +602,7 @@ namespace YAML
 		if(!good())
 			return *this;
 
-        m_pState->BeginScalar();
+        m_pState->StartedScalar();
 
 		return *this;
 	}
@@ -614,7 +614,7 @@ namespace YAML
 		if(!good())
 			return *this;
 
-        m_pState->BeginScalar();
+        m_pState->StartedScalar();
 
 		return *this;
 	}

@@ -37,9 +37,9 @@ namespace YAML
         void SetAnchor();
         void SetTag();
         void SetNonContent();
-        void BeginScalar();
-		void BeginGroup(GroupType::value type);
-		void EndGroup(GroupType::value type);
+        void StartedScalar();
+		void StartedGroup(GroupType::value type);
+		void EndedGroup(GroupType::value type);
 
         EmitterNodeType::value NextGroupType(GroupType::value type) const;
         EmitterNodeType::value CurGroupNodeType() const;
@@ -100,7 +100,7 @@ namespace YAML
 		template <typename T>
 		void _Set(Setting<T>& fmt, T value, FmtScope::value scope);
         
-        void BeginNode();
+        void StartedNode();
 		
 	private:
 		// basic state ok?

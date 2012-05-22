@@ -58,7 +58,7 @@ namespace YAML
         m_hasNonContent = true;
     }
 
-    void EmitterState::BeginNode()
+    void EmitterState::StartedNode()
     {
         if(!m_groups.empty())
             m_groups.top().childCount++;
@@ -87,14 +87,14 @@ namespace YAML
         return EmitterNodeType::None;
     }
     
-    void EmitterState::BeginScalar()
+    void EmitterState::StartedScalar()
     {
-        BeginNode();
+        StartedNode();
     }
 
-	void EmitterState::BeginGroup(GroupType::value type)
+	void EmitterState::StartedGroup(GroupType::value type)
 	{
-        BeginNode();
+        StartedNode();
 
 		const int lastGroupIndent = (m_groups.empty() ? 0 : m_groups.top().indent);
 		m_curIndent += lastGroupIndent;
@@ -114,7 +114,7 @@ namespace YAML
 		m_groups.push(pGroup);
 	}
 	
-	void EmitterState::EndGroup(GroupType::value type)
+	void EmitterState::EndedGroup(GroupType::value type)
 	{
 		if(m_groups.empty())
 			return SetError(ErrorMsg::UNMATCHED_GROUP_TAG);
