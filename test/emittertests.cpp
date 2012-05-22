@@ -205,7 +205,7 @@ namespace Test
 			out << YAML::Value << "angel";
 			out << YAML::EndMap;
 			
-			desiredOutput = "? - 1\n  - 3\n: monster\n? [2, 0]\n: demon\nthe origin: angel";
+			desiredOutput = "? - 1\n  - 3\n: monster\n[2, 0]: demon\nthe origin: angel";
 		}
 		
 		void ScalarFormat(YAML::Emitter& out, std::string& desiredOutput)

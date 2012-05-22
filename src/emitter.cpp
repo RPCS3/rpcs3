@@ -339,7 +339,6 @@ namespace YAML
     
     void Emitter::FlowSeqPrepareNode(EmitterNodeType::value child)
     {
-        const unsigned curIndent = m_pState->CurIndent();
         const unsigned lastIndent = m_pState->LastIndent();
 
         if(!m_pState->HasBegunNode()) {
@@ -359,7 +358,7 @@ namespace YAML
             case EmitterNodeType::Scalar:
             case EmitterNodeType::FlowSeq:
             case EmitterNodeType::FlowMap:
-                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, curIndent);
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, lastIndent);
                 break;
             case EmitterNodeType::BlockSeq:
             case EmitterNodeType::BlockMap:
@@ -431,7 +430,6 @@ namespace YAML
     
     void Emitter::FlowMapPrepareSimpleKey(EmitterNodeType::value child)
     {
-        const unsigned curIndent = m_pState->CurIndent();
         const unsigned lastIndent = m_pState->LastIndent();
         
         if(!m_pState->HasBegunNode()) {
@@ -451,7 +449,7 @@ namespace YAML
             case EmitterNodeType::Scalar:
             case EmitterNodeType::FlowSeq:
             case EmitterNodeType::FlowMap:
-                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, curIndent);
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, lastIndent);
                 break;
             case EmitterNodeType::BlockSeq:
             case EmitterNodeType::BlockMap:
@@ -462,7 +460,6 @@ namespace YAML
     
     void Emitter::FlowMapPrepareSimpleKeyValue(EmitterNodeType::value child)
     {
-        const unsigned curIndent = m_pState->CurIndent();
         const unsigned lastIndent = m_pState->LastIndent();
         
         if(!m_pState->HasBegunNode()) {
@@ -479,7 +476,7 @@ namespace YAML
             case EmitterNodeType::Scalar:
             case EmitterNodeType::FlowSeq:
             case EmitterNodeType::FlowMap:
-                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, curIndent);
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, lastIndent);
                 break;
             case EmitterNodeType::BlockSeq:
             case EmitterNodeType::BlockMap:
