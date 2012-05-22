@@ -111,6 +111,20 @@ namespace YAML
         return EmitterNodeType::None;
     }
     
+    void EmitterState::StartedDoc()
+    {
+        m_hasAnchor = false;
+        m_hasTag = false;
+        m_hasNonContent = false;
+    }
+    
+    void EmitterState::EndedDoc()
+    {
+        m_hasAnchor = false;
+        m_hasTag = false;
+        m_hasNonContent = false;
+    }
+
     void EmitterState::StartedScalar()
     {
         StartedNode();

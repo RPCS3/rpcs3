@@ -181,6 +181,8 @@ namespace YAML
         if(m_stream.col() > 0)
             m_stream << "\n";
         m_stream << "---\n";
+        
+        m_pState->StartedDoc();
 	}
 	
 	// EmitEndDoc
@@ -313,7 +315,7 @@ namespace YAML
     
     void Emitter::PrepareTopNode(EmitterNodeType::value child)
     {
-        if(m_pState->CurGroupChildCount() > 0 && m_stream.pos() > 0) {
+        if(m_pState->CurGroupChildCount() > 0 && m_stream.col() > 0) {
             if(child != EmitterNodeType::None)
                 EmitBeginDoc();
         }
