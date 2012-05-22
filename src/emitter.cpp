@@ -250,7 +250,7 @@ namespace YAML
 		if(!good())
 			return;
         
-        PrepareNode(m_pState->NextGroupType(GroupType::None));
+        PrepareNode(EmitterNodeType::None);
         m_stream << "\n";
         m_pState->SetNonContent();
 	}
