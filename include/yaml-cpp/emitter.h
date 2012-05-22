@@ -132,19 +132,28 @@ namespace YAML
 		if(!good())
 			return *this;
 		
+        PrepareNode(EmitterNodeType::Scalar);
+
+		std::stringstream stream;
+        SetStreamablePrecision<T>(stream);
+		stream << value;
+        m_stream << stream.str();
+        
+        StartedScalar();
+
 		return *this;
 	}
 	
     template<>
-    inline void Emitter::SetStreamablePrecision<float>(std::stringstream& str)
+    inline void Emitter::SetStreamablePrecision<float>(std::stringstream& stream)
     {
-		str.precision(GetFloatPrecision());
+		stream.precision(GetFloatPrecision());
     }
 
     template<>
-    inline void Emitter::SetStreamablePrecision<double>(std::stringstream& str)
+    inline void Emitter::SetStreamablePrecision<double>(std::stringstream& stream)
     {
-		str.precision(GetDoublePrecision());
+		stream.precision(GetDoublePrecision());
     }
 
 	// overloads of insertion
