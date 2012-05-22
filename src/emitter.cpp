@@ -304,12 +304,31 @@ namespace YAML
     void Emitter::BlockSeqPrepareNode(EmitterNodeType::value child)
     {
         const unsigned curIndent = m_pState->CurIndent();
+        const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
+        
         if(!m_pState->HasTag() && !m_pState->HasAnchor()) {
             if(m_pState->CurGroupChildCount() > 0) {
                 m_stream << "\n";
             }
             m_stream << IndentTo(curIndent);
             m_stream << "-";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                if(m_stream.col() < nextIndent)
+                    m_stream << IndentTo(nextIndent);
+                else
+                    m_stream << " ";
+                break;
+            case EmitterNodeType::BlockSeq:
+                m_stream << "\n";
+                break;
+            case EmitterNodeType::BlockMap:
+                break;
         }
     }
     
@@ -319,15 +338,59 @@ namespace YAML
 
     void Emitter::BlockMapPrepareNode(EmitterNodeType::value child)
     {
+        const unsigned curIndent = m_pState->CurIndent();
+        const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
+        const std::size_t childCount = m_pState->CurGroupChildCount();
+
         if(!m_pState->HasTag() && !m_pState->HasAnchor()) {
-            const std::size_t childCount = m_pState->CurGroupChildCount();
             if(childCount % 2 == 0) {
                 // key
                 if(childCount > 0) {
                     m_stream << "\n";
                 }
+                if(false /* long key */) {
+                }
             } else {
                 // value
+                if(false /* was long key */) {
+                } else {
+                    m_stream << ":";
+                }
+            }
+        }
+        
+        if(childCount % 2 == 0) {
+            // key
+            switch(child) {
+                case EmitterNodeType::None:
+                case EmitterNodeType::Scalar:
+                case EmitterNodeType::FlowSeq:
+                case EmitterNodeType::FlowMap:
+                    if(m_stream.col() < curIndent)
+                        m_stream << IndentTo(curIndent);
+                    else
+                        m_stream << " ";
+                    break;
+                case EmitterNodeType::BlockSeq:
+                case EmitterNodeType::BlockMap:
+                    break;
+            }
+        } else {
+            // value
+            switch(child) {
+                case EmitterNodeType::None:
+                case EmitterNodeType::Scalar:
+                case EmitterNodeType::FlowSeq:
+                case EmitterNodeType::FlowMap:
+                    if(m_stream.col() < nextIndent)
+                        m_stream << IndentTo(nextIndent);
+                    else
+                        m_stream << " ";
+                    break;
+                case EmitterNodeType::BlockSeq:
+                case EmitterNodeType::BlockMap:
+                    m_stream << "\n";
+                    break;
             }
         }
     }
