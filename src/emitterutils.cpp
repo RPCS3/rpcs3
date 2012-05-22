@@ -275,18 +275,23 @@ namespace YAML
 				GetNextCodePointAndAdvance(codePoint, i, str.end());
 				) 
 			{
-				if (codePoint == '\"')
-					out << "\\\"";
-				else if (codePoint == '\\')
-					out << "\\\\";
-				else if (codePoint < 0x20 || (codePoint >= 0x80 && codePoint <= 0xA0)) // Control characters and non-breaking space
-					WriteDoubleQuoteEscapeSequence(out, codePoint);
-				else if (codePoint == 0xFEFF) // Byte order marks (ZWNS) should be escaped (YAML 1.2, sec. 5.2)	
-					WriteDoubleQuoteEscapeSequence(out, codePoint);
-				else if (escapeNonAscii && codePoint > 0x7E)
-					WriteDoubleQuoteEscapeSequence(out, codePoint);
-				else
-					WriteCodePoint(out, codePoint);
+                switch(codePoint) {
+                    case '\"': out << "\\\""; break;
+                    case '\\': out << "\\\\"; break;
+                    case '\n': out << "\\n"; break;
+                    case '\t': out << "\\t"; break;
+                    case '\r': out << "\\r"; break;
+                    case '\b': out << "\\b"; break;
+                    default:
+                        if(codePoint < 0x20 || (codePoint >= 0x80 && codePoint <= 0xA0)) // Control characters and non-breaking space
+                            WriteDoubleQuoteEscapeSequence(out, codePoint);
+                        else if (codePoint == 0xFEFF) // Byte order marks (ZWNS) should be escaped (YAML 1.2, sec. 5.2)	
+                            WriteDoubleQuoteEscapeSequence(out, codePoint);
+                        else if (escapeNonAscii && codePoint > 0x7E)
+                            WriteDoubleQuoteEscapeSequence(out, codePoint);
+                        else
+                            WriteCodePoint(out, codePoint);
+                }
 			}
 			out << "\"";
 			return true;
