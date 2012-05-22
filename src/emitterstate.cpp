@@ -306,7 +306,7 @@ namespace YAML
 
 	bool EmitterState::SetIndent(unsigned value, FmtScope::value scope)
 	{
-		if(value == 0)
+		if(value <= 1)
 			return false;
 		
 		_Set(m_indent, value, scope);
