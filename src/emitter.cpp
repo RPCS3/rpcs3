@@ -580,7 +580,7 @@ namespace YAML
             case EmitterNodeType::Scalar:
             case EmitterNodeType::FlowSeq:
             case EmitterNodeType::FlowMap:
-                SpaceOrIndentTo(true, curIndent);
+                SpaceOrIndentTo(true, curIndent + 1);
                 break;
             case EmitterNodeType::BlockSeq:
             case EmitterNodeType::BlockMap:
@@ -611,7 +611,7 @@ namespace YAML
             case EmitterNodeType::FlowMap:
             case EmitterNodeType::BlockSeq:
             case EmitterNodeType::BlockMap:
-                SpaceOrIndentTo(true, nextIndent);
+                SpaceOrIndentTo(true, curIndent + 1);
                 break;
         }
     }
