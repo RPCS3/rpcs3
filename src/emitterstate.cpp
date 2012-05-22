@@ -58,12 +58,26 @@ namespace YAML
         m_hasNonContent = true;
     }
 
+    void EmitterState::SetLongKey()
+    {
+        assert(!m_groups.empty());        
+        if(m_groups.empty())
+            return;
+        
+        assert(m_groups.top().type == GroupType::Map);
+        assert(m_groups.top().flowType == FlowType::Block);
+        m_groups.top().longKey = true;
+    }
+
     void EmitterState::StartedNode()
     {
-        if(m_groups.empty())
+        if(m_groups.empty()) {
             m_docCount++;
-        else
+        } else {
             m_groups.top().childCount++;
+            if(m_groups.top().childCount % 2 == 0)
+                m_groups.top().longKey = false;
+        }
         
         m_hasAnchor = false;
         m_hasTag = false;
@@ -164,6 +178,11 @@ namespace YAML
     std::size_t EmitterState::CurGroupChildCount() const
     {
         return m_groups.empty() ? m_docCount : m_groups.top().childCount;
+    }
+
+    bool EmitterState::CurGroupLongKey() const
+    {
+        return m_groups.empty() ? false : m_groups.top().longKey;
     }
 
 	void EmitterState::ClearModifiedSettings()

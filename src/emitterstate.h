@@ -37,6 +37,7 @@ namespace YAML
         void SetAnchor();
         void SetTag();
         void SetNonContent();
+        void SetLongKey();
         void StartedScalar();
 		void StartedGroup(GroupType::value type);
 		void EndedGroup(GroupType::value type);
@@ -48,6 +49,7 @@ namespace YAML
         FlowType::value CurGroupFlowType() const;
         int CurGroupIndent() const;
         std::size_t CurGroupChildCount() const;
+        bool CurGroupLongKey() const;
 
 		int CurIndent() const { return m_curIndent; }
         bool HasAnchor() const { return m_hasAnchor; }
@@ -127,12 +129,13 @@ namespace YAML
 		SettingChanges m_globalModifiedSettings;
 		
 		struct Group {
-			explicit Group(GroupType::value type_): type(type_), indent(0), childCount(0) {}
+			explicit Group(GroupType::value type_): type(type_), indent(0), childCount(0), longKey(false) {}
 			
             GroupType::value type;
             FlowType::value flowType;
 			int indent;
             std::size_t childCount;
+            bool longKey;
 			
 			SettingChanges modifiedSettings;
             

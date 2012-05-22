@@ -4,17 +4,12 @@
 int main()
 {
     YAML::Emitter out;
-    out << YAML::Comment("Hello");
-    out << YAML::BeginSeq;
-    out << YAML::Comment("Hello");
-    out << YAML::Anchor("a") << YAML::Comment("anchor") << "item 1" << YAML::Comment("a");
-    out << YAML::BeginMap << YAML::Comment("b");
-    out << "pens" << YAML::Comment("foo") << 2.3 << YAML::Comment("bar");
-    out << "pencils" << 15;
-    out << YAML::EndMap << YAML::Comment("monkey");
-    out << "item 2";
-    out << YAML::EndSeq;
-    out << YAML::Comment("end");
+    out << YAML::BeginMap;
+    out << YAML::BeginMap;
+    out << "a" << "b";
+    out << YAML::EndMap;
+    out << "c";
+    out << YAML::EndMap;
     
     std::cout << out.c_str() << "\n";
     return 0;
