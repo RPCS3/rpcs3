@@ -155,8 +155,12 @@ namespace YAML
 	
 	void EmitterState::EndedGroup(GroupType::value type)
 	{
-		if(m_groups.empty())
-			return SetError(ErrorMsg::UNMATCHED_GROUP_TAG);
+		if(m_groups.empty()) {
+            if(type == GroupType::Seq)
+                return SetError(ErrorMsg::UNEXPECTED_END_SEQ);
+            else
+                return SetError(ErrorMsg::UNEXPECTED_END_MAP);
+        }
 		
 		// get rid of the current group
 		{
