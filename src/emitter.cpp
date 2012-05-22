@@ -369,7 +369,6 @@ namespace YAML
     void Emitter::BlockMapPrepareKey(EmitterNodeType::value child)
     {
         const unsigned curIndent = m_pState->CurIndent();
-        const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
         const std::size_t childCount = m_pState->CurGroupChildCount();
         
         if(child == EmitterNodeType::None)
@@ -520,6 +519,8 @@ namespace YAML
 		if(!good())
 			return *this;
 
+        PrepareNode(EmitterNodeType::Scalar);
+        m_stream << ComputeFullBoolName(b);
         m_pState->StartedScalar();
 
 		return *this;
@@ -530,6 +531,8 @@ namespace YAML
 		if(!good())
 			return *this;
 
+        PrepareNode(EmitterNodeType::Scalar);
+        m_stream << ch;
         m_pState->StartedScalar();
 
 		return *this;
@@ -635,6 +638,7 @@ namespace YAML
 		if(!good())
 			return *this;
 
+        // TODO
         m_pState->StartedScalar();
 
 		return *this;
@@ -647,6 +651,8 @@ namespace YAML
 		if(!good())
 			return *this;
 
+        PrepareNode(EmitterNodeType::Scalar);
+		Utils::WriteBinary(m_stream, binary);
         m_pState->StartedScalar();
 
 		return *this;
