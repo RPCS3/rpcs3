@@ -4,9 +4,10 @@
 int main()
 {
     YAML::Emitter out;
+    out << YAML::Anchor("monkey");
     out << YAML::BeginSeq;
     out << "foo";
-    out << "bar";
+    out << YAML::LocalTag("hi") << "bar";
     out << YAML::BeginMap;
     out << "a" << "b" << "c" << "d";
     out << YAML::EndMap;

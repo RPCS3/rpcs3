@@ -34,6 +34,8 @@ namespace YAML
 		void SetError(const std::string& error) { throw std::runtime_error(error); m_isGood = false; m_lastError = error; }
 		
 		// node handling
+        void SetAnchor();
+        void SetTag();
         void BeginScalar();
 		void BeginGroup(GroupType::value type);
 		void EndGroup(GroupType::value type);
@@ -49,6 +51,7 @@ namespace YAML
 		int CurIndent() const { return m_curIndent; }
         bool HasAnchor() const { return m_hasAnchor; }
         bool HasTag() const { return m_hasTag; }
+        bool HasBegunNode() const { return m_hasAnchor || m_hasTag; }
 
 		void ClearModifiedSettings();
 

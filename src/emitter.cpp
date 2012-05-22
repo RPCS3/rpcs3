@@ -284,17 +284,26 @@ namespace YAML
     
     void Emitter::PrepareTopNode(EmitterNodeType::value child)
     {
-        const bool hasAnchor = m_pState->HasAnchor();
-        const bool hasTag = m_pState->HasTag();
-        
-        if(!hasAnchor && !hasTag && m_stream.pos() > 0) {
+        if(!m_pState->HasBegunNode() && m_stream.pos() > 0) {
             EmitBeginDoc();
         }
         
-        // TODO: if we were writing null, and
-        // we wanted it blank, we wouldn't want a space
-        if(hasAnchor || hasTag)
-            m_stream << " ";
+        switch(child) {
+            case EmitterNodeType::None:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                // TODO: if we were writing null, and
+                // we wanted it blank, we wouldn't want a space
+                if(m_pState->HasBegunNode())
+                    m_stream << " ";
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                if(m_pState->HasBegunNode())
+                    m_stream << "\n";
+                break;
+        }
     }
     
     void Emitter::FlowSeqPrepareNode(EmitterNodeType::value child)
@@ -306,7 +315,7 @@ namespace YAML
         const unsigned curIndent = m_pState->CurIndent();
         const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
         
-        if(!m_pState->HasTag() && !m_pState->HasAnchor()) {
+        if(!m_pState->HasBegunNode()) {
             if(m_pState->CurGroupChildCount() > 0) {
                 m_stream << "\n";
             }
@@ -342,7 +351,7 @@ namespace YAML
         const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
         const std::size_t childCount = m_pState->CurGroupChildCount();
 
-        if(!m_pState->HasTag() && !m_pState->HasAnchor()) {
+        if(!m_pState->HasBegunNode()) {
             if(childCount % 2 == 0) {
                 // key
                 if(childCount > 0) {
@@ -507,8 +516,20 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
+        
+        if(m_pState->HasAnchor()) {
+            m_pState->SetError(ErrorMsg::INVALID_ANCHOR);
+            return *this;
+        }
 
-        m_pState->BeginScalar();
+        PrepareNode(EmitterNodeType::None);
+
+		if(!Utils::WriteAnchor(m_stream, anchor.content)) {
+			m_pState->SetError(ErrorMsg::INVALID_ANCHOR);
+			return *this;
+		}
+        
+        m_pState->SetAnchor();
 
 		return *this;
 	}
@@ -517,9 +538,29 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
-
-        m_pState->BeginScalar();
         
+        if(m_pState->HasTag()) {
+            m_pState->SetError(ErrorMsg::INVALID_TAG);
+            return *this;
+        }
+        
+        PrepareNode(EmitterNodeType::None);
+        
+		bool success = false;
+		if(tag.type == _Tag::Type::Verbatim)
+			success = Utils::WriteTag(m_stream, tag.content, true);
+		else if(tag.type == _Tag::Type::PrimaryHandle)
+			success = Utils::WriteTag(m_stream, tag.content, false);
+		else
+			success = Utils::WriteTagWithPrefix(m_stream, tag.prefix, tag.content);
+		
+		if(!success) {
+			m_pState->SetError(ErrorMsg::INVALID_TAG);
+			return *this;
+		}
+
+        m_pState->SetTag();
+
 		return *this;
 	}
 

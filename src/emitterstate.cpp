@@ -43,6 +43,16 @@ namespace YAML
 		SetMapKeyFormat(value, FmtScope::Local);
 	}
 	
+    void EmitterState::SetAnchor()
+    {
+        m_hasAnchor = true;
+    }
+        
+    void EmitterState::SetTag()
+    {
+        m_hasTag = true;
+    }
+
     void EmitterState::BeginNode()
     {
         if(!m_groups.empty())
