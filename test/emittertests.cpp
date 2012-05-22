@@ -938,7 +938,14 @@ namespace Test
             "  intelligence: 56";
         }
         
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////
+		void ForceSingleQuotedToDouble(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::SingleQuoted << "Hello\nWorld";
+
+            desiredOutput = "Hello\\nWorld";
+		}
+        
+        ////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		
 		void ExtraEndSeq(YAML::Emitter& out, std::string& desiredError)
@@ -960,13 +967,6 @@ namespace Test
 			out << YAML::Key << "Hello" << YAML::Value << "World";
 			out << YAML::EndMap;
 			out << YAML::EndMap;
-		}
-
-		void BadSingleQuoted(YAML::Emitter& out, std::string& desiredError)
-		{
-			desiredError = YAML::ErrorMsg::SINGLE_QUOTED_CHAR;
-			
-			out << YAML::SingleQuoted << "Hello\nWorld";
 		}
 
 		void InvalidAnchor(YAML::Emitter& out, std::string& desiredError)
@@ -1135,10 +1135,10 @@ namespace Test
 		RunEmitterTest(&Emitter::DashInBlockContext, "dash in block context", passed, total);
 		RunEmitterTest(&Emitter::HexAndOct, "hex and oct", passed, total);
 		RunEmitterTest(&Emitter::CompactMapWithNewline, "compact map with newline", passed, total);
+        RunEmitterTest(&Emitter::ForceSingleQuotedToDouble, "force single quoted to double", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);
-		RunEmitterErrorTest(&Emitter::BadSingleQuoted, "bad single quoted string", passed, total);
 		RunEmitterErrorTest(&Emitter::InvalidAnchor, "invalid anchor", passed, total);
 		RunEmitterErrorTest(&Emitter::InvalidAlias, "invalid alias", passed, total);
 		RunEmitterErrorTest(&Emitter::BadLocalTag, "bad local tag", passed, total);
