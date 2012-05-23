@@ -155,56 +155,36 @@ namespace Test {
 MockEventHandler handler;\
 std::stringstream stream(ex);\
 YAML::Parser parser(stream);\
-while(parser.HandleNextDocument(handler))\
+while(parser.HandleNextDocument(handler)) {}
 
 #define EXPECT_DOC_START()\
-do {\
-handler.Expect(Event(Event::DocStart, "", 0, ""));\
-} while(false)
+handler.Expect(Event(Event::DocStart, "", 0, ""))
     
 #define EXPECT_DOC_END()\
-do {\
-handler.Expect(Event(Event::DocEnd, "", 0, ""));\
-} while(false)
+handler.Expect(Event(Event::DocEnd, "", 0, ""))
     
 #define EXPECT_NULL(anchor)\
-do {\
-handler.Expect(Event(Event::Null, "", anchor, ""));\
-} while(false)
+handler.Expect(Event(Event::Null, "", anchor, ""))
     
 #define EXPECT_ALIAS(anchor)\
-do {\
-handler.Expect(Event(Event::Alias, "", anchor, ""));\
-} while(false)
+handler.Expect(Event(Event::Alias, "", anchor, ""))
     
 #define EXPECT_SCALAR(tag, anchor, value)\
-do {\
-handler.Expect(Event(Event::Scalar, tag, anchor, value));\
-} while(false)
+handler.Expect(Event(Event::Scalar, tag, anchor, value))
     
 #define EXPECT_SEQ_START(tag, anchor)\
-do {\
-handler.Expect(Event(Event::SeqStart, tag, anchor, ""));\
-} while(false)
+handler.Expect(Event(Event::SeqStart, tag, anchor, ""))
     
 #define EXPECT_SEQ_END()\
-do {\
-handler.Expect(Event(Event::SeqEnd, "", 0, ""));\
-} while(false)
+handler.Expect(Event(Event::SeqEnd, "", 0, ""))
     
 #define EXPECT_MAP_START(tag, anchor)\
-do {\
-handler.Expect(Event(Event::MapStart, tag, anchor, ""));\
-} while(false)
+handler.Expect(Event(Event::MapStart, tag, anchor, ""))
     
 #define EXPECT_MAP_END()\
-do {\
-handler.Expect(Event(Event::MapEnd, "", 0, ""));\
-} while(false)
+handler.Expect(Event(Event::MapEnd, "", 0, ""))
     
 #define DONE()\
-do {\
-return handler.Check();\
-} while(false)
+return handler.Check()
     
 }
