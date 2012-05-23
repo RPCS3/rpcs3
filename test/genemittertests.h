@@ -1,3 +1,4 @@
+#ifdef YAML_GEN_TESTS
 namespace Emitter {
 TEST test02571eee35ac0cbd3777(YAML::Emitter& out)
 {
@@ -9746,8 +9747,11 @@ TEST test7adafdc8be65a5d610bf(YAML::Emitter& out)
     DONE();
 }
 }
+#endif // YAML_GEN_TESTS
+
 void RunGenEmitterTests(int& passed, int& total)
 {
+#ifdef YAML_GEN_TESTS
     RunGenEmitterTest(&Emitter::test02571eee35ac0cbd3777, "test02571eee35ac0cbd3777", passed, total);
     RunGenEmitterTest(&Emitter::test71b969ca18898d226320, "test71b969ca18898d226320", passed, total);
     RunGenEmitterTest(&Emitter::testd69e4ea95ce6f221c6e7, "testd69e4ea95ce6f221c6e7", passed, total);
@@ -10246,4 +10250,7 @@ void RunGenEmitterTests(int& passed, int& total)
     RunGenEmitterTest(&Emitter::testec1cdffaae8842854947, "testec1cdffaae8842854947", passed, total);
     RunGenEmitterTest(&Emitter::test30727d97de63c1ad395a, "test30727d97de63c1ad395a", passed, total);
     RunGenEmitterTest(&Emitter::test7adafdc8be65a5d610bf, "test7adafdc8be65a5d610bf", passed, total);
+#else // YAML_GEN_TESTS
+   (void)passed; (void)total;
+#endif // YAML_GEN_TESTS
 }

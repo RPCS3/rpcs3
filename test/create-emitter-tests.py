@@ -3,6 +3,7 @@ import yaml
 import hashlib
 
 NS = 'Emitter'
+DEFINE = 'YAML_GEN_TESTS'
 EVENT_COUNT = 5
 
 def encode_stream(line):
@@ -142,6 +143,7 @@ def gen_tests():
         
 
 def create_emitter_tests(out):
+    out.write('#ifdef %s\n' % DEFINE)
     out.write('namespace %s {\n' % NS)
 
     tests = list(gen_tests())
@@ -166,11 +168,16 @@ def create_emitter_tests(out):
         out.write('}\n')
 
     out.write('}\n')
+    out.write('#endif // %s\n\n' % DEFINE)
 
     out.write('void RunGenEmitterTests(int& passed, int& total)\n')
     out.write('{\n')
+    out.write('#ifdef %s\n' % DEFINE)
     for test in tests:
         out.write('    RunGenEmitterTest(&Emitter::%s, "%s", passed, total);\n' % (test['name'], encode(test['name'])))
+    out.write('#else // %s\n' % DEFINE)
+    out.write('   (void)passed; (void)total;\n')
+    out.write('#endif // %s\n' % DEFINE)
     out.write('}\n')
 
 if __name__ == '__main__':
