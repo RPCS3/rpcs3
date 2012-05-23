@@ -315,6 +315,9 @@ namespace YAML
     
     void Emitter::PrepareTopNode(EmitterNodeType::value child)
     {
+        if(child == EmitterNodeType::None)
+            return;
+        
         if(m_pState->CurGroupChildCount() > 0 && m_stream.col() > 0) {
             if(child != EmitterNodeType::None)
                 EmitBeginDoc();
@@ -322,14 +325,14 @@ namespace YAML
         
         switch(child) {
             case EmitterNodeType::None:
+                break;
             case EmitterNodeType::Property:
             case EmitterNodeType::Scalar:
             case EmitterNodeType::FlowSeq:
             case EmitterNodeType::FlowMap:
                 // TODO: if we were writing null, and
                 // we wanted it blank, we wouldn't want a space
-                if(m_pState->HasBegunContent())
-                    m_stream << " ";
+                SpaceOrIndentTo(m_pState->HasBegunContent(), 0);
                 break;
             case EmitterNodeType::BlockSeq:
             case EmitterNodeType::BlockMap:
