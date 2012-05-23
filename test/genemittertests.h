@@ -7488,6 +7488,2263 @@ TEST test33c4f45355dc7df2e2a8(YAML::Emitter& out)
     EXPECT_DOC_END();
     DONE();
 }
+TEST testc55c40f32c34c890acce(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testb06ba64c5895f218175d(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test14adb5374833871b2d0c(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test7ff7826c0f0563ce5a65(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test394e607327447b08e729(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testdf03e1437e901976c2c8(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test77467fcda467dd063050(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test5bcea73651331a2357d0(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test2956b3f097a16a4cd951(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test3170422d0cad24cd602a(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testb37f0cd80f138e8f2622(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test3e00cce71da4636fa1f7(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testfd184c04759685f21abb(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test14ab4965eff0a569da16(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test271811f2df7210366780(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testfcfe8657dffc21f6cd45(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test609e44eab4ab95f31e33(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test7841fc715275a45a2770(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test662c03de87ca40bd943e(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test0a9475ec3c946fe11991(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test94d28ebdbee90f430eb1(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginMap;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testd5035afc82e23b67ce03(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginMap;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testcc9788c342da4454758f(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::Comment("comment");
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test140974453293fdb1155d(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testdc0b80a131730e98d735(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test1c5225b07d746c2bd331(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testa49a0be204cd2b57f17b(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testbe08cc0a08cf2cb5e7ec(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test4d2a2e12689655edd77c(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test4d4a25a54401f0282ceb(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::EndSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test91f55feebb012ce89a93(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test1f3d0b19c6a346b087e0(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test4e26682c2daf8ded04a6(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test6f24e6df03922bba0d8a(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test60849eca7dc178908ff1(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test28b7db2ac68bb806e143(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test8db156db7065942bc260(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST teste240aced6e2292a9b091(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test468628a845426ce4a106(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testa3a2d467766b74acd6fd(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test5bf63d8ed606d688d869(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test0d35c1487237ba7d8bdc(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testb1fddc2897760d60e733(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testbaf845554a46f088bf71(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test6383f28d62ad9ce3c075(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test88a4c1cc11b99a61eccd(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test4716a2cf58a70705987b(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test75222084929bd0f9d38f(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test2fb23c79eec625216523(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testb1699a6b7c5ded480677(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testd7de744a20ca1dc099db(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test900b2dcf20981b44ea65(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test20cc330b6d1171584aed(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test5ea8e3642fab864fb09d(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test42e21cbc65f534972ead(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::Comment("comment");
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test14e3b5dca1d7a5a0c957(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test9bd4800a58394b172738(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testb715a2b66987a872ced8(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST teste9b56880009cc6899131(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test21f96f767e38471c9d4d(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testa8aebba05fc1858c0a6c(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST teste6e7442377049b17ee9e(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test428b593e283163fee752(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << "bar";
+    out << YAML::EndMap;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test0b6c63323da4bf9798c2(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::Comment("comment");
+    out << YAML::EndMap;
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test0f4c45c39fe39dfc8a1d(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testb8043a7ae1de42dd81db(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test4d9b278579ffb76fc56d(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test672fc8b6d281f82b9332(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testb406d378fa0df952b051(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test68a227d03f20863f37e4(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testcee8582fd340377bda46(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test06fd48e8c86baf6fc05b(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test70b4ccbf71c0716bf8e4(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test449c2b349be8da36682b(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::Comment("comment");
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test9620fa69718e3b4fe391(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test3faaebe701bea6f8ee39(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test763ee61808091c7a354d(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test81b0d6b575228cde91e5(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testb607ae3c5d560092e37b(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testa53c54726737df14a5dd(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginSeq;
+    out << "foo";
+    out << YAML::EndSeq;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SEQ_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test071d73b309a1365e0b07(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testf8f45511528fa28cddcb(YAML::Emitter& out)
+{
+    out << YAML::Comment("comment");
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testabdd2bf3bdf550e3dd60(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::Comment("comment");
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test53424b35498a73fbede9(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testf0c6c1a1afced157d6a5(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST teste45dbac33918e0fee74f(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::Comment("comment");
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test903c7ab3d09d4323107f(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::Comment("comment");
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test5d39d351680dba4be04b(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << YAML::Comment("comment");
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testaa1e8d6d4385aab47bcd(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << YAML::Comment("comment");
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test9bd238b748ced1db588b(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::Comment("comment");
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST testec1cdffaae8842854947(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::Comment("comment");
+    out << YAML::EndSeq;
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test30727d97de63c1ad395a(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
+TEST test7adafdc8be65a5d610bf(YAML::Emitter& out)
+{
+    out << YAML::BeginSeq;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::BeginMap;
+    out << "foo";
+    out << "bar";
+    out << YAML::EndMap;
+    out << YAML::EndSeq;
+    out << YAML::Comment("comment");
+
+    HANDLE(out.c_str());
+    EXPECT_DOC_START();
+    EXPECT_SEQ_START("?", 0);
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_MAP_START("?", 0);
+    EXPECT_SCALAR("?", 0, "foo");
+    EXPECT_SCALAR("?", 0, "bar");
+    EXPECT_MAP_END();
+    EXPECT_SEQ_END();
+    EXPECT_DOC_END();
+    DONE();
+}
 }
 void RunGenEmitterTests(int& passed, int& total)
 {
@@ -7896,4 +10153,97 @@ void RunGenEmitterTests(int& passed, int& total)
     RunGenEmitterTest(&Emitter::test7661db62a921285da885, "test7661db62a921285da885", passed, total);
     RunGenEmitterTest(&Emitter::test9382f466be3e19ca395f, "test9382f466be3e19ca395f", passed, total);
     RunGenEmitterTest(&Emitter::test33c4f45355dc7df2e2a8, "test33c4f45355dc7df2e2a8", passed, total);
+    RunGenEmitterTest(&Emitter::testc55c40f32c34c890acce, "testc55c40f32c34c890acce", passed, total);
+    RunGenEmitterTest(&Emitter::testb06ba64c5895f218175d, "testb06ba64c5895f218175d", passed, total);
+    RunGenEmitterTest(&Emitter::test14adb5374833871b2d0c, "test14adb5374833871b2d0c", passed, total);
+    RunGenEmitterTest(&Emitter::test7ff7826c0f0563ce5a65, "test7ff7826c0f0563ce5a65", passed, total);
+    RunGenEmitterTest(&Emitter::test394e607327447b08e729, "test394e607327447b08e729", passed, total);
+    RunGenEmitterTest(&Emitter::testdf03e1437e901976c2c8, "testdf03e1437e901976c2c8", passed, total);
+    RunGenEmitterTest(&Emitter::test77467fcda467dd063050, "test77467fcda467dd063050", passed, total);
+    RunGenEmitterTest(&Emitter::test5bcea73651331a2357d0, "test5bcea73651331a2357d0", passed, total);
+    RunGenEmitterTest(&Emitter::test2956b3f097a16a4cd951, "test2956b3f097a16a4cd951", passed, total);
+    RunGenEmitterTest(&Emitter::test3170422d0cad24cd602a, "test3170422d0cad24cd602a", passed, total);
+    RunGenEmitterTest(&Emitter::testb37f0cd80f138e8f2622, "testb37f0cd80f138e8f2622", passed, total);
+    RunGenEmitterTest(&Emitter::test3e00cce71da4636fa1f7, "test3e00cce71da4636fa1f7", passed, total);
+    RunGenEmitterTest(&Emitter::testfd184c04759685f21abb, "testfd184c04759685f21abb", passed, total);
+    RunGenEmitterTest(&Emitter::test14ab4965eff0a569da16, "test14ab4965eff0a569da16", passed, total);
+    RunGenEmitterTest(&Emitter::test271811f2df7210366780, "test271811f2df7210366780", passed, total);
+    RunGenEmitterTest(&Emitter::testfcfe8657dffc21f6cd45, "testfcfe8657dffc21f6cd45", passed, total);
+    RunGenEmitterTest(&Emitter::test609e44eab4ab95f31e33, "test609e44eab4ab95f31e33", passed, total);
+    RunGenEmitterTest(&Emitter::test7841fc715275a45a2770, "test7841fc715275a45a2770", passed, total);
+    RunGenEmitterTest(&Emitter::test662c03de87ca40bd943e, "test662c03de87ca40bd943e", passed, total);
+    RunGenEmitterTest(&Emitter::test0a9475ec3c946fe11991, "test0a9475ec3c946fe11991", passed, total);
+    RunGenEmitterTest(&Emitter::test94d28ebdbee90f430eb1, "test94d28ebdbee90f430eb1", passed, total);
+    RunGenEmitterTest(&Emitter::testd5035afc82e23b67ce03, "testd5035afc82e23b67ce03", passed, total);
+    RunGenEmitterTest(&Emitter::testcc9788c342da4454758f, "testcc9788c342da4454758f", passed, total);
+    RunGenEmitterTest(&Emitter::test140974453293fdb1155d, "test140974453293fdb1155d", passed, total);
+    RunGenEmitterTest(&Emitter::testdc0b80a131730e98d735, "testdc0b80a131730e98d735", passed, total);
+    RunGenEmitterTest(&Emitter::test1c5225b07d746c2bd331, "test1c5225b07d746c2bd331", passed, total);
+    RunGenEmitterTest(&Emitter::testa49a0be204cd2b57f17b, "testa49a0be204cd2b57f17b", passed, total);
+    RunGenEmitterTest(&Emitter::testbe08cc0a08cf2cb5e7ec, "testbe08cc0a08cf2cb5e7ec", passed, total);
+    RunGenEmitterTest(&Emitter::test4d2a2e12689655edd77c, "test4d2a2e12689655edd77c", passed, total);
+    RunGenEmitterTest(&Emitter::test4d4a25a54401f0282ceb, "test4d4a25a54401f0282ceb", passed, total);
+    RunGenEmitterTest(&Emitter::test91f55feebb012ce89a93, "test91f55feebb012ce89a93", passed, total);
+    RunGenEmitterTest(&Emitter::test1f3d0b19c6a346b087e0, "test1f3d0b19c6a346b087e0", passed, total);
+    RunGenEmitterTest(&Emitter::test4e26682c2daf8ded04a6, "test4e26682c2daf8ded04a6", passed, total);
+    RunGenEmitterTest(&Emitter::test6f24e6df03922bba0d8a, "test6f24e6df03922bba0d8a", passed, total);
+    RunGenEmitterTest(&Emitter::test60849eca7dc178908ff1, "test60849eca7dc178908ff1", passed, total);
+    RunGenEmitterTest(&Emitter::test28b7db2ac68bb806e143, "test28b7db2ac68bb806e143", passed, total);
+    RunGenEmitterTest(&Emitter::test8db156db7065942bc260, "test8db156db7065942bc260", passed, total);
+    RunGenEmitterTest(&Emitter::teste240aced6e2292a9b091, "teste240aced6e2292a9b091", passed, total);
+    RunGenEmitterTest(&Emitter::test468628a845426ce4a106, "test468628a845426ce4a106", passed, total);
+    RunGenEmitterTest(&Emitter::testa3a2d467766b74acd6fd, "testa3a2d467766b74acd6fd", passed, total);
+    RunGenEmitterTest(&Emitter::test5bf63d8ed606d688d869, "test5bf63d8ed606d688d869", passed, total);
+    RunGenEmitterTest(&Emitter::test0d35c1487237ba7d8bdc, "test0d35c1487237ba7d8bdc", passed, total);
+    RunGenEmitterTest(&Emitter::testb1fddc2897760d60e733, "testb1fddc2897760d60e733", passed, total);
+    RunGenEmitterTest(&Emitter::testbaf845554a46f088bf71, "testbaf845554a46f088bf71", passed, total);
+    RunGenEmitterTest(&Emitter::test6383f28d62ad9ce3c075, "test6383f28d62ad9ce3c075", passed, total);
+    RunGenEmitterTest(&Emitter::test88a4c1cc11b99a61eccd, "test88a4c1cc11b99a61eccd", passed, total);
+    RunGenEmitterTest(&Emitter::test4716a2cf58a70705987b, "test4716a2cf58a70705987b", passed, total);
+    RunGenEmitterTest(&Emitter::test75222084929bd0f9d38f, "test75222084929bd0f9d38f", passed, total);
+    RunGenEmitterTest(&Emitter::test2fb23c79eec625216523, "test2fb23c79eec625216523", passed, total);
+    RunGenEmitterTest(&Emitter::testb1699a6b7c5ded480677, "testb1699a6b7c5ded480677", passed, total);
+    RunGenEmitterTest(&Emitter::testd7de744a20ca1dc099db, "testd7de744a20ca1dc099db", passed, total);
+    RunGenEmitterTest(&Emitter::test900b2dcf20981b44ea65, "test900b2dcf20981b44ea65", passed, total);
+    RunGenEmitterTest(&Emitter::test20cc330b6d1171584aed, "test20cc330b6d1171584aed", passed, total);
+    RunGenEmitterTest(&Emitter::test5ea8e3642fab864fb09d, "test5ea8e3642fab864fb09d", passed, total);
+    RunGenEmitterTest(&Emitter::test42e21cbc65f534972ead, "test42e21cbc65f534972ead", passed, total);
+    RunGenEmitterTest(&Emitter::test14e3b5dca1d7a5a0c957, "test14e3b5dca1d7a5a0c957", passed, total);
+    RunGenEmitterTest(&Emitter::test9bd4800a58394b172738, "test9bd4800a58394b172738", passed, total);
+    RunGenEmitterTest(&Emitter::testb715a2b66987a872ced8, "testb715a2b66987a872ced8", passed, total);
+    RunGenEmitterTest(&Emitter::teste9b56880009cc6899131, "teste9b56880009cc6899131", passed, total);
+    RunGenEmitterTest(&Emitter::test21f96f767e38471c9d4d, "test21f96f767e38471c9d4d", passed, total);
+    RunGenEmitterTest(&Emitter::testa8aebba05fc1858c0a6c, "testa8aebba05fc1858c0a6c", passed, total);
+    RunGenEmitterTest(&Emitter::teste6e7442377049b17ee9e, "teste6e7442377049b17ee9e", passed, total);
+    RunGenEmitterTest(&Emitter::test428b593e283163fee752, "test428b593e283163fee752", passed, total);
+    RunGenEmitterTest(&Emitter::test0b6c63323da4bf9798c2, "test0b6c63323da4bf9798c2", passed, total);
+    RunGenEmitterTest(&Emitter::test0f4c45c39fe39dfc8a1d, "test0f4c45c39fe39dfc8a1d", passed, total);
+    RunGenEmitterTest(&Emitter::testb8043a7ae1de42dd81db, "testb8043a7ae1de42dd81db", passed, total);
+    RunGenEmitterTest(&Emitter::test4d9b278579ffb76fc56d, "test4d9b278579ffb76fc56d", passed, total);
+    RunGenEmitterTest(&Emitter::test672fc8b6d281f82b9332, "test672fc8b6d281f82b9332", passed, total);
+    RunGenEmitterTest(&Emitter::testb406d378fa0df952b051, "testb406d378fa0df952b051", passed, total);
+    RunGenEmitterTest(&Emitter::test68a227d03f20863f37e4, "test68a227d03f20863f37e4", passed, total);
+    RunGenEmitterTest(&Emitter::testcee8582fd340377bda46, "testcee8582fd340377bda46", passed, total);
+    RunGenEmitterTest(&Emitter::test06fd48e8c86baf6fc05b, "test06fd48e8c86baf6fc05b", passed, total);
+    RunGenEmitterTest(&Emitter::test70b4ccbf71c0716bf8e4, "test70b4ccbf71c0716bf8e4", passed, total);
+    RunGenEmitterTest(&Emitter::test449c2b349be8da36682b, "test449c2b349be8da36682b", passed, total);
+    RunGenEmitterTest(&Emitter::test9620fa69718e3b4fe391, "test9620fa69718e3b4fe391", passed, total);
+    RunGenEmitterTest(&Emitter::test3faaebe701bea6f8ee39, "test3faaebe701bea6f8ee39", passed, total);
+    RunGenEmitterTest(&Emitter::test763ee61808091c7a354d, "test763ee61808091c7a354d", passed, total);
+    RunGenEmitterTest(&Emitter::test81b0d6b575228cde91e5, "test81b0d6b575228cde91e5", passed, total);
+    RunGenEmitterTest(&Emitter::testb607ae3c5d560092e37b, "testb607ae3c5d560092e37b", passed, total);
+    RunGenEmitterTest(&Emitter::testa53c54726737df14a5dd, "testa53c54726737df14a5dd", passed, total);
+    RunGenEmitterTest(&Emitter::test071d73b309a1365e0b07, "test071d73b309a1365e0b07", passed, total);
+    RunGenEmitterTest(&Emitter::testf8f45511528fa28cddcb, "testf8f45511528fa28cddcb", passed, total);
+    RunGenEmitterTest(&Emitter::testabdd2bf3bdf550e3dd60, "testabdd2bf3bdf550e3dd60", passed, total);
+    RunGenEmitterTest(&Emitter::test53424b35498a73fbede9, "test53424b35498a73fbede9", passed, total);
+    RunGenEmitterTest(&Emitter::testf0c6c1a1afced157d6a5, "testf0c6c1a1afced157d6a5", passed, total);
+    RunGenEmitterTest(&Emitter::teste45dbac33918e0fee74f, "teste45dbac33918e0fee74f", passed, total);
+    RunGenEmitterTest(&Emitter::test903c7ab3d09d4323107f, "test903c7ab3d09d4323107f", passed, total);
+    RunGenEmitterTest(&Emitter::test5d39d351680dba4be04b, "test5d39d351680dba4be04b", passed, total);
+    RunGenEmitterTest(&Emitter::testaa1e8d6d4385aab47bcd, "testaa1e8d6d4385aab47bcd", passed, total);
+    RunGenEmitterTest(&Emitter::test9bd238b748ced1db588b, "test9bd238b748ced1db588b", passed, total);
+    RunGenEmitterTest(&Emitter::testec1cdffaae8842854947, "testec1cdffaae8842854947", passed, total);
+    RunGenEmitterTest(&Emitter::test30727d97de63c1ad395a, "test30727d97de63c1ad395a", passed, total);
+    RunGenEmitterTest(&Emitter::test7adafdc8be65a5d610bf, "test7adafdc8be65a5d610bf", passed, total);
 }

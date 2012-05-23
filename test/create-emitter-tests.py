@@ -104,6 +104,12 @@ def gen_templates():
            [[scalar('foo')], [seq_start(), scalar('foo'), seq_end()], [map_start(), scalar('foo'), scalar('bar'), map_end()]],
            [map_end()],
            [doc_end(True)]]
+    yield [[doc_start(True)],
+           [seq_start()],
+           [[scalar('foo')], [seq_start(), scalar('foo'), seq_end()], [map_start(), scalar('foo'), scalar('bar'), map_end()]],
+           [[scalar('foo')], [seq_start(), scalar('foo'), seq_end()], [map_start(), scalar('foo'), scalar('bar'), map_end()]],
+           [seq_end()],
+           [doc_end(True)]]
 
 def expand(template):
     if len(template) == 0:
