@@ -61,8 +61,10 @@ def gen_tests():
 def create_emitter_tests(out):
     out.write('namespace %s {\n' % NS)
 
-    for test in gen_tests():
-        out.write('inline TEST %s(YAML::Emitter& out)\n' % test['name'])
+    tests = list(gen_tests())
+
+    for test in tests:
+        out.write('TEST %s(YAML::Emitter& out)\n' % test['name'])
         out.write('{\n')
         for event in test['events']:
             emit = event['emit']
@@ -80,6 +82,12 @@ def create_emitter_tests(out):
         out.write('    DONE();\n')
         out.write('}\n')
 
+    out.write('}\n')
+
+    out.write('void RunGenEmitterTests(int& passed, int& total)\n')
+    out.write('{\n')
+    for test in tests:
+        out.write('    RunGenEmitterTest(&Emitter::%s, %s, passed, total);\n' % (test['name'], encode(test['name'])))
     out.write('}\n')
 
 if __name__ == '__main__':

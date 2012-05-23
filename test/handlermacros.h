@@ -1,11 +1,10 @@
+#include "teststruct.h"
 #pragma once
 
 #include "yaml-cpp/yaml.h"
 #include "yaml-cpp/eventhandler.h"
 #include <string>
 #include <cassert>
-
-#define YAML_ASSERT(cond) do { if(!(cond)) return "  Assert failed: " #cond; } while(false)
 
 namespace Test {
     std::string Quote(const std::string& text) {
