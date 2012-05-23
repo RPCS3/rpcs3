@@ -42,7 +42,10 @@ def scalar(value, tag='', anchor='', anchor_id=0):
     if tag:
         out_tag = encode(tag)
     else:
-        out_tag = '!'
+        if value == encode(value):
+            out_tag = '?'
+        else:
+            out_tag = '!'
     emit += ['"%s"' % encode(value)]
     return {'emit': emit, 'handle': 'SCALAR("%s", %s, "%s")' % (out_tag, anchor_id, encode(value))}
 
@@ -50,7 +53,7 @@ def comment(value):
     return {'emit': 'YAML::Comment("%s")' % value, 'handle': ''}
 
 def gen_templates():
-    yield [[doc_start(), doc_start(True)], [scalar('foo\n')], [doc_end(), doc_end(True)]]
+    yield [[doc_start(), doc_start(True)], [scalar('foo')], [doc_end(), doc_end(True)]]
 
 def expand(template):
     if len(template) == 0:
@@ -70,7 +73,11 @@ def expand(template):
 def gen_events():
     for template in gen_templates():
         for events in expand(template):
-            yield events
+            base = list(events)
+            for i in range(0, len(base)+1):
+                cpy = list(base)
+                cpy.insert(i, comment('comment'))
+                yield cpy
 
 def gen_tests():
     for events in gen_events():
