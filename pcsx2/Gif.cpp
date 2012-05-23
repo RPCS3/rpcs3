@@ -50,6 +50,17 @@ void incGifChAddr(u32 qwc) {
 __fi void gifInterrupt()
 {
 	GIF_LOG("gifInterrupt caught!");
+	//Required for Path3 Masking timing!
+	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
+	{
+		gifUnit.gifPath[GIF_PATH_3].state = GIF_PATH_IDLE;
+
+		if(vif1Regs.stat.VGW)
+		{
+			CPU_INT(DMAC_GIF, 16);
+			return;
+		}
+	}
 
 	if (dmacRegs.ctrl.MFD == MFD_GIF) { // GIF MFIFO
 		//Console.WriteLn("GIF MFIFO");
@@ -238,7 +249,7 @@ void GIFdma()
 		GIFchain();	//Transfers the data set by the switch
 		CPU_INT(DMAC_GIF, gscycles);
 		return;
-	}
+	} else if(gspath3done == false) GIFdma();
 
 	prevcycles = 0;
 	CPU_INT(DMAC_GIF, gscycles);

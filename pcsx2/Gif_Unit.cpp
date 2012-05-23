@@ -72,7 +72,7 @@ bool Gif_HandlerAD(u8* pMem) {
 		GSSIGLBLID.LBLID = (GSSIGLBLID.LBLID&~data[1])|(data[0]&data[1]);
 	}
 	elif (reg >= 0x63 && reg != 0x7f) {
-		DevCon.Warning("GIF Handler - Write to unknown register! [reg=%x]", reg);
+		//DevCon.Warning("GIF Handler - Write to unknown register! [reg=%x]", reg);
 	}
 	return false;
 }

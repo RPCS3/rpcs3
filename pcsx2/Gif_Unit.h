@@ -183,7 +183,7 @@ struct Gif_Path {
 	s32 getReadAmount()     { return AtomicRead(readAmount) + gsPack.readAmount; }
 	bool hasDataRemaining() { return curOffset < curSize; }
 	bool isDone()           { return isMTVU() ? !mtvu.fakePackets 
-							: (!hasDataRemaining() && state == GIF_PATH_IDLE); }
+							: (!hasDataRemaining() && (state == GIF_PATH_IDLE || state == GIF_PATH_WAIT)); }
 
 	// Waits on the MTGS to process gs packets
 	void mtgsReadWait() {
@@ -295,7 +295,13 @@ struct Gif_Path {
 			if (gifTag.tag.EOP) {
 				GS_Packet t = gsPack;
 				t.done = 1;
-				state  = GIF_PATH_IDLE;
+
+				//Path 3 Masking is timing sensitive, we need to simulate its length! (NFSU2)
+				if((gifRegs.stat.APATH-1) == GIF_PATH_3)
+					state = GIF_PATH_WAIT;
+				else 
+					state  = GIF_PATH_IDLE;
+
 				gsPack.Reset();
 				gsPack.offset = curOffset;
 				return t; // Complete GS packet
@@ -584,7 +590,7 @@ struct Gif_Unit {
 	bool CanDoP3Slice() { return stat.IMT == 1 && gifPath[GIF_PATH_3].state == GIF_PATH_IMAGE; }
 	bool CanDoGif()		{ return stat.PSE == 0 && (CHECK_GIFREVERSEHACK ? 1 : stat.DIR == 0) && gsSIGNAL.queued == 0; }
 	//Mask stops the next packet which hasnt started from transferring
-	bool Path3Masked()  { return ((stat.M3R || stat.M3P) && (gifPath[GIF_PATH_3].state == GIF_PATH_IDLE)); }
+	bool Path3Masked()  { return ((stat.M3R || stat.M3P) && (gifPath[GIF_PATH_3].state == GIF_PATH_IDLE || gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)); }
 
 	void PrintInfo(bool printP1=1, bool printP2=1, bool printP3=1) {
 		u32 a = checkPaths(1,1,1), b = checkQueued(1,1,1);

@@ -56,7 +56,8 @@ enum GIF_PATH_STATE {
 	GIF_PATH_IDLE    = 0, // Path is idle (hasn't started a GS packet)
 	GIF_PATH_PACKED  = 1, // Path is on a PACKED  gif tag
 	GIF_PATH_REGLIST = 2, // Path is on a REGLIST gif tag
-	GIF_PATH_IMAGE   = 3  // Path is on a IMAGE   gif tag
+	GIF_PATH_IMAGE   = 3, // Path is on a IMAGE   gif tag
+	GIF_PATH_WAIT	 = 4  // Used only by PATH3 to simulate packet length (Path 3 Masking)
 };
 
 enum GIF_FLG {

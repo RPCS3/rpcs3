@@ -360,14 +360,14 @@ vifOp(vifCode_MskPath3) {
 vifOp(vifCode_Nop) {
 	pass1 { 
 		GetVifX.cmd = 0;
-		if(idx && vif1ch.chcr.STR == true)
+		/*if(idx && vif1ch.chcr.STR == true)
 		{
 			//Some games use a huge stream of NOPS to wait for a GIF packet to start, alas the way PCSX2 works it never starts
 			//So the mask can go on before the packet continues, causing desync.
 
 			if(((data[1] >> 24) & 0x7f) == 0x6)  //Look in to the future and see if we have a mask path 3 command (NFSU)
 				GetVifX.vifstalled = true; //Stall if we do to get the timing right.
-		}
+		}*/
 	}
 	pass3 { VifCodeLog("Nop"); }
 	return 0;
