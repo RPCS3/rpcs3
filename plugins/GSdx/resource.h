@@ -92,6 +92,8 @@
 #define IDC_HACK_DESCRIPTION            2073
 #define IDC_STATIC_MSAA                 2074
 #define IDC_STATIC_SKIPDRAW             2075
+#define IDC_CHECK_AGGRESSIVECRC         2076
+#define IDC_AGGRESSIVECRC               2076
 #define IDC_COLORSPACE                  3000
 #define IDR_CONVERT_FX                  10000
 #define IDR_TFX_FX                      10001
@@ -110,7 +112,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        10012
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         2076
+#define _APS_NEXT_CONTROL_VALUE         2077
 #define _APS_NEXT_SYMED_VALUE           5000
 #endif
 #endif

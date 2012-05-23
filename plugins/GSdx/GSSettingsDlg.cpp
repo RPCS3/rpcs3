@@ -422,6 +422,7 @@ void GSHacksDlg::OnInit()
 	CheckDlgButton(m_hWnd, IDC_OFFSETHACK, theApp.GetConfig("UserHacks_HalfPixelOffset", 0));
 	CheckDlgButton(m_hWnd, IDC_SPRITEHACK, theApp.GetConfig("UserHacks_SpriteHack", 0));
 	CheckDlgButton(m_hWnd, IDC_WILDHACK, theApp.GetConfig("UserHacks_WildHack", 0));
+	CheckDlgButton(m_hWnd, IDC_AGGRESSIVECRC, theApp.GetConfig("UserHacks_AggressiveCRC", 0));
 
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETRANGE, 0, MAKELPARAM(1000, 0));
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("UserHacks_SkipDraw", 0), 0));
@@ -483,6 +484,11 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 				helpstr = "Multisample Anti-Aliasing\n\nEnables hardware Anti-Aliasing. Needs lots of memory."
 						  " The Z-24 modes might need to have LogarithmicZ to compensate for the bits lost (only in DX9 mode).";
 				break;
+			case IDC_AGGRESSIVECRC:
+				helpstr = "Use more aggressive CRC hacks on some games\n\n"
+						  "Only affects few games, removing some effects which might make the image sharper/clearer.\n"
+						  "Affected games: FFX, FFX2, GOW2, SoTC, SSX3.";
+				break;
 			default:
 				helpstr = "Hover over an item to get a description.";
 				break;
@@ -506,6 +512,7 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 			theApp.SetConfig("UserHacks_SpriteHack", (int)IsDlgButtonChecked(m_hWnd, IDC_SPRITEHACK));
 			theApp.SetConfig("UserHacks_SkipDraw", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_GETPOS, 0, 0));
 			theApp.SetConfig("UserHacks_WildHack", (int)IsDlgButtonChecked(m_hWnd, IDC_WILDHACK));
+			theApp.SetConfig("UserHacks_AggressiveCRC", (int)IsDlgButtonChecked(m_hWnd, IDC_AGGRESSIVECRC));
 			EndDialog(m_hWnd, id);
 		} break;
 		}

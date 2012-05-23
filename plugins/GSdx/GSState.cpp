@@ -111,6 +111,8 @@ GSState::GSState()
 	s_save = !!theApp.GetConfig("save", 0);
 	s_savez = !!theApp.GetConfig("savez", 0);
 	s_saven = theApp.GetConfig("saven", 0);
+
+	userHacks_AggressiveCRC = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_AggressiveCRC", 0) : 0;
 }
 
 GSState::~GSState()
@@ -2871,6 +2873,7 @@ struct GSFrameInfo
 
 typedef bool (*GetSkipCount)(const GSFrameInfo& fi, int& skip);
 CRC::Region g_crc_region = CRC::NoRegion;
+int g_aggressive = 0;
 
 bool GSC_Okami(const GSFrameInfo& fi, int& skip)
 {
@@ -3044,7 +3047,7 @@ bool GSC_SoTC(const GSFrameInfo& fi, int& skip)
             // Not needed anymore? What did it fix anyway? (rama)
     if(skip == 0)
     {
-            if(fi.TME /*&& fi.FBP == 0x03d80*/ && fi.FPSM == 0 && fi.TBP0 == 0x03fc0 && fi.TPSM == 1)
+            if(g_aggressive && fi.TME /*&& fi.FBP == 0x03d80*/ && fi.FPSM == 0 && fi.TBP0 == 0x03fc0 && fi.TPSM == 1)
             {
                     skip = 48;	//removes sky bloom
             }
@@ -3429,13 +3432,13 @@ bool GSC_GodOfWar2(const GSFrameInfo& fi, int& skip)
 			{
 					skip = 1; // wall of fog
 			}
-			else if(fi.TPSM == PSM_PSMCT24 && fi.TME && (fi.FBP ==0x1300 ) && (fi.TBP0 ==0x0F00 || fi.TBP0 ==0x1300 || fi.TBP0==0x2b00)) // || fi.FBP == 0x0100 //消水下黑線跟光源
+			else if(g_aggressive && fi.TPSM == PSM_PSMCT24 && fi.TME && (fi.FBP ==0x1300 ) && (fi.TBP0 ==0x0F00 || fi.TBP0 ==0x1300 || fi.TBP0==0x2b00)) // || fi.FBP == 0x0100 //消水下黑線跟光源
 			{
-				skip = 1; // 重影
+				skip = 1; // global haze/halo
 			}
-			else if(fi.TPSM == PSM_PSMCT24 && fi.TME && (fi.FBP ==0x0100 ) && (fi.TBP0==0x2b00 || fi.TBP0==0x2e80)) //480P下2e80 
+			else if(g_aggressive && fi.TPSM == PSM_PSMCT24 && fi.TME && (fi.FBP ==0x0100 ) && (fi.TBP0==0x2b00 || fi.TBP0==0x2e80)) //480P下2e80 
 			{
-				skip = 1; // 水下黑線
+				skip = 1; // water effect and water vertical lines
 			}
 		}
 	}
@@ -3594,11 +3597,11 @@ bool GSC_ValkyrieProfile2(const GSFrameInfo& fi, int& skip)
 		/*if(fi.TME && (fi.FBP == 0x018c0 || fi.FBP == 0x02180) && fi.FPSM == fi.TPSM && fi.TBP0 >= 0x03200 && fi.TPSM == PSM_PSMCT32)	//NTSC only, !(fi.TBP0 == 0x03580 || fi.TBP0 == 0x03960)
 		{
 			skip = 1;	//red garbage in lost forest, removes other effects...
-		}*/
+		}
 		if(fi.TME && fi.FPSM == fi.TPSM && fi.TPSM == PSM_PSMCT16 && fi.FBMSK == 0x03FFF)
 		{
-			skip = 1; // CMV的豎紋
-        }
+			skip = 1; // //garbage in cutscenes, doesn't remove completely, better use "Alpha Hack"
+        }*/
 		if(fi.TME && fi.FBP == fi.TBP0 && fi.FPSM == PSM_PSMCT32 && fi.TPSM == PSM_PSMT4HH)
 		{
 			skip = 1000; //
@@ -3912,7 +3915,7 @@ bool GSC_ShadowofRome(const GSFrameInfo& fi, int& skip)
 
 bool GSC_FFXII(const GSFrameInfo& fi, int& skip)
 {
-	if(skip == 0)
+	if(g_aggressive && skip == 0)
 	{
 		if(fi.TME)
 		{
@@ -3930,7 +3933,7 @@ bool GSC_FFXII(const GSFrameInfo& fi, int& skip)
 
 bool GSC_FFX2(const GSFrameInfo& fi, int& skip)
 {
-	if(skip == 0)
+	if(g_aggressive && skip == 0)
 	{
 		if(fi.TME)
 		{
@@ -3948,7 +3951,7 @@ bool GSC_FFX2(const GSFrameInfo& fi, int& skip)
 
 bool GSC_FFX(const GSFrameInfo& fi, int& skip)
 {
-	if(skip == 0)
+	if(g_aggressive && skip == 0)
 	{
 		if(fi.TME)
 		{
@@ -4251,7 +4254,7 @@ bool GSC_TombRaiderUnderWorld(const GSFrameInfo& fi, int& skip)
 
 bool GSC_SSX3(const GSFrameInfo& fi, int& skip)
 {
-	if(skip == 0)
+	if(g_aggressive && skip == 0)
 	{
 		if(fi.TME)
 		{
@@ -5313,6 +5316,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 
 	GetSkipCount gsc = map[m_game.title];
 	g_crc_region = m_game.region;
+	g_aggressive = userHacks_AggressiveCRC;
 
 #ifdef ENABLE_DYNAMIC_CRC_HACK
 	bool res=false; if(IsInvokedDynamicCrcHack(fi, skip, g_crc_region, res, m_crc)){ if( !res ) return false;	} else

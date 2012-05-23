@@ -126,6 +126,9 @@ if( IsCRC(0x086273D2, 0x26A6E286, 0x9F185CE1) ){ // 3 first MGS3 CRCs from GSCrc
 	return true;
 }
 
+
+
+return true;
 }
 
 /*********** Dynamic CRC hack code ends here *****************/
@@ -216,7 +219,7 @@ typedef struct _stats {	uint32 overall, changed, skipped, nextPrint;} Stats;
 #define CRC_HACK     DynamicCrcHack2
 #define CRC_HACK_OLD DynamicCrcHack
 #if INITIAL_MODE == 0
-	#define CRC_HACK Voldemort
+	#define CRC_HACK Voldemort2
 	#define CRC_HACK_OLD Voldemort
 #endif
 DLL_EXPORT bool CRC_HACK (uint32 FBP, uint32 FPSM, uint32 FBMSK, uint32 TBP0, uint32 TPSM, uint32 TZTST,

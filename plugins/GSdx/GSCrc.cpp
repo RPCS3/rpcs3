@@ -335,7 +335,7 @@ CRC::Game CRC::m_games[] =
 	{0xE0347841, XE3, JP, 0}, //異域傳說3
 	{0xA4E88698, XE3, CH, 0},
 	{0x2088950A, XE3, US, 0},
-	{0x79B8A95F, DevilMayCry3, US, 0},
+	// DMC(1)? {0x79B8A95F, DevilMayCry3, US, 0},
 	{0x7F3D692D, DevilMayCry3, CH, 0},
 	{0x1A85E924, DevilMayCry3, CH, 0}, //惡魔獵人3三合一中文特別版
 	{0x0a8ef911, ArctheLad, US, 0}, //亞克傳承-精靈之黃昏
@@ -350,6 +350,7 @@ CRC::Game CRC::m_games[] =
 	{0xB05805B6, TombRaiderAnniversary, JP, 0}, //十週年紀念版 重返禁地
 	{0xBC8B3F50, TombRaiderLegend, US, 0}, //7代傳奇
 	{0x08FFF00D, SSX3, JP, 0}, //極限滑雪3
+	{0xCE942B2A, SSX3, EU, 0},
 	{0x5C891FF1, Black, US, 0},
 	{0xCAA04879, Black, EU, 0},
 	{0xADDFF505, Black, EU, 0},	//?
@@ -465,7 +466,9 @@ CRC::Game CRC::m_games[] =
 	{0xCDEE4B19, RogueGalaxy, JP, 0},
 	{0xF7F181C3, DeathByDegreesTekkenNinaWilliams, CH, 0}, //鐵拳妮娜
 	{0xF088FA5B, DeathByDegreesTekkenNinaWilliams, KO, 0},
+	{0x59683BB0, DeathByDegreesTekkenNinaWilliams, EU, 0},
 	{0x771C3B47, AlpineRacer3, JP, 0}, //阿爾卑斯山滑雪大賽3
+	{0x7367D841, AlpineRacer3, EU, 0},
 	{0x449E1F6B, HummerBadlands, US, 0}, 
 	{0xAEA1B3AD, SengokuBasara, JP, 0},
 	{0x5B659BED, Grandia3, JP, 0},
@@ -482,6 +485,7 @@ CRC::Game CRC::m_games[] =
 	{0x027C604C, SoulCalibur3, US, 0},
 	{0x24090A12, SoulCalibur3, EU, 0},
 	{0x37B99B14, SoulCalibur3, KO, 0},
+	{0xBC5480A3, SoulCalibur3, EU, 0},
 	{0xFC0F8A5B, Simple2000Vol114, JP, 0},
 	{0x0098F740, SeintoSeiya, NoRegion, 0}, //聖鬥士星矢-黃道十二宮
 	{0xBDD9BAAD, UrbanReign, US, 0}, //街頭爭霸
