@@ -68,6 +68,22 @@ def seq_start(tag='', anchor='', anchor_id=0):
 def seq_end():
     return {'emit': 'YAML::EndSeq', 'handle': 'SEQ_END()'}
 
+def map_start(tag='', anchor='', anchor_id=0):
+    emit = []
+    if tag:
+        emit += ['YAML::VerbatimTag("%s")' % encode(tag)]
+    if anchor:
+        emit += ['YAML::Anchor("%s")' % encode(anchor)]
+    if tag:
+        out_tag = encode(tag)
+    else:
+        out_tag = '?'
+    emit += ['YAML::BeginMap']
+    return {'emit': emit, 'handle': 'MAP_START("%s", %s)' % (out_tag, anchor_id)}
+
+def map_end():
+    return {'emit': 'YAML::EndMap', 'handle': 'MAP_END()'}
+
 def gen_templates():
     yield [[doc_start(), doc_start(True)],
            [scalar('foo'), scalar('foo\n'), scalar('foo', 'tag'), scalar('foo', '', 'anchor', 1)],
@@ -77,6 +93,17 @@ def gen_templates():
            [[], [scalar('foo')], [scalar('foo', 'tag')], [scalar('foo', '', 'anchor', 1)], [scalar('foo', 'tag', 'anchor', 1)], [scalar('foo'), scalar('bar')], [scalar('foo', 'tag', 'anchor', 1), scalar('bar', 'tag', 'other', 2)]],
            [seq_end()],
            [doc_end(), doc_end(True)]]
+    yield [[doc_start(), doc_start(True)],
+           [map_start()],
+           [[], [scalar('foo'), scalar('bar')], [scalar('foo', 'tag', 'anchor', 1), scalar('bar', 'tag', 'other', 2)]],
+           [map_end()],
+           [doc_end(), doc_end(True)]]
+    yield [[doc_start(True)],
+           [map_start()],
+           [[scalar('foo')], [seq_start(), scalar('foo'), seq_end()], [map_start(), scalar('foo'), scalar('bar'), map_end()]],
+           [[scalar('foo')], [seq_start(), scalar('foo'), seq_end()], [map_start(), scalar('foo'), scalar('bar'), map_end()]],
+           [map_end()],
+           [doc_end(True)]]
 
 def expand(template):
     if len(template) == 0:
