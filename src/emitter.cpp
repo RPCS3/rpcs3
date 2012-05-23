@@ -567,7 +567,7 @@ namespace YAML
         if(child == EmitterNodeType::None)
             return;
 
-        if(!m_pState->HasBegunNode()) {
+        if(!m_pState->HasBegunContent()) {
             if(childCount > 0) {
                 m_stream << "\n";
             }
