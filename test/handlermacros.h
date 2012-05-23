@@ -7,7 +7,7 @@
 #include <cassert>
 
 namespace Test {
-    std::string Quote(const std::string& text) {
+    inline std::string Quote(const std::string& text) {
         YAML::Emitter out;
         out << YAML::DoubleQuoted << text;
         return out.c_str();
@@ -52,15 +52,15 @@ namespace Test {
         }
     };
     
-    std::ostream& operator << (std::ostream& out, const Event& event) {
+    inline std::ostream& operator << (std::ostream& out, const Event& event) {
         return event.write(out);
     }
     
-    bool operator == (const Event& a, const Event& b) {
+    inline bool operator == (const Event& a, const Event& b) {
         return a.type == b.type && a.tag == b.tag && a.anchor == b.anchor && a.scalar == b.scalar;
     }
     
-    bool operator != (const Event& a, const Event& b) {
+    inline bool operator != (const Event& a, const Event& b) {
         return !(a == b);
     }
     

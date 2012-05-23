@@ -25,13 +25,13 @@ def doc_start(implicit=False):
     if implicit:
         return {'emit': '', 'handle': 'DOC_START()'}
     else:
-        return {'emit': 'YAML::DocStart', 'handle': 'DOC_START()'}
+        return {'emit': 'YAML::BeginDoc', 'handle': 'DOC_START()'}
 
 def doc_end(implicit=False):
     if implicit:
         return {'emit': '', 'handle': 'DOC_END()'}
     else:
-        return {'emit': 'YAML::DocEnd', 'handle': 'DOC_END()'}
+        return {'emit': 'YAML::EndDoc', 'handle': 'DOC_END()'}
 
 def scalar(value, tag='', anchor='', anchor_id=0):
     emit = []
@@ -39,8 +39,12 @@ def scalar(value, tag='', anchor='', anchor_id=0):
         emit += ['YAML::VerbatimTag("%s")' % encode(tag)]
     if anchor:
         emit += ['YAML::Anchor("%s")' % encode(anchor)]
+    if tag:
+        out_tag = encode(tag)
+    else:
+        out_tag = '!'
     emit += ['"%s"' % encode(value)]
-    return {'emit': emit, 'handle': 'SCALAR("%s", %s, "%s")' % (encode(tag), anchor_id, encode(value))}
+    return {'emit': emit, 'handle': 'SCALAR("%s", %s, "%s")' % (out_tag, anchor_id, encode(value))}
 
 def gen_outlines():
     yield [doc_start(), scalar('foo\n'), doc_end()]
@@ -87,7 +91,7 @@ def create_emitter_tests(out):
     out.write('void RunGenEmitterTests(int& passed, int& total)\n')
     out.write('{\n')
     for test in tests:
-        out.write('    RunGenEmitterTest(&Emitter::%s, %s, passed, total);\n' % (test['name'], encode(test['name'])))
+        out.write('    RunGenEmitterTest(&Emitter::%s, "%s", passed, total);\n' % (test['name'], encode(test['name'])))
     out.write('}\n')
 
 if __name__ == '__main__':
