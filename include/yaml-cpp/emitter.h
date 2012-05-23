@@ -8,6 +8,7 @@
 
 #include "yaml-cpp/dll.h"
 #include "yaml-cpp/binary.h"
+#include "yaml-cpp/emitterdef.h"
 #include "yaml-cpp/emittermanip.h"
 #include "yaml-cpp/ostream.h"
 #include "yaml-cpp/noncopyable.h"
@@ -70,33 +71,45 @@ namespace YAML
 		Emitter& WriteStreamable(T value);
 
 	private:
-		void PreWriteIntegralType(std::stringstream& str);
-		void PreWriteStreamable(std::stringstream& str);
-		void PostWriteIntegralType(const std::stringstream& str);
-		void PostWriteStreamable(const std::stringstream& str);
-        
         template<typename T> void SetStreamablePrecision(std::stringstream&) {}
         unsigned GetFloatPrecision() const;
         unsigned GetDoublePrecision() const;
+        
+        void PrepareIntegralStream(std::stringstream& stream) const;
+        void StartedScalar();
 	
 	private:
-		void PreAtomicWrite();
-		bool GotoNextPreAtomicState();
-		void PostAtomicWrite();
-		void EmitSeparationIfNecessary();
-		
 		void EmitBeginDoc();
 		void EmitEndDoc();
 		void EmitBeginSeq();
 		void EmitEndSeq();
 		void EmitBeginMap();
 		void EmitEndMap();
-		void EmitKey();
-		void EmitValue();
 		void EmitNewline();
 		void EmitKindTag();
 		void EmitTag(bool verbatim, const _Tag& tag);
 		
+        void PrepareNode(EmitterNodeType::value child);
+        void PrepareTopNode(EmitterNodeType::value child);
+        void FlowSeqPrepareNode(EmitterNodeType::value child);
+        void BlockSeqPrepareNode(EmitterNodeType::value child);
+
+        void FlowMapPrepareNode(EmitterNodeType::value child);
+
+        void FlowMapPrepareLongKey(EmitterNodeType::value child);
+        void FlowMapPrepareLongKeyValue(EmitterNodeType::value child);
+        void FlowMapPrepareSimpleKey(EmitterNodeType::value child);
+        void FlowMapPrepareSimpleKeyValue(EmitterNodeType::value child);
+
+        void BlockMapPrepareNode(EmitterNodeType::value child);
+
+        void BlockMapPrepareLongKey(EmitterNodeType::value child);
+        void BlockMapPrepareLongKeyValue(EmitterNodeType::value child);
+        void BlockMapPrepareSimpleKey(EmitterNodeType::value child);
+        void BlockMapPrepareSimpleKeyValue(EmitterNodeType::value child);
+        
+        void SpaceOrIndentTo(bool requireSpace, unsigned indent);
+        
 		const char *ComputeFullBoolName(bool b) const;
 		bool CanEmitNewline() const;
 		
@@ -111,10 +124,15 @@ namespace YAML
 		if(!good())
 			return *this;
 		
-		std::stringstream str;
-		PreWriteIntegralType(str);
-		str << value;
-		PostWriteIntegralType(str);
+        PrepareNode(EmitterNodeType::Scalar);
+
+        std::stringstream stream;
+        PrepareIntegralStream(stream);
+        stream << value;
+        m_stream << stream.str();
+        
+        StartedScalar();
+
 		return *this;
 	}
 
@@ -124,24 +142,28 @@ namespace YAML
 		if(!good())
 			return *this;
 		
-		std::stringstream str;
-		PreWriteStreamable(str);
-        SetStreamablePrecision<T>(str);
-		str << value;
-		PostWriteStreamable(str);
+        PrepareNode(EmitterNodeType::Scalar);
+
+		std::stringstream stream;
+        SetStreamablePrecision<T>(stream);
+		stream << value;
+        m_stream << stream.str();
+        
+        StartedScalar();
+
 		return *this;
 	}
 	
     template<>
-    inline void Emitter::SetStreamablePrecision<float>(std::stringstream& str)
+    inline void Emitter::SetStreamablePrecision<float>(std::stringstream& stream)
     {
-		str.precision(GetFloatPrecision());
+		stream.precision(GetFloatPrecision());
     }
 
     template<>
-    inline void Emitter::SetStreamablePrecision<double>(std::stringstream& str)
+    inline void Emitter::SetStreamablePrecision<double>(std::stringstream& stream)
     {
-		str.precision(GetDoublePrecision());
+		stream.precision(GetDoublePrecision());
     }
 
 	// overloads of insertion

@@ -5,18 +5,9 @@
 #pragma once
 #endif
 
-#include <string>
+#include "teststruct.h"
 
 namespace Test {
-	struct TEST {
-		TEST(): ok(false) {}
-		TEST(bool ok_): ok(ok_) {}
-		TEST(const char *error_): ok(false), error(error_) {}
-		
-		bool ok;
-		std::string error;
-	};
-	
 	namespace Spec {
 		// 2.1
 		TEST SeqScalars();

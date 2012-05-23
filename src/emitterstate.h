@@ -8,71 +8,20 @@
 
 #include "ptr_stack.h"
 #include "setting.h"
+#include "yaml-cpp/emitterdef.h"
 #include "yaml-cpp/emittermanip.h"
 #include <cassert>
 #include <vector>
 #include <stack>
 #include <memory>
+#include <stdexcept>
 
 namespace YAML
 {
-	enum FMT_SCOPE {
-		LOCAL,
-		GLOBAL
-	};
-	
-	enum GROUP_TYPE {
-		GT_NONE,
-		GT_SEQ,
-		GT_MAP
-	};
-	
-	enum FLOW_TYPE {
-		FT_NONE,
-		FT_FLOW,
-		FT_BLOCK
-	};
-	
-	enum NODE_STATE {
-		NS_START,
-		NS_READY_FOR_ATOM,
-		NS_END
-	};
-	
-	enum EMITTER_STATE {
-		ES_WAITING_FOR_DOC,
-		ES_WRITING_DOC,
-		ES_DONE_WITH_DOC,
-		
-		// block seq
-		ES_WAITING_FOR_BLOCK_SEQ_ENTRY,
-		ES_WRITING_BLOCK_SEQ_ENTRY,
-		ES_DONE_WITH_BLOCK_SEQ_ENTRY,
-		
-		// flow seq
-		ES_WAITING_FOR_FLOW_SEQ_ENTRY,
-		ES_WRITING_FLOW_SEQ_ENTRY,
-		ES_DONE_WITH_FLOW_SEQ_ENTRY,
-		
-		// block map
-		ES_WAITING_FOR_BLOCK_MAP_ENTRY,
-		ES_WAITING_FOR_BLOCK_MAP_KEY,
-		ES_WRITING_BLOCK_MAP_KEY,
-		ES_DONE_WITH_BLOCK_MAP_KEY,
-		ES_WAITING_FOR_BLOCK_MAP_VALUE,
-		ES_WRITING_BLOCK_MAP_VALUE,
-		ES_DONE_WITH_BLOCK_MAP_VALUE,
-		
-		// flow map
-		ES_WAITING_FOR_FLOW_MAP_ENTRY,
-		ES_WAITING_FOR_FLOW_MAP_KEY,
-		ES_WRITING_FLOW_MAP_KEY,
-		ES_DONE_WITH_FLOW_MAP_KEY,
-		ES_WAITING_FOR_FLOW_MAP_VALUE,
-		ES_WRITING_FLOW_MAP_VALUE,
-		ES_DONE_WITH_FLOW_MAP_VALUE
-	};
-	
+	struct FmtScope { enum value { Local, Global }; };
+	struct GroupType { enum value { None, Seq, Map }; };
+	struct FlowType { enum value { None, Flow, Block }; };
+
 	class EmitterState
 	{
 	public:
@@ -84,76 +33,81 @@ namespace YAML
 		const std::string GetLastError() const { return m_lastError; }
 		void SetError(const std::string& error) { m_isGood = false; m_lastError = error; }
 		
-		// main state of the machine
-		EMITTER_STATE GetCurState() const { return m_stateStack.top(); }
-		void SwitchState(EMITTER_STATE state) { PopState(); PushState(state); }
-		void PushState(EMITTER_STATE state) { m_stateStack.push(state); }
-		void PopState() { m_stateStack.pop(); }
-		
-		void SetLocalValue(EMITTER_MANIP value);
-		
-		// group handling
-		void BeginGroup(GROUP_TYPE type);
-		void EndGroup(GROUP_TYPE type);
-		
-		GROUP_TYPE GetCurGroupType() const;
-		FLOW_TYPE GetCurGroupFlowType() const;
-		int GetCurIndent() const { return m_curIndent; }
-		
-		bool CurrentlyInLongKey();
-		void StartLongKey();
-		void StartSimpleKey();
+		// node handling
+        void SetAnchor();
+        void SetTag();
+        void SetNonContent();
+        void SetLongKey();
+        void ForceFlow();
+        void StartedDoc();
+        void EndedDoc();
+        void StartedScalar();
+		void StartedGroup(GroupType::value type);
+		void EndedGroup(GroupType::value type);
 
-		bool RequiresSoftSeparation() const { return m_requiresSoftSeparation; }
-		bool RequiresHardSeparation() const { return m_requiresHardSeparation; }
-		void RequireSoftSeparation() { m_requiresSoftSeparation = true; }
-		void RequireHardSeparation() { m_requiresSoftSeparation = true; m_requiresHardSeparation = true; }
-		void ForceHardSeparation() { m_requiresSoftSeparation = false; }
-		void UnsetSeparation() { m_requiresSoftSeparation = false; m_requiresHardSeparation = false; }
+        EmitterNodeType::value NextGroupType(GroupType::value type) const;
+        EmitterNodeType::value CurGroupNodeType() const;
+
+		GroupType::value CurGroupType() const;
+        FlowType::value CurGroupFlowType() const;
+        int CurGroupIndent() const;
+        std::size_t CurGroupChildCount() const;
+        bool CurGroupLongKey() const;
+
+        int LastIndent() const;
+		int CurIndent() const { return m_curIndent; }
+        bool HasAnchor() const { return m_hasAnchor; }
+        bool HasTag() const { return m_hasTag; }
+        bool HasBegunNode() const { return m_hasAnchor || m_hasTag || m_hasNonContent; }
+        bool HasBegunContent() const { return m_hasAnchor || m_hasTag; }
 
 		void ClearModifiedSettings();
 
 		// formatters
-		bool SetOutputCharset(EMITTER_MANIP value, FMT_SCOPE scope);
+		void SetLocalValue(EMITTER_MANIP value);
+
+		bool SetOutputCharset(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetOutputCharset() const { return m_charset.get(); }
 
-		bool SetStringFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetStringFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetStringFormat() const { return m_strFmt.get(); }
 		
-		bool SetBoolFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetBoolFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetBoolFormat() const { return m_boolFmt.get(); }
 
-		bool SetBoolLengthFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetBoolLengthFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetBoolLengthFormat() const { return m_boolLengthFmt.get(); }
 
-		bool SetBoolCaseFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetBoolCaseFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetBoolCaseFormat() const { return m_boolCaseFmt.get(); }
 
-		bool SetIntFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetIntFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetIntFormat() const { return m_intFmt.get(); }
 
-		bool SetIndent(unsigned value, FMT_SCOPE scope);
+		bool SetIndent(unsigned value, FmtScope::value scope);
 		int GetIndent() const { return m_indent.get(); }
 		
-		bool SetPreCommentIndent(unsigned value, FMT_SCOPE scope);
+		bool SetPreCommentIndent(unsigned value, FmtScope::value scope);
 		int GetPreCommentIndent() const { return m_preCommentIndent.get(); }
-		bool SetPostCommentIndent(unsigned value, FMT_SCOPE scope);
+		bool SetPostCommentIndent(unsigned value, FmtScope::value scope);
 		int GetPostCommentIndent() const { return m_postCommentIndent.get(); }
 		
-		bool SetFlowType(GROUP_TYPE groupType, EMITTER_MANIP value, FMT_SCOPE scope);
-		EMITTER_MANIP GetFlowType(GROUP_TYPE groupType) const;
+		bool SetFlowType(GroupType::value groupType, EMITTER_MANIP value, FmtScope::value scope);
+		EMITTER_MANIP GetFlowType(GroupType::value groupType) const;
 		
-		bool SetMapKeyFormat(EMITTER_MANIP value, FMT_SCOPE scope);
+		bool SetMapKeyFormat(EMITTER_MANIP value, FmtScope::value scope);
 		EMITTER_MANIP GetMapKeyFormat() const { return m_mapKeyFmt.get(); }
         
-        bool SetFloatPrecision(int value, FMT_SCOPE scope);
+        bool SetFloatPrecision(int value, FmtScope::value scope);
         unsigned GetFloatPrecision() const { return m_floatPrecision.get(); }
-        bool SetDoublePrecision(int value, FMT_SCOPE scope);
+        bool SetDoublePrecision(int value, FmtScope::value scope);
         unsigned GetDoublePrecision() const { return m_doublePrecision.get(); }
 		
 	private:
 		template <typename T>
-		void _Set(Setting<T>& fmt, T value, FMT_SCOPE scope);
+		void _Set(Setting<T>& fmt, T value, FmtScope::value scope);
+        
+        void StartedNode();
 		
 	private:
 		// basic state ok?
@@ -161,8 +115,6 @@ namespace YAML
 		std::string m_lastError;
 		
 		// other state
-		std::stack<EMITTER_STATE> m_stateStack;
-		
 		Setting<EMITTER_MANIP> m_charset;
 		Setting<EMITTER_MANIP> m_strFmt;
 		Setting<EMITTER_MANIP> m_boolFmt;
@@ -181,29 +133,50 @@ namespace YAML
 		SettingChanges m_globalModifiedSettings;
 		
 		struct Group {
-			Group(GROUP_TYPE type_): type(type_), usingLongKey(false), indent(0) {}
+			explicit Group(GroupType::value type_): type(type_), indent(0), childCount(0), longKey(false) {}
 			
-			GROUP_TYPE type;
-			EMITTER_MANIP flow;
-			bool usingLongKey;
+            GroupType::value type;
+            FlowType::value flowType;
 			int indent;
+            std::size_t childCount;
+            bool longKey;
 			
 			SettingChanges modifiedSettings;
+            
+            EmitterNodeType::value NodeType() const {
+                if(type == GroupType::Seq) {
+                    if(flowType == FlowType::Flow)
+                        return EmitterNodeType::FlowSeq;
+                    else
+                        return EmitterNodeType::BlockSeq;
+                } else {
+                    if(flowType == FlowType::Flow)
+                        return EmitterNodeType::FlowMap;
+                    else
+                        return EmitterNodeType::BlockMap;
+                }
+
+                // can't get here
+                assert(false);
+                return EmitterNodeType::None;
+            }
 		};
 
 		ptr_stack<Group> m_groups;
 		unsigned m_curIndent;
-		bool m_requiresSoftSeparation;
-		bool m_requiresHardSeparation;
+        bool m_hasAnchor;
+        bool m_hasTag;
+        bool m_hasNonContent;
+        std::size_t m_docCount;
 	};
 
 	template <typename T>
-	void EmitterState::_Set(Setting<T>& fmt, T value, FMT_SCOPE scope) {
+	void EmitterState::_Set(Setting<T>& fmt, T value, FmtScope::value scope) {
 		switch(scope) {
-			case LOCAL:
+			case FmtScope::Local:
 				m_modifiedSettings.push(fmt.set(value));
 				break;
-			case GLOBAL:
+			case FmtScope::Global:
 				fmt.set(value);
 				m_globalModifiedSettings.push(fmt.set(value));  // this pushes an identity set, so when we restore,
 				                                                // it restores to the value here, and not the previous one

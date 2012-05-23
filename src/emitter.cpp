@@ -39,69 +39,69 @@ namespace YAML
 	// global setters
 	bool Emitter::SetOutputCharset(EMITTER_MANIP value)
 	{
-		return m_pState->SetOutputCharset(value, GLOBAL);
+		return m_pState->SetOutputCharset(value, FmtScope::Global);
 	}
 
 	bool Emitter::SetStringFormat(EMITTER_MANIP value)
 	{
-		return m_pState->SetStringFormat(value, GLOBAL);
+		return m_pState->SetStringFormat(value, FmtScope::Global);
 	}
 	
 	bool Emitter::SetBoolFormat(EMITTER_MANIP value)
 	{
 		bool ok = false;
-		if(m_pState->SetBoolFormat(value, GLOBAL))
+		if(m_pState->SetBoolFormat(value, FmtScope::Global))
 			ok = true;
-		if(m_pState->SetBoolCaseFormat(value, GLOBAL))
+		if(m_pState->SetBoolCaseFormat(value, FmtScope::Global))
 			ok = true;
-		if(m_pState->SetBoolLengthFormat(value, GLOBAL))
+		if(m_pState->SetBoolLengthFormat(value, FmtScope::Global))
 			ok = true;
 		return ok;
 	}
 	
 	bool Emitter::SetIntBase(EMITTER_MANIP value)
 	{
-		return m_pState->SetIntFormat(value, GLOBAL);
+		return m_pState->SetIntFormat(value, FmtScope::Global);
 	}
 	
 	bool Emitter::SetSeqFormat(EMITTER_MANIP value)
 	{
-		return m_pState->SetFlowType(GT_SEQ, value, GLOBAL);
+		return m_pState->SetFlowType(GroupType::Seq, value, FmtScope::Global);
 	}
 	
 	bool Emitter::SetMapFormat(EMITTER_MANIP value)
 	{
 		bool ok = false;
-		if(m_pState->SetFlowType(GT_MAP, value, GLOBAL))
+		if(m_pState->SetFlowType(GroupType::Map, value, FmtScope::Global))
 			ok = true;
-		if(m_pState->SetMapKeyFormat(value, GLOBAL))
+		if(m_pState->SetMapKeyFormat(value, FmtScope::Global))
 			ok = true;
 		return ok;
 	}
 	
 	bool Emitter::SetIndent(unsigned n)
 	{
-		return m_pState->SetIndent(n, GLOBAL);
+		return m_pState->SetIndent(n, FmtScope::Global);
 	}
 	
 	bool Emitter::SetPreCommentIndent(unsigned n)
 	{
-		return m_pState->SetPreCommentIndent(n, GLOBAL);
+		return m_pState->SetPreCommentIndent(n, FmtScope::Global);
 	}
 	
 	bool Emitter::SetPostCommentIndent(unsigned n)
 	{
-		return m_pState->SetPostCommentIndent(n, GLOBAL);
+		return m_pState->SetPostCommentIndent(n, FmtScope::Global);
 	}
     
     bool Emitter::SetFloatPrecision(unsigned n)
     {
-        return m_pState->SetFloatPrecision(n, GLOBAL);
+        return m_pState->SetFloatPrecision(n, FmtScope::Global);
     }
 
     bool Emitter::SetDoublePrecision(unsigned n)
     {
-        return m_pState->SetDoublePrecision(n, GLOBAL);
+        return m_pState->SetDoublePrecision(n, FmtScope::Global);
     }
 
 	// SetLocalValue
@@ -131,10 +131,8 @@ namespace YAML
 				EmitEndMap();
 				break;
 			case Key:
-				EmitKey();
-				break;
 			case Value:
-				EmitValue();
+                // deprecated (these can be deduced by the parity of nodes in a map)
 				break;
 			case TagByKind:
 				EmitKindTag();
@@ -151,220 +149,40 @@ namespace YAML
 	
 	Emitter& Emitter::SetLocalIndent(const _Indent& indent)
 	{
-		m_pState->SetIndent(indent.value, LOCAL);
+		m_pState->SetIndent(indent.value, FmtScope::Local);
 		return *this;
 	}
 
     Emitter& Emitter::SetLocalPrecision(const _Precision& precision)
     {
         if(precision.floatPrecision >= 0)
-            m_pState->SetFloatPrecision(precision.floatPrecision, LOCAL);
+            m_pState->SetFloatPrecision(precision.floatPrecision, FmtScope::Local);
         if(precision.doublePrecision >= 0)
-            m_pState->SetDoublePrecision(precision.doublePrecision, LOCAL);
+            m_pState->SetDoublePrecision(precision.doublePrecision, FmtScope::Local);
         return *this;
     }
 
-	// GotoNextPreAtomicState
-	// . Runs the state machine, emitting if necessary, and returns 'true' if done (i.e., ready to emit an atom)
-	bool Emitter::GotoNextPreAtomicState()
-	{
-		if(!good())
-			return true;
-		
-		unsigned curIndent = m_pState->GetCurIndent();
-		
-		EMITTER_STATE curState = m_pState->GetCurState();
-		switch(curState) {
-				// document-level
-			case ES_WAITING_FOR_DOC:
-				m_pState->SwitchState(ES_WRITING_DOC);
-				return true;
-			case ES_WRITING_DOC:
-				return true;
-			case ES_DONE_WITH_DOC:
-				EmitBeginDoc();
-				return false;
-				
-				// block sequence
-			case ES_WAITING_FOR_BLOCK_SEQ_ENTRY:
-				m_stream << IndentTo(curIndent) << "-";
-				m_pState->RequireSoftSeparation();
-				m_pState->SwitchState(ES_WRITING_BLOCK_SEQ_ENTRY);
-				return true;
-			case ES_WRITING_BLOCK_SEQ_ENTRY:
-				return true;
-			case ES_DONE_WITH_BLOCK_SEQ_ENTRY:
-				m_stream << '\n';
-				m_pState->SwitchState(ES_WAITING_FOR_BLOCK_SEQ_ENTRY);
-				return false;
-				
-				// flow sequence
-			case ES_WAITING_FOR_FLOW_SEQ_ENTRY:
-				m_pState->SwitchState(ES_WRITING_FLOW_SEQ_ENTRY);
-				return true;
-			case ES_WRITING_FLOW_SEQ_ENTRY:
-				return true;
-			case ES_DONE_WITH_FLOW_SEQ_ENTRY:
-				EmitSeparationIfNecessary();
-				m_stream << ',';
-				m_pState->RequireSoftSeparation();
-				m_pState->SwitchState(ES_WAITING_FOR_FLOW_SEQ_ENTRY);
-				return false;
-				
-				// block map
-			case ES_WAITING_FOR_BLOCK_MAP_ENTRY:
-				m_pState->SetError(ErrorMsg::EXPECTED_KEY_TOKEN);
-				return true;
-			case ES_WAITING_FOR_BLOCK_MAP_KEY:
-				if(m_pState->CurrentlyInLongKey()) {
-					m_stream << IndentTo(curIndent) << '?';
-					m_pState->RequireSoftSeparation();
-				}
-				m_pState->SwitchState(ES_WRITING_BLOCK_MAP_KEY);
-				return true;
-			case ES_WRITING_BLOCK_MAP_KEY:
-				return true;
-			case ES_DONE_WITH_BLOCK_MAP_KEY:
-				m_pState->SetError(ErrorMsg::EXPECTED_VALUE_TOKEN);
-				return true;
-			case ES_WAITING_FOR_BLOCK_MAP_VALUE:
-				m_pState->SwitchState(ES_WRITING_BLOCK_MAP_VALUE);
-				return true;
-			case ES_WRITING_BLOCK_MAP_VALUE:
-				return true;
-			case ES_DONE_WITH_BLOCK_MAP_VALUE:
-				m_pState->SetError(ErrorMsg::EXPECTED_KEY_TOKEN);
-				return true;
-				
-				// flow map
-			case ES_WAITING_FOR_FLOW_MAP_ENTRY:
-				m_pState->SetError(ErrorMsg::EXPECTED_KEY_TOKEN);
-				return true;
-			case ES_WAITING_FOR_FLOW_MAP_KEY:
-				EmitSeparationIfNecessary();
-				m_pState->SwitchState(ES_WRITING_FLOW_MAP_KEY);
-				if(m_pState->CurrentlyInLongKey()) {
-					m_stream << '?';
-					m_pState->RequireSoftSeparation();
-				}
-				return true;
-			case ES_WRITING_FLOW_MAP_KEY:
-				return true;
-			case ES_DONE_WITH_FLOW_MAP_KEY:
-				m_pState->SetError(ErrorMsg::EXPECTED_VALUE_TOKEN);
-				return true;
-			case ES_WAITING_FOR_FLOW_MAP_VALUE:
-				EmitSeparationIfNecessary();
-				m_stream << ':';
-				m_pState->RequireSoftSeparation();
-				m_pState->SwitchState(ES_WRITING_FLOW_MAP_VALUE);
-				return true;
-			case ES_WRITING_FLOW_MAP_VALUE:
-				return true;
-			case ES_DONE_WITH_FLOW_MAP_VALUE:
-				m_pState->SetError(ErrorMsg::EXPECTED_KEY_TOKEN);
-				return true;
-			default:
-				assert(false);
-		}
-
-		assert(false);
-		return true;
-	}
-	
-	// PreAtomicWrite
-	// . Depending on the emitter state, write to the stream to get it
-	//   in position to do an atomic write (e.g., scalar, sequence, or map)
-	void Emitter::PreAtomicWrite()
-	{
-		if(!good())
-			return;
-		
-		while(!GotoNextPreAtomicState())
-			;
-	}
-	
-	// PostAtomicWrite
-	// . Clean up
-	void Emitter::PostAtomicWrite()
-	{
-		if(!good())
-			return;
-		
-		EMITTER_STATE curState = m_pState->GetCurState();
-		switch(curState) {
-				// document-level
-			case ES_WRITING_DOC:
-				m_pState->SwitchState(ES_DONE_WITH_DOC);
-				break;
-
-				// block seq
-			case ES_WRITING_BLOCK_SEQ_ENTRY:
-				m_pState->SwitchState(ES_DONE_WITH_BLOCK_SEQ_ENTRY);
-				break;
-				
-				// flow seq
-			case ES_WRITING_FLOW_SEQ_ENTRY:
-				m_pState->SwitchState(ES_DONE_WITH_FLOW_SEQ_ENTRY);
-				break;
-				
-				// block map
-			case ES_WRITING_BLOCK_MAP_KEY:
-				if(!m_pState->CurrentlyInLongKey()) {
-					m_stream << ':';
-					m_pState->RequireSoftSeparation();
-				}
-				m_pState->SwitchState(ES_DONE_WITH_BLOCK_MAP_KEY);
-				break;
-			case ES_WRITING_BLOCK_MAP_VALUE:
-				m_pState->SwitchState(ES_DONE_WITH_BLOCK_MAP_VALUE);
-				break;
-				
-				// flow map
-			case ES_WRITING_FLOW_MAP_KEY:
-				m_pState->SwitchState(ES_DONE_WITH_FLOW_MAP_KEY);
-				break;
-			case ES_WRITING_FLOW_MAP_VALUE:
-				m_pState->SwitchState(ES_DONE_WITH_FLOW_MAP_VALUE);
-				break;
-			default:
-				assert(false);
-		};
-				
-		m_pState->ClearModifiedSettings();
-	}
-	
-	// EmitSeparationIfNecessary
-	void Emitter::EmitSeparationIfNecessary()
-	{
-		if(!good())
-			return;
-		
-		if(m_pState->RequiresSoftSeparation())
-			m_stream << ' ';
-		else if(m_pState->RequiresHardSeparation())
-			m_stream << '\n';
-		m_pState->UnsetSeparation();
-	}
-	
 	// EmitBeginDoc
 	void Emitter::EmitBeginDoc()
 	{
 		if(!good())
 			return;
-		
-		EMITTER_STATE curState = m_pState->GetCurState();
-		if(curState != ES_WAITING_FOR_DOC && curState != ES_WRITING_DOC && curState != ES_DONE_WITH_DOC) {
+        
+        if(m_pState->CurGroupType() != GroupType::None) {
 			m_pState->SetError("Unexpected begin document");
 			return;
-		}
-		
-		if(curState == ES_WRITING_DOC || curState == ES_DONE_WITH_DOC)
-			m_stream << '\n';		
-		m_stream << "---\n";
-
-		m_pState->UnsetSeparation();
-		m_pState->SwitchState(ES_WAITING_FOR_DOC);
+        }
+        
+        if(m_pState->HasAnchor() || m_pState->HasTag()) {
+			m_pState->SetError("Unexpected begin document");
+			return;
+        }
+        
+        if(m_stream.col() > 0)
+            m_stream << "\n";
+        m_stream << "---\n";
+        
+        m_pState->StartedDoc();
 	}
 	
 	// EmitEndDoc
@@ -372,20 +190,20 @@ namespace YAML
 	{
 		if(!good())
 			return;
-
-		
-		EMITTER_STATE curState = m_pState->GetCurState();
-		if(curState != ES_WAITING_FOR_DOC && curState != ES_WRITING_DOC && curState != ES_DONE_WITH_DOC) {
-			m_pState->SetError("Unexpected end document");
+        
+        if(m_pState->CurGroupType() != GroupType::None) {
+			m_pState->SetError("Unexpected begin document");
 			return;
-		}
-		
-		if(curState == ES_WRITING_DOC || curState == ES_DONE_WITH_DOC)
-			m_stream << '\n';		
-		m_stream << "...\n";
-		
-		m_pState->UnsetSeparation();
-		m_pState->SwitchState(ES_WAITING_FOR_DOC);
+        }
+        
+        if(m_pState->HasAnchor() || m_pState->HasTag()) {
+			m_pState->SetError("Unexpected begin document");
+			return;
+        }
+        
+        if(m_stream.col() > 0)
+            m_stream << "\n";
+        m_stream << "...\n";
 	}
 
 	// EmitBeginSeq
@@ -393,33 +211,10 @@ namespace YAML
 	{
 		if(!good())
 			return;
-		
-		// must have a long key if we're emitting a sequence
-		m_pState->StartLongKey();
-		
-		PreAtomicWrite();
-		
-		EMITTER_STATE curState = m_pState->GetCurState();
-		EMITTER_MANIP flowType = m_pState->GetFlowType(GT_SEQ);
-		if(flowType == Block) {
-			if(curState == ES_WRITING_BLOCK_SEQ_ENTRY ||
-			   curState == ES_WRITING_BLOCK_MAP_KEY || curState == ES_WRITING_BLOCK_MAP_VALUE ||
-			   curState == ES_WRITING_DOC
-			) {
-				if(m_pState->RequiresHardSeparation() || curState != ES_WRITING_DOC) {
-					m_stream << "\n";
-					m_pState->UnsetSeparation();
-				}
-			}
-			m_pState->PushState(ES_WAITING_FOR_BLOCK_SEQ_ENTRY);
-		} else if(flowType == Flow) {
-			EmitSeparationIfNecessary();
-			m_stream << "[";
-			m_pState->PushState(ES_WAITING_FOR_FLOW_SEQ_ENTRY);
-		} else
-			assert(false);
-
-		m_pState->BeginGroup(GT_SEQ);
+        
+        PrepareNode(m_pState->NextGroupType(GroupType::Seq));
+        
+        m_pState->StartedGroup(GroupType::Seq);
 	}
 	
 	// EmitEndSeq
@@ -427,35 +222,20 @@ namespace YAML
 	{
 		if(!good())
 			return;
-		
-		if(m_pState->GetCurGroupType() != GT_SEQ)
-			return m_pState->SetError(ErrorMsg::UNEXPECTED_END_SEQ);
-		
-		EMITTER_STATE curState = m_pState->GetCurState();
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
-		if(flowType == FT_BLOCK) {
-			// Note: block sequences are *not* allowed to be empty, but we convert it
-			//       to a flow sequence if it is
-			assert(curState == ES_DONE_WITH_BLOCK_SEQ_ENTRY || curState == ES_WAITING_FOR_BLOCK_SEQ_ENTRY);
-			if(curState == ES_WAITING_FOR_BLOCK_SEQ_ENTRY) {
-				// Note: only one of these will actually output anything for a given situation
-				EmitSeparationIfNecessary();
-				unsigned curIndent = m_pState->GetCurIndent();
-				m_stream << IndentTo(curIndent);
-
-				m_stream << "[]";
-			}
-		} else if(flowType == FT_FLOW) {
-			// Note: flow sequences are allowed to be empty
-			assert(curState == ES_DONE_WITH_FLOW_SEQ_ENTRY || curState == ES_WAITING_FOR_FLOW_SEQ_ENTRY);
-			m_stream << "]";
-		} else
-			assert(false);
-		
-		m_pState->PopState();
-		m_pState->EndGroup(GT_SEQ);
-
-		PostAtomicWrite();
+        
+        if(m_pState->CurGroupChildCount() == 0)
+            m_pState->ForceFlow();
+        
+        if(m_pState->CurGroupFlowType() == FlowType::Flow) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(m_pState->CurIndent());
+            if(m_pState->CurGroupChildCount() == 0)
+                m_stream << "[";
+            m_stream << "]";
+        }
+        
+        m_pState->EndedGroup(GroupType::Seq);
 	}
 	
 	// EmitBeginMap
@@ -463,33 +243,10 @@ namespace YAML
 	{
 		if(!good())
 			return;
-		
-		// must have a long key if we're emitting a map
-		m_pState->StartLongKey();
 
-		PreAtomicWrite();
-
-		EMITTER_STATE curState = m_pState->GetCurState();
-		EMITTER_MANIP flowType = m_pState->GetFlowType(GT_MAP);
-		if(flowType == Block) {
-			if(curState == ES_WRITING_BLOCK_SEQ_ENTRY ||
-			   curState == ES_WRITING_BLOCK_MAP_KEY || curState == ES_WRITING_BLOCK_MAP_VALUE ||
-			   curState == ES_WRITING_DOC
-			) {
-				if(m_pState->RequiresHardSeparation() || (curState != ES_WRITING_DOC && curState != ES_WRITING_BLOCK_SEQ_ENTRY)) {
-					m_stream << "\n";
-					m_pState->UnsetSeparation();
-				}
-			}
-			m_pState->PushState(ES_WAITING_FOR_BLOCK_MAP_ENTRY);
-		} else if(flowType == Flow) {
-			EmitSeparationIfNecessary();
-			m_stream << "{";
-			m_pState->PushState(ES_WAITING_FOR_FLOW_MAP_ENTRY);
-		} else
-			assert(false);
-		
-		m_pState->BeginGroup(GT_MAP);
+        PrepareNode(m_pState->NextGroupType(GroupType::Map));
+        
+        m_pState->StartedGroup(GroupType::Map);
 	}
 	
 	// EmitEndMap
@@ -497,120 +254,461 @@ namespace YAML
 	{
 		if(!good())
 			return;
-		
-		if(m_pState->GetCurGroupType() != GT_MAP)
-			return m_pState->SetError(ErrorMsg::UNEXPECTED_END_MAP);
 
-		EMITTER_STATE curState = m_pState->GetCurState();
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
-		if(flowType == FT_BLOCK) {
-			// Note: block sequences are *not* allowed to be empty, but we convert it
-			//       to a flow sequence if it is
-			assert(curState == ES_DONE_WITH_BLOCK_MAP_VALUE || curState == ES_WAITING_FOR_BLOCK_MAP_ENTRY);
-			if(curState == ES_WAITING_FOR_BLOCK_MAP_ENTRY) {
-				// Note: only one of these will actually output anything for a given situation
-				EmitSeparationIfNecessary();
-				unsigned curIndent = m_pState->GetCurIndent();
-				m_stream << IndentTo(curIndent);
-				m_stream << "{}";
-			}
-		} else if(flowType == FT_FLOW) {
-			// Note: flow maps are allowed to be empty
-			assert(curState == ES_DONE_WITH_FLOW_MAP_VALUE || curState == ES_WAITING_FOR_FLOW_MAP_ENTRY);
-			EmitSeparationIfNecessary();
-			m_stream << "}";
-		} else
-			assert(false);
-		
-		m_pState->PopState();
-		m_pState->EndGroup(GT_MAP);
-		
-		PostAtomicWrite();
-	}
-	
-	// EmitKey
-	void Emitter::EmitKey()
-	{
-		if(!good())
-			return;
-		
-		EMITTER_STATE curState = m_pState->GetCurState();
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
-		if(curState != ES_WAITING_FOR_BLOCK_MAP_ENTRY && curState != ES_DONE_WITH_BLOCK_MAP_VALUE
-		   && curState != ES_WAITING_FOR_FLOW_MAP_ENTRY && curState != ES_DONE_WITH_FLOW_MAP_VALUE)
-			return m_pState->SetError(ErrorMsg::UNEXPECTED_KEY_TOKEN);
+        if(m_pState->CurGroupChildCount() == 0)
+            m_pState->ForceFlow();
+        
+        if(m_pState->CurGroupFlowType() == FlowType::Flow) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(m_pState->CurIndent());
+            if(m_pState->CurGroupChildCount() == 0)
+                m_stream << "{";
+            m_stream << "}";
+        }
 
-		if(flowType == FT_BLOCK) {
-			if(curState == ES_DONE_WITH_BLOCK_MAP_VALUE)
-				m_stream << '\n';
-			unsigned curIndent = m_pState->GetCurIndent();
-			m_stream << IndentTo(curIndent);
-			m_pState->UnsetSeparation();
-			m_pState->SwitchState(ES_WAITING_FOR_BLOCK_MAP_KEY);
-		} else if(flowType == FT_FLOW) {
-			EmitSeparationIfNecessary();
-			if(curState == ES_DONE_WITH_FLOW_MAP_VALUE) {
-				m_stream << ',';
-				m_pState->RequireSoftSeparation();
-			}
-			m_pState->SwitchState(ES_WAITING_FOR_FLOW_MAP_KEY);
-		} else
-			assert(false);
-		
-		if(m_pState->GetMapKeyFormat() == LongKey)
-			m_pState->StartLongKey();
-		else if(m_pState->GetMapKeyFormat() == Auto)
-			m_pState->StartSimpleKey();
-		else
-			assert(false);
-	}
-	
-	// EmitValue
-	void Emitter::EmitValue()
-	{
-		if(!good())
-			return;
-
-		EMITTER_STATE curState = m_pState->GetCurState();
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
-		if(curState != ES_DONE_WITH_BLOCK_MAP_KEY && curState != ES_DONE_WITH_FLOW_MAP_KEY)
-			return m_pState->SetError(ErrorMsg::UNEXPECTED_VALUE_TOKEN);
-
-		if(flowType == FT_BLOCK) {
-			if(m_pState->CurrentlyInLongKey()) {
-				m_stream << '\n';
-				m_stream << IndentTo(m_pState->GetCurIndent());
-				m_stream << ':';
-				m_pState->RequireSoftSeparation();
-			}
-			m_pState->SwitchState(ES_WAITING_FOR_BLOCK_MAP_VALUE);
-		} else if(flowType == FT_FLOW) {
-			m_pState->SwitchState(ES_WAITING_FOR_FLOW_MAP_VALUE);
-		} else
-			assert(false);
-	}
+        m_pState->EndedGroup(GroupType::Map);
+    }
 
 	// EmitNewline
 	void Emitter::EmitNewline()
 	{
 		if(!good())
 			return;
-
-		if(CanEmitNewline()) {
-			m_stream << '\n';
-			m_pState->UnsetSeparation();
-		}
+        
+        PrepareNode(EmitterNodeType::None);
+        m_stream << "\n";
+        m_pState->SetNonContent();
 	}
 
 	bool Emitter::CanEmitNewline() const
 	{
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
-		if(flowType == FT_BLOCK && m_pState->CurrentlyInLongKey())
-			return true;
-
-		EMITTER_STATE curState = m_pState->GetCurState();
-		return curState != ES_DONE_WITH_BLOCK_MAP_KEY && curState != ES_WAITING_FOR_BLOCK_MAP_VALUE && curState != ES_WRITING_BLOCK_MAP_VALUE;
+        return true;
 	}
+
+    // Put the stream in a state so we can simply write the next node
+    // E.g., if we're in a sequence, write the "- "
+    void Emitter::PrepareNode(EmitterNodeType::value child)
+    {
+        switch(m_pState->CurGroupNodeType()) {
+            case EmitterNodeType::None:
+                PrepareTopNode(child);
+                break;
+            case EmitterNodeType::FlowSeq:
+                FlowSeqPrepareNode(child);
+                break;
+            case EmitterNodeType::BlockSeq:
+                BlockSeqPrepareNode(child);
+                break;
+            case EmitterNodeType::FlowMap:
+                FlowMapPrepareNode(child);
+                break;
+            case EmitterNodeType::BlockMap:
+                BlockMapPrepareNode(child);
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+                assert(false);
+                break;
+        }
+    }
+    
+    void Emitter::PrepareTopNode(EmitterNodeType::value child)
+    {
+        if(child == EmitterNodeType::None)
+            return;
+        
+        if(m_pState->CurGroupChildCount() > 0 && m_stream.col() > 0) {
+            if(child != EmitterNodeType::None)
+                EmitBeginDoc();
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                // TODO: if we were writing null, and
+                // we wanted it blank, we wouldn't want a space
+                SpaceOrIndentTo(m_pState->HasBegunContent(), 0);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                if(m_pState->HasBegunNode())
+                    m_stream << "\n";
+                break;
+        }
+    }
+    
+    void Emitter::FlowSeqPrepareNode(EmitterNodeType::value child)
+    {
+        const unsigned lastIndent = m_pState->LastIndent();
+
+        if(!m_pState->HasBegunNode()) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(lastIndent);
+            if(m_pState->CurGroupChildCount() == 0)
+                m_stream << "[";
+            else
+                m_stream << ",";
+        }
+
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, lastIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                assert(false);
+                break;
+        }
+    }
+
+    void Emitter::BlockSeqPrepareNode(EmitterNodeType::value child)
+    {
+        const unsigned curIndent = m_pState->CurIndent();
+        const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
+        
+        if(child == EmitterNodeType::None)
+            return;
+        
+        if(!m_pState->HasBegunContent()) {
+            if(m_pState->CurGroupChildCount() > 0 || m_stream.comment()) {
+                m_stream << "\n";
+            }
+            m_stream << IndentTo(curIndent);
+            m_stream << "-";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(m_pState->HasBegunContent(), nextIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+                m_stream << "\n";
+                break;
+            case EmitterNodeType::BlockMap:
+                if(m_pState->HasBegunContent() || m_stream.comment())
+                    m_stream << "\n";
+                break;
+        }
+    }
+    
+    void Emitter::FlowMapPrepareNode(EmitterNodeType::value child)
+    {
+        if(m_pState->CurGroupChildCount() % 2 == 0) {
+            if(m_pState->GetMapKeyFormat() == LongKey)
+                m_pState->SetLongKey();
+            
+            if(m_pState->CurGroupLongKey())
+                FlowMapPrepareLongKey(child);
+            else
+                FlowMapPrepareSimpleKey(child);
+        } else {
+            if(m_pState->CurGroupLongKey())
+                FlowMapPrepareLongKeyValue(child);
+            else
+                FlowMapPrepareSimpleKeyValue(child);
+        }
+    }
+
+    void Emitter::FlowMapPrepareLongKey(EmitterNodeType::value child)
+    {
+        const unsigned lastIndent = m_pState->LastIndent();
+        
+        if(!m_pState->HasBegunNode()) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(lastIndent);
+            if(m_pState->CurGroupChildCount() == 0)
+                m_stream << "{ ?";
+            else
+                m_stream << ", ?";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, lastIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                assert(false);
+                break;
+        }
+    }
+    
+    void Emitter::FlowMapPrepareLongKeyValue(EmitterNodeType::value child)
+    {
+        const unsigned lastIndent = m_pState->LastIndent();
+        
+        if(!m_pState->HasBegunNode()) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(lastIndent);
+            m_stream << ":";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, lastIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                assert(false);
+                break;
+        }
+    }
+    
+    void Emitter::FlowMapPrepareSimpleKey(EmitterNodeType::value child)
+    {
+        const unsigned lastIndent = m_pState->LastIndent();
+        
+        if(!m_pState->HasBegunNode()) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(lastIndent);
+            if(m_pState->CurGroupChildCount() == 0)
+                m_stream << "{";
+            else
+                m_stream << ",";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, lastIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                assert(false);
+                break;
+        }
+    }
+    
+    void Emitter::FlowMapPrepareSimpleKeyValue(EmitterNodeType::value child)
+    {
+        const unsigned lastIndent = m_pState->LastIndent();
+        
+        if(!m_pState->HasBegunNode()) {
+            if(m_stream.comment())
+                m_stream << "\n";
+            m_stream << IndentTo(lastIndent);
+            m_stream << ":";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(m_pState->HasBegunContent() || m_pState->CurGroupChildCount() > 0, lastIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                assert(false);
+                break;
+        }
+    }
+
+    void Emitter::BlockMapPrepareNode(EmitterNodeType::value child)
+    {
+        if(m_pState->CurGroupChildCount() % 2 == 0) {
+            if(m_pState->GetMapKeyFormat() == LongKey)
+                m_pState->SetLongKey();
+            if(child == EmitterNodeType::BlockSeq || child == EmitterNodeType::BlockMap)
+                m_pState->SetLongKey();
+            
+            if(m_pState->CurGroupLongKey())
+                BlockMapPrepareLongKey(child);
+            else
+                BlockMapPrepareSimpleKey(child);
+        } else {
+            if(m_pState->CurGroupLongKey())
+                BlockMapPrepareLongKeyValue(child);
+            else
+                BlockMapPrepareSimpleKeyValue(child);
+        }
+    }
+    
+    void Emitter::BlockMapPrepareLongKey(EmitterNodeType::value child)
+    {
+        const unsigned curIndent = m_pState->CurIndent();
+        const std::size_t childCount = m_pState->CurGroupChildCount();
+        
+        if(child == EmitterNodeType::None)
+            return;
+
+        if(!m_pState->HasBegunContent()) {
+            if(childCount > 0) {
+                m_stream << "\n";
+            }
+            if(m_stream.comment()) {
+                m_stream << "\n";
+            }
+            m_stream << IndentTo(curIndent);
+            m_stream << "?";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(true, curIndent + 1);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                break;
+        }
+    }
+
+    void Emitter::BlockMapPrepareLongKeyValue(EmitterNodeType::value child)
+    {
+        const unsigned curIndent = m_pState->CurIndent();
+        
+        if(child == EmitterNodeType::None)
+            return;
+
+        if(!m_pState->HasBegunContent()) {
+            m_stream << "\n";
+            m_stream << IndentTo(curIndent);
+            m_stream << ":";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                SpaceOrIndentTo(true, curIndent + 1);
+                break;
+        }
+    }
+
+    void Emitter::BlockMapPrepareSimpleKey(EmitterNodeType::value child)
+    {
+        const unsigned curIndent = m_pState->CurIndent();
+        const std::size_t childCount = m_pState->CurGroupChildCount();
+        
+        if(child == EmitterNodeType::None)
+            return;
+        
+        if(!m_pState->HasBegunNode()) {
+            if(childCount > 0) {
+                m_stream << "\n";
+            }
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(m_pState->HasBegunContent(), curIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                break;
+        }
+    }
+    
+    void Emitter::BlockMapPrepareSimpleKeyValue(EmitterNodeType::value child)
+    {
+        const unsigned curIndent = m_pState->CurIndent();
+        const unsigned nextIndent = curIndent + m_pState->CurGroupIndent();
+        
+        if(!m_pState->HasBegunNode()) {
+            m_stream << ":";
+        }
+        
+        switch(child) {
+            case EmitterNodeType::None:
+                break;
+            case EmitterNodeType::Property:
+            case EmitterNodeType::Scalar:
+            case EmitterNodeType::FlowSeq:
+            case EmitterNodeType::FlowMap:
+                SpaceOrIndentTo(true, nextIndent);
+                break;
+            case EmitterNodeType::BlockSeq:
+            case EmitterNodeType::BlockMap:
+                m_stream << "\n";
+                break;
+        }
+    }
+    
+    // SpaceOrIndentTo
+    // . Prepares for some more content by proper spacing
+    void Emitter::SpaceOrIndentTo(bool requireSpace, unsigned indent)
+    {
+        if(m_stream.comment())
+            m_stream << "\n";
+        if(m_stream.col() > 0 && requireSpace)
+            m_stream << " ";
+        m_stream << IndentTo(indent);
+    }
+
+    void Emitter::PrepareIntegralStream(std::stringstream& stream) const
+    {
+		
+		switch(m_pState->GetIntFormat()) {
+			case Dec:
+				stream << std::dec;
+				break;
+			case Hex:
+                stream << "0x";
+				stream << std::hex;
+				break;
+			case Oct:
+                stream << "0";
+				stream << std::oct;
+				break;
+			default:
+				assert(false);
+		}
+    }
+
+    void Emitter::StartedScalar()
+    {
+        m_pState->StartedScalar();
+    }
 
 	// *******************************************************************************************
 	// overloads of Write
@@ -619,73 +717,33 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
-		
-		// literal scalars must use long keys
-		if(m_pState->GetStringFormat() == Literal && m_pState->GetCurGroupFlowType() != FT_FLOW)
-			m_pState->StartLongKey();
-		
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
-		
-		bool escapeNonAscii = m_pState->GetOutputCharset() == EscapeNonAscii;
-		EMITTER_MANIP strFmt = m_pState->GetStringFormat();
-		FLOW_TYPE flowType = m_pState->GetCurGroupFlowType();
-		unsigned curIndent = m_pState->GetCurIndent();
+        
+		const bool escapeNonAscii = m_pState->GetOutputCharset() == EscapeNonAscii;
+        const StringFormat::value strFormat = Utils::ComputeStringFormat(str, m_pState->GetStringFormat(), m_pState->CurGroupFlowType(), escapeNonAscii);
+        
+        if(strFormat == StringFormat::Literal)
+            m_pState->SetMapKeyFormat(YAML::LongKey, FmtScope::Local);
+        
+        PrepareNode(EmitterNodeType::Scalar);
+        
+        switch(strFormat) {
+            case StringFormat::Plain:
+                m_stream << str;
+                break;
+            case StringFormat::SingleQuoted:
+                Utils::WriteSingleQuotedString(m_stream, str);
+                break;
+            case StringFormat::DoubleQuoted:
+                Utils::WriteDoubleQuotedString(m_stream, str, escapeNonAscii);
+                break;
+            case StringFormat::Literal:
+                Utils::WriteLiteralString(m_stream, str, m_pState->CurIndent() + m_pState->GetIndent());
+                break;
+        }
 
-		switch(strFmt) {
-			case Auto:
-				Utils::WriteString(m_stream, str, flowType == FT_FLOW, escapeNonAscii);
-				break;
-			case SingleQuoted:
-				if(!Utils::WriteSingleQuotedString(m_stream, str)) {
-					m_pState->SetError(ErrorMsg::SINGLE_QUOTED_CHAR);
-					return *this;
-				}
-				break;
-			case DoubleQuoted:
-				Utils::WriteDoubleQuotedString(m_stream, str, escapeNonAscii);
-				break;
-			case Literal:
-				if(flowType == FT_FLOW)
-					Utils::WriteString(m_stream, str, flowType == FT_FLOW, escapeNonAscii);
-				else
-					Utils::WriteLiteralString(m_stream, str, curIndent + m_pState->GetIndent());
-				break;
-			default:
-				assert(false);
-		}
-		
-		PostAtomicWrite();
+        StartedScalar();
+        
 		return *this;
-	}
-
-	void Emitter::PreWriteIntegralType(std::stringstream& str)
-	{
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
-		
-		EMITTER_MANIP intFmt = m_pState->GetIntFormat();
-		switch(intFmt) {
-			case Dec:
-				str << std::dec;
-				break;
-			case Hex:
-                str << "0x";
-				str << std::hex;
-				break;
-			case Oct:
-                str << "0";
-				str << std::oct;
-				break;
-			default:
-				assert(false);
-		}
-	}
-
-	void Emitter::PreWriteStreamable(std::stringstream&)
-	{
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
 	}
 
     unsigned Emitter::GetFloatPrecision() const
@@ -697,18 +755,6 @@ namespace YAML
     {
         return m_pState->GetDoublePrecision();
     }
-
-	void Emitter::PostWriteIntegralType(const std::stringstream& str)
-	{
-		m_stream << str.str();
-		PostAtomicWrite();
-	}
-
-	void Emitter::PostWriteStreamable(const std::stringstream& str)
-	{
-		m_stream << str.str();
-		PostAtomicWrite();
-	}
 
 	const char *Emitter::ComputeFullBoolName(bool b) const
 	{
@@ -749,17 +795,17 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
-		
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
-	
+
+        PrepareNode(EmitterNodeType::Scalar);
+
 		const char *name = ComputeFullBoolName(b);
 		if(m_pState->GetBoolLengthFormat() == ShortBool)
 			m_stream << name[0];
 		else
 			m_stream << name;
 
-		PostAtomicWrite();
+        StartedScalar();
+
 		return *this;
 	}
 
@@ -767,13 +813,11 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
-		
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
-		
-		Utils::WriteChar(m_stream, ch);
-		
-		PostAtomicWrite();
+
+        PrepareNode(EmitterNodeType::Scalar);
+        Utils::WriteChar(m_stream, ch);
+        StartedScalar();
+
 		return *this;
 	}
 
@@ -781,14 +825,21 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
-		
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
+        
+        if(m_pState->HasAnchor() || m_pState->HasTag()) {
+            m_pState->SetError(ErrorMsg::INVALID_ALIAS);
+            return *this;
+        }
+
+        PrepareNode(EmitterNodeType::Scalar);
+
 		if(!Utils::WriteAlias(m_stream, alias.content)) {
 			m_pState->SetError(ErrorMsg::INVALID_ALIAS);
 			return *this;
 		}
-		PostAtomicWrite();
+        
+        StartedScalar();
+
 		return *this;
 	}
 	
@@ -796,15 +847,21 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
-		
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
+        
+        if(m_pState->HasAnchor()) {
+            m_pState->SetError(ErrorMsg::INVALID_ANCHOR);
+            return *this;
+        }
+
+        PrepareNode(EmitterNodeType::Property);
+
 		if(!Utils::WriteAnchor(m_stream, anchor.content)) {
 			m_pState->SetError(ErrorMsg::INVALID_ANCHOR);
 			return *this;
 		}
-		m_pState->RequireHardSeparation();
-		// Note: no PostAtomicWrite() because we need another value for this node
+        
+        m_pState->SetAnchor();
+
 		return *this;
 	}
 	
@@ -812,10 +869,14 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
-
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
-		
+        
+        if(m_pState->HasTag()) {
+            m_pState->SetError(ErrorMsg::INVALID_TAG);
+            return *this;
+        }
+        
+        PrepareNode(EmitterNodeType::Property);
+        
 		bool success = false;
 		if(tag.type == _Tag::Type::Verbatim)
 			success = Utils::WriteTag(m_stream, tag.content, true);
@@ -828,9 +889,9 @@ namespace YAML
 			m_pState->SetError(ErrorMsg::INVALID_TAG);
 			return *this;
 		}
-		
-		m_pState->RequireHardSeparation();
-		// Note: no PostAtomicWrite() because we need another value for this node
+
+        m_pState->SetTag();
+
 		return *this;
 	}
 
@@ -843,13 +904,15 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
-		
+
+        PrepareNode(EmitterNodeType::None);
+        
 		if(m_stream.col() > 0)
 			m_stream << Indentation(m_pState->GetPreCommentIndent());
 		Utils::WriteComment(m_stream, comment.content, m_pState->GetPostCommentIndent());
-		m_pState->RequireHardSeparation();
-		m_pState->ForceHardSeparation();
-		
+
+        m_pState->SetNonContent();
+
 		return *this;
 	}
 
@@ -857,11 +920,13 @@ namespace YAML
 	{
 		if(!good())
 			return *this;
-		
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
-		m_stream << "~";
-		PostAtomicWrite();
+
+        PrepareNode(EmitterNodeType::Scalar);
+        
+        m_stream << "~";
+
+        StartedScalar();
+
 		return *this;
 	}
 
@@ -871,11 +936,11 @@ namespace YAML
 
 		if(!good())
 			return *this;
-		
-		PreAtomicWrite();
-		EmitSeparationIfNecessary();
+
+        PrepareNode(EmitterNodeType::Scalar);
 		Utils::WriteBinary(m_stream, binary);
-		PostAtomicWrite();
+        StartedScalar();
+
 		return *this;
 	}
 }

@@ -1,4 +1,5 @@
 #include "tests.h"
+#include "handlermacros.h"
 #include "yaml-cpp/yaml.h"
 #include <iostream>
 
@@ -190,7 +191,7 @@ namespace Test
 			out << YAML::Value << "demon";
 			out << YAML::EndMap;
 			
-			desiredOutput = "?\n  - 1\n  - 3\n: monster\n? [2, 0]\n: demon";
+			desiredOutput = "? - 1\n  - 3\n: monster\n? [2, 0]\n: demon";
 		}
 
 		void AutoLongKey(YAML::Emitter& out, std::string& desiredOutput)
@@ -204,7 +205,7 @@ namespace Test
 			out << YAML::Value << "angel";
 			out << YAML::EndMap;
 			
-			desiredOutput = "?\n  - 1\n  - 3\n: monster\n? [2, 0]\n: demon\nthe origin: angel";
+			desiredOutput = "? - 1\n  - 3\n: monster\n[2, 0]: demon\nthe origin: angel";
 		}
 		
 		void ScalarFormat(YAML::Emitter& out, std::string& desiredOutput)
@@ -218,7 +219,7 @@ namespace Test
 			out << YAML::Literal << "literal scalar\nthat may span\nmany, many\nlines and have \"whatever\" crazy\tsymbols that we like";
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- simple scalar\n- 'explicit single-quoted scalar'\n- \"explicit double-quoted scalar\"\n- \"auto-detected\\x0adouble-quoted scalar\"\n- a non-\"auto-detected\" double-quoted scalar\n- |\n  literal scalar\n  that may span\n  many, many\n  lines and have \"whatever\" crazy\tsymbols that we like";
+			desiredOutput = "- simple scalar\n- 'explicit single-quoted scalar'\n- \"explicit double-quoted scalar\"\n- \"auto-detected\\ndouble-quoted scalar\"\n- a non-\"auto-detected\" double-quoted scalar\n- |\n  literal scalar\n  that may span\n  many, many\n  lines and have \"whatever\" crazy\tsymbols that we like";
 		}
 
 		void AutoLongKeyScalar(YAML::Emitter& out, std::string& desiredOutput)
@@ -256,7 +257,7 @@ namespace Test
 			out << "total value";
 			out << YAML::EndMap;
 			
-			desiredOutput = "?\n  key: value\n  next key: next value\n: total value";
+			desiredOutput = "? key: value\n  next key: next value\n: total value";
 		}
 		
 		void AliasAndAnchor(YAML::Emitter& out, std::string& desiredOutput)
@@ -539,7 +540,7 @@ namespace Test
 		{
 			out << YAML::Flow << YAML::BeginSeq << "foo" << YAML::Comment("foo!") << "bar" << YAML::EndSeq;
 			
-			desiredOutput = "[foo  # foo!\n, bar]";
+			desiredOutput = "[foo,  # foo!\nbar]";
 		}
 
 		void CommentInFlowMap(YAML::Emitter& out, std::string& desiredOutput)
@@ -550,7 +551,7 @@ namespace Test
 			out << YAML::Key << "baz" << YAML::Value << "baz value" << YAML::Comment("baz!");
 			out << YAML::EndMap;
 			
-			desiredOutput = "{foo: foo value, bar: bar value  # bar!\n, baz: baz value  # baz!\n}";
+			desiredOutput = "{foo: foo value, bar: bar value,  # bar!\nbaz: baz value,  # baz!\n}";
 		}
 
 		void Indentation(YAML::Emitter& out, std::string& desiredOutput)
@@ -563,7 +564,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "-   key 1: value 1\n    key 2:\n        - a\n        - b\n        - c";
+			desiredOutput = "-   key 1: value 1\n    key 2:\n        -   a\n        -   b\n        -   c";
 		}
 
 		void SimpleGlobalSettings(YAML::Emitter& out, std::string& desiredOutput)
@@ -597,7 +598,7 @@ namespace Test
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
 			
-			desiredOutput = "- key 1: value 1\n  key 2: [a, b, c]\n- ? [1, 2]\n  :\n    a: b";
+			desiredOutput = "- key 1: value 1\n  key 2: [a, b, c]\n- [1, 2]:\n    a: b";
 		}
 
 		void Null(YAML::Emitter& out, std::string& desiredOutput)
@@ -720,7 +721,7 @@ namespace Test
 			out << YAML::Flow << YAML::BeginSeq;
 			out << "a" << YAML::Newline << "b" << "c" << YAML::Newline << "d";
 			out << YAML::EndSeq;
-			desiredOutput = "[a\n, b, c\n, d]";
+			desiredOutput = "[a,\nb, c,\nd]";
 		}
 
 		void NewlineInBlockMap(YAML::Emitter& out, std::string& desiredOutput)
@@ -730,7 +731,7 @@ namespace Test
 			out << YAML::Key << "b" << YAML::Newline << YAML::Value << "bar";
 			out << YAML::LongKey << YAML::Key << "c" << YAML::Newline << YAML::Value << "car";
 			out << YAML::EndMap;
-			desiredOutput = "a: foo\n\nb: bar\n? c\n\n: car";
+			desiredOutput = "a: foo\nb:\n  bar\n? c\n\n: car";
 		}
 		
 		void NewlineInFlowMap(YAML::Emitter& out, std::string& desiredOutput)
@@ -739,7 +740,7 @@ namespace Test
 			out << YAML::Key << "a" << YAML::Value << "foo" << YAML::Newline;
 			out << YAML::Key << "b" << YAML::Value << "bar";
 			out << YAML::EndMap;
-			desiredOutput = "{a: foo\n, b: bar}";
+			desiredOutput = "{a: foo,\nb: bar}";
 		}
 		
 		void LotsOfNewlines(YAML::Emitter& out, std::string& desiredOutput)
@@ -755,7 +756,7 @@ namespace Test
 			out << YAML::LongKey << YAML::Key << "f" << YAML::Newline << YAML::Value << "foo";
 			out << YAML::EndMap;
 			out << YAML::EndSeq;
-			desiredOutput = "- a\n\n-\n  - b\n  - c\n\n\n-\n  d: e\n  ? f\n\n  : foo";
+			desiredOutput = "- a\n\n-\n  - b\n  - c\n\n\n-\n  d:\n    e\n  ? f\n\n  : foo";
 		}
 		
 		void Binary(YAML::Emitter& out, std::string& desiredOutput)
@@ -911,7 +912,40 @@ namespace Test
             desiredOutput = "[31, 0x1f, 037]";
         }
         
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////
+        void CompactMapWithNewline(YAML::Emitter& out, std::string& desiredOutput)
+        {
+            out << YAML::Comment("Characteristics");
+            out << YAML::BeginSeq;
+            out << YAML::BeginMap;
+            out << YAML::Key << "color" << YAML::Value << "blue";
+            out << YAML::Key << "height" << YAML::Value << 120;
+            out << YAML::EndMap;
+            out << YAML::Newline << YAML::Newline;
+            out << YAML::Comment("Skills");
+            out << YAML::BeginMap;
+            out << YAML::Key << "attack" << YAML::Value << 23;
+            out << YAML::Key << "intelligence" << YAML::Value << 56;
+            out << YAML::EndMap;
+            out << YAML::EndSeq;
+            
+            desiredOutput =
+            "# Characteristics\n"
+            "- color: blue\n"
+            "  height: 120\n"
+            "\n"
+            "# Skills\n"
+            "- attack: 23\n"
+            "  intelligence: 56";
+        }
+        
+		void ForceSingleQuotedToDouble(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::SingleQuoted << "Hello\nWorld";
+
+            desiredOutput = "\"Hello\\nWorld\"";
+		}
+        
+        ////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		
 		void ExtraEndSeq(YAML::Emitter& out, std::string& desiredError)
@@ -935,13 +969,6 @@ namespace Test
 			out << YAML::EndMap;
 		}
 
-		void BadSingleQuoted(YAML::Emitter& out, std::string& desiredError)
-		{
-			desiredError = YAML::ErrorMsg::SINGLE_QUOTED_CHAR;
-			
-			out << YAML::SingleQuoted << "Hello\nWorld";
-		}
-
 		void InvalidAnchor(YAML::Emitter& out, std::string& desiredError)
 		{
 			desiredError = YAML::ErrorMsg::INVALID_ANCHOR;
@@ -957,43 +984,6 @@ namespace Test
 			
 			out << YAML::BeginSeq;
 			out << YAML::Alias("new\nline");
-			out << YAML::EndSeq;
-		}
-
-		void MissingKey(YAML::Emitter& out, std::string& desiredError)
-		{
-			desiredError = YAML::ErrorMsg::EXPECTED_KEY_TOKEN;
-			
-			out << YAML::BeginMap;
-			out << YAML::Key << "key" << YAML::Value << "value";
-			out << "missing key" << YAML::Value << "value";
-			out << YAML::EndMap;
-		}
-		
-		void MissingValue(YAML::Emitter& out, std::string& desiredError)
-		{
-			desiredError = YAML::ErrorMsg::EXPECTED_VALUE_TOKEN;
-			
-			out << YAML::BeginMap;
-			out << YAML::Key << "key" << "value";
-			out << YAML::EndMap;
-		}
-
-		void UnexpectedKey(YAML::Emitter& out, std::string& desiredError)
-		{
-			desiredError = YAML::ErrorMsg::UNEXPECTED_KEY_TOKEN;
-			
-			out << YAML::BeginSeq;
-			out << YAML::Key << "hi";
-			out << YAML::EndSeq;
-		}
-		
-		void UnexpectedValue(YAML::Emitter& out, std::string& desiredError)
-		{
-			desiredError = YAML::ErrorMsg::UNEXPECTED_VALUE_TOKEN;
-			
-			out << YAML::BeginSeq;
-			out << YAML::Value << "hi";
 			out << YAML::EndSeq;
 		}
 	}
@@ -1043,7 +1033,37 @@ namespace Test
 			}
 			total++;
 		}
+        
+        void RunGenEmitterTest(TEST (*test)(YAML::Emitter&), const std::string& name, int& passed, int& total) {
+            YAML::Emitter out;
+            TEST ret;
+
+			try {
+				ret = test(out);
+			} catch(const YAML::Exception& e) {
+				ret.ok = false;
+				ret.error = std::string("  Exception caught: ") + e.what();
+			}
+            
+            if(!out.good()) {
+                ret.ok = false;
+                ret.error = out.GetLastError();
+            }
+			
+			if(!ret.ok) {
+				std::cout << "Generated emitter test failed: " << name << "\n";
+                std::cout << "Output:\n";
+                std::cout << out.c_str() << "<<<\n";
+				std::cout << ret.error << "\n";
+			}
+			
+			if(ret.ok)
+				passed++;
+			total++;
+        }
 	}
+    
+#include "genemittertests.h"
 	
 	bool RunEmitterTests()
 	{
@@ -1126,17 +1146,16 @@ namespace Test
 		RunEmitterTest(&Emitter::SetPrecision, "set precision", passed, total);
 		RunEmitterTest(&Emitter::DashInBlockContext, "dash in block context", passed, total);
 		RunEmitterTest(&Emitter::HexAndOct, "hex and oct", passed, total);
+		RunEmitterTest(&Emitter::CompactMapWithNewline, "compact map with newline", passed, total);
+        RunEmitterTest(&Emitter::ForceSingleQuotedToDouble, "force single quoted to double", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);
-		RunEmitterErrorTest(&Emitter::BadSingleQuoted, "bad single quoted string", passed, total);
 		RunEmitterErrorTest(&Emitter::InvalidAnchor, "invalid anchor", passed, total);
 		RunEmitterErrorTest(&Emitter::InvalidAlias, "invalid alias", passed, total);
-		RunEmitterErrorTest(&Emitter::MissingKey, "missing key", passed, total);
-		RunEmitterErrorTest(&Emitter::MissingValue, "missing value", passed, total);
-		RunEmitterErrorTest(&Emitter::UnexpectedKey, "unexpected key", passed, total);
-		RunEmitterErrorTest(&Emitter::UnexpectedValue, "unexpected value", passed, total);
 		RunEmitterErrorTest(&Emitter::BadLocalTag, "bad local tag", passed, total);
+        
+        RunGenEmitterTests(passed, total);
 
 		std::cout << "Emitter tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

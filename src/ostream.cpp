@@ -3,7 +3,7 @@
 
 namespace YAML
 {
-	ostream::ostream(): m_buffer(0), m_pos(0), m_size(0), m_row(0), m_col(0)
+	ostream::ostream(): m_buffer(0), m_pos(0), m_size(0), m_row(0), m_col(0), m_comment(false)
 	{
 		reserve(1024);
 	}
@@ -37,6 +37,7 @@ namespace YAML
 		if(ch == '\n') {
 			m_row++;
 			m_col = 0;
+            m_comment = false;
 		} else
 			m_col++;
 	}
