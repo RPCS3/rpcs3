@@ -53,7 +53,7 @@ def comment(value):
     return {'emit': 'YAML::Comment("%s")' % value, 'handle': ''}
 
 def gen_templates():
-    yield [[doc_start(), doc_start(True)], [scalar('foo')], [doc_end(), doc_end(True)]]
+    yield [[doc_start(), doc_start(True)], [scalar('foo'), scalar('foo\n')], [doc_end(), doc_end(True)]]
 
 def expand(template):
     if len(template) == 0:
