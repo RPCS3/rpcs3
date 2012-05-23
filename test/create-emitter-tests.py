@@ -46,15 +46,31 @@ def scalar(value, tag='', anchor='', anchor_id=0):
     emit += ['"%s"' % encode(value)]
     return {'emit': emit, 'handle': 'SCALAR("%s", %s, "%s")' % (out_tag, anchor_id, encode(value))}
 
-def gen_outlines():
-    yield [doc_start(), scalar('foo\n'), doc_end()]
-    yield [doc_start(True), scalar('foo\n'), doc_end()]
-    yield [doc_start(), scalar('foo\n'), doc_end(True)]
-    yield [doc_start(True), scalar('foo\n'), doc_end(True)]
+def comment(value):
+    return {'emit': 'YAML::Comment("%s")' % value, 'handle': ''}
+
+def gen_templates():
+    yield [[doc_start(), doc_start(True)], [scalar('foo\n')], [doc_end(), doc_end(True)]]
+
+def expand(template):
+    if len(template) == 0:
+        pass
+    elif len(template) == 1:
+        for item in template[0]:
+            if isinstance(item, list):
+                yield item
+            else:
+                yield [item]
+    else:
+        for car in expand(template[:1]):
+            for cdr in expand(template[1:]):
+                yield car + cdr
+            
 
 def gen_events():
-    for events in gen_outlines():
-        yield events
+    for template in gen_templates():
+        for events in expand(template):
+            yield events
 
 def gen_tests():
     for events in gen_events():
