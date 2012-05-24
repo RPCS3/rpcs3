@@ -116,4 +116,7 @@ void __fastcall WriteFIFO_GIF(const mem128_t *value)
 {
 	GUNIT_LOG("WriteFIFO_GIF()");
 	gifUnit.TransferGSPacketData(GIF_TRANS_FIFO, (u8*)value, 16);
+
+	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
+		gifUnit.gifPath[GIF_PATH_3].state = GIF_PATH_IDLE;
 }
