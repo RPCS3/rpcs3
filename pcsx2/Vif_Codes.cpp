@@ -92,11 +92,13 @@ void ExecuteVU(int idx)
 	{
 		vuExecMicro(idx, -1);
 		vifX.cmd = 0;
+		vifX.pass = 0;
 	}
 	else if((vifX.cmd & 0x7f) == 0x14 || (vifX.cmd & 0x7f) == 0x15)
 	{
 		vuExecMicro(idx, (u16)(vifXRegs.code) << 3);
 		vifX.cmd = 0;
+		vifX.pass = 0;
 	}
 }
 
@@ -106,9 +108,9 @@ void ExecuteVU(int idx)
 
 vifOp(vifCode_Base) {
 	vif1Only();
-	pass1 { vif1Regs.base = vif1Regs.code & 0x3ff; vif1.cmd = 0; }
+	pass1 { vif1Regs.base = vif1Regs.code & 0x3ff; vif1.cmd = 0; vif1.pass = 0; }
 	pass3 { VifCodeLog("Base"); }
-	return 0;
+	return 1;
 }
 
 template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDirectHL) {
@@ -116,7 +118,8 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 	pass1 {
 		int vifImm    = (u16)vif1Regs.code;
 		vif1.tag.size = vifImm ? (vifImm*4) : (65536*4);
-		return 0;
+		vif1.pass = 1;
+		return 1;
 	}
 	pass2 {
 		const char* name = isDirectHL ? "DirectHL" : "Direct";
@@ -134,9 +137,11 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 			//gifUnit.PrintInfo();
 			vif1.vifstalled   = true;
 			vif1Regs.stat.VGW = true;
+			return 0;
 		}
 		if (vif1.tag.size == 0) {
 			vif1.cmd = 0;
+			vif1.pass = 0;
 		}
 		return ret / 4;
 	}
@@ -164,11 +169,13 @@ vifOp(vifCode_Flush) {
 			//gifUnit.PrintInfo();
 			vif1Regs.stat.VGW = true;
 			vifX.vifstalled   = true;
+			return 0;
 		}
 		else vifX.cmd = 0;
+		vifX.pass = 0;
 	}
 	pass3 { VifCodeLog("Flush"); }
-	return 0;
+	return 1;
 }
 
 vifOp(vifCode_FlushA) {
@@ -207,25 +214,27 @@ vifOp(vifCode_FlushA) {
 		if (doStall) {
 			vif1Regs.stat.VGW = true;
 			vifX.vifstalled   = true;
+			return 0;
 		}
 		else vifX.cmd = 0;
+		vifX.pass = 0;
 	}
 	pass3 { VifCodeLog("FlushA"); }
-	return 0;
+	return 1;
 }
 
 // ToDo: FixMe
 vifOp(vifCode_FlushE) {
 	vifStruct& vifX = GetVifX;
-	pass1 { vifFlush(idx); vifX.cmd = 0; }
+	pass1 { vifFlush(idx); vifX.cmd = 0; vifX.pass = 0;}
 	pass3 { VifCodeLog("FlushE"); }
-	return 0;
+	return 1;
 }
 
 vifOp(vifCode_ITop) {
-	pass1 { vifXRegs.itops = vifXRegs.code & 0x3ff; GetVifX.cmd = 0; }
+	pass1 { vifXRegs.itops = vifXRegs.code & 0x3ff; GetVifX.cmd = 0; GetVifX.pass = 0; }
 	pass3 { VifCodeLog("ITop"); }
-	return 0;
+	return 1;
 }
 
 vifOp(vifCode_Mark) {
@@ -234,9 +243,10 @@ vifOp(vifCode_Mark) {
 		vifXRegs.mark     = (u16)vifXRegs.code;
 		vifXRegs.stat.MRK = true;
 		vifX.cmd          = 0;
+		vifX.pass		  = 0;
 	}
 	pass3 { VifCodeLog("Mark"); }
-	return 0;
+	return 1;
 }
 
 static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
@@ -262,7 +272,12 @@ vifOp(vifCode_MPG) {
 		vifX.tag.addr = (u16)(vifXRegs.code <<  3) & (idx ? 0x3fff : 0xfff);
 		vifX.tag.size = vifNum ? (vifNum*2) : 512;
 		vifFlush(idx);
-		return 1;
+		if(vifX.vifstalled == true) return 0;
+		else
+		{
+			vifX.pass = 1;
+			return 1;
+		}
 	}
 	pass2 {
 		if (vifX.vifpacketsize < vifX.tag.size) { // Partial Transfer
@@ -282,6 +297,7 @@ vifOp(vifCode_MPG) {
 			int ret       = vifX.tag.size;
 			vifX.tag.size = 0;
 			vifX.cmd      = 0;
+			vifX.pass		= 0;
 			return ret;
 		}
 	}
@@ -298,10 +314,11 @@ vifOp(vifCode_MSCAL) {
 		{
 			vuExecMicro(idx, (u16)(vifXRegs.code) << 3); 
 			vifX.cmd = 0;
-		}
+			vifX.pass = 0;
+		} 
 	}
 	pass3 { VifCodeLog("MSCAL"); }
-	return 0;
+	return 1;
 }
 
 vifOp(vifCode_MSCALF) {
@@ -318,10 +335,11 @@ vifOp(vifCode_MSCALF) {
 		{
 			vuExecMicro(idx, (u16)(vifXRegs.code) << 3);
 			vifX.cmd = 0;
+			vifX.pass = 0;
 		}
 	}
 	pass3 { VifCodeLog("MSCALF"); }
-	return 0;
+	return 1;
 }
 
 vifOp(vifCode_MSCNT) {
@@ -332,10 +350,11 @@ vifOp(vifCode_MSCNT) {
 		{
 			vuExecMicro(idx, -1);
 			vifX.cmd = 0;
+			vifX.pass = 0;
 		}
 	}
 	pass3 { VifCodeLog("MSCNT"); }
-	return 0;
+	return 1;
 }
 
 // ToDo: FixMe
@@ -352,14 +371,16 @@ vifOp(vifCode_MskPath3) {
 			//}
 		}
 		vif1.cmd = 0;
+		vif1.pass = 0;
 	}
 	pass3 { VifCodeLog("MskPath3"); }
-	return 0;
+	return 1;
 }
 
 vifOp(vifCode_Nop) {
 	pass1 { 
 		GetVifX.cmd = 0;
+		GetVifX.pass = 0;
 		/*if(idx && vif1ch.chcr.STR == true)
 		{
 			//Some games use a huge stream of NOPS to wait for a GIF packet to start, alas the way PCSX2 works it never starts
@@ -370,7 +391,7 @@ vifOp(vifCode_Nop) {
 		}*/
 	}
 	pass3 { VifCodeLog("Nop"); }
-	return 0;
+	return 1;
 }
 
 // ToDo: Review Flags
@@ -385,10 +406,11 @@ vifOp(vifCode_Null) {
 			//vifX.irq++;
 		}
 		vifX.cmd = 0;
+		vifX.pass = 0;
 	}
 	pass2 { Console.Error("Vif%d bad vifcode! [CMD = %x]", idx, vifX.cmd); }
 	pass3 { VifCodeLog("Null"); }
-	return 0;
+	return 1;
 }
 
 vifOp(vifCode_Offset) {
@@ -398,9 +420,10 @@ vifOp(vifCode_Offset) {
 		vif1Regs.ofst		= vif1Regs.code & 0x3ff;
 		vif1Regs.tops		= vif1Regs.base;
 		vif1.cmd			= 0;
+		vif1.pass			= 0;
 	}
 	pass3 { VifCodeLog("Offset"); }
-	return 0;
+	return 1;
 }
 
 template<int idx> static __fi int _vifCode_STColRow(const u32* data, u32* pmem2) {
@@ -421,7 +444,13 @@ template<int idx> static __fi int _vifCode_STColRow(const u32* data, u32* pmem2)
 
 	vifX.tag.addr += ret;
 	vifX.tag.size -= ret;
-	if (!vifX.tag.size) vifX.cmd = 0;
+	if (!vifX.tag.size)
+	{
+		vifX.pass = 0;
+		vifX.cmd = 0;
+	}
+
+	
 
 	return ret;
 }
@@ -431,6 +460,7 @@ vifOp(vifCode_STCol) {
 	pass1 {
 		vifX.tag.addr = 0;
 		vifX.tag.size = 4;
+		vifX.pass = 1;
 		return 1;
 	}
 	pass2 {
@@ -447,6 +477,7 @@ vifOp(vifCode_STRow) {
 	pass1 {
 		vifX.tag.addr = 0;
 		vifX.tag.size = 4;
+		vifX.pass = 1;
 		return 1;
 	}
 	pass2 {
@@ -455,7 +486,7 @@ vifOp(vifCode_STRow) {
 		return ret;
 	}
 	pass3 { VifCodeLog("STRow"); }
-	return 0;
+	return 1;
 }
 
 vifOp(vifCode_STCycl) {
@@ -464,23 +495,24 @@ vifOp(vifCode_STCycl) {
 		vifXRegs.cycle.cl = (u8)(vifXRegs.code);
 		vifXRegs.cycle.wl = (u8)(vifXRegs.code >> 8);
 		vifX.cmd		   = 0;
+		vifX.pass		   = 0;
 	}
 	pass3 { VifCodeLog("STCycl"); }
-	return 0;
+	return 1;
 }
 
 vifOp(vifCode_STMask) {
 	vifStruct& vifX = GetVifX;
-	pass1 { vifX.tag.size = 1; }
-	pass2 { vifXRegs.mask = data[0]; vifX.tag.size = 0; vifX.cmd = 0; }
+	pass1 { vifX.tag.size = 1; vifX.pass = 1; return 1; }
+	pass2 { vifXRegs.mask = data[0]; vifX.tag.size = 0; vifX.cmd = 0; vifX.pass = 0;}
 	pass3 { VifCodeLog("STMask"); }
 	return 1;
 }
 
 vifOp(vifCode_STMod) {
-	pass1 { vifXRegs.mode = vifXRegs.code & 0x3; GetVifX.cmd = 0; }
+	pass1 { vifXRegs.mode = vifXRegs.code & 0x3; GetVifX.cmd = 0; GetVifX.pass = 0;}
 	pass3 { VifCodeLog("STMod"); }
-	return 0;
+	return 1;
 }
 
 template< uint idx >
@@ -496,6 +528,7 @@ static uint calc_addr(bool flg)
 vifOp(vifCode_Unpack) {
 	pass1 {
 		vifUnpackSetup<idx>(data);
+		
 		return 1;
 	}
 	pass2 { 

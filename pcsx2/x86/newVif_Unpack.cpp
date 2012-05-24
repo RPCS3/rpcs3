@@ -133,6 +133,7 @@ _vifT int nVifUnpack(const u8* data) {
 		}
 		else vu1Thread.VifUnpack(vif, vifRegs, (u8*)data, size);
 
+		vif.pass		= 0;
 		vif.tag.size	= 0;
 		vif.cmd			= 0;
 		vifRegs.num		= 0;

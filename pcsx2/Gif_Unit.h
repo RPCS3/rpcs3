@@ -145,6 +145,7 @@ struct Gif_Path {
 	u32 buffLimit;	  // Cut off limit to wrap around
 	u32 curSize;	  // Used buffer in bytes
 	u32 curOffset;	  // Offset of current gifTag
+	u32 dmaRewind;    // Used by path3 when only part of a DMA chain is used
 	Gif_Tag   gifTag; // Current GS Primitive tag
 	GS_Packet gsPack; // Current GS Packet info
 	GIF_PATH  idx;	  // Gif Path Index
@@ -296,14 +297,29 @@ struct Gif_Path {
 				GS_Packet t = gsPack;
 				t.done = 1;
 
-				//Path 3 Masking is timing sensitive, we need to simulate its length! (NFSU2)
+				
+				dmaRewind = 0;
+				
+				gsPack.Reset();
+				gsPack.offset = curOffset;
+				
+				//Path 3 Masking is timing sensitive, we need to simulate its length! (NFSU2/Outrun 2006)
+				
 				if((gifRegs.stat.APATH-1) == GIF_PATH_3)
+				{
 					state = GIF_PATH_WAIT;
+
+					if(curSize - curOffset > 0 && (gifRegs.stat.M3R || gifRegs.stat.M3P))
+					{
+						//Including breaking packets early (Rewind DMA to pick up where left off)
+						//but only do this when the path is masked, else we're pointlessly slowing things down.
+						dmaRewind = curSize - curOffset;
+						curSize = curOffset;
+					}	
+				}
 				else 
 					state  = GIF_PATH_IDLE;
 
-				gsPack.Reset();
-				gsPack.offset = curOffset;
 				return t; // Complete GS packet
 			}
 		}
@@ -486,7 +502,7 @@ struct Gif_Unit {
 		}
 
 		gifPath[tranType&3].CopyGSPacketData(pMem, size, aligned);
-		Execute();
+		size -= Execute();
 		return size;
 	}
 
@@ -524,10 +540,12 @@ struct Gif_Unit {
 
 	// Processes gif packets and performs path arbitration
 	// on EOPs or on Path 3 Images when IMT is set.
-	void Execute() {
-		if (!CanDoGif()) { DevCon.Error("Gif Unit - Signal or PSE Set or Dir = GS to EE"); return; }
+	int Execute() {
+		if (!CanDoGif()) { DevCon.Error("Gif Unit - Signal or PSE Set or Dir = GS to EE"); return 0; }
 		bool didPath3 = false;
+		int curPath = stat.APATH-1;
 		stat.OPH = 1;
+		gifPath[curPath].dmaRewind = 0;
 		for(;;) {
 			if (stat.APATH) { // Some Transfer is happening
 				Gif_Path& path   = gifPath[stat.APATH-1];
@@ -568,7 +586,9 @@ struct Gif_Unit {
 			else { stat.APATH = 0; stat.OPH = 0; break; }
 		}
 		Gif_FinishIRQ();
-		//DevCon.WriteLn("APATH = %d [%d,%d,%d]", stat.APATH, !!checkPaths(1,0,0,0),!!checkPaths(0,1,0,0),!!checkPaths(0,0,1,0));
+
+		//Path3 can rewind the DMA, so we send back the amount we go back!
+		return gifPath[curPath].dmaRewind;
 	}
 
 	// XGkick

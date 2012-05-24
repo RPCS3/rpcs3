@@ -62,6 +62,7 @@ struct vifStruct {
 	struct { // These must be together for MTVU
 		vifCode tag;
 		int cmd;
+		int pass;
 		int cl;
 		u8  usn;
 		u8  StructEnd; // Address of this is used to calculate end of struct

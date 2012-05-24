@@ -249,7 +249,7 @@ void GIFdma()
 		GIFchain();	//Transfers the data set by the switch
 		CPU_INT(DMAC_GIF, gscycles);
 		return;
-	} else if(gspath3done == false) GIFdma();
+	} else if(gspath3done == false) GIFdma(); //Loop round if there was a blank tag, causes hell otherwise with P3 masking games.
 
 	prevcycles = 0;
 	CPU_INT(DMAC_GIF, gscycles);
