@@ -543,9 +543,9 @@ struct Gif_Unit {
 	int Execute() {
 		if (!CanDoGif()) { DevCon.Error("Gif Unit - Signal or PSE Set or Dir = GS to EE"); return 0; }
 		bool didPath3 = false;
-		int curPath = stat.APATH-1;
+		int curPath = stat.APATH > 0 ? stat.APATH-1 : 0; //Init to zero if no path is already set.
 		stat.OPH = 1;
-		gifPath[curPath].dmaRewind = 0;
+		
 		for(;;) {
 			if (stat.APATH) { // Some Transfer is happening
 				Gif_Path& path   = gifPath[stat.APATH-1];
@@ -579,10 +579,10 @@ struct Gif_Unit {
 				//DevCon.WriteLn("Adding GS Packet for path %d", stat.APATH);
 				AddCompletedGSPacket(gsPack, (GIF_PATH)(stat.APATH-1));
 			}
-			if   (!gsSIGNAL.queued && !gifPath[0].isDone()) { stat.APATH = 1; stat.P1Q = 0; }
-			elif (!gsSIGNAL.queued && !gifPath[1].isDone()) { stat.APATH = 2; stat.P2Q = 0; }
+			if   (!gsSIGNAL.queued && !gifPath[0].isDone()) { stat.APATH = 1; stat.P1Q = 0; gifPath[0].dmaRewind = 0; curPath = 0; }
+			elif (!gsSIGNAL.queued && !gifPath[1].isDone()) { stat.APATH = 2; stat.P2Q = 0; gifPath[1].dmaRewind = 0; curPath = 1; }
 			elif (!gsSIGNAL.queued && !gifPath[2].isDone() && !Path3Masked() /*&& !stat.P2Q*/)
-				 { stat.APATH = 3; stat.P3Q = 0; stat.IP3 = 0; }
+				 { stat.APATH = 3; stat.P3Q = 0; stat.IP3 = 0; gifPath[2].dmaRewind = 0; curPath = 2; }
 			else { stat.APATH = 0; stat.OPH = 0; break; }
 		}
 		Gif_FinishIRQ();
