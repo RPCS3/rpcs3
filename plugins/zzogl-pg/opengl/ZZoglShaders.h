@@ -399,6 +399,9 @@ struct FRAGMENTSHADER
 		samplers[sBitwiseANDY].set_unit(7);
 		samplers[sInterlace].set_unit(8);
 		samplers[sCLUT].set_unit(9);
+
+		prog.isFragment = true;
+		prog.link		= (void*)this;
 	}
 
 	ZZshShaderLink prog;						// it link to FRAGMENTSHADER structure, for compability between GLSL and CG
@@ -577,6 +580,9 @@ struct VERTEXSHADER
 		// Default value not sure it is needed
 		uniform_buffer[0].SettleFloat(fBitBltTrans, float4(0.5f, -0.5f, 0.5, 0.5 + 0.4/416.0f ) );
 		uniform_buffer[1].SettleFloat(fBitBltTrans, float4(0.5f, -0.5f, 0.5, 0.5 + 0.4/416.0f ) );
+
+		prog.isFragment = false;
+		prog.link		= (void*)this;
 	}
 
 	VertexUniform uniform_buffer[ZZSH_CTX_ALL];

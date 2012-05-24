@@ -41,7 +41,6 @@ typedef void (APIENTRYP _PFNSWAPINTERVAL)(int);
 map<string, GLbyte> mapGLExtensions;
 
 extern bool ZZshLoadExtraEffects();
-extern FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed);
 
 GLuint vboRect = 0;
 GLuint g_vboBuffers[VB_NUMBUFFERS]; // VBOs for all drawing commands

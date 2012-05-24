@@ -91,6 +91,37 @@ typedef signed long long int64;
 
 extern wxString s_strIniPath; // Air's new (r2361) new constant for ini file path
 
+static std::string format(const char* fmt, ...)
+{
+	va_list args;
+	va_start(args, fmt);
+
+	int result = -1, length = 256;
+
+	char* buffer = NULL;
+
+	while(result == -1)
+	{
+		if(buffer) delete [] buffer;
+
+		buffer = new char[length + 1];
+
+		memset(buffer, 0, length + 1);
+
+		result = vsnprintf(buffer, length, fmt, args);
+
+		length *= 2;
+	}
+
+	va_end(args);
+
+	std::string s(buffer);
+
+	delete [] buffer;
+
+	return s;
+}
+
 typedef struct
 {
 	int x, y, w, h;

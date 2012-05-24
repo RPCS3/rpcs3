@@ -80,6 +80,9 @@ const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
 
 const static char* g_pTexTypes[] = { "32", "tex32", "clut32", "tex32to16", "tex16to8h" };
 const static char* g_pShaders[4] = { "full", "reduced", "accurate", "accurate-reduced" };
+const static char* g_pPsTexWrap[] = { "#define REPEAT 1\n", "#define CLAMP 1\n", "#define REGION_REPEAT 1\n", "\n" };
+const int GLSL_VERSION = 330;
+
 
 // ----------------- Global Variables
 
@@ -109,8 +112,6 @@ extern bool s_bWriteDepth;
 // Debug variable, store name of the function that call the shader.
 const char* ShaderCallerName = "";
 const char* ShaderHandleName = "";
-
-const char* ShaderNames[MAX_ACTIVE_SHADERS] = {""};
 
 ZZshProgram CompiledPrograms[MAX_ACTIVE_SHADERS][MAX_ACTIVE_SHADERS] = {{0}};
 
@@ -170,17 +171,9 @@ bool ZZshStartUsingShaders() {
 	bool bFailed;
 	FRAGMENTSHADER* pfrag = ZZshLoadShadeEffect(0, 1, 1, 1, 1, temp, 0, &bFailed);
 	if( bFailed || pfrag == NULL ) {
-		g_nPixelShaderVer = SHADER_ACCURATE|SHADER_REDUCED;
-
-		pfrag = ZZshLoadShadeEffect(0, 0, 1, 1, 0, temp, 0, &bFailed);
-		if( bFailed || pfrag == NULL || glGetError() != GL_NO_ERROR) {
-			g_nPixelShaderVer = SHADER_REDUCED;
-			ZZLog::Error_Log("Basic shader test failed.");
-		}
+		return false;
+		ZZLog::Error_Log("Shader test failed.");
 	}
-
-	if (g_nPixelShaderVer & SHADER_REDUCED)
-		conf.bilinear = 0;
 
 	ZZLog::Error_Log("Creating extra effects.");
 	B_G(ZZshLoadExtraEffects(), return false);
@@ -300,40 +293,13 @@ void ZZshSetParameter4fvWithRetry(ZZshParameter* param, ZZshShaderLink& prog, co
 
 // Used sometimes for color 1.
 void ZZshDefaultOneColor( FRAGMENTSHADER& ptr ) {
-//	return;
 	ShaderHandleName = "Set Default One colot";
 	float4 v = float4 ( 1, 1, 1, 1 );
-	//ZZshSetParameter4fv(ptr.prog, ptr.sOneColor, v, "DegaultOne");
 	ptr.ZZshSetParameter4fv(ptr.sOneColor, v);
 }
 //-------------------------------------------------------------------------------------
 
-const GLchar * EmptyVertex = "void main(void) {gl_Position = ftransform();}";
-const GLchar * EmptyFragment = "void main(void) {gl_FragColor = gl_Color;}";
-
-inline bool GetCompilationLog(ZZshProgram program) {
-#if	defined(DEVBUILD) || defined(_DEBUG)
-	GLint log_length = 0;
-	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &log_length);
-
-	char* log = new char[log_length];
-	glGetProgramInfoLog(program, log_length, NULL, log);
-
-	GLint CompileStatus;
-	glGetProgramiv(program, GL_LINK_STATUS, &CompileStatus);
-	if (CompileStatus == GL_FALSE) {
-		ZZLog::Error_Log("Compiling... %d:\t %s", program, log);
-		delete [] log;
-		return false;
-	} 
-
-	delete [] log;
-#endif
-	return true;
-}
-
 static bool ValidateProgram(ZZshProgram Prog) {
-#if	defined(DEVBUILD) || defined(_DEBUG)
 	GLint isValid;
 
 	glValidateProgram(Prog);
@@ -347,71 +313,36 @@ static bool ValidateProgram(ZZshProgram Prog) {
 		ZZLog::Error_Log("Validation %d... %d:\t %s", Prog, infologlength, InfoLog);
 	}
 	return (isValid != 0);
-#else
-	return true;
-#endif
 }
 
-inline bool CompileShader(ZZshProgram& program, const char* DefineString, const char* name, GLenum shaderType, bool empty = false) {
+inline bool CompileShaderFromFile(ZZshProgram& program, const std::string& DefineString, std::string main_entry, GLenum ShaderType)
+{
+	std::string header("");
+
+	header += format("#version %d\n", GLSL_VERSION);
+	header += format("#define %s main\n", main_entry.c_str());
+	if (ShaderType == GL_VERTEX_SHADER) header += "#define VERTEX_SHADER 1\n";
+	else if (ShaderType == GL_FRAGMENT_SHADER) header += "#define FRAGMENT_SHADER 1\n";
+	header += DefineString;
+
 	const GLchar* ShaderSource[2];
-	ShaderSource[0] = (const GLchar*)DefineString;
-	// FIXME, can maybe replaced with the program 0 it will used default fixed stage
-	if (empty)
-	{
-		if(shaderType == GL_VERTEX_SHADER)
-			ShaderSource[1] = EmptyVertex;
-		else
-			ShaderSource[1] = EmptyFragment;
-		ZZLog::Error_Log("Used Empty shader for %s... Ok.",name);
-	}
-	else
-		ShaderSource[1] = (const GLchar*)ZZshSource;
 
-	program = glCreateShaderProgramv(shaderType, 2, &ShaderSource[0]);
+	ShaderSource[0] = header.c_str();
+	ShaderSource[1] = (const GLchar*)ZZshSource;
 
-	ZZLog::Debug_Log("Creating program %d for %s", program, name);
+	program = glCreateShaderProgramv(ShaderType, 2, &ShaderSource[0]);
 
-	if (!GetCompilationLog(program)) {
-		ZZLog::Error_Log("Failed to compile shader for %s:", name);
-		return false;
-	}
+	ZZLog::Debug_Log("Creating program %d for %s", program, main_entry.c_str());
 
-	ShaderNames[program] = name;
-
-	GL_REPORT_ERRORD();
-
+#if	defined(DEVBUILD) || defined(_DEBUG)
 	if (!ValidateProgram(program)) return false;
+#endif
 
 	return true;
-}
 
-inline bool LoadShaderFromFile(ZZshProgram& program, const char* DefineString, const char* name, GLenum ShaderType, bool empty = false) {			// Linux specific, as I presume
-
-	if (!CompileShader(program, DefineString, name, ShaderType, empty)) {
-		ZZLog::Error_Log("Failed to compile shader for %s: ", name);
-		return false;
-	}
-
-	ZZLog::Error_Log("Compile shader for %s... Ok",name);
-	return true;
 }
 
 //-------------------------------------------------------------------------------------
-
-static void PutParametersAndRun(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
-	UNIFORM_ERROR_LOG("Run program %s(%d) \t+\t%s(%d)", ShaderNames[vs->program], vs->program, ShaderNames[ps->program], ps->program);
-
-	PutParametersInProgram(vs, ps);
-
-#if	defined(DEVBUILD) || defined(_DEBUG)
-	glValidateProgramPipeline(s_pipeline);
-	GLint isValid;
-	glGetProgramPipelineiv(s_pipeline, GL_VALIDATE_STATUS, &isValid);
-	if (!isValid) ZZLog::Error_Log("Something weird happened on pipeline validation.");
-#endif
-
-	GL_REPORT_ERRORD();
-}
 
 void ZZshSetupShader() {
 	VERTEXSHADER* vs = (VERTEXSHADER*)g_vsprog.link;
@@ -419,7 +350,19 @@ void ZZshSetupShader() {
 
 	if (vs == NULL || ps == NULL) return;
 
-	PutParametersAndRun(vs, ps);
+	// From the glValidateProgram docs: "The implementation may use this as an opportunity to perform any internal
+	// shader modifications that may be required to ensure correct operation of the installed
+	// shaders given the current GL state"
+	// It might be a good idea to validate the pipeline also in release mode???
+#if	defined(DEVBUILD) || defined(_DEBUG)
+	glValidateProgramPipeline(s_pipeline);
+	GLint isValid;
+	glGetProgramPipelineiv(s_pipeline, GL_VALIDATE_STATUS, &isValid);
+	if (!isValid) ZZLog::Error_Log("Something weird happened on pipeline validation.");
+#endif
+
+	PutParametersInProgram(vs, ps);
+	GL_REPORT_ERRORD();
 }
 
 void ZZshSetVertexShader(ZZshShaderLink prog) {
@@ -489,54 +432,30 @@ void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	ps->enable_texture();
 }
 
-static void SetupFragmentProgramParameters(FRAGMENTSHADER* pf, int context, int type)
+std::string BuildGlslMacro(bool writedepth, int texwrap = 3, bool testaem = false, bool exactcolor = false)
 {
-	// uniform parameters
-	pf->prog.link = (void*)pf;			// Setting autolink
-	pf->prog.isFragment = true;			// Setting autolink
-	pf->context = context;
+	std::string header("");
 
+	if (writedepth) header += "#define WRITE_DEPTH 1\n";
+	if (testaem)	header += "#define TEST_AEM 1\n";
+	if (exactcolor) header += "#define EXACT_COLOR 1\n";
+	header += format("%s", g_pPsTexWrap[texwrap]);
+	//const char* AddAccurate  = (ps & SHADER_ACCURATE)?"#define ACCURATE_DECOMPRESSION 1\n":"";
 
+	return header;
 }
 
-void SetupVertexProgramParameters(VERTEXSHADER* pf, int context)
+static __forceinline bool LOAD_VS(const std::string& DefineString, const char* name, VERTEXSHADER& vertex, ZZshProfile context)
 {
-	pf->prog.link = (void*)pf;			// Setting autolink
-	pf->prog.isFragment = false;			// Setting autolink
-	pf->context = context;
-}
-
-//const int GLSL_VERSION = 130;  			// Sampler2DRect appear in 1.3
-const int GLSL_VERSION = 330;
-
-// We use strictly compilation from source for GSLS
-static __forceinline void GlslHeaderString(char* header_string, const char* name, const char* depth)
-{
-	sprintf(header_string, "#version %d compatibility\n#define %s main\n%s\n", GLSL_VERSION, name, depth);
-}
-
-static __forceinline bool LOAD_VS(char* DefineString, const char* name, VERTEXSHADER& vertex, int shaderver, ZZshProfile context, const char* depth)
-{
-	bool flag;
-	char temp[200];
-	GlslHeaderString(temp, name, depth);
-	sprintf(DefineString, "%s#define VERTEX_SHADER 1\n", temp);
-	//ZZLog::WriteLn("Define for VS == '%s'", DefineString);
-	flag = LoadShaderFromFile(vertex.program, DefineString, name, GL_VERTEX_SHADER);
-	SetupVertexProgramParameters(&vertex, context * NOCONTEXT);
+	bool flag = CompileShaderFromFile(vertex.program, DefineString, name, GL_VERTEX_SHADER);
+	vertex.context = context * NOCONTEXT;
 	return flag;
 }
 
-static __forceinline bool LOAD_PS(char* DefineString, const char* name, FRAGMENTSHADER& fragment, int shaderver, ZZshProfile context, const char* depth)
+static __forceinline bool LOAD_PS(const std::string& DefineString, const char* name, FRAGMENTSHADER& fragment, ZZshProfile context)
 {
-	bool flag;
-	char temp[200];
-	GlslHeaderString(temp, name, depth);
-	sprintf(DefineString, "%s#define FRAGMENT_SHADER 1\n", temp);
-	//ZZLog::WriteLn("Define for PS == '%s'", DefineString);
-
-	flag = LoadShaderFromFile(fragment.program, DefineString, name, GL_FRAGMENT_SHADER);
-	SetupFragmentProgramParameters(&fragment, context * NOCONTEXT, 0);
+	bool flag = CompileShaderFromFile(fragment.program, DefineString, name, GL_FRAGMENT_SHADER);
+	fragment.context = context * NOCONTEXT;
 	return flag;
 }
 
@@ -551,106 +470,75 @@ inline bool LoadEffects()
 
 bool ZZshLoadExtraEffects() {
 	bool bLoadSuccess = true;
-	char DefineString[DEFINE_STRING_SIZE] = "";
-	const char* writedepth = "#define WRITE_DEPTH 1\n";	// should we write depth field
+
+	std::string depth_macro = BuildGlslMacro(true);
+	std::string empty_macro = BuildGlslMacro(false);
 
 
 	const char* pvsshaders[4] = { "RegularVS", "TextureVS", "RegularFogVS", "TextureFogVS" };
 
 	for (int i = 0; i < 4; ++i) {
-		if (!LOAD_VS(DefineString, pvsshaders[i], pvsStore[2 * i], cgvProf, 0, "")) bLoadSuccess = false;
-		if (!LOAD_VS(DefineString, pvsshaders[i], pvsStore[2 *i + 1 ], cgvProf, 1, "")) bLoadSuccess = false;
-		if (!LOAD_VS(DefineString, pvsshaders[i], pvsStore[2 *i + 8 ], cgvProf, 0, writedepth)) bLoadSuccess = false;
-		if (!LOAD_VS(DefineString, pvsshaders[i], pvsStore[2 *i + 8 + 1], cgvProf, 1, writedepth)) bLoadSuccess = false;
+		if (!LOAD_VS(empty_macro, pvsshaders[i], pvsStore[2 * i], 0)) bLoadSuccess = false;
+		if (!LOAD_VS(empty_macro, pvsshaders[i], pvsStore[2 *i + 1 ], 1)) bLoadSuccess = false;
+		if (!LOAD_VS(depth_macro, pvsshaders[i], pvsStore[2 *i + 8 ], 0)) bLoadSuccess = false;
+		if (!LOAD_VS(depth_macro, pvsshaders[i], pvsStore[2 *i + 8 + 1], 1)) bLoadSuccess = false;
 	}
 	for (int i = 0; i < 16; ++i)
 		pvs[i] = pvsStore[i].prog;
 
-	if (!LOAD_VS(DefineString, "BitBltVS", pvsBitBlt, cgvProf, 0, "")) bLoadSuccess = false;
+	if (!LOAD_VS(empty_macro, "BitBltVS", pvsBitBlt, 0)) bLoadSuccess = false;
 	GL_REPORT_ERRORD();
 
-	if (!LOAD_PS(DefineString, "RegularPS", ppsRegular[0], cgfProf, 0, "")) bLoadSuccess = false;
-	if (!LOAD_PS(DefineString, "RegularFogPS", ppsRegular[1], cgfProf, 0, "")) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "RegularPS", ppsRegular[0],  0)) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "RegularFogPS", ppsRegular[1],  0)) bLoadSuccess = false;
 
 	if( conf.mrtdepth ) {
-		if (!LOAD_PS(DefineString, "RegularPS", ppsRegular[2], cgfProf, 0, writedepth)) bLoadSuccess = false;
+		if (!LOAD_PS(depth_macro, "RegularPS", ppsRegular[2],  0)) bLoadSuccess = false;
 		if (!bLoadSuccess) conf.mrtdepth = 0;
 
-		if (!LOAD_PS(DefineString, "RegularFogPS", ppsRegular[3], cgfProf, 0, writedepth)) bLoadSuccess = false;
+		if (!LOAD_PS(depth_macro, "RegularFogPS", ppsRegular[3],  0)) bLoadSuccess = false;
 		if (!bLoadSuccess) conf.mrtdepth = 0;
 	}
 
-	if (!LOAD_PS(DefineString, "BitBltPS", ppsBitBlt[0], cgfProf, 0, "")) bLoadSuccess = false;
-	if (!LOAD_PS(DefineString, "BitBltAAPS", ppsBitBlt[1], cgfProf, 0, "")) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "BitBltPS", ppsBitBlt[0],  0)) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "BitBltAAPS", ppsBitBlt[1],  0)) bLoadSuccess = false;
 	if (!bLoadSuccess) {
 		ZZLog::Error_Log("Failed to load BitBltAAPS, using BitBltPS.");
-		if (!LOAD_PS(DefineString, "BitBltPS", ppsBitBlt[1], cgfProf, 0, "")) bLoadSuccess = false;
+		if (!LOAD_PS(empty_macro, "BitBltPS", ppsBitBlt[1],  0)) bLoadSuccess = false;
 	}
 
-	if (!LOAD_PS(DefineString, "BitBltDepthPS", ppsBitBltDepth, cgfProf, 0, "")) bLoadSuccess = false;
-	if (!LOAD_PS(DefineString, "CRTCTargPS", ppsCRTCTarg[0], cgfProf, 0, "")) bLoadSuccess = false;
-	if (!LOAD_PS(DefineString, "CRTCTargInterPS", ppsCRTCTarg[1], cgfProf, 0, "")) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "BitBltDepthPS", ppsBitBltDepth,  0)) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "CRTCTargPS", ppsCRTCTarg[0],  0)) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "CRTCTargInterPS", ppsCRTCTarg[1],  0)) bLoadSuccess = false;
 
 	g_bCRTCBilinear = true;
-	if (!LOAD_PS(DefineString, "CRTCPS", ppsCRTC[0], cgfProf, 0, "")) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "CRTCPS", ppsCRTC[0],  0)) bLoadSuccess = false;
 	if( !bLoadSuccess ) {
 		// switch to simpler
 		g_bCRTCBilinear = false;
-		if (!LOAD_PS(DefineString, "CRTCPS_Nearest", ppsCRTC[0], cgfProf, 0, "")) bLoadSuccess = false;
-		if (!LOAD_PS(DefineString, "CRTCInterPS_Nearest", ppsCRTC[0], cgfProf, 0, "")) bLoadSuccess = false;
+		if (!LOAD_PS(empty_macro, "CRTCPS_Nearest", ppsCRTC[0],  0)) bLoadSuccess = false;
+		if (!LOAD_PS(empty_macro, "CRTCInterPS_Nearest", ppsCRTC[0],  0)) bLoadSuccess = false;
 	}
 	else {
-		if (!LOAD_PS(DefineString, "CRTCInterPS", ppsCRTC[1], cgfProf, 0, "")) bLoadSuccess = false;
+		if (!LOAD_PS(empty_macro, "CRTCInterPS", ppsCRTC[1],  0)) bLoadSuccess = false;
 	}
 
 	if( !bLoadSuccess )
 		ZZLog::Error_Log("Failed to create CRTC shaders.");
 
-	// if (!LOAD_PS(DefineString, "CRTC24PS", ppsCRTC24[0], cgfProf, 0, "")) bLoadSuccess = false;
-	// if (!LOAD_PS(DefineString, "CRTC24InterPS", ppsCRTC24[1], cgfProf, 0, "")) bLoadSuccess = false;
-	if (!LOAD_PS(DefineString, "ZeroPS", ppsOne, cgfProf, 0, "")) bLoadSuccess = false;
-	if (!LOAD_PS(DefineString, "BaseTexturePS", ppsBaseTexture, cgfProf, 0, "")) bLoadSuccess = false;
-	if (!LOAD_PS(DefineString, "Convert16to32PS", ppsConvert16to32, cgfProf, 0, "")) bLoadSuccess = false;
-	if (!LOAD_PS(DefineString, "Convert32to16PS", ppsConvert32to16, cgfProf, 0, "")) bLoadSuccess = false;
+	// if (!LOAD_PS(empty_macro, "CRTC24PS", ppsCRTC24[0],  0)) bLoadSuccess = false;
+	// if (!LOAD_PS(empty_macro, "CRTC24InterPS", ppsCRTC24[1],  0)) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "ZeroPS", ppsOne,  0)) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "BaseTexturePS", ppsBaseTexture,  0)) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "Convert16to32PS", ppsConvert16to32,  0)) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "Convert32to16PS", ppsConvert32to16,  0)) bLoadSuccess = false;
 
 	// DEBUG
-	// if (!LOAD_PS(DefineString, "ZeroDebugPS", ppsDebug, cgfProf, 0, "")) bLoadSuccess = false;
-	// if (!LOAD_PS(DefineString, "ZeroDebug2PS", ppsDebug2, cgfProf, 0, "")) bLoadSuccess = false;
+	// if (!LOAD_PS(empty_macro, "ZeroDebugPS", ppsDebug,  0)) bLoadSuccess = false;
+	// if (!LOAD_PS(empty_macro, "ZeroDebug2PS", ppsDebug2,  0)) bLoadSuccess = false;
 
 	GL_REPORT_ERRORD();
 	return true;
-}
-
-const static char* g_pPsTexWrap[] = { "#define REPEAT 1\n", "#define CLAMP 1\n", "#define REGION_REPEAT 1\n", "" };
-
-static ZZshProgram LoadShaderFromType(int type, int texfilter, int texwrap, int fog, int writedepth, int testaem, int exactcolor, int ps, int context) {
-
-	assert( texwrap < NUM_TEXWRAPS);
-	assert( type < NUM_TYPES );
-
-	char* name = new char[MAX_SHADER_NAME_SIZE];
-	sprintf(name, "Texture%s%d_%sPS", fog?"Fog":"", texfilter, g_pTexTypes[type]);
-
-	ZZLog::Debug_Log("Starting shader for %s", name);
-
-	const char* AddWrap 	= g_pPsTexWrap[texwrap];
-	const char* AddDepth 	= writedepth?"#define WRITE_DEPTH 1\n":"";
-	const char* AddAEM	= testaem?"#define TEST_AEM 1\n":"";
-	const char* AddExcolor	= exactcolor?"#define EXACT_COLOR 1\n":"";
-	const char* AddAccurate  = (ps & SHADER_ACCURATE)?"#define ACCURATE_DECOMPRESSION 1\n":"";
-	char DefineString[DEFINE_STRING_SIZE] = "";
-	char temp[200];
-	GlslHeaderString(temp, name, AddWrap);
-	sprintf(DefineString, "%s#define FRAGMENT_SHADER 1\n%s%s%s%s\n#define CTX %d\n", temp, AddDepth, AddAEM, AddExcolor, AddAccurate, context * NOCONTEXT);
-
-	ZZshProgram program;
-	if (!LoadShaderFromFile(program, DefineString, name, GL_FRAGMENT_SHADER))
-		return LoadShaderFromFile(program, DefineString, name, GL_FRAGMENT_SHADER, true);
-
-	ZZLog::Debug_Log("Create new shader for type:%d filter:%d wrap:%d for:%d depth:%d aem:%d color:%d decompression:%d ctx:%d... Ok \n", type, texfilter, texwrap, fog, writedepth, testaem, exactcolor, ps, context);
-
-	GL_REPORT_ERRORD();
-	return program;
 }
 
 FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testaem, int exactcolor, const clampInfo& clamp, int context, bool* pbFailed)
@@ -658,7 +546,6 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 	int texwrap;
 
 	assert( texfilter < NUM_FILTERS );
-	//assert( g_nPixelShaderVer == SHADER_30 );
 	if( clamp.wms == clamp.wmt ) {
 		switch( clamp.wms ) {
 			case 0: texwrap = TEXWRAP_REPEAT; break;
@@ -683,27 +570,17 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 	{
 		return pf;
 	}
-	pf->program = LoadShaderFromType(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, g_nPixelShaderVer, context);
 
-	if (ZZshExistProgram(pf)) {
-		SetupFragmentProgramParameters(pf, context, type);
-		GL_REPORT_ERRORD();
+	std::string macro = BuildGlslMacro(s_bWriteDepth, texwrap, testaem, exactcolor);
+	std::string main_entry  = format("Texture%s%d_%sPS", fog?"Fog":"", texfilter, g_pTexTypes[type]);
 
-		if( glGetError() != GL_NO_ERROR ) {
-				ZZLog::Check_GL_Error();
-				ZZLog::Error_Log("Failed to load shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
-				if (pbFailed != NULL ) *pbFailed = true;
-				return pf;
-		}
-
-		return pf;
+	pf->context = context * NOCONTEXT;
+	if (!CompileShaderFromFile(pf->program, macro, main_entry, GL_FRAGMENT_SHADER)) {
+		ZZLog::Error_Log("Failed to create shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
+		if( pbFailed != NULL ) *pbFailed = false;
+		return NULL;
 	}
-
-	ZZLog::Error_Log("Failed to create shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
-	if( pbFailed != NULL ) *pbFailed = true;
-
-	GL_REPORT_ERRORD();
-	return NULL;
+	return pf;
 }
 
 #endif // GLSL4_API
