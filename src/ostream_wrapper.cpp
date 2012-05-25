@@ -53,22 +53,4 @@ namespace YAML
             m_comment = false;
 		}
     }
-
-	ostream_wrapper& operator << (ostream_wrapper& out, const char *str)
-	{
-        out.write(str, std::strlen(str));
-		return out;
-	}
-	
-	ostream_wrapper& operator << (ostream_wrapper& out, const std::string& str)
-	{
-		out.write(str);
-		return out;
-	}
-	
-	ostream_wrapper& operator << (ostream_wrapper& out, char ch)
-	{
-		out.write(&ch, 1);
-		return out;
-	}
 }
