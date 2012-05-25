@@ -42,14 +42,10 @@ void mVUdispatcherA(mV) {
 	xLDMXCSR(g_sseVUMXCSR);
 
 	// Load Regs
-#if 1 // CHECK_MACROVU0 - Always on now
 	xMOV(gprF0, ptr32[&mVU.regs().VI[REG_STATUS_FLAG].UL]);
 	xMOV(gprF1, gprF0);
 	xMOV(gprF2, gprF0);
 	xMOV(gprF3, gprF0);
-#else
-	mVUallocSFLAGd((uptr)&mVU.regs().VI[REG_STATUS_FLAG].UL, 1);
-#endif
 
 	xMOVAPS (xmmT1, ptr128[&mVU.regs().VI[REG_MAC_FLAG].UL]);
 	xSHUF.PS(xmmT1, xmmT1, 0);

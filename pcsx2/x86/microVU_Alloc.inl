@@ -71,37 +71,20 @@ __ri void mVUallocSFLAGc(const x32& reg, const x32& regT, int fInstance)
 }
 
 // Denormalizes Status Flag
-// If setAllflags is false, then returns result in eax (gprT1)
-// else all microVU flag regs (gprF0..F3) get the result.
-__ri void mVUallocSFLAGd(u32* memAddr, bool setAllflags) {
+__ri void mVUallocSFLAGd(u32* memAddr) {
+	xMOV(edx, ptr32[memAddr]);
+	xMOV(eax, edx);
+	xSHR(eax, 3);
+	xAND(eax, 0x18);
 
-	// When this function is used by mVU0 macro the EErec
-	// needs EBP (gprF1) and ESI (gprF2) to be preserved.
-	const xAddressReg& t0 = setAllflags ? gprT1 : gprF3;
-	const xAddressReg& t1 = setAllflags ? gprT2 : gprF2;
-	const xAddressReg& t2 = setAllflags ? gprT3 : gprF0;
+	xMOV(ecx, edx);
+	xSHL(ecx, 11);
+	xAND(ecx, 0x1800);
+	xOR (eax, ecx);
 
-	xMOV(t2, ptr32[memAddr]);
-	xMOV(t0, t2);
-	xSHR(t0, 3);
-	xAND(t0, 0x18);
-
-	xMOV(t1, t2);
-	xSHL(t1, 11);
-	xAND(t1, 0x1800);
-	xOR (t0, t1);
-
-	xSHL(t2, 14);
-	xAND(t2, 0x3cf0000);
-	xOR (t0, t2);
-
-	if (setAllflags) {
-		// this code should be run in mVU micro mode only, so writing to
-		// EBP (gprF1) and ESI (gprF2) is ok (and needed for vuMicro).
-		xMOV(gprF0, gprF3); // gprF3 is t0
-		xMOV(gprF1, gprF3);
-		xMOV(gprF2, gprF3);
-	}
+	xSHL(edx, 14);
+	xAND(edx, 0x3cf0000);
+	xOR (eax, edx);
 }
 
 __fi void mVUallocMFLAGa(mV, const x32& reg, int fInstance)

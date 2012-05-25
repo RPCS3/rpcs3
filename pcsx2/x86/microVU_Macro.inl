@@ -306,7 +306,7 @@ static void recCTC2() {
 			break;
 		case REG_STATUS_FLAG:
 			if (_Rt_) { // Denormalizes flag into eax (gprT1)
-				mVUallocSFLAGd(&cpuRegs.GPR.r[_Rt_].UL[0], 0);
+				mVUallocSFLAGd(&cpuRegs.GPR.r[_Rt_].UL[0]);
 				xMOV(ptr32[&vu0Regs.VI[_Rd_].UL], eax);
 			}
 			else xMOV(ptr32[&vu0Regs.VI[_Rd_].UL], 0);
