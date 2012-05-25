@@ -13,7 +13,7 @@ namespace YAML
 		delete [] m_buffer;
 	}
 	
-	void ostream_wrapper::reserve(unsigned size)
+	void ostream_wrapper::reserve(std::size_t size)
 	{
 		if(size <= m_size)
 			return;
@@ -25,6 +25,28 @@ namespace YAML
 		m_buffer = newBuffer;
 		m_size = size;
 	}
+    
+    void ostream_wrapper::write(const std::string& str)
+    {
+        while(m_pos + str.size() + 1 >= m_size)
+            reserve(m_size * 2);
+        
+        std::copy(str.begin(), str.end(), m_buffer + m_pos);
+        
+        for(std::size_t i=0;i<str.size();i++)
+            update_pos(str[i]);
+    }
+
+    void ostream_wrapper::write(const char *str, std::size_t size)
+    {
+        while(m_pos + size + 1 >= m_size)
+            reserve(m_size * 2);
+
+        std::copy(str, str + size, m_buffer + m_pos);
+        
+        for(std::size_t i=0;i<size;i++)
+            update_pos(str[i]);
+    }
 	
 	void ostream_wrapper::put(char ch)
 	{
@@ -32,27 +54,30 @@ namespace YAML
 			reserve(m_size * 2);
 		
 		m_buffer[m_pos] = ch;
+        update_pos(ch);
+	}
+
+    void ostream_wrapper::update_pos(char ch)
+    {
 		m_pos++;
+        m_col++;
 		
 		if(ch == '\n') {
 			m_row++;
 			m_col = 0;
             m_comment = false;
-		} else
-			m_col++;
-	}
+		}
+    }
 
 	ostream_wrapper& operator << (ostream_wrapper& out, const char *str)
 	{
-		std::size_t length = std::strlen(str);
-		for(std::size_t i=0;i<length;i++)
-			out.put(str[i]);
+        out.write(str, std::strlen(str));
 		return out;
 	}
 	
 	ostream_wrapper& operator << (ostream_wrapper& out, const std::string& str)
 	{
-		out << str.c_str();
+		out.write(str);
 		return out;
 	}
 	

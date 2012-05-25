@@ -16,22 +16,28 @@ namespace YAML
 		ostream_wrapper();
 		~ostream_wrapper();
 		
-		void reserve(unsigned size);
+		void reserve(std::size_t size);
+        void write(const std::string& str);
+        void write(const char *str, std::size_t size);
 		void put(char ch);
+        
         void set_comment() { m_comment = true; }
 		const char *str() const { return m_buffer; }
 		
-		unsigned row() const { return m_row; }
-		unsigned col() const { return m_col; }
-		unsigned pos() const { return m_pos; }
+		std::size_t row() const { return m_row; }
+		std::size_t col() const { return m_col; }
+		std::size_t pos() const { return m_pos; }
         bool comment() const { return m_comment; }
+        
+    private:
+        void update_pos(char ch);
 		
 	private:
 		char *m_buffer;
-		unsigned m_pos;
-		unsigned m_size;
+		std::size_t m_pos;
+		std::size_t m_size;
 		
-		unsigned m_row, m_col;
+		std::size_t m_row, m_col;
         bool m_comment;
 	};
 	
