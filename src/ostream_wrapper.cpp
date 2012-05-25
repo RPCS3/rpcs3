@@ -1,19 +1,19 @@
-#include "yaml-cpp/ostream.h"
+#include "yaml-cpp/ostream_wrapper.h"
 #include <cstring>
 
 namespace YAML
 {
-	ostream::ostream(): m_buffer(0), m_pos(0), m_size(0), m_row(0), m_col(0), m_comment(false)
+	ostream_wrapper::ostream_wrapper(): m_buffer(0), m_pos(0), m_size(0), m_row(0), m_col(0), m_comment(false)
 	{
 		reserve(1024);
 	}
 	
-	ostream::~ostream()
+	ostream_wrapper::~ostream_wrapper()
 	{
 		delete [] m_buffer;
 	}
 	
-	void ostream::reserve(unsigned size)
+	void ostream_wrapper::reserve(unsigned size)
 	{
 		if(size <= m_size)
 			return;
@@ -26,7 +26,7 @@ namespace YAML
 		m_size = size;
 	}
 	
-	void ostream::put(char ch)
+	void ostream_wrapper::put(char ch)
 	{
 		if(m_pos >= m_size - 1)   // an extra space for the NULL terminator
 			reserve(m_size * 2);
@@ -42,7 +42,7 @@ namespace YAML
 			m_col++;
 	}
 
-	ostream& operator << (ostream& out, const char *str)
+	ostream_wrapper& operator << (ostream_wrapper& out, const char *str)
 	{
 		std::size_t length = std::strlen(str);
 		for(std::size_t i=0;i<length;i++)
@@ -50,13 +50,13 @@ namespace YAML
 		return out;
 	}
 	
-	ostream& operator << (ostream& out, const std::string& str)
+	ostream_wrapper& operator << (ostream_wrapper& out, const std::string& str)
 	{
 		out << str.c_str();
 		return out;
 	}
 	
-	ostream& operator << (ostream& out, char ch)
+	ostream_wrapper& operator << (ostream_wrapper& out, char ch)
 	{
 		out.put(ch);
 		return out;

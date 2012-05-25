@@ -10,9 +10,9 @@
 #include "yaml-cpp/binary.h"
 #include "yaml-cpp/emitterdef.h"
 #include "yaml-cpp/emittermanip.h"
-#include "yaml-cpp/ostream.h"
 #include "yaml-cpp/noncopyable.h"
 #include "yaml-cpp/null.h"
+#include "yaml-cpp/ostream_wrapper.h"
 #include <memory>
 #include <string>
 #include <sstream>
@@ -114,8 +114,8 @@ namespace YAML
 		bool CanEmitNewline() const;
 		
 	private:
-		ostream m_stream;
-		std::auto_ptr <EmitterState> m_pState;
+		ostream_wrapper m_stream;
+		std::auto_ptr<EmitterState> m_pState;
 	};
 	
 	template <typename T>
