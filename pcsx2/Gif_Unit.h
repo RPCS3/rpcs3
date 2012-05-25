@@ -585,6 +585,15 @@ struct Gif_Unit {
 				 { stat.APATH = 3; stat.P3Q = 0; stat.IP3 = 0; gifPath[2].dmaRewind = 0; curPath = 2; }
 			else { stat.APATH = 0; stat.OPH = 0; break; }
 		}
+
+		//Some loaders/Refresh Rate selectors and things dont issue "End of Packet" commands
+		//So we look and see if the end of the last tag is all there, if so, stick it in the buffer for the GS :)
+		//(Invisible Screens on Terminator 3 and Growlanser 2/3)
+		if(gifPath[curPath].curOffset == gifPath[curPath].curSize) 
+		{
+			FlushToMTGS();
+		}
+
 		Gif_FinishIRQ();
 
 		//Path3 can rewind the DMA, so we send back the amount we go back!
