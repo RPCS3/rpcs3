@@ -881,10 +881,10 @@ void RenderCRTC()
 		tex0Info& texframe = dispinfo[i];
 
 		// I don't think this is neccessary, now that we make sure the ciruit we are working with is enabled.
-		/*if (texframe.th <= 1) 
-		{
-			continue;
-		}*/
+		// 
+		// Actually it seems there are still empty frame in some games (persona 4 and tales of abyss). I'm not sure it 
+		// is normal, for the moment keep the check to avoid some undefined behavior. -- Gregory
+		if (texframe.th <= 1) continue;
 		
 		if (SMODE2->INT && SMODE2->FFMD) 
 		{
