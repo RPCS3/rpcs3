@@ -15,6 +15,7 @@ namespace YAML
 	{
 	public:
 		ostream_wrapper();
+        explicit ostream_wrapper(std::ostream& stream);
 		~ostream_wrapper();
 		
         void write(const std::string& str);
@@ -23,8 +24,12 @@ namespace YAML
         void set_comment() { m_comment = true; }
 
 		const char *str() const {
-            m_buffer[m_pos] = NULL;
-            return &m_buffer[0];
+            if(m_pStream) {
+                return NULL;
+            } else {
+                m_buffer[m_pos] = NULL;
+                return &m_buffer[0];
+            }
         }
 		
 		std::size_t row() const { return m_row; }
@@ -37,6 +42,7 @@ namespace YAML
 		
 	private:
         mutable std::vector<char> m_buffer;
+        std::ostream *m_pStream;
 
 		std::size_t m_pos;
 		std::size_t m_row, m_col;

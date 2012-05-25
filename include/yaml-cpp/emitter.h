@@ -25,6 +25,7 @@ namespace YAML
 	{
 	public:
 		Emitter();
+        explicit Emitter(std::ostream& stream);
 		~Emitter();
 		
 		// output
@@ -114,8 +115,8 @@ namespace YAML
 		bool CanEmitNewline() const;
 		
 	private:
-		ostream_wrapper m_stream;
 		std::auto_ptr<EmitterState> m_pState;
+		ostream_wrapper m_stream;
 	};
 	
 	template <typename T>
