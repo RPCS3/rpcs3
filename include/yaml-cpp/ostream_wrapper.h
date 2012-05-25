@@ -7,6 +7,7 @@
 
 
 #include <string>
+#include <vector>
 
 namespace YAML
 {
@@ -16,13 +17,15 @@ namespace YAML
 		ostream_wrapper();
 		~ostream_wrapper();
 		
-		void reserve(std::size_t size);
         void write(const std::string& str);
         void write(const char *str, std::size_t size);
-		void put(char ch);
         
         void set_comment() { m_comment = true; }
-		const char *str() const { return m_buffer; }
+
+		const char *str() const {
+            m_buffer[m_pos] = NULL;
+            return &m_buffer[0];
+        }
 		
 		std::size_t row() const { return m_row; }
 		std::size_t col() const { return m_col; }
@@ -33,10 +36,9 @@ namespace YAML
         void update_pos(char ch);
 		
 	private:
-		char *m_buffer;
+        mutable std::vector<char> m_buffer;
+
 		std::size_t m_pos;
-		std::size_t m_size;
-		
 		std::size_t m_row, m_col;
         bool m_comment;
 	};
