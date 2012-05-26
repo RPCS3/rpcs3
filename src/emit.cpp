@@ -15,9 +15,8 @@ namespace YAML
 	
 	std::ostream& operator << (std::ostream& out, const Node& node)
 	{
-		Emitter emitter;
+		Emitter emitter(out);
 		emitter << node;
-		out << emitter.c_str();
 		return out;
 	}
 
