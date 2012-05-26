@@ -24,7 +24,7 @@ namespace YAML
 		return m_stream.str();
 	}
 	
-	unsigned Emitter::size() const
+    std::size_t Emitter::size() const
 	{
 		return m_stream.pos();
 	}

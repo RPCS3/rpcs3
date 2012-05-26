@@ -30,7 +30,7 @@ namespace YAML
 		
 		// output
 		const char *c_str() const;
-		unsigned size() const;
+        std::size_t size() const;
 		
 		// state checking
 		bool good() const;
