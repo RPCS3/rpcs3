@@ -188,24 +188,22 @@ namespace YAML
             void WriteDoubleQuoteEscapeSequence(ostream_wrapper& out, int codePoint) {
 				static const char hexDigits[] = "0123456789abcdef";
 
-				char escSeq[] = "\\U00000000";
+                out << "\\";
 				int digits = 8;
-				if (codePoint < 0xFF) {
-					escSeq[1] = 'x';
+				if(codePoint < 0xFF) {
+                    out << "x";
 					digits = 2;
-				} else if (codePoint < 0xFFFF) {
-					escSeq[1] = 'u';
+				} else if(codePoint < 0xFFFF) {
+                    out << "u";
 					digits = 4;
-				}
+				} else {
+                    out << "U";
+                    digits = 8;
+                }
 
 				// Write digits into the escape sequence
-				int i = 2;
-				for (; digits > 0; --digits, ++i) {
-					escSeq[i] = hexDigits[(codePoint >> (4 * (digits - 1))) & 0xF];
-				}
-
-				escSeq[i] = 0; // terminate with NUL character
-				out << escSeq;
+				for (; digits > 0; --digits)
+					out << hexDigits[(codePoint >> (4 * (digits - 1))) & 0xF];
 			}
 
 			bool WriteAliasName(ostream_wrapper& out, const std::string& str) {

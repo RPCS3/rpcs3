@@ -25,9 +25,9 @@ namespace YAML
 
 		const char *str() const {
             if(m_pStream) {
-                return NULL;
+                return 0;
             } else {
-                m_buffer[m_pos] = NULL;
+                m_buffer[m_pos] = '\0';
                 return &m_buffer[0];
             }
         }
@@ -49,8 +49,9 @@ namespace YAML
         bool m_comment;
 	};
 	
-	inline ostream_wrapper& operator << (ostream_wrapper& stream, const char *str) {
-        stream.write(str, std::strlen(str));
+    template<std::size_t N>
+	inline ostream_wrapper& operator << (ostream_wrapper& stream, const char (&str)[N]) {
+        stream.write(str, N-1);
         return stream;
     }
     
