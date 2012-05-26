@@ -51,7 +51,7 @@ class Kick
 		void Output_Vertex(VertexGPU vert, u32 id);
         bool ValidPrevPrim;
 	public:
-		Kick() { }
+		Kick() : ValidPrevPrim(false) { }
 		~Kick() { }
 		
 		void KickVertex(bool adc);

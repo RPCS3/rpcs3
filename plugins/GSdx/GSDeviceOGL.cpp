@@ -39,6 +39,7 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_pipeline(0)
 	  , m_fbo(0)
 	  , m_fbo_read(0)
+	  , m_enable_shader_AMD_hack(false)
 	  , m_vb_sr(NULL)
 	  , m_srv_changed(false)
 	  , m_ss_changed(false)
@@ -377,6 +378,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// HW renderer shader
 	// ****************************************************************
+	m_enable_shader_AMD_hack = true; // ....
 	CreateTextureFX();
 
 	// ****************************************************************
@@ -1252,7 +1254,7 @@ GLuint GSDeviceOGL::glCreateShaderProgramv_AMD_BUG_WORKAROUND(GLenum  type,  GLs
 			if (compiled) {
 				glAttachShader(program, shader);
 				// HACK TO SET CORRECTLY THE INDEX
-				if (type == GL_FRAGMENT_SHADER) {
+				if (type == GL_FRAGMENT_SHADER && m_enable_shader_AMD_hack) {
 					glBindFragDataLocationIndexed(program, 0, 0, "SV_Target0");
 					glBindFragDataLocationIndexed(program, 0, 1, "SV_Target1");
 				}

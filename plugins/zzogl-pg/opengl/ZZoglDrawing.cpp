@@ -145,7 +145,7 @@ void Kick::DrawPrim(u32 prim_type)
             break;
 
         case PRIM_LINE_STRIP:
-            if (likely(ValidPrevPrim)) {
+            if (likely(ValidPrevPrim) && curvb.nCount != 0) {
                 assert(curvb.nCount >= 1);
                 p[0] = p[-1];
             } else {
@@ -165,7 +165,7 @@ void Kick::DrawPrim(u32 prim_type)
             break;
 
         case PRIM_TRIANGLE_STRIP:
-            if (likely(ValidPrevPrim)) {
+            if (likely(ValidPrevPrim) && curvb.nCount != 0) {
                 assert(curvb.nCount >= 2);
                 p[0] = p[-2];
                 p[1] = p[-1];
@@ -180,7 +180,7 @@ void Kick::DrawPrim(u32 prim_type)
             break;
 
         case PRIM_TRIANGLE_FAN:
-            if (likely(ValidPrevPrim)) {
+            if (likely(ValidPrevPrim) && curvb.nCount != 0) {
                 assert(curvb.nCount >= 2);
                 VertexGPU* TriFanVert = curvb.pBufferData + gs.nTriFanVert;
                 p[0] = TriFanVert[0];

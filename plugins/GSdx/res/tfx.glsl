@@ -86,6 +86,10 @@ void vs_main()
 	// example: ceil(afterseveralvertextransformations(y = 133)) => 134 => line 133 stays empty
 	// input granularity is 1/16 pixel, anything smaller than that won't step drawing up/left by one pixel
 	// example: 133.0625 (133 + 1/16) should start from line 134, ceil(133.0625 - 0.05) still above 133
+
+    // Greg TEST
+    //float logz = log2(1+float(z))/32 * 0.999f;
+	//vec4 p = vec4(i_p, logz, 0) - vec4(0.05f, 0.05f, 0, 0); 
 	
 	vec4 p = vec4(i_p, z, 0) - vec4(0.05f, 0.05f, 0, 0); 
 	vec4 final_p = p * VertexScale - VertexOffset;

@@ -109,7 +109,7 @@ void ps_main1()
 
 	c.a *= 256.0f / 127.0f; // hm, 0.5 won't give us 1.0 if we just multiply with 2
 
-	highp uvec4 i = uvec4(c * vec4(0x001f, 0x03e0, 0x7c00, 0x8000));
+	highp uvec4 i = uvec4(c * vec4(uint(0x001f), uint(0x03e0), uint(0x7c00), uint(0x8000)));
 
     SV_Target1 = (i.x & uint(0x001f)) | (i.y & uint(0x03e0)) | (i.z & uint(0x7c00)) | (i.w & uint(0x8000));
 }
