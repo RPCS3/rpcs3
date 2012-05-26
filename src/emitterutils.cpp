@@ -107,7 +107,7 @@ namespace YAML
 				return true;
 			}
 			
-			void WriteCodePoint(ostream& out, int codePoint) {
+			void WriteCodePoint(ostream_wrapper& out, int codePoint) {
 				if (codePoint < 0 || codePoint > 0x10FFFF) {
 					codePoint = REPLACEMENT_CHARACTER;
 				}
@@ -185,30 +185,28 @@ namespace YAML
                 return true;
             }
 			
-            void WriteDoubleQuoteEscapeSequence(ostream& out, int codePoint) {
+            void WriteDoubleQuoteEscapeSequence(ostream_wrapper& out, int codePoint) {
 				static const char hexDigits[] = "0123456789abcdef";
 
-				char escSeq[] = "\\U00000000";
+                out << "\\";
 				int digits = 8;
-				if (codePoint < 0xFF) {
-					escSeq[1] = 'x';
+				if(codePoint < 0xFF) {
+                    out << "x";
 					digits = 2;
-				} else if (codePoint < 0xFFFF) {
-					escSeq[1] = 'u';
+				} else if(codePoint < 0xFFFF) {
+                    out << "u";
 					digits = 4;
-				}
+				} else {
+                    out << "U";
+                    digits = 8;
+                }
 
 				// Write digits into the escape sequence
-				int i = 2;
-				for (; digits > 0; --digits, ++i) {
-					escSeq[i] = hexDigits[(codePoint >> (4 * (digits - 1))) & 0xF];
-				}
-
-				escSeq[i] = 0; // terminate with NUL character
-				out << escSeq;
+				for (; digits > 0; --digits)
+					out << hexDigits[(codePoint >> (4 * (digits - 1))) & 0xF];
 			}
 
-			bool WriteAliasName(ostream& out, const std::string& str) {
+			bool WriteAliasName(ostream_wrapper& out, const std::string& str) {
 				int codePoint;
 				for(std::string::const_iterator i = str.begin();
 					GetNextCodePointAndAdvance(codePoint, i, str.end());
@@ -247,7 +245,7 @@ namespace YAML
             return StringFormat::DoubleQuoted;
         }
 
-		bool WriteSingleQuotedString(ostream& out, const std::string& str)
+		bool WriteSingleQuotedString(ostream_wrapper& out, const std::string& str)
 		{
 			out << "'";
 			int codePoint;
@@ -267,7 +265,7 @@ namespace YAML
 			return true;
 		}
 		
-		bool WriteDoubleQuotedString(ostream& out, const std::string& str, bool escapeNonAscii)
+		bool WriteDoubleQuotedString(ostream_wrapper& out, const std::string& str, bool escapeNonAscii)
 		{
 			out << "\"";
 			int codePoint;
@@ -297,7 +295,7 @@ namespace YAML
 			return true;
 		}
 
-		bool WriteLiteralString(ostream& out, const std::string& str, int indent)
+		bool WriteLiteralString(ostream_wrapper& out, const std::string& str, int indent)
 		{
 			out << "|\n";
 			out << IndentTo(indent);
@@ -314,7 +312,7 @@ namespace YAML
 			return true;
 		}
 		
-		bool WriteChar(ostream& out, char ch)
+		bool WriteChar(ostream_wrapper& out, char ch)
 		{
 			if(('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'))
 				out << ch;
@@ -334,7 +332,7 @@ namespace YAML
 			return true;
 		}
 
-		bool WriteComment(ostream& out, const std::string& str, int postCommentIndent)
+		bool WriteComment(ostream_wrapper& out, const std::string& str, int postCommentIndent)
 		{
 			const unsigned curIndent = out.col();
 			out << "#" << Indentation(postCommentIndent);
@@ -354,19 +352,19 @@ namespace YAML
 			return true;
 		}
 
-		bool WriteAlias(ostream& out, const std::string& str)
+		bool WriteAlias(ostream_wrapper& out, const std::string& str)
 		{
 			out << "*";
 			return WriteAliasName(out, str);
 		}
 		
-		bool WriteAnchor(ostream& out, const std::string& str)
+		bool WriteAnchor(ostream_wrapper& out, const std::string& str)
 		{
 			out << "&";
 			return WriteAliasName(out, str);
 		}
 
-		bool WriteTag(ostream& out, const std::string& str, bool verbatim)
+		bool WriteTag(ostream_wrapper& out, const std::string& str, bool verbatim)
 		{
 			out << (verbatim ? "!<" : "!");
 			StringCharSource buffer(str.c_str(), str.size());
@@ -386,7 +384,7 @@ namespace YAML
 			return true;
 		}
 
-		bool WriteTagWithPrefix(ostream& out, const std::string& prefix, const std::string& tag)
+		bool WriteTagWithPrefix(ostream_wrapper& out, const std::string& prefix, const std::string& tag)
 		{
 			out << "!";
 			StringCharSource prefixBuffer(prefix.c_str(), prefix.size());
@@ -416,7 +414,7 @@ namespace YAML
 			return true;
 		}
 
-		bool WriteBinary(ostream& out, const Binary& binary)
+		bool WriteBinary(ostream_wrapper& out, const Binary& binary)
 		{
             WriteDoubleQuotedString(out, EncodeBase64(binary.data(), binary.size()), false);
             return true;

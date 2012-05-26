@@ -7,7 +7,7 @@
 
 
 #include "emitterstate.h"
-#include "yaml-cpp/ostream.h"
+#include "yaml-cpp/ostream_wrapper.h"
 #include <string>
 
 namespace YAML
@@ -20,16 +20,16 @@ namespace YAML
 	{
         StringFormat::value ComputeStringFormat(const std::string& str, EMITTER_MANIP strFormat, FlowType::value flowType, bool escapeNonAscii);
         
-		bool WriteSingleQuotedString(ostream& out, const std::string& str);
-		bool WriteDoubleQuotedString(ostream& out, const std::string& str, bool escapeNonAscii);
-		bool WriteLiteralString(ostream& out, const std::string& str, int indent);
-		bool WriteChar(ostream& out, char ch);
-		bool WriteComment(ostream& out, const std::string& str, int postCommentIndent);
-		bool WriteAlias(ostream& out, const std::string& str);
-		bool WriteAnchor(ostream& out, const std::string& str);
-		bool WriteTag(ostream& out, const std::string& str, bool verbatim);
-		bool WriteTagWithPrefix(ostream& out, const std::string& prefix, const std::string& tag);
-		bool WriteBinary(ostream& out, const Binary& binary);
+		bool WriteSingleQuotedString(ostream_wrapper& out, const std::string& str);
+		bool WriteDoubleQuotedString(ostream_wrapper& out, const std::string& str, bool escapeNonAscii);
+		bool WriteLiteralString(ostream_wrapper& out, const std::string& str, int indent);
+		bool WriteChar(ostream_wrapper& out, char ch);
+		bool WriteComment(ostream_wrapper& out, const std::string& str, int postCommentIndent);
+		bool WriteAlias(ostream_wrapper& out, const std::string& str);
+		bool WriteAnchor(ostream_wrapper& out, const std::string& str);
+		bool WriteTag(ostream_wrapper& out, const std::string& str, bool verbatim);
+		bool WriteTagWithPrefix(ostream_wrapper& out, const std::string& prefix, const std::string& tag);
+		bool WriteBinary(ostream_wrapper& out, const Binary& binary);
 	}
 }
 

@@ -6,7 +6,7 @@
 #endif
 
 
-#include "yaml-cpp/ostream.h"
+#include "yaml-cpp/ostream_wrapper.h"
 #include <iostream>
 
 namespace YAML
@@ -16,7 +16,7 @@ namespace YAML
 		unsigned n;
 	};
 	
-	inline ostream& operator << (ostream& out, const Indentation& indent) {
+	inline ostream_wrapper& operator << (ostream_wrapper& out, const Indentation& indent) {
 		for(unsigned i=0;i<indent.n;i++)
 			out << ' ';
 		return out;
@@ -27,7 +27,7 @@ namespace YAML
 		unsigned n;
 	};
 	
-	inline ostream& operator << (ostream& out, const IndentTo& indent) {
+	inline ostream_wrapper& operator << (ostream_wrapper& out, const IndentTo& indent) {
 		while(out.col() < indent.n)
 			out << ' ';
 		return out;

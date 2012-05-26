@@ -11,6 +11,10 @@ namespace YAML
 	{
 	}
 	
+	Emitter::Emitter(std::ostream& stream): m_pState(new EmitterState), m_stream(stream)
+	{
+	}
+
 	Emitter::~Emitter()
 	{
 	}
