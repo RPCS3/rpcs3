@@ -145,7 +145,7 @@ layout(location = 1) out vec4 FragData1;
 // // used only on rare cases where the render target is PSMT8H
 // uniform sampler2D g_sCLUT;
 // main ps2 memory, each pixel is stored in 32bit color
-layout(binding = 0) uniform sampler2DRect g_sMemory; // dual context
+layout(binding = 10) uniform sampler2DRect g_sMemory; // dual context
 
 // used to get the tiled offset into a page given the linear offset
 layout(binding = 1) uniform sampler2DRect g_sSrcFinal;

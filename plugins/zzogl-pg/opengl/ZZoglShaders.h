@@ -327,8 +327,9 @@ struct FRAGMENTSHADER
 #endif
 };
 #else
-const GLenum g_texture_target[10] = {GL_TEXTURE_RECTANGLE, GL_TEXTURE_RECTANGLE, GL_TEXTURE_2D, GL_TEXTURE_2D, GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_RECTANGLE, GL_TEXTURE_RECTANGLE, GL_TEXTURE_RECTANGLE, GL_TEXTURE_2D};
+const GLenum g_texture_target[11] = {GL_TEXTURE_RECTANGLE, GL_TEXTURE_RECTANGLE, GL_TEXTURE_2D, GL_TEXTURE_2D, GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_RECTANGLE, GL_TEXTURE_RECTANGLE, GL_TEXTURE_RECTANGLE, GL_TEXTURE_2D, GL_TEXTURE_RECTANGLE};
 
+extern int g_current_texture_bind[11];
 struct SamplerParam {
 	int		unit;
 	GLuint	texid;
@@ -337,17 +338,20 @@ struct SamplerParam {
 	SamplerParam() : unit(-1), texid(0), target(0) {}
 
 	void set_unit(int new_unit) {
-		assert(new_unit < 10);
+		assert(new_unit < 11);
 		unit = new_unit;
 		target = g_texture_target[new_unit];
 	}
 
 	void enable_texture() {
 		assert(unit >= 0);
-		assert(unit < 10);
+		assert(unit < 11);
 		if (texid) {
-			glActiveTexture(GL_TEXTURE0 + unit);
-			glBindTexture(target, texid);
+			if (g_current_texture_bind[unit] != texid) {
+				glActiveTexture(GL_TEXTURE0 + unit);
+				glBindTexture(target, texid);
+				g_current_texture_bind[unit] = texid;
+			}
 		}
 	}
 
@@ -392,8 +396,8 @@ struct FRAGMENTSHADER
 		//sBitwiseANDY         = 4;
 		//sInterlace           = 5;
 		//sCLUT                = 6;
-		samplers[sMemory].set_unit(0);
-		samplers[sMemory+1].set_unit(0); // Dual context. Use same unit
+		samplers[sMemory].set_unit(10);
+		samplers[sMemory+1].set_unit(10); // Dual context. Use same unit
 		samplers[sFinal].set_unit(1);
 		samplers[sBitwiseANDX].set_unit(6);
 		samplers[sBitwiseANDY].set_unit(7);
@@ -737,6 +741,9 @@ extern GSUniformBufferOGL *common_buffer;
 extern GSUniformBufferOGL *vertex_buffer;
 extern GSUniformBufferOGL *fragment_buffer;
 extern GSVertexBufferStateOGL *vertex_array;
+
+extern GLenum g_current_vs;
+extern GLenum g_current_ps;
 
 extern void init_shader();
 extern void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps);

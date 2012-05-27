@@ -120,10 +120,18 @@ GSUniformBufferOGL *constant_buffer;
 GSUniformBufferOGL *common_buffer;
 GSUniformBufferOGL *vertex_buffer;
 GSUniformBufferOGL *fragment_buffer;
+static bool dirty_common_buffer = true;
+static bool dirty_vertex_buffer = true;
+static bool dirty_fragment_buffer = true;
+
 GSVertexBufferStateOGL *vertex_array;
 
 COMMONSHADER g_cs;
 static GLuint s_pipeline = 0;
+
+int g_current_texture_bind[11] = {0};
+GLenum g_current_vs = NULL;
+GLenum g_current_ps = NULL;
 
 //FRAGMENTSHADER ppsDebug;
 //FRAGMENTSHADER ppsDebug2;
@@ -260,9 +268,11 @@ void ZZshSetParameter4fv(ZZshShaderLink& prog, ZZshParameter param, const float*
 	if (prog.isFragment) {
 		FRAGMENTSHADER* shader = (FRAGMENTSHADER*)prog.link;
 		shader->ZZshSetParameter4fv(param, v);
+		dirty_fragment_buffer = true;
 	} else {
 		VERTEXSHADER* shader = (VERTEXSHADER*)prog.link;
 		shader->ZZshSetParameter4fv(param, v);
+		dirty_vertex_buffer = true;
 	}
 #ifdef ENABLE_MARKER
 	char* debug = new char[100];
@@ -273,6 +283,7 @@ void ZZshSetParameter4fv(ZZshShaderLink& prog, ZZshParameter param, const float*
 
 void ZZshSetParameter4fv(ZZshParameter param, const float* v, const char* name) {
 	g_cs.ZZshSetParameter4fv(param, v);
+	dirty_common_buffer = true;
 #ifdef ENABLE_MARKER
 	char* debug = new char[100];
 	sprintf(debug, "CS: uniform (%s) (%f)", name, *v);
@@ -282,13 +293,7 @@ void ZZshSetParameter4fv(ZZshParameter param, const float* v, const char* name) 
 
 // The same stuff, but also with retry of param, name should be USED name of param for prog.
 void ZZshSetParameter4fvWithRetry(ZZshParameter* param, ZZshShaderLink& prog, const float* v, const char* name) {
-	if (prog.isFragment) {
-		FRAGMENTSHADER* shader = (FRAGMENTSHADER*)prog.link;
-		shader->ZZshSetParameter4fv(*param, v);
-	} else {
-		VERTEXSHADER* shader = (VERTEXSHADER*)prog.link;
-		shader->ZZshSetParameter4fv(*param, v);
-	}
+	ZZshSetParameter4fv(prog, *param, v, name);
 }
 
 // Used sometimes for color 1.
@@ -296,6 +301,7 @@ void ZZshDefaultOneColor( FRAGMENTSHADER& ptr ) {
 	ShaderHandleName = "Set Default One colot";
 	float4 v = float4 ( 1, 1, 1, 1 );
 	ptr.ZZshSetParameter4fv(ptr.sOneColor, v);
+	dirty_fragment_buffer = true;
 }
 //-------------------------------------------------------------------------------------
 
@@ -371,7 +377,10 @@ void ZZshSetVertexShader(ZZshShaderLink prog) {
 	VERTEXSHADER* vs = (VERTEXSHADER*)g_vsprog.link;
 	if (!vs) return;
 
-	glUseProgramStages(s_pipeline, GL_VERTEX_SHADER_BIT, vs->program);
+	if (vs->program != g_current_vs) {
+		glUseProgramStages(s_pipeline, GL_VERTEX_SHADER_BIT, vs->program);
+		g_current_ps = vs->program;
+	}
 }
 
 void ZZshSetPixelShader(ZZshShaderLink prog) {
@@ -380,7 +389,10 @@ void ZZshSetPixelShader(ZZshShaderLink prog) {
 	FRAGMENTSHADER* ps = (FRAGMENTSHADER*)g_psprog.link;
 	if (!ps) return;
 
-	glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ps->program);
+	if (ps->program != g_current_ps) {
+		glUseProgramStages(s_pipeline, GL_FRAGMENT_SHADER_BIT, ps->program);
+		g_current_ps = ps->program;
+	}
 }
 
 //------------------------------------------------------------------------------------------------------------------
@@ -413,14 +425,23 @@ void init_shader() {
 
 void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 
-	common_buffer->bind();
-	common_buffer->upload((void*)&g_cs.uniform_buffer[g_cs.context]);
+	if (dirty_common_buffer) {
+		common_buffer->bind();
+		common_buffer->upload((void*)&g_cs.uniform_buffer[g_cs.context]);
+		dirty_common_buffer = false;
+	}
 
-	vertex_buffer->bind();
-	vertex_buffer->upload((void*)&vs->uniform_buffer[vs->context]);
+	if (dirty_vertex_buffer) {
+		vertex_buffer->bind();
+		vertex_buffer->upload((void*)&vs->uniform_buffer[vs->context]);
+		dirty_vertex_buffer = false;
+	}
 
-	fragment_buffer->bind();
-	fragment_buffer->upload((void*)&ps->uniform_buffer[ps->context]);
+	if (dirty_fragment_buffer) {
+		fragment_buffer->bind();
+		fragment_buffer->upload((void*)&ps->uniform_buffer[ps->context]);
+		dirty_fragment_buffer = false;
+	}
 
 #ifdef ENABLE_MARKER
 	char* debug = new char[100];
@@ -430,6 +451,9 @@ void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 
 	g_cs.enable_texture();
 	ps->enable_texture();
+	// By default enable the unit 0, so I have the guarantee that any
+	// texture command won't change current binding of others unit
+	glActiveTexture(GL_TEXTURE0);
 }
 
 std::string BuildGlslMacro(bool writedepth, int texwrap = 3, bool testaem = false, bool exactcolor = false)
