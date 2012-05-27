@@ -78,8 +78,6 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 	gifTransferLog(index, pMem, size);
 	const u32* start = pMem;
 	u32 size_arg = size;
-
-	g_dump.Transfer(index, (const u8*)pMem, size);
 #endif
 
 	while (size > 0)
