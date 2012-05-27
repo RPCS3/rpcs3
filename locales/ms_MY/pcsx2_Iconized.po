@@ -1,0 +1,373 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR PCSX2 Dev Team
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PCSX2 0.9.9\n"
+"Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
+"POT-Creation-Date: 2012-05-07 17:47+0200\n"
+"PO-Revision-Date: 2012-05-23 10:01+0800\n"
+"Last-Translator: \n"
+"Language-Team: kohaku2421 <kohaku2421@gmail.com>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-KeywordsList: pxE;pxEt\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-Basepath: trunk\\\n"
+"X-Poedit-SearchPath-0: pcsx2\n"
+"X-Poedit-SearchPath-1: common\n"
+
+#: common/src/Utilities/Exceptions.cpp:254
+msgid "!Notice:VirtualMemoryMap"
+msgstr "Memori maya tidak mencukupi, atau pengalamatan memori maya yang diperlukan telah ditempah oleh proses lain, servis dan DLL."
+
+#: pcsx2/CDVD/CDVD.cpp:389
+msgid "!Notice:PsxDisc"
+msgstr "Playstation aka PS1 disc tidak disokong oleh PCSX2. Jika anda nak emulate PS1, maka anda kena download emulator PS1, contohnye, ePSXe atau PCSX."
+
+#: pcsx2/System.cpp:114
+msgid "!Notice:Recompiler:VirtualMemoryAlloc"
+msgstr "Recompiler ini gagal utk menempah memori yg diperlukan utk internal cache. Ralat in boleh disebabkan oleh kekurangan memori maya, contohnya swapfile yg kecil atau dimatikan atau terdapat program lain menggunakan banyak memori. Anda juga boleh mengurangkan saiz cache utk recompiler PCSX2, dibawah Host Settings."
+
+#: pcsx2/System.cpp:348
+msgid "!Notice:EmuCore::MemoryForVM"
+msgstr "PCSX2 gagal utk menempah memori utk PS2 virtual machine. Tutup aplikasi yg banyak menggunakan memori kemudian cuba lagi."
+
+#: pcsx2/gui/AppInit.cpp:43
+msgid "!Notice:Startup:NoSSE2"
+msgstr "Amaran: Komputer anda tidak menyokong SSE2, dimana ia diperlukan oleh PCSX2 recompiler dan plugin. Pilihan anda akan menjadi terhad dan emulation akan jadi *sgt* perlahan."
+
+#: pcsx2/gui/AppInit.cpp:162
+msgid "!Notice:RecompilerInit:Header"
+msgstr "Amaran: Sesetengah PS2 recompiler yg tlh di konfigurasi gagal utk dimulakan dan tlh dimatikan."
+
+#: pcsx2/gui/AppInit.cpp:211
+msgid "!Notice:RecompilerInit:Footer"
+msgstr "Nota: Recompiler tidak diperlukan oleh PCSX2 utk dijalankan, walau bagaimanapun ia penting dlm meningkatkan kelajuan emulation. Anda kemungkinan perlu menghidupkan semula secara manual recompiler dlm senarai di atas, jika anda dapat menyelesaikan masalah anda kelak."
+
+#: pcsx2/gui/AppMain.cpp:546
+msgid "!Notice:BiosDumpRequired"
+msgstr "PCSX2 memerlukan PS2 BIOS utk dijalankan. Disebabkan hakcipta, anda mesti *MENDAPATKAN* BIOS dari PS2 MILIK ANDA SENDIRI. Sila rujuk FAQ dan panduan utk maklumat lanjut."
+
+#: pcsx2/gui/AppMain.cpp:629
+msgid "!Notice Error:Thread Deadlock Actions"
+msgstr ""
+"'Abaikan' utk terus menuggu thread utk memberi respon.\n"
+"'Batal' utk cuba membatalkan thread.\n"
+"'Henti' utk menutup PCSX2 serta-merta."
+
+#: pcsx2/gui/AppUserMode.cpp:57
+msgid "!Notice:PortableModeRights"
+msgstr "Sila pastikan folder-folder ini tlh dibuat dan akaun pengguna anda mempunyai hak menulis ke atas mereka -- atau jalankan semula PCSX2 dgn hak administrator, dimana ia membolehkan PCSX2 utk membuat folder sendiri. Jika anda tidak mempunyai hak terhadap komputer ini, maka anda perlu menukar kepada User Documents Mode (klik butang di bawah)."
+
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
+msgid "!ContextTip:ChangingNTFS"
+msgstr "Pemampatan NTFS boleh diubah secara manual pada bila-bila masa dgn menggunakan file properties dari Windows Explorer."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
+msgid "!ContextTip:Folders:Settings"
+msgstr "Ini adalah folder dimana PCSX2 menyimpan tetapan anda termasuk seting yg dihasilkan oleh kebanyakan plugin (sesetengah plugin lama mungkin tidak)."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
+msgid "!Panel:Folders:Settings"
+msgstr "Anda tidak di wajibkan utk menyatakan tempat utk tetapan PCSX2 disini. Jika tempat tersebut sedia ada mengandungi tetapan PCSX2, anda akan diberi pilihan utk import atau membuat yg baru."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
+msgid "!Wizard:Welcome"
+msgstr "Wizard akan membantu dlm men-konfigurasi plugin, kad memori, dan BIOS. Jika ini kali pertama anda menggunakan %s, adalah digalakkan anda utk membaca readme panduan konfigurasi."
+
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
+msgid "!Wizard:Bios:Tutorial"
+msgstr ""
+"PCSX2 memerlukan salinan BIOS yg *sah* drpd PS2 utk menjalankan permainan.\n"
+"Anda tidak boleh menggunakan salinan yg didapati drpd rakan atau Internet.\n"
+"Anda mesti dump BIOS drpd PS2 anda sendiri."
+
+#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
+msgid "!Notice:ImportExistingSettings"
+msgstr ""
+"Seting sedia ada %s tlh dijumpai dlm folder tetapan yg tlh di konfigurasi. Adakah anda mahu import seting ini atau buat yg baru dgn nilai asal %s?\n"
+"\n"
+"(atau tekan Batal utk memilih folder seting yg lain)"
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
+msgid "!Panel:Mcd:NtfsCompress"
+msgstr "Mampatan NTFS adalah terbina dalam, pantas, dan sgt berguna; digunakan utk memampat kad memori dgn baik (opsyen ini sgt digalakkan)."
+
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
+msgid "!Panel:Mcd:EnableEjection"
+msgstr "Mengelakkan kad memori dprd korup dgn memaksa games mengindeks semula kandungan kad selepas memuat dari savestate. Mungkin tidak sesuai dgn semua permainan (Guitar Hero)."
+
+#: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
+msgid "!Panel:StuckThread:Heading"
+msgstr "Thread %s tidak memberi respon. Mungkin ia tlh dikunci, atau dijalankan dgn kelajuan *sgt* perlahan."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
+msgid "!Panel:HasHacksOverrides"
+msgstr "Amaran! Anda menjalankan PCSX2 dgn opsyen command line yg mengambil alih seting asal anda. Opsyen command line tidak dinyatakan dlm kotak dialog tetapan, dan akan dimatikan jika anda menetapkan apa-apa perubahan di sini."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
+msgid "!Panel:HasPluginsOverrides"
+msgstr "Amaran! Anda menjalankan PCSX2 dgn opsyen command line yg mengambil alih seting asal anda. Opsyen command line tidak dinyatakan dlm kotak dialog tetapan, dan akan dimatikan jika anda menetapkan apa-apa perubahan di sini."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
+msgid "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+"Preset akan menetapkan speed hack, sesetengah opsyen recompiler dan game fix yg diketahui akan meningkatkan kelajuan.\n"
+"Game fix penting yg diketahui akan ditetapkan secara automatik.\n"
+"\n"
+"Info Preset:\n"
+"1 --> Emulation yg paling tepat tetapi paling perlahan.\n"
+"3 --> Cuba utk menetapkan ketepatan emulation dan kestabilan.\n"
+"4 --> Sedikit hack-hack agresif.\n"
+"6 --> Terlalu banyak hack yg berkemungkinan akan menyebabkan game menjadi perlahan."
+
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
+msgid "!Notice:Tooltip:Presets:Checkbox"
+msgstr ""
+"Preset akan menetapkan speed hack, sesetengah opsyen recompiler dan game fix yg diketahui akan meningkatkan kelajuan.\n"
+"Game fix penting yg diketahui akan ditetapkan secara automatik.\n"
+"\n"
+"--> Jgn tanda utk mengubah seting secara manual (dgn seting sekarang sbg tapak)"
+
+#: pcsx2/gui/IsoDropTarget.cpp:28
+msgid "!Notice:ConfirmSysReset"
+msgstr "Perbuatan ini akan reset state virtual machine PS2 yg sedia ada; semua perkembangan sekarang akan hilang. Anda pasti?"
+
+#: pcsx2/gui/MainMenuClicks.cpp:106
+msgid "!Notice:DeleteSettings"
+msgstr ""
+"Arahan ini akan mengosongkan seting %s dan membolehkan anda menjalankan Wizard Kali Pertama. Anda juga perlu membuka semula %s secara manual selepas operasi ini.\n"
+"\n"
+"AMARAN!! Tekan OK utk buang *SEMUA* seting utk %s dan memaksa aplikasi utk ditutup, juga menghilangkan apa-apa perkembangan emulation. Anda benar-benar pasti?\n"
+"\n"
+"(nota: tidak termasuk seting utk plugin)"
+
+#: pcsx2/gui/MemoryCardFile.cpp:78
+msgid "!Notice:Mcd:HasBeenDisabled"
+msgstr ""
+"Slot-PS2 %d telah diamtikan secara automatik. Anda boleh membetulkan masalah\n"
+"dan menghidupkannya semula pada bila-bila masa dgn Konfig:Kad Memori drpd menu utama."
+
+#: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
+msgid "!Notice:BIOS:InvalidSelection"
+msgstr "Sila pilih BIOS yg sah. Jika anda gagal melakukannya maka tekan Batal utk menutup tetingkap panel Konfigurasi."
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:111
+msgid "!Panel:EE/IOP:Heading"
+msgstr "Notis: Kebanyakan game berfungsi dgn baik pada opsyen asal."
+
+#: pcsx2/gui/Panels/CpuPanel.cpp:178
+msgid "!Panel:VUs:Heading"
+msgstr "Notis: Kebanyakan game berfungsi dgn baik pada opsyen asal."
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:69
+msgid "!Notice:DirPicker:CreatePath"
+msgstr "Laluan/Direktori yg dinyatakan tidak wujud. Adakah anda mahu membuatnya?"
+
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
+msgid "!ContextTip:DirPicker:UseDefault"
+msgstr "Apabila ditanda, folder ini akan mengikut yg asalnya terlibat dgn seting mod pengguna PCSX2 sekarang."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:55
+msgid "!ContextTip:Window:Zoom"
+msgstr ""
+"Zoom = 100: Memuatkan seluruh imej kedalam kotak tetingkap tanpa ruang kosong.\n"
+"Atas/bawah 100: Zoom Masuk/Keluar\n"
+"0: Zoom Masuk secara automatik hingga bar hitam tiada (aspect ratio dikekalkan, sesetengah imej akan terkeluar dari skrin).\n"
+"  NOTA: Sesetengah game akan melukis bar hitam mereka sendiri, dimana tidak dihilangkan dengan '0'.\n"
+"\n"
+"Keyboard: CTRL + NUMPAD-PLUS: Zoom Masuk, CTRL + NUMPAD-MINUS: Zoom Keluar, CTRL + NUMPAD-*: Tukar antara 100/0"
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
+msgid "!ContextTip:Window:Vsync"
+msgstr "Vsync menghilangkan screen tearing tetapi akan memberi impak pada kelajuan. Ia selalunya digunakan dlm mod fullscreen, dan kemungkinan tidak akan berfungsi dgn semua plugin GS."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
+msgid "!ContextTip:Window:ManagedVsync"
+msgstr "Menghidupkan Vsync apabila framerate betul-betul pada kelajuan penuh. Kurang shj drpd kelajuan tersebut, Vsync akan dimatikan utk mengelakkan impak prestasi yg lebih besar. Nota: Pada masa ini ia hanya berfungsi baik dgn GSdx sbg plugin GS dan di konfigurasi utk menggunakan DX10/11 hardware rendering. Plugin-plugin atau mod rendering lain akan mengabaikannya atau menghasilkan frame hitam yg berkelip apabila mod ini berfungsi. Ia juga memerlukan Vsync untuk diaktifkan."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:76
+msgid "!ContextTip:Window:HideMouse"
+msgstr "Tandakan ini utk memaksa kursor tetikus utk tidak ditunjukkan dlm tetingkap GS; berguna jika meggunakan tetikus sbg controller utama semasa bermain. Pada asalnya kursor tetikus akan sembunyi sendiri selepas ketidak aktifan selama 2 saat."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:82
+msgid "!ContextTip:Window:Fullscreen"
+msgstr "Menghidupkan penukaran mod secara automatik kepada fullscreen apabila memulakan atau menyambung semula emulation. Anda masih boleh menukar paparan fullscreen pada bila-bila masa dgn alt-enter."
+
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:93
+msgid "!ContextTip:Window:HideGS"
+msgstr "Menutup tetingkap GS sepenuhnya yg selalunya besar apabila menekan ESC atau menjeda emulator."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:67
+msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr ""
+"Diketahui akan memberi kesan pada game:\n"
+" * Digital Devil Saga (membetulkan FMV dan crash) \n"
+" * SSX (membetulkan grafik pelik dan crash) \n"
+" * Resident Evil: Dead Aim (menyebabkan tekstur pelik/hancur)"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
+msgid "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr ""
+"Diketahui memberi kesan pada game:\n"
+" * Bleach Blade Battler\n"
+" * Growlanse II dan III\n"
+" * Wizardry"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
+msgid "!ContextTip:Gamefixes:DMA Busy hack"
+msgstr ""
+"Diketahui memberi kesan pada game:\n"
+" * Mana Khemia 1 (Pergi \"off campus\")"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
+msgstr ""
+"Diketahui memberi kesan pada game:\n"
+" * Test Drive Unlimited\n"
+" * Transformers"
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
+msgid "!Panel:Gamefixes:Compat Warning"
+msgstr ""
+"GameFix akan menyebabkan emulation salah dalam sesetengah game. \n"
+"Ia juga boleh menyebabkan masalah kestabilan dan kelajuan. \n"
+"\n"
+"Adalah lebih baik utk mneghidupkan 'GameFixes Automatik' dlm menu utama, dan membiarkan halaman ini kosong. \n"
+" ('Automatik' bermaksud: memberi game yg tertentu dgn fix yg bersesuaian)"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+msgid "!Notice:Mcd:Delete"
+msgstr "Anda akan membuang kad memori %s. Semua data dlm kad ini akan hilang! Anda pasti?"
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:758
+msgid "!Notice:Mcd:CantDuplicate"
+msgstr "Gagal: Duplicate hanya dibenarkan kepada port-PS2 kosong atau kepada fail sistem."
+
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:801
+msgid "!Notice:Mcd:Copy Failed"
+msgstr "Gagal: Destinasi kad memori '%s' sedang digunakan."
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+msgid "!Panel:Usermode:Explained"
+msgstr "Sila pilih tempat asal dokumen level pengguna PCSX2 dibawah (termasuk kad memori, screenshot, seting, dan savestate). Lokasi folder-folder ini boleh diambil alih pada bila-bila masa dgn menggunakan Core Settings panel."
+
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:41
+msgid "!Panel:Usermode:Warning"
+msgstr "Anda boleh mengubah folder asal utk dokumen level pengguna PCSX2 (termasuk kad memori, screenshot, seting dan savestate). Opsyen ini hanya memberi kesan pada Laluan Standard yg tlh di set utk menggunakan nilai asal semasa pemasangan."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:40
+msgid "!ContextTip:Folders:Savestates"
+msgstr "Folder ini adalah dimana PCSX2 merekod savestate; direkod samada menggunakan menu/toolbar, atau dgn menekan F1/F3 (simpan/muat)."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:50
+msgid "!ContextTip:Folders:Snapshots"
+msgstr "Folder ini adalah dimana PCSX2 menyimpan screenshot. Format imej scrrenshot dan stailnya akan berbeza bergantung kepada plugin GS yg digunakan."
+
+#: pcsx2/gui/Panels/PathsPanel.cpp:60
+msgid "!ContextTip:Folders:Logs"
+msgstr "Folder ini adalah dimana PCSX2 menyimpan fail log dan dump diagnostik. Kebanyakan plugin akan turut menggunakan folder ini, walau bagaimanapun sesetengah plugin lama akan mengabaikannya."
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+msgid "!Notice:PluginSelector:ConfirmShutdown"
+msgstr ""
+"Amaran! Penukaran plugin memerlukan penutupan lengkap dan reset kepada virtual machine PS2. PCSX2 akan cuba utk menyimpan dan mengembalikan semula state, tetapi jika plugin yg baru dipilih tidak sesuai, pemulihan semula akan gagal, dan segala progress akan hilang.\n"
+"\n"
+"Anda pasti utk menetapkan seting sekarang?"
+
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
+msgid "!Notice:PluginSelector:ApplyFailed"
+msgstr "Semua plugin mesti mempunyai pilihan yg sah utk %s dijalankan. Jika anda gagal utk membuat pilihan yg sah kerana kehilangan plugin atau pemasangan %s yg tidak lengkap, maka tekan Batal utk menutup panel Kofigurasi."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
+msgid "!Panel:Speedhacks:EECycleX1"
+msgstr "Cyclerate asal. Ini sgt menyamai kelajuan EmotionEngine PS2 sebenar."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
+msgid "!Panel:Speedhacks:EECycleX2"
+msgstr "Mengurangkan cyclerate EE sebanyak 33%. Sedikit pertambahan kelajuan utk kebanyakan game dgn kestabilan tinggi."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
+msgid "!Panel:Speedhacks:EECycleX3"
+msgstr "Mengurangkan cyclerate EE sebanyak 50%. Lebih banyak pertambahan kelajuan, tetapi *akan* menyebabkan stuttering audio dlm banyak FMV."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+msgid "!Panel:Speedhacks:VUCycleStealOff"
+msgstr "Mematikan VU Cycle Stealing. Seting paling stabil!"
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
+msgid "!Panel:Speedhacks:VUCycleSteal1"
+msgstr "Sedikit VU Cycle Stealing. Merendahkan kestabilan, tetapi sedikit pertambahan kelajuan bagi kebanyakan game."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
+msgid "!Panel:Speedhacks:VUCycleSteal2"
+msgstr "VU Cycle Stealing sederhana. Merendahkan lagi kestabilan, tetapi sangat meningkatkan kelajuan dlm sesetengah game."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
+msgid "!Panel:Speedhacks:VUCycleSteal3"
+msgstr "VU Cycle Stealing maksimum. Kegunaannya terhad, kerana ia akan menyebabkan flickering atau slowdown dlm kebayakan game."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
+msgid "!Panel:Speedhacks:Overview"
+msgstr "Speedhack selalunya meningkatkan prestasi emulation, tetapi akan menyebabkan glitch, audio pelik, dan bacaan FPS palsu. Apabila menghadapi masalah emulation, matikan panel ini dahulu."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
+msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+msgstr "Menetapkan nilai yg lebih tinggi akan mengurangkan clock speed teras cpu EmotionEngine R5900 dgn efektif, dan akan memberi banyak peningkatan kelajuan pada game yg gagal menggunakan potensi penuh perkakasan sebenar PS2."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
+msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+msgstr "Slider ini mengawal amaun cycle curian VU unit dari EmotionEngine. Nilai yg lebih tinggi menambah cycle curian drpd EE bg setiap microprogram VU yg dijalankan game."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
+msgid "!ContextTip:Speedhacks:vuFlagHack"
+msgstr "Megemaskini Status Flag pada blok yg akan membacanya sahaja, drpd sepanjang masa. Seting ini selamat dan SuperVU melakukan perkara yg sama pada asalnya."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+msgid "!ContextTip:Speedhacks:vuThread"
+msgstr "Menjalankan VU1 pada threadnya sendiri (microVU1-sahaja). Selalunya akan meningkatkan kelajuan pada CPU yg mempunyai 3 teras atau lebih. Seting ini selamat bagi kebanyakan game, tatapi sesetengahnya yg tidak sesuai akan hang. Dalam kes game yg dihadkan GSnya, ia akan menyebabkan slowdown (terutamanya dual core CPU)."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
+msgid "!ContextTip:Speedhacks:INTC"
+msgstr "Hack ini bagus utk game yg menggunakan INTC Status register untuk menunggu Vsync, dimana selalunya terdapat pada game bkn RPG. Game yg tidak menggunakan teknik vsync ini akan mendapat sedikit atau tiada pertambahan kelajuan."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
+msgid "!ContextTip:Speedhacks:BIFC0"
+msgstr "Target utamanya adalah idle loop EE pada alamat 0x81FC0 dlm kernel, hack ini akan detect loop yg dipastikan akan memberi hasil machine state yg sama hingga acara yg dijadualkan trigger emulation dlm unit lain. Selepas satu loop tersebut, kita mempercepatkan masa untuk acara seterusnya atau penghujung masa pemproses, mana-mana yg datang dahulu."
+
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
+msgid "!ContextTip:Speedhacks:fastCDVD"
+msgstr "Semak HDLoader utk senarai kesesuaian game-game yg mempunyai masalah dgn hack ini. (Sering ditandakan sbg memerlukan 'mode 1' atau 'slow DVD'"
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:37
+msgid "!ContextTip:Framelimiter:Disable"
+msgstr "Sila ambil tahu bahawa apabila Framelimiting dimatikan, mod Turbo dan SlowMotion juga akan tidak dibenarkan."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:227
+msgid "!Panel:Frameskip:Heading"
+msgstr "Notis: Oleh kerana design perkakasan PS2, frame skipping yg tepat adalah mustahil. Menghidupkannnya hanya akan menyebabkan ralat grafik yg agak teruk dlm sesetengah game."
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:306
+msgid "!ContextTip:GS:SyncMTGS"
+msgstr "Utk trubleshooting kemungkinan pepijat yg mungkin terdapat dlm MTGS sahaja, kerana ia mungkin sangat perlahan. "
+
+#: pcsx2/gui/Panels/VideoPanel.cpp:310
+msgid "!ContextTip:GS:DisableOutput"
+msgstr ""
+"Membuang semua noise yg dihasilkan oleh thread MTGS atau overhead GPU. Opsyen ini bagus digunakan bersama savestate: simpan sebuah state, hidupkan opsyen ini, dan muat semula savestate.\n"
+"\n"
+"Amaran: Opsyen ini boleh dihidupkan on-the-fly tetapi tidak boleh dimatikan on-the-fly (video akan menjadi buruk/pelik)."
+
+#: pcsx2/vtlb.cpp:710
+msgid "!Notice:HostVmReserve"
+msgstr "Sistem anda kekurangan memori/ruang maya untuk PCSX2 dijalankan. Ini boleh disebabkan oleh swapfile yg kecil atau dimatikan, atau program lain yg menggunakan terlalu banyak memori/ruang."
+
+#: pcsx2/x86/sVU_zerorec.cpp:363
+msgid "!Notice:superVU:VirtualMemoryAlloc"
+msgstr "Kekurangan Memori: Recompiler SuperVU gagal untuk menempah julat memori yg diperlukan, dan tidak akan ada utk digunakan. Ralat ini tidak bersifat kritikal, kerana sVU rec telah menjadi usang, dan anda patut menggunakan microVU. :)"
+

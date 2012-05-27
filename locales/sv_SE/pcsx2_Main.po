@@ -4,9 +4,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-05-07 17:46+0200\n"
-"PO-Revision-Date: 2012-02-28 12:54+0100\n"
-"Last-Translator: Georg Ronnert <pgert@yahoo.se>\n"
+"POT-Creation-Date: 2012-05-27 12:20+0200\n"
+"PO-Revision-Date: 2012-05-09 13:20+0100\n"
+"Last-Translator: pgert <http://forums.pcsx2.net/User-pgert>\n"
 "Language-Team: \n"
 "Language: \n"
 "MIME-Version: 1.0\n"
@@ -67,8 +67,8 @@ msgid ""
 "Permission denied while trying to open file, likely due to insufficient user "
 "account rights."
 msgstr ""
-"Tillstånd nekades medans försök att öppna filen gjordes, troligen till följd "
-"av otillräcklig användarbehörighet."
+"Tillstånd att öppna filen nekades, troligen till följd av bristande "
+"Användarbehörighet."
 
 #: common/src/Utilities/Exceptions.cpp:393
 msgid ""
@@ -110,15 +110,15 @@ msgid ""
 "If loading from an ISO image, this error may be caused by an unsupported ISO "
 "image type or a bug in PCSX2 ISO image support."
 msgstr ""
-"Om försök att ladda genom en ISO-avbild har gjorts, kan detta fel ha "
-"orsakats av en ostödjandes ISO-typ, eller av ett fel i PCSX2's ISO-stöd."
+"Om försök att ladda genom ISO-avbild har gjorts, kan detta fel ha orsakats "
+"av en ostödjandes ISO-typ, eller av ett fel i PCSX2's ISO-stöd."
 
 #: pcsx2/MTGS.cpp:859
 msgid ""
 "The MTGS thread has become unresponsive while waiting for the GS plugin to "
 "open."
 msgstr ""
-"MTGS tråden har blivit osvarandes under inväntningen av att GS-"
+"MTGS-tråden har blivit osvarandes under inväntningen av att GS-"
 "insticksprogrammet ska öppna."
 
 #: pcsx2/PluginManager.cpp:709
@@ -186,12 +186,12 @@ msgid ""
 "unsupported version of PCSX2."
 msgstr ""
 "Det konfigurerade %s-insticksprogrammet är inte ett giltligt PCSX2-"
-"insticksprogram, eller för en äldre ostödjandes version av PCSX2."
+"insticksprogram, eller är för en äldre ostödjandes version av PCSX2."
 
 #: pcsx2/PluginManager.cpp:1355
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr ""
-"Det inhemska MinneskortsInsticksprogrammet misslyckades att initialiseras."
+"Det inhemska MinneskortsInsticksProgrammet misslyckades att initialiseras."
 
 #: pcsx2/PluginManager.cpp:1752
 msgid "Unloaded Plugin"
@@ -212,8 +212,7 @@ msgid ""
 "Logs manual protection, split blocks, and other things that might impact "
 "performance."
 msgstr ""
-"Loggar manuellt skydd, delade block, och annat som kan vara av betydelse för "
-"prestanda."
+"Loggar manuellt skydd, delade block, och annat som kan påverka prestanda."
 
 #: pcsx2/SourceLog.cpp:106
 msgid "Shows the game developer's logging text (EE processor)"
@@ -246,7 +245,7 @@ msgstr "Avassemblering av COP0-instruktioner (MMU, CPU och DMA status etc)."
 
 #: pcsx2/SourceLog.cpp:169
 msgid "Disasm of the EE's floating point unit (FPU) only."
-msgstr "Endast avassemblering av EE's flyttalsenhet (FPU)."
+msgstr "Avassemblering av endast EE's flyttalsenhet (FPU)."
 
 #: pcsx2/SourceLog.cpp:175
 msgid "Disasm of the EE's VU0macro co-processor instructions."
@@ -261,7 +260,7 @@ msgid ""
 "All known hardware register accesses (very slow!); not including sub filter "
 "options below."
 msgstr ""
-"Alla kända hårdvaruregisteråtkomster (mycket långsamt!); förutom "
+"Alla kända hårdvaruregisteråtkomster (mycket långsamt!), förutom "
 "underfilterstillämpningarna nedanför."
 
 #: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
@@ -478,7 +477,7 @@ msgstr "tvingar %s att köra ''Första gången Trollkarlen''"
 
 #: pcsx2/gui/AppInit.cpp:255
 msgid "enables portable mode operation (requires admin/root access)"
-msgstr "möjliggör flyttbart-läge-procedur (kräver admin/rot behörighet)"
+msgstr "möjliggör flyttbart-läge-procedur (kräver Administarörsbehörighet)"
 
 #: pcsx2/gui/AppInit.cpp:259
 #, c-format
@@ -510,7 +509,7 @@ msgstr ""
 
 #: pcsx2/gui/AppInit.cpp:496
 msgid "PCSX2 Error: Hardware Deficiency"
-msgstr "PCSX2 Fel: Hårdvarubristfällighet"
+msgstr "PCSX2 Fel: HårdvaruBristfällighet"
 
 #: pcsx2/gui/AppInit.cpp:496 pcsx2/gui/AppInit.cpp:508
 #, c-format
@@ -1106,7 +1105,7 @@ msgstr "PCSX2 Tråd är osvarandes"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:36
 msgid "Config Overrides Warning"
-msgstr "KonfigÅsidosättningVarning"
+msgstr "KonfigÅsidosättningsVarning"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:56
 msgid "Components Overrides Warning"
@@ -2275,8 +2274,8 @@ msgid ""
 "This setting may require administration privileges from your operating "
 "system, depending on how your system is configured."
 msgstr ""
-"Beroende av hur Ert system är konfigurerat kan denna inställning kan kräva "
-"administratörsprivilegier av Ert operativsystem."
+"Beroende av hur Ert system är konfigurerat kan Ert operativsystem kräva "
+"administratörsprivilegier för denna inställning."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:66
 #, c-format
@@ -2379,7 +2378,7 @@ msgstr "Möjliggör snabbhackar"
 msgid ""
 "A safe and easy way to make sure that all speedhacks are completely disabled."
 msgstr ""
-"Ett säkert och lätt sätt att försäkra Er om att alla snabbhackar \n"
+"Ett lätt och säkert sätt att försäkra Er om att alla snabbhackar \n"
 " är helt förhindrade är att ha denna avmarkerad."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:111
@@ -2387,7 +2386,7 @@ msgid ""
 "Resets all speedhack options to their defaults, which consequently turns "
 "them all OFF."
 msgstr ""
-"Återställer alla snabbhackartillämpningar till deras förval, vilket "
+"Återställer alla snabbhackstillämpningar till deras förval, vilket "
 "följdaktligen avaktiverar dem."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:120
@@ -2443,7 +2442,7 @@ msgstr ""
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:188
 msgid "Enable Wait Loop Detection"
-msgstr "Möjliggör VäntloopsUpptäckning"
+msgstr "Möjliggör VäntgångsUpptäckning"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:189
 msgid ""
@@ -2458,7 +2457,9 @@ msgstr "Möjliggör snabb CDVD"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:192
 msgid "Fast disc access, less loading times. [Not Recommended]"
-msgstr "Snabb disktillgång, färre laddningsgånger. [Avrådes]"
+msgstr ""
+"Snabb disktillgång, \n"
+" och färre antal laddningar. [Avrådes]"
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:37
 msgid "Themes Search Path:"
@@ -2542,7 +2543,7 @@ msgid ""
 "disable frameskipping."
 msgstr ""
 "Normal och Turbobegränsad bildöverhoppning, \n"
-" vilket dock ännu förhindras med Ultrarapidsläge."
+" vilket fortfarande förhindras med Ultrarapidsläge."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:217
 msgid "Frames to Draw"
@@ -2585,18 +2586,12 @@ msgid "Framelimiter"
 msgstr "Bildbegränsare"
 
 #: pcsx2/gui/SysState.cpp:283
-#, fuzzy
 msgid "Cannot load this savestate.  The state is an unsupported version."
-msgstr ""
-"Kan inte ladda sparpunkten eftersom den är av en okänd eller ostödjandes "
-"version."
+msgstr "Kan inte ladda sparpunkten eftersom den är av en ostödjandes version."
 
 #: pcsx2/gui/SysState.cpp:290
-#, fuzzy
 msgid "Cannot load this savestate. The state is an unsupported version."
-msgstr ""
-"Kan inte ladda sparpunkten eftersom den är av en okänd eller ostödjandes "
-"version."
+msgstr "Kan inte ladda sparpunkten eftersom den är av en ostödjandes version."
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."

@@ -1,493 +1,370 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) 2011 PCSX2_Dev_Team
-# This file is distributed under the same license as the PCSX2 package.
+# Copyright (C) YEAR PCSX2 Dev Team
+# This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-04-07 11:42+0200\n"
-"PO-Revision-Date: 2012-05-08 19:05+0100\n"
-"Last-Translator: Gregory Hainaut <gregory.hainaut@gmail.com>\n"
+"POT-Creation-Date: 2012-05-07 17:47+0200\n"
+"PO-Revision-Date: 2012-05-22 00:16+0200\n"
+"Last-Translator: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Poedit-KeywordsList: pxE\n"
+"X-Poedit-KeywordsList: pxE;pxEt\n"
 "X-Poedit-SourceCharset: utf-8\n"
-"X-Poedit-Basepath: trunk\\\n"
+"X-Poedit-Basepath: C:\\Users\\Ceyhun\\Downloads\\PCSX2 SVN\n"
 "X-Poedit-Language: Turkish\n"
 "X-Poedit-Country: TURKEY\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
 #: common/src/Utilities/Exceptions.cpp:254
-#, fuzzy
 msgid "!Notice:VirtualMemoryMap"
-msgstr "!Notice:VirtualMemoryMap"
+msgstr "Yetersiz sanal bellek miktarı. Tüm bellek diğer işlemler, hizmetler ya da DLL'ler tarafından kullanılıyor."
 
 #: pcsx2/CDVD/CDVD.cpp:389
-#, fuzzy
 msgid "!Notice:PsxDisc"
-msgstr "!Notice:PsxDisc"
+msgstr "PCSX2 Play Station disklerini desteklemez. Bir PS oyunu oynamak istiyorsanız bunun için ePSXe ya da PCSX gibi PS oyunlarına yönelik yapılmış bir emülatör kullanmalısınız."
 
 #: pcsx2/System.cpp:114
-#, fuzzy
 msgid "!Notice:Recompiler:VirtualMemoryAlloc"
-msgstr "!Notice:Recompiler:VirtualMemoryAlloc"
+msgstr "Derleyici dahili önbellek için gerekli olan bitişik hafıza miktarını ayıramıyor.Bu hata takas dosyasının küçük olması ya da devre dışı bırakılması nedeniyle düşük sanal bellek miktarı olan bilgisayarlarda veya başka bir programın hafızanın tamamı kullanması nedeniyle olur. Ayrıca Ana Bilgisayar Seçenekleri altından tüm PCSX2 derleyicilerinin önbellek boyutlarını azaltmayı deneyebilirsiniz."
 
 #: pcsx2/System.cpp:348
-#, fuzzy
 msgid "!Notice:EmuCore::MemoryForVM"
-msgstr "!Notice:EmuCore::MemoryForVM"
+msgstr "PCSX2 PS2 sanal makinesi için gerekli hafızayı ayıramadı. Arkaplanda çalışan uygulamaları kapatıp yeniden deneyin."
 
 #: pcsx2/gui/AppInit.cpp:43
-#, fuzzy
 msgid "!Notice:Startup:NoSSE2"
-msgstr "!Notice:Startup:NoSSE2"
+msgstr "Uyarı: Bilgisayarınız çoğu PCSX2 derleyicileri ve eklentileri tarafından kullanılan SSE2 özelliğini desteklemiyor. Kullanabileceğiniz seçenekler çok kısıtlı olacaktır ve emülatör aşırı derecede yavaş çalışacaktır."
 
 #: pcsx2/gui/AppInit.cpp:162
-#, fuzzy
 msgid "!Notice:RecompilerInit:Header"
-msgstr "!Notice:RecompilerInit:Header"
+msgstr "Uyarı: Ayarlanmış bazı PS2 derleyicileri başlatılamadığından devre dışı bırakıldı."
 
 #: pcsx2/gui/AppInit.cpp:211
-#, fuzzy
 msgid "!Notice:RecompilerInit:Footer"
-msgstr "!Notice:RecompilerInit:Footer"
+msgstr "Not: PCSX2'nin çalışması için gerekli olmasalar da derleyiciler emülatör hızını oldukça artırır. Sorun ortadan kalktıktan sonra yukarda belirtilen derleyicileri el ile yeniden ayarlamanız gerekebilir."
 
 #: pcsx2/gui/AppMain.cpp:546
-#, fuzzy
 msgid "!Notice:BiosDumpRequired"
-msgstr "!Notice:BiosDumpRequired"
+msgstr "PCSX2'nin çalışması için bir PS2 BIOS dosyası gereklidir. Yasal nedenlerden dolayı BIOS dosyasını *kendi* PS2 konsolunuzdan almalısınız. Daha fazla bilgi için SSS ve kullanma kılavuzlarına göz atınız."
 
 #: pcsx2/gui/AppMain.cpp:629
-#, fuzzy
 msgid "!Notice Error:Thread Deadlock Actions"
-msgstr "!Notice Error:Thread Deadlock Actions"
+msgstr ""
+"İşlemin yanıt vermesini beklemek için 'Yoksay'a tıklayın.\n"
+"İşlemi iptal etmek için 'İptal'e tıklayın.\n"
+"PCSX2'den çıkmak için 'Sonlandır'a tıklayın."
 
 #: pcsx2/gui/AppUserMode.cpp:57
-#, fuzzy
 msgid "!Notice:PortableModeRights"
-msgstr "!Notice:PortableModeRights"
+msgstr "Lütfen bu klasörlerin oluşturulduğundan ve dosya yazma haklarına sahip olduğunuza emin olun. Bu haklara sahip değilseniz PCSX2'yi sağ tıklayarak 'Yönetici olarak çalıştır'ı tıklayın. Hesap haklarına sahip değilseniz Kullanıcı Dosyaları modunu aşağıdan değiştirmeniz gerekir."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
-#, fuzzy
 msgid "!ContextTip:ChangingNTFS"
-msgstr "!ContextTip:ChangingNTFS"
+msgstr "NTFS sıkıştırması Windows Gezgini dosya seçeneklerinden el ile değiştirilebilir."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
-#, fuzzy
 msgid "!ContextTip:Folders:Settings"
-msgstr "!ContextTip:Folders:Settings"
+msgstr "Burası PCSX2'nin hem program hem çeşitli eklenti ayarlarını sakladığı klasördür. (Bazı eski eklentilerin ayar dosyaları buraya gelmeyebilir.)"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
-#, fuzzy
 msgid "!Panel:Folders:Settings"
-msgstr "!Panel:Folders:Settings"
+msgstr "Buradan PCSX2 ayarlarının kaydedilmesi için başka bir klasör seçebilirsiniz. Seçtiğiniz klasör varolan bir PCSX2 ayar dosyası içeriyorsa ayarları 'İçe Aktar' veya 'Üzerine Yaz' seçeneklerinden birini seçmeniz istenecektir."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
-#, fuzzy
 msgid "!Wizard:Welcome"
-msgstr "!Wizard:Welcome"
+msgstr "Bu sihirbaz eklentileri, hafıza kartlarını ve BIOS'u ayarlamanızda yardımcı olacaktır. %s'i ilk kez yüklediyseniz beni oku dosyasına vekullanma kılavuzuna göz atmanız önerilir."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
-#, fuzzy
 msgid "!Wizard:Bios:Tutorial"
-msgstr "!Wizard:Bios:Tutorial"
+msgstr ""
+"PCSX2'nin çalışması için \"yasal\" bir PS2 BIOS dosyasına ihtiyacınız vardır.\n"
+"Internetten veya arkadaşınızdan aldığınız bir BIOS kullanmanız suçtur.\n"
+"BIOS dosyanızı *kendi* Play Station 2 konsolunuzdan almalısınız."
 
 #: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
-#, fuzzy
 msgid "!Notice:ImportExistingSettings"
-msgstr "!Notice:ImportExistingSettings"
+msgstr ""
+"Seçili klasörde %s ayar dosyaları bulundu. Bu ayarları içe aktarıp uygulamak mı istiyorsunuz yoksa ayar dosyaları silinip varsayılan %s ayarları mı uygulansın?\n"
+"\n"
+"(veya İptal'e tıklayarak ayarlar için başka bir klasör seçebilirsiniz)"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
-#, fuzzy
 msgid "!Panel:Mcd:NtfsCompress"
-msgstr "!Panel:Mcd:NtfsCompress"
+msgstr "NTFS sıkıştırma seçeneği hızlıdır ve uyumluluk oranı yüksektir. Hafıza kartının diskte kapladığı boyutu oldukça azaltır. (Bu seçenek önerilir.)"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
-#, fuzzy
 msgid "!Panel:Mcd:EnableEjection"
-msgstr "!Panel:Mcd:EnableEjection"
+msgstr "Kayıt konumunun yüklenmesinden sonra hafıza kartlarını çıkartıp takarak veri kaybını önler. Her oyunla uyumlu olmayabilir. (Guitar Hero)"
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
-#, fuzzy
 msgid "!Panel:StuckThread:Heading"
-msgstr "!Panel:StuckThread:Heading"
+msgstr "%s işlemi yanıt vermiyor. Kilitlenmiş ya da aşırı derecede yavaş çalışıyor olabilir."
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
-#, fuzzy
 msgid "!Panel:HasHacksOverrides"
-msgstr "!Panel:HasHacksOverrides"
+msgstr "Dikkat! PCSX2'yi ayarlarınızı etkileyecek bir komut satırı seçeneğiyle çalıştırıyorsunuz. Bu komut satırı seçenekleri doğrudan Ayarlar sekmesinde görüntülenmez ve buradan yapılan herhangi bir ayar komut satırını devre dışı bırakır."
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
-#, fuzzy
 msgid "!Panel:HasPluginsOverrides"
-msgstr "!Panel:HasPluginsOverrides"
+msgstr "Dikkat! PCSX2'yi ayarlarınızı etkileyecek bir komut satırı seçeneğiyle çalıştırıyorsunuz. Bu komut satırı seçenekleri doğrudan Ayarlar sekmesinde görüntülenmez ve buradan yapılan herhangi bir ayar komut satırını devre dışı bırakır."
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
-#, fuzzy
 msgid "!Notice:Tooltip:Presets:Slider"
-msgstr "!Notice:Tooltip:Presets:Slider"
+msgstr ""
+"Ön ayarlar hızı artırdığı bilinen bazı derleyici seçenekleri, oyun yamaları ve hız hacklerini uygular.\n"
+"Bilinen önemli oyun yamaları otomatik olarak uygulanır.\n"
+"\n"
+"Ön ayarlar hakkında:\n"
+"1 -     En uyumlu fakat en yavaş.\n"
+"3 --> Hızla uyumluluğu dengeler.\n"
+"4 -     Bazı agresif hackler uygulanır.\n"
+"6 -     Muhtemelen oyunu yavaşlatmaya neden olacak fazlalıkta hack uygulanır."
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
-#, fuzzy
 msgid "!Notice:Tooltip:Presets:Checkbox"
-msgstr "!Notice:Tooltip:Presets:Checkbox"
+msgstr ""
+"Ön Ayarlar hızı artırdığı bilinen bazı derleyici seçenekleri, oyun yamaları ve hız hacklerini uygular.\n"
+"Bilinen önemli oyun yamaları otomatik olarak uygulanır.\n"
+"---> Ayarları (seçili ön ayarı baz alarak) el ile yapmak için tik işaretini kaldırın."
 
 #: pcsx2/gui/IsoDropTarget.cpp:28
-#, fuzzy
 msgid "!Notice:ConfirmSysReset"
-msgstr "!Notice:ConfirmSysReset"
+msgstr "PS2 sanal makinesi baştan başlatılacak; şu anki konumunuzu kaydedeceksiniz. Bunu yapmak istediğinizden emin misiniz?"
 
 #: pcsx2/gui/MainMenuClicks.cpp:106
-#, fuzzy
 msgid "!Notice:DeleteSettings"
-msgstr "!Notice:DeleteSettings"
+msgstr ""
+"Bu komut tüm %s ayarlarını silerek İlk Kullanım Sihirbazını açmanızı sağlar. Bunu seçtikten sonra %s'i yeniden başlatmalısınız.\n"
+"\n"
+"DİKKAT!! TÜM %s ayarlarını silmek ve uygulamayı tamamen sonlandırmak için Tamam'a tıklayın. Bunu yapmak istediğinize kesinlikle emin misiniz?\n"
+"\n"
+"(Not: Eklentilerin ayarları kaybedilmez.)"
 
 #: pcsx2/gui/MemoryCardFile.cpp:78
-#, fuzzy
 msgid "!Notice:Mcd:HasBeenDisabled"
-msgstr "!Notice:Mcd:HasBeenDisabled"
+msgstr "%s PS2-slotu otomatik olarak devre dışı bırakıldı."
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
-#, fuzzy
 msgid "!Notice:BIOS:InvalidSelection"
-msgstr "!Notice:BIOS:InvalidSelection"
+msgstr "Lütfen geçerli bir BIOS seçiniz. Geçerli bir seçim yapamıyorsanız Ayarlar panelini İptal'e basarak kapatabilirsiniz."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:111
-#, fuzzy
 msgid "!Panel:EE/IOP:Heading"
-msgstr "!Panel:EE/IOP:Heading"
+msgstr "Not: Birçok oyun varsayılan ayarlarla çalışabilir."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:178
-#, fuzzy
 msgid "!Panel:VUs:Heading"
-msgstr "!Panel:VUs:Heading"
+msgstr "Not: Birçok oyun varsayılan ayarlarla çalışabilir."
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:69
-#, fuzzy
 msgid "!Notice:DirPicker:CreatePath"
-msgstr "!Notice:DirPicker:CreatePath"
+msgstr "Seçili konum/klasör bulunamadı. Bu klasörü oluşturmak istiyor musunuz?"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:158
-#, fuzzy
 msgid "!ContextTip:DirPicker:UseDefault"
-msgstr "!ContextTip:DirPicker:UseDefault"
+msgstr "Seçildiğinde bu klasör şu anki PCSX2 kullanıcı ayarına bağlı varsayılan ayarları kullanır."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:55
-#, fuzzy
 msgid "!ContextTip:Window:Zoom"
-msgstr "!ContextTip:Window:Vsync"
+msgstr ""
+"Yakınlaştırma = 100: Görüntüyü kesmeden ekrana sığdır.\n"
+"100'ün üzeri ya da altı: Yakınlaştır/Uzaklaştır\n"
+"0: Siyah çizgiler yok olana kadar otomatik yakınlaştırma yap (en-boy oranı bozulmaz, bazı görüntüler ekran dışına taşabilir).\n"
+"NOT: Bazı oyunlar kendi siyah çizgilerini çizdiklerinden '0' bu çizgileri silemez.\n"
+"\n"
+"Klavye: CTRL + NUMPAD-ARTI: Yakınlaştırma, CTRL + NUMPAD - EKSİ: Uzaklaştırma, CTRL + NUMPAD - *: 100/0"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:63
-#, fuzzy
 msgid "!ContextTip:Window:Vsync"
-msgstr "!ContextTip:Window:Vsync"
+msgstr "Vsync ekran üzerinde oluşan bölünmeleri önlemesine karşın performans kaybına neden olur. Yalnızca tam ekran modunda çalışır ve tüm GS eklentileri ile uyumlu olmayabilir."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:68
-#, fuzzy
 msgid "!ContextTip:Window:ManagedVsync"
-msgstr "!ContextTip:Window:ManagedVsync"
+msgstr "Kare hızı oranı tam olduğu zaman Vsync'i etkinleştirir. Kare hızı düşmeye başladığında performans kaybı oluşmaması için Vsync devre dışı bırakılır. Not: Öncelikle Vsync'in etkinleştirilmiş olması gerekir. Bu özellik şimdilik yalnızca GS eklentisi olarak GSdx seçildiğinde ve ayarlarından DX10/11 hardware rendering seçili olduğunda çalışır. GSdx dışındaki herhangi bir eklenti seçildiğinde özellik kullanılmaz ya da özellik her etkinleştirildiğinde siyah bir ekran gelir."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:76
-#, fuzzy
 msgid "!ContextTip:Window:HideMouse"
-msgstr "!ContextTip:Window:HideMouse"
+msgstr "Fare imlecinin GS ekranı üzerinde görünmesini istemiyorsanız bunu etkinleştirin. Özellikle fareyi bir oyun aygıtı olarak kullanıyorsanız oldukça faydalıdır. Varsayılan olarak 2 saniye herhangi bir işlem yapılmadığında fare imleci otomatik olarak gizlenir."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:82
-#, fuzzy
 msgid "!ContextTip:Window:Fullscreen"
-msgstr "!ContextTip:Window:Fullscreen"
+msgstr "Emülatör çalıştığında ya da devam ettirildiğinde otomatik olarak tam ekrana geçişi etkinleştirir. Tam ekrandan çıkmak için Alt+Enter'ı kullanabilirsiniz."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:93
-#, fuzzy
 msgid "!ContextTip:Window:HideGS"
-msgstr "!ContextTip:Window:HideGS"
+msgstr "ESC tuşuna basıldığında ya da emülatör duraklatıldığında GS ekranı tamamen kapatılır."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:67
-#, fuzzy
 msgid "!ContextTip:Gamefixes:EE Timing Hack"
-msgstr "!ContextTip:Gamefixes:EE Timing Hack"
+msgstr ""
+"Etkilediği bilinen oyunlar:\n"
+"* Digital Devil Saga (Videoları ve çökmeleri düzeltir)\n"
+"* SSX (Görüntüleri ve çökmeleri düzeltir)\n"
+"* Resident Evil: Dead Aim (Görüntüde bozulmalara neden olur)"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:80
-#, fuzzy
 msgid "!ContextTip:Gamefixes:OPH Flag hack"
-msgstr "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr ""
+"Etkilediği bilinen oyunlar:\n"
+"* Bleach Blade Battler\n"
+"* Growlanser II ve III\n"
+"* Wizardry"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:89
-#, fuzzy
 msgid "!ContextTip:Gamefixes:DMA Busy hack"
-msgstr "!ContextTip:Gamefixes:DMA Busy hack"
+msgstr ""
+"Etkilediği bilinen oyunlar:\n"
+"* Mana Khemia 1 (Haritadan dışarı çıkma hatası için)"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:96
-#, fuzzy
 msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
-msgstr "!ContextTip:Gamefixes:OPH Flag hack"
+msgstr ""
+"Etkilediği bilinen oyunlar:\n"
+"* Test Drive Unlimited\n"
+"* Transformers"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:119
-#, fuzzy
 msgid "!Panel:Gamefixes:Compat Warning"
-msgstr "!Panel:Gamefixes:Compat Warning"
+msgstr ""
+"Oyun yamaları bazı oyunlarda işe yaramayabilir. \n"
+"Bunun yanı sıra uyumluluk ya da performans sorunlarına neden olabilirler. Ayarları buradan yapmak yerine ana menüden 'Otomatik Oyun Yamaları' seçeneğini etkinleştirmek çoğu zaman daha faydalıdır.\n"
+"('Otomatik' kelimesi doğru çalıştığı bilinen yamaların belirli oyunlara doğrudan uygulanması anlamına gelir)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
-#, fuzzy
 msgid "!Notice:Mcd:Delete"
-msgstr "!Notice:Mcd:Delete"
+msgstr "Formatlanmış '%s' hafıza kartını silmek üzeresiniz. Karttaki tüm veriler kaybolacaktır! Bunu yapmak istediğinizden kesinlikle emin misiniz?"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:758
-#, fuzzy
 msgid "!Notice:Mcd:CantDuplicate"
-msgstr "!Notice:Mcd:CantDuplicate"
+msgstr "Hata: Kopyalama yalnızca boş bir PS2-Portu veya dosya sistemi için geçerlidir."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:801
-#, fuzzy
 msgid "!Notice:Mcd:Copy Failed"
-msgstr "!Notice:Mcd:Copy Failed"
+msgstr "Hata: Seçili %s hafıza kartı kullanımda."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
-#, fuzzy
 msgid "!Panel:Usermode:Explained"
-msgstr "!Panel:Usermode:Explained"
+msgstr "Lütfen PCSX2 hafıza kartları, ekran görüntüleri, ayarlar ve kayıt konumları gibi PCSX2 kullanıcı dosyalarının saklanacağı konumu seçiniz. Bu klasörlerin konumları daha sonradan Eklenti/BIOS Seçici seçeneği altından değiştirilebilir."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:41
-#, fuzzy
 msgid "!Panel:Usermode:Warning"
-msgstr "!Panel:Usermode:Warning"
+msgstr "PCSX2 kullanıcı dosyalarının saklandığı varsayılan konumu buradan değiştirebilirsiniz. Bu seçenek yalnızca yükleme sırasında varsayılan olarak ayarlanmış standart konumları etkiler."
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:40
-#, fuzzy
 msgid "!ContextTip:Folders:Savestates"
-msgstr "!ContextTip:Folders:Savestates"
+msgstr "Bu klasör F1/F3 (kaydet/yükle)'e basarak ya da ana menüden kullanabileceğiniz PCSX2 kayıt konumlarının saklandığı klasördür."
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:50
-#, fuzzy
 msgid "!ContextTip:Folders:Snapshots"
-msgstr "!ContextTip:Folders:Snapshots"
+msgstr "Bu klasör PCSX2'nin ekran görüntülerini kaydettiği klasördür. Ekran görüntünün dosya biçimi ve stili kullanılan GS eklentisine göre değişebilir."
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:60
-#, fuzzy
 msgid "!ContextTip:Folders:Logs"
-msgstr "!ContextTip:Folders:Logs"
+msgstr "Burası PCSX2'nin günlük dosyalarını ve tanımlama dökümlerini kaydettiği klasördür. Bazı eski eklentiler hariç birçok eklenti bu klasörü kullanır."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
-#, fuzzy
 msgid "!Notice:PluginSelector:ConfirmShutdown"
-msgstr "!Notice:PluginSelector:ConfirmShutdown"
+msgstr ""
+"Dikkat! Eklentileri değiştirdikten sonra PS2 sanal makinesini baştan başlatmanı gerekir. PCSX2 şu anki konumunuzu kaydetmeyi deneyecek fakat yeni seçilen eklentiler yüklemeyle uyumlu değilse konumunuzu kaybedeceksiniz.\n"
+"\n"
+"Ayarları uygulamak istediğinize emin misiniz?"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
-#, fuzzy
 msgid "!Notice:PluginSelector:ApplyFailed"
-msgstr "!Notice:PluginSelector:ApplyFailed"
+msgstr "%s'nin çalışması için tüm eklentilerin seçilmiş olması gerekir. %s kurulumunda oluşan bir hata sonucu veya elinizde olmayan eklentiler nedeniyle seçim yapamıyorsanız İptal'e tıklayarak Ayarlar panelini kapatın."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
-#, fuzzy
 msgid "!Panel:Speedhacks:EECycleX1"
-msgstr "!Panel:Speedhacks:EECycleX1"
+msgstr "1 - Varsayılan döngü oranı. Gerçek PS2 EE hızına oldukça yakındır."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
-#, fuzzy
 msgid "!Panel:Speedhacks:EECycleX2"
-msgstr "!Panel:Speedhacks:EECycleX2"
+msgstr "2 - EE'nin döngü oranını %33 oranında azaltır. Birçok oyunda hız artışı sağlar, uyumluluğu oldukça yüksektir."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
-#, fuzzy
 msgid "!Panel:Speedhacks:EECycleX3"
-msgstr "!Panel:Speedhacks:EECycleX3"
+msgstr "3 - EE'nin döngü oranını %50 oranında azaltır. Ortalama hız artışı sağlamasına rağmen takılmalara neden olur."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
-#, fuzzy
 msgid "!Panel:Speedhacks:VUCycleStealOff"
-msgstr "!Panel:Speedhacks:VUCycleStealOff"
+msgstr "0 - VU Cycle Stealing'i devre dışı bırakır. En sorunsuz seçenektir."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
-#, fuzzy
 msgid "!Panel:Speedhacks:VUCycleSteal1"
-msgstr "!Panel:Speedhacks:VUCycleSteal1"
+msgstr "1 - Düşük uyumluluk; çoğu oyunda biraz hız artışı."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
-#, fuzzy
 msgid "!Panel:Speedhacks:VUCycleSteal2"
-msgstr "!Panel:Speedhacks:VUCycleSteal2"
+msgstr "2 - Daha düşük uyumluluk; birçok oyunda büyük hız artışı."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
-#, fuzzy
 msgid "!Panel:Speedhacks:VUCycleSteal3"
-msgstr "!Panel:Speedhacks:VUCycleSteal3"
+msgstr "3 - Titremeye ve takılmalara neden olacağından pek yararlı değildir."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
-#, fuzzy
 msgid "!Panel:Speedhacks:Overview"
-msgstr "!Panel:Speedhacks:Overview"
+msgstr "Hız Hackleri emülatör hızını artırmasına rağmen hatalara, seste bozulmalara ve yanlış FPS değerlerinin gösterilmesine neden olabilir. Oyunlarda sorunlar yaşarsanız ilk olarak bu paneli devre dışı bırakın."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
-#, fuzzy
 msgid "!ContextTip:Speedhacks:EECycleRate Slider"
-msgstr "!ContextTip:Speedhacks:EECycleRate Slider"
+msgstr "Buradan yüksek değerleri seçtiğinizde EE'nin R5900 çekirdek işlemcisinin saat hızı azaltılarak gerçek PS2 donanımı seviyesine ulaşamayan oyunlarda büyük hız artışı sağlanır."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
-#, fuzzy
 msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
-msgstr "!ContextTip:Speedhacks:VUCycleStealing Slider"
+msgstr "Burası VU ünitesinin EE'den ne kadar döngü eksilttiğini ayarlamanızı sağlar."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
-#, fuzzy
 msgid "!ContextTip:Speedhacks:vuFlagHack"
-msgstr "!ContextTip:Speedhacks:vuFlagHack"
+msgstr "Status Flag'lerini her zaman yerine yalnızca okunacakları zaman günceller. Bu çoğu zaman güvenlidir ve zaten Super VU varsayılan olarak buna benzer bir işlem uygular."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
-#, fuzzy
 msgid "!ContextTip:Speedhacks:vuThread"
-msgstr "!ContextTip:Speedhacks:vuMinMax"
+msgstr "VU1'i kendi işlemi altında yürütür (yalnızca microVU1 için geçerlidir). 3 ya da daha fazla çekirdeği olan işlemcilerde hız artışı sağlar. Birçok oyun için güvenlidir fakat birkaç oyunla uyumsuz olduğundan donmalar meydana gelebilir. GS sınırlı oyunlarda FPS düşebilir (özellikle çift çekirdekli işlemcilerde)."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
-#, fuzzy
 msgid "!ContextTip:Speedhacks:INTC"
-msgstr "!ContextTip:Speedhacks:INTC"
+msgstr "Bu hack en çok özellikle 3D olmayan ve vsync'i beklemek için INTC status'u kullanan oyunlarla uyumludur."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
-#, fuzzy
 msgid "!ContextTip:Speedhacks:BIFC0"
-msgstr "!ContextTip:Speedhacks:BIFC0"
+msgstr "Kernelin 0x81FC0 adresindeki EE işlevsiz döngüsünü hedef alan bu hack farklı bir olay planlanmış işlem ünitesini değiştirene dek her bir iterasyon sonucu gövdeleri aynı makine durumunda oluşacak olan döngüleri tespit eder. Bu döngülerin tek seferlik iterasyonundan sonra işlemcinin zaman döngüsüne ya da bir sonraki olayın zamanlamasına ilerlenir."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
-#, fuzzy
 msgid "!ContextTip:Speedhacks:fastCDVD"
-msgstr "!ContextTip:Speedhacks:fastCDVD"
+msgstr "Bilinen sorunlu oyunlar listesini görmek için HDLoader uyumluluk listesine bakın. (Sorunlu oyunlar 'mode1' ya da 'slow DVD' olarak işaretlidir)"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:37
-#, fuzzy
 msgid "!ContextTip:Framelimiter:Disable"
-msgstr "!ContextTip:Framelimiter:Disable"
+msgstr "Kare sınırlaması devre dışı bırakıldığında Turbo ve Ağır Çekim modlarının da devre dışı bırakılacağını unutmayın."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:227
-#, fuzzy
 msgid "!Panel:Frameskip:Heading"
-msgstr "!Panel:Frameskip:Heading"
+msgstr "Önemli: PS2 donanım dizaynı nedeniyle kusursuz kare atlama özelliği imkansızdır. Bu özelliği etkinleştirmek bazı oyunlarda ciddi görsel bozulmalara neden olacaktır."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:306
-#, fuzzy
 msgid "!ContextTip:GS:SyncMTGS"
-msgstr "!ContextTip:GS:SyncMTGS"
+msgstr "MTGS işlem eşzamanlamasının çökmelere veya görsel bozulmalara neden olduğunu düşünüyorsanız bunu etkinleştirin."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:310
-#, fuzzy
 msgid "!ContextTip:GS:DisableOutput"
-msgstr "!ContextTip:GS:DisableOutput"
+msgstr ""
+"MTGS işlemi ya da ekran kartının aşırı derece ısınması nedeniyle oluşabilecek kalite testi gürültüsünü kaldırır. Bu seçenek kayıt konumlarıyla bağlantılı olarak kullanılır: herhangi bir konumda oyununuzu kaydedin, bu seçeneği etkinleştirin ve kayıt konumunuzu yeniden yükleyin.\n"
+"\n"
+"Dikkat: Bu seçenek oyun açıkken etkinleştirilebilir fakat kapatılamaz (görüntüler bozulur)."
 
 #: pcsx2/vtlb.cpp:710
-#, fuzzy
 msgid "!Notice:HostVmReserve"
-msgstr "!Notice:HostVmReserve"
+msgstr "Sistem PCSX2'nin çalışması için yeterli sanal kaynağa sahip değil. Bu hata takas dosyasının çok küçük boyutlu olması ya da devre dışı bırakılması veya arkaplanda çalışan uygulamaların hafızanın tamamını kullanması sonucu oluşur."
 
 #: pcsx2/x86/sVU_zerorec.cpp:363
-#, fuzzy
 msgid "!Notice:superVU:VirtualMemoryAlloc"
-msgstr "!Notice:superVU:VirtualMemoryAlloc"
+msgstr "Hafıza hatası: SuperVU derleyicisi belirtilen hafıza değerlerini ayıramadığı için kullanılamıyor. Bu hata sVU zaten eski olduğundan ve onun yerine microVU kullansanız daha iyi olacağından çok da ciddi değildir. :)"
 
-#~ msgid "!ContextTip:Speedhacks:vuBlockHack"
-#~ msgstr "!ContextTip:Speedhacks:vuBlockHack"
-
-#~ msgid "No reason given."
-#~ msgstr "Sebep belirtilmemiş."
-
-#~ msgid "Threading activity: start, detach, sync, deletion, etc."
-#~ msgstr "İşlem etkinliği; başlat, çıkart, eşleştir, sil vb..."
-
-#~ msgid "Includes idle event processing and some other uncommon event usages."
-#~ msgstr "Boş olay işlemesi ve diğer yaygın olmayan olay işlemelerini içerir."
-
-#~ msgid ""
-#~ "The MTGS thread has become unresponsive while waiting for the GS plugin "
-#~ "to open."
-#~ msgstr ""
-#~ "MTGS işlemcisi GS eklentisinin açılmasını beklerken yanıt vermeyi "
-#~ "durdurdu."
-
-#~ msgid "Internal Memorycard Plugin failed to initialize."
-#~ msgstr "Hafıza kartı eklentisi başlatılamadı."
-
-#~ msgid "Safest"
-#~ msgstr "En Güvenli"
-
-#~ msgid "Safe (faster)"
-#~ msgstr "Güvenli (daha hızlı)"
-
-#~ msgid "Balanced"
-#~ msgstr "Dengeli"
-
-#~ msgid "Aggressive"
-#~ msgstr "Agresif"
-
-#~ msgid "Aggressive plus"
-#~ msgstr "Daha Agresif"
-
-#~ msgid "Mostly Harmful"
-#~ msgstr "Çoğu Zaman Zararlı"
-
-#~ msgid "Fits a lot of log in a microcosmically small area."
-#~ msgstr "Çok küçük bir alana birçok günlük dosyası sığdırır."
-
-#~ msgid "It's what I use (the programmer guy)."
-#~ msgstr "Benim kullandığım. :) (Geliştiricinin)"
-
-#~ msgid "Its nice and readable."
-#~ msgstr "Güzel ve okunur."
-
-#~ msgid "In case you have a really high res display."
-#~ msgstr "Yüksek çözünürlüklü bir ekranınız varsa."
-
-#~ msgid "Default soft-tone color scheme."
-#~ msgstr "Varsayılan yumuşak tonlu renk şeması"
-
-#~ msgid ""
-#~ "Classic black color scheme for people who enjoy having text seared into "
-#~ "their optic nerves."
-#~ msgstr "Yazıların gözüne girmesinden hoşlananlar için klasik siyah tema."
-
-#~ msgid ""
-#~ "When checked the log window will be visible over other foreground windows."
-#~ msgstr "Seçildiğinde günlük diğer pencerelerin önünde gözükür."
-
-#~ msgid ""
-#~ "Always use this option if you want the safest and surest memory card "
-#~ "behavior."
-#~ msgstr "Hafıza kartını en güvenli ve kararlı yapan seçenek."
-
-#~ msgid "16 and 32 MB cards have roughly the same compatibility factor."
-#~ msgstr "16 ve 32 MB kartlar neredeyse aynı uyumluluk oranına sahiptir."
-
-#~ msgid ""
-#~ "Use at your own risk.  Erratic memory card behavior is possible (though "
-#~ "unlikely)."
-#~ msgstr ""
-#~ "Riski size ait olmak üzere kullanın. Hafıza kartınız çıldırabilir "
-#~ "(nadiren)."
-
-#~ msgid "Logs events as they are passed to the PS2 virtual machine."
-#~ msgstr "Olayları PS2 sanal makinesindeki gibi günlükler."
-
-#~ msgid ""
-#~ "Error while parsing either NTSC or PAL framerate settings.  Settings must "
-#~ "be valid floating point numerics."
-#~ msgstr ""
-#~ "NTSC ya da PAL kare hızı ayarlarında hata. Ayarlar geçerli rakamlardan "
-#~ "oluşmalı."
-
-#~ msgid ""
-#~ "For troubleshooting potential bugs in the MTGS only, as it is potentially "
-#~ "very slow."
-#~ msgstr "MTGS hatalarını tespit etmek için. Çok yavaştır."
-
-#~ msgid ""
-#~ "Completely disables all GS plugin activity; ideal for benchmarking EEcore "
-#~ "components."
-#~ msgstr ""
-#~ "Tüm GS eklenti işlemlerini devre dışı bırakır; EEcore bileşenlerini test "
-#~ "etmek için idealdir."
-
-#~ msgid "!ContextTip:Window:FullscreenExclusive"
-#~ msgstr "!ContextTip:Window:FullscreenExclusive"
