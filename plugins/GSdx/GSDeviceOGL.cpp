@@ -168,6 +168,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		const GLubyte* s;
 		s = glGetString(GL_VERSION);
 		if (s == NULL) return false;
+		fprintf(stderr, "Supported Opengl version: %s\n", s);
 
 		GLuint dot = 0;
 		while (s[dot] != '\0' && s[dot] != '.') dot++;

@@ -403,7 +403,7 @@ static bool get_snapshot_filename(char *filename, char* path, const char* extens
 	{
 		snapshotnr++;
 
-		sprintf(filename, "%s/snap%03ld.%s", path, snapshotnr, extension);
+		sprintf(filename, "%s/snap%03d.%s", path, snapshotnr, extension);
 
 		bmpfile = fopen(filename, "rb");
 
@@ -641,6 +641,7 @@ struct Packet
 {
 	u8 type, param;
 	u32 size, addr;
+	u32 real_size;
 	vector<u32> buff;
 };
 
@@ -694,18 +695,20 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 				p->param = (u8)fgetc(fp);
 
 				fread(&p->size, 4, 1, fp);
+				fread(&p->real_size, 4, 1, fp);
 
 				switch(p->param)
 				{
 				case 0:
-					p->buff.resize(0x4000);
-					p->addr = 0x4000 - p->size;
-					fread(&p->buff[p->addr], p->size, 1, fp);
+					p->buff.resize(0x4000/4);
+					//p->addr = 0x4000 - p->size;
+					//fread(&p->buff[p->addr], p->size, 1, fp);
+					fread(&p->buff[0], p->size, 1, fp);
 					break;
 				case 1:
 				case 2:
 				case 3:
-					p->buff.resize(p->size);
+					p->buff.resize(p->size/4);
 					fread(&p->buff[0], p->size, 1, fp);
 					break;
 				}
@@ -726,7 +729,7 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 
 			case 3:
 
-				p->buff.resize(0x2000);
+				p->buff.resize(0x2000/4);
 
 				fread(&p->buff[0], 0x2000, 1, fp);
 
@@ -755,12 +758,14 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 				{
 				case 0:
 
+					//fprintf(stderr, "TRANSFER %d size %d\n", p->param, p->real_size);
 					switch(p->param)
 					{
-					case 0: GSgifTransfer1(&p->buff[0], p->addr); break;
-					case 1: GSgifTransfer2(&p->buff[0], p->size / 16); break;
-					case 2: GSgifTransfer3(&p->buff[0], p->size / 16); break;
-					case 3: GSgifTransfer(&p->buff[0], p->size / 16); break;
+					//case 0: GSgifTransfer1((u32*)&p->buff[0], p->addr); break;
+					case 0: _GSgifTransfer<0>(&p->buff[0], p->real_size); break;
+					case 1: GSgifTransfer2((u32*)&p->buff[0], p->real_size); break;
+					case 2: GSgifTransfer3((u32*)&p->buff[0], p->real_size); break;
+					case 3: GSgifTransfer((u32*)&p->buff[0], p->real_size); break;
 					}
 
 					break;
@@ -789,8 +794,8 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 				}
 			}
 			unsigned long end = timeGetTime();
-			fprintf(stderr, "The %d frames of the scene was render on %dms\n", frame_number, end - start);
-			fprintf(stderr, "A means of %fms by frame\n", (float)(end - start)/(float)frame_number);
+			fprintf(stderr, "The %ld frames of the scene was render on %ldms\n", frame_number, end - start);
+			fprintf(stderr, "A means of %fms by frame (limit 16ms/f)\n", (float)(end - start)/(float)frame_number);
 
 			sleep(1);
 			finished--;

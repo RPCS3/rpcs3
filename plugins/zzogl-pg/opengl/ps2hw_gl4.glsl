@@ -57,12 +57,6 @@
 #define TEX_DECL vec4
 #endif
 
-#ifdef WRITE_DEPTH
-#define DOZWRITE(x) x
-#else
-#define DOZWRITE(x)
-#endif
-
 // NVidia CG-data types
 #define half2 vec2
 #define half3 vec3
@@ -602,37 +596,33 @@ half4 ps2FinalColor(half4 col)
 half4 ps2FinalColor(half4 col)
 {
 	return col * g_fOneColor.xxxy + g_fOneColor.zzzw;
-	//return vec4(1.0f,0.0f,1.0f, 0.8f);
 }
 #endif
 
+
 #ifdef FRAGMENT_SHADER 			// This is code only for FRAGMENTS (pixel shader)
+
+#ifdef WRITE_DEPTH
+void write_depth_target(vec4 z)
+{
+    FragData1 = z; 
+}
+#else
+void write_depth_target(vec4 z) { }
+#endif
 
 void RegularPS() {
 	// whenever outputting depth, make sure to mult by 255/256 and 1
 	FragData0 = ps2FinalColor(PSin.color);
-	DOZWRITE(FragData1 = PSin.z;)
+    write_depth_target(PSin.z);
 }
-
-#ifdef WRITE_DEPTH
 
 #define DECL_TEXPS(num, bit) \
 void Texture##num##bit##PS() \
 { \
 	FragData0 = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color)); \
-	FragData1 = PSin.z; \
+	write_depth_target(PSin.z); \
 }
-
-#else
-
-#define DECL_TEXPS(num, bit) \
-void Texture##num##bit##PS() \
-{ \
-	FragData0 = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color)); \
-}
-
-#endif
-
 
 #define DECL_TEXPS_(num) \
 DECL_TEXPS(num, _32) \
@@ -653,10 +643,8 @@ void RegularFogPS() {
 	c.xyz = mix(g_fFogColor.xyz, PSin.color.xyz, vec3(PSin.fog));
 	c.w = PSin.color.w;
 	FragData0 = ps2FinalColor(c);
-   	DOZWRITE(FragData1 = PSin.z;)
+    write_depth_target(PSin.z);
 }
-
-#ifdef WRITE_DEPTH
 
 #define DECL_TEXFOGPS(num, bit) \
 void TextureFog##num##bit##PS() \
@@ -664,20 +652,8 @@ void TextureFog##num##bit##PS() \
 	half4 c = ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color); \
 	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(PSin.fog)); \
 	FragData0 = ps2FinalColor(c); \
-   	FragData1 = PSin.z; \
+	write_depth_target(PSin.z); \
 }
-
-#else
-
-#define DECL_TEXFOGPS(num, bit) \
-void TextureFog##num##bit##PS() \
-{ \
-	half4 c = ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color); \
-	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(PSin.fog)); \
-	FragData0 = ps2FinalColor(c); \
-}
-
-#endif
 
 #define DECL_TEXFOGPS_(num) \
 DECL_TEXFOGPS(num, _32) \
@@ -876,70 +852,78 @@ void Convert32to16PS() {
 
 #ifdef VERTEX_SHADER
 
-float4 OutPosition() {
+void SetColor() {
+	VSout.color = Color;
+}
+
+void SetTex() {
+#ifdef PERSPECTIVE_CORRECT_TEX
+	VSout.tex.xyz = TexCoord.xyz;
+#else
+	VSout.tex.xy = TexCoord.xy/TexCoord.z;
+#endif
+}
+
+void SetZ() {
+#ifdef WRITE_DEPTH
+	VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;
+    VSout.z.w = g_fc0.y;
+#endif
+}
+
+float SetPosition() {
 	float4 position;
 	position.xy = vec2(Vert.xy) * g_fPosXY.xy + g_fPosXY.zw;
+    // FIXME: the factor in normal mode seem bogus. They don't have same order than in log mode. Or I failed to understand the logic
+    //// normal mode.
+    // -> dot(g_fZ, SecondaryColor.zyxw)) => reconstruct a float from normalized char. The float range from 0 to 1
+    // position.z = dot(g_fZ, SecondaryColor.zyxw);
+    //// logz mode
+    // -> dot(g_fZ, SecondaryColor.zyxw)) => reconstruct a float from normalized char. The float range from 0 to 2**32
+    // position.z = log(g_fc0.y + dot(g_fZ, SecondaryColor.zyxw)) * g_fZNorm.x
+    // position.z = log(1 + Z_INT) * 0.999f / (32 * log(2.0)) = log2(1 + Z_INT) * 0.999f / 32
+    // log2(...) will range from 0 to 32
 	position.z = (log(g_fc0.y + dot(g_fZ, SecondaryColor.zyxw)) * g_fZNorm.x + g_fZNorm.y) * g_fZMin.y + dot(g_fZ, SecondaryColor.zyxw) * g_fZMin.x ;
 	position.w = g_fc0.y;
-	return position;
+
+    gl_Position = position;
+
+    // For fog
+    return position.z;
+}
+
+void SetFog(float z) {
+    VSout.fog = z * g_fBilinear.w;
 }
 
 // just smooth shadering
 void RegularVS() {
-	float4 position = OutPosition();
-	gl_Position = position;
-
-	VSout.color = Color;
-
-	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
-    DOZWRITE(VSout.z.w = g_fc0.y;)
+    float z = SetPosition();
+    SetColor();
+    SetZ();
 }
 
 // diffuse texture mapping
 void TextureVS() {
-	float4 position = OutPosition();
-	gl_Position = position;
-
-	VSout.color = Color;
-
-#ifdef PERSPECTIVE_CORRECT_TEX
-	VSout.tex.xyz = TexCoord.xyz;
-#else
-	VSout.tex.xy = TexCoord.xy/TexCoord.z;
-#endif
-
- 	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
-    DOZWRITE(VSout.z.w = g_fc0.y;)
+    float z = SetPosition();
+    SetColor();
+    SetTex();
+    SetZ();
 }
 
 void RegularFogVS() {
-	float4 position = OutPosition();
-	gl_Position = position;
-
-	VSout.color = Color;
-
-    VSout.fog = position.z * g_fBilinear.w;
-
-	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
-    DOZWRITE(VSout.z.w = g_fc0.y;)
+    float z = SetPosition();
+    SetColor();
+    SetZ();
+    SetFog(z);
 }
 
 void TextureFogVS() {
-	float4 position = OutPosition();
-	gl_Position = position;
-
-	VSout.color = Color;
-
-#ifdef PERSPECTIVE_CORRECT_TEX
-	VSout.tex.xyz = TexCoord.xyz;
-#else
-	VSout.tex.xy = TexCoord.xy/TexCoord.z;
-#endif
-
-    VSout.fog = position.z * g_fBilinear.w;
-
-	DOZWRITE(VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;)
-    DOZWRITE(VSout.z.w = g_fc0.y;)
+    float z = SetPosition();
+    SetColor();
+    SetTex();
+    SetZ();
+    SetFog(z);
 }
 
 void BitBltVS() {

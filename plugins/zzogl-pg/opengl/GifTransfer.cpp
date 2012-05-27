@@ -76,6 +76,8 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 
 #ifdef _DEBUG
 	gifTransferLog(index, pMem, size);
+	const u32* start = pMem;
+	u32 size_arg = size;
 
 	g_dump.Transfer(index, (const u8*)pMem, size);
 #endif
@@ -221,6 +223,10 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 			}
 		}
 	}
+
+#ifdef _DEBUG
+	g_dump.Transfer(index, start, pMem - start, size_arg);
+#endif
 
 	// This is the case when not all data was readed from one try: VU1 has too much data.
 	// So we should redo reading from the start.

@@ -58,13 +58,14 @@ void GSDump::Close()
 	}
 }
 
-void GSDump::Transfer(int index, const u8* mem, size_t size)
+void GSDump::Transfer(int index, const u32* mem, size_t size, u32 real_size)
 {
 	if(m_gs && size > 0)
 	{
 		fputc(0, m_gs);
 		fputc(index, m_gs);
 		fwrite(&size, 4, 1, m_gs);
+		fwrite(&real_size, 4, 1, m_gs);
 		fwrite(mem, size, 1, m_gs);
 	}
 }
