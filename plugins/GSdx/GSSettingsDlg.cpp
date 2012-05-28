@@ -475,7 +475,7 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 						  " Full can be used for Tales of Destiny.";
 				break;
 			case IDC_WILDHACK:
-				helpstr = "WildArms\n\nLowers the GS precission to avoid gaps between pixels when"
+				helpstr = "WildArms\n\nLowers the GS precision to avoid gaps between pixels when"
 						  " upscaling. Full option fixes the text on WildArms games, while Half option might improve portraits"
 						  " in ArTonelico.";
 				break;

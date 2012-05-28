@@ -168,17 +168,21 @@ __fi void gsWrite8(u32 mem, u8 value)
 	GIF_LOG("GS write 8 at %8.8lx with data %8.8lx", mem, value);
 }
 
-static __fi void _gsSMODEwrite( u32 mem, u32 value )
+static void _gsSMODEwrite( u32 mem, u32 value )
 {
 	switch (mem)
 	{
-		case GS_SMODE1:
-			// ToDo: There's other flags determining which mode to set. The only tested one so far is the PAL / NTSC one.
-			gsSetRegionMode( ((value & 0x6000) == 0x6000) ? Region_PAL : (value & 0x400000) ? Region_NTSC_PROGRESSIVE : Region_NTSC );
+	case GS_SMODE1:
+		if ( (value & 0x6000) == 0x6000 ) 
+			gsSetRegionMode( Region_PAL );
+		else if (value & 0x400000 || value & 0x200000) 
+			gsSetRegionMode( Region_NTSC_PROGRESSIVE );
+		else
+			gsSetRegionMode( Region_NTSC );
 		break;
 
-		case GS_SMODE2:
-			gsIsInterlaced = (value & 0x1);
+	case GS_SMODE2:
+		gsIsInterlaced = (value & 0x1);
 		break;
 	}
 }
