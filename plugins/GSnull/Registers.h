@@ -16,14 +16,6 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-// These enums & structures are copied from GSdx, which got them from sp2dev 0.4.0.
-
-// sp2dev is Copyright (C) 2002 Terratron Technologies Inc.  All Rights Reserved.
-// http://window.terratron.com/~sosman/ps2linux/
-//
-// Gsdx is Copyright (C) 2007-2009 Gabest   All Rights Reserved.
-// http://www.gabest.org
-//
 
 #ifndef __REGISTERS_H__
 #define __REGISTERS_H__
@@ -578,15 +570,6 @@ REG64_SET(GSReg)
 	GSRegSMODE2		SMODE2;
 REG_SET_END
 
-//
-// sps2tags.h
-//
-
-#define SET_GIF_REG(gifTag, iRegNo, uiValue) \
-	{((GIFTag*)&gifTag)->u64[1] |= (((uiValue) & 0xf) << ((iRegNo) << 2));}
-
-#define GET_GIF_REG(tag, reg) \
-	(((tag).u32[2 + ((reg) >> 3)] >> (((reg) & 7) << 2)) & 0xf)
 //
 // GIFTag
 

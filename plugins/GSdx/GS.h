@@ -17,11 +17,6 @@
  *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
  *  http://www.gnu.org/copyleft/gpl.html
  *
- *	Special Notes:
- *
- *	Register definitions and most of the enums originate from sps2dev-0.4.0
- *	Copyright (C) 2002 Terratron Technologies Inc.  All Rights Reserved.
- *
  */
 
 #pragma once
@@ -44,10 +39,6 @@
 #include "GSVector.h"
 
 #pragma pack(push, 1)
-
-//
-// sps2registers.h
-//
 
 enum GS_PRIM
 {
@@ -224,10 +215,6 @@ enum GS_AFAIL
 	AFAIL_ZB_ONLY	= 2,
 	AFAIL_RGB_ONLY	= 3,
 };
-
-//
-// sps2regstructs.h
-//
 
 #define REG32(name) \
 union name			\
@@ -506,10 +493,6 @@ REG64_SET(GSReg)
 	GSRegSMODE1		SMODE1;
 	GSRegSMODE2		SMODE2;
 REG_SET_END
-
-//
-// sps2tags.h
-//
 
 //
 // GIFTag
