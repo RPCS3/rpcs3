@@ -342,7 +342,9 @@ __fi void vif1Interrupt()
 
 	if(g_vif1Cycles > 0 || vif1ch.qwc)
 	{
-		CPU_INT(DMAC_VIF1, max((int)g_vif1Cycles, 8));
+		if(!(vif1Regs.stat.VGW && gifUnit.gifPath[GIF_PATH_3].state != GIF_PATH_IDLE)) //If we're waiting on GIF, stop looping, (can be over 1000 loops!)
+			CPU_INT(DMAC_VIF1, max((int)g_vif1Cycles, 8));
+
 		return;
 	}
 	else if(vif1Regs.stat.VPS == VPS_TRANSFERRING) DevCon.Warning("Cycles %x, cmd %x, qwc %x, waitonvu %x", g_vif1Cycles, vif1.cmd, vif1ch.qwc, vif1.waitforvu);

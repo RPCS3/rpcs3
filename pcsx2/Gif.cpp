@@ -57,6 +57,8 @@ __fi void gifInterrupt()
 
 		if(vif1Regs.stat.VGW)
 		{
+			CPU_INT(DMAC_VIF1, 1);
+
 			if(!gifUnit.Path3Masked()) 
 				CPU_INT(DMAC_GIF, 16);
 

@@ -318,9 +318,12 @@ void vifMFIFOInterrupt()
 				vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);
 				
 			case 1: //Transfer data
-				mfifo_VIF1chain();
+				if(vif1.inprogress & 0x1) //Just in case the tag breaks early (or something wierd happens)!
+					mfifo_VIF1chain();
 				//Sanity check! making sure we always have non-zero values
-				CPU_INT(DMAC_MFIFO_VIF, (g_vif1Cycles == 0 ? 4 : g_vif1Cycles) );	
+				if(!(vif1Regs.stat.VGW && gifUnit.gifPath[GIF_PATH_3].state != GIF_PATH_IDLE)) //If we're waiting on GIF, stop looping, (can be over 1000 loops!)
+					CPU_INT(DMAC_MFIFO_VIF, (g_vif1Cycles == 0 ? 4 : g_vif1Cycles) );	
+
 				vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);
 				return;
 		}
