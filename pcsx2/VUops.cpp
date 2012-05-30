@@ -1873,8 +1873,17 @@ s32 _branchAddr(VURegs * VU) {
 }
 
 static __fi void _setBranch(VURegs * VU, u32 bpc) {
-	VU->branch = 2;
-	VU->branchpc = bpc;
+	if(VU->branch == 1) 
+	{
+		//DevCon.Warning("Branch in Branch Delay slot!");
+		VU->delaybranchpc = bpc;
+		VU->takedelaybranch = true;
+	}
+	else
+	{
+		VU->branch = 2;
+		VU->branchpc = bpc;
+	}
 }
 
 static __ri void _vuIBEQ(VURegs * VU) {

@@ -148,6 +148,14 @@ static void _vu0Exec(VURegs* VU)
 		VU->branch--;
 		if (VU->branch == 0) {
 			VU->VI[REG_TPC].UL = VU->branchpc;
+			if(VU->takedelaybranch == true)
+			{
+				//DevCon.Warning("Setting VU0 Delay branch to next branch, treating first as delay slot");
+				VU->branchpc = VU->delaybranchpc;
+				VU->delaybranchpc = 0;
+				VU->branch = 2;
+				VU->takedelaybranch = false;
+			}
 		}
 	}
 

@@ -139,6 +139,8 @@ struct __aligned16 VURegs {
 	// classes requires considerable code refactoring.  Maybe later. >_<
 	u32 branch;
 	u32 branchpc;
+	u32 delaybranchpc;
+	bool takedelaybranch;
 
 	// MAC/Status flags -- these are used by interpreters and superVU, but are kind of hacky
 	// and shouldn't be relied on for any useful/valid info.  Would like to move them out of
