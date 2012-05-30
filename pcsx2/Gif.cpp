@@ -455,6 +455,21 @@ void gifMFIFOInterrupt()
     GIF_LOG("gifMFIFOInterrupt");
 	mfifocycles = 0;
 
+	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
+	{
+		gifUnit.gifPath[GIF_PATH_3].state = GIF_PATH_IDLE;
+
+		if(vif1Regs.stat.VGW)
+		{
+			CPU_INT(DMAC_VIF1, 1);
+
+			if(!gifUnit.Path3Masked()) 
+				CPU_INT(DMAC_MFIFO_GIF, 16);
+
+			if(!gspath3done || gifch.qwc > 0) return;
+		}
+	}
+
 	if (dmacRegs.ctrl.MFD != MFD_GIF) {
 		DevCon.Warning("Not in GIF MFIFO mode! Stopping GIF MFIFO");
 		return;
