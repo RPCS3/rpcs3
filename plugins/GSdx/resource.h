@@ -92,7 +92,6 @@
 #define IDC_HACK_DESCRIPTION            2073
 #define IDC_STATIC_MSAA                 2074
 #define IDC_STATIC_SKIPDRAW             2075
-#define IDC_CHECK_AGGRESSIVECRC         2076
 #define IDC_AGGRESSIVECRC               2076
 #define IDC_COLORSPACE                  3000
 #define IDR_CONVERT_FX                  10000
