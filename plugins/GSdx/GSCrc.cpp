@@ -156,7 +156,7 @@ CRC::Game CRC::m_games[] =
 	{0x5188ABCA, CrashBandicootWoC, US, 0},
 	{0x3A03D62F, CrashBandicootWoC, EU, 0},
 	{0x013E349D, ResidentEvil4, US, 0},
-	{0x6BA2F6B9, ResidentEvil4, NoRegion, 0},
+	// same CRC as EU {0x6BA2F6B9, ResidentEvil4, NoRegion, 0},
 	{0xDBB7A559, ResidentEvil4, US, 0},
 	{0x6BA2F6B9, ResidentEvil4, EU, 0},
 	{0x60FA8C69, ResidentEvil4, JP, 0},
@@ -185,7 +185,7 @@ CRC::Game CRC::m_games[] =
 	{0xA61A4C6D, GodOfWar, NoRegion, 0},
 	{0xE23D532B, GodOfWar, NoRegion, 0},
 	{0xDF1AF973, GodOfWar, NoRegion, 0},
-	{0xD6385328, GodOfWar, NoRegion, 0},
+	// same CRC as US {0xD6385328, GodOfWar, NoRegion, 0},
 	{0x1A85E924, GodOfWar, NoRegion, 0}, //天幻1+2，不能同時使用
 	{0x608ACBD3, GodOfWar, CH, 0}, //完美漢化修改版
 	{0x2F123FD8, GodOfWar2, RU, 0},
@@ -203,13 +203,15 @@ CRC::Game CRC::m_games[] =
 	{0x5D482F18, JackieChanAdv, NoRegion, 0},
 	{0xF0A6D880, HarvestMoon, US, 0},
 	{0x75C01A04, NamcoXCapcom, US, 0},
-	{0xBF6F101F, GiTS, US, 0},
+	//Same CRC also reported as EU, and we have another US crc... {0xBF6F101F, GiTS, US, 0},
 	{0x95CC86EF, GiTS, US, 0},
 	{0xA5768F53, GiTS, JP, 0},
 	{0xA3643EB1, GiTS, KO, 0},
+	{0xBF6F101F, GiTS, EU, 0},
 	{0x6BF11378, Onimusha3, US, 0},
 	{0x71320CA8, Onimusha3, JP, 0},
 	{0xDAFFFB0D, Onimusha3, KO, 0},
+	// apparently on google most results for this crc is Onimusha4 (shinOnimusha) {0x812C5A96, Onimusha3, EU, 0},
 	{0xF442260C, MajokkoALaMode2, JP, 0},
 	{0x14FE77F7, TalesOfAbyss, US, 0},
 	{0x045D77E9, TalesOfAbyss, JPUNDUB, 0},
@@ -323,6 +325,7 @@ CRC::Game CRC::m_games[] =
 	{0xA79B0491, NanoBreaker, JP, 0},
 	{0x7985D894, FinalFightStreetwise, US, 0}, 
 	{0xED4BF0D3, FinalFightStreetwise, US, 0}, //紅星
+	{0x73C560BA, FinalFightStreetwise, EU, 0},
 	{0xCBB87BF9, EvangelionJo, JP, 0}, //新世紀福音戰士:序
 	{0x278A91FD, CaptainTsubasa, JP, 0}, //足球小將翼
 	{0xC5B75C7C, Oneechanbara2Special, JP, 0}, //性感女劍士2特別編
@@ -332,6 +335,7 @@ CRC::Game CRC::m_games[] =
 	{0xF7786EE4, EternalPoison, JP, 0}, //粉紅劇毒
 	{0x2BE55519, EternalPoison, US, 0},
 	{0xE01F57EC, LegoBatman, US, 0}, //樂高蝙蝠俠
+	{0xE01F57ED, LegoBatman, EU, 0},
 	{0xE0347841, XE3, JP, 0}, //異域傳說3
 	{0xA4E88698, XE3, CH, 0},
 	{0x2088950A, XE3, US, 0},
@@ -346,9 +350,12 @@ CRC::Game CRC::m_games[] =
 	{0x57818AF6, ShadowofRome, US, 0}, 
 	{0xF21EE6E0, CrashNburn, US, 0},
 	{0x694A998E, TombRaiderUnderworld, JP, 0}, //8代地城奪寶
+	{0x8E214549, TombRaiderUnderworld, EU, 0},
 	{0xB639EB17, TombRaiderAnniversary, US, 0},
 	{0xB05805B6, TombRaiderAnniversary, JP, 0}, //十週年紀念版 重返禁地
+	{0xA629A376, TombRaiderAnniversary, EU, 0},
 	{0xBC8B3F50, TombRaiderLegend, US, 0}, //7代傳奇
+	{0x05177ECE, TombRaiderLegend, EU, 0},
 	{0x08FFF00D, SSX3, JP, 0}, //極限滑雪3
 	{0xCE942B2A, SSX3, EU, 0},
 	{0x5C891FF1, Black, US, 0},
@@ -424,8 +431,10 @@ CRC::Game CRC::m_games[] =
 	{0xA9461CB2, SkyGunner, US, 0},
 	{0xB799A60C, SkyGunner, NoRegion, 0},
 	{0x6848699B, JamesBondEverythingOrNothing, US, 0},
+	{0x5FFFDE40, JamesBondEverythingOrNothing, EU, 0},
 	{0xF7FB054C, Siren, CH, 0}, //死魂曲
 	{0x47C2C34A, Siren, KO, 0},
+	{0xB083CCC2, Siren, EU, 0}, // Spanish
 	{0x90F4B057, ZettaiZetsumeiToshi2, CH, 0},
 	{0xC988ECBB, ZettaiZetsumeiToshi2, JP, 0},
 	{0x81CA29BE, VF4EVO, EU, 0},
@@ -451,6 +460,7 @@ CRC::Game CRC::m_games[] =
 	{0x4A4B623A, FightingBeautyWulong, JP,0}, //格鬥美神武龍
 	{0x5AC7E79C, TouristTrophy, CH, 0}, //摩拖車浪漫旅
 	{0xFF9C0E93, TouristTrophy, US, 0},
+	{0xCA9AA903, TouristTrophy, EU, 0}, //crc hack not fully working on PAL, still needs brightness =0
 	{0xA1B3F232, GTASanAndreas, EU, 0}, //俠盜獵車手聖安地列斯
 	{0x399A49CA, GTASanAndreas, US, 0}, 
 	{0x60FE139C, GTASanAndreas, JP, 0}, 
@@ -464,6 +474,7 @@ CRC::Game CRC::m_games[] =
 	{0x4E811100, UltramanFightingEvolution, JP, 0}, //超能力霸王戰鬥進化重生
 	{0x0643F90C, RogueGalaxy, US, 0}, //俠盜銀河
 	{0xCDEE4B19, RogueGalaxy, JP, 0},
+	{0xCBB4B383, RogueGalaxy, EU, 0},
 	{0xF7F181C3, DeathByDegreesTekkenNinaWilliams, CH, 0}, //鐵拳妮娜
 	{0xF088FA5B, DeathByDegreesTekkenNinaWilliams, KO, 0},
 	{0x59683BB0, DeathByDegreesTekkenNinaWilliams, EU, 0},
@@ -489,6 +500,7 @@ CRC::Game CRC::m_games[] =
 	{0xFC0F8A5B, Simple2000Vol114, JP, 0},
 	{0x0098F740, SeintoSeiya, NoRegion, 0}, //聖鬥士星矢-黃道十二宮
 	{0xBDD9BAAD, UrbanReign, US, 0}, //街頭爭霸
+	{0xAE4BEBD3, UrbanReign, EU, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;
