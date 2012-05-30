@@ -57,8 +57,10 @@ __fi void gifInterrupt()
 
 		if(vif1Regs.stat.VGW)
 		{
-			CPU_INT(DMAC_GIF, 16);
-			return;
+			if(!gifUnit.Path3Masked()) 
+				CPU_INT(DMAC_GIF, 16);
+
+			if(!gspath3done || gifch.qwc > 0) return;
 		}
 	}
 
@@ -168,7 +170,10 @@ static __fi tDMA_TAG* ReadTag2()
 bool CheckPaths(EE_EventType Channel) {
 	// Can't do Path 3, so try dma again later...
 	if(!gifUnit.CanDoPath3()) {
-		CPU_INT(Channel, 128);
+		if(!gifUnit.Path3Masked())
+		{
+			CPU_INT(Channel, 128);
+		}
 		return false;
 	}
 	return true;
