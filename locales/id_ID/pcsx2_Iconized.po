@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: PCSX2 0.9.8 r4560\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2012-04-07 11:42+0200\n"
-"PO-Revision-Date: 2012-01-13 16:56+0700\n"
-"Last-Translator: \n"
+"PO-Revision-Date: 2012-06-01 10:32+0100\n"
+"Last-Translator: Gregory Hainaut <gregory.hainaut@gmail.com>\n"
 "Language-Team: ikazu <ikazu.kevin@gmail.com>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
@@ -24,42 +24,52 @@ msgstr ""
 "X-Poedit-SearchPath-1: common\n"
 
 #: common/src/Utilities/Exceptions.cpp:254
+#, fuzzy
 msgid "!Notice:VirtualMemoryMap"
 msgstr "!Pemberitahuan:MapVirtualMemory"
 
 #: pcsx2/CDVD/CDVD.cpp:389
+#, fuzzy
 msgid "!Notice:PsxDisc"
 msgstr "!Pemberitahuan:DiscPsx"
 
 #: pcsx2/System.cpp:114
+#, fuzzy
 msgid "!Notice:Recompiler:VirtualMemoryAlloc"
 msgstr "!Pemberitahuan:Recompiler:AlokasiMemoriVirtual"
 
 #: pcsx2/System.cpp:348
+#, fuzzy
 msgid "!Notice:EmuCore::MemoryForVM"
 msgstr "!Pemberitahuan:CoreEmu::MemoriUntukMesinVirtual"
 
 #: pcsx2/gui/AppInit.cpp:43
+#, fuzzy
 msgid "!Notice:Startup:NoSSE2"
 msgstr "!Pemberitahuan:Startup:NoSSE2"
 
 #: pcsx2/gui/AppInit.cpp:162
+#, fuzzy
 msgid "!Notice:RecompilerInit:Header"
 msgstr "!Pemberitahuan:InitRecompiler:Header"
 
 #: pcsx2/gui/AppInit.cpp:211
+#, fuzzy
 msgid "!Notice:RecompilerInit:Footer"
 msgstr "!Pemberitahuan:InitRecompiler:Footer"
 
 #: pcsx2/gui/AppMain.cpp:546
+#, fuzzy
 msgid "!Notice:BiosDumpRequired"
 msgstr "!Pemberitahuan:DumpBiosDiperlukan"
 
 #: pcsx2/gui/AppMain.cpp:629
+#, fuzzy
 msgid "!Notice Error:Thread Deadlock Actions"
 msgstr "!Pemberitahuan Eror:Aksi Deadlock Pada Trit"
 
 #: pcsx2/gui/AppUserMode.cpp:57
+#, fuzzy
 msgid "!Notice:PortableModeRights"
 msgstr "!Pemberitahuan:KekuasaanModePortable"
 
@@ -73,30 +83,37 @@ msgid "!ContextTip:Folders:Settings"
 msgstr "!Panel:Folders:Pengaturan"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
+#, fuzzy
 msgid "!Panel:Folders:Settings"
 msgstr "!Panel:Folders:Pengaturan"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
+#, fuzzy
 msgid "!Wizard:Welcome"
 msgstr "!Wizard:Selamat Datang"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
+#, fuzzy
 msgid "!Wizard:Bios:Tutorial"
 msgstr "!Wizard:Bios:Tutorial"
 
 #: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
+#, fuzzy
 msgid "!Notice:ImportExistingSettings"
 msgstr "!Pemberitahuan:ImporPengaturanYangAda"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
+#, fuzzy
 msgid "!Panel:Mcd:NtfsCompress"
 msgstr "!Panel:Mcd:NtfsCompress"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
+#, fuzzy
 msgid "!Panel:Mcd:EnableEjection"
 msgstr "!Panel:Mcd:AkifkanEjection"
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
+#, fuzzy
 msgid "!Panel:StuckThread:Heading"
 msgstr "!Panel:TritSangkut:Heading"
 
@@ -118,30 +135,37 @@ msgid "!Notice:Tooltip:Presets:Checkbox"
 msgstr ""
 
 #: pcsx2/gui/IsoDropTarget.cpp:28
+#, fuzzy
 msgid "!Notice:ConfirmSysReset"
 msgstr "!Pemberitahuan:KonfirmasiResetSistem"
 
 #: pcsx2/gui/MainMenuClicks.cpp:106
+#, fuzzy
 msgid "!Notice:DeleteSettings"
 msgstr "!Pemberitahuan:HapusPengaturan"
 
 #: pcsx2/gui/MemoryCardFile.cpp:78
+#, fuzzy
 msgid "!Notice:Mcd:HasBeenDisabled"
 msgstr "!Pemberitahuan:Mcd:TelahDiNonaktifkan"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
+#, fuzzy
 msgid "!Notice:BIOS:InvalidSelection"
 msgstr "!Pemberitahuan:BIOS:PilihanTidakValid"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:111
+#, fuzzy
 msgid "!Panel:EE/IOP:Heading"
 msgstr "!Panel:EE/IOP:Heading"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:178
+#, fuzzy
 msgid "!Panel:VUs:Heading"
 msgstr "!Panel:VUs:Heading"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:69
+#, fuzzy
 msgid "!Notice:DirPicker:CreatePath"
 msgstr "!Pemberitahuan:PilihanDirektori:BuatLokasi"
 
@@ -191,26 +215,32 @@ msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
 msgstr ""
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:119
+#, fuzzy
 msgid "!Panel:Gamefixes:Compat Warning"
 msgstr "!Panel:PerbaikanPermainan:Peringatan Compat"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+#, fuzzy
 msgid "!Notice:Mcd:Delete"
 msgstr "!Pemberitahuan:Mcd:Hapus"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:758
+#, fuzzy
 msgid "!Notice:Mcd:CantDuplicate"
 msgstr "!Pemberitahuan:Mcd:TidakBisaDuplikat"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:801
+#, fuzzy
 msgid "!Notice:Mcd:Copy Failed"
 msgstr "!Pemberitahuan:Mcd:Salin Gagal"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+#, fuzzy
 msgid "!Panel:Usermode:Explained"
 msgstr "!Panel:Modepengguna:Terjelaskan"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:41
+#, fuzzy
 msgid "!Panel:Usermode:Warning"
 msgstr "!Panel:Modepengguna:Peringatan"
 
@@ -228,10 +258,12 @@ msgid "!ContextTip:Folders:Logs"
 msgstr ""
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
+#, fuzzy
 msgid "!Notice:PluginSelector:ConfirmShutdown"
 msgstr "!Pemberitahuan:PilihanPlugin:KonfirmasiMatikan"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
+#, fuzzy
 msgid "!Notice:PluginSelector:ApplyFailed"
 msgstr "!Pemberitahuan:PilihanPlugin:GagalTerapkan"
 
@@ -271,6 +303,7 @@ msgid "!Panel:Speedhacks:VUCycleSteal3"
 msgstr "!Panel:Speedhacks:PenampakanSebagian"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
+#, fuzzy
 msgid "!Panel:Speedhacks:Overview"
 msgstr "!Panel:Speedhacks:PenampakanSebagian"
 
@@ -308,6 +341,7 @@ msgid "!ContextTip:Framelimiter:Disable"
 msgstr ""
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:227
+#, fuzzy
 msgid "!Panel:Frameskip:Heading"
 msgstr "!Panel:Frameskip:Heading"
 
@@ -320,9 +354,12 @@ msgid "!ContextTip:GS:DisableOutput"
 msgstr ""
 
 #: pcsx2/vtlb.cpp:710
+#, fuzzy
 msgid "!Notice:HostVmReserve"
 msgstr "!Pemberitahuan:HostVmReserve"
 
 #: pcsx2/x86/sVU_zerorec.cpp:363
+#, fuzzy
 msgid "!Notice:superVU:VirtualMemoryAlloc"
 msgstr "!Pemberitahuan:superVU:AlokasiMemoriVirtual"
+

@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.7\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-05-07 17:46+0200\n"
-"PO-Revision-Date: 2011-09-28 21:53+0100\n"
+"POT-Creation-Date: 2012-06-01 10:29+0200\n"
+"PO-Revision-Date: 2012-05-21 12:59+0100\n"
 "Last-Translator: Víctor González <pajaroloco_2@hotmail.com>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -413,8 +413,8 @@ msgstr "Muy peligroso"
 #: pcsx2/gui/AppConfig.cpp:1008 pcsx2/gui/AppConfig.cpp:1014
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr ""
-"Error al sobrescribir el archivo de configuración ya existente, se ha "
-"denegado el permiso."
+"Error al sobrescribir el archivo de configuración ya existente, permiso "
+"denegado."
 
 #: pcsx2/gui/AppCorePlugins.cpp:404
 msgid "Loading PS2 system plugins..."
@@ -957,7 +957,7 @@ msgstr "Tarjeta de memoria nueva:"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:72
 msgid "At folder:    "
-msgstr "En la carpeta:"
+msgstr "Carpeta:"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:75
 msgid "Select file name: "
@@ -1033,7 +1033,7 @@ msgid ""
 "Low compatibility warning: Yes it's very big, but may not work with many "
 "games."
 msgstr ""
-"Aviso de baja compatibilidad: El tamaño aumenta, pero puede no funcioanr con "
+"Aviso de baja compatibilidad: El tamaño aumenta, pero puede no funcionar con "
 "muchos juegos."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
@@ -1062,7 +1062,7 @@ msgid ""
 "Change the language only if you need to.\n"
 "The system default should be fine for most operating systems."
 msgstr ""
-"Cambia el idioma sólo si te es necesario.\n"
+"Cambia el idioma sólo si es necesario.\n"
 "El idioma predeterminado del sistema debería bastar para la mayoría de "
 "sistemas operativos."
 
@@ -1978,8 +1978,7 @@ msgstr "Arreglos para juegos"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:38
 msgid "VU Add Hack - Fixes Tri-Ace games boot crash."
-msgstr ""
-"Arreglo de añadido VU - Evita que los juegos de Tri-Ace fallen al arrancar."
+msgstr "Añadido VU - Evita que los juegos de Tri-Ace fallen al arrancar."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:39
 msgid ""
@@ -1996,24 +1995,23 @@ msgstr ""
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:42
 msgid "VU Clip Flag Hack - For Persona games (SuperVU recompiler only!)"
 msgstr ""
-"Arreglo para ajustar bandera VU: Para los juegos Persona (¡Sólo recompilador "
-"SuperVU!)"
+"Ajustar etiqueta VU: Para la saga Persona (¡Solo recompilador SuperVU!)"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:46
 msgid "FPU Compare Hack - For Digimon Rumble Arena 2."
-msgstr "Arreglo de comparación FPU - Para Digimon Rumble Arena 2."
+msgstr "Comparación FPU - Para Digimon Rumble Arena 2."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:50
 msgid "FPU Multiply Hack - For Tales of Destiny."
-msgstr "Arreglo de multiplicación FPU - Para Tales of Destiny."
+msgstr "Multiplicación FPU - Para Tales of Destiny."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:54
 msgid "FPU Negative Div Hack - For Gundam games."
-msgstr "Arreglo de división negativa FPU - Para los juegos de Gundam."
+msgstr "División negativa FPU - Para los juegos de Gundam."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:58
 msgid "VU XGkick Hack - For Erementar Gerad."
-msgstr "Arreglo XGkick de VU - Para Erementar Gerad."
+msgstr "XGkick de VU - Para Erementar Gerad."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:62
 msgid "FFX videos fix - Fixes bad graphics overlay in FFX videos."
@@ -2022,21 +2020,17 @@ msgstr ""
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:66
 msgid "EE timing hack - Multi purpose hack. Try if all else fails."
-msgstr ""
-"Arreglo de tempo EE - Arreglo multipropósito. Probar si todo lo demás falla."
+msgstr "Tempo EE - Arreglo multipropósito. Probar si todo lo demás falla."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:75
 msgid ""
 "Skip MPEG hack - Skips videos/FMVs in games to avoid game hanging/freezes."
 msgstr ""
-"Arreglo para saltar MPEGs - Evita los vídeos/FMVs en los juegos para evitar "
-"cuelgues/bloqueos."
+"Saltar MPEGs - No muestra los vídeos/FMVs para evitar cuelgues/bloqueos."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:79
 msgid "OPH Flag hack - Try if your game freezes showing the same frame."
-msgstr ""
-"Arreglo de señal OPH - Probar si tu juego se bloquea al mostrar la misma "
-"imagen."
+msgstr "Señal OPH - Probar si tu juego se bloquea al mostrar la misma imagen."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:88
 msgid "Ignore DMAC writes when it is busy."
@@ -2085,8 +2079,8 @@ msgid ""
 "Warning: Enabling trace logs is typically very slow, and is a leading cause "
 "of 'What happened to my FPS?' problems. :)"
 msgstr ""
-"Aviso: Activar los registros de rastros reduce el rendimiento, y es la "
-"principal causa de la pregunta '¿Por qué va lento el juego'?. :)"
+"Aviso: Los registros de rastros reducen el rendimiento, y son la principal "
+"causa de la pregunta '¿Por qué va lento el juego?'. :)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:151
 msgid "Select folder with PS2 memory cards"
@@ -2212,7 +2206,7 @@ msgstr "Renombrar tarjeta de memoria"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:872
 msgid "Error: Rename could not be completed.\n"
-msgstr "Error: No se ha podido hacer el cambio de nombre.\n"
+msgstr "Error: No se ha podido cambiar el nombre.\n"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:962
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:139
@@ -2282,7 +2276,7 @@ msgstr "Tamaño"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:109
 msgid "Formatted"
-msgstr "Formatada"
+msgstr "Formateada"
 
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:110
 msgid "Last Modified"
@@ -2330,7 +2324,7 @@ msgid ""
 "system, depending on how your system is configured."
 msgstr ""
 "Este ajuste podría necesitar privilegios de administrador de tu sistema "
-"operativo, en función de cómo esté configurado."
+"operativo, según como esté configurado."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:66
 #, c-format
@@ -2379,7 +2373,7 @@ msgstr "¿Apagar la máquina virtual de PS2?"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:321
 msgid "I'm givin' her all she's got, Captain!"
-msgstr "¡Vamos a plena potencia, capitán!"
+msgstr "¡Vamos a toda máquina, capitán!"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:323
 msgid "Enumerating available plugins..."
@@ -2492,8 +2486,8 @@ msgid ""
 "Huge speedup for some games, with almost no compatibility side effects. "
 "[Recommended]"
 msgstr ""
-"Subida enorme de velocidad en algunos juegos, sin prácticamente ningún "
-"efecto secundario de compatibilidad (Recomendado)"
+"Subida enorme de velocidad en algunos juegos, sin casi ningún efecto "
+"secundario de compatibilidad (Recomendado)"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:188
 msgid "Enable Wait Loop Detection"
@@ -2640,18 +2634,16 @@ msgid "Framelimiter"
 msgstr "Limitador de fotogramas"
 
 #: pcsx2/gui/SysState.cpp:283
-#, fuzzy
 msgid "Cannot load this savestate.  The state is an unsupported version."
 msgstr ""
-"No se ha podido cargar el guardado rápido.  Es una versión desconocida o no "
-"admitida."
+"No se ha podido cargar el guardado rápido.  Este archivo es de una versión "
+"obsoleta."
 
 #: pcsx2/gui/SysState.cpp:290
-#, fuzzy
 msgid "Cannot load this savestate. The state is an unsupported version."
 msgstr ""
-"No se ha podido cargar el guardado rápido.  Es una versión desconocida o no "
-"admitida."
+"No se ha podido cargar el guardado rápido. Este archivo es de una versión "
+"obsoleta."
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
@@ -2726,8 +2718,8 @@ msgstr ""
 #~ "PCSX2 that is either newer than this version, or is no longer supported."
 #~ msgstr ""
 #~ "No se puede cargar este guardado rápido.  El archivo es de una edición "
-#~ "incompatible de PCSX2 que es o más reciente que esta versión, o que ya no "
-#~ "es admitida."
+#~ "incompatible de PCSX2 más reciente que esta versión o que ya no es "
+#~ "admitida."
 
 #~ msgid ""
 #~ "Cannot load this savestate. The state is an unsupported version, likely "
