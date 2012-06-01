@@ -1325,6 +1325,9 @@ void Flush(int context)
 	FUNCLOG
 	VB& curvb = vb[context];
 	const pixTest curtest = curvb.test;
+#ifdef GLSL4_API
+	g_cs.set_context(context);
+#endif
 
 	if (FlushInitialTest(curvb, curtest, context)) return;
 

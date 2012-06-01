@@ -24,24 +24,7 @@
 #extension ARB_texture_rectangle: require
 #extension GL_ARB_shading_language_420pack: require
 #extension GL_ARB_separate_shader_objects : require
-// Set with version macro
-// #define GL_compatibility_profile 1
 
-
-#define PERSPECTIVE_CORRECT_TEX
-
-// When writting GLSL code we should change variables in code according to denominator
-// Not than in and out variables are differ!
-// in POSITION  	set by glVertexPointer		goes 	to gl_Vertex;
-// out POSITION						goes    to gl_position
-// in COLOR0							gl_Color
-// out COLOR0							gl_FrontColor
-// in TEXCOORD0							gl_MultiTexCoord0
-// out TEXCOORD0						gl_TexCoord[0]
-
-//in Fragments:
-// in TEXCOORD0							gl_TexCoord[0]
-// out COLOR0							gl_FragData[0]
 
 //#define TEST_AEM // tests AEM for black pixels
 //#define REGION_REPEAT // set if texture wrapping mode is region repeat
@@ -49,12 +32,14 @@
 //#define ACCURATE_DECOMPRESSION // set for less capable hardware ATI Radeon 9000 series
 //#define EXACT_COLOR	// make sure the output color is clamped to 1/255 boundaries (for alpha testing)
 
+#define PERSPECTIVE_CORRECT_TEX
+
 #ifdef PERSPECTIVE_CORRECT_TEX
 #define TEX_XY tex.xy/tex.z
-#define TEX_DECL vec4
+#define TEX_DECL vec3
 #else
 #define TEX_XY tex.xy
-#define TEX_DECL vec4
+#define TEX_DECL vec2
 #endif
 
 // NVidia CG-data types
@@ -77,25 +62,6 @@ struct vertex
     float fog;
 };
 
-// VS input (from VBO)
-//
-// glColorPointer -> gl_Color (color)
-// glSecondaryColorPointerEXT -> gl_SecondaryColor (it seems just a way to have another parameter in shader)
-// glTexCoordPointer -> gl_MultiTexCoord0 (tex coord)
-// glVertexPointer -> gl_Vertex (position)
-//
-// VS Output (to PS)
-// gl_Position (must be kept)
-// vertex
-//
-// FS input (from VS)
-// vertex
-//
-// FS output
-// gl_FragData[0]
-// gl_FragData[1]
-
-
 #ifdef VERTEX_SHADER
 out gl_PerVertex {
     invariant vec4 gl_Position;
@@ -109,10 +75,6 @@ layout(location = 2) in vec4 SecondaryColor;
 layout(location = 3) in vec3 TexCoord;
 
 layout(location = 0) out vertex VSout;
-
-/////// return ZZ_SH_CRTC;
-// otex0 -> tex
-// ointerpos -> z
 
 #endif
 
@@ -797,12 +759,16 @@ void ZeroPS() {
 }
 
 void ZeroDebugPS() {
-	FragData0 = vec4(0.0, 1.0, 0.0, 0.5);
-	//FragData0 = vec4(PSin.position.x, PSin.position.y, 1.0, 0.5);
+	FragData0 = vec4(PSin.tex.x, PSin.tex.y, PSin.tex.z, 0.5);
 }
 
 void ZeroDebug2PS() {
-	FragData0 = vec4(1.0, 0.0, 0.0, 0.5);
+    vec2 xy = ps2memcoord(fract(PSin.tex.xy/PSin.tex.z)).xy * vec2(1/4096.0f, 1/48.0f);
+	FragData0 = vec4(xy.x, xy.y, 0.0, 0.5);
+}
+
+void ZeroDebug3PS() {
+	//FragData0 = vec4(PSin.position.x/2.0f + 0.5f, PSin.position.y/2.0f + 0.5f, 1.0, 0.5);
 }
 
 void BaseTexturePS() {
@@ -858,7 +824,7 @@ void SetColor() {
 
 void SetTex() {
 #ifdef PERSPECTIVE_CORRECT_TEX
-	VSout.tex.xyz = TexCoord.xyz;
+	VSout.tex = TexCoord;
 #else
 	VSout.tex.xy = TexCoord.xy/TexCoord.z;
 #endif

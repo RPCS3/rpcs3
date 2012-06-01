@@ -64,6 +64,10 @@ inline bool ZZshActiveParameter(ZZshParameter param) {return (param !=NULL); }
 #include "GSVertexArrayOGL.h"
 #endif
 
+// GLSL only
+// Set it to 0 to diable context usage, 1 -- to enable. FFX-1 have a strange issue with ClampExt.
+#define NOCONTEXT		0
+
 #ifdef GLSL_API
 
 enum ZZshPARAMTYPE {
@@ -329,7 +333,7 @@ struct FRAGMENTSHADER
 #else
 const GLenum g_texture_target[11] = {GL_TEXTURE_RECTANGLE, GL_TEXTURE_RECTANGLE, GL_TEXTURE_2D, GL_TEXTURE_2D, GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_RECTANGLE, GL_TEXTURE_RECTANGLE, GL_TEXTURE_RECTANGLE, GL_TEXTURE_2D, GL_TEXTURE_RECTANGLE};
 
-extern int g_current_texture_bind[11];
+extern uint g_current_texture_bind[11];
 struct SamplerParam {
 	int		unit;
 	GLuint	texid;
@@ -463,6 +467,8 @@ struct FRAGMENTSHADER
 		for (uint i = 0; i < 7 ; i++)
 			samplers[i].release_texture();
 	}
+
+	void set_context(uint new_context) { context = new_context * NOCONTEXT;}
 };
 #endif
 
@@ -555,6 +561,8 @@ struct COMMONSHADER
 		for (int i = 0; i < 4; i++)
 			samplers[i].enable_texture();
 	}
+
+	void set_context(uint new_context) { context = new_context * NOCONTEXT;}
 };
 #endif
 
@@ -607,6 +615,7 @@ struct VERTEXSHADER
 
 	bool IsDualContext(ZZshParameter param) { return false;}
 
+	void set_context(uint new_context) { context = new_context * NOCONTEXT;}
 };
 #endif
 

@@ -129,12 +129,13 @@ GSVertexBufferStateOGL *vertex_array;
 COMMONSHADER g_cs;
 static GLuint s_pipeline = 0;
 
-int g_current_texture_bind[11] = {0};
-GLenum g_current_vs = NULL;
-GLenum g_current_ps = NULL;
+uint g_current_texture_bind[11] = {0};
+GLenum g_current_vs = 0;
+GLenum g_current_ps = 0;
 
-//FRAGMENTSHADER ppsDebug;
-//FRAGMENTSHADER ppsDebug2;
+FRAGMENTSHADER ppsDebug;
+FRAGMENTSHADER ppsDebug2;
+FRAGMENTSHADER ppsDebug3;
 
 //------------------ Code
 
@@ -421,6 +422,13 @@ void init_shader() {
 	
 	glGenProgramPipelines(1, &s_pipeline);
 	glBindProgramPipeline(s_pipeline);
+
+
+	// FIXME
+	// In the future it would be better to use directly the common shader
+	g_vparamPosXY[0] = g_cs.g_vparamPosXY;
+	g_vparamPosXY[1] = g_cs.g_vparamPosXY;
+	g_fparamFogColor = g_cs.g_fparamFogColor;
 }
 
 void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
@@ -472,14 +480,14 @@ std::string BuildGlslMacro(bool writedepth, int texwrap = 3, bool testaem = fals
 static __forceinline bool LOAD_VS(const std::string& DefineString, const char* name, VERTEXSHADER& vertex, ZZshProfile context)
 {
 	bool flag = CompileShaderFromFile(vertex.program, DefineString, name, GL_VERTEX_SHADER);
-	vertex.context = context * NOCONTEXT;
+	vertex.set_context(context);
 	return flag;
 }
 
 static __forceinline bool LOAD_PS(const std::string& DefineString, const char* name, FRAGMENTSHADER& fragment, ZZshProfile context)
 {
 	bool flag = CompileShaderFromFile(fragment.program, DefineString, name, GL_FRAGMENT_SHADER);
-	fragment.context = context * NOCONTEXT;
+	fragment.set_context(context);
 	return flag;
 }
 
@@ -498,6 +506,11 @@ bool ZZshLoadExtraEffects() {
 	std::string depth_macro = BuildGlslMacro(true);
 	std::string empty_macro = BuildGlslMacro(false);
 
+	// DEBUG
+	// Put them first so it is easier to get their program index in apitrace. Namely 3,4,5
+	if (!LOAD_PS(empty_macro, "ZeroDebugPS", ppsDebug,  0)) bLoadSuccess = false;
+	if (!LOAD_PS(empty_macro, "ZeroDebug2PS", ppsDebug2,  0)) bLoadSuccess = false;
+	//if (!LOAD_PS(empty_macro, "ZeroDebug3PS", ppsDebug3,  0)) bLoadSuccess = false;
 
 	const char* pvsshaders[4] = { "RegularVS", "TextureVS", "RegularFogVS", "TextureFogVS" };
 
@@ -557,10 +570,6 @@ bool ZZshLoadExtraEffects() {
 	if (!LOAD_PS(empty_macro, "Convert16to32PS", ppsConvert16to32,  0)) bLoadSuccess = false;
 	if (!LOAD_PS(empty_macro, "Convert32to16PS", ppsConvert32to16,  0)) bLoadSuccess = false;
 
-	// DEBUG
-	// if (!LOAD_PS(empty_macro, "ZeroDebugPS", ppsDebug,  0)) bLoadSuccess = false;
-	// if (!LOAD_PS(empty_macro, "ZeroDebug2PS", ppsDebug2,  0)) bLoadSuccess = false;
-
 	GL_REPORT_ERRORD();
 	return true;
 }
@@ -598,7 +607,7 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 	std::string macro = BuildGlslMacro(s_bWriteDepth, texwrap, testaem, exactcolor);
 	std::string main_entry  = format("Texture%s%d_%sPS", fog?"Fog":"", texfilter, g_pTexTypes[type]);
 
-	pf->context = context * NOCONTEXT;
+	pf->set_context(context);
 	if (!CompileShaderFromFile(pf->program, macro, main_entry, GL_FRAGMENT_SHADER)) {
 		ZZLog::Error_Log("Failed to create shader %d,%d,%d,%d.", type, fog, texfilter, 4*clamp.wms+clamp.wmt);
 		if( pbFailed != NULL ) *pbFailed = false;

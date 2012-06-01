@@ -158,6 +158,9 @@ enum PSM_value{
 // This code returns the same value on Z-textures, so texel storage mode is (BITMODE and !ISZTEX).
 inline int PSMT_BITMODE(int psm) {return (psm & 0x7);}
 
+template <int psm> 
+inline int PSM_BITMODE() {return (psm & 0x7);}
+
 inline int PSMT_BITS_NUM(int psm)
 {
 	// Treat these as 32 bit.
@@ -186,9 +189,20 @@ inline int PSMT_BITS_NUM(int psm)
 // Used for PSMT8, PSMT8H, PSMT4, PSMT4HH, PSMT4HL textures
 inline bool PSMT_ISCLUT(int psm) { return (PSMT_BITMODE(psm) > 2);}
 
+// Check to see if it is 32 bits. According to code comments, anyways.
+// I'll have to look closer at it, because it'd seem like it'd return true for 24 bits.
+// Note: the function only works for clut format. Clut PSM is 4 bits only. The possible value are PSMCT32, PSMCT16, PSMCT16S
+inline bool PSMT_IS32BIT(int psm) {return !!(psm <= 1);}
+
 // PSMCT16, PSMCT16S, PSMT16Z, PSMT16SZ is 16-bit targets and usually there is
 // two of them in each 32-bit word.
 inline bool PSMT_IS16BIT(int psm) { return (PSMT_BITMODE(psm) == 2);}
+
+template <int psm> 
+inline bool PSM_IS16BIT() { return ((psm & 0x7) == 2);}
+
+// PSM16Z and PSMT16SZ use -1 offset to z-buff. Need to check this thesis.
+inline bool PSMT_IS16Z(int psm) {return ((psm & 0x32) == 0x32);}
 
 // PSMT32Z, PSMT24Z, PSMT16Z, PSMT16SZ is Z-buffer textures
 inline bool PSMT_ISZTEX(int psm) {return ((psm & 0x30) == 0x30);}
@@ -196,26 +210,28 @@ inline bool PSMT_ISZTEX(int psm) {return ((psm & 0x30) == 0x30);}
 // PSMCT16, PSMCT16S, PSMT8, PSMT8H, PSMT16Z and PSMT16SZ use only half 16 bit per pixel.
 inline bool PSMT_ISHALF(int psm) {return ((psm & 2) == 2);}
 
+template <int psm>
+inline bool PSM_ISHALF() {return (psm & 2);}
+
 // PSMT8 and PSMT8H use IDTEX8 CLUT, PSMT4H, PSMT4HL, PSMT4HH -- IDTEX4.
 // Don't use it on non clut entries, please!
 inline bool PSMT_IS8CLUT(int psm) {return ((psm & 3) == 3);}
-
-// PSM16Z and PSMT16SZ use -1 offset to z-buff. Need to check this thesis.
-inline bool PSMT_IS16Z(int psm) {return ((psm & 0x32) == 0x32);}
-
-// Check to see if it is 32 bits. According to code comments, anyways.
-// I'll have to look closer at it, because it'd seem like it'd return true for 24 bits.
-// Note: the function only works for clut format. Clut PSM is 4 bits only. The possible value are PSMCT32, PSMCT16, PSMCT16S
-inline bool PSMT_IS32BIT(int psm) {return !!(psm <= 1);}
 
 // When color format is RGB24 (PSMCT24) or RGBA16 (PSMCT16 & 16S) alpha value expanded, based on
 // TEXA register and AEM status.
 inline int PSMT_ALPHAEXP(int psm) {return (psm == PSMCT24 || psm == PSMCT16 || psm == PSMCT16S);}
 
+// Check, how many pixels would be stored in side. So 32 and 24 is 32-bit's (1 pixel),
+// 16, 16S -- 16 bit's (2 pixels), 8 and 8H -- 4 pixels, and 4 -- 8 pixels.
+inline int PSMT_BITCOUNT(int psm) {return (PSMT_BITMODE(psm) == 0) ? 1 : 1 << (PSMT_BITMODE(psm) - 1); }
+
+template <int psm> 
+inline int PSM_BITCOUNT() {return (PSM_BITMODE<psm>() == 0) ? 1 : 1 << (PSM_BITMODE<psm>() - 1); }
 
 // This function updates the 6th and 5th bit of psm
 // 00 or 11 -> 00 ; 01 -> 10 ; 10 -> 01
-inline int Switch_Top_Bytes (int X) {
+inline int Switch_Top_Bytes (int X) 
+{
 	if ( ( X & 0x30 ) == 0 )
 		return X;
 	else
@@ -235,6 +251,61 @@ inline int PIXELS_PER_WORD(int psm)
 	return 1;
 }
 
+template <int psm> 
+inline int PSM_PIXELS_PER_WORD() 
+{
+	if (psm == PSMT8)
+		return 4;
+	if (psm == PSMT4)
+		return 8;
+	if (PSM_IS16BIT<psm>()) 
+		return 2;
+	return 1;
+}
+
+// Some psm does not have all pixels in memory.
+template <int psm> 
+inline bool PSM_NON_FULL_WORD() 
+{
+	return ((psm == PSMCT24) || (psm == PSMT24Z) || (psm == PSMT8H) || (psm == PSMT4HL) || (psm == PSMT4HH));
+}
+
+inline bool PSM_NON_FULL_WORD(int psm) 
+{
+	return ((psm == PSMCT24) || (psm == PSMT24Z) || (psm == PSMT8H) || (psm == PSMT4HL) || (psm == PSMT4HH));
+}
+
+template <int psm> 
+inline int PSM_PIXEL_SHIFT() 
+{
+	if (!PSM_NON_FULL_WORD<psm>())
+		return 0;
+	switch (psm) {
+		case PSMCT24:
+		case PSMT24Z:
+			return 0;
+		case PSMT8H:
+		case PSMT4HL:
+			return 24;
+		case PSMT4HH:
+			return 28;
+		default: return 0;	
+	}
+}
+
+template <int psm> 
+inline int PSM_BITS_PER_PIXEL() 
+{
+	switch (psm & 0x7) {
+		case 0: return 32;
+		case 1: return 24;
+		case 2: return 16;
+		case 3: return 8;
+		case 4: return 4;
+		default: return 0;
+	}
+}
+
 // Some storage formats could share the same memory block (2 textures in 1 format). This include following combinations:
 // PSMT24(24Z) with either 8H, 4HL, 4HH and PSMT4HL with PSMT4HH.
 // We use slightly different versions of this function on comparison with GSDX, Storage format XOR 0x30 made Z-textures
@@ -246,6 +317,33 @@ inline bool PSMT_HAS_SHARED_BITS (int fpsm, int tpsm) {
 
 // If a clut is in 32-bit color, its size is 4 bytes, and 16-bit clut has a 2 byte size.
 inline int CLUT_PIXEL_SIZE(int cpsm) {return ((cpsm <= 1) ? 4 : 2); }
+
+inline void PSMT_SET_BLOCK_SIZE (int psm, int& W, int&H, int& ppw) {
+	switch (PIXELS_PER_WORD(psm)) {
+		case 8: 
+			W = 128; H = 128; ppw = 8;
+		case 4:
+			W = 128;  H = 64; ppw = 4;
+		case 2:	
+			W = 64; H = 64; ppw = 2;
+		default:
+			W = 32; H = 64; ppw = 1;
+	}
+}
+
+template <int psm>
+inline int PSM_PIXELS_STORED_PER_WORD() 
+{
+	return 32 / PSM_BITS_PER_PIXEL<psm>(); 
+}
+
+template <int psm>
+inline int PSM_BYTS_LOAD_PER_WRITE() 
+{
+	if (psm == PSMCT24 || psm == PSMT24Z) return 3;
+	return 4;
+}
+
 
 //----------------------- Data from registers -----------------------
 
