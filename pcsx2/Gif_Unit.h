@@ -473,7 +473,7 @@ struct Gif_Unit {
 			}
 			if (tranType == GIF_TRANS_MTVU) {   // This is on the EE thread
 				path1.mtvu.fakePackets++;
-				if (CanDoGif()) Execute();
+				if (CanDoGif()) Execute(false);
 				return 0;
 			}
 		}
@@ -502,7 +502,7 @@ struct Gif_Unit {
 		}
 
 		gifPath[tranType&3].CopyGSPacketData(pMem, size, aligned);
-		size -= Execute();
+		size -= Execute(tranType == GIF_TRANS_DMA);
 		return size;
 	}
 
@@ -540,10 +540,11 @@ struct Gif_Unit {
 
 	// Processes gif packets and performs path arbitration
 	// on EOPs or on Path 3 Images when IMT is set.
-	int Execute() {
+	int Execute(bool isPath3) {
 		if (!CanDoGif()) { DevCon.Error("Gif Unit - Signal or PSE Set or Dir = GS to EE"); return 0; }
 		bool didPath3 = false;
 		int curPath = stat.APATH > 0 ? stat.APATH-1 : 0; //Init to zero if no path is already set.
+		gifPath[2].dmaRewind = 0;
 		stat.OPH = 1;
 		
 		for(;;) {
@@ -579,10 +580,10 @@ struct Gif_Unit {
 				//DevCon.WriteLn("Adding GS Packet for path %d", stat.APATH);
 				AddCompletedGSPacket(gsPack, (GIF_PATH)(stat.APATH-1));
 			}
-			if   (!gsSIGNAL.queued && !gifPath[0].isDone()) { stat.APATH = 1; stat.P1Q = 0; gifPath[0].dmaRewind = 0; curPath = 0; }
-			elif (!gsSIGNAL.queued && !gifPath[1].isDone()) { stat.APATH = 2; stat.P2Q = 0; gifPath[1].dmaRewind = 0; curPath = 1; }
+			if   (!gsSIGNAL.queued && !gifPath[0].isDone()) { stat.APATH = 1; stat.P1Q = 0; curPath = 0; }
+			elif (!gsSIGNAL.queued && !gifPath[1].isDone()) { stat.APATH = 2; stat.P2Q = 0; curPath = 1; }
 			elif (!gsSIGNAL.queued && !gifPath[2].isDone() && !Path3Masked() /*&& !stat.P2Q*/)
-				 { stat.APATH = 3; stat.P3Q = 0; stat.IP3 = 0; gifPath[2].dmaRewind = 0; curPath = 2; }
+				 { stat.APATH = 3; stat.P3Q = 0; stat.IP3 = 0; curPath = 2; }
 			else { stat.APATH = 0; stat.OPH = 0; break; }
 		}
 
@@ -597,7 +598,10 @@ struct Gif_Unit {
 		Gif_FinishIRQ();
 
 		//Path3 can rewind the DMA, so we send back the amount we go back!
-		return gifPath[curPath].dmaRewind;
+		if(isPath3)
+			return gifPath[2].dmaRewind;
+		else
+			return 0;
 	}
 
 	// XGkick

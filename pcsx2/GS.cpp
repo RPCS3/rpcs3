@@ -110,7 +110,7 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 		}
 		else CSRreg.SIGNAL = false;
 		gifUnit.gsSIGNAL.queued = false;
-		gifUnit.Execute(); // Resume paused transfers
+		gifUnit.Execute(false); // Resume paused transfers
 	}
 	
 	if(csr.FINISH)	CSRreg.FINISH	= false;
