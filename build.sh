@@ -23,6 +23,7 @@ do
 	case $f in
 		--sdl13)
 			flags="$flags -DFORCE_INTERNAL_SDL=TRUE"
+            echo "Warning SDL is not supported anymore"
 			;;
 		--dev)
 			flags="$flags -DCMAKE_BUILD_TYPE=Devel"
@@ -36,6 +37,8 @@ do
 		--release)
 			flags="$flags -DCMAKE_BUILD_TYPE=Release"
 			;;
+        --glsl)
+			flags="$flags -DGLSL_API=TRUE"
 		--clean)
 			clean_build=true
 			;;

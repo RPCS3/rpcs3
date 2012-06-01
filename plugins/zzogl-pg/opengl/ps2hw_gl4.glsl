@@ -69,7 +69,7 @@ out gl_PerVertex {
     float gl_ClipDistance[];
 };
 
-layout(location = 0) in ivec2 Vert;
+layout(location = 0) in ivec4 Vert;
 layout(location = 1) in vec4 Color;
 layout(location = 2) in vec4 SecondaryColor;
 layout(location = 3) in vec3 TexCoord;
@@ -837,7 +837,7 @@ void SetZ() {
 #endif
 }
 
-float SetPosition() {
+void SetPosition() {
 	float4 position;
 	position.xy = vec2(Vert.xy) * g_fPosXY.xy + g_fPosXY.zw;
     // FIXME: the factor in normal mode seem bogus. They don't have same order than in log mode. Or I failed to understand the logic
@@ -853,43 +853,40 @@ float SetPosition() {
 	position.w = g_fc0.y;
 
     gl_Position = position;
-
-    // For fog
-    return position.z;
 }
 
-void SetFog(float z) {
-    VSout.fog = z * g_fBilinear.w;
+void SetFog() {
+    VSout.fog = float(Vert.z) * g_fBilinear.w;
 }
 
 // just smooth shadering
 void RegularVS() {
-    float z = SetPosition();
+    SetPosition();
     SetColor();
     SetZ();
 }
 
 // diffuse texture mapping
 void TextureVS() {
-    float z = SetPosition();
+    SetPosition();
     SetColor();
     SetTex();
     SetZ();
 }
 
 void RegularFogVS() {
-    float z = SetPosition();
+    SetPosition();
     SetColor();
     SetZ();
-    SetFog(z);
+    SetFog();
 }
 
 void TextureFogVS() {
-    float z = SetPosition();
+    SetPosition();
     SetColor();
     SetTex();
     SetZ();
-    SetFog(z);
+    SetFog();
 }
 
 void BitBltVS() {
