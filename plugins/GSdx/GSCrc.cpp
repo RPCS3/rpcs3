@@ -65,7 +65,7 @@ CRC::Game CRC::m_games[] =
 	{0x280AD120, FFXII, JP, 0},
 	{0x08C1ED4D, HauntingGround, NoRegion, 0},
 	{0x2CD5794C, HauntingGround, EU, 0},
-	{0x7D4EA48F, HauntingGround, EU, 0},
+	//duplicate crc with genji.. {0x7D4EA48F, HauntingGround, EU, 0},
 	{0x867BB945, HauntingGround, JP, 0},
 	{0xE263BC4B, HauntingGround, JP, 0},
 	{0x901AAC09, HauntingGround, US, 0},
@@ -188,7 +188,7 @@ CRC::Game CRC::m_games[] =
 	// same CRC as US {0xD6385328, GodOfWar, NoRegion, 0},
 	{0x1A85E924, GodOfWar, NoRegion, 0}, //天幻1+2，不能同時使用
 	{0x608ACBD3, GodOfWar, CH, 0}, //完美漢化修改版
-	{0x2F123FD8, GodOfWar2, RU, 0},
+	//same crc as the US version. {0x2F123FD8, GodOfWar2, RU, 0},
 	{0x2F123FD8, GodOfWar2, US, 0},
 	{0x44A8A22A, GodOfWar2, EU, 0},
 	{0x4340C7C6, GodOfWar2, KO, 0},
@@ -211,7 +211,6 @@ CRC::Game CRC::m_games[] =
 	{0x6BF11378, Onimusha3, US, 0},
 	{0x71320CA8, Onimusha3, JP, 0},
 	{0xDAFFFB0D, Onimusha3, KO, 0},
-	// apparently on google most results for this crc is Onimusha4 (shinOnimusha) {0x812C5A96, Onimusha3, EU, 0},
 	{0xF442260C, MajokkoALaMode2, JP, 0},
 	{0x14FE77F7, TalesOfAbyss, US, 0},
 	{0x045D77E9, TalesOfAbyss, JPUNDUB, 0},
@@ -235,7 +234,7 @@ CRC::Game CRC::m_games[] =
 	{0x23A97857, StarOcean3, US, 0},
 	{0xBEC32D49, StarOcean3, JP, 0},
 	{0x8192A241, StarOcean3, JP, 0}, //NTSC JP special directors cut limited extra sugar on top edition (the special one :p)
-	{0x23A97857, StarOcean3, JPUNDUB, 0},
+	// it's the US version with speach files from JP... {0x23A97857, StarOcean3, JPUNDUB, 0},
 	{0xCC96CE93, ValkyrieProfile2, US, 0},
 	{0x774DE8E2, ValkyrieProfile2, JP, 0},
 	{0x04CCB600, ValkyrieProfile2, EU, 0},
@@ -341,7 +340,7 @@ CRC::Game CRC::m_games[] =
 	{0x2088950A, XE3, US, 0},
 	// DMC(1)? {0x79B8A95F, DevilMayCry3, US, 0},
 	{0x7F3D692D, DevilMayCry3, CH, 0},
-	{0x1A85E924, DevilMayCry3, CH, 0}, //惡魔獵人3三合一中文特別版
+	//duplicate crc with GOW1... {0x1A85E924, DevilMayCry3, CH, 0}, //惡魔獵人3三合一中文特別版
 	{0x0a8ef911, ArctheLad, US, 0}, //亞克傳承-精靈之黃昏
 	{0x2C5E7DEA, ArctheLad, CH, 0},
 	{0xE69E7F58, ArctheLad, US, 0}, //亞克傳承-黑暗之終結
@@ -387,6 +386,7 @@ CRC::Game CRC::m_games[] =
 	{0x79C952B0, DevilMayCry3, JP, 0},	//SE
 	{0x7F3DDEAB, DevilMayCry3, JP, 0},
 	{0x05931990, DevilMayCry3, KO, 0},
+	{0x4AD36D59, DevilMayCry3, RU, 0},
 	{0xBEBF8793, BurnoutTakedown, US, 0},
 	{0x75BECC18, BurnoutTakedown, EU, 0},
 	{0xCE49B0DE, BurnoutTakedown, EU, 0},
@@ -403,7 +403,7 @@ CRC::Game CRC::m_games[] =
 	{0xB78A5F5A, CallofDutyFinalFronts, EU, 0},
 	{0xD03D4C77, SpyroNewBeginning, US, 0},
 	{0x0EE5646B, SpyroNewBeginning, EU, 0},
-	{0x7ACF7E03, SpyroNewBeginning, NoRegion, 0},
+	//duplicate crc with ico... {0x7ACF7E03, SpyroNewBeginning, NoRegion, 0},
 	{0xB80CE8EC, SpyroEternalNight, US, 0},
 	{0x8AE9536D, SpyroEternalNight, EU, 0},
 	{0xC95F0198, SpyroEternalNight, NoRegion, 0},
