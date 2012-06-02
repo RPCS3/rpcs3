@@ -59,11 +59,10 @@ __fi void gifInterrupt()
 		{
 			CPU_INT(DMAC_VIF1, 1);
 
-			if(!gifUnit.Path3Masked()) 
-				CPU_INT(DMAC_GIF, 16);
-
-			if(!gspath3done || gifch.qwc > 0) return;
+			CPU_INT(DMAC_GIF, 16);
+			return;
 		}
+		
 	}
 
 	if (dmacRegs.ctrl.MFD == MFD_GIF) { // GIF MFIFO
