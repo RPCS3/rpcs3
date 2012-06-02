@@ -350,10 +350,12 @@ EXPORT_C_(void) GSclose()
 	FUNCLOG
 
 	ZZDestroy();
+	// Clean shader. Must be done before the context is delete
+	ZZshExitCleaning();
+
 	GLWin.CloseWindow();
 
 	// Free alocated memory. We could close plugin without closing pcsx2, so we SHOULD free all allocated resources
-	ZZshExitCleaning();
 	SaveStateFile = NULL;
 	SaveStateExists = true; // default value
     g_LastCRC = 0;
