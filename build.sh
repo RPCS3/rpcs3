@@ -15,7 +15,6 @@
 # If not, see <http://www.gnu.org/licenses/>.
 
 flags=""
-args="$@"
 clean_build=false
 
 for f in $*
@@ -25,10 +24,7 @@ do
 			flags="$flags -DFORCE_INTERNAL_SDL=TRUE"
             echo "Warning SDL is not supported anymore"
 			;;
-		--dev)
-			flags="$flags -DCMAKE_BUILD_TYPE=Devel"
-			;;
-		--devel)
+		--dev|--devel)
 			flags="$flags -DCMAKE_BUILD_TYPE=Devel"
 			;;
 		--debug)
@@ -39,24 +35,26 @@ do
 			;;
         --glsl)
 			flags="$flags -DGLSL_API=TRUE"
+            ;;
 		--clean)
 			clean_build=true
 			;;
 		*)
 			# unknown option
 			echo "Valid options are:"
-			echo "--dev / --devel - Build pcsx2 as a Development build."
-			echo "--debug - Build pcsx2 as a Debug build."
-			echo "--release - Build pcsx2 as a Release build."
-			echo "--clean - Do a clean build."
-			echo "--sdl13 - Use the internal copy of sdl (needed for gsdx to use sdl)."
+			echo "--dev / --devel - Build PCSX2 as a Development build."
+			echo "--debug         - Build PCSX2 as a Debug build."
+			echo "--release       - Build PCSX2 as a Release build."
+			echo "--clean         - Do a clean build."
+            echo "--glsl          - Replace CG backend of ZZogl by GLSL"
+			echo "--sdl13         - Use the internal copy of SDL (add sdl backend to gsdx)."
 			exit 1;;
   	esac
 done
 
 rm install_log.txt
 
-if [ $flags ]; then
+if [ "$flags" != "" ]; then
 	echo "Building pcsx2 with $flags"
 	echo "Building pcsx2 with $flags" > install_log.txt
 fi
@@ -67,7 +65,7 @@ fi
 cd build
 
 cmake $flags .. 2>&1 | tee -a ../install_log.txt 
-if [ $clean_build = true ]; then
+if [ "$clean_build" = true ]; then
 	echo "Doing a clean build."
 	make clean 2>&1 | tee -a ../install_log.txt 
 fi

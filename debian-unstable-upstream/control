@@ -20,7 +20,7 @@ Build-Depends: cmake (>= 2.8.5),
     libwxgtk2.8-dev,
     libx11-dev,
     locales | locales-all,
-# package was split in precise to allow multiarch support
+# Future: depends on "nvidia-cg-dev" directly
     libcg, nvidia-cg-toolkit (>= 3),
     portaudio19-dev,
     zlib1g-dev (>= 1:1.2.3.3)
@@ -29,10 +29,8 @@ Homepage: http://pcsx2.net/
 
 Package: pcsx2-unstable
 Architecture: i386
-# manually add nvidia-cg-toolkit for zzogl (cg pacakge does not provide symbol or shlibs files)
 # recommand libasound for alsa plugin for pulseaudio
-Depends: ${shlibs:Depends}, ${misc:Depends},
-    libcg | nvidia-cg-toolkit (>= 2.1)
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Recommends: libasound2-plugins
 Conflicts: pcsx2,
     pcsx2-data-unstable,

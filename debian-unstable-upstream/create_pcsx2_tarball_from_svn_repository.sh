@@ -123,9 +123,9 @@ mkdir -p $ROOT_DIR/plugins
     get_svn_dir plugins/CDVDnull;
     # Potential copyright issue. Optional anyway
     # get_svn_dir plugins/CDVDnull plugins/CDVDiso;
-    get_svn_dir plugins/PadNull plugins/onepad;
-    get_svn_dir plugins/SPU2null plugins/spu2-x;
-    get_svn_dir plugins/GSnull plugins/zzogl-pg plugins/zzogl-pg-cg plugins/GSdx;
+    get_svn_dir plugins/onepad;
+    get_svn_dir plugins/spu2-x;
+    get_svn_dir plugins/zzogl-pg plugins/zzogl-pg-cg plugins/GSdx;
     get_svn_dir plugins/dev9null plugins/FWnull plugins/USBnull;
 echo "Note: some plugins are more or less deprecated CDVDisoEFP, CDVDlinuz, Zerogs, Zeropad ...";
 echo "Done")
