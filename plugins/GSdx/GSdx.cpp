@@ -112,12 +112,16 @@ GSdxApp::GSdxApp()
 	m_gs_renderers.push_back(GSSetting(3, "Direct3D%d    ", "Hardware"));
 	m_gs_renderers.push_back(GSSetting(4, "Direct3D%d    ", "Software"));
 	m_gs_renderers.push_back(GSSetting(5, "Direct3D%d    ", "Null"));
+#ifdef _LINUX
 	m_gs_renderers.push_back(GSSetting(7, "SDL 1.3", "Software"));
 	m_gs_renderers.push_back(GSSetting(8, "SDL 1.3", "Null"));
+#endif
 	m_gs_renderers.push_back(GSSetting(10, "Null", "Software"));
 	m_gs_renderers.push_back(GSSetting(11, "Null", "Null"));
+#ifdef _LINUX
 	m_gs_renderers.push_back(GSSetting(12, "OpenGL", "Hardware"));
 	m_gs_renderers.push_back(GSSetting(13, "OpenGL", "Software"));
+#endif
 
 	m_gs_interlace.push_back(GSSetting(0, "None", ""));
 	m_gs_interlace.push_back(GSSetting(1, "Weave tff", "saw-tooth"));
