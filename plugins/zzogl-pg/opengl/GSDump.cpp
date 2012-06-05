@@ -87,7 +87,7 @@ void GSDump::VSync(int field, bool last, u8* regs)
 		fwrite(regs, 0x2000, 1, m_gs);
 
 		fputc(1, m_gs);
-		fputc(field, m_gs);
+		fwrite(&field, 4, 1, m_gs);
 
 		if((++m_frames & 1) == 0 && last)
 		{

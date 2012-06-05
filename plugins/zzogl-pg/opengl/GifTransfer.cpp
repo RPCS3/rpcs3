@@ -223,7 +223,7 @@ template<int index> void _GSgifTransfer(const u32 *pMem, u32 size)
 	}
 
 #ifdef _DEBUG
-	g_dump.Transfer(index, start, pMem - start, size_arg);
+	g_dump.Transfer(index, start, pMem - start + 4, size_arg);
 #endif
 
 	// This is the case when not all data was readed from one try: VU1 has too much data.

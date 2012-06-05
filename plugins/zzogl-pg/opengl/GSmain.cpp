@@ -513,6 +513,8 @@ EXPORT_C_(void) GSvsync(int current_interlace)
 		if (get_snapshot_filename(filename, "/tmp", "gs"))
 			g_dump.Open(filename, g_LastCRC, fd, g_pBasePS2Mem);
 		conf.dump--;
+
+		free(payload);
 	}
 	g_dump.VSync(current_interlace, (conf.dump == 0), g_pBasePS2Mem);
 #endif
@@ -702,7 +704,7 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 				switch(p->param)
 				{
 				case 0:
-					p->buff.resize(0x4000/4);
+					p->buff.resize(0x4000);
 					//p->addr = 0x4000 - p->size;
 					//fread(&p->buff[p->addr], p->size, 1, fp);
 					fread(&p->buff[0], p->size, 1, fp);
@@ -710,7 +712,7 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 				case 1:
 				case 2:
 				case 3:
-					p->buff.resize(p->size/4);
+					p->buff.resize(p->size);
 					fread(&p->buff[0], p->size, 1, fp);
 					break;
 				}
@@ -719,7 +721,8 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 
 			case 1:
 
-				p->param = (u8)fgetc(fp);
+				fread(&p->param, 4, 1, fp);
+				//p->param = (u8)fgetc(fp);
 
 				break;
 
@@ -731,7 +734,7 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 
 			case 3:
 
-				p->buff.resize(0x2000/4);
+				p->buff.resize(0x2000);
 
 				fread(&p->buff[0], 0x2000, 1, fp);
 
@@ -785,6 +788,7 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 
 					// FIXME
 					// GSreadFIFO2(&buff[0], p->size / 16);
+					fprintf(stderr, "GSreadFIFO2 not yet implemented");
 
 					break;
 
