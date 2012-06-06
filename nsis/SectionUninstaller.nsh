@@ -8,6 +8,9 @@
 Section "Un.Program and Plugins ${APP_NAME}"
 
   SetShellVarContext all
+  ; First thing, remove the registry entry in case uninstall doesn't complete successfully
+  ;   otherwise, pcsx2 will be "confused" if it's re-installed later.
+  DeleteRegKey HKCU Software\PCSX2
 
   !insertmacro UNINSTALL.LOG_UNINSTALL "$INSTDIR"
 
@@ -24,12 +27,11 @@ Section "Un.Program and Plugins ${APP_NAME}"
   ; Remove files and registry key that store PCSX2 paths configurations
   SetShellVarContext current
   Delete $DOCUMENTS\PCSX2\inis\PCSX2_ui.ini
-  DeleteRegKey HKCU Software\PCSX2
 
 SectionEnd
 
 ; /o for optional and unticked by default
-Section /o "Un.Program and Plugin configuration files"
+Section /o "Un.Configuration files (Program and Plugins)"
   
   SetShellVarContext current
   RMDir /r "$DOCUMENTS\PCSX2\inis\"
@@ -37,9 +39,21 @@ Section /o "Un.Program and Plugin configuration files"
 SectionEnd
 
 ; /o for optional and unticked by default
-Section /o "Un.User files (Memory Cards, Savestates, BIOS, etc)"
+Section /o "Un.User files (Memory Cards, Savestates, etc)"
   
   SetShellVarContext current
-  RMDir /r "$DOCUMENTS\PCSX2\"
+  RMDir /r "$DOCUMENTS\PCSX2\inis\"
+  RMDir /r "$DOCUMENTS\PCSX2\logs\"
+  RMDir /r "$DOCUMENTS\PCSX2\memcards\"
+  RMDir /r "$DOCUMENTS\PCSX2\snaps\"
+  RMDir /r "$DOCUMENTS\PCSX2\sstates\"
+
+SectionEnd
+
+; /o for optional and unticked by default
+Section /o "Un.BIOS files"
+  
+  SetShellVarContext current
+  RMDir /r "$DOCUMENTS\PCSX2\bios\"
 
 SectionEnd

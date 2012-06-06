@@ -53,10 +53,11 @@ Section "!${APP_NAME} (required)" SEC_CORE
   SetOutPath "$INSTDIR\Plugins"
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
 
-    File /nonfatal /oname=gsdx-sse2-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx-sse2.dll
-    File /nonfatal /oname=gsdx-ssse3-r${SVNREV_GSDX}.dll   ..\bin\Plugins\gsdx-ssse3.dll 
-    File /nonfatal /oname=gsdx-sse4-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx-sse4.dll
-    File /nonfatal /oname=zerogs-r${SVNREV_ZEROGS}.dll     ..\bin\Plugins\zerogs.dll
+    File /nonfatal /oname=gsdx32-sse2-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx32-sse2.dll
+    File /nonfatal /oname=gsdx32-ssse3-r${SVNREV_GSDX}.dll   ..\bin\Plugins\gsdx32-ssse3.dll 
+    File /nonfatal /oname=gsdx32-sse4-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx32-sse4.dll
+    File /nonfatal /oname=gsdx32-avx-r${SVNREV_GSDX}.dll     ..\bin\Plugins\gsdx32-avx.dll
+    File /nonfatal /oname=zerogs-r${SVNREV_ZEROGS}.dll       ..\bin\Plugins\zerogs.dll
   
     File /nonfatal /oname=spu2-x-r${SVNREV_SPU2X}.dll      ..\bin\Plugins\spu2-x.dll
     File /nonfatal /oname=zerospu2-r${SVNREV_ZEROSPU2}.dll ..\bin\Plugins\zerospu2.dll
@@ -105,6 +106,7 @@ SectionEnd
 ; None of the methods are reliable, because the registry keys placed by the MSI installer
 ; vary depending on operating system *and* MSI installer version (youch).
 ;
+!if 0 ; Not required anymore, we're compiling with vs2010 (there's anotehr commented out section below. search "SEC_CRT2008").
 Section "Microsoft Visual C++ 2008 SP1 Redist (required)"  SEC_CRT2008
 
   ;SectionIn RO
@@ -142,8 +144,9 @@ OnSuccess:
 
 done:
 SectionEnd
+!endif
 
-Section "Microsoft Visual C++ 2010 Redist (required)" SEC_CRT2010
+Section "Microsoft Visual C++ 2010 SP1 Redist (required)" SEC_CRT2010
 
   ; Make this required on the web installer, since it has a fully reliable check to
   ; see if it needs to be downloaded and installed or not.
@@ -153,7 +156,7 @@ Section "Microsoft Visual C++ 2010 Redist (required)" SEC_CRT2010
   ; independent key for checking availability.
   
   ; Downloaded from:
-  ;   http://download.microsoft.com/download/5/B/C/5BC5DBB3-652D-4DCE-B14A-475AB85EEF6E/vcredist_x86.exe
+  ;   http://download.microsoft.com/download/C/6/D/C6D0FD4E-9E53-4897-9B91-836EBA2AACD3/vcredist_x86.exe
 
   ClearErrors
   ReadRegDword $R0 HKLM "SOFTWARE\Microsoft\VisualStudio\10.0\VC\VCRedist\x86" "Installed"
@@ -165,15 +168,15 @@ Section "Microsoft Visual C++ 2010 Redist (required)" SEC_CRT2010
 
   SetOutPath "$TEMP"
 
-  DetailPrint "Downloading Visual C++ 2010 Redistributable Setup..."
+  DetailPrint "Downloading Visual C++ 2010 SP1 Redistributable Setup..."
   DetailPrint "Contacting Microsoft.com..."
-  NSISdl::download /TIMEOUT=15000 "http://download.microsoft.com/download/5/B/C/5BC5DBB3-652D-4DCE-B14A-475AB85EEF6E/vcredist_x86.exe" "vcredist_2010_x86.exe"
+  NSISdl::download /TIMEOUT=15000 "http://download.microsoft.com/download/C/6/D/C6D0FD4E-9E53-4897-9B91-836EBA2AACD3/vcredist_x86.exe" "vcredist_2010_sp1_x86.exe"
 
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" OnSuccess
   DetailPrint "Cound not contact Microsoft.com, or the file has been (re)moved!"
   DetailPrint "Contacting Googlecode.com..."
-  NSISdl::download /TIMEOUT=20000 "http://pcsx2.googlecode.com/files/vcredist_2010_x86.exe" "vcredist_2010_x86.exe"
+  NSISdl::download /TIMEOUT=20000 "http://pcsx2.googlecode.com/files/vcredist_2010_sp1_x86.exe" "vcredist_2010_sp1_x86.exe"
 
   ; [TODO] Provide a mirror for this file hosted from pcsx2.net .. ?  or emudev.net .. ?
   ;Pop $R0 ;Get the return value
@@ -182,15 +185,15 @@ Section "Microsoft Visual C++ 2010 Redist (required)" SEC_CRT2010
 
   Pop $R0 ;Get the return value
   StrCmp $R0 "success" +2
-    MessageBox MB_OK "Could not download Visual Studio 2010 Redist; none of the mirrors appear to be functional."
+    MessageBox MB_OK "Could not download Visual Studio 2010 SP1 Redist; none of the mirrors appear to be functional."
     Goto done
 
 OnSuccess:
   DetailPrint "Running Visual C++ 2010 SP1 Redistributable Setup..."
-  ExecWait '"$TEMP\vcredist_2010_x86.exe" /qb'
+  ExecWait '"$TEMP\vcredist_2010_sp1_x86.exe" /qb'
   DetailPrint "Finished Visual C++ 2010 SP1 Redistributable Setup"
   
-  Delete "$TEMP\vcredist_2010_x86.exe"
+  Delete "$TEMP\vcredist_2010_sp1_x86.exe"
 
 done:
 SectionEnd
@@ -258,7 +261,9 @@ LangString DESC_DIRECTX    ${LANG_ENGLISH} "Only uncheck this if you are quite c
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_STARTMENU}   $(DESC_STARTMENU)
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DESKTOP}     $(DESC_DESKTOP)
 
+!if 0  
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CRT2008}     $(DESC_CRT2008)
+!endif
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_CRT2010}     $(DESC_CRT2010)
   !insertmacro MUI_DESCRIPTION_TEXT ${SEC_DIRECTX}     $(DESC_DIRECTX)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END

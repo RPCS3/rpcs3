@@ -5,28 +5,33 @@
  * Install NSIS (tested with 2.46)
  * Install NSIS Script: Advanced Uninstall Log (you can find it on NSIS wiki)
 
- * Download the Visual C++ 2008 SP1 Redistributable and save it to this nsis/ folder under the name:
-     vcredist_2008_sp1_x86.exe
+/*******
+ -- Not needed as we now build using VS2010 --:
+* Download the Visual C++ 2008 SP1 Redistributable and save it to this nsis/ folder under the name:
+     vcredist_2008_sp1_x86.exe ( http://download.microsoft.com/download/d/d/9/dd9a82d0-52ef-40db-8dab-795376989c03/vcredist_x86.exe )
+*******/
 
- * Download the Visual C++ 2010 Redistributable and save it to this nsis/ folder.
-     vcredist_2010_x86.exe
+ * Download the Visual C++ 2010 SP1 Redistributable and save it to this nsis/ folder.
+     vcredist_2010_sp1_x86.exe ( http://download.microsoft.com/download/C/6/D/C6D0FD4E-9E53-4897-9B91-836EBA2AACD3/vcredist_x86.exe )
 
-  [both files can be obtained from Microsoft's website, just google for them]
+  [the files can be obtained from Microsoft's website, just google for them]
 
- * Download the DirectX Web Installer (vcwebsetup.exe) from Microsoft's website and save it to
+ * Download the DirectX Web Installer (dxwebsetup.exe) from Microsoft's website and save it to
    this nsis/ folder.  (currently required, might be made optional later).  No name change is
-   required.
+   required. ( http://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe )
  
  * Load the PCSX2 Suite solution and rebuild all in the following targets:
     * Release SSE2
     * Release SSSE3 (only needed if packaging plugins)
     * Release SSE4 (only needed if packaging plugins)
+    * Release AVX (only needed if packaging plugins)
     * Devel (optional)
     
     You may selectively unload plugins you do not wish to package prior to running the NSIS
     script.
 
- * Compile script!  Output executable will be generated to the output/ folder.
+ * Compile scripts (pcsx2_web_install.nsi and pcsx2_full_install.nsi)!
+   Output executables will be generated to the output/ folder.
  
  
 --------------------------------------------
@@ -37,7 +42,7 @@ The installer will include plugins only if they are present.  If you do not buil
 remove some (or all) plugins before running the nsis script, only PCSX2 and whatever remaining
 plugins will be packaged.
 
-GSdx SSE2, SSSE3, and SSE4 versions are all included into the installer *if* they are present.
+GSdx SSE2, SSSE3, SSE4 and AVX versions are all included into the installer *if* they are present.
 You will need to follow the above instructions and compile all release targets to get all the
 GSdx DLLs.
 

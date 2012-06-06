@@ -7,11 +7,11 @@
 
 !ifndef INC_CRT_2008
   ; Set to 0 to disable inclusion of Visual Studio 2008 SP1 CRT Redists
-  !define INC_CRT_2008  1
+  !define INC_CRT_2008  0
 !endif
 
 !ifndef INC_CRT_2010
-  ; Set to 0 to disable inclusion of Visual Studio 2010 CRT Redists
+  ; Set to 0 to disable inclusion of Visual Studio 2010 SP1 CRT Redists
   !define INC_CRT_2010  1
 !endif
 
@@ -57,10 +57,11 @@ Section "!${APP_NAME} (required)" SEC_CORE
   SetOutPath "$INSTDIR\Plugins"
   !insertmacro UNINSTALL.LOG_OPEN_INSTALL
 
-    File /nonfatal /oname=gsdx-sse2-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx-sse2.dll
-    File /nonfatal /oname=gsdx-ssse3-r${SVNREV_GSDX}.dll   ..\bin\Plugins\gsdx-ssse3.dll 
-    File /nonfatal /oname=gsdx-sse4-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx-sse4.dll
-    File /nonfatal /oname=zerogs-r${SVNREV_ZEROGS}.dll     ..\bin\Plugins\zerogs.dll
+    File /nonfatal /oname=gsdx32-sse2-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx32-sse2.dll
+    File /nonfatal /oname=gsdx32-ssse3-r${SVNREV_GSDX}.dll   ..\bin\Plugins\gsdx32-ssse3.dll 
+    File /nonfatal /oname=gsdx32-sse4-r${SVNREV_GSDX}.dll    ..\bin\Plugins\gsdx32-sse4.dll
+    File /nonfatal /oname=gsdx32-avx-r${SVNREV_GSDX}.dll     ..\bin\Plugins\gsdx32-avx.dll
+    File /nonfatal /oname=zerogs-r${SVNREV_ZEROGS}.dll       ..\bin\Plugins\zerogs.dll
   
     File /nonfatal /oname=spu2-x-r${SVNREV_SPU2X}.dll      ..\bin\Plugins\spu2-x.dll
     File /nonfatal /oname=zerospu2-r${SVNREV_ZEROSPU2}.dll ..\bin\Plugins\zerospu2.dll
@@ -108,7 +109,7 @@ SectionEnd
 !endif
 
 !if ${INC_CRT_2010} > 0
-Section "Microsoft Visual C++ 2010 Redist (recommended)" SEC_CRT2010
+Section "Microsoft Visual C++ 2010 SP1 Redist (recommended)" SEC_CRT2010
 
   ;SectionIn RO
 
@@ -116,7 +117,7 @@ Section "Microsoft Visual C++ 2010 Redist (recommended)" SEC_CRT2010
   ; independent key for checking availability.
   
   ; Downloaded from:
-  ;   http://download.microsoft.com/download/5/B/C/5BC5DBB3-652D-4DCE-B14A-475AB85EEF6E/vcredist_x86.exe
+  ;   http://download.microsoft.com/download/C/6/D/C6D0FD4E-9E53-4897-9B91-836EBA2AACD3/vcredist_x86.exe
 
   ClearErrors
   ReadRegDword $R0 HKLM "SOFTWARE\Microsoft\VisualStudio\10.0\VC\VCRedist\x86" "Installed"
@@ -127,12 +128,12 @@ Section "Microsoft Visual C++ 2010 Redist (recommended)" SEC_CRT2010
     Goto done
 
   SetOutPath "$TEMP"
-  File "vcredist_2010_x86.exe"
-  DetailPrint "Running Visual C++ 2010 Redistributable Setup..."
-  ExecWait '"$TEMP\vcredist_2010_x86.exe" /qb'
-  DetailPrint "Finished Visual C++ 2010 Redistributable Setup"
+  File "vcredist_2010_sp1_x86.exe"
+  DetailPrint "Running Visual C++ 2010 SP1 Redistributable Setup..."
+  ExecWait '"$TEMP\vcredist_2010_sp1_x86.exe" /qb'
+  DetailPrint "Finished Visual C++ 2010 SP1 Redistributable Setup"
   
-  Delete "$TEMP\vcredist_2010_x86.exe"
+  Delete "$TEMP\vcredist_2010_sp1_x86.exe"
 
 done:
 SectionEnd
