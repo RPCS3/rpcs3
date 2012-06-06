@@ -246,6 +246,14 @@ static int loadGameSettings(Pcsx2Config& dest, const Game_Data& game, bool verbo
 		gf++;
 	}
 
+
+	if (game.keyExists("mvuFlagSpeedHack")) {
+		bool vuFlagHack = game.getInt("mvuFlagSpeedHack") ? 1 : 0;
+		if(verbose) Console.WriteLn("(GameDB) Changing mVU flag speed hack [mode=%d]", vuFlagHack);
+		dest.Speedhacks.vuFlagHack = vuFlagHack;
+		gf++;
+	}
+
 	for( GamefixId id=GamefixId_FIRST; id<pxEnumEnd; ++id )
 	{
 		wxString key( EnumToString(id) );

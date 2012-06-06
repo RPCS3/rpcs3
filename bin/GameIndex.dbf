@@ -70,6 +70,11 @@
 -- VIF1StallHack 	= 1 // SOCOM II.
 
 ---------------------------------------------
+-- Speed Hacks (SpeedHackName = <value>)
+---------------------------------------------
+-- mvuFlagSpeedHack = 1 or 0 // Katamari Damacy have weird speed bug when this speed hack is enabled (and it is by default)
+
+---------------------------------------------
 -- Patches ([patches] or [patches = crc])
 ---------------------------------------------
 -- Patches must be specified in blocks.
@@ -6133,6 +6138,7 @@ Name   = Katamari Damacy
 Region = NTSC-U
 Compat = 5
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLUS-21009
 Name   = Sega Classics Collection
@@ -7163,6 +7169,7 @@ Name   = We Love Katamari
 Region = NTSC-U
 Compat = 5
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLUS-21231
 Name   = Sniper Elite
@@ -11304,6 +11311,7 @@ Serial = SCAJ-20079
 Name   = Katamari Damacy
 Region = NTSC-Unk
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SCAJ-20080
 Name   = Kaena
@@ -11526,6 +11534,7 @@ Serial = SCAJ-20135
 Name   = Minna Daisuki Katamari Damacy
 Region = NTSC-Unk
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SCAJ-20136
 Name   = Ace Combat 5 - The Unsung War [PlayStation2 The Best]
@@ -11933,6 +11942,7 @@ Serial = SCKA-20025
 Name   = Katamari Damacy
 Region = NTSC-K
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SCKA-20026
 Name   = Gungrave O.D.
@@ -12014,6 +12024,7 @@ Serial = SCKA-20051
 Name   = Minna Daisuki Katamari Damacy
 Region = NTSC-K
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SCKA-20052
 Name   = Genji
@@ -26932,6 +26943,7 @@ Name   = Katamari Damacy
 Region = NTSC-J
 Compat = 5
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLPS-25361
 Name   = Smash Court Professional Tournament 2
@@ -29062,6 +29074,7 @@ Serial = SLPS-73210
 Name   = Katamari Damacy [PlayStation 2 The Best]
 Region = NTSC-J
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLPS-73211
 Name   = Summon Night 3 [PlayStation 2 The Best]
@@ -29176,11 +29189,13 @@ Serial = SLPS-73240
 Name   = Katamari Damacy [PlayStation 2 The Best]
 Region = NTSC-J
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLPS-73241
 Name   = Minna Daisuki Katamari Damacy [PlayStation 2 The Best]
 Region = NTSC-J
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLPS-73242
 Name   = Tales of Legendia [PlayStation 2 The Best]
@@ -39205,6 +39220,7 @@ Serial = SLES-53828
 Name   = We Love Katamari
 Region = PAL-Unk
 SkipMPEGHack = 1
+mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLES-53829
 Name   = Raiden III
