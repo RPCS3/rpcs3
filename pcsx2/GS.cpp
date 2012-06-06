@@ -121,23 +121,12 @@ static __fi void gsCSRwrite( const tGS_CSR& csr )
 
 static __fi void IMRwrite(u32 value)
 {
-	GSIMR = (value & 0x1f00)|0x6000;
-
-	if(CSRreg.GetInterruptMask() & (~(GSIMR >> 8) & 0x1f))
-		gsIrq();
-
 	GUNIT_LOG("IMRwrite()");
-	if (gifUnit.gsSIGNAL.queued && !(GSIMR & 0x100)) {
-		// Note: PS2 apps are expected to write a successive 1 and 0 to the IMR in order to
-		//  trigger the gsInt and clear the second pending SIGNAL interrupt -- if they fail
-		//  to do so, the GS will freeze again upon the very next SIGNAL).
-		//
-		// What's not known here is whether or not the SIGID register should be updated
-		//  here or when the GS is resumed during CSR write (above).
 
-		CSRreg.SIGNAL = true;
+	if (CSRreg.GetInterruptMask() & (~value & GSIMR) >> 8)
 		gsIrq();
-	}
+
+	GSIMR = (value & 0x1f00)|0x6000;
 }
 
 __fi void gsWrite8(u32 mem, u8 value)
