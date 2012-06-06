@@ -38,7 +38,7 @@ GSState::GSState()
 	, m_q(1.0f)
 	, m_texflush(true)
 {
-	m_nativeres = !!theApp.GetConfig("nativeres", 0);
+	m_nativeres = !!theApp.GetConfig("nativeres", 1);
 
 	memset(&m_v, 0, sizeof(m_v));
 	memset(&m_vertex, 0, sizeof(m_vertex));

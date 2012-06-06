@@ -30,7 +30,7 @@ GSRenderer::GSRenderer()
 {
 	m_GStitleInfoBuffer[0] = 0;
 
-	m_interlace = theApp.GetConfig("interlace", 0);
+	m_interlace = theApp.GetConfig("interlace", 7);
 	m_aspectratio = theApp.GetConfig("aspectratio", 1);
 	m_filter = theApp.GetConfig("filter", 1);
 	m_vsync = !!theApp.GetConfig("vsync", 0);

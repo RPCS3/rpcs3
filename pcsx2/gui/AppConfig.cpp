@@ -459,7 +459,7 @@ AppConfig::AppConfig()
 	#ifdef __WXMSW__
 	McdCompressNTFS		= true;
 	#endif
-	EnableSpeedHacks	= false;
+	EnableSpeedHacks	= true;
 	EnableGameFixes		= false;
 
 	EnablePresets		= false;
