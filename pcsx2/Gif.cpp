@@ -57,7 +57,9 @@ __fi void gifInterrupt()
 
 		if(vif1Regs.stat.VGW)
 		{
-			CPU_INT(DMAC_VIF1, 1);
+			//Check if VIF is in a cycle or is currently "idle" waiting for GIF to come back.
+			if(!cpuRegs.interrupt & (1<<DMAC_VIF1))
+				CPU_INT(DMAC_VIF1, 1);
 
 			CPU_INT(DMAC_GIF, 16);
 			return;

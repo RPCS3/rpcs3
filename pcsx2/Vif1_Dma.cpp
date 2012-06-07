@@ -71,7 +71,7 @@ void vif1TransferToMemory()
 	pMem += size;
 
 	if(pMem < pMemEnd) {
-		DevCon.Warning("GS Transfer < VIF QWC, Clearing end of space");
+		//DevCon.Warning("GS Transfer < VIF QWC, Clearing end of space");
 		
 		__m128 zeroreg = _mm_setzero_ps();
 		do {
@@ -313,41 +313,30 @@ __fi void vif1Interrupt()
 		vif1Regs.stat.VPS = VPS_IDLE;
 	}
 	
-	if (!vif1.done)
-	{
-
-		if (!(dmacRegs.ctrl.DMAE))
-		{
-			Console.WriteLn("vif1 dma masked");
-			return;
-		}
-
-		if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
-		if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
-		if(vif1.waitforvu == true)
-		{
-			//DevCon.Warning("Waiting on VU1");
-			return;
-		}
-	}
-	
-
 	if (vif1.inprogress & 0x1)
-	{
-		_VIF1chain();
-		// VIF_NORMAL_FROM_MEM_MODE is a very slow operation.
-		// Timesplitters 2 depends on this being a bit higher than 128.
-		if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
-	}
+    {
+            _VIF1chain();
+            // VIF_NORMAL_FROM_MEM_MODE is a very slow operation.
+            // Timesplitters 2 depends on this beeing a bit higher than 128.
+            if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
+            CPU_INT(DMAC_VIF1, g_vif1Cycles);
+            return;
+    }
 
-	if(g_vif1Cycles > 0 || vif1ch.qwc)
-	{
-		if(!(vif1Regs.stat.VGW && gifUnit.gifPath[GIF_PATH_3].state != GIF_PATH_IDLE)) //If we're waiting on GIF, stop looping, (can be over 1000 loops!)
-			CPU_INT(DMAC_VIF1, max((int)g_vif1Cycles, 8));
+    if (!vif1.done)
+    {
 
-		return;
+            if (!(dmacRegs.ctrl.DMAE))
+            {
+                    Console.WriteLn("vif1 dma masked");
+                    return;
+            }
+
+            if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
+            if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
+            CPU_INT(DMAC_VIF1, g_vif1Cycles);
+            return;
 	}
-	else if(vif1Regs.stat.VPS == VPS_TRANSFERRING) DevCon.Warning("Cycles %x, cmd %x, qwc %x, waitonvu %x", g_vif1Cycles, vif1.cmd, vif1ch.qwc, vif1.waitforvu);
 
 	if (vif1.vifstalled && vif1.irq)
 	{
