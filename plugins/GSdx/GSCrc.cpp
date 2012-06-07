@@ -472,9 +472,6 @@ CRC::Game CRC::m_games[] =
 	{0x924C4AA6, GodHand, KO, 0},
 	{0x9637D496, KnightsOfTheTemple2, JP, 0}, //聖堂騎士團2
 	{0x4E811100, UltramanFightingEvolution, JP, 0}, //超能力霸王戰鬥進化重生
-	{0x0643F90C, RogueGalaxy, US, 0}, //俠盜銀河
-	{0xCDEE4B19, RogueGalaxy, JP, 0},
-	{0xCBB4B383, RogueGalaxy, EU, 0},
 	{0xF7F181C3, DeathByDegreesTekkenNinaWilliams, CH, 0}, //鐵拳妮娜
 	{0xF088FA5B, DeathByDegreesTekkenNinaWilliams, KO, 0},
 	{0x59683BB0, DeathByDegreesTekkenNinaWilliams, EU, 0},

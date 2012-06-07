@@ -160,7 +160,6 @@ public:
 		GodHand,
 		KnightsOfTheTemple2,
 		UltramanFightingEvolution,
-		RogueGalaxy,
 		DeathByDegreesTekkenNinaWilliams,
 		AlpineRacer3,
 		HummerBadlands,

@@ -4853,20 +4853,6 @@ bool GSC_UltramanFightingEvolution(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
-bool GSC_RogueGalaxy(const GSFrameInfo& fi, int& skip)
-{
-	if(skip == 0)
-	{
-		if(fi.TME && (fi.TBP0==0x2c40) && (fi.TPSM == PSM_PSMCT32 || fi.TPSM == PSM_PSMCT24))
-		{
-			skip = 1; //³õ´º°{Ã{
-		} 
-		
-	}
-
-	return true;
-}
-
 bool GSC_DeathByDegreesTekkenNinaWilliams(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -5298,7 +5284,6 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::GodHand] = GSC_GodHand;
 		map[CRC::KnightsOfTheTemple2] = GSC_KnightsOfTheTemple2;
 		map[CRC::UltramanFightingEvolution] = GSC_UltramanFightingEvolution;
-		map[CRC::RogueGalaxy] = GSC_RogueGalaxy;
 		map[CRC::DeathByDegreesTekkenNinaWilliams] = GSC_DeathByDegreesTekkenNinaWilliams;
 		map[CRC::AlpineRacer3] = GSC_AlpineRacer3;
 		map[CRC::HummerBadlands] = GSC_HummerBadlands;
