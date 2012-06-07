@@ -487,7 +487,7 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 			case IDC_AGGRESSIVECRC:
 				helpstr = "Use more aggressive CRC hacks on some games\n\n"
 						  "Only affects few games, removing some effects which might make the image sharper/clearer.\n"
-						  "Affected games: FFX, FFX2, GOW2, SoTC, SSX3.";
+						  "Affected games: FFX, FFX2, FFXII, GOW2, ICO, SoTC, SSX3.";
 				break;
 			default:
 				helpstr = "Hover over an item to get a description.";

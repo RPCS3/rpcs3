@@ -3111,7 +3111,7 @@ bool GSC_ICO(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 1;
 		}
-		else if(fi.TME && fi.FBP == 0x0800 && (fi.TBP0 == 0x2800 || fi.TBP0 ==0x2c00) && fi.TPSM ==0  && fi.FBMSK == 0)
+		else if( g_aggressive && fi.TME && fi.FBP == 0x0800 && (fi.TBP0 == 0x2800 || fi.TBP0 ==0x2c00) && fi.TPSM ==0  && fi.FBMSK == 0)
 		{
 			skip = 1; //­«¼v
 		}
