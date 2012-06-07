@@ -6005,6 +6005,7 @@ Serial = SLUS-20980
 Name   = Ys - The Ark of Napishtim
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-20981
 Name   = Teenage Mutant Ninja Turtles 2
@@ -9442,7 +9443,6 @@ Serial = SLUS-21746
 Name   = Call Of Duty - World At War - Final Fronts
 Region = NTSC-U
 Compat = 5
-EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-21748
 Name   = MLB Power Pros 2008
@@ -9616,6 +9616,7 @@ Serial = SLUS-21787
 Name   = TNA iMPACT!
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-21788
 Name   = Ar Tonelico 2 - Melody Of Metafalica
@@ -14082,6 +14083,7 @@ Region = NTSC-K
 Serial = SLKA-25249
 Name   = Ys - The Ark of Napishtim [with Guide Book]
 Region = NTSC-K
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLKA-25251
 Name   = Metal Gear Solid 3 - Snake Eater
@@ -19846,10 +19848,12 @@ Region = NTSC-J
 Serial = SLPM-65829
 Name   = Ys - The Ark of Napishtim [Limited Edition]
 Region = NTSC-J
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPM-65830
 Name   = Ys - The Ark of Napishtim
 Region = NTSC-J
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPM-65831
 Name   = Hello Kitty no PikoPiko Daisakusen
@@ -19874,6 +19878,7 @@ Region = NTSC-J
 Serial = SLPM-65836
 Name   = Ys - The Ark of Napishtim
 Region = NTSC-J
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLPM-65837
 Name   = Terminator 3 - Redemption
@@ -37707,6 +37712,7 @@ Compat = 4
 Serial = SLES-53079
 Name   = Ys - The Ark of Napishtim
 Region = PAL-Unk
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-53080
 Name   = Extreme Sprint 3010
@@ -41407,6 +41413,7 @@ Serial = SLES-55150
 Name   = TNA Impact
 Region = PAL-Unk
 Compat = 5
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-55163
 Name   = The Legend of Spyro - Dawn of the Dragon
@@ -41603,12 +41610,10 @@ Region = PAL-M7
 Serial = SLES-55367
 Name   = Call of Duty - World at War - Final Fronts
 Region = PAL-M4
-EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-55369
 Name   = Call of Duty - World at War - Final Fronts
 Region = PAL-G
-EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-55371
 Name   = Barbie Horse Adventures - Riding Camp
