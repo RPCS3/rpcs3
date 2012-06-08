@@ -14,10 +14,8 @@
 namespace YAML
 {
 	struct Directives;
-	struct Mark;
 	struct Token;
 	class EventHandler;
-	class Node;
 	class Scanner;
 
 	class YAML_CPP_API Parser: private noncopyable
