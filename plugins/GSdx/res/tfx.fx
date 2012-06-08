@@ -109,7 +109,7 @@ float4 sample_c(float2 uv)
 
 float4 sample_p(float u)
 {
-	return Palette.Sample(PaletteSampler, u);
+	return Palette.Sample(PaletteSampler, u * 255./256);
 }
 
 float4 sample_rt(float2 uv)
@@ -199,7 +199,7 @@ float4 sample_c(float2 uv)
 
 float4 sample_p(float u)
 {
-	return tex2D(Palette, u);
+	return tex2D(Palette, u * 255./256 + 1./512);
 }
 
 float4 sample_rt(float2 uv)
