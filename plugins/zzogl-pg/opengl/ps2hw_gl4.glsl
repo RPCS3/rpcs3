@@ -21,7 +21,7 @@
 // divides by z for every pixel, instead of in vertex shader
 // fixes kh textures
 
-#extension ARB_texture_rectangle: require
+#extension GL_ARB_texture_rectangle: require
 #extension GL_ARB_shading_language_420pack: require
 #extension GL_ARB_separate_shader_objects : require
 
@@ -565,25 +565,25 @@ half4 ps2FinalColor(half4 col)
 #ifdef FRAGMENT_SHADER 			// This is code only for FRAGMENTS (pixel shader)
 
 #ifdef WRITE_DEPTH
-void write_depth_target(vec4 z)
+void write_depth_target()
 {
-    FragData1 = z; 
+    FragData1 = PSin.z; 
 }
 #else
-void write_depth_target(vec4 z) { }
+void write_depth_target() { }
 #endif
 
 void RegularPS() {
 	// whenever outputting depth, make sure to mult by 255/256 and 1
 	FragData0 = ps2FinalColor(PSin.color);
-    write_depth_target(PSin.z);
+    write_depth_target();
 }
 
 #define DECL_TEXPS(num, bit) \
 void Texture##num##bit##PS() \
 { \
 	FragData0 = ps2FinalColor(ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color)); \
-	write_depth_target(PSin.z); \
+	write_depth_target(); \
 }
 
 #define DECL_TEXPS_(num) \
@@ -605,7 +605,7 @@ void RegularFogPS() {
 	c.xyz = mix(g_fFogColor.xyz, PSin.color.xyz, vec3(PSin.fog));
 	c.w = PSin.color.w;
 	FragData0 = ps2FinalColor(c);
-    write_depth_target(PSin.z);
+    write_depth_target();
 }
 
 #define DECL_TEXFOGPS(num, bit) \
@@ -614,7 +614,7 @@ void TextureFog##num##bit##PS() \
 	half4 c = ps2CalcShade(ps2shade##num##bit(PSin.tex), PSin.color); \
 	c.xyz = mix(g_fFogColor.xyz, c.xyz, vec3(PSin.fog)); \
 	FragData0 = ps2FinalColor(c); \
-	write_depth_target(PSin.z); \
+	write_depth_target(); \
 }
 
 #define DECL_TEXFOGPS_(num) \

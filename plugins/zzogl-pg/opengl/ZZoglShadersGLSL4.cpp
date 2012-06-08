@@ -243,9 +243,7 @@ void ZZshGLEnableProfile() {
 // The same function for texture, also to cgGLEnable
 void ZZshGLSetTextureParameter(ZZshParameter param, GLuint texobj, const char* name) {
 #ifdef ENABLE_MARKER
-	char* debug = new char[100];
-	sprintf(debug, "CS: texture %d, param %d", texobj, param);
-	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
+	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, format("CS: texture %d, param %d", texobj, param).c_str() );
 #endif
 
 	g_cs.set_texture(param, texobj);
@@ -254,9 +252,7 @@ void ZZshGLSetTextureParameter(ZZshParameter param, GLuint texobj, const char* n
 void ZZshGLSetTextureParameter(ZZshShaderLink prog, ZZshParameter param, GLuint texobj, const char* name) {
 	FRAGMENTSHADER* shader = (FRAGMENTSHADER*)prog.link;
 #ifdef ENABLE_MARKER
-	char* debug = new char[100];
-	sprintf(debug, "FS(%d):texture %d, param %d", shader->program, texobj, param);
-	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
+	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, format("FS(%d):texture %d, param %d", shader->program, texobj, param).c_str() );
 #endif
 
 	shader->set_texture(param, texobj);
@@ -276,9 +272,7 @@ void ZZshSetParameter4fv(ZZshShaderLink& prog, ZZshParameter param, const float*
 		dirty_vertex_buffer = true;
 	}
 #ifdef ENABLE_MARKER
-	char* debug = new char[100];
-	sprintf(debug, "prog: uniform (%s) (%f)", name, *v);
-	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
+	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, format("prog: uniform (%s) (%f)", name, *v).c_str() );
 #endif
 }
 
@@ -286,9 +280,7 @@ void ZZshSetParameter4fv(ZZshParameter param, const float* v, const char* name) 
 	g_cs.ZZshSetParameter4fv(param, v);
 	dirty_common_buffer = true;
 #ifdef ENABLE_MARKER
-	char* debug = new char[100];
-	sprintf(debug, "CS: uniform (%s) (%f)", name, *v);
-	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
+	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, format("CS: uniform (%s) (%f)", name, *v).c_str() );
 #endif
 }
 
@@ -380,7 +372,7 @@ void ZZshSetVertexShader(ZZshShaderLink prog) {
 
 	if (vs->program != g_current_vs) {
 		glUseProgramStages(s_pipeline, GL_VERTEX_SHADER_BIT, vs->program);
-		g_current_ps = vs->program;
+		g_current_vs = vs->program;
 	}
 }
 
@@ -452,9 +444,7 @@ void PutParametersInProgram(VERTEXSHADER* vs, FRAGMENTSHADER* ps) {
 	}
 
 #ifdef ENABLE_MARKER
-	char* debug = new char[100];
-	sprintf(debug, "FS(%d): enable texture", ps->program);
-	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, debug);
+	if (GLEW_GREMEDY_string_marker) glStringMarkerGREMEDY(0, format("FS(%d): enable texture", ps->program).c_str() );
 #endif
 
 	g_cs.enable_texture();

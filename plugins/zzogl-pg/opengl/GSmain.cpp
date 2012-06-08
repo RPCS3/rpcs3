@@ -349,9 +349,9 @@ EXPORT_C_(void) GSclose()
 {
 	FUNCLOG
 
-	ZZDestroy();
 	// Clean shader. Must be done before the context is delete
 	ZZshExitCleaning();
+	ZZDestroy();
 
 	GLWin.CloseWindow();
 
