@@ -48,7 +48,7 @@ namespace YAML
 	{
 		// an empty node *is* a possibility
 		if(m_scanner.empty()) {
-			eventHandler.OnNull(Mark::null(), NullAnchor);
+			eventHandler.OnNull(m_scanner.mark(), NullAnchor);
 			return;
 		}
 		
@@ -136,7 +136,7 @@ namespace YAML
 		
 		while(1) {
 			if(m_scanner.empty())
-				throw ParserException(Mark::null(), ErrorMsg::END_OF_SEQ);
+				throw ParserException(m_scanner.mark(), ErrorMsg::END_OF_SEQ);
 			
 			Token token = m_scanner.peek();
 			if(token.type != Token::BLOCK_ENTRY && token.type != Token::BLOCK_SEQ_END)
@@ -169,7 +169,7 @@ namespace YAML
 		
 		while(1) {
 			if(m_scanner.empty())
-				throw ParserException(Mark::null(), ErrorMsg::END_OF_SEQ_FLOW);
+				throw ParserException(m_scanner.mark(), ErrorMsg::END_OF_SEQ_FLOW);
 			
 			// first check for end
 			if(m_scanner.peek().type == Token::FLOW_SEQ_END) {
@@ -179,6 +179,9 @@ namespace YAML
 			
 			// then read the node
 			HandleNode(eventHandler);
+            
+            if(m_scanner.empty())
+				throw ParserException(m_scanner.mark(), ErrorMsg::END_OF_SEQ_FLOW);
 			
 			// now eat the separator (or could be a sequence end, which we ignore - but if it's neither, then it's a bad node)
 			Token& token = m_scanner.peek();
@@ -211,7 +214,7 @@ namespace YAML
 		
 		while(1) {
 			if(m_scanner.empty())
-				throw ParserException(Mark::null(), ErrorMsg::END_OF_MAP);
+				throw ParserException(m_scanner.mark(), ErrorMsg::END_OF_MAP);
 			
 			Token token = m_scanner.peek();
 			if(token.type != Token::KEY && token.type != Token::VALUE && token.type != Token::BLOCK_MAP_END)
@@ -250,7 +253,7 @@ namespace YAML
 		
 		while(1) {
 			if(m_scanner.empty())
-				throw ParserException(Mark::null(), ErrorMsg::END_OF_MAP_FLOW);
+				throw ParserException(m_scanner.mark(), ErrorMsg::END_OF_MAP_FLOW);
 			
 			Token& token = m_scanner.peek();
             const Mark mark = token.mark;
@@ -275,6 +278,9 @@ namespace YAML
 			} else {
 				eventHandler.OnNull(mark, NullAnchor);
 			}
+            
+            if(m_scanner.empty())
+				throw ParserException(m_scanner.mark(), ErrorMsg::END_OF_MAP_FLOW);
 			
 			// now eat the separator (or could be a map end, which we ignore - but if it's neither, then it's a bad node)
 			Token& nextToken = m_scanner.peek();

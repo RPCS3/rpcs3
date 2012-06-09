@@ -6,12 +6,12 @@
 namespace Test
 {
     namespace Parser {
-		TEST BadDocStart()
+		TEST NoEndOfMapFlow()
         {
             try {
                 HANDLE("---{header: {id: 1");
             } catch(const YAML::ParserException& e) {
-                YAML_ASSERT(true);
+                YAML_ASSERT(e.msg == std::string(YAML::ErrorMsg::END_OF_MAP_FLOW));
                 return true;
             }
             return "  no exception caught";
@@ -43,7 +43,7 @@ namespace Test
 	{
 		int passed = 0;
 		int total = 0;
-		RunParserTest(&Parser::BadDocStart, "Bad doc start", passed, total);
+		RunParserTest(&Parser::NoEndOfMapFlow, "No end of map flow", passed, total);
 		
 		std::cout << "Parser tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

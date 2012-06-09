@@ -31,6 +31,7 @@ namespace YAML
 		bool empty();
 		void pop();
 		Token& peek();
+        Mark mark() const;
 
 	private:
 		struct IndentMarker {
