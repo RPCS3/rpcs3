@@ -109,7 +109,7 @@ float4 sample_c(float2 uv)
 
 float4 sample_p(float u)
 {
-	return Palette.Sample(PaletteSampler, u * 255./256 + 0.5/256);
+	return Palette.Sample(PaletteSampler, u);
 }
 
 float4 sample_rt(float2 uv)
@@ -338,7 +338,7 @@ float4 sample_4a(float4 uv)
 	if(PS_RT) c *= 128.0f / 255;
 	#endif
 
-	return c;
+	return c * 255./256 + 0.5/256;
 }
 
 float4x4 sample_4p(float4 u)
@@ -394,13 +394,9 @@ float4 sample(float2 st, float q)
 		{
 			c = sample_4p(sample_4a(uv));
 		}
-		else if(PS_FMT == FMT_4HL)
+		else if(PS_FMT == FMT_4HL || PS_FMT == FMT_4HH)
 		{
 			c = sample_4p(fmod(sample_4a(uv), 1.0f / 16));
-		}
-		else if(PS_FMT == FMT_4HH)
-		{
-			c = sample_4p(fmod(sample_4a(uv) * 16, 1.0f / 16));
 		}
 		else if(PS_FMT == FMT_8)
 		{
