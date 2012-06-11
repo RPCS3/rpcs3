@@ -2,7 +2,7 @@
 #define FMT_32 0
 #define FMT_24 1
 #define FMT_16 2
-#define FMT_8 3
+#define FMT_PAL 4 /* flag bit */
 
 #if SHADER_MODEL >= 0x400
 
@@ -21,7 +21,7 @@
 #define PS_FST 0
 #define PS_WMS 0
 #define PS_WMT 0
-#define PS_FMT FMT_8
+#define PS_FMT FMT_32
 #define PS_AEM 0
 #define PS_TFX 0
 #define PS_TCC 1
@@ -127,7 +127,7 @@ float4 sample_rt(float2 uv)
 #define PS_FST 0
 #define PS_WMS 0
 #define PS_WMT 0
-#define PS_FMT FMT_8
+#define PS_FMT FMT_32
 #define PS_AEM 0
 #define PS_TFX 0
 #define PS_TCC 0
@@ -387,7 +387,7 @@ float4 sample(float2 st, float q)
 
 		float4x4 c;
 
-		if(PS_FMT == FMT_8)
+		if(PS_FMT & FMT_PAL)
 		{
 			c = sample_4p(sample_4a(uv));
 		}
@@ -396,6 +396,24 @@ float4 sample(float2 st, float q)
 			c = sample_4c(uv);
 		}
 
+		for (uint i = 0; i < 4; i++)
+		{
+			if((PS_FMT & ~FMT_PAL) == FMT_32)
+			{
+				#if SHADER_MODEL <= 0x300
+				if(PS_RT) c[i].a *= 128.0f / 255;
+				#endif
+			}
+			else if((PS_FMT & ~FMT_PAL) == FMT_24)
+			{
+				c[i].a = !PS_AEM || any(c[i].rgb) ? TA.x : 0;
+			}
+			else if((PS_FMT & ~FMT_PAL) == FMT_16)
+			{
+				c[i].a = c[i].a >= 0.5 ? TA.y : !PS_AEM || any(c[i].rgb) ? TA.x : 0; 
+			}
+		}
+	
 		if(PS_LTF)
 		{	
 			t = lerp(lerp(c[0], c[1], dd.x), lerp(c[2], c[3], dd.x), dd.y);
@@ -405,24 +423,7 @@ float4 sample(float2 st, float q)
 			t = c[0];
 		}
 	}
-	
-	if(PS_FMT == FMT_32)
-	{
-		#if SHADER_MODEL <= 0x300
-		if(PS_RT) t.a *= 128.0f / 255;
-		#endif
-	}
-	else if(PS_FMT == FMT_24)
-	{
-		t.a = !PS_AEM || any(t.rgb) ? TA.x : 0;
-	}
-	else if(PS_FMT == FMT_16)
-	{
-		// a bit incompatible with up-scaling because the 1 bit alpha is interpolated
-	
-		t.a = t.a >= 0.5 ? TA.y : !PS_AEM || any(t.rgb) ? TA.x : 0; 
-	}
-	
+
 	return t;
 }
 

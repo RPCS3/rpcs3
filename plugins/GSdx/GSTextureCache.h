@@ -29,14 +29,6 @@ class GSTextureCache
 public:
 	enum {RenderTarget, DepthStencil};
 
-	enum TextureFormatType
-	{
-		FMT_32,
-		FMT_24,
-		FMT_16,
-		FMT_8,
-	};
-
 	class Surface : public GSAlignedClass<32>
 	{
 	protected:
@@ -68,7 +60,6 @@ public:
 		bool m_initpalette;
 		uint32 m_valid[MAX_PAGES]; // each uint32 bits map to the 32 blocks of that page
 		uint32* m_clut;
-		int m_fmt;
 		bool m_target;
 		bool m_complete;
 		bool m_repeating;

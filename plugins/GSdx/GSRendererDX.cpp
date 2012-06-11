@@ -275,9 +275,17 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 
 	if(tex)
 	{
+		const GSLocalMemory::psm_t &psm = GSLocalMemory::m_psm[context->TEX0.PSM];
+
 		ps_sel.wms = context->CLAMP.WMS;
 		ps_sel.wmt = context->CLAMP.WMT;
-		ps_sel.fmt = tex->m_fmt;
+		if (tex->m_palette)
+		{
+			const GSLocalMemory::psm_t &cpsm = GSLocalMemory::m_psm[context->TEX0.CPSM];
+			ps_sel.fmt = cpsm.fmt | 4;
+		}
+		else
+			ps_sel.fmt = psm.fmt;
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;

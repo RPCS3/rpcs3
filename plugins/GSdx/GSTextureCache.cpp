@@ -585,44 +585,30 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 	bool hack = false;
 
-	if(dst == NULL)
+	if(m_spritehack && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT8H)) 
 	{
-		if(m_spritehack && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT8H)) 
-		{
-			src->m_spritehack_t = true;
-			
-			if(m_spritehack == 2 && TEX0.CPSM != PSM_PSMCT16) 
-				src->m_spritehack_t = false;		
-		}			
-		else
-			src->m_spritehack_t = false;
+		src->m_spritehack_t = true;
 		
-		if(m_paltex && psm.pal > 0)
-		{
-			src->m_fmt = FMT_8;
+		if(m_spritehack == 2 && TEX0.CPSM != PSM_PSMCT16) 
+			src->m_spritehack_t = false;		
+	}			
+	else
+		src->m_spritehack_t = false;
 
-			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th, Get8bitFormat());
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-		}
-		else
-		{
-			src->m_fmt = FMT_32;
-
-			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th);
-		}
+	if (m_paltex && psm.pal > 0)
+	{
+		src->m_texture = m_renderer->m_dev->CreateTexture(tw, th, Get8bitFormat());
+		src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+	}
+	else if (dst == NULL || dst->m_type != RenderTarget /* TODO */)
+	{
+		src->m_texture = m_renderer->m_dev->CreateTexture(tw, th);
 	}
 	else
 	{
 		// TODO: clean up this mess
 
 		src->m_target = true;
-
-		if(dst->m_type != RenderTarget)
-		{
-			// TODO
-			delete src;
-			return NULL;
-		}
 
 		dst->Update();
 
@@ -754,34 +740,6 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		else
 			ASSERT(0);
 
-		switch(TEX0.PSM)
-		{
-		default:
-			// Note: this assertion triggers in Xenosaga2 after the first intro scenes, when
-			// gameplay first begins (in the city).
-			ASSERT(0);
-		case PSM_PSMCT32:
-			src->m_fmt = FMT_32;
-			break;
-		case PSM_PSMCT24:
-			src->m_fmt = FMT_24;
-			break;
-		case PSM_PSMCT16:
-		case PSM_PSMCT16S:
-			src->m_fmt = FMT_16;
-			break;
-		// actually if we end up in that side of the function with a paletted format, we're probably already screwed
-		case PSM_PSMT8:
-		case PSM_PSMT8H:
-		case PSM_PSMT4:
-		case PSM_PSMT4HL:
-		case PSM_PSMT4HH:
-			src->m_fmt = FMT_8;
-			break;
-		}
-		if (psm.pal > 0)
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-
 		if(tmp != NULL)
 		{
 			m_renderer->m_dev->Recycle(dst->m_texture);
@@ -887,7 +845,6 @@ GSTextureCache::Source::Source(GSRenderer* r, const GIFRegTEX0& TEX0, const GIFR
 	: Surface(r, temp)
 	, m_palette(NULL)
 	, m_initpalette(true)
-	, m_fmt(0)
 	, m_target(false)
 	, m_complete(false)
 	, m_p2t(NULL)
@@ -1005,7 +962,7 @@ void GSTextureCache::Source::Update(const GSVector4i& rect)
 
 	if(blocks > 0)
 	{
-		m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * blocks << (m_fmt == FMT_32 ? 2 : 0));
+		m_renderer->m_perfmon.Put(GSPerfMon::Unswizzle, bs.x * bs.y * blocks << (m_palette ? 2 : 0));
 
 		Flush(m_write.count);
 	}
@@ -1061,7 +1018,7 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 	GSLocalMemory::readTexture rtx = psm.rtx;
 
-	if(m_fmt == FMT_8)
+	if(m_palette)
 	{
 		pitch >>= 2;
 		rtx = psm.rtxP;
