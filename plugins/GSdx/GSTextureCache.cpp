@@ -132,17 +132,14 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 		}
 	}
 
-	if(psm.pal > 0)
+	if (src->m_palette)
 	{
 		int size = psm.pal * sizeof(clut[0]);
 
-		if(src->m_palette)
+		if(src->m_initpalette || !GSVector4i::update(src->m_clut, clut, size))
 		{
-			if(src->m_initpalette || !GSVector4i::update(src->m_clut, clut, size))
-			{
-				src->m_palette->Update(GSVector4i(0, 0, psm.pal, 1), src->m_clut, size);
-				src->m_initpalette = false;
-			}
+			src->m_palette->Update(GSVector4i(0, 0, psm.pal, 1), src->m_clut, size);
+			src->m_initpalette = false;
 		}
 	}
 
@@ -595,16 +592,9 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	else
 		src->m_spritehack_t = false;
 
-	if (m_paltex && psm.pal > 0)
-	{
-		src->m_texture = m_renderer->m_dev->CreateTexture(tw, th, Get8bitFormat());
-		src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-	}
-	else if (dst == NULL || dst->m_type != RenderTarget /* TODO */)
-	{
-		src->m_texture = m_renderer->m_dev->CreateTexture(tw, th);
-	}
-	else
+	if (dst && dst->m_type == RenderTarget
+	    && (dst->m_TEX0.PSM == TEX0.PSM || dst->m_TEX0.PSM == PSM_PSMCT32 && TEX0.PSM == PSM_PSMCT24
+	        || m_paltex && dst->m_TEX0.PSM == PSM_PSMCT32 && TEX0.PSM == PSM_PSMT8H))
 	{
 		// TODO: clean up this mess
 
@@ -709,7 +699,14 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		GSVector4 sr(0, 0, w, h);
 
 		GSTexture* st = src->m_texture ? src->m_texture : dst->m_texture;
-		GSTexture* dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
+		GSTexture *dt;
+		if (m_paltex && psm.pal > 0)
+		{
+			dt = m_renderer->m_dev->CreateRenderTarget(w, h, false, Get8bitFormat());
+			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+		}
+		else
+			dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
 
 		if(!src->m_texture)
 		{
@@ -768,6 +765,18 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 		dst->m_texture->OffsetHack_modx = modx;
 		dst->m_texture->OffsetHack_mody = mody;
+	}
+	else
+	{
+		if (dst)
+			Read(dst, dst->m_valid);
+		if (m_paltex && psm.pal > 0)
+		{
+			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th, Get8bitFormat());
+			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+		}
+		else
+			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th);
 	}
 
 	if(src->m_texture == NULL)
