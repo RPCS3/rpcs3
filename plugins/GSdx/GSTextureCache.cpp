@@ -576,6 +576,7 @@ void GSTextureCache::IncAge()
 //Fixme: Several issues in here. Not handling depth stencil, pitch conversion doesnt work.
 GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, Target* dst)
 {
+	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 	Source* src = new Source(m_renderer, TEX0, TEXA, m_temp);
 
 	int tw = 1 << TEX0.TW;
@@ -596,7 +597,7 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		else
 			src->m_spritehack_t = false;
 		
-		if(m_paltex && GSLocalMemory::m_psm[TEX0.PSM].pal > 0)
+		if(m_paltex && psm.pal > 0)
 		{
 			src->m_fmt = FMT_8;
 
@@ -769,26 +770,17 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		case PSM_PSMCT16S:
 			src->m_fmt = FMT_16;
 			break;
-		case PSM_PSMT8H:
-			src->m_fmt = FMT_8H;
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-			break;
+		// actually if we end up in that side of the function with a paletted format, we're probably already screwed
 		case PSM_PSMT8:
-			//Not sure, this wasn't handled at all.
-			//Xenosaga 2 and 3 use it, Tales of Legendia as well.
-			//It's always used for fog like effects.
-			src->m_fmt = FMT_8;
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-			break;
+		case PSM_PSMT8H:
+		case PSM_PSMT4:
 		case PSM_PSMT4HL:
-			src->m_fmt = FMT_4HL;
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-			break;
 		case PSM_PSMT4HH:
-			src->m_fmt = FMT_4HH;
-			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
+			src->m_fmt = FMT_8;
 			break;
 		}
+		if (psm.pal > 0)
+			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
 
 		if(tmp != NULL)
 		{
@@ -826,8 +818,6 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		delete src;
 		return NULL;
 	}
-
-	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 
 	if(psm.pal > 0)
 	{

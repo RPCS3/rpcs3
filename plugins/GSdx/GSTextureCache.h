@@ -34,9 +34,6 @@ public:
 		FMT_32,
 		FMT_24,
 		FMT_16,
-		FMT_8H,
-		FMT_4HL,
-		FMT_4HH,
 		FMT_8,
 	};
 

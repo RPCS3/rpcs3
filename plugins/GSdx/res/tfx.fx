@@ -2,10 +2,7 @@
 #define FMT_32 0
 #define FMT_24 1
 #define FMT_16 2
-#define FMT_8H 3
-#define FMT_4HL 4
-#define FMT_4HH 5
-#define FMT_8 6
+#define FMT_8 3
 
 #if SHADER_MODEL >= 0x400
 
@@ -390,15 +387,7 @@ float4 sample(float2 st, float q)
 
 		float4x4 c;
 
-		if(PS_FMT == FMT_8H)
-		{
-			c = sample_4p(sample_4a(uv));
-		}
-		else if(PS_FMT == FMT_4HL || PS_FMT == FMT_4HH)
-		{
-			c = sample_4p(fmod(sample_4a(uv), 1.0f / 16));
-		}
-		else if(PS_FMT == FMT_8)
+		if(PS_FMT == FMT_8)
 		{
 			c = sample_4p(sample_4a(uv));
 		}
