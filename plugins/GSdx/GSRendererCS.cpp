@@ -294,9 +294,14 @@ bool GSRendererCS::CreateDevice(GSDevice* dev_unk)
 		{NULL, NULL},
 	};
 
-	hr = dev->CompileShader(IDR_CS_FX, "ps_main0", macro, &m_ps0); 
-
-	if(FAILED(hr)) return false;
+	try
+	{
+		dev->CompileShader(IDR_CS_FX, "ps_main0", macro, &m_ps0); 
+	}
+	catch (GSDXRecoverableError)
+	{
+		return false;
+	}
 
 	// PSConstantBuffer
 
