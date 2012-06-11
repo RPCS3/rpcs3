@@ -213,11 +213,11 @@ public:
 	operator ID3D11Device*() {return m_dev;}
 	operator ID3D11DeviceContext*() {return m_ctx;}
 
-	HRESULT CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11VertexShader** vs, D3D11_INPUT_ELEMENT_DESC* layout, int count, ID3D11InputLayout** il);
-	HRESULT CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs);
-	HRESULT CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs, D3D11_SO_DECLARATION_ENTRY* layout, int count);	
-	HRESULT CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps);
-	HRESULT CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs);
-	HRESULT CompileShader(const char* fn, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs);
+	void CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11VertexShader** vs, D3D11_INPUT_ELEMENT_DESC* layout, int count, ID3D11InputLayout** il);
+	void CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs);
+	void CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs, D3D11_SO_DECLARATION_ENTRY* layout, int count);	
+	void CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps);
+	void CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs);
+	void CompileShader(const char* fn, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs);
 };
 

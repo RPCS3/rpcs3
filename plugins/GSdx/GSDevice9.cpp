@@ -1288,7 +1288,7 @@ void GSDevice9::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4
 	}
 }
 
-HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
+void GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
 {
 	vector<D3DXMACRO> m;
 
@@ -1309,24 +1309,20 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
-	ASSERT(SUCCEEDED(hr));
-
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
 
 	hr = m_dev->CreateVertexDeclaration(layout, il);
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
-
-	return S_OK;
 }
 
-HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps)
+void GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps)
 {
 	uint32 flags = 0;
 
@@ -1358,13 +1354,9 @@ HRESULT GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO
 		printf("%s\n", (const char*)error->GetBufferPointer());
 	}
 
-	ASSERT(SUCCEEDED(hr));
-
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
-
-	return S_OK;
 }
 

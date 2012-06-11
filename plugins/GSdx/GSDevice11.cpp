@@ -138,11 +138,11 @@ bool GSDevice11::Create(GSWnd* wnd)
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
 	};
 
-	hr = CompileShader(IDR_CONVERT_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
+	CompileShader(IDR_CONVERT_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
 
 	for(int i = 0; i < countof(m_convert.ps); i++)
 	{
-		hr = CompileShader(IDR_CONVERT_FX, format("ps_main%d", i).c_str(), NULL, &m_convert.ps[i]);
+		CompileShader(IDR_CONVERT_FX, format("ps_main%d", i).c_str(), NULL, &m_convert.ps[i]);
 	}
 
 	memset(&dsd, 0, sizeof(dsd));
@@ -170,7 +170,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	for(int i = 0; i < countof(m_merge.ps); i++)
 	{
-		hr = CompileShader(IDR_MERGE_FX, format("ps_main%d", i).c_str(), NULL, &m_merge.ps[i]);
+		CompileShader(IDR_MERGE_FX, format("ps_main%d", i).c_str(), NULL, &m_merge.ps[i]);
 	}
 
 	memset(&bsd, 0, sizeof(bsd));
@@ -198,7 +198,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	for(int i = 0; i < countof(m_interlace.ps); i++)
 	{
-		hr = CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i).c_str(), NULL, &m_interlace.ps[i]);
+		CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i).c_str(), NULL, &m_interlace.ps[i]);
 	}
 
 	// Shade Boost	
@@ -229,7 +229,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	hr = m_dev->CreateBuffer(&bd, NULL, &m_shadeboost.cb);
 
-	hr = CompileShader(IDR_SHADEBOOST_FX, "ps_main", macro, &m_shadeboost.ps);
+	CompileShader(IDR_SHADEBOOST_FX, "ps_main", macro, &m_shadeboost.ps);
 
 	// fxaa
 
@@ -241,7 +241,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	hr = m_dev->CreateBuffer(&bd, NULL, &m_fxaa.cb);
 
-	hr = CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+	CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
 
 	//
 
@@ -1184,7 +1184,7 @@ void GSDevice11::OMSetRenderTargets(const GSVector2i& rtsize, int count, ID3D11U
 	}
 }
 
-HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11VertexShader** vs, D3D11_INPUT_ELEMENT_DESC* layout, int count, ID3D11InputLayout** il)
+void GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11VertexShader** vs, D3D11_INPUT_ELEMENT_DESC* layout, int count, ID3D11InputLayout** il)
 {
 	HRESULT hr;
 
@@ -1203,27 +1203,25 @@ HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MAC
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
 
 	hr = m_dev->CreateVertexShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(), NULL, vs);
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
 
 	hr = m_dev->CreateInputLayout(layout, count, shader->GetBufferPointer(), shader->GetBufferSize(), il);
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
-
-	return hr;
 }
 
-HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs)
+void GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs)
 {
 	HRESULT hr;
 
@@ -1242,20 +1240,18 @@ HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MAC
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
 
 	hr = m_dev->CreateGeometryShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(), NULL, gs);
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
-
-	return hr;
 }
 
-HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs, D3D11_SO_DECLARATION_ENTRY* layout, int count)
+void GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11GeometryShader** gs, D3D11_SO_DECLARATION_ENTRY* layout, int count)
 {
 	HRESULT hr;
 
@@ -1274,20 +1270,18 @@ HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MAC
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
 
 	hr = m_dev->CreateGeometryShaderWithStreamOutput((void*)shader->GetBufferPointer(), shader->GetBufferSize(), layout, count, NULL, 0, D3D11_SO_NO_RASTERIZED_STREAM, NULL, gs);
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
-
-	return hr;
 }
 
-HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps)
+void GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps)
 {
 	HRESULT hr;
 
@@ -1306,20 +1300,18 @@ HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MAC
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
 
 	hr = m_dev->CreatePixelShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(),NULL, ps);
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
-
-	return hr;
 }
 
-HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs)
+void GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs)
 {
 	HRESULT hr;
 
@@ -1338,20 +1330,18 @@ HRESULT GSDevice11::CompileShader(uint32 id, const char* entry, D3D11_SHADER_MAC
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
 
 	hr = m_dev->CreateComputeShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(),NULL, cs);
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
-
-	return hr;
 }
 
-HRESULT GSDevice11::CompileShader(const char* fn, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs)
+void GSDevice11::CompileShader(const char* fn, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs)
 {
 	HRESULT hr;
 
@@ -1370,16 +1360,14 @@ HRESULT GSDevice11::CompileShader(const char* fn, const char* entry, D3D11_SHADE
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
 
 	hr = m_dev->CreateComputeShader((void*)shader->GetBufferPointer(), shader->GetBufferSize(),NULL, cs);
 
 	if(FAILED(hr))
 	{
-		return hr;
+		throw GSDXRecoverableError();
 	}
-
-	return hr;
 }
 

@@ -422,130 +422,209 @@ EXPORT_C_(int) GSopen(void** dsp, char* title, int mt)
 
 EXPORT_C GSreset()
 {
-	s_gs->Reset();
+	try
+	{
+		s_gs->Reset();
+	}
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C GSgifSoftReset(uint32 mask)
 {
-	s_gs->SoftReset(mask);
+	try
+	{
+		s_gs->SoftReset(mask);
+	}
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C GSwriteCSR(uint32 csr)
 {
-	s_gs->WriteCSR(csr);
+	try
+	{
+		s_gs->WriteCSR(csr);
+	}
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C GSreadFIFO(uint8* mem)
 {
+	try
+	{
 #ifdef _LINUX
-	// FIXME: double check which thread call this function
-	// See fifo2 issue below
-	if (theApp.GetConfig("renderer", 0) / 3 == 4) {
-		fprintf(stderr, "Disable FIFO1 on opengl\n");
+		// FIXME: double check which thread call this function
+		// See fifo2 issue below
+		if (theApp.GetConfig("renderer", 0) / 3 == 4) {
+			fprintf(stderr, "Disable FIFO1 on opengl\n");
+		}
+		s_gs->m_wnd.AttachContext();
+#endif
+
+		s_gs->ReadFIFO(mem, 1);
+
+#ifdef _LINUX
+		s_gs->m_wnd.DetachContext();
+#endif
 	}
-	s_gs->m_wnd.AttachContext();
-#endif
-
-	s_gs->ReadFIFO(mem, 1);
-
-#ifdef _LINUX
-	s_gs->m_wnd.DetachContext();
-#endif
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 {
+	try
+	{
 #ifdef _LINUX
-	// FIXME called from EE core thread not MTGS which cause
-	// invalidate data for opengl
-	if (theApp.GetConfig("renderer", 0) / 3 == 4) {
+		// FIXME called from EE core thread not MTGS which cause
+		// invalidate data for opengl
+		if (theApp.GetConfig("renderer", 0) / 3 == 4) {
 #ifdef OGL_DEBUG
-		fprintf(stderr, "Disable FIFO2(%d) on opengl\n", size);
+			fprintf(stderr, "Disable FIFO2(%d) on opengl\n", size);
 #endif
-		//return;
-	}
-	s_gs->m_wnd.AttachContext();
+			//return;
+		}
+		s_gs->m_wnd.AttachContext();
 #endif
 
-	s_gs->ReadFIFO(mem, size);
+		s_gs->ReadFIFO(mem, size);
 
 #ifdef _LINUX
-	s_gs->m_wnd.DetachContext();
+		s_gs->m_wnd.DetachContext();
 #endif
+	}
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C GSgifTransfer(const uint8* mem, uint32 size)
 {
-	s_gs->Transfer<3>(mem, size);
+	try
+	{
+		s_gs->Transfer<3>(mem, size);
+	}
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C GSgifTransfer1(uint8* mem, uint32 addr)
 {
-	s_gs->Transfer<0>(const_cast<uint8*>(mem) + addr, (0x4000 - addr) / 16);
+	try
+	{
+		s_gs->Transfer<0>(const_cast<uint8*>(mem) + addr, (0x4000 - addr) / 16);
+	}
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C GSgifTransfer2(uint8* mem, uint32 size)
 {
-	s_gs->Transfer<1>(const_cast<uint8*>(mem), size);
+	try
+	{
+		s_gs->Transfer<1>(const_cast<uint8*>(mem), size);
+	}
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C GSgifTransfer3(uint8* mem, uint32 size)
 {
-	s_gs->Transfer<2>(const_cast<uint8*>(mem), size);
+	try
+	{
+		s_gs->Transfer<2>(const_cast<uint8*>(mem), size);
+	}
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C GSvsync(int field)
 {
+	try
+	{
 #ifdef _WINDOWS
 
-	if(s_gs->m_wnd.IsManaged())
-	{
-		MSG msg;
-
-		memset(&msg, 0, sizeof(msg));
-
-		while(msg.message != WM_QUIT && PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		if(s_gs->m_wnd.IsManaged())
 		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			MSG msg;
+
+			memset(&msg, 0, sizeof(msg));
+
+			while(msg.message != WM_QUIT && PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
 		}
-	}
 
 #endif
 
-	s_gs->VSync(field);
+		s_gs->VSync(field);
+	}
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C_(uint32) GSmakeSnapshot(char* path)
 {
-	string s(path);
-
-	if(!s.empty() && s[s.length() - 1] != DIRECTORY_SEPARATOR)
+	try
 	{
-		s = s + DIRECTORY_SEPARATOR;
-	}
+		string s(path);
 
-	return s_gs->MakeSnapshot(s + "gsdx");
+		if(!s.empty() && s[s.length() - 1] != DIRECTORY_SEPARATOR)
+		{
+			s = s + DIRECTORY_SEPARATOR;
+		}
+
+		return s_gs->MakeSnapshot(s + "gsdx");
+	}
+	catch (GSDXRecoverableError)
+	{
+		return false;
+	}
 }
 
 EXPORT_C GSkeyEvent(GSKeyEventData* e)
 {
-	s_gs->KeyEvent(e);
+	try
+	{
+		s_gs->KeyEvent(e);
+	}
+	catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 {
-	if(mode == FREEZE_SAVE)
+	try
 	{
-		return s_gs->Freeze(data, false);
+		if(mode == FREEZE_SAVE)
+		{
+			return s_gs->Freeze(data, false);
+		}
+		else if(mode == FREEZE_SIZE)
+		{
+			return s_gs->Freeze(data, true);
+		}
+		else if(mode == FREEZE_LOAD)
+		{
+			return s_gs->Defrost(data);
+		}
 	}
-	else if(mode == FREEZE_SIZE)
+	catch (GSDXRecoverableError)
 	{
-		return s_gs->Freeze(data, true);
-	}
-	else if(mode == FREEZE_LOAD)
-	{
-		return s_gs->Defrost(data);
 	}
 
 	return 0;
@@ -553,32 +632,37 @@ EXPORT_C_(int) GSfreeze(int mode, GSFreezeData* data)
 
 EXPORT_C GSconfigure()
 {
-	if(!GSUtil::CheckSSE()) return;
+	try
+	{
+		if(!GSUtil::CheckSSE()) return;
 
 #ifdef _WINDOWS
 
-	if(GSSettingsDlg(s_isgsopen2).DoModal() == IDOK)
-	{
-		if(s_gs != NULL && s_gs->m_wnd.IsManaged())
+		if(GSSettingsDlg(s_isgsopen2).DoModal() == IDOK)
 		{
-			// Legacy apps like gsdxgui expect this...
+			if(s_gs != NULL && s_gs->m_wnd.IsManaged())
+			{
+				// Legacy apps like gsdxgui expect this...
 
-			GSshutdown();
+				GSshutdown();
+			}
 		}
-	}
 
 #else
 
-    // TODO: linux
+		// TODO: linux
 
-	if (RunLinuxDialog())
-	{
-		if(s_gs != NULL && s_gs->m_wnd.IsManaged())
+		if (RunLinuxDialog())
 		{
-			GSshutdown();
+			if(s_gs != NULL && s_gs->m_wnd.IsManaged())
+			{
+				GSshutdown();
+			}
 		}
-	}
 #endif
+	} catch (GSDXRecoverableError)
+	{
+	}
 }
 
 EXPORT_C_(int) GStest()
