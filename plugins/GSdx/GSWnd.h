@@ -103,6 +103,7 @@ class GSWnd
 	Window       m_Xwindow;
 	Display*     m_XDisplay;
 
+	bool m_ctx_attached;
 	bool m_managed;
 	int  m_renderer;
 	GLXContext   m_context;
@@ -115,6 +116,7 @@ public:
 	bool Attach(void* handle, bool managed = true);
 	void Detach();
 	bool IsManaged() const {return m_managed;}
+	bool IsContextAttached() const { return m_ctx_attached; }
 
 	Display* GetDisplay();
 	void* GetHandle() {return (void*)m_Xwindow;}

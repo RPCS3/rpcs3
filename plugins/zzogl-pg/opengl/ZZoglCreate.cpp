@@ -496,11 +496,6 @@ bool ZZCreate(int _width, int _height)
 
 	FB::Create();
 
-	if (FB::buf == 0)
-	{
-		ZZLog::Error_Log("Failed to create the renderbuffer.");
-	}
-
 	GL_REPORT_ERRORD();
 
 	FB::Bind();
@@ -803,7 +798,7 @@ bool ZZCreate(int _width, int _height)
 	}
 	else
 	{
-		ZZLog::Debug_Log("In final init!");
+		ZZLog::Debug_Log("Error In final init!");
 		return false;
 	}
 }
@@ -834,7 +829,10 @@ void ZZDestroy()
 	}
 
 #ifdef GLSL4_API
-	delete vertex_array;
+	if (vertex_array != NULL) {
+		delete vertex_array;
+		vertex_array = NULL;
+	}
 #endif
 
 	g_nCurVBOIndex = 0;
@@ -877,6 +875,8 @@ void ZZDestroy()
 	SAFE_RELEASE_PROG(ppsOne.prog);
 
 	safe_delete(font_p);
+
+	FB::Delete();
 
 	GLWin.ReleaseContext();
 

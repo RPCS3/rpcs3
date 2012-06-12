@@ -113,8 +113,6 @@ extern bool s_bWriteDepth;
 const char* ShaderCallerName = "";
 const char* ShaderHandleName = "";
 
-ZZshProgram CompiledPrograms[MAX_ACTIVE_SHADERS][MAX_ACTIVE_SHADERS] = {{0}};
-
 // new for GLSL4
 GSUniformBufferOGL *constant_buffer;
 GSUniformBufferOGL *common_buffer;
@@ -124,7 +122,7 @@ static bool dirty_common_buffer = true;
 static bool dirty_vertex_buffer = true;
 static bool dirty_fragment_buffer = true;
 
-GSVertexBufferStateOGL *vertex_array;
+GSVertexBufferStateOGL *vertex_array = NULL;
 
 COMMONSHADER g_cs;
 static GLuint s_pipeline = 0;
@@ -226,6 +224,14 @@ void ZZshExitCleaning() {
 	delete common_buffer;
 	delete vertex_buffer;
 	delete fragment_buffer;
+
+	dirty_fragment_buffer = true;
+	dirty_vertex_buffer = true;
+	dirty_common_buffer = true;
+	g_current_ps = 0;
+	g_current_vs = 0;
+	for (uint i = 0; i < 11; i++)
+		g_current_texture_bind[i] = 0;
 
 	glDeleteProgramPipelines(1, &s_pipeline);
 }

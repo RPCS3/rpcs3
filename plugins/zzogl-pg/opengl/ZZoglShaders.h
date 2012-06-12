@@ -110,7 +110,9 @@ const ZZshParamInfo  qZero = {ShName:"", type:ZZ_UNDEFINED, fvalue:{0}, sampler:
 const ZZshShaderLink sZero = {link: NULL, isFragment: false};
 
 inline bool ZZshActiveParameter(ZZshParameter param) {return (param > -1); }
+#ifndef GLSL4_API
 #define SAFE_RELEASE_PROG(x) 	{ /*don't know what to do*/ }
+#endif
 
 // ---------------------------
 
@@ -616,7 +618,28 @@ struct VERTEXSHADER
 	bool IsDualContext(ZZshParameter param) { return false;}
 
 	void set_context(uint new_context) { context = new_context * NOCONTEXT;}
+
+	void release_prog() {
+		if(program) {
+			glDeleteProgram(program);
+			program = 0;
+		}
+	}
 };
+#endif
+
+#ifdef GLSL4_API
+#define SAFE_RELEASE_PROG(x) 	{ \
+	if ((x.link) != NULL) { \
+		if (x.isFragment) { \
+			FRAGMENTSHADER* shader = (FRAGMENTSHADER*)x.link; \
+			shader->release_prog(); \
+		} else { \
+			VERTEXSHADER* shader = (VERTEXSHADER*)x.link; \
+			shader->release_prog(); \
+		} \
+	} \
+}
 #endif
 
 	extern VERTEXSHADER pvsBitBlt;

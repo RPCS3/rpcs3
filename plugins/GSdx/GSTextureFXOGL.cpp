@@ -86,6 +86,7 @@ void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 	if(i == m_vs.end())
 	{
 		std::string macro = format("#define VS_BPPZ %d\n", sel.bppz)
+			+ format("#define VS_LOGZ %d\n", sel.logz)
 			+ format("#define VS_TME %d\n", sel.tme)
 			+ format("#define VS_FST %d\n", sel.fst)
 			+ format("#define VS_RTCOPY %d\n", sel.rtcopy);

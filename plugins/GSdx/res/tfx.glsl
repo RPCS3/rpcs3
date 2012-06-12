@@ -87,21 +87,23 @@ void vs_main()
 	// input granularity is 1/16 pixel, anything smaller than that won't step drawing up/left by one pixel
 	// example: 133.0625 (133 + 1/16) should start from line 134, ceil(133.0625 - 0.05) still above 133
 
-    // Greg TEST
-    //float logz = log2(1+float(z))/32 * 0.999f;
-	//vec4 p = vec4(i_p, logz, 0) - vec4(0.05f, 0.05f, 0, 0); 
-	
 	vec4 p = vec4(i_p, z, 0) - vec4(0.05f, 0.05f, 0, 0); 
 	vec4 final_p = p * VertexScale - VertexOffset;
     // FIXME
     // FLIP vertically
     final_p.y *= -1.0f;
 
+	if(VS_LOGZ == 1)
+	{
+		final_p.z = log2(1.0f + float(z)) / 32.0f;
+	}
+
 	VSout.p = final_p;
     gl_Position = final_p; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 #if VS_RTCOPY
 	VSout.tp = final_p * vec4(0.5, -0.5, 0, 0) + 0.5;
 #endif
+
 
 	if(VS_TME != 0)
 	{

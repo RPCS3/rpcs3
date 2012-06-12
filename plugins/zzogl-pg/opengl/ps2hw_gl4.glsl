@@ -334,7 +334,7 @@ float2 ps2addr(float2 coord)
 
 half4 tex2DPS_32(float2 tex0)
 {
-	return texture(g_sMemory, ps2memcoord(tex0).xy);
+	return texture(g_sMemory, ps2memcoord(tex0));
 }
 
 // use when texture is not tiled -- shader 1
@@ -653,7 +653,7 @@ half4 BilinearBitBlt(float2 tex0)
 }
 
 void BitBltPS() {
-	FragData0 = texture(g_sMemory, ps2memcoord(PSin.tex.xy).xy)*g_fOneColor.xxxy;
+	FragData0 = texture(g_sMemory, ps2memcoord(PSin.tex.xy))*g_fOneColor.xxxy;
 }
 
 // used when AA
@@ -719,7 +719,7 @@ void CRTCInterPS() {
 // simpler
 void CRTCInterPS_Nearest() {
 	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
-	half4 c = texture(g_sMemory, ps2memcoord(PSin.tex.xy).xy);
+	half4 c = texture(g_sMemory, ps2memcoord(PSin.tex.xy));
 	c.w = (c.w * g_fOneColor.x + g_fOneColor.y)*finter;
 	FragData0 = c;
 }
@@ -733,7 +733,7 @@ void CRTCPS() {
 
 // simpler
 void CRTCPS_Nearest() {
-	half4 c = texture(g_sMemory, ps2memcoord(PSin.tex.xy).xy);
+	half4 c = texture(g_sMemory, ps2memcoord(PSin.tex.xy));
 	c.w = c.w * g_fOneColor.x + g_fOneColor.y;
 	FragData0 = c;
 }
@@ -742,14 +742,14 @@ void CRTC24InterPS() {
 	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
 	float2 filtcoord = trunc(PSin.tex.xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
 
-	half4 c = texture(g_sMemory, ps2memcoord(filtcoord).xy);
+	half4 c = texture(g_sMemory, ps2memcoord(filtcoord));
 	c.w = (c.w * g_fOneColor.x + g_fOneColor.y)*finter;
 	FragData0 = c;
 }
 
 void CRTC24PS() {
 	float2 filtcoord = trunc(PSin.tex.xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
-	half4 c = texture(g_sMemory, ps2memcoord(filtcoord).xy);
+	half4 c = texture(g_sMemory, ps2memcoord(filtcoord));
 	c.w = c.w * g_fOneColor.x + g_fOneColor.y;
 	FragData0 = c;
 }
@@ -763,7 +763,7 @@ void ZeroDebugPS() {
 }
 
 void ZeroDebug2PS() {
-    vec2 xy = ps2memcoord(fract(PSin.tex.xy/PSin.tex.z)).xy * vec2(1/4096.0f, 1/48.0f);
+    vec2 xy = ps2memcoord(fract(PSin.tex.xy/PSin.tex.z)) * vec2(1/4096.0f, 1/48.0f);
 	FragData0 = vec4(xy.x, xy.y, 0.0, 0.5);
 }
 

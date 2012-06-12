@@ -10,6 +10,7 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 set(Output GSdx-0.1.16)
 
 set(CommonFlags
+    -DOGL_MT_HACK
     -D_LINUX
     -fno-operator-names
     -mpreferred-stack-boundary=2
@@ -48,6 +49,10 @@ endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 if(CMAKE_BUILD_TYPE STREQUAL Release)
     add_definitions(${CommonFlags} ${SDLFlags} ${OptimizationFlags} -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
+
+if(XDG_STD)
+    add_definitions(-DXDG_STD)
+endif(XDG_STD)
 
 set(GSdxSources
     GPU.cpp

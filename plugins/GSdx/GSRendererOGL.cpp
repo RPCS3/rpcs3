@@ -205,7 +205,8 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	vs_sel.tme = PRIM->TME;
 	vs_sel.fst = PRIM->FST;
-	vs_sel.logz = dev->HasDepth32() ? 0 : m_logz ? 1 : 0;
+	//vs_sel.logz = dev->HasDepth32() ? 0 : m_logz ? 1 : 0;
+	vs_sel.logz = m_logz ? 1 : 0;
 	//OGL vs_sel.rtcopy = !!rtcopy;
 	vs_sel.rtcopy = false;
 

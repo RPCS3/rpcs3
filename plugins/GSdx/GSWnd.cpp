@@ -213,7 +213,7 @@ void GSWnd::HideFrame()
 #else
 
 GSWnd::GSWnd()
-	: m_window(NULL), m_Xwindow(0), m_XDisplay(NULL)
+	: m_window(NULL), m_Xwindow(0), m_XDisplay(NULL), m_ctx_attached(false)
 {
 }
 
@@ -278,16 +278,25 @@ bool GSWnd::CreateContext(int major, int minor)
 	if (!m_context) return false;
 
 	XSync( m_XDisplay, false);
+	return true;
 }
 
 void GSWnd::AttachContext()
 {
-	glXMakeCurrent(m_XDisplay, m_Xwindow, m_context);
+	if (!IsContextAttached()) {
+		fprintf(stderr, "Attach the context\n");
+		glXMakeCurrent(m_XDisplay, m_Xwindow, m_context);
+		m_ctx_attached = true;
+	}
 }
 
 void GSWnd::DetachContext()
 {
-	glXMakeCurrent(m_XDisplay, None, NULL);
+	if (IsContextAttached()) {
+		fprintf(stderr, "Detach the context\n");
+		glXMakeCurrent(m_XDisplay, None, NULL);
+		m_ctx_attached = false;
+	}
 }
 
 void GSWnd::CheckContext()

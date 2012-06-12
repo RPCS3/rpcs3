@@ -185,7 +185,18 @@ namespace FB
 
 	static __forceinline void Create()
 	{
+		assert(buf == 0);
 		glGenFramebuffersEXT(1, &buf);
+		if (buf == 0)
+			ZZLog::Error_Log("Failed to create the renderbuffer.");
+	}
+
+	static __forceinline void Delete()
+	{
+		if (buf != 0) {
+			glDeleteFramebuffers(1, &buf);
+			buf = 0;
+		}
 	}
 	
 	static __forceinline void Bind()
