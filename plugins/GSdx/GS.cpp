@@ -1520,7 +1520,7 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 				}
 			}
 			unsigned long end = timeGetTime();
-			fprintf(stderr, "The %d frames of the scene was render on %dms\n", frame_number, end - start);
+			fprintf(stderr, "The %ld frames of the scene was render on %ldms\n", frame_number, end - start);
 			fprintf(stderr, "A means of %fms by frame\n", (float)(end - start)/(float)frame_number);
 
 			sleep(1);

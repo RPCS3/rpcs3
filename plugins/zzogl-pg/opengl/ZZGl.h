@@ -194,7 +194,7 @@ namespace FB
 	static __forceinline void Delete()
 	{
 		if (buf != 0) {
-			glDeleteFramebuffers(1, &buf);
+			glDeleteFramebuffersEXT(1, &buf);
 			buf = 0;
 		}
 	}

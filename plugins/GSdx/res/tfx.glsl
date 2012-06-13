@@ -5,10 +5,7 @@
 #define FMT_32 0
 #define FMT_24 1
 #define FMT_16 2
-#define FMT_8H 3
-#define FMT_4HL 4
-#define FMT_4HH 5
-#define FMT_8 6
+#define FMT_PAL 4 /* flag bit */
 
 #ifndef VS_BPPZ
 #define VS_BPPZ 0
@@ -25,7 +22,7 @@
 #define PS_FST 0
 #define PS_WMS 0
 #define PS_WMT 0
-#define PS_FMT FMT_8
+#define PS_FMT FMT_32
 #define PS_AEM 0
 #define PS_TFX 0
 #define PS_TCC 1
@@ -431,27 +428,19 @@ vec4 sample_color(vec2 st, float q)
 
 		mat4 c;
 
-		if(PS_FMT == FMT_8H)
-		{
+		if(PS_FMT & FMT_PAL)
 			c = sample_4p(sample_4a(uv));
-		}
-		else if(PS_FMT == FMT_4HL)
-		{
-            // FIXME mod and fmod are different when value are negative
-			c = sample_4p(mod(sample_4a(uv), 1.0f / 16));
-		}
-		else if(PS_FMT == FMT_4HH)
-		{
-            // FIXME mod and fmod are different when value are negative
-			c = sample_4p(mod(sample_4a(uv) * 16, 1.0f / 16));
-		}
-		else if(PS_FMT == FMT_8)
-		{
-			c = sample_4p(sample_4a(uv));
-		}
 		else
-		{
 			c = sample_4c(uv);
+
+		// PERF: see the impact of the exansion before/after the interpolation
+		for (uint i = 0; i < 4; i++) {
+			if((PS_FMT & ~FMT_PAL) == FMT_16)
+			{
+				// FIXME GLSL any only support bvec so try to mix it with notEqual
+				bvec3 rgb_check = notEqual( t.rgb, vec3(0.0f, 0.0f, 0.0f) );
+				t.a = t.a >= 0.5 ? TA.y : ( (PS_AEM == 0) || any(rgb_check) ) ? TA.x : 0.0f; 
+			}
 		}
 
 		if(PS_LTF != 0)
@@ -464,11 +453,7 @@ vec4 sample_color(vec2 st, float q)
 		}
 	}
 	
-	if(PS_FMT == FMT_32)
-	{
-        ;
-	}
-	else if(PS_FMT == FMT_24)
+	if(PS_FMT == FMT_24)
 	{
         // FIXME GLSL any only support bvec so try to mix it with notEqual
         bvec3 rgb_check = notEqual( t.rgb, vec3(0.0f, 0.0f, 0.0f) );

@@ -341,14 +341,20 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	if(tex)
 	{
+		const GSLocalMemory::psm_t &psm = GSLocalMemory::m_psm[context->TEX0.PSM];
+
 		ps_sel.wms = context->CLAMP.WMS;
 		ps_sel.wmt = context->CLAMP.WMT;
-		ps_sel.fmt = tex->m_fmt;
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
 		ps_sel.ltf = m_filter == 2 ? m_vt.IsLinear() : m_filter;
 		ps_sel.rt = tex->m_target;
+		if (tex->m_palette) {
+			const GSLocalMemory::psm_t &cpsm = GSLocalMemory::m_psm[context->TEX0.CPSM];
+			ps_sel.fmt = cpsm.fmt | 4;
+		} else
+			ps_sel.fmt = psm.fmt;
 
 		int w = tex->m_texture->GetWidth();
 		int h = tex->m_texture->GetHeight();
