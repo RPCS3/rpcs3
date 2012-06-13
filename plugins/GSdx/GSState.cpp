@@ -120,6 +120,7 @@ GSState::GSState()
 	s_saven = theApp.GetConfig("saven", 0);
 
 	userHacks_AggressiveCRC = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_AggressiveCRC", 0) : 0;
+	userHacks_DisableCrcHacks = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig( "UserHacks_DisableCrcHacks", 0 ) : 0;
 }
 
 GSState::~GSState()
@@ -5319,7 +5320,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 #ifdef ENABLE_DYNAMIC_CRC_HACK
 	bool res=false; if(IsInvokedDynamicCrcHack(fi, skip, g_crc_region, res, m_crc)){ if( !res ) return false;	} else
 #endif
-	if(gsc && !gsc(fi, skip))
+	if(gsc && !userHacks_DisableCrcHacks && !gsc(fi, skip))
 	{
 		return false;
 	}

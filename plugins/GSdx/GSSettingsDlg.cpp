@@ -423,6 +423,7 @@ void GSHacksDlg::OnInit()
 	CheckDlgButton(m_hWnd, IDC_SPRITEHACK, theApp.GetConfig("UserHacks_SpriteHack", 0));
 	CheckDlgButton(m_hWnd, IDC_WILDHACK, theApp.GetConfig("UserHacks_WildHack", 0));
 	CheckDlgButton(m_hWnd, IDC_AGGRESSIVECRC, theApp.GetConfig("UserHacks_AggressiveCRC", 0));
+	CheckDlgButton(m_hWnd, IDC_CHECK_DISABLE_ALL_HACKS, theApp.GetConfig("UserHacks_DisableCrcHacks", 0));
 
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETRANGE, 0, MAKELPARAM(1000, 0));
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("UserHacks_SkipDraw", 0), 0));
@@ -489,6 +490,14 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 						  "Only affects few games, removing some effects which might make the image sharper/clearer.\n"
 						  "Affected games: FFX, FFX2, FFXII, GOW2, ICO, SoTC, SSX3.";
 				break;
+			case IDC_CHECK_DISABLE_ALL_HACKS:
+				helpstr = "FOR TESTING ONLY!!\n\n"
+						  "Disable all CRC hacks - will break many games. Overrides CrcHacksExclusion at gsdx.ini\n"
+						  "\n"
+						  "It's possible to exclude CRC hacks also via the gsdx.ini. E.g.:\n"
+						  "CrcHacksExclusions=all\n"
+						  "CrcHacksExclusions=0x0F0C4A9C, 0x0EE5646B, 0x7ACF7E03";
+				break;
 			default:
 				helpstr = "Hover over an item to get a description.";
 				break;
@@ -513,6 +522,7 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 			theApp.SetConfig("UserHacks_SkipDraw", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_GETPOS, 0, 0));
 			theApp.SetConfig("UserHacks_WildHack", (int)IsDlgButtonChecked(m_hWnd, IDC_WILDHACK));
 			theApp.SetConfig("UserHacks_AggressiveCRC", (int)IsDlgButtonChecked(m_hWnd, IDC_AGGRESSIVECRC));
+			theApp.SetConfig("UserHacks_DisableCrcHacks", (int)IsDlgButtonChecked(m_hWnd, IDC_CHECK_DISABLE_ALL_HACKS));
 			EndDialog(m_hWnd, id);
 		} break;
 		}

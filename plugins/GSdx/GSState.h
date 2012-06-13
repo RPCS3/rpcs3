@@ -139,6 +139,7 @@ class GSState : public GSAlignedClass<32>
 protected:
 	bool IsBadFrame(int& skip, int UserHacks_SkipDraw);
 	int userHacks_AggressiveCRC;
+	int userHacks_DisableCrcHacks;
 
 	GSVertex m_v;
 	float m_q;
