@@ -452,7 +452,10 @@ void GSTextureCache::InvalidateLocalMem(GSOffset* o, const GSVector4i& r)
 				// note: r.rintersect breaks Wizardry and Chaos Legion
 				// Read(t, t->m_valid) works in all tested games but is very slow in GUST titles ><
 				if (r.x == 0 && r.y == 0) // Full screen read?
+				{
 					Read(t, t->m_valid);
+					t->m_valid = GSVector4i::zero();
+				}
 				else // Block level read?
 					Read(t, r.rintersect(t->m_valid));
 			}
@@ -771,7 +774,10 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	else
 	{
 		if (dst)
+		{
 			Read(dst, dst->m_valid);
+			dst->m_valid = GSVector4i::zero();
+		}
 		if (m_paltex && psm.pal > 0)
 		{
 			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th, Get8bitFormat());
