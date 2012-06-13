@@ -356,23 +356,25 @@ float4 sample(float2 st, float q)
 	{
 		st /= q;
 	}
-	
+
 	float4 t;
+	float4x4 c;
+	float2 dd;
+
 /*	
 	if(PS_FMT <= FMT_16 && PS_WMS < 2 && PS_WMT < 2)
 	{
-		t = sample_c(st);
+		c[0] = sample_c(st);
 	}
 */
 	if(PS_FMT <= FMT_16 && PS_WMS < 3 && PS_WMT < 3)
 	{
-		t = sample_c(clampuv(st));
+		c[0] = sample_c(clampuv(st));
 	}
 	else
 	{
 		float4 uv;
-		float2 dd;
-		
+
 		if(PS_LTF)
 		{
 			uv = st.xyxy + HalfTexel;
@@ -382,10 +384,8 @@ float4 sample(float2 st, float q)
 		{
 			uv = st.xyxy;
 		}
-		
-		uv = wrapuv(uv);
 
-		float4x4 c;
+		uv = wrapuv(uv);
 
 		if(PS_FMT & FMT_PAL)
 		{
@@ -395,33 +395,34 @@ float4 sample(float2 st, float q)
 		{
 			c = sample_4c(uv);
 		}
+	}
 
-		for (uint i = 0; i < 4; i++)
+	[unroll]
+	for (uint i = 0; i < 4; i++)
+	{
+		if((PS_FMT & ~FMT_PAL) == FMT_32)
 		{
-			if((PS_FMT & ~FMT_PAL) == FMT_32)
-			{
-				#if SHADER_MODEL <= 0x300
-				if(PS_RT) c[i].a *= 128.0f / 255;
-				#endif
-			}
-			else if((PS_FMT & ~FMT_PAL) == FMT_24)
-			{
-				c[i].a = !PS_AEM || any(c[i].rgb) ? TA.x : 0;
-			}
-			else if((PS_FMT & ~FMT_PAL) == FMT_16)
-			{
-				c[i].a = c[i].a >= 0.5 ? TA.y : !PS_AEM || any(c[i].rgb) ? TA.x : 0; 
-			}
+			#if SHADER_MODEL <= 0x300
+			if(PS_RT) c[i].a *= 128.0f / 255;
+			#endif
 		}
-	
-		if(PS_LTF)
-		{	
-			t = lerp(lerp(c[0], c[1], dd.x), lerp(c[2], c[3], dd.x), dd.y);
-		}
-		else
+		else if((PS_FMT & ~FMT_PAL) == FMT_24)
 		{
-			t = c[0];
+			c[i].a = !PS_AEM || any(c[i].rgb) ? TA.x : 0;
 		}
+		else if((PS_FMT & ~FMT_PAL) == FMT_16)
+		{
+			c[i].a = c[i].a >= 0.5 ? TA.y : !PS_AEM || any(c[i].rgb) ? TA.x : 0; 
+		}
+	}
+
+	if(PS_LTF)
+	{	
+		t = lerp(lerp(c[0], c[1], dd.x), lerp(c[2], c[3], dd.x), dd.y);
+	}
+	else
+	{
+		t = c[0];
 	}
 
 	return t;
