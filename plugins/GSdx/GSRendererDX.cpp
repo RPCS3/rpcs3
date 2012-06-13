@@ -276,7 +276,7 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 	if(tex)
 	{
 		const GSLocalMemory::psm_t &psm = GSLocalMemory::m_psm[context->TEX0.PSM];
-		bool bilinear = m_filter == 2 ? m_vt.IsLinear() : m_filter;
+		bool bilinear = m_filter == 2 ? m_vt.IsLinear() : (bool)m_filter;
 
 		ps_sel.wms = context->CLAMP.WMS;
 		ps_sel.wmt = context->CLAMP.WMT;
@@ -285,6 +285,8 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 			const GSLocalMemory::psm_t &cpsm = GSLocalMemory::m_psm[context->TEX0.CPSM];
 			ps_sel.fmt = cpsm.fmt | 4;
 		}
+		else if (psm.pal > 0)
+			ps_sel.fmt = 0;
 		else
 			ps_sel.fmt = psm.fmt;
 		ps_sel.aem = env.TEXA.AEM;

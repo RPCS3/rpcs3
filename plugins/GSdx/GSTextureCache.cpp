@@ -56,6 +56,7 @@ void GSTextureCache::RemoveAll()
 GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA, const GSVector4i& r)
 {
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
+	const GSLocalMemory::psm_t& cpsm = psm.pal > 0 ? GSLocalMemory::m_psm[TEX0.CPSM] : psm;
 	const uint32* clut = m_renderer->m_mem.m_clut;
 
 	Source* src = NULL;
@@ -71,7 +72,7 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 			continue;
 		}
 
-		if((psm.trbpp == 16 || psm.trbpp == 24) && TEX0.TCC && TEXA != s->m_TEXA)
+		if(!m_paltex && TEX0.TCC && cpsm.fmt > 0 && TEXA != s->m_TEXA)
 		{
 			continue;
 		}
@@ -582,6 +583,9 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 	bool hack = false;
 
+	if (dst)
+		dst->Update();
+
 	if(m_spritehack && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT8H)) 
 	{
 		src->m_spritehack_t = true;
@@ -599,8 +603,6 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		// TODO: clean up this mess
 
 		src->m_target = true;
-
-		dst->Update();
 
 		GSTexture* tmp = NULL;
 
