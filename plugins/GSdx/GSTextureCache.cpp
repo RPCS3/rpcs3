@@ -452,10 +452,7 @@ void GSTextureCache::InvalidateLocalMem(GSOffset* o, const GSVector4i& r)
 				// note: r.rintersect breaks Wizardry and Chaos Legion
 				// Read(t, t->m_valid) works in all tested games but is very slow in GUST titles ><
 				if (r.x == 0 && r.y == 0) // Full screen read?
-				{
 					Read(t, t->m_valid);
-					t->m_valid = GSVector4i::zero();
-				}
 				else // Block level read?
 					Read(t, r.rintersect(t->m_valid));
 			}
@@ -586,9 +583,6 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 
 	bool hack = false;
 
-	if (dst)
-		dst->Update();
-
 	if(m_spritehack && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT8H)) 
 	{
 		src->m_spritehack_t = true;
@@ -599,13 +593,20 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	else
 		src->m_spritehack_t = false;
 
-	if (dst && dst->m_type == RenderTarget
-	    && (dst->m_TEX0.PSM == TEX0.PSM || dst->m_TEX0.PSM == PSM_PSMCT32 && TEX0.PSM == PSM_PSMCT24
-	        || m_paltex && dst->m_TEX0.PSM == PSM_PSMCT32 && TEX0.PSM == PSM_PSMT8H))
+	if (dst)
 	{
 		// TODO: clean up this mess
 
 		src->m_target = true;
+
+		if(dst->m_type != RenderTarget)
+		{
+			// TODO
+			delete src;
+			return NULL;
+		}
+
+		dst->Update();
 
 		GSTexture* tmp = NULL;
 
@@ -773,11 +774,6 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	}
 	else
 	{
-		if (dst)
-		{
-			Read(dst, dst->m_valid);
-			dst->m_valid = GSVector4i::zero();
-		}
 		if (m_paltex && psm.pal > 0)
 		{
 			src->m_texture = m_renderer->m_dev->CreateTexture(tw, th, Get8bitFormat());
