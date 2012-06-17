@@ -1011,6 +1011,11 @@ void GSTextureCache::Source::Write(const GSVector4i& r)
 
 void GSTextureCache::Source::Flush(uint32 count)
 {
+	// This function as written will not work for paletted formats copied from framebuffers
+	// because they are 8 or 4 bit formats on the GS and the GS local memory module reads
+	// these into an 8 bit format while the D3D surfaces are 32 bit.
+	// However the function is never called for these cases.  This is just for information
+	// should someone wish to use this function for these cases later.
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[m_TEX0.PSM];
 
 	int tw = 1 << m_TEX0.TW;
