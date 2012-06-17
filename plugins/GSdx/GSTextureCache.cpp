@@ -705,14 +705,9 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 		GSVector4 sr(0, 0, w, h);
 
 		GSTexture* st = src->m_texture ? src->m_texture : dst->m_texture;
-		GSTexture *dt;
+		GSTexture *dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
 		if (m_paltex && psm.pal > 0)
-		{
-			dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
 			src->m_palette = m_renderer->m_dev->CreateTexture(256, 1);
-		}
-		else
-			dt = m_renderer->m_dev->CreateRenderTarget(w, h, false);
 
 		if(!src->m_texture)
 		{
