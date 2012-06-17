@@ -196,7 +196,7 @@ float4 sample_c(float2 uv)
 
 float4 sample_p(float u)
 {
-	return tex2D(Palette, u * 255./256 + 0.5/256);
+	return tex2D(Palette, u);
 }
 
 float4 sample_rt(float2 uv)
