@@ -657,7 +657,7 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	float4 valpha = RenderGetForClip(texframe.psm, CRTC_RENDER);
 
 	ZZshGLSetTextureParameter(curr_ppsCRTC()->prog, curr_ppsCRTC()->sMemory, vb[0].pmemtarg->ptex->tex, "CRTC memory");
-	RenderCreateInterlaceTex(texframe.th, CRTC_RENDER_TARG);
+	RenderCreateInterlaceTex(texframe.th, CRTC_RENDER);
 	ZZshSetPixelShader(curr_ppsCRTC()->prog);
 	
 	DrawTriangleArray();
