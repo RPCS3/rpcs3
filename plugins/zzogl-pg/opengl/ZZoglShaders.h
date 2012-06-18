@@ -353,11 +353,21 @@ struct SamplerParam {
 		assert(unit >= 0);
 		assert(unit < 11);
 		if (texid) {
+			// Unfortunately there is a nastly corner case
+			// 1/ Attach a texture to the unit
+			// 2/ delete the texture
+			// 3/ recreate a texture (with same id)
+			// 4/ => texture need to be reattached again...
+#if 0
 			if (g_current_texture_bind[unit] != texid) {
 				glActiveTexture(GL_TEXTURE0 + unit);
 				glBindTexture(target, texid);
 				g_current_texture_bind[unit] = texid;
 			}
+#else
+			glActiveTexture(GL_TEXTURE0 + unit);
+			glBindTexture(target, texid);
+#endif
 		}
 	}
 
