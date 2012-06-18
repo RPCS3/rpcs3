@@ -2106,7 +2106,7 @@ msgid ""
 "( '.ps2' will be added automatically)"
 msgstr ""
 "Pilih sebuah nama untuk duplikat\n"
-"\v('.ps2' akan otomatis ditambah)"
+"('.ps2' akan otomatis ditambah)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:782
 #, c-format
@@ -2133,7 +2133,7 @@ msgid ""
 "( '.ps2' will be added automatically)"
 msgstr ""
 "Pilih sebuah nama untnuk memory card '%s'\n"
-"\v('.ps2' akan otomatis ditambah)"
+"('.ps2' akan otomatis ditambah)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:844
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:856

@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-05-07 17:46+0200\n"
-"PO-Revision-Date: 2011-10-05 21:01+0100\n"
+"POT-Creation-Date: 2012-06-18 20:23+0200\n"
+"PO-Revision-Date: 2012-06-06 19:17+0100\n"
 "Last-Translator: Leucos\n"
 "Language-Team: \n"
 "Language: \n"
@@ -14,7 +14,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-KeywordsList: _;pxL;_d;pxDt;_t;pxLt\n"
 "X-Poedit-SourceCharset: utf-8\n"
-"X-Poedit-Basepath: trunk\\\n"
+"X-Poedit-Basepath: ..\\..\\..\\PCSX2 Checkout\n"
 "X-Poedit-Language: Italian\n"
 "X-Poedit-Country: ITALY\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
@@ -752,8 +752,8 @@ msgid ""
 "Classic black color scheme for people who enjoy having text seared into "
 "their optic nerves."
 msgstr ""
-"Schema di colore nero classico, per la gente che si diverte ad avere il "
-"testo marchiato a fuoco nei propri nervi ottici."
+"Schema classico a colore nero, per la gente che si diverte ad avere il testo "
+"marchiato a fuoco nei propri nervi ottici."
 
 #: pcsx2/gui/ConsoleLogger.cpp:424
 msgid "Dark theme"
@@ -975,7 +975,7 @@ msgstr "Utilizza la compressione NTFS per la creazione di questa Memory Card."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:195
 msgid "8 MB [most compatible]"
-msgstr "8 MiB [la più compatibile]"
+msgstr "8 MB [la più compatibile]"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:195
 msgid ""
@@ -995,7 +995,7 @@ msgstr ""
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:199
 msgid "16 MB"
-msgstr "16 MiB"
+msgstr "16 MB"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:199
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:203
@@ -1009,16 +1009,16 @@ msgstr ""
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
 msgid "16 and 32 MB cards have roughly the same compatibility factor."
 msgstr ""
-"Le memory card da 16 e 32 MiB hanno grosso modo lo stesso fattore di "
+"Le memory card da 16 e 32 MB hanno grosso modo lo stesso fattore di "
 "compatibilità."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:203
 msgid "32 MB"
-msgstr "32 MiB"
+msgstr "32 MB"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:207
 msgid "64 MB"
-msgstr "64 MiB"
+msgstr "64 MB"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:207
 msgid ""
@@ -1061,7 +1061,7 @@ msgstr ""
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:90
 msgid "Welcome to PCSX2!"
-msgstr "Benvenuti in PCSX2!"
+msgstr "Benvenuto in PCSX2!"
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:104
 msgid "Configuration Guides (online)"
@@ -1109,8 +1109,7 @@ msgstr "Gestore Memory Card"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:112
 msgid "Drag cards to or from PS2-ports"
-msgstr ""
-"Puoi trascinare le memory card da e sulle porte PS2 per inserirle/espellerle."
+msgstr "Trascina le memory card da e sulle porte PS2 per inserirle/espellerle."
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:113
 msgid ""
@@ -1743,7 +1742,7 @@ msgid ""
 "Click the Browse button to select a different folder where PCSX2 will look "
 "for PS2 BIOS roms."
 msgstr ""
-"Fai clic il pulsante Sfoglia per selezionare la cartella dove PCSX2 cercherà "
+"Fai clic il pulsante Sfoglia per scegliere la cartella dove PCSX2 cercherà "
 "le ROM del BIOS PS2."
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:113
@@ -1778,7 +1777,7 @@ msgstr "Positivo"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:32
 msgid "Chop / Zero"
-msgstr "Taglia / Zero"
+msgstr "Tronca / Zero"
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:37
 msgid "None"
@@ -2399,8 +2398,8 @@ msgstr "Configura..."
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:379
 msgid "Click the Browse button to select a different folder for PCSX2 plugins."
 msgstr ""
-"Fai clic sul pulsante Sfoglia per selezionare una cartella differente "
-"contenente i plugin di PCSX2."
+"Fai clic sul pulsante Sfoglia per scegliere la cartella che contiene i "
+"plugin di PCSX2."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:481
 #, c-format
@@ -2496,7 +2495,7 @@ msgstr ""
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:188
 msgid "Enable Wait Loop Detection"
-msgstr "Attiva rilevamento ciclo d'inattività (Wait Loop Detection)"
+msgstr "Attiva rilevamento ciclo d'attesa (Wait Loop Detection)"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:189
 msgid ""
@@ -2527,8 +2526,8 @@ msgid ""
 "Click the Browse button to select a different folder containing PCSX2 visual "
 "themes."
 msgstr ""
-"Fai clic sul pulsante Sfoglia per selezionare una cartella diversa "
-"contenente i Temi di PCSX2."
+"Fai clic sul pulsante Sfoglia per scegliere la cartella che contiente i Temi "
+"di PCSX2."
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:49
 msgid "Select a visual theme:"
@@ -2638,18 +2637,16 @@ msgid "Framelimiter"
 msgstr "Limitatore Fotogrammi"
 
 #: pcsx2/gui/SysState.cpp:283
-#, fuzzy
 msgid "Cannot load this savestate.  The state is an unsupported version."
 msgstr ""
-"Impossibile caricare il salvataggio di stato. Appartiene ad una versione "
-"sconosciuta o non supportata."
+"Impossibile caricare questo salvataggio di stato. Appartiene ad una versione "
+"non supportata."
 
 #: pcsx2/gui/SysState.cpp:290
-#, fuzzy
 msgid "Cannot load this savestate. The state is an unsupported version."
 msgstr ""
-"Impossibile caricare il salvataggio di stato. Appartiene ad una versione "
-"sconosciuta o non supportata."
+"Impossibile caricare questo salvataggio di stato. Appartiene ad una versione "
+"non supportata."
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
