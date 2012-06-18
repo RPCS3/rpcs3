@@ -27,12 +27,15 @@ using namespace std;
 #include "GS.h"
 #include "GifTransfer.h"
 #include "null/GSnull.h"
+#ifdef _MSC_VER
+#	include "svnrev.h"
+#endif
 
 const unsigned char version  = PS2E_GS_VERSION;
 const unsigned char revision = 0;
 const unsigned char build    = 1;    // increase that with each version
 
-static char *libraryName = "GSnull Driver";
+static char libraryName[256];
 Config conf;
 u32 GSKeyEvent = 0;
 bool GSShift = false, GSAlt = false;
@@ -60,7 +63,12 @@ EXPORT_C_(u32) PS2EgetLibType()
 
 EXPORT_C_(char*) PS2EgetLibName()
 {
-	return libraryName;
+#ifdef _MSC_VER
+	sprintf_s( libraryName, "GSnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
+	return libraryName;	
+#elif
+	return "GSnull Driver";
+#endif
 }
 
 EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)

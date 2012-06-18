@@ -31,12 +31,15 @@
 using namespace std;
 
 #include "DEV9.h"
+#ifdef _MSC_VER
+#	include "svnrev.h"
+#endif
 
 const unsigned char version  = PS2E_DEV9_VERSION;
 const unsigned char revision = 0;
 const unsigned char build = 5;    // increase that with each version
 
-const char *libraryName = "DEV9null Driver";
+static char libraryName[256];
 
 // Our IRQ call.
 void (*DEV9irq)(int);
@@ -73,7 +76,12 @@ EXPORT_C_(u32) PS2EgetLibType()
 
 EXPORT_C_(char*) PS2EgetLibName()
 {
-	return (char *)libraryName;
+#ifdef _MSC_VER
+	sprintf_s( libraryName, "DEV9null Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
+	return libraryName;	
+#elif
+	return "DEV9null Driver";
+#endif
 }
 
 EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
