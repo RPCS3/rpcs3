@@ -420,7 +420,6 @@ void GSHacksDlg::OnInit()
 
 	CheckDlgButton(m_hWnd, IDC_ALPHAHACK, theApp.GetConfig("UserHacks_AlphaHack", 0));
 	CheckDlgButton(m_hWnd, IDC_OFFSETHACK, theApp.GetConfig("UserHacks_HalfPixelOffset", 0));
-	CheckDlgButton(m_hWnd, IDC_SPRITEHACK, theApp.GetConfig("UserHacks_SpriteHack", 0));
 	CheckDlgButton(m_hWnd, IDC_WILDHACK, theApp.GetConfig("UserHacks_WildHack", 0));
 	CheckDlgButton(m_hWnd, IDC_AGGRESSIVECRC, theApp.GetConfig("UserHacks_AggressiveCRC", 0));
 	CheckDlgButton(m_hWnd, IDC_CHECK_DISABLE_ALL_HACKS, theApp.GetConfig("UserHacks_DisableCrcHacks", 0));
@@ -470,11 +469,6 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 			case IDC_OFFSETHACK:
 				helpstr = "Halfpixel\n\nMight fix some misaligned fog, bloom, or blend effect.";
 				break;
-			case IDC_SPRITEHACK:
-				helpstr = "Sprite Hack\n\nHelps getting rid of black inner lines in some filtered sprites."
-						  " Half option is the preferred one. Use it for Mana Khemia or ArTonelico for example."
-						  " Full can be used for Tales of Destiny.";
-				break;
 			case IDC_WILDHACK:
 				helpstr = "WildArms\n\nLowers the GS precision to avoid gaps between pixels when"
 						  " upscaling. Full option fixes the text on WildArms games, while Half option might improve portraits"
@@ -518,7 +512,6 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 			theApp.SetConfig("UserHacks_MSAA", cb2msaa[(int)SendMessage(GetDlgItem(m_hWnd, IDC_MSAACB), CB_GETCURSEL, 0, 0)]);
 			theApp.SetConfig("UserHacks_AlphaHack", (int)IsDlgButtonChecked(m_hWnd, IDC_ALPHAHACK));
 			theApp.SetConfig("UserHacks_HalfPixelOffset", (int)IsDlgButtonChecked(m_hWnd, IDC_OFFSETHACK));
-			theApp.SetConfig("UserHacks_SpriteHack", (int)IsDlgButtonChecked(m_hWnd, IDC_SPRITEHACK));
 			theApp.SetConfig("UserHacks_SkipDraw", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_GETPOS, 0, 0));
 			theApp.SetConfig("UserHacks_WildHack", (int)IsDlgButtonChecked(m_hWnd, IDC_WILDHACK));
 			theApp.SetConfig("UserHacks_AggressiveCRC", (int)IsDlgButtonChecked(m_hWnd, IDC_AGGRESSIVECRC));

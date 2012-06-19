@@ -75,7 +75,6 @@
 #define IDC_SKIPDRAWHACKEDIT            2048
 #define IDC_STATIC10                    2049
 #define IDC_HACKDISABLED                2050
-#define IDC_SPRITEHACK                  2051
 #define IDRESET                         2052
 #define IDC_SATURATION_SLIDER           2053
 #define IDC_BRIGHTNESS_SLIDER           2055
