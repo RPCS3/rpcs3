@@ -745,7 +745,12 @@ EXPORT_C_(int) GSsetupRecording(int start, void* data)
 
 EXPORT_C GSsetGameCRC(uint32 crc, int options)
 {
-	s_gs->SetGameCRC(crc, options);
+	int userHacks_DisableCrcHacks1 = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig( "UserHacks_DisableCrcHacks", 0 ) : 0;
+	
+	if (!userHacks_DisableCrcHacks1)
+		s_gs->SetGameCRC(crc, options);
+	else 
+		s_gs->SetGameCRC(0, options);
 }
 
 EXPORT_C GSgetLastTag(uint32* tag)
