@@ -62,6 +62,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				AdditionalDependencies="ksuser.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -127,6 +128,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				AdditionalDependencies="ksuser.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -194,6 +196,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				AdditionalDependencies="ksuser.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -259,6 +262,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				AdditionalDependencies="ksuser.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -325,6 +329,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
+				AdditionalDependencies="ksuser.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
