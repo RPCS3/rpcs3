@@ -57,6 +57,14 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 {
 	const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[TEX0.PSM];
 	const GSLocalMemory::psm_t& cpsm = psm.pal > 0 ? GSLocalMemory::m_psm[TEX0.CPSM] : psm;
+
+	GIFRegTEXA plainTEXA;
+
+	plainTEXA.AEM = 1;
+	plainTEXA.TA0 = 0;
+	plainTEXA.TA1 = 0x80;
+	m_renderer->m_mem.m_clut.Read32(TEX0, plainTEXA);
+
 	const uint32* clut = m_renderer->m_mem.m_clut;
 
 	Source* src = NULL;
@@ -1036,6 +1044,8 @@ void GSTextureCache::Source::Flush(uint32 count)
 		pitch >>= 2;
 		rtx = psm.rtxP;
 	}
+	else if (psm.pal > 0)
+		m_renderer->m_mem.m_clut.Read32(m_TEX0, m_TEXA);
 
 	uint8* buff = m_temp;
 
