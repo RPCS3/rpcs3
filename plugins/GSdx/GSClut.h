@@ -101,7 +101,6 @@ public:
 	void Write(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT);
 	void Read(const GIFRegTEX0& TEX0);
 	void Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA);
-	void GetAlphaMinMax32(int& amin, int& amax);
 
 	uint32 operator [] (size_t i) const {return m_buff32[i];}
 
