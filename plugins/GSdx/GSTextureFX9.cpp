@@ -135,7 +135,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 
 	if(i == m_ps.end())
 	{
-		string str[14];
+		string str[15];
 
 		str[0] = format("%d", sel.fst);
 		str[1] = format("%d", sel.wms);
@@ -151,6 +151,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 		str[11] = format("%d", sel.ltf);
 		str[12] = format("%d", sel.colclip);
 		str[13] = format("%d", sel.date);
+		str[14] = format("%d", sel.spritehack);
 
 		D3DXMACRO macro[] =
 		{
@@ -168,6 +169,7 @@ void GSDevice9::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSel
 			{"PS_LTF", str[11].c_str()},
 			{"PS_COLCLIP", str[12].c_str()},
 			{"PS_DATE", str[13].c_str()},
+			{"PS_SPRITEHACK", str[14].c_str()},
 			{NULL, NULL},
 		};
 

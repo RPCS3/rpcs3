@@ -33,6 +33,7 @@
 #define PS_LTF 1
 #define PS_COLCLIP 0
 #define PS_DATE 0
+#define PS_SPRITEHACK 0
 #endif
 
 struct VS_INPUT
@@ -504,7 +505,9 @@ void atst(float4 c)
 	}
 	else if(PS_ATST == 2) // l
 	{
+		#if PS_SPRITEHACK == 0
 		clip(AREF - a);
+		#endif				
 	}
 	else if(PS_ATST == 3) // le
 	{

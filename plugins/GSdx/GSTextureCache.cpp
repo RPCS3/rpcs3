@@ -25,6 +25,7 @@
 GSTextureCache::GSTextureCache(GSRenderer* r)
 	: m_renderer(r)
 {
+	m_spritehack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_SpriteHack", 0) : 0;
 	
 	UserHacks_HalfPixelOffset = !!theApp.GetConfig("UserHacks", 0) && !!theApp.GetConfig("UserHacks_HalfPixelOffset", 0);
 
@@ -589,6 +590,16 @@ GSTextureCache::Source* GSTextureCache::CreateSource(const GIFRegTEX0& TEX0, con
 	int tp = TEX0.TBW << 6;
 
 	bool hack = false;
+
+	if(m_spritehack && (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT8H)) 
+	{
+		src->m_spritehack_t = true;
+		
+		if(m_spritehack == 2 && TEX0.CPSM != PSM_PSMCT16) 
+			src->m_spritehack_t = false;		
+	}			
+	else
+		src->m_spritehack_t = false;
 
 	if (dst)
 	{
