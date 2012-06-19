@@ -2654,10 +2654,7 @@ void GSState::GetAlphaMinMax()
 
 	if(PRIM->TME && context->TEX0.TCC)
 	{
-		const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[context->TEX0.PSM];
-		const GSLocalMemory::psm_t& cpsm = psm.pal > 0 ? GSLocalMemory::m_psm[context->TEX0.CPSM] : psm;
-
-		switch(cpsm.fmt)
+		switch(GSLocalMemory::m_psm[context->TEX0.PSM].fmt)
 		{
 		case 0:
 			a.y = 0;
@@ -2670,6 +2667,10 @@ void GSState::GetAlphaMinMax()
 		case 2:
 			a.y = env.TEXA.AEM ? 0 : min(env.TEXA.TA0, env.TEXA.TA1);
 			a.w = max(env.TEXA.TA0, env.TEXA.TA1);
+			break;
+		case 3:
+			m_mem.m_clut.Read32(context->TEX0, env.TEXA);
+			m_mem.m_clut.GetAlphaMinMax32(a.y, a.w);
 			break;
 		default:
 			__assume(0);
