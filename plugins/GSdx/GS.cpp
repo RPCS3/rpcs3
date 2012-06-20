@@ -750,7 +750,7 @@ EXPORT_C GSsetGameCRC(uint32 crc, int options)
 	if (!userHacks_DisableCrcHacks1)
 		s_gs->SetGameCRC(crc, options);
 	else 
-		s_gs->SetGameCRC(0, options);
+		s_gs->SetGameCRC(0xfffffffe, options);
 }
 
 EXPORT_C GSgetLastTag(uint32* tag)
