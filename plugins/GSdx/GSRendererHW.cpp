@@ -173,11 +173,7 @@ void GSRendererHW::Draw()
 {
 	if(m_dev->IsLost()) return;
 
-	#ifndef DISABLE_CRC_HACKS
-	
 	if(GSRenderer::IsBadFrame(m_skip, m_userhacks_skipdraw)) return;
-
-	#endif
 
 	GSDrawingEnvironment& env = m_env;
 	GSDrawingContext* context = m_context;
@@ -258,7 +254,7 @@ void GSRendererHW::Draw()
 		s_n++;
 	}
 
-	if(m_hacks.m_oi && !(this->*m_hacks.m_oi)(rt->m_texture, ds->m_texture, tex))
+	if(!userHacks_DisableCrcHacks && m_hacks.m_oi && !(this->*m_hacks.m_oi)(rt->m_texture, ds->m_texture, tex))
 	{
 		return;
 	}

@@ -545,13 +545,13 @@ CRC::Game CRC::Lookup(uint32 crc)
 		if(crcDups)
 			printf("[FIXME] GSdx: Duplicate CRC: Overall: %d\n", crcDups);
 	}
-#ifndef DISABLE_CRC_HACKS
+
 	hash_map<uint32, Game*>::iterator i = m_map.find(crc);
 
 	if(i != m_map.end())
 	{
 		return *i->second;
 	}
-#endif
+
 	return m_games[0];
 }

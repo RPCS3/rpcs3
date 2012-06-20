@@ -32,12 +32,6 @@
 
 //#define DISABLE_HW_TEXTURE_CACHE // Slow but fixes a lot of bugs
 
-//#define DISABLE_CRC_HACKS // Disable all game specific hacks
-
-#if defined(DISABLE_HW_TEXTURE_CACHE) && !defined(DISABLE_CRC_HACKS)
-	#define DISABLE_CRC_HACKS
-#endif
-
 //#define DISABLE_BITMASKING
 
 //#define DISABLE_COLCLAMP
