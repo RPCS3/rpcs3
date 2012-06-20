@@ -66,7 +66,7 @@ EXPORT_C_(char*) PS2EgetLibName()
 #ifdef _MSC_VER
 	sprintf_s( libraryName, "GSnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
 	return libraryName;	
-#elif
+#else
 	return "GSnull Driver";
 #endif
 }
