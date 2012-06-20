@@ -2229,7 +2229,7 @@ void GSState::SetGameCRC(uint32 crc, int options)
 {
 	m_crc = crc;
 	m_options = options;
-	m_game = CRC::Lookup(crc);
+	m_game = CRC::Lookup(userHacks_DisableCrcHacks ? 0 : crc);
 }
 
 //
@@ -5320,7 +5320,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 #ifdef ENABLE_DYNAMIC_CRC_HACK
 	bool res=false; if(IsInvokedDynamicCrcHack(fi, skip, g_crc_region, res, m_crc)){ if( !res ) return false;	} else
 #endif
-	if(gsc && !userHacks_DisableCrcHacks && !gsc(fi, skip))
+	if(gsc && !gsc(fi, skip))
 	{
 		return false;
 	}

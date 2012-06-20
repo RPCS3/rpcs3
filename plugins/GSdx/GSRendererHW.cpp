@@ -254,7 +254,7 @@ void GSRendererHW::Draw()
 		s_n++;
 	}
 
-	if(!userHacks_DisableCrcHacks && m_hacks.m_oi && !(this->*m_hacks.m_oi)(rt->m_texture, ds->m_texture, tex))
+	if(m_hacks.m_oi && !(this->*m_hacks.m_oi)(rt->m_texture, ds->m_texture, tex))
 	{
 		return;
 	}
