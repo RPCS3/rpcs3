@@ -428,13 +428,13 @@ vec4 sample_color(vec2 st, float q)
 
 		mat4 c;
 
-		if(PS_FMT & FMT_PAL)
+		if((PS_FMT & FMT_PAL) != 0)
 			c = sample_4p(sample_4a(uv));
 		else
 			c = sample_4c(uv);
 
 		// PERF: see the impact of the exansion before/after the interpolation
-		for (uint i = 0; i < 4; i++) {
+		for (int i = 0; i < 4; i++) {
 			if((PS_FMT & ~FMT_PAL) == FMT_16)
 			{
 				// FIXME GLSL any only support bvec so try to mix it with notEqual
