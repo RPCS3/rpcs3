@@ -319,7 +319,9 @@ __fi void vif1Interrupt()
             // VIF_NORMAL_FROM_MEM_MODE is a very slow operation.
             // Timesplitters 2 depends on this beeing a bit higher than 128.
             if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
-            CPU_INT(DMAC_VIF1, g_vif1Cycles);
+		
+			if(!(vif1Regs.stat.VGW && gifUnit.gifPath[GIF_PATH_3].state != GIF_PATH_IDLE)) //If we're waiting on GIF, stop looping, (can be over 1000 loops!)
+				CPU_INT(DMAC_VIF1, g_vif1Cycles);
             return;
     }
 
@@ -334,7 +336,9 @@ __fi void vif1Interrupt()
 
             if ((vif1.inprogress & 0x1) == 0) vif1SetupTransfer();
             if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
-            CPU_INT(DMAC_VIF1, g_vif1Cycles);
+
+			if(!(vif1Regs.stat.VGW && gifUnit.gifPath[GIF_PATH_3].state != GIF_PATH_IDLE)) //If we're waiting on GIF, stop looping, (can be over 1000 loops!)
+	            CPU_INT(DMAC_VIF1, g_vif1Cycles);
             return;
 	}
 
