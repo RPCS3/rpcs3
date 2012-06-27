@@ -3338,7 +3338,9 @@ bool GSC_AceCombat4(const GSFrameInfo& fi, int& skip)
 
 bool GSC_Drakengard2(const GSFrameInfo& fi, int& skip)
 {
-	if(skip == 0)
+	// Below hack breaks the GUI
+	
+	/*if(skip == 0)
 	{
 		if(g_crc_region == CRC::CH && fi.TME && fi.FBP == 0x026c0  && fi.TBP0 == 0x00a00 && fi.FPSM ==2)
 		{
@@ -3348,7 +3350,7 @@ bool GSC_Drakengard2(const GSFrameInfo& fi, int& skip)
 		{
 			skip = 64;
 		}
-	}
+	}*/
 
 	return true;
 }

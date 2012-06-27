@@ -134,10 +134,10 @@ CRC::Game CRC::m_games[] =
 	{0x0086E35B, GT4, EU, 0},
 	{0x77E61C8A, GT4, US, 0},
 	{0x33C6E35E, GT4, US, 0},
-	{0x7ABDBB5E, GT3, CH, 0}, //GT4中文D9版
-	{0x3E9D448A, GT3, CH, 0}, //GT4中文D5版
-	{0xAD66643C, GT3, CH, 0}, //GT4中文D9轉D5版
-	{0x6810C3BC, GT3, CH, 0}, //GRAN TURISMO Concept 2002 Tokyo-Geneva中文版
+	{0x7ABDBB5E, GT3, CH, 0}, // cutie comment
+	{0x3E9D448A, GT3, CH, 0}, // cutie comment
+	{0xAD66643C, GT3, CH, 0}, // cutie comment
+	{0x6810C3BC, GT3, CH, 0}, //GRAN TURISMO Concept 2002 Tokyo-Geneva
 	{0x85AE91B3, GT3, US, 0},
 	{0xC220951A, GT3, NoRegion, 0},
 	{0x60013EBD, GTConcept, EU, 0},
@@ -168,7 +168,7 @@ CRC::Game CRC::m_games[] =
 	{0x1B9B7563, AceCombat4, NoRegion, 0},
 	{0xEC432B24, Drakengard2, EU, 0},
 	{0x1648E3C9, Drakengard2, US, 0},
-	{0xB7ADB13A, Drakengard2, CH, 0}, //復仇龍騎士2
+	{0xB7ADB13A, Drakengard2, CH, 0},
 	{0xFC46EA61, Tekken5, JP, 0},
 	{0x1F88EE37, Tekken5, EU, 0},
 	{0x1F88BECD, Tekken5, EU, 0},	//language selector...
@@ -186,8 +186,8 @@ CRC::Game CRC::m_games[] =
 	{0xE23D532B, GodOfWar, NoRegion, 0},
 	{0xDF1AF973, GodOfWar, NoRegion, 0},
 	// same CRC as US {0xD6385328, GodOfWar, NoRegion, 0},
-	{0x1A85E924, GodOfWar, NoRegion, 0}, //天幻1+2，不能同時使用
-	{0x608ACBD3, GodOfWar, CH, 0}, //完美漢化修改版
+	{0x1A85E924, GodOfWar, NoRegion, 0}, // cutie comment
+	{0x608ACBD3, GodOfWar, CH, 0}, // cutie comment
 	//same crc as the US version. {0x2F123FD8, GodOfWar2, RU, 0},
 	{0x2F123FD8, GodOfWar2, US, 0},
 	{0x44A8A22A, GodOfWar2, EU, 0},
@@ -198,8 +198,8 @@ CRC::Game CRC::m_games[] =
 	{0x5990866F, GodOfWar2, NoRegion, 0},
 	{0xC4C4FD5F, GodOfWar2, CH, 0},
 	{0xDCD9A9F7, GodOfWar2, NoRegion, 0},
-	{0xFA0DF523, GodOfWar2, CH, 0}, //完美漢化修改版D5
-	{0x9FEE3466, GodOfWar2, CH, 0}, //完美漢化修改版D9
+	{0xFA0DF523, GodOfWar2, CH, 0}, // cutie comment
+	{0x9FEE3466, GodOfWar2, CH, 0}, // cutie comment
 	{0x5D482F18, JackieChanAdv, NoRegion, 0},
 	{0xF0A6D880, HarvestMoon, US, 0},
 	{0x75C01A04, NamcoXCapcom, US, 0},
@@ -294,7 +294,7 @@ CRC::Game CRC::m_games[] =
 	{0x9ABF90FB, LordOfTheRingsTwoTowers, ES, 0},
 	{0xC0E909E9, LordOfTheRingsTwoTowers, JP, 0},
 	{0x6898435D, LordOfTheRingsTwoTowers, KO, 0},
-	{0xDC2F9B98, LordOfTheRingsTwoTowers, CH, 0}, //魔戒二部曲
+	{0xDC2F9B98, LordOfTheRingsTwoTowers, CH, 0}, // cutie comment
 	{0xEB198738, LordOfTheRingsThirdAge, US, 0},
 	{0x614F4CF4, LordOfTheRingsThirdAge, EU, 0},
 	{0x37CD4279, LordOfTheRingsThirdAge, KO, 0},
@@ -323,39 +323,39 @@ CRC::Game CRC::m_games[] =
 	{0x9A93FE5D, CastlevaniaLoI, KO, 0},
 	{0xA79B0491, NanoBreaker, JP, 0},
 	{0x7985D894, FinalFightStreetwise, US, 0}, 
-	{0xED4BF0D3, FinalFightStreetwise, US, 0}, //紅星
+	{0xED4BF0D3, FinalFightStreetwise, US, 0}, // cutie comment
 	{0x73C560BA, FinalFightStreetwise, EU, 0},
-	{0xCBB87BF9, EvangelionJo, JP, 0}, //新世紀福音戰士:序
-	{0x278A91FD, CaptainTsubasa, JP, 0}, //足球小將翼
-	{0xC5B75C7C, Oneechanbara2Special, JP, 0}, //性感女劍士2特別編
-	{0xC0659AD1, NarutimateAccel, JP, 0}, //火影忍者疾風傳
+	{0xCBB87BF9, EvangelionJo, JP, 0}, // cutie comment
+	{0x278A91FD, CaptainTsubasa, JP, 0}, // cutie comment
+	{0xC5B75C7C, Oneechanbara2Special, JP, 0}, // cutie comment
+	{0xC0659AD1, NarutimateAccel, JP, 0}, // cutie comment
 	{0xF3D9DFBE, NarutimateAccel, JP, 0},
-	{0x59739DDE, Naruto, JP, 0}, //木葉英雄3
-	{0xF7786EE4, EternalPoison, JP, 0}, //粉紅劇毒
+	{0x59739DDE, Naruto, JP, 0}, // cutie comment
+	{0xF7786EE4, EternalPoison, JP, 0}, // cutie comment
 	{0x2BE55519, EternalPoison, US, 0},
-	{0xE01F57EC, LegoBatman, US, 0}, //樂高蝙蝠俠
+	{0xE01F57EC, LegoBatman, US, 0}, // cutie comment
 	{0xE01F57ED, LegoBatman, EU, 0},
-	{0xE0347841, XE3, JP, 0}, //異域傳說3
+	{0xE0347841, XE3, JP, 0}, // cutie comment
 	{0xA4E88698, XE3, CH, 0},
 	{0x2088950A, XE3, US, 0},
 	// DMC(1)? {0x79B8A95F, DevilMayCry3, US, 0},
 	{0x7F3D692D, DevilMayCry3, CH, 0},
-	//duplicate crc with GOW1... {0x1A85E924, DevilMayCry3, CH, 0}, //惡魔獵人3三合一中文特別版
-	{0x0a8ef911, ArctheLad, US, 0}, //亞克傳承-精靈之黃昏
+	//duplicate crc with GOW1... {0x1A85E924, DevilMayCry3, CH, 0},
+	{0x0a8ef911, ArctheLad, US, 0}, // cutie comment
 	{0x2C5E7DEA, ArctheLad, CH, 0},
-	{0xE69E7F58, ArctheLad, US, 0}, //亞克傳承-黑暗之終結
-	{0xB1995E29, ShadowofRome, EU, 0}, //羅馬之影
+	{0xE69E7F58, ArctheLad, US, 0}, // cutie comment
+	{0xB1995E29, ShadowofRome, EU, 0}, // cutie comment
 	{0x958DCA28, ShadowofRome, EU, 0},
 	{0x57818AF6, ShadowofRome, US, 0}, 
 	{0xF21EE6E0, CrashNburn, US, 0},
-	{0x694A998E, TombRaiderUnderworld, JP, 0}, //8代地城奪寶
+	{0x694A998E, TombRaiderUnderworld, JP, 0}, // cutie comment
 	{0x8E214549, TombRaiderUnderworld, EU, 0},
 	{0xB639EB17, TombRaiderAnniversary, US, 0},
-	{0xB05805B6, TombRaiderAnniversary, JP, 0}, //十週年紀念版 重返禁地
+	{0xB05805B6, TombRaiderAnniversary, JP, 0}, // cutie comment
 	{0xA629A376, TombRaiderAnniversary, EU, 0},
-	{0xBC8B3F50, TombRaiderLegend, US, 0}, //7代傳奇
+	{0xBC8B3F50, TombRaiderLegend, US, 0}, // cutie comment
 	{0x05177ECE, TombRaiderLegend, EU, 0},
-	{0x08FFF00D, SSX3, JP, 0}, //極限滑雪3
+	{0x08FFF00D, SSX3, JP, 0}, // cutie comment
 	{0xCE942B2A, SSX3, EU, 0},
 	{0x5C891FF1, Black, US, 0},
 	{0xCAA04879, Black, EU, 0},
@@ -432,7 +432,7 @@ CRC::Game CRC::m_games[] =
 	{0xB799A60C, SkyGunner, NoRegion, 0},
 	{0x6848699B, JamesBondEverythingOrNothing, US, 0},
 	{0x5FFFDE40, JamesBondEverythingOrNothing, EU, 0},
-	{0xF7FB054C, Siren, CH, 0}, //死魂曲
+	{0xF7FB054C, Siren, CH, 0}, // cutie comment
 	{0x47C2C34A, Siren, KO, 0},
 	{0xB083CCC2, Siren, EU, 0}, // Spanish
 	{0x90F4B057, ZettaiZetsumeiToshi2, CH, 0},
@@ -452,16 +452,16 @@ CRC::Game CRC::m_games[] =
 	{0xFFDE85E9, ShinOnimusha, US, 0},
 	{0xE21404E2, GetaWay, US, 0},
 	{0xE78971DF, GetaWayBlackMonday, US, 0},
-	{0x1130BF23, SakuraTaisen, CH, 0}, //櫻花大戰熾熱之血
+	{0x1130BF23, SakuraTaisen, CH, 0}, // cutie comment
 	{0x4FAE8B83, SakuraTaisen, KO, 0},
-	{0xEF06DBD6, SakuraWarsSoLongMyLove, JP, 0}, //櫻花大戰5
-	{0xDD41054D, SakuraWarsSoLongMyLove, US, 0}, //櫻花大戰5
+	{0xEF06DBD6, SakuraWarsSoLongMyLove, JP, 0}, // cutie comment
+	{0xDD41054D, SakuraWarsSoLongMyLove, US, 0}, // cutie comment
 	{0xC2E3A7A4, SakuraWarsSoLongMyLove, KO, 0},
-	{0x4A4B623A, FightingBeautyWulong, JP,0}, //格鬥美神武龍
-	{0x5AC7E79C, TouristTrophy, CH, 0}, //摩拖車浪漫旅
+	{0x4A4B623A, FightingBeautyWulong, JP,0}, // cutie comment
+	{0x5AC7E79C, TouristTrophy, CH, 0}, // cutie comment
 	{0xFF9C0E93, TouristTrophy, US, 0},
 	{0xCA9AA903, TouristTrophy, EU, 0}, //crc hack not fully working on PAL, still needs brightness =0
-	{0xA1B3F232, GTASanAndreas, EU, 0}, //俠盜獵車手聖安地列斯
+	{0xA1B3F232, GTASanAndreas, EU, 0}, // cutie comment
 	{0x399A49CA, GTASanAndreas, US, 0}, 
 	{0x60FE139C, GTASanAndreas, JP, 0}, 
 	{0x2615F542, FrontMission5, JP, 0}, 
@@ -470,22 +470,22 @@ CRC::Game CRC::m_games[] =
 	{0xAEDAEE99, GodHand, JP, 0}, 
 	{0x6FB69282, GodHand, US, 0},
 	{0x924C4AA6, GodHand, KO, 0},
-	{0x9637D496, KnightsOfTheTemple2, JP, 0}, //聖堂騎士團2
-	{0x4E811100, UltramanFightingEvolution, JP, 0}, //超能力霸王戰鬥進化重生
-	{0xF7F181C3, DeathByDegreesTekkenNinaWilliams, CH, 0}, //鐵拳妮娜
+	{0x9637D496, KnightsOfTheTemple2, JP, 0}, // cutie comment
+	{0x4E811100, UltramanFightingEvolution, JP, 0}, // cutie comment
+	{0xF7F181C3, DeathByDegreesTekkenNinaWilliams, CH, 0}, // cutie comment
 	{0xF088FA5B, DeathByDegreesTekkenNinaWilliams, KO, 0},
 	{0x59683BB0, DeathByDegreesTekkenNinaWilliams, EU, 0},
-	{0x771C3B47, AlpineRacer3, JP, 0}, //阿爾卑斯山滑雪大賽3
+	{0x771C3B47, AlpineRacer3, JP, 0}, // cutie comment
 	{0x7367D841, AlpineRacer3, EU, 0},
 	{0x449E1F6B, HummerBadlands, US, 0}, 
 	{0xAEA1B3AD, SengokuBasara, JP, 0},
 	{0x5B659BED, Grandia3, JP, 0},
 	{0x5B657DAD, Grandia3, US, 0},
 	{0x830B6FB1, TalesofSymphonia, JP, 0},
-	{0x8409FD51, TalesofDestiny, JP, 0}, //導演剪輯版
+	{0x8409FD51, TalesofDestiny, JP, 0}, // cutie comment
 	{0xA90CD846, TalesofDestiny, JP, 0},
-	{0xC4D0FACC, SDGundamGGeneration, JP, 0}, //世紀戰役
-	{0xBBDE6926, SDGundamGGeneration, JP, 0}, //戰魂
+	{0xC4D0FACC, SDGundamGGeneration, JP, 0}, // cutie comment
+	{0xBBDE6926, SDGundamGGeneration, JP, 0}, // cutie comment
 	{0x49D60A00, SDGundamGGeneration, JP, 0}, //NEO
 	{0x83AFB38A, SoulCalibur2, KO, 0},
 	{0xE1B01308, SoulCalibur2, US, 0},
@@ -495,8 +495,8 @@ CRC::Game CRC::m_games[] =
 	{0x37B99B14, SoulCalibur3, KO, 0},
 	{0xBC5480A3, SoulCalibur3, EU, 0},
 	{0xFC0F8A5B, Simple2000Vol114, JP, 0},
-	{0x0098F740, SeintoSeiya, NoRegion, 0}, //聖鬥士星矢-黃道十二宮
-	{0xBDD9BAAD, UrbanReign, US, 0}, //街頭爭霸
+	{0x0098F740, SeintoSeiya, NoRegion, 0}, // cutie comment
+	{0xBDD9BAAD, UrbanReign, US, 0}, // cutie comment
 	{0xAE4BEBD3, UrbanReign, EU, 0},
 };
 
