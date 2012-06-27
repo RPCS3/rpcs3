@@ -276,23 +276,20 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 	if(tex)
 	{
 		const GSLocalMemory::psm_t &psm = GSLocalMemory::m_psm[context->TEX0.PSM];
-		bool bilinear = m_filter == 2 ? m_vt.IsLinear() : (bool)m_filter;
+		const GSLocalMemory::psm_t &cpsm = psm.pal > 0 ? GSLocalMemory::m_psm[context->TEX0.CPSM] : psm;
+		bool bilinear = m_filter == 2 ? m_vt.IsLinear() : m_filter != 0;
+		bool simple_sample = !tex->m_palette && cpsm.fmt == 0 && context->CLAMP.WMS < 3 && context->CLAMP.WMT < 3;
 
 		ps_sel.wms = context->CLAMP.WMS;
 		ps_sel.wmt = context->CLAMP.WMT;
 		if (tex->m_palette)
-		{
-			const GSLocalMemory::psm_t &cpsm = GSLocalMemory::m_psm[context->TEX0.CPSM];
 			ps_sel.fmt = cpsm.fmt | 4;
-		}
-		else if (psm.pal > 0)
-			ps_sel.fmt = 0;
 		else
-			ps_sel.fmt = psm.fmt;
+			ps_sel.fmt = cpsm.fmt;
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
-		ps_sel.ltf = bilinear && !(ps_sel.fmt <= 2 && ps_sel.wms < 3 && ps_sel.wmt < 3);
+		ps_sel.ltf = bilinear && !simple_sample;
 		ps_sel.rt = tex->m_target;
 		ps_sel.spritehack = tex->m_spritehack_t;
 
@@ -324,7 +321,7 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 
 		ps_ssel.tau = (context->CLAMP.WMS + 3) >> 1;
 		ps_ssel.tav = (context->CLAMP.WMT + 3) >> 1;
-		ps_ssel.ltf = bilinear && ps_sel.fmt <= 2 && ps_sel.wms < 3 && ps_sel.wmt < 3;
+		ps_ssel.ltf = bilinear && simple_sample;
 	}
 	else
 	{

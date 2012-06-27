@@ -362,12 +362,12 @@ float4 sample(float2 st, float q)
 	float2 dd;
 
 /*	
-	if(PS_FMT <= FMT_16 && PS_WMS < 2 && PS_WMT < 2)
+	if(!PS_LTF && PS_FMT <= FMT_16 && PS_WMS < 2 && PS_WMT < 2)
 	{
 		c[0] = sample_c(st);
 	}
 */
-	if(PS_FMT <= FMT_16 && PS_WMS < 3 && PS_WMT < 3)
+	if (!PS_LTF && PS_FMT <= FMT_16 && PS_WMS < 3 && PS_WMT < 3)
 	{
 		c[0] = sample_c(clampuv(st));
 	}

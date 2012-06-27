@@ -80,11 +80,6 @@ GSTextureCache::Source* GSTextureCache::LookupSource(const GIFRegTEX0& TEX0, con
 			continue;
 		}
 
-		if(!m_paltex && TEX0.TCC && cpsm.fmt > 0 && TEXA != s->m_TEXA)
-		{
-			continue;
-		}
-
 		if(s->m_palette == NULL && psm.pal > 0 && !GSVector4i::compare64(clut, s->m_clut, psm.pal * sizeof(clut[0])))
 		{
 			continue;
@@ -1039,13 +1034,17 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 	GSLocalMemory::readTexture rtx = psm.rtx;
 
+	GIFRegTEXA plainTEXA;
+
+	plainTEXA.AEM = 1;
+	plainTEXA.TA0 = 0;
+	plainTEXA.TA1 = 0x80;
+
 	if(m_palette)
 	{
 		pitch >>= 2;
 		rtx = psm.rtxP;
 	}
-	else if (psm.pal > 0)
-		m_renderer->m_mem.m_clut.Read32(m_TEX0, m_TEXA);
 
 	uint8* buff = m_temp;
 
@@ -1065,13 +1064,13 @@ void GSTextureCache::Source::Flush(uint32 count)
 
 			if(m_texture->Map(m, &r))
 			{
-				(mem.*rtx)(o, r, m.bits, m.pitch, m_TEXA);
+				(mem.*rtx)(o, r, m.bits, m.pitch, plainTEXA);
 
 				m_texture->Unmap();
 			}
 			else
 			{
-				(mem.*rtx)(o, r, buff, pitch, m_TEXA);
+				(mem.*rtx)(o, r, buff, pitch, plainTEXA);
 
 				m_texture->Update(r, buff, pitch);
 			}
