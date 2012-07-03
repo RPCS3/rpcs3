@@ -2,7 +2,7 @@
 ; PCSX2 Full/Complete Install Package!
 ; (a NSIS installer script)
 ;
-; Copyright 2009-2011  PCSX2 Dev Team
+; Copyright 2009-2012  PCSX2 Dev Team
 ;
 
 !ifndef INC_CRT_2008
@@ -83,14 +83,14 @@ SectionEnd
 ; -----------------------------------------------------------------------
 ; MSVC Redistributable - required if the user does not already have it
 ; Note: if your NSIS generates an error here it means you need to download the latest
-; visual studio redist package from microsoft.  Any redist 2008/SP1 or newer will do.
+; visual studio redist package from microsoft.
 ;
 ; IMPORTANT: Online references for how to detect the presence of the VS2008 redists LIE.
 ; None of the methods are reliable, because the registry keys placed by the MSI installer
 ; vary depending on operating system *and* MSI installer version (youch).
 ;
 !if ${INC_CRT_2008} > 0
-Section "Microsoft Visual C++ 2008 SP1 Redist (required)"  SEC_CRT2008
+Section "Microsoft Visual C++ 2008 SP1 Redist"  SEC_CRT2008
 
   SectionIn RO
 
@@ -109,7 +109,7 @@ SectionEnd
 !endif
 
 !if ${INC_CRT_2010} > 0
-Section "Microsoft Visual C++ 2010 SP1 Redist (recommended)" SEC_CRT2010
+Section "Microsoft Visual C++ 2010 SP1 Redist" SEC_CRT2010
 
   ;SectionIn RO
 
@@ -146,7 +146,7 @@ SectionEnd
 ; This section could be optional, but why not?  It's pretty painless to double-check that
 ; all the libraries are up-to-date.
 ;
-Section "DirectX Web Setup (recommended)" SEC_DIRECTX
+Section "DirectX Web Setup" SEC_DIRECTX
                                                                               
  ;SectionIn RO
 
@@ -168,7 +168,7 @@ LangString DESC_STARTMENU  ${LANG_ENGLISH} "Adds shortcuts for PCSX2 to the star
 LangString DESC_DESKTOP    ${LANG_ENGLISH} "Adds a shortcut for PCSX2 to the desktop (all users)."
 
 LangString DESC_CRT2008    ${LANG_ENGLISH} "Required by the PCSX2 binaries packaged in this installer."
-LangString DESC_CRT2010    ${LANG_ENGLISH} "This may be used by future PCSX2 plugins and updates, but is not (yet) necessary."
+LangString DESC_CRT2010    ${LANG_ENGLISH} "Required by the PCSX2 binaries packaged in this installer."
 LangString DESC_DIRECTX    ${LANG_ENGLISH} "Only uncheck this if you are quite certain your Direct3D runtimes are up to date."
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
