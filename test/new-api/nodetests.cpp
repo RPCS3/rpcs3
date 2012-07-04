@@ -373,7 +373,51 @@ namespace Test
             }
             return true;
         }
-	}
+        
+        TEST CloneScalar()
+        {
+            YAML::Node node = YAML::Load("!foo monkey");
+            YAML::Node clone = Clone(node);
+            YAML_ASSERT(!(node == clone));
+            YAML_ASSERT(node.as<std::string>() == clone.as<std::string>());
+            YAML_ASSERT(node.Tag() == clone.Tag());
+            return true;
+        }
+
+        TEST CloneSeq()
+        {
+            YAML::Node node = YAML::Load("[1, 3, 5, 7]");
+            YAML::Node clone = Clone(node);
+            YAML_ASSERT(!(node == clone));
+            YAML_ASSERT(clone.Type() == YAML::NodeType::Sequence);
+            YAML_ASSERT(node.size() == clone.size());
+            for(std::size_t i=0;i<node.size();i++)
+                YAML_ASSERT(node[i].as<int>() == clone[i].as<int>());
+            return true;
+        }
+
+        TEST CloneMap()
+        {
+            YAML::Node node = YAML::Load("{foo: bar}");
+            YAML::Node clone = Clone(node);
+            YAML_ASSERT(!(node == clone));
+            YAML_ASSERT(clone.Type() == YAML::NodeType::Map);
+            YAML_ASSERT(node.size() == clone.size());
+            YAML_ASSERT(node["foo"].as<std::string>() == clone["foo"].as<std::string>());
+            return true;
+        }
+
+        TEST CloneAlias()
+        {
+            YAML::Node node = YAML::Load("&foo [*foo]");
+            YAML::Node clone = Clone(node);
+            YAML_ASSERT(!(node == clone));
+            YAML_ASSERT(clone.Type() == YAML::NodeType::Sequence);
+            YAML_ASSERT(node.size() == clone.size());
+            YAML_ASSERT(clone == clone[0]);
+            return true;
+        }
+    }
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
 		TEST ret;
@@ -426,6 +470,10 @@ namespace Test
 		RunNodeTest(&Node::IterateMap, "iterate map", passed, total);
 		RunNodeTest(&Node::ForEach, "for each", passed, total);
 		RunNodeTest(&Node::ForEachMap, "for each map", passed, total);
+		RunNodeTest(&Node::CloneScalar, "clone scalar", passed, total);
+		RunNodeTest(&Node::CloneSeq, "clone seq", passed, total);
+		RunNodeTest(&Node::CloneMap, "clone map", passed, total);
+		RunNodeTest(&Node::CloneAlias, "clone alias", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

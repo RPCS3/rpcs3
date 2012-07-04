@@ -224,7 +224,7 @@ namespace YAML
 		m_pMemory->merge(*rhs.m_pMemory);
 		m_pNode = rhs.m_pNode;
 	}
-
+    
 	// size/iterator
 	inline std::size_t Node::size() const
 	{
