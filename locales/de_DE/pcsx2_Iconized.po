@@ -5,7 +5,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2012-04-07 11:42+0200\n"
-"PO-Revision-Date: 2011-04-09 01:11+0100\n"
+"PO-Revision-Date: 2012-07-04 11:45+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
 "Language: \n"
@@ -20,9 +20,7 @@ msgstr ""
 
 #: common/src/Utilities/Exceptions.cpp:254
 msgid "!Notice:VirtualMemoryMap"
-msgstr ""
-"Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher "
-"wird von anderen Programmen / DLLs belegt."
+msgstr "Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher wird von anderen Programmen / DLLs belegt."
 
 #: pcsx2/CDVD/CDVD.cpp:389
 msgid "!Notice:PsxDisc"
@@ -30,87 +28,55 @@ msgstr "PlayStation 1 (PSX) Spiele werden von PCSX2 noch nicht unterstützt!"
 
 #: pcsx2/System.cpp:114
 msgid "!Notice:Recompiler:VirtualMemoryAlloc"
-msgstr ""
-"Der Recompiler konnte nicht genug virtuellen Speicher allokieren. Versuche "
-"PCSX2 etwas mehr Speicher zu gewähren indem du nicht benötigte Programme "
-"beendest."
+msgstr "Der Recompiler konnte nicht genug virtuellen Speicher allokieren. Versuche PCSX2 etwas mehr Speicher zu gewähren indem du nicht benötigte Programme beendest."
 
 #: pcsx2/System.cpp:348
 msgid "!Notice:EmuCore::MemoryForVM"
-msgstr ""
-"Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher "
-"wird von anderen Programmen / DLLs belegt."
+msgstr "Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher wird von anderen Programmen / DLLs belegt."
 
 #: pcsx2/gui/AppInit.cpp:43
 msgid "!Notice:Startup:NoSSE2"
-msgstr ""
-"Dein Prozessor unterstützt kein SSE2. Viele Plugins werden nicht "
-"funktionieren und die Emulation wird sehr langsam sein."
+msgstr "Dein Prozessor unterstützt kein SSE2. Viele Plugins werden nicht funktionieren und die Emulation wird sehr langsam sein."
 
 #: pcsx2/gui/AppInit.cpp:162
 msgid "!Notice:RecompilerInit:Header"
-msgstr ""
-"Einige der PCSX2 Recompiler konnten nicht starten und wurden deaktiviert:"
+msgstr "Einige der PCSX2 Recompiler konnten nicht starten und wurden deaktiviert:"
 
 #: pcsx2/gui/AppInit.cpp:211
 msgid "!Notice:RecompilerInit:Footer"
-msgstr ""
-"Recompiler werden zwar nicht unbedingt von PCSX2 benötigt, sie sind aber "
-"wichtig um akzeptable FPS Raten zu erreichen. Du kannst versuchen die "
-"Recompiler über die Konfigurationseinstellungen zu reaktivieren."
+msgstr "Recompiler werden zwar nicht unbedingt von PCSX2 benötigt, sie sind aber wichtig um akzeptable FPS Raten zu erreichen. Du kannst versuchen die Recompiler über die Konfigurationseinstellungen zu reaktivieren."
 
 #: pcsx2/gui/AppMain.cpp:546
 msgid "!Notice:BiosDumpRequired"
-msgstr ""
-"PCSX2 benötigt ein PS2 BIOS Abbild. Da Sony den BIOS Code lizenziert hat "
-"dürfen wir dieses nicht mit PCSX2 vertreiben. Du musst daher das BIOS Abbild "
-"deiner eigenen PS2 benutzen! Näheres dazu in der FAQ."
+msgstr "PCSX2 benötigt ein PS2 BIOS Abbild. Da Sony den BIOS Code lizenziert hat dürfen wir dieses nicht mit PCSX2 vertreiben. Du musst daher das BIOS Abbild deiner eigenen PS2 benutzen! Näheres dazu in der FAQ."
 
 #: pcsx2/gui/AppMain.cpp:629
 msgid "!Notice Error:Thread Deadlock Actions"
-msgstr ""
-"Ignorieren um weiter auf den Thread zu warten.Abbrechen um den Thread zu "
-"beenden.Beenden um PCSX2 komplett zu schließen."
+msgstr "Ignorieren um weiter auf den Thread zu warten.Abbrechen um den Thread zu beenden.Beenden um PCSX2 komplett zu schließen."
 
 #: pcsx2/gui/AppUserMode.cpp:57
 msgid "!Notice:PortableModeRights"
-msgstr ""
-"Stelle  bitte sicher das diese Ordner erstellt wurden und das dein "
-"Benutzeraccount Schreibrechte hat. Alternativ kannst du versuchen PCSX2 mit "
-"Administratorrechten zu starten. Das sollte es ermöglichen die benötigten "
-"Ordner zu erstellen. Falls du keine dieser Möglichkeiten hast, solltest du "
-"in den normalen Installationsmodus wechseln (klicke den folgenden Button)."
+msgstr "Stelle  bitte sicher das diese Ordner erstellt wurden und das dein Benutzeraccount Schreibrechte hat. Alternativ kannst du versuchen PCSX2 mit Administratorrechten zu starten. Das sollte es ermöglichen die benötigten Ordner zu erstellen. Falls du keine dieser Möglichkeiten hast, solltest du in den normalen Installationsmodus wechseln (klicke den folgenden Button)."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
 msgid "!ContextTip:ChangingNTFS"
-msgstr ""
-"Die NTFS Komprimierung kann jederzeit via Windows Explorer geändert werden."
+msgstr "Die NTFS Komprimierung kann jederzeit via Windows Explorer geändert werden."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
 msgid "!ContextTip:Folders:Settings"
-msgstr ""
-"PCSX2 und Plugins werden versuchen ihre Einstellungen in diesen Ordner zu "
-"schreiben. Einige (ältere) Plugins könnten dies jedoch nicht unterstützen."
+msgstr "PCSX2 und Plugins werden versuchen ihre Einstellungen in diesen Ordner zu schreiben. Einige (ältere) Plugins könnten dies jedoch nicht unterstützen."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
 msgid "!Panel:Folders:Settings"
-msgstr ""
-"Du kannst hier optional ein Verzeichnis angeben, in dem PCSX2 seine "
-"Konfiguration speichern wird. Sind dort bereits Einstellungen vorhanden, "
-"wird PCSX2 dir anbieten, diese zu importieren."
+msgstr "Du kannst hier optional ein Verzeichnis angeben, in dem PCSX2 seine Konfiguration speichern wird. Sind dort bereits Einstellungen vorhanden, wird PCSX2 dir anbieten, diese zu importieren."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
 msgid "!Wizard:Welcome"
-msgstr ""
-"Der Konfigurationshelfer nimmt die Grundeinstellungen für %s vor. Es werden "
-"Plugins, das BIOS Abbild und Memory Cards konfiguriert."
+msgstr "Der Konfigurationshelfer nimmt die Grundeinstellungen für %s vor. Es werden Plugins, das BIOS Abbild und Memory Cards konfiguriert."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
 msgid "!Wizard:Bios:Tutorial"
-msgstr ""
-"PCSX2 benötigt ein PS2 BIOS Abbild. Da Sony den BIOS Code lizenziert hat "
-"dürfen wir dieses nicht mit PCSX2 vertreiben. Du musst daher das BIOS Abbild "
-"deiner eigenen PS2 benutzen! Näheres dazu in der FAQ."
+msgstr "PCSX2 benötigt ein PS2 BIOS Abbild. Da Sony den BIOS Code lizenziert hat dürfen wir dieses nicht mit PCSX2 vertreiben. Du musst daher das BIOS Abbild deiner eigenen PS2 benutzen! Näheres dazu in der FAQ."
 
 #: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
 msgid "!Notice:ImportExistingSettings"
@@ -124,29 +90,19 @@ msgstr "Schnelle und sichere Komprimierung der Memory Cards. Empfohlen."
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
 msgid "!Panel:Mcd:EnableEjection"
-msgstr ""
-"Inkompatibel mit Guitar Hero und Spielen, die es nicht ermöglichen mehrmals "
-"nach einer Memory Card zu suchen."
+msgstr "Inkompatibel mit Guitar Hero und Spielen, die es nicht ermöglichen mehrmals nach einer Memory Card zu suchen."
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
 msgid "!Panel:StuckThread:Heading"
-msgstr ""
-"Der Thread antwortet nicht. Er könnte festgefroren sein, oder aber sehr "
-"langsam reagieren."
+msgstr "Der Thread antwortet nicht. Er könnte festgefroren sein, oder aber sehr langsam reagieren."
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
 msgid "!Panel:HasHacksOverrides"
-msgstr ""
-"Achtung! PCSX2 läuft mit Kommandozeilenparametern, welche die hier zu "
-"tätigenden Einstellungen übergehen. Solltest du hier Änderungen vornehmen, "
-"werden diese Kommandozeilenparameter ignoriert."
+msgstr "Achtung! PCSX2 läuft mit Kommandozeilenparametern, welche die hier zu tätigenden Einstellungen übergehen. Solltest du hier Änderungen vornehmen, werden diese Kommandozeilenparameter ignoriert."
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
 msgid "!Panel:HasPluginsOverrides"
-msgstr ""
-"Achtung! PCSX2 läuft mit Kommandozeilenparametern, welche die hier "
-"einzustellenden Plugins und Ordner übergehen. Solltest du hier Änderungen "
-"vornehmen, werden diese Kommandozeilenparameter ignoriert."
+msgstr "Achtung! PCSX2 läuft mit Kommandozeilenparametern, welche die hier einzustellenden Plugins und Ordner übergehen. Solltest du hier Änderungen vornehmen, werden diese Kommandozeilenparameter ignoriert."
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
 msgid "!Notice:Tooltip:Presets:Slider"
@@ -159,10 +115,7 @@ msgstr ""
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
 msgid "!Notice:Tooltip:Presets:Checkbox"
-msgstr ""
-"Presets erleichtern dir die Konfiguration, indem sie passende Einstellungen "
-"zur gewünschten Geschwindigkeitsstufe wählen. Höhere Stufen aktivieren mehr "
-"Hacks und sind daher nicht mit allen Spielen kompatibel."
+msgstr "Presets erleichtern dir die Konfiguration, indem sie passende Einstellungen zur gewünschten Geschwindigkeitsstufe wählen. Höhere Stufen aktivieren mehr Hacks und sind daher nicht mit allen Spielen kompatibel."
 
 #: pcsx2/gui/IsoDropTarget.cpp:28
 msgid "!Notice:ConfirmSysReset"
@@ -170,16 +123,11 @@ msgstr "Diese Option wird die virtuelle PS2 resetten. Bist du dir sicher?"
 
 #: pcsx2/gui/MainMenuClicks.cpp:106
 msgid "!Notice:DeleteSettings"
-msgstr ""
-"Diese Option löscht alle %s Einstellungen und ermöglicht das erneute "
-"Ausführen des Konfigurationshelfers. %s muss dazu neu gestartet werden.Alle "
-"%s Einstellungen gehen verloren. Bist du dir sicher?"
+msgstr "Diese Option löscht alle %s Einstellungen und ermöglicht das erneute Ausführen des Konfigurationshelfers. %s muss dazu neu gestartet werden.Alle %s Einstellungen gehen verloren. Bist du dir sicher?"
 
 #: pcsx2/gui/MemoryCardFile.cpp:78
 msgid "!Notice:Mcd:HasBeenDisabled"
-msgstr ""
-"Die Memory Card in Slot %d wurde automatisch deaktiviert. Du kannst dieses "
-"Problem via Konfiguration > Memory Card beheben."
+msgstr "Die Memory Card in Slot %d wurde automatisch deaktiviert. Du kannst dieses Problem via Konfiguration > Memory Card beheben."
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
 msgid "!Notice:BIOS:InvalidSelection"
@@ -205,20 +153,15 @@ msgstr "Nutzt das Standardverzeichnis des gewählten Installationsmodus."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:55
 msgid "!ContextTip:Window:Zoom"
-msgstr "!ContextTip:Window:Zoom"
+msgstr "Zoom"
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:63
 msgid "!ContextTip:Window:Vsync"
-msgstr ""
-"VSync ist eine Grafikoption, die versucht Jidder und Tearing zu vermeiden. "
-"Sie setzt voraus, dass das Spiel mit voller Geschwindigkeit läuft, was "
-"selten zu 100% der Fall ist. Es wird nicht empfohlen, VSync zu aktivieren."
+msgstr "VSync ist eine Grafikoption, die versucht Jidder und Tearing zu vermeiden. Sie setzt voraus, dass das Spiel mit voller Geschwindigkeit läuft, was selten zu 100% der Fall ist. Es wird nicht empfohlen, VSync zu aktivieren."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:68
 msgid "!ContextTip:Window:ManagedVsync"
-msgstr ""
-"Aktiviert Vsync nur bei voller Geschwindigkeit. Sobald die FPS unter 50 "
-"(PAL) oder 60 (NTSC) fallen, wird Vsync deaktiviert."
+msgstr "Aktiviert Vsync nur bei voller Geschwindigkeit. Sobald die FPS unter 50 (PAL) oder 60 (NTSC) fallen, wird Vsync deaktiviert."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:76
 msgid "!ContextTip:Window:HideMouse"
@@ -234,9 +177,7 @@ msgstr "Versteckt das GS Fenster wenn man mit ESC die Emulation pausiert."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:67
 msgid "!ContextTip:Gamefixes:EE Timing Hack"
-msgstr ""
-"Ändert das wichtige Timing für alle DMA Komponenten auf einen festen, "
-"schnellen Wert. Hat diversen Einfluss auf die Kompatibilität."
+msgstr "Ändert das wichtige Timing für alle DMA Komponenten auf einen festen, schnellen Wert. Hat diversen Einfluss auf die Kompatibilität."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:80
 msgid "!ContextTip:Gamefixes:OPH Flag hack"
@@ -244,30 +185,23 @@ msgstr "Veraltet"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:89
 msgid "!ContextTip:Gamefixes:DMA Busy hack"
-msgstr "!ContextTip:Gamefixes:DMA Busy hack"
+msgstr "DMA Busy hack"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:96
-#, fuzzy
 msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
-msgstr "Veraltet"
+msgstr "VIF1 Fifo hack."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:119
 msgid "!Panel:Gamefixes:Compat Warning"
-msgstr ""
-"Spielefixes können spezifische, bekannte Fehler in einigen Spielen beheben. "
-"Sie sollten aber nur für diese Spiele aktiviert werden."
+msgstr "Spielefixes können spezifische, bekannte Fehler in einigen Spielen beheben. Sie sollten aber nur für diese Spiele aktiviert werden."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
 msgid "!Notice:Mcd:Delete"
-msgstr ""
-"Hiermit wird die komplette Memory Card in Slot %u gelöscht. Bist du dir "
-"absolut sicher?"
+msgstr "Hiermit wird die komplette Memory Card in Slot %u gelöscht. Bist du dir absolut sicher?"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:758
 msgid "!Notice:Mcd:CantDuplicate"
-msgstr ""
-"Fehler: Duplizieren ist nur in einen leeren PS2 Port oder in das Dateisystem "
-"erlaubt."
+msgstr "Fehler: Duplizieren ist nur in einen leeren PS2 Port oder in das Dateisystem erlaubt."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:801
 msgid "!Notice:Mcd:Copy Failed"
@@ -283,35 +217,26 @@ msgstr "Du kannst den Standardordner für PCSX2 und Plugins hier einstellen."
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:40
 msgid "!ContextTip:Folders:Savestates"
-msgstr ""
-"In diesen Ordner wird PCSX2 versuchen Savestates zu schreiben. States können "
-"bei vielen Spielen schnell recht viel Platz beanspruchen!"
+msgstr "In diesen Ordner wird PCSX2 versuchen Savestates zu schreiben. States können bei vielen Spielen schnell recht viel Platz beanspruchen!"
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:50
 msgid "!ContextTip:Folders:Snapshots"
-msgstr ""
-"In diesen Ordner werden PCSX2 und Plugins versuchen Screenshots zu schreiben."
+msgstr "In diesen Ordner werden PCSX2 und Plugins versuchen Screenshots zu schreiben."
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:60
 msgid "!ContextTip:Folders:Logs"
-msgstr ""
-"In diesen Ordner werden PCSX2 und Plugins versuchen Logdateien zu schreiben."
+msgstr "In diesen Ordner werden PCSX2 und Plugins versuchen Logdateien zu schreiben."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
 msgid "!Notice:PluginSelector:ConfirmShutdown"
 msgstr ""
-"Warnung: Die Plugins zur Laufzeit zu verändern erfordert ein komplettes "
-"Reinitialisieren der Plugins und der Recompiler. PCSX2 wird versuchen alles "
-"korrekt wiederherzustellen, dies ist jedoch nicht ganz sicher. \n"
+"Warnung: Die Plugins zur Laufzeit zu verändern erfordert ein komplettes Reinitialisieren der Plugins und der Recompiler. PCSX2 wird versuchen alles korrekt wiederherzustellen, dies ist jedoch nicht ganz sicher. \n"
 "\n"
 "Bist du dir sicher das du die Änderung jetzt anwenden möchtest?"
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
 msgid "!Notice:PluginSelector:ApplyFailed"
-msgstr ""
-"Alle Plugins müssen korrekt eingestellt sein, ansonsten kann PCSX2 nicht "
-"funktionieren. Falls du keine gültige Konfiguration erstellen kannst, drücke "
-"Abbrechen."
+msgstr "Alle Plugins müssen korrekt eingestellt sein, ansonsten kann PCSX2 nicht funktionieren. Falls du keine gültige Konfiguration erstellen kannst, drücke Abbrechen."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
 msgid "!Panel:Speedhacks:EECycleX1"
@@ -343,32 +268,23 @@ msgstr "Stufe 3."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
 msgid "!Panel:Speedhacks:Overview"
-msgstr ""
-"Speedhacks verbessern die FPS Leistung der Emulation auf deinem PC indem sie "
-"Abkürzungen nehmen oder die PS2 Hardware untertakten. Sie können "
-"Emulationsprobleme auslösen, daher empfehlen wir bei Fehlern zuerst die "
-"Speedhacks zu deaktivieren!"
+msgstr "Speedhacks verbessern die FPS Leistung der Emulation auf deinem PC indem sie Abkürzungen nehmen oder die PS2 Hardware untertakten. Sie können Emulationsprobleme auslösen, daher empfehlen wir bei Fehlern zuerst die Speedhacks zu deaktivieren!"
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
 msgid "!ContextTip:Speedhacks:EECycleRate Slider"
-msgstr ""
-"Erhöhen dieses Wertes untertaktet die virtuelle PS2 CPU (Emotion Engine). "
-"Daher läuft die Emulation etwas schneller aber viele Spiele laufen stockend."
+msgstr "Erhöhen dieses Wertes untertaktet die virtuelle PS2 CPU (Emotion Engine). Daher läuft die Emulation etwas schneller aber viele Spiele laufen stockend."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
 msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
-msgstr ""
-"\"Stiehlt\" der PS2 CPU einige Zyklen bei jeder VU Programmausführung. "
-"Geschwindigkeitsgewinn bei reduzierter Kompatibilität."
+msgstr "\"Stiehlt\" der PS2 CPU einige Zyklen bei jeder VU Programmausführung. Geschwindigkeitsgewinn bei reduzierter Kompatibilität."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
 msgid "!ContextTip:Speedhacks:vuFlagHack"
 msgstr "Lässt einige VU Statusflags aus. Sicher."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
-#, fuzzy
 msgid "!ContextTip:Speedhacks:vuThread"
-msgstr "Funktioniert nicht mit Gran Turismo 4 oder Tekken 5."
+msgstr "Lässt VU1 in einem weiteren Thread laufen um die Performance in 3D spielen zu erhöhen. Benötigt 3 oder mehr CPU Kerne und funktioniert nicht mit jedem Spiel."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
 msgid "!ContextTip:Speedhacks:INTC"
@@ -380,21 +296,15 @@ msgstr "Kann gefahrlos aktiviert werden."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
 msgid "!ContextTip:Speedhacks:fastCDVD"
-msgstr ""
-"Einige Spiele erwarten ein standardkonformes (langsam lesendes) DVD "
-"Laufwerk. Diese können dann hängenbleiben."
+msgstr "Einige Spiele erwarten ein standardkonformes (langsam lesendes) DVD Laufwerk. Diese können dann hängenbleiben."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:37
 msgid "!ContextTip:Framelimiter:Disable"
-msgstr ""
-"Deaktiviert den Framelimiter. Das Spiel läuft so schnell wie es dein Rechner "
-"ermöglicht."
+msgstr "Deaktiviert den Framelimiter. Das Spiel läuft so schnell wie es dein Rechner ermöglicht."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:227
 msgid "!Panel:Frameskip:Heading"
-msgstr ""
-"Aufgrund des spezifischen Designs der PS2 ist ein akkurates Frameskipping "
-"nicht möglich. Versuche die Werte anzupassen oder benutze Speedhacks."
+msgstr "Aufgrund des spezifischen Designs der PS2 ist ein akkurates Frameskipping nicht möglich. Versuche die Werte anzupassen oder benutze Speedhacks."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:306
 msgid "!ContextTip:GS:SyncMTGS"
@@ -402,21 +312,15 @@ msgstr "Nur für das Debugging aktivieren. Sehr langsam."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:310
 msgid "!ContextTip:GS:DisableOutput"
-msgstr ""
-"Entfernt störende Faktoren von der Grafikkarte oder Treiberproblemen. Nur "
-"für PCSX2 Benchmarks interressant."
+msgstr "Entfernt störende Faktoren von der Grafikkarte oder Treiberproblemen. Nur für PCSX2 Benchmarks interressant."
 
 #: pcsx2/vtlb.cpp:710
 msgid "!Notice:HostVmReserve"
-msgstr ""
-"Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher "
-"wird von anderen Programmen / DLLs belegt."
+msgstr "Es steht nicht genügend virtueller Speicher zur Verfügung bzw. der Speicher wird von anderen Programmen / DLLs belegt."
 
 #: pcsx2/x86/sVU_zerorec.cpp:363
 msgid "!Notice:superVU:VirtualMemoryAlloc"
-msgstr ""
-"Der SuperVU Recompiler konnte nicht genügend virtuellen Speicher allokieren. "
-"Versuche es mit microVU!"
+msgstr "Der SuperVU Recompiler konnte nicht genügend virtuellen Speicher allokieren. Versuche es mit microVU!"
 
 #~ msgid "!ContextTip:Speedhacks:vuBlockHack"
 #~ msgstr "Kann die Geschwindigkeit leicht erhöhen. In FFX kontraproduktiv!"

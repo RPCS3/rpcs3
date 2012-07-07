@@ -2,8 +2,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-05-07 17:46+0200\n"
-"PO-Revision-Date: 2011-09-08 19:40+0800\n"
+"POT-Creation-Date: 2012-07-07 10:43+0200\n"
+"PO-Revision-Date: 2012-06-27 14:19+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
 "Language: \n"
@@ -1056,7 +1056,7 @@ msgstr "載入預先定義的設置："
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:228
 #, c-format
 msgid "Emulation Settings - %s"
-msgstr "模擬器設定 - %s"
+msgstr "模擬器選項 - %s"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:237
 msgid "EE/IOP"
@@ -1085,7 +1085,7 @@ msgstr "遊戲修正"
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:253
 #, c-format
 msgid "Components Selectors - %s"
-msgstr "元件選擇 - %s"
+msgstr "插件 / BIOS - %s"
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:260
 msgid "Plugins"
@@ -2496,14 +2496,12 @@ msgid "Framelimiter"
 msgstr "畫框限制"
 
 #: pcsx2/gui/SysState.cpp:283
-#, fuzzy
 msgid "Cannot load this savestate.  The state is an unsupported version."
-msgstr "無法讀取即時存檔，檔案版本未知或不支援。"
+msgstr "無法讀取即時存檔。即時存檔的版本不被支援。"
 
 #: pcsx2/gui/SysState.cpp:290
-#, fuzzy
 msgid "Cannot load this savestate. The state is an unsupported version."
-msgstr "無法讀取即時存檔，檔案版本未知或不支援。"
+msgstr "無法讀取即時存檔。即時存檔的版本不被支援。"
 
 #: pcsx2/gui/SysState.cpp:326
 msgid "There is no active virtual machine state to download or save."
@@ -2561,6 +2559,30 @@ msgid ""
 msgstr "%s 指令集未找到。microVU 要求 CPU 支援 MMX、SSE、SSE2。"
 
 #~ msgid ""
+#~ "Good Speedup and High Compatibility; may cause garbage graphics, SPS, "
+#~ "etc... [Recommended]"
+#~ msgstr ""
+#~ "不錯的速度提升而且相容性高；可能導致\n"
+#~ "圖像變得垃圾、有尖刺的多邊形，等等...\n"
+#~ "【推薦】"
+
+#~ msgid "mVU Block Hack"
+#~ msgstr "mVU Block Hack"
+
+#~ msgid ""
+#~ "Good Speedup and High Compatibility; may cause garbage graphics, SPS, "
+#~ "etc..."
+#~ msgstr ""
+#~ "不錯的速度提升而且相容性高；可能導致\n"
+#~ "圖像變得垃圾、有尖刺的多邊形，等等..."
+
+#~ msgid ""
+#~ "Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
+#~ msgstr ""
+#~ "不錯的速度提升而且相容性高；可能導致\n"
+#~ "圖像變得糟糕、有尖刺的多邊形，等等..."
+
+#~ msgid ""
 #~ "Cannot load this savestate.  The state is from an incompatible edition of "
 #~ "PCSX2 that is either newer than this version, or is no longer supported."
 #~ msgstr ""
@@ -2573,30 +2595,6 @@ msgstr "%s 指令集未找到。microVU 要求 CPU 支援 MMX、SSE、SSE2。"
 #~ msgstr ""
 #~ "無法讀取即時存檔。即時存檔的版本不被支援，即時存檔可能是由比當前版本新的 "
 #~ "PCSX2 建立。"
-
-#~ msgid "mVU Block Hack"
-#~ msgstr "mVU Block Hack"
-
-#~ msgid ""
-#~ "Good Speedup and High Compatibility; may cause bad graphics, SPS, etc..."
-#~ msgstr ""
-#~ "不錯的速度提升而且相容性高；可能導致\n"
-#~ "圖像變得糟糕、有尖刺的多邊形，等等..."
-
-#~ msgid ""
-#~ "Good Speedup and High Compatibility; may cause garbage graphics, SPS, "
-#~ "etc... [Recommended]"
-#~ msgstr ""
-#~ "不錯的速度提升而且相容性高；可能導致\n"
-#~ "圖像變得垃圾、有尖刺的多邊形，等等...\n"
-#~ "【推薦】"
-
-#~ msgid ""
-#~ "Good Speedup and High Compatibility; may cause garbage graphics, SPS, "
-#~ "etc..."
-#~ msgstr ""
-#~ "不錯的速度提升而且相容性高；可能導致\n"
-#~ "圖像變得垃圾、有尖刺的多邊形，等等..."
 
 #~ msgid "Enable EE Cache - Interpreter Only! (Slower)"
 #~ msgstr "啟用快取 - 僅用於直譯器！（速度更慢）"
