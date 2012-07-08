@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-05-27 12:20+0200\n"
-"PO-Revision-Date: 2012-05-09 13:20+0100\n"
+"POT-Creation-Date: 2012-07-08 09:24+0200\n"
+"PO-Revision-Date: 2012-07-06 16:53+0100\n"
 "Last-Translator: pgert <http://forums.pcsx2.net/User-pgert>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -260,7 +260,7 @@ msgid ""
 "All known hardware register accesses (very slow!); not including sub filter "
 "options below."
 msgstr ""
-"Alla kända hårdvaruregisteråtkomster (mycket långsamt!), förutom "
+"Alla kända hårdvaruregisteråtkomster (mycket långsamt!), ej inräknat "
 "underfilterstillämpningarna nedanför."
 
 #: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
@@ -323,7 +323,8 @@ msgstr "Avassemblering av IOP's GPU-hjälpprocessorinstruktioner."
 #: pcsx2/SourceLog.cpp:288
 msgid ""
 "All known hardware register accesses, not including the sub-filters below."
-msgstr "Alla kända hårdvaruregisteråtkomster, förutom underfilterna nedanför."
+msgstr ""
+"Alla kända hårdvaruregisteråtkomster, ej inräknat underfilterna nedanför."
 
 #: pcsx2/SourceLog.cpp:306
 msgid "Memorycard reads, writes, erases, terminators, and other processing."
@@ -1500,7 +1501,7 @@ msgstr "Återkör CDVD (fullt)"
 
 #: pcsx2/gui/MainFrame.cpp:623
 msgid "Hard reset of the active VM."
-msgstr "Hård återställning av den aktiva VM'n."
+msgstr "Hård återställning av aktiv VM."
 
 #: pcsx2/gui/MainFrame.cpp:627
 msgid "Boot CDVD (full)"
@@ -1988,7 +1989,7 @@ msgstr "OPH Flagg hack - Försök ifall Ert spel fryser visandes samma bild."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:88
 msgid "Ignore DMAC writes when it is busy."
-msgstr "Ignorera DMAC-skrivningar när denne är upptagen."
+msgstr "Ignorera DMAC-skrivningar när denna är upptagen."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:95
 msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
@@ -2386,8 +2387,8 @@ msgid ""
 "Resets all speedhack options to their defaults, which consequently turns "
 "them all OFF."
 msgstr ""
-"Återställer alla snabbhackstillämpningar till deras förval, vilket "
-"följdaktligen avaktiverar dem."
+"Återställer alla snabbhackstillämpningar till deras förval, \n"
+" vilket följdaktligen avaktiverar dem."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:120
 msgid "EE Cyclerate [Not Recommended]"
