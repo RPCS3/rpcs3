@@ -138,7 +138,12 @@ namespace YAML
 
 			rhs.clear();
 			for(const_iterator it=node.begin();it!=node.end();++it)
+#if defined(__GNUC__) && __GNUC__ < 4
+//workaround for GCC 3:
+				rhs[it->first.template as<K>()] = it->second.template as<V>();
+#else
 				rhs[it->first.as<K>()] = it->second.as<V>();
+#endif
 			return true;
 		}
 	};
@@ -159,7 +164,12 @@ namespace YAML
 			
 			rhs.clear();
 			for(const_iterator it=node.begin();it!=node.end();++it)
+#if defined(__GNUC__) && __GNUC__ < 4
+//workaround for GCC 3:
+				rhs.push_back(it->template as<T>());
+#else
 				rhs.push_back(it->as<T>());
+#endif
 			return true;
 		}
 	};
@@ -180,7 +190,12 @@ namespace YAML
 			
 			rhs.clear();
 			for(const_iterator it=node.begin();it!=node.end();++it)
+#if defined(__GNUC__) && __GNUC__ < 4
+//workaround for GCC 3:
+				rhs.push_back(it->template as<T>());
+#else
 				rhs.push_back(it->as<T>());
+#endif
 			return true;
 		}
 	};
