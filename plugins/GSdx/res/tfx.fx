@@ -4,6 +4,9 @@
 #define FMT_16 2
 #define FMT_PAL 4 /* flag bit */
 
+// And I say this as an ATI user.
+#define ATI_SUCKS 1
+
 #if SHADER_MODEL >= 0x400
 
 #ifndef VS_BPPZ
@@ -34,6 +37,7 @@
 #define PS_COLCLIP 0
 #define PS_DATE 0
 #define PS_SPRITEHACK 0
+#define PS_POINT_SAMPLER 0
 #endif
 
 struct VS_INPUT
@@ -101,6 +105,15 @@ cbuffer cb1
 
 float4 sample_c(float2 uv)
 {
+	if (ATI_SUCKS && PS_POINT_SAMPLER)
+	{
+		// Weird issue with ATI cards (happens on at least HD 4xxx and 5xxx),
+		// it looks like they add 127/128 of a texel to sampling coordinates
+		// occasionally causing point sampling to erroneously round up.
+		// I'm manually adjusting coordinates to the centre of texels here,
+		// though the centre is just paranoia, the top left corner works fine.
+		uv = (trunc(uv * WH.zw) + float2(0.5, 0.5)) / WH.zw;
+	}
 	return Texture.Sample(TextureSampler, uv);
 }
 
@@ -378,7 +391,7 @@ float4 sample(float2 st, float q)
 		if(PS_LTF)
 		{
 			uv = st.xyxy + HalfTexel;
-			dd = frac(uv.xy * WH.zw); 
+			dd = frac(uv.xy * WH.zw);
 		}
 		else
 		{

@@ -175,12 +175,13 @@ public:
 				uint32 colclip:2;
 				uint32 date:2;
 				uint32 spritehack:1;
+				uint32 point_sampler:1;
 			};
 
 			uint32 key;
 		};
 
-		operator uint32() {return key & 0x7ffffff;}
+		operator uint32() {return key & 0xfffffff;}
 
 		PSSelector() : key(0) {}
 	};

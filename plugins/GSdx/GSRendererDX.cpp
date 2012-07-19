@@ -292,6 +292,7 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 		ps_sel.ltf = bilinear && !simple_sample;
 		ps_sel.rt = tex->m_target;
 		ps_sel.spritehack = tex->m_spritehack_t;
+		ps_sel.point_sampler = !(bilinear && simple_sample);
 
 		int w = tex->m_texture->GetWidth();
 		int h = tex->m_texture->GetHeight();
