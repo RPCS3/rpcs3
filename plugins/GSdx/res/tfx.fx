@@ -519,19 +519,24 @@ void atst(float4 c)
 	else if(PS_ATST == 2) // l
 	{
 		#if PS_SPRITEHACK == 0
-		clip(AREF - a);
+		clip(AREF - a - 0.5f);
 		#endif				
 	}
 	else if(PS_ATST == 3) // le
 	{
-		clip(AREF - a);
+		clip(AREF - a + 0.5f);
 	}
 	else if(PS_ATST == 4) // e
 	{
-		clip(0.5f - abs(a - AREF));	}
-	else if(PS_ATST == 5 || PS_ATST == 6) // ge, g
+		clip(0.5f - abs(a - AREF));
+	}
+	else if(PS_ATST == 5) // ge
 	{
-		clip(a - AREF);
+		clip(a - AREF + 0.5f);
+	}
+	else if(PS_ATST == 6) // g
+	{
+		clip(a - AREF - 0.5f);
 	}
 	else if(PS_ATST == 7) // ne
 	{

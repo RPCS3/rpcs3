@@ -252,26 +252,12 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 	}
 
 	if(context->TEST.ATE)
-	{
 		ps_sel.atst = context->TEST.ATST;
-
-		switch(ps_sel.atst)
-		{
-		case ATST_LESS:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
-			break;
-		case ATST_GREATER:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
-			break;
-		default:
-			ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
-			break;
-		}
-	}
 	else
-	{
 		ps_sel.atst = ATST_ALWAYS;
-	}
+
+	if (context->TEST.ATE && context->TEST.ATST > 1)
+		ps_cb.FogColor_AREF.a = (float)context->TEST.AREF;
 
 	if(tex)
 	{
@@ -375,19 +361,6 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 		static const uint32 iatst[] = {1, 0, 5, 6, 7, 2, 3, 4};
 
 		ps_sel.atst = iatst[ps_sel.atst];
-
-		switch(ps_sel.atst)
-		{
-		case ATST_LESS:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
-			break;
-		case ATST_GREATER:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
-			break;
-		default:
-			ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
-			break;
-		}
 
 		dev->SetupPS(ps_sel, &ps_cb, ps_ssel);
 
