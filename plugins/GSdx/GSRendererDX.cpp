@@ -351,6 +351,7 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 			dev->SetupPS(ps_selneg, &ps_cb, ps_ssel);
 
 			dev->DrawIndexedPrimitive();
+			dev->SetupOM(om_dssel, om_bsel, afix);
 		}
 	}
 
