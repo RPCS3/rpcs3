@@ -719,56 +719,49 @@ void GSDevice11::DoShadeBoost(GSTexture* st, GSTexture* dt)
 
 void GSDevice11::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm)
 {
-	const GSVector2i& size = rt->GetSize();
+	// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
 
-	if(GSTexture* t = CreateRenderTarget(size.x, size.y, rt->IsMSAA()))
-	{
-		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
+	BeginScene();
 
-		BeginScene();
+	ClearStencil(ds, 0);
 
-		ClearStencil(ds, 0);
+	// om
 
-		// om
+	OMSetDepthStencilState(m_date.dss, 1);
+	OMSetBlendState(m_date.bs, 0);
+	OMSetRenderTargets(NULL, ds);
 
-		OMSetDepthStencilState(m_date.dss, 1);
-		OMSetBlendState(m_date.bs, 0);
-		OMSetRenderTargets(t, ds);
+	// ia
 
-		// ia
+	IASetVertexBuffer(vertices, sizeof(vertices[0]), 4);
+	IASetInputLayout(m_convert.il);
+	IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-		IASetVertexBuffer(vertices, sizeof(vertices[0]), 4);
-		IASetInputLayout(m_convert.il);
-		IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	// vs
 
-		// vs
+	VSSetShader(m_convert.vs, NULL);
 
-		VSSetShader(m_convert.vs, NULL);
+	// gs
 
-		// gs
+	GSSetShader(NULL);
 
-		GSSetShader(NULL);
+	// ps
 
-		// ps
+	GSTexture* rt2 = rt->IsMSAA() ? Resolve(rt) : rt;
 
-		GSTexture* rt2 = rt->IsMSAA() ? Resolve(rt) : rt;
+	PSSetShaderResources(rt2, NULL);
+	PSSetSamplerState(m_convert.pt, NULL);
+	PSSetShader(m_convert.ps[datm ? 2 : 3], NULL);
 
-		PSSetShaderResources(rt2, NULL);
-		PSSetSamplerState(m_convert.pt, NULL);
-		PSSetShader(m_convert.ps[datm ? 2 : 3], NULL);
+	//
 
-		//
+	DrawPrimitive();
 
-		DrawPrimitive();
+	//
 
-		//
+	EndScene();
 
-		EndScene();
-
-		Recycle(t);
-
-		if(rt2 != rt) Recycle(rt2);
-	}
+	if(rt2 != rt) Recycle(rt2);
 }
 
 void GSDevice11::IASetVertexBuffer(const void* vertex, size_t stride, size_t count)
@@ -1110,6 +1103,9 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 	ID3D11RenderTargetView* rtv = NULL;
 	ID3D11DepthStencilView* dsv = NULL;
 
+	if (!rt && !ds)
+		throw GSDXRecoverableError();
+
 	if(rt) rtv = *(GSTexture11*)rt;
 	if(ds) dsv = *(GSTexture11*)ds;
 
@@ -1121,9 +1117,10 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 		m_ctx->OMSetRenderTargets(1, &rtv, dsv);
 	}
 
-	if(m_state.viewport != rt->GetSize())
+	GSVector2i size = rt ? rt->GetSize() : ds->GetSize();
+	if(m_state.viewport != size)
 	{
-		m_state.viewport = rt->GetSize();
+		m_state.viewport = size;
 
 		D3D11_VIEWPORT vp;
 
@@ -1131,15 +1128,15 @@ void GSDevice11::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector
 
 		vp.TopLeftX = 0;
 		vp.TopLeftY = 0;
-		vp.Width = (float)rt->GetWidth();
-		vp.Height = (float)rt->GetHeight();
+		vp.Width = (float)size.x;
+		vp.Height = (float)size.y;
 		vp.MinDepth = 0.0f;
 		vp.MaxDepth = 1.0f;
 
 		m_ctx->RSSetViewports(1, &vp);
 	}
 
-	GSVector4i r = scissor ? *scissor : GSVector4i(rt->GetSize()).zwxy();
+	GSVector4i r = scissor ? *scissor : GSVector4i(size).zwxy();
 
 	if(!m_state.scissor.eq(r))
 	{
