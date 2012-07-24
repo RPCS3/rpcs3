@@ -215,12 +215,13 @@ public:
 				uint32 zwe:1;
 				uint32 date:1;
 				uint32 fba:1;
+				uint32 alpha_stencil:1;
 			};
 
 			uint32 key;
 		};
 
-		operator uint32() {return key & 0x1f;}
+		operator uint32() {return key & 0x3f;}
 
 		OMDepthStencilSelector() : key(0) {}
 	};

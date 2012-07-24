@@ -32,6 +32,7 @@ GSRendererDX::GSRendererDX(GSTextureCache* tc, const GSVector2& pixelcenter)
 
 	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0) && !!theApp.GetConfig("UserHacks", 0);
     UserHacks_WildHack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_WildHack", 0) : 0;
+	UserHacks_AlphaStencil = !!theApp.GetConfig("UserHacks_AlphaStencil", 0) && !!theApp.GetConfig("UserHacks", 0);
 }
 
 GSRendererDX::~GSRendererDX()
@@ -258,6 +259,24 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 
 	if (context->TEST.ATE && context->TEST.ATST > 1)
 		ps_cb.FogColor_AREF.a = (float)context->TEST.AREF;
+
+	// Destination alpha pseudo stencil hack: use a stencil operation combined with an alpha test
+	// to only draw pixels which would cause the destination alpha test to fail in the future once.
+	// Unfortunately this also means only drawing those pixels at all, which is why this is a hack.
+	// The interaction with FBA in D3D9 is probably less than ideal.
+	if (UserHacks_AlphaStencil && DATE && dev->HasStencil() && om_bsel.wa && (!context->TEST.ATE || context->TEST.ATST == 1))
+	{
+		if (!context->FBA.FBA)
+		{
+			if (context->TEST.DATM == 0)
+				ps_sel.atst = 5; // >=
+			else
+				ps_sel.atst = 2; // <
+			ps_cb.FogColor_AREF.a = (float)0x80;
+		}
+		if (!(context->FBA.FBA && context->TEST.DATM == 1))
+			om_dssel.alpha_stencil = 1;
+	}
 
 	if(tex)
 	{

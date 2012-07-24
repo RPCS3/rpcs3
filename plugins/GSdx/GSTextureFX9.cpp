@@ -238,11 +238,11 @@ void GSDevice9::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint
 		{
 			dss->StencilEnable = true;
 			dss->StencilReadMask = 1;
-			dss->StencilWriteMask = 2;
+			dss->StencilWriteMask = dssel.alpha_stencil ? 3 : 2;
 			dss->StencilFunc = dssel.date ? D3DCMP_EQUAL : D3DCMP_ALWAYS;
-			dss->StencilPassOp = dssel.fba ? D3DSTENCILOP_REPLACE : D3DSTENCILOP_KEEP;
-			dss->StencilFailOp = dssel.fba ? D3DSTENCILOP_ZERO : D3DSTENCILOP_KEEP;
-			dss->StencilDepthFailOp = dssel.fba ? D3DSTENCILOP_ZERO : D3DSTENCILOP_KEEP;
+			dss->StencilPassOp = dssel.alpha_stencil ? D3DSTENCILOP_ZERO : dssel.fba ? D3DSTENCILOP_REPLACE : D3DSTENCILOP_KEEP;
+			dss->StencilFailOp = dssel.fba && !dssel.alpha_stencil ? D3DSTENCILOP_ZERO : D3DSTENCILOP_KEEP;
+			dss->StencilDepthFailOp = D3DSTENCILOP_KEEP;
 			dss->StencilRef = 3;
 		}
 

@@ -24,27 +24,19 @@
  */
 
 #define IDC_NATIVERES                   2001
-#define IDC_VSYNC                       2002
 #define IDC_PALTEX                      2003
 #define IDC_LOGZ                        2004
-#define IDC_CHECK6                      2005
 #define IDC_CODECS                      2006
 #define IDC_RESOLUTION                  2007
-#define IDC_SHADER                      2008
 #define IDC_RESX_EDIT                   2009
 #define IDC_RESY_EDIT                   2010
 #define IDC_AA1                         2011
 #define IDC_SWTHREADS_EDIT              2012
-#define IDC_CUSTOM1                     2013
-#define IDC_MSAAEDIT                    2013
-#define IDC_CHECK4                      2014
 #define IDC_FILTER                      2015
 #define IDC_DITHERING                   2016
-#define IDC_RADIO1                      2017
 #define IDC_RESX                        2018
 #define IDC_RESY                        2019
 #define IDD_CONFIG                      2020
-#define IDC_MSAA                        2020
 #define IDB_LOGO9                       2021
 #define IDB_LOGO10                      2022
 #define IDC_FBA                         2023
@@ -52,7 +44,6 @@
 #define IDC_LOGO11                      2025
 #define IDD_CAPTURE                     2026
 #define IDD_GPUCONFIG                   2027
-#define IDC_BLUR                        2028
 #define IDC_RENDERER                    2029
 #define IDC_INTERLACE                   2030
 #define IDC_ASPECTRATIO                 2031
@@ -67,14 +58,8 @@
 #define IDC_WIDTH                       2040
 #define IDC_HEIGHT                      2041
 #define IDC_CONFIGURE                   2042
-#define IDC_STATIC_TEXT_HWAA            2043
-#define IDC_ALPHAHACK2                  2044
-#define IDC_STATIC_TEXT_SKIPDRAW        2045
 #define IDC_WINDOWED                    2046
-#define IDC_USERHACKS                   2047
 #define IDC_SKIPDRAWHACKEDIT            2048
-#define IDC_STATIC10                    2049
-#define IDC_HACKDISABLED                2050
 #define IDC_SPRITEHACK                  2051
 #define IDRESET                         2052
 #define IDC_SATURATION_SLIDER           2053
@@ -94,6 +79,7 @@
 #define IDC_STATIC_SKIPDRAW             2075
 #define IDC_AGGRESSIVECRC               2076
 #define IDC_CHECK_DISABLE_ALL_HACKS     2077
+#define IDC_ALPHASTENCIL                2078
 #define IDC_COLORSPACE                  3000
 #define IDR_CONVERT_FX                  10000
 #define IDR_TFX_FX                      10001

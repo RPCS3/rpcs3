@@ -298,11 +298,11 @@ void GSDevice11::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uin
 			dsd.StencilReadMask = 1;
 			dsd.StencilWriteMask = 1;
 			dsd.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
-			dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+			dsd.FrontFace.StencilPassOp = dssel.alpha_stencil ? D3D11_STENCIL_OP_ZERO : D3D11_STENCIL_OP_KEEP;
 			dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 			dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
 			dsd.BackFace.StencilFunc = D3D11_COMPARISON_EQUAL;
-			dsd.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+			dsd.BackFace.StencilPassOp = dssel.alpha_stencil ? D3D11_STENCIL_OP_ZERO : D3D11_STENCIL_OP_KEEP;
 			dsd.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
 			dsd.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
 		}
