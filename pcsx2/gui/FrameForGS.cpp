@@ -410,7 +410,7 @@ GSFrame::~GSFrame() throw()
 void GSFrame::OnCloseWindow(wxCloseEvent& evt)
 {
 	sApp.OnGsFrameClosed( GetId() );
-	evt.Skip();		// and close it.
+	Hide();		// and don't close it.
 }
 
 bool GSFrame::ShowFullScreen(bool show, long style)
