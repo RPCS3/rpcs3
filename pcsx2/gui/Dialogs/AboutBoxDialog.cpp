@@ -49,7 +49,7 @@ Dialogs::AboutBoxDialog::AboutBoxDialog( wxWindow* parent )
 		L"\n\n"
 		L"%s: Bositman, ChaosCode, "
 		L"CKemu, crushtest, GeneralPlot, "
-		L"Krakatos, Parotaku, Rudy_X"
+		L"Krakatos, Parotaku, prafull, Rudy_X"
 		L"\n\n"
 		L"%s: CKemu, Falcon4ever",
 		_("Previous versions"), _("Betatesting"), _("Webmasters"));
