@@ -11,9 +11,9 @@ Section "Start Menu Shortcuts" SEC_STARTMENU
   CreateShortCut "$SMPROGRAMS\PCSX2\Uninstall ${APP_NAME}.lnk"      "${UNINST_EXE}"      ""    "${UNINST_EXE}"    0
   CreateShortCut "$SMPROGRAMS\PCSX2\${APP_NAME}.lnk"                "${APP_EXE}"         ""    "${APP_EXE}"       0
 
-  CreateShortCut "$SMPROGRAMS\PCSX2\Readme ${APP_VERSION}.lnk"                      "$INSTDIR\docs\${PCSX2_README}" \
+  CreateShortCut "$SMPROGRAMS\PCSX2\Readme.lnk"                      "$INSTDIR\docs\${PCSX2_README}" \
     "" "" 0 "" "" "Typical usage overview and background information for PCSX2."
-  CreateShortCut "$SMPROGRAMS\PCSX2\Frequently Asked Questions ${APP_VERSION}.lnk"  "$INSTDIR\docs\${PCSX2_FAQ}" \
+  CreateShortCut "$SMPROGRAMS\PCSX2\Frequently Asked Questions.lnk"  "$INSTDIR\docs\${PCSX2_FAQ}" \
     "" "" 0 "" "" "Common answers to common problems and inquiries."
 
   ;IfFileExists ..\bin\pcsx2-dev.exe 0 +2

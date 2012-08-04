@@ -74,8 +74,8 @@ InstallDir "$PROGRAMFILES\PCSX2 ${APP_VERSION}"
 !define APP_EXE          "$INSTDIR\${APP_FILENAME}.exe"
 !define INSTDIR_REG_KEY  "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_FILENAME}"
 
-!define PCSX2_README     "PCSX2_Readme_${APP_VERSION}.pdf"
-!define PCSX2_FAQ        "PCSX2_FAQ_${APP_VERSION}.pdf"
+!define PCSX2_README     "PCSX2_Readme.pdf"
+!define PCSX2_FAQ        "PCSX2_FAQ.pdf"
 
 
 Var DirectXSetupError

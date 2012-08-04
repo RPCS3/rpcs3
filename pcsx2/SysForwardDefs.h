@@ -15,9 +15,9 @@
 
 #pragma once
 
-static const int PCSX2_VersionHi	= 0;
-static const int PCSX2_VersionMid	= 9;
-static const int PCSX2_VersionLo	= 9;
+static const int PCSX2_VersionHi	= 1;
+static const int PCSX2_VersionMid	= 1;
+static const int PCSX2_VersionLo	= 0;
 
 class SysCoreThread;
 class CpuInitializerSet;
