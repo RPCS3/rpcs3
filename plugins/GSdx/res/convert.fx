@@ -132,7 +132,7 @@ PS_OUTPUT ps_main2(PS_INPUT input)
 {
 	PS_OUTPUT output;
 	
-	clip(sample_c(input.t).a - 128.0f / 255); // >= 0x80 pass
+	clip(sample_c(input.t).a - 127.5f / 255); // >= 0x80 pass
 	
 	output.c = 0;
 
@@ -143,7 +143,7 @@ PS_OUTPUT ps_main3(PS_INPUT input)
 {
 	PS_OUTPUT output;
 	
-	clip(127.95f / 255 - sample_c(input.t).a); // < 0x80 pass (== 0x80 should not pass)
+	clip(127.5f / 255 - sample_c(input.t).a); // < 0x80 pass (== 0x80 should not pass)
 	
 	output.c = 0;
 
