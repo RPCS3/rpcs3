@@ -506,7 +506,7 @@ void datst(PS_INPUT input)
 
 void atst(float4 c)
 {
-	float a = trunc(c.a * 255);
+	float a = trunc(c.a * 255 + 0.01);
 	
 	if(PS_ATST == 0) // never
 	{
