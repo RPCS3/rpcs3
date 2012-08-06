@@ -44,6 +44,7 @@ class GSHacksDlg : public GSDialog
 {
 	unsigned short cb2msaa[17];
 	unsigned short msaa2cb[17];
+	std::string adapter_id;
 	
 	bool isdx9;
 
@@ -57,13 +58,29 @@ protected:
 
 public:
 	GSHacksDlg();
+
+	// Ugh
+	void SetAdapter(std::string adapter_id_)
+	{
+		adapter_id = adapter_id_;
+	}
 };
 
 class GSSettingsDlg : public GSDialog
 {
 	list<D3DDISPLAYMODE> m_modes;
+	struct Adapter
+	{
+		std::string name;
+		std::string id;
+		D3D_FEATURE_LEVEL level;
+		Adapter(const std::string &n, const std::string &i, const D3D_FEATURE_LEVEL &l)
+			: name(n), id(i), level(l) {}
+	};
+	std::vector<const Adapter> adapters;
 	bool m_IsOpen2;
 
+	void UpdateRenderers();
 	void UpdateControls();
 
 protected:

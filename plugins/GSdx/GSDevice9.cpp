@@ -47,9 +47,41 @@ GSDevice9::~GSDevice9()
 	if(m_state.ps_cb) _aligned_free(m_state.ps_cb);
 }
 
+static void FindAdapter(IDirect3D9 *d3d9, UINT &adapter, D3DDEVTYPE &devtype, std::string adapter_id = "")
+{
+	adapter = D3DADAPTER_DEFAULT;
+	devtype = D3DDEVTYPE_HAL;
+
+	if (!adapter_id.length())
+		adapter_id = theApp.GetConfig("Adapter", "default");
+
+	if (adapter_id == "default")
+		;
+	else if (adapter_id == "ref")
+	{
+		devtype = D3DDEVTYPE_REF;
+	}
+	else
+	{
+		int n = d3d9->GetAdapterCount();
+		for (int i = 0; i < n; i++)
+		{
+			D3DADAPTER_IDENTIFIER9 id;
+			if (D3D_OK != d3d9->GetAdapterIdentifier(i, 0, &id))
+				break;
+			if (GSAdapter(id) == adapter_id)
+			{
+				adapter = i;
+				devtype = D3DDEVTYPE_HAL;
+				break;
+			}
+		}
+	}
+}
+
 // if supported and null != msaa_desc, msaa_desc will contain requested Count and Quality
 
-static bool IsMsaaSupported(IDirect3D9* d3d, D3DFORMAT depth_format, uint32 msaaCount, DXGI_SAMPLE_DESC* msaa_desc = NULL)
+static bool IsMsaaSupported(IDirect3D9* d3d, UINT adapter, D3DDEVTYPE devtype, D3DFORMAT depth_format, uint32 msaaCount, DXGI_SAMPLE_DESC* msaa_desc = NULL)
 {
 	if(msaaCount > 16) return false;
 
@@ -57,7 +89,7 @@ static bool IsMsaaSupported(IDirect3D9* d3d, D3DFORMAT depth_format, uint32 msaa
 
 	memset(&d3dcaps, 0, sizeof(d3dcaps));
 
-	d3d->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &d3dcaps);
+	d3d->GetDeviceCaps(adapter, devtype, &d3dcaps);
 
 	DWORD quality[2] = {0, 0};
 
@@ -76,14 +108,14 @@ static bool IsMsaaSupported(IDirect3D9* d3d, D3DFORMAT depth_format, uint32 msaa
 	return false;
 }
 
-static bool TestDepthFormat(IDirect3D9* d3d, D3DFORMAT format)
+static bool TestDepthFormat(IDirect3D9* d3d, UINT adapter, D3DDEVTYPE devtype, D3DFORMAT format)
 {
-	if(FAILED(d3d->CheckDeviceFormat(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, format)))
+	if(FAILED(d3d->CheckDeviceFormat(adapter, devtype, D3DFMT_X8R8G8B8, D3DUSAGE_DEPTHSTENCIL, D3DRTYPE_SURFACE, format)))
 	{
 		return false;
 	}
 
-	if(FAILED(d3d->CheckDepthStencilMatch(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_X8R8G8B8, D3DFMT_X8R8G8B8, format)))
+	if(FAILED(d3d->CheckDepthStencilMatch(adapter, devtype, D3DFMT_X8R8G8B8, D3DFMT_X8R8G8B8, format)))
 	{
 		return false;
 	}
@@ -91,7 +123,7 @@ static bool TestDepthFormat(IDirect3D9* d3d, D3DFORMAT format)
 	return true;
 }
 
-static D3DFORMAT BestD3dFormat(IDirect3D9* d3d, int msaaCount = 0, DXGI_SAMPLE_DESC* msaa_desc = NULL)
+static D3DFORMAT BestD3dFormat(IDirect3D9* d3d, UINT adapter, D3DDEVTYPE devtype, int msaaCount = 0, DXGI_SAMPLE_DESC* msaa_desc = NULL)
 {
 	// In descending order of preference
 
@@ -106,7 +138,7 @@ static D3DFORMAT BestD3dFormat(IDirect3D9* d3d, int msaaCount = 0, DXGI_SAMPLE_D
 
 	for(int i = 0; i < sizeof(fmts); i++)
 	{
-		if(TestDepthFormat(d3d, fmts[i]) && (!msaaCount || IsMsaaSupported(d3d, fmts[i], msaaCount, msaa_desc)))
+		if(TestDepthFormat(d3d, adapter, devtype, fmts[i]) && (!msaaCount || IsMsaaSupported(d3d, adapter, devtype, fmts[i], msaaCount, msaa_desc)))
 		{
 			return fmts[i];
 		}
@@ -117,13 +149,18 @@ static D3DFORMAT BestD3dFormat(IDirect3D9* d3d, int msaaCount = 0, DXGI_SAMPLE_D
 
 // return: 32, 24, or 0 if not supported. if 1==msaa, considered as msaa=0
 
-uint32 GSDevice9::GetMaxDepth(uint32 msaa = 0)
+uint32 GSDevice9::GetMaxDepth(uint32 msaa, std::string adapter_id)
 {
 	CComPtr<IDirect3D9> d3d;
 
 	d3d.Attach(Direct3DCreate9(D3D_SDK_VERSION));
 
-	switch(BestD3dFormat(d3d, msaa))
+	UINT adapter;
+	D3DDEVTYPE devtype;
+
+	FindAdapter(d3d, adapter, devtype, adapter_id);
+
+	switch(BestD3dFormat(d3d, adapter, devtype, msaa))
 	{
 		case D3DFMT_D32:
 		case D3DFMT_D32F_LOCKABLE:
@@ -156,18 +193,35 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	if(!m_d3d) return false;
 
+	UINT adapter;
+	D3DDEVTYPE devtype;
+
+	FindAdapter(m_d3d, adapter, devtype);
+
+	D3DADAPTER_IDENTIFIER9 id;
+
+	if(S_OK == m_d3d->GetAdapterIdentifier(adapter, 0, &id))
+	{
+		printf("%s (%d.%d.%d.%d)\n",
+			id.Description,
+			id.DriverVersion.HighPart >> 16,
+			id.DriverVersion.HighPart & 0xffff,
+			id.DriverVersion.LowPart >> 16,
+			id.DriverVersion.LowPart & 0xffff);
+	}
+
 	ForceValidMsaaConfig();
 
 	// Get best format/depth for msaa. Assumption is that if the resulting depth is 24 instead of possible 32,
 	// the user was already warned when she selected it. (Lower res z buffer without warning is unacceptable).
 
-	m_depth_format = BestD3dFormat(m_d3d, m_msaa, &m_msaa_desc);
+	m_depth_format = BestD3dFormat(m_d3d, adapter, devtype, m_msaa, &m_msaa_desc);
 
 	if(D3DFMT_UNKNOWN == m_depth_format)
 	{
 		// can't find a format with requested msaa, try without.
 
-		m_depth_format = BestD3dFormat(m_d3d, 0);
+		m_depth_format = BestD3dFormat(m_d3d, adapter, devtype, 0);
 
 		if(D3DFMT_UNKNOWN == m_depth_format)
 		{

@@ -55,6 +55,38 @@ bool GSDevice11::Create(GSWnd* wnd)
 	D3D11_RASTERIZER_DESC rd;
 	D3D11_BLEND_DESC bsd;
 
+	CComPtr<IDXGIAdapter1> adapter;
+	D3D_DRIVER_TYPE driver_type = D3D_DRIVER_TYPE_HARDWARE;
+
+	std::string adapter_id = theApp.GetConfig("Adapter", "default");
+
+	if (adapter_id == "default")
+		;
+	else if (adapter_id == "ref")
+	{
+		driver_type = D3D_DRIVER_TYPE_REFERENCE;
+	}
+	else
+	{
+		CComPtr<IDXGIFactory1> dxgi_factory;
+		CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&dxgi_factory);
+		if (dxgi_factory)
+			for (int i = 0;; i++)
+			{
+				CComPtr<IDXGIAdapter1> enum_adapter;
+				if (S_OK != dxgi_factory->EnumAdapters1(i, &enum_adapter))
+					break;
+				DXGI_ADAPTER_DESC1 desc;
+				hr = enum_adapter->GetDesc1(&desc);
+				if (S_OK == hr && GSAdapter(desc) == adapter_id)
+				{
+					adapter = enum_adapter;
+					driver_type = D3D_DRIVER_TYPE_UNKNOWN;
+					break;
+				}
+			}
+	}
+
 	memset(&scd, 0, sizeof(scd));
 
 	scd.BufferCount = 2;
@@ -94,8 +126,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 		D3D_FEATURE_LEVEL_10_0,
 	};
 
-	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, levels, countof(levels), D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
-	// hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, flags, NULL, 0, D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
+	hr = D3D11CreateDeviceAndSwapChain(adapter, driver_type, NULL, flags, levels, countof(levels), D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
 
 	if(FAILED(hr)) return false;
 

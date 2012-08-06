@@ -233,23 +233,6 @@ bool GSUtil::CheckDirectX()
 		printf("\n");
 	}
 
-	if(IDirect3D9* d3d = Direct3DCreate9(D3D_SDK_VERSION))
-	{
-		D3DADAPTER_IDENTIFIER9 id;
-
-		if(S_OK == d3d->GetAdapterIdentifier(D3DADAPTER_DEFAULT, 0, &id))
-		{
-			printf("%s (%d.%d.%d.%d)\n",
-				id.Description,
-				id.DriverVersion.HighPart >> 16,
-				id.DriverVersion.HighPart & 0xffff,
-				id.DriverVersion.LowPart >> 16,
-				id.DriverVersion.LowPart & 0xffff);
-		}
-
-		d3d->Release();
-	}
-
 	string d3dx9_dll = format("d3dx9_%d.dll", D3DX_SDK_VERSION);
 
 	if(HINSTANCE hDll = LoadLibrary(d3dx9_dll.c_str()))

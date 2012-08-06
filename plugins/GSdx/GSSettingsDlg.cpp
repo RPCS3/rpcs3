@@ -39,6 +39,13 @@ void GSSettingsDlg::OnInit()
 
 	m_modes.clear();
 
+	CComPtr<IDirect3D9> d3d9;
+	d3d9.Attach(Direct3DCreate9(D3D_SDK_VERSION));
+
+	CComPtr<IDXGIFactory1> dxgi_factory;
+	if (GSUtil::CheckDXGI())
+		CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void**)&dxgi_factory);
+
 	if(!m_IsOpen2)
 	{
 		D3DDISPLAYMODE mode;
@@ -47,21 +54,17 @@ void GSSettingsDlg::OnInit()
 
 		ComboBoxAppend(IDC_RESOLUTION, "Please select...", (LPARAM)&m_modes.back(), true);
 
-		CComPtr<IDirect3D9> d3d;
-
-		d3d.Attach(Direct3DCreate9(D3D_SDK_VERSION));
-		
-		if(d3d)
+		if(d3d9)
 		{
 			uint32 w = theApp.GetConfig("ModeWidth", 0);
 			uint32 h = theApp.GetConfig("ModeHeight", 0);
 			uint32 hz = theApp.GetConfig("ModeRefreshRate", 0);
 
-			uint32 n = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_R5G6B5);
+			uint32 n = d3d9->GetAdapterModeCount(D3DADAPTER_DEFAULT, D3DFMT_R5G6B5);
 
 			for(uint32 i = 0; i < n; i++)
 			{
-				if(S_OK == d3d->EnumAdapterModes(D3DADAPTER_DEFAULT, D3DFMT_R5G6B5, i, &mode))
+				if(S_OK == d3d9->EnumAdapterModes(D3DADAPTER_DEFAULT, D3DFMT_R5G6B5, i, &mode))
 				{
 					m_modes.push_back(mode);
 
@@ -73,25 +76,76 @@ void GSSettingsDlg::OnInit()
 		}
 	}
 
-	D3D_FEATURE_LEVEL level = GSUtil::CheckDirect3D11Level();
+	adapters.clear();
 
-	vector<GSSetting> renderers;
+	adapters.push_back(Adapter("Default Hardware Device", "default", GSUtil::CheckDirect3D11Level(NULL, D3D_DRIVER_TYPE_HARDWARE)));
+	adapters.push_back(Adapter("Reference Device", "ref", GSUtil::CheckDirect3D11Level(NULL, D3D_DRIVER_TYPE_REFERENCE)));
 
-	for(size_t i = 0; i < theApp.m_gs_renderers.size(); i++)
+	if (dxgi_factory)
 	{
-		GSSetting r = theApp.m_gs_renderers[i];
-
-		if(i >= 3 && i <= 5)
+		for (int i = 0;; i++)
 		{
-			if(level < D3D_FEATURE_LEVEL_10_0) continue;
-
-			r.name = std::string("Direct3D") + (level >= D3D_FEATURE_LEVEL_11_0 ? "11" : "10");
+			CComPtr<IDXGIAdapter1> adapter;
+			if (S_OK != dxgi_factory->EnumAdapters1(i, &adapter))
+				break;
+			DXGI_ADAPTER_DESC1 desc;
+			HRESULT hr = adapter->GetDesc1(&desc);
+			if (S_OK == hr)
+			{
+				D3D_FEATURE_LEVEL level = GSUtil::CheckDirect3D11Level(adapter, D3D_DRIVER_TYPE_UNKNOWN);
+// GSDX isn't unicode!?
+#if 1
+				int size = WideCharToMultiByte(CP_ACP, 0,
+					desc.Description, sizeof(desc.Description),
+					NULL, 0,
+					NULL, NULL);
+				char *buf = new char[size];
+				WideCharToMultiByte(CP_ACP, 0,
+					desc.Description, sizeof(desc.Description),
+					buf, size,
+					NULL, NULL);
+				adapters.push_back(Adapter(buf, GSAdapter(desc), level));
+				delete buf;
+#else
+				adapters.push_back(Adapter(desc.Description, GSAdapter(desc), level));
+#endif
+			}
 		}
-
-		renderers.push_back(r);
+	}
+	else if (d3d9)
+	{
+		int n = d3d9->GetAdapterCount();
+		for (int i = 0; i < n; i++)
+		{
+			D3DADAPTER_IDENTIFIER9 desc;
+			if (D3D_OK != d3d9->GetAdapterIdentifier(i, 0, &desc))
+				break;
+// GSDX isn't unicode!?
+#if 0
+			wchar_t buf[sizeof desc.Description * sizeof(WCHAR)];
+			MultiByteToWideChar(CP_ACP /* I have no idea if this is right */, 0,
+				desc.Description, sizeof(desc.Description),
+				buf, sizeof buf / sizeof *buf);
+			adapters.push_back(Adapter(buf, GSAdapter(desc), (D3D_FEATURE_LEVEL)0));
+#else
+			adapters.push_back(Adapter(desc.Description, GSAdapter(desc), (D3D_FEATURE_LEVEL)0));
+#endif
+		}
 	}
 
-	ComboBoxInit(IDC_RENDERER, renderers, theApp.GetConfig("Renderer", 0));
+	std::string adapter_setting = theApp.GetConfig("Adapter", "default");
+	vector<GSSetting> adapter_settings;
+	unsigned adapter_sel = 0;
+
+	for (unsigned i = 0; i < adapters.size(); i++)
+	{
+		if (adapters[i].id == adapter_setting)
+			adapter_sel = i;
+		adapter_settings.push_back(GSSetting(i, adapters[i].name.c_str(), ""));
+	}
+
+	ComboBoxInit(IDC_ADAPTER, adapter_settings, adapter_sel);
+	UpdateRenderers();
 	ComboBoxInit(IDC_INTERLACE, theApp.m_gs_interlace, theApp.GetConfig("Interlace", 7)); // 7 = "auto", detects interlace based on SMODE2 register
 	ComboBoxInit(IDC_ASPECTRATIO, theApp.m_gs_aspectratio, theApp.GetConfig("AspectRatio", 1));
 	ComboBoxInit(IDC_UPSCALE_MULTIPLIER, theApp.m_gs_upscale_multiplier, theApp.GetConfig("upscale_multiplier", 1));
@@ -126,94 +180,137 @@ void GSSettingsDlg::OnInit()
 
 bool GSSettingsDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 {
-	if(id == IDC_UPSCALE_MULTIPLIER && code == CBN_SELCHANGE)
+	switch (id)
 	{
-		UpdateControls();
-	}
-	if(id == IDC_RENDERER && code == CBN_SELCHANGE)
-	{
-		UpdateControls();
-	}
-	else if(id == IDC_NATIVERES && code == BN_CLICKED)
-	{
-		UpdateControls();
-	}
-	else if(id == IDC_SHADEBOOST && code == BN_CLICKED)
-	{
-		UpdateControls();
-	}
-	else if(id == IDC_SHADEBUTTON && code == BN_CLICKED)
-	{
-		ShadeBoostDlg.DoModal();
-	}
-	else if(id == IDC_HACKS_ENABLED && code == BN_CLICKED)
-	{
-		UpdateControls();
-	}
-	else if(id == IDC_HACKSBUTTON && code == BN_CLICKED)
-	{
-		HacksDlg.DoModal();
-	}
-	else if(id == IDOK)
-	{
-		INT_PTR data;
-
-		if(!m_IsOpen2 && ComboBoxGetSelData(IDC_RESOLUTION, data))
+		case IDC_ADAPTER:
+			if (code == CBN_SELCHANGE)
+			{
+				UpdateRenderers();
+				UpdateControls();
+			}
+			break;
+		case IDC_RENDERER:
+		case IDC_UPSCALE_MULTIPLIER:
+			if (code == CBN_SELCHANGE)
+				UpdateControls();
+			break;
+		case IDC_NATIVERES:
+		case IDC_SHADEBOOST:
+		case IDC_HACKS_ENABLED:
+			if (code == BN_CLICKED)
+				UpdateControls();
+			break;
+		case IDC_SHADEBUTTON:
+			if (code == BN_CLICKED)
+				ShadeBoostDlg.DoModal();
+			break;
+		case IDC_HACKSBUTTON:
+			if (code == BN_CLICKED)
+				HacksDlg.DoModal();
+			break;
+		case IDOK:
 		{
-			const D3DDISPLAYMODE* mode = (D3DDISPLAYMODE*)data;
+			INT_PTR data;
 
-			theApp.SetConfig("ModeWidth", (int)mode->Width);
-			theApp.SetConfig("ModeHeight", (int)mode->Height);
-			theApp.SetConfig("ModeRefreshRate", (int)mode->RefreshRate);
+			if(ComboBoxGetSelData(IDC_ADAPTER, data))
+			{
+				theApp.SetConfig("Adapter", adapters[(int)data].id.c_str());
+			}
+
+			if(!m_IsOpen2 && ComboBoxGetSelData(IDC_RESOLUTION, data))
+			{
+				const D3DDISPLAYMODE* mode = (D3DDISPLAYMODE*)data;
+
+				theApp.SetConfig("ModeWidth", (int)mode->Width);
+				theApp.SetConfig("ModeHeight", (int)mode->Height);
+				theApp.SetConfig("ModeRefreshRate", (int)mode->RefreshRate);
+			}
+
+			if(ComboBoxGetSelData(IDC_RENDERER, data))
+			{
+				theApp.SetConfig("Renderer", (int)data);
+			}
+
+			if(ComboBoxGetSelData(IDC_INTERLACE, data))
+			{
+				theApp.SetConfig("Interlace", (int)data);
+			}
+
+			if(ComboBoxGetSelData(IDC_ASPECTRATIO, data))
+			{
+				theApp.SetConfig("AspectRatio", (int)data);
+			}
+
+			if(ComboBoxGetSelData(IDC_UPSCALE_MULTIPLIER, data))
+			{
+				theApp.SetConfig("upscale_multiplier", (int)data);
+			}
+			else
+			{
+				theApp.SetConfig("upscale_multiplier", 1);
+			}
+
+			if(GetId() == IDD_CONFIG) // TODO: other options may not be present in IDD_CONFIG2 as well
+			{
+				theApp.SetConfig("windowed", (int)IsDlgButtonChecked(m_hWnd, IDC_WINDOWED));			
+			}
+
+			theApp.SetConfig("filter", (int)IsDlgButtonChecked(m_hWnd, IDC_FILTER));
+			theApp.SetConfig("paltex", (int)IsDlgButtonChecked(m_hWnd, IDC_PALTEX));
+			theApp.SetConfig("logz", (int)IsDlgButtonChecked(m_hWnd, IDC_LOGZ));
+			theApp.SetConfig("fba", (int)IsDlgButtonChecked(m_hWnd, IDC_FBA));
+			theApp.SetConfig("aa1", (int)IsDlgButtonChecked(m_hWnd, IDC_AA1));
+			theApp.SetConfig("nativeres", (int)IsDlgButtonChecked(m_hWnd, IDC_NATIVERES));
+			theApp.SetConfig("resx", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESX), UDM_GETPOS, 0, 0));
+			theApp.SetConfig("resy", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_GETPOS, 0, 0));
+			theApp.SetConfig("extrathreads", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0));
+
+			// Shade Boost
+			theApp.SetConfig("ShadeBoost", (int)IsDlgButtonChecked(m_hWnd, IDC_SHADEBOOST));
+
+			// Hacks
+			theApp.SetConfig("UserHacks", (int)IsDlgButtonChecked(m_hWnd, IDC_HACKS_ENABLED));
 		}
-
-		if(ComboBoxGetSelData(IDC_RENDERER, data))
-		{
-			theApp.SetConfig("Renderer", (int)data);
-		}
-
-		if(ComboBoxGetSelData(IDC_INTERLACE, data))
-		{
-			theApp.SetConfig("Interlace", (int)data);
-		}
-
-		if(ComboBoxGetSelData(IDC_ASPECTRATIO, data))
-		{
-			theApp.SetConfig("AspectRatio", (int)data);
-		}
-
-		if(ComboBoxGetSelData(IDC_UPSCALE_MULTIPLIER, data))
-		{
-			theApp.SetConfig("upscale_multiplier", (int)data);
-		}
-		else
-		{
-			theApp.SetConfig("upscale_multiplier", 1);
-		}
-
-		if(GetId() == IDD_CONFIG) // TODO: other options may not be present in IDD_CONFIG2 as well
-		{
-			theApp.SetConfig("windowed", (int)IsDlgButtonChecked(m_hWnd, IDC_WINDOWED));			
-		}
-
-		theApp.SetConfig("filter", (int)IsDlgButtonChecked(m_hWnd, IDC_FILTER));
-		theApp.SetConfig("paltex", (int)IsDlgButtonChecked(m_hWnd, IDC_PALTEX));
-		theApp.SetConfig("logz", (int)IsDlgButtonChecked(m_hWnd, IDC_LOGZ));
-		theApp.SetConfig("fba", (int)IsDlgButtonChecked(m_hWnd, IDC_FBA));
-		theApp.SetConfig("aa1", (int)IsDlgButtonChecked(m_hWnd, IDC_AA1));
-		theApp.SetConfig("nativeres", (int)IsDlgButtonChecked(m_hWnd, IDC_NATIVERES));
-		theApp.SetConfig("resx", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESX), UDM_GETPOS, 0, 0));
-		theApp.SetConfig("resy", (int)SendMessage(GetDlgItem(m_hWnd, IDC_RESY), UDM_GETPOS, 0, 0));
-		theApp.SetConfig("extrathreads", (int)SendMessage(GetDlgItem(m_hWnd, IDC_SWTHREADS), UDM_GETPOS, 0, 0));
-
-		// Shade Boost
-		theApp.SetConfig("ShadeBoost", (int)IsDlgButtonChecked(m_hWnd, IDC_SHADEBOOST));
-
-		// Hacks
-		theApp.SetConfig("UserHacks", (int)IsDlgButtonChecked(m_hWnd, IDC_HACKS_ENABLED));
+		break;
 	}
 
 	return __super::OnCommand(hWnd, id, code);
+}
+
+void GSSettingsDlg::UpdateRenderers()
+{
+	INT_PTR i;
+
+	if (!ComboBoxGetSelData(IDC_ADAPTER, i))
+		return;
+
+	// Ugggh
+	HacksDlg.SetAdapter(adapters[(int)i].id);
+
+	D3D_FEATURE_LEVEL level = adapters[(int)i].level;
+
+	vector<GSSetting> renderers;
+
+	unsigned renderer_setting = theApp.GetConfig("Renderer", 0);
+	unsigned renderer_sel = 0;
+
+	for(size_t i = 0; i < theApp.m_gs_renderers.size(); i++)
+	{
+		GSSetting r = theApp.m_gs_renderers[i];
+
+		if(i >= 3 && i <= 5)
+		{
+			if(level < D3D_FEATURE_LEVEL_10_0) continue;
+
+			r.name = std::string("Direct3D") + (level >= D3D_FEATURE_LEVEL_11_0 ? "11" : "10");
+		}
+
+		renderers.push_back(r);
+		if (r.id == renderer_setting)
+			renderer_sel = renderer_setting;
+	}
+
+	ComboBoxInit(IDC_RENDERER, renderers, renderer_sel);
 }
 
 void GSSettingsDlg::UpdateControls()
@@ -386,7 +483,7 @@ void GSHacksDlg::OnInit()
 	{
 		if( i == 1) continue;
 
-		int depth = GSDevice9::GetMaxDepth(i);
+		int depth = GSDevice9::GetMaxDepth(i, adapter_id);
 
 		if(depth)
 		{

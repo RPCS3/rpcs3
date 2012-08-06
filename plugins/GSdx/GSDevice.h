@@ -154,3 +154,29 @@ public:
 	void AgePool();
 };
 
+struct GSAdapter
+{
+	uint32 vendor;
+	uint32 device;
+	uint32 subsys;
+	uint32 rev;
+
+	operator std::string() const;
+	bool operator==(const GSAdapter&) const;
+	bool operator==(const std::string &s) const
+	{
+		return (std::string)*this == s;
+	}
+	bool operator==(const char *s) const
+	{
+		return (std::string)*this == s;
+	}
+
+#ifdef _WINDOWS
+	GSAdapter(const DXGI_ADAPTER_DESC1 &desc_dxgi);
+	GSAdapter(const D3DADAPTER_IDENTIFIER9 &desc_d3d9);
+#endif
+#ifdef _LINUX
+	// TODO
+#endif
+};

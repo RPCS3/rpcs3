@@ -359,3 +359,38 @@ bool GSDevice::ResizeTexture(GSTexture** t, int w, int h)
 	return t2 != NULL;
 }
 
+GSAdapter::operator std::string() const
+{
+	char buf[sizeof "12345678:12345678:12345678:12345678"];
+	sprintf(buf, "%.4X:%.4X:%.8X:%.2X", vendor, device, subsys, rev);
+	return buf;
+}
+
+bool GSAdapter::operator==(const GSAdapter &desc_dxgi) const
+{
+	return vendor == desc_dxgi.vendor
+		&& device == desc_dxgi.device
+		&& subsys == desc_dxgi.subsys
+		&& rev == desc_dxgi.rev;
+}
+
+#ifdef _WINDOWS
+GSAdapter::GSAdapter(const DXGI_ADAPTER_DESC1 &desc_dxgi)
+	: vendor(desc_dxgi.VendorId)
+	, device(desc_dxgi.DeviceId)
+	, subsys(desc_dxgi.SubSysId)
+	, rev(desc_dxgi.Revision)
+{
+}
+
+GSAdapter::GSAdapter(const D3DADAPTER_IDENTIFIER9 &desc_d3d9)
+	: vendor(desc_d3d9.VendorId)
+	, device(desc_d3d9.DeviceId)
+	, subsys(desc_d3d9.SubSysId)
+	, rev(desc_d3d9.Revision)
+{
+}
+#endif
+#ifdef _LINUX
+// TODO
+#endif
