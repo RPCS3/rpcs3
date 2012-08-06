@@ -73,9 +73,7 @@ void GSSettingsDlg::OnInit()
 		}
 	}
 
-	D3D_FEATURE_LEVEL level;
-
-	GSUtil::CheckDirect3D11Level(level);
+	D3D_FEATURE_LEVEL level = GSUtil::CheckDirect3D11Level();
 
 	vector<GSSetting> renderers;
 

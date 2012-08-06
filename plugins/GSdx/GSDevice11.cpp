@@ -37,7 +37,6 @@ GSDevice11::GSDevice11()
 
 GSDevice11::~GSDevice11()
 {
-	GSUtil::UnloadDynamicLibraries();
 }
 
 bool GSDevice11::Create(GSWnd* wnd)

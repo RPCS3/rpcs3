@@ -42,8 +42,9 @@ public:
 #ifdef _WINDOWS
 
 	static bool CheckDirectX();
-	static bool CheckDirect3D11Level(D3D_FEATURE_LEVEL& level);
-	static void UnloadDynamicLibraries();
+	static bool CheckDXGI();
+	static bool CheckD3D11();
+	static D3D_FEATURE_LEVEL CheckDirect3D11Level(IDXGIAdapter *adapter = NULL, D3D_DRIVER_TYPE type = D3D_DRIVER_TYPE_HARDWARE);
 
 #endif
 };

@@ -277,121 +277,52 @@ bool GSUtil::CheckDirectX()
 //  DX11 Detection (includes DXGI detection and dynamic library method bindings)
 // ---------------------------------------------------------------------------------
 //  Code 'Borrowed' from Microsoft's DXGI sources -- Modified to suit our needs. --air
+//  Stripped down because of unnecessary complexity and false positives
+//  e.g. (d3d11_beta.dll would fail at device creation time) --pseudonym
 
-typedef HRESULT (WINAPI * FNPTR_CREATEDXGIFACTORY)(REFIID, void**);
+static int s_DXGI;
+static int s_D3D11;
 
-typedef HRESULT (WINAPI * FNPTR_D3D11CREATEDEVICEANDSWAPCHAIN) (
-	__in   IDXGIAdapter *pAdapter,
-	__in   D3D_DRIVER_TYPE DriverType,
-	__in   HMODULE Software,
-	__in   UINT Flags,
-	__in   const D3D_FEATURE_LEVEL *pFeatureLevels,
-	__in   UINT FeatureLevels,
-	__in   UINT SDKVersion,
-	__in   const DXGI_SWAP_CHAIN_DESC *pSwapChainDesc,
-	__out  IDXGISwapChain **ppSwapChain,
-	__out  ID3D11Device **ppDevice,
-	__out  D3D_FEATURE_LEVEL *pFeatureLevel,
-	__out  ID3D11DeviceContext **ppImmediateContext
-);
-
-static HMODULE					s_hModD3D11 = NULL;
-static PFN_D3D11_CREATE_DEVICE	s_DynamicD3D11CreateDevice = NULL;
-static HMODULE					s_hModDXGI = NULL;
-static FNPTR_CREATEDXGIFACTORY	s_DynamicCreateDXGIFactory = NULL;
-static long						s_D3D11Checked = 0;
-static D3D_FEATURE_LEVEL		s_D3D11Level = (D3D_FEATURE_LEVEL)0;
-
-static bool DXUTDelayLoadDXGI()
+bool GSUtil::CheckDXGI()
 {
-	if(s_DynamicD3D11CreateDevice == NULL)
+	if (0 == s_DXGI)
 	{
-		s_hModDXGI = LoadLibrary("dxgi.dll");
-
-		if(s_hModDXGI != NULL)
-		{
-			s_DynamicCreateDXGIFactory = (FNPTR_CREATEDXGIFACTORY)GetProcAddress(s_hModDXGI, "CreateDXGIFactory");
-		}
-
-		// If DXGI isn't installed then this system isn't even capable of DX11 support; so no point
-		// in checking for DX11 DLLs.
-			
-		if(s_DynamicCreateDXGIFactory == NULL) 
-		{
-			return false;
-		}
-
-		s_hModD3D11 = LoadLibrary("d3d11.dll");
-		
-		if(s_hModD3D11 == NULL) 
-		{
-			s_hModD3D11 = LoadLibrary("d3d11_beta.dll");
-		}
-
-		if(s_hModD3D11 != NULL)
-		{
-			s_DynamicD3D11CreateDevice	= (PFN_D3D11_CREATE_DEVICE)GetProcAddress(s_hModD3D11, "D3D11CreateDevice");
-		}
-
-		if(s_DynamicD3D11CreateDevice == NULL)
-		{
-			return false;
-		}
+		HMODULE hmod = LoadLibrary("dxgi.dll");
+		s_DXGI = hmod ? 1 : -1;
+		if (hmod)
+			FreeLibrary(hmod);
 	}
 
-	CComPtr<IDXGIFactory> f;
-
-	return s_DynamicCreateDXGIFactory(__uuidof(IDXGIFactory), (LPVOID*)&f) == S_OK && f != NULL;
+	return s_DXGI > 0;
 }
 
-bool GSUtil::CheckDirect3D11Level(D3D_FEATURE_LEVEL& level)
+bool GSUtil::CheckD3D11()
 {
-	HRESULT hr = S_OK;
+	if (!CheckDXGI())
+		return false;
 
-	level = (D3D_FEATURE_LEVEL)0;
-
-	if(!_interlockedbittestandset(&s_D3D11Checked, 0)) // thread safety...
+	if (0 == s_D3D11)
 	{
-		if(!DXUTDelayLoadDXGI())
-		{
-			UnloadDynamicLibraries();
-
-			return false;
-		}
-		
-		const D3D_FEATURE_LEVEL levels[] =
-		{
-			D3D_FEATURE_LEVEL_11_0,
-			D3D_FEATURE_LEVEL_10_1,
-			D3D_FEATURE_LEVEL_10_0,
-			D3D_FEATURE_LEVEL_9_3,
-			D3D_FEATURE_LEVEL_9_2,
-			D3D_FEATURE_LEVEL_9_1,
-		};
-
-		CComPtr<ID3D11Device> dev;
-		CComPtr<ID3D11DeviceContext> ctx;
-
-		hr = s_DynamicD3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_SINGLETHREADED, levels, countof(levels), D3D11_SDK_VERSION, &dev, &level, &ctx);
-
-		s_D3D11Level = level;
+		HMODULE hmod = LoadLibrary("d3d11.dll");
+		s_D3D11 = hmod ? 1 : -1;
+		if (hmod)
+			FreeLibrary(hmod);
 	}
 
-	level = s_D3D11Level;
-
-	return SUCCEEDED(hr) && level >= D3D_FEATURE_LEVEL_9_1;
+	return s_D3D11 > 0;
 }
 
-void GSUtil::UnloadDynamicLibraries()
+D3D_FEATURE_LEVEL GSUtil::CheckDirect3D11Level(IDXGIAdapter *adapter, D3D_DRIVER_TYPE type)
 {
-	s_DynamicD3D11CreateDevice = NULL;
-	s_DynamicCreateDXGIFactory = NULL;
+	HRESULT hr;
+	D3D_FEATURE_LEVEL level;
 
-	if(s_hModD3D11) FreeLibrary(s_hModD3D11);
-	if(s_hModDXGI) FreeLibrary(s_hModDXGI);
+	if(!CheckD3D11())
+		return (D3D_FEATURE_LEVEL)0;
 
-	s_hModD3D11 = NULL;
-	s_hModDXGI = NULL;
+	hr = D3D11CreateDevice(adapter, type, NULL, 0, NULL, 0, D3D11_SDK_VERSION, NULL, &level, NULL);
+
+	return SUCCEEDED(hr) ? level : (D3D_FEATURE_LEVEL)0;
 }
 
 #endif
