@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <limits.h>
 #include "GSTextureOGL.h"
 static int g_state_texture_unit = -1;
 static int g_state_texture_id = -1;
@@ -372,16 +373,22 @@ void GSTextureOGL::Save(const string& fn, const void* image, uint32 pitch)
 
 	for(int h = m_size.y; h > 0; h--, data -= pitch)
 	{
-		if (IsDss()) {
+		if (false && IsDss()) {
 			// Only get the depth and convert it to an integer
 			uint8* better_data = data;
 			for (int w = m_size.x; w > 0; w--, better_data += 8) {
 				float* input = (float*)better_data;
 				// FIXME how to dump 32 bits value into 8bits component color
-				uint32 depth = (uint32)ldexpf(*input, 32);
-				uint8 small_depth = depth >> 24;
-				uint8 better_data[4] = {small_depth, small_depth, small_depth, 0 };
-				fwrite(&better_data, 1, 4, fp);
+				GLuint depth_integer = (GLuint)(*input * (float)UINT_MAX);
+				uint8 r = (depth_integer >>  0) & 0xFF;
+				uint8 g = (depth_integer >>  8) & 0xFF;
+				uint8 b = (depth_integer >> 16) & 0xFF;
+				uint8 a = (depth_integer >> 24) & 0xFF;
+
+				fwrite(&r, 1, 1, fp);
+				fwrite(&g, 1, 1, fp);
+				fwrite(&b, 1, 1, fp);
+				fwrite(&a, 1, 1, fp);
 			}
 		} else {
 			// swap red and blue
@@ -402,7 +409,6 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 {
 	// Collect the texture data
 	uint32 pitch = 4 * m_size.x;
-	if (IsDss()) pitch *= 2;
 	char* image = (char*)malloc(pitch * m_size.y);
 	bool status = true;
 
@@ -413,8 +419,14 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 		//glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	} else if(IsDss()) {
-		EnableUnit(0);
-		glGetTexImage(m_texture_target, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, image);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
+
+		//EnableUnit(0);
+
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_texture_target, m_texture_id, 0);
+		glReadPixels(0, 0, m_size.x, m_size.y, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, image);
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	} else {
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 

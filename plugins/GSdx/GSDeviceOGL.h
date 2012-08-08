@@ -228,6 +228,8 @@ public:
 		if (!m_stencil_enable) return;
 		fprintf(stderr, "Stencil %s. Both pass op %s\n", NameOfParam(m_stencil_func), NameOfParam(m_stencil_spass_dpass_op));
 	}
+
+	bool IsMaskEnable() { return m_depth_mask; }
 };
 
 class GSDeviceOGL : public GSDevice

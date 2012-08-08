@@ -46,21 +46,6 @@ void GSDeviceOGL::CreateTextureFX()
 	glSamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
 	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
 
-	//{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	//{"TEXCOORD", 1, DXGI_FORMAT_R32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	//float2 t : TEXCOORD0;
-	//float q : TEXCOORD1;
-	//
-	//{"POSITION", 0, DXGI_FORMAT_R16G16_UINT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	//{"POSITION", 1, DXGI_FORMAT_R32_UINT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	//uint2 p : POSITION0;
-	//uint z : POSITION1;
-	//
-	//{"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 8, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	//{"COLOR", 1, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 28, D3D11_INPUT_PER_VERTEX_DATA, 0},
-	//float4 c : COLOR0;
-	//float4 f : COLOR1;
-
 	GSInputLayoutOGL vert_format[] =
 	{
 		// FIXME
@@ -74,6 +59,13 @@ void GSDeviceOGL::CreateTextureFX()
 		{6 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(GSVertex) , (const GLvoid*)(28) } ,
 	};
 	m_vb = new GSVertexBufferStateOGL(sizeof(GSVertex), vert_format, countof(vert_format));
+
+	// Compile some dummy shaders to allow modification inside Apitrace for debug
+	GLuint dummy;
+	std::string macro = "";
+	CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &dummy, macro);
+	CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &dummy, macro);
+	CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &dummy, macro);
 }
 
 void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)

@@ -584,7 +584,7 @@ void GSDeviceOGL::DebugOutput()
 	} else {
 		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_f%d__d%d__tex.bmp", g_frame_count, g_draw_count));
 	}
-	//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
+	if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
 
 	fprintf(stderr, "\n");
 	//DebugBB();
@@ -668,7 +668,17 @@ void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 	OMSetFBO(m_fbo);
 	static_cast<GSTextureOGL*>(t)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
 	// FIXME can you clean depth and stencil separately
-	glClearBufferfv(GL_DEPTH, 0, &c);
+	// XXX: glClear* depends on the scissor test!!! Disable it because the viewport 
+	// could be smaller than the texture and we really want to clean all pixels.
+	glDisable(GL_SCISSOR_TEST);
+	if (m_state.dss != NULL && m_state.dss->IsMaskEnable()) {
+		glClearBufferfv(GL_DEPTH, 0, &c);
+	} else {
+		glDepthMask(true);
+		glClearBufferfv(GL_DEPTH, 0, &c);
+		glDepthMask(false);
+	}
+	glEnable(GL_SCISSOR_TEST);
 	OMSetFBO(fbo_old);
 }
 
