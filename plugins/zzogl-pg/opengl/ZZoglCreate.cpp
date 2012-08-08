@@ -475,10 +475,10 @@ bool ZZCreate(int _width, int _height)
 	g_fiGPU_TEXWIDTH = 1.0f / GPU_TEXWIDTH;
 
 	// FIXME: not clean maybe re integrate the function in shader files --greg
-#ifndef GLSL_API
-	if (!CreateOpenShadersFile()) return false;
-#else
+#if defined(GLSL_API) || defined(GLSL4_API)
 	if (!ZZshCreateOpenShadersFile()) return false;
+#else
+	if (!CreateOpenShadersFile()) return false;
 #endif
 
 	GL_REPORT_ERROR();

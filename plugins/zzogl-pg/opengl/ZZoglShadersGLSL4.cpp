@@ -48,9 +48,8 @@
 #include "Util.h"
 #include "ZZoglShaders.h"
 #include "zpipe.h"
-#include <math.h>
 #include <map>
-#include  <fcntl.h>			// this for open(). Maybe linux-specific
+#include <fcntl.h>			// this for open(). Maybe linux-specific
 #include <sys/mman.h>			// and this for mmap
 
 // ----------------- Defines
@@ -75,11 +74,7 @@
 // #define ENABLE_MARKER // Fire some marker for opengl Debugger (apitrace, gdebugger)
 //------------------ Constants
 
-// Used in a logarithmic Z-test, as (1-o(1))/log(MAX_U32).
-const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
-
 const static char* g_pTexTypes[] = { "32", "tex32", "clut32", "tex32to16", "tex16to8h" };
-const static char* g_pShaders[4] = { "full", "reduced", "accurate", "accurate-reduced" };
 const static char* g_pPsTexWrap[] = { "#define REPEAT 1\n", "#define CLAMP 1\n", "#define REGION_REPEAT 1\n", "\n" };
 const int GLSL_VERSION = 330;
 
@@ -146,16 +141,6 @@ bool ZZshCheckProfilesSupport() {
 	return true;
 }
 
-// Error handler. Setup in ZZogl_Create once.
-void HandleCgError(ZZshContext ctx, ZZshError err, void* appdata)
-{/*
-	ZZLog::Error_Log("%s->%s: %s", ShaderCallerName, ShaderHandleName, cgGetErrorString(err));
-	const char* listing = cgGetLastListing(g_cgcontext);
-	if (listing != NULL)
-		ZZLog::Debug_Log("	last listing: %s", listing);
-*/
-}
-
 bool ZZshStartUsingShaders() {
 
 	ZZLog::Error_Log("Creating effects.");
@@ -173,7 +158,6 @@ bool ZZshStartUsingShaders() {
 	memset(&temp, 0, sizeof(temp));
 	temp.wms = 3; temp.wmt = 3;
 
-	g_nPixelShaderVer = 0;//SHADER_ACCURATE;
 	// test
 	bool bFailed;
 	FRAGMENTSHADER* pfrag = ZZshLoadShadeEffect(0, 1, 1, 1, 1, temp, 0, &bFailed);
@@ -185,7 +169,6 @@ bool ZZshStartUsingShaders() {
 	ZZLog::Error_Log("Creating extra effects.");
 	B_G(ZZshLoadExtraEffects(), return false);
 
-	ZZLog::Error_Log("Using %s shaders.", g_pShaders[g_nPixelShaderVer]);
 
 	return true;
 }
@@ -469,6 +452,9 @@ std::string BuildGlslMacro(bool writedepth, int texwrap = 3, bool testaem = fals
 	if (exactcolor) header += "#define EXACT_COLOR 1\n";
 	header += format("%s", g_pPsTexWrap[texwrap]);
 	//const char* AddAccurate  = (ps & SHADER_ACCURATE)?"#define ACCURATE_DECOMPRESSION 1\n":"";
+	if (conf.settings().no_logz) {
+		header += "#define NO_LOGZ 1\n";
+	}
 
 	return header;
 }
@@ -589,7 +575,7 @@ FRAGMENTSHADER* ZZshLoadShadeEffect(int type, int texfilter, int fog, int testae
 	else
 		texwrap = TEXWRAP_REPEAT_CLAMP;
 
-	int index = GET_SHADER_INDEX(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, context, 0);
+	int index = GET_SHADER_INDEX(type, texfilter, texwrap, fog, s_bWriteDepth, testaem, exactcolor, 0, 0);
 
 	if( pbFailed != NULL ) *pbFailed = false;
 

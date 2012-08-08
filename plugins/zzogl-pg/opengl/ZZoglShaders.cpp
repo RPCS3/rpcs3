@@ -18,7 +18,7 @@
  */
 
 // By default enable nvidia cg api
-#if !defined(GLSL_API) && !defined(NVIDIA_CG_API)
+#if !defined(GLSL_API) && !defined(NVIDIA_CG_API) && !defined(GLSL4_API)
 #define NVIDIA_CG_API
 #endif
 

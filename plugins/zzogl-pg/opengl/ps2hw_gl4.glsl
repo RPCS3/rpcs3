@@ -31,6 +31,7 @@
 //#define WRITE_DEPTH // set if depth is also written in a MRT
 //#define ACCURATE_DECOMPRESSION // set for less capable hardware ATI Radeon 9000 series
 //#define EXACT_COLOR	// make sure the output color is clamped to 1/255 boundaries (for alpha testing)
+//#define NO_LOGZ       // disable logz
 
 #define PERSPECTIVE_CORRECT_TEX
 
@@ -58,7 +59,7 @@ struct vertex
 {
     vec4 color;
     TEX_DECL tex;
-    vec4 z;
+    vec4 Z;
     float fog;
 };
 
@@ -137,8 +138,6 @@ layout(std140, binding = 0) uniform constant_buffer
 	float4 g_fMult;
 	// Vertex
 	float4 g_fZ;				// transforms d3dcolor z into float z
-	float4 g_fZMin;
-	float4 g_fZNorm;
 	// Pixel
 	half4 g_fExactColor;
 };
@@ -567,7 +566,7 @@ half4 ps2FinalColor(half4 col)
 #ifdef WRITE_DEPTH
 void write_depth_target()
 {
-    FragData1 = PSin.z; 
+    FragData1 = PSin.Z; 
 }
 #else
 void write_depth_target() { }
@@ -665,7 +664,11 @@ void BitBltDepthPS() {
 	vec4 data;
 	data = texture(g_sMemory, ps2memcoord(PSin.tex.xy));
 	FragData0 = data + g_fZBias.y;
-	gl_FragDepth   = (log(g_fc0.y + dot(data, g_fBitBltZ)) * g_fOneColor.w) * g_fZMin.y + dot(data, g_fBitBltZ) * g_fZMin.x ;
+#ifdef NO_LOGZ
+	gl_FragDepth = dot(data, g_fBitBltZ);
+#else
+	gl_FragDepth = log(g_fc0.y + dot(data, g_fBitBltZ)) * g_fOneColor.w;
+#endif
 }
 
 void BitBltDepthMRTPS() {
@@ -673,7 +676,11 @@ void BitBltDepthMRTPS() {
 	data = texture(g_sMemory, ps2memcoord(PSin.tex.xy));
 	FragData0 = data + g_fZBias.y;
 	FragData1.x = g_fc0.x;
-	gl_FragDepth = (log(g_fc0.y + dot(data, g_fBitBltZ)) * g_fOneColor.w) * g_fZMin.y + dot(data, g_fBitBltZ) * g_fZMin.x ;
+#ifdef NO_LOGZ
+	gl_FragDepth = dot(data, g_fBitBltZ);
+#else
+	gl_FragDepth = log(g_fc0.y + dot(data, g_fBitBltZ)) * g_fOneColor.w;
+#endif
 }
 
 // static const float BlurKernel[9] = {
@@ -694,7 +701,7 @@ half4 BilinearFloat16(float2 tex0)
 }
 
 void CRTCTargInterPS() {
-	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
+	float finter = texture(g_sInterlace, PSin.Z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
 	float4 c = BilinearFloat16(PSin.tex.xy);
 	c.w = ( g_fc0.w*c.w * g_fOneColor.x + g_fOneColor.y ) * finter;
 	FragData0 = c;
@@ -709,7 +716,7 @@ void CRTCTargPS() {
 }
 
 void CRTCInterPS() {
-	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
+	float finter = texture(g_sInterlace, PSin.Z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
 	float2 filtcoord = trunc(PSin.tex.xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
 	half4 c = BilinearBitBlt(filtcoord);
 	c.w = (c.w * g_fOneColor.x + g_fOneColor.y)*finter;
@@ -718,7 +725,7 @@ void CRTCInterPS() {
 
 // simpler
 void CRTCInterPS_Nearest() {
-	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
+	float finter = texture(g_sInterlace, PSin.Z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
 	half4 c = texture(g_sMemory, ps2memcoord(PSin.tex.xy));
 	c.w = (c.w * g_fOneColor.x + g_fOneColor.y)*finter;
 	FragData0 = c;
@@ -739,7 +746,7 @@ void CRTCPS_Nearest() {
 }
 
 void CRTC24InterPS() {
-	float finter = texture(g_sInterlace, PSin.z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
+	float finter = texture(g_sInterlace, PSin.Z.yy).x * g_fOneColor.z + g_fOneColor.w + g_fc0.w;
 	float2 filtcoord = trunc(PSin.tex.xy) * g_fInvTexDims.xy + g_fInvTexDims.zw;
 
 	half4 c = texture(g_sMemory, ps2memcoord(filtcoord));
@@ -832,8 +839,8 @@ void SetTex() {
 
 void SetZ() {
 #ifdef WRITE_DEPTH
-	VSout.z = SecondaryColor * g_fZBias.x + g_fZBias.y;
-    VSout.z.w = g_fc0.y;
+	VSout.Z = SecondaryColor * g_fZBias.x + g_fZBias.y;
+    VSout.Z.w = 1.0f;
 #endif
 }
 
@@ -849,8 +856,14 @@ void SetPosition() {
     // position.z = log(g_fc0.y + dot(g_fZ, SecondaryColor.zyxw)) * g_fZNorm.x
     // position.z = log(1 + Z_INT) * 0.999f / (32 * log(2.0)) = log2(1 + Z_INT) * 0.999f / 32
     // log2(...) will range from 0 to 32
-	position.z = (log(g_fc0.y + dot(g_fZ, SecondaryColor.zyxw)) * g_fZNorm.x + g_fZNorm.y) * g_fZMin.y + dot(g_fZ, SecondaryColor.zyxw) * g_fZMin.x ;
-	position.w = g_fc0.y;
+
+	// position.z = (log(g_fc0.y + dot(g_fZ, SecondaryColor.zyxw)) * g_fZNorm.x + g_fZNorm.y) * g_fZMin.y + dot(g_fZ, SecondaryColor.zyxw) * g_fZMin.x ;
+#ifdef NO_LOGZ
+	position.z = dot(g_fZ, SecondaryColor.zyxw);
+#else
+	position.z = log2(1.0f + dot(g_fZ, SecondaryColor.zyxw)) * 0.999f/32.0f;
+#endif
+	position.w = 1.0f;
 
     gl_Position = position;
 }
@@ -896,7 +909,7 @@ void BitBltVS() {
 	gl_Position = position;
 
 	VSout.tex.xy = TexCoord.xy * g_fBitBltTex.xy + g_fBitBltTex.zw;
-	VSout.z.xy = position.xy * g_fBitBltTrans.xy + g_fBitBltTrans.zw;
+	VSout.Z.xy = position.xy * g_fBitBltTrans.xy + g_fBitBltTrans.zw;
 }
 
 #endif

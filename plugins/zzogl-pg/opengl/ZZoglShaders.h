@@ -35,7 +35,7 @@
 #include "GS.h"
 
 // By default enable nvidia cg api
-#if !defined(GLSL_API) && !defined(NVIDIA_CG_API)
+#if !defined(GLSL_API) && !defined(NVIDIA_CG_API) && !defined(GLSL4_API)
 #define NVIDIA_CG_API
 #endif
 // --------------------------- API abstraction level --------------------------------
@@ -55,7 +55,6 @@
 #define sZero			0			// Zero program
 
 #define SAFE_RELEASE_PROG(x) 	{ if( (x) != NULL ) { cgDestroyProgram(x); x = NULL; } }
-inline bool ZZshActiveParameter(ZZshParameter param) {return (param !=NULL); }
 
 #endif					// end NVIDIA cg-toolkit API
 
@@ -68,7 +67,10 @@ inline bool ZZshActiveParameter(ZZshParameter param) {return (param !=NULL); }
 // Set it to 0 to diable context usage, 1 -- to enable. FFX-1 have a strange issue with ClampExt.
 #define NOCONTEXT		0
 
-#ifdef GLSL_API
+#if defined(GLSL_API)
+
+#define MAX_ACTIVE_UNIFORMS 600
+#define MAX_ACTIVE_SHADERS 400
 
 enum ZZshPARAMTYPE {
 	ZZ_UNDEFINED,
@@ -89,6 +91,13 @@ typedef struct {
 	bool		Constant;	// Uniform could be constants, does not change at program flow
 	bool 		Settled;	// Check if Uniform value was set.
 } ZZshParamInfo;
+const ZZshParamInfo  qZero = {ShName:"", type:ZZ_UNDEFINED, fvalue:{0}, sampler: -1, texid: 0, Constant: false, Settled: false};
+
+#define SAFE_RELEASE_PROG(x) 	{ /*don't know what to do*/ }
+
+#endif
+
+#if defined(GLSL_API) || defined(GLSL4_API)
 
 typedef struct {
 	void*	 	link;
@@ -103,20 +112,12 @@ typedef struct {
 #define ZZshError		int
 #define ZZshIndex		GLuint
 
-const ZZshParamInfo  qZero = {ShName:"", type:ZZ_UNDEFINED, fvalue:{0}, sampler: -1, texid: 0, Constant: false, Settled: false};
-
 #define pZero			0
 
 const ZZshShaderLink sZero = {link: NULL, isFragment: false};
-
-inline bool ZZshActiveParameter(ZZshParameter param) {return (param > -1); }
-#ifndef GLSL4_API
-#define SAFE_RELEASE_PROG(x) 	{ /*don't know what to do*/ }
 #endif
 
 // ---------------------------
-
-#endif
 
 extern float4 g_vdepth;
 extern float4 vlogz;
@@ -160,15 +161,13 @@ struct ConstantUniform {
 			float g_fMult[4];
 			// VS
 			float g_fZ[4];
-			float g_fZMin[4];
-			float g_fZNorm[4];
 			// PS
 			float g_fExactColor[4];
 		};
-		float linear[8*4];
+		float linear[6*4];
 	};
 	void SettleFloat(uint indice, const float* v) {
-		assert(indice + 3 < 8*4);
+		assert(indice + 3 < 6*4);
 		linear[indice+0] = v[0];
 		linear[indice+1] = v[1];
 		linear[indice+2] = v[2];
@@ -223,8 +222,6 @@ struct VertexUniform {
 
 
 
-//const static char* g_pPsTexWrap[] = { "-DREPEAT", "-DCLAMP", "-DREGION_REPEAT", NULL };
-
 enum ZZshShaderType {ZZ_SH_ZERO, ZZ_SH_REGULAR, ZZ_SH_REGULAR_FOG, ZZ_SH_TEXTURE, ZZ_SH_TEXTURE_FOG, ZZ_SH_CRTC, ZZ_SH_NONE};
 // We have "compatible" shaders, as RegularFogVS and RegularFogPS. if don't need to wory about incompatible shaders
 // It used only in GLSL mode. 
@@ -234,9 +231,6 @@ enum ZZshShaderType {ZZ_SH_ZERO, ZZ_SH_REGULAR, ZZ_SH_REGULAR_FOG, ZZ_SH_TEXTURE
 extern int 		g_nPixelShaderVer;
 extern ZZshShaderLink 	pvs[16], g_vsprog, g_psprog;
 extern ZZshParameter 	g_vparamPosXY[2], g_fparamFogColor;
-
-#define MAX_ACTIVE_UNIFORMS 600
-#define MAX_ACTIVE_SHADERS 400
 
 #ifndef GLSL4_API
 struct FRAGMENTSHADER
@@ -511,8 +505,6 @@ struct COMMONSHADER
 		g_fc0            = (ZZshParameter)offsetof(struct ConstantUniform, g_fc0) /4;
 		g_fMult          = (ZZshParameter)offsetof(struct ConstantUniform, g_fMult) /4;
 		g_fZ             = (ZZshParameter)offsetof(struct ConstantUniform, g_fZ) /4;
-		g_fZMin          = (ZZshParameter)offsetof(struct ConstantUniform, g_fZMin) /4;
-		g_fZNorm         = (ZZshParameter)offsetof(struct ConstantUniform, g_fZNorm) /4;
 		g_fExactColor    = (ZZshParameter)offsetof(struct ConstantUniform, g_fExactColor) /4;
 
 		// Setup the constant buffer
@@ -520,18 +512,11 @@ struct COMMONSHADER
 		// Set Z-test, log or no log;
 		if (conf.settings().no_logz) {
 			g_vdepth = float4( 255.0 /256.0f,  255.0/65536.0f, 255.0f/(65535.0f*256.0f), 1.0f/(65536.0f*65536.0f));
-			vlogz = float4( 1.0f, 0.0f, 0.0f, 0.0f);
 		}
 		else {
 			g_vdepth = float4( 256.0f*65536.0f, 65536.0f, 256.0f, 65536.0f*65536.0f);
-			vlogz = float4( 0.0f, 1.0f, 0.0f, 0.0f);
 		}
 		uniform_buffer_constant.SettleFloat(g_fZ, g_vdepth );
-		uniform_buffer_constant.SettleFloat(g_fZMin, vlogz );
-
-		const float g_filog32 = 0.999f / (32.0f * logf(2.0f));
-		float4 vnorm = float4(g_filog32, 0, 0,0);
-		uniform_buffer_constant.SettleFloat(g_fZNorm, vnorm);
 
 		uniform_buffer_constant.SettleFloat(g_fBilinear, float4(-0.2f, -0.65f, 0.9f, 1.0f / 32767.0f ) );
 		uniform_buffer_constant.SettleFloat(g_fZBias, float4(1.0f/256.0f, 1.0004f, 1, 0.5f) );
@@ -542,7 +527,7 @@ struct COMMONSHADER
 	}
 
 	ZZshParameter g_fparamFogColor, g_vparamPosXY;
-	ZZshParameter g_fBilinear, g_fZBias, g_fc0, g_fMult, g_fZ, g_fZMin, g_fZNorm, g_fExactColor;
+	ZZshParameter g_fBilinear, g_fZBias, g_fc0, g_fMult, g_fZ, g_fExactColor;
 	uint context;
 
 	GlobalUniform	uniform_buffer[ZZSH_CTX_ALL];

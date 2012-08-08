@@ -226,7 +226,7 @@ void CDepthTarget::Update(int context, CRenderTarget* prndr)
 		vdepth.z = vdepth.w = 0;
 	}
 
-#ifdef GLSL_API
+#if defined(GLSL_API) || defined(GLSL4_API)
 	assert(ppsBitBltDepth.sBitBltZ != -1);
 #else
 	assert(ppsBitBltDepth.sBitBltZ != 0);

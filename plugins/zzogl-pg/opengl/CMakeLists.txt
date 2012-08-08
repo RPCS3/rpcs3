@@ -47,7 +47,7 @@ endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 # Select the shader API 
 if(GLSL_API)
-    add_definitions(-DGLSL_API -DGLSL4_API -DOGL4_LOG)
+    add_definitions(-DGLSL4_API -DOGL4_LOG)
     #add_definitions(-DGLSL_API)
 else(GLSL_API)
 	add_definitions(-DNVIDIA_CG_API)
