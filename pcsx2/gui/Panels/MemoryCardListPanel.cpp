@@ -717,9 +717,7 @@ void Panels::MemoryCardListPanel_Simple::UiDeleteCard( McdSlotItem& card )
 	{
 		wxString content;
 		content.Printf(
-			pxE( "!Notice:Mcd:Delete",
-				L"You are about to delete the formatted memory card '%s'. "
-				L"All data on this card will be lost!  Are you absolutely and quite positively sure?"
+			pxE( L"You are about to delete the formatted memory card '%s'. All data on this card will be lost!  Are you absolutely and quite positively sure?"
 				), card.Filename.GetFullName().c_str()
 		);
 
@@ -755,8 +753,7 @@ bool Panels::MemoryCardListPanel_Simple::UiDuplicateCard(McdSlotItem& src, McdSl
 		{
 			wxString content;
 			content.Printf(
-				pxE( "!Notice:Mcd:CantDuplicate",
-				L"Failed: Duplicate is only allowed to an empty PS2-Port or to the file system." )
+				pxE( L"Failed: Duplicate is only allowed to an empty PS2-Port or to the file system." )
 			);
 
 			Msgbox::Alert( content, _("Duplicate memory card") );
@@ -798,8 +795,7 @@ bool Panels::MemoryCardListPanel_Simple::UiDuplicateCard(McdSlotItem& src, McdSl
 		if( !wxCopyFile( srcfile.GetFullPath(), destfile.GetFullPath(),	true ) )
 		{
 			wxString heading;
-			heading.Printf( pxE( "!Notice:Mcd:Copy Failed",
-				L"Failed: Destination memory card '%s' is in use." ),
+			heading.Printf( pxE( L"Failed: Destination memory card '%s' is in use." ),
 				dest.Filename.GetFullName().c_str(), dest.Slot
 			);
 

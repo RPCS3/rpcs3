@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.8\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-04-07 11:42+0200\n"
+"POT-Creation-Date: 2012-08-10 11:44+0200\n"
 "PO-Revision-Date: 2011-04-17 17:56+0100\n"
 "Last-Translator: Delirious <delirious@freemail.hu>\n"
 "Language-Team: Delirious <delirious@freemail.hu>\n"
@@ -19,20 +19,30 @@ msgstr ""
 "X-Poedit-SourceCharset: utf-8\n"
 
 #: common/src/Utilities/Exceptions.cpp:254
-msgid "!Notice:VirtualMemoryMap"
+msgid ""
+"There is not enough virtual memory available, or necessary virtual memory "
+"mappings have already been reserved by other processes, services, or DLLs."
 msgstr ""
 "Nincs elegendő szabad virtuális memória, vagy a szükséges virtuális memória "
 "kiosztás más folyamatok, szolgáltatások vagy DLL-ek számára van fenntartva."
 
 #: pcsx2/CDVD/CDVD.cpp:389
-msgid "!Notice:PsxDisc"
+msgid ""
+"Playstation game discs are not supported by PCSX2.  If you want to emulate "
+"PSX games then you'll have to download a PSX-specific emulator, such as "
+"ePSXe or PCSX."
 msgstr ""
 "A PlayStation játék lemezeket nem támogatja a PCSX2. Ha PSX játékokat akarsz "
 "emulálni, akkor le kell töltened egy PSX emulátort, ilyenek az ePSXe vagy a "
 "PCSX."
 
 #: pcsx2/System.cpp:114
-msgid "!Notice:Recompiler:VirtualMemoryAlloc"
+msgid ""
+"This recompiler was unable to reserve contiguous memory required for "
+"internal caches.  This error can be caused by low virtual memory resources, "
+"such as a small or disabled swapfile, or by another program that is hogging "
+"a lot of memory.  You can also try reducing the default cache sizes for all "
+"PCSX2 recompilers, found under Host Settings."
 msgstr ""
 "Ez a recompiler nem tudott folyamatos memóriát lefoglalni, ami szükséges a "
 "belső gyorsítótár számára.  Ilyen hibát okozhat a nem elegendő virtuális "
@@ -41,49 +51,71 @@ msgstr ""
 "csökkenteni az alapértelmezett gyorsítótár méretét is minden PCSX2 "
 "recomplier számára a Gazdagép beállításai alatt."
 
-#: pcsx2/System.cpp:348
-msgid "!Notice:EmuCore::MemoryForVM"
+#: pcsx2/System.cpp:344
+msgid ""
+"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
+"out some memory hogging background tasks and try again."
 msgstr ""
 "PCSX2 nem képes a szükséges memória lefoglalására a PS2 virtuális gép "
 "számára. Zárj be néhány nagy memóriaigényű háttér feladatot és próbáld újra."
 
 #: pcsx2/gui/AppInit.cpp:43
-msgid "!Notice:Startup:NoSSE2"
+msgid ""
+"Warning: Your computer does not support SSE2, which is required by many "
+"PCSX2 recompilers and plugins. Your options will be limited and emulation "
+"will be *very* slow."
 msgstr ""
 "Figyelem: A számítógép nem támogatja az SSE2 utasításkészletet, ami "
 "szükséges a legtöbb PCSX2 recomplier és plugin számára. A lehetőségek "
 "korlátozottak, az emuláció pedig *nagyon* lassú lesz."
 
-#: pcsx2/gui/AppInit.cpp:162
-msgid "!Notice:RecompilerInit:Header"
+#: pcsx2/gui/AppInit.cpp:160
+msgid ""
+"Warning: Some of the configured PS2 recompilers failed to initialize and "
+"have been disabled:"
 msgstr ""
 "Figyelem: Néhány beállított PS2 recomplier iniciálása sikertelen és ezért "
 "használatuk letiltva:"
 
-#: pcsx2/gui/AppInit.cpp:211
-msgid "!Notice:RecompilerInit:Footer"
+#: pcsx2/gui/AppInit.cpp:208
+msgid ""
+"Note: Recompilers are not necessary for PCSX2 to run, however they typically "
+"improve emulation speed substantially. You may have to manually re-enable "
+"the recompilers listed above, if you resolve the errors."
 msgstr ""
 "Megjegyzés: Recompilerek nem szükségesek a PCSX2 futtatásához, azonban "
 "lényegesn gyorsítják az emuláció sebességét. Kézileg kell majd újra "
 "bekapcsolnod a feljebb listázott recompilereket, ha megoldottad a hibákat."
 
 #: pcsx2/gui/AppMain.cpp:546
-msgid "!Notice:BiosDumpRequired"
+msgid ""
+"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
+"obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
+"count).  Please consult the FAQs and Guides for further instructions."
 msgstr ""
 "PCSX2 emulátor működéséhez szükséges egy PS2 BIOS. Jogi okokból a BIOS fájlt "
 "egy valódi PS2 egységből *kell* kimentened, olyanból amit birtokolsz "
 "(kölcsönözni is lehet). További információk végett ajánlatos megtekinteni az "
 "Olvass el fájlt, és átnézni a Beállítási útmutató tartalmát."
 
-#: pcsx2/gui/AppMain.cpp:629
-msgid "!Notice Error:Thread Deadlock Actions"
+#: pcsx2/gui/AppMain.cpp:626
+msgid ""
+"'Ignore' to continue waiting for the thread to respond.\n"
+"'Cancel' to attempt to cancel the thread.\n"
+"'Terminate' to quit PCSX2 immediately.\n"
 msgstr ""
 "'Kihagyás' tovább várakozás az folyamat válaszára.\n"
 "'Mégsem' kísérlet a folyamat leállítására.\n"
-"'Megszakítás' kilépés a PCSX2 emulátorból azonnal."
+"'Megszakítás' kilépés a PCSX2 emulátorból azonnal.\n"
 
 #: pcsx2/gui/AppUserMode.cpp:57
-msgid "!Notice:PortableModeRights"
+msgid ""
+"Please ensure that these folders are created and that your user account is "
+"granted write permissions to them -- or re-run PCSX2 with elevated "
+"(administrator) rights, which should grant PCSX2 the ability to create the "
+"necessary folders itself.  If you do not have elevated rights on this "
+"computer, then you will need to switch to User Documents mode (click button "
+"below)."
 msgstr ""
 "Győződj meg róla, hogy ezek a mappák létre vannak hozva és rendelkezel a "
 "szükséges írási jogosultsággal hozzájuk -- vagy indítsd újra a PCSX2 "
@@ -93,34 +125,48 @@ msgstr ""
 "váltanod a Felhasználói dokumentumok módra (kattints a lenti gombra)."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
-msgid "!ContextTip:ChangingNTFS"
+msgid ""
+"NTFS compression can be changed manually at any time by using file "
+"properties from Windows Explorer."
 msgstr ""
 "NTFS tömörítés használata kézileg bármikor átállítható a fájl "
 "tulajdonságoknál a Windows intézőből."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
-msgid "!ContextTip:Folders:Settings"
+msgid ""
+"This is the folder where PCSX2 saves your settings, including settings "
+"generated by most plugins (some older plugins may not respect this value)."
 msgstr ""
 "Ebbe a mappába menti a PCSX2 a beállításokat, beleértve a legtöbb plugin "
 "által létrehozott beállításokat (néhány régebbi plugin nem veszi figyelembe "
 "ezt az értéket)."
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
-msgid "!Panel:Folders:Settings"
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:52
+msgid ""
+"You may optionally specify a location for your PCSX2 settings here.  If the "
+"location contains existing PCSX2 settings, you will be given the option to "
+"import or overwrite them."
 msgstr ""
 "Megadhatsz egy választható helyet a PCSX2 beállítások számára itt.  Ha ott "
 "lesznek PCSX2 beállítások, akkor az importálási vagy felülírási lehetőségek "
 "lesznek felkínálva."
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
-msgid "!Wizard:Welcome"
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:89
+#, c-format
+msgid ""
+"This wizard will help guide you through configuring plugins, memory cards, "
+"and BIOS.  It is recommended if this is your first time installing %s that "
+"you view the readme and configuration guide."
 msgstr ""
 "Ez a varázsló segít a pluginok, memória kártyák és a BIOS beállításaiban. Ha "
 "először telepíted a %s emulátort, akkor ajánlatos megtekinteni az Olvass el "
 "fájlt, és átnézni a Beállítási útmutató tartalmát."
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
-msgid "!Wizard:Bios:Tutorial"
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:132
+msgid ""
+"PCSX2 requires a *legal* copy of the PS2 BIOS in order to run games.\n"
+"You cannot use a copy obtained from a friend or the Internet.\n"
+"You must dump the BIOS from your *own* Playstation 2 console."
 msgstr ""
 "PCSX2 emulátor számára szükséges egy *legális* PS2 BIOS másolat a játékok "
 "futtatásához.\n"
@@ -128,7 +174,13 @@ msgstr ""
 "A BIOS fájlt a *saját* PlayStation 2 konzolodból kell kimentened."
 
 #: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
-msgid "!Notice:ImportExistingSettings"
+#, c-format
+msgid ""
+"Existing %s settings have been found in the configured settings folder.  "
+"Would you like to import these settings or overwrite them with %s default "
+"values?\n"
+"\n"
+"(or press Cancel to select a different settings folder)"
 msgstr ""
 "Meglévő %s beállítások találhatóak a konfigurált beállítások mappában. "
 "Szeretnéd importálni ezeket a beállításokat vagy felülírni azokat a %s "
@@ -137,34 +189,49 @@ msgstr ""
 "(vagy nyomd le a Mégsem gombot egy másik beállítási mappa választásához)"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
-msgid "!Panel:Mcd:NtfsCompress"
+msgid ""
+"NTFS compression is built-in, fast, and completely reliable; and typically "
+"compresses memory cards very well (this option is highly recommended)."
 msgstr ""
 "Az NTFS tömörítés beépített, gyors és teljesen megbízható; és meglehetősen "
 "jól tömöríti a memória kártyákat (ez az opció erősen ajánlott)."
 
-#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
-msgid "!Panel:Mcd:EnableEjection"
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:39
+msgid ""
+"Avoids memory card corruption by forcing games to re-index card contents "
+"after loading from savestates.  May not be compatible with all games (Guitar "
+"Hero)."
 msgstr ""
 "Memória kártya sérülés elkerülése végett a játékok a kártya tartalom újra "
 "indexelésére vannak kényszerítve állásmentés betöltését követően. Nem minden "
 "játékkal kompatibilis (Guitar Hero)."
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
-msgid "!Panel:StuckThread:Heading"
+#, c-format
+msgid ""
+"The thread '%s' is not responding.  It could be deadlocked, or it might just "
+"be running *really* slowly."
 msgstr ""
 "'%s' folyamatág nem válaszol.  Holtponton van vagy egyszerűen csak "
 "*rendkívül* lassan fut."
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
-msgid "!Panel:HasHacksOverrides"
+msgid ""
+"Warning!  You are running PCSX2 with command line options that override your "
+"configured settings.  These command line options will not be reflected in "
+"the Settings dialog, and will be disabled if you apply any changes here."
 msgstr ""
 "Figyelem!  A PCSX2 emulátort parancssori beállításokkal használod és ez "
 "felülbírálja az eddigi beállításaidat.  Ezek a parancssori beállítások nem "
 "fognak megjelenni a Beállítások párbeszédablakban, és ki lesznek kapcsolva, "
 "ha valamelyik változtatást elfogadod itt."
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
-msgid "!Panel:HasPluginsOverrides"
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:55
+msgid ""
+"Warning!  You are running PCSX2 with command line options that override your "
+"configured plugin and/or folder settings.  These command line options will "
+"not be reflected in the settings dialog, and will be disabled when you apply "
+"settings changes here."
 msgstr ""
 "Figyelem!  A PCSX2 emulátort parancssori beállításokkal használod és ez "
 "felülbírálja az eddigi plugin vagy/és mappa beállításaidat.  Ezek a "
@@ -172,8 +239,17 @@ msgstr ""
 "párbeszédablakban, és ki lesznek kapcsolva, ha valamelyik változtatást "
 "elfogadod itt."
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
-msgid "!Notice:Tooltip:Presets:Slider"
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:129
+msgid ""
+"The Presets apply speed hacks, some recompiler options and some game fixes "
+"known to boost speed.\n"
+"Known important game fixes will be applied automatically.\n"
+"\n"
+"Presets info:\n"
+"1 -     The most accurate emulation but also the slowest.\n"
+"3 --> Tries to balance speed with compatibility.\n"
+"4 -     Some more aggressive hacks.\n"
+"6 -     Too many hacks which will probably slow down most games.\n"
 msgstr ""
 "A Beállítás alkalmazza a sebesség hackeket, néhány recomplier opció és "
 "néhány játék javítás jelentősen növeli a sebességet.\n"
@@ -183,10 +259,15 @@ msgstr ""
 "1 -     A legpontosabb emuláció és ugyanakkor a leglassabb is.\n"
 "3 --> Megpróbálja a sebességet a kompatibilitással egyensúlyban tartani.\n"
 "4 -     Néhány még agresszívebb hack.\n"
-"6 -     Túl sok hack, melyek valószínűleg a legtöbb játékot lassítják."
+"6 -     Túl sok hack, melyek valószínűleg a legtöbb játékot lassítják.\n"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
-msgid "!Notice:Tooltip:Presets:Checkbox"
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:136
+msgid ""
+"The Presets apply speed hacks, some recompiler options and some game fixes "
+"known to boost speed.\n"
+"Known important game fixes will be applied automatically.\n"
+"\n"
+"--> Uncheck to modify settings manually (with current preset as base)"
 msgstr ""
 "A Beállítás alkalmazza a sebesség hackeket, néhány recomplier opció és "
 "néhány játék javítás jelentősen növeli a sebességet.\n"
@@ -196,13 +277,23 @@ msgstr ""
 "beállítást alapul véve)"
 
 #: pcsx2/gui/IsoDropTarget.cpp:28
-msgid "!Notice:ConfirmSysReset"
+msgid ""
+"This action will reset the existing PS2 virtual machine state; all current "
+"progress will be lost.  Are you sure?"
 msgstr ""
 "Ez a művelet alapra állítja a meglévő PS2 virtuális gép állapotát; minden "
 "eddigi adat el fog veszni. Biztosan akarod?"
 
 #: pcsx2/gui/MainMenuClicks.cpp:106
-msgid "!Notice:DeleteSettings"
+#, c-format
+msgid ""
+"This command clears %s settings and allows you to re-run the First-Time "
+"Wizard.  You will need to manually restart %s after this operation.\n"
+"\n"
+"WARNING!!  Click OK to delete *ALL* settings for %s and force-close the app, "
+"losing any current emulation progress.  Are you absolutely sure?\n"
+"\n"
+"(note: settings for plugins are unaffected)"
 msgstr ""
 "Ez a parancs törli a %s beállításait és vissza enged térni az első "
 "indításkori varázslóhoz.  A %s kézi újraindítására van szükség a művelet "
@@ -215,7 +306,11 @@ msgstr ""
 "(megjegyzés: nincs hatással a plugin beállításokkal)"
 
 #: pcsx2/gui/MemoryCardFile.cpp:78
-msgid "!Notice:Mcd:HasBeenDisabled"
+#, c-format
+msgid ""
+"The PS2-slot %d has been automatically disabled.  You can correct the "
+"problem\n"
+"and re-enable it at any time using Config:Memory cards from the main menu."
 msgstr ""
 "A PS2 %d. memória kártya csatlakozója automatikusan ki van kapcsolva.  "
 "Javíthatod a problémát\n"
@@ -223,48 +318,71 @@ msgstr ""
 "résznél."
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
-msgid "!Notice:BIOS:InvalidSelection"
+msgid ""
+"Please select a valid BIOS.  If you are unable to make a valid selection "
+"then press Cancel to close the Configuration panel."
 msgstr ""
 "Válassz egy érvényes BIOS fájlt.  Ha nem áll rendelkezésre megfelelő fájl, "
 "akkor nyomj Mégsem gombot a beállítás panel bezárásához."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:111
-msgid "!Panel:EE/IOP:Heading"
+msgid "Notice: Most games are fine with the default options. "
 msgstr ""
 "Megjegyzés: A legtöbb játéknak megfelelőek az alapértelmezett beállítások. "
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:178
-msgid "!Panel:VUs:Heading"
+#: pcsx2/gui/Panels/CpuPanel.cpp:177
+msgid "Notice: Most games are fine with the default options."
 msgstr ""
 "Megjegyzés: A legtöbb játéknak megfelelőek az alapértelmezett beállítások. "
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:69
-msgid "!Notice:DirPicker:CreatePath"
+msgid ""
+"The specified path/directory does not exist.  Would you like to create it?"
 msgstr "A megadott hely/könyvtár nincs meg.  Szeretnéd létrehozni?"
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
-msgid "!ContextTip:DirPicker:UseDefault"
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:157
+msgid ""
+"When checked this folder will automatically reflect the default associated "
+"with PCSX2's current usermode setting. "
 msgstr ""
 "Kijelöléskor ez a mappa automatikusan megmutatja a PCSX2 jelenlegi "
 "felhasználói mód beállítás társítását."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:55
 #, fuzzy
-msgid "!ContextTip:Window:Zoom"
+msgid ""
+"Zoom = 100: Fit the entire image to the window without any cropping.\n"
+"Above/Below 100: Zoom In/Out\n"
+"0: Automatic-Zoom-In untill the black-bars are gone (Aspect ratio is kept, "
+"some of the image goes out of screen).\n"
+"  NOTE: Some games draw their own black-bars, which will not be removed with "
+"'0'.\n"
+"\n"
+"Keyboard: CTRL + NUMPAD-PLUS: Zoom-In, CTRL + NUMPAD-MINUS: Zoom-Out, CTRL + "
+"NUMPAD-*: Toggle 100/0"
 msgstr ""
 "A függőleges szinkron (Vsync) csökkenti a kép töredezettséget, de nagy "
 "hatással van a teljesítményre is. Általában csak teljes képernyős módban "
 "használatos és nem minden GS plugin esetén működik."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
-msgid "!ContextTip:Window:Vsync"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:58
+msgid ""
+"Vsync eliminates screen tearing but typically has a big performance hit. It "
+"usually only applies to fullscreen mode, and may not work with all GS "
+"plugins."
 msgstr ""
 "A függőleges szinkron (Vsync) csökkenti a kép töredezettséget, de nagy "
 "hatással van a teljesítményre is. Általában csak teljes képernyős módban "
 "használatos és nem minden GS plugin esetén működik."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
-msgid "!ContextTip:Window:ManagedVsync"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:61
+msgid ""
+"Enables Vsync when the framerate is exactly at full speed. Should it fall "
+"below that, Vsync gets disabled to avoid further performance penalties. "
+"Note: This currently only works well with GSdx as GS plugin and with it "
+"configured to use DX10/11 hardware rendering. Any other plugin or rendering "
+"mode will either ignore it or produce a black frame that blinks whenever the "
+"mode switches. It also requires Vsync to be enabled."
 msgstr ""
 "A függőleges szinkron (Vsync) csak akkor van használatban, amikor a "
 "képfrissítés teljes sebességen van. Ha az alá esik, akkor a Vsync kikapcsol "
@@ -275,60 +393,87 @@ msgstr ""
 "hoz létre minden módváltásnál. Szükséges még, hogy a Vsync be legyen "
 "kapcsolva."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:76
-msgid "!ContextTip:Window:HideMouse"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
+msgid ""
+"Check this to force the mouse cursor invisible inside the GS window; useful "
+"if using the mouse as a primary control device for gaming.  By default the "
+"mouse auto-hides after 2 seconds of inactivity."
 msgstr ""
 "Legyen kijelölve ez annak érdekében, hogy az egérmutató ne látszódjon a GS "
 "ablakban; hasznos ha egeret használsz elsődleges irányítóként a játékokhoz.  "
 "Alapértelmezettként a mutató automatikusan eltűnik két másodperc tétlenség "
 "után."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:82
-msgid "!ContextTip:Window:Fullscreen"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:67
+msgid ""
+"Enables automatic mode switch to fullscreen when starting or resuming "
+"emulation. You can still toggle fullscreen display at any time using alt-"
+"enter."
 msgstr ""
 "Bekapcsolja az automatikus teljes nézetre váltást emuláció indításakor vagy "
 "folytatásakor. Ettől bármikor válthatsz teljes nézetre és vissza az ALT + "
 "ENTER kombinációval."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:93
-msgid "!ContextTip:Window:HideGS"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:74
+msgid ""
+"Completely closes the often large and bulky GS window when pressing ESC or "
+"pausing the emulator."
 msgstr ""
 "Teljesen bezárja a gyakran nagy és terjedelmes GS ablakot az ESC billentyű "
 "lenyomásakor vagy az emulátor szüneteltetésekor."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:67
-msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgid ""
+"Known to affect following games:\n"
+" * Digital Devil Saga (Fixes FMV and crashes)\n"
+" * SSX (Fixes bad graphics and crashes)\n"
+" * Resident Evil: Dead Aim (Causes garbled textures)"
 msgstr ""
 "A következő játékokra ismert a hatása:\n"
 " * Digital Devil Saga (FMV és fagyás javítások)\n"
 " * SSX (Rossz grafika és fagyás javítások)\n"
 " * Resident Evil: Dead Aim (Elferdített textúrákat okoz)"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
-msgid "!ContextTip:Gamefixes:OPH Flag hack"
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:76
+msgid ""
+"Known to affect following games:\n"
+" * Bleach Blade Battler\n"
+" * Growlanser II and III\n"
+" * Wizardry"
 msgstr ""
 "A következő játékokra ismert a hatása:\n"
 " * Bleach Blade Battler\n"
 " * Growlanser II és III\n"
 " * Wizardry"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
-msgid "!ContextTip:Gamefixes:DMA Busy hack"
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:81
+msgid ""
+"Known to affect following games:\n"
+" * Mana Khemia 1 (Going \"off campus\")\n"
 msgstr ""
 "A következő játékokra ismert a hatása:\n"
-" * Mana Khemia 1 (\"off campus\" esetén)"
+" * Mana Khemia 1 (\"off campus\" esetén)\n"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:86
 #, fuzzy
-msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
+msgid ""
+"Known to affect following games:\n"
+" * Test Drive Unlimited\n"
+" * Transformers"
 msgstr ""
 "A következő játékokra ismert a hatása:\n"
 " * Bleach Blade Battler\n"
 " * Growlanser II és III\n"
 " * Wizardry"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
-msgid "!Panel:Gamefixes:Compat Warning"
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:106
+msgid ""
+"Gamefixes can work around wrong emulation in some titles. \n"
+"They may also cause compatibility or performance issues. \n"
+"\n"
+"It's better to enable 'Automatic game fixes' at the main menu instead, and "
+"leave this page empty. \n"
+"('Automatic' means: selectively use specific tested fixes for specific games)"
 msgstr ""
 "A játék javítások megoldások lehetnek a hibás emulációra néhány játék "
 "esetében. \n"
@@ -338,30 +483,42 @@ msgstr ""
 "beállítanod itt."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
-msgid "!Notice:Mcd:Delete"
+#, c-format
+msgid ""
+"You are about to delete the formatted memory card '%s'. All data on this "
+"card will be lost!  Are you absolutely and quite positively sure?"
 msgstr ""
 "Éppen törölni szándékozod a(z) '%s' nevű formázott memória kártyát. Minden a "
 "kártyán lévő adat el fog veszni!  Teljesen és egészen biztos vagy a dologban?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:758
-msgid "!Notice:Mcd:CantDuplicate"
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:756
+msgid ""
+"Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
 msgstr ""
 "Hiba: Másolás csak egy üres PS2 portra vagy a fájlrendszerbe engedélyezett."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:801
-msgid "!Notice:Mcd:Copy Failed"
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#, c-format
+msgid "Failed: Destination memory card '%s' is in use."
 msgstr "Hiba: A(z) '%s' nevű memória kártya használatban van."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
-msgid "!Panel:Usermode:Explained"
+msgid ""
+"Please select your preferred default location for PCSX2 user-level documents "
+"below (includes memory cards, screenshots, settings, and savestates).  These "
+"folder locations can be overridden at any time using the Core Settings panel."
 msgstr ""
 "Add meg az általad kedvelt alapértelmezett helyet a PCSX2 felhasználói "
 "szintű dokumentumaihoz (beleértve a memória kártyákat, pillanatképeket, "
 "beállításokat és állásmentéseket).  Ezek a mappák bármikor "
 "megváltoztathatóak a Központi beállítások panelen."
 
-#: pcsx2/gui/Panels/MiscPanelStuff.cpp:41
-msgid "!Panel:Usermode:Warning"
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:38
+msgid ""
+"You can change the preferred default location for PCSX2 user-level documents "
+"here (includes memory cards, screenshots, settings, and savestates).  This "
+"option only affects Standard Paths which are set to use the installation "
+"default value."
 msgstr ""
 "Megváltoztathatod az általad kedvelt alapértelmezett helyet a PCSX2 "
 "felhasználói szintű dokumentumaihoz itt (beleértve a memória kártyákat, "
@@ -370,27 +527,40 @@ msgstr ""
 "használatára van állítva."
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:40
-msgid "!ContextTip:Folders:Savestates"
+msgid ""
+"This folder is where PCSX2 records savestates; which are recorded either by "
+"using menus/toolbars, or by pressing F1/F3 (save/load)."
 msgstr ""
 "Ebben a mappában tárolja a PCSX2 az állásmentéseket; ezek elmenthetőek vagy "
 "a menük/eszköztárak használatával, vagy az F1/F3 lenyomásával (mentés/"
 "betöltés)."
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:50
-msgid "!ContextTip:Folders:Snapshots"
+#: pcsx2/gui/Panels/PathsPanel.cpp:48
+msgid ""
+"This folder is where PCSX2 saves screenshots.  Actual screenshot image "
+"format and style may vary depending on the GS plugin being used."
 msgstr ""
 "Ebbe a mappába menti a PCSX2 a pillanatképeket.  Az aktuális pillanatkép "
 "formátum és stílus nagymértékben függ a használatban lévő GS plugintól."
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:60
-msgid "!ContextTip:Folders:Logs"
+#: pcsx2/gui/Panels/PathsPanel.cpp:56
+msgid ""
+"This folder is where PCSX2 saves its logfiles and diagnostic dumps.  Most "
+"plugins will also adhere to this folder, however some older plugins may "
+"ignore it."
 msgstr ""
 "Ebbe a mappába menti a PCSX2 a naplófájlokat és a diagnosztikai "
 "eredményeket.  A legtöbb plugin ehhez a mappához ragaszkodik, azonban néhány "
 "régebbi plugin nem ismeri fel."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
-msgid "!Notice:PluginSelector:ConfirmShutdown"
+msgid ""
+"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 "
+"virtual machine. PCSX2 will attempt to save and restore the state, but if "
+"the newly selected plugins are incompatible the recovery may fail, and "
+"current progress will be lost.\n"
+"\n"
+"Are you sure you want to apply settings now?"
 msgstr ""
 "Figyelem!  Pluginok váltása esetén a PS2 virtuális gép teljes leállítására "
 "és alapra állítására van szükség. A PCSX2 megkísérli menteni és "
@@ -400,8 +570,12 @@ msgstr ""
 "\n"
 "Biztosan alkalmazod mégis a beállításokat most?"
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
-msgid "!Notice:PluginSelector:ApplyFailed"
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:452
+#, c-format
+msgid ""
+"All plugins must have valid selections for %s to run.  If you are unable to "
+"make a valid selection due to missing plugins or an incomplete install of "
+"%s, then press Cancel to close the Configuration panel."
 msgstr ""
 "Minden helyen szerepelnie kell kiválasztott pluginnak a %s működéséhez.  Ha "
 "valamelyik nem áll rendelkezésre, mert plugin hiányzik vagy a %s telepítése "
@@ -409,82 +583,113 @@ msgstr ""
 "bezárásához."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
-msgid "!Panel:Speedhacks:EECycleX1"
+msgid ""
+"1 - Default cyclerate. This closely matches the actual speed of a real PS2 "
+"EmotionEngine."
 msgstr ""
 "1 - Alapértelmezett ciklusszám. Ez megközelítőleg hasonlít a valódi PS2 "
 "EmotionEngine tényleges sebességéhez."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
-msgid "!Panel:Speedhacks:EECycleX2"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:31
+msgid ""
+"2 - Reduces the EE's cyclerate by about 33%.  Mild speedup for most games "
+"with high compatibility."
 msgstr ""
 "2 - 33 %-kal csökkenti az EE ciklusszámát.  Enyhe sebesség növekedés a "
 "legtöbb játéknál magas kompatibilitással."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
-msgid "!Panel:Speedhacks:EECycleX3"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:35
+msgid ""
+"3 - Reduces the EE's cyclerate by about 50%.  Moderate speedup, but *will* "
+"cause stuttering audio on many FMVs."
 msgstr ""
 "3 - Megközelítőleg 50 %-kal csökkenti az EE ciklusszámát.  Mérsékelt "
 "sebesség növekedés, de recsegő hangot *okoz* számos FMV esetén."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
-msgid "!Panel:Speedhacks:VUCycleStealOff"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:50
+msgid "0 - Disables VU Cycle Stealing.  Most compatible setting!"
 msgstr ""
 "0 - Kikapcsolja a VU ciklus csökkentést.  Leginkább kompatibilis beállítás!"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
-msgid "!Panel:Speedhacks:VUCycleSteal1"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+msgid ""
+"1 - Mild VU Cycle Stealing.  Lower compatibility, but some speedup for most "
+"games."
 msgstr ""
 "1 - Enyhe VU ciklus csökkentés.  Alacsonyabb kompatibilitás, de bizonyos "
 "sebességnövekedés a legtöbb játéknál."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
-msgid "!Panel:Speedhacks:VUCycleSteal2"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:58
+msgid ""
+"2 - Moderate VU Cycle Stealing.  Even lower compatibility, but significant "
+"speedups in some games."
 msgstr ""
 "2 - Mérsékelt VU ciklus csökkentés.  Még alacsonyabb kompatibilitás, de "
 "jelentős sebességnövekedés néhány játéknál."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
-msgid "!Panel:Speedhacks:VUCycleSteal3"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:63
+msgid ""
+"3 - Maximum VU Cycle Stealing.  Usefulness is limited, as this will cause "
+"flickering visuals or slowdown in most games."
 msgstr ""
 "3 - Maximális VU ciklus csökkentés.  Használhatósága korlátozott, mivel "
 "képvillogást és lassulást okoz a legtöbb játéknál."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
-msgid "!Panel:Speedhacks:Overview"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:88
+msgid ""
+"Speedhacks usually improve emulation speed, but can cause glitches, broken "
+"audio, and false FPS readings.  When having emulation problems, disable this "
+"panel first."
 msgstr ""
 "A gyorsító hackek általában növelik az emuláció sebességét, de grafikai "
 "hibákat, hang problémákat és hibás FPS beolvasást eredményezhetnek.  "
 "Emulációs problémák esetén először ezt a panelt kapcsold ki."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
-msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:118
+msgid ""
+"Setting higher values on this slider effectively reduces the clock speed of "
+"the EmotionEngine's R5900 core cpu, and typically brings big speedups to "
+"games that fail to utilize the full potential of the real PS2 hardware."
 msgstr ""
 "Magasabb érték állítása a csúszkán hatásosan csökkenti az EmotionEngine's "
 "R5900 központi processzor órajelét és tipikusan nagy sebesség növekedést "
 "okoz azoknál a játékoknál, amelyek nem képesek kihasználni a valódi PS2 "
 "hardver tényleges képességeit."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
-msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:136
+msgid ""
+"This slider controls the amount of cycles the VU unit steals from the "
+"EmotionEngine.  Higher values increase the number of cycles stolen from the "
+"EE for each VU microprogram the game runs."
 msgstr ""
 "Ez a csúszka szabályozza azon ciklusok mennyiségét, amelyeket a VU egység "
 "elvesz az EmotionEngine elől.  Magasabb érték növeli az EE elől elvett és a "
 "játék által futtatott összes mikroprogram számára átadott ciklusok számát."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
-msgid "!ContextTip:Speedhacks:vuFlagHack"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:153
+msgid ""
+"Updates Status Flags only on blocks which will read them, instead of all the "
+"time. This is safe most of the time, and Super VU does something similar by "
+"default."
 msgstr ""
 "Az állapot jelzőket csak azokon a blokkokon frissíti amelyek olvassák "
 "azokat. Legtöbbször ez biztonságos és a Super VU is valami hasonlót végez "
 "alapértelmezettként."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:156
 #, fuzzy
-msgid "!ContextTip:Speedhacks:vuThread"
+msgid ""
+"Runs VU1 on its own thread (microVU1-only). Generally a speedup on CPUs with "
+"3 or more cores. This is safe for most games, but a few games are "
+"incompatible and may hang. In the case of GS limited games, it may be a "
+"slowdown (especially on dual core CPUs)."
 msgstr "Nem működik a Gran Turismo 4 vagy Tekken 5 esetén."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
-msgid "!ContextTip:Speedhacks:INTC"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+msgid ""
+"This hack works best for games that use the INTC Status register to wait for "
+"vsyncs, which includes primarily non-3D RPG titles. Games that do not use "
+"this method of vsync will see little or no speedup from this hack."
 msgstr ""
 "Ez a hack működik legjobban azoknál a játékoknál, amelyek használják az INTC "
 "állapot regisztert a függőleges szinkronra várakozáshoz, ebbe elsődlegesen a "
@@ -492,8 +697,14 @@ msgstr ""
 "eljárást használják a függőleges szinkronhoz csak csekély, vagy semmilyen "
 "gyorsulás nem észlelhető a hack használatával."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
-msgid "!ContextTip:Speedhacks:BIFC0"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
+msgid ""
+"Primarily targetting the EE idle loop at address 0x81FC0 in the kernel, this "
+"hack attempts to detect loops whose bodies are guaranteed to result in the "
+"same machine state for every iteration until a scheduled event triggers "
+"emulation of another unit.  After a single iteration of such loops, we "
+"advance to the time of the next event or the end of the processor's "
+"timeslice, whichever comes first."
 msgstr ""
 "Elsődlegesen megcélozva az EE üresjárati hurkot a 0x81FC0 címzésen a "
 "kernelben, ez a hack megkísérli észlelni azokat a hurkokat, amelyeknek "
@@ -503,33 +714,47 @@ msgstr ""
 "előrehozhatjuk a következő eseményt vagy a processzor időszeletének végét, "
 "bármelyik is következik előbb."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
-msgid "!ContextTip:Speedhacks:fastCDVD"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:180
+msgid ""
+"Check HDLoader compatibility lists for known games that have issues with "
+"this. (Often marked as needing 'mode 1' or 'slow DVD'"
 msgstr ""
 "Ellenőrizd a HDLoader kompatibilitási listát a problémás játékok végett. "
 "(Gyakran ez szerepel 'mode 1' vagy 'slow DVD')"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:37
-msgid "!ContextTip:Framelimiter:Disable"
+msgid ""
+"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will "
+"not be available either."
 msgstr ""
 "Nem árt tudni, ha a képkocka korlátozás ki van kapcsolva, a turbó és "
 "lassított mód sem érhető el."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:227
-msgid "!Panel:Frameskip:Heading"
+#: pcsx2/gui/Panels/VideoPanel.cpp:225
+msgid ""
+"Notice: Due to PS2 hardware design, precise frame skipping is impossible. "
+"Enabling it will cause severe graphical errors in some games."
 msgstr ""
 "Megjegyzés: A PS2 hardver összetételének köszönhetően a pontos képkocka "
 "kihagyás nem lehetséges. Használata számos grafikai hibát okoz néhány "
 "játékban."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
-msgid "!ContextTip:GS:SyncMTGS"
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
+msgid ""
+"Enable this if you think MTGS thread sync is causing crashes or graphical "
+"errors."
 msgstr ""
 "Kapcsold ezt be, ha úgy gondolod az MTGS folyamatág szinkron okozza a "
 "fagyást vagy grafikai hibákat."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:310
-msgid "!ContextTip:GS:DisableOutput"
+#: pcsx2/gui/Panels/VideoPanel.cpp:305
+msgid ""
+"Removes any benchmark noise caused by the MTGS thread or GPU overhead.  This "
+"option is best used in conjunction with savestates: save a state at an ideal "
+"scene, enable this option, and re-load the savestate.\n"
+"\n"
+"Warning: This option can be enabled on-the-fly but typically cannot be "
+"disabled on-the-fly (video will typically be garbage)."
 msgstr ""
 "Eltávolít bármely teszt zajt, amit az MTGS folyamatág vagy az általános GPU "
 "okoz.  Ez az opció legjobban az állásmentésekkel együtt használható: ments "
@@ -539,15 +764,22 @@ msgstr ""
 "Figyelem: Ez az opció bekapcsolható, de többnyire nem kapcsolható ki játék "
 "közben (a videó tipikusan szétesik)"
 
-#: pcsx2/vtlb.cpp:710
-msgid "!Notice:HostVmReserve"
+#: pcsx2/vtlb.cpp:711
+msgid ""
+"Your system is too low on virtual resources for PCSX2 to run. This can be "
+"caused by having a small or disabled swapfile, or by other programs that are "
+"hogging resources."
 msgstr ""
 "A rendszer túl kevés virtuális erőforrással rendelkezik a PCSX2 "
 "működtetéséhez.  Ilyen hibát okozhat a kis méretű vagy kikapcsolt "
 "lapozófájl, vagy más, nagy mennyiségű erőforrást fogyasztó program."
 
 #: pcsx2/x86/sVU_zerorec.cpp:363
-msgid "!Notice:superVU:VirtualMemoryAlloc"
+msgid ""
+"Out of Memory (sorta): The SuperVU recompiler was unable to reserve the "
+"specific memory ranges required, and will not be available for use.  This is "
+"not a critical error, since the sVU rec is obsolete, and you should use "
+"microVU instead anyway. :)"
 msgstr ""
 "Kevés a memória (valahogyan): A SuperVu recompiler nem volt képes lefoglalni "
 "egy megadott mennyiségű szükséges memóriát, ezért nem lesz képes használni "

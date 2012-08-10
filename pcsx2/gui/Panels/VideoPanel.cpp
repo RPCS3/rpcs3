@@ -34,9 +34,7 @@ Panels::FramelimiterPanel::FramelimiterPanel( wxWindow* parent )
 	m_check_LimiterDisable = new pxCheckBox( this, _("Disable Framelimiting"),
 		_("Useful for running benchmarks. Toggle this option in-game by pressing F4.") );
 
-	m_check_LimiterDisable->SetToolTip( pxEt( "!ContextTip:Framelimiter:Disable",
-		L"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will not "
-		L"be available either."
+	m_check_LimiterDisable->SetToolTip( pxEt( L"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will not be available either."
 	) );
 
 	pxFitToDigits( m_spin_NominalPct	= new wxSpinCtrl( this ), 6 );
@@ -224,9 +222,7 @@ Panels::FrameSkipPanel::FrameSkipPanel( wxWindow* parent )
 
 	*this	+= s_spins	| StdExpand();
 
-	*this	+= Text( pxE( "!Panel:Frameskip:Heading",
-		L"Notice: Due to PS2 hardware design, precise frame skipping is impossible. "
-		L"Enabling it will cause severe graphical errors in some games." )
+	*this	+= Text( pxE( L"Notice: Due to PS2 hardware design, precise frame skipping is impossible. Enabling it will cause severe graphical errors in some games." )
 	) | StdExpand();
 
 	*this += 24; // Extends the right box to match the left one. Only works with (Windows) 100% dpi.
@@ -303,14 +299,10 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 		_t("Completely disables all GS plugin activity; ideal for benchmarking EEcore components.")
 	);
 
-	m_check_SynchronousGS->SetToolTip( pxEt( "!ContextTip:GS:SyncMTGS",
-		L"Enable this if you think MTGS thread sync is causing crashes or graphical errors.")
+	m_check_SynchronousGS->SetToolTip( pxEt( L"Enable this if you think MTGS thread sync is causing crashes or graphical errors.")
 	) ;
 
-	m_check_DisableOutput->SetToolTip( pxEt( "!ContextTip:GS:DisableOutput",
-		L"Removes any benchmark noise caused by the MTGS thread or GPU overhead.  This option is best used in conjunction with savestates: "
-		L"save a state at an ideal scene, enable this option, and re-load the savestate.\n\n"
-		L"Warning: This option can be enabled on-the-fly but typically cannot be disabled on-the-fly (video will typically be garbage)."
+	m_check_DisableOutput->SetToolTip( pxEt( L"Removes any benchmark noise caused by the MTGS thread or GPU overhead.  This option is best used in conjunction with savestates: save a state at an ideal scene, enable this option, and re-load the savestate.\n\nWarning: This option can be enabled on-the-fly but typically cannot be disabled on-the-fly (video will typically be garbage)."
 	) );
 
 	//GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );

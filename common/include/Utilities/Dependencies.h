@@ -212,46 +212,18 @@ static const s64 _4gb		= _1gb * 4;
 
 
 // --------------------------------------------------------------------------------------
-//  pxE(key, msg) and pxEt(key, msg)  [macros]
+//  pxE(msg) and pxEt(msg)  [macros] => now same as _/_t/_d
 // --------------------------------------------------------------------------------------
-// Translation Feature: pxE is used as a method of dereferencing very long english text
-// descriptions via a "key" identifier.  In this way, the english text can be revised without
-// it breaking existing translation bindings.  Make sure to add pxE to your PO catalog's
-// source code identifiers, and then reference the source code to see what the current
-// english version is.
-//
-// Valid prefix types:
-//
-// !Panel:       Key-based translation of a panel or dialog text; usually either a header or
-//               checkbox description, by may also include some controls with long labels.
-//               These have the highest translation priority.
-//
-// !Notice:      Key-based translation of a popup dialog box; either a notice, confirmation,
-//               or error.  These typically have very high translation priority (roughly equal
-//               or slightly less than pxE_Panel).
-//
-// !Tooltip:     Key-based translation of a tooltip for a button on a tool bar.  Since buttons are
-//               rarely self-explanatory, these translations are considered medium to high priority.
-//
-// !Wizard       Key-based translation of a heading, checkbox item, description, or other text
-//               associated with the First-time wizard.  Translation of these items is considered
-//               lower-priority to most other messages; but equal or higher priority to ContextTips.
-//
-// !ContextTip:  Key-based translation of a tooltip for a control on a dialog/panel.  Translation
-//               of these items is typically considered "lowest priority" as they usually provide
-//               only tertiary (extra) info to the user.
-//
-
-#define pxE(key, english)			pxExpandMsg( wxT(key),	english )
+#define pxE(english)			pxExpandMsg( (english) )
 
 // For use with tertiary translations (low priority).
-#define pxEt(key, english)			pxExpandMsg( wxT(key),	english )
+#define pxEt(english)			pxExpandMsg( (english) )
 
 // For use with Dev/debug build translations (low priority).
-#define pxE_dev(key, english)		pxExpandMsg( wxT(key),	english )
+#define pxE_dev(english)		pxExpandMsg( (english) )
 
 
-extern const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent );
+extern const wxChar* __fastcall pxExpandMsg( const wxChar* englishContent );
 extern const wxChar* __fastcall pxGetTranslation( const wxChar* message );
 extern bool pxIsEnglish( int id );
 

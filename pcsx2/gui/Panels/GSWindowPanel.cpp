@@ -52,47 +52,26 @@ Panels::GSWindowSettingsPanel::GSWindowSettingsPanel( wxWindow* parent )
 	m_check_DclickFullscreen = new pxCheckBox( this, _("Double-click toggles fullscreen mode") );
 	//m_check_ExclusiveFS = new pxCheckBox( this, _("Use exclusive fullscreen mode (if available)") );
 
-	m_text_Zoom->SetToolTip( pxEt( "!ContextTip:Window:Zoom",
-		L"Zoom = 100: Fit the entire image to the window without any cropping.\n"
-		L"Above/Below 100: Zoom In/Out\n"
-		L"0: Automatic-Zoom-In untill the black-bars are gone (Aspect ratio is kept, some of the image goes out of screen).\n"
-		L"  NOTE: Some games draw their own black-bars, which will not be removed with '0'.\n\n"
-		L"Keyboard: CTRL + NUMPAD-PLUS: Zoom-In, CTRL + NUMPAD-MINUS: Zoom-Out, CTRL + NUMPAD-*: Toggle 100/0"
+	m_text_Zoom->SetToolTip( pxEt( L"Zoom = 100: Fit the entire image to the window without any cropping.\nAbove/Below 100: Zoom In/Out\n0: Automatic-Zoom-In untill the black-bars are gone (Aspect ratio is kept, some of the image goes out of screen).\n  NOTE: Some games draw their own black-bars, which will not be removed with '0'.\n\nKeyboard: CTRL + NUMPAD-PLUS: Zoom-In, CTRL + NUMPAD-MINUS: Zoom-Out, CTRL + NUMPAD-*: Toggle 100/0"
 	) );
 
-	m_check_VsyncEnable->SetToolTip( pxEt( "!ContextTip:Window:Vsync",
-		L"Vsync eliminates screen tearing but typically has a big performance hit. "
-		L"It usually only applies to fullscreen mode, and may not work with all GS plugins."
+	m_check_VsyncEnable->SetToolTip( pxEt( L"Vsync eliminates screen tearing but typically has a big performance hit. It usually only applies to fullscreen mode, and may not work with all GS plugins."
 	) );
 	
-	m_check_ManagedVsync->SetToolTip( pxEt( "!ContextTip:Window:ManagedVsync",
-		L"Enables Vsync when the framerate is exactly at full speed. "
-		L"Should it fall below that, Vsync gets disabled to avoid further performance penalties. "
-		L"Note: This currently only works well with GSdx as GS plugin and with it configured to use DX10/11 hardware rendering. "
-		L"Any other plugin or rendering mode will either ignore it or produce a black frame that blinks whenever the mode switches. "
-		L"It also requires Vsync to be enabled."
+	m_check_ManagedVsync->SetToolTip( pxEt( L"Enables Vsync when the framerate is exactly at full speed. Should it fall below that, Vsync gets disabled to avoid further performance penalties. Note: This currently only works well with GSdx as GS plugin and with it configured to use DX10/11 hardware rendering. Any other plugin or rendering mode will either ignore it or produce a black frame that blinks whenever the mode switches. It also requires Vsync to be enabled."
 	) );
 
-	m_check_HideMouse->SetToolTip( pxEt( "!ContextTip:Window:HideMouse",
-		L"Check this to force the mouse cursor invisible inside the GS window; useful if using "
-		L"the mouse as a primary control device for gaming.  By default the mouse auto-hides after "
-		L"2 seconds of inactivity."
+	m_check_HideMouse->SetToolTip( pxEt( L"Check this to force the mouse cursor invisible inside the GS window; useful if using the mouse as a primary control device for gaming.  By default the mouse auto-hides after 2 seconds of inactivity."
 	) );
 
-	m_check_Fullscreen->SetToolTip( pxEt( "!ContextTip:Window:Fullscreen",
-		L"Enables automatic mode switch to fullscreen when starting or resuming emulation. "
-		L"You can still toggle fullscreen display at any time using alt-enter."
+	m_check_Fullscreen->SetToolTip( pxEt( L"Enables automatic mode switch to fullscreen when starting or resuming emulation. You can still toggle fullscreen display at any time using alt-enter."
 	) );
 
 /*
-	m_check_ExclusiveFS->SetToolTip( pxEt( "!ContextTip:Window:FullscreenExclusive",
-		L"Fullscreen Exclusive Mode may look better on older CRTs and might be a little faster on older video cards, "
-		L"but typically can lead to memory leaks or random crashes when entering/leaving fullscreen mode."
+	m_check_ExclusiveFS->SetToolTip( pxEt( L"Fullscreen Exclusive Mode may look better on older CRTs and might be a little faster on older video cards, but typically can lead to memory leaks or random crashes when entering/leaving fullscreen mode."
 	) );
 */
-	m_check_CloseGS->SetToolTip( pxEt( "!ContextTip:Window:HideGS",
-		L"Completely closes the often large and bulky GS window when pressing "
-		L"ESC or pausing the emulator."
+	m_check_CloseGS->SetToolTip( pxEt( L"Completely closes the often large and bulky GS window when pressing ESC or pausing the emulator."
 	) );
 
 	// ----------------------------------------------------------------------------

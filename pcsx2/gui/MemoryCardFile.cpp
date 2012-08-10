@@ -75,11 +75,9 @@ protected:
 
 	wxString GetDisabledMessage( uint slot ) const
 	{
-		return pxE( "!Notice:Mcd:HasBeenDisabled", wxsFormat(
-			L"The PS2-slot %d has been automatically disabled.  You can correct the problem\n"
-			L"and re-enable it at any time using Config:Memory cards from the main menu.",
-			slot//TODO: translate internal slot index to human-readable slot description
-		) );
+		return wxsFormat( pxE( L"The PS2-slot %d has been automatically disabled.  You can correct the problem\nand re-enable it at any time using Config:Memory cards from the main menu."
+					) , slot//TODO: translate internal slot index to human-readable slot description
+		);
 	}
 };
 

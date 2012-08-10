@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-04-07 11:42+0200\n"
+"POT-Creation-Date: 2012-08-10 11:44+0200\n"
 "PO-Revision-Date: 2011-04-25 01:25+0100\n"
 "Last-Translator: Bukhartsev Dmitriy <bukhartsev.dm@gmail.com>\n"
 "Language-Team: Kein <kein-of@yandex.ru>\n"
@@ -21,19 +21,29 @@ msgstr ""
 "X-Poedit-SearchPath-1: common\n"
 
 #: common/src/Utilities/Exceptions.cpp:254
-msgid "!Notice:VirtualMemoryMap"
+msgid ""
+"There is not enough virtual memory available, or necessary virtual memory "
+"mappings have already been reserved by other processes, services, or DLLs."
 msgstr ""
 "В вашей системе недостаточно виртуальной памяти, либо же, доступное адресное "
 "пространство уже занято другим процессом, службой или библиотеками."
 
 #: pcsx2/CDVD/CDVD.cpp:389
-msgid "!Notice:PsxDisc"
+msgid ""
+"Playstation game discs are not supported by PCSX2.  If you want to emulate "
+"PSX games then you'll have to download a PSX-specific emulator, such as "
+"ePSXe or PCSX."
 msgstr ""
 "Эмулятор PCSX2 не поддерживает игры от PlayStation. Если вы желаете "
 "запустить игры от PSX, используйте соответствующий эмулятор: ePSXe или PCSX."
 
 #: pcsx2/System.cpp:114
-msgid "!Notice:Recompiler:VirtualMemoryAlloc"
+msgid ""
+"This recompiler was unable to reserve contiguous memory required for "
+"internal caches.  This error can be caused by low virtual memory resources, "
+"such as a small or disabled swapfile, or by another program that is hogging "
+"a lot of memory.  You can also try reducing the default cache sizes for all "
+"PCSX2 recompilers, found under Host Settings."
 msgstr ""
 "Рекомпилятор не смог зарезервировать непрерывный блок памяти, необходимый "
 "для внутреннего кэша. Данная проблема может быть вызвана недостатком "
@@ -42,28 +52,38 @@ msgstr ""
 "Если хотите, вы можете попробовать уменьшить значения кэша для всех "
 "рекомпиляторов PCSX2 (см. «Основные настройки»)."
 
-#: pcsx2/System.cpp:348
-msgid "!Notice:EmuCore::MemoryForVM"
+#: pcsx2/System.cpp:344
+msgid ""
+"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close "
+"out some memory hogging background tasks and try again."
 msgstr ""
 "Эмулятор PCSX2 не смог зарезервировать объем памяти, необходимый для "
 "виртуальной машины PS2. Попробуйте закрыть какие-либо \"тяжелые\" приложения "
 "(антивирус, браузер) и перезапустите PCSX2."
 
 #: pcsx2/gui/AppInit.cpp:43
-msgid "!Notice:Startup:NoSSE2"
+msgid ""
+"Warning: Your computer does not support SSE2, which is required by many "
+"PCSX2 recompilers and plugins. Your options will be limited and emulation "
+"will be *very* slow."
 msgstr ""
 "Внимание: ваш компьютер не поддерживает SSE2-инструкции, необходимые для "
 "работы многих плагинов и опций PCSX2. Вы будете ограничены в настройках "
 "эмулятора, а сам процесс эмуляции будет *очень* медленным."
 
-#: pcsx2/gui/AppInit.cpp:162
-msgid "!Notice:RecompilerInit:Header"
+#: pcsx2/gui/AppInit.cpp:160
+msgid ""
+"Warning: Some of the configured PS2 recompilers failed to initialize and "
+"have been disabled:"
 msgstr ""
 "Внимание: произошла ошибка инициализации некоторых рекомпиляторов PCSX2, они "
 "будут автоматически отключены."
 
-#: pcsx2/gui/AppInit.cpp:211
-msgid "!Notice:RecompilerInit:Footer"
+#: pcsx2/gui/AppInit.cpp:208
+msgid ""
+"Note: Recompilers are not necessary for PCSX2 to run, however they typically "
+"improve emulation speed substantially. You may have to manually re-enable "
+"the recompilers listed above, if you resolve the errors."
 msgstr ""
 "Примечание: наличие рекомпиляторов не критично для работы PCSX2 в целом, "
 "однако, они позволяют ускорить процесс эмуляции в разы. Вы можете включить "
@@ -71,21 +91,33 @@ msgstr ""
 "ошибки."
 
 #: pcsx2/gui/AppMain.cpp:546
-msgid "!Notice:BiosDumpRequired"
+msgid ""
+"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
+"obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
+"count).  Please consult the FAQs and Guides for further instructions."
 msgstr ""
 "Для работы эмулятора PCSX2 вам нужна *легальная* копия образа BIOS'а из "
 "вашей PS2. Вы не можете использовать образ, скачанный из интернета или "
 "полученный от друзей. Используйте спец-программы для сохранения вашей "
 "собственной копии BIOS'а с вашей консоли."
 
-#: pcsx2/gui/AppMain.cpp:629
-msgid "!Notice Error:Thread Deadlock Actions"
+#: pcsx2/gui/AppMain.cpp:626
+msgid ""
+"'Ignore' to continue waiting for the thread to respond.\n"
+"'Cancel' to attempt to cancel the thread.\n"
+"'Terminate' to quit PCSX2 immediately.\n"
 msgstr ""
 "Выберите 'Игнорировать' если хотите подождать ответа.Выберите 'Отмена' если "
-"желаете закрыть поток.Выберите 'Выход' если хотите завершить работу PCSX2."
+"желаете закрыть поток.Выберите 'Выход' если хотите завершить работу PCSX2.\n"
 
 #: pcsx2/gui/AppUserMode.cpp:57
-msgid "!Notice:PortableModeRights"
+msgid ""
+"Please ensure that these folders are created and that your user account is "
+"granted write permissions to them -- or re-run PCSX2 with elevated "
+"(administrator) rights, which should grant PCSX2 the ability to create the "
+"necessary folders itself.  If you do not have elevated rights on this "
+"computer, then you will need to switch to User Documents mode (click button "
+"below)."
 msgstr ""
 "Пожалуста убедитесь что эти папки были созданы и ваш пользовательский "
 "аккаунт предоставил им разрешение на запись -- или перезапустите PCSX2 с "
@@ -95,34 +127,48 @@ msgstr ""
 "\"мод\" (кликните на кнопочку рядом)."
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:181
-msgid "!ContextTip:ChangingNTFS"
+msgid ""
+"NTFS compression can be changed manually at any time by using file "
+"properties from Windows Explorer."
 msgstr ""
 "Режим NTFS-компрессии может быть изменен в любой момент времени через "
 "свойства файла Проводника Windows."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:49
-msgid "!ContextTip:Folders:Settings"
+msgid ""
+"This is the folder where PCSX2 saves your settings, including settings "
+"generated by most plugins (some older plugins may not respect this value)."
 msgstr ""
 "Папка, где PCSX2 будет хранить свои настройки, в том числе и настройки "
 "большинства плагинов (некоторые устаревшие плагины могут игнорировать данную "
 "опцию)."
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:54
-msgid "!Panel:Folders:Settings"
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:52
+msgid ""
+"You may optionally specify a location for your PCSX2 settings here.  If the "
+"location contains existing PCSX2 settings, you will be given the option to "
+"import or overwrite them."
 msgstr ""
 "Ниже вы можете указать отдельную папку для хранения настроек PCSX2. Если вы "
 "укажете папку с уже существующимим настройками PCSX2 вам будет предложен "
 "выбор импортировать их в текущую конфигурацию."
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:94
-msgid "!Wizard:Welcome"
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:89
+#, c-format
+msgid ""
+"This wizard will help guide you through configuring plugins, memory cards, "
+"and BIOS.  It is recommended if this is your first time installing %s that "
+"you view the readme and configuration guide."
 msgstr ""
 "Этот волшебник поможет вам пройти через дебри настроек плагинов,  карт "
 "памяти и БИОСа. Строго рекомендуеться если вы впервые производите установку "
 "%s то посмотрите FAQ и гайд по конфигурации."
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:140
-msgid "!Wizard:Bios:Tutorial"
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:132
+msgid ""
+"PCSX2 requires a *legal* copy of the PS2 BIOS in order to run games.\n"
+"You cannot use a copy obtained from a friend or the Internet.\n"
+"You must dump the BIOS from your *own* Playstation 2 console."
 msgstr ""
 "Для работы эмулятора PCSX2 вам нужна *легальная* копия образа BIOS'а PS2. Вы "
 "не можете использовать образ, скачанный из интернета или полученный от "
@@ -131,7 +177,13 @@ msgstr ""
 "руководству программы."
 
 #: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:31
-msgid "!Notice:ImportExistingSettings"
+#, c-format
+msgid ""
+"Existing %s settings have been found in the configured settings folder.  "
+"Would you like to import these settings or overwrite them with %s default "
+"values?\n"
+"\n"
+"(or press Cancel to select a different settings folder)"
 msgstr ""
 "Программа настройки %s нашла старые настройки эмулятора в указанной вами "
 "папке. Желаете импортировать эти настройки или перезаписать настройками %s "
@@ -140,14 +192,19 @@ msgstr ""
 "(нажмите \"Отмена\" для выбора другой папки)"
 
 #: pcsx2/gui/Dialogs/McdConfigDialog.cpp:30
-msgid "!Panel:Mcd:NtfsCompress"
+msgid ""
+"NTFS compression is built-in, fast, and completely reliable; and typically "
+"compresses memory cards very well (this option is highly recommended)."
 msgstr ""
 "Режим NTFS-компрессии быстр, надежен и нативен для Windows.  Весьма неплохое "
 "сжатие файлов карт памяти ставит его в один ряд с другими рекомендуемыми "
 "настройками."
 
-#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:41
-msgid "!Panel:Mcd:EnableEjection"
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:39
+msgid ""
+"Avoids memory card corruption by forcing games to re-index card contents "
+"after loading from savestates.  May not be compatible with all games (Guitar "
+"Hero)."
 msgstr ""
 "Позволяет избежать возможной порчи вирутальных карты памяти при "
 "использовании быстрых сохранений. Сразу после загрузки оного, эмулятор "
@@ -155,27 +212,46 @@ msgstr ""
 "некоторыми играми (Guitar Hero 4)."
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:33
-msgid "!Panel:StuckThread:Heading"
+#, c-format
+msgid ""
+"The thread '%s' is not responding.  It could be deadlocked, or it might just "
+"be running *really* slowly."
 msgstr ""
 "Нет ответа от потока '%s'. Возможно он завис или работет *очень* медленно."
 
 #: pcsx2/gui/Dialogs/SysConfigDialog.cpp:38
-msgid "!Panel:HasHacksOverrides"
+msgid ""
+"Warning!  You are running PCSX2 with command line options that override your "
+"configured settings.  These command line options will not be reflected in "
+"the Settings dialog, and will be disabled if you apply any changes here."
 msgstr ""
 "Осторожно! PCSX2 был запущен с опцией командной строки, которая замещает "
 "некоторые опции которые были определены до этого. Эти опции не будут "
 "отражены на панели, и будут отключены когда здесь будут применины какие-либо "
 "изменения."
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:58
-msgid "!Panel:HasPluginsOverrides"
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:55
+msgid ""
+"Warning!  You are running PCSX2 with command line options that override your "
+"configured plugin and/or folder settings.  These command line options will "
+"not be reflected in the settings dialog, and will be disabled when you apply "
+"settings changes here."
 msgstr ""
 "Осторожно! PCSX2 был запущен с опцией командной строки, которая замещает "
 "настройки ваших плагинов и папок . Эти настройки не будут отражены на "
 "панели, и будут отключены  когда здесь будут применины какие-либо изменения."
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:135
-msgid "!Notice:Tooltip:Presets:Slider"
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:129
+msgid ""
+"The Presets apply speed hacks, some recompiler options and some game fixes "
+"known to boost speed.\n"
+"Known important game fixes will be applied automatically.\n"
+"\n"
+"Presets info:\n"
+"1 -     The most accurate emulation but also the slowest.\n"
+"3 --> Tries to balance speed with compatibility.\n"
+"4 -     Some more aggressive hacks.\n"
+"6 -     Too many hacks which will probably slow down most games.\n"
 msgstr ""
 "При выборе предварительных настроек будут выбраны speed-хаки, несколько "
 "опций рекомпилятора и некоторые исправления которые могут  увеличить "
@@ -186,10 +262,15 @@ msgstr ""
 "3 -> Попытка сбалансировать скорость с совместимостью.\n"
 "4 -> Немного более агрессивные хаки.\n"
 "6 -> Как можно больше хаков, однако это скорее всего замедлит большинство "
-"игр."
+"игр.\n"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:149
-msgid "!Notice:Tooltip:Presets:Checkbox"
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:136
+msgid ""
+"The Presets apply speed hacks, some recompiler options and some game fixes "
+"known to boost speed.\n"
+"Known important game fixes will be applied automatically.\n"
+"\n"
+"--> Uncheck to modify settings manually (with current preset as base)"
 msgstr ""
 "При выборе предварительных настроек будут использованы speed-хаки, несколько "
 "опций рекомпилятора и некоторые исправления которые могут увеличить "
@@ -200,13 +281,23 @@ msgstr ""
 "настройками как основой)."
 
 #: pcsx2/gui/IsoDropTarget.cpp:28
-msgid "!Notice:ConfirmSysReset"
+msgid ""
+"This action will reset the existing PS2 virtual machine state; all current "
+"progress will be lost.  Are you sure?"
 msgstr ""
 "Данная операция перезапустит вирутальную машину PS2. Все несохраненные "
 "данные будут потеряны. Хотите продолжить?"
 
 #: pcsx2/gui/MainMenuClicks.cpp:106
-msgid "!Notice:DeleteSettings"
+#, fuzzy, c-format
+msgid ""
+"This command clears %s settings and allows you to re-run the First-Time "
+"Wizard.  You will need to manually restart %s after this operation.\n"
+"\n"
+"WARNING!!  Click OK to delete *ALL* settings for %s and force-close the app, "
+"losing any current emulation progress.  Are you absolutely sure?\n"
+"\n"
+"(note: settings for plugins are unaffected)"
 msgstr ""
 "Данная команда удалит текущие настройки PCSX2 и позволит вам запустить "
 "Мастер настройки при следующем запуске PCSX2.\n"
@@ -219,7 +310,11 @@ msgstr ""
 "(примечание: все настройки плагинов сохранятся)"
 
 #: pcsx2/gui/MemoryCardFile.cpp:78
-msgid "!Notice:Mcd:HasBeenDisabled"
+#, c-format
+msgid ""
+"The PS2-slot %d has been automatically disabled.  You can correct the "
+"problem\n"
+"and re-enable it at any time using Config:Memory cards from the main menu."
 msgstr ""
 "Карта памяти в слоте %d была автоматически отключена. После того, как вы "
 "исправите проблему,\n"
@@ -227,51 +322,74 @@ msgstr ""
 "Настройки карт памя"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:138
-msgid "!Notice:BIOS:InvalidSelection"
+msgid ""
+"Please select a valid BIOS.  If you are unable to make a valid selection "
+"then press Cancel to close the Configuration panel."
 msgstr ""
 "Для продолжения работы вам необходимо выбрать образ BIOS'а. Если вы не "
 "уверены в своем выборе, нажмите Cancel дабы закрыть окно настроек без "
 "применения изменений."
 
 #: pcsx2/gui/Panels/CpuPanel.cpp:111
-msgid "!Panel:EE/IOP:Heading"
+msgid "Notice: Most games are fine with the default options. "
 msgstr ""
 "Примечание: большинство игр хорошо работают со стандартными настройками"
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:178
-msgid "!Panel:VUs:Heading"
+#: pcsx2/gui/Panels/CpuPanel.cpp:177
+msgid "Notice: Most games are fine with the default options."
 msgstr ""
 "Примечание: большинство игр хорошо работают со стандартными настройками"
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:69
-msgid "!Notice:DirPicker:CreatePath"
+msgid ""
+"The specified path/directory does not exist.  Would you like to create it?"
 msgstr "Указаные путь/папка не существуют. Желаете создать их?"
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:158
-msgid "!ContextTip:DirPicker:UseDefault"
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:157
+msgid ""
+"When checked this folder will automatically reflect the default associated "
+"with PCSX2's current usermode setting. "
 msgstr ""
 "Активируйте данную опцию, если желаете чтобы PCSX2 создавала соответствующие "
 "папки относительно пути указанному в настройках пользовательского режима."
 
 #: pcsx2/gui/Panels/GSWindowPanel.cpp:55
 #, fuzzy
-msgid "!ContextTip:Window:Zoom"
+msgid ""
+"Zoom = 100: Fit the entire image to the window without any cropping.\n"
+"Above/Below 100: Zoom In/Out\n"
+"0: Automatic-Zoom-In untill the black-bars are gone (Aspect ratio is kept, "
+"some of the image goes out of screen).\n"
+"  NOTE: Some games draw their own black-bars, which will not be removed with "
+"'0'.\n"
+"\n"
+"Keyboard: CTRL + NUMPAD-PLUS: Zoom-In, CTRL + NUMPAD-MINUS: Zoom-Out, CTRL + "
+"NUMPAD-*: Toggle 100/0"
 msgstr ""
 "Устраняет \"излом\" изображения при активной смене картинки на экране, "
 "однако сия роскошь чревата общим понижением производительности. Актуально "
 "лишь при использовании полноэкранного режима и лишь в связке с теми видео-"
 "плагинами, которые его поддерживают."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:63
-msgid "!ContextTip:Window:Vsync"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:58
+msgid ""
+"Vsync eliminates screen tearing but typically has a big performance hit. It "
+"usually only applies to fullscreen mode, and may not work with all GS "
+"plugins."
 msgstr ""
 "Устраняет \"излом\" изображения при активной смене картинки на экране, "
 "однако сия роскошь чревата общим понижением производительности. Актуально "
 "лишь при использовании полноэкранного режима и лишь в связке с теми видео-"
 "плагинами, которые его поддерживают."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:68
-msgid "!ContextTip:Window:ManagedVsync"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:61
+msgid ""
+"Enables Vsync when the framerate is exactly at full speed. Should it fall "
+"below that, Vsync gets disabled to avoid further performance penalties. "
+"Note: This currently only works well with GSdx as GS plugin and with it "
+"configured to use DX10/11 hardware rendering. Any other plugin or rendering "
+"mode will either ignore it or produce a black frame that blinks whenever the "
+"mode switches. It also requires Vsync to be enabled."
 msgstr ""
 "Включает режим вертикальной синхронизации (Vsync) когда скорость смены "
 "кадров происходит на полной мощности. В случае падения ниже этой скорости, "
@@ -281,88 +399,127 @@ msgstr ""
 "Любой другой плагин или вид рендеринга будет игнорировать это или будет "
 "выдавать черный кадр каждый раз когда происходит переключение режимов."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:76
-msgid "!ContextTip:Window:HideMouse"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:64
+msgid ""
+"Check this to force the mouse cursor invisible inside the GS window; useful "
+"if using the mouse as a primary control device for gaming.  By default the "
+"mouse auto-hides after 2 seconds of inactivity."
 msgstr ""
 "По умолчанию, курсор мыши скрывается после 2-ух секунд бездействия. Данная "
 "опция моментально скрывает курсор мыши в видеоокне. Удобно, если вы "
 "используете управление мышью в игре."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:82
-msgid "!ContextTip:Window:Fullscreen"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:67
+msgid ""
+"Enables automatic mode switch to fullscreen when starting or resuming "
+"emulation. You can still toggle fullscreen display at any time using alt-"
+"enter."
 msgstr ""
 "Автоматически переводит видеоокно в полный режим при запуске игры. Впрочем, "
 "вы всегда можете выйти из данного режима с помощью комбинации ALT+ENTER."
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:93
-msgid "!ContextTip:Window:HideGS"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:74
+msgid ""
+"Completely closes the often large and bulky GS window when pressing ESC or "
+"pausing the emulator."
 msgstr "Скрывает видеоокно при установке паузы или нажатии ESC."
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:67
-msgid "!ContextTip:Gamefixes:EE Timing Hack"
+msgid ""
+"Known to affect following games:\n"
+" * Digital Devil Saga (Fixes FMV and crashes)\n"
+" * SSX (Fixes bad graphics and crashes)\n"
+" * Resident Evil: Dead Aim (Causes garbled textures)"
 msgstr ""
 "Актуален для следующих игр:\n"
 "* Digital Devil Saga (исправляет видеозаставки и вылеты)\n"
 "* SSX (исправляет графические ошибки и вылеты)\n"
 "* Resident Evil: Dead Aim (исправляет неправильные текстуры)"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
-msgid "!ContextTip:Gamefixes:OPH Flag hack"
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:76
+msgid ""
+"Known to affect following games:\n"
+" * Bleach Blade Battler\n"
+" * Growlanser II and III\n"
+" * Wizardry"
 msgstr ""
 "Актуален для следующих игр:\n"
 "* Bleach Blade Battler\n"
 "* Growlanser II and III\n"
 "* Wizardry\""
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:89
-msgid "!ContextTip:Gamefixes:DMA Busy hack"
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:81
+msgid ""
+"Known to affect following games:\n"
+" * Mana Khemia 1 (Going \"off campus\")\n"
 msgstr ""
 "Актуален для следующих игр:\n"
-"* Mana Khemia 1 (\"выходя за пределы кампуса\")"
+"* Mana Khemia 1 (\"выходя за пределы кампуса\")\n"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:96
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:86
 #, fuzzy
-msgid "!ContextTip:Gamefixes:VIF1 FIFO hack"
+msgid ""
+"Known to affect following games:\n"
+" * Test Drive Unlimited\n"
+" * Transformers"
 msgstr ""
 "Актуален для следующих игр:\n"
 "* Bleach Blade Battler\n"
 "* Growlanser II and III\n"
 "* Wizardry\""
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:119
-msgid "!Panel:Gamefixes:Compat Warning"
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:106
+msgid ""
+"Gamefixes can work around wrong emulation in some titles. \n"
+"They may also cause compatibility or performance issues. \n"
+"\n"
+"It's better to enable 'Automatic game fixes' at the main menu instead, and "
+"leave this page empty. \n"
+"('Automatic' means: selectively use specific tested fixes for specific games)"
 msgstr ""
 "Определенные игровые хаки исправляют ошибки эмуляции в определенных играх, "
 "однако почти всегда вызывают ошибки и проблемы в других. При смене игры вам "
 "необходимо отключить хаки вручную (если какие-либо их них были включены)."
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
-msgid "!Notice:Mcd:Delete"
+#, fuzzy, c-format
+msgid ""
+"You are about to delete the formatted memory card '%s'. All data on this "
+"card will be lost!  Are you absolutely and quite positively sure?"
 msgstr ""
 "Вы действительно хотите удалить отформатированную карту памяти в слоте %u? "
 "Все сохраненные данные на ней будут потеряны!"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:758
-msgid "!Notice:Mcd:CantDuplicate"
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:756
+msgid ""
+"Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
 msgstr ""
 "Облом: Дубликация разершена только на пустой PS2-порт или на файловую систему"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:801
-msgid "!Notice:Mcd:Copy Failed"
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#, fuzzy, c-format
+msgid "Failed: Destination memory card '%s' is in use."
 msgstr ""
 "Ошибка! Невозможно скопировать выбранную карту памяти в слот %u. Указанный "
 "файл уже используется."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
-msgid "!Panel:Usermode:Explained"
+msgid ""
+"Please select your preferred default location for PCSX2 user-level documents "
+"below (includes memory cards, screenshots, settings, and savestates).  These "
+"folder locations can be overridden at any time using the Core Settings panel."
 msgstr ""
 "Выберите место, куда PCSX2 будет сохранять ваши пользовательские данные "
 "(настройки, карты памяти, быстрые сохранения, скриншоты и т.д.). Папка, "
 "которую вы выберете, будет основной рабочей папкой PCSX2, но вы всегда "
 "сможете изменить ее месторасположение через меню настроек эмулятора."
 
-#: pcsx2/gui/Panels/MiscPanelStuff.cpp:41
-msgid "!Panel:Usermode:Warning"
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:38
+msgid ""
+"You can change the preferred default location for PCSX2 user-level documents "
+"here (includes memory cards, screenshots, settings, and savestates).  This "
+"option only affects Standard Paths which are set to use the installation "
+"default value."
 msgstr ""
 "Данная опция позволит вам изменить папку, где PCSX2 будет сохранять ваши "
 "пользовательские данные (настройки, карты памяти, быстрые сохранения, "
@@ -370,24 +527,37 @@ msgstr ""
 "папки, у которых стоит галочка \"Использовать настройки по умолчанию\"."
 
 #: pcsx2/gui/Panels/PathsPanel.cpp:40
-msgid "!ContextTip:Folders:Savestates"
+msgid ""
+"This folder is where PCSX2 records savestates; which are recorded either by "
+"using menus/toolbars, or by pressing F1/F3 (save/load)."
 msgstr "Папка, куда PCSX2 будет записывать ваши быстрые сохранения."
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:50
-msgid "!ContextTip:Folders:Snapshots"
+#: pcsx2/gui/Panels/PathsPanel.cpp:48
+msgid ""
+"This folder is where PCSX2 saves screenshots.  Actual screenshot image "
+"format and style may vary depending on the GS plugin being used."
 msgstr ""
 "Папка, куда PCSX2 будет сохранять ваши скриншоты. Форма, размер и стиль "
 "скриншотов зависят от используемого плагина."
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:60
-msgid "!ContextTip:Folders:Logs"
+#: pcsx2/gui/Panels/PathsPanel.cpp:56
+msgid ""
+"This folder is where PCSX2 saves its logfiles and diagnostic dumps.  Most "
+"plugins will also adhere to this folder, however some older plugins may "
+"ignore it."
 msgstr ""
 "Данная папка предназначена для сохранения логов и дампов PCSX2. Последние "
 "версии плагинов так же используют данную директорию для  сохранения разной "
 "отладочной информации."
 
 #: pcsx2/gui/Panels/PluginSelectorPanel.cpp:242
-msgid "!Notice:PluginSelector:ConfirmShutdown"
+msgid ""
+"Warning!  Changing plugins requires a complete shutdown and reset of the PS2 "
+"virtual machine. PCSX2 will attempt to save and restore the state, but if "
+"the newly selected plugins are incompatible the recovery may fail, and "
+"current progress will be lost.\n"
+"\n"
+"Are you sure you want to apply settings now?"
 msgstr ""
 "Внимание! Смена плагинов требует перезапуска вирутальной машины PS2. Сейчас "
 "PCSX2 попробует сохранить текущее состояние и восстановить его с новыми "
@@ -396,102 +566,143 @@ msgstr ""
 "\n"
 "Вы действительно хотите продолжить?"
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:457
-msgid "!Notice:PluginSelector:ApplyFailed"
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:452
+#, c-format
+msgid ""
+"All plugins must have valid selections for %s to run.  If you are unable to "
+"make a valid selection due to missing plugins or an incomplete install of "
+"%s, then press Cancel to close the Configuration panel."
 msgstr ""
 "Для нормальной работы %s вам необходимо указать и выбрать все доступные "
 "плагины. Если вы не можете сделать выбор ввиду отсутствия некоторых плагинов "
 "%s, нажмите \"Отмена\" для выхода из окна настроек."
 
 #: pcsx2/gui/Panels/SpeedhacksPanel.cpp:27
-msgid "!Panel:Speedhacks:EECycleX1"
+msgid ""
+"1 - Default cyclerate. This closely matches the actual speed of a real PS2 "
+"EmotionEngine."
 msgstr ""
 "1 - Стандартное значение скорости работы виртуального процессора PS2 (нет "
 "прироста скорости)."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:32
-msgid "!Panel:Speedhacks:EECycleX2"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:31
+msgid ""
+"2 - Reduces the EE's cyclerate by about 33%.  Mild speedup for most games "
+"with high compatibility."
 msgstr ""
 "2 - понижает цикл работы EE примерно на 33%. Неплохое ускорение для "
 "большинства игр, без потери совместимости."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:37
-msgid "!Panel:Speedhacks:EECycleX3"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:35
+msgid ""
+"3 - Reduces the EE's cyclerate by about 50%.  Moderate speedup, but *will* "
+"cause stuttering audio on many FMVs."
 msgstr ""
 "3 - понижает цикл работы EE примерно на 50%. Хорошее ускорение, чревато "
 "возможным заиканием звука."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
-msgid "!Panel:Speedhacks:VUCycleStealOff"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:50
+msgid "0 - Disables VU Cycle Stealing.  Most compatible setting!"
 msgstr ""
 "0 - VU Cycle Stealing отключен. Наиболее безопасная опция в плане "
 "совместимости."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:59
-msgid "!Panel:Speedhacks:VUCycleSteal1"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:54
+msgid ""
+"1 - Mild VU Cycle Stealing.  Lower compatibility, but some speedup for most "
+"games."
 msgstr ""
 "1 - среднее значение VU Cycle Stealing. Может повлиять на совместимость, но "
 "при этом ускоряет некоторые игры."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:64
-msgid "!Panel:Speedhacks:VUCycleSteal2"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:58
+msgid ""
+"2 - Moderate VU Cycle Stealing.  Even lower compatibility, but significant "
+"speedups in some games."
 msgstr ""
 "2 - высокое значение VU Cycle Stealing. Наверняка скажется на совместимости, "
 "окупается неплохим ускорением эмуляции."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:70
-msgid "!Panel:Speedhacks:VUCycleSteal3"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:63
+msgid ""
+"3 - Maximum VU Cycle Stealing.  Usefulness is limited, as this will cause "
+"flickering visuals or slowdown in most games."
 msgstr ""
 "1 - максимальное значение VU Cycle Stealing. В этом режиме будет проявляться "
 "множество графических багов."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:97
-msgid "!Panel:Speedhacks:Overview"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:88
+msgid ""
+"Speedhacks usually improve emulation speed, but can cause glitches, broken "
+"audio, and false FPS readings.  When having emulation problems, disable this "
+"panel first."
 msgstr ""
 "Спидхаки позволяют вам ускорить эмуляцию той или иной игры, но в большинстве "
 "случаев вам придется расплачиваться за скорость различными багами, "
 "испорченным звуком, некорректными значениями FPS. При наличии каких-либо "
 "критичных проблем - первым делом отключите ВСЕ спидхаки."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:129
-msgid "!ContextTip:Speedhacks:EECycleRate Slider"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:118
+msgid ""
+"Setting higher values on this slider effectively reduces the clock speed of "
+"the EmotionEngine's R5900 core cpu, and typically brings big speedups to "
+"games that fail to utilize the full potential of the real PS2 hardware."
 msgstr ""
 "Позволяет последовательно понизить цикл работы EmotionEngine процессора "
 "эмулируемой машины и тем самым ускорить игры, которые не полностью "
 "используют аппаратные ресурсы PS2."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
-msgid "!ContextTip:Speedhacks:VUCycleStealing Slider"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:136
+msgid ""
+"This slider controls the amount of cycles the VU unit steals from the "
+"EmotionEngine.  Higher values increase the number of cycles stolen from the "
+"EE for each VU microprogram the game runs."
 msgstr ""
 "Позволяет настроить количество циклов, \"воруемых\" VU-юнитом у "
 "EmotionEngine. Более высокое значение хака увеличивает количество циклов, "
 "которые будут \"позаимствованы\" у EE для обработки микропрограмм VU."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:169
-msgid "!ContextTip:Speedhacks:vuFlagHack"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:153
+msgid ""
+"Updates Status Flags only on blocks which will read them, instead of all the "
+"time. This is safe most of the time, and Super VU does something similar by "
+"default."
 msgstr ""
 "Обновляет флаги состояния только на тех блоках, которые будут читать данные "
 "флаги (вместо постоянного обновления всех блоков). Вполне безопасный хак, "
 "SuperVU-рекомпилятор делает нечто подобное по-умолчанию."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:156
 #, fuzzy
-msgid "!ContextTip:Speedhacks:vuThread"
+msgid ""
+"Runs VU1 on its own thread (microVU1-only). Generally a speedup on CPUs with "
+"3 or more cores. This is safe for most games, but a few games are "
+"incompatible and may hang. In the case of GS limited games, it may be a "
+"slowdown (especially on dual core CPUs)."
 msgstr ""
 "Использует SSEx-инструкции для Min/Max-операции с плавающей точкой, вместо "
 "дополнительных Min/Max-операций при просчете логики. \"Ломает\" Gran Turismo "
 "4 и Tekken 5. Возможно что-то еще."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:195
-msgid "!ContextTip:Speedhacks:INTC"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:174
+msgid ""
+"This hack works best for games that use the INTC Status register to wait for "
+"vsyncs, which includes primarily non-3D RPG titles. Games that do not use "
+"this method of vsync will see little or no speedup from this hack."
 msgstr ""
 "Данный хак лучше всего применять для игр которые используют регистрацию "
 "статуса INTC при ожидании вертикального синхроимпульса. В основном это RPG, "
 "не использующие 3D. Все остальные игры либо не получат никакого ускорения, "
 "либо оно будет чрезвычайно мало."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:200
-msgid "!ContextTip:Speedhacks:BIFC0"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:177
+msgid ""
+"Primarily targetting the EE idle loop at address 0x81FC0 in the kernel, this "
+"hack attempts to detect loops whose bodies are guaranteed to result in the "
+"same machine state for every iteration until a scheduled event triggers "
+"emulation of another unit.  After a single iteration of such loops, we "
+"advance to the time of the next event or the end of the processor's "
+"timeslice, whichever comes first."
 msgstr ""
 "Изначально нацеленный на пустые циклы EE-рекомпилятора по адресу ядра "
 "0x81FC0,\n"
@@ -504,32 +715,46 @@ msgstr ""
 "событию или\n"
 "вообще к концу процессорного интервала."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:207
-msgid "!ContextTip:Speedhacks:fastCDVD"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:180
+msgid ""
+"Check HDLoader compatibility lists for known games that have issues with "
+"this. (Often marked as needing 'mode 1' or 'slow DVD'"
 msgstr ""
 "Для получения списка игр, которые испытывают проблемы при использовании "
 "данного хака, вы можете обратитьcя к списку совмесимости HDLoader'а "
 "(смотрите по \"mode1\" и \"slow DVD\")."
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:37
-msgid "!ContextTip:Framelimiter:Disable"
+msgid ""
+"Note that when Framelimiting is disabled, Turbo and SlowMotion modes will "
+"not be available either."
 msgstr "Отключение лимита кадров отключит так же и Turbo-/Slowmotion-режимы."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:227
-msgid "!Panel:Frameskip:Heading"
+#: pcsx2/gui/Panels/VideoPanel.cpp:225
+msgid ""
+"Notice: Due to PS2 hardware design, precise frame skipping is impossible. "
+"Enabling it will cause severe graphical errors in some games."
 msgstr ""
 "Примечание: ввиду особенностей архитектуры аппаратной части PS2, аккуратный "
 "пропуск кадров невозможен в принципе. Поэтому, его активация может "
 "спровоцировать появление графических артефактов в некоторых играх."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:306
-msgid "!ContextTip:GS:SyncMTGS"
+#: pcsx2/gui/Panels/VideoPanel.cpp:302
+msgid ""
+"Enable this if you think MTGS thread sync is causing crashes or graphical "
+"errors."
 msgstr ""
 "Включайте данную опцию только в том случае, если вы думаете что "
 "синхронизация потоков MTGS приводит к вылетам или графическим артефактам."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:310
-msgid "!ContextTip:GS:DisableOutput"
+#: pcsx2/gui/Panels/VideoPanel.cpp:305
+msgid ""
+"Removes any benchmark noise caused by the MTGS thread or GPU overhead.  This "
+"option is best used in conjunction with savestates: save a state at an ideal "
+"scene, enable this option, and re-load the savestate.\n"
+"\n"
+"Warning: This option can be enabled on-the-fly but typically cannot be "
+"disabled on-the-fly (video will typically be garbage)."
 msgstr ""
 "Отключает обработку всех GS-данных, тем самым убирая возможный замедляющий "
 "фактор при замерах производительность остальных компонентов эмулятора. "
@@ -540,14 +765,21 @@ msgstr ""
 "Примечание: данная опция применяется \"на лету\", однако ее последующее "
 "отключение в реальном времени чревато появлением графического мусора в игре. "
 
-#: pcsx2/vtlb.cpp:710
-msgid "!Notice:HostVmReserve"
+#: pcsx2/vtlb.cpp:711
+msgid ""
+"Your system is too low on virtual resources for PCSX2 to run. This can be "
+"caused by having a small or disabled swapfile, or by other programs that are "
+"hogging resources."
 msgstr ""
 "Недостаточно виртуальной памяти для запуска PCSX2. Возможно, у вас отключен "
 "своп-файл или какая-то другая программа \"съела\" все системные ресурсы."
 
 #: pcsx2/x86/sVU_zerorec.cpp:363
-msgid "!Notice:superVU:VirtualMemoryAlloc"
+msgid ""
+"Out of Memory (sorta): The SuperVU recompiler was unable to reserve the "
+"specific memory ranges required, and will not be available for use.  This is "
+"not a critical error, since the sVU rec is obsolete, and you should use "
+"microVU instead anyway. :)"
 msgstr ""
 "Out of Memory (типа): рекомпилятор SuperVU не смог зарезервировать "
 "необходимое адресное пространство и не может быть использован. Впрочем, не "

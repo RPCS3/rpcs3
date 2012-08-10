@@ -135,9 +135,7 @@ void Panels::BiosSelectorPanel::Apply()
 	{
 		throw Exception::CannotApplySettings(this)
 			.SetDiagMsg(L"User did not specify a valid BIOS selection.")
-			.SetUserMsg( pxE( "!Notice:BIOS:InvalidSelection",
-				L"Please select a valid BIOS.  If you are unable to make a valid selection "
-				L"then press Cancel to close the Configuration panel."
+			.SetUserMsg( pxE( L"Please select a valid BIOS.  If you are unable to make a valid selection then press Cancel to close the Configuration panel."
 			) );
 	}
 

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-05-07 17:47+0200\n"
+"POT-Creation-Date: 2012-08-10 11:44+0200\n"
 "PO-Revision-Date: 2012-05-23 08:58+0800\n"
 "Last-Translator: \n"
 "Language-Team: kohaku2421 <kohaku2421@gmail.com>\n"
@@ -38,36 +38,51 @@ msgid "Oh noes! Out of memory!"
 msgstr "Kekurangan memori!"
 
 #: common/src/Utilities/Exceptions.cpp:234
-msgid "Virtual memory mapping failure!  Your system may have conflicting device drivers, services, or may simply have insufficient memory or resources to meet PCSX2's lofty needs."
-msgstr "Pengamalatan memori maya gagal! Sistem anda mungkin mempunyai konflik perkakasan, servis, atau kekurangan memori dan keperluan yang diperlukan untuk PCSX2."
+msgid ""
+"Virtual memory mapping failure!  Your system may have conflicting device "
+"drivers, services, or may simply have insufficient memory or resources to "
+"meet PCSX2's lofty needs."
+msgstr ""
+"Pengamalatan memori maya gagal! Sistem anda mungkin mempunyai konflik "
+"perkakasan, servis, atau kekurangan memori dan keperluan yang diperlukan "
+"untuk PCSX2."
 
-#: common/src/Utilities/Exceptions.cpp:309
+#: common/src/Utilities/Exceptions.cpp:307
 msgid "Path: "
 msgstr "Laluan:"
 
-#: common/src/Utilities/Exceptions.cpp:313
+#: common/src/Utilities/Exceptions.cpp:311
 msgid "[Unnamed or unknown]"
 msgstr "[Tiada nama atau tidak diketahui]"
 
-#: common/src/Utilities/Exceptions.cpp:333
+#: common/src/Utilities/Exceptions.cpp:331
 msgid "A file could not be created."
 msgstr "Fail tidak mampu dihasilkan."
 
-#: common/src/Utilities/Exceptions.cpp:353
+#: common/src/Utilities/Exceptions.cpp:351
 msgid "File not found."
 msgstr "Fail tidak dijumpai."
 
-#: common/src/Utilities/Exceptions.cpp:373
-msgid "Permission denied while trying to open file, likely due to insufficient user account rights."
-msgstr "Keizinan dinafikan ketika hendak membuka fail, mungkin kerana kekurangan kuasa akaun pengguna."
+#: common/src/Utilities/Exceptions.cpp:371
+msgid ""
+"Permission denied while trying to open file, likely due to insufficient user "
+"account rights."
+msgstr ""
+"Keizinan dinafikan ketika hendak membuka fail, mungkin kerana kekurangan "
+"kuasa akaun pengguna."
 
-#: common/src/Utilities/Exceptions.cpp:393
-msgid "Unexpected end of file or stream encountered.  File is probably truncated or corrupted."
-msgstr "Penghujung fail atau laluan yang tidak diduga dijumpai. Fail kemungkinan dipendekkan atau korup."
+#: common/src/Utilities/Exceptions.cpp:391
+msgid ""
+"Unexpected end of file or stream encountered.  File is probably truncated or "
+"corrupted."
+msgstr ""
+"Penghujung fail atau laluan yang tidak diduga dijumpai. Fail kemungkinan "
+"dipendekkan atau korup."
 
 #: common/src/Utilities/ThreadTools.cpp:41
 msgid "Threading activity: start, detach, sync, deletion, etc."
-msgstr "Aktiviti threading: mula, cerai, penyelarasan, pembuangan, dan lain-lain."
+msgstr ""
+"Aktiviti threading: mula, cerai, penyelarasan, pembuangan, dan lain-lain."
 
 #: common/src/Utilities/ThreadingDialogs.cpp:30
 msgid "Waiting for tasks..."
@@ -79,7 +94,8 @@ msgstr "Menuggu kerja..."
 
 #: common/src/Utilities/wxAppWithHelpers.cpp:36
 msgid "Includes idle event processing and some other uncommon event usages."
-msgstr "Mangambil kira pemprosesan acara leka dan sedikit penggunaan acara luarbiasa."
+msgstr ""
+"Mangambil kira pemprosesan acara leka dan sedikit penggunaan acara luarbiasa."
 
 #: pcsx2/CDVD/IsoFileFormats.cpp:416
 msgid "Unrecognized ISO image file format"
@@ -87,29 +103,47 @@ msgstr "Fail imej ISO tidak dikenali"
 
 #: pcsx2/Elfheader.cpp:266
 msgid "Cannot load ELF binary image.  The file may be corrupt or incomplete."
-msgstr "Tidak boleh memuatkan imej binari ELF. Fail kemungkinan korup atau tidak lengkap."
+msgstr ""
+"Tidak boleh memuatkan imej binari ELF. Fail kemungkinan korup atau tidak "
+"lengkap."
 
 #: pcsx2/Elfheader.cpp:268
-msgid "If loading from an ISO image, this error may be caused by an unsupported ISO image type or a bug in PCSX2 ISO image support."
-msgstr "Jika memuatkan dari imej ISO, ralat ini mungkin disebabkan oleh imej ISO yang tidak disokong atau pepijat dalam sokongan imej ISO PCSX2."
+msgid ""
+"If loading from an ISO image, this error may be caused by an unsupported ISO "
+"image type or a bug in PCSX2 ISO image support."
+msgstr ""
+"Jika memuatkan dari imej ISO, ralat ini mungkin disebabkan oleh imej ISO "
+"yang tidak disokong atau pepijat dalam sokongan imej ISO PCSX2."
 
 #: pcsx2/MTGS.cpp:859
-msgid "The MTGS thread has become unresponsive while waiting for the GS plugin to open."
+msgid ""
+"The MTGS thread has become unresponsive while waiting for the GS plugin to "
+"open."
 msgstr "Thread MTGS tidak memberi respons semasa menuggu plugin GS untuk buka."
 
 #: pcsx2/PluginManager.cpp:709
-msgid "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
-msgstr "Savestate tidak boleh dimuatkan, kerana ia telah korup atau tidak lengkap."
+msgid ""
+"The savestate cannot be loaded, as it appears to be corrupt or incomplete."
+msgstr ""
+"Savestate tidak boleh dimuatkan, kerana ia telah korup atau tidak lengkap."
 
 #: pcsx2/PluginManager.cpp:719
 #, c-format
-msgid "%s plugin failed to open.  Your computer may have insufficient resources, or incompatible hardware/drivers."
-msgstr "%s plugin gagal untuk dibuka. Komputer anda mungkin kekurangan keperluan, atau perkakasan/driver yang tidak sesuai."
+msgid ""
+"%s plugin failed to open.  Your computer may have insufficient resources, or "
+"incompatible hardware/drivers."
+msgstr ""
+"%s plugin gagal untuk dibuka. Komputer anda mungkin kekurangan keperluan, "
+"atau perkakasan/driver yang tidak sesuai."
 
 #: pcsx2/PluginManager.cpp:726
 #, c-format
-msgid "%s plugin failed to initialize.  Your system may have insufficient memory or resources needed."
-msgstr "%s plugin gagal untuk dimulakan. Sistem anda kemungkinan kekurangan memori atau keperluan yang diperlukan."
+msgid ""
+"%s plugin failed to initialize.  Your system may have insufficient memory or "
+"resources needed."
+msgstr ""
+"%s plugin gagal untuk dimulakan. Sistem anda kemungkinan kekurangan memori "
+"atau keperluan yang diperlukan."
 
 #: pcsx2/PluginManager.cpp:832
 #, c-format
@@ -119,25 +153,41 @@ msgstr "%s plugin yang telah di konfigurasi tidak dijumpai."
 #: pcsx2/PluginManager.cpp:836
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
-msgstr "Fail plugin %s yang di konfigurasi adalah perpustakaan sumber dinamik tidak sah"
+msgstr ""
+"Fail plugin %s yang di konfigurasi adalah perpustakaan sumber dinamik tidak "
+"sah"
 
 #: pcsx2/PluginManager.cpp:854
 #, c-format
-msgid "The configured %s plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2."
-msgstr "%s plugin adalah bukan plugin untuk PCSX2, atau untuk PCSX2 versi lama yang tidak lagi disokong."
+msgid ""
+"The configured %s plugin is not a PCSX2 plugin, or is for an older "
+"unsupported version of PCSX2."
+msgstr ""
+"%s plugin adalah bukan plugin untuk PCSX2, atau untuk PCSX2 versi lama yang "
+"tidak lagi disokong."
 
 #: pcsx2/PluginManager.cpp:879
-msgid "The plugin reports that your hardware or software/drivers are not supported."
-msgstr "Plugin menyatakan yang perkakasan atau perisian/driver anda tidak disokong."
+msgid ""
+"The plugin reports that your hardware or software/drivers are not supported."
+msgstr ""
+"Plugin menyatakan yang perkakasan atau perisian/driver anda tidak disokong."
 
 #: pcsx2/PluginManager.cpp:900
-msgid "Configured plugin is not a PCSX2 plugin, or is for an older unsupported version of PCSX2."
-msgstr "Plugin yang telah di konfigurasi bukan plugin PCSX2, atau untuk PCSX2 versi lama yang tidak lagi disokong."
+msgid ""
+"Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
+"version of PCSX2."
+msgstr ""
+"Plugin yang telah di konfigurasi bukan plugin PCSX2, atau untuk PCSX2 versi "
+"lama yang tidak lagi disokong."
 
 #: pcsx2/PluginManager.cpp:926
 #, c-format
-msgid "Configured %s plugin is not a valid PCSX2 plugin, or is for an older unsupported version of PCSX2."
-msgstr "Plugin %s yang telah dikonfigurasi adalah plugin PCSX2 yang tidak sah, atau untuk PCSX2 versi lama yang tidak lagi disokong."
+msgid ""
+"Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
+"unsupported version of PCSX2."
+msgstr ""
+"Plugin %s yang telah dikonfigurasi adalah plugin PCSX2 yang tidak sah, atau "
+"untuk PCSX2 versi lama yang tidak lagi disokong."
 
 #: pcsx2/PluginManager.cpp:1355
 msgid "Internal Memorycard Plugin failed to initialize."
@@ -149,15 +199,21 @@ msgstr "Plugin tidak dimuatkan"
 
 #: pcsx2/SaveState.cpp:342
 msgid "Cannot load savestate.  It is of an unknown or unsupported version."
-msgstr "Savestate tidak boleh dimuatkan. Ia dari versi yang tidak diketahui atau tidak disokong."
+msgstr ""
+"Savestate tidak boleh dimuatkan. Ia dari versi yang tidak diketahui atau "
+"tidak disokong."
 
 #: pcsx2/SourceLog.cpp:96
 msgid "Dumps detailed information for PS2 executables (ELFs)."
 msgstr "Menyediakan dump informasi yang teliti untuk penghuraian PS2 (ELFs)"
 
 #: pcsx2/SourceLog.cpp:101
-msgid "Logs manual protection, split blocks, and other things that might impact performance."
-msgstr "Perlindungan manual log, belahan blok, dan benda lain yang mampu memberi impak pada prestasi."
+msgid ""
+"Logs manual protection, split blocks, and other things that might impact "
+"performance."
+msgstr ""
+"Perlindungan manual log, belahan blok, dan benda lain yang mampu memberi "
+"impak pada prestasi."
 
 #: pcsx2/SourceLog.cpp:106
 msgid "Shows the game developer's logging text (EE processor)"
@@ -177,10 +233,11 @@ msgstr "Aktiviti SYSCALL dan DECI2."
 
 #: pcsx2/SourceLog.cpp:151
 msgid "Direct memory accesses to unknown or unmapped EE memory space."
-msgstr "Menghalakan akses memori kepada ruang memori yang tidak diketahui atau tidak beralamat."
+msgstr ""
+"Menghalakan akses memori kepada ruang memori yang tidak diketahui atau tidak "
+"beralamat."
 
-#: pcsx2/SourceLog.cpp:157
-#: pcsx2/SourceLog.cpp:276
+#: pcsx2/SourceLog.cpp:157 pcsx2/SourceLog.cpp:276
 msgid "Disasm of executing core instructions (excluding COPs and CACHE)."
 msgstr "Penceraian instruksi teras permulaan (tidak termaasuk COP da CACHE)."
 
@@ -201,16 +258,18 @@ msgid "Execution of EE cache instructions."
 msgstr "Permulaan intruksi cache EE."
 
 #: pcsx2/SourceLog.cpp:187
-msgid "All known hardware register accesses (very slow!); not including sub filter options below."
-msgstr "Semua akses daftar perkakasan (sangat perlahan!); tidak mengambil kira sub tapisan dibawah."
+msgid ""
+"All known hardware register accesses (very slow!); not including sub filter "
+"options below."
+msgstr ""
+"Semua akses daftar perkakasan (sangat perlahan!); tidak mengambil kira sub "
+"tapisan dibawah."
 
-#: pcsx2/SourceLog.cpp:193
-#: pcsx2/SourceLog.cpp:294
+#: pcsx2/SourceLog.cpp:193 pcsx2/SourceLog.cpp:294
 msgid "Logs only unknown, unmapped, or unimplemented register accesses."
 msgstr "Hanya log capaian daftar diketahui, unmapped, atau tidak disediakan."
 
-#: pcsx2/SourceLog.cpp:199
-#: pcsx2/SourceLog.cpp:300
+#: pcsx2/SourceLog.cpp:199 pcsx2/SourceLog.cpp:300
 msgid "Logs only DMA-related registers."
 msgstr "Log hanya daftar berkaitan DMA."
 
@@ -240,7 +299,8 @@ msgstr "Log pemindahan data sebenar, timbang tara kanan bas, sangkut, dll."
 
 #: pcsx2/SourceLog.cpp:241
 msgid "Tracks all EE counters events and some counter register activity."
-msgstr "Menjejaki semua kiraan EE peristiwa dan beberapa aktiviti daftar kaunter."
+msgstr ""
+"Menjejaki semua kiraan EE peristiwa dan beberapa aktiviti daftar kaunter."
 
 #: pcsx2/SourceLog.cpp:247
 msgid "Dumps various VIF and VIFcode processing data."
@@ -256,14 +316,17 @@ msgstr "Aktiviti SYSCALL dan IRX."
 
 #: pcsx2/SourceLog.cpp:270
 msgid "Direct memory accesses to unknown or unmapped IOP memory space."
-msgstr "Menhalakan akses memori kepada ruang memori IOP tidak diketahui atau tidak beralamat."
+msgstr ""
+"Menhalakan akses memori kepada ruang memori IOP tidak diketahui atau tidak "
+"beralamat."
 
 #: pcsx2/SourceLog.cpp:282
 msgid "Disasm of the IOP's GPU co-processor instructions."
 msgstr "Penceraian co-pemprosesan instruksi IOP GPU."
 
 #: pcsx2/SourceLog.cpp:288
-msgid "All known hardware register accesses, not including the sub-filters below."
+msgid ""
+"All known hardware register accesses, not including the sub-filters below."
 msgstr "Semua akses daftar perkakasan, tidak mengambil kira sub tapis dibawah."
 
 #: pcsx2/SourceLog.cpp:306
@@ -286,15 +349,17 @@ msgstr "Menjejaki semua acara kiraan IOP dan sedikit aktiviti kiraan daftar."
 msgid "Detailed logging of CDVD hardware."
 msgstr "Log teliti berkenaan perkakasan CDVD."
 
-#: pcsx2/System.h:206
-#: pcsx2/System.h:207
-#: pcsx2/System.h:208
+#: pcsx2/System.h:206 pcsx2/System.h:207 pcsx2/System.h:208
 msgid "PCSX2 Message"
 msgstr "Mesej PCSX2"
 
 #: pcsx2/ZipTools/thread_gzip.cpp:82
-msgid "The savestate was not properly saved. The temporary file was created successfully but could not be moved to its final resting place."
-msgstr "Savestate tidak disimpan dengan betul. Fail sementara berjaya dicipta tetapi tidak boleh dipindahkan ke tempat akhirnya."
+msgid ""
+"The savestate was not properly saved. The temporary file was created "
+"successfully but could not be moved to its final resting place."
+msgstr ""
+"Savestate tidak disimpan dengan betul. Fail sementara berjaya dicipta tetapi "
+"tidak boleh dipindahkan ke tempat akhirnya."
 
 #: pcsx2/gui/AppConfig.cpp:842
 msgid "Safest"
@@ -320,8 +385,7 @@ msgstr "Lebih agresif"
 msgid "Mostly Harmful"
 msgstr "Bahaya"
 
-#: pcsx2/gui/AppConfig.cpp:1008
-#: pcsx2/gui/AppConfig.cpp:1014
+#: pcsx2/gui/AppConfig.cpp:1008 pcsx2/gui/AppConfig.cpp:1014
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "Gagal untuk menulis ke fail tetapan sedia ada; keizinan dinafikan."
 
@@ -333,186 +397,191 @@ msgstr "Memuatkan plugin sistem PS2..."
 msgid "PCSX2 - SSE2 Recommended"
 msgstr "PCSX2 - SSE2 Disyorkan"
 
-#: pcsx2/gui/AppInit.cpp:71
-msgid "SSE extensions are not available.  PCSX2 requires a cpu that supports the SSE instruction set."
-msgstr "Ekstensi SSE tiada. PCSX2 memerlukan CPU yang menyokong set instruksi SSE."
+#: pcsx2/gui/AppInit.cpp:69
+msgid ""
+"SSE extensions are not available.  PCSX2 requires a cpu that supports the "
+"SSE instruction set."
+msgstr ""
+"Ekstensi SSE tiada. PCSX2 memerlukan CPU yang menyokong set instruksi SSE."
 
-#: pcsx2/gui/AppInit.cpp:154
+#: pcsx2/gui/AppInit.cpp:152
 msgid "PCSX2 Recompiler Error(s)"
 msgstr "Ralat PCSX2 Recompiler"
 
-#: pcsx2/gui/AppInit.cpp:227
+#: pcsx2/gui/AppInit.cpp:222
 msgid "All options are for the current session only and will not be saved.\n"
 msgstr "Semua pilihan untuk sesi sekarang sahaja dan tidak akan disimpan.\n"
 
-#: pcsx2/gui/AppInit.cpp:237
-#: pcsx2/gui/AppMain.cpp:299
+#: pcsx2/gui/AppInit.cpp:232 pcsx2/gui/AppMain.cpp:299
 msgid "IsoFile"
 msgstr "Fail Iso"
 
-#: pcsx2/gui/AppInit.cpp:238
+#: pcsx2/gui/AppInit.cpp:233
 msgid "displays this list of command line options"
 msgstr "menunjukkan senarai pilihan command line ini"
 
-#: pcsx2/gui/AppInit.cpp:239
+#: pcsx2/gui/AppInit.cpp:234
 msgid "forces the program log/console to be visible"
 msgstr "memaksa program log/console untuk ditunjukkan"
 
-#: pcsx2/gui/AppInit.cpp:240
+#: pcsx2/gui/AppInit.cpp:235
 msgid "use fullscreen GS mode"
 msgstr "gunakan mod GS skrin penuh"
 
-#: pcsx2/gui/AppInit.cpp:241
+#: pcsx2/gui/AppInit.cpp:236
 msgid "use windowed GS mode"
 msgstr "gunakan mod tetingkap GS"
 
-#: pcsx2/gui/AppInit.cpp:243
+#: pcsx2/gui/AppInit.cpp:238
 msgid "disables display of the gui while running games"
 msgstr "mematikan paparan gui semasa menjalankan permainan"
 
-#: pcsx2/gui/AppInit.cpp:244
+#: pcsx2/gui/AppInit.cpp:239
 msgid "executes an ELF image"
 msgstr "memulakan imej ELF"
 
-#: pcsx2/gui/AppInit.cpp:245
+#: pcsx2/gui/AppInit.cpp:240
 msgid "boots an empty dvd tray; use to enter the PS2 system menu"
 msgstr "memuat dari tray dvd kosong; gunakan untuk memasuki sistem menu PS2"
 
-#: pcsx2/gui/AppInit.cpp:246
+#: pcsx2/gui/AppInit.cpp:241
 msgid "boots from the CDVD plugin (overrides IsoFile parameter)"
 msgstr "memuat dari plugin CDVD (mengamibl alih parameter IsoFile)"
 
-#: pcsx2/gui/AppInit.cpp:248
+#: pcsx2/gui/AppInit.cpp:243
 msgid "disables all speedhacks"
 msgstr "mematikan semua speedhack"
 
-#: pcsx2/gui/AppInit.cpp:249
+#: pcsx2/gui/AppInit.cpp:244
 msgid "use the specified comma or pipe-delimited list of gamefixes."
-msgstr "gunakan koma yg dinyatakan atau senarai gamefix yg tlh di pipe-delimited kan"
+msgstr ""
+"gunakan koma yg dinyatakan atau senarai gamefix yg tlh di pipe-delimited kan"
 
-#: pcsx2/gui/AppInit.cpp:250
+#: pcsx2/gui/AppInit.cpp:245
 msgid "disables fast booting"
 msgstr "mematikan boot pantas"
 
-#: pcsx2/gui/AppInit.cpp:252
+#: pcsx2/gui/AppInit.cpp:247
 msgid "changes the configuration file path"
 msgstr "mengubah laluan fail konfigurasi"
 
-#: pcsx2/gui/AppInit.cpp:253
+#: pcsx2/gui/AppInit.cpp:248
 msgid "specifies the PCSX2 configuration file to use"
 msgstr "menyatakan fail konfigurasi untuk digunakan PCSX2"
 
-#: pcsx2/gui/AppInit.cpp:254
+#: pcsx2/gui/AppInit.cpp:249
 #, c-format
 msgid "forces %s to start the First-time Wizard"
 msgstr "memaksa %s untuk mulakan Wizard Kali Pertama"
 
-#: pcsx2/gui/AppInit.cpp:255
+#: pcsx2/gui/AppInit.cpp:250
 msgid "enables portable mode operation (requires admin/root access)"
 msgstr "membolehkan mod operasi mudah aliih (memerlukan akses admin/utama)"
 
-#: pcsx2/gui/AppInit.cpp:259
+#: pcsx2/gui/AppInit.cpp:254
 #, c-format
 msgid "specify the file to use as the %s plugin"
 msgstr "menyatakan fail untuk menggunakan plugin%s"
 
-#: pcsx2/gui/AppInit.cpp:307
+#: pcsx2/gui/AppInit.cpp:302
 #, c-format
 msgid "Plugin Override Error - %s"
 msgstr "Ralat Ambil Alih Plugin - %s"
 
-#: pcsx2/gui/AppInit.cpp:310
+#: pcsx2/gui/AppInit.cpp:305
 #, c-format
 msgid ""
-"%s Plugin Override Error!  The following file does not exist or is not a valid %s plugin:\n"
+"%s Plugin Override Error!  The following file does not exist or is not a "
+"valid %s plugin:\n"
 "\n"
-msgstr "Ralat Ambil Alih Plugin %s ! Fail tersebut tidak wujud atau %s plugin tidak sah:\n"
+msgstr ""
+"Ralat Ambil Alih Plugin %s ! Fail tersebut tidak wujud atau %s plugin tidak "
+"sah:\n"
 
-#: pcsx2/gui/AppInit.cpp:317
+#: pcsx2/gui/AppInit.cpp:312
 #, c-format
 msgid "Press OK to use the default configured plugin, or Cancel to close %s."
 msgstr "tekan OK untuk gunakan tetapan asal plugin, atau Cancel untuk tutup %s"
 
-#: pcsx2/gui/AppInit.cpp:496
+#: pcsx2/gui/AppInit.cpp:491
 msgid "PCSX2 Error: Hardware Deficiency"
 msgstr "Ralat PCSX2: Masalah Perkakasan"
 
-#: pcsx2/gui/AppInit.cpp:496
-#: pcsx2/gui/AppInit.cpp:508
+#: pcsx2/gui/AppInit.cpp:491 pcsx2/gui/AppInit.cpp:503
 #, c-format
 msgid "Press OK to close %s."
 msgstr "Tekan OK untuk tutup %s"
 
-#: pcsx2/gui/AppInit.cpp:509
+#: pcsx2/gui/AppInit.cpp:504
 #, c-format
 msgid "%s Critical Error"
 msgstr "%s Ralat Kritikal"
 
-#: pcsx2/gui/AppInit.cpp:679
+#: pcsx2/gui/AppInit.cpp:674
 msgid "OK"
 msgstr "OK"
 
-#: pcsx2/gui/AppInit.cpp:680
+#: pcsx2/gui/AppInit.cpp:675
 msgid "&OK"
 msgstr "&OK"
 
-#: pcsx2/gui/AppInit.cpp:681
+#: pcsx2/gui/AppInit.cpp:676
 msgid "Cancel"
 msgstr "Batal"
 
-#: pcsx2/gui/AppInit.cpp:682
+#: pcsx2/gui/AppInit.cpp:677
 msgid "&Cancel"
 msgstr "&Batal"
 
-#: pcsx2/gui/AppInit.cpp:683
+#: pcsx2/gui/AppInit.cpp:678
 msgid "&Apply"
 msgstr "&Tetapkan"
 
-#: pcsx2/gui/AppInit.cpp:684
+#: pcsx2/gui/AppInit.cpp:679
 msgid "&Next >"
 msgstr "&Seterusnya >"
 
-#: pcsx2/gui/AppInit.cpp:685
+#: pcsx2/gui/AppInit.cpp:680
 msgid "< &Back"
 msgstr "< &Balik"
 
-#: pcsx2/gui/AppInit.cpp:686
+#: pcsx2/gui/AppInit.cpp:681
 msgid "&Back"
 msgstr "&Balik"
 
-#: pcsx2/gui/AppInit.cpp:687
+#: pcsx2/gui/AppInit.cpp:682
 msgid "&Finish"
 msgstr "&Tamat"
 
-#: pcsx2/gui/AppInit.cpp:688
+#: pcsx2/gui/AppInit.cpp:683
 msgid "&Yes"
 msgstr "&Ya"
 
-#: pcsx2/gui/AppInit.cpp:689
+#: pcsx2/gui/AppInit.cpp:684
 msgid "&No"
 msgstr "&Tidak"
 
-#: pcsx2/gui/AppInit.cpp:690
+#: pcsx2/gui/AppInit.cpp:685
 msgid "Browse"
 msgstr "Cari"
 
-#: pcsx2/gui/AppInit.cpp:691
+#: pcsx2/gui/AppInit.cpp:686
 msgid "&Save"
 msgstr "&Simpan"
 
-#: pcsx2/gui/AppInit.cpp:692
+#: pcsx2/gui/AppInit.cpp:687
 msgid "Save &As..."
 msgstr "Simpan &sbg"
 
-#: pcsx2/gui/AppInit.cpp:693
+#: pcsx2/gui/AppInit.cpp:688
 msgid "&Help"
 msgstr "&Bantuan"
 
-#: pcsx2/gui/AppInit.cpp:694
+#: pcsx2/gui/AppInit.cpp:689
 msgid "&Home"
 msgstr "&Rumah"
 
-#: pcsx2/gui/AppInit.cpp:696
+#: pcsx2/gui/AppInit.cpp:691
 msgid "Show about dialog"
 msgstr "Tunjuk berkenaan dialog"
 
@@ -526,33 +595,35 @@ msgstr ""
 "\n"
 "Tekan OK untuk ke Panel Konfigurasi Plugin"
 
-#: pcsx2/gui/AppMain.cpp:140
-#: pcsx2/gui/AppMain.cpp:154
-msgid "Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
-msgstr "Amaran! Plugin sistem tidak dimuatkan. PCSX2 kemungkinan tidak boleh dijalankan."
+#: pcsx2/gui/AppMain.cpp:140 pcsx2/gui/AppMain.cpp:154
+msgid ""
+"Warning!  System plugins have not been loaded.  PCSX2 may be inoperable."
+msgstr ""
+"Amaran! Plugin sistem tidak dimuatkan. PCSX2 kemungkinan tidak boleh "
+"dijalankan."
 
 #: pcsx2/gui/AppMain.cpp:309
 #, c-format
 msgid "%s Commandline Options"
 msgstr "%s Pilihan Commandline"
 
-#: pcsx2/gui/AppMain.cpp:573
+#: pcsx2/gui/AppMain.cpp:570
 msgid "PS2 BIOS Error"
 msgstr "Ralat PS2 BIOS"
 
-#: pcsx2/gui/AppMain.cpp:574
+#: pcsx2/gui/AppMain.cpp:571
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr "Tekan OK untuk ke Panel Konfigurasi BIOS."
 
-#: pcsx2/gui/AppMain.cpp:626
+#: pcsx2/gui/AppMain.cpp:623
 msgid "PCSX2 Unresponsive Thread"
 msgstr "Thread PCSX2 Tiada Respons"
 
-#: pcsx2/gui/AppMain.cpp:636
+#: pcsx2/gui/AppMain.cpp:630
 msgid "Terminate"
 msgstr "Hentikan"
 
-#: pcsx2/gui/AppMain.cpp:963
+#: pcsx2/gui/AppMain.cpp:956
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Memulakan PS2 Virtual Machine..."
 
@@ -564,35 +635,43 @@ msgstr "Cari Iso yg tiada sblm ini dalam sejarah."
 msgid "Browse..."
 msgstr "Cari..."
 
-#: pcsx2/gui/AppUserMode.cpp:99
+#: pcsx2/gui/AppUserMode.cpp:94
 msgid "The following folders exist, but are not writable:"
 msgstr "Folder-folder ini wujud, tetapi tidak boleh ditulis:"
 
-#: pcsx2/gui/AppUserMode.cpp:104
+#: pcsx2/gui/AppUserMode.cpp:99
 msgid "The following folders are missing and cannot be created:"
 msgstr "Folder-folder ini hilang dan tidak boleh dibuat:"
 
-#: pcsx2/gui/AppUserMode.cpp:144
+#: pcsx2/gui/AppUserMode.cpp:139
 #, c-format
 msgid "Portable mode error - %s"
 msgstr "Ralat mod mudah alih - %s"
 
-#: pcsx2/gui/AppUserMode.cpp:157
-msgid "PCSX2 has been installed as a portable application but cannot run due to the following errors:"
-msgstr "PCSX2 tlh dipasang sbg aplikasi mudah alih tetapi tidak boleh dijalankan kerana ralat:"
+#: pcsx2/gui/AppUserMode.cpp:152
+msgid ""
+"PCSX2 has been installed as a portable application but cannot run due to the "
+"following errors:"
+msgstr ""
+"PCSX2 tlh dipasang sbg aplikasi mudah alih tetapi tidak boleh dijalankan "
+"kerana ralat:"
 
-#: pcsx2/gui/AppUserMode.cpp:165
+#: pcsx2/gui/AppUserMode.cpp:160
 msgid "Switch to User Documents Mode"
 msgstr "Ubah ke User Documents Mode"
 
-#: pcsx2/gui/AppUserMode.cpp:178
+#: pcsx2/gui/AppUserMode.cpp:173
 #, c-format
 msgid "%s is switching to local install mode."
 msgstr "%s berubah ke local install mode."
 
-#: pcsx2/gui/AppUserMode.cpp:179
-msgid "Try to remove the file called \"portable.ini\" from your installation directory manually."
-msgstr "Cuba buang fail bernama \"portable.ini\" dari direktori pemasangan secara manual."
+#: pcsx2/gui/AppUserMode.cpp:174
+msgid ""
+"Try to remove the file called \"portable.ini\" from your installation "
+"directory manually."
+msgstr ""
+"Cuba buang fail bernama \"portable.ini\" dari direktori pemasangan secara "
+"manual."
 
 #: pcsx2/gui/ApplyState.h:55
 msgid "Cannot apply new settings, one of the settings is invalid."
@@ -614,8 +693,7 @@ msgstr "Kecil"
 msgid "It's what I use (the programmer guy)."
 msgstr "Apa yg saya gunakan (programmer)."
 
-#: pcsx2/gui/ConsoleLogger.cpp:415
-#: pcsx2/gui/Panels/CpuPanel.cpp:38
+#: pcsx2/gui/ConsoleLogger.cpp:415 pcsx2/gui/Panels/CpuPanel.cpp:38
 msgid "Normal"
 msgstr "Normal"
 
@@ -644,7 +722,9 @@ msgid "Light theme"
 msgstr "Tema terang."
 
 #: pcsx2/gui/ConsoleLogger.cpp:424
-msgid "Classic black color scheme for people who enjoy having text seared into their optic nerves."
+msgid ""
+"Classic black color scheme for people who enjoy having text seared into "
+"their optic nerves."
 msgstr "Tema warna hitam untuk mereka yang hmmm...."
 
 #: pcsx2/gui/ConsoleLogger.cpp:424
@@ -656,7 +736,8 @@ msgid "Always on Top"
 msgstr "Sentiasa di Atas"
 
 #: pcsx2/gui/ConsoleLogger.cpp:428
-msgid "When checked the log window will be visible over other foreground windows."
+msgid ""
+"When checked the log window will be visible over other foreground windows."
 msgstr "Apabila ditanda, tetingkap log akan berada atas tetingkap lain."
 
 #: pcsx2/gui/ConsoleLogger.cpp:430
@@ -675,8 +756,7 @@ msgstr "C&lear"
 msgid "Clear the log window contents"
 msgstr "Mengosongkan kandungan tetingkap log"
 
-#: pcsx2/gui/ConsoleLogger.cpp:433
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:280
+#: pcsx2/gui/ConsoleLogger.cpp:433 pcsx2/gui/Dialogs/SysConfigDialog.cpp:264
 msgid "Appearance"
 msgstr "Rupa"
 
@@ -798,12 +878,20 @@ msgid "Do not show this dialog again."
 msgstr "Jgn tunjuk dialog ini lagi."
 
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:199
-msgid "Disables this popup and whatever response you select here will be automatically used from now on."
-msgstr "Mematikan popup ini dan apa2 yg tlh anda pilih akan digunakan secara automatik dari sekarang."
+msgid ""
+"Disables this popup and whatever response you select here will be "
+"automatically used from now on."
+msgstr ""
+"Mematikan popup ini dan apa2 yg tlh anda pilih akan digunakan secara "
+"automatik dari sekarang."
 
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:201
-msgid "The popup will not be shown again.  This setting can be undone from the settings panels."
-msgstr "Popup ini tidak akan ditunjukkan lagi. Seting ini boleh diubah semula di panel tetapan."
+msgid ""
+"The popup will not be shown again.  This setting can be undone from the "
+"settings panels."
+msgstr ""
+"Popup ini tidak akan ditunjukkan lagi. Seting ini boleh diubah semula di "
+"panel tetapan."
 
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:247
 #: pcsx2/gui/Dialogs/ConfirmationDialogs.cpp:292
@@ -819,8 +907,8 @@ msgid "Create a new memory card"
 msgstr "Buat kad memori baru"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:59
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:74
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:273
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:73
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:271
 msgid "Create"
 msgstr "Buat"
 
@@ -837,7 +925,7 @@ msgid "Select file name: "
 msgstr "Pilih nama fail:"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:149
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:855
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:851
 #, c-format
 msgid "Error (%s)"
 msgstr "Ralat (%s)"
@@ -855,47 +943,62 @@ msgstr "Ralat: Kad memori tidak boleh dihasilkan."
 msgid "Use NTFS compression when creating this card."
 msgstr "Gunakan pemampatan NTFS semasa membuat kad ini."
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:195
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:194
 msgid "8 MB [most compatible]"
 msgstr "8 MB [paling stabil]"
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:195
-msgid "This is the standard Sony-provisioned size, and is supported by all games and BIOS versions."
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:194
+msgid ""
+"This is the standard Sony-provisioned size, and is supported by all games "
+"and BIOS versions."
 msgstr "Saiz standard dari Sony, disokong semua permainan dan versi BIOS."
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:196
-msgid "Always use this option if you want the safest and surest memory card behavior."
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:195
+msgid ""
+"Always use this option if you want the safest and surest memory card "
+"behavior."
 msgstr "Sentiasa gunakan pilihan ini jika anda mahukan yg selamat dan terbaik."
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:199
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:198
 msgid "16 MB"
 msgstr "16 MB"
 
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:198
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:202
+msgid ""
+"A typical size for 3rd-party memory cards which should work with most games."
+msgstr ""
+"Saiz biasa untuk kad memori pihak ketiga dimana akan berfungsi dgn "
+"kebanyakan game."
+
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:199
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:203
-msgid "A typical size for 3rd-party memory cards which should work with most games."
-msgstr "Saiz biasa untuk kad memori pihak ketiga dimana akan berfungsi dgn kebanyakan game."
-
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:200
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:204
 msgid "16 and 32 MB cards have roughly the same compatibility factor."
 msgstr "16 and 32 MB cards have roughly the same compatibility factor."
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:203
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:202
 msgid "32 MB"
 msgstr "32 MB"
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:207
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:206
 msgid "64 MB"
 msgstr "64 MB"
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:207
-msgid "Low compatibility warning: Yes it's very big, but may not work with many games."
-msgstr "Amaran kestabilan rendah: Ya, ia sgt besar, tetapi kemungkinan tidak berfungsi dgn banyak game."
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:206
+msgid ""
+"Low compatibility warning: Yes it's very big, but may not work with many "
+"games."
+msgstr ""
+"Amaran kestabilan rendah: Ya, ia sgt besar, tetapi kemungkinan tidak "
+"berfungsi dgn banyak game."
 
-#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:208
-msgid "Use at your own risk.  Erratic memory card behavior is possible (though unlikely)."
-msgstr "Risiko anda yg tanggung. Kad memori mungkin akan berkelakuan pelik (walaupun kdg2)."
+#: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:207
+msgid ""
+"Use at your own risk.  Erratic memory card behavior is possible (though "
+"unlikely)."
+msgstr ""
+"Risiko anda yg tanggung. Kad memori mungkin akan berkelakuan pelik (walaupun "
+"kdg2)."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:47
 #, c-format
@@ -906,11 +1009,11 @@ msgstr "Pilih folder untuk tetapan %s"
 msgid "Settings"
 msgstr "Tetapan"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:81
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:76
 msgid "Language selector"
 msgstr "Pilihan Bahasa"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:84
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:79
 msgid ""
 "Change the language only if you need to.\n"
 "The system default should be fine for most operating systems."
@@ -918,19 +1021,19 @@ msgstr ""
 "Tukar bahasa HANYA bila perlu.\n"
 "System default akan berfungsi dgn baik bagi kebanyakan sistem operasi."
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:90
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:85
 msgid "Welcome to PCSX2!"
 msgstr "Selamat datang ke PCSX2!"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:104
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:96
 msgid "Configuration Guides (online)"
 msgstr "Panduan Konfigurasi (online)"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:108
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:100
 msgid "Readme / FAQ (Offline/PDF)"
 msgstr "Readme / FAQ (Offline/PDF)"
 
-#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:117
+#: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:109
 #, c-format
 msgid "%s First Time Configuration"
 msgstr "%s Konfigurasi kali Pertama"
@@ -944,11 +1047,11 @@ msgstr "Database permainan - %s"
 msgid "Import Existing Settings?"
 msgstr "Import tetapan sedia ada?"
 
-#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:39
+#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:36
 msgid "Import"
 msgstr "Import"
 
-#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:40
+#: pcsx2/gui/Dialogs/ImportSettingsDialog.cpp:37
 msgid "Overwrite"
 msgstr "Buat Baru"
 
@@ -956,19 +1059,19 @@ msgstr "Buat Baru"
 msgid "Trace Logging"
 msgstr "Jejak Logging"
 
-#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:40
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:38
 msgid "Auto-eject memory cards when loading savestates"
 msgstr "Auto-eject kad memori semasa memuat savestate"
 
-#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:96
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:92
 msgid "MemoryCard Manager"
 msgstr "Pengurus Kad Memori"
 
-#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:112
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:108
 msgid "Drag cards to or from PS2-ports"
 msgstr "Tarik kad ke atau dari port PS2"
 
-#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:113
+#: pcsx2/gui/Dialogs/McdConfigDialog.cpp:109
 msgid ""
 "\n"
 "Note: Duplicate/Rename/Create/Delete will NOT be reverted with 'Cancel'."
@@ -983,7 +1086,9 @@ msgstr "Konfigurasi PCSX2 Kali Pertama"
 #: pcsx2/gui/Dialogs/PickUserModeDialog.cpp:29
 #, c-format
 msgid "%s is starting from a new or unknown folder and needs to be configured."
-msgstr "%s dijalankan dari folder yg baru atau tidak diketahui dan perlu di konfigurasi."
+msgstr ""
+"%s dijalankan dari folder yg baru atau tidak diketahui dan perlu di "
+"konfigurasi."
 
 #: pcsx2/gui/Dialogs/StuckThreadDialog.cpp:28
 msgid "PCSX2 Thread is not responding"
@@ -993,61 +1098,61 @@ msgstr "Thread PCSX2 tidak memberi respons"
 msgid "Config Overrides Warning"
 msgstr "Amaran Ambil alih Konfigurasi"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:56
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:53
 msgid "Components Overrides Warning"
 msgstr "Amaran Ambil alih Komponen"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:147
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:134
 msgid "Preset:"
 msgstr "Preset:"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:228
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:212
 #, c-format
 msgid "Emulation Settings - %s"
 msgstr "Tetapan Emulation - %s"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:237
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:221
 msgid "EE/IOP"
 msgstr "EE/IOP"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:238
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:222
 msgid "VUs"
 msgstr "VUs"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:239
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:223
 msgid "GS"
 msgstr "GS"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:240
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:224
 msgid "GS Window"
 msgstr "Tetingkap GS"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:241
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:225
 msgid "Speedhacks"
 msgstr "Speedhacks"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:242
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:226
 msgid "Game Fixes"
 msgstr "Game Fixes"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:253
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:237
 #, c-format
 msgid "Components Selectors - %s"
 msgstr "Pilihan Komponen - %s"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:260
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:244
 msgid "Plugins"
 msgstr "Plugins"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:261
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:245
 msgid "BIOS"
 msgstr "BIOS"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:262
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:246
 msgid "Folders"
 msgstr "Folders"
 
-#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:273
+#: pcsx2/gui/Dialogs/SysConfigDialog.cpp:257
 #, c-format
 msgid "Appearance/Themes - %s"
 msgstr "Rupa/Tema - %s"
@@ -1073,8 +1178,7 @@ msgstr "Hapus Aplikasi"
 msgid "GS Output is Disabled!"
 msgstr "Output GS dimatikan!"
 
-#: pcsx2/gui/GlobalCommands.cpp:387
-#: pcsx2/gui/MainFrame.cpp:414
+#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:414
 msgid "Save state"
 msgstr "Save state"
 
@@ -1082,8 +1186,7 @@ msgstr "Save state"
 msgid "Saves the virtual machine state to the current slot."
 msgstr "Menyimpan state virtual machine ke slot yg dipilih."
 
-#: pcsx2/gui/GlobalCommands.cpp:393
-#: pcsx2/gui/MainFrame.cpp:413
+#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:413
 msgid "Load state"
 msgstr "Load state"
 
@@ -1115,21 +1218,24 @@ msgstr "Ke slot sebelumnya"
 msgid "Cycles the current save slot in -1 fashion!"
 msgstr "Ke slot kini dlm fesyen -1!"
 
-#: pcsx2/gui/IsoDropTarget.cpp:57
+#: pcsx2/gui/IsoDropTarget.cpp:55
 msgid "Drag and Drop Error"
 msgstr "Ralat Drag and Drop"
 
-#: pcsx2/gui/IsoDropTarget.cpp:58
+#: pcsx2/gui/IsoDropTarget.cpp:56
 #, c-format
-msgid "It is an error to drop multiple files onto a %s window.  One at a time please, thank you."
-msgstr "Adalah sebuah ralat untuk meletakkan berbilang fail ke tetingkap %s. Satu2 ya, terima kasih."
+msgid ""
+"It is an error to drop multiple files onto a %s window.  One at a time "
+"please, thank you."
+msgstr ""
+"Adalah sebuah ralat untuk meletakkan berbilang fail ke tetingkap %s. Satu2 "
+"ya, terima kasih."
 
-#: pcsx2/gui/IsoDropTarget.cpp:89
-#: pcsx2/gui/MainMenuClicks.cpp:342
+#: pcsx2/gui/IsoDropTarget.cpp:87 pcsx2/gui/MainMenuClicks.cpp:338
 msgid "Confirm PS2 Reset"
 msgstr "Pasti Reset PS2"
 
-#: pcsx2/gui/IsoDropTarget.cpp:91
+#: pcsx2/gui/IsoDropTarget.cpp:89
 #, c-format
 msgid ""
 "You have dropped the following ELF binary into %s:\n"
@@ -1138,7 +1244,7 @@ msgstr ""
 "Anda tlh meletakkan binari ELF ke dlm %s:\n"
 "\n"
 
-#: pcsx2/gui/IsoDropTarget.cpp:135
+#: pcsx2/gui/IsoDropTarget.cpp:133
 #, c-format
 msgid "You have dropped the following ISO image into %s:"
 msgstr "Anda tlh meletakkan imej ISO ke dlm %s:"
@@ -1148,8 +1254,7 @@ msgstr "Anda tlh meletakkan imej ISO ke dlm %s:"
 msgid "Slot %d"
 msgstr "Slot %d"
 
-#: pcsx2/gui/MainFrame.cpp:44
-#: pcsx2/gui/Saveslots.cpp:150
+#: pcsx2/gui/MainFrame.cpp:44 pcsx2/gui/Saveslots.cpp:150
 msgid "Backup"
 msgstr "Buat sokongan"
 
@@ -1195,8 +1300,7 @@ msgstr "%s  %d.%d.%d %s"
 msgid "(modded)"
 msgstr "(modded)"
 
-#: pcsx2/gui/MainFrame.cpp:399
-#: pcsx2/gui/MainFrame.cpp:401
+#: pcsx2/gui/MainFrame.cpp:399 pcsx2/gui/MainFrame.cpp:401
 #: pcsx2/gui/MainFrame.cpp:407
 msgid "Initializing..."
 msgstr "Memulakan..."
@@ -1290,8 +1394,7 @@ msgstr "&Kad memori"
 msgid "&Plugin/BIOS Selector"
 msgstr "&Pilihan Plugin/BIOS"
 
-#: pcsx2/gui/MainFrame.cpp:460
-#: pcsx2/gui/Panels/GameDatabasePanel.cpp:346
+#: pcsx2/gui/MainFrame.cpp:460 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
 msgid "Game Database Editor"
 msgstr "Editor Database Permainan"
 
@@ -1412,8 +1515,7 @@ msgstr "Boot CDVD (fast)"
 msgid "Use fast boot to skip PS2 startup and splash screens"
 msgstr "Gunakan boot pantas untuk skip BIOS"
 
-#: pcsx2/gui/MainFrame.cpp:703
-#: pcsx2/gui/MainFrame.cpp:738
+#: pcsx2/gui/MainFrame.cpp:703 pcsx2/gui/MainFrame.cpp:738
 msgid "No plugin loaded"
 msgstr "Tiada plugin dimuatkan"
 
@@ -1422,7 +1524,9 @@ msgid "Core GS Settings..."
 msgstr "Tetapan teras GS..."
 
 #: pcsx2/gui/MainFrame.cpp:709
-msgid "Modify hardware emulation settings regulated by the PCSX2 core virtual machine."
+msgid ""
+"Modify hardware emulation settings regulated by the PCSX2 core virtual "
+"machine."
 msgstr "Mengubah tetapan perkakasan emulation, dikawal oleh teras VM PCSX2."
 
 #: pcsx2/gui/MainFrame.cpp:711
@@ -1442,77 +1546,79 @@ msgstr "Tetapan Plugin..."
 msgid "Opens the %s plugin's advanced settings dialog."
 msgstr "Membuka kotak dialog plugin %s yg lebih mendalam."
 
-#: pcsx2/gui/MainMenuClicks.cpp:112
+#: pcsx2/gui/MainMenuClicks.cpp:108
 msgid "Reset all settings?"
 msgstr "Reset semua tetapan?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:140
+#: pcsx2/gui/MainMenuClicks.cpp:136
 msgid "Confirm ISO image change"
 msgstr "Pasti penukaran imej ISO"
 
-#: pcsx2/gui/MainMenuClicks.cpp:146
+#: pcsx2/gui/MainMenuClicks.cpp:142
 msgid "Do you want to swap discs or boot the new image (via system reset)?"
 msgstr "Anda mahu menukar disc atau boot imej baru (melalui sistem reset)?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:148
-#: pcsx2/gui/MainMenuClicks.cpp:194
+#: pcsx2/gui/MainMenuClicks.cpp:144 pcsx2/gui/MainMenuClicks.cpp:190
 msgid "Swap Disc"
 msgstr "Tukar Disc"
 
-#: pcsx2/gui/MainMenuClicks.cpp:184
+#: pcsx2/gui/MainMenuClicks.cpp:180
 msgid "Confirm CDVD source change"
 msgstr "Pasti penukaran punca CDVD"
 
-#: pcsx2/gui/MainMenuClicks.cpp:187
+#: pcsx2/gui/MainMenuClicks.cpp:183
 #, c-format
 msgid "You've selected to switch the CDVD source from %s to %s."
 msgstr "Anda tlh memilih untuk menukar punca CDVD dari %s ke %s."
 
-#: pcsx2/gui/MainMenuClicks.cpp:191
+#: pcsx2/gui/MainMenuClicks.cpp:187
 msgid "Do you want to swap discs or boot the new image (system reset)?"
 msgstr "Anda mahu menukar disc atau boot imej baru (sistem reset)?"
 
-#: pcsx2/gui/MainMenuClicks.cpp:261
+#: pcsx2/gui/MainMenuClicks.cpp:257
 #, c-format
 msgid "All Supported (%s)"
 msgstr "Semua Disokong (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:264
+#: pcsx2/gui/MainMenuClicks.cpp:260
 #, c-format
 msgid "Disc Images (%s)"
 msgstr "Imej Disc (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:267
+#: pcsx2/gui/MainMenuClicks.cpp:263
 #, c-format
 msgid "Blockdumps (%s)"
 msgstr "Blockdumps (%s)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:270
-#: pcsx2/gui/MainMenuClicks.cpp:291
+#: pcsx2/gui/MainMenuClicks.cpp:266 pcsx2/gui/MainMenuClicks.cpp:287
 msgid "All Files (*.*)"
 msgstr "Semua Fail (*.*)"
 
-#: pcsx2/gui/MainMenuClicks.cpp:273
+#: pcsx2/gui/MainMenuClicks.cpp:269
 msgid "Select CDVD source iso..."
 msgstr "Pilih punca iso CDVD..."
 
-#: pcsx2/gui/MainMenuClicks.cpp:290
+#: pcsx2/gui/MainMenuClicks.cpp:286
 msgid "Select ELF file..."
 msgstr "Pilih fail ELF..."
 
-#: pcsx2/gui/MainMenuClicks.cpp:316
+#: pcsx2/gui/MainMenuClicks.cpp:312
 msgid "ISO file not found!"
 msgstr "Fail ISO tidak dijumpai!"
 
-#: pcsx2/gui/MainMenuClicks.cpp:318
+#: pcsx2/gui/MainMenuClicks.cpp:314
 msgid "An error occurred while trying to open the file:"
 msgstr "Sebuah ralat terjadi semasa cuba untuk membuka fail:"
 
-#: pcsx2/gui/MainMenuClicks.cpp:319
-msgid "Error: The configured ISO file does not exist.  Click OK to select a new ISO source for CDVD."
-msgstr "Ralat: Fail ISO yg tlh di konfigurasi tidak wujud. Tekan OK untuk pilih punca ISO baru utk CDVD."
+#: pcsx2/gui/MainMenuClicks.cpp:315
+msgid ""
+"Error: The configured ISO file does not exist.  Click OK to select a new ISO "
+"source for CDVD."
+msgstr ""
+"Ralat: Fail ISO yg tlh di konfigurasi tidak wujud. Tekan OK untuk pilih "
+"punca ISO baru utk CDVD."
 
-#: pcsx2/gui/MainMenuClicks.cpp:390
+#: pcsx2/gui/MainMenuClicks.cpp:386
 msgid ""
 "You have selected the following ISO image into PCSX2:\n"
 "\n"
@@ -1520,7 +1626,7 @@ msgstr ""
 "Anda tlh memilih fail imej ISO tersebut ke dlm PCSX2:\n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:183
+#: pcsx2/gui/MemoryCardFile.cpp:181
 #, c-format
 msgid ""
 "Could not create a memory card: \n"
@@ -1533,7 +1639,7 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:201
+#: pcsx2/gui/MemoryCardFile.cpp:199
 #, c-format
 msgid ""
 "Access denied to memory card: \n"
@@ -1546,19 +1652,19 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:525
+#: pcsx2/gui/MemoryCardFile.cpp:523
 msgid "File name empty or too short"
 msgstr "Tiada nama atau terlalu pendek"
 
-#: pcsx2/gui/MemoryCardFile.cpp:530
+#: pcsx2/gui/MemoryCardFile.cpp:528
 msgid "File name outside of required directory"
 msgstr "Nama fail diluar direktori yg diperlukan"
 
-#: pcsx2/gui/MemoryCardFile.cpp:536
+#: pcsx2/gui/MemoryCardFile.cpp:534
 msgid "File name already exists"
 msgstr "Nama fail telah sedia ada"
 
-#: pcsx2/gui/MemoryCardFile.cpp:543
+#: pcsx2/gui/MemoryCardFile.cpp:541
 msgid "The Operating-System prevents this file from being created"
 msgstr "Sistem Operasi menghalang fail ini dari dicipta"
 
@@ -1575,8 +1681,11 @@ msgid "Select folder with PS2 BIOS roms"
 msgstr "Pilih folder dgn rom PS2 BIOS"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:111
-msgid "Click the Browse button to select a different folder where PCSX2 will look for PS2 BIOS roms."
-msgstr "Tekan Cari untuk memilih folder yg lain utk PCSX2 mencari rom PS2 BIOS."
+msgid ""
+"Click the Browse button to select a different folder where PCSX2 will look "
+"for PS2 BIOS roms."
+msgstr ""
+"Tekan Cari untuk memilih folder yg lain utk PCSX2 mencari rom PS2 BIOS."
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:113
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:156
@@ -1620,8 +1729,7 @@ msgstr "None"
 msgid "EE/FPU Advanced Recompiler Options"
 msgstr "Pilihan Advanced Recompiler EE/FPU"
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:87
-#: pcsx2/gui/Panels/CpuPanel.cpp:102
+#: pcsx2/gui/Panels/CpuPanel.cpp:87 pcsx2/gui/Panels/CpuPanel.cpp:102
 msgid "Extra + Preserve Sign"
 msgstr "Extra + Preserve Sign"
 
@@ -1637,88 +1745,94 @@ msgstr "Pilihan Advanced Recompiler VU0 / VU1"
 msgid "Extra"
 msgstr "Extra"
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:117
-#: pcsx2/gui/Panels/CpuPanel.cpp:126
-#: pcsx2/gui/Panels/CpuPanel.cpp:184
+#: pcsx2/gui/Panels/CpuPanel.cpp:116 pcsx2/gui/Panels/CpuPanel.cpp:125
+#: pcsx2/gui/Panels/CpuPanel.cpp:182
 msgid "Interpreter"
 msgstr "Interpreter"
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:118
+#: pcsx2/gui/Panels/CpuPanel.cpp:117
 msgid "Quite possibly the slowest thing in the universe."
 msgstr "Benda yg paling perlahan dlm alam semeta."
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:120
-#: pcsx2/gui/Panels/CpuPanel.cpp:129
+#: pcsx2/gui/Panels/CpuPanel.cpp:119 pcsx2/gui/Panels/CpuPanel.cpp:128
 msgid "Recompiler"
 msgstr "Recompiler"
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:121
-msgid "Performs just-in-time binary translation of 64-bit MIPS-IV machine code to x86."
+#: pcsx2/gui/Panels/CpuPanel.cpp:120
+msgid ""
+"Performs just-in-time binary translation of 64-bit MIPS-IV machine code to "
+"x86."
 msgstr "Melakukan translasi binari 64-bit MIPS-IV machine code kepada x86."
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:127
+#: pcsx2/gui/Panels/CpuPanel.cpp:126
 msgid "Pretty slow; provided for diagnostic purposes only."
 msgstr "Agak perlahan; gunakan untuk diagnostik shj."
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:130
-msgid "Performs just-in-time binary translation of 32-bit MIPS-I machine code to x86."
+#: pcsx2/gui/Panels/CpuPanel.cpp:129
+msgid ""
+"Performs just-in-time binary translation of 32-bit MIPS-I machine code to "
+"x86."
 msgstr "Melakukan translasi binari 32-bit MIPS-I mcahine code kepada x86."
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:154
+#: pcsx2/gui/Panels/CpuPanel.cpp:153
 msgid "Enable EE Cache (Slower)"
 msgstr "Hidupkan EE Cache (Perlahan)"
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:154
+#: pcsx2/gui/Panels/CpuPanel.cpp:153
 msgid "Interpreter only; provided for diagnostic"
 msgstr "Interpreter shj; utk diagnostik"
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:170
-#: pcsx2/gui/Panels/CpuPanel.cpp:223
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:110
+#: pcsx2/gui/Panels/CpuPanel.cpp:169 pcsx2/gui/Panels/CpuPanel.cpp:221
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:99
 msgid "Restore Defaults"
 msgstr "Kembali kpd Asal"
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:185
-msgid "Vector Unit Interpreter. Slow and not very compatible. Only use for diagnostics."
-msgstr "Vector Unit Interpreter. Perlahan dan kurang stabil. Gunakan utk diagnostik."
+#: pcsx2/gui/Panels/CpuPanel.cpp:183
+msgid ""
+"Vector Unit Interpreter. Slow and not very compatible. Only use for "
+"diagnostics."
+msgstr ""
+"Vector Unit Interpreter. Perlahan dan kurang stabil. Gunakan utk diagnostik."
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:187
+#: pcsx2/gui/Panels/CpuPanel.cpp:185
 msgid "microVU Recompiler"
 msgstr "microVU Recompiler"
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:188
-msgid "New Vector Unit recompiler with much improved compatibility. Recommended."
+#: pcsx2/gui/Panels/CpuPanel.cpp:186
+msgid ""
+"New Vector Unit recompiler with much improved compatibility. Recommended."
 msgstr "VU unit baru dgn kestabilan tinggi. Disyorkan."
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:190
+#: pcsx2/gui/Panels/CpuPanel.cpp:188
 msgid "superVU Recompiler [legacy]"
 msgstr "superVU Recompiler [legacy]"
 
-#: pcsx2/gui/Panels/CpuPanel.cpp:191
-msgid "Useful for diagnosing bugs or clamping issues in the new mVU recompiler."
+#: pcsx2/gui/Panels/CpuPanel.cpp:189
+msgid ""
+"Useful for diagnosing bugs or clamping issues in the new mVU recompiler."
 msgstr "Berguna utk diagnostik pepijat atau isu2 lain berkenaa mVU recompiler."
 
 #: pcsx2/gui/Panels/DirPickerPanel.cpp:64
 msgid "Path does not exist"
 msgstr "Lauan tidak wujud"
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:156
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:155
 msgid "Use default setting"
 msgstr "Gunakan tetapan asal"
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:176
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:174
 msgid "Open in Explorer"
 msgstr "Buka dlm Explorer"
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:177
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:175
 msgid "Open an explorer window to this folder."
 msgstr "Membuka tetingkap explorer kepada folder ini."
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:268
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:266
 msgid "Create folder?"
 msgstr "Cipta folder?"
 
-#: pcsx2/gui/Panels/DirPickerPanel.cpp:269
+#: pcsx2/gui/Panels/DirPickerPanel.cpp:267
 #, c-format
 msgid "A configured folder does not exist.  Should %s try to create it?"
 msgstr "Folder yg tlh di konfigurasi tidak wujud. Benarkan %s utk membuat?"
@@ -1763,21 +1877,25 @@ msgstr "Tukar Vsync secara dinamik bergantung pada frame rate (baca tooltip!)"
 msgid "Double-click toggles fullscreen mode"
 msgstr "Double klik utk fullscreen"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:110
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:89
 msgid "Aspect Ratio:"
 msgstr "Aspect Ratio:"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:112
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:91
 msgid "Custom Window Size:"
 msgstr "Saiz tetingkap custom:"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:115
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:94
 msgid "Zoom:"
 msgstr "Zoom:"
 
-#: pcsx2/gui/Panels/GSWindowPanel.cpp:196
-msgid "Invalid window dimensions specified: Size cannot contain non-numeric digits! >_<"
-msgstr "Dimensi tetingkap tidak sah: Saiz tidak boleh mengandungi digit bkn numerik! >_<"
+#: pcsx2/gui/Panels/GSWindowPanel.cpp:175
+msgid ""
+"Invalid window dimensions specified: Size cannot contain non-numeric digits! "
+">_<"
+msgstr ""
+"Dimensi tetingkap tidak sah: Saiz tidak boleh mengandungi digit bkn numerik! "
+">_<"
 
 #: pcsx2/gui/Panels/GameDatabasePanel.cpp:334
 msgid "Search"
@@ -1832,36 +1950,38 @@ msgstr "FFX videos fix - Menyelesaikan overlay grafik buruk dlm FFX videos."
 msgid "EE timing hack - Multi purpose hack. Try if all else fails."
 msgstr "EE timing hack - Hack multi fungsi. Cuba jika yg lain2 semua gagal."
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:75
-msgid "Skip MPEG hack - Skips videos/FMVs in games to avoid game hanging/freezes."
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:71
+msgid ""
+"Skip MPEG hack - Skips videos/FMVs in games to avoid game hanging/freezes."
 msgstr "Skip MPEG hack - Skips videos/FMVs dlm games utk elak hang/freeze"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:79
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:75
 msgid "OPH Flag hack - Try if your game freezes showing the same frame."
 msgstr "OPH Flag hack - Cuba jika game anda freeze menunjukkan frame yg sama."
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:88
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:80
 msgid "Ignore DMAC writes when it is busy."
 msgstr "Abaikan DMAC writes bila sibuk."
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:95
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:85
 msgid "Simulate VIF1 FIFO read ahead. Fixes slow loading games."
 msgstr "Simulate VIF1 FIFO read ahead. Menyelesaikan slow loading games."
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:103
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:90
 msgid "Delay VIF1 Stalls (VIF1 FIFO) - For SOCOM 2 HUD."
 msgstr "Delay VIF1 Stalls (VIF1 FIFO) - Utk SOCOM 2 HUD."
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:107
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:94
 msgid "Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"
 msgstr "Ignore Bus Direction on Path3 Transfer - Utk Hotwheels"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:118
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:105
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "Benarkan manual game fixes [X digalakkan]"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:127
-msgid "The safest way to make sure that all game fixes are completely disabled."
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
+msgid ""
+"The safest way to make sure that all game fixes are completely disabled."
 msgstr "Cara paling selamat adalah memastikan semua game fixes dimatikan."
 
 #: pcsx2/gui/Panels/LogOptionsPanels.cpp:249
@@ -1869,12 +1989,20 @@ msgid "Enable Trace Logging"
 msgstr "Hidupkan Trace Logging"
 
 #: pcsx2/gui/Panels/LogOptionsPanels.cpp:250
-msgid "Trace logs are all written to emulog.txt.  Toggle trace logging at any time using F10."
-msgstr "Trace log semuanya ditulis ke emulog.txt. Hidup dan matikan bila2 masa dgn F10."
+msgid ""
+"Trace logs are all written to emulog.txt.  Toggle trace logging at any time "
+"using F10."
+msgstr ""
+"Trace log semuanya ditulis ke emulog.txt. Hidup dan matikan bila2 masa dgn "
+"F10."
 
 #: pcsx2/gui/Panels/LogOptionsPanels.cpp:251
-msgid "Warning: Enabling trace logs is typically very slow, and is a leading cause of 'What happened to my FPS?' problems. :)"
-msgstr "Amaran: menghidupkan trace logs selalunya sgt perlahan, dan menyebabkan masalah 'Kenapa dgn FPS saya'. :)"
+msgid ""
+"Warning: Enabling trace logs is typically very slow, and is a leading cause "
+"of 'What happened to my FPS?' problems. :)"
+msgstr ""
+"Amaran: menghidupkan trace logs selalunya sgt perlahan, dan menyebabkan "
+"masalah 'Kenapa dgn FPS saya'. :)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:151
 msgid "Select folder with PS2 memory cards"
@@ -1934,28 +2062,29 @@ msgstr "Buang"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:545
 msgid "Permanently delete this memory card from disk (all contents are lost)"
-msgstr "Buang kad memori ini dari disk secara kekal (segala kandungan akan hilang)"
+msgstr ""
+"Buang kad memori ini dari disk secara kekal (segala kandungan akan hilang)"
 
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:547
 msgid "Create a new memory card and assign it to this Port."
 msgstr "Buat kad memori baru dan tetapkannya ke Port ini."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:726
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:724
 msgid "Delete memory file?"
 msgstr "Buang fail memori?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:750
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:762
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:769
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:783
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:748
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:759
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:766
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:780
 msgid "Duplicate memory card"
 msgstr "Duplicate kad memori"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:750
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:748
 msgid "Failed: Can only duplicate an existing card."
 msgstr "Gagal: Hanya boleh duplicate kad yg tlh sedia ada."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:769
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:766
 msgid ""
 "Select a name for the duplicate\n"
 "( '.ps2' will be added automatically)"
@@ -1963,25 +2092,25 @@ msgstr ""
 "Pilih nama utk duplicate\n"
 "( '.ps2' akan ditambah secara automatik)"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:782
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:779
 #, c-format
 msgid "Failed: %s"
 msgstr "Gagal: %s"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:808
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:804
 msgid "Copy failed!"
 msgstr "Menyalin gagal!"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:816
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:812
 #, c-format
 msgid "Memory card '%s' duplicated to '%s'."
 msgstr "Kad memori tlh di-duplicate drpd '%s' ke '%s'. "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:820
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:816
 msgid "Success"
 msgstr "Berjaya"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:841
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:837
 #, c-format
 msgid ""
 "Select a new name for the memory card '%s'\n"
@@ -1990,67 +2119,67 @@ msgstr ""
 "Pilih nama baru utk kad memori '%s'\n"
 "( '.ps2' akan ditambah secara automatik)"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:844
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:856
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:872
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:840
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:852
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:868
 msgid "Rename memory card"
 msgstr "Nama semula kad memori"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:872
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:868
 msgid "Error: Rename could not be completed.\n"
 msgstr "Ralat: Penamaan semula tidak boleh dilaksanakan. \n"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:962
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:958
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:139
 #, c-format
 msgid "Port-%u / Multitap-%u--Port-1"
 msgstr "Port-%u / Multitap-%u--Port-1"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:963
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:959
 #: pcsx2/gui/Panels/MemoryCardListView.cpp:140
 #, c-format
 msgid "             Multitap-%u--Port-%u"
 msgstr "             Multitap-%u--Port-%u"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:988
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:984
 msgid "Empty"
 msgstr "kosong"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:994
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:990
 #, c-format
 msgid "Select a target port for '%s'"
 msgstr "Pilih target port utk '%s'"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:995
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:991
 msgid "Insert card"
 msgstr "Masuk kad"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1055
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1051
 msgid "Eject card"
 msgstr "Keluar kad"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1055
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1051
 msgid "Insert card ..."
 msgstr "Masuk kad..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1056
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1052
 msgid "Duplicate card ..."
 msgstr "Duplicate kad..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1057
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1053
 msgid "Rename card ..."
 msgstr "Nama Semula kad..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1058
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1054
 msgid "Delete card"
 msgstr "Buang kad"
 
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1057
 #: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1061
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1065
 msgid "Create a new card ..."
 msgstr "Buat kad baru..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1069
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1065
 msgid "Refresh List"
 msgstr "Refresh senarai"
 
@@ -2098,32 +2227,36 @@ msgstr "[-- Tiada kad x digunakan --]"
 msgid "Usermode Selection"
 msgstr "Pilihan Usermode"
 
-#: pcsx2/gui/Panels/MiscPanelStuff.cpp:50
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:44
 msgid "User Documents (recommended)"
 msgstr "Dokumen Pengguna (digalakkan)"
 
-#: pcsx2/gui/Panels/MiscPanelStuff.cpp:51
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:45
 msgid "Location: "
 msgstr "Tempat:"
 
-#: pcsx2/gui/Panels/MiscPanelStuff.cpp:55
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:49
 msgid "Custom folder:"
 msgstr "Custom folder:"
 
-#: pcsx2/gui/Panels/MiscPanelStuff.cpp:57
-msgid "This setting may require administration privileges from your operating system, depending on how your system is configured."
-msgstr "Tetapan ini mungkin memerlukan kebolehan admin dari sistem operasi anda, bergantung kpd bagaimna sistem anda di konfigurasi."
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:51
+msgid ""
+"This setting may require administration privileges from your operating "
+"system, depending on how your system is configured."
+msgstr ""
+"Tetapan ini mungkin memerlukan kebolehan admin dari sistem operasi anda, "
+"bergantung kpd bagaimna sistem anda di konfigurasi."
 
-#: pcsx2/gui/Panels/MiscPanelStuff.cpp:66
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:60
 #, c-format
 msgid "Select a document root for %s"
 msgstr "Pilih punca dokumen utk %s"
 
-#: pcsx2/gui/Panels/MiscPanelStuff.cpp:124
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:118
 msgid "Apply"
 msgstr "Tetapkan"
 
-#: pcsx2/gui/Panels/MiscPanelStuff.cpp:125
+#: pcsx2/gui/Panels/MiscPanelStuff.cpp:119
 msgid "Make this language my default right now!"
 msgstr "Jadikan bahasa in sbg bahasa asal sekarang!"
 
@@ -2135,19 +2268,19 @@ msgstr "Savestates:"
 msgid "Select folder for Savestates"
 msgstr "Pilih folder utk savestates"
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:48
+#: pcsx2/gui/Panels/PathsPanel.cpp:46
 msgid "Snapshots:"
 msgstr "Snapshots:"
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:49
+#: pcsx2/gui/Panels/PathsPanel.cpp:47
 msgid "Select a folder for Snapshots"
 msgstr "Pilih folder utk snapshots"
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:58
+#: pcsx2/gui/Panels/PathsPanel.cpp:54
 msgid "Logs/Dumps:"
 msgstr "Logs/Dumps:"
 
-#: pcsx2/gui/Panels/PathsPanel.cpp:59
+#: pcsx2/gui/Panels/PathsPanel.cpp:55
 msgid "Select a folder for logs/dumps"
 msgstr "Pilih folder utk logs/dumps"
 
@@ -2159,36 +2292,36 @@ msgstr "Seting sedang ditetapkan..."
 msgid "Shutdown PS2 virtual machine?"
 msgstr "Tutup PS2 Virtual Machine?"
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:321
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:316
 msgid "I'm givin' her all she's got, Captain!"
 msgstr "Saya memberikan dia apa yg dia ada, Kapten! (LOL)"
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:323
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:318
 msgid "Enumerating available plugins..."
 msgstr "Menyediakan plugin yg ada..."
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:356
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:351
 msgid "Plugins Search Path:"
 msgstr "Laluan carian plugin:"
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:357
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:352
 msgid "Select a folder with PCSX2 plugins"
 msgstr "Pilih folder dgn plugin PCSX2"
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:370
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:365
 msgid "Configure..."
 msgstr "Kofigurasi..."
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:379
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:374
 msgid "Click the Browse button to select a different folder for PCSX2 plugins."
 msgstr "Tekan Cari untuk memilih folder lain dgn plugin PCSX2."
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:481
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:473
 #, c-format
 msgid "Please select a valid plugin for the %s."
 msgstr "Sila pilih plugin yg sah utk %s."
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:519
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:511
 #, c-format
 msgid ""
 "The selected %s plugin failed to load.\n"
@@ -2201,75 +2334,89 @@ msgstr ""
 "Sebab: %s\n"
 "\n"
 
-#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:730
+#: pcsx2/gui/Panels/PluginSelectorPanel.cpp:722
 msgid "Completing tasks..."
 msgstr "Menyiapkan kerja2..."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:96
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:87
 msgid "Enable speedhacks"
 msgstr "Hidupkan speedhacks"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:102
-msgid "A safe and easy way to make sure that all speedhacks are completely disabled."
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:91
+msgid ""
+"A safe and easy way to make sure that all speedhacks are completely disabled."
 msgstr "Cara paling selamat adalah memastikan semua speedhacks dimatikan."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:111
-msgid "Resets all speedhack options to their defaults, which consequently turns them all OFF."
-msgstr "Mengembalikan semua speedhax kpd yg asal, atau mudah dikatakan semua OFF."
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:100
+msgid ""
+"Resets all speedhack options to their defaults, which consequently turns "
+"them all OFF."
+msgstr ""
+"Mengembalikan semua speedhax kpd yg asal, atau mudah dikatakan semua OFF."
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:120
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:109
 msgid "EE Cyclerate [Not Recommended]"
 msgstr "EE Cyclerate [X digalakkan]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:141
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:127
 msgid "VU Cycle Stealing [Not Recommended]"
 msgstr "VU Cycle Stealing [X digalakkan]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:161
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:145
 msgid "microVU Hacks"
 msgstr "microVU Hacks"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:163
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:147
 msgid "mVU Flag Hack"
 msgstr "mVU Flag Hack"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:164
-msgid "Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:148
+msgid ""
+"Good Speedup and High Compatibility; may cause bad graphics... [Recommended]"
 msgstr "Kelajuan + Kestabilan; boleh menyebabkan grafik pelik... [Digalakkan}"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:166
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:150
 msgid "MTVU (Multi-Threaded microVU1)"
 msgstr "MTVU (Multi-Threaded microVU1)"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
-msgid "Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ cores]"
-msgstr "Kelajuan + Kestabilan; boleh menyebabkan hanging... [Digalakkan jika 3+ teras CPU]"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:151
+msgid ""
+"Good Speedup and High Compatibility; may cause hanging... [Recommended if 3+ "
+"cores]"
+msgstr ""
+"Kelajuan + Kestabilan; boleh menyebabkan hanging... [Digalakkan jika 3+ "
+"teras CPU]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:183
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:162
 msgid "Other Hacks"
 msgstr "Hack lain2"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:185
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:164
 msgid "Enable INTC Spin Detection"
 msgstr "Enable INTC Spin Detection"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:186
-msgid "Huge speedup for some games, with almost no compatibility side effects. [Recommended]"
-msgstr "Kelajuan++ utk sedikit games, dgn hampir tiada side effects. [Digalakkan]"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:165
+msgid ""
+"Huge speedup for some games, with almost no compatibility side effects. "
+"[Recommended]"
+msgstr ""
+"Kelajuan++ utk sedikit games, dgn hampir tiada side effects. [Digalakkan]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:188
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:167
 msgid "Enable Wait Loop Detection"
 msgstr "Enable Wait Loop Detection"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:189
-msgid "Moderate speedup for some games, with no known side effects. [Recommended]"
-msgstr "Sedikit kelajuan utk sesetengah games, dgn tiada side effects. [Digalakkan]"
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:168
+msgid ""
+"Moderate speedup for some games, with no known side effects. [Recommended]"
+msgstr ""
+"Sedikit kelajuan utk sesetengah games, dgn tiada side effects. [Digalakkan]"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:191
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:170
 msgid "Enable fast CDVD"
 msgstr "Enable fast CDVD"
 
-#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:192
+#: pcsx2/gui/Panels/SpeedhacksPanel.cpp:171
 msgid "Fast disc access, less loading times. [Not Recommended]"
 msgstr "Akses disc pantas, kurang masa loading. [X digalakkan]"
 
@@ -2282,7 +2429,9 @@ msgid "Select folder containing PCSX2 visual themes"
 msgstr "Pilih folder mengandungi tema PCSX2"
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:45
-msgid "Click the Browse button to select a different folder containing PCSX2 visual themes."
+msgid ""
+"Click the Browse button to select a different folder containing PCSX2 visual "
+"themes."
 msgstr "Tekan Cari utk pilih folder lain mengandungi tema PCSX2."
 
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:49
@@ -2294,83 +2443,96 @@ msgid "Disable Framelimiting"
 msgstr "Matikan Framelimiting"
 
 #: pcsx2/gui/Panels/VideoPanel.cpp:35
-msgid "Useful for running benchmarks. Toggle this option in-game by pressing F4."
+msgid ""
+"Useful for running benchmarks. Toggle this option in-game by pressing F4."
 msgstr "Berguna utk benchmarking. Hidup atau matikan semasa gaming dgn F4."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:61
+#: pcsx2/gui/Panels/VideoPanel.cpp:59
 msgid "Base Framerate Adjust:"
 msgstr "Base Framerate Adjust:"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:67
+#: pcsx2/gui/Panels/VideoPanel.cpp:65
 msgid "Slow Motion Adjust:"
 msgstr "Slow Motion Adjust:"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:73
+#: pcsx2/gui/Panels/VideoPanel.cpp:71
 msgid "Turbo Adjust:"
 msgstr "Turbo Adjust:"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:88
+#: pcsx2/gui/Panels/VideoPanel.cpp:86
 msgid "NTSC Framerate:"
 msgstr "NTSC Framerate:"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:91
-#: pcsx2/gui/Panels/VideoPanel.cpp:97
+#: pcsx2/gui/Panels/VideoPanel.cpp:89 pcsx2/gui/Panels/VideoPanel.cpp:95
 msgid "FPS"
 msgstr "FPS"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:94
+#: pcsx2/gui/Panels/VideoPanel.cpp:92
 msgid "PAL Framerate:"
 msgstr "PAL Framerate:"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:166
-msgid "Error while parsing either NTSC or PAL framerate settings.  Settings must be valid floating point numerics."
-msgstr "Ralat semasa menghurai tetapan framerate NTSC atau PAL. Seting mesti terdiri dari titik apungan numerik yg sah."
+#: pcsx2/gui/Panels/VideoPanel.cpp:164
+msgid ""
+"Error while parsing either NTSC or PAL framerate settings.  Settings must be "
+"valid floating point numerics."
+msgstr ""
+"Ralat semasa menghurai tetapan framerate NTSC atau PAL. Seting mesti terdiri "
+"dari titik apungan numerik yg sah."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:184
+#: pcsx2/gui/Panels/VideoPanel.cpp:182
 msgid "Disabled [default]"
 msgstr "Dimatikan [Asal]"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:188
+#: pcsx2/gui/Panels/VideoPanel.cpp:186
 msgid "Skip when on Turbo only (TAB to enable)"
 msgstr "Skip bila dlm Turbo shj (TAB utk hidupkan)"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:192
+#: pcsx2/gui/Panels/VideoPanel.cpp:190
 msgid "Constant skipping"
 msgstr "Skip secara tetap"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:194
-msgid "Normal and Turbo limit rates skip frames.  Slow motion mode will still disable frameskipping."
-msgstr "Normal dan Turbo menghadkan kadar skip frames. Mode slow motion akan mematikan frameskipping."
+#: pcsx2/gui/Panels/VideoPanel.cpp:192
+msgid ""
+"Normal and Turbo limit rates skip frames.  Slow motion mode will still "
+"disable frameskipping."
+msgstr ""
+"Normal dan Turbo menghadkan kadar skip frames. Mode slow motion akan "
+"mematikan frameskipping."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:217
+#: pcsx2/gui/Panels/VideoPanel.cpp:215
 msgid "Frames to Draw"
 msgstr "Frames utk Draw"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:222
+#: pcsx2/gui/Panels/VideoPanel.cpp:220
 msgid "Frames to Skip"
 msgstr "Frames utk Skip"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:298
+#: pcsx2/gui/Panels/VideoPanel.cpp:294
 msgid "Use Synchronized MTGS"
 msgstr "Guna Synchronized MTGS"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:299
-msgid "For troubleshooting potential bugs in the MTGS only, as it is potentially very slow."
+#: pcsx2/gui/Panels/VideoPanel.cpp:295
+msgid ""
+"For troubleshooting potential bugs in the MTGS only, as it is potentially "
+"very slow."
 msgstr "Utk troubleshooting pepijat dlm MTGS shj, kerana ia sgt perlahan."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:302
+#: pcsx2/gui/Panels/VideoPanel.cpp:298
 msgid "Disable all GS output"
 msgstr "Matikan semua GS output"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:303
-msgid "Completely disables all GS plugin activity; ideal for benchmarking EEcore components."
-msgstr "Mematikan semua aktiviti plugin GS; ideal utk benchmarking komponen EEcore."
+#: pcsx2/gui/Panels/VideoPanel.cpp:299
+msgid ""
+"Completely disables all GS plugin activity; ideal for benchmarking EEcore "
+"components."
+msgstr ""
+"Mematikan semua aktiviti plugin GS; ideal utk benchmarking komponen EEcore."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:320
+#: pcsx2/gui/Panels/VideoPanel.cpp:312
 msgid "Frame Skipping"
 msgstr "Frame Skipping"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:323
+#: pcsx2/gui/Panels/VideoPanel.cpp:315
 msgid "Framelimiter"
 msgstr "Framelimiter"
 
@@ -2387,41 +2549,62 @@ msgid "There is no active virtual machine state to download or save."
 msgstr "Tiada virtual machine yg aktif utk dimuat turun atau disimpan."
 
 #: pcsx2/gui/SysState.cpp:520
-msgid "This savestate cannot be loaded because it is not a valid gzip archive.  It may have been created by an older unsupported version of PCSX2, or it may be corrupted."
-msgstr "Savestate gagal dimuatkan kerana ia bkn gzip archive yg sah. Mungkin ia dicipta oleh PCSX2 versi lama, ataupun telah korup."
+msgid ""
+"This savestate cannot be loaded because it is not a valid gzip archive.  It "
+"may have been created by an older unsupported version of PCSX2, or it may be "
+"corrupted."
+msgstr ""
+"Savestate gagal dimuatkan kerana ia bkn gzip archive yg sah. Mungkin ia "
+"dicipta oleh PCSX2 versi lama, ataupun telah korup."
 
 #: pcsx2/gui/SysState.cpp:579
 msgid "This file is not a valid PCSX2 savestate.  See the logfile for details."
-msgstr "Fail ini bkn savestate PCSX2 yg sah. Lihat logfile utk maklumat lanjut."
+msgstr ""
+"Fail ini bkn savestate PCSX2 yg sah. Lihat logfile utk maklumat lanjut."
 
 #: pcsx2/gui/SysState.cpp:598
-msgid "This savestate cannot be loaded due to missing critical components.  See the log file for details."
-msgstr "Savestate ini gagal dimuatkan kerana kehilangan komponen pnting. Lihat log file utk maklumat lanjut."
+msgid ""
+"This savestate cannot be loaded due to missing critical components.  See the "
+"log file for details."
+msgstr ""
+"Savestate ini gagal dimuatkan kerana kehilangan komponen pnting. Lihat log "
+"file utk maklumat lanjut."
 
 #: pcsx2/gui/i18n.cpp:63
 msgid " (default)"
 msgstr " (Asal)"
 
-#: pcsx2/ps2/BiosTools.cpp:83
-#: pcsx2/ps2/BiosTools.cpp:151
+#: pcsx2/ps2/BiosTools.cpp:83 pcsx2/ps2/BiosTools.cpp:151
 msgid "The selected BIOS file is not a valid PS2 BIOS.  Please re-configure."
 msgstr "BIOS yg dipilih bkn PS2 BIOS yg sah. Sila lakukan kofigurasi semula."
 
 #: pcsx2/ps2/BiosTools.cpp:244
-msgid "The PS2 BIOS could not be loaded.  The BIOS has not been configured, or the configuration has been corrupted.  Please re-configure."
-msgstr "PS2 BIOS gagal dimuatkan. BIOS tidak di konfigurasi, atau konfigurasi tlh korup. Sila lakukan konfigurasi semula."
+msgid ""
+"The PS2 BIOS could not be loaded.  The BIOS has not been configured, or the "
+"configuration has been corrupted.  Please re-configure."
+msgstr ""
+"PS2 BIOS gagal dimuatkan. BIOS tidak di konfigurasi, atau konfigurasi tlh "
+"korup. Sila lakukan konfigurasi semula."
 
 #: pcsx2/ps2/BiosTools.cpp:251
 msgid "The configured BIOS file does not exist.  Please re-configure."
-msgstr "BIOS yg tlh di konfigurasi tidak wujud. Sila lakukan konfigurasi semula."
+msgstr ""
+"BIOS yg tlh di konfigurasi tidak wujud. Sila lakukan konfigurasi semula."
 
 #: pcsx2/x86/ix86-32/iR5900-32.cpp:578
 #, c-format
-msgid "%s Extensions not found.  The R5900-32 recompiler requires a host CPU with MMX, SSE, and SSE2 extensions."
-msgstr "Extensi %s tidak dijumpai. Recompiler R5900-32 memerlukan hos CPU dgn extensi MMX, SSE dan SSE2."
+msgid ""
+"%s Extensions not found.  The R5900-32 recompiler requires a host CPU with "
+"MMX, SSE, and SSE2 extensions."
+msgstr ""
+"Extensi %s tidak dijumpai. Recompiler R5900-32 memerlukan hos CPU dgn "
+"extensi MMX, SSE dan SSE2."
 
 #: pcsx2/x86/microVU.cpp:28
 #, c-format
-msgid "%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and SSE2 extensions."
-msgstr "Extensi %s tidak dijumpai. microVU memerlukan hos CPU dgn extensi MMX, SSE, dan SSE2."
-
+msgid ""
+"%s Extensions not found.  microVU requires a host CPU with MMX, SSE, and "
+"SSE2 extensions."
+msgstr ""
+"Extensi %s tidak dijumpai. microVU memerlukan hos CPU dgn extensi MMX, SSE, "
+"dan SSE2."

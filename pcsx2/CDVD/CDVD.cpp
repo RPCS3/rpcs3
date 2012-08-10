@@ -386,9 +386,7 @@ void cdvdReloadElfInfo(wxString elfoverride)
 			if (!ENABLE_LOADING_PS1_GAMES)
 				Cpu->ThrowException( Exception::RuntimeError()
 					.SetDiagMsg(L"PSX game discs are not supported by PCSX2.")
-					.SetUserMsg(pxE( "!Notice:PsxDisc",
-						L"Playstation game discs are not supported by PCSX2.  If you want to emulate PSX games "
-						L"then you'll have to download a PSX-specific emulator, such as ePSXe or PCSX.")
+					.SetUserMsg(pxE( L"Playstation game discs are not supported by PCSX2.  If you want to emulate PSX games then you'll have to download a PSX-specific emulator, such as ePSXe or PCSX.")
 					)
 				);
 				//Console.Error( "Playstation1 game discs are not supported by PCSX2." );

@@ -32,16 +32,10 @@ using namespace pxSizerFlags;
 Panels::DocsFolderPickerPanel::DocsFolderPickerPanel( wxWindow* parent, bool isFirstTime )
 	: BaseApplicableConfigPanel( parent, wxVERTICAL, _("Usermode Selection") )
 {
-	const wxString usermodeExplained( pxE( "!Panel:Usermode:Explained",
-		L"Please select your preferred default location for PCSX2 user-level documents below "
-		L"(includes memory cards, screenshots, settings, and savestates).  "
-		L"These folder locations can be overridden at any time using the Core Settings panel."
+	const wxString usermodeExplained( pxE( L"Please select your preferred default location for PCSX2 user-level documents below (includes memory cards, screenshots, settings, and savestates).  These folder locations can be overridden at any time using the Core Settings panel."
 	) );
 
-	const wxString usermodeWarning( pxE( "!Panel:Usermode:Warning",
-		L"You can change the preferred default location for PCSX2 user-level documents here "
-		L"(includes memory cards, screenshots, settings, and savestates).  "
-		L"This option only affects Standard Paths which are set to use the installation default value."
+	const wxString usermodeWarning( pxE( L"You can change the preferred default location for PCSX2 user-level documents here (includes memory cards, screenshots, settings, and savestates).  This option only affects Standard Paths which are set to use the installation default value."
 	) );
 
 	const RadioPanelItem UsermodeOptions[] = 

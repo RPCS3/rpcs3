@@ -251,9 +251,7 @@ wxString Exception::VirtualMemoryMapConflict::FormatDisplayMessage() const
 {
 	FastFormatUnicode retmsg;
 	retmsg.Write( L"%s",
-		pxE( "!Notice:VirtualMemoryMap",
-			L"There is not enough virtual memory available, or necessary virtual memory "
-			L"mappings have already been reserved by other processes, services, or DLLs."
+		pxE( L"There is not enough virtual memory available, or necessary virtual memory mappings have already been reserved by other processes, services, or DLLs."
 		)
 	);
 

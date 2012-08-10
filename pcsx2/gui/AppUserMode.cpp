@@ -54,12 +54,7 @@ static wxFileName GetPortableIniPath()
 
 static wxString GetMsg_PortableModeRights()
 {
-	return pxE( "!Notice:PortableModeRights",
-		L"Please ensure that these folders are created and that your user account is granted "
-		L"write permissions to them -- or re-run PCSX2 with elevated (administrator) rights, which "
-		L"should grant PCSX2 the ability to create the necessary folders itself.  If you "
-		L"do not have elevated rights on this computer, then you will need to switch to User "
-		L"Documents mode (click button below)."
+	return pxE( L"Please ensure that these folders are created and that your user account is granted write permissions to them -- or re-run PCSX2 with elevated (administrator) rights, which should grant PCSX2 the ability to create the necessary folders itself.  If you do not have elevated rights on this computer, then you will need to switch to User Documents mode (click button below)."
 	);
 };
 

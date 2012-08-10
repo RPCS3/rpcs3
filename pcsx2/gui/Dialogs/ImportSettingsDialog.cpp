@@ -28,10 +28,7 @@ Dialogs::ImportSettingsDialog::ImportSettingsDialog( wxWindow* parent )
 	pxStaticText& heading( Text( pxsFmt(
 
 		/// (%s is the app name, normally PCSX2 -- omitting one or both %s is allowed)
-		pxE( "!Notice:ImportExistingSettings",
-			L"Existing %s settings have been found in the configured settings folder.  "
-			L"Would you like to import these settings or overwrite them with %s default values?"
-			L"\n\n(or press Cancel to select a different settings folder)"
+		pxE( L"Existing %s settings have been found in the configured settings folder.  Would you like to import these settings or overwrite them with %s default values?\n\n(or press Cancel to select a different settings folder)"
 		), pxGetAppName().c_str(), pxGetAppName().c_str()
 	)));
 

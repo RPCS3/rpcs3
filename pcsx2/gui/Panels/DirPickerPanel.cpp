@@ -66,8 +66,7 @@ void Panels::DirPickerPanel::Explore_Click( wxCommandEvent &evt )
 
 		createPathDlg += createPathDlg.Label( path.ToString() ) | StdCenter();
 
-		createPathDlg += createPathDlg.Heading( pxE( "!Notice:DirPicker:CreatePath",
-			L"The specified path/directory does not exist.  Would you like to create it?" )
+		createPathDlg += createPathDlg.Heading( pxE( L"The specified path/directory does not exist.  Would you like to create it?" )
 		);
 
 		wxWindowID result = pxIssueConfirmation( createPathDlg,
@@ -155,8 +154,7 @@ void Panels::DirPickerPanel::InitForRegisteredMode( const wxString& normalized, 
 	{
 		m_checkCtrl = new pxCheckBox( this, _("Use default setting") );
 
-		pxSetToolTip( m_checkCtrl, pxEt( "!ContextTip:DirPicker:UseDefault",
-			L"When checked this folder will automatically reflect the default associated with PCSX2's current usermode setting. " )
+		pxSetToolTip( m_checkCtrl, pxEt( L"When checked this folder will automatically reflect the default associated with PCSX2's current usermode setting. " )
 		);
 
 		Connect( m_checkCtrl->GetId(),	wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( DirPickerPanel::UseDefaultPath_Click ) );

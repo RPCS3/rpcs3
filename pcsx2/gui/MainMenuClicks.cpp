@@ -103,11 +103,7 @@ void MainEmuFrame::Menu_ResetAllSettings_Click(wxCommandEvent &event)
 	{
 		ScopedCoreThreadPopup suspender;
 		if( !Msgbox::OkCancel( pxsFmt(
-			pxE( "!Notice:DeleteSettings",
-				L"This command clears %s settings and allows you to re-run the First-Time Wizard.  You will need to "
-				L"manually restart %s after this operation.\n\n"
-				L"WARNING!!  Click OK to delete *ALL* settings for %s and force-close the app, losing any current emulation progress.  Are you absolutely sure?"
-				L"\n\n(note: settings for plugins are unaffected)"
+			pxE( L"This command clears %s settings and allows you to re-run the First-Time Wizard.  You will need to manually restart %s after this operation.\n\nWARNING!!  Click OK to delete *ALL* settings for %s and force-close the app, losing any current emulation progress.  Are you absolutely sure?\n\n(note: settings for plugins are unaffected)"
 			), pxGetAppName().c_str(), pxGetAppName().c_str(), pxGetAppName().c_str() ),
 			_("Reset all settings?") ) )
 		{

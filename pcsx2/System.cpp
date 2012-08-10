@@ -111,11 +111,7 @@ void RecompiledCodeReserve::ThrowIfNotOk() const
 
 	throw Exception::OutOfMemory(m_name)
 		.SetDiagMsg(pxsFmt( L"Recompiled code cache could not be mapped." ))
-		.SetUserMsg( pxE( "!Notice:Recompiler:VirtualMemoryAlloc",
-			L"This recompiler was unable to reserve contiguous memory required for internal caches.  "
-			L"This error can be caused by low virtual memory resources, such as a small or disabled swapfile, "
-			L"or by another program that is hogging a lot of memory.  You can also try reducing the default "
-			L"cache sizes for all PCSX2 recompilers, found under Host Settings."
+		.SetUserMsg( pxE( L"This recompiler was unable to reserve contiguous memory required for internal caches.  This error can be caused by low virtual memory resources, such as a small or disabled swapfile, or by another program that is hogging a lot of memory.  You can also try reducing the default cache sizes for all PCSX2 recompilers, found under Host Settings."
 		));
 }
 
@@ -345,9 +341,7 @@ public:
 // returns the translated error message for the Virtual Machine failing to allocate!
 static wxString GetMemoryErrorVM()
 {
-	return pxE( "!Notice:EmuCore::MemoryForVM",
-		L"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. "
-		L"Close out some memory hogging background tasks and try again."
+	return pxE( L"PCSX2 is unable to allocate memory needed for the PS2 virtual machine. Close out some memory hogging background tasks and try again."
 	);
 }
 

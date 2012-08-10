@@ -64,11 +64,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 		},
 		{
 			_("EE timing hack - Multi purpose hack. Try if all else fails."),
-			pxEt( "!ContextTip:Gamefixes:EE Timing Hack",
-				L"Known to affect following games:\n"
-				L" * Digital Devil Saga (Fixes FMV and crashes)\n"
-				L" * SSX (Fixes bad graphics and crashes)\n"
-				L" * Resident Evil: Dead Aim (Causes garbled textures)"
+			pxEt( L"Known to affect following games:\n * Digital Devil Saga (Fixes FMV and crashes)\n * SSX (Fixes bad graphics and crashes)\n * Resident Evil: Dead Aim (Causes garbled textures)"
 			)
 		},
 		{
@@ -77,26 +73,17 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 		},
 		{
 			_("OPH Flag hack - Try if your game freezes showing the same frame."),
-			pxEt( "!ContextTip:Gamefixes:OPH Flag hack",
-				L"Known to affect following games:\n"
-				L" * Bleach Blade Battler\n"
-				L" * Growlanser II and III\n"
-				L" * Wizardry"
+			pxEt( L"Known to affect following games:\n * Bleach Blade Battler\n * Growlanser II and III\n * Wizardry"
 			)
 		},
 		{
 			_("Ignore DMAC writes when it is busy."),
-			pxEt( "!ContextTip:Gamefixes:DMA Busy hack",
-				L"Known to affect following games:\n"
-				L" * Mana Khemia 1 (Going \"off campus\")\n"
+			pxEt( L"Known to affect following games:\n * Mana Khemia 1 (Going \"off campus\")\n"
 			)
 		},
 		{
 			_("Simulate VIF1 FIFO read ahead. Fixes slow loading games."),
-			pxEt( "!ContextTip:Gamefixes:VIF1 FIFO hack",
-				L"Known to affect following games:\n"
-				L" * Test Drive Unlimited\n"
-				L" * Transformers"
+			pxEt( L"Known to affect following games:\n * Test Drive Unlimited\n * Transformers"
 			)
 		},
 		{
@@ -116,11 +103,7 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 	}
 
 	m_check_Enable = new pxCheckBox( this, _("Enable manual game fixes [Not recommended]"),
-		pxE( "!Panel:Gamefixes:Compat Warning",
-			L"Gamefixes can work around wrong emulation in some titles. \n"
-			L"They may also cause compatibility or performance issues. \n\n"
-			L"It's better to enable 'Automatic game fixes' at the main menu instead, and leave this page empty. \n"
-			L"('Automatic' means: selectively use specific tested fixes for specific games)"
+		pxE( L"Gamefixes can work around wrong emulation in some titles. \nThey may also cause compatibility or performance issues. \n\nIt's better to enable 'Automatic game fixes' at the main menu instead, and leave this page empty. \n('Automatic' means: selectively use specific tested fixes for specific games)"
 		)
 	);
 

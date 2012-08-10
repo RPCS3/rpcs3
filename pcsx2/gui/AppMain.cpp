@@ -543,10 +543,7 @@ void Pcsx2App::OnEmuKeyDown( wxKeyEvent& evt )
 // are multiple variations on the BIOS and BIOS folder checks).
 wxString BIOS_GetMsg_Required()
 {
-	return pxE( "!Notice:BiosDumpRequired",
-		L"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* obtain "
-		L"a BIOS from an actual PS2 unit that you own (borrowing doesn't count).  "
-		L"Please consult the FAQs and Guides for further instructions."
+	return pxE( L"PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't count).  Please consult the FAQs and Guides for further instructions."
 	);
 }
 
@@ -626,10 +623,7 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 		wxDialogWithHelpers dialog( NULL, _("PCSX2 Unresponsive Thread"), wxVERTICAL );
 		
 		dialog += dialog.Heading( ex.FormatDisplayMessage() + L"\n\n" +
-			pxE( "!Notice Error:Thread Deadlock Actions",
-				L"'Ignore' to continue waiting for the thread to respond.\n"
-				L"'Cancel' to attempt to cancel the thread.\n"
-				L"'Terminate' to quit PCSX2 immediately.\n"
+			pxE( L"'Ignore' to continue waiting for the thread to respond.\n'Cancel' to attempt to cancel the thread.\n'Terminate' to quit PCSX2 immediately.\n"
 			)
 		);
 

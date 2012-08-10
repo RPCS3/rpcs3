@@ -22,59 +22,11 @@ bool pxIsEnglish( int id )
 
 // --------------------------------------------------------------------------------------
 //  pxExpandMsg  -- an Iconized Text Translator
+//  Was replaced by a standard implementation of wxGetTranslation
 // --------------------------------------------------------------------------------------
-// This function provides two layers of translated lookups.  It puts the key through the
-// current language first and, if the key is not resolved (meaning the language pack doesn't
-// have a translation for it), it's put through our own built-in english translation.  This
-// second step is needed to resolve some of our lengthy UI tooltips and descriptors, which
-// use iconized GetText identifiers.
-//
-// (without this second pass many tooltips would just show up as "Savestate Tooltip" instead
-//  of something meaningful).
-//
-// Rationale: Traditional gnu-style gettext stuff tends to stop translating strings when 
-// the slightest change to a string is made (including punctuation and possibly even case).
-// On long strings especially, this can be unwanted since future revisions of the app may have
-// simple typo or newline fixes that *should not* break existing translations.  Furthermore,
-// icons can be used in places where otherwise identical english verbage for two separate
-// terms can be differentiated.  GNU gettext has some new tools for using fuzzy logic heuristics
-// matching, but it is also imperfect and complicated, so we have opted to continue using this
-// system instead.
-//
-const wxChar* __fastcall pxExpandMsg( const wxChar* key, const wxChar* englishContent )
+const wxChar* __fastcall pxExpandMsg( const wxChar* englishContent )
 {
-#ifdef PCSX2_DEVBUILD
-	static const wxChar* tbl_pxE_Prefixes[] =
-	{
-		L"!Panel:",
-		L"!Notice:",
-		L"!Wizard:",
-		L"!Tooltip:",
-		L"!ContextTip:",
-		NULL
-	};
-
-	// test the prefix of the key for consistency to valid/known prefix types.
-	const wxChar** prefix = tbl_pxE_Prefixes;
-	while( *prefix != NULL )
-	{
-		if( wxString(key).StartsWith(*prefix) ) break;
-		++prefix;
-	}
-	pxAssertDev( *prefix != NULL,
-		pxsFmt( L"Invalid pxE key prefix in key '%s'.  Prefix must be one of the valid prefixes listed in pxExpandMsg.", key )
-	);
-#endif
-
-	const wxLanguageInfo* info = (wxGetLocale() != NULL) ? wxLocale::GetLanguageInfo( wxGetLocale()->GetLanguage() ) : NULL;
-
-	if( ( info == NULL ) || pxIsEnglish( info->Language ) )
-		return englishContent;
-
-	const wxChar* retval = wxGetTranslation( key );
-
-	// Check if the translation failed, and fall back on an english lookup.
-	return ( wxStrcmp( retval, key ) == 0 ) ? englishContent : retval;
+	return wxGetTranslation( englishContent );
 }
 
 // ------------------------------------------------------------------------

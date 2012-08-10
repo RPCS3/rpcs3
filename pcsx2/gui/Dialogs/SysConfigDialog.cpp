@@ -35,10 +35,7 @@ static void CheckHacksOverrides()
 
 	wxDialogWithHelpers dialog( wxFindWindowByName( L"Dialog:" + Dialogs::SysConfigDialog::GetNameStatic() ), _("Config Overrides Warning") );
 	
-	dialog += dialog.Text( pxEt("!Panel:HasHacksOverrides",
-		L"Warning!  You are running PCSX2 with command line options that override your configured settings.  "
-		L"These command line options will not be reflected in the Settings dialog, and will be disabled "
-		L"if you apply any changes here."
+	dialog += dialog.Text( pxEt( L"Warning!  You are running PCSX2 with command line options that override your configured settings.  These command line options will not be reflected in the Settings dialog, and will be disabled if you apply any changes here."
 	));
 
 	// [TODO] : List command line option overrides in action?
@@ -55,10 +52,7 @@ static void CheckPluginsOverrides()
 
 	wxDialogWithHelpers dialog( NULL, _("Components Overrides Warning") );
 	
-	dialog += dialog.Text( pxEt("!Panel:HasPluginsOverrides",
-		L"Warning!  You are running PCSX2 with command line options that override your configured plugin and/or folder settings.  "
-		L"These command line options will not be reflected in the settings dialog, and will be disabled "
-		L"when you apply settings changes here."
+	dialog += dialog.Text( pxEt( L"Warning!  You are running PCSX2 with command line options that override your configured plugin and/or folder settings.  These command line options will not be reflected in the settings dialog, and will be disabled when you apply settings changes here."
 	));
 
 	// [TODO] : List command line option overrides in action?
@@ -132,24 +126,14 @@ void Dialogs::SysConfigDialog::AddPresetsControl()
 	m_slider_presets->SetMinSize(wxSize(100,25));
 
 	m_slider_presets->SetToolTip(
-		pxEt( "!Notice:Tooltip:Presets:Slider",
-				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
-				L"Known important game fixes will be applied automatically.\n\n"
-				L"Presets info:\n"
-				L"1 -     The most accurate emulation but also the slowest.\n"
-				L"3 --> Tries to balance speed with compatibility.\n"
-				L"4 -     Some more aggressive hacks.\n"
-				L"6 -     Too many hacks which will probably slow down most games.\n"
+		pxEt( L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\nKnown important game fixes will be applied automatically.\n\nPresets info:\n1 -     The most accurate emulation but also the slowest.\n3 --> Tries to balance speed with compatibility.\n4 -     Some more aggressive hacks.\n6 -     Too many hacks which will probably slow down most games.\n"
 			)
 	);
 	m_slider_presets->Enable(g_Conf->EnablePresets);
 
 	m_check_presets = new pxCheckBox( this, _("Preset:"), 0);
 	m_check_presets->SetToolTip(
-		pxEt( "!Notice:Tooltip:Presets:Checkbox",
-				L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\n"
-				L"Known important game fixes will be applied automatically.\n\n"
-				L"--> Uncheck to modify settings manually (with current preset as base)"
+		pxEt( L"The Presets apply speed hacks, some recompiler options and some game fixes known to boost speed.\nKnown important game fixes will be applied automatically.\n\n--> Uncheck to modify settings manually (with current preset as base)"
 			)
 	);
 	m_check_presets->SetValue(!!g_Conf->EnablePresets);

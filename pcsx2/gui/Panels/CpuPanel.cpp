@@ -108,8 +108,7 @@ Panels::AdvancedOptionsVU::AdvancedOptionsVU( wxWindow* parent )
 Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 	: BaseApplicableConfigPanel_SpecificConfig( parent )
 {
-	*this	+= Text( pxE( "!Panel:EE/IOP:Heading",
-		L"Notice: Most games are fine with the default options. ")
+	*this	+= Text( pxE( L"Notice: Most games are fine with the default options. ")
 	) | StdExpand();
 
 	const RadioPanelItem tbl_CpuTypes_EE[] =
@@ -175,8 +174,7 @@ Panels::CpuPanelEE::CpuPanelEE( wxWindow* parent )
 Panels::CpuPanelVU::CpuPanelVU( wxWindow* parent )
 	: BaseApplicableConfigPanel_SpecificConfig( parent )
 {
-	*this	+= Text( pxE( "!Panel:VUs:Heading",
-		L"Notice: Most games are fine with the default options. ")
+	*this	+= Text( pxE( L"Notice: Most games are fine with the default options.")
 	) | StdExpand();
 
 	const RadioPanelItem tbl_CpuTypes_VU[] =

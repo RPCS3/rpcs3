@@ -707,10 +707,8 @@ void vtlb_Core_Free()
 
 static wxString GetHostVmErrorMsg()
 {
-	return pxE("!Notice:HostVmReserve",
-		L"Your system is too low on virtual resources for PCSX2 to run.  This can be "
-		L"caused by having a small or disabled swapfile, or by other programs that are "
-		L"hogging resources."
+	return pxE(
+		L"Your system is too low on virtual resources for PCSX2 to run. This can be caused by having a small or disabled swapfile, or by other programs that are hogging resources."
 	);
 }
 // --------------------------------------------------------------------------------------
