@@ -52,14 +52,9 @@ MAIN_POT=locales/templates/pcsx2_Main.pot
 MAIN_KEY1=_
 MAIN_KEY2=pxL
 
-DEV_POT=locales/templates/pcsx2_Devel.pot
 DEV_KEY1=_d
 DEV_KEY2=pxDt
 
-ICO_POT=locales/templates/pcsx2_Iconized.pot
-ICO_KEY1=pxE
-
-TER_POT=locales/templates/pcsx2_Tertiary.pot
 TER_KEY1=_t
 TER_KEY2=pxLt
 TER_KEY3=pxEt
@@ -69,6 +64,9 @@ xgettext --keyword=$MAIN_KEY1 --keyword=$MAIN_KEY2 --keyword=$DEV_KEY1 --keyword
 	--keyword=$TER_KEY1 --keyword=$TER_KEY2 $GENERAL_OPTION --copyright-holder="$COPYRIGHT"  \
 	$input_files --output=$MAIN_POT
 sed --in-place $MAIN_POT --expression=s/charset=CHARSET/charset=UTF-8/
+
+ICO_POT=locales/templates/pcsx2_Iconized.pot
+ICO_KEY1=pxE
 
 echo "Generate $ICO_POT"
 xgettext --keyword=$ICO_KEY1 --keyword=$TER_KEY3 $GENERAL_OPTION --copyright-holder="$COPYRIGHT" \

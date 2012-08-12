@@ -37,6 +37,18 @@ if(CMAKE_SIZEOF_VOID_P MATCHES "8")
     SET_PROPERTY(GLOBAL PROPERTY COMPILE_DEFINITIONS "-m32")
 endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
 
+# Use multiarch path if they exists
+if(EXISTS "/usr/lib/i386-linux-gnu")
+    set(CMAKE_LIBRARY_ARCHITECTURE "i386-linux-gnu")
+endif()
+
+# * -fPIC option was removed for multiple reasons.
+#     - Code only supports the x86 architecture.
+#     - code uses the ebx register so it's not compliant with PIC.
+#     - Impacts the performance too much.
+#     - Only plugins. No package will link to them.
+set(CMAKE_POSITION_INDEPENDENT_CODE OFF) 
+
 # set module path
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -60,7 +72,6 @@ include_directories(${PROJECT_SOURCE_DIR}/common/include
 					${PROJECT_SOURCE_DIR}/common/include/x86emitter
                     # WORKAROUND Some issue with multiarch on Debian/Ubuntu
                     /usr/include/i386-linux-gnu
-                    /usr/include/x86_64-linux-gnu
                     )
 
 # make the translation
