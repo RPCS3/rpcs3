@@ -117,7 +117,7 @@ _vifT int nVifUnpack(const u8* data) {
 
 	if (ret == vif.tag.size) { // Full Transfer
 		if (v.bSize) { // Last transfer was partial
-			memcpy_fast(&v.buffer[v.bSize], data, size);
+			memcpy_aligned(&v.buffer[v.bSize], data, size);
 			v.bSize		+= size;
 			size        = v.bSize;
 			data		= v.buffer;
@@ -140,7 +140,7 @@ _vifT int nVifUnpack(const u8* data) {
 		v.bSize			= 0;
 	}
 	else { // Partial Transfer
-		memcpy_fast(&v.buffer[v.bSize], data, size);
+		memcpy_aligned(&v.buffer[v.bSize], data, size);
 		v.bSize		 += size;
 		vif.tag.size -= ret;
 

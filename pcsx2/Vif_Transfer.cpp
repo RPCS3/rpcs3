@@ -22,34 +22,12 @@
 // VifCode Transfer Interpreter (Vif0/Vif1)
 //------------------------------------------------------------------
 
-// Doesn't stall if the next vifCode is the Mark command
-_vifT bool runMark(u32* &data) {
-	if (((vifXRegs.code >> 24) & 0x7f) == 0x7) {
-		//DevCon.WriteLn("Vif%d: Running Mark with I-bit", idx);
-		return 1; // No Stall?
-	}
-	return 1; // Stall
-}
-
-// Returns 1 if i-bit && finished vifcode && i-bit not masked
-_vifT bool analyzeIbit(u32* &data, int iBit) {
-	vifStruct& vifX = GetVifX;
-	if (iBit && !vifX.cmd && !vifXRegs.err.MII) {
-		//DevCon.WriteLn("Vif I-Bit IRQ");
-		vifX.irq++;
-
-		if(CHECK_VIF1STALLHACK) return 0;
-		else return 1;
-	}
-	return 0;
-}
-
 // Interprets packet
 _vifT void vifTransferLoop(u32* &data) {
 	vifStruct& vifX = GetVifX;
 
 	u32& pSize = vifX.vifpacketsize;
-	int  iBit  = vifX.cmd >> 7;
+	
 	int ret = 0;
 
 	vifXRegs.stat.VPS |= VPS_TRANSFERRING;
@@ -58,11 +36,19 @@ _vifT void vifTransferLoop(u32* &data) {
 	while (pSize > 0 && !vifX.vifstalled) {
 
 		if(!vifX.cmd) { // Get new VifCode
-			
+
+			if(!vifXRegs.err.MII)
+			{
+				if(vifX.irq && !CHECK_VIF1STALLHACK) 
+					break;
+
+				vifX.irq      = data[0] >> 31;
+			}
+
 			vifXRegs.code = data[0];
 			vifX.cmd	  = data[0] >> 24;
-			iBit		  = data[0] >> 31;
-
+			
+			
 			//VIF_LOG("New VifCMD %x tagsize %x", vifX.cmd, vifX.tag.size);
 			if (IsDevBuild && SysTrace.EE.VIFcode.IsActive()) {
 				// Pass 2 means "log it"
@@ -73,10 +59,7 @@ _vifT void vifTransferLoop(u32* &data) {
 		ret = vifCmdHandler[idx][vifX.cmd & 0x7f](vifX.pass, data);
 		data   += ret;
 		pSize  -= ret;
-		if (analyzeIbit<idx>(data, iBit)) break;
 	}
-
-	if (pSize) vifX.vifstalled = true;
 }
 
 _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {

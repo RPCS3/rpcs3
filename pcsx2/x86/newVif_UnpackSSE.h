@@ -34,12 +34,15 @@ class VifUnpackSSE_Base
 public:
 	bool			usn;			// unsigned flag
 	bool			doMask;			// masking write enable flag
+	int				UnpkLoopIteration;
+	int				UnpkNoOfIterations;
+
 
 protected:
 	xAddressVoid	dstIndirect;
 	xAddressVoid	srcIndirect;
 	xRegisterSSE	workReg;
-	xRegisterSSE	destReg;
+	xRegisterSSE	destReg;	
 
 public:
 	VifUnpackSSE_Base();
@@ -105,7 +108,7 @@ class VifUnpackSSE_Dynarec : public VifUnpackSSE_Base
 public:
 	bool			isFill;
 	int				doMode;			// two bit value representing... something!
-
+	
 protected:
 	const nVifStruct&	v;			// vif0 or vif1
 	const nVifBlock&	vB;			// some pre-collected data from VifStruct
@@ -126,7 +129,9 @@ public:
 
 	virtual bool IsUnmaskedOp() const{ return !doMode && !doMask; }
 
+	void ModUnpack( int upknum, bool PostOp );
 	void CompileRoutine();
+	
 
 protected:
 	virtual void doMaskWrite(const xRegisterSSE& regX) const;

@@ -257,12 +257,14 @@ static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 		vu1Thread.WriteMicroMem(addr, (u8*)data, size*4);
 		return;
 	}
-	if (memcmp_mmx(VUx.Micro + addr, data, size*4)) {
+	//The compare is pretty much a waste of time, likelyhood is that the program isnt there, thats why its copying it.
+	//Faster without.
+	//if (memcmp_mmx(VUx.Micro + addr, data, size*4)) {
 		// Clear VU memory before writing!
 		if (!idx)  CpuVU0->Clear(addr, size*4);
 		else	   CpuVU1->Clear(addr, size*4);
-		memcpy_fast(VUx.Micro + addr, data, size*4);
-	}
+		memcpy_aligned(VUx.Micro + addr, data, size*4); //from tests, memcpy is 1fps faster on Grandia 3 than memcpy_fast
+	//}
 }
 
 vifOp(vifCode_MPG) {
@@ -381,14 +383,6 @@ vifOp(vifCode_Nop) {
 	pass1 { 
 		GetVifX.cmd = 0;
 		GetVifX.pass = 0;
-		/*if(idx && vif1ch.chcr.STR == true)
-		{
-			//Some games use a huge stream of NOPS to wait for a GIF packet to start, alas the way PCSX2 works it never starts
-			//So the mask can go on before the packet continues, causing desync.
-
-			if(((data[1] >> 24) & 0x7f) == 0x6)  //Look in to the future and see if we have a mask path 3 command (NFSU)
-				GetVifX.vifstalled = true; //Stall if we do to get the timing right.
-		}*/
 	}
 	pass3 { VifCodeLog("Nop"); }
 	return 1;

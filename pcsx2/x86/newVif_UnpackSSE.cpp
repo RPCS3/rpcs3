@@ -25,7 +25,6 @@
 //static __pagealigned u8 nVifUpkExec[__pagesize*4];
 static RecompiledCodeReserve* nVifUpkExec = NULL;
 
-
 // Merges xmm vectors without modifying source reg
 void mergeVectors(xRegisterSSE dest, xRegisterSSE src, xRegisterSSE temp, int xyzw) {
 	if (x86caps.hasStreamingSIMD4Extensions  || (xyzw==15)
@@ -33,7 +32,7 @@ void mergeVectors(xRegisterSSE dest, xRegisterSSE src, xRegisterSSE temp, int xy
 		mVUmergeRegs(dest, src, xyzw);
 	}
 	else {
-		xMOVAPS(temp, src);
+		if(temp != src) xMOVAPS(temp, src); //Sometimes we don't care if the source is modified and is temp reg.
 		mVUmergeRegs(dest, temp, xyzw);
 	}
 }
@@ -61,7 +60,7 @@ void VifUnpackSSE_Base::xShiftR(const xRegisterSSE& regX, int n) const {
 
 void VifUnpackSSE_Base::xPMOVXX8(const xRegisterSSE& regX) const {
 	if (usn)	xPMOVZX.BD(regX, ptr32[srcIndirect]);
-	else		xPMOVSX.BD(regX, ptr32[srcIndirect]);
+	else		xPMOVSX.BD(regX, ptr32[srcIndirect]);	
 }
 
 void VifUnpackSSE_Base::xPMOVXX16(const xRegisterSSE& regX) const {
@@ -70,37 +69,87 @@ void VifUnpackSSE_Base::xPMOVXX16(const xRegisterSSE& regX) const {
 }
 
 void VifUnpackSSE_Base::xUPK_S_32() const {
-	xMOV32     (workReg, ptr32[srcIndirect]);
-	xPSHUF.D   (destReg, workReg, _v0);
+
+	switch(UnpkLoopIteration)  
+	{	
+		case 0:
+			xMOV128    (workReg, ptr32[srcIndirect]);
+			xPSHUF.D   (destReg, workReg, _v0);
+			break;
+		case 1:
+			xPSHUF.D   (destReg, workReg, _v1);
+			break;
+		case 2:
+			xPSHUF.D   (destReg, workReg, _v2);
+			break;
+		case 3:
+			xPSHUF.D   (destReg, workReg, _v3);
+			break;
+	}
+	
 }
 
 void VifUnpackSSE_Base::xUPK_S_16() const {
-	if (x86caps.hasStreamingSIMD4Extensions) 
+
+	if (!x86caps.hasStreamingSIMD4Extensions) 
 	{
-		xPMOVXX16  (workReg);
+			xMOV16     (workReg, ptr32[srcIndirect]);
+			xPUNPCK.LWD(workReg, workReg);
+			xShiftR    (workReg, 16);
+
+			xPSHUF.D   (destReg, workReg, _v0);
+			return;
 	}
-	else 
-	{
-		xMOV16     (workReg, ptr32[srcIndirect]);
-		xPUNPCK.LWD(workReg, workReg);
-		xShiftR    (workReg, 16);
+
+	switch(UnpkLoopIteration)  
+	{	
+		case 0:
+			xPMOVXX16  (workReg);
+			xPSHUF.D   (destReg, workReg, _v0);
+			break;
+		case 1:
+			xPSHUF.D   (destReg, workReg, _v1);
+			break;
+		case 2:
+			xPSHUF.D   (destReg, workReg, _v2);
+			break;
+		case 3:
+			xPSHUF.D   (destReg, workReg, _v3);
+			break;
 	}
-	xPSHUF.D   (destReg, workReg, _v0);
+	
 }
 
 void VifUnpackSSE_Base::xUPK_S_8() const {
-	if (x86caps.hasStreamingSIMD4Extensions) 
-	{
-		xPMOVXX8   (workReg);
-	}
-	else 
+	
+	if (!x86caps.hasStreamingSIMD4Extensions) 
 	{
 		xMOV8      (workReg, ptr32[srcIndirect]);
 		xPUNPCK.LBW(workReg, workReg);
 		xPUNPCK.LWD(workReg, workReg);
 		xShiftR    (workReg, 24);
+
+		xPSHUF.D   (destReg, workReg, _v0);
+		return;
 	}
-	xPSHUF.D   (destReg, workReg, _v0);
+
+	switch(UnpkLoopIteration)  
+	{	
+		case 0:
+			xPMOVXX8   (workReg);
+			xPSHUF.D   (destReg, workReg, _v0);
+			break;
+		case 1:
+			xPSHUF.D   (destReg, workReg, _v1);
+			break;
+		case 2:
+			xPSHUF.D   (destReg, workReg, _v2);
+			break;
+		case 3:
+			xPSHUF.D   (destReg, workReg, _v3);
+			break;
+	}
+	
 }
 
 // The V2 + V3 unpacks have freaky behaviour, the manual claims "indeterminate".
@@ -109,44 +158,75 @@ void VifUnpackSSE_Base::xUPK_S_8() const {
 // I have commented after each shuffle to show what data is going where - Ref
 
 void VifUnpackSSE_Base::xUPK_V2_32() const {
-	xMOV64     (destReg, ptr32[srcIndirect]);
-	xPSHUF.D   (destReg, destReg, 0x44); //v1v0v1v0
+
+	if(UnpkLoopIteration == 0) 
+	{	
+		xMOV128     (workReg, ptr32[srcIndirect]);
+		xPSHUF.D   (destReg, workReg, 0x44); //v1v0v1v0
+	}
+	else
+	{
+		xPSHUF.D   (destReg, workReg, 0xEE); //v3v2v3v2
+	}
+	
 }
 
 void VifUnpackSSE_Base::xUPK_V2_16() const {
-	if (x86caps.hasStreamingSIMD4Extensions) 
+
+	if(UnpkLoopIteration == 0 || !x86caps.hasStreamingSIMD4Extensions)
 	{
-		xPMOVXX16  (destReg);
+		if (x86caps.hasStreamingSIMD4Extensions) 
+		{
+			xPMOVXX16  (workReg);
+		
+		}
+		else 
+		{
+			xMOV32     (workReg, ptr32[srcIndirect]);
+			xPUNPCK.LWD(workReg, workReg);
+			xShiftR    (workReg, 16);
+		}
+		xPSHUF.D   (destReg, workReg, 0x44); //v1v0v1v0
 	}
-	else 
+	else
 	{
-		xMOV32     (destReg, ptr32[srcIndirect]);
-		xPUNPCK.LWD(destReg, destReg);
-		xShiftR    (destReg, 16);
+		xPSHUF.D   (destReg, workReg, 0xEE); //v3v2v3v2
 	}
-	xPSHUF.D   (destReg, destReg, 0x44); //v1v0v1v0
+	
+	
 }
 
 void VifUnpackSSE_Base::xUPK_V2_8() const {
-	if (x86caps.hasStreamingSIMD4Extensions) 
+
+	if(UnpkLoopIteration == 0 || !x86caps.hasStreamingSIMD4Extensions)
 	{
-		xPMOVXX8   (destReg);
+		if (x86caps.hasStreamingSIMD4Extensions) 
+		{
+			xPMOVXX8   (workReg);
+		}
+		else 
+		{
+			xMOV16     (workReg, ptr32[srcIndirect]);
+			xPUNPCK.LBW(workReg, workReg);
+			xPUNPCK.LWD(workReg, workReg);
+			xShiftR    (workReg, 24);
+		}
+		xPSHUF.D   (destReg, workReg, 0x44); //v1v0v1v0
 	}
-	else 
+	else
 	{
-		xMOV16     (destReg, ptr32[srcIndirect]);
-		xPUNPCK.LBW(destReg, destReg);
-		xPUNPCK.LWD(destReg, destReg);
-		xShiftR    (destReg, 24);
+		xPSHUF.D   (destReg, workReg, 0xEE); //v3v2v3v2
 	}
-	xPSHUF.D   (destReg, destReg, 0x44); //v1v0v1v0
+	
 }
 
 void VifUnpackSSE_Base::xUPK_V3_32() const {
+
 	xMOV128    (destReg, ptr128[srcIndirect]);
 }
 
 void VifUnpackSSE_Base::xUPK_V3_16() const {
+
 	if (x86caps.hasStreamingSIMD4Extensions) 
 	{
 		xPMOVXX16  (destReg);
@@ -160,6 +240,7 @@ void VifUnpackSSE_Base::xUPK_V3_16() const {
 }
 
 void VifUnpackSSE_Base::xUPK_V3_8() const {
+
 	if (x86caps.hasStreamingSIMD4Extensions) 
 	{
 		xPMOVXX8   (destReg);
@@ -174,10 +255,12 @@ void VifUnpackSSE_Base::xUPK_V3_8() const {
 }
 
 void VifUnpackSSE_Base::xUPK_V4_32() const {
+
 	xMOV128    (destReg, ptr32[srcIndirect]);
 }
 
 void VifUnpackSSE_Base::xUPK_V4_16() const {
+
 	if (x86caps.hasStreamingSIMD4Extensions) 
 	{
 		xPMOVXX16  (destReg);
@@ -191,6 +274,7 @@ void VifUnpackSSE_Base::xUPK_V4_16() const {
 }
 
 void VifUnpackSSE_Base::xUPK_V4_8() const {
+
 	if (x86caps.hasStreamingSIMD4Extensions) 
 	{
 		xPMOVXX8   (destReg);
@@ -205,6 +289,7 @@ void VifUnpackSSE_Base::xUPK_V4_8() const {
 }
 
 void VifUnpackSSE_Base::xUPK_V4_5() const {
+
 	xMOV16		(workReg, ptr32[srcIndirect]);
 	xPSHUF.D	(workReg, workReg, _v0);
 	xPSLL.D		(workReg, 3);			// ABG|R5.000
