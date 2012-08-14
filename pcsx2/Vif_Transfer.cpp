@@ -83,27 +83,28 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 
 	vifX.irqoffset = transferred % 4; // cannot lose the offset
 
-	if (!TTE) {// *WARNING* - Tags CAN have interrupts! so lets just ignore the dma modifying stuffs (GT4)
+	if (vifX.irq && vifX.cmd == 0) {
+		//DevCon.WriteLn("Vif IRQ!");
+		if(((vifXRegs.code >> 24) & 0x7f) != 0x7) {
+			vifXRegs.stat.VIS = true; // Note: commenting this out fixes WALL-E?			
+		}	
+		//Always needs to be set to return to the correct offset if there is data left.
+		vifX.vifstalled = true;
+	}	
+
+	if (!TTE) // *WARNING* - Tags CAN have interrupts! so lets just ignore the dma modifying stuffs (GT4)
+	{
 		transferred  = transferred >> 2;
 		vifXch.madr +=(transferred << 4);
 		vifXch.qwc  -= transferred;
+
 		if (vifXch.chcr.STR) hwDmacSrcTadrInc(vifXch);
+
 		if(!vifXch.qwc) {
 			vifX.inprogress &= ~0x1;
 			vifX.vifstalled = false;
 		}
 	}
-	else {
-		if (!vifX.irqoffset) vifX.vifstalled = false;
-	}
-
-	if (vifX.irq && vifX.cmd == 0) {
-		//DevCon.WriteLn("Vif IRQ!");
-		if(((vifXRegs.code >> 24) & 0x7f) != 0x7) {
-			vifXRegs.stat.VIS = true; // Note: commenting this out fixes WALL-E?
-			vifX.vifstalled = true;
-		}		
-	}	
 
 	return !vifX.vifstalled;
 }
