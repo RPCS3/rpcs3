@@ -157,7 +157,7 @@ FixedInt<Precision>& FixedInt<Precision>::SetFraction( u32 fracpart )
 template< int Precision >
 wxString FixedInt<Precision>::ToString() const
 {
-	return wxsFormat( L"%d.%d", GetWhole(), (GetFraction() * 100) / Precision );
+	return wxsFormat( L"%d.%02d", GetWhole(), (GetFraction() * 100) / Precision );
 }
 
 template< int Precision >
@@ -167,7 +167,8 @@ wxString FixedInt<Precision>::ToString( int fracDigits ) const
 
 	pxAssert( fracDigits <= 7 );		// higher numbers would just cause overflows and bad mojo.
 	int mulby = (int)pow( 10.0, fracDigits );
-	return wxsFormat( L"%d.%d", GetWhole(), (GetFraction() * mulby) / Precision );
+	wxString fmt=wxsFormat(L"%%d.%%0%dd", fracDigits);
+	return wxsFormat( fmt, GetWhole(), (GetFraction() * mulby) / Precision );
 }
 
 template< int Precision >
