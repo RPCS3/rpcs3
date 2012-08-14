@@ -151,6 +151,7 @@ enum MenuIdentifiers
 	MenuId_Website,				// Visit our awesome website!
 	MenuId_Profiler,			// Enable profiler
 	MenuId_Console,				// Enable console
+	MenuId_ChangeLang,			// Change language (resets first time wizard to show on next start)
 	MenuId_Console_Stdio,		// Enable Stdio
 
 	// Debug Subsection
@@ -545,6 +546,7 @@ public:
 	void WipeUserModeSettings();
 	bool TestUserPermissionsRights( const wxDirName& testFolder, wxString& createFailedStr, wxString& accessFailedStr );
 	void EstablishAppUserMode();
+	void ForceFirstTimeWizardOnNextRun();
 
 	wxConfigBase* OpenInstallSettingsFile();
 	wxConfigBase* TestForPortableInstall();

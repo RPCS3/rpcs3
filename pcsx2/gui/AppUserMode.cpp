@@ -262,6 +262,17 @@ wxConfigBase* Pcsx2App::OpenInstallSettingsFile()
 }
 
 
+void Pcsx2App::ForceFirstTimeWizardOnNextRun()
+{
+	ScopedPtr<wxConfigBase> conf_install;
+
+	conf_install = TestForPortableInstall();
+	if (!conf_install)
+		conf_install = OpenInstallSettingsFile();
+
+	conf_install->Write( L"RunWizard", true );
+}
+
 void Pcsx2App::EstablishAppUserMode()
 {
 	ScopedPtr<wxConfigBase> conf_install;

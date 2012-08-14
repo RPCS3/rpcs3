@@ -235,6 +235,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_Debug_Logging,		Menu_Debug_Logging_Click );
 
 	ConnectMenu( MenuId_Console,			Menu_ShowConsole );
+	ConnectMenu( MenuId_ChangeLang,			Menu_ChangeLang );
 	ConnectMenu( MenuId_Console_Stdio,		Menu_ShowConsole_Stdio );
 
 	ConnectMenu( MenuId_About,				Menu_ShowAboutBox );
@@ -322,6 +323,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	, m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) )
 
 	, m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, _("Show Console"), wxEmptyString, wxITEM_CHECK ) )
+	, m_MenuItem_ChangeLang( *new wxMenuItem( &m_menuMisc, MenuId_ChangeLang, L"Change Language", wxEmptyString, wxITEM_CHECK ) )	// Always in English
 	, m_MenuItem_Console_Stdio( *new wxMenuItem( &m_menuMisc, MenuId_Console_Stdio, _("Console to Stdio"), wxEmptyString, wxITEM_CHECK ) )
 
 {
@@ -502,6 +504,10 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	//m_menuMisc.Append(MenuId_Website,			_("Visit Website..."),
 	//	_("Opens your web-browser to our favorite website."));
 	m_menuMisc.Append(MenuId_About,				_("About...") );
+
+	m_menuMisc.AppendSeparator();
+	m_menuMisc.Append( &m_MenuItem_ChangeLang );
+
 #ifdef PCSX2_DEVBUILD
 	//m_menuDebug.Append(MenuId_Debug_Open,		_("Open Debug Window..."),	wxEmptyString);
 	//m_menuDebug.Append(MenuId_Debug_MemoryDump,	_("Memory Dump..."),		wxEmptyString);

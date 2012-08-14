@@ -568,6 +568,19 @@ void MainEmuFrame::Menu_ShowConsole(wxCommandEvent &event)
 	wxGetApp().ProgramLog_PostEvent( evt );
 }
 
+void MainEmuFrame::Menu_ChangeLang(wxCommandEvent &event) // Always in English
+{
+	Msgbox::Alert ( L"Please restart PCSX2.\n"
+					L"\n"
+					L"First-Time-Wizard will then appear, where you can change the language.\n"
+					L"\n"
+					L"(You can keep other settings by choosing 'Import' when prompted)"
+					 );
+
+	wxGetApp().ForceFirstTimeWizardOnNextRun();
+}
+
+
 void MainEmuFrame::Menu_ShowConsole_Stdio(wxCommandEvent &event)
 {
 	g_Conf->EmuOptions.ConsoleToStdio = GetMenuBar()->IsChecked( MenuId_Console_Stdio );

@@ -126,6 +126,7 @@ protected:
 	wxMenu&			m_SaveStatesSubmenu;
 
 	wxMenuItem&		m_MenuItem_Console;
+	wxMenuItem&		m_MenuItem_ChangeLang;
 	wxMenuItem&		m_MenuItem_Console_Stdio;
 
 	PerPluginMenuInfo	m_PluginMenuPacks[PluginId_Count];
@@ -203,6 +204,7 @@ protected:
 	void Menu_Debug_Logging_Click(wxCommandEvent &event);
 
 	void Menu_ShowConsole(wxCommandEvent &event);
+	void Menu_ChangeLang(wxCommandEvent &event);
 	void Menu_ShowConsole_Stdio(wxCommandEvent &event);
 	void Menu_ShowAboutBox(wxCommandEvent &event);
 
