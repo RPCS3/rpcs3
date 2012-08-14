@@ -263,7 +263,7 @@ static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 		// Clear VU memory before writing!
 		if (!idx)  CpuVU0->Clear(addr, size*4);
 		else	   CpuVU1->Clear(addr, size*4);
-		memcpy_aligned(VUx.Micro + addr, data, size*4); //from tests, memcpy is 1fps faster on Grandia 3 than memcpy_fast
+		memcpy_fast(VUx.Micro + addr, data, size*4); //from tests, memcpy is 1fps faster on Grandia 3 than memcpy_fast
 	//}
 }
 

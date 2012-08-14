@@ -282,10 +282,14 @@ static __ri void DmaExec( void (*func)(), u32 mem, u32 value )
 template< uint page >
 __fi u32 dmacRead32( u32 mem )
 {
-	// Fixme: OPH hack. Toggle the flag on each GIF_STAT access. (rama)
+	// Fixme: OPH hack. Toggle the flag on GIF_STAT access. (rama)
 	if (IsPageFor(mem) && (mem == GIF_STAT) && CHECK_OPHFLAGHACK)
 	{
-		gifRegs.stat.OPH = !gifRegs.stat.OPH;
+		static unsigned counter = 1;
+		if (++counter == 8)
+			counter = 2;
+		// Set OPH and APATH from counter, cycling paths and alternating OPH
+		return gifRegs.stat._u32 & ~(7 << 9) | (counter & 1 ? counter << 9 : 0);
 	}
 	
 	return psHu32(mem);
