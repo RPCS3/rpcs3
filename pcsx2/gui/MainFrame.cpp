@@ -323,7 +323,6 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	, m_SaveStatesSubmenu( *MakeStatesSubMenu( MenuId_State_Save01 ) )
 
 	, m_MenuItem_Console( *new wxMenuItem( &m_menuMisc, MenuId_Console, _("Show Console"), wxEmptyString, wxITEM_CHECK ) )
-	, m_MenuItem_ChangeLang( *new wxMenuItem( &m_menuMisc, MenuId_ChangeLang, L"Change Language", wxEmptyString, wxITEM_CHECK ) )	// Always in English
 	, m_MenuItem_Console_Stdio( *new wxMenuItem( &m_menuMisc, MenuId_Console_Stdio, _("Console to Stdio"), wxEmptyString, wxITEM_CHECK ) )
 
 {
@@ -506,7 +505,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menuMisc.Append(MenuId_About,				_("About...") );
 
 	m_menuMisc.AppendSeparator();
-	m_menuMisc.Append( &m_MenuItem_ChangeLang );
+	m_menuMisc.Append( MenuId_ChangeLang,		L"Change Language" ); // Always in English
 
 #ifdef PCSX2_DEVBUILD
 	//m_menuDebug.Append(MenuId_Debug_Open,		_("Open Debug Window..."),	wxEmptyString);
