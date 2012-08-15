@@ -378,12 +378,15 @@ vec4 sample_4a(vec4 uv)
 {
     vec4 c;
 
+    // XXX
+    // I think .a is related to 8bit texture in alpha channel
+    // Opengl is only 8 bits on red channel. Not sure exactly of the impact
     c.x = sample_c(uv.xy).a;
     c.y = sample_c(uv.zy).a;
     c.z = sample_c(uv.xw).a;
     c.w = sample_c(uv.zw).a;
 
-    return c;
+	return c * 255./256 + 0.5/256;
 }
 
 mat4 sample_4p(vec4 u)
@@ -406,19 +409,21 @@ vec4 sample_color(vec2 st, float q)
     }
 
     vec4 t;
-    if((PS_FMT <= FMT_16) && (PS_WMS < 3) && (PS_WMT < 3))
+    mat4 c;
+    vec2 dd;
+
+    if (PS_LTF == 0 && PS_FMT <= FMT_16 && PS_WMS < 3 && PS_WMT < 3)
     {
-        t = sample_c(clampuv(st));
+        c[0] = sample_c(clampuv(st));
     }
     else
     {
         vec4 uv;
-        vec2 dd;
 
         if(PS_LTF != 0)
         {
             uv = st.xyxy + HalfTexel;
-            dd = fract(uv.xy * WH.zw); 
+            dd = fract(uv.xy * WH.zw);
         }
         else
         {
@@ -427,45 +432,40 @@ vec4 sample_color(vec2 st, float q)
 
         uv = wrapuv(uv);
 
-        mat4 c;
-
         if((PS_FMT & FMT_PAL) != 0)
+        {
             c = sample_4p(sample_4a(uv));
+        }
         else
+        {
             c = sample_4c(uv);
-
-        // PERF: see the impact of the exansion before/after the interpolation
-        for (int i = 0; i < 4; i++) {
-            if((PS_FMT & ~FMT_PAL) == FMT_16)
-            {
-                // FIXME GLSL any only support bvec so try to mix it with notEqual
-                bvec3 rgb_check = notEqual( t.rgb, vec3(0.0f, 0.0f, 0.0f) );
-                t.a = t.a >= 0.5 ? TA.y : ( (PS_AEM == 0) || any(rgb_check) ) ? TA.x : 0.0f; 
-            }
-        }
-
-        if(PS_LTF != 0)
-        {
-            t = mix(mix(c[0], c[1], dd.x), mix(c[2], c[3], dd.x), dd.y);
-        }
-        else
-        {
-            t = c[0];
         }
     }
 
-    if(PS_FMT == FMT_24)
+    // PERF: see the impact of the exansion before/after the interpolation
+    for (uint i = 0; i < 4; i++)
     {
-        // FIXME GLSL any only support bvec so try to mix it with notEqual
-        bvec3 rgb_check = notEqual( t.rgb, vec3(0.0f, 0.0f, 0.0f) );
-        t.a = ( (PS_AEM == 0) || any(rgb_check)  ) ? TA.x : 0.0f;
+        if((PS_FMT & ~FMT_PAL) == FMT_24)
+        {
+            // FIXME GLSL any only support bvec so try to mix it with notEqual
+            bvec3 rgb_check = notEqual( t.rgb, vec3(0.0f, 0.0f, 0.0f) );
+            t.a = ( (PS_AEM == 0) || any(rgb_check)  ) ? TA.x : 0.0f;
+        }
+        else if((PS_FMT & ~FMT_PAL) == FMT_16)
+        {
+            // FIXME GLSL any only support bvec so try to mix it with notEqual
+            bvec3 rgb_check = notEqual( t.rgb, vec3(0.0f, 0.0f, 0.0f) );
+            t.a = t.a >= 0.5 ? TA.y : ( (PS_AEM == 0) || any(rgb_check) ) ? TA.x : 0.0f;
+        }
     }
-    else if(PS_FMT == FMT_16)
+
+    if(PS_LTF != 0)
     {
-        // a bit incompatible with up-scaling because the 1 bit alpha is interpolated
-        // FIXME GLSL any only support bvec so try to mix it with notEqual
-        bvec3 rgb_check = notEqual( t.rgb, vec3(0.0f, 0.0f, 0.0f) );
-        t.a = t.a >= 0.5 ? TA.y : ( (PS_AEM == 0) || any(rgb_check) ) ? TA.x : 0.0f; 
+        t = mix(mix(c[0], c[1], dd.x), mix(c[2], c[3], dd.x), dd.y);
+    }
+    else
+    {
+        t = c[0];
     }
 
     return t;
@@ -533,7 +533,7 @@ void datst()
 
 void atst(vec4 c)
 {
-    float a = trunc(c.a * 255);
+    float a = trunc(c.a * 255 + 0.01);
 
     if(PS_ATST == 0) // never
     {
@@ -546,12 +546,12 @@ void atst(vec4 c)
     else if(PS_ATST == 2 ) // l
     {
         if (PS_SPRITEHACK == 0)
-            if ((AREF - a) < 0.0f)
+            if ((AREF - a - 0.5f) < 0.0f)
                 discard;
     }
     else if(PS_ATST == 3 ) // le
     {
-        if ((AREF - a) < 0.0f)
+        if ((AREF - a + 0.5f) < 0.0f)
             discard;
     }
     else if(PS_ATST == 4) // e
@@ -559,9 +559,14 @@ void atst(vec4 c)
         if ((0.5f - abs(a - AREF)) < 0.0f)
             discard;
     }
-    else if(PS_ATST == 5 || PS_ATST == 6) // ge, g
+    else if(PS_ATST == 5) // ge
     {
-        if ((a-AREF) < 0.0f)
+        if ((a-AREF + 0.5f) < 0.0f)
+            discard;
+    }
+    else if(PS_ATST == 6) // g
+    {
+        if ((a-AREF - 0.5f) < 0.0f)
             discard;
     }
     else if(PS_ATST == 7) // ne

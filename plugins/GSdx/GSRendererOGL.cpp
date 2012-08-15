@@ -30,6 +30,7 @@ GSRendererOGL::GSRendererOGL()
 	m_fba = !!theApp.GetConfig("fba", 1);
 	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0) && !!theApp.GetConfig("UserHacks", 0);
 	UserHacks_WildHack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_WildHack", 0) : 0;
+	UserHacks_AlphaStencil = !!theApp.GetConfig("UserHacks_AlphaStencil", 0) && !!theApp.GetConfig("UserHacks", 0);
 	m_pixelcenter = GSVector2(-0.5f, -0.5f);
 }
 
@@ -318,43 +319,51 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	}
 
 	if(context->TEST.ATE)
-	{
 		ps_sel.atst = context->TEST.ATST;
-
-		switch(ps_sel.atst)
-		{
-		case ATST_LESS:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
-			break;
-		case ATST_GREATER:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
-			break;
-		default:
-			ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
-			break;
-		}
-	}
 	else
-	{
 		ps_sel.atst = ATST_ALWAYS;
+
+	if (context->TEST.ATE && context->TEST.ATST > 1)
+		ps_cb.FogColor_AREF.a = (float)context->TEST.AREF;
+
+	// Destination alpha pseudo stencil hack: use a stencil operation combined with an alpha test
+	// to only draw pixels which would cause the destination alpha test to fail in the future once.
+	// Unfortunately this also means only drawing those pixels at all, which is why this is a hack.
+	// The interaction with FBA in D3D9 is probably less than ideal.
+	if (UserHacks_AlphaStencil && DATE && dev->HasStencil() && om_bsel.wa && (!context->TEST.ATE || context->TEST.ATST == 1))
+	{
+		if (!context->FBA.FBA)
+		{
+			if (context->TEST.DATM == 0)
+				ps_sel.atst = 5; // >=
+			else
+				ps_sel.atst = 2; // <
+			ps_cb.FogColor_AREF.a = (float)0x80;
+		}
+		if (!(context->FBA.FBA && context->TEST.DATM == 1))
+			om_dssel.alpha_stencil = 1;
 	}
 
 	if(tex)
 	{
 		const GSLocalMemory::psm_t &psm = GSLocalMemory::m_psm[context->TEX0.PSM];
+		const GSLocalMemory::psm_t &cpsm = psm.pal > 0 ? GSLocalMemory::m_psm[context->TEX0.CPSM] : psm;
+		bool bilinear = m_filter == 2 ? m_vt.IsLinear() : m_filter != 0;
+		bool simple_sample = !tex->m_palette && cpsm.fmt == 0 && context->CLAMP.WMS < 3 && context->CLAMP.WMT < 3;
 
 		ps_sel.wms = context->CLAMP.WMS;
 		ps_sel.wmt = context->CLAMP.WMT;
+		if (tex->m_palette)
+			ps_sel.fmt = cpsm.fmt | 4;
+		else
+			ps_sel.fmt = cpsm.fmt;
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
-		ps_sel.ltf = m_filter == 2 ? m_vt.IsLinear() : m_filter;
+		ps_sel.ltf = bilinear && !simple_sample;
 		ps_sel.rt = tex->m_target;
-		if (tex->m_palette) {
-			const GSLocalMemory::psm_t &cpsm = GSLocalMemory::m_psm[context->TEX0.CPSM];
-			ps_sel.fmt = cpsm.fmt | 4;
-		} else
-			ps_sel.fmt = psm.fmt;
+		ps_sel.spritehack = tex->m_spritehack_t;
+		ps_sel.point_sampler = !(bilinear && simple_sample);
 
 		int w = tex->m_texture->GetWidth();
 		int h = tex->m_texture->GetHeight();
@@ -384,7 +393,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 		ps_ssel.tau = (context->CLAMP.WMS + 3) >> 1;
 		ps_ssel.tav = (context->CLAMP.WMT + 3) >> 1;
-		ps_ssel.ltf = ps_sel.ltf;
+		ps_ssel.ltf = bilinear && simple_sample;
 	}
 	else
 	{
@@ -427,6 +436,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 			dev->SetupPS(ps_selneg, &ps_cb, ps_ssel);
 
 			dev->DrawIndexedPrimitive();
+			dev->SetupOM(om_dssel, om_bsel, afix);
 		}
 	}
 
@@ -437,19 +447,6 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		static const uint32 iatst[] = {1, 0, 5, 6, 7, 2, 3, 4};
 
 		ps_sel.atst = iatst[ps_sel.atst];
-
-		switch(ps_sel.atst)
-		{
-		case ATST_LESS:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF - 1);
-			break;
-		case ATST_GREATER:
-			ps_cb.FogColor_AREF.a = (float)((int)context->TEST.AREF + 1);
-			break;
-		default:
-			ps_cb.FogColor_AREF.a = (float)(int)context->TEST.AREF;
-			break;
-		}
 
 		dev->SetupPS(ps_sel, &ps_cb, ps_ssel);
 

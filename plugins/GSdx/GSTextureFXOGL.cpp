@@ -254,7 +254,7 @@ void GSDeviceOGL::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, ui
 		if (dssel.date)
 		{
 			dss->EnableStencil();
-			dss->SetStencil(GL_EQUAL, GL_KEEP);
+			dss->SetStencil(GL_EQUAL, dssel.alpha_stencil ? GL_ZERO : GL_KEEP);
 		}
 
 		if(dssel.ztst != ZTST_ALWAYS || dssel.zwe)

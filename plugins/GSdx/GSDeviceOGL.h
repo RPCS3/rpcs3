@@ -380,12 +380,13 @@ class GSDeviceOGL : public GSDevice
 				uint32 colclip:2;
 				uint32 date:2;
 				uint32 spritehack:1;
+				uint32 point_sampler:1;
 			};
 
 			uint32 key;
 		};
 
-		operator uint32() {return key & 0x3ffffff;}
+		operator uint32() {return key & 0xfffffff;}
 
 		PSSelector() : key(0) {}
 	};
@@ -419,12 +420,13 @@ class GSDeviceOGL : public GSDevice
 				uint32 zwe:1;
 				uint32 date:1;
 				uint32 fba:1;
+				uint32 alpha_stencil:1;
 			};
 
 			uint32 key;
 		};
 
-		operator uint32() {return key & 0x1f;}
+		operator uint32() {return key & 0x3f;}
 
 		OMDepthStencilSelector() : key(0) {}
 	};
