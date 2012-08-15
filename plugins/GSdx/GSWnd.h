@@ -55,51 +55,12 @@ public:
 };
 
 #else
-/*
+
 #include <X11/Xlib.h>
-#include <X11/Xatom.h>
-#include <X11/Xutil.h>
 
 class GSWnd
 {
-	Display* m_display;
-	Window m_window;
-
-	bool m_managed; // set true when we're attached to a 3rdparty window that's amanged by the emulator
-	bool m_frame;
-
-public:
-	GSWnd();
-	virtual ~GSWnd();
-
-	bool Create(const string& title, int w, int h);
-	bool Attach(void* handle, bool managed = true) {return false;}
-	void Detach() {}
-	bool IsManaged() const {return m_managed;}
-
-	Display* GetDisplay() {return m_display;}
-	void* GetHandle() {return (void*)m_window;}
-	GSVector4i GetClientRect();
-	bool SetWindowText(const char* title);
-
-	void Show();
-	void Hide();
-	void HideFrame();
-};
-*/
-#include <X11/Xlib.h>
-#ifdef ENABLE_SDL_DEV
-#include "../../3rdparty/SDL-1.3.0-5387/include/SDL.h"
-#include "../../3rdparty/SDL-1.3.0-5387/include/SDL_syswm.h"
-#endif
-
-class GSWnd
-{
-#ifdef ENABLE_SDL_DEV
-	SDL_Window* m_window;
-#else
 	void* m_window;
-#endif
 	Window       m_Xwindow;
 	Display*     m_XDisplay;
 
@@ -122,9 +83,6 @@ public:
 	void* GetHandle() {return (void*)m_Xwindow;}
 	GSVector4i GetClientRect();
 	bool SetWindowText(const char* title);
-#ifdef ENABLE_SDL_DEV
-	void SetWindow(SDL_Window* current_window) { if (current_window) m_window = current_window; }
-#endif
 
 	bool CreateContext(int major, int minor);
 	void AttachContext();

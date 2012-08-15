@@ -29,25 +29,19 @@ set(OptimizationFlags
     -DNDEBUG
     )
 
-if(projectSDL)
-    set(SDLFlags -DENABLE_SDL_DEV)
-else(projectSDL)
-    set(SDLFlags "")
-endif(projectSDL)
-
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-    add_definitions(${CommonFlags} ${SDLFlags} -DOGL_DEBUG -g -Wall)
+    add_definitions(${CommonFlags} -DOGL_DEBUG -g -Wall)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
 if(CMAKE_BUILD_TYPE STREQUAL Devel)
-    add_definitions(${CommonFlags} ${SDLFlags} ${OptimizationFlags} -g -W)
+    add_definitions(${CommonFlags} ${OptimizationFlags} -g -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Devel)
 
 # Release - Build
 if(CMAKE_BUILD_TYPE STREQUAL Release)
-    add_definitions(${CommonFlags} ${SDLFlags} ${OptimizationFlags} -W)
+    add_definitions(${CommonFlags} ${OptimizationFlags} -W)
 endif(CMAKE_BUILD_TYPE STREQUAL Release)
 
 if(XDG_STD)
@@ -72,7 +66,6 @@ set(GSdxSources
     GSCrc.cpp
     GSDevice.cpp
     GSDeviceOGL.cpp
-    GSDeviceSDL.cpp
 	GSDeviceSW.cpp
     GSDeviceNull.cpp
     GSDirtyRect.cpp
@@ -190,9 +183,6 @@ add_library(${Output} SHARED ${GSdxSources} ${GSdxHeaders})
 target_link_libraries(${Output} ${X11_LIBRARIES})
 target_link_libraries(${Output} ${GLEW_LIBRARY})
 target_link_libraries(${Output} ${OPENGL_LIBRARIES})
-if(projectSDL)
-    target_link_libraries(${Output} ${SDL_LIBRARY})
-endif(projectSDL)
 
 if(Linux)
 	target_link_libraries(${Output} ${GTK2_LIBRARIES})
@@ -223,7 +213,7 @@ if(BUILD_REPLAY_LOADERS)
 
 	# We can have separate option for gsdx inside the player. It will only
 	# cost a 2nd rebuild of gsdx...
-	#add_definitions(${CommonFlags} ${SDLFlags} ${OptimizationFlags} -W)
+	#add_definitions(${CommonFlags} ${OptimizationFlags} -W)
 
 	add_library(${Static} STATIC ${GSdxSources} ${GSdxHeaders})
 
@@ -233,9 +223,6 @@ if(BUILD_REPLAY_LOADERS)
 	target_link_libraries(${Static} ${X11_LIBRARIES})
 	target_link_libraries(${Static} ${GLEW_LIBRARY})
 	target_link_libraries(${Static} ${GTK2_LIBRARIES})
-	if(projectSDL)
-	    target_link_libraries(${Static} ${SDL_LIBRARY})
-	endif(projectSDL)
 
 	target_link_libraries(${Replay} ${Static})
 	# Warning others lib must be linked after GSdx...
@@ -243,10 +230,6 @@ if(BUILD_REPLAY_LOADERS)
 	target_link_libraries(${Replay} ${X11_LIBRARIES})
 	target_link_libraries(${Replay} ${GLEW_LIBRARY})
 	target_link_libraries(${Replay} ${GTK2_LIBRARIES})
-	if(projectSDL)
-	    target_link_libraries(${Replay} ${SDL_LIBRARY})
-	endif(projectSDL)
-
 
 	if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 	    target_link_libraries(${Replay} "${USER_CMAKE_LD_FLAGS}")

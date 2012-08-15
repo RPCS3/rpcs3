@@ -31,10 +31,8 @@ find_package(Gettext) # translation tool
 find_package(JPEG)
 find_package(OpenGL)
 # Tell cmake that we use SDL as a library and not as an application
-if(NOT FORCE_INTERNAL_SDL)
-    set(SDL_BUILDING_LIBRARY TRUE)
-    find_package(SDL)
-endif(NOT FORCE_INTERNAL_SDL)
+set(SDL_BUILDING_LIBRARY TRUE)
+find_package(SDL)
 find_package(Subversion)
 # The requirement of wxWidgets is checked in SelectPcsx2Plugins module
 # Does not require the module (allow to compile non-wx plugins)
@@ -43,9 +41,7 @@ find_package(Subversion)
 # set(wxWidgets_CONFIG_OPTIONS --unicode=yes --debug=yes) # In case someone want to debug inside wx
 set(wxWidgets_CONFIG_OPTIONS --unicode=yes)
 find_package(wxWidgets COMPONENTS base core adv)
-if(NOT FORCE_INTERNAL_ZLIB)
-    find_package(ZLIB)
-endif(NOT FORCE_INTERNAL_ZLIB)
+find_package(ZLIB)
 
 ## Use pcsx2 package to find module
 ## Include cg because of zzogl-cg and zerogs
@@ -55,9 +51,7 @@ endif(NOT FORCE_INTERNAL_ZLIB)
 include(FindGlew)
 include(FindLibc)
 include(FindPortAudio)
-if(NOT FORCE_INTERNAL_SOUNDTOUCH)
-    include(FindSoundTouch)
-endif(NOT FORCE_INTERNAL_SOUNDTOUCH)
+include(FindSoundTouch)
 include(FindSparseHash)
 include(FindSparseHash_NEW)
 
@@ -70,36 +64,7 @@ include(FindSparseHash_NEW)
 #----------------------------------------
 #         Fallback on 3rdparty libraries
 #----------------------------------------
-# Note to avoid some conflict with system include, we must include 3rdparty first
-if(NOT ZLIB_FOUND OR FORCE_INTERNAL_ZLIB)
-	# use project one
-	set(projectZLIB TRUE)
-    set(ZLIB_FOUND TRUE)
-    # Set path
-    set(ZLIB_LIBRARIES pcsx2_zlib)
-    include_directories(${PROJECT_SOURCE_DIR}/3rdparty/zlib)
-    message(STATUS "Use internal pcsx2 zlib library")
-endif(NOT ZLIB_FOUND OR FORCE_INTERNAL_ZLIB)
-
-if(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
-	# use project one
-	set(projectSoundTouch TRUE)
-	set(SOUNDTOUCH_FOUND TRUE)
-    # Set path
-	set(SOUNDTOUCH_LIBRARIES pcsx2_SoundTouch)
-    include_directories(${PROJECT_SOURCE_DIR}/3rdparty/soundtouch_linux_include)
-    message(STATUS "Use internal pcsx2 SoundTouch library")
-endif(NOT SOUNDTOUCH_FOUND OR FORCE_INTERNAL_SOUNDTOUCH)
-
-if(NOT SDL_FOUND OR FORCE_INTERNAL_SDL)
-	# use project one
-    set(projectSDL TRUE)
-	set(SDL_FOUND TRUE)
-    # Set path
-    set(SDL_LIBRARY pcsx2_SDL)
-    include_directories(${PROJECT_SOURCE_DIR}/3rdparty/SDL-1.3.0-5387/include)
-    message(STATUS "Use internal pcsx2 SDL library")
-endif(NOT SDL_FOUND OR FORCE_INTERNAL_SDL)
+# Empty
 
 #----------------------------------------
 #		    Use system include (if not 3rdparty one)
@@ -152,14 +117,14 @@ if(PORTAUDIO_FOUND)
 endif(PORTAUDIO_FOUND)
 
 # SDL
-if(SDL_FOUND AND NOT projectSDL)
+if(SDL_FOUND)
 	include_directories(${SDL_INCLUDE_DIR})
-endif(SDL_FOUND AND NOT projectSDL)
+endif(SDL_FOUND)
 
 # SoundTouch
-if(SOUNDTOUCH_FOUND AND NOT projectSoundTouch)
+if(SOUNDTOUCH_FOUND)
 	include_directories(${SOUNDTOUCH_INCLUDE_DIR})
-endif(SOUNDTOUCH_FOUND AND NOT projectSoundTouch)
+endif(SOUNDTOUCH_FOUND)
 
 # SPARSEHASH
 if(SPARSEHASH_FOUND)
@@ -198,6 +163,6 @@ if(wxWidgets_FOUND)
 endif(wxWidgets_FOUND)
 
 # Zlib
-if(ZLIB_FOUND AND NOT projectZLIB)
+if(ZLIB_FOUND)
 	include_directories(${ZLIB_INCLUDE_DIRS})
-endif(ZLIB_FOUND AND NOT projectZLIB)
+endif(ZLIB_FOUND)

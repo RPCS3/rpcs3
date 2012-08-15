@@ -68,11 +68,7 @@ GtkWidget* CreateRenderComboBox()
 			// better use opengl instead of SDL
 			case 6:
 			case 7:
-#ifdef ENABLE_SDL_DEV
-				label += " (deprecated)";
-#else
 				label += " (removed)";
-#endif
 				break;
 
 			// (dev only) for any NULL stuff
@@ -94,10 +90,6 @@ GtkWidget* CreateRenderComboBox()
 
 	switch (theApp.GetConfig("renderer", 0)) {
 		// Note the value are based on m_gs_renderers vector on GSdx.cpp
-#ifdef ENABLE_SDL_DEV
-		case 7 : renderer_box_position = 0; break;
-		case 8 : renderer_box_position = 1; break;
-#endif
 		case 10: renderer_box_position = 2; break;
 		case 11: renderer_box_position = 3; break;
 		case 12: renderer_box_position = 4; break;
@@ -163,7 +155,7 @@ GtkWidget* CreateFilterComboBox()
 void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 {
 	int render_type;
-	bool hardware_render = false, software_render = false, sdl_render = false, null_render = false;
+	bool hardware_render = false, software_render = false, null_render = false;
 	
 	render_type = gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box));
 	hardware_render = ((render_type % 3) == 1);
@@ -443,10 +435,6 @@ bool RunLinuxDialog()
 		if (gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box)) != -1) {
 			// Note the value are based on m_gs_renderers vector on GSdx.cpp
 			switch (gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box))) {
-#ifdef ENABLE_SDL_DEV
-				case 0: theApp.SetConfig("renderer", 7); break;
-				case 1: theApp.SetConfig("renderer", 8); break;
-#endif
 				case 2: theApp.SetConfig("renderer", 10); break;
 				case 3: theApp.SetConfig("renderer", 11); break;
 				case 4: theApp.SetConfig("renderer", 12); break;

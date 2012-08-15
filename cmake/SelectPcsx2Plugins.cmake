@@ -4,16 +4,15 @@
 set(msg_dep_common_libs "check these libraries -> wxWidgets (>=2.8.10), sparsehash (>=1.5)")
 set(msg_dep_pcsx2       "check these libraries -> wxWidgets (>=2.8.10), gtk2 (>=2.16), zlib (>=1.2.4), pcsx2 common libs")
 set(msg_dep_cdvdiso     "check these libraries -> bzip2 (>=1.0.5), gtk2 (>=2.16)")
-set(msg_dep_zerogs      "check these libraries -> glew (>=1.5), opengl, X11, nvidia-cg-toolkit (>=2.1)")
+set(msg_dep_zerogs      "check these libraries -> glew (>=1.6), opengl, X11, nvidia-cg-toolkit (>=2.1)")
 set(msg_dep_gsdx        "check these libraries -> opengl, X11")
 set(msg_dep_onepad      "check these libraries -> sdl (>=1.2)")
-set(msg_dep_zeropad     "check these libraries -> sdl (>=1.2)")
 set(msg_dep_spu2x       "check these libraries -> soundtouch (>=1.5), alsa, portaudio (>=1.9), pcsx2 common libs")
 set(msg_dep_zerospu2    "check these libraries -> soundtouch (>=1.5), alsa")
 if(GLSL_API)
-	set(msg_dep_zzogl       "check these libraries -> glew (>=1.5), jpeg (>=6.2), opengl, X11, pcsx2 common libs")
+	set(msg_dep_zzogl       "check these libraries -> glew (>=1.6), jpeg (>=6.2), opengl, X11, pcsx2 common libs")
 else(GLSL_API)
-	set(msg_dep_zzogl       "check these libraries -> glew (>=1.5), jpeg (>=6.2), opengl, X11, nvidia-cg-toolkit (>=2.1), pcsx2 common libs")
+	set(msg_dep_zzogl       "check these libraries -> glew (>=1.6), jpeg (>=6.2), opengl, X11, nvidia-cg-toolkit (>=2.1), pcsx2 common libs")
 endif(GLSL_API)
 
 #-------------------------------------------------------------------------------
@@ -129,7 +128,6 @@ endif(GTK2_FOUND)
 #---------------------------------------
 # requires: -OpenGL
 #			-X11
-#           -PCSX2 SDL
 #---------------------------------------
 if(OPENGL_FOUND AND X11_FOUND)
     set(GSdx TRUE)

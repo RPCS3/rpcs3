@@ -24,7 +24,6 @@
 #include "GSUtil.h"
 #include "GSRendererSW.h"
 #include "GSRendererNull.h"
-#include "GSDeviceSDL.h"
 #include "GSDeviceNull.h"
 
 #ifdef _WINDOWS
@@ -141,16 +140,6 @@ EXPORT_C_(int) GSinit()
 
 #endif
 
-#ifdef ENABLE_SDL_DEV
-	if(!SDL_WasInit(SDL_INIT_VIDEO))
-	{
-		if(SDL_Init(SDL_INIT_VIDEO) < 0)
-		{
-			return -1;
-		}
-	}
-#endif
-
 	return 0;
 }
 
@@ -161,10 +150,6 @@ EXPORT_C GSshutdown()
 	s_gs = NULL;
 
 	s_renderer = -1;
-
-#ifdef ENABLE_SDL_DEV
-	SDL_Quit();
-#endif
 
 #ifdef _WINDOWS
 
@@ -245,9 +230,6 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 				#ifdef _WINDOWS
 				case 0: dev = new GSDevice9(); break;
 				case 1: dev = new GSDevice11(); break;
-				#endif
-				#ifdef ENABLE_SDL_DEV
-				case 2: dev = new GSDeviceSDL(); break;
 				#endif
 				#ifdef _LINUX
 				case 4: dev = new GSDeviceOGL(); break;

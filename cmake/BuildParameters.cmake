@@ -1,15 +1,12 @@
+### TODO 
+# Hardcode GLSL_SHADER_DIR and GAMEINDEX_DIR. To check that default is fine for everybody
+
 ### Select the build type
 # Use Release/Devel/Debug      : -DCMAKE_BUILD_TYPE=Release|Devel|Debug
 # Enable/disable the stripping : -DCMAKE_BUILD_STRIP=TRUE|FALSE
 # generation .po based on src  : -DCMAKE_BUILD_PO=TRUE|FALSE
 # Rebuild the ps2hw.dat file   : -DREBUILD_SHADER=TRUE
 # Build the Replay Loaders     : -DBUILD_REPLAY_LOADERS=TRUE|FALSE
-
-### Force the choice of 3rd party library in pcsx2 over system libraries
-# Use all         internal lib: -DFORCE_INTERNAL_ALL=TRUE
-# Use soundtouch  internal lib: -DFORCE_INTERNAL_SOUNDTOUCH=TRUE
-# Use zlib        internal lib: -DFORCE_INTERNAL_ZLIB=TRUE
-# Use sdl1.3      internal lib: -DFORCE_INTERNAL_SDL=TRUE # Not supported yet
 # Use GLSL API(else NVIDIA_CG): -DGLSL_API=TRUE
 
 ### GCC optimization options
@@ -54,35 +51,6 @@ if(NOT DEFINED CMAKE_BUILD_PO)
         message(STATUS "Disable the building of po files by default in ${CMAKE_BUILD_TYPE} build !!!")
     endif(CMAKE_BUILD_TYPE STREQUAL "Release")
 endif(NOT DEFINED CMAKE_BUILD_PO)
-
-#-------------------------------------------------------------------------------
-# Select library system vs 3rdparty
-#-------------------------------------------------------------------------------
-if(FORCE_INTERNAL_ALL)
-    set(FORCE_INTERNAL_SOUNDTOUCH TRUE)
-    set(FORCE_INTERNAL_ZLIB TRUE)
-    set(FORCE_INTERNAL_SDL TRUE)
-endif(FORCE_INTERNAL_ALL)
-
-if(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
-    set(FORCE_INTERNAL_SOUNDTOUCH FALSE)
-endif(NOT DEFINED FORCE_INTERNAL_SOUNDTOUCH)
-
-if(NOT DEFINED FORCE_INTERNAL_ZLIB)
-    set(FORCE_INTERNAL_ZLIB FALSE)
-endif(NOT DEFINED FORCE_INTERNAL_ZLIB)
-
-if(NOT DEFINED FORCE_INTERNAL_SDL)
-    set(FORCE_INTERNAL_SDL FALSE)
-endif(NOT DEFINED FORCE_INTERNAL_SDL)
-if (FORCE_INTERNAL_SDL)
-    message(STATUS "Internal SDL is a development snapshot of libsdl 1.3
-    Crashes can be expected and no support will be provided")
-endif (FORCE_INTERNAL_SDL)
-
-if (NOT DEFINED XDG_STD)
-    set(XDG_STD FALSE)
-endif (NOT DEFINED XDG_STD)
 
 #-------------------------------------------------------------------------------
 # Control GCC flags
@@ -181,11 +149,11 @@ if(PACKAGE_MODE)
     endif(NOT DEFINED PLUGIN_DIR)
 
     if(NOT DEFINED GAMEINDEX_DIR)
-        set(GAMEINDEX_DIR "/var/games/pcsx2")
+        set(GAMEINDEX_DIR "${CMAKE_INSTALL_PREFIX}/share/games/pcsx2")
     endif(NOT DEFINED GAMEINDEX_DIR)
 
     if(NOT DEFINED GLSL_SHADER_DIR)
-        set(GLSL_SHADER_DIR "/usr/share/games/pcsx2")
+        set(GLSL_SHADER_DIR "${CMAKE_INSTALL_PREFIX}/share/games/pcsx2")
     endif(NOT DEFINED GLSL_SHADER_DIR)
 
     # Compile all source codes with these 3 defines
@@ -213,3 +181,11 @@ endif(NOT DEFINED REBUILD_SHADER)
 if(NOT DEFINED BUILD_REPLAY_LOADERS)
 	set(BUILD_REPLAY_LOADERS TRUE)
 endif(NOT DEFINED BUILD_REPLAY_LOADERS)
+
+#-------------------------------------------------------------------------------
+# Use PCSX2 default path (not XDG)
+#-------------------------------------------------------------------------------
+if (NOT DEFINED XDG_STD)
+    set(XDG_STD FALSE)
+endif (NOT DEFINED XDG_STD)
+

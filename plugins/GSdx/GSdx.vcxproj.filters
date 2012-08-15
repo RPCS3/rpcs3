@@ -285,9 +285,6 @@
     <ClCompile Include="GSDeviceSW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GSDeviceSDL.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="GSSetupPrimCodeGenerator.x64.avx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -630,9 +627,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSDeviceSW.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GSDeviceSDL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="config.h">

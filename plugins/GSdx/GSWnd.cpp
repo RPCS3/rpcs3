@@ -219,13 +219,6 @@ GSWnd::GSWnd()
 
 GSWnd::~GSWnd()
 {
-#ifdef ENABLE_SDL_DEV
-	if(m_window != NULL && m_managed)
-	{
-		SDL_DestroyWindow(m_window);
-		m_window = NULL;
-	}
-#endif
 	if (m_XDisplay) {
 		XCloseDisplay(m_XDisplay);
 		m_XDisplay = NULL;
@@ -315,16 +308,16 @@ bool GSWnd::Attach(void* handle, bool managed)
 	m_managed = managed;
 
 	m_renderer = theApp.GetConfig("renderer", 0) / 3;
-	if (m_renderer != 2) {
-		m_XDisplay = XOpenDisplay(NULL);
+	assert(m_renderer != 2);
 
-		// Note: 4.2 crash on latest nvidia drivers!
-		if (!CreateContext(3, 3)) return false;
+	m_XDisplay = XOpenDisplay(NULL);
 
-		AttachContext();
+	// Note: 4.2 crash on latest nvidia drivers!
+	if (!CreateContext(3, 3)) return false;
 
-		CheckContext();
-	}
+	AttachContext();
+
+	CheckContext();
 
 	return true;
 }
@@ -333,18 +326,9 @@ void GSWnd::Detach()
 {
 	// Actually the destructor is not called when there is only a GSclose/GSshutdown
 	// The window still need to be closed
-	if (m_renderer == 2) {
-#ifdef ENABLE_SDL_DEV
-		if(m_window != NULL && m_managed)
-		{
-			SDL_DestroyWindow(m_window);
-			m_window = NULL;
-		}
-#endif
-	} else {
-		DetachContext();
-		if (m_context) glXDestroyContext(m_XDisplay, m_context);
-	}
+	DetachContext();
+	if (m_context) glXDestroyContext(m_XDisplay, m_context);
+
 	if (m_XDisplay) {
 		XCloseDisplay(m_XDisplay);
 		m_XDisplay = NULL;
@@ -362,95 +346,46 @@ bool GSWnd::Create(const string& title, int w, int h)
 
 	m_managed = true;
 
-	if (m_renderer == 2) {
-#ifdef ENABLE_SDL_DEV
+	// note this part must be only executed when replaying .gs debug file
+	m_XDisplay = XOpenDisplay(NULL);
 
-#ifdef _LINUX
-		// When you reconfigure the plugins during the play, SDL is shutdown so SDL_GetNumVideoDisplays return 0
-		// and the plugins is badly closed. NOTE: SDL is initialized in SDL_CreateWindow.
-		//
-		// I'm not sure this sanity check is still useful, normally (I hope) SDL_CreateWindow will return a null
-		// hence a false for this current function.
-		// For the moment do an init -- Gregory
-		if(!SDL_WasInit(SDL_INIT_VIDEO))
-			if(SDL_Init(SDL_INIT_VIDEO) < 0) return false;
+	int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
+		GLX_RED_SIZE, 8,
+		GLX_GREEN_SIZE, 8,
+		GLX_BLUE_SIZE, 8,
+		GLX_DEPTH_SIZE, 24,
+		None
+	};
+	XVisualInfo* vi = glXChooseVisual(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl);
 
-		// Sanity check; if there aren't any video displays available, we can't create a window.
-		if (SDL_GetNumVideoDisplays() <= 0) return false;
-#endif
+	/* create a color map */
+	XSetWindowAttributes attr;
+	attr.colormap = XCreateColormap(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
+			vi->visual, AllocNone);
+	attr.border_pixel = 0;
+	attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
+		StructureNotifyMask | SubstructureRedirectMask | SubstructureNotifyMask |
+		EnterWindowMask | LeaveWindowMask | FocusChangeMask ;
 
-		m_window = SDL_CreateWindow(title.c_str(), 100, 100, w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+	// Create a window at the last position/size
+	m_Xwindow = XCreateWindow(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
+			0 , 0 , w, h, 0, vi->depth, InputOutput, vi->visual,
+			CWBorderPixel | CWColormap | CWEventMask, &attr);
 
-		// Get the X window from the newly created window
-		// It would be needed to get the current size
-		SDL_SysWMinfo wminfo;
-		memset(&wminfo, 0, sizeof(wminfo));
+	XMapWindow (m_XDisplay, m_Xwindow);
+	XFree(vi);
 
-		wminfo.version.major = SDL_MAJOR_VERSION;
-		wminfo.version.minor = SDL_MINOR_VERSION;
+	if (!CreateContext(3, 3)) return false;
 
-		SDL_GetWindowWMInfo(m_window, &wminfo);
-		m_Xwindow = wminfo.info.x11.window;
+	AttachContext();
 
-#endif
-		return (m_window != NULL);
-
-	} else {
-
-		// note this part must be only executed when replaying .gs debug file
-		m_XDisplay = XOpenDisplay(NULL);
-
-		int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
-			GLX_RED_SIZE, 8,
-			GLX_GREEN_SIZE, 8,
-			GLX_BLUE_SIZE, 8,
-			GLX_DEPTH_SIZE, 24,
-			None
-		};
-		XVisualInfo* vi = glXChooseVisual(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl);
-
-		/* create a color map */
-		XSetWindowAttributes attr;
-		attr.colormap = XCreateColormap(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
-				vi->visual, AllocNone);
-		attr.border_pixel = 0;
-		attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
-			StructureNotifyMask | SubstructureRedirectMask | SubstructureNotifyMask |
-			EnterWindowMask | LeaveWindowMask | FocusChangeMask ;
-
-		// Create a window at the last position/size
-		m_Xwindow = XCreateWindow(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
-				0 , 0 , w, h, 0, vi->depth, InputOutput, vi->visual,
-				CWBorderPixel | CWColormap | CWEventMask, &attr);
-
-		XMapWindow (m_XDisplay, m_Xwindow);
-		XFree(vi);
-
-		if (!CreateContext(3, 3)) return false;
-
-		AttachContext();
-
-		return (m_Xwindow != 0);
-	}
+	return (m_Xwindow != 0);
 }
 
 Display* GSWnd::GetDisplay()
 {
-#ifdef ENABLE_SDL_DEV
-	SDL_SysWMinfo wminfo;
-
-	memset(&wminfo, 0, sizeof(wminfo));
-
-	wminfo.version.major = SDL_MAJOR_VERSION;
-	wminfo.version.minor = SDL_MINOR_VERSION;
-
-	SDL_GetWindowWMInfo(m_window, &wminfo);
-
-	return wminfo.subsystem == SDL_SYSWM_X11 ? wminfo.info.x11.display : NULL;
-#else
 	// note this part must be only executed when replaying .gs debug file
 	return m_XDisplay;
-#endif
 }
 
 GSVector4i GSWnd::GetClientRect()
@@ -464,17 +399,8 @@ GSVector4i GSWnd::GetClientRect()
     int xDummy;
     int yDummy;
 
-	// In gsopen2, pcsx2 stoles all event (including resize event). SDL is not able to update its structure
-	// so you must do it yourself
-	// In perfect world:
-	// if (m_window) SDL_GetWindowSize(m_window, &w, &h);
-	// In real world...:
 	if (!m_XDisplay) m_XDisplay = XOpenDisplay(NULL);
 	XGetGeometry(m_XDisplay, m_Xwindow, &winDummy, &xDummy, &yDummy, &w, &h, &borderDummy, &depthDummy);
-#ifdef ENABLE_SDL_DEV
-	if (m_renderer == 2)
-		SDL_SetWindowSize(m_window, w, h);
-#endif
 
 	return GSVector4i(0, 0, (int)w, (int)h);
 }
@@ -486,78 +412,36 @@ bool GSWnd::SetWindowText(const char* title)
 {
 	if (!m_managed) return true;
 
-	if (m_renderer == 2) {
-#ifdef ENABLE_SDL_DEV
+	XTextProperty prop;
 
-	// Do not find anyway to check the current fullscreen status
-	// Better than nothing heuristic, check the window position. Fullscreen = (0,0)
-	// if(!(m_window->flags & SDL_WINDOW_FULLSCREEN) ) // Do not compile
-	//
-	// We call SDL_PumpEvents to refresh x and y value.
-	// but we not use this function anyway.
-	// FIXME: it does not feel a good solution -- Gregory
-	// NOte: it might be more thread safe to use a call to XGetGeometry
-		int x,y = 0;
-		SDL_PumpEvents();
-		SDL_GetWindowPosition(m_window, &x, &y);
-		if ( x && y )
-			SDL_SetWindowTitle(m_window, title);
+	memset(&prop, 0, sizeof(prop));
 
-#endif
-	} else {
-		XTextProperty prop;
-
-		memset(&prop, 0, sizeof(prop));
-
-		char* ptitle = (char*)title;
-		if (XStringListToTextProperty(&ptitle, 1, &prop)) {
-			XSetWMName(m_XDisplay, m_Xwindow, &prop);
-		}
-
-		XFree(prop.value);
-		XFlush(m_XDisplay);
+	char* ptitle = (char*)title;
+	if (XStringListToTextProperty(&ptitle, 1, &prop)) {
+		XSetWMName(m_XDisplay, m_Xwindow, &prop);
 	}
+
+	XFree(prop.value);
+	XFlush(m_XDisplay);
 
 	return true;
 }
 
 void GSWnd::Flip()
 {
-	if (m_renderer == 2) {
-#ifdef ENABLE_SDL_DEV
-#if SDL_VERSION_ATLEAST(1,3,0)
-	SDL_GL_SwapWindow(m_window);
-#else
-	SDL_GL_SwapBuffers();
-#endif
-#endif
-	} else {
-		glXSwapBuffers(m_XDisplay, m_Xwindow);
-	}
+	glXSwapBuffers(m_XDisplay, m_Xwindow);
 }
 
 void GSWnd::Show()
 {
-	if (m_renderer == 2) {
-#ifdef ENABLE_SDL_DEV
-		SDL_ShowWindow(m_window);
-#endif
-	} else {
-		XMapRaised(m_XDisplay, m_Xwindow);
-		XFlush(m_XDisplay);
-	}
+	XMapRaised(m_XDisplay, m_Xwindow);
+	XFlush(m_XDisplay);
 }
 
 void GSWnd::Hide()
 {
-	if (m_renderer == 2) {
-#ifdef ENABLE_SDL_DEV
-		SDL_HideWindow(m_window);
-#endif
-	} else {
-		XUnmapWindow(m_XDisplay, m_Xwindow);
-		XFlush(m_XDisplay);
-	}
+	XUnmapWindow(m_XDisplay, m_Xwindow);
+	XFlush(m_XDisplay);
 }
 
 void GSWnd::HideFrame()
