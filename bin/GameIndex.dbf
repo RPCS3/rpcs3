@@ -3751,6 +3751,7 @@ Serial = SLUS-20482
 Name   = Sphinx and the Cursed Mummy
 Region = NTSC-U
 Compat = 5
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLUS-20483
 Name   = WWE Smackdown - Shut Your Mouth
@@ -4134,6 +4135,7 @@ Name   = Buffy the Vampire Slayer - Chaos Bleeds
 Region = NTSC-U
 Compat = 4
 EETimingHack = 1		//garbage in HUD
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLUS-20567
 Name   = P.T.O. IV - Pacific Theater of Operations
@@ -34961,6 +34963,7 @@ Region = PAL-Unk
 Serial = SLES-51831
 Name   = Sphinx and The Cursed Mummy
 Region = PAL-Unk
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLES-51833
 Name   = Premier Manager 2003-2004
@@ -35151,6 +35154,7 @@ Serial = SLES-51890
 Name   = Buffy the Vampire Slayer - Chaos Bleeds
 Region = PAL-Unk
 Compat = 5
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLES-51893
 Name   = Naval Ops - Warship Gunner
