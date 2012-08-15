@@ -65,7 +65,7 @@ fi
 # Launch PCSX2
 if [ -x pcsx2 ]
 then
-    ./pcsx2
+    ./pcsx2 $@
 else
     echo "Error PCSX2 not found"
     echo "Maybe the script was directly 'called'"

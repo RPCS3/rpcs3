@@ -12,20 +12,13 @@ set(TOP_CMAKE_WAS_SOURCED TRUE)
 # Note: disable the failure in package mode
 if(NOT PACKAGE_MODE)
     if(CMAKE_SIZEOF_VOID_P MATCHES "8")
-        if (EXISTS /etc/fedora-release)
-            # Fedora users can install all .i686
-            message(STATUS "
-            Please ensure that you have all 32bits dependency installed (.i686 packages).
-            See http://code.google.com/p/pcsx2/wiki/ChrootAnd64bStatusLinux for more details.")
-        else (EXISTS /etc/fedora-release)
-        message(FATAL_ERROR "
-        PCSX2 does not support a 64-bit environment. Please install a 32-bit chroot or a 32-bit OS.
-        PCSX2 has no plan to support a 64-bit architecture in the future.
+        message(WARNING "
+        PCSX2 does not support a 64-bits environment and has no plan to support a 64-bits architecture in the future.
         It would need a complete rewrite of the core emulator and a lot of time.
 
-        However, when linux distribution properly supports multi-arch packages, it will
-        be at least possible to easily compile and install PCSX2 without too much hassle (the chroot environment).")
-        endif (EXISTS /etc/fedora-release)
+        You can still run a 32-bits binary if you install all 32-bits libraries (runtime and dev).
+
+        Ubuntu users, please upgrade to 12.04.")
     endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
 endif(NOT PACKAGE_MODE)
 
@@ -35,12 +28,19 @@ if(CMAKE_SIZEOF_VOID_P MATCHES "8")
     SET_PROPERTY(GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS OFF)
     # Probably useless but it will not harm
     SET_PROPERTY(GLOBAL PROPERTY COMPILE_DEFINITIONS "-m32")
+
+    
+    # Force the search on 32-bits path.
+    if(EXISTS "/usr/lib32")
+        set(CMAKE_LIBRARY_ARCHITECTURE "../lib32")
+    endif()
+    # Debian/ubuntu drop /usr/lib32
+    if(EXISTS "/usr/lib/i386-linux-gnu")
+        set(CMAKE_LIBRARY_ARCHITECTURE "i386-linux-gnu")
+    endif()
+
 endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
 
-# Use multiarch path if they exists
-if(EXISTS "/usr/lib/i386-linux-gnu")
-    set(CMAKE_LIBRARY_ARCHITECTURE "i386-linux-gnu")
-endif()
 
 # * -fPIC option was removed for multiple reasons.
 #     - Code only supports the x86 architecture.

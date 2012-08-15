@@ -666,6 +666,13 @@ endforeach(res_file IN ITEMS
         ConfigIcon_Appearance ConfigIcon_Cpu ConfigIcon_Gamefixes ConfigIcon_MemoryCard
         ConfigIcon_Paths ConfigIcon_Plugins ConfigIcon_Speedhacks ConfigIcon_Video)
 
+# Suppress all the system-specific predefined macros outside the reserved namespace.
+# Needed when stringifying macros.
+# See issue: 1233
+if(PACKAGE_MODE)
+	SET_SOURCE_FILES_PROPERTIES(gui/AppConfig.cpp PROPERTIES COMPILE_FLAGS "-Wp,-ansi,-U__STRICT_ANSI__")
+endif(PACKAGE_MODE)    
+
 # link target with project internal libraries
 target_link_libraries(${Output} Utilities x86emitter)
 					
