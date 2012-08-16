@@ -97,7 +97,8 @@ __fi void vif0FBRST(u32 value) {
 		cpuRegs.interrupt &= ~1; //Stop all vif0 DMA's
 		psHu64(VIF0_FIFO) = 0;
 		psHu64(VIF0_FIFO + 8) = 0;
-		vif0.vifstalled = false;
+		vif0.vifstalled.enabled = false;
+		vif1.irqoffset.enabled = false;
 		vif0.inprogress = 0;
 		vif0.cmd = 0;
 		vif0.done = true;
@@ -123,7 +124,8 @@ __fi void vif0FBRST(u32 value) {
 		//  just stoppin the VIF (linuz).
 		vif0Regs.stat.VSS = true;
 		vif0Regs.stat.VPS = VPS_IDLE;
-		vif0.vifstalled = true;
+		vif0.vifstalled.enabled = true;
+		vif0.vifstalled.value = VIF_IRQ_STALL;
 	}
 
 	if (value & 0x8) // Cancel Vif Stall.
@@ -138,8 +140,8 @@ __fi void vif0FBRST(u32 value) {
 				    VIF0_STAT_INT | VIF0_STAT_ER0 | VIF0_STAT_ER1);
 		if (cancel)
 		{
-			if (vif0.vifstalled)
-			{
+			if (vif0.vifstalled.enabled && vif0.vifstalled.value == VIF_IRQ_STALL)
+			{				
 				g_vif0Cycles = 0;
 
 				// loop necessary for spiderman
@@ -192,7 +194,8 @@ __fi void vif1FBRST(u32 value) {
 		vif1Regs.err.reset();
 		vif1.inprogress = 0;
 		vif1.cmd = 0;
-		vif1.vifstalled = false;
+		vif1.vifstalled.enabled = false;
+		vif1.irqoffset.enabled = false;
 		vif1Regs.stat.FQC = 0;
 		vif1Regs.stat.clear_flags(VIF1_STAT_FDR | VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS | VIF1_STAT_VPS);
 	}
@@ -206,6 +209,8 @@ __fi void vif1FBRST(u32 value) {
 		vif1Regs.stat.VFS = true;
 		vif1Regs.stat.VPS = VPS_IDLE;
 		cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
+		vif1.vifstalled.enabled = true;
+		vif1.vifstalled.value = VIF_IRQ_STALL;
 		Console.WriteLn("vif1 force break");
 	}
 
@@ -216,7 +221,8 @@ __fi void vif1FBRST(u32 value) {
 		vif1Regs.stat.VSS = true;
 		vif1Regs.stat.VPS = VPS_IDLE;
 		cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-		vif1.vifstalled = true;
+		vif1.vifstalled.enabled = true;
+		vif1.vifstalled.value = VIF_IRQ_STALL;
 	}
 
 	if (FBRST(value).STC) // Cancel Vif Stall.
@@ -234,7 +240,7 @@ __fi void vif1FBRST(u32 value) {
 
 		if (cancel)
 		{
-			if (vif1.vifstalled)
+			if (vif1.vifstalled.enabled && vif1.vifstalled.value == VIF_IRQ_STALL)
 			{
 				g_vif1Cycles = 0;
 				// loop necessary for spiderman

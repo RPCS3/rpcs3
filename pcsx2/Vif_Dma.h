@@ -54,6 +54,11 @@ union tTRXREG {
 	};
 };
 
+struct tVIF_CTRL {
+   bool enabled;
+   u32 value;
+};
+
 // NOTE, if debugging vif stalls, use sega classics, spyro, gt4, and taito
 struct vifStruct {
 	__aligned16 u128 MaskRow;
@@ -71,7 +76,7 @@ struct vifStruct {
 	int irq;
 
 	bool done;
-	bool vifstalled;
+	tVIF_CTRL vifstalled;
 	bool stallontag;
 	bool waitforvu;
 
@@ -81,7 +86,7 @@ struct vifStruct {
 	tTRXREG    TRXREG;
 	u32        GSLastDownloadSize;
 
-	u8  irqoffset; // 32bit offset where next vif code is
+	tVIF_CTRL  irqoffset; // 32bit offset where next vif code is
 	u32 vifpacketsize;
 	u8  inprogress;
 	u8  dmamode;

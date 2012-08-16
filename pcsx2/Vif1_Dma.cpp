@@ -28,7 +28,8 @@ __fi void vif1FLUSH()
 	if(vif1Regs.stat.VEW == true)
 	{
 		vif1.waitforvu = true;
-		vif1.vifstalled = true;
+		vif1.vifstalled.enabled = true;
+		vif1.vifstalled.value = VIF_TIMING_BREAK;
 	}
 }
 
@@ -100,7 +101,8 @@ bool _VIF1chain()
 	if (vif1ch.qwc == 0)
 	{
 		vif1.inprogress &= ~1;
-		vif1.irqoffset = 0;
+		vif1.irqoffset.value = 0;
+		vif1.irqoffset.enabled = false;
 		return true;
 	}
 
@@ -124,8 +126,8 @@ bool _VIF1chain()
 	VIF_LOG("VIF1chain size=%d, madr=%lx, tadr=%lx",
 	        vif1ch.qwc, vif1ch.madr, vif1ch.tadr);
 
-	if (vif1.vifstalled)
-		return VIF1transfer(pMem + vif1.irqoffset, vif1ch.qwc * 4 - vif1.irqoffset, false);
+	if (vif1.irqoffset.enabled)
+		return VIF1transfer(pMem + vif1.irqoffset.value, vif1ch.qwc * 4 - vif1.irqoffset.value, false);
 	else
 		return VIF1transfer(pMem, vif1ch.qwc * 4, false);
 }
@@ -174,27 +176,29 @@ __fi void vif1SetupTransfer()
 
 				VIF_LOG("\tVIF1 SrcChain TTE=1, data = 0x%08x.%08x", masked_tag._u32[3], masked_tag._u32[2]);
 
-				if (vif1.vifstalled)
+				if (vif1.irqoffset.enabled)
 				{
-					ret = VIF1transfer((u32*)&masked_tag + vif1.irqoffset, 4 - vif1.irqoffset, true);  //Transfer Tag on stall
+					ret = VIF1transfer((u32*)&masked_tag + vif1.irqoffset.value, 4 - vif1.irqoffset.value, true);  //Transfer Tag on stall
 					//ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset);  //Transfer Tag on stall
 				}
 				else
 				{
 					//Some games (like killzone) do Tags mid unpack, the nops will just write blank data
 					//to the VU's, which breaks stuff, this is where the 128bit packet will fail, so we ignore the first 2 words
-					vif1.irqoffset = 2;
+					vif1.irqoffset.value = 2;
+					vif1.irqoffset.enabled = true;
 					ret = VIF1transfer((u32*)&masked_tag + 2, 2, true);  //Transfer Tag
 					//ret = VIF1transfer((u32*)ptag + 2, 2);  //Transfer Tag
 				}
 				
-				if (!ret && vif1.irqoffset)
+				if (!ret && vif1.irqoffset.enabled)
 				{
 					vif1.inprogress &= ~1; //Better clear this so it has to do it again (Jak 1)
 					return;        //IRQ set by VIFTransfer
 				}
 			}
-			vif1.irqoffset = 0;
+			vif1.irqoffset.value = 0;
+			vif1.irqoffset.enabled = false;
 
 			vif1.done |= hwDmacSrcChainWithStack(vif1ch, ptag->ID);
 
@@ -225,6 +229,7 @@ __fi void vif1VUFinish()
 	}
 
 	vif1Regs.stat.VEW = false;
+	VIF_LOG("VU1 finished");
 	if(vif1.waitforvu == true)
 	{
 		vif1.waitforvu = false;
@@ -303,6 +308,8 @@ __fi void vif1Interrupt()
 		}
 	}
 
+	vif1.vifstalled.enabled = false;
+
 	//Mirroring change to VIF0
 	if (vif1.cmd) 
 	{
@@ -342,9 +349,9 @@ __fi void vif1Interrupt()
             return;
 	}
 
-	if (vif1.vifstalled && vif1.irq)
+	if (vif1.vifstalled.enabled && vif1.done)
 	{
-		DevCon.WriteLn("VIF1 looping on stall\n");
+		DevCon.WriteLn("VIF1 looping on stall at end\n");
 		CPU_INT(DMAC_VIF1, 0);
 		return; //Dont want to end if vif is stalled.
 	}
@@ -362,7 +369,8 @@ __fi void vif1Interrupt()
 	if (vif1ch.chcr.DIR) vif1Regs.stat.FQC = min(vif1ch.qwc, (u16)16);
 
 	vif1ch.chcr.STR = false;
-	vif1.vifstalled = false;
+	vif1.vifstalled.enabled = false;
+	vif1.irqoffset.enabled = false;
 	g_vif1Cycles = 0;
 	DMA_LOG("VIF1 DMA End");
 	hwDmacIrq(DMAC_VIF1);
@@ -376,12 +384,6 @@ void dmaVIF1()
 	        vif1ch.chcr._u32, vif1ch.madr, vif1ch.qwc,
 	        vif1ch.tadr, vif1ch.asr0, vif1ch.asr1);
 
-//	vif1.done = false;
-	
-	//if(vif1.irqoffset != 0 && vif1.vifstalled == true) DevCon.Warning("Offset on VIF1 start! offset %x, Progress %x", vif1.irqoffset, vif1.vifstalled);
-	/*vif1.irqoffset = 0;
-	vif1.vifstalled = false;	
-	vif1.inprogress = 0;*/
 	g_vif1Cycles = 0;
 
 #ifdef PCSX2_DEVBUILD
@@ -419,6 +421,7 @@ void dmaVIF1()
 			else
 				vif1.dmamode = VIF_NORMAL_TO_MEM_MODE;
 
+			if(vif1.irqoffset.enabled == true && vif1.done == false) DevCon.Warning("Warning! VIF1 starting a Normal transfer with vif offset set (Possible force stop?)");
 			vif1.done = true;
 		}
 
@@ -426,6 +429,7 @@ void dmaVIF1()
 	}
 	else
 	{
+		if(vif1.irqoffset.enabled == true && vif1.done == false) DevCon.Warning("Warning! VIF1 starting a new Chain transfer with vif offset set (Possible force stop?)");
 		vif1.dmamode = VIF_CHAIN_MODE;
 		vif1.done = false;
 		vif1.inprogress &= ~0x1;

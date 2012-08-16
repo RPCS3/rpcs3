@@ -28,7 +28,8 @@ __fi void vif0FLUSH()
 	if(vif0Regs.stat.VEW == true)
 	{
 		vif0.waitforvu = true;
-		vif0.vifstalled = true;
+		vif0.vifstalled.enabled = true;
+		vif0.vifstalled.value = VIF_TIMING_BREAK;
 	}
 	return;
 }
@@ -55,8 +56,8 @@ bool _VIF0chain()
 	VIF_LOG("VIF0chain size=%d, madr=%lx, tadr=%lx",
 	        vif0ch.qwc, vif0ch.madr, vif0ch.tadr);
 
-	if (vif0.vifstalled)
-		return VIF0transfer(pMem + vif0.irqoffset, vif0ch.qwc * 4 - vif0.irqoffset);
+	if (vif0.irqoffset.enabled)
+		return VIF0transfer(pMem + vif0.irqoffset.value, vif0ch.qwc * 4 - vif0.irqoffset.value);
 	else
 		return VIF0transfer(pMem, vif0ch.qwc * 4);
 }
@@ -101,21 +102,22 @@ __fi void vif0SetupTransfer()
 
 				VIF_LOG("\tVIF0 SrcChain TTE=1, data = 0x%08x.%08x", masked_tag._u32[3], masked_tag._u32[2]);
 
-				if (vif0.vifstalled)
+				if (vif0.irqoffset.enabled)
 				{
-					ret = VIF0transfer((u32*)&masked_tag + vif0.irqoffset, 4 - vif0.irqoffset, true);  //Transfer Tag on stall
+					ret = VIF0transfer((u32*)&masked_tag + vif0.irqoffset.value, 4 - vif0.irqoffset.value, true);  //Transfer Tag on stall
 					//ret = VIF0transfer((u32*)ptag + (2 + vif0.irqoffset), 2 - vif0.irqoffset);  //Transfer Tag on stall
 				}
 				else
 				{
 					//Some games (like killzone) do Tags mid unpack, the nops will just write blank data
 					//to the VU's, which breaks stuff, this is where the 128bit packet will fail, so we ignore the first 2 words
-					vif0.irqoffset = 2;
+					vif0.irqoffset.value = 2;
+					vif0.irqoffset.enabled = true;
 					ret = VIF0transfer((u32*)&masked_tag + 2, 2, true);  //Transfer Tag
 					//ret = VIF0transfer((u32*)ptag + 2, 2);  //Transfer Tag
 				}
 				
-				if (!ret && vif0.irqoffset)
+				if (!ret && vif0.irqoffset.enabled)
 				{
 					vif0.inprogress = 0; //Better clear this so it has to do it again (Jak 1)
 					return;        //IRQ set by VIFTransfer
@@ -123,7 +125,8 @@ __fi void vif0SetupTransfer()
 				}
 			}
 
-			vif0.irqoffset = 0;
+			vif0.irqoffset.value = 0;
+			vif0.irqoffset.enabled = false;
 			vif0.done |= hwDmacSrcChainWithStack(vif0ch, ptag->ID);
 
 			if(vif0ch.qwc > 0) vif0.inprogress = 1;
@@ -153,12 +156,13 @@ __fi void vif0VUFinish()
 		return;
 	}
 	vif0Regs.stat.VEW = false;
+	VIF_LOG("VU0 finished");
 	if(vif0.waitforvu == true)
 	{
 		vif0.waitforvu = false;
 		ExecuteVU(0);
 		//Make sure VIF0 isnt already scheduled to spin.
-		if(!(cpuRegs.interrupt & 0x1))
+		if(!(cpuRegs.interrupt & 0x1) && vif0ch.chcr.STR == true)
 			vif0Interrupt();
 	}
 	//DevCon.Warning("VU0 state cleared");
@@ -200,6 +204,9 @@ __fi void vif0Interrupt()
 		//CPU_INT(DMAC_VIF0, 16);
 		return;
 	}
+
+	vif0.vifstalled.enabled = false;
+
 	//Must go after the Stall, incase it's still in progress, GTC africa likes to see it still transferring.
 	if (vif0.cmd) 
 	{
@@ -233,9 +240,9 @@ __fi void vif0Interrupt()
 		return;
 	}
 
-	if (vif0.vifstalled && vif0.irq)
+	if (vif0.vifstalled.enabled && vif0.done)
 	{
-		DevCon.WriteLn("VIF0 looping on stall\n");
+		DevCon.WriteLn("VIF0 looping on stall at end\n");
 		CPU_INT(DMAC_VIF0, 0);
 		return; //Dont want to end if vif is stalled.
 	}
@@ -246,6 +253,8 @@ __fi void vif0Interrupt()
 
 	vif0ch.chcr.STR = false;
 	vif0Regs.stat.FQC = min((u16)0x8, vif0ch.qwc);
+	vif0.vifstalled.enabled = false;
+	vif0.irqoffset.enabled = false;
 	g_vif0Cycles = 0;
 	hwDmacIrq(DMAC_VIF0);
 	vif0Regs.stat.FQC = 0;
@@ -260,15 +269,17 @@ void dmaVIF0()
 	        vif0ch.tadr, vif0ch.asr0, vif0ch.asr1);
 
 	g_vif0Cycles = 0;
-	//if(vif0.irqoffset != 0 && vif0.vifstalled == true) DevCon.Warning("Offset on VIF0 start! offset %x, Progress %x", vif0.irqoffset, vif0.vifstalled);
-	/*vif0.irqoffset = 0;
-	vif0.vifstalled = false;
-	vif0.inprogress = 0;
-	vif0.done = false;*/
+		
 
 	if ((vif0ch.chcr.MOD == NORMAL_MODE) || vif0ch.qwc > 0)   // Normal Mode
 	{
 			vif0.dmamode = VIF_NORMAL_TO_MEM_MODE;
+
+			if(vif0.irqoffset.enabled == true && vif0.done == false)
+			{
+				if(vif0ch.chcr.MOD == NORMAL_MODE)DevCon.Warning("Warning! VIF0 starting a new Normal transfer with vif offset set (Possible force stop?)");
+				else if(vif0ch.qwc == 0) DevCon.Warning("Warning! VIF0 starting a new Chain transfer with vif offset set (Possible force stop?)");
+			}
 
 			vif0.done = false;
 

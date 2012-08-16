@@ -44,7 +44,7 @@ static __fi void vuExecMicro(int idx, u32 addr) {
 	int startcycles = 0;
 	//vifFlush(idx);
 
-	//if(vifX.vifstalled == true) return;
+	//if(vifX.vifstalled.enabled == true) return;
 
 	if (vifRegs.itops  > (idx ? 0x3ffu : 0xffu)) {
 		Console.WriteLn("VIF%d ITOP overrun! %x", idx, vifRegs.itops);
@@ -76,12 +76,14 @@ static __fi void vuExecMicro(int idx, u32 addr) {
 	if (!idx) vu0ExecMicro(addr);
 	else	  vu1ExecMicro(addr);
 
+	///NOTE: Shadowman 2 has SPS with this, uncommenting the correct code fixes it
 	if (!idx) { startcycles = ((VU0.cycle-startcycles) + ( vif0ch.qwc - (vif0.vifpacketsize >> 2) )); CPU_INT(VIF_VU0_FINISH, 1/*startcycles * BIAS*/); }
 	else      { startcycles = ((VU1.cycle-startcycles) + ( vif1ch.qwc - (vif1.vifpacketsize >> 2) )); CPU_INT(VIF_VU1_FINISH, 1/*startcycles * BIAS*/); }
 
 
 	//DevCon.Warning("Ran VU%x, VU0 Cycles %x, VU1 Cycles %x, start %x cycle %x", idx, g_vu0Cycles, g_vu1Cycles, startcycles, VU1.cycle);
-	GetVifX.vifstalled = true;
+	GetVifX.vifstalled.enabled = true;
+	GetVifX.vifstalled.value = VIF_TIMING_BREAK;
 }
 
 void ExecuteVU(int idx)
@@ -135,7 +137,8 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 		if (size != ret) { // Stall if gif didn't process all the data (path2 queued)
 			GUNIT_WARN("Vif %s: Stall! [size=%d][ret=%d]", name, size, ret);
 			//gifUnit.PrintInfo();
-			vif1.vifstalled   = true;
+			vif1.vifstalled.enabled   = true;
+			vif1.vifstalled.value = VIF_TIMING_BREAK;
 			vif1Regs.stat.VGW = true;
 			return 0;
 		}
@@ -168,7 +171,8 @@ vifOp(vifCode_Flush) {
 			GUNIT_WARN("Vif Flush: Stall!");
 			//gifUnit.PrintInfo();
 			vif1Regs.stat.VGW = true;
-			vifX.vifstalled   = true;
+			vifX.vifstalled.enabled   = true;
+			vifX.vifstalled.value = VIF_TIMING_BREAK;
 			return 0;
 		}
 		else vifX.cmd = 0;
@@ -197,14 +201,7 @@ vifOp(vifCode_FlushA) {
 					//p3.state= GIF_PATH_IDLE; // Does any game need this anymore?
 					DevCon.Warning("Vif FlushA - path3 has no more data, but didn't EOP");
 				}
-				/*else { // Path 3 hasn't finished its current gs packet
-					if (gifUnit.stat.APATH != 3 && gifUnit.Path3Masked()) {
-						gifUnit.stat.APATH  = 3; // Hack: Force path 3 to finish (persona 3 needs this)
-						//DevCon.Warning("Vif FlushA - Forcing path3 to finish current packet");
-					}
-					gifInterrupt();    // Feed path3 some gif dma data
-					gifUnit.Execute(); // Execute path3 in-case gifInterrupt() didn't...
-				}*/
+
 				if (p3.state != GIF_PATH_IDLE) {
 					doStall = true; // If path3 still isn't finished...
 				}
@@ -213,7 +210,8 @@ vifOp(vifCode_FlushA) {
 		}
 		if (doStall) {
 			vif1Regs.stat.VGW = true;
-			vifX.vifstalled   = true;
+			vifX.vifstalled.enabled   = true;
+			vifX.vifstalled.value = VIF_TIMING_BREAK;
 			return 0;
 		}
 		else vifX.cmd = 0;
@@ -274,7 +272,7 @@ vifOp(vifCode_MPG) {
 		vifX.tag.addr = (u16)(vifXRegs.code <<  3) & (idx ? 0x3fff : 0xfff);
 		vifX.tag.size = vifNum ? (vifNum*2) : 512;
 		vifFlush(idx);
-		if(vifX.vifstalled == true) return 0;
+		if(vifX.vifstalled.enabled == true) return 0;
 		else
 		{
 			vifX.pass = 1;
@@ -331,7 +329,8 @@ vifOp(vifCode_MSCALF) {
 		if (u32 a = gifUnit.checkPaths(1,1,0)) {
 			GUNIT_WARN("Vif MSCALF: Stall! [%d,%d]", !!(a&1), !!(a&2));
 			vif1Regs.stat.VGW = true;
-			vifX.vifstalled   = true;
+			vifX.vifstalled.enabled   = true;
+			vifX.vifstalled.value = VIF_TIMING_BREAK;
 		}
 		if(vifX.waitforvu == false)
 		{
@@ -396,7 +395,8 @@ vifOp(vifCode_Null) {
 		if (!(vifXRegs.err.ME1)) { // Ignore vifcode and tag mismatch error
 			Console.WriteLn("Vif%d: Unknown VifCmd! [%x]", idx, vifX.cmd);
 			vifXRegs.stat.ER1 = true;
-			vifX.vifstalled = true;
+			vifX.vifstalled.enabled = true;
+			vifX.vifstalled.value = VIF_IRQ_STALL;
 			//vifX.irq++;
 		}
 		vifX.cmd = 0;

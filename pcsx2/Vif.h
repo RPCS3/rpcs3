@@ -83,6 +83,12 @@ enum vif_status
     VPS_TRANSFERRING = 3 // And decompressing.
 };
 
+enum vif_stallreasons
+{
+    VIF_TIMING_BREAK  = 1,
+    VIF_IRQ_STALL	 = 2
+};
+
 //
 // Bitfield Structure
 //

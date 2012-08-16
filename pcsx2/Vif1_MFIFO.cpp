@@ -72,14 +72,14 @@ static __fi bool mfifoVIF1rbTransfer()
 		src = (u32*)PSM(vif1ch.madr);
 		if (src == NULL) return false;
 
-		if (vif1.vifstalled)
-			ret = VIF1transfer(src + vif1.irqoffset, s1 - vif1.irqoffset);
+		if (vif1.irqoffset.enabled)
+			ret = VIF1transfer(src + vif1.irqoffset.value, s1 - vif1.irqoffset.value);
 		else
 			ret = VIF1transfer(src, s1);
 
 		if (ret)
 		{
-			if(vif1.irqoffset != 0) DevCon.Warning("VIF1 MFIFO Offest != 0! vifoffset=%x", vif1.irqoffset);
+			if(vif1.irqoffset.value != 0) DevCon.Warning("VIF1 MFIFO Offest != 0! vifoffset=%x", vif1.irqoffset.value);
             /* and second copy 's2' bytes from 'maddr' to '&data[s1]' */
             vif1ch.madr = maddr;
 
@@ -97,8 +97,8 @@ static __fi bool mfifoVIF1rbTransfer()
 		src = (u32*)PSM(vif1ch.madr);
 		if (src == NULL) return false;
 
-		if (vif1.vifstalled)
-			ret = VIF1transfer(src + vif1.irqoffset, mfifoqwc * 4 - vif1.irqoffset);
+		if (vif1.irqoffset.enabled)
+			ret = VIF1transfer(src + vif1.irqoffset.value, mfifoqwc * 4 - vif1.irqoffset.value);
 		else
 			ret = VIF1transfer(src, mfifoqwc << 2);
 
@@ -138,8 +138,8 @@ static __fi void mfifo_VIF1chain()
 
 		if (pMem == NULL) return;
 
-		if (vif1.vifstalled)
-			VIF1transfer((u32*)pMem + vif1.irqoffset, vif1ch.qwc * 4 - vif1.irqoffset);
+		if (vif1.irqoffset.enabled)
+			VIF1transfer((u32*)pMem + vif1.irqoffset.value, vif1ch.qwc * 4 - vif1.irqoffset.value);
 		else
 			VIF1transfer((u32*)pMem, vif1ch.qwc << 2);
 	}
@@ -154,7 +154,7 @@ void mfifoVIF1transfer(int qwc)
 	if (qwc > 0)
 	{
 		//vifqwc += qwc;
-		SPR_LOG("Added %x qw to mfifo, total now %x - Vif CHCR %x Stalled %x done %x", qwc, vif1ch.chcr._u32, vif1.vifstalled, vif1.done);
+		SPR_LOG("Added %x qw to mfifo,Vif CHCR %x Stalled %x done %x", qwc, vif1ch.chcr._u32, vif1.vifstalled.enabled, vif1.done);
 		if (vif1.inprogress & 0x10)
 		{
 			if(vif1ch.chcr.STR == true && !(cpuRegs.interrupt & (1<<DMAC_MFIFO_VIF)))
@@ -187,28 +187,30 @@ void mfifoVIF1transfer(int qwc)
 
 			VIF_LOG("\tVIF1 SrcChain TTE=1, data = 0x%08x.%08x", masked_tag._u32[3], masked_tag._u32[2]);
 
-			if (vif1.vifstalled)
+			if (vif1.irqoffset.enabled)
 			{
-				ret = VIF1transfer((u32*)&masked_tag + vif1.irqoffset, 4 - vif1.irqoffset, true);  //Transfer Tag on stall
+				ret = VIF1transfer((u32*)&masked_tag + vif1.irqoffset.value, 4 - vif1.irqoffset.value, true);  //Transfer Tag on stall
 				//ret = VIF1transfer((u32*)ptag + (2 + vif1.irqoffset), 2 - vif1.irqoffset);  //Transfer Tag on stall
 			}
 			else
 			{
-				vif1.irqoffset = 2;
+				vif1.irqoffset.value = 2;
+				vif1.irqoffset.enabled = true;
 				ret = VIF1transfer((u32*)&masked_tag + 2, 2, true);  //Transfer Tag
 				//ret = VIF1transfer((u32*)ptag + 2, 2);  //Transfer Tag
 			}
 
-			if (!ret && vif1.irqoffset)
+			if (!ret && vif1.irqoffset.enabled)
 			{
 				vif1.inprogress &= ~1;
 				return;        //IRQ set by VIFTransfer
 				
-			} //else vif1.vifstalled = false;
+			} //else vif1.vifstalled.enabled = false;
 			g_vif1Cycles += 2;
 		}
 		
-		vif1.irqoffset = 0;
+		vif1.irqoffset.value = 0;
+		vif1.irqoffset.enabled = false;
 
         vif1ch.unsafeTransfer(ptag);
 
@@ -305,6 +307,8 @@ void vifMFIFOInterrupt()
 		if(!(vif1.done && vif1ch.qwc == 0))return;
 	}
 
+	vif1.vifstalled.enabled = false;
+
 	if (vif1.done == false || vif1ch.qwc) {
 		switch(vif1.inprogress & 1) {
 			case 0: //Set up transfer
@@ -330,7 +334,8 @@ void vifMFIFOInterrupt()
 		return;
 	} 
 
-	vif1.vifstalled = false;
+	vif1.vifstalled.enabled = false;
+	vif1.irqoffset.enabled = false;
 	vif1.done = 1;
 	g_vif1Cycles = 0;
 	vif1Regs.stat.FQC = min((u16)0x10, vif1ch.qwc);

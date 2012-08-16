@@ -71,7 +71,7 @@ void __fastcall WriteFIFO_VIF0(const mem128_t *value)
 	VIF_LOG("WriteFIFO/VIF0 <- %ls", value->ToString().c_str());
 
 	vif0ch.qwc += 1;
-	if(vif0.irqoffset != 0 && vif0.vifstalled == true) DevCon.Warning("Offset on VIF0 FIFO start!");
+	if(vif0.irqoffset.value != 0 && vif0.vifstalled.enabled == true) DevCon.Warning("Offset on VIF0 FIFO start!");
 	bool ret = VIF0transfer((u32*)value, 4);
 
 	if (vif0.cmd) 
@@ -96,7 +96,7 @@ void __fastcall WriteFIFO_VIF1(const mem128_t *value)
 	if (vif1Regs.stat.test(VIF1_STAT_INT | VIF1_STAT_VSS | VIF1_STAT_VIS | VIF1_STAT_VFS) ) {
 		DevCon.Warning("writing to vif1 fifo when stalled");
 	}
-	if (vif1.irqoffset != 0 && vif1.vifstalled == true) {
+	if (vif1.irqoffset.value != 0 && vif1.vifstalled.enabled == true) {
 		DevCon.Warning("Offset on VIF1 FIFO start!");
 	}
 

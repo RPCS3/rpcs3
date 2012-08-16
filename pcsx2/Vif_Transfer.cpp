@@ -32,8 +32,8 @@ _vifT void vifTransferLoop(u32* &data) {
 
 	vifXRegs.stat.VPS |= VPS_TRANSFERRING;
 	vifXRegs.stat.ER1  = false;
-
-	while (pSize > 0 && !vifX.vifstalled) {
+	if(!idx)VIF_LOG("Starting VIF0 loop, pSize = %x, stalled = %x", pSize, vifX.vifstalled.enabled );
+	while (pSize > 0 && !vifX.vifstalled.enabled) {
 
 		if(!vifX.cmd) { // Get new VifCode
 
@@ -66,11 +66,8 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 	vifStruct& vifX = GetVifX;
 
 	// irqoffset necessary to add up the right qws, or else will spin (spiderman)
-	int transferred = vifX.irqoffset;
-
-	vifX.irqoffset  = 0;
-	vifX.vifstalled = false;
-	vifX.stallontag = false;
+	int transferred = vifX.irqoffset.enabled ? vifX.irqoffset.value : 0;
+	
 	vifX.vifpacketsize = size;
 	vifTransferLoop<idx>(data);
 
@@ -81,15 +78,16 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 	if (!idx) g_vif0Cycles += max(1, (int)((transferred * BIAS) >> 2));
 	else	  g_vif1Cycles += max(1, (int)((transferred * BIAS) >> 2));
 
-	vifX.irqoffset = transferred % 4; // cannot lose the offset
-
+	vifX.irqoffset.value = transferred % 4; // cannot lose the offset
+	
 	if (vifX.irq && vifX.cmd == 0) {
 		//DevCon.WriteLn("Vif IRQ!");
 		if(((vifXRegs.code >> 24) & 0x7f) != 0x7) {
 			vifXRegs.stat.VIS = true; // Note: commenting this out fixes WALL-E?			
 		}	
 		//Always needs to be set to return to the correct offset if there is data left.
-		vifX.vifstalled = true;
+		vifX.vifstalled.enabled = true;
+		vifX.vifstalled.value = VIF_IRQ_STALL;
 	}	
 
 	if (!TTE) // *WARNING* - Tags CAN have interrupts! so lets just ignore the dma modifying stuffs (GT4)
@@ -100,13 +98,22 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 
 		if (vifXch.chcr.STR) hwDmacSrcTadrInc(vifXch);
 
-		if(!vifXch.qwc) {
+		if(!vifXch.qwc) 
 			vifX.inprogress &= ~0x1;
-			vifX.vifstalled = false;
-		}
+		else if(vifX.irqoffset.value != 0) 
+			vifX.irqoffset.enabled = true;
+		else 
+			vifX.irqoffset.enabled = false;
+	}
+	else
+	{
+		if(vifX.irqoffset.value > 1)
+			vifX.irqoffset.enabled = true;
+		else
+			vifX.irqoffset.enabled = false;
 	}
 
-	return !vifX.vifstalled;
+	return !vifX.vifstalled.enabled;
 }
 
 // When TTE is set to 1, MADR and QWC are not updated as part of the transfer.
