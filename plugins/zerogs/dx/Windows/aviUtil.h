@@ -348,7 +348,7 @@ BOOL AVI_Exit()
 static PAVIFILE pfile = NULL;
 static PAVISTREAM ps = NULL;
 static PAVISTREAM psCompressed = NULL;
-static int count = 0;
+static int counter = 0;
 
 
 // Initialization...
@@ -371,7 +371,7 @@ bool START_AVI(const char* file_name)
 
 bool ADD_FRAME_FROM_DIB_TO_AVI(const char* _compressor, int _frameRate, int width, int height, int bits, void* pdata)
 {
-	if(count == 0)
+	if(counter == 0)
 	{
 		if(! AVI_CreateStream(pfile, &ps, _frameRate,
 			width*height/bits,
@@ -398,7 +398,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(const char* _compressor, int _frameRate, int widt
 	}
 
 	HRESULT hr = AVIStreamWrite(psCompressed, // stream pointer
-		count, // time of this frame
+		counter, // time of this frame
 		1, // number to write
 		pdata,
 		width*height/8, // lpbi->biSizeImage, // size of this frame
@@ -413,7 +413,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(const char* _compressor, int _frameRate, int widt
 		return FALSE;
 	}
 
-	count++;
+	counter++;
 	return true;
 }
 
@@ -422,7 +422,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(const char* _compressor, int _frameRate, int widt
 bool ADD_FRAME_FROM_DIB_TO_AVI(HANDLE dib, const char* _compressor, int _frameRate)
 {
 	LPBITMAPINFOHEADER lpbi;
-	if(count == 0)
+	if(counter == 0)
 	{
 		lpbi = (LPBITMAPINFOHEADER)GlobalLock(dib);
 		if(! AVI_CreateStream(pfile, &ps, _frameRate,
@@ -446,7 +446,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(HANDLE dib, const char* _compressor, int _frameRa
 	}
 
 	lpbi = (LPBITMAPINFOHEADER)GlobalLock(dib);
-	if(! AVI_AddFrame(psCompressed, count * 1, lpbi))
+	if(! AVI_AddFrame(psCompressed, counter * 1, lpbi))
 	{
 		//printf("Error - AVI_AddFrame()\n");
 		GlobalUnlock(lpbi);
@@ -454,7 +454,7 @@ bool ADD_FRAME_FROM_DIB_TO_AVI(HANDLE dib, const char* _compressor, int _frameRa
 	}
 
 	GlobalUnlock(lpbi);
-	count++;
+	counter++;
 	return true;
 }
 

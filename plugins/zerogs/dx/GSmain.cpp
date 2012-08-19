@@ -965,7 +965,7 @@ void CALLBACK GSgifTransfer3(u32 *pMem, u32 size)
 	_GSgifTransfer(&gs.path3, pMem, size);
 }
 
-static int count = 0;
+static int counter = 0;
 void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 {
 	pathInfo *path = &gs.path1;
@@ -975,8 +975,8 @@ void CALLBACK GSgifTransfer1(u32 *pMem, u32 addr)
 	addr &= 0x3fff;
 
 #ifdef PCSX2_DEBUG
-	PRIM_LOG("count: %d\n", count);
-	count++;
+	PRIM_LOG("count: %d\n", counter);
+	counter++;
 #endif
 
 	gs.path1.tag.nloop = 0;
