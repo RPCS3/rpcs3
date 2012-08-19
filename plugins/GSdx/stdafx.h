@@ -103,12 +103,16 @@ typedef signed long long int64;
 
 using namespace std;
 
-#if defined(_MSC_VER) && _MSC_VER >= 1500 && _MSC_VER < 1600
+#ifdef _MSC_VER
 
+#if _MSC_VER >= 1500
 	#include <memory>
-
+#if _MSC_VER < 1600
 	using namespace std::tr1;
-
+#else
+	using namespace std;
+#endif
+#endif
 #endif
 
 #ifdef __GNUC__

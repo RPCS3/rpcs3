@@ -93,7 +93,7 @@ enum wxKeyType
 #define WX_DECLARE_LIST_WITH_DECL(elT, liT, decl) \
     WX_DECLARE_LIST_XO(elT*, liT, decl)
 
-#if !defined( __VISUALC__ )
+#if (defined(_MSC_VER) && _MSC_VER >= 1300) || !defined( __VISUALC__ )
 
 template<class T>
 class WXDLLIMPEXP_BASE wxList_SortFunction
@@ -109,7 +109,16 @@ private:
 #define WX_LIST_SORTFUNCTION( elT, f ) wxList_SortFunction<elT>(f)
 #define VC6_WORKAROUND(elT, liT, decl)
 
+#if defined(_MSC_VER) && _MSC_VER >= 1700
+#define WXObjectAllocator(x) std::_Wrap_alloc< wxObjectAllocator< x > >
+#else
+#define WXObjectAllocator(x) wxObjectAllocator< x >
+#endif
+
+
 #else // if defined( __VISUALC__ )
+
+#define WXObjectAllocator(x) wxObjectAllocator< x >
 
 #define WX_LIST_SORTFUNCTION( elT, f ) std::greater<elT>( f )
 #define VC6_WORKAROUND(elT, liT, decl)                                        \
@@ -174,10 +183,10 @@ private:
     };                                                                        \
                                                                               \
     VC6_WORKAROUND(elT, liT, decl)                                            \
-    decl liT : public std::list< elT, wxObjectAllocator< elT > >              \
+    decl liT : public std::list< elT, WXObjectAllocator( elT ) >              \
     {                                                                         \
     private:                                                                  \
-        typedef std::list< elT, wxObjectAllocator< elT > > BaseListType;      \
+        typedef std::list< elT, WXObjectAllocator( elT ) > BaseListType;      \
         static BaseListType EmptyList;                                        \
                                                                               \
         bool m_destroy;                                                       \
@@ -187,7 +196,7 @@ private:
         {                                                                     \
         private:                                                              \
             /* Workaround for broken VC6 nested class name resolution */      \
-            typedef std::list<elT, wxObjectAllocator< elT > >::iterator iterator; \
+            typedef std::list<elT, WXObjectAllocator( elT ) >::iterator iterator; \
             friend class liT;                                                 \
                                                                               \
             iterator m_iter;                                                  \

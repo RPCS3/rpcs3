@@ -172,7 +172,7 @@ protected:
 };
 
 #ifdef _MSC_VER
-	typedef std::list< SysExecEvent*, wxObjectAllocator<SysExecEvent*> > pxEvtList;
+	typedef std::list< SysExecEvent*, WXObjectAllocator(SysExecEvent*) > pxEvtList;
 #else
 	typedef std::list<SysExecEvent*> pxEvtList;
 #endif

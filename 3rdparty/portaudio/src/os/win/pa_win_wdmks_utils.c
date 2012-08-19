@@ -56,7 +56,7 @@
 #include "pa_win_wdmks_utils.h"
 
 #if !defined(PA_WDMKS_NO_KSGUID_LIB) && !defined(PAWIN_WDMKS_NO_KSGUID_LIB)
-    #if (defined(WIN32) && (defined(_MSC_VER) && (_MSC_VER >= 1200))) /* MSC version 6 and above */
+    #if (defined(WIN32) && (defined(_MSC_VER) && (_MSC_VER >= 1200) && (_MSC_VER < 1600))) /* MSC version 6 up to 2008 */
         #pragma comment( lib, "ksguid.lib" )
     #endif
     #define pa_KSDATAFORMAT_TYPE_AUDIO            KSDATAFORMAT_TYPE_AUDIO

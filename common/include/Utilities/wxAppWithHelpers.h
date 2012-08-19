@@ -58,7 +58,7 @@ public:
 };
 
 #ifdef _MSC_VER
-	typedef std::list< wxEvent*, wxObjectAllocator<wxEvent*> > wxEventList;
+	typedef std::list< wxEvent*, WXObjectAllocator(wxEvent*) > wxEventList;
 #else
 	typedef std::list< wxEvent* > wxEventList;
 #endif

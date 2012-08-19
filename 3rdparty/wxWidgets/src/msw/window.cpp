@@ -107,7 +107,9 @@
 #endif
 
 #if !defined __WXWINCE__ && !defined NEED_PBT_H
+#if !defined(_MSC_VER) || _MSC_VER < 1600
     #include <pbt.h>
+#endif
 #endif
 
 #if defined(__WXWINCE__)
