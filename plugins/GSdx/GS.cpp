@@ -549,6 +549,9 @@ EXPORT_C GSvsync(int field)
 
 #endif
 
+#ifdef OGL_MT_HACK
+		s_gs->m_wnd.AttachContext();
+#endif
 		s_gs->VSync(field);
 	}
 	catch (GSDXRecoverableError)
