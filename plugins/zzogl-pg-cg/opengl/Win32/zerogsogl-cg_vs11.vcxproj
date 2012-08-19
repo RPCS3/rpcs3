@@ -1,0 +1,280 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Devel|Win32">
+      <Configuration>Devel</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>ZZOgl-cg</ProjectName>
+    <ProjectGuid>{019773FA-2DAA-4C12-9511-BD2D4EB2A718}</ProjectGuid>
+    <RootNamespace>ZZogl-cg</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\..\common\vsprops\plugin_svnroot.props" />
+    <Import Project="..\..\..\..\common\vsprops\BaseProperties.props" />
+    <Import Project="..\..\..\..\common\vsprops\3rdpartyDeps.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Release.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\..\common\vsprops\plugin_svnroot.props" />
+    <Import Project="..\..\..\..\common\vsprops\BaseProperties.props" />
+    <Import Project="..\..\..\..\common\vsprops\3rdpartyDeps.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Debug.props" />
+    <Import Project="..\..\..\..\common\vsprops\IncrementalLinking.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\..\common\vsprops\plugin_svnroot.props" />
+    <Import Project="..\..\..\..\common\vsprops\BaseProperties.props" />
+    <Import Project="..\..\..\..\common\vsprops\3rdpartyDeps.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Devel.props" />
+    <Import Project="..\..\..\..\common\vsprops\IncrementalLinking.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(ProjectName)-dev</TargetName>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)bin\$(PcsxSubsection)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(PlatformName)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\;$(ProjectRootDir)\ZeroGSShaders\;$(ProjectRootDir)\Win32;$(SvnRootDir)\3rdparty\libjpeg;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;_USRDLL;__i386__;ZEROGS_DEVBUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;Comctl32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>.\zerogs.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\;$(ProjectRootDir)\ZeroGSShaders\;$(ProjectRootDir)\Win32;$(SvnRootDir)\3rdparty\libjpeg;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_USRDLL;ZEROGS_DEVBUILD;_DEBUG;__i386__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;Comctl32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ModuleDefinitionFile>.\zerogs.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>Win32</TargetEnvironment>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\;$(ProjectRootDir)\ZeroGSShaders\;$(ProjectRootDir)\Win32;$(SvnRootDir)\3rdparty\libjpeg;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;_USRDLL;__i386__;ZEROGS_SSE2;RELEASE_TO_PUBLIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;Comctl32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ModuleDefinitionFile>.\zerogs.def</ModuleDefinitionFile>
+      <ImportLibrary>
+      </ImportLibrary>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\GSDump.cpp" />
+    <ClCompile Include="..\ZZClut.cpp" />
+    <ClCompile Include="..\ZZoglDrawing.cpp" />
+    <ClCompile Include="..\ZZoglFlushHack.cpp" />
+    <ClCompile Include="Conf.cpp" />
+    <ClCompile Include="..\GifTransfer.cpp" />
+    <ClCompile Include="..\glprocs.c" />
+    <ClCompile Include="..\GLWin32.cpp" />
+    <ClCompile Include="..\GLWinX11.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\GSmain.cpp" />
+    <ClCompile Include="..\HostMemory.cpp" />
+    <ClCompile Include="..\Mem.cpp" />
+    <ClCompile Include="..\Mem_Swizzle.cpp" />
+    <ClCompile Include="..\Mem_Tables.cpp" />
+    <ClCompile Include="..\rasterfont.cpp" />
+    <ClCompile Include="..\Regs.cpp" />
+    <ClCompile Include="..\Profile.cpp" />
+    <ClCompile Include="..\targets.cpp" />
+    <ClCompile Include="Win32.cpp" />
+    <ClCompile Include="..\x86.cpp" />
+    <ClCompile Include="..\zerogs.cpp" />
+    <ClCompile Include="..\zpipe.cpp" />
+    <ClCompile Include="..\ZZHacks.cpp" />
+    <ClCompile Include="..\ZZKeyboard.cpp" />
+    <ClCompile Include="..\ZZLog.cpp" />
+    <ClCompile Include="..\ZZoglCreate.cpp" />
+    <ClCompile Include="..\ZZoglCRTC.cpp" />
+    <ClCompile Include="..\ZZoglFlush.cpp" />
+    <ClCompile Include="..\ZZoglSave.cpp" />
+    <ClCompile Include="..\ZZoglShaders.cpp" />
+    <ClCompile Include="..\ZZoglShoots.cpp" />
+    <ClCompile Include="..\ZZoglVB.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="GSsoftdx.def" />
+    <CustomBuild Include="..\x86-32.asm">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ml /nologo /c /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">ml /nologo /c /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ml /nologo /c /Fo"$(IntDir)%(Filename).obj" "%(FullPath)"
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename).obj;%(Outputs)</Outputs>
+    </CustomBuild>
+    <None Include="Pcsx2.ico" />
+    <None Include="zerogs.bmp" />
+    <None Include="..\..\ReadMe.txt" />
+    <None Include="..\ps2hw.dat" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\GSDump.h" />
+    <ClInclude Include="aviUtil.h" />
+    <ClInclude Include="..\GifTransfer.h" />
+    <ClInclude Include="..\CRC.h" />
+    <ClInclude Include="..\GS.h" />
+    <ClInclude Include="..\Util.h" />
+    <ClInclude Include="..\Mem.h" />
+    <ClInclude Include="..\Mem_Swizzle.h" />
+    <ClInclude Include="..\Mem_Transmit.h" />
+    <ClInclude Include="..\PS2Edefs.h" />
+    <ClInclude Include="..\PS2Etypes.h" />
+    <ClInclude Include="..\rasterfont.h" />
+    <ClInclude Include="..\Regs.h" />
+    <ClInclude Include="..\Profile.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="resrc1.h" />
+    <ClInclude Include="..\targets.h" />
+    <ClInclude Include="Win32.h" />
+    <ClInclude Include="..\x86.h" />
+    <ClInclude Include="..\ZZGl.h" />
+    <ClInclude Include="..\ZZHacks.h" />
+    <ClInclude Include="..\ZZLog.h" />
+    <ClInclude Include="..\zerogs.h" />
+    <ClInclude Include="..\zerogsmath.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="zerogs.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\3rdparty\libjpeg\libjpeg.vcxproj">
+      <Project>{bc236261-77e8-4567-8d09-45cd02965eb6}</Project>
+      <Private>true</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\3rdparty\w32pthreads\pthreads.vcxproj">
+      <Project>{26511268-2902-4997-8421-ecd7055f9e28}</Project>
+      <Private>true</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\3rdparty\w32pthreads\pthreads_lib.vcxproj">
+      <Project>{7e9b2be7-cec3-4f14-847b-0ab8d562fb86}</Project>
+      <Private>true</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_base.vcxproj">
+      <Project>{48ad7e0a-25b1-4974-a1e3-03f8c438d34f}</Project>
+      <Private>true</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\3rdparty\wxWidgets\build\msw\wx_core.vcxproj">
+      <Project>{0318ba30-ef48-441a-9e10-dc85efae39f0}</Project>
+      <Private>true</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\3rdparty\zlib\zlib.vcxproj">
+      <Project>{2f6c0388-20cb-4242-9f6c-a6ebb6a83f47}</Project>
+      <Private>true</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\common\build\Utilities\utilities.vcxproj">
+      <Project>{4639972e-424e-4e13-8b07-ca403c481346}</Project>
+      <Private>true</Private>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

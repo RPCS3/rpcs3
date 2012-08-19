@@ -1,0 +1,229 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Devel|Win32">
+      <Configuration>Devel</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>wxAdv28</ProjectName>
+    <ProjectGuid>{0E231FB1-F3C9-4724-ACCB-DE8BCB3C089E}</ProjectGuid>
+    <RootNamespace>wxAdvanced</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="ProjectRootDir.props" />
+    <Import Project="..\..\..\3rdparty.props" />
+    <Import Project="Common.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Devel.props" />
+    <Import Project="..\..\..\..\common\vsprops\IncrementalLinking.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="ProjectRootDir.props" />
+    <Import Project="..\..\..\3rdparty.props" />
+    <Import Project="Common.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Release.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="ProjectRootDir.props" />
+    <Import Project="..\..\..\3rdparty.props" />
+    <Import Project="Common.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Debug.props" />
+    <Import Project="..\..\..\..\common\vsprops\IncrementalLinking.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectName)-dbg</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(ProjectName)-dev</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\include;$(ProjectRootDir)\include\msvc;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;__WXDEBUG__;wxUSE_BASE=0;wxUSE_GUI=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>wx/wxprec.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Lib>
+      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Lib>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\..\..\lib\vc_lib/wx_adv.bsc</OutputFile>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\include;$(ProjectRootDir)\include\msvc;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>wxUSE_BASE=0;wxUSE_GUI=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>wx/wxprec.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\include;$(ProjectRootDir)\include\msvc;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>wxUSE_BASE=0;wxUSE_GUI=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>wx/wxprec.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\common\animatecmn.cpp" />
+    <ClCompile Include="..\..\src\common\datavcmn.cpp" />
+    <ClCompile Include="..\..\src\common\dummy.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\common\taskbarcmn.cpp" />
+    <ClCompile Include="..\..\src\msw\aboutdlg.cpp" />
+    <ClCompile Include="..\..\src\msw\datectrl.cpp" />
+    <ClCompile Include="..\..\src\msw\joystick.cpp" />
+    <ClCompile Include="..\..\src\msw\sound.cpp" />
+    <ClCompile Include="..\..\src\msw\taskbar.cpp" />
+    <ClCompile Include="..\..\src\generic\aboutdlgg.cpp" />
+    <ClCompile Include="..\..\src\generic\animateg.cpp" />
+    <ClCompile Include="..\..\src\generic\bmpcboxg.cpp" />
+    <ClCompile Include="..\..\src\generic\calctrl.cpp" />
+    <ClCompile Include="..\..\src\generic\datavgen.cpp" />
+    <ClCompile Include="..\..\src\generic\datectlg.cpp" />
+    <ClCompile Include="..\..\src\generic\grid.cpp" />
+    <ClCompile Include="..\..\src\generic\gridctrl.cpp" />
+    <ClCompile Include="..\..\src\generic\gridsel.cpp" />
+    <ClCompile Include="..\..\src\generic\helpext.cpp" />
+    <ClCompile Include="..\..\src\generic\hyperlink.cpp" />
+    <ClCompile Include="..\..\src\generic\laywin.cpp" />
+    <ClCompile Include="..\..\src\generic\odcombo.cpp" />
+    <ClCompile Include="..\..\src\generic\propdlg.cpp" />
+    <ClCompile Include="..\..\src\generic\sashwin.cpp" />
+    <ClCompile Include="..\..\src\generic\splash.cpp" />
+    <ClCompile Include="..\..\src\generic\tipdlg.cpp" />
+    <ClCompile Include="..\..\src\generic\wizard.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\src\msw\version.rc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\wx\msw\setup.h" />
+    <ClInclude Include="..\..\include\wx\univ\setup.h" />
+    <ClInclude Include="..\..\include\wx\msw\datectrl.h" />
+    <ClInclude Include="..\..\include\wx\msw\genrcdefs.h" />
+    <ClInclude Include="..\..\include\wx\msw\joystick.h" />
+    <ClInclude Include="..\..\include\wx\msw\sound.h" />
+    <ClInclude Include="..\..\include\wx\msw\taskbar.h" />
+    <ClInclude Include="..\..\include\wx\generic\aboutdlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\animate.h" />
+    <ClInclude Include="..\..\include\wx\generic\bmpcbox.h" />
+    <ClInclude Include="..\..\include\wx\generic\calctrl.h" />
+    <ClInclude Include="..\..\include\wx\generic\dataview.h" />
+    <ClInclude Include="..\..\include\wx\generic\datectrl.h" />
+    <ClInclude Include="..\..\include\wx\generic\grid.h" />
+    <ClInclude Include="..\..\include\wx\generic\gridctrl.h" />
+    <ClInclude Include="..\..\include\wx\generic\gridsel.h" />
+    <ClInclude Include="..\..\include\wx\generic\helpext.h" />
+    <ClInclude Include="..\..\include\wx\generic\laywin.h" />
+    <ClInclude Include="..\..\include\wx\generic\propdlg.h" />
+    <ClInclude Include="..\..\include\wx\generic\sashwin.h" />
+    <ClInclude Include="..\..\include\wx\generic\splash.h" />
+    <ClInclude Include="..\..\include\wx\generic\wizard.h" />
+    <CustomBuildStep Include="..\..\include\wx\aboutdlg.h" />
+    <ClInclude Include="..\..\include\wx\animate.h" />
+    <ClInclude Include="..\..\include\wx\animdecod.h" />
+    <ClInclude Include="..\..\include\wx\bmpcbox.h" />
+    <ClInclude Include="..\..\include\wx\calctrl.h" />
+    <ClInclude Include="..\..\include\wx\dataview.h" />
+    <ClInclude Include="..\..\include\wx\datectrl.h" />
+    <ClInclude Include="..\..\include\wx\dateevt.h" />
+    <ClInclude Include="..\..\include\wx\dcbuffer.h" />
+    <ClInclude Include="..\..\include\wx\grid.h" />
+    <ClInclude Include="..\..\include\wx\hyperlink.h" />
+    <ClInclude Include="..\..\include\wx\joystick.h" />
+    <ClInclude Include="..\..\include\wx\laywin.h" />
+    <ClInclude Include="..\..\include\wx\odcombo.h" />
+    <ClInclude Include="..\..\include\wx\propdlg.h" />
+    <ClInclude Include="..\..\include\wx\sashwin.h" />
+    <ClInclude Include="..\..\include\wx\sound.h" />
+    <ClInclude Include="..\..\include\wx\splash.h" />
+    <ClInclude Include="..\..\include\wx\taskbar.h" />
+    <ClInclude Include="..\..\include\wx\tipdlg.h" />
+    <ClInclude Include="..\..\include\wx\wave.h" />
+    <ClInclude Include="..\..\include\wx\wizard.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="wx_config.vcxproj">
+      <Project>{c34487af-228a-4d11-8e50-27803df76873}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -1,0 +1,1539 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Devel|Win32">
+      <Configuration>Devel</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>wxCore28</ProjectName>
+    <ProjectGuid>{0318BA30-EF48-441A-9E10-DC85EFAE39F0}</ProjectGuid>
+    <RootNamespace>wxCore</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="ProjectRootDir.props" />
+    <Import Project="..\..\..\3rdparty.props" />
+    <Import Project="Common.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Devel.props" />
+    <Import Project="..\..\..\..\common\vsprops\IncrementalLinking.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="ProjectRootDir.props" />
+    <Import Project="..\..\..\3rdparty.props" />
+    <Import Project="Common.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Release.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="ProjectRootDir.props" />
+    <Import Project="..\..\..\3rdparty.props" />
+    <Import Project="Common.props" />
+    <Import Project="..\..\..\..\common\vsprops\CodeGen_Debug.props" />
+    <Import Project="..\..\..\..\common\vsprops\IncrementalLinking.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">$(ProjectName)-dev</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\include;$(ProjectRootDir)\include\msvc;$(SvnRootDir)\3rdparty\zlib;$(ProjectRootDir)\src\png;$(SvnRootDir)\3rdparty\libjpeg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;__WXDEBUG__;wxUSE_BASE=0;wxUSE_GUI=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>wx/wxprec.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\include;$(ProjectRootDir)\include\msvc;$(SvnRootDir)\3rdparty\zlib;$(ProjectRootDir)\src\png;$(SvnRootDir)\3rdparty\libjpeg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>wxUSE_BASE=0;wxUSE_GUI=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>wx/wxprec.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(ProjectRootDir)\include;$(ProjectRootDir)\include\msvc;$(SvnRootDir)\3rdparty\zlib;$(ProjectRootDir)\src\png;$(SvnRootDir)\3rdparty\libjpeg;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>wxUSE_BASE=0;wxUSE_GUI=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>wx/wxprec.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Bscmake>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\common\accesscmn.cpp" />
+    <ClCompile Include="..\..\src\common\anidecod.cpp" />
+    <ClCompile Include="..\..\src\common\appcmn.cpp" />
+    <ClCompile Include="..\..\src\common\artprov.cpp" />
+    <ClCompile Include="..\..\src\common\artstd.cpp" />
+    <ClCompile Include="..\..\src\common\bmpbase.cpp" />
+    <ClCompile Include="..\..\src\common\bookctrl.cpp" />
+    <ClCompile Include="..\..\src\common\choiccmn.cpp" />
+    <ClCompile Include="..\..\src\common\clipcmn.cpp" />
+    <ClCompile Include="..\..\src\common\clrpickercmn.cpp" />
+    <ClCompile Include="..\..\src\common\cmdproc.cpp" />
+    <ClCompile Include="..\..\src\common\cmndata.cpp" />
+    <ClCompile Include="..\..\src\common\colourcmn.cpp" />
+    <ClCompile Include="..\..\src\common\combocmn.cpp" />
+    <ClCompile Include="..\..\src\common\containr.cpp" />
+    <ClCompile Include="..\..\src\common\cshelp.cpp" />
+    <ClCompile Include="..\..\src\common\ctrlcmn.cpp" />
+    <ClCompile Include="..\..\src\common\ctrlsub.cpp" />
+    <ClCompile Include="..\..\src\common\datacmn.cpp" />
+    <ClCompile Include="..\..\src\common\dcbase.cpp" />
+    <ClCompile Include="..\..\src\common\dcbufcmn.cpp" />
+    <ClCompile Include="..\..\src\common\dcgraph.cpp" />
+    <ClCompile Include="..\..\src\common\dlgcmn.cpp" />
+    <ClCompile Include="..\..\src\common\dndcmn.cpp" />
+    <ClCompile Include="..\..\src\common\dobjcmn.cpp" />
+    <ClCompile Include="..\..\src\common\docmdi.cpp" />
+    <ClCompile Include="..\..\src\common\docview.cpp" />
+    <ClCompile Include="..\..\src\common\dpycmn.cpp" />
+    <ClCompile Include="..\..\src\common\dseldlg.cpp" />
+    <ClCompile Include="..\..\src\common\dummy.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\common\effects.cpp" />
+    <ClCompile Include="..\..\src\common\event.cpp" />
+    <ClCompile Include="..\..\src\common\evtloopcmn.cpp" />
+    <ClCompile Include="..\..\src\common\fddlgcmn.cpp" />
+    <ClCompile Include="..\..\src\common\filepickercmn.cpp" />
+    <ClCompile Include="..\..\src\common\fldlgcmn.cpp" />
+    <ClCompile Include="..\..\src\common\fontcmn.cpp" />
+    <ClCompile Include="..\..\src\common\fontenumcmn.cpp" />
+    <ClCompile Include="..\..\src\common\fontmap.cpp" />
+    <ClCompile Include="..\..\src\common\fontpickercmn.cpp" />
+    <ClCompile Include="..\..\src\common\framecmn.cpp" />
+    <ClCompile Include="..\..\src\common\fs_mem.cpp" />
+    <ClCompile Include="..\..\src\common\gaugecmn.cpp" />
+    <ClCompile Include="..\..\src\common\gbsizer.cpp" />
+    <ClCompile Include="..\..\src\common\gdicmn.cpp" />
+    <ClCompile Include="..\..\src\common\geometry.cpp" />
+    <ClCompile Include="..\..\src\common\gifdecod.cpp" />
+    <ClCompile Include="..\..\src\common\graphcmn.cpp" />
+    <ClCompile Include="..\..\src\common\helpbase.cpp" />
+    <ClCompile Include="..\..\src\common\iconbndl.cpp" />
+    <ClCompile Include="..\..\src\common\imagall.cpp" />
+    <ClCompile Include="..\..\src\common\imagbmp.cpp" />
+    <ClCompile Include="..\..\src\common\image.cpp" />
+    <ClCompile Include="..\..\src\common\imagfill.cpp" />
+    <ClCompile Include="..\..\src\common\imaggif.cpp" />
+    <ClCompile Include="..\..\src\common\imagiff.cpp" />
+    <ClCompile Include="..\..\src\common\imagjpeg.cpp" />
+    <ClCompile Include="..\..\src\common\imagpcx.cpp" />
+    <ClCompile Include="..\..\src\common\imagpng.cpp" />
+    <ClCompile Include="..\..\src\common\imagpnm.cpp" />
+    <ClCompile Include="..\..\src\common\imagtga.cpp" />
+    <ClCompile Include="..\..\src\common\imagtiff.cpp" />
+    <ClCompile Include="..\..\src\common\imagxpm.cpp" />
+    <ClCompile Include="..\..\src\common\layout.cpp" />
+    <ClCompile Include="..\..\src\common\lboxcmn.cpp" />
+    <ClCompile Include="..\..\src\common\listctrlcmn.cpp" />
+    <ClCompile Include="..\..\src\common\matrix.cpp" />
+    <ClCompile Include="..\..\src\common\menucmn.cpp" />
+    <ClCompile Include="..\..\src\common\msgout.cpp" />
+    <ClCompile Include="..\..\src\common\nbkbase.cpp" />
+    <ClCompile Include="..\..\src\common\overlaycmn.cpp" />
+    <ClCompile Include="..\..\src\common\paper.cpp" />
+    <ClCompile Include="..\..\src\common\pickerbase.cpp" />
+    <ClCompile Include="..\..\src\common\popupcmn.cpp" />
+    <ClCompile Include="..\..\src\common\prntbase.cpp" />
+    <ClCompile Include="..\..\src\common\quantize.cpp" />
+    <ClCompile Include="..\..\src\common\radiocmn.cpp" />
+    <ClCompile Include="..\..\src\common\rendcmn.cpp" />
+    <ClCompile Include="..\..\src\common\rgncmn.cpp" />
+    <ClCompile Include="..\..\src\common\settcmn.cpp" />
+    <ClCompile Include="..\..\src\common\sizer.cpp" />
+    <ClCompile Include="..\..\src\common\srchcmn.cpp" />
+    <ClCompile Include="..\..\src\common\statbar.cpp" />
+    <ClCompile Include="..\..\src\common\stockitem.cpp" />
+    <ClCompile Include="..\..\src\common\tbarbase.cpp" />
+    <ClCompile Include="..\..\src\common\textcmn.cpp" />
+    <ClCompile Include="..\..\src\common\timercmn.cpp" />
+    <ClCompile Include="..\..\src\common\toplvcmn.cpp" />
+    <ClCompile Include="..\..\src\common\treebase.cpp" />
+    <ClCompile Include="..\..\src\common\utilscmn.cpp" />
+    <ClCompile Include="..\..\src\common\valgen.cpp" />
+    <ClCompile Include="..\..\src\common\validate.cpp" />
+    <ClCompile Include="..\..\src\common\valtext.cpp" />
+    <ClCompile Include="..\..\src\common\wincmn.cpp" />
+    <ClCompile Include="..\..\src\common\xpmdecod.cpp" />
+    <ClCompile Include="..\..\src\msw\aboutdlg.cpp" />
+    <ClCompile Include="..\..\src\msw\accel.cpp" />
+    <ClCompile Include="..\..\src\msw\ole\access.cpp" />
+    <ClCompile Include="..\..\src\msw\app.cpp" />
+    <ClCompile Include="..\..\src\msw\ole\automtn.cpp" />
+    <ClCompile Include="..\..\src\msw\bitmap.cpp" />
+    <ClCompile Include="..\..\src\msw\bmpbuttn.cpp" />
+    <ClCompile Include="..\..\src\msw\brush.cpp" />
+    <ClCompile Include="..\..\src\msw\button.cpp" />
+    <ClCompile Include="..\..\src\msw\caret.cpp" />
+    <ClCompile Include="..\..\src\msw\checkbox.cpp" />
+    <ClCompile Include="..\..\src\msw\checklst.cpp" />
+    <ClCompile Include="..\..\src\msw\choice.cpp" />
+    <ClCompile Include="..\..\src\msw\clipbrd.cpp" />
+    <ClCompile Include="..\..\src\msw\colordlg.cpp" />
+    <ClCompile Include="..\..\src\msw\colour.cpp" />
+    <ClCompile Include="..\..\src\msw\combo.cpp" />
+    <ClCompile Include="..\..\src\msw\combobox.cpp" />
+    <ClCompile Include="..\..\src\msw\control.cpp" />
+    <ClCompile Include="..\..\src\msw\cursor.cpp" />
+    <ClCompile Include="..\..\src\msw\data.cpp" />
+    <ClCompile Include="..\..\src\msw\ole\dataobj.cpp" />
+    <ClCompile Include="..\..\src\msw\dc.cpp" />
+    <ClCompile Include="..\..\src\msw\dcclient.cpp" />
+    <ClCompile Include="..\..\src\msw\dcmemory.cpp" />
+    <ClCompile Include="..\..\src\msw\dcprint.cpp" />
+    <ClCompile Include="..\..\src\msw\dcscreen.cpp" />
+    <ClCompile Include="..\..\src\msw\dialog.cpp" />
+    <ClCompile Include="..\..\src\msw\dialup.cpp" />
+    <ClCompile Include="..\..\src\msw\dib.cpp" />
+    <ClCompile Include="..\..\src\msw\dirdlg.cpp" />
+    <ClCompile Include="..\..\src\msw\display.cpp" />
+    <ClCompile Include="..\..\src\msw\dragimag.cpp" />
+    <ClCompile Include="..\..\src\msw\ole\dropsrc.cpp" />
+    <ClCompile Include="..\..\src\msw\ole\droptgt.cpp" />
+    <ClCompile Include="..\..\src\msw\enhmeta.cpp" />
+    <ClCompile Include="..\..\src\msw\evtloop.cpp" />
+    <ClCompile Include="..\..\src\msw\fdrepdlg.cpp" />
+    <ClCompile Include="..\..\src\msw\filedlg.cpp" />
+    <ClCompile Include="..\..\src\msw\font.cpp" />
+    <ClCompile Include="..\..\src\msw\fontdlg.cpp" />
+    <ClCompile Include="..\..\src\msw\fontenum.cpp" />
+    <ClCompile Include="..\..\src\msw\fontutil.cpp" />
+    <ClCompile Include="..\..\src\msw\frame.cpp" />
+    <ClCompile Include="..\..\src\msw\gauge95.cpp" />
+    <ClCompile Include="..\..\src\msw\gdiimage.cpp" />
+    <ClCompile Include="..\..\src\msw\gdiobj.cpp" />
+    <ClCompile Include="..\..\src\msw\graphics.cpp" />
+    <ClCompile Include="..\..\src\msw\gsockmsw.cpp" />
+    <ClCompile Include="..\..\src\msw\helpchm.cpp" />
+    <ClCompile Include="..\..\src\msw\helpwin.cpp" />
+    <ClCompile Include="..\..\src\msw\icon.cpp" />
+    <ClCompile Include="..\..\src\msw\imaglist.cpp" />
+    <ClCompile Include="..\..\src\msw\iniconf.cpp" />
+    <ClCompile Include="..\..\src\msw\listbox.cpp" />
+    <ClCompile Include="..\..\src\msw\listctrl.cpp" />
+    <ClCompile Include="..\..\src\msw\main.cpp" />
+    <ClCompile Include="..\..\src\msw\mdi.cpp" />
+    <ClCompile Include="..\..\src\msw\menu.cpp" />
+    <ClCompile Include="..\..\src\msw\menuitem.cpp" />
+    <ClCompile Include="..\..\src\msw\metafile.cpp" />
+    <ClCompile Include="..\..\src\msw\minifram.cpp" />
+    <ClCompile Include="..\..\src\msw\msgdlg.cpp" />
+    <ClCompile Include="..\..\src\msw\mslu.cpp" />
+    <ClCompile Include="..\..\src\msw\nativdlg.cpp" />
+    <ClCompile Include="..\..\src\msw\notebook.cpp" />
+    <ClCompile Include="..\..\src\msw\ole\oleutils.cpp" />
+    <ClCompile Include="..\..\src\msw\ownerdrw.cpp" />
+    <ClCompile Include="..\..\src\msw\palette.cpp" />
+    <ClCompile Include="..\..\src\msw\pen.cpp" />
+    <ClCompile Include="..\..\src\msw\popupwin.cpp" />
+    <ClCompile Include="..\..\src\msw\printdlg.cpp" />
+    <ClCompile Include="..\..\src\msw\printwin.cpp" />
+    <ClCompile Include="..\..\src\msw\radiobox.cpp" />
+    <ClCompile Include="..\..\src\msw\radiobut.cpp" />
+    <ClCompile Include="..\..\src\msw\region.cpp" />
+    <ClCompile Include="..\..\src\msw\renderer.cpp" />
+    <ClCompile Include="..\..\src\msw\scrolbar.cpp" />
+    <ClCompile Include="..\..\src\msw\settings.cpp" />
+    <ClCompile Include="..\..\src\msw\slider95.cpp" />
+    <ClCompile Include="..\..\src\msw\spinbutt.cpp" />
+    <ClCompile Include="..\..\src\msw\spinctrl.cpp" />
+    <ClCompile Include="..\..\src\msw\statbmp.cpp" />
+    <ClCompile Include="..\..\src\msw\statbox.cpp" />
+    <ClCompile Include="..\..\src\msw\statbr95.cpp" />
+    <ClCompile Include="..\..\src\msw\statline.cpp" />
+    <ClCompile Include="..\..\src\msw\stattext.cpp" />
+    <ClCompile Include="..\..\src\msw\tabctrl.cpp" />
+    <ClCompile Include="..\..\src\msw\tbar95.cpp" />
+    <ClCompile Include="..\..\src\msw\textctrl.cpp" />
+    <ClCompile Include="..\..\src\msw\tglbtn.cpp" />
+    <ClCompile Include="..\..\src\msw\timer.cpp" />
+    <ClCompile Include="..\..\src\msw\tooltip.cpp" />
+    <ClCompile Include="..\..\src\msw\toplevel.cpp" />
+    <ClCompile Include="..\..\src\msw\treectrl.cpp" />
+    <ClCompile Include="..\..\src\msw\utilsgui.cpp" />
+    <ClCompile Include="..\..\src\msw\ole\uuid.cpp" />
+    <ClCompile Include="..\..\src\msw\uxtheme.cpp" />
+    <ClCompile Include="..\..\src\msw\volume.cpp" />
+    <ClCompile Include="..\..\src\msw\window.cpp" />
+    <ClCompile Include="..\..\src\generic\aboutdlgg.cpp" />
+    <ClCompile Include="..\..\src\generic\accel.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\generic\busyinfo.cpp" />
+    <ClCompile Include="..\..\src\generic\buttonbar.cpp" />
+    <ClCompile Include="..\..\src\generic\choicbkg.cpp" />
+    <ClCompile Include="..\..\src\generic\choicdgg.cpp" />
+    <ClCompile Include="..\..\src\generic\clrpickerg.cpp" />
+    <ClCompile Include="..\..\src\generic\collpaneg.cpp" />
+    <ClCompile Include="..\..\src\generic\colrdlgg.cpp" />
+    <ClCompile Include="..\..\src\generic\combog.cpp" />
+    <ClCompile Include="..\..\src\generic\dcpsg.cpp" />
+    <ClCompile Include="..\..\src\generic\dirctrlg.cpp" />
+    <ClCompile Include="..\..\src\generic\dirdlgg.cpp" />
+    <ClCompile Include="..\..\src\generic\dragimgg.cpp" />
+    <ClCompile Include="..\..\src\generic\fdrepdlg.cpp" />
+    <ClCompile Include="..\..\src\generic\filedlgg.cpp" />
+    <ClCompile Include="..\..\src\generic\filepickerg.cpp" />
+    <ClCompile Include="..\..\src\generic\fontdlgg.cpp" />
+    <ClCompile Include="..\..\src\generic\fontpickerg.cpp" />
+    <ClCompile Include="..\..\src\generic\hyperlink.cpp" />
+    <ClCompile Include="..\..\src\generic\listbkg.cpp" />
+    <ClCompile Include="..\..\src\generic\listctrl.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\generic\logg.cpp" />
+    <ClCompile Include="..\..\src\generic\mdig.cpp" />
+    <ClCompile Include="..\..\src\generic\msgdlgg.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\generic\numdlgg.cpp" />
+    <ClCompile Include="..\..\src\generic\panelg.cpp" />
+    <ClCompile Include="..\..\src\generic\printps.cpp" />
+    <ClCompile Include="..\..\src\generic\prntdlgg.cpp" />
+    <ClCompile Include="..\..\src\generic\progdlgg.cpp" />
+    <ClCompile Include="..\..\src\generic\renderg.cpp" />
+    <ClCompile Include="..\..\src\generic\scrlwing.cpp" />
+    <ClCompile Include="..\..\src\generic\selstore.cpp" />
+    <ClCompile Include="..\..\src\generic\spinctlg.cpp" />
+    <ClCompile Include="..\..\src\generic\splitter.cpp" />
+    <ClCompile Include="..\..\src\generic\srchctlg.cpp" />
+    <ClCompile Include="..\..\src\generic\statusbr.cpp" />
+    <ClCompile Include="..\..\src\generic\tabg.cpp" />
+    <ClCompile Include="..\..\src\generic\textdlgg.cpp" />
+    <ClCompile Include="..\..\src\generic\tipwin.cpp" />
+    <ClCompile Include="..\..\src\generic\toolbkg.cpp" />
+    <ClCompile Include="..\..\src\generic\treebkg.cpp" />
+    <ClCompile Include="..\..\src\generic\treectlg.cpp" />
+    <ClCompile Include="..\..\src\generic\vlbox.cpp" />
+    <ClCompile Include="..\..\src\generic\vscroll.cpp" />
+    <ClCompile Include="..\..\src\univ\bmpbuttn.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\button.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\checkbox.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\checklst.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\choice.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\colschem.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\combobox.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\control.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\ctrlrend.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\framuniv.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\gauge.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\themes\gtk.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\inpcons.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\inphand.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\listbox.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\menu.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\themes\metal.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\themes\mono.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\notebook.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\radiobox.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\radiobut.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\scrarrow.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\scrolbar.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\scrthumb.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\slider.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\spinbutt.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\statbmp.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\statbox.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\statline.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\stattext.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\statusbr.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\stdrend.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\textctrl.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\tglbtn.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\theme.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\toolbar.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\topluniv.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\themes\win32.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\univ\winuniv.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\png.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngerror.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngget.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngmem.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngpread.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngread.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngrio.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngrtran.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngrutil.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngset.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngtest.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngtrans.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngwio.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngwrite.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngwtran.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\..\src\png\pngwutil.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">
+      </PrecompiledHeaderOutputFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+      </PrecompiledHeaderOutputFile>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\wx\univ\setup.h" />
+    <ClInclude Include="..\..\include\wx\msw\accel.h" />
+    <ClInclude Include="..\..\include\wx\msw\ole\access.h" />
+    <ClInclude Include="..\..\include\wx\msw\ole\activex.h" />
+    <ClInclude Include="..\..\include\wx\msw\app.h" />
+    <ClInclude Include="..\..\include\wx\msw\ole\automtn.h" />
+    <ClInclude Include="..\..\include\wx\msw\bitmap.h" />
+    <ClInclude Include="..\..\include\wx\msw\bmpbuttn.h" />
+    <ClInclude Include="..\..\include\wx\msw\brush.h" />
+    <ClInclude Include="..\..\include\wx\msw\button.h" />
+    <ClInclude Include="..\..\include\wx\msw\caret.h" />
+    <ClInclude Include="..\..\include\wx\msw\checkbox.h" />
+    <ClInclude Include="..\..\include\wx\msw\checklst.h" />
+    <ClInclude Include="..\..\include\wx\msw\choice.h" />
+    <ClInclude Include="..\..\include\wx\msw\clipbrd.h" />
+    <ClInclude Include="..\..\include\wx\msw\colordlg.h" />
+    <ClInclude Include="..\..\include\wx\msw\colour.h" />
+    <ClInclude Include="..\..\include\wx\msw\combo.h" />
+    <ClInclude Include="..\..\include\wx\msw\combobox.h" />
+    <ClInclude Include="..\..\include\wx\msw\control.h" />
+    <ClInclude Include="..\..\include\wx\msw\cursor.h" />
+    <ClInclude Include="..\..\include\wx\msw\ole\dataform.h" />
+    <ClInclude Include="..\..\include\wx\msw\ole\dataobj.h" />
+    <ClInclude Include="..\..\include\wx\msw\ole\dataobj2.h" />
+    <ClInclude Include="..\..\include\wx\msw\datectrl.h" />
+    <ClInclude Include="..\..\include\wx\msw\dc.h" />
+    <ClInclude Include="..\..\include\wx\msw\dcclient.h" />
+    <ClInclude Include="..\..\include\wx\msw\dcmemory.h" />
+    <ClInclude Include="..\..\include\wx\msw\dcprint.h" />
+    <ClInclude Include="..\..\include\wx\msw\dcscreen.h" />
+    <ClInclude Include="..\..\include\wx\msw\dialog.h" />
+    <ClInclude Include="..\..\include\wx\msw\dib.h" />
+    <ClInclude Include="..\..\include\wx\msw\dirdlg.h" />
+    <ClInclude Include="..\..\include\wx\msw\dragimag.h" />
+    <ClInclude Include="..\..\include\wx\msw\ole\dropsrc.h" />
+    <ClInclude Include="..\..\include\wx\msw\ole\droptgt.h" />
+    <ClInclude Include="..\..\include\wx\msw\enhmeta.h" />
+    <ClInclude Include="..\..\include\wx\msw\evtloop.h" />
+    <ClInclude Include="..\..\include\wx\msw\fdrepdlg.h" />
+    <ClInclude Include="..\..\include\wx\msw\filedlg.h" />
+    <ClInclude Include="..\..\include\wx\msw\font.h" />
+    <ClInclude Include="..\..\include\wx\msw\fontdlg.h" />
+    <ClInclude Include="..\..\include\wx\msw\frame.h" />
+    <ClInclude Include="..\..\include\wx\msw\gauge95.h" />
+    <ClInclude Include="..\..\include\wx\msw\gdiimage.h" />
+    <ClInclude Include="..\..\include\wx\msw\glcanvas.h" />
+    <ClInclude Include="..\..\include\wx\msw\helpbest.h" />
+    <ClInclude Include="..\..\include\wx\msw\helpchm.h" />
+    <ClInclude Include="..\..\include\wx\msw\helpwin.h" />
+    <ClInclude Include="..\..\include\wx\msw\htmlhelp.h" />
+    <ClInclude Include="..\..\include\wx\msw\icon.h" />
+    <ClInclude Include="..\..\include\wx\msw\imaglist.h" />
+    <ClInclude Include="..\..\include\wx\msw\iniconf.h" />
+    <ClInclude Include="..\..\include\wx\msw\joystick.h" />
+    <ClInclude Include="..\..\include\wx\msw\listbox.h" />
+    <ClInclude Include="..\..\include\wx\msw\listctrl.h" />
+    <ClInclude Include="..\..\include\wx\msw\mdi.h" />
+    <ClInclude Include="..\..\include\wx\msw\menu.h" />
+    <ClInclude Include="..\..\include\wx\msw\menuitem.h" />
+    <ClInclude Include="..\..\include\wx\msw\metafile.h" />
+    <ClInclude Include="..\..\include\wx\msw\minifram.h" />
+    <ClInclude Include="..\..\include\wx\msw\missing.h" />
+    <ClInclude Include="..\..\include\wx\msw\msgdlg.h" />
+    <ClInclude Include="..\..\include\wx\msw\msvcrt.h" />
+    <ClInclude Include="..\..\include\wx\msw\notebook.h" />
+    <ClInclude Include="..\..\include\wx\msw\ole\oleutils.h" />
+    <ClInclude Include="..\..\include\wx\msw\palette.h" />
+    <ClInclude Include="..\..\include\wx\msw\pen.h" />
+    <ClInclude Include="..\..\include\wx\msw\popupwin.h" />
+    <ClInclude Include="..\..\include\wx\msw\printdlg.h" />
+    <ClInclude Include="..\..\include\wx\msw\printwin.h" />
+    <ClInclude Include="..\..\include\wx\msw\radiobox.h" />
+    <ClInclude Include="..\..\include\wx\msw\radiobut.h" />
+    <ClInclude Include="..\..\include\wx\msw\rcdefs.h" />
+    <ClInclude Include="..\..\include\wx\msw\region.h" />
+    <ClInclude Include="..\..\include\wx\msw\scrolbar.h" />
+    <ClInclude Include="..\..\include\wx\msw\setup0.h" />
+    <ClInclude Include="..\..\include\wx\msw\slider95.h" />
+    <ClInclude Include="..\..\include\wx\msw\sound.h" />
+    <ClInclude Include="..\..\include\wx\msw\spinbutt.h" />
+    <ClInclude Include="..\..\include\wx\msw\spinctrl.h" />
+    <ClInclude Include="..\..\include\wx\msw\statbmp.h" />
+    <ClInclude Include="..\..\include\wx\msw\statbox.h" />
+    <ClInclude Include="..\..\include\wx\msw\statbr95.h" />
+    <ClInclude Include="..\..\include\wx\msw\statline.h" />
+    <ClInclude Include="..\..\include\wx\msw\stattext.h" />
+    <ClInclude Include="..\..\include\wx\msw\tabctrl.h" />
+    <ClInclude Include="..\..\include\wx\msw\taskbar.h" />
+    <ClInclude Include="..\..\include\wx\msw\tbar95.h" />
+    <ClInclude Include="..\..\include\wx\msw\textctrl.h" />
+    <ClInclude Include="..\..\include\wx\msw\tglbtn.h" />
+    <ClInclude Include="..\..\include\wx\msw\timer.h" />
+    <ClInclude Include="..\..\include\wx\msw\tooltip.h" />
+    <ClInclude Include="..\..\include\wx\msw\toplevel.h" />
+    <ClInclude Include="..\..\include\wx\msw\treectrl.h" />
+    <ClInclude Include="..\..\include\wx\msw\ole\uuid.h" />
+    <ClInclude Include="..\..\include\wx\msw\uxtheme.h" />
+    <ClInclude Include="..\..\include\wx\msw\uxthemep.h" />
+    <ClInclude Include="..\..\include\wx\msw\window.h" />
+    <ClInclude Include="..\..\include\wx\generic\aboutdlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\accel.h" />
+    <ClInclude Include="..\..\include\wx\generic\animate.h" />
+    <ClInclude Include="..\..\include\wx\generic\bmpcbox.h" />
+    <ClInclude Include="..\..\include\wx\generic\busyinfo.h" />
+    <ClInclude Include="..\..\include\wx\generic\buttonbar.h" />
+    <ClInclude Include="..\..\include\wx\generic\calctrl.h" />
+    <ClInclude Include="..\..\include\wx\generic\choicdgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\clrpickerg.h" />
+    <ClInclude Include="..\..\include\wx\generic\collpaneg.h" />
+    <ClInclude Include="..\..\include\wx\generic\colrdlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\combo.h" />
+    <ClInclude Include="..\..\include\wx\generic\dataview.h" />
+    <ClInclude Include="..\..\include\wx\generic\datectrl.h" />
+    <ClInclude Include="..\..\include\wx\generic\dcpsg.h" />
+    <ClInclude Include="..\..\include\wx\generic\dirctrlg.h" />
+    <ClInclude Include="..\..\include\wx\generic\dirdlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\dragimgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\fdrepdlg.h" />
+    <ClInclude Include="..\..\include\wx\generic\filedlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\filepickerg.h" />
+    <ClInclude Include="..\..\include\wx\generic\fontdlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\fontpickerg.h" />
+    <ClInclude Include="..\..\include\wx\generic\grid.h" />
+    <ClInclude Include="..\..\include\wx\generic\gridctrl.h" />
+    <ClInclude Include="..\..\include\wx\generic\gridsel.h" />
+    <ClInclude Include="..\..\include\wx\generic\helpext.h" />
+    <ClInclude Include="..\..\include\wx\generic\laywin.h" />
+    <ClInclude Include="..\..\include\wx\generic\listctrl.h" />
+    <ClInclude Include="..\..\include\wx\generic\logg.h" />
+    <ClInclude Include="..\..\include\wx\generic\mdig.h" />
+    <ClInclude Include="..\..\include\wx\generic\msgdlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\notebook.h" />
+    <ClInclude Include="..\..\include\wx\generic\numdlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\panelg.h" />
+    <ClInclude Include="..\..\include\wx\generic\printps.h" />
+    <ClInclude Include="..\..\include\wx\generic\prntdlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\progdlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\propdlg.h" />
+    <ClInclude Include="..\..\include\wx\generic\sashwin.h" />
+    <ClInclude Include="..\..\include\wx\generic\scrolwin.h" />
+    <ClInclude Include="..\..\include\wx\generic\spinctlg.h" />
+    <ClInclude Include="..\..\include\wx\generic\splash.h" />
+    <ClInclude Include="..\..\include\wx\generic\splitter.h" />
+    <ClInclude Include="..\..\include\wx\generic\srchctlg.h" />
+    <ClInclude Include="..\..\include\wx\generic\statusbr.h" />
+    <ClInclude Include="..\..\include\wx\generic\tabg.h" />
+    <ClInclude Include="..\..\include\wx\generic\textdlgg.h" />
+    <ClInclude Include="..\..\include\wx\generic\timer.h" />
+    <ClInclude Include="..\..\include\wx\generic\treectlg.h" />
+    <ClInclude Include="..\..\include\wx\generic\wizard.h" />
+    <ClInclude Include="..\..\include\wx\univ\app.h" />
+    <ClInclude Include="..\..\include\wx\univ\bmpbuttn.h" />
+    <ClInclude Include="..\..\include\wx\univ\button.h" />
+    <ClInclude Include="..\..\include\wx\univ\checkbox.h" />
+    <ClInclude Include="..\..\include\wx\univ\checklst.h" />
+    <ClInclude Include="..\..\include\wx\univ\chkconf.h" />
+    <ClInclude Include="..\..\include\wx\univ\choice.h" />
+    <ClInclude Include="..\..\include\wx\univ\colschem.h" />
+    <ClInclude Include="..\..\include\wx\univ\combobox.h" />
+    <ClInclude Include="..\..\include\wx\univ\control.h" />
+    <ClInclude Include="..\..\include\wx\univ\dialog.h" />
+    <ClInclude Include="..\..\include\wx\univ\frame.h" />
+    <ClInclude Include="..\..\include\wx\univ\gauge.h" />
+    <ClInclude Include="..\..\include\wx\univ\inpcons.h" />
+    <ClInclude Include="..\..\include\wx\univ\inphand.h" />
+    <ClInclude Include="..\..\include\wx\univ\listbox.h" />
+    <ClInclude Include="..\..\include\wx\univ\menu.h" />
+    <ClInclude Include="..\..\include\wx\univ\menuitem.h" />
+    <ClInclude Include="..\..\include\wx\univ\notebook.h" />
+    <ClInclude Include="..\..\include\wx\univ\radiobox.h" />
+    <ClInclude Include="..\..\include\wx\univ\radiobut.h" />
+    <ClInclude Include="..\..\include\wx\univ\renderer.h" />
+    <ClInclude Include="..\..\include\wx\univ\scrarrow.h" />
+    <ClInclude Include="..\..\include\wx\univ\scrolbar.h" />
+    <ClInclude Include="..\..\include\wx\univ\scrthumb.h" />
+    <ClInclude Include="..\..\include\wx\univ\scrtimer.h" />
+    <ClInclude Include="..\..\include\wx\univ\slider.h" />
+    <ClInclude Include="..\..\include\wx\univ\spinbutt.h" />
+    <ClInclude Include="..\..\include\wx\univ\statbmp.h" />
+    <ClInclude Include="..\..\include\wx\univ\statbox.h" />
+    <ClInclude Include="..\..\include\wx\univ\statline.h" />
+    <ClInclude Include="..\..\include\wx\univ\stattext.h" />
+    <ClInclude Include="..\..\include\wx\univ\statusbr.h" />
+    <ClInclude Include="..\..\include\wx\univ\stdrend.h" />
+    <ClInclude Include="..\..\include\wx\univ\textctrl.h" />
+    <ClInclude Include="..\..\include\wx\univ\tglbtn.h" />
+    <ClInclude Include="..\..\include\wx\univ\theme.h" />
+    <ClInclude Include="..\..\include\wx\univ\toolbar.h" />
+    <ClInclude Include="..\..\include\wx\univ\toplevel.h" />
+    <ClInclude Include="..\..\include\wx\univ\window.h" />
+    <ClInclude Include="..\..\include\wx\html\helpctrl.h" />
+    <ClInclude Include="..\..\include\wx\html\helpdata.h" />
+    <ClInclude Include="..\..\include\wx\html\helpdlg.h" />
+    <ClInclude Include="..\..\include\wx\html\helpfrm.h" />
+    <ClInclude Include="..\..\include\wx\html\helpwnd.h" />
+    <ClInclude Include="..\..\include\wx\html\htmlcell.h" />
+    <ClInclude Include="..\..\include\wx\html\htmldefs.h" />
+    <ClInclude Include="..\..\include\wx\html\htmlfilt.h" />
+    <ClInclude Include="..\..\include\wx\html\htmlpars.h" />
+    <ClInclude Include="..\..\include\wx\html\htmlproc.h" />
+    <ClInclude Include="..\..\include\wx\html\htmltag.h" />
+    <ClInclude Include="..\..\include\wx\html\htmlwin.h" />
+    <ClInclude Include="..\..\include\wx\html\htmprint.h" />
+    <ClInclude Include="..\..\include\wx\html\m_templ.h" />
+    <ClInclude Include="..\..\include\wx\html\winpars.h" />
+    <ClInclude Include="..\..\include\wx\aboutdlg.h" />
+    <ClInclude Include="..\..\include\wx\accel.h" />
+    <ClInclude Include="..\..\include\wx\access.h" />
+    <ClInclude Include="..\..\include\wx\anidecod.h" />
+    <ClInclude Include="..\..\include\wx\animate.h" />
+    <ClInclude Include="..\..\include\wx\animdecod.h" />
+    <ClInclude Include="..\..\include\wx\artprov.h" />
+    <ClInclude Include="..\..\include\wx\aui\aui.h" />
+    <ClInclude Include="..\..\include\wx\aui\auibook.h" />
+    <ClInclude Include="..\..\include\wx\bitmap.h" />
+    <ClInclude Include="..\..\include\wx\bmpbuttn.h" />
+    <ClInclude Include="..\..\include\wx\bmpcbox.h" />
+    <ClInclude Include="..\..\include\wx\bookctrl.h" />
+    <ClInclude Include="..\..\include\wx\brush.h" />
+    <ClInclude Include="..\..\include\wx\busyinfo.h" />
+    <ClInclude Include="..\..\include\wx\button.h" />
+    <ClInclude Include="..\..\include\wx\calctrl.h" />
+    <ClInclude Include="..\..\include\wx\caret.h" />
+    <ClInclude Include="..\..\include\wx\checkbox.h" />
+    <ClInclude Include="..\..\include\wx\checklst.h" />
+    <ClInclude Include="..\..\include\wx\choicdlg.h" />
+    <ClInclude Include="..\..\include\wx\choice.h" />
+    <ClInclude Include="..\..\include\wx\choicebk.h" />
+    <ClInclude Include="..\..\include\wx\clipbrd.h" />
+    <ClInclude Include="..\..\include\wx\clrpicker.h" />
+    <ClInclude Include="..\..\include\wx\cmdproc.h" />
+    <ClInclude Include="..\..\include\wx\cmndata.h" />
+    <ClInclude Include="..\..\include\wx\collpane.h" />
+    <ClInclude Include="..\..\include\wx\colordlg.h" />
+    <ClInclude Include="..\..\include\wx\colour.h" />
+    <ClInclude Include="..\..\include\wx\combo.h" />
+    <ClInclude Include="..\..\include\wx\combobox.h" />
+    <ClInclude Include="..\..\include\wx\control.h" />
+    <ClInclude Include="..\..\include\wx\cshelp.h" />
+    <ClInclude Include="..\..\include\wx\ctrlsub.h" />
+    <ClInclude Include="..\..\include\wx\cursor.h" />
+    <ClInclude Include="..\..\include\wx\dataobj.h" />
+    <ClInclude Include="..\..\include\wx\dataview.h" />
+    <ClInclude Include="..\..\include\wx\datectrl.h" />
+    <ClInclude Include="..\..\include\wx\dateevt.h" />
+    <ClInclude Include="..\..\include\wx\dbgrid.h" />
+    <ClInclude Include="..\..\include\wx\dc.h" />
+    <ClInclude Include="..\..\include\wx\dcbuffer.h" />
+    <ClInclude Include="..\..\include\wx\dcclient.h" />
+    <ClInclude Include="..\..\include\wx\dcgraph.h" />
+    <ClInclude Include="..\..\include\wx\dcmemory.h" />
+    <ClInclude Include="..\..\include\wx\dcmirror.h" />
+    <ClInclude Include="..\..\include\wx\dcprint.h" />
+    <ClInclude Include="..\..\include\wx\dcps.h" />
+    <ClInclude Include="..\..\include\wx\dcscreen.h" />
+    <ClInclude Include="..\..\include\wx\debugrpt.h" />
+    <ClInclude Include="..\..\include\wx\dialog.h" />
+    <ClInclude Include="..\..\include\wx\dialup.h" />
+    <ClInclude Include="..\..\include\wx\dirctrl.h" />
+    <ClInclude Include="..\..\include\wx\dirdlg.h" />
+    <ClInclude Include="..\..\include\wx\display.h" />
+    <ClInclude Include="..\..\include\wx\display_impl.h" />
+    <ClInclude Include="..\..\include\wx\dnd.h" />
+    <ClInclude Include="..\..\include\wx\aui\dockart.h" />
+    <ClInclude Include="..\..\include\wx\docmdi.h" />
+    <ClInclude Include="..\..\include\wx\docview.h" />
+    <ClInclude Include="..\..\include\wx\dragimag.h" />
+    <ClInclude Include="..\..\include\wx\effects.h" />
+    <ClInclude Include="..\..\include\wx\encinfo.h" />
+    <ClInclude Include="..\..\include\wx\evtloop.h" />
+    <ClInclude Include="..\..\include\wx\fdrepdlg.h" />
+    <ClInclude Include="..\..\include\wx\filedlg.h" />
+    <ClInclude Include="..\..\include\wx\filepicker.h" />
+    <ClInclude Include="..\..\include\wx\aui\floatpane.h" />
+    <ClInclude Include="..\..\include\wx\fmappriv.h" />
+    <ClInclude Include="..\..\include\wx\font.h" />
+    <ClInclude Include="..\..\include\wx\fontdlg.h" />
+    <ClInclude Include="..\..\include\wx\fontenum.h" />
+    <ClInclude Include="..\..\include\wx\fontpicker.h" />
+    <ClInclude Include="..\..\include\wx\fontutil.h" />
+    <ClInclude Include="..\..\include\wx\frame.h" />
+    <ClInclude Include="..\..\include\wx\aui\framemanager.h" />
+    <ClInclude Include="..\..\include\wx\gauge.h" />
+    <ClInclude Include="..\..\include\wx\gbsizer.h" />
+    <ClInclude Include="..\..\include\wx\gdicmn.h" />
+    <ClInclude Include="..\..\include\wx\gdiobj.h" />
+    <ClInclude Include="..\..\include\wx\geometry.h" />
+    <ClInclude Include="..\..\include\wx\gifdecod.h" />
+    <ClInclude Include="..\..\include\wx\glcanvas.h" />
+    <ClInclude Include="..\..\include\wx\graphics.h" />
+    <ClInclude Include="..\..\include\wx\grid.h" />
+    <ClInclude Include="..\..\include\wx\help.h" />
+    <ClInclude Include="..\..\include\wx\helpbase.h" />
+    <ClInclude Include="..\..\include\wx\helphtml.h" />
+    <ClInclude Include="..\..\include\wx\helpwin.h" />
+    <ClInclude Include="..\..\include\wx\htmllbox.h" />
+    <ClInclude Include="..\..\include\wx\hyperlink.h" />
+    <ClInclude Include="..\..\include\wx\icon.h" />
+    <ClInclude Include="..\..\include\wx\iconbndl.h" />
+    <ClInclude Include="..\..\include\wx\imagbmp.h" />
+    <ClInclude Include="..\..\include\wx\image.h" />
+    <ClInclude Include="..\..\include\wx\imaggif.h" />
+    <ClInclude Include="..\..\include\wx\imagiff.h" />
+    <ClInclude Include="..\..\include\wx\imagjpeg.h" />
+    <ClInclude Include="..\..\include\wx\imaglist.h" />
+    <ClInclude Include="..\..\include\wx\imagpcx.h" />
+    <ClInclude Include="..\..\include\wx\imagpng.h" />
+    <ClInclude Include="..\..\include\wx\imagpnm.h" />
+    <ClInclude Include="..\..\include\wx\imagtga.h" />
+    <ClInclude Include="..\..\include\wx\imagtiff.h" />
+    <ClInclude Include="..\..\include\wx\imagxpm.h" />
+    <ClInclude Include="..\..\include\wx\joystick.h" />
+    <ClInclude Include="..\..\include\wx\layout.h" />
+    <ClInclude Include="..\..\include\wx\laywin.h" />
+    <ClInclude Include="..\..\include\wx\listbase.h" />
+    <ClInclude Include="..\..\include\wx\listbook.h" />
+    <ClInclude Include="..\..\include\wx\listbox.h" />
+    <ClInclude Include="..\..\include\wx\listctrl.h" />
+    <ClInclude Include="..\..\include\wx\matrix.h" />
+    <ClInclude Include="..\..\include\wx\mdi.h" />
+    <ClInclude Include="..\..\include\wx\mediactrl.h" />
+    <ClInclude Include="..\..\include\wx\menu.h" />
+    <ClInclude Include="..\..\include\wx\menuitem.h" />
+    <ClInclude Include="..\..\include\wx\metafile.h" />
+    <ClInclude Include="..\..\include\wx\minifram.h" />
+    <ClInclude Include="..\..\include\wx\msgdlg.h" />
+    <ClInclude Include="..\..\include\wx\notebook.h" />
+    <ClInclude Include="..\..\include\wx\numdlg.h" />
+    <ClInclude Include="..\..\include\wx\odcombo.h" />
+    <ClInclude Include="..\..\include\wx\overlay.h" />
+    <ClInclude Include="..\..\include\wx\ownerdrw.h" />
+    <ClInclude Include="..\..\include\wx\palette.h" />
+    <ClInclude Include="..\..\include\wx\panel.h" />
+    <ClInclude Include="..\..\include\wx\paper.h" />
+    <ClInclude Include="..\..\include\wx\pen.h" />
+    <ClInclude Include="..\..\include\wx\pickerbase.h" />
+    <ClInclude Include="..\..\include\wx\popupwin.h" />
+    <ClInclude Include="..\..\include\wx\print.h" />
+    <ClInclude Include="..\..\include\wx\printdlg.h" />
+    <ClInclude Include="..\..\include\wx\prntbase.h" />
+    <ClInclude Include="..\..\include\wx\progdlg.h" />
+    <ClInclude Include="..\..\include\wx\propdlg.h" />
+    <ClInclude Include="..\..\include\wx\ptr_scpd.h" />
+    <ClInclude Include="..\..\include\wx\quantize.h" />
+    <ClInclude Include="..\..\include\wx\radiobox.h" />
+    <ClInclude Include="..\..\include\wx\radiobut.h" />
+    <ClInclude Include="..\..\include\wx\rawbmp.h" />
+    <ClInclude Include="..\..\include\wx\region.h" />
+    <ClInclude Include="..\..\include\wx\renderer.h" />
+    <ClInclude Include="..\..\include\wx\richtext\richtextbuffer.h" />
+    <ClInclude Include="..\..\include\wx\richtext\richtextctrl.h" />
+    <ClInclude Include="..\..\include\wx\richtext\richtextformatdlg.h" />
+    <ClInclude Include="..\..\include\wx\richtext\richtexthtml.h" />
+    <ClInclude Include="..\..\include\wx\richtext\richtextprint.h" />
+    <ClInclude Include="..\..\include\wx\richtext\richtextstyledlg.h" />
+    <ClInclude Include="..\..\include\wx\richtext\richtextstyles.h" />
+    <ClInclude Include="..\..\include\wx\richtext\richtextsymboldlg.h" />
+    <ClInclude Include="..\..\include\wx\richtext\richtextxml.h" />
+    <ClInclude Include="..\..\include\wx\sashwin.h" />
+    <ClInclude Include="..\..\include\wx\scopeguard.h" />
+    <ClInclude Include="..\..\include\wx\scrolbar.h" />
+    <ClInclude Include="..\..\include\wx\scrolwin.h" />
+    <ClInclude Include="..\..\include\wx\selstore.h" />
+    <ClInclude Include="..\..\include\wx\settings.h" />
+    <ClInclude Include="..\..\include\wx\sizer.h" />
+    <ClInclude Include="..\..\include\wx\slider.h" />
+    <ClInclude Include="..\..\include\wx\sound.h" />
+    <ClInclude Include="..\..\include\wx\spinbutt.h" />
+    <ClInclude Include="..\..\include\wx\spinctrl.h" />
+    <ClInclude Include="..\..\include\wx\splash.h" />
+    <ClInclude Include="..\..\include\wx\splitter.h" />
+    <ClInclude Include="..\..\include\wx\srchctrl.h" />
+    <ClInclude Include="..\..\include\wx\statbmp.h" />
+    <ClInclude Include="..\..\include\wx\statbox.h" />
+    <ClInclude Include="..\..\include\wx\statline.h" />
+    <ClInclude Include="..\..\include\wx\stattext.h" />
+    <ClInclude Include="..\..\include\wx\statusbr.h" />
+    <ClInclude Include="..\..\include\wx\tab.h" />
+    <ClInclude Include="..\..\include\wx\tabctrl.h" />
+    <ClInclude Include="..\..\include\wx\aui\tabmdi.h" />
+    <ClInclude Include="..\..\include\wx\taskbar.h" />
+    <ClInclude Include="..\..\include\wx\tbarbase.h" />
+    <ClInclude Include="..\..\include\wx\textctrl.h" />
+    <ClInclude Include="..\..\include\wx\textdlg.h" />
+    <ClInclude Include="..\..\include\wx\tglbtn.h" />
+    <ClInclude Include="..\..\include\wx\tipdlg.h" />
+    <ClInclude Include="..\..\include\wx\tipwin.h" />
+    <ClInclude Include="..\..\include\wx\toolbar.h" />
+    <ClInclude Include="..\..\include\wx\toolbook.h" />
+    <ClInclude Include="..\..\include\wx\tooltip.h" />
+    <ClInclude Include="..\..\include\wx\toplevel.h" />
+    <ClInclude Include="..\..\include\wx\treebase.h" />
+    <ClInclude Include="..\..\include\wx\treebook.h" />
+    <ClInclude Include="..\..\include\wx\treectrl.h" />
+    <ClInclude Include="..\..\include\wx\valgen.h" />
+    <ClInclude Include="..\..\include\wx\validate.h" />
+    <ClInclude Include="..\..\include\wx\valtext.h" />
+    <ClInclude Include="..\..\include\wx\vidmode.h" />
+    <ClInclude Include="..\..\include\wx\vlbox.h" />
+    <ClInclude Include="..\..\include\wx\vms_x_fix.h" />
+    <ClInclude Include="..\..\include\wx\vscroll.h" />
+    <ClInclude Include="..\..\include\wx\wave.h" />
+    <ClInclude Include="..\..\include\wx\window.h" />
+    <ClInclude Include="..\..\include\wx\wizard.h" />
+    <ClInclude Include="..\..\include\wx\wupdlock.h" />
+    <ClInclude Include="..\..\include\wx\wxhtml.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_all.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_animatctrl.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_bmp.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_bmpbt.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_bmpcbox.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_bttn.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_cald.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_chckb.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_chckl.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_choic.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_choicbk.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_clrpicker.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_collpane.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_combo.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_datectrl.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_dirpicker.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_dlg.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_filepicker.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_fontpicker.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_frame.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_gauge.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_gdctl.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_grid.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_html.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_htmllbox.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_hyperlink.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_listb.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_listbk.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_listc.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_mdi.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_menu.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_notbk.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_odcombo.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_panel.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_propdlg.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_radbt.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_radbx.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_scrol.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_scwin.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_sizer.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_slidr.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_spin.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_split.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_statbar.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_stbmp.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_stbox.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_stlin.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_sttxt.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_text.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_tglbtn.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_toolb.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_tree.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_treebk.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_unkwn.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xh_wizrd.h" />
+    <ClInclude Include="..\..\include\wx\xrc\xmlres.h" />
+    <ClInclude Include="..\..\include\wx\xpmdecod.h" />
+    <ClInclude Include="..\..\include\wx\xpmhand.h" />
+    <ClInclude Include="..\..\src\png\png.h" />
+    <ClInclude Include="..\..\src\png\pngasmrd.h" />
+    <ClInclude Include="..\..\src\png\pngconf.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\src\msw\version.rc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\libjpeg\libjpeg.vcxproj">
+      <Project>{bc236261-77e8-4567-8d09-45cd02965eb6}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="wx_config.vcxproj">
+      <Project>{c34487af-228a-4d11-8e50-27803df76873}</Project>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
