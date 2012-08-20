@@ -554,7 +554,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			return;
 		case VK_PRIOR:
 			m_fxaa = !m_fxaa;
-			printf("GSdx: fxaa is now %s.\n", m_fxaa ? "enabled" : "disabled");
+			printf("GSdx: Post-processing shader is now %s.\n", m_fxaa ? "enabled" : "disabled");
 			return;
 		}
 

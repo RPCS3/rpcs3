@@ -360,7 +360,12 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	// fxaa
 
-	CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps);
+	try { 
+		CompileShader("shader.fx", "ps_main", NULL, &m_fxaa.ps); 
+	} 
+	catch (GSDXRecoverableError) {
+		CompileShader(IDR_FXAA_FX, "ps_main", NULL, &m_fxaa.ps); 
+	}
 
 	// create shader layout
 
@@ -1341,6 +1346,83 @@ void GSDevice9::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4
 		m_dev->SetScissorRect(r);
 	}
 }
+
+void GSDevice9::CompileShader(const char* fn, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
+{
+    vector<D3DXMACRO> m;
+
+    PrepareShaderMacro(m, macro);
+
+    HRESULT hr;
+
+    CComPtr<ID3DXBuffer> shader, error;
+
+    hr = D3DXCompileShaderFromFile(fn, &m[0], NULL, entry.c_str(), m_shader.vs.c_str(), 0, &shader, &error, NULL);
+
+    if(SUCCEEDED(hr))
+    {
+        hr = m_dev->CreateVertexShader((DWORD*)shader->GetBufferPointer(), vs);
+    }
+    else if(error)
+    {
+        printf("%s\n", (const char*)error->GetBufferPointer());
+    }
+
+    ASSERT(SUCCEEDED(hr));
+
+    if(FAILED(hr))
+    {
+        throw GSDXRecoverableError();
+    }
+
+    hr = m_dev->CreateVertexDeclaration(layout, il);
+
+    if(FAILED(hr))
+    {
+        throw GSDXRecoverableError();
+    }
+}
+
+void GSDevice9::CompileShader(const char* fn, const string& entry, const D3DXMACRO* macro, IDirect3DPixelShader9** ps)
+{
+    uint32 flags = 0;
+
+    if(m_shader.level >= D3D_FEATURE_LEVEL_9_3)
+    {
+        flags |= D3DXSHADER_AVOID_FLOW_CONTROL;
+    }
+    else
+    {
+        flags |= D3DXSHADER_SKIPVALIDATION;
+    }
+
+    vector<D3DXMACRO> m;
+
+    PrepareShaderMacro(m, macro);
+
+    HRESULT hr;
+
+    CComPtr<ID3DXBuffer> shader, error;
+
+    hr = D3DXCompileShaderFromFile(fn, &m[0], NULL, entry.c_str(), m_shader.ps.c_str(), flags, &shader, &error, NULL);
+
+    if(SUCCEEDED(hr))
+    {
+        hr = m_dev->CreatePixelShader((DWORD*)shader->GetBufferPointer(), ps);
+    }
+    else if(error)
+    {
+        printf("%s\n", (const char*)error->GetBufferPointer());
+    }
+
+    ASSERT(SUCCEEDED(hr));
+
+    if(FAILED(hr))
+    {
+        throw GSDXRecoverableError();
+    }
+}
+
 
 void GSDevice9::CompileShader(uint32 id, const string& entry, const D3DXMACRO* macro, IDirect3DVertexShader9** vs, const D3DVERTEXELEMENT9* layout, int count, IDirect3DVertexDeclaration9** il)
 {

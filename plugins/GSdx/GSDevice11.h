@@ -219,5 +219,7 @@ public:
 	void CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps);
 	void CompileShader(uint32 id, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs);
 	void CompileShader(const char* fn, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11ComputeShader** cs);
+	void CompileShader(const char* fn, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11VertexShader** vs, D3D11_INPUT_ELEMENT_DESC* layout, int count, ID3D11InputLayout** il);
+	void CompileShader(const char* fn, const char* entry, D3D11_SHADER_MACRO* macro, ID3D11PixelShader** ps);
 };
 
