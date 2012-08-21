@@ -435,6 +435,18 @@ double FramerateManager::GetFramerate() const
 // LogicalVsync - Event received from the AppCoreThread (EEcore) for each vsync,
 // roughly 50/60 times a second when frame limiting is enabled, and up to 10,000 
 // times a second if not (ok, not quite, but you get the idea... I hope.)
+extern uint eecount_on_last_vdec;
+extern bool FMVstarted;
+extern bool renderswitch;
+extern bool EnableFMV;
+
+void DoFmvSwitch()
+{
+	ScopedCoreThreadPause paused_core( new SysExecEvent_SaveSinglePlugin(PluginId_GS) );
+	renderswitch = !renderswitch;
+	paused_core.AllowResume();
+}
+
 void Pcsx2App::LogicalVsync()
 {
 	if( AppRpc_TryInvokeAsync( &Pcsx2App::LogicalVsync ) ) return;
@@ -445,6 +457,23 @@ void Pcsx2App::LogicalVsync()
 
 	FpsManager.DoFrame();
 	
+	if (EmuConfig.Gamefixes.FMVinSoftwareHack) {
+		if (EnableFMV == 1) {
+			Console.Warning("FMV on");
+			DoFmvSwitch();
+			EnableFMV = 0;
+		}
+
+		if (FMVstarted){
+			int diff = cpuRegs.cycle - eecount_on_last_vdec;
+			if (diff > 60000000 ) {
+				Console.Warning("FMV off");
+				DoFmvSwitch();
+				FMVstarted = 0;
+			}
+		}
+	}
+
 	if (EmuConfig.GS.ManagedVsync && EmuConfig.GS.VsyncEnable)
 	{
 		static bool last_enabled = true; // Avoids locking it in some scenarios

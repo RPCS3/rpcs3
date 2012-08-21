@@ -49,6 +49,9 @@ int coded_block_pattern = 0;
 
 u8 indx4[16*16/2];
 
+uint eecount_on_last_vdec = 0;
+bool FMVstarted = 0;
+bool EnableFMV = 0;
 
 void tIPU_cmd::clear()
 {
@@ -403,6 +406,17 @@ static __ri void ipuBDEC(tIPU_CMD_BDEC bdec)
 
 static __fi bool ipuVDEC(u32 val)
 {
+	if (EmuConfig.Gamefixes.FMVinSoftwareHack) {
+		static int count = 0;
+		if (count++ > 5) {
+			if (FMVstarted == 0) {
+				EnableFMV = 1;
+				FMVstarted = 1;
+			}
+			count = 0;
+		}
+		eecount_on_last_vdec = cpuRegs.cycle;
+	}
 	switch (ipu_cmd.pos[0])
 	{
 		case 0:

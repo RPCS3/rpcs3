@@ -93,6 +93,10 @@ Panels::GameFixesPanel::GameFixesPanel( wxWindow* parent )
 		{
 			_("Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"),
 			wxEmptyString
+		},
+		{
+			_("Switch to GSdx software rendering when a FMV plays"),
+			wxEmptyString
 		}
 	};
 
