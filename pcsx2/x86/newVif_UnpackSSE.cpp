@@ -46,6 +46,7 @@ VifUnpackSSE_Base::VifUnpackSSE_Base()
 	, workReg( xmm1 )
 	, destReg( xmm0 )
 {
+	 UnpkLoopIteration = 0;
 }
 
 void VifUnpackSSE_Base::xMovDest() const {
@@ -182,9 +183,10 @@ void VifUnpackSSE_Base::xUPK_V2_16() const {
 		}
 		else 
 		{
-			xMOV32     (workReg, ptr32[srcIndirect]);
-			xPUNPCK.LWD(workReg, workReg);
-			xShiftR    (workReg, 16);
+			xXOR.PD    (destReg, destReg);
+			xMOV64     (workReg, ptr32[srcIndirect]);
+			xPUNPCK.LWD(workReg, destReg);
+			//xShiftR    (workReg, 16);
 		}
 		xPSHUF.D   (destReg, workReg, 0x44); //v1v0v1v0
 	}

@@ -160,11 +160,11 @@ void VifUnpackSSE_Dynarec::ModUnpack( int upknum, bool PostOp )
 	{
 		case 0:	
 		case 1: 
-		case 2: UnpkNoOfIterations = 4; if(PostOp == true) { UnpkLoopIteration++; UnpkLoopIteration = UnpkLoopIteration % UnpkNoOfIterations; }	break;
+		case 2: if(PostOp == true) { UnpkLoopIteration++; UnpkLoopIteration = UnpkLoopIteration & 0x3; }	break;
 
 		case 4:  
 		case 5:
-		case 6: UnpkNoOfIterations = 2; if(PostOp == true) { UnpkLoopIteration++; UnpkLoopIteration = UnpkLoopIteration % UnpkNoOfIterations; }	break;
+		case 6: if(PostOp == true) { UnpkLoopIteration++; UnpkLoopIteration = UnpkLoopIteration & 0x1; } break;
 
 		case 8: 	break;
 		case 9:		break;
@@ -195,7 +195,7 @@ void VifUnpackSSE_Dynarec::CompileRoutine() {
 	MSKPATH3_LOG("Compiling new block, unpack number %x, mode %x, masking %x, vNum %x", upkNum, doMode, doMask, vNum);
 
 	pxAssume(vCL == 0);
-	UnpkLoopIteration = 0;
+	
 	// Value passed determines # of col regs we need to load
 	SetMasks(isFill ? blockSize : cycleSize);
 

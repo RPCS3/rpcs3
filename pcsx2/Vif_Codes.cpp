@@ -249,12 +249,30 @@ vifOp(vifCode_Mark) {
 
 static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 	VURegs& VUx = idx ? VU1 : VU0;
+	vifStruct& vifX = GetVifX;
 	pxAssert(VUx.Micro > 0);
 
 	if (idx && THREAD_VU1) {
 		vu1Thread.WriteMicroMem(addr, (u8*)data, size*4);
 		return;
 	}
+
+	
+
+	if((addr + size *4) > (idx ? 0x4000 : 0x1000))
+	{
+		//DevCon.Warning("Handling split MPG");
+		if (!idx)  CpuVU0->Clear(addr, (idx ? 0x4000 : 0x1000) - addr);
+		else	   CpuVU1->Clear(addr, (idx ? 0x4000 : 0x1000) - addr);
+		
+		memcpy_fast(VUx.Micro + addr, data, (idx ? 0x4000 : 0x1000) - addr);
+		size -= ((idx ? 0x4000 : 0x1000) - addr) / 4;
+		memcpy_fast(VUx.Micro, data, size);
+
+		vifX.tag.addr = size * 4;
+	}
+	else
+	{
 	//The compare is pretty much a waste of time, likelyhood is that the program isnt there, thats why its copying it.
 	//Faster without.
 	//if (memcmp_mmx(VUx.Micro + addr, data, size*4)) {
@@ -262,7 +280,9 @@ static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 		if (!idx)  CpuVU0->Clear(addr, size*4);
 		else	   CpuVU1->Clear(addr, size*4);
 		memcpy_fast(VUx.Micro + addr, data, size*4); //from tests, memcpy is 1fps faster on Grandia 3 than memcpy_fast
-	//}
+
+		vifX.tag.addr   +=   size * 4;
+	}
 }
 
 vifOp(vifCode_MPG) {
@@ -282,19 +302,18 @@ vifOp(vifCode_MPG) {
 	pass2 {
 		if (vifX.vifpacketsize < vifX.tag.size) { // Partial Transfer
 			if((vifX.tag.addr + vifX.vifpacketsize*4) > (idx ? 0x4000 : 0x1000)) {
-				DevCon.Warning("Vif%d MPG Split Overflow", idx);
+				//DevCon.Warning("Vif%d MPG Split Overflow", idx);
 			}
 			_vifCode_MPG(idx,    vifX.tag.addr, data, vifX.vifpacketsize);
-			vifX.tag.addr   +=   vifX.vifpacketsize * 4;
-			vifX.tag.size   -=   vifX.vifpacketsize;
+			vifX.tag.size -= vifX.vifpacketsize; //We can do this first as its passed as a pointer
 			return vifX.vifpacketsize;
 		}
 		else { // Full Transfer
 			if((vifX.tag.addr + vifX.tag.size*4) > (idx ? 0x4000 : 0x1000)) {
-				DevCon.Warning("Vif%d MPG Split Overflow", idx);
+				//DevCon.Warning("Vif%d MPG Split Overflow full %x", idx, vifX.tag.addr + vifX.tag.size*4);
 			}
 			_vifCode_MPG(idx,  vifX.tag.addr, data, vifX.tag.size);
-			int ret       = vifX.tag.size;
+			int ret = vifX.tag.size;
 			vifX.tag.size = 0;
 			vifX.cmd      = 0;
 			vifX.pass		= 0;

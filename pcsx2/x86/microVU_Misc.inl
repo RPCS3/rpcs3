@@ -142,6 +142,14 @@ void mVUsaveReg(const xmm& reg, xAddressVoid ptr, int xyzw, bool modXYZW)
 	}
 }
 
+static const __aligned16 u32 SSEXYZWMask[4][4] =
+{
+	{0xffffffff, 0xffffffff, 0xffffffff, 0x00000000},
+	{0xffffffff, 0xffffffff, 0x00000000, 0xffffffff},
+	{0xffffffff, 0x00000000, 0xffffffff, 0xffffffff},
+	{0x00000000, 0xffffffff, 0xffffffff, 0xffffffff}
+};
+
 // Modifies the Source Reg! (ToDo: Optimize modXYZW = 1 cases)
 void mVUmergeRegs(const xmm& dest, const xmm& src, int xyzw, bool modXYZW)
 {
@@ -206,6 +214,15 @@ void mVUmergeRegs(const xmm& dest, const xmm& src, int xyzw, bool modXYZW)
 						 break;
 			}
 		}
+	} 
+	else if( dest == src )
+	{
+		//VIF can sent the temp directory as the source and destination, just need to clear the ones we dont want in which case.
+		if(!(xyzw & 0x1)) xAND.PS( dest, ptr128[SSEXYZWMask[0]]);
+		if(!(xyzw & 0x2)) xAND.PS( dest, ptr128[SSEXYZWMask[1]]);
+		if(!(xyzw & 0x4)) xAND.PS( dest, ptr128[SSEXYZWMask[2]]);
+		if(!(xyzw & 0x8)) xAND.PS( dest, ptr128[SSEXYZWMask[3]]);
+
 	}
 }
 
