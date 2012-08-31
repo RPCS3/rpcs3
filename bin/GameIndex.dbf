@@ -1905,7 +1905,6 @@ Serial = SLUS-20042
 Name   = LEGO Racers 2
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20043
 Name   = Star Wars - Super Bombad Racing
@@ -2270,7 +2269,6 @@ Serial = SLUS-20145
 Name   = Ring of Red
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20146
 Name   = Shadow of Destiny
@@ -2315,7 +2313,6 @@ Serial = SLUS-20152
 Name   = Ace Combat 4 - Shattered Skies
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1		//hangs on menus
 ---------------------------------------------
 Serial = SLUS-20153
 Name   = RC Revenge Pro
@@ -2900,7 +2897,6 @@ Serial = SLUS-20287
 Name   = Guilty Gear X
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20288
 Name   = Godai - Elemental Force
@@ -3055,7 +3051,6 @@ Serial = SLUS-20324
 Name   = Paris Dakar Rally
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20325
 Name   = Bass Strike
@@ -3362,7 +3357,6 @@ Serial = SLUS-20389
 Name   = Endgame
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20390
 Name   = Risk - Global Domination
@@ -3557,7 +3551,6 @@ Serial = SLUS-20436
 Name   = Guilty Gear X2
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20437
 Name   = Dance Dance Revolution MAX
@@ -3626,7 +3619,6 @@ Serial = SLUS-20454
 Name   = Enter the Matrix
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 EETimingHack = 1
 ---------------------------------------------
 Serial = SLUS-20455
@@ -4458,7 +4450,6 @@ Serial = SLUS-20641
 Name   = IndyCar Series
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20642
 Name   = Auto Modellista
@@ -4873,7 +4864,6 @@ Serial = SLUS-20735
 Name   = Lethal Skies 2
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20736
 Name   = Cabela's Dangerous Hunts
@@ -5333,7 +5323,6 @@ Serial = SLUS-20842
 Name   = Sims, The - Bustin' Out
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20843
 Name   = Dead to Rights II
@@ -5374,7 +5363,6 @@ Serial = SLUS-20851
 Name   = Ace Combat 5 - The Unsung War
 Region = NTSC-U
 Compat = 4
-SkipMPEGHack = 1		//hangs on menus
 ---------------------------------------------
 Serial = SLUS-20852
 Name   = Terminator 3, The - The Redemption
@@ -5649,7 +5637,6 @@ Serial = SLUS-20908
 Name   = Guilty Gear Isuka
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20909
 Name   = Crash Bandicoot Twinsanity
@@ -5769,7 +5756,6 @@ Serial = SLUS-20933
 Name   = Smash Court Pro Tournament Tennis 2
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1		//IPU menu hangs the game without it
 ---------------------------------------------
 Serial = SLUS-20934
 Name   = Death by Degrees
@@ -6048,7 +6034,6 @@ Serial = SLUS-20987
 Name   = Pool Paradise
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-20988
 Region = NTSC-U
@@ -6147,7 +6132,6 @@ Serial = SLUS-21008
 Name   = Katamari Damacy
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLUS-21009
@@ -7128,7 +7112,6 @@ Serial = SLUS-21220
 Name   = World Soccer - Winning Eleven 9 International
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-21221
 Name   = Magna Carta - Tears of Blood
@@ -7139,7 +7122,6 @@ Serial = SLUS-21222
 Name   = Top Spin
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1	//background IPU in main menu hangs the game.
 ---------------------------------------------
 Serial = SLUS-21223
 Name   = Karaoke Revolution Party
@@ -7179,7 +7161,6 @@ Name   = We Love Katamari
 Region = NTSC-U
 Compat = 5
 vuClampMode = 3
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLUS-21231
@@ -7734,7 +7715,6 @@ Serial = SLUS-21346
 Name   = Ace Combat Zero - The Belkan War
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1		//hangs ofn menus
 ---------------------------------------------
 Serial = SLUS-21347
 Name   = AMF Xtreme Bowling
@@ -8108,13 +8088,11 @@ Serial = SLUS-21421
 Name   = Spy Hunter - Nowhere to Run
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-21422
 Name   = Tom Clancy's Ghost Recon - Advenced Warfighter
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-21423
 Name   = Grand Theft Auto - Liberty City Stories
@@ -9044,7 +9022,6 @@ Serial = SLUS-21652
 Name   = Guilty Gear XX - Accent Core
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-21653
 Name   = Kiki Kai Kai
@@ -9864,7 +9841,6 @@ Serial = SLUS-21847
 Name   = Guilty Gear XX - Accent Core Plus
 Region = NTSC-U
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLUS-21848
 Name   = Rock Band Track Pack - AC/DC Live
@@ -11062,7 +11038,6 @@ Region = NTSC-Unk
 Serial = SCAJ-20005
 Name   = Guilty Gear XX
 Region = NTSC-Unk
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SCAJ-20006
 Name   = Gunbarl Collection with Time Crisis
@@ -11170,7 +11145,6 @@ Region = NTSC-Unk
 Serial = SCAJ-20033
 Name   = Guilty Gear XX #Reload
 Region = NTSC-Unk
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SCAJ-20034
 Name   = Summon Night 3
@@ -11320,7 +11294,6 @@ Region = NTSC-Unk
 Serial = SCAJ-20079
 Name   = Katamari Damacy
 Region = NTSC-Unk
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SCAJ-20080
@@ -11387,7 +11360,6 @@ EETimingHack = 1
 Serial = SCAJ-20096
 Name   = Guilty Gear Isuka
 Region = NTSC-Unk
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SCAJ-20097
 Name   = EyeToy - FuriFuri Dance Tengoku
@@ -11544,7 +11516,6 @@ Serial = SCAJ-20135
 Name   = Minna Daisuki Katamari Damacy
 Region = NTSC-Unk
 vuClampMode = 3
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SCAJ-20136
@@ -11953,7 +11924,6 @@ Compat = 5
 Serial = SCKA-20025
 Name   = Katamari Damacy
 Region = NTSC-K
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SCKA-20026
@@ -11983,7 +11953,6 @@ Region = NTSC-K
 Serial = SCKA-20033
 Name   = Smash Court Professional Tournament 2 [Limited Edition]
 Region = NTSC-K
-SkipMPEGHack = 1		//menu hangs the game without it
 ---------------------------------------------
 Serial = SCKA-20034
 Name   = Time Crisis 3 [PlayStation 2 Big Hit Series]
@@ -12036,7 +12005,6 @@ Serial = SCKA-20051
 Name   = Minna Daisuki Katamari Damacy
 Region = NTSC-K
 vuClampMode = 3
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SCKA-20052
@@ -14253,7 +14221,6 @@ Region = NTSC-K
 Serial = SLKA-25322
 Name   = Guilty Gear XX - Slash
 Region = NTSC-K
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLKA-25323
 Name   = SSX On Tour
@@ -14601,7 +14568,6 @@ Region = NTSC-J
 Serial = SLPM-62013
 Name   = Ring of Red
 Region = NTSC-J
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-62015
 Name   = Silpheed - The Lost Planet
@@ -14789,7 +14755,6 @@ Region = NTSC-J
 Serial = SLPM-62091
 Name   = Ring of Red
 Region = NTSC-J
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-62092
 Name   = XG3 Extreme G Racing
@@ -15072,7 +15037,6 @@ Region = NTSC-J
 Serial = SLPM-62204
 Name   = LEGO Racers 2
 Region = NTSC-J
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-62205
 Name   = Virtua Cop Re-Birth
@@ -17012,7 +16976,6 @@ Serial = SLPM-64525
 Name   = Guilty Gear X Plus "By Your Side"
 Region = NTSC-K
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-64549
 Name   = Shikigame no Shiro
@@ -18584,7 +18547,6 @@ Compat = 5
 Serial = SLPM-65479
 Name   = Sims, The - Bustin' Out
 Region = NTSC-J
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-65480
 Name   = Michigan
@@ -19202,7 +19164,6 @@ Region = NTSC-J
 Serial = SLPM-65644
 Name   = Guilty Gear Isuka
 Region = NTSC-J
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-65648
 Name   = Medal of Honor - Frontline [EA Best Hits]
@@ -20934,7 +20895,6 @@ Region = NTSC-J
 Serial = SLPM-66129
 Name   = Guilty Gear XX #Reload
 Region = NTSC-J
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-66130
 Name   = Tom Clancy's Splinter Cell - Chaos Theory
@@ -21679,7 +21639,6 @@ Serial = SLPM-66333
 Name   = Guilty Gear XX Slash
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-66334
 Name   = WRC - World Rally Championship 4 [Spike the Best]
@@ -23014,7 +22973,6 @@ Serial = SLPM-66712
 Name   = Rozen Maiden - Geppetto Garden [Limited Edition]
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-66714
 Name   = Wrestle Kingdom 2 - Pro Wrestling Sekai Taisen
@@ -23150,7 +23108,6 @@ Serial = SLPM-66746
 Name   = Guilty Gear XX - Accent Core
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-66747
 Name   = Baroque
@@ -23952,13 +23909,11 @@ Region = NTSC-J
 Serial = SLPM-66964
 Name   = Guilty Gear XX - Accent Core Plus [Append Edition]
 Region = NTSC-J
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-66965
 Name   = Guilty Gear XX - Accent Core Plus
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPM-66966
 Name   = Godfather, The [EA-SY! 1980]
@@ -25884,7 +25839,6 @@ Name   = Seven Lance Moromos - Cavalryman Corps
 Region = NTSC-J
 Compat = 5
 EETimingHack = 1		//Correct graphics after changing scene.
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-25026
 Name   = Dead or Alive 2 - Hardcore
@@ -26373,7 +26327,6 @@ Serial = SLPS-25184
 Name   = Guilty Gear XX - The Midnight Carnival
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-25185
 Name   = Unlimited SaGa [Limited Edition]
@@ -26403,14 +26356,12 @@ Serial = SLPS-25195
 Name   = Venus & Braves [Premium Pack]
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 EETimingHack = 1
 ---------------------------------------------
 Serial = SLPS-25196
 Name   = Venus & Braves
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 EETimingHack = 1
 ---------------------------------------------
 Serial = SLPS-25197
@@ -26540,7 +26491,6 @@ Serial = SLPS-25235
 Name   = Yumeria
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-25236
 Name   = Fantastic Fortune 2
@@ -26603,7 +26553,6 @@ Region = NTSC-J
 Serial = SLPS-25254
 Name   = Enter the Matrix
 Region = NTSC-J
-SkipMPEGHack = 1
 EETimingHack = 1
 ---------------------------------------------
 Serial = SLPS-25255
@@ -26633,7 +26582,6 @@ Region = NTSC-J
 Serial = SLPS-25261
 Name   = Guilty Gear XX #Reload
 Region = NTSC-J
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-25262
 Name   = Private Nurse Maria
@@ -26660,7 +26608,6 @@ Serial = SLPS-25271
 Name   = Sidewinder V
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-25272
 Name   = Hulk, The
@@ -26962,13 +26909,11 @@ Serial = SLPS-25360
 Name   = Katamari Damacy
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLPS-25361
 Name   = Smash Court Professional Tournament 2
 Region = NTSC-J
-SkipMPEGHack = 1		//IPU menu hangs the game without it
 ---------------------------------------------
 Serial = SLPS-25362
 Name   = Tetsujin 28 Go
@@ -27372,7 +27317,6 @@ Serial = SLPS-25467
 Name   = Minna Daisuki Katamaki Damacy
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-25468
 Name   = Eternal Aselia - The Spirit of Eternity Sword
@@ -27603,7 +27547,6 @@ Name   = dot Hack - Fragment
 Region = NTSC-J
 Compat = 5
 EETimingHack = 1
-SkipMPEGHack = 1
 OPHFlagHack = 1
 DMABusyHack = 1
 ---------------------------------------------
@@ -27636,7 +27579,6 @@ Serial = SLPS-25534
 Name   = Twinkle Star Sprites - La Petite Princesse
 Region = NTSC-J
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLPS-25535
 Name   = NeoGeo Online Collection Vol.3 - The King of Fighters - Orochi Collection [Special Pack]
@@ -29094,7 +29036,6 @@ Region = NTSC-J
 Serial = SLPS-73210
 Name   = Katamari Damacy [PlayStation 2 The Best]
 Region = NTSC-J
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLPS-73211
@@ -29209,14 +29150,12 @@ Region = NTSC-J
 Serial = SLPS-73240
 Name   = Katamari Damacy [PlayStation 2 The Best]
 Region = NTSC-J
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLPS-73241
 Name   = Minna Daisuki Katamari Damacy [PlayStation 2 The Best]
 Region = NTSC-J
 vuClampMode = 3
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLPS-73242
@@ -30527,7 +30466,6 @@ Serial = SCES-53310
 Name   = Roland Garros 2005
 Region = PAL-E
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SCES-53312
 Name   = Soul Calibur 3
@@ -31489,7 +31427,6 @@ Serial = SLES-50113
 Name   = Ring of Red
 Region = PAL-M3
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-50114
 Name   = Kengo - Master of Bushido
@@ -31680,7 +31617,6 @@ Serial = SLES-50202
 Name   = DNA - Dark Native Apostle
 Region = PAL-M5
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-50203
 Name   = Bloody Roar 3
@@ -32180,7 +32116,6 @@ Region = PAL-Unk
 Serial = SLES-50443
 Name   = LEGO Racers 2
 Region = PAL-Unk
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-50444
 Name   = Portal Runner
@@ -32488,7 +32423,6 @@ Region = PAL-Unk
 Serial = SLES-50591
 Name   = Guilty Gear X
 Region = PAL-E
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-50592
 Name   = No One Lives Forever
@@ -33778,7 +33712,6 @@ Serial = SLES-51203
 Name   = Enter the Matrix
 Region = PAL-M5
 Compat = 5
-SkipMPEGHack = 1
 EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-51208
@@ -34052,7 +33985,6 @@ Region = PAL-Unk
 Serial = SLES-51344
 Name   = Guilty Gear X2
 Region = PAL-Unk
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-51345
 Name   = Run Like Hell
@@ -34424,7 +34356,6 @@ Serial = SLES-51555
 Name   = Play It Pinball
 Region = PAL-Unk
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-51557
 Name   = Broken Sword - The Sleeping Dragon
@@ -35518,12 +35449,10 @@ Serial = SLES-52047
 Name   = Sims, The - Bustin' Out
 Region = PAL-Unk
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-52048
 Name   = Sims, The - Bustin' Out
 Region = PAL-Unk
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-52055
 Name   = Harry Potter and the Philosopher's Stone
@@ -35574,7 +35503,6 @@ Name   = SWAT - Global Strike Force
 Region = PAL-Unk
 Compat = 5
 eeClampMode = 3			//For grey screen ingame.
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-52100
 Name   = NRL Rugby League
@@ -36159,7 +36087,6 @@ Region = PAL-Unk
 Serial = SLES-52423
 Name   = Smash Court Tennis - Pro Tournament 2
 Region = PAL-Unk
-SkipMPEGHack = 1		//IPU menu hangs the game without it
 ---------------------------------------------
 Serial = SLES-52433
 Name   = Goblin Commander - Unleash The Horde
@@ -37439,7 +37366,6 @@ Serial = SLES-52967
 Name   = Guilty Gear X2 Reloaded
 Region = PAL-Unk
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-52968
 Name   = Burnout 2 - Point of Impact
@@ -37964,7 +37890,6 @@ Serial = SLES-53175
 Name   = Top Spin
 Region = PAL-Unk
 Compat = 5
-SkipMPEGHack = 1	//background IPU in main menu hangs the game.
 ---------------------------------------------
 Serial = SLES-53186
 Name   = International Super Karts
@@ -38106,7 +38031,6 @@ Serial = SLES-53284
 Name   = Guilty Gear Isuka
 Region = PAL-Unk
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-53287
 Name   = Tom Clancy's Splinter Cell - Chaos Theory
@@ -39220,7 +39144,6 @@ Serial = SLES-53810
 Name   = Sensible Soccer 2006
 Region = PAL-Unk
 Compat = 5
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-53813
 Name   = Friends - Celui qui Repond a Toutes les Questions
@@ -39256,7 +39179,6 @@ Serial = SLES-53828
 Name   = We Love Katamari
 Region = PAL-Unk
 vuClampMode = 3
-SkipMPEGHack = 1
 mvuFlagSpeedHack = 0
 ---------------------------------------------
 Serial = SLES-53829
@@ -39583,7 +39505,6 @@ Serial = SLES-53996
 Name   = Army Men - Major Malfunction
 Region = PAL-Unk
 Compat = 4
-SkipMPEGHack = 1
 ---------------------------------------------
 Serial = SLES-53998
 Name   = OutRun 2006 - Coast 2 Coast
