@@ -204,7 +204,8 @@ static __ri void DmaExec( void (*func)(), u32 mem, u32 value )
 	{
 		const uint channel = ChannelNumber(mem);
 
-		if(psHu8(DMAC_ENABLER+2) == 1) //DMA is suspended so we can allow writes to anything
+		// The following if ( 0 ) is probably a misunderstanding, broke Katamari videos
+		if( 0 /*psHu8(DMAC_ENABLER+2) == 1*/) //DMA is suspended so we can allow writes to anything
 		{
 			//If it stops the DMA, we need to clear any pending interrupts so the DMA doesnt continue.
 			if(chcr.STR == 0)
