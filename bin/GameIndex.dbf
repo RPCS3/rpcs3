@@ -2006,6 +2006,22 @@ Compat = 1
 [patches = 23AF6876]
 	// change TLSNDDRV RPC to blocking, better would be to move the wait to the top of the function
 	patch=0,EE,002b06ec,word,24060000
+
+	//patch=0,EE,002b0868,word,10000014
+
+	// don't ask
+	//patch=0,EE,002B00B8,word,FFB00010
+	//patch=0,EE,002B00BC,word,3C140067
+	//patch=0,EE,002B00C0,word,2690C0C0
+	//patch=0,EE,002B00C4,word,0C0EBA28
+	//patch=0,EE,002B00C8,word,0200202D
+	//patch=0,EE,002B00CC,word,5440FFFD
+	//patch=0,EE,002B00D0,word,2690C0C0
+	//patch=0,EE,002B00D4,word,1040000B
+	//patch=0,EE,002B00D8,word,3253FFF0
+	//patch=0,EE,002B00DC,word,3402C020
+	//patch=0,EE,002B00E0,word,12620009
+	//patch=0,EE,002B00E4,word,3C150067
 [/patches]
 ---------------------------------------------
 Serial = SLUS-20072
@@ -25754,6 +25770,23 @@ Compat = 5
 [patches = 7894BA09]
 	// change TLSNDDRV RPC to blocking, better would be to move the wait to the top of the function
 	patch=0,EE,00290408,word,24060000
+
+	//patch=0,EE,0029055C,word,10000013
+
+	// I tried to write a comment explaining this then realised the futility
+	//patch=0,EE,0028FE78,word,FFB300E0
+	//patch=0,EE,0028FE7C,word,3C130058
+	//patch=0,EE,0028FE80,word,0C0CD678
+	//patch=0,EE,0028FE84,word,266457C0
+	//patch=0,EE,0028FE88,word,1440FFFD
+	//patch=0,EE,0028FE8C,word,32224000
+	//patch=0,EE,0028FE90,word,1040000E
+	//patch=0,EE,0028FE94,word,FFB400F0
+	//patch=0,EE,0028FE98,word,3402C020
+	//patch=0,EE,0028FE9C,word,322BFFF0
+	//patch=0,EE,0028FEA0,word,1162000B
+	//patch=0,EE,0028FEA4,word,3C140058
+	//patch=0,EE,0028FEA8,word,00000000
 [/patches]
 ---------------------------------------------
 Serial = SLPS-25003
