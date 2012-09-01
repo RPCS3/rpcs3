@@ -1538,11 +1538,11 @@ void StartVoices(int core, u32 value)
 		{
 			V_Voice& thisvc( Cores[core].Voices[vc] );
 
-			if(MsgKeyOnOff()) ConLog("* SPU2-X: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %02x%02x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
+			if(MsgKeyOnOff()) ConLog("* SPU2-X: KeyOn: C%dV%02d: SSA: %8x; M: %s%s%s%s; H: %04x; P: %04x V: %04x/%04x; ADSR: %04x%04x\n",
 				core,vc,thisvc.StartA,
 				(Cores[core].VoiceGates[vc].DryL)?"+":"-",(Cores[core].VoiceGates[vc].DryR)?"+":"-",
 				(Cores[core].VoiceGates[vc].WetL)?"+":"-",(Cores[core].VoiceGates[vc].WetR)?"+":"-",
-				*(u8*)GetMemPtr(thisvc.StartA),*(u8 *)GetMemPtr((thisvc.StartA)+1),
+				*(u16*)GetMemPtr(thisvc.StartA),
 				thisvc.Pitch,
 				thisvc.Volume.Left.Value>>16,thisvc.Volume.Right.Value>>16,
 				thisvc.ADSR.regADSR1,thisvc.ADSR.regADSR2);
