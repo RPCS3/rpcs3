@@ -196,20 +196,20 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 	// Not really important.  Everything should work regardless,
 	// but it could be indicative of an emulation foopah elsewhere.
 
-#if 0
-	uptr pa = ((uptr)pMem)&7;
-	uptr pm = TSA&0x7;
+	if(MsgToConsole()) {
+		uptr pa = ((uptr)pMem)&7;
+		uptr pm = TSA&0x7;
 
-	if( pa )
-	{
-		fprintf(stderr, "* SPU2 DMA Write > Missaligned SOURCE! Core: %d  TSA: 0x%x  TDA: 0x%x  Size: 0x%x\n", core, TSA, TDA, size);
-	}
+		if( pa )
+		{
+			ConLog("* SPU2 DMA Write > Missaligned SOURCE! Core: %d  TSA: 0x%x  TDA: 0x%x  Size: 0x%x\n", Index, TSA, TDA, size);
+		}
 
-	if( pm )
-	{
-		fprintf(stderr, "* SPU2 DMA Write > Missaligned TARGET! Core: %d  TSA: 0x%x  TDA: 0x%x Size: 0x%x\n", core, TSA, TDA, size );
+		if( pm )
+		{
+			ConLog("* SPU2 DMA Write > Missaligned TARGET! Core: %d  TSA: 0x%x  TDA: 0x%x Size: 0x%x\n", Index, TSA, TDA, size );
+		}
 	}
-#endif
 
 	if(Index==0)
 		DMA4LogWrite(pMem,size<<1);
