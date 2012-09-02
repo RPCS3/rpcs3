@@ -496,8 +496,8 @@ struct V_Core
 
 	__forceinline u16 DmaRead()
 	{
-		const u16 ret = (u16)spu2M_Read(TDA);
-		++TDA; TDA &= 0xfffff;
+		const u16 ret = (u16)spu2M_Read(TSA);
+		++TSA; TSA &= 0xfffff;
 		return ret;
 	}
 

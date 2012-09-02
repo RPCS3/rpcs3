@@ -589,7 +589,7 @@ EXPORT_C_(u16) SPU2read(u32 rmem)
 	u16 ret=0xDEAD; u32 core=0, mem=rmem&0xFFFF, omem=mem;
 	if (mem & 0x400) { omem^=0x400; core=1; }
 
-	if(rmem==0x1f9001AC)
+	if(omem == 0x1f9001AC)
 	{
 		ret = Cores[core].DmaRead();
 	}
@@ -602,7 +602,7 @@ EXPORT_C_(u16) SPU2read(u32 rmem)
 		{
 			ret = Cores[0].ReadRegPS1(rmem);
 		}
-		else if( (mem&0xFFFF) >= 0x800 )
+		else if (mem >= 0x800)
 		{
 			ret = spu2Ru16(mem);
 			ConLog("* SPU2-X: Read from reg>=0x800: %x value %x\n",mem,ret);
