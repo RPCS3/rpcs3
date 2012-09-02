@@ -314,7 +314,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 #endif
 	}
 
-	TSA			= TDA & 0xFFFF0;
+	TSA			= TDA;
 	DMAICounter	= size;
 	TADR		= MADR + (size<<1);
 }
@@ -322,7 +322,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 void V_Core::DoDMAread(u16* pMem, u32 size)
 {
 #ifndef ENABLE_NEW_IOPDMA_SPU2
-	TSA &= 0xffff8;
+	TSA &= 0xfffff;
 
 	u32 buff1end = TSA + size;
 	u32 buff2end = 0;
@@ -379,7 +379,7 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 		}
 	}
 
-	TSA = TDA & 0xFFFFF;
+	TSA = TDA;
 
 	DMAICounter	= size;
 	Regs.STATX &= ~0x80;
@@ -408,7 +408,7 @@ void V_Core::DoDMAwrite(u16* pMem, u32 size)
 		DebugCores[Index].dmaFlag = 2;
 	}
 
-	TSA &= ~7;
+	TSA &= 0xfffff;
 
 	bool adma_enable = ((AutoDMACtrl&(Index+1))==(Index+1));
 
@@ -436,7 +436,7 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 	bool DmaStarting = !DmaStarted;
 	DmaStarted = true;
 
-	TSA &= 0xffff8;
+	TSA &= 0xfffff;
 
 	u16* pMem = (u16*)data;
 
@@ -495,7 +495,7 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 		}
 	}
 
-	TSA = TDA & 0xFFFFF;
+	TSA = TDA;
 
 	Regs.STATX &= ~0x80;
 	Regs.STATX |= 0x400;
@@ -526,7 +526,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 		DebugCores[Index].dmaFlag = 1;
 	}
 
-	TSA &= ~7;
+	TSA &= 0xfffff;
 
 	bool adma_enable = ((AutoDMACtrl&(Index+1))==(Index+1));
 
