@@ -113,6 +113,8 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 			vifX.irqoffset.enabled = false;
 	}
 
+	vifExecQueue(idx);
+
 	return !vifX.vifstalled.enabled;
 }
 

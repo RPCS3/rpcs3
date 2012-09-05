@@ -90,6 +90,9 @@ struct vifStruct {
 	u32 vifpacketsize;
 	u8  inprogress;
 	u8  dmamode;
+
+	bool queued_program;
+	u32 queued_pc;
 };
 
 extern __aligned16 vifStruct  vif0, vif1;
@@ -131,3 +134,5 @@ extern u32 g_vif1Cycles;
 
 extern void vif0FLUSH();
 extern void vif1FLUSH();
+
+extern void vifExecQueue(int idx);

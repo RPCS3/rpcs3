@@ -34,17 +34,45 @@ vifOp(vifCode_Null);
 // Vif0/Vif1 Misc Functions
 //------------------------------------------------------------------
 
+__ri void vifExecQueue(int idx)
+{
+	if (!GetVifX.queued_program)
+		return;
+
+	GetVifX.queued_program = false;
+
+	int startcycles = 0;
+
+	if (!idx) startcycles = VU0.cycle;
+	else      startcycles = VU1.cycle;
+
+	if (!idx) vu0ExecMicro(GetVifX.queued_pc);
+	else	  vu1ExecMicro(GetVifX.queued_pc);
+
+	///NOTE: Shadowman 2 has SPS with this, uncommenting the correct code fixes it
+	if (!idx) { startcycles = ((VU0.cycle-startcycles) + ( vif0ch.qwc - (vif0.vifpacketsize >> 2) )); CPU_INT(VIF_VU0_FINISH, 1/*startcycles * BIAS*/); }
+	else      { startcycles = ((VU1.cycle-startcycles) + ( vif1ch.qwc - (vif1.vifpacketsize >> 2) )); CPU_INT(VIF_VU1_FINISH, 1/*startcycles * BIAS*/); }
+
+	//DevCon.Warning("Ran VU%x, VU0 Cycles %x, VU1 Cycles %x, start %x cycle %x", idx, g_vu0Cycles, g_vu1Cycles, startcycles, VU1.cycle);
+	//GetVifX.vifstalled.enabled = true;
+	//GetVifX.vifstalled.value = VIF_TIMING_BREAK;
+}
+
 static __fi void vifFlush(int idx) {
 	if (!idx) vif0FLUSH();
 	else      vif1FLUSH();
+
+	vifExecQueue(idx);
 }
 
 static __fi void vuExecMicro(int idx, u32 addr) {
 	VIFregisters& vifRegs = vifXRegs;
-	int startcycles = 0;
-	//vifFlush(idx);
 
-	//if(vifX.vifstalled.enabled == true) return;
+	vifFlush(idx);
+	if(GetVifX.waitforvu)
+		return;
+
+	vifRegs.stat.VEW = true;
 
 	if (vifRegs.itops  > (idx ? 0x3ffu : 0xffu)) {
 		Console.WriteLn("VIF%d ITOP overrun! %x", idx, vifRegs.itops);
@@ -70,20 +98,8 @@ static __fi void vuExecMicro(int idx, u32 addr) {
 		}
 	}
 
-	if (!idx) startcycles = VU0.cycle;
-	else      startcycles = VU1.cycle;
-
-	if (!idx) vu0ExecMicro(addr);
-	else	  vu1ExecMicro(addr);
-
-	///NOTE: Shadowman 2 has SPS with this, uncommenting the correct code fixes it
-	if (!idx) { startcycles = ((VU0.cycle-startcycles) + ( vif0ch.qwc - (vif0.vifpacketsize >> 2) )); CPU_INT(VIF_VU0_FINISH, 1/*startcycles * BIAS*/); }
-	else      { startcycles = ((VU1.cycle-startcycles) + ( vif1ch.qwc - (vif1.vifpacketsize >> 2) )); CPU_INT(VIF_VU1_FINISH, 1/*startcycles * BIAS*/); }
-
-
-	//DevCon.Warning("Ran VU%x, VU0 Cycles %x, VU1 Cycles %x, start %x cycle %x", idx, g_vu0Cycles, g_vu1Cycles, startcycles, VU1.cycle);
-	GetVifX.vifstalled.enabled = true;
-	GetVifX.vifstalled.value = VIF_TIMING_BREAK;
+	GetVifX.queued_program = true;
+	GetVifX.queued_pc = addr;
 }
 
 void ExecuteVU(int idx)
@@ -251,6 +267,8 @@ static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 	VURegs& VUx = idx ? VU1 : VU0;
 	vifStruct& vifX = GetVifX;
 	pxAssert(VUx.Micro > 0);
+
+	vifExecQueue(idx);
 
 	if (idx && THREAD_VU1) {
 		vu1Thread.WriteMicroMem(addr, (u8*)data, size*4);
