@@ -524,7 +524,7 @@ GtkWidget *create_notebook_page_dialog(int page, dialog_buttons btn[MAX_KEYS], d
     keys_tree_scroll = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(keys_tree_scroll), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 	gtk_container_add (GTK_CONTAINER(keys_tree_scroll), key_tree_manager->view_widget(page));
-    gtk_widget_set_size_request(keys_tree_scroll, 300, 525);
+    gtk_widget_set_size_request(keys_tree_scroll, 300, 500);
     
 	keys_tree_clear_btn = gtk_button_new_with_label("Clear All");
 	g_signal_connect(GTK_OBJECT (keys_tree_clear_btn), "clicked", G_CALLBACK(on_clear_clicked), NULL);
