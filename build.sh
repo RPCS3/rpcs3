@@ -20,10 +20,6 @@ clean_build=false
 for f in $*
 do
 	case $f in
-		--sdl13)
-			flags="$flags -DFORCE_INTERNAL_SDL=TRUE"
-            echo "Warning SDL is not supported anymore"
-			;;
 		--dev|--devel)
 			flags="$flags -DCMAKE_BUILD_TYPE=Devel"
 			;;
@@ -47,7 +43,6 @@ do
 			echo "--release       - Build PCSX2 as a Release build."
 			echo "--clean         - Do a clean build."
             echo "--glsl          - Replace CG backend of ZZogl by GLSL"
-			echo "--sdl13         - Use the internal copy of SDL (add sdl backend to gsdx)."
 			exit 1;;
   	esac
 done
