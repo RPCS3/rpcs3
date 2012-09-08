@@ -163,18 +163,55 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 
 	switch(wxLangId)
 	{
+		case wxLANGUAGE_ARABIC_ALGERIA       :
+		case wxLANGUAGE_ARABIC_BAHRAIN       :
+		case wxLANGUAGE_ARABIC_EGYPT         :
+		case wxLANGUAGE_ARABIC_IRAQ          :
+		case wxLANGUAGE_ARABIC_JORDAN        :
+		case wxLANGUAGE_ARABIC_KUWAIT        :
+		case wxLANGUAGE_ARABIC_LEBANON       :
+		case wxLANGUAGE_ARABIC_LIBYA         :
+		case wxLANGUAGE_ARABIC_MOROCCO       :
+		case wxLANGUAGE_ARABIC_OMAN          :
+		case wxLANGUAGE_ARABIC_QATAR         :
+		case wxLANGUAGE_ARABIC_SAUDI_ARABIA  :
+		case wxLANGUAGE_ARABIC_SUDAN         :
+		case wxLANGUAGE_ARABIC_SYRIA         :
+		case wxLANGUAGE_ARABIC_TUNISIA       :
+		case wxLANGUAGE_ARABIC_UAE           :
+		case wxLANGUAGE_ARABIC_YEMEN         : return wxLANGUAGE_ARABIC;
+
 		case wxLANGUAGE_CHINESE_HONGKONG     : 
 		case wxLANGUAGE_CHINESE_MACAU        : return wxLANGUAGE_CHINESE_TRADITIONAL;
 
 		case wxLANGUAGE_CHINESE_SINGAPORE    : return wxLANGUAGE_CHINESE_SIMPLIFIED;
 
+		// case wxLANGUAGE_SAMI_INARI_FINLAND    :
+		// case wxLANGUAGE_SAMI_NORTHERN_FINLAND :
+		// case wxLANGUAGE_SAMI_SKOLT_FINLAND    : return wxLANGUAGE_FINNISH;
+		// - not supported by wxWidgets (2.9.4).
+
 		case wxLANGUAGE_SAMI                 : 
-		// The correct fallback for Sami would be
-		// however, currently wxWidgets (2.9.3) only supports wxLANGUAGE_SAMI.
-		//  case: wxLANGUAGE_SAMI_LULE_SWEDEN :
+		// Most of the samis live in Norway.
+		// case wxLANGUAGE_SAMI_LULE_NORWAY     :
+		// case wxLANGUAGE_SAMI_NORTHERN_NORWAY :
+		// case wxLANGUAGE_SAMI_SOUTHERN_NORWAY :
+		// - not supported by wxWidgets (2.9.4).
+		case wxLANGUAGE_DANISH               :
+		case wxLANGUAGE_NORWEGIAN_NYNORSK    : return wxLANGUAGE_NORWEGIAN_BOKMAL;
+
+		//  case: wxLANGUAGE_SAMI_LULE_SWEDEN     :
 		//  case: wxLANGUAGE_SAMI_NORTHERN_SWEDEN :
 		//  case: wxLANGUAGE_SAMI_SOUTHERN_SWEDEN :
+		// - not supported by wxWidgets (2.9.4).
 		case wxLANGUAGE_SWEDISH_FINLAND      : return wxLANGUAGE_SWEDISH;
+
+		// case wxLANGUAGE_LUXEMBOURGISH        :
+		// - not supported by wxWidgets (2.9.4).
+		case wxLANGUAGE_AFRIKAANS            :
+		// case wxLANG_FRISIAN                  :
+		// - not supported by wxWidgets (2.9.4).
+		case wxLANGUAGE_DUTCH_BELGIAN        : return wxLANGUAGE_DUTCH;
 
 		case wxLANGUAGE_PORTUGUESE           : return wxLANGUAGE_PORTUGUESE_BRAZILIAN;
 
@@ -183,11 +220,13 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 		case wxLANGUAGE_GERMAN_BELGIUM       : 
 		case wxLANGUAGE_GERMAN_LIECHTENSTEIN : 
 		case wxLANGUAGE_GERMAN_LUXEMBOURG    : 
-		// Currently wxWidgets (2.9.3) doesn't support Sorbian.
+		// Currently wxWidgets (2.9.4) doesn't support Sorbian.
 		//  case wxLANGUAGE_LOWER_SORBIAN :
 		//  case wxLANGUAGE_UPPER_SORBIAN :
 		case wxLANGUAGE_GERMAN_SWISS         : return wxLANGUAGE_GERMAN;
 
+		case wxLANGUAGE_BASQUE:
+		case wxLANGUAGE_CATALAN:
 		case wxLANGUAGE_SPANISH_ARGENTINA:
 		case wxLANGUAGE_SPANISH_BOLIVIA:
 		case wxLANGUAGE_SPANISH_CHILE:
@@ -209,6 +248,7 @@ static wxLanguage i18n_FallbackToAnotherLang( wxLanguage wxLangId )
 
 		case wxLANGUAGE_ITALIAN_SWISS        : return wxLANGUAGE_ITALIAN;
 
+		case wxLANGUAGE_CORSICAN:
 		case wxLANGUAGE_FRENCH_BELGIAN:
 		case wxLANGUAGE_FRENCH_CANADIAN:
 		case wxLANGUAGE_FRENCH_LUXEMBOURG:
