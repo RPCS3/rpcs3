@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-08-10 11:44+0200\n"
+"POT-Creation-Date: 2012-09-08 18:25+0200\n"
 "PO-Revision-Date: 2012-03-08 11:33-0000\n"
 "Last-Translator: goldeng <odakawoi@yahoo.fr>\n"
 "Language-Team: goldeng <odakawoi@yahoo.fr>\n"
@@ -42,12 +42,12 @@ msgstr ""
 "exemple, ePSXe ou PCSX) !"
 
 #: pcsx2/System.cpp:114
+#, fuzzy
 msgid ""
 "This recompiler was unable to reserve contiguous memory required for "
 "internal caches.  This error can be caused by low virtual memory resources, "
 "such as a small or disabled swapfile, or by another program that is hogging "
-"a lot of memory.  You can also try reducing the default cache sizes for all "
-"PCSX2 recompilers, found under Host Settings."
+"a lot of memory."
 msgstr ""
 "Le recompiler n'a pas été en mesure d'allouer la mémoire virtuelle "
 "nécessaire. Cette erreur peut être causée par une insuffisance en "
@@ -93,7 +93,7 @@ msgstr ""
 "globales. Si vous êtes parvenus à résoudre des problèmes en désactivant le "
 "recompiler, vous devrez le réactiver manuellement."
 
-#: pcsx2/gui/AppMain.cpp:546
+#: pcsx2/gui/AppMain.cpp:575
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -108,7 +108,7 @@ msgstr ""
 "Veuillez consulter la FAQ ou les guides disponibles pour plus de "
 "renseignements."
 
-#: pcsx2/gui/AppMain.cpp:626
+#: pcsx2/gui/AppMain.cpp:655
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -497,7 +497,7 @@ msgstr ""
 "* Test Drive Unlimited\n"
 "* Transformers"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:106
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
 msgid ""
 "Gamefixes can work around wrong emulation in some titles. \n"
 "They may also cause compatibility or performance issues. \n"
@@ -540,10 +540,12 @@ msgstr ""
 "concernées sont en cours d'utilisation."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+#, fuzzy
 msgid ""
 "Please select your preferred default location for PCSX2 user-level documents "
 "below (includes memory cards, screenshots, settings, and savestates).  These "
-"folder locations can be overridden at any time using the Core Settings panel."
+"folder locations can be overridden at any time using the Plugin/BIOS "
+"Selector panel."
 msgstr ""
 "Veuillez sélectionner le répertoire par défaut des fichiers utilisateur "
 "PCSX2 (cartes mémoire, screenshots, paramètres d'affichage, etc...). Ce "
@@ -806,7 +808,7 @@ msgstr ""
 "Votre système manque de ressources pour exécuter l'émulateur PCSX2. Cela "
 "peut être dû à un autre programme qui occupe trop d'espace-mémoire."
 
-#: pcsx2/x86/sVU_zerorec.cpp:363
+#: pcsx2/x86/sVU_zerorec.cpp:364
 msgid ""
 "Out of Memory (sorta): The SuperVU recompiler was unable to reserve the "
 "specific memory ranges required, and will not be available for use.  This is "

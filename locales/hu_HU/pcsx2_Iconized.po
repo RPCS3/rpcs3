@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.8\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-08-10 11:44+0200\n"
+"POT-Creation-Date: 2012-09-08 18:25+0200\n"
 "PO-Revision-Date: 2011-04-17 17:56+0100\n"
 "Last-Translator: Delirious <delirious@freemail.hu>\n"
 "Language-Team: Delirious <delirious@freemail.hu>\n"
@@ -37,12 +37,12 @@ msgstr ""
 "PCSX."
 
 #: pcsx2/System.cpp:114
+#, fuzzy
 msgid ""
 "This recompiler was unable to reserve contiguous memory required for "
 "internal caches.  This error can be caused by low virtual memory resources, "
 "such as a small or disabled swapfile, or by another program that is hogging "
-"a lot of memory.  You can also try reducing the default cache sizes for all "
-"PCSX2 recompilers, found under Host Settings."
+"a lot of memory."
 msgstr ""
 "Ez a recompiler nem tudott folyamatos memóriát lefoglalni, ami szükséges a "
 "belső gyorsítótár számára.  Ilyen hibát okozhat a nem elegendő virtuális "
@@ -87,7 +87,7 @@ msgstr ""
 "lényegesn gyorsítják az emuláció sebességét. Kézileg kell majd újra "
 "bekapcsolnod a feljebb listázott recompilereket, ha megoldottad a hibákat."
 
-#: pcsx2/gui/AppMain.cpp:546
+#: pcsx2/gui/AppMain.cpp:575
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -98,7 +98,7 @@ msgstr ""
 "(kölcsönözni is lehet). További információk végett ajánlatos megtekinteni az "
 "Olvass el fájlt, és átnézni a Beállítási útmutató tartalmát."
 
-#: pcsx2/gui/AppMain.cpp:626
+#: pcsx2/gui/AppMain.cpp:655
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -466,7 +466,7 @@ msgstr ""
 " * Growlanser II és III\n"
 " * Wizardry"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:106
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
 msgid ""
 "Gamefixes can work around wrong emulation in some titles. \n"
 "They may also cause compatibility or performance issues. \n"
@@ -503,10 +503,12 @@ msgid "Failed: Destination memory card '%s' is in use."
 msgstr "Hiba: A(z) '%s' nevű memória kártya használatban van."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+#, fuzzy
 msgid ""
 "Please select your preferred default location for PCSX2 user-level documents "
 "below (includes memory cards, screenshots, settings, and savestates).  These "
-"folder locations can be overridden at any time using the Core Settings panel."
+"folder locations can be overridden at any time using the Plugin/BIOS "
+"Selector panel."
 msgstr ""
 "Add meg az általad kedvelt alapértelmezett helyet a PCSX2 felhasználói "
 "szintű dokumentumaihoz (beleértve a memória kártyákat, pillanatképeket, "
@@ -774,7 +776,7 @@ msgstr ""
 "működtetéséhez.  Ilyen hibát okozhat a kis méretű vagy kikapcsolt "
 "lapozófájl, vagy más, nagy mennyiségű erőforrást fogyasztó program."
 
-#: pcsx2/x86/sVU_zerorec.cpp:363
+#: pcsx2/x86/sVU_zerorec.cpp:364
 msgid ""
 "Out of Memory (sorta): The SuperVU recompiler was unable to reserve the "
 "specific memory ranges required, and will not be available for use.  This is "

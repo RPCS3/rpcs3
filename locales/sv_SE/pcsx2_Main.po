@@ -2,21 +2,19 @@
 # This file is distributed under the same license as the PCSX2 package.
 msgid ""
 msgstr ""
-"Project-Id-Version: PCSX2 0.9.9\n"
+"Project-Id-Version: PCSX2 1.1.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-08-10 11:44+0200\n"
-"PO-Revision-Date: 2012-07-06 16:53+0100\n"
+"POT-Creation-Date: 2012-09-08 18:39+0200\n"
+"PO-Revision-Date: 2012-08-28 18:00+0100\n"
 "Last-Translator: pgert <http://forums.pcsx2.net/User-pgert>\n"
 "Language-Team: \n"
-"Language: \n"
+"Language: sv_SE\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-KeywordsList: _;pxL;_d;pxDt;_t;pxLt\n"
-"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-Basepath: C:\\Arkiv\\PCSX2\\SVN\n"
-"X-Poedit-Language: Swedish\n"
-"X-Poedit-Country: SWEDEN\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
@@ -611,23 +609,23 @@ msgstr ""
 msgid "%s Commandline Options"
 msgstr "%s Instruktionsmöjligheter"
 
-#: pcsx2/gui/AppMain.cpp:570
+#: pcsx2/gui/AppMain.cpp:599
 msgid "PS2 BIOS Error"
 msgstr "PS2 BIOS Fel"
 
-#: pcsx2/gui/AppMain.cpp:571
+#: pcsx2/gui/AppMain.cpp:600
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr "Tryck ''Vidare'' för att gå till BIOS-KonfigurationsPanelen."
 
-#: pcsx2/gui/AppMain.cpp:623
+#: pcsx2/gui/AppMain.cpp:652
 msgid "PCSX2 Unresponsive Thread"
 msgstr "PCSX2 Osvarande tråd"
 
-#: pcsx2/gui/AppMain.cpp:630
+#: pcsx2/gui/AppMain.cpp:659
 msgid "Terminate"
 msgstr "Avsluta"
 
-#: pcsx2/gui/AppMain.cpp:956
+#: pcsx2/gui/AppMain.cpp:985
 msgid "Executing PS2 Virtual Machine..."
 msgstr "Kör PS2's Virtuella Maskin ..."
 
@@ -1188,7 +1186,7 @@ msgstr "Avsluta tillämpning"
 msgid "GS Output is Disabled!"
 msgstr "GS' Utsignal är Förhindrad!"
 
-#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:414
+#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:415
 msgid "Save state"
 msgstr "Spara tillstånd"
 
@@ -1196,7 +1194,7 @@ msgstr "Spara tillstånd"
 msgid "Saves the virtual machine state to the current slot."
 msgstr "Sparar det Virtuella Maskin tillståndet till den nuvarande sockeln."
 
-#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:413
+#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:414
 msgid "Load state"
 msgstr "Ladda tillstånd"
 
@@ -1268,275 +1266,275 @@ msgstr "Sockel %d"
 msgid "Backup"
 msgstr "Säkerhetskopiera"
 
-#: pcsx2/gui/MainFrame.cpp:324
+#: pcsx2/gui/MainFrame.cpp:325
 msgid "Show Console"
 msgstr "Visa Konsol"
 
-#: pcsx2/gui/MainFrame.cpp:325
+#: pcsx2/gui/MainFrame.cpp:326
 msgid "Console to Stdio"
 msgstr "Konsol till Stdio"
 
-#: pcsx2/gui/MainFrame.cpp:338
+#: pcsx2/gui/MainFrame.cpp:339
 msgid "&System"
 msgstr "&System"
 
-#: pcsx2/gui/MainFrame.cpp:339
+#: pcsx2/gui/MainFrame.cpp:340
 msgid "CD&VD"
 msgstr "&CDVD"
 
-#: pcsx2/gui/MainFrame.cpp:340
+#: pcsx2/gui/MainFrame.cpp:341
 msgid "&Config"
 msgstr "&Konfig"
 
-#: pcsx2/gui/MainFrame.cpp:341
+#: pcsx2/gui/MainFrame.cpp:342
 msgid "&Misc"
 msgstr "&Diverse"
 
-#: pcsx2/gui/MainFrame.cpp:343
+#: pcsx2/gui/MainFrame.cpp:344
 msgid "&Debug"
 msgstr "&Felsök"
 
-#: pcsx2/gui/MainFrame.cpp:355
+#: pcsx2/gui/MainFrame.cpp:356
 #, c-format
 msgid "%s  %d.%d.%d.%d%s (svn)  %s"
 msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 
-#: pcsx2/gui/MainFrame.cpp:361
+#: pcsx2/gui/MainFrame.cpp:362
 #, c-format
 msgid "%s  %d.%d.%d %s"
 msgstr "%s  %d.%d.%d %s"
 
-#: pcsx2/gui/MainFrame.cpp:362
+#: pcsx2/gui/MainFrame.cpp:363
 msgid "(modded)"
 msgstr "(modifierade)"
 
-#: pcsx2/gui/MainFrame.cpp:399 pcsx2/gui/MainFrame.cpp:401
-#: pcsx2/gui/MainFrame.cpp:407
+#: pcsx2/gui/MainFrame.cpp:400 pcsx2/gui/MainFrame.cpp:402
+#: pcsx2/gui/MainFrame.cpp:408
 msgid "Initializing..."
 msgstr "Initialisering ..."
 
-#: pcsx2/gui/MainFrame.cpp:403
+#: pcsx2/gui/MainFrame.cpp:404
 msgid "Run ELF..."
 msgstr "Kör ELF ..."
 
-#: pcsx2/gui/MainFrame.cpp:404
+#: pcsx2/gui/MainFrame.cpp:405
 msgid "For running raw PS2 binaries directly"
 msgstr "För att direktköra råa PS2-binärer."
 
-#: pcsx2/gui/MainFrame.cpp:416
+#: pcsx2/gui/MainFrame.cpp:417
 msgid "Backup before save"
 msgstr "Säkerhetskopiera innan sparning"
 
-#: pcsx2/gui/MainFrame.cpp:421
+#: pcsx2/gui/MainFrame.cpp:422
 msgid "Automatic Gamefixes"
 msgstr "Automatiska Spelfixar"
 
-#: pcsx2/gui/MainFrame.cpp:422
+#: pcsx2/gui/MainFrame.cpp:423
 msgid "Automatically applies needed Gamefixes to known problematic games"
 msgstr ""
 "Tillämpar automatiskt erfordeliga Spelfixar för till vetskap problematiska "
 "spel."
 
-#: pcsx2/gui/MainFrame.cpp:424
+#: pcsx2/gui/MainFrame.cpp:425
 msgid "Enable Cheats"
 msgstr "Möjliggör Fuskisar"
 
-#: pcsx2/gui/MainFrame.cpp:427
+#: pcsx2/gui/MainFrame.cpp:428
 msgid "Enable Host Filesystem"
 msgstr "Möjliggör Värdfilsystem"
 
-#: pcsx2/gui/MainFrame.cpp:432
+#: pcsx2/gui/MainFrame.cpp:433
 msgid "Shutdown"
 msgstr "Nedstängning"
 
-#: pcsx2/gui/MainFrame.cpp:433
+#: pcsx2/gui/MainFrame.cpp:434
 msgid "Wipes all internal VM states and shuts down plugins."
 msgstr "Rensar alla inhemska VM-tillstånd och stänger ner insticksprogram."
 
-#: pcsx2/gui/MainFrame.cpp:435
+#: pcsx2/gui/MainFrame.cpp:436
 msgid "Exit"
 msgstr "Avsluta"
 
-#: pcsx2/gui/MainFrame.cpp:436
+#: pcsx2/gui/MainFrame.cpp:437
 #, c-format
 msgid "Closing %s may be hazardous to your health"
 msgstr "Att stänga ner %s kan vara riskfyllt för Eder hälsa."
 
-#: pcsx2/gui/MainFrame.cpp:443
+#: pcsx2/gui/MainFrame.cpp:444
 msgid "Iso Selector"
 msgstr "ISO väljare"
 
-#: pcsx2/gui/MainFrame.cpp:444
+#: pcsx2/gui/MainFrame.cpp:445
 msgid "Plugin Menu"
 msgstr "Insticksmeny"
 
-#: pcsx2/gui/MainFrame.cpp:447
+#: pcsx2/gui/MainFrame.cpp:448
 msgid "Iso"
 msgstr "ISO"
 
-#: pcsx2/gui/MainFrame.cpp:447
+#: pcsx2/gui/MainFrame.cpp:448
 msgid "Makes the specified ISO image the CDVD source."
 msgstr "Gör den ovan angivna ISO-avbilden till CDVD-källa."
 
-#: pcsx2/gui/MainFrame.cpp:448
+#: pcsx2/gui/MainFrame.cpp:449
 msgid "Plugin"
 msgstr "Insticksprogram"
 
-#: pcsx2/gui/MainFrame.cpp:448
+#: pcsx2/gui/MainFrame.cpp:449
 msgid "Uses an external plugin as the CDVD source."
 msgstr "Använder ett utomstående insticksprogram som CDVD-källa."
 
-#: pcsx2/gui/MainFrame.cpp:449
+#: pcsx2/gui/MainFrame.cpp:450
 msgid "No disc"
 msgstr "Disklös"
 
-#: pcsx2/gui/MainFrame.cpp:449
+#: pcsx2/gui/MainFrame.cpp:450
 msgid "Use this to boot into your virtual PS2's BIOS configuration."
 msgstr "Använd detta för att köra Er virtuella PS2's BIOS-konfiguration."
 
-#: pcsx2/gui/MainFrame.cpp:457
+#: pcsx2/gui/MainFrame.cpp:458
 msgid "Emulation &Settings"
 msgstr "&Emuleringsinställningar"
 
-#: pcsx2/gui/MainFrame.cpp:458
+#: pcsx2/gui/MainFrame.cpp:459
 msgid "&Memory cards"
 msgstr "&Minneskort"
 
-#: pcsx2/gui/MainFrame.cpp:459
+#: pcsx2/gui/MainFrame.cpp:460
 msgid "&Plugin/BIOS Selector"
 msgstr "&Insticks/BIOS Väjare"
 
-#: pcsx2/gui/MainFrame.cpp:460 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
+#: pcsx2/gui/MainFrame.cpp:461 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
 msgid "Game Database Editor"
 msgstr "Speldatabas Redigerare"
 
-#: pcsx2/gui/MainFrame.cpp:466
+#: pcsx2/gui/MainFrame.cpp:467
 msgid "&Video (GS)"
 msgstr "&Video (GS)"
 
-#: pcsx2/gui/MainFrame.cpp:467
+#: pcsx2/gui/MainFrame.cpp:468
 msgid "&Audio (SPU2)"
 msgstr "&Ljud (SPU2)"
 
-#: pcsx2/gui/MainFrame.cpp:468
+#: pcsx2/gui/MainFrame.cpp:469
 msgid "&Controllers (PAD)"
 msgstr "&Manövrering (PAD)"
 
-#: pcsx2/gui/MainFrame.cpp:469
+#: pcsx2/gui/MainFrame.cpp:470
 msgid "Dev9"
 msgstr "Dev9"
 
-#: pcsx2/gui/MainFrame.cpp:470
+#: pcsx2/gui/MainFrame.cpp:471
 msgid "USB"
 msgstr "USB"
 
-#: pcsx2/gui/MainFrame.cpp:471
+#: pcsx2/gui/MainFrame.cpp:472
 msgid "Firewire"
 msgstr "Firewire"
 
-#: pcsx2/gui/MainFrame.cpp:477
+#: pcsx2/gui/MainFrame.cpp:478
 msgid "Multitap 1"
 msgstr "Flerplugg 1"
 
-#: pcsx2/gui/MainFrame.cpp:478
+#: pcsx2/gui/MainFrame.cpp:479
 msgid "Multitap 2"
 msgstr "Flerplugg 2"
 
-#: pcsx2/gui/MainFrame.cpp:481
+#: pcsx2/gui/MainFrame.cpp:482
 msgid "Clear all settings..."
 msgstr "Rensa alla inställningar ..."
 
-#: pcsx2/gui/MainFrame.cpp:482
+#: pcsx2/gui/MainFrame.cpp:483
 #, c-format
 msgid "Clears all %s settings and re-runs the startup wizard."
 msgstr "Rensa alla %s-inställningar och återkör ''Första gången Trollkarlen''."
 
-#: pcsx2/gui/MainFrame.cpp:504
+#: pcsx2/gui/MainFrame.cpp:505
 msgid "About..."
 msgstr "Om ..."
 
-#: pcsx2/gui/MainFrame.cpp:508
+#: pcsx2/gui/MainFrame.cpp:513
 msgid "Logging..."
 msgstr "Loggning ..."
 
-#: pcsx2/gui/MainFrame.cpp:585
+#: pcsx2/gui/MainFrame.cpp:590
 msgid "Pause"
 msgstr "Pausa"
 
-#: pcsx2/gui/MainFrame.cpp:586
+#: pcsx2/gui/MainFrame.cpp:591
 msgid "Safely pauses emulation and preserves the PS2 state."
 msgstr "Säker pausning av emulering som bevarar PS2-tillståndet."
 
-#: pcsx2/gui/MainFrame.cpp:593
+#: pcsx2/gui/MainFrame.cpp:598
 msgid "Resume"
 msgstr "Återuppta"
 
-#: pcsx2/gui/MainFrame.cpp:594
+#: pcsx2/gui/MainFrame.cpp:599
 msgid "Resumes the suspended emulation state."
 msgstr "Återupptar det pausade emuleringstillståndet."
 
-#: pcsx2/gui/MainFrame.cpp:598
+#: pcsx2/gui/MainFrame.cpp:603
 msgid "Pause/Resume"
 msgstr "Pausa/Återuppta"
 
-#: pcsx2/gui/MainFrame.cpp:599
+#: pcsx2/gui/MainFrame.cpp:604
 msgid "No emulation state is active; cannot suspend or resume."
 msgstr "Inget emuleringstillstånd är aktivt; kan inte Pausa eller Återuppta."
 
-#: pcsx2/gui/MainFrame.cpp:608
+#: pcsx2/gui/MainFrame.cpp:613
 msgid "Restart"
 msgstr "Omstart"
 
-#: pcsx2/gui/MainFrame.cpp:609
+#: pcsx2/gui/MainFrame.cpp:614
 msgid "Simulates hardware reset of the PS2 virtual machine."
 msgstr "Simulerar hårdvaruåterställningen för PS2's Virtuella Maskin."
 
-#: pcsx2/gui/MainFrame.cpp:614
+#: pcsx2/gui/MainFrame.cpp:619
 msgid "No emulation state is active; boot something first."
 msgstr "Inget emuleringstillstånd är aktivt - kör något först."
 
-#: pcsx2/gui/MainFrame.cpp:622
+#: pcsx2/gui/MainFrame.cpp:627
 msgid "Reboot CDVD (full)"
 msgstr "Återkör CDVD (fullt)"
 
-#: pcsx2/gui/MainFrame.cpp:623
+#: pcsx2/gui/MainFrame.cpp:628
 msgid "Hard reset of the active VM."
 msgstr "Hård återställning av aktiv VM."
 
-#: pcsx2/gui/MainFrame.cpp:627
+#: pcsx2/gui/MainFrame.cpp:632
 msgid "Boot CDVD (full)"
 msgstr "Kör CDVD (fullt)"
 
-#: pcsx2/gui/MainFrame.cpp:628
+#: pcsx2/gui/MainFrame.cpp:633
 msgid "Boot the VM using the current DVD or Iso source media"
 msgstr "Kör VM'n med det nuvarande DVD/ISO mediumet som källa."
 
-#: pcsx2/gui/MainFrame.cpp:636
+#: pcsx2/gui/MainFrame.cpp:641
 msgid "Reboot CDVD (fast)"
 msgstr "Återkör CDVD (snabbt)"
 
-#: pcsx2/gui/MainFrame.cpp:637
+#: pcsx2/gui/MainFrame.cpp:642
 msgid "Reboot using fast BOOT (skips splash screens)"
 msgstr "Återkör med snabbuppkörning (hoppar över plaskskärmar)"
 
-#: pcsx2/gui/MainFrame.cpp:641
+#: pcsx2/gui/MainFrame.cpp:646
 msgid "Boot CDVD (fast)"
 msgstr "Kör CDVD (snabbt)"
 
-#: pcsx2/gui/MainFrame.cpp:642
+#: pcsx2/gui/MainFrame.cpp:647
 msgid "Use fast boot to skip PS2 startup and splash screens"
 msgstr ""
 "Använd snabbuppkörning för att hoppa över PS2-uppstart och plaskskärmar."
 
-#: pcsx2/gui/MainFrame.cpp:703 pcsx2/gui/MainFrame.cpp:738
+#: pcsx2/gui/MainFrame.cpp:708 pcsx2/gui/MainFrame.cpp:743
 msgid "No plugin loaded"
 msgstr "Inget insticksprogram laddat"
 
-#: pcsx2/gui/MainFrame.cpp:708
+#: pcsx2/gui/MainFrame.cpp:713
 msgid "Core GS Settings..."
 msgstr "Kärn-GS Inställningar ..."
 
-#: pcsx2/gui/MainFrame.cpp:709
+#: pcsx2/gui/MainFrame.cpp:714
 msgid ""
 "Modify hardware emulation settings regulated by the PCSX2 core virtual "
 "machine."
@@ -1544,19 +1542,19 @@ msgstr ""
 "Ändra hårdvaruemuleringsinställningar reglerade av PCSX2's kärn Virtuella "
 "Maskin."
 
-#: pcsx2/gui/MainFrame.cpp:711
+#: pcsx2/gui/MainFrame.cpp:716
 msgid "Window Settings..."
 msgstr "Fönster Inställningar ..."
 
-#: pcsx2/gui/MainFrame.cpp:712
+#: pcsx2/gui/MainFrame.cpp:717
 msgid "Modify window and appearance options, including aspect ratio."
 msgstr "Ändra fönster och utseendetillämpningar, däribland bildkvot."
 
-#: pcsx2/gui/MainFrame.cpp:719
+#: pcsx2/gui/MainFrame.cpp:724
 msgid "Plugin Settings..."
 msgstr "Insticksinställningar ..."
 
-#: pcsx2/gui/MainFrame.cpp:720
+#: pcsx2/gui/MainFrame.cpp:725
 #, c-format
 msgid "Opens the %s plugin's advanced settings dialog."
 msgstr "Öppnar %s-insticksprogrammets avancerade inställningsdialog."
@@ -1572,7 +1570,8 @@ msgstr "Bekräfta ISO-avbildförändring"
 #: pcsx2/gui/MainMenuClicks.cpp:142
 msgid "Do you want to swap discs or boot the new image (via system reset)?"
 msgstr ""
-"Vill Ni byta disk eller köra den nya avbilden (genom systemåterställning)?"
+"Vill Ni byta disk eller köra den nya avbilden \n"
+" (genom systemåterställning)?"
 
 #: pcsx2/gui/MainMenuClicks.cpp:144 pcsx2/gui/MainMenuClicks.cpp:190
 msgid "Swap Disc"
@@ -2004,11 +2003,15 @@ msgid "Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"
 msgstr ""
 "Strunta i Bussriktning vid Path3 Överföring - används för ''Hotwheels''"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:105
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:98
+msgid "Switch to GSdx software rendering when a FMV plays"
+msgstr "Växla till GSdx Mjukvaruframställning när FMV'er spelas."
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:109
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "Möjliggör manuella spelfixar [Avrådes]"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:114
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
 msgstr ""

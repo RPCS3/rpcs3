@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-08-10 11:44+0200\n"
-"PO-Revision-Date: 2012-05-11 17:41+0900\n"
+"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"PO-Revision-Date: 2012-08-11 14:07+0900\n"
 "Last-Translator: 99skull <99skull@gmail.com>\n"
 "Language-Team: 99skull <99skull@gmail.com>\n"
 "Language: \n"
@@ -41,12 +41,12 @@ msgstr ""
 "하면 ePSXe 또는 PCSX 같은 에뮬레이터를 다운받아야 합니다."
 
 #: pcsx2/System.cpp:114
+#, fuzzy
 msgid ""
 "This recompiler was unable to reserve contiguous memory required for "
 "internal caches.  This error can be caused by low virtual memory resources, "
 "such as a small or disabled swapfile, or by another program that is hogging "
-"a lot of memory.  You can also try reducing the default cache sizes for all "
-"PCSX2 recompilers, found under Host Settings."
+"a lot of memory."
 msgstr ""
 "주의! 이 리컴파일러가 내부캐시를 위한 인접한 메모리 예약을 할 수 없습니다. "
 "이 에러는 낮은 가상 메모리 또는 작거나 사용할 수 없는 스왑파일 때문에 일어납"
@@ -86,7 +86,7 @@ msgstr ""
 "레이션 속도를 크게 높여줍니다. 에러를 해결하려면 위의 리컴파일러를 수동으로 "
 "다시 사용하게 해야 합니다."
 
-#: pcsx2/gui/AppMain.cpp:546
+#: pcsx2/gui/AppMain.cpp:575
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -96,7 +96,7 @@ msgstr ""
 "소유한(빌린것은 안됨) 실제 PS2 기계에서 얻어야 합니다. 자세한 설명은 포럼의 "
 "질문답변에 문의하세요."
 
-#: pcsx2/gui/AppMain.cpp:626
+#: pcsx2/gui/AppMain.cpp:655
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -147,14 +147,14 @@ msgstr ""
 "PCSX2 설정이 존재하면, 가져오거나 덮어쓸건지 물어보게 됩니다."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:89
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "This wizard will help guide you through configuring plugins, memory cards, "
 "and BIOS.  It is recommended if this is your first time installing %s that "
 "you view the readme and configuration guide."
 msgstr ""
-"이 마법사는 플러그인, 메모리카드와 바이오스 설정을 도와줄 것입니다. 설치가 처"
-"음 이라면 readme 파일과 설정가이드를 읽어보는 걸 권장합니다."
+"이 마법사는 플러그인, 메모리카드와 바이오스 설정을 도와줄 것입니다. %s 설치"
+"가 처음 이라면 readme 파일과 설정가이드를 읽어보는 걸 권장합니다."
 
 #: pcsx2/gui/Dialogs/FirstTimeWizard.cpp:132
 msgid ""
@@ -447,7 +447,7 @@ msgstr ""
 " * 테스트 드라이브 언리미티드\n"
 " * 트랜스포머"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:106
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
 msgid ""
 "Gamefixes can work around wrong emulation in some titles. \n"
 "They may also cause compatibility or performance issues. \n"
@@ -482,10 +482,12 @@ msgid "Failed: Destination memory card '%s' is in use."
 msgstr "실패: 대상 메모리카드 '%s' 가 사용중 입니다."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+#, fuzzy
 msgid ""
 "Please select your preferred default location for PCSX2 user-level documents "
 "below (includes memory cards, screenshots, settings, and savestates).  These "
-"folder locations can be overridden at any time using the Core Settings panel."
+"folder locations can be overridden at any time using the Plugin/BIOS "
+"Selector panel."
 msgstr ""
 "PCSX2 유저레벨 문서(메모리카드, 스냅샷, 설정 그리고 상태저장)를 위해 아래에 "
 "원하는 기본 위치를 선택해 주세요. 이 폴더 위치는 설정창을 이용해서 언제든 변"
@@ -738,7 +740,7 @@ msgstr ""
 "수 없는 스왑파일 때문에 일어나거나, 또는 리소스를 점유하는 다른 프로그램 때문"
 "에 일어납니다."
 
-#: pcsx2/x86/sVU_zerorec.cpp:363
+#: pcsx2/x86/sVU_zerorec.cpp:364
 msgid ""
 "Out of Memory (sorta): The SuperVU recompiler was unable to reserve the "
 "specific memory ranges required, and will not be available for use.  This is "

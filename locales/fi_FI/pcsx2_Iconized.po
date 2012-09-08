@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-08-10 11:44+0200\n"
+"POT-Creation-Date: 2012-09-08 18:25+0200\n"
 "PO-Revision-Date: 2012-05-20 13:26+0200\n"
 "Last-Translator: kmartimo <kimmo.martimo@gmail.com>\n"
 "Language-Team: kmartimo <kimmo.martimo@gmail.com>\n"
@@ -42,12 +42,12 @@ msgstr ""
 "täytyy ladata PSX-emulaattori, kuten ePSXe tai PCSX."
 
 #: pcsx2/System.cpp:114
+#, fuzzy
 msgid ""
 "This recompiler was unable to reserve contiguous memory required for "
 "internal caches.  This error can be caused by low virtual memory resources, "
 "such as a small or disabled swapfile, or by another program that is hogging "
-"a lot of memory.  You can also try reducing the default cache sizes for all "
-"PCSX2 recompilers, found under Host Settings."
+"a lot of memory."
 msgstr ""
 "Uudelleenkääntäjä ei pystynyt varaamaan yhtenäistä muistialuetta, jota "
 "tarvitaan sisäisille välimuisteille. Tämän virheen voi aiheuttaa alhainen "
@@ -93,7 +93,7 @@ msgstr ""
 "manuaalisesti ottamaan käyttöön yllä listatut uudelleenkääntäjät, jos saat "
 "virheet ratkaistua."
 
-#: pcsx2/gui/AppMain.cpp:546
+#: pcsx2/gui/AppMain.cpp:575
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -103,7 +103,7 @@ msgstr ""
 "*täytyy* hankkia BIOS-tiedosto omistamastasi PS2-järjestelmästä (lainaamista "
 "ei lasketa). Lisätietoja löydät UKK:sta (FAQ) ja oppaista."
 
-#: pcsx2/gui/AppMain.cpp:626
+#: pcsx2/gui/AppMain.cpp:655
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -474,7 +474,7 @@ msgstr ""
 "* Test Drive Unlimited\n"
 "* Transformers"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:106
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
 msgid ""
 "Gamefixes can work around wrong emulation in some titles. \n"
 "They may also cause compatibility or performance issues. \n"
@@ -514,10 +514,12 @@ msgid "Failed: Destination memory card '%s' is in use."
 msgstr "Epäonnistui: Kohdemuistikortti '%s' on käytössä."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+#, fuzzy
 msgid ""
 "Please select your preferred default location for PCSX2 user-level documents "
 "below (includes memory cards, screenshots, settings, and savestates).  These "
-"folder locations can be overridden at any time using the Core Settings panel."
+"folder locations can be overridden at any time using the Plugin/BIOS "
+"Selector panel."
 msgstr ""
 "Ole hyvä ja valitse alla haluamasi oletussijainti PCSX2:den käyttäjätason "
 "tiedostoille (sisältäen muistikortit, ruutukaappaukset, asetukset ja "
@@ -787,7 +789,7 @@ msgstr ""
 "Tämän voi aiheuttaa pieni tai käytöstä poistettu heittovaihtotiedosto (swap "
 "file) tai muut ohjelmat, jotka vievät resursseja. "
 
-#: pcsx2/x86/sVU_zerorec.cpp:363
+#: pcsx2/x86/sVU_zerorec.cpp:364
 msgid ""
 "Out of Memory (sorta): The SuperVU recompiler was unable to reserve the "
 "specific memory ranges required, and will not be available for use.  This is "

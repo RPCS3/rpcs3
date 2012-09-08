@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-08-10 11:44+0200\n"
-"PO-Revision-Date: 2012-05-11 17:41+0900\n"
+"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"PO-Revision-Date: 2012-08-11 14:08+0900\n"
 "Last-Translator: 99skull <99skull@gmail.com>\n"
 "Language-Team: 99skull <99skull@gmail.com>\n"
 "Language: \n"
@@ -595,23 +595,23 @@ msgstr ""
 msgid "%s Commandline Options"
 msgstr "%s 커맨드라인 옵션들"
 
-#: pcsx2/gui/AppMain.cpp:570
+#: pcsx2/gui/AppMain.cpp:599
 msgid "PS2 BIOS Error"
 msgstr "PS2 바이오스 에러"
 
-#: pcsx2/gui/AppMain.cpp:571
+#: pcsx2/gui/AppMain.cpp:600
 msgid "Press Ok to go to the BIOS Configuration Panel."
 msgstr "바이오스 설정 화면을 열기위해 확인을 누르세요."
 
-#: pcsx2/gui/AppMain.cpp:623
+#: pcsx2/gui/AppMain.cpp:652
 msgid "PCSX2 Unresponsive Thread"
 msgstr "PCSX2 반응이 늦은 스레드"
 
-#: pcsx2/gui/AppMain.cpp:630
+#: pcsx2/gui/AppMain.cpp:659
 msgid "Terminate"
 msgstr "종료"
 
-#: pcsx2/gui/AppMain.cpp:956
+#: pcsx2/gui/AppMain.cpp:985
 msgid "Executing PS2 Virtual Machine..."
 msgstr "PS2 가상머신 실행..."
 
@@ -1159,7 +1159,7 @@ msgstr "App 제거"
 msgid "GS Output is Disabled!"
 msgstr "GS 출력 사용안함!"
 
-#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:414
+#: pcsx2/gui/GlobalCommands.cpp:387 pcsx2/gui/MainFrame.cpp:415
 msgid "Save state"
 msgstr "상태 저장"
 
@@ -1167,7 +1167,7 @@ msgstr "상태 저장"
 msgid "Saves the virtual machine state to the current slot."
 msgstr "가상 머신 상태를 현재 슬롯에 저장합니다."
 
-#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:413
+#: pcsx2/gui/GlobalCommands.cpp:393 pcsx2/gui/MainFrame.cpp:414
 msgid "Load state"
 msgstr "상태 로드"
 
@@ -1239,290 +1239,290 @@ msgstr "슬롯 %d"
 msgid "Backup"
 msgstr "백업"
 
-#: pcsx2/gui/MainFrame.cpp:324
+#: pcsx2/gui/MainFrame.cpp:325
 msgid "Show Console"
 msgstr "콘솔 보기"
 
-#: pcsx2/gui/MainFrame.cpp:325
+#: pcsx2/gui/MainFrame.cpp:326
 msgid "Console to Stdio"
 msgstr "Stdio 에 콘솔"
 
-#: pcsx2/gui/MainFrame.cpp:338
+#: pcsx2/gui/MainFrame.cpp:339
 msgid "&System"
 msgstr "&시스템"
 
-#: pcsx2/gui/MainFrame.cpp:339
+#: pcsx2/gui/MainFrame.cpp:340
 msgid "CD&VD"
 msgstr "&CDVD"
 
-#: pcsx2/gui/MainFrame.cpp:340
+#: pcsx2/gui/MainFrame.cpp:341
 msgid "&Config"
 msgstr "&설정"
 
-#: pcsx2/gui/MainFrame.cpp:341
+#: pcsx2/gui/MainFrame.cpp:342
 msgid "&Misc"
 msgstr "&기타"
 
-#: pcsx2/gui/MainFrame.cpp:343
+#: pcsx2/gui/MainFrame.cpp:344
 msgid "&Debug"
 msgstr "&디버그"
 
-#: pcsx2/gui/MainFrame.cpp:355
+#: pcsx2/gui/MainFrame.cpp:356
 #, c-format
 msgid "%s  %d.%d.%d.%d%s (svn)  %s"
 msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 
-#: pcsx2/gui/MainFrame.cpp:361
+#: pcsx2/gui/MainFrame.cpp:362
 #, c-format
 msgid "%s  %d.%d.%d %s"
 msgstr "%s  %d.%d.%d %s"
 
-#: pcsx2/gui/MainFrame.cpp:362
+#: pcsx2/gui/MainFrame.cpp:363
 msgid "(modded)"
 msgstr "(수정된)"
 
-#: pcsx2/gui/MainFrame.cpp:399 pcsx2/gui/MainFrame.cpp:401
-#: pcsx2/gui/MainFrame.cpp:407
+#: pcsx2/gui/MainFrame.cpp:400 pcsx2/gui/MainFrame.cpp:402
+#: pcsx2/gui/MainFrame.cpp:408
 msgid "Initializing..."
 msgstr "초기화 중..."
 
-#: pcsx2/gui/MainFrame.cpp:403
+#: pcsx2/gui/MainFrame.cpp:404
 msgid "Run ELF..."
 msgstr "ELF 구동..."
 
-#: pcsx2/gui/MainFrame.cpp:404
+#: pcsx2/gui/MainFrame.cpp:405
 msgid "For running raw PS2 binaries directly"
 msgstr "PS2 바이너리를 직접 구동"
 
-#: pcsx2/gui/MainFrame.cpp:416
+#: pcsx2/gui/MainFrame.cpp:417
 msgid "Backup before save"
 msgstr "저장 전 백업"
 
-#: pcsx2/gui/MainFrame.cpp:421
+#: pcsx2/gui/MainFrame.cpp:422
 msgid "Automatic Gamefixes"
 msgstr "자동 게임수정"
 
-#: pcsx2/gui/MainFrame.cpp:422
+#: pcsx2/gui/MainFrame.cpp:423
 msgid "Automatically applies needed Gamefixes to known problematic games"
 msgstr "알려진 문제에 대해 필요한 게임수정을 자동으로 적용합니다"
 
-#: pcsx2/gui/MainFrame.cpp:424
+#: pcsx2/gui/MainFrame.cpp:425
 msgid "Enable Cheats"
 msgstr "치트 사용"
 
-#: pcsx2/gui/MainFrame.cpp:427
+#: pcsx2/gui/MainFrame.cpp:428
 msgid "Enable Host Filesystem"
 msgstr "호스트 파일시스템 사용"
 
-#: pcsx2/gui/MainFrame.cpp:432
+#: pcsx2/gui/MainFrame.cpp:433
 msgid "Shutdown"
 msgstr "닫기"
 
-#: pcsx2/gui/MainFrame.cpp:433
+#: pcsx2/gui/MainFrame.cpp:434
 msgid "Wipes all internal VM states and shuts down plugins."
 msgstr "내부 가상머신 상태를 지우고 플러그인 닫기."
 
-#: pcsx2/gui/MainFrame.cpp:435
+#: pcsx2/gui/MainFrame.cpp:436
 msgid "Exit"
 msgstr "종료"
 
-#: pcsx2/gui/MainFrame.cpp:436
+#: pcsx2/gui/MainFrame.cpp:437
 #, c-format
 msgid "Closing %s may be hazardous to your health"
 msgstr "%s을 닫는 것은 건강에 안 좋습니다 :)"
 
-#: pcsx2/gui/MainFrame.cpp:443
+#: pcsx2/gui/MainFrame.cpp:444
 msgid "Iso Selector"
 msgstr "Iso 선택"
 
-#: pcsx2/gui/MainFrame.cpp:444
+#: pcsx2/gui/MainFrame.cpp:445
 msgid "Plugin Menu"
 msgstr "플러그인 메뉴"
 
-#: pcsx2/gui/MainFrame.cpp:447
+#: pcsx2/gui/MainFrame.cpp:448
 msgid "Iso"
 msgstr "Iso"
 
-#: pcsx2/gui/MainFrame.cpp:447
+#: pcsx2/gui/MainFrame.cpp:448
 msgid "Makes the specified ISO image the CDVD source."
 msgstr "특정 ISO 이미지를 직접 구동합니다."
 
-#: pcsx2/gui/MainFrame.cpp:448
+#: pcsx2/gui/MainFrame.cpp:449
 msgid "Plugin"
 msgstr "플러그인"
 
-#: pcsx2/gui/MainFrame.cpp:448
+#: pcsx2/gui/MainFrame.cpp:449
 msgid "Uses an external plugin as the CDVD source."
 msgstr "CDVD 소스로 외부플러그인을 사용합니다."
 
-#: pcsx2/gui/MainFrame.cpp:449
+#: pcsx2/gui/MainFrame.cpp:450
 msgid "No disc"
 msgstr "디스크없음"
 
-#: pcsx2/gui/MainFrame.cpp:449
+#: pcsx2/gui/MainFrame.cpp:450
 msgid "Use this to boot into your virtual PS2's BIOS configuration."
 msgstr "가상 PS2 바이오스 설정에 들어가기 위해 이것을 사용하세요."
 
-#: pcsx2/gui/MainFrame.cpp:457
+#: pcsx2/gui/MainFrame.cpp:458
 msgid "Emulation &Settings"
 msgstr "에뮬레이션 &설정들"
 
-#: pcsx2/gui/MainFrame.cpp:458
+#: pcsx2/gui/MainFrame.cpp:459
 msgid "&Memory cards"
 msgstr "&메모리 카드들"
 
-#: pcsx2/gui/MainFrame.cpp:459
+#: pcsx2/gui/MainFrame.cpp:460
 msgid "&Plugin/BIOS Selector"
 msgstr "&플러그인/바이오스 선택"
 
-#: pcsx2/gui/MainFrame.cpp:460 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
+#: pcsx2/gui/MainFrame.cpp:461 pcsx2/gui/Panels/GameDatabasePanel.cpp:346
 msgid "Game Database Editor"
 msgstr "게임 데이터베이스 에디터"
 
-#: pcsx2/gui/MainFrame.cpp:466
+#: pcsx2/gui/MainFrame.cpp:467
 msgid "&Video (GS)"
 msgstr "&비디오 (GS)"
 
-#: pcsx2/gui/MainFrame.cpp:467
+#: pcsx2/gui/MainFrame.cpp:468
 msgid "&Audio (SPU2)"
 msgstr "&오디오 (SPU2)"
 
-#: pcsx2/gui/MainFrame.cpp:468
+#: pcsx2/gui/MainFrame.cpp:469
 msgid "&Controllers (PAD)"
 msgstr "&컨트롤러 (PAD)"
 
-#: pcsx2/gui/MainFrame.cpp:469
+#: pcsx2/gui/MainFrame.cpp:470
 msgid "Dev9"
 msgstr "Dev9"
 
-#: pcsx2/gui/MainFrame.cpp:470
+#: pcsx2/gui/MainFrame.cpp:471
 msgid "USB"
 msgstr "USB"
 
-#: pcsx2/gui/MainFrame.cpp:471
+#: pcsx2/gui/MainFrame.cpp:472
 msgid "Firewire"
 msgstr "Firewire"
 
-#: pcsx2/gui/MainFrame.cpp:477
+#: pcsx2/gui/MainFrame.cpp:478
 msgid "Multitap 1"
 msgstr "멀티탭 1"
 
-#: pcsx2/gui/MainFrame.cpp:478
+#: pcsx2/gui/MainFrame.cpp:479
 msgid "Multitap 2"
 msgstr "멀티탭 2"
 
-#: pcsx2/gui/MainFrame.cpp:481
+#: pcsx2/gui/MainFrame.cpp:482
 msgid "Clear all settings..."
 msgstr "모든설정 지우기..."
 
-#: pcsx2/gui/MainFrame.cpp:482
+#: pcsx2/gui/MainFrame.cpp:483
 #, c-format
 msgid "Clears all %s settings and re-runs the startup wizard."
 msgstr "모든 %s 설정을 지우고 시작 마법사를 재구동."
 
-#: pcsx2/gui/MainFrame.cpp:504
+#: pcsx2/gui/MainFrame.cpp:505
 msgid "About..."
 msgstr "에뮬에 대해"
 
-#: pcsx2/gui/MainFrame.cpp:508
+#: pcsx2/gui/MainFrame.cpp:513
 msgid "Logging..."
 msgstr "로그기록..."
 
-#: pcsx2/gui/MainFrame.cpp:585
+#: pcsx2/gui/MainFrame.cpp:590
 msgid "Pause"
 msgstr "일시중지"
 
-#: pcsx2/gui/MainFrame.cpp:586
+#: pcsx2/gui/MainFrame.cpp:591
 msgid "Safely pauses emulation and preserves the PS2 state."
 msgstr "안전하게 에뮬을 멈추고 PS2 상태를 보전합니다."
 
-#: pcsx2/gui/MainFrame.cpp:593
+#: pcsx2/gui/MainFrame.cpp:598
 msgid "Resume"
 msgstr "게임계속"
 
-#: pcsx2/gui/MainFrame.cpp:594
+#: pcsx2/gui/MainFrame.cpp:599
 msgid "Resumes the suspended emulation state."
 msgstr "중지된 에뮬 상태를 계속합니다."
 
-#: pcsx2/gui/MainFrame.cpp:598
+#: pcsx2/gui/MainFrame.cpp:603
 msgid "Pause/Resume"
 msgstr "중지/계속"
 
-#: pcsx2/gui/MainFrame.cpp:599
+#: pcsx2/gui/MainFrame.cpp:604
 msgid "No emulation state is active; cannot suspend or resume."
 msgstr "에뮬레이션 중이 아님; 중지 또는 계속할 수 없습니다."
 
-#: pcsx2/gui/MainFrame.cpp:608
+#: pcsx2/gui/MainFrame.cpp:613
 msgid "Restart"
 msgstr "재시작"
 
-#: pcsx2/gui/MainFrame.cpp:609
+#: pcsx2/gui/MainFrame.cpp:614
 msgid "Simulates hardware reset of the PS2 virtual machine."
 msgstr "PS2 가상머신의 리셋을 시뮬레이션 합니다."
 
-#: pcsx2/gui/MainFrame.cpp:614
+#: pcsx2/gui/MainFrame.cpp:619
 msgid "No emulation state is active; boot something first."
 msgstr "에뮬레이션 중이 아님; 먼저 부팅하세요."
 
-#: pcsx2/gui/MainFrame.cpp:622
+#: pcsx2/gui/MainFrame.cpp:627
 msgid "Reboot CDVD (full)"
 msgstr "CDVD 재부팅(전체)"
 
-#: pcsx2/gui/MainFrame.cpp:623
+#: pcsx2/gui/MainFrame.cpp:628
 msgid "Hard reset of the active VM."
 msgstr "활동중인 가상머신의 하드 리셋."
 
-#: pcsx2/gui/MainFrame.cpp:627
+#: pcsx2/gui/MainFrame.cpp:632
 msgid "Boot CDVD (full)"
 msgstr "CDVD 부팅(전체)"
 
-#: pcsx2/gui/MainFrame.cpp:628
+#: pcsx2/gui/MainFrame.cpp:633
 msgid "Boot the VM using the current DVD or Iso source media"
 msgstr "현재 DVD 또는 Iso 이미지로 가상머신을 부팅"
 
-#: pcsx2/gui/MainFrame.cpp:636
+#: pcsx2/gui/MainFrame.cpp:641
 msgid "Reboot CDVD (fast)"
 msgstr "CDVD 재부팅(빠른)"
 
-#: pcsx2/gui/MainFrame.cpp:637
+#: pcsx2/gui/MainFrame.cpp:642
 msgid "Reboot using fast BOOT (skips splash screens)"
 msgstr "빠른 BOOT으로 재부팅(로고화면 생략)"
 
-#: pcsx2/gui/MainFrame.cpp:641
+#: pcsx2/gui/MainFrame.cpp:646
 msgid "Boot CDVD (fast)"
 msgstr "CDVD 부팅(빠른)"
 
-#: pcsx2/gui/MainFrame.cpp:642
+#: pcsx2/gui/MainFrame.cpp:647
 msgid "Use fast boot to skip PS2 startup and splash screens"
 msgstr "PS2 시작과 로고화면을 생략하는 빠른 부팅"
 
-#: pcsx2/gui/MainFrame.cpp:703 pcsx2/gui/MainFrame.cpp:738
+#: pcsx2/gui/MainFrame.cpp:708 pcsx2/gui/MainFrame.cpp:743
 msgid "No plugin loaded"
 msgstr "플러그인이 없음"
 
-#: pcsx2/gui/MainFrame.cpp:708
+#: pcsx2/gui/MainFrame.cpp:713
 msgid "Core GS Settings..."
 msgstr "핵심 GS 설정..."
 
-#: pcsx2/gui/MainFrame.cpp:709
+#: pcsx2/gui/MainFrame.cpp:714
 msgid ""
 "Modify hardware emulation settings regulated by the PCSX2 core virtual "
 "machine."
 msgstr "PCSX2 핵심 가상머신에 의한 정규화 된 하드웨어 에뮬레이션 설정을 변경."
 
-#: pcsx2/gui/MainFrame.cpp:711
+#: pcsx2/gui/MainFrame.cpp:716
 msgid "Window Settings..."
 msgstr "화면 설정..."
 
-#: pcsx2/gui/MainFrame.cpp:712
+#: pcsx2/gui/MainFrame.cpp:717
 msgid "Modify window and appearance options, including aspect ratio."
 msgstr "화면비율을 포함한 창과 형태 옵션을 변경."
 
-#: pcsx2/gui/MainFrame.cpp:719
+#: pcsx2/gui/MainFrame.cpp:724
 msgid "Plugin Settings..."
 msgstr "플러그인 설정..."
 
-#: pcsx2/gui/MainFrame.cpp:720
+#: pcsx2/gui/MainFrame.cpp:725
 #, c-format
 msgid "Opens the %s plugin's advanced settings dialog."
 msgstr "%s 플러그인의 고급설정 창을 엽니다."
@@ -1951,11 +1951,15 @@ msgstr "VIF1 Stalls을 지연시킴(VIF1 FIFO) - 소콤2 HUD."
 msgid "Ignore Bus Direction on Path3 Transfer - Used for Hotwheels"
 msgstr "경로3 전송에서 버스방향을 무시 - 핫휠을 위해 사용"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:105
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:98
+msgid "Switch to GSdx software rendering when a FMV plays"
+msgstr ""
+
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:109
 msgid "Enable manual game fixes [Not recommended]"
 msgstr "수동 게임수정을 사용 [권장하지 않음]"
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:114
 msgid ""
 "The safest way to make sure that all game fixes are completely disabled."
 msgstr "가장 안전한 방법은 모든 게임수정을 완전히 사용 안하는 것입니다."

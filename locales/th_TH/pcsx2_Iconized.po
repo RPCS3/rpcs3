@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-08-10 11:44+0200\n"
+"POT-Creation-Date: 2012-09-08 18:25+0200\n"
 "PO-Revision-Date: 2012-06-11 12:56+0700\n"
 "Last-Translator: xyteton <xyteton@hotmail.com>\n"
 "Language-Team: xyteton <xyteton@hotmail.com>\n"
@@ -40,12 +40,12 @@ msgid ""
 msgstr "PCSX2 ไม่รองรับดิสก์เกม Playstation 1"
 
 #: pcsx2/System.cpp:114
+#, fuzzy
 msgid ""
 "This recompiler was unable to reserve contiguous memory required for "
 "internal caches.  This error can be caused by low virtual memory resources, "
 "such as a small or disabled swapfile, or by another program that is hogging "
-"a lot of memory.  You can also try reducing the default cache sizes for all "
-"PCSX2 recompilers, found under Host Settings."
+"a lot of memory."
 msgstr ""
 "รีคอมไพเลอร์ไม่สามารถสงวนหน่วยความจำอย่างต่อเนื่อง ที่ต้องการสำหรับแค็ชภายใน\n"
 "ความผิดพลาดนี้อาจเกิดจากทรัพยากรหน่วยความจำเสมือนมีค่าต่ำ เช่น เล็ก \n"
@@ -86,7 +86,7 @@ msgstr ""
 "มันจะช่วยปรับปรุงความเร็วของการจำลองอย่างเห็นได้\n"
 "คุณอาจจะลองใช้งานรีคอมไพเลอร์ที่ระบุไว้ด้านบนอีกครั้ง หากคุณต้องการจะแก้ปัญหา"
 
-#: pcsx2/gui/AppMain.cpp:546
+#: pcsx2/gui/AppMain.cpp:575
 msgid ""
 "PCSX2 requires a PS2 BIOS in order to run.  For legal reasons, you *must* "
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
@@ -96,7 +96,7 @@ msgstr ""
 "เอาไบออสมาจากตัว PS2 ที่แท้จริงของคุณเอง (ไม่นับการยืม)\n"
 "โปรดศึกษาจากแนวทางและคำถามที่พบบ่อยสำหรับคำแนะนำเพิ่มเติม"
 
-#: pcsx2/gui/AppMain.cpp:626
+#: pcsx2/gui/AppMain.cpp:655
 msgid ""
 "'Ignore' to continue waiting for the thread to respond.\n"
 "'Cancel' to attempt to cancel the thread.\n"
@@ -438,7 +438,7 @@ msgid ""
 " * Transformers"
 msgstr ""
 
-#: pcsx2/gui/Panels/GameFixesPanel.cpp:106
+#: pcsx2/gui/Panels/GameFixesPanel.cpp:110
 msgid ""
 "Gamefixes can work around wrong emulation in some titles. \n"
 "They may also cause compatibility or performance issues. \n"
@@ -474,10 +474,12 @@ msgid "Failed: Destination memory card '%s' is in use."
 msgstr "ล้มเหลว: การ์ดความจำปลายทาง '%s' กำลังถูกใช้อยู่"
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
+#, fuzzy
 msgid ""
 "Please select your preferred default location for PCSX2 user-level documents "
 "below (includes memory cards, screenshots, settings, and savestates).  These "
-"folder locations can be overridden at any time using the Core Settings panel."
+"folder locations can be overridden at any time using the Plugin/BIOS "
+"Selector panel."
 msgstr ""
 "โปรดเลือกที่ตั้งค่าตั้งต้นที่คุณชอบสำหรับเอกสารระดับผู้ใช้ PCSX2 ด้านล่าง\n"
 "(รวมทั้งการ์ดความจำ, ภาพหน้าจอ, การตั้งค่า, และบันทึกสถานภาพ)\n"
@@ -723,7 +725,7 @@ msgstr ""
 "ระบบของคุณช้าเกินไปที่จะเป็นแหล่งทรัพยากรจำลองสำหรับ PCSX2 ในการรัน \n"
 "นี่อาจเกิดจาก swapfile เล็กหรือไม่ถูกใช้งาน หรือเพราะโปรแกรมอื่นที่กินทรัพยากร"
 
-#: pcsx2/x86/sVU_zerorec.cpp:363
+#: pcsx2/x86/sVU_zerorec.cpp:364
 msgid ""
 "Out of Memory (sorta): The SuperVU recompiler was unable to reserve the "
 "specific memory ranges required, and will not be available for use.  This is "
