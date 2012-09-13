@@ -204,65 +204,33 @@ static __ri void DmaExec( void (*func)(), u32 mem, u32 value )
 	{
 		const uint channel = ChannelNumber(mem);
 
-		// The following if ( 0 ) is probably a misunderstanding, broke Katamari videos
-		if( 0 /*psHu8(DMAC_ENABLER+2) == 1*/) //DMA is suspended so we can allow writes to anything
+		//As the manual states "Fields other than STR can only be written to when the DMA is stopped"
+		//Also "The DMA may not stop properly just by writing 0 to STR"
+		//So the presumption is that STR can be written to (ala force stop the DMA) but nothing else
+		//If the developer wishes to alter any of the other fields, it must be done AFTER the STR has been written,
+		//it will not work before or during this event.
+		if(chcr.STR == 0)
 		{
-			//If it stops the DMA, we need to clear any pending interrupts so the DMA doesnt continue.
-			if(chcr.STR == 0)
+			//DevCon.Warning(L"32bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem), reg.chcr._u32, chcr._u32);
+			reg.chcr.STR = 0;
+			//We need to clear any existing DMA loops that are in progress else they will continue!
+
+			if(channel == 1)
 			{
-				//DevCon.Warning(L"32bit %s DMA Stopped on Suspend", ChcrName(mem));
-				if(channel == 1)
-				{
-					cpuClearInt( 10 );
-					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
-				}
-				else if(channel == 2)
-				{
-					cpuClearInt( 11 );
-					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
-				}
-				
-				cpuClearInt( channel );
-				QueuedDMA._u16 &= ~(1 << channel); //Clear any queued DMA requests for this channel
+				cpuClearInt( 10 );
+				QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
 			}
-			//Sanity Check for possible future bug fix0rs ;p
-			//Spams on Persona 4 opening.
-			//if(reg.chcr.TAG != chcr.TAG) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Active", ChcrName(mem), chcr.TAG, reg.chcr.TAG, reg.qwc);
-			//Here we update the LOWER CHCR, if a chain is stopped half way through, it can be manipulated in to a different mode
-			//But we need to preserve the existing tag for now
-			reg.chcr.set((reg.chcr.TAG << 16) | chcr.lower());
-			return;
-		}
-		else //Else the DMA is running (Not Suspended), so we cant touch it!
-		{
-			//As the manual states "Fields other than STR can only be written to when the DMA is stopped"
-			//Also "The DMA may not stop properly just by writing 0 to STR"
-			//So the presumption is that STR can be written to (ala force stop the DMA) but nothing else
-
-			if(chcr.STR == 0)
+			else if(channel == 2)
 			{
-				//DevCon.Warning(L"32bit Force Stopping %s (Current CHCR %x) while DMA active", ChcrName(mem), reg.chcr._u32, chcr._u32);
-				reg.chcr.STR = 0;
-				//We need to clear any existing DMA loops that are in progress else they will continue!
-
-				if(channel == 1)
-				{
-					cpuClearInt( 10 );
-					QueuedDMA._u16 &= ~(1 << 10); //Clear any queued DMA requests for this channel
-				}
-				else if(channel == 2)
-				{
-					cpuClearInt( 11 );
-					QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
-				}
-				
-				cpuClearInt( channel );
-				QueuedDMA._u16 &= ~(1 << channel); //Clear any queued DMA requests for this channel
+				cpuClearInt( 11 );
+				QueuedDMA._u16 &= ~(1 << 11); //Clear any queued DMA requests for this channel
 			}
-			//else DevCon.Warning(L"32bit Attempted to change %s CHCR (Currently %x) with %x while DMA active, ignoring QWC = %x", ChcrName(mem), reg.chcr._u32, chcr._u32, reg.qwc);
-			return;
+				
+			cpuClearInt( channel );
+			QueuedDMA._u16 &= ~(1 << channel); //Clear any queued DMA requests for this channel
 		}
-
+		//else DevCon.Warning(L"32bit Attempted to change %s CHCR (Currently %x) with %x while DMA active, ignoring QWC = %x", ChcrName(mem), reg.chcr._u32, chcr._u32, reg.qwc);
+		return;
 	}
 
 	//if(reg.chcr.TAG != chcr.TAG && chcr.MOD == CHAIN_MODE) DevCon.Warning(L"32bit CHCR Tag on %s changed to %x from %x QWC = %x Channel Not Active", ChcrName(mem), chcr.TAG, reg.chcr.TAG, reg.qwc);

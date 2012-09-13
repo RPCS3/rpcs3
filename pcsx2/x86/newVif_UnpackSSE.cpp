@@ -22,18 +22,38 @@
 #define xMOV64(regX, loc)	xMOVUPS(regX, loc)
 #define xMOV128(regX, loc)	xMOVUPS(regX, loc)
 
+static const __aligned16 u32 SSEXYZWMask[4][4] =
+{
+	{0xffffffff, 0xffffffff, 0xffffffff, 0x00000000},
+	{0xffffffff, 0xffffffff, 0x00000000, 0xffffffff},
+	{0xffffffff, 0x00000000, 0xffffffff, 0xffffffff},
+	{0x00000000, 0xffffffff, 0xffffffff, 0xffffffff}
+};
+
 //static __pagealigned u8 nVifUpkExec[__pagesize*4];
 static RecompiledCodeReserve* nVifUpkExec = NULL;
 
 // Merges xmm vectors without modifying source reg
 void mergeVectors(xRegisterSSE dest, xRegisterSSE src, xRegisterSSE temp, int xyzw) {
-	if (x86caps.hasStreamingSIMD4Extensions  || (xyzw==15)
-	|| (xyzw==12) || (xyzw==11) || (xyzw==8) || (xyzw==3)) {
-		mVUmergeRegs(dest, src, xyzw);
+	if(dest == temp)
+	{
+		//VIF can sent the temp directory as the source and destination, just need to clear the ones we dont want in which case.
+		if(!(xyzw & 0x1)) xAND.PS( dest, ptr128[SSEXYZWMask[0]]);
+		if(!(xyzw & 0x2)) xAND.PS( dest, ptr128[SSEXYZWMask[1]]);
+		if(!(xyzw & 0x4)) xAND.PS( dest, ptr128[SSEXYZWMask[2]]);
+		if(!(xyzw & 0x8)) xAND.PS( dest, ptr128[SSEXYZWMask[3]]);
+
 	}
-	else {
-		if(temp != src) xMOVAPS(temp, src); //Sometimes we don't care if the source is modified and is temp reg.
-		mVUmergeRegs(dest, temp, xyzw);
+	else
+	{
+		if (x86caps.hasStreamingSIMD4Extensions  || (xyzw==15)
+		|| (xyzw==12) || (xyzw==11) || (xyzw==8) || (xyzw==3)) {
+			mVUmergeRegs(dest, src, xyzw);
+		}
+		else {
+			if(temp != src) xMOVAPS(temp, src); //Sometimes we don't care if the source is modified and is temp reg.
+			mVUmergeRegs(dest, temp, xyzw);
+		}
 	}
 }
 
@@ -174,26 +194,25 @@ void VifUnpackSSE_Base::xUPK_V2_32() const {
 
 void VifUnpackSSE_Base::xUPK_V2_16() const {
 
-	if(UnpkLoopIteration == 0 || !x86caps.hasStreamingSIMD4Extensions)
-	{
-		if (x86caps.hasStreamingSIMD4Extensions) 
-		{
-			xPMOVXX16  (workReg);
-		
-		}
-		else 
-		{
-			xXOR.PD    (destReg, destReg);
-			xMOV64     (workReg, ptr32[srcIndirect]);
-			xPUNPCK.LWD(workReg, destReg);
-			//xShiftR    (workReg, 16);
-		}
-		xPSHUF.D   (destReg, workReg, 0x44); //v1v0v1v0
-	}
-	else
-	{
-		xPSHUF.D   (destReg, workReg, 0xEE); //v3v2v3v2
-	}
+	if(UnpkLoopIteration == 0)
+    {
+            if (x86caps.hasStreamingSIMD4Extensions)
+            {
+                    xPMOVXX16  (workReg);
+               
+            }
+            else
+            {
+                    xMOV64     (workReg, ptr64[srcIndirect]);
+                    xPUNPCK.LWD(workReg, workReg);
+                    xShiftR    (workReg, 16);
+            }
+            xPSHUF.D   (destReg, workReg, 0x44); //v1v0v1v0
+    }
+    else
+    {
+            xPSHUF.D   (destReg, workReg, 0xEE); //v3v2v3v2
+    }
 	
 	
 }

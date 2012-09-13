@@ -291,7 +291,7 @@ _vifT static __ri bool dVifExecuteUnpack(const u8* data, bool isFill)
 			((nVifrecCall)b->startPtr)((uptr)dest, (uptr)data);
 		}
 		else {
-			DevCon.WriteLn("Running Interpreter Block");
+			VIF_LOG("Running Interpreter Block");
 			_nVifUnpack(idx, data, vifRegs.mode, isFill);
 		}
 		return true;
