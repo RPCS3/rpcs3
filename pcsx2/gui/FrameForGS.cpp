@@ -370,22 +370,18 @@ static const uint TitleBarUpdateMs = 333;
 
 
 GSFrame::GSFrame(wxWindow* parent, const wxString& title)
-	: wxFrame(parent, wxID_ANY, title,
-		g_Conf->GSWindow.WindowPos, wxSize( 640, 480 ),
-		(g_Conf->GSWindow.DisableResizeBorders ? 0 : wxRESIZE_BORDER) | wxCAPTION | wxCLIP_CHILDREN |
-			wxSYSTEM_MENU | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX
-	)
+	: wxFrame(parent, wxID_ANY, title, g_Conf->GSWindow.WindowPos)
 	, m_timer_UpdateTitle( this )
 {
 	SetIcons( wxGetApp().GetIconBundle() );
-	SetClientSize( g_Conf->GSWindow.WindowSize );
 	SetBackgroundColour( *wxBLACK );
 
 	wxStaticText* label = new wxStaticText( this, wxID_ANY, _("GS Output is Disabled!") );
 	m_id_OutputDisabled = label->GetId();
 	label->SetFont( wxFont( 20, wxDEFAULT, wxNORMAL, wxBOLD ) );
 	label->SetForegroundColour( *wxWHITE );
-	label->Show( EmuConfig.GS.DisableOutput );
+
+	AppStatusEvent_OnSettingsApplied();
 
 	GSPanel* gsPanel = new GSPanel( this );
 	gsPanel->Show( !EmuConfig.GS.DisableOutput );
@@ -497,6 +493,11 @@ bool GSFrame::Show( bool shown )
 void GSFrame::AppStatusEvent_OnSettingsApplied()
 {
 	if( IsBeingDeleted() ) return;
+
+	SetWindowStyle((g_Conf->GSWindow.DisableResizeBorders ? 0 : wxRESIZE_BORDER) | wxCAPTION | wxCLIP_CHILDREN |
+			wxSYSTEM_MENU | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX);
+	SetClientSize( g_Conf->GSWindow.WindowSize );
+	Refresh();
 
 	if( g_Conf->GSWindow.CloseOnEsc )
 	{
