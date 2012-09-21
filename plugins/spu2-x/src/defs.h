@@ -189,7 +189,9 @@ struct V_Voice
 // sample position within the current decoded packet.
 	s32 SCurrent;
 
-	void Start();
+	// it takes a few ticks for voices to start on the real SPU2?
+	void QueueStart();
+	bool Start();
 	void Stop();
 };
 
@@ -435,6 +437,8 @@ struct V_Core
 	u16*			DMAPtr;
 	u32				MADR;
 	u32				TADR;
+
+	u32				KeyOn; // not the KON register (though maybe it is)
 
 	StereoOut32 downbuf[8];
 	StereoOut32 upbuf[8];

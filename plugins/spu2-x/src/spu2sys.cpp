@@ -303,7 +303,16 @@ void V_Core::UpdateEffectsBufferSize()
 	RevBuffers.MIX_DEST_B1 = EffectsBufferIndexer( Revb.MIX_DEST_B1 );
 }
 
-void V_Voice::Start()
+void V_Voice::QueueStart()
+{
+	if (Cycles - PlayCycle < 4)
+	{
+		printf(" *** KeyOn after less than 4 T disregarded.\n");
+	}
+	PlayCycle = Cycles;
+}
+
+bool V_Voice::Start()
 {
 	if((Cycles-PlayCycle)>=4)
 	{
@@ -316,7 +325,6 @@ void V_Voice::Start()
 		ADSR.Releasing	= false;
 		ADSR.Value		= 1;
 		ADSR.Phase		= 1;
-		PlayCycle		= Cycles;
 		SCurrent		= 28;
 		LoopMode		= 0;
 		LoopFlags		= 0;
@@ -327,11 +335,10 @@ void V_Voice::Start()
 		PV1 = PV2		= 0;
 		PV3 = PV4		= 0;
 		NextCrest = -0x8000;
+		return true;
 	}
 	else
-	{
-		printf(" *** KeyOn after less than 4 T disregarded.\n");
-	}
+		return false;
 }
 
 void V_Voice::Stop()
@@ -420,6 +427,13 @@ __forceinline void TimeUpdate(u32 cClocks)
 		dClocks -= TickInterval;
 		lClocks += TickInterval;
 		Cycles++;
+
+		for (int i = 0; i < 2; i++)
+			if (Cores[i].KeyOn)
+				for (int j = 0; j < 24; j++)
+					if (Cores[i].KeyOn >> j & 1)
+						if (Cores[i].Voices[j].Start())
+							Cores[i].KeyOn &= ~(1 << j);
 
 		// Note: IOP does not use MMX regs, so no need to save them.
 		//SaveMMXRegs();
@@ -1528,11 +1542,13 @@ void StartVoices(int core, u32 value)
 
 	Cores[core].Regs.ENDX &= ~value;
 
+	Cores[core].KeyOn |= value;
+
 	for( u8 vc=0; vc<V_Core::NumVoices; vc++ )
 	{
 		if( !((value>>vc) & 1) ) continue;
 
-		Cores[core].Voices[vc].Start();
+		Cores[core].Voices[vc].QueueStart();
 
 		if( IsDevBuild )
 		{
