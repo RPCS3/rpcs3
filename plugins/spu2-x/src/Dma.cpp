@@ -78,7 +78,7 @@ void DMALogClose()
 
 void V_Core::LogAutoDMA( FILE* fp )
 {
-	if( !DMALog() || !fp ) return;
+	if( !DMALog() || !fp || !DMAPtr ) return;
 	fwrite( DMAPtr+InputDataProgress, 0x400, 1, fp );
 }
 
