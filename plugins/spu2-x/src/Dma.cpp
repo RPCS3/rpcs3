@@ -244,6 +244,8 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 	const u32 buff1size = (buff1end-TSA);
 	memcpy( GetMemPtr( TSA ), pMem, buff1size*2 );
 
+	u32 TDA;
+
 	if( buff2end > 0 )
 	{
 		// second branch needs copied:
@@ -340,6 +342,8 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 	// Note on TSA's position after our copy finishes:
 	// IRQA should be measured by the end of the writepos+0x20.  But the TDA
 	// should be written back at the precise endpoint of the xfer.
+
+	u32 TDA;
 
 	if( buff2end > 0 )
 	{
@@ -456,6 +460,8 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 	// Note on TSA's position after our copy finishes:
 	// IRQA should be measured by the end of the writepos+0x20.  But the TDA
 	// should be written back at the precise endpoint of the xfer.
+
+	u32 TDA;
 
 	if( buff2end > 0 )
 	{

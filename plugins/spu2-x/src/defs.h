@@ -387,7 +387,6 @@ struct V_Core
 
 	u32				IRQA;			// Interrupt Address
 	u32				TSA;			// DMA Transfer Start Address
-	u32				TDA;			// DMA Transfer Data Address (Internal...)
 
 	bool			IRQEnable;		// Interrupt Enable
 	bool			FxEnable;		// Effect Enable
