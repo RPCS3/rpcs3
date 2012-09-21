@@ -267,16 +267,23 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 #if NO_BIOS_HACKFIX
 		for( int i=0; i<2; i++ )
 		{
-			// Note: (start is inclusive, dest exclusive -- fixes DMC1 FMVs)
+			// Start is exclusive and end is inclusive... maybe? The end is documented to be inclusive,
+			// which suggests that memory access doesn't trigger interrupts, incrementing registers does
+			// (which would mean that if TSA=IRQA an interrupt doesn't fire... I guess?)
+			// Chaos Legion uses interrupt addresses set to the beginning of the two buffers in a double
+			// buffer scheme and sets LSA of one of the voices to the start of the opposite buffer.
+			// However it transfers to the same address right after setting IRQA, which by our previous
+			// understanding would trigger the interrupt early causing it to switch buffers again immediately
+			// and an interrupt never fires again, leaving the voices looping the same samples forever.
 
-			if (Cores[i].IRQEnable && (Cores[i].IRQA >= TSA || Cores[i].IRQA < TDA))
+			if (Cores[i].IRQEnable && (Cores[i].IRQA > TSA || Cores[i].IRQA <= TDA))
 			{
 				//ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
 				SetIrqCall(i);
 			}
 		}
 #else
-		if ((IRQEnable && (IRQA >= TSA || IRQA < TDA))
+		if ((IRQEnable && (IRQA > TSA || IRQA <= TDA))
 		{
 			SetIrqCall(Index);
 		}
@@ -287,7 +294,7 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 		// Buffer doesn't wrap/overflow!
 		// Just set the TDA and check for an IRQ...
 
-		TDA = buff1end;
+		TDA = (buff1end + 1) & 0xfffff;
 
 		// Flag interrupt?  If IRQA occurs between start and dest, flag it.
 		// Important: Test both core IRQ settings for either DMA!
@@ -295,16 +302,14 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 #if NO_BIOS_HACKFIX
 		for( int i=0; i<2; i++ )
 		{
-			// Note: (start is inclusive, dest exclusive -- fixes DMC1 FMVs)
-
-			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
+			if (Cores[i].IRQEnable && (Cores[i].IRQA > TSA && Cores[i].IRQA <= TDA))
 			{
 				//ConLog("DMAwrite Core %d: IRQ Called (IRQ passed). IRQA = %x Cycles = %d\n", i, Cores[i].IRQA, Cycles );
 				SetIrqCall(i);
 			}
 		}
 #else
-		if( IRQEnable && (IRQA >= TSA) && (IRQA < TDA) )
+		if( IRQEnable && (IRQA > TSA) && (IRQA <= TDA) )
 		{
 			SetIrqCall(Index);
 		}
@@ -351,7 +356,7 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 
 		for( int i=0; i<2; i++ )
 		{
-			if (Cores[i].IRQEnable && (Cores[i].IRQA >= TSA || Cores[i].IRQA < TDA))
+			if (Cores[i].IRQEnable && (Cores[i].IRQA > TSA || Cores[i].IRQA <= TDA))
 			{
 				SetIrqCall(i);
 			}
@@ -369,7 +374,7 @@ void V_Core::DoDMAread(u16* pMem, u32 size)
 
 		for( int i=0; i<2; i++ )
 		{
-			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
+			if (Cores[i].IRQEnable && (Cores[i].IRQA > TSA && Cores[i].IRQA <= TDA))
 			{
 				SetIrqCall(i);
 			}
@@ -467,7 +472,7 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 		for( int i=0; i<2; i++ )
 		{
-			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA || Cores[i].IRQA < TDA) )
+			if( Cores[i].IRQEnable && (Cores[i].IRQA > TSA || Cores[i].IRQA <= TDA) )
 			{
 				SetIrqCall(i);
 			}
@@ -485,7 +490,7 @@ s32 V_Core::NewDmaRead(u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 		for( int i=0; i<2; i++ )
 		{
-			if( Cores[i].IRQEnable && (Cores[i].IRQA >= TSA) && (Cores[i].IRQA < TDA) )
+			if( Cores[i].IRQEnable && (Cores[i].IRQA > TSA) && (Cores[i].IRQA <= TDA) )
 			{
 				SetIrqCall(i);
 			}
@@ -561,7 +566,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 				for( int i=0; i<2; i++ )
 				{
-					if( Cores[i].IRQEnable && (Cores[i].IRQA >= dummyTSA) && (Cores[i].IRQA < dummyTDA) )
+					if( Cores[i].IRQEnable && (Cores[i].IRQA > dummyTSA) && (Cores[i].IRQA <= dummyTDA) )
 					{
 						SetIrqCall(i);
 					}
@@ -581,7 +586,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 				for( int i=0; i<2; i++ )
 				{
-					if( Cores[i].IRQEnable && (Cores[i].IRQA >= dummyTSA) && (Cores[i].IRQA < dummyTDA) )
+					if( Cores[i].IRQEnable && (Cores[i].IRQA > dummyTSA) && (Cores[i].IRQA <= dummyTDA) )
 					{
 						SetIrqCall(i);
 					}
@@ -599,7 +604,7 @@ s32 V_Core::NewDmaWrite(u32* data, u32 bytesLeft, u32* bytesProcessed)
 
 				for( int i=0; i<2; i++ )
 				{
-					if( Cores[i].IRQEnable && (Cores[i].IRQA >= dummyTSA) && (Cores[i].IRQA < dummyTDA) )
+					if( Cores[i].IRQEnable && (Cores[i].IRQA > dummyTSA) && (Cores[i].IRQA <= dummyTDA) )
 					{
 						SetIrqCall(i);
 					}
