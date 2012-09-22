@@ -35,25 +35,22 @@ static RecompiledCodeReserve* nVifUpkExec = NULL;
 
 // Merges xmm vectors without modifying source reg
 void mergeVectors(xRegisterSSE dest, xRegisterSSE src, xRegisterSSE temp, int xyzw) {
-	if(dest == temp)
-	{
-		//VIF can sent the temp directory as the source and destination, just need to clear the ones we dont want in which case.
-		if(!(xyzw & 0x1)) xAND.PS( dest, ptr128[SSEXYZWMask[0]]);
-		if(!(xyzw & 0x2)) xAND.PS( dest, ptr128[SSEXYZWMask[1]]);
-		if(!(xyzw & 0x4)) xAND.PS( dest, ptr128[SSEXYZWMask[2]]);
-		if(!(xyzw & 0x8)) xAND.PS( dest, ptr128[SSEXYZWMask[3]]);
-
-	}
-	else
-	{
-		if (x86caps.hasStreamingSIMD4Extensions  || (xyzw==15)
+	if (x86caps.hasStreamingSIMD4Extensions  || (xyzw==15)
 		|| (xyzw==12) || (xyzw==11) || (xyzw==8) || (xyzw==3)) {
 			mVUmergeRegs(dest, src, xyzw);
+	}
+	else 
+	{
+		if(temp != src) xMOVAPS(temp, src); //Sometimes we don't care if the source is modified and is temp reg.
+		if(dest == temp)
+		{
+			//VIF can sent the temp directory as the source and destination, just need to clear the ones we dont want in which case.
+			if(!(xyzw & 0x1)) xAND.PS( dest, ptr128[SSEXYZWMask[0]]);
+			if(!(xyzw & 0x2)) xAND.PS( dest, ptr128[SSEXYZWMask[1]]);
+			if(!(xyzw & 0x4)) xAND.PS( dest, ptr128[SSEXYZWMask[2]]);
+			if(!(xyzw & 0x8)) xAND.PS( dest, ptr128[SSEXYZWMask[3]]);
 		}
-		else {
-			if(temp != src) xMOVAPS(temp, src); //Sometimes we don't care if the source is modified and is temp reg.
-			mVUmergeRegs(dest, temp, xyzw);
-		}
+		else mVUmergeRegs(dest, temp, xyzw);
 	}
 }
 
