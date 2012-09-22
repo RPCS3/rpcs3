@@ -612,7 +612,10 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 	else
 	{
 		// Continue processing voice, even if it's "off". Or else we miss interrupts! (Fatal Frame engine died because of this.)
-		if ((vc.LoopFlags & 3) != 3 || vc.LoopStartA != (vc.NextA & ~7)) {
+		if ((vc.LoopFlags & 3) != 3 || vc.LoopStartA != (vc.NextA & ~7)		// not in a tight loop
+			|| thiscore.IRQEnable && (thiscore.IRQA & ~7) == vc.LoopStartA	// or should be interrupting regularly
+			|| !(thiscore.Regs.ENDX & 1 << voiceidx))						// or isn't currently flagged as having passed the endpoint
+		{
 			UpdatePitch(coreidx, voiceidx);
 
 			while (vc.SP > 0)
