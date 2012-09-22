@@ -550,7 +550,7 @@ _start:
 namespace loadcore {
 	void RegisterLibraryEntries_DEBUG()
 	{
-		DbgCon.WriteLn(Color_Gray, "RegisterLibraryEntries: %8.8s", iopVirtMemR<char>(a0 + 12));
+		DevCon.WriteLn(Color_Gray, "RegisterLibraryEntries: %8.8s", iopVirtMemR<char>(a0 + 12));
 	}
 }
 
@@ -577,14 +577,14 @@ namespace intrman {
 
 	void RegisterIntrHandler_DEBUG()
 	{
-		DbgCon.WriteLn(Color_Gray, "RegisterIntrHandler: intr %s, handler %x", intrname[a0], a2);
+		DevCon.WriteLn(Color_Gray, "RegisterIntrHandler: intr %s, handler %x", intrname[a0], a2);
 	}
 }
 
 namespace sifcmd {
 	void sceSifRegisterRpc_DEBUG()
 	{
-		DbgCon.WriteLn( Color_Gray, "sifcmd sceSifRegisterRpc: rpc_id %x", a1);
+		DevCon.WriteLn( Color_Gray, "sifcmd sceSifRegisterRpc: rpc_id %x", a1);
 	}
 }
 
