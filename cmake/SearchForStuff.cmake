@@ -42,6 +42,9 @@ find_package(Subversion)
 set(wxWidgets_CONFIG_OPTIONS --unicode=yes)
 find_package(wxWidgets COMPONENTS base core adv)
 find_package(ZLIB)
+if (EGL_API)
+    include(FindEGL)
+endif()
 
 ## Use pcsx2 package to find module
 ## Include cg because of zzogl-cg and zerogs
@@ -95,6 +98,11 @@ endif(BZIP2_FOUND)
 if(CG_FOUND)
 	include_directories(${CG_INCLUDE_DIRS})
 endif(CG_FOUND)
+
+# EGL
+if (EGL_FOUND)
+    include_directories(${EGL_INCLUDE_DIR})
+endif()
 
 # Jpeg
 if(JPEG_FOUND)

@@ -345,6 +345,7 @@ EXPORT_C_(void) GSshutdown()
 
 	ZZLog::Close();
 }
+
 EXPORT_C_(void) GSclose()
 {
 	FUNCLOG

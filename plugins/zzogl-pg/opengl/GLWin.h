@@ -22,9 +22,25 @@
 
 #ifdef _WIN32
 #define GL_WIN32_WINDOW
+
 #else
+
 #define GL_X11_WINDOW
+#include <stdlib.h>
+#include <X11/Xlib.h>
+
+#ifdef EGL_API
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+
+#else
+#define GLX_API
+#include <GL/glx.h>
+
 #endif
+
+#endif
+
 
 #undef CreateWindow	// Undo Windows.h global namespace pollution
 
@@ -34,24 +50,33 @@ extern void OnFKey(int key, int shift);
 class GLWindow
 {
 	private:
-#ifdef GL_X11_WINDOW
-		Display *glDisplay;
-		GLXContext context;
-		XVisualInfo *vi;
-		
-		Window glWindow;
-		XSetWindowAttributes attr;
-		
-		bool CreateVisual();
-		void GetGLXVersion();
+#if defined(GL_X11_WINDOW)
 		void GetWindowSize();
-        void UpdateGrabKey();
-        void Force43Ratio();
+		void PrintProtocolVersion();
+
 		bool CreateContextGL(int, int);
-		void CreateContextGL();
+		bool CreateContextGL();
 #endif
-		bool fullScreen, doubleBuffered;
-		u32 width, height, depth;
+
+#ifdef GLX_API
+		Display *NativeDisplay;
+		Window NativeWindow;
+
+		GLXContext context;
+#endif
+
+#ifdef EGL_API
+		EGLNativeWindowType NativeWindow;
+		EGLNativeDisplayType NativeDisplay;
+
+		EGLDisplay eglDisplay;
+		EGLSurface eglSurface;
+		EGLContext eglContext;
+
+
+		EGLBoolean OpenEGLDisplay();
+		void CloseEGLDisplay();
+#endif
 
 	public:
 		char title[256];
@@ -60,15 +85,10 @@ class GLWindow
 		void SwapGLBuffers();
 		bool ReleaseContext();
 
-#ifdef GL_X11_WINDOW
-        void ToggleFullscreen();
-#endif
-		
 		bool CreateWindow(void *pDisplay);
 		void CloseWindow();
 		bool DisplayWindow(int _width, int _height);
 		void SetTitle(char *strtitle);
-		void ResizeCheck();
 		void ProcessEvents();
 	
 		void UpdateWindowSize(int nNewWidth, int nNewHeight)

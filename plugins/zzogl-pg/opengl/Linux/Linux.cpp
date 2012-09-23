@@ -51,10 +51,6 @@ EXPORT_C_(void) GSkeyEvent(keyEvent *ev)
 					THR_KeyEvent = ev->key;
 					break;
 
-				case XK_Escape:
-                    if (conf.fullscreen()) GLWin.ToggleFullscreen();
-					break;
-
 				case XK_Shift_L:
 				case XK_Shift_R:
 					THR_bShift = true;
@@ -69,10 +65,6 @@ EXPORT_C_(void) GSkeyEvent(keyEvent *ev)
 				case XK_Alt_R:
 					bAlt = true;
 					break;
-
-                case XK_Return:
-                    if (bAlt)
-                        GLWin.ToggleFullscreen();
 			}
 			break;
 

@@ -7,7 +7,8 @@
 # generation .po based on src  : -DCMAKE_BUILD_PO=TRUE|FALSE
 # Rebuild the ps2hw.dat file   : -DREBUILD_SHADER=TRUE
 # Build the Replay Loaders     : -DBUILD_REPLAY_LOADERS=TRUE|FALSE
-# Use GLSL API(else NVIDIA_CG): -DGLSL_API=TRUE
+# Use GLSL API(else NVIDIA_CG): -DGLSL_API=TRUE|FALSE
+# Use EGL (vs GLX)            : -DEGL_API=TRUE|FALSE
 
 ### GCC optimization options
 # control C flags             : -DUSER_CMAKE_C_FLAGS="cflags"
@@ -167,6 +168,15 @@ endif(PACKAGE_MODE)
 if(NOT DEFINED GLSL_API)
 	set(GLSL_API FALSE)
 endif(NOT DEFINED GLSL_API)
+
+#-------------------------------------------------------------------------------
+# Select GLX API by default
+#-------------------------------------------------------------------------------
+if(NOT DEFINED EGL_API)
+    set(EGL_API FALSE)
+else()
+    message(STATUS "EGL is experimental and not expected to work yet!!!")
+endif()
 
 #-------------------------------------------------------------------------------
 # Use the precompiled shader file by default

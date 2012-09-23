@@ -322,12 +322,6 @@ void GLWindow::SetTitle(char *strtitle)
 	if (!conf.fullscreen()) SetWindowText(GShwnd, wxString::FromUTF8(strtitle));
 }
 
-void GLWindow::ResizeCheck()
-{
-
-}
-
-
 extern void ChangeDeviceSize(int nNewWidth, int nNewHeight);
 
 void GLWindow::ProcessEvents()

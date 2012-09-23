@@ -20,68 +20,119 @@
 #include "Util.h"
 #include "GLWin.h"
 
-#ifdef GL_X11_WINDOW
+#if defined(GL_X11_WINDOW)
 
-#include <X11/Xlib.h>
-#include <stdlib.h>
+#ifdef EGL_API
+// Need at least MESA 9.0 (plan for october/november 2012)
+// So force the destiny to at least check the compilation
+#ifndef EGL_KHR_create_context
+#define EGL_KHR_create_context 1
+#define EGL_CONTEXT_MAJOR_VERSION_KHR			    EGL_CONTEXT_CLIENT_VERSION
+#define EGL_CONTEXT_MINOR_VERSION_KHR			    0x30FB
+#define EGL_CONTEXT_FLAGS_KHR				    0x30FC
+#define EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR		    0x30FD
+#define EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_KHR  0x31BD
+#define EGL_NO_RESET_NOTIFICATION_KHR			    0x31BE
+#define EGL_LOSE_CONTEXT_ON_RESET_KHR			    0x31BF
+#define EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR		    0x00000001
+#define EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR	    0x00000002
+#define EGL_CONTEXT_OPENGL_ROBUST_ACCESS_BIT_KHR	    0x00000004
+#define EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR		    0x00000001
+#define EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR    0x00000002
+#endif
+#endif
+
 
 #ifdef USE_GSOPEN2
 bool GLWindow::CreateWindow(void *pDisplay)
 {
-	glWindow = (Window)*((u32*)(pDisplay)+1);
+	bool ret = true;
+
+	NativeWindow = (Window)*((u32*)(pDisplay)+1);
 	// Do not take the display which come from pcsx2 neither change it.
 	// You need a new one to do the operation in the GS thread
-	glDisplay = XOpenDisplay(NULL);
+	NativeDisplay = XOpenDisplay(NULL);
+	if (!NativeDisplay) ret = false;
 
-	return true;
+#ifdef EGL_API
+	if (!OpenEGLDisplay()) ret = false;
+#endif
+
+	return ret;
 }
 #else
 bool GLWindow::CreateWindow(void *pDisplay)
 {
+	bool ret = true;
+
     // init support of multi thread
     if (!XInitThreads())
         ZZLog::Error_Log("Failed to init the xlib concurent threads");
 
-	glDisplay = XOpenDisplay(NULL);
+	NativeDisplay = XOpenDisplay(NULL);
+	if (!NativeDisplay) ret = false;
 
-	if (pDisplay == NULL) 
+	if (pDisplay == NULL)
 	{
 		ZZLog::Error_Log("Failed to create window. Exiting...");
 		return false;
 	}
 
 	// Allow pad to use the display
-	*(Display**)pDisplay = glDisplay;
+	*(Display**)pDisplay = NativeDisplay;
 	// Pad can use the window to grab the input. For the moment just set to 0 to avoid
 	// to grab an unknow window... Anyway GSopen1 might be dropped in the future
 	*((u32*)(pDisplay)+1) = 0;
 
-	return true;
+#ifdef EGL_API
+	if (!OpenEGLDisplay()) ret = false;
+#endif
+
+	return ret;
+}
+#endif
+
+#ifdef EGL_API
+EGLBoolean GLWindow::OpenEGLDisplay()
+{
+	// Create an EGL display from the native display
+	eglDisplay = eglGetDisplay((EGLNativeDisplayType)NativeDisplay);
+	if ( eglDisplay == EGL_NO_DISPLAY ) return EGL_FALSE;
+
+	if ( !eglInitialize(eglDisplay, NULL, NULL) ) return EGL_FALSE;
+
+	return EGL_TRUE;
+}
+#endif
+
+#ifdef EGL_API
+void GLWindow::CloseEGLDisplay()
+{
+	eglTerminate(eglDisplay);
 }
 #endif
 
 bool GLWindow::ReleaseContext()
 {
     bool status = true;
-    if (!glDisplay) return status;
+#ifdef GLX_API
+    if (!NativeDisplay) return status;
 
     // free the context
 	if (context)
 	{
-		if (!glXMakeCurrent(glDisplay, None, NULL)) {
+		if (!glXMakeCurrent(NativeDisplay, None, NULL)) {
 			ZZLog::Error_Log("Could not release drawing context.");
             status = false;
         }
-			
-		glXDestroyContext(glDisplay, context);
+
+		glXDestroyContext(NativeDisplay, context);
 		context = NULL;
 	}
-	
-    // free the visual
-    if (vi) {
-        XFree(vi);
-        vi = NULL;
-    }
+#endif
+#ifdef EGL_API
+	eglReleaseThread();
+#endif
 
 	return status;
 }
@@ -89,68 +140,41 @@ bool GLWindow::ReleaseContext()
 void GLWindow::CloseWindow()
 {
 	SaveConfig();
-	if (!glDisplay) return;
+	if (!NativeDisplay) return;
 
-    XCloseDisplay(glDisplay);
-    glDisplay = NULL;
-}
+#ifdef EGL_API
+	CloseEGLDisplay();
+#endif
 
-bool GLWindow::CreateVisual()
-{
-	// attributes for a single buffered visual in RGBA format with at least
-	// 8 bits per color and a 24 bit depth buffer
-	int attrListSgl[] = {GLX_RGBA, GLX_RED_SIZE, 8,
-						 GLX_GREEN_SIZE, 8,
-						 GLX_BLUE_SIZE, 8,
-						 GLX_DEPTH_SIZE, 24,
-						 None
-						};
-
-	// attributes for a double buffered visual in RGBA format with at least
-	// 8 bits per color and a 24 bit depth buffer
-	int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
-						  GLX_RED_SIZE, 8,
-						  GLX_GREEN_SIZE, 8,
-						  GLX_BLUE_SIZE, 8,
-						  GLX_DEPTH_SIZE, 24,
-						  None
-						};
-
-	/* get an appropriate visual */
-	vi = glXChooseVisual(glDisplay, DefaultScreen(glDisplay), attrListDbl);
-
-	if (vi == NULL)
-	{
-		vi = glXChooseVisual(glDisplay, DefaultScreen(glDisplay), attrListSgl);
-		doubleBuffered = false;
-		ZZLog::Error_Log("Only Singlebuffered Visual!");
-	}
-	else
-	{
-		doubleBuffered = true;
-		ZZLog::Error_Log("Got Doublebuffered Visual!");
-	}
-
-	if (vi == NULL)
-	{
-		ZZLog::Error_Log("Failed to get buffered Visual!");
-		return false;
-	}
-	return true;
+    XCloseDisplay(NativeDisplay);
+    NativeDisplay = NULL;
 }
 
 void GLWindow::GetWindowSize()
 {
-    if (!glDisplay or !glWindow) return;
+    if (!NativeDisplay or !NativeWindow) return;
 
+	u32 depth = 0;
+#ifdef GLX_API
 	unsigned int borderDummy;
 	Window winDummy;
     s32 xDummy;
     s32 yDummy;
-	
-    XLockDisplay(glDisplay);
-	XGetGeometry(glDisplay, glWindow, &winDummy, &xDummy, &yDummy, &width, &height, &borderDummy, &depth);
-    XUnlockDisplay(glDisplay);
+	u32 width;
+	u32 height;
+
+    XLockDisplay(NativeDisplay);
+	XGetGeometry(NativeDisplay, NativeWindow, &winDummy, &xDummy, &yDummy, &width, &height, &borderDummy, &depth);
+    XUnlockDisplay(NativeDisplay);
+#endif
+
+	// FIXME: Not sure it works but that could remove latest X11 bits.
+#ifdef EGL_API
+	int width;
+	int height;
+	eglQuerySurface(eglDisplay, eglSurface, EGL_WIDTH, &width);
+	eglQuerySurface(eglDisplay, eglSurface, EGL_HEIGHT, &height);
+#endif
 
     // update the gl buffer size
     UpdateWindowSize(width, height);
@@ -161,27 +185,28 @@ void GLWindow::GetWindowSize()
 #endif
 }
 
-void GLWindow::GetGLXVersion()
+void GLWindow::PrintProtocolVersion()
 {
+#ifdef GLX_API
 	int glxMajorVersion, glxMinorVersion;
-	
-	glXQueryVersion(glDisplay, &glxMajorVersion, &glxMinorVersion);
 
-	if (glXIsDirect(glDisplay, context))
+	glXQueryVersion(NativeDisplay, &glxMajorVersion, &glxMinorVersion);
+
+	if (glXIsDirect(NativeDisplay, context))
 		ZZLog::Error_Log("glX-Version %d.%d with Direct Rendering", glxMajorVersion, glxMinorVersion);
 	else
 		ZZLog::Error_Log("glX-Version %d.%d with Indirect Rendering !!! It will be slow", glxMajorVersion, glxMinorVersion);
-
+#endif
+#ifdef EGL_API
+	ZZLog::Error_Log("Egl: %s : %s", eglQueryString(eglDisplay, EGL_VENDOR) , eglQueryString(eglDisplay, EGL_VERSION) );
+	ZZLog::Error_Log("Egl: extensions supported: %s", eglQueryString(eglDisplay, EGL_EXTENSIONS));
+#endif
 }
 
+#ifdef GLX_API
 bool GLWindow::CreateContextGL(int major, int minor)
 {
-	if (!glDisplay) return false;
-
-	if (major <= 2) {
-		context = glXCreateContext(glDisplay, vi, NULL, GL_TRUE);
-		return true;
-	}
+	if (!NativeDisplay) return false;
 
 	// Get visual information
 	static int attrListDbl[] =
@@ -197,9 +222,23 @@ bool GLWindow::CreateContextGL(int major, int minor)
 		None
 	};
 
+	// Only keep for older card but NVIDIA and AMD both drop the support of those cards
+	if (major <= 2) {
+		XVisualInfo *vi = glXChooseVisual(NativeDisplay, DefaultScreen(NativeDisplay), attrListDbl);
+		if (vi == NULL) return NULL;
+
+		context = glXCreateContext(NativeDisplay, vi, NULL, GL_TRUE);
+        XFree(vi);
+
+		if (!context) return false;
+
+		glXMakeCurrent(NativeDisplay, NativeWindow, context);
+		return true;
+	}
+
 	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
 	int fbcount = 0;
-	GLXFBConfig *fbc = glXChooseFBConfig(glDisplay, DefaultScreen(glDisplay), attrListDbl, &fbcount);
+	GLXFBConfig *fbc = glXChooseFBConfig(NativeDisplay, DefaultScreen(NativeDisplay), attrListDbl, &fbcount);
 	if (!fbc || fbcount < 1) return false;
 
 	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
@@ -218,45 +257,107 @@ bool GLWindow::CreateContextGL(int major, int minor)
 		None
 	};
 
-	context = glXCreateContextAttribsARB(glDisplay, fbc[0], 0, true, context_attribs);
+	context = glXCreateContextAttribsARB(NativeDisplay, fbc[0], 0, true, context_attribs);
 	if (!context) return false;
 
-	XSync( glDisplay, false);
+	XSync( NativeDisplay, false);
+
+	glXMakeCurrent(NativeDisplay, NativeWindow, context);
 
 	return true;
 }
+#endif
 
-void GLWindow::CreateContextGL()
+#if defined(GLX_API) || defined(EGL_API)
+bool GLWindow::CreateContextGL()
 {
+	bool ret;
 #if defined(OGL4_LOG) || defined(GLSL4_API)
 	// We need to define a debug context. So we need at a 3.0 context (if not 3.2 actually)
-	CreateContextGL(3, 3);
+	ret = CreateContextGL(3, 3);
 #else
 	// FIXME there was some issue with previous context creation on Geforce7. Code was rewritten
 	// for GSdx unfortunately it was not tested on Geforce7 so keep the 2.0 context for now.
+	// Note: Geforce 6&7 was dropped from nvidia driver (2012)
 #if 0
-	if (! CreateContextGL(3, 0) )
-		CreateContextGL(2, 0);
+	ret = CreateContextGL(3, 0)
+	if (! ret )
+		ret = CreateContextGL(2, 0);
 #else
-	CreateContextGL(2, 0);
+	ret = CreateContextGL(2, 0);
 #endif
 
 #endif
+	return ret;
 }
+#endif
+
+#ifdef EGL_API
+bool GLWindow::CreateContextGL( int major, int minor)
+{
+	EGLConfig eglConfig;
+	EGLint numConfigs;
+	EGLint contextAttribs[] =
+	{
+		EGL_CONTEXT_MAJOR_VERSION_KHR, major,
+		EGL_CONTEXT_MINOR_VERSION_KHR, minor,
+		// Keep compatibility for old cruft
+		EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR,
+		//EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR | EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR,
+		// FIXME : Request a debug context to ease opengl development
+		EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR,
+		EGL_NONE
+	};
+	EGLint attrList[] = {
+		EGL_RED_SIZE, 8,
+		EGL_GREEN_SIZE, 8,
+		EGL_BLUE_SIZE, 8,
+		EGL_DEPTH_SIZE, 24,
+		EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
+		EGL_NONE
+	};
+
+	eglBindAPI(EGL_OPENGL_API);
+
+	if ( !eglChooseConfig(eglDisplay, attrList, &eglConfig, 1, &numConfigs) )
+	{
+		ZZLog::Error_Log("Failed to get a frame buffer config!");
+		return EGL_FALSE;
+	}
+
+	eglSurface = eglCreateWindowSurface(eglDisplay, eglConfig, NativeWindow, NULL);
+	if ( eglSurface == EGL_NO_SURFACE )
+	{
+		ZZLog::Error_Log("Failed to get a window surface");
+		return EGL_FALSE;
+	}
+
+	eglContext = eglCreateContext(eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttribs );
+	if ( eglContext == EGL_NO_CONTEXT )
+	{
+		ZZLog::Error_Log("Failed to create the context");
+		ZZLog::Error_Log("EGL STATUS: %x", eglGetError());
+		return EGL_FALSE;
+	}
+
+	if ( !eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext) )
+	{
+		return EGL_FALSE;
+	}
+
+	return EGL_TRUE;
+}
+#endif
+
 
 #ifdef USE_GSOPEN2
 bool GLWindow::DisplayWindow(int _width, int _height)
 {
 	GetWindowSize();
 
-	if (!CreateVisual()) return false;
+	if ( !CreateContextGL() ) return false;
 
-
-	CreateContextGL();
-	// connect the glx-context to the window
-	glXMakeCurrent(glDisplay, glWindow, context);
-
-	GetGLXVersion();
+	PrintProtocolVersion();
 
 	return true;
 }
@@ -266,41 +367,16 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	backbuffer.w = _width;
 	backbuffer.h = _height;
 
-	if (!CreateVisual()) return false;
-
-	/* create a color map */
-	attr.colormap = XCreateColormap(glDisplay, RootWindow(glDisplay, vi->screen),
-						   vi->visual, AllocNone);
-	attr.border_pixel = 0;
-    attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
-        StructureNotifyMask | SubstructureRedirectMask | SubstructureNotifyMask |
-        EnterWindowMask | LeaveWindowMask | FocusChangeMask ;
-
-    // Create a window at the last position/size
-    glWindow = XCreateWindow(glDisplay, RootWindow(glDisplay, vi->screen),
-            conf.x , conf.y , _width, _height, 0, vi->depth, InputOutput, vi->visual,
-            CWBorderPixel | CWColormap | CWEventMask,
-            &attr);
-
-    /* Allow to kill properly the window */
-    Atom wmDelete = XInternAtom(glDisplay, "WM_DELETE_WINDOW", True);
-    XSetWMProtocols(glDisplay, glWindow, &wmDelete, 1);
-
-    // Set icon name
-    XSetIconName(glDisplay, glWindow, "ZZogl-pg");
+	NativeWindow = XCreateSimpleWindow(NativeDisplay, DefaultRootWindow(NativeDisplay), conf.x, conf.y, backbuffer.w, backbuffer.h, 0, 0, 0);
 
     // Draw the window
-    XMapRaised(glDisplay, glWindow);
-    XSync(glDisplay, false);
+    XMapRaised(NativeDisplay, NativeWindow);
+    XSync(NativeDisplay, false);
 
-	// connect the glx-context to the window
-	CreateContextGL();
-	glXMakeCurrent(glDisplay, glWindow, context);
-	
-	GetGLXVersion();
+	if ( !CreateContextGL() ) return false;
 
-    // Always start in window mode
-	fullScreen = 0;
+	PrintProtocolVersion();
+
     GetWindowSize();
 
 	return true;
@@ -312,8 +388,12 @@ void GLWindow::SwapGLBuffers()
 	if (glGetError() != GL_NO_ERROR) ZZLog::Debug_Log("glError before swap!");
 	ZZLog::Check_GL_Error();
 
-	// FIXME I think we need to flush when there is only 1 visual buffer
-	glXSwapBuffers(glDisplay, glWindow);
+#ifdef GLX_API
+	glXSwapBuffers(NativeDisplay, NativeWindow);
+#endif
+#ifdef EGL_API
+	eglSwapBuffers(eglDisplay, eglSurface);
+#endif
 	// glClear(GL_COLOR_BUFFER_BIT);
 }
 
@@ -327,8 +407,6 @@ void GLWindow::ProcessEvents()
 
 #ifdef USE_GSOPEN2
 	GetWindowSize();
-#else
-	ResizeCheck();
 #endif
 
 	if (THR_KeyEvent)     // This value was passed from GSKeyEvents which could be in another thread
@@ -354,159 +432,7 @@ void GLWindow::ProcessEvents()
 }
 
 
-// ************************** Function that are either stub or useless in GSOPEN2
-#define _NET_WM_STATE_REMOVE 0
-#define _NET_WM_STATE_ADD 1
-#define _NET_WM_STATE_TOGGLE 2
-
-void GLWindow::Force43Ratio()
-{
-#ifndef USE_GSOPEN2
-    // avoid black border in fullscreen
-    if (fullScreen && conf.isWideScreen) {
-        conf.width = width;
-        conf.height = height;
-    }
-
-    if(!fullScreen && !conf.isWideScreen) {
-        // Compute the width based on height
-        s32 new_width = (4*height)/3;
-        // do not bother to resize for 5 pixels. Avoid a loop
-        // due to round value
-        if ( ABS(new_width - width) > 5) {
-            width = new_width;
-            conf.width = new_width;
-            // resize the window
-            XLockDisplay(glDisplay);
-            XResizeWindow(glDisplay, glWindow, new_width, height);
-            XSync(glDisplay, False);
-            XUnlockDisplay(glDisplay);
-        }
-    }
-#endif
-}
-
-void GLWindow::UpdateGrabKey()
-{
-    // Do not stole the key in debug mode. It is not breakpoint friendly...
-#ifndef _DEBUG
-    XLockDisplay(glDisplay);
-    if (fullScreen) {
-        XGrabPointer(glDisplay, glWindow, True, ButtonPressMask, GrabModeAsync, GrabModeAsync, glWindow, None, CurrentTime);
-        XGrabKeyboard(glDisplay, glWindow, True, GrabModeAsync, GrabModeAsync, CurrentTime);
-    } else {
-        XUngrabPointer(glDisplay, CurrentTime);
-        XUngrabKeyboard(glDisplay, CurrentTime);
-    }
-    XUnlockDisplay(glDisplay);
-#endif
-}
-
-void GLWindow::ToggleFullscreen()
-{
-#ifndef USE_GSOPEN2
-    if (!glDisplay or !glWindow) return;
-
-    Force43Ratio();
-
-    u32 mask = SubstructureRedirectMask | SubstructureNotifyMask;
-    // Setup a new event structure
-    XClientMessageEvent cme;
-    cme.type = ClientMessage;
-    cme.send_event = True;
-    cme.display = glDisplay;
-    cme.window  = glWindow;
-    cme.message_type = XInternAtom(glDisplay, "_NET_WM_STATE", False);
-    cme.format = 32;
-    // Note: can not use _NET_WM_STATE_TOGGLE because the WM can change the fullscreen state
-    // and screw up the fullscreen variable... The test on fulscreen restore a sane configuration
-    cme.data.l[0] = fullScreen  ? _NET_WM_STATE_REMOVE : _NET_WM_STATE_ADD;
-    cme.data.l[1] = (u32)XInternAtom(glDisplay, "_NET_WM_STATE_FULLSCREEN", False);
-    cme.data.l[2] = 0;
-    cme.data.l[3] = 0;
-
-    // send the event
-    XLockDisplay(glDisplay);
-    if (!XSendEvent(glDisplay, RootWindow(glDisplay, vi->screen), False, mask, (XEvent*)(&cme)))
-        ZZLog::Error_Log("Failed to send event: toggle fullscreen");
-    else {
-        fullScreen = (!fullScreen);
-        conf.setFullscreen(fullScreen);
-    }
-    XUnlockDisplay(glDisplay);
-
-    // Apply the change
-    XSync(glDisplay, false);
-
-    // Wait a little that the VM does his joes. Actually the best is to check some WM event
-    // but it not sure it will appear so a time out is necessary.
-    usleep(100*1000); // 100 us should be far enough for old computer and unnoticeable for users
-
-    // update info structure
-    GetWindowSize();
-
-	UpdateGrabKey();
-
-    // avoid black border in widescreen fullscreen
-    if (fullScreen && conf.isWideScreen) {
-        conf.width = width;
-        conf.height = height;
-    }
-
-    // Hide the cursor in the right bottom corner
-    if(fullScreen)
-        XWarpPointer(glDisplay, None, glWindow, 0, 0, 0, 0, 2*width, 2*height);
-
-#endif
-}
-
-void GLWindow::ResizeCheck()
-{
-	XEvent event;
-    if (!glDisplay or !glWindow) return;
-
-    XLockDisplay(glDisplay);
-	while (XCheckTypedWindowEvent(glDisplay, glWindow, ConfigureNotify, &event))
-	{
-		if ((event.xconfigure.width != width) || (event.xconfigure.height != height))
-		{
-			width = event.xconfigure.width;
-			height = event.xconfigure.height;
-            Force43Ratio();
-			UpdateWindowSize(width, height);
-		}
-
-        if (!fullScreen) {
-            if ((event.xconfigure.x != conf.x) || (event.xconfigure.y != conf.y))
-            {
-                // Fixme; x&y occassionally gives values near the top left corner rather then the real values,
-                // causing the window to change positions when adjusting ZZOgl's settings.
-                conf.x = event.xconfigure.x;
-                conf.y = event.xconfigure.y;
-            }
-        }
-	}
-    XUnlockDisplay(glDisplay);
-}
-
-void GLWindow::SetTitle(char *strtitle)
-{
-#ifndef USE_GSOPEN2
-    if (!glDisplay or !glWindow) return;
-	if (fullScreen) return;
-
-    XTextProperty prop;
-    memset(&prop, 0, sizeof(prop));
-
-    char* ptitle = strtitle;
-    if (XStringListToTextProperty(&ptitle, 1, &prop)) {
-        XLockDisplay(glDisplay);
-        XSetWMName(glDisplay, glWindow, &prop);
-        XUnlockDisplay(glDisplay);
-    }
-
-    XFree(prop.value);
-#endif
-}
+// ************************** Function that are useless in GSopen2 (GSopen 1 is only used with the debug replayer)
+void GLWindow::SetTitle(char *strtitle) { }
 
 #endif

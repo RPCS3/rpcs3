@@ -53,6 +53,11 @@ else(GLSL_API)
 	add_definitions(-DNVIDIA_CG_API)
 endif(GLSL_API)
 
+# Select the EGL API
+if (EGL_API)
+	add_definitions(-DEGL_API)
+endif()
+
 
 # zzogl sources
 set(zzoglSources
@@ -168,6 +173,9 @@ target_link_libraries(${Output} ${GLEW_LIBRARY})
 
 # link target with opengl
 target_link_libraries(${Output} ${OPENGL_LIBRARIES})
+if(EGL_API)
+    target_link_libraries(${Output} ${EGL_LIBRARIES})
+endif()
 
 # link target with X11
 target_link_libraries(${Output} ${X11_LIBRARIES})
@@ -229,6 +237,9 @@ if(BUILD_REPLAY_LOADERS)
 	endif(NOT GLSL_API)
 	target_link_libraries(${Static} ${GLEW_LIBRARY})
 	target_link_libraries(${Static} ${OPENGL_LIBRARIES})
+if(EGL_API)
+	target_link_libraries(${Static} ${EGL_LIBRARIES})
+endif()
 	target_link_libraries(${Static} ${X11_LIBRARIES})
 	target_link_libraries(${Static} ${JPEG_LIBRARIES})
 
