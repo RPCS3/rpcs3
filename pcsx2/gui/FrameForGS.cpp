@@ -496,7 +496,8 @@ void GSFrame::AppStatusEvent_OnSettingsApplied()
 
 	SetWindowStyle((g_Conf->GSWindow.DisableResizeBorders ? 0 : wxRESIZE_BORDER) | wxCAPTION | wxCLIP_CHILDREN |
 			wxSYSTEM_MENU | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX);
-	SetClientSize( g_Conf->GSWindow.WindowSize );
+	if (!IsFullScreen() && !IsMaximized())
+		SetClientSize(g_Conf->GSWindow.WindowSize);
 	Refresh();
 
 	if( g_Conf->GSWindow.CloseOnEsc )
