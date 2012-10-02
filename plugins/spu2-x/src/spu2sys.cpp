@@ -265,10 +265,11 @@ void V_Core::UpdateEffectsBufferSize()
 		//printf("too big, returning\n");
 		//return;
 	}
-	if (newbufsize == EffectsBufferSize) return;
+	if (newbufsize == EffectsBufferSize && EffectsStartA == EffectsBufferStart) return;
 	
 	RevBuffers.NeedsUpdated = false;
 	EffectsBufferSize = newbufsize;
+	EffectsBufferStart = EffectsStartA;
 
 	if( EffectsBufferSize <= 0 ) return;
 

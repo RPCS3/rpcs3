@@ -412,10 +412,11 @@ struct V_Core
 	u32				ExtEffectsEndA;
 	u32				ReverbX;
 
-	// Current size of the effects buffer.  Pre-caculated when the effects start
+	// Current size of and position of the effects buffer.  Pre-caculated when the effects start
 	// or end position registers are written.  CAN BE NEGATIVE OR ZERO, in which
 	// case reverb should be disabled.
 	s32				EffectsBufferSize;
+	u32				EffectsBufferStart;
 
 	V_CoreRegs		Regs;			// Registers
 
