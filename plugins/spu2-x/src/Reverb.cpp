@@ -37,6 +37,7 @@ __forceinline s32 V_Core::RevbGetIndexer( s32 offset )
 		pos += EffectsStartA;
 	}
 
+	assert(pos >= EffectsStartA && pos <= EffectsEndA);
 	return pos;
 }
 
