@@ -5534,7 +5534,6 @@ Compat = 4
 Serial = SLUS-20883
 Name   = Tom Clancy's Rainbow Six 3
 Region = NTSC-U
-Serial = SLUS-20883
 Compat = 5
 ---------------------------------------------
 Serial = SLUS-20884
@@ -5942,6 +5941,7 @@ Name   = Tony Hawk's Underground 2
 Region = NTSC-U
 Compat = 5
 vuRoundMode = 0		//Crashes without.
+EETimingHack = 1 //Hangs after Memory Card check without.
 ---------------------------------------------
 Serial = SLUS-20966
 Name   = State of Emergency 2
@@ -36562,11 +36562,13 @@ Serial = SLES-52621
 Name   = Tony Hawk's Underground 2
 Region = PAL-Unk
 vuRoundMode = 0		//Crashes without.
+EETimingHack = 1 //Hangs after Memory Card check without.
 ---------------------------------------------
 Serial = SLES-52622
 Name   = Tony Hawk's Underground 2
 Region = PAL-Unk
 vuRoundMode = 0		//Crashes without.
+EETimingHack = 1 //Hangs after Memory Card check without.
 ---------------------------------------------
 Serial = SLES-52624
 Name   = X-Men Legends
