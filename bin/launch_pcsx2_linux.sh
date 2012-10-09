@@ -24,8 +24,17 @@
 
 current_script=$0
 
-[ $current_script = "launch_pcsx2_linux.sh" ] || [ $current_script = "sh" ] || [ $current_script = "bash" ] && \
-    echo "Error the script was directly 'called'" && \
+# We are already in the good directory. Allow to use "bash launch_pcsx2_linux.sh"
+if [ $current_script = "launch_pcsx2_linux.sh" ]
+then
+    if [ -e "./launch_pcsx2_linux.sh" ]
+    then
+        current_script="./launch_pcsx2_linux.sh"
+    fi
+fi
+
+[ $current_script = "launch_pcsx2_linux.sh" ] && \
+    echo "Error the script was either directly 'called' (ie launch_pcsx2_linux.sh)" && \
     echo "Use either /absolute_path/launch_pcsx2_linux.sh or ./relative_path/launch_pcsx2_linux.sh" && exit 1;
 
 # Note: sh (dash on debian) does not support pushd, popd...
