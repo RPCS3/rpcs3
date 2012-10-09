@@ -88,14 +88,6 @@
 ---------------------------------------------
 -- Game List
 ---------------------------------------------
-Serial = PBPX-95503
-Name   = Gran Turismo 3 - A-Spec [PS2 Bundle]
-Region = NTSC-U
----------------------------------------------
-Serial = PBPX-95517
-Name   = Network Adapter Start-Up Disc
-Region = NTSC-U
----------------------------------------------
 Serial = SCUS-90174
 Name   = Toy Story 3 (PlayStation 2 Bundle)
 Region = NTSC-U
@@ -263,11 +255,6 @@ Serial = SCUS-97140
 Name   = Mark of Kri, The
 Region = NTSC-U
 Compat = 4
----------------------------------------------
-Serial = SCUS-97142
-Name   = Primal - Civilization Is Only Skin Deep
-Region = NTSC-U
-Compat = 5
 ---------------------------------------------
 Serial = SCUS-97144
 Name   = PlayStation Underground 5.1
@@ -564,10 +551,6 @@ Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97224
 Name   = Wild ARMs 3 [Demo]
-Region = NTSC-U
----------------------------------------------
-Serial = SCUS-97225
-Name   = Primal [Demo]
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97226
@@ -3161,7 +3144,7 @@ Region = NTSC-U
 Serial = SLUS-20343
 Name   = Forever Kingdom
 Region = NTSC-U
-Compat = 3
+Compat = 4
 ---------------------------------------------
 Serial = SLUS-20344
 Name   = Rez
@@ -3228,7 +3211,8 @@ Compat = 2
 Serial = SLUS-20360
 Name   = Blade 2
 Region = NTSC-U
-Compat = 4
+Compat = 5
+EETimingHack = 1	// Only is needed from r4821 and later versions.
 ---------------------------------------------
 Serial = SLUS-20361
 Name   = Rally Fusion - Race of Champions
@@ -4616,11 +4600,6 @@ Name   = Virtual On Marz
 Region = NTSC-U
 Compat = 5
 ---------------------------------------------
-Serial = SLUS-20675
-Name   = Baldur's Gate - Dark Alliance 2
-Region = NTSC-U
-Compat = 4
----------------------------------------------
 Serial = SLUS-20676
 Name   = Lowrider
 Region = NTSC-U
@@ -4895,6 +4874,7 @@ Serial = SLUS-20738
 Name   = Van Helsing
 Region = NTSC-U
 Compat = 5
+EETimingHack = 1	// To enter the main menu.
 ---------------------------------------------
 Serial = SLUS-20740
 Name   = Mobile Suit Gundam - Encounters in Space
@@ -10953,6 +10933,23 @@ Serial = PAPX-90512
 Name   = Gran Turismo 4 - Toyota Prius [Trial]
 Region = NTSC-J
 ---------------------------------------------
+Serial = PBPX-95503
+Name   = Gran Turismo 3 - A-Spec [PS2 Bundle]
+Region = NTSC-U
+---------------------------------------------
+Serial = PBPX-95517
+Name   = Network Adapter Start-Up Disc
+Region = NTSC-U
+---------------------------------------------
+Serial = PBPX-95201
+Name   = Dead or Alive 2
+Region = NTSC-J
+Compat = 5
+[patches = 70D26E09]
+	// change TLSNDDRV RPC to blocking, better would be to move the wait to the top of the function
+	patch=0,EE,00290408,word,24060000
+[/patches]
+---------------------------------------------
 Serial = PBPX-95524
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-Unk
@@ -13705,12 +13702,12 @@ Region = NTSC-K
 Compat = 5
 ---------------------------------------------
 Serial = SLKA-25012
-Name   = Davil May Cry 2 Dante
+Name   = Devil May Cry 2 Dante
 Region = NTSC-K
 Compat = 5
 ---------------------------------------------
 Serial = SLKA-25013
-Name   = Davil May Cry 2 Lucia
+Name   = Devil May Cry 2 Lucia
 Region = NTSC-K
 Compat = 5
 ---------------------------------------------
@@ -21642,6 +21639,7 @@ Region = NTSC-J
 Serial = SLPM-66329
 Name   = Mahou Sensei Negima! Kagai Jugyou
 Region = NTSC-J
+Compat = 5	// GS Software rendering only. VU XGkick Hack fixes some rendering problem.
 ---------------------------------------------
 Serial = SLPM-66330
 Name   = Tokimeki Memorial - Girl's Side - 2nd Kiss
@@ -22580,6 +22578,7 @@ Region = NTSC-J
 Serial = SLPM-66593
 Name   = Negima! 3-Jikanme [Live Version]
 Region = NTSC-J
+Compat = 5
 ---------------------------------------------
 Serial = SLPM-66594
 Name   = Rhapsodia [Konami the Best]
@@ -29956,10 +29955,23 @@ Serial = SCES-51105
 Name   = Ape Escape 2
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SCUS-97225
+Name   = Primal [Demo]
+Region = NTSC-U
+---------------------------------------------
+Serial = SCUS-97142
+Name   = Primal - Civilization Is Only Skin Deep
+Region = NTSC-U
+Compat = 5
+---------------------------------------------
 Serial = SCES-51135
 Name   = Primal
 Region = PAL-M5
-Compat = 5
+Compat = 5	// GS Software rendering only (issue 1212).
+---------------------------------------------
+Serial = SCES-51685
+Name   = Primal
+Region = PAL-R
 ---------------------------------------------
 Serial = SCES-51159
 Name   = Getaway, The
@@ -30079,10 +30091,6 @@ Region = PAL-Unk
 Serial = SCES-51684
 Name   = World Rally Championship 3
 Region = PAL-Unk
----------------------------------------------
-Serial = SCES-51685
-Name   = Primal
-Region = PAL-R
 ---------------------------------------------
 Serial = SCES-51706
 Name   = Amplitude
@@ -30265,7 +30273,7 @@ Serial = SCES-52432
 Name   = This is Football 2005
 Region = PAL-Unk
 ---------------------------------------------
-Serial = SCES-52436
+Serial = SCED-52436
 Name   = Playstation2 UK Demo 7-2004
 Region = PAL-Unk
 Compat = 2
@@ -30319,7 +30327,7 @@ Name   = This is Football 2005
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SCES-52677
-Name   = Hardware - Online Arena
+Name   = Network Access Disc & Hardware - Online Arena
 Region = PAL-Unk
 Compat = 4
 ---------------------------------------------
@@ -30508,6 +30516,7 @@ Serial = SCES-53312
 Name   = Soul Calibur 3
 Region = PAL-Unk
 Compat = 4
+vuRoundMode = 3
 ---------------------------------------------
 Serial = SCES-53315
 Name   = EyeToy - Play 3
@@ -35686,6 +35695,11 @@ Serial = SLES-52179
 Name   = Kaan Barbarian Blade
 Region = PAL-Unk
 ---------------------------------------------
+Serial = SLUS-20675
+Name   = Baldur's Gate - Dark Alliance 2
+Region = NTSC-U
+Compat = 4
+---------------------------------------------
 Serial = SLES-52187
 Name   = Baldur's Gate - Dark Alliance 2
 Region = PAL-Unk
@@ -39200,7 +39214,7 @@ Region = PAL-Unk
 Compat = 4
 ---------------------------------------------
 Serial = SLES-53825
-Name   = Project Zero 3 - Tormented
+Name   = Project Zero 3 - The Tormented
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
@@ -41892,6 +41906,10 @@ Region = PAL-M4
 Serial = SLES-55644
 Name   = FIFA 11
 Region = PAL-M5
+---------------------------------------------
+Serial = SLES-55665
+Name   = FIFA 13
+Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-55648
 Name   = WWE All-Stars
