@@ -80,7 +80,7 @@ __forceinline void spu2M_Write( u32 addr, s16 value )
 		const int cacheIdx = addr / pcm_WordsPerBlock;
 		pcm_cache_data[cacheIdx].Validated = false;
 
-		if(MsgToConsole()) ConLog( "* SPU2-X: PcmCache Block Clear at 0x%x (cacheIdx=0x%x)\n", addr, cacheIdx);
+		if(MsgToConsole() && MsgCache()) ConLog( "* SPU2-X: PcmCache Block Clear at 0x%x (cacheIdx=0x%x)\n", addr, cacheIdx);
 	}
 	*GetMemPtr( addr ) = value;
 }
@@ -1142,7 +1142,7 @@ static void __fastcall RegWrite_Core( u16 value )
 		break;
 
 		case REG_S_ADMAS:
-			//ConLog("* SPU2-X: Core %d AutoDMAControl set to %d (%d)\n",core,value, Cycles);
+			ConLog("* SPU2-X: Core %d AutoDMAControl set to %d (at cycle %d)\n",core,value, Cycles);
 			thiscore.AutoDMACtrl=value;
 
 			if(value==0)

@@ -10228,6 +10228,11 @@ Serial = SLUS-21944
 Name   = Dora's Big Birthday Adventure
 Region = NTSC-U
 ---------------------------------------------
+Serial = SLUS-21946
+Name   = Madden NFL 12
+Region = NTSC-U
+Compat = 5
+---------------------------------------------
 Serial = SLUS-27029
 Name   = Disney Sing It [Bundle]
 Region = NTSC-U
