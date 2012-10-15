@@ -1142,7 +1142,7 @@ static void __fastcall RegWrite_Core( u16 value )
 		break;
 
 		case REG_S_ADMAS:
-			ConLog("* SPU2-X: Core %d AutoDMAControl set to %d (at cycle %d)\n",core,value, Cycles);
+			if ( MsgToConsole() ) ConLog("* SPU2-X: Core %d AutoDMAControl set to %d (at cycle %d)\n",core,value, Cycles);
 			thiscore.AutoDMACtrl=value;
 
 			if(value==0)

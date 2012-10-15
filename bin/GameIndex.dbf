@@ -840,6 +840,8 @@ Serial = SCUS-97328
 Name   = Gran Turismo 4
 Region = NTSC-U
 Compat = 5
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCUS-97329
 Name   = Downhill Domination [Demo]
@@ -1167,6 +1169,8 @@ Region = NTSC-U
 Serial = SCUS-97436
 Name   = Gran Turismo 4 [Online Public Beta]
 Region = NTSC-U
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCUS-97437
 Name   = ATV Offroad Fury 3 [Demo]
@@ -10932,6 +10936,8 @@ Region = NTSC-U
 Serial = PAPX-90512
 Name   = Gran Turismo 4 - Toyota Prius [Trial]
 Region = NTSC-J
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = PBPX-95503
 Name   = Gran Turismo 3 - A-Spec [PS2 Bundle]
@@ -10954,6 +10960,8 @@ Serial = PBPX-95524
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-Unk
 Compat = 5
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 [patches = CA6243B9]
 	
 	comment=patches by Nachbrenner
@@ -10972,6 +10980,8 @@ Serial = PCPX-96649
 Name   = Gran Turismo 4 [Demo]
 Region = NTSC-J
 Compat = 4
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 [patches = E906EA37]
 	
 	comment=patches by mdr61
@@ -11266,6 +11276,8 @@ Region = NTSC-Unk
 Serial = SCAJ-20066
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-Unk
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCAJ-20067
 Name   = GunGrave O.D.
@@ -11840,11 +11852,15 @@ Region = NTSC-Unk
 Serial = SCAJ-30006
 Name   = Gran Turismo 4
 Region = NTSC-Unk
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCAJ-30007
 Name   = Gran Turismo 4
 Region = NTSC-Unk
 Compat = 5
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 [patches = 7ABDBB5E]
 	
 	comment=patches by nachbrenner
@@ -11857,6 +11873,8 @@ Compat = 5
 Serial = SCAJ-30008
 Name   = Gran Turismo 4 [PlayStation 2 The Best]
 Region = NTSC-Unk
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCAJ-30010
 Name   = God of War
@@ -11932,6 +11950,8 @@ VIF1StallHack = 1		//HUD
 Serial = SCKA-20022
 Name   = Gran Turismo 4 Prologue
 Region = NTSC-K
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCKA-20023
 Name   = Fatal Frame 2
@@ -12179,6 +12199,8 @@ Region = NTSC-K
 Serial = SCKA-30001
 Name   = Gran Turismo 4
 Region = NTSC-K
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCKA-30002
 Name   = God of War
@@ -12589,6 +12611,8 @@ Region = NTSC-J
 Serial = SCPS-15055
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-J
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-15056
 Name   = Ratchet & Clank 2
@@ -12866,6 +12890,8 @@ Serial = SCPS-17001
 Name   = Gran Turismo 4
 Region = NTSC-J
 Compat = 5
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-17002
 Name   = Wild ARMs - Alter Code F
@@ -12992,6 +13018,8 @@ Region = NTSC-J
 Serial = SCPS-19252
 Name   = Gran Turismo 4 [PlayStation 2 The Best]
 Region = NTSC-J
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-19253
 Name   = Wild ARMs - Alter Code F [PlayStation 2 The Best - Reprint]
@@ -13012,6 +13040,8 @@ Region = NTSC-J
 Serial = SCPS-19304
 Name   = Gran Turismo 4 - Prologue [PlayStation 2 The Best]
 Region = NTSC-J
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-19305
 Name   = Siren [PlayStation 2 The Best]
@@ -30101,6 +30131,8 @@ Serial = SCES-51719
 Name   = Gran Turismo 4
 Region = PAL-Unk
 Compat = 5
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCES-51725
 Name   = Everquest Online Adventures
@@ -30282,6 +30314,8 @@ Serial = SCES-52438
 Name   = Gran Turismo 4 - Prologue
 Region = PAL-Unk
 Compat = 5
+eeClampMode = 3 // Text in races works
+vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCES-52456
 Name   = Ratchet & Clank 3

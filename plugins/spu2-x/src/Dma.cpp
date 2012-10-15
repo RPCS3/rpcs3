@@ -157,7 +157,7 @@ void V_Core::StartADMAWrite(u16 *pMem, u32 sz)
 
 			AutoDMAReadBuffer(0);
 #endif
-
+			// Klonoa 2
 			if(size==512)
 				DMAICounter = size;
 		}
