@@ -350,18 +350,18 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	wxSize backsize( m_background.GetSize() );
 
 	wxString wintitle;
-	if( PCSX2_VersionLo & 1 )
+	if( PCSX2_isReleaseVersion )
 	{
-		// Odd versions: beta / development editions, which feature revision number and compile date.
-		wintitle.Printf( _("%s  %d.%d.%d.%d%s (svn)  %s"), pxGetAppName().c_str(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
-			SVN_REV, SVN_MODS ? L"m" : wxEmptyString, fromUTF8(__DATE__).c_str() );
-	}
-	else
-	{
-		// evens: stable releases, with a simpler title.
+		// stable releases, with a simple title.
 		wintitle.Printf( _("%s  %d.%d.%d %s"), pxGetAppName().c_str(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
 			SVN_MODS ? _("(modded)") : wxEmptyString
 		);
+	}
+	else
+	{
+		// beta / development editions, which feature revision number and compile date.
+		wintitle.Printf( _("%s  %d.%d.%d.%d%s (svn)  %s"), pxGetAppName().c_str(), PCSX2_VersionHi, PCSX2_VersionMid, PCSX2_VersionLo,
+			SVN_REV, SVN_MODS ? L"m" : wxEmptyString, fromUTF8(__DATE__).c_str() );
 	}
 
 	SetTitle( wintitle );
