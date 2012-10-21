@@ -54,8 +54,10 @@ else(GLSL_API)
 endif(GLSL_API)
 
 # Select the EGL API
-if (EGL_API)
+if(EGL_API AND EGL_GL_CONTEXT_SUPPORT)
 	add_definitions(-DEGL_API)
+else()
+    message(WARNING "Current EGL implementation doesn't support openGL context. Fallback to standard GLX.")
 endif()
 
 
@@ -173,7 +175,7 @@ target_link_libraries(${Output} ${GLEW_LIBRARY})
 
 # link target with opengl
 target_link_libraries(${Output} ${OPENGL_LIBRARIES})
-if(EGL_API)
+if (EGL_API AND EGL_GL_CONTEXT_SUPPORT)
     target_link_libraries(${Output} ${EGL_LIBRARIES})
 endif()
 
@@ -237,7 +239,7 @@ if(BUILD_REPLAY_LOADERS)
 	endif(NOT GLSL_API)
 	target_link_libraries(${Static} ${GLEW_LIBRARY})
 	target_link_libraries(${Static} ${OPENGL_LIBRARIES})
-if(EGL_API)
+if (EGL_API AND EGL_GL_CONTEXT_SUPPORT)
 	target_link_libraries(${Static} ${EGL_LIBRARIES})
 endif()
 	target_link_libraries(${Static} ${X11_LIBRARIES})

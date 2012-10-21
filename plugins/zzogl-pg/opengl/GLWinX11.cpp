@@ -42,7 +42,6 @@
 #endif
 #endif
 
-
 #ifdef USE_GSOPEN2
 bool GLWindow::CreateWindow(void *pDisplay)
 {
@@ -119,15 +118,15 @@ bool GLWindow::ReleaseContext()
     if (!NativeDisplay) return status;
 
     // free the context
-	if (context)
+	if (glxContext)
 	{
 		if (!glXMakeCurrent(NativeDisplay, None, NULL)) {
 			ZZLog::Error_Log("Could not release drawing context.");
             status = false;
         }
 
-		glXDestroyContext(NativeDisplay, context);
-		context = NULL;
+		glXDestroyContext(NativeDisplay, glxContext);
+		glxContext = NULL;
 	}
 #endif
 #ifdef EGL_API
@@ -192,7 +191,7 @@ void GLWindow::PrintProtocolVersion()
 
 	glXQueryVersion(NativeDisplay, &glxMajorVersion, &glxMinorVersion);
 
-	if (glXIsDirect(NativeDisplay, context))
+	if (glXIsDirect(NativeDisplay, glxContext))
 		ZZLog::Error_Log("glX-Version %d.%d with Direct Rendering", glxMajorVersion, glxMinorVersion);
 	else
 		ZZLog::Error_Log("glX-Version %d.%d with Indirect Rendering !!! It will be slow", glxMajorVersion, glxMinorVersion);
@@ -227,21 +226,21 @@ bool GLWindow::CreateContextGL(int major, int minor)
 		XVisualInfo *vi = glXChooseVisual(NativeDisplay, DefaultScreen(NativeDisplay), attrListDbl);
 		if (vi == NULL) return NULL;
 
-		context = glXCreateContext(NativeDisplay, vi, NULL, GL_TRUE);
+		glxContext = glXCreateContext(NativeDisplay, vi, NULL, GL_TRUE);
         XFree(vi);
 
-		if (!context) return false;
+		if (!glxContext) return false;
 
-		glXMakeCurrent(NativeDisplay, NativeWindow, context);
+		glXMakeCurrent(NativeDisplay, NativeWindow, glxContext);
 		return true;
 	}
 
-	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
+	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC)GetProcAddress("glXChooseFBConfig");
 	int fbcount = 0;
 	GLXFBConfig *fbc = glXChooseFBConfig(NativeDisplay, DefaultScreen(NativeDisplay), attrListDbl, &fbcount);
 	if (!fbc || fbcount < 1) return false;
 
-	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
+	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)GetProcAddress("glXCreateContextAttribsARB");
 	if (!glXCreateContextAttribsARB) return false;
 
 	// Create a context
@@ -253,22 +252,23 @@ bool GLWindow::CreateContextGL(int major, int minor)
 		GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
 		//GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB | GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
 		// FIXME : Request a debug context to ease opengl development
+#if defined(ZEROGS_DEVBUILD) || defined(_DEBUG)
 		GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
+#endif
 		None
 	};
 
-	context = glXCreateContextAttribsARB(NativeDisplay, fbc[0], 0, true, context_attribs);
-	if (!context) return false;
+	glxContext = glXCreateContextAttribsARB(NativeDisplay, fbc[0], 0, true, context_attribs);
+	if (!glxContext) return false;
 
 	XSync( NativeDisplay, false);
 
-	glXMakeCurrent(NativeDisplay, NativeWindow, context);
+	glXMakeCurrent(NativeDisplay, NativeWindow, glxContext);
 
 	return true;
 }
 #endif
 
-#if defined(GLX_API) || defined(EGL_API)
 bool GLWindow::CreateContextGL()
 {
 	bool ret;
@@ -290,10 +290,9 @@ bool GLWindow::CreateContextGL()
 #endif
 	return ret;
 }
-#endif
 
 #ifdef EGL_API
-bool GLWindow::CreateContextGL( int major, int minor)
+bool GLWindow::CreateContextGL(int major, int minor)
 {
 	EGLConfig eglConfig;
 	EGLint numConfigs;
@@ -305,7 +304,9 @@ bool GLWindow::CreateContextGL( int major, int minor)
 		EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR,
 		//EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR | EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR,
 		// FIXME : Request a debug context to ease opengl development
+#if defined(ZEROGS_DEVBUILD) || defined(_DEBUG)
 		EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR,
+#endif
 		EGL_NONE
 	};
 	EGLint attrList[] = {
@@ -383,6 +384,16 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 }
 #endif
 
+void* GLWindow::GetProcAddress(const char *function)
+{
+#ifdef EGL_API
+	return (void*)eglGetProcAddress(function);
+#endif
+#ifdef GLX_API
+	return (void*)glXGetProcAddress((const GLubyte*)function);
+#endif
+}
+
 void GLWindow::SwapGLBuffers()
 {
 	if (glGetError() != GL_NO_ERROR) ZZLog::Debug_Log("glError before swap!");
@@ -395,6 +406,45 @@ void GLWindow::SwapGLBuffers()
 	eglSwapBuffers(eglDisplay, eglSurface);
 #endif
 	// glClear(GL_COLOR_BUFFER_BIT);
+}
+
+void GLWindow::InitVsync(bool extension)
+{
+#ifdef GLX_API
+	if (extension) {
+		swapinterval = (_PFNSWAPINTERVAL)GetProcAddress("glXSwapInterval");
+
+		if (!swapinterval)
+			swapinterval = (_PFNSWAPINTERVAL)GetProcAddress("glXSwapIntervalSGI");
+
+		if (!swapinterval)
+			swapinterval = (_PFNSWAPINTERVAL)GetProcAddress("glXSwapIntervalEXT");
+
+		if (swapinterval) {
+			swapinterval(0);
+			vsync_supported = true;
+		} else {
+			ZZLog::Error_Log("No support for SwapInterval (framerate clamped to monitor refresh rate),");
+			vsync_supported = false;
+		}
+	} else {
+		vsync_supported = false;
+	}
+
+#endif
+}
+
+void GLWindow::SetVsync(bool enable)
+{
+	fprintf(stderr, "change vsync %d\n", enable);
+#ifdef EGL_API
+	eglSwapInterval(eglDisplay, enable);
+#endif
+#ifdef GLX_API
+	if (vsync_supported) {
+		swapinterval(enable);
+	}
+#endif
 }
 
 u32 THR_KeyEvent = 0; // Value for key event processing between threads

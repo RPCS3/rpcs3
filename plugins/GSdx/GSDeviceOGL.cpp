@@ -499,6 +499,11 @@ bool GSDeviceOGL::Reset(int w, int h)
 	return true;
 }
 
+void GSDeviceOGL::SetVSync(bool enable)
+{
+	m_wnd->SetVSync(enable);
+}
+
 void GSDeviceOGL::Flip()
 {
 	// FIXME: disable it when code is working
@@ -1336,6 +1341,8 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 		myfile.close();
 	} else {
 		fprintf(stderr, "Error opening %s: ", shader_file.c_str());
+		*program = 0;
+		return;
 	}
 
 

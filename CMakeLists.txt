@@ -4,6 +4,37 @@ project(Pcsx2)
 # Debian-based distributions require at least 2.8.5 due to multiarch.
 cmake_minimum_required(VERSION 2.8.5)
 
+# Keep OLD policy. Code was updated to support the new one but wasn't tested
+#
+# cmake version 2.8.9
+#   CMP0018
+#        Ignore CMAKE_SHARED_LIBRARY_<Lang>_FLAGS variable.
+# 
+#        CMake 2.8.8 and lower compiled sources in SHARED and MODULE libraries
+#        using the value of the undocumented CMAKE_SHARED_LIBRARY_<Lang>_FLAGS
+#        platform variable.  The variable contained platform-specific flags
+#        needed to compile objects for shared libraries.  Typically it included
+#        a flag such as -fPIC for position independent code but also included
+#        other flags needed on certain platforms.  CMake 2.8.9 and higher
+#        prefer instead to use the POSITION_INDEPENDENT_CODE target property to
+#        determine what targets should be position independent, and new
+#        undocumented platform variables to select flags while ignoring
+#        CMAKE_SHARED_LIBRARY_<Lang>_FLAGS completely.
+# 
+#        The default for either approach produces identical compilation flags,
+#        but if a project modifies CMAKE_SHARED_LIBRARY_<Lang>_FLAGS from its
+#        original value this policy determines which approach to use.
+# 
+#        The OLD behavior for this policy is to ignore the
+#        POSITION_INDEPENDENT_CODE property for all targets and use the
+#        modified value of CMAKE_SHARED_LIBRARY_<Lang>_FLAGS for SHARED and
+#        MODULE libraries.
+# 
+#        The NEW behavior for this policy is to ignore
+#        CMAKE_SHARED_LIBRARY_<Lang>_FLAGS whether it is modified or not and
+#        honor the POSITION_INDEPENDENT_CODE target property.
+cmake_policy(SET CMP0018 OLD)
+
 # Variable to check that people use the good file
 set(TOP_CMAKE_WAS_SOURCED TRUE)
 

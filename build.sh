@@ -32,6 +32,10 @@ do
         --glsl)
 			flags="$flags -DGLSL_API=TRUE"
             ;;
+        --egl)
+            echo "Warning EGL needs at lesat MESA 9.0"
+			flags="$flags -DEGL_API=TRUE"
+            ;;
 		--clean)
 			clean_build=true
 			;;
@@ -43,6 +47,7 @@ do
 			echo "--release       - Build PCSX2 as a Release build."
 			echo "--clean         - Do a clean build."
             echo "--glsl          - Replace CG backend of ZZogl by GLSL"
+            echo "--egl           - Replace GLX by EGL (ZZogl plugins only)"
 			exit 1;;
   	esac
 done
@@ -54,16 +59,18 @@ if [ "$flags" != "" ]; then
 	echo "Building pcsx2 with $flags" > install_log.txt
 fi
 
-if [ ! -d "build" ]; then
-    mkdir build
+if [ "$clean_build" = true ]; then
+	echo "Doing a clean build."
+    rm -fr build
+	# make clean 2>&1 | tee -a ../install_log.txt 
 fi
+
+
+mkdir -p build
 cd build
 
 cmake $flags .. 2>&1 | tee -a ../install_log.txt 
-if [ "$clean_build" = true ]; then
-	echo "Doing a clean build."
-	make clean 2>&1 | tee -a ../install_log.txt 
-fi
+
 CORE=`grep -w -c processor /proc/cpuinfo`
 make -j $CORE 2>&1 | tee -a ../install_log.txt 
 make install 2>&1 | tee -a ../install_log.txt 

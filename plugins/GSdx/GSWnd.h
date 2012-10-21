@@ -69,6 +69,8 @@ class GSWnd
 	int  m_renderer;
 	GLXContext   m_context;
 
+	PFNGLXSWAPINTERVALMESAPROC m_swapinterval;
+
 public:
 	GSWnd();
 	virtual ~GSWnd();
@@ -93,6 +95,7 @@ public:
 	void Hide();
 	void HideFrame();
 	void Flip();
+	void SetVSync(bool enable);
 };
 
 #endif

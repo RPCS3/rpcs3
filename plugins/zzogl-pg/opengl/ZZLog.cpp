@@ -367,11 +367,14 @@ void Error_Log(const char *fmt, ...)
 	va_end(list);
 }
 
+#ifdef _DEBUG
 #define LOUD_DEBUGGING
+#endif
 
 #ifdef OGL4_LOG
 void Check_GL_Error()
 {
+#if defined(ZEROGS_DEVBUILD) || defined(_DEBUG)
        unsigned int count = 64; // max. num. of messages that will be read from the log
        int bufsize = 2048;
        unsigned int* sources      = new unsigned int[count];
@@ -399,6 +402,7 @@ void Check_GL_Error()
        delete [] severities;
        delete [] lengths;
        delete [] messageLog;
+#endif
 }
 
 void GL_Error_Log(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message)

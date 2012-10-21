@@ -23,11 +23,6 @@
 #include <stdlib.h>
 #include "targets.h"
 
-#ifdef _WIN32
-extern HDC		hDC;	   // Private GDI Device Context
-extern HGLRC	hRC;	   // Permanent Rendering Context
-#endif
-
 extern int s_frameskipping;
 extern float fFPS;
 extern unsigned char zgsrevision, zgsbuild, zgsminor;

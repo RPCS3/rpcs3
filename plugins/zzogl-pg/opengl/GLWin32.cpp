@@ -22,10 +22,6 @@
 
 #ifdef GL_WIN32_WINDOW
 
-HWND		GShwnd = NULL;
-HDC			hDC = NULL;	 // Private GDI Device Context
-HGLRC		hRC = NULL;	 // Permanent Rendering Context
-
 LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	static int nWindowWidth = 0, nWindowHeight = 0;
@@ -109,7 +105,7 @@ bool GLWindow::CreateWindow(void *pDisplay)
 
 	GetWindowRect(GetDesktopWindow(), &rcdesktop);
 
-	GShwnd = CreateWindowEx(	dwExStyle,				// Extended Style For The Window
+	NativeWindow = CreateWindowEx(	dwExStyle,				// Extended Style For The Window
 					L"PS2EMU_ZEROGS",				// Class Name
 					L"ZZOgl",					// Window Title
 					dwStyle,				// Selected Window Style
@@ -122,22 +118,22 @@ bool GLWindow::CreateWindow(void *pDisplay)
 					hInstance,				// Instance
 					NULL);					// Don't Pass Anything To WM_CREATE
 
-	if (GShwnd == NULL) 
+	if (NativeWindow == NULL) 
 	{
 		ZZLog::Error_Log("Failed to create window. Exiting...");
 		return false;
 	}
 
-	if (pDisplay != NULL) *(HWND*)pDisplay = GShwnd;
+	if (pDisplay != NULL) *(HWND*)pDisplay = NativeWindow;
 
 	// set just in case
-	SetWindowLongPtr(GShwnd, GWLP_WNDPROC, (LPARAM)(WNDPROC)MsgProc);
+	SetWindowLongPtr(NativeWindow, GWLP_WNDPROC, (LPARAM)(WNDPROC)MsgProc);
 
-	ShowWindow(GShwnd, SW_SHOWDEFAULT);
+	ShowWindow(NativeWindow, SW_SHOWDEFAULT);
 
-	UpdateWindow(GShwnd);
+	UpdateWindow(NativeWindow);
 
-	SetFocus(GShwnd);
+	SetFocus(NativeWindow);
 
 	if (pDisplay == NULL) ZZLog::Error_Log("Failed to create window. Exiting...");
 	return (pDisplay != NULL);
@@ -145,42 +141,37 @@ bool GLWindow::CreateWindow(void *pDisplay)
 
 bool GLWindow::ReleaseContext()
 {
-	if (hRC)											// Do We Have A Rendering Context?
+	if (wglContext)											// Do We Have A Rendering Context?
 	{
 		if (!wglMakeCurrent(NULL, NULL))				 // Are We Able To Release The DC And RC Contexts?
 		{
 			MessageBox(NULL, L"Release Of DC And RC Failed.", L"SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
 		}
 
-		if (!wglDeleteContext(hRC))					 // Are We Able To Delete The RC?
+		if (!wglDeleteContext(wglContext))					 // Are We Able To Delete The RC?
 		{
 			MessageBox(NULL, L"Release Rendering Context Failed.", L"SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
 		}
 
-		hRC = NULL;									 // Set RC To NULL
+		wglContext = NULL;									 // Set RC To NULL
 	}
 
-	if (hDC && !ReleaseDC(GShwnd, hDC))				 // Are We Able To Release The DC
-	{
-		MessageBox(NULL, L"Release Device Context Failed.", L"SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
-		hDC = NULL;									 // Set DC To NULL
-	}
+	CloseWGLDisplay();
 
 	return true;
 }
 
 void GLWindow::CloseWindow()
 {
-	if (GShwnd != NULL)
+	if (NativeWindow != NULL)
 	{
-		DestroyWindow(GShwnd);
-		GShwnd = NULL;
+		DestroyWindow(NativeWindow);
+		NativeWindow = NULL;
 	}
 }
 
 bool GLWindow::DisplayWindow(int _width, int _height)
 {
-	GLuint	  PixelFormat;			// Holds The Results After Searching For A Match
 	DWORD	   dwExStyle;			  // Window Extended Style
 	DWORD	   dwStyle;				// Window Style
 
@@ -215,10 +206,10 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 	int X = (rcdesktop.right - rcdesktop.left) / 2 - (rc.right - rc.left) / 2;
 	int Y = (rcdesktop.bottom - rcdesktop.top) / 2 - (rc.bottom - rc.top) / 2;
 
-	SetWindowLong(GShwnd, GWL_STYLE, dwStyle);
-	SetWindowLong(GShwnd, GWL_EXSTYLE, dwExStyle);
+	SetWindowLong(NativeWindow, GWL_STYLE, dwStyle);
+	SetWindowLong(NativeWindow, GWL_EXSTYLE, dwExStyle);
 
-	SetWindowPos(GShwnd, HWND_TOP, X, Y, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
+	SetWindowPos(NativeWindow, HWND_TOP, X, Y, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
 
 	if (conf.fullscreen())
 	{
@@ -249,6 +240,18 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		ChangeDisplaySettings(NULL, 0);
 	}
 
+	if (!OpenWGLDisplay()) return false;
+
+	if (!CreateContextGL()) return false;
+
+	UpdateWindow(NativeWindow);
+
+	return true;
+}
+
+bool GLWindow::OpenWGLDisplay()
+{
+	GLuint	  PixelFormat;			// Holds The Results After Searching For A Match
 	PIXELFORMATDESCRIPTOR pfd =			 // pfd Tells Windows How We Want Things To Be
 
 	{
@@ -272,37 +275,59 @@ bool GLWindow::DisplayWindow(int _width, int _height)
 		0, 0, 0									 // Layer Masks Ignored
 	};
 
-	if (!(hDC = GetDC(GShwnd)))
+	if (!(NativeDisplay = GetDC(NativeWindow)))
 	{
 		MessageBox(NULL, L"(1) Can't Create A GL Device Context.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
-	if (!(PixelFormat = ChoosePixelFormat(hDC, &pfd)))
+	if (!(PixelFormat = ChoosePixelFormat(NativeDisplay, &pfd)))
 	{
 		MessageBox(NULL, L"(2) Can't Find A Suitable PixelFormat.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
-	if (!SetPixelFormat(hDC, PixelFormat, &pfd))
+	if (!SetPixelFormat(NativeDisplay, PixelFormat, &pfd))
 	{
 		MessageBox(NULL, L"(3) Can't Set The PixelFormat.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
-	if (!(hRC = wglCreateContext(hDC)))
+	return true;
+}
+
+void GLWindow::CloseWGLDisplay()
+{
+	if (NativeDisplay && !ReleaseDC(NativeWindow, NativeDisplay))				 // Are We Able To Release The DC
 	{
-		MessageBox(NULL, L"(4) Can't Create A GL Rendering Context.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
+		MessageBox(NULL, L"Release Device Context Failed.", L"SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
+		NativeDisplay = NULL;									 // Set DC To NULL
+	}
+}
+
+bool GLWindow::CreateContextGL()
+{
+	return CreateContextGL(2, 0);
+}
+
+bool GLWindow::CreateContextGL(int major, int minor)
+{
+	if (major <= 2) {
+		if (!(wglContext = wglCreateContext(NativeDisplay)))
+		{
+			MessageBox(NULL, L"(4) Can't Create A GL Rendering Context.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
+			return false;
+		}
+
+		if (!wglMakeCurrent(NativeDisplay, wglContext))
+		{
+			MessageBox(NULL, L"(5) Can't Activate The GL Rendering Context.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
+			return false;
+		}
+	} else {
+		// todo
 		return false;
 	}
-
-	if (!wglMakeCurrent(hDC, hRC))
-	{
-		MessageBox(NULL, L"(5) Can't Activate The GL Rendering Context.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
-		return false;
-	}
-
-	UpdateWindow(GShwnd);
 
 	return true;
 }
@@ -313,13 +338,13 @@ void GLWindow::SwapGLBuffers()
 
 	if (glGetError() != GL_NO_ERROR) ZZLog::Debug_Log("glError before swap!");
 
-	SwapBuffers(hDC);
+	SwapBuffers(NativeDisplay);
 	lastswaptime = timeGetTime();
 }
 
 void GLWindow::SetTitle(char *strtitle)
 {
-	if (!conf.fullscreen()) SetWindowText(GShwnd, wxString::FromUTF8(strtitle));
+	if (!conf.fullscreen()) SetWindowText(NativeWindow, wxString::FromUTF8(strtitle));
 }
 
 extern void ChangeDeviceSize(int nNewWidth, int nNewHeight);
@@ -356,12 +381,12 @@ void GLWindow::ProcessEvents()
 								// destroy that msg
 								conf.setFullscreen(false);
 								ChangeDeviceSize(conf.width, conf.height);
-								UpdateWindow(GShwnd);
+								UpdateWindow(NativeWindow);
 								continue; // so that msg doesn't get sent
 							}
 							else
 							{
-								SendMessage(GShwnd, WM_DESTROY, 0, 0);
+								SendMessage(NativeWindow, WM_DESTROY, 0, 0);
 								return;
 							}
 
@@ -390,5 +415,21 @@ void GLWindow::ProcessEvents()
 	}
 }
 
+void* GLWindow::GetProcAddress(const char* function)
+{
+	return (void*)wglGetProcAddress(function);
+}
+
+void GLWindow::InitVsync(bool extension)
+{
+	vsync_supported = extension;
+}
+
+void GLWindow::SetVsync(bool enable)
+{
+	if (vsync_supported) {
+		wglSwapIntervalEXT(0);
+	}
+}
 
 #endif

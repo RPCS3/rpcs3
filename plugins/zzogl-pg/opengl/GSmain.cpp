@@ -488,6 +488,7 @@ EXPORT_C_(void) GSsetVsync(int enabled)
 
 	ZZLog::Debug_Log("Setting VSync to 0x%x.", enabled);
 	gs.vsync = enabled;
+	GLWin.SetVsync(enabled);
 }
 
 EXPORT_C_(void) GSvsync(int current_interlace)

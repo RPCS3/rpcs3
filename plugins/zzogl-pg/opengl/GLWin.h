@@ -22,6 +22,7 @@
 
 #ifdef _WIN32
 #define GL_WIN32_WINDOW
+#define WGL_API
 
 #else
 
@@ -44,6 +45,11 @@
 
 #undef CreateWindow	// Undo Windows.h global namespace pollution
 
+#ifdef GLX_API
+typedef void (APIENTRYP _PFNSWAPINTERVAL)(int);
+#endif
+
+
 extern void SetDeviceSize(int nNewWidth, int nNewHeight);
 extern void OnFKey(int key, int shift);
 
@@ -53,16 +59,17 @@ class GLWindow
 #if defined(GL_X11_WINDOW)
 		void GetWindowSize();
 		void PrintProtocolVersion();
-
+#endif
 		bool CreateContextGL(int, int);
 		bool CreateContextGL();
-#endif
 
 #ifdef GLX_API
 		Display *NativeDisplay;
 		Window NativeWindow;
 
-		GLXContext context;
+		GLXContext glxContext;
+
+		_PFNSWAPINTERVAL swapinterval;
 #endif
 
 #ifdef EGL_API
@@ -78,6 +85,18 @@ class GLWindow
 		void CloseEGLDisplay();
 #endif
 
+#ifdef WGL_API
+		HWND	NativeWindow;
+		HDC		NativeDisplay; // hDC // Private GDI Device Context
+		HGLRC	wglContext; // hRC // Permanent Rendering Context
+
+		bool OpenWGLDisplay();
+		void CloseWGLDisplay();
+#endif
+
+		bool vsync_supported;
+
+
 	public:
 		char title[256];
 		Size backbuffer;
@@ -90,6 +109,11 @@ class GLWindow
 		bool DisplayWindow(int _width, int _height);
 		void SetTitle(char *strtitle);
 		void ProcessEvents();
+
+		void* GetProcAddress(const char* function);
+
+		void SetVsync(bool enable);
+		void InitVsync(bool extension); // dummy in EGL
 	
 		void UpdateWindowSize(int nNewWidth, int nNewHeight)
 		{
@@ -102,6 +126,14 @@ class GLWindow
 				conf.width = nNewWidth;
 				conf.height = nNewHeight;
 			}
+		}
+		
+		GLWindow() {
+#ifdef WGL_API
+			NativeWindow = NULL;
+			NativeDisplay = NULL;
+			wglContext = NULL;
+#endif
 		}
 };
 

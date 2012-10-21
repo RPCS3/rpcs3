@@ -9,8 +9,12 @@ if(EGL_INCLUDE_DIR AND EGL_LIBRARIES)
     set(EGL_FIND_QUIETLY TRUE)
 endif(EGL_INCLUDE_DIR AND EGL_LIBRARIES)
 
+INCLUDE(CheckCXXSymbolExists)
+
 # include dir
-find_path(EGL_INCLUDE_DIR EGL/egl.h)
+find_path(EGL_INCLUDE_DIR EGL/eglext.h)
+
+CHECK_CXX_SYMBOL_EXISTS(EGL_KHR_create_context "EGL/eglext.h" EGL_GL_CONTEXT_SUPPORT)
 
 # finally the library itself
 find_library(libEGL NAMES EGL)

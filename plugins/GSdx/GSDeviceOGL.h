@@ -593,6 +593,7 @@ class GSDeviceOGL : public GSDevice
 	bool Create(GSWnd* wnd);
 	bool Reset(int w, int h);
 	void Flip();
+	void SetVSync(bool enable);
 
 	void DrawPrimitive();
 	void DrawIndexedPrimitive();

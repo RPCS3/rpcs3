@@ -36,8 +36,6 @@
 #endif
 
 // ----------------- Types
-typedef void (APIENTRYP _PFNSWAPINTERVAL)(int);
-
 map<string, GLbyte> mapGLExtensions;
 
 extern bool ZZshLoadExtraEffects();
@@ -198,9 +196,9 @@ inline void CreateOtherCheck()
 	}
 
 	if (IsGLExt("GL_ARB_draw_buffers"))
-		glDrawBuffers = (PFNGLDRAWBUFFERSPROC)wglGetProcAddress("glDrawBuffers");
+		glDrawBuffers = (PFNGLDRAWBUFFERSPROC)GLWin.GetProcAddress("glDrawBuffers");
 	else if (IsGLExt("GL_ATI_draw_buffers"))
-		glDrawBuffers = (PFNGLDRAWBUFFERSPROC)wglGetProcAddress("glDrawBuffersATI");
+		glDrawBuffers = (PFNGLDRAWBUFFERSPROC)GLWin.GetProcAddress("glDrawBuffersATI");
 
 
 	if (!IsGLExt("GL_ARB_multitexture"))
@@ -222,27 +220,12 @@ inline void CreateOtherCheck()
 		ZZLog::Error_Log("Could not properly make bitmasks, so some textures will be missed.");
 
 #ifdef _WIN32
-	if (IsGLExt("WGL_EXT_swap_control") || IsGLExt("EXT_swap_control"))
-		wglSwapIntervalEXT(0);
-
+	GLWin.InitVsync(IsGLExt("WGL_EXT_swap_control") || IsGLExt("EXT_swap_control"));
 #else
-	if (IsGLExt("GLX_SGI_swap_control"))
-	{
-		_PFNSWAPINTERVAL swapinterval = (_PFNSWAPINTERVAL)wglGetProcAddress("glXSwapInterval");
-
-		if (!swapinterval)
-			swapinterval = (_PFNSWAPINTERVAL)wglGetProcAddress("glXSwapIntervalSGI");
-
-		if (!swapinterval)
-			swapinterval = (_PFNSWAPINTERVAL)wglGetProcAddress("glXSwapIntervalEXT");
-
-		if (swapinterval)
-			swapinterval(0);
-		else
-			ZZLog::Error_Log("No support for SwapInterval (framerate clamped to monitor refresh rate),");
-	}
-
+	GLWin.InitVsync(IsGLExt("GLX_SGI_swap_control"));
 #endif
+
+	GLWin.SetVsync(false);
 }
 
 
@@ -358,7 +341,7 @@ inline bool CreateFillExtensionsMap()
 	string all_ext("");
 
 	PFNGLGETSTRINGIPROC glGetStringi = 0;
-	glGetStringi = (PFNGLGETSTRINGIPROC)wglGetProcAddress("glGetStringi");
+	glGetStringi = (PFNGLGETSTRINGIPROC)GLWin.GetProcAddress("glGetStringi");
 	glGetIntegerv(GL_NUM_EXTENSIONS, &max_ext);
 
     if (glGetStringi && max_ext) {

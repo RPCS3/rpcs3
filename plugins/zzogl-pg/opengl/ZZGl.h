@@ -40,11 +40,6 @@
 #include <GL/glext.h>
 #include <GL/glx.h>
 
-inline void* wglGetProcAddress(const char* x)
-{
-	return (void*)glXGetProcAddress((const GLubyte*)x);
-}
-
 #endif
 
 #include "Mem.h"

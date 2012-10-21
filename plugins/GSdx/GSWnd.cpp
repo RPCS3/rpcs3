@@ -213,7 +213,7 @@ void GSWnd::HideFrame()
 #else
 
 GSWnd::GSWnd()
-	: m_window(NULL), m_Xwindow(0), m_XDisplay(NULL), m_ctx_attached(false)
+	: m_window(NULL), m_Xwindow(0), m_XDisplay(NULL), m_ctx_attached(false), m_swapinterval(NULL)
 {
 }
 
@@ -277,7 +277,7 @@ bool GSWnd::CreateContext(int major, int minor)
 void GSWnd::AttachContext()
 {
 	if (!IsContextAttached()) {
-		fprintf(stderr, "Attach the context\n");
+		//fprintf(stderr, "Attach the context\n");
 		glXMakeCurrent(m_XDisplay, m_Xwindow, m_context);
 		m_ctx_attached = true;
 	}
@@ -286,7 +286,7 @@ void GSWnd::AttachContext()
 void GSWnd::DetachContext()
 {
 	if (IsContextAttached()) {
-		fprintf(stderr, "Detach the context\n");
+		//fprintf(stderr, "Detach the context\n");
 		glXMakeCurrent(m_XDisplay, None, NULL);
 		m_ctx_attached = false;
 	}
@@ -299,7 +299,7 @@ void GSWnd::CheckContext()
 	if (glXIsDirect(m_XDisplay, m_context))
 		fprintf(stderr, "glX-Version %d.%d with Direct Rendering\n", glxMajorVersion, glxMinorVersion);
 	else
-		fprintf(stderr, "glX-Version %d.%d with Indirect Rendering !!! It will be slow\n", glxMajorVersion, glxMinorVersion);
+		fprintf(stderr, "glX-Version %d.%d with Indirect Rendering !!! It won't support properly opengl\n", glxMajorVersion, glxMinorVersion);
 }
 
 bool GSWnd::Attach(void* handle, bool managed)
@@ -318,6 +318,10 @@ bool GSWnd::Attach(void* handle, bool managed)
 	AttachContext();
 
 	CheckContext();
+
+	PFNGLXSWAPINTERVALMESAPROC m_swapinterval = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte*) "glXSwapIntervalMESA");
+	//PFNGLXSWAPINTERVALMESAPROC m_swapinterval = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte*) "glXSwapInterval");
+
 
 	return true;
 }
@@ -425,6 +429,14 @@ bool GSWnd::SetWindowText(const char* title)
 	XFlush(m_XDisplay);
 
 	return true;
+}
+
+void GSWnd::SetVSync(bool enable)
+{
+	// m_swapinterval uses an integer as parameter
+	// 0 -> disable vsync
+	// n -> wait n frame
+	if (m_swapinterval) m_swapinterval((int)enable);
 }
 
 void GSWnd::Flip()
