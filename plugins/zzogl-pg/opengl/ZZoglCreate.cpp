@@ -207,12 +207,12 @@ inline void CreateOtherCheck()
 		ZZLog::Error_Log("Using multitexturing.");
 
 	GLint Max_Texture_Size_NV = 0;
-
 	GLint Max_Texture_Size_2d = 0;
 
 	glGetIntegerv(GL_MAX_RECTANGLE_TEXTURE_SIZE_NV, &Max_Texture_Size_NV);
-
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &Max_Texture_Size_2d);
+
+	g_MaxTexHeight = min(Max_Texture_Size_2d, Max_Texture_Size_NV);
 
 	ZZLog::Error_Log("Maximum texture size is %d for Tex_2d and %d for Tex_NV.", Max_Texture_Size_2d, Max_Texture_Size_NV);
 
@@ -446,8 +446,10 @@ bool ZZCreate(int _width, int _height)
 
 	CreateOtherCheck();
 
+	// Incorrect must check rectangle texture too. Now done directly on CreateOtherCheck()
+	//
 	// check the max texture width and height
-	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &g_MaxTexWidth);
+	///glGetIntegerv(GL_MAX_TEXTURE_SIZE, &g_MaxTexWidth);
     // Limit the texture size supported to 8192. We do not need bigger texture.
     // Besides the following assertion is false when texture are too big.
     // ZZoglFlush.cpp:2349:	assert(fblockstride >= 1.0f)
