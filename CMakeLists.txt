@@ -33,7 +33,9 @@ cmake_minimum_required(VERSION 2.8.5)
 #        The NEW behavior for this policy is to ignore
 #        CMAKE_SHARED_LIBRARY_<Lang>_FLAGS whether it is modified or not and
 #        honor the POSITION_INDEPENDENT_CODE target property.
-cmake_policy(SET CMP0018 OLD)
+if(POLICY CMP0018)
+    cmake_policy(SET CMP0018 OLD)
+endif()
 
 # Variable to check that people use the good file
 set(TOP_CMAKE_WAS_SOURCED TRUE)
