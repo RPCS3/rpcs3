@@ -208,7 +208,7 @@ bool GLWindow::CreateContextGL(int major, int minor)
 	if (!NativeDisplay) return false;
 
 	// Get visual information
-	static int attrListDbl[] =
+	int attrListDbl[] =
 	{
 		GLX_X_RENDERABLE    , True,
 		GLX_DRAWABLE_TYPE   , GLX_WINDOW_BIT,
@@ -221,9 +221,22 @@ bool GLWindow::CreateContextGL(int major, int minor)
 		None
 	};
 
+	// Attribute are very sensible to the various implementation (intel, nvidia, amd)
+	// Nvidia and Intel doesn't support previous attributes for opengl2.0
+	int attrListDbl_2_0[] =
+	{
+		GLX_RGBA,
+		GLX_DOUBLEBUFFER,
+		GLX_RED_SIZE, 8,
+		GLX_GREEN_SIZE, 8,
+		GLX_BLUE_SIZE, 8,
+		GLX_DEPTH_SIZE, 24,
+		None
+	};
+
 	// Only keep for older card but NVIDIA and AMD both drop the support of those cards
 	if (major <= 2) {
-		XVisualInfo *vi = glXChooseVisual(NativeDisplay, DefaultScreen(NativeDisplay), attrListDbl);
+		XVisualInfo *vi = glXChooseVisual(NativeDisplay, DefaultScreen(NativeDisplay), attrListDbl_2_0);
 		if (vi == NULL) return NULL;
 
 		glxContext = glXCreateContext(NativeDisplay, vi, NULL, GL_TRUE);
@@ -411,6 +424,7 @@ void GLWindow::SwapGLBuffers()
 void GLWindow::InitVsync(bool extension)
 {
 #ifdef GLX_API
+	vsync_supported = false;
 	if (extension) {
 		swapinterval = (_PFNSWAPINTERVAL)GetProcAddress("glXSwapInterval");
 
@@ -425,10 +439,7 @@ void GLWindow::InitVsync(bool extension)
 			vsync_supported = true;
 		} else {
 			ZZLog::Error_Log("No support for SwapInterval (framerate clamped to monitor refresh rate),");
-			vsync_supported = false;
 		}
-	} else {
-		vsync_supported = false;
 	}
 
 #endif
@@ -441,7 +452,7 @@ void GLWindow::SetVsync(bool enable)
 	eglSwapInterval(eglDisplay, enable);
 #endif
 #ifdef GLX_API
-	if (vsync_supported) {
+	if (vsync_supported && swapinterval) {
 		swapinterval(enable);
 	}
 #endif
