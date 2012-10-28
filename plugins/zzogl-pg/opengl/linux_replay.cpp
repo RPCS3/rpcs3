@@ -35,10 +35,30 @@ void help()
 
 int main ( int argc, char *argv[] )
 {
-  if ( argc < 2 ) help();
+	GSsetLogDir("/tmp");
+	if ( argc == 3) {
+		GSsetSettingsDir(argv[1]);
+		GSReplay(argv[2]);
+	} else if ( argc == 2) {
+#ifdef XDG_STD
+		std::string home("HOME");
+		char * val = getenv( home.c_str() );
+		if (val == NULL) {
+			fprintf(stderr, "Failed to get the home dir\n");
+			help();
+		}
 
-  GSsetSettingsDir(argv[1]);
-  GSsetLogDir("/tmp");
-  GSReplay(argv[2]);
+		std::string ini_dir(val);
+		ini_dir += "/.config/pcsx2/inis";
+
+		GSsetSettingsDir(ini_dir.c_str());
+		GSReplay(argv[1]);
+#else
+		fprintf(stderr, "default ini dir only supported on XDG\n");
+		help();
+#endif
+	} else
+		help();
+
 }
 

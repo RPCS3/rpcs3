@@ -121,7 +121,7 @@ bool GLWindow::ReleaseContext()
 	if (glxContext)
 	{
 		if (!glXMakeCurrent(NativeDisplay, None, NULL)) {
-			ZZLog::Error_Log("Could not release drawing context.");
+			ZZLog::Error_Log("GLX: Could not release drawing context.");
             status = false;
         }
 
@@ -197,8 +197,8 @@ void GLWindow::PrintProtocolVersion()
 		ZZLog::Error_Log("glX-Version %d.%d with Indirect Rendering !!! It will be slow", glxMajorVersion, glxMinorVersion);
 #endif
 #ifdef EGL_API
-	ZZLog::Error_Log("Egl: %s : %s", eglQueryString(eglDisplay, EGL_VENDOR) , eglQueryString(eglDisplay, EGL_VERSION) );
-	ZZLog::Error_Log("Egl: extensions supported: %s", eglQueryString(eglDisplay, EGL_EXTENSIONS));
+	ZZLog::Error_Log("EGL: %s : %s", eglQueryString(eglDisplay, EGL_VENDOR) , eglQueryString(eglDisplay, EGL_VERSION) );
+	ZZLog::Error_Log("EGL: extensions supported: %s", eglQueryString(eglDisplay, EGL_EXTENSIONS));
 #endif
 }
 
@@ -251,7 +251,10 @@ bool GLWindow::CreateContextGL(int major, int minor)
 	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC)GetProcAddress("glXChooseFBConfig");
 	int fbcount = 0;
 	GLXFBConfig *fbc = glXChooseFBConfig(NativeDisplay, DefaultScreen(NativeDisplay), attrListDbl, &fbcount);
-	if (!fbc || fbcount < 1) return false;
+	if (!fbc || fbcount < 1) {
+		ZZLog::Error_Log("GLX: failed to find a framebuffer");
+		return false;
+	}
 
 	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)GetProcAddress("glXCreateContextAttribsARB");
 	if (!glXCreateContextAttribsARB) return false;
@@ -272,7 +275,10 @@ bool GLWindow::CreateContextGL(int major, int minor)
 	};
 
 	glxContext = glXCreateContextAttribsARB(NativeDisplay, fbc[0], 0, true, context_attribs);
-	if (!glxContext) return false;
+	if (!glxContext) {
+		ZZLog::Error_Log("GLX: failed to create an opengl context");
+		return false;
+	}
 
 	XSync( NativeDisplay, false);
 
@@ -335,21 +341,21 @@ bool GLWindow::CreateContextGL(int major, int minor)
 
 	if ( !eglChooseConfig(eglDisplay, attrList, &eglConfig, 1, &numConfigs) )
 	{
-		ZZLog::Error_Log("Failed to get a frame buffer config!");
+		ZZLog::Error_Log("EGL: Failed to get a frame buffer config!");
 		return EGL_FALSE;
 	}
 
 	eglSurface = eglCreateWindowSurface(eglDisplay, eglConfig, NativeWindow, NULL);
 	if ( eglSurface == EGL_NO_SURFACE )
 	{
-		ZZLog::Error_Log("Failed to get a window surface");
+		ZZLog::Error_Log("EGL: Failed to get a window surface");
 		return EGL_FALSE;
 	}
 
 	eglContext = eglCreateContext(eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttribs );
 	if ( eglContext == EGL_NO_CONTEXT )
 	{
-		ZZLog::Error_Log("Failed to create the context");
+		ZZLog::Error_Log("EGL: Failed to create the context");
 		ZZLog::Error_Log("EGL STATUS: %x", eglGetError());
 		return EGL_FALSE;
 	}
@@ -438,7 +444,7 @@ void GLWindow::InitVsync(bool extension)
 			swapinterval(0);
 			vsync_supported = true;
 		} else {
-			ZZLog::Error_Log("No support for SwapInterval (framerate clamped to monitor refresh rate),");
+			ZZLog::Error_Log("GLX: No support for SwapInterval (framerate clamped to monitor refresh rate),");
 		}
 	}
 

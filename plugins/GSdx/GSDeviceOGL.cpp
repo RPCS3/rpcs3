@@ -39,6 +39,7 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_pipeline(0)
 	  , m_fbo(0)
 	  , m_fbo_read(0)
+	  , m_AMD_gpu(false)
 	  , m_enable_shader_AMD_hack(false)
 	  , m_vb_sr(NULL)
 	  , m_srv_changed(false)
@@ -148,8 +149,10 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 {
 	if (m_window == NULL) {
 		// FIXME......
-		// GLEW's problem is that it calls glGetString(GL_EXTENSIONS) which causes GL_INVALID_ENUM on GL 3.2 forward compatible context as soon as glewInit() is called. It also doesn't fetch the function pointers. The solution is for GLEW to use glGetStringi instead.
-		// The current version of GLEW is 1.7.0 but they still haven't corrected it. The only fix is to use glewExperimental for now :
+		// GLEW's problem is that it calls glGetString(GL_EXTENSIONS) which causes GL_INVALID_ENUM
+		// on GL 3.2 forward compatible context as soon as glewInit() is called. It also doesn't fetch
+		// the function pointers. The solution is for GLEW to use glGetStringi instead.
+		// The current version of GLEW is 1.9.0 but they still haven't corrected it. The only fix is to use glewExperimental for now :
 		//NOTE: I'm not sure experimental work on 1.6 ...
 		glewExperimental=true;
 		const int glew_ok = glewInit();
@@ -168,7 +171,10 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		const GLubyte* s;
 		s = glGetString(GL_VERSION);
 		if (s == NULL) return false;
-		fprintf(stderr, "Supported Opengl version: %s\n", s);
+		fprintf(stderr, "Supported Opengl version: %s on GPU: %s. Vendor: %s\n", s, glGetString(GL_RENDERER), glGetString(GL_VENDOR));
+		if ( strcmp((const char*)glGetString(GL_VENDOR), "ATI Technologies Inc.") == 0 ) {
+			m_AMD_gpu = true;
+		}
 
 		GLuint dot = 0;
 		while (s[dot] != '\0' && s[dot] != '.') dot++;
@@ -379,7 +385,9 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// HW renderer shader
 	// ****************************************************************
-	m_enable_shader_AMD_hack = true; // ....
+	if (m_AMD_gpu) {
+		m_enable_shader_AMD_hack = true; // ....
+	}
 	CreateTextureFX();
 
 	// ****************************************************************
@@ -779,11 +787,8 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 		return;
 	}
 
-	// GL_NV_copy_image seem like the good extension but not supported on AMD...
-	// Maybe opengl 4.3 !
+	// FIXME: the extension was integrated in opengl 4.3 (now we need driver that support OGL4.3)
 	// FIXME check those function work as expected
-	// FIXME: it is an NVIDIA extension. Hopefully lastest AMD driver support it too.
-	// An EXT extensions might be release later.
 	// void CopyImageSubDataNV(
     //         uint srcName, enum srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
 	//     uint dstName, enum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
@@ -880,11 +885,7 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// gs
 	// ************************************
 
-#ifdef AMD_DRIVER_WORKAROUND
-	GSSetShader(m_convert.gs);
-#else
 	GSSetShader(0);
-#endif
 
 	// ************************************
 	// ps
@@ -992,12 +993,7 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 		// gs
 
-#ifdef AMD_DRIVER_WORKAROUND
-		GSSetShader(m_convert.gs);
-#else
 		GSSetShader(0);
-#endif
-
 
 		// ps
 
@@ -1360,8 +1356,10 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	header_str[header.size()] = '\0';
 
 	// ... See below to test that index is correctly set by driver
-	//*program = glCreateShaderProgramv(type, 2, sources_array);
-	*program = glCreateShaderProgramv_AMD_BUG_WORKAROUND(type, 2, sources_array);
+	if (m_AMD_gpu)
+		*program = glCreateShaderProgramv_AMD_BUG_WORKAROUND(type, 2, sources_array);
+	else
+		*program = glCreateShaderProgramv(type, 2, sources_array);
 
 	// DEBUG AMD failure...
 	// GLint index = -1;

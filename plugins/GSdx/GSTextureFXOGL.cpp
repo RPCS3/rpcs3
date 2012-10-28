@@ -107,11 +107,7 @@ void GSDeviceOGL::SetupGS(GSSelector sel)
 	// Static
 	// *************************************************************
 	GLuint gs = 0;
-#ifdef AMD_DRIVER_WORKAROUND
-	if (true)
-#else
 	if(sel.prim > 0 && (sel.iip == 0 || sel.prim == 3))
-#endif
 	{
 		auto i = m_gs.find(sel);
 

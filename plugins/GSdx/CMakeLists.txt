@@ -20,8 +20,6 @@ set(CommonFlags
     -std=c++0x
     -fno-strict-aliasing
     #-DOGL_DEBUG # FIXME remove me when code is ready
-    # Unload of Geometry shader was fixed in Cat 12.3 (ie OpenGL version string: 4.2.11554)
-    #-DAMD_DRIVER_WORKAROUND
     )
 
 set(OptimizationFlags
