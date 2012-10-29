@@ -236,9 +236,9 @@ bool GSWnd::CreateContext(int major, int minor)
 	// Get visual information
 	static int attrListDbl[] =
 	{
+		// GLX_X_RENDERABLE: If True is specified, then only frame buffer configurations that have associated X
+		// visuals (and can be used to render to Windows and/or GLX pixmaps) will be considered. The default value is GLX_DONT_CARE.
 		GLX_X_RENDERABLE    , True,
-		GLX_DRAWABLE_TYPE   , GLX_WINDOW_BIT,
-		GLX_RENDER_TYPE     , GLX_RGBA_BIT,
 		GLX_RED_SIZE        , 8,
 		GLX_GREEN_SIZE      , 8,
 		GLX_BLUE_SIZE       , 8,

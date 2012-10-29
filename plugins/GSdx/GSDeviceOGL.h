@@ -485,9 +485,6 @@ class GSDeviceOGL : public GSDevice
 	GSVertexBufferStateOGL* m_vb;	  // vb_state for HW renderer
 	GSVertexBufferStateOGL* m_vb_sr; // vb_state for StretchRect
 
-	bool m_enable_shader_AMD_hack;
-	bool m_AMD_gpu;
-
 	struct {
 		GLuint ps[2];				 // program object
 		GSUniformBufferOGL* cb;		 // uniform buffer object

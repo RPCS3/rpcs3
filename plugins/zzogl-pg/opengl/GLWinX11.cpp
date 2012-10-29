@@ -210,9 +210,9 @@ bool GLWindow::CreateContextGL(int major, int minor)
 	// Get visual information
 	int attrListDbl[] =
 	{
+		// GLX_X_RENDERABLE: If True is specified, then only frame buffer configurations that have associated X
+		// visuals (and can be used to render to Windows and/or GLX pixmaps) will be considered. The default value is GLX_DONT_CARE.
 		GLX_X_RENDERABLE    , True,
-		GLX_DRAWABLE_TYPE   , GLX_WINDOW_BIT,
-		GLX_RENDER_TYPE     , GLX_RGBA_BIT,
 		GLX_RED_SIZE        , 8,
 		GLX_GREEN_SIZE      , 8,
 		GLX_BLUE_SIZE       , 8,
@@ -268,7 +268,7 @@ bool GLWindow::CreateContextGL(int major, int minor)
 		GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
 		//GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB | GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
 		// FIXME : Request a debug context to ease opengl development
-#if defined(ZEROGS_DEVBUILD) || defined(_DEBUG)
+#if (defined(ZEROGS_DEVBUILD) || defined(_DEBUG)) && defined(OGL4_LOG)
 		GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
 #endif
 		None
@@ -282,7 +282,10 @@ bool GLWindow::CreateContextGL(int major, int minor)
 
 	XSync( NativeDisplay, false);
 
-	glXMakeCurrent(NativeDisplay, NativeWindow, glxContext);
+	if (!glXMakeCurrent(NativeDisplay, NativeWindow, glxContext)) {
+		ZZLog::Error_Log("GLX: failed to attach the opengl context");
+		return false;
+	}
 
 	return true;
 }

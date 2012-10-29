@@ -39,8 +39,6 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_pipeline(0)
 	  , m_fbo(0)
 	  , m_fbo_read(0)
-	  , m_AMD_gpu(false)
-	  , m_enable_shader_AMD_hack(false)
 	  , m_vb_sr(NULL)
 	  , m_srv_changed(false)
 	  , m_ss_changed(false)
@@ -172,9 +170,8 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		s = glGetString(GL_VERSION);
 		if (s == NULL) return false;
 		fprintf(stderr, "Supported Opengl version: %s on GPU: %s. Vendor: %s\n", s, glGetString(GL_RENDERER), glGetString(GL_VENDOR));
-		if ( strcmp((const char*)glGetString(GL_VENDOR), "ATI Technologies Inc.") == 0 ) {
-			m_AMD_gpu = true;
-		}
+		// Could be useful to detect the GPU vendor:
+		// if ( strcmp((const char*)glGetString(GL_VENDOR), "ATI Technologies Inc.") == 0 )
 
 		GLuint dot = 0;
 		while (s[dot] != '\0' && s[dot] != '.') dot++;
@@ -204,7 +201,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	}
 
 	// FIXME disable it when code is ready
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+	// glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 
 	m_window = wnd;
 
@@ -385,9 +382,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// HW renderer shader
 	// ****************************************************************
-	if (m_AMD_gpu) {
-		m_enable_shader_AMD_hack = true; // ....
-	}
 	CreateTextureFX();
 
 	// ****************************************************************
@@ -1266,7 +1260,7 @@ GLuint GSDeviceOGL::glCreateShaderProgramv_AMD_BUG_WORKAROUND(GLenum  type,  GLs
 			if (compiled) {
 				glAttachShader(program, shader);
 				// HACK TO SET CORRECTLY THE INDEX
-				if (type == GL_FRAGMENT_SHADER && m_enable_shader_AMD_hack) {
+				if (type == GL_FRAGMENT_SHADER) {
 					glBindFragDataLocationIndexed(program, 0, 0, "SV_Target0");
 					glBindFragDataLocationIndexed(program, 0, 1, "SV_Target1");
 				}
@@ -1355,23 +1349,18 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	header.copy(header_str, header.size(), 0);
 	header_str[header.size()] = '\0';
 
-	// ... See below to test that index is correctly set by driver
-	if (m_AMD_gpu)
-		*program = glCreateShaderProgramv_AMD_BUG_WORKAROUND(type, 2, sources_array);
-	else
-		*program = glCreateShaderProgramv(type, 2, sources_array);
+	*program = glCreateShaderProgramv(type, 2, sources_array);
 
-	// DEBUG AMD failure...
-	// GLint index = -1;
-
-	// index    = glGetFragDataIndex(*program,  "SV_Target0");
-	// fprintf(stderr, "Frag0 index %d\n", index);
-	// assert(index == 0);
-
-	// index    = glGetFragDataIndex(*program,  "SV_Target1");
-	// fprintf(stderr, "Frag1 index %d\n", index);
-	// assert(index == 1);
-	// END DEBUG AMD
+	// Check the correctness of the driver
+	GLint slot = glGetFragDataLocation(*program, "SV_Target1");
+	if (slot == 0) { // <=> SV_Target1 used same slot as SV_Target0
+		GLint index = glGetFragDataIndex(*program,  "SV_Target1");
+		if (index != 1) {
+			fprintf(stderr, "Driver bug: failed to set the index, program will be recompiled\n");
+			glDeleteProgram(*program);
+			*program = glCreateShaderProgramv_AMD_BUG_WORKAROUND(type, 2, sources_array);
+		}
+	}
 
 	free(source_str);
 	free(header_str);
