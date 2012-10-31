@@ -78,15 +78,7 @@ namespace YAML
 		const Node operator[](const Node& key) const;
 		Node operator[](const Node& key);
 		bool remove(const Node& key);
-		
-		const Node operator[](const char *key) const;
-		Node operator[](const char *key);
-		bool remove(const char *key);
 
-		const Node operator[](char *key) const;
-		Node operator[](char *key);
-		bool remove(char *key);
-		
 	private:
 		explicit Node(detail::node& node, detail::shared_memory_holder pMemory);
 		
