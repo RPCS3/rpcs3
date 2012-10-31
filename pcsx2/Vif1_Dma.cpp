@@ -287,7 +287,7 @@ __fi void vif1Interrupt()
 	}
 	if (!vif1ch.chcr.STR) Console.WriteLn("Vif1 running when CHCR == %x", vif1ch.chcr._u32);
 
-	if (vif1.irq && vif1.tag.size == 0)
+	if (vif1.irq && vif1.tag.size == 0 &&vif1.cmd == 0)
 	{
 		VIF_LOG("VIF IRQ Firing");
 		vif1Regs.stat.INT = true;

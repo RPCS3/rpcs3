@@ -178,7 +178,7 @@ __fi void vif0Interrupt()
 
 	if (!(vif0ch.chcr.STR)) Console.WriteLn("vif0 running when CHCR == %x", vif0ch.chcr._u32);
 
-	if (vif0.irq && vif0.tag.size == 0)
+	if (vif0.irq && vif0.tag.size == 0 && vif0.cmd == 0)
 	{
 		vif0Regs.stat.INT = true;
 		hwIntcIrq(VIF0intc);
