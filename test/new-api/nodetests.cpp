@@ -417,6 +417,32 @@ namespace Test
             YAML_ASSERT(clone == clone[0]);
             return true;
         }
+        
+        TEST ForceInsertIntoMap()
+        {
+            YAML::Node node;
+            node["a"] = "b";
+            node.force_insert("x", "y");
+            node.force_insert("a", 5);
+            YAML_ASSERT(node.size() == 3);
+            YAML_ASSERT(node.Type() == YAML::NodeType::Map);
+            bool ab = false;
+            bool a5 = false;
+            bool xy = false;
+            for(YAML::const_iterator it=node.begin();it!=node.end();++it) {
+                if(it->first.as<std::string>() == "a") {
+                    if(it->second.as<std::string>() == "b")
+                        ab = true;
+                    else if(it->second.as<std::string>() == "5")
+                        a5 = true;
+                } else if(it->first.as<std::string>() == "x" && it->second.as<std::string>() == "y")
+                    xy = true;
+            }
+            YAML_ASSERT(ab);
+            YAML_ASSERT(a5);
+            YAML_ASSERT(xy);
+            return true;
+        }
     }
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -474,6 +500,7 @@ namespace Test
 		RunNodeTest(&Node::CloneSeq, "clone seq", passed, total);
 		RunNodeTest(&Node::CloneMap, "clone map", passed, total);
 		RunNodeTest(&Node::CloneAlias, "clone alias", passed, total);
+        RunNodeTest(&Node::ForceInsertIntoMap, "force insert into map", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

@@ -118,6 +118,27 @@ namespace YAML
 			
 			return false;
 		}
+        
+        // map
+        template<typename Key, typename Value>
+        inline void node_data::force_insert(const Key& key, const Value& value, shared_memory_holder pMemory)
+        {
+			switch(m_type) {
+				case NodeType::Map:
+					break;
+				case NodeType::Undefined:
+				case NodeType::Null:
+				case NodeType::Sequence:
+					convert_to_map(pMemory);
+					break;
+				case NodeType::Scalar:
+                    throw BadInsert();
+			}
+			
+			node& k = convert_to_node(key, pMemory);
+			node& v = convert_to_node(value, pMemory);
+			insert_map_pair(k, v);
+        }
 
 		template<typename T>
 		inline bool node_data::equals(node& node, const T& rhs, shared_memory_holder pMemory)

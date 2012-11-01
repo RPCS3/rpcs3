@@ -358,9 +358,16 @@ namespace YAML
 		key.EnsureNodeExists();
 		return m_pNode->remove(*key.m_pNode, m_pMemory);
 	}
+    
+    // map
+    template<typename Key, typename Value>
+    inline void Node::force_insert(const Key& key, const Value& value)
+    {
+        EnsureNodeExists();
+		m_pNode->force_insert(detail::to_value(key), detail::to_value(value), m_pMemory);
+    }
 
 	// free functions
-
 	inline bool operator==(const Node& lhs, const Node& rhs)
 	{
 		return lhs.is(rhs);

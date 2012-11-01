@@ -55,6 +55,10 @@ namespace YAML
 			node& get(node& key, shared_memory_holder pMemory) const { return static_cast<const node_data&>(*m_pData).get(key, pMemory); }
 			node& get(node& key, shared_memory_holder pMemory) { return m_pData->get(key, pMemory); }
 			bool remove(node& key, shared_memory_holder pMemory) { return m_pData->remove(key, pMemory); }
+            
+            // map
+            template<typename Key, typename Value>
+            void force_insert(const Key& key, const Value& value, shared_memory_holder pMemory) { m_pData->force_insert(key, value, pMemory); }
 
 		private:
 			shared_node_data m_pData;

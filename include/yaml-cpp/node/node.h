@@ -78,6 +78,10 @@ namespace YAML
 		const Node operator[](const Node& key) const;
 		Node operator[](const Node& key);
 		bool remove(const Node& key);
+        
+        // map
+        template<typename Key, typename Value>
+        void force_insert(const Key& key, const Value& value);
 
 	private:
 		explicit Node(detail::node& node, detail::shared_memory_holder pMemory);

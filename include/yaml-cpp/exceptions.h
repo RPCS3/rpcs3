@@ -61,6 +61,7 @@ namespace YAML
 		const char * const BAD_DEREFERENCE        = "bad dereference";
         const char * const BAD_SUBSCRIPT          = "operator[] call on a scalar";
         const char * const BAD_PUSHBACK           = "appending to a non-sequence";
+        const char * const BAD_INSERT             = "inserting in a non-convertible-to-map";
 		
 		const char * const UNMATCHED_GROUP_TAG    = "unmatched group tag";
 		const char * const UNEXPECTED_END_SEQ     = "unexpected end sequence token";
@@ -178,6 +179,12 @@ namespace YAML
 		: RepresentationException(Mark::null(), ErrorMsg::BAD_PUSHBACK) {}
 	};
 	
+	class BadInsert: public RepresentationException {
+	public:
+		BadInsert()
+		: RepresentationException(Mark::null(), ErrorMsg::BAD_INSERT) {}
+	};
+
 	class EmitterException: public Exception {
 	public:
 		EmitterException(const std::string& msg_)

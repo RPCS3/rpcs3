@@ -115,6 +115,10 @@ namespace YAML
 			}
 			bool remove(node& key, shared_memory_holder pMemory) { return m_pRef->remove(key, pMemory); }
 
+            // map
+            template<typename Key, typename Value>
+            void force_insert(const Key& key, const Value& value, shared_memory_holder pMemory){ m_pRef->force_insert(key, value, pMemory); }
+
 		private:
 			shared_node_ref m_pRef;
 			typedef std::set<node *> nodes;

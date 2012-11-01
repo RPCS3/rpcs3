@@ -56,6 +56,10 @@ namespace YAML
 			node& get(node& key, shared_memory_holder pMemory) const;
 			node& get(node& key, shared_memory_holder pMemory);
 			bool remove(node& key, shared_memory_holder pMemory);
+            
+            // map
+            template<typename Key, typename Value>
+            void force_insert(const Key& key, const Value& value, shared_memory_holder pMemory);
 			
 		public:
 			static std::string empty_scalar;
