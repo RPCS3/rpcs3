@@ -128,7 +128,7 @@ namespace YAML
 		static Node encode(const std::map<K, V>& rhs) {
 			Node node(NodeType::Map);
 			for(typename std::map<K, V>::const_iterator it=rhs.begin();it!=rhs.end();++it)
-				node[it->first] = it->second;
+                node.force_insert(it->first, it->second);
 			return node;
 		}
 		
