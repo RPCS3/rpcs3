@@ -305,6 +305,8 @@ Panels::VideoPanel::VideoPanel( wxWindow* parent ) :
 	m_check_DisableOutput->SetToolTip( pxEt( L"Removes any benchmark noise caused by the MTGS thread or GPU overhead.  This option is best used in conjunction with savestates: save a state at an ideal scene, enable this option, and re-load the savestate.\n\nWarning: This option can be enabled on-the-fly but typically cannot be disabled on-the-fly (video will typically be garbage)."
 	) );
 
+	m_check_DisableOutput->Hide(); // Band-aid fix since currently broken
+
 	//GSWindowSettingsPanel* winpan = new GSWindowSettingsPanel( left );
 	//winpan->AddFrame(_("Display/Window"));
 
