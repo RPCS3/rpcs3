@@ -920,7 +920,7 @@ namespace YAML
 		return *this;
 	}
 
-	Emitter& Emitter::Write(const _Null& /*null*/)
+	Emitter& Emitter::Write(const _Null& /*n*/)
 	{
 		if(!good())
 			return *this;
