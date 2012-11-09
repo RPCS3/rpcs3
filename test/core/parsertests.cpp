@@ -29,7 +29,7 @@ namespace Test
 			}
 			
 			if(!ret.ok) {
-				std::cout << "Spec test " << index << " failed: " << name << "\n";
+				std::cout << "Parser test failed: " << name << "\n";
 				std::cout << ret.error << "\n";
 			}
 			
