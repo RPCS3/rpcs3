@@ -30,6 +30,8 @@ namespace YAML
 
     Node LoadFile(const std::string& filename) {
         std::ifstream fin(filename.c_str());
+        if(!fin)
+            throw BadFile();
         return Load(fin);
     }
 
@@ -59,6 +61,8 @@ namespace YAML
 
     std::vector<Node> LoadAllFromFile(const std::string& filename) {
         std::ifstream fin(filename.c_str());
+        if(!fin)
+            throw BadFile();
         return LoadAll(fin);
     }
 }

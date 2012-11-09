@@ -70,6 +70,7 @@ namespace YAML
 		const char * const INVALID_ANCHOR         = "invalid anchor";
 		const char * const INVALID_ALIAS          = "invalid alias";
 		const char * const INVALID_TAG            = "invalid tag";
+        const char * const BAD_FILE               = "bad file";
 
 		template <typename T>
 		inline const std::string KEY_NOT_FOUND_WITH_KEY(const T&, typename disable_if<is_numeric<T> >::type * = 0) {
@@ -190,6 +191,11 @@ namespace YAML
 		EmitterException(const std::string& msg_)
 		: Exception(Mark::null(), msg_) {}
 	};
+    
+    class BadFile: public Exception {
+    public:
+        BadFile(): Exception(Mark::null(), ErrorMsg::BAD_FILE) {}
+    };
 }
 
 #endif // EXCEPTIONS_H_62B23520_7C8E_11DE_8A39_0800200C9A66
