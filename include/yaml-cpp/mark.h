@@ -13,7 +13,7 @@ namespace YAML
 	struct YAML_CPP_API Mark {
 		Mark(): pos(0), line(0), column(0) {}
 		
-		static const Mark null() { return Mark(-1, -1, -1); }
+		static const Mark null_mark() { return Mark(-1, -1, -1); }
 		
 		int pos;
 		int line, column;

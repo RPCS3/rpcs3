@@ -189,7 +189,7 @@ namespace YAML
 	class EmitterException: public Exception {
 	public:
 		EmitterException(const std::string& msg_)
-		: Exception(Mark::null(), msg_) {}
+		: Exception(Mark::null_mark(), msg_) {}
 	};
     
     class BadFile: public Exception {
