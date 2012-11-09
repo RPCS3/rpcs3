@@ -946,6 +946,15 @@ namespace Test
             desiredOutput = "\"Hello\\nWorld\"";
 		}
         
+		void QuoteQuestionMark(YAML::Emitter& out, std::string& desiredOutput)
+		{
+			out << YAML::BeginMap;
+            out << "a" << "?foo";
+			out << YAML::EndMap;
+            
+            desiredOutput = "a: \"?foo\"";
+		}
+
         ////////////////////////////////////////////////////////////////////////////////
 		// incorrect emitting
 		
@@ -1167,6 +1176,7 @@ namespace Test
 		RunEmitterTest(&Emitter::HexAndOct, "hex and oct", passed, total);
 		RunEmitterTest(&Emitter::CompactMapWithNewline, "compact map with newline", passed, total);
         RunEmitterTest(&Emitter::ForceSingleQuotedToDouble, "force single quoted to double", passed, total);
+        RunEmitterTest(&Emitter::QuoteQuestionMark, "quote question mark", passed, total);
 		
 		RunEmitterErrorTest(&Emitter::ExtraEndSeq, "extra EndSeq", passed, total);
 		RunEmitterErrorTest(&Emitter::ExtraEndMap, "extra EndMap", passed, total);
