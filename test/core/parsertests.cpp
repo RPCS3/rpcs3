@@ -16,6 +16,18 @@ namespace Test
             }
             return "  no exception caught";
         }
+        
+        TEST PlainScalarStartingWithQuestionMark()
+        {
+            HANDLE("foo: ?bar");
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "foo");
+            EXPECT_SCALAR("?", 0, "?bar");
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
+        }
     }
     
 	namespace {
@@ -44,6 +56,7 @@ namespace Test
 		int passed = 0;
 		int total = 0;
 		RunParserTest(&Parser::NoEndOfMapFlow, "No end of map flow", passed, total);
+		RunParserTest(&Parser::PlainScalarStartingWithQuestionMark, "Plain scalar starting with question mark", passed, total);
 		
 		std::cout << "Parser tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
