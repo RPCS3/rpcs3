@@ -91,7 +91,7 @@ namespace YAML
 			return e;
 		}
 		inline const RegEx& Key() {
-			static const RegEx e = RegEx('?');
+			static const RegEx e = RegEx('?') + BlankOrBreak();
 			return e;
 		}
 		inline const RegEx& KeyInFlow() {
