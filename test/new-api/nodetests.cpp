@@ -443,6 +443,15 @@ namespace Test
             YAML_ASSERT(xy);
             return true;
         }
+        
+        TEST ClearNode()
+        {
+            YAML::Node node = YAML::Load("[1, 2, 3]");
+            YAML_ASSERT(!node.IsNull());
+            node.clear();
+            YAML_ASSERT(node.IsNull());
+            return true;
+        }
     }
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -501,6 +510,7 @@ namespace Test
 		RunNodeTest(&Node::CloneMap, "clone map", passed, total);
 		RunNodeTest(&Node::CloneAlias, "clone alias", passed, total);
         RunNodeTest(&Node::ForceInsertIntoMap, "force insert into map", passed, total);
+        RunNodeTest(&Node::ClearNode, "clear node", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

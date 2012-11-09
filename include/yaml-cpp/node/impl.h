@@ -15,7 +15,7 @@
 
 namespace YAML
 {
-	inline Node::Node(): m_pNode(0)
+	inline Node::Node(): m_pNode(NULL)
 	{
 	}
 	
@@ -168,6 +168,11 @@ namespace YAML
 		return *this;
 	}
 	
+    inline void Node::clear()
+    {
+        m_pNode = NULL;
+    }
+
 	template<typename T>
 	inline void Node::Assign(const T& rhs)
 	{
