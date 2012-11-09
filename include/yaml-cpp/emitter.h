@@ -62,7 +62,7 @@ namespace YAML
 		Emitter& Write(const _Anchor& anchor);
 		Emitter& Write(const _Tag& tag);
 		Emitter& Write(const _Comment& comment);
-		Emitter& Write(const _Null& null);
+		Emitter& Write(const _Null& n);
 		Emitter& Write(const Binary& binary);
 		
 		template <typename T>
