@@ -152,7 +152,7 @@ namespace YAML
 	class BadConversion: public RepresentationException {
 	public:
 		BadConversion()
-        : RepresentationException(Mark::null(), ErrorMsg::BAD_CONVERSION) {}
+        : RepresentationException(Mark::null_mark(), ErrorMsg::BAD_CONVERSION) {}
 	};
 
     template<typename T>
@@ -165,25 +165,25 @@ namespace YAML
 	class BadDereference: public RepresentationException {
 	public:
 		BadDereference()
-		: RepresentationException(Mark::null(), ErrorMsg::BAD_DEREFERENCE) {}
+		: RepresentationException(Mark::null_mark(), ErrorMsg::BAD_DEREFERENCE) {}
 	};
 
 	class BadSubscript: public RepresentationException {
 	public:
 		BadSubscript()
-		: RepresentationException(Mark::null(), ErrorMsg::BAD_SUBSCRIPT) {}
+		: RepresentationException(Mark::null_mark(), ErrorMsg::BAD_SUBSCRIPT) {}
 	};
 
 	class BadPushback: public RepresentationException {
 	public:
 		BadPushback()
-		: RepresentationException(Mark::null(), ErrorMsg::BAD_PUSHBACK) {}
+		: RepresentationException(Mark::null_mark(), ErrorMsg::BAD_PUSHBACK) {}
 	};
 	
 	class BadInsert: public RepresentationException {
 	public:
 		BadInsert()
-		: RepresentationException(Mark::null(), ErrorMsg::BAD_INSERT) {}
+		: RepresentationException(Mark::null_mark(), ErrorMsg::BAD_INSERT) {}
 	};
 
 	class EmitterException: public Exception {
@@ -194,7 +194,7 @@ namespace YAML
     
     class BadFile: public Exception {
     public:
-        BadFile(): Exception(Mark::null(), ErrorMsg::BAD_FILE) {}
+        BadFile(): Exception(Mark::null_mark(), ErrorMsg::BAD_FILE) {}
     };
 }
 
