@@ -17,6 +17,11 @@
 
 #include "Global.h"
 
+// Games have turned out to be surprisingly sensitive to whether a parked, silent voice is being fully emulated.
+// With Silent Hill: Shattered Memories requiring full processing for no obvious reason, we've decided to
+// disable the optimisation until we can tie it to the game database.
+#define NEVER_SKIP_VOICES 1
+
 void ADMAOutLogWrite(void *lpData, u32 ulSize);
 
 static const s32 tbl_XA_Factor[16][2] =
@@ -612,7 +617,8 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 	else
 	{
 		// Continue processing voice, even if it's "off". Or else we miss interrupts! (Fatal Frame engine died because of this.)
-		if ((*GetMemPtr(vc.NextA & 0xFFFF8) >> 8 & 3) != 3 || vc.LoopStartA != (vc.NextA & ~7)		// not in a tight loop
+		if (NEVER_SKIP_VOICES
+			|| (*GetMemPtr(vc.NextA & 0xFFFF8) >> 8 & 3) != 3 || vc.LoopStartA != (vc.NextA & ~7)		// not in a tight loop
 			|| Cores[0].IRQEnable && (Cores[0].IRQA & ~7) == vc.LoopStartA	// or should be interrupting regularly
 			|| Cores[1].IRQEnable && (Cores[1].IRQA & ~7) == vc.LoopStartA
 			|| !(thiscore.Regs.ENDX & 1 << voiceidx))						// or isn't currently flagged as having passed the endpoint
