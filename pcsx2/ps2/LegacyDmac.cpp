@@ -120,7 +120,18 @@ __fi tDMA_TAG* SPRdmaGetAddr(u32 addr, bool write)
 			vu1Thread.WaitVU();
 		}
 		//Access for VU Memory
-		return (tDMA_TAG*)vtlb_GetPhyPtr(addr & 0x1FFFFFF0);
+		if((addr >= 0x11008000) && (addr < 0x1100c000))
+			return (tDMA_TAG*)VU1.Micro + (addr & 0x3ff0);
+
+		if((addr >= 0x1100c000) && (addr < 0x11010000))
+			return (tDMA_TAG*)VU1.Mem + (addr & 0x3ff0);
+
+		if ((addr >= 0x11000000) && (addr < 0x11004000))
+			return (tDMA_TAG*)VU0.Micro + (addr & 0xfff0);
+
+		if ((addr >= 0x11004000) && (addr < 0x11008000))
+			return (tDMA_TAG*)VU0.Mem + (addr & 0xfff0);	
+		
 	}
 	else
 	{
