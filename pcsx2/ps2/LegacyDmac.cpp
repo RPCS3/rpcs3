@@ -120,17 +120,19 @@ __fi tDMA_TAG* SPRdmaGetAddr(u32 addr, bool write)
 			vu1Thread.WaitVU();
 		}
 		//Access for VU Memory
-		if((addr >= 0x11008000) && (addr < 0x1100c000))
-			return (tDMA_TAG*)VU1.Micro + (addr & 0xfff0);
 
 		if((addr >= 0x1100c000) && (addr < 0x11010000))
-			return (tDMA_TAG*)VU1.Mem + (addr & 0xfff0);
+			return (tDMA_TAG*)VU1.Mem + (addr & 0x3fff);
+
+		//Possibly not needed but the manual doesn't say SPR cannot access it.
+		if((addr >= 0x11008000) && (addr < 0x1100c000))
+			return (tDMA_TAG*)VU1.Micro + (addr & 0x3fff);
 
 		if ((addr >= 0x11000000) && (addr < 0x11004000))
-			return (tDMA_TAG*)VU0.Micro + (addr & 0xfff0);
+			return (tDMA_TAG*)VU0.Micro + (addr & 0xff0);
 
 		if ((addr >= 0x11004000) && (addr < 0x11008000))
-			return (tDMA_TAG*)VU0.Mem + (addr & 0xfff0);		
+			return (tDMA_TAG*)VU0.Mem + (addr & 0xff0);		
 		
 	}
 	else
