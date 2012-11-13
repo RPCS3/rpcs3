@@ -60,6 +60,13 @@ void __fastcall BaseVUmicroCPU::ExecuteBlockJIT(BaseVUmicroCPU* cpu) {
 	const int  test = cpu->m_Idx ? 0x100 : 1;
 	const int  c	= 128;	// VU Execution Cycles
 	if (stat & test) {		// VU is running
+		#ifdef PCSX2_DEVBUILD
+		static int warn = 5;
+		if (warn > 0){
+			DevCon.Warning("Rare case: VU0 Macro (COP2) op forcing a VU0 Micro update.");
+			warn--;
+		}
+		#endif
 		cpu->Execute(c);	// Execute VU
 		if (stat & test) {
 			cpu->m_lastEEcycles+=(c*2);
