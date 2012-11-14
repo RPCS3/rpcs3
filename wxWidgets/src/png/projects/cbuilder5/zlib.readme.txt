@@ -1,0 +1,14 @@
+The project that builds libpng under Borland C++ Builder does not
+explicitly build zlib.  By taking this decision, there is no need
+to update the libpng project each time when there is a change in
+the list of zlib source files.  After all, this list is private to
+zlib, and applications (such as libpng) should not assume anything
+about it.
+
+If you wish to contribute a project that builds zlib under Borland
+C++ Builder, please submit it to the zlib developers, not to the
+libpng developers.
+
+By default, the libpng project uses zlib as a static library.  If
+you wish to use zlib as a DLL, please read the important notes from
+the zlib DLL FAQ, found inside the zlib distribution.

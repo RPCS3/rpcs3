@@ -1,0 +1,31 @@
+
+!if "$(FINAL)" == "1"
+LIBTARGET=$(WXDIR)\lib\png.lib
+!else if "$(FINAL)" == "hybrid"
+LIBTARGET=$(WXDIR)\lib\pngh.lib
+!else
+LIBTARGET=$(WXDIR)\lib\pngd.lib
+!endif
+
+OBJECTS = $D\png.obj \
+          $D\pngerror.obj \
+          $D\pngget.obj \
+          $D\pngmem.obj \
+          $D\pngpread.obj \
+          $D\pngread.obj \
+          $D\pngrio.obj \
+          $D\pngrtran.obj \
+          $D\pngrutil.obj \
+          $D\pngset.obj \
+          $D\pngtrans.obj \
+          $D\pngwio.obj \
+          $D\pngwrite.obj \
+          $D\pngwtran.obj \
+          $D\pngwutil.obj
+
+
+
+# Pull in standard variable definitions
+
+!include ..\makelib.vc
+

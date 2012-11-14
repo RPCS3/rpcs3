@@ -1,0 +1,230 @@
+#! /usr/bin/sh
+
+cat > Config.tmp << '@END'
+#
+#  Copyright (C) 1995 by Ke Jin <kejin@empress.com>
+#
+
+#============ Default for all system ==============
+SHELL   =
+SHELL   = /bin/sh
+DLDAPI  = DLDAPI_SVR4_DLFCN
+DLSUFFIX= so
+OUTFILE = iodbc
+OBJX    =
+@END
+
+\rm -f Makefile.tmp
+cat > Makefile.tmp <<'@END'
+include Version.mk
+include Config.mk
+@END
+
+case $1 in
+ sun4)
+	cat >> Config.tmp << '@END'
+
+#============ SunOS 4.1.x =========================
+PIC     = -pic
+CC      = acc
+LIBS    = -ldl
+@END
+	;;
+
+ aix)
+	cat >> Config.tmp << '@END'
+
+#=========== AIX 3.x 4.x ==========================
+DLDAPI  = DLDAPI_AIX_LOAD
+ANSI    = -langlvl=ansi
+LDFLAGS = -H512 -T512 -bE:shrsub.exp -bM:SRE
+LIBS    = -lc
+OBJX    = main.o
+DLSUFFIX= s.o
+CFLAGSX = -DCLI_NAME_PREFIX=\".SQL\"
+@END
+	;;
+
+ hp300 | hp400)
+	cat >> Config.tmp << '@END'
+
+#============ HP/UX (s300/s400) 9.x 10.x ==========
+DLDAPI  = DLDAPI_HP_SHL
+ANSI    = -Aa
+PIC     = +z
+LDFLAGS = -b
+DLSUFFIX= sl
+CFLAGSX = -D_INCLUDE_POSIX_SOURCE -DCLI_NAME_PREFIX=\"_SQL\"
+@END
+	;;
+
+ hp700 | hp800)
+	cat >> Config.tmp << '@END'
+
+#============ HP/UX 9000(s700/s800) 9.x 10.x ======
+DLDAPI  = DLDAPI_HP_SHL
+ANSI    = -Aa
+PIC     = +z
+LDFLAGS = -b
+LIBS    = -lc -ldld
+DLSUFFIX= sl
+CFLAGSX = -D_INCLUDE_POSIX_SOURCE
+@END
+	;;
+
+ solaris)
+	cat >> Config.tmp << '@END'
+
+#======= Solaris 2.x, SunOS 5.x (Sparc/x86) =======
+LDFLAGS = -G -z defs
+LIBS    = -lc -ldl -lnsl
+@END
+	;;
+
+ ncr |gis)
+	cat >> Config.tmp << '@END'
+
+#============= NCR SVR4 3.x =======================
+PIC     = -KPIC
+LDFLAGS = -G -z defs
+LIBS    = -lc -ldl
+@END
+	;;
+
+ unixware)
+	cat >> Config.tmp << '@END'
+
+#========= UnixWare SVR4 1.x, 2.x =================
+PIC     = -KPIC
+LDFLAGS = -G -z defs
+LIBS    = -lc -ldl
+@END
+	;;
+
+ maxos)
+	cat >> Config.tmp << '@END'
+
+#============ Concurrent Maxion MAX/OS 1.x ========
+PIC     = -KPIC
+LDFLAGS = -G -z defs
+LIBS    = -lc -ldl
+@END
+	;;
+
+ sco-opensrv | sco-osr5 )
+	cat >> Config.tmp << '@END'
+
+#============ SCO OpenServer 5.x ==================
+PIC     = -K PIC -b elf
+LDFLAGS = -G -z defs
+LIBS    = -lc -ldl
+@END
+	;;
+
+ dgux) 
+	cat >> Config.tmp << '@END'
+
+#============ DG/UX 5.x ===========================
+PIC     = -K PIC
+LDFLAGS = -G -z defs
+LIBS    = -lc -ldl
+@END
+	;;
+
+ freebsd)
+	cat >> Config.tmp << '@END'
+
+#============= FreeBSD 2.x ========================
+PIC     = -fPIC	
+CFLAGSX = -DCLI_NAME_PREFIX=\"_SQL\"
+LDFLAGS = -Bshareable
+LIBS    = -lc
+@END
+
+	\rm -f Makefile.tmp
+	cat > Makefile.tmp <<'@END'
+.include "Version.mk"
+.include "Config.mk"
+@END
+	;;
+
+ bsd-os)
+	cat >> Config.tmp << '@END'
+
+#============ BSDI BSD/OS 2.x =====================
+#
+#	ported by: Stuart Hayton <stuey@clic.co.uk>
+#
+CC      = gcc
+LDFLAGS = -r
+LDSUFFIX= o
+LIBS    = -lc_s.2.0 -ldl
+@END
+	;;
+
+ linux-elf)
+	cat >> Config.tmp << '@END'
+
+#============= Linux ELF =========================
+#      Slackware 2.x,(kernel 1.3.x) on i386
+#      Red Hat   2.x (kernel 1.2.x) on i486
+#
+ANSI    = -ansi
+CC      = gcc
+PIC     = -fPIC
+LDFLAGS = -shared
+LIBS    = -ldl
+@END
+	;;
+
+ irix5| irix6)
+	cat >> Config.tmp << '@END'
+
+#============= SGI IRIX 5.x, 6.x =================
+LDFLAGS = -shared
+LIBS    = -lc
+@END
+	;;
+
+ dec-osf1 | dec-unix)
+	cat >> Config.tmp << '@END'
+
+#============= DEC Unix(OSF/1) 3.x, 4.x ==========
+LDFLAGS = -shared
+LIBS    = -lc
+@END
+	;;
+ *)
+	cat << '@END'
+
+  Usage: autoconfig <platform_opt>  or
+	 build      <platform_opt>
+	
+  platform_opt:
+
+	sun4		-- SunOS 4.1.x
+	aix		-- IBM AIX 3.x, 4.x
+	hp300, hp400	-- HP/UX 9.x, 10.x on 9000 s300/s400
+	hp700, hp800	-- HP/UX 9.x, 10.x on 9000 s700/s800
+	solaris		-- Sun Solaris 2.x, SunOS 5.x
+	ncr, gis	-- NCR(GIS) SVR4 3.x
+	unixware	-- Novell UnixWare 1.x, 2.x
+	maxos		-- Concurrent MAX/OS SVR4  1.x
+	sco-osr5	-- SCO Open Server 5.x
+	dgux		-- DG/UX 5.x
+	freebsd		-- FreeBSD 2.x
+	bsd-os		-- BSDI BSD/OS 2.x
+	linux-elf	-- Linux ELF 1.2.x and up
+	irix5, irix6	-- SGI Irix 5.x, 6.x
+	dec-osf1	-- DEC Unix(OSF/1) 3.x, 4.x
+
+@END
+	\rm -f Config.tmp
+	\rm -f Makefile.tmp
+	exit 1
+	;;
+esac
+	\mv -f Config.tmp Config.mk
+	sed -e 's/.include.*//' -e 's/include.*//' Makefile >> Makefile.tmp
+	\mv -f Makefile.tmp Makefile
+	exit 0

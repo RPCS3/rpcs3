@@ -1,0 +1,35 @@
+# makeprog.bcc
+# Incude file for samples
+
+!include $(WXDIR)\src\makebcc.env
+
+WXLIB = $(WXDIR)\lib\wx.lib
+LIBS=$(WXLIB) $(EXTRALIBS) mathwl cwl import ole2w16 winpng zlib
+
+all:    $(TARGET).exe $(EXTRATARGETS)
+
+$(TARGET).exe:      $(WXLIB) $(OBJECTS) $(TARGET).def $(TARGET).res
+        tlink $(LINKFLAGS) @&&!
+c0wl.obj $(OBJECTS)
+$(TARGET)
+nul
+$(LIBS)
+$(TARGET).def
+!
+        brc -K $(TARGET).res
+
+.$(SRCSUFF).obj:
+	bcc $(CPPFLAGS) -c {$< }
+
+.c.obj:
+	bcc $(CPPFLAGS) -P- -c {$< }
+
+$(TARGET).res :      $(TARGET).rc $(WXDIR)\include\wx\msw\wx.rc
+    brc -r /i$(BCCDIR)\include /i$(WXDIR)\include /i$(WXDIR)\contrib\include $(TARGET)
+
+clean:
+        -erase *.obj
+        -erase *.exe
+        -erase *.res
+        -erase *.map
+        -erase *.rws

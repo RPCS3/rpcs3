@@ -1,0 +1,32 @@
+#
+# File:		makelib.b32
+# Author:	Julian Smart
+# Created:	1999
+# Updated:	
+# Copyright:
+#
+# Include file for libraries. Set LIBTARGET and OBJECTS
+# before including this file.
+
+
+lib: $(LIBTARGET)
+   
+$(LIBTARGET): $(OBJECTS) 
+   -if exist $(LIBTARGET) $(RM) $(LIBTARGET)
+   echo making $(LIBTARGET)
+   tlib "$(LIBTARGET)" /P512 @&&!
++$(OBJECTS:.obj =.obj +)
+!
+
+clean:
+##        -if exist $(OBJ_PATH)\*.obj $(RM) $(OBJ_PATH)\*.obj
+        -if exist *.res $(RM) *.res
+        -if exist *.map $(RM) *.map
+        -if exist *.rws $(RM) *.rws
+        -if exist $(LIBTARGET) $(RM) $(LIBTARGET)
+
+.$(SRCSUFF).obj:
+    bcc32 $(CPPFLAGS) -c -n$(OBJ_PATH) {$< }
+
+.c.obj:
+    bcc32 $(CPPFLAGS) -P- -c -n$(OBJ_PATH) {$< }

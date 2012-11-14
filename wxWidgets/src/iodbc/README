@@ -1,0 +1,187 @@
+0. Changes
+	a. I realized that a driver manager doesn't aware of 
+	   difference between a C5 (i.e. hstmt) and a C6 
+	   (i.e. transaction) states. 
+
+	b. The link flags "-lc" has been removed from Linux ELF
+	   section of Config.mk to fix a segment fault problem.
+	   Now, it works fine on Slackware 2.3 and Red Hat 2.0
+	   (kernel version are 1.2.xx and 1.3.xx respectively).
+	   
+	c. On FreeBSD 2.x, dlsym() doesn't handle the '_' 
+	   prepended before a exporting function symbol. So, 
+	   CLI_NAME_PREFIX needs to be defined as "_SQL" for 
+	   FreeBSD. 
+
+	d. Some files are renamed
+		dld.c	-> dlf.c
+		dld.h	-> dlf.h
+		confg.h -> config.h
+
+1. iODBC driver manager platform availability
+
+   iODBC driver manager has been ported to following Unix platforms: 
+
+	SunOS		4.1.x		Sun Sparc
+	HP/UX		9.x, 10.x	HP9000 s700/s800
+	HP/UX		9.x 		HP9000 s300/s400		
+	IBM AIX		3.x, 4.x 	IBM RS6000, PowerPC
+	Sun Solaris	2.x		Sun Sparc, PCx86
+	SGI Irix SVR4	5.x, 6.x	IP12 MIPS, IP22 MIPS
+	NCR SVR4 	3.x		NCR 3435
+	UnixWare SVR4.2 1.x, 2.x	x86
+	DEC Unix(OSF/1)	3.x, 4.x	DEC Alpha
+	FreeBSD		2.x		x86
+	BSDI BSD/OS 	2.x		?
+	Linux ELF 	1.2.x, 1.3.x	x86
+	SCO OpenServer 	5.x 		x86
+	Max/OS SVR4	1.x		Concurrent Maxion 9200 MP
+	DG/UX		5.x		Aviion
+
+   Porting of iODBC driver manager to some non-unix operating systems
+   such as Windows family(3.x, 95, NT), OS/2 and Mac is supported but 
+   has never compiled and tested yet :). Of cause, you need to supply 
+   a make/build file and a short LibMain for creating the iodbc.dll.
+
+2. How to build iODBC driver manager:
+
+	step 1. Identify your system
+	step 2. Run build with a suitable option
+   
+   Here is an example:
+
+	%[1]: sh iodbc-2.12.shar
+	....
+	%[2]: cd iodbc-2.12
+	%[3]: uname -s -v -r -m
+	HP-UX B.10.01 A 9000/710
+	%[4]: ./build hp700
+	autoconfig hp700
+	make
+	....
+	Generating iODBC driver manager --> /home/kejin/iodbc-2.12.sl
+
+3. odbc.ini( ~/.odbc.ini )
+
+   Driver manager and drivers use odbc.ini(or ~/.odbc.ini on Unix) file 
+   or connection string when establishing a data source connection. On
+   Windows, odbc.ini is located in Windows directory. On unix, iODBC driver 
+   manager(and all other ODBC drivers and driver managers I awared) looks 
+   .odbc.ini file in real user's home directory (it could be a softlink to 
+   the file located somewhere else). Make sure your driver will look into 
+   the same file (or a file which is a symbolic link to the same file).  
+   The format of odbc.ini( or ~/.odbc.ini ) is defined as:
+
+	odbc.ini(or .odbc.ini) ::= data_source_list
+
+	data_source_list ::= /* empty */
+			   | data_source '\n' data_source_list
+
+	data_source ::= '[' data_source_name ']' '\n' data_source_desc
+
+	data_source_name ::= 'default' | [A-Za-z]*[A-Za-z0-9_]*
+
+	data_source_desc ::= /* empty */
+			   | attrib_desc '\n' data_source_desc
+
+	addrib_desc ::= Attrib '=' attrib_value
+
+	Attrib ::= 'Driver' | 'PID' | 'UID' | driver_def_attrib
+
+	driver_def_attrib ::= [A-Za-z]*[A-Za-z0-9_]*
+
+   An example of .odbc.ini file:
+
+	[toronto_yp]
+	# yellow page of metro Toronto
+	Driver = /usr/lib/odbc/oracle.so
+	<....>
+
+	[toronto_wp]
+	# white page of metro Toronto
+	Driver = /usr/lib/odbc/oracle.so
+	<....>
+
+	[contract]
+	# all contract documents
+	Driver = /usr/lib/odbc/informix.so
+	<....>
+
+	[netnews]
+	# NNTP netnews group 
+	Driver = /usr/lib/odbc/nnodbc.so
+	Server = news.empress.com
+
+	[rnd_test]
+	# data source for R&D test
+	Driver = /home/r_d/odbc/empodbc.so
+	URL = empodbc://rnd.empress.com:6322/rnd_test/testdb
+
+	[default]
+	# default to odbc gateway
+	Driver = /usr/lib/odbc/gateway.so
+
+4. Tracing
+
+   iODBC driver manager traces driver's ODBC call invoked by the driver 
+   manager. Default tracing file is ./odbc.log. Tracing option (i.e. 
+   on/off or optional tracing file name) can be set in ~/.odbc.ini 
+   file (under a data source section) as:
+
+	TraceFile = <optional_trace_file>
+	Trace = ON | On | on | 1 | OFF | Off | off | 0
+
+   If <optional_trace_file> is stderr or stdout, i.e.
+   
+        TraceFile = stderr 
+   
+   or
+
+	TraceFile = stdout
+
+   the tracing message will go to the terminal screen(if it is available).
+
+   iODBC driver manager allows one to tune on/off tracing on selected
+   connection(s). Different connections can share one or use different 
+   tracing file(s). ODBC calls on connections without tuning tracing on
+   will not be traced. 
+	
+5. File list:
+
+	README		This file
+	IAFA-PACKAGE	Version and copyright information
+	Changes.log	Source changes log
+	Version.mk	Version make include file
+	Config.mk	Config  make include file
+	Makefile	make file
+	config.h	system config include file
+	isql.h		ODBC 1.0 macro 
+	isqlext.h	ODBC 2.0 macro
+	dlf.h		general dynamic loader module interface
+	dlf.c		general dynamic loader module (mapping to svr4)
+	dlproc.h	simple dynamic loader module interface 
+	dlproc.c	simple dynamic loader on top of dlf module
+	herr.h		error handling module interface
+	herr.c		error handling module
+	herr.ci		error handling source include
+	henv.h		environment handle interface
+	henv.c		environment handle module
+	henv.ci		environment handle source include 
+	hdbc.h		connection handle interface
+	hdbc.c		connection handle module
+	hstmt.h		statement  handle interface
+	hstmt.c		statement  handle module
+	connect.c	connect functions
+	prepare.c	query prepare functions
+	execute.c	query executing functions
+	result.c	query result property functions
+	fetch.c		query result fetch functions
+	info.c		driver information functions
+	catalog.c	catalog functions
+	misc.c		miscellaneous functions
+	itrace.h	macro
+	itrace.c	trace function
+	main.c		entry function used to build a share library on AIX
+	shrsub.exp	export symbol list used on AIX
+	autoconfig	shell script for creating Config.mk
+	build		shell script for building iodbc driver manager 

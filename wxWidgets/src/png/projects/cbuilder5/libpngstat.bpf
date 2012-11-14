@@ -1,0 +1,22 @@
+USEUNIT("..\..\png.c");
+USEUNIT("..\..\pngerror.c");
+USEUNIT("..\..\pngget.c");
+USEUNIT("..\..\pngmem.c");
+USEUNIT("..\..\pngpread.c");
+USEUNIT("..\..\pngread.c");
+USEUNIT("..\..\pngrio.c");
+USEUNIT("..\..\pngrtran.c");
+USEUNIT("..\..\pngrutil.c");
+USEUNIT("..\..\pngset.c");
+USEUNIT("..\..\pngtrans.c");
+USEUNIT("..\..\pngwio.c");
+USEUNIT("..\..\pngwrite.c");
+USEUNIT("..\..\pngwtran.c");
+USEUNIT("..\..\pngwutil.c");
+USELIB("..\..\..\zlib\zlib.lib");
+//---------------------------------------------------------------------------
+#define Library
+
+// To add a file to the library use the Project menu 'Add to Project'.
+
+ 

@@ -1,0 +1,139 @@
+#
+# File:      makefile.vc
+# Author:    David Webster
+# Created:   1999
+# Updated:
+# Copyright:
+# Licence:   wxWindows Licence
+#
+# "%W% %G%"
+#
+# Makefile : Builds os2png.lib library for OS/2 3.0/4.0
+
+# Suffixes
+OBJSUFF=obj
+SRCSUFF=cpp
+
+OS2FLAGS=/c /W2 /DOS232 /D__VISAGECPP__ /Ss /Q /N100
+OS2LINKFLAGS=/BASE:0x00010000 /PMTYPE:PM /NOE /NOD /ALIGN:16
+OS2LIBFLAGS=/NOL /NOE
+OS2LIBS=CPPOM30.lib CPPOOC3.LIB OS2386.LIB
+
+!if "$(WXMAKINGDLL)" != "0"
+EXTRADLLFLAGS=/DWXMAKINGDLL=1 /Ge- /D__OS2DLL__
+EXTRALNKFLAGS=/DLL
+!endif
+
+# Change WXDIR or WXWIN to wherever wxWindows is found
+WXDIR = $(WXWIN)
+
+OS2PNGDIR=$(WXDIR)\src\png
+OS2PNGINC=$(WINPNGDIR)
+OS2PNGLIB=$(WXDIR)\lib\os2png.lib
+!if "$(WXMAKINGDLL)" != "1"
+OS2PNGLIB=$(WXDIR)\lib\os2png.lib
+!else
+OS2PNGLIB=$(WXDIR)\lib\os2png.dll
+!endif
+INC=-I$(WXDIR)\src\zlib -I$(OS2PNGINC)
+
+!ifndef FINAL
+FINAL=0
+!endif
+
+!if "$(NOPCH)" == "1"
+PCH=
+PRECOMP=
+MAKEPRECOMP=
+!else
+PCH=$(WXLIBNAME).pch
+PRECOMP=/Si$(PCH)
+MAKEPRECOMP=/Fi$(PCH)
+!endif
+
+!if "$(FINAL)" == "0"
+!if "$(WXMAKINGDLL)" == "1"
+D=DebugOS2DLL
+!else
+D=DebugOS2
+!endif
+OPT =
+DEBUG_FLAGS= /Ti /D__WXDEBUG__ #/Fb
+LINK_DEBUG_FLAGS=/DEBUG
+CRTFLAG=/Gm /Gd
+!else
+# /O1 - smallest code
+# /O2 - fastest code
+!if "$(WXMAKINGDLL)" == "1"
+D=RelseOS2DLL
+!else
+D=RelseOS2
+!endif
+OPT = /O+ /Oc /G5
+DEBUG_FLAGS=
+LINK_DEBUG_FLAGS=/RELEASE
+CRTFLAG=/Gm /Gd
+!endif
+
+!if [md $(OS2PNGDIR)\$D]
+!endif
+
+CPPFLAGS=$(OS2FLAGS) $(EXTRADLLFLAGS) $(DEBUG_FLAGS) $(PRECOMP) $(INC) $(OPT) $(CRTFLAG)
+LINKFKAGS=$(OS2LINKFLAGS) $(EXTRALNKFLAGS)
+LIBS=..\\..\\lib\os2zlibd.lib
+
+{..\png}.c{..\png\$D}.obj:
+    @echo $<
+    icc @<<
+$(CPPFLAGS) /Fo$@ /Tp $<
+<<
+
+OBJECTS = \
+  ..\png\$D\png.obj \
+  ..\png\$D\pngread.obj \
+  ..\png\$D\pngrtran.obj \
+  ..\png\$D\pngrutil.obj \
+  ..\png\$D\pngpread.obj \
+  ..\png\$D\pngtrans.obj \
+  ..\png\$D\pngwrite.obj \
+  ..\png\$D\pngwtran.obj \
+  ..\png\$D\pngwutil.obj \
+  ..\png\$D\pngerror.obj \
+  ..\png\$D\pngmem.obj \
+  ..\png\$D\pngwio.obj \
+  ..\png\$D\pngrio.obj \
+  ..\png\$D\pngget.obj \
+  ..\png\$D\pngset.obj
+
+all:  $(OS2PNGLIB)
+
+!if "$(WXMAKINGDLL)" != "1"
+
+$(WXDIR)\lib\os2png.lib: $(OBJECTS)
+ touch $(WXDIR)\lib\os2png.lib
+ del $(WXDIR)\lib\os2png.lib
+ ilib $(OS2LIBFLAGS) $@ @<<
+    $**;
+<<
+
+!else
+
+# Update the dynamic link library
+$(WXDIR)\lib\os2png.dll: $(OBJECTS)
+    icc @<<
+    /B" $(LINKFLAGS)" /Fe$@
+    $(LIBS)
+    $(OBJECTS)
+    $(WXDIR)\src\os2\os2png.def
+<<
+    implib $(WXDIR)\lib\os2pngd.lib $(WXDIR)\src\os2\os2png.def
+
+!endif
+
+clean:
+        del      $(OS2PNGLIB)
+        erase /N $(OS2PNGDIR)\$D
+        rd       $(OS2PNGDIR)\$D
+
+cleanall:     clean
+

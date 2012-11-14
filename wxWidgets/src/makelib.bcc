@@ -1,0 +1,37 @@
+#
+# File:		makelib.b32
+# Author:	Julian Smart
+# Created:	1999
+# Updated:	
+# Copyright:
+#
+# Include file for libraries. Set LIBTARGET and OBJECTS
+# before including this file.
+
+# WXWIN and BCCDIR are set by parent make
+
+WXDIR = $(WXWIN)
+
+!include $(WXDIR)\src\makebcc.env
+
+$(LIBTARGET): $(OBJECTS)
+        erase $(LIBTARGET)
+	tlib $(LIBTARGET) /P1024 @&&!
+-+$(OBJECTS:.obj =.obj -+)
+!
+
+.$(SRCSUFF).obj:
+	bcc $(CPPFLAGS) -c {$< }
+
+.c.obj:
+	bcc $(CPPFLAGS) -P- -c {$< }
+
+clean:
+        -erase *.obj
+        -erase *.exe
+        -erase *.res
+        -erase *.map
+        -erase *.rws
+        -erase $(LIBTARGET)
+
+

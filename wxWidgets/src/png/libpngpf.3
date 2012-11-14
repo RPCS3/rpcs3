@@ -1,0 +1,1096 @@
+.TH LIBPNGPF 3 "September 12, 2004"
+.SH NAME
+libpng \- Portable Network Graphics (PNG) Reference Library 1.2.7
+(private functions)
+.SH SYNOPSIS
+\fB\fB#include <png.h>\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_build_gamma_table (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_build_grayscale_palette (int \fP\fI\fP\fIbit_depth\fP\fB\fP\fB, png_colorp \fI\fIpalette\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_calculate_crc (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIptr\fP\fB\fP\fB, png_size_t \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_check_chunk_name (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fI\fIchunk_name\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBpng_size_t png_check_keyword (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_charp \fP\fI\fP\fIkey\fP\fB\fP\fB, png_charpp \fI\fInew_key\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_combine_row (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, int \fI\fImask\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_correct_palette (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_colorp \fP\fI\fP\fIpalette\fP\fB\fP\fB, int \fI\fInum_palette\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBint png_crc_error (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBint png_crc_finish (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIskip\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_crc_read (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIbuf\fP\fB\fP\fB, png_size_t \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBpng_voidp png_create_struct (int \fI\fItype\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBpng_voidp png_create_struct_2 (int \fP\fI\fP\fItype\fP\fB\fP\fB, png_malloc_ptr \fP\fI\fP\fImalloc_fn\fP\fB\fP\fB, png_voidp \fI\fImem_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBpng_charp png_decompress_chunk (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, int \fP\fI\fP\fIcomp_type\fP\fB\fP\fB, png_charp \fP\fI\fP\fIchunkdata\fP\fB\fP\fB, png_size_t \fP\fI\fP\fIchunklength\fP\fB\fP\fB, png_size_t \fP\fI\fP\fIprefix_length\fP\fB\fP\fB, png_size_t \fI\fI*data_length\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_destroy_struct (png_voidp \fI\fIstruct_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_destroy_struct_2 (png_voidp \fP\fI\fP\fIstruct_ptr\fP\fB\fP\fB, png_free_ptr \fP\fI\fP\fIfree_fn\fP\fB\fP\fB, png_voidp \fI\fImem_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_background (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_color_16p \fP\fI\fP\fItrans_values\fP\fB\fP\fB, png_color_16p \fP\fI\fP\fIbackground\fP\fB\fP\fB, png_color_16p \fP\fI\fP\fIbackground_1\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIgamma_table\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIgamma_from_1\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIgamma_to_1\fP\fB\fP\fB, png_uint_16pp \fP\fI\fP\fIgamma_16\fP\fB\fP\fB, png_uint_16pp \fP\fI\fP\fIgamma_16_from_1\fP\fB\fP\fB, png_uint_16pp \fP\fI\fP\fIgamma_16_to_1\fP\fB\fP\fB, int \fI\fIgamma_shift\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_bgr (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_chop (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_dither (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIpalette_lookup\fP\fB\fP\fB, png_bytep \fI\fIdither_lookup\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_expand (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_color_16p \fI\fItrans_value\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_expand_palette (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_colorp \fP\fI\fP\fIpalette\fP\fB\fP\fB, png_bytep \fP\fI\fP\fItrans\fP\fB\fP\fB, int \fI\fInum_trans\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_gamma (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIgamma_table\fP\fB\fP\fB, png_uint_16pp \fP\fI\fP\fIgamma_16_table\fP\fB\fP\fB, int \fI\fIgamma_shift\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_gray_to_rgb (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_invert (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_pack (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_uint_32 \fI\fIbit_depth\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_packswap (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_read_filler (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIfiller\fP\fB\fP\fB, png_uint_32 \fI\fIflags\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_read_interlace (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, int \fP\fI\fP\fIpass\fP\fB\fP\fB, png_uint_32 \fI\fItransformations\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_read_invert_alpha (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_read_swap_alpha (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_read_transformations (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBint png_do_rgb_to_gray (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_shift (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_color_8p \fI\fIbit_depth\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_strip_filler (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_uint_32 \fI\fIflags\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_swap (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_unpack (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_unshift (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_color_8p \fI\fIsig_bits\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_write_interlace (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, int \fI\fIpass\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_write_invert_alpha (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_write_swap_alpha (png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_do_write_transformations (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid *png_far_to_near (png_structp png_ptr,png_voidp \fP\fI\fP\fIptr\fP\fB\fP\fB, int \fI\fIcheck\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_flush (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBpng_int_32 png_get_int_32 (png_bytep \fI\fIbuf\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBpng_uint_16 png_get_uint_16 (png_bytep \fI\fIbuf\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBpng_uint_32 png_get_uint_31 (png_bytep \fI\fIbuf\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBpng_uint_32 png_get_uint_32 (png_bytep \fI\fIbuf\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_bKGD (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_cHRM (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_gAMA (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_hIST (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_IEND (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_IHDR (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_iCCP (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_iTXt (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_oFFs (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_pCAL (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_pHYs (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_PLTE (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_sBIT (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_sCAL (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_sPLT (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_sRGB (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_tEXt (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_tIME (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_tRNS (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_unknown (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_handle_zTXt (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_info_destroy (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fI\fIinfo_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_init_mmx_flags (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_init_read_transformations (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_process_IDAT_data (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIbuffer\fP\fB\fP\fB, png_size_t \fI\fIbuffer_length\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_process_some_data (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fI\fIinfo_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_check_crc (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_crc_finish (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_crc_skip (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_fill_buffer (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIbuffer\fP\fB\fP\fB, png_size_t \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_handle_tEXt (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_handle_unknown (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_handle_zTXt (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_have_end (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fI\fIinfo_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_have_info (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fI\fIinfo_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_have_row (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fI\fIrow\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_process_row (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_read_chunk (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fI\fIinfo_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_read_end (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fI\fIinfo_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_read_IDAT (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_read_sig (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fI\fIinfo_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_read_tEXt (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fI\fIinfo_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_read_zTXt (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fI\fIinfo_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_restore_buffer (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIbuffer\fP\fB\fP\fB, png_size_t \fI\fIbuffer_length\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_push_save_buffer (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_read_data (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIdata\fP\fB\fP\fB, png_size_t \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_read_filter_row (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_row_infop \fP\fI\fP\fIrow_info\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIrow\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIprev_row\fP\fB\fP\fB, int \fI\fIfilter\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_read_finish_row (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_read_push_finish_row (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_read_start_row (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_read_transform_info (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fI\fIinfo_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_reset_crc (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_save_int_32 (png_bytep \fP\fI\fP\fIbuf\fP\fB\fP\fB, png_int_32 \fI\fIi\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_save_uint_16 (png_bytep \fP\fI\fP\fIbuf\fP\fB\fP\fB, unsigned int \fI\fIi\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_save_uint_32 (png_bytep \fP\fI\fP\fIbuf\fP\fB\fP\fB, png_uint_32 \fI\fIi\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBint png_set_text_2 (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_infop \fP\fI\fP\fIinfo_ptr\fP\fB\fP\fB, png_textp \fP\fI\fP\fItext_ptr\fP\fB\fP\fB, int \fI\fInum_text)\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_cHRM (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, double \fP\fI\fP\fIwhite_x\fP\fB\fP\fB, double \fP\fI\fP\fIwhite_y\fP\fB\fP\fB, double \fP\fI\fP\fIred_x\fP\fB\fP\fB, double \fP\fI\fP\fIred_y\fP\fB\fP\fB, double \fP\fI\fP\fIgreen_x\fP\fB\fP\fB, double \fP\fI\fP\fIgreen_y\fP\fB\fP\fB, double \fP\fI\fP\fIblue_x\fP\fB\fP\fB, double \fI\fIblue_y\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_cHRM_fixed (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIwhite_x\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIwhite_y\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIred_x\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIred_y\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIgreen_x\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIgreen_y\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIblue_x\fP\fB\fP\fB, png_uint_32 \fI\fIblue_y\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_data (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIdata\fP\fB\fP\fB, png_size_t \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_filtered_row (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fI\fIfiltered_row\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_find_filter (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_row_infop \fI\fIrow_info\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_finish_row (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_gAMA (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, double \fI\fIfile_gamma\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_gAMA_fixed (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_uint_32 \fI\fIint_file_gamma\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_hIST (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_uint_16p \fP\fI\fP\fIhist\fP\fB\fP\fB, int \fI\fInum_hist\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_iCCP (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_charp \fP\fI\fP\fIname\fP\fB\fP\fB, int \fP\fI\fP\fIcompression_type\fP\fB\fP\fB, png_charp \fP\fI\fP\fIprofile\fP\fB\fP\fB, int \fI\fIproflen\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_IDAT (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fP\fI\fP\fIdata\fP\fB\fP\fB, png_size_t \fI\fIlength\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_IEND (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_IHDR (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIwidth\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIheight\fP\fB\fP\fB, int \fP\fI\fP\fIbit_depth\fP\fB\fP\fB, int \fP\fI\fP\fIcolor_type\fP\fB\fP\fB, int \fP\fI\fP\fIcompression_type\fP\fB\fP\fB, int \fP\fI\fP\fIfilter_type\fP\fB\fP\fB, int \fI\fIinterlace_type\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_iTXt (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, int \fP\fI\fP\fIcompression\fP\fB\fP\fB, png_charp \fP\fI\fP\fIkey\fP\fB\fP\fB, png_charp \fP\fI\fP\fIlang\fP\fB\fP\fB, png_charp \fP\fI\fP\fItranslated_key\fP\fB\fP\fB, png_charp \fI\fItext)\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_oFFs (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIx_offset\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIy_offset\fP\fB\fP\fB, int \fI\fIunit_type\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_pCAL (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_charp \fP\fI\fP\fIpurpose\fP\fB\fP\fB, png_int_32 \fP\fI\fP\fIX0\fP\fB\fP\fB, png_int_32 \fP\fI\fP\fIX1\fP\fB\fP\fB, int \fP\fI\fP\fItype\fP\fB\fP\fB, int \fP\fI\fP\fInparams\fP\fB\fP\fB, png_charp \fP\fI\fP\fIunits\fP\fB\fP\fB, png_charpp \fI\fIparams\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_pHYs (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIx_pixels_per_unit\fP\fB\fP\fB, png_uint_32 \fP\fI\fP\fIy_pixels_per_unit\fP\fB\fP\fB, int \fI\fIunit_type\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_PLTE (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_colorp \fP\fI\fP\fIpalette\fP\fB\fP\fB, png_uint_32 \fI\fInum_pal\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_sBIT (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_color_8p \fP\fI\fP\fIsbit\fP\fB\fP\fB, int \fI\fIcolor_type\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_sCAL (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_charp \fP\fI\fP\fIunit\fP\fB\fP\fB, double \fP\fI\fP\fIwidth\fP\fB\fP\fB, double \fI\fIheight\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_sCAL_s (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_charp \fP\fI\fP\fIunit\fP\fB\fP\fB, png_charp \fP\fI\fP\fIwidth\fP\fB\fP\fB, png_charp \fI\fIheight\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_sig (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_sRGB (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, int \fI\fIintent\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_sPLT (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_spalette_p \fI\fIpalette\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_start_row (png_structp \fI\fIpng_ptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_tEXt (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_charp \fP\fI\fP\fIkey\fP\fB\fP\fB, png_charp \fP\fI\fP\fItext\fP\fB\fP\fB, png_size_t \fI\fItext_len\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_tIME (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_timep \fI\fImod_time\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_tRNS (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_bytep \fP\fI\fP\fItrans\fP\fB\fP\fB, png_color_16p \fP\fI\fP\fIvalues\fP\fB\fP\fB, int \fP\fI\fP\fInumber\fP\fB\fP\fB, int \fI\fIcolor_type\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_write_zTXt (png_structp \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, png_charp \fP\fI\fP\fIkey\fP\fB\fP\fB, png_charp \fP\fI\fP\fItext\fP\fB\fP\fB, png_size_t \fP\fI\fP\fItext_len\fP\fB\fP\fB, int \fI\fIcompression\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoidpf png_zalloc (voidpf \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, uInt \fP\fI\fP\fIitems\fP\fB\fP\fB, uInt \fI\fIsize\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+\fB\fBvoid png_zfree (voidpf \fP\fI\fP\fIpng_ptr\fP\fB\fP\fB, voidpf \fI\fIptr\fP\fB\fP\fB);\fP\fP
+
+\fI\fB
+
+\fI\fB\fI\fB
+
+\fI\fB
+
+.SH DESCRIPTION
+The functions listed above are used privately by libpng
+and are not recommended for use by applications.  They are
+not "exported" to applications using shared libraries.  They
+are listed alphabetically here as an aid to libpng maintainers.
+See png.h for more information on these functions.
+
+.SH SEE ALSO
+libpng(3), png(5)
+.SH AUTHOR
+Glenn Randers-Pehrson

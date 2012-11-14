@@ -1,0 +1,59 @@
+#
+# File:     makeprog.va
+# Author:   David Webster
+# Created:  1999
+# Updated:
+# Copyright:    (c) David Webster
+#
+# Makefile environment for building samples. Include this from
+# your own makefile.
+# Use FINAL=1 argument to nmake to build final version with no debugging
+# info
+
+#
+# Define inference rules for compiling C++ files.
+#
+{$(THISDIR)}.cpp{$(OPATH)}.obj:
+    @echo $<
+    icc @<<
+    $(CPPFLAGS) /Fo$@ /Tp $<
+    $(THISDIR)\$(@B).cpp
+<<
+
+all:    $(PROGTARGET)
+
+wx:
+        cd $(WXDIR)\src\os2
+        nmake -f makefile.va FINAL=$(FINAL)
+        cd $(THISDIR)
+
+wxclean:
+        cd $(WXDIR)\src\os2
+        nmake -f makefile.va clean
+        cd $(THISDIR)
+
+$(PROGRAM).obj:: $(OPATH)\$(PROGRAM).obj
+$(OPATH)\$(PROGRAM).obj: $(THISDIR)\$(PROGRAM).cpp
+
+$(PROGRAM).res:: $(PROGRES)
+$(PROGRES):
+    $(RC) -I $(WXDIR)\include\wx\os2 -D __VISAGECPP__ -r $(PROGRC) $(PROGRES)
+
+$(PROGRAM).exe:: $(PROGTARGET)
+$(PROGTARGET):   $(OBJECTS) $(PROGRES) $(DUMMYOBJ) $(WXLIB)
+    @echo " Link::Linker "
+    $(LINK) @<<
+        /B" $(LINKFLAGS)" /Fe$@
+        $(LINKLIBS)
+        $(OBJECTS)
+        $(LIBS)
+<<
+  $(RC) $(PROGRES) $(PROGTARGET)
+
+clean:
+        -erase $(OBJECTS)
+        -erase $(OPATH)\*.exe
+        -erase $(OPATH)\*.obj
+        -erase $(OPATH)\*.res
+        -erase $(OPATH)\*.map
+

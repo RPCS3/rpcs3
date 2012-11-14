@@ -1,0 +1,35 @@
+#
+# File:     makefile.va
+# Author:   David Webster
+# Created:  1999
+# Updated:
+# Copyright:    (c) 1999, David Webster
+#
+# "%W% %G%"
+#
+# Makefile : Builds wxWindows library wx.lib for VisualAge C++ V3.0 for OS/2
+# Arguments:
+#
+# FINAL=1 argument to nmake to build version with no debugging info.
+# dll builds a library (wxdll.lib) suitable for creating DLLs
+#    * Note that the dll target is experimental - see docs/dll.txt.
+#
+!include <makeva.env>
+
+THISDIR=$(WXDIR)\src
+
+all:
+    cd os2
+    nmake -f makefile.va
+    cd $(THISDIR)
+
+clean:
+    cd os2
+    nmake -f makefile.va clean
+    cd $(THISDIR)
+
+cleanall:
+    cd os2
+    nmake -f makefile.va cleanall
+    cd $(THISDIR)
+

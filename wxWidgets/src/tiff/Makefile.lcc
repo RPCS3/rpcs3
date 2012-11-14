@@ -1,0 +1,129 @@
+# $Header$
+#
+# Tag Image File Format Library
+#
+# Copyright (c) 1988-1997 Sam Leffler
+# Copyright (c) 1991-1997 Silicon Graphics, Inc.
+# 
+# Permission to use, copy, modify, distribute, and sell this software and 
+# its documentation for any purpose is hereby granted without fee, provided
+# that (i) the above copyright notices and this permission notice appear in
+# all copies of the software and related documentation, and (ii) the names of
+# Sam Leffler and Silicon Graphics may not be used in any advertising or
+# publicity relating to the software without the specific, prior written
+# permission of Stanford and Silicon Graphics.
+# 
+# THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND, 
+# EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY 
+# WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.  
+# 
+# IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
+# ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
+# OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+# WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF 
+# LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE 
+# OF THIS SOFTWARE.
+#
+DESTDIR=.
+#
+INSTALL=install
+NULL=
+
+IPATH=	-I. -I../jpeg
+CONF_LIBRARY=\
+	${NULL}
+COPTS=	-Oloop -cwagshf -d1 -b0 -v -DNDEBUG -rr -j135i
+CFLAGS=	${COPTS} ${IPATH} ${CONF_LIBRARY}
+#
+INCS=	tiff.h tiffio.h
+SRCS=	tif_fax3.c \
+	tif_fax4.c \
+	tif_aux.c \
+	tif_atari.c \
+	tif_ccittrle.c \
+	tif_close.c \
+	tif_compress.c \
+	tif_dir.c \
+	tif_dirinfo.c \
+	tif_dirread.c \
+	tif_dirwrite.c \
+	tif_dumpmode.c \
+	tif_error.c \
+	tif_getimage.c \
+	tif_jpeg.c \
+	tif_flush.c \
+	tif_lzw.c \
+	tif_next.c \
+	tif_open.c \
+	tif_packbits.c \
+	tif_print.c \
+	tif_read.c \
+	tif_swab.c \
+	tif_strip.c \
+	tif_thunder.c \
+	tif_tile.c \
+	tif_version.c \
+	tif_warning.c \
+	tif_write.c \
+	${NULL}
+OBJS=	tif_fax3.o \
+	tif_fax4.o \
+	tif_aux.o \
+	tif_atari.o \
+	tif_ccittrle.o \
+	tif_close.o \
+	tif_compress.o \
+	tif_dir.o \
+	tif_dirinfo.o \
+	tif_dirread.o \
+	tif_dirwrite.o \
+	tif_dumpmode.o \
+	tif_error.o \
+	tif_getimage.o \
+	tif_jpeg.o \
+	tif_flush.o \
+	tif_lzw.o \
+	tif_next.o \
+	tif_open.o \
+	tif_packbits.o \
+	tif_print.o \
+	tif_read.o \
+	tif_swab.o \
+	tif_strip.o \
+	tif_thunder.o \
+	tif_tile.o \
+	tif_version.o \
+	tif_warning.o \
+	tif_write.o \
+	${NULL}
+ALL=	tiffrnb.lib
+
+all:	${ALL}
+
+${ALL}:	${OBJS}
+	${AR} ${ARFLAGS} $@ r $<
+
+${OBJS}: tiffio.h tiff.h tiffcomp.h tiffiop.h tiffconf.h
+tif_fax3.o: tif_fax3.c g3states.h t4.h tif_fax3.h
+
+g3states.h: mkg3states.c t4.h
+	${CC} -o mkg3states.ttp ${CFLAGS} mkg3states.c
+	./mkg3states -c > g3states.h
+
+install: all installh
+	-for i in ${ALL}; do \
+	${INSTALL} -c -m 644 $$i ${DESTDIR}/lib/$$i; \
+	done
+
+installh: ${INCS}
+	-for i in ${INCS}; do \
+		h=`basename $$i`; \
+		cmp -s $$i ${DESTDIR}/include/$$h || \
+		  ${INSTALL} -c -m 444 $$i ${DESTDIR}/include/$$h; \
+	done
+
+clean:
+	rm -f ${ALL} ${OBJS} mkg3states.ttp mkg3states.o g3states.h
+
+tags:	${SRCS}
+	${CTAGS} ${SRCS}

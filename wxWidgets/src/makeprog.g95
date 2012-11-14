@@ -1,0 +1,32 @@
+#
+# File:		makeprog.g95
+# Author:	Julian Smart
+# Created:	1999
+# Updated:	
+# Copyright:	(c) Julian Smart, 1999
+#
+# Include file for Cygwin/Mingw32 samples
+
+# WXDIR = $(WXWIN)
+
+include $(WXDIR)/src/makeg95.env
+
+all:    $(TARGET)$(GUISUFFIX)$(EXESUFF) $(TARGET)_resources.$(OBJSUFF) $(EXTRATARGETS)
+
+$(TARGET)$(GUISUFFIX)$(EXESUFF):	$(OBJECTS) $(TARGET)_resources.$(OBJSUFF) $(WXLIB)
+	$(CXX) $(ALL_LDFLAGS) -o $(TARGET)$(GUISUFFIX)$(EXESUFF) $(OBJECTS) $(TARGET)_resources.$(OBJSUFF) $(LDLIBS)
+
+$(TARGET)_resources.o:  $(TARGET).rc
+	$(RESCOMP) $(RCINPUTSWITCH) $(TARGET).rc $(RCOUTPUTSWITCH) $(TARGET)_resources.o $(RESFLAGS)
+
+clean:
+	-$(RM) *.o
+	-$(RM) $(TARGET)_resources.o
+	-$(RM) core
+	-$(RM) *.rsc
+	-$(RM) *.res
+	-$(RM) *.exe
+
+cleanall: clean
+	-$(RM) $(TARGET).exe
+

@@ -1,0 +1,117 @@
+/*
+ *  henv.ci
+ *
+ *  $Id: henv.ci 1446 1999-01-22 10:52:42Z RR $
+ *
+ *  Function names
+ *
+ *  The iODBC driver manager.
+ *  
+ *  Copyright (C) 1995 by Ke Jin <kejin@empress.com> 
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Library General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Library General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Library General Public
+ *  License along with this library; if not, write to the Free
+ *  Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+/* There are some exceptions :
+ * on FreeBSD 2.x      CLI_NAME_PREFIX is defined in Config.mk as "_SQL"
+ * on HP/UX s300/s400, CLI_NAME_PREFIX is defined in Config.mk as "_SQL" 
+ * on AIX 3.x 4.x,     CLI_NAME_PREFIX is defined in Config.mk as ".SQL" 
+ */
+#ifndef	CLI_NAME_PREFIX
+#  define CLI_NAME_PREFIX	"SQL"	/* using call by value prefix */ 
+#else
+# ifdef NEED_USCORE
+#  define CLI_NAME_PREFIX	"_SQL"
+# endif
+#endif
+
+static struct
+  {
+    int en_idx;
+    char *symbol;
+  }
+odbcapi_symtab[] = {
+
+#if (ODBCVER >= 0x0300)
+        { en_AllocHandle          CLI_NAME_PREFIX "AllocHandle" },
+        { en_FreeHandle           CLI_NAME_PREFIX "FreeHandle" },
+#endif
+        { en_AllocEnv,            CLI_NAME_PREFIX "AllocEnv" },
+        { en_AllocConnect,        CLI_NAME_PREFIX "AllocConnect" },
+        { en_Connect,             CLI_NAME_PREFIX "Connect" },
+        { en_DriverConnect,       CLI_NAME_PREFIX "DriverConnect" },
+        { en_BrowseConnect,       CLI_NAME_PREFIX "BrowseConnect" },
+
+        { en_DataSources,         CLI_NAME_PREFIX "DataSources" },
+        { en_Drivers,             CLI_NAME_PREFIX "Driver" },
+        { en_GetInfo,             CLI_NAME_PREFIX "GetInfo" },
+        { en_GetFunctions,        CLI_NAME_PREFIX "GetFunctions" },
+        { en_GetTypeInfo,         CLI_NAME_PREFIX "GetTypeInfo" },
+
+        { en_SetConnectOption,    CLI_NAME_PREFIX "SetConnectOption" },
+        { en_GetConnectOption,    CLI_NAME_PREFIX "GetConnectOption" },
+        { en_SetStmtOption,       CLI_NAME_PREFIX "SetStmtOption" },
+        { en_GetStmtOption,       CLI_NAME_PREFIX "GetStmtOption" },
+
+        { en_AllocStmt,           CLI_NAME_PREFIX "AllocStmt" },
+        { en_Prepare,             CLI_NAME_PREFIX "Prepare" },
+        { en_BindParameter,       CLI_NAME_PREFIX "BindParameter" },
+        { en_ParamOptions,        CLI_NAME_PREFIX "ParamOptions" },
+        { en_GetCursorName,       CLI_NAME_PREFIX "GetCursorName" },
+        { en_SetCursorName,       CLI_NAME_PREFIX "SetCursorName" },
+        { en_SetScrollOptions,    CLI_NAME_PREFIX "SetScrollOptions" },
+        { en_SetParam,            CLI_NAME_PREFIX "SetParam" },
+
+        { en_Execute,             CLI_NAME_PREFIX "Execute" },
+        { en_ExecDirect,          CLI_NAME_PREFIX "ExecDirect" },
+        { en_NativeSql,           CLI_NAME_PREFIX "NativeSql" },
+        { en_DescribeParam,       CLI_NAME_PREFIX "DescribeParam" },
+        { en_NumParams,           CLI_NAME_PREFIX "NumParams" },
+        { en_ParamData,           CLI_NAME_PREFIX "ParamData" },
+        { en_PutData,             CLI_NAME_PREFIX "PutData" },
+
+        { en_RowCount,            CLI_NAME_PREFIX "RowCount" },
+        { en_NumResultCols,       CLI_NAME_PREFIX "NumResultCols" },
+        { en_DescribeCol,         CLI_NAME_PREFIX "DescribeCol" },
+        { en_ColAttributes,       CLI_NAME_PREFIX "ColAttributes" },
+        { en_BindCol,             CLI_NAME_PREFIX "BindCol" },
+        { en_Fetch,               CLI_NAME_PREFIX "Fetch" },
+        { en_ExtendedFetch,       CLI_NAME_PREFIX "ExtendedFetch" },
+        { en_GetData,             CLI_NAME_PREFIX "GetData" },
+        { en_SetPos,              CLI_NAME_PREFIX "SetPos" },
+        { en_MoreResults,         CLI_NAME_PREFIX "MoreResults" },
+        { en_Error,               CLI_NAME_PREFIX "Error" },
+
+        { en_ColumnPrivileges,    CLI_NAME_PREFIX "ColumnPrivileges" },
+        { en_Columns,             CLI_NAME_PREFIX "Columns" },
+        { en_ForeignKeys,         CLI_NAME_PREFIX "ForeignKeys" },
+        { en_PrimaryKeys,         CLI_NAME_PREFIX "PrimaryKeys" },
+        { en_ProcedureColumns,    CLI_NAME_PREFIX "ProcedureColumns" },
+        { en_Procedures,          CLI_NAME_PREFIX "Procedures" },
+        { en_SpecialColumns,      CLI_NAME_PREFIX "SpecialColumns" },
+        { en_Statistics,          CLI_NAME_PREFIX "Statistics" },
+        { en_TablePrivileges,     CLI_NAME_PREFIX "TablePrivileges" },
+        { en_Tables,              CLI_NAME_PREFIX "Tables" },
+
+        { en_FreeStmt,            CLI_NAME_PREFIX "FreeStmt" },
+        { en_Cancel,              CLI_NAME_PREFIX "Cancel" },
+        { en_Transact,            CLI_NAME_PREFIX "Transact" },
+
+        { en_Disconnect,          CLI_NAME_PREFIX "Disconnect" },
+        { en_FreeConnect,         CLI_NAME_PREFIX "FreeConnect" },
+        { en_FreeEnv,             CLI_NAME_PREFIX "FreeEnv" },
+
+        { en_NullProc,            NULL }
+};

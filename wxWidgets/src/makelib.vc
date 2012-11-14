@@ -1,0 +1,49 @@
+#
+# File:		makelib.vc
+# Author:	Julian Smart
+# Created:	1999
+# Updated:
+# Copyright:	(c) Julian Smart
+#
+# Makefile : Builds a library for a utility
+# Use FINAL=1 argument to nmake to build final version with no debugging
+# info
+
+# Set WXDIR for your system (hint, set an environment variable named WXWIN)
+WXDIR = $(WXWIN)
+
+!include $(WXDIR)\src\makevc.env
+
+!if "$(RM)" == ""
+RM= erase
+!endif
+
+all:    $(D) $(EXTRATARGETS) $(LIBTARGET)
+
+$(D) :
+	mkdir $(D)
+
+wx:
+        cd $(WXDIR)\src\msw
+        nmake -f makefile.vc FINAL=$(FINAL)
+
+wxclean:
+        cd $(WXDIR)\src\msw
+        nmake -f makefile.vc clean
+
+$(LIBTARGET): $(OBJECTS)
+	-$(RM) $(LIBTARGET)
+	$(implib) @<<
+-out:$(LIBTARGET)
+-machine:$(CPU)
+$(OBJECTS)
+<<
+
+clean:
+        -$(RM) $(LIBTARGET)
+        -$(RM) $(OBJECTS)
+        -$(RM) *.exe
+        -$(RM) *.res
+        -$(RM) *.map
+        -$(RM) *.sbr
+        -$(RM) *.pdb

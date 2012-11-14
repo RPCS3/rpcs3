@@ -1,0 +1,7 @@
+#	$Header$
+
+o tiffcmp read data by strip/tile instead of scanline
+o YCbCr sampling support
+o extracate colorspace conversion support
+o look at isolating all codecs from TIFF library
+o JPEG colormode order dependency problem

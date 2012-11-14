@@ -1,0 +1,79 @@
+#
+# File:		makefile.nt
+# Author:	Julian Smart
+# Created:	1999
+# Updated:
+# Copyright:	(c) Julian Smart
+#
+# Makefile environment for building samples. Include this from
+# your own makefile.
+# Use FINAL=1 argument to nmake to build final version with no debugging
+# info
+
+# Set WXDIR for your system
+WXDIR = $(WXWIN)
+
+!ifndef WXUSINGDLL
+WXUSINGDLL=0
+!endif
+
+!include $(WXDIR)\src\makevc.env
+
+!if "$(RM)" == ""
+RM= erase
+!endif
+
+all:    $(PROGRAM).exe
+
+wx:
+        cd $(WXDIR)\src\msw
+        nmake -f makefile.vc FINAL=$(FINAL)
+#        cd $(THISDIR)
+
+wxclean:
+        cd $(WXDIR)\src\msw
+        nmake -f makefile.vc clean
+#        cd $(THISDIR)
+
+
+!if "$(wxUSE_GUI)" == ""
+wxUSE_GUI=1
+!endif
+
+!if "$(wxUSE_GUI)" == "1"
+
+#!if "$(WXUSINGDLL)" == "1"
+DUMMYOBJ=
+#!endif
+
+$(PROGRAM).exe:      $(WXLIB) $(OBJECTS) $(PROGRAM).res
+	$(link) @<<
+-out:$(PROGRAM).exe
+$(LINKFLAGS)
+$(OBJECTS) $(DUMMYOBJ) $(PROGRAM).res
+$(LIBS)
+<<
+
+$(PROGRAM).res :      $(PROGRAM).rc $(WXDIR)\include\wx\msw\wx.rc
+    $(rc) -r /i$(WXDIR)\include /i$(WXDIR)\contrib\include -fo$@ $(PROGRAM).rc
+
+!else
+
+$(PROGRAM).exe:      $(WXLIB) $(OBJECTS)
+	$(link) @<<
+-out:$(PROGRAM).exe
+$(LINKFLAGS)
+$(OBJECTS) $(DUMMYOBJ)
+$(LIBS)
+<<
+
+!endif
+
+
+clean:
+        -$(RM) *.obj
+        -$(RM) *.exe
+        -$(RM) *.res
+        -$(RM) *.map
+        -$(RM) *.sbr
+        -$(RM) *.pdb

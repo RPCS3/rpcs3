@@ -1,0 +1,27 @@
+/* XPM */
+static const char * htmsidep_xpm[] = {
+/* columns rows colors chars-per-pixel */
+"16 15 6 1",
+". c Black",
+"X c #FFFFFF",
+"+ c #808080",
+"  c None",
+"O c #0000C0",
+"o c #C0C0C0",
+/* pixels */
+"                ",
+" .............. ",
+" .XXXX.ooooooo. ",
+" .XOXX.oo...oo. ",
+" .XXOX.ooooooo. ",
+" .OOOO.o...+.o. ",
+" .XXOX.ooooooo. ",
+" .XOXX.ooooooo. ",
+" .XXXX.o..+ooo. ",
+" .XXOX.ooooooo. ",
+" .XOXX.o...+.o. ",
+" .OOOO.ooooooo. ",
+" .XOXX.o.+...o. ",
+" .XXOX.ooooooo. ",
+" .............. "
+};

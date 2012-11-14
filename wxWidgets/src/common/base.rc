@@ -1,0 +1,49 @@
+///////////////////////////////////////////////////////////////////////////////
+// Name:        src/base/base.rc
+// Purpose:     contains version info resource for wxBase DLL build
+// Author:      Vadim Zeitlin
+// Modified by:
+// Created:     09.07.00
+// RCS-ID:      $Id: base.rc 13410 2002-01-06 14:51:28Z VS $
+// Copyright:   (c) 2000 Vadim Zeitlin
+// Licence:     wxWindows license
+///////////////////////////////////////////////////////////////////////////////
+
+#include "wx/version.h"
+
+#ifdef _DEBUG
+    #define DLL_FLAGS 0x1L
+    #define DLL_SUFFIX "d"
+#else
+    #define DLL_FLAGS 0x0L
+    #define DLL_SUFFIX ""
+#endif
+
+1 VERSIONINFO
+ FILEVERSION wxMAJOR_VERSION,wxMINOR_VERSION,wxRELEASE_NUMBER,wxBETA_NUMBER
+ PRODUCTVERSION wxMAJOR_VERSION,wxMINOR_VERSION,wxRELEASE_NUMBER,wxBETA_NUMBER
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS DLL_FLAGS
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "Comments", "wxBase (part of Windows) cross-platform framework\0"
+            VALUE "CompanyName", "wxWindows development team\0"
+            VALUE "FileDescription", "wxBase is a non GUI part of wxWindows\0"
+            VALUE "FileVersion", wxVERSION_NUM_DOT_STRING "\0"
+            VALUE "InternalName", "wxBase\0"
+            VALUE "LegalCopyright", "Copyright © 1993-2002 wxWindows development team\0"
+            VALUE "LegalTrademarks", "\0"
+            VALUE "OriginalFilename", "wxbase" wxVERSION_NUM_STRING DLL_SUFFIX ".dll\0"
+            VALUE "PrivateBuild", "\0"
+            VALUE "ProductName", "wxWindows\0"
+            VALUE "ProductVersion", wxVERSION_NUM_DOT_STRING "\0"
+            VALUE "SpecialBuild", "\0"
+        END
+    END
+END

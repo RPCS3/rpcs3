@@ -1,0 +1,335 @@
+#
+# File:      makefile.vc
+# Author:    David Webster
+# Created:   1999
+# Updated:
+# Copyright:
+# Licence:   wxWindows Licence
+# "%W% %G%"
+#
+# Makefile : Builds os2jpeg.lib library for OS/2 3.0/4.0
+
+# Suffixes
+OBJSUFF=obj
+SRCSUFF=cpp
+
+OS2FLAGS=/c /W2 /DOS232 /D__VISAGECPP__ /D__WXPM__ /DJPEGLOCAL /Ss /Q /N100 /Tdc
+OS2LINKFLAGS=/BASE:0x00010000 /PMTYPE:PM /NOE /NOD /ALIGN:16
+OS2LIBFLAGS=/NOL /NOE
+OS2LIBS=CPPOM30.lib CPPOOC3.LIB OS2386.LIB
+
+!if "$(WXMAKINGDLL)" != "0"
+EXTRADLLFLAGS=/DWXMAKINGDLL=1 /Ge- /D__OS2DLL__
+EXTRALNKFLAGS=/DLL
+!endif
+
+# Change WXDIR or WXWIN to wherever wxWindows is found
+WXDIR = $(WXWIN)
+
+OS2JPEGDIR=$(WXDIR)\src\jpeg
+OS2JPEGINC=$(WINJPEGDIR)
+!if "$(WXMAKINGDLL)" != "1"
+OS2JPEGLIB=$(WXDIR)\lib\os2jpeg.lib
+!else
+OS2JPEGLIB=$(WXDIR)\lib\os2jpeg.dll
+!endif
+
+TEMP1TGT=$(WXDIR)\lib\os2jpeg1.lib
+TEMP2TGT=$(WXDIR)\lib\os2jpeg2.lib
+
+INC=-I$(WXDIR)\src\jpeg -I$(WXDIR)\Include
+!ifndef FINAL
+FINAL=0
+!endif
+
+!if "$(NOPCH)" == "1"
+PCH=
+PRECOMP=
+MAKEPRECOMP=
+!else
+PCH=$(WXLIBNAME).pch
+PRECOMP=/Si$(PCH)
+MAKEPRECOMP=/Fi$(PCH)
+!endif
+
+!if "$(FINAL)" == "0"
+!if "$(WXMAKINGDLL)" == "1"
+D=DebugOS2DLL
+!else
+D=DebugOS2
+!endif
+
+OPT =
+DEBUG_FLAGS= /Ti /D__WXDEBUG__ #/Fb
+LINK_DEBUG_FLAGS=/DEBUG
+CRTFLAG=/Gm /Gd
+!else
+# /O1 - smallest code
+# /O2 - fastest code
+!if "$(WXMAKINGDLL)" == "1"
+D=RelseOS2DLL
+!else
+D=RelseOS2
+!endif
+OPT = /O+ /Oc /G5
+DEBUG_FLAGS=
+LINK_DEBUG_FLAGS=/RELEASE
+CRTFLAG=/Gm /Gd
+!endif
+
+!if [md $(OS2JPEGDIR)\$D]
+!endif
+
+CPPFLAGS=$(OS2FLAGS) $(EXTRADLLFLAGS) $(DEBUG_FLAGS) $(PRECOMP) $(INC) $(OPT) $(CRTFLAG)
+LINKFKAGS=$(OS2LINKFLAGS) $(EXTRALNKFLAGS)
+
+{..\jpeg}.c{..\jpeg\$D}.obj:
+    @echo $<
+    icc @<<
+$(CPPFLAGS) /Fo$@ /Tp $<
+<<
+
+SYSDEPMEM= ..\jpeg\$D\jmemnobs.obj
+
+# library object files common to compression and decompression
+COMOBJECTS= \
+  ..\jpeg\$D\jcomapi.obj \
+  ..\jpeg\$D\jutils.obj \
+  ..\jpeg\$D\jerror.obj \
+  ..\jpeg\$D\jmemmgr.obj \
+  $(SYSDEPMEM)
+
+COMLIBOBJS= \
+  jcomapi.obj \
+  jutils.obj \
+  jerror.obj \
+  jmemmgr.obj \
+  jmemnobs
+
+# compression library object files
+CLIBOBJECTS= \
+  ..\jpeg\$D\jcapimin.obj \
+  ..\jpeg\$D\jcapistd.obj \
+  ..\jpeg\$D\jctrans.obj \
+  ..\jpeg\$D\jcparam.obj \
+  ..\jpeg\$D\jdatadst.obj \
+  ..\jpeg\$D\jcinit.obj \
+  ..\jpeg\$D\jcmaster.obj \
+  ..\jpeg\$D\jcmarker.obj \
+  ..\jpeg\$D\jcmainct.obj \
+  ..\jpeg\$D\jcprepct.obj \
+  ..\jpeg\$D\jccoefct.obj \
+  ..\jpeg\$D\jccolor.obj \
+  ..\jpeg\$D\jcsample.obj \
+  ..\jpeg\$D\jchuff.obj \
+  ..\jpeg\$D\jcphuff.obj \
+  ..\jpeg\$D\jcdctmgr.obj \
+  ..\jpeg\$D\jfdctfst.obj \
+  ..\jpeg\$D\jfdctflt.obj \
+  ..\jpeg\$D\jfdctint.obj
+
+CLIBLIBOBJS= \
+  jcapimin.obj \
+  jcapistd.obj \
+  jctrans.obj \
+  jcparam.obj \
+  jdatadst.obj \
+  jcinit.obj \
+  jcmaster.obj \
+  jcmarker.obj \
+  jcmainct.obj \
+  jcprepct.obj \
+  jccoefct.obj \
+  jccolor.obj \
+  jcsample.obj \
+  jchuff.obj \
+  jcphuff.obj \
+  jcdctmgr.obj \
+  jfdctfst.obj \
+  jfdctflt.obj \
+  jfdctint.obj
+
+# decompression library object files
+DLIBOBJECTS= \
+  ..\jpeg\$D\jdapimin.obj \
+  ..\jpeg\$D\jdapistd.obj \
+  ..\jpeg\$D\jdtrans.obj \
+  ..\jpeg\$D\jdatasrc.obj \
+  ..\jpeg\$D\jdmaster.obj \
+  ..\jpeg\$D\jdinput.obj \
+  ..\jpeg\$D\jdmarker.obj \
+  ..\jpeg\$D\jdhuff.obj \
+  ..\jpeg\$D\jdphuff.obj \
+  ..\jpeg\$D\jdmainct.obj \
+  ..\jpeg\$D\jdcoefct.obj \
+  ..\jpeg\$D\jdpostct.obj \
+  ..\jpeg\$D\jddctmgr.obj \
+  ..\jpeg\$D\jidctfst.obj \
+  ..\jpeg\$D\jidctflt.obj \
+  ..\jpeg\$D\jidctint.obj \
+  ..\jpeg\$D\jidctred.obj \
+  ..\jpeg\$D\jdsample.obj \
+  ..\jpeg\$D\jdcolor.obj \
+  ..\jpeg\$D\jquant1.obj \
+  ..\jpeg\$D\jquant2.obj \
+  ..\jpeg\$D\jdmerge.obj
+
+DLIBLIBOBJS= \
+  jdapimin.obj \
+  jdapistd.obj \
+  jdtrans.obj \
+  jdatasrc.obj \
+  jdmaster.obj \
+  jdinput.obj \
+  jdmarker.obj \
+  jdhuff.obj \
+  jdphuff.obj \
+  jdmainct.obj \
+  jdcoefct.obj \
+  jdpostct.obj \
+  jddctmgr.obj \
+  jidctfst.obj \
+  jidctflt.obj \
+  jidctint.obj \
+  jidctred.obj \
+  jdsample.obj \
+  jdcolor.obj \
+  jquant1.obj \
+  jquant2.obj \
+  jdmerge.obj
+
+# These objectfiles are included in libjpeg.lib
+OBJECTS=  $(COMOBJECTS) $(CLIBOBJECTS) $(DLIBOBJECTS)
+
+# object files for sample applications (excluding library files)
+COBJECTS= \
+  ..\jpeg\$D\cjpeg.obj \
+  ..\jpeg\$D\rdppm.obj \
+  ..\jpeg\$D\rdgif.obj \
+  ..\jpeg\$D\rdtarga.obj \
+  ..\jpeg\$D\rdrle.obj \
+  ..\jpeg\$D\rdbmp.obj \
+  ..\jpeg\$D\rdswitch.obj \
+  ..\jpeg\$D\cdjpeg.obj
+
+DOBJECTS= \
+  ..\jpeg\$D\djpeg.obj \
+  ..\jpeg\$D\wrppm.obj \
+  ..\jpeg\$D\wrgif.obj \
+  ..\jpeg\$D\wrtarga.obj \
+  ..\jpeg\$D\wrrle.obj \
+  ..\jpeg\$D\wrbmp.obj \
+  ..\jpeg\$D\rdcolmap.obj \
+  ..\jpeg\$D\cdjpeg.obj
+
+TROBJECTS= \
+  ..\jpeg\$D\jpegtran.obj \
+  ..\jpeg\$D\rdswitch.obj \
+  ..\jpeg\$D\cdjpeg.obj \
+  ..\jpeg\$D\transupp.obj
+
+all:  $(OBJECTS) $(OS2JPEGLIB)
+
+$(COMLIBOBJS):
+  copy ..\jpeg\$D\jcomapi.obj
+  copy ..\jpeg\$D\jutils.obj
+  copy ..\jpeg\$D\jerror.obj
+  copy ..\jpeg\$D\jmemmgr.obj
+  copy ..\jpeg\$D\jmemnobs.obj
+
+$(CLIBLIBOBJS):
+  copy ..\jpeg\$D\jcapimin.obj
+  copy ..\jpeg\$D\jcapistd.obj
+  copy ..\jpeg\$D\jctrans.obj
+  copy ..\jpeg\$D\jcparam.obj
+  copy ..\jpeg\$D\jdatadst.obj
+  copy ..\jpeg\$D\jcinit.obj
+  copy ..\jpeg\$D\jcmaster.obj
+  copy ..\jpeg\$D\jcmarker.obj
+  copy ..\jpeg\$D\jcmainct.obj
+  copy ..\jpeg\$D\jcprepct.obj
+  copy ..\jpeg\$D\jccoefct.obj
+  copy ..\jpeg\$D\jccolor.obj
+  copy ..\jpeg\$D\jcsample.obj
+  copy ..\jpeg\$D\jchuff.obj
+  copy ..\jpeg\$D\jcphuff.obj
+  copy ..\jpeg\$D\jcdctmgr.obj
+  copy ..\jpeg\$D\jfdctfst.obj
+  copy ..\jpeg\$D\jfdctflt.obj
+  copy ..\jpeg\$D\jfdctint.obj
+
+$(DLIBLIBOBJS):
+  copy ..\jpeg\$D\jdapimin.obj
+  copy ..\jpeg\$D\jdapistd.obj
+  copy ..\jpeg\$D\jdtrans.obj
+  copy ..\jpeg\$D\jdatasrc.obj
+  copy ..\jpeg\$D\jdmaster.obj
+  copy ..\jpeg\$D\jdinput.obj
+  copy ..\jpeg\$D\jdmarker.obj
+  copy ..\jpeg\$D\jdhuff.obj
+  copy ..\jpeg\$D\jdphuff.obj
+  copy ..\jpeg\$D\jdmainct.obj
+  copy ..\jpeg\$D\jdcoefct.obj
+  copy ..\jpeg\$D\jdpostct.obj
+  copy ..\jpeg\$D\jddctmgr.obj
+  copy ..\jpeg\$D\jidctfst.obj
+  copy ..\jpeg\$D\jidctflt.obj
+  copy ..\jpeg\$D\jidctint.obj
+  copy ..\jpeg\$D\jidctred.obj
+  copy ..\jpeg\$D\jdsample.obj
+  copy ..\jpeg\$D\jdcolor.obj
+  copy ..\jpeg\$D\jquant1.obj
+  copy ..\jpeg\$D\jquant2.obj
+  copy ..\jpeg\$D\jdmerge.obj
+
+!if "$(WXMAKINGDLL)" != "1"
+
+$(WXDIR)\lib\os2jpeg1.lib: \
+    $(COMLIBOBJS) \
+    $(CLIBLIBOBJS)
+ -touch $(WXDIR)\lib\os2jpeg1.lib
+ -del $(WXDIR)\lib\os2jpeg1.lib
+ ilib $(OS2LIBFLAGS) $@ @<<
+    $**;
+<<
+
+$(WXDIR)\lib\os2jpeg2.lib: $(DLIBLIBOBJS)
+ -touch $(WXDIR)\lib\os2jpeg2.lib
+ -del $(WXDIR)\lib\os2jpeg2.lib
+ ilib $(OS2LIBFLAGS) $@ @<<
+    $**;
+<<
+
+$(WXDIR)\lib\os2jpeg.lib: \
+    $(TEMP1TGT) \
+    $(TEMP2TGT)
+ -touch $(WXDIR)\lib\os2jpeg.lib
+ -del $(WXDIR)\lib\os2jpeg.lib
+ ilib $(OS2LIBFLAGS) $@ @<<
+    $**;
+<<
+  del *.obj
+  del $(TEMP1TGT)
+  del $(TEMP2TGT)
+
+!else
+
+# Update the dynamic link library
+$(WXDIR)\lib\os2jpeg.dll: $(OBJECTS)
+    icc @<<
+    /B" $(LINKFLAGS)" /Fe$@
+    $(LIBS)
+    $(OBJECTS)
+    $(WXDIR)\src\os2\os2jpeg.def
+<<
+    implib $(WXDIR)\lib\os2jpegd.lib $(WXDIR)\src\os2\os2jpeg.def
+
+!endif
+
+clean:
+        del      $(OS2JPEGLIB)
+        erase /N $(OS2JPEGDIR)\$D
+        rd       $(OS2JPEGDIR)\$D
+
+cleanall:     clean
+

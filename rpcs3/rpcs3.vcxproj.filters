@@ -1,0 +1,346 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Emu">
+      <UniqueIdentifier>{29c70b04-59a5-4d5b-98f9-3584df137ed1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui">
+      <UniqueIdentifier>{98fb6fa5-9a9a-48a6-a6b4-be4b9a69b76e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="rpcs3">
+      <UniqueIdentifier>{47155d25-741d-42c0-8850-f22aafca082a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\SysCalls">
+      <UniqueIdentifier>{f306c137-6d2c-4e21-ba79-ac87d0ded22c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\SysCalls\lv2">
+      <UniqueIdentifier>{adfec460-d940-4482-9fdb-18cb0814c3d5}</UniqueIdentifier>
+      <ParseFiles>true</ParseFiles>
+    </Filter>
+    <Filter Include="Emu\CPU">
+      <UniqueIdentifier>{f66e37f9-5e58-443b-bcff-2e9e002ac89e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Loader">
+      <UniqueIdentifier>{6c36f15e-07fd-45d6-a81c-1ab43ee1b58b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io">
+      <UniqueIdentifier>{57263311-75a4-4309-81aa-b86fd212794b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GS">
+      <UniqueIdentifier>{461eddb5-b8a8-46be-918c-98cc7eaf995b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Include">
+      <UniqueIdentifier>{6fb03753-064a-456d-bb6f-9ceaed3776c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GS\GL">
+      <UniqueIdentifier>{e79e49c8-6967-4776-8f50-5479c3821b51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{9bd88f78-8528-48f3-b9e0-78e06476b04d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="rpcs3.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\MainFrame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\ConLog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Memory\Memory.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\MemoryViewer.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\DisAsmFrame.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\System.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Ini.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\CompilerELF.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\InterpreterDisAsm.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Process.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\GameViewer.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\ELF.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\ELF32.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\ELF64.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\PSF.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\SELF.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\Loader.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\PPCThread.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\PPCThreadManager.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\SPUThread.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\FuncList.cpp">
+      <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Lwmutex.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\Pad.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\DbgConsole.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GSManager.cpp">
+      <Filter>Emu\GS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Pad.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Resc.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Heap.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\FragmentProgram.cpp">
+      <Filter>Emu\GS\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\GLBuffers.cpp">
+      <Filter>Emu\GS\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\GLGSRender.cpp">
+      <Filter>Emu\GS\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\Program.cpp">
+      <Filter>Emu\GS\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\VertexProgram.cpp">
+      <Filter>Emu\GS\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\OpenGL.cpp">
+      <Filter>Emu\GS\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GSRender.cpp">
+      <Filter>Emu\GS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GL\ProgramBuffer.cpp">
+      <Filter>Emu\GS\GL</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_SPU_Thread.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\RSXThread.cpp">
+      <Filter>Emu\GS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\PPUThread.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\Thread.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="rpcs3.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Ini.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\DbgConsole.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\GameInfo.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\System.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\DisAsm.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPCThread.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPCThreadManager.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUDecoder.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUDisAsm.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUInterpreter.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUOpcodes.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUThread.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUDecoder.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUDisAsm.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUInterpreter.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUOpcodes.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\SPUThread.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\GS\GCM.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\GS\GSManager.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\GS\GSRender.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\GS\GL\GLGSRender.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\GS\Null\NullGSRender.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Pad.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\PadHandler.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Null\NullPadHandler.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\Memory.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Memory\MemoryBlock.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\ErrorCodes.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\SysCalls\SysCalls.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\CompilerELF.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\ConLog.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\DisAsmFrame.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\FrameBase.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\GameViewer.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\InterpreterDisAsm.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\MainFrame.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Gui\MemoryViewer.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\ELF.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\ELF32.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\ELF64.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\Loader.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\PSF.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\SELF.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Array.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\IdManager.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\MTProgressDialog.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Thread.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Timer.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

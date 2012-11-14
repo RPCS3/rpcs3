@@ -1,0 +1,124 @@
+/*
+ *  herr.ci
+ *
+ *  $Id: herr.ci 1446 1999-01-22 10:52:42Z RR $
+ *
+ *  Error messages
+ *
+ *  The iODBC driver manager.
+ *  
+ *  Copyright (C) 1995 by Ke Jin <kejin@empress.com> 
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Library General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2 of the License, or (at your option) any later version.
+ *
+ *  This library is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *  Library General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Library General Public
+ *  License along with this library; if not, write to the Free
+ *  Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+static const sqlerrmsg_t sqlerrmsg_tab[] =
+{
+        { en_00000, "00000", "" }, 
+        { en_01000, "01000", "General warning" },
+        { en_01002, "01002", "Disconnect error" },
+        { en_01004, "01004", "Data truncated" },
+        { en_01006, "01006", "Privilege not revoked" },
+        { en_01S00, "01S00", "Invalid connection string attribute" },
+        { en_01S01, "01S01", "Error in row" },
+        { en_01S02, "01S02", "Optional value changed" },
+        { en_01S03, "01S03", "No rows updated or deleted" },
+        { en_01S04, "01S04", "More than one row updated or deleted" },
+        { en_07001, "07001", "Wrong number of parameters" },
+        { en_07006, "07006", "Restricted data type attribute violation" },
+        { en_08001, "08001", "Unable to connect to data source" },
+        { en_08002, "08002", "Connection in use" },
+        { en_08003, "08003", "Connect not open" },
+        { en_08004, "08004", "Data source rejected establishment of connection" },
+        { en_08007, "08007", "Connection failure during transaction" },
+        { en_08S01, "08S01", "Communication link failure" },
+        { en_21S01, "21S01", "Insert value list does not match" },
+        { en_21S02, "21S02", "Degree of derived table does not match column list" },
+        { en_22001, "22001", "String data right truncation" },
+        { en_22003, "22003", "Numeric value out of range" },
+        { en_22005, "22005", "Error in assignment" },
+        { en_22008, "22008", "Datetime field overflow" },
+        { en_22012, "22012", "Division by zero" },
+        { en_22026, "22026", "String data, length mismatch" },
+        { en_23000, "23000", "Integrity constraint violation" },
+        { en_24000, "24000", "Invalid cursor state" },
+        { en_25000, "25000", "Invalid transaction state" },
+        { en_28000, "28000", "Invalid authorization specification" },
+        { en_34000, "34000", "Invalid cursor name" },
+        { en_37000, "37000", "Syntex error or access violation" },
+        { en_3C000, "3C000", "Duplicate cursor name" },
+        { en_40001, "40001", "Serialization failure" },
+        { en_42000, "42000", "Syntax error or access violation" },
+        { en_70100, "70100", "Operation aborted" },
+        { en_IM001, "IM001", "Driver does not support this function" },
+        { en_IM002, "IM002", "Data source name not found and no default "
+                           "driver specified. Driver could not be loaded" },
+        { en_IM003, "IM003", "Specified driver could not be loaded" },
+        { en_IM004, "IM004", "Driver's SQLAllocEnv() failed" },
+        { en_IM005, "IM005", "Driver's SQLAllocConnect() failed" },
+        { en_IM006, "IM006", "Driver's SQLSetConnectOption failed" },
+        { en_IM007, "IM007", "No data source or driver specified, dialog prohibited" },
+        { en_IM008, "IM008", "Dialog failed" },
+        { en_IM009, "IM009", "Unable to load translation DLL" },
+        { en_IM010, "IM010", "Data source name too long" },
+        { en_IM011, "IM011", "Driver name too long" },
+        { en_IM012, "IM012", "DRIVER keyword syntax error" },
+        { en_IM013, "IM013", "Trace file error" },
+        { en_IM014, "IM014", "Try to change tracing file while tracing is on" },
+        { en_S0001, "S0001", "Base table or view already exists" },
+        { en_S0002, "S0002", "Base table not found" },
+        { en_S0011, "S0011", "Index already exists" },
+        { en_S0012, "S0012", "Index not found" },
+        { en_S0021, "S0021", "Column already exists" },
+        { en_S0022, "S0022", "Column not found" },
+        { en_S0023, "S0023", "No default for column" },
+        { en_S1000, "S1000", "General error" },
+        { en_S1001, "S1001", "Memory allocation failure" },
+        { en_S1002, "S1002", "Invalid column number" },
+        { en_S1003, "S1003", "Program type out of range" },
+        { en_S1004, "S1004", "SQL data type out of range" },
+        { en_S1008, "S1008", "Operation canceled" },
+        { en_S1009, "S1009", "Invalid argument value" },
+        { en_S1010, "S1010", "Function sequence error" },
+        { en_S1011, "S1011", "Operation invalid at this time" },
+        { en_S1012, "S1012", "Invalid transaction operation code specified" },
+        { en_S1015, "S1015", "No cursor name available" },
+        { en_S1090, "S1090", "Invalid string or buffer length" },
+        { en_S1091, "S1091", "Descriptor type out of range" },
+        { en_S1092, "S1092", "Option type out of range" },
+        { en_S1093, "S1093", "Invalid parameter" },
+        { en_S1094, "S1094", "Invalid scale value" },
+        { en_S1095, "S1095", "Function type out of range" },
+        { en_S1096, "S1096", "Information type out of range" },
+        { en_S1097, "S1097", "Column type out of range" },
+        { en_S1098, "S1098", "Scope type out of range" },
+        { en_S1099, "S1099", "Nullable type out of range" },
+        { en_S1100, "S1100", "Uniquenss option type out of range" },
+        { en_S1101, "S1101", "Accuracy option type out of range" },
+        { en_S1103, "S1103", "Direction option out of range" },
+        { en_S1104, "S1104", "Invalid precision value" },
+        { en_S1105, "S1105", "Invalid parameter type" },
+        { en_S1106, "S1106", "Fetch type out of range" },
+        { en_S1107, "S1107", "Row value out of range" },
+        { en_S1108, "S1108", "Concurrency option out of range" },
+        { en_S1109, "S1109", "Invalid cursor position" },
+        { en_S1110, "S1110", "Invalid driver completion" },
+        { en_S1111, "S1111", "Invalid bookmark value" },
+        { en_S1C00, "S1C00", "Driver not capable" },
+        { en_S1T00, "S1T00", "Timeout expired" },
+        { en_sqlstat_total,   NULL, NULL }
+};
+
+static char FAR*	sqlerrhd = "[iODBC][Driver Manager]";

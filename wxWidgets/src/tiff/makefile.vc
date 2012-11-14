@@ -1,0 +1,93 @@
+#
+#	Simple MS VC++ Makefile
+#
+#	To build:
+#       C:\libtiff\libtiff> nmake /f makefile.vc all
+#
+
+# 
+# Select _CONSOLE to build a library which reports errors to stderr, or
+# _WINDOWED to build such that errors are reported via MessageBox().
+#
+WINMODE = -DTIF_PLATFORM_CONSOLE
+#WINMODE = -DTIF_PLATFORM_WINDOWED
+
+# Uncomment and edit following lines to enable JPEG support
+#JPEG_SUPPORT	= 1
+#JPEGDIR 	= d:/projects/jpeg-6b
+
+CC      	= cl
+INCL		= -I.
+LIBS    	=
+EXTRAFLAGS	=
+
+!IFDEF JPEG_SUPPORT
+INCL		= $(INCL) -I$(JPEGDIR)
+EXTRAFLAGS	= $(EXTRAFLAGS) -DJPEG_SUPPORT
+!ENDIF
+
+CFLAGS  = /nologo /W3 $(INCL) $(WINMODE) $(EXTRAFLAGS)
+
+OBJ	= \
+	tif_aux.obj \
+	tif_close.obj \
+	tif_codec.obj \
+	tif_color.obj \
+	tif_compress.obj \
+	tif_dir.obj \
+	tif_dirinfo.obj \
+	tif_dirread.obj \
+	tif_dirwrite.obj \
+	tif_dumpmode.obj \
+	tif_error.obj \
+	tif_extension.obj \
+	tif_fax3.obj \
+	fax3sm_winnt.obj \
+	tif_getimage.obj \
+	tif_jpeg.obj \
+	tif_ojpeg.obj \
+	tif_flush.obj \
+	tif_luv.obj \
+	tif_lzw.obj \
+	tif_next.obj \
+	tif_open.obj \
+	tif_packbits.obj \
+	tif_pixarlog.obj \
+	tif_predict.obj \
+	tif_print.obj \
+	tif_read.obj \
+	tif_swab.obj \
+	tif_strip.obj \
+	tif_thunder.obj \
+	tif_tile.obj \
+	tif_win32.obj \
+	tif_version.obj \
+	tif_warning.obj \
+	tif_write.obj \
+	tif_zip.obj
+
+VERSION	= ..\VERSION
+ALPHA = ..\dist\tiff.alpha
+
+default:	libtiff.lib
+
+all:	libtiff.lib libtiff.dll
+
+libtiff.lib:	tiffvers.h $(OBJ)
+	lib /out:libtiff.lib $(OBJ)
+
+libtiff.dll:	$(OBJ)
+	link /dll /def:libtiff.def /out:libtiff.dll /implib:libtiff_i.lib \
+		$(OBJ) $(LIBS)
+	
+tiffvers.h:	$(VERSION) mkversion.c
+	$(CC) mkversion.c 
+	if exist tiffvers.h del tiffvers.h
+	.\mkversion.exe -v $(VERSION) tiffvers.h
+
+clean:
+	del *.obj *.lib libtiff.dll
+
+tif_version.obj:	tiffvers.h
+
+

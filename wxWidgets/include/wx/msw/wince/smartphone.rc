@@ -1,0 +1,67 @@
+///////////////////////////////////////////////////////////////////////////////
+// Name:        wx/msw/wince/smartphone.h
+// Purpose:     resources for MS Smartphone build
+// Author:      Wlodzimierz ABX Skiba
+// Modified by:
+// Created:     01.05.2004
+// RCS-ID:      $Id: smartphone.rc 30036 2004-10-20 15:14:46Z VZ $
+// Copyright:   (c) Wlodzimierz Skiba
+// License:     wxWindows licence
+///////////////////////////////////////////////////////////////////////////////
+
+#include <aygshell.h>
+
+#include "wx/msw/wince/resources.h"
+
+STRINGTABLE
+BEGIN
+    IDS_EMPTY   ""
+END
+
+IDR_POPUP_1 MENU
+BEGIN
+    POPUP ""
+    BEGIN
+        MENUITEM "M", IDM_ITEM
+    END
+END
+
+IDR_POPUP_2 MENU
+BEGIN
+    POPUP ""
+    BEGIN
+        MENUITEM "M", IDM_ITEM
+    END
+    POPUP ""
+    BEGIN
+        MENUITEM "M", IDM_ITEM
+    END
+END
+
+IDR_MENUBAR_ONE_BUTTON RCDATA
+BEGIN
+    0,2,
+    I_IMAGENONE, IDM_LEFT,  TBSTATE_ENABLED, TBSTYLE_BUTTON   | TBSTYLE_AUTOSIZE, IDS_EMPTY, 0, NOMENU,
+    I_IMAGENONE, IDM_RIGHT, TBSTATE_ENABLED, TBSTYLE_BUTTON   | TBSTYLE_AUTOSIZE, IDS_EMPTY, 0, NOMENU,
+END
+
+IDR_MENUBAR_LEFT_MENU RCDATA
+BEGIN
+    IDR_POPUP_1,1,
+    I_IMAGENONE, IDM_LEFT,  TBSTATE_ENABLED, TBSTYLE_DROPDOWN | TBSTYLE_AUTOSIZE, IDS_EMPTY, 0, 0,
+END
+
+IDR_MENUBAR_RIGHT_MENU RCDATA
+BEGIN
+    IDR_POPUP_1,2,
+    I_IMAGENONE, IDM_LEFT,  TBSTATE_ENABLED, TBSTYLE_BUTTON   | TBSTYLE_AUTOSIZE, IDS_EMPTY, 0, NOMENU,
+    I_IMAGENONE, IDM_RIGHT, TBSTATE_ENABLED, TBSTYLE_DROPDOWN | TBSTYLE_AUTOSIZE, IDS_EMPTY, 0, 0,
+END
+
+IDR_MENUBAR_BOTH_MENUS RCDATA
+BEGIN
+    IDR_POPUP_2,2,
+    I_IMAGENONE, IDM_LEFT,  TBSTATE_ENABLED, TBSTYLE_DROPDOWN | TBSTYLE_AUTOSIZE, IDS_EMPTY, 0, 0,
+    I_IMAGENONE, IDM_RIGHT, TBSTATE_ENABLED, TBSTYLE_DROPDOWN | TBSTYLE_AUTOSIZE, IDS_EMPTY, 0, 1,
+END
+

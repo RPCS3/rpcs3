@@ -1,0 +1,29 @@
+
+Libpng 1.2.7 - September 12, 2004
+
+This is not intended to be a public release.  It will be replaced
+within a few weeks by a public version or by another test version.
+
+Changes since the last public release (1.2.6):
+
+  Revised pngtest so memory allocation testing is only done when PNG_DEBUG==1.
+  Removed unused pngasmrd.h file.
+  Removed references to uu.net for archived files.  Added references to
+    PNG Spec (second edition) and the PNG ISO/IEC Standard.
+  Added "test-dd" target in 15 makefiles, to run pngtest in DESTDIR.
+  Fixed bug with "optimized window size" in the IDAT datastream, that
+    causes libpng to write PNG files with incorrect zlib header bytes.
+  Fixed bug with sCAL chunk and big-endian machines (David Munro).
+  Undid new code added in 1.2.6 to update the color_type in
+    png_set_filler().
+  Added png_set_add_alpha() that updates color type.
+  Revised png_set_strip_filler() to not remove alpha if color_type has alpha.
+  Added makefile.hp64
+  Changed projects/msvc/png32ms.def to scripts/png32ms.def in makefile.cygwin
+
+Send comments/corrections/commendations to
+png-implement@ccrc.wustl.edu (subscription required; write to
+majordomo@ccrc.wustl.edu with "subscribe png-implement" in the message)
+or to glennrp@users.sourceforge.net
+
+Glenn R-P

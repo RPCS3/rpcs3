@@ -1,0 +1,67 @@
+January 18, 1999, V2.50:
+	* Added autoconf/automake/libtool support
+	* Licensing moved to LGPL 
+	* Added OpenLink code enhancements and bug fixes
+
+------------------------------------------------------------------------
+Original Changelog from Ke Jin
+------------------------------------------------------------------------
+July 30, 1995, v2.00.beta: 
+	0. the first release and beta version. 
+
+Sep. 11, 1995, v2.10:
+	1. Porting to AIX 3.x and 4.x, by writing dlopen(),
+	   dlsym(), dlclose() interface. 
+	2. Tested on SCO OpenServer 5.x 
+	3. Awared of that, unlike s700/s800, exported function 
+	   symbols on HP9000 s300/s400 will be prepended with 
+	   a '_' prefix by compiler(and this '_' prefix is not
+	   automatically handled by shl_findsym()). Now, it works
+	   fine on s300/s400.
+	4. Support driver ODBC call tracing.
+
+Oct. 12, 1995, v2.11:
+	5. Driver's SQLNumResultCols() will automatically be 
+	   invoked in driver manager's SQLExecute(),
+	   SQLExecDirect() and SQLParamData() after successfully 
+	   (i.e. return SQL_SUCCESS or SQL_SUCCESS_WITH_INFO )
+	   calling of their correspondent driver functions. This 
+	   simplifies the state tracing/checking of the driver 
+	   manager a lot and allows store procedures to return 
+	   result set and also make iODBC driver manager work 
+	   properly with SELECT INTO statements which actually 
+	   don't return result sets.
+	6. Memory leaks are cleared.
+	7. Two bugs in dld.c for AIX are fixed 
+	8. A bug of setting tracing option is fixed.
+	9. The driver will not be unloaded by SQLDisconnect() 
+	   but by SQLFreeConnect() or next SQLConnect()/
+	   SQLDriverConnect()/SQLBrowsConnect() on a different 
+	   driver. This will save driver's loading time if it
+	   has been used by a previous connection(even there
+	   is no active connection on this driver).
+	10.Another three platforms are supported:
+		FreeBSD			2.x 
+		Concurrent Max/OS SVR4	1.x
+		DG/UX			5.x
+	11.autoconfig and build -- shell scripts to help modifying 
+	   Config.mk and building iodbc driver manager
+
+Nov. 12, 1995, v2.12
+	12.I realized that a driver manager doesn't aware of 
+	   difference between a C5 (i.e. hstmt) and a C6 
+	   (i.e. transaction) states. 
+	13.The link flags "-lc" has been droped from Linux ELF
+	   section of Config.mk to fix a segment fault problem.
+	   Now, it works fine on Slackware 2.3 and Red Hat 2.0
+	   (kernel version are 1.2.xx and 1.3.xx respectively).
+	14.On FreeBSD 2.x, dlsym() doesn't handle the '_' prefix 
+	   prepended to an exportting function symbol by compiler. 
+	   So, CLI_NAME_PREFIX needs to be defined as "_SQL" for 
+	   FreeBSD 2.x. 
+	15.Some files are renamed
+		dld.c	-> dlf.c
+		dld.h	-> dlf.h
+		confg.h -> config.h
+	16. Fix a bug on setting tracing options.
+

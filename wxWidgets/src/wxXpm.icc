@@ -1,0 +1,32 @@
+option ProjectOptions = gen(arch, "pentium2"), opt(tune, "pentium2"),
+                        define("__WXPM__", ), define("__VISAGECPP__", ), define("wx_pm", ),
+                        incl(searchpath, "..\\src\\xpm"), report(level, "E"),
+                        file(genobject, "..\\src\\xpm\\dbgos240\\")
+{
+   perform
+   {
+       run before '-mkdir ' '..\\src\\xpm\\dbgos240'
+   }
+   target "..\\lib\\os2xpm.lib"
+   {
+      source type("c") "XPM\\ATTRIB.C"
+      source type("c") "XPM\\CRBUFFRI.C"
+      source type("c") "XPM\\CRDATFRI.C"
+      source type("c") "XPM\\CREATE.C"
+      source type("c") "XPM\\CRIFRBUF.C"
+      source type("c") "XPM\\CRIFRDAT.C"
+      source type("c") "XPM\\DATA.C"
+      source type("c") "XPM\\HASHTAB.C"
+      source type("c") "XPM\\IMAGE.C"
+      source type("c") "XPM\\INFO.C"
+      source type("c") "XPM\\MISC.C"
+      source type("c") "XPM\\PARSE.C"
+      source type("c") "XPM\\RDFTODAT.C"
+      source type("c") "XPM\\RDFTOI.C"
+      source type("c") "XPM\\RGB.C"
+      source type("c") "XPM\\SCAN.C"
+      source type("c") "XPM\\SIMX.C"
+      source type("c") "XPM\\WRFFRDAT.C"
+      source type("c") "XPM\\WRFFRI.C"
+   }
+}

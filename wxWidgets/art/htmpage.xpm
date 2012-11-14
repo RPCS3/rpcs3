@@ -1,0 +1,23 @@
+/* XPM */
+static const char * htmpage_xpm[] = {
+"16 16 4 1",
+" 	c None",
+".	c #808080",
+"X	c Gray100",
+"o	c Black",
+"                ",
+"  ..........    ",
+"  .XXXXXXXX..   ",
+"  .XXXXXXXXooo  ",
+"  .X......XXXo  ",
+"  .XXXXXXXXXXo  ",
+"  .X........Xo  ",
+"  .XXXXXXXXXXo  ",
+"  .X........Xo  ",
+"  .XXXXXXXXXXo  ",
+"  .X........Xo  ",
+"  .XXXXXXXXXXo  ",
+"  .X........Xo  ",
+"  .XXXXXXXXXXo  ",
+"  .XXXXXXXXXXo  ",
+"  oooooooooooo  "};
