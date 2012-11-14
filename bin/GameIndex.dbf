@@ -3687,7 +3687,8 @@ Region = NTSC-U
 Serial = SLUS-20467
 Name   = Tomb Raider - The Angel of Darkness
 Region = NTSC-U
-Compat = 2
+Compat = 5
+OPHFlagHack = 1
 ---------------------------------------------
 Serial = SLUS-20468
 Name   = Dynasty Tactics
@@ -11210,6 +11211,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20044
 Name   = Tomb Raider - The Angel of Darkness
 Region = NTSC-Unk
+OPHFlagHack = 1
 ---------------------------------------------
 Serial = SCAJ-20045
 Name   = Shadow Tower Abyss
@@ -26599,6 +26601,7 @@ Region = NTSC-J
 Serial = SLPS-25246
 Name   = Tomb Raider - The Angel of Darkness
 Region = NTSC-J
+OPHFlagHack = 1
 ---------------------------------------------
 Serial = SLPS-25247
 Name   = R-Type Final
@@ -33831,7 +33834,8 @@ Compat = 5
 Serial = SLES-51227
 Name   = Tomb Raider - Angel of Darkness
 Region = PAL-Unk
-Compat = 2
+Compat = 5
+OPHFlagHack = 1
 ---------------------------------------------
 Serial = SLES-51229
 Name   = Virtua Cop - Elite Edition
