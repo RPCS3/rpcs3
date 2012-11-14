@@ -1744,6 +1744,7 @@ Region = NTSC-U
 Serial = SCUS-97654
 Name   = MotorStorm Arctic Edge
 Region = NTSC-U
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SCUS-97660
 Name   = Singstar Latino
@@ -5899,8 +5900,9 @@ Compat = 4
 	//fix IPU busy! ingame
 	//patch=0,EE,003a9538,word,03e00008
 	//patch=0,EE,003a953c,word,00000000
-	patch=0,EE,003a9460,word,03e00008
-	patch=0,EE,003a9464,word,00000000
+	
+	//patch=0,EE,003a9460,word,03e00008
+	//patch=0,EE,003a9464,word,00000000
 	
 [/patches]
 ---------------------------------------------
@@ -31073,6 +31075,7 @@ Region = PAL-G
 Serial = SCES-55573
 Name   = MotorStorm - Arctic Edge
 Region = PAL-M14
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SCES-55606
 Name   = SingStar Die groten Solokunstler
@@ -36326,13 +36329,14 @@ Name   = Neo Contra
 Region = PAL-Unk
 Compat = 4
 [patches = EEE2F6A3]
-	comment=Patches By Nachbrenner
+	//comment=Patches By Nachbrenner
 	
 	//fix IPU busy! ingame
-	patch=0,EE,003a9a88,word,03e00008
-	patch=0,EE,003a9a8c,word,00000000
-	patch=0,EE,003a9b60,word,03e00008
-	patch=0,EE,003a9b64,word,00000000
+	//patch=0,EE,003a9a88,word,03e00008
+	//patch=0,EE,003a9a8c,word,00000000
+	//patch=0,EE,003a9b60,word,03e00008
+	//patch=0,EE,003a9b64,word,00000000
+	
 [/patches]
 ---------------------------------------------
 Serial = SLES-52511
@@ -41868,6 +41872,7 @@ Region = PAL-M6
 Serial = SLES-55573
 Name   = MotorStorm Arctic Edge
 Region = PAL-Unk
+OPHFLagHack = 1
 ---------------------------------------------
 Serial = SLES-55574
 Name   = the Lord of the Rings - Aragorn's Quest
