@@ -111,7 +111,7 @@ struct FragmentDecompilerThread : public wxThread
 
 	wxString GetMask();
 
-	void AddCode(wxString code, bool bkt = true);
+	void AddCode(wxString code);
 	wxString AddReg(u32 index);
 	wxString AddTex();
 

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "FragmentProgram.h"
 
-void FragmentDecompilerThread::AddCode(wxString code, bool bkt)
+void FragmentDecompilerThread::AddCode(wxString code)
 {
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_le) return;
 	if(!src0.exec_if_eq || !src0.exec_if_gr || !src0.exec_if_le)
@@ -29,7 +29,7 @@ void FragmentDecompilerThread::AddCode(wxString code, bool bkt)
 		}
 	}
 
-	code = AddReg(dst.dest_reg) + GetMask() + " = " + (bkt ? "(" + code + ")" : code) + GetMask();
+	code = AddReg(dst.dest_reg) + GetMask() + " = " + code + GetMask();
 
 	main += "\t" + code + ";\n";
 }
@@ -157,18 +157,10 @@ wxThread::ExitCode FragmentDecompilerThread::Entry()
 
 		switch(dst.opcode)
 		{
-		case 0x0: break; //NOP
-		case 0x1:
-			AddCode(GetSRC(src0), false);
-		break;
-
-		case 0x2:
-			AddCode(GetSRC(src0) + " * " + GetSRC(src1));
-		break;
-
-		case 0x17:
-			AddCode("texture(" + AddTex() + ", (" + GetSRC(src0) + ").xy)", false);
-		break;
+		case 0x00: break; //NOP
+		case 0x01: AddCode(GetSRC(src0)); break; //MOV
+		case 0x02: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + ")"); break; //MUL
+		case 0x17: AddCode("texture(" + AddTex() + ", (" + GetSRC(src0) + ").xy)"); break; //TEX
 
 		default:
 			ConLog.Error("Unknown opcode 0x%x", dst.opcode);

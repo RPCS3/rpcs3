@@ -119,7 +119,7 @@ wxString VertexDecompilerThread::GetSRC(const u32 n)
 	return ret;
 }
 
-void VertexDecompilerThread::AddCode(wxString code, bool bkt, bool src_mask)
+void VertexDecompilerThread::AddCode(wxString code, bool src_mask)
 {
 	if(d0.cond == 0) return;
 	if(d0.cond != 7)
@@ -129,14 +129,7 @@ void VertexDecompilerThread::AddCode(wxString code, bool bkt, bool src_mask)
 		return;
 	}
 
-	if(src_mask)
-	{
-		code = GetDST() + GetMask() + " = " + (bkt ? "(" + code + ")" : code) +  GetMask();
-	}
-	else
-	{
-		code = GetDST() + GetMask() + " = " + (bkt ? "(" + code + ")" : code);
-	}
+	code = GetDST() + GetMask() + " = " + (src_mask ? code + GetMask() : code);
 
 	main += "\t" + code + ";\n";
 }
@@ -181,27 +174,27 @@ wxThread::ExitCode VertexDecompilerThread::Entry()
 		switch(d1.vec_opcode)
 		{
 		case 0x00: break; //NOP
-		case 0x01: AddCode(GetSRC(0), false); break; //MOV
-		case 0x02: AddCode(GetSRC(0) + " * " + GetSRC(1)); break; //MUL
-		case 0x03: AddCode(GetSRC(0) + " + " + GetSRC(1)); break; //ADD
-		case 0x04: AddCode(GetSRC(0) + " * " + GetSRC(1) + " + " + GetSRC(2)); break; //MAD
-		case 0x05: AddCode("dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz).xxx"); break; //DP3
+		case 0x01: AddCode(GetSRC(0)); break; //MOV
+		case 0x02: AddCode("(" + GetSRC(0) + " * " + GetSRC(1) + ")"); break; //MUL
+		case 0x03: AddCode("(" + GetSRC(0) + " + " + GetSRC(1) + ")"); break; //ADD
+		case 0x04: AddCode("(" + GetSRC(0) + " * " + GetSRC(1) + " + " + GetSRC(2) + ")"); break; //MAD
+		case 0x05: AddCode("dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz)", false); break; //DP3
 		//case 0x06: TODO //DPH
-		case 0x07: AddCode("dot(" + GetSRC(0) + ", " + GetSRC(1) + ").xxxx"); break; //DP4
-		case 0x08: AddCode("distance(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //DST
-		case 0x09: AddCode("min(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //MAX
-		case 0x0a: AddCode("max(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //MAX
-		case 0x0b: AddCode("lessThan(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SLT
-		case 0x0c: AddCode("greaterThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SGE
-		case 0x0e: AddCode("fract(" + GetSRC(0) + ")", false); break; //FRC
-		case 0x0f: AddCode("floor(" + GetSRC(0) + ")", false); break; //FLR
-		case 0x10: AddCode("equal(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SEQ
-		case 0x11: AddCode("vec4(0.0f, 0.0f, 0.0f, 0.0f)", false); break; //SFL
-		case 0x12: AddCode("greaterThan(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SGT
-		case 0x13: AddCode("lessThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SLE
-		case 0x14: AddCode("notEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SNE
-		case 0x15: AddCode("vec4(1.0f, 1.0f, 1.0f, 1.0f)", false); break; //STR
-		case 0x16: AddCode("sign(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SSG
+		case 0x07: AddCode("dot(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //DP4
+		case 0x08: AddCode("distance(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //DST
+		case 0x09: AddCode("min(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MAX
+		case 0x0a: AddCode("max(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MAX
+		case 0x0b: AddCode("lessThan(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SLT
+		case 0x0c: AddCode("greaterThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SGE
+		case 0x0e: AddCode("fract(" + GetSRC(0) + ")"); break; //FRC
+		case 0x0f: AddCode("floor(" + GetSRC(0) + ")"); break; //FLR
+		case 0x10: AddCode("equal(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SEQ
+		case 0x11: AddCode("vec4(0.0f, 0.0f, 0.0f, 0.0f)"); break; //SFL
+		case 0x12: AddCode("greaterThan(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SGT
+		case 0x13: AddCode("lessThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SLE
+		case 0x14: AddCode("notEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SNE
+		case 0x15: AddCode("vec4(1.0f, 1.0f, 1.0f, 1.0f)"); break; //STR
+		case 0x16: AddCode("sign(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SSG
 
 		default:
 			ConLog.Error("Unknown vp opcode 0x%x", d1.vec_opcode);
