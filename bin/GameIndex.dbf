@@ -2552,21 +2552,6 @@ Serial = SLUS-20209
 Name   = Midnight Club II
 Region = NTSC-U
 Compat = 5
-[patches = C1625F14]
-	
-	comment=patches by Nachbrenner
-	
-	//skip videos
-	patch=0,EE,0013D5E0,word,00000000
-	
-[/patches]
-[patches = E5F2DF38]	
-	comment=patches by Nachbrenner
-	
-	//skip videos
-	patch=0,EE,0013D5E0,word,00000000
-	
-[/patches]
 ---------------------------------------------
 Serial = SLUS-20210
 Name   = 18 Wheeler - American Pro Trucker
@@ -6226,14 +6211,6 @@ Serial = SLUS-21029
 Name   = Midnight Club 3 - DUB Edition
 Region = NTSC-U
 Compat = 5
-[patches = 4A0E5B3A]
-
-	comment=patch by Shadow Lady
-	
-	//skip videos
-	patch=0,EE,0065352C,word,00000000
-
-[/patches]
 ---------------------------------------------
 Serial = SLUS-21030
 Name   = Outlaw Golf 2
@@ -7760,14 +7737,6 @@ Serial = SLUS-21355
 Name   = Midnight Club 3 - DUB Edition Remix
 Region = NTSC-U
 Compat = 5
-[patches = 60A42FF5]
-
-	comment=patch by Shadow Lady
-	
-	//skip videos
-	patch=0,EE,006580A0,word,00000000
-
-[/patches]
 ---------------------------------------------
 Serial = SLUS-21356
 Name   = Tom Clancy's Splinter Cell - Double Agent
@@ -37377,14 +37346,6 @@ Region = PAL-Unk
 Serial = SLES-52942
 Name   = Midnight Club 3 - DUB Edition
 Region = PAL-Unk
-[patches = EBE1972D]
-
-	comment=patch by Shadow Lady
-	
-	//skip videos
-	patch=0,EE,006537a0,word,00000000
-
-[/patches]
 ---------------------------------------------
 Serial = SLES-52943
 Name   = ESPN NFL 2K5
