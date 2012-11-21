@@ -308,7 +308,9 @@ void V_Voice::QueueStart()
 {
 	if (Cycles - PlayCycle < 4)
 	{
+		// Required by The Legend of Spyro: The Eternal Night (probably the other two legend games too)
 		ConLog(" *** KeyOn after less than 4 T disregarded.\n");
+		return;
 	}
 	PlayCycle = Cycles;
 }
