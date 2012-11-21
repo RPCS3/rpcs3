@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by FireWireNull.rc
+// Used by GS.rc
 //
 #define IDD_CONFDLG                     101
 #define IDD_CONFIG                      101
