@@ -308,7 +308,7 @@ void V_Voice::QueueStart()
 {
 	if (Cycles - PlayCycle < 4)
 	{
-		printf(" *** KeyOn after less than 4 T disregarded.\n");
+		ConLog(" *** KeyOn after less than 4 T disregarded.\n");
 	}
 	PlayCycle = Cycles;
 }
