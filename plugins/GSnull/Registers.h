@@ -323,22 +323,16 @@ union name			\
 #define REG_END2 };
 
 #define REG32_SET(name) \
-union name			\
+struct name			\
 {					\
-	u32 _u32;	\
 
 #define REG64_SET(name) \
-union name			\
+struct name			\
 {					\
-	u64 _u64;		\
-	u32 _u32[2];	\
 
 #define REG128_SET(name)\
-union name			\
+struct name			\
 {					\
-	__m128i _m128;  \
-	u64 _u64[2];	\
-	u32 _u32[4];	\
 
 #define REG_SET_END };
 
