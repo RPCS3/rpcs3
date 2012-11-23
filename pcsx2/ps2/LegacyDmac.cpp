@@ -134,6 +134,8 @@ __fi tDMA_TAG* SPRdmaGetAddr(u32 addr, bool write)
 		if ((addr >= 0x11004000) && (addr < 0x11008000))
 			return (tDMA_TAG*)VU0.Mem + (addr & 0xff0);		
 		
+		// Unreachable
+		return NULL;
 	}
 	else
 	{
