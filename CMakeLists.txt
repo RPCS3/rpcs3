@@ -62,17 +62,16 @@ if(CMAKE_SIZEOF_VOID_P MATCHES "8")
     # Probably useless but it will not harm
     SET_PROPERTY(GLOBAL PROPERTY COMPILE_DEFINITIONS "-m32")
 
-    
     # Force the search on 32-bits path.
     if(EXISTS "/usr/lib32")
         set(CMAKE_LIBRARY_ARCHITECTURE "../lib32")
     endif()
-    # Debian/ubuntu drop /usr/lib32
-    if(EXISTS "/usr/lib/i386-linux-gnu")
-        set(CMAKE_LIBRARY_ARCHITECTURE "i386-linux-gnu")
-    endif()
-
 endif(CMAKE_SIZEOF_VOID_P MATCHES "8")
+
+# Debian/ubuntu drop /usr/lib32 and move /usr/lib to /usr/lib/i386-linux-gnu
+if(EXISTS "/usr/lib/i386-linux-gnu")
+    set(CMAKE_LIBRARY_ARCHITECTURE "i386-linux-gnu")
+endif()
 
 
 # * -fPIC option was removed for multiple reasons.
