@@ -1349,16 +1349,26 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	header.copy(header_str, header.size(), 0);
 	header_str[header.size()] = '\0';
 
+#if 0
+	// Could be useful one day
+	const GLchar* ShaderSource[1];
+	ShaderSource[0] = header.append(source).c_str();
+	*program = glCreateShaderProgramv(type, 1, &ShaderSource[0]);
+#else
 	*program = glCreateShaderProgramv(type, 2, sources_array);
+#endif
 
-	// Check the correctness of the driver
-	GLint slot = glGetFragDataLocation(*program, "SV_Target1");
-	if (slot == 0) { // <=> SV_Target1 used same slot as SV_Target0
-		GLint index = glGetFragDataIndex(*program,  "SV_Target1");
-		if (index != 1) {
-			fprintf(stderr, "Driver bug: failed to set the index, program will be recompiled\n");
-			glDeleteProgram(*program);
-			*program = glCreateShaderProgramv_AMD_BUG_WORKAROUND(type, 2, sources_array);
+	// Check the correctness of the (AMD) driver
+	// Note: glGetFragDataLocation crash too!!! Catalyst 12.10 => HD 6XXX
+	if (theApp.GetConfig("renderer", 0) == 12) {
+		GLint slot = glGetFragDataLocation(*program, "SV_Target1");
+		if (slot == 0) { // <=> SV_Target1 used same slot as SV_Target0
+			GLint index = glGetFragDataIndex(*program,  "SV_Target1");
+			if (index != 1) {
+				fprintf(stderr, "Driver bug: failed to set the index, program will be recompiled\n");
+				glDeleteProgram(*program);
+				*program = glCreateShaderProgramv_AMD_BUG_WORKAROUND(type, 2, sources_array);
+			}
 		}
 	}
 
