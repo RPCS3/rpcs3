@@ -101,7 +101,7 @@ int BlockdumpFileReader::ReadSync(void* pBuffer, uint lsn, uint count)
 			m_file->Read( &check_lsn, sizeof(check_lsn) );
 			pxAssert( check_lsn == lsn );
 #else
-			m_file->Seek( BlockDumpHeaderSize + (i * (m_blocksize + 4)) + 4 );
+			m_file->SeekI( BlockDumpHeaderSize + (i * (m_blocksize + 4)) + 4 );
 #endif
 
 			m_file->Read( dst, m_blocksize );
