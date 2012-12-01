@@ -28,11 +28,11 @@
 
 #include "CDVDisoReader.h"
 
-static u8 *pbuffer;
-static u8 cdbuffer[CD_FRAMESIZE_RAW] = {0};
-static isoFile iso;
+#include "AsyncFileReader.h"
 
-static int psize, cdtype;
+static InputIsoFile iso;
+
+static int pmode, cdtype;
 
 static s32 layer1start = -1;
 static bool layer1searched = false;
@@ -172,7 +172,7 @@ static void FindLayer1Start()
 	if( blockresult != -1 )
 	{
 		u8 tempbuffer[CD_FRAMESIZE_RAW];
-		iso.ReadBlock(tempbuffer, blockresult);
+		iso.ReadSync(tempbuffer, blockresult);
 
 		if( testForPartitionInfo( tempbuffer ) )
 		{
@@ -212,13 +212,13 @@ static void FindLayer1Start()
 		while( (layer1start == -1) && (deviation < midsector-16) )
 		{
 			u8 tempbuffer[CD_FRAMESIZE_RAW];
-			iso.ReadBlock(tempbuffer, midsector-deviation);
+			iso.ReadSync(tempbuffer, midsector-deviation);
 
 			if(testForPartitionInfo( tempbuffer ))
 				layer1start = midsector-deviation;
 			else
 			{
-				iso.ReadBlock(tempbuffer, midsector+deviation);
+				iso.ReadSync(tempbuffer, midsector+deviation);
 				if( testForPartitionInfo( tempbuffer ) )
 					layer1start = midsector+deviation;
 			}
@@ -380,6 +380,8 @@ s32 CALLBACK ISOgetTOC(void* toc)
 
 s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 {
+	static u8 cdbuffer[CD_FRAMESIZE_RAW] = {0};
+
 	int _lsn = lsn;
 
 	if (_lsn < 0) lsn = iso.GetBlockCount() + _lsn;
@@ -387,13 +389,15 @@ s32 CALLBACK ISOreadSector(u8* tempbuffer, u32 lsn, int mode)
 
 	if(mode == CDVD_MODE_2352)
 	{
-		iso.ReadBlock(tempbuffer, lsn);
+		iso.ReadSync(tempbuffer, lsn);
 		return 0;
 	}
 
-	iso.ReadBlock(cdbuffer, lsn);
+	iso.ReadSync(cdbuffer, lsn);
 
-	pbuffer = cdbuffer;
+	
+	u8 *pbuffer = cdbuffer;
+	int psize;
 
 	switch (mode)
 	{
@@ -430,41 +434,23 @@ s32 CALLBACK ISOreadTrack(u32 lsn, int mode)
 	if (_lsn < 0) lsn = iso.GetBlockCount() + _lsn;
 	if (lsn > iso.GetBlockCount()) return -1;
 
-	iso.ReadBlock(cdbuffer, lsn);
-	pbuffer = cdbuffer;
+	iso.BeginRead2(lsn);
 
-	switch (mode)
-	{
-	case CDVD_MODE_2352:
-		psize = 2352;
-		break;
-	case CDVD_MODE_2340:
-		pbuffer += 12;
-		psize = 2340;
-		break;
-	case CDVD_MODE_2328:
-		pbuffer += 24;
-		psize = 2328;
-		break;
-	case CDVD_MODE_2048:
-		pbuffer += 24;
-		psize = 2048;
-		break;
-	}
+	pmode = mode;
 
 	return 0;
 }
 
 s32 CALLBACK ISOgetBuffer2(u8* buffer)
 {
-	memcpy_fast(buffer, pbuffer, psize);
-	return 0;
+	return iso.FinishRead3(buffer, pmode);
 }
 
-u8* CALLBACK ISOgetBuffer()
-{
-	return pbuffer;
-}
+//u8* CALLBACK ISOgetBuffer()
+//{
+//	iso.FinishRead();
+//	return pbuffer;
+//}
 
 s32 CALLBACK ISOgetTrayStatus()
 {
@@ -495,7 +481,7 @@ CDVD_API CDVDapi_Iso =
 
 	ISOopen,
 	ISOreadTrack,
-	ISOgetBuffer, // emu shouldn't use this one.
+	NULL, //ISOgetBuffer, // emu shouldn't use this one.
 	ISOreadSubQ,
 	ISOgetTN,
 	ISOgetTD,

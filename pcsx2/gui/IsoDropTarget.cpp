@@ -186,7 +186,7 @@ bool IsoDropTarget::OnDropFiles(wxCoord x, wxCoord y, const wxArrayString& filen
 		//    ISO CHECK
 		// ---------------
 
-		isoFile iso;
+		InputIsoFile iso;
 
 		if (iso.Test( filenames[0] ))
 		{
