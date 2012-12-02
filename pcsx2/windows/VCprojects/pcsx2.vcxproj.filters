@@ -275,9 +275,6 @@
     <ClCompile Include="..\..\Elfheader.cpp">
       <Filter>System\ISO</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\CDVD\IsoFileFormats.cpp">
-      <Filter>System\ISO</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\Linux\LnxHostSys.cpp">
       <Filter>System\Linux</Filter>
     </ClCompile>
@@ -817,6 +814,21 @@
     <ClCompile Include="..\..\Gif_Logger.cpp">
       <Filter>System\Ps2\GS</Filter>
     </ClCompile>
+    <ClCompile Include="..\FlatFileReaderWindows.cpp">
+      <Filter>System\ISO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\CDVD\InputIsoFile.cpp">
+      <Filter>System\ISO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MultipartFileReader.cpp">
+      <Filter>System\ISO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\CDVD\OutputIsoFile.cpp">
+      <Filter>System\ISO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\CDVD\BlockdumpFileReader.cpp">
+      <Filter>System\ISO</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Patch.h">
@@ -1203,6 +1215,9 @@
     </ClInclude>
     <ClInclude Include="..\..\x86\microVU_Profiler.h">
       <Filter>System\Ps2\EmotionEngine\VU\Dynarec\microVU</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\AsyncFileReader.h">
+      <Filter>System\ISO</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
