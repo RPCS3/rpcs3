@@ -45,8 +45,7 @@ int InputIsoFile::ReadSync(u8* dst, uint lsn)
 		return -1;
 	}
 
-	m_reader->BeginRead(dst+m_blockofs, lsn, 1);
-	return m_reader->FinishRead();
+	return m_reader->ReadSync(dst+m_blockofs, lsn, 1);
 }
 
 void InputIsoFile::BeginRead2(uint lsn)
@@ -203,7 +202,8 @@ bool InputIsoFile::Open( const wxString& srcfile, bool testOnly )
 	m_reader = new FlatFileReader();
 	m_reader->Open(m_filename);
 
-	if(BlockdumpFileReader::DetectBlockdump(m_reader))
+	bool isBlockdump;
+	if(isBlockdump = BlockdumpFileReader::DetectBlockdump(m_reader))
 	{
 		delete m_reader;
 
@@ -216,21 +216,23 @@ bool InputIsoFile::Open( const wxString& srcfile, bool testOnly )
 
 		m_reader = bdr;
 
-		ReadUnit = 1;
+		ReadUnit = 1;		
 	}
-	else 
+
+	bool detected = Detect();
+		
+	if(testOnly)
+		return detected;
+		
+	if (!detected)
+		throw Exception::BadStream()
+			.SetUserMsg(_("Unrecognized ISO image file format"))
+			.SetDiagMsg(L"ISO mounting failed: PCSX2 is unable to identify the ISO image type.");
+
+	if(!isBlockdump)
 	{
 		ReadUnit = MaxReadUnit;
 
-		bool detected = Detect();
-
-		if(testOnly)
-			return detected;
-
-		if (!detected)
-			throw Exception::BadStream()
-				.SetUserMsg(_("Unrecognized ISO image file format"))
-				.SetDiagMsg(L"ISO mounting failed: PCSX2 is unable to identify the ISO image type.");
 		m_reader->SetBlockSize(m_blocksize);
 	
 		// Returns the original reader if single-part or a Multipart reader otherwise
