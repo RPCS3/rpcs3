@@ -58,7 +58,7 @@ int lastLSN;		// needed for block dumping
 // Records last read block length for block dumping
 //static int plsn = 0;
 
-//static OutputIsoFile blockDumpFile;
+static OutputIsoFile blockDumpFile;
 
 // Assertion check for CDVD != NULL (in devel and debug builds), because its handier than
 // relying on DEP exceptions -- and a little more reliable too.
@@ -337,12 +337,12 @@ bool DoCDVDopen()
 	if( ret == 1 )	throw Exception::CancelEvent(L"User canceled the CDVD plugin's open dialog.");
 
 	int cdtype = DoCDVDdetectDiskType();
-/*
+
 	if (!EmuConfig.CdvdDumpBlocks || (cdtype == CDVD_TYPE_NODISC))
 	{
 		blockDumpFile.Close();
 		return true;
-	}*/
+	}
 
 	// TODO: Add a blockdumps configurable folder, and use that instead of CWD().
 
@@ -367,8 +367,8 @@ bool DoCDVDopen()
 
 	cdvdTD td;
 	CDVD->getTD(0, &td);
-/*
-	blockDumpFile.Create(temp, ISOFLAGS_BLOCKDUMP_V3);
+
+	blockDumpFile.Create(temp, 3);
 
 	if( blockDumpFile.IsOpened() )
 	{
@@ -390,7 +390,7 @@ bool DoCDVDopen()
 		}
 		blockDumpFile.WriteFormat(blockofs, blocksize, blocks);
 	}
-*/
+
 
 	return true;
 }
@@ -410,12 +410,12 @@ s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 {
 	CheckNullCDVD();
 	int ret = CDVD->readSector(buffer,lsn,mode);
-/*
+
 	if (ret == 0 && blockDumpFile.IsOpened())
 	{
 		blockDumpFile.WriteBlock(buffer, lsn);
 	}
-*/
+
 	return ret;
 }
 
@@ -449,12 +449,12 @@ s32 DoCDVDgetBuffer(u8* buffer)
 {
 	CheckNullCDVD();
 	int ret = CDVD->getBuffer2(buffer);
-/*
+
 	if (ret == 0 && blockDumpFile.IsOpened())
 	{
 		blockDumpFile.WriteBlock(buffer, lastLSN);
 	}
-*/
+
 	return ret;
 }
 

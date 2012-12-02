@@ -20,70 +20,6 @@
 
 #include <errno.h>
 
-/*
-class OutputIsoFile
-{
-	DeclareNoncopyableObject( OutputIsoFile );
-	
-protected:
-	wxString	m_filename;
-
-	isoType		m_type;
-	u32			m_flags;
-
-	s32			m_offset;
-	s32			m_blockofs;
-	u32			m_blocksize;
-
-	// total number of blocks in the ISO image (including all parts)
-	u32			m_blocks;
-
-	// dtable / dtablesize are used when reading blockdumps
-	ScopedArray<u32>	m_dtable;
-	int					m_dtablesize;
-
-	ScopedPtr<wxFileOutputStream>	m_outstream;
-
-	// Currently unused internal buffer (it was used for compressed
-	// iso support, before it was removed).
-	//ScopedArray<u8>		m_buffer;
-	//int					m_buflsn;
-			
-public:	
-	OutputIsoFile();
-	virtual ~OutputIsoFile() throw();
-
-	bool IsOpened() const;
-	
-	
-	const wxString& GetFilename() const
-	{
-		return m_filename;
-	}
-
-	void Create(const wxString& filename, int mode);
-	void Close();
-	void WriteFormat(int blockofs, uint blocksize, uint blocks);
-
-	void WriteBlock(const u8* src, uint lsn);
-	
-protected:
-	void _init();
-
-	void _WriteBlock(const u8* src, uint lsn);
-	void _WriteBlockD(const u8* src, uint lsn);
-		
-	void outWrite( const void* src, size_t size );
-
-	template< typename T >
-	void outWrite( const T& data )
-	{
-		outWrite( &data, sizeof(data) );
-	}
-};
-*/
-
-/*
 void pxStream_OpenCheck( const wxStreamBase& stream, const wxString& fname, const wxString& mode )
 {
 	if (stream.IsOk()) return;
@@ -105,8 +41,7 @@ OutputIsoFile::~OutputIsoFile() throw()
 
 void OutputIsoFile::_init()
 {
-	m_type			= ISOTYPE_ILLEGAL;
-	m_flags			= 0;
+	m_version		= 0;
 
 	m_offset		= 0;
 	m_blockofs		= 0;
@@ -117,12 +52,12 @@ void OutputIsoFile::_init()
 	m_dtablesize	= 0;
 }
 
-void OutputIsoFile::Create(const wxString& filename, int flags)
+void OutputIsoFile::Create(const wxString& filename, int version)
 {
 	Close();
 	m_filename = filename;
 
-	m_flags		= flags;
+	m_version	= version;
 	m_offset	= 0;
 	m_blockofs	= 24;
 	m_blocksize	= 2048;
@@ -144,7 +79,7 @@ void OutputIsoFile::WriteFormat(int _blockofs, uint _blocksize, uint _blocks)
 	Console.WriteLn("blocksize   = %u", m_blocksize);
 	Console.WriteLn("blocks	     = %u", m_blocks);
 
-	if (m_flags & ISOFLAGS_BLOCKDUMP_V2)
+	if (m_version == 2)
 	{
 		outWrite("BDV2", 4);
 		outWrite(m_blocksize);
@@ -176,7 +111,7 @@ void OutputIsoFile::_WriteBlockD(const u8* src, uint lsn)
 
 void OutputIsoFile::WriteBlock(const u8* src, uint lsn)
 {
-	if (m_flags == ISOFLAGS_BLOCKDUMP_V2)
+	if (m_version == 2)
 		_WriteBlockD(src, lsn);
 	else
 		_WriteBlock(src, lsn);
@@ -208,4 +143,3 @@ bool OutputIsoFile::IsOpened() const
 {
 	return m_outstream && m_outstream->IsOk();
 }
-*/

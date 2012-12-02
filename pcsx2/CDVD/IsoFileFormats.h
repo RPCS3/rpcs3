@@ -95,3 +95,58 @@ protected:
 	bool tryIsoType(u32 _size, s32 _offset, s32 _blockofs);
 	void FindParts();
 };
+
+class OutputIsoFile
+{
+	DeclareNoncopyableObject( OutputIsoFile );
+	
+protected:
+	wxString	m_filename;
+
+	u32			m_version;
+
+	s32			m_offset;
+	s32			m_blockofs;
+	u32			m_blocksize;
+
+	// total number of blocks in the ISO image (including all parts)
+	u32			m_blocks;
+
+	// dtable / dtablesize are used when reading blockdumps
+	ScopedArray<u32>	m_dtable;
+	int					m_dtablesize;
+
+	ScopedPtr<wxFileOutputStream>	m_outstream;
+		
+public:	
+	OutputIsoFile();
+	virtual ~OutputIsoFile() throw();
+
+	bool IsOpened() const;
+	
+	
+	const wxString& GetFilename() const
+	{
+		return m_filename;
+	}
+
+	void Create(const wxString& filename, int mode);
+	void Close();
+	void WriteFormat(int blockofs, uint blocksize, uint blocks);
+
+	void WriteBlock(const u8* src, uint lsn);
+	
+protected:
+	void _init();
+
+	void _WriteBlock(const u8* src, uint lsn);
+	void _WriteBlockD(const u8* src, uint lsn);
+		
+	void outWrite( const void* src, size_t size );
+
+	template< typename T >
+	void outWrite( const T& data )
+	{
+		outWrite( &data, sizeof(data) );
+	}
+};
