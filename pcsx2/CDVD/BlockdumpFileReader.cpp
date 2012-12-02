@@ -70,11 +70,27 @@ bool BlockdumpFileReader::Open(const wxString& fileName)
 
 	m_file->SeekI(BlockDumpHeaderSize);
 
-	for (int i=0; i < m_dtablesize; ++i)
-	{
-		m_file->Read(&(m_dtable[i]), sizeof(m_dtable[i]));
-		m_file->SeekI(m_blocksize, wxFromCurrent);
-	}
+	u32 bs = 1024*1024;
+	u8* buffer = new u8[bs];
+	u32 off = 0;
+	u32 has = 0;
+	int i = 0;
+	do {
+		m_file->Read(buffer, bs);
+		has = m_file->LastRead();
+		
+		while (i < m_dtablesize && off < has)
+		{
+			m_dtable[i++] = *(u32*)(buffer + off);
+			off += 4;
+			off += m_blocksize;
+		}
+
+		off -= has;
+
+	} while(has == bs);
+	
+	delete[] buffer;
 
 	return true;
 }
