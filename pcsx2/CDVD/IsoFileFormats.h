@@ -132,21 +132,19 @@ public:
 
 	void Create(const wxString& filename, int mode);
 	void Close();
-	void WriteFormat(int blockofs, uint blocksize, uint blocks);
 
-	void WriteBlock(const u8* src, uint lsn);
+	void WriteHeader(int blockofs, uint blocksize, uint blocks);
+
+	void WriteSector(const u8* src, uint lsn);
 	
 protected:
 	void _init();
 
-	void _WriteBlock(const u8* src, uint lsn);
-	void _WriteBlockD(const u8* src, uint lsn);
-		
-	void outWrite( const void* src, size_t size );
+	void WriteBuffer( const void* src, size_t size );
 
 	template< typename T >
-	void outWrite( const T& data )
+	void WriteValue( const T& data )
 	{
-		outWrite( &data, sizeof(data) );
+		WriteBuffer( &data, sizeof(data) );
 	}
 };

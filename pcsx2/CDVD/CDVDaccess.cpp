@@ -388,7 +388,7 @@ bool DoCDVDopen()
 				blocksize = 2048;
 			break;
 		}
-		blockDumpFile.WriteFormat(blockofs, blocksize, blocks);
+		blockDumpFile.WriteHeader(blockofs, blocksize, blocks);
 	}
 
 
@@ -413,7 +413,7 @@ s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 
 	if (ret == 0 && blockDumpFile.IsOpened())
 	{
-		blockDumpFile.WriteBlock(buffer, lsn);
+		blockDumpFile.WriteSector(buffer, lsn);
 	}
 
 	return ret;
@@ -452,7 +452,7 @@ s32 DoCDVDgetBuffer(u8* buffer)
 
 	if (ret == 0 && blockDumpFile.IsOpened())
 	{
-		blockDumpFile.WriteBlock(buffer, lastLSN);
+		blockDumpFile.WriteSector(buffer, lastLSN);
 	}
 
 	return ret;

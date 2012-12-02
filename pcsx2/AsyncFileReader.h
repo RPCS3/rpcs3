@@ -1,41 +1,5 @@
 #pragma once
-/*
-// --------------------------------------------------------------------------------------
-//  MultiPartIso
-// --------------------------------------------------------------------------------------
-// An encapsulating class for array boundschecking and easy ScopedPointer behavior.
-//
-class _IsoPart
-{
-	DeclareNoncopyableObject( _IsoPart );
 
-public:
-	// starting block index of this part of the iso.
-	u32			slsn;
-	// ending bock index of this part of the iso.
-	u32			elsn;
-
-	wxString						filename;
-	ScopedPtr<wxFileInputStream>	handle;
-
-public:	
-	_IsoPart() {}
-	~_IsoPart() throw();
-	
-	void Read( void* dest, size_t size );
-
-	void Seek(wxFileOffset pos, wxSeekMode mode = wxFromStart);
-	void SeekEnd(wxFileOffset pos=0);
-	wxFileOffset Tell() const;
-	uint CalculateBlocks( uint startBlock, uint blocksize );
-
-	template< typename T >
-	void Read( T& dest )
-	{
-		Read( &dest, sizeof(dest) );
-	}
-};
-*/
 #ifdef WIN32
 #	include <Windows.h>
 #	undef Yield
@@ -63,7 +27,7 @@ public:
 
 	virtual void Close(void)=0;
 
-	virtual int GetBlockCount(void) const=0;
+	virtual uint GetBlockCount(void) const=0;
 	
 	virtual void SetBlockSize(uint bytes) {}	
 	
@@ -77,6 +41,8 @@ public:
 
 class FlatFileReader : public AsyncFileReader
 {
+	DeclareNoncopyableObject( FlatFileReader );
+
 #ifdef WIN32
 	HANDLE hOverlappedFile;
 
@@ -102,7 +68,7 @@ public:
 
 	virtual void Close(void);
 
-	virtual int GetBlockCount(void) const;
+	virtual uint GetBlockCount(void) const;
 	
 	void SetBlockSize(uint bytes) { m_blocksize = bytes; }
 };
@@ -138,7 +104,7 @@ public:
 
 	virtual void Close(void);
 
-	virtual int GetBlockCount(void) const;
+	virtual uint GetBlockCount(void) const;
 	
 	void SetBlockSize(uint bytes);
 
@@ -155,7 +121,7 @@ class BlockdumpFileReader : public AsyncFileReader
 	u32			m_blocks;	
 	s32			m_blockofs;
 
-	// dtable / dtablesize are used when reading blockdumps
+	// index table
 	ScopedArray<u32>	m_dtable;
 	int					m_dtablesize;
 
@@ -175,7 +141,7 @@ public:
 
 	virtual void Close(void);
 
-	virtual int GetBlockCount(void) const;
+	virtual uint GetBlockCount(void) const;
 
 	static bool DetectBlockdump(AsyncFileReader* reader);
 

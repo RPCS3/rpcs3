@@ -122,7 +122,7 @@ bool MultipartFileReader::Open(const wxString& fileName)
 {
 	// Cannot open a MultipartFileReader directly,
 	// use DetectMultipart to convert a FlatFileReader
-	return -1;
+	return false;
 }
 
 uint MultipartFileReader::GetFirstPart(uint lsn)
@@ -208,7 +208,7 @@ void MultipartFileReader::Close(void)
 	}
 }
 
-int MultipartFileReader::GetBlockCount(void) const
+uint MultipartFileReader::GetBlockCount(void) const
 {
 	return m_parts[m_numparts-1].end;
 }

@@ -69,7 +69,7 @@ void OutputIsoFile::Create(const wxString& filename, int version)
 }
 
 // Generates format header information for blockdumps.
-void OutputIsoFile::WriteFormat(int _blockofs, uint _blocksize, uint _blocks)
+void OutputIsoFile::WriteHeader(int _blockofs, uint _blocksize, uint _blocks)
 {
 	m_blocksize	= _blocksize;
 	m_blocks	= _blocks;
@@ -81,40 +81,35 @@ void OutputIsoFile::WriteFormat(int _blockofs, uint _blocksize, uint _blocks)
 
 	if (m_version == 2)
 	{
-		outWrite("BDV2", 4);
-		outWrite(m_blocksize);
-		outWrite(m_blocks);
-		outWrite(m_blockofs);
+		WriteBuffer("BDV2", 4);
+		WriteValue(m_blocksize);
+		WriteValue(m_blocks);
+		WriteValue(m_blockofs);
 	}
 }
 
-void OutputIsoFile::_WriteBlock(const u8* src, uint lsn)
-{
-	wxFileOffset ofs = (wxFileOffset)lsn * m_blocksize + m_offset;
-
-	m_outstream->SeekO( ofs );
-	outWrite( src + m_blockofs, m_blocksize );
-}
-
-void OutputIsoFile::_WriteBlockD(const u8* src, uint lsn)
-{
-	// Find and ignore blocks that have already been dumped:
-	for (int i=0; i<m_dtablesize; ++i)
-	{
-		if (m_dtable[i] == lsn) return;
-	}
-
-	m_dtable[m_dtablesize++] = lsn;
-	outWrite<u32>( lsn );
-	outWrite( src + m_blockofs, m_blocksize );
-}
-
-void OutputIsoFile::WriteBlock(const u8* src, uint lsn)
+void OutputIsoFile::WriteSector(const u8* src, uint lsn)
 {
 	if (m_version == 2)
-		_WriteBlockD(src, lsn);
+	{	
+		// Find and ignore blocks that have already been dumped:
+		for (int i=0; i<m_dtablesize; ++i)
+		{
+			if (m_dtable[i] == lsn) return;
+		}
+
+		m_dtable[m_dtablesize++] = lsn;
+
+		WriteValue<u32>( lsn );
+	}
 	else
-		_WriteBlock(src, lsn);
+	{
+		wxFileOffset ofs = (wxFileOffset)lsn * m_blocksize + m_offset;
+
+		m_outstream->SeekO( ofs );
+	}
+	
+	WriteBuffer( src + m_blockofs, m_blocksize );
 }
 
 void OutputIsoFile::Close()
@@ -124,7 +119,7 @@ void OutputIsoFile::Close()
 	_init();
 }
 
-void OutputIsoFile::outWrite( const void* src, size_t size )
+void OutputIsoFile::WriteBuffer( const void* src, size_t size )
 {
 	m_outstream->Write(src, size);
 	if(m_outstream->GetLastError() == wxSTREAM_WRITE_ERROR)

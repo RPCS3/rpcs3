@@ -98,7 +98,7 @@ void FlatFileReader::Close(void)
 	hEvent = INVALID_HANDLE_VALUE;
 }
 
-int FlatFileReader::GetBlockCount(void) const
+uint FlatFileReader::GetBlockCount(void) const
 {
 	LARGE_INTEGER fileSize;
 	fileSize.LowPart = GetFileSize(hOverlappedFile, (DWORD*)&(fileSize.HighPart));
