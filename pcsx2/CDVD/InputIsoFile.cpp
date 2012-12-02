@@ -130,6 +130,7 @@ int InputIsoFile::FinishRead3(u8* dst, uint mode)
 	int end = min(end1, end2);
 
 	int diff = m_blockofs - _offset;
+	int ndiff = 0;
 	if(diff > 0)
 	{
 		memset(dst, 0, diff);
@@ -137,13 +138,14 @@ int InputIsoFile::FinishRead3(u8* dst, uint mode)
 	}
 	else 
 	{
+		ndiff = -diff;
 		diff = 0;
 	}
 
 	length = end - _offset;
 
 	uint read_offset = (m_current_lsn - m_read_lsn) * m_blocksize;
-	memcpy_fast(dst + diff, m_readbuffer + read_offset, length);
+	memcpy_fast(dst + diff, m_readbuffer + ndiff + read_offset, length);
 	
 	if (m_type == ISOTYPE_CD && diff >= 12)
 	{
