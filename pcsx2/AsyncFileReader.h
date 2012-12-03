@@ -47,12 +47,11 @@ class FlatFileReader : public AsyncFileReader
 	HANDLE hOverlappedFile;
 
 	OVERLAPPED asyncOperationContext;
-	bool asyncInProgress;
 
 	HANDLE hEvent;
 #else
-#	error Not implemented
 #endif
+	bool asyncInProgress;
 
 public:
 	FlatFileReader(void);
