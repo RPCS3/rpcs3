@@ -3,6 +3,8 @@
 #ifdef WIN32
 #	include <Windows.h>
 #	undef Yield
+#else
+#	include <libaio.h>
 #endif
 
 class AsyncFileReader
@@ -49,9 +51,12 @@ class FlatFileReader : public AsyncFileReader
 	OVERLAPPED asyncOperationContext;
 
 	HANDLE hEvent;
-#else
-#endif
+
 	bool asyncInProgress;
+#else
+	int m_fd; // FIXME don't know if overlap as an equivalent on linux
+	io_context_t m_aio_context;
+#endif
 
 public:
 	FlatFileReader(void);

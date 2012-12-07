@@ -4,9 +4,8 @@
 FlatFileReader::FlatFileReader(void)
 {
 	m_blocksize = 2048;
-	//hOverlappedFile = INVALID_HANDLE_VALUE;
-	//hEvent = INVALID_HANDLE_VALUE;
-	asyncInProgress = false;
+	m_fd = 0;
+	m_aio_context = 0;
 }
 
 FlatFileReader::~FlatFileReader(void)
@@ -18,19 +17,12 @@ bool FlatFileReader::Open(const wxString& fileName)
 {
 	m_filename = fileName;
 
-	//hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	int err = io_setup(64, &m_aio_context);
+	if (err) return false;
 
-	//hOverlappedFile = CreateFile(
-	//	fileName,
-	//	GENERIC_READ,
-	//	FILE_SHARE_READ,
-	//	NULL,
-	//	OPEN_EXISTING,
-	//	FILE_FLAG_SEQUENTIAL_SCAN | FILE_FLAG_OVERLAPPED,
-	//	NULL);
+    m_fd = wxOpen(fileName, O_RDONLY, 0);
 
-	//return hOverlappedFile != INVALID_HANDLE_VALUE;
-	return true;
+	return (m_fd != 0);
 }
 
 int FlatFileReader::ReadSync(void* pBuffer, uint sector, uint count)
@@ -41,60 +33,54 @@ int FlatFileReader::ReadSync(void* pBuffer, uint sector, uint count)
 
 void FlatFileReader::BeginRead(void* pBuffer, uint sector, uint count)
 {
-	LARGE_INTEGER offset;
-	//offset.QuadPart = sector * (__int64)m_blocksize;
-	
-	//DWORD bytesToRead = count * m_blocksize;
+	u64 offset;
+	offset = sector * (u64)m_blocksize;
 
-	//ZeroMemory(&asyncOperationContext, sizeof(asyncOperationContext));
-	//asyncOperationContext.hEvent = hEvent;
-	//asyncOperationContext.Offset = offset.LowPart;
-	//asyncOperationContext.OffsetHigh = offset.HighPart;
+	u32 bytesToRead = count * m_blocksize;
 
-	//ReadFile(hOverlappedFile, pBuffer, bytesToRead, NULL, &asyncOperationContext);
-	asyncInProgress = true;
+	struct iocb iocb;
+	struct iocb* iocbs = &iocb;
+
+	io_prep_pread(&iocb, m_fd, pBuffer, bytesToRead, offset);
+	io_submit(m_aio_context, 1, &iocbs);
 }
 
 int FlatFileReader::FinishRead(void)
 {
-	//DWORD bytes;
-	//
-	//if(!GetOverlappedResult(hOverlappedFile, &asyncOperationContext, &bytes, TRUE))
-	//{
-	//	asyncInProgress = false;
-	//	return -1;
-	//}
+	u32 bytes;
 
-	asyncInProgress = false;
-	//return bytes;
-	return 0;
+	int min_nr = 1;
+	int max_nr = 1;
+    struct io_event* events = new io_event[max_nr];
+
+	int event = io_getevents(m_aio_context, min_nr, max_nr, events, NULL);
+	if (event < 1) {
+		return -1;
+	}
+
+	return 1;
 }
 
 void FlatFileReader::CancelRead(void)
 {
-	//CancelIo(hOverlappedFile);
+	// Will be done when m_aio_context context is destroyed
+	// Note: io_cancel exists but need the iocb structure as parameter
+	// int io_cancel(aio_context_t ctx_id, struct iocb *iocb,
+	//                struct io_event *result);
 }
 
 void FlatFileReader::Close(void)
 {
-	//if(asyncInProgress)
-	//	CancelRead();
 
-	//if(hOverlappedFile != INVALID_HANDLE_VALUE)
-	//	CloseHandle(hOverlappedFile);
+	if (m_fd) close(m_fd);
 
-	//if(hEvent != INVALID_HANDLE_VALUE)
-	//	CloseHandle(hEvent);
+	io_destroy(m_aio_context);
 
-	//hOverlappedFile = INVALID_HANDLE_VALUE;
-	//hEvent = INVALID_HANDLE_VALUE;
+	m_fd = 0;
+	m_aio_context = 0;
 }
 
-int FlatFileReader::GetBlockCount(void) const
+uint FlatFileReader::GetBlockCount(void) const
 {
-	LARGE_INTEGER fileSize;
-	//fileSize.LowPart = GetFileSize(hOverlappedFile, (DWORD*)&(fileSize.HighPart));
-
-	//return (int)(fileSize.QuadPart / m_blocksize);
-	return 0;
+	return (int)(Path::GetFileSize(m_filename) / m_blocksize);
 }

@@ -694,6 +694,8 @@ endif(Linux)
 # link target with zlib
 target_link_libraries(${Output} ${ZLIB_LIBRARIES})
 
+target_link_libraries(${Output} "aio")
+
 # User flags options
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
     target_link_libraries(${Output} "${USER_CMAKE_LD_FLAGS}")
