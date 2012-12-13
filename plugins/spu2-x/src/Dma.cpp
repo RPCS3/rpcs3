@@ -414,6 +414,13 @@ void V_Core::DoDMAwrite(u16* pMem, u32 size)
 		DebugCores[Index].dmaFlag = 2;
 	}
 
+	if(MsgToConsole())
+	{
+		if (TSA > 0xfffff){
+			ConLog("* SPU2-X: Transfer Start Address out of bounds. TSA is %x\n", TSA);
+		}
+	}
+
 	TSA &= 0xfffff;
 
 	bool adma_enable = ((AutoDMACtrl&(Index+1))==(Index+1));
