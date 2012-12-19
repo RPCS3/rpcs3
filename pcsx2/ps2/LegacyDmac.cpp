@@ -123,23 +123,29 @@ __fi tDMA_TAG* SPRdmaGetAddr(u32 addr, bool write)
 
 		if((addr >= 0x1100c000) && (addr < 0x11010000))
 		{
-			DevCon.Warning("VU1 Mem %x", addr);
-			return (tDMA_TAG*)VU1.Mem + (addr & 0x3ff0);
+			//DevCon.Warning("VU1 Mem %x", addr);
+			return (tDMA_TAG*)(VU1.Mem + (addr & 0x3ff0));
 		}
 
+		if((addr >= 0x11004000) && (addr < 0x11008000))
+		{
+			//DevCon.Warning("VU0 Mem %x", addr);
+			return (tDMA_TAG*)(VU0.Mem + (addr & 0xff0));
+		}
+		
 		//Possibly not needed but the manual doesn't say SPR cannot access it.
+		if((addr >= 0x11000000) && (addr < 0x11004000))
+		{
+			//DevCon.Warning("VU0 Micro %x", addr);
+			return (tDMA_TAG*)(VU0.Micro + (addr & 0xff0));
+		}
+
 		if((addr >= 0x11008000) && (addr < 0x1100c000))
 		{
-			DevCon.Warning("VU1 Micro %x", addr);
-			return (tDMA_TAG*)VU1.Micro + (addr & 0x3ff0);
+			//DevCon.Warning("VU1 Micro %x", addr);
+			return (tDMA_TAG*)(VU1.Micro + (addr & 0x3ff0));
 		}
-
-		if ((addr >= 0x11000000) && (addr < 0x11008000))
-		{
-			//VU0 is still mapped directly to physical memory, you cant just
-			//Access it like above (it doesn't work lol) CSI 3 - Dimensions of Murder
-			return (tDMA_TAG*)vtlb_GetPhyPtr(addr & 0x1FFFFFF0);
-		}
+		
 		
 		// Unreachable
 		return NULL;

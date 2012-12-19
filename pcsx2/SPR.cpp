@@ -32,23 +32,45 @@ void sprInit()
 {
 }
 
-static void TestClearVUs(u32 madr, u32 qwc)
+static void TestClearVUs(u32 madr, u32 qwc, bool isWrite)
 {
-	if (madr >= 0x11000000)
+	if (madr >= 0x11000000 && (madr < 0x11010000))
 	{
 		if (madr < 0x11004000)
 		{
-			DbgCon.Warning("scratch pad clearing vu0");
-			CpuVU0->Clear(madr&0xfff, qwc * 16);
+			if(isWrite == true) 
+			{
+				DbgCon.Warning("scratch pad clearing vu0");
+			
+				CpuVU0->Clear(madr&0xfff, qwc * 16);
+			}
+
+			if(((madr & 0xff0) + (qwc * 16)) > 0x1000 )
+			{
+				DevCon.Warning("Warning! SPR%d Crossing in to VU0 Micro Mirror address! Start MADR = %x, End MADR = %x", isWrite ? 0 : 1, madr, madr + (qwc * 16));
+			}
 		}
 		else if (madr >= 0x11008000 && madr < 0x1100c000)
-		{
-			DbgCon.Warning("scratch pad clearing vu1");
-			if (THREAD_VU1) {
-				DevCon.Error("MTVU Warning: SPR Accessing VU1 Memory!!!");
-				vu1Thread.WaitVU();
+		{			
+			if(isWrite == true) 
+			{
+				DbgCon.Warning("scratch pad clearing vu1");
+
+				if (THREAD_VU1) {
+					DevCon.Error("MTVU Warning: SPR Accessing VU1 Memory!!!");
+					vu1Thread.WaitVU();
+				}
+
+				CpuVU1->Clear(madr&0x3fff, qwc * 16);
 			}
-			CpuVU1->Clear(madr&0x3fff, qwc * 16);
+		}
+		else if (madr >= 0x11004000 && madr < 0x11008000)
+		{
+			//SPR trying to write to to VU0 Mem mirror address.
+			if(((madr & 0xff0) + (qwc * 16)) > 0x1000)
+			{
+				DevCon.Warning("Warning! SPR%d Crossing in to VU0 Mem Mirror address! Start MADR = %x, End MADR = %x", isWrite ? 0 : 1, madr, madr + (qwc * 16));
+			}
 		}
 	}
 }
@@ -87,7 +109,7 @@ int  _SPR0chain()
 			memcpy_qwc(pMem, &psSu128(spr0ch.sadr), partialqwc);
 
 			// clear VU mem also!
-			TestClearVUs(spr0ch.madr, partialqwc);
+			TestClearVUs(spr0ch.madr, partialqwc, true);
 
 			spr0ch.madr += partialqwc << 4;
 			spr0ch.sadr += partialqwc << 4;
@@ -138,7 +160,7 @@ void _SPR0interleave()
 			case NO_MFD:
 			case MFD_RESERVED:
 				// clear VU mem also!
-				TestClearVUs(spr0ch.madr, spr0ch.qwc);
+				TestClearVUs(spr0ch.madr, spr0ch.qwc, true);
 				memcpy_qwc(pMem, &psSu128(spr0ch.sadr), spr0ch.qwc);
 				break;
  		}
@@ -297,6 +319,11 @@ void dmaSPR0()   // fromSPR
 
 __fi static void SPR1transfer(const void* data, int qwc)
 {
+	if ((spr1ch.madr >= 0x11000000) && (spr1ch.madr < 0x11010000))
+	{
+		TestClearVUs(spr1ch.madr, spr1ch.qwc, false);
+	}
+
 	memcpy_qwc(&psSu128(spr1ch.sadr), data, qwc);
 	spr1ch.sadr += qwc * 16;
 }
