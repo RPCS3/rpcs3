@@ -371,6 +371,7 @@ __fi void vif1Interrupt()
 	vif1ch.chcr.STR = false;
 	vif1.vifstalled.enabled = false;
 	vif1.irqoffset.enabled = false;
+	if(vif1.queued_program == true) vifExecQueue(1);
 	g_vif1Cycles = 0;
 	DMA_LOG("VIF1 DMA End");
 	hwDmacIrq(DMAC_VIF1);

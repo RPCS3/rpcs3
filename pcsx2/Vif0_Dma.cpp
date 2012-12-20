@@ -255,6 +255,7 @@ __fi void vif0Interrupt()
 	vif0Regs.stat.FQC = min((u16)0x8, vif0ch.qwc);
 	vif0.vifstalled.enabled = false;
 	vif0.irqoffset.enabled = false;
+	if(vif0.queued_program == true) vifExecQueue(0);
 	g_vif0Cycles = 0;
 	hwDmacIrq(DMAC_VIF0);
 	vif0Regs.stat.FQC = 0;
