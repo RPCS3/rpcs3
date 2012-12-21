@@ -115,10 +115,12 @@ __fi tDMA_TAG* SPRdmaGetAddr(u32 addr, bool write)
 	}
 	else if ((addr >= 0x11000000) && (addr < 0x11010000))
 	{
-		if (THREAD_VU1) {
-			//DevCon.Error("MTVU: SPRdmaGetAddr Accessing VU Memory!");
+		if (addr >= 0x11008000 && THREAD_VU1)
+		{
+			DevCon.Warning("MTVU: SPR Accessing VU1 Memory");
 			vu1Thread.WaitVU();
 		}
+		
 		//Access for VU Memory
 
 		if((addr >= 0x1100c000) && (addr < 0x11010000))

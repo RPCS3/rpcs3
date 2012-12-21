@@ -56,11 +56,6 @@ static void TestClearVUs(u32 madr, u32 qwc, bool isWrite)
 			{
 				DbgCon.Warning("scratch pad clearing vu1");
 
-				if (THREAD_VU1) {
-					DevCon.Error("MTVU Warning: SPR Accessing VU1 Memory!!!");
-					vu1Thread.WaitVU();
-				}
-
 				CpuVU1->Clear(madr&0x3fff, qwc * 16);
 			}
 		}
