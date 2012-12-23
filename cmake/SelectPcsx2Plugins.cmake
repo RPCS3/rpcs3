@@ -43,23 +43,24 @@ endif(wxWidgets_FOUND AND SPARSEHASH_FOUND)
 #           -gtk2 (linux)
 #           -zlib
 #           -common_libs
+#           -aio
 #---------------------------------------
 # Common dependancy
-if(wxWidgets_FOUND AND ZLIB_FOUND AND common_libs)
+if(wxWidgets_FOUND AND ZLIB_FOUND AND common_libs AND AIO_FOUND)
     set(pcsx2_core TRUE)
 elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/pcsx2")
     set(pcsx2_core FALSE)
-else(wxWidgets_FOUND AND ZLIB_FOUND AND common_libs)
+else()
     set(pcsx2_core FALSE)
     message(STATUS "Skip build of pcsx2 core: miss some dependencies")
     message(STATUS "${msg_dep_pcsx2}")
-endif(wxWidgets_FOUND AND ZLIB_FOUND AND common_libs)
+endif()
 # Linux need also gtk2
 if(Linux AND pcsx2_core AND NOT GTK2_FOUND)
     set(pcsx2_core FALSE)
     message(STATUS "Skip build of pcsx2 core: miss some dependencies")
     message(STATUS "${msg_dep_pcsx2}")
-endif(Linux AND pcsx2_core AND NOT GTK2_FOUND)
+endif()
 
 
 #-------------------------------------------------------------------------------

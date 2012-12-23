@@ -17,7 +17,7 @@
 
 #include "CDVD.h"
 #include "wx/wfstream.h"
-
+#include "AsyncFileReader.h"
 
 enum isoType
 {
@@ -28,67 +28,82 @@ enum isoType
 	ISOTYPE_DVDDL
 };
 
-enum isoFlags
-{
-	ISOFLAGS_BLOCKDUMP_V2 =	0x0004,
-	ISOFLAGS_BLOCKDUMP_V3 =	0x0020
-};
-
 static const int CD_FRAMESIZE_RAW	= 2448;
-
-// --------------------------------------------------------------------------------------
-//  MultiPartIso
-// --------------------------------------------------------------------------------------
-// An encapsulating class for array boundschecking and easy ScopedPointer behavior.
-//
-class _IsoPart
-{
-	DeclareNoncopyableObject( _IsoPart );
-
-public:
-	// starting block index of this part of the iso.
-	u32			slsn;
-	// ending bock index of this part of the iso.
-	u32			elsn;
-
-	wxString						filename;
-	ScopedPtr<wxFileInputStream>	handle;
-
-public:	
-	_IsoPart() {}
-	~_IsoPart() throw();
-	
-	void Read( void* dest, size_t size );
-
-	void Seek(wxFileOffset pos, wxSeekMode mode = wxFromStart);
-	void SeekEnd(wxFileOffset pos=0);
-	wxFileOffset Tell() const;
-	uint CalculateBlocks( uint startBlock, uint blocksize );
-
-	template< typename T >
-	void Read( T& dest )
-	{
-		Read( &dest, sizeof(dest) );
-	}
-};
 
 // --------------------------------------------------------------------------------------
 //  isoFile
 // --------------------------------------------------------------------------------------
-class isoFile
+class InputIsoFile
 {
-	DeclareNoncopyableObject( isoFile );
+	DeclareNoncopyableObject( InputIsoFile );
+	
+	 static const uint MaxReadUnit = 128;
 
 protected:
-	static const uint MaxSplits = 8;
+	 uint ReadUnit;
 
 protected:
 	wxString	m_filename;
-	uint		m_numparts;
-	_IsoPart	m_parts[MaxSplits];
+	AsyncFileReader*	m_reader;
+
+	uint		m_current_lsn;
+	uint		m_current_count;
 
 	isoType		m_type;
 	u32			m_flags;
+
+	s32			m_offset;
+	s32			m_blockofs;
+	u32			m_blocksize;
+
+	// total number of blocks in the ISO image (including all parts)
+	u32			m_blocks;
+		
+	bool		m_read_inprogress;
+	uint		m_read_lsn;
+	uint		m_read_count;
+	u8			m_readbuffer[MaxReadUnit * CD_FRAMESIZE_RAW];
+	
+public:	
+	InputIsoFile();
+	virtual ~InputIsoFile() throw();
+
+	bool IsOpened() const;
+	
+	isoType GetType() const		{ return m_type; }
+	uint GetBlockCount() const	{ return m_blocks; }	
+	int GetBlockOffset() const	{ return m_blockofs; }
+	
+	const wxString& GetFilename() const
+	{
+		return m_filename;
+	}
+
+	bool Test( const wxString& srcfile );
+	bool Open( const wxString& srcfile, bool testOnly = false );
+	void Close();
+	bool Detect( bool readType=true );
+
+	int ReadSync(u8* dst, uint lsn);
+
+	void BeginRead2(uint lsn);
+	int FinishRead3(u8* dest, uint mode);
+	
+protected:
+	void _init();
+
+	bool tryIsoType(u32 _size, s32 _offset, s32 _blockofs);
+	void FindParts();
+};
+
+class OutputIsoFile
+{
+	DeclareNoncopyableObject( OutputIsoFile );
+	
+protected:
+	wxString	m_filename;
+
+	u32			m_version;
 
 	s32			m_offset;
 	s32			m_blockofs;
@@ -102,62 +117,34 @@ protected:
 	int					m_dtablesize;
 
 	ScopedPtr<wxFileOutputStream>	m_outstream;
-
-	// Currently unused internal buffer (it was used for compressed
-	// iso support, before it was removed).
-	//ScopedArray<u8>		m_buffer;
-	//int					m_buflsn;
-			
+		
 public:	
-	isoFile();
-	virtual ~isoFile() throw();
+	OutputIsoFile();
+	virtual ~OutputIsoFile() throw();
 
 	bool IsOpened() const;
 	
-	isoType GetType() const		{ return m_type; }
-
-	// Returns the number of blocks in the ISO image.
-	uint GetBlockCount() const	{ return m_blocks; }
-	
-	int GetBlockOffset() const	{ return m_blockofs; }
 	
 	const wxString& GetFilename() const
 	{
 		return m_filename;
 	}
 
-	bool Test( const wxString& srcfile );
-	void Open( const wxString& srcfile );
 	void Create(const wxString& filename, int mode);
 	void Close();
-	bool Detect( bool readType=true );
 
-	void WriteFormat(int blockofs, uint blocksize, uint blocks);
+	void WriteHeader(int blockofs, uint blocksize, uint blocks);
 
-	void ReadBlock(u8* dst, uint lsn);
-	void WriteBlock(const u8* src, uint lsn);
+	void WriteSector(const u8* src, uint lsn);
 	
 protected:
-	bool detect();
 	void _init();
-	void _ReadDtable();
-	void _ReadBlock(u8* dst, uint lsn);
-	void _ReadBlockD(u8* dst, uint lsn);
 
-	void _WriteBlock(const u8* src, uint lsn);
-	void _WriteBlockD(const u8* src, uint lsn);
-
-	bool tryIsoType(u32 _size, s32 _offset, s32 _blockofs);
-	void FindParts();
-	
-	void outWrite( const void* src, size_t size );
+	void WriteBuffer( const void* src, size_t size );
 
 	template< typename T >
-	void outWrite( const T& data )
+	void WriteValue( const T& data )
 	{
-		outWrite( &data, sizeof(data) );
+		WriteBuffer( &data, sizeof(data) );
 	}
 };
-
-
-

@@ -408,6 +408,8 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\CDVD\BlockdumpFileReader.cpp" />
+    <ClCompile Include="..\..\CDVD\OutputIsoFile.cpp" />
     <ClCompile Include="..\..\GameDatabase.cpp" />
     <ClCompile Include="..\..\Gif_Logger.cpp" />
     <ClCompile Include="..\..\Gif_Unit.cpp" />
@@ -418,6 +420,7 @@
     <ClCompile Include="..\..\gui\Panels\GameDatabasePanel.cpp" />
     <ClCompile Include="..\..\gui\Panels\MemoryCardListView.cpp" />
     <ClCompile Include="..\..\IPU\IPUdma.cpp" />
+    <ClCompile Include="..\..\MultipartFileReader.cpp" />
     <ClCompile Include="..\..\Patch.cpp" />
     <ClCompile Include="..\..\Patch_Memory.cpp" />
     <ClCompile Include="..\..\PrecompiledHeader.cpp">
@@ -432,6 +435,7 @@
     <ClCompile Include="..\..\x86\iMisc.cpp" />
     <ClCompile Include="..\..\Pcsx2Config.cpp" />
     <ClCompile Include="..\..\PluginManager.cpp" />
+    <ClCompile Include="..\FlatFileReaderWindows.cpp" />
     <ClCompile Include="..\SamplProf.cpp" />
     <ClCompile Include="..\..\SaveState.cpp" />
     <ClCompile Include="..\..\SourceLog.cpp" />
@@ -440,7 +444,7 @@
     <ClCompile Include="..\..\System.cpp" />
     <ClCompile Include="..\..\System\SysThreadBase.cpp" />
     <ClCompile Include="..\..\Elfheader.cpp" />
-    <ClCompile Include="..\..\CDVD\IsoFileFormats.cpp" />
+    <ClCompile Include="..\..\CDVD\InputIsoFile.cpp" />
     <ClCompile Include="..\..\Linux\LnxHostSys.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Devel|Win32'">true</ExcludedFromBuild>
@@ -682,6 +686,7 @@
     <ClCompile Include="..\..\ZipTools\thread_lzma.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\AsyncFileReader.h" />
     <ClInclude Include="..\..\GameDatabase.h" />
     <ClInclude Include="..\..\Gif_Unit.h" />
     <ClInclude Include="..\..\gui\AppGameDatabase.h" />

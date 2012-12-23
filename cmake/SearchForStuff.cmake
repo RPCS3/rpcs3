@@ -47,6 +47,7 @@ if (EGL_API)
 endif()
 
 ## Use pcsx2 package to find module
+include(FindAio)
 ## Include cg because of zzogl-cg and zerogs
 #if(NOT GLSL_API)
 	include(FindCg)
@@ -73,68 +74,59 @@ include(FindSparseHash_NEW)
 #		    Use system include (if not 3rdparty one)
 #----------------------------------------
 if(Linux)
-    # GTK2
 	if(GTK2_FOUND)
 		include_directories(${GTK2_INCLUDE_DIRS})
 	endif(GTK2_FOUND)
 
-	# x11
 	if(X11_FOUND)
 		include_directories(${X11_INCLUDE_DIR})
 	endif(X11_FOUND)
 endif(Linux)
 
-# ALSA
+if(AIO_FOUND)
+    include_directories(${AIO_INCLUDE_DIR})
+endif()
+
 if(ALSA_FOUND)
 	include_directories(${ALSA_INCLUDE_DIRS})
 endif(ALSA_FOUND)
 
-# bzip2
 if(BZIP2_FOUND)
 	include_directories(${BZIP2_INCLUDE_DIR})
 endif(BZIP2_FOUND)
 
-# Cg
 if(CG_FOUND)
 	include_directories(${CG_INCLUDE_DIRS})
 endif(CG_FOUND)
 
-# EGL
 if (EGL_FOUND)
     include_directories(${EGL_INCLUDE_DIR})
 endif()
 
-# Jpeg
 if(JPEG_FOUND)
 	include_directories(${JPEG_INCLUDE_DIR})
 endif(JPEG_FOUND)
 
-# GLEW
 if(GLEW_FOUND)
     include_directories(${GLEW_INCLUDE_DIR})
 endif(GLEW_FOUND)
 
-# OpenGL
 if(OPENGL_FOUND)
 	include_directories(${OPENGL_INCLUDE_DIR})
 endif(OPENGL_FOUND)
 
-# PortAudio
 if(PORTAUDIO_FOUND)
 	include_directories(${PORTAUDIO_INCLUDE_DIR})
 endif(PORTAUDIO_FOUND)
 
-# SDL
 if(SDL_FOUND)
 	include_directories(${SDL_INCLUDE_DIR})
 endif(SDL_FOUND)
 
-# SoundTouch
 if(SOUNDTOUCH_FOUND)
 	include_directories(${SOUNDTOUCH_INCLUDE_DIR})
 endif(SOUNDTOUCH_FOUND)
 
-# SPARSEHASH
 if(SPARSEHASH_FOUND)
 	include_directories(${SPARSEHASH_INCLUDE_DIR})
 endif(SPARSEHASH_FOUND)
@@ -144,7 +136,6 @@ if(SPARSEHASH_NEW_FOUND)
     set(SPARSEHASH_FOUND TRUE)
 endif(SPARSEHASH_NEW_FOUND)
 
-# Wx
 if(wxWidgets_FOUND)
     if(Linux)
         # Force the use of 32 bit library configuration on
@@ -170,7 +161,6 @@ if(wxWidgets_FOUND)
 	include(${wxWidgets_USE_FILE})
 endif(wxWidgets_FOUND)
 
-# Zlib
 if(ZLIB_FOUND)
 	include_directories(${ZLIB_INCLUDE_DIRS})
 endif(ZLIB_FOUND)

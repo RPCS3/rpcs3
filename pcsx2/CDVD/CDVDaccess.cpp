@@ -57,7 +57,8 @@ int lastLSN;		// needed for block dumping
 
 // Records last read block length for block dumping
 //static int plsn = 0;
-static isoFile blockDumpFile;
+
+static OutputIsoFile blockDumpFile;
 
 // Assertion check for CDVD != NULL (in devel and debug builds), because its handier than
 // relying on DEP exceptions -- and a little more reliable too.
@@ -367,7 +368,7 @@ bool DoCDVDopen()
 	cdvdTD td;
 	CDVD->getTD(0, &td);
 
-	blockDumpFile.Create(temp, ISOFLAGS_BLOCKDUMP_V3);
+	blockDumpFile.Create(temp, 3);
 
 	if( blockDumpFile.IsOpened() )
 	{
@@ -387,8 +388,9 @@ bool DoCDVDopen()
 				blocksize = 2048;
 			break;
 		}
-		blockDumpFile.WriteFormat(blockofs, blocksize, blocks);
+		blockDumpFile.WriteHeader(blockofs, blocksize, blocks);
 	}
+
 
 	return true;
 }
@@ -396,7 +398,7 @@ bool DoCDVDopen()
 void DoCDVDclose()
 {
 	CheckNullCDVD();
-	blockDumpFile.Close();
+	//blockDumpFile.Close();
 
 	if( CDVD->close != NULL )
 		CDVD->close();
@@ -411,7 +413,7 @@ s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 
 	if (ret == 0 && blockDumpFile.IsOpened())
 	{
-		blockDumpFile.WriteBlock(buffer, lsn);
+		blockDumpFile.WriteSector(buffer, lsn);
 	}
 
 	return ret;
@@ -450,7 +452,7 @@ s32 DoCDVDgetBuffer(u8* buffer)
 
 	if (ret == 0 && blockDumpFile.IsOpened())
 	{
-		blockDumpFile.WriteBlock(buffer, lastLSN);
+		blockDumpFile.WriteSector(buffer, lastLSN);
 	}
 
 	return ret;

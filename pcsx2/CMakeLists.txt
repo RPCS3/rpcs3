@@ -146,6 +146,8 @@ set(pcsx2Sources
 	MMI.cpp
 	MTGS.cpp
     MTVU.cpp
+    MultipartFileReader.cpp
+    OutputIsoFile.cpp
 	Patch.cpp
 	Patch_Memory.cpp
 	Pcsx2Config.cpp
@@ -243,14 +245,17 @@ set(pcsx2Headers
 
 # CDVD sources
 set(pcsx2CDVDSources
+    CDVD/BlockdumpFileReader.cpp
 	CDVD/CdRom.cpp
 	CDVD/CDVDaccess.cpp
 	CDVD/CDVD.cpp
 	CDVD/CDVDisoReader.cpp
-	CDVD/IsoFileFormats.cpp
+    CDVD/InputIsoFile.cpp
+    CDVD/OutputIsoFile.cpp
 	CDVD/IsoFS/IsoFile.cpp
 	CDVD/IsoFS/IsoFSCDVD.cpp
-	CDVD/IsoFS/IsoFS.cpp)
+	CDVD/IsoFS/IsoFS.cpp
+    )
 
 # CDVD headers
 set(pcsx2CDVDHeaders
@@ -415,7 +420,9 @@ set(pcsx2IPUHeaders
 
 # Linux sources
 set(pcsx2LinuxSources
-	Linux/LnxKeyCodes.cpp)
+	Linux/LnxKeyCodes.cpp
+    Linux/LnxFlatFileReader.cpp
+    )
 
 # Linux headers
 set(pcsx2LinuxHeaders
@@ -686,6 +693,8 @@ endif(Linux)
 
 # link target with zlib
 target_link_libraries(${Output} ${ZLIB_LIBRARIES})
+
+target_link_libraries(${Output} ${AIO_LIBRARIES})
 
 # User flags options
 if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")

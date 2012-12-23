@@ -421,6 +421,14 @@
 				Name="ISO"
 				>
 				<File
+					RelativePath="..\..\AsyncFileReader.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\BlockdumpFileReader.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\..\Elfheader.cpp"
 					>
 				</File>
@@ -429,11 +437,23 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\CDVD\IsoFileFormats.cpp"
+					RelativePath="..\FlatFileReaderWindows.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\InputIsoFile.cpp"
 					>
 				</File>
 				<File
 					RelativePath="..\..\CDVD\IsoFileFormats.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\MultipartFileReader.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\..\CDVD\OutputIsoFile.cpp"
 					>
 				</File>
 			</Filter>
