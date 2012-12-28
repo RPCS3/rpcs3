@@ -13,7 +13,8 @@ protected:
 	AsyncFileReader(void) {}
 
 	wxString m_filename;
-	
+
+	uint m_dataoffset;
 	uint m_blocksize;
 
 public:
