@@ -200,7 +200,7 @@ int IPU1dma()
 							break;
 
 						default:
-							Console.Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team");
+							DevCon.Error("IPU ERROR: different transfer mode!, Please report to PCSX2 Team");
 							break;
 					}
 
