@@ -10,11 +10,13 @@
 class AsyncFileReader
 {	
 protected:
-	AsyncFileReader(void) {}
+	AsyncFileReader(void) { m_nextExpectedRead = -1; }
 
 	wxString m_filename;
 	
 	uint m_blocksize;
+
+	uint m_nextExpectedRead;
 
 public:
 	virtual ~AsyncFileReader(void) {};
@@ -32,6 +34,8 @@ public:
 	virtual uint GetBlockCount(void) const=0;
 	
 	virtual void SetBlockSize(uint bytes) {}	
+
+	uint GetReadAheadHint() const { return m_nextExpectedRead; }
 	
 	uint GetBlockSize() const { return m_blocksize; }
 
@@ -73,7 +77,7 @@ public:
 	virtual void Close(void);
 
 	virtual uint GetBlockCount(void) const;
-	
+
 	void SetBlockSize(uint bytes) { m_blocksize = bytes; }
 };
 

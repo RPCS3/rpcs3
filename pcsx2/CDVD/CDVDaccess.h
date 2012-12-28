@@ -51,6 +51,7 @@ struct CDVD_API
 	_CDVDreadSector    readSector;
 	_CDVDgetBuffer2    getBuffer2;
 	_CDVDgetDualInfo   getDualInfo;
+	_CDVDnotifyReadLength notifyReadLength;
 };
 
 // ----------------------------------------------------------------------------
@@ -80,3 +81,4 @@ extern s32  DoCDVDgetBuffer(u8* buffer);
 extern s32  DoCDVDdetectDiskType();
 extern void DoCDVDresetDiskTypeCache();
 
+extern void DoCDVDnotifyReadLength(s32 length);

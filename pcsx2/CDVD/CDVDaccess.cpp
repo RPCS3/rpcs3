@@ -419,6 +419,11 @@ s32 DoCDVDreadSector(u8* buffer, u32 lsn, int mode)
 	return ret;
 }
 
+void DoCDVDnotifyReadLength(s32 length)
+{
+	CDVD->notifyReadLength(length);
+}
+
 s32 DoCDVDreadTrack(u32 lsn, int mode)
 {
 	CheckNullCDVD();

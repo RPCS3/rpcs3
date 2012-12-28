@@ -475,6 +475,11 @@ void CALLBACK ISOnewDiskCB(void(* /* callback */)())
 {
 }
 
+void CALLBACK ISOnotifyReadLength(s32 readLength)
+{
+	iso.NotifyReadLength(readLength);
+}
+
 CDVD_API CDVDapi_Iso =
 {
 	ISOclose,
@@ -496,4 +501,5 @@ CDVD_API CDVDapi_Iso =
 	ISOreadSector,
 	ISOgetBuffer2,
 	ISOgetDualInfo,
+	ISOnotifyReadLength
 };

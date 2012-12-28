@@ -37,7 +37,8 @@ class InputIsoFile
 {
 	DeclareNoncopyableObject( InputIsoFile );
 	
-	 static const uint MaxReadUnit = 128;
+	 static const uint MaxReadUnit = 1;
+	 static const uint MaxReadAhead = 1;
 
 protected:
 	 uint ReadUnit;
@@ -63,7 +64,13 @@ protected:
 	uint		m_read_lsn;
 	uint		m_read_count;
 	u8			m_readbuffer[MaxReadUnit * CD_FRAMESIZE_RAW];
+
+	uint		m_read_ahead;
+	uint		m_read_length;
 	
+	bool		m_is_reading_ahead;
+	uint		m_expected_sequential_remaining;
+
 public:	
 	InputIsoFile();
 	virtual ~InputIsoFile() throw();
@@ -88,6 +95,8 @@ public:
 
 	void BeginRead2(uint lsn);
 	int FinishRead3(u8* dest, uint mode);
+
+	void NotifyReadLength(s32 length) { m_expected_sequential_remaining = m_read_length = length; }
 	
 protected:
 	void _init();

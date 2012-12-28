@@ -50,6 +50,18 @@ int InputIsoFile::ReadSync(u8* dst, uint lsn)
 
 void InputIsoFile::BeginRead2(uint lsn)
 {
+	if(m_read_inprogress)
+	{
+		if(lsn >= m_read_lsn && lsn < (m_read_lsn+m_read_count))
+		{
+			// read already in progress
+			return;
+		}
+
+		FinishRead3(NULL, 0);
+		m_is_reading_ahead = false;
+	}
+
 	if (lsn > m_blocks)
 	{
 		FastFormatUnicode msg;
@@ -98,12 +110,22 @@ int InputIsoFile::FinishRead3(u8* dst, uint mode)
 
 	if(m_read_inprogress)
 	{
-		ret = m_reader->FinishRead();
+		if(dst)
+			ret = m_reader->FinishRead();
+		else
+		{
+			m_reader->CancelRead();
+			return -1;
+		}
+
 		m_read_inprogress = false;
 
 		if(ret < 0)
 			return ret;
 	}
+
+	if(!dst)
+		return -1;
 		
 	switch (mode)
 	{
@@ -153,6 +175,22 @@ int InputIsoFile::FinishRead3(u8* dst, uint mode)
 		dst[diff - 9] = 2;
 	}
 
+	if(m_expected_sequential_remaining > 0)
+		m_expected_sequential_remaining --;
+
+	if(m_read_ahead > 0 && (m_expected_sequential_remaining > 0 || m_read_length > 1))
+	{
+		uint lsn = (m_expected_sequential_remaining > 0) ?
+				m_read_lsn + 1 :
+				m_reader->GetReadAheadHint();
+
+		if(lsn >= 0)
+		{
+			m_is_reading_ahead = true;
+			BeginRead2(lsn);
+		}
+	}
+
 	return 0;
 }
 
@@ -179,6 +217,11 @@ void InputIsoFile::_init()
 	m_read_inprogress = false;
 	m_read_count = 0;
 	m_read_lsn = -1;
+
+	m_read_length = 0;
+	m_expected_sequential_remaining = 0;
+
+	m_is_reading_ahead = false;
 }
 
 // Tests the specified filename to see if it is a supported ISO type.  This function typically
@@ -218,7 +261,9 @@ bool InputIsoFile::Open( const wxString& srcfile, bool testOnly )
 
 		m_reader = bdr;
 
-		ReadUnit = 1;		
+		ReadUnit = 1;	
+
+		m_read_ahead = 0;
 	}
 
 	bool detected = Detect();
@@ -239,6 +284,8 @@ bool InputIsoFile::Open( const wxString& srcfile, bool testOnly )
 	
 		// Returns the original reader if single-part or a Multipart reader otherwise
 		m_reader =	MultipartFileReader::DetectMultipart(m_reader);
+		
+		m_read_ahead = MaxReadAhead;
 	}
 
 	m_blocks = m_reader->GetBlockCount();
