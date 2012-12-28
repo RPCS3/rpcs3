@@ -598,12 +598,9 @@ void SaveStateBase::cdvdFreeze()
 		// Make sure the Cdvd plugin has the expected track loaded into the buffer.
 		// If cdvd.Readed is cleared it means we need to load the SeekToSector (ie, a
 		// seek is in progress!)
-		
+
 		if( cdvd.Reading )
-		{
-			DoCDVDnotifyReadLength(cdvd.nSectors);
 			cdvd.RErr = DoCDVDreadTrack( cdvd.Readed ? cdvd.Sector : cdvd.SeekToSector, cdvd.ReadMode);
-		}
 	}
 }
 
@@ -1221,8 +1218,6 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector,MODE_CDROM ) );
-			
-			DoCDVDnotifyReadLength(cdvd.nSectors);
 
 			// Read-ahead by telling the plugin about the track now.
 			// This helps improve performance on actual from-cd emulation
@@ -1271,8 +1266,6 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector, MODE_CDROM ) );
-			
-			DoCDVDnotifyReadLength(cdvd.nSectors);
 
 			// Read-ahead by telling the plugin about the track now.
 			// This helps improve performance on actual from-cd emulation
@@ -1309,8 +1302,6 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector, MODE_DVDROM ) );
-			
-			DoCDVDnotifyReadLength(cdvd.nSectors);
 
 			// Read-ahead by telling the plugin about the track now.
 			// This helps improve performance on actual from-cd emulation

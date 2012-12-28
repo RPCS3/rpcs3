@@ -34,6 +34,16 @@ bool FlatFileReader::Open(const wxString& fileName)
 
 int FlatFileReader::ReadSync(void* pBuffer, uint sector, uint count)
 {
+	//LARGE_INTEGER offset;
+	//offset.QuadPart = sector * (__int64)m_blocksize;
+	//
+	//DWORD bytesToRead = count * m_blocksize;
+	//DWORD bytes;
+
+	//if(!ReadFile(hOverlappedFile, pBuffer, bytesToRead, &bytes, NULL))
+	//	return -1;
+
+	//return bytes;
 	BeginRead(pBuffer, sector, count);
 	return FinishRead();
 }
@@ -52,8 +62,6 @@ void FlatFileReader::BeginRead(void* pBuffer, uint sector, uint count)
 
 	ReadFile(hOverlappedFile, pBuffer, bytesToRead, NULL, &asyncOperationContext);
 	asyncInProgress = true;
-
-	m_nextExpectedRead = sector + count;
 }
 
 int FlatFileReader::FinishRead(void)
