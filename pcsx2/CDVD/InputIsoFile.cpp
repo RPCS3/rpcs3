@@ -234,7 +234,8 @@ bool InputIsoFile::Open( const wxString& srcfile, bool testOnly )
 	if(!isBlockdump)
 	{
 		ReadUnit = MaxReadUnit;
-
+		
+		m_reader->SetDataOffset(m_offset);
 		m_reader->SetBlockSize(m_blocksize);
 	
 		// Returns the original reader if single-part or a Multipart reader otherwise
@@ -277,7 +278,8 @@ bool InputIsoFile::tryIsoType(u32 _size, s32 _offset, s32 _blockofs)
 	m_blocksize	= _size;
 	m_offset	= _offset;
 	m_blockofs	= _blockofs;
-
+	
+	m_reader->SetDataOffset(_offset);
 	m_reader->SetBlockSize(_size);
 	
 	if(ReadSync(buf, 16) < 0)
@@ -331,6 +333,7 @@ bool InputIsoFile::Detect( bool readType )
 	m_blockofs	= 0;
 	m_type		= ISOTYPE_AUDIO;
 	
+	m_reader->SetDataOffset(m_offset);
 	m_reader->SetBlockSize(m_blocksize);
 
 	//BUG: This also detects a memory-card-file as a valid Audio-CD ISO... -avih

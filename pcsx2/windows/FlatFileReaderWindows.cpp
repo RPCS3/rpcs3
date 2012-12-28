@@ -51,7 +51,7 @@ int FlatFileReader::ReadSync(void* pBuffer, uint sector, uint count)
 void FlatFileReader::BeginRead(void* pBuffer, uint sector, uint count)
 {
 	LARGE_INTEGER offset;
-	offset.QuadPart = sector * (__int64)m_blocksize;
+	offset.QuadPart = sector * (s64)m_blocksize + m_dataoffset;
 	
 	DWORD bytesToRead = count * m_blocksize;
 
