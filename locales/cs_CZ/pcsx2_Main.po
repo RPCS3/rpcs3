@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
-"PO-Revision-Date: 2012-05-24 20:41+0100\n"
+"POT-Creation-Date: 2013-01-02 11:15+0100\n"
+"PO-Revision-Date: 2012-09-09 20:41+0100\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Zbyněk Schwarz\n"
 "Language: cs\n"
@@ -96,7 +96,7 @@ msgid "Includes idle event processing and some other uncommon event usages."
 msgstr ""
 "Zahrnuje zpracování nečinné události a další neobyčejné používání událostí."
 
-#: pcsx2/CDVD/IsoFileFormats.cpp:416
+#: pcsx2/CDVD/InputIsoFile.cpp:231
 msgid "Unrecognized ISO image file format"
 msgstr "Nerozpoznaný formát souboru obrazu ISO"
 
@@ -1182,7 +1182,7 @@ msgstr "Stiskněte Ukončit pro okamžité ukončení %s."
 msgid "Terminate App"
 msgstr "Ukončit Aplikaci"
 
-#: pcsx2/gui/FrameForGS.cpp:384
+#: pcsx2/gui/FrameForGS.cpp:379
 msgid "GS Output is Disabled!"
 msgstr "Výstup GS je Zakázán!"
 
@@ -1296,17 +1296,17 @@ msgstr "&Ladění"
 
 #: pcsx2/gui/MainFrame.cpp:356
 #, c-format
-msgid "%s  %d.%d.%d.%d%s (svn)  %s"
-msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
-
-#: pcsx2/gui/MainFrame.cpp:362
-#, c-format
 msgid "%s  %d.%d.%d %s"
 msgstr "%s  %d.%d.%d %s"
 
-#: pcsx2/gui/MainFrame.cpp:363
+#: pcsx2/gui/MainFrame.cpp:357
 msgid "(modded)"
 msgstr "(pozměněno)"
+
+#: pcsx2/gui/MainFrame.cpp:363
+#, c-format
+msgid "%s  %d.%d.%d.%d%s (svn)  %s"
+msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 
 #: pcsx2/gui/MainFrame.cpp:400 pcsx2/gui/MainFrame.cpp:402
 #: pcsx2/gui/MainFrame.cpp:408
@@ -2003,7 +2003,7 @@ msgstr "Nevšímat si směru řadiče v převodu Path3 - Použito pro Hotwheels"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:98
 msgid "Switch to GSdx software rendering when a FMV plays"
-msgstr ""
+msgstr "Přepnout na softwarové vykreslování GSdx při přehrávání FMV"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:109
 msgid "Enable manual game fixes [Not recommended]"
@@ -2576,11 +2576,11 @@ msgstr ""
 "Úplně zakáže jakoukoli aktivitu zásuvného modulu GS; ideální pro měření "
 "výkonu hlavních součástí EE."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:312
+#: pcsx2/gui/Panels/VideoPanel.cpp:314
 msgid "Frame Skipping"
 msgstr "Přeskakování Snímků"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:315
+#: pcsx2/gui/Panels/VideoPanel.cpp:317
 msgid "Framelimiter"
 msgstr "Omezovač Snímků"
 

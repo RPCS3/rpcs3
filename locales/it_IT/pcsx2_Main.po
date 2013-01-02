@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-01-02 11:15+0100\n"
 "PO-Revision-Date: 2012-08-28 01:03+0100\n"
 "Last-Translator: Leucos\n"
 "Language-Team: Leucos\n"
@@ -96,7 +96,7 @@ msgstr ""
 "Include la processazione degli eventi d'inattività ed alcuni altri utilizzi "
 "non comuni di eventi."
 
-#: pcsx2/CDVD/IsoFileFormats.cpp:416
+#: pcsx2/CDVD/InputIsoFile.cpp:231
 msgid "Unrecognized ISO image file format"
 msgstr "Formato file immagine ISO non riconosciuto"
 
@@ -1213,7 +1213,7 @@ msgstr "Premi Termina per terminare %s immediatamente."
 msgid "Terminate App"
 msgstr "Termina applicazione"
 
-#: pcsx2/gui/FrameForGS.cpp:384
+#: pcsx2/gui/FrameForGS.cpp:379
 msgid "GS Output is Disabled!"
 msgstr "L'output GS è disabilitato!"
 
@@ -1329,17 +1329,17 @@ msgstr "&Debug"
 
 #: pcsx2/gui/MainFrame.cpp:356
 #, c-format
-msgid "%s  %d.%d.%d.%d%s (svn)  %s"
-msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
-
-#: pcsx2/gui/MainFrame.cpp:362
-#, c-format
 msgid "%s  %d.%d.%d %s"
 msgstr "%s  %d.%d.%d %s"
 
-#: pcsx2/gui/MainFrame.cpp:363
+#: pcsx2/gui/MainFrame.cpp:357
 msgid "(modded)"
 msgstr "(modificato)"
+
+#: pcsx2/gui/MainFrame.cpp:363
+#, c-format
+msgid "%s  %d.%d.%d.%d%s (svn)  %s"
+msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 
 #: pcsx2/gui/MainFrame.cpp:400 pcsx2/gui/MainFrame.cpp:402
 #: pcsx2/gui/MainFrame.cpp:408
@@ -2629,11 +2629,11 @@ msgstr ""
 "Disattiva completamente l'attività del plugin GS; ideale per fare un "
 "benchmark dei componenti EEcore."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:312
+#: pcsx2/gui/Panels/VideoPanel.cpp:314
 msgid "Frame Skipping"
 msgstr "Salto Fotogrammi"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:315
+#: pcsx2/gui/Panels/VideoPanel.cpp:317
 msgid "Framelimiter"
 msgstr "Limitatore Fotogrammi"
 

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-01-02 11:15+0100\n"
 "PO-Revision-Date: 2011-12-17 01:36+0900\n"
 "Last-Translator: DeltaHF\n"
 "Language-Team: DeltaHF\n"
@@ -96,7 +96,7 @@ msgstr "タスク待機状態..."
 msgid "Includes idle event processing and some other uncommon event usages."
 msgstr "アイドルイベント処理及びその他例外イベントを用途に含みます。"
 
-#: pcsx2/CDVD/IsoFileFormats.cpp:416
+#: pcsx2/CDVD/InputIsoFile.cpp:231
 msgid "Unrecognized ISO image file format"
 msgstr "認識できないISOイメージファイル形式です。"
 
@@ -1172,7 +1172,7 @@ msgstr "終了を押して%sを強制終了します。"
 msgid "Terminate App"
 msgstr "アプリケーションの終了"
 
-#: pcsx2/gui/FrameForGS.cpp:384
+#: pcsx2/gui/FrameForGS.cpp:379
 msgid "GS Output is Disabled!"
 msgstr "GS出力は無効です！"
 
@@ -1286,17 +1286,17 @@ msgstr "デバッグ(&D)"
 
 #: pcsx2/gui/MainFrame.cpp:356
 #, c-format
-msgid "%s  %d.%d.%d.%d%s (svn)  %s"
-msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
-
-#: pcsx2/gui/MainFrame.cpp:362
-#, c-format
 msgid "%s  %d.%d.%d %s"
 msgstr "%s  %d.%d.%d %s"
 
-#: pcsx2/gui/MainFrame.cpp:363
+#: pcsx2/gui/MainFrame.cpp:357
 msgid "(modded)"
 msgstr "(改変済)"
+
+#: pcsx2/gui/MainFrame.cpp:363
+#, c-format
+msgid "%s  %d.%d.%d.%d%s (svn)  %s"
+msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 
 #: pcsx2/gui/MainFrame.cpp:400 pcsx2/gui/MainFrame.cpp:402
 #: pcsx2/gui/MainFrame.cpp:408
@@ -2547,11 +2547,11 @@ msgstr ""
 "GSプラグインの動作を完全に無効にします。エモーションエンジンのコンポーネント"
 "自体の処理速度計測とデバッグ目的に最適です。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:312
+#: pcsx2/gui/Panels/VideoPanel.cpp:314
 msgid "Frame Skipping"
 msgstr "フレームスキップ"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:315
+#: pcsx2/gui/Panels/VideoPanel.cpp:317
 msgid "Framelimiter"
 msgstr "フレームリミッタ"
 

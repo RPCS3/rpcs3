@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
-"PO-Revision-Date: 2012-05-13 21:22+0800\n"
+"POT-Creation-Date: 2013-01-02 11:15+0100\n"
+"PO-Revision-Date: 2012-10-03 22:15+0800\n"
 "Last-Translator: Wei Mingzhi <whistler_wmz@users.sf.net>\n"
 "Language-Team: \n"
 "Language: \n"
@@ -89,7 +89,7 @@ msgstr "正在等待任务..."
 msgid "Includes idle event processing and some other uncommon event usages."
 msgstr "包含空闲事件处理及一些其它的非常见事件使用。"
 
-#: pcsx2/CDVD/IsoFileFormats.cpp:416
+#: pcsx2/CDVD/InputIsoFile.cpp:231
 msgid "Unrecognized ISO image file format"
 msgstr "无法识别的 ISO 镜像文件格式"
 
@@ -1123,7 +1123,7 @@ msgstr "单击终止可立即结束 %s。"
 msgid "Terminate App"
 msgstr "终止应用程序"
 
-#: pcsx2/gui/FrameForGS.cpp:384
+#: pcsx2/gui/FrameForGS.cpp:379
 msgid "GS Output is Disabled!"
 msgstr "GS 输出已禁用!"
 
@@ -1235,17 +1235,17 @@ msgstr "调试(&D)"
 
 #: pcsx2/gui/MainFrame.cpp:356
 #, c-format
-msgid "%s  %d.%d.%d.%d%s (svn)  %s"
-msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
-
-#: pcsx2/gui/MainFrame.cpp:362
-#, c-format
 msgid "%s  %d.%d.%d %s"
 msgstr "%s  %d.%d.%d %s"
 
-#: pcsx2/gui/MainFrame.cpp:363
+#: pcsx2/gui/MainFrame.cpp:357
 msgid "(modded)"
 msgstr "(已修改)"
+
+#: pcsx2/gui/MainFrame.cpp:363
+#, c-format
+msgid "%s  %d.%d.%d.%d%s (svn)  %s"
+msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 
 #: pcsx2/gui/MainFrame.cpp:400 pcsx2/gui/MainFrame.cpp:402
 #: pcsx2/gui/MainFrame.cpp:408
@@ -1918,7 +1918,7 @@ msgstr "忽略 Path3 传输中的总线方向 - 用于 Hotwheels"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:98
 msgid "Switch to GSdx software rendering when a FMV plays"
-msgstr ""
+msgstr "播放 FMV 时，切换到 GSdx 软件渲染模式"
 
 #: pcsx2/gui/Panels/GameFixesPanel.cpp:109
 msgid "Enable manual game fixes [Not recommended]"
@@ -2456,11 +2456,11 @@ msgid ""
 "components."
 msgstr "彻底禁用所有的 GS 插件活动；可用于评测 EE 内核组件性能。"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:312
+#: pcsx2/gui/Panels/VideoPanel.cpp:314
 msgid "Frame Skipping"
 msgstr "跳帧"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:315
+#: pcsx2/gui/Panels/VideoPanel.cpp:317
 msgid "Framelimiter"
 msgstr "限帧"
 

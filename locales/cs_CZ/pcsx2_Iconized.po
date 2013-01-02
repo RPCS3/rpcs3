@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2012-09-08 18:25+0200\n"
-"PO-Revision-Date: 2012-05-24 20:31+0100\n"
+"PO-Revision-Date: 2012-09-09 20:43+0100\n"
 "Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
 "Language-Team: Zbyněk Schwarz\n"
 "Language: cs\n"
@@ -39,7 +39,6 @@ msgstr ""
 "PSX, pak si budete muset stáhnout PSX emulátor, jako ePSXe nebo PCSX."
 
 #: pcsx2/System.cpp:114
-#, fuzzy
 msgid ""
 "This recompiler was unable to reserve contiguous memory required for "
 "internal caches.  This error can be caused by low virtual memory resources, "
@@ -49,9 +48,7 @@ msgstr ""
 "Tento rekompilátor nemohl vyhradit přilehlou paměť potřebnou pro vnitřní "
 "vyrovnávací paměti. Tato chyba může být způsobena nízkými zdroji virtuální "
 "paměti, jako např. vypnutý nebo malý stránkovací soubor, nebo jiným "
-"programem náročným na paměť. Můžete také zkusit snížit výchozí velikost "
-"vyrovnávací paměti pro všechny rekompilátory PCSX2, naleznete v Nastavení "
-"Hostitele."
+"programem náročným na paměť."
 
 #: pcsx2/System.cpp:344
 msgid ""
@@ -493,17 +490,16 @@ msgid "Failed: Destination memory card '%s' is in use."
 msgstr "Selhání: Cílová paměťová karta '%s' se používá."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
-#, fuzzy
 msgid ""
 "Please select your preferred default location for PCSX2 user-level documents "
 "below (includes memory cards, screenshots, settings, and savestates).  These "
 "folder locations can be overridden at any time using the Plugin/BIOS "
 "Selector panel."
 msgstr ""
-"Prosím vyberte níže Vaši upřednostňované výchozí umístění pro dokumenty "
+"Prosím níže vyberte vaše výchozí upřednostňované umístění pro dokumenty "
 "uživatelské úrovně PCSX2 (zahrnující paměťové karty, snímky obrazovky, "
-"nastavení a uložené stavy). Tyto umístění adresářů mohou být kdykoli "
-"potlačena použitím panelu Hlavního Nastavení."
+"nastavení a uložené stavy). Tato umístění adresářů mohou být kdykoli "
+"potlačena použitím panelu panelu výběru BIOSu/Zásuvných modulů."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:38
 msgid ""

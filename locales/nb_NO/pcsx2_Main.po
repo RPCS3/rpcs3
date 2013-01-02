@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-01-02 11:15+0100\n"
 "PO-Revision-Date: 2012-08-12 09:43+0100\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -95,7 +95,7 @@ msgstr "Venter på oppgave..."
 msgid "Includes idle event processing and some other uncommon event usages."
 msgstr "Inkluderer hvilende prosesser og noen unormale bruksområder."
 
-#: pcsx2/CDVD/IsoFileFormats.cpp:416
+#: pcsx2/CDVD/InputIsoFile.cpp:231
 msgid "Unrecognized ISO image file format"
 msgstr "Ukjent ISO bilde fil format"
 
@@ -1186,7 +1186,7 @@ msgstr "Trykk Terminer for å stoppe %s med en gang."
 msgid "Terminate App"
 msgstr "Terminer Applikasjon"
 
-#: pcsx2/gui/FrameForGS.cpp:384
+#: pcsx2/gui/FrameForGS.cpp:379
 msgid "GS Output is Disabled!"
 msgstr "GS Ut strømen er deaktivert"
 
@@ -1298,17 +1298,17 @@ msgstr "&Problemløsing"
 
 #: pcsx2/gui/MainFrame.cpp:356
 #, c-format
-msgid "%s  %d.%d.%d.%d%s (svn)  %s"
-msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
-
-#: pcsx2/gui/MainFrame.cpp:362
-#, c-format
 msgid "%s  %d.%d.%d %s"
 msgstr "%s  %d.%d.%d %s"
 
-#: pcsx2/gui/MainFrame.cpp:363
+#: pcsx2/gui/MainFrame.cpp:357
 msgid "(modded)"
 msgstr "(modifisert)"
+
+#: pcsx2/gui/MainFrame.cpp:363
+#, c-format
+msgid "%s  %d.%d.%d.%d%s (svn)  %s"
+msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 
 #: pcsx2/gui/MainFrame.cpp:400 pcsx2/gui/MainFrame.cpp:402
 #: pcsx2/gui/MainFrame.cpp:408
@@ -2575,11 +2575,11 @@ msgstr ""
 "Fullstendig deaktivering alle GS tilleggs aktiviteter; ideelt for ytelses "
 "måling av Eecore komponenter."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:312
+#: pcsx2/gui/Panels/VideoPanel.cpp:314
 msgid "Frame Skipping"
 msgstr "Ramme Hopping"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:315
+#: pcsx2/gui/Panels/VideoPanel.cpp:317
 msgid "Framelimiter"
 msgstr "Rammebegrensning"
 

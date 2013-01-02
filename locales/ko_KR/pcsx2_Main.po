@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-01-02 11:15+0100\n"
 "PO-Revision-Date: 2012-08-11 14:08+0900\n"
 "Last-Translator: 99skull <99skull@gmail.com>\n"
 "Language-Team: 99skull <99skull@gmail.com>\n"
@@ -94,7 +94,7 @@ msgstr "작업을 대기중..."
 msgid "Includes idle event processing and some other uncommon event usages."
 msgstr "유휴 이벤트 과정과 다른 흔치않은 이벤트 사용들을 포함."
 
-#: pcsx2/CDVD/IsoFileFormats.cpp:416
+#: pcsx2/CDVD/InputIsoFile.cpp:231
 msgid "Unrecognized ISO image file format"
 msgstr "인식할 수 없는 ISO 이미지 파일포맷"
 
@@ -1155,7 +1155,7 @@ msgstr "%s 를 즉시 중지하려면 제거를 누르세요."
 msgid "Terminate App"
 msgstr "App 제거"
 
-#: pcsx2/gui/FrameForGS.cpp:384
+#: pcsx2/gui/FrameForGS.cpp:379
 msgid "GS Output is Disabled!"
 msgstr "GS 출력 사용안함!"
 
@@ -1269,17 +1269,17 @@ msgstr "&디버그"
 
 #: pcsx2/gui/MainFrame.cpp:356
 #, c-format
-msgid "%s  %d.%d.%d.%d%s (svn)  %s"
-msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
-
-#: pcsx2/gui/MainFrame.cpp:362
-#, c-format
 msgid "%s  %d.%d.%d %s"
 msgstr "%s  %d.%d.%d %s"
 
-#: pcsx2/gui/MainFrame.cpp:363
+#: pcsx2/gui/MainFrame.cpp:357
 msgid "(modded)"
 msgstr "(수정된)"
+
+#: pcsx2/gui/MainFrame.cpp:363
+#, c-format
+msgid "%s  %d.%d.%d.%d%s (svn)  %s"
+msgstr "%s  %d.%d.%d.%d%s (svn)  %s"
 
 #: pcsx2/gui/MainFrame.cpp:400 pcsx2/gui/MainFrame.cpp:402
 #: pcsx2/gui/MainFrame.cpp:408
@@ -2501,11 +2501,11 @@ msgstr ""
 "모든 GS 플러그인 활동을 완전히 사용안함; EE코어 요소의 이상적인 벤치마킹을 위"
 "함."
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:312
+#: pcsx2/gui/Panels/VideoPanel.cpp:314
 msgid "Frame Skipping"
 msgstr "프레임 생략"
 
-#: pcsx2/gui/Panels/VideoPanel.cpp:315
+#: pcsx2/gui/Panels/VideoPanel.cpp:317
 msgid "Framelimiter"
 msgstr "프레임 제한"
 

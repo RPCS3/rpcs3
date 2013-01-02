@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: PCSX2 1.0.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
 "POT-Creation-Date: 2012-09-08 18:25+0200\n"
-"PO-Revision-Date: 2012-08-18 14:40+0200\n"
+"PO-Revision-Date: 2012-10-28 12:37+0200\n"
 "Last-Translator: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
 "Language-Team: Ceyhun Özgöç (PyramidHead) <atiamar@hotmail.com>\n"
 "Language: tr_TR\n"
@@ -18,6 +18,7 @@ msgstr ""
 "X-Poedit-KeywordsList: pxE;pxEt\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 "X-Poedit-Basepath: C:\\Users\\Ceyhun\\Downloads\\PCSX2 SVN\n"
+"X-Generator: Poedit 1.5.4\n"
 "X-Poedit-SearchPath-0: pcsx2\n"
 "X-Poedit-SearchPath-1: common\n"
 
@@ -40,7 +41,6 @@ msgstr ""
 "kullanmalısınız."
 
 #: pcsx2/System.cpp:114
-#, fuzzy
 msgid ""
 "This recompiler was unable to reserve contiguous memory required for "
 "internal caches.  This error can be caused by low virtual memory resources, "
@@ -50,9 +50,7 @@ msgstr ""
 "Derleyici dahili önbellek için gerekli olan bitişik hafıza miktarını "
 "ayıramıyor. Bu hata takas dosyasının küçük olması ya da devre dışı "
 "bırakılması nedeniyle düşük sanal bellek miktarı olan bilgisayarlarda veya "
-"başka bir programın hafızanın tamamı kullanması nedeniyle olur. Ayrıca Ana "
-"Bilgisayar Seçenekleri altından tüm PCSX2 derleyicilerinin varsayılan "
-"önbellek boyutlarını azaltmayı deneyebilirsiniz."
+"başka bir programın hafızanın tamamı kullanması nedeniyle olur."
 
 #: pcsx2/System.cpp:344
 msgid ""
@@ -505,7 +503,6 @@ msgid "Failed: Destination memory card '%s' is in use."
 msgstr "Hata: Hedef %s hafıza kartı kullanımda."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:35
-#, fuzzy
 msgid ""
 "Please select your preferred default location for PCSX2 user-level documents "
 "below (includes memory cards, screenshots, settings, and savestates).  These "
@@ -513,8 +510,9 @@ msgid ""
 "Selector panel."
 msgstr ""
 "Lütfen PCSX2 hafıza kartları, ekran görüntüleri, ayarlar ve kayıt konumları "
-"gibi PCSX2 kullanıcı dosyalarının saklanacağı konumu seçiniz. Bu klasörlerin "
-"konumları daha sonradan Eklenti/BIOS Seçici paneli altından değiştirilebilir."
+"gibi PCSX2 kullanıcı dosyalarının saklanacağı varsayılan konumu seçiniz. Bu "
+"klasörlerin konumları daha sonradan Eklenti/BIOS Seçici paneli altından "
+"değiştirilebilir."
 
 #: pcsx2/gui/Panels/MiscPanelStuff.cpp:38
 msgid ""
