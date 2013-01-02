@@ -80,7 +80,7 @@ get_svn_dir()
         echo "  $directory" | sed -e 's/\//\ /g'
         if [ -e `basename ${directory}` ] ; then
             # Directory already exist so only update
-            svn up --quiet ${SVN_TRUNK}/${directory} -r $SVN_CO_VERSION;
+            svn up --quiet `basename ${directory}` -r $SVN_CO_VERSION;
         else 
             svn co --quiet ${SVN_TRUNK}/${directory} -r $SVN_CO_VERSION;
         fi
@@ -92,7 +92,7 @@ get_svn_file()
     for file in $* ; do
         # Versioning information is not supported for a single file
         # therefore you can't use svn co
-        svn export --quiet ${SVN_TRUNK}/${file} -r $SVN_CO_VERSION;
+        svn export --quiet ${SVN_TRUNK}/${file} --force -r $SVN_CO_VERSION;
     done
 }
 
@@ -130,33 +130,23 @@ mkdir -p $ROOT_DIR/plugins
 echo "Note: some plugins are more or less deprecated CDVDisoEFP, CDVDlinuz, Zerogs, Zeropad ...";
 echo "Done")
 
-## Download the internal sdl 1.3 for gsdx
-# echo "Downloading 3rdpary SDL 1.3 (need by gsdx) revision ${SVN_CO_VERSION}"
-# mkdir -p $ROOT_DIR/3rdparty
-# (cd $ROOT_DIR/3rdparty/;
-#     get_svn_file 3rdparty/CMakeLists.txt;
-#     get_svn_dir 3rdparty/SDL-1.3.0-5387;)
-# echo "Done"
-    
-
 ## Installation
 echo "Copy the subversion repository to a temporary directory"
 # Copy the dir
 rm -fr $NEW_DIR
 cp -r $ROOT_DIR $NEW_DIR
 
-echo "Remove .svn directories"
-find $NEW_DIR -name ".svn" -type d -exec rm -fr {} \; 2> /dev/null
-echo "Remove windows files (useless & copyright issues)"
+echo "Remove windows files (useless & potential copyright issues)"
+# => pcsx2/windows
+# Copyright header must be updated
 find $NEW_DIR -iname "windows" -type d -exec rm -fr {} \; 2> /dev/null
+# => ./plugins/zzogl-pg*/opengl/Win32 (reduced to the current linux plugins)
 find $NEW_DIR -name "Win32" -type d -exec rm -fr {} \; 2> /dev/null
-rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/Win32"
-rm -fr "${NEW_DIR}/common/vsprops"
+
 echo "Remove useless files (copyright issues)"
 rm -fr "${NEW_DIR}/plugins/zzogl-pg/opengl/ZeroGSShaders"
 rm -fr "${NEW_DIR}/common/src/Utilities/x86/MemcpyFast.cpp"
 rm -fr "${NEW_DIR}/plugins/GSdx/baseclasses"
-rm -fr "${NEW_DIR}/plugins/GSdx/vtune"
 
 ## BUILD
 echo "Build the tar.gz file"

@@ -5,6 +5,7 @@ Maintainer: Gregory Hainaut <gregory.hainaut@gmail.com>
 Build-Depends: cmake (>= 2.8.5),
     debhelper (>= 8.9),
     dpkg-dev (>= 1.15.7),
+    libaio-dev,
     libasound2-dev,
     libbz2-dev,
     libgl1-mesa-dev,
@@ -29,9 +30,11 @@ Homepage: http://pcsx2.net/
 
 Package: pcsx2-unstable
 Architecture: i386
-# recommand libasound for alsa plugin for pulseaudio
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Recommends: libasound2-plugins
+# libasound => alsa plugin for pulseaudio
+# libusb    => ps3 controller (and probably others)
+Recommends: libasound2-plugins,
+    libusb-0.1-4
 Conflicts: pcsx2,
     pcsx2-data-unstable,
     pcsx2-l10n-unstable,
