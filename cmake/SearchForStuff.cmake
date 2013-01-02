@@ -39,7 +39,13 @@ find_package(Subversion)
 # Force the unicode build (the variable is only supported on cmake 2.8.3 and above)
 # Warning do not put any double-quote for the argument...
 # set(wxWidgets_CONFIG_OPTIONS --unicode=yes --debug=yes) # In case someone want to debug inside wx
-set(wxWidgets_CONFIG_OPTIONS --unicode=yes)
+# 
+# Fedora uses an extra non-standard option ...
+if(Fedora) 
+    set(wxWidgets_CONFIG_OPTIONS --unicode=yes --arch i686)
+else()
+    set(wxWidgets_CONFIG_OPTIONS --unicode=yes)
+endif()
 find_package(wxWidgets COMPONENTS base core adv)
 find_package(ZLIB)
 if (EGL_API)
