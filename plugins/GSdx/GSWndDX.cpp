@@ -19,6 +19,7 @@
  *
  */
 
+#include "stdafx.h"
 #include "GSWndDX.h"
 
 #ifdef _WINDOWS
@@ -34,11 +35,11 @@ GSWndDX::~GSWndDX()
 
 LRESULT CALLBACK GSWndDX::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	GSWnd* wnd = NULL;
+	GSWndDX* wnd = NULL;
 
 	if(message == WM_NCCREATE)
 	{
-		wnd = (GSWnd*)((LPCREATESTRUCT)lParam)->lpCreateParams;
+		wnd = (GSWndDX*)((LPCREATESTRUCT)lParam)->lpCreateParams;
 
 		SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)wnd);
 
@@ -46,7 +47,7 @@ LRESULT CALLBACK GSWndDX::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 	}
 	else
 	{
-		wnd = (GSWnd*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+		wnd = (GSWndDX*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	}
 
 	if(wnd == NULL)
@@ -92,7 +93,7 @@ bool GSWndDX::Create(const string& title, int w, int h)
 	// TODO: wc.hIcon = ;
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-	wc.lpszClassName = "GSWnd";
+	wc.lpszClassName = "GSWndDX";
 
 	if(!GetClassInfo(wc.hInstance, wc.lpszClassName, &wc))
 	{

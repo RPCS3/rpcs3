@@ -20,9 +20,10 @@
  */
 
 #include "GSWnd.h"
-#include <X11/Xlib.h>
 
 #ifdef _LINUX
+#include <X11/Xlib.h>
+
 class GSWndOGL : public GSWnd
 {
 	void*      m_window;

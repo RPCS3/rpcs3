@@ -275,8 +275,9 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 				default:
 				#ifdef _WINDOWS
 					s_gs->m_wnd = new GSWndDX(); break;
-				#endif
+				#else
 				case 4: s_gs->m_wnd = new GSWndOGL(); break;
+				#endif
 			}
 		}
 	}

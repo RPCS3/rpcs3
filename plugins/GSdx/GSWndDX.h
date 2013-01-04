@@ -19,6 +19,7 @@
  *
  */
 
+#include "stdafx.h"
 #include "GSWnd.h"
 
 #ifdef _WINDOWS
