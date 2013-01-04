@@ -18,3 +18,5 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
+
+#include "stdafx.h"
