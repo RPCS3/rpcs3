@@ -33,6 +33,7 @@
 #include "GSDevice9.h"
 #include "GSDevice11.h"
 #include "GSWndDX.h"
+#include "GSWndWGL.h"
 #include "GSRendererCS.h"
 #include "GSSettingsDlg.h"
 
@@ -270,15 +271,14 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 
 		if (s_gs->m_wnd == NULL)
 		{
-			switch(renderer / 3)
-			{
-				default:
-				#ifdef _WINDOWS
-					s_gs->m_wnd = new GSWndDX(); break;
-				#else
-				case 4: s_gs->m_wnd = new GSWndOGL(); break;
-				#endif
-			}
+#ifdef _WINDOWS
+			if (renderer / 3 == 4)
+				s_gs->m_wnd = new GSWndWGL();
+			else
+				s_gs->m_wnd = new GSWndDX();
+#else
+			s_gs->m_wnd = new GSWndOGL();
+#endif
 		}
 	}
 	catch(std::exception& ex)

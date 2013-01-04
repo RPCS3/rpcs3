@@ -21,33 +21,38 @@
 
 #include "GSWnd.h"
 
-#ifdef _LINUX
-#include <X11/Xlib.h>
+#ifdef _WINDOWS
 
-class GSWndOGL : public GSWnd
+class GSWndWGL : public GSWnd
 {
-	Window     m_NativeWindow;
-	Display*   m_NativeDisplay;
-	GLXContext m_context;
+	//Window     m_NativeWindow;
+	//Display*   m_NativeDisplay;
+	//GLXContext m_context;
+	HWND	 m_NativeWindow;
+	HDC		 m_NativeDisplay;
+	HGLRC	 m_context;
 
 	bool m_ctx_attached;
 
-	PFNGLXSWAPINTERVALMESAPROC m_swapinterval;
+	//PFNGLXSWAPINTERVALMESAPROC m_swapinterval;
 
 	bool IsContextAttached() const { return m_ctx_attached; }
 	bool CreateContext(int major, int minor);
 	void CheckContext();
 
+	void CloseWGLDisplay();
+	bool OpenWGLDisplay();
+
 public:
-	GSWndOGL();
-	virtual ~GSWndOGL() {};
+	GSWndWGL();
+	virtual ~GSWndWGL() {};
 
 	bool Create(const string& title, int w, int h);
 	bool Attach(void* handle, bool managed = true);
 	void Detach();
 
-	void* GetDisplay();
-	void* GetHandle() {return (void*)m_NativeWindow;}
+	void* GetDisplay() {return m_NativeWindow;}
+	void* GetHandle() {return m_NativeWindow;}
 	GSVector4i GetClientRect();
 	bool SetWindowText(const char* title);
 

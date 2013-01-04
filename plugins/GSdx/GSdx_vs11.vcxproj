@@ -635,6 +635,7 @@
     <ClCompile Include="GSVertexTrace.cpp" />
     <ClCompile Include="GSWnd.cpp" />
     <ClCompile Include="GSWndDX.cpp" />
+    <ClCompile Include="GSWndWGL.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|x64'">Create</PrecompiledHeader>
@@ -1650,6 +1651,7 @@
     <ClInclude Include="GSVertexTrace.h" />
     <ClInclude Include="GSWnd.h" />
     <ClInclude Include="GSWndDX.h" />
+    <ClInclude Include="GSWndWGL.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="svnrev.h" />
     <ClInclude Include="resource.h" />

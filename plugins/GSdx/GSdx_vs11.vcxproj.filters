@@ -180,6 +180,9 @@
     <ClCompile Include="GSWndDX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSWndWGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -483,6 +486,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSWndDX.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSWndWGL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">

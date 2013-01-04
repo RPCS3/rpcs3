@@ -23,13 +23,13 @@
 
 #ifdef _LINUX
 GSWndOGL::GSWndOGL()
-	: m_window(NULL), m_Xwindow(0), m_XDisplay(NULL), m_swapinterval(NULL)
+	: m_NativeWindow(0), m_NativeDisplay(NULL), m_swapinterval(NULL)
 {
 }
 
 bool GSWndOGL::CreateContext(int major, int minor)
 {
-	if ( !m_XDisplay || !m_Xwindow )
+	if ( !m_NativeDisplay || !m_NativeWindow )
 	{
 		fprintf( stderr, "Wrong X11 display/window\n" );
 		exit(1);
@@ -51,7 +51,7 @@ bool GSWndOGL::CreateContext(int major, int minor)
 
 	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
 	int fbcount = 0;
-	GLXFBConfig *fbc = glXChooseFBConfig(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl, &fbcount);
+	GLXFBConfig *fbc = glXChooseFBConfig(m_NativeDisplay, DefaultScreen(m_NativeDisplay), attrListDbl, &fbcount);
 	if (!fbc || fbcount < 1) return false;
 
 	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
@@ -69,10 +69,10 @@ bool GSWndOGL::CreateContext(int major, int minor)
 		None
 	};
 
-	m_context = glXCreateContextAttribsARB(m_XDisplay, fbc[0], 0, true, context_attribs);
+	m_context = glXCreateContextAttribsARB(m_NativeDisplay, fbc[0], 0, true, context_attribs);
 	if (!m_context) return false;
 
-	XSync( m_XDisplay, false);
+	XSync( m_NativeDisplay, false);
 	return true;
 }
 
@@ -80,7 +80,7 @@ void GSWndOGL::AttachContext()
 {
 	if (!IsContextAttached()) {
 		//fprintf(stderr, "Attach the context\n");
-		glXMakeCurrent(m_XDisplay, m_Xwindow, m_context);
+		glXMakeCurrent(m_NativeDisplay, m_NativeWindow, m_context);
 		m_ctx_attached = true;
 	}
 }
@@ -89,7 +89,7 @@ void GSWndOGL::DetachContext()
 {
 	if (IsContextAttached()) {
 		//fprintf(stderr, "Detach the context\n");
-		glXMakeCurrent(m_XDisplay, None, NULL);
+		glXMakeCurrent(m_NativeDisplay, None, NULL);
 		m_ctx_attached = false;
 	}
 }
@@ -97,8 +97,8 @@ void GSWndOGL::DetachContext()
 void GSWndOGL::CheckContext()
 {
 	int glxMajorVersion, glxMinorVersion;
-	glXQueryVersion(m_XDisplay, &glxMajorVersion, &glxMinorVersion);
-	if (glXIsDirect(m_XDisplay, m_context))
+	glXQueryVersion(m_NativeDisplay, &glxMajorVersion, &glxMinorVersion);
+	if (glXIsDirect(m_NativeDisplay, m_context))
 		fprintf(stderr, "glX-Version %d.%d with Direct Rendering\n", glxMajorVersion, glxMinorVersion);
 	else
 		fprintf(stderr, "glX-Version %d.%d with Indirect Rendering !!! It won't support properly opengl\n", glxMajorVersion, glxMinorVersion);
@@ -106,10 +106,10 @@ void GSWndOGL::CheckContext()
 
 bool GSWndOGL::Attach(void* handle, bool managed)
 {
-	m_Xwindow = *(Window*)handle;
+	m_NativeWindow = *(Window*)handle;
 	m_managed = managed;
 
-	m_XDisplay = XOpenDisplay(NULL);
+	m_NativeDisplay = XOpenDisplay(NULL);
 
 	// Note: 4.2 crash on latest nvidia drivers!
 	if (!CreateContext(3, 3)) return false;
@@ -130,17 +130,17 @@ void GSWndOGL::Detach()
 	// Actually the destructor is not called when there is only a GSclose/GSshutdown
 	// The window still need to be closed
 	DetachContext();
-	if (m_context) glXDestroyContext(m_XDisplay, m_context);
+	if (m_context) glXDestroyContext(m_NativeDisplay, m_context);
 
-	if (m_XDisplay) {
-		XCloseDisplay(m_XDisplay);
-		m_XDisplay = NULL;
+	if (m_NativeDisplay) {
+		XCloseDisplay(m_NativeDisplay);
+		m_NativeDisplay = NULL;
 	}
 }
 
 bool GSWndOGL::Create(const string& title, int w, int h)
 {
-	if(m_window != NULL) return false;
+	if(m_NativeWindow) return false;
 
 	if(w <= 0 || h <= 0) {
 		w = theApp.GetConfig("ModeWidth", 640);
@@ -150,7 +150,7 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 	m_managed = true;
 
 	// note this part must be only executed when replaying .gs debug file
-	m_XDisplay = XOpenDisplay(NULL);
+	m_NativeDisplay = XOpenDisplay(NULL);
 
 	int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
 		GLX_RED_SIZE, 8,
@@ -159,11 +159,11 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 		GLX_DEPTH_SIZE, 24,
 		None
 	};
-	XVisualInfo* vi = glXChooseVisual(m_XDisplay, DefaultScreen(m_XDisplay), attrListDbl);
+	XVisualInfo* vi = glXChooseVisual(m_NativeDisplay, DefaultScreen(m_NativeDisplay), attrListDbl);
 
 	/* create a color map */
 	XSetWindowAttributes attr;
-	attr.colormap = XCreateColormap(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
+	attr.colormap = XCreateColormap(m_NativeDisplay, RootWindow(m_NativeDisplay, vi->screen),
 			vi->visual, AllocNone);
 	attr.border_pixel = 0;
 	attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
@@ -171,24 +171,24 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 		EnterWindowMask | LeaveWindowMask | FocusChangeMask ;
 
 	// Create a window at the last position/size
-	m_Xwindow = XCreateWindow(m_XDisplay, RootWindow(m_XDisplay, vi->screen),
+	m_NativeWindow = XCreateWindow(m_NativeDisplay, RootWindow(m_NativeDisplay, vi->screen),
 			0 , 0 , w, h, 0, vi->depth, InputOutput, vi->visual,
 			CWBorderPixel | CWColormap | CWEventMask, &attr);
 
-	XMapWindow (m_XDisplay, m_Xwindow);
+	XMapWindow (m_NativeDisplay, m_NativeWindow);
 	XFree(vi);
 
 	if (!CreateContext(3, 3)) return false;
 
 	AttachContext();
 
-	return (m_Xwindow != 0);
+	return (m_NativeWindow != 0);
 }
 
 void* GSWndOGL::GetDisplay()
 {
 	// note this part must be only executed when replaying .gs debug file
-	return (void*)m_XDisplay;
+	return (void*)m_NativeDisplay;
 }
 
 GSVector4i GSWndOGL::GetClientRect()
@@ -202,8 +202,8 @@ GSVector4i GSWndOGL::GetClientRect()
     int xDummy;
     int yDummy;
 
-	if (!m_XDisplay) m_XDisplay = XOpenDisplay(NULL);
-	XGetGeometry(m_XDisplay, m_Xwindow, &winDummy, &xDummy, &yDummy, &w, &h, &borderDummy, &depthDummy);
+	if (!m_NativeDisplay) m_NativeDisplay = XOpenDisplay(NULL);
+	XGetGeometry(m_NativeDisplay, m_NativeWindow, &winDummy, &xDummy, &yDummy, &w, &h, &borderDummy, &depthDummy);
 
 	return GSVector4i(0, 0, (int)w, (int)h);
 }
@@ -221,11 +221,11 @@ bool GSWndOGL::SetWindowText(const char* title)
 
 	char* ptitle = (char*)title;
 	if (XStringListToTextProperty(&ptitle, 1, &prop)) {
-		XSetWMName(m_XDisplay, m_Xwindow, &prop);
+		XSetWMName(m_NativeDisplay, m_NativeWindow, &prop);
 	}
 
 	XFree(prop.value);
-	XFlush(m_XDisplay);
+	XFlush(m_NativeDisplay);
 
 	return true;
 }
@@ -240,23 +240,24 @@ void GSWndOGL::SetVSync(bool enable)
 
 void GSWndOGL::Flip()
 {
-	glXSwapBuffers(m_XDisplay, m_Xwindow);
+	glXSwapBuffers(m_NativeDisplay, m_NativeWindow);
 }
 
 void GSWndOGL::Show()
 {
-	XMapRaised(m_XDisplay, m_Xwindow);
-	XFlush(m_XDisplay);
+	XMapRaised(m_NativeDisplay, m_NativeWindow);
+	XFlush(m_NativeDisplay);
 }
 
 void GSWndOGL::Hide()
 {
-	XUnmapWindow(m_XDisplay, m_Xwindow);
-	XFlush(m_XDisplay);
+	XUnmapWindow(m_NativeDisplay, m_NativeWindow);
+	XFlush(m_NativeDisplay);
 }
 
 void GSWndOGL::HideFrame()
 {
 	// TODO
 }
+
 #endif
