@@ -56,10 +56,10 @@ bool GSWndWGL::CreateContext(int major, int minor)
 			// Note: don't support deprecated feature (pre openg 3.1)
 			//GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB | GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
 			WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
-			None
+			0
 		};
 
-		PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress((const GLubyte*) "wglCreateContextAttribsARB");
+		PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
 		if (!wglCreateContextAttribsARB) return false;
 
 		HGLRC context30 = wglCreateContextAttribsARB(m_NativeDisplay, NULL, context_attribs);
@@ -176,7 +176,7 @@ void GSWndWGL::Detach()
 	// The window still need to be closed
 	DetachContext();
 
-	if (m_context) wglContext(m_context);
+	if (m_context) wglDeleteContext(m_context);
 
 	CloseWGLDisplay();
 }
@@ -209,19 +209,19 @@ bool GSWndWGL::OpenWGLDisplay()
 
 	if (!(m_NativeDisplay = GetDC(m_NativeWindow)))
 	{
-		MessageBox(NULL, L"(1) Can't Create A GL Device Context.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
+		MessageBox(NULL, "(1) Can't Create A GL Device Context.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
 	if (!(PixelFormat = ChoosePixelFormat(m_NativeDisplay, &pfd)))
 	{
-		MessageBox(NULL, L"(2) Can't Find A Suitable PixelFormat.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
+		MessageBox(NULL, "(2) Can't Find A Suitable PixelFormat.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
 	if (!SetPixelFormat(m_NativeDisplay, PixelFormat, &pfd))
 	{
-		MessageBox(NULL, L"(3) Can't Set The PixelFormat.", L"ERROR", MB_OK | MB_ICONEXCLAMATION);
+		MessageBox(NULL, "(3) Can't Set The PixelFormat.", "ERROR", MB_OK | MB_ICONEXCLAMATION);
 		return false;
 	}
 
@@ -232,7 +232,7 @@ void GSWndWGL::CloseWGLDisplay()
 {
 	if (m_NativeDisplay && !ReleaseDC(m_NativeWindow, m_NativeDisplay))				 // Are We Able To Release The DC
 	{
-		MessageBox(NULL, L"Release Device Context Failed.", L"SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
+		MessageBox(NULL, "Release Device Context Failed.", "SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
 		m_NativeDisplay = NULL;									 // Set DC To NULL
 	}
 }
@@ -300,13 +300,14 @@ GSVector4i GSWndWGL::GetClientRect()
 }
 
 //TODO: check extensions supported or not
+//FIXME : extension allocation
 void GSWndWGL::SetVSync(bool enable)
 {
 	// m_swapinterval uses an integer as parameter
 	// 0 -> disable vsync
 	// n -> wait n frame
 	//if (m_swapinterval) m_swapinterval((int)enable);
-	wglSwapIntervalEXT(!enable);
+	// wglSwapIntervalEXT(!enable);
 
 }
 

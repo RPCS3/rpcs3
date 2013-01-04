@@ -123,6 +123,10 @@ using namespace std;
 
 #ifdef _WINDOWS
 
+	#include <GL/gl.h>
+	#include <GL/glext.h>
+	#include <GL/wglext.h>
+
 	#include <hash_map>
 	#include <hash_set>
 
