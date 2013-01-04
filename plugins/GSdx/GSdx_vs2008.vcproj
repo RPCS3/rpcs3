@@ -1238,6 +1238,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSWndDX.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\stdafx.cpp"
 				>
 				<FileConfiguration
@@ -1641,6 +1645,10 @@
 			</File>
 			<File
 				RelativePath=".\GSWnd.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSWndDX.h"
 				>
 			</File>
 			<File
