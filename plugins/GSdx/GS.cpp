@@ -32,6 +32,7 @@
 #include "GSRendererDX11.h"
 #include "GSDevice9.h"
 #include "GSDevice11.h"
+#include "GSWndDX.h"
 #include "GSRendererCS.h"
 #include "GSSettingsDlg.h"
 
@@ -41,6 +42,7 @@ static HRESULT s_hr = E_FAIL;
 
 #include "GSDeviceOGL.h"
 #include "GSRendererOGL.h"
+#include "GSWndOGL.h"
 
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
@@ -173,7 +175,7 @@ EXPORT_C GSclose()
 
 	s_gs->m_dev = NULL;
 
-	s_gs->m_wnd.Detach();
+	s_gs->m_wnd->Detach();
 }
 
 static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
@@ -265,6 +267,18 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 				s_renderer = renderer;
 			}
 		}
+
+		if (s_gs->m_wnd == NULL)
+		{
+			switch(renderer / 3)
+			{
+				default:
+				#ifdef _WINDOWS
+					s_gs->m_wnd = new GSWndDX(); break;
+				#endif
+				case 4: s_gs->m_wnd = new GSWndOGL(); break;
+			}
+		}
 	}
 	catch(std::exception& ex)
 	{
@@ -296,9 +310,9 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			return -1;
 		}
 
-		s_gs->m_wnd.Show();
+		s_gs->m_wnd->Show();
 
-		*dsp = s_gs->m_wnd.GetDisplay();
+		*dsp = s_gs->m_wnd->GetDisplay();
 	}
 	else
 	{
@@ -306,10 +320,10 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 
 #ifdef _LINUX
 		// Get the Xwindow from dsp.
-		if( !s_gs->m_wnd.Attach((void*)((uint32*)(dsp)+1), false) )
+		if( !s_gs->m_wnd->Attach((void*)((uint32*)(dsp)+1), false) )
 			return -1;
 #else
-		s_gs->m_wnd.Attach(*dsp, false);
+		s_gs->m_wnd->Attach(*dsp, false);
 #endif
 	}
 
@@ -446,13 +460,13 @@ EXPORT_C GSreadFIFO(uint8* mem)
 #ifdef OGL_DEBUG
 		if (theApp.GetConfig("renderer", 0) / 3 == 4) fprintf(stderr, "Disable FIFO1 on opengl\n");
 #endif
-		s_gs->m_wnd.AttachContext();
+		s_gs->m_wnd->AttachContext();
 #endif
 
 		s_gs->ReadFIFO(mem, 1);
 
 #ifdef OGL_MT_HACK
-		s_gs->m_wnd.DetachContext();
+		s_gs->m_wnd->DetachContext();
 #endif
 	}
 	catch (GSDXRecoverableError)
@@ -470,13 +484,13 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 #ifdef OGL_DEBUG
 		if (theApp.GetConfig("renderer", 0) / 3 == 4) fprintf(stderr, "Disable FIFO2(%d) on opengl\n", size);
 #endif
-		s_gs->m_wnd.AttachContext();
+		s_gs->m_wnd->AttachContext();
 #endif
 
 		s_gs->ReadFIFO(mem, size);
 
 #ifdef OGL_MT_HACK
-		s_gs->m_wnd.DetachContext();
+		s_gs->m_wnd->DetachContext();
 #endif
 	}
 	catch (GSDXRecoverableError)
@@ -534,7 +548,7 @@ EXPORT_C GSvsync(int field)
 	{
 #ifdef _WINDOWS
 
-		if(s_gs->m_wnd.IsManaged())
+		if(s_gs->m_wnd->IsManaged())
 		{
 			MSG msg;
 
@@ -550,7 +564,7 @@ EXPORT_C GSvsync(int field)
 #endif
 
 #ifdef OGL_MT_HACK
-		s_gs->m_wnd.AttachContext();
+		s_gs->m_wnd->AttachContext();
 #endif
 		s_gs->VSync(field);
 	}
@@ -623,7 +637,7 @@ EXPORT_C GSconfigure()
 
 		if(GSSettingsDlg(s_isgsopen2).DoModal() == IDOK)
 		{
-			if(s_gs != NULL && s_gs->m_wnd.IsManaged())
+			if(s_gs != NULL && s_gs->m_wnd->IsManaged())
 			{
 				// Legacy apps like gsdxgui expect this...
 
@@ -637,7 +651,7 @@ EXPORT_C GSconfigure()
 
 		if (RunLinuxDialog())
 		{
-			if(s_gs != NULL && s_gs->m_wnd.IsManaged())
+			if(s_gs != NULL && s_gs->m_wnd->IsManaged())
 			{
 				GSshutdown();
 			}

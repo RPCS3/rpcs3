@@ -1,5 +1,5 @@
 /*
- *	Copyright (C) 2007-2009 Gabest
+ *	Copyright (C) 2007-2012 Gabest
  *	http://www.gabest.org
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -18,3 +18,34 @@
  *  http://www.gnu.org/copyleft/gpl.html
  *
  */
+
+#include "GSWnd.h"
+
+#ifdef _WINDOWS
+class GSWndDX : public GSWnd
+{
+	HWND m_hWnd;
+
+	bool m_frame;
+
+	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+	virtual LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
+
+public:
+	GSWndDX();
+	virtual ~GSWndDX();
+
+	bool Create(const string& title, int w, int h);
+	bool Attach(void* handle, bool managed = true);
+	void Detach();
+
+	void* GetDisplay() {return m_hWnd;}
+	void* GetHandle() {return m_hWnd;}
+	GSVector4i GetClientRect();
+	bool SetWindowText(const char* title);
+
+	void Show();
+	void Hide();
+	void HideFrame();
+};
+#endif

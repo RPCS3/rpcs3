@@ -21,81 +21,37 @@
 
 #pragma once
 
+#include "stdafx.h"
+#include "GSdx.h"
 #include "GSVector.h"
 
-#ifdef _WINDOWS
-
 class GSWnd
 {
-	HWND m_hWnd;
-
+protected:
 	bool m_managed; // set true when we're attached to a 3rdparty window that's amanged by the emulator
-	bool m_frame;
-
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-	virtual LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
 public:
-	GSWnd();
-	virtual ~GSWnd();
+	GSWnd() : m_managed(false) {};
+	virtual ~GSWnd() {};
 
-	bool Create(const string& title, int w, int h);
-	bool Attach(void* handle, bool managed = true);
-	void Detach();
+	virtual bool Create(const string& title, int w, int h) = 0;
+	virtual bool Attach(void* handle, bool managed = true) = 0;
+	virtual void Detach() = 0;
 	bool IsManaged() const {return m_managed;}
 
-	void* GetDisplay() {return m_hWnd;}
-	void* GetHandle() {return m_hWnd;}
-	GSVector4i GetClientRect();
-	bool SetWindowText(const char* title);
+	virtual void* GetDisplay() = 0;
+	virtual void* GetHandle() = 0;
+	virtual GSVector4i GetClientRect() = 0;
+	virtual bool SetWindowText(const char* title) = 0;
 
-	void Show();
-	void Hide();
-	void HideFrame();
+	virtual void AttachContext() {};
+	virtual void DetachContext() {};
+
+	virtual void Show() = 0;
+	virtual void Hide() = 0;
+	virtual void HideFrame() = 0;
+
+	virtual void Flip() {};
+	virtual void SetVSync(bool enable) {};
+
 };
-
-#else
-
-#include <X11/Xlib.h>
-
-class GSWnd
-{
-	void* m_window;
-	Window       m_Xwindow;
-	Display*     m_XDisplay;
-
-	bool m_ctx_attached;
-	bool m_managed;
-	int  m_renderer;
-	GLXContext   m_context;
-
-	PFNGLXSWAPINTERVALMESAPROC m_swapinterval;
-
-public:
-	GSWnd();
-	virtual ~GSWnd();
-
-	bool Create(const string& title, int w, int h);
-	bool Attach(void* handle, bool managed = true);
-	void Detach();
-	bool IsManaged() const {return m_managed;}
-	bool IsContextAttached() const { return m_ctx_attached; }
-
-	Display* GetDisplay();
-	void* GetHandle() {return (void*)m_Xwindow;}
-	GSVector4i GetClientRect();
-	bool SetWindowText(const char* title);
-
-	bool CreateContext(int major, int minor);
-	void AttachContext();
-	void DetachContext();
-	void CheckContext();
-
-	void Show();
-	void Hide();
-	void HideFrame();
-	void Flip();
-	void SetVSync(bool enable);
-};
-
-#endif

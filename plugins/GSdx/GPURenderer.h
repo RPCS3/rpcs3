@@ -24,6 +24,9 @@
 #include "GPUState.h"
 #include "GSVertexList.h"
 #include "GSDevice.h"
+#ifdef _WINDOWS
+#include "GSWndDX.h"
+#endif
 
 class GPURenderer : public GPUState
 {
@@ -53,7 +56,7 @@ protected:
 
 	#endif
 
-	GSWnd m_wnd;
+	GSWnd* m_wnd;
 
 public:
 	GPURenderer(GSDevice* dev);

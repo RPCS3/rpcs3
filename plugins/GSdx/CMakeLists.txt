@@ -105,6 +105,7 @@ set(GSdxSources
     GSVector.cpp
     GSVertexTrace.cpp
     GSWnd.cpp
+    GSWndOGL.cpp
     GSdx.cpp
     stdafx.cpp
     )
@@ -166,6 +167,7 @@ set(GSdxHeaders
     GSVertexSW.h
     GSVertexTrace.h
     GSWnd.h
+    GSWndOGL.h
     GSdx.h
     stdafx.h
     xbyak/xbyak.h
