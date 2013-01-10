@@ -1569,6 +1569,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
+    <ClInclude Include="GLLoader.h" />
     <ClInclude Include="GPU.h" />
     <ClInclude Include="GPUDrawingEnvironment.h" />
     <ClInclude Include="GPUDrawScanline.h" />

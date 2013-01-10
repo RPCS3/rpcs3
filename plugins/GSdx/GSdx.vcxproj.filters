@@ -335,6 +335,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GLLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GS.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -1388,6 +1388,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\GLLoader.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GPU.h"
 				>
 			</File>

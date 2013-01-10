@@ -33,6 +33,67 @@
 static uint32 g_draw_count = 0;
 static uint32 g_frame_count = 1;		
 
+PFNGLACTIVETEXTUREPROC glActiveTexture = NULL;
+PFNGLATTACHSHADERPROC glAttachShader = NULL;
+PFNGLBINDBUFFERPROC glBindBuffer = NULL;
+PFNGLBINDBUFFERBASEPROC glBindBufferBase = NULL;
+PFNGLBINDFRAGDATALOCATIONINDEXEDPROC glBindFragDataLocationIndexed = NULL;
+PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
+PFNGLBINDPROGRAMPIPELINEPROC glBindProgramPipeline = NULL;
+PFNGLBINDSAMPLERPROC glBindSampler = NULL;
+PFNGLBINDVERTEXARRAYPROC glBindVertexArray = NULL;
+PFNGLBLENDCOLORPROC glBlendColor = NULL;
+PFNGLBLENDEQUATIONSEPARATEPROC glBlendEquationSeparate = NULL;
+PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate = NULL;
+PFNGLBLITFRAMEBUFFERPROC glBlitFramebuffer = NULL;
+PFNGLBUFFERDATAPROC glBufferData = NULL;
+PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus = NULL;
+PFNGLCLEARBUFFERFVPROC glClearBufferfv = NULL;
+PFNGLCLEARBUFFERIVPROC glClearBufferiv = NULL;
+PFNGLCOMPILESHADERPROC glCompileShader = NULL;
+PFNGLCOPYIMAGESUBDATANVPROC glCopyImageSubDataNV = NULL;
+PFNGLCREATEPROGRAMPROC glCreateProgram = NULL;
+PFNGLCREATESHADERPROC glCreateShader = NULL;
+PFNGLCREATESHADERPROGRAMVPROC glCreateShaderProgramv = NULL;
+PFNGLDELETEBUFFERSPROC glDeleteBuffers = NULL;
+PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
+PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
+PFNGLDELETEPROGRAMPIPELINESPROC glDeleteProgramPipelines = NULL;
+PFNGLDELETESAMPLERSPROC glDeleteSamplers = NULL;
+PFNGLDELETESHADERPROC glDeleteShader = NULL;
+PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays = NULL;
+PFNGLDETACHSHADERPROC glDetachShader = NULL;
+PFNGLDRAWBUFFERSPROC glDrawBuffers = NULL;
+PFNGLDRAWELEMENTSBASEVERTEXPROC glDrawElementsBaseVertex = NULL;
+PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = NULL;
+PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer = NULL;
+PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
+PFNGLGENBUFFERSPROC glGenBuffers = NULL;
+PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = NULL;
+PFNGLGENPROGRAMPIPELINESPROC glGenProgramPipelines = NULL;
+PFNGLGENSAMPLERSPROC glGenSamplers = NULL;
+PFNGLGENVERTEXARRAYSPROC glGenVertexArrays = NULL;
+PFNGLGETBUFFERPARAMETERIVPROC glGetBufferParameteriv = NULL;
+PFNGLGETDEBUGMESSAGELOGARBPROC glGetDebugMessageLogARB = NULL;
+PFNGLGETFRAGDATAINDEXPROC glGetFragDataIndex = NULL;
+PFNGLGETFRAGDATALOCATIONPROC glGetFragDataLocation = NULL;
+PFNGLGETPROGRAMINFOLOGPROC glGetProgramInfoLog = NULL;
+PFNGLGETPROGRAMIVPROC glGetProgramiv = NULL;
+PFNGLGETSHADERIVPROC glGetShaderiv = NULL;
+PFNGLGETSTRINGIPROC glGetStringi = NULL;
+PFNGLISFRAMEBUFFERPROC glIsFramebuffer = NULL;
+PFNGLLINKPROGRAMPROC glLinkProgram = NULL;
+PFNGLMAPBUFFERPROC glMapBuffer = NULL;
+PFNGLMAPBUFFERRANGEPROC glMapBufferRange = NULL;
+PFNGLPROGRAMPARAMETERIPROC glProgramParameteri = NULL;
+PFNGLSAMPLERPARAMETERFPROC glSamplerParameterf = NULL;
+PFNGLSAMPLERPARAMETERIPROC glSamplerParameteri = NULL;
+PFNGLSHADERSOURCEPROC glShaderSource = NULL;
+PFNGLUNIFORM1IPROC glUniform1i = NULL;
+PFNGLUNMAPBUFFERPROC glUnmapBuffer = NULL;
+PFNGLUSEPROGRAMSTAGESPROC glUseProgramStages = NULL;
+PFNGLVERTEXATTRIBIPOINTERPROC glVertexAttribIPointer = NULL;
+PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = NULL;
 
 GSDeviceOGL::GSDeviceOGL()
 	: m_free_window(false)
@@ -147,6 +208,7 @@ GSTexture* GSDeviceOGL::FetchSurface(int type, int w, int h, bool msaa, int form
 bool GSDeviceOGL::Create(GSWnd* wnd)
 {
 	if (m_window == NULL) {
+#ifdef _LINUX
 		// FIXME......
 		// GLEW's problem is that it calls glGetString(GL_EXTENSIONS) which causes GL_INVALID_ENUM
 		// on GL 3.2 forward compatible context as soon as glewInit() is called. It also doesn't fetch
@@ -167,6 +229,69 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		// 	fprintf(stderr, "4.2 is not supported!\n");
 		// 	return false;
 		// }
+#else
+		GL_LOADFN(glActiveTexture);
+		GL_LOADFN(glAttachShader);
+		GL_LOADFN(glBindBuffer);
+		GL_LOADFN(glBindBufferBase);
+		GL_LOADFN(glBindFragDataLocationIndexed);
+		GL_LOADFN(glBindFramebuffer);
+		GL_LOADFN(glBindProgramPipeline);
+		GL_LOADFN(glBindSampler);
+		GL_LOADFN(glBindVertexArray);
+		GL_LOADFN(glBlendColor);
+		GL_LOADFN(glBlendEquationSeparate);
+		GL_LOADFN(glBlendFuncSeparate);
+		GL_LOADFN(glBlitFramebuffer);
+		GL_LOADFN(glBufferData);
+		GL_LOADFN(glCheckFramebufferStatus);
+		GL_LOADFN(glClearBufferfv);
+		GL_LOADFN(glClearBufferiv);
+		GL_LOADFN(glCompileShader);
+		GL_LOADFN(glCopyImageSubDataNV);
+		GL_LOADFN(glCreateProgram);
+		GL_LOADFN(glCreateShader);
+		GL_LOADFN(glCreateShaderProgramv);
+		GL_LOADFN(glDeleteBuffers);
+		GL_LOADFN(glDeleteFramebuffers);
+		GL_LOADFN(glDeleteProgram);
+		GL_LOADFN(glDeleteProgramPipelines);
+		GL_LOADFN(glDeleteSamplers);
+		GL_LOADFN(glDeleteShader);
+		GL_LOADFN(glDeleteVertexArrays);
+		GL_LOADFN(glDetachShader);
+		GL_LOADFN(glDrawBuffers);
+		GL_LOADFN(glDrawElementsBaseVertex);
+		GL_LOADFN(glEnableVertexAttribArray);
+		GL_LOADFN(glFramebufferRenderbuffer);
+		GL_LOADFN(glFramebufferTexture2D);
+		GL_LOADFN(glGenBuffers);
+		GL_LOADFN(glGenFramebuffers);
+		GL_LOADFN(glGenProgramPipelines);
+		GL_LOADFN(glGenSamplers);
+		GL_LOADFN(glGenVertexArrays);
+		GL_LOADFN(glGetBufferParameteriv);
+		GL_LOADFN(glGetDebugMessageLogARB);
+		GL_LOADFN(glGetFragDataIndex);
+		GL_LOADFN(glGetFragDataLocation);
+		GL_LOADFN(glGetProgramInfoLog);
+		GL_LOADFN(glGetProgramiv);
+		GL_LOADFN(glGetShaderiv);
+		GL_LOADFN(glGetStringi);
+		GL_LOADFN(glIsFramebuffer);
+		GL_LOADFN(glLinkProgram);
+		GL_LOADFN(glMapBuffer);
+		GL_LOADFN(glMapBufferRange);
+		GL_LOADFN(glProgramParameteri);
+		GL_LOADFN(glSamplerParameterf);
+		GL_LOADFN(glSamplerParameteri);
+		GL_LOADFN(glShaderSource);
+		GL_LOADFN(glUniform1i);
+		GL_LOADFN(glUnmapBuffer);
+		GL_LOADFN(glUseProgramStages);
+		GL_LOADFN(glVertexAttribIPointer);
+		GL_LOADFN(glVertexAttribPointer);
+#endif
 		const GLubyte* s;
 		s = glGetString(GL_VERSION);
 		if (s == NULL) return false;
@@ -189,6 +314,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 			return false;
 		}
 
+#ifdef _LINUX
 		if ( !glewIsSupported("GL_ARB_separate_shader_objects")) {
 			fprintf(stderr, "GL_ARB_separate_shader_objects is not supported\n");
 			return false;
@@ -197,6 +323,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 			fprintf(stderr, "GL_ARB_shading_language_420pack is not supported\n");
 			//return false;
 		}
+#endif
 
 
 	}
