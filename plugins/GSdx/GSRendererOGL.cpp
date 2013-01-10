@@ -19,6 +19,7 @@
  *
  */
 
+#include "stdafx.h"
 #include "GSRendererOGL.h"
 #include "GSRenderer.h"
 

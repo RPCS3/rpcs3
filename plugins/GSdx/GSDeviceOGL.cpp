@@ -19,6 +19,7 @@
  *
  */
 
+#include "stdafx.h"
 #include "GSDeviceOGL.h"
 
 // TODO performance cost to investigate
@@ -64,19 +65,19 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete (m_vb_sr);
 
 	// Clean m_merge_obj
-	for (uint i = 0; i < 2; i++)
+	for (uint32 i = 0; i < 2; i++)
 		glDeleteProgram(m_merge_obj.ps[i]);
 	delete (m_merge_obj.cb);
 	delete (m_merge_obj.bs);
 	
 	// Clean m_interlace
-	for (uint i = 0; i < 2; i++)
+	for (uint32 i = 0; i < 2; i++)
 		glDeleteProgram(m_interlace.ps[i]);
 	delete (m_interlace.cb);
 
 	// Clean m_convert
 	glDeleteProgram(m_convert.vs);
-	for (uint i = 0; i < 2; i++)
+	for (uint32 i = 0; i < 2; i++)
 		glDeleteProgram(m_convert.ps[i]);
 	glDeleteSamplers(1, &m_convert.ln);
 	glDeleteSamplers(1, &m_convert.pt);
@@ -229,7 +230,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	CompileShaderFromSource("convert.glsl", "vs_main", GL_VERTEX_SHADER, &m_convert.vs);
 	CompileShaderFromSource("convert.glsl", "gs_main", GL_GEOMETRY_SHADER, &m_convert.gs);
-	for(uint i = 0; i < countof(m_convert.ps); i++)
+	for(uint32 i = 0; i < countof(m_convert.ps); i++)
 		CompileShaderFromSource("convert.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_convert.ps[i]);
 
 	// Note the following object are initialized to 0 so disabled.
@@ -289,7 +290,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	m_merge_obj.cb = new GSUniformBufferOGL(1, sizeof(MergeConstantBuffer));
 
-	for(uint i = 0; i < countof(m_merge_obj.ps); i++)
+	for(uint32 i = 0; i < countof(m_merge_obj.ps); i++)
 		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge_obj.ps[i]);
 
 	m_merge_obj.bs = new GSBlendStateOGL();
@@ -301,7 +302,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	m_interlace.cb = new GSUniformBufferOGL(2, sizeof(InterlaceConstantBuffer));
 
-	for(uint i = 0; i < countof(m_interlace.ps); i++)
+	for(uint32 i = 0; i < countof(m_interlace.ps); i++)
 		CompileShaderFromSource("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_interlace.ps[i]);
 	// ****************************************************************
 	// Shade boost
@@ -784,8 +785,8 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 	// FIXME: the extension was integrated in opengl 4.3 (now we need driver that support OGL4.3)
 	// FIXME check those function work as expected
 	// void CopyImageSubDataNV(
-    //         uint srcName, enum srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
-	//     uint dstName, enum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
+    //         uint32 srcName, enum srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
+	//     uint32 dstName, enum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
 	//     sizei width, sizei height, sizei depth);
 	glCopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), static_cast<GSTextureOGL*>(st)->GetTarget(), 
 			0, r.x, r.y, 0,
@@ -1148,7 +1149,7 @@ void GSDeviceOGL::PSSetShader(GLuint ps)
 // 4/ set the sampler state
 // glBindSampler(1 , sampler);
 	if (m_srv_changed || m_ss_changed) {
-		for (uint i=0 ; i < 1; i++) {
+		for (uint32 i=0 ; i < 1; i++) {
 			if (m_state.ps_srv[i] != NULL) {
 				m_state.ps_srv[i]->EnableUnit(i);
 				glBindSampler(i, m_state.ps_ss[i]);

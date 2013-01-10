@@ -25,6 +25,8 @@
 #include "GSRendererSW.h"
 #include "GSRendererNull.h"
 #include "GSDeviceNull.h"
+#include "GSDeviceOGL.h"
+#include "GSRendererOGL.h"
 
 #ifdef _WINDOWS
 
@@ -41,8 +43,6 @@ static HRESULT s_hr = E_FAIL;
 
 #else
 
-#include "GSDeviceOGL.h"
-#include "GSRendererOGL.h"
 #include "GSWndOGL.h"
 
 #include <gtk/gtk.h>
@@ -234,10 +234,8 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 				case 0: dev = new GSDevice9(); break;
 				case 1: dev = new GSDevice11(); break;
 				#endif
-				#ifdef _LINUX
-				case 4: dev = new GSDeviceOGL(); break;
-				#endif
 				case 3: dev = new GSDeviceNull(); break;
+				case 4: dev = new GSDeviceOGL(); break;
 			}
 
 			if(dev == NULL)
@@ -249,20 +247,22 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			{
 				switch(renderer % 3)
 				{
-				default:
-				case 0:
-#ifdef _WINDOWS
-					s_gs = (renderer / 3) == 0 ? (GSRenderer*)new GSRendererDX9() : (GSRenderer*)new GSRendererDX11();
-#else
-					s_gs = (GSRenderer*)new GSRendererOGL();
-#endif
-					break;
-				case 1:
-					s_gs = new GSRendererSW(threads);
-					break;
-				case 2:
-					s_gs = new GSRendererNull();
-					break;
+					default:
+					case 0:
+						switch(renderer) 
+						{ 
+							default:
+							case 0: s_gs = (GSRenderer*)new GSRendererDX9(); break;
+							case 3: s_gs = (GSRenderer*)new GSRendererDX11(); break;
+							case 12: s_gs = (GSRenderer*)new GSRendererOGL(); break;
+						}
+						break;
+					case 1:
+						s_gs = new GSRendererSW(threads);
+						break;
+					case 2:
+						s_gs = new GSRendererNull();
+						break;
 				}
 
 				s_renderer = renderer;

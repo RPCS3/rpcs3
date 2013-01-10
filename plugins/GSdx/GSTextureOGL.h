@@ -28,7 +28,7 @@ class GSTextureOGL : public GSTexture
 	private:
 		GLenum m_texture_target; // texture target: 2D, rectangle etc...
 		GLuint m_texture_id;	 // the texture id
-		uint m_pbo_id;
+		uint32 m_pbo_id;
 		int m_pbo_size;
 		GLuint m_fbo_read;
 
@@ -42,7 +42,7 @@ class GSTextureOGL : public GSTexture
 		bool Save(const string& fn, bool dds = false);
 		void Save(const string& fn, const void* image, uint32 pitch);
 
-		void EnableUnit(uint unit);
+		void EnableUnit(uint32 unit);
 		void Attach(GLenum attachment);
 
 		bool IsBackbuffer() { return (m_type == GSTexture::Backbuffer); }

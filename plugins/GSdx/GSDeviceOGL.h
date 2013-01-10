@@ -206,7 +206,7 @@ public:
 
 	void SetupStencil(uint8 sref)
 	{
-		uint ref = sref;
+		uint32 ref = sref;
 		if (m_stencil_enable) {
 			glEnable(GL_STENCIL_TEST);
 			glStencilFunc(m_stencil_func, ref, m_stencil_mask);

@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "stdafx.h"
 #include <limits.h>
 #include "GSTextureOGL.h"
 static int g_state_texture_unit = -1;
@@ -86,7 +87,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 	// Extra buffer to handle various pixel transfer
 	glGenBuffers(1, &m_pbo_id);
 
-	uint msaa_level;
+	uint32 msaa_level;
 	if (m_msaa) {
 		// FIXME  which level of MSAA
 		msaa_level = 1;
@@ -208,7 +209,7 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 #endif
 }
 
-void GSTextureOGL::EnableUnit(uint unit)
+void GSTextureOGL::EnableUnit(uint32 unit)
 {
 	if (!IsBackbuffer()) {
 		// FIXME

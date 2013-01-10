@@ -862,6 +862,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSDeviceOGL.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSDeviceSW.cpp"
 				>
 			</File>
@@ -1038,6 +1042,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSRendererOGL.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSRendererSW.cpp"
 				>
 			</File>
@@ -1178,6 +1186,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSTextureOGL.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSTextureCache.cpp"
 				>
 			</File>
@@ -1190,6 +1202,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSTextureCacheOGL.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSTextureCacheSW.cpp"
 				>
 			</File>
@@ -1199,6 +1215,10 @@
 			</File>
 			<File
 				RelativePath=".\GSTextureFX9.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GSTextureFXOGL.cpp"
 				>
 			</File>
 			<File
@@ -1468,6 +1488,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSDeviceOGL.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSDeviceSW.h"
 				>
 			</File>
@@ -1548,6 +1572,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSRendererOGL.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSRendererSW.h"
 				>
 			</File>
@@ -1588,6 +1616,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSTextureOGL.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSTextureCache.h"
 				>
 			</File>
@@ -1597,6 +1629,10 @@
 			</File>
 			<File
 				RelativePath=".\GSTextureCache9.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSTextureCacheOGL.h"
 				>
 			</File>
 			<File
@@ -1620,6 +1656,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSUniformBufferOGL.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSUtil.h"
 				>
 			</File>
@@ -1629,6 +1669,10 @@
 			</File>
 			<File
 				RelativePath=".\GSVertex.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSVertexArrayOGL.h"
 				>
 			</File>
 			<File

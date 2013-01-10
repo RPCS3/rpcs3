@@ -24,11 +24,11 @@
 class GSUniformBufferOGL {
 	GLuint buffer;		// data object
 	GLuint index;		// GLSL slot
-	uint   size;	    // size of the data
+	uint32   size;	    // size of the data
 	const GLenum target;
 
 public:
-	GSUniformBufferOGL(GLuint index, uint size) : index(index)
+	GSUniformBufferOGL(GLuint index, uint32 size) : index(index)
 												  , size(size)
 												  ,target(GL_UNIFORM_BUFFER)
 	{

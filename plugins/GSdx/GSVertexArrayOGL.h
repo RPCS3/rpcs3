@@ -187,7 +187,7 @@ public:
 
 	void set_internal_format(GSInputLayoutOGL* layout, uint32 layout_nbr)
 	{
-		for (uint i = 0; i < layout_nbr; i++) {
+		for (uint32 i = 0; i < layout_nbr; i++) {
 			// Note this function need both a vertex array object and a GL_ARRAY_BUFFER buffer
 			glEnableVertexAttribArray(layout[i].index);
 			switch (layout[i].type) {

@@ -19,6 +19,7 @@
  *
  */
 
+#include "stdafx.h"
 #include "GSWndOGL.h"
 
 #ifdef _LINUX
