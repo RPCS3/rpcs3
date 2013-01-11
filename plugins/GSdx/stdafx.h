@@ -126,6 +126,7 @@ using namespace std;
 	#include <GL/gl.h>
 	#include <GL/glext.h>
 	#include <GL/wglext.h>
+	#include "GLLoader.h"
 
 	#include <hash_map>
 	#include <hash_set>
