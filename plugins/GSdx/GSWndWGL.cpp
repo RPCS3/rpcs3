@@ -69,6 +69,7 @@ bool GSWndWGL::CreateContext(int major, int minor)
 		wglDeleteContext(m_context);
 
 		m_context = context30;
+		fprintf(stderr, "3.x GL context successfully created\n");
 	}
 
 #if 0
@@ -153,8 +154,8 @@ bool GSWndWGL::Attach(void* handle, bool managed)
 	if (!OpenWGLDisplay()) return false;
 
 	// FIXME: debug purpose
-	if (!CreateContext(2, 0)) return false;
-	//if (!CreateContext(3, 3)) return false;
+	//if (!CreateContext(2, 0)) return false;
+	if (!CreateContext(3, 3)) return false;
 
 	AttachContext();
 
