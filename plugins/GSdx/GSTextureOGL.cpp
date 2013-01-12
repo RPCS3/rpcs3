@@ -108,7 +108,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 			else if (m_format == GL_R16UI) m_pbo_size = m_size.x * m_size.y * 2;
 			else {
 				fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
-				assert(0); // TODO Later
+				ASSERT(0); // TODO Later
 			}
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo_id);
@@ -135,7 +135,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
 			else {
 				fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
-				assert(0); // TODO Later
+				ASSERT(0); // TODO Later
 			}
 			break;
 		default: break;
@@ -158,7 +158,7 @@ void GSTextureOGL::Attach(GLenum attachment)
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 {
-	if (m_type == GSTexture::DepthStencil || m_type == GSTexture::Offscreen) assert(0);
+	if (m_type == GSTexture::DepthStencil || m_type == GSTexture::Offscreen) ASSERT(0);
 
 	// FIXME warning order of the y axis
 	// FIXME I'm not confident with GL_UNSIGNED_BYTE type
@@ -179,7 +179,7 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RED, GL_R8, data);
 	else {
 		fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
-		assert(0);
+		ASSERT(0);
 	}
 #if 0
 	//if (m_size.x != 16)
@@ -259,7 +259,7 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED, GL_UNSIGNED_BYTE, 0);
 		} else {
 			fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
-			assert(0);
+			ASSERT(0);
 		}
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 

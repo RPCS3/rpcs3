@@ -1336,12 +1336,12 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 	m_state.dsv = static_cast<GSTextureOGL*>(ds);
 
 	if (static_cast<GSTextureOGL*>(rt)->IsBackbuffer()) {
-		assert(ds == NULL); // no depth-stencil without FBO
+		ASSERT(ds == NULL); // no depth-stencil without FBO
 
 		OMSetFBO(0);
 
 	} else {
-		assert(rt != NULL); // a render target must exists
+		ASSERT(rt != NULL); // a render target must exists
 
 		// FIXME DEBUG special case for GL_R16UI
 		if (rt->GetFormat() == GL_R16UI) {
@@ -1426,7 +1426,7 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 		case GL_FRAGMENT_SHADER:
 			shader_type = "#define FRAGMENT_SHADER 1\n";
 			break;
-		default: assert(0);
+		default: ASSERT(0);
 	}
 
 	// Select the entry point ie the main function
