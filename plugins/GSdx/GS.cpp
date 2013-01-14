@@ -57,7 +57,7 @@ extern bool RunLinuxDialog();
 #define PS2E_X86 0x01   // 32 bit
 #define PS2E_X86_64 0x02   // 64 bit
 
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 GSRenderer* s_gs = NULL;
 #else
 static GSRenderer* s_gs = NULL;
@@ -457,7 +457,7 @@ EXPORT_C GSreadFIFO(uint8* mem)
 {
 	try
 	{
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 		// FIXME: double check which thread call this function
 		// See fifo2 issue below
 #ifdef OGL_DEBUG
@@ -468,7 +468,7 @@ EXPORT_C GSreadFIFO(uint8* mem)
 
 		s_gs->ReadFIFO(mem, 1);
 
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 		s_gs->m_wnd->DetachContext();
 #endif
 	}
@@ -481,7 +481,7 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 {
 	try
 	{
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 		// FIXME called from EE core thread not MTGS which cause
 		// invalidate data for opengl
 #ifdef OGL_DEBUG
@@ -492,7 +492,7 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 
 		s_gs->ReadFIFO(mem, size);
 
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 		s_gs->m_wnd->DetachContext();
 #endif
 	}
@@ -566,7 +566,7 @@ EXPORT_C GSvsync(int field)
 
 #endif
 
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 		s_gs->m_wnd->AttachContext();
 #endif
 		s_gs->VSync(field);

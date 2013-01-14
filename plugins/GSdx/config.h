@@ -37,3 +37,5 @@
 //#define DISABLE_COLCLAMP
 
 //#define DISABLE_DATE
+
+#define ENABLE_OGL_MT_HACK // OpenGL doesn't allow to access the same bound context from multiple threads. This hack changes context binding for GSreadFIFO* access

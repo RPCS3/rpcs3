@@ -10,7 +10,6 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 set(Output GSdx-0.1.16)
 
 set(CommonFlags
-    -DOGL_MT_HACK
     -D_LINUX
     -fno-operator-names
     -mpreferred-stack-boundary=2

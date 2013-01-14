@@ -23,7 +23,7 @@
 #include "GSState.h"
 #include "GSdx.h"
 
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 
 #include "GSRendererOGL.h"
 extern GSRenderer* s_gs;
@@ -1260,7 +1260,7 @@ void GSState::GIFRegHandlerTRXDIR(const GIFReg* RESTRICT r)
 		break;
 	case 1: // local -> host
 		m_tr.Init(m_env.TRXPOS.SSAX, m_env.TRXPOS.SSAY);
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 		s_gs->m_wnd->DetachContext();
 #endif
 		break;
@@ -1767,7 +1767,7 @@ static hash_map<uint64, uint64> s_tags;
 template<int index> void GSState::Transfer(const uint8* mem, uint32 size)
 {
 	GSPerfMonAutoTimer pmat(&m_perfmon);
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 	s_gs->m_wnd->AttachContext();
 #endif
 
