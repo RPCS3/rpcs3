@@ -21,6 +21,22 @@
 
 #pragma once
 
+#ifdef _WINDOWS
+#define GL_LOADFN(name) { \
+		if( (*(void**)&name = (void*)wglGetProcAddress(#name)) == NULL ) { \
+			fprintf(stderr,"Failed to find %s\n", #name); \
+		} \
+}
+#else
+#define GL_LOADFN(name) { \
+		if( (*(void**)&name = (void*)glXGetProcAddress((const GLubyte*)#name)) == NULL ) { \
+			fprintf(stderr,"Failed to find %s\n", #name); \
+		} \
+}
+// Use glew
+//#define GL_LOADFN(name)
+#endif
+
 extern PFNGLACTIVETEXTUREPROC glActiveTexture;
 extern PFNGLATTACHSHADERPROC glAttachShader;
 extern PFNGLBINDBUFFERPROC glBindBuffer;
@@ -83,12 +99,8 @@ extern PFNGLUSEPROGRAMSTAGESPROC glUseProgramStages;
 extern PFNGLVERTEXATTRIBIPOINTERPROC glVertexAttribIPointer;
 extern PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer;
 
-#ifdef _WINDOWS
-#define GL_LOADFN(name) { \
-		if( (*(void**)&name = (void*)wglGetProcAddress(#name)) == NULL ) { \
-			fprintf(stderr,"Failed to find %s\n", #name); \
-		} \
+namespace GLLoader {
+	bool check_gl_version(uint32 major, uint32 minor);
+	void init_gl_function();
+	bool check_gl_supported_extension();
 }
-#else
-// Use glew
-#endif

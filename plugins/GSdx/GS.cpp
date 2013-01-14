@@ -252,8 +252,10 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 						switch(renderer) 
 						{ 
 							default:
+#ifdef _WINDOWS
 							case 0: s_gs = (GSRenderer*)new GSRendererDX9(); break;
 							case 3: s_gs = (GSRenderer*)new GSRendererDX11(); break;
+#endif
 							case 12: s_gs = (GSRenderer*)new GSRendererOGL(); break;
 						}
 						break;

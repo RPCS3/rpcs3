@@ -270,6 +270,9 @@
     <ClCompile Include="baseclasses\wxutil.cpp">
       <Filter>Baseclasses</Filter>
     </ClCompile>
+    <ClCompile Include="GLLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

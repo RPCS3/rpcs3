@@ -47,6 +47,7 @@ if(XDG_STD)
 endif(XDG_STD)
 
 set(GSdxSources
+    GLLoader.cpp
     GPU.cpp
     GPUDrawScanline.cpp
     GPUDrawScanlineCodeGenerator.cpp

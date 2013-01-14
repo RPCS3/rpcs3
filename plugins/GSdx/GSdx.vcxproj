@@ -438,6 +438,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="GLLoader.cpp" />
     <ClCompile Include="GPU.cpp" />
     <ClCompile Include="GPUDrawScanline.cpp" />
     <ClCompile Include="GPUDrawScanlineCodeGenerator.cpp" />
