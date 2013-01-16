@@ -81,7 +81,7 @@ class GSBufferOGL {
 	}
 
 	bool Map(void** pointer, uint32 count ) {
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 		GLint b_size = -1;
 		glGetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
 
@@ -114,7 +114,7 @@ class GSBufferOGL {
 		// Upload the data to the buffer
 		*pointer = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
 		//fprintf(stderr, "Map %x from %d to %d\n", *pointer, m_start, m_start+m_count);
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 		if (*pointer == NULL) {
 			fprintf(stderr, "CRITICAL ERROR map failed for vb!!!\n");
 			return false;

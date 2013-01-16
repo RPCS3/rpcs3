@@ -22,7 +22,6 @@
 #include "stdafx.h"
 #include "GLLoader.h"
 
-PFNGLACTIVETEXTUREPROC                 glActiveTexture                 =   NULL;
 PFNGLATTACHSHADERPROC                  glAttachShader                  =   NULL;
 PFNGLBINDBUFFERPROC                    glBindBuffer                    =   NULL;
 PFNGLBINDBUFFERBASEPROC                glBindBufferBase                =   NULL;
@@ -31,7 +30,6 @@ PFNGLBINDFRAMEBUFFERPROC               glBindFramebuffer               =   NULL;
 PFNGLBINDPROGRAMPIPELINEPROC           glBindProgramPipeline           =   NULL;
 PFNGLBINDSAMPLERPROC                   glBindSampler                   =   NULL;
 PFNGLBINDVERTEXARRAYPROC               glBindVertexArray               =   NULL;
-PFNGLBLENDCOLORPROC                    glBlendColor                    =   NULL;
 PFNGLBLENDEQUATIONSEPARATEPROC         glBlendEquationSeparate         =   NULL;
 PFNGLBLENDFUNCSEPARATEPROC             glBlendFuncSeparate             =   NULL;
 PFNGLBLITFRAMEBUFFERPROC               glBlitFramebuffer               =   NULL;
@@ -110,7 +108,6 @@ namespace GLLoader {
     }
 
     void init_gl_function() {
-		GL_LOADFN(glActiveTexture);
 		GL_LOADFN(glAttachShader);
 		GL_LOADFN(glBindBuffer);
 		GL_LOADFN(glBindBufferBase);
@@ -119,7 +116,6 @@ namespace GLLoader {
 		GL_LOADFN(glBindProgramPipeline);
 		GL_LOADFN(glBindSampler);
 		GL_LOADFN(glBindVertexArray);
-		GL_LOADFN(glBlendColor);
 		GL_LOADFN(glBlendEquationSeparate);
 		GL_LOADFN(glBlendFuncSeparate);
 		GL_LOADFN(glBlitFramebuffer);

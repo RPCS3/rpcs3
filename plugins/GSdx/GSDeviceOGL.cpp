@@ -52,7 +52,7 @@ GSDeviceOGL::GSDeviceOGL()
 	memset(&m_state, 0, sizeof(m_state));
 
 	// Reset the debug file
-	#ifdef OGL_DEBUG
+	#ifdef ENABLE_OGL_DEBUG
 	FILE* f = fopen("Debug.txt","w");
 	fclose(f);
 	#endif
@@ -462,7 +462,7 @@ void GSDeviceOGL::SetVSync(bool enable)
 void GSDeviceOGL::Flip()
 {
 	// FIXME: disable it when code is working
-	#ifdef OGL_DEBUG
+	#ifdef ENABLE_OGL_DEBUG
 	CheckDebugLog();
 	#endif
 
@@ -471,7 +471,7 @@ void GSDeviceOGL::Flip()
 #ifdef PRINT_FRAME_NUMBER
 	fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
 #endif
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 	if (theApp.GetConfig("debug_ogl_dump", 0) != 0)
 		g_frame_count++;
 #endif
@@ -552,13 +552,13 @@ void GSDeviceOGL::DebugOutput()
 
 void GSDeviceOGL::DrawPrimitive()
 {
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 	DebugInput();
 #endif
 
 	m_state.vb->DrawPrimitive();
 
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 	DebugOutput();
 	g_draw_count++;
 #endif
@@ -566,13 +566,13 @@ void GSDeviceOGL::DrawPrimitive()
 
 void GSDeviceOGL::DrawIndexedPrimitive()
 {
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 	DebugInput();
 #endif
 
 	m_state.vb->DrawIndexedPrimitive();
 
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 	DebugOutput();
 	g_draw_count++;
 #endif
@@ -581,13 +581,13 @@ void GSDeviceOGL::DrawIndexedPrimitive()
 void GSDeviceOGL::DrawIndexedPrimitive(int offset, int count)
 {
 	ASSERT(offset + count <= m_index.count);
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 	DebugInput();
 #endif
 
 	m_state.vb->DrawIndexedPrimitive(offset, count);
 
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 	DebugOutput();
 	g_draw_count++;
 #endif

@@ -460,7 +460,7 @@ EXPORT_C GSreadFIFO(uint8* mem)
 #ifdef ENABLE_OGL_MT_HACK
 		// FIXME: double check which thread call this function
 		// See fifo2 issue below
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 		if (theApp.GetConfig("renderer", 0) / 3 == 4) fprintf(stderr, "Disable FIFO1 on opengl\n");
 #endif
 		s_gs->m_wnd->AttachContext();
@@ -484,7 +484,7 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 #ifdef ENABLE_OGL_MT_HACK
 		// FIXME called from EE core thread not MTGS which cause
 		// invalidate data for opengl
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 		if (theApp.GetConfig("renderer", 0) / 3 == 4) fprintf(stderr, "Disable FIFO2(%d) on opengl\n", size);
 #endif
 		s_gs->m_wnd->AttachContext();

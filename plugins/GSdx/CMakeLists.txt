@@ -18,7 +18,7 @@ set(CommonFlags
     -Wunused-variable
     -std=c++0x
     -fno-strict-aliasing
-    #-DOGL_DEBUG # FIXME remove me when code is ready
+    #-DENABLE_OGL_DEBUG # FIXME remove me when code is ready
     )
 
 set(OptimizationFlags
@@ -28,7 +28,7 @@ set(OptimizationFlags
 
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-    add_definitions(${CommonFlags} -DOGL_DEBUG -g -Wall)
+    add_definitions(${CommonFlags} -DENABLE_OGL_DEBUG -g -Wall)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
@@ -181,7 +181,6 @@ include_directories(.)
 add_library(${Output} SHARED ${GSdxSources} ${GSdxHeaders})
 
 target_link_libraries(${Output} ${X11_LIBRARIES})
-target_link_libraries(${Output} ${GLEW_LIBRARY})
 target_link_libraries(${Output} ${OPENGL_LIBRARIES})
 
 if(Linux)
@@ -221,14 +220,12 @@ if(BUILD_REPLAY_LOADERS)
 
 	target_link_libraries(${Static} ${OPENGL_LIBRARIES})
 	target_link_libraries(${Static} ${X11_LIBRARIES})
-	target_link_libraries(${Static} ${GLEW_LIBRARY})
 	target_link_libraries(${Static} ${GTK2_LIBRARIES})
 
 	target_link_libraries(${Replay} ${Static})
 	# Warning others lib must be linked after GSdx...
 	target_link_libraries(${Replay} ${OPENGL_LIBRARIES})
 	target_link_libraries(${Replay} ${X11_LIBRARIES})
-	target_link_libraries(${Replay} ${GLEW_LIBRARY})
 	target_link_libraries(${Replay} ${GTK2_LIBRARIES})
 
 	if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
