@@ -359,8 +359,9 @@ int BlioCallback( const void *input, void *output, unsigned long frameCount,
 
       /* check for underflow */
       if( avail < frameCount * blio->inputSampleSizeActual * blio->inChan )
+      {
          OSAtomicOr32( paInputOverflow, &blio->statusFlags );
-
+      }
       toRead = MIN( avail, frameCount * blio->inputSampleSizeActual * blio->inChan );
 
       /* copy the data */

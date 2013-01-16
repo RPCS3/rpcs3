@@ -30,7 +30,7 @@ If you want to get information about each device, simply loop through as follows
     }
 @endcode
 
-The Pa_DeviceInfo structure contains a wealth of information such as the name of the devices, the default latency associated with the devices and more. The structure ihas the following fields:
+The Pa_DeviceInfo structure contains a wealth of information such as the name of the devices, the default latency associated with the devices and more. The structure has the following fields:
 
 @code
 int 	structVersion

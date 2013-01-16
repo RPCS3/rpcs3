@@ -1,5 +1,5 @@
 /*
-* $Id: pa_win_wdmks.c 1820 2012-02-25 07:43:10Z robiwan $
+* $Id: pa_win_wdmks.c 1885 2012-12-28 16:54:25Z robiwan $
 * PortAudio Windows WDM-KS interface
 *
 * Author: Andrew Baldwin, Robert Bielik (WaveRT)
@@ -69,6 +69,7 @@ of a device for the duration of active stream using those devices
 
 #include <string.h> /* strlen() */
 #include <assert.h>
+#include <wchar.h>  /* iswspace() */
 
 #include "pa_util.h"
 #include "pa_allocation.h"
@@ -159,6 +160,21 @@ Default is to use the pin category.
 #endif
 
 #include <setupapi.h>
+
+#ifndef EXTERN_C
+#define EXTERN_C extern
+#endif
+
+#if defined(__GNUC__)
+
+/* For MinGW we reference mingw-include files supplied with WASAPI */
+#define WINBOOL BOOL
+
+#include "../wasapi/mingw-include/ks.h"
+#include "../wasapi/mingw-include/ksmedia.h"
+
+#else
+
 #include <mmreg.h>
 #include <ks.h>
 
@@ -167,18 +183,17 @@ Default is to use the pin category.
    an "old" ksmedia.h), so the proper ksmedia.h is used */
 #include <ksmedia.h>
 
+#endif
+
 #include <assert.h>
 #include <stdio.h>
 
 /* These next definitions allow the use of the KSUSER DLL */
-typedef KSDDKAPI DWORD WINAPI KSCREATEPIN(HANDLE, PKSPIN_CONNECT, ACCESS_MASK, PHANDLE);
+typedef /*KSDDKAPI*/ DWORD WINAPI KSCREATEPIN(HANDLE, PKSPIN_CONNECT, ACCESS_MASK, PHANDLE);
 extern HMODULE      DllKsUser;
 extern KSCREATEPIN* FunctionKsCreatePin;
 
 /* These definitions allows the use of AVRT.DLL on Vista and later OSs */
-extern HMODULE      DllAvRt;
-typedef HANDLE WINAPI AVSETMMTHREADCHARACTERISTICS(LPCSTR, LPDWORD TaskIndex);
-typedef BOOL WINAPI AVREVERTMMTHREADCHARACTERISTICS(HANDLE);
 typedef enum _PA_AVRT_PRIORITY
 {
     PA_AVRT_PRIORITY_LOW = -1,
@@ -186,10 +201,17 @@ typedef enum _PA_AVRT_PRIORITY
     PA_AVRT_PRIORITY_HIGH,
     PA_AVRT_PRIORITY_CRITICAL
 } PA_AVRT_PRIORITY, *PPA_AVRT_PRIORITY;
-typedef BOOL WINAPI AVSETMMTHREADPRIORITY(HANDLE, PA_AVRT_PRIORITY);
-extern AVSETMMTHREADCHARACTERISTICS* FunctionAvSetMmThreadCharacteristics;
-extern AVREVERTMMTHREADCHARACTERISTICS* FunctionAvRevertMmThreadCharacteristics;
-extern AVSETMMTHREADPRIORITY* FunctionAvSetMmThreadPriority;
+
+typedef struct
+{
+    HINSTANCE hInstance;
+
+    HANDLE  (WINAPI *AvSetMmThreadCharacteristics) (LPCSTR, LPDWORD);
+    BOOL    (WINAPI *AvRevertMmThreadCharacteristics) (HANDLE);
+    BOOL    (WINAPI *AvSetMmThreadPriority) (HANDLE, PA_AVRT_PRIORITY);
+} PaWinWDMKSAvRtEntryPoints;
+
+static PaWinWDMKSAvRtEntryPoints paWinWDMKSAvRtEntryPoints = {0};
 
 /* An unspecified channel count (-1) is not treated correctly, so we replace it with
 * an arbitrarily large number */ 
@@ -408,11 +430,6 @@ static const unsigned cPacketsArrayMask = 3;
 HMODULE      DllKsUser = NULL;
 KSCREATEPIN* FunctionKsCreatePin = NULL;
 
-HMODULE         DllAvRt = NULL;
-AVSETMMTHREADCHARACTERISTICS* FunctionAvSetMmThreadCharacteristics = NULL;
-AVREVERTMMTHREADCHARACTERISTICS* FunctionAvRevertMmThreadCharacteristics = NULL;
-AVSETMMTHREADPRIORITY* FunctionAvSetMmThreadPriority = NULL;
-
 /* prototypes for functions declared in this file */
 
 #ifdef __cplusplus
@@ -434,13 +451,13 @@ static PaError WdmSyncIoctl(HANDLE handle,
                             void* outBuffer,
                             unsigned long outBufferCount,
                             unsigned long* bytesReturned);
+
 static PaError WdmGetPropertySimple(HANDLE handle,
                                     const GUID* const guidPropertySet,
                                     unsigned long property,
                                     void* value,
-                                    unsigned long valueCount,
-                                    void* instance,
-                                    unsigned long instanceCount);
+                                    unsigned long valueCount);
+
 static PaError WdmSetPropertySimple(HANDLE handle,
                                     const GUID* const guidPropertySet,
                                     unsigned long property,
@@ -456,11 +473,13 @@ static PaError WdmGetPinPropertySimple(HANDLE  handle,
                                        void* value,
                                        unsigned long valueCount,
                                        unsigned long* byteCount);
+
 static PaError WdmGetPinPropertyMulti(HANDLE  handle,
                                       unsigned long pinId,
                                       const GUID* const guidPropertySet,
                                       unsigned long property,
                                       KSMULTIPLE_ITEM** ksMultipleItem);
+
 static PaError WdmGetPropertyMulti(HANDLE handle,
                                    const GUID* const guidPropertySet,
                                    unsigned long property,
@@ -692,7 +711,17 @@ static PaError WdmSyncIoctl(
             ( ioctlNumber == IOCTL_KS_PROPERTY ) &&
             ( outBufferCount == 0 ) ) ) 
         {
-            PaWinWDM_SetLastErrorInfo(result, "WdmSyncIoctl: DeviceIoControl GLE = 0x%08X", error);
+            KSPROPERTY* ksProperty = (KSPROPERTY*)inBuffer;
+
+            PaWinWDM_SetLastErrorInfo(result, "WdmSyncIoctl: DeviceIoControl GLE = 0x%08X (prop_set = {%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}, prop_id = %u)",
+                error,
+                ksProperty->Set.Data1, ksProperty->Set.Data2, ksProperty->Set.Data3,
+                ksProperty->Set.Data4[0], ksProperty->Set.Data4[1],
+                ksProperty->Set.Data4[2], ksProperty->Set.Data4[3],
+                ksProperty->Set.Data4[4], ksProperty->Set.Data4[5],
+                ksProperty->Set.Data4[6], ksProperty->Set.Data4[7],
+                ksProperty->Id
+                );
             result = paUnanticipatedHostError;
         }
     }
@@ -703,36 +732,20 @@ static PaError WdmGetPropertySimple(HANDLE handle,
                                     const GUID* const guidPropertySet,
                                     unsigned long property,
                                     void* value,
-                                    unsigned long valueCount,
-                                    void* instance,
-                                    unsigned long instanceCount)
+                                    unsigned long valueCount)
 {
     PaError result;
-    KSPROPERTY* ksProperty;
-    unsigned long propertyCount;
+    KSPROPERTY ksProperty;
 
-    propertyCount = sizeof(KSPROPERTY) + instanceCount;
-    ksProperty = (KSPROPERTY*)_alloca( propertyCount );
-    if( !ksProperty )
-    {
-        return paInsufficientMemory;
-    }
-
-    FillMemory((void*)ksProperty,sizeof(ksProperty),0);
-    ksProperty->Set = *guidPropertySet;
-    ksProperty->Id = property;
-    ksProperty->Flags = KSPROPERTY_TYPE_GET;
-
-    if( instance )
-    {
-        memcpy( (void*)(((char*)ksProperty)+sizeof(KSPROPERTY)), instance, instanceCount );
-    }
+    ksProperty.Set = *guidPropertySet;
+    ksProperty.Id = property;
+    ksProperty.Flags = KSPROPERTY_TYPE_GET;
 
     result = WdmSyncIoctl(
         handle,
         IOCTL_KS_PROPERTY,
-        ksProperty,
-        propertyCount,
+        &ksProperty,
+        sizeof(KSPROPERTY),
         value,
         valueCount,
         NULL);
@@ -2090,9 +2103,7 @@ static PaError PinInstantiate(PaWinWdmPin* pin)
             &KSPROPSETID_Connection,
             KSPROPERTY_CONNECTION_ALLOCATORFRAMING,
             &ksaf,
-            sizeof(ksaf),
-            NULL,
-            0);
+            sizeof(ksaf));
 
         if( result != paNoError )
         {
@@ -2101,9 +2112,7 @@ static PaError PinInstantiate(PaWinWdmPin* pin)
                 &KSPROPSETID_Connection,
                 KSPROPERTY_CONNECTION_ALLOCATORFRAMING_EX,
                 &ksafex,
-                sizeof(ksafex),
-                NULL,
-                0);
+                sizeof(ksafex));
             if( result == paNoError )
             {
                 pin->frameSize = ksafex.FramingItem[0].FramingRange.Range.MinFrameSize;
@@ -2672,7 +2681,7 @@ static PaWinWdmFilter* FilterNew( PaWDMKSType type, DWORD devNode, const wchar_t
     /* Get product GUID (it might not be supported) */
     {
         KSCOMPONENTID compId;
-        if (WdmGetPropertySimple(filter->handle, &KSPROPSETID_General, KSPROPERTY_GENERAL_COMPONENTID, &compId, sizeof(KSCOMPONENTID), NULL, 0) == paNoError)
+        if (WdmGetPropertySimple(filter->handle, &KSPROPSETID_General, KSPROPERTY_GENERAL_COMPONENTID, &compId, sizeof(KSCOMPONENTID)) == paNoError)
         {
             filter->devInfo.deviceProductGuid = compId.Product;
         }
@@ -3668,7 +3677,7 @@ PaError PaWinWdm_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiInd
     PaError result = paNoError;
     int deviceCount = 0;
     void *scanResults = 0;
-    PaWinWdmHostApiRepresentation *wdmHostApi;
+    PaWinWdmHostApiRepresentation *wdmHostApi = NULL;
 
     PA_LOGE_;
 
@@ -3686,22 +3695,24 @@ PaError PaWinWdm_Initialize( PaUtilHostApiRepresentation **hostApi, PaHostApiInd
         if(DllKsUser == NULL)
             goto error;
     }
-
-    /* Attempt to load AVRT.DLL, if we can't, then we'll just use time critical prio instead... */
-    if(DllAvRt == NULL)
-    {
-        DllAvRt = LoadLibrary(TEXT("avrt.dll"));
-        if (DllAvRt != NULL)
-        {
-            FunctionAvSetMmThreadCharacteristics = (AVSETMMTHREADCHARACTERISTICS*)GetProcAddress(DllAvRt,"AvSetMmThreadCharacteristicsA");
-            FunctionAvRevertMmThreadCharacteristics = (AVREVERTMMTHREADCHARACTERISTICS*)GetProcAddress(DllAvRt, "AvRevertMmThreadCharacteristics");
-            FunctionAvSetMmThreadPriority = (AVSETMMTHREADPRIORITY*)GetProcAddress(DllAvRt, "AvSetMmThreadPriority");
-        }
-    }
-
     FunctionKsCreatePin = (KSCREATEPIN*)GetProcAddress(DllKsUser, "KsCreatePin");
     if(FunctionKsCreatePin == NULL)
         goto error;
+
+    /* Attempt to load AVRT.DLL, if we can't, then we'll just use time critical prio instead... */
+    if(paWinWDMKSAvRtEntryPoints.hInstance == NULL)
+    {
+        paWinWDMKSAvRtEntryPoints.hInstance = LoadLibrary(TEXT("avrt.dll"));
+        if (paWinWDMKSAvRtEntryPoints.hInstance != NULL)
+        {
+            paWinWDMKSAvRtEntryPoints.AvSetMmThreadCharacteristics =
+                (HANDLE(WINAPI*)(LPCSTR,LPDWORD))GetProcAddress(paWinWDMKSAvRtEntryPoints.hInstance,"AvSetMmThreadCharacteristicsA");
+            paWinWDMKSAvRtEntryPoints.AvRevertMmThreadCharacteristics =
+                (BOOL(WINAPI*)(HANDLE))GetProcAddress(paWinWDMKSAvRtEntryPoints.hInstance, "AvRevertMmThreadCharacteristics");
+            paWinWDMKSAvRtEntryPoints.AvSetMmThreadPriority =
+                (BOOL(WINAPI*)(HANDLE,PA_AVRT_PRIORITY))GetProcAddress(paWinWDMKSAvRtEntryPoints.hInstance, "AvSetMmThreadPriority");
+        }
+    }
 
     wdmHostApi = (PaWinWdmHostApiRepresentation*)PaUtil_AllocateMemory( sizeof(PaWinWdmHostApiRepresentation) );
     if( !wdmHostApi )
@@ -3778,10 +3789,10 @@ static void Terminate( struct PaUtilHostApiRepresentation *hostApi )
         DllKsUser = NULL;
     }
 
-    if( DllAvRt != NULL )
+    if( paWinWDMKSAvRtEntryPoints.hInstance != NULL )
     {
-        FreeLibrary( DllAvRt );
-        DllAvRt = NULL;
+        FreeLibrary( paWinWDMKSAvRtEntryPoints.hInstance );
+        paWinWDMKSAvRtEntryPoints.hInstance = NULL;
     }
 
     if( wdmHostApi)
@@ -4948,8 +4959,18 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 
                 if (result != paNoError)
                 {
+                    unsigned long pos = 0xdeadc0de;
                     PA_DEBUG(("Failed to register capture position register, using PinGetAudioPositionViaIOCTL\n"));
                     stream->capture.pPin->fnAudioPosition = PinGetAudioPositionViaIOCTL;
+                    /* Test position function */
+                    result = (stream->capture.pPin->fnAudioPosition)(stream->capture.pPin, &pos);
+                    if (result != paNoError || pos != 0x0)
+                    {
+                        PA_DEBUG(("Failed to read capture position register (IOCTL)\n"));
+                        PaWinWDM_SetLastErrorInfo(paUnanticipatedHostError, "Failed to read capture position register (IOCTL)");
+                        result = paUnanticipatedHostError;
+                        goto error;
+                    }                
                 }
                 else
                 {
@@ -5060,8 +5081,18 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
 
                 if (result != paNoError)
                 {
+                    unsigned long pos = 0xdeadc0de;
                     PA_DEBUG(("Failed to register rendering position register, using PinGetAudioPositionViaIOCTL\n"));
                     stream->render.pPin->fnAudioPosition = PinGetAudioPositionViaIOCTL;
+                    /* Test position function */
+                    result = (stream->render.pPin->fnAudioPosition)(stream->render.pPin, &pos);
+                    if (result != paNoError || pos != 0x0)
+                    {
+                        PA_DEBUG(("Failed to read render position register (IOCTL)\n"));
+                        PaWinWDM_SetLastErrorInfo(paUnanticipatedHostError, "Failed to read render position register (IOCTL)");
+                        result = paUnanticipatedHostError;
+                        goto error;
+                    }
                 }
                 else
                 {
@@ -5343,12 +5374,12 @@ static HANDLE BumpThreadPriority()
     HANDLE hAVRT = NULL;
 
     /* If we have access to AVRT.DLL (Vista and later), use it */
-    if (FunctionAvSetMmThreadCharacteristics != NULL) 
+    if (paWinWDMKSAvRtEntryPoints.AvSetMmThreadCharacteristics != NULL) 
     {
-        hAVRT = FunctionAvSetMmThreadCharacteristics("Pro Audio", &dwTask);
+        hAVRT = paWinWDMKSAvRtEntryPoints.AvSetMmThreadCharacteristics("Pro Audio", &dwTask);
         if (hAVRT != NULL && hAVRT != INVALID_HANDLE_VALUE) 
         {
-            BOOL bret = FunctionAvSetMmThreadPriority(hAVRT, PA_AVRT_PRIORITY_CRITICAL);
+            BOOL bret = paWinWDMKSAvRtEntryPoints.AvSetMmThreadPriority(hAVRT, PA_AVRT_PRIORITY_CRITICAL);
             if (!bret)
             {
                 PA_DEBUG(("Set mm thread prio to critical failed!\n"));
@@ -5385,8 +5416,8 @@ static void DropThreadPriority(HANDLE hAVRT)
 
     if (hAVRT != NULL) 
     {
-        FunctionAvSetMmThreadPriority(hAVRT, PA_AVRT_PRIORITY_NORMAL);
-        FunctionAvRevertMmThreadCharacteristics(hAVRT);
+        paWinWDMKSAvRtEntryPoints.AvSetMmThreadPriority(hAVRT, PA_AVRT_PRIORITY_NORMAL);
+        paWinWDMKSAvRtEntryPoints.AvRevertMmThreadCharacteristics(hAVRT);
         return;
     }
 
@@ -5564,7 +5595,7 @@ static PaError PaDoProcessing(PaProcessThreadInfo* pInfo)
         if (inputFramesAvailable && (!pInfo->stream->userOutputChannels || inputFramesAvailable >= (int)pInfo->stream->render.framesPerBuffer))
         {
             unsigned wrapCntr = 0;
-            char* data[2] = {0};
+            void* data[2] = {0};
             ring_buffer_size_t size[2] = {0};
 
             /* If full-duplex, we just extract output buffer number of frames */
@@ -6042,9 +6073,13 @@ static PaError StartStream( PaStream *s )
 {
     PaError result = paNoError;
     PaWinWdmStream *stream = (PaWinWdmStream*)s;
-    DWORD dwID;
 
     PA_LOGE_;
+
+    if (stream->streamThread != NULL)
+    {
+        return paStreamIsNotStopped;
+    }
 
     stream->streamStop = 0;
     stream->streamAbort = 0;
@@ -6060,7 +6095,7 @@ static PaError StartStream( PaStream *s )
     /*ret = SetPriorityClass(GetCurrentProcess(),REALTIME_PRIORITY_CLASS);
     PA_DEBUG(("Class ret = %d;",ret));*/
 
-    stream->streamThread = CREATE_THREAD_FUNCTION (NULL, 0, ProcessingThread, stream, CREATE_SUSPENDED, &dwID);
+    stream->streamThread = CREATE_THREAD_FUNCTION (NULL, 0, ProcessingThread, stream, CREATE_SUSPENDED, NULL);
     if(stream->streamThread == NULL)
     {
         result = paInsufficientMemory;
@@ -6101,14 +6136,14 @@ static PaError StopStream( PaStream *s )
 {
     PaError result = paNoError;
     PaWinWdmStream *stream = (PaWinWdmStream*)s;
-    int doCb = 0;
+    BOOL doCb = FALSE;
 
     PA_LOGE_;
 
     if(stream->streamActive)
     {
         DWORD dwExitCode;
-        doCb = 1;
+        doCb = TRUE;
         stream->streamStop = 1;
         if (GetExitCodeThread(stream->streamThread, &dwExitCode) && dwExitCode == STILL_ACTIVE)
         {
@@ -6136,8 +6171,11 @@ static PaError StopStream( PaStream *s )
         }
     }
 
-    CloseHandle(stream->streamThread);
-    stream->streamThread = 0;
+    if (stream->streamThread != NULL)
+    {
+        CloseHandle(stream->streamThread);
+        stream->streamThread = 0;
+    }
     stream->streamStarted = 0;
     stream->streamActive = 0;
 
@@ -6325,6 +6363,7 @@ static signed long GetStreamWriteAvailable( PaStream* s )
 
 static PaError PaPinCaptureEventHandler_WaveCyclic(PaProcessThreadInfo* pInfo, unsigned eventIndex)
 {
+    PaError result = paNoError;
     ring_buffer_size_t frameCount;
     DATAPACKET* packet = pInfo->stream->capture.packets + eventIndex;
 
@@ -6332,22 +6371,26 @@ static PaError PaPinCaptureEventHandler_WaveCyclic(PaProcessThreadInfo* pInfo, u
 
     if (packet->Header.DataUsed == 0)
     {
-        PA_HP_TRACE((pInfo->stream->hLog, ">>> Capture bogus event: idx=%u (DataUsed=%u)", eventIndex, packet->Header.DataUsed));
+        PA_HP_TRACE((pInfo->stream->hLog, ">>> Capture bogus event (no data): idx=%u", eventIndex));
 
         /* Bogus event, reset! This is to handle the behavior of this USB mic: http://shop.xtz.se/measurement-system/microphone-to-dirac-live-room-correction-suite 
            on startup of streaming, where it erroneously sets the event without the corresponding buffer being filled (DataUsed == 0) */
         ResetEvent(packet->Signal.hEvent);
-        return -1;
+
+        result = -1;    /* Only need this to be NOT paNoError */
+    }
+    else
+    {
+        pInfo->capturePackets[pInfo->captureHead & cPacketsArrayMask].packet = packet;
+
+        frameCount = PaUtil_WriteRingBuffer(&pInfo->stream->ringBuffer, packet->Header.Data, pInfo->stream->capture.framesPerBuffer);
+
+        PA_HP_TRACE((pInfo->stream->hLog, ">>> Capture event: idx=%u (frames=%u)", eventIndex, frameCount));
+        ++pInfo->captureHead;
     }
 
-    pInfo->capturePackets[pInfo->captureHead & cPacketsArrayMask].packet = packet;
-
-    frameCount = PaUtil_WriteRingBuffer(&pInfo->stream->ringBuffer, packet->Header.Data, pInfo->stream->capture.framesPerBuffer);
-
-    PA_HP_TRACE((pInfo->stream->hLog, ">>> Capture event: idx=%u (frames=%u)", eventIndex, frameCount));
-    ++pInfo->captureHead;
-    --pInfo->pending;
-    return paNoError;
+    --pInfo->pending; /* This needs to be done in either case */
+    return result;
 }
 
 static PaError PaPinCaptureSubmitHandler_WaveCyclic(PaProcessThreadInfo* pInfo, unsigned eventIndex)

@@ -1,7 +1,7 @@
 #ifndef PORTAUDIO_H
 #define PORTAUDIO_H
 /*
- * $Id: portaudio.h 1745 2011-08-25 17:44:01Z rossb $
+ * $Id: portaudio.h 1859 2012-09-01 00:10:13Z philburk $
  * PortAudio Portable Real-Time Audio Library
  * PortAudio API Header File
  * Latest version available at: http://www.portaudio.com/
@@ -1021,7 +1021,7 @@ typedef struct PaStreamInfo
 /** Retrieve a pointer to a PaStreamInfo structure containing information
  about the specified stream.
  @return A pointer to an immutable PaStreamInfo structure. If the stream
- parameter invalid, or an error is encountered, the function returns NULL.
+ parameter is invalid, or an error is encountered, the function returns NULL.
 
  @param stream A pointer to an open stream previously created with Pa_OpenStream.
 

@@ -99,6 +99,7 @@ You will need to add the following frameworks to your XCode project:
  - AudioToolbox.framework
  - AudioUnit.framework
  - CoreServices.framework
+ - Carbon.framework
 
 @section comp_mac_ca_5 Using the Library in Other Projects
 

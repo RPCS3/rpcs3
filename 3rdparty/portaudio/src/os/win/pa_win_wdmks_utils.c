@@ -47,15 +47,26 @@
     #define _INC_MMREG                      // for STATIC_KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
 #endif
 #include <winioctl.h>						// MinGW32 does not define this automatically
+
+#if defined(__GNUC__)
+
+#include "../../hostapi/wasapi/mingw-include/ks.h"
+#include "../../hostapi/wasapi/mingw-include/ksmedia.h"
+
+#else
+
 #include <ks.h>
 #include <ksmedia.h>
+
+#endif
+
 #include <stdio.h>                          // just for some development printfs
 
 #include "portaudio.h"
 #include "pa_util.h"
 #include "pa_win_wdmks_utils.h"
 
-#if !defined(PA_WDMKS_NO_KSGUID_LIB) && !defined(PAWIN_WDMKS_NO_KSGUID_LIB)
+#if !defined(PA_WDMKS_NO_KSGUID_LIB) && !defined(PAWIN_WDMKS_NO_KSGUID_LIB) && !defined(__GNUC__)
     #if (defined(WIN32) && (defined(_MSC_VER) && (_MSC_VER >= 1200) && (_MSC_VER < 1600))) /* MSC version 6 up to 2008 */
         #pragma comment( lib, "ksguid.lib" )
     #endif

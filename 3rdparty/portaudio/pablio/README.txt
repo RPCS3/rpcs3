@@ -2,10 +2,14 @@ README for PABLIO
 Portable Audio Blocking I/O Library
 Author: Phil Burk
 
-PABLIO is a simplified interface to PortAudio that provide
+PABLIO is a simplified interface to PortAudio that provides
 read/write style blocking I/O.
 
-Please see the .DOC file for documentation.
+PABLIO is DEPRECATED. We recommend that people use the blocking I/O calls
+that are now part of the PortAudio API. These are Pa_ReadStream() and
+Pa_WriteStream().
+
+http://portaudio.com/docs/v19-doxydocs/blocking_read_write.html
 
 /*
  * More information on PortAudio at: http://www.portaudio.com

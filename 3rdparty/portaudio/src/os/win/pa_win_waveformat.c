@@ -104,7 +104,6 @@ void PaWin_InitializeWaveFormatExtensible( PaWinWaveFormat *waveFormat,
     *((GUID*)&waveFormat->fields[PAWIN_INDEXOF_SUBFORMAT]) = guid;
 }
 
-
 PaWinWaveFormatChannelMask PaWin_DefaultChannelMask( int numChannels )
 {
 	switch( numChannels ){
@@ -129,11 +128,16 @@ PaWinWaveFormatChannelMask PaWin_DefaultChannelMask( int numChannels )
 			return PAWIN_SPEAKER_5POINT1; 
         /* case 7: */
 		case 8:
-			return PAWIN_SPEAKER_7POINT1;
+            /* RoBi: PAWIN_SPEAKER_7POINT1_SURROUND fits normal surround sound setups better than PAWIN_SPEAKER_7POINT1, f.i. NVidia HDMI Audio
+               output is silent on channels 5&6 with NVidia drivers, and channel 7&8 with Micrsoft HD Audio driver using PAWIN_SPEAKER_7POINT1. 
+               With PAWIN_SPEAKER_7POINT1_SURROUND both setups work OK. */
+			return PAWIN_SPEAKER_7POINT1_SURROUND;
 	}
 
     /* Apparently some Audigy drivers will output silence 
        if the direct-out constant (0) is used. So this is not ideal.    
+
+       RoBi 2012-12-19: Also, NVidia driver seem to output garbage instead. Again not very ideal.
     */
 	return  PAWIN_SPEAKER_DIRECTOUT;
 

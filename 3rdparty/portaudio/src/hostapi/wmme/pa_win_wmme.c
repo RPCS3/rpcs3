@@ -1,5 +1,5 @@
 /*
- * $Id: pa_win_wmme.c 1739 2011-08-25 07:15:31Z rossb $
+ * $Id: pa_win_wmme.c 1874 2012-10-31 06:20:59Z rbencina $
  * pa_win_wmme.c
  * Implementation of PortAudio for Windows MultiMedia Extensions (WMME)       
  *                                                                                         
@@ -450,7 +450,7 @@ static PaDeviceIndex GetEnvDefaultDeviceID( char *envName )
 #ifndef WIN32_PLATFORM_PSPC /* no GetEnvironmentVariable on PocketPC */
 
     /* Let user determine default device by setting environment variable. */
-    hresult = GetEnvironmentVariable( envName, envbuf, PA_ENV_BUF_SIZE_ );
+    hresult = GetEnvironmentVariableA( envName, envbuf, PA_ENV_BUF_SIZE_ );
     if( (hresult > 0) && (hresult < PA_ENV_BUF_SIZE_) )
     {
         recommendedIndex = atoi( envbuf );
@@ -709,7 +709,8 @@ static PaError InitializeInputDeviceInfo( PaWinMmeHostApiRepresentation *winMmeH
     {
         /* Append I/O suffix to WAVE_MAPPER device. */
         deviceName = (char *)PaUtil_GroupAllocateMemory(
-                    winMmeHostApi->allocations, StrTLen( wic.szPname ) + 1 + sizeof(constInputMapperSuffix_) );
+                    winMmeHostApi->allocations,
+					(long) (StrTLen( wic.szPname ) + 1 + sizeof(constInputMapperSuffix_)) );
         if( !deviceName )
         {
             result = paInsufficientMemory;
@@ -721,7 +722,8 @@ static PaError InitializeInputDeviceInfo( PaWinMmeHostApiRepresentation *winMmeH
     else
     {
         deviceName = (char*)PaUtil_GroupAllocateMemory(
-                    winMmeHostApi->allocations, StrTLen( wic.szPname ) + 1 );
+                    winMmeHostApi->allocations, 
+					(long) (StrTLen( wic.szPname ) + 1) );
         if( !deviceName )
         {
             result = paInsufficientMemory;
@@ -835,7 +837,8 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
     {
         /* Append I/O suffix to WAVE_MAPPER device. */
         deviceName = (char *)PaUtil_GroupAllocateMemory(
-                    winMmeHostApi->allocations, StrTLen( woc.szPname ) + 1 + sizeof(constOutputMapperSuffix_) );
+                    winMmeHostApi->allocations, 
+					(long) (StrTLen( woc.szPname ) + 1 + sizeof(constOutputMapperSuffix_)) );
         if( !deviceName )
         {
             result = paInsufficientMemory;
@@ -847,7 +850,8 @@ static PaError InitializeOutputDeviceInfo( PaWinMmeHostApiRepresentation *winMme
     else
     {
         deviceName = (char*)PaUtil_GroupAllocateMemory(
-                    winMmeHostApi->allocations, StrTLen( woc.szPname ) + 1 );
+                    winMmeHostApi->allocations, 
+					(long) (StrTLen( woc.szPname ) + 1) );
         if( !deviceName )
         {
             result = paInsufficientMemory;

@@ -25,7 +25,7 @@ Many platforms with GCC/make can use the simple ./configure && make combination 
 
 @section tut_start3 Programming with PortAudio
 
-Below are the steps to writing a PortAudio application:
+Below are the steps to writing a PortAudio application using the callback technique:
 
  - Write a callback function that will be called by PortAudio when audio processing is needed.
  - Initialize the PA library and open a stream for audio I/O.
@@ -38,7 +38,7 @@ In addition to this "Callback" architecture, V19 also supports a "Blocking I/O" 
 
 In this tutorial, we'll show how to use the callback architecture to play a sawtooth wave. Much of the tutorial is taken from the file paex_saw.c, which is part of the PortAudio distribution. When you're done with this tutorial, you'll be armed with the basic knowledge you need to write an audio program. If you need more sample code, look in the "examples" and "test" directory of the PortAudio distribution. Another great source of info is the portaudio.h Doxygen page, which documents the entire V19 API. Also see the page for <a href="http://www.assembla.com/spaces/portaudio/wiki/Tips">tips on programming PortAudio</a> on the PortAudio wiki.
 
-If you are upgrading from V18, you may want to look at the <a href="http://www.portaudio.com/docs/proposals/index.html">Proposed Enhancements to PortAudio</a>, which describes the differences between V18 and V19.
+@section tut_start4 Programming Tutorial Contents
 
 - \ref writing_a_callback
 - \ref initializing_portaudio
@@ -48,6 +48,8 @@ If you are upgrading from V18, you may want to look at the <a href="http://www.p
 - \ref utility_functions
 - \ref querying_devices
 - \ref blocking_read_write
+
+If you are upgrading from V18, you may want to look at the <a href="http://www.portaudio.com/docs/proposals/index.html">Proposed Enhancements to PortAudio</a>, which describes the differences between V18 and V19.
 
 Once you have a basic understanding of how to use PortAudio, you might be interested in \ref exploring.
 

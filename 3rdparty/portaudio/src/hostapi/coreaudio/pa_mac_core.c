@@ -1774,25 +1774,16 @@ static PaError OpenStream( struct PaUtilHostApiRepresentation *hostApi,
        do is initialize everything so that if we fail, we know what hasn't
        been touched.
      */
-
-    stream->inputAudioBufferList.mBuffers[0].mData = NULL;
-    stream->inputRingBuffer.buffer = NULL;
-    bzero( &stream->blio, sizeof( PaMacBlio ) );
-/*
+    bzero( stream, sizeof( PaMacCoreStream ) );
+    
+    /*
     stream->blio.inputRingBuffer.buffer = NULL;
     stream->blio.outputRingBuffer.buffer = NULL;
     stream->blio.inputSampleFormat = inputParameters?inputParameters->sampleFormat:0;
     stream->blio.inputSampleSize = computeSampleSizeFromFormat(stream->blio.inputSampleFormat);
     stream->blio.outputSampleFormat=outputParameters?outputParameters->sampleFormat:0;
     stream->blio.outputSampleSize = computeSampleSizeFromFormat(stream->blio.outputSampleFormat);
-*/
-    stream->inputSRConverter = NULL;
-    stream->inputUnit = NULL;
-    stream->outputUnit = NULL;
-    stream->inputFramesPerBuffer = 0;
-    stream->outputFramesPerBuffer = 0;
-    stream->bufferProcessorIsInitialized = FALSE;
-	stream->timingInformationMutexIsInitialized = 0;
+    */
 
     /* assert( streamCallback ) ; */ /* only callback mode is implemented */
     if( streamCallback )
@@ -2145,11 +2136,11 @@ static OSStatus AudioIOProc( void *inRefCon,
    const bool isRender               = inBusNumber == OUTPUT_ELEMENT;
    int callbackResult                = paContinue ;
    double hostTimeStampInPaTime      = HOST_TIME_TO_PA_TIME(inTimeStamp->mHostTime);
-
+    
    VVDBUG(("AudioIOProc()\n"));
 
    PaUtil_BeginCpuLoadMeasurement( &stream->cpuLoadMeasurer );
-
+    
    /* -----------------------------------------------------------------*\
       This output may be useful for debugging,
       But printing durring the callback is a bad enough idea that
@@ -2250,7 +2241,8 @@ static OSStatus AudioIOProc( void *inRefCon,
        *
        */
       OSStatus err = 0;
-      unsigned long frames;
+       unsigned long frames;
+       long bytesPerFrame = sizeof( float ) * ioData->mBuffers[0].mNumberChannels;
 
       /* -- start processing -- */
       PaUtil_BeginBufferProcessing( &(stream->bufferProcessor),
@@ -2261,8 +2253,8 @@ static OSStatus AudioIOProc( void *inRefCon,
       /* -- compute frames. do some checks -- */
       assert( ioData->mNumberBuffers == 1 );
       assert( ioData->mBuffers[0].mNumberChannels == stream->userOutChan );
-      frames = ioData->mBuffers[0].mDataByteSize;
-      frames /= sizeof( float ) * ioData->mBuffers[0].mNumberChannels;
+
+      frames = ioData->mBuffers[0].mDataByteSize / bytesPerFrame;
       /* -- copy and process input data -- */
       err= AudioUnitRender(stream->inputUnit,
                     ioActionFlags,
@@ -2300,7 +2292,8 @@ static OSStatus AudioIOProc( void *inRefCon,
        * and into the PA buffer processor. If sample rate conversion
        * is required on input, that is done here as well.
        */
-      unsigned long frames;
+       unsigned long frames;
+       long bytesPerFrame = sizeof( float ) * ioData->mBuffers[0].mNumberChannels;
 
       /* Sometimes, when stopping a duplex stream we get erroneous
          xrun flags, so if this is our last run, clear the flags. */
@@ -2322,8 +2315,7 @@ static OSStatus AudioIOProc( void *inRefCon,
 
       /* -- Copy and process output data -- */
       assert( ioData->mNumberBuffers == 1 );
-      frames = ioData->mBuffers[0].mDataByteSize;
-      frames /= sizeof( float ) * ioData->mBuffers[0].mNumberChannels;
+      frames = ioData->mBuffers[0].mDataByteSize / bytesPerFrame;
       assert( ioData->mBuffers[0].mNumberChannels == stream->userOutChan );
       PaUtil_SetOutputFrameCount( &(stream->bufferProcessor), frames );
       PaUtil_SetInterleavedOutputChannels( &(stream->bufferProcessor),
@@ -2337,6 +2329,8 @@ static OSStatus AudioIOProc( void *inRefCon,
          /* Here, we read the data out of the ring buffer, through the
             audio converter. */
          int inChan = stream->inputAudioBufferList.mBuffers[0].mNumberChannels;
+         long bytesPerFrame = flsz * inChan;
+          
          if( stream->inputSRConverter )
          {
                OSStatus err;
@@ -2353,7 +2347,12 @@ static OSStatus AudioIOProc( void *inRefCon,
                { /*the ring buffer callback underflowed */
                   err = 0;
                   bzero( ((char *)data) + size, sizeof(data)-size );
-                  stream->xrunFlags |= paInputUnderflow;
+                  /* The ring buffer can underflow normally when the stream is stopping.
+                   * So only report an error if the stream is active. */
+                  if( stream->state == ACTIVE )
+                  {
+                      stream->xrunFlags |= paInputUnderflow;
+                  }
                }
                ERR( err );
                assert( !err );
@@ -2374,7 +2373,7 @@ static OSStatus AudioIOProc( void *inRefCon,
                AudioConverter would otherwise handle for us. */
             void *data1, *data2;
             ring_buffer_size_t size1, size2;
-            PaUtil_GetRingBufferReadRegions( &stream->inputRingBuffer,
+            ring_buffer_size_t framesReadable = PaUtil_GetRingBufferReadRegions( &stream->inputRingBuffer,
                                              frames,
                                              &data1, &size1,
                                              &data2, &size2 );
@@ -2389,14 +2388,21 @@ static OSStatus AudioIOProc( void *inRefCon,
                     PaUtil_EndBufferProcessing( &(stream->bufferProcessor),
                                                 &callbackResult );
                PaUtil_AdvanceRingBufferReadIndex(&stream->inputRingBuffer, size1 );
-            } else if( size1 + size2 < frames ) {
+            } else if( framesReadable < frames ) {
+                
+                long sizeBytes1 = size1 * bytesPerFrame;
+                long sizeBytes2 = size2 * bytesPerFrame;
                /*we underflowed. take what data we can, zero the rest.*/
-               unsigned char data[frames*inChan*flsz];
-               if( size1 )
-                  memcpy( data, data1, size1 );
-               if( size2 )
-                  memcpy( data+size1, data2, size2 );
-               bzero( data+size1+size2, frames*flsz*inChan - size1 - size2 );
+               unsigned char data[ frames * bytesPerFrame ];
+               if( size1 > 0 )
+               {   
+                   memcpy( data, data1, sizeBytes1 );
+               }
+               if( size2 > 0 )
+               {
+                   memcpy( data+sizeBytes1, data2, sizeBytes2 );
+               }
+               bzero( data+sizeBytes1+sizeBytes2, (frames*bytesPerFrame) - sizeBytes1 - sizeBytes2 );
 
                PaUtil_SetInputFrameCount( &(stream->bufferProcessor), frames );
                PaUtil_SetInterleavedInputChannels( &(stream->bufferProcessor),
@@ -2407,7 +2413,7 @@ static OSStatus AudioIOProc( void *inRefCon,
                     PaUtil_EndBufferProcessing( &(stream->bufferProcessor),
                                                 &callbackResult );
                PaUtil_AdvanceRingBufferReadIndex( &stream->inputRingBuffer,
-                                                  size1+size2 );
+                                                  framesReadable );
                /* flag underflow */
                stream->xrunFlags |= paInputUnderflow;
             } else {
@@ -2425,7 +2431,7 @@ static OSStatus AudioIOProc( void *inRefCon,
                framesProcessed =
                     PaUtil_EndBufferProcessing( &(stream->bufferProcessor),
                                                 &callbackResult );
-               PaUtil_AdvanceRingBufferReadIndex(&stream->inputRingBuffer, size1+size2 );
+               PaUtil_AdvanceRingBufferReadIndex(&stream->inputRingBuffer, framesReadable );
             }
          }
       } else {
@@ -2463,13 +2469,13 @@ static OSStatus AudioIOProc( void *inRefCon,
       {
          /* If this is duplex or we use a converter, put the data
             into the ring buffer. */
-         long bytesIn, bytesOut;
-         bytesIn = sizeof( float ) * inNumberFrames * chan;
-         bytesOut = PaUtil_WriteRingBuffer( &stream->inputRingBuffer,
+          ring_buffer_size_t framesWritten = PaUtil_WriteRingBuffer( &stream->inputRingBuffer,
                                             stream->inputAudioBufferList.mBuffers[0].mData,
                                             inNumberFrames );
-         if( bytesIn != bytesOut )
-            stream->xrunFlags |= paInputOverflow ;
+         if( framesWritten != inNumberFrames )
+         {
+             stream->xrunFlags |= paInputOverflow ;
+         }
       }
       else
       {

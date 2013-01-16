@@ -3,8 +3,8 @@
 
 @section overview Overview
 
-PortAudio is a cross-platform, open-source C language library for real-time audio input and output. The library provides functions that allow your software to acquire and output real-time audio streams from your computer's hardware audio interfaces. It is designed to simplify writing cross-platform audio applications, and also to simplify the development of audio software in general by hiding the complexities of dealing directly with each native audio API. PortAudio is used to implement sound recording, editing and mixing applications, software synthesizers, effects processors, music players, internet telephony applications, software defined radios and more. Supported platforms include MS Windows, Mac OS X and Linux. Third-party language bindings make it possible to call PortAudio from other programming languages including C++, C#, Python, PureBasic, FreePascal and Lazarus.
-
+PortAudio is a cross-platform, open-source C language library for real-time audio input and output.
+The library provides functions that allow your software to acquire and output real-time audio streams from your computer's hardware audio interfaces. It is designed to simplify writing cross-platform audio applications, and also to simplify the development of audio software in general by hiding the complexities of dealing directly with each native audio API. PortAudio is used to implement sound recording, editing and mixing applications, software synthesizers, effects processors, music players, internet telephony applications, software defined radios and more. Supported platforms include MS Windows, Mac OS X and Linux. Third-party language bindings make it possible to call PortAudio from other programming languages including @ref java_binding "Java", C++, C#, Python, PureBasic, FreePascal and Lazarus.
 
 @section start_here Start here
 
@@ -38,6 +38,8 @@ Documentation for non-portable platform-specific host API extensions
 
 - <a href="http://www.assembla.com/spaces/portaudio/wiki">The PortAudio wiki</a>
 
+- @ref java_binding<br>
+Documentation for the Java JNI interface to PortAudio
 
 @section developer_resources Developer Resources
 
