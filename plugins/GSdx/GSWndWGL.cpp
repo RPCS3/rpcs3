@@ -29,7 +29,6 @@ GSWndWGL::GSWndWGL()
 {
 }
 
-//TODO: GL3 context
 bool GSWndWGL::CreateContext(int major, int minor)
 {
 	if ( !m_NativeDisplay || !m_NativeWindow )
@@ -39,7 +38,10 @@ bool GSWndWGL::CreateContext(int major, int minor)
 	}
 
 	// GL2 context are quite easy but we need GL3 which is another painful story...
-	if (!(m_context = wglCreateContext(m_NativeDisplay))) return false;
+	if (!(m_context = wglCreateContext(m_NativeDisplay))) {
+		fprinf(stderr, "Failed to create a 2.0 context\n");
+		return false;
+	}
 
 	// FIXME test it
 	// Note: albeit every tutorial said that we need an opengl context to use the GL function wglCreateContextAttribsARB
@@ -60,10 +62,16 @@ bool GSWndWGL::CreateContext(int major, int minor)
 		};
 
 		PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
-		if (!wglCreateContextAttribsARB) return false;
+		if (!wglCreateContextAttribsARB) {
+			fprinf(stderr, "Failed to init wglCreateContextAttribsARB function pointer\n");
+			return false;
+		}
 
 		HGLRC context30 = wglCreateContextAttribsARB(m_NativeDisplay, NULL, context_attribs);
-		if (!context30) return false;
+		if (!context30) {
+			fprinf(stderr, "Failed to create a 3.x context\n");
+			return false;
+		}
 
 		DetachContext();
 		wglDeleteContext(m_context);
@@ -72,48 +80,6 @@ bool GSWndWGL::CreateContext(int major, int minor)
 		fprintf(stderr, "3.x GL context successfully created\n");
 	}
 
-#if 0
-
-
-	// Get visual information
-	static int attrListDbl[] =
-	{
-		// GLX_X_RENDERABLE: If True is specified, then only frame buffer configurations that have associated X
-		// visuals (and can be used to render to Windows and/or GLX pixmaps) will be considered. The default value is GLX_DONT_CARE.
-		GLX_X_RENDERABLE    , True,
-		GLX_RED_SIZE        , 8,
-		GLX_GREEN_SIZE      , 8,
-		GLX_BLUE_SIZE       , 8,
-		GLX_DEPTH_SIZE      , 24,
-		GLX_DOUBLEBUFFER    , True,
-		None
-	};
-
-	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
-	int fbcount = 0;
-	GLXFBConfig *fbc = glXChooseFBConfig(m_NativeDisplay, DefaultScreen(m_NativeDisplay), attrListDbl, &fbcount);
-	if (!fbc || fbcount < 1) return false;
-
-	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
-	if (!glXCreateContextAttribsARB) return false;
-
-	// Create a context
-	int context_attribs[] =
-	{
-		GLX_CONTEXT_MAJOR_VERSION_ARB, major,
-		GLX_CONTEXT_MINOR_VERSION_ARB, minor,
-		// FIXME : Request a debug context to ease opengl development
-		// Note: don't support deprecated feature (pre openg 3.1)
-		//GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB | GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
-		GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
-		None
-	};
-
-	m_context = glXCreateContextAttribsARB(m_NativeDisplay, fbc[0], 0, true, context_attribs);
-	if (!m_context) return false;
-
-	XSync( m_NativeDisplay, false);
-#endif
 	return true;
 }
 
@@ -153,8 +119,6 @@ bool GSWndWGL::Attach(void* handle, bool managed)
 
 	if (!OpenWGLDisplay()) return false;
 
-	// FIXME: debug purpose
-	//if (!CreateContext(2, 0)) return false;
 	if (!CreateContext(3, 3)) return false;
 
 	AttachContext();
@@ -178,6 +142,7 @@ void GSWndWGL::Detach()
 	DetachContext();
 
 	if (m_context) wglDeleteContext(m_context);
+	m_context = NULL;
 
 	CloseWGLDisplay();
 }
@@ -234,8 +199,8 @@ void GSWndWGL::CloseWGLDisplay()
 	if (m_NativeDisplay && !ReleaseDC(m_NativeWindow, m_NativeDisplay))				 // Are We Able To Release The DC
 	{
 		MessageBox(NULL, "Release Device Context Failed.", "SHUTDOWN ERROR", MB_OK | MB_ICONINFORMATION);
-		m_NativeDisplay = NULL;									 // Set DC To NULL
 	}
+	m_NativeDisplay = NULL;									 // Set DC To NULL
 }
 
 //TODO: GSopen 1 => Drop?

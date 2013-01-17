@@ -208,7 +208,6 @@ using namespace std;
 	//#include <ext/hash_set>
 
 	#include <GL/gl.h>
-	#include <GL/glx.h>
 	#include <GL/glext.h>
 	#include "GLLoader.h"
 

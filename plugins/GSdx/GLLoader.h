@@ -21,6 +21,12 @@
 
 #pragma once
 
+#ifdef _LINUX
+#include <GL/glx.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#endif
+
 #ifdef _WINDOWS
 #define GL_LOADFN(name) { \
 		if( (*(void**)&name = (void*)wglGetProcAddress(#name)) == NULL ) { \
@@ -28,11 +34,19 @@
 		} \
 }
 #else
+#ifdef EGL_API
 #define GL_LOADFN(name) { \
-		if( (*(void**)&name = (void*)glXGetProcAddress((const GLubyte*)#name)) == NULL ) { \
-			fprintf(stderr,"Failed to find %s\n", #name); \
-		} \
+	if( (*(void**)&name = (void*)eglGetProcAddress(#name)) == NULL ) { \
+		fprintf(stderr,"Failed to find %s\n", #name); \
+	} \
 }
+#else
+#define GL_LOADFN(name) { \
+	if( (*(void**)&name = (void*)glXGetProcAddress((const GLubyte*)#name)) == NULL ) { \
+		fprintf(stderr,"Failed to find %s\n", #name); \
+	} \
+}
+#endif
 #endif
 
 // Those are provided on gl.h on linux...

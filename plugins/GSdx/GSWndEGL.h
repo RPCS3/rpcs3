@@ -23,25 +23,30 @@
 
 #ifdef _LINUX
 #include <X11/Xlib.h>
-#include <GL/glx.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
 
-class GSWndOGL : public GSWnd
+class GSWndEGL : public GSWnd
 {
-	Window     m_NativeWindow;
-	Display*   m_NativeDisplay;
-	GLXContext m_context;
+	EGLNativeWindowType    m_NativeWindow;
+	EGLNativeDisplayType   m_NativeDisplay;
+
+	EGLDisplay m_eglDisplay;
+	EGLSurface m_eglSurface;
+	EGLContext m_eglContext;
 
 	bool m_ctx_attached;
-
-	PFNGLXSWAPINTERVALMESAPROC m_swapinterval;
 
 	bool IsContextAttached() const { return m_ctx_attached; }
 	bool CreateContext(int major, int minor);
 	void CheckContext();
 
+	EGLBoolean OpenEGLDisplay();
+	void CloseEGLDisplay();
+
 public:
-	GSWndOGL();
-	virtual ~GSWndOGL() {};
+	GSWndEGL();
+	virtual ~GSWndEGL() {};
 
 	bool Create(const string& title, int w, int h);
 	bool Attach(void* handle, bool managed = true);

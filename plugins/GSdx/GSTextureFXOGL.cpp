@@ -61,11 +61,13 @@ void GSDeviceOGL::CreateTextureFX()
 	m_vb = new GSVertexBufferStateOGL(sizeof(GSVertex), vert_format, countof(vert_format));
 
 	// Compile some dummy shaders to allow modification inside Apitrace for debug
+#ifdef _LINUX
 	GLuint dummy;
-	std::string macro = "";
+	std::string macro = "\n";
 	CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &dummy, macro);
 	CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &dummy, macro);
 	CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &dummy, macro);
+#endif
 }
 
 void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)

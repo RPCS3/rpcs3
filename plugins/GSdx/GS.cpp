@@ -44,6 +44,7 @@ static HRESULT s_hr = E_FAIL;
 #else
 
 #include "GSWndOGL.h"
+#include "GSWndEGL.h"
 
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
@@ -279,7 +280,11 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			else
 				s_gs->m_wnd = new GSWndDX();
 #else
+	#ifdef EGL_API
+			s_gs->m_wnd = new GSWndEGL();
+	#else
 			s_gs->m_wnd = new GSWndOGL();
+	#endif
 #endif
 		}
 	}
