@@ -39,7 +39,7 @@ bool GSWndWGL::CreateContext(int major, int minor)
 
 	// GL2 context are quite easy but we need GL3 which is another painful story...
 	if (!(m_context = wglCreateContext(m_NativeDisplay))) {
-		fprinf(stderr, "Failed to create a 2.0 context\n");
+		fprintf(stderr, "Failed to create a 2.0 context\n");
 		return false;
 	}
 
@@ -63,13 +63,13 @@ bool GSWndWGL::CreateContext(int major, int minor)
 
 		PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
 		if (!wglCreateContextAttribsARB) {
-			fprinf(stderr, "Failed to init wglCreateContextAttribsARB function pointer\n");
+			fprintf(stderr, "Failed to init wglCreateContextAttribsARB function pointer\n");
 			return false;
 		}
 
 		HGLRC context30 = wglCreateContextAttribsARB(m_NativeDisplay, NULL, context_attribs);
 		if (!context30) {
-			fprinf(stderr, "Failed to create a 3.x context\n");
+			fprintf(stderr, "Failed to create a 3.x context\n");
 			return false;
 		}
 
