@@ -35,6 +35,11 @@
 }
 #endif
 
+// Those are provided on gl.h on linux...
+#ifdef _WINDOWS
+extern   PFNGLACTIVETEXTUREPROC                 glActiveTexture;
+extern   PFNGLBLENDCOLORPROC                    glBlendColor;
+#endif
 extern   PFNGLATTACHSHADERPROC                  glAttachShader;
 extern   PFNGLBINDBUFFERPROC                    glBindBuffer;
 extern   PFNGLBINDBUFFERBASEPROC                glBindBufferBase;

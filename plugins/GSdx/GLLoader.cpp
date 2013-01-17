@@ -22,6 +22,12 @@
 #include "stdafx.h"
 #include "GLLoader.h"
 
+// Those are provided on gl.h on linux...
+#ifdef _WINDOWS
+PFNGLACTIVETEXTUREPROC                 glActiveTexture                 =   NULL;
+PFNGLBLENDCOLORPROC                    glBlendColor                    =   NULL;
+#endif
+
 PFNGLATTACHSHADERPROC                  glAttachShader                  =   NULL;
 PFNGLBINDBUFFERPROC                    glBindBuffer                    =   NULL;
 PFNGLBINDBUFFERBASEPROC                glBindBufferBase                =   NULL;
@@ -108,6 +114,12 @@ namespace GLLoader {
     }
 
     void init_gl_function() {
+		// Those are provided on gl.h on linux...
+#ifdef _WINDOWS
+		GL_LOADFN(glActiveTexture);
+		GL_LOADFN(glBlendColor);
+#endif
+
 		GL_LOADFN(glAttachShader);
 		GL_LOADFN(glBindBuffer);
 		GL_LOADFN(glBindBufferBase);
