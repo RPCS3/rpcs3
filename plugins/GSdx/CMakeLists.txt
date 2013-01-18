@@ -45,6 +45,15 @@ if(XDG_STD)
     add_definitions(-DXDG_STD)
 endif(XDG_STD)
 
+# Select the EGL API
+if(EGL_API AND EGL_FOUND)
+    if (EGL_GL_CONTEXT_SUPPORT)
+        add_definitions(-DEGL_API)
+    else()
+        message(WARNING "Current EGL implementation doesn't support openGL context. Fallback to standard GLX.")
+    endif()
+endif()
+
 set(GSdxSources
     GLLoader.cpp
     GPU.cpp
@@ -184,6 +193,9 @@ add_library(${Output} SHARED ${GSdxSources} ${GSdxHeaders})
 
 target_link_libraries(${Output} ${X11_LIBRARIES})
 target_link_libraries(${Output} ${OPENGL_LIBRARIES})
+if(EGL_API AND EGL_FOUND AND EGL_GL_CONTEXT_SUPPORT)
+    target_link_libraries(${Output} ${EGL_LIBRARIES})
+endif()
 
 if(Linux)
 	target_link_libraries(${Output} ${GTK2_LIBRARIES})
@@ -221,12 +233,18 @@ if(BUILD_REPLAY_LOADERS)
 	add_executable(${Replay} linux_replay.cpp)
 
 	target_link_libraries(${Static} ${OPENGL_LIBRARIES})
+    if(EGL_API AND EGL_FOUND AND EGL_GL_CONTEXT_SUPPORT)
+        target_link_libraries(${Static} ${EGL_LIBRARIES})
+    endif()
 	target_link_libraries(${Static} ${X11_LIBRARIES})
 	target_link_libraries(${Static} ${GTK2_LIBRARIES})
 
 	target_link_libraries(${Replay} ${Static})
 	# Warning others lib must be linked after GSdx...
 	target_link_libraries(${Replay} ${OPENGL_LIBRARIES})
+    if(EGL_API AND EGL_FOUND AND EGL_GL_CONTEXT_SUPPORT)
+        target_link_libraries(${Replay} ${EGL_LIBRARIES})
+    endif()
 	target_link_libraries(${Replay} ${X11_LIBRARIES})
 	target_link_libraries(${Replay} ${GTK2_LIBRARIES})
 

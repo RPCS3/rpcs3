@@ -25,7 +25,7 @@
 #ifdef _WINDOWS
 //TODO
 GSWndWGL::GSWndWGL()
-	: m_NativeWindow(NULL), m_NativeDisplay(NULL), m_context(NULL)//, m_swapinterval(NULL)
+	: m_NativeWindow(NULL), m_NativeDisplay(NULL), m_context(NULL), m_ctx_attached(false)
 {
 }
 

@@ -40,9 +40,9 @@
 #define EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR    0x00000002
 #endif
 
-#ifdef _LINUX
+#if defined(_LINUX) && defined (EGL_API)
 GSWndEGL::GSWndEGL()
-	: m_NativeWindow(0), m_NativeDisplay(NULL)
+	: m_NativeWindow(0), m_NativeDisplay(NULL), m_ctx_attached(false)
 {
 }
 

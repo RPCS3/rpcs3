@@ -24,7 +24,7 @@
 
 #ifdef _LINUX
 GSWndOGL::GSWndOGL()
-	: m_NativeWindow(0), m_NativeDisplay(NULL), m_swapinterval(NULL)
+	: m_NativeWindow(0), m_NativeDisplay(NULL), m_swapinterval(NULL), m_ctx_attached(false)
 {
 }
 

@@ -21,7 +21,7 @@
 
 #include "GSWnd.h"
 
-#ifdef _LINUX
+#if defined(_LINUX) && defined (EGL_API)
 #include <X11/Xlib.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
