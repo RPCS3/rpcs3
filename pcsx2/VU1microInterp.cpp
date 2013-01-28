@@ -24,7 +24,7 @@ extern void _vuFlushAll(VURegs* VU);
 
 void _vu1ExecUpper(VURegs* VU, u32 *ptr) {
 	VU->code = ptr[1];
-	IdebugUPPER(VU1);
+	//IdebugUPPER(VU1);
 	VU1_UPPER_OPCODE[VU->code & 0x3f]();
 }
 
@@ -68,7 +68,7 @@ static void _vu1Exec(VURegs* VU)
 		}
 	}
 
-	VUM_LOG("VU->cycle = %d (flags st=%x;mac=%x;clip=%x,q=%f)", VU->cycle, VU->statusflag, VU->macflag, VU->clipflag, VU->q.F);
+	//VUM_LOG("VU->cycle = %d (flags st=%x;mac=%x;clip=%x,q=%f)", VU->cycle, VU->statusflag, VU->macflag, VU->clipflag, VU->q.F);
 
 	VU->code = ptr[1];
 	VU1regs_UPPER_OPCODE[VU->code & 0x3f](&uregs);
@@ -144,21 +144,26 @@ static void _vu1Exec(VURegs* VU)
 	if (VU->branch > 0) {
 		if (VU->branch-- == 1) {
 			VU->VI[REG_TPC].UL = VU->branchpc;
-			if(VU->takedelaybranch == true && VU->linkreg == 0)
+			if(VU->takedelaybranch == true)
 			{				
-				//DevCon.Warning("Setting VU1 Delay branch to next branch, treating first as delay slot");
+				//DevCon.Warning("VU1 - Branch/Jump in Delay Slot");
+				if(VU->firstbranchisjump == 1)
+				{
+					//DevCon.Warning("Jump first, so reading 1 instruction from first branch, then jumping second");
 				
-				VU->branch = 2;
-				VU->branchpc = VU->delaybranchpc;
+					VU->branch = 1;
+					VU->branchpc = VU->delaybranchpc;							
+				}
+				else
+				{
+					//DevCon.Warning("Branch first, so ignoring second branch");
+				}
+
 				VU->delaybranchpc = 0;
-				
 				VU->takedelaybranch = false;
 			}
-			else
-			{
-				VU->takedelaybranch = false;
-				VU->linkreg = 0;
-			}
+			
+			VU->firstbranchisjump = 0;
 		}
 	}
 

@@ -1872,19 +1872,20 @@ s32 _branchAddr(VURegs * VU) {
 	return bpc;
 }
 
-static __fi void _setBranch(VURegs * VU, u32 bpc, bool islink) {
+static __fi void _setBranch(VURegs * VU, u32 bpc, bool isjump) {
 	if(VU->branch == 1) 
-	{
-		if(islink)
-		{
-			VU->linkreg = _It_;
-		}
+	{		
 		//DevCon.Warning("Branch in Branch Delay slot!");
 		VU->delaybranchpc = bpc;
 		VU->takedelaybranch = true;
 	}
 	else
 	{
+		if(isjump)
+		{
+			VU->firstbranchisjump = 1;
+		}
+
 		VU->branch = 2;
 		VU->branchpc = bpc;
 	}
@@ -1943,12 +1944,12 @@ static __ri void _vuBAL(VURegs * VU) {
 
 	if (_It_) VU->VI[_It_].US[0] = (VU->VI[REG_TPC].UL + 8)/8;
 
-	_setBranch(VU, bpc, true);
+	_setBranch(VU, bpc, false);
 }
 
 static __ri void _vuJR(VURegs * VU) {
     u32 bpc = VU->VI[_Is_].US[0] * 8;
-	_setBranch(VU, bpc, false);
+	_setBranch(VU, bpc, true);
 }
 
 //If this is in a branch delay, the jump isn't taken ( Evil Dead - Fistfull of Boomstick )
