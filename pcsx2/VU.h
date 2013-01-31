@@ -140,7 +140,6 @@ struct __aligned16 VURegs {
 	u32 branch;
 	u32 branchpc;
 	u32 delaybranchpc;
-	u32 firstbranchisjump;
 	bool takedelaybranch;
 
 	// MAC/Status flags -- these are used by interpreters and superVU, but are kind of hacky

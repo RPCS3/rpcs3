@@ -1872,7 +1872,7 @@ s32 _branchAddr(VURegs * VU) {
 	return bpc;
 }
 
-static __fi void _setBranch(VURegs * VU, u32 bpc, bool isjump) {
+static __fi void _setBranch(VURegs * VU, u32 bpc) {
 	if(VU->branch == 1) 
 	{		
 		//DevCon.Warning("Branch in Branch Delay slot!");
@@ -1881,11 +1881,7 @@ static __fi void _setBranch(VURegs * VU, u32 bpc, bool isjump) {
 	}
 	else
 	{
-		if(isjump)
-		{
-			VU->firstbranchisjump = 1;
-		}
-
+		
 		VU->branch = 2;
 		VU->branchpc = bpc;
 	}
@@ -1894,70 +1890,95 @@ static __fi void _setBranch(VURegs * VU, u32 bpc, bool isjump) {
 static __ri void _vuIBEQ(VURegs * VU) {
 	if (VU->VI[_It_].US[0] == VU->VI[_Is_].US[0]) {
 		s32 bpc = _branchAddr(VU);
-		_setBranch(VU, bpc, false);
+		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuIBGEZ(VURegs * VU) {
 	if (VU->VI[_Is_].SS[0] >= 0) {
 		s32 bpc = _branchAddr(VU);
-		_setBranch(VU, bpc, false);
+		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuIBGTZ(VURegs * VU) {
 	if (VU->VI[_Is_].SS[0] > 0) {
 		s32 bpc = _branchAddr(VU);
-		_setBranch(VU, bpc, false);
+		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuIBLEZ(VURegs * VU) {
 	if (VU->VI[_Is_].SS[0] <= 0) {
 		s32 bpc = _branchAddr(VU);
-		_setBranch(VU, bpc, false);
+		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuIBLTZ(VURegs * VU) {
 	if (VU->VI[_Is_].SS[0] < 0) {
 		s32 bpc = _branchAddr(VU);
-		_setBranch(VU, bpc, false);
+		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuIBNE(VURegs * VU) {
 	if (VU->VI[_It_].US[0] != VU->VI[_Is_].US[0]) {
 		s32 bpc = _branchAddr(VU);
-		_setBranch(VU, bpc, false);
+		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuB(VURegs * VU) {
 	s32 bpc = _branchAddr(VU);
-	_setBranch(VU, bpc, false);
+	_setBranch(VU, bpc);
 }
 
-// NOTE!! This might fall in a delay slot, if it does, the BAL won't be taken. Not sure if this is correct
 static __ri void _vuBAL(VURegs * VU) {
 	s32 bpc = _branchAddr(VU);
 
-	if (_It_) VU->VI[_It_].US[0] = (VU->VI[REG_TPC].UL + 8)/8;
+	
+	if(_It_)
+	{
+		//If we are in the branch delay slot, the instruction after the first		
+		//instruction in the first branches target becomes the linked reg.
+		if(VU->branch == 1) 
+		{
+			VU->VI[_It_].US[0] = (VU->branchpc + 8)/8;
+		}
+		else
+		{
+			VU->VI[_It_].US[0] = (VU->VI[REG_TPC].UL+8)/8;
+		}
+	}
 
-	_setBranch(VU, bpc, false);
+	_setBranch(VU, bpc);
 }
 
 static __ri void _vuJR(VURegs * VU) {
     u32 bpc = VU->VI[_Is_].US[0] * 8;
-	_setBranch(VU, bpc, true);
+	_setBranch(VU, bpc);
 }
 
 //If this is in a branch delay, the jump isn't taken ( Evil Dead - Fistfull of Boomstick )
 static __ri void _vuJALR(VURegs * VU) {
     u32 bpc = VU->VI[_Is_].US[0] * 8;
-	if (_It_) VU->VI[_It_].US[0] = (VU->VI[REG_TPC].UL + 8)/8;
+	
+	if(_It_)
+	{
+		//If we are in the branch delay slot, the instruction after the first		
+		//instruction in the first branches target becomes the linked reg.
+		if(VU->branch == 1) 
+		{
+			VU->VI[_It_].US[0] = (VU->branchpc + 8)/8;
+		}
+		else
+		{
+			VU->VI[_It_].US[0] = (VU->VI[REG_TPC].UL+8)/8;
+		}
+	}
 
-	_setBranch(VU, bpc, true);
+	_setBranch(VU, bpc);
 }
 
 static __ri void _vuMFP(VURegs * VU) {

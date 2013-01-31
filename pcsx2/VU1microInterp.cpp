@@ -140,30 +140,19 @@ static void _vu1Exec(VURegs* VU)
 	_vuAddLowerStalls(VU, &lregs);
 
 	_vuTestPipes(VU);
-
+	
 	if (VU->branch > 0) {
 		if (VU->branch-- == 1) {
 			VU->VI[REG_TPC].UL = VU->branchpc;
+
 			if(VU->takedelaybranch == true)
 			{				
-				//DevCon.Warning("VU1 - Branch/Jump in Delay Slot");
-				if(VU->firstbranchisjump == 1)
-				{
-					//DevCon.Warning("Jump first, so reading 1 instruction from first branch, then jumping second");
-				
-					VU->branch = 1;
-					VU->branchpc = VU->delaybranchpc;							
-				}
-				else
-				{
-					//DevCon.Warning("Branch first, so ignoring second branch");
-				}
-
+				VU->branch = 2;
+				//DevCon.Warning("VU1 - Branch/Jump in Delay Slot");			
+				VU->branchpc = VU->delaybranchpc;
 				VU->delaybranchpc = 0;
 				VU->takedelaybranch = false;
-			}
-			
-			VU->firstbranchisjump = 0;
+			}			
 		}
 	}
 
