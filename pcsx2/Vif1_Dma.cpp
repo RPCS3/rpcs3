@@ -235,7 +235,7 @@ __fi void vif1VUFinish()
 		vif1.waitforvu = false;
 		ExecuteVU(1);
 		//Check if VIF is already scheduled to interrupt, if it's waiting, kick it :P
-		if((cpuRegs.interrupt & (1<<DMAC_VIF1 | 1 << DMAC_MFIFO_VIF)) == 0 && vif1ch.chcr.STR == true)
+		if((cpuRegs.interrupt & (1<<DMAC_VIF1 | 1 << DMAC_MFIFO_VIF)) == 0 && vif1ch.chcr.STR == true && !vif1Regs.stat.INT)
 		{
 			if(dmacRegs.ctrl.MFD == MFD_VIF1)
 				vifMFIFOInterrupt();

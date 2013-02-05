@@ -306,10 +306,30 @@ static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 vifOp(vifCode_MPG) {
 	vifStruct& vifX = GetVifX;
 	pass1 {
+		bool   bProgramExists = false;
 		int    vifNum =  (u8)(vifXRegs.code >> 16);
 		vifX.tag.addr = (u16)(vifXRegs.code <<  3) & (idx ? 0x3fff : 0xfff);
 		vifX.tag.size = vifNum ? (vifNum*2) : 512;
 		vifFlush(idx);
+
+		//Make a note of the VU programs we're loading, checked in VIF Unpacks
+		for( u32 i = 0; i < vifX.LoadedMicroProgs; i++ )
+		{
+			if(vifX.MicroProgAddrS[i] == vifX.tag.addr)
+			{
+				bProgramExists = true;
+				vifX.MicroProgAddrS[i] = vifX.tag.addr;
+				vifX.MicroProgAddrE[i] = vifX.tag.addr + (vifX.tag.size * 4);
+				break;
+			}
+		}
+		if(bProgramExists == false)
+		{
+			vifX.MicroProgAddrS[vifX.LoadedMicroProgs] = vifX.tag.addr;
+			vifX.MicroProgAddrE[vifX.LoadedMicroProgs] = vifX.tag.addr + (vifX.tag.size * 4);
+			vifX.LoadedMicroProgs++;
+		}
+		
 		if(vifX.vifstalled.enabled == true) return 0;
 		else
 		{

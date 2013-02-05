@@ -162,7 +162,7 @@ __fi void vif0VUFinish()
 		vif0.waitforvu = false;
 		ExecuteVU(0);
 		//Make sure VIF0 isnt already scheduled to spin.
-		if(!(cpuRegs.interrupt & 0x1) && vif0ch.chcr.STR == true)
+		if(!(cpuRegs.interrupt & 0x1) && vif0ch.chcr.STR == true && !vif0Regs.stat.INT)
 			vif0Interrupt();
 	}
 	//DevCon.Warning("VU0 state cleared");
