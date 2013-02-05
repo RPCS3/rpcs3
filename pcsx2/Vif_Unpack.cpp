@@ -185,7 +185,7 @@ __aligned16 const UNPACKFUNCTYPE VIFfuncTable[2][3][4 * 4 * 2 * 2] =
 //----------------------------------------------------------------------------
 
 _vifT void vifUnpackSetup(const u32 *data) {
-	bool bModifyingVUProg = false;
+
 	vifStruct& vifX = GetVifX;
 
 	if ((vifXRegs.cycle.wl == 0) && (vifXRegs.cycle.wl < vifXRegs.cycle.cl)) {
@@ -225,25 +225,6 @@ _vifT void vifUnpackSetup(const u32 *data) {
 	u32 addr = vifXRegs.code;
 	if (idx && ((addr>>15)&1)) addr += vif1Regs.tops;
 	vifX.tag.addr = (addr<<4) & (idx ? 0x3ff0 : 0xff0);
-
-	//The Snowblind Engine modifies VU programs with unpacks (seemingly), 
-	//however some games (like everblue) don't like the vu waiting until the
-	//last minute, so as long as the unpack isn't editing a microprogram, we're safe.
-	if(vifX.queued_program == true && vifX.LoadedMicroProgs > 0) 
-	{
-		for(u32 i = 0; i < vifX.LoadedMicroProgs; i++)
-		{
-			if(vifX.MicroProgAddrS[i] <= vifX.tag.addr && vifX.MicroProgAddrE[i] > vifX.tag.addr)
-			{
-					bModifyingVUProg = true;
-					break;
-			}
-		}
-		if(bModifyingVUProg == false) 
-			vifExecQueue(idx);
-	}
-	
-		
 
 	VIF_LOG("Unpack VIF%x, QWC %x tagsize %x", idx, vifNum, vif0.tag.size);
 

@@ -93,9 +93,6 @@ struct vifStruct {
 
 	bool queued_program;
 	u32 queued_pc;
-	u32 LoadedMicroProgs;   //Note how many microprograms we have on the VU.
-	u32 MicroProgAddrS[100]; //Start Addresses
-	u32 MicroProgAddrE[100]; //End Addresses
 };
 
 extern __aligned16 vifStruct  vif0, vif1;

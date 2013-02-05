@@ -103,7 +103,6 @@ __fi void vif0FBRST(u32 value) {
 		vif0.cmd = 0;
 		vif0.done = true;
 		vif0ch.chcr.STR = false;
-		vif0.LoadedMicroProgs = 0;
 		vif0Regs.err.reset();
 		vif0Regs.stat.clear_flags(VIF0_STAT_FQC | VIF0_STAT_INT | VIF0_STAT_VSS | VIF0_STAT_VIS | VIF0_STAT_VFS | VIF0_STAT_VPS); // FQC=0
 	}
@@ -178,7 +177,6 @@ __fi void vif1FBRST(u32 value) {
 		psHu64(VIF1_FIFO) = 0;
 		psHu64(VIF1_FIFO + 8) = 0;
 		vif1.done = true;
-		vif1.LoadedMicroProgs = 0;
 		vif1ch.chcr.STR = false;
 		
 #if USE_OLD_GIF == 1 // ...

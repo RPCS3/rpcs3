@@ -312,24 +312,6 @@ vifOp(vifCode_MPG) {
 		vifX.tag.size = vifNum ? (vifNum*2) : 512;
 		vifFlush(idx);
 
-		//Make a note of the VU programs we're loading, checked in VIF Unpacks
-		for( u32 i = 0; i < vifX.LoadedMicroProgs; i++ )
-		{
-			if(vifX.MicroProgAddrS[i] == vifX.tag.addr)
-			{
-				bProgramExists = true;
-				vifX.MicroProgAddrS[i] = vifX.tag.addr;
-				vifX.MicroProgAddrE[i] = vifX.tag.addr + (vifX.tag.size * 4);
-				break;
-			}
-		}
-		if(bProgramExists == false)
-		{
-			vifX.MicroProgAddrS[vifX.LoadedMicroProgs] = vifX.tag.addr;
-			vifX.MicroProgAddrE[vifX.LoadedMicroProgs] = vifX.tag.addr + (vifX.tag.size * 4);
-			vifX.LoadedMicroProgs++;
-		}
-		
 		if(vifX.vifstalled.enabled == true) return 0;
 		else
 		{
@@ -439,6 +421,7 @@ vifOp(vifCode_Nop) {
 	pass1 { 
 		GetVifX.cmd = 0;
 		GetVifX.pass = 0;
+		vifExecQueue(idx);
 	}
 	pass3 { VifCodeLog("Nop"); }
 	return 1;
