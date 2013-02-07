@@ -186,46 +186,46 @@ public:
 
 	static uint32 BlockNumber32(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable32[(y >> 3) & 3][(x >> 3) & 7];
+		return bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable32[(y >> 3) & 3][(x >> 3) & 7] & 16383;
 	}
 
 	static uint32 BlockNumber16(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16[(y >> 3) & 7][(x >> 4) & 3];
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16[(y >> 3) & 7][(x >> 4) & 3] & 16383;
 	}
 
 	static uint32 BlockNumber16S(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16S[(y >> 3) & 7][(x >> 4) & 3];
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16S[(y >> 3) & 7][(x >> 4) & 3] & 16383;
 	}
 
 	static uint32 BlockNumber8(int x, int y, uint32 bp, uint32 bw)
 	{
 		// ASSERT((bw & 1) == 0); // allowed for mipmap levels
 
-		return bp + ((y >> 1) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f) + blockTable8[(y >> 4) & 3][(x >> 4) & 7];
+		return bp + ((y >> 1) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f) + blockTable8[(y >> 4) & 3][(x >> 4) & 7] & 16383;
 	}
 
 	static uint32 BlockNumber4(int x, int y, uint32 bp, uint32 bw)
 	{
 		// ASSERT((bw & 1) == 0); // allowed for mipmap levels
 
-		return bp + ((y >> 2) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f) + blockTable4[(y >> 4) & 7][(x >> 5) & 3];
+		return bp + ((y >> 2) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f) + blockTable4[(y >> 4) & 7][(x >> 5) & 3] & 16383;
 	}
 
 	static uint32 BlockNumber32Z(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable32Z[(y >> 3) & 3][(x >> 3) & 7];
+		return bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable32Z[(y >> 3) & 3][(x >> 3) & 7] & 16383;
 	}
 
 	static uint32 BlockNumber16Z(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16Z[(y >> 3) & 7][(x >> 4) & 3];
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16Z[(y >> 3) & 7][(x >> 4) & 3] & 16383;
 	}
 
 	static uint32 BlockNumber16SZ(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16SZ[(y >> 3) & 7][(x >> 4) & 3];
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16SZ[(y >> 3) & 7][(x >> 4) & 3] & 16383;
 	}
 
 	uint8* BlockPtr(uint32 bp) const
@@ -317,7 +317,7 @@ public:
 
 	static __forceinline uint32 PixelAddress32(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 5) * bw + (x >> 6);
+		uint32 page = (bp >> 5) + (y >> 5) * bw + (x >> 6) & 511;
 		uint32 word = (page << 11) + pageOffset32[bp & 0x1f][y & 0x1f][x & 0x3f];
 
 		return word;
@@ -325,7 +325,7 @@ public:
 
 	static __forceinline uint32 PixelAddress16(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6);
+		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6) & 511;
 		uint32 word = (page << 12) + pageOffset16[bp & 0x1f][y & 0x3f][x & 0x3f];
 
 		return word;
@@ -333,7 +333,7 @@ public:
 
 	static __forceinline uint32 PixelAddress16S(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6);
+		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6) & 511;
 		uint32 word = (page << 12) + pageOffset16S[bp & 0x1f][y & 0x3f][x & 0x3f];
 
 		return word;
@@ -343,7 +343,7 @@ public:
 	{
 		// ASSERT((bw & 1) == 0); // allowed for mipmap levels
 
-		uint32 page = (bp >> 5) + (y >> 6) * (bw >> 1) + (x >> 7);
+		uint32 page = (bp >> 5) + (y >> 6) * (bw >> 1) + (x >> 7) & 511;
 		uint32 word = (page << 13) + pageOffset8[bp & 0x1f][y & 0x3f][x & 0x7f];
 
 		return word;
@@ -353,7 +353,7 @@ public:
 	{
 		// ASSERT((bw & 1) == 0); // allowed for mipmap levels
 
-		uint32 page = (bp >> 5) + (y >> 7) * (bw >> 1) + (x >> 7);
+		uint32 page = (bp >> 5) + (y >> 7) * (bw >> 1) + (x >> 7) & 511;
 		uint32 word = (page << 14) + pageOffset4[bp & 0x1f][y & 0x7f][x & 0x7f];
 
 		return word;
@@ -361,7 +361,7 @@ public:
 
 	static __forceinline uint32 PixelAddress32Z(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 5) * bw + (x >> 6);
+		uint32 page = (bp >> 5) + (y >> 5) * bw + (x >> 6) & 511;
 		uint32 word = (page << 11) + pageOffset32Z[bp & 0x1f][y & 0x1f][x & 0x3f];
 
 		return word;
@@ -369,7 +369,7 @@ public:
 
 	static __forceinline uint32 PixelAddress16Z(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6);
+		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6) & 511;
 		uint32 word = (page << 12) + pageOffset16Z[bp & 0x1f][y & 0x3f][x & 0x3f];
 
 		return word;
@@ -377,7 +377,7 @@ public:
 
 	static __forceinline uint32 PixelAddress16SZ(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6);
+		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6) & 511;
 		uint32 word = (page << 12) + pageOffset16SZ[bp & 0x1f][y & 0x3f][x & 0x3f];
 
 		return word;
