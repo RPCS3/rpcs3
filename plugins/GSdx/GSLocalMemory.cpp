@@ -83,11 +83,9 @@ GSLocalMemory::psm_t GSLocalMemory::m_psm[64];
 GSLocalMemory::GSLocalMemory()
 	: m_clut(this)
 {
-	m_vm8 = (uint8*)vmalloc(m_vmsize * 16, false);
+	m_vm8 = (uint8*)vmalloc(m_vmsize * 2, false);
 	m_vm16 = (uint16*)m_vm8;
 	m_vm32 = (uint32*)m_vm8;
-	DWORD oldprotect;
-	VirtualProtect(m_vm8 + m_vmsize, m_vmsize * 15, PAGE_NOACCESS, &oldprotect);
 
 	memset(m_vm8, 0, m_vmsize);
 
@@ -623,7 +621,7 @@ vector<GSVector2i>* GSLocalMemory::GetPage2TileMap(const GIFRegTEX0& TEX0)
 
 		for(int x = 0, i = y << 7; x < tw; x += bs.x, i += bs.x)
 		{
-			uint32 page = (base + o->block.col[x >> 3]) >> 5 & 511;
+			uint32 page = (base + o->block.col[x >> 3]) >> 5;
 
 			if(page < MAX_PAGES)
 			{
@@ -1385,8 +1383,6 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 	int sx = (int)TRXPOS.SSAX;
 	int ex = sx + (int)TRXREG.RRW;
 
-	uint32 addr = psm->pa(0, y, bp, bw);
-
 	switch(BITBLTBUF.SPSM)
 	{
 	case PSM_PSMCT32:
@@ -1399,18 +1395,19 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 		while(len > 0)
 		{
 			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint32* RESTRICT ps = &m_vm32[psm->pa(0, y, bp, bw)];
 
 			for(int ex4 = ex - 4; len >= 4 && x <= ex4; len -= 4, x += 4, pd += 4)
 			{
-				pd[0] = ReadPixel32(addr + offset[x + 0]);
-				pd[1] = ReadPixel32(addr + offset[x + 1]);
-				pd[2] = ReadPixel32(addr + offset[x + 2]);
-				pd[3] = ReadPixel32(addr + offset[x + 3]);
+				pd[0] = ps[offset[x + 0]];
+				pd[1] = ps[offset[x + 1]];
+				pd[2] = ps[offset[x + 2]];
+				pd[3] = ps[offset[x + 3]];
 			}
 
 			for(; len > 0 && x < ex; len--, x++, pd++)
 			{
-				*pd = ReadPixel32(addr + offset[x]);
+				*pd = ps[offset[x]];
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1426,10 +1423,11 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 		while(len > 0)
 		{
 			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint32* RESTRICT ps = &m_vm32[psm->pa(0, y, bp, bw)];
 
 			for(; len > 0 && x < ex; len--, x++, pb += 3)
 			{
-				uint32 c = ReadPixel32(addr + offset[x]);
+				uint32 c = ps[offset[x]];
 
 				pb[0] = (uint8)(c);
 				pb[1] = (uint8)(c >> 8);
@@ -1451,18 +1449,19 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 		while(len > 0)
 		{
 			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint16* RESTRICT ps = &m_vm16[psm->pa(0, y, bp, bw)];
 
 			for(int ex4 = ex - 4; len >= 4 && x <= ex4; len -= 4, x += 4, pw += 4)
 			{
-				pw[0] = (uint16)ReadPixel16(addr + offset[x + 0]);
-				pw[1] = (uint16)ReadPixel16(addr + offset[x + 1]);
-				pw[2] = (uint16)ReadPixel16(addr + offset[x + 2]);
-				pw[3] = (uint16)ReadPixel16(addr + offset[x + 3]);
+				pw[0] = ps[offset[x + 0]];
+				pw[1] = ps[offset[x + 1]];
+				pw[2] = ps[offset[x + 2]];
+				pw[3] = ps[offset[x + 3]];
 			}
 
 			for(; len > 0 && x < ex; len--, x++, pw++)
 			{
-				*pw = (uint16)ReadPixel16(addr + offset[x]);
+				*pw = ps[offset[x]];
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1475,18 +1474,19 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 		while(len > 0)
 		{
 			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint8* RESTRICT ps = &m_vm8[psm->pa(0, y, bp, bw)];
 
 			for(int ex4 = ex - 4; len >= 4 && x <= ex4; len -= 4, x += 4, pb += 4)
 			{
-				pb[0] = (uint8)ReadPixel8(addr + offset[x + 0]);
-				pb[1] = (uint8)ReadPixel8(addr + offset[x + 1]);
-				pb[2] = (uint8)ReadPixel8(addr + offset[x + 2]);
-				pb[3] = (uint8)ReadPixel8(addr + offset[x + 3]);
+				pb[0] = ps[offset[x + 0]];
+				pb[1] = ps[offset[x + 1]];
+				pb[2] = ps[offset[x + 2]];
+				pb[3] = ps[offset[x + 3]];
 			}
 
 			for(; len > 0 && x < ex; len--, x++, pb++)
 			{
-				*pb = (uint8)ReadPixel8(addr + offset[x]);
+				*pb = ps[offset[x]];
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1498,11 +1498,12 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 
 		while(len > 0)
 		{
+			uint32 addr = psm->pa(0, y, bp, bw);
 			int* RESTRICT offset = psm->rowOffset[y & 7];
 
 			for(; len > 0 && x < ex; len--, x += 2, pb++)
 			{
-				*pb = (uint8)(ReadPixel4(addr + offset[x + 0]) | (ReadPixel4(addr + offset[x + 1]) << 4));
+				*pb = ReadPixel4(addr + offset[x + 0]) | (ReadPixel4(addr + offset[x + 1]) << 4);
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1515,18 +1516,19 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 		while(len > 0)
 		{
 			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint32* RESTRICT ps = &m_vm32[psm->pa(0, y, bp, bw)];
 
 			for(int ex4 = ex - 4; len >= 4 && x <= ex4; len -= 4, x += 4, pb += 4)
 			{
-				pb[0] = (uint8)ReadPixel8H(addr + offset[x + 0]);
-				pb[1] = (uint8)ReadPixel8H(addr + offset[x + 1]);
-				pb[2] = (uint8)ReadPixel8H(addr + offset[x + 2]);
-				pb[3] = (uint8)ReadPixel8H(addr + offset[x + 3]);
+				pb[0] = (uint8)(ps[offset[x + 0]] >> 24);
+				pb[1] = (uint8)(ps[offset[x + 1]] >> 24);
+				pb[2] = (uint8)(ps[offset[x + 2]] >> 24);
+				pb[3] = (uint8)(ps[offset[x + 3]] >> 24);
 			}
 
 			for(; len > 0 && x < ex; len--, x++, pb++)
 			{
-				*pb = (uint8)ReadPixel8H(addr + offset[x]);
+				*pb = (uint8)(ps[offset[x]] >> 24);
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1539,13 +1541,14 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 		while(len > 0)
 		{
 			int* offset = psm->rowOffset[y & 7];
+			uint32* RESTRICT ps = &m_vm32[psm->pa(0, y, bp, bw)];
 
 			for(; len > 0 && x < ex; len--, x += 2, pb++)
 			{
-				uint32 c0 = ReadPixel4HL(addr + offset[x + 0]);
-				uint32 c1 = ReadPixel4HL(addr + offset[x + 1]);
+				uint32 c0 = (ps[offset[x + 0]] >> 24) & 0x0f;
+				uint32 c1 = (ps[offset[x + 1]] >> 20) & 0xf0;
 
-				*pb = (uint8)(c0 | c1 << 4);
+				*pb = (uint8)(c0 | c1);
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -1558,13 +1561,14 @@ void GSLocalMemory::ReadImageX(int& tx, int& ty, uint8* dst, int len, GIFRegBITB
 		while(len > 0)
 		{
 			int* RESTRICT offset = psm->rowOffset[y & 7];
+			uint32* RESTRICT ps = &m_vm32[psm->pa(0, y, bp, bw)];
 
 			for(; len > 0 && x < ex; len--, x += 2, pb++)
 			{
-				uint32 c0 = ReadPixel4HH(addr + offset[x + 0]);
-				uint32 c1 = ReadPixel4HH(addr + offset[x + 1]);
+				uint32 c0 = (ps[offset[x + 0]] >> 28) & 0x0f;
+				uint32 c1 = (ps[offset[x + 1]] >> 24) & 0xf0;
 
-				*pb = (uint8)(c0 | c1 << 4);
+				*pb = (uint8)(c0 | c1);
 			}
 
 			if(x == ex) {x = sx; y++;}
@@ -2036,7 +2040,7 @@ uint32* GSOffset::GetPages(const GSVector4i& rect, uint32* pages, GSVector4i* bb
 
 		for(int x = r.left; x < r.right; x += bs.x)
 		{
-			uint32 n = (base + block.col[x]) >> 5 & (MAX_PAGES-1);
+			uint32 n = (base + block.col[x]) >> 5;
 
 			if(n < MAX_PAGES)
 			{

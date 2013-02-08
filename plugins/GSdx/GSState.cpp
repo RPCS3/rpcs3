@@ -1572,20 +1572,20 @@ void GSState::Move()
 			{
 				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 				{
-					uint32 s = spo->pixel.row[sy];
-					uint32 d = dpo->pixel.row[dy];
+					uint32* RESTRICT s = &m_mem.m_vm32[spo->pixel.row[sy]];
+					uint32* RESTRICT d = &m_mem.m_vm32[dpo->pixel.row[dy]];
 
-					for(int x = 0; x < w; x++) m_mem.WritePixel32(d + dcol[x], m_mem.ReadPixel32(s + scol[x]));
+					for(int x = 0; x < w; x++) d[dcol[x]] = s[scol[x]];
 				}
 			}
 			else
 			{
 				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 				{
-					uint32 s = spo->pixel.row[sy];
-					uint32 d = dpo->pixel.row[dy];
+					uint32* RESTRICT s = &m_mem.m_vm32[spo->pixel.row[sy]];
+					uint32* RESTRICT d = &m_mem.m_vm32[dpo->pixel.row[dy]];
 
-					for(int x = 0; x > -w; x--) m_mem.WritePixel32(d + dcol[x], m_mem.ReadPixel32(s + scol[x]));
+					for(int x = 0; x > -w; x--) d[dcol[x]] = s[scol[x]];
 				}
 			}
 		}
@@ -1595,20 +1595,20 @@ void GSState::Move()
 			{
 				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 				{
-					uint32 s = spo->pixel.row[sy];
-					uint32 d = dpo->pixel.row[dy];
+					uint32* RESTRICT s = &m_mem.m_vm32[spo->pixel.row[sy]];
+					uint32* RESTRICT d = &m_mem.m_vm32[dpo->pixel.row[dy]];
 
-					for(int x = 0; x < w; x++) m_mem.WritePixel24(d + dcol[x], m_mem.ReadPixel24(s + scol[x]));
+					for(int x = 0; x < w; x++) d[dcol[x]] = (d[dcol[x]] & 0xff000000) | (s[scol[x]] & 0x00ffffff);
 				}
 			}
 			else
 			{
 				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 				{
-					uint32 s = spo->pixel.row[sy];
-					uint32 d = dpo->pixel.row[dy];
+					uint32* RESTRICT s = &m_mem.m_vm32[spo->pixel.row[sy]];
+					uint32* RESTRICT d = &m_mem.m_vm32[dpo->pixel.row[dy]];
 
-					for(int x = 0; x > -w; x--) m_mem.WritePixel24(d + dcol[x], m_mem.ReadPixel24(s + scol[x]));
+					for(int x = 0; x > -w; x--) d[dcol[x]] = (d[dcol[x]] & 0xff000000) | (s[scol[x]] & 0x00ffffff);
 				}
 			}
 		}
@@ -1618,20 +1618,20 @@ void GSState::Move()
 			{
 				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 				{
-					uint32 s = spo->pixel.row[sy];
-					uint32 d = dpo->pixel.row[dy];
+					uint16* RESTRICT s = &m_mem.m_vm16[spo->pixel.row[sy]];
+					uint16* RESTRICT d = &m_mem.m_vm16[dpo->pixel.row[dy]];
 
-					for(int x = 0; x < w; x++) m_mem.WritePixel16(d + dcol[x], m_mem.ReadPixel16(s + scol[x]));
+					for(int x = 0; x < w; x++) d[dcol[x]] = s[scol[x]];
 				}
 			}
 			else
 			{
 				for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 				{
-					uint32 s = spo->pixel.row[sy];
-					uint32 d = dpo->pixel.row[dy];
+					uint16* RESTRICT s = &m_mem.m_vm16[spo->pixel.row[sy]];
+					uint16* RESTRICT d = &m_mem.m_vm16[dpo->pixel.row[dy]];
 
-					for(int x = 0; x > -w; x--) m_mem.WritePixel16(d + dcol[x], m_mem.ReadPixel16(s + scol[x]));
+					for(int x = 0; x > -w; x--) d[dcol[x]] = s[scol[x]];
 				}
 			}
 		}
@@ -1642,26 +1642,26 @@ void GSState::Move()
 		{
 			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 			{
-				uint32 s = spo->pixel.row[sy];
-				uint32 d = dpo->pixel.row[dy];
+				uint8* RESTRICT s = &m_mem.m_vm8[spo->pixel.row[sy]];
+				uint8* RESTRICT d = &m_mem.m_vm8[dpo->pixel.row[dy]];
 
 				int* RESTRICT scol = &spo->pixel.col[sy & 7][sx];
 				int* RESTRICT dcol = &dpo->pixel.col[dy & 7][dx];
 
-				for(int x = 0; x < w; x++) m_mem.WritePixel8(d + dcol[x], m_mem.ReadPixel8(s + scol[x]));
+				for(int x = 0; x < w; x++) d[dcol[x]] = s[scol[x]];
 			}
 		}
 		else
 		{
 			for(int y = 0; y < h; y++, sy += yinc, dy += yinc)
 			{
-				uint32 s = spo->pixel.row[sy];
-				uint32 d = dpo->pixel.row[dy];
+				uint8* RESTRICT s = &m_mem.m_vm8[spo->pixel.row[sy]];
+				uint8* RESTRICT d = &m_mem.m_vm8[dpo->pixel.row[dy]];
 
 				int* RESTRICT scol = &spo->pixel.col[sy & 7][sx];
 				int* RESTRICT dcol = &dpo->pixel.col[dy & 7][dx];
 
-				for(int x = 0; x > -w; x--) m_mem.WritePixel8(d + dcol[x], m_mem.ReadPixel8(s + scol[x]));
+				for(int x = 0; x > -w; x--) d[dcol[x]] = s[scol[x]];
 			}
 		}
 	}

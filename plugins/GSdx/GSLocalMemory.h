@@ -186,51 +186,53 @@ public:
 
 	static uint32 BlockNumber32(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable32[(y >> 3) & 3][(x >> 3) & 7] & 16383;
+		return bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable32[(y >> 3) & 3][(x >> 3) & 7];
 	}
 
 	static uint32 BlockNumber16(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16[(y >> 3) & 7][(x >> 4) & 3] & 16383;
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16[(y >> 3) & 7][(x >> 4) & 3];
 	}
 
 	static uint32 BlockNumber16S(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16S[(y >> 3) & 7][(x >> 4) & 3] & 16383;
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16S[(y >> 3) & 7][(x >> 4) & 3];
 	}
 
 	static uint32 BlockNumber8(int x, int y, uint32 bp, uint32 bw)
 	{
 		// ASSERT((bw & 1) == 0); // allowed for mipmap levels
 
-		return bp + ((y >> 1) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f) + blockTable8[(y >> 4) & 3][(x >> 4) & 7] & 16383;
+		return bp + ((y >> 1) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f) + blockTable8[(y >> 4) & 3][(x >> 4) & 7];
 	}
 
 	static uint32 BlockNumber4(int x, int y, uint32 bp, uint32 bw)
 	{
 		// ASSERT((bw & 1) == 0); // allowed for mipmap levels
 
-		return bp + ((y >> 2) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f) + blockTable4[(y >> 4) & 7][(x >> 5) & 3] & 16383;
+		return bp + ((y >> 2) & ~0x1f) * (bw >> 1) + ((x >> 2) & ~0x1f) + blockTable4[(y >> 4) & 7][(x >> 5) & 3];
 	}
 
 	static uint32 BlockNumber32Z(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable32Z[(y >> 3) & 3][(x >> 3) & 7] & 16383;
+		return bp + (y & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable32Z[(y >> 3) & 3][(x >> 3) & 7];
 	}
 
 	static uint32 BlockNumber16Z(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16Z[(y >> 3) & 7][(x >> 4) & 3] & 16383;
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16Z[(y >> 3) & 7][(x >> 4) & 3];
 	}
 
 	static uint32 BlockNumber16SZ(int x, int y, uint32 bp, uint32 bw)
 	{
-		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16SZ[(y >> 3) & 7][(x >> 4) & 3] & 16383;
+		return bp + ((y >> 1) & ~0x1f) * bw + ((x >> 1) & ~0x1f) + blockTable16SZ[(y >> 3) & 7][(x >> 4) & 3];
 	}
 
 	uint8* BlockPtr(uint32 bp) const
 	{
-		return &m_vm8[(bp & MAX_BLOCKS-1) << 8];
+		ASSERT(bp < 16384);
+
+		return &m_vm8[bp << 8];
 	}
 
 	uint8* BlockPtr32(int x, int y, uint32 bp, uint32 bw) const
@@ -315,7 +317,7 @@ public:
 
 	static __forceinline uint32 PixelAddress32(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 5) * bw + (x >> 6) & 511;
+		uint32 page = (bp >> 5) + (y >> 5) * bw + (x >> 6);
 		uint32 word = (page << 11) + pageOffset32[bp & 0x1f][y & 0x1f][x & 0x3f];
 
 		return word;
@@ -323,7 +325,7 @@ public:
 
 	static __forceinline uint32 PixelAddress16(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6) & 511;
+		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6);
 		uint32 word = (page << 12) + pageOffset16[bp & 0x1f][y & 0x3f][x & 0x3f];
 
 		return word;
@@ -331,7 +333,7 @@ public:
 
 	static __forceinline uint32 PixelAddress16S(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6) & 511;
+		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6);
 		uint32 word = (page << 12) + pageOffset16S[bp & 0x1f][y & 0x3f][x & 0x3f];
 
 		return word;
@@ -341,7 +343,7 @@ public:
 	{
 		// ASSERT((bw & 1) == 0); // allowed for mipmap levels
 
-		uint32 page = (bp >> 5) + (y >> 6) * (bw >> 1) + (x >> 7) & 511;
+		uint32 page = (bp >> 5) + (y >> 6) * (bw >> 1) + (x >> 7);
 		uint32 word = (page << 13) + pageOffset8[bp & 0x1f][y & 0x3f][x & 0x7f];
 
 		return word;
@@ -351,7 +353,7 @@ public:
 	{
 		// ASSERT((bw & 1) == 0); // allowed for mipmap levels
 
-		uint32 page = (bp >> 5) + (y >> 7) * (bw >> 1) + (x >> 7) & 511;
+		uint32 page = (bp >> 5) + (y >> 7) * (bw >> 1) + (x >> 7);
 		uint32 word = (page << 14) + pageOffset4[bp & 0x1f][y & 0x7f][x & 0x7f];
 
 		return word;
@@ -359,7 +361,7 @@ public:
 
 	static __forceinline uint32 PixelAddress32Z(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 5) * bw + (x >> 6) & 511;
+		uint32 page = (bp >> 5) + (y >> 5) * bw + (x >> 6);
 		uint32 word = (page << 11) + pageOffset32Z[bp & 0x1f][y & 0x1f][x & 0x3f];
 
 		return word;
@@ -367,7 +369,7 @@ public:
 
 	static __forceinline uint32 PixelAddress16Z(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6) & 511;
+		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6);
 		uint32 word = (page << 12) + pageOffset16Z[bp & 0x1f][y & 0x3f][x & 0x3f];
 
 		return word;
@@ -375,7 +377,7 @@ public:
 
 	static __forceinline uint32 PixelAddress16SZ(int x, int y, uint32 bp, uint32 bw)
 	{
-		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6) & 511;
+		uint32 page = (bp >> 5) + (y >> 6) * bw + (x >> 6);
 		uint32 word = (page << 12) + pageOffset16SZ[bp & 0x1f][y & 0x3f][x & 0x3f];
 
 		return word;
@@ -385,52 +387,52 @@ public:
 
 	__forceinline uint32 ReadPixel32(uint32 addr) const
 	{
-		return m_vm32[addr & 0xFFFFF];
+		return m_vm32[addr];
 	}
 
 	__forceinline uint32 ReadPixel24(uint32 addr) const
 	{
-		return m_vm32[addr & 0xFFFFF] & 0x00ffffff;
+		return m_vm32[addr] & 0x00ffffff;
 	}
 
 	__forceinline uint32 ReadPixel16(uint32 addr) const
 	{
-		return (uint32)m_vm16[addr & 0x1FFFFF];
+		return (uint32)m_vm16[addr];
 	}
 
 	__forceinline uint32 ReadPixel8(uint32 addr) const
 	{
-		return (uint32)m_vm8[addr & 0x3FFFFF];
+		return (uint32)m_vm8[addr];
 	}
 
 	__forceinline uint32 ReadPixel4(uint32 addr) const
 	{
-		return (m_vm8[addr >> 1 & 0x3FFFFF] >> ((addr & 1) << 2)) & 0x0f;
+		return (m_vm8[addr >> 1] >> ((addr & 1) << 2)) & 0x0f;
 	}
 
 	__forceinline uint32 ReadPixel8H(uint32 addr) const
 	{
-		return m_vm32[addr & 0xFFFFF] >> 24;
+		return m_vm32[addr] >> 24;
 	}
 
 	__forceinline uint32 ReadPixel4HL(uint32 addr) const
 	{
-		return (m_vm32[addr & 0xFFFFF] >> 24) & 0x0f;
+		return (m_vm32[addr] >> 24) & 0x0f;
 	}
 
 	__forceinline uint32 ReadPixel4HH(uint32 addr) const
 	{
-		return (m_vm32[addr & 0xFFFFF] >> 28) & 0x0f;
+		return (m_vm32[addr] >> 28) & 0x0f;
 	}
 
 	__forceinline uint32 ReadFrame24(uint32 addr) const
 	{
-		return 0x80000000 | (m_vm32[addr & 0xFFFFF] & 0xffffff);
+		return 0x80000000 | (m_vm32[addr] & 0xffffff);
 	}
 
 	__forceinline uint32 ReadFrame16(uint32 addr) const
 	{
-		uint32 c = (uint32)m_vm16[addr & 0x1FFFFF];
+		uint32 c = (uint32)m_vm16[addr];
 
 		return ((c & 0x8000) << 16) | ((c & 0x7c00) << 9) | ((c & 0x03e0) << 6) | ((c & 0x001f) << 3);
 	}
@@ -532,44 +534,44 @@ public:
 
 	__forceinline void WritePixel32(uint32 addr, uint32 c)
 	{
-		m_vm32[addr & 0xFFFFF] = c;
+		m_vm32[addr] = c;
 	}
 
 	__forceinline void WritePixel24(uint32 addr, uint32 c)
 	{
-		m_vm32[addr & 0xFFFFF] = (m_vm32[addr & 0xFFFFF] & 0xff000000) | (c & 0x00ffffff);
+		m_vm32[addr] = (m_vm32[addr] & 0xff000000) | (c & 0x00ffffff);
 	}
 
 	__forceinline void WritePixel16(uint32 addr, uint32 c)
 	{
-		m_vm16[addr & 0x1FFFFF] = (uint16)c;
+		m_vm16[addr] = (uint16)c;
 	}
 
 	__forceinline void WritePixel8(uint32 addr, uint32 c)
 	{
-		m_vm8[addr & 0x3FFFFF] = (uint8)c;
+		m_vm8[addr] = (uint8)c;
 	}
 
 	__forceinline void WritePixel4(uint32 addr, uint32 c)
 	{
 		int shift = (addr & 1) << 2; addr >>= 1;
 
-		m_vm8[addr & 0x3FFFFF] = (uint8)((m_vm8[addr & 0x3FFFFF] & (0xf0 >> shift)) | ((c & 0x0f) << shift));
+		m_vm8[addr] = (uint8)((m_vm8[addr] & (0xf0 >> shift)) | ((c & 0x0f) << shift));
 	}
 
 	__forceinline void WritePixel8H(uint32 addr, uint32 c)
 	{
-		m_vm32[addr & 0xFFFFF] = (m_vm32[addr & 0xFFFFF] & 0x00ffffff) | (c << 24);
+		m_vm32[addr] = (m_vm32[addr] & 0x00ffffff) | (c << 24);
 	}
 
 	__forceinline void WritePixel4HL(uint32 addr, uint32 c)
 	{
-		m_vm32[addr & 0xFFFFF] = (m_vm32[addr & 0xFFFFF] & 0xf0ffffff) | ((c & 0x0f) << 24);
+		m_vm32[addr] = (m_vm32[addr] & 0xf0ffffff) | ((c & 0x0f) << 24);
 	}
 
 	__forceinline void WritePixel4HH(uint32 addr, uint32 c)
 	{
-		m_vm32[addr & 0xFFFFF] = (m_vm32[addr & 0xFFFFF] & 0x0fffffff) | ((c & 0x0f) << 28);
+		m_vm32[addr] = (m_vm32[addr] & 0x0fffffff) | ((c & 0x0f) << 28);
 	}
 
 	__forceinline void WriteFrame16(uint32 addr, uint32 c)
@@ -672,12 +674,12 @@ public:
 		for(int y = r.top; y < r.bottom; y++, src += pitch)
 		{
 			uint32* RESTRICT s = (uint32*)src;
-			int d = o->pixel.row[y];
+			uint32* RESTRICT d = &m_vm32[o->pixel.row[y]];
 			int* RESTRICT col = o->pixel.col[0];
 
 			for(int x = r.left; x < r.right; x++)
 			{
-				m_vm32[d + col[x] & 0xFFFFF] = s[x];
+				d[col[x]] = s[x];
 			}
 		}
 	}
@@ -689,12 +691,12 @@ public:
 		for(int y = r.top; y < r.bottom; y++, src += pitch)
 		{
 			uint32* RESTRICT s = (uint32*)src;
-			int d = o->pixel.row[y];
+			uint32* RESTRICT d = &m_vm32[o->pixel.row[y]];
 			int* RESTRICT col = o->pixel.col[0];
 
 			for(int x = r.left; x < r.right; x++)
 			{
-				m_vm32[d + col[x] & 0xFFFFF] = (m_vm32[d + col[x] & 0xFFFFF] & 0xff000000) | (s[x] & 0x00ffffff);
+				d[col[x]] = (d[col[x]] & 0xff000000) | (s[x] & 0x00ffffff);
 			}
 		}
 	}
@@ -706,12 +708,12 @@ public:
 		for(int y = r.top; y < r.bottom; y++, src += pitch)
 		{
 			uint16* RESTRICT s = (uint16*)src;
-			int d = o->pixel.row[y];
+			uint16* RESTRICT d = &m_vm16[o->pixel.row[y]];
 			int* RESTRICT col = o->pixel.col[0];
 
 			for(int x = r.left; x < r.right; x++)
 			{
-				m_vm16[d + col[x] & 0x1FFFFF] = s[x];
+				d[col[x]] = s[x];
 			}
 		}
 	}
@@ -723,7 +725,7 @@ public:
 		for(int y = r.top; y < r.bottom; y++, src += pitch)
 		{
 			uint32* RESTRICT s = (uint32*)src;
-			int d = o->pixel.row[y];
+			uint16* RESTRICT d = &m_vm16[o->pixel.row[y]];
 			int* RESTRICT col = o->pixel.col[0];
 
 			for(int x = r.left; x < r.right; x++)
@@ -731,24 +733,24 @@ public:
 				uint32 rb = s[x] & 0x00f800f8;
 				uint32 ga = s[x] & 0x8000f800;
 
-				m_vm16[d + col[x] & 0x1FFFFF] = (uint16)((ga >> 16) | (rb >> 9) | (ga >> 6) | (rb >> 3));
+				d[col[x]] = (uint16)((ga >> 16) | (rb >> 9) | (ga >> 6) | (rb >> 3));
 			}
 		}
 	}
 
 	__forceinline uint32 ReadTexel32(uint32 addr, const GIFRegTEXA& TEXA) const
 	{
-		return m_vm32[addr & 0xFFFFF];
+		return m_vm32[addr];
 	}
 
 	__forceinline uint32 ReadTexel24(uint32 addr, const GIFRegTEXA& TEXA) const
 	{
-		return Expand24To32(m_vm32[addr & 0xFFFFF], TEXA);
+		return Expand24To32(m_vm32[addr], TEXA);
 	}
 
 	__forceinline uint32 ReadTexel16(uint32 addr, const GIFRegTEXA& TEXA) const
 	{
-		return Expand16To32(m_vm16[addr & 0x1FFFFF], TEXA);
+		return Expand16To32(m_vm16[addr], TEXA);
 	}
 
 	__forceinline uint32 ReadTexel8(uint32 addr, const GIFRegTEXA& TEXA) const
