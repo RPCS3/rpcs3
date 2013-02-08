@@ -814,6 +814,7 @@ static void __fastcall RegWrite_VoiceParams( u16 value )
 		break;
 
 		case 2:
+			if (value > 0x3fff) ConLog( "* SPU2: Pitch setting too big: 0x%x\n", value);
 			thisvoice.Pitch			= value & 0x3fff;
 		break;
 
@@ -829,7 +830,7 @@ static void __fastcall RegWrite_VoiceParams( u16 value )
 			// [Air] : Mysterious ADSR set code.  Too bad none of my games ever use it.
 			//      (as usual... )
 			thisvoice.ADSR.Value = (value << 16) | value;
-			ConLog( "* SPU2: Mysterious ADSR Volume Set to 0x%x", value );
+			ConLog( "* SPU2: Mysterious ADSR Volume Set to 0x%x\n", value );
 		break;
 
 		case 6:	thisvoice.Volume.Left.RegSet( value ); break;

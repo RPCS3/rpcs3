@@ -24,7 +24,7 @@ extern void _vuFlushAll(VURegs* VU);
 
 void _vu1ExecUpper(VURegs* VU, u32 *ptr) {
 	VU->code = ptr[1];
-	IdebugUPPER(VU1);
+	//IdebugUPPER(VU1);
 	VU1_UPPER_OPCODE[VU->code & 0x3f]();
 }
 
@@ -68,7 +68,7 @@ static void _vu1Exec(VURegs* VU)
 		}
 	}
 
-	VUM_LOG("VU->cycle = %d (flags st=%x;mac=%x;clip=%x,q=%f)", VU->cycle, VU->statusflag, VU->macflag, VU->clipflag, VU->q.F);
+	//VUM_LOG("VU->cycle = %d (flags st=%x;mac=%x;clip=%x,q=%f)", VU->cycle, VU->statusflag, VU->macflag, VU->clipflag, VU->q.F);
 
 	VU->code = ptr[1];
 	VU1regs_UPPER_OPCODE[VU->code & 0x3f](&uregs);
@@ -140,18 +140,19 @@ static void _vu1Exec(VURegs* VU)
 	_vuAddLowerStalls(VU, &lregs);
 
 	_vuTestPipes(VU);
-
+	
 	if (VU->branch > 0) {
 		if (VU->branch-- == 1) {
 			VU->VI[REG_TPC].UL = VU->branchpc;
+
 			if(VU->takedelaybranch == true)
-			{
-				//DevCon.Warning("Setting VU1 Delay branch to next branch, treating first as delay slot");
+			{				
+				VU->branch = 2;
+				//DevCon.Warning("VU1 - Branch/Jump in Delay Slot");			
 				VU->branchpc = VU->delaybranchpc;
 				VU->delaybranchpc = 0;
-				VU->branch = 2;
 				VU->takedelaybranch = false;
-			}
+			}			
 		}
 	}
 

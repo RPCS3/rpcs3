@@ -10,7 +10,7 @@
 class AsyncFileReader
 {	
 protected:
-	AsyncFileReader(void) {}
+	AsyncFileReader(void) {m_dataoffset=0;}
 
 	wxString m_filename;
 

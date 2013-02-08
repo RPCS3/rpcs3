@@ -98,7 +98,7 @@ __fi void vif0FBRST(u32 value) {
 		psHu64(VIF0_FIFO) = 0;
 		psHu64(VIF0_FIFO + 8) = 0;
 		vif0.vifstalled.enabled = false;
-		vif1.irqoffset.enabled = false;
+		vif0.irqoffset.enabled = false;
 		vif0.inprogress = 0;
 		vif0.cmd = 0;
 		vif0.done = true;

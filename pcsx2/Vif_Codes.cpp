@@ -306,10 +306,12 @@ static __fi void _vifCode_MPG(int idx, u32 addr, const u32 *data, int size) {
 vifOp(vifCode_MPG) {
 	vifStruct& vifX = GetVifX;
 	pass1 {
+		bool   bProgramExists = false;
 		int    vifNum =  (u8)(vifXRegs.code >> 16);
 		vifX.tag.addr = (u16)(vifXRegs.code <<  3) & (idx ? 0x3fff : 0xfff);
 		vifX.tag.size = vifNum ? (vifNum*2) : 512;
 		vifFlush(idx);
+
 		if(vifX.vifstalled.enabled == true) return 0;
 		else
 		{
@@ -419,6 +421,7 @@ vifOp(vifCode_Nop) {
 	pass1 { 
 		GetVifX.cmd = 0;
 		GetVifX.pass = 0;
+		vifExecQueue(idx);
 	}
 	pass3 { VifCodeLog("Nop"); }
 	return 1;

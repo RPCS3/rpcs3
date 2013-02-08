@@ -1,5 +1,5 @@
 /*
- * $Id: pa_front.c 1730 2011-08-18 03:43:51Z rossb $
+ * $Id: pa_front.c 1880 2012-12-04 18:39:48Z rbencina $
  * Portable Audio I/O Library Multi-Host API front end
  * Validate function parameters and manage multiple host APIs.
  *
@@ -824,7 +824,7 @@ static int SampleFormatIsValid( PaSampleFormat format )
         - if supplied its hostApi field matches the output device's host Api
  
     double sampleRate
-        - is not an 'absurd' rate (less than 1000. or greater than 200000.)
+        - is not an 'absurd' rate (less than 1000. or greater than 384000.)
         - sampleRate is NOT validated against device capabilities
  
     PaStreamFlags streamFlags
@@ -965,7 +965,7 @@ static PaError ValidateOpenStreamParameters(
     
     
     /* Check for absurd sample rates. */
-    if( (sampleRate < 1000.0) || (sampleRate > 200000.0) )
+    if( (sampleRate < 1000.0) || (sampleRate > 384000.0) )
         return paInvalidSampleRate;
 
     if( ((streamFlags & ~paPlatformSpecificFlags) & ~(paClipOff | paDitherOff | paNeverDropInput | paPrimeOutputBuffersUsingStreamCallback ) ) != 0 )

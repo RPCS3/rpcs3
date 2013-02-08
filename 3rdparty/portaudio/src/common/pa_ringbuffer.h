@@ -1,7 +1,7 @@
 #ifndef PA_RINGBUFFER_H
 #define PA_RINGBUFFER_H
 /*
- * $Id: pa_ringbuffer.h 1734 2011-08-18 11:19:36Z rossb $
+ * $Id: pa_ringbuffer.h 1873 2012-10-07 19:00:11Z philburk $
  * Portable Audio I/O Library
  * Ring Buffer utility.
  *
@@ -65,6 +65,9 @@
  The memory area used to store the buffer elements must be allocated by 
  the client prior to calling PaUtil_InitializeRingBuffer() and must outlive
  the use of the ring buffer.
+ 
+ @note The ring buffer functions are not normally exposed in the PortAudio libraries. 
+ If you want to call them then you will need to add pa_ringbuffer.c to your application source code.
 */
 
 #if defined(__APPLE__)

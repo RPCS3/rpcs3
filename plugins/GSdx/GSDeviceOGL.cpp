@@ -1312,7 +1312,7 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 #endif
 
 	// Check the correctness of the (AMD) driver
-	// Note: glGetFragDataLocation crash too!!! Catalyst 12.10 => HD 6XXX
+	// Note: glGetFragDataLocation crash too!!! Catalyst 12.10 (and later) => HD 5XXX,6XXX !!!
 	if (theApp.GetConfig("renderer", 0) == 12) {
 		GLint slot = glGetFragDataLocation(*program, "SV_Target1");
 		if (slot == 0) { // <=> SV_Target1 used same slot as SV_Target0
@@ -1331,16 +1331,19 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 
 	if (theApp.GetConfig("debug_ogl_shader", 1) == 1) {
 		// Print a nice debug log
-		GLint log_length = 0;
-		glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
-
-		char* log = (char*)malloc(log_length);
-		glGetProgramInfoLog(*program, log_length, NULL, log);
-
 		fprintf(stderr, "%s (entry %s, prog %d) :", glsl_file.c_str(), entry.c_str(), *program);
 		fprintf(stderr, "\n%s", macro_sel.c_str());
-		fprintf(stderr, "%s\n", log);
+
+		GLint log_length = 0;
+		glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+		if (log_length > 0) {
+		char* log = (char*)malloc(log_length);
+		glGetProgramInfoLog(*program, log_length, NULL, log);
+			fprintf(stderr, "%s", log);
 		free(log);
+		}
+		fprintf(stderr, "\n");
+
 	}
 }
 

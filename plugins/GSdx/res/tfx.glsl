@@ -443,7 +443,7 @@ vec4 sample_color(vec2 st, float q)
     }
 
     // PERF: see the impact of the exansion before/after the interpolation
-    for (uint i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++)
     {
         if((PS_FMT & ~FMT_PAL) == FMT_24)
         {

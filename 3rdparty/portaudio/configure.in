@@ -208,23 +208,63 @@ case "${host_os}" in
         LIBS="-framework CoreAudio -framework AudioToolbox -framework AudioUnit -framework Carbon"
 
         if test "x$enable_mac_universal" = "xyes" ; then
-           if [[ -d /Developer/SDKs/MacOSX10.5.sdk ]] ; then
-              mac_version_min="-mmacosx-version-min=10.3"
-              mac_arches="-arch i386 -arch ppc -arch x86_64 -arch ppc64"
-              mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.5.sdk"
-           elif [[ -d /Developer/SDKs/MacOSX10.6.sdk ]] ; then
-              mac_version_min="-mmacosx-version-min=10.4"
-              mac_arches="-arch i386 -arch x86_64"
-              mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.6.sdk"
-           elif [[ -d /Developer/SDKs/MacOSX10.7.sdk ]] ; then
-              mac_version_min="-mmacosx-version-min=10.4"
-              mac_arches="-arch i386 -arch x86_64"
-              mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.7.sdk"
-           else
-              mac_version_min="-mmacosx-version-min=10.3"
-              mac_arches="-arch i386 -arch ppc"
-              mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.4u.sdk"
-           fi
+           case "xcodebuild -version | sed -n 's/Xcode \(.*\)/\1/p'" in
+
+           [12]*|3.0|3.1)
+              dnl In pre-3.2 versions of Xcode, xcodebuild doesn't
+              dnl support -sdk, so we can't use that to look for
+              dnl SDKs.  However, in those versions of Xcode, the
+              dnl SDKs are under /Developer/SDKs, so we can just look
+              dnl there.  Also, we assume they had no SDKs later
+              dnl than 10.5, as 3.2 was the version that came with
+              dnl 10.6, at least if the Wikipedia page for Xcode
+              dnl is to be believed.
+              if [[ -d /Developer/SDKs/MacOSX10.5.sdk ]] ; then
+                 mac_version_min="-mmacosx-version-min=10.3"
+                 mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.5.sdk"
+              else
+                 mac_version_min="-mmacosx-version-min=10.3"
+                 mac_sysroot="-isysroot /Developer/SDKs/MacOSX10.4u.sdk"
+              fi
+              ;;
+
+           *)
+              dnl In 3.2 and later, xcodebuild supports -sdk, and, in
+              dnl 4.3 and later, the SDKs aren't under /Developer/SDKs
+              dnl as there *is* no /Developer, so we use -sdk to check
+              dnl what SDKs are available and to get the full path of
+              dnl the SDKs.
+              if xcodebuild -version -sdk macosx10.5 Path >/dev/null 2>&1 ; then
+                 mac_version_min="-mmacosx-version-min=10.3"
+                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.5 Path`"
+              elif xcodebuild -version -sdk macosx10.6 Path >/dev/null 2>&1 ; then
+                 mac_version_min="-mmacosx-version-min=10.4"
+                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.6 Path`"
+              elif xcodebuild -version -sdk macosx10.7 Path >/dev/null 2>&1 ; then
+                 mac_version_min="-mmacosx-version-min=10.4"
+                 mac_sysroot="-isysroot `xcodebuild -version -sdk macosx10.7 Path`"
+              else
+                 AC_MSG_ERROR([Couldn't find 10.5, 10.6, or 10.7 SDK])
+              fi
+           esac
+
+           dnl Pick which architectures to build for based on what
+           dnl the compiler supports.
+           mac_arches=""
+           for arch in i386 x86_64 ppc ppc64
+           do
+              save_CFLAGS="$CFLAGS"
+              CFLAGS="$CFLAGS -arch $arch"
+              AC_TRY_COMPILE([], [return 0;],
+                 [
+                    if [[ -z "$mac_arches" ]] ; then
+                       mac_arches="-arch $arch"
+                    else
+                       mac_arches="$mac_arches -arch $arch"
+                    fi
+                 ])
+              CFLAGS="$save_CFLAGS"
+           done
         else
            mac_arches=""
            mac_sysroot=""
@@ -247,7 +287,7 @@ case "${host_os}" in
         if [[ "x$with_directx" = "xyes" ]]; then
             DXDIR="$with_dxdir"
             add_objects src/hostapi/dsound/pa_win_ds.o src/hostapi/dsound/pa_win_ds_dynlink.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_coinitialize.o src/os/win/pa_win_waveformat.o
-            LIBS="-lwinmm -lm -ldsound -lole32"
+            LIBS="${LIBS} -lwinmm -lm -ldsound -lole32"
             DLL_LIBS="${DLL_LIBS} -lwinmm -lm -L$DXDIR/lib -ldsound -lole32"
             #VC98="\"/c/Program Files/Microsoft Visual Studio/VC98/Include\""
             #CFLAGS="$CFLAGS -I$VC98 -DPA_NO_WMME -DPA_NO_ASIO"
@@ -257,7 +297,7 @@ case "${host_os}" in
         if [[ "x$with_asio" = "xyes" ]]; then
             ASIODIR="$with_asiodir"
             add_objects src/hostapi/asio/pa_asio.o src/common/pa_ringbuffer.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_coinitialize.o src/hostapi/asio/iasiothiscallresolver.o $ASIODIR/common/asio.o $ASIODIR/host/asiodrivers.o $ASIODIR/host/pc/asiolist.o
-            LIBS="-lwinmm -lm -lole32 -luuid"
+            LIBS="${LIBS} -lwinmm -lm -lole32 -luuid"
             DLL_LIBS="${DLL_LIBS} -lwinmm -lm -lole32 -luuid"
             CFLAGS="$CFLAGS -ffast-math -fomit-frame-pointer -I\$(top_srcdir)/src/hostapi/asio -I$ASIODIR/host/pc -I$ASIODIR/common -I$ASIODIR/host -UPA_USE_ASIO -DPA_USE_ASIO=1 -DWINDOWS"
 
@@ -272,8 +312,8 @@ case "${host_os}" in
 
         if [[ "x$with_wdmks" = "xyes" ]]; then
             DXDIR="$with_dxdir"
-            add_objects src/hostapi/wdmks/pa_win_wdmks.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o
-            LIBS="-lwinmm -lm -luuid -lsetupapi -lole32"
+            add_objects src/hostapi/wdmks/pa_win_wdmks.o src/common/pa_ringbuffer.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_wdmks_util.o src/os/win/pa_win_waveformat.o
+            LIBS="${LIBS} -lwinmm -lm -luuid -lsetupapi -lole32"
             DLL_LIBS="${DLL_LIBS} -lwinmm -lm -L$DXDIR/lib -luuid -lsetupapi -lole32"
             #VC98="\"/c/Program Files/Microsoft Visual Studio/VC98/Include\""
             #CFLAGS="$CFLAGS -I$VC98 -DPA_NO_WMME -DPA_NO_ASIO"
@@ -282,14 +322,14 @@ case "${host_os}" in
 
         if [[ "x$with_wmme" = "xyes" ]]; then
             add_objects src/hostapi/wmme/pa_win_wmme.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_waveformat.o
-            LIBS="-lwinmm -lm -lole32 -luuid"
+            LIBS="${LIBS} -lwinmm -lm -lole32 -luuid"
             DLL_LIBS="${DLL_LIBS} -lwinmm"
             CFLAGS="$CFLAGS -UPA_USE_WMME -DPA_USE_WMME=1"
         fi
 
         if [[ "x$with_wasapi" = "xyes" ]]; then
             add_objects src/hostapi/wasapi/pa_win_wasapi.o src/common/pa_ringbuffer.o src/os/win/pa_win_hostapis.o src/os/win/pa_win_util.o src/os/win/pa_win_coinitialize.o src/os/win/pa_win_waveformat.o
-            LIBS="-lwinmm -lm -lole32 -luuid"
+            LIBS="${LIBS} -lwinmm -lm -lole32 -luuid"
             DLL_LIBS="${DLL_LIBS} -lwinmm -lole32"
             CFLAGS="$CFLAGS -I\$(top_srcdir)/src/hostapi/wasapi/mingw-include -UPA_USE_WASAPI -DPA_USE_WASAPI=1"
         fi

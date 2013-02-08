@@ -1,7 +1,7 @@
 #ifndef PA_HOSTAPI_H
 #define PA_HOSTAPI_H
 /*
- * $Id: pa_hostapi.h 1740 2011-08-25 07:17:48Z philburk $
+ * $Id: pa_hostapi.h 1880 2012-12-04 18:39:48Z rbencina $
  * Portable Audio I/O Library
  * host api representation
  *
@@ -264,7 +264,7 @@ typedef struct PaUtilHostApiRepresentation {
                 - if supplied its hostApi field matches the output device's host Api
  
             double sampleRate
-                - is not an 'absurd' rate (less than 1000. or greater than 200000.)
+                - is not an 'absurd' rate (less than 1000. or greater than 384000.)
                 - sampleRate is NOT validated against device capabilities
  
             PaStreamFlags streamFlags

@@ -84,6 +84,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 INPUT                  = doc/src \
                          include \
+                         bindings/java \
                          examples \          
                          src \
                          test \
@@ -91,6 +92,7 @@ INPUT                  = doc/src \
 FILE_PATTERNS          = *.h \
                          *.c \
                          *.cpp \
+                         *.java \
                          *.dox
 RECURSIVE              = YES
 EXCLUDE                = src/hostapi/wasapi/mingw-include
