@@ -473,7 +473,7 @@ struct Gif_Unit {
 			}
 			if (tranType == GIF_TRANS_MTVU) {   // This is on the EE thread
 				path1.mtvu.fakePackets++;
-				if (CanDoGif()) Execute(false);
+				if (CanDoGif()) Execute(false, true);
 				return 0;
 			}
 		}
@@ -481,7 +481,7 @@ struct Gif_Unit {
 		GUNIT_LOG("%s - [path=%d][size=%d]", Gif_TransferStr[(tranType>>8)&0xf], (tranType&3)+1, size);
 		if (size == 0)  { GUNIT_WARN("Gif Unit - Size == 0"); return 0; }
 		if(!CanDoGif()) { GUNIT_WARN("Gif Unit - Signal or PSE Set or Dir = GS to EE"); }
-		pxAssertDev((stat.APATH==0) || checkPaths(1,1,1), "Gif Unit - APATH wasn't cleared?");
+		//pxAssertDev((stat.APATH==0) || checkPaths(1,1,1), "Gif Unit - APATH wasn't cleared?");
 		lastTranType = tranType;
 
 		if (tranType == GIF_TRANS_FIFO) {
@@ -502,7 +502,7 @@ struct Gif_Unit {
 		}
 
 		gifPath[tranType&3].CopyGSPacketData(pMem, size, aligned);
-		size -= Execute(tranType == GIF_TRANS_DMA);
+		size -= Execute(tranType == GIF_TRANS_DMA, false);
 		return size;
 	}
 
@@ -540,7 +540,7 @@ struct Gif_Unit {
 
 	// Processes gif packets and performs path arbitration
 	// on EOPs or on Path 3 Images when IMT is set.
-	int Execute(bool isPath3) {
+	int Execute(bool isPath3, bool isResume) {
 		if (!CanDoGif()) { DevCon.Error("Gif Unit - Signal or PSE Set or Dir = GS to EE"); return 0; }
 		bool didPath3 = false;
 		int curPath = stat.APATH > 0 ? stat.APATH-1 : 0; //Init to zero if no path is already set.
@@ -584,7 +584,7 @@ struct Gif_Unit {
 			elif (!gsSIGNAL.queued && !gifPath[1].isDone()) { stat.APATH = 2; stat.P2Q = 0; curPath = 1; }
 			elif (!gsSIGNAL.queued && !gifPath[2].isDone() && !Path3Masked() /*&& !stat.P2Q*/)
 				 { stat.APATH = 3; stat.P3Q = 0; stat.IP3 = 0; curPath = 2; }
-			else { stat.APATH = 0; stat.OPH = 0; break; }
+			else { if(isResume) { stat.APATH = 0; stat.OPH = 0; } break; }
 		}
 
 		//Some loaders/Refresh Rate selectors and things dont issue "End of Packet" commands

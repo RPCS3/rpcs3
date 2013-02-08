@@ -50,7 +50,17 @@ void incGifChAddr(u32 qwc) {
 __fi void gifInterrupt()
 {
 	GIF_LOG("gifInterrupt caught!");
-	//Required for Path3 Masking timing!
+	if( gifRegs.stat.APATH == 3 )
+	{
+		gifRegs.stat.APATH = 0;
+		gifRegs.stat.OPH = 0;
+		if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_IDLE || gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT) 
+		{
+			if(gifUnit.checkPaths(1,1,0)) gifUnit.Execute(false, true);
+		}
+
+	}
+		//Required for Path3 Masking timing!
 	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
 	{
 		gifUnit.gifPath[GIF_PATH_3].state = GIF_PATH_IDLE;
@@ -455,6 +465,17 @@ void gifMFIFOInterrupt()
 {
     GIF_LOG("gifMFIFOInterrupt");
 	mfifocycles = 0;
+
+	if( gifRegs.stat.APATH == 3 )
+	{
+		gifRegs.stat.APATH = 0;
+		gifRegs.stat.OPH = 0;
+		if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_IDLE || gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT) 
+		{
+			if(gifUnit.checkPaths(1,1,0)) gifUnit.Execute(false, true);
+		}
+
+	}
 
 	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
 	{

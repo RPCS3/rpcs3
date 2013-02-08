@@ -230,6 +230,18 @@ __fi void vif1VUFinish()
 
 	vif1Regs.stat.VEW = false;
 	VIF_LOG("VU1 finished");
+
+	if( gifRegs.stat.APATH == 1 )
+	{
+		VIF_LOG("Clear APATH1");
+		gifRegs.stat.APATH = 0;
+		gifRegs.stat.OPH = 0;
+		if(!vif1.waitforvu) 
+		{
+			if(gifUnit.checkPaths(0,1,1)) gifUnit.Execute(false, true);
+		}
+
+	}
 	if(vif1.waitforvu == true)
 	{
 		vif1.waitforvu = false;
@@ -253,6 +265,13 @@ __fi void vif1Interrupt()
 
 	g_vif1Cycles = 0;
 
+	if( gifRegs.stat.APATH == 2  && gifUnit.gifPath[1].isDone())
+	{
+		gifRegs.stat.APATH = 0;
+		gifRegs.stat.OPH = 0;
+
+		if(gifUnit.checkPaths(1,0,1)) gifUnit.Execute(false, true);
+	}
 	//Some games (Fahrenheit being one) start vif first, let it loop through blankness while it sets MFIFO mode, so we need to check it here.
 	if (dmacRegs.ctrl.MFD == MFD_VIF1) {
 		//Console.WriteLn("VIFMFIFO\n");

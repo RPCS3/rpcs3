@@ -250,6 +250,14 @@ void vifMFIFOInterrupt()
 	g_vif1Cycles = 0;
 	VIF_LOG("vif mfifo interrupt");
 
+	if( gifRegs.stat.APATH == 2  && gifUnit.gifPath[1].isDone())
+	{
+		gifRegs.stat.APATH = 0;
+		gifRegs.stat.OPH = 0;
+
+		if(gifUnit.checkPaths(1,0,1)) gifUnit.Execute(false, true);
+	}
+
 	if (dmacRegs.ctrl.MFD != MFD_VIF1) {
 		DevCon.Warning("Not in VIF MFIFO mode! Stopping VIF MFIFO");
 		return;
