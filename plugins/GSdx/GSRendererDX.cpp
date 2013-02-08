@@ -170,7 +170,7 @@ void GSRendererDX::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sourc
 		{
 			if(m_vt.m_max.p.z > 0xffff)
 			{
-				ASSERT(m_vt.m_min.p.z > 0xffff); // sfex capcom logo
+				//ASSERT(m_vt.m_min.p.z > 0xffff); // sfex capcom logo
 				// Fixme : Same as above, I guess.
 				if (m_vt.m_min.p.z > 0xffff)
 				{

@@ -278,7 +278,7 @@ bool GSTextureCacheSW::Texture::Update(const GSVector4i& rect)
 
 			for(int x = r.left, i = (y << 7) + x; x < r.right; x += bs.x, i += bs.x)
 			{
-				uint32 block = base + o->block.col[x];
+				uint32 block = base + o->block.col[x] & (MAX_BLOCKS-1);
 
 				if(block < MAX_BLOCKS)
 				{
@@ -305,7 +305,7 @@ bool GSTextureCacheSW::Texture::Update(const GSVector4i& rect)
 
 			for(int x = r.left; x < r.right; x += bs.x)
 			{
-				uint32 block = base + o->block.col[x];
+				uint32 block = base + o->block.col[x] & (MAX_BLOCKS-1);
 
 				if(block < MAX_BLOCKS)
 				{

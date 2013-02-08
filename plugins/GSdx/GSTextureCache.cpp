@@ -409,6 +409,7 @@ void GSTextureCache::InvalidateVideoMem(GSOffset* o, const GSVector4i& rect, boo
 			if(GSUtil::HasSharedBits(psm, t->m_TEX0.PSM) && bp < t->m_TEX0.TBP0)
 			{
 				uint32 rowsize = bw * 8192;
+				// FIXME: what if TBP0 < bp?
 				uint32 offset = (uint32)((t->m_TEX0.TBP0 - bp) * 256);
 
 				if(rowsize > 0 && offset % rowsize == 0)
@@ -922,7 +923,7 @@ void GSTextureCache::Source::Update(const GSVector4i& rect)
 
 			for(int x = r.left, i = (y << 7) + x; x < r.right; x += bs.x, i += bs.x)
 			{
-				uint32 block = base + o->block.col[x >> 3];
+				uint32 block = base + o->block.col[x >> 3] & (MAX_BLOCKS-1);
 
 				if(block < MAX_BLOCKS)
 				{
@@ -951,7 +952,7 @@ void GSTextureCache::Source::Update(const GSVector4i& rect)
 
 			for(int x = r.left; x < r.right; x += bs.x)
 			{
-				uint32 block = base + o->block.col[x >> 3];
+				uint32 block = base + o->block.col[x >> 3] & (MAX_BLOCKS-1);
 
 				if(block < MAX_BLOCKS)
 				{
@@ -1185,7 +1186,7 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, const GSO
 
 		for(int x = 0; x < tw; x += bs.x)
 		{
-			uint32 page = (base + o->block.col[x >> 3]) >> 5;
+			uint32 page = (base + o->block.col[x >> 3]) >> 5 & (MAX_PAGES-1);
 
 			if(page < MAX_PAGES)
 			{
