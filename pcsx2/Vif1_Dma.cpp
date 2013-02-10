@@ -267,7 +267,7 @@ __fi void vif1Interrupt()
 
 	g_vif1Cycles = 0;
 
-	if( gifRegs.stat.APATH == 2  && gifUnit.gifPath[1].isDone())
+	if( gifRegs.stat.APATH == 2  && gifUnit.gifPath[GIF_PATH_2].isDone())
 	{
 		gifRegs.stat.APATH = 0;
 		gifRegs.stat.OPH = 0;
