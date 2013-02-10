@@ -113,6 +113,9 @@ static int CheckDiskTypeFS(int baseType)
 	{
 	}
 
+#ifdef PCSX2_DEVBUILD
+	return CDVD_TYPE_PS2DVD; // need this hack for some homebrew (SMS)
+#endif
 	return CDVD_TYPE_ILLEGAL; // << Only for discs which aren't ps2 at all.
 }
 
