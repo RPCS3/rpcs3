@@ -236,6 +236,8 @@ __fi void vif1VUFinish()
 		VIF_LOG("Clear APATH1");
 		gifRegs.stat.APATH = 0;
 		gifRegs.stat.OPH = 0;
+		vif1Regs.stat.VGW = false; //Let vif continue if it's stuck on a flush
+
 		if(!vif1.waitforvu) 
 		{
 			if(gifUnit.checkPaths(0,1,1)) gifUnit.Execute(false, true);
@@ -269,6 +271,7 @@ __fi void vif1Interrupt()
 	{
 		gifRegs.stat.APATH = 0;
 		gifRegs.stat.OPH = 0;
+		vif1Regs.stat.VGW = false; //Let vif continue if it's stuck on a flush
 
 		if(gifUnit.checkPaths(1,0,1)) gifUnit.Execute(false, true);
 	}

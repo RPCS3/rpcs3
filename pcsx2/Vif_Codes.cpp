@@ -181,9 +181,10 @@ vifOp(vifCode_Flush) {
 	vif1Only();
 	vifStruct& vifX = GetVifX;
 	pass1or2 {
+		bool p1or2 = (gifRegs.stat.APATH != 0 && gifRegs.stat.APATH != 3);
 		vif1Regs.stat.VGW = false;
 		vifFlush(idx);
-		if (gifUnit.checkPaths(1,1,0)) {
+		if (gifUnit.checkPaths(1,1,0) || p1or2) {
 			GUNIT_WARN("Vif Flush: Stall!");
 			//gifUnit.PrintInfo();
 			vif1Regs.stat.VGW = true;
@@ -202,15 +203,22 @@ vifOp(vifCode_FlushA) {
 	vif1Only();
 	vifStruct& vifX = GetVifX;
 	pass1or2 {
-		Gif_Path& p3      = gifUnit.gifPath[GIF_PATH_3];
-		u32       p1or2   = gifUnit.checkPaths(1,1,0);
-		bool      doStall = false;
+		//Gif_Path& p3      = gifUnit.gifPath[GIF_PATH_3];
+		u32       gifBusy   = gifUnit.checkPaths(1,1,1) || (gifRegs.stat.APATH != 0);
+		//bool      doStall = false;
 		vif1Regs.stat.VGW = false;
 		vifFlush(idx);
-		if (p3.state != GIF_PATH_IDLE || p1or2) {
+
+		if (gifBusy) 
+		{
 			GUNIT_WARN("Vif FlushA: Stall!");
+			vif1Regs.stat.VGW = true;
+			vifX.vifstalled.enabled   = true;
+			vifX.vifstalled.value = VIF_TIMING_BREAK;
+			return 0;
+			
 			//gifUnit.PrintInfo();
-			if (p3.state != GIF_PATH_IDLE && !p1or2) { // Only path 3 left...
+			/*if (p3.state != GIF_PATH_IDLE && !p1or2) { // Only path 3 left...
 				GUNIT_WARN("Vif FlushA - Getting path3 to finish!");
 				if (gifUnit.lastTranType == GIF_TRANS_FIFO
 				&&  p3.state != GIF_PATH_IDLE && !p3.hasDataRemaining()) { 
@@ -222,15 +230,17 @@ vifOp(vifCode_FlushA) {
 					doStall = true; // If path3 still isn't finished...
 				}
 			}
-			else doStall = true;
+			else doStall = true;*/
 		}
-		if (doStall) {
+		/*if (doStall) {
 			vif1Regs.stat.VGW = true;
 			vifX.vifstalled.enabled   = true;
 			vifX.vifstalled.value = VIF_TIMING_BREAK;
 			return 0;
 		}
-		else vifX.cmd = 0;
+		else*/ 
+		//Didn't need to stall!
+		vifX.cmd = 0;
 		vifX.pass = 0;
 	}
 	pass3 { VifCodeLog("FlushA"); }
