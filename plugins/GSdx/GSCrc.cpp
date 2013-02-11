@@ -500,6 +500,7 @@ CRC::Game CRC::m_games[] =
 	{0x0098F740, SeintoSeiya, NoRegion, 0}, // cutie comment
 	{0xBDD9BAAD, UrbanReign, US, 0}, // cutie comment
 	{0xAE4BEBD3, UrbanReign, EU, 0},
+	{0x9F391882, SteambotChronicles, US, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

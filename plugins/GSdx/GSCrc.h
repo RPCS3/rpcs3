@@ -173,6 +173,7 @@ public:
 		Simple2000Vol114,
 		SeintoSeiya,
 		UrbanReign,
+		SteambotChronicles,
 		TitleCount,
 	};
 
