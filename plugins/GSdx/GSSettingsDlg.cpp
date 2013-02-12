@@ -522,6 +522,11 @@ void GSHacksDlg::OnInit()
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETRANGE, 0, MAKELPARAM(1000, 0));
 	SendMessage(GetDlgItem(m_hWnd, IDC_SKIPDRAWHACK), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("UserHacks_SkipDraw", 0), 0));
 
+	SendMessage(GetDlgItem(m_hWnd, IDC_TCOFFSETX), UDM_SETRANGE, 0, MAKELPARAM(10000, 0));
+	SendMessage(GetDlgItem(m_hWnd, IDC_TCOFFSETX), UDM_SETPOS, 0, MAKELPARAM(theApp.GetConfig("UserHacks_TCOffset", 0) & 0xFFFF, 0));
+
+	SendMessage(GetDlgItem(m_hWnd, IDC_TCOFFSETY), UDM_SETRANGE, 0, MAKELPARAM(10000, 0));
+	SendMessage(GetDlgItem(m_hWnd, IDC_TCOFFSETY), UDM_SETPOS, 0, MAKELPARAM((theApp.GetConfig("UserHacks_TCOffset", 0) >> 16) & 0xFFFF, 0));
 
 	// Hacks descriptions
 	SetWindowText(GetDlgItem(m_hWnd, IDC_HACK_DESCRIPTION), "Hover over an item to get a description.");
@@ -537,6 +542,7 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_SETCURSOR:
 	{
 		const char *helpstr = "";
+		bool updateText = true;
 
 		POINT pos;
 		GetCursorPos(&pos);
@@ -597,12 +603,26 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 						  "CrcHacksExclusions=all\n"
 						  "CrcHacksExclusions=0x0F0C4A9C, 0x0EE5646B, 0x7ACF7E03";
 				break;
+
+			case IDC_TCOFFSETX:
+			case IDC_TCOFFSETX2:
+			case IDC_STATIC_TCOFFSETX:
+			case IDC_TCOFFSETY:
+			case IDC_TCOFFSETY2:
+			case IDC_STATIC_TCOFFSETY:
+				helpstr = "Texture Coordinates Offset Hack\n\n"
+						  "Offset for the ST/UV texture coordinates. Fixes some odd texture issues and might fix some post processing alignment too.\n\n"
+						  "  0500 0500, fixes Persona 3 minimap, helps Haunting Ground.\n"
+						  "  0000 1000, fixes Xenosaga hair edges (DX10+ Issue)\n";
+				break;
+
 			default:
-				helpstr = "Hover over an item to get a description.";
+				updateText = false;
 				break;
 		}
 
-		SetWindowText(GetDlgItem(m_hWnd, IDC_HACK_DESCRIPTION), helpstr);
+		if(updateText)
+			SetWindowText(GetDlgItem(m_hWnd, IDC_HACK_DESCRIPTION), helpstr);
 
 	} break;
 
@@ -623,6 +643,12 @@ bool GSHacksDlg::OnMessage(UINT message, WPARAM wParam, LPARAM lParam)
 			theApp.SetConfig("UserHacks_AggressiveCRC", (int)IsDlgButtonChecked(m_hWnd, IDC_AGGRESSIVECRC));
 			theApp.SetConfig("UserHacks_AlphaStencil", (int)IsDlgButtonChecked(m_hWnd, IDC_ALPHASTENCIL));
 			theApp.SetConfig("UserHacks_DisableCrcHacks", (int)IsDlgButtonChecked(m_hWnd, IDC_CHECK_DISABLE_ALL_HACKS));
+
+			unsigned int TCOFFSET  =  SendMessage(GetDlgItem(m_hWnd, IDC_TCOFFSETX), UDM_GETPOS, 0, 0) & 0xFFFF;
+						 TCOFFSET |= (SendMessage(GetDlgItem(m_hWnd, IDC_TCOFFSETY), UDM_GETPOS, 0, 0) & 0xFFFF) << 16;
+
+			theApp.SetConfig("UserHacks_TCOffset", TCOFFSET);
+
 			EndDialog(m_hWnd, id);
 		} break;
 		}

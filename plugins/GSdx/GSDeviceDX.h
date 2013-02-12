@@ -96,6 +96,8 @@ public:
 		GSVector4 MinF_TA;
 		GSVector4i MskFix;
 
+		GSVector4 TC_OffsetHack;
+
 		struct PSConstantBuffer()
 		{
 			FogColor_AREF = GSVector4::zero();
@@ -175,6 +177,7 @@ public:
 				uint32 colclip:2;
 				uint32 date:2;
 				uint32 spritehack:1;
+				uint32 tcoffsethack:1;
 				uint32 point_sampler:1;
 			};
 
