@@ -28,8 +28,6 @@
 //#define ENABLE_DYNAMIC_CRC_HACK
 #define DYNA_DLL_PATH "c:/dev/pcsx2/trunk/tools/dynacrchack/DynaCrcHack.dll"
 
-#define ENABLE_UPSCALE_HACKS // Hacks intended to fix upscaling / rendering glitches in HW renderers
-
 //#define DISABLE_HW_TEXTURE_CACHE // Slow but fixes a lot of bugs
 
 //#define DISABLE_BITMASKING

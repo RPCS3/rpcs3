@@ -197,10 +197,11 @@ void V_Core::PlainDMAWrite(u16 *pMem, u32 size)
 	// but it could be indicative of an emulation foopah elsewhere.
 
 	if(MsgToConsole()) {
-		if((uptr)pMem & 15)
+		// Don't need this anymore. Target may still be good to know though.
+		/*if((uptr)pMem & 15)
 		{
 			ConLog("* SPU2 DMA Write > Misaligned source. Core: %d  IOP: %p  TSA: 0x%x  Size: 0x%x\n", Index, (void*)pMem, TSA, size);
-		}
+		}*/
 
 		if(TSA & 7)
 		{

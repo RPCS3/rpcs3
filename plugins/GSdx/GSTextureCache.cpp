@@ -196,24 +196,7 @@ GSTextureCache::Target* GSTextureCache::LookupTarget(const GIFRegTEX0& TEX0, int
 
 		if(multiplier > 1) // it's limited to a maximum of 4 on reading the config
 		{
-
-#if 0 //#ifdef ENABLE_UPSCALE_HACKS //not happy with this yet..
-
-			float x = 1.0f;
-			float y = 1.0f;
-
-			switch(multiplier)
-			{
-				case 2: x = 1.9375; y = 2.0f; break; // x res get's rid of vertical lines in many games
-				case 3: x = 2.9375f; y = 2.9375f; break; // not helping much
-				case 4: x = 3.875f; y = 3.875f; break; // not helping much
-				default: __assume(0);
-			}
-
-			dst->m_texture->SetScale(GSVector2::_(x, y));
-#else
 			dst->m_texture->SetScale(GSVector2((float)multiplier, (float)multiplier));
-#endif
 		}
 		else
 		{
