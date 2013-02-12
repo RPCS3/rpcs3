@@ -204,7 +204,7 @@ float4 ps_params[7];
 #define MinF		ps_params[4].xy
 #define TA			ps_params[4].zw
 
-#define TC_OffsetHack ps_params[5]
+#define TC_OffsetHack ps_params[6]
 
 float4 sample_c(float2 uv)
 {
