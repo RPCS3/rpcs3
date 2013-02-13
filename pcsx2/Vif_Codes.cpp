@@ -432,6 +432,14 @@ vifOp(vifCode_Nop) {
 		GetVifX.cmd = 0;
 		GetVifX.pass = 0;
 		vifExecQueue(idx);
+		if(GetVifX.vifpacketsize > 1)
+		{
+			if(((data[1] >> 24) & 0x7f) == 0x6) //is mskpath3 next
+			{ 
+				GetVifX.vifstalled.enabled   = true;
+				GetVifX.vifstalled.value = VIF_TIMING_BREAK;
+			}
+		}
 	}
 	pass3 { VifCodeLog("Nop"); }
 	return 1;
