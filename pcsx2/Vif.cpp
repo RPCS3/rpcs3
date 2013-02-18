@@ -125,7 +125,7 @@ __fi void vif0FBRST(u32 value) {
 		//  just stoppin the VIF (linuz).
 		vif0Regs.stat.VSS = true;
 		vif0Regs.stat.VPS = VPS_IDLE;
-		vif0.vifstalled.enabled = true;
+		vif0.vifstalled.enabled = VifStallEnable(vif0ch);
 		vif0.vifstalled.value = VIF_IRQ_STALL;
 	}
 
@@ -231,7 +231,7 @@ __fi void vif1FBRST(u32 value) {
 		vif1Regs.stat.VFS = true;
 		vif1Regs.stat.VPS = VPS_IDLE;
 		cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-		vif1.vifstalled.enabled = true;
+		vif1.vifstalled.enabled = VifStallEnable(vif1ch);
 		vif1.vifstalled.value = VIF_IRQ_STALL;
 		Console.WriteLn("vif1 force break");
 	}
@@ -243,7 +243,7 @@ __fi void vif1FBRST(u32 value) {
 		vif1Regs.stat.VSS = true;
 		vif1Regs.stat.VPS = VPS_IDLE;
 		cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-		vif1.vifstalled.enabled = true;
+		vif1.vifstalled.enabled = VifStallEnable(vif1ch);
 		vif1.vifstalled.value = VIF_IRQ_STALL;
 	}
 

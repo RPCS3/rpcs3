@@ -28,7 +28,7 @@ __fi void vif1FLUSH()
 	if(vif1Regs.stat.VEW == true)
 	{
 		vif1.waitforvu = true;
-		vif1.vifstalled.enabled = true;
+		vif1.vifstalled.enabled = VifStallEnable(vif1ch);
 		vif1.vifstalled.value = VIF_TIMING_BREAK;
 	}
 }
