@@ -161,6 +161,8 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 		if (vif1.tag.size == 0) {
 			vif1.cmd = 0;
 			vif1.pass = 0;
+			vif1.vifstalled.enabled   = true;
+			vif1.vifstalled.value = VIF_TIMING_BREAK;
 		}
 		return ret / 4;
 	}
@@ -188,12 +190,12 @@ vifOp(vifCode_Flush) {
 			GUNIT_WARN("Vif Flush: Stall!");
 			//gifUnit.PrintInfo();
 			vif1Regs.stat.VGW = true;
-			vifX.vifstalled.enabled   = true;
-			vifX.vifstalled.value = VIF_TIMING_BREAK;
+			vif1.vifstalled.enabled   = true;
+			vif1.vifstalled.value = VIF_TIMING_BREAK;
 			return 0;
 		}
-		else vifX.cmd = 0;
-		vifX.pass = 0;
+		else vif1.cmd = 0;
+		vif1.pass = 0;
 	}
 	pass3 { VifCodeLog("Flush"); }
 	return 1;
@@ -213,8 +215,8 @@ vifOp(vifCode_FlushA) {
 		{
 			GUNIT_WARN("Vif FlushA: Stall!");
 			vif1Regs.stat.VGW = true;
-			vifX.vifstalled.enabled   = true;
-			vifX.vifstalled.value = VIF_TIMING_BREAK;
+			vif1.vifstalled.enabled   = true;
+			vif1.vifstalled.value = VIF_TIMING_BREAK;
 			return 0;
 			
 			//gifUnit.PrintInfo();
@@ -240,8 +242,8 @@ vifOp(vifCode_FlushA) {
 		}
 		else*/ 
 		//Didn't need to stall!
-		vifX.cmd = 0;
-		vifX.pass = 0;
+		vif1.cmd = 0;
+		vif1.pass = 0;
 	}
 	pass3 { VifCodeLog("FlushA"); }
 	return 1;

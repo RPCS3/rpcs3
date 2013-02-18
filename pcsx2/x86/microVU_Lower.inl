@@ -1245,7 +1245,7 @@ void setBranchA(mP, int x, int _x_) {
 void condEvilBranch(mV, int JMPcc) {
 	if (mVUlow.badBranch) {
 		xMOV(ptr32[&mVU.branch], gprT1);
-		xMOV(ptr32[&mVU.badBranch], branchAddr);
+		xMOV(ptr32[&mVU.badBranch], branchAddrN);
 
 		xCMP(gprT1b, 0);
 		xForwardJump8 cJMP((JccComparisonType)JMPcc);
@@ -1261,6 +1261,9 @@ void condEvilBranch(mV, int JMPcc) {
 		xMOV(gprT1, ptr32[&mVU.badBranch]); // Branch Not Taken
 		xMOV(ptr32[&mVU.evilBranch], gprT1);
 	cJMP.SetTarget();
+	incPC(-2);
+	if(mVUlow.branch >= 9) DevCon.Warning("Conditional in JALR/JR delay slot - If game broken report to PCSX2 Team"); 
+	incPC(2);
 }
 
 mVUop(mVU_B) {
@@ -1284,7 +1287,7 @@ mVUop(mVU_BAL) {
 			mVUallocVIb(mVU, gprT1, _It_);
 		}
 
-		if (mVUlow.badBranch)  { xMOV(ptr32[&mVU.badBranch],  branchAddr); }
+		if (mVUlow.badBranch)  { xMOV(ptr32[&mVU.badBranch],  branchAddrN); }
 		if (mVUlow.evilBranch) { xMOV(ptr32[&mVU.evilBranch], branchAddr);}
 		mVU.profiler.EmitOp(opBAL);
 	}
@@ -1382,9 +1385,11 @@ void normJumpPass2(mV) {
 		mVUallocVIa(mVU, gprT1, _Is_);
 		xSHL(gprT1, 3);
 		xAND(gprT1, mVU.microMemSize - 8);
-		
-		if (!mVUlow.evilBranch) xMOV(ptr32[&mVU.branch],	 gprT1); 
-		else					{ xMOV(ptr32[&mVU.evilBranch], gprT1);}
+				
+		if (!mVUlow.evilBranch) { xMOV(ptr32[&mVU.branch],	   gprT1	  ); }
+		else					{ xMOV(ptr32[&mVU.evilBranch], gprT1	  ); }
+		//If delay slot is conditional, it uses badBranch to go to its target
+		if (mVUlow.badBranch)   { xADD(gprT1, 8); xMOV(ptr32[&mVU.badBranch],  gprT1); }  
 	}
 }
 

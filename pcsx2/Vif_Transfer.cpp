@@ -107,9 +107,9 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 	}
 	else
 	{
-		if(vifX.irqoffset.value > 1)
+		if(vifX.irqoffset.value != 0){
 			vifX.irqoffset.enabled = true;
-		else
+		}else
 			vifX.irqoffset.enabled = false;
 	}
 
