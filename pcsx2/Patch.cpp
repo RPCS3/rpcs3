@@ -166,7 +166,7 @@ void inifile_process(wxTextFile &f1 )
     }
 }
 
-void ResetCeatsCount()
+void ResetCheatsCount()
 {
   cheatnumber = 0;
 }

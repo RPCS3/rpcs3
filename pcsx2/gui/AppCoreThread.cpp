@@ -350,7 +350,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 		gameName = L"Booting PS2 BIOS... ";
 	}
 
-  ResetCeatsCount();
+  ResetCheatsCount();
 	if (EmuConfig.EnableCheats) {
     if (int cheats = LoadCheats(gameCRC, L"cheats", L"Cheats")) {
 			gameCheats.Printf(L" [%d Cheats]", cheats);
