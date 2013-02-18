@@ -186,7 +186,8 @@ __ri void branchWarning(mV) {
 		mVUlow.isNOP = 1;
 	}
 	else incPC(2);
-	if (mVUinfo.isBdelay) { // Check if VI Reg Written to on Branch Delay Slot Instruction
+
+	if (mVUinfo.isBdelay && !mVUlow.evilBranch) { // Check if VI Reg Written to on Branch Delay Slot Instruction
 		if (mVUlow.VI_write.reg && mVUlow.VI_write.used && !mVUlow.readFlags) {
 			mVUlow.backupVI = 1;
 			mVUregs.viBackUp = mVUlow.VI_write.reg;
@@ -420,6 +421,57 @@ __fi void mVUinitFirstPass(microVU& mVU, uptr pState, u8* thisPtr) {
 // Recompiler
 //------------------------------------------------------------------
 
+//This bastardized function is used when a linked branch is in a conditional delay slot. It's messy, it's horrible, but it works.
+//Unfortunately linking the reg manually and using the normal evil block method seems to suck at this :/
+//If this is removed, test Evil Dead: Fistful of Boomstick (hangs going ingame), Mark of Kri (collision detection)
+//and Tony Hawks Project 8 (graphics are half missing, requires Negative rounding when working)
+void* mVUcompileSingleInstruction(microVU& mVU, u32 startPC, uptr pState, microFlagCycles& mFC) {
+	
+	u8*				thisPtr  = x86Ptr;
+	
+	// First Pass
+	iPC = startPC / 4;
+	
+	mVUbranch = 0;
+	incPC(1);
+	startLoop(mVU);
+
+	mVUincCycles(mVU, 1);
+	mVUopU(mVU, 0);
+	mVUcheckBadOp(mVU);
+	if (curI & _Ebit_)  { eBitPass1(mVU, branch); DevCon.Warning("E Bit on single instruction");}
+	if (curI & _DTbit_) { branch = 4; DevCon.Warning("D Bit on single instruction");}
+	if (curI & _Mbit_)  { mVUup.mBit = 1; DevCon.Warning("M Bit on single instruction");}
+	if (curI & _Ibit_)  { mVUlow.isNOP = 1; mVUup.iBit = 1; DevCon.Warning("I Bit on single instruction");}
+	else			    { incPC(-1); mVUopL(mVU, 0); incPC(1); }
+	mVUsetCycles(mVU);
+	mVUinfo.readQ  =  mVU.q;
+	mVUinfo.writeQ = !mVU.q;
+	mVUinfo.readP  =  mVU.p;
+	mVUinfo.writeP = !mVU.p;
+	mVUcount++;
+	mVUsetFlagInfo(mVU);
+	incPC(1);
+
+
+	mVUsetFlags(mVU, mFC);	   // Sets Up Flag instances
+	mVUoptimizePipeState(mVU); // Optimize the End Pipeline State for nicer Block Linking
+	mVUdebugPrintBlocks(mVU,0);// Prints Start/End PC of blocks executed, for debugging...
+	mVUtestCycles(mVU);		   // Update VU Cycles and Exit Early if Necessary
+
+	// Second Pass
+	iPC = startPC / 4;
+	setCode();
+
+	if (mVUup.mBit)				{ xOR(ptr32[&mVU.regs().flags], VUFLAG_MFLAGSET); }
+	mVUexecuteInstruction(mVU);
+
+	mVUincCycles(mVU, 1); //Just incase the is XGKick
+	if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
+	
+	return thisPtr;
+}
+
 void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 	
 	microFlagCycles mFC;
@@ -431,6 +483,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 	mVUsetupRange(mVU, startPC, 1); // Setup Program Bounds/Range
 	mVU.regAlloc->reset(); // Reset regAlloc
 	mVUinitFirstPass(mVU, pState, thisPtr);
+	mVUbranch = 0;
 	for(int branch = 0; mVUcount < endCount; mVUcount++) {
 		incPC(1);
 		startLoop(mVU);
@@ -478,6 +531,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 			mVUsetupRange(mVU, xPC, 0);
 			mVUdebugPrintBlocks(mVU,1);
 			incPC(-3); // Go back to branch opcode
+		
 			switch (mVUlow.branch) {
 				case 1: case 2:  normBranch(mVU, mFC);			  return thisPtr; // B/BAL
 				case 9: case 10: normJump  (mVU, mFC);			  return thisPtr; // JR/JALR
@@ -502,7 +556,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 __fi void* mVUentryGet(microVU& mVU, microBlockManager* block, u32 startPC, uptr pState) {
 	microBlock* pBlock = block->search((microRegInfo*)pState);
 	if (pBlock) return pBlock->x86ptrStart;
-	else	    return mVUcompile(mVU, startPC, pState);
+	else	 {  return mVUcompile(mVU, startPC, pState);}
 }
 
  // Search for Existing Compiled Block (if found, return x86ptr; else, compile and return x86ptr)

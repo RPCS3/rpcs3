@@ -1245,7 +1245,8 @@ void setBranchA(mP, int x, int _x_) {
 void condEvilBranch(mV, int JMPcc) {
 	if (mVUlow.badBranch) {
 		xMOV(ptr32[&mVU.branch], gprT1);
-		xMOV(ptr32[&mVU.badBranch], branchAddrN);
+		xMOV(ptr32[&mVU.badBranch], branchAddr);
+
 		xCMP(gprT1b, 0);
 		xForwardJump8 cJMP((JccComparisonType)JMPcc);
 			incPC(6); // Branch Not Taken Addr + 8
@@ -1277,10 +1278,14 @@ mVUop(mVU_BAL) {
 	setBranchA(mX, 2, _It_);
 	pass1 { mVUanalyzeNormBranch(mVU, _It_, 1); }
 	pass2 {
-		xMOV(gprT1, bSaveAddr);
-		mVUallocVIb(mVU, gprT1, _It_);
-		if (mVUlow.badBranch)  { xMOV(ptr32[&mVU.badBranch],  branchAddrN); }
-		if (mVUlow.evilBranch) { xMOV(ptr32[&mVU.evilBranch], branchAddr); }
+		if(!mVUlow.evilBranch)
+		{
+			xMOV(gprT1, bSaveAddr);
+			mVUallocVIb(mVU, gprT1, _It_);
+		}
+
+		if (mVUlow.badBranch)  { xMOV(ptr32[&mVU.badBranch],  branchAddr); }
+		if (mVUlow.evilBranch) { xMOV(ptr32[&mVU.evilBranch], branchAddr);}
 		mVU.profiler.EmitOp(opBAL);
 	}
 	pass3 { mVUlog("BAL vi%02d [<a href=\"#addr%04x\">%04x</a>]", _Ft_, branchAddr, branchAddr); }
@@ -1377,13 +1382,9 @@ void normJumpPass2(mV) {
 		mVUallocVIa(mVU, gprT1, _Is_);
 		xSHL(gprT1, 3);
 		xAND(gprT1, mVU.microMemSize - 8);
-		if (!mVUlow.evilBranch) xMOV(ptr32[&mVU.branch],	 gprT1);
-		else					xMOV(ptr32[&mVU.evilBranch], gprT1);
-		if (mVUlow.badBranch) {
-			xADD(gprT1, 8);
-			xAND(gprT1, mVU.microMemSize - 8);
-			xMOV(ptr32[&mVU.badBranch],  gprT1);
-		}
+		
+		if (!mVUlow.evilBranch) xMOV(ptr32[&mVU.branch],	 gprT1); 
+		else					{ xMOV(ptr32[&mVU.evilBranch], gprT1);}
 	}
 }
 
@@ -1399,8 +1400,27 @@ mVUop(mVU_JALR) {
 	pass1 { mVUanalyzeJump(mVU, _Is_, _It_, 1); }
 	pass2 {
 		normJumpPass2(mVU);
-		xMOV(gprT1, bSaveAddr);
-		mVUallocVIb(mVU, gprT1, _It_);
+		if(!mVUlow.evilBranch)
+		{
+			xMOV(gprT1, bSaveAddr);
+			mVUallocVIb(mVU, gprT1, _It_);
+		}
+		if(mVUlow.evilBranch)
+		{
+			incPC(-2);
+			if(mVUlow.branch >= 9) //Previous branch is a jump of some type so 
+								   //we need to take the branch address from the register it uses.
+			{
+				DevCon.Warning("Linking JALR from JALR/JR branch target! - If game broken report to PCSX2 Team");
+				mVUallocVIa(mVU, gprT1, _Is_);
+				xADD(gprT1, 8);
+				xSHR(gprT1, 3);
+				incPC(2);
+				mVUallocVIb(mVU, gprT1, _It_);
+			}
+			else incPC(2);
+		}
+		
 		mVU.profiler.EmitOp(opJALR);
 	}
 	pass3 { mVUlog("JALR vi%02d, [vi%02d]", _Ft_, _Fs_); }

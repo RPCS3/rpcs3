@@ -18,7 +18,7 @@
 extern bool  doEarlyExit (microVU& mVU);
 extern void  mVUincCycles(microVU& mVU, int x);
 extern void* mVUcompile  (microVU& mVU, u32 startPC, uptr pState);
-
+extern void* mVUcompileSingleInstruction(microVU& mVU, u32 startPC, uptr pState, microFlagCycles& mFC);
 __fi int getLastFlagInst(microRegInfo& pState, int* xFlag, int flagType, int isEbit) {
 	if (isEbit) return findFlagInst(xFlag, 0x7fffffff);
 	if (pState.needExactMatch & (1<<flagType)) return 3;
@@ -126,18 +126,76 @@ void normJumpCompile(mV, microFlagCycles& mFC, bool isEvilJump) {
 void normBranch(mV, microFlagCycles& mFC) {
 
 	// E-bit Branch
-	if (mVUup.eBit) { iPC = branchAddr/4; mVUendProgram(mVU, &mFC, 1); return; }
+	if (mVUup.eBit) { if(mVUlow.badBranch) DevCon.Warning("End on evil Unconditional branch! - Not implemented! - If game broken report to PCSX2 Team"); iPC = branchAddr/4; mVUendProgram(mVU, &mFC, 1); return; }
+	
+	if(mVUlow.badBranch)
+	{
+		u32 badBranchAddr = branchAddr+8;
+		incPC(3);
+		if(mVUlow.branch == 2 || mVUlow.branch == 10)	//Delay slot branch needs linking
+		{
+			DevCon.Warning("Found %s in delay slot, linking - If game broken report to PCSX2 Team", mVUlow.branch == 2 ? "BAL" : "JALR");
+			xMOV(gprT3, badBranchAddr);
+			xSHR(gprT3, 3);
+			mVUallocVIb(mVU, gprT3, _It_);
+
+		}
+		incPC(-3);
+	}
 	
 	// Normal Branch
 	mVUsetupBranch(mVU, mFC);
 	normBranchCompile(mVU, branchAddr);
 }
 
+//Messy handler warning!!
+//This handles JALR/BAL in the delay slot of a conditional branch.  We do this because the normal handling
+//Doesn't seem to work properly, even if the link is made to the correct address, so we do it manually instead.
+//Normally EvilBlock handles all this stuff, but something to do with conditionals and links don't quite work right :/
+void condJumpProcessingEvil(mV, microFlagCycles& mFC, int JMPcc) {
+
+	u32 bPC = iPC-1; // mVUcompile can modify iPC, mVUpBlock, and mVUregs so back them up
+	microBlock* pBlock = mVUpBlock;
+	u32 badBranchAddr;
+	iPC = bPC-2;
+	setCode();
+	badBranchAddr = branchAddr;
+
+	xCMP(ptr16[&mVU.branch], 0);
+	
+	xForwardJump32 eJMP(xInvertCond((JccComparisonType)JMPcc));
+
+	mVUcompileSingleInstruction(mVU, badBranchAddr, (uptr)&mVUregs, mFC);
+
+	xMOV(gprT3, badBranchAddr+8);
+	iPC = bPC;
+	setCode();
+	xSHR(gprT3, 3);
+	mVUallocVIb(mVU, gprT3, _It_); //Link to branch addr + 8
+	
+	normJumpCompile(mVU, mFC, true); //Compile evil branch, just in time!
+	
+	eJMP.SetTarget();
+	
+	incPC(2);  // Point to delay slot of evil Branch (as the original branch isn't taken)
+	mVUcompileSingleInstruction(mVU, xPC, (uptr)&mVUregs, mFC);
+
+	xMOV(gprT3, xPC);
+	iPC = bPC;
+	setCode();
+	xSHR(gprT3, 3);
+	mVUallocVIb(mVU, gprT3, _It_);
+		
+	normJumpCompile(mVU, mFC, true); //Compile evil branch, just in time!
+
+}
 void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 	mVUsetupBranch(mVU, mFC);
 	xCMP(ptr16[&mVU.branch], 0);
 	incPC(3);
 	if (mVUup.eBit) { // Conditional Branch With E-Bit Set
+		if(mVUlow.evilBranch) DevCon.Warning("End on evil branch! - Not implemented! - If game broken report to PCSX2 Team");
+
 		mVUendProgram(mVU, &mFC, 2);
 		xForwardJump8 eJMP((JccComparisonType)JMPcc);
 			incPC(1); // Set PC to First instruction of Non-Taken Side
@@ -151,6 +209,17 @@ void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 		return;
 	}
 	else { // Normal Conditional Branch
+		
+		if(mVUlow.evilBranch) //We are dealing with an evil evil block, so we need to process this slightly differently
+		{
+			
+			if(mVUlow.branch == 10 || mVUlow.branch == 2) //Evil branch is a jump of some measure
+			{
+				//Because of how it is linked, we need to make sure the target is recompiled if taken
+				condJumpProcessingEvil(mVU, mFC, JMPcc);
+				return;
+			}
+		}
 		microBlock* bBlock;
 		incPC2(1); // Check if Branch Non-Taken Side has already been recompiled
 		blockCreate(iPC/2);
@@ -190,7 +259,22 @@ void normJump(mV, microFlagCycles& mFC) {
 		normBranchCompile(mVU, jumpAddr);
 		return;
 	}
+	if(mVUlow.badBranch)
+	{		
+		incPC(3);
+		if(mVUlow.branch == 2 || mVUlow.branch == 10)	//Delay slot BAL needs linking, only need to do BAL here, JALR done earlier
+		{
+			DevCon.Warning("Found %x in delay slot, linking - If game broken report to PCSX2 Team", mVUlow.branch == 2 ? "BAL" : "JALR");
+			incPC(-2);
+			mVUallocVIa(mVU, gprT1, _Is_);
+			xADD(gprT1, 8);
+			xSHR(gprT1, 3);
+			incPC(2);
+			mVUallocVIb(mVU, gprT1, _It_);
 
+		}
+		incPC(-3);
+	}
 	if (mVUup.eBit) { // E-bit Jump
 		mVUendProgram(mVU, &mFC, 2);
 		xMOV(gprT1, ptr32[&mVU.branch]);
