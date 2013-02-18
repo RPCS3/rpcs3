@@ -21,6 +21,7 @@
 #include "Patch.h"
 #include "GameDatabase.h"
 #include <wx/textfile.h>
+#include <wx/dir.h>
 
 IniPatch Patch[ MAX_PATCH ];
 IniPatch Cheat[ MAX_CHEAT ];
@@ -165,35 +166,55 @@ void inifile_process(wxTextFile &f1 )
     }
 }
 
+void ResetCeatsCount()
+{
+  cheatnumber = 0;
+}
+
+static int LoadCheatsFiles(const wxString& folderName, wxString& fileSpec, const wxString& friendlyName)
+{
+  if (!wxDir::Exists(folderName)) {
+    Console.WriteLn(Color_Red, L"The %s folder ('%s') is inaccessible. Skipping...", friendlyName.c_str(), folderName.c_str());
+    return 0;
+  }
+  wxDir dir(folderName);
+
+  int before = cheatnumber;
+  wxString buffer;
+  wxTextFile f;
+  bool found = dir.GetFirst(&buffer, fileSpec, wxDIR_FILES);
+  while (found) {
+    Console.WriteLn(Color_Gray, L"Found %s file: '%s'", friendlyName.c_str(), buffer.c_str());
+    int before = cheatnumber;
+    f.Open(Path::Combine(dir.GetName(), buffer));
+    inifile_process(f);
+    f.Close();
+    int loaded = cheatnumber - before;
+    Console.WriteLn((loaded ? Color_Green : Color_Gray), L"Loaded %d %s from '%s'", loaded, friendlyName.c_str(), buffer.c_str());
+    found = dir.GetNext(&buffer);
+  }
+
+  return cheatnumber - before;
+}
+
 // This routine loads cheats from *.pnach files
 // Returns number of cheats loaded
 // Note: Should be called after InitPatches()
-int InitCheats(const wxString& name)
+int LoadCheats(const wxString& name, const wxString& folderName, const wxString& friendlyName)
 {
-	wxTextFile f1;
-	wxString buffer;
-	cheatnumber = 0;
+  int loaded = 0;
 
-	// FIXME : We need to add a 'cheats' folder to the AppConfig, and use that instead. --air
+  wxString filespec = name + L"*.pnach";
+  loaded += LoadCheatsFiles(folderName, filespec, friendlyName);
 
-	buffer = Path::Combine(L"cheats", name + L".pnach");
+  wxString nameUpper = name; nameUpper.Upper();
+  if (wxFileName::IsCaseSensitive() && name != nameUpper) {
+    filespec = nameUpper + L"*.pnach";
+    loaded += LoadCheatsFiles(folderName, filespec, friendlyName);
+  }
 
-	if(!f1.Open(buffer) && wxFileName::IsCaseSensitive())
-	{
-		f1.Open( Path::Combine(L"cheats", name.Upper() + L".pnach") );
-	}
-
-	if(!f1.IsOpened())
-	{
-		Console.WriteLn( Color_Gray, "No cheats found. Resuming execution without cheats..." );
-		return 0;
-	}
-
-	Console.WriteLn( Color_Green, "Cheats found!");
-	inifile_process( f1 );
-
-	Console.WriteLn("Cheats Loaded: %d", cheatnumber);
-	return cheatnumber;
+  Console.WriteLn((loaded ? Color_Green : Color_Gray), L"Overall %d %s loaded", loaded, friendlyName.c_str());
+  return loaded;
 }
 
 static u32 StrToU32(const wxString& str, int base = 10)
