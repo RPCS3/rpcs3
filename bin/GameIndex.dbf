@@ -840,7 +840,7 @@ Serial = SCUS-97328
 Name   = Gran Turismo 4
 Region = NTSC-U
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCUS-97329
@@ -1169,7 +1169,7 @@ Region = NTSC-U
 Serial = SCUS-97436
 Name   = Gran Turismo 4 [Online Public Beta]
 Region = NTSC-U
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCUS-97437
@@ -10908,7 +10908,7 @@ Region = NTSC-U
 Serial = PAPX-90512
 Name   = Gran Turismo 4 - Toyota Prius [Trial]
 Region = NTSC-J
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = PBPX-95503
@@ -10932,39 +10932,39 @@ Serial = PBPX-95524
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-Unk
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
-[patches = CA6243B9]
+//[patches = CA6243B9]
+//	
+//	comment=patches by Nachbrenner
 	
-	comment=patches by Nachbrenner
-	
-	//fix IPU DMA 
-	patch=1,EE,00166814,word,00000000
-	patch=1,EE,003a36b8,word,00000000
-	patch=1,EE,003a36f4,word,00000000
-	//Skip Videos
-	patch=1,EE,001e3718,word,03e00008 
-	patch=1,EE,001e371c,word,00000000
-	
-[/patches]
+//	//fix IPU DMA 
+//	patch=1,EE,00166814,word,00000000
+//	patch=1,EE,003a36b8,word,00000000
+//	patch=1,EE,003a36f4,word,00000000
+//	//Skip Videos
+//	patch=1,EE,001e3718,word,03e00008 
+//	patch=1,EE,001e371c,word,00000000
+//	
+//[/patches]
 ---------------------------------------------
 Serial = PCPX-96649
 Name   = Gran Turismo 4 [Demo]
 Region = NTSC-J
 Compat = 4
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
-[patches = E906EA37]
-	
-	comment=patches by mdr61
-	
-	//Timelimit counter stop
-	patch=0,EE,002EF740,word,00000000
-	//Pause counter stop
-	patch=0,EE,002C7394,word,00000000
-	patch=0,EE,002F1F40,word,00000000
-	
-[/patches]
+//[patches = E906EA37]
+//	
+//	comment=patches by mdr61
+//	
+//	//Timelimit counter stop
+//	patch=0,EE,002EF740,word,00000000
+//	//Pause counter stop
+//	patch=0,EE,002C7394,word,00000000
+//	patch=0,EE,002F1F40,word,00000000
+//	
+//[/patches]
 ---------------------------------------------
 Serial = SCAJ-10001
 Name   = Makai Senki Disgaea
@@ -11249,7 +11249,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20066
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-Unk
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCAJ-20067
@@ -11825,28 +11825,28 @@ Region = NTSC-Unk
 Serial = SCAJ-30006
 Name   = Gran Turismo 4
 Region = NTSC-Unk
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCAJ-30007
 Name   = Gran Turismo 4
 Region = NTSC-Unk
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
-[patches = 7ABDBB5E]
-	
-	comment=patches by nachbrenner
-	
-	//skip Videos
-	patch=1,EE,00100D84,word,24100001
-	
-[/patches]
+//[patches = 7ABDBB5E]
+//	
+//	comment=patches by nachbrenner
+//	
+//	//skip Videos
+//	patch=1,EE,00100D84,word,24100001
+//	
+//[/patches]
 ---------------------------------------------
 Serial = SCAJ-30008
 Name   = Gran Turismo 4 [PlayStation 2 The Best]
 Region = NTSC-Unk
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCAJ-30010
@@ -11923,7 +11923,7 @@ VIF1StallHack = 1		//HUD
 Serial = SCKA-20022
 Name   = Gran Turismo 4 Prologue
 Region = NTSC-K
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCKA-20023
@@ -12172,7 +12172,7 @@ Region = NTSC-K
 Serial = SCKA-30001
 Name   = Gran Turismo 4
 Region = NTSC-K
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCKA-30002
@@ -12584,7 +12584,7 @@ Region = NTSC-J
 Serial = SCPS-15055
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-J
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-15056
@@ -12863,7 +12863,7 @@ Serial = SCPS-17001
 Name   = Gran Turismo 4
 Region = NTSC-J
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-17002
@@ -12991,7 +12991,7 @@ Region = NTSC-J
 Serial = SCPS-19252
 Name   = Gran Turismo 4 [PlayStation 2 The Best]
 Region = NTSC-J
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-19253
@@ -13013,7 +13013,7 @@ Region = NTSC-J
 Serial = SCPS-19304
 Name   = Gran Turismo 4 - Prologue [PlayStation 2 The Best]
 Region = NTSC-J
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-19305
@@ -30105,7 +30105,7 @@ Serial = SCES-51719
 Name   = Gran Turismo 4
 Region = PAL-Unk
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCES-51725
@@ -30288,7 +30288,7 @@ Serial = SCES-52438
 Name   = Gran Turismo 4 - Prologue
 Region = PAL-Unk
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCES-52456
