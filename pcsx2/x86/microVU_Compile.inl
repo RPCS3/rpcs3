@@ -407,7 +407,7 @@ __fi void mVUinitFirstPass(microVU& mVU, uptr pState, u8* thisPtr) {
 	}
 	mVUblock.x86ptrStart	= thisPtr;
 	mVUpBlock				= mVUblocks[mVUstartPC/2]->add(&mVUblock); // Add this block to block manager
-	mVUregs.needExactMatch	= /*(mVUregs.blockType||noFlagOpts)?7:*/0; // ToDo: Fix 1-Op block flag linking (MGS2:Demo/Sly Cooper)
+	mVUregs.needExactMatch	= (isEvilBlock)?7:0; // ToDo: Fix 1-Op block flag linking (MGS2:Demo/Sly Cooper)
 	mVUregs.blockType		= 0;
 	mVUregs.viBackUp		= 0;
 	mVUregs.flagInfo		= 0;
@@ -504,6 +504,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		elif (branch == 1)  { branch = 2; }
 		if   (mVUbranch)    { mVUsetFlagInfo(mVU); eBitWarning(mVU); branch = 3; mVUbranch = 0; }
 		incPC(1);
+		if(isEvilBlock){ mVUcount++; break; } //Need a count, else the flags do not update.
 	}
 
 	// Fix up vi15 const info for propagation through blocks
