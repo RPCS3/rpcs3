@@ -407,7 +407,7 @@ __fi void mVUinitFirstPass(microVU& mVU, uptr pState, u8* thisPtr) {
 	}
 	mVUblock.x86ptrStart	= thisPtr;
 	mVUpBlock				= mVUblocks[mVUstartPC/2]->add(&mVUblock); // Add this block to block manager
-	mVUregs.needExactMatch	= (isEvilBlock)?7:0; // ToDo: Fix 1-Op block flag linking (MGS2:Demo/Sly Cooper)
+	mVUregs.needExactMatch	= (mVUpBlock->pState.blockType)?7:0; // ToDo: Fix 1-Op block flag linking (MGS2:Demo/Sly Cooper)
 	mVUregs.blockType		= 0;
 	mVUregs.viBackUp		= 0;
 	mVUregs.flagInfo		= 0;
@@ -484,7 +484,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 	mVU.regAlloc->reset(); // Reset regAlloc
 	mVUinitFirstPass(mVU, pState, thisPtr);
 	mVUbranch = 0;
-	for(int branch = 0; mVUcount < endCount; mVUcount++) {
+	for(int branch = 0; mVUcount < endCount;) {
 		incPC(1);
 		startLoop(mVU);
 		mVUincCycles(mVU, 1);
@@ -500,11 +500,11 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		mVUinfo.writeQ = !mVU.q;
 		mVUinfo.readP  =  mVU.p;
 		mVUinfo.writeP = !mVU.p;
-		if   (branch >= 2)  { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } mVUcount++; branchWarning(mVU); break; }
+		mVUcount++;
+		if   (branch >= 2)  { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } branchWarning(mVU); break; }
 		elif (branch == 1)  { branch = 2; }
 		if   (mVUbranch)    { mVUsetFlagInfo(mVU); eBitWarning(mVU); branch = 3; mVUbranch = 0; }
 		incPC(1);
-		if(isEvilBlock){ mVUcount++; break; } //Need a count, else the flags do not update.
 	}
 
 	// Fix up vi15 const info for propagation through blocks
