@@ -446,24 +446,28 @@ template<int vunum> static __fi void ClearVuFunc(u32 addr, u32 size) {
 template<int vunum> static mem8_t __fc vuMicroRead8(u32 addr) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
+	
 	if (vunum && THREAD_VU1) vu1Thread.WaitVU();
 	return vu->Micro[addr];
 }
 template<int vunum> static mem16_t __fc vuMicroRead16(u32 addr) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
+	
 	if (vunum && THREAD_VU1) vu1Thread.WaitVU();
 	return *(u16*)&vu->Micro[addr];
 }
 template<int vunum> static mem32_t __fc vuMicroRead32(u32 addr) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
+	
 	if (vunum && THREAD_VU1) vu1Thread.WaitVU();
 	return *(u32*)&vu->Micro[addr];
 }
 template<int vunum> static void __fc vuMicroRead64(u32 addr,mem64_t* data) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
+	
 	if (vunum && THREAD_VU1) vu1Thread.WaitVU();
 	*data=*(u64*)&vu->Micro[addr];
 }
@@ -471,6 +475,7 @@ template<int vunum> static void __fc vuMicroRead128(u32 addr,mem128_t* data) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
 	if (vunum && THREAD_VU1) vu1Thread.WaitVU();
+	
 	CopyQWC(data,&vu->Micro[addr]);
 }
 
@@ -479,6 +484,7 @@ template<int vunum> static void __fc vuMicroRead128(u32 addr,mem128_t* data) {
 template<int vunum> static void __fc vuMicroWrite8(u32 addr,mem8_t data) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
+	
 	if (vunum && THREAD_VU1) {
 		vu1Thread.WriteMicroMem(addr, &data, sizeof(u8));
 		return;
@@ -491,6 +497,7 @@ template<int vunum> static void __fc vuMicroWrite8(u32 addr,mem8_t data) {
 template<int vunum> static void __fc vuMicroWrite16(u32 addr, mem16_t data) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
+	
 	if (vunum && THREAD_VU1) {
 		vu1Thread.WriteMicroMem(addr, &data, sizeof(u16));
 		return;
@@ -503,6 +510,7 @@ template<int vunum> static void __fc vuMicroWrite16(u32 addr, mem16_t data) {
 template<int vunum> static void __fc vuMicroWrite32(u32 addr, mem32_t data) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
+	
 	if (vunum && THREAD_VU1) {
 		vu1Thread.WriteMicroMem(addr, &data, sizeof(u32));
 		return;
@@ -515,25 +523,33 @@ template<int vunum> static void __fc vuMicroWrite32(u32 addr, mem32_t data) {
 template<int vunum> static void __fc vuMicroWrite64(u32 addr, const mem64_t* data) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
+	u64		tempdata;
+	tempdata = (data[0] >> 32) | (data[0] << 32); //VU stores it in a different order
+	
 	if (vunum && THREAD_VU1) {
-		vu1Thread.WriteMicroMem(addr, (void*)data, sizeof(u64));
+		vu1Thread.WriteMicroMem(addr, &tempdata, sizeof(u64));
 		return;
 	}
-	if (*(u64*)&vu->Micro[addr]!=data[0]) {
+	
+	if (*(u64*)&vu->Micro[addr]!=tempdata) {
 		ClearVuFunc<vunum>(addr, 8);
-		*(u64*)&vu->Micro[addr] =data[0];
+		*(u64*)&vu->Micro[addr] =tempdata;
 	}
 }
 template<int vunum> static void __fc vuMicroWrite128(u32 addr, const mem128_t* data) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
+	mem128_t  tempdata;
+	tempdata.lo = (data->lo >> 32) | (data->lo << 32); //VU stores it in a different order
+	tempdata.hi = (data->hi >> 32) | (data->hi << 32); //VU stores it in a different order
+
 	if (vunum && THREAD_VU1) {
-		vu1Thread.WriteMicroMem(addr, (void*)data, sizeof(u128));
+		vu1Thread.WriteMicroMem(addr, &tempdata, sizeof(u128));
 		return;
 	}
-	if ((u128&)vu->Micro[addr]!=*data) {
+	if ((u128&)vu->Micro[addr]!=tempdata) { //Hmm, is that right?
 		ClearVuFunc<vunum>(addr, 16);
-		CopyQWC(&vu->Micro[addr],data);
+		CopyQWC(&vu->Micro[addr],&tempdata);
 	}
 }
 
