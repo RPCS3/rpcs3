@@ -525,7 +525,7 @@ template<int vunum> static void __fc vuMicroWrite64(u32 addr, const mem64_t* dat
 	addr      &= vunum ? 0x3fff: 0xfff;
 	u64		tempdata;
 
-	if(cpuRegs.pc == 0x8000dff0)
+	if(cpuRegs.pc >= 0x80000000 && cpuRegs.pc < 0x82000000)
 		tempdata = (data[0] >> 32) | (data[0] << 32); //BIOS writes them in the wrong order apparently...
 	else
 		tempdata = data[0];
