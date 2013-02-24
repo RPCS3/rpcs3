@@ -154,6 +154,10 @@ struct __aligned16 VURegs {
 
 	u32 ebit;
 
+	u8 VIBackupCycles;
+	u32 VIOldValue;
+	u32 VIRegNumber;
+
 	fmacPipe fmac[8];
 	fdivPipe fdiv;
 	efuPipe efu;

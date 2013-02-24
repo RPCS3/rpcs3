@@ -144,6 +144,9 @@ static void _vu0Exec(VURegs* VU)
 
 	_vuTestPipes(VU);
 
+	if(VU->VIBackupCycles > 0) 
+		VU->VIBackupCycles--;
+
 	if (VU->branch > 0) {
 		if (VU->branch-- == 1) {
 			VU->VI[REG_TPC].UL = VU->branchpc;
@@ -161,6 +164,7 @@ static void _vu0Exec(VURegs* VU)
 
 	if( VU->ebit > 0 ) {
 		if( VU->ebit-- == 1 ) {
+			VU->VIBackupCycles = 0;
 			_vuFlushAll(VU);
 			VU0.VI[REG_VPU_STAT].UL&= ~0x1; /* E flag */
 			vif0Regs.stat.VEW = false;

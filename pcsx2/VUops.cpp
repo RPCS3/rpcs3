@@ -43,6 +43,7 @@
 #define _Imm11_		(s32)(VU->code & 0x400 ? 0xfffffc00 | (VU->code & 0x3ff) : VU->code & 0x3ff)
 #define _UImm11_	(s32)(VU->code & 0x7ff)
 
+#define VI_BACKUP
 
 static __aligned16 VECTOR RDzero;
 
@@ -1456,7 +1457,7 @@ static __fi void _vuCLIP(VURegs * VU) {
 	if ( vuDouble(VU->VF[_Fs_].i.z) > +value ) VU->clipflag|= 0x10;
 	if ( vuDouble(VU->VF[_Fs_].i.z) < -value ) VU->clipflag|= 0x20;
 	VU->clipflag = VU->clipflag & 0xFFFFFF;
-	VU->VI[REG_CLIP_FLAG].UL = VU->clipflag;
+	//VU->VI[REG_CLIP_FLAG].UL = VU->clipflag; //Shouldn't need to do this, let the pipes sort it out.
 
 
 }/*last update 16/07/05 refraction - Needs checking */
@@ -1546,36 +1547,81 @@ static __fi void _vuIADDI(VURegs * VU) {
 	s16 imm = ((VU->code >> 6) & 0x1f);
 	imm = ((imm & 0x10 ? 0xfff0 : 0) | (imm & 0xf));
 	if(_It_ == 0) return;
+
+#ifdef VI_BACKUP
+	VU->VIBackupCycles = 2;
+	VU->VIRegNumber = _It_;
+	VU->VIOldValue = VU->VI[_It_].US[0];
+#endif
+
 	VU->VI[_It_].SS[0] = VU->VI[_Is_].SS[0] + imm;
 }//last checked 17/05/03 shadow NOTE: not quite sure about that
 
 static __fi void _vuIADDIU(VURegs * VU) {
 	if(_It_ == 0) return;
+
+#ifdef VI_BACKUP
+	VU->VIBackupCycles = 2;
+	VU->VIRegNumber = _It_;
+	VU->VIOldValue = VU->VI[_It_].US[0];
+#endif
+
 	VU->VI[_It_].SS[0] = VU->VI[_Is_].SS[0] + (((VU->code >> 10) & 0x7800) | (VU->code & 0x7ff));
 }//last checked 17/05/03 shadow
 
 static __fi void _vuIADD(VURegs * VU) {
 	if(_Id_ == 0) return;
+
+#ifdef VI_BACKUP
+	VU->VIBackupCycles = 2;
+	VU->VIRegNumber = _It_;
+	VU->VIOldValue = VU->VI[_Id_].US[0];
+#endif
+
 	VU->VI[_Id_].SS[0] = VU->VI[_Is_].SS[0] + VU->VI[_It_].SS[0];
 }//last checked 17/05/03 shadow
 
 static __fi void _vuIAND(VURegs * VU) {
 	if(_Id_ == 0) return;
+
+#ifdef VI_BACKUP
+	VU->VIBackupCycles = 2;
+	VU->VIRegNumber = _It_;
+	VU->VIOldValue = VU->VI[_Id_].US[0];
+#endif
+
 	VU->VI[_Id_].US[0] = VU->VI[_Is_].US[0] & VU->VI[_It_].US[0];
 }//last checked 17/05/03 shadow
 
 static __fi void _vuIOR(VURegs * VU) {
 	if(_Id_ == 0) return;
+
+#ifdef VI_BACKUP
+	VU->VIBackupCycles = 2;
+	VU->VIRegNumber = _It_;
+	VU->VIOldValue = VU->VI[_Id_].US[0];
+#endif
+
 	VU->VI[_Id_].US[0] = VU->VI[_Is_].US[0] | VU->VI[_It_].US[0];
 }
 
 static __fi void _vuISUB(VURegs * VU) {
 	if(_Id_ == 0) return;
+#ifdef VI_BACKUP
+	VU->VIBackupCycles = 2;
+	VU->VIRegNumber = _It_;
+	VU->VIOldValue = VU->VI[_Id_].US[0];
+#endif
 	VU->VI[_Id_].SS[0] = VU->VI[_Is_].SS[0] - VU->VI[_It_].SS[0];
 }
 
 static __fi void _vuISUBIU(VURegs * VU) {
 	if(_It_ == 0) return;
+#ifdef VI_BACKUP
+	VU->VIBackupCycles = 2;
+	VU->VIRegNumber = _It_;
+	VU->VIOldValue = VU->VI[_It_].US[0];
+#endif
 	VU->VI[_It_].SS[0] = VU->VI[_Is_].SS[0] - (((VU->code >> 10) & 0x7800) | (VU->code & 0x7ff));
 }
 
@@ -1600,6 +1646,11 @@ static __fi void _vuMFIR(VURegs * VU) {
 // Big bug!!! mov from fs to ft not ft to fs. asadr
 static __fi void _vuMTIR(VURegs * VU) {
 	if(_It_ == 0) return;
+#ifdef VI_BACKUP
+	VU->VIBackupCycles = 2;
+	VU->VIRegNumber = _It_;
+	VU->VIOldValue = VU->VI[_It_].US[0];
+#endif
 	VU->VI[_It_].US[0] =  *(u16*)&VU->VF[_Fs_].F[_Fsf_];
 }
 
@@ -1703,6 +1754,13 @@ static __ri void _vuILW(VURegs * VU) {
  	s16 imm = (VU->code & 0x400) ? (VU->code & 0x3ff) | 0xfc00 : (VU->code & 0x3ff);
 	u16 addr = ((imm + VU->VI[_Is_].SS[0]) * 16);
 	u16* ptr = (u16*)GET_VU_MEM(VU, addr);
+
+#ifdef VI_BACKUP
+	VU->VIBackupCycles = 2;
+	VU->VIRegNumber = _It_;
+	VU->VIOldValue = VU->VI[_It_].US[0];
+#endif
+
 	if (_X) VU->VI[_It_].US[0] = ptr[0];
 	if (_Y) VU->VI[_It_].US[0] = ptr[2];
 	if (_Z) VU->VI[_It_].US[0] = ptr[4];
@@ -1724,6 +1782,13 @@ static __ri void _vuILWR(VURegs * VU) {
 
 	u32 addr = (VU->VI[_Is_].US[0] * 16);
 	u16* ptr = (u16*)GET_VU_MEM(VU, addr);
+
+#ifdef VI_BACKUP
+	VU->VIBackupCycles = 2;
+	VU->VIRegNumber = _It_;
+	VU->VIOldValue = VU->VI[_It_].US[0];
+#endif
+
 	if (_X) VU->VI[_It_].US[0] = ptr[0];
 	if (_Y) VU->VI[_It_].US[0] = ptr[2];
 	if (_Z) VU->VI[_It_].US[0] = ptr[4];
@@ -1888,42 +1953,113 @@ static __fi void _setBranch(VURegs * VU, u32 bpc) {
 }
 
 static __ri void _vuIBEQ(VURegs * VU) {
-	if (VU->VI[_It_].US[0] == VU->VI[_Is_].US[0]) {
+	s16 dest = VU->VI[_It_].US[0] ;
+	s16 src = VU->VI[_Is_].US[0];
+#ifdef VI_BACKUP
+	if(VU->VIBackupCycles > 0)
+	{
+		if(VU->VIRegNumber == _It_)
+		{
+			dest = VU->VIOldValue;
+		}
+		if(VU->VIRegNumber == _Is_)
+		{
+			src = VU->VIOldValue;
+		}
+	}
+#endif
+	if (dest == src) {
 		s32 bpc = _branchAddr(VU);
 		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuIBGEZ(VURegs * VU) {
-	if (VU->VI[_Is_].SS[0] >= 0) {
+	s16 src = VU->VI[_Is_].US[0];
+#ifdef VI_BACKUP
+	if(VU->VIBackupCycles > 0)
+	{
+		if(VU->VIRegNumber == _Is_)
+		{
+			src = VU->VIOldValue;
+		}
+	}
+#endif
+	if (src >= 0) {
 		s32 bpc = _branchAddr(VU);
 		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuIBGTZ(VURegs * VU) {
-	if (VU->VI[_Is_].SS[0] > 0) {
+	s16 src = VU->VI[_Is_].US[0];
+#ifdef VI_BACKUP
+	if(VU->VIBackupCycles > 0)
+	{
+		if(VU->VIRegNumber == _Is_)
+		{
+			src = VU->VIOldValue;
+		}
+	}
+#endif
+
+	if (src > 0) {
 		s32 bpc = _branchAddr(VU);
 		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuIBLEZ(VURegs * VU) {
-	if (VU->VI[_Is_].SS[0] <= 0) {
+	s16 src = VU->VI[_Is_].US[0];
+#ifdef VI_BACKUP
+	if(VU->VIBackupCycles > 0)
+	{
+		if(VU->VIRegNumber == _Is_)
+		{
+			src = VU->VIOldValue;
+		}
+	}
+#endif
+	if (src <= 0) {
 		s32 bpc = _branchAddr(VU);
 		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuIBLTZ(VURegs * VU) {
-	if (VU->VI[_Is_].SS[0] < 0) {
+	s16 src = VU->VI[_Is_].US[0];
+#ifdef VI_BACKUP
+	if(VU->VIBackupCycles > 0)
+	{
+		if(VU->VIRegNumber == _Is_)
+		{
+			src = VU->VIOldValue;
+		}
+	}
+#endif
+	if (src < 0) {
 		s32 bpc = _branchAddr(VU);
 		_setBranch(VU, bpc);
 	}
 }
 
 static __ri void _vuIBNE(VURegs * VU) {
-	if (VU->VI[_It_].US[0] != VU->VI[_Is_].US[0]) {
+	s16 dest = VU->VI[_It_].US[0] ;
+	s16 src = VU->VI[_Is_].US[0];
+#ifdef VI_BACKUP
+	if(VU->VIBackupCycles > 0)
+	{
+		if(VU->VIRegNumber == _It_)
+		{
+			dest = VU->VIOldValue;
+		}
+		if(VU->VIRegNumber == _Is_)
+		{
+			src = VU->VIOldValue;
+		}
+	}
+#endif
+	if (dest != src) {
 		s32 bpc = _branchAddr(VU);
 		_setBranch(VU, bpc);
 	}
