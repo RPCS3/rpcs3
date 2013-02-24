@@ -167,7 +167,7 @@ __fi void mVUcheckBadOp(mV) {
 		//So to prevent spamming we ignore these, however its possible the real VU will bomb out if 
 		//this happens, so we will bomb out without warning.
 		if(mVU.code != 0x8000033c)
-			DevCon.Warning("microVU Warning: First Instruction of block contains illegal opcode...");
+			DevCon.Warning("microVU Warning: Block contains an illegal opcode...");
 		else
 			mVUinfo.isBadOp = false; //End quietly
 	}
