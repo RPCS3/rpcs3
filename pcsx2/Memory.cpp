@@ -523,21 +523,15 @@ template<int vunum> static void __fc vuMicroWrite32(u32 addr, mem32_t data) {
 template<int vunum> static void __fc vuMicroWrite64(u32 addr, const mem64_t* data) {
 	VURegs* vu = vunum ?  &VU1 :  &VU0;
 	addr      &= vunum ? 0x3fff: 0xfff;
-	u64		tempdata;
-
-	if(cpuRegs.pc >= 0x80000000 && cpuRegs.pc < 0x82000000)
-		tempdata = (data[0] >> 32) | (data[0] << 32); //BIOS writes them in the wrong order apparently...
-	else
-		tempdata = data[0];
 
 	if (vunum && THREAD_VU1) {
-		vu1Thread.WriteMicroMem(addr, &tempdata, sizeof(u64));
+		vu1Thread.WriteMicroMem(addr, (void*)data, sizeof(u64));
 		return;
 	}
 	
-	if (*(u64*)&vu->Micro[addr]!=tempdata) {
+	if (*(u64*)&vu->Micro[addr]!=data[0]) {
 		ClearVuFunc<vunum>(addr, 8);
-		*(u64*)&vu->Micro[addr] =tempdata;
+		*(u64*)&vu->Micro[addr] =data[0];
 	}
 }
 template<int vunum> static void __fc vuMicroWrite128(u32 addr, const mem128_t* data) {
@@ -548,7 +542,7 @@ template<int vunum> static void __fc vuMicroWrite128(u32 addr, const mem128_t* d
 		vu1Thread.WriteMicroMem(addr, (void*)data, sizeof(u128));
 		return;
 	}
-	if ((u128&)vu->Micro[addr]!=*data) { //Hmm, is that right?
+	if ((u128&)vu->Micro[addr]!=*data) {
 		ClearVuFunc<vunum>(addr, 16);
 		CopyQWC(&vu->Micro[addr],data);
 	}

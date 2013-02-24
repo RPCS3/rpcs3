@@ -19,8 +19,8 @@
 // Messages Called at Execution Time...
 //------------------------------------------------------------------
 
-static void __fc mVUbadOp0  (u32 prog, u32 pc)	{ Console.Error("microVU0 Warning: Exiting... Block started with illegal opcode. [%04x] [%03d]", pc, prog); }
-static void __fc mVUbadOp1  (u32 prog, u32 pc)	{ Console.Error("microVU1 Warning: Exiting... Block started with illegal opcode. [%04x] [%03d]", pc, prog); }
+static void __fc mVUbadOp0  (u32 prog, u32 pc)	{ Console.Error("microVU0 Warning: Exiting... Block contains an illegal opcode. [%04x] [%03d]", pc, prog); }
+static void __fc mVUbadOp1  (u32 prog, u32 pc)	{ Console.Error("microVU1 Warning: Exiting... Block contains an illegal opcode. [%04x] [%03d]", pc, prog); }
 static void __fc mVUwarning0(u32 prog, u32 pc)	{ Console.Error("microVU0 Warning: Exiting from Possible Infinite Loop [%04x] [%03d]", pc, prog); }
 static void __fc mVUwarning1(u32 prog, u32 pc)	{ Console.Error("microVU1 Warning: Exiting from Possible Infinite Loop [%04x] [%03d]", pc, prog); }
 static void __fc mVUprintPC1(u32 pc)			{ Console.WriteLn("Block Start PC = 0x%04x", pc); }
@@ -160,15 +160,22 @@ void mVUexecuteInstruction(mV) {
 
 // If 1st op in block is a bad opcode, then don't compile rest of block (Dawn of Mana Level 2)
 __fi void mVUcheckBadOp(mV) {
-	if (mVUinfo.isBadOp && mVUcount == 0) {
+	if (mVUinfo.isBadOp) {
 		mVUinfo.isEOB = true;
-		Console.Warning("microVU Warning: First Instruction of block contains illegal opcode...");
+
+		// The BIOS writes upper and lower NOPs in reversed slots (bug)
+		//So to prevent spamming we ignore these, however its possible the real VU will bomb out if 
+		//this happens, so we will bomb out without warning.
+		if(mVU.code != 0x8000033c)
+			DevCon.Warning("microVU Warning: First Instruction of block contains illegal opcode...");
+		else
+			mVUinfo.isBadOp = false; //End quietly
 	}
 }
 
 // Prints msg when exiting block early if 1st op was a bad opcode (Dawn of Mana Level 2)
 __fi void handleBadOp(mV, int count) {
-	if (mVUinfo.isBadOp && count == 0) {
+	if (mVUinfo.isBadOp) {
 		mVUbackupRegs(mVU, true);
 		xMOV(gprT2, mVU.prog.cur->idx);
 		xMOV(gprT3, xPC);
@@ -504,6 +511,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		if   (branch >= 2)  { mVUinfo.isEOB = 1; if (branch == 3) { mVUinfo.isBdelay = 1; } branchWarning(mVU); break; }
 		elif (branch == 1)  { branch = 2; }
 		if   (mVUbranch)    { mVUsetFlagInfo(mVU); eBitWarning(mVU); branch = 3; mVUbranch = 0; }
+		if   (mVUinfo.isEOB) break;
 		incPC(1);
 	}
 
