@@ -9,8 +9,6 @@ if(AIO_INCLUDE_DIR AND AIO_LIBRARIES)
     set(AIO_FIND_QUIETLY TRUE)
 endif(AIO_INCLUDE_DIR AND AIO_LIBRARIES)
 
-INCLUDE(CheckCXXSymbolExists)
-
 # include dir
 find_path(AIO_INCLUDE_DIR libaio.h)
 
