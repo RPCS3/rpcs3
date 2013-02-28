@@ -417,7 +417,7 @@ void LoadglFunctions()
 
 inline bool TryBlockFormat(GLint fmt, const GLvoid* vBlockData) {
 	g_internalFloatFmt = fmt; 
-	glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_FLOAT, vBlockData);
+	glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RED, GL_FLOAT, vBlockData);
 	return (glGetError() == GL_NO_ERROR);
 }
 
@@ -611,8 +611,10 @@ bool ZZCreate(int _width, int _height)
 		
 		// We store block data on u16 rather float numbers. It's not so preciese, but ALPHA16 is OpenGL 2.0 standart
 		// and use only 16 bit. Old zerogs use red channel, but it does not work.
+
+		// Note: GL_ALPHA was dropped in GL3.0 in favor of GL_RED ... Time to upgrade -- gregory
 		
-		glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_UNSIGNED_SHORT, &vBlockData[0]);
+		glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RED, GL_UNSIGNED_SHORT, &vBlockData[0]);
 		if( glGetError() != GL_NO_ERROR ) {
 			ZZLog::Error_Log("ZZogl ERROR: could not fill blocks");
 			return false;
