@@ -96,7 +96,7 @@ float2 ps2memcoord(float2 realtex)
 	off.xy = realtex.xy-fblock.xy;
 
 #ifdef ACCURATE_DECOMPRESSION
-	off.z = tex2D(g_sBlocks, g_fTexBlock.xy*fblock + g_fTexBlock.zw).r;
+	off.zw = tex2D(g_sBlocks, g_fTexBlock.xy*fblock + g_fTexBlock.zw).ar;
 	off.x = dot(off.xy, g_fTexOffset.xy); 
 	float r = g_fTexOffset.w;
 	float f = frac(off.x);
@@ -105,7 +105,7 @@ float2 ps2memcoord(float2 realtex)
 	off.x = frac(f + fadd + r);
 	off.w -= off.x ;
 #else
-	off.z = tex2D(g_sBlocks, g_fTexBlock.xy*fblock + g_fTexBlock.zw).r;
+	off.z = tex2D(g_sBlocks, g_fTexBlock.xy*fblock + g_fTexBlock.zw).a;
 
 	// combine the two
     off.x = dot(off.xyz, g_fTexOffset.xyz)+g_fTexOffset.w;
@@ -135,10 +135,10 @@ void ps2memcoord4(float4 orgtex, out float4 off0, out float4 off1)
 	float4 colors;// = tex2D(g_sBilinearBlocks, ftransblock.xy);
 
 	// this is faster on ffx ingame
-	colors.x = tex2D(g_sBlocks, ftransblock.xy).r;
-	colors.y = tex2D(g_sBlocks, ftransblock.zy).r;
-	colors.z = tex2D(g_sBlocks, ftransblock.xw).r;
-	colors.w = tex2D(g_sBlocks, ftransblock.zw).r;
+	colors.x = tex2D(g_sBlocks, ftransblock.xy).a;
+	colors.y = tex2D(g_sBlocks, ftransblock.zy).a;
+	colors.z = tex2D(g_sBlocks, ftransblock.xw).a;
+	colors.w = tex2D(g_sBlocks, ftransblock.zw).a;
 
 	float4 fr, rem;
 
