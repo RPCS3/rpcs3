@@ -5042,23 +5042,25 @@ bool GSC_UrbanReign(const GSFrameInfo& fi, int& skip)
 
 bool GSC_SteambotChronicles(const GSFrameInfo& fi, int& skip)
 {
-	// Author: miseru99 on forums.pcsx2.net
-	if(fi.TME && fi.TPSM == PSM_PSMCT16S)
+	if(skip == 0)
 	{
-		if(fi.FBP == 0x1180)
+		// Author: miseru99 on forums.pcsx2.net
+		if(fi.TME && fi.TPSM == PSM_PSMCT16S)
 		{
-			skip=1;//1 deletes some of the glitched effects
-		}
-		else if(fi.FBP == 0)
-		{
-			skip=100;//deletes most others(too high deletes the buggy sea completely;c, too low causes glitches to be visible)
-		}
-		else if(g_aggressive && fi.FBP != 0)//Agressive CRC
-		{
-			skip=19;//"speedhack", makes the game very light, vaporized water can disappear when not looked at directly, possibly some interface still, other value to try: 6 breaks menu background, possibly nothing(?) during gameplay, but it's slower, hence not much of a speedhack anymore
+			if(fi.FBP == 0x1180)
+			{
+				skip=1;//1 deletes some of the glitched effects
+			}
+			else if(fi.FBP == 0)
+			{
+				skip=100;//deletes most others(too high deletes the buggy sea completely;c, too low causes glitches to be visible)
+			}
+			else if(g_aggressive && fi.FBP != 0)//Agressive CRC
+			{
+				skip=19;//"speedhack", makes the game very light, vaporized water can disappear when not looked at directly, possibly some interface still, other value to try: 6 breaks menu background, possibly nothing(?) during gameplay, but it's slower, hence not much of a speedhack anymore
+			}
 		}
 	}
-
 	return true;
 }
 
