@@ -1209,12 +1209,12 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 				default: cdvd.ReadMode = CDVD_MODE_2048; cdvd.BlockSize = 2048; break;
 			}
 
-			CDVD_LOG( "CdRead > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%x(%x), ReadMode=%x(%x) (1074=%x)",
-				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
+			CDVD_LOG( "CdRead > startSector=%d, seekTo=%d, nSectors=%d, RetryCnt=%x, Speed=%x(%x), ReadMode=%x(%x) (1074=%x)",
+				cdvd.Sector, cdvd.SeekToSector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
 			if( EmuConfig.CdvdVerboseReads )
 				Console.WriteLn( Color_Gray, L"CdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
-					cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
+					cdvd.SeekToSector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_CDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector,MODE_CDROM ) );
@@ -1293,12 +1293,12 @@ static void cdvdWrite04(u8 rt) { // NCOMMAND
 			cdvd.ReadMode = CDVD_MODE_2048;
 			cdvd.BlockSize = 2064;	// Why oh why was it 2064
 
-			CDVD_LOG( "DvdRead > startSector=%d, nSectors=%d, RetryCnt=%x, Speed=%x(%x), ReadMode=%x(%x) (1074=%x)",
-				cdvd.Sector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
+			CDVD_LOG( "DvdRead > startSector=%d, seekTo=%d nSectors=%d, RetryCnt=%x, Speed=%x(%x), ReadMode=%x(%x) (1074=%x)",
+				cdvd.Sector, cdvd.SeekToSector, cdvd.nSectors, cdvd.RetryCnt, cdvd.Speed, cdvd.Param[9], cdvd.ReadMode, cdvd.Param[10], psxHu32(0x1074));
 
 			if( EmuConfig.CdvdVerboseReads )
 				Console.WriteLn( Color_Gray, L"DvdRead: Reading Sector %d(%d Blocks of Size %d) at Speed=%dx",
-					cdvd.Sector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
+					cdvd.SeekToSector, cdvd.nSectors,cdvd.BlockSize,cdvd.Speed);
 
 			cdvd.ReadTime = cdvdBlockReadTime( MODE_DVDROM );
 			CDVDREAD_INT( cdvdStartSeek( cdvd.SeekToSector, MODE_DVDROM ) );
