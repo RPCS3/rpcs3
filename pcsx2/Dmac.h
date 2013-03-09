@@ -553,7 +553,7 @@ extern void setDmacStat(u32 num);
 extern tDMA_TAG *SPRdmaGetAddr(u32 addr, bool write);
 extern tDMA_TAG *dmaGetAddr(u32 addr, bool write);
 
-extern void hwIntcIrq(int n);
+extern void __fastcall hwIntcIrq(int n);
 extern void hwDmacIrq(int n);
 
 extern void FireMFIFOEmpty();

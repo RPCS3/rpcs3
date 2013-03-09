@@ -112,6 +112,8 @@ struct microUpperOp {
 	bool eBit;				// Has E-bit set
 	bool iBit;				// Has I-bit set
 	bool mBit;				// Has M-bit set
+	bool tBit;				// Has T-bit set
+	bool dBit;				// Has D-bit set
 	microVFreg VF_write;	// VF Vectors written to by this instruction
 	microVFreg VF_read[2];	// VF Vectors read by this instruction
 };
