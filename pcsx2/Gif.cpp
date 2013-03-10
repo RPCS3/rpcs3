@@ -360,7 +360,7 @@ static __fi bool mfifoGIFchain()
 	if (gifch.qwc == 0) return true;
 
 	if (gifch.madr >= dmacRegs.rbor.ADDR &&
-		gifch.madr <=(dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
+		gifch.madr < (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
 	{
 		bool ret = true;
 	//	if(gifch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge GIF");
