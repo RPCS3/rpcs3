@@ -145,6 +145,32 @@ static __fi void mfifo_VIF1chain()
 	}
 }
 
+void mfifoVifMaskMem(int id)
+{
+	switch (id) {
+		//These five transfer data following the tag, need to check its within the buffer (Front Mission 4)
+		case TAG_CNT:
+		case TAG_NEXT:
+		case TAG_CALL: 
+		case TAG_RET:
+		case TAG_END:
+			if(vif1ch.madr < dmacRegs.rbor.ADDR) //probably not needed but we will check anyway.
+			{
+				//DevCon.Warning("VIF MFIFO MADR below bottom of ring buffer, wrapping VIF MADR = %x Ring Bottom %x", vif1ch.madr, dmacRegs.rbor.ADDR);
+				vif1ch.madr = qwctag(vif1ch.madr);
+			}
+			if(vif1ch.madr > (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK)) //Usual scenario is the tag is near the end (Front Mission 4)
+			{
+				//DevCon.Warning("VIF MFIFO MADR outside top of ring buffer, wrapping VIF MADR = %x Ring Top %x", vif1ch.madr, (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK)+16);
+				vif1ch.madr = qwctag(vif1ch.madr);
+			}
+			break;
+		default:
+			//Do nothing as the MADR could be outside
+			break;
+	}
+}
+
 void mfifoVIF1transfer(int qwc)
 {
 	tDMA_TAG *ptag;
@@ -222,6 +248,8 @@ void mfifoVIF1transfer(int qwc)
         ptag[1]._u32, ptag[0]._u32, vif1ch.qwc, ptag->ID, vif1ch.madr, vif1ch.tadr, vifqwc, spr0ch.madr);
 
 		vif1.done |= hwDmacSrcChainWithStack(vif1ch, ptag->ID);
+
+		mfifoVifMaskMem(ptag->ID);
 
 		if (vif1ch.chcr.TIE && ptag->IRQ)
 		{
