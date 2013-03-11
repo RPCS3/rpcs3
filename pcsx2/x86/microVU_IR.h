@@ -259,6 +259,18 @@ public:
 		}
 	}
 
+	void TDwritebackAll(bool clearState = 0) {
+		for(int i = 0; i < xmmTotal; i++) {
+			microMapXMM& mapX = xmmMap[xmm(i).Id];
+
+			if ((mapX.VFreg > 0) && mapX.xyzw) { // Reg was modified and not Temp or vf0
+				if   (mapX.VFreg == 33) xMOVSS(ptr32[&getVI(REG_I)], xmm(i));
+				elif (mapX.VFreg == 32) mVUsaveReg(xmm(i), ptr[&regs().ACC],		 mapX.xyzw, 1);
+				else					mVUsaveReg(xmm(i), ptr[&getVF(mapX.VFreg)], mapX.xyzw, 1);
+			}
+		}
+	}
+
 	void clearReg(const xmm& reg) { clearReg(reg.Id); }
 	void clearReg(int regId) {
 		microMapXMM& clear = xmmMap[regId];

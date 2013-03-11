@@ -480,35 +480,37 @@ void* mVUcompileSingleInstruction(microVU& mVU, u32 startPC, uptr pState, microF
 
 void mVUDoDBit(microVU& mVU, microFlagCycles* mFC)
 {
+	incPC(2);
 	xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x400 : 0x4));
 	xForwardJump32 eJMP(Jcc_Zero);
 	xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x200 : 0x2));
-	xMOV( gprT2, (isVU1 ? 7 : 6));
-	xCALL( hwIntcIrq );
-	mVUendProgram(mVU, mFC, 2);
-	xMOV(gprT1, ptr32[&mVU.branch]);
-	xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], gprT1);
-	xJMP(mVU.exitFunct);
+	xOR(ptr32[&mVU.regs().flags], VUFLAG_INTCINTERRUPT);
+	mVUDTendProgram(mVU, mFC, 1);
 	eJMP.SetTarget();
+	incPC(-2);
 }
 
 void mVUDoTBit(microVU& mVU, microFlagCycles* mFC)
 {
+	incPC(2);
 	xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x800 : 0x8));
 	xForwardJump32 eJMP(Jcc_Zero);
 	xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x400 : 0x4));
-	xMOV( gprT2, (isVU1 ? 7 : 6));
-	xCALL( hwIntcIrq );
-	mVUendProgram(mVU, mFC, 2);
-	xMOV(gprT1, ptr32[&mVU.branch]);
-	xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], gprT1);
-	xJMP(mVU.exitFunct);
+	xOR(ptr32[&mVU.regs().flags], VUFLAG_INTCINTERRUPT);
+	mVUDTendProgram(mVU, mFC, 1);
 	eJMP.SetTarget();
+	incPC(-2);	
 }
 
+void mVUSaveFlags(microVU& mVU,microFlagCycles &mFC, microFlagCycles &mFCBackup)
+{
+	memcpy_fast(&mFCBackup, &mFC, sizeof(microFlagCycles));
+	mVUsetFlags(mVU, mFCBackup);	   // Sets Up Flag instances
+}
 void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 	
 	microFlagCycles mFC;
+	microFlagCycles mFCBackup;
 	u8*				thisPtr  = x86Ptr;
 	const u32		endCount = (((microRegInfo*)pState)->blockType) ? 1 : (mVU.microMemSize / 8);
 
@@ -525,9 +527,9 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		mVUopU(mVU, 0);
 		mVUcheckBadOp(mVU);
 		if (curI & _Ebit_)  { eBitPass1(mVU, branch); }
-		if (curI & _Dbit_)  { mVUup.dBit = 1; }
+		if (curI & _Dbit_)  { mVUup.dBit = 1; mVUsetFlagInfo(mVU); mVUSaveFlags(mVU, mFC, mFCBackup); }
 		if (curI & _Mbit_)  { mVUup.mBit = 1; }
-		if (curI & _Tbit_)  { mVUup.tBit = 1; branch = 2; }
+		if (curI & _Tbit_)  { mVUup.tBit = 1; mVUsetFlagInfo(mVU); mVUSaveFlags(mVU, mFC, mFCBackup); }
 		if (curI & _Ibit_)  { mVUlow.isNOP = 1; mVUup.iBit = 1; }
 		else			    { incPC(-1); mVUopL(mVU, 0); incPC(1); }
 		mVUsetCycles(mVU);
@@ -561,7 +563,10 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		if (mVUinfo.isEOB)			{ handleBadOp(mVU, x); x = 0xffff; }
 		if (mVUup.mBit)				{ xOR(ptr32[&mVU.regs().flags], VUFLAG_MFLAGSET); }
 		mVUexecuteInstruction(mVU);
-		
+		incPC(-1);
+		if(mVUup.tBit) {mVUDoTBit(mVU, &mFC); }
+		else if(mVUup.dBit) { mVUDoDBit(mVU, &mFC);}
+		incPC(1);
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
 		if (isEvilBlock)			{ mVUsetupRange(mVU, xPC, 0); normJumpCompile(mVU, mFC, 1); return thisPtr; }
 		else if (!mVUinfo.isBdelay)	{ incPC(1); }
@@ -583,10 +588,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		}
 	}
 	if ((x == endCount) && (x!=1)) { Console.Error("microVU%d: Possible infinite compiling loop!", mVU.index); }
-	incPC(-1);
-	if(mVUup.tBit) mVUDoTBit(mVU, &mFC);
-	if(mVUup.dBit) mVUDoDBit(mVU, &mFC);
-	incPC(1);
+	
 	// E-bit End
 	mVUsetupRange(mVU, xPC-8, 0);
 	mVUendProgram(mVU, &mFC, 1);

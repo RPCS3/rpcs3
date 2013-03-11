@@ -28,6 +28,62 @@ __fi int getLastFlagInst(microRegInfo& pState, int* xFlag, int flagType, int isE
 void mVU0clearlpStateJIT() { if (!microVU0.prog.cleared) memzero(microVU0.prog.lpState); }
 void mVU1clearlpStateJIT() { if (!microVU1.prog.cleared) memzero(microVU1.prog.lpState); }
 
+void mVUDTendProgram(mV, microFlagCycles* mFC, int isEbit) {
+
+	int fStatus = getLastFlagInst(mVUpBlock->pState, mFC->xStatus, 0, isEbit);
+	int fMac	= getLastFlagInst(mVUpBlock->pState, mFC->xMac,    1, isEbit);
+	int fClip	= getLastFlagInst(mVUpBlock->pState, mFC->xClip,   2, isEbit);
+	int qInst	= 0;
+	int pInst	= 0;
+	mVU.regAlloc->TDwritebackAll(); //Writing back ok, invalidating early kills the rec, so don't do it :P
+
+	if (isEbit) {
+		memzero(mVUinfo);
+		memzero(mVUregsTemp);
+		mVUincCycles(mVU, 100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
+		mVUcycles -= 100;
+		qInst = mVU.q;
+		pInst = mVU.p;
+		if (mVUinfo.doDivFlag) {
+			sFLAG.doFlag = 1;
+			sFLAG.write  = fStatus;
+			mVUdivSet(mVU);
+		}
+		if (mVUinfo.doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }
+		if (doEarlyExit(mVU)) {
+			if (!isVU1) xCALL(mVU0clearlpStateJIT);
+			else		xCALL(mVU1clearlpStateJIT);
+		}
+	}
+
+	// Save P/Q Regs
+	if (qInst) { xPSHUF.D(xmmPQ, xmmPQ, 0xe5); }
+	xMOVSS(ptr32[&mVU.regs().VI[REG_Q].UL], xmmPQ);
+	if (isVU1) {
+		xPSHUF.D(xmmPQ, xmmPQ, pInst ? 3 : 2);
+		xMOVSS(ptr32[&mVU.regs().VI[REG_P].UL], xmmPQ);
+	}
+
+	// Save Flag Instances
+	xMOV(ptr32[&mVU.regs().VI[REG_STATUS_FLAG].UL],	getFlagReg(fStatus));
+	mVUallocMFLAGa(mVU, gprT1, fMac);
+	mVUallocCFLAGa(mVU, gprT2, fClip);
+	xMOV(ptr32[&mVU.regs().VI[REG_MAC_FLAG].UL],	gprT1);
+	xMOV(ptr32[&mVU.regs().VI[REG_CLIP_FLAG].UL],	gprT2);
+
+	if (isEbit || isVU1) { // Clear 'is busy' Flags
+		if (!mVU.index || !THREAD_VU1) {
+			xAND(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
+			//xAND(ptr32[&mVU.getVifRegs().stat], ~VIF1_STAT_VEW); // Clear VU 'is busy' signal for vif
+		}
+	}
+
+	if (isEbit != 2) { // Save PC, and Jump to Exit Point
+		xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], xPC);
+		xJMP(mVU.exitFunct);
+	}
+}
+
 void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {
 
 	int fStatus = getLastFlagInst(mVUpBlock->pState, mFC->xStatus, 0, isEbit);

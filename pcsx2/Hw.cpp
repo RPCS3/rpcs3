@@ -129,8 +129,7 @@ __fi uint dmacInterrupt()
 	return 0x800;
 }
 
-//Fastcall required for VU recompilers. Test Over the Hedge when changing.
-void __fastcall hwIntcIrq(int n)
+void hwIntcIrq(int n)
 {
 	psHu32(INTC_STAT) |= 1<<n;
 	if(psHu32(INTC_MASK) & (1<<n))cpuTestINTCInts();

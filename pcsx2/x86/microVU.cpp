@@ -327,6 +327,12 @@ void recMicroVU0::Execute(u32 cycles) {
 	// woody hangs if too high on sVU (untested on mVU)
 	// Edit: Need to test this again, if anyone ever has a "Woody" game :p
 	((mVUrecCall)microVU0.startFunct)(VU0.VI[REG_TPC].UL, cycles);
+
+	if(microVU0.regs().flags & 0x4)
+	{
+		microVU0.regs().flags &= ~0x4;
+		hwIntcIrq(6);
+	}
 }
 void recMicroVU1::Execute(u32 cycles) {
 	pxAssert(m_Reserved); // please allocate me first! :|
@@ -335,6 +341,12 @@ void recMicroVU1::Execute(u32 cycles) {
 		if(!(VU0.VI[REG_VPU_STAT].UL & 0x100)) return;
 	}
 	((mVUrecCall)microVU1.startFunct)(VU1.VI[REG_TPC].UL, cycles);
+
+	if(microVU1.regs().flags & 0x4)
+	{
+		microVU1.regs().flags &= ~0x4;
+		hwIntcIrq(7);
+	}
 }
 
 void recMicroVU0::Clear(u32 addr, u32 size) {

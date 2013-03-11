@@ -82,7 +82,7 @@ struct REG_VI {
 
 //#define VUFLAG_BREAKONMFLAG		0x00000001
 #define VUFLAG_MFLAGSET			0x00000002
-
+#define VUFLAG_INTCINTERRUPT    0x00000004
 struct fdivPipe {
 	int enable;
 	REG_VI reg;
