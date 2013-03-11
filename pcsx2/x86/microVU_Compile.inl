@@ -160,16 +160,15 @@ void mVUexecuteInstruction(mV) {
 
 // If 1st op in block is a bad opcode, then don't compile rest of block (Dawn of Mana Level 2)
 __fi void mVUcheckBadOp(mV) {
-	if (mVUinfo.isBadOp) {
-		mVUinfo.isEOB = true;
 
-		// The BIOS writes upper and lower NOPs in reversed slots (bug)
-		//So to prevent spamming we ignore these, however its possible the real VU will bomb out if 
-		//this happens, so we will bomb out without warning.
-		if(mVU.code != 0x8000033c)
-			DevCon.Warning("microVU Warning: Block contains an illegal opcode...");
-		else
-			mVUinfo.isBadOp = false; //End quietly
+	// The BIOS writes upper and lower NOPs in reversed slots (bug)
+	//So to prevent spamming we ignore these, however its possible the real VU will bomb out if 
+	//this happens, so we will bomb out without warning.
+	if (mVUinfo.isBadOp && mVU.code != 0x8000033c) {
+		
+		mVUinfo.isEOB = true;
+		DevCon.Warning("microVU Warning: Block contains an illegal opcode...");
+
 	}
 }
 
@@ -479,23 +478,31 @@ void* mVUcompileSingleInstruction(microVU& mVU, u32 startPC, uptr pState, microF
 	return thisPtr;
 }
 
-void mVUDoDBit(microVU& mVU)
+void mVUDoDBit(microVU& mVU, microFlagCycles* mFC)
 {
 	xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x400 : 0x4));
 	xForwardJump32 eJMP(Jcc_Zero);
 	xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x200 : 0x2));
 	xMOV( gprT2, (isVU1 ? 7 : 6));
 	xCALL( hwIntcIrq );
+	mVUendProgram(mVU, mFC, 2);
+	xMOV(gprT1, ptr32[&mVU.branch]);
+	xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], gprT1);
+	xJMP(mVU.exitFunct);
 	eJMP.SetTarget();
 }
 
-void mVUDoTBit(microVU& mVU)
+void mVUDoTBit(microVU& mVU, microFlagCycles* mFC)
 {
 	xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x800 : 0x8));
 	xForwardJump32 eJMP(Jcc_Zero);
 	xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x400 : 0x4));
 	xMOV( gprT2, (isVU1 ? 7 : 6));
 	xCALL( hwIntcIrq );
+	mVUendProgram(mVU, mFC, 2);
+	xMOV(gprT1, ptr32[&mVU.branch]);
+	xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], gprT1);
+	xJMP(mVU.exitFunct);
 	eJMP.SetTarget();
 }
 
@@ -518,7 +525,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		mVUopU(mVU, 0);
 		mVUcheckBadOp(mVU);
 		if (curI & _Ebit_)  { eBitPass1(mVU, branch); }
-		if (curI & _Dbit_)  { mVUup.dBit = 1; branch = 2; }
+		if (curI & _Dbit_)  { mVUup.dBit = 1; }
 		if (curI & _Mbit_)  { mVUup.mBit = 1; }
 		if (curI & _Tbit_)  { mVUup.tBit = 1; branch = 2; }
 		if (curI & _Ibit_)  { mVUlow.isNOP = 1; mVUup.iBit = 1; }
@@ -554,6 +561,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		if (mVUinfo.isEOB)			{ handleBadOp(mVU, x); x = 0xffff; }
 		if (mVUup.mBit)				{ xOR(ptr32[&mVU.regs().flags], VUFLAG_MFLAGSET); }
 		mVUexecuteInstruction(mVU);
+		
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
 		if (isEvilBlock)			{ mVUsetupRange(mVU, xPC, 0); normJumpCompile(mVU, mFC, 1); return thisPtr; }
 		else if (!mVUinfo.isBdelay)	{ incPC(1); }
@@ -576,8 +584,8 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 	}
 	if ((x == endCount) && (x!=1)) { Console.Error("microVU%d: Possible infinite compiling loop!", mVU.index); }
 	incPC(-1);
-	if(mVUup.tBit) mVUDoTBit(mVU);
-	if(mVUup.dBit) mVUDoDBit(mVU);
+	if(mVUup.tBit) mVUDoTBit(mVU, &mFC);
+	if(mVUup.dBit) mVUDoDBit(mVU, &mFC);
 	incPC(1);
 	// E-bit End
 	mVUsetupRange(mVU, xPC-8, 0);
