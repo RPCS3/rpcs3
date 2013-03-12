@@ -16997,10 +16997,6 @@ Name   = Guilty Gear X Plus "By Your Side"
 Region = NTSC-K
 Compat = 5
 ---------------------------------------------
-Serial = SLPM-64549
-Name   = Shikigame no Shiro
-Region = NTSC-K
----------------------------------------------
 Serial = SLPM-65001
 Name   = Kessen
 Region = NTSC-J
@@ -31140,14 +31136,6 @@ Region = PAL-E
 Serial = SLED-53723
 Name   = Peter Jackson's king Kong [Demo]
 Region = PAL-E
----------------------------------------------
-Serial = SLED-53745
-Name   = Total Overdose [Demo]
-Region = PAL-M5
----------------------------------------------
-Serial = SLED-53745
-Name   = Total Overdose [Demo]
-Region = PAL-M5
 ---------------------------------------------
 Serial = SLED-53745
 Name   = Total Overdose [Demo]
