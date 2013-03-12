@@ -480,26 +480,111 @@ void* mVUcompileSingleInstruction(microVU& mVU, u32 startPC, uptr pState, microF
 
 void mVUDoDBit(microVU& mVU, microFlagCycles* mFC)
 {
-	incPC(2);
+	bool isBranch = false;
+	JccComparisonType Jcc;
+
+	incPC(2); //Check next slot for branch delay, if not, that's where the VU will resume anyway.
+
+	if(mVUinfo.isBdelay) isBranch = true;
+	
 	xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x400 : 0x4));
 	xForwardJump32 eJMP(Jcc_Zero);
 	xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x200 : 0x2));
 	xOR(ptr32[&mVU.regs().flags], VUFLAG_INTCINTERRUPT);
-	mVUDTendProgram(mVU, mFC, 1);
+
+	if(isBranch) 
+	{		
+		incPC(-2); // Go back to branch opcode
+
+		DevCon.Warning("D Bit on branch");
+		mVUDTendProgram(mVU, mFC, 2);
+		xCMP(ptr16[&mVU.branch], 0);
+		switch (mVUlow.branch) {
+				case 1: case 2:  Jcc = Jcc_Unconditional; DevCon.Warning("D Bit on B/BAL, might be buggy");  break; // B/BAL
+				case 9: case 10: DevCon.Warning("JR/JALR probably not supported on D Bit!");		  break; // JR/JALR
+				case 3: Jcc = Jcc_Equal;		  break; // IBEQ
+				case 4: Jcc = Jcc_GreaterOrEqual; break; // IBGEZ
+				case 5: Jcc = Jcc_Greater;		  break; // IBGTZ
+				case 6: Jcc = Jcc_LessOrEqual;	  break; // IBLEQ
+				case 7: Jcc = Jcc_Less;			  break; // IBLTZ
+				case 8: Jcc = Jcc_NotEqual;		  break; // IBNEQ
+			}
+		if(mVUlow.branch < 9) 
+		{
+			incPC(1);
+			xForwardJump8 bJMP((JccComparisonType)Jcc);
+				incPC(1); // Set PC to First instruction of Non-Taken Side
+				xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], xPC);
+				xJMP(mVU.exitFunct);
+			bJMP.SetTarget();
+			incPC(-4); // Go Back to Branch Opcode to get branchAddr
+			iPC = branchAddr/4;
+			xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], xPC);
+		}
+		else
+		{
+			xMOV(gprT1, ptr32[&mVU.branch]);
+			xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], gprT1);
+		}
+		xJMP(mVU.exitFunct);
+	}
+	else
+		mVUDTendProgram(mVU, mFC, 1);
 	eJMP.SetTarget();
-	incPC(-2);
 }
 
 void mVUDoTBit(microVU& mVU, microFlagCycles* mFC)
 {
-	incPC(2);
+	bool isBranch = false;
+	JccComparisonType Jcc;
+
+	incPC(2); //Check next slot for branch delay, if not, that's where the VU will resume anyway.
+
+	if(mVUinfo.isBdelay) isBranch = true;
+
 	xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x800 : 0x8));
 	xForwardJump32 eJMP(Jcc_Zero);
 	xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x400 : 0x4));
 	xOR(ptr32[&mVU.regs().flags], VUFLAG_INTCINTERRUPT);
-	mVUDTendProgram(mVU, mFC, 1);
+	if(isBranch) 
+	{
+		incPC(-2); // Go back to branch opcode
+
+		DevCon.Warning("T Bit on branch");
+		mVUDTendProgram(mVU, mFC, 2);
+		xCMP(ptr16[&mVU.branch], 0);
+		switch (mVUlow.branch) {
+				case 1: case 2:  Jcc = Jcc_Unconditional; DevCon.Warning("T Bit on B/BAL, might be buggy");  break; // B/BAL
+				case 9: case 10: DevCon.Warning("JR/JALR probably not supported on T Bit!");		  break; // JR/JALR
+				case 3: Jcc = Jcc_Equal;		  break; // IBEQ
+				case 4: Jcc = Jcc_GreaterOrEqual; break; // IBGEZ
+				case 5: Jcc = Jcc_Greater;		  break; // IBGTZ
+				case 6: Jcc = Jcc_LessOrEqual;	  break; // IBLEQ
+				case 7: Jcc = Jcc_Less;			  break; // IBLTZ
+				case 8: Jcc = Jcc_NotEqual;		  break; // IBNEQ
+			}
+		if(mVUlow.branch < 9) 
+		{
+			incPC(1);
+			xForwardJump8 bJMP((JccComparisonType)Jcc);
+				incPC(1); // Set PC to First instruction of Non-Taken Side
+				xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], xPC);
+				xJMP(mVU.exitFunct);
+			bJMP.SetTarget();
+			incPC(-4); // Go Back to Branch Opcode to get branchAddr
+			iPC = branchAddr/4;
+			xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], xPC);
+		}
+		else
+		{
+			xMOV(gprT1, ptr32[&mVU.branch]);
+			xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], gprT1);
+		}
+		xJMP(mVU.exitFunct);
+	}
+	else
+		mVUDTendProgram(mVU, mFC, 1);
 	eJMP.SetTarget();
-	incPC(-2);	
 }
 
 void mVUSaveFlags(microVU& mVU,microFlagCycles &mFC, microFlagCycles &mFCBackup)
@@ -563,10 +648,6 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		if (mVUinfo.isEOB)			{ handleBadOp(mVU, x); x = 0xffff; }
 		if (mVUup.mBit)				{ xOR(ptr32[&mVU.regs().flags], VUFLAG_MFLAGSET); }
 		mVUexecuteInstruction(mVU);
-		incPC(-1);
-		if(mVUup.tBit) {mVUDoTBit(mVU, &mFC); }
-		else if(mVUup.dBit) { mVUDoDBit(mVU, &mFC);}
-		incPC(1);
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
 		if (isEvilBlock)			{ mVUsetupRange(mVU, xPC, 0); normJumpCompile(mVU, mFC, 1); return thisPtr; }
 		else if (!mVUinfo.isBdelay)	{ incPC(1); }
@@ -586,6 +667,12 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 				case 8: condBranch(mVU, mFC, Jcc_NotEqual);		  return thisPtr; // IBNEQ
 			}
 		}
+
+		incPC(-2);
+		if(mVUup.tBit) { mVUDoTBit(mVU, &mFC); }
+		else if(mVUup.dBit) { mVUDoDBit(mVU, &mFC); }
+		else incPC(2);
+
 	}
 	if ((x == endCount) && (x!=1)) { Console.Error("microVU%d: Possible infinite compiling loop!", mVU.index); }
 	
