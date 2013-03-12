@@ -496,12 +496,12 @@ void mVUDoDBit(microVU& mVU, microFlagCycles* mFC)
 	{		
 		incPC(-2); // Go back to branch opcode
 
-		DevCon.Warning("D Bit on branch");
+		DevCon.Warning("microVU%d: D-Bit on branch [%04x]", getIndex, xPC);
 		mVUDTendProgram(mVU, mFC, 2);
 		xCMP(ptr16[&mVU.branch], 0);
 		switch (mVUlow.branch) {
-				case 1: case 2:  Jcc = Jcc_Unconditional; DevCon.Warning("D Bit on B/BAL, might be buggy");  break; // B/BAL
-				case 9: case 10: DevCon.Warning("JR/JALR probably not supported on D Bit!");		  break; // JR/JALR
+				case 1: case 2:  Jcc = Jcc_Unconditional; DevCon.Warning("microVU%d: D Bit on B/BAL, might be buggy", getIndex);  break; // B/BAL
+				case 9: case 10: DevCon.Warning("microVU%d: JR/JALR probably not supported on D Bit!", getIndex);		  break; // JR/JALR
 				case 3: Jcc = Jcc_Equal;		  break; // IBEQ
 				case 4: Jcc = Jcc_GreaterOrEqual; break; // IBGEZ
 				case 5: Jcc = Jcc_Greater;		  break; // IBGTZ
@@ -549,13 +549,12 @@ void mVUDoTBit(microVU& mVU, microFlagCycles* mFC)
 	if(isBranch) 
 	{
 		incPC(-2); // Go back to branch opcode
-
-		DevCon.Warning("T Bit on branch");
+		DevCon.Warning("microVU%d: T-Bit on branch [%04x]", getIndex, xPC);
 		mVUDTendProgram(mVU, mFC, 2);
 		xCMP(ptr16[&mVU.branch], 0);
 		switch (mVUlow.branch) {
-				case 1: case 2:  Jcc = Jcc_Unconditional; DevCon.Warning("T Bit on B/BAL, might be buggy");  break; // B/BAL
-				case 9: case 10: DevCon.Warning("JR/JALR probably not supported on T Bit!");		  break; // JR/JALR
+				case 1: case 2:  Jcc = Jcc_Unconditional; DevCon.Warning("microVU%d: T Bit on B/BAL, might be buggy", getIndex);  break; // B/BAL
+				case 9: case 10: DevCon.Warning("microVU%d: JR/JALR probably not supported on T Bit!", getIndex);		  break; // JR/JALR
 				case 3: Jcc = Jcc_Equal;		  break; // IBEQ
 				case 4: Jcc = Jcc_GreaterOrEqual; break; // IBGEZ
 				case 5: Jcc = Jcc_Greater;		  break; // IBGTZ
