@@ -1245,7 +1245,7 @@ void setBranchA(mP, int x, int _x_) {
 void condEvilBranch(mV, int JMPcc) {
 	if (mVUlow.badBranch) {
 		xMOV(ptr32[&mVU.branch], gprT1);
-		xMOV(ptr32[&mVU.badBranch], branchAddrN);
+		xMOV(ptr32[&mVU.badBranch], branchAddr);
 
 		xCMP(gprT1b, 0);
 		xForwardJump8 cJMP((JccComparisonType)JMPcc);
