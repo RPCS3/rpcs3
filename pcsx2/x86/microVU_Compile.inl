@@ -482,8 +482,10 @@ void mVUDoDBit(microVU& mVU, microFlagCycles* mFC)
 {
 	bool isBranch = false;
 	JccComparisonType Jcc;
+	u32 savedPC = 0;
 
 	incPC(2); //Check next slot for branch delay, if not, that's where the VU will resume anyway.
+	savedPC = iPC; //Save PC as it's about to get modified if it's a branch!
 
 	if(mVUinfo.isBdelay) isBranch = true;
 	
@@ -531,14 +533,17 @@ void mVUDoDBit(microVU& mVU, microFlagCycles* mFC)
 	else
 		mVUDTendProgram(mVU, mFC, 1);
 	eJMP.SetTarget();
+	iPC = savedPC;
 }
 
 void mVUDoTBit(microVU& mVU, microFlagCycles* mFC)
 {
 	bool isBranch = false;
 	JccComparisonType Jcc;
+	u32 savedPC = 0;
 
 	incPC(2); //Check next slot for branch delay, if not, that's where the VU will resume anyway.
+	savedPC = iPC; //Save PC as it's about to get modified if it's a branch!
 
 	if(mVUinfo.isBdelay) isBranch = true;
 
@@ -584,6 +589,7 @@ void mVUDoTBit(microVU& mVU, microFlagCycles* mFC)
 	else
 		mVUDTendProgram(mVU, mFC, 1);
 	eJMP.SetTarget();
+	iPC = savedPC;
 }
 
 void mVUSaveFlags(microVU& mVU,microFlagCycles &mFC, microFlagCycles &mFCBackup)
