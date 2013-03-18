@@ -38,8 +38,8 @@ void mVUDTendProgram(mV, microFlagCycles* mFC, int isEbit) {
 	mVU.regAlloc->TDwritebackAll(); //Writing back ok, invalidating early kills the rec, so don't do it :P
 
 	if (isEbit) {
-		memzero(mVUinfo);
-		memzero(mVUregsTemp);
+		/*memzero(mVUinfo);
+		memzero(mVUregsTemp);*/
 		mVUincCycles(mVU, 100); // Ensures Valid P/Q instances (And sets all cycle data to 0)
 		mVUcycles -= 100;
 		qInst = mVU.q;
@@ -74,7 +74,7 @@ void mVUDTendProgram(mV, microFlagCycles* mFC, int isEbit) {
 	if (isEbit || isVU1) { // Clear 'is busy' Flags
 		if (!mVU.index || !THREAD_VU1) {
 			xAND(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? ~0x100 : ~0x001)); // VBS0/VBS1 flag
-			//xAND(ptr32[&mVU.getVifRegs().stat], ~VIF1_STAT_VEW); // Clear VU 'is busy' signal for vif
+			xAND(ptr32[&mVU.getVifRegs().stat], ~VIF1_STAT_VEW); // Clear VU 'is busy' signal for vif
 		}
 	}
 
@@ -181,7 +181,31 @@ void normJumpCompile(mV, microFlagCycles& mFC, bool isEvilJump) {
 
 void normBranch(mV, microFlagCycles& mFC) {
 
-	// E-bit Branch
+	// E-bit or T-Bit or D-Bit Branch
+	if (mVUup.dBit) 
+	{
+		u32 tempPC = iPC;
+		xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x400 : 0x4));
+		xForwardJump32 eJMP(Jcc_Zero);
+		xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x200 : 0x2));
+		xOR(ptr32[&mVU.regs().flags], VUFLAG_INTCINTERRUPT);
+		iPC = branchAddr/4;
+		mVUDTendProgram(mVU, &mFC, 1);
+		eJMP.SetTarget();
+		iPC = tempPC;		
+	}
+	if (mVUup.tBit)
+	{
+		u32 tempPC = iPC;
+		xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x800 : 0x8));
+		xForwardJump32 eJMP(Jcc_Zero);
+		xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x400 : 0x4));
+		xOR(ptr32[&mVU.regs().flags], VUFLAG_INTCINTERRUPT);
+		iPC = branchAddr/4;
+		mVUDTendProgram(mVU, &mFC, 1);
+		eJMP.SetTarget();
+		iPC = tempPC;	
+	}
 	if (mVUup.eBit) { if(mVUlow.badBranch) DevCon.Warning("End on evil Unconditional branch! - Not implemented! - If game broken report to PCSX2 Team"); iPC = branchAddr/4; mVUendProgram(mVU, &mFC, 1); return; }
 	
 	if(mVUlow.badBranch)
@@ -247,6 +271,49 @@ void condJumpProcessingEvil(mV, microFlagCycles& mFC, int JMPcc) {
 }
 void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 	mVUsetupBranch(mVU, mFC);
+	
+	if (mVUup.tBit)
+	{
+		u32 tempPC = iPC;
+		xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x800 : 0x8));
+		xForwardJump32 eJMP(Jcc_Zero);
+		xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x400 : 0x4));
+		xOR(ptr32[&mVU.regs().flags], VUFLAG_INTCINTERRUPT);
+		mVUDTendProgram(mVU, &mFC, 2);
+		xCMP(ptr16[&mVU.branch], 0);
+		xForwardJump8 tJMP((JccComparisonType)JMPcc);
+			incPC(4); // Set PC to First instruction of Non-Taken Side
+			xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], xPC);
+			xJMP(mVU.exitFunct);
+		eJMP.SetTarget();
+		incPC(-4); // Go Back to Branch Opcode to get branchAddr
+		iPC = branchAddr/4;
+		xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], xPC);
+		xJMP(mVU.exitFunct);
+		tJMP.SetTarget();
+		iPC = tempPC;	
+	}
+	if (mVUup.dBit) 
+	{
+		u32 tempPC = iPC;
+		xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x400 : 0x4));
+		xForwardJump32 eJMP(Jcc_Zero);
+		xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x200 : 0x2));
+		xOR(ptr32[&mVU.regs().flags], VUFLAG_INTCINTERRUPT);
+		mVUDTendProgram(mVU, &mFC, 2);
+		xCMP(ptr16[&mVU.branch], 0);
+		xForwardJump8 dJMP((JccComparisonType)JMPcc);
+			incPC(4); // Set PC to First instruction of Non-Taken Side
+			xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], xPC);
+			xJMP(mVU.exitFunct);
+		dJMP.SetTarget();
+		incPC(-4); // Go Back to Branch Opcode to get branchAddr
+		iPC = branchAddr/4;
+		xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], xPC);
+		xJMP(mVU.exitFunct);
+		eJMP.SetTarget();
+		iPC = tempPC;		
+	}
 	xCMP(ptr16[&mVU.branch], 0);
 	incPC(3);
 	if (mVUup.eBit) { // Conditional Branch With E-Bit Set
@@ -330,6 +397,30 @@ void normJump(mV, microFlagCycles& mFC) {
 
 		}
 		incPC(-3);
+	}
+	if (mVUup.dBit) 
+	{
+		xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x400 : 0x4));
+		xForwardJump32 eJMP(Jcc_Zero);
+		xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x200 : 0x2));
+		xOR(ptr32[&mVU.regs().flags], VUFLAG_INTCINTERRUPT);
+		mVUDTendProgram(mVU, &mFC, 2);
+		xMOV(gprT1, ptr32[&mVU.branch]);
+		xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], gprT1);
+		xJMP(mVU.exitFunct);
+		eJMP.SetTarget();	
+	}
+	if (mVUup.tBit)
+	{
+		xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x800 : 0x8));
+		xForwardJump32 eJMP(Jcc_Zero);
+		xOR(ptr32[&VU0.VI[REG_VPU_STAT].UL], (isVU1 ? 0x400 : 0x4));
+		xOR(ptr32[&mVU.regs().flags], VUFLAG_INTCINTERRUPT);
+		mVUDTendProgram(mVU, &mFC, 2);
+		xMOV(gprT1, ptr32[&mVU.branch]);
+		xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], gprT1);
+		xJMP(mVU.exitFunct);
+		eJMP.SetTarget();
 	}
 	if (mVUup.eBit) { // E-bit Jump
 		mVUendProgram(mVU, &mFC, 2);
