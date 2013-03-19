@@ -37,9 +37,6 @@ u8 eeprom[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-
-int Log = 1;
-
 u32 *iopPC;
 
 const unsigned char version  = PS2E_DEV9_VERSION;
@@ -68,7 +65,11 @@ u32 CALLBACK PS2EgetLibVersion2(u32 type) {
 	return (version<<16) | (revision<<8) | build;
 }
 
+// Warning: The below log function is SLOW. Better fix it before attempting to use it.
+int Log = 0;
+
 void __Log(char *fmt, ...) {
+	if (!Log) return;
 	va_list list;
 
 	static int ticks=-1;
@@ -76,7 +77,6 @@ void __Log(char *fmt, ...) {
 
 	if(ticks==-1) ticks=nticks;
 
-//	if (!Log) return;
 	if(iopPC!=NULL)
 	{
 		fprintf(dev9Log,"[%10d + %4d, IOP PC = %08x] ",nticks,nticks-ticks,*iopPC);
