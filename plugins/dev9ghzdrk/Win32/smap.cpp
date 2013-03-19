@@ -101,19 +101,7 @@ void rx_process(NetPacket* pk)
 	pbd->ctrl_stat&= ~SMAP_BD_RX_EMPTY;
 
 	//increase frame count
-	u8* cntptr=&dev9Ru8(SMAP_R_RXFIFO_FRAME_CNT);
-
-#ifdef WIN_X64
-	*cntptr++; //no asm inline in x64
-#else
-	__asm 
-	{ 
-		//this is silly
-		mov eax,[cntptr];
-		lock inc byte ptr [eax] 
-	}
-#endif
-
+	dev9Ru8(SMAP_R_RXFIFO_FRAME_CNT)++;
 	//spams// emu_printf("Got packet, %d bytes (%d fifo)\n", pk->size,bytes);
 	_DEV9irq(SMAP_INTR_RXEND,0);//now ? or when the fifo is full ? i guess now atm
 								//note that this _is_ wrong since the IOP interrupt system is not thread safe.. but nothing i can do about that
@@ -131,15 +119,15 @@ void tx_process()
 	//spams// printf("tx_process : %d cnt frames !\n",cnt);
 
 	//						this hack worsens OPL performance. Is it really needed? OPL works fine without. (rama)
-	if (!tx_p_first)
-	{
-		dev9Ru8(SMAP_R_TXFIFO_FRAME_CNT)=0;
-		tx_p_first=true;
-		//THIS IS A HACK.without that the stack wont init, i guess its missing e3/emac emulation ..
-		emu_printf("WARN : First packet interrupt hack ..\n");
-		_DEV9irq(SMAP_INTR_RXEND|SMAP_INTR_TXEND|SMAP_INTR_TXDNV,100);
-		return;
-	}
+	//if (!tx_p_first)
+	//{
+	//	dev9Ru8(SMAP_R_TXFIFO_FRAME_CNT)=0;
+	//	tx_p_first=true;
+	//	//THIS IS A HACK.without that the stack wont init, i guess its missing e3/emac emulation ..
+	//	emu_printf("WARN : First packet interrupt hack ..\n");
+	//	_DEV9irq(SMAP_INTR_RXEND|SMAP_INTR_TXEND|SMAP_INTR_TXDNV,100);
+	//	return;
+	//}
 
 	NetPacket pk;
 	int fc=0;
@@ -554,17 +542,7 @@ void CALLBACK smap_write8(u32 addr, u8 value)
 		DEV9_LOG("SMAP_R_RXFIFO_FRAME_DEC 8bit write %x\n", value);
 		dev9Ru8(addr) = value;
 		{
-			u8* cntptr=&dev9Ru8(SMAP_R_RXFIFO_FRAME_CNT);
-#ifdef WIN_X64
-			*cntptr--; //no asm inline in x64
-#else
-			__asm 
-			{ 
-				//this is silly
-				mov eax,[cntptr];
-				lock dec byte ptr [eax] 
-			}
-#endif
+			dev9Ru8(SMAP_R_RXFIFO_FRAME_CNT)--;
 		}
 		return;
 

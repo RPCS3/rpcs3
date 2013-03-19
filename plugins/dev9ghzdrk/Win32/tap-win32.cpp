@@ -64,11 +64,7 @@
 #define USERMODEDEVICEDIR "\\\\.\\Global\\"
 #define TAPSUFFIX         ".tap"
 
-#ifdef WIN_X64
-#define TAP_COMPONENT_ID "tap0901"
-#else
 #define TAP_COMPONENT_ID "tap0801"
-#endif
 
 vector<string>* get_tap_reg ()
 {

@@ -62,11 +62,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="DEV9ghzdrk.def">
-      <Filter>Source Files</Filter>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="mtfifo.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -93,5 +88,10 @@
     <ResourceCompile Include="DEV9ghzdrk.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DEV9ghzdrk.def">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
