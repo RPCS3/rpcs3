@@ -1,0 +1,97 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{c269b350-967d-41e2-9e0e-e454d5bc53c4}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Source Files\smap">
+      <UniqueIdentifier>{c19bd699-ac94-4cd8-bb19-c8c47a0a4608}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ethernet i/o">
+      <UniqueIdentifier>{02c8fe11-fda9-4bc5-80c0-399198b16979}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ethernet i/o\pcap">
+      <UniqueIdentifier>{1c0eef21-bc05-4eaa-9984-27d43ea85743}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ethernet i/o\tap">
+      <UniqueIdentifier>{8768cdfe-28b8-4cc5-a92e-c4f3f77d7660}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ethernet i/o\sock">
+      <UniqueIdentifier>{63c91c1b-ddb1-49de-b9e1-198780595d23}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{068d3325-67a3-42e1-9091-91d5b4228dea}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{30994d8f-3093-437c-8bb0-5d22f02f59ef}</UniqueIdentifier>
+      <Extensions>ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Config.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Win32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="smap.cpp">
+      <Filter>Source Files\smap</Filter>
+    </ClCompile>
+    <ClCompile Include="net.cpp">
+      <Filter>Source Files\ethernet i/o</Filter>
+    </ClCompile>
+    <ClCompile Include="tap-win32.cpp">
+      <Filter>Source Files\ethernet i/o\tap</Filter>
+    </ClCompile>
+    <ClCompile Include="icmp.cpp">
+      <Filter>Source Files\ethernet i/o\sock</Filter>
+    </ClCompile>
+    <ClCompile Include="socket_io.cpp">
+      <Filter>Source Files\ethernet i/o\sock</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DEV9.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\flash.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\pcap_io.cpp">
+      <Filter>Source Files\ethernet i/o\pcap</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DEV9ghzdrk.def">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="mtfifo.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="smap.h">
+      <Filter>Source Files\smap</Filter>
+    </ClInclude>
+    <ClInclude Include="net.h">
+      <Filter>Source Files\ethernet i/o</Filter>
+    </ClInclude>
+    <ClInclude Include="pcap_io.h">
+      <Filter>Source Files\ethernet i/o\pcap</Filter>
+    </ClInclude>
+    <ClInclude Include="tap.h">
+      <Filter>Source Files\ethernet i/o\tap</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DEV9.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\PS2Edefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="DEV9ghzdrk.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>
