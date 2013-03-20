@@ -118,16 +118,16 @@ void tx_process()
 	u32 cnt=dev9Ru8(SMAP_R_TXFIFO_FRAME_CNT);
 	//spams// printf("tx_process : %d cnt frames !\n",cnt);
 
-	//						this hack worsens OPL performance. Is it really needed? OPL works fine without. (rama)
-	//if (!tx_p_first)
-	//{
-	//	dev9Ru8(SMAP_R_TXFIFO_FRAME_CNT)=0;
-	//	tx_p_first=true;
-	//	//THIS IS A HACK.without that the stack wont init, i guess its missing e3/emac emulation ..
-	//	emu_printf("WARN : First packet interrupt hack ..\n");
-	//	_DEV9irq(SMAP_INTR_RXEND|SMAP_INTR_TXEND|SMAP_INTR_TXDNV,100);
-	//	return;
-	//}
+	//Hack needed for GT4. Game fails to init the adapter otherwise (and notices about that via IOP kprintf on bootup).
+	if (!tx_p_first)
+	{
+		dev9Ru8(SMAP_R_TXFIFO_FRAME_CNT)=0;
+		tx_p_first=true;
+		//THIS IS A HACK.without that the stack wont init, i guess its missing e3/emac emulation ..
+		emu_printf("WARN : First packet interrupt hack ..\n");
+		_DEV9irq(SMAP_INTR_RXEND|SMAP_INTR_TXEND|SMAP_INTR_TXDNV,100);
+		return;
+	}
 
 	NetPacket pk;
 	int fc=0;
