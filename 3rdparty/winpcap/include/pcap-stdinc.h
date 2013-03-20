@@ -66,7 +66,8 @@
 #define strdup _strdup
 #endif
 
-#define inline __inline 
+// PCSX2 note: MSVC2012 error with DEV9ghzdrk because of a macro redefinition here
+//#define inline __inline 
 
 #ifdef __MINGW32__
 #include <stdint.h>
