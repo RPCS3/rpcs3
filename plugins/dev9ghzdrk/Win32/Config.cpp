@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include <winsock2.h>
-#include "DEV9.h"
+#include "..\DEV9.h"
 
 #define GetKeyV(name, var, s, t) \
 	size = s; type = t; \

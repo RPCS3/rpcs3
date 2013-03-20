@@ -1,5 +1,5 @@
 #pragma once
-#include "dev9.h"
+#include "..\dev9.h"
 
 u8 CALLBACK smap_read8(u32 addr);
 u16 CALLBACK smap_read16(u32 addr);

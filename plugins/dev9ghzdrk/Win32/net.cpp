@@ -1,5 +1,5 @@
 #include "net.h"
-#include "Dev9.h"
+#include "..\Dev9.h"
 
 //mtfifo<NetPacket*> rx_fifo;
 //mtfifo<NetPacket*> tx_fifo;

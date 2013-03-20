@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include "tap.h"
-#include "dev9.h"
+#include "..\dev9.h"
 #include <string>
 
 //=============

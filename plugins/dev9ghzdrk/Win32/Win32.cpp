@@ -5,7 +5,7 @@
 
 #include "Config.h"
 #include "resource.h"
-#include "DEV9.h"
+#include "..\DEV9.h"
 #include "pcap.h"
 #include "pcap_io.h"
 #include "net.h"
