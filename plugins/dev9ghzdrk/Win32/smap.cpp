@@ -107,11 +107,12 @@ void rx_process(NetPacket* pk)
 								//note that this _is_ wrong since the IOP interrupt system is not thread safe.. but nothing i can do about that
 }
 
-bool tx_p_first=false;
 u32 wswap(u32 d)
 {
 	return (d>>16)|(d<<16);
 }
+
+extern bool tx_p_first;
 void tx_process()
 {
 	//we loop based on count ? or just *use* it ?
@@ -119,9 +120,10 @@ void tx_process()
 	//spams// printf("tx_process : %d cnt frames !\n",cnt);
 
 	//Hack needed for GT4. Game fails to init the adapter otherwise (and notices about that via IOP kprintf on bootup).
+	//Reseting SMAP_R_TXFIFO_FRAME_CNT to 0 however breaks OPL. Thankfully not doing that fixes the problem while GT4 still works. 
 	if (!tx_p_first)
 	{
-		dev9Ru8(SMAP_R_TXFIFO_FRAME_CNT)=0;
+		//dev9Ru8(SMAP_R_TXFIFO_FRAME_CNT)=0;
 		tx_p_first=true;
 		//THIS IS A HACK.without that the stack wont init, i guess its missing e3/emac emulation ..
 		emu_printf("WARN : First packet interrupt hack ..\n");

@@ -168,12 +168,15 @@ void CALLBACK DEV9shutdown() {
 #endif
 }
 
+bool tx_p_first;
 s32 CALLBACK DEV9open(void *pDsp) 
 {
 	DEV9_LOG("DEV9open\n");
 	LoadConf();
 	DEV9_LOG("open r+: %s\n", config.Hdd);
 	config.HddSize = 8*1024;
+	
+	tx_p_first=false; // reset stack init hack so it works on game reboots 
 
 	iopPC = (u32*)pDsp;
 	
