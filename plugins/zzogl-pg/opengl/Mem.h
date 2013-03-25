@@ -150,7 +150,7 @@ struct BLOCK
 	_TransferLocalHost TransferLocalHost;
 
 	// texture must be of dims BLOCK_TEXWIDTH and BLOCK_TEXHEIGHT
-	static void FillBlocks(std::vector<char>& vBlockData, std::vector<char>& vBilinearData, int floatfmt);
+	static void FillBlocks(std::vector<char>& vBlockData, std::vector<char>& vBilinearData);
 	
 	void SetDim(u32 bw, u32 bh, u32 ox2, u32 oy2, u32 mult2)
 	{

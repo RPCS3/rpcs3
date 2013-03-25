@@ -428,7 +428,7 @@ void TransferLocalHost24Z(void* pbyMem, u32 nQWordSize) { FUNCLOG }
 void TransferLocalHost16Z(void* pbyMem, u32 nQWordSize) { FUNCLOG }
 void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize) { FUNCLOG }
 
-inline void FILL_BLOCK(BLOCK& b, int floatfmt, vector<char>& vBlockData, vector<char>& vBilinearData, int ox, int oy, int psmX) { 
+inline void FILL_BLOCK(BLOCK& b, vector<char>& vBlockData, vector<char>& vBilinearData, int ox, int oy, int psmX) {
 	int bw = ZZ_DT[psmX][4] + 1;
 	int bh = ZZ_DT[psmX][3] + 1;
 	int mult = 1 << ZZ_DT[psmX][0];
@@ -448,36 +448,28 @@ inline void FILL_BLOCK(BLOCK& b, int floatfmt, vector<char>& vBlockData, vector<
 	// This is never true.
 	//assert( sizeof(g_pageTable[psmX]) == bw*bh*sizeof(g_pageTable[psmX][0][0]) ); 
 	float* psrcf = (float*)&vBlockData[0] + ox + oy * BLOCK_TEXWIDTH; 
-	u16* psrcw = (u16*)&vBlockData[0] + ox + oy * BLOCK_TEXWIDTH; 
 	for(int i = 0; i < bh; ++i) { 
 		for(int j = 0; j < bw; ++j) { 
 			/* fill the table */ 
 			u32 u = g_blockTable[psmX][(i / b.colheight)][(j / b.colwidth)] * 64 * mult + g_columnTable[psmX][i%b.colheight][j%b.colwidth]; 
 			b.pageTable[i][j] = u; 
-			if( floatfmt ) { 
-				psrcf[i*BLOCK_TEXWIDTH+j] = (float)(u) / (float)(GPU_TEXWIDTH*mult); 
-			} 
-			else { 
-				psrcw[i*BLOCK_TEXWIDTH+j] = u; 
-			} 
+			psrcf[i*BLOCK_TEXWIDTH+j] = (float)(u) / (float)(GPU_TEXWIDTH*mult);
 		} 
 	} 
 	
-	if( floatfmt ) { 
-		float4* psrcv = (float4*)&vBilinearData[0] + ox + oy * BLOCK_TEXWIDTH; 
-		for(int i = 0; i < bh; ++i) { 
-			for(int j = 0; j < bw; ++j) { 
-				float4* pv = &psrcv[i*BLOCK_TEXWIDTH+j]; 
-				pv->x = psrcf[i*BLOCK_TEXWIDTH+j]; 
-				pv->y = psrcf[i*BLOCK_TEXWIDTH+((j+1)%bw)]; 
-				pv->z = psrcf[((i+1)%bh)*BLOCK_TEXWIDTH+j]; 
-				pv->w = psrcf[((i+1)%bh)*BLOCK_TEXWIDTH+((j+1)%bw)]; 
-			} 
+	float4* psrcv = (float4*)&vBilinearData[0] + ox + oy * BLOCK_TEXWIDTH;
+	for(int i = 0; i < bh; ++i) {
+		for(int j = 0; j < bw; ++j) {
+			float4* pv = &psrcv[i*BLOCK_TEXWIDTH+j];
+			pv->x = psrcf[i*BLOCK_TEXWIDTH+j];
+			pv->y = psrcf[i*BLOCK_TEXWIDTH+((j+1)%bw)];
+			pv->z = psrcf[((i+1)%bh)*BLOCK_TEXWIDTH+j];
+			pv->w = psrcf[((i+1)%bh)*BLOCK_TEXWIDTH+((j+1)%bw)];
 		} 
 	} 
 }
 
-void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, int floatfmt)
+void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData)
 {
 	FUNCLOG
 	vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * (floatfmt ? 4 : 2));
@@ -490,7 +482,7 @@ void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, in
 	memset(m_Blocks, 0, sizeof(m_Blocks));
 
 	// 32
-	FILL_BLOCK(b, floatfmt,  vBlockData, vBilinearData, 0, 0, PSMCT32);
+	FILL_BLOCK(b,  vBlockData, vBilinearData, 0, 0, PSMCT32);
 	b.TransferHostLocal = TransferHostLocal32;
 	b.TransferLocalHost = TransferLocalHost32;
 	m_Blocks[PSMCT32] = b;
@@ -514,7 +506,7 @@ void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, in
 	m_Blocks[PSMT4HH] = b;
 
 	// 32z
-	FILL_BLOCK(b, floatfmt, vBlockData, vBilinearData, 64, 0, PSMT32Z);
+	FILL_BLOCK(b, vBlockData, vBilinearData, 64, 0, PSMT32Z);
 	b.TransferHostLocal = TransferHostLocal32Z;
 	b.TransferLocalHost = TransferLocalHost32Z;
 	m_Blocks[PSMT32Z] = b;
@@ -525,37 +517,37 @@ void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, in
 	m_Blocks[PSMT24Z] = b;
 
 	// 16
-	FILL_BLOCK(b, floatfmt,  vBlockData, vBilinearData,  0, 32, PSMCT16);
+	FILL_BLOCK(b,  vBlockData, vBilinearData,  0, 32, PSMCT16);
 	b.TransferHostLocal = TransferHostLocal16;
 	b.TransferLocalHost = TransferLocalHost16;
 	m_Blocks[PSMCT16] = b;
 
 	// 16s
-	FILL_BLOCK(b, floatfmt,  vBlockData, vBilinearData,  64, 32, PSMCT16S);
+	FILL_BLOCK(b,  vBlockData, vBilinearData,  64, 32, PSMCT16S);
 	b.TransferHostLocal = TransferHostLocal16S;
 	b.TransferLocalHost = TransferLocalHost16S;
 	m_Blocks[PSMCT16S] = b;
 
 	// 16z
-	FILL_BLOCK(b, floatfmt,  vBlockData, vBilinearData,  0, 96, PSMT16Z);
+	FILL_BLOCK(b,  vBlockData, vBilinearData,  0, 96, PSMT16Z);
 	b.TransferHostLocal = TransferHostLocal16Z;
 	b.TransferLocalHost = TransferLocalHost16Z;
 	m_Blocks[PSMT16Z] = b;
 
 	// 16sz
-	FILL_BLOCK(b, floatfmt,  vBlockData, vBilinearData, 64, 96, PSMT16SZ);
+	FILL_BLOCK(b,  vBlockData, vBilinearData, 64, 96, PSMT16SZ);
 	b.TransferHostLocal = TransferHostLocal16SZ;
 	b.TransferLocalHost = TransferLocalHost16SZ;
 	m_Blocks[PSMT16SZ] = b;
 
 	// 8
-	FILL_BLOCK(b, floatfmt,  vBlockData, vBilinearData,  0, 160, PSMT8);
+	FILL_BLOCK(b,  vBlockData, vBilinearData,  0, 160, PSMT8);
 	b.TransferHostLocal = TransferHostLocal8;
 	b.TransferLocalHost = TransferLocalHost8;
 	m_Blocks[PSMT8] = b;
 
 	// 4
-	FILL_BLOCK(b, floatfmt,  vBlockData, vBilinearData,  0, 224, PSMT4);
+	FILL_BLOCK(b,  vBlockData, vBilinearData,  0, 224, PSMT4);
 	b.TransferHostLocal = TransferHostLocal4;
 	b.TransferLocalHost = TransferLocalHost4;
 	m_Blocks[PSMT4] = b;

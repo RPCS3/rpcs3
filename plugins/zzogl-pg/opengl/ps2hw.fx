@@ -96,7 +96,7 @@ float2 ps2memcoord(float2 realtex)
 	off.xy = realtex.xy-fblock.xy;
 
 #ifdef ACCURATE_DECOMPRESSION
-	off.zw = tex2D(g_sBlocks, g_fTexBlock.xy*fblock + g_fTexBlock.zw).ar;
+	off.z = tex2D(g_sBlocks, g_fTexBlock.xy*fblock + g_fTexBlock.zw).a;
 	off.x = dot(off.xy, g_fTexOffset.xy); 
 	float r = g_fTexOffset.w;
 	float f = frac(off.x);
