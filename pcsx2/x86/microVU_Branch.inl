@@ -172,6 +172,15 @@ void normJumpCompile(mV, microFlagCycles& mFC, bool isEvilJump) {
 	if (doJumpCaching)	xMOV(gprT3, (uptr)mVUpBlock);
 	else				xMOV(gprT3, (uptr)&mVUpBlock->pStateEnd);
 
+	if(mVUup.eBit && isEvilJump)// E-bit EvilJump
+	{
+		//Xtreme G 3 does 2 conditional jumps, the first contains an E Bit on the first instruction
+		//So if it is taken, you need to end the program, else you get infinite loops.
+		mVUendProgram(mVU, &mFC, 2);
+		xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], gprT2);
+		xJMP(mVU.exitFunct);
+	}
+	
 	if (!mVU.index) xCALL(mVUcompileJIT<0>); //(u32 startPC, uptr pState)
 	else			xCALL(mVUcompileJIT<1>);
 
