@@ -149,7 +149,12 @@ namespace YAML
 			return false;
 		}
 		
-		template<typename T>
+		inline bool node_data::equals(node& node, const char *rhs, shared_memory_holder pMemory)
+		{
+            return equals<std::string>(node, rhs, pMemory);
+		}
+
+        template<typename T>
 		inline node& node_data::convert_to_node(const T& rhs, shared_memory_holder pMemory)
 		{
 			Node value = convert<T>::encode(rhs);

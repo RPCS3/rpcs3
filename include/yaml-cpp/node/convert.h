@@ -47,7 +47,22 @@ namespace YAML
 		}
 	};
 	
+	// C-strings can only be encoded
 	template<>
+	struct convert<const char *> {
+		static Node encode(const char *&rhs) {
+			return Node(rhs);
+		}
+	};
+
+	template<std::size_t N>
+	struct convert<const char[N]> {
+		static Node encode(const char (&rhs)[N]) {
+			return Node(rhs);
+		}
+	};
+
+    template<>
 	struct convert<_Null> {
 		static Node encode(const _Null& /* rhs */) {
 			return Node();
