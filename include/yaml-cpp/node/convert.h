@@ -58,7 +58,7 @@ namespace YAML
 		}
 	};
 	
-#define YAML_DEFINE_CONVERT_STREAMABLE(type)\
+#define YAML_DEFINE_CONVERT_STREAMABLE(type, negative_op)\
 	template<>\
 	struct convert<type> {\
 		static Node encode(const type& rhs) {\
@@ -80,7 +80,7 @@ namespace YAML
                     rhs = std::numeric_limits<type>::infinity();\
                     return true;\
                 } else if(conversion::IsNegativeInfinity(input)) {\
-                    rhs = -std::numeric_limits<type>::infinity();\
+                    rhs = negative_op std::numeric_limits<type>::infinity();\
                     return true;\
                 }\
             }\
@@ -94,22 +94,30 @@ namespace YAML
 		}\
 	}
 	
-	YAML_DEFINE_CONVERT_STREAMABLE(int);
-	YAML_DEFINE_CONVERT_STREAMABLE(unsigned);
-	YAML_DEFINE_CONVERT_STREAMABLE(short);
-	YAML_DEFINE_CONVERT_STREAMABLE(unsigned short);
-	YAML_DEFINE_CONVERT_STREAMABLE(long);
-	YAML_DEFINE_CONVERT_STREAMABLE(unsigned long);
-	YAML_DEFINE_CONVERT_STREAMABLE(long long);
-	YAML_DEFINE_CONVERT_STREAMABLE(unsigned long long);
+#define YAML_DEFINE_CONVERT_STREAMABLE_SIGNED(type)\
+    YAML_DEFINE_CONVERT_STREAMABLE(type, -)
+
+#define YAML_DEFINE_CONVERT_STREAMABLE_UNSIGNED(type)\
+    YAML_DEFINE_CONVERT_STREAMABLE(type, +)
+
+    YAML_DEFINE_CONVERT_STREAMABLE_SIGNED(int);
+	YAML_DEFINE_CONVERT_STREAMABLE_SIGNED(short);
+	YAML_DEFINE_CONVERT_STREAMABLE_SIGNED(long);
+	YAML_DEFINE_CONVERT_STREAMABLE_SIGNED(long long);
+	YAML_DEFINE_CONVERT_STREAMABLE_SIGNED(unsigned);
+	YAML_DEFINE_CONVERT_STREAMABLE_UNSIGNED(unsigned short);
+	YAML_DEFINE_CONVERT_STREAMABLE_UNSIGNED(unsigned long);
+	YAML_DEFINE_CONVERT_STREAMABLE_UNSIGNED(unsigned long long);
 	
-	YAML_DEFINE_CONVERT_STREAMABLE(char);
-	YAML_DEFINE_CONVERT_STREAMABLE(unsigned char);
+	YAML_DEFINE_CONVERT_STREAMABLE_SIGNED(char);
+	YAML_DEFINE_CONVERT_STREAMABLE_UNSIGNED(unsigned char);
 	
-	YAML_DEFINE_CONVERT_STREAMABLE(float);
-	YAML_DEFINE_CONVERT_STREAMABLE(double);
-	YAML_DEFINE_CONVERT_STREAMABLE(long double);
+	YAML_DEFINE_CONVERT_STREAMABLE_SIGNED(float);
+	YAML_DEFINE_CONVERT_STREAMABLE_SIGNED(double);
+	YAML_DEFINE_CONVERT_STREAMABLE_SIGNED(long double);
 	
+#undef YAML_DEFINE_CONVERT_STREAMABLE_SIGNED
+#undef YAML_DEFINE_CONVERT_STREAMABLE_UNSIGNED
 #undef YAML_DEFINE_CONVERT_STREAMABLE
 	
 	// bool
