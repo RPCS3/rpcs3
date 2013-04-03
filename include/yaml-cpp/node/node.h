@@ -56,7 +56,7 @@ namespace YAML
 		bool is(const Node& rhs) const;
 		template<typename T> Node& operator=(const T& rhs);
 		Node& operator=(const Node& rhs);
-        void clear();
+        void reset(const Node& rhs = Node());
         
 		// size/iterator
 		std::size_t size() const;

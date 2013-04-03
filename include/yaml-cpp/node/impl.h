@@ -168,9 +168,10 @@ namespace YAML
 		return *this;
 	}
 	
-    inline void Node::clear()
+    inline void Node::reset(const YAML::Node& rhs)
     {
-        m_pNode = NULL;
+        m_pMemory = rhs.m_pMemory;
+        m_pNode = rhs.m_pNode;
     }
 
 	template<typename T>

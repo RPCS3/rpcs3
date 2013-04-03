@@ -444,12 +444,17 @@ namespace Test
             return true;
         }
         
-        TEST ClearNode()
+        TEST ResetNode()
         {
             YAML::Node node = YAML::Load("[1, 2, 3]");
             YAML_ASSERT(!node.IsNull());
-            node.clear();
+            YAML::Node other = node;
+            node.reset();
             YAML_ASSERT(node.IsNull());
+            YAML_ASSERT(!other.IsNull());
+            node.reset(other);
+            YAML_ASSERT(!node.IsNull());
+            YAML_ASSERT(other == node);
             return true;
         }
     }
@@ -510,7 +515,7 @@ namespace Test
 		RunNodeTest(&Node::CloneMap, "clone map", passed, total);
 		RunNodeTest(&Node::CloneAlias, "clone alias", passed, total);
         RunNodeTest(&Node::ForceInsertIntoMap, "force insert into map", passed, total);
-        RunNodeTest(&Node::ClearNode, "clear node", passed, total);
+        RunNodeTest(&Node::ResetNode, "reset node", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
