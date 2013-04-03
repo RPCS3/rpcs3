@@ -168,7 +168,19 @@ namespace Test
 			return true;
 		}
 		
-		TEST SimpleAlias()
+		TEST StdPair()
+		{
+			std::pair<int, std::string> p;
+            p.first = 5;
+            p.second = "five";
+			
+			YAML::Node node;
+			node["pair"] = p;
+			YAML_ASSERT((node["pair"].as<std::pair<int, std::string> >() == p));
+			return true;
+		}
+
+        TEST SimpleAlias()
 		{
 			YAML::Node node;
 			node["foo"] = "value";
@@ -463,8 +475,9 @@ namespace Test
 		TEST ret;
 		try {
 			ret = test();
-		} catch(...) {
+		} catch(const std::exception& e) {
 			ret.ok = false;
+            ret.error = e.what();
 		}
 		if(ret.ok) {
 			passed++;
@@ -492,6 +505,7 @@ namespace Test
 		RunNodeTest(&Node::StdVector, "std::vector", passed, total);
 		RunNodeTest(&Node::StdList, "std::list", passed, total);
 		RunNodeTest(&Node::StdMap, "std::map", passed, total);
+		RunNodeTest(&Node::StdPair, "std::pair", passed, total);
 		RunNodeTest(&Node::SimpleAlias, "simple alias", passed, total);
 		RunNodeTest(&Node::AliasAsKey, "alias as key", passed, total);
 		RunNodeTest(&Node::SelfReferenceSequence, "self reference sequence", passed, total);

@@ -223,6 +223,38 @@ namespace YAML
 		}
 	};
     
+	// std::pair
+	template<typename T, typename U>
+	struct convert<std::pair<T, U> > {
+		static Node encode(const std::pair<T, U>& rhs) {
+			Node node(NodeType::Sequence);
+            node.push_back(rhs.first);
+            node.push_back(rhs.second);
+			return node;
+		}
+		
+		static bool decode(const Node& node, std::pair<T, U>& rhs) {
+			if(!node.IsSequence())
+				return false;
+            if (node.size() != 2)
+                return false;
+
+#if defined(__GNUC__) && __GNUC__ < 4
+//workaround for GCC 3:
+				rhs.first = node[0].template as<T>();
+#else
+				rhs.first = node[0].as<T>();
+#endif
+#if defined(__GNUC__) && __GNUC__ < 4
+//workaround for GCC 3:
+				rhs.second = node[1].template as<U>();
+#else
+				rhs.second = node[1].as<U>();
+#endif
+			return true;
+		}
+	};
+
     // binary
     template<>
 	struct convert<Binary> {
