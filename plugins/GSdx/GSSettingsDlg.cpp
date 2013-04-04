@@ -105,7 +105,7 @@ void GSSettingsDlg::OnInit()
 					buf, size,
 					NULL, NULL);
 				adapters.push_back(Adapter(buf, GSAdapter(desc), level));
-				delete buf;
+				delete [] buf;
 #else
 				adapters.push_back(Adapter(desc.Description, GSAdapter(desc), level));
 #endif
