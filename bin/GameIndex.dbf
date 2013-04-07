@@ -214,7 +214,7 @@ Name   = Kiosk Demo Disc 2.02
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97128
-Name   = Drakan - The Ancients' Gates
+Name   = Drakan - The Ancients' Gates	// aka Drakan 2
 Region = NTSC-U
 Compat = 5
 EETimingHack = 1		//flickery textures
@@ -349,7 +349,7 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SCUS-97169
-Name   = Drakan - The Ancients' Gates [Demo]
+Name   = Drakan - The Ancients' Gates [Demo]	// aka Drakan 2 [Demo]
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97170
@@ -3755,6 +3755,9 @@ Serial = SLUS-20484
 Name   = Devil May Cry 2 [Disc1of2]
 Region = NTSC-U
 Compat = 5
+[patches]
+	comment=Note that this disc has the same CRC as SLPM-65232, the NTSC-J disc.
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20485
 Name   = Dino Stalker
@@ -5949,7 +5952,7 @@ Name   = Samurai Showdown V
 Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-20973
-Name   = Champions - Return to Arms
+Name   = Champions - Return to Arms	// aka Champions of Norrath 2
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
@@ -9559,6 +9562,12 @@ Region = NTSC-U
 Compat = 5
 VuClipFlagHack = 1
 ---------------------------------------------
+Serial = SLUS-21782B
+Name   = Shin Megami Tensei - Persona 4
+Region = NTSC-U
+Compat = 5
+VuClipFlagHack = 1
+---------------------------------------------
 Serial = SLUS-21783
 Name   = Space Chimps
 Region = NTSC-U
@@ -10708,7 +10717,7 @@ Name   = Konami Preview Disc
 Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-29126
-Name   = Champions - Return to Arms [Demo]
+Name   = Champions - Return to Arms [Demo]	// aka Champions of Norrath 2 [Demo]
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
@@ -17697,6 +17706,9 @@ Serial = SLPM-65232
 Name   = Devil May Cry 2 [Dante Disc]
 Region = NTSC-J
 Compat = 5
+[patches]
+	comment=Note that this disc has the same CRC as SLUS-20484, the NTSC-U disc.
+[/patches]
 ---------------------------------------------
 Serial = SLPM-65233
 Name   = Devil May Cry 2 [Lucia Disc]
@@ -19903,11 +19915,6 @@ Region = NTSC-J
 Serial = SLPM-65844
 Name   = Air [Best]
 Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65845
-Name   = Baldur's Gate - Dark Alliance II
-Region = NTSC-J
-Compat = 4
 ---------------------------------------------
 Serial = SLPM-65846
 Name   = Lord of the Rings, The - Uchitsu Kuni Daisanki
@@ -29567,9 +29574,14 @@ Region = PAL-E
 Compat = 5
 ---------------------------------------------
 Serial = SCES-50006
-Name   = Drakan - The Ancients' Gates
-Region = PAL-Unk
+Name   = Drakan - The Ancients' Gates	// aka Drakan 2
+Region = PAL-M5
 EETimingHack = 1		//flickery textures
+[patches]
+	comment=This gamedisc supports multiple languages.
+	comment=Language selection is done through the BIOS configuration.
+	comment=Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SCES-50009
 Name   = Wild Wild Racing
@@ -32912,7 +32924,7 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-50821
 Name   = Project Zero
-Region = PAL-M5
+Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
 Serial = SLES-50822
@@ -35708,6 +35720,11 @@ Name   = Baldur's Gate - Dark Alliance 2
 Region = PAL-Unk
 Compat = 4
 ---------------------------------------------
+Serial = SLPM-65845
+Name   = Baldur's Gate - Dark Alliance II
+Region = NTSC-J
+Compat = 4
+---------------------------------------------
 Serial = SLES-52190
 Name   = RPM Tuning
 Region = PAL-Unk
@@ -37620,7 +37637,7 @@ Compat = 5
 eeRoundMode = 0
 ---------------------------------------------
 Serial = SLES-53039
-Name   = Champions - Return to Arms
+Name   = Champions - Return to Arms	// aka Champions of Norrath 2
 Region = PAL-Unk
 Compat = 4
 ---------------------------------------------
@@ -39373,7 +39390,7 @@ Name   = 50cent - Bulletproof
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53908
-Name   = Tomb Raider - Legends
+Name   = Tomb Raider - Legend
 Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
