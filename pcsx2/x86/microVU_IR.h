@@ -159,6 +159,7 @@ struct microOp {
 	bool swapOps;		 // Run Lower Instruction before Upper Instruction
 	bool backupVF;		 // Backup mVUlow.VF_write.reg, and restore it before the Upper Instruction is called
 	bool doXGKICK;		 // Do XGKICK transfer on this instruction
+	u32  XGKICKPC;       // The PC in which the XGKick has taken place, so if we break early (before it) we don run it.
 	bool doDivFlag;		 // Transfer Div flag to Status Flag on this instruction
 	int	 readQ;			 // Q instance for reading
 	int	 writeQ;		 // Q instance for writing

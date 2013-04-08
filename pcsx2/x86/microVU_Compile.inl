@@ -269,7 +269,7 @@ void mVUincCycles(mV, int x) {
 	}
 	if (mVUregs.xgkick) {
 		calcCycles(mVUregs.xgkick, x);
-		if (!mVUregs.xgkick) { mVUinfo.doXGKICK = 1; }
+		if (!mVUregs.xgkick) { mVUinfo.doXGKICK = 1; mVUinfo.XGKICKPC = xPC;}
 	}
 	calcCycles(mVUregs.r, x);
 }
@@ -380,9 +380,9 @@ void mVUtestCycles(microVU& mVU) {
 
 // This gets run at the start of every loop of mVU's first pass
 __fi void startLoop(mV) {
-	if (curI & _Mbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: M-bit set!", getIndex); }
-	if (curI & _Dbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: D-bit set!", getIndex); }
-	if (curI & _Tbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: T-bit set!", getIndex); }
+	if (curI & _Mbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: M-bit set! PC = %x", getIndex, xPC); }
+	if (curI & _Dbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: D-bit set! PC = %x", getIndex, xPC); }
+	if (curI & _Tbit_)	{ DevCon.WriteLn (Color_Green, "microVU%d: T-bit set! PC = %x", getIndex, xPC); }
 	memzero(mVUinfo);
 	memzero(mVUregsTemp);
 }

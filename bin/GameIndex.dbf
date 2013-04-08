@@ -10667,6 +10667,7 @@ Region = NTSC-U
 Serial = SLUS-29101
 Name   = Crash Twinsanity & Spyro - A Hero's Tail [Demo]
 Region = NTSC-U
+XgKickHack = 1  //Fixes bad Geometry
 ---------------------------------------------
 Serial = SLUS-29104
 Name   = Galactic Wrestling - Featuring Ultimate Muscle [Demo]
@@ -16456,7 +16457,7 @@ Serial = SLPM-62623
 Name   = Elemental Gerad
 Region = NTSC-J
 Compat = 5
-XgKickHack = 1
+XgKickHack = 1 //Fixes chocolate coloured characters
 ---------------------------------------------
 Serial = SLPM-62624
 Name   = Indoor Helicopter Adventure 2
@@ -29400,7 +29401,7 @@ Region = NTSC-J
 Serial = TCPS-10111
 Name   = Eremental Gerad
 Region = NTSC-J
-XgKickHack = 1
+XgKickHack = 1  //Fixes chocolate coloured characters
 ---------------------------------------------
 Serial = TCPS-10113
 Name   = Mushihime-sama
@@ -30476,7 +30477,7 @@ Serial = SCES-53247
 Name   = WRC - World Rally Championship - Rally Evolved
 Region = PAL-Unk
 Compat = 4
-XgKickHack = 1			//Most of the ingame SPS gets fixed with it.
+XgKickHack = 1			//SPS.
 [patches = cbbc2e7f]
 	comment=patches by Nachbrenner
 	//fix delay slot violation
@@ -36477,6 +36478,7 @@ Serial = SLES-52568
 Name   = Crash Twinsanity
 Region = PAL-Unk
 Compat = 5
+XgKickHack = 1 //Fixes bad Geometry
 ---------------------------------------------
 Serial = SLES-52569
 Name   = Spyro - A Hero's Tail

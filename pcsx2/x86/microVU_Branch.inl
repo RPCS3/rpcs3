@@ -35,6 +35,9 @@ void mVUDTendProgram(mV, microFlagCycles* mFC, int isEbit) {
 	int fClip	= getLastFlagInst(mVUpBlock->pState, mFC->xClip,   2, isEbit);
 	int qInst	= 0;
 	int pInst	= 0;
+	microBlock stateBackup;
+	memcpy(&stateBackup, &mVUregs, sizeof(mVUregs)); //backup the state, it's about to get screwed with.
+
 	mVU.regAlloc->TDwritebackAll(); //Writing back ok, invalidating early kills the rec, so don't do it :P
 
 	if (isEbit) {
@@ -49,7 +52,8 @@ void mVUDTendProgram(mV, microFlagCycles* mFC, int isEbit) {
 			sFLAG.write  = fStatus;
 			mVUdivSet(mVU);
 		}
-		if (mVUinfo.doXGKICK) { mVU_XGKICK_DELAY(mVU, 1); }
+		//Run any pending XGKick, providing we've got to it.
+		if (mVUinfo.doXGKICK && xPC >= mVUinfo.XGKICKPC) { mVU_XGKICK_DELAY(mVU, 1); }
 		if (doEarlyExit(mVU)) {
 			if (!isVU1) xCALL(mVU0clearlpStateJIT);
 			else		xCALL(mVU1clearlpStateJIT);
@@ -82,6 +86,7 @@ void mVUDTendProgram(mV, microFlagCycles* mFC, int isEbit) {
 		xMOV(ptr32[&mVU.regs().VI[REG_TPC].UL], xPC);
 		xJMP(mVU.exitFunct);
 	}
+	memcpy(&mVUregs, &stateBackup, sizeof(mVUregs)); //Restore the state for the rest of the recompile
 }
 
 void mVUendProgram(mV, microFlagCycles* mFC, int isEbit) {

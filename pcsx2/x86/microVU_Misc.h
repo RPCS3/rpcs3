@@ -370,7 +370,7 @@ static const bool doJumpAsSameProgram = 0; // Set to 1 to treat jumps as same pr
 //------------------------------------------------------------------
 
 // XG Kick Transfer Delay Amount
-#define mVU_XGKICK_CYCLES ((CHECK_XGKICKHACK) ? 3 : 1)
+#define mVU_XGKICK_CYCLES ((CHECK_XGKICKHACK) ? 6 : 1)
 // Its unknown at recompile time how long the xgkick transfer will take
 // so give it a value that makes games happy :) (SO3 is fine at 1 cycle delay)
 
