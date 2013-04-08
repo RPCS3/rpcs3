@@ -11629,6 +11629,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20161
 Name   = Siren 2
 Region = NTSC-J
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCAJ-20162
 Name   = Rogue Galaxy
@@ -11653,6 +11654,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20167
 Name   = Siren 2
 Region = NTSC-Ch-J
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCAJ-20168
 Name   = Rule of Rose
@@ -12085,6 +12087,7 @@ Region = NTSC-K
 Serial = SCKA-20069
 Name   = Siren 2
 Region = NTSC-K
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCKA-20070
 Name   = Ace Combat Zero - The Belkan War
@@ -12807,6 +12810,7 @@ Serial = SCPS-15106
 Name   = Siren 2
 Region = NTSC-J
 Compat = 4
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCPS-15107
 Name   = Gunparade Orchestra - Midori no Shou [Limited Edition]
@@ -13109,6 +13113,7 @@ Region = NTSC-J
 Serial = SCPS-19326
 Name   = Siren 2 [PlayStation 2 The Best]
 Region = NTSC-J
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCPS-19327
 Name   = Ape Escape 3 [PlayStation 2 the Best - Reprint]
@@ -30648,6 +30653,7 @@ Serial = SCES-53851
 Name   = Forbidden Siren 2
 Region = PAL-M5
 Compat = 4
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCES-53879
 Name   = Buzz! The Big Quiz
