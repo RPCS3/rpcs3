@@ -282,6 +282,8 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
 				// ASSERT(TEX0.CSA == 0); // sfex
+				// The clut offset was missing here, broke Disney's Golf
+				clut += (TEX0.CSA & 15) << 4;
 				ReadCLUT_T32_I8(clut, m_buff32);
 				break;
 			case PSM_PSMT4:
