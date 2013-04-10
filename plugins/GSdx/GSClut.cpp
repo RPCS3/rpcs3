@@ -30,7 +30,7 @@ GSClut::GSClut(GSLocalMemory* mem)
 {
 	uint8* p = (uint8*)vmalloc(CLUT_ALLOC_SIZE, false);
 
-	m_clut = (uint16*)&p[0]; // 1k + 1k for buffer overruns (TODO: wrap CSM2 writes, too)
+	m_clut = (uint16*)&p[0]; // 1k + 1k for mirrored area simulating wrapping memory
 	m_buff32 = (uint32*)&p[2048]; // 1k
 	m_buff64 = (uint64*)&p[4096]; // 2k
 	m_write.dirty = true;
@@ -124,31 +124,43 @@ void GSClut::Write(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 	m_read.dirty = true;
 
 	(this->*m_wc[TEX0.CSM][TEX0.CPSM][TEX0.PSM])(TEX0, TEXCLUT);
+
+	// Mirror write to other half of buffer to simulate wrapping memory
+	int offset = (TEX0.CSA & (TEX0.CPSM < PSM_PSMCT16 ? 15 : 31)) * 16;
+	if (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT8H)
+	{
+		int size = TEX0.CPSM < PSM_PSMCT16 ? 512 : 256;
+
+		memcpy(m_clut + 512 + offset, m_clut + offset, sizeof *m_clut * min(size, 512 - offset));
+		memcpy(m_clut, m_clut + 512, sizeof *m_clut * max(0, size + offset - 512));
+	}
+	else
+	{
+		int size = 16;
+
+		memcpy(m_clut + 512 + offset, m_clut + offset, sizeof *m_clut * size);
+		if (TEX0.CPSM < PSM_PSMCT16)
+			memcpy(m_clut + 512 + 256 + offset, m_clut + 256 + offset, sizeof *m_clut * size);
+	}
 }
 
 void GSClut::WriteCLUT32_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
 	ALIGN_STACK(32);
 
-	// ASSERT(TEX0.CSA == 0); // sfex
-
-	WriteCLUT_T32_I8_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut);
+	WriteCLUT_T32_I8_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + ((TEX0.CSA & 15) << 4));
 }
 
 void GSClut::WriteCLUT32_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
 	ALIGN_STACK(32);
 
-	ASSERT(TEX0.CSA < 16);
-
 	WriteCLUT_T32_I4_CSM1((uint32*)m_mem->BlockPtr32(0, 0, TEX0.CBP, 1), m_clut + ((TEX0.CSA & 15) << 4));
 }
 
 void GSClut::WriteCLUT16_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	ASSERT(TEX0.CSA < 16);
-
-	WriteCLUT_T16_I8_CSM1((uint16*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + ((TEX0.CSA & 15) << 4));
+	WriteCLUT_T16_I8_CSM1((uint16*)m_mem->BlockPtr16(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
@@ -158,9 +170,7 @@ void GSClut::WriteCLUT16_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TE
 
 void GSClut::WriteCLUT16S_I8_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 {
-	ASSERT(TEX0.CSA < 16);
-
-	WriteCLUT_T16_I8_CSM1((uint16*)m_mem->BlockPtr16S(0, 0, TEX0.CBP, 1), m_clut + ((TEX0.CSA & 15) << 4));
+	WriteCLUT_T16_I8_CSM1((uint16*)m_mem->BlockPtr16S(0, 0, TEX0.CBP, 1), m_clut + (TEX0.CSA << 4));
 }
 
 void GSClut::WriteCLUT16S_I4_CSM1(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
@@ -175,7 +185,7 @@ template<int n> void GSClut::WriteCLUT32_CSM2(const GIFRegTEX0& TEX0, const GIFR
 	uint32* RESTRICT s = &m_mem->m_vm32[o->pixel.row[TEXCLUT.COV]];
 	int* RESTRICT col = &o->pixel.col[0][TEXCLUT.COU << 4];
 
-	uint16* RESTRICT clut = m_clut + (TEX0.CSA << 4);
+	uint16* RESTRICT clut = m_clut + ((TEX0.CSA & 15) << 4);
 
 	for(int i = 0; i < n; i++)
 	{
@@ -231,13 +241,12 @@ void GSClut::Read(const GIFRegTEX0& TEX0)
 			{
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
-				ASSERT(TEX0.CSA == 0);
+				clut += (TEX0.CSA & 15) << 4;
 				ReadCLUT_T32_I8(clut, m_buff32);
 				break;
 			case PSM_PSMT4:
 			case PSM_PSMT4HL:
 			case PSM_PSMT4HH:
-				//ASSERT(TEX0.CSA < 16);
 				clut += (TEX0.CSA & 15) << 4;
 				ReadCLUT_T32_I4(clut, m_buff32, m_buff64);
 				break;
@@ -249,8 +258,7 @@ void GSClut::Read(const GIFRegTEX0& TEX0)
 			{
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
-				ASSERT(TEX0.CSA < 16);
-				clut += (TEX0.CSA & 15) << 4;
+				clut += TEX0.CSA << 4;
 				ReadCLUT_T16_I8(clut, m_buff32);
 				break;
 			case PSM_PSMT4:
@@ -281,15 +289,12 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 			{
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
-				// ASSERT(TEX0.CSA == 0); // sfex
-				// The clut offset was missing here, broke Disney's Golf
 				clut += (TEX0.CSA & 15) << 4;
 				ReadCLUT_T32_I8(clut, m_buff32);
 				break;
 			case PSM_PSMT4:
 			case PSM_PSMT4HL:
 			case PSM_PSMT4HH:
-				//ASSERT(TEX0.CSA < 16); // Idol Janshi Suchie-Pai IV (highlighted menu item, mahjong tiles)
 				clut += (TEX0.CSA & 15) << 4;
 				// TODO: merge these functions
 				ReadCLUT_T32_I4(clut, m_buff32);
@@ -303,8 +308,7 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 			{
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
-				ASSERT(TEX0.CSA < 16);
-				clut += (TEX0.CSA & 15) << 4;
+				clut += TEX0.CSA << 4;
 				Expand16(clut, m_buff32, 256, TEXA);
 				break;
 			case PSM_PSMT4:
