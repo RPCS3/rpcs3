@@ -2562,10 +2562,7 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 		__assume(0);
 	}
 
-// Kingdom Hearts 2's tron section shows a bug with the CLAMP_REPEAT code here.
-// This is just an optimisation so it's disabled until the bug is found.
-#if 0
-	if(wms + wmt < 6)
+	if(wms != CLAMP_REGION_REPEAT || wmt != CLAMP_REGION_REPEAT)
 	{
 		GSVector4 st = m_vt.m_min.t.xyxy(m_vt.m_max.t);
 
@@ -2580,7 +2577,7 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 
 		int mask = 0;
 
-		// This part is suspicious, as far as I can tell it zeroes fields if tw/th aren't 0, which is probably not the intent
+		// See commented code below for the meaning of mask
 		if(wms == CLAMP_REPEAT || wmt == CLAMP_REPEAT)
 		{
 			u = uv & GSVector4i::xffffffff().srl32(32 - tw);
@@ -2592,11 +2589,17 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 			mask = (uu.upl32(vv) == uu.uph32(vv)).mask();
 		}
 
-		uv = uv.rintersect(tr);
+		uv = uv.rintersect(vr - GSVector4i(0,0,1,1));
 
 		switch(wms)
 		{
 		case CLAMP_REPEAT:
+			// This commented code cannot be used directly because it needs uv before the intersection
+			/*if (uv_.x >> tw == uv_.z >> tw)
+			{
+				vr.x = max(vr.x, (uv_.x & ((1 << tw) - 1)));
+				vr.z = min(vr.z, (uv_.z & ((1 << tw) - 1)) + 1);
+			}*/
 			if(mask & 0x000f) {if(vr.x < u.x) vr.x = u.x; if(vr.z > u.z + 1) vr.z = u.z + 1;}
 			break;
 		case CLAMP_CLAMP:
@@ -2613,6 +2616,11 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 		switch(wmt)
 		{
 		case CLAMP_REPEAT:
+			/*if (uv_.y >> th == uv_.w >> th)
+			{
+				vr.y = max(vr.y, (uv_.y & ((1 << th) - 1)));
+				vr.w = min(vr.w, (uv_.w & ((1 << th) - 1)) + 1);
+			}*/
 			if(mask & 0xf000) {if(vr.y < v.y) vr.y = v.y; if(vr.w > v.w + 1) vr.w = v.w + 1;}
 			break;
 		case CLAMP_CLAMP:
@@ -2626,16 +2634,16 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 			__assume(0);
 		}
 	}
-#endif
 
 	vr = vr.rintersect(tr);
 
+	// This really shouldn't happen now except with the clamping region set entirely outside the texture,
+	// special handling should be written for that case.
 	if(vr.rempty())
 	{
 		// NOTE: this can happen when texcoords are all outside the texture or clamping area is zero, but we can't 
 		// let the texture cache update nothing, the sampler will still need a single texel from the border somewhere
 		// examples: 
-		// - ICO opening menu (texture looks like the miniature silhouette of everything except the sky)
 		// - THPS (no visible problems)
 		// - NFSMW (strange rectangles on screen, might be unrelated)
 
