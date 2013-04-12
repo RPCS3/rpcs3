@@ -58,7 +58,7 @@ namespace PatchFunc
 }
 
 extern void ResetCheatsCount();
-extern int  LoadCheats(const wxString& name, const wxString& folderName, const wxString& friendlyName);
+extern int  LoadCheats(wxString name, const wxString& folderName, const wxString& friendlyName);
 extern void inifile_command(bool isCheat, const wxString& cmd);
 extern void inifile_trim(wxString& buffer);
 

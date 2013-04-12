@@ -200,8 +200,13 @@ static int LoadCheatsFiles(const wxString& folderName, wxString& fileSpec, const
 // This routine loads cheats from *.pnach files
 // Returns number of cheats loaded
 // Note: Should be called after InitPatches()
-int LoadCheats(const wxString& name, const wxString& folderName, const wxString& friendlyName)
+int LoadCheats(wxString name, const wxString& folderName, const wxString& friendlyName)
 {
+  if (!name.Length()) {
+    Console.WriteLn(Color_Gray, "Cheats: No CRC, using 00000000 instead.");
+    name = L"00000000";
+  }
+
   int loaded = 0;
 
   wxString filespec = name + L"*.pnach";
