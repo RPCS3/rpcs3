@@ -196,7 +196,7 @@ void normJumpCompile(mV, microFlagCycles& mFC, bool isEvilJump) {
 void normBranch(mV, microFlagCycles& mFC) {
 
 	// E-bit or T-Bit or D-Bit Branch
-	if (mVUup.dBit) 
+	if (mVUup.dBit && doDBitHandling) 
 	{
 		u32 tempPC = iPC;
 		xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x400 : 0x4));
@@ -307,7 +307,7 @@ void condBranch(mV, microFlagCycles& mFC, int JMPcc) {
 		tJMP.SetTarget();
 		iPC = tempPC;	
 	}
-	if (mVUup.dBit) 
+	if (mVUup.dBit && doDBitHandling) 
 	{
 		u32 tempPC = iPC;
 		xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x400 : 0x4));
@@ -412,7 +412,7 @@ void normJump(mV, microFlagCycles& mFC) {
 		}
 		incPC(-3);
 	}
-	if (mVUup.dBit) 
+	if (mVUup.dBit && doDBitHandling) 
 	{
 		xTEST(ptr32[&VU0.VI[REG_FBRST].UL], (isVU1 ? 0x400 : 0x4));
 		xForwardJump32 eJMP(Jcc_Zero);

@@ -568,7 +568,7 @@ void* mVUcompile(microVU& mVU, u32 startPC, uptr pState) {
 		if(!mVUinfo.isBdelay && !mVUlow.branch) //T/D Bit on branch is handled after the branch, branch delay slots are executed.
 		{
 			if(mVUup.tBit) { mVUDoTBit(mVU, &mFC); }
-			else if(mVUup.dBit) { mVUDoDBit(mVU, &mFC); }
+			else if(mVUup.dBit && doDBitHandling) { mVUDoDBit(mVU, &mFC); }
 		}
 		if (mVUinfo.doXGKICK)		{ mVU_XGKICK_DELAY(mVU, 1); }
 		if (isEvilBlock)			{ mVUsetupRange(mVU, xPC, 0); normJumpCompile(mVU, mFC, 1); return thisPtr; }

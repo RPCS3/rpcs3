@@ -350,6 +350,12 @@ static const bool doJumpAsSameProgram = 0; // Set to 1 to treat jumps as same pr
 // constant recompilation problems in certain games.
 // Note: You MUST disable doJumpCaching if you enable this option.
 
+// Handling of D-Bit in Micro Programs
+static const bool doDBitHandling = 0;
+// This flag shouldn't be enabled in released versions of games. Any games which
+// need this method of pausing the VU should be using the T-Bit instead, however
+// this could prove useful for VU debugging.
+
 //------------------------------------------------------------------
 // Speed Hacks (can cause infinite loops, SPS, Black Screens, etc...)
 //------------------------------------------------------------------
