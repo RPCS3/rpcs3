@@ -75,6 +75,12 @@ namespace YAML
 		ParseProperties(tag, anchor);
 		
 		const Token& token = m_scanner.peek();
+
+        if(token.type == Token::PLAIN_SCALAR && token.value == "null") {
+            eventHandler.OnNull(mark, anchor);
+            m_scanner.pop();
+            return;
+        }
 		
 		// add non-specific tags
 		if(tag.empty())
