@@ -75,6 +75,12 @@ namespace YAML
 		ParseProperties(tag, anchor);
 		
 		const Token& token = m_scanner.peek();
+
+        if(token.type == Token::PLAIN_SCALAR && token.value == "null") {
+            eventHandler.OnNull(mark, anchor);
+            m_scanner.pop();
+            return;
+        }
 		
 		// add non-specific tags
 		if(tag.empty())
@@ -256,6 +262,7 @@ namespace YAML
 				throw ParserException(m_scanner.mark(), ErrorMsg::END_OF_MAP_FLOW);
 			
 			Token& token = m_scanner.peek();
+            const Mark mark = token.mark;
 			// first check for end
 			if(token.type == Token::FLOW_MAP_END) {
 				m_scanner.pop();
@@ -267,7 +274,7 @@ namespace YAML
 				m_scanner.pop();
 				HandleNode(eventHandler);
 			} else {
-				eventHandler.OnNull(token.mark, NullAnchor);
+				eventHandler.OnNull(mark, NullAnchor);
 			}
 			
 			// now grab value (optional)
@@ -275,7 +282,7 @@ namespace YAML
 				m_scanner.pop();
 				HandleNode(eventHandler);
 			} else {
-				eventHandler.OnNull(token.mark, NullAnchor);
+				eventHandler.OnNull(mark, NullAnchor);
 			}
             
             if(m_scanner.empty())

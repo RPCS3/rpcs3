@@ -28,6 +28,18 @@ namespace Test
             EXPECT_DOC_END();
             DONE();
         }
+
+        TEST NullStringScalar()
+        {
+            HANDLE("foo: null");
+            EXPECT_DOC_START();
+            EXPECT_MAP_START("?", 0);
+            EXPECT_SCALAR("?", 0, "foo");
+            EXPECT_NULL(0);
+            EXPECT_MAP_END();
+            EXPECT_DOC_END();
+            DONE();
+        }
     }
     
 	namespace {
@@ -57,6 +69,7 @@ namespace Test
 		int total = 0;
 		RunParserTest(&Parser::NoEndOfMapFlow, "No end of map flow", passed, total);
 		RunParserTest(&Parser::PlainScalarStartingWithQuestionMark, "Plain scalar starting with question mark", passed, total);
+		RunParserTest(&Parser::NullStringScalar, "Null string scalar", passed, total);
 		
 		std::cout << "Parser tests: " << passed << "/" << total << " passed\n";
 		return passed == total;
