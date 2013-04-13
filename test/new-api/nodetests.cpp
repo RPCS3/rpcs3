@@ -498,6 +498,14 @@ namespace Test
             YAML_ASSERT_THROWS(node.begin()->begin()->IsDefined(), YAML::InvalidNode);
             return true;
         }
+
+        TEST FloatingPrecision()
+        {
+            const double x = 0.123456789;
+            YAML::Node node = YAML::Node(x);
+            YAML_ASSERT(node.as<double>() == x);
+            return true;
+        }
     }
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -560,6 +568,7 @@ namespace Test
         RunNodeTest(&Node::ForceInsertIntoMap, "force insert into map", passed, total);
         RunNodeTest(&Node::ResetNode, "reset node", passed, total);
         RunNodeTest(&Node::DereferenceIteratorError, "dereference iterator error", passed, total);
+        RunNodeTest(&Node::FloatingPrecision, "floating precision", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

@@ -78,6 +78,7 @@ namespace YAML
 	struct convert<type> {\
 		static Node encode(const type& rhs) {\
 			std::stringstream stream;\
+            stream.precision(std::numeric_limits<type>::digits10 + 1);\
 			stream << rhs;\
 			return Node(stream.str());\
 		}\
