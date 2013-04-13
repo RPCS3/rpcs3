@@ -19,8 +19,8 @@ namespace YAML
 		m_seqFmt.set(Block);
 		m_mapFmt.set(Block);
 		m_mapKeyFmt.set(Auto);
-        m_floatPrecision.set(6);
-        m_doublePrecision.set(15);
+        m_floatPrecision.set(std::numeric_limits<float>::digits10 + 1);
+        m_doublePrecision.set(std::numeric_limits<double>::digits10 + 1);
 	}
 	
 	EmitterState::~EmitterState()
@@ -367,7 +367,7 @@ namespace YAML
 
     bool EmitterState::SetFloatPrecision(int value, FmtScope::value scope)
     {
-        if(value < 0 || value > std::numeric_limits<float>::digits10)
+        if(value < 0 || value > std::numeric_limits<float>::digits10 + 1)
             return false;
         _Set(m_floatPrecision, value, scope);
         return true;
@@ -375,7 +375,7 @@ namespace YAML
     
     bool EmitterState::SetDoublePrecision(int value, FmtScope::value scope)
     {
-        if(value < 0 || value > std::numeric_limits<double>::digits10)
+        if(value < 0 || value > std::numeric_limits<double>::digits10 + 1)
             return false;
         _Set(m_doublePrecision, value, scope);
         return true;
