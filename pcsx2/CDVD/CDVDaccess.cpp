@@ -148,7 +148,11 @@ static int FindDiskType(int mType)
 			{
 				//const cdVolDesc& volDesc = (cdVolDesc&)bleh;
 				//if(volDesc.rootToc.tocSize == 2048)
-				if(*(u16*)(bleh+166) == 2048)
+				
+				//Horrible hack! in CD images position 166 and 171 have block size but not DVD's
+				//It's not always 2048 however (can be 4096)
+				//Test Impossible Mission if thia is changed.
+				if(*(u16*)(bleh+166) == *(u16*)(bleh+171))
 					iCDType = CDVD_TYPE_DETCTCD;
 				else
 					iCDType = CDVD_TYPE_DETCTDVDS;
