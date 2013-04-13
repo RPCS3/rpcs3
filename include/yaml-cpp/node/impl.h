@@ -15,30 +15,34 @@
 
 namespace YAML
 {
-	inline Node::Node(): m_pNode(NULL)
+	inline Node::Node(): m_isValid(true), m_pNode(NULL)
 	{
 	}
 	
-	inline Node::Node(NodeType::value type): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
+	inline Node::Node(NodeType::value type): m_isValid(true), m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
 	{
 		m_pNode->set_type(type);
 	}
 	
 	template<typename T>
-	inline Node::Node(const T& rhs): m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
+	inline Node::Node(const T& rhs): m_isValid(true), m_pMemory(new detail::memory_holder), m_pNode(&m_pMemory->create_node())
 	{
 		Assign(rhs);
 	}
 	
-    inline Node::Node(const detail::iterator_value& rhs): m_pMemory(rhs.m_pMemory), m_pNode(rhs.m_pNode)
+    inline Node::Node(const detail::iterator_value& rhs): m_isValid(rhs.m_isValid), m_pMemory(rhs.m_pMemory), m_pNode(rhs.m_pNode)
     {
     }
 
-	inline Node::Node(const Node& rhs): m_pMemory(rhs.m_pMemory), m_pNode(rhs.m_pNode)
+	inline Node::Node(const Node& rhs): m_isValid(rhs.m_isValid), m_pMemory(rhs.m_pMemory), m_pNode(rhs.m_pNode)
 	{
 	}
 	
-	inline Node::Node(detail::node& node, detail::shared_memory_holder pMemory): m_pMemory(pMemory), m_pNode(&node)
+    inline Node::Node(Zombie): m_isValid(false), m_pNode(NULL)
+    {
+    }
+
+    inline Node::Node(detail::node& node, detail::shared_memory_holder pMemory): m_isValid(true), m_pMemory(pMemory), m_pNode(&node)
 	{
 	}
 
@@ -48,6 +52,8 @@ namespace YAML
 
 	inline void Node::EnsureNodeExists() const
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		if(!m_pNode) {
 			m_pMemory.reset(new detail::memory_holder);
 			m_pNode = &m_pMemory->create_node();
@@ -57,11 +63,15 @@ namespace YAML
 	
 	inline bool Node::IsDefined() const
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		return m_pNode ? m_pNode->is_defined() : true;
 	}
 
 	inline NodeType::value Node::Type() const
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		return m_pNode ? m_pNode->type() : NodeType::Null;
 	}
 	
@@ -128,27 +138,37 @@ namespace YAML
 	template<typename T>
 	inline const T Node::as() const
 	{
+        if(!m_isValid)
+            throw InvalidNode();
         return as_if<T, void>(*this)();
 	}
 
     template<typename T, typename S>
     inline const T Node::as(const S& fallback) const
     {
+        if(!m_isValid)
+            throw InvalidNode();
         return as_if<T, S>(*this)(fallback);
     }
     
 	inline const std::string& Node::Scalar() const
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		return m_pNode ? m_pNode->scalar() : detail::node_data::empty_scalar;
 	}
 
 	inline const std::string& Node::Tag() const
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		return m_pNode ? m_pNode->tag() : detail::node_data::empty_scalar;
 	}
 
 	inline void Node::SetTag(const std::string& tag)
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		m_pNode->set_tag(tag);
 	}
@@ -156,6 +176,8 @@ namespace YAML
 	// assignment
 	inline bool Node::is(const Node& rhs) const
 	{
+        if(!m_isValid || !rhs.m_isValid)
+            throw InvalidNode();
         if(!m_pNode || !rhs.m_pNode)
             return false;
 		return m_pNode->is(*rhs.m_pNode);
@@ -164,12 +186,16 @@ namespace YAML
 	template<typename T>
 	inline Node& Node::operator=(const T& rhs)
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		Assign(rhs);
 		return *this;
 	}
 	
     inline void Node::reset(const YAML::Node& rhs)
     {
+        if(!m_isValid || !rhs.m_isValid)
+            throw InvalidNode();
         m_pMemory = rhs.m_pMemory;
         m_pNode = rhs.m_pNode;
     }
@@ -177,30 +203,40 @@ namespace YAML
 	template<typename T>
 	inline void Node::Assign(const T& rhs)
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		AssignData(convert<T>::encode(rhs));
 	}
 
 	template<>
 	inline void Node::Assign(const std::string& rhs)
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
 	}
 
 	inline void Node::Assign(const char *rhs)
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
 	}
 
 	inline void Node::Assign(char *rhs)
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		m_pNode->set_scalar(rhs);
 	}
 	
 	inline Node& Node::operator=(const Node& rhs)
 	{
+        if(!m_isValid || !rhs.m_isValid)
+            throw InvalidNode();
 		if(is(rhs))
 			return *this;
 		AssignNode(rhs);
@@ -209,6 +245,8 @@ namespace YAML
 
 	inline void Node::AssignData(const Node& rhs)
 	{
+        if(!m_isValid || !rhs.m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		rhs.EnsureNodeExists();
 		
@@ -218,6 +256,8 @@ namespace YAML
 
 	inline void Node::AssignNode(const Node& rhs)
 	{
+        if(!m_isValid || !rhs.m_isValid)
+            throw InvalidNode();
 		rhs.EnsureNodeExists();
 
 		if(!m_pNode) {
@@ -234,26 +274,36 @@ namespace YAML
 	// size/iterator
 	inline std::size_t Node::size() const
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		return m_pNode ? m_pNode->size() : 0;
 	}
 
 	inline const_iterator Node::begin() const
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		return m_pNode ? const_iterator(m_pNode->begin(), m_pMemory) : const_iterator();
 	}
 	
 	inline iterator Node::begin()
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		return m_pNode ? iterator(m_pNode->begin(), m_pMemory) : iterator();
 	}
 
 	inline const_iterator Node::end() const
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		return m_pNode ? const_iterator(m_pNode->end(), m_pMemory) : const_iterator();
 	}
 
 	inline iterator Node::end()
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		return m_pNode ? iterator(m_pNode->end(), m_pMemory) : iterator();
 	}
 	
@@ -261,11 +311,15 @@ namespace YAML
 	template<typename T>
 	inline void Node::push_back(const T& rhs)
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		push_back(Node(rhs));
 	}
 	
 	inline void Node::push_back(const Node& rhs)
 	{
+        if(!m_isValid || !rhs.m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		rhs.EnsureNodeExists();
 		
@@ -322,6 +376,8 @@ namespace YAML
 	template<typename Key>
 	inline const Node Node::operator[](const Key& key) const
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		detail::node& value = static_cast<const detail::node&>(*m_pNode).get(detail::to_value(key), m_pMemory);
 		return Node(value, m_pMemory);
@@ -330,6 +386,8 @@ namespace YAML
 	template<typename Key>
 	inline Node Node::operator[](const Key& key)
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		detail::node& value = m_pNode->get(detail::to_value(key), m_pMemory);
 		return Node(value, m_pMemory);
@@ -338,12 +396,16 @@ namespace YAML
 	template<typename Key>
 	inline bool Node::remove(const Key& key)
 	{
+        if(!m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		return m_pNode->remove(detail::to_value(key), m_pMemory);
 	}
 	
 	inline const Node Node::operator[](const Node& key) const
 	{
+        if(!m_isValid || !key.m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		key.EnsureNodeExists();
 		detail::node& value = static_cast<const detail::node&>(*m_pNode).get(*key.m_pNode, m_pMemory);
@@ -352,6 +414,8 @@ namespace YAML
 	
 	inline Node Node::operator[](const Node& key)
 	{
+        if(!m_isValid || !key.m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		key.EnsureNodeExists();
 		detail::node& value = m_pNode->get(*key.m_pNode, m_pMemory);
@@ -360,6 +424,8 @@ namespace YAML
 	
 	inline bool Node::remove(const Node& key)
 	{
+        if(!m_isValid || !key.m_isValid)
+            throw InvalidNode();
 		EnsureNodeExists();
 		key.EnsureNodeExists();
 		return m_pNode->remove(*key.m_pNode, m_pMemory);
@@ -369,6 +435,8 @@ namespace YAML
     template<typename Key, typename Value>
     inline void Node::force_insert(const Key& key, const Value& value)
     {
+        if(!m_isValid)
+            throw InvalidNode();
         EnsureNodeExists();
 		m_pNode->force_insert(detail::to_value(key), detail::to_value(value), m_pMemory);
     }

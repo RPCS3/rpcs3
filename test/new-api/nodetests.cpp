@@ -8,15 +8,33 @@ namespace {
 		TEST(): ok(false) {}
 		TEST(bool ok_): ok(ok_) {}
 		TEST(const char *error_): ok(false), error(error_) {}
+        TEST(const std::string& error_): ok(false), error(error_) {}
 		
 		bool ok;
 		std::string error;
 	};
 }
 
-#define YAML_ASSERT(cond) do { if(!(cond)) return "  Assert failed: " #cond; } while(false)
+#define YAML_ASSERT(cond)\
+    do {\
+        if(!(cond))\
+            return "  Assert failed: " #cond;\
+    } while(false)
 
-#define YAML_ASSERT_THROWS(cond, exc) do { try { (cond); return "  Expression did not throw: " #cond; } catch(const exc&) {} catch(...) { return "  Expression threw something other than " #exc ": " #cond; } } while(false)
+#define YAML_ASSERT_THROWS(cond, exc)\
+    do {\
+        try {\
+            (cond);\
+            return "  Expression did not throw: " #cond;\
+        } catch(const exc&) {\
+        } catch(const std::runtime_error& e) {\
+            std::stringstream stream;\
+            stream << "  Expression threw runtime error ther than " #exc ":\n    " #cond "\n    " << e.what();\
+            return stream.str();\
+        } catch(...) {\
+            return "  Expression threw unknown exception, other than " #exc ":\n    " #cond;\
+        }\
+    } while(false)
 
 namespace Test
 {
@@ -319,7 +337,7 @@ namespace Test
             YAML::Node node = YAML::Load("[1.5, 1, .nan, .inf, -.inf, 0x15, 015]");
             YAML_ASSERT(node[0].as<float>() == 1.5f);
             YAML_ASSERT(node[0].as<double>() == 1.5);
-            YAML_ASSERT_THROWS(node[0].as<int>(), std::runtime_error);
+            YAML_ASSERT_THROWS(node[0].as<int>(), YAML::TypedBadConversion<int>);
             YAML_ASSERT(node[1].as<int>() == 1);
             YAML_ASSERT(node[1].as<float>() == 1.0f);
             YAML_ASSERT(node[2].as<float>() != node[2].as<float>());
@@ -469,6 +487,17 @@ namespace Test
             YAML_ASSERT(other == node);
             return true;
         }
+
+        TEST DereferenceIteratorError()
+        {
+            YAML::Node node = YAML::Load("[{a: b}, 1, 2]");
+            YAML_ASSERT_THROWS(node.begin()->first.as<int>(), YAML::InvalidNode);
+            YAML_ASSERT((*node.begin()).IsMap() == true);
+            YAML_ASSERT(node.begin()->IsMap() == true);
+            YAML_ASSERT_THROWS((*node.begin()->begin()).IsDefined(), YAML::InvalidNode);
+            YAML_ASSERT_THROWS(node.begin()->begin()->IsDefined(), YAML::InvalidNode);
+            return true;
+        }
     }
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -530,6 +559,7 @@ namespace Test
 		RunNodeTest(&Node::CloneAlias, "clone alias", passed, total);
         RunNodeTest(&Node::ForceInsertIntoMap, "force insert into map", passed, total);
         RunNodeTest(&Node::ResetNode, "reset node", passed, total);
+        RunNodeTest(&Node::DereferenceIteratorError, "dereference iterator error", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

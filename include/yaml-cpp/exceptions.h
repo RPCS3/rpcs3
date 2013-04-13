@@ -55,6 +55,7 @@ namespace YAML
 		const char * const AMBIGUOUS_ANCHOR       = "cannot assign the same alias to multiple nodes";
 		const char * const UNKNOWN_ANCHOR         = "the referenced anchor is not defined";
 
+        const char * const INVALID_NODE           = "invalid node; this may result from using a map iterator as a sequence iterator, or vice-versa";
 		const char * const INVALID_SCALAR         = "invalid scalar";
 		const char * const KEY_NOT_FOUND          = "key not found";
         const char * const BAD_CONVERSION         = "bad conversion";
@@ -149,7 +150,13 @@ namespace YAML
 		return TypedKeyNotFound <T> (mark, key);
 	}
 
-	class BadConversion: public RepresentationException {
+	class InvalidNode: public RepresentationException {
+	public:
+		InvalidNode()
+        : RepresentationException(Mark::null_mark(), ErrorMsg::INVALID_NODE) {}
+	};
+
+    class BadConversion: public RepresentationException {
 	public:
 		BadConversion()
         : RepresentationException(Mark::null_mark(), ErrorMsg::BAD_CONVERSION) {}
