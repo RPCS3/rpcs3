@@ -50,7 +50,7 @@ bool GSDeviceSW::Reset(int w, int h)
 
 GSTexture* GSDeviceSW::CreateSurface(int type, int w, int h, bool msaa, int format)
 {
-	if(format != 0) return false; // there is only one format
+	if(format != 0) return NULL; // there is only one format
 
 	return new GSTextureSW(type, w, h);
 }

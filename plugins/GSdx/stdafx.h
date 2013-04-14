@@ -434,7 +434,11 @@ struct aligned_free_second {template<class T> void operator()(T& p) {_aligned_fr
 
 	#ifdef __GNUC__
 
-	__forceinline unsigned long long __rdtsc()
+	// gcc 4.8 define __rdtsc but unfortunately the compiler crash...
+	// The redefine allow to skip the gcc __rdtsc version -- Gregory
+	#define __rdtsc _lnx_rdtsc
+	//__forceinline unsigned long long __rdtsc()
+	__forceinline unsigned long long _lnx_rdtsc()
 	{
 		#if defined(__amd64__) || defined(__x86_64__)
 		unsigned long long low, high;
