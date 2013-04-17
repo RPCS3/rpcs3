@@ -2,7 +2,7 @@
 ///
 /// Generic version of the x86 CPU extension detection routine.
 ///
-/// This file is for GNU & other non-Windows compilers, see 'cpu_detect_x86_win.cpp'
+/// This file is for GNU & other non-Windows compilers, see 'cpu_detect_x86_win.cpp' 
 /// for the Microsoft compiler version.
 ///
 /// Author        : Copyright (c) Olli Parviainen
@@ -11,10 +11,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2009-02-25 19:13:51 +0200 (Wed, 25 Feb 2009) $
+// Last changed  : $Date: 2011-09-02 15:56:11 -0300 (sex, 02 set 2011) $
 // File revision : $Revision: 4 $
 //
-// $Id: cpu_detect_x86_gcc.cpp 67 2009-02-25 17:13:51Z oparviai $
+// $Id: cpu_detect_x86_gcc.cpp 131 2011-09-02 18:56:11Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -39,14 +39,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <stdexcept>
-#include <string>
 #include "cpu_detect.h"
 #include "STTypes.h"
-
-using namespace std;
-
-#include <stdio.h>
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -68,7 +62,7 @@ void disableExtensions(uint dwDisableMask)
 /// Checks which instruction set extensions are supported by the CPU.
 uint detectCPUextensions(void)
 {
-#if (!(ALLOW_X86_OPTIMIZATIONS) || !(__GNUC__))
+#if (!(SOUNDTOUCH_ALLOW_X86_OPTIMIZATIONS) || !(__GNUC__))
 
     return 0; // always disable extensions on non-x86 platforms.
 
@@ -78,8 +72,11 @@ uint detectCPUextensions(void)
     if (_dwDisabledISA == 0xffffffff) return 0;
 
     asm volatile(
+#ifndef __x86_64__
+        // Check if 'cpuid' instructions is available by toggling eflags bit 21.
+        // Skip this for x86-64 as they always have cpuid while stack manipulation
+        // differs from 16/32bit ISA.
         "\n\txor     %%esi, %%esi"       // clear %%esi = result register
-        // check if 'cpuid' instructions is available by toggling eflags bit 21
 
         "\n\tpushf"                      // save eflags to stack
         "\n\tmovl    (%%esp), %%eax"     // load eax from stack (with eflags)
@@ -93,6 +90,8 @@ uint detectCPUextensions(void)
         "\n\txor     %%edx, %%edx"       // clear edx for defaulting no mmx
         "\n\tcmp     %%ecx, %%eax"       // compare to original eflags values
         "\n\tjz      end"                // jumps to 'end' if cpuid not present
+#endif // __x86_64__
+
         // cpuid instruction available, test for presence of mmx instructions
 
         "\n\tmovl    $1, %%eax"
@@ -129,7 +128,7 @@ uint detectCPUextensions(void)
       : "=r" (res)
       : /* no inputs */
       : "%edx", "%eax", "%ecx", "%esi" );
-
+      
     return res & ~_dwDisabledISA;
 #endif
 }

@@ -1,20 +1,20 @@
 ////////////////////////////////////////////////////////////////////////////////
 ///
-/// SSE optimized routines for Pentium-III, Athlon-XP and later CPUs. All SSE
-/// optimized functions have been gathered into this single source
-/// code file, regardless to their class or original source code file, in order
+/// SSE optimized routines for Pentium-III, Athlon-XP and later CPUs. All SSE 
+/// optimized functions have been gathered into this single source 
+/// code file, regardless to their class or original source code file, in order 
 /// to ease porting the library to other compiler and processor platforms.
 ///
 /// The SSE-optimizations are programmed using SSE compiler intrinsics that
 /// are supported both by Microsoft Visual C++ and GCC compilers, so this file
 /// should compile with both toolsets.
 ///
-/// NOTICE: If using Visual Studio 6.0, you'll need to install the "Visual C++
-/// 6.0 processor pack" update to support SSE instruction set. The update is
+/// NOTICE: If using Visual Studio 6.0, you'll need to install the "Visual C++ 
+/// 6.0 processor pack" update to support SSE instruction set. The update is 
 /// available for download at Microsoft Developers Network, see here:
 /// http://msdn.microsoft.com/en-us/vstudio/aa718349.aspx
 ///
-/// If the above URL is expired or removed, go to "http://msdn.microsoft.com" and
+/// If the above URL is expired or removed, go to "http://msdn.microsoft.com" and 
 /// perform a search with keywords "processor pack".
 ///
 /// Author        : Copyright (c) Olli Parviainen
@@ -23,10 +23,10 @@
 ///
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Last changed  : $Date: 2009-12-28 22:32:57 +0200 (Mon, 28 Dec 2009) $
+// Last changed  : $Date: 2012-11-08 16:53:01 -0200 (qui, 08 nov 2012) $
 // File revision : $Revision: 4 $
 //
-// $Id: sse_optimized.cpp 80 2009-12-28 20:32:57Z oparviai $
+// $Id: sse_optimized.cpp 160 2012-11-08 18:53:01Z oparviai $
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -56,9 +56,9 @@
 
 using namespace soundtouch;
 
-#ifdef ALLOW_SSE
+#ifdef SOUNDTOUCH_ALLOW_SSE
 
-// SSE routines available only with float sample type
+// SSE routines available only with float sample type    
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -71,35 +71,35 @@ using namespace soundtouch;
 #include <math.h>
 
 // Calculates cross correlation of two buffers
-double TDStretchSSE::calcCrossCorrStereo(const float *pV1, const float *pV2) const
+double TDStretchSSE::calcCrossCorr(const float *pV1, const float *pV2) const
 {
     int i;
     const float *pVec1;
     const __m128 *pVec2;
     __m128 vSum, vNorm;
 
-    // Note. It means a major slow-down if the routine needs to tolerate
-    // unaligned __m128 memory accesses. It's way faster if we can skip
+    // Note. It means a major slow-down if the routine needs to tolerate 
+    // unaligned __m128 memory accesses. It's way faster if we can skip 
     // unaligned slots and use _mm_load_ps instruction instead of _mm_loadu_ps.
     // This can mean up to ~ 10-fold difference (incl. part of which is
     // due to skipping every second round for stereo sound though).
     //
-    // Compile-time define ALLOW_NONEXACT_SIMD_OPTIMIZATION is provided
+    // Compile-time define SOUNDTOUCH_ALLOW_NONEXACT_SIMD_OPTIMIZATION is provided
     // for choosing if this little cheating is allowed.
 
-#ifdef ALLOW_NONEXACT_SIMD_OPTIMIZATION
-    // Little cheating allowed, return valid correlation only for
+#ifdef SOUNDTOUCH_ALLOW_NONEXACT_SIMD_OPTIMIZATION
+    // Little cheating allowed, return valid correlation only for 
     // aligned locations, meaning every second round for stereo sound.
 
     #define _MM_LOAD    _mm_load_ps
 
-    if (((ulong)pV1) & 15) return -1e50;    // skip unaligned locations
+    if (((ulongptr)pV1) & 15) return -1e50;    // skip unaligned locations
 
 #else
     // No cheating allowed, use unaligned load & take the resulting
     // performance hit.
     #define _MM_LOAD    _mm_loadu_ps
-#endif
+#endif 
 
     // ensure overlapLength is divisible by 8
     assert((overlapLength % 8) == 0);
@@ -110,8 +110,9 @@ double TDStretchSSE::calcCrossCorrStereo(const float *pV1, const float *pV2) con
     pVec2 = (const __m128*)pV2;
     vSum = vNorm = _mm_setzero_ps();
 
-    // Unroll the loop by factor of 4 * 4 operations
-    for (i = 0; i < overlapLength / 8; i ++)
+    // Unroll the loop by factor of 4 * 4 operations. Use same routine for
+    // stereo & mono, for mono it just means twice the amount of unrolling.
+    for (i = 0; i < channels * overlapLength / 16; i ++) 
     {
         __m128 vTemp;
         // vSum += pV1[0..3] * pV2[0..3]
@@ -152,7 +153,7 @@ double TDStretchSSE::calcCrossCorrStereo(const float *pV1, const float *pV2) con
 
     // Calculates the cross-correlation value between 'pV1' and 'pV2' vectors
     corr = norm = 0.0;
-    for (i = 0; i < overlapLength / 8; i ++)
+    for (i = 0; i < channels * overlapLength / 16; i ++) 
     {
         corr += pV1[0] * pV2[0] +
                 pV1[1] * pV2[1] +
@@ -171,80 +172,12 @@ double TDStretchSSE::calcCrossCorrStereo(const float *pV1, const float *pV2) con
                 pV1[14] * pV2[14] +
                 pV1[15] * pV2[15];
 
-	for (j = 0; j < 15; j ++) norm += pV1[j] * pV1[j];
+    for (j = 0; j < 15; j ++) norm += pV1[j] * pV1[j];
 
         pV1 += 16;
         pV2 += 16;
     }
     return corr / sqrt(norm);
-    */
-
-    /* This is a bit outdated, corresponding routine in assembler. This may be teeny-weeny bit
-       faster than intrinsic version, but more difficult to maintain & get compiled on multiple
-       platforms.
-
-    uint overlapLengthLocal = overlapLength;
-    float corr;
-
-    _asm
-    {
-        // Very important note: data in 'pV2' _must_ be aligned to
-        // 16-byte boundary!
-
-        // give prefetch hints to CPU of what data are to be needed soonish
-        // give more aggressive hints on pV1 as that changes while pV2 stays
-        // same between runs
-        prefetcht0 [pV1]
-        prefetcht0 [pV2]
-        prefetcht0 [pV1 + 32]
-
-        mov     eax, dword ptr pV1
-        mov     ebx, dword ptr pV2
-
-        xorps   xmm0, xmm0
-
-        mov     ecx, overlapLengthLocal
-        shr     ecx, 3  // div by eight
-
-    loop1:
-        prefetcht0 [eax + 64]     // give a prefetch hint to CPU what data are to be needed soonish
-        prefetcht0 [ebx + 32]     // give a prefetch hint to CPU what data are to be needed soonish
-        movups  xmm1, [eax]
-        mulps   xmm1, [ebx]
-        addps   xmm0, xmm1
-
-        movups  xmm2, [eax + 16]
-        mulps   xmm2, [ebx + 16]
-        addps   xmm0, xmm2
-
-        prefetcht0 [eax + 96]     // give a prefetch hint to CPU what data are to be needed soonish
-        prefetcht0 [ebx + 64]     // give a prefetch hint to CPU what data are to be needed soonish
-
-        movups  xmm3, [eax + 32]
-        mulps   xmm3, [ebx + 32]
-        addps   xmm0, xmm3
-
-        movups  xmm4, [eax + 48]
-        mulps   xmm4, [ebx + 48]
-        addps   xmm0, xmm4
-
-        add     eax, 64
-        add     ebx, 64
-
-        dec     ecx
-        jnz     loop1
-
-        // add the four floats of xmm0 together and return the result.
-
-        movhlps xmm1, xmm0          // move 3 & 4 of xmm0 to 1 & 2 of xmm1
-        addps   xmm1, xmm0
-        movaps  xmm2, xmm1
-        shufps  xmm2, xmm2, 0x01    // move 2 of xmm2 as 1 of xmm2
-        addss   xmm2, xmm1
-        movss   corr, xmm2
-    }
-
-    return (double)corr;
     */
 }
 
@@ -281,15 +214,15 @@ void FIRFilterSSE::setCoefficients(const float *coeffs, uint newLength, uint uRe
     FIRFilter::setCoefficients(coeffs, newLength, uResultDivFactor);
 
     // Scale the filter coefficients so that it won't be necessary to scale the filtering result
-    // also rearrange coefficients suitably for 3DNow!
+    // also rearrange coefficients suitably for SSE
     // Ensure that filter coeffs array is aligned to 16-byte boundary
     delete[] filterCoeffsUnalign;
     filterCoeffsUnalign = new float[2 * newLength + 4];
-    filterCoeffsAlign = (float *)(((unsigned long)filterCoeffsUnalign + 15) & (ulong)-16);
+    filterCoeffsAlign = (float *)SOUNDTOUCH_ALIGN_POINTER_16(filterCoeffsUnalign);
 
     fDivider = (float)resultDivider;
 
-    // rearrange the filter coefficients for mmx routines
+    // rearrange the filter coefficients for mmx routines 
     for (i = 0; i < newLength; i ++)
     {
         filterCoeffsAlign[2 * i + 0] =
@@ -313,7 +246,7 @@ uint FIRFilterSSE::evaluateFilterStereo(float *dest, const float *source, uint n
     assert(dest != NULL);
     assert((length % 8) == 0);
     assert(filterCoeffsAlign != NULL);
-    assert(((ulong)filterCoeffsAlign) % 16 == 0);
+    assert(((ulongptr)filterCoeffsAlign) % 16 == 0);
 
     // filter is evaluated for two stereo samples with each iteration, thus use of 'j += 2'
     for (j = 0; j < count; j += 2)
@@ -324,13 +257,13 @@ uint FIRFilterSSE::evaluateFilterStereo(float *dest, const float *source, uint n
         uint i;
 
         pSrc = (const float*)source;              // source audio data
-        pFil = (const __m128*)filterCoeffsAlign;  // filter coefficients. NOTE: Assumes coefficients
+        pFil = (const __m128*)filterCoeffsAlign;  // filter coefficients. NOTE: Assumes coefficients 
                                                   // are aligned to 16-byte boundary
         sum1 = sum2 = _mm_setzero_ps();
 
-        for (i = 0; i < length / 8; i ++)
+        for (i = 0; i < length / 8; i ++) 
         {
-            // Unroll loop for efficiency & calculate filter for 2*2 stereo samples
+            // Unroll loop for efficiency & calculate filter for 2*2 stereo samples 
             // at each pass
 
             // sum1 is accu for 2*2 filtered stereo sound data at the primary sound data offset
@@ -365,14 +298,14 @@ uint FIRFilterSSE::evaluateFilterStereo(float *dest, const float *source, uint n
     }
 
     // Ideas for further improvement:
-    // 1. If it could be guaranteed that 'source' were always aligned to 16-byte
+    // 1. If it could be guaranteed that 'source' were always aligned to 16-byte 
     //    boundary, a faster aligned '_mm_load_ps' instruction could be used.
-    // 2. If it could be guaranteed that 'dest' were always aligned to 16-byte
+    // 2. If it could be guaranteed that 'dest' were always aligned to 16-byte 
     //    boundary, a faster '_mm_store_ps' instruction could be used.
 
     return (uint)count;
 
-    /* original routine in C-language. please notice the C-version has differently
+    /* original routine in C-language. please notice the C-version has differently 
        organized coefficients though.
     double suml1, suml2;
     double sumr1, sumr2;
@@ -387,26 +320,26 @@ uint FIRFilterSSE::evaluateFilterStereo(float *dest, const float *source, uint n
         suml2 = sumr2 = 0.0;
         ptr = src;
         pFil = filterCoeffs;
-        for (i = 0; i < lengthLocal; i ++)
+        for (i = 0; i < lengthLocal; i ++) 
         {
             // unroll loop for efficiency.
 
-            suml1 += ptr[0] * pFil[0] +
+            suml1 += ptr[0] * pFil[0] + 
                      ptr[2] * pFil[2] +
                      ptr[4] * pFil[4] +
                      ptr[6] * pFil[6];
 
-            sumr1 += ptr[1] * pFil[1] +
+            sumr1 += ptr[1] * pFil[1] + 
                      ptr[3] * pFil[3] +
                      ptr[5] * pFil[5] +
                      ptr[7] * pFil[7];
 
-            suml2 += ptr[8] * pFil[0] +
+            suml2 += ptr[8] * pFil[0] + 
                      ptr[10] * pFil[2] +
                      ptr[12] * pFil[4] +
                      ptr[14] * pFil[6];
 
-            sumr2 += ptr[9] * pFil[1] +
+            sumr2 += ptr[9] * pFil[1] + 
                      ptr[11] * pFil[3] +
                      ptr[13] * pFil[5] +
                      ptr[15] * pFil[7];
@@ -423,88 +356,6 @@ uint FIRFilterSSE::evaluateFilterStereo(float *dest, const float *source, uint n
         dest += 4;
     }
     */
-
-
-    /* Similar routine in assembly, again obsoleted due to maintainability
-    _asm
-    {
-        // Very important note: data in 'src' _must_ be aligned to
-        // 16-byte boundary!
-        mov     edx, count
-        mov     ebx, dword ptr src
-        mov     eax, dword ptr dest
-        shr     edx, 1
-
-    loop1:
-        // "outer loop" : during each round 2*2 output samples are calculated
-
-        // give prefetch hints to CPU of what data are to be needed soonish
-        prefetcht0 [ebx]
-        prefetcht0 [filterCoeffsLocal]
-
-        mov     esi, ebx
-        mov     edi, filterCoeffsLocal
-        xorps   xmm0, xmm0
-        xorps   xmm1, xmm1
-        mov     ecx, lengthLocal
-
-    loop2:
-        // "inner loop" : during each round eight FIR filter taps are evaluated for 2*2 samples
-        prefetcht0 [esi + 32]     // give a prefetch hint to CPU what data are to be needed soonish
-        prefetcht0 [edi + 32]     // give a prefetch hint to CPU what data are to be needed soonish
-
-        movups  xmm2, [esi]         // possibly unaligned load
-        movups  xmm3, [esi + 8]     // possibly unaligned load
-        mulps   xmm2, [edi]
-        mulps   xmm3, [edi]
-        addps   xmm0, xmm2
-        addps   xmm1, xmm3
-
-        movups  xmm4, [esi + 16]    // possibly unaligned load
-        movups  xmm5, [esi + 24]    // possibly unaligned load
-        mulps   xmm4, [edi + 16]
-        mulps   xmm5, [edi + 16]
-        addps   xmm0, xmm4
-        addps   xmm1, xmm5
-
-        prefetcht0 [esi + 64]     // give a prefetch hint to CPU what data are to be needed soonish
-        prefetcht0 [edi + 64]     // give a prefetch hint to CPU what data are to be needed soonish
-
-        movups  xmm6, [esi + 32]    // possibly unaligned load
-        movups  xmm7, [esi + 40]    // possibly unaligned load
-        mulps   xmm6, [edi + 32]
-        mulps   xmm7, [edi + 32]
-        addps   xmm0, xmm6
-        addps   xmm1, xmm7
-
-        movups  xmm4, [esi + 48]    // possibly unaligned load
-        movups  xmm5, [esi + 56]    // possibly unaligned load
-        mulps   xmm4, [edi + 48]
-        mulps   xmm5, [edi + 48]
-        addps   xmm0, xmm4
-        addps   xmm1, xmm5
-
-        add     esi, 64
-        add     edi, 64
-        dec     ecx
-        jnz     loop2
-
-        // Now xmm0 and xmm1 both have a filtered 2-channel sample each, but we still need
-        // to sum the two hi- and lo-floats of these registers together.
-
-        movhlps xmm2, xmm0          // xmm2 = xmm2_3 xmm2_2 xmm0_3 xmm0_2
-        movlhps xmm2, xmm1          // xmm2 = xmm1_1 xmm1_0 xmm0_3 xmm0_2
-        shufps  xmm0, xmm1, 0xe4    // xmm0 = xmm1_3 xmm1_2 xmm0_1 xmm0_0
-        addps   xmm0, xmm2
-
-        movaps  [eax], xmm0
-        add     ebx, 16
-        add     eax, 16
-
-        dec     edx
-        jnz     loop1
-    }
-    */
 }
 
-#endif  // ALLOW_SSE
+#endif  // SOUNDTOUCH_ALLOW_SSE
