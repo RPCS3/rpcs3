@@ -23,10 +23,13 @@
 #include "GSDeviceOGL.h"
 #include "GSTables.h"
 
+static const uint32 g_vs_cb_index = 20;
+static const uint32 g_ps_cb_index = 21;
+
 void GSDeviceOGL::CreateTextureFX()
 {
-	m_vs_cb = new GSUniformBufferOGL(4, sizeof(VSConstantBuffer));
-	m_ps_cb = new GSUniformBufferOGL(5, sizeof(PSConstantBuffer));
+	m_vs_cb = new GSUniformBufferOGL(g_vs_cb_index, sizeof(VSConstantBuffer));
+	m_ps_cb = new GSUniformBufferOGL(g_ps_cb_index, sizeof(PSConstantBuffer));
 
 	glGenSamplers(1, &m_rt_ss);
 	// FIXME, seem to have no difference between sampler !!!

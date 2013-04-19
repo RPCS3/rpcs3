@@ -69,7 +69,11 @@ out gl_PerVertex {
     float gl_ClipDistance[];
 };
 
-layout(std140, binding = 4) uniform cb0
+#ifdef DISABLE_GL42
+layout(std140) uniform cb20
+#else
+layout(std140, binding = 20) uniform cb20
+#endif
 {
     vec4 VertexScale;
     vec4 VertexOffset;
@@ -278,7 +282,11 @@ layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
 layout(binding = 2) uniform sampler2D RTCopySampler;
 
-layout(std140, binding = 5) uniform cb1
+#ifdef DISABLE_GL42
+layout(std140) uniform cb21
+#else
+layout(std140, binding = 21) uniform cb21
+#endif
 {
     vec3 FogColor;
     float AREF;

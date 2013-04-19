@@ -32,6 +32,10 @@
 static uint32 g_draw_count = 0;
 static uint32 g_frame_count = 1;		
 
+static const uint32 g_merge_cb_index      = 10;
+static const uint32 g_interlace_cb_index  = 11;
+static const uint32 g_shadeboost_cb_index = 12;
+static const uint32 g_fxaa_cb_index       = 13;
 
 GSDeviceOGL::GSDeviceOGL()
 	: m_free_window(false)
@@ -287,7 +291,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// merge
 	// ****************************************************************
-	m_merge_obj.cb = new GSUniformBufferOGL(1, sizeof(MergeConstantBuffer));
+	m_merge_obj.cb = new GSUniformBufferOGL(g_merge_cb_index, sizeof(MergeConstantBuffer));
 
 	for(uint i = 0; i < countof(m_merge_obj.ps); i++)
 		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge_obj.ps[i]);
@@ -299,14 +303,14 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// interlace
 	// ****************************************************************
-	m_interlace.cb = new GSUniformBufferOGL(2, sizeof(InterlaceConstantBuffer));
+	m_interlace.cb = new GSUniformBufferOGL(g_interlace_cb_index, sizeof(InterlaceConstantBuffer));
 
 	for(uint i = 0; i < countof(m_interlace.ps); i++)
 		CompileShaderFromSource("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_interlace.ps[i]);
 	// ****************************************************************
 	// Shade boost
 	// ****************************************************************
-	m_shadeboost.cb = new GSUniformBufferOGL(6, sizeof(ShadeBoostConstantBuffer));
+	m_shadeboost.cb = new GSUniformBufferOGL(g_shadeboost_cb_index, sizeof(ShadeBoostConstantBuffer));
 
 	int ShadeBoost_Contrast = theApp.GetConfig("ShadeBoost_Contrast", 50);
 	int ShadeBoost_Brightness = theApp.GetConfig("ShadeBoost_Brightness", 50);
@@ -347,7 +351,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// FIXME need to define FXAA_GLSL_130 for the shader
 	// FIXME need to manually set the index...
 	// FIXME need dofxaa interface too
-	// m_fxaa.cb = new GSUniformBufferOGL(3, sizeof(FXAAConstantBuffer));
+	// m_fxaa.cb = new GSUniformBufferOGL(g_fxaa_cb_index, sizeof(FXAAConstantBuffer));
 	//CompileShaderFromSource("fxaa.fx", format("ps_main", i), GL_FRAGMENT_SHADER, &m_fxaa.ps);
 
 	// ****************************************************************
@@ -597,47 +601,62 @@ void GSDeviceOGL::DebugOutput()
 	//DebugBB();
 }
 
-void GSDeviceOGL::DrawPrimitive()
+#ifdef DISABLE_GL42
+static void set_uniform_buffer_binding(GLuint prog, GLchar* name, GLuint binding) {
+	GLuint index;
+	index = glGetUniformBlockIndex(prog, name);
+	if (index != GL_INVALID_INDEX) {
+		glUniformBlockBinding(prog, index, binding);
+	}
+}
+#endif
+
+void GSDeviceOGL::BeforeDraw()
 {
 #ifdef OGL_DEBUG
 	DebugInput();
 #endif
 
-	m_state.vb->DrawPrimitive();
+#ifdef DISABLE_GL42
+	set_uniform_buffer_binding(m_state.vs, "cb20", 20);
+	set_uniform_buffer_binding(m_state.ps, "cb21", 21);
 
+	set_uniform_buffer_binding(m_state.ps, "cb10", 10);
+	set_uniform_buffer_binding(m_state.ps, "cb11", 11);
+	set_uniform_buffer_binding(m_state.ps, "cb12", 12);
+	set_uniform_buffer_binding(m_state.ps, "cb13", 13);
+#endif
+}
+
+void GSDeviceOGL::AfterDraw()
+{
 #ifdef OGL_DEBUG
 	DebugOutput();
 	g_draw_count++;
 #endif
 }
 
+void GSDeviceOGL::DrawPrimitive()
+{
+	BeforeDraw();
+	m_state.vb->DrawPrimitive();
+	AfterDraw();
+}
+
 void GSDeviceOGL::DrawIndexedPrimitive()
 {
-#ifdef OGL_DEBUG
-	DebugInput();
-#endif
-
+	BeforeDraw();
 	m_state.vb->DrawIndexedPrimitive();
-
-#ifdef OGL_DEBUG
-	DebugOutput();
-	g_draw_count++;
-#endif
+	AfterDraw();
 }
 
 void GSDeviceOGL::DrawIndexedPrimitive(int offset, int count)
 {
 	ASSERT(offset + count <= m_index.count);
-#ifdef OGL_DEBUG
-	DebugInput();
-#endif
 
+	BeforeDraw();
 	m_state.vb->DrawIndexedPrimitive(offset, count);
-
-#ifdef OGL_DEBUG
-	DebugOutput();
-	g_draw_count++;
-#endif
+	AfterDraw();
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -733,7 +752,7 @@ GSTexture* GSDeviceOGL::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w
 	{
 		ASSERT(0);
 
-		return false;
+		return NULL;
 	}
 
 	// FIXME: It is possible to bypass completely offscreen-buffer on opengl but it needs some re-thinking of the code.
@@ -1283,7 +1302,11 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	// Build a header string
 	// *****************************************************
 	// First select the version (must be the first line so we need to generate it
+#ifdef DISABLE_GL42
+	std::string version = "#version 330\n#extension GL_ARB_separate_shader_objects : require\n#define DISABLE_GL42\n";
+#else
 	std::string version = "#version 330\n#extension GL_ARB_shading_language_420pack: require\n#extension GL_ARB_separate_shader_objects : require\n";
+#endif
 	//std::string version = "#version 420\n";
 
 	// Allow to puts several shader in 1 files

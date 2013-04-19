@@ -599,6 +599,8 @@ class GSDeviceOGL : public GSDevice
 	void DrawPrimitive();
 	void DrawIndexedPrimitive();
 	void DrawIndexedPrimitive(int offset, int count);
+	void BeforeDraw();
+	void AfterDraw();
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
 	void ClearRenderTarget(GSTexture* t, uint32 c);

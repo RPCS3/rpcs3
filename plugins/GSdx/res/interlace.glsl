@@ -11,7 +11,11 @@ layout(location = 0) in vertex_basic PSin;
 
 layout(location = 0) out vec4 SV_Target0;
 
-layout(std140, binding = 2) uniform cb0
+#ifdef DISABLE_GL42
+layout(std140) uniform cb11
+#else
+layout(std140, binding = 11) uniform cb11
+#endif
 {
     vec2 ZrH;
     float hH;

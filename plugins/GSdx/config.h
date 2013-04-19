@@ -35,3 +35,5 @@
 //#define DISABLE_COLCLAMP
 
 //#define DISABLE_DATE
+
+//#define DISABLE_GL42
