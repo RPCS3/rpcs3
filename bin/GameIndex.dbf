@@ -214,10 +214,10 @@ Name   = Kiosk Demo Disc 2.02
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97128
-Name   = Drakan - The Ancients' Gates	// aka Drakan 2
+Name   = Drakan - The Ancients' Gates	// aka "Drakan 2"
 Region = NTSC-U
 Compat = 5
-EETimingHack = 1		//flickery textures
+EETimingHack = 1	// flickery textures
 ---------------------------------------------
 Serial = SCUS-97129
 Name   = Okage - Shadow King
@@ -349,7 +349,7 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SCUS-97169
-Name   = Drakan - The Ancients' Gates [Demo]	// aka Drakan 2 [Demo]
+Name   = Drakan - The Ancients' Gates [Demo]	// aka "Drakan 2 [Demo]"
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97170
@@ -3670,7 +3670,7 @@ Name   = Gravenville - Ghost Master
 Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-20467
-Name   = Tomb Raider - The Angel of Darkness
+Name   = Tomb Raider - The Angel of Darkness	// aka "TRAOD"
 Region = NTSC-U
 Compat = 5
 OPHFlagHack = 1
@@ -5952,7 +5952,7 @@ Name   = Samurai Showdown V
 Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-20973
-Name   = Champions - Return to Arms	// aka Champions of Norrath 2
+Name   = Champions - Return to Arms	// aka "Champions of Norrath 2"
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
@@ -10718,7 +10718,7 @@ Name   = Konami Preview Disc
 Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-29126
-Name   = Champions - Return to Arms [Demo]	// aka Champions of Norrath 2 [Demo]
+Name   = Champions - Return to Arms [Demo]	// aka "Champions of Norrath 2 [Demo]"
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
@@ -11188,7 +11188,7 @@ Name   = Chain Drive
 Region = NTSC-Unk
 ---------------------------------------------
 Serial = SCAJ-20044
-Name   = Tomb Raider - The Angel of Darkness
+Name   = Tomb Raider - The Angel of Darkness	// aka "TRAOD"
 Region = NTSC-Unk
 OPHFlagHack = 1
 ---------------------------------------------
@@ -26577,7 +26577,7 @@ Name   = True Love Story - Summer Days and Yet
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-25246
-Name   = Tomb Raider - The Angel of Darkness
+Name   = Tomb Raider - The Angel of Darkness	// aka "TRAOD"
 Region = NTSC-J
 OPHFlagHack = 1
 ---------------------------------------------
@@ -29580,13 +29580,18 @@ Region = PAL-E
 Compat = 5
 ---------------------------------------------
 Serial = SCES-50006
-Name   = Drakan - The Ancients' Gates	// aka Drakan 2
+Name   = Drakan - The Ancients' Gates	// aka "Drakan 2"
 Region = PAL-M5
-EETimingHack = 1		//flickery textures
+Compat = 5
+EETimingHack = 1	// flickery textures
 [patches]
 	comment=This gamedisc supports multiple languages.
 	comment=Language selection is done through the BIOS configuration.
 	comment=Implementation requires full boot - "Boot CDVD (full)".
+
+	patch=1,EE,001C2274,word,3C013F7F // 3C013F80
+	// Fix by pgert that reduces displaycrap which arises with Resolution Scaling
+	//  around the Health & Mana bars. Improvement someone?
 [/patches]
 ---------------------------------------------
 Serial = SCES-50009
@@ -30350,8 +30355,17 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SCES-52677
 Name   = Network Access Disc & Hardware - Online Arena
-Region = PAL-Unk
-Compat = 4
+Region = PAL-Unk	// Portuguese * Dutch * Italian * German * Spanish * French * English * Japanese
+Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages and widescreen.
+	comment=- Language & widescreen selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+	comment=-
+	comment=- Using GSdx, this gamedisc crashes in gamemenu with SW-mode, 
+	comment=-  and have no 3D display with HW-mode.
+	comment=- Playable by toggling between HW-mode (in menu) and SW-mode (in game).
+[/patches]
 ---------------------------------------------
 Serial = SCES-52748
 Name   = EyeToy - Play 2
@@ -31704,8 +31718,13 @@ Compat = 4
 ---------------------------------------------
 Serial = SLES-50211
 Name   = Gauntlet - Dark Legacy
-Region = PAL-Unk
+Region = PAL-Unk	// English * French * German
 Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-50212
 Name   = Paris-Dakar Rally
@@ -32931,8 +32950,14 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-50821
 Name   = Project Zero
-Region = PAL-Unk
+Region = PAL-M5
 Compat = 5
+[patches]
+	comment=- This gamedisc only lets you choose language once,
+	comment=-  whereafter it stores that setting in the memcard.
+	comment=- To change the language you actually have to erase
+	comment=-  the memcard content for the game.
+[/patches]
 ---------------------------------------------
 Serial = SLES-50822
 Name   = Shadow Hearts
@@ -33808,10 +33833,16 @@ Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
 Serial = SLES-51227
-Name   = Tomb Raider - Angel of Darkness
+Name   = Tomb Raider - Angel of Darkness	// aka "TRAOD"
 Region = PAL-Unk
 Compat = 5
 OPHFlagHack = 1
+[patches]
+	comment=- This gamedisc supports multiple languages and widescreen.
+	comment=- Language & widescreen selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+	comment=- Full boot is recommended anyway for this gamedisc to avoid textproblems.
+[/patches]
 ---------------------------------------------
 Serial = SLES-51229
 Name   = Virtua Cop - Elite Edition
@@ -35662,6 +35693,12 @@ Compat = 3
 Serial = SLES-52149
 Name   = Tom Clancy's Splinter Cell - Pandora Tomorrow
 Region = PAL-Unk
+Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-52150
 Name   = Legacy of Kain - Defiance
@@ -35961,7 +35998,7 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-52325
 Name   = Champions of Norrath - Realms of EverQuest
-Region = PAL-Unk
+Region = PAL-Unk	// English * French * German
 ---------------------------------------------
 Serial = SLES-52326
 Name   = Spawn - Armageddon
@@ -37538,8 +37575,13 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53007
 Name   = Tom Clancy's Splinter Cell - Chaos Theory
-Region = PAL-M5
+Region = PAL-Unk
 Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-53011
 Name   = Gallop Racer 2
@@ -37645,7 +37687,7 @@ Compat = 5
 eeRoundMode = 0
 ---------------------------------------------
 Serial = SLES-53039
-Name   = Champions - Return to Arms	// aka Champions of Norrath 2
+Name   = Champions - Return to Arms	// aka "Champions of Norrath 2"
 Region = PAL-Unk
 Compat = 4
 ---------------------------------------------
@@ -37923,7 +37965,12 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53154
 Name   = Bard's Tale
-Region = PAL-Unk
+Region = PAL-Unk	// English * Spanish * Italian * French * German * Japanese * Korean * Chinese
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-53155
 Name   = Star Wars - Episode III - Revenge of the Sith
@@ -38900,7 +38947,13 @@ Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53667
 Name   = Gauntlet - Seven Sorrows
-Region = PAL-Unk
+Region = PAL-M5
+Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-53668
 Name   = Micro Machines v4
@@ -39237,6 +39290,12 @@ Compat = 5
 Serial = SLES-53826
 Name   = Tom Clancy's Splinter Cell - Double Agent
 Region = PAL-Unk
+Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-53827
 Name   = Tom Clancy's Splinter Cell - Double Agent
@@ -39399,8 +39458,13 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53908
 Name   = Tomb Raider - Legend
-Region = PAL-Unk
+Region = PAL-Unk	// English * French * German * Italian * Spanish * Japanese * Portugese * Polish
 Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-53909
 Name   = Full Spectrum Warrior - Ten Hammers
@@ -39970,17 +40034,17 @@ Region = PAL-R
 ---------------------------------------------
 Serial = SLES-54185
 Name   = Dirge of Cerberus - Final Fantasy VII
-Region = PAL-E
+Region = PAL-Unk
 Compat = 5
 [patches = 33F7D21A]
-	
-	//comment=patches by nachbrenner
-	
-	//override sceScfGetLanguage
-	//patch=0,EE,002486d8,word,24020000 //japanese
-	//patch=0,EE,002486d8,word,24020001 //english
-	//patch=0,EE,002486d8,word,24020004 //german
-	
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+
+	// Override sceScfGetLanguage patches by nachbrenner:
+	//  patch=0,EE,002486d8,word,24020000 // japanese
+	//  patch=0,EE,002486d8,word,24020001 // english
+	//  patch=0,EE,002486d8,word,24020004 // german
 [/patches]
 ---------------------------------------------
 Serial = SLES-54186
@@ -40874,7 +40938,13 @@ Region = PAL-M11
 ---------------------------------------------
 Serial = SLES-54674
 Name   = Lara Croft Tomb Raider - Anniversary
-Region = PAL-M5
+Region = PAL-Unk	// English * French * German * Italian * Spanish * Japanese * Portugese * Polish * Russian * Czech
+Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-54675
 Name   = Street Warrior
@@ -41707,8 +41777,13 @@ Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-55442
 Name   = Tomb Raider Underworld
-Region = PAL-M5
+Region = PAL-Unk	// English * French * German * Italian * Spanish * Japanese * Portugese * Polish * Russian * Czech * Dutch
 Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-55443
 Name   = Mana Khemia - Alchemists of Al-Revis
