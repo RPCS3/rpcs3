@@ -1058,6 +1058,14 @@ typedef struct _PS2E_ComponentAPI_Mcd
 	//
 	void (PS2E_CALLBACK* McdGetSizeInfo)( PS2E_THISPTR thisptr, uint port, uint slot, PS2E_McdSizeInfo* outways );
 
+	// McdIsPSX
+	// Checks if the memorycard is a PSX one from the Mcd provider.
+	// 
+	// Returns:
+	//   False: PS2, True: PSX
+	//
+	bool (PS2E_CALLBACK* McdIsPSX)( PS2E_THISPTR thisptr, uint port, uint slot );
+
 	// McdRead
 	// Requests that a block of data be loaded from the memorycard into the specified dest
 	// buffer (which is allocated by the caller).  Bytes read should match the requested

@@ -44,6 +44,7 @@ struct McdSlotItem
 	//Only meaningful when IsPresent==true (a file exists for this item):
 	wxFileName	Filename;		// full pathname
 	bool		IsFormatted;
+	bool		IsPSX; // False: PS2 memory card, True: PSX memory card
 	uint		SizeInMB;		// size, in megabytes!
 	wxDateTime	DateCreated;
 	wxDateTime	DateModified;
@@ -62,6 +63,7 @@ struct McdSlotItem
 	{
 		Slot		= -1;
 		
+		IsPSX = false;
 		IsPresent = false;
 		IsEnabled = false;
 	}

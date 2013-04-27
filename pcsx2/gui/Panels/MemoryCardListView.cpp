@@ -76,6 +76,7 @@ enum McdColumnType_Simple
 	McdColS_Filename,
 	McdColS_Size,
 	McdColS_Formatted,
+	McdColS_Type,
 	McdColS_DateModified,
 	McdColS_DateCreated,
 	McdColS_Count
@@ -102,13 +103,14 @@ const ListViewColumnInfo& MemoryCardListView_Simple::GetDefaultColumnInfo( uint 
 {
 	static const ListViewColumnInfo columns[] =
 	{
-		{ _("PS2 Port")		, 154 , wxLIST_FORMAT_LEFT	},
+		{ _("PS2 Port")		, 170 , wxLIST_FORMAT_LEFT	},
 		//{ _("Port status")	, 80  , wxLIST_FORMAT_LEFT	},
-		{ _("Card (file) name")	, 126 , wxLIST_FORMAT_LEFT	},
-		{ _("Card size")	, 60  , wxLIST_FORMAT_LEFT	},
+		{ _("Card (file) name")	, 145 , wxLIST_FORMAT_LEFT	},
+		{ _("Card size")	, 65  , wxLIST_FORMAT_LEFT	},
 		{ _("Formatted")	, 80  , wxLIST_FORMAT_LEFT	},
-		{ _("Last Modified"), 85 , wxLIST_FORMAT_LEFT	},
-		{ _("Created on")	, 85 , wxLIST_FORMAT_LEFT	},
+		{ _("Type")			  , 60  , wxLIST_FORMAT_LEFT	},
+		{ _("Last Modified"), 90 , wxLIST_FORMAT_LEFT	},
+		{ _("Created on")	, 90 , wxLIST_FORMAT_LEFT	},
 	};
 
 	pxAssertDev( idx < ArraySize(columns), "ListView column index is out of bounds." );
@@ -152,8 +154,9 @@ wxString MemoryCardListView_Simple::OnGetItemText(long item, long column) const
 			return prefix + res;
 		}
 */		
-		case McdColS_Size:			return prefix + ( !it.IsPresent ? L"" : pxsFmt( L"%u MB", it.SizeInMB ) );
+		case McdColS_Size:			return prefix + ( !it.IsPresent ? L"" : (it.IsPSX? pxsFmt( L"%u MBit", it.SizeInMB ) : pxsFmt( L"%u MiB", it.SizeInMB )) );
 		case McdColS_Formatted:		return prefix + ( !it.IsPresent ? L"" : ( it.IsFormatted ? _("Yes") : _("No")) );
+		case McdColS_Type:			return prefix + ( !it.IsPresent ? L"" : ( it.IsPSX? _("PSX") : _("PS2")) );
 		case McdColS_DateModified:	return prefix + ( !it.IsPresent ? L"" : it.DateModified.FormatDate() );
 		case McdColS_DateCreated:	return prefix + ( !it.IsPresent ? L"" : it.DateCreated.FormatDate() );
 

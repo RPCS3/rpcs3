@@ -64,6 +64,7 @@ public:
 
 	s32  IsPresent	( uint slot );
 	void GetSizeInfo( uint slot, PS2E_McdSizeInfo& outways );
+	bool IsPSX	( uint slot );
 	s32  Read		( uint slot, u8 *dest, u32 adr, int size );
 	s32  Save		( uint slot, const u8 *src, u32 adr, int size );
 	s32  EraseBlock	( uint slot, u32 adr );
@@ -266,6 +267,11 @@ void FileMemoryCard::GetSizeInfo( uint slot, PS2E_McdSizeInfo& outways )
 		outways.McdSizeInSectors	= 0x4000;
 }
 
+bool FileMemoryCard::IsPSX( uint slot )
+{
+	return m_file[slot].Length() == 0x20000;
+}
+
 s32 FileMemoryCard::Read( uint slot, u8 *dest, u32 adr, int size )
 {
 	wxFFile& mcfp( m_file[slot] );
@@ -379,6 +385,11 @@ static void PS2E_CALLBACK FileMcd_GetSizeInfo( PS2E_THISPTR thisptr, uint port, 
 	thisptr->impl.GetSizeInfo( FileMcd_ConvertToSlot( port, slot ), *outways );
 }
 
+static bool PS2E_CALLBACK FileMcd_IsPSX( PS2E_THISPTR thisptr, uint port, uint slot )
+{
+	return thisptr->impl.IsPSX( FileMcd_ConvertToSlot( port, slot ) );
+}
+
 static s32 PS2E_CALLBACK FileMcd_Read( PS2E_THISPTR thisptr, uint port, uint slot, u8 *dest, u32 adr, int size )
 {
 	return thisptr->impl.Read( FileMcd_ConvertToSlot( port, slot ), dest, adr, size );
@@ -408,6 +419,7 @@ Component_FileMcd::Component_FileMcd()
 
 	api.McdIsPresent	= FileMcd_IsPresent;
 	api.McdGetSizeInfo	= FileMcd_GetSizeInfo;
+	api.McdIsPSX		= FileMcd_IsPSX;
 	api.McdRead			= FileMcd_Read;
 	api.McdSave			= FileMcd_Save;
 	api.McdEraseBlock	= FileMcd_EraseBlock;

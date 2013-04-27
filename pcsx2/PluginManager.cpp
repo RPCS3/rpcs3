@@ -43,6 +43,11 @@ void SysPluginBindings::McdGetSizeInfo( uint port, uint slot, PS2E_McdSizeInfo& 
 		Mcd->McdGetSizeInfo( (PS2E_THISPTR) Mcd, port, slot, &outways );
 }
 
+bool SysPluginBindings::McdIsPSX( uint port, uint slot )
+{
+	return Mcd->McdIsPSX( (PS2E_THISPTR) Mcd, port, slot );
+}
+
 void SysPluginBindings::McdRead( uint port, uint slot, u8 *dest, u32 adr, int size )
 {
 	Mcd->McdRead( (PS2E_THISPTR) Mcd, port, slot, dest, adr, size );
