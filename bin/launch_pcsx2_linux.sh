@@ -72,9 +72,15 @@ then
 fi
 
 # Launch PCSX2
-if [ -x pcsx2 ]
+if [ -x "pcsx2" ]
 then
     ./pcsx2 $@
+elif [ -x "pcsx2-dev" ]
+then
+    ./pcsx2-dev $@
+elif [ -x "pcsx2-dbg" ]
+then
+    ./pcsx2-dbg $@
 else
     echo "Error PCSX2 not found"
     echo "Maybe the script was directly 'called'"
