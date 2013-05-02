@@ -5890,8 +5890,8 @@ Compat = 4
 	//patch=0,EE,003a9538,word,03e00008
 	//patch=0,EE,003a953c,word,00000000
 	
-	//patch=0,EE,003a9460,word,03e00008
-	//patch=0,EE,003a9464,word,00000000
+	patch=0,EE,003a9460,word,03e00008
+	patch=0,EE,003a9464,word,00000000
 	
 [/patches]
 ---------------------------------------------
@@ -6559,7 +6559,6 @@ Serial = SLUS-21106
 Name   = True Crime - New York City
 Region = NTSC-U
 Compat = 4
-EETimingHack = 1		//Bad Textures (Possibly needs SW Mode too)
 ---------------------------------------------
 Serial = SLUS-21107
 Name   = X-Men - The Official Game
@@ -22145,7 +22144,6 @@ Region = NTSC-J
 Serial = SLPM-66473
 Name   = True Crime - New York City
 Region = NTSC-J
-EETimingHack = 1		//Bad Textures (Possibly needs SW Mode too)
 ---------------------------------------------
 Serial = SLPM-66474
 Name   = Odin Sphere
@@ -24374,7 +24372,6 @@ eeRoundMode = 0
 Serial = SLPM-74243
 Name   = True Crime - New York City [PlayStation 2 the Best]
 Region = NTSC-J
-EETimingHack = 1		//Bad Textures (Possibly needs SW Mode too)
 ---------------------------------------------
 Serial = SLPM-74244
 Name   = Phantasy Star Universe [PlayStation 2 the Best]
@@ -36360,10 +36357,10 @@ Compat = 4
 	//comment=Patches By Nachbrenner
 	
 	//fix IPU busy! ingame
-	//patch=0,EE,003a9a88,word,03e00008
-	//patch=0,EE,003a9a8c,word,00000000
-	//patch=0,EE,003a9b60,word,03e00008
-	//patch=0,EE,003a9b64,word,00000000
+	patch=0,EE,003a9a88,word,03e00008
+	patch=0,EE,003a9a8c,word,00000000
+	patch=0,EE,003a9b60,word,03e00008
+	patch=0,EE,003a9b64,word,00000000
 	
 [/patches]
 ---------------------------------------------
@@ -38866,12 +38863,10 @@ Compat = 5
 Serial = SLES-53616
 Name   = True Crime - New York City
 Region = PAL-Unk
-EETimingHack = 1		//Bad Textures (Possibly needs SW Mode too)
 ---------------------------------------------
 Serial = SLES-53618
 Name   = True Crime - New York City
 Region = PAL-Unk
-EETimingHack = 1		//Bad Textures (Possibly needs SW Mode too)
 ---------------------------------------------
 Serial = SLES-53621
 Name   = Wallace & Grommit - The Curse of the Were Rabbit
