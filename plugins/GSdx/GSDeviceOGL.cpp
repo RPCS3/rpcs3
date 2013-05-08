@@ -1262,40 +1262,6 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 	}
 }
 
-// AMD drivers fail to support correctly the setting of index in fragment shader (layout statement in glsl)...
-// So instead to use directly glCreateShaderProgramv, you need to emulate the function and manually set 
-// the index in the fragment shader.
-GLuint GSDeviceOGL::glCreateShaderProgramv_AMD_BUG_WORKAROUND(GLenum  type,  GLsizei  count,  const char ** strings)
-{
-	const GLuint shader = glCreateShader(type);
-	if (shader) {
-		glShaderSource(shader, count, strings, NULL);
-		glCompileShader(shader);
-		const GLuint program = glCreateProgram();
-		if (program) {
-			GLint compiled = GL_FALSE;
-			glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-			glProgramParameteri(program, GL_PROGRAM_SEPARABLE, GL_TRUE);
-			if (compiled) {
-				glAttachShader(program, shader);
-				// HACK TO SET CORRECTLY THE INDEX
-				if (type == GL_FRAGMENT_SHADER) {
-					glBindFragDataLocationIndexed(program, 0, 0, "SV_Target0");
-					glBindFragDataLocationIndexed(program, 0, 1, "SV_Target1");
-				}
-				// END OF HACK
-				glLinkProgram(program);
-				glDetachShader(program, shader);
-			}
-			/* append-shader-info-log-to-program-info-log */
-		}
-		glDeleteShader(shader);
-		return program;
-	} else {
-		return 0;
-	}
-}
-
 void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const std::string& macro_sel)
 {
 	// *****************************************************
@@ -1380,20 +1346,6 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 #else
 	*program = glCreateShaderProgramv(type, 2, sources_array);
 #endif
-
-	// Check the correctness of the (AMD) driver
-	// Note: glGetFragDataLocation crash too!!! Catalyst 12.10 (and later) => HD 5XXX,6XXX !!!
-	if (theApp.GetConfig("renderer", 0) == 12) {
-		GLint slot = glGetFragDataLocation(*program, "SV_Target1");
-		if (slot == 0) { // <=> SV_Target1 used same slot as SV_Target0
-			GLint index = glGetFragDataIndex(*program,  "SV_Target1");
-			if (index != 1) {
-				fprintf(stderr, "Driver bug: failed to set the index, program will be recompiled\n");
-				glDeleteProgram(*program);
-				*program = glCreateShaderProgramv_AMD_BUG_WORKAROUND(type, 2, sources_array);
-			}
-		}
-	}
 
 	free(source_str);
 	free(header_str);

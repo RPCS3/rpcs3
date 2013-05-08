@@ -19,8 +19,6 @@
  *
  */
 
-#pragma once
-
 #include <limits.h>
 #include "GSTextureOGL.h"
 static int g_state_texture_unit = -1;

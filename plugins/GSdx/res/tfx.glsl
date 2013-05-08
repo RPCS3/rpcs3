@@ -153,10 +153,7 @@ out gl_PerVertex {
     float gl_ClipDistance[];
 };
 
-// FIXME
-// AMD Driver bug again !!!!
-//layout(location = 0) in vertex GSin[];
-in vertex GSin[];
+layout(location = 0) in vertex GSin[];
 
 layout(location = 0) out vertex GSout;
 
