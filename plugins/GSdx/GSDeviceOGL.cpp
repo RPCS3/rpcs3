@@ -69,19 +69,33 @@ GSDeviceOGL::~GSDeviceOGL()
 
 	// Clean m_merge_obj
 	for (uint i = 0; i < 2; i++)
+#ifndef DISABLE_GL41_SSO
 		glDeleteProgram(m_merge_obj.ps[i]);
+#else
+		glDeleteShader(m_merge_obj.ps[i]);
+#endif
 	delete (m_merge_obj.cb);
 	delete (m_merge_obj.bs);
 	
 	// Clean m_interlace
 	for (uint i = 0; i < 2; i++)
+#ifndef DISABLE_GL41_SSO
 		glDeleteProgram(m_interlace.ps[i]);
+#else
+		glDeleteShader(m_interlace.ps[i]);
+#endif
 	delete (m_interlace.cb);
 
 	// Clean m_convert
+#ifndef DISABLE_GL41_SSO
 	glDeleteProgram(m_convert.vs);
 	for (uint i = 0; i < 2; i++)
 		glDeleteProgram(m_convert.ps[i]);
+#else
+	glDeleteShader(m_convert.vs);
+	for (uint i = 0; i < 2; i++)
+		glDeleteShader(m_convert.ps[i]);
+#endif
 	glDeleteSamplers(1, &m_convert.ln);
 	glDeleteSamplers(1, &m_convert.pt);
 	delete m_convert.dss;
@@ -92,7 +106,9 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete m_date.bs;
 
 	// Clean various opengl allocation
+#ifndef DISABLE_GL41_SSO
 	glDeleteProgramPipelines(1, &m_pipeline);
+#endif
 	glDeleteFramebuffers(1, &m_fbo);
 	glDeleteFramebuffers(1, &m_fbo_read);
 
@@ -102,9 +118,18 @@ GSDeviceOGL::~GSDeviceOGL()
 	glDeleteSamplers(1, &m_rt_ss);
 	delete m_vb;
 
+#ifndef DISABLE_GL41_SSO
 	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) glDeleteProgram(it->second);
 	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) glDeleteProgram(it->second);
 	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) glDeleteProgram(it->second);
+#else
+	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) glDeleteShader(it->second);
+	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) glDeleteShader(it->second);
+	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) glDeleteShader(it->second);
+
+	for (auto it = m_single_prog.begin(); it != m_single_prog.end() ; it++) glDeleteProgram(it->second);
+	m_single_prog.clear();
+#endif
 	for (auto it = m_ps_ss.begin(); it != m_ps_ss.end() ; it++) glDeleteSamplers(1, &it->second);
 	m_vs.clear();
 	m_gs.clear();
@@ -212,8 +237,10 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// Various object
 	// ****************************************************************
+#ifndef DISABLE_GL41_SSO
 	glGenProgramPipelines(1, &m_pipeline);
 	glBindProgramPipeline(m_pipeline);
+#endif
 
 	glGenFramebuffers(1, &m_fbo);
 	glGenFramebuffers(1, &m_fbo_read);
@@ -635,9 +662,11 @@ GLuint GSDeviceOGL::link_prog()
 		fprintf(stderr, "\n");
 	}
 
+#if 0
 	if (m_state.vs) glDetachShader(single_prog, m_state.vs);
 	if (m_state.ps) glDetachShader(single_prog, m_state.ps);
 	if (m_state.gs) glDetachShader(single_prog, m_state.gs);
+#endif
 
 	return single_prog;
 }
@@ -650,7 +679,9 @@ void GSDeviceOGL::BeforeDraw()
 #endif
 
 #ifdef DISABLE_GL41_SSO
-	uint32 sel = m_state.vs << 24 | m_state.gs << 30 | m_state.ps;
+	// Note: shader are integer lookup pointer. They start from 1 and incr
+	// every time you create a new shader OR a new program.
+	uint64 sel = (uint64)m_state.vs << 40 | (uint64)m_state.gs << 20 | m_state.ps;
 	auto single_prog = m_single_prog.find(sel);
 	if (single_prog == m_single_prog.end()) {
 		m_single_prog[sel] = link_prog();	

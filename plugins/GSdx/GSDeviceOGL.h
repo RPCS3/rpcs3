@@ -658,7 +658,7 @@ class GSDeviceOGL : public GSDevice
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 
 #ifdef DISABLE_GL41_SSO
-	hash_map<uint32, GLuint > m_single_prog;
+	hash_map<uint64, GLuint > m_single_prog;
 	GLuint link_prog();
 #endif
 
