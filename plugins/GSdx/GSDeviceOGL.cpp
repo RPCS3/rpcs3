@@ -1359,13 +1359,12 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 		GLint log_length = 0;
 		glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
 		if (log_length > 0) {
-		char* log = (char*)malloc(log_length);
-		glGetProgramInfoLog(*program, log_length, NULL, log);
+			char* log = new char[log_length];
+			glGetProgramInfoLog(*program, log_length, NULL, log);
 			fprintf(stderr, "%s", log);
-		free(log);
+			delete[] log;
 		}
 		fprintf(stderr, "\n");
-
 	}
 }
 
