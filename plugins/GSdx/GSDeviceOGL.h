@@ -656,4 +656,10 @@ class GSDeviceOGL : public GSDevice
 	void SetupGS(GSSelector sel);
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
+
+#ifdef DISABLE_GL41_SSO
+	hash_map<uint32, GLuint > m_single_prog;
+	GLuint link_prog();
+#endif
+
 };

@@ -36,4 +36,8 @@
 
 //#define DISABLE_DATE
 
+// Set manually uniform buffer index
 //#define DISABLE_GL42
+
+// Debug: use single program for all shaders.
+//#define DISABLE_GL41_SSO

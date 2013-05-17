@@ -611,10 +611,54 @@ static void set_uniform_buffer_binding(GLuint prog, GLchar* name, GLuint binding
 }
 #endif
 
+#ifdef DISABLE_GL41_SSO
+GLuint GSDeviceOGL::link_prog()
+{
+	GLuint single_prog = glCreateProgram();
+	if (m_state.vs) glAttachShader(single_prog, m_state.vs);
+	if (m_state.ps) glAttachShader(single_prog, m_state.ps);
+	if (m_state.gs) glAttachShader(single_prog, m_state.gs);
+
+	glLinkProgram(single_prog);
+
+	GLint status;
+	glGetProgramiv(single_prog, GL_LINK_STATUS, &status);
+	if (!status) {
+		GLint log_length = 0;
+		glGetProgramiv(single_prog, GL_INFO_LOG_LENGTH, &log_length);
+		if (log_length > 0) {
+			char* log = new char[log_length];
+			glGetProgramInfoLog(single_prog, log_length, NULL, log);
+			fprintf(stderr, "%s", log);
+			delete[] log;
+		}
+		fprintf(stderr, "\n");
+	}
+
+	if (m_state.vs) glDetachShader(single_prog, m_state.vs);
+	if (m_state.ps) glDetachShader(single_prog, m_state.ps);
+	if (m_state.gs) glDetachShader(single_prog, m_state.gs);
+
+	return single_prog;
+}
+#endif
+
 void GSDeviceOGL::BeforeDraw()
 {
 #ifdef OGL_DEBUG
 	DebugInput();
+#endif
+
+#ifdef DISABLE_GL41_SSO
+	uint32 sel = m_state.vs << 24 | m_state.gs << 30 | m_state.ps;
+	auto single_prog = m_single_prog.find(sel);
+	if (single_prog == m_single_prog.end()) {
+		m_single_prog[sel] = link_prog();	
+		single_prog = m_single_prog.find(sel);
+	}
+
+	glUseProgram(single_prog->second);
+
 #endif
 
 #ifdef DISABLE_GL42
@@ -1104,7 +1148,9 @@ void GSDeviceOGL::VSSetShader(GLuint vs)
 	if(m_state.vs != vs)
 	{
 		m_state.vs = vs;
+#ifndef DISABLE_GL41_SSO
 		glUseProgramStages(m_pipeline, GL_VERTEX_SHADER_BIT, vs);
+#endif
 	}
 }
 
@@ -1113,7 +1159,9 @@ void GSDeviceOGL::GSSetShader(GLuint gs)
 	if(m_state.gs != gs)
 	{
 		m_state.gs = gs;
+#ifndef DISABLE_GL41_SSO
 		glUseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, gs);
+#endif
 	}
 }
 
@@ -1154,7 +1202,9 @@ void GSDeviceOGL::PSSetShader(GLuint ps)
 	if(m_state.ps != ps)
 	{
 		m_state.ps = ps;
+#ifndef DISABLE_GL41_SSO
 		glUseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, ps);
+#endif
 	}
 
 // Sampler and texture must be set at the same time
@@ -1268,10 +1318,18 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	// Build a header string
 	// *****************************************************
 	// First select the version (must be the first line so we need to generate it
-#ifdef DISABLE_GL42
-	std::string version = "#version 330\n#extension GL_ARB_separate_shader_objects : require\n#define DISABLE_GL42\n";
+#ifdef DISABLE_GL41_SSO
+	#ifdef DISABLE_GL42
+	std::string version = "#version 330\n#define DISABLE_GL42\n";
+	#else
+	std::string version = "#version 330\n#extension GL_ARB_shading_language_420pack: require\n";
+	#endif
 #else
+	#ifdef DISABLE_GL42
+	std::string version = "#version 330\n#extension GL_ARB_separate_shader_objects : require\n#define DISABLE_GL42\n";
+	#else
 	std::string version = "#version 330\n#extension GL_ARB_shading_language_420pack: require\n#extension GL_ARB_separate_shader_objects : require\n";
+	#endif
 #endif
 	//std::string version = "#version 420\n";
 
@@ -1338,6 +1396,7 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	header.copy(header_str, header.size(), 0);
 	header_str[header.size()] = '\0';
 
+#ifndef DISABLE_GL41_SSO
 #if 0
 	// Could be useful one day
 	const GLchar* ShaderSource[1];
@@ -1345,6 +1404,11 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	*program = glCreateShaderProgramv(type, 1, &ShaderSource[0]);
 #else
 	*program = glCreateShaderProgramv(type, 2, sources_array);
+#endif
+#else
+	*program = glCreateShader(type);
+	glShaderSource(*program, 2, sources_array, NULL);
+	glCompileShader(*program);
 #endif
 
 	free(source_str);
@@ -1357,10 +1421,18 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 		fprintf(stderr, "\n%s", macro_sel.c_str());
 
 		GLint log_length = 0;
+#ifndef DISABLE_GL41_SSO
 		glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+#else
+		glGetShaderiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+#endif
 		if (log_length > 0) {
 			char* log = new char[log_length];
+#ifndef DISABLE_GL41_SSO
 			glGetProgramInfoLog(*program, log_length, NULL, log);
+#else
+			glGetShaderInfoLog(*program, log_length, NULL, log);
+#endif
 			fprintf(stderr, "%s", log);
 			delete[] log;
 		}
