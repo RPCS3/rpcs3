@@ -87,6 +87,7 @@ PFNGLUNMAPBUFFERPROC                   glUnmapBuffer                   =   NULL;
 PFNGLUSEPROGRAMSTAGESPROC              glUseProgramStages              =   NULL;
 PFNGLVERTEXATTRIBIPOINTERPROC          glVertexAttribIPointer          =   NULL;
 PFNGLVERTEXATTRIBPOINTERPROC           glVertexAttribPointer           =   NULL;
+PFNGLTEXSTORAGE2DPROC				   glTexStorage2D				   =   NULL;
 
 namespace GLLoader {
 
@@ -179,6 +180,7 @@ namespace GLLoader {
 		GL_LOADFN(glUseProgramStages);
 		GL_LOADFN(glVertexAttribIPointer);
 		GL_LOADFN(glVertexAttribPointer);
+		GL_LOADFN(glTexStorage2D);
     }
 
 	bool check_gl_supported_extension() {
@@ -187,6 +189,7 @@ namespace GLLoader {
 
 		bool found_GL_ARB_separate_shader_objects = false;
 		bool found_GL_ARB_shading_language_420pack = false;
+		bool found_GL_ARB_texture_storage = false;
 		fprintf(stderr, "DEBUG: check_gl_supported_extension\n");
 
 		if (glGetStringi && max_ext) {
@@ -198,17 +201,24 @@ namespace GLLoader {
 				if (ext.compare("GL_ARB_shading_language_420pack") == 0) {
 					found_GL_ARB_shading_language_420pack = true;
 				}
+				if (ext.compare("GL_ARB_texture_storage") == 0) {
+					found_GL_ARB_texture_storage = true;
+				}
 				fprintf(stderr, "EXT: %s\n", ext.c_str());
 			}
 		}
 
-		if ( !found_GL_ARB_separate_shader_objects) {
+		if (!found_GL_ARB_separate_shader_objects) {
 			fprintf(stderr, "GL_ARB_separate_shader_objects is not supported\n");
 			return false;
 		}
-		if ( !found_GL_ARB_shading_language_420pack) {
+		if (!found_GL_ARB_shading_language_420pack) {
 			fprintf(stderr, "GL_ARB_shading_language_420pack is not supported\n");
 			//return false;
+		}
+		if (!found_GL_ARB_texture_storage) {
+			fprintf(stderr, "GL_ARB_texture_storage is not supported\n");
+			return false;
 		}
 
 		return true;

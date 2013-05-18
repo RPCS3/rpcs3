@@ -68,7 +68,7 @@ bool GSWndOGL::CreateContext(int major, int minor)
 	// Install a dummy handler to handle gracefully (aka not segfault) the support of GL version
 	int (*oldHandler)(Display*, XErrorEvent*) = XSetErrorHandler(&ctxErrorHandler);
 	// Be sure the handler is installed
-	XSync( m_XDisplay, false);
+	XSync( m_NativeDisplay, false);
 
 	// Create a context
 	int context_attribs[] =
@@ -88,7 +88,7 @@ bool GSWndOGL::CreateContext(int major, int minor)
 	XSetErrorHandler(oldHandler);
 
 	// Get latest error
-	XSync( m_XDisplay, false);
+	XSync( m_NativeDisplay, false);
 
 	if (!m_context || ctxError) {
 		fprintf(stderr, "Failed to create the opengl context. Check your drivers support openGL %d.%d. Hint: opensource drivers don't\n", major, minor );

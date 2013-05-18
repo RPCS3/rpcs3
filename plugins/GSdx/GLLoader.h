@@ -113,6 +113,7 @@ extern   PFNGLUNMAPBUFFERPROC                   glUnmapBuffer;
 extern   PFNGLUSEPROGRAMSTAGESPROC              glUseProgramStages;
 extern   PFNGLVERTEXATTRIBIPOINTERPROC          glVertexAttribIPointer;
 extern   PFNGLVERTEXATTRIBPOINTERPROC           glVertexAttribPointer;
+extern   PFNGLTEXSTORAGE2DPROC				    glTexStorage2D;
 
 namespace GLLoader {
 	bool check_gl_version(uint32 major, uint32 minor);
