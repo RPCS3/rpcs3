@@ -80,7 +80,13 @@
 #define IDC_AGGRESSIVECRC               2076
 #define IDC_CHECK_DISABLE_ALL_HACKS     2077
 #define IDC_ALPHASTENCIL                2078
-#define IDC_ADAPTER                     2078
+#define IDC_ADAPTER                     2079
+#define IDC_STATIC_TCOFFSETX            2080
+#define IDC_STATIC_TCOFFSETY            2081
+#define IDC_TCOFFSETX                   2082
+#define IDC_TCOFFSETX2                  2083
+#define IDC_TCOFFSETY                   2084
+#define IDC_TCOFFSETY2                  2085
 #define IDC_COLORSPACE                  3000
 #define IDR_CONVERT_FX                  10000
 #define IDR_TFX_FX                      10001
@@ -99,7 +105,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        10012
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         2079
+#define _APS_NEXT_CONTROL_VALUE         2086
 #define _APS_NEXT_SYMED_VALUE           5000
 #endif
 #endif

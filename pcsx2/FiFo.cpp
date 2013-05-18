@@ -109,6 +109,15 @@ void __fastcall WriteFIFO_VIF1(const mem128_t *value)
 	}
 	else vif1Regs.stat.VPS = VPS_IDLE;
 
+	if( gifRegs.stat.APATH == 2  && gifUnit.gifPath[1].isDone())
+	{
+		gifRegs.stat.APATH = 0;
+		gifRegs.stat.OPH = 0;
+		vif1Regs.stat.VGW = false; //Let vif continue if it's stuck on a flush
+
+		if(gifUnit.checkPaths(1,0,1)) gifUnit.Execute(false, true);
+	}
+
 	pxAssertDev( ret, "vif stall code not implemented" );
 }
 
@@ -119,4 +128,16 @@ void __fastcall WriteFIFO_GIF(const mem128_t *value)
 
 	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
 		gifUnit.gifPath[GIF_PATH_3].state = GIF_PATH_IDLE;
+
+	if( gifRegs.stat.APATH == 3 )
+	{
+		gifRegs.stat.APATH = 0;
+		gifRegs.stat.OPH = 0;
+
+		if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_IDLE || gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT) 
+		{
+			if(gifUnit.checkPaths(1,1,0)) gifUnit.Execute(false, true);
+		}
+
+	}
 }

@@ -214,10 +214,10 @@ Name   = Kiosk Demo Disc 2.02
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97128
-Name   = Drakan - The Ancients' Gates
+Name   = Drakan - The Ancients' Gates	// aka "Drakan 2"
 Region = NTSC-U
 Compat = 5
-EETimingHack = 1		//flickery textures
+EETimingHack = 1	// flickery textures
 ---------------------------------------------
 Serial = SCUS-97129
 Name   = Okage - Shadow King
@@ -349,7 +349,7 @@ Region = NTSC-U
 Compat = 5
 ---------------------------------------------
 Serial = SCUS-97169
-Name   = Drakan - The Ancients' Gates [Demo]
+Name   = Drakan - The Ancients' Gates [Demo]	// aka "Drakan 2 [Demo]"
 Region = NTSC-U
 ---------------------------------------------
 Serial = SCUS-97170
@@ -840,7 +840,7 @@ Serial = SCUS-97328
 Name   = Gran Turismo 4
 Region = NTSC-U
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCUS-97329
@@ -1169,7 +1169,7 @@ Region = NTSC-U
 Serial = SCUS-97436
 Name   = Gran Turismo 4 [Online Public Beta]
 Region = NTSC-U
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCUS-97437
@@ -3670,7 +3670,7 @@ Name   = Gravenville - Ghost Master
 Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-20467
-Name   = Tomb Raider - The Angel of Darkness
+Name   = Tomb Raider - The Angel of Darkness	// aka "TRAOD"
 Region = NTSC-U
 Compat = 5
 OPHFlagHack = 1
@@ -3755,6 +3755,9 @@ Serial = SLUS-20484
 Name   = Devil May Cry 2 [Disc1of2]
 Region = NTSC-U
 Compat = 5
+[patches]
+	comment=Note that this disc has the same CRC as SLPM-65232, the NTSC-J disc.
+[/patches]
 ---------------------------------------------
 Serial = SLUS-20485
 Name   = Dino Stalker
@@ -5887,8 +5890,8 @@ Compat = 4
 	//patch=0,EE,003a9538,word,03e00008
 	//patch=0,EE,003a953c,word,00000000
 	
-	//patch=0,EE,003a9460,word,03e00008
-	//patch=0,EE,003a9464,word,00000000
+	patch=0,EE,003a9460,word,03e00008
+	patch=0,EE,003a9464,word,00000000
 	
 [/patches]
 ---------------------------------------------
@@ -5949,7 +5952,7 @@ Name   = Samurai Showdown V
 Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-20973
-Name   = Champions - Return to Arms
+Name   = Champions - Return to Arms	// aka "Champions of Norrath 2"
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
@@ -9559,6 +9562,12 @@ Region = NTSC-U
 Compat = 5
 VuClipFlagHack = 1
 ---------------------------------------------
+Serial = SLUS-21782B
+Name   = Shin Megami Tensei - Persona 4
+Region = NTSC-U
+Compat = 5
+VuClipFlagHack = 1
+---------------------------------------------
 Serial = SLUS-21783
 Name   = Space Chimps
 Region = NTSC-U
@@ -10658,6 +10667,7 @@ Region = NTSC-U
 Serial = SLUS-29101
 Name   = Crash Twinsanity & Spyro - A Hero's Tail [Demo]
 Region = NTSC-U
+XgKickHack = 1  //Fixes bad Geometry
 ---------------------------------------------
 Serial = SLUS-29104
 Name   = Galactic Wrestling - Featuring Ultimate Muscle [Demo]
@@ -10708,7 +10718,7 @@ Name   = Konami Preview Disc
 Region = NTSC-U
 ---------------------------------------------
 Serial = SLUS-29126
-Name   = Champions - Return to Arms [Demo]
+Name   = Champions - Return to Arms [Demo]	// aka "Champions of Norrath 2 [Demo]"
 Region = NTSC-U
 Compat = 4
 ---------------------------------------------
@@ -10908,7 +10918,7 @@ Region = NTSC-U
 Serial = PAPX-90512
 Name   = Gran Turismo 4 - Toyota Prius [Trial]
 Region = NTSC-J
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = PBPX-95503
@@ -10932,39 +10942,39 @@ Serial = PBPX-95524
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-Unk
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
-[patches = CA6243B9]
+//[patches = CA6243B9]
+//	
+//	comment=patches by Nachbrenner
 	
-	comment=patches by Nachbrenner
-	
-	//fix IPU DMA 
-	patch=1,EE,00166814,word,00000000
-	patch=1,EE,003a36b8,word,00000000
-	patch=1,EE,003a36f4,word,00000000
-	//Skip Videos
-	patch=1,EE,001e3718,word,03e00008 
-	patch=1,EE,001e371c,word,00000000
-	
-[/patches]
+//	//fix IPU DMA 
+//	patch=1,EE,00166814,word,00000000
+//	patch=1,EE,003a36b8,word,00000000
+//	patch=1,EE,003a36f4,word,00000000
+//	//Skip Videos
+//	patch=1,EE,001e3718,word,03e00008 
+//	patch=1,EE,001e371c,word,00000000
+//	
+//[/patches]
 ---------------------------------------------
 Serial = PCPX-96649
 Name   = Gran Turismo 4 [Demo]
 Region = NTSC-J
 Compat = 4
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
-[patches = E906EA37]
-	
-	comment=patches by mdr61
-	
-	//Timelimit counter stop
-	patch=0,EE,002EF740,word,00000000
-	//Pause counter stop
-	patch=0,EE,002C7394,word,00000000
-	patch=0,EE,002F1F40,word,00000000
-	
-[/patches]
+//[patches = E906EA37]
+//	
+//	comment=patches by mdr61
+//	
+//	//Timelimit counter stop
+//	patch=0,EE,002EF740,word,00000000
+//	//Pause counter stop
+//	patch=0,EE,002C7394,word,00000000
+//	patch=0,EE,002F1F40,word,00000000
+//	
+//[/patches]
 ---------------------------------------------
 Serial = SCAJ-10001
 Name   = Makai Senki Disgaea
@@ -11178,7 +11188,7 @@ Name   = Chain Drive
 Region = NTSC-Unk
 ---------------------------------------------
 Serial = SCAJ-20044
-Name   = Tomb Raider - The Angel of Darkness
+Name   = Tomb Raider - The Angel of Darkness	// aka "TRAOD"
 Region = NTSC-Unk
 OPHFlagHack = 1
 ---------------------------------------------
@@ -11249,7 +11259,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20066
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-Unk
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCAJ-20067
@@ -11619,6 +11629,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20161
 Name   = Siren 2
 Region = NTSC-J
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCAJ-20162
 Name   = Rogue Galaxy
@@ -11643,6 +11654,7 @@ Region = NTSC-Unk
 Serial = SCAJ-20167
 Name   = Siren 2
 Region = NTSC-Ch-J
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCAJ-20168
 Name   = Rule of Rose
@@ -11825,28 +11837,28 @@ Region = NTSC-Unk
 Serial = SCAJ-30006
 Name   = Gran Turismo 4
 Region = NTSC-Unk
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCAJ-30007
 Name   = Gran Turismo 4
 Region = NTSC-Unk
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
-[patches = 7ABDBB5E]
-	
-	comment=patches by nachbrenner
-	
-	//skip Videos
-	patch=1,EE,00100D84,word,24100001
-	
-[/patches]
+//[patches = 7ABDBB5E]
+//	
+//	comment=patches by nachbrenner
+//	
+//	//skip Videos
+//	patch=1,EE,00100D84,word,24100001
+//	
+//[/patches]
 ---------------------------------------------
 Serial = SCAJ-30008
 Name   = Gran Turismo 4 [PlayStation 2 The Best]
 Region = NTSC-Unk
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCAJ-30010
@@ -11923,7 +11935,7 @@ VIF1StallHack = 1		//HUD
 Serial = SCKA-20022
 Name   = Gran Turismo 4 Prologue
 Region = NTSC-K
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCKA-20023
@@ -12075,6 +12087,7 @@ Region = NTSC-K
 Serial = SCKA-20069
 Name   = Siren 2
 Region = NTSC-K
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCKA-20070
 Name   = Ace Combat Zero - The Belkan War
@@ -12172,7 +12185,7 @@ Region = NTSC-K
 Serial = SCKA-30001
 Name   = Gran Turismo 4
 Region = NTSC-K
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCKA-30002
@@ -12584,7 +12597,7 @@ Region = NTSC-J
 Serial = SCPS-15055
 Name   = Gran Turismo 4 - Prologue
 Region = NTSC-J
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-15056
@@ -12797,6 +12810,7 @@ Serial = SCPS-15106
 Name   = Siren 2
 Region = NTSC-J
 Compat = 4
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCPS-15107
 Name   = Gunparade Orchestra - Midori no Shou [Limited Edition]
@@ -12863,7 +12877,7 @@ Serial = SCPS-17001
 Name   = Gran Turismo 4
 Region = NTSC-J
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-17002
@@ -12991,7 +13005,7 @@ Region = NTSC-J
 Serial = SCPS-19252
 Name   = Gran Turismo 4 [PlayStation 2 The Best]
 Region = NTSC-J
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-19253
@@ -13013,7 +13027,7 @@ Region = NTSC-J
 Serial = SCPS-19304
 Name   = Gran Turismo 4 - Prologue [PlayStation 2 The Best]
 Region = NTSC-J
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCPS-19305
@@ -13099,6 +13113,7 @@ Region = NTSC-J
 Serial = SCPS-19326
 Name   = Siren 2 [PlayStation 2 The Best]
 Region = NTSC-J
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCPS-19327
 Name   = Ape Escape 3 [PlayStation 2 the Best - Reprint]
@@ -16447,7 +16462,7 @@ Serial = SLPM-62623
 Name   = Elemental Gerad
 Region = NTSC-J
 Compat = 5
-XgKickHack = 1
+XgKickHack = 1 //Fixes chocolate coloured characters
 ---------------------------------------------
 Serial = SLPM-62624
 Name   = Indoor Helicopter Adventure 2
@@ -16996,10 +17011,6 @@ Serial = SLPM-64525
 Name   = Guilty Gear X Plus "By Your Side"
 Region = NTSC-K
 Compat = 5
----------------------------------------------
-Serial = SLPM-64549
-Name   = Shikigame no Shiro
-Region = NTSC-K
 ---------------------------------------------
 Serial = SLPM-65001
 Name   = Kessen
@@ -17701,6 +17712,9 @@ Serial = SLPM-65232
 Name   = Devil May Cry 2 [Dante Disc]
 Region = NTSC-J
 Compat = 5
+[patches]
+	comment=Note that this disc has the same CRC as SLUS-20484, the NTSC-U disc.
+[/patches]
 ---------------------------------------------
 Serial = SLPM-65233
 Name   = Devil May Cry 2 [Lucia Disc]
@@ -19907,11 +19921,6 @@ Region = NTSC-J
 Serial = SLPM-65844
 Name   = Air [Best]
 Region = NTSC-J
----------------------------------------------
-Serial = SLPM-65845
-Name   = Baldur's Gate - Dark Alliance II
-Region = NTSC-J
-Compat = 4
 ---------------------------------------------
 Serial = SLPM-65846
 Name   = Lord of the Rings, The - Uchitsu Kuni Daisanki
@@ -26568,7 +26577,7 @@ Name   = True Love Story - Summer Days and Yet
 Region = NTSC-J
 ---------------------------------------------
 Serial = SLPS-25246
-Name   = Tomb Raider - The Angel of Darkness
+Name   = Tomb Raider - The Angel of Darkness	// aka "TRAOD"
 Region = NTSC-J
 OPHFlagHack = 1
 ---------------------------------------------
@@ -29397,7 +29406,7 @@ Region = NTSC-J
 Serial = TCPS-10111
 Name   = Eremental Gerad
 Region = NTSC-J
-XgKickHack = 1
+XgKickHack = 1  //Fixes chocolate coloured characters
 ---------------------------------------------
 Serial = TCPS-10113
 Name   = Mushihime-sama
@@ -29571,9 +29580,19 @@ Region = PAL-E
 Compat = 5
 ---------------------------------------------
 Serial = SCES-50006
-Name   = Drakan - The Ancients' Gates
-Region = PAL-Unk
-EETimingHack = 1		//flickery textures
+Name   = Drakan - The Ancients' Gates	// aka "Drakan 2"
+Region = PAL-M5
+Compat = 5
+EETimingHack = 1	// flickery textures
+[patches]
+	comment=This gamedisc supports multiple languages.
+	comment=Language selection is done through the BIOS configuration.
+	comment=Implementation requires full boot - "Boot CDVD (full)".
+
+	patch=1,EE,001C2274,word,3C013F7F // 3C013F80
+	// Fix by pgert that reduces displaycrap which arises with Resolution Scaling
+	//  around the Health & Mana bars. Improvement someone?
+[/patches]
 ---------------------------------------------
 Serial = SCES-50009
 Name   = Wild Wild Racing
@@ -30105,7 +30124,7 @@ Serial = SCES-51719
 Name   = Gran Turismo 4
 Region = PAL-Unk
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCES-51725
@@ -30288,7 +30307,7 @@ Serial = SCES-52438
 Name   = Gran Turismo 4 - Prologue
 Region = PAL-Unk
 Compat = 5
-eeClampMode = 3 // Text in races works
+//eeClampMode = 3 // Text in races works
 vuClampMode = 2 // Text in GT mode works
 ---------------------------------------------
 Serial = SCES-52456
@@ -30336,8 +30355,17 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SCES-52677
 Name   = Network Access Disc & Hardware - Online Arena
-Region = PAL-Unk
-Compat = 4
+Region = PAL-Unk	// Portuguese * Dutch * Italian * German * Spanish * French * English * Japanese
+Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages and widescreen.
+	comment=- Language & widescreen selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+	comment=-
+	comment=- Using GSdx, this gamedisc crashes in gamemenu with SW-mode, 
+	comment=-  and have no 3D display with HW-mode.
+	comment=- Playable by toggling between HW-mode (in menu) and SW-mode (in game).
+[/patches]
 ---------------------------------------------
 Serial = SCES-52748
 Name   = EyeToy - Play 2
@@ -30468,7 +30496,7 @@ Serial = SCES-53247
 Name   = WRC - World Rally Championship - Rally Evolved
 Region = PAL-Unk
 Compat = 4
-XgKickHack = 1			//Most of the ingame SPS gets fixed with it.
+XgKickHack = 1			//SPS.
 [patches = cbbc2e7f]
 	comment=patches by Nachbrenner
 	//fix delay slot violation
@@ -30639,6 +30667,7 @@ Serial = SCES-53851
 Name   = Forbidden Siren 2
 Region = PAL-M5
 Compat = 4
+XgKickHack = 1			//SPS.
 ---------------------------------------------
 Serial = SCES-53879
 Name   = Buzz! The Big Quiz
@@ -31140,14 +31169,6 @@ Region = PAL-E
 Serial = SLED-53723
 Name   = Peter Jackson's king Kong [Demo]
 Region = PAL-E
----------------------------------------------
-Serial = SLED-53745
-Name   = Total Overdose [Demo]
-Region = PAL-M5
----------------------------------------------
-Serial = SLED-53745
-Name   = Total Overdose [Demo]
-Region = PAL-M5
 ---------------------------------------------
 Serial = SLED-53745
 Name   = Total Overdose [Demo]
@@ -31697,8 +31718,13 @@ Compat = 4
 ---------------------------------------------
 Serial = SLES-50211
 Name   = Gauntlet - Dark Legacy
-Region = PAL-Unk
+Region = PAL-Unk	// English * French * German
 Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-50212
 Name   = Paris-Dakar Rally
@@ -32926,6 +32952,12 @@ Serial = SLES-50821
 Name   = Project Zero
 Region = PAL-M5
 Compat = 5
+[patches]
+	comment=- This gamedisc only lets you choose language once,
+	comment=-  whereafter it stores that setting in the memcard.
+	comment=- To change the language you actually have to erase
+	comment=-  the memcard content for the game.
+[/patches]
 ---------------------------------------------
 Serial = SLES-50822
 Name   = Shadow Hearts
@@ -33801,10 +33833,16 @@ Region = PAL-Unk
 Compat = 5
 ---------------------------------------------
 Serial = SLES-51227
-Name   = Tomb Raider - Angel of Darkness
+Name   = Tomb Raider - Angel of Darkness	// aka "TRAOD"
 Region = PAL-Unk
 Compat = 5
 OPHFlagHack = 1
+[patches]
+	comment=- This gamedisc supports multiple languages and widescreen.
+	comment=- Language & widescreen selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+	comment=- Full boot is recommended anyway for this gamedisc to avoid textproblems.
+[/patches]
 ---------------------------------------------
 Serial = SLES-51229
 Name   = Virtua Cop - Elite Edition
@@ -35655,6 +35693,12 @@ Compat = 3
 Serial = SLES-52149
 Name   = Tom Clancy's Splinter Cell - Pandora Tomorrow
 Region = PAL-Unk
+Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-52150
 Name   = Legacy of Kain - Defiance
@@ -35718,6 +35762,11 @@ Compat = 4
 Serial = SLES-52188
 Name   = Baldur's Gate - Dark Alliance 2
 Region = PAL-Unk
+Compat = 4
+---------------------------------------------
+Serial = SLPM-65845
+Name   = Baldur's Gate - Dark Alliance II
+Region = NTSC-J
 Compat = 4
 ---------------------------------------------
 Serial = SLES-52190
@@ -35849,14 +35898,17 @@ Compat = 4
 Serial = SLES-52278
 Name   = Mafia
 Region = PAL-Unk
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-52279
 Name   = Mafia
 Region = PAL-Unk
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-52280
 Name   = Mafia
 Region = PAL-Unk
+EETimingHack = 1
 ---------------------------------------------
 Serial = SLES-52282
 Name   = Mafia
@@ -35949,7 +36001,7 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-52325
 Name   = Champions of Norrath - Realms of EverQuest
-Region = PAL-Unk
+Region = PAL-Unk	// English * French * German
 ---------------------------------------------
 Serial = SLES-52326
 Name   = Spawn - Armageddon
@@ -36305,10 +36357,10 @@ Compat = 4
 	//comment=Patches By Nachbrenner
 	
 	//fix IPU busy! ingame
-	//patch=0,EE,003a9a88,word,03e00008
-	//patch=0,EE,003a9a8c,word,00000000
-	//patch=0,EE,003a9b60,word,03e00008
-	//patch=0,EE,003a9b64,word,00000000
+	patch=0,EE,003a9a88,word,03e00008
+	patch=0,EE,003a9a8c,word,00000000
+	patch=0,EE,003a9b60,word,03e00008
+	patch=0,EE,003a9b64,word,00000000
 	
 [/patches]
 ---------------------------------------------
@@ -36472,6 +36524,7 @@ Serial = SLES-52568
 Name   = Crash Twinsanity
 Region = PAL-Unk
 Compat = 5
+XgKickHack = 1 //Fixes bad Geometry
 ---------------------------------------------
 Serial = SLES-52569
 Name   = Spyro - A Hero's Tail
@@ -37525,8 +37578,13 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53007
 Name   = Tom Clancy's Splinter Cell - Chaos Theory
-Region = PAL-M5
+Region = PAL-Unk
 Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-53011
 Name   = Gallop Racer 2
@@ -37632,7 +37690,7 @@ Compat = 5
 eeRoundMode = 0
 ---------------------------------------------
 Serial = SLES-53039
-Name   = Champions - Return to Arms
+Name   = Champions - Return to Arms	// aka "Champions of Norrath 2"
 Region = PAL-Unk
 Compat = 4
 ---------------------------------------------
@@ -37910,7 +37968,12 @@ Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53154
 Name   = Bard's Tale
-Region = PAL-Unk
+Region = PAL-Unk	// English * Spanish * Italian * French * German * Japanese * Korean * Chinese
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-53155
 Name   = Star Wars - Episode III - Revenge of the Sith
@@ -38887,7 +38950,13 @@ Region = PAL-E
 ---------------------------------------------
 Serial = SLES-53667
 Name   = Gauntlet - Seven Sorrows
-Region = PAL-Unk
+Region = PAL-M5
+Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-53668
 Name   = Micro Machines v4
@@ -39224,6 +39293,12 @@ Compat = 5
 Serial = SLES-53826
 Name   = Tom Clancy's Splinter Cell - Double Agent
 Region = PAL-Unk
+Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-53827
 Name   = Tom Clancy's Splinter Cell - Double Agent
@@ -39308,7 +39383,7 @@ Serial = SLES-53866
 Name   = Over the Hedge
 Region = PAL-Unk
 ---------------------------------------------
-Serial = SLES-53866
+Serial = SLES-53867
 Name   = Ski Alpin 2006
 Region = PAL-Unk
 vuClampMode = 2
@@ -39385,9 +39460,14 @@ Name   = 50cent - Bulletproof
 Region = PAL-Unk
 ---------------------------------------------
 Serial = SLES-53908
-Name   = Tomb Raider - Legends
-Region = PAL-Unk
+Name   = Tomb Raider - Legend
+Region = PAL-Unk	// English * French * German * Italian * Spanish * Japanese * Portugese * Polish
 Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-53909
 Name   = Full Spectrum Warrior - Ten Hammers
@@ -39957,17 +40037,17 @@ Region = PAL-R
 ---------------------------------------------
 Serial = SLES-54185
 Name   = Dirge of Cerberus - Final Fantasy VII
-Region = PAL-E
+Region = PAL-Unk
 Compat = 5
 [patches = 33F7D21A]
-	
-	//comment=patches by nachbrenner
-	
-	//override sceScfGetLanguage
-	//patch=0,EE,002486d8,word,24020000 //japanese
-	//patch=0,EE,002486d8,word,24020001 //english
-	//patch=0,EE,002486d8,word,24020004 //german
-	
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+
+	// Override sceScfGetLanguage patches by nachbrenner:
+	//  patch=0,EE,002486d8,word,24020000 // japanese
+	//  patch=0,EE,002486d8,word,24020001 // english
+	//  patch=0,EE,002486d8,word,24020004 // german
 [/patches]
 ---------------------------------------------
 Serial = SLES-54186
@@ -40861,7 +40941,13 @@ Region = PAL-M11
 ---------------------------------------------
 Serial = SLES-54674
 Name   = Lara Croft Tomb Raider - Anniversary
-Region = PAL-M5
+Region = PAL-Unk	// English * French * German * Italian * Spanish * Japanese * Portugese * Polish * Russian * Czech
+Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-54675
 Name   = Street Warrior
@@ -41694,8 +41780,13 @@ Region = PAL-M5
 ---------------------------------------------
 Serial = SLES-55442
 Name   = Tomb Raider Underworld
-Region = PAL-M5
+Region = PAL-Unk	// English * French * German * Italian * Spanish * Japanese * Portugese * Polish * Russian * Czech * Dutch
 Compat = 5
+[patches]
+	comment=- This gamedisc supports multiple languages.
+	comment=- Language selection is done through the BIOS configuration.
+	comment=- Implementation requires full boot - "Boot CDVD (full)".
+[/patches]
 ---------------------------------------------
 Serial = SLES-55443
 Name   = Mana Khemia - Alchemists of Al-Revis

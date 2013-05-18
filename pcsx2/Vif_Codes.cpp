@@ -54,7 +54,7 @@ __ri void vifExecQueue(int idx)
 	else      { startcycles = ((VU1.cycle-startcycles) + ( vif1ch.qwc - (vif1.vifpacketsize >> 2) )); CPU_INT(VIF_VU1_FINISH, 1/*startcycles * BIAS*/); }
 
 	//DevCon.Warning("Ran VU%x, VU0 Cycles %x, VU1 Cycles %x, start %x cycle %x", idx, g_vu0Cycles, g_vu1Cycles, startcycles, VU1.cycle);
-	//GetVifX.vifstalled.enabled = true;
+	//GetVifX.vifstalled.enabled = VifStallEnable(vifXch);
 	//GetVifX.vifstalled.value = VIF_TIMING_BREAK;
 }
 
@@ -153,7 +153,7 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 		if (size != ret) { // Stall if gif didn't process all the data (path2 queued)
 			GUNIT_WARN("Vif %s: Stall! [size=%d][ret=%d]", name, size, ret);
 			//gifUnit.PrintInfo();
-			vif1.vifstalled.enabled   = true;
+			vif1.vifstalled.enabled   = VifStallEnable(vif1ch);
 			vif1.vifstalled.value = VIF_TIMING_BREAK;
 			vif1Regs.stat.VGW = true;
 			return 0;
@@ -161,6 +161,8 @@ template<int idx> __fi int _vifCode_Direct(int pass, const u8* data, bool isDire
 		if (vif1.tag.size == 0) {
 			vif1.cmd = 0;
 			vif1.pass = 0;
+			vif1.vifstalled.enabled   = VifStallEnable(vif1ch);
+			vif1.vifstalled.value = VIF_TIMING_BREAK;
 		}
 		return ret / 4;
 	}
@@ -181,18 +183,19 @@ vifOp(vifCode_Flush) {
 	vif1Only();
 	vifStruct& vifX = GetVifX;
 	pass1or2 {
+		bool p1or2 = (gifRegs.stat.APATH != 0 && gifRegs.stat.APATH != 3);
 		vif1Regs.stat.VGW = false;
 		vifFlush(idx);
-		if (gifUnit.checkPaths(1,1,0)) {
+		if (gifUnit.checkPaths(1,1,0) || p1or2) {
 			GUNIT_WARN("Vif Flush: Stall!");
 			//gifUnit.PrintInfo();
 			vif1Regs.stat.VGW = true;
-			vifX.vifstalled.enabled   = true;
-			vifX.vifstalled.value = VIF_TIMING_BREAK;
+			vif1.vifstalled.enabled   = VifStallEnable(vif1ch);
+			vif1.vifstalled.value = VIF_TIMING_BREAK;
 			return 0;
 		}
-		else vifX.cmd = 0;
-		vifX.pass = 0;
+		else vif1.cmd = 0;
+		vif1.pass = 0;
 	}
 	pass3 { VifCodeLog("Flush"); }
 	return 1;
@@ -202,15 +205,22 @@ vifOp(vifCode_FlushA) {
 	vif1Only();
 	vifStruct& vifX = GetVifX;
 	pass1or2 {
-		Gif_Path& p3      = gifUnit.gifPath[GIF_PATH_3];
-		u32       p1or2   = gifUnit.checkPaths(1,1,0);
-		bool      doStall = false;
+		//Gif_Path& p3      = gifUnit.gifPath[GIF_PATH_3];
+		u32       gifBusy   = gifUnit.checkPaths(1,1,1) || (gifRegs.stat.APATH != 0);
+		//bool      doStall = false;
 		vif1Regs.stat.VGW = false;
 		vifFlush(idx);
-		if (p3.state != GIF_PATH_IDLE || p1or2) {
+
+		if (gifBusy) 
+		{
 			GUNIT_WARN("Vif FlushA: Stall!");
+			vif1Regs.stat.VGW = true;
+			vif1.vifstalled.enabled   = VifStallEnable(vif1ch);
+			vif1.vifstalled.value = VIF_TIMING_BREAK;
+			return 0;
+			
 			//gifUnit.PrintInfo();
-			if (p3.state != GIF_PATH_IDLE && !p1or2) { // Only path 3 left...
+			/*if (p3.state != GIF_PATH_IDLE && !p1or2) { // Only path 3 left...
 				GUNIT_WARN("Vif FlushA - Getting path3 to finish!");
 				if (gifUnit.lastTranType == GIF_TRANS_FIFO
 				&&  p3.state != GIF_PATH_IDLE && !p3.hasDataRemaining()) { 
@@ -222,16 +232,18 @@ vifOp(vifCode_FlushA) {
 					doStall = true; // If path3 still isn't finished...
 				}
 			}
-			else doStall = true;
+			else doStall = true;*/
 		}
-		if (doStall) {
+		/*if (doStall) {
 			vif1Regs.stat.VGW = true;
-			vifX.vifstalled.enabled   = true;
+			vifX.vifstalled.enabled   = VifStallEnable(vifXch);
 			vifX.vifstalled.value = VIF_TIMING_BREAK;
 			return 0;
 		}
-		else vifX.cmd = 0;
-		vifX.pass = 0;
+		else*/ 
+		//Didn't need to stall!
+		vif1.cmd = 0;
+		vif1.pass = 0;
 	}
 	pass3 { VifCodeLog("FlushA"); }
 	return 1;
@@ -368,7 +380,7 @@ vifOp(vifCode_MSCALF) {
 		if (u32 a = gifUnit.checkPaths(1,1,0)) {
 			GUNIT_WARN("Vif MSCALF: Stall! [%d,%d]", !!(a&1), !!(a&2));
 			vif1Regs.stat.VGW = true;
-			vifX.vifstalled.enabled   = true;
+			vifX.vifstalled.enabled   = VifStallEnable(vifXch);
 			vifX.vifstalled.value = VIF_TIMING_BREAK;
 		}
 		if(vifX.waitforvu == false)
@@ -422,6 +434,14 @@ vifOp(vifCode_Nop) {
 		GetVifX.cmd = 0;
 		GetVifX.pass = 0;
 		vifExecQueue(idx);
+		if(GetVifX.vifpacketsize > 1)
+		{
+			if(((data[1] >> 24) & 0x7f) == 0x6) //is mskpath3 next
+			{ 
+				GetVifX.vifstalled.enabled   = VifStallEnable(vifXch);
+				GetVifX.vifstalled.value = VIF_TIMING_BREAK;
+			}
+		}
 	}
 	pass3 { VifCodeLog("Nop"); }
 	return 1;
@@ -435,7 +455,7 @@ vifOp(vifCode_Null) {
 		if (!(vifXRegs.err.ME1)) { // Ignore vifcode and tag mismatch error
 			Console.WriteLn("Vif%d: Unknown VifCmd! [%x]", idx, vifX.cmd);
 			vifXRegs.stat.ER1 = true;
-			vifX.vifstalled.enabled = true;
+			vifX.vifstalled.enabled = VifStallEnable(vifXch);
 			vifX.vifstalled.value = VIF_IRQ_STALL;
 			//vifX.irq++;
 		}

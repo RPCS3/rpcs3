@@ -21,6 +21,7 @@
 #include "GS.h"
 #include "Gif.h"
 #include "MTVU.h"
+#include "Gif_Unit.h"
 
 __aligned16 vifStruct  vif0, vif1;
 
@@ -124,7 +125,7 @@ __fi void vif0FBRST(u32 value) {
 		//  just stoppin the VIF (linuz).
 		vif0Regs.stat.VSS = true;
 		vif0Regs.stat.VPS = VPS_IDLE;
-		vif0.vifstalled.enabled = true;
+		vif0.vifstalled.enabled = VifStallEnable(vif0ch);
 		vif0.vifstalled.value = VIF_IRQ_STALL;
 	}
 
@@ -178,6 +179,27 @@ __fi void vif1FBRST(u32 value) {
 		psHu64(VIF1_FIFO + 8) = 0;
 		vif1.done = true;
 		vif1ch.chcr.STR = false;
+
+		//HACK!! Dynasty Warriors 5 Empires has some sort of wierd packet alignment thing going off, meaning
+		//the packet ends before the DirectHL in progress has finished. Not sure what causes that, but the GIF
+		//Unit is still waiting for more data, so we have to "pretend" it is finished when the game issues a reset
+		//which it does without causing any pauses.
+		//In most cases, this will never ever happen, so doing the following won't matter.
+		if(!gifUnit.gifPath[GIF_PATH_2].isDone()) 
+		{
+			DevCon.Warning("VIF1 FBRST While GIF Path2 is waiting for data!");
+			gifUnit.gifPath[GIF_PATH_2].state = GIF_PATH_IDLE;
+			gifUnit.gifPath[GIF_PATH_2].curSize = gifUnit.gifPath[GIF_PATH_2].curOffset;
+
+			if( gifRegs.stat.APATH == 2)
+			{
+				gifRegs.stat.APATH = 0;
+				gifRegs.stat.OPH = 0;
+				vif1Regs.stat.VGW = false; //Let vif continue if it's stuck on a flush
+
+				if(gifUnit.checkPaths(1,0,1)) gifUnit.Execute(false, true);
+			}
+		}
 		
 #if USE_OLD_GIF == 1 // ...
 		if(vif1Regs.mskpath3 == 1 && GSTransferStatus.PTH3 == STOPPED_MODE && gifch.chcr.STR == true) {
@@ -209,7 +231,7 @@ __fi void vif1FBRST(u32 value) {
 		vif1Regs.stat.VFS = true;
 		vif1Regs.stat.VPS = VPS_IDLE;
 		cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-		vif1.vifstalled.enabled = true;
+		vif1.vifstalled.enabled = VifStallEnable(vif1ch);
 		vif1.vifstalled.value = VIF_IRQ_STALL;
 		Console.WriteLn("vif1 force break");
 	}
@@ -221,7 +243,7 @@ __fi void vif1FBRST(u32 value) {
 		vif1Regs.stat.VSS = true;
 		vif1Regs.stat.VPS = VPS_IDLE;
 		cpuRegs.interrupt &= ~((1 << 1) | (1 << 10)); //Stop all vif1 DMA's
-		vif1.vifstalled.enabled = true;
+		vif1.vifstalled.enabled = VifStallEnable(vif1ch);
 		vif1.vifstalled.value = VIF_IRQ_STALL;
 	}
 

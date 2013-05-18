@@ -86,7 +86,7 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 			vifXRegs.stat.VIS = true; // Note: commenting this out fixes WALL-E?			
 		}	
 		//Always needs to be set to return to the correct offset if there is data left.
-		vifX.vifstalled.enabled = true;
+		vifX.vifstalled.enabled = VifStallEnable(vifXch);
 		vifX.vifstalled.value = VIF_IRQ_STALL;
 	}	
 
@@ -107,9 +107,9 @@ _vifT static __fi bool vifTransfer(u32 *data, int size, bool TTE) {
 	}
 	else
 	{
-		if(vifX.irqoffset.value > 1)
+		if(vifX.irqoffset.value != 0){
 			vifX.irqoffset.enabled = true;
-		else
+		}else
 			vifX.irqoffset.enabled = false;
 	}
 

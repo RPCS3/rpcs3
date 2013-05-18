@@ -37,6 +37,7 @@
 #define PS_COLCLIP 0
 #define PS_DATE 0
 #define PS_SPRITEHACK 0
+#define PS_TCOFFSETHACK 0
 #define PS_POINT_SAMPLER 0
 #endif
 
@@ -101,6 +102,7 @@ cbuffer cb1
 	float2 MinF;
 	float2 TA;
 	uint4 MskFix;
+	float4 TC_OffsetHack;
 };
 
 float4 sample_c(float2 uv)
@@ -201,6 +203,8 @@ float4 ps_params[7];
 #define MinMax		ps_params[3]
 #define MinF		ps_params[4].xy
 #define TA			ps_params[4].zw
+
+#define TC_OffsetHack ps_params[6]
 
 float4 sample_c(float2 uv)
 {
@@ -365,10 +369,11 @@ float4x4 sample_4p(float4 u)
 
 float4 sample(float2 st, float q)
 {
-	if(!PS_FST)
-	{
-		st /= q;
-	}
+	if(!PS_FST) st /= q;
+
+	#if PS_TCOFFSETHACK
+	st += TC_OffsetHack.xy;
+	#endif 
 
 	float4 t;
 	float4x4 c;

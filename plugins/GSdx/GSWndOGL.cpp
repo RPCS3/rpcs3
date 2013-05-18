@@ -28,6 +28,13 @@ GSWndOGL::GSWndOGL()
 {
 }
 
+static bool ctxError = false;
+static int  ctxErrorHandler(Display *dpy, XErrorEvent *ev)
+{
+	ctxError = true;
+	return 0;
+}
+
 bool GSWndOGL::CreateContext(int major, int minor)
 {
 	if ( !m_NativeDisplay || !m_NativeWindow )
@@ -58,6 +65,11 @@ bool GSWndOGL::CreateContext(int major, int minor)
 	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
 	if (!glXCreateContextAttribsARB) return false;
 
+	// Install a dummy handler to handle gracefully (aka not segfault) the support of GL version
+	int (*oldHandler)(Display*, XErrorEvent*) = XSetErrorHandler(&ctxErrorHandler);
+	// Be sure the handler is installed
+	XSync( m_XDisplay, false);
+
 	// Create a context
 	int context_attribs[] =
 	{
@@ -71,9 +83,18 @@ bool GSWndOGL::CreateContext(int major, int minor)
 	};
 
 	m_context = glXCreateContextAttribsARB(m_NativeDisplay, fbc[0], 0, true, context_attribs);
-	if (!m_context) return false;
 
-	XSync( m_NativeDisplay, false);
+	// Don't forget to reinstall the older Handler
+	XSetErrorHandler(oldHandler);
+
+	// Get latest error
+	XSync( m_XDisplay, false);
+
+	if (!m_context || ctxError) {
+		fprintf(stderr, "Failed to create the opengl context. Check your drivers support openGL %d.%d. Hint: opensource drivers don't\n", major, minor );
+		return false;
+	}
+
 	return true;
 }
 

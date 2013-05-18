@@ -28,8 +28,6 @@
 //#define ENABLE_DYNAMIC_CRC_HACK
 #define DYNA_DLL_PATH "c:/dev/pcsx2/trunk/tools/dynacrchack/DynaCrcHack.dll"
 
-#define ENABLE_UPSCALE_HACKS // Hacks intended to fix upscaling / rendering glitches in HW renderers
-
 //#define DISABLE_HW_TEXTURE_CACHE // Slow but fixes a lot of bugs
 
 //#define DISABLE_BITMASKING
@@ -42,3 +40,9 @@
 #ifdef _DEBUG
 #define ENABLE_OGL_DEBUG   // Create a debug context and check opengl command status. Allow also to dump various textures/states.
 #endif
+
+// Set manually uniform buffer index
+//#define DISABLE_GL42
+
+// Debug: use single program for all shaders.
+//#define DISABLE_GL41_SSO

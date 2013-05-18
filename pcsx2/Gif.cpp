@@ -50,7 +50,17 @@ void incGifChAddr(u32 qwc) {
 __fi void gifInterrupt()
 {
 	GIF_LOG("gifInterrupt caught!");
-	//Required for Path3 Masking timing!
+	if( gifRegs.stat.APATH == 3 )
+	{
+		gifRegs.stat.APATH = 0;
+		gifRegs.stat.OPH = 0;
+		if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_IDLE || gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT) 
+		{
+			if(gifUnit.checkPaths(1,1,0)) gifUnit.Execute(false, true);
+		}
+
+	}
+		//Required for Path3 Masking timing!
 	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
 	{
 		gifUnit.gifPath[GIF_PATH_3].state = GIF_PATH_IDLE;
@@ -102,7 +112,7 @@ __fi void gifInterrupt()
 }
 
 static u32 WRITERING_DMA(u32 *pMem, u32 qwc) {
-	//qwc = min(qwc, 1024u);
+	if(gifRegs.stat.IMT) qwc = std::min(qwc, 1024u);
 	uint size = gifUnit.TransferGSPacketData(GIF_TRANS_DMA, (u8*)pMem, qwc*16) / 16;
 	incGifChAddr(size);
 	return size;
@@ -350,7 +360,7 @@ static __fi bool mfifoGIFchain()
 	if (gifch.qwc == 0) return true;
 
 	if (gifch.madr >= dmacRegs.rbor.ADDR &&
-		gifch.madr <=(dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
+		gifch.madr <= (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
 	{
 		bool ret = true;
 	//	if(gifch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge GIF");
@@ -378,6 +388,32 @@ static __fi bool mfifoGIFchain()
 
 static u32 qwctag(u32 mask) {
 	return (dmacRegs.rbor.ADDR + (mask & dmacRegs.rbsr.RMSK));
+}
+
+void mfifoGifMaskMem(int id)
+{
+	switch (id) {
+		//These five transfer data following the tag, need to check its within the buffer (Front Mission 4)
+		case TAG_CNT:
+		case TAG_NEXT:
+		case TAG_CALL: 
+		case TAG_RET:
+		case TAG_END:
+			if(gifch.madr < dmacRegs.rbor.ADDR) //probably not needed but we will check anyway.
+			{
+				//DevCon.Warning("GIF MFIFO MADR below bottom of ring buffer, wrapping GIF MADR = %x Ring Bottom %x", gifch.madr, dmacRegs.rbor.ADDR);
+				gifch.madr = qwctag(gifch.madr);
+			}
+			if(gifch.madr > (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK)) //Usual scenario is the tag is near the end (Front Mission 4)
+			{
+				//DevCon.Warning("GIF MFIFO MADR outside top of ring buffer, wrapping GIF MADR = %x Ring Top %x", gifch.madr, (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK)+16);
+				gifch.madr = qwctag(gifch.madr);
+			}
+			break;
+		default:
+			//Do nothing as the MADR could be outside
+			break;
+	}
 }
 
 void mfifoGIFtransfer(int qwc)
@@ -415,6 +451,8 @@ void mfifoGIFtransfer(int qwc)
 				ptag[1]._u32, ptag[0]._u32, gifch.qwc, ptag->ID, gifch.madr, gifch.tadr, gifqwc, spr0ch.madr);
 
 		gspath3done = hwDmacSrcChainWithStack(gifch, ptag->ID);
+
+		mfifoGifMaskMem(ptag->ID);
 
 		if(gspath3done == true) gifstate = GIF_STATE_DONE;
 		else gifstate = GIF_STATE_READY;
@@ -455,6 +493,17 @@ void gifMFIFOInterrupt()
 {
     GIF_LOG("gifMFIFOInterrupt");
 	mfifocycles = 0;
+
+	if( gifRegs.stat.APATH == 3 )
+	{
+		gifRegs.stat.APATH = 0;
+		gifRegs.stat.OPH = 0;
+		if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_IDLE || gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT) 
+		{
+			if(gifUnit.checkPaths(1,1,0)) gifUnit.Execute(false, true);
+		}
+
+	}
 
 	if(gifUnit.gifPath[GIF_PATH_3].state == GIF_PATH_WAIT)
 	{

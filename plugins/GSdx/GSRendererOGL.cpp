@@ -33,6 +33,10 @@ GSRendererOGL::GSRendererOGL()
 	UserHacks_WildHack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_WildHack", 0) : 0;
 	UserHacks_AlphaStencil = !!theApp.GetConfig("UserHacks_AlphaStencil", 0) && !!theApp.GetConfig("UserHacks", 0);
 	m_pixelcenter = GSVector2(-0.5f, -0.5f);
+
+	UserHacks_TCOffset = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_TCOffset", 0) : 0;
+	UserHacks_TCO_x = (UserHacks_TCOffset & 0xFFFF) / -1000.0f;
+	UserHacks_TCO_y = ((UserHacks_TCOffset >> 16) & 0xFFFF) / -1000.0f;
 }
 
 bool GSRendererOGL::CreateDevice(GSDevice* dev)
@@ -61,7 +65,7 @@ void GSRendererOGL::SetupIA()
         
             for(unsigned int i = 0; i < m_vertex.next; i++, d++)
                 if(PRIM->TME && PRIM->FST)
-                    d->UV &= UserHacks_WildHack == 1 ? 0x3FEF3FEF : 0x3FF73FF7;
+                    d->UV &= 0x3FEF3FEF;
         }
 
 		dev->IAUnmapVertexBuffer();
@@ -354,10 +358,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 		ps_sel.wms = context->CLAMP.WMS;
 		ps_sel.wmt = context->CLAMP.WMT;
-		if (tex->m_palette)
-			ps_sel.fmt = cpsm.fmt | 4;
-		else
-			ps_sel.fmt = cpsm.fmt;
+		ps_sel.fmt = tex->m_palette ? cpsm.fmt | 4 : cpsm.fmt;
 		ps_sel.aem = env.TEXA.AEM;
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
@@ -385,6 +386,10 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		ps_cb.WH = WH;
 		ps_cb.HalfTexel = GSVector4(-0.5f, 0.5f).xxyy() / WH.zwzw();
 		ps_cb.MskFix = GSVector4i(context->CLAMP.MINU, context->CLAMP.MINV, context->CLAMP.MAXU, context->CLAMP.MAXV);
+
+		// TC Offset Hack
+		ps_sel.tcoffsethack = !!UserHacks_TCOffset;
+		ps_cb.TC_OffsetHack = GSVector4(UserHacks_TCO_x, UserHacks_TCO_y).xyxy() / WH.xyxy();
 
 		GSVector4 clamp(ps_cb.MskFix);
 		GSVector4 ta(env.TEXA & GSVector4i::x000000ff());

@@ -142,6 +142,14 @@ mem32_t __fastcall _hwRead32(u32 mem)
 	if(mem == (D1_CHCR + 0x10) && CHECK_VIFFIFOHACK) 
 		return psHu32(mem) + (vif1ch.qwc * 16);
 
+	if((mem == GIF_CHCR) && !vif1ch.chcr.STR && gifRegs.stat.M3P && gifRegs.stat.APATH != 3)
+	{
+		//Hack for Wallace and Gromit Curse Project Zoo - Enabled the mask, then starts a new
+		//GIF DMA, the mask never comes off and it won't proceed until this is unset.
+		//Unsetting it works too but messes up other PATH3 games.
+		//If STR is already unset, it won't make the slightest difference.
+		return (psHu32(mem) & ~0x100);
+	}
 	return psHu32(mem);
 }
 

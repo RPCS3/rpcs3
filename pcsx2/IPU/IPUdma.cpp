@@ -279,15 +279,15 @@ void IPU0dma()
 				case NO_STD:
 					break;
 				case STD_GIF: // GIF
-					Console.Warning("GIFSTALL");
+					DevCon.Warning("GIFSTALL");
 					g_nDMATransfer.GIFSTALL = true;
 					break;
 				case STD_VIF1: // VIF
-					Console.Warning("VIFSTALL");
+					DevCon.Warning("VIFSTALL");
 					g_nDMATransfer.VIFSTALL = true;
 					break;
 				case STD_SIF1:
-					Console.Warning("SIFSTALL");
+					DevCon.Warning("SIFSTALL");
 					g_nDMATransfer.SIFSTALL = true;
 					break;
 			}
@@ -402,7 +402,7 @@ void ipu0Interrupt()
 	if (g_nDMATransfer.GIFSTALL)
 	{
 		// gif
-		Console.Warning("IPU GIF Stall");
+		DevCon.Warning("IPU GIF Stall");
 		g_nDMATransfer.GIFSTALL = false;
 		//if (gif->chcr.STR) GIFdma();
 	}
@@ -410,7 +410,7 @@ void ipu0Interrupt()
 	if (g_nDMATransfer.VIFSTALL)
 	{
 		// vif
-		Console.Warning("IPU VIF Stall");
+		DevCon.Warning("IPU VIF Stall");
 		g_nDMATransfer.VIFSTALL = false;
 		//if (vif1ch.chcr.STR) dmaVIF1();
 	}
@@ -418,7 +418,7 @@ void ipu0Interrupt()
 	if (g_nDMATransfer.SIFSTALL)
 	{
 		// sif
-		Console.Warning("IPU SIF Stall");
+		DevCon.Warning("IPU SIF Stall");
 		g_nDMATransfer.SIFSTALL = false;
 
 		// Not totally sure whether this needs to be done or not, so I'm

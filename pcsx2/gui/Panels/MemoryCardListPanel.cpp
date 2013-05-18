@@ -35,13 +35,18 @@ using namespace Panels;
 
 static bool IsMcdFormatted( wxFFile& fhand )
 {
+	static const char formatted_psx[] = "MC";
 	static const char formatted_string[] = "Sony PS2 Memory Card Format";
 	static const int fmtstrlen = sizeof( formatted_string )-1;
 
 	char dest[fmtstrlen];
 
 	fhand.Read( dest, fmtstrlen );
-	return memcmp( formatted_string, dest, fmtstrlen ) == 0;
+
+	bool formatted = memcmp( formatted_string, dest, fmtstrlen ) == 0;
+	if(!formatted) formatted = memcmp( formatted_psx, dest, 2 ) == 0;
+
+	return formatted;
 }
 
 //sets IsPresent if the file is valid, and derived properties (filename, formatted, size, etc)
@@ -56,7 +61,10 @@ bool EnumerateMemoryCard( McdSlotItem& dest, const wxFileName& filename, const w
 	//DevCon.WriteLn( fullpath );
 	wxFFile mcdFile( fullpath );
 	if( !mcdFile.IsOpened() ) return false;	// wx should log the error for us.
-	if( mcdFile.Length() < (1024*528) )
+
+	wxFileOffset length = mcdFile.Length();
+
+	if( length < (1024*528) && length != 0x20000 )
 	{
 		Console.Warning( "... MemoryCard appears to be truncated.  Ignoring." );
 		return false;
@@ -67,7 +75,14 @@ bool EnumerateMemoryCard( McdSlotItem& dest, const wxFileName& filename, const w
 	if( filename.GetFullPath() == (basePath+filename.GetFullName()).GetFullPath() )
 		dest.Filename = filename.GetFullName();
 
-	dest.SizeInMB		= (uint)(mcdFile.Length() / (1024 * 528 * 2));
+	dest.SizeInMB		= (uint)(length / (1024 * 528 * 2));
+
+	if(length == 0x20000)
+	{
+		dest.IsPSX = true; // PSX memcard;
+		dest.SizeInMB = 1; // MegaBIT
+	}
+	
 	dest.IsFormatted	= IsMcdFormatted( mcdFile );
 	filename.GetTimes( NULL, &dest.DateModified, &dest.DateCreated );
 
@@ -1082,6 +1097,8 @@ void Panels::MemoryCardListPanel_Simple::ReadFilesAtMcdFolder(){
 
 	wxArrayString memcardList;
 	wxDir::GetAllFiles(m_FolderPicker->GetPath().ToString(), &memcardList, L"*.ps2", wxDIR_FILES);
+	wxDir::GetAllFiles(m_FolderPicker->GetPath().ToString(), &memcardList, L"*.mcd", wxDIR_FILES);
+	wxDir::GetAllFiles(m_FolderPicker->GetPath().ToString(), &memcardList, L"*.mcr", wxDIR_FILES);
 
 	for(uint i = 0; i < memcardList.size(); i++) {
 		McdSlotItem currentCardFile;

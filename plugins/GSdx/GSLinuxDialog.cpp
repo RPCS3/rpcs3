@@ -29,8 +29,6 @@ GtkWidget *shadeboost_check, *paltex_check, *fba_check, *aa_check,  *native_res_
 GtkWidget *sb_contrast, *sb_brightness, *sb_saturation;
 GtkWidget *resx_spin, *resy_spin;
 
-GtkWidget *hack_alpha_check, *hack_offset_check, *hack_skipdraw_spin, *hack_msaa_check, *hack_sprite_check, * hack_wild_check, *hack_enble_check;
-
 static void SysMessage(const char *fmt, ...)
 {
 	va_list list;
@@ -212,6 +210,21 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 	}
 }
 
+void set_hex_entry(GtkWidget *text_box, int hex_value) {
+	gchar* data=(gchar *)g_malloc(sizeof(gchar)*40);
+	sprintf(data,"%X", hex_value);
+	gtk_entry_set_text(GTK_ENTRY(text_box),data);
+}
+
+int get_hex_entry(GtkWidget *text_box) {
+	int hex_value = 0;
+	const gchar *data = gtk_entry_get_text(GTK_ENTRY(text_box));
+
+	sscanf(data,"%X",&hex_value);
+
+	return hex_value;
+}
+
 bool RunLinuxDialog()
 {
 	GtkWidget *dialog;
@@ -222,6 +235,9 @@ bool RunLinuxDialog()
 	GtkWidget *interlace_label, *threads_label, *native_label,  *msaa_label, *rexy_label, *render_label, *filter_label;
 	
 	GtkWidget *hack_table, *hack_skipdraw_label, *hack_box, *hack_frame;
+	GtkWidget *hack_alpha_check, *hack_offset_check, *hack_skipdraw_spin, *hack_msaa_check, *hack_sprite_check, * hack_wild_check, *hack_enble_check;
+	GtkWidget *hack_tco_label, *hack_tco_entry;
+
 	int return_value;
 	
 	GdkPixbuf* logo_pixmap;
@@ -324,15 +340,20 @@ bool RunLinuxDialog()
 	gtk_box_pack_start(GTK_BOX(resxy_box), resy_spin, false, false, 5);
 
 	// Create our hack settings.
-	hack_alpha_check = gtk_check_button_new_with_label("Alpha Hack");
-	hack_offset_check = gtk_check_button_new_with_label("Offset Hack");
+	hack_alpha_check    = gtk_check_button_new_with_label("Alpha Hack");
+	hack_offset_check   = gtk_check_button_new_with_label("Offset Hack");
 	hack_skipdraw_label = gtk_label_new("Skipdraw:");
-	hack_skipdraw_spin = gtk_spin_button_new_with_range(0,1000,1);
-	hack_enble_check = gtk_check_button_new_with_label("Enable User Hacks");
-	hack_wild_check = gtk_check_button_new_with_label("Wild arm Hack");
-	hack_sprite_check = gtk_check_button_new_with_label("Sprite Hack");
-	hack_msaa_check = gtk_check_button_new_with_label("Msaa Hack");
+	hack_skipdraw_spin  = gtk_spin_button_new_with_range(0,1000,1);
+	hack_enble_check    = gtk_check_button_new_with_label("Enable User Hacks");
+	hack_wild_check     = gtk_check_button_new_with_label("Wild arm Hack");
+	hack_sprite_check   = gtk_check_button_new_with_label("Sprite Hack");
+	hack_msaa_check     = gtk_check_button_new_with_label("Msaa Hack");
+	hack_tco_label      = gtk_label_new("Texture offset: 0x");
+	hack_tco_entry      = gtk_entry_new();
+
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(hack_skipdraw_spin), theApp.GetConfig("UserHacks_SkipDraw", 0));
+	set_hex_entry(hack_tco_entry, theApp.GetConfig("UserHacks_TCOffset", 0));
+
 	// Tables are strange. The numbers are for their position: left, right, top, bottom.
 	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_alpha_check, 0, 1, 0, 1);
 	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_offset_check, 1, 2, 0, 1);
@@ -342,6 +363,8 @@ bool RunLinuxDialog()
 	//gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_msaa_check, 2, 3, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_skipdraw_label, 0, 1, 2, 3);
 	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_skipdraw_spin, 1, 2, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_tco_label, 0, 1, 3, 4);
+	gtk_table_attach_defaults(GTK_TABLE(hack_table), hack_tco_entry, 1, 2, 3, 4);
 
 	// Create our checkboxes.
 	shadeboost_check = gtk_check_button_new_with_label("Shade boost");
@@ -473,6 +496,7 @@ bool RunLinuxDialog()
 		theApp.SetConfig("UserHacks_WildHack", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_wild_check)));
 		theApp.SetConfig("UserHacks_SpriteHack", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_sprite_check)));
 		theApp.SetConfig("UserHacks", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_enble_check)));
+		theApp.SetConfig("UserHacks_TCOffset", get_hex_entry(hack_tco_entry));
 		
 		// Let's just be windowed for the moment.
 		theApp.SetConfig("windowed", 1);

@@ -59,13 +59,17 @@ static void _vu1Exec(VURegs* VU)
 		if (VU0.VI[REG_FBRST].UL & 0x400) {
 			VU0.VI[REG_VPU_STAT].UL|= 0x200;
 			hwIntcIrq(INTC_VU1);
+			VU->ebit = 1;
 		}
+		
 	}
 	if (ptr[1] & 0x08000000) { /* T flag */
 		if (VU0.VI[REG_FBRST].UL & 0x800) {
 			VU0.VI[REG_VPU_STAT].UL|= 0x400;
 			hwIntcIrq(INTC_VU1);
+			VU->ebit = 1;
 		}
+		
 	}
 
 	//VUM_LOG("VU->cycle = %d (flags st=%x;mac=%x;clip=%x,q=%f)", VU->cycle, VU->statusflag, VU->macflag, VU->clipflag, VU->q.F);
@@ -141,6 +145,9 @@ static void _vu1Exec(VURegs* VU)
 
 	_vuTestPipes(VU);
 	
+	if(VU->VIBackupCycles > 0) 
+		VU->VIBackupCycles--;
+	
 	if (VU->branch > 0) {
 		if (VU->branch-- == 1) {
 			VU->VI[REG_TPC].UL = VU->branchpc;
@@ -158,6 +165,7 @@ static void _vu1Exec(VURegs* VU)
 
 	if( VU->ebit > 0 ) {
 		if( VU->ebit-- == 1 ) {
+			VU->VIBackupCycles = 0;
 			_vuFlushAll(VU);
 			VU0.VI[REG_VPU_STAT].UL &= ~0x100;
 			vif1Regs.stat.VEW = false;

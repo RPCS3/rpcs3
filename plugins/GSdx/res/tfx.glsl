@@ -7,6 +7,10 @@
 #define FMT_16 2
 #define FMT_PAL 4 /* flag bit */
 
+// Not sure we have same issue on opengl. Doesn't work anyway on ATI card
+// And I say this as an ATI user.
+#define ATI_SUCKS 0
+
 #ifndef VS_BPPZ
 #define VS_BPPZ 0
 #define VS_TME 1
@@ -36,6 +40,8 @@
 #define PS_COLCLIP 0
 #define PS_DATE 0
 #define PS_SPRITEHACK 0
+#define PS_POINT_SAMPLER 0
+#define PS_TCOFFSETHACK 0
 #endif
 
 struct vertex
@@ -63,7 +69,11 @@ out gl_PerVertex {
     float gl_ClipDistance[];
 };
 
-layout(std140, binding = 4) uniform cb0
+#ifdef DISABLE_GL42
+layout(std140) uniform cb20
+#else
+layout(std140, binding = 20) uniform cb20
+#endif
 {
     vec4 VertexScale;
     vec4 VertexOffset;
@@ -143,10 +153,7 @@ out gl_PerVertex {
     float gl_ClipDistance[];
 };
 
-// FIXME
-// AMD Driver bug again !!!!
-//layout(location = 0) in vertex GSin[];
-in vertex GSin[];
+layout(location = 0) in vertex GSin[];
 
 layout(location = 0) out vertex GSout;
 
@@ -272,7 +279,11 @@ layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
 layout(binding = 2) uniform sampler2D RTCopySampler;
 
-layout(std140, binding = 5) uniform cb1
+#ifdef DISABLE_GL42
+layout(std140) uniform cb21
+#else
+layout(std140, binding = 21) uniform cb21
+#endif
 {
     vec3 FogColor;
     float AREF;
@@ -282,10 +293,22 @@ layout(std140, binding = 5) uniform cb1
     vec2 MinF;
     vec2 TA;
     uvec4 MskFix;
+    vec4 TC_OffsetHack;
 };
 
 vec4 sample_c(vec2 uv)
 {
+    // FIXME: check the issue on openGL
+	if (ATI_SUCKS == 1 && PS_POINT_SAMPLER == 1)
+	{
+		// Weird issue with ATI cards (happens on at least HD 4xxx and 5xxx),
+		// it looks like they add 127/128 of a texel to sampling coordinates
+		// occasionally causing point sampling to erroneously round up.
+		// I'm manually adjusting coordinates to the centre of texels here,
+		// though the centre is just paranoia, the top left corner works fine.
+		uv = (trunc(uv * WH.zw) + vec2(0.5, 0.5)) / WH.zw;
+	}
+
     // FIXME I'm not sure it is a good solution to flip texture
     return texture(TextureSampler, uv);
     //FIXME another way to FLIP vertically
@@ -403,10 +426,9 @@ mat4 sample_4p(vec4 u)
 
 vec4 sample_color(vec2 st, float q)
 {
-    if(PS_FST == 0)
-    {
-        st /= q;
-    }
+    if(PS_FST == 0) st /= q;
+
+    if(PS_TCOFFSETHACK == 1) st += TC_OffsetHack.xy;
 
     vec4 t;
     mat4 c;

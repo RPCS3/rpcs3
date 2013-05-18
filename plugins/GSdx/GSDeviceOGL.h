@@ -301,6 +301,8 @@ class GSDeviceOGL : public GSDevice
 		GSVector4 MinF_TA;
 		GSVector4i MskFix;
 
+		GSVector4 TC_OffsetHack;
+
 		PSConstantBuffer()
 		{
 			FogColor_AREF = GSVector4::zero();
@@ -380,6 +382,7 @@ class GSDeviceOGL : public GSDevice
 				uint32 colclip:2;
 				uint32 date:2;
 				uint32 spritehack:1;
+				uint32 tcoffsethack:1;
 				uint32 point_sampler:1;
 			};
 
@@ -596,6 +599,8 @@ class GSDeviceOGL : public GSDevice
 	void DrawPrimitive();
 	void DrawIndexedPrimitive();
 	void DrawIndexedPrimitive(int offset, int count);
+	void BeforeDraw();
+	void AfterDraw();
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
 	void ClearRenderTarget(GSTexture* t, uint32 c);
@@ -618,7 +623,7 @@ class GSDeviceOGL : public GSDevice
 
 	GSTexture* Resolve(GSTexture* t);
 
-	void CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const std::string& macro_sel = "");
+	void CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const char* glsl_h_code, const std::string& macro_sel = "");
 
 	void EndScene();
 
@@ -652,5 +657,9 @@ class GSDeviceOGL : public GSDevice
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 
-	GLuint glCreateShaderProgramv_AMD_BUG_WORKAROUND(GLenum  type,  GLsizei  count,  const char ** strings);
+#ifdef DISABLE_GL41_SSO
+	hash_map<uint64, GLuint > m_single_prog;
+	GLuint link_prog();
+#endif
+
 };

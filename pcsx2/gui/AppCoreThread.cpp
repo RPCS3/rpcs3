@@ -305,6 +305,7 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	wxString gamePatch;
 	wxString gameFixes;
 	wxString gameCheats;
+  wxString gameWsHacks;
 
 	wxString gameName;
 	wxString gameCompat;
@@ -349,13 +350,21 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 		gameName = L"Booting PS2 BIOS... ";
 	}
 
+  ResetCheatsCount();
 	if (EmuConfig.EnableCheats) {
-		if (int cheats = InitCheats(gameCRC)) {
+    if (int cheats = LoadCheats(gameCRC, L"cheats", L"Cheats")) {
 			gameCheats.Printf(L" [%d Cheats]", cheats);
 		}
 	}
 
-	Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats);
+  // FIXME: we should have a widescreen hacks config
+  if (EmuConfig.EnableCheats) {
+    if (int cheats = LoadCheats(gameCRC, L"cheats_ws", L"Widescreen hacks")) {
+      gameWsHacks.Printf(L" [%d WS hacks]", cheats);
+    }
+  }
+
+	Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats+gameWsHacks);
 
 	// Re-entry guard protects against cases where code wants to manually set core settings
 	// which are not part of g_Conf.  The subsequent call to apply g_Conf settings (which is

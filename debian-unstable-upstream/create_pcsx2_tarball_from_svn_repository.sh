@@ -136,6 +136,8 @@ echo "Copy the subversion repository to a temporary directory"
 rm -fr $NEW_DIR
 cp -r $ROOT_DIR $NEW_DIR
 
+echo "Remove .svn directories"
+find $NEW_DIR -name ".svn" -type d -exec rm -fr {} \; 2> /dev/null
 echo "Remove windows files (useless & potential copyright issues)"
 # => pcsx2/windows
 # Copyright header must be updated

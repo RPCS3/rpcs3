@@ -249,12 +249,9 @@ void TransferLocalHost24Z(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost16Z(void* pbyMem, u32 nQWordSize)		{FUNCLOG}
 void TransferLocalHost16SZ(void* pbyMem, u32 nQWordSize)	{FUNCLOG}
 
-void fill_block(BLOCK b, vector<char>& vBlockData, vector<char>& vBilinearData, int floatfmt)
+void fill_block(BLOCK b, vector<char>& vBlockData, vector<char>& vBilinearData)
 {
 	float* psrcf = (float*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH;
-    u16* psrcw = NULL;
-    if (!floatfmt)
-        psrcw = (u16*)&vBlockData[0] + b.ox + b.oy * BLOCK_TEXWIDTH;
 
 	for(int i = 0; i < b.height; ++i)
 	{
@@ -266,43 +263,33 @@ void fill_block(BLOCK b, vector<char>& vBlockData, vector<char>& vBilinearData, 
             u32 ct = b.columnTable[(i%b.colheight)*b.colwidth + (j%b.colwidth)];
             u32 u = bt * 64 * b.mult + ct;
 			b.pageTable[i * b.width + j] = u;
-            if (floatfmt)
-                psrcf[i_width + j] = (float)(u) / (float)(GPU_TEXWIDTH * b.mult);
-            else
-                psrcw[i_width + j] = u;
-
+			psrcf[i_width + j] = (float)(u) / (float)(GPU_TEXWIDTH * b.mult);
 		}
 	}
 
-    if (floatfmt) {
-        float4* psrcv = (float4*)&vBilinearData[0] + b.ox + b.oy * BLOCK_TEXWIDTH;
+	float4* psrcv = (float4*)&vBilinearData[0] + b.ox + b.oy * BLOCK_TEXWIDTH;
 
-        for(int i = 0; i < b.height; ++i)
-        {
-            u32 i_width = i*BLOCK_TEXWIDTH;
-            u32 i_width2 = ((i+1)%b.height)*BLOCK_TEXWIDTH;
-            for(int j = 0; j < b.width; ++j)
-            {
-                u32 temp = ((j + 1) % b.width);
-                float4* pv = &psrcv[i_width + j];
-                pv->x = psrcf[i_width + j];
-                pv->y = psrcf[i_width + temp];
-                pv->z = psrcf[i_width2 + j];
-                pv->w = psrcf[i_width2 + temp];
-            }
-        }
-    }
+	for(int i = 0; i < b.height; ++i)
+	{
+		u32 i_width = i*BLOCK_TEXWIDTH;
+		u32 i_width2 = ((i+1)%b.height)*BLOCK_TEXWIDTH;
+		for(int j = 0; j < b.width; ++j)
+		{
+			u32 temp = ((j + 1) % b.width);
+			float4* pv = &psrcv[i_width + j];
+			pv->x = psrcf[i_width + j];
+			pv->y = psrcf[i_width + temp];
+			pv->z = psrcf[i_width2 + j];
+			pv->w = psrcf[i_width2 + temp];
+		}
+	}
 }
 
-void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, int floatfmt)
+void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData)
 {
 	FUNCLOG
-    if (floatfmt) {
-        vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * 4);
-        vBilinearData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * sizeof(float4));
-    } else {
-        vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * 2);
-    }
+	vBlockData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * 4);
+	vBilinearData.resize(BLOCK_TEXWIDTH * BLOCK_TEXHEIGHT * sizeof(float4));
 
 	BLOCK b;
 
@@ -311,7 +298,7 @@ void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, in
 	// 32
 	b.SetDim(64, 32, 0, 0, 1);
     b.SetTable(PSMCT32);
-    fill_block(b, vBlockData, vBilinearData, floatfmt);
+    fill_block(b, vBlockData, vBilinearData);
 	m_Blocks[PSMCT32] = b;
 	m_Blocks[PSMCT32].SetFun(PSMCT32);
 
@@ -332,7 +319,7 @@ void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, in
 	// 32z
 	b.SetDim(64, 32, 64, 0, 1);
     b.SetTable(PSMT32Z);
-    fill_block(b, vBlockData, vBilinearData, floatfmt);
+    fill_block(b, vBlockData, vBilinearData);
 	m_Blocks[PSMT32Z] = b;
 	m_Blocks[PSMT32Z].SetFun(PSMT32Z);
 
@@ -343,42 +330,42 @@ void BLOCK::FillBlocks(vector<char>& vBlockData, vector<char>& vBilinearData, in
 	// 16
 	b.SetDim(64, 64, 0, 32, 2);
     b.SetTable(PSMCT16);
-    fill_block(b, vBlockData, vBilinearData, floatfmt);
+    fill_block(b, vBlockData, vBilinearData);
 	m_Blocks[PSMCT16] = b;
 	m_Blocks[PSMCT16].SetFun(PSMCT16);
 
 	// 16s
 	b.SetDim(64, 64, 64, 32, 2);
     b.SetTable(PSMCT16S);
-    fill_block(b, vBlockData, vBilinearData, floatfmt);
+    fill_block(b, vBlockData, vBilinearData);
 	m_Blocks[PSMCT16S] = b;
 	m_Blocks[PSMCT16S].SetFun(PSMCT16S);
 
 	// 16z
 	b.SetDim(64, 64, 0, 96, 2);
     b.SetTable(PSMT16Z);
-    fill_block(b, vBlockData, vBilinearData, floatfmt);
+    fill_block(b, vBlockData, vBilinearData);
 	m_Blocks[PSMT16Z] = b;
 	m_Blocks[PSMT16Z].SetFun(PSMT16Z);
 
 	// 16sz
 	b.SetDim(64, 64, 64, 96, 2);
     b.SetTable(PSMT16SZ);
-    fill_block(b, vBlockData, vBilinearData, floatfmt);
+    fill_block(b, vBlockData, vBilinearData);
 	m_Blocks[PSMT16SZ] = b;
 	m_Blocks[PSMT16SZ].SetFun(PSMT16SZ);
 
 	// 8
 	b.SetDim(128, 64, 0, 160, 4);
     b.SetTable(PSMT8);
-    fill_block(b, vBlockData, vBilinearData, floatfmt);
+    fill_block(b, vBlockData, vBilinearData);
 	m_Blocks[PSMT8] = b;
 	m_Blocks[PSMT8].SetFun(PSMT8);
 
 	// 4
 	b.SetDim(128, 128, 0, 224, 8);
     b.SetTable(PSMT4);
-    fill_block(b, vBlockData, vBilinearData, floatfmt);
+    fill_block(b, vBlockData, vBilinearData);
 	m_Blocks[PSMT4] = b;
 	m_Blocks[PSMT4].SetFun(PSMT4);
 }

@@ -40,9 +40,9 @@ find_package(Subversion)
 # Warning do not put any double-quote for the argument...
 # set(wxWidgets_CONFIG_OPTIONS --unicode=yes --debug=yes) # In case someone want to debug inside wx
 # 
-# Fedora uses an extra non-standard option ...
+# Fedora uses an extra non-standard option ... Arch must be the first option.
 if(Fedora) 
-    set(wxWidgets_CONFIG_OPTIONS --unicode=yes --arch i686)
+    set(wxWidgets_CONFIG_OPTIONS --arch i686 --unicode=yes)
 else()
     set(wxWidgets_CONFIG_OPTIONS --unicode=yes)
 endif()

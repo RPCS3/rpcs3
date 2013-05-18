@@ -96,10 +96,6 @@ GLenum s_srcrgb, s_dstrgb, s_srcalpha, s_dstalpha; // set by zgsBlendFuncSeparat
 u32 s_stencilfunc, s_stencilref, s_stencilmask;
 GLenum s_drawbuffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
 
-GLenum g_internalFloatFmt = GL_ALPHA_FLOAT32_ATI;
-GLenum g_internalRGBAFloatFmt = GL_RGBA_FLOAT32_ATI;
-GLenum g_internalRGBAFloat16Fmt = GL_RGBA_FLOAT16_ATI;
-
 u32 ptexLogo = 0;
 int nLogoWidth, nLogoHeight;
 u32 s_ptexInterlace = 0;		 // holds interlace fields
@@ -136,35 +132,55 @@ bool IsGLExt(const char* szTargetExtension)
 	return mapGLExtensions.find(string(szTargetExtension)) != mapGLExtensions.end();
 }
 
+inline bool check_gl_version(uint32 major, uint32 minor) {
+	const GLubyte* s;
+	s = glGetString(GL_VERSION);
+	if (s == NULL) return false;
+	ZZLog::Error_Log("Supported Opengl version: %s on GPU: %s. Vendor: %s\n", s, glGetString(GL_RENDERER), glGetString(GL_VENDOR));
+	// Could be useful to detect the GPU vendor:
+	// if ( strcmp((const char*)glGetString(GL_VENDOR), "ATI Technologies Inc.") == 0 )
+
+	GLuint dot = 0;
+	while (s[dot] != '\0' && s[dot] != '.') dot++;
+	if (dot == 0) return false;
+
+	GLuint major_gl = s[dot-1]-'0';
+	GLuint minor_gl = s[dot+1]-'0';
+
+	if ( (major_gl < major) || ( major_gl == major && minor_gl < minor ) ) {
+		ZZLog::Error_Log("OPENGL %d.%d is not supported\n", major, minor);
+		return false;
+	}
+
+	return true;
+}
+
 // Function asks about different OGL extensions, that are required to setup accordingly. Return false if checks failed
 inline bool CreateImportantCheck()
 {
 	bool bSuccess = true;
+
 #ifndef _WIN32
 	int const glew_ok = glewInit();
 
 	if (glew_ok != GLEW_OK) {
 		ZZLog::Error_Log("glewInit() is not ok!");
-		bSuccess = false;
-	} else {
-		const GLubyte* gl_version = glGetString(GL_VERSION);
-		ZZLog::Error_Log("Supported Opengl version : %s\n", gl_version);
+		// Better exit now, any openGL call will segfault.
+		return false;
 	}
-
 #endif
 
+	// Require a minimum of openGL2.0 (first version that support hardware shader)
+	bSuccess &= check_gl_version(2, 0);
+
+	// GL_EXT_framebuffer_object -> GL3.0
+	// Opensource driver -> Intel OK. Radeon need EXT_packed_depth_stencil
 	if (!IsGLExt("GL_EXT_framebuffer_object"))
 	{
 		ZZLog::Error_Log("*********\nZZogl: ERROR: Need GL_EXT_framebuffer_object for multiple render targets\nZZogl: *********");
 		bSuccess = false;
 	}
 
-	if (!IsGLExt("GL_EXT_secondary_color"))
-	{
-		ZZLog::Error_Log("*********\nZZogl: OGL WARNING: Need GL_EXT_secondary_color\nZZogl: *********");
-		bSuccess = false;
-	}
-	
 	bSuccess &= ZZshCheckProfilesSupport();
 	
 	return bSuccess;
@@ -173,38 +189,20 @@ inline bool CreateImportantCheck()
 // This is a check for less important open gl extensions.
 inline void CreateOtherCheck()
 {
-	if (!IsGLExt("GL_EXT_blend_equation_separate") || glBlendEquationSeparateEXT == NULL)
-	{
-		ZZLog::Error_Log("*********\nZZogl: OGL WARNING: Need GL_EXT_blend_equation_separate\nZZogl: *********");
-		zgsBlendEquationSeparateEXT = glBlendEquationSeparateDummy;
-	}
-	else
-		zgsBlendEquationSeparateEXT = glBlendEquationSeparateEXT;
+	// GL_EXT_blend_equation_separate -> GL2.0
+	// Opensource driver -> Intel OK. Radeon OK.
+	zgsBlendEquationSeparateEXT = glBlendEquationSeparateEXT;
 
-	if (!IsGLExt("GL_EXT_blend_func_separate") || glBlendFuncSeparateEXT == NULL)
-	{
-		ZZLog::Error_Log("*********\nZZogl: OGL WARNING: Need GL_EXT_blend_func_separate\nZZogl: *********");
-		zgsBlendFuncSeparateEXT = glBlendFuncSeparateDummy;
-	}
-	else
-		zgsBlendFuncSeparateEXT = glBlendFuncSeparateEXT;
+	// GL_EXT_blend_func_separate -> GL1.4
+	// Opensource driver -> Intel OK. Radeon OK.
+	zgsBlendFuncSeparateEXT = glBlendFuncSeparateEXT;
 
-	if (!IsGLExt("GL_ARB_draw_buffers") && !IsGLExt("GL_ATI_draw_buffers"))
-	{
-		ZZLog::Error_Log("*********\nZZogl: OGL WARNING: multiple render targets not supported, some effects might look bad\nZZogl: *********");
+	// GL_ARB_draw_buffers -> GL2.0
+	// Opensource driver -> Intel (need gen4). Radeon OK.
+	if (glDrawBuffers == NULL) {
+		ZZLog::Error_Log("*********\nZZogl: OGL ERROR: multiple render targets not supported, some effects might look bad\nZZogl: *********");
 		conf.mrtdepth = 0;
 	}
-
-	if (IsGLExt("GL_ARB_draw_buffers"))
-		glDrawBuffers = (PFNGLDRAWBUFFERSPROC)GLWin.GetProcAddress("glDrawBuffers");
-	else if (IsGLExt("GL_ATI_draw_buffers"))
-		glDrawBuffers = (PFNGLDRAWBUFFERSPROC)GLWin.GetProcAddress("glDrawBuffersATI");
-
-
-	if (!IsGLExt("GL_ARB_multitexture"))
-		ZZLog::Error_Log("No multitexturing.");
-	else
-		ZZLog::Error_Log("Using multitexturing.");
 
 	GLint Max_Texture_Size_NV = 0;
 	GLint Max_Texture_Size_2d = 0;
@@ -396,6 +394,8 @@ inline bool CreateFillExtensionsMap()
 
 void LoadglFunctions()
 {
+	// GL_EXT_framebuffer_object
+	// CORE -> 3.0 and replaced by GL_ARB_framebuffer_object
 	GL_LOADFN(glIsRenderbufferEXT);
 	GL_LOADFN(glBindRenderbufferEXT);
 	GL_LOADFN(glDeleteRenderbuffersEXT);
@@ -412,22 +412,20 @@ void LoadglFunctions()
 	GL_LOADFN(glFramebufferTexture3DEXT);
 	GL_LOADFN(glFramebufferRenderbufferEXT);
 	GL_LOADFN(glGetFramebufferAttachmentParameterivEXT);
-	GL_LOADFN(glGenerateMipmapEXT);
+
+	// CORE -> 2.0
+	GL_LOADFN(glDrawBuffers);
 }
 
 inline bool TryBlockFormat(GLint fmt, const GLvoid* vBlockData) {
-	g_internalFloatFmt = fmt; 
-	glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_FLOAT, vBlockData);
+	glTexImage2D(GL_TEXTURE_2D, 0, fmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_FLOAT, vBlockData);
 	return (glGetError() == GL_NO_ERROR);
 }
 
-inline bool TryBlinearFormat(GLint fmt32, GLint fmt16, const GLvoid* vBilinearData) {
-	g_internalRGBAFloatFmt = fmt32;
-	g_internalRGBAFloat16Fmt = fmt16;
-	glTexImage2D(GL_TEXTURE_2D, 0, g_internalRGBAFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, vBilinearData);
+inline bool TryBlinearFormat(GLint fmt32, const GLvoid* vBilinearData) {
+	glTexImage2D(GL_TEXTURE_2D, 0, fmt32, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RGBA, GL_FLOAT, vBilinearData);
 	return (glGetError() == GL_NO_ERROR);
 }
-
 
 bool ZZCreate(int _width, int _height)
 {
@@ -584,7 +582,6 @@ bool ZZCreate(int _width, int _height)
 
 	// create the blocks texture
 	g_fBlockMult = 1;
-	bool do_not_use_billinear = false;
 
 #ifndef ZZNORMAL_MEMORY
 	FillAlowedPsnTable();
@@ -592,58 +589,54 @@ bool ZZCreate(int _width, int _height)
 #endif
 
 	vector<char> vBlockData, vBilinearData;
-	BLOCK::FillBlocks(vBlockData, vBilinearData, 1);
+	BLOCK::FillBlocks(vBlockData, vBilinearData);
 
 	glGenTextures(1, &ptexBlocks);
 	glBindTexture(GL_TEXTURE_2D, ptexBlocks);
 	
+	// Opensource driver -> Intel (need gen4) (enabled by default on mesa 9). Radeon depends on the HW capability
+#ifdef GLSL4_API
+	// texture float -> GL3.0
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_RED, GL_FLOAT, &vBlockData[0]);
+	if (glGetError() != GL_NO_ERROR) {
+		ZZLog::Error_Log("ZZogl ERROR: could not fill blocks");
+		return false;
+	}
+#else
 	if 	(TryBlockFormat(GL_RGBA32F, &vBlockData[0]))
 		ZZLog::Error_Log("Use GL_RGBA32F for blockdata.");
 	else if (TryBlockFormat(GL_ALPHA_FLOAT32_ATI, &vBlockData[0]))
 	 	ZZLog::Error_Log("Use ATI_texture_float for blockdata.");
-	else if (TryBlockFormat(GL_ALPHA32F_ARB, &vBlockData[0]))
-		ZZLog::Error_Log("Use ARB_texture_float for blockdata.");
-	else 
-		{	// This case is bad. But for really old cards it could be nice. 			
-		g_fBlockMult = 65535.0f*(float)g_fiGPU_TEXWIDTH;
-		BLOCK::FillBlocks(vBlockData, vBilinearData, 0);
-		g_internalFloatFmt = GL_ALPHA16;
-		
-		// We store block data on u16 rather float numbers. It's not so preciese, but ALPHA16 is OpenGL 2.0 standart
-		// and use only 16 bit. Old zerogs use red channel, but it does not work.
-		
-		glTexImage2D(GL_TEXTURE_2D, 0, g_internalFloatFmt, BLOCK_TEXWIDTH, BLOCK_TEXHEIGHT, 0, GL_ALPHA, GL_UNSIGNED_SHORT, &vBlockData[0]);
-		if( glGetError() != GL_NO_ERROR ) {
-			ZZLog::Error_Log("ZZogl ERROR: could not fill blocks");
-			return false;
- 		}
-	
-		do_not_use_billinear = true;
-		conf.bilinear = 0;
-		ZZLog::Error_Log("Using non-bilinear fill, quallity is outdated!");	
+	else {
+		ZZLog::Error_Log("ZZogl ERROR: float texture not supported. If you use opensource driver (aka Mesa), you probably need to compile it with texture float support.");
+		ZZLog::Error_Log("ZZogl ERROR: Otherwise you probably have a very very old GPU, either use an older version of the plugin or upgrade your computer");
+		return false;
 	}
+#endif
 
 	setTex2DFilters(GL_NEAREST);
 	setTex2DWrap(GL_REPEAT);
 
-	if (!do_not_use_billinear) 
-	{
-		// fill in the bilinear blocks (main variant).
-		glGenTextures(1, &ptexBilinearBlocks);
-		glBindTexture(GL_TEXTURE_2D, ptexBilinearBlocks);
-		
-		if 	(TryBlinearFormat(GL_RGBA32F, GL_RGBA16F, &vBilinearData[0]))
-			ZZLog::Error_Log("Fill bilinear blocks OK.!");
-		else if (TryBlinearFormat(GL_RGBA_FLOAT32_ATI, GL_RGBA_FLOAT16_ATI, &vBilinearData[0]))
-			ZZLog::Error_Log("Fill bilinear blocks with ATI_texture_float.");
-		else if (TryBlinearFormat(GL_FLOAT_RGBA32_NV, GL_FLOAT_RGBA16_NV, &vBilinearData[0]))
-			ZZLog::Error_Log("ZZogl Fill bilinear blocks with NVidia_float.");
-		else 
-			ZZLog::Error_Log("Fill bilinear blocks failed.");
+	// fill in the bilinear blocks (main variant).
+	glGenTextures(1, &ptexBilinearBlocks);
+	glBindTexture(GL_TEXTURE_2D, ptexBilinearBlocks);
 
-		setTex2DFilters(GL_NEAREST);
-		setTex2DWrap(GL_REPEAT);
-	}
+#ifdef GLSL4_API
+	if 	(!TryBlinearFormat(GL_RGBA32F, &vBilinearData[0]))
+		ZZLog::Error_Log("Fill bilinear blocks failed.");
+#else
+	if 	(TryBlinearFormat(GL_RGBA32F, &vBilinearData[0]))
+		ZZLog::Error_Log("Fill bilinear blocks OK.!");
+	else if (TryBlinearFormat(GL_RGBA_FLOAT32_ATI, &vBilinearData[0]))
+		ZZLog::Error_Log("Fill bilinear blocks with ATI_texture_float.");
+	else if (TryBlinearFormat(GL_FLOAT_RGBA32_NV, &vBilinearData[0]))
+		ZZLog::Error_Log("ZZogl Fill bilinear blocks with NVidia_float.");
+	else
+		ZZLog::Error_Log("Fill bilinear blocks failed.");
+#endif
+
+	setTex2DFilters(GL_NEAREST);
+	setTex2DWrap(GL_REPEAT);
 
 	float fpri = 1;
 
@@ -687,11 +680,6 @@ bool ZZCreate(int _width, int _height)
 	glEnableClientState(GL_COLOR_ARRAY);
 	GL_REPORT_ERROR();
 #endif
-
-	// some cards don't support this
-//	glClientActiveTexture(GL_TEXTURE0);
-//	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-//	glTexCoordPointer(4, GL_UNSIGNED_BYTE, sizeof(VertexGPU), (void*)12);
 
 	// create the conversion textures
 	glGenTextures(1, &ptexConv16to32);
@@ -746,6 +734,7 @@ bool ZZCreate(int _width, int _height)
 
 	GL_REPORT_ERROR();
 
+
 	if (err != GL_NO_ERROR) bSuccess = false;
 
 	glDisable(GL_STENCIL_TEST);
@@ -772,10 +761,6 @@ bool ZZCreate(int _width, int _height)
 	vb[1].Init(VB_BUFFERSIZE);
 
 	g_vsprog = g_psprog = sZero;
-
-#ifdef OGL4_LOG
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
-#endif
 
 	if (glGetError() == GL_NO_ERROR)
 	{

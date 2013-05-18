@@ -95,9 +95,6 @@ static __forceinline void SET_STREAM()
 #endif
 }
 
-// global alpha blending settings
-extern GLenum g_internalRGBAFloat16Fmt;
-
 //static __forceinline void SAFE_RELEASE_TEX(u32& x)
 //{
 //	if (x != 0) 
@@ -148,7 +145,6 @@ extern PFNGLFRAMEBUFFERTEXTURE2DEXTPROC glFramebufferTexture2DEXT;
 extern PFNGLFRAMEBUFFERTEXTURE3DEXTPROC glFramebufferTexture3DEXT;
 extern PFNGLFRAMEBUFFERRENDERBUFFEREXTPROC glFramebufferRenderbufferEXT;
 extern PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVEXTPROC glGetFramebufferAttachmentParameterivEXT;
-extern PFNGLGENERATEMIPMAPEXTPROC glGenerateMipmapEXT;
 extern PFNGLDRAWBUFFERSPROC glDrawBuffers;
 
 #ifdef GLSL4_API

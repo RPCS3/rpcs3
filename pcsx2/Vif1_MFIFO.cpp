@@ -116,7 +116,7 @@ static __fi void mfifo_VIF1chain()
 	}
 
 	if (vif1ch.madr >= dmacRegs.rbor.ADDR &&
-	        vif1ch.madr <= (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
+	        vif1ch.madr < (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16))
 	{		
 		//if(vif1ch.madr == (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK + 16)) DevCon.Warning("Edge VIF1");
 		
@@ -142,6 +142,32 @@ static __fi void mfifo_VIF1chain()
 			VIF1transfer((u32*)pMem + vif1.irqoffset.value, vif1ch.qwc * 4 - vif1.irqoffset.value);
 		else
 			VIF1transfer((u32*)pMem, vif1ch.qwc << 2);
+	}
+}
+
+void mfifoVifMaskMem(int id)
+{
+	switch (id) {
+		//These five transfer data following the tag, need to check its within the buffer (Front Mission 4)
+		case TAG_CNT:
+		case TAG_NEXT:
+		case TAG_CALL: 
+		case TAG_RET:
+		case TAG_END:
+			if(vif1ch.madr < dmacRegs.rbor.ADDR) //probably not needed but we will check anyway.
+			{
+				//DevCon.Warning("VIF MFIFO MADR below bottom of ring buffer, wrapping VIF MADR = %x Ring Bottom %x", vif1ch.madr, dmacRegs.rbor.ADDR);
+				vif1ch.madr = qwctag(vif1ch.madr);
+			}
+			if(vif1ch.madr > (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK)) //Usual scenario is the tag is near the end (Front Mission 4)
+			{
+				//DevCon.Warning("VIF MFIFO MADR outside top of ring buffer, wrapping VIF MADR = %x Ring Top %x", vif1ch.madr, (dmacRegs.rbor.ADDR + dmacRegs.rbsr.RMSK)+16);
+				vif1ch.madr = qwctag(vif1ch.madr);
+			}
+			break;
+		default:
+			//Do nothing as the MADR could be outside
+			break;
 	}
 }
 
@@ -223,6 +249,8 @@ void mfifoVIF1transfer(int qwc)
 
 		vif1.done |= hwDmacSrcChainWithStack(vif1ch, ptag->ID);
 
+		mfifoVifMaskMem(ptag->ID);
+
 		if (vif1ch.chcr.TIE && ptag->IRQ)
 		{
 			VIF_LOG("dmaIrq Set");
@@ -249,6 +277,14 @@ void vifMFIFOInterrupt()
 {
 	g_vif1Cycles = 0;
 	VIF_LOG("vif mfifo interrupt");
+
+	if( gifRegs.stat.APATH == 2  && gifUnit.gifPath[1].isDone())
+	{
+		gifRegs.stat.APATH = 0;
+		gifRegs.stat.OPH = 0;
+
+		if(gifUnit.checkPaths(1,0,1)) gifUnit.Execute(false, true);
+	}
 
 	if (dmacRegs.ctrl.MFD != MFD_VIF1) {
 		DevCon.Warning("Not in VIF MFIFO mode! Stopping VIF MFIFO");

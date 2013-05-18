@@ -807,7 +807,8 @@ REG_END2
 			if(PSM == PSM_PSMT4) return TW > 7 || TH > 7;
 		}
 
-		return (TBW << 6) < (1u << TW);
+		// The recast of TBW seems useless but it avoid tons of warning from GCC...
+		return ((uint32)TBW << 6u) < (1u << TW);
 	}
 REG_END2
 

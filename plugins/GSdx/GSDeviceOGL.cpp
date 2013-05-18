@@ -22,6 +22,11 @@
 #include "stdafx.h"
 #include "GSDeviceOGL.h"
 
+#include "res/convert.h"
+#include "res/interlace.h"
+#include "res/merge.h"
+#include "res/shadeboost.h"
+
 // TODO performance cost to investigate
 // Texture attachment/glDrawBuffer. For the moment it set every draw and potentially multiple time (first time in clear, second time in rendering)
 //  Attachment 1 is only used with the GL_16UI format
@@ -32,6 +37,11 @@
 
 static uint32 g_draw_count = 0;
 static uint32 g_frame_count = 1;		
+
+static const uint32 g_merge_cb_index      = 10;
+static const uint32 g_interlace_cb_index  = 11;
+static const uint32 g_shadeboost_cb_index = 12;
+static const uint32 g_fxaa_cb_index       = 13;
 
 GSDeviceOGL::GSDeviceOGL()
 	: m_free_window(false)
@@ -65,19 +75,33 @@ GSDeviceOGL::~GSDeviceOGL()
 
 	// Clean m_merge_obj
 	for (uint32 i = 0; i < 2; i++)
+#ifndef DISABLE_GL41_SSO
 		glDeleteProgram(m_merge_obj.ps[i]);
+#else
+		glDeleteShader(m_merge_obj.ps[i]);
+#endif
 	delete (m_merge_obj.cb);
 	delete (m_merge_obj.bs);
 	
 	// Clean m_interlace
 	for (uint32 i = 0; i < 2; i++)
+#ifndef DISABLE_GL41_SSO
 		glDeleteProgram(m_interlace.ps[i]);
+#else
+		glDeleteShader(m_interlace.ps[i]);
+#endif
 	delete (m_interlace.cb);
 
 	// Clean m_convert
+#ifndef DISABLE_GL41_SSO
 	glDeleteProgram(m_convert.vs);
 	for (uint32 i = 0; i < 2; i++)
 		glDeleteProgram(m_convert.ps[i]);
+#else
+	glDeleteShader(m_convert.vs);
+	for (uint i = 0; i < 2; i++)
+		glDeleteShader(m_convert.ps[i]);
+#endif
 	glDeleteSamplers(1, &m_convert.ln);
 	glDeleteSamplers(1, &m_convert.pt);
 	delete m_convert.dss;
@@ -88,7 +112,9 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete m_date.bs;
 
 	// Clean various opengl allocation
+#ifndef DISABLE_GL41_SSO
 	glDeleteProgramPipelines(1, &m_pipeline);
+#endif
 	glDeleteFramebuffers(1, &m_fbo);
 	glDeleteFramebuffers(1, &m_fbo_read);
 
@@ -98,9 +124,18 @@ GSDeviceOGL::~GSDeviceOGL()
 	glDeleteSamplers(1, &m_rt_ss);
 	delete m_vb;
 
+#ifndef DISABLE_GL41_SSO
 	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) glDeleteProgram(it->second);
 	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) glDeleteProgram(it->second);
 	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) glDeleteProgram(it->second);
+#else
+	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) glDeleteShader(it->second);
+	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) glDeleteShader(it->second);
+	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) glDeleteShader(it->second);
+
+	for (auto it = m_single_prog.begin(); it != m_single_prog.end() ; it++) glDeleteProgram(it->second);
+	m_single_prog.clear();
+#endif
 	for (auto it = m_ps_ss.begin(); it != m_ps_ss.end() ; it++) glDeleteSamplers(1, &it->second);
 	m_vs.clear();
 	m_gs.clear();
@@ -161,8 +196,10 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// Various object
 	// ****************************************************************
+#ifndef DISABLE_GL41_SSO
 	glGenProgramPipelines(1, &m_pipeline);
 	glBindProgramPipeline(m_pipeline);
+#endif
 
 	glGenFramebuffers(1, &m_fbo);
 	glGenFramebuffers(1, &m_fbo_read);
@@ -180,10 +217,10 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// convert
 	// ****************************************************************
-	CompileShaderFromSource("convert.glsl", "vs_main", GL_VERTEX_SHADER, &m_convert.vs);
-	CompileShaderFromSource("convert.glsl", "gs_main", GL_GEOMETRY_SHADER, &m_convert.gs);
+	CompileShaderFromSource("convert.glsl", "vs_main", GL_VERTEX_SHADER, &m_convert.vs, convert_glsl);
+	CompileShaderFromSource("convert.glsl", "gs_main", GL_GEOMETRY_SHADER, &m_convert.gs, convert_glsl);
 	for(uint32 i = 0; i < countof(m_convert.ps); i++)
-		CompileShaderFromSource("convert.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_convert.ps[i]);
+		CompileShaderFromSource("convert.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_convert.ps[i], convert_glsl);
 
 	// Note the following object are initialized to 0 so disabled.
 	// Note: maybe enable blend with a factor of 1
@@ -240,10 +277,10 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// merge
 	// ****************************************************************
-	m_merge_obj.cb = new GSUniformBufferOGL(1, sizeof(MergeConstantBuffer));
+	m_merge_obj.cb = new GSUniformBufferOGL(g_merge_cb_index, sizeof(MergeConstantBuffer));
 
 	for(uint32 i = 0; i < countof(m_merge_obj.ps); i++)
-		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge_obj.ps[i]);
+		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge_obj.ps[i], merge_glsl);
 
 	m_merge_obj.bs = new GSBlendStateOGL();
 	m_merge_obj.bs->EnableBlend();
@@ -252,14 +289,14 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// interlace
 	// ****************************************************************
-	m_interlace.cb = new GSUniformBufferOGL(2, sizeof(InterlaceConstantBuffer));
+	m_interlace.cb = new GSUniformBufferOGL(g_interlace_cb_index, sizeof(InterlaceConstantBuffer));
 
 	for(uint32 i = 0; i < countof(m_interlace.ps); i++)
-		CompileShaderFromSource("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_interlace.ps[i]);
+		CompileShaderFromSource("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_interlace.ps[i], interlace_glsl);
 	// ****************************************************************
 	// Shade boost
 	// ****************************************************************
-	m_shadeboost.cb = new GSUniformBufferOGL(6, sizeof(ShadeBoostConstantBuffer));
+	m_shadeboost.cb = new GSUniformBufferOGL(g_shadeboost_cb_index, sizeof(ShadeBoostConstantBuffer));
 
 	int ShadeBoost_Contrast = theApp.GetConfig("ShadeBoost_Contrast", 50);
 	int ShadeBoost_Brightness = theApp.GetConfig("ShadeBoost_Brightness", 50);
@@ -268,7 +305,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		+ format("#define SB_BRIGHTNESS %d\n", ShadeBoost_Brightness)
 		+ format("#define SB_CONTRAST %d\n", ShadeBoost_Contrast);
 
-	CompileShaderFromSource("shadeboost.glsl", "ps_main", GL_FRAGMENT_SHADER, &m_shadeboost.ps, macro);
+	CompileShaderFromSource("shadeboost.glsl", "ps_main", GL_FRAGMENT_SHADER, &m_shadeboost.ps, shadeboost_glsl, macro);
 
 	// ****************************************************************
 	// rasterization configuration
@@ -300,8 +337,8 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// FIXME need to define FXAA_GLSL_130 for the shader
 	// FIXME need to manually set the index...
 	// FIXME need dofxaa interface too
-	// m_fxaa.cb = new GSUniformBufferOGL(3, sizeof(FXAAConstantBuffer));
-	//CompileShaderFromSource("fxaa.fx", format("ps_main", i), GL_FRAGMENT_SHADER, &m_fxaa.ps);
+	// m_fxaa.cb = new GSUniformBufferOGL(g_fxaa_cb_index, sizeof(FXAAConstantBuffer));
+	//CompileShaderFromSource("fxaa.fx", format("ps_main", i), GL_FRAGMENT_SHADER, &m_fxaa.ps, fxaa_glsl);
 
 	// ****************************************************************
 	// date
@@ -471,9 +508,8 @@ void GSDeviceOGL::Flip()
 #ifdef PRINT_FRAME_NUMBER
 	fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
 #endif
-#ifdef ENABLE_OGL_DEBUG
-	if (theApp.GetConfig("debug_ogl_dump", 0) != 0)
-		g_frame_count++;
+#if defined(ENABLE_OGL_DEBUG) || defined(PRINT_FRAME_NUMBER)
+	g_frame_count++;
 #endif
 }
 
@@ -550,47 +586,112 @@ void GSDeviceOGL::DebugOutput()
 	//DebugBB();
 }
 
-void GSDeviceOGL::DrawPrimitive()
+#ifdef DISABLE_GL42
+static void set_uniform_buffer_binding(GLuint prog, GLchar* name, GLuint binding) {
+	GLuint index;
+	index = glGetUniformBlockIndex(prog, name);
+	if (index != GL_INVALID_INDEX) {
+		glUniformBlockBinding(prog, index, binding);
+	}
+}
+#endif
+
+#ifdef DISABLE_GL41_SSO
+GLuint GSDeviceOGL::link_prog()
+{
+	GLuint single_prog = glCreateProgram();
+	if (m_state.vs) glAttachShader(single_prog, m_state.vs);
+	if (m_state.ps) glAttachShader(single_prog, m_state.ps);
+	if (m_state.gs) glAttachShader(single_prog, m_state.gs);
+
+	glLinkProgram(single_prog);
+
+	GLint status;
+	glGetProgramiv(single_prog, GL_LINK_STATUS, &status);
+	if (!status) {
+		GLint log_length = 0;
+		glGetProgramiv(single_prog, GL_INFO_LOG_LENGTH, &log_length);
+		if (log_length > 0) {
+			char* log = new char[log_length];
+			glGetProgramInfoLog(single_prog, log_length, NULL, log);
+			fprintf(stderr, "%s", log);
+			delete[] log;
+		}
+		fprintf(stderr, "\n");
+	}
+
+#if 0
+	if (m_state.vs) glDetachShader(single_prog, m_state.vs);
+	if (m_state.ps) glDetachShader(single_prog, m_state.ps);
+	if (m_state.gs) glDetachShader(single_prog, m_state.gs);
+#endif
+
+	return single_prog;
+}
+#endif
+
+void GSDeviceOGL::BeforeDraw()
 {
 #ifdef ENABLE_OGL_DEBUG
 	DebugInput();
 #endif
 
-	m_state.vb->DrawPrimitive();
+#ifdef DISABLE_GL41_SSO
+	// Note: shader are integer lookup pointer. They start from 1 and incr
+	// every time you create a new shader OR a new program.
+	uint64 sel = (uint64)m_state.vs << 40 | (uint64)m_state.gs << 20 | m_state.ps;
+	auto single_prog = m_single_prog.find(sel);
+	if (single_prog == m_single_prog.end()) {
+		m_single_prog[sel] = link_prog();	
+		single_prog = m_single_prog.find(sel);
+	}
 
+	glUseProgram(single_prog->second);
+
+#endif
+
+#ifdef DISABLE_GL42
+	set_uniform_buffer_binding(m_state.vs, "cb20", 20);
+	set_uniform_buffer_binding(m_state.ps, "cb21", 21);
+
+	set_uniform_buffer_binding(m_state.ps, "cb10", 10);
+	set_uniform_buffer_binding(m_state.ps, "cb11", 11);
+	set_uniform_buffer_binding(m_state.ps, "cb12", 12);
+	set_uniform_buffer_binding(m_state.ps, "cb13", 13);
+#endif
+}
+
+void GSDeviceOGL::AfterDraw()
+{
 #ifdef ENABLE_OGL_DEBUG
 	DebugOutput();
+#endif
+#if defined(ENABLE_OGL_DEBUG) || defined(PRINT_FRAME_NUMBER)
 	g_draw_count++;
 #endif
 }
 
+void GSDeviceOGL::DrawPrimitive()
+{
+	BeforeDraw();
+	m_state.vb->DrawPrimitive();
+	AfterDraw();
+}
+
 void GSDeviceOGL::DrawIndexedPrimitive()
 {
-#ifdef ENABLE_OGL_DEBUG
-	DebugInput();
-#endif
-
+	BeforeDraw();
 	m_state.vb->DrawIndexedPrimitive();
-
-#ifdef ENABLE_OGL_DEBUG
-	DebugOutput();
-	g_draw_count++;
-#endif
+	AfterDraw();
 }
 
 void GSDeviceOGL::DrawIndexedPrimitive(int offset, int count)
 {
 	ASSERT(offset + count <= m_index.count);
-#ifdef ENABLE_OGL_DEBUG
-	DebugInput();
-#endif
 
+	BeforeDraw();
 	m_state.vb->DrawIndexedPrimitive(offset, count);
-
-#ifdef ENABLE_OGL_DEBUG
-	DebugOutput();
-	g_draw_count++;
-#endif
+	AfterDraw();
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
@@ -686,7 +787,7 @@ GSTexture* GSDeviceOGL::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w
 	{
 		ASSERT(0);
 
-		return false;
+		return NULL;
 	}
 
 	// FIXME: It is possible to bypass completely offscreen-buffer on opengl but it needs some re-thinking of the code.
@@ -1038,7 +1139,9 @@ void GSDeviceOGL::VSSetShader(GLuint vs)
 	if(m_state.vs != vs)
 	{
 		m_state.vs = vs;
+#ifndef DISABLE_GL41_SSO
 		glUseProgramStages(m_pipeline, GL_VERTEX_SHADER_BIT, vs);
+#endif
 	}
 }
 
@@ -1047,7 +1150,9 @@ void GSDeviceOGL::GSSetShader(GLuint gs)
 	if(m_state.gs != gs)
 	{
 		m_state.gs = gs;
+#ifndef DISABLE_GL41_SSO
 		glUseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, gs);
+#endif
 	}
 }
 
@@ -1088,7 +1193,9 @@ void GSDeviceOGL::PSSetShader(GLuint ps)
 	if(m_state.ps != ps)
 	{
 		m_state.ps = ps;
+#ifndef DISABLE_GL41_SSO
 		glUseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, ps);
+#endif
 	}
 
 // Sampler and texture must be set at the same time
@@ -1196,47 +1303,25 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 	}
 }
 
-// AMD drivers fail to support correctly the setting of index in fragment shader (layout statement in glsl)...
-// So instead to use directly glCreateShaderProgramv, you need to emulate the function and manually set 
-// the index in the fragment shader.
-GLuint GSDeviceOGL::glCreateShaderProgramv_AMD_BUG_WORKAROUND(GLenum  type,  GLsizei  count,  const char ** strings)
-{
-	const GLuint shader = glCreateShader(type);
-	if (shader) {
-		glShaderSource(shader, count, strings, NULL);
-		glCompileShader(shader);
-		const GLuint program = glCreateProgram();
-		if (program) {
-			GLint compiled = GL_FALSE;
-			glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-			glProgramParameteri(program, GL_PROGRAM_SEPARABLE, GL_TRUE);
-			if (compiled) {
-				glAttachShader(program, shader);
-				// HACK TO SET CORRECTLY THE INDEX
-				if (type == GL_FRAGMENT_SHADER) {
-					glBindFragDataLocationIndexed(program, 0, 0, "SV_Target0");
-					glBindFragDataLocationIndexed(program, 0, 1, "SV_Target1");
-				}
-				// END OF HACK
-				glLinkProgram(program);
-				glDetachShader(program, shader);
-			}
-			/* append-shader-info-log-to-program-info-log */
-		}
-		glDeleteShader(shader);
-		return program;
-	} else {
-		return 0;
-	}
-}
-
-void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const std::string& macro_sel)
+void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const char* glsl_h_code, const std::string& macro_sel)
 {
 	// *****************************************************
 	// Build a header string
 	// *****************************************************
 	// First select the version (must be the first line so we need to generate it
+#ifdef DISABLE_GL41_SSO
+	#ifdef DISABLE_GL42
+	std::string version = "#version 330\n#define DISABLE_GL42\n";
+	#else
+	std::string version = "#version 330\n#extension GL_ARB_shading_language_420pack: require\n";
+	#endif
+#else
+	#ifdef DISABLE_GL42
+	std::string version = "#version 330\n#extension GL_ARB_separate_shader_objects : require\n#define DISABLE_GL42\n";
+	#else
 	std::string version = "#version 330\n#extension GL_ARB_shading_language_420pack: require\n#extension GL_ARB_separate_shader_objects : require\n";
+	#endif
+#endif
 	//std::string version = "#version 420\n";
 
 	// Allow to puts several shader in 1 files
@@ -1274,6 +1359,7 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	const std::string shader_file = string("plugins/") + glsl_file;
 #endif
 	std::ifstream myfile(shader_file.c_str());
+	bool failed_to_open_glsl = true;
 	if (myfile.is_open()) {
 		while ( myfile.good() )
 		{
@@ -1282,26 +1368,30 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 			source += '\n';
 		}
 		myfile.close();
-	} else {
-		fprintf(stderr, "Error opening %s: ", shader_file.c_str());
-		*program = 0;
-		return;
+		failed_to_open_glsl = false;
 	}
 
 
 	// Note it is better to separate header and source file to have the good line number
 	// in the glsl compiler report
 	const char** sources_array = (const char**)malloc(2*sizeof(char*));
-	char* source_str = (char*)malloc(source.size() + 1);
+
 	char* header_str = (char*)malloc(header.size() + 1);
 	sources_array[0] = header_str;
-	sources_array[1] = source_str;
-
-	source.copy(source_str, source.size(), 0);
-	source_str[source.size()] = '\0';
 	header.copy(header_str, header.size(), 0);
 	header_str[header.size()] = '\0';
 
+	char* source_str = (char*)malloc(source.size() + 1);
+	if (failed_to_open_glsl) {
+		sources_array[1] = glsl_h_code;
+	} else {
+		sources_array[1] = source_str;
+		source.copy(source_str, source.size(), 0);
+		source_str[source.size()] = '\0';
+	}
+
+
+#ifndef DISABLE_GL41_SSO
 #if 0
 	// Could be useful one day
 	const GLchar* ShaderSource[1];
@@ -1310,20 +1400,11 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 #else
 	*program = glCreateShaderProgramv(type, 2, sources_array);
 #endif
-
-	// Check the correctness of the (AMD) driver
-	// Note: glGetFragDataLocation crash too!!! Catalyst 12.10 (and later) => HD 5XXX,6XXX !!!
-	if (theApp.GetConfig("renderer", 0) == 12) {
-		GLint slot = glGetFragDataLocation(*program, "SV_Target1");
-		if (slot == 0) { // <=> SV_Target1 used same slot as SV_Target0
-			GLint index = glGetFragDataIndex(*program,  "SV_Target1");
-			if (index != 1) {
-				fprintf(stderr, "Driver bug: failed to set the index, program will be recompiled\n");
-				glDeleteProgram(*program);
-				*program = glCreateShaderProgramv_AMD_BUG_WORKAROUND(type, 2, sources_array);
-			}
-		}
-	}
+#else
+	*program = glCreateShader(type);
+	glShaderSource(*program, 2, sources_array, NULL);
+	glCompileShader(*program);
+#endif
 
 	free(source_str);
 	free(header_str);
@@ -1335,15 +1416,22 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 		fprintf(stderr, "\n%s", macro_sel.c_str());
 
 		GLint log_length = 0;
+#ifndef DISABLE_GL41_SSO
 		glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+#else
+		glGetShaderiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+#endif
 		if (log_length > 0) {
-		char* log = (char*)malloc(log_length);
-		glGetProgramInfoLog(*program, log_length, NULL, log);
+			char* log = new char[log_length];
+#ifndef DISABLE_GL41_SSO
+			glGetProgramInfoLog(*program, log_length, NULL, log);
+#else
+			glGetShaderInfoLog(*program, log_length, NULL, log);
+#endif
 			fprintf(stderr, "%s", log);
-		free(log);
+			delete[] log;
 		}
 		fprintf(stderr, "\n");
-
 	}
 }
 

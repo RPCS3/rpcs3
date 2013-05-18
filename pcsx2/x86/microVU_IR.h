@@ -112,6 +112,8 @@ struct microUpperOp {
 	bool eBit;				// Has E-bit set
 	bool iBit;				// Has I-bit set
 	bool mBit;				// Has M-bit set
+	bool tBit;				// Has T-bit set
+	bool dBit;				// Has D-bit set
 	microVFreg VF_write;	// VF Vectors written to by this instruction
 	microVFreg VF_read[2];	// VF Vectors read by this instruction
 };
@@ -157,6 +159,7 @@ struct microOp {
 	bool swapOps;		 // Run Lower Instruction before Upper Instruction
 	bool backupVF;		 // Backup mVUlow.VF_write.reg, and restore it before the Upper Instruction is called
 	bool doXGKICK;		 // Do XGKICK transfer on this instruction
+	u32  XGKICKPC;       // The PC in which the XGKick has taken place, so if we break early (before it) we don run it.
 	bool doDivFlag;		 // Transfer Div flag to Status Flag on this instruction
 	int	 readQ;			 // Q instance for reading
 	int	 writeQ;		 // Q instance for writing
@@ -254,6 +257,18 @@ public:
 		for(int i = 0; i < xmmTotal; i++) {
 			writeBackReg(xmm(i));
 			if (clearState) clearReg(i);
+		}
+	}
+
+	void TDwritebackAll(bool clearState = 0) {
+		for(int i = 0; i < xmmTotal; i++) {
+			microMapXMM& mapX = xmmMap[xmm(i).Id];
+
+			if ((mapX.VFreg > 0) && mapX.xyzw) { // Reg was modified and not Temp or vf0
+				if   (mapX.VFreg == 33) xMOVSS(ptr32[&getVI(REG_I)], xmm(i));
+				elif (mapX.VFreg == 32) mVUsaveReg(xmm(i), ptr[&regs().ACC],		 mapX.xyzw, 1);
+				else					mVUsaveReg(xmm(i), ptr[&getVF(mapX.VFreg)], mapX.xyzw, 1);
+			}
 		}
 	}
 

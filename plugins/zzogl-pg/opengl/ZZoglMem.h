@@ -95,7 +95,7 @@ struct BLOCK
 	void (*TransferLocalHost)(void* pbyMem, u32 nQWordSize);
 
 	// texture must be of dims BLOCK_TEXWIDTH and BLOCK_TEXHEIGHT
-	static void FillBlocks(std::vector<char>& vBlockData, std::vector<char>& vBilinearData, int floatfmt);
+	static void FillBlocks(std::vector<char>& vBlockData, std::vector<char>& vBilinearData);
 };
 
 void FillBlockTables();

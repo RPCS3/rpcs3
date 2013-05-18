@@ -19,8 +19,6 @@
  *
  */
 
-#pragma once
-
 #include "stdafx.h"
 #include <limits.h>
 #include "GSTextureOGL.h"
@@ -66,7 +64,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 			//FIXME I not sure we need a pixel buffer object. It seems more a texture
 			// glGenBuffers(1, &m_texture_id);
 			// m_texture_target = GL_PIXEL_UNPACK_BUFFER;
-			// assert(0);
+			// ASSERT(0);
 			// Note there is also a buffer texture!!!
 			// http://www.opengl.org/wiki/Buffer_Texture
 			// Note: in this case it must use in GLSL
@@ -81,6 +79,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 		case GSTexture::Backbuffer:
 			m_texture_target = 0;
 			m_texture_id = 0;
+			break;
 		default:
 			break;
 	}
@@ -97,11 +96,6 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 
 	// Allocate the buffer
 	switch (m_type) {
-		case GSTexture::DepthStencil:
-			EnableUnit(0);
-			glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_DEPTH_STENCIL, GL_FLOAT_32_UNSIGNED_INT_24_8_REV, NULL);
-			break;
-
 		case GSTexture::Offscreen:
 			// Allocate a pbo with the texture
 			if (m_format == GL_RGBA8) m_pbo_size = m_size.x * m_size.y * 4;
@@ -114,28 +108,22 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo_id);
 			glBufferData(GL_PIXEL_PACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			ASSERT(!m_msaa);
 
+		case GSTexture::DepthStencil:
 		case GSTexture::RenderTarget:
 		case GSTexture::Texture:
-			// FIXME
+			// FIXME: check the opensource driver
 			// Howto allocate the texture unit !!!
 			// In worst case the HW renderer seems to use 3 texture unit
 			// For the moment SW renderer only use 1 so don't bother
 			EnableUnit(0);
-			// Did we need to setup a default sampler of the texture now?
-			// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-			if (m_format == GL_RGBA8)
-				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-			else if (m_format == GL_R16UI)
-				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RED_INTEGER, GL_UNSIGNED_SHORT, NULL);
-			else if (m_format == GL_R8)
-				glTexImage2D(m_texture_target, 0, m_format, m_size.x, m_size.y, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
-			else {
-				fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
-				ASSERT(0); // TODO Later
+			if (m_msaa) {
+				ASSERT(m_texture_target == GL_TEXTURE_2D_MULTISAMPLE);
+				// Require a recent GLEW and GL4.3
+				//glTexStorage2DMultisample(m_texture_target, msaa_level, m_format, m_size.x, m_size.y, false);
+			} else {
+				glTexStorage2D(m_texture_target, 1,  m_format, m_size.x, m_size.y);
 			}
 			break;
 		default: break;

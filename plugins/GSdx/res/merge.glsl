@@ -11,7 +11,11 @@ layout(location = 0) in vertex_basic PSin;
 
 layout(location = 0) out vec4 SV_Target0;
 
-layout(std140, binding = 1) uniform cb0
+#ifdef DISABLE_GL42
+layout(std140) uniform cb10
+#else
+layout(std140, binding = 10) uniform cb10
+#endif
 {
     vec4 BGColor;
 };

@@ -136,7 +136,7 @@ static D3DFORMAT BestD3dFormat(IDirect3D9* d3d, UINT adapter, D3DDEVTYPE devtype
 
 	if(1 == msaaCount) msaaCount = 0;
 
-	for(int i = 0; i < sizeof(fmts); i++)
+	for(int i = 0; i < countof(fmts); i++)
 	{
 		if(TestDepthFormat(d3d, adapter, devtype, fmts[i]) && (!msaaCount || IsMsaaSupported(d3d, adapter, devtype, fmts[i], msaaCount, msaa_desc)))
 		{
