@@ -623,7 +623,7 @@ class GSDeviceOGL : public GSDevice
 
 	GSTexture* Resolve(GSTexture* t);
 
-	void CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const std::string& macro_sel = "");
+	void CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const char* glsl_h_code, const std::string& macro_sel = "");
 
 	void EndScene();
 

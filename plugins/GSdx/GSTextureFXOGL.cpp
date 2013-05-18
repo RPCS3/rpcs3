@@ -23,6 +23,8 @@
 #include "GSDeviceOGL.h"
 #include "GSTables.h"
 
+#include "res/tfx.h"
+
 static const uint32 g_vs_cb_index = 20;
 static const uint32 g_ps_cb_index = 21;
 
@@ -66,9 +68,9 @@ void GSDeviceOGL::CreateTextureFX()
 	// Compile some dummy shaders to allow modification inside Apitrace for debug
 	GLuint dummy;
 	std::string macro = "";
-	CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &dummy, macro);
-	CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &dummy, macro);
-	CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &dummy, macro);
+	CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &dummy, tfx_glsl, macro);
+	CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &dummy, tfx_glsl, macro);
+	CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &dummy, tfx_glsl, macro);
 }
 
 void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
@@ -87,7 +89,7 @@ void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 			+ format("#define VS_RTCOPY %d\n", sel.rtcopy);
 
 		GLuint vs;
-		CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &vs, macro);
+		CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &vs, tfx_glsl, macro);
 
 		m_vs[sel] = vs;
 		i = m_vs.find(sel);
@@ -118,7 +120,7 @@ void GSDeviceOGL::SetupGS(GSSelector sel)
 			std::string macro = format("#define GS_IIP %d\n", sel.iip)
 				+ format("#define GS_PRIM %d\n", sel.prim);
 
-			CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &gs, macro);
+			CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &gs, tfx_glsl, macro);
 
 			m_gs[sel] = gs;
 		} else {
@@ -160,7 +162,7 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 			+ format("#define PS_TCOFFSETHACK %d\n", sel.tcoffsethack)
 			+ format("#define PS_POINT_SAMPLER %d\n", sel.point_sampler);
 
-		CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &ps, macro);
+		CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &ps, tfx_glsl, macro);
 
 		m_ps[sel] = ps;
 		i = m_ps.find(sel);
