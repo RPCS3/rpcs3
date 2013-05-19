@@ -105,11 +105,11 @@ public:
 			glEnable(GL_BLEND);
 			if (HasConstantFactor()) {
 				debug_factor = factor;
-				glBlendColor(factor, factor, factor, 0);
+				gl_BlendColor(factor, factor, factor, 0);
 			}
 
-			glBlendEquationSeparate(m_equation_RGB, m_equation_ALPHA);
-			glBlendFuncSeparate(m_func_sRGB, m_func_dRGB, m_func_sALPHA, m_func_dALPHA);
+			gl_BlendEquationSeparate(m_equation_RGB, m_equation_ALPHA);
+			gl_BlendFuncSeparate(m_func_sRGB, m_func_dRGB, m_func_sALPHA, m_func_dALPHA);
 		} else {
 			glDisable(GL_BLEND);
 		}

@@ -76,9 +76,9 @@ GSDeviceOGL::~GSDeviceOGL()
 	// Clean m_merge_obj
 	for (uint32 i = 0; i < 2; i++)
 #ifndef DISABLE_GL41_SSO
-		glDeleteProgram(m_merge_obj.ps[i]);
+		gl_DeleteProgram(m_merge_obj.ps[i]);
 #else
-		glDeleteShader(m_merge_obj.ps[i]);
+		gl_DeleteShader(m_merge_obj.ps[i]);
 #endif
 	delete (m_merge_obj.cb);
 	delete (m_merge_obj.bs);
@@ -86,24 +86,24 @@ GSDeviceOGL::~GSDeviceOGL()
 	// Clean m_interlace
 	for (uint32 i = 0; i < 2; i++)
 #ifndef DISABLE_GL41_SSO
-		glDeleteProgram(m_interlace.ps[i]);
+		gl_DeleteProgram(m_interlace.ps[i]);
 #else
-		glDeleteShader(m_interlace.ps[i]);
+		gl_DeleteShader(m_interlace.ps[i]);
 #endif
 	delete (m_interlace.cb);
 
 	// Clean m_convert
 #ifndef DISABLE_GL41_SSO
-	glDeleteProgram(m_convert.vs);
+	gl_DeleteProgram(m_convert.vs);
 	for (uint32 i = 0; i < 2; i++)
-		glDeleteProgram(m_convert.ps[i]);
+		gl_DeleteProgram(m_convert.ps[i]);
 #else
-	glDeleteShader(m_convert.vs);
+	gl_DeleteShader(m_convert.vs);
 	for (uint i = 0; i < 2; i++)
-		glDeleteShader(m_convert.ps[i]);
+		gl_DeleteShader(m_convert.ps[i]);
 #endif
-	glDeleteSamplers(1, &m_convert.ln);
-	glDeleteSamplers(1, &m_convert.pt);
+	gl_DeleteSamplers(1, &m_convert.ln);
+	gl_DeleteSamplers(1, &m_convert.pt);
 	delete m_convert.dss;
 	delete m_convert.bs;
 
@@ -113,30 +113,30 @@ GSDeviceOGL::~GSDeviceOGL()
 
 	// Clean various opengl allocation
 #ifndef DISABLE_GL41_SSO
-	glDeleteProgramPipelines(1, &m_pipeline);
+	gl_DeleteProgramPipelines(1, &m_pipeline);
 #endif
-	glDeleteFramebuffers(1, &m_fbo);
-	glDeleteFramebuffers(1, &m_fbo_read);
+	gl_DeleteFramebuffers(1, &m_fbo);
+	gl_DeleteFramebuffers(1, &m_fbo_read);
 
 	// Delete HW FX
 	delete m_vs_cb;
 	delete m_ps_cb;
-	glDeleteSamplers(1, &m_rt_ss);
+	gl_DeleteSamplers(1, &m_rt_ss);
 	delete m_vb;
 
 #ifndef DISABLE_GL41_SSO
-	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) glDeleteProgram(it->second);
-	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) glDeleteProgram(it->second);
-	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) glDeleteProgram(it->second);
+	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) gl_DeleteProgram(it->second);
+	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) gl_DeleteProgram(it->second);
+	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) gl_DeleteProgram(it->second);
 #else
-	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) glDeleteShader(it->second);
-	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) glDeleteShader(it->second);
-	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) glDeleteShader(it->second);
+	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) gl_DeleteShader(it->second);
+	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) gl_DeleteShader(it->second);
+	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) gl_DeleteShader(it->second);
 
-	for (auto it = m_single_prog.begin(); it != m_single_prog.end() ; it++) glDeleteProgram(it->second);
+	for (auto it = m_single_prog.begin(); it != m_single_prog.end() ; it++) gl_DeleteProgram(it->second);
 	m_single_prog.clear();
 #endif
-	for (auto it = m_ps_ss.begin(); it != m_ps_ss.end() ; it++) glDeleteSamplers(1, &it->second);
+	for (auto it = m_ps_ss.begin(); it != m_ps_ss.end() ; it++) gl_DeleteSamplers(1, &it->second);
 	m_vs.clear();
 	m_gs.clear();
 	m_ps.clear();
@@ -197,12 +197,12 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// Various object
 	// ****************************************************************
 #ifndef DISABLE_GL41_SSO
-	glGenProgramPipelines(1, &m_pipeline);
-	glBindProgramPipeline(m_pipeline);
+	gl_GenProgramPipelines(1, &m_pipeline);
+	gl_BindProgramPipeline(m_pipeline);
 #endif
 
-	glGenFramebuffers(1, &m_fbo);
-	glGenFramebuffers(1, &m_fbo_read);
+	gl_GenFramebuffers(1, &m_fbo);
+	gl_GenFramebuffers(1, &m_fbo_read);
 
 	// ****************************************************************
 	// Vertex buffer state
@@ -240,35 +240,35 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 
 	hr = m_dev->CreateBlendState(&bsd, &m_convert.bs);
 #endif
-	glGenSamplers(1, &m_convert.ln);
-	glSamplerParameteri(m_convert.ln, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glSamplerParameteri(m_convert.ln, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glSamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glSamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glSamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	gl_GenSamplers(1, &m_convert.ln);
+	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	// FIXME which value for GL_TEXTURE_MIN_LOD
-	glSamplerParameterf(m_convert.ln, GL_TEXTURE_MAX_LOD, FLT_MAX);
+	gl_SamplerParameterf(m_convert.ln, GL_TEXTURE_MAX_LOD, FLT_MAX);
 	// FIXME: seems there is 2 possibility in opengl
 	// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	// glSamplerParameteri(m_convert.ln, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	glSamplerParameteri(m_convert.ln, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	glSamplerParameteri(m_convert.ln, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
+	// gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
 	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
 
 
-	glGenSamplers(1, &m_convert.pt);
-	glSamplerParameteri(m_convert.pt, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glSamplerParameteri(m_convert.pt, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glSamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glSamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glSamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	gl_GenSamplers(1, &m_convert.pt);
+	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	// FIXME which value for GL_TEXTURE_MIN_LOD
-	glSamplerParameterf(m_convert.pt, GL_TEXTURE_MAX_LOD, FLT_MAX);
+	gl_SamplerParameterf(m_convert.pt, GL_TEXTURE_MAX_LOD, FLT_MAX);
 	// FIXME: seems there is 2 possibility in opengl
 	// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	// glSamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	glSamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	glSamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
+	// gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
 	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
 
 	m_convert.dss = new GSDepthStencilOGL();
@@ -530,7 +530,7 @@ void GSDeviceOGL::DebugBB()
 
 	static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
 
-	glBlitFramebuffer(0, 0, size.x, size.y,
+	gl_BlitFramebuffer(0, 0, size.x, size.y,
 			0, 0, size.x, size.y,
 			GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
@@ -599,21 +599,21 @@ static void set_uniform_buffer_binding(GLuint prog, GLchar* name, GLuint binding
 #ifdef DISABLE_GL41_SSO
 GLuint GSDeviceOGL::link_prog()
 {
-	GLuint single_prog = glCreateProgram();
-	if (m_state.vs) glAttachShader(single_prog, m_state.vs);
-	if (m_state.ps) glAttachShader(single_prog, m_state.ps);
-	if (m_state.gs) glAttachShader(single_prog, m_state.gs);
+	GLuint single_prog = gl_CreateProgram();
+	if (m_state.vs) gl_AttachShader(single_prog, m_state.vs);
+	if (m_state.ps) gl_AttachShader(single_prog, m_state.ps);
+	if (m_state.gs) gl_AttachShader(single_prog, m_state.gs);
 
-	glLinkProgram(single_prog);
+	gl_LinkProgram(single_prog);
 
 	GLint status;
-	glGetProgramiv(single_prog, GL_LINK_STATUS, &status);
+	gl_GetProgramiv(single_prog, GL_LINK_STATUS, &status);
 	if (!status) {
 		GLint log_length = 0;
-		glGetProgramiv(single_prog, GL_INFO_LOG_LENGTH, &log_length);
+		gl_GetProgramiv(single_prog, GL_INFO_LOG_LENGTH, &log_length);
 		if (log_length > 0) {
 			char* log = new char[log_length];
-			glGetProgramInfoLog(single_prog, log_length, NULL, log);
+			gl_GetProgramInfoLog(single_prog, log_length, NULL, log);
 			fprintf(stderr, "%s", log);
 			delete[] log;
 		}
@@ -621,9 +621,9 @@ GLuint GSDeviceOGL::link_prog()
 	}
 
 #if 0
-	if (m_state.vs) glDetachShader(single_prog, m_state.vs);
-	if (m_state.ps) glDetachShader(single_prog, m_state.ps);
-	if (m_state.gs) glDetachShader(single_prog, m_state.gs);
+	if (m_state.vs) gl_DetachShader(single_prog, m_state.vs);
+	if (m_state.ps) gl_DetachShader(single_prog, m_state.ps);
+	if (m_state.gs) gl_DetachShader(single_prog, m_state.gs);
 #endif
 
 	return single_prog;
@@ -700,8 +700,8 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 	if (static_cast<GSTextureOGL*>(t)->IsBackbuffer()) {
 		// FIXME I really not sure
 		OMSetFBO(0);
-		//glClearBufferfv(GL_COLOR, GL_LEFT, c.v);
-		glClearBufferfv(GL_COLOR, 0, c.v);
+		//gl_ClearBufferfv(GL_COLOR, GL_LEFT, c.v);
+		gl_ClearBufferfv(GL_COLOR, 0, c.v);
 		// code for the old interface
 		// glClearColor(c.x, c.y, c.z, c.w);
 		// glClear(GL_COLOR_BUFFER_BIT);
@@ -710,7 +710,7 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 		// I would like to avoid FBO for a basic clean operation
 		OMSetFBO(m_fbo);
 		static_cast<GSTextureOGL*>(t)->Attach(GL_COLOR_ATTACHMENT0);
-		glClearBufferfv(GL_COLOR, 0, c.v);
+		gl_ClearBufferfv(GL_COLOR, 0, c.v);
 	}
 	OMSetFBO(fbo_old);
 }
@@ -733,10 +733,10 @@ void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 	// could be smaller than the texture and we really want to clean all pixels.
 	glDisable(GL_SCISSOR_TEST);
 	if (m_state.dss != NULL && m_state.dss->IsMaskEnable()) {
-		glClearBufferfv(GL_DEPTH, 0, &c);
+		gl_ClearBufferfv(GL_DEPTH, 0, &c);
 	} else {
 		glDepthMask(true);
-		glClearBufferfv(GL_DEPTH, 0, &c);
+		gl_ClearBufferfv(GL_DEPTH, 0, &c);
 		glDepthMask(false);
 	}
 	glEnable(GL_SCISSOR_TEST);
@@ -752,7 +752,7 @@ void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 	static_cast<GSTextureOGL*>(t)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
 	GLint color = c;
 	// FIXME can you clean depth and stencil separately
-	glClearBufferiv(GL_STENCIL, 0, &color);
+	gl_ClearBufferiv(GL_STENCIL, 0, &color);
 	OMSetFBO(fbo_old);
 }
 
@@ -841,7 +841,7 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
     //         uint32 srcName, enum srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
 	//     uint32 dstName, enum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
 	//     sizei width, sizei height, sizei depth);
-	glCopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), static_cast<GSTextureOGL*>(st)->GetTarget(), 
+	gl_CopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), static_cast<GSTextureOGL*>(st)->GetTarget(),
 			0, r.x, r.y, 0,
 			static_cast<GSTextureOGL*>(dt)->GetID(), static_cast<GSTextureOGL*>(dt)->GetTarget(),
 			0, r.x, r.y, 0,
@@ -1140,7 +1140,7 @@ void GSDeviceOGL::VSSetShader(GLuint vs)
 	{
 		m_state.vs = vs;
 #ifndef DISABLE_GL41_SSO
-		glUseProgramStages(m_pipeline, GL_VERTEX_SHADER_BIT, vs);
+		gl_UseProgramStages(m_pipeline, GL_VERTEX_SHADER_BIT, vs);
 #endif
 	}
 }
@@ -1151,7 +1151,7 @@ void GSDeviceOGL::GSSetShader(GLuint gs)
 	{
 		m_state.gs = gs;
 #ifndef DISABLE_GL41_SSO
-		glUseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, gs);
+		gl_UseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, gs);
 #endif
 	}
 }
@@ -1194,24 +1194,24 @@ void GSDeviceOGL::PSSetShader(GLuint ps)
 	{
 		m_state.ps = ps;
 #ifndef DISABLE_GL41_SSO
-		glUseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, ps);
+		gl_UseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, ps);
 #endif
 	}
 
 // Sampler and texture must be set at the same time
 // 1/ select the texture unit
-// glActiveTexture(GL_TEXTURE0 + 1);
+// gl_ActiveTexture(GL_TEXTURE0 + 1);
 // 2/ bind the texture
 // glBindTexture(GL_TEXTURE_2D , brickTexture);
 // 3/ sets the texture sampler in GLSL (could be useless with layout stuff)
-// glUniform1i(brickSamplerId , 1);
+// gl_Uniform1i(brickSamplerId , 1);
 // 4/ set the sampler state
-// glBindSampler(1 , sampler);
+// gl_BindSampler(1 , sampler);
 	if (m_srv_changed || m_ss_changed) {
 		for (uint32 i=0 ; i < 1; i++) {
 			if (m_state.ps_srv[i] != NULL) {
 				m_state.ps_srv[i]->EnableUnit(i);
-				glBindSampler(i, m_state.ps_ss[i]);
+				gl_BindSampler(i, m_state.ps_ss[i]);
 			}
 		}
 	}
@@ -1221,9 +1221,9 @@ void GSDeviceOGL::OMSetFBO(GLuint fbo, GLenum buffer)
 {
 	if (m_state.fbo != fbo) {
 		m_state.fbo = fbo;
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		gl_BindFramebuffer(GL_FRAMEBUFFER, fbo);
 		// FIXME DEBUG
-		//if (fbo) fprintf(stderr, "FB status %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+		//if (fbo) fprintf(stderr, "FB status %x\n", gl_CheckFramebufferStatus(GL_FRAMEBUFFER));
 	}
 
 	if (m_state.draw != buffer) {
@@ -1396,14 +1396,14 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	// Could be useful one day
 	const GLchar* ShaderSource[1];
 	ShaderSource[0] = header.append(source).c_str();
-	*program = glCreateShaderProgramv(type, 1, &ShaderSource[0]);
+	*program = gl_CreateShaderProgramv(type, 1, &ShaderSource[0]);
 #else
-	*program = glCreateShaderProgramv(type, 2, sources_array);
+	*program = gl_CreateShaderProgramv(type, 2, sources_array);
 #endif
 #else
-	*program = glCreateShader(type);
-	glShaderSource(*program, 2, sources_array, NULL);
-	glCompileShader(*program);
+	*program = gl_CreateShader(type);
+	gl_ShaderSource(*program, 2, sources_array, NULL);
+	gl_CompileShader(*program);
 #endif
 
 	free(source_str);
@@ -1417,14 +1417,14 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 
 		GLint log_length = 0;
 #ifndef DISABLE_GL41_SSO
-		glGetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+		gl_GetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
 #else
-		glGetShaderiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+		gl_GetShaderiv(*program, GL_INFO_LOG_LENGTH, &log_length);
 #endif
 		if (log_length > 0) {
 			char* log = new char[log_length];
 #ifndef DISABLE_GL41_SSO
-			glGetProgramInfoLog(*program, log_length, NULL, log);
+			gl_GetProgramInfoLog(*program, log_length, NULL, log);
 #else
 			glGetShaderInfoLog(*program, log_length, NULL, log);
 #endif
@@ -1446,7 +1446,7 @@ void GSDeviceOGL::CheckDebugLog()
        int* lengths = new int[count];
        char* messageLog = new char[bufsize];
 
-       unsigned int retVal = glGetDebugMessageLogARB(count, bufsize, sources, types, ids, severities, lengths, messageLog);
+       unsigned int retVal = gl_GetDebugMessageLogARB(count, bufsize, sources, types, ids, severities, lengths, messageLog);
 
        if(retVal > 0)
        {

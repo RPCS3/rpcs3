@@ -33,19 +33,19 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 	// Opengl world
 
 	// Render work in parallal with framebuffer object (FBO) http://www.opengl.org/wiki/Framebuffer_Objects
-	// render are attached to FBO through : glFramebufferRenderbuffer. You can query the number of colorattachement with GL_MAX_COLOR_ATTACHMENTS
-	// FBO   :  constructor -> glGenFramebuffers, glDeleteFramebuffers
-	//			binding     -> glBindFramebuffer (target can be read/write/both)
-	//			blit		-> glBlitFramebuffer (read FB to draw FB)
-	//			info		-> glIsFramebuffer, glGetFramebufferAttachmentParameter, glCheckFramebufferStatus
+	// render are attached to FBO through : gl_FramebufferRenderbuffer. You can query the number of colorattachement with GL_MAX_COLOR_ATTACHMENTS
+	// FBO   :  constructor -> gl_GenFramebuffers, gl_DeleteFramebuffers
+	//			binding     -> gl_BindFramebuffer (target can be read/write/both)
+	//			blit		-> gl_BlitFramebuffer (read FB to draw FB)
+	//			info		-> gl_IsFramebuffer, glGetFramebufferAttachmentParameter, gl_CheckFramebufferStatus
 	//
 	// There are two types of framebuffer-attachable images; texture images and renderbuffer images.
 	// If an image of a texture object is attached to a framebuffer, OpenGL performs "render to texture".
 	// And if an image of a renderbuffer object is attached to a framebuffer, then OpenGL performs "offscreen rendering".
 	// Blitting:
-	// glDrawBuffers
+	// gl_DrawBuffers
 	// glReadBuffer
-	// glBlitFramebuffer
+	// gl_BlitFramebuffer
 
 	// *************************************************************
 	// m_size.x = w;
@@ -62,7 +62,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 	switch (m_type) {
 		case GSTexture::Offscreen:
 			//FIXME I not sure we need a pixel buffer object. It seems more a texture
-			// glGenBuffers(1, &m_texture_id);
+			// gl_GenBuffers(1, &m_texture_id);
 			// m_texture_target = GL_PIXEL_UNPACK_BUFFER;
 			// ASSERT(0);
 			// Note there is also a buffer texture!!!
@@ -84,7 +84,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 			break;
 	}
 	// Extra buffer to handle various pixel transfer
-	glGenBuffers(1, &m_pbo_id);
+	gl_GenBuffers(1, &m_pbo_id);
 
 	uint32 msaa_level;
 	if (m_msaa) {
@@ -105,9 +105,9 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 				ASSERT(0); // TODO Later
 			}
 
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo_id);
-			glBufferData(GL_PIXEL_PACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			gl_BindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo_id);
+			gl_BufferData(GL_PIXEL_PACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
+			gl_BindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 			ASSERT(!m_msaa);
 
 		case GSTexture::DepthStencil:
@@ -121,9 +121,9 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 			if (m_msaa) {
 				ASSERT(m_texture_target == GL_TEXTURE_2D_MULTISAMPLE);
 				// Require a recent GLEW and GL4.3
-				//glTexStorage2DMultisample(m_texture_target, msaa_level, m_format, m_size.x, m_size.y, false);
+				//gl_TexStorage2DMultisample(m_texture_target, msaa_level, m_format, m_size.x, m_size.y, false);
 			} else {
-				glTexStorage2D(m_texture_target, 1,  m_format, m_size.x, m_size.y);
+				gl_TexStorage2D(m_texture_target, 1,  m_format, m_size.x, m_size.y);
 			}
 			break;
 		default: break;
@@ -132,16 +132,16 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 
 GSTextureOGL::~GSTextureOGL()
 {
-	glDeleteBuffers(1, &m_pbo_id);
+	gl_DeleteBuffers(1, &m_pbo_id);
 	glDeleteTextures(1, &m_texture_id);
 }
 
 void GSTextureOGL::Attach(GLenum attachment)
 {
 	//fprintf(stderr, "format %d,%x\n", m_type, m_format);
-	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
+	gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
 	// FIXME DEBUG
-	//fprintf(stderr, "FB status %x\n", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+	//fprintf(stderr, "FB status %x\n", gl_CheckFramebufferStatus(GL_FRAMEBUFFER));
 }
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
@@ -206,7 +206,7 @@ void GSTextureOGL::EnableUnit(uint32 unit)
 		// For the moment SW renderer only use 1 so don't bother
 		if (g_state_texture_unit != unit) {
 			g_state_texture_unit = unit;
-			glActiveTexture(GL_TEXTURE0 + unit);
+			gl_ActiveTexture(GL_TEXTURE0 + unit);
 			// When you change the texture unit, texture must be rebinded
 			g_state_texture_id = m_texture_id;
 			glBindTexture(m_texture_target, m_texture_id);
@@ -224,18 +224,18 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 	// Set m.pitch <- size of a row
 	// I think in opengl we need to copy back the data to the RAM: glReadPixels — read a block of pixels from the frame buffer
 	//
-	// glMapBuffer — map a buffer object's data store
+	// gl_MapBuffer — map a buffer object's data store
 	// Can be used on GL_PIXEL_UNPACK_BUFFER or GL_TEXTURE_BUFFER
 	if (m_type == GSTexture::Offscreen) {
 		// Bind the texture to the read framebuffer to avoid any disturbance
 		EnableUnit(0);
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
-		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_texture_target, m_texture_id, 0);
+		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
+		gl_FramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_texture_target, m_texture_id, 0);
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
 
 		// FIXME It might be possible to only read a subrange of the texture based on r object
 		// Load the PBO with the data
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo_id);
+		gl_BindBuffer(GL_PIXEL_PACK_BUFFER, m_pbo_id);
 		if (m_format == GL_RGBA8) {
 			glPixelStorei(GL_PACK_ALIGNMENT, 4);
 			glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, 0);
@@ -249,17 +249,17 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 			fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
 			ASSERT(0);
 		}
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
 		// Give access from the CPU
-		m.bits = (uint8*) glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, m_pbo_size, GL_MAP_READ_BIT);
+		m.bits = (uint8*) gl_MapBufferRange(GL_PIXEL_PACK_BUFFER, 0, m_pbo_size, GL_MAP_READ_BIT);
 		m.pitch = m_size.x;
 
 		if ( m.bits ) {
 			return true;
 		} else {
 			fprintf(stderr, "bad mapping of the pbo\n");
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+			gl_BindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 			return false;
 		}
 	}
@@ -286,8 +286,8 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 void GSTextureOGL::Unmap()
 {
 	if (m_type == GSTexture::Offscreen) {
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		gl_UnmapBuffer(GL_PIXEL_PACK_BUFFER);
+		gl_BindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
 	}
 }
@@ -405,22 +405,22 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 	// for us
 	if (IsBackbuffer()) {
 		//glReadBuffer(GL_BACK);
-		//glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		//gl_BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, image);
 	} else if(IsDss()) {
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
+		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 
 		//EnableUnit(0);
 
-		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_texture_target, m_texture_id, 0);
+		gl_FramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_texture_target, m_texture_id, 0);
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, image);
 
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	} else {
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
+		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 
 		EnableUnit(0);
-		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_texture_target, m_texture_id, 0);
+		gl_FramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_texture_target, m_texture_id, 0);
 
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
 		if (m_format == GL_RGBA8)
@@ -438,7 +438,7 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 			status = false;
 		}
 
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	}
 
 	if (status) Save(fn, image, pitch);

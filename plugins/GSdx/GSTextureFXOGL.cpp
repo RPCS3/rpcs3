@@ -33,22 +33,22 @@ void GSDeviceOGL::CreateTextureFX()
 	m_vs_cb = new GSUniformBufferOGL(g_vs_cb_index, sizeof(VSConstantBuffer));
 	m_ps_cb = new GSUniformBufferOGL(g_ps_cb_index, sizeof(PSConstantBuffer));
 
-	glGenSamplers(1, &m_rt_ss);
+	gl_GenSamplers(1, &m_rt_ss);
 	// FIXME, seem to have no difference between sampler !!!
 	m_palette_ss = m_rt_ss;
 
-	glSamplerParameteri(m_rt_ss, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glSamplerParameteri(m_rt_ss, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glSamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glSamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glSamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	// FIXME which value for GL_TEXTURE_MIN_LOD
-	glSamplerParameterf(m_rt_ss, GL_TEXTURE_MAX_LOD, FLT_MAX);
+	gl_SamplerParameterf(m_rt_ss, GL_TEXTURE_MAX_LOD, FLT_MAX);
 	// FIXME: seems there is 2 possibility in opengl
 	// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	// glSamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	glSamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	glSamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
+	// gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
 	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
 
 	GSInputLayoutOGL vert_format[] =
@@ -200,35 +200,35 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 			// *************************************************************
 			// Static
 			// *************************************************************
-			glGenSamplers(1, &ss0);
+			gl_GenSamplers(1, &ss0);
 			if (ssel.ltf) {
-				glSamplerParameteri(ss0, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glSamplerParameteri(ss0, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				gl_SamplerParameteri(ss0, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				gl_SamplerParameteri(ss0, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			} else {
-				glSamplerParameteri(ss0, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				glSamplerParameteri(ss0, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				gl_SamplerParameteri(ss0, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				gl_SamplerParameteri(ss0, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			}
 
 			// FIXME ensure U -> S,  V -> T and W->R
 			if (ssel.tau)
-				glSamplerParameteri(ss0, GL_TEXTURE_WRAP_S, GL_REPEAT);
+				gl_SamplerParameteri(ss0, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			else
-				glSamplerParameteri(ss0, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				gl_SamplerParameteri(ss0, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 
 			if (ssel.tav)
-				glSamplerParameteri(ss0, GL_TEXTURE_WRAP_T, GL_REPEAT);
+				gl_SamplerParameteri(ss0, GL_TEXTURE_WRAP_T, GL_REPEAT);
 			else
-				glSamplerParameteri(ss0, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				gl_SamplerParameteri(ss0, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-			glSamplerParameteri(ss0, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+			gl_SamplerParameteri(ss0, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
 			// FIXME which value for GL_TEXTURE_MIN_LOD
-			glSamplerParameterf(m_rt_ss, GL_TEXTURE_MAX_LOD, FLT_MAX);
+			gl_SamplerParameterf(m_rt_ss, GL_TEXTURE_MAX_LOD, FLT_MAX);
 			// FIXME: seems there is 2 possibility in opengl
 			// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
-			// glSamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-			glSamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-			glSamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
+			// gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+			gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
 			// FIXME: need ogl extension sd.MaxAnisotropy = 16;
 
 			m_ps_ss[ssel] = ss0;

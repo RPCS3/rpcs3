@@ -32,7 +32,7 @@ public:
 												  , size(size)
 												  ,target(GL_UNIFORM_BUFFER)
 	{
-		glGenBuffers(1, &buffer);
+		gl_GenBuffers(1, &buffer);
 		bind();
 		allocate();
 		attach();
@@ -40,28 +40,28 @@ public:
 
 	void bind()
 	{
-		glBindBuffer(target, buffer);
+		gl_BindBuffer(target, buffer);
 	}
 
 	void allocate()
 	{
-		glBufferData(target, size, NULL, GL_STREAM_DRAW);
+		gl_BufferData(target, size, NULL, GL_STREAM_DRAW);
 	}
 
 	void attach()
 	{
-		glBindBufferBase(target, index, buffer);
+		gl_BindBufferBase(target, index, buffer);
 	}
 
 	void upload(const void* src)
 	{
 		uint32 flags = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-		uint8* dst = (uint8*) glMapBufferRange(target, 0, size, flags);
+		uint8* dst = (uint8*) gl_MapBufferRange(target, 0, size, flags);
 		memcpy(dst, src, size);
-		glUnmapBuffer(target);
+		gl_UnmapBuffer(target);
 	}
 
 	~GSUniformBufferOGL() {
-		glDeleteBuffers(1, &buffer);
+		gl_DeleteBuffers(1, &buffer);
 	}
 };
