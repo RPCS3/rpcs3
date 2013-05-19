@@ -75,33 +75,31 @@ GSDeviceOGL::~GSDeviceOGL()
 
 	// Clean m_merge_obj
 	for (uint32 i = 0; i < 2; i++)
-#ifndef DISABLE_GL41_SSO
-		gl_DeleteProgram(m_merge_obj.ps[i]);
-#else
-		gl_DeleteShader(m_merge_obj.ps[i]);
-#endif
+		if (GLLoader::found_GL_ARB_separate_shader_objects)
+			gl_DeleteProgram(m_merge_obj.ps[i]);
+		else
+			gl_DeleteShader(m_merge_obj.ps[i]);
 	delete (m_merge_obj.cb);
 	delete (m_merge_obj.bs);
 	
 	// Clean m_interlace
 	for (uint32 i = 0; i < 2; i++)
-#ifndef DISABLE_GL41_SSO
-		gl_DeleteProgram(m_interlace.ps[i]);
-#else
-		gl_DeleteShader(m_interlace.ps[i]);
-#endif
+		if (GLLoader::found_GL_ARB_separate_shader_objects)
+			gl_DeleteProgram(m_interlace.ps[i]);
+		else
+			gl_DeleteShader(m_interlace.ps[i]);
 	delete (m_interlace.cb);
 
 	// Clean m_convert
-#ifndef DISABLE_GL41_SSO
-	gl_DeleteProgram(m_convert.vs);
-	for (uint32 i = 0; i < 2; i++)
-		gl_DeleteProgram(m_convert.ps[i]);
-#else
-	gl_DeleteShader(m_convert.vs);
-	for (uint i = 0; i < 2; i++)
-		gl_DeleteShader(m_convert.ps[i]);
-#endif
+	if (GLLoader::found_GL_ARB_separate_shader_objects) {
+		gl_DeleteProgram(m_convert.vs);
+		for (uint32 i = 0; i < 2; i++)
+			gl_DeleteProgram(m_convert.ps[i]);
+	} else {
+		gl_DeleteShader(m_convert.vs);
+		for (uint i = 0; i < 2; i++)
+			gl_DeleteShader(m_convert.ps[i]);
+	}
 	gl_DeleteSamplers(1, &m_convert.ln);
 	gl_DeleteSamplers(1, &m_convert.pt);
 	delete m_convert.dss;
@@ -112,9 +110,8 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete m_date.bs;
 
 	// Clean various opengl allocation
-#ifndef DISABLE_GL41_SSO
-	gl_DeleteProgramPipelines(1, &m_pipeline);
-#endif
+	if (GLLoader::found_GL_ARB_separate_shader_objects)
+		gl_DeleteProgramPipelines(1, &m_pipeline);
 	gl_DeleteFramebuffers(1, &m_fbo);
 	gl_DeleteFramebuffers(1, &m_fbo_read);
 
@@ -124,18 +121,19 @@ GSDeviceOGL::~GSDeviceOGL()
 	gl_DeleteSamplers(1, &m_rt_ss);
 	delete m_vb;
 
-#ifndef DISABLE_GL41_SSO
-	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) gl_DeleteProgram(it->second);
-	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) gl_DeleteProgram(it->second);
-	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) gl_DeleteProgram(it->second);
-#else
-	for (auto it = m_vs.begin(); it != m_vs.end() ; it++) gl_DeleteShader(it->second);
-	for (auto it = m_gs.begin(); it != m_gs.end() ; it++) gl_DeleteShader(it->second);
-	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) gl_DeleteShader(it->second);
+	if (GLLoader::found_GL_ARB_separate_shader_objects) {
+		for (auto it = m_vs.begin(); it != m_vs.end() ; it++) gl_DeleteProgram(it->second);
+		for (auto it = m_gs.begin(); it != m_gs.end() ; it++) gl_DeleteProgram(it->second);
+		for (auto it = m_ps.begin(); it != m_ps.end() ; it++) gl_DeleteProgram(it->second);
+	} else {
+		for (auto it = m_vs.begin(); it != m_vs.end() ; it++) gl_DeleteShader(it->second);
+		for (auto it = m_gs.begin(); it != m_gs.end() ; it++) gl_DeleteShader(it->second);
+		for (auto it = m_ps.begin(); it != m_ps.end() ; it++) gl_DeleteShader(it->second);
 
-	for (auto it = m_single_prog.begin(); it != m_single_prog.end() ; it++) gl_DeleteProgram(it->second);
-	m_single_prog.clear();
-#endif
+		for (auto it = m_single_prog.begin(); it != m_single_prog.end() ; it++) gl_DeleteProgram(it->second);
+		m_single_prog.clear();
+	}
+
 	for (auto it = m_ps_ss.begin(); it != m_ps_ss.end() ; it++) gl_DeleteSamplers(1, &it->second);
 	m_vs.clear();
 	m_gs.clear();
@@ -196,10 +194,10 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// Various object
 	// ****************************************************************
-#ifndef DISABLE_GL41_SSO
-	gl_GenProgramPipelines(1, &m_pipeline);
-	gl_BindProgramPipeline(m_pipeline);
-#endif
+	if (GLLoader::found_GL_ARB_separate_shader_objects) {
+		gl_GenProgramPipelines(1, &m_pipeline);
+		gl_BindProgramPipeline(m_pipeline);
+	}
 
 	gl_GenFramebuffers(1, &m_fbo);
 	gl_GenFramebuffers(1, &m_fbo_read);
@@ -586,17 +584,14 @@ void GSDeviceOGL::DebugOutput()
 	//DebugBB();
 }
 
-#ifdef DISABLE_GL42
 static void set_uniform_buffer_binding(GLuint prog, GLchar* name, GLuint binding) {
 	GLuint index;
-	index = glGetUniformBlockIndex(prog, name);
+	index = gl_GetUniformBlockIndex(prog, name);
 	if (index != GL_INVALID_INDEX) {
-		glUniformBlockBinding(prog, index, binding);
+		gl_UniformBlockBinding(prog, index, binding);
 	}
 }
-#endif
 
-#ifdef DISABLE_GL41_SSO
 GLuint GSDeviceOGL::link_prog()
 {
 	GLuint single_prog = gl_CreateProgram();
@@ -628,7 +623,6 @@ GLuint GSDeviceOGL::link_prog()
 
 	return single_prog;
 }
-#endif
 
 void GSDeviceOGL::BeforeDraw()
 {
@@ -636,29 +630,28 @@ void GSDeviceOGL::BeforeDraw()
 	DebugInput();
 #endif
 
-#ifdef DISABLE_GL41_SSO
-	// Note: shader are integer lookup pointer. They start from 1 and incr
-	// every time you create a new shader OR a new program.
-	uint64 sel = (uint64)m_state.vs << 40 | (uint64)m_state.gs << 20 | m_state.ps;
-	auto single_prog = m_single_prog.find(sel);
-	if (single_prog == m_single_prog.end()) {
-		m_single_prog[sel] = link_prog();	
-		single_prog = m_single_prog.find(sel);
+	if (!GLLoader::found_GL_ARB_separate_shader_objects) {
+		// Note: shader are integer lookup pointer. They start from 1 and incr
+		// every time you create a new shader OR a new program.
+		uint64 sel = (uint64)m_state.vs << 40 | (uint64)m_state.gs << 20 | m_state.ps;
+		auto single_prog = m_single_prog.find(sel);
+		if (single_prog == m_single_prog.end()) {
+			m_single_prog[sel] = link_prog();
+			single_prog = m_single_prog.find(sel);
+		}
+
+		gl_UseProgram(single_prog->second);
 	}
 
-	glUseProgram(single_prog->second);
+	if (!GLLoader::found_GL_ARB_shading_language_420pack) {
+		set_uniform_buffer_binding(m_state.vs, "cb20", 20);
+		set_uniform_buffer_binding(m_state.ps, "cb21", 21);
 
-#endif
-
-#ifdef DISABLE_GL42
-	set_uniform_buffer_binding(m_state.vs, "cb20", 20);
-	set_uniform_buffer_binding(m_state.ps, "cb21", 21);
-
-	set_uniform_buffer_binding(m_state.ps, "cb10", 10);
-	set_uniform_buffer_binding(m_state.ps, "cb11", 11);
-	set_uniform_buffer_binding(m_state.ps, "cb12", 12);
-	set_uniform_buffer_binding(m_state.ps, "cb13", 13);
-#endif
+		set_uniform_buffer_binding(m_state.ps, "cb10", 10);
+		set_uniform_buffer_binding(m_state.ps, "cb11", 11);
+		set_uniform_buffer_binding(m_state.ps, "cb12", 12);
+		set_uniform_buffer_binding(m_state.ps, "cb13", 13);
+	}
 }
 
 void GSDeviceOGL::AfterDraw()
@@ -1139,9 +1132,8 @@ void GSDeviceOGL::VSSetShader(GLuint vs)
 	if(m_state.vs != vs)
 	{
 		m_state.vs = vs;
-#ifndef DISABLE_GL41_SSO
-		gl_UseProgramStages(m_pipeline, GL_VERTEX_SHADER_BIT, vs);
-#endif
+		if (GLLoader::found_GL_ARB_separate_shader_objects)
+			gl_UseProgramStages(m_pipeline, GL_VERTEX_SHADER_BIT, vs);
 	}
 }
 
@@ -1150,9 +1142,8 @@ void GSDeviceOGL::GSSetShader(GLuint gs)
 	if(m_state.gs != gs)
 	{
 		m_state.gs = gs;
-#ifndef DISABLE_GL41_SSO
-		gl_UseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, gs);
-#endif
+		if (GLLoader::found_GL_ARB_separate_shader_objects)
+			gl_UseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, gs);
 	}
 }
 
@@ -1193,9 +1184,8 @@ void GSDeviceOGL::PSSetShader(GLuint ps)
 	if(m_state.ps != ps)
 	{
 		m_state.ps = ps;
-#ifndef DISABLE_GL41_SSO
-		gl_UseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, ps);
-#endif
+		if (GLLoader::found_GL_ARB_separate_shader_objects)
+			gl_UseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, ps);
 	}
 
 // Sampler and texture must be set at the same time
@@ -1309,20 +1299,15 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	// Build a header string
 	// *****************************************************
 	// First select the version (must be the first line so we need to generate it
-#ifdef DISABLE_GL41_SSO
-	#ifdef DISABLE_GL42
-	std::string version = "#version 330\n#define DISABLE_GL42\n";
-	#else
-	std::string version = "#version 330\n#extension GL_ARB_shading_language_420pack: require\n";
-	#endif
-#else
-	#ifdef DISABLE_GL42
-	std::string version = "#version 330\n#extension GL_ARB_separate_shader_objects : require\n#define DISABLE_GL42\n";
-	#else
-	std::string version = "#version 330\n#extension GL_ARB_shading_language_420pack: require\n#extension GL_ARB_separate_shader_objects : require\n";
-	#endif
-#endif
-	//std::string version = "#version 420\n";
+	std::string version = "#version 330\n";
+	if (GLLoader::found_GL_ARB_shading_language_420pack) {
+		version += "#extension GL_ARB_shading_language_420pack: require\n";
+	} else {
+		version += "#define DISABLE_GL42\n";
+	}
+	if (GLLoader::found_GL_ARB_separate_shader_objects) {
+		version += "#extension GL_ARB_separate_shader_objects : require\n";
+	}
 
 	// Allow to puts several shader in 1 files
 	std::string shader_type;
@@ -1391,20 +1376,20 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	}
 
 
-#ifndef DISABLE_GL41_SSO
-#if 0
-	// Could be useful one day
-	const GLchar* ShaderSource[1];
-	ShaderSource[0] = header.append(source).c_str();
-	*program = gl_CreateShaderProgramv(type, 1, &ShaderSource[0]);
-#else
-	*program = gl_CreateShaderProgramv(type, 2, sources_array);
-#endif
-#else
-	*program = gl_CreateShader(type);
-	gl_ShaderSource(*program, 2, sources_array, NULL);
-	gl_CompileShader(*program);
-#endif
+	if (GLLoader::found_GL_ARB_separate_shader_objects) {
+	#if 0
+		// Could be useful one day
+		const GLchar* ShaderSource[1];
+		ShaderSource[0] = header.append(source).c_str();
+		*program = gl_CreateShaderProgramv(type, 1, &ShaderSource[0]);
+	#else
+		*program = gl_CreateShaderProgramv(type, 2, sources_array);
+	#endif
+	} else {
+		*program = gl_CreateShader(type);
+		gl_ShaderSource(*program, 2, sources_array, NULL);
+		gl_CompileShader(*program);
+	}
 
 	free(source_str);
 	free(header_str);
@@ -1416,18 +1401,18 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 		fprintf(stderr, "\n%s", macro_sel.c_str());
 
 		GLint log_length = 0;
-#ifndef DISABLE_GL41_SSO
-		gl_GetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
-#else
-		gl_GetShaderiv(*program, GL_INFO_LOG_LENGTH, &log_length);
-#endif
+		if (GLLoader::found_GL_ARB_separate_shader_objects)
+			gl_GetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+		else
+			gl_GetShaderiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+
 		if (log_length > 0) {
 			char* log = new char[log_length];
-#ifndef DISABLE_GL41_SSO
-			gl_GetProgramInfoLog(*program, log_length, NULL, log);
-#else
-			glGetShaderInfoLog(*program, log_length, NULL, log);
-#endif
+			if (GLLoader::found_GL_ARB_separate_shader_objects)
+				gl_GetProgramInfoLog(*program, log_length, NULL, log);
+			else
+				gl_GetShaderInfoLog(*program, log_length, NULL, log);
+
 			fprintf(stderr, "%s", log);
 			delete[] log;
 		}

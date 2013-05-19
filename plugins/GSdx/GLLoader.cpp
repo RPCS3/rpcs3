@@ -22,78 +22,91 @@
 #include "stdafx.h"
 #include "GLLoader.h"
 
-PFNGLACTIVETEXTUREPROC                 gl_ActiveTexture                 =   NULL;
-PFNGLBLENDCOLORPROC                    gl_BlendColor                    =   NULL;
-PFNGLATTACHSHADERPROC                  gl_AttachShader                  =   NULL;
-PFNGLBINDBUFFERPROC                    gl_BindBuffer                    =   NULL;
-PFNGLBINDBUFFERBASEPROC                gl_BindBufferBase                =   NULL;
-PFNGLBINDFRAGDATALOCATIONINDEXEDPROC   gl_BindFragDataLocationIndexed   =   NULL;
-PFNGLBINDFRAMEBUFFERPROC               gl_BindFramebuffer               =   NULL;
-PFNGLBINDPROGRAMPIPELINEPROC           gl_BindProgramPipeline           =   NULL;
-PFNGLBINDSAMPLERPROC                   gl_BindSampler                   =   NULL;
-PFNGLBINDVERTEXARRAYPROC               gl_BindVertexArray               =   NULL;
-PFNGLBLENDEQUATIONSEPARATEPROC         gl_BlendEquationSeparate         =   NULL;
-PFNGLBLENDFUNCSEPARATEPROC             gl_BlendFuncSeparate             =   NULL;
-PFNGLBLITFRAMEBUFFERPROC               gl_BlitFramebuffer               =   NULL;
-PFNGLBUFFERDATAPROC                    gl_BufferData                    =   NULL;
-PFNGLCHECKFRAMEBUFFERSTATUSPROC        gl_CheckFramebufferStatus        =   NULL;
-PFNGLCLEARBUFFERFVPROC                 gl_ClearBufferfv                 =   NULL;
-PFNGLCLEARBUFFERIVPROC                 gl_ClearBufferiv                 =   NULL;
-PFNGLCOMPILESHADERPROC                 gl_CompileShader                 =   NULL;
-PFNGLCOPYIMAGESUBDATANVPROC            gl_CopyImageSubDataNV            =   NULL;
-PFNGLCREATEPROGRAMPROC                 gl_CreateProgram                 =   NULL;
-PFNGLCREATESHADERPROC                  gl_CreateShader                  =   NULL;
-PFNGLCREATESHADERPROGRAMVPROC          gl_CreateShaderProgramv          =   NULL;
-PFNGLDELETEBUFFERSPROC                 gl_DeleteBuffers                 =   NULL;
-PFNGLDELETEFRAMEBUFFERSPROC            gl_DeleteFramebuffers            =   NULL;
-PFNGLDELETEPROGRAMPROC                 gl_DeleteProgram                 =   NULL;
-PFNGLDELETEPROGRAMPIPELINESPROC        gl_DeleteProgramPipelines        =   NULL;
-PFNGLDELETESAMPLERSPROC                gl_DeleteSamplers                =   NULL;
-PFNGLDELETESHADERPROC                  gl_DeleteShader                  =   NULL;
-PFNGLDELETEVERTEXARRAYSPROC            gl_DeleteVertexArrays            =   NULL;
-PFNGLDETACHSHADERPROC                  gl_DetachShader                  =   NULL;
-PFNGLDRAWBUFFERSPROC                   gl_DrawBuffers                   =   NULL;
-PFNGLDRAWELEMENTSBASEVERTEXPROC        gl_DrawElementsBaseVertex        =   NULL;
-PFNGLENABLEVERTEXATTRIBARRAYPROC       gl_EnableVertexAttribArray       =   NULL;
-PFNGLFRAMEBUFFERRENDERBUFFERPROC       gl_FramebufferRenderbuffer       =   NULL;
-PFNGLFRAMEBUFFERTEXTURE2DPROC          gl_FramebufferTexture2D          =   NULL;
-PFNGLGENBUFFERSPROC                    gl_GenBuffers                    =   NULL;
-PFNGLGENFRAMEBUFFERSPROC               gl_GenFramebuffers               =   NULL;
-PFNGLGENPROGRAMPIPELINESPROC           gl_GenProgramPipelines           =   NULL;
-PFNGLGENSAMPLERSPROC                   gl_GenSamplers                   =   NULL;
-PFNGLGENVERTEXARRAYSPROC               gl_GenVertexArrays               =   NULL;
-PFNGLGETBUFFERPARAMETERIVPROC          gl_GetBufferParameteriv          =   NULL;
-PFNGLGETDEBUGMESSAGELOGARBPROC         gl_GetDebugMessageLogARB         =   NULL;
-PFNGLGETFRAGDATAINDEXPROC              gl_GetFragDataIndex              =   NULL;
-PFNGLGETFRAGDATALOCATIONPROC           gl_GetFragDataLocation           =   NULL;
-PFNGLGETPROGRAMINFOLOGPROC             gl_GetProgramInfoLog             =   NULL;
-PFNGLGETPROGRAMIVPROC                  gl_GetProgramiv                  =   NULL;
-PFNGLGETSHADERIVPROC                   gl_GetShaderiv                   =   NULL;
-PFNGLGETSTRINGIPROC                    gl_GetStringi                    =   NULL;
-PFNGLISFRAMEBUFFERPROC                 gl_IsFramebuffer                 =   NULL;
-PFNGLLINKPROGRAMPROC                   gl_LinkProgram                   =   NULL;
-PFNGLMAPBUFFERPROC                     gl_MapBuffer                     =   NULL;
-PFNGLMAPBUFFERRANGEPROC                gl_MapBufferRange                =   NULL;
-PFNGLPROGRAMPARAMETERIPROC             gl_ProgramParameteri             =   NULL;
-PFNGLSAMPLERPARAMETERFPROC             gl_SamplerParameterf             =   NULL;
-PFNGLSAMPLERPARAMETERIPROC             gl_SamplerParameteri             =   NULL;
-PFNGLSHADERSOURCEPROC                  gl_ShaderSource                  =   NULL;
-PFNGLUNIFORM1IPROC                     gl_Uniform1i                     =   NULL;
-PFNGLUNMAPBUFFERPROC                   gl_UnmapBuffer                   =   NULL;
-PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages              =   NULL;
-PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer          =   NULL;
-PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer           =   NULL;
-PFNGLTEXSTORAGE2DPROC				   gl_TexStorage2D				   =   NULL;
+PFNGLACTIVETEXTUREPROC                 gl_ActiveTexture               = NULL;
+PFNGLBLENDCOLORPROC                    gl_BlendColor                  = NULL;
+PFNGLATTACHSHADERPROC                  gl_AttachShader                = NULL;
+PFNGLBINDBUFFERPROC                    gl_BindBuffer                  = NULL;
+PFNGLBINDBUFFERBASEPROC                gl_BindBufferBase              = NULL;
+PFNGLBINDFRAGDATALOCATIONINDEXEDPROC   gl_BindFragDataLocationIndexed = NULL;
+PFNGLBINDFRAMEBUFFERPROC               gl_BindFramebuffer             = NULL;
+PFNGLBINDPROGRAMPIPELINEPROC           gl_BindProgramPipeline         = NULL;
+PFNGLBINDSAMPLERPROC                   gl_BindSampler                 = NULL;
+PFNGLBINDVERTEXARRAYPROC               gl_BindVertexArray             = NULL;
+PFNGLBLENDEQUATIONSEPARATEPROC         gl_BlendEquationSeparate       = NULL;
+PFNGLBLENDFUNCSEPARATEPROC             gl_BlendFuncSeparate           = NULL;
+PFNGLBLITFRAMEBUFFERPROC               gl_BlitFramebuffer             = NULL;
+PFNGLBUFFERDATAPROC                    gl_BufferData                  = NULL;
+PFNGLCHECKFRAMEBUFFERSTATUSPROC        gl_CheckFramebufferStatus      = NULL;
+PFNGLCLEARBUFFERFVPROC                 gl_ClearBufferfv               = NULL;
+PFNGLCLEARBUFFERIVPROC                 gl_ClearBufferiv               = NULL;
+PFNGLCOMPILESHADERPROC                 gl_CompileShader               = NULL;
+PFNGLCOPYIMAGESUBDATANVPROC            gl_CopyImageSubDataNV          = NULL;
+PFNGLCREATEPROGRAMPROC                 gl_CreateProgram               = NULL;
+PFNGLCREATESHADERPROC                  gl_CreateShader                = NULL;
+PFNGLCREATESHADERPROGRAMVPROC          gl_CreateShaderProgramv        = NULL;
+PFNGLDELETEBUFFERSPROC                 gl_DeleteBuffers               = NULL;
+PFNGLDELETEFRAMEBUFFERSPROC            gl_DeleteFramebuffers          = NULL;
+PFNGLDELETEPROGRAMPROC                 gl_DeleteProgram               = NULL;
+PFNGLDELETEPROGRAMPIPELINESPROC        gl_DeleteProgramPipelines      = NULL;
+PFNGLDELETESAMPLERSPROC                gl_DeleteSamplers              = NULL;
+PFNGLDELETESHADERPROC                  gl_DeleteShader                = NULL;
+PFNGLDELETEVERTEXARRAYSPROC            gl_DeleteVertexArrays          = NULL;
+PFNGLDETACHSHADERPROC                  gl_DetachShader                = NULL;
+PFNGLDRAWBUFFERSPROC                   gl_DrawBuffers                 = NULL;
+PFNGLDRAWELEMENTSBASEVERTEXPROC        gl_DrawElementsBaseVertex      = NULL;
+PFNGLENABLEVERTEXATTRIBARRAYPROC       gl_EnableVertexAttribArray     = NULL;
+PFNGLFRAMEBUFFERRENDERBUFFERPROC       gl_FramebufferRenderbuffer     = NULL;
+PFNGLFRAMEBUFFERTEXTURE2DPROC          gl_FramebufferTexture2D        = NULL;
+PFNGLGENBUFFERSPROC                    gl_GenBuffers                  = NULL;
+PFNGLGENFRAMEBUFFERSPROC               gl_GenFramebuffers             = NULL;
+PFNGLGENPROGRAMPIPELINESPROC           gl_GenProgramPipelines         = NULL;
+PFNGLGENSAMPLERSPROC                   gl_GenSamplers                 = NULL;
+PFNGLGENVERTEXARRAYSPROC               gl_GenVertexArrays             = NULL;
+PFNGLGETBUFFERPARAMETERIVPROC          gl_GetBufferParameteriv        = NULL;
+PFNGLGETDEBUGMESSAGELOGARBPROC         gl_GetDebugMessageLogARB       = NULL;
+PFNGLGETFRAGDATAINDEXPROC              gl_GetFragDataIndex            = NULL;
+PFNGLGETFRAGDATALOCATIONPROC           gl_GetFragDataLocation         = NULL;
+PFNGLGETPROGRAMINFOLOGPROC             gl_GetProgramInfoLog           = NULL;
+PFNGLGETPROGRAMIVPROC                  gl_GetProgramiv                = NULL;
+PFNGLGETSHADERIVPROC                   gl_GetShaderiv                 = NULL;
+PFNGLGETSTRINGIPROC                    gl_GetStringi                  = NULL;
+PFNGLISFRAMEBUFFERPROC                 gl_IsFramebuffer               = NULL;
+PFNGLLINKPROGRAMPROC                   gl_LinkProgram                 = NULL;
+PFNGLMAPBUFFERPROC                     gl_MapBuffer                   = NULL;
+PFNGLMAPBUFFERRANGEPROC                gl_MapBufferRange              = NULL;
+PFNGLPROGRAMPARAMETERIPROC             gl_ProgramParameteri           = NULL;
+PFNGLSAMPLERPARAMETERFPROC             gl_SamplerParameterf           = NULL;
+PFNGLSAMPLERPARAMETERIPROC             gl_SamplerParameteri           = NULL;
+PFNGLSHADERSOURCEPROC                  gl_ShaderSource                = NULL;
+PFNGLUNIFORM1IPROC                     gl_Uniform1i                   = NULL;
+PFNGLUNMAPBUFFERPROC                   gl_UnmapBuffer                 = NULL;
+PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages            = NULL;
+PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer        = NULL;
+PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer         = NULL;
+PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D                = NULL;
+// NO GL4.1
+PFNGLUSEPROGRAMPROC                    gl_UseProgram                  = NULL;
+PFNGLGETSHADERINFOLOGPROC              gl_GetShaderInfoLog            = NULL;
+// NO GL4.2
+PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex        = NULL;
+PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding         = NULL;
 
 namespace GLLoader {
 
+	bool fglrx_buggy_driver = false;
+	bool found_GL_ARB_separate_shader_objects = false;
+	bool found_GL_ARB_shading_language_420pack = false;
+	bool found_GL_ARB_texture_storage = false;
+
     bool check_gl_version(uint32 major, uint32 minor) {
-		const GLubyte* s;
-		s = glGetString(GL_VERSION);
+
+		const GLubyte* s = glGetString(GL_VERSION);
 		if (s == NULL) return false;
 		fprintf(stderr, "Supported Opengl version: %s on GPU: %s. Vendor: %s\n", s, glGetString(GL_RENDERER), glGetString(GL_VENDOR));
+
 		// Could be useful to detect the GPU vendor:
-		// if ( strcmp((const char*)glGetString(GL_VENDOR), "ATI Technologies Inc.") == 0 )
+		if (strcmp((const char*)glGetString(GL_VENDOR), "ATI Technologies Inc.") == 0)
+			fglrx_buggy_driver = true;
 
 		GLuint dot = 0;
 		while (s[dot] != '\0' && s[dot] != '.') dot++;
@@ -173,22 +186,25 @@ namespace GLLoader {
 		GL_LOADFN(gl_VertexAttribIPointer, glVertexAttribIPointer);
 		GL_LOADFN(gl_VertexAttribPointer, glVertexAttribPointer);
 		GL_LOADFN(gl_TexStorage2D, glTexStorage2D);
+		// NO GL4.1
+		GL_LOADFN(gl_UseProgram, glUseProgram);
+		GL_LOADFN(gl_GetShaderInfoLog, glGetShaderInfoLog);
+		// NO GL4.2
+		GL_LOADFN(gl_GetUniformBlockIndex, glGetUniformBlockIndex);
+		GL_LOADFN(gl_UniformBlockBinding, glUniformBlockBinding);
     }
 
 	bool check_gl_supported_extension() {
 		int max_ext = 0;
 		glGetIntegerv(GL_NUM_EXTENSIONS, &max_ext);
 
-		bool found_GL_ARB_separate_shader_objects = false;
-		bool found_GL_ARB_shading_language_420pack = false;
-		bool found_GL_ARB_texture_storage = false;
 		fprintf(stderr, "DEBUG: check_gl_supported_extension\n");
 
 		if (gl_GetStringi && max_ext) {
 			for (GLint i = 0; i < max_ext; i++) {
 				string ext((const char*)gl_GetStringi(GL_EXTENSIONS, i));
 				if (ext.compare("GL_ARB_separate_shader_objects") == 0) {
-					found_GL_ARB_separate_shader_objects = true;
+					if (!fglrx_buggy_driver) found_GL_ARB_separate_shader_objects = true;
 				}
 				if (ext.compare("GL_ARB_shading_language_420pack") == 0) {
 					found_GL_ARB_shading_language_420pack = true;
@@ -202,7 +218,7 @@ namespace GLLoader {
 
 		if (!found_GL_ARB_separate_shader_objects) {
 			fprintf(stderr, "GL_ARB_separate_shader_objects is not supported\n");
-			return false;
+			//return false;
 		}
 		if (!found_GL_ARB_shading_language_420pack) {
 			fprintf(stderr, "GL_ARB_shading_language_420pack is not supported\n");

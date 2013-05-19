@@ -110,10 +110,22 @@ extern   PFNGLUNMAPBUFFERPROC                   gl_UnmapBuffer;
 extern   PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages;
 extern   PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer;
 extern   PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer;
-extern   PFNGLTEXSTORAGE2DPROC				    gl_TexStorage2D;
+extern   PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D;
+// NO GL4.1
+extern   PFNGLUSEPROGRAMPROC                    gl_UseProgram;
+extern   PFNGLGETSHADERINFOLOGPROC              gl_GetShaderInfoLog;
+// NO GL4.2
+extern   PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex;
+extern   PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding;
+
 
 namespace GLLoader {
 	bool check_gl_version(uint32 major, uint32 minor);
 	void init_gl_function();
 	bool check_gl_supported_extension();
+
+	extern bool found_GL_ARB_separate_shader_objects;
+	extern bool found_GL_ARB_shading_language_420pack;
+	extern bool found_GL_ARB_texture_storage;
+	extern bool fglrx_buggy_driver;
 }

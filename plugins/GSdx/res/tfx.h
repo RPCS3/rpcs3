@@ -25,7 +25,7 @@
 
 #include "stdafx.h"
 
-extern const char* tfx_glsl =
+static const char* tfx_glsl =
 	"//#version 420 // Keep it for text editor detection\n"
 	"\n"
 	"// note lerp => mix\n"

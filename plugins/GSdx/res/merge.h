@@ -25,7 +25,7 @@
 
 #include "stdafx.h"
 
-extern const char* merge_glsl =
+static const char* merge_glsl =
 	"//#version 420 // Keep it for editor detection\n"
 	"\n"
 	"struct vertex_basic\n"

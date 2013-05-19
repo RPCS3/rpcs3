@@ -45,7 +45,7 @@ sub glsl2h {
 
 #include "stdafx.h"
 
-extern const char* ${glsl}_glsl =
+static const char* ${glsl}_glsl =
 EOS
 
     print $H $header;

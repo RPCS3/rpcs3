@@ -25,7 +25,7 @@
 
 #include "stdafx.h"
 
-extern const char* shadeboost_glsl =
+static const char* shadeboost_glsl =
 	"//#version 420 // Keep it for editor detection\n"
 	"\n"
 	"/*\n"

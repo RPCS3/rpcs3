@@ -40,9 +40,3 @@
 #ifdef _DEBUG
 #define ENABLE_OGL_DEBUG   // Create a debug context and check opengl command status. Allow also to dump various textures/states.
 #endif
-
-// Set manually uniform buffer index
-//#define DISABLE_GL42
-
-// Debug: use single program for all shaders.
-//#define DISABLE_GL41_SSO
