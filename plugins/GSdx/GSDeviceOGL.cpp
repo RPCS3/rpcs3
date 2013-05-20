@@ -97,7 +97,7 @@ GSDeviceOGL::~GSDeviceOGL()
 			gl_DeleteProgram(m_convert.ps[i]);
 	} else {
 		gl_DeleteShader(m_convert.vs);
-		for (uint i = 0; i < 2; i++)
+		for (uint32 i = 0; i < 2; i++)
 			gl_DeleteShader(m_convert.ps[i]);
 	}
 	gl_DeleteSamplers(1, &m_convert.ln);
