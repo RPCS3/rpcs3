@@ -504,7 +504,6 @@ class GSDeviceOGL : public GSDevice
 		GLuint ps[8];	// program object
 		GLuint ln;		// sampler object
 		GLuint pt;		// sampler object
-		GLuint gs;
 		GSDepthStencilOGL* dss;
 		GSBlendStateOGL* bs;
 	} m_convert;

@@ -57,13 +57,13 @@ bool GSWndOGL::CreateContext(int major, int minor)
 		None
 	};
 
-	PFNGLXCHOOSEFBCONFIGPROC glXChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
+	PFNGLXCHOOSEFBCONFIGPROC glX_ChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
 	int fbcount = 0;
-	GLXFBConfig *fbc = glXChooseFBConfig(m_NativeDisplay, DefaultScreen(m_NativeDisplay), attrListDbl, &fbcount);
+	GLXFBConfig *fbc = glX_ChooseFBConfig(m_NativeDisplay, DefaultScreen(m_NativeDisplay), attrListDbl, &fbcount);
 	if (!fbc || fbcount < 1) return false;
 
-	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
-	if (!glXCreateContextAttribsARB) return false;
+	PFNGLXCREATECONTEXTATTRIBSARBPROC glX_CreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
+	if (!glX_CreateContextAttribsARB) return false;
 
 	// Install a dummy handler to handle gracefully (aka not segfault) the support of GL version
 	int (*oldHandler)(Display*, XErrorEvent*) = XSetErrorHandler(&ctxErrorHandler);
@@ -82,7 +82,7 @@ bool GSWndOGL::CreateContext(int major, int minor)
 		None
 	};
 
-	m_context = glXCreateContextAttribsARB(m_NativeDisplay, fbc[0], 0, true, context_attribs);
+	m_context = glX_CreateContextAttribsARB(m_NativeDisplay, fbc[0], 0, true, context_attribs);
 
 	// Don't forget to reinstall the older Handler
 	XSetErrorHandler(oldHandler);
@@ -174,6 +174,7 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 	// note this part must be only executed when replaying .gs debug file
 	m_NativeDisplay = XOpenDisplay(NULL);
 
+#if 0
 	int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
 		GLX_RED_SIZE, 8,
 		GLX_GREEN_SIZE, 8,
@@ -197,12 +198,19 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 			0 , 0 , w, h, 0, vi->depth, InputOutput, vi->visual,
 			CWBorderPixel | CWColormap | CWEventMask, &attr);
 
-	XMapWindow (m_NativeDisplay, m_NativeWindow);
 	XFree(vi);
+#else
+	m_NativeWindow = XCreateSimpleWindow(m_NativeDisplay, DefaultRootWindow(m_NativeDisplay), 0, 0, w, h, 0, 0, 0);
+#endif
+
+	XMapWindow (m_NativeDisplay, m_NativeWindow);
+
 
 	if (!CreateContext(3, 3)) return false;
 
 	AttachContext();
+
+	CheckContext();
 
 	return (m_NativeWindow != 0);
 }

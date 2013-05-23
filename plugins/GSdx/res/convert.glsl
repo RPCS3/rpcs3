@@ -37,39 +37,6 @@ void vs_main()
 
 #endif
 
-#ifdef GEOMETRY_SHADER
-in gl_PerVertex {
-    vec4 gl_Position;
-    float gl_PointSize;
-    float gl_ClipDistance[];
-} gl_in[];
-
-out gl_PerVertex {
-    vec4 gl_Position;
-    float gl_PointSize;
-    float gl_ClipDistance[];
-};
-
-// FIXME
-// AMD Driver bug again !!!!
-//layout(location = 0) in vertex GSin[];
-in vertex_basic GSin[];
-
-layout(location = 0) out vertex_basic GSout;
-layout(triangles) in;
-layout(triangle_strip, max_vertices = 3) out;
-
-void gs_main()
-{
-    for(int i = 0; i < gl_in.length(); i++) {
-        gl_Position = gl_in[i].gl_Position;
-        GSout = GSin[i];
-        EmitVertex();
-    }
-    EndPrimitive();
-}
-#endif
-
 #ifdef FRAGMENT_SHADER
 // NOTE: pixel can be clip with "discard"
 

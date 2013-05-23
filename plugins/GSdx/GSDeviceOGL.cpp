@@ -216,7 +216,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// convert
 	// ****************************************************************
 	CompileShaderFromSource("convert.glsl", "vs_main", GL_VERTEX_SHADER, &m_convert.vs, convert_glsl);
-	CompileShaderFromSource("convert.glsl", "gs_main", GL_GEOMETRY_SHADER, &m_convert.gs, convert_glsl);
 	for(uint32 i = 0; i < countof(m_convert.ps); i++)
 		CompileShaderFromSource("convert.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_convert.ps[i], convert_glsl);
 

@@ -222,31 +222,10 @@ endif(PACKAGE_MODE)
 ################################### Replay Loader
 if(BUILD_REPLAY_LOADERS)
 	set(Replay pcsx2_GSReplayLoader)
-	set(Static GSdx-static)
-
-	# We can have separate option for gsdx inside the player. It will only
-	# cost a 2nd rebuild of gsdx...
-	#add_definitions(${CommonFlags} ${OptimizationFlags} -W)
-
-	add_library(${Static} STATIC ${GSdxSources} ${GSdxHeaders})
 
 	add_executable(${Replay} linux_replay.cpp)
 
-	target_link_libraries(${Static} ${OPENGL_LIBRARIES})
-    if(EGL_API AND EGL_FOUND AND EGL_GL_CONTEXT_SUPPORT)
-        target_link_libraries(${Static} ${EGL_LIBRARIES})
-    endif()
-	target_link_libraries(${Static} ${X11_LIBRARIES})
-	target_link_libraries(${Static} ${GTK2_LIBRARIES})
-
-	target_link_libraries(${Replay} ${Static})
-	# Warning others lib must be linked after GSdx...
-	target_link_libraries(${Replay} ${OPENGL_LIBRARIES})
-    if(EGL_API AND EGL_FOUND AND EGL_GL_CONTEXT_SUPPORT)
-        target_link_libraries(${Replay} ${EGL_LIBRARIES})
-    endif()
-	target_link_libraries(${Replay} ${X11_LIBRARIES})
-	target_link_libraries(${Replay} ${GTK2_LIBRARIES})
+    target_link_libraries(${Replay} ${LIBC_LIBRARIES})
 
 	if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 	    target_link_libraries(${Replay} "${USER_CMAKE_LD_FLAGS}")
