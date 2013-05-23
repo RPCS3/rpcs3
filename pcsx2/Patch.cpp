@@ -171,13 +171,13 @@ void ResetCheatsCount()
   cheatnumber = 0;
 }
 
-static int LoadCheatsFiles(const wxString& folderName, wxString& fileSpec, const wxString& friendlyName)
+static int LoadCheatsFiles(const wxDirName& folderName, wxString& fileSpec, const wxString& friendlyName)
 {
-  if (!wxDir::Exists(folderName)) {
-    Console.WriteLn(Color_Red, L"The %s folder ('%s') is inaccessible. Skipping...", friendlyName.c_str(), folderName.c_str());
+  if (!folderName.Exists()) {
+    Console.WriteLn(Color_Red, L"The %s folder ('%s') is inaccessible. Skipping...", friendlyName.c_str(), folderName.ToString().c_str());
     return 0;
   }
-  wxDir dir(folderName);
+  wxDir dir(folderName.ToString());
 
   int before = cheatnumber;
   wxString buffer;
@@ -200,7 +200,7 @@ static int LoadCheatsFiles(const wxString& folderName, wxString& fileSpec, const
 // This routine loads cheats from *.pnach files
 // Returns number of cheats loaded
 // Note: Should be called after InitPatches()
-int LoadCheats(wxString name, const wxString& folderName, const wxString& friendlyName)
+int LoadCheats(wxString name, const wxDirName& folderName, const wxString& friendlyName)
 {
   if (!name.Length()) {
     Console.WriteLn(Color_Gray, "Cheats: No CRC, using 00000000 instead.");

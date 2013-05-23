@@ -33,6 +33,9 @@ enum FoldersEnum_t
 
 	FolderId_Documents,
 
+	FolderId_Cheats,
+	FolderId_CheatsWS,
+
 	FolderId_COUNT
 };
 
@@ -58,6 +61,8 @@ namespace PathDefs
 	extern wxDirName GetSettings();
 	extern wxDirName GetLogs();
 	extern wxDirName GetLangs();
+	extern wxDirName GetCheats();
+	extern wxDirName GetCheatsWS();
 
 	extern wxDirName Get( FoldersEnum_t folderidx );
 
@@ -74,6 +79,8 @@ namespace PathDefs
 		extern const wxDirName& Logs();
 		extern const wxDirName& Dumps();
 		extern const wxDirName& Langs();
+		extern const wxDirName& Cheats();
+		extern const wxDirName& CheatsWS();
 	}
 }
 
