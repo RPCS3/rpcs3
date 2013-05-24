@@ -212,9 +212,8 @@ int LoadCheats(wxString name, const wxDirName& folderName, const wxString& frien
   wxString filespec = name + L"*.pnach";
   loaded += LoadCheatsFiles(folderName, filespec, friendlyName);
 
-  wxString nameUpper = name; nameUpper.Upper();
-  if (wxFileName::IsCaseSensitive() && name != nameUpper) {
-    filespec = nameUpper + L"*.pnach";
+  if (wxFileName::IsCaseSensitive() && name != name.Upper()) {
+    filespec = name.Upper() + L"*.pnach";
     loaded += LoadCheatsFiles(folderName, filespec, friendlyName);
   }
 
