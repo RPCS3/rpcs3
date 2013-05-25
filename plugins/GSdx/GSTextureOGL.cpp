@@ -25,6 +25,10 @@
 static int g_state_texture_unit = -1;
 static int g_state_texture_id = -1;
 
+// FIXME: check if it possible to always use those setup by default
+// glPixelStorei(GL_PACK_ALIGNMENT, 1);
+// glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
 GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint fbo_read)
 	: m_pbo_id(0),
 	  m_pbo_size(0)
@@ -153,32 +157,55 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 
 	EnableUnit(0);
 
-	// pitch could be different of width*element_size
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch>>2);
-	// FIXME : it crash on colin mcrae rally 3 (others game too) when the size is 16
-	//fprintf(stderr, "Texture %dx%d with a pitch of %d\n", m_size.x, m_size.y, pitch >>2);
-	//fprintf(stderr, "Box (%d,%d)x(%d,%d)\n", r.x, r.y, r.width(), r.height());
-
-	if (m_format == GL_RGBA8)
-		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
-	else if (m_format == GL_R16UI)
-		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RED_INTEGER, GL_R16UI, data);
-	else if (m_format == GL_R8)
-		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RED, GL_R8, data);
-	else {
-		fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
-		ASSERT(0);
+	// pitch is in byte wherease GL_UNPACK_ROW_LENGTH is in pixel
+	GLenum format;
+	GLenum type;
+	switch (m_format) {
+		case GL_RGBA8:
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch>>2);
+			format = GL_RGBA;
+			type = GL_UNSIGNED_BYTE;
+			break;
+		case GL_R16UI:
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch>>1);
+			format = GL_RED;
+			type = GL_UNSIGNED_SHORT;
+			break;
+		case GL_R8:
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch);
+			format = GL_RED;
+			type = GL_UNSIGNED_BYTE;
+			break;
+		default:
+			fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
+			ASSERT(0);
 	}
-#if 0
-	//if (m_size.x != 16)
-	if (r.width() > 16 && r.height() > 16)
-		glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
-	else {
-		fprintf(stderr, "skip texture upload\n");
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Restore default behavior
-		return false;
+
+#ifdef _LINUX
+	if (GLLoader::fglrx_buggy_driver) {
+		// FIXME : it crash on colin mcrae rally 3 (others game too) when the texture is small
+		//if ((pitch >> 2) == 32 || r.width() < 32 || r.height() < 32) {
+		if ((r.width() < 32) || (pitch == 128 && r.width() == 32)) {
+#ifdef ENABLE_OGL_DEBUG
+			fprintf(stderr, "Skip Texture %dx%d with a pitch of %d pixel. Type %x\n", m_size.x, m_size.y, pitch >>2, m_format);
+			fprintf(stderr, "Box (%d,%d)x(%d,%d)\n", r.x, r.y, r.width(), r.height());
+#endif
+			//char *random = (char*)malloc(m_size.x*m_size.y*32);
+			//glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, random);
+			//return true;
+			//glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
+			//glFinish();
+
+			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Restore default behavior
+			return false;
+		}
 	}
 #endif
+
+	glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), format, type, data);
 
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Restore default behavior
 

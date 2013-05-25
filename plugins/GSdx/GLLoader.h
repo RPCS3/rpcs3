@@ -117,6 +117,7 @@ extern   PFNGLGETSHADERINFOLOGPROC              gl_GetShaderInfoLog;
 // NO GL4.2
 extern   PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex;
 extern   PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding;
+extern   PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation;
 
 
 namespace GLLoader {

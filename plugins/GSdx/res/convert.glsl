@@ -9,11 +9,13 @@ struct vertex_basic
 
 #ifdef VERTEX_SHADER
 
+#if __VERSION__ > 140
 out gl_PerVertex {
     vec4 gl_Position;
     float gl_PointSize;
     float gl_ClipDistance[];
 };
+#endif
 
 layout(location = 0) in vec4 POSITION;
 layout(location = 1) in vec2 TEXCOORD0;
@@ -45,23 +47,28 @@ layout(location = 0) in vertex_basic PSin;
 layout(location = 0) out vec4 SV_Target0;
 layout(location = 1) out uint SV_Target1;
 
+#ifdef DISABLE_GL42
+uniform sampler2D TextureSampler;
+#else
 layout(binding = 0) uniform sampler2D TextureSampler;
+#endif
 
 vec4 sample_c()
 {
     return texture(TextureSampler, PSin.t );
 }
 
-vec4 ps_crt(uint i)
-{
-    vec4 mask[4] =
-	{
+uniform vec4 mask[4] = vec4[4]
+(
 		vec4(1, 0, 0, 0),
 		vec4(0, 1, 0, 0),
 		vec4(0, 0, 1, 0),
 		vec4(1, 1, 1, 0)
-	};
+);
 
+
+vec4 ps_crt(uint i)
+{
 	return sample_c() * clamp((mask[i] + 0.5f), 0.0f, 1.0f);
 }
 

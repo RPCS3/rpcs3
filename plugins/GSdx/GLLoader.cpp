@@ -90,6 +90,7 @@ PFNGLGETSHADERINFOLOGPROC              gl_GetShaderInfoLog            = NULL;
 // NO GL4.2
 PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex        = NULL;
 PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding         = NULL;
+PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation          = NULL;
 
 namespace GLLoader {
 
@@ -192,6 +193,7 @@ namespace GLLoader {
 		// NO GL4.2
 		GL_LOADFN(gl_GetUniformBlockIndex, glGetUniformBlockIndex);
 		GL_LOADFN(gl_UniformBlockBinding, glUniformBlockBinding);
+		GL_LOADFN(gl_GetUniformLocation, glGetUniformLocation);
     }
 
 	bool check_gl_supported_extension() {

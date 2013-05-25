@@ -21,7 +21,11 @@ layout(std140, binding = 11) uniform cb11
     float hH;
 };
 
+#ifdef DISABLE_GL42
+uniform sampler2D TextureSampler;
+#else
 layout(binding = 0) uniform sampler2D TextureSampler;
+#endif
 
 // TODO ensure that clip (discard) is < 0 and not <= 0 ???
 void ps_main0()

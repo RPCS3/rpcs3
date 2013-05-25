@@ -63,11 +63,13 @@ layout(location = 6) in vec4  i_f;
 
 layout(location = 0) out vertex VSout;
 
+#if __VERSION__ > 140
 out gl_PerVertex {
     invariant vec4 gl_Position;
     float gl_PointSize;
     float gl_ClipDistance[];
 };
+#endif
 
 #ifdef DISABLE_GL42
 layout(std140) uniform cb20
@@ -275,9 +277,15 @@ layout(location = 0) in vertex PSin;
 layout(location = 0, index = 0) out vec4 SV_Target0;
 layout(location = 0, index = 1) out vec4 SV_Target1;
 
+#ifdef DISABLE_GL42
+uniform sampler2D TextureSampler;
+uniform sampler2D PaletteSampler;
+uniform sampler2D RTCopySampler;
+#else
 layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
 layout(binding = 2) uniform sampler2D RTCopySampler;
+#endif
 
 #ifdef DISABLE_GL42
 layout(std140) uniform cb21

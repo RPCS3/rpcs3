@@ -20,7 +20,11 @@ layout(std140, binding = 10) uniform cb10
     vec4 BGColor;
 };
 
+#ifdef DISABLE_GL42
+uniform sampler2D TextureSampler;
+#else
 layout(binding = 0) uniform sampler2D TextureSampler;
+#endif
 
 void ps_main0()
 {

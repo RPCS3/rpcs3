@@ -181,7 +181,11 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	if (m_window == NULL) {
 		GLLoader::init_gl_function();
 
+#ifdef OGL_FREE_DRIVER
+		if (!GLLoader::check_gl_version(3, 0)) return false;
+#else
 		if (!GLLoader::check_gl_version(3, 3)) return false;
+#endif
 
 		if (!GLLoader::check_gl_supported_extension()) return false;
 	}
@@ -471,7 +475,11 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	}
 #endif
 
+#ifdef OGL_FREE_DRIVER
+	return false;
+#else
 	return true;
+#endif
 }
 
 bool GSDeviceOGL::Reset(int w, int h)
@@ -591,6 +599,13 @@ static void set_uniform_buffer_binding(GLuint prog, GLchar* name, GLuint binding
 	}
 }
 
+static void set_sampler_uniform_binding(GLuint prog, GLchar* name, GLuint binding) {
+	GLint loc = gl_GetUniformLocation(prog, name);
+	if (loc != -1) {
+		gl_Uniform1i(loc, binding);
+	}
+}
+
 GLuint GSDeviceOGL::link_prog()
 {
 	GLuint single_prog = gl_CreateProgram();
@@ -628,12 +643,14 @@ void GSDeviceOGL::BeforeDraw()
 #ifdef ENABLE_OGL_DEBUG
 	DebugInput();
 #endif
+	hash_map<uint64, GLuint >::iterator single_prog;
+
 
 	if (!GLLoader::found_GL_ARB_separate_shader_objects) {
 		// Note: shader are integer lookup pointer. They start from 1 and incr
 		// every time you create a new shader OR a new program.
 		uint64 sel = (uint64)m_state.vs << 40 | (uint64)m_state.gs << 20 | m_state.ps;
-		auto single_prog = m_single_prog.find(sel);
+		single_prog = m_single_prog.find(sel);
 		if (single_prog == m_single_prog.end()) {
 			m_single_prog[sel] = link_prog();
 			single_prog = m_single_prog.find(sel);
@@ -643,13 +660,31 @@ void GSDeviceOGL::BeforeDraw()
 	}
 
 	if (!GLLoader::found_GL_ARB_shading_language_420pack) {
-		set_uniform_buffer_binding(m_state.vs, "cb20", 20);
-		set_uniform_buffer_binding(m_state.ps, "cb21", 21);
+		if (GLLoader::found_GL_ARB_separate_shader_objects) {
+			set_uniform_buffer_binding(m_state.vs, "cb20", 20);
+			set_uniform_buffer_binding(m_state.ps, "cb21", 21);
 
-		set_uniform_buffer_binding(m_state.ps, "cb10", 10);
-		set_uniform_buffer_binding(m_state.ps, "cb11", 11);
-		set_uniform_buffer_binding(m_state.ps, "cb12", 12);
-		set_uniform_buffer_binding(m_state.ps, "cb13", 13);
+			set_uniform_buffer_binding(m_state.ps, "cb10", 10);
+			set_uniform_buffer_binding(m_state.ps, "cb11", 11);
+			set_uniform_buffer_binding(m_state.ps, "cb12", 12);
+			set_uniform_buffer_binding(m_state.ps, "cb13", 13);
+
+			set_sampler_uniform_binding(m_state.ps, "TextureSampler", 0);
+			set_sampler_uniform_binding(m_state.ps, "PaletteSampler", 1);
+			set_sampler_uniform_binding(m_state.ps, "RTCopySampler", 2);
+		} else {
+			set_uniform_buffer_binding(single_prog->second, "cb20", 20);
+			set_uniform_buffer_binding(single_prog->second, "cb21", 21);
+
+			set_uniform_buffer_binding(single_prog->second, "cb10", 10);
+			set_uniform_buffer_binding(single_prog->second, "cb11", 11);
+			set_uniform_buffer_binding(single_prog->second, "cb12", 12);
+			set_uniform_buffer_binding(single_prog->second, "cb13", 13);
+
+			set_sampler_uniform_binding(single_prog->second, "TextureSampler", 0);
+			set_sampler_uniform_binding(single_prog->second, "PaletteSampler", 1);
+			set_sampler_uniform_binding(single_prog->second, "RTCopySampler", 2);
+		}
 	}
 }
 
@@ -1298,7 +1333,11 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	// Build a header string
 	// *****************************************************
 	// First select the version (must be the first line so we need to generate it
+#ifdef OGL_FREE_DRIVER
+	std::string version = "#version 130\n";
+#else
 	std::string version = "#version 330\n";
+#endif
 	if (GLLoader::found_GL_ARB_shading_language_420pack) {
 		version += "#extension GL_ARB_shading_language_420pack: require\n";
 	} else {
@@ -1307,6 +1346,10 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	if (GLLoader::found_GL_ARB_separate_shader_objects) {
 		version += "#extension GL_ARB_separate_shader_objects : require\n";
 	}
+#ifdef OGL_FREE_DRIVER
+	version += "#extension GL_ARB_explicit_attrib_location : require\n";
+	version += "#extension GL_ARB_uniform_buffer_object : require\n";
+#endif
 
 	// Allow to puts several shader in 1 files
 	std::string shader_type;

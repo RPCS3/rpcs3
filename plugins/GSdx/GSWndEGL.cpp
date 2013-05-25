@@ -55,12 +55,9 @@ bool GSWndEGL::CreateContext(int major, int minor)
 		EGL_CONTEXT_MAJOR_VERSION_KHR, major,
 		EGL_CONTEXT_MINOR_VERSION_KHR, minor,
 		// Keep compatibility for old cruft
-		EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR,
-		//EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR | EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR,
+		//EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR,
 		// FIXME : Request a debug context to ease opengl development
-#if defined(ZEROGS_DEVBUILD) || defined(_DEBUG)
-		EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR,
-#endif
+		EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR | EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR,
 		EGL_NONE
 	};
 	EGLint attrList[] = {
@@ -76,22 +73,22 @@ bool GSWndEGL::CreateContext(int major, int minor)
 
 	if ( !eglChooseConfig(m_eglDisplay, attrList, &eglConfig, 1, &numConfigs) )
 	{
-		fprintf(stderr,"EGL: Failed to get a frame buffer config!");
+		fprintf(stderr,"EGL: Failed to get a frame buffer config!\n");
 		return EGL_FALSE;
 	}
 
 	m_eglSurface = eglCreateWindowSurface(m_eglDisplay, eglConfig, m_NativeWindow, NULL);
 	if ( m_eglSurface == EGL_NO_SURFACE )
 	{
-		fprintf(stderr,"EGL: Failed to get a window surface");
+		fprintf(stderr,"EGL: Failed to get a window surface\n");
 		return EGL_FALSE;
 	}
 
 	m_eglContext = eglCreateContext(m_eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttribs );
 	if ( m_eglContext == EGL_NO_CONTEXT )
 	{
-		fprintf(stderr,"EGL: Failed to create the context");
-		fprintf(stderr,"EGL STATUS: %x", eglGetError());
+		fprintf(stderr,"EGL: Failed to create the context\n");
+		fprintf(stderr,"EGL STATUS: %x\n", eglGetError());
 		return EGL_FALSE;
 	}
 
@@ -123,8 +120,8 @@ void GSWndEGL::DetachContext()
 
 void GSWndEGL::CheckContext()
 {
-	fprintf(stderr,"EGL: %s : %s", eglQueryString(m_eglDisplay, EGL_VENDOR) , eglQueryString(m_eglDisplay, EGL_VERSION) );
-	fprintf(stderr,"EGL: extensions supported: %s", eglQueryString(m_eglDisplay, EGL_EXTENSIONS));
+	fprintf(stderr,"EGL: %s : %s\n", eglQueryString(m_eglDisplay, EGL_VENDOR) , eglQueryString(m_eglDisplay, EGL_VERSION) );
+	fprintf(stderr,"EGL: extensions supported: %s\n", eglQueryString(m_eglDisplay, EGL_EXTENSIONS));
 }
 
 bool GSWndEGL::Attach(void* handle, bool managed)

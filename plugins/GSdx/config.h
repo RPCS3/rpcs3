@@ -40,3 +40,5 @@
 #ifdef _DEBUG
 #define ENABLE_OGL_DEBUG   // Create a debug context and check opengl command status. Allow also to dump various textures/states.
 #endif
+
+//#define OGL_FREE_DRIVER

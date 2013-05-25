@@ -21,12 +21,6 @@
 #include "stdafx.h"
 #include <dlfcn.h>
 
-//typedef void* (ReplaysetSettingsDir)(const char*);
-//typedef void* (ReplayReplay)(char*, int);
-
-//ypedef void* (*GSsetSettingsDir)(const char* dir);
-//void (*GSReplay)(char* lpszCmdLine, int renderer);
-
 void help()
 {
 	fprintf(stderr, "Loader gs file\n");
@@ -46,10 +40,6 @@ int main ( int argc, char *argv[] )
 		help();
 	}
 
-#if 0
-	ReplaysetSettingsDir GSsetSettingsDir_ptr;
-	ReplayReplay GSReplay_ptr;
-#endif
 	void (*GSsetSettingsDir_ptr)(const char*);
 	void (*GSReplay_ptr)(char*, int);
 
@@ -63,6 +53,7 @@ int main ( int argc, char *argv[] )
 		std::string home("HOME");
 		char * val = getenv( home.c_str() );
 		if (val == NULL) {
+			dlclose(handle);
 			fprintf(stderr, "Failed to get the home dir\n");
 			help();
 		}
@@ -73,9 +64,11 @@ int main ( int argc, char *argv[] )
 		GSsetSettingsDir_ptr(ini_dir.c_str());
 #else
 		fprintf(stderr, "default ini dir only supported on XDG\n");
+		dlclose(handle);
 		help();
 #endif
 	}
 
 	GSReplay_ptr(argv[2], 12);
+	dlclose(handle);
 }
