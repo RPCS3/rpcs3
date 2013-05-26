@@ -127,6 +127,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 				// Require a recent GLEW and GL4.3
 				//gl_TexStorage2DMultisample(m_texture_target, msaa_level, m_format, m_size.x, m_size.y, false);
 			} else {
+				//glTexParameteri(m_texture_target, GL_TEXTURE_MAX_LEVEL, 0);
 				gl_TexStorage2D(m_texture_target, 1,  m_format, m_size.x, m_size.y);
 			}
 			break;

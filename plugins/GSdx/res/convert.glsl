@@ -28,12 +28,21 @@ layout(location = 1) in vec2 TEXCOORD0;
 // smooth, the default, means to do perspective-correct interpolation.
 //
 // The centroid qualifier only matters when multisampling. If this qualifier is not present, then the value is interpolated to the pixel's center, anywhere in the pixel, or to one of the pixel's samples. This sample may lie outside of the actual primitive being rendered, since a primitive can cover only part of a pixel's area. The centroid qualifier is used to prevent this; the interpolation point must fall within both the pixel's area and the primitive's area.
+#if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) out vertex_basic VSout;
+#define VSout_p (VSout.p)
+#define VSout_t (VSout.t)
+#else
+layout(location = 0) out vec4 p;
+layout(location = 1) out vec2 t;
+#define VSout_p p
+#define VSout_t t
+#endif
 
 void vs_main()
 {
-    VSout.p = POSITION;
-    VSout.t = TEXCOORD0;
+    VSout_p = POSITION;
+    VSout_t = TEXCOORD0;
     gl_Position = POSITION; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 }
 
@@ -42,7 +51,16 @@ void vs_main()
 #ifdef FRAGMENT_SHADER
 // NOTE: pixel can be clip with "discard"
 
+#if __VERSION__ > 140
 layout(location = 0) in vertex_basic PSin;
+#define PSin_p (PSin.p)
+#define PSin_t (PSin.t)
+#else
+layout(location = 0) in vec4 p;
+layout(location = 1) in vec2 t;
+#define PSin_p p
+#define PSin_t t
+#endif
 
 layout(location = 0) out vec4 SV_Target0;
 layout(location = 1) out uint SV_Target1;
@@ -55,7 +73,7 @@ layout(binding = 0) uniform sampler2D TextureSampler;
 
 vec4 sample_c()
 {
-    return texture(TextureSampler, PSin.t );
+    return texture(TextureSampler, PSin_t );
 }
 
 uniform vec4 mask[4] = vec4[4]
@@ -99,7 +117,7 @@ void ps_main7()
 
 void ps_main5() // triangular
 {
-	highp uvec4 p = uvec4(PSin.p);
+	highp uvec4 p = uvec4(PSin_p);
 
 	vec4 c = ps_crt(((p.x + ((p.y >> 1u) & 1u) * 3u) >> 1u) % 3u);
 
@@ -108,7 +126,7 @@ void ps_main5() // triangular
 
 void ps_main6() // diagonal
 {
-	uvec4 p = uvec4(PSin.p);
+	uvec4 p = uvec4(PSin_p);
 
 	vec4 c = ps_crt((p.x + (p.y % 3u)) % 3u);
 

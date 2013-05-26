@@ -61,7 +61,22 @@ layout(location = 4) in uint  i_z;
 layout(location = 5) in uvec2 i_uv;
 layout(location = 6) in vec4  i_f;
 
+#if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) out vertex VSout;
+#define VSout_p (VSout.p)
+#define VSout_t (VSout.t)
+#define VSout_tp (VSout.tp)
+#define VSout_c (VSout.c)
+#else
+layout(location = 0) out vec4 p;
+layout(location = 1) out vec4 t;
+layout(location = 2) out vec4 tp;
+layout(location = 3) out vec4 c;
+#define VSout_p p
+#define VSout_t t
+#define VSout_tp tp
+#define VSout_c c
+#endif
 
 #if __VERSION__ > 140
 out gl_PerVertex {
@@ -108,10 +123,10 @@ void vs_main()
         final_p.z = log2(1.0f + float(z)) / 32.0f;
     }
 
-    VSout.p = final_p;
+    VSout_p = final_p;
     gl_Position = final_p; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 #if VS_RTCOPY
-    VSout.tp = final_p * vec4(0.5, -0.5, 0, 0) + 0.5;
+    VSout_tp = final_p * vec4(0.5, -0.5, 0, 0) + 0.5;
 #endif
 
 
@@ -119,25 +134,25 @@ void vs_main()
     {
         if(VS_FST != 0)
         {
-            //VSout.t.xy = i_t * TextureScale;
-            VSout.t.xy = i_uv * TextureScale;
-            VSout.t.w = 1.0f;
+            //VSout_t.xy = i_t * TextureScale;
+            VSout_t.xy = i_uv * TextureScale;
+            VSout_t.w = 1.0f;
         }
         else
         {
-            //VSout.t.xy = i_t;
-            VSout.t.xy = i_st;
-            VSout.t.w = i_q;
+            //VSout_t.xy = i_t;
+            VSout_t.xy = i_st;
+            VSout_t.w = i_q;
         }
     }
     else
     {
-        VSout.t.xy = vec2(0.0f, 0.0f);
-        VSout.t.w = 1.0f;
+        VSout_t.xy = vec2(0.0f, 0.0f);
+        VSout_t.w = 1.0f;
     }
 
-    VSout.c = i_c;
-    VSout.t.z = i_f.r;
+    VSout_c = i_c;
+    VSout_t.z = i_f.r;
 }
 
 #endif
@@ -271,7 +286,22 @@ void gs_main()
 #endif
 
 #ifdef FRAGMENT_SHADER
+#if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) in vertex PSin;
+#define PSin_p (PSin.p)
+#define PSin_t (PSin.t)
+#define PSin_tp (PSin.tp)
+#define PSin_c (PSin.c)
+#else
+layout(location = 0) in vec4 PSinp;
+layout(location = 1) in vec4 PSint;
+layout(location = 2) in vec4 PSintp;
+layout(location = 3) in vec4 PSinc;
+#define PSin_p PSinp
+#define PSin_t PSint
+#define PSin_tp PSintp
+#define PSin_c PSinc
+#endif
 
 // Same buffer but 2 colors for dual source blending
 layout(location = 0, index = 0) out vec4 SV_Target0;
@@ -551,7 +581,7 @@ vec4 tfx(vec4 t, vec4 c)
 void datst()
 {
 #if PS_DATE > 0
-    float alpha = sample_rt(PSin.tp.xy).a;
+    float alpha = sample_rt(PSin_tp.xy).a;
     float alpha0x80 = 128. / 255;
 
     if (PS_DATE == 1 && alpha >= alpha0x80)
@@ -621,13 +651,13 @@ vec4 ps_color()
 {
     datst();
 
-    vec4 t = sample_color(PSin.t.xy, PSin.t.w);
+    vec4 t = sample_color(PSin_t.xy, PSin_t.w);
 
-    vec4 c = tfx(t, PSin.c);
+    vec4 c = tfx(t, PSin_c);
 
     atst(c);
 
-    c = fog(c, PSin.t.z);
+    c = fog(c, PSin_t.z);
 
     if (PS_COLCLIP == 2)
     {

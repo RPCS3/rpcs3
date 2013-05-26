@@ -87,6 +87,7 @@ PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D                = NULL;
 // NO GL4.1
 PFNGLUSEPROGRAMPROC                    gl_UseProgram                  = NULL;
 PFNGLGETSHADERINFOLOGPROC              gl_GetShaderInfoLog            = NULL;
+PFNGLPROGRAMUNIFORM1IPROC              gl_ProgramUniform1i            = NULL;
 // NO GL4.2
 PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex        = NULL;
 PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding         = NULL;
@@ -190,6 +191,7 @@ namespace GLLoader {
 		// NO GL4.1
 		GL_LOADFN(gl_UseProgram, glUseProgram);
 		GL_LOADFN(gl_GetShaderInfoLog, glGetShaderInfoLog);
+		GL_LOADFN(gl_ProgramUniform1i, glProgramUniform1i);
 		// NO GL4.2
 		GL_LOADFN(gl_GetUniformBlockIndex, glGetUniformBlockIndex);
 		GL_LOADFN(gl_UniformBlockBinding, glUniformBlockBinding);
@@ -230,6 +232,10 @@ namespace GLLoader {
 			fprintf(stderr, "GL_ARB_texture_storage is not supported\n");
 			return false;
 		}
+
+		// REMOVE ME: Emulate open source driver
+		// found_GL_ARB_shading_language_420pack = false;
+		// found_GL_ARB_separate_shader_objects = true;
 
 		return true;
 	}

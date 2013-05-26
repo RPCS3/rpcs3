@@ -475,11 +475,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	}
 #endif
 
-#ifdef OGL_FREE_DRIVER
-	return false;
-#else
 	return true;
-#endif
 }
 
 bool GSDeviceOGL::Reset(int w, int h)
@@ -602,7 +598,11 @@ static void set_uniform_buffer_binding(GLuint prog, GLchar* name, GLuint binding
 static void set_sampler_uniform_binding(GLuint prog, GLchar* name, GLuint binding) {
 	GLint loc = gl_GetUniformLocation(prog, name);
 	if (loc != -1) {
-		gl_Uniform1i(loc, binding);
+		if (GLLoader::found_GL_ARB_separate_shader_objects) {
+			gl_ProgramUniform1i(prog, loc, binding);
+		} else {
+			gl_Uniform1i(loc, binding);
+		}
 	}
 }
 
@@ -1345,6 +1345,10 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	}
 	if (GLLoader::found_GL_ARB_separate_shader_objects) {
 		version += "#extension GL_ARB_separate_shader_objects : require\n";
+		// REMOVE ME: Emulate open source driver
+		//if (!GLLoader::found_GL_ARB_shading_language_420pack) {
+		//	version += "#define NO_STRUCT 1\n";
+		//}
 	}
 #ifdef OGL_FREE_DRIVER
 	version += "#extension GL_ARB_explicit_attrib_location : require\n";

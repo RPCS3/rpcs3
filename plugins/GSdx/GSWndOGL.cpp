@@ -134,7 +134,11 @@ bool GSWndOGL::Attach(void* handle, bool managed)
 	m_NativeDisplay = XOpenDisplay(NULL);
 
 	// Note: 4.2 crash on latest nvidia drivers!
+#ifdef OGL_FREE_DRIVER
+	if (!CreateContext(3, 0)) return false;
+#else
 	if (!CreateContext(3, 3)) return false;
+#endif
 
 	AttachContext();
 

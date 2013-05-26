@@ -114,6 +114,7 @@ extern   PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D;
 // NO GL4.1
 extern   PFNGLUSEPROGRAMPROC                    gl_UseProgram;
 extern   PFNGLGETSHADERINFOLOGPROC              gl_GetShaderInfoLog;
+extern   PFNGLPROGRAMUNIFORM1IPROC              gl_ProgramUniform1i;
 // NO GL4.2
 extern   PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex;
 extern   PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding;

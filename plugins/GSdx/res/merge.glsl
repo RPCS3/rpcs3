@@ -7,7 +7,16 @@ struct vertex_basic
 };
 
 #ifdef FRAGMENT_SHADER
+#if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) in vertex_basic PSin;
+#define PSin_p (PSin.p)
+#define PSin_t (PSin.t)
+#else
+layout(location = 0) in vec4 p;
+layout(location = 1) in vec2 t;
+#define PSin_p p
+#define PSin_t t
+#endif
 
 layout(location = 0) out vec4 SV_Target0;
 
@@ -28,14 +37,14 @@ layout(binding = 0) uniform sampler2D TextureSampler;
 
 void ps_main0()
 {
-    vec4 c = texture(TextureSampler, PSin.t);
+    vec4 c = texture(TextureSampler, PSin_t);
 	c.a = min(c.a * 2, 1.0);
     SV_Target0 = c;
 }
 
 void ps_main1()
 {
-    vec4 c = texture(TextureSampler, PSin.t);
+    vec4 c = texture(TextureSampler, PSin_t);
 	c.a = BGColor.a;
     SV_Target0 = c;
 }

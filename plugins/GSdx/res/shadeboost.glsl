@@ -14,7 +14,16 @@ struct vertex_basic
 
 #ifdef FRAGMENT_SHADER
 
+#if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) in vertex_basic PSin;
+#define PSin_p (PSin.p)
+#define PSin_t (PSin.t)
+#else
+layout(location = 0) in vec4 p;
+layout(location = 1) in vec2 t;
+#define PSin_p p
+#define PSin_t t
+#endif
 
 layout(location = 0) out vec4 SV_Target0;
 
@@ -61,7 +70,7 @@ vec4 ContrastSaturationBrightness(vec4 color)
 
 void ps_main()
 {
-    vec4 c = texture(TextureSampler, PSin.t);
+    vec4 c = texture(TextureSampler, PSin_t);
 	SV_Target0 = ContrastSaturationBrightness(c);
 }
 

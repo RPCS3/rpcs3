@@ -14,8 +14,6 @@ INCLUDE(CheckCXXSymbolExists)
 # include dir
 find_path(EGL_INCLUDE_DIR EGL/eglext.h)
 
-CHECK_CXX_SYMBOL_EXISTS(EGL_KHR_create_context "EGL/eglext.h" EGL_GL_CONTEXT_SUPPORT)
-
 # finally the library itself
 find_library(libEGL NAMES EGL)
 set(EGL_LIBRARIES ${libEGL})

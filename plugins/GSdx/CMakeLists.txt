@@ -47,11 +47,7 @@ endif(XDG_STD)
 
 # Select the EGL API
 if(EGL_API AND EGL_FOUND)
-    if (EGL_GL_CONTEXT_SUPPORT)
-        add_definitions(-DEGL_API)
-    else()
-        message(WARNING "Current EGL implementation doesn't support openGL context. Fallback to standard GLX.")
-    endif()
+    add_definitions(-DEGL_API)
 endif()
 
 set(GSdxSources
@@ -193,7 +189,7 @@ add_library(${Output} SHARED ${GSdxSources} ${GSdxHeaders})
 
 target_link_libraries(${Output} ${X11_LIBRARIES})
 target_link_libraries(${Output} ${OPENGL_LIBRARIES})
-if(EGL_API AND EGL_FOUND AND EGL_GL_CONTEXT_SUPPORT)
+if(EGL_API AND EGL_FOUND)
     target_link_libraries(${Output} ${EGL_LIBRARIES})
 endif()
 
