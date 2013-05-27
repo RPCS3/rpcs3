@@ -182,9 +182,9 @@ static int LoadCheatsFiles(const wxDirName& folderName, wxString& fileSpec, cons
 	int before = cheatnumber;
 	wxString buffer;
 	wxTextFile f;
-	bool found = dir.GetFirst(&buffer, fileSpec, wxDIR_FILES);
+	bool found = dir.GetFirst(&buffer, L"*", wxDIR_FILES);
 	while (found) {
-		if (buffer.Matches(L"*.pnach") || buffer.Matches(L"*.PNACH")) {
+		if (buffer.Upper().Matches(fileSpec.Upper())) {
 			Console.WriteLn(Color_Gray, L"Found %s file: '%s'", friendlyName.c_str(), buffer.c_str());
 			int before = cheatnumber;
 			f.Open(Path::Combine(dir.GetName(), buffer));
@@ -211,13 +211,8 @@ int LoadCheats(wxString name, const wxDirName& folderName, const wxString& frien
 
 	int loaded = 0;
 
-	wxString filespec = name + L"*.*";
+	wxString filespec = name + L"*.pnach";
 	loaded += LoadCheatsFiles(folderName, filespec, friendlyName);
-
-	if (wxFileName::IsCaseSensitive() && name != name.Upper()) {
-		filespec = name.Upper() + L"*.*";
-		loaded += LoadCheatsFiles(folderName, filespec, friendlyName);
-	}
 
 	Console.WriteLn((loaded ? Color_Green : Color_Gray), L"Overall %d %s loaded", loaded, friendlyName.c_str());
 	return loaded;
