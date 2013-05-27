@@ -103,6 +103,7 @@ namespace GLLoader {
 	bool found_geometry_shader = true;
 	bool found_GL_NV_copy_image = false;
 	bool found_GL_ARB_copy_image = false;
+	bool found_only_gl30	= false;
 
     bool check_gl_version(uint32 major, uint32 minor) {
 
@@ -128,6 +129,10 @@ namespace GLLoader {
 		if (theApp.GetConfig("override_geometry_shader", -1) != -1) {
 			found_geometry_shader = !!theApp.GetConfig("override_geometry_shader", -1);
 			fprintf(stderr, "Override geometry shaders detection\n");
+		}
+		if ( (major_gl == 3) && minor_gl < 3) {
+			// Opensource driver spotted
+			found_only_gl30 = true;
 		}
 
 		if ( (major_gl < major) || ( major_gl == major && minor_gl < minor ) ) {
@@ -262,6 +267,13 @@ namespace GLLoader {
 		if (theApp.GetConfig("override_GL_ARB_separate_shader_objects", -1) != -1) {
 			found_GL_ARB_separate_shader_objects = !!theApp.GetConfig("override_GL_ARB_separate_shader_objects", -1);
 			fprintf(stderr, "Override GL_ARB_separate_shader_objects detection\n");
+		}
+		if (theApp.GetConfig("ovveride_GL_ARB_copy_image", -1) != -1) {
+			// Same extension so override both
+			found_GL_ARB_copy_image = !!theApp.GetConfig("override_GL_ARB_copy_image", -1);
+			found_GL_NV_copy_image = !!theApp.GetConfig("override_GL_ARB_copy_image", -1);
+			fprintf(stderr, "Override GL_ARB_copy_image detection\n");
+			fprintf(stderr, "Override GL_NV_copy_image detection\n");
 		}
 
 		return true;

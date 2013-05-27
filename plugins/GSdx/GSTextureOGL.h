@@ -44,6 +44,7 @@ class GSTextureOGL : public GSTexture
 
 		void EnableUnit(uint32 unit);
 		void Attach(GLenum attachment);
+		void AttachRead(GLenum attachment);
 
 		bool IsBackbuffer() { return (m_type == GSTexture::Backbuffer); }
 		bool IsDss() { return (m_type == GSTexture::DepthStencil); }

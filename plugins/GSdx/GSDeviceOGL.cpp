@@ -181,11 +181,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	if (m_window == NULL) {
 		GLLoader::init_gl_function();
 
-#ifdef OGL_FREE_DRIVER
 		if (!GLLoader::check_gl_version(3, 0)) return false;
-#else
-		if (!GLLoader::check_gl_version(3, 3)) return false;
-#endif
 
 		if (!GLLoader::check_gl_supported_extension()) return false;
 	}
@@ -884,7 +880,17 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 				r.width(), r.height(), 1);
 #endif
 	} else {
-		// FIXME fallback for open source driver
+
+		GSTextureOGL* st_ogl = (GSTextureOGL*) st;
+		GSTextureOGL* dt_ogl = (GSTextureOGL*) dt;
+
+		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
+
+		st_ogl->AttachRead(GL_COLOR_ATTACHMENT0);
+		dt_ogl->EnableUnit(0);
+		glCopyTexSubImage2D(dt_ogl->GetTarget(), 0, r.x, r.y, r.x, r.y, r.width(), r.height());
+
+		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	}
 
 #if 0
@@ -1346,11 +1352,12 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	// Build a header string
 	// *****************************************************
 	// First select the version (must be the first line so we need to generate it
-#ifdef OGL_FREE_DRIVER
-	std::string version = "#version 130\n";
-#else
-	std::string version = "#version 330\n";
-#endif
+	std::string version;
+	if (GLLoader::found_only_gl30) {
+		version = "#version 130\n";
+	} else {
+		version = "#version 330\n";
+	}
 	if (GLLoader::found_GL_ARB_shading_language_420pack) {
 		version += "#extension GL_ARB_shading_language_420pack: require\n";
 	} else {
@@ -1363,14 +1370,13 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 		//	version += "#define NO_STRUCT 1\n";
 		//}
 	} else {
-#ifdef OGL_FREE_DRIVER
-		version += "#define DISABLE_SSO\n";
-#endif
+		if (GLLoader::found_only_gl30)
+			version += "#define DISABLE_SSO\n";
 	}
-#ifdef OGL_FREE_DRIVER
-	version += "#extension GL_ARB_explicit_attrib_location : require\n";
-	version += "#extension GL_ARB_uniform_buffer_object : require\n";
-#endif
+	if (GLLoader::found_only_gl30) {
+		version += "#extension GL_ARB_explicit_attrib_location : require\n";
+		version += "#extension GL_ARB_uniform_buffer_object : require\n";
+	}
 
 	// Allow to puts several shader in 1 files
 	std::string shader_type;

@@ -133,4 +133,5 @@ namespace GLLoader {
 	extern bool found_GL_NV_copy_image;
 	extern bool found_geometry_shader;
 	extern bool fglrx_buggy_driver;
+	extern bool found_only_gl30;
 }

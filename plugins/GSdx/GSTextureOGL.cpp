@@ -149,6 +149,12 @@ void GSTextureOGL::Attach(GLenum attachment)
 	//fprintf(stderr, "FB status %x\n", gl_CheckFramebufferStatus(GL_FRAMEBUFFER));
 }
 
+void GSTextureOGL::AttachRead(GLenum attachment)
+{
+	gl_FramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
+	glReadBuffer(attachment);
+}
+
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 {
 	if (m_type == GSTexture::DepthStencil || m_type == GSTexture::Offscreen) ASSERT(0);
