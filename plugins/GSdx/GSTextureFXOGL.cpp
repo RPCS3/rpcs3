@@ -70,7 +70,8 @@ void GSDeviceOGL::CreateTextureFX()
 	GLuint dummy;
 	std::string macro = "\n";
 	CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &dummy, tfx_glsl, macro);
-	CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &dummy, tfx_glsl, macro);
+	if (GLLoader::found_geometry_shader)
+		CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &dummy, tfx_glsl, macro);
 	CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &dummy, tfx_glsl, macro);
 #endif
 }

@@ -44,6 +44,7 @@ class GSRendererOGL : public GSRendererHW
 		float UserHacks_TCO_x, UserHacks_TCO_y;
 
 	protected:
+		void EmulateGS();
 		void SetupIA();
 
 	public:

@@ -129,5 +129,8 @@ namespace GLLoader {
 	extern bool found_GL_ARB_separate_shader_objects;
 	extern bool found_GL_ARB_shading_language_420pack;
 	extern bool found_GL_ARB_texture_storage;
+	extern bool found_GL_ARB_copy_image;
+	extern bool found_GL_NV_copy_image;
+	extern bool found_geometry_shader;
 	extern bool fglrx_buggy_driver;
 }

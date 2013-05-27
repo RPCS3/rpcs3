@@ -868,11 +868,24 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
     //         uint32 srcName, enum srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
 	//     uint32 dstName, enum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
 	//     sizei width, sizei height, sizei depth);
-	gl_CopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), static_cast<GSTextureOGL*>(st)->GetTarget(),
-			0, r.x, r.y, 0,
-			static_cast<GSTextureOGL*>(dt)->GetID(), static_cast<GSTextureOGL*>(dt)->GetTarget(),
-			0, r.x, r.y, 0,
-			r.width(), r.height(), 1);
+	if (GLLoader::found_GL_NV_copy_image) {
+		gl_CopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), static_cast<GSTextureOGL*>(st)->GetTarget(),
+				0, r.x, r.y, 0,
+				static_cast<GSTextureOGL*>(dt)->GetID(), static_cast<GSTextureOGL*>(dt)->GetTarget(),
+				0, r.x, r.y, 0,
+				r.width(), r.height(), 1);
+	} else if (GLLoader::found_GL_ARB_copy_image) {
+		// Would need an update of GL definition. For the moment it isn't supported by driver anyway.
+#if 0
+		gl_CopyImageSubData( static_cast<GSTextureOGL*>(st)->GetID(), static_cast<GSTextureOGL*>(st)->GetTarget(),
+				0, r.x, r.y, 0,
+				static_cast<GSTextureOGL*>(dt)->GetID(), static_cast<GSTextureOGL*>(dt)->GetTarget(),
+				0, r.x, r.y, 0,
+				r.width(), r.height(), 1);
+#endif
+	} else {
+		// FIXME fallback for open source driver
+	}
 
 #if 0
 	D3D11_BOX box = {r.left, r.top, 0, r.right, r.bottom, 1};
@@ -1349,6 +1362,10 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 		//if (!GLLoader::found_GL_ARB_shading_language_420pack) {
 		//	version += "#define NO_STRUCT 1\n";
 		//}
+	} else {
+#ifdef OGL_FREE_DRIVER
+		version += "#define DISABLE_SSO\n";
+#endif
 	}
 #ifdef OGL_FREE_DRIVER
 	version += "#extension GL_ARB_explicit_attrib_location : require\n";

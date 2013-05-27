@@ -68,14 +68,21 @@ layout(location = 0) out vertex VSout;
 #define VSout_tp (VSout.tp)
 #define VSout_c (VSout.c)
 #else
-layout(location = 0) out vec4 p;
-layout(location = 1) out vec4 t;
-layout(location = 2) out vec4 tp;
-layout(location = 3) out vec4 c;
-#define VSout_p p
-#define VSout_t t
-#define VSout_tp tp
-#define VSout_c c
+#ifdef DISABLE_SSO
+out vec4 SHADERp;
+out vec4 SHADERt;
+out vec4 SHADERtp;
+out vec4 SHADERc;
+#else
+layout(location = 0) out vec4 SHADERp;
+layout(location = 1) out vec4 SHADERt;
+layout(location = 2) out vec4 SHADERtp;
+layout(location = 3) out vec4 SHADERc;
+#endif
+#define VSout_p SHADERp
+#define VSout_t SHADERt
+#define VSout_tp SHADERtp
+#define VSout_c SHADERc
 #endif
 
 #if __VERSION__ > 140
@@ -293,14 +300,21 @@ layout(location = 0) in vertex PSin;
 #define PSin_tp (PSin.tp)
 #define PSin_c (PSin.c)
 #else
-layout(location = 0) in vec4 PSinp;
-layout(location = 1) in vec4 PSint;
-layout(location = 2) in vec4 PSintp;
-layout(location = 3) in vec4 PSinc;
-#define PSin_p PSinp
-#define PSin_t PSint
-#define PSin_tp PSintp
-#define PSin_c PSinc
+#ifdef DISABLE_SSO
+in vec4 SHADERp;
+in vec4 SHADERt;
+in vec4 SHADERtp;
+in vec4 SHADERc;
+#else
+layout(location = 0) in vec4 SHADERp;
+layout(location = 1) in vec4 SHADERt;
+layout(location = 2) in vec4 SHADERtp;
+layout(location = 3) in vec4 SHADERc;
+#endif
+#define PSin_p SHADERp
+#define PSin_t SHADERt
+#define PSin_tp SHADERtp
+#define PSin_c SHADERc
 #endif
 
 // Same buffer but 2 colors for dual source blending

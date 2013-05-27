@@ -21,6 +21,7 @@
 
 #include "stdafx.h"
 #include "GLLoader.h"
+#include "GSdx.h"
 
 PFNGLACTIVETEXTUREPROC                 gl_ActiveTexture               = NULL;
 PFNGLBLENDCOLORPROC                    gl_BlendColor                  = NULL;
@@ -99,6 +100,9 @@ namespace GLLoader {
 	bool found_GL_ARB_separate_shader_objects = false;
 	bool found_GL_ARB_shading_language_420pack = false;
 	bool found_GL_ARB_texture_storage = false;
+	bool found_geometry_shader = true;
+	bool found_GL_NV_copy_image = false;
+	bool found_GL_ARB_copy_image = false;
 
     bool check_gl_version(uint32 major, uint32 minor) {
 
@@ -117,10 +121,20 @@ namespace GLLoader {
 		GLuint major_gl = s[dot-1]-'0';
 		GLuint minor_gl = s[dot+1]-'0';
 
+		if ( (major_gl < 3) || ( major_gl == 3 && minor_gl < 2 ) ) {
+			fprintf(stderr, "Geometry shaders are not supported. Required openGL3.2\n");
+			found_geometry_shader = false;
+		}
+		if (theApp.GetConfig("override_geometry_shader", -1) != -1) {
+			found_geometry_shader = !!theApp.GetConfig("override_geometry_shader", -1);
+			fprintf(stderr, "Override geometry shaders detection\n");
+		}
+
 		if ( (major_gl < major) || ( major_gl == major && minor_gl < minor ) ) {
 			fprintf(stderr, "OPENGL %d.%d is not supported\n", major, minor);
 			return false;
 		}
+
 
         return true;
     }
@@ -216,6 +230,13 @@ namespace GLLoader {
 				if (ext.compare("GL_ARB_texture_storage") == 0) {
 					found_GL_ARB_texture_storage = true;
 				}
+				if (ext.compare("GL_NV_copy_image") == 0) {
+					found_GL_NV_copy_image = true;
+				}
+				// Replace previous extensions (when driver will be updated)
+				if (ext.compare("GL_ARB_copy_image") == 0) {
+					found_GL_ARB_copy_image = true;
+				}
 				fprintf(stderr, "EXT: %s\n", ext.c_str());
 			}
 		}
@@ -233,9 +254,15 @@ namespace GLLoader {
 			return false;
 		}
 
-		// REMOVE ME: Emulate open source driver
-		// found_GL_ARB_shading_language_420pack = false;
-		// found_GL_ARB_separate_shader_objects = true;
+
+		if (theApp.GetConfig("override_GL_ARB_shading_language_420pack", -1) != -1) {
+			found_GL_ARB_shading_language_420pack = !!theApp.GetConfig("override_GL_ARB_shading_language_420pack", -1);
+			fprintf(stderr, "Override GL_ARB_shading_language_420pack detection\n");
+		}
+		if (theApp.GetConfig("override_GL_ARB_separate_shader_objects", -1) != -1) {
+			found_GL_ARB_separate_shader_objects = !!theApp.GetConfig("override_GL_ARB_separate_shader_objects", -1);
+			fprintf(stderr, "Override GL_ARB_separate_shader_objects detection\n");
+		}
 
 		return true;
 	}

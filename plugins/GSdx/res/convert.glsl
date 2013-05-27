@@ -33,10 +33,15 @@ layout(location = 0) out vertex_basic VSout;
 #define VSout_p (VSout.p)
 #define VSout_t (VSout.t)
 #else
-layout(location = 0) out vec4 p;
-layout(location = 1) out vec2 t;
-#define VSout_p p
-#define VSout_t t
+#ifdef DISABLE_SSO
+out vec4 SHADERp;
+out vec2 SHADERt;
+#else
+layout(location = 0) out vec4 SHADERp;
+layout(location = 1) out vec2 SHADERt;
+#endif
+#define VSout_p SHADERp
+#define VSout_t SHADERt
 #endif
 
 void vs_main()
@@ -51,15 +56,20 @@ void vs_main()
 #ifdef FRAGMENT_SHADER
 // NOTE: pixel can be clip with "discard"
 
-#if __VERSION__ > 140
+#if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) in vertex_basic PSin;
 #define PSin_p (PSin.p)
 #define PSin_t (PSin.t)
 #else
-layout(location = 0) in vec4 p;
-layout(location = 1) in vec2 t;
-#define PSin_p p
-#define PSin_t t
+#ifdef DISABLE_SSO
+in vec4 SHADERp;
+in vec2 SHADERt;
+#else
+layout(location = 0) in vec4 SHADERp;
+layout(location = 1) in vec2 SHADERt;
+#endif
+#define PSin_p SHADERp
+#define PSin_t SHADERt
 #endif
 
 layout(location = 0) out vec4 SV_Target0;

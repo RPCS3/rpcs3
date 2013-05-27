@@ -19,10 +19,15 @@ layout(location = 0) in vertex_basic PSin;
 #define PSin_p (PSin.p)
 #define PSin_t (PSin.t)
 #else
-layout(location = 0) in vec4 p;
-layout(location = 1) in vec2 t;
-#define PSin_p p
-#define PSin_t t
+#ifdef DISABLE_SSO
+in vec4 SHADERp;
+in vec2 SHADERt;
+#else
+layout(location = 0) in vec4 SHADERp;
+layout(location = 1) in vec2 SHADERt;
+#endif
+#define PSin_p SHADERp
+#define PSin_t SHADERt
 #endif
 
 layout(location = 0) out vec4 SV_Target0;
