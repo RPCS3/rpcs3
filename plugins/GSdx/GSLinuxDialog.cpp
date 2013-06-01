@@ -24,7 +24,7 @@
 #include "GSdx.h"
 #include "GSLinuxLogo.h"
 
-GtkWidget *msaa_combo_box, *render_combo_box, *filter_combo_box;
+GtkWidget *fsaa_combo_box, *render_combo_box, *filter_combo_box;
 GtkWidget *shadeboost_check, *paltex_check, *fba_check, *aa_check,  *native_res_check;
 GtkWidget *sb_contrast, *sb_brightness, *sb_saturation;
 GtkWidget *resx_spin, *resy_spin;
@@ -133,7 +133,7 @@ GtkWidget* CreateMsaaComboBox()
 	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "5x");
 	gtk_combo_box_append_text(GTK_COMBO_BOX(combo_box), "6x");
 
-	gtk_combo_box_set_active(GTK_COMBO_BOX(combo_box), theApp.GetConfig("msaa", 0));
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo_box), theApp.GetConfig("upscale_multiplier", 2)-1);
 	return combo_box;
 }
 
@@ -152,11 +152,8 @@ GtkWidget* CreateFilterComboBox()
 
 void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 {
-	int render_type;
-	bool hardware_render = false, software_render = false, null_render = false;
-	
-	render_type = gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box));
-	hardware_render = ((render_type % 3) == 1);
+	int	render_type = gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box));
+	bool hardware_render = ((render_type % 3) == 1);
 	
 	if (hardware_render)
 	{
@@ -168,15 +165,15 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 		
 		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(native_res_check)))
 		{
-			gtk_widget_set_sensitive(msaa_combo_box, false);
+			gtk_widget_set_sensitive(fsaa_combo_box, false);
 			gtk_widget_set_sensitive(resx_spin, false);
 			gtk_widget_set_sensitive(resy_spin, false);
 		}
 		else
 		{
-			gtk_widget_set_sensitive(msaa_combo_box, true);
+			gtk_widget_set_sensitive(fsaa_combo_box, true);
 			
-			if (gtk_combo_box_get_active(GTK_COMBO_BOX(msaa_combo_box)) == 0)
+			if (gtk_combo_box_get_active(GTK_COMBO_BOX(fsaa_combo_box)) == 0)
 			{
 				gtk_widget_set_sensitive(resx_spin, true);
 				gtk_widget_set_sensitive(resy_spin, true);
@@ -200,7 +197,7 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 		gtk_widget_set_sensitive(fba_check, false);
 		
 		gtk_widget_set_sensitive(native_res_check, false);
-		gtk_widget_set_sensitive(msaa_combo_box, false);
+		gtk_widget_set_sensitive(fsaa_combo_box, false);
 		gtk_widget_set_sensitive(resx_spin, false);
 		gtk_widget_set_sensitive(resy_spin, false);
 
@@ -229,10 +226,10 @@ bool RunLinuxDialog()
 {
 	GtkWidget *dialog;
 	GtkWidget *main_box, *res_box, *hw_box, *sw_box;
-	GtkWidget  *native_box, *msaa_box, *resxy_box, *renderer_box, *interlace_box, *threads_box, *filter_box;
+	GtkWidget  *native_box, *fsaa_box, *resxy_box, *renderer_box, *interlace_box, *threads_box, *filter_box;
 	GtkWidget *hw_table, *res_frame, *hw_frame, *sw_frame;
 	GtkWidget *interlace_combo_box, *threads_spin;
-	GtkWidget *interlace_label, *threads_label, *native_label,  *msaa_label, *rexy_label, *render_label, *filter_label;
+	GtkWidget *interlace_label, *threads_label, *native_label,  *fsaa_label, *rexy_label, *render_label, *filter_label;
 	
 	GtkWidget *hack_table, *hack_skipdraw_label, *hack_box, *hack_frame;
 	GtkWidget *hack_alpha_check, *hack_offset_check, *hack_skipdraw_spin, *hack_msaa_check, *hack_sprite_check, * hack_wild_check, *hack_enble_check;
@@ -323,11 +320,11 @@ bool RunLinuxDialog()
 	gtk_box_pack_start(GTK_BOX(native_box), native_label, false, false, 5);
 	gtk_box_pack_start(GTK_BOX(native_box), native_res_check, false, false, 5);
 	
-	msaa_label = gtk_label_new("Or Use Scaling (broken):");
-	msaa_combo_box = CreateMsaaComboBox();
-	msaa_box = gtk_hbox_new(false, 5);
-	gtk_box_pack_start(GTK_BOX(msaa_box), msaa_label, false, false, 5);
-	gtk_box_pack_start(GTK_BOX(msaa_box), msaa_combo_box, false, false, 5);
+	fsaa_label = gtk_label_new("Or Use Scaling (broken):");
+	fsaa_combo_box = CreateMsaaComboBox();
+	fsaa_box = gtk_hbox_new(false, 5);
+	gtk_box_pack_start(GTK_BOX(fsaa_box), fsaa_label, false, false, 5);
+	gtk_box_pack_start(GTK_BOX(fsaa_box), fsaa_combo_box, false, false, 5);
 	
 	rexy_label = gtk_label_new("Custom Resolution:");
 	resx_spin = gtk_spin_button_new_with_range(256,8192,1);
@@ -405,7 +402,7 @@ bool RunLinuxDialog()
 	
 	// Populate all those boxes we created earlier with widgets.
 	gtk_container_add(GTK_CONTAINER(res_box), native_box);
-	gtk_container_add(GTK_CONTAINER(res_box), msaa_box);
+	gtk_container_add(GTK_CONTAINER(res_box), fsaa_box);
 	gtk_container_add(GTK_CONTAINER(res_box), resxy_box);
 	
 	gtk_container_add(GTK_CONTAINER(sw_box), threads_box);
@@ -437,7 +434,7 @@ bool RunLinuxDialog()
 	}
 
 	g_signal_connect(render_combo_box, "changed", G_CALLBACK(toggle_widget_states), NULL);
-	g_signal_connect(msaa_combo_box, "changed", G_CALLBACK(toggle_widget_states), NULL);
+	g_signal_connect(fsaa_combo_box, "changed", G_CALLBACK(toggle_widget_states), NULL);
 	g_signal_connect(native_res_check, "toggled", G_CALLBACK(toggle_widget_states), NULL);
 	// Put the box in the dialog and show it to the world.
 	gtk_container_add (GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), main_box);
@@ -484,7 +481,7 @@ bool RunLinuxDialog()
 		theApp.SetConfig("ShadeBoost_Brightness", (int)gtk_range_get_value(GTK_RANGE(sb_brightness)));
 		theApp.SetConfig("ShadeBoost_Contrast", (int)gtk_range_get_value(GTK_RANGE(sb_contrast)));
 
-		theApp.SetConfig("msaa", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(msaa_combo_box)));
+		theApp.SetConfig("upscale_multiplier", (int)gtk_combo_box_get_active(GTK_COMBO_BOX(fsaa_combo_box))+1);
 		theApp.SetConfig("resx", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(resx_spin)));
 		theApp.SetConfig("resy", (int)gtk_spin_button_get_value(GTK_SPIN_BUTTON(resy_spin)));
 		
@@ -497,6 +494,9 @@ bool RunLinuxDialog()
 		theApp.SetConfig("UserHacks_SpriteHack", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_sprite_check)));
 		theApp.SetConfig("UserHacks", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(hack_enble_check)));
 		theApp.SetConfig("UserHacks_TCOffset", get_hex_entry(hack_tco_entry));
+
+		// NOT supported yet
+		theApp.SetConfig("msaa", 0);
 		
 		// Let's just be windowed for the moment.
 		theApp.SetConfig("windowed", 1);

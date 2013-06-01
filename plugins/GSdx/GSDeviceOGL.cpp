@@ -50,8 +50,6 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_fbo(0)
 	  , m_fbo_read(0)
 	  , m_vb_sr(NULL)
-	  , m_srv_changed(false)
-	  , m_ss_changed(false)
 {
 	m_msaa = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_MSAA", 0) : 0;
 
@@ -719,23 +717,20 @@ void GSDeviceOGL::DrawIndexedPrimitive(int offset, int count)
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
-	GLuint fbo_old = m_state.fbo;
+	glDisable(GL_SCISSOR_TEST);
 	if (static_cast<GSTextureOGL*>(t)->IsBackbuffer()) {
-		// FIXME I really not sure
 		OMSetFBO(0);
-		//gl_ClearBufferfv(GL_COLOR, GL_LEFT, c.v);
+
+		// glDrawBuffer(GL_BACK); // this is the default when there is no FB
+		// 0 will select the first drawbuffer ie GL_BACK
 		gl_ClearBufferfv(GL_COLOR, 0, c.v);
-		// code for the old interface
-		// glClearColor(c.x, c.y, c.z, c.w);
-		// glClear(GL_COLOR_BUFFER_BIT);
 	} else {
-		// FIXME1 I need to clarify this FBO attachment stuff
-		// I would like to avoid FBO for a basic clean operation
 		OMSetFBO(m_fbo);
 		static_cast<GSTextureOGL*>(t)->Attach(GL_COLOR_ATTACHMENT0);
+
 		gl_ClearBufferfv(GL_COLOR, 0, c.v);
 	}
-	OMSetFBO(fbo_old);
+	glEnable(GL_SCISSOR_TEST);
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
@@ -746,14 +741,9 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
 
 void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 {
-	GLuint fbo_old = m_state.fbo;
-	// FIXME I need to clarify this FBO attachment stuff
-	// I would like to avoid FBO for a basic clean operation
 	OMSetFBO(m_fbo);
 	static_cast<GSTextureOGL*>(t)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
-	// FIXME can you clean depth and stencil separately
-	// XXX: glClear* depends on the scissor test!!! Disable it because the viewport 
-	// could be smaller than the texture and we really want to clean all pixels.
+
 	glDisable(GL_SCISSOR_TEST);
 	if (m_state.dss != NULL && m_state.dss->IsMaskEnable()) {
 		gl_ClearBufferfv(GL_DEPTH, 0, &c);
@@ -763,20 +753,17 @@ void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 		glDepthMask(false);
 	}
 	glEnable(GL_SCISSOR_TEST);
-	OMSetFBO(fbo_old);
 }
 
 void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 {
-	GLuint fbo_old = m_state.fbo;
-	// FIXME I need to clarify this FBO attachment stuff
-	// I would like to avoid FBO for a basic clean operation
 	OMSetFBO(m_fbo);
 	static_cast<GSTextureOGL*>(t)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
 	GLint color = c;
-	// FIXME can you clean depth and stencil separately
+
+	glDisable(GL_SCISSOR_TEST);
 	gl_ClearBufferiv(GL_STENCIL, 0, &color);
-	OMSetFBO(fbo_old);
+	glEnable(GL_SCISSOR_TEST);
 }
 
 GSTexture* GSDeviceOGL::CreateRenderTarget(int w, int h, bool msaa, int format)
@@ -887,7 +874,7 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 
 		st_ogl->AttachRead(GL_COLOR_ATTACHMENT0);
-		dt_ogl->EnableUnit(0);
+		dt_ogl->EnableUnit(6);
 		glCopyTexSubImage2D(dt_ogl->GetTarget(), 0, r.x, r.y, r.x, r.y, r.width(), r.height());
 
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -1182,7 +1169,7 @@ void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)
 
 void GSDeviceOGL::VSSetShader(GLuint vs)
 {
-	if(m_state.vs != vs)
+	if (m_state.vs != vs)
 	{
 		m_state.vs = vs;
 		if (GLLoader::found_GL_ARB_separate_shader_objects)
@@ -1192,7 +1179,7 @@ void GSDeviceOGL::VSSetShader(GLuint vs)
 
 void GSDeviceOGL::GSSetShader(GLuint gs)
 {
-	if(m_state.gs != gs)
+	if (m_state.gs != gs)
 	{
 		m_state.gs = gs;
 		if (GLLoader::found_GL_ARB_separate_shader_objects)
@@ -1211,52 +1198,33 @@ void GSDeviceOGL::PSSetShaderResource(int i, GSTexture* sr)
 {
 	GSTextureOGL* srv = static_cast<GSTextureOGL*>(sr);
 
-	if(m_state.ps_srv[i] != srv)
+	if (m_state.ps_srv[i] != srv)
 	{
 		m_state.ps_srv[i] = srv;
-
-		m_srv_changed = true;
+		if (srv != NULL)
+			m_state.ps_srv[i]->EnableUnit(i);
 	}
 }
 
 void GSDeviceOGL::PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2)
 {
-	if(m_state.ps_ss[0] != ss0 || m_state.ps_ss[1] != ss1)
-	//if(m_state.ps_ss[0] != ss0 || m_state.ps_ss[1] != ss1 || m_state.ps_ss[2] != ss2)
-	{
+	if (m_state.ps_ss[0] != ss0) {
 		m_state.ps_ss[0] = ss0;
+		gl_BindSampler(0, ss0);
+	}
+	if (m_state.ps_ss[1] != ss1) {
 		m_state.ps_ss[1] = ss1;
-		//m_state.ps_ss[2] = ss2;
-
-		m_ss_changed = true;
+		gl_BindSampler(1, ss1);
 	}
 }
 
 void GSDeviceOGL::PSSetShader(GLuint ps)
 {
-	if(m_state.ps != ps)
+	if (m_state.ps != ps)
 	{
 		m_state.ps = ps;
 		if (GLLoader::found_GL_ARB_separate_shader_objects)
 			gl_UseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, ps);
-	}
-
-// Sampler and texture must be set at the same time
-// 1/ select the texture unit
-// gl_ActiveTexture(GL_TEXTURE0 + 1);
-// 2/ bind the texture
-// glBindTexture(GL_TEXTURE_2D , brickTexture);
-// 3/ sets the texture sampler in GLSL (could be useless with layout stuff)
-// gl_Uniform1i(brickSamplerId , 1);
-// 4/ set the sampler state
-// gl_BindSampler(1 , sampler);
-	if (m_srv_changed || m_ss_changed) {
-		for (uint32 i=0 ; i < 1; i++) {
-			if (m_state.ps_srv[i] != NULL) {
-				m_state.ps_srv[i]->EnableUnit(i);
-				gl_BindSampler(i, m_state.ps_ss[i]);
-			}
-		}
 	}
 }
 
@@ -1278,7 +1246,7 @@ void GSDeviceOGL::OMSetFBO(GLuint fbo, GLenum buffer)
 
 void GSDeviceOGL::OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref)
 {
-	if(m_state.dss != dss) {
+	if (m_state.dss != dss) {
 		m_state.dss = dss;
 		m_state.sref = sref;
 
@@ -1294,7 +1262,7 @@ void GSDeviceOGL::OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref)
 
 void GSDeviceOGL::OMSetBlendState(GSBlendStateOGL* bs, float bf)
 {
-	if( m_state.bs != bs || (m_state.bf != bf && bs->HasConstantFactor()) )
+	if ( m_state.bs != bs || (m_state.bf != bf && bs->HasConstantFactor()) )
 	{
 		m_state.bs = bs;
 		m_state.bf = bf;

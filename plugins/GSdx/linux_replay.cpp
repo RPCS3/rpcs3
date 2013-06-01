@@ -34,14 +34,14 @@ int main ( int argc, char *argv[] )
 {
 	if (argc < 3) help();
 
-	void *handle = dlopen(argv[1], RTLD_LAZY|RTLD_DEEPBIND);
+	void *handle = dlopen(argv[1], RTLD_LAZY|RTLD_GLOBAL);
 	if (handle == NULL) {
 		fprintf(stderr, "Failed to open plugin %s\n", argv[1]);
 		help();
 	}
 
-	void (*GSsetSettingsDir_ptr)(const char*);
-	void (*GSReplay_ptr)(char*, int);
+	__attribute__((stdcall)) void (*GSsetSettingsDir_ptr)(const char*);
+	__attribute__((stdcall)) void (*GSReplay_ptr)(char*, int);
 
 	*(void**)(&GSsetSettingsDir_ptr) = dlsym(handle, "GSsetSettingsDir");
 	*(void**)(&GSReplay_ptr) = dlsym(handle, "GSReplay");
@@ -50,8 +50,7 @@ int main ( int argc, char *argv[] )
 		(void)GSsetSettingsDir_ptr(argv[3]);
 	} else if ( argc == 3) {
 #ifdef XDG_STD
-		std::string home("HOME");
-		char * val = getenv( home.c_str() );
+		char *val = getenv("HOME");
 		if (val == NULL) {
 			dlclose(handle);
 			fprintf(stderr, "Failed to get the home dir\n");

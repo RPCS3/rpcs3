@@ -46,7 +46,7 @@
 
 struct vertex
 {
-    vec4 p;
+    //vec4 p;
     vec4 t;
     vec4 tp;
     vec4 c;
@@ -69,17 +69,17 @@ layout(location = 0) out vertex VSout;
 #define VSout_c (VSout.c)
 #else
 #ifdef DISABLE_SSO
-out vec4 SHADERp;
+//out vec4 SHADERp;
 out vec4 SHADERt;
 out vec4 SHADERtp;
 out vec4 SHADERc;
 #else
-layout(location = 0) out vec4 SHADERp;
-layout(location = 1) out vec4 SHADERt;
-layout(location = 2) out vec4 SHADERtp;
-layout(location = 3) out vec4 SHADERc;
+//layout(location = 0) out vec4 SHADERp;
+layout(location = 0) out vec4 SHADERt;
+layout(location = 1) out vec4 SHADERtp;
+layout(location = 2) out vec4 SHADERc;
 #endif
-#define VSout_p SHADERp
+//#define VSout_p SHADERp
 #define VSout_t SHADERt
 #define VSout_tp SHADERtp
 #define VSout_c SHADERc
@@ -130,7 +130,7 @@ void vs_main()
         final_p.z = log2(1.0f + float(z)) / 32.0f;
     }
 
-    VSout_p = final_p;
+    //VSout_p = final_p;
     gl_Position = final_p; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 #if VS_RTCOPY
     VSout_tp = final_p * vec4(0.5, -0.5, 0, 0) + 0.5;
@@ -241,46 +241,50 @@ void gs_main()
     // right bottom => GSin[1];
     vertex rb = GSin[1];
     vertex lt = GSin[0];
+    vec4 rb_p = gl_in[1].gl_Position;
+    vec4 lb_p = gl_in[1].gl_Position;
+    vec4 rt_p = gl_in[1].gl_Position;
+    vec4 lt_p = gl_in[0].gl_Position;
 
-    lt.p.z = rb.p.z;
+    lt_p.z = rb_p.z;
     lt.t.zw = rb.t.zw;
 #if GS_IIP == 0
     lt.c = rb.c;
 #endif
 
     vertex lb = rb;
-    lb.p.x = lt.p.x;
+    lb_p.x = lt_p.x;
     lb.t.x = lt.t.x;
 
     vertex rt = rb;
-    rt.p.y = lt.p.y;
+    rt_p.y = lt_p.y;
     rt.t.y = lt.t.y;
 
     // Triangle 1
-    gl_Position = lt.p;
+    gl_Position = lt_p;
     GSout = lt;
     EmitVertex();
 
-    gl_Position = lb.p;
+    gl_Position = lb_p;
     GSout = lb;
     EmitVertex();
 
-    gl_Position = rt.p;
+    gl_Position = rt_p;
     GSout = rt;
     EmitVertex();
 
     EndPrimitive();
 
     // Triangle 2
-    gl_Position = lb.p;
+    gl_Position = lb_p;
     GSout = lb;
     EmitVertex();
 
-    gl_Position = rt.p;
+    gl_Position = rt_p;
     GSout = rt;
     EmitVertex();
 
-    gl_Position = rb.p;
+    gl_Position = rb_p;
     GSout = rb;
     EmitVertex();
 
@@ -295,7 +299,7 @@ void gs_main()
 #ifdef FRAGMENT_SHADER
 #if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) in vertex PSin;
-#define PSin_p (PSin.p)
+//#define PSin_p (PSin.p)
 #define PSin_t (PSin.t)
 #define PSin_tp (PSin.tp)
 #define PSin_c (PSin.c)
@@ -306,12 +310,12 @@ in vec4 SHADERt;
 in vec4 SHADERtp;
 in vec4 SHADERc;
 #else
-layout(location = 0) in vec4 SHADERp;
-layout(location = 1) in vec4 SHADERt;
-layout(location = 2) in vec4 SHADERtp;
-layout(location = 3) in vec4 SHADERc;
+//layout(location = 0) in vec4 SHADERp;
+layout(location = 0) in vec4 SHADERt;
+layout(location = 1) in vec4 SHADERtp;
+layout(location = 2) in vec4 SHADERc;
 #endif
-#define PSin_p SHADERp
+//#define PSin_p SHADERp
 #define PSin_t SHADERt
 #define PSin_tp SHADERtp
 #define PSin_c SHADERc

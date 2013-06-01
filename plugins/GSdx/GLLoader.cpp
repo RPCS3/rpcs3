@@ -228,31 +228,21 @@ namespace GLLoader {
 				string ext((const char*)gl_GetStringi(GL_EXTENSIONS, i));
 				if (ext.compare("GL_ARB_separate_shader_objects") == 0) {
 					if (!fglrx_buggy_driver) found_GL_ARB_separate_shader_objects = true;
+					else fprintf(stderr, "Buggy driver detected, GL_ARB_separate_shader_objects will be disabled\n");
 				}
-				if (ext.compare("GL_ARB_shading_language_420pack") == 0) {
-					found_GL_ARB_shading_language_420pack = true;
-				}
-				if (ext.compare("GL_ARB_texture_storage") == 0) {
-					found_GL_ARB_texture_storage = true;
-				}
-				if (ext.compare("GL_NV_copy_image") == 0) {
-					found_GL_NV_copy_image = true;
-				}
+				if (ext.compare("GL_ARB_shading_language_420pack") == 0) found_GL_ARB_shading_language_420pack = true;
+				if (ext.compare("GL_ARB_texture_storage") == 0) found_GL_ARB_texture_storage = true;
+				if (ext.compare("GL_NV_copy_image") == 0) found_GL_NV_copy_image = true;
 				// Replace previous extensions (when driver will be updated)
-				if (ext.compare("GL_ARB_copy_image") == 0) {
-					found_GL_ARB_copy_image = true;
-				}
-				fprintf(stderr, "EXT: %s\n", ext.c_str());
+				if (ext.compare("GL_ARB_copy_image") == 0) found_GL_ARB_copy_image = true;
 			}
 		}
 
 		if (!found_GL_ARB_separate_shader_objects) {
 			fprintf(stderr, "GL_ARB_separate_shader_objects is not supported\n");
-			//return false;
 		}
 		if (!found_GL_ARB_shading_language_420pack) {
 			fprintf(stderr, "GL_ARB_shading_language_420pack is not supported\n");
-			//return false;
 		}
 		if (!found_GL_ARB_texture_storage) {
 			fprintf(stderr, "GL_ARB_texture_storage is not supported\n");

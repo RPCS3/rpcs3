@@ -551,9 +551,6 @@ class GSDeviceOGL : public GSDevice
  		GLenum	   draw;
 	} m_state;
 
-	bool m_srv_changed;
-	bool m_ss_changed;
-
 	hash_map<uint32, GLuint > m_vs;
 	hash_map<uint32, GLuint > m_gs;
 	hash_map<uint32, GLuint > m_ps;

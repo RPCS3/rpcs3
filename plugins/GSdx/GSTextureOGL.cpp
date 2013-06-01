@@ -23,7 +23,7 @@
 #include <limits.h>
 #include "GSTextureOGL.h"
 static int g_state_texture_unit = -1;
-static int g_state_texture_id = -1;
+static int g_state_texture_id[7] = {0, 0, 0, 0, 0, 0, 0};
 
 // FIXME: check if it possible to always use those setup by default
 // glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -121,7 +121,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 			// Howto allocate the texture unit !!!
 			// In worst case the HW renderer seems to use 3 texture unit
 			// For the moment SW renderer only use 1 so don't bother
-			EnableUnit(0);
+			EnableUnit(3);
 			if (m_msaa) {
 				ASSERT(m_texture_target == GL_TEXTURE_2D_MULTISAMPLE);
 				// Require a recent GLEW and GL4.3
@@ -137,13 +137,17 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 
 GSTextureOGL::~GSTextureOGL()
 {
+	/* Unbind the texture from our local state */
+	for (uint i = 0; i < 7; i++)
+		if (g_state_texture_id[i] == m_texture_id)
+			g_state_texture_id[i] = 0;
+
 	gl_DeleteBuffers(1, &m_pbo_id);
 	glDeleteTextures(1, &m_texture_id);
 }
 
 void GSTextureOGL::Attach(GLenum attachment)
 {
-	//fprintf(stderr, "format %d,%x\n", m_type, m_format);
 	gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
 	// FIXME DEBUG
 	//fprintf(stderr, "FB status %x\n", gl_CheckFramebufferStatus(GL_FRAMEBUFFER));
@@ -162,7 +166,7 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	// FIXME warning order of the y axis
 	// FIXME I'm not confident with GL_UNSIGNED_BYTE type
 
-	EnableUnit(0);
+	EnableUnit(4);
 
 	// pitch is in byte wherease GL_UNPACK_ROW_LENGTH is in pixel
 	GLenum format;
@@ -233,21 +237,18 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 
 void GSTextureOGL::EnableUnit(uint32 unit)
 {
-	if (!IsBackbuffer()) {
-		// FIXME
-		// Howto allocate the texture unit !!!
-		// In worst case the HW renderer seems to use 3 texture unit
-		// For the moment SW renderer only use 1 so don't bother
-		if (g_state_texture_unit != unit) {
-			g_state_texture_unit = unit;
-			gl_ActiveTexture(GL_TEXTURE0 + unit);
-			// When you change the texture unit, texture must be rebinded
-			g_state_texture_id = m_texture_id;
-			glBindTexture(m_texture_target, m_texture_id);
-		} else if (g_state_texture_id != m_texture_id) {
-			g_state_texture_id = m_texture_id;
-			glBindTexture(m_texture_target, m_texture_id);
-		}
+	/* Not a real texture */
+	if (IsBackbuffer()) {
+		return;
+	}
+
+	if (g_state_texture_unit != unit) {
+		gl_ActiveTexture(GL_TEXTURE0 + unit);
+		g_state_texture_unit = unit;
+	}
+	if (g_state_texture_id[unit] != m_texture_id) {
+		g_state_texture_id[unit] = m_texture_id;
+		glBindTexture(m_texture_target, m_texture_id);
 	}
 }
 
@@ -262,7 +263,7 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 	// Can be used on GL_PIXEL_UNPACK_BUFFER or GL_TEXTURE_BUFFER
 	if (m_type == GSTexture::Offscreen) {
 		// Bind the texture to the read framebuffer to avoid any disturbance
-		EnableUnit(0);
+		EnableUnit(5);
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 		gl_FramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_texture_target, m_texture_id, 0);
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -444,8 +445,6 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 	} else if(IsDss()) {
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 
-		//EnableUnit(0);
-
 		gl_FramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, m_texture_target, m_texture_id, 0);
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, image);
 
@@ -453,7 +452,7 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 	} else {
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 
-		EnableUnit(0);
+		EnableUnit(6);
 		gl_FramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, m_texture_target, m_texture_id, 0);
 
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
