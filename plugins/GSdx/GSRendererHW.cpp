@@ -202,6 +202,11 @@ void GSRendererHW::Draw()
 
 	if(PRIM->TME)
 	{
+		if(GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0)
+		{
+			m_mem.m_clut.Read32(context->TEX0, env.TEXA);
+		}
+
 		GSVector4i r;
 
 		GetTextureMinMax(r, context->TEX0, context->CLAMP, m_vt.IsLinear());

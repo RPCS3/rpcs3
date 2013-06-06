@@ -958,6 +958,15 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 				rb = m_global.frb.lerp16<0>(rb, fog);
 				ga = m_global.fga.lerp16<0>(ga, fog).mix16(ga);
+
+				/*
+				fog = fog.srl16(7);
+
+				GSVector4i ifog = GSVector4i::x00ff().sub16(fog);
+
+				rb = rb.mul16l(fog).add16(m_global.frb.mul16l(ifog)).srl16(8);
+				ga = ga.mul16l(fog).add16(m_global.fga.mul16l(ifog)).srl16(8).mix16(ga);
+				*/
 			}
 
 			// ReadFrame
@@ -1204,18 +1213,18 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 			if(sel.fwrite)
 			{
-				if(sel.colclamp == 0)
-				{
-					rb &= GSVector4i::x00ff();
-					ga &= GSVector4i::x00ff();
-				}
-
 				if(sel.fpsm == 2 && sel.dthe)
 				{
 					int y = (top & 3) << 1;
 
 					rb = rb.add16(m_global.dimx[0 + y]);
 					ga = ga.add16(m_global.dimx[1 + y]);
+				}
+
+				if(sel.colclamp == 0)
+				{
+					rb &= GSVector4i::x00ff();
+					ga &= GSVector4i::x00ff();
 				}
 
 				GSVector4i fs = rb.upl16(ga).pu16(rb.uph16(ga));

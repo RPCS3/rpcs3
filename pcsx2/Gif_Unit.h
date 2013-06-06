@@ -100,10 +100,18 @@ struct Gif_Tag {
 	void analyzeTag() {
 		hasAD = false;
 		u32 t = tag.REGS[0];
-		for(u32 i = 0; i < nRegs; i++) {
-			if (i == 8) t = tag.REGS[1];
+		u32 i = 0;
+		u32 j = std::min<u32>(nRegs, 8);
+		for(; i < j; i++) {
 			regs[i] = t & 0xf;
-			hasAD  |= (regs[i] == GIF_REG_A_D);
+			hasAD |= (regs[i] == GIF_REG_A_D);
+			t >>= 4;
+		}
+		t = tag.REGS[1];
+		j = nRegs;
+		for(; i < j; i++) {
+			regs[i] = t & 0xf;
+			hasAD |= (regs[i] == GIF_REG_A_D);
 			t >>= 4;
 		}
 	}

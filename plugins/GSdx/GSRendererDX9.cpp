@@ -205,7 +205,9 @@ void GSRendererDX9::SetupIA()
 						//printf("GSDX: %08X | D3D9(%d) %s\n", s->UV & 0x3FEF3FEF, m_vertex.next, i == 0 ? "*" : "");
 					}
 					else
+					{
 						t = GSVector4(GSVector4i::load(s->UV).upl16());
+					}
 				}
 				else
 				{

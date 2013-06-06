@@ -48,6 +48,7 @@ class GSState : public GSAlignedClass<32>
 	void GIFPackedRegHandlerRGBA(const GIFPackedReg* RESTRICT r);
 	void GIFPackedRegHandlerSTQ(const GIFPackedReg* RESTRICT r);
 	void GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r);
+	void GIFPackedRegHandlerUV_Hack(const GIFPackedReg* RESTRICT r);
 	template<uint32 prim, uint32 adc> void GIFPackedRegHandlerXYZF2(const GIFPackedReg* RESTRICT r);
 	template<uint32 prim, uint32 adc> void GIFPackedRegHandlerXYZ2(const GIFPackedReg* RESTRICT r);
 	void GIFPackedRegHandlerFOG(const GIFPackedReg* RESTRICT r);
@@ -77,6 +78,7 @@ class GSState : public GSAlignedClass<32>
 	void GIFRegHandlerRGBAQ(const GIFReg* RESTRICT r);
 	void GIFRegHandlerST(const GIFReg* RESTRICT r);
 	void GIFRegHandlerUV(const GIFReg* RESTRICT r);
+	void GIFRegHandlerUV_Hack(const GIFReg* RESTRICT r);
 	template<uint32 prim, uint32 adc> void GIFRegHandlerXYZF2(const GIFReg* RESTRICT r);
 	template<uint32 prim, uint32 adc> void GIFRegHandlerXYZ2(const GIFReg* RESTRICT r);
 	template<int i> void GIFRegHandlerTEX0(const GIFReg* RESTRICT r);
@@ -138,8 +140,11 @@ class GSState : public GSAlignedClass<32>
 
 protected:
 	bool IsBadFrame(int& skip, int UserHacks_SkipDraw);
-	int userHacks_AggressiveCRC;
-	int userHacks_DisableCrcHacks;
+
+	int UserHacks_AggressiveCRC;
+	int UserHacks_DisableCrcHacks;
+	int UserHacks_WildHack;
+    bool isPackedUV_HackFlag;
 
 	GSVertex m_v;
 	float m_q;
@@ -195,8 +200,6 @@ public:
 	CRC::Game m_game;
 	GSDump m_dump;
 	bool m_nativeres;
-
-    bool isPackedUV_HackFlag;
 
 	int s_n;
 	bool s_dump;

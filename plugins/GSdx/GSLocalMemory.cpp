@@ -1224,7 +1224,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel32(addr + offset[x], *pd);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1244,7 +1244,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel24(addr + offset[x], *(uint32*)pb);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1266,7 +1266,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel16(addr + offset[x], *pw);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1283,7 +1283,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel8(addr + offset[x], *pb);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1301,7 +1301,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel4(addr + offset[x + 1], *pb >> 4);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1318,7 +1318,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel8H(addr + offset[x], *pb);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1336,7 +1336,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel4HL(addr + offset[x + 1], *pb >> 4);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1354,7 +1354,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel4HH(addr + offset[x + 1], *pb >> 4);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
