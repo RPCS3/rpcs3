@@ -18,7 +18,6 @@ set(CommonFlags
     -Wunused-variable
     -std=c++0x
     -fno-strict-aliasing
-    #-DENABLE_OGL_DEBUG # FIXME remove me when code is ready
     )
 
 set(OptimizationFlags
@@ -28,7 +27,7 @@ set(OptimizationFlags
 
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-    add_definitions(${CommonFlags} -DENABLE_OGL_DEBUG -g -Wall)
+    add_definitions(${CommonFlags} -D_DEBUG -g -Wall)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build

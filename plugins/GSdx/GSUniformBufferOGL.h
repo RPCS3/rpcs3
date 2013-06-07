@@ -55,10 +55,10 @@ public:
 
 	void upload(const void* src)
 	{
-		uint32 flags = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-		uint8* dst = (uint8*) gl_MapBufferRange(target, 0, size, flags);
-		memcpy(dst, src, size);
-		gl_UnmapBuffer(target);
+		// glMapBufferRange allow to set various parameter but the call is
+		// synchronous whereas glBufferSubData could be asynchronous.
+		// TODO: investigate the extension ARB_invalidate_subdata
+		gl_BufferSubData(target, 0, size, src);
 	}
 
 	~GSUniformBufferOGL() {

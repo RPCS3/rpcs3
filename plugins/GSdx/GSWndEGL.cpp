@@ -103,6 +103,10 @@ bool GSWndEGL::CreateContext(int major, int minor)
 void GSWndEGL::AttachContext()
 {
 	if (!IsContextAttached()) {
+		// The setting of the API is local to a thread. This function 
+		// can be called from 2 threads.
+		eglBindAPI(EGL_OPENGL_API);
+
 		//fprintf(stderr, "Attach the context\n");
 		eglMakeCurrent(m_eglDisplay, m_eglSurface, m_eglSurface, m_eglContext);
 		m_ctx_attached = true;

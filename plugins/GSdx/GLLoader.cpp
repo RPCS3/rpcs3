@@ -85,6 +85,7 @@ PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages            = NULL;
 PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer        = NULL;
 PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer         = NULL;
 PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D                = NULL;
+PFNGLBUFFERSUBDATAPROC                 gl_BufferSubData               = NULL;
 // NO GL4.1
 PFNGLUSEPROGRAMPROC                    gl_UseProgram                  = NULL;
 PFNGLGETSHADERINFOLOGPROC              gl_GetShaderInfoLog            = NULL;
@@ -207,6 +208,7 @@ namespace GLLoader {
 		GL_LOADFN(gl_VertexAttribIPointer, glVertexAttribIPointer);
 		GL_LOADFN(gl_VertexAttribPointer, glVertexAttribPointer);
 		GL_LOADFN(gl_TexStorage2D, glTexStorage2D);
+		GL_LOADFN(gl_BufferSubData, glBufferSubData);
 		// NO GL4.1
 		GL_LOADFN(gl_UseProgram, glUseProgram);
 		GL_LOADFN(gl_GetShaderInfoLog, glGetShaderInfoLog);

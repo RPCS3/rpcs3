@@ -111,6 +111,7 @@ extern   PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages;
 extern   PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer;
 extern   PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer;
 extern   PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D;
+extern   PFNGLBUFFERSUBDATAPROC                 gl_BufferSubData;
 // NO GL4.1
 extern   PFNGLUSEPROGRAMPROC                    gl_UseProgram;
 extern   PFNGLGETSHADERINFOLOGPROC              gl_GetShaderInfoLog;
