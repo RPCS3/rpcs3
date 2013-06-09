@@ -52,12 +52,15 @@ bool GSWndEGL::CreateContext(int major, int minor)
 	EGLint numConfigs;
 	EGLint contextAttribs[] =
 	{
+		// Not yet supported by Radeon/Gallium
+#if 0
 		EGL_CONTEXT_MAJOR_VERSION_KHR, major,
 		EGL_CONTEXT_MINOR_VERSION_KHR, minor,
 		// Keep compatibility for old cruft
 		//EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR,
 		// FIXME : Request a debug context to ease opengl development
 		EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR | EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR,
+#endif
 		EGL_NONE
 	};
 	EGLint attrList[] = {

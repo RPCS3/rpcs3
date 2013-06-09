@@ -22,8 +22,11 @@
 #include "stdafx.h"
 #include <limits.h>
 #include "GSTextureOGL.h"
-static int g_state_texture_unit = -1;
-static int g_state_texture_id[7] = {0, 0, 0, 0, 0, 0, 0};
+static GLuint g_state_texture_unit = -1;
+static GLuint g_state_texture_id[7] = {0, 0, 0, 0, 0, 0, 0};
+static GLuint g_color0 = 0;
+static GLuint g_color1 = 0;
+static GLuint g_depth = 0;
 
 // FIXME: check if it possible to always use those setup by default
 // glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -90,6 +93,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 	// Extra buffer to handle various pixel transfer
 	gl_GenBuffers(1, &m_pbo_id);
 
+#if 0
 	uint32 msaa_level;
 	if (m_msaa) {
 		// FIXME  which level of MSAA
@@ -97,6 +101,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 	} else {
 		msaa_level = 0;
 	}
+#endif
 
 	// Allocate the buffer
 	switch (m_type) {
@@ -117,17 +122,12 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 		case GSTexture::DepthStencil:
 		case GSTexture::RenderTarget:
 		case GSTexture::Texture:
-			// FIXME: check the opensource driver
-			// Howto allocate the texture unit !!!
-			// In worst case the HW renderer seems to use 3 texture unit
-			// For the moment SW renderer only use 1 so don't bother
 			EnableUnit(3);
 			if (m_msaa) {
 				ASSERT(m_texture_target == GL_TEXTURE_2D_MULTISAMPLE);
-				// Require a recent GLEW and GL4.3
+				// Require a recent GL4.3 extension
 				//gl_TexStorage2DMultisample(m_texture_target, msaa_level, m_format, m_size.x, m_size.y, false);
 			} else {
-				//glTexParameteri(m_texture_target, GL_TEXTURE_MAX_LEVEL, 0);
 				gl_TexStorage2D(m_texture_target, 1,  m_format, m_size.x, m_size.y);
 			}
 			break;
@@ -148,7 +148,30 @@ GSTextureOGL::~GSTextureOGL()
 
 void GSTextureOGL::Attach(GLenum attachment)
 {
-	gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
+	switch(attachment) {
+		case GL_COLOR_ATTACHMENT0:
+		if (g_color0 != m_texture_id) {
+				g_color0 = m_texture_id;
+			gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
+		}
+			break;
+		case GL_COLOR_ATTACHMENT1:
+		if (g_color1 != m_texture_id) {
+				g_color1 = m_texture_id;
+			gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
+		}
+			break;
+		case GL_DEPTH_STENCIL_ATTACHMENT:
+		if (g_depth != m_texture_id) {
+			gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
+			g_depth = m_texture_id;
+		}
+			break;
+		default:
+			gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, m_texture_target, m_texture_id, 0);
+			break;
+	}
+
 	// FIXME DEBUG
 	//fprintf(stderr, "FB status %x\n", gl_CheckFramebufferStatus(GL_FRAMEBUFFER));
 }
@@ -204,11 +227,6 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 			fprintf(stderr, "Skip Texture %dx%d with a pitch of %d pixel. Type %x\n", m_size.x, m_size.y, pitch >>2, m_format);
 			fprintf(stderr, "Box (%d,%d)x(%d,%d)\n", r.x, r.y, r.width(), r.height());
 #endif
-			//char *random = (char*)malloc(m_size.x*m_size.y*32);
-			//glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, random);
-			//return true;
-			//glTexSubImage2D(m_texture_target, 0, r.x, r.y, r.width(), r.height(), GL_RGBA, GL_UNSIGNED_BYTE, data);
-			//glFinish();
 
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Restore default behavior
 			return false;

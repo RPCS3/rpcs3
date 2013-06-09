@@ -280,8 +280,7 @@ class GSDeviceOGL : public GSDevice
 				uint32 tme:1;
 				uint32 fst:1;
 				uint32 logz:1;
-				uint32 rtcopy:1;
-				uint32 wildhack:2;
+				//uint32 rtcopy:1;
 			};
 
 			uint32 key;
@@ -580,9 +579,6 @@ class GSDeviceOGL : public GSDevice
 
 	void CheckDebugLog();
 	static void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
-	void DebugOutput();
-	void DebugInput();
-	void DebugBB();
 
 	bool HasStencil() { return true; }
 	bool HasDepth32() { return true; }
@@ -603,6 +599,7 @@ class GSDeviceOGL : public GSDevice
 	void ClearDepth(GSTexture* t, float c);
 	void ClearStencil(GSTexture* t, uint8 c);
 
+	void CreateSampler(GLuint& sampler, bool bilinear, bool tau, bool tav);
 	GSTexture* CreateRenderTarget(int w, int h, bool msaa, int format = 0);
 	GSTexture* CreateDepthStencil(int w, int h, bool msaa, int format = 0);
 	GSTexture* CreateTexture(int w, int h, int format = 0);

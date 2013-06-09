@@ -33,47 +33,42 @@ void GSDeviceOGL::CreateTextureFX()
 	m_vs_cb = new GSUniformBufferOGL(g_vs_cb_index, sizeof(VSConstantBuffer));
 	m_ps_cb = new GSUniformBufferOGL(g_ps_cb_index, sizeof(PSConstantBuffer));
 
-	gl_GenSamplers(1, &m_rt_ss);
-	// FIXME, seem to have no difference between sampler !!!
-	m_palette_ss = m_rt_ss;
-
-	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	// FIXME which value for GL_TEXTURE_MIN_LOD
-	gl_SamplerParameterf(m_rt_ss, GL_TEXTURE_MAX_LOD, FLT_MAX);
-	// FIXME: seems there is 2 possibility in opengl
-	// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	// gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
-	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
+	CreateSampler(m_palette_ss, false, false, false);
 
 	GSInputLayoutOGL vert_format[] =
 	{
-		// FIXME
 		{0 , 2 , GL_FLOAT          , GL_FALSE , sizeof(GSVertex) , (const GLvoid*)(0) }  ,
 		{1 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(GSVertex) , (const GLvoid*)(8) }  ,
 		{2 , 1 , GL_FLOAT          , GL_FALSE , sizeof(GSVertex) , (const GLvoid*)(12) } ,
 		{3 , 2 , GL_UNSIGNED_SHORT , GL_FALSE , sizeof(GSVertex) , (const GLvoid*)(16) } ,
 		{4 , 1 , GL_UNSIGNED_INT   , GL_FALSE , sizeof(GSVertex) , (const GLvoid*)(20) } ,
-		// note: there is a 32 bits pad
 		{5 , 2 , GL_UNSIGNED_SHORT , GL_FALSE , sizeof(GSVertex) , (const GLvoid*)(24) } ,
 		{6 , 4 , GL_UNSIGNED_BYTE  , GL_TRUE  , sizeof(GSVertex) , (const GLvoid*)(28) } ,
 	};
 	m_vb = new GSVertexBufferStateOGL(sizeof(GSVertex), vert_format, countof(vert_format));
 
 	// Compile some dummy shaders to allow modification inside Apitrace for debug
-#ifdef _LINUX
 	GLuint dummy;
 	std::string macro = "\n";
 	CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &dummy, tfx_glsl, macro);
-	if (GLLoader::found_geometry_shader)
-		CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &dummy, tfx_glsl, macro);
+	CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &dummy, tfx_glsl, macro);
 	CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &dummy, tfx_glsl, macro);
-#endif
+
+	// Pre compile all Geometry & Vertex Shader
+	// It might cost a seconds at startup but it would reduce benchmark pollution
+	GSDeviceOGL::GSSelector gs_sel;
+	for (uint32 key = 0; key < (1 << 3); key++) {
+		gs_sel.key = key;
+		SetupGS(gs_sel);
+	}
+	GSDeviceOGL::VSSelector vs_sel;
+	for (uint32 key = 0; key < (1 << 5); key++) {
+		vs_sel.key = key;
+		SetupVS(vs_sel, NULL);
+	}
+	// Use sane reset value
+	GSSetShader(0);
+	VSSetShader(0);
 }
 
 void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
@@ -88,8 +83,7 @@ void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		std::string macro = format("#define VS_BPPZ %d\n", sel.bppz)
 			+ format("#define VS_LOGZ %d\n", sel.logz)
 			+ format("#define VS_TME %d\n", sel.tme)
-			+ format("#define VS_FST %d\n", sel.fst)
-			+ format("#define VS_RTCOPY %d\n", sel.rtcopy);
+			+ format("#define VS_FST %d\n", sel.fst);
 
 		GLuint vs;
 		CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &vs, tfx_glsl, macro);
@@ -101,7 +95,7 @@ void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 	// *************************************************************
 	// Dynamic
 	// *************************************************************
-	if(m_vs_cb_cache.Update(cb)) {
+	if(cb != NULL && m_vs_cb_cache.Update(cb)) {
 		SetUniformBuffer(m_vs_cb);
 		m_vs_cb->upload(cb);
 	}
@@ -168,7 +162,6 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 		CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &ps, tfx_glsl, macro);
 
 		m_ps[sel] = ps;
-		i = m_ps.find(sel);
 	} else {
 		ps = i->second;
 	}
@@ -201,36 +194,7 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 			// *************************************************************
 			// Static
 			// *************************************************************
-			gl_GenSamplers(1, &ss0);
-			if (ssel.ltf) {
-				gl_SamplerParameteri(ss0, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				gl_SamplerParameteri(ss0, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			} else {
-				gl_SamplerParameteri(ss0, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				gl_SamplerParameteri(ss0, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			}
-
-			// FIXME ensure U -> S,  V -> T and W->R
-			if (ssel.tau)
-				gl_SamplerParameteri(ss0, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			else
-				gl_SamplerParameteri(ss0, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-
-			if (ssel.tav)
-				gl_SamplerParameteri(ss0, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			else
-				gl_SamplerParameteri(ss0, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-			gl_SamplerParameteri(ss0, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-			// FIXME which value for GL_TEXTURE_MIN_LOD
-			gl_SamplerParameterf(m_rt_ss, GL_TEXTURE_MAX_LOD, FLT_MAX);
-			// FIXME: seems there is 2 possibility in opengl
-			// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
-			// gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-			gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-			gl_SamplerParameteri(m_rt_ss, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
-			// FIXME: need ogl extension sd.MaxAnisotropy = 16;
+			CreateSampler(ss0, ssel.ltf, ssel.tau, ssel.tav);
 
 			m_ps_ss[ssel] = ss0;
 		}
@@ -241,8 +205,7 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 		}
 	}
 
-	PSSetSamplerState(ss0, ss1, sel.date ? m_rt_ss : 0);
-
+	PSSetSamplerState(ss0, ss1, 0);
 	PSSetShader(ps);
 }
 

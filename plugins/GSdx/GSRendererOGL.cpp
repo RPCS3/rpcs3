@@ -319,10 +319,8 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	vs_sel.tme = PRIM->TME;
 	vs_sel.fst = PRIM->FST;
-	//vs_sel.logz = dev->HasDepth32() ? 0 : m_logz ? 1 : 0;
 	vs_sel.logz = m_logz ? 1 : 0;
 	//OGL vs_sel.rtcopy = !!rtcopy;
-	vs_sel.rtcopy = false;
 
 	// The real GS appears to do no masking based on the Z buffer format and writing larger Z values
 	// than the buffer supports seems to be an error condition on the real GS, causing it to crash.
@@ -529,8 +527,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	dev->SetupOM(om_dssel, om_bsel, afix);
 	dev->SetupVS(vs_sel, &vs_cb);
-	if (GLLoader::found_geometry_shader)
-		dev->SetupGS(gs_sel);
+	dev->SetupGS(gs_sel);
 	dev->SetupPS(ps_sel, &ps_cb, ps_ssel);
 
 	// draw

@@ -116,7 +116,7 @@ GSDeviceOGL::~GSDeviceOGL()
 	// Delete HW FX
 	delete m_vs_cb;
 	delete m_ps_cb;
-	gl_DeleteSamplers(1, &m_rt_ss);
+	gl_DeleteSamplers(1, &m_palette_ss);
 	delete m_vb;
 
 	if (GLLoader::found_GL_ARB_separate_shader_objects) {
@@ -235,36 +235,9 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 
 	hr = m_dev->CreateBlendState(&bsd, &m_convert.bs);
 #endif
-	gl_GenSamplers(1, &m_convert.ln);
-	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	// FIXME which value for GL_TEXTURE_MIN_LOD
-	gl_SamplerParameterf(m_convert.ln, GL_TEXTURE_MAX_LOD, FLT_MAX);
-	// FIXME: seems there is 2 possibility in opengl
-	// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	// gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	gl_SamplerParameteri(m_convert.ln, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
-	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
 
-
-	gl_GenSamplers(1, &m_convert.pt);
-	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	// FIXME which value for GL_TEXTURE_MIN_LOD
-	gl_SamplerParameterf(m_convert.pt, GL_TEXTURE_MAX_LOD, FLT_MAX);
-	// FIXME: seems there is 2 possibility in opengl
-	// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	// gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	gl_SamplerParameteri(m_convert.pt, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
-	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
+	CreateSampler(m_convert.ln, true, false, false);
+	CreateSampler(m_convert.pt, false, false, false);
 
 	m_convert.dss = new GSDepthStencilOGL();
 	m_convert.bs  = new GSBlendStateOGL();
@@ -431,44 +404,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, flags, NULL, 0, D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
 #endif
 
-	// ****************************************************************
-	// The check of capability is done when context is created on openGL
-	// For the moment don't bother with extension, I just ask the most recent openGL version
-	// ****************************************************************
-#if 0
-	if(FAILED(hr)) return false;
-
-	if(!SetFeatureLevel(level, true))
-	{
-		return false;
-	}
-
-	D3D11_FEATURE_DATA_D3D10_X_HARDWARE_OPTIONS options;
-
-	hr = m_dev->CheckFeatureSupport(D3D11_FEATURE_D3D10_X_HARDWARE_OPTIONS, &options, sizeof(D3D11_FEATURE_D3D10_X_HARDWARE_OPTIONS));
-
-	// msaa
-
-	for(uint32 i = 2; i <= D3D11_MAX_MULTISAMPLE_SAMPLE_COUNT; i++)
-	{
-		uint32 quality[2] = {0, 0};
-
-		if(SUCCEEDED(m_dev->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, i, &quality[0])) && quality[0] > 0
-		&& SUCCEEDED(m_dev->CheckMultisampleQualityLevels(DXGI_FORMAT_D32_FLOAT_S8X24_UINT, i, &quality[1])) && quality[1] > 0)
-		{
-			m_msaa_desc.Count = i;
-			m_msaa_desc.Quality = std::min<uint32>(quality[0] - 1, quality[1] - 1);
-
-			if(i >= m_msaa) break;
-		}
-	}
-
-	if(m_msaa_desc.Count == 1)
-	{
-		m_msaa = 0;
-	}
-#endif
-
 	return true;
 }
 
@@ -506,79 +441,6 @@ void GSDeviceOGL::Flip()
 #if defined(ENABLE_OGL_DEBUG) || defined(PRINT_FRAME_NUMBER)
 	g_frame_count++;
 #endif
-}
-
-void GSDeviceOGL::DebugBB()
-{
-	bool dump_me = false;
-	uint32 start = theApp.GetConfig("debug_ogl_dump", 0);
-	uint32 length = theApp.GetConfig("debug_ogl_dump_length", 5);
-	if ( (start != 0 && g_frame_count >= start && g_frame_count < (start + length)) ) dump_me = true;
-
-	if (!dump_me) return;
-
-	GLuint fbo_old = m_state.fbo;
-	OMSetFBO(m_fbo);
-
-	GSVector2i size = m_backbuffer->GetSize();
-	GSTexture* rt = CreateRenderTarget(size.x, size.y, false);
-
-	static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
-
-	gl_BlitFramebuffer(0, 0, size.x, size.y,
-			0, 0, size.x, size.y,
-			GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
-	rt->Save(format("/tmp/out_f%d__d%d__bb.bmp", g_frame_count, g_draw_count));
-
-	delete rt;
-	OMSetFBO(fbo_old);
-}
-
-void GSDeviceOGL::DebugInput()
-{
-	bool dump_me = false;
-	uint32 start = theApp.GetConfig("debug_ogl_dump", 0);
-	uint32 length = theApp.GetConfig("debug_ogl_dump_length", 5);
-	if ( (start != 0 && g_frame_count >= start && g_frame_count < (start + length)) ) dump_me = true;
-
-	if (!dump_me) return;
-
-	for (auto i = 0 ; i < 3 ; i++) {
-		if (m_state.ps_srv[i] != NULL) {
-			m_state.ps_srv[i]->Save(format("/tmp/in_f%d__d%d__%d.bmp", g_frame_count, g_draw_count, i));
-		}
-	}
-	//if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/target_f%d__d%d__tex.bmp", g_frame_count, g_draw_count));
-	//if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_in_%d.bmp", g_draw_count));
-
-	fprintf(stderr, "Draw %d (Frame %d)\n", g_draw_count, g_frame_count);
-	fprintf(stderr, "vs: %d ; gs: %d ; ps: %d\n", m_state.vs, m_state.gs, m_state.ps);
-	m_state.vb->debug();
-	m_state.bs->debug();
-	m_state.dss->debug();
-}
-
-void GSDeviceOGL::DebugOutput()
-{
-	CheckDebugLog();
-
-	bool dump_me = false;
-	uint32 start = theApp.GetConfig("debug_ogl_dump", 0);
-	uint32 length = theApp.GetConfig("debug_ogl_dump_length", 5);
-	if ( (start != 0 && g_frame_count >= start && g_frame_count < (start + length)) ) dump_me = true;
-
-	if (!dump_me) return;
-
-	if (m_state.rtv == m_backbuffer) {
-		m_state.rtv->Save(format("/tmp/out_f%d__d%d__back.bmp", g_frame_count, g_draw_count));
-	} else {
-		if (m_state.rtv != NULL) m_state.rtv->Save(format("/tmp/out_f%d__d%d__tex.bmp", g_frame_count, g_draw_count));
-	}
-	if (m_state.dsv != NULL) m_state.dsv->Save(format("/tmp/ds_out_%d.bmp", g_draw_count));
-
-	fprintf(stderr, "\n");
-	//DebugBB();
 }
 
 static void set_uniform_buffer_binding(GLuint prog, GLchar* name, GLuint binding) {
@@ -634,9 +496,6 @@ GLuint GSDeviceOGL::link_prog()
 
 void GSDeviceOGL::BeforeDraw()
 {
-#ifdef ENABLE_OGL_DEBUG
-	DebugInput();
-#endif
 	hash_map<uint64, GLuint >::iterator single_prog;
 
 
@@ -684,9 +543,6 @@ void GSDeviceOGL::BeforeDraw()
 
 void GSDeviceOGL::AfterDraw()
 {
-#ifdef ENABLE_OGL_DEBUG
-	DebugOutput();
-#endif
 #if defined(ENABLE_OGL_DEBUG) || defined(PRINT_FRAME_NUMBER)
 	g_draw_count++;
 #endif
@@ -764,6 +620,40 @@ void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 	glDisable(GL_SCISSOR_TEST);
 	gl_ClearBufferiv(GL_STENCIL, 0, &color);
 	glEnable(GL_SCISSOR_TEST);
+}
+
+void GSDeviceOGL::CreateSampler(GLuint& sampler, bool bilinear, bool tau, bool tav)
+{
+	gl_GenSamplers(1, &sampler);
+	if (bilinear) {
+		gl_SamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		gl_SamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	} else {
+		gl_SamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		gl_SamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+
+	// FIXME ensure U -> S,  V -> T and W->R
+	if (tau)
+		gl_SamplerParameteri(sampler, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	else
+		gl_SamplerParameteri(sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	if (tav)
+		gl_SamplerParameteri(sampler, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	else
+		gl_SamplerParameteri(sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	gl_SamplerParameteri(sampler, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	// FIXME which value for GL_TEXTURE_MIN_LOD
+	gl_SamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, FLT_MAX);
+
+	// FIXME: seems there is 2 possibility in opengl
+	// DX: sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	// gl_SamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+	gl_SamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	gl_SamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
+	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
 }
 
 GSTexture* GSDeviceOGL::CreateRenderTarget(int w, int h, bool msaa, int format)
@@ -1316,6 +1206,12 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 
 void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const char* glsl_h_code, const std::string& macro_sel)
 {
+	// Not supported
+	if (type == GL_GEOMETRY_SHADER && !GLLoader::found_geometry_shader) {
+		*program = 0;
+		return;
+	}
+
 	// *****************************************************
 	// Build a header string
 	// *****************************************************
@@ -1459,13 +1355,13 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 
 void GSDeviceOGL::CheckDebugLog()
 {
-       unsigned int count = 64; // max. num. of messages that will be read from the log
+       unsigned int count = 16; // max. num. of messages that will be read from the log
        int bufsize = 2048;
-       unsigned int* sources      = new unsigned int[count];
-       unsigned int* types        = new unsigned int[count];
-       unsigned int* ids   = new unsigned int[count];
-       unsigned int* severities = new unsigned int[count];
-       int* lengths = new int[count];
+	   unsigned int sources[16] = {};
+	   unsigned int types[16] = {};
+	   unsigned int ids[16]   = {};
+	   unsigned int severities[16] = {};
+	   int lengths[16] = {};
        char* messageLog = new char[bufsize];
 
        unsigned int retVal = gl_GetDebugMessageLogARB(count, bufsize, sources, types, ids, severities, lengths, messageLog);
@@ -1480,13 +1376,6 @@ void GSDeviceOGL::CheckDebugLog()
                     pos += lengths[i];
               }
        }
-
-       delete [] sources;
-       delete [] types;
-       delete [] ids;
-       delete [] severities;
-       delete [] lengths;
-       delete [] messageLog;
 }
 
 void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message)
