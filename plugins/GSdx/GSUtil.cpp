@@ -62,7 +62,9 @@ const char* GSUtil::GetLibName()
 		sl.push_back(format("GCC %d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__));
 		#endif
 
-		#if _M_SSE >= 0x500
+		#if _M_SSE >= 0x501
+		sl.push_back("AVX2");
+		#elif _M_SSE >= 0x500
 		sl.push_back("AVX");
 		#elif _M_SSE >= 0x402
 		sl.push_back("SSE42");

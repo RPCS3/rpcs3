@@ -214,7 +214,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release AVX|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="vsprops\ProjectRootDir.props" />
-    <Import Project="vsprops\avx.props" />
+    <Import Project="vsprops\avx_vs11.props" />
     <Import Project="vsprops\common.props" />
     <Import Project="vsprops\release.props" />
     <Import Project="vsprops\x86.props" />
@@ -238,7 +238,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug AVX|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="vsprops\ProjectRootDir.props" />
-    <Import Project="vsprops\avx.props" />
+    <Import Project="vsprops\avx_vs11.props" />
     <Import Project="vsprops\common.props" />
     <Import Project="vsprops\debug.props" />
     <Import Project="vsprops\x86.props" />
@@ -294,7 +294,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release AVX|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="vsprops\ProjectRootDir.props" />
-    <Import Project="vsprops\avx.props" />
+    <Import Project="vsprops\avx_vs11.props" />
     <Import Project="vsprops\common.props" />
     <Import Project="vsprops\release.props" />
     <Import Project="vsprops\x64.props" />
@@ -318,7 +318,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug AVX|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="vsprops\ProjectRootDir.props" />
-    <Import Project="vsprops\avx.props" />
+    <Import Project="vsprops\avx_vs11.props" />
     <Import Project="vsprops\common.props" />
     <Import Project="vsprops\debug.props" />
     <Import Project="vsprops\x64.props" />
