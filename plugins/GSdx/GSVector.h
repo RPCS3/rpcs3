@@ -4471,6 +4471,11 @@ public:
 	VECTOR8i_PERMUTE64_1(c, 2)
 	VECTOR8i_PERMUTE64_1(d, 3)
 
+	__forceinline GSVector8i permute32(const GSVector8i& mask) const
+	{
+		return GSVector8i(_mm256_permutevar8x32_epi32(m, mask));
+	}
+
 	__forceinline static GSVector8i zero() {return GSVector8i(_mm256_setzero_si256());}
 
 	__forceinline static GSVector8i xffffffff() {return zero() == zero();}
@@ -4720,9 +4725,15 @@ public:
 	{
 		// FIXME: MSVC bug, _mm256_castps128_ps256 may directy reload spilled regs from unaligned memory with vmovaps (in vs2012 they simply changed it to vmovups, still can't keep the second xmm in a register)
 
-		// m = _mm256_permute2f128_ps(_mm256_castps128_ps256(m0), _mm256_castps128_ps256(m1), 0x20);
+		#if _MSC_VER >= 1700 
+		
+		this->m = _mm256_permute2f128_ps(_mm256_castps128_ps256(m0), _mm256_castps128_ps256(m1), 0x20);
+
+		#else
 
 		this->m = zero().insert<0>(m0).insert<1>(m1);
+
+		#endif
 	}
 
 	__forceinline GSVector8(const GSVector8& v)
@@ -4737,16 +4748,16 @@ public:
 
 	__forceinline explicit GSVector8(__m128 m)
 	{
-		#if _MSC_VER >= 1700 
-		
 		// FIXME: MSVC bug, _mm256_castps128_ps256 may directy reload spilled regs from unaligned memory with vmovaps
 
+		#if _MSC_VER >= 1700 
+		
 		this->m = _mm256_castps128_ps256(m);
 		this->m = _mm256_permute2f128_ps(this->m, this->m, 0);
 
 		#else
 
-		this->m = zero().insert<0>(m).xx();
+		this->m = zero().insert<0>(m).aa();
 
 		#endif
 	}
@@ -4779,16 +4790,16 @@ public:
 
 	__forceinline void operator = (__m128 m)
 	{
-		#if _MSC_VER >= 1700 
-		
 		// FIXME: MSVC bug, _mm256_castps128_ps256 may directy reload spilled regs from unaligned memory with vmovaps
+		
+		#if _MSC_VER >= 1700 
 		
 		this->m = _mm256_castps128_ps256(m);
 		this->m = _mm256_permute2f128_ps(this->m, this->m, 0);
 
 		#else
 
-		this->m = zero().insert<0>(m).xx();
+		this->m = zero().insert<0>(m).aa();
 
 		#endif
 	}
@@ -5332,6 +5343,8 @@ public:
 	VECTOR8_PERMUTE128_1(d, 3)
 	VECTOR8_PERMUTE128_1(_, 8)
 
+	#if _M_SSE >= 0x501
+
 	// a = v[63:0]
 	// b = v[127:64]
 	// c = v[191:128]
@@ -5339,7 +5352,6 @@ public:
 
 	#define VECTOR8_PERMUTE64_4(as, an, bs, bn, cs, cn, ds, dn) \
 		__forceinline GSVector8 as##bs##cs##ds() const {return GSVector8(_mm256_castpd_ps(_mm256_permute4x64_pd(_mm256_castps_pd(m), _MM_SHUFFLE(dn, cn, bn, an))));} \
-		__forceinline GSVector8 as##bs##cs##ds(const GSVector8& v) const {return GSVector8(_mm256_castpd_ps(_mm256_permute4x64_pd(_mm256_castps_pd(m), _MM_SHUFFLE(dn, cn, bn, an))));} \
 
 	#define VECTOR8_PERMUTE64_3(as, an, bs, bn, cs, cn) \
 		VECTOR8_PERMUTE64_4(as, an, bs, bn, cs, cn, a, 0) \
@@ -5363,6 +5375,13 @@ public:
 	VECTOR8_PERMUTE64_1(b, 1)
 	VECTOR8_PERMUTE64_1(c, 2)
 	VECTOR8_PERMUTE64_1(d, 3)
+
+	__forceinline GSVector8 permute32(const GSVector8i& mask) const
+	{
+		return GSVector8(_mm256_permutevar8x32_ps(m, mask));
+	}
+
+	#endif
 };
 
 #endif
