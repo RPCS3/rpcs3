@@ -10,6 +10,7 @@
     <ClCompile>
       <PreprocessorDefinitions>_M_SSE=0x500;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/arch:AVX %(AdditionalOptions)</AdditionalOptions>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

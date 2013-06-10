@@ -22,14 +22,27 @@
 #include "stdafx.h"
 #include "GSBlock.h"
 
+#if _M_SSE >= 0x501
+const GSVector8i GSBlock::m_r16mask(
+	0, 1, 4, 5, 2, 3, 6, 7, 8, 9, 12, 13, 10, 11, 14, 15, 
+	0, 1, 4, 5, 2, 3, 6, 7, 8, 9, 12, 13, 10, 11, 14, 15);
+#else
 const GSVector4i GSBlock::m_r16mask(0, 1, 4, 5, 2, 3, 6, 7, 8, 9, 12, 13, 10, 11, 14, 15);
+#endif
 const GSVector4i GSBlock::m_r8mask(0, 4, 2, 6, 8, 12, 10, 14, 1, 5, 3, 7, 9, 13, 11, 15);
 const GSVector4i GSBlock::m_r4mask(0, 1, 4, 5, 8, 9, 12, 13, 2, 3, 6, 7, 10, 11, 14, 15);
 
+#if _M_SSE >= 0x501
+const GSVector8i GSBlock::m_xxxa(0x00008000);
+const GSVector8i GSBlock::m_xxbx(0x00007c00);
+const GSVector8i GSBlock::m_xgxx(0x000003e0);
+const GSVector8i GSBlock::m_rxxx(0x0000001f);
+#else
 const GSVector4i GSBlock::m_xxxa(0x00008000);
 const GSVector4i GSBlock::m_xxbx(0x00007c00);
 const GSVector4i GSBlock::m_xgxx(0x000003e0);
 const GSVector4i GSBlock::m_rxxx(0x0000001f);
+#endif
 
 const GSVector4i GSBlock::m_uw8hmask0 = GSVector4i(0, 0, 0, 0, 1, 1, 1, 1, 8, 8, 8, 8, 9, 9, 9, 9);
 const GSVector4i GSBlock::m_uw8hmask1 = GSVector4i(2, 2, 2, 2, 3, 3, 3, 3, 10, 10, 10, 10, 11, 11, 11, 11);

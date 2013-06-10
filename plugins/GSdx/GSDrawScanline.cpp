@@ -1553,19 +1553,30 @@ void GSDrawScanline::DrawRectT(const int* RESTRICT row, const int* RESTRICT col,
 {
 	if(m == 0xffffffff) return;
 
+	#if _M_SSE >= 0x501
+
+	GSVector8i color((int)c);
+	GSVector8i mask((int)m);
+
+	#else
+
 	GSVector4i color((int)c);
 	GSVector4i mask((int)m);
+
+	#endif
 
 	if(sizeof(T) == sizeof(uint16))
 	{
 		color = color.xxzzlh();
 		mask = mask.xxzzlh();
+		c = (c & 0xffff) | (c << 16);
+		m = (m & 0xffff) | (m << 16);
 	}
 
-	if(masked) ASSERT(mask.u32[0] != 0);
-
 	color = color.andnot(mask);
-	c = color.extract32<0>();
+	c = c & (~m);
+
+	if(masked) ASSERT(mask.u32[0] != 0);
 
 	GSVector4i br = r.ralign<Align_Inside>(GSVector2i(8 * 4 / sizeof(T), 8));
 
@@ -1606,6 +1617,37 @@ void GSDrawScanline::FillRect(const int* RESTRICT row, const int* RESTRICT col, 
 	}
 }
 
+#if _M_SSE >= 0x501
+
+template<class T, bool masked>
+void GSDrawScanline::FillBlock(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, const GSVector8i& c, const GSVector8i& m)
+{
+	if(r.x >= r.z) return;
+
+	T* vm = (T*)m_global.vm;
+
+	for(int y = r.y; y < r.w; y += 8)
+	{
+		T* RESTRICT d = &vm[row[y]];
+
+		for(int x = r.x; x < r.z; x += 8 * 4 / sizeof(T))
+		{
+			GSVector8i* RESTRICT p = (GSVector8i*)&d[col[x]];
+
+			p[0] = !masked ? c : (c | (p[0] & m));
+			p[1] = !masked ? c : (c | (p[1] & m));
+			p[2] = !masked ? c : (c | (p[2] & m));
+			p[3] = !masked ? c : (c | (p[3] & m));
+			p[4] = !masked ? c : (c | (p[4] & m));
+			p[5] = !masked ? c : (c | (p[5] & m));
+			p[6] = !masked ? c : (c | (p[6] & m));
+			p[7] = !masked ? c : (c | (p[7] & m));
+		}
+	}
+}
+
+#else
+
 template<class T, bool masked>
 void GSDrawScanline::FillBlock(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m)
 {
@@ -1631,3 +1673,5 @@ void GSDrawScanline::FillBlock(const int* RESTRICT row, const int* RESTRICT col,
 		}
 	}
 }
+
+#endif

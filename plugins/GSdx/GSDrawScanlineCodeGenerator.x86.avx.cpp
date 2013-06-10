@@ -31,6 +31,7 @@ static const int _v = _args + 8;
 
 void GSDrawScanlineCodeGenerator::Generate()
 {
+//ret(8);
 	push(ebx);
 	push(esi);
 	push(edi);
@@ -1143,13 +1144,6 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 
 	if(!m_sel.lcm)
 	{
-		// store u/v
-
-		vpunpckldq(xmm0, xmm2, xmm3);
-		vmovdqa(ptr[&m_local.temp.uv[0]], xmm0);
-		vpunpckhdq(xmm0, xmm2, xmm3);
-		vmovdqa(ptr[&m_local.temp.uv[1]], xmm0);
-
 		// lod = -log2(Q) * (1 << L) + K
 
 		vpcmpeqd(xmm1, xmm1);
@@ -1167,18 +1161,37 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 			
 		// xmm4 = mant(q) | 1.0f
 
-		vmulps(xmm5, xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[0]]);
-		vaddps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[1]]);
-		vmulps(xmm5, xmm4);
-		vsubps(xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[3]]); 
-		vaddps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[2]]);
-		vmulps(xmm4, xmm5);
-		vaddps(xmm4, xmm0);
+		if(m_cpu.has(util::Cpu::tFMA))
+		{
+			vmovaps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[0]]); // c0
+			vfmadd213ps(xmm5, xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[1]]); // c0 * xmm4 + c1
+			vfmadd213ps(xmm5, xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[2]]); // (c0 * xmm4 + c1) * xmm4 + c2
+			vsubps(xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[3]]); // xmm4 - 1.0f
+			vfmadd213ps(xmm4, xmm5, xmm0); // ((c0 * xmm4 + c1) * xmm4 + c2) * (xmm4 - 1.0f) + xmm0
+		}
+		else
+		{
+			vmulps(xmm5, xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[0]]);
+			vaddps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[1]]);
+			vmulps(xmm5, xmm4);
+			vsubps(xmm4, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[3]]); 
+			vaddps(xmm5, ptr[&GSDrawScanlineCodeGenerator::m_log2_coef[2]]);
+			vmulps(xmm4, xmm5);
+			vaddps(xmm4, xmm0);
+		}
 
 		// xmm4 = log2(Q) = ((((c0 * xmm4) + c1) * xmm4) + c2) * (xmm4 - 1.0f) + xmm0
 
-		vmulps(xmm4, ptr[&m_local.gd->l]);
-		vaddps(xmm4, ptr[&m_local.gd->k]);
+		if(m_cpu.has(util::Cpu::tFMA))
+		{
+			vmovaps(xmm5, ptr[&m_local.gd->l]);
+			vfmadd213ps(xmm4, xmm5, ptr[&m_local.gd->k]); 
+		}
+		else
+		{
+			vmulps(xmm4, ptr[&m_local.gd->l]);
+			vaddps(xmm4, ptr[&m_local.gd->k]);
+		}
 
 		// xmm4 = (-log2(Q) * (1 << L) + K) * 0x10000
 
@@ -1196,6 +1209,7 @@ void GSDrawScanlineCodeGenerator::SampleTextureLOD()
 		}
 
 		vpsrld(xmm0, xmm4, 16);
+
 		vmovdqa(ptr[&m_local.temp.lod.i], xmm0);
 /*
 vpslld(xmm5, xmm0, 6);
@@ -1205,58 +1219,93 @@ return;
 */
 		if(m_sel.mmin == 2) // trilinear mode
 		{
-			vpshuflw(xmm0, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
-			vpshufhw(xmm0, xmm0, _MM_SHUFFLE(2, 2, 0, 0));
-			vmovdqa(ptr[&m_local.temp.lod.f], xmm0);
+			vpshuflw(xmm1, xmm4, _MM_SHUFFLE(2, 2, 0, 0));
+			vpshufhw(xmm1, xmm1, _MM_SHUFFLE(2, 2, 0, 0));
+			vmovdqa(ptr[&m_local.temp.lod.f], xmm1);
 		}
 
-		// shift u/v by (int)lod
+		// shift u/v/minmax by (int)lod
 
-		vmovq(xmm4, ptr[&m_local.gd->t.minmax]);
+		if(m_cpu.has(util::Cpu::tAVX2))
+		{
+			vpsravd(xmm2, xmm2, xmm0);
+			vpsravd(xmm3, xmm3, xmm0);
 
-		vmovdqa(xmm2, ptr[&m_local.temp.uv[0]]);
-		vmovdqa(xmm5, xmm2);
-		vmovdqa(xmm3, ptr[&m_local.temp.uv[1]]);
-		vmovdqa(xmm6, xmm3);
+			vmovdqa(ptr[&m_local.temp.uv[0]], xmm2);
+			vmovdqa(ptr[&m_local.temp.uv[1]], xmm3);
 
-		vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[0]]); 
-		vpsrad(xmm2, xmm0);
-		vpsrlw(xmm1, xmm4, xmm0);
-		vmovq(ptr[&m_local.temp.uv_minmax[0].u32[0]], xmm1);
+			// m_local.gd->t.minmax => m_local.temp.uv_minmax[0/1]
 
-		vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[1]]);
-		vpsrad(xmm5, xmm0);
-		vpsrlw(xmm1, xmm4, xmm0);
-		vmovq(ptr[&m_local.temp.uv_minmax[1].u32[0]], xmm1);
+			vmovq(xmm4, ptr[&m_local.gd->t.minmax]); // x x x x maxv maxu minv minu
+			vpunpcklwd(xmm4, xmm4); // maxv maxv maxu maxu minv minv minu minu
 
-		vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[2]]);
-		vpsrad(xmm3, xmm0);
-		vpsrlw(xmm1, xmm4, xmm0);
-		vmovq(ptr[&m_local.temp.uv_minmax[0].u32[2]], xmm1);
+			vpxor(xmm1, xmm1);
+			
+			vpunpckldq(xmm6, xmm4, xmm4); // minv minv minv minv minu minu minu minu
+			vpunpcklwd(xmm5, xmm6, xmm1); // 0 minu 0 minu 0 minu 0 minu
+			vpsrlvd(xmm5, xmm5, xmm0);
+			vpunpckhwd(xmm6, xmm6, xmm1); // 0 minv 0 minv 0 minv 0 minv
+			vpsrlvd(xmm6, xmm6, xmm0);
+			vpackusdw(xmm5, xmm6); // xmm5 = minv minv minv minv minu minu minu minu
+			
+			vpunpckhdq(xmm4, xmm4); // maxv maxv maxv maxv maxu maxu maxu maxu
+			vpunpcklwd(xmm6, xmm4, xmm1); // 0 maxu 0 maxu 0 maxu 0 maxu
+			vpsrlvd(xmm6, xmm6, xmm0);
+			vpunpckhwd(xmm4, xmm1); // 0 maxv 0 maxv 0 maxv 0 maxv
+			vpsrlvd(xmm4, xmm4, xmm0);
+			vpackusdw(xmm6, xmm4); // xmm6 = maxv maxv maxv maxv maxu maxu maxu maxu
 
-		vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[3]]);
-		vpsrad(xmm6, xmm0);
-		vpsrlw(xmm1, xmm4, xmm0);
-		vmovq(ptr[&m_local.temp.uv_minmax[1].u32[2]], xmm1);
+			vmovdqa(ptr[&m_local.temp.uv_minmax[0]], xmm5);
+			vmovdqa(ptr[&m_local.temp.uv_minmax[1]], xmm6);
+		}
+		else
+		{
+			vmovq(xmm4, ptr[&m_local.gd->t.minmax]);
 
-		vpunpckldq(xmm2, xmm3);
-		vpunpckhdq(xmm5, xmm6);
-		vpunpckhdq(xmm3, xmm2, xmm5);
-		vpunpckldq(xmm2, xmm5);
+			vpunpckldq(xmm5, xmm2, xmm3);
+			vpunpckhdq(xmm6, xmm2, xmm3);
+			vmovdqa(xmm2, xmm5);
+			vmovdqa(xmm3, xmm6);
 
-		vmovdqa(ptr[&m_local.temp.uv[0]], xmm2);
-		vmovdqa(ptr[&m_local.temp.uv[1]], xmm3);
+			vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[0]]); 
+			vpsrad(xmm2, xmm0);
+			vpsrlw(xmm1, xmm4, xmm0);
+			vmovq(ptr[&m_local.temp.uv_minmax[0].u32[0]], xmm1);
 
-		vmovdqa(xmm5, ptr[&m_local.temp.uv_minmax[0]]);
-		vmovdqa(xmm6, ptr[&m_local.temp.uv_minmax[1]]);
+			vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[1]]);
+			vpsrad(xmm5, xmm0);
+			vpsrlw(xmm1, xmm4, xmm0);
+			vmovq(ptr[&m_local.temp.uv_minmax[1].u32[0]], xmm1);
 
-		vpunpcklwd(xmm0, xmm5, xmm6);
-		vpunpckhwd(xmm1, xmm5, xmm6);
-		vpunpckldq(xmm5, xmm0, xmm1);
-		vpunpckhdq(xmm6, xmm0, xmm1);
+			vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[2]]);
+			vpsrad(xmm3, xmm0);
+			vpsrlw(xmm1, xmm4, xmm0);
+			vmovq(ptr[&m_local.temp.uv_minmax[0].u32[2]], xmm1);
 
-		vmovdqa(ptr[&m_local.temp.uv_minmax[0]], xmm5);
-		vmovdqa(ptr[&m_local.temp.uv_minmax[1]], xmm6);
+			vmovd(xmm0, ptr[&m_local.temp.lod.i.u32[3]]);
+			vpsrad(xmm6, xmm0);
+			vpsrlw(xmm1, xmm4, xmm0);
+			vmovq(ptr[&m_local.temp.uv_minmax[1].u32[2]], xmm1);
+
+			vpunpckldq(xmm2, xmm3);
+			vpunpckhdq(xmm5, xmm6);
+			vpunpckhdq(xmm3, xmm2, xmm5);
+			vpunpckldq(xmm2, xmm5);
+
+			vmovdqa(ptr[&m_local.temp.uv[0]], xmm2);
+			vmovdqa(ptr[&m_local.temp.uv[1]], xmm3);
+
+			vmovdqa(xmm5, ptr[&m_local.temp.uv_minmax[0]]);
+			vmovdqa(xmm6, ptr[&m_local.temp.uv_minmax[1]]);
+
+			vpunpcklwd(xmm0, xmm5, xmm6);
+			vpunpckhwd(xmm1, xmm5, xmm6);
+			vpunpckldq(xmm5, xmm0, xmm1);
+			vpunpckhdq(xmm6, xmm0, xmm1);
+
+			vmovdqa(ptr[&m_local.temp.uv_minmax[0]], xmm5);
+			vmovdqa(ptr[&m_local.temp.uv_minmax[1]], xmm6);
+		}
 	}
 	else
 	{
@@ -2842,12 +2891,22 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 		}
 
 		const int r[] = {5, 6, 2, 4, 0, 1, 3, 5};
+		const int t[] = {4, 1, 5, 2};
 
 		for(int i = 0; i < pixels; i++)
 		{
-			for(int j = 0; j < 4; j++)
+			if(m_cpu.has(util::Cpu::tAVX2) && !m_sel.tlu) // vpgatherdd seems to be dead slow for byte aligned offsets, not using it for palette lookups
 			{
-				ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
+				Xmm mask = Xmm(t[i]);
+				vpcmpeqd(mask, mask);
+				vpgatherdd(Xmm(r[i * 2 + 1]), ptr[ebx + Xmm(r[i * 2 + 0]) * 4], mask);
+			}
+			else
+			{
+				for(int j = 0; j < 4; j++)
+				{
+					ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
+				}
 			}
 		}
 	}
