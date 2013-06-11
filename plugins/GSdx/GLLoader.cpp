@@ -110,11 +110,12 @@ namespace GLLoader {
 
 		const GLubyte* s = glGetString(GL_VERSION);
 		if (s == NULL) return false;
-		fprintf(stderr, "Supported Opengl version: %s on GPU: %s. Vendor: %s\n", s, glGetString(GL_RENDERER), glGetString(GL_VENDOR));
 
-		// Could be useful to detect the GPU vendor:
-		//if (strcmp((const char*)glGetString(GL_VENDOR), "ATI Technologies Inc.") == 0)
-		if (strstr((const char*)glGetString(GL_VENDOR), "ATI"))
+		const char* vendor = (const char*)glGetString(GL_VENDOR);
+		fprintf(stderr, "Supported Opengl version: %s on GPU: %s. Vendor: %s\n", s, glGetString(GL_RENDERER), vendor);
+
+		// Name change but driver is still bad!
+		if (strstr(vendor, "ATI") || strstr(vendor, "Advanced Micro Devices"))
 			fglrx_buggy_driver = true;
 
 		GLuint dot = 0;

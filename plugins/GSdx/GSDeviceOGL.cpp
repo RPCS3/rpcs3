@@ -816,10 +816,18 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// ************************************
 
 
+	// Original code from DX
 	float left = dr.x * 2 / ds.x - 1.0f;
-	float top = 1.0f - dr.y * 2 / ds.y;
 	float right = dr.z * 2 / ds.x - 1.0f;
+#if 0
+	float top = 1.0f - dr.y * 2 / ds.y;
 	float bottom = 1.0f - dr.w * 2 / ds.y;
+#else
+	// Opengl get some issues with the coordinate
+	// I flip top/bottom to fix scaling of the internal resolution
+	float top = -1.0f + dr.y * 2 / ds.y;
+	float bottom = -1.0f + dr.w * 2 / ds.y;
+#endif
 
 	// Flip y axis only when we render in the backbuffer
 	// By default everything is render in the wrong order (ie dx).
@@ -828,16 +836,16 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// Only flipping the backbuffer is transparent (I hope)...
 	GSVector4 flip_sr = sr;
 	if (static_cast<GSTextureOGL*>(dt)->IsBackbuffer()) {
-		flip_sr.y = 1.0f - sr.y;
-		flip_sr.w = 1.0f - sr.w;
+		flip_sr.y = sr.w;
+		flip_sr.w = sr.y;
 	}
 
 	GSVertexPT1 vertices[] =
 	{
-		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(flip_sr.x, flip_sr.y)},
-		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(flip_sr.z, flip_sr.y)},
-		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(flip_sr.x, flip_sr.w)},
-		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(flip_sr.z, flip_sr.w)},
+		{GSVector4(left, top, 0.5f, 1.0f), GSVector2(flip_sr.x, flip_sr.y)},
+		{GSVector4(right, top, 0.5f, 1.0f), GSVector2(flip_sr.z, flip_sr.y)},
+		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(flip_sr.x, flip_sr.w)},
+		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(flip_sr.z, flip_sr.w)},
 	};
 	//fprintf(stderr, "A:%fx%f B:%fx%f\n", left, top, bottom, right);
 	//fprintf(stderr, "SR: %f %f %f %f\n", sr.x, sr.y, sr.z, sr.w);
