@@ -238,10 +238,10 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 				{GSVector4(dst.x, -dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
 				{GSVector4(dst.z, -dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
 #else
-				{GSVector4(dst.x, -dst.w, 0.5f, 1.0f), GSVector2(src.x, src.y)},
-				{GSVector4(dst.z, -dst.w, 0.5f, 1.0f), GSVector2(src.z, src.y)},
-				{GSVector4(dst.x, -dst.y, 0.5f, 1.0f), GSVector2(src.x, src.w)},
-				{GSVector4(dst.z, -dst.y, 0.5f, 1.0f), GSVector2(src.z, src.w)},
+				{GSVector4(dst.x, dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
+				{GSVector4(dst.z, dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
+				{GSVector4(dst.x, dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
+				{GSVector4(dst.z, dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
 #endif
 			};
 			//fprintf(stderr, "DATE A:%fx%f B:%fx%f\n", dst.x, -dst.y, dst.z, -dst.w);

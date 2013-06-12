@@ -209,8 +209,11 @@ public:
 		uint32 ref = sref;
 		if (m_stencil_enable) {
 			glEnable(GL_STENCIL_TEST);
+			// Note: here the mask control which bitplane is considered by the operation
 			glStencilFunc(m_stencil_func, ref, m_stencil_mask);
 			glStencilOp(m_stencil_sfail_op, m_stencil_spass_dfail_op, m_stencil_spass_dpass_op);
+			// Control which stencil bitplane are written
+			glStencilMask(m_stencil_mask);
 		} else
 			glDisable(GL_STENCIL_TEST);
 	}
