@@ -26,6 +26,7 @@
 #include "res/interlace.h"
 #include "res/merge.h"
 #include "res/shadeboost.h"
+#include "res/fxaa.h"
 
 // TODO performance cost to investigate
 // Texture attachment/glDrawBuffer. For the moment it set every draw and potentially multiple time (first time in clear, second time in rendering)
@@ -107,6 +108,14 @@ GSDeviceOGL::~GSDeviceOGL()
 	gl_DeleteSamplers(1, &m_convert.pt);
 	delete m_convert.dss;
 	delete m_convert.bs;
+
+	// Clean m_fxaa
+	delete m_fxaa.cb;
+	if (GLLoader::found_GL_ARB_separate_shader_objects) {
+		gl_DeleteProgram(m_fxaa.ps);
+	} else {
+		gl_DeleteShader(m_fxaa.ps);
+	}
 
 	// Clean m_date
 	delete m_date.dss;
@@ -274,11 +283,11 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	int ShadeBoost_Contrast = theApp.GetConfig("ShadeBoost_Contrast", 50);
 	int ShadeBoost_Brightness = theApp.GetConfig("ShadeBoost_Brightness", 50);
 	int ShadeBoost_Saturation = theApp.GetConfig("ShadeBoost_Saturation", 50);
-	std::string macro = format("#define SB_SATURATION %d\n", ShadeBoost_Saturation)
+	std::string shade_macro = format("#define SB_SATURATION %d\n", ShadeBoost_Saturation)
 		+ format("#define SB_BRIGHTNESS %d\n", ShadeBoost_Brightness)
 		+ format("#define SB_CONTRAST %d\n", ShadeBoost_Contrast);
 
-	CompileShaderFromSource("shadeboost.glsl", "ps_main", GL_FRAGMENT_SHADER, &m_shadeboost.ps, shadeboost_glsl, macro);
+	CompileShaderFromSource("shadeboost.glsl", "ps_main", GL_FRAGMENT_SHADER, &m_shadeboost.ps, shadeboost_glsl, shade_macro);
 
 	// ****************************************************************
 	// rasterization configuration
@@ -310,8 +319,14 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// FIXME need to define FXAA_GLSL_130 for the shader
 	// FIXME need to manually set the index...
 	// FIXME need dofxaa interface too
-	// m_fxaa.cb = new GSUniformBufferOGL(g_fxaa_cb_index, sizeof(FXAAConstantBuffer));
-	//CompileShaderFromSource("fxaa.fx", format("ps_main", i), GL_FRAGMENT_SHADER, &m_fxaa.ps, fxaa_glsl);
+	std::string fxaa_macro = "#define FXAA_GLSL_130 1\n";
+	if (!GLLoader::found_only_gl30) {
+		// This extension become core on openGL4
+		fxaa_macro += "#extension GL_ARB_gpu_shader5 : enable\n";
+		fxaa_macro += "#define FXAA_GATHER4_ALPHA\n";
+	}
+	m_fxaa.cb = new GSUniformBufferOGL(g_fxaa_cb_index, sizeof(FXAAConstantBuffer));
+	CompileShaderFromSource("fxaa.fx", "ps_main", GL_FRAGMENT_SHADER, &m_fxaa.ps, fxaa_fx, fxaa_macro);
 
 	// ****************************************************************
 	// DATE
@@ -914,6 +929,25 @@ void GSDeviceOGL::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool lin
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], linear);
 }
 
+void GSDeviceOGL::DoFXAA(GSTexture* st, GSTexture* dt)
+{
+	GSVector2i s = dt->GetSize();
+
+	GSVector4 sr(0, 0, 1, 1);
+	GSVector4 dr(0, 0, s.x, s.y);
+
+	FXAAConstantBuffer cb;
+
+	// FIXME optimize: remove rcpFrameOpt. And reduce rcpFrame to vec2
+	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
+	cb.rcpFrameOpt = GSVector4::zero();
+
+	SetUniformBuffer(m_fxaa.cb);
+	m_fxaa.cb->upload(&cb);
+
+	StretchRect(st, sr, dt, dr, m_fxaa.ps, true);
+}
+
 void GSDeviceOGL::DoShadeBoost(GSTexture* st, GSTexture* dt)
 {
 	GSVector2i s = dt->GetSize();
@@ -1301,7 +1335,10 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 
 	char* source_str = (char*)malloc(source.size() + 1);
 	if (failed_to_open_glsl) {
-		sources_array[1] = glsl_h_code;
+		if (glsl_h_code)
+			sources_array[1] = glsl_h_code;
+		else
+			sources_array[1] = '\0';
 	} else {
 		sources_array[1] = source_str;
 		source.copy(source_str, source.size(), 0);
@@ -1329,17 +1366,21 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	free(sources_array);
 
 	if (theApp.GetConfig("debug_ogl_shader", 1) == 1) {
-		// Print a nice debug log
-		fprintf(stderr, "%s (entry %s, prog %d) :", glsl_file.c_str(), entry.c_str(), *program);
-		fprintf(stderr, "\n%s", macro_sel.c_str());
-
 		GLint log_length = 0;
-		if (GLLoader::found_GL_ARB_separate_shader_objects)
+		GLint status = false;
+		if (GLLoader::found_GL_ARB_separate_shader_objects) {
 			gl_GetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
-		else
+			gl_GetProgramiv(*program, GL_LINK_STATUS, &status);
+		} else {
 			gl_GetShaderiv(*program, GL_INFO_LOG_LENGTH, &log_length);
+			gl_GetShaderiv(*program, GL_COMPILE_STATUS, &status);
+		}
 
-		if (log_length > 0) {
+		if (log_length > 0 && !status) {
+			// Print a nice debug log
+			fprintf(stderr, "%s (entry %s, prog %d) :", glsl_file.c_str(), entry.c_str(), *program);
+			fprintf(stderr, "\n%s", macro_sel.c_str());
+
 			char* log = new char[log_length];
 			if (GLLoader::found_GL_ARB_separate_shader_objects)
 				gl_GetProgramInfoLog(*program, log_length, NULL, log);
@@ -1347,9 +1388,9 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 				gl_GetShaderInfoLog(*program, log_length, NULL, log);
 
 			fprintf(stderr, "%s", log);
+			fprintf(stderr, "\n");
 			delete[] log;
 		}
-		fprintf(stderr, "\n");
 	}
 }
 

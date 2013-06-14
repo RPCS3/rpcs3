@@ -8,14 +8,16 @@ my @res = qw/convert interlace merge shadeboost tfx/;
 my $path = File::Spec->catdir("plugins", "GSdx", "res");
 
 foreach my $r (@res) {
-    glsl2h($path, $r);
+    glsl2h($path, $r, "glsl");
 }
+glsl2h($path, "fxaa", "fx");
 
 sub glsl2h {
     my $path = shift;
     my $glsl = shift;
+    my $ext  = shift;
 
-    my $in = File::Spec->catfile($path, "${glsl}.glsl");
+    my $in = File::Spec->catfile($path, "${glsl}.$ext");
     my $out = File::Spec->catfile($path, "${glsl}.h");
     open(my $GLSL, "<$in") or die;
     open(my $H, ">$out") or die;
@@ -48,7 +50,7 @@ sub glsl2h {
 
 #include "stdafx.h"
 
-static const char* ${glsl}_glsl =
+static const char* ${glsl}_${ext} =
 EOS
 
     print $H $header;

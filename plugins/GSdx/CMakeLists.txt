@@ -203,15 +203,15 @@ endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 if(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
 
-    foreach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
+    foreach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl fxaa.fx)
         install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/${glsl} DESTINATION ${GLSL_SHADER_DIR})
-    endforeach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
+    endforeach()
 else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
 
-    foreach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
+    foreach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl fxaa.fx)
         install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/${glsl} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-    endforeach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
+    endforeach()
 endif(PACKAGE_MODE)
 
 ################################### Replay Loader
