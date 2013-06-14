@@ -138,7 +138,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint
 GSTextureOGL::~GSTextureOGL()
 {
 	/* Unbind the texture from our local state */
-	for (uint i = 0; i < 7; i++)
+	for (uint32 i = 0; i < 7; i++)
 		if (g_state_texture_id[i] == m_texture_id)
 			g_state_texture_id[i] = 0;
 

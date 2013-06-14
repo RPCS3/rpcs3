@@ -457,13 +457,12 @@ vec4 sample_4a(vec4 uv)
 {
     vec4 c;
 
-    // XXX
-    // I think .a is related to 8bit texture in alpha channel
-    // Opengl is only 8 bits on red channel. Not sure exactly of the impact
-    c.x = sample_c(uv.xy).a;
-    c.y = sample_c(uv.zy).a;
-    c.z = sample_c(uv.xw).a;
-    c.w = sample_c(uv.zw).a;
+    // Dx used the alpha channel.
+    // Opengl is only 8 bits on red channel.
+    c.x = sample_c(uv.xy).r;
+    c.y = sample_c(uv.zy).r;
+    c.z = sample_c(uv.xw).r;
+    c.w = sample_c(uv.zw).r;
 
 	return c * 255./256 + 0.5/256;
 }
