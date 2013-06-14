@@ -34,6 +34,11 @@
 //#define LOUD_DEBUGGING
 //#define PRINT_FRAME_NUMBER
 //#define ONLY_LINES
+#if 0
+#ifdef _DEBUG
+#define ENABLE_OGL_STENCIL_DEBUG
+#endif
+#endif
 
 static uint32 g_draw_count = 0;
 static uint32 g_frame_count = 1;		
@@ -309,33 +314,18 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	//CompileShaderFromSource("fxaa.fx", format("ps_main", i), GL_FRAGMENT_SHADER, &m_fxaa.ps, fxaa_glsl);
 
 	// ****************************************************************
-	// date
+	// DATE
 	// ****************************************************************
 
 	m_date.dss = new GSDepthStencilOGL();
 	m_date.dss->EnableStencil();
 	m_date.dss->SetStencil(GL_ALWAYS, GL_REPLACE);
-	//memset(&dsd, 0, sizeof(dsd));
 
-	//dsd.DepthEnable = false;
-	//dsd.StencilEnable = true;
-	//dsd.StencilReadMask = 1;
-	//dsd.StencilWriteMask = 1;
-
-	//dsd.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	//dsd.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-	//dsd.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	//dsd.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-
-	//m_dev->CreateDepthStencilState(&dsd, &m_date.dss);
-
-	// FIXME are the blend state really empty
 	m_date.bs = new GSBlendStateOGL();
-	//D3D11_BLEND_DESC blend;
-
-	//memset(&blend, 0, sizeof(blend));
-
-	//m_dev->CreateBlendState(&blend, &m_date.bs);
+#ifndef ENABLE_OGL_STENCIL_DEBUG
+	// Only keep stencil data
+	m_date.bs->SetMask(false, false, false, false);
+#endif
 
 	// ****************************************************************
 	// HW renderer shader
@@ -944,56 +934,59 @@ void GSDeviceOGL::DoShadeBoost(GSTexture* st, GSTexture* dt)
 
 void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm)
 {
+#ifdef ENABLE_OGL_STENCIL_DEBUG
 	const GSVector2i& size = rt->GetSize();
+	GSTexture* t = CreateRenderTarget(size.x, size.y, rt->IsMSAA());
+#else
+	GSTexture* t = NULL;
+#endif
+	// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
 
-	if(GSTexture* t = CreateRenderTarget(size.x, size.y, rt->IsMSAA()))
-	{
-		// sfex3 (after the capcom logo), vf4 (first menu fading in), ffxii shadows, rumble roses shadows, persona4 shadows
+	BeginScene();
 
-		BeginScene();
+	ClearStencil(ds, 0);
 
-		ClearStencil(ds, 0);
+	// om
 
-		// om
+	OMSetDepthStencilState(m_date.dss, 1);
+	OMSetBlendState(m_date.bs, 0);
+	OMSetRenderTargets(t, ds);
 
-		OMSetDepthStencilState(m_date.dss, 1);
-		OMSetBlendState(m_date.bs, 0);
-		OMSetRenderTargets(t, ds);
+	// ia
 
-		// ia
+	IASetVertexState(m_vb_sr);
+	IASetVertexBuffer(vertices, 4);
+	IASetPrimitiveTopology(GL_TRIANGLE_STRIP);
 
-		IASetVertexState(m_vb_sr);
-		IASetVertexBuffer(vertices, 4);
-		IASetPrimitiveTopology(GL_TRIANGLE_STRIP);
+	// vs
 
-		// vs
+	VSSetShader(m_convert.vs);
 
-		VSSetShader(m_convert.vs);
+	// gs
 
-		// gs
+	GSSetShader(0);
 
-		GSSetShader(0);
+	// ps
 
-		// ps
+	GSTexture* rt2 = rt->IsMSAA() ? Resolve(rt) : rt;
 
-		GSTexture* rt2 = rt->IsMSAA() ? Resolve(rt) : rt;
+	PSSetShaderResources(rt2, NULL);
+	PSSetSamplerState(m_convert.pt, 0);
+	PSSetShader(m_convert.ps[datm ? 2 : 3]);
 
-		PSSetShaderResources(rt2, NULL);
-		PSSetSamplerState(m_convert.pt, 0);
-		PSSetShader(m_convert.ps[datm ? 2 : 3]);
+	//
 
-		//
+	DrawPrimitive();
 
-		DrawPrimitive();
+	//
 
-		//
+	EndScene();
 
-		EndScene();
+#ifdef ENABLE_OGL_STENCIL_DEBUG
+	Recycle(t);
+#endif
 
-		Recycle(t);
-
-		if(rt2 != rt) Recycle(rt2);
-	}
+	if(rt2 != rt) Recycle(rt2);
 }
 
 // copy a multisample texture to a non-texture multisample. On opengl you need 2 FBO with different level of
@@ -1146,15 +1139,9 @@ void GSDeviceOGL::OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref)
 {
 	if (m_state.dss != dss) {
 		m_state.dss = dss;
-		m_state.sref = sref;
 
 		dss->SetupDepth();
-		dss->SetupStencil(sref);
-
-	} else if (m_state.sref != sref) {
-		m_state.sref = sref;
-
-		dss->SetupStencil(sref);
+		dss->SetupStencil();
 	}
 }
 
@@ -1171,39 +1158,41 @@ void GSDeviceOGL::OMSetBlendState(GSBlendStateOGL* bs, float bf)
 
 void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor)
 {
-	// Hum, need to separate 2 case, Render target fbo and render target backbuffer
-	// Or maybe blit final result to the backbuffer
-	m_state.rtv = static_cast<GSTextureOGL*>(rt);
-	m_state.dsv = static_cast<GSTextureOGL*>(ds);
-
-	if (static_cast<GSTextureOGL*>(rt)->IsBackbuffer()) {
-		ASSERT(ds == NULL); // no depth-stencil without FBO
-
-		OMSetFBO(0);
-
-	} else {
-		ASSERT(rt != NULL); // a render target must exists
-
-		// FIXME DEBUG special case for GL_R16UI
-		if (rt->GetFormat() == GL_R16UI) {
-			OMSetFBO(m_fbo, GL_COLOR_ATTACHMENT1);
-			static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT1);
+	if (rt == NULL || !static_cast<GSTextureOGL*>(rt)->IsBackbuffer()) {
+		if (rt) {
+			// FIXME DEBUG special case for GL_R16UI
+			if (rt->GetFormat() == GL_R16UI) {
+				OMSetFBO(m_fbo, GL_COLOR_ATTACHMENT1);
+				static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT1);
+			} else {
+				OMSetFBO(m_fbo, GL_COLOR_ATTACHMENT0);
+				static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
+			}
 		} else {
-			OMSetFBO(m_fbo, GL_COLOR_ATTACHMENT0);
-			static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
+			// Note: NULL rt is only used in DATE so far. Color writing is disabled
+			// on the blend setup
+			OMSetFBO(m_fbo, GL_NONE);
 		}
 
-		if (ds != NULL)
+		// Note: it must be done after OMSetFBO
+		if (ds)
 			static_cast<GSTextureOGL*>(ds)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
+
+	} else {
+		// Render in the backbuffer
+		OMSetFBO(0);
 	}
 
-	if(m_state.viewport != rt->GetSize())
+
+
+	GSVector2i size = rt ? rt->GetSize() : ds->GetSize();
+	if(m_state.viewport != size)
 	{
-		m_state.viewport = rt->GetSize();
-		glViewport(0, 0, rt->GetWidth(), rt->GetHeight());
+		m_state.viewport = size;
+		glViewport(0, 0, size.x, size.y);
 	}
 
-	GSVector4i r = scissor ? *scissor : GSVector4i(rt->GetSize()).zwxy();
+	GSVector4i r = scissor ? *scissor : GSVector4i(size).zwxy();
 
 	if(!m_state.scissor.eq(r))
 	{
@@ -1249,6 +1238,9 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 		version += "#extension GL_ARB_explicit_attrib_location : require\n";
 		version += "#extension GL_ARB_uniform_buffer_object : require\n";
 	}
+#ifdef ENABLE_OGL_STENCIL_DEBUG
+	version += "#define ENABLE_OGL_STENCIL_DEBUG 1\n";
+#endif
 
 	// Allow to puts several shader in 1 files
 	std::string shader_type;

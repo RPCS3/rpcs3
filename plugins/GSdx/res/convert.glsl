@@ -143,20 +143,28 @@ void ps_main6() // diagonal
     SV_Target0 = c;
 }
 
+// Used for DATE (stencil)
 void ps_main2()
 {
-    if((sample_c().a - 128.0f / 255) < 0) // >= 0x80 pass
+    if((sample_c().a - 127.5f / 255) < 0) // >= 0x80 pass
         discard;
 
-    SV_Target0 = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+#ifdef ENABLE_OGL_STENCIL_DEBUG
+    SV_Target0 = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+#endif
 }
+
+// Used for DATE (stencil)
 void ps_main3()
 {
-    if((127.95f / 255 - sample_c().a) <0) // < 0x80 pass (== 0x80 should not pass)
+    if((127.5f / 255 - sample_c().a) < 0) // < 0x80 pass (== 0x80 should not pass)
         discard;
 
-    SV_Target0 = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+#ifdef ENABLE_OGL_STENCIL_DEBUG
+    SV_Target0 = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+#endif
 }
+
 void ps_main4()
 {
     // FIXME mod and fmod are different when value are negative

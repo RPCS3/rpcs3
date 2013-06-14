@@ -292,12 +292,15 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 		if (m_format == GL_RGBA8) {
 			glPixelStorei(GL_PACK_ALIGNMENT, 4);
 			glReadPixels(0, 0, m_size.x, m_size.y, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+			m.pitch = m_size.x * 4;
 		} else if (m_format == GL_R16UI) {
 			glPixelStorei(GL_PACK_ALIGNMENT, 2);
 			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED_INTEGER, GL_UNSIGNED_SHORT, 0);
+			m.pitch = m_size.x * 2;
 		} else if (m_format == GL_R8) {
 			glPixelStorei(GL_PACK_ALIGNMENT, 1);
 			glReadPixels(0, 0, m_size.x, m_size.y, GL_RED, GL_UNSIGNED_BYTE, 0);
+			m.pitch = m_size.x;
 		} else {
 			fprintf(stderr, "wrong texture pixel format :%x\n", m_format);
 			ASSERT(0);
@@ -306,7 +309,6 @@ bool GSTextureOGL::Map(GSMap& m, const GSVector4i* r)
 
 		// Give access from the CPU
 		m.bits = (uint8*) gl_MapBufferRange(GL_PIXEL_PACK_BUFFER, 0, m_pbo_size, GL_MAP_READ_BIT);
-		m.pitch = m_size.x;
 
 		if ( m.bits ) {
 			return true;

@@ -152,11 +152,11 @@ class GSDepthStencilOGL {
 	GLboolean m_depth_mask;
 	// Note front face and back might be split but it seems they have same parameter configuration
 	bool m_stencil_enable;
-	GLuint m_stencil_mask;
+	const GLuint m_stencil_mask;
 	GLuint m_stencil_func;
-	GLuint m_stencil_ref;
-	GLuint m_stencil_sfail_op;
-	GLuint m_stencil_spass_dfail_op;
+	const GLuint m_stencil_ref;
+	const GLuint m_stencil_sfail_op;
+	const GLuint m_stencil_spass_dfail_op;
 	GLuint m_stencil_spass_dpass_op;
 
 	char* NameOfParam(GLenum p)
@@ -182,7 +182,7 @@ public:
 		, m_stencil_enable(false)
 		, m_stencil_mask(1)
 		, m_stencil_func(0)
-		, m_stencil_ref(0)
+		, m_stencil_ref(1)
 		, m_stencil_sfail_op(GL_KEEP)
 		, m_stencil_spass_dfail_op(GL_KEEP)
 		, m_stencil_spass_dpass_op(GL_KEEP)
@@ -204,14 +204,14 @@ public:
 			glDisable(GL_DEPTH_TEST);
 	}
 
-	void SetupStencil(uint8 sref)
+	void SetupStencil()
 	{
-		uint32 ref = sref;
 		if (m_stencil_enable) {
 			glEnable(GL_STENCIL_TEST);
 			// Note: here the mask control which bitplane is considered by the operation
-			glStencilFunc(m_stencil_func, ref, m_stencil_mask);
+			glStencilFunc(m_stencil_func, m_stencil_ref, m_stencil_mask);
 			glStencilOp(m_stencil_sfail_op, m_stencil_spass_dfail_op, m_stencil_spass_dpass_op);
+			// FIXME only needed once since m_stencil_mask is constant
 			// Control which stencil bitplane are written
 			glStencilMask(m_stencil_mask);
 		} else
@@ -541,7 +541,6 @@ class GSDeviceOGL : public GSDevice
 		GSVector2i viewport;
 		GSVector4i scissor;
 		GSDepthStencilOGL* dss;
-		uint8 sref;
 		GSBlendStateOGL* bs;
 		float bf;
 		// FIXME texture attachment in the FBO
