@@ -51,8 +51,10 @@ void GSRendererDX11::SetupIA()
 		{
 			GSVertex* RESTRICT d = (GSVertex*)ptr;
 		
-			for(unsigned int i = 0; i < m_vertex.next; i++, d++)
-				if(PRIM->TME && PRIM->FST) d->UV &= 0x3FEF3FEF;
+			for(unsigned int i = 0; i < m_vertex.next; i++)
+			{
+				if(PRIM->TME && PRIM->FST) d[i].UV &= 0x3FEF3FEF;
+			}
 		}
 		
 		dev->IAUnmapVertexBuffer();

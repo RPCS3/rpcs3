@@ -126,21 +126,26 @@ void GSClut::Write(const GIFRegTEX0& TEX0, const GIFRegTEXCLUT& TEXCLUT)
 	(this->*m_wc[TEX0.CSM][TEX0.CPSM][TEX0.PSM])(TEX0, TEXCLUT);
 
 	// Mirror write to other half of buffer to simulate wrapping memory
+
 	int offset = (TEX0.CSA & (TEX0.CPSM < PSM_PSMCT16 ? 15 : 31)) * 16;
-	if (TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT8H)
+
+	if(TEX0.PSM == PSM_PSMT8 || TEX0.PSM == PSM_PSMT8H)
 	{
 		int size = TEX0.CPSM < PSM_PSMCT16 ? 512 : 256;
 
-		memcpy(m_clut + 512 + offset, m_clut + offset, sizeof *m_clut * min(size, 512 - offset));
-		memcpy(m_clut, m_clut + 512, sizeof *m_clut * max(0, size + offset - 512));
+		memcpy(m_clut + 512 + offset, m_clut + offset, sizeof(*m_clut) * min(size, 512 - offset));
+		memcpy(m_clut, m_clut + 512, sizeof(*m_clut) * max(0, size + offset - 512));
 	}
 	else
 	{
 		int size = 16;
 
-		memcpy(m_clut + 512 + offset, m_clut + offset, sizeof *m_clut * size);
-		if (TEX0.CPSM < PSM_PSMCT16)
-			memcpy(m_clut + 512 + 256 + offset, m_clut + 256 + offset, sizeof *m_clut * size);
+		memcpy(m_clut + 512 + offset, m_clut + offset, sizeof(*m_clut) * size);
+		
+		if(TEX0.CPSM < PSM_PSMCT16)
+		{
+			memcpy(m_clut + 512 + 256 + offset, m_clut + 256 + offset, sizeof(*m_clut) * size);
+		}
 	}
 }
 
@@ -289,7 +294,7 @@ void GSClut::Read32(const GIFRegTEX0& TEX0, const GIFRegTEXA& TEXA)
 			{
 			case PSM_PSMT8:
 			case PSM_PSMT8H:
-				clut += (TEX0.CSA & 15) << 4;
+				clut += (TEX0.CSA & 15) << 4; // disney golf title screen
 				ReadCLUT_T32_I8(clut, m_buff32);
 				break;
 			case PSM_PSMT4:

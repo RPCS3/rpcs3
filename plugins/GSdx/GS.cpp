@@ -1131,7 +1131,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 {
 	::SetPriorityClass(::GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
-	FILE* file = fopen("c:\\log.txt", "a");
+	FILE* file = fopen("c:\\temp1\\log.txt", "a");
 
 	fprintf(file, "-------------------------\n\n");
 

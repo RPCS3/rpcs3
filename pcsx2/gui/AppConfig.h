@@ -132,7 +132,9 @@ public:
 				UseDefaultSavestates:1,
 				UseDefaultMemoryCards:1,
 				UseDefaultLogs:1,
-				UseDefaultLangs:1;
+				UseDefaultLangs:1,
+				UseDefaultCheats:1,
+				UseDefaultCheatsWS:1;
 		BITFIELD_END
 
 		wxDirName
@@ -141,7 +143,9 @@ public:
 			Savestates,
 			MemoryCards,
 			Langs,
-			Logs;
+			Logs,
+			Cheats,
+			CheatsWS;
 
 		wxDirName RunIso;		// last used location for Iso loading.
 		wxDirName RunELF;		// last used location for ELF loading.

@@ -2745,6 +2745,16 @@ void GSDrawScanlineCodeGenerator::WriteFrame()
 		return;
 	}
 
+	if(m_sel.fpsm == 2 && m_sel.dthe)
+	{
+		mov(eax, ptr[esp + _top]);
+		and(eax, 3);
+		shl(eax, 5);
+		mov(ebp, ptr[&m_local.gd->dimx]);
+		paddw(xmm5, ptr[ebp + eax + sizeof(GSVector4i) * 0]);
+		paddw(xmm6, ptr[ebp + eax + sizeof(GSVector4i) * 1]);
+	}
+
 	if(m_sel.colclamp == 0)
 	{
 		// c[0] &= 0x000000ff;
@@ -2754,16 +2764,6 @@ void GSDrawScanlineCodeGenerator::WriteFrame()
 		psrlw(xmm7, 8);
 		pand(xmm5, xmm7);
 		pand(xmm6, xmm7);
-	}
-
-	if(m_sel.fpsm == 2 && m_sel.dthe)
-	{
-		mov(eax, ptr[esp + _top]);
-		and(eax, 3);
-		shl(eax, 5);
-		mov(ebp, ptr[&m_local.gd->dimx]);
-		paddw(xmm5, ptr[ebp + eax + sizeof(GSVector4i) * 0]);
-		paddw(xmm6, ptr[ebp + eax + sizeof(GSVector4i) * 1]);
 	}
 
 	// GSVector4i fs = c[0].upl16(c[1]).pu16(c[0].uph16(c[1]));

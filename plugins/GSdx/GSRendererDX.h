@@ -37,7 +37,6 @@ protected:
 	virtual void SetupIA() = 0;
 	virtual void UpdateFBA(GSTexture* rt) {}
 
-	unsigned int UserHacks_WildHack;
 	unsigned int UserHacks_TCOffset;
 	float UserHacks_TCO_x, UserHacks_TCO_y;
 

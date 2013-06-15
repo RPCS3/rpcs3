@@ -47,6 +47,16 @@ GSState::GSState()
 {
 	m_nativeres = !!theApp.GetConfig("nativeres", 1);
 
+	s_n = 0;
+	s_dump = !!theApp.GetConfig("dump", 0);
+	s_save = !!theApp.GetConfig("save", 0);
+	s_savez = !!theApp.GetConfig("savez", 0);
+	s_saven = theApp.GetConfig("saven", 0);
+
+	UserHacks_AggressiveCRC = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_AggressiveCRC", 0) : 0;
+	UserHacks_DisableCrcHacks = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig( "UserHacks_DisableCrcHacks", 0 ) : 0;
+	UserHacks_WildHack = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_WildHack", 0) : 0;
+
 	memset(&m_v, 0, sizeof(m_v));
 	memset(&m_vertex, 0, sizeof(m_vertex));
 	memset(&m_index, 0, sizeof(m_index));
@@ -112,15 +122,6 @@ GSState::GSState()
 	Reset();
 
 	ResetHandlers();
-
-	s_n = 0;
-	s_dump = !!theApp.GetConfig("dump", 0);
-	s_save = !!theApp.GetConfig("save", 0);
-	s_savez = !!theApp.GetConfig("savez", 0);
-	s_saven = theApp.GetConfig("saven", 0);
-
-	userHacks_AggressiveCRC = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_AggressiveCRC", 0) : 0;
-	userHacks_DisableCrcHacks = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig( "UserHacks_DisableCrcHacks", 0 ) : 0;
 }
 
 GSState::~GSState()
@@ -243,7 +244,7 @@ void GSState::ResetHandlers()
 	m_fpGIFPackedRegHandlers[GIF_REG_PRIM] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerPRIM;
 	m_fpGIFPackedRegHandlers[GIF_REG_RGBA] = &GSState::GIFPackedRegHandlerRGBA;
 	m_fpGIFPackedRegHandlers[GIF_REG_STQ] = &GSState::GIFPackedRegHandlerSTQ;
-	m_fpGIFPackedRegHandlers[GIF_REG_UV] = &GSState::GIFPackedRegHandlerUV;
+	m_fpGIFPackedRegHandlers[GIF_REG_UV] = !UserHacks_WildHack ? &GSState::GIFPackedRegHandlerUV : &GSState::GIFPackedRegHandlerUV_Hack;
 	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_1] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerTEX0<0>;
 	m_fpGIFPackedRegHandlers[GIF_REG_TEX0_2] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerTEX0<1>;
 	m_fpGIFPackedRegHandlers[GIF_REG_CLAMP_1] = (GIFPackedRegHandler)(GIFRegHandler)&GSState::GIFRegHandlerCLAMP<0>;
@@ -281,7 +282,7 @@ void GSState::ResetHandlers()
 	m_fpGIFRegHandlers[GIF_A_D_REG_PRIM] = &GSState::GIFRegHandlerPRIM;
 	m_fpGIFRegHandlers[GIF_A_D_REG_RGBAQ] = &GSState::GIFRegHandlerRGBAQ;
 	m_fpGIFRegHandlers[GIF_A_D_REG_ST] = &GSState::GIFRegHandlerST;
-	m_fpGIFRegHandlers[GIF_A_D_REG_UV] = &GSState::GIFRegHandlerUV;
+	m_fpGIFRegHandlers[GIF_A_D_REG_UV] = !UserHacks_WildHack ? &GSState::GIFRegHandlerUV : &GSState::GIFRegHandlerUV_Hack;
 	m_fpGIFRegHandlers[GIF_A_D_REG_TEX0_1] = &GSState::GIFRegHandlerTEX0<0>;
 	m_fpGIFRegHandlers[GIF_A_D_REG_TEX0_2] = &GSState::GIFRegHandlerTEX0<1>;
 	m_fpGIFRegHandlers[GIF_A_D_REG_CLAMP_1] = &GSState::GIFRegHandlerCLAMP<0>;
@@ -493,6 +494,13 @@ void GSState::GIFPackedRegHandlerUV(const GIFPackedReg* RESTRICT r)
 	GSVector4i v = GSVector4i::loadl(r) & GSVector4i::x00003fff();
 
 	m_v.UV = (uint32)GSVector4i::store(v.ps32(v));
+}
+
+void GSState::GIFPackedRegHandlerUV_Hack(const GIFPackedReg* RESTRICT r)
+{
+	GSVector4i v = GSVector4i::loadl(r) & GSVector4i::x00003fff();
+
+	m_v.UV = (uint32)GSVector4i::store(v.ps32(v));
 
     isPackedUV_HackFlag = true;
 }
@@ -682,6 +690,11 @@ void GSState::GIFRegHandlerST(const GIFReg* RESTRICT r)
 }
 
 void GSState::GIFRegHandlerUV(const GIFReg* RESTRICT r)
+{
+    m_v.UV = r->UV.u32[0] & 0x3fff3fff;
+}
+
+void GSState::GIFRegHandlerUV_Hack(const GIFReg* RESTRICT r)
 {
     m_v.UV = r->UV.u32[0] & 0x3fff3fff;
 
@@ -1179,6 +1192,8 @@ template<int i> void GSState::GIFRegHandlerZBUF(const GIFReg* RESTRICT r)
 	{
 		// during startup all regs are cleared to 0 (by the bios or something), so we mask z until this register becomes valid
 		// edit: breaks Grandia Xtreme and sounds like a bad idea generally. What was the intend?
+		// edit2: should be set only before any serious drawing happens, grandia extreme nulls out this register throughout the whole game, 
+		//        I already forgot what it fixed, that game never masked the zbuffer, but assumed it was set by default
 		//ZBUF.ZMSK = 1;
 	}
 
@@ -2229,7 +2244,7 @@ void GSState::SetGameCRC(uint32 crc, int options)
 {
 	m_crc = crc;
 	m_options = options;
-	m_game = CRC::Lookup(userHacks_DisableCrcHacks ? 0 : crc);
+	m_game = CRC::Lookup(UserHacks_DisableCrcHacks ? 0 : crc);
 }
 
 //
@@ -2589,7 +2604,7 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 			mask = (uu.upl32(vv) == uu.uph32(vv)).mask();
 		}
 
-		uv = uv.rintersect(vr - GSVector4i(0,0,1,1));
+		uv = uv.rintersect(tr);
 
 		switch(wms)
 		{
@@ -2604,8 +2619,13 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 			break;
 		case CLAMP_CLAMP:
 		case CLAMP_REGION_CLAMP:
-			if(vr.x < uv.x) vr.x = uv.x;
-			if(vr.z > uv.z + 1) vr.z = uv.z + 1;
+			if(vr.x > uv.z) vr.z = vr.x + 1;
+			else if(vr.z < uv.x) vr.x = vr.z - 1;
+			else
+			{
+				if(vr.x < uv.x) vr.x = uv.x;
+				if(vr.z > uv.z + 1) vr.z = uv.z + 1;
+			}
 			break;
 		case CLAMP_REGION_REPEAT:
 			break;
@@ -2625,8 +2645,13 @@ void GSState::GetTextureMinMax(GSVector4i& r, const GIFRegTEX0& TEX0, const GIFR
 			break;
 		case CLAMP_CLAMP:
 		case CLAMP_REGION_CLAMP:
-			if(vr.y < uv.y) vr.y = uv.y;
-			if(vr.w > uv.w + 1) vr.w = uv.w + 1;
+			if(vr.y > uv.w) vr.w = vr.y + 1;
+			else if(vr.w < uv.y) vr.y = vr.w - 1;
+			else
+			{
+				if(vr.y < uv.y) vr.y = uv.y;
+				if(vr.w > uv.w + 1) vr.w = uv.w + 1;
+			}
 			break;
 		case CLAMP_REGION_REPEAT:
 			break;
@@ -2682,7 +2707,6 @@ void GSState::GetAlphaMinMax()
 			a.w = max(env.TEXA.TA0, env.TEXA.TA1);
 			break;
 		case 3:
-			m_mem.m_clut.Read32(context->TEX0, env.TEXA);
 			m_mem.m_clut.GetAlphaMinMax32(a.y, a.w);
 			break;
 		default:
@@ -5355,7 +5379,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 
 	GetSkipCount gsc = map[m_game.title];
 	g_crc_region = m_game.region;
-	g_aggressive = userHacks_AggressiveCRC;
+	g_aggressive = UserHacks_AggressiveCRC;
 
 #ifdef ENABLE_DYNAMIC_CRC_HACK
 	bool res=false; if(IsInvokedDynamicCrcHack(fi, skip, g_crc_region, res, m_crc)){ if( !res ) return false;	} else

@@ -489,7 +489,7 @@ void GSRasterizer::DrawTriangle(const GSVertexSW* vertex, const uint32* index)
 		{
 			edge = v1;
 
-			edge.p = (v0.p.xxxx() + ddx[m2] * dv[0].p.yyyy()).xyzw(edge.p);
+			edge.p = v0.p.xxxx().addm(ddx[m2], dv[0].p.yyyy()).xyzw(edge.p);
 			dedge.p = ddx[2 - (m2 << 1)].yzzw(dedge.p);
 
 			DrawTriangleSection(tb.y, tb.w, edge, dedge, dscan, v1.p);
@@ -532,7 +532,7 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, co
 
 		GSVertexSW scan;
 
-		scan.p = edge.p + dedge.p * dy;
+		scan.p = edge.p.addm(dedge.p, dy);
 
 		GSVector4 lrf = scan.p.ceil();
 		GSVector4 l = lrf.max(scissor);
@@ -546,14 +546,14 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, co
 
 		if(pixels > 0)
 		{
-			scan.t = edge.t + dedge.t * dy;
-			scan.c = edge.c + dedge.c * dy;
+			scan.t = edge.t.addm(dedge.t, dy);
+			scan.c = edge.c.addm(dedge.c, dy);
 
 			GSVector4 prestep = (l - p0).xxxx();
 
-			scan.p += dscan.p * prestep;
-			scan.t += dscan.t * prestep;
-			scan.c += dscan.c * prestep;
+			scan.p = scan.p.addm(dscan.p, prestep);
+			scan.t = scan.t.addm(dscan.t, prestep);
+			scan.c = scan.c.addm(dscan.c, prestep);
 
 			AddScanline(e++, pixels, left, top, scan);
 		}

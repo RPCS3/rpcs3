@@ -171,55 +171,51 @@ void ResetCheatsCount()
   cheatnumber = 0;
 }
 
-static int LoadCheatsFiles(const wxString& folderName, wxString& fileSpec, const wxString& friendlyName)
+static int LoadCheatsFiles(const wxDirName& folderName, wxString& fileSpec, const wxString& friendlyName)
 {
-  if (!wxDir::Exists(folderName)) {
-    Console.WriteLn(Color_Red, L"The %s folder ('%s') is inaccessible. Skipping...", friendlyName.c_str(), folderName.c_str());
-    return 0;
-  }
-  wxDir dir(folderName);
+	if (!folderName.Exists()) {
+		Console.WriteLn(Color_Red, L"The %s folder ('%s') is inaccessible. Skipping...", friendlyName.c_str(), folderName.ToString().c_str());
+		return 0;
+	}
+	wxDir dir(folderName.ToString());
 
-  int before = cheatnumber;
-  wxString buffer;
-  wxTextFile f;
-  bool found = dir.GetFirst(&buffer, fileSpec, wxDIR_FILES);
-  while (found) {
-    Console.WriteLn(Color_Gray, L"Found %s file: '%s'", friendlyName.c_str(), buffer.c_str());
-    int before = cheatnumber;
-    f.Open(Path::Combine(dir.GetName(), buffer));
-    inifile_process(f);
-    f.Close();
-    int loaded = cheatnumber - before;
-    Console.WriteLn((loaded ? Color_Green : Color_Gray), L"Loaded %d %s from '%s'", loaded, friendlyName.c_str(), buffer.c_str());
-    found = dir.GetNext(&buffer);
-  }
+	int before = cheatnumber;
+	wxString buffer;
+	wxTextFile f;
+	bool found = dir.GetFirst(&buffer, L"*", wxDIR_FILES);
+	while (found) {
+		if (buffer.Upper().Matches(fileSpec.Upper())) {
+			Console.WriteLn(Color_Gray, L"Found %s file: '%s'", friendlyName.c_str(), buffer.c_str());
+			int before = cheatnumber;
+			f.Open(Path::Combine(dir.GetName(), buffer));
+			inifile_process(f);
+			f.Close();
+			int loaded = cheatnumber - before;
+			Console.WriteLn((loaded ? Color_Green : Color_Gray), L"Loaded %d %s from '%s'", loaded, friendlyName.c_str(), buffer.c_str());
+		}
+		found = dir.GetNext(&buffer);
+	}
 
-  return cheatnumber - before;
+	return cheatnumber - before;
 }
 
 // This routine loads cheats from *.pnach files
 // Returns number of cheats loaded
 // Note: Should be called after InitPatches()
-int LoadCheats(wxString name, const wxString& folderName, const wxString& friendlyName)
+int LoadCheats(wxString name, const wxDirName& folderName, const wxString& friendlyName)
 {
-  if (!name.Length()) {
-    Console.WriteLn(Color_Gray, "Cheats: No CRC, using 00000000 instead.");
-    name = L"00000000";
-  }
+	if (!name.Length()) {
+		Console.WriteLn(Color_Gray, "Cheats: No CRC, using 00000000 instead.");
+		name = L"00000000";
+	}
 
-  int loaded = 0;
+	int loaded = 0;
 
-  wxString filespec = name + L"*.pnach";
-  loaded += LoadCheatsFiles(folderName, filespec, friendlyName);
+	wxString filespec = name + L"*.pnach";
+	loaded += LoadCheatsFiles(folderName, filespec, friendlyName);
 
-  wxString nameUpper = name; nameUpper.Upper();
-  if (wxFileName::IsCaseSensitive() && name != nameUpper) {
-    filespec = nameUpper + L"*.pnach";
-    loaded += LoadCheatsFiles(folderName, filespec, friendlyName);
-  }
-
-  Console.WriteLn((loaded ? Color_Green : Color_Gray), L"Overall %d %s loaded", loaded, friendlyName.c_str());
-  return loaded;
+	Console.WriteLn((loaded ? Color_Green : Color_Gray), L"Overall %d %s loaded", loaded, friendlyName.c_str());
+	return loaded;
 }
 
 static u32 StrToU32(const wxString& str, int base = 10)

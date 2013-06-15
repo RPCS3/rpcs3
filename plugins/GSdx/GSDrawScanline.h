@@ -49,8 +49,17 @@ protected:
 	template<class T, bool masked>
 	__forceinline void FillRect(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, uint32 c, uint32 m);
 
+	#if _M_SSE >= 0x501
+
+	template<class T, bool masked>
+	__forceinline void FillBlock(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, const GSVector8i& c, const GSVector8i& m);
+
+	#else
+
 	template<class T, bool masked>
 	__forceinline void FillBlock(const int* RESTRICT row, const int* RESTRICT col, const GSVector4i& r, const GSVector4i& c, const GSVector4i& m);
+
+	#endif
 
 public:
 	GSDrawScanline();

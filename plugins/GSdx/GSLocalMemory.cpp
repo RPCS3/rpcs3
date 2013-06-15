@@ -801,7 +801,7 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, const uint8*
 			{
 			case PSM_PSMCT32:
 			case PSM_PSMZ32:
-				ReadColumn32<true>(y, dst, buff, 32);
+				ReadColumn32(y, dst, buff, 32);
 				memcpy(&buff[32], &src[x * 4], 32);
 				WriteColumn32<true, 0xffffffff>(y, dst, buff, 32);
 				break;
@@ -809,17 +809,17 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, const uint8*
 			case PSM_PSMCT16S:
 			case PSM_PSMZ16:
 			case PSM_PSMZ16S:
-				ReadColumn16<true>(y, dst, buff, 32);
+				ReadColumn16(y, dst, buff, 32);
 				memcpy(&buff[32], &src[x * 2], 32);
 				WriteColumn16<true>(y, dst, buff, 32);
 				break;
 			case PSM_PSMT8:
-				ReadColumn8<true>(y, dst, buff, 16);
+				ReadColumn8(y, dst, buff, 16);
 				for(int i = 0, j = y2; i < h2; i++, j++) memcpy(&buff[j * 16], &src[i * srcpitch + x], 16);
 				WriteColumn8<true>(y, dst, buff, 16);
 				break;
 			case PSM_PSMT4:
-				ReadColumn4<true>(y, dst, buff, 16);
+				ReadColumn4(y, dst, buff, 16);
 				for(int i = 0, j = y2; i < h2; i++, j++) memcpy(&buff[j * 16], &src[i * srcpitch + (x >> 1)], 16);
 				WriteColumn4<true>(y, dst, buff, 16);
 				break;
@@ -882,7 +882,7 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, const uint8*
 			{
 			case PSM_PSMCT32:
 			case PSM_PSMZ32:
-				ReadColumn32<true>(y, dst, buff, 32);
+				ReadColumn32(y, dst, buff, 32);
 				memcpy(&buff[0], &src[x * 4], 32);
 				WriteColumn32<true, 0xffffffff>(y, dst, buff, 32);
 				break;
@@ -890,17 +890,17 @@ void GSLocalMemory::WriteImageTopBottom(int l, int r, int y, int h, const uint8*
 			case PSM_PSMCT16S:
 			case PSM_PSMZ16:
 			case PSM_PSMZ16S:
-				ReadColumn16<true>(y, dst, buff, 32);
+				ReadColumn16(y, dst, buff, 32);
 				memcpy(&buff[0], &src[x * 2], 32);
 				WriteColumn16<true>(y, dst, buff, 32);
 				break;
 			case PSM_PSMT8:
-				ReadColumn8<true>(y, dst, buff, 16);
+				ReadColumn8(y, dst, buff, 16);
 				for(int i = 0; i < h; i++) memcpy(&buff[i * 16], &src[i * srcpitch + x], 16);
 				WriteColumn8<true>(y, dst, buff, 16);
 				break;
 			case PSM_PSMT4:
-				ReadColumn4<true>(y, dst, buff, 16);
+				ReadColumn4(y, dst, buff, 16);
 				for(int i = 0; i < h; i++) memcpy(&buff[i * 16], &src[i * srcpitch + (x >> 1)], 16);
 				WriteColumn4<true>(y, dst, buff, 16);
 				break;
@@ -1157,6 +1157,7 @@ void GSLocalMemory::WriteImage4HH(int& tx, int& ty, const uint8* src, int len, G
 		ty = th;
 	}
 }
+
 void GSLocalMemory::WriteImage24Z(int& tx, int& ty, const uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
 {
 	if(TRXREG.RRW == 0) return;
@@ -1190,6 +1191,7 @@ void GSLocalMemory::WriteImage24Z(int& tx, int& ty, const uint8* src, int len, G
 		ty = th;
 	}
 }
+
 void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIFRegBITBLTBUF& BITBLTBUF, GIFRegTRXPOS& TRXPOS, GIFRegTRXREG& TRXREG)
 {
 	if(len <= 0) return;
@@ -1224,7 +1226,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel32(addr + offset[x], *pd);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1244,7 +1246,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel24(addr + offset[x], *(uint32*)pb);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1266,7 +1268,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel16(addr + offset[x], *pw);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1283,7 +1285,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel8(addr + offset[x], *pb);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1301,7 +1303,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel4(addr + offset[x + 1], *pb >> 4);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1318,7 +1320,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel8H(addr + offset[x], *pb);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1336,7 +1338,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel4HL(addr + offset[x + 1], *pb >> 4);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1354,7 +1356,7 @@ void GSLocalMemory::WriteImageX(int& tx, int& ty, const uint8* src, int len, GIF
 				WritePixel4HH(addr + offset[x + 1], *pb >> 4);
 			}
 
-			if(x == ex) {x = sx; y++;}
+			if(x >= ex) {x = sx; y++;}
 		}
 
 		break;
@@ -1587,7 +1589,7 @@ void GSLocalMemory::ReadTexture32(const GSOffset* RESTRICT o, const GSVector4i& 
 {
 	FOREACH_BLOCK_START(r, 8, 8, 32)
 	{
-		ReadBlock32<true>(src, dst, dstpitch);
+		ReadBlock32(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1693,7 +1695,7 @@ void GSLocalMemory::ReadTextureBlock32(uint32 bp, uint8* dst, int dstpitch, cons
 {
 	ALIGN_STACK(32);
 
-	ReadBlock32<true>(BlockPtr(bp), dst, dstpitch);
+	ReadBlock32(BlockPtr(bp), dst, dstpitch);
 }
 
 void GSLocalMemory::ReadTextureBlock24(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
@@ -1845,7 +1847,7 @@ void GSLocalMemory::ReadTexture8P(const GSOffset* RESTRICT o, const GSVector4i& 
 {
 	FOREACH_BLOCK_START(r, 16, 16, 8)
 	{
-		ReadBlock8<true>(src, dst, dstpitch);
+		ReadBlock8(src, dst, dstpitch);
 	}
 	FOREACH_BLOCK_END
 }
@@ -1890,7 +1892,7 @@ void GSLocalMemory::ReadTexture4HHP(const GSOffset* RESTRICT o, const GSVector4i
 
 void GSLocalMemory::ReadTextureBlock8P(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const
 {
-	ReadBlock8<true>(BlockPtr(bp), dst, dstpitch);
+	ReadBlock8(BlockPtr(bp), dst, dstpitch);
 }
 
 void GSLocalMemory::ReadTextureBlock4P(uint32 bp, uint8* dst, int dstpitch, const GIFRegTEXA& TEXA) const

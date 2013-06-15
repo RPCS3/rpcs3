@@ -27,14 +27,25 @@
 
 class GSBlock
 {
+	#if _M_SSE >= 0x501
+	static const GSVector8i m_r16mask;
+	#else
 	static const GSVector4i m_r16mask;
+	#endif
 	static const GSVector4i m_r8mask;
 	static const GSVector4i m_r4mask;
 
+	#if _M_SSE >= 0x501
+	static const GSVector8i m_xxxa;
+	static const GSVector8i m_xxbx;
+	static const GSVector8i m_xgxx;
+	static const GSVector8i m_rxxx;
+	#else
 	static const GSVector4i m_xxxa;
 	static const GSVector4i m_xxbx;
 	static const GSVector4i m_xgxx;
 	static const GSVector4i m_rxxx;
+	#endif
 
 	static const GSVector4i m_uw8hmask0;
 	static const GSVector4i m_uw8hmask1;
@@ -277,41 +288,62 @@ public:
 		WriteColumn4<3, aligned>(dst, src, srcpitch);
 	}
 
-	template<int i, bool aligned> __forceinline static void ReadColumn32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	template<int i> __forceinline static void ReadColumn32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		GSVector4i v0, v1, v2, v3;
+		#if _M_SSE >= 0x501
 
-		if(aligned)
-		{
-			const GSVector4i* s = (const GSVector4i*)src;
+		const GSVector8i* s = (const GSVector8i*)src;
 		
-			v0 = s[i * 4 + 0];
-			v1 = s[i * 4 + 1];
-			v2 = s[i * 4 + 2];
-			v3 = s[i * 4 + 3];
+		GSVector8i v0 = s[i * 2 + 0];
+		GSVector8i v1 = s[i * 2 + 1];
 
-			GSVector4i::sw64(v0, v1, v2, v3);
-		}
-		else
-		{
-			v0 = GSVector4i::load(&src[i * 64 + 0], &src[i * 64 + 16]);
-			v1 = GSVector4i::load(&src[i * 64 + 32], &src[i * 64 + 48]);
-			v2 = GSVector4i::load(&src[i * 64 + 8], &src[i * 64 + 24]);
-			v3 = GSVector4i::load(&src[i * 64 + 40], &src[i * 64 + 56]);
-		}
+		GSVector8i::sw128(v0, v1);
+		GSVector8i::sw64(v0, v1);
+
+		GSVector8i::store<true>(&dst[dstpitch * 0], v0);
+		GSVector8i::store<true>(&dst[dstpitch * 1], v1);
+
+		#else
+
+		const GSVector4i* s = (const GSVector4i*)src;
+		
+		GSVector4i v0 = s[i * 4 + 0];
+		GSVector4i v1 = s[i * 4 + 1];
+		GSVector4i v2 = s[i * 4 + 2];
+		GSVector4i v3 = s[i * 4 + 3];
+
+		GSVector4i::sw64(v0, v1, v2, v3);
 
 		GSVector4i* d0 = (GSVector4i*)&dst[dstpitch * 0];
 		GSVector4i* d1 = (GSVector4i*)&dst[dstpitch * 1];
 
-		GSVector4i::store<aligned>(&d0[0], v0);
-		GSVector4i::store<aligned>(&d0[1], v1);
-		GSVector4i::store<aligned>(&d1[0], v2);
-		GSVector4i::store<aligned>(&d1[1], v3);
+		GSVector4i::store<true>(&d0[0], v0);
+		GSVector4i::store<true>(&d0[1], v1);
+		GSVector4i::store<true>(&d1[0], v2);
+		GSVector4i::store<true>(&d1[1], v3);
+
+		#endif
 	}
 
-	template<int i, bool aligned> __forceinline static void ReadColumn16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	template<int i> __forceinline static void ReadColumn16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		#if _M_SSE >= 0x301
+		#if _M_SSE >= 0x501
+		
+		const GSVector8i* s = (const GSVector8i*)src;
+		
+		GSVector8i v0 = s[i * 2 + 0].shuffle8(m_r16mask);
+		GSVector8i v1 = s[i * 2 + 1].shuffle8(m_r16mask);
+
+		GSVector8i::sw128(v0, v1);
+		GSVector8i::sw32(v0, v1);
+
+		v0 = v0.acbd();
+		v1 = v1.acbd();
+
+		GSVector8i::store<true>(&dst[dstpitch * 0], v0);
+		GSVector8i::store<true>(&dst[dstpitch * 1], v1);
+
+		#elif _M_SSE >= 0x301
 
 		const GSVector4i* s = (const GSVector4i*)src;
 
@@ -326,10 +358,10 @@ public:
 		GSVector4i* d0 = (GSVector4i*)&dst[dstpitch * 0];
 		GSVector4i* d1 = (GSVector4i*)&dst[dstpitch * 1];
 
-		GSVector4i::store<aligned>(&d0[0], v0);
-		GSVector4i::store<aligned>(&d0[1], v2);
-		GSVector4i::store<aligned>(&d1[0], v1);
-		GSVector4i::store<aligned>(&d1[1], v3);
+		GSVector4i::store<true>(&d0[0], v0);
+		GSVector4i::store<true>(&d0[1], v2);
+		GSVector4i::store<true>(&d1[0], v1);
+		GSVector4i::store<true>(&d1[1], v3);
 
 		#else
 
@@ -340,6 +372,8 @@ public:
 		GSVector4i v2 = s[i * 4 + 2];
 		GSVector4i v3 = s[i * 4 + 3];
 
+		//for(int16 i = 0; i < 8; i++) {v0.i16[i] = i; v1.i16[i] = i + 8; v2.i16[i] = i + 16; v3.i16[i] = i + 24;}
+
 		GSVector4i::sw16(v0, v1, v2, v3);
 		GSVector4i::sw32(v0, v1, v2, v3);
 		GSVector4i::sw16(v0, v2, v1, v3);
@@ -347,15 +381,15 @@ public:
 		GSVector4i* d0 = (GSVector4i*)&dst[dstpitch * 0];
 		GSVector4i* d1 = (GSVector4i*)&dst[dstpitch * 1];
 
-		GSVector4i::store<aligned>(&d0[0], v0);
-		GSVector4i::store<aligned>(&d0[1], v1);
-		GSVector4i::store<aligned>(&d1[0], v2);
-		GSVector4i::store<aligned>(&d1[1], v3);
+		GSVector4i::store<true>(&d0[0], v0);
+		GSVector4i::store<true>(&d0[1], v1);
+		GSVector4i::store<true>(&d1[0], v2);
+		GSVector4i::store<true>(&d1[1], v3);
 
 		#endif
 	}
 
-	template<int i, bool aligned> __forceinline static void ReadColumn8(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	template<int i> __forceinline static void ReadColumn8(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		#if _M_SSE >= 0x301
 
@@ -386,10 +420,10 @@ public:
 		GSVector4i::sw16(v0, v1, v2, v3);
 		GSVector4i::sw32(v0, v1, v3, v2);
 
-		GSVector4i::store<aligned>(&dst[dstpitch * 0], v0);
-		GSVector4i::store<aligned>(&dst[dstpitch * 1], v3);
-		GSVector4i::store<aligned>(&dst[dstpitch * 2], v1);
-		GSVector4i::store<aligned>(&dst[dstpitch * 3], v2);
+		GSVector4i::store<true>(&dst[dstpitch * 0], v0);
+		GSVector4i::store<true>(&dst[dstpitch * 1], v3);
+		GSVector4i::store<true>(&dst[dstpitch * 2], v1);
+		GSVector4i::store<true>(&dst[dstpitch * 3], v2);
 
 		#else
 
@@ -416,15 +450,15 @@ public:
 			v1 = v1.yxwz();
 		}
 
-		GSVector4i::store<aligned>(&dst[dstpitch * 0], v0);
-		GSVector4i::store<aligned>(&dst[dstpitch * 1], v1);
-		GSVector4i::store<aligned>(&dst[dstpitch * 2], v2);
-		GSVector4i::store<aligned>(&dst[dstpitch * 3], v3);
+		GSVector4i::store<true>(&dst[dstpitch * 0], v0);
+		GSVector4i::store<true>(&dst[dstpitch * 1], v1);
+		GSVector4i::store<true>(&dst[dstpitch * 2], v2);
+		GSVector4i::store<true>(&dst[dstpitch * 3], v3);
 
 		#endif
 	}
 
-	template<int i, bool aligned> __forceinline static void ReadColumn4(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	template<int i> __forceinline static void ReadColumn4(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		#if _M_SSE >= 0x301
 
@@ -453,10 +487,10 @@ public:
 			GSVector4i::sw16rl(v0, v1, v2, v3);
 		}
 
-		GSVector4i::store<aligned>(&dst[dstpitch * 0], v0);
-		GSVector4i::store<aligned>(&dst[dstpitch * 1], v1);
-		GSVector4i::store<aligned>(&dst[dstpitch * 2], v2);
-		GSVector4i::store<aligned>(&dst[dstpitch * 3], v3);
+		GSVector4i::store<true>(&dst[dstpitch * 0], v0);
+		GSVector4i::store<true>(&dst[dstpitch * 1], v1);
+		GSVector4i::store<true>(&dst[dstpitch * 2], v2);
+		GSVector4i::store<true>(&dst[dstpitch * 3], v3);
 
 		#else
 
@@ -491,104 +525,104 @@ public:
 			v1 = v1.yxwzlh();
 		}
 
-		GSVector4i::store<aligned>(&dst[dstpitch * 0], v0);
-		GSVector4i::store<aligned>(&dst[dstpitch * 1], v1);
-		GSVector4i::store<aligned>(&dst[dstpitch * 2], v2);
-		GSVector4i::store<aligned>(&dst[dstpitch * 3], v3);
+		GSVector4i::store<true>(&dst[dstpitch * 0], v0);
+		GSVector4i::store<true>(&dst[dstpitch * 1], v1);
+		GSVector4i::store<true>(&dst[dstpitch * 2], v2);
+		GSVector4i::store<true>(&dst[dstpitch * 3], v3);
 
 		#endif
 	}
 
-	template<bool aligned> static void ReadColumn32(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	static void ReadColumn32(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		switch((y >> 1) & 3)
 		{
-		case 0: ReadColumn32<0, aligned>(src, dst, dstpitch); break;
-		case 1: ReadColumn32<1, aligned>(src, dst, dstpitch); break;
-		case 2: ReadColumn32<2, aligned>(src, dst, dstpitch); break;
-		case 3: ReadColumn32<3, aligned>(src, dst, dstpitch); break;
+		case 0: ReadColumn32<0>(src, dst, dstpitch); break;
+		case 1: ReadColumn32<1>(src, dst, dstpitch); break;
+		case 2: ReadColumn32<2>(src, dst, dstpitch); break;
+		case 3: ReadColumn32<3>(src, dst, dstpitch); break;
 		default: __assume(0);
 		}
 	}
 
-	template<bool aligned> static void ReadColumn16(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	static void ReadColumn16(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		switch((y >> 1) & 3)
 		{
-		case 0: ReadColumn16<0, aligned>(src, dst, dstpitch); break;
-		case 1: ReadColumn16<1, aligned>(src, dst, dstpitch); break;
-		case 2: ReadColumn16<2, aligned>(src, dst, dstpitch); break;
-		case 3: ReadColumn16<3, aligned>(src, dst, dstpitch); break;
+		case 0: ReadColumn16<0>(src, dst, dstpitch); break;
+		case 1: ReadColumn16<1>(src, dst, dstpitch); break;
+		case 2: ReadColumn16<2>(src, dst, dstpitch); break;
+		case 3: ReadColumn16<3>(src, dst, dstpitch); break;
 		default: __assume(0);
 		}
 	}
 
-	template<bool aligned> static void ReadColumn8(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	static void ReadColumn8(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		switch((y >> 2) & 3)
 		{
-		case 0: ReadColumn8<0, aligned>(src, dst, dstpitch); break;
-		case 1: ReadColumn8<1, aligned>(src, dst, dstpitch); break;
-		case 2: ReadColumn8<2, aligned>(src, dst, dstpitch); break;
-		case 3: ReadColumn8<3, aligned>(src, dst, dstpitch); break;
+		case 0: ReadColumn8<0>(src, dst, dstpitch); break;
+		case 1: ReadColumn8<1>(src, dst, dstpitch); break;
+		case 2: ReadColumn8<2>(src, dst, dstpitch); break;
+		case 3: ReadColumn8<3>(src, dst, dstpitch); break;
 		default: __assume(0);
 		}
 	}
 
-	template<bool aligned> static void ReadColumn4(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	static void ReadColumn4(int y, const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		switch((y >> 2) & 3)
 		{
-		case 0: ReadColumn4<0, aligned>(src, dst, dstpitch); break;
-		case 1: ReadColumn4<1, aligned>(src, dst, dstpitch); break;
-		case 2: ReadColumn4<2, aligned>(src, dst, dstpitch); break;
-		case 3: ReadColumn4<3, aligned>(src, dst, dstpitch); break;
+		case 0: ReadColumn4<0>(src, dst, dstpitch); break;
+		case 1: ReadColumn4<1>(src, dst, dstpitch); break;
+		case 2: ReadColumn4<2>(src, dst, dstpitch); break;
+		case 3: ReadColumn4<3>(src, dst, dstpitch); break;
 		default: __assume(0);
 		}
 	}
 
-	template<bool aligned> static void ReadBlock32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	static void ReadBlock32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		ReadColumn32<0, aligned>(src, dst, dstpitch);
+		ReadColumn32<0>(src, dst, dstpitch);
 		dst += dstpitch * 2;
-		ReadColumn32<1, aligned>(src, dst, dstpitch);
+		ReadColumn32<1>(src, dst, dstpitch);
 		dst += dstpitch * 2;
-		ReadColumn32<2, aligned>(src, dst, dstpitch);
+		ReadColumn32<2>(src, dst, dstpitch);
 		dst += dstpitch * 2;
-		ReadColumn32<3, aligned>(src, dst, dstpitch);
+		ReadColumn32<3>(src, dst, dstpitch);
 	}
 
-	template<bool aligned> static void ReadBlock16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	static void ReadBlock16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		ReadColumn16<0, aligned>(src, dst, dstpitch);
+		ReadColumn16<0>(src, dst, dstpitch);
 		dst += dstpitch * 2;
-		ReadColumn16<1, aligned>(src, dst, dstpitch);
+		ReadColumn16<1>(src, dst, dstpitch);
 		dst += dstpitch * 2;
-		ReadColumn16<2, aligned>(src, dst, dstpitch);
+		ReadColumn16<2>(src, dst, dstpitch);
 		dst += dstpitch * 2;
-		ReadColumn16<3, aligned>(src, dst, dstpitch);
+		ReadColumn16<3>(src, dst, dstpitch);
 	}
 
-	template<bool aligned> static void ReadBlock8(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	static void ReadBlock8(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		ReadColumn8<0, aligned>(src, dst, dstpitch);
+		ReadColumn8<0>(src, dst, dstpitch);
 		dst += dstpitch * 4;
-		ReadColumn8<1, aligned>(src, dst, dstpitch);
+		ReadColumn8<1>(src, dst, dstpitch);
 		dst += dstpitch * 4;
-		ReadColumn8<2, aligned>(src, dst, dstpitch);
+		ReadColumn8<2>(src, dst, dstpitch);
 		dst += dstpitch * 4;
-		ReadColumn8<3, aligned>(src, dst, dstpitch);
+		ReadColumn8<3>(src, dst, dstpitch);
 	}
 
-	template<bool aligned> static void ReadBlock4(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
+	static void ReadBlock4(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
-		ReadColumn4<0, aligned>(src, dst, dstpitch);
+		ReadColumn4<0>(src, dst, dstpitch);
 		dst += dstpitch * 4;
-		ReadColumn4<1, aligned>(src, dst, dstpitch);
+		ReadColumn4<1>(src, dst, dstpitch);
 		dst += dstpitch * 4;
-		ReadColumn4<2, aligned>(src, dst, dstpitch);
+		ReadColumn4<2>(src, dst, dstpitch);
 		dst += dstpitch * 4;
-		ReadColumn4<3, aligned>(src, dst, dstpitch);
+		ReadColumn4<3>(src, dst, dstpitch);
 	}
 
 	__forceinline static void ReadBlock4P(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
@@ -850,8 +884,39 @@ public:
 		}
 	}
 
+	template<bool AEM, class V> __forceinline static V Expand24to32(const V& c, const V& TA0)
+	{
+		return c | (AEM ? TA0.andnot(c == V::zero()) : TA0); // TA0 & (c != GSVector4i::zero())
+	}
+
+	template<bool AEM, class V> __forceinline static V Expand16to32(const V& c, const V& TA0, const V& TA1)
+	{
+		return ((c & m_rxxx) << 3) | ((c & m_xgxx) << 6) | ((c & m_xxbx) << 9) | (AEM ? TA0.blend8(TA1, c.sra16(15)).andnot(c == V::zero()) : TA0.blend(TA1, c.sra16(15)));
+	}
+
 	template<bool AEM> static void ExpandBlock24(const uint32* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA)
 	{
+		#if _M_SSE >= 0x501
+
+		const GSVector8i* s = (const GSVector8i*)src;
+
+		GSVector8i TA0(TEXA.TA0 << 24);
+		GSVector8i mask = GSVector8i::x00ffffff();
+
+		for(int i = 0; i < 4; i++, dst += dstpitch * 2)
+		{
+			GSVector8i v0 = s[i * 2 + 0] & mask;
+			GSVector8i v1 = s[i * 2 + 1] & mask;
+
+			GSVector8i* d0 = (GSVector8i*)&dst[dstpitch * 0];
+			GSVector8i* d1 = (GSVector8i*)&dst[dstpitch * 1];
+
+			d0[0] = Expand24to32<AEM>(v0, TA0);
+			d1[0] = Expand24to32<AEM>(v1, TA0);
+		}
+
+		#else
+
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i TA0(TEXA.TA0 << 24);
@@ -867,68 +932,53 @@ public:
 			GSVector4i* d0 = (GSVector4i*)&dst[dstpitch * 0];
 			GSVector4i* d1 = (GSVector4i*)&dst[dstpitch * 1];
 
-			if(AEM)
-			{
-				d0[0] = v0 | TA0.andnot(v0 == GSVector4i::zero()); // TA0 & (v0 != GSVector4i::zero())
-				d0[1] = v1 | TA0.andnot(v1 == GSVector4i::zero()); // TA0 & (v1 != GSVector4i::zero())
-				d1[0] = v2 | TA0.andnot(v2 == GSVector4i::zero()); // TA0 & (v2 != GSVector4i::zero())
-				d1[1] = v3 | TA0.andnot(v3 == GSVector4i::zero()); // TA0 & (v3 != GSVector4i::zero())
-			}
-			else
-			{
-				d0[0] = v0 | TA0;
-				d0[1] = v1 | TA0;
-				d1[0] = v2 | TA0;
-				d1[1] = v3 | TA0;
-			}
+			d0[0] = Expand24to32<AEM>(v0, TA0);
+			d0[1] = Expand24to32<AEM>(v1, TA0);
+			d1[0] = Expand24to32<AEM>(v2, TA0);
+			d1[1] = Expand24to32<AEM>(v3, TA0);
 		}
+
+		#endif
 	}
 
 	template<bool AEM> static void ExpandBlock16(const uint16* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA) // do not inline, uses too many xmm regs
 	{
+		#if _M_SSE >= 0x501
+		
+		const GSVector8i* s = (const GSVector8i*)src;
+
+		GSVector8i TA0(TEXA.TA0 << 24);
+		GSVector8i TA1(TEXA.TA1 << 24);
+
+		for(int i = 0; i < 8; i++, dst += dstpitch)
+		{
+			GSVector8i v = s[i].acbd();
+
+			((GSVector8i*)dst)[0] = Expand16to32<AEM>(v.upl16(v), TA0, TA1);
+			((GSVector8i*)dst)[1] = Expand16to32<AEM>(v.uph16(v), TA0, TA1);
+		}
+
+		#else
+		
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i TA0(TEXA.TA0 << 24);
 		GSVector4i TA1(TEXA.TA1 << 24);
-		GSVector4i rm = m_rxxx;
-		GSVector4i gm = m_xgxx;
-		GSVector4i bm = m_xxbx;
-		GSVector4i l, h;
 
 		for(int i = 0; i < 8; i++, dst += dstpitch)
 		{
 			GSVector4i v0 = s[i * 2 + 0];
 
-			l = v0.upl16(v0);
-			h = v0.uph16(v0);
-
-			if(AEM)
-			{
-				((GSVector4i*)dst)[0] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA0.blend8(TA1, l.sra16(15)).andnot(l == GSVector4i::zero());
-				((GSVector4i*)dst)[1] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend8(TA1, h.sra16(15)).andnot(h == GSVector4i::zero());
-			}
-			else
-			{
-				((GSVector4i*)dst)[0] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA0.blend(TA1, l.sra16(15));
-				((GSVector4i*)dst)[1] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend(TA1, h.sra16(15));
-			}
+			((GSVector4i*)dst)[0] = Expand16to32<AEM>(v0.upl16(v0), TA0, TA1);
+			((GSVector4i*)dst)[1] = Expand16to32<AEM>(v0.uph16(v0), TA0, TA1);
 
 			GSVector4i v1 = s[i * 2 + 1];
 
-			l = v1.upl16(v1);
-			h = v1.uph16(v1);
-
-			if(AEM)
-			{
-				((GSVector4i*)dst)[2] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA0.blend8(TA1, l.sra16(15)).andnot(l == GSVector4i::zero());
-				((GSVector4i*)dst)[3] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend8(TA1, h.sra16(15)).andnot(h == GSVector4i::zero());
-			}
-			else
-			{
-				((GSVector4i*)dst)[2] = ((l & rm) << 3) | ((l & gm) << 6) | ((l & bm) << 9) | TA0.blend(TA1, l.sra16(15));
-				((GSVector4i*)dst)[3] = ((h & rm) << 3) | ((h & gm) << 6) | ((h & bm) << 9) | TA0.blend(TA1, h.sra16(15));
-			}
+			((GSVector4i*)dst)[2] = Expand16to32<AEM>(v1.upl16(v1), TA0, TA1);
+			((GSVector4i*)dst)[3] = Expand16to32<AEM>(v1.uph16(v1), TA0, TA1);
 		}
+
+		#endif
 	}
 
 	__forceinline static void ExpandBlock8_32(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const uint32* RESTRICT pal)
@@ -1386,6 +1436,33 @@ public:
 
 	template<bool AEM> __forceinline static void ReadAndExpandBlock24(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA)
 	{
+		#if _M_SSE >= 0x501
+
+		const GSVector8i* s = (const GSVector8i*)src;
+		
+		GSVector8i TA0(TEXA.TA0 << 24);
+		GSVector8i mask = GSVector8i::x00ffffff();
+
+		for(int i = 0; i < 4; i++, dst += dstpitch * 2)
+		{
+			GSVector8i v0 = s[i * 2 + 0];
+			GSVector8i v1 = s[i * 2 + 1];
+
+			GSVector8i::sw128(v0, v1);
+			GSVector8i::sw64(v0, v1);
+
+			v0 &= mask;
+			v1 &= mask;
+
+			GSVector8i* d0 = (GSVector8i*)&dst[dstpitch * 0];
+			GSVector8i* d1 = (GSVector8i*)&dst[dstpitch * 1];
+
+			d0[0] = Expand24to32<AEM>(v0, TA0);
+			d1[0] = Expand24to32<AEM>(v1, TA0);
+		}
+
+		#else
+
 		const GSVector4i* s = (const GSVector4i*)src;
 
 		GSVector4i TA0(TEXA.TA0 << 24);
@@ -1408,30 +1485,42 @@ public:
 			GSVector4i* d0 = (GSVector4i*)&dst[dstpitch * 0];
 			GSVector4i* d1 = (GSVector4i*)&dst[dstpitch * 1];
 
-			if(AEM)
-			{
-				d0[0] = v0 | TA0.andnot(v0 == GSVector4i::zero()); // TA0 & (v0 != GSVector4i::zero())
-				d0[1] = v1 | TA0.andnot(v1 == GSVector4i::zero()); // TA0 & (v1 != GSVector4i::zero())
-				d1[0] = v2 | TA0.andnot(v2 == GSVector4i::zero()); // TA0 & (v2 != GSVector4i::zero())
-				d1[1] = v3 | TA0.andnot(v3 == GSVector4i::zero()); // TA0 & (v3 != GSVector4i::zero())
-			}
-			else
-			{
-				d0[0] = v0 | TA0;
-				d0[1] = v1 | TA0;
-				d1[0] = v2 | TA0;
-				d1[1] = v3 | TA0;
-			}
+			d0[0] = Expand24to32<AEM>(v0, TA0);
+			d0[1] = Expand24to32<AEM>(v1, TA0);
+			d1[0] = Expand24to32<AEM>(v2, TA0);
+			d1[1] = Expand24to32<AEM>(v3, TA0);
 		}
-	}
-	template<bool AEM> __forceinline static GSVector4i Expand16to32(const GSVector4i& c, const GSVector4i& TA0, const GSVector4i& TA1)
-	{
-		return ((c & m_rxxx) << 3) | ((c & m_xgxx) << 6) | ((c & m_xxbx) << 9) | (AEM ? TA0.blend8(TA1, c.sra16(15)).andnot(c == GSVector4i::zero()) : TA0.blend(TA1, c.sra16(15)));
+
+		#endif
 	}
 
 	template<bool AEM> __forceinline static void ReadAndExpandBlock16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch, const GIFRegTEXA& TEXA)
 	{
-		#if 0 // not faster
+		#if _M_SSE >= 0x501
+
+		const GSVector8i* s = (const GSVector8i*)src;
+
+		GSVector8i TA0(TEXA.TA0 << 24);
+		GSVector8i TA1(TEXA.TA1 << 24);
+
+		for(int i = 0; i < 4; i++, dst += dstpitch * 2)
+		{
+			GSVector8i v0 = s[i * 2 + 0].shuffle8(m_r16mask);
+			GSVector8i v1 = s[i * 2 + 1].shuffle8(m_r16mask);
+
+			GSVector8i::sw128(v0, v1);
+			GSVector8i::sw32(v0, v1);
+
+			GSVector8i* d0 = (GSVector8i*)&dst[dstpitch * 0];
+			GSVector8i* d1 = (GSVector8i*)&dst[dstpitch * 1];
+
+			d0[0] = Expand16to32<AEM>(v0.upl16(v0), TA0, TA1);
+			d0[1] = Expand16to32<AEM>(v0.uph16(v0), TA0, TA1);
+			d1[0] = Expand16to32<AEM>(v1.upl16(v1), TA0, TA1);
+			d1[1] = Expand16to32<AEM>(v1.uph16(v1), TA0, TA1);
+		}
+		
+		#elif 0 // not faster
 		
 		const GSVector4i* s = (const GSVector4i*)src;
 
@@ -1468,7 +1557,7 @@ public:
 		
 		__aligned(uint16, 32) block[16 * 8];
 	
-		ReadBlock16<true>(src, (uint8*)block, sizeof(block) / 8);
+		ReadBlock16(src, (uint8*)block, sizeof(block) / 8);
 
 		ExpandBlock16<AEM>(block, dst, dstpitch, TEXA);
 
@@ -1525,7 +1614,7 @@ public:
 
 		__aligned(uint8, 32) block[16 * 16];
 
-		ReadBlock8<true>(src, (uint8*)block, sizeof(block) / 16);
+		ReadBlock8(src, (uint8*)block, sizeof(block) / 16);
 
 		ExpandBlock8_32(block, dst, dstpitch, pal);
 
@@ -1600,7 +1689,7 @@ public:
 
 		__aligned(uint8, 32) block[(32 / 2) * 16];
 
-		ReadBlock4<true>(src, (uint8*)block, sizeof(block) / 16);
+		ReadBlock4(src, (uint8*)block, sizeof(block) / 16);
 
 		ExpandBlock4_32(block, dst, dstpitch, pal);
 
@@ -1641,7 +1730,7 @@ public:
 
 		__aligned(uint32, 32) block[8 * 8];
 
-		ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
+		ReadBlock32(src, (uint8*)block, sizeof(block) / 8);
 
 		ExpandBlock8H_32(block, dst, dstpitch, pal);
 
@@ -1682,7 +1771,7 @@ public:
 
 		__aligned(uint32, 32) block[8 * 8];
 
-		ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
+		ReadBlock32(src, (uint8*)block, sizeof(block) / 8);
 
 		ExpandBlock4HL_32(block, dst, dstpitch, pal);
 
@@ -1723,7 +1812,7 @@ public:
 
 		__aligned(uint32, 32) block[8 * 8];
 
-		ReadBlock32<true>(src, (uint8*)block, sizeof(block) / 8);
+		ReadBlock32(src, (uint8*)block, sizeof(block) / 8);
 
 		ExpandBlock4HH_32(block, dst, dstpitch, pal);
 

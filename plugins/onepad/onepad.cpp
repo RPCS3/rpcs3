@@ -121,6 +121,7 @@ int ds2mode = 0; // DS Mode at start
 FILE *padLog = NULL;
 
 pthread_spinlock_t	   mutex_KeyEvent;
+bool mutex_WasInit = false;
 KeyStatus* key_status = NULL;
 
 queue<keyEvent> ev_fifo;
@@ -277,6 +278,7 @@ EXPORT_C_(s32) PADopen(void *pDsp)
 
 	while (!ev_fifo.empty()) ev_fifo.pop();
 	pthread_spin_init(&mutex_KeyEvent, PTHREAD_PROCESS_PRIVATE);
+	mutex_WasInit = true;
 
 #ifdef __LINUX__
 	JoystickInfo::EnumerateJoysticks(s_vjoysticks);
@@ -303,6 +305,7 @@ EXPORT_C_(void) PADsetLogDir(const char* dir)
 EXPORT_C_(void) PADclose()
 {
 	while (!ev_fifo.empty()) ev_fifo.pop();
+	mutex_WasInit = false;
 	pthread_spin_destroy(&mutex_KeyEvent);
 	_PADclose();
 }
@@ -666,8 +669,12 @@ EXPORT_C_(keyEvent*) PADkeyEvent()
 #ifdef __LINUX__
 EXPORT_C_(void) PADWriteEvent(keyEvent &evt)
 {
-	pthread_spin_lock(&mutex_KeyEvent);
-	ev_fifo.push(evt);
-	pthread_spin_unlock(&mutex_KeyEvent);
+	// This function call be called before PADopen. Therefore we cann't
+	// guarantee that the spin lock was initialized
+	if (mutex_WasInit) {
+		pthread_spin_lock(&mutex_KeyEvent);
+		ev_fifo.push(evt);
+		pthread_spin_unlock(&mutex_KeyEvent);
+	}
 }
 #endif
