@@ -170,6 +170,16 @@ GSdxApp::GSdxApp()
 }
 
 #ifdef _LINUX
+void GSdxApp::ReloadConfig()
+{
+	auto file = m_configuration_map.find("inifile");
+	if (file == m_configuration_map.end()) return;
+
+	// A map was built so reload it
+	m_configuration_map.clear();
+	BuildConfigurationMap(file->second.c_str());
+}
+
 void GSdxApp::BuildConfigurationMap(const char* lpFileName)
 {
 	// Check if the map was already built

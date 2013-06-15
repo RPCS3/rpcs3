@@ -41,6 +41,8 @@ public:
 #endif
 #ifdef _LINUX
 	void BuildConfigurationMap(const char* lpFileName);
+	void ReloadConfig();
+
 	size_t GetPrivateProfileString(const char* lpAppName, const char* lpKeyName, const char* lpDefault, char* lpReturnedString, size_t nSize, const char* lpFileName);
 	bool WritePrivateProfileString(const char* lpAppName, const char* lpKeyName, const char* pString, const char* lpFileName);
 	int GetPrivateProfileInt(const char* lpAppName, const char* lpKeyName, int nDefault, const char* lpFileName);

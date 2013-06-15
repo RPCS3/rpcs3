@@ -652,15 +652,10 @@ EXPORT_C GSconfigure()
 
 #else
 
-		// TODO: linux
-
-		if (RunLinuxDialog())
-		{
-			if(s_gs != NULL && s_gs->m_wnd->IsManaged())
-			{
-				GSshutdown();
-			}
+		if (RunLinuxDialog()) {
+			theApp.ReloadConfig();
 		}
+
 #endif
 	} catch (GSDXRecoverableError)
 	{

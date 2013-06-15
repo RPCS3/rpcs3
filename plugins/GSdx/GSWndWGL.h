@@ -25,9 +25,6 @@
 
 class GSWndWGL : public GSWnd
 {
-	//Window     m_NativeWindow;
-	//Display*   m_NativeDisplay;
-	//GLXContext m_context;
 	HWND	 m_NativeWindow;
 	HDC		 m_NativeDisplay;
 	HGLRC	 m_context;

@@ -25,7 +25,7 @@
 #include "GSLinuxLogo.h"
 
 GtkWidget *fsaa_combo_box, *render_combo_box, *filter_combo_box;
-GtkWidget *shadeboost_check, *paltex_check, *fba_check, *aa_check,  *native_res_check;
+GtkWidget *shadeboost_check, *paltex_check, *fba_check, *aa_check,  *native_res_check, *fxaa_check;
 GtkWidget *sb_contrast, *sb_brightness, *sb_saturation;
 GtkWidget *resx_spin, *resy_spin;
 
@@ -152,16 +152,17 @@ GtkWidget* CreateFilterComboBox()
 
 void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 {
+#if 0
 	int	render_type = gtk_combo_box_get_active(GTK_COMBO_BOX(render_combo_box));
 	bool hardware_render = ((render_type % 3) == 1);
 	
 	if (hardware_render)
 	{
 		gtk_widget_set_sensitive(filter_combo_box, true);
-		gtk_widget_set_sensitive(shadeboost_check, true);
 		gtk_widget_set_sensitive(paltex_check, true);
 		gtk_widget_set_sensitive(fba_check, true);
 		gtk_widget_set_sensitive(native_res_check, true);
+
 		
 		if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(native_res_check)))
 		{
@@ -185,14 +186,10 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 			}
 		}
 
-		gtk_widget_set_sensitive(sb_brightness,true);
-		gtk_widget_set_sensitive(sb_saturation,true);
-		gtk_widget_set_sensitive(sb_contrast,true);
 	}
 	else
 	{
 		gtk_widget_set_sensitive(filter_combo_box, false);
-		gtk_widget_set_sensitive(shadeboost_check, false);
 		gtk_widget_set_sensitive(paltex_check, false);
 		gtk_widget_set_sensitive(fba_check, false);
 		
@@ -200,11 +197,8 @@ void toggle_widget_states( GtkWidget *widget, gpointer callback_data )
 		gtk_widget_set_sensitive(fsaa_combo_box, false);
 		gtk_widget_set_sensitive(resx_spin, false);
 		gtk_widget_set_sensitive(resy_spin, false);
-
-		gtk_widget_set_sensitive(sb_brightness,false);
-		gtk_widget_set_sensitive(sb_saturation,false);
-		gtk_widget_set_sensitive(sb_contrast,false);
 	}
+#endif
 }
 
 void set_hex_entry(GtkWidget *text_box, int hex_value) {
@@ -225,9 +219,9 @@ int get_hex_entry(GtkWidget *text_box) {
 bool RunLinuxDialog()
 {
 	GtkWidget *dialog;
-	GtkWidget *main_box, *res_box, *hw_box, *sw_box;
+	GtkWidget *main_box, *res_box, *hw_box, *sw_box, *shader_box;
 	GtkWidget  *native_box, *fsaa_box, *resxy_box, *renderer_box, *interlace_box, *threads_box, *filter_box;
-	GtkWidget *hw_table, *res_frame, *hw_frame, *sw_frame;
+	GtkWidget *hw_table, *shader_table, *res_frame, *hw_frame, *sw_frame, *shader_frame;
 	GtkWidget *interlace_combo_box, *threads_spin;
 	GtkWidget *interlace_label, *threads_label, *native_label,  *fsaa_label, *rexy_label, *render_label, *filter_label;
 	
@@ -258,6 +252,13 @@ bool RunLinuxDialog()
 	res_box = gtk_vbox_new(false, 5);
 	res_frame = gtk_frame_new ("OpenGL Internal Resolution (can cause glitches)");
 	gtk_container_add(GTK_CONTAINER(res_frame), res_box);
+
+	// The extra shader setting frame/container/table
+	shader_box = gtk_vbox_new(false, 5);
+	shader_frame = gtk_frame_new("Custom Shader Settings");
+	gtk_container_add(GTK_CONTAINER(shader_frame), shader_box);
+	shader_table = gtk_table_new(5,2, false);
+	gtk_container_add(GTK_CONTAINER(shader_box), shader_table);
 	
 	// The hardware mode frame, container, and table.
 	hw_box = gtk_vbox_new(false, 5);
@@ -365,15 +366,17 @@ bool RunLinuxDialog()
 
 	// Create our checkboxes.
 	shadeboost_check = gtk_check_button_new_with_label("Shade boost");
-	paltex_check = gtk_check_button_new_with_label("Allow 8 bit textures");
+	paltex_check = gtk_check_button_new_with_label("Allow 8 bits textures");
 	fba_check = gtk_check_button_new_with_label("Alpha correction (FBA)");
 	aa_check = gtk_check_button_new_with_label("Edge anti-aliasing (AA1)");
+	fxaa_check = gtk_check_button_new_with_label("Fxaa shader");
 	
 	// Set the checkboxes.
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(shadeboost_check), theApp.GetConfig("shadeboost", 1));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(paltex_check), theApp.GetConfig("paltex", 0));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fba_check), theApp.GetConfig("fba", 1));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(aa_check), theApp.GetConfig("aa1", 0));
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(fxaa_check), theApp.GetConfig("fxaa", 0));
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(native_res_check), theApp.GetConfig("nativeres", 0));
 	
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(hack_alpha_check), theApp.GetConfig("UserHacks_AlphaHack", 0));
@@ -404,27 +407,30 @@ bool RunLinuxDialog()
 	gtk_container_add(GTK_CONTAINER(res_box), native_box);
 	gtk_container_add(GTK_CONTAINER(res_box), fsaa_box);
 	gtk_container_add(GTK_CONTAINER(res_box), resxy_box);
-	
+
 	gtk_container_add(GTK_CONTAINER(sw_box), threads_box);
 	gtk_container_add(GTK_CONTAINER(sw_box), aa_check);
+
+	// Tables are strange. The numbers are for their position: left, right, top, bottom.
+	gtk_table_attach_defaults(GTK_TABLE(shader_table), fxaa_check, 0, 1, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(shader_table), shadeboost_check, 1, 2, 0, 1);
+	gtk_table_attach_defaults(GTK_TABLE(shader_table), sb_brightness_label, 0, 1, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(shader_table), sb_brightness, 1, 2, 1, 2);
+	gtk_table_attach_defaults(GTK_TABLE(shader_table), sb_contrast_label, 0, 1, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(shader_table), sb_contrast, 1, 2, 2, 3);
+	gtk_table_attach_defaults(GTK_TABLE(shader_table), sb_saturation_label, 0, 1, 3, 4);
+	gtk_table_attach_defaults(GTK_TABLE(shader_table), sb_saturation, 1, 2, 3, 4);
 	
 	// Tables are strange. The numbers are for their position: left, right, top, bottom.
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), filter_box, 0, 1, 0, 1);
-	gtk_table_attach_defaults(GTK_TABLE(hw_table), shadeboost_check, 1, 2, 0, 1);
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), paltex_check, 0, 1, 1, 2);
 	gtk_table_attach_defaults(GTK_TABLE(hw_table), fba_check, 1, 2, 1, 2);
-	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_brightness_label, 0, 1, 2, 3);
-	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_brightness, 1, 2, 2, 3);
-	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_contrast_label, 0, 1, 3, 4);
-	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_contrast, 1, 2, 3, 4);
-	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_saturation_label, 0, 1, 4, 5);
-	gtk_table_attach_defaults(GTK_TABLE(hw_table), sb_saturation, 1, 2, 4, 5);
-
 	
 	// Put everything in the big box.
 	gtk_container_add(GTK_CONTAINER(main_box), renderer_box);
 	gtk_container_add(GTK_CONTAINER(main_box), interlace_box);
 	gtk_container_add(GTK_CONTAINER(main_box), res_frame);
+	gtk_container_add(GTK_CONTAINER(main_box), shader_frame);
 	gtk_container_add(GTK_CONTAINER(main_box), hw_frame);
 	gtk_container_add(GTK_CONTAINER(main_box), sw_frame);
 	
@@ -475,6 +481,7 @@ bool RunLinuxDialog()
 		theApp.SetConfig("paltex", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(paltex_check)));
 		theApp.SetConfig("fba", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fba_check)));
 		theApp.SetConfig("aa1", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(aa_check)));
+		theApp.SetConfig("fxaa", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(fxaa_check)));
 		theApp.SetConfig("nativeres", (int)gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(native_res_check)));
 		
 		theApp.SetConfig("ShadeBoost_Saturation", (int)gtk_range_get_value(GTK_RANGE(sb_saturation)));
