@@ -323,7 +323,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	if (!GLLoader::found_only_gl30) {
 		// This extension become core on openGL4
 		fxaa_macro += "#extension GL_ARB_gpu_shader5 : enable\n";
-		fxaa_macro += "#define FXAA_GATHER4_ALPHA\n";
+		fxaa_macro += "#define FXAA_GATHER4_ALPHA 1\n";
 	}
 	m_fxaa.cb = new GSUniformBufferOGL(g_fxaa_cb_index, sizeof(FXAAConstantBuffer));
 	CompileShaderFromSource("fxaa.fx", "ps_main", GL_FRAGMENT_SHADER, &m_fxaa.ps, fxaa_fx, fxaa_macro);

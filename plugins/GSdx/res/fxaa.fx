@@ -1,5 +1,9 @@
 #if defined(SHADER_MODEL) || defined(FXAA_GLSL_130) // make safe to include in resource file to enforce dependency
 
+#ifndef FXAA_GLSL_130
+    #define FXAA_GLSL_130 0
+#endif
+
 #define FXAA_PC 1
 #define FXAA_QUALITY_SUBPIX 0.0
 
@@ -60,7 +64,7 @@ struct PS_OUTPUT
 #endif
 
 
-#ifdef FXAA_GLSL_130
+#if (FXAA_GLSL_130 == 1)
 struct vertex_basic
 {
     vec4 p;
@@ -1224,7 +1228,7 @@ PS_OUTPUT ps_main(PS_INPUT input)
 }
 #endif
 
-#ifdef FXAA_GLSL_130
+#if (FXAA_GLSL_130 == 1)
 void ps_main()
 {
 	vec2 pos = PSin_t;
