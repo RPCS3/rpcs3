@@ -120,10 +120,8 @@ GSdxApp::GSdxApp()
 #endif
 	m_gs_renderers.push_back(GSSetting(10, "Null", "Software"));
 	m_gs_renderers.push_back(GSSetting(11, "Null", "Null"));
-#ifdef _LINUX
 	m_gs_renderers.push_back(GSSetting(12, "OpenGL", "Hardware"));
 	m_gs_renderers.push_back(GSSetting(13, "OpenGL", "Software"));
-#endif
 
 	m_gs_interlace.push_back(GSSetting(0, "None", ""));
 	m_gs_interlace.push_back(GSSetting(1, "Weave tff", "saw-tooth"));
@@ -172,6 +170,16 @@ GSdxApp::GSdxApp()
 }
 
 #ifdef _LINUX
+void GSdxApp::ReloadConfig()
+{
+	auto file = m_configuration_map.find("inifile");
+	if (file == m_configuration_map.end()) return;
+
+	// A map was built so reload it
+	m_configuration_map.clear();
+	BuildConfigurationMap(file->second.c_str());
+}
+
 void GSdxApp::BuildConfigurationMap(const char* lpFileName)
 {
 	// Check if the map was already built

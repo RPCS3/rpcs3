@@ -105,11 +105,11 @@ public:
 			glEnable(GL_BLEND);
 			if (HasConstantFactor()) {
 				debug_factor = factor;
-				glBlendColor(factor, factor, factor, 0);
+				gl_BlendColor(factor, factor, factor, 0);
 			}
 
-			glBlendEquationSeparate(m_equation_RGB, m_equation_ALPHA);
-			glBlendFuncSeparate(m_func_sRGB, m_func_dRGB, m_func_sALPHA, m_func_dALPHA);
+			gl_BlendEquationSeparate(m_equation_RGB, m_equation_ALPHA);
+			gl_BlendFuncSeparate(m_func_sRGB, m_func_dRGB, m_func_sALPHA, m_func_dALPHA);
 		} else {
 			glDisable(GL_BLEND);
 		}
@@ -152,11 +152,11 @@ class GSDepthStencilOGL {
 	GLboolean m_depth_mask;
 	// Note front face and back might be split but it seems they have same parameter configuration
 	bool m_stencil_enable;
-	GLuint m_stencil_mask;
+	const GLuint m_stencil_mask;
 	GLuint m_stencil_func;
-	GLuint m_stencil_ref;
-	GLuint m_stencil_sfail_op;
-	GLuint m_stencil_spass_dfail_op;
+	const GLuint m_stencil_ref;
+	const GLuint m_stencil_sfail_op;
+	const GLuint m_stencil_spass_dfail_op;
 	GLuint m_stencil_spass_dpass_op;
 
 	char* NameOfParam(GLenum p)
@@ -182,7 +182,7 @@ public:
 		, m_stencil_enable(false)
 		, m_stencil_mask(1)
 		, m_stencil_func(0)
-		, m_stencil_ref(0)
+		, m_stencil_ref(1)
 		, m_stencil_sfail_op(GL_KEEP)
 		, m_stencil_spass_dfail_op(GL_KEEP)
 		, m_stencil_spass_dpass_op(GL_KEEP)
@@ -204,13 +204,16 @@ public:
 			glDisable(GL_DEPTH_TEST);
 	}
 
-	void SetupStencil(uint8 sref)
+	void SetupStencil()
 	{
-		uint ref = sref;
 		if (m_stencil_enable) {
 			glEnable(GL_STENCIL_TEST);
-			glStencilFunc(m_stencil_func, ref, m_stencil_mask);
+			// Note: here the mask control which bitplane is considered by the operation
+			glStencilFunc(m_stencil_func, m_stencil_ref, m_stencil_mask);
 			glStencilOp(m_stencil_sfail_op, m_stencil_spass_dfail_op, m_stencil_spass_dpass_op);
+			// FIXME only needed once since m_stencil_mask is constant
+			// Control which stencil bitplane are written
+			glStencilMask(m_stencil_mask);
 		} else
 			glDisable(GL_STENCIL_TEST);
 	}
@@ -280,8 +283,7 @@ class GSDeviceOGL : public GSDevice
 				uint32 tme:1;
 				uint32 fst:1;
 				uint32 logz:1;
-				uint32 rtcopy:1;
-				uint32 wildhack:2;
+				//uint32 rtcopy:1;
 			};
 
 			uint32 key;
@@ -504,7 +506,6 @@ class GSDeviceOGL : public GSDevice
 		GLuint ps[8];	// program object
 		GLuint ln;		// sampler object
 		GLuint pt;		// sampler object
-		GLuint gs;
 		GSDepthStencilOGL* dss;
 		GSBlendStateOGL* bs;
 	} m_convert;
@@ -540,7 +541,6 @@ class GSDeviceOGL : public GSDevice
 		GSVector2i viewport;
 		GSVector4i scissor;
 		GSDepthStencilOGL* dss;
-		uint8 sref;
 		GSBlendStateOGL* bs;
 		float bf;
 		// FIXME texture attachment in the FBO
@@ -551,9 +551,6 @@ class GSDeviceOGL : public GSDevice
 		GLuint	   fbo;
  		GLenum	   draw;
 	} m_state;
-
-	bool m_srv_changed;
-	bool m_ss_changed;
 
 	hash_map<uint32, GLuint > m_vs;
 	hash_map<uint32, GLuint > m_gs;
@@ -574,8 +571,10 @@ class GSDeviceOGL : public GSDevice
 	protected:
 	GSTexture* CreateSurface(int type, int w, int h, bool msaa, int format);
 	GSTexture* FetchSurface(int type, int w, int h, bool msaa, int format);
+
 	void DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c);
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
+	void DoFXAA(GSTexture* st, GSTexture* dt);
 	void DoShadeBoost(GSTexture* st, GSTexture* dt);
 
 	public:
@@ -584,9 +583,6 @@ class GSDeviceOGL : public GSDevice
 
 	void CheckDebugLog();
 	static void DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message);
-	void DebugOutput();
-	void DebugInput();
-	void DebugBB();
 
 	bool HasStencil() { return true; }
 	bool HasDepth32() { return true; }
@@ -607,6 +603,7 @@ class GSDeviceOGL : public GSDevice
 	void ClearDepth(GSTexture* t, float c);
 	void ClearStencil(GSTexture* t, uint8 c);
 
+	void CreateSampler(GLuint& sampler, bool bilinear, bool tau, bool tav);
 	GSTexture* CreateRenderTarget(int w, int h, bool msaa, int format = 0);
 	GSTexture* CreateDepthStencil(int w, int h, bool msaa, int format = 0);
 	GSTexture* CreateTexture(int w, int h, int format = 0);
@@ -657,9 +654,6 @@ class GSDeviceOGL : public GSDevice
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 
-#ifdef DISABLE_GL41_SSO
 	hash_map<uint64, GLuint > m_single_prog;
 	GLuint link_prog();
-#endif
-
 };

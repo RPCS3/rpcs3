@@ -123,6 +123,11 @@ using namespace std;
 
 #ifdef _WINDOWS
 
+	#include <GL/gl.h>
+	#include <GL/glext.h>
+	#include <GL/wglext.h>
+	#include "GLLoader.h"
+
 	#include <hash_map>
 	#include <hash_set>
 
@@ -202,10 +207,9 @@ using namespace std;
 	//#include <ext/hash_map>
 	//#include <ext/hash_set>
 
-	#include <GL/glew.h>
 	#include <GL/gl.h>
-	#include <GL/glx.h>
 	#include <GL/glext.h>
+	#include "GLLoader.h"
 
 	//using namespace __gnu_cxx;
 

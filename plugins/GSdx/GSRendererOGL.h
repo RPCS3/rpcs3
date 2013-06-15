@@ -39,11 +39,11 @@ class GSRendererOGL : public GSRendererHW
 		bool m_fba;
 		bool UserHacks_AlphaHack;
 		bool UserHacks_AlphaStencil;
-		unsigned int UserHacks_WildHack;
 		unsigned int UserHacks_TCOffset;
 		float UserHacks_TCO_x, UserHacks_TCO_y;
 
 	protected:
+		void EmulateGS();
 		void SetupIA();
 
 	public:

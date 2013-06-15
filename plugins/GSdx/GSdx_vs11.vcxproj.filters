@@ -60,6 +60,9 @@
     <ClCompile Include="GSDeviceNull.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSDeviceOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -108,6 +111,9 @@
     <ClCompile Include="GSRendererNull.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSRendererOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSRendererSW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -135,6 +141,9 @@
     <ClCompile Include="GSTexture9.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSTextureOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSTextureCache.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -144,6 +153,9 @@
     <ClCompile Include="GSTextureCache9.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSTextureCacheOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSTextureCacheSW.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -151,6 +163,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSTextureFX9.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSTextureFXOGL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSTextureNull.cpp">
@@ -175,6 +190,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GSWnd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSWndDX.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSWndWGL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
@@ -249,6 +270,9 @@
     <ClCompile Include="baseclasses\wxutil.cpp">
       <Filter>Baseclasses</Filter>
     </ClCompile>
+    <ClCompile Include="GLLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -314,6 +338,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GLLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -351,6 +378,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSDeviceNull.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSDeviceOGL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSDialog.h">
@@ -407,6 +437,9 @@
     <ClInclude Include="GSRendererNull.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSRendererOGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSRendererSW.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -437,6 +470,9 @@
     <ClInclude Include="GSTexture9.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSTextureOGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSTextureCache.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -444,6 +480,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSTextureCache9.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSTextureCacheOGL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSTextureCacheSW.h">
@@ -455,6 +494,9 @@
     <ClInclude Include="GSThread.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GSUniformBufferOGL.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="GSUtil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -462,6 +504,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSVertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSVertexArrayOGL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSVertexHW.h">
@@ -477,6 +522,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSWnd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSWndDX.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSWndWGL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">

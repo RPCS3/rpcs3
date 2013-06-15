@@ -25,6 +25,8 @@
 #include "GSRendererSW.h"
 #include "GSRendererNull.h"
 #include "GSDeviceNull.h"
+#include "GSDeviceOGL.h"
+#include "GSRendererOGL.h"
 
 #ifdef _WINDOWS
 
@@ -32,6 +34,8 @@
 #include "GSRendererDX11.h"
 #include "GSDevice9.h"
 #include "GSDevice11.h"
+#include "GSWndDX.h"
+#include "GSWndWGL.h"
 #include "GSRendererCS.h"
 #include "GSSettingsDlg.h"
 
@@ -39,8 +43,8 @@ static HRESULT s_hr = E_FAIL;
 
 #else
 
-#include "GSDeviceOGL.h"
-#include "GSRendererOGL.h"
+#include "GSWndOGL.h"
+#include "GSWndEGL.h"
 
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
@@ -54,7 +58,7 @@ extern bool RunLinuxDialog();
 #define PS2E_X86 0x01   // 32 bit
 #define PS2E_X86_64 0x02   // 64 bit
 
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 GSRenderer* s_gs = NULL;
 #else
 static GSRenderer* s_gs = NULL;
@@ -173,7 +177,7 @@ EXPORT_C GSclose()
 
 	s_gs->m_dev = NULL;
 
-	s_gs->m_wnd.Detach();
+	s_gs->m_wnd->Detach();
 }
 
 static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
@@ -231,10 +235,8 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 				case 0: dev = new GSDevice9(); break;
 				case 1: dev = new GSDevice11(); break;
 				#endif
-				#ifdef _LINUX
-				case 4: dev = new GSDeviceOGL(); break;
-				#endif
 				case 3: dev = new GSDeviceNull(); break;
+				case 4: dev = new GSDeviceOGL(); break;
 			}
 
 			if(dev == NULL)
@@ -246,24 +248,44 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			{
 				switch(renderer % 3)
 				{
-				default:
-				case 0:
+					default:
+					case 0:
+						switch(renderer) 
+						{ 
+							default:
 #ifdef _WINDOWS
-					s_gs = (renderer / 3) == 0 ? (GSRenderer*)new GSRendererDX9() : (GSRenderer*)new GSRendererDX11();
-#else
-					s_gs = (GSRenderer*)new GSRendererOGL();
+							case 0: s_gs = (GSRenderer*)new GSRendererDX9(); break;
+							case 3: s_gs = (GSRenderer*)new GSRendererDX11(); break;
 #endif
-					break;
-				case 1:
-					s_gs = new GSRendererSW(threads);
-					break;
-				case 2:
-					s_gs = new GSRendererNull();
-					break;
+							case 12: s_gs = (GSRenderer*)new GSRendererOGL(); break;
+						}
+						break;
+					case 1:
+						s_gs = new GSRendererSW(threads);
+						break;
+					case 2:
+						s_gs = new GSRendererNull();
+						break;
 				}
 
 				s_renderer = renderer;
 			}
+		}
+
+		if (s_gs->m_wnd == NULL)
+		{
+#ifdef _WINDOWS
+			if (renderer / 3 == 4)
+				s_gs->m_wnd = new GSWndWGL();
+			else
+				s_gs->m_wnd = new GSWndDX();
+#else
+	#ifdef EGL_API
+			s_gs->m_wnd = new GSWndEGL();
+	#else
+			s_gs->m_wnd = new GSWndOGL();
+	#endif
+#endif
 		}
 	}
 	catch(std::exception& ex)
@@ -296,9 +318,9 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			return -1;
 		}
 
-		s_gs->m_wnd.Show();
+		s_gs->m_wnd->Show();
 
-		*dsp = s_gs->m_wnd.GetDisplay();
+		*dsp = s_gs->m_wnd->GetDisplay();
 	}
 	else
 	{
@@ -306,10 +328,10 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 
 #ifdef _LINUX
 		// Get the Xwindow from dsp.
-		if( !s_gs->m_wnd.Attach((void*)((uint32*)(dsp)+1), false) )
+		if( !s_gs->m_wnd->Attach((void*)((uint32*)(dsp)+1), false) )
 			return -1;
 #else
-		s_gs->m_wnd.Attach(*dsp, false);
+		s_gs->m_wnd->Attach(*dsp, false);
 #endif
 	}
 
@@ -440,19 +462,19 @@ EXPORT_C GSreadFIFO(uint8* mem)
 {
 	try
 	{
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 		// FIXME: double check which thread call this function
 		// See fifo2 issue below
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 		if (theApp.GetConfig("renderer", 0) / 3 == 4) fprintf(stderr, "Disable FIFO1 on opengl\n");
 #endif
-		s_gs->m_wnd.AttachContext();
+		s_gs->m_wnd->AttachContext();
 #endif
 
 		s_gs->ReadFIFO(mem, 1);
 
-#ifdef OGL_MT_HACK
-		s_gs->m_wnd.DetachContext();
+#ifdef ENABLE_OGL_MT_HACK
+		s_gs->m_wnd->DetachContext();
 #endif
 	}
 	catch (GSDXRecoverableError)
@@ -464,19 +486,16 @@ EXPORT_C GSreadFIFO2(uint8* mem, uint32 size)
 {
 	try
 	{
-#ifdef OGL_MT_HACK
+#ifdef ENABLE_OGL_MT_HACK
 		// FIXME called from EE core thread not MTGS which cause
 		// invalidate data for opengl
-#ifdef OGL_DEBUG
-		if (theApp.GetConfig("renderer", 0) / 3 == 4) fprintf(stderr, "Disable FIFO2(%d) on opengl\n", size);
-#endif
-		s_gs->m_wnd.AttachContext();
+		s_gs->m_wnd->AttachContext();
 #endif
 
 		s_gs->ReadFIFO(mem, size);
 
-#ifdef OGL_MT_HACK
-		s_gs->m_wnd.DetachContext();
+#ifdef ENABLE_OGL_MT_HACK
+		s_gs->m_wnd->DetachContext();
 #endif
 	}
 	catch (GSDXRecoverableError)
@@ -534,7 +553,7 @@ EXPORT_C GSvsync(int field)
 	{
 #ifdef _WINDOWS
 
-		if(s_gs->m_wnd.IsManaged())
+		if(s_gs->m_wnd->IsManaged())
 		{
 			MSG msg;
 
@@ -549,8 +568,8 @@ EXPORT_C GSvsync(int field)
 
 #endif
 
-#ifdef OGL_MT_HACK
-		s_gs->m_wnd.AttachContext();
+#ifdef ENABLE_OGL_MT_HACK
+		s_gs->m_wnd->AttachContext();
 #endif
 		s_gs->VSync(field);
 	}
@@ -623,7 +642,7 @@ EXPORT_C GSconfigure()
 
 		if(GSSettingsDlg(s_isgsopen2).DoModal() == IDOK)
 		{
-			if(s_gs != NULL && s_gs->m_wnd.IsManaged())
+			if(s_gs != NULL && s_gs->m_wnd->IsManaged())
 			{
 				// Legacy apps like gsdxgui expect this...
 
@@ -633,15 +652,10 @@ EXPORT_C GSconfigure()
 
 #else
 
-		// TODO: linux
-
-		if (RunLinuxDialog())
-		{
-			if(s_gs != NULL && s_gs->m_wnd.IsManaged())
-			{
-				GSshutdown();
-			}
+		if (RunLinuxDialog()) {
+			theApp.ReloadConfig();
 		}
+
 #endif
 	} catch (GSDXRecoverableError)
 	{

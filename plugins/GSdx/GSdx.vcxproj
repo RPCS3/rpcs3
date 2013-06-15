@@ -438,6 +438,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="GLLoader.cpp" />
     <ClCompile Include="GPU.cpp" />
     <ClCompile Include="GPUDrawScanline.cpp" />
     <ClCompile Include="GPUDrawScanlineCodeGenerator.cpp" />
@@ -460,6 +461,7 @@
     <ClCompile Include="GSDevice9.cpp" />
     <ClCompile Include="GSDeviceDX.cpp" />
     <ClCompile Include="GSDeviceNull.cpp" />
+    <ClCompile Include="GSDeviceOGL.cpp" />
     <ClCompile Include="GSDeviceSW.cpp" />
     <ClCompile Include="GSDialog.cpp" />
     <ClCompile Include="GSDirtyRect.cpp" />
@@ -536,6 +538,7 @@
     <ClCompile Include="GSRendererDX9.cpp" />
     <ClCompile Include="GSRendererHW.cpp" />
     <ClCompile Include="GSRendererNull.cpp" />
+    <ClCompile Include="GSRendererOGL.cpp" />
     <ClCompile Include="GSRendererSW.cpp" />
     <ClCompile Include="GSSetting.cpp" />
     <ClCompile Include="GSSettingsDlg.cpp" />
@@ -601,12 +604,15 @@
     <ClCompile Include="GSTexture.cpp" />
     <ClCompile Include="GSTexture11.cpp" />
     <ClCompile Include="GSTexture9.cpp" />
+    <ClCompile Include="GSTextureOGL.cpp" />
     <ClCompile Include="GSTextureCache.cpp" />
     <ClCompile Include="GSTextureCache11.cpp" />
     <ClCompile Include="GSTextureCache9.cpp" />
+    <ClCompile Include="GSTextureCacheOGL.cpp" />
     <ClCompile Include="GSTextureCacheSW.cpp" />
     <ClCompile Include="GSTextureFX11.cpp" />
     <ClCompile Include="GSTextureFX9.cpp" />
+    <ClCompile Include="GSTextureFXOGL.cpp" />
     <ClCompile Include="GSTextureNull.cpp" />
     <ClCompile Include="GSTextureSW.cpp" />
     <ClCompile Include="GSThread.cpp" />
@@ -618,6 +624,8 @@
     <ClCompile Include="GSVertexSW.cpp" />
     <ClCompile Include="GSVertexTrace.cpp" />
     <ClCompile Include="GSWnd.cpp" />
+    <ClCompile Include="GSWndDX.cpp" />
+    <ClCompile Include="GSWndWGL.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|x64'">Create</PrecompiledHeader>
@@ -1562,6 +1570,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h" />
+    <ClInclude Include="GLLoader.h" />
     <ClInclude Include="GPU.h" />
     <ClInclude Include="GPUDrawingEnvironment.h" />
     <ClInclude Include="GPUDrawScanline.h" />
@@ -1587,6 +1596,7 @@
     <ClInclude Include="GSDevice9.h" />
     <ClInclude Include="GSDeviceDX.h" />
     <ClInclude Include="GSDeviceNull.h" />
+    <ClInclude Include="GSDeviceOGL.h" />
     <ClInclude Include="GSDeviceSW.h" />
     <ClInclude Include="GSDialog.h" />
     <ClInclude Include="GSDirtyRect.h" />
@@ -1607,6 +1617,7 @@
     <ClInclude Include="GSRendererDX9.h" />
     <ClInclude Include="GSRendererHW.h" />
     <ClInclude Include="GSRendererNull.h" />
+    <ClInclude Include="GSRendererOGL.h" />
     <ClInclude Include="GSRendererSW.h" />
     <ClInclude Include="GSScanlineEnvironment.h" />
     <ClInclude Include="GSSetting.h" />
@@ -1617,21 +1628,27 @@
     <ClInclude Include="GSTexture.h" />
     <ClInclude Include="GSTexture11.h" />
     <ClInclude Include="GSTexture9.h" />
+    <ClInclude Include="GSTextureOGL.h" />
     <ClInclude Include="GSTextureCache.h" />
     <ClInclude Include="GSTextureCache11.h" />
     <ClInclude Include="GSTextureCache9.h" />
+    <ClInclude Include="GSTextureCacheOGL.h" />
     <ClInclude Include="GSTextureCacheSW.h" />
     <ClInclude Include="GSTextureNull.h" />
     <ClInclude Include="GSTextureSW.h" />
     <ClInclude Include="GSThread.h" />
+    <ClInclude Include="GSUniformBufferOGL.h" />
     <ClInclude Include="GSUtil.h" />
     <ClInclude Include="GSVector.h" />
     <ClInclude Include="GSVertex.h" />
+    <ClInclude Include="GSVertexArrayOGL.h" />
     <ClInclude Include="GSVertexHW.h" />
     <ClInclude Include="GSVertexList.h" />
     <ClInclude Include="GSVertexSW.h" />
     <ClInclude Include="GSVertexTrace.h" />
     <ClInclude Include="GSWnd.h" />
+    <ClInclude Include="GSWndDX.h" />
+    <ClInclude Include="GSWndWGL.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="svnrev.h" />
     <ClInclude Include="resource.h" />

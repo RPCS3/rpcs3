@@ -53,7 +53,7 @@ protected:
 	virtual GSTexture* GetOutput(int i) = 0;
 
 public:
-	GSWnd m_wnd;
+	GSWnd* m_wnd;
 	GSDevice* m_dev;
 
 public:

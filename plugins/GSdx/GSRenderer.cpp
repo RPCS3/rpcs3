@@ -23,7 +23,8 @@
 #include "GSRenderer.h"
 
 GSRenderer::GSRenderer()
-	: m_dev(NULL)
+	: m_wnd(NULL)
+	, m_dev(NULL)
 	, m_shader(0)
 	, m_shift_key(false)
 	, m_control_key(false)
@@ -52,7 +53,7 @@ GSRenderer::~GSRenderer()
 
 bool GSRenderer::CreateWnd(const string& title, int w, int h)
 {
-	return m_wnd.Create(title.c_str(), w, h);
+	return m_wnd->Create(title.c_str(), w, h);
 }
 
 bool GSRenderer::CreateDevice(GSDevice* dev)
@@ -60,7 +61,7 @@ bool GSRenderer::CreateDevice(GSDevice* dev)
 	ASSERT(dev);
 	ASSERT(!m_dev);
 
-	if(!dev->Create(&m_wnd))
+	if(!dev->Create(m_wnd))
 	{
 		return false;
 	}
@@ -330,7 +331,7 @@ void GSRenderer::VSync(int field)
 #ifdef GSTITLEINFO_API_FORCE_VERBOSE
 		if (1)//force verbose reply
 #else
-		if (m_wnd.IsManaged())
+		if (m_wnd->IsManaged())
 #endif
 		{
 			//GSdx owns the window's title, be verbose.
@@ -379,9 +380,9 @@ void GSRenderer::VSync(int field)
 			s += " | Recording...";
 		}
 
-		if(m_wnd.IsManaged())
+		if(m_wnd->IsManaged())
 		{
-			m_wnd.SetWindowText(s.c_str());
+			m_wnd->SetWindowText(s.c_str());
 		}
 		else
 		{
@@ -411,7 +412,7 @@ void GSRenderer::VSync(int field)
 
 	// present
 
-	m_dev->Present(m_wnd.GetClientRect().fit(m_aspectratio), m_shader);
+	m_dev->Present(m_wnd->GetClientRect().fit(m_aspectratio), m_shader);
 
 	// snapshot
 
@@ -537,7 +538,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			printf("GSdx: Set deinterlace mode to %d (%s).\n", (int)m_interlace, theApp.m_gs_interlace.at(m_interlace).name.c_str());
 			return;
 		case VK_F6:
-			if( m_wnd.IsManaged() )
+			if( m_wnd->IsManaged() )
 				m_aspectratio = (m_aspectratio + 3 + step) % 3;
 			return;
 		case VK_F7:
@@ -571,7 +572,7 @@ void GSRenderer::KeyEvent(GSKeyEventData* e)
 			fprintf(stderr, "GSdx: Set deinterlace mode to %d (%s).\n", (int)m_interlace, theApp.m_gs_interlace.at(m_interlace).name.c_str());
 			return;
 		case XK_F6:
-			if( m_wnd.IsManaged() )
+			if( m_wnd->IsManaged() )
 				m_aspectratio = (m_aspectratio + 3 + step) % 3;
 			return;
 		case XK_F7:

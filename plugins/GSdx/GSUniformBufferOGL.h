@@ -24,15 +24,15 @@
 class GSUniformBufferOGL {
 	GLuint buffer;		// data object
 	GLuint index;		// GLSL slot
-	uint   size;	    // size of the data
+	uint32   size;	    // size of the data
 	const GLenum target;
 
 public:
-	GSUniformBufferOGL(GLuint index, uint size) : index(index)
+	GSUniformBufferOGL(GLuint index, uint32 size) : index(index)
 												  , size(size)
 												  ,target(GL_UNIFORM_BUFFER)
 	{
-		glGenBuffers(1, &buffer);
+		gl_GenBuffers(1, &buffer);
 		bind();
 		allocate();
 		attach();
@@ -40,28 +40,28 @@ public:
 
 	void bind()
 	{
-		glBindBuffer(target, buffer);
+		gl_BindBuffer(target, buffer);
 	}
 
 	void allocate()
 	{
-		glBufferData(target, size, NULL, GL_STREAM_DRAW);
+		gl_BufferData(target, size, NULL, GL_STREAM_DRAW);
 	}
 
 	void attach()
 	{
-		glBindBufferBase(target, index, buffer);
+		gl_BindBufferBase(target, index, buffer);
 	}
 
 	void upload(const void* src)
 	{
-		uint32 flags = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-		uint8* dst = (uint8*) glMapBufferRange(target, 0, size, flags);
-		memcpy(dst, src, size);
-		glUnmapBuffer(target);
+		// glMapBufferRange allow to set various parameter but the call is
+		// synchronous whereas glBufferSubData could be asynchronous.
+		// TODO: investigate the extension ARB_invalidate_subdata
+		gl_BufferSubData(target, 0, size, src);
 	}
 
 	~GSUniformBufferOGL() {
-		glDeleteBuffers(1, &buffer);
+		gl_DeleteBuffers(1, &buffer);
 	}
 };

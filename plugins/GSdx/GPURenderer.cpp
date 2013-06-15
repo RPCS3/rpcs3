@@ -45,6 +45,8 @@ GPURenderer::GPURenderer(GSDevice* dev)
 	m_hWnd = NULL;
 	m_wndproc = NULL;
 
+	m_wnd = new GSWndDX();
+
 	#endif
 }
 
@@ -74,7 +76,7 @@ bool GPURenderer::Create(void* hWnd)
 
 	SetWindowLongPtr(m_hWnd, GWLP_WNDPROC, (LONG_PTR)WndProc);
 
-	if(!m_wnd.Attach(m_hWnd))
+	if(!m_wnd->Attach(m_hWnd))
 	{
 		return false;
 	}
@@ -85,9 +87,9 @@ bool GPURenderer::Create(void* hWnd)
 
 	#endif
 
-	m_wnd.Show();
+	m_wnd->Show();
 
-	if(!m_dev->Create(&m_wnd))
+	if(!m_dev->Create(m_wnd))
 	{
 		return false;
 	}
@@ -189,10 +191,10 @@ void GPURenderer::VSync()
 			s = format("%s | %.2f mpps", s.c_str(), fps * fillrate / (1024 * 1024));
 		}
 
-        m_wnd.SetWindowText(s.c_str());
+        m_wnd->SetWindowText(s.c_str());
 	}
 
-	GSVector4i r = m_wnd.GetClientRect();
+	GSVector4i r = m_wnd->GetClientRect();
 
 	m_dev->Present(r.fit(m_aspectratio), 0);
 }

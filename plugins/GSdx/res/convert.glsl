@@ -9,11 +9,13 @@ struct vertex_basic
 
 #ifdef VERTEX_SHADER
 
+#if __VERSION__ > 140
 out gl_PerVertex {
     vec4 gl_Position;
     float gl_PointSize;
     float gl_ClipDistance[];
 };
+#endif
 
 layout(location = 0) in vec4 POSITION;
 layout(location = 1) in vec2 TEXCOORD0;
@@ -26,75 +28,75 @@ layout(location = 1) in vec2 TEXCOORD0;
 // smooth, the default, means to do perspective-correct interpolation.
 //
 // The centroid qualifier only matters when multisampling. If this qualifier is not present, then the value is interpolated to the pixel's center, anywhere in the pixel, or to one of the pixel's samples. This sample may lie outside of the actual primitive being rendered, since a primitive can cover only part of a pixel's area. The centroid qualifier is used to prevent this; the interpolation point must fall within both the pixel's area and the primitive's area.
+#if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) out vertex_basic VSout;
+#define VSout_p (VSout.p)
+#define VSout_t (VSout.t)
+#else
+#ifdef DISABLE_SSO
+out vec4 SHADERp;
+out vec2 SHADERt;
+#else
+layout(location = 0) out vec4 SHADERp;
+layout(location = 1) out vec2 SHADERt;
+#endif
+#define VSout_p SHADERp
+#define VSout_t SHADERt
+#endif
 
 void vs_main()
 {
-    VSout.p = POSITION;
-    VSout.t = TEXCOORD0;
+    VSout_p = POSITION;
+    VSout_t = TEXCOORD0;
     gl_Position = POSITION; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 }
 
 #endif
 
-#ifdef GEOMETRY_SHADER
-in gl_PerVertex {
-    vec4 gl_Position;
-    float gl_PointSize;
-    float gl_ClipDistance[];
-} gl_in[];
-
-out gl_PerVertex {
-    vec4 gl_Position;
-    float gl_PointSize;
-    float gl_ClipDistance[];
-};
-
-// FIXME
-// AMD Driver bug again !!!!
-//layout(location = 0) in vertex GSin[];
-in vertex_basic GSin[];
-
-layout(location = 0) out vertex_basic GSout;
-layout(triangles) in;
-layout(triangle_strip, max_vertices = 3) out;
-
-void gs_main()
-{
-    for(int i = 0; i < gl_in.length(); i++) {
-        gl_Position = gl_in[i].gl_Position;
-        GSout = GSin[i];
-        EmitVertex();
-    }
-    EndPrimitive();
-}
-#endif
-
 #ifdef FRAGMENT_SHADER
 // NOTE: pixel can be clip with "discard"
 
+#if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) in vertex_basic PSin;
+#define PSin_p (PSin.p)
+#define PSin_t (PSin.t)
+#else
+#ifdef DISABLE_SSO
+in vec4 SHADERp;
+in vec2 SHADERt;
+#else
+layout(location = 0) in vec4 SHADERp;
+layout(location = 1) in vec2 SHADERt;
+#endif
+#define PSin_p SHADERp
+#define PSin_t SHADERt
+#endif
 
 layout(location = 0) out vec4 SV_Target0;
 layout(location = 1) out uint SV_Target1;
 
+#ifdef DISABLE_GL42
+uniform sampler2D TextureSampler;
+#else
 layout(binding = 0) uniform sampler2D TextureSampler;
+#endif
 
 vec4 sample_c()
 {
-    return texture(TextureSampler, PSin.t );
+    return texture(TextureSampler, PSin_t );
 }
 
-vec4 ps_crt(uint i)
-{
-    vec4 mask[4] =
-	{
+uniform vec4 mask[4] = vec4[4]
+(
 		vec4(1, 0, 0, 0),
 		vec4(0, 1, 0, 0),
 		vec4(0, 0, 1, 0),
 		vec4(1, 1, 1, 0)
-	};
+);
 
+
+vec4 ps_crt(uint i)
+{
 	return sample_c() * clamp((mask[i] + 0.5f), 0.0f, 1.0f);
 }
 
@@ -125,7 +127,7 @@ void ps_main7()
 
 void ps_main5() // triangular
 {
-	highp uvec4 p = uvec4(PSin.p);
+	highp uvec4 p = uvec4(PSin_p);
 
 	vec4 c = ps_crt(((p.x + ((p.y >> 1u) & 1u) * 3u) >> 1u) % 3u);
 
@@ -134,27 +136,35 @@ void ps_main5() // triangular
 
 void ps_main6() // diagonal
 {
-	uvec4 p = uvec4(PSin.p);
+	uvec4 p = uvec4(PSin_p);
 
 	vec4 c = ps_crt((p.x + (p.y % 3u)) % 3u);
 
     SV_Target0 = c;
 }
 
+// Used for DATE (stencil)
 void ps_main2()
 {
-    if((sample_c().a - 128.0f / 255) < 0) // >= 0x80 pass
+    if((sample_c().a - 127.5f / 255) < 0) // >= 0x80 pass
         discard;
 
-    SV_Target0 = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+#ifdef ENABLE_OGL_STENCIL_DEBUG
+    SV_Target0 = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+#endif
 }
+
+// Used for DATE (stencil)
 void ps_main3()
 {
-    if((127.95f / 255 - sample_c().a) <0) // < 0x80 pass (== 0x80 should not pass)
+    if((127.5f / 255 - sample_c().a) < 0) // < 0x80 pass (== 0x80 should not pass)
         discard;
 
-    SV_Target0 = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+#ifdef ENABLE_OGL_STENCIL_DEBUG
+    SV_Target0 = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+#endif
 }
+
 void ps_main4()
 {
     // FIXME mod and fmod are different when value are negative

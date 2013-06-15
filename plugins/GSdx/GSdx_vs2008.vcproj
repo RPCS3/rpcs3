@@ -774,6 +774,10 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\GLLoader.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GPU.cpp"
 				>
 			</File>
@@ -859,6 +863,10 @@
 			</File>
 			<File
 				RelativePath=".\GSDeviceNull.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GSDeviceOGL.cpp"
 				>
 			</File>
 			<File
@@ -1038,6 +1046,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSRendererOGL.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSRendererSW.cpp"
 				>
 			</File>
@@ -1178,6 +1190,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSTextureOGL.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSTextureCache.cpp"
 				>
 			</File>
@@ -1190,6 +1206,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSTextureCacheOGL.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSTextureCacheSW.cpp"
 				>
 			</File>
@@ -1199,6 +1219,10 @@
 			</File>
 			<File
 				RelativePath=".\GSTextureFX9.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GSTextureFXOGL.cpp"
 				>
 			</File>
 			<File
@@ -1235,6 +1259,14 @@
 			</File>
 			<File
 				RelativePath=".\GSWnd.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GSWndDX.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\GSWndWGL.cpp"
 				>
 			</File>
 			<File
@@ -1360,6 +1392,10 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\GLLoader.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GPU.h"
 				>
 			</File>
@@ -1460,6 +1496,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSDeviceOGL.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSDeviceSW.h"
 				>
 			</File>
@@ -1540,6 +1580,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSRendererOGL.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSRendererSW.h"
 				>
 			</File>
@@ -1580,6 +1624,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSTextureOGL.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSTextureCache.h"
 				>
 			</File>
@@ -1589,6 +1637,10 @@
 			</File>
 			<File
 				RelativePath=".\GSTextureCache9.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSTextureCacheOGL.h"
 				>
 			</File>
 			<File
@@ -1612,6 +1664,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GSUniformBufferOGL.h"
+				>
+			</File>
+			<File
 				RelativePath=".\GSUtil.h"
 				>
 			</File>
@@ -1621,6 +1677,10 @@
 			</File>
 			<File
 				RelativePath=".\GSVertex.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSVertexArrayOGL.h"
 				>
 			</File>
 			<File
@@ -1641,6 +1701,14 @@
 			</File>
 			<File
 				RelativePath=".\GSWnd.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSWndDX.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSWndWGL.h"
 				>
 			</File>
 			<File

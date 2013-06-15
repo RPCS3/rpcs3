@@ -10,7 +10,6 @@ endif(NOT TOP_CMAKE_WAS_SOURCED)
 set(Output GSdx-0.1.16)
 
 set(CommonFlags
-    -DOGL_MT_HACK
     -D_LINUX
     -fno-operator-names
     -mpreferred-stack-boundary=2
@@ -19,7 +18,6 @@ set(CommonFlags
     -Wunused-variable
     -std=c++0x
     -fno-strict-aliasing
-    #-DOGL_DEBUG # FIXME remove me when code is ready
     )
 
 set(OptimizationFlags
@@ -29,7 +27,7 @@ set(OptimizationFlags
 
 # Debug - Build
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
-    add_definitions(${CommonFlags} -DOGL_DEBUG -g -Wall)
+    add_definitions(${CommonFlags} -D_DEBUG -g -Wall)
 endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 # Devel - Build
@@ -46,7 +44,13 @@ if(XDG_STD)
     add_definitions(-DXDG_STD)
 endif(XDG_STD)
 
+# Select the EGL API
+if(EGL_API AND EGL_FOUND)
+    add_definitions(-DEGL_API)
+endif()
+
 set(GSdxSources
+    GLLoader.cpp
     GPU.cpp
     GPUDrawScanline.cpp
     GPUDrawScanlineCodeGenerator.cpp
@@ -105,6 +109,8 @@ set(GSdxSources
     GSVector.cpp
     GSVertexTrace.cpp
     GSWnd.cpp
+    GSWndOGL.cpp
+    GSWndEGL.cpp
     GSdx.cpp
     stdafx.cpp
     )
@@ -166,6 +172,8 @@ set(GSdxHeaders
     GSVertexSW.h
     GSVertexTrace.h
     GSWnd.h
+    GSWndOGL.h
+    GSWndEGL.h
     GSdx.h
     stdafx.h
     xbyak/xbyak.h
@@ -179,8 +187,10 @@ include_directories(.)
 add_library(${Output} SHARED ${GSdxSources} ${GSdxHeaders})
 
 target_link_libraries(${Output} ${X11_LIBRARIES})
-target_link_libraries(${Output} ${GLEW_LIBRARY})
 target_link_libraries(${Output} ${OPENGL_LIBRARIES})
+if(EGL_API AND EGL_FOUND)
+    target_link_libraries(${Output} ${EGL_LIBRARIES})
+endif()
 
 if(Linux)
 	target_link_libraries(${Output} ${GTK2_LIBRARIES})
@@ -193,41 +203,24 @@ endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 if(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
 
-    foreach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
+    foreach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl fxaa.fx)
         install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/${glsl} DESTINATION ${GLSL_SHADER_DIR})
-    endforeach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
+    endforeach()
 else(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
 
-    foreach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
+    foreach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl fxaa.fx)
         install(FILES ${PROJECT_SOURCE_DIR}/plugins/GSdx/res/${glsl} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-    endforeach(glsl IN ITEMS convert.glsl interlace.glsl merge.glsl tfx.glsl shadeboost.glsl)
+    endforeach()
 endif(PACKAGE_MODE)
 
 ################################### Replay Loader
 if(BUILD_REPLAY_LOADERS)
 	set(Replay pcsx2_GSReplayLoader)
-	set(Static GSdx-static)
-
-	# We can have separate option for gsdx inside the player. It will only
-	# cost a 2nd rebuild of gsdx...
-	#add_definitions(${CommonFlags} ${OptimizationFlags} -W)
-
-	add_library(${Static} STATIC ${GSdxSources} ${GSdxHeaders})
 
 	add_executable(${Replay} linux_replay.cpp)
 
-	target_link_libraries(${Static} ${OPENGL_LIBRARIES})
-	target_link_libraries(${Static} ${X11_LIBRARIES})
-	target_link_libraries(${Static} ${GLEW_LIBRARY})
-	target_link_libraries(${Static} ${GTK2_LIBRARIES})
-
-	target_link_libraries(${Replay} ${Static})
-	# Warning others lib must be linked after GSdx...
-	target_link_libraries(${Replay} ${OPENGL_LIBRARIES})
-	target_link_libraries(${Replay} ${X11_LIBRARIES})
-	target_link_libraries(${Replay} ${GLEW_LIBRARY})
-	target_link_libraries(${Replay} ${GTK2_LIBRARIES})
+    target_link_libraries(${Replay} ${LIBC_LIBRARIES})
 
 	if(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 	    target_link_libraries(${Replay} "${USER_CMAKE_LD_FLAGS}")

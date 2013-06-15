@@ -1,5 +1,5 @@
 /*
- *	Copyright (C) 2007-2009 Gabest
+ *	Copyright (C) 2007-2012 Gabest
  *	http://www.gabest.org
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -19,39 +19,34 @@
  *
  */
 
-#pragma once
-
 #include "stdafx.h"
-#include "GSdx.h"
-#include "GSVector.h"
+#include "GSWnd.h"
 
-class GSWnd
+#ifdef _WINDOWS
+class GSWndDX : public GSWnd
 {
-protected:
-	bool m_managed; // set true when we're attached to a 3rdparty window that's amanged by the emulator
+	HWND m_hWnd;
+
+	bool m_frame;
+
+	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+	virtual LRESULT OnMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
 public:
-	GSWnd() : m_managed(false) {};
-	virtual ~GSWnd() {};
+	GSWndDX();
+	virtual ~GSWndDX();
 
-	virtual bool Create(const string& title, int w, int h) = 0;
-	virtual bool Attach(void* handle, bool managed = true) = 0;
-	virtual void Detach() = 0;
-	bool IsManaged() const {return m_managed;}
+	bool Create(const string& title, int w, int h);
+	bool Attach(void* handle, bool managed = true);
+	void Detach();
 
-	virtual void* GetDisplay() = 0;
-	virtual void* GetHandle() = 0;
-	virtual GSVector4i GetClientRect() = 0;
-	virtual bool SetWindowText(const char* title) = 0;
+	void* GetDisplay() {return m_hWnd;}
+	void* GetHandle() {return m_hWnd;}
+	GSVector4i GetClientRect();
+	bool SetWindowText(const char* title);
 
-	virtual void AttachContext() {};
-	virtual void DetachContext() {};
-
-	virtual void Show() = 0;
-	virtual void Hide() = 0;
-	virtual void HideFrame() = 0;
-
-	virtual void Flip() {};
-	virtual void SetVSync(bool enable) {};
-
+	void Show();
+	void Hide();
+	void HideFrame();
 };
+#endif

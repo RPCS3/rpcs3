@@ -36,8 +36,10 @@
 
 //#define DISABLE_DATE
 
-// Set manually uniform buffer index
-//#define DISABLE_GL42
+#define ENABLE_OGL_MT_HACK // OpenGL doesn't allow to access the same bound context from multiple threads. This hack changes context binding for GSreadFIFO* access
+#ifdef _DEBUG
+#define ENABLE_OGL_DEBUG   // Create a debug context and check opengl command status. Allow also to dump various textures/states.
+#endif
 
-// Debug: use single program for all shaders.
-//#define DISABLE_GL41_SSO
+// Allow to create only a 3.0 context for opensource driver
+//#define OGL_FREE_DRIVER

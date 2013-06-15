@@ -47,12 +47,12 @@ class GSBufferOGL {
 		, m_limit(0)
 		, m_target(target)
 	{
-		glGenBuffers(1, &m_buffer);
+		gl_GenBuffers(1, &m_buffer);
 		// Opengl works best with 1-4MB buffer.
 		m_default_size = 2 * 1024 * 1024 / m_stride;
 	}
 
-	~GSBufferOGL() { glDeleteBuffers(1, &m_buffer); }
+	~GSBufferOGL() { gl_DeleteBuffers(1, &m_buffer); }
 
 	void allocate() { allocate(m_default_size); }
 
@@ -60,12 +60,12 @@ class GSBufferOGL {
 	{
 		m_start = 0;
 		m_limit = new_limit;
-		glBufferData(m_target,  m_limit * m_stride, NULL, GL_STREAM_DRAW);
+		gl_BufferData(m_target,  m_limit * m_stride, NULL, GL_STREAM_DRAW);
 	}
 
 	void bind()
 	{
-		glBindBuffer(m_target, m_buffer);
+		gl_BindBuffer(m_target, m_buffer);
 	}
 
 	void upload(const void* src, uint32 count)
@@ -81,9 +81,9 @@ class GSBufferOGL {
 	}
 
 	bool Map(void** pointer, uint32 count ) {
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 		GLint b_size = -1;
-		glGetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
+		gl_GetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
 
 		if (b_size <= 0) return false;
 #endif
@@ -112,9 +112,9 @@ class GSBufferOGL {
 		}
 
 		// Upload the data to the buffer
-		*pointer = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
+		*pointer = (uint8*) gl_MapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
 		//fprintf(stderr, "Map %x from %d to %d\n", *pointer, m_start, m_start+m_count);
-#ifdef OGL_DEBUG
+#ifdef ENABLE_OGL_DEBUG
 		if (*pointer == NULL) {
 			fprintf(stderr, "CRITICAL ERROR map failed for vb!!!\n");
 			return false;
@@ -123,7 +123,7 @@ class GSBufferOGL {
 		return true;
 	}
 
-	void Unmap() { glUnmapBuffer(m_target); }
+	void Unmap() { gl_UnmapBuffer(m_target); }
 
 	void EndScene()
 	{
@@ -138,12 +138,12 @@ class GSBufferOGL {
 
 	void Draw(GLenum mode, GLint basevertex)
 	{
-		glDrawElementsBaseVertex(mode, m_count, GL_UNSIGNED_INT, (void*)(m_start * m_stride), basevertex);
+		gl_DrawElementsBaseVertex(mode, m_count, GL_UNSIGNED_INT, (void*)(m_start * m_stride), basevertex);
 	}
 
 	void Draw(GLenum mode, GLint basevertex, int offset, int count)
 	{
-		glDrawElementsBaseVertex(mode, count, GL_UNSIGNED_INT, (void*)((m_start + offset) * m_stride), basevertex);
+		gl_DrawElementsBaseVertex(mode, count, GL_UNSIGNED_INT, (void*)((m_start + offset) * m_stride), basevertex);
 	}
 
 	size_t GetStart() { return m_start; }
@@ -165,7 +165,7 @@ class GSVertexBufferStateOGL {
 public:
 	GSVertexBufferStateOGL(size_t stride, GSInputLayoutOGL* layout, uint32 layout_nbr)
 	{
-		glGenVertexArrays(1, &m_va);
+		gl_GenVertexArrays(1, &m_va);
 
 		m_vb = new GSBufferOGL(GL_ARRAY_BUFFER, stride);
 		m_ib = new GSBufferOGL(GL_ELEMENT_ARRAY_BUFFER, sizeof(uint32));
@@ -181,23 +181,23 @@ public:
 
 	void bind()
 	{
-		glBindVertexArray(m_va);
+		gl_BindVertexArray(m_va);
 		m_vb->bind();
 	}
 
 	void set_internal_format(GSInputLayoutOGL* layout, uint32 layout_nbr)
 	{
-		for (uint i = 0; i < layout_nbr; i++) {
+		for (uint32 i = 0; i < layout_nbr; i++) {
 			// Note this function need both a vertex array object and a GL_ARRAY_BUFFER buffer
-			glEnableVertexAttribArray(layout[i].index);
+			gl_EnableVertexAttribArray(layout[i].index);
 			switch (layout[i].type) {
 				case GL_UNSIGNED_SHORT:
 				case GL_UNSIGNED_INT:
-					// Rule: when shader use integral (not normalized) you must use glVertexAttribIPointer (note the extra I)
-					glVertexAttribIPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].stride, layout[i].offset);
+					// Rule: when shader use integral (not normalized) you must use gl_VertexAttribIPointer (note the extra I)
+					gl_VertexAttribIPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].stride, layout[i].offset);
 					break;
 				default:
-					glVertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].normalize,  layout[i].stride, layout[i].offset);
+					gl_VertexAttribPointer(layout[i].index, layout[i].size, layout[i].type, layout[i].normalize,  layout[i].stride, layout[i].offset);
 					break;
 			}
 		}
@@ -227,7 +227,7 @@ public:
 
 	~GSVertexBufferStateOGL()
 	{
-		glDeleteVertexArrays(1, &m_va);
+		gl_DeleteVertexArrays(1, &m_va);
 		delete m_vb;
 		delete m_ib;
 	}

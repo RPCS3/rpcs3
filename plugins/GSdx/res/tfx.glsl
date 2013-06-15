@@ -46,7 +46,7 @@
 
 struct vertex
 {
-    vec4 p;
+    //vec4 p;
     vec4 t;
     vec4 tp;
     vec4 c;
@@ -61,13 +61,37 @@ layout(location = 4) in uint  i_z;
 layout(location = 5) in uvec2 i_uv;
 layout(location = 6) in vec4  i_f;
 
+#if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) out vertex VSout;
+#define VSout_p (VSout.p)
+#define VSout_t (VSout.t)
+#define VSout_tp (VSout.tp)
+#define VSout_c (VSout.c)
+#else
+#ifdef DISABLE_SSO
+//out vec4 SHADERp;
+out vec4 SHADERt;
+out vec4 SHADERtp;
+out vec4 SHADERc;
+#else
+//layout(location = 0) out vec4 SHADERp;
+layout(location = 0) out vec4 SHADERt;
+layout(location = 1) out vec4 SHADERtp;
+layout(location = 2) out vec4 SHADERc;
+#endif
+//#define VSout_p SHADERp
+#define VSout_t SHADERt
+#define VSout_tp SHADERtp
+#define VSout_c SHADERc
+#endif
 
+#if __VERSION__ > 140
 out gl_PerVertex {
     invariant vec4 gl_Position;
     float gl_PointSize;
     float gl_ClipDistance[];
 };
+#endif
 
 #ifdef DISABLE_GL42
 layout(std140) uniform cb20
@@ -106,10 +130,10 @@ void vs_main()
         final_p.z = log2(1.0f + float(z)) / 32.0f;
     }
 
-    VSout.p = final_p;
+    //VSout_p = final_p;
     gl_Position = final_p; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 #if VS_RTCOPY
-    VSout.tp = final_p * vec4(0.5, -0.5, 0, 0) + 0.5;
+    VSout_tp = final_p * vec4(0.5, -0.5, 0, 0) + 0.5;
 #endif
 
 
@@ -117,25 +141,25 @@ void vs_main()
     {
         if(VS_FST != 0)
         {
-            //VSout.t.xy = i_t * TextureScale;
-            VSout.t.xy = i_uv * TextureScale;
-            VSout.t.w = 1.0f;
+            //VSout_t.xy = i_t * TextureScale;
+            VSout_t.xy = i_uv * TextureScale;
+            VSout_t.w = 1.0f;
         }
         else
         {
-            //VSout.t.xy = i_t;
-            VSout.t.xy = i_st;
-            VSout.t.w = i_q;
+            //VSout_t.xy = i_t;
+            VSout_t.xy = i_st;
+            VSout_t.w = i_q;
         }
     }
     else
     {
-        VSout.t.xy = vec2(0.0f, 0.0f);
-        VSout.t.w = 1.0f;
+        VSout_t.xy = vec2(0.0f, 0.0f);
+        VSout_t.w = 1.0f;
     }
 
-    VSout.c = i_c;
-    VSout.t.z = i_f.r;
+    VSout_c = i_c;
+    VSout_t.z = i_f.r;
 }
 
 #endif
@@ -217,46 +241,50 @@ void gs_main()
     // right bottom => GSin[1];
     vertex rb = GSin[1];
     vertex lt = GSin[0];
+    vec4 rb_p = gl_in[1].gl_Position;
+    vec4 lb_p = gl_in[1].gl_Position;
+    vec4 rt_p = gl_in[1].gl_Position;
+    vec4 lt_p = gl_in[0].gl_Position;
 
-    lt.p.z = rb.p.z;
+    lt_p.z = rb_p.z;
     lt.t.zw = rb.t.zw;
 #if GS_IIP == 0
     lt.c = rb.c;
 #endif
 
     vertex lb = rb;
-    lb.p.x = lt.p.x;
+    lb_p.x = lt_p.x;
     lb.t.x = lt.t.x;
 
     vertex rt = rb;
-    rt.p.y = lt.p.y;
+    rt_p.y = lt_p.y;
     rt.t.y = lt.t.y;
 
     // Triangle 1
-    gl_Position = lt.p;
+    gl_Position = lt_p;
     GSout = lt;
     EmitVertex();
 
-    gl_Position = lb.p;
+    gl_Position = lb_p;
     GSout = lb;
     EmitVertex();
 
-    gl_Position = rt.p;
+    gl_Position = rt_p;
     GSout = rt;
     EmitVertex();
 
     EndPrimitive();
 
     // Triangle 2
-    gl_Position = lb.p;
+    gl_Position = lb_p;
     GSout = lb;
     EmitVertex();
 
-    gl_Position = rt.p;
+    gl_Position = rt_p;
     GSout = rt;
     EmitVertex();
 
-    gl_Position = rb.p;
+    gl_Position = rb_p;
     GSout = rb;
     EmitVertex();
 
@@ -269,15 +297,43 @@ void gs_main()
 #endif
 
 #ifdef FRAGMENT_SHADER
+#if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) in vertex PSin;
+//#define PSin_p (PSin.p)
+#define PSin_t (PSin.t)
+#define PSin_tp (PSin.tp)
+#define PSin_c (PSin.c)
+#else
+#ifdef DISABLE_SSO
+in vec4 SHADERp;
+in vec4 SHADERt;
+in vec4 SHADERtp;
+in vec4 SHADERc;
+#else
+//layout(location = 0) in vec4 SHADERp;
+layout(location = 0) in vec4 SHADERt;
+layout(location = 1) in vec4 SHADERtp;
+layout(location = 2) in vec4 SHADERc;
+#endif
+//#define PSin_p SHADERp
+#define PSin_t SHADERt
+#define PSin_tp SHADERtp
+#define PSin_c SHADERc
+#endif
 
 // Same buffer but 2 colors for dual source blending
 layout(location = 0, index = 0) out vec4 SV_Target0;
 layout(location = 0, index = 1) out vec4 SV_Target1;
 
+#ifdef DISABLE_GL42
+uniform sampler2D TextureSampler;
+uniform sampler2D PaletteSampler;
+uniform sampler2D RTCopySampler;
+#else
 layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
 layout(binding = 2) uniform sampler2D RTCopySampler;
+#endif
 
 #ifdef DISABLE_GL42
 layout(std140) uniform cb21
@@ -401,13 +457,12 @@ vec4 sample_4a(vec4 uv)
 {
     vec4 c;
 
-    // XXX
-    // I think .a is related to 8bit texture in alpha channel
-    // Opengl is only 8 bits on red channel. Not sure exactly of the impact
-    c.x = sample_c(uv.xy).a;
-    c.y = sample_c(uv.zy).a;
-    c.z = sample_c(uv.xw).a;
-    c.w = sample_c(uv.zw).a;
+    // Dx used the alpha channel.
+    // Opengl is only 8 bits on red channel.
+    c.x = sample_c(uv.xy).r;
+    c.y = sample_c(uv.zy).r;
+    c.z = sample_c(uv.xw).r;
+    c.w = sample_c(uv.zw).r;
 
 	return c * 255./256 + 0.5/256;
 }
@@ -470,14 +525,14 @@ vec4 sample_color(vec2 st, float q)
         if((PS_FMT & ~FMT_PAL) == FMT_24)
         {
             // FIXME GLSL any only support bvec so try to mix it with notEqual
-            bvec3 rgb_check = notEqual( t.rgb, vec3(0.0f, 0.0f, 0.0f) );
-            t.a = ( (PS_AEM == 0) || any(rgb_check)  ) ? TA.x : 0.0f;
+            bvec3 rgb_check = notEqual( c[i].rgb, vec3(0.0f, 0.0f, 0.0f) );
+            c[i].a = ( (PS_AEM == 0) || any(rgb_check)  ) ? TA.x : 0.0f;
         }
         else if((PS_FMT & ~FMT_PAL) == FMT_16)
         {
             // FIXME GLSL any only support bvec so try to mix it with notEqual
-            bvec3 rgb_check = notEqual( t.rgb, vec3(0.0f, 0.0f, 0.0f) );
-            t.a = t.a >= 0.5 ? TA.y : ( (PS_AEM == 0) || any(rgb_check) ) ? TA.x : 0.0f;
+            bvec3 rgb_check = notEqual( c[i].rgb, vec3(0.0f, 0.0f, 0.0f) );
+            c[i].a = c[i].a >= 0.5 ? TA.y : ( (PS_AEM == 0) || any(rgb_check) ) ? TA.x : 0.0f;
         }
     }
 
@@ -543,7 +598,7 @@ vec4 tfx(vec4 t, vec4 c)
 void datst()
 {
 #if PS_DATE > 0
-    float alpha = sample_rt(PSin.tp.xy).a;
+    float alpha = sample_rt(PSin_tp.xy).a;
     float alpha0x80 = 128. / 255;
 
     if (PS_DATE == 1 && alpha >= alpha0x80)
@@ -613,13 +668,13 @@ vec4 ps_color()
 {
     datst();
 
-    vec4 t = sample_color(PSin.t.xy, PSin.t.w);
+    vec4 t = sample_color(PSin_t.xy, PSin_t.w);
 
-    vec4 c = tfx(t, PSin.c);
+    vec4 c = tfx(t, PSin_c);
 
     atst(c);
 
-    c = fog(c, PSin.t.z);
+    c = fog(c, PSin_t.z);
 
     if (PS_COLCLIP == 2)
     {
