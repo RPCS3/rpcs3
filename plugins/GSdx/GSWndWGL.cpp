@@ -23,7 +23,6 @@
 #include "GSWndWGL.h"
 
 #ifdef _WINDOWS
-//TODO
 GSWndWGL::GSWndWGL()
 	: m_NativeWindow(NULL), m_NativeDisplay(NULL), m_context(NULL), m_ctx_attached(false)
 {
@@ -134,7 +133,6 @@ bool GSWndWGL::Attach(void* handle, bool managed)
 	return true;
 }
 
-//TODO
 void GSWndWGL::Detach()
 {
 	// Actually the destructor is not called when there is only a GSclose/GSshutdown
