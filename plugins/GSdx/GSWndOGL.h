@@ -33,7 +33,7 @@ class GSWndOGL : public GSWndGL
 
 	PFNGLXSWAPINTERVALMESAPROC m_swapinterval;
 
-	bool CreateContext(int major, int minor);
+	void CreateContext(int major, int minor);
 	void CheckContext();
 
 public:

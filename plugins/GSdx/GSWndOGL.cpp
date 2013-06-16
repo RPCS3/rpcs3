@@ -35,12 +35,12 @@ static int  ctxErrorHandler(Display *dpy, XErrorEvent *ev)
 	return 0;
 }
 
-bool GSWndOGL::CreateContext(int major, int minor)
+void GSWndOGL::CreateContext(int major, int minor)
 {
 	if ( !m_NativeDisplay || !m_NativeWindow )
 	{
 		fprintf( stderr, "Wrong X11 display/window\n" );
-		exit(1);
+		throw GSDXRecoverableError();
 	}
 
 	// Get visual information
@@ -60,10 +60,14 @@ bool GSWndOGL::CreateContext(int major, int minor)
 	PFNGLXCHOOSEFBCONFIGPROC glX_ChooseFBConfig = (PFNGLXCHOOSEFBCONFIGPROC) glXGetProcAddress((GLubyte *) "glXChooseFBConfig");
 	int fbcount = 0;
 	GLXFBConfig *fbc = glX_ChooseFBConfig(m_NativeDisplay, DefaultScreen(m_NativeDisplay), attrListDbl, &fbcount);
-	if (!fbc || fbcount < 1) return false;
+	if (!fbc || fbcount < 1) {
+		throw GSDXRecoverableError();
+	}
 
 	PFNGLXCREATECONTEXTATTRIBSARBPROC glX_CreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
-	if (!glX_CreateContextAttribsARB) return false;
+	if (!glX_CreateContextAttribsARB) {
+		throw GSDXRecoverableError();
+	}
 
 	// Install a dummy handler to handle gracefully (aka not segfault) the support of GL version
 	int (*oldHandler)(Display*, XErrorEvent*) = XSetErrorHandler(&ctxErrorHandler);
@@ -92,10 +96,8 @@ bool GSWndOGL::CreateContext(int major, int minor)
 
 	if (!m_context || ctxError) {
 		fprintf(stderr, "Failed to create the opengl context. Check your drivers support openGL %d.%d. Hint: opensource drivers don't\n", major, minor );
-		return false;
+		throw GSDXRecoverableError();
 	}
-
-	return true;
 }
 
 void GSWndOGL::AttachContext()
@@ -122,8 +124,10 @@ void GSWndOGL::CheckContext()
 	glXQueryVersion(m_NativeDisplay, &glxMajorVersion, &glxMinorVersion);
 	if (glXIsDirect(m_NativeDisplay, m_context))
 		fprintf(stderr, "glX-Version %d.%d with Direct Rendering\n", glxMajorVersion, glxMinorVersion);
-	else
+	else {
 		fprintf(stderr, "glX-Version %d.%d with Indirect Rendering !!! It won't support properly opengl\n", glxMajorVersion, glxMinorVersion);
+		throw GSDXRecoverableError();
+	}
 }
 
 bool GSWndOGL::Attach(void* handle, bool managed)
@@ -133,12 +137,7 @@ bool GSWndOGL::Attach(void* handle, bool managed)
 
 	m_NativeDisplay = XOpenDisplay(NULL);
 
-	// Note: 4.2 crash on latest nvidia drivers!
-#ifdef OGL_FREE_DRIVER
-	if (!CreateContext(3, 0)) return false;
-#else
-	if (!CreateContext(3, 3)) return false;
-#endif
+	CreateContext(3, 3);
 
 	AttachContext();
 
@@ -167,7 +166,8 @@ void GSWndOGL::Detach()
 
 bool GSWndOGL::Create(const string& title, int w, int h)
 {
-	if(m_NativeWindow) return false;
+	if(m_NativeWindow)
+		throw GSDXRecoverableError();
 
 	if(w <= 0 || h <= 0) {
 		w = theApp.GetConfig("ModeWidth", 640);
@@ -180,11 +180,9 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 	m_NativeDisplay = XOpenDisplay(NULL);
 
 	m_NativeWindow = XCreateSimpleWindow(m_NativeDisplay, DefaultRootWindow(m_NativeDisplay), 0, 0, w, h, 0, 0, 0);
-
 	XMapWindow (m_NativeDisplay, m_NativeWindow);
 
-
-	if (!CreateContext(3, 3)) return false;
+	CreateContext(3, 3);
 
 	AttachContext();
 
@@ -192,7 +190,10 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 
 	PopulateGlFunction();
 
-	return (m_NativeWindow != 0);
+	if (m_NativeWindow != 0)
+		throw GSDXRecoverableError();
+
+	return true;
 }
 
 void* GSWndOGL::GetProcAddress(const char* name)
@@ -200,6 +201,7 @@ void* GSWndOGL::GetProcAddress(const char* name)
 	void* ptr = (void*)glXGetProcAddress((const GLubyte*)name);
 	if (ptr == NULL) {
 		fprintf(stderr, "Failed to find %s\n", name);
+		throw GSDXRecoverableError();
 	}
 	return ptr;
 }

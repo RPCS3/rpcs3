@@ -54,10 +54,10 @@ class GSWndEGL : public GSWndGL
 	EGLSurface m_eglSurface;
 	EGLContext m_eglContext;
 
-	bool CreateContext(int major, int minor);
+	void CreateContext(int major, int minor);
 	void CheckContext();
 
-	EGLBoolean OpenEGLDisplay();
+	void OpenEGLDisplay();
 	void CloseEGLDisplay();
 
 public:

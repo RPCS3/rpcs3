@@ -200,6 +200,7 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 		threads = theApp.GetConfig("extrathreads", 0);
 	}
 
+	GSWnd* wnd[2];
 	try
 	{
 		if(s_renderer != renderer)
@@ -286,11 +287,8 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			else
 				s_gs->m_wnd = new GSWndDX();
 #else
-	#ifdef EGL_API
-			s_gs->m_wnd = new GSWndEGL();
-	#else
-			s_gs->m_wnd = new GSWndOGL();
-	#endif
+			wnd[0] = new GSWndOGL();
+			wnd[1] = new GSWndEGL();
 #endif
 		}
 	}
@@ -317,12 +315,39 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 		int w = theApp.GetConfig("ModeWidth", 0);
 		int h = theApp.GetConfig("ModeHeight", 0);
 
+#ifdef _LINUX
+		for(uint32 i = 0; i < 2; i++) {
+			try
+			{
+				if (wnd[i] == NULL) continue;
+
+				wnd[i]->Create(title, w, h);
+				s_gs->m_wnd = wnd[i];
+
+				if (i == 0) delete wnd[1];
+
+				break;
+			}
+			catch (GSDXRecoverableError)
+			{
+				delete wnd[i];
+			}
+		}
+		if (s_gs->m_wnd == NULL)
+		{
+			GSclose();
+
+			return -1;
+		}
+#endif
+#ifdef _WINDOWS
 		if(!s_gs->CreateWnd(title, w, h))
 		{
 			GSclose();
 
 			return -1;
 		}
+#endif
 
 		s_gs->m_wnd->Show();
 
@@ -333,10 +358,30 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 		s_gs->SetMultithreaded(true);
 
 #ifdef _LINUX
-		// Get the Xwindow from dsp.
-		if( !s_gs->m_wnd->Attach((void*)((uint32*)(dsp)+1), false) )
+		for(uint32 i = 0; i < 2; i++) {
+			try
+			{
+				if (wnd[i] == NULL) continue;
+
+				wnd[i]->Attach((void*)((uint32*)(dsp)+1), false);
+				s_gs->m_wnd = wnd[i];
+
+				if (i == 0) delete wnd[1];
+
+				break;
+			}
+			catch (GSDXRecoverableError)
+			{
+				wnd[i]->Detach();
+				delete wnd[i];
+			}
+		}
+		if (s_gs->m_wnd == NULL)
+		{
 			return -1;
-#else
+		}
+#endif
+#ifdef _WINDOWS
 		s_gs->m_wnd->Attach(*dsp, false);
 #endif
 	}

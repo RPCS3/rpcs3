@@ -29,7 +29,7 @@ GSWndEGL::GSWndEGL()
 {
 }
 
-bool GSWndEGL::CreateContext(int major, int minor)
+void GSWndEGL::CreateContext(int major, int minor)
 {
 	EGLConfig eglConfig;
 	EGLint numConfigs;
@@ -60,14 +60,14 @@ bool GSWndEGL::CreateContext(int major, int minor)
 	if ( !eglChooseConfig(m_eglDisplay, attrList, &eglConfig, 1, &numConfigs) )
 	{
 		fprintf(stderr,"EGL: Failed to get a frame buffer config!\n");
-		return EGL_FALSE;
+		throw GSDXRecoverableError();
 	}
 
 	m_eglSurface = eglCreateWindowSurface(m_eglDisplay, eglConfig, m_NativeWindow, NULL);
 	if ( m_eglSurface == EGL_NO_SURFACE )
 	{
 		fprintf(stderr,"EGL: Failed to get a window surface\n");
-		return EGL_FALSE;
+		throw GSDXRecoverableError();
 	}
 
 	m_eglContext = eglCreateContext(m_eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttribs );
@@ -75,15 +75,13 @@ bool GSWndEGL::CreateContext(int major, int minor)
 	{
 		fprintf(stderr,"EGL: Failed to create the context\n");
 		fprintf(stderr,"EGL STATUS: %x\n", eglGetError());
-		return EGL_FALSE;
+		throw GSDXRecoverableError();
 	}
 
 	if ( !eglMakeCurrent(m_eglDisplay, m_eglSurface, m_eglSurface, m_eglContext) )
 	{
-		return EGL_FALSE;
+		throw GSDXRecoverableError();
 	}
-
-	return EGL_TRUE;
 }
 
 void GSWndEGL::AttachContext()
@@ -120,10 +118,9 @@ bool GSWndEGL::Attach(void* handle, bool managed)
 	m_managed = managed;
 
 	m_NativeDisplay = XOpenDisplay(NULL);
-	if (!OpenEGLDisplay()) return false;
+	OpenEGLDisplay();
 
-	// Note: 4.2 crash on latest nvidia drivers!
-	if (!CreateContext(3, 3)) return false;
+	CreateContext(3, 3);
 
 	AttachContext();
 
@@ -149,7 +146,8 @@ void GSWndEGL::Detach()
 
 bool GSWndEGL::Create(const string& title, int w, int h)
 {
-	if(m_NativeWindow) return false;
+	if(m_NativeWindow)
+		throw GSDXRecoverableError();
 
 	if(w <= 0 || h <= 0) {
 		w = theApp.GetConfig("ModeWidth", 640);
@@ -160,21 +158,21 @@ bool GSWndEGL::Create(const string& title, int w, int h)
 
 	// note this part must be only executed when replaying .gs debug file
 	m_NativeDisplay = XOpenDisplay(NULL);
-	if (!OpenEGLDisplay()) return false;
+	OpenEGLDisplay();
 
 	m_NativeWindow = XCreateSimpleWindow(m_NativeDisplay, DefaultRootWindow(m_NativeDisplay), 0, 0, w, h, 0, 0, 0);
-
 	XMapWindow (m_NativeDisplay, m_NativeWindow);
 
-	if (!CreateContext(3, 3)) return false;
+	CreateContext(3, 3);
 
 	AttachContext();
 
 	CheckContext();
 
-	PopulateGlFunction();
+	if (m_NativeWindow != 0)
+		throw GSDXRecoverableError();
 
-	return (m_NativeWindow != 0);
+	return true;
 }
 
 void* GSWndEGL::GetProcAddress(const char* name)
@@ -182,6 +180,7 @@ void* GSWndEGL::GetProcAddress(const char* name)
 	void* ptr = (void*)eglGetProcAddress(name);
 	if (ptr == NULL) {
 		fprintf(stderr, "Failed to find %s\n", name);
+		throw GSDXRecoverableError();
 	}
 	return ptr;
 }
@@ -265,15 +264,15 @@ void GSWndEGL::CloseEGLDisplay()
 	eglTerminate(m_eglDisplay);
 }
 
-EGLBoolean GSWndEGL::OpenEGLDisplay()
+void GSWndEGL::OpenEGLDisplay()
 {
 	// Create an EGL display from the native display
 	m_eglDisplay = eglGetDisplay((EGLNativeDisplayType)m_NativeDisplay);
-	if ( m_eglDisplay == EGL_NO_DISPLAY ) return EGL_FALSE;
+	if ( m_eglDisplay == EGL_NO_DISPLAY )
+		throw GSDXRecoverableError();
 
-	if ( !eglInitialize(m_eglDisplay, NULL, NULL) ) return EGL_FALSE;
-
-	return EGL_TRUE;
+	if ( !eglInitialize(m_eglDisplay, NULL, NULL) )
+		throw GSDXRecoverableError();
 }
 
 #endif
