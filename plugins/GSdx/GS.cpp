@@ -179,11 +179,14 @@ EXPORT_C GSclose()
 
 	s_gs->m_dev = NULL;
 
-	s_gs->m_wnd->Detach();
+	if (s->gs_m_wnd)
+	{
+		s_gs->m_wnd->Detach();
 
-	delete s_gs->m_wnd;
+		delete s_gs->m_wnd;
 
-	s_gs->m_wnd = NULL;
+		s_gs->m_wnd = NULL;
+	}
 }
 
 static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
