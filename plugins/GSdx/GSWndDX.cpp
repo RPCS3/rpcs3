@@ -83,6 +83,8 @@ bool GSWndDX::Create(const string& title, int w, int h)
 {
 	if(m_hWnd) return false;
 
+	m_managed = true;
+
 	WNDCLASS wc;
 
 	memset(&wc, 0, sizeof(wc));
