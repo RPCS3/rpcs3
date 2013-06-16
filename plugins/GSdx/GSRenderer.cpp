@@ -52,6 +52,11 @@ GSRenderer::~GSRenderer()
 	}*/
 
 	delete m_dev;
+
+	if (m_wnd)
+	{
+		delete m_wnd;
+	}
 }
 
 bool GSRenderer::CreateWnd(const string& title, int w, int h)

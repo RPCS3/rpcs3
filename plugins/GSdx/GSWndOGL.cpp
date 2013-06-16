@@ -190,7 +190,7 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 
 	PopulateGlFunction();
 
-	if (m_NativeWindow != 0)
+	if (m_NativeWindow == 0)
 		throw GSDXRecoverableError();
 
 	return true;

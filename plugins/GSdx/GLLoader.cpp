@@ -105,6 +105,7 @@ namespace GLLoader {
 	bool found_GL_NV_copy_image = false;
 	bool found_GL_ARB_copy_image = false;
 	bool found_only_gl30	= false;
+	bool found_GL_ARB_gpu_shader5 = false;
 
     bool check_gl_version(uint32 major, uint32 minor) {
 
@@ -165,18 +166,22 @@ namespace GLLoader {
 				if (ext.compare("GL_NV_copy_image") == 0) found_GL_NV_copy_image = true;
 				// Replace previous extensions (when driver will be updated)
 				if (ext.compare("GL_ARB_copy_image") == 0) found_GL_ARB_copy_image = true;
+				if (ext.compare("GL_ARB_gpu_shader5") == 0) found_GL_ARB_gpu_shader5 = true;
 			}
 		}
 
 		if (!found_GL_ARB_separate_shader_objects) {
-			fprintf(stderr, "GL_ARB_separate_shader_objects is not supported\n");
+			fprintf(stderr, "INFO: GL_ARB_separate_shader_objects is not supported\n");
 		}
 		if (!found_GL_ARB_shading_language_420pack) {
-			fprintf(stderr, "GL_ARB_shading_language_420pack is not supported\n");
+			fprintf(stderr, "INFO: GL_ARB_shading_language_420pack is not supported\n");
 		}
 		if (!found_GL_ARB_texture_storage) {
-			fprintf(stderr, "GL_ARB_texture_storage is not supported\n");
+			fprintf(stderr, "FATAL: GL_ARB_texture_storage is not supported\n");
 			return false;
+		}
+		if (!found_GL_ARB_gpu_shader5) {
+			fprintf(stderr, "INFO: GL_ARB_gpu_shader5 is not supported\n");
 		}
 
 

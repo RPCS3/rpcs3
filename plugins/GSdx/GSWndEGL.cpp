@@ -169,7 +169,9 @@ bool GSWndEGL::Create(const string& title, int w, int h)
 
 	CheckContext();
 
-	if (m_NativeWindow != 0)
+	PopulateGlFunction();
+
+	if (m_NativeWindow == 0)
 		throw GSDXRecoverableError();
 
 	return true;

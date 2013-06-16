@@ -182,10 +182,6 @@ EXPORT_C GSclose()
 	if (s_gs->m_wnd)
 	{
 		s_gs->m_wnd->Detach();
-
-		delete s_gs->m_wnd;
-
-		s_gs->m_wnd = NULL;
 	}
 }
 
@@ -333,6 +329,7 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			}
 			catch (GSDXRecoverableError)
 			{
+				wnd[i]->Detach();
 				delete wnd[i];
 			}
 		}
@@ -1441,6 +1438,7 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 		void* hWnd = NULL;
 
 		_GSopen((void**)&hWnd, "", renderer);
+		if (s_gs->m_wnd == NULL) return;
 
 		uint32 crc;
 		fread(&crc, 4, 1, fp);

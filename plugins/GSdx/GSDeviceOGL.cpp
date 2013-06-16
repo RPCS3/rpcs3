@@ -318,7 +318,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// FIXME need to manually set the index...
 	// FIXME need dofxaa interface too
 	std::string fxaa_macro = "#define FXAA_GLSL_130 1\n";
-	if (!GLLoader::found_only_gl30) {
+	if (GLLoader::found_GL_ARB_gpu_shader5) {
 		// This extension become core on openGL4
 		fxaa_macro += "#extension GL_ARB_gpu_shader5 : enable\n";
 		fxaa_macro += "#define FXAA_GATHER4_ALPHA 1\n";

@@ -107,4 +107,5 @@ namespace GLLoader {
 	extern bool found_geometry_shader;
 	extern bool fglrx_buggy_driver;
 	extern bool found_only_gl30;
+	extern bool found_GL_ARB_gpu_shader5;
 }
