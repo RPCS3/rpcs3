@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-01-02 11:15+0100\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2012-06-27 14:19+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
@@ -110,12 +110,12 @@ msgid ""
 "open."
 msgstr "當等候圖形插件開啟時，多執行緒圖形模式的執行緒停止回應。"
 
-#: pcsx2/PluginManager.cpp:709
+#: pcsx2/PluginManager.cpp:714
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr "無法讀取即時存檔，檔案似乎損壞或不完整。"
 
-#: pcsx2/PluginManager.cpp:719
+#: pcsx2/PluginManager.cpp:724
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -124,42 +124,42 @@ msgstr ""
 "開啟【%s】插件失敗。您的電腦可能沒有足夠的資源，\n"
 "或是有不相容的硬體或驅動程式。"
 
-#: pcsx2/PluginManager.cpp:726
+#: pcsx2/PluginManager.cpp:731
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
 "resources needed."
 msgstr "初始化【%s】插件失敗。您的系統可能沒有足夠的記憶體或資源。"
 
-#: pcsx2/PluginManager.cpp:832
+#: pcsx2/PluginManager.cpp:837
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "未找到所選【%s】插件的檔案"
 
-#: pcsx2/PluginManager.cpp:836
+#: pcsx2/PluginManager.cpp:841
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr "所選【%s】插件的檔案不是有效的動態連結函式庫"
 
-#: pcsx2/PluginManager.cpp:854
+#: pcsx2/PluginManager.cpp:859
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
 "unsupported version of PCSX2."
 msgstr "所選擇的 %s 插件不是 PCSX2 的插件，或者是不再支援的舊版 PCSX2 的插件。"
 
-#: pcsx2/PluginManager.cpp:879
+#: pcsx2/PluginManager.cpp:884
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr "插件報告不支援您的硬體或軟體 / 驅動程式。"
 
-#: pcsx2/PluginManager.cpp:900
+#: pcsx2/PluginManager.cpp:905
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
 msgstr "所選擇的插件不是 PCSX2 的插件，或者是不再支援的舊版 PCSX2 的插件。"
 
-#: pcsx2/PluginManager.cpp:926
+#: pcsx2/PluginManager.cpp:931
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
@@ -167,11 +167,11 @@ msgid ""
 msgstr ""
 "所選擇的 %s 插件不是有效的 PCSX2 插件，或者是不再支援的舊版 PCSX2 的插件。"
 
-#: pcsx2/PluginManager.cpp:1355
+#: pcsx2/PluginManager.cpp:1360
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr "初始化內部記憶卡插件失敗。"
 
-#: pcsx2/PluginManager.cpp:1752
+#: pcsx2/PluginManager.cpp:1757
 msgid "Unloaded Plugin"
 msgstr "未載入的插件"
 
@@ -326,31 +326,31 @@ msgid ""
 "successfully but could not be moved to its final resting place."
 msgstr "即時存檔未能正確地儲存。成功建立暫存檔，但是無法將其移至目的地。"
 
-#: pcsx2/gui/AppConfig.cpp:842
+#: pcsx2/gui/AppConfig.cpp:874
 msgid "Safest"
 msgstr "最安全"
 
-#: pcsx2/gui/AppConfig.cpp:843
+#: pcsx2/gui/AppConfig.cpp:875
 msgid "Safe (faster)"
 msgstr "安全（速度更快）"
 
-#: pcsx2/gui/AppConfig.cpp:844
+#: pcsx2/gui/AppConfig.cpp:876
 msgid "Balanced"
 msgstr "平衡"
 
-#: pcsx2/gui/AppConfig.cpp:845
+#: pcsx2/gui/AppConfig.cpp:877
 msgid "Aggressive"
 msgstr "激進"
 
-#: pcsx2/gui/AppConfig.cpp:846
+#: pcsx2/gui/AppConfig.cpp:878
 msgid "Aggressive plus"
 msgstr "更加激進"
 
-#: pcsx2/gui/AppConfig.cpp:847
+#: pcsx2/gui/AppConfig.cpp:879
 msgid "Mostly Harmful"
 msgstr "基本上有害"
 
-#: pcsx2/gui/AppConfig.cpp:1008 pcsx2/gui/AppConfig.cpp:1014
+#: pcsx2/gui/AppConfig.cpp:1040 pcsx2/gui/AppConfig.cpp:1046
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "覆寫現存的設定檔失敗；沒有權限。"
 
@@ -879,7 +879,7 @@ msgid "Select file name: "
 msgstr "給記憶卡取名： "
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:149
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:851
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:866
 #, c-format
 msgid "Error (%s)"
 msgstr "錯誤（%s）"
@@ -1569,7 +1569,7 @@ msgstr ""
 "您已經選擇以下光碟映像檔：\n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:181
+#: pcsx2/gui/MemoryCardFile.cpp:182
 #, c-format
 msgid ""
 "Could not create a memory card: \n"
@@ -1582,7 +1582,7 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:199
+#: pcsx2/gui/MemoryCardFile.cpp:200
 #, c-format
 msgid ""
 "Access denied to memory card: \n"
@@ -1595,19 +1595,19 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:523
+#: pcsx2/gui/MemoryCardFile.cpp:535
 msgid "File name empty or too short"
 msgstr "檔案名稱是空的或太短"
 
-#: pcsx2/gui/MemoryCardFile.cpp:528
+#: pcsx2/gui/MemoryCardFile.cpp:540
 msgid "File name outside of required directory"
 msgstr "檔案名稱在所要求的資料夾之外"
 
-#: pcsx2/gui/MemoryCardFile.cpp:534
+#: pcsx2/gui/MemoryCardFile.cpp:546
 msgid "File name already exists"
 msgstr "檔案名稱已經存在"
 
-#: pcsx2/gui/MemoryCardFile.cpp:541
+#: pcsx2/gui/MemoryCardFile.cpp:553
 msgid "The Operating-System prevents this file from being created"
 msgstr "作業系統阻止建立這個檔案"
 
@@ -1630,7 +1630,7 @@ msgid ""
 msgstr "按下【瀏覽】按鈕選擇不同的資料夾"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:113
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:156
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:171
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:47
 msgid "Refresh list"
 msgstr "重新載入列表"
@@ -1958,86 +1958,86 @@ msgstr ""
 "警告：啟用追蹤日誌會令遊戲速度非常慢，而且是「我的 FPS 發生了什麼事？」問題的"
 "最重要的原因。：）"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:151
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:166
 msgid "Select folder with PS2 memory cards"
 msgstr "選擇含有 PS2 記憶卡的資料夾"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:448
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:533
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:463
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:548
 msgid "Eject"
 msgstr "退出"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:449
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:464
 msgid "Duplicate ..."
 msgstr "建立副本"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:450
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:465
 msgid "Rename ..."
 msgstr "重新命名"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:451
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:515
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:542
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:466
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:530
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:557
 msgid "Create ..."
 msgstr "新增"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:463
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:478
 msgid "Card: "
 msgstr "記憶卡： "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:516
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:531
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:564
 msgid "Create a new memory card."
 msgstr "建立一個新的記憶卡"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:529
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:544
 msgid "Rename this memory card ..."
 msgstr "重新命名所選擇的記憶卡"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:533
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:548
 msgid "Insert ..."
 msgstr "插入"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:534
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
 msgid "Eject the card from this port"
 msgstr "退出所選擇的記憶卡"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:534
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
 msgid "Insert this card to a port ..."
 msgstr "將所選擇的記憶卡插入記憶卡插口"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:538
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:553
 msgid "Create a duplicate of this memory card ..."
 msgstr "建立所選記憶卡的副本"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:542
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:557
 msgid "Delete"
 msgstr "刪除"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:545
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:560
 msgid "Permanently delete this memory card from disk (all contents are lost)"
 msgstr "刪除所選擇的記憶卡（失去所有遊戲存檔）"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:547
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:562
 msgid "Create a new memory card and assign it to this Port."
 msgstr "建立一個新的記憶卡"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:724
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:739
 msgid "Delete memory file?"
 msgstr "刪除記憶卡？"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:748
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:759
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:766
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:780
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:763
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:774
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:781
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:795
 msgid "Duplicate memory card"
 msgstr "建立記憶卡的副本"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:748
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:763
 msgid "Failed: Can only duplicate an existing card."
 msgstr "失敗：僅能給已經存在的記憶卡建立副本。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:766
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:781
 msgid ""
 "Select a name for the duplicate\n"
 "( '.ps2' will be added automatically)"
@@ -2045,25 +2045,25 @@ msgstr ""
 "取一個名字給副本記憶卡\n"
 "（.ps2 副檔名會被自動添加）"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:779
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:794
 #, c-format
 msgid "Failed: %s"
 msgstr "失敗：%s"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:804
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:819
 msgid "Copy failed!"
 msgstr "複製失敗！"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:812
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:827
 #, c-format
 msgid "Memory card '%s' duplicated to '%s'."
 msgstr "記憶卡『 %s 』的副本是『 %s 』"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:816
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:831
 msgid "Success"
 msgstr "成功"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:837
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:852
 #, c-format
 msgid ""
 "Select a new name for the memory card '%s'\n"
@@ -2072,107 +2072,121 @@ msgstr ""
 "取一個新名字給記憶卡『 %s 』\n"
 "（.ps2 副檔名會被自動添加）"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:840
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:852
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:868
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:855
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:867
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:883
 msgid "Rename memory card"
 msgstr "重新命名記憶卡"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:868
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:883
 msgid "Error: Rename could not be completed.\n"
 msgstr "錯誤：重新命名無法完成。\n"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:958
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:139
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:973
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:141
 #, c-format
 msgid "Port-%u / Multitap-%u--Port-1"
 msgstr "插口-%u / 手把擴充器-%u--插口-1"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:959
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:140
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:974
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:142
 #, c-format
 msgid "             Multitap-%u--Port-%u"
 msgstr "             手把擴充器-%u--插口-%u"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:984
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:999
 msgid "Empty"
 msgstr "空插口"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:990
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1005
 #, c-format
 msgid "Select a target port for '%s'"
 msgstr "選擇一個記憶卡插口用來插入記憶卡『 %s 』"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:991
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1006
 msgid "Insert card"
 msgstr "插入記憶卡"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1051
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1066
 msgid "Eject card"
 msgstr "退出記憶卡"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1051
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1066
 msgid "Insert card ..."
 msgstr "插入記憶卡插口"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1052
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1067
 msgid "Duplicate card ..."
 msgstr "建立記憶卡的副本"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1053
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1068
 msgid "Rename card ..."
 msgstr "重新命名記憶卡"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1054
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1069
 msgid "Delete card"
 msgstr "刪除記憶卡"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1057
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1061
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1072
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1076
 msgid "Create a new card ..."
 msgstr "新增記憶卡"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1065
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1080
 msgid "Refresh List"
 msgstr "重新載入列表"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:105
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:106
 msgid "PS2 Port"
 msgstr "記憶卡插口"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:107
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:108
 msgid "Card (file) name"
 msgstr "檔案名稱"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:108
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:109
 msgid "Card size"
 msgstr "大小"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:109
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:110
 msgid "Formatted"
 msgstr "已格式化"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:110
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:111
+msgid "Type"
+msgstr ""
+
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:112
 msgid "Last Modified"
 msgstr "修改日期"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:111
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:113
 msgid "Created on"
 msgstr "建立日期"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:156
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:158
 msgid "No"
 msgstr "否"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:156
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:158
 msgid "Yes"
 msgstr "是"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:169
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:159
+#, fuzzy
+msgid "PS2"
+msgstr "FPS"
+
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:159
+#, fuzzy
+msgid "PSX"
+msgstr "FPS"
+
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:172
 msgid "[-- Unused cards --]"
 msgstr "[-- 未使用的記憶卡 --]"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:171
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:174
 msgid "[-- No unused cards --]"
 msgstr "[-- 沒有未使用的記憶卡 --]"
 

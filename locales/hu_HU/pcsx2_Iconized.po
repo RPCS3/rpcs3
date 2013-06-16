@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.8\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2011-04-17 17:56+0100\n"
 "Last-Translator: Delirious <delirious@freemail.hu>\n"
 "Language-Team: Delirious <delirious@freemail.hu>\n"
@@ -305,7 +305,7 @@ msgstr ""
 "\n"
 "(megjegyzés: nincs hatással a plugin beállításokkal)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:78
+#: pcsx2/gui/MemoryCardFile.cpp:79
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "
@@ -482,7 +482,7 @@ msgstr ""
 "A játék javítások alapból be vannak kapcsolva, ezért nem kell semmit sem "
 "beállítanod itt."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
 #, c-format
 msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
@@ -491,13 +491,13 @@ msgstr ""
 "Éppen törölni szándékozod a(z) '%s' nevű formázott memória kártyát. Minden a "
 "kártyán lévő adat el fog veszni!  Teljesen és egészen biztos vagy a dologban?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:756
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
 msgid ""
 "Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
 msgstr ""
 "Hiba: Másolás csak egy üres PS2 portra vagy a fájlrendszerbe engedélyezett."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
 #, c-format
 msgid "Failed: Destination memory card '%s' is in use."
 msgstr "Hiba: A(z) '%s' nevű memória kártya használatban van."

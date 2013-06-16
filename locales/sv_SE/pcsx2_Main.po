@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.1.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-01-02 11:15+0100\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2012-12-25 20:41+0100\n"
 "Last-Translator: pgert <http://forums.pcsx2.net/User-pgert>\n"
 "Language-Team: http://forums.pcsx2.net/Thread-Swedish-GUI-translation-for-"
@@ -121,13 +121,13 @@ msgstr ""
 "MTGS-tråden har blivit osvarandes under inväntningen av att GS-"
 "insticksprogrammet ska öppna."
 
-#: pcsx2/PluginManager.cpp:709
+#: pcsx2/PluginManager.cpp:714
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr ""
 "Sparpunkten kan inte laddas, eftersom den verkar förstörd eller ofullständig."
 
-#: pcsx2/PluginManager.cpp:719
+#: pcsx2/PluginManager.cpp:724
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -136,7 +136,7 @@ msgstr ""
 "%s's insticksprogram misslyckades att öppna. \n"
 "Er dator kan ha otillräckliga resurser, eller oförenlig hårdvara/drivrutiner."
 
-#: pcsx2/PluginManager.cpp:726
+#: pcsx2/PluginManager.cpp:731
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
@@ -145,17 +145,17 @@ msgstr ""
 "%s's insticksprogram misslyckades att initialiseras. Ert system kan ha "
 "otillräckligt med minne eller andra erfordeliga resurser."
 
-#: pcsx2/PluginManager.cpp:832
+#: pcsx2/PluginManager.cpp:837
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "Den konfigurerade %s-insticksprogramfilen hittades ej."
 
-#: pcsx2/PluginManager.cpp:836
+#: pcsx2/PluginManager.cpp:841
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr "Det konfigurerade %s-insticksprogrammet är inte en giltlig DLL."
 
-#: pcsx2/PluginManager.cpp:854
+#: pcsx2/PluginManager.cpp:859
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
@@ -164,14 +164,14 @@ msgstr ""
 "Det konfigurerade %s-insticksprogrammet är inte ett PCSX2-insticksprogram, "
 "eller är för en äldre ostödjandes version av PCSX2."
 
-#: pcsx2/PluginManager.cpp:879
+#: pcsx2/PluginManager.cpp:884
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr ""
 "Insticksprogrammet rapporterar att Er hårdvara eller mjukvara/drivrutiner "
 "icke stödjes."
 
-#: pcsx2/PluginManager.cpp:900
+#: pcsx2/PluginManager.cpp:905
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
@@ -179,7 +179,7 @@ msgstr ""
 "Det konfigurerade insticksprogrammet är inte ett PCSX2-insticksprogram, "
 "eller för en äldre ostödjandes version av PCSX2."
 
-#: pcsx2/PluginManager.cpp:926
+#: pcsx2/PluginManager.cpp:931
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
@@ -188,12 +188,12 @@ msgstr ""
 "Det konfigurerade %s-insticksprogrammet är inte ett giltligt PCSX2-"
 "insticksprogram, eller är för en äldre ostödjandes version av PCSX2."
 
-#: pcsx2/PluginManager.cpp:1355
+#: pcsx2/PluginManager.cpp:1360
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr ""
 "Det inhemska Minneskorts-InsticksProgrammet misslyckades att initialiseras."
 
-#: pcsx2/PluginManager.cpp:1752
+#: pcsx2/PluginManager.cpp:1757
 msgid "Unloaded Plugin"
 msgstr "Oladdat Insticksprogram"
 
@@ -359,31 +359,31 @@ msgstr ""
 "Sparpunkten blev inte ordentligt sparad. Den tillfälliga filen skapades "
 "framgångsrikt med kunde inte flyttas till sin slutliga viloplats."
 
-#: pcsx2/gui/AppConfig.cpp:842
+#: pcsx2/gui/AppConfig.cpp:874
 msgid "Safest"
 msgstr "Säkrast"
 
-#: pcsx2/gui/AppConfig.cpp:843
+#: pcsx2/gui/AppConfig.cpp:875
 msgid "Safe (faster)"
 msgstr "Säkert (snabbare)"
 
-#: pcsx2/gui/AppConfig.cpp:844
+#: pcsx2/gui/AppConfig.cpp:876
 msgid "Balanced"
 msgstr "Balanserat"
 
-#: pcsx2/gui/AppConfig.cpp:845
+#: pcsx2/gui/AppConfig.cpp:877
 msgid "Aggressive"
 msgstr "Aggressivt"
 
-#: pcsx2/gui/AppConfig.cpp:846
+#: pcsx2/gui/AppConfig.cpp:878
 msgid "Aggressive plus"
 msgstr "Aggressivt plus"
 
-#: pcsx2/gui/AppConfig.cpp:847
+#: pcsx2/gui/AppConfig.cpp:879
 msgid "Mostly Harmful"
 msgstr "Mest Skadligt"
 
-#: pcsx2/gui/AppConfig.cpp:1008 pcsx2/gui/AppConfig.cpp:1014
+#: pcsx2/gui/AppConfig.cpp:1040 pcsx2/gui/AppConfig.cpp:1046
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr ""
 "Misslyckades att skriva över befintlig inställningsfil; tillstånd nekades."
@@ -931,7 +931,7 @@ msgid "Select file name: "
 msgstr "Välj filnamn:"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:149
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:851
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:866
 #, c-format
 msgid "Error (%s)"
 msgstr "Fel (%s)"
@@ -1644,7 +1644,7 @@ msgstr ""
 "Ni har valt följande ISO-avbild för PCSX2: \n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:181
+#: pcsx2/gui/MemoryCardFile.cpp:182
 #, c-format
 msgid ""
 "Could not create a memory card: \n"
@@ -1657,7 +1657,7 @@ msgstr ""
 "%s \n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:199
+#: pcsx2/gui/MemoryCardFile.cpp:200
 #, c-format
 msgid ""
 "Access denied to memory card: \n"
@@ -1670,19 +1670,19 @@ msgstr ""
 "%s \n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:523
+#: pcsx2/gui/MemoryCardFile.cpp:535
 msgid "File name empty or too short"
 msgstr "Filnamnet är tomt eller för kort"
 
-#: pcsx2/gui/MemoryCardFile.cpp:528
+#: pcsx2/gui/MemoryCardFile.cpp:540
 msgid "File name outside of required directory"
 msgstr "Filnamnet är utanför den krävda mappen"
 
-#: pcsx2/gui/MemoryCardFile.cpp:534
+#: pcsx2/gui/MemoryCardFile.cpp:546
 msgid "File name already exists"
 msgstr "Filnamnet finns redan"
 
-#: pcsx2/gui/MemoryCardFile.cpp:541
+#: pcsx2/gui/MemoryCardFile.cpp:553
 msgid "The Operating-System prevents this file from being created"
 msgstr "Operativsystemet hindrar denna fil från att skapas"
 
@@ -1707,7 +1707,7 @@ msgstr ""
 "PS2 BIOS ROM."
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:113
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:156
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:171
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:47
 msgid "Refresh list"
 msgstr "Fräscha upp listan"
@@ -2042,87 +2042,87 @@ msgstr ""
 "Varning: Möjliggörande av spårloggar är vanligtvis mycket långsamt, och är "
 "den främsta orsaken till ''Vad skedde med mina FPS'er?'' problem. :)"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:151
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:166
 msgid "Select folder with PS2 memory cards"
 msgstr "Välj mapp med PS2-minneskort"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:448
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:533
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:463
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:548
 msgid "Eject"
 msgstr "Utmata"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:449
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:464
 msgid "Duplicate ..."
 msgstr "Dubblera ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:450
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:465
 msgid "Rename ..."
 msgstr "Namnbyt ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:451
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:515
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:542
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:466
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:530
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:557
 msgid "Create ..."
 msgstr "Skapa ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:463
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:478
 msgid "Card: "
 msgstr "Minneskort: "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:516
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:531
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:564
 msgid "Create a new memory card."
 msgstr "Skapa ett nytt minneskort."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:529
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:544
 msgid "Rename this memory card ..."
 msgstr "Namnbyt detta minneskort ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:533
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:548
 msgid "Insert ..."
 msgstr "Inmata ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:534
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
 msgid "Eject the card from this port"
 msgstr "Utmata kortet från denna sockel"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:534
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
 msgid "Insert this card to a port ..."
 msgstr "Inmata detta kort till en sockel ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:538
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:553
 msgid "Create a duplicate of this memory card ..."
 msgstr "Dubblera detta minneskort ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:542
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:557
 msgid "Delete"
 msgstr "Kassera"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:545
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:560
 msgid "Permanently delete this memory card from disk (all contents are lost)"
 msgstr ""
 "Ta permanent bort detta minneskort från disken (allt innehåll går förlorat)"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:547
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:562
 msgid "Create a new memory card and assign it to this Port."
 msgstr "Skapa ett nytt minneskort och anvisa den till denna Sockel."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:724
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:739
 msgid "Delete memory file?"
 msgstr "Kassera minnesfil?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:748
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:759
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:766
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:780
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:763
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:774
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:781
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:795
 msgid "Duplicate memory card"
 msgstr "Dubblera minneskort"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:748
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:763
 msgid "Failed: Can only duplicate an existing card."
 msgstr "Misslyckades: Kan endast dubblera ett befintligt kort."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:766
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:781
 msgid ""
 "Select a name for the duplicate\n"
 "( '.ps2' will be added automatically)"
@@ -2130,25 +2130,25 @@ msgstr ""
 "Välj ett namn för dubbletten \n"
 " (''.ps2'' läggs till automatiskt):"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:779
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:794
 #, c-format
 msgid "Failed: %s"
 msgstr "Misslyckades: %s"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:804
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:819
 msgid "Copy failed!"
 msgstr "Kopiering misslyckades!"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:812
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:827
 #, c-format
 msgid "Memory card '%s' duplicated to '%s'."
 msgstr "Minneskort ''%s'' dubblerad till ''%s''."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:816
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:831
 msgid "Success"
 msgstr "Framgång"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:837
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:852
 #, c-format
 msgid ""
 "Select a new name for the memory card '%s'\n"
@@ -2157,107 +2157,121 @@ msgstr ""
 "Välj ett nytt namn för minneskortet ''%s'' \n"
 " (''.ps2'' läggs till automatiskt):"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:840
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:852
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:868
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:855
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:867
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:883
 msgid "Rename memory card"
 msgstr "Namnbyt minneskort"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:868
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:883
 msgid "Error: Rename could not be completed.\n"
 msgstr "Fel: Namnbyte kunde inte fullgöras. \n"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:958
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:139
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:973
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:141
 #, c-format
 msgid "Port-%u / Multitap-%u--Port-1"
 msgstr "Sockel-%u / Flerplugg-%u--Sockel-1"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:959
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:140
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:974
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:142
 #, c-format
 msgid "             Multitap-%u--Port-%u"
 msgstr "             Flerplugg-%u--Sockel-%u"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:984
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:999
 msgid "Empty"
 msgstr "Tom"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:990
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1005
 #, c-format
 msgid "Select a target port for '%s'"
 msgstr "Välj en målsockel för ''%s''"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:991
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1006
 msgid "Insert card"
 msgstr "Inmata kort"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1051
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1066
 msgid "Eject card"
 msgstr "Utmata kort"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1051
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1066
 msgid "Insert card ..."
 msgstr "Inmata kort ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1052
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1067
 msgid "Duplicate card ..."
 msgstr "Dubblera kort ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1053
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1068
 msgid "Rename card ..."
 msgstr "Namnbyt kort ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1054
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1069
 msgid "Delete card"
 msgstr "Kassera kort"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1057
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1061
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1072
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1076
 msgid "Create a new card ..."
 msgstr "Skapa ett nytt kort ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1065
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1080
 msgid "Refresh List"
 msgstr "Fräscha upp listan"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:105
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:106
 msgid "PS2 Port"
 msgstr "PS2-Sockel"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:107
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:108
 msgid "Card (file) name"
 msgstr "Kort (fil) namn"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:108
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:109
 msgid "Card size"
 msgstr "Kortstorlek"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:109
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:110
 msgid "Formatted"
 msgstr "Formaterad"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:110
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:111
+msgid "Type"
+msgstr ""
+
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:112
 msgid "Last Modified"
 msgstr "Senast Modifierad"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:111
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:113
 msgid "Created on"
 msgstr "Skapad den"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:156
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:158
 msgid "No"
 msgstr "Nej"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:156
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:158
 msgid "Yes"
 msgstr "Ja"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:169
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:159
+#, fuzzy
+msgid "PS2"
+msgstr "FPS"
+
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:159
+#, fuzzy
+msgid "PSX"
+msgstr "FPS"
+
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:172
 msgid "[-- Unused cards --]"
 msgstr "[-- Oanvända kort --]"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:171
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:174
 msgid "[-- No unused cards --]"
 msgstr "[-- Inga oanvända kort --]"
 

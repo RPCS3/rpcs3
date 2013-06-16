@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2012-06-11 12:56+0700\n"
 "Last-Translator: xyteton <xyteton@hotmail.com>\n"
 "Language-Team: xyteton <xyteton@hotmail.com>\n"
@@ -290,7 +290,7 @@ msgstr ""
 "\n"
 "(หมายเหตุ: การตั้งค่าสำหรับปลั๊กอินไม่ได้รับผลกระทบ)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:78
+#: pcsx2/gui/MemoryCardFile.cpp:79
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "
@@ -454,7 +454,7 @@ msgstr ""
 "('อัตโนมัติ' หมายถึง: "
 "การเลือกใช้วิธีการแก้ปัญหาเกมที่ผ่านการทดสอบแล้วและจำเพาะเจาะจงต่อเกมนั้น ๆ)"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
 #, c-format
 msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
@@ -463,12 +463,12 @@ msgstr ""
 "คุณกำลังจะลบการ์ดความจำที่ฟอร์แมตแล้ว '%s' \n"
 "ข้อมูลทั้งหมดบนการ์ดนี้จะหายไป! คุณแน่ใจอย่างถ่องแท้แล้วหรือไม่?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:756
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
 msgid ""
 "Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
 msgstr "ล้มเหลว: การทำสำเนาซ้ำอนุญาตเฉพาะสู่พอร์ต-PS2 ที่ว่าง หรือสู่ระบบไฟล์"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
 #, c-format
 msgid "Failed: Destination memory card '%s' is in use."
 msgstr "ล้มเหลว: การ์ดความจำปลายทาง '%s' กำลังถูกใช้อยู่"

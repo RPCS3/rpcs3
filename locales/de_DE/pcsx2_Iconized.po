@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2012-07-04 11:45+0100\n"
 "Last-Translator: \n"
 "Language-Team: PCSX2\n"
@@ -266,7 +266,7 @@ msgstr ""
 "Ausführen des Konfigurationshelfers. %s muss dazu neu gestartet werden.Alle "
 "%s Einstellungen gehen verloren. Bist du dir sicher?"
 
-#: pcsx2/gui/MemoryCardFile.cpp:78
+#: pcsx2/gui/MemoryCardFile.cpp:79
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "
@@ -401,7 +401,7 @@ msgstr ""
 "Spielefixes können spezifische, bekannte Fehler in einigen Spielen beheben. "
 "Sie sollten aber nur für diese Spiele aktiviert werden."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
 #, fuzzy, c-format
 msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
@@ -410,14 +410,14 @@ msgstr ""
 "Hiermit wird die komplette Memory Card in Slot %u gelöscht. Bist du dir "
 "absolut sicher?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:756
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
 msgid ""
 "Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
 msgstr ""
 "Fehler: Duplizieren ist nur in einen leeren PS2 Port oder in das Dateisystem "
 "erlaubt."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
 #, fuzzy, c-format
 msgid "Failed: Destination memory card '%s' is in use."
 msgstr "Konnte die Memory Card nicht kopieren. Die Zieldatei ist in Benutzung."

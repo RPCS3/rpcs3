@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 1.0\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2013-01-02 11:17+0100\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2012-08-14 09:51+0200\n"
 "Last-Translator: abdo123 <abdoabdo1234567890@hotmail.com>\n"
 "Language-Team: Abdo 123 <abdoabdo1234567890@hotmail.com>\n"
@@ -117,12 +117,12 @@ msgid ""
 "open."
 msgstr "إن عملية MTGS أصبحت لا تستجيب أناء الإنتظار لملحق GS ليعمل"
 
-#: pcsx2/PluginManager.cpp:709
+#: pcsx2/PluginManager.cpp:714
 msgid ""
 "The savestate cannot be loaded, as it appears to be corrupt or incomplete."
 msgstr " لم يتم قراءة الحالة , على ما يبدو أنها فاسدة أو غير كاملة ."
 
-#: pcsx2/PluginManager.cpp:719
+#: pcsx2/PluginManager.cpp:724
 #, c-format
 msgid ""
 "%s plugin failed to open.  Your computer may have insufficient resources, or "
@@ -131,7 +131,7 @@ msgstr ""
 "الملحق لم يعمل على ما يبدو أنه لديك موارد غير كافية أو تعريف/هاردوير غير "
 "متوافق %"
 
-#: pcsx2/PluginManager.cpp:726
+#: pcsx2/PluginManager.cpp:731
 #, c-format
 msgid ""
 "%s plugin failed to initialize.  Your system may have insufficient memory or "
@@ -140,17 +140,17 @@ msgstr ""
 "فشل الملحق s. بالقيام بعملية التهيئة ربما نظامك ليس لديه ذاكرة كافية أو "
 "الموارد اللازمة % "
 
-#: pcsx2/PluginManager.cpp:832
+#: pcsx2/PluginManager.cpp:837
 #, c-format
 msgid "The configured %s plugin file was not found"
 msgstr "ملف الملحق %s المضبوط ليس موجودا"
 
-#: pcsx2/PluginManager.cpp:836
+#: pcsx2/PluginManager.cpp:841
 #, c-format
 msgid "The configured %s plugin file is not a valid dynamic library"
 msgstr "ملف الملحق المضبوط %s ليس مكتبة ديناميكية صالحة"
 
-#: pcsx2/PluginManager.cpp:854
+#: pcsx2/PluginManager.cpp:859
 #, c-format
 msgid ""
 "The configured %s plugin is not a PCSX2 plugin, or is for an older "
@@ -159,19 +159,19 @@ msgstr ""
 "الملحق  %s  ليس ملحقا خاصا بـ PCSX2 أو هو لنسخة قديمة غير مدعومة حاليا في "
 "هذه النسخة"
 
-#: pcsx2/PluginManager.cpp:879
+#: pcsx2/PluginManager.cpp:884
 msgid ""
 "The plugin reports that your hardware or software/drivers are not supported."
 msgstr "وصلنا تقرير من الملحق أن الـ \"سوفتوير\" أو التعاريف غير مدعومة "
 
-#: pcsx2/PluginManager.cpp:900
+#: pcsx2/PluginManager.cpp:905
 msgid ""
 "Configured plugin is not a PCSX2 plugin, or is for an older unsupported "
 "version of PCSX2."
 msgstr ""
 "الملحق ليس ملحقا خاصا بـ PCSX2 أو هو لنسخة قديمة غير مدعوم في النسخة الحالية "
 
-#: pcsx2/PluginManager.cpp:926
+#: pcsx2/PluginManager.cpp:931
 #, c-format
 msgid ""
 "Configured %s plugin is not a valid PCSX2 plugin, or is for an older "
@@ -180,11 +180,11 @@ msgstr ""
 "الملحق  %s  ليس ملحقا خاصا بـ PCSX2 أو هو لنسخة قديمة غير مدعومة حاليا في "
 "هذه النسخة"
 
-#: pcsx2/PluginManager.cpp:1355
+#: pcsx2/PluginManager.cpp:1360
 msgid "Internal Memorycard Plugin failed to initialize."
 msgstr "ملحق كروت الذاكرة الخارجي فشل في التهيئة "
 
-#: pcsx2/PluginManager.cpp:1752
+#: pcsx2/PluginManager.cpp:1757
 msgid "Unloaded Plugin"
 msgstr "ملحق لم يتم تشغيله"
 
@@ -353,31 +353,31 @@ msgstr ""
 "الـ savestate لم تحفظ بشكل لائق . الملف المؤقت أنشئ بنجاح لكن لم يتم نقله "
 "إلى مكان حفظه الأخير"
 
-#: pcsx2/gui/AppConfig.cpp:842
+#: pcsx2/gui/AppConfig.cpp:874
 msgid "Safest"
 msgstr "الأكثر أمانا"
 
-#: pcsx2/gui/AppConfig.cpp:843
+#: pcsx2/gui/AppConfig.cpp:875
 msgid "Safe (faster)"
 msgstr "أمن ( أسرع )"
 
-#: pcsx2/gui/AppConfig.cpp:844
+#: pcsx2/gui/AppConfig.cpp:876
 msgid "Balanced"
 msgstr "متوازن"
 
-#: pcsx2/gui/AppConfig.cpp:845
+#: pcsx2/gui/AppConfig.cpp:877
 msgid "Aggressive"
 msgstr "إندفاعي"
 
-#: pcsx2/gui/AppConfig.cpp:846
+#: pcsx2/gui/AppConfig.cpp:878
 msgid "Aggressive plus"
 msgstr "إندفاعي بلس"
 
-#: pcsx2/gui/AppConfig.cpp:847
+#: pcsx2/gui/AppConfig.cpp:879
 msgid "Mostly Harmful"
 msgstr "على الأغلب مؤذي"
 
-#: pcsx2/gui/AppConfig.cpp:1008 pcsx2/gui/AppConfig.cpp:1014
+#: pcsx2/gui/AppConfig.cpp:1040 pcsx2/gui/AppConfig.cpp:1046
 msgid "Failed to overwrite existing settings file; permission was denied."
 msgstr "فشل في إستبدال ملف الإعدادات الأصلي , تم رفض الأذن"
 
@@ -917,7 +917,7 @@ msgid "Select file name: "
 msgstr "حدد إسم ملف"
 
 #: pcsx2/gui/Dialogs/CreateMemoryCardDialog.cpp:149
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:851
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:866
 #, c-format
 msgid "Error (%s)"
 msgstr "خطأ  (%s)"
@@ -1067,7 +1067,8 @@ msgid ""
 "\n"
 "Note: Duplicate/Rename/Create/Delete will NOT be reverted with 'Cancel'."
 msgstr ""
-"\nملاحظة : الإستنساخ/إنشاء /حذف/إعادة التسمية لن ترجع مثل ما كانت مع \"إلغاء\""
+"\n"
+"ملاحظة : الإستنساخ/إنشاء /حذف/إعادة التسمية لن ترجع مثل ما كانت مع \"إلغاء\""
 
 #: pcsx2/gui/Dialogs/PickUserModeDialog.cpp:24
 msgid "PCSX2 First Time configuration"
@@ -1235,8 +1236,7 @@ msgstr ""
 #: pcsx2/gui/IsoDropTarget.cpp:133
 #, c-format
 msgid "You have dropped the following ISO image into %s:"
-msgstr ""
-"لقد قمت بترك ملف ISO التالي إلى %s:"
+msgstr "لقد قمت بترك ملف ISO التالي إلى %s:"
 
 #: pcsx2/gui/MainFrame.cpp:38
 #, c-format
@@ -1615,7 +1615,7 @@ msgstr ""
 "لقد إخترت ملف الـ ISO التالي لـ PCSX2 :  \n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:181
+#: pcsx2/gui/MemoryCardFile.cpp:182
 #, c-format
 msgid ""
 "Could not create a memory card: \n"
@@ -1628,7 +1628,7 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:199
+#: pcsx2/gui/MemoryCardFile.cpp:200
 #, c-format
 msgid ""
 "Access denied to memory card: \n"
@@ -1641,19 +1641,19 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: pcsx2/gui/MemoryCardFile.cpp:523
+#: pcsx2/gui/MemoryCardFile.cpp:535
 msgid "File name empty or too short"
 msgstr "إسم الملف فارغ أو قصير للغاية"
 
-#: pcsx2/gui/MemoryCardFile.cpp:528
+#: pcsx2/gui/MemoryCardFile.cpp:540
 msgid "File name outside of required directory"
 msgstr "إسم الملف خارج المسار المطلوب"
 
-#: pcsx2/gui/MemoryCardFile.cpp:534
+#: pcsx2/gui/MemoryCardFile.cpp:546
 msgid "File name already exists"
 msgstr "إسم الملف موجود أصلا "
 
-#: pcsx2/gui/MemoryCardFile.cpp:541
+#: pcsx2/gui/MemoryCardFile.cpp:553
 msgid "The Operating-System prevents this file from being created"
 msgstr "الويندوز يمنع هذا الملف من أن يتم إنشاؤه"
 
@@ -1677,7 +1677,7 @@ msgstr ""
 "إنقر \"إستعراض\" لإختيار ملف مختلف الذي سيحاول PCSX2 إيجاد ملفات BIOS بداخله"
 
 #: pcsx2/gui/Panels/BiosSelectorPanel.cpp:113
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:156
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:171
 #: pcsx2/gui/Panels/ThemeSelectorPanel.cpp:47
 msgid "Refresh list"
 msgstr "قائمة التحديث"
@@ -1998,87 +1998,87 @@ msgstr ""
 "تحذير : تفعيل اليجل التتبعي هو بطيء بشكل نوعي لذلك هو السبب الأساسي في مشاكل "
 "\"ماذا حدث للسرعة\""
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:151
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:166
 msgid "Select folder with PS2 memory cards"
 msgstr "لإختر ملفا لكروت الذاكرة الخاصة بـ PS2"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:448
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:533
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:463
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:548
 msgid "Eject"
 msgstr "إخراج"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:449
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:464
 msgid "Duplicate ..."
 msgstr "إستنساخ"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:450
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:465
 msgid "Rename ..."
 msgstr "إعادة تسمية"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:451
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:515
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:542
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:466
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:530
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:557
 msgid "Create ..."
 msgstr "إنشاء"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:463
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:478
 msgid "Card: "
 msgstr "كرت :"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:516
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:531
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:564
 msgid "Create a new memory card."
 msgstr "إنشاء كرت ذاكرة جديد"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:529
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:544
 msgid "Rename this memory card ..."
 msgstr "إعادة تسمية كرت الذاكرة "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:533
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:548
 msgid "Insert ..."
 msgstr "إدخال"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:534
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
 msgid "Eject the card from this port"
 msgstr "أخرج الكرت من هذا المدخل"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:534
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:549
 msgid "Insert this card to a port ..."
 msgstr "أدخل هذا الكرت لمدخل"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:538
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:553
 msgid "Create a duplicate of this memory card ..."
 msgstr "إنشاء مستنسخ من هذا الكرت"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:542
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:557
 msgid "Delete"
 msgstr "حذف"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:545
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:560
 msgid "Permanently delete this memory card from disk (all contents are lost)"
 msgstr ""
 "خذق تام ونهائي لكرت الذاكرة هذا من القرص الصلب ( كل المحتويات سوف تفقد )"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:547
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:562
 msgid "Create a new memory card and assign it to this Port."
 msgstr "أنشأ كرت جديد وعيّنه لهذا المدخل "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:724
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:739
 msgid "Delete memory file?"
 msgstr "حذف الملف الخاص بكرت الذاكرة "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:748
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:759
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:766
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:780
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:763
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:774
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:781
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:795
 msgid "Duplicate memory card"
 msgstr "إستنساخ كرت الذاكرة"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:748
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:763
 msgid "Failed: Can only duplicate an existing card."
 msgstr "فشل : يمكن فقط إستنساخ الكروت الموجودة"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:766
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:781
 msgid ""
 "Select a name for the duplicate\n"
 "( '.ps2' will be added automatically)"
@@ -2086,25 +2086,25 @@ msgstr ""
 "إختر إسما للمستنسخ \n"
 " ( سوف تضاف بشكل تلقائي ps2. )"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:779
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:794
 #, c-format
 msgid "Failed: %s"
 msgstr "فشل "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:804
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:819
 msgid "Copy failed!"
 msgstr "فشل النسخ"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:812
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:827
 #, c-format
 msgid "Memory card '%s' duplicated to '%s'."
 msgstr "كرت الذاكرة  '%s'  إستنسخ إلى  '%s' "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:816
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:831
 msgid "Success"
 msgstr "نجاح "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:837
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:852
 #, c-format
 msgid ""
 "Select a new name for the memory card '%s'\n"
@@ -2113,107 +2113,121 @@ msgstr ""
 "إختر إسما جديدا لكرت الذاكرة '%s'\n"
 "( سوف تضاف بشكل تلقائي ps2. )"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:840
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:852
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:868
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:855
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:867
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:883
 msgid "Rename memory card"
 msgstr "إعادة تسمية كرت الذاكرة "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:868
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:883
 msgid "Error: Rename could not be completed.\n"
 msgstr "خطأ :  لم يمكن إكمال إعادة التسمية \n"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:958
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:139
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:973
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:141
 #, c-format
 msgid "Port-%u / Multitap-%u--Port-1"
 msgstr "المدخل -%u /  Multitap -%u-- المدخل -1"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:959
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:140
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:974
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:142
 #, c-format
 msgid "             Multitap-%u--Port-%u"
 msgstr "Multitap-%u--المدخل -%u"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:984
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:999
 msgid "Empty"
 msgstr "فارغ"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:990
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1005
 #, c-format
 msgid "Select a target port for '%s'"
 msgstr "إختر مدخل لـ '%'s"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:991
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1006
 msgid "Insert card"
 msgstr "أدخل الكرت"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1051
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1066
 msgid "Eject card"
 msgstr "أخرج الكرت"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1051
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1066
 msgid "Insert card ..."
 msgstr "أدخل الكرت ...."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1052
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1067
 msgid "Duplicate card ..."
 msgstr "إستنساخ الكرت ..."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1053
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1068
 msgid "Rename card ..."
 msgstr "إعادة تسمية الكرت ...."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1054
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1069
 msgid "Delete card"
 msgstr "حذف الكرت "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1057
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1061
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1072
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1076
 msgid "Create a new card ..."
 msgstr "أنشئ كرتا جديدا "
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1065
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:1080
 msgid "Refresh List"
 msgstr "حدّث القائمة "
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:105
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:106
 msgid "PS2 Port"
 msgstr "مدخل الموجود في الـ PS2"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:107
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:108
 msgid "Card (file) name"
 msgstr "إسم الكرت ( الملق )"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:108
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:109
 msgid "Card size"
 msgstr "حجم الكرت"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:109
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:110
 msgid "Formatted"
 msgstr "تم تهيئته ( مفرمت )"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:110
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:111
+msgid "Type"
+msgstr ""
+
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:112
 msgid "Last Modified"
 msgstr "أخر مرة تم تعديله"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:111
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:113
 msgid "Created on"
 msgstr "أنشئ في "
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:156
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:158
 msgid "No"
 msgstr "لا"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:156
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:158
 msgid "Yes"
 msgstr "نعم"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:169
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:159
+#, fuzzy
+msgid "PS2"
+msgstr "الفرامات في الثانية الواحدة"
+
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:159
+#, fuzzy
+msgid "PSX"
+msgstr "الفرامات في الثانية الواحدة"
+
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:172
 msgid "[-- Unused cards --]"
 msgstr "[ --الكروت الغير مستعملة--]"
 
-#: pcsx2/gui/Panels/MemoryCardListView.cpp:171
+#: pcsx2/gui/Panels/MemoryCardListView.cpp:174
 msgid "[-- No unused cards --]"
 msgstr "[-- لا يوجد كروت غير مستعملة --]"
 

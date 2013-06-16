@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2012-05-23 10:01+0800\n"
 "Last-Translator: \n"
 "Language-Team: kohaku2421 <kohaku2421@gmail.com>\n"
@@ -300,7 +300,7 @@ msgstr ""
 "\n"
 "(nota: tidak termasuk seting utk plugin)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:78
+#: pcsx2/gui/MemoryCardFile.cpp:79
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "
@@ -479,7 +479,7 @@ msgstr ""
 "membiarkan halaman ini kosong. \n"
 " ('Automatik' bermaksud: memberi game yg tertentu dgn fix yg bersesuaian)"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
 #, c-format
 msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
@@ -488,14 +488,14 @@ msgstr ""
 "Anda akan membuang kad memori %s. Semua data dlm kad ini akan hilang! Anda "
 "pasti?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:756
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
 msgid ""
 "Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
 msgstr ""
 "Gagal: Duplicate hanya dibenarkan kepada port-PS2 kosong atau kepada fail "
 "sistem."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
 #, c-format
 msgid "Failed: Destination memory card '%s' is in use."
 msgstr "Gagal: Destinasi kad memori '%s' sedang digunakan."

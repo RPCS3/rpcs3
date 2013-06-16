@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.8 r4560\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2012-06-01 10:32+0100\n"
 "Last-Translator: Gregory Hainaut <gregory.hainaut@gmail.com>\n"
 "Language-Team: ikazu <ikazu.kevin@gmail.com>\n"
@@ -230,7 +230,7 @@ msgid ""
 "(note: settings for plugins are unaffected)"
 msgstr "!Pemberitahuan:HapusPengaturan"
 
-#: pcsx2/gui/MemoryCardFile.cpp:78
+#: pcsx2/gui/MemoryCardFile.cpp:79
 #, fuzzy, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "
@@ -358,20 +358,20 @@ msgid ""
 "('Automatic' means: selectively use specific tested fixes for specific games)"
 msgstr "!Panel:PerbaikanPermainan:Peringatan Compat"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
 #, fuzzy, c-format
 msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
 "card will be lost!  Are you absolutely and quite positively sure?"
 msgstr "!Pemberitahuan:Mcd:Hapus"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:756
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
 #, fuzzy
 msgid ""
 "Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
 msgstr "!Pemberitahuan:Mcd:TidakBisaDuplikat"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
 #, fuzzy, c-format
 msgid "Failed: Destination memory card '%s' is in use."
 msgstr "!Pemberitahuan:Mcd:Salin Gagal"

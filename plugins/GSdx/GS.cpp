@@ -179,7 +179,7 @@ EXPORT_C GSclose()
 
 	s_gs->m_dev = NULL;
 
-	if (s->gs_m_wnd)
+	if (s_gs->m_wnd)
 	{
 		s_gs->m_wnd->Detach();
 

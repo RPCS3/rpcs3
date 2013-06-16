@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2012-08-11 14:07+0900\n"
 "Last-Translator: 99skull <99skull@gmail.com>\n"
 "Language-Team: 99skull <99skull@gmail.com>\n"
@@ -289,7 +289,7 @@ msgstr ""
 "\n"
 "(주의: 플러그인 설정은 영향받지 않습니다)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:78
+#: pcsx2/gui/MemoryCardFile.cpp:79
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "
@@ -462,7 +462,7 @@ msgstr ""
 "이것 대신 메인메뉴의 '자동 게임 수정'을 사용하는 것이 좋고, 이곳은 놔두세요\n"
 "('자동'의 의미: 일부 게임에 검증된 특정한 설정을 선택적으로 사용하는 것)"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
 #, c-format
 msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
@@ -471,12 +471,12 @@ msgstr ""
 "포맷된 메모리카드 '%s' 를 지우려고 합니다. 카드의 모든 데이터가 사라집니다! "
 "정말로 지우는게 확실합니까?"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:756
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
 msgid ""
 "Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
 msgstr "실패: 복사는 오직 빈 PS2-포트 또는 파일 시스템에만 허용됩니다."
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
 #, c-format
 msgid "Failed: Destination memory card '%s' is in use."
 msgstr "실패: 대상 메모리카드 '%s' 가 사용중 입니다."

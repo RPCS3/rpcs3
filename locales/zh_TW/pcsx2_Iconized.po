@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2011-09-09 11:52+0800\n"
 "Last-Translator: 呆丸北拜\n"
 "Language-Team: pcsx2fan\n"
@@ -279,7 +279,7 @@ msgstr ""
 "\n"
 "（注意：各個插件自身的設定不受影響）"
 
-#: pcsx2/gui/MemoryCardFile.cpp:78
+#: pcsx2/gui/MemoryCardFile.cpp:79
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "
@@ -451,7 +451,7 @@ msgstr ""
 "如果是手動設定遊戲修正，變更所玩的遊戲後，您需要手動關閉已啟用的遊戲修正、或"
 "乾脆關閉手動設定遊戲修正。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
 #, fuzzy, c-format
 msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
@@ -460,12 +460,12 @@ msgstr ""
 "您即將刪除 %u 插槽已格式化的記憶卡。\n"
 "該記憶卡的全部資料將會丟失！您真的確定嗎？"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:756
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
 msgid ""
 "Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
 msgstr "失敗：僅允許建立副本至空的記憶卡插口或檔案系統。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
 #, fuzzy, c-format
 msgid "Failed: Destination memory card '%s' is in use."
 msgstr "錯誤！無法複製記憶卡至插槽 %u。目標檔案使用中。"

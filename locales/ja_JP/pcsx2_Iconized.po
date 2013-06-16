@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PCSX2 0.9.9\n"
 "Report-Msgid-Bugs-To: http://code.google.com/p/pcsx2/\n"
-"POT-Creation-Date: 2012-09-08 18:25+0200\n"
+"POT-Creation-Date: 2013-06-16 11:54+0200\n"
 "PO-Revision-Date: 2012-03-05 08:12+0900\n"
 "Last-Translator: DeltaHF\n"
 "Language-Team: DeltaHF\n"
@@ -100,8 +100,8 @@ msgid ""
 "obtain a BIOS from an actual PS2 unit that you own (borrowing doesn't "
 "count).  Please consult the FAQs and Guides for further instructions."
 msgstr ""
-"PCSX2を実行するにはPS2のBIOSが必要です。あなた自身が所有する(借物はダメです)"
-"PS2の実機から \n"
+"PCSX2を実行するにはPS2のBIOSが必要です。あなた自身が所有する(借物はダメで"
+"す)PS2の実機から \n"
 "「合法的に」手に入れて下さい。詳しい吸出し方法はFAQやガイドを参照して下さい。"
 
 #: pcsx2/gui/AppMain.cpp:655
@@ -304,7 +304,7 @@ msgstr ""
 "\n"
 "(注意： プラグインの設定に影響はありません)"
 
-#: pcsx2/gui/MemoryCardFile.cpp:78
+#: pcsx2/gui/MemoryCardFile.cpp:79
 #, c-format
 msgid ""
 "The PS2-slot %d has been automatically disabled.  You can correct the "
@@ -476,7 +476,7 @@ msgstr ""
 "以下の項目を空欄のままにし、[自動ゲーム修正]を有効にする事を推奨します。\n"
 "([自動ゲーム修正]は特定のゲームに対し選択的にテスト済みの修正を適用させます)"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:720
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:735
 #, c-format
 msgid ""
 "You are about to delete the formatted memory card '%s'. All data on this "
@@ -485,14 +485,14 @@ msgstr ""
 "フォーマットされたメモリーカード[%s]を削除しようとしています。\n"
 "メモリーカードのデータは全て失われます。本当に削除してもよろしいですか？"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:756
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:771
 msgid ""
 "Failed: Duplicate is only allowed to an empty PS2-Port or to the file system."
 msgstr ""
 "複製に失敗しました。複製は空PS2ポート又はファイルシステムに対してのみ許可され"
 "ています。"
 
-#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:798
+#: pcsx2/gui/Panels/MemoryCardListPanel.cpp:813
 #, c-format
 msgid "Failed: Destination memory card '%s' is in use."
 msgstr "コピーに失敗しました。コピー先のメモリーカード[%s]は使用中です。"
