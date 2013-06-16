@@ -22,27 +22,10 @@
 #include "stdafx.h"
 #include "GSWndEGL.h"
 
-// Need at least MESA 9.0 (plan for october/november 2012)
-// So force the destiny to at least check the compilation
-#ifndef EGL_KHR_create_context
-#define EGL_KHR_create_context 1
-#define EGL_CONTEXT_MAJOR_VERSION_KHR			    EGL_CONTEXT_CLIENT_VERSION
-#define EGL_CONTEXT_MINOR_VERSION_KHR			    0x30FB
-#define EGL_CONTEXT_FLAGS_KHR				    0x30FC
-#define EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR		    0x30FD
-#define EGL_CONTEXT_OPENGL_RESET_NOTIFICATION_STRATEGY_KHR  0x31BD
-#define EGL_NO_RESET_NOTIFICATION_KHR			    0x31BE
-#define EGL_LOSE_CONTEXT_ON_RESET_KHR			    0x31BF
-#define EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR		    0x00000001
-#define EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR	    0x00000002
-#define EGL_CONTEXT_OPENGL_ROBUST_ACCESS_BIT_KHR	    0x00000004
-#define EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT_KHR		    0x00000001
-#define EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR    0x00000002
-#endif
+#if defined(_LINUX)
 
-#if defined(_LINUX) && defined (EGL_API)
 GSWndEGL::GSWndEGL()
-	: m_NativeWindow(0), m_NativeDisplay(NULL), m_ctx_attached(false)
+	: m_NativeWindow(0), m_NativeDisplay(NULL)
 {
 }
 
@@ -146,6 +129,8 @@ bool GSWndEGL::Attach(void* handle, bool managed)
 
 	CheckContext();
 
+	PopulateGlFunction();
+
 	return true;
 }
 
@@ -185,7 +170,20 @@ bool GSWndEGL::Create(const string& title, int w, int h)
 
 	AttachContext();
 
+	CheckContext();
+
+	PopulateGlFunction();
+
 	return (m_NativeWindow != 0);
+}
+
+void* GSWndEGL::GetProcAddress(const char* name)
+{
+	void* ptr = (void*)eglGetProcAddress(name);
+	if (ptr == NULL) {
+		fprintf(stderr, "Failed to find %s\n", name);
+	}
+	return ptr;
 }
 
 void* GSWndEGL::GetDisplay()
@@ -277,6 +275,5 @@ EGLBoolean GSWndEGL::OpenEGLDisplay()
 
 	return EGL_TRUE;
 }
-
 
 #endif

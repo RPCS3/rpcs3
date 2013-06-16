@@ -23,17 +23,14 @@
 
 #ifdef _WINDOWS
 
-class GSWndWGL : public GSWnd
+class GSWndWGL : public GSWndGL
 {
 	HWND	 m_NativeWindow;
 	HDC		 m_NativeDisplay;
 	HGLRC	 m_context;
 
-	bool m_ctx_attached;
-
 	//PFNGLXSWAPINTERVALMESAPROC m_swapinterval;
 
-	bool IsContextAttached() const { return m_ctx_attached; }
 	bool CreateContext(int major, int minor);
 	void CheckContext();
 
@@ -55,6 +52,7 @@ public:
 
 	void AttachContext();
 	void DetachContext();
+	void* GetProcAddress(const char* name);
 
 	void Show();
 	void Hide();

@@ -45,7 +45,7 @@ if(XDG_STD)
 endif(XDG_STD)
 
 # Select the EGL API
-if(EGL_API AND EGL_FOUND)
+if(EGL_API)
     add_definitions(-DEGL_API)
 endif()
 
@@ -188,9 +188,7 @@ add_library(${Output} SHARED ${GSdxSources} ${GSdxHeaders})
 
 target_link_libraries(${Output} ${X11_LIBRARIES})
 target_link_libraries(${Output} ${OPENGL_LIBRARIES})
-if(EGL_API AND EGL_FOUND)
-    target_link_libraries(${Output} ${EGL_LIBRARIES})
-endif()
+target_link_libraries(${Output} ${EGL_LIBRARIES})
 
 if(Linux)
 	target_link_libraries(${Output} ${GTK2_LIBRARIES})

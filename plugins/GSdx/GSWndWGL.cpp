@@ -24,7 +24,7 @@
 
 #ifdef _WINDOWS
 GSWndWGL::GSWndWGL()
-	: m_NativeWindow(NULL), m_NativeDisplay(NULL), m_context(NULL), m_ctx_attached(false)
+	: m_NativeWindow(NULL), m_NativeDisplay(NULL), m_context(NULL)
 {
 }
 
@@ -127,6 +127,8 @@ bool GSWndWGL::Attach(void* handle, bool managed)
 	// TODO
 	//m_swapinterval = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte*) "glXSwapIntervalMESA");
 	//PFNGLXSWAPINTERVALMESAPROC m_swapinterval = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte*) "glXSwapInterval");
+
+	PopulateGlFunction();
 
 	UpdateWindow(m_NativeWindow);
 
@@ -261,6 +263,15 @@ GSVector4i GSWndWGL::GetClientRect()
 	::GetClientRect(m_NativeWindow, r);
 
 	return r;
+}
+
+void* GSWndWGL::GetProcAddress(const char* name)
+{
+	void* ptr = (void*)wglGetProcAddress(name);
+	if (ptr == NULL) {
+		fprintf(stderr, "Failed to find %s\n", name);
+	}
+	return ptr;
 }
 
 //TODO: check extensions supported or not

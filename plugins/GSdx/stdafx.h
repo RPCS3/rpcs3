@@ -262,9 +262,13 @@ struct aligned_free_second {template<class T> void operator()(T& p) {_aligned_fr
 
         #define RESTRICT restrict
 
-    #elif _MSC_VER >= 1400 // TODO: gcc
+    #elif _MSC_VER >= 1400
 
         #define RESTRICT __restrict
+
+	#elif defined(__GNUC__)
+
+        #define RESTRICT __restrict__
 
     #else
 

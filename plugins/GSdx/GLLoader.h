@@ -21,34 +21,6 @@
 
 #pragma once
 
-#ifdef _LINUX
-#include <GL/glx.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#endif
-
-#ifdef _WINDOWS
-#define GL_LOADFN(name, glName) { \
-		if( (*(void**)&name = (void*)wglGetProcAddress(#glName)) == NULL ) { \
-			fprintf(stderr,"Failed to find %s\n", #glName); \
-		} \
-}
-#else
-#ifdef EGL_API
-#define GL_LOADFN(name, glName) { \
-	if( (*(void**)&name = (void*)eglGetProcAddress(#glName)) == NULL ) { \
-		fprintf(stderr,"Failed to find %s\n", #glName); \
-	} \
-}
-#else
-#define GL_LOADFN(name, glName) { \
-	if( (*(void**)&name = (void*)glXGetProcAddress((const GLubyte*)#glName)) == NULL ) { \
-		fprintf(stderr,"Failed to find %s\n", #glName); \
-	} \
-}
-#endif
-#endif
-
 extern   PFNGLACTIVETEXTUREPROC                 gl_ActiveTexture;
 extern   PFNGLBLENDCOLORPROC                    gl_BlendColor;
 extern   PFNGLATTACHSHADERPROC                  gl_AttachShader;

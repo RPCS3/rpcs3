@@ -24,7 +24,7 @@
 
 #ifdef _LINUX
 GSWndOGL::GSWndOGL()
-	: m_NativeWindow(0), m_NativeDisplay(NULL), m_swapinterval(NULL), m_ctx_attached(false)
+	: m_NativeWindow(0), m_NativeDisplay(NULL), m_swapinterval(NULL)
 {
 }
 
@@ -147,6 +147,7 @@ bool GSWndOGL::Attach(void* handle, bool managed)
 	m_swapinterval = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte*) "glXSwapIntervalMESA");
 	//PFNGLXSWAPINTERVALMESAPROC m_swapinterval = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte*) "glXSwapInterval");
 
+	PopulateGlFunction();
 
 	return true;
 }
@@ -178,34 +179,7 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 	// note this part must be only executed when replaying .gs debug file
 	m_NativeDisplay = XOpenDisplay(NULL);
 
-#if 0
-	int attrListDbl[] = { GLX_RGBA, GLX_DOUBLEBUFFER,
-		GLX_RED_SIZE, 8,
-		GLX_GREEN_SIZE, 8,
-		GLX_BLUE_SIZE, 8,
-		GLX_DEPTH_SIZE, 24,
-		None
-	};
-	XVisualInfo* vi = glXChooseVisual(m_NativeDisplay, DefaultScreen(m_NativeDisplay), attrListDbl);
-
-	/* create a color map */
-	XSetWindowAttributes attr;
-	attr.colormap = XCreateColormap(m_NativeDisplay, RootWindow(m_NativeDisplay, vi->screen),
-			vi->visual, AllocNone);
-	attr.border_pixel = 0;
-	attr.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask |
-		StructureNotifyMask | SubstructureRedirectMask | SubstructureNotifyMask |
-		EnterWindowMask | LeaveWindowMask | FocusChangeMask ;
-
-	// Create a window at the last position/size
-	m_NativeWindow = XCreateWindow(m_NativeDisplay, RootWindow(m_NativeDisplay, vi->screen),
-			0 , 0 , w, h, 0, vi->depth, InputOutput, vi->visual,
-			CWBorderPixel | CWColormap | CWEventMask, &attr);
-
-	XFree(vi);
-#else
 	m_NativeWindow = XCreateSimpleWindow(m_NativeDisplay, DefaultRootWindow(m_NativeDisplay), 0, 0, w, h, 0, 0, 0);
-#endif
 
 	XMapWindow (m_NativeDisplay, m_NativeWindow);
 
@@ -216,7 +190,18 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 
 	CheckContext();
 
+	PopulateGlFunction();
+
 	return (m_NativeWindow != 0);
+}
+
+void* GSWndOGL::GetProcAddress(const char* name)
+{
+	void* ptr = (void*)glXGetProcAddress((const GLubyte*)name);
+	if (ptr == NULL) {
+		fprintf(stderr, "Failed to find %s\n", name);
+	}
+	return ptr;
 }
 
 void* GSWndOGL::GetDisplay()

@@ -5,7 +5,7 @@ set(msg_dep_common_libs "check these libraries -> wxWidgets (>=2.8.10), sparseha
 set(msg_dep_pcsx2       "check these libraries -> wxWidgets (>=2.8.10), gtk2 (>=2.16), zlib (>=1.2.4), pcsx2 common libs")
 set(msg_dep_cdvdiso     "check these libraries -> bzip2 (>=1.0.5), gtk2 (>=2.16)")
 set(msg_dep_zerogs      "check these libraries -> glew (>=1.6), opengl, X11, nvidia-cg-toolkit (>=2.1)")
-set(msg_dep_gsdx        "check these libraries -> opengl, X11")
+set(msg_dep_gsdx        "check these libraries -> opengl, egl, X11")
 set(msg_dep_onepad      "check these libraries -> sdl (>=1.2)")
 set(msg_dep_spu2x       "check these libraries -> soundtouch (>=1.5), alsa, portaudio (>=1.9), pcsx2 common libs")
 set(msg_dep_zerospu2    "check these libraries -> soundtouch (>=1.5), alsa")
@@ -130,15 +130,15 @@ endif(GTK2_FOUND)
 # requires: -OpenGL
 #			-X11
 #---------------------------------------
-if(OPENGL_FOUND AND X11_FOUND)
+if(OPENGL_FOUND AND X11_FOUND AND EGL_FOUND)
     set(GSdx TRUE)
 elseif(NOT EXISTS "${PROJECT_SOURCE_DIR}/plugins/GSdx")
 	set(GSdx FALSE)
-else(OPENGL_FOUND AND X11_FOUND)
+else(OPENGL_FOUND AND X11_FOUND AND EGL_FOUND)
 	set(GSdx FALSE)
     message(STATUS "Skip build of GSdx: miss some dependencies")
     message(STATUS "${msg_dep_gsdx}")
-endif(OPENGL_FOUND AND X11_FOUND)
+endif(OPENGL_FOUND AND X11_FOUND AND EGL_FOUND)
 #---------------------------------------
 
 #---------------------------------------

@@ -55,3 +55,36 @@ public:
 	virtual void SetVSync(bool enable) {};
 
 };
+
+class GSWndGL : public GSWnd
+{
+protected:
+	bool m_ctx_attached;
+
+	bool IsContextAttached() const { return m_ctx_attached; }
+
+public:
+	GSWndGL() : m_ctx_attached(false) {};
+	virtual ~GSWndGL() {};
+
+	virtual bool Create(const string& title, int w, int h) = 0;
+	virtual bool Attach(void* handle, bool managed = true) = 0;
+	virtual void Detach() = 0;
+
+	virtual void* GetDisplay() = 0;
+	virtual void* GetHandle() = 0;
+	virtual GSVector4i GetClientRect() = 0;
+	virtual bool SetWindowText(const char* title) = 0;
+
+	virtual void AttachContext() = 0;
+	virtual void DetachContext() = 0;
+	virtual void* GetProcAddress(const char* name) = 0;
+
+	virtual void Show() = 0;
+	virtual void Hide() = 0;
+	virtual void HideFrame() = 0;
+	virtual void Flip() = 0;
+	virtual void SetVSync(bool enable) = 0;
+
+	void PopulateGlFunction();
+};

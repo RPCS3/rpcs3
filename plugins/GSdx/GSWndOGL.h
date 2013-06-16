@@ -25,17 +25,14 @@
 #include <X11/Xlib.h>
 #include <GL/glx.h>
 
-class GSWndOGL : public GSWnd
+class GSWndOGL : public GSWndGL
 {
 	Window     m_NativeWindow;
 	Display*   m_NativeDisplay;
 	GLXContext m_context;
 
-	bool m_ctx_attached;
-
 	PFNGLXSWAPINTERVALMESAPROC m_swapinterval;
 
-	bool IsContextAttached() const { return m_ctx_attached; }
 	bool CreateContext(int major, int minor);
 	void CheckContext();
 
@@ -54,6 +51,7 @@ public:
 
 	void AttachContext();
 	void DetachContext();
+	void* GetProcAddress(const char* name);
 
 	void Show();
 	void Hide();
