@@ -173,11 +173,17 @@ EXPORT_C GSclose()
 
 	s_gs->ResetDevice();
 
+	// Opengl requirement: It must be done before the Detach() of
+	// the context
 	delete s_gs->m_dev;
 
 	s_gs->m_dev = NULL;
 
 	s_gs->m_wnd->Detach();
+
+	delete s_gs->m_wnd;
+
+	s_gs->m_wnd = NULL;
 }
 
 static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)

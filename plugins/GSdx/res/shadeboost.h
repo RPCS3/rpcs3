@@ -75,7 +75,7 @@ static const char* shadeboost_glsl =
 	"layout(binding = 0) uniform sampler2D TextureSampler;\n"
 	"#endif\n"
 	"\n"
-	"// For all settings: 1.0 = 100\% 0.5=50\% 1.5 = 150\% \n"
+	"// For all settings: 1.0 = 100% 0.5=50% 1.5 = 150% \n"
 	"vec4 ContrastSaturationBrightness(vec4 color)\n"
 	"{\n"
 	"	const float sat = SB_SATURATION / 50.0;\n"

@@ -58,7 +58,6 @@ EOS
     my $line;
     while(defined($line = <$GLSL>)) {
         chomp $line;
-        $line =~ s/%/\\%/g;
         $line =~ s/"/\\"/g;
         print $H "\t\"$line\\n\"\n";
     }

@@ -963,7 +963,7 @@ void GSDeviceOGL::DoShadeBoost(GSTexture* st, GSTexture* dt)
 	SetUniformBuffer(m_shadeboost.cb);
 	m_shadeboost.cb->upload(&cb);
 
-	StretchRect(st, sr, dt, dr, m_shadeboost.ps, m_shadeboost.cb);
+	StretchRect(st, sr, dt, dr, m_shadeboost.ps, true);
 }
 
 void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm)
