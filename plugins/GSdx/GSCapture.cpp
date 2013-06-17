@@ -177,7 +177,7 @@ public:
 		: CBaseFilter(NAME("GSSource"), pUnk, this, __uuidof(this), &hr)
 		, m_output(NULL)
 		, m_size(w, h)
-		, m_atpf(10000000i64 / fps)
+		, m_atpf((REFERENCE_TIME)(10000000.0f / fps))
 		, m_now(0)
 	{
 		m_output = new GSSourceOutputPin(m_size, m_atpf, this, this, hr, colorspace);

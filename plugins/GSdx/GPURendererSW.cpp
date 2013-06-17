@@ -27,7 +27,7 @@ GPURendererSW::GPURendererSW(GSDevice* dev, int threads)
 	: GPURendererT<GSVertexSW>(dev)
 	, m_texture(NULL)
 {
-	m_output = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 16);
+	m_output = (uint32*)_aligned_malloc(m_mem.GetWidth() * m_mem.GetHeight() * sizeof(uint32), 32);
 
 	m_rl = GSRasterizerList::Create<GPUDrawScanline>(threads, &m_perfmon);
 }
@@ -121,7 +121,7 @@ void GPURendererSW::Draw()
 	data->scissor.right = min((int)(m_env.DRAREABR.X + 1) << m_scale.x, m_mem.GetWidth());
 	data->scissor.bottom = min((int)(m_env.DRAREABR.Y + 1) << m_scale.y, m_mem.GetHeight());
 	
-	data->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_count, 16);
+	data->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_count, 32);
 	data->vertex = (GSVertexSW*)data->buff;
 	data->vertex_count = m_count;
 

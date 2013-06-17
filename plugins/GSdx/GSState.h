@@ -148,16 +148,16 @@ protected:
 
 	GSVertex m_v;
 	float m_q;
-	GSVector4 m_scissor;
-	uint32 m_ofxy;
+	GSVector4i m_scissor;
+	GSVector4i m_ofxy;
 	bool m_texflush;
 	
 	struct 
 	{
 		GSVertex* buff; 
 		size_t head, tail, next, maxcount; // head: first vertex, tail: last vertex + 1, next: last indexed + 1
-		GSVector4 xy[4]; 
 		size_t xy_tail;
+		uint64 xy[4];
 	} m_vertex; 
 
 	struct 

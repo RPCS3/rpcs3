@@ -85,4 +85,6 @@ public:
 	void WritePixel(const GSVector4i& src, int addr, int i, uint32 psm);
 
 #endif
+
+	void PrintStats() {m_ds_map.PrintStats();}
 };

@@ -516,7 +516,7 @@ void GSState::GIFPackedRegHandlerXYZF2(const GIFPackedReg* RESTRICT r)
 	*/
 	GSVector4i xy = GSVector4i::loadl(&r->u64[0]);
 	GSVector4i zf = GSVector4i::loadl(&r->u64[1]);
-	xy = xy.upl16(xy.srl<4>()).upl32(GSVector4i::loadl(&m_v.UV));
+	xy = xy.upl16(xy.srl<4>()).upl32(GSVector4i::load((int)m_v.UV));
 	zf = zf.srl32(4) & GSVector4i::x00ffffff().upl32(GSVector4i::x000000ff());
 
 	m_v.m[1] = xy.upl32(zf);
@@ -567,14 +567,19 @@ void GSState::GIFPackedRegHandlerSTQRGBAXYZF2(const GIFPackedReg* RESTRICT r, ui
 		GSVector4i st = GSVector4i::loadl(&r[0].u64[0]);
 		GSVector4i q = GSVector4i::loadl(&r[0].u64[1]);
 		GSVector4i rgba = (GSVector4i::load<false>(&r[1]) & GSVector4i::x000000ff()).ps32().pu16();
-
+		/*
+		GSVector4i rg = GSVector4i::loadl(&r[1].u64[0]);
+		GSVector4i ba = GSVector4i::loadl(&r[1].u64[1]);
+		GSVector4i rbga = rg.upl8(ba);
+		GSVector4i rgba = rbga.upl8(rbga.zzzz());
+		*/
 		q = q.blend8(GSVector4i::cast(GSVector4::m_one), q == GSVector4i::zero()); // see GIFPackedRegHandlerSTQ
 
 		m_v.m[0] = st.upl64(rgba.upl32(q)); // TODO: only store the last one
 
 		GSVector4i xy = GSVector4i::loadl(&r[2].u64[0]);
 		GSVector4i zf = GSVector4i::loadl(&r[2].u64[1]);
-		xy = xy.upl16(xy.srl<4>()).upl32(GSVector4i::loadl(&m_v.UV));
+		xy = xy.upl16(xy.srl<4>()).upl32(GSVector4i::load((int)m_v.UV));
 		zf = zf.srl32(4) & GSVector4i::x00ffffff().upl32(GSVector4i::x000000ff());
 
 		m_v.m[1] = xy.upl32(zf); // TODO: only store the last one
@@ -599,7 +604,12 @@ void GSState::GIFPackedRegHandlerSTQRGBAXYZ2(const GIFPackedReg* RESTRICT r, uin
 		GSVector4i st = GSVector4i::loadl(&r[0].u64[0]);
 		GSVector4i q = GSVector4i::loadl(&r[0].u64[1]);
 		GSVector4i rgba = (GSVector4i::load<false>(&r[1]) & GSVector4i::x000000ff()).ps32().pu16();
-
+		/*
+		GSVector4i rg = GSVector4i::loadl(&r[1].u64[0]);
+		GSVector4i ba = GSVector4i::loadl(&r[1].u64[1]);
+		GSVector4i rbga = rg.upl8(ba);
+		GSVector4i rgba = rbga.upl8(rbga.zzzz());
+		*/
 		q = q.blend8(GSVector4i::cast(GSVector4::m_one), q == GSVector4i::zero()); // see GIFPackedRegHandlerSTQ
 
 		m_v.m[0] = st.upl64(rgba.upl32(q)); // TODO: only store the last one
@@ -719,7 +729,7 @@ void GSState::GIFRegHandlerXYZF2(const GIFReg* RESTRICT r)
 
 	GSVector4i xyzf = GSVector4i::loadl(&r->XYZF);
 	GSVector4i xyz = xyzf & (GSVector4i::xffffffff().upl32(GSVector4i::x00ffffff()));
-	GSVector4i uvf = GSVector4i::loadl(&m_v.UV).upl32(xyzf.srl32(24).srl<4>());
+	GSVector4i uvf = GSVector4i::load((int)m_v.UV).upl32(xyzf.srl32(24).srl<4>());
 	
 	m_v.m[1] = xyz.upl64(uvf);
 
@@ -2258,7 +2268,7 @@ void GSState::UpdateContext()
 
 void GSState::UpdateScissor()
 {
-	m_scissor = m_context->scissor.ofex;
+	m_scissor = m_context->scissor.ex;
 	m_ofxy = m_context->scissor.ofxy;
 }
 
@@ -2286,8 +2296,8 @@ void GSState::GrowVertexBuffer()
 {
 	int maxcount = std::max<int>(m_vertex.maxcount * 3 / 2, 10000);
 
-	GSVertex* vertex = (GSVertex*)_aligned_malloc(sizeof(GSVertex) * maxcount, 16);
-	uint32* index = (uint32*)_aligned_malloc(sizeof(uint32) * maxcount * 3, 16); // worst case is slightly less than vertex number * 3
+	GSVertex* vertex = (GSVertex*)_aligned_malloc(sizeof(GSVertex) * maxcount, 32);
+	uint32* index = (uint32*)_aligned_malloc(sizeof(uint32) * maxcount * 3, 32); // worst case is slightly less than vertex number * 3
 
 	if(m_vertex.buff != NULL)
 	{
@@ -2328,7 +2338,13 @@ __forceinline void GSState::VertexKick(uint32 skip)
 	tailptr[0] = v0;
 	tailptr[1] = v1;
 
-	m_vertex.xy[xy_tail & 3] = GSVector4(v1.upl32(v1.sub16(GSVector4i::load(m_ofxy)).sra16(4)).upl16()); // zw not sign extended, only useful for eq tests
+	GSVector4i xy = v1.xxxx().sub16(m_ofxy);
+
+	#if _M_SSE >= 0x401
+	GSVector4i::storel(&m_vertex.xy[xy_tail & 3], xy.blend32<2>(xy.sra16(4)));
+	#else
+	GSVector4i::storel(&m_vertex.xy[xy_tail & 3], xy.upl32(xy.sra16(4).yyyy()));
+	#endif
 
 	m_vertex.tail = ++tail;
 	m_vertex.xy_tail = ++xy_tail;
@@ -2356,14 +2372,14 @@ __forceinline void GSState::VertexKick(uint32 skip)
 
 	if(skip == 0 && (prim != GS_TRIANGLEFAN || m <= 4)) // m_vertex.xy only knows about the last 4 vertices, head could be far behind for fan
 	{
-		GSVector4 v0, v1, v2, v3;
+		GSVector4i v0, v1, v2, v3, pmin, pmax;
 
-		v0 = m_vertex.xy[(xy_tail + 1) & 3]; // T-3
-		v1 = m_vertex.xy[(xy_tail + 2) & 3]; // T-2
-		v2 = m_vertex.xy[(xy_tail + 3) & 3]; // T-1
-		v3 = m_vertex.xy[(xy_tail - m) & 3]; // H
+		v0 = GSVector4i::loadl(&m_vertex.xy[(xy_tail + 1) & 3]); // T-3
+		v1 = GSVector4i::loadl(&m_vertex.xy[(xy_tail + 2) & 3]); // T-2
+		v2 = GSVector4i::loadl(&m_vertex.xy[(xy_tail + 3) & 3]); // T-1
+		v3 = GSVector4i::loadl(&m_vertex.xy[(xy_tail - m) & 3]); // H
 
-		GSVector4 pmin, pmax, cross;
+		GSVector4 cross;
 
 		switch(prim)
 		{
@@ -2374,21 +2390,21 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		case GS_LINELIST:
 		case GS_LINESTRIP:
 		case GS_SPRITE:
-			pmin = v2.min(v1);
-			pmax = v2.max(v1);
+			pmin = v2.min_i16(v1);
+			pmax = v2.max_i16(v1);
 			break;
 		case GS_TRIANGLELIST:
 		case GS_TRIANGLESTRIP:
-			pmin = v2.min(v1.min(v0));
-			pmax = v2.max(v1.max(v0));
+			pmin = v2.min_i16(v1.min_i16(v0));
+			pmax = v2.max_i16(v1.max_i16(v0));
 			break;
 		case GS_TRIANGLEFAN:
-			pmin = v2.min(v1.min(v3));
-			pmax = v2.max(v1.max(v3));
+			pmin = v2.min_i16(v1.min_i16(v3));
+			pmax = v2.max_i16(v1.max_i16(v3));
 			break;
 		}
 
-		GSVector4 test = pmax < m_scissor | pmin > m_scissor.zwxy(); 
+		GSVector4i test = pmax.lt16(m_scissor) | pmin.gt16(m_scissor.zwzwl()); 
 		
 		switch(prim)
 		{
@@ -2396,7 +2412,7 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		case GS_TRIANGLESTRIP:
 		case GS_TRIANGLEFAN:
 		case GS_SPRITE:
-			test |= m_nativeres ? (pmin == pmax).zwzw() : pmin == pmax;
+			test |= m_nativeres ? pmin.eq16(pmax).zwzwl() : pmin.eq16(pmax);
 			break;
 		}
 
@@ -2404,16 +2420,19 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		{
 		case GS_TRIANGLELIST:
 		case GS_TRIANGLESTRIP:
-			cross = (v2 - v1) * (v2 - v0).yxwz();
-			test |= cross == cross.yxwz();
+			// TODO: any way to do a 16-bit integer cross product?
+			cross = GSVector4(v2.xyxyl().i16to32().sub32(v0.upl32(v1).i16to32())); // x20, y20, x21, y21
+			cross = cross * cross.wzwz(); // x20 * y21, y20 * x21
+			test |= GSVector4i::cast(cross == cross.yxwz());
 			break;
 		case GS_TRIANGLEFAN:
-			cross = (v2 - v1) * (v2 - v3).yxwz();
-			test |= cross == cross.yxwz();
+			cross = GSVector4(v2.xyxyl().i16to32().sub32(v3.upl32(v1).i16to32())); // x23, y23, x21, y21
+			cross = cross * cross.wzwz(); // x23 * y21, y23 * x21
+			test |= GSVector4i::cast(cross == cross.yxwz());
 			break;
 		}
 		
-		skip |= test.mask() & 3;
+		skip |= test.mask() & 15;
 	}
 
 	if(skip != 0)

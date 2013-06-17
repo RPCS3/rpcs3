@@ -28,6 +28,10 @@ static FILE* s_fp = LOG ? fopen("c:\\temp1\\_.txt", "w") : NULL;
 
 const GSVector4 g_pos_scale(1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
 
+#if _M_SSE >= 0x501
+const GSVector8 g_pos_scale2(1.0f / 16, 1.0f / 16, 1.0f, 128.0f, 1.0f / 16, 1.0f / 16, 1.0f, 128.0f);
+#endif
+
 GSRendererSW::GSRendererSW(int threads)
 	: m_fzb(NULL)
 {
@@ -210,7 +214,7 @@ void GSRendererSW::VSync(int field)
 
 	m_tc->IncAge();
 
-	// if((m_perfmon.GetFrame() & 255) == 0) m_rl.PrintStats();
+	// if((m_perfmon.GetFrame() & 255) == 0) m_rl->PrintStats();
 }
 
 void GSRendererSW::ResetDevice()
@@ -263,18 +267,80 @@ GSTexture* GSRendererSW::GetOutput(int i)
 template<uint32 primclass, uint32 tme, uint32 fst>
 void GSRendererSW::ConvertVertexBuffer(GSVertexSW* RESTRICT dst, const GSVertex* RESTRICT src, size_t count)
 {
-	size_t i = m_vertex.next;
+	#if 0//_M_SSE >= 0x501
 
+	// TODO: something isn't right here, this makes other functions slower (split load/store? old sse code in 3rd party lib?)
+
+	GSVector8i o2((GSVector4i)m_context->XYOFFSET);
+	GSVector8 tsize2(GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH, 1, 0));
+
+	for(int i = (int)m_vertex.next; i > 0; i -= 2, src += 2, dst += 2) // ok to overflow, allocator makes sure there is one more dummy vertex
+	{
+		GSVector8i v0 = GSVector8i::load<true>(src[0].m);
+		GSVector8i v1 = GSVector8i::load<true>(src[1].m);
+
+		GSVector8 stcq = GSVector8::cast(v0.ac(v1));
+		GSVector8i xyzuvf = v0.bd(v1);
+
+		//GSVector8 stcq = GSVector8::load(&src[0].m[0], &src[1].m[0]);
+		//GSVector8i xyzuvf = GSVector8i::load(&src[0].m[1], &src[1].m[1]);
+
+		GSVector8i xy = xyzuvf.upl16() - o2;
+		GSVector8i zf = xyzuvf.ywww().min_u32(GSVector8i::xffffff00());
+
+		GSVector8 p = GSVector8(xy).xyxy(GSVector8(zf) + (GSVector8::m_x4f800000 & GSVector8::cast(zf.sra32(31)))) * g_pos_scale2;
+		GSVector8 c = GSVector8(GSVector8i::cast(stcq).uph8().upl16() << 7);
+
+		GSVector8 t = GSVector8::zero();
+
+		if(tme)
+		{
+			if(fst)
+			{
+				t = GSVector8(xyzuvf.uph16() << (16 - 4));
+			}
+			else
+			{
+				t = stcq.xyww() * tsize2;
+			}
+		}
+
+		if(primclass == GS_SPRITE_CLASS)
+		{
+			t = t.insert32<1, 3>(GSVector8::cast(xyzuvf));
+		}
+/*
+		if(tme || primclass == GS_SPRITE_CLASS) 
+		{
+			GSVector8::store<true>(&dst[0].p, p.ac(t));
+		}
+		else 
+		{
+			GSVector8::storel(&dst[0].p, p);
+		}
+*/
+		GSVector8::store<true>(&dst[0].p, p.ac(t));
+		GSVector8::store<true>(&dst[0].c, c.a_());
+/*
+		if(tme || primclass == GS_SPRITE_CLASS) 
+		{
+			GSVector8::store<true>(&dst[1].p, p.bd(t));
+		}
+		else 
+		{
+			GSVector8::storeh(&dst[1].p, p);
+		}
+*/
+		GSVector8::store<true>(&dst[1].p, p.bd(t));
+		GSVector8::store<true>(&dst[1].c, c.b_());
+	}
+
+	#else
+	
 	GSVector4i o = (GSVector4i)m_context->XYOFFSET;
 	GSVector4 tsize = GSVector4(0x10000 << m_context->TEX0.TW, 0x10000 << m_context->TEX0.TH, 1, 0);
 
-	#if _M_SSE >= 0x501
-
-	// TODO: process vertices in pairs, when AVX2 becomes available
-
-	#endif
-	
-	for(; i > 0; i--, src++, dst++)
+	for(int i = (int)m_vertex.next; i > 0; i--, src++, dst++)
 	{
 		GSVector4 stcq = GSVector4::load<true>(&src->m[0]); // s t rgba q
 
@@ -297,7 +363,7 @@ void GSRendererSW::ConvertVertexBuffer(GSVertexSW* RESTRICT dst, const GSVertex*
 		dst->p = GSVector4(xy).xyxy(GSVector4(zf) + (GSVector4::m_x4f800000 & GSVector4::cast(zf.sra32(31)))) * g_pos_scale;
 		dst->c = GSVector4(GSVector4i::cast(stcq).zzzz().u8to32() << 7);
 
-		GSVector4 t;
+		GSVector4 t = GSVector4::zero();
 
 		if(tme)
 		{
@@ -323,17 +389,25 @@ void GSRendererSW::ConvertVertexBuffer(GSVertexSW* RESTRICT dst, const GSVertex*
 		{
 			#if _M_SSE >= 0x401
 
-			t = t.insert<1, 3>(GSVector4::cast(xyzuvf));
-				
+			t = t.insert32<1, 3>(GSVector4::cast(xyzuvf));
+
 			#else
-				
-			t = t.insert<0, 3>(GSVector4::cast(GSVector4i::load(z)));
+
+			t = t.insert32<0, 3>(GSVector4::cast(GSVector4i::load(z)));
 
 			#endif
 		}
 
 		dst->t = t;
+
+		#if _M_SSE >= 0x501
+
+		dst->_pad = GSVector4::zero();
+
+		#endif
 	}
+
+	#endif
 }
 
 void GSRendererSW::Draw()
@@ -345,10 +419,10 @@ void GSRendererSW::Draw()
 	shared_ptr<GSRasterizerData> data(sd);
 
 	sd->primclass = m_vt.m_primclass;
-	sd->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * m_vertex.next + sizeof(uint32) * m_index.tail, 32);
+	sd->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * ((m_vertex.next + 1) & ~1) + sizeof(uint32) * m_index.tail, 32);
 	sd->vertex = (GSVertexSW*)sd->buff;
 	sd->vertex_count = m_vertex.next;
-	sd->index = (uint32*)(sd->buff + sizeof(GSVertexSW) * m_vertex.next);
+	sd->index = (uint32*)(sd->buff + sizeof(GSVertexSW) * ((m_vertex.next + 1) & ~1));
 	sd->index_count = m_index.tail;
 
 	(this->*m_cvb[m_vt.m_primclass][PRIM->TME][PRIM->FST])(sd->vertex, m_vertex.buff, m_vertex.next);
@@ -631,6 +705,20 @@ void GSRendererSW::InvalidateLocalMem(const GIFRegBITBLTBUF& BITBLTBUF, const GS
 	}
 }
 
+__forceinline void Increment16(volatile short* lpAddend)
+{
+	// (*lpAddend)++;
+
+	_InterlockedIncrement16(lpAddend);
+}
+
+__forceinline void Decrement16(volatile short* lpAddend)
+{
+	// (*lpAddend)--;
+
+	_InterlockedDecrement16(lpAddend);
+}
+	
 void GSRendererSW::UsePages(const uint32* pages, int type)
 {
 	if(type < 2)
@@ -639,7 +727,7 @@ void GSRendererSW::UsePages(const uint32* pages, int type)
 		{
 			ASSERT(((short*)&m_fzb_pages[*p])[type] < SHRT_MAX);
 
-			_InterlockedIncrement16((short*)&m_fzb_pages[*p] + type);
+			Increment16((short*)&m_fzb_pages[*p] + type);
 		}
 	}
 	else
@@ -648,7 +736,7 @@ void GSRendererSW::UsePages(const uint32* pages, int type)
 		{
 			ASSERT(m_tex_pages[*p] < SHRT_MAX);
 
-			_InterlockedIncrement16((short*)&m_tex_pages[*p]); // remember which texture pages are used
+			Increment16((short*)&m_tex_pages[*p]);
 		}
 	}
 }
@@ -661,7 +749,7 @@ void GSRendererSW::ReleasePages(const uint32* pages, int type)
 		{
 			ASSERT(((short*)&m_fzb_pages[*p])[type] > 0);
 
-			_InterlockedDecrement16((short*)&m_fzb_pages[*p] + type);
+			Decrement16((short*)&m_fzb_pages[*p] + type);
 		}
 	}
 	else
@@ -670,7 +758,7 @@ void GSRendererSW::ReleasePages(const uint32* pages, int type)
 		{
 			ASSERT(m_tex_pages[*p] > 0);
 
-			_InterlockedDecrement16((short*)&m_tex_pages[*p]);
+			Decrement16((short*)&m_tex_pages[*p]);
 		}
 	}
 }
@@ -1390,23 +1478,29 @@ GSRendererSW::SharedData::~SharedData()
 	fflush(s_fp);}
 }
 
+static TransactionScope::Lock s_lock;
+
 void GSRendererSW::SharedData::UsePages(const uint32* fb_pages, int fpsm, const uint32* zb_pages, int zpsm)
 {
 	if(m_using_pages) return;
 
-	if(global.sel.fb)
 	{
-		m_parent->UsePages(fb_pages, 0);
-	}
+		//TransactionScope scope(s_lock);
 
-	if(global.sel.zb)
-	{
-		m_parent->UsePages(zb_pages, 1);
-	}
+		if(global.sel.fb)
+		{
+			m_parent->UsePages(fb_pages, 0);
+		}
 
-	for(size_t i = 0; m_tex[i].t != NULL; i++)
-	{
-		m_parent->UsePages(m_tex[i].t->m_pages.n, 2);
+		if(global.sel.zb)
+		{
+			m_parent->UsePages(zb_pages, 1);
+		}
+
+		for(size_t i = 0; m_tex[i].t != NULL; i++)
+		{
+			m_parent->UsePages(m_tex[i].t->m_pages.n, 2);
+		}
 	}
 
 	m_fb_pages = fb_pages;
@@ -1421,19 +1515,23 @@ void GSRendererSW::SharedData::ReleasePages()
 {
 	if(!m_using_pages) return;
 
-	if(global.sel.fb)
 	{
-		m_parent->ReleasePages(m_fb_pages, 0);
-	}
+		//TransactionScope scope(s_lock);
 
-	if(global.sel.zb)
-	{
-		m_parent->ReleasePages(m_zb_pages, 1);
-	}
+		if(global.sel.fb)
+		{
+			m_parent->ReleasePages(m_fb_pages, 0);
+		}
 
-	for(size_t i = 0; m_tex[i].t != NULL; i++)
-	{
-		m_parent->ReleasePages(m_tex[i].t->m_pages.n, 2);
+		if(global.sel.zb)
+		{
+			m_parent->ReleasePages(m_zb_pages, 1);
+		}
+
+		for(size_t i = 0; m_tex[i].t != NULL; i++)
+		{
+			m_parent->ReleasePages(m_tex[i].t->m_pages.n, 2);
+		}
 	}
 
 	delete [] m_fb_pages;

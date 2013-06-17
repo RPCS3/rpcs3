@@ -71,4 +71,6 @@ public:
 	void DrawRect(const GSVector4i& r, const GSVertexSW& v);
 
 #endif
+
+	void PrintStats() {m_ds_map.PrintStats();}
 };

@@ -120,7 +120,7 @@ protected:
 	void GrowVertexBuffer()
 	{
 		int maxcount = std::max<int>(m_maxcount * 3 / 2, 10000);
-		Vertex* vertices = (Vertex*)_aligned_malloc(sizeof(Vertex) * maxcount, 16);
+		Vertex* vertices = (Vertex*)_aligned_malloc(sizeof(Vertex) * maxcount, 32);
 
 	    if(m_vertices != NULL)
 		{

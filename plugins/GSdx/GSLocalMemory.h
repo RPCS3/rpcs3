@@ -845,10 +845,10 @@ public:
 
 	//
 
-	template<int psm, int bsx, int bsy, bool aligned>
+	template<int psm, int bsx, int bsy, int alignment>
 	void WriteImageColumn(int l, int r, int y, int h, const uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF);
 
-	template<int psm, int bsx, int bsy, bool aligned>
+	template<int psm, int bsx, int bsy, int alignment>
 	void WriteImageBlock(int l, int r, int y, int h, const uint8* src, int srcpitch, const GIFRegBITBLTBUF& BITBLTBUF);
 
 	template<int psm, int bsx, int bsy>

@@ -367,3 +367,99 @@ public:
 
 	virtual void Process(T& item) = 0;
 };
+
+// http://software.intel.com/en-us/blogs/2012/11/06/exploring-intel-transactional-synchronization-extensions-with-intel-software
+
+class TransactionScope
+{
+public:
+	class Lock
+	{
+		volatile long state;
+
+	public:
+		Lock() 
+			: state(0) 
+		{
+		}
+
+		void lock()
+		{
+			while(_InterlockedCompareExchange(&state, 1, 0) != 0)
+			{
+				do {_mm_pause();} while(state == 1);
+			}
+		}
+
+		void unlock() 
+		{
+			_InterlockedExchange(&state, 0);
+		}
+
+		bool isLocked() const 
+		{
+			return state == 1;
+		}
+	};
+
+private:
+	Lock& fallBackLock;
+
+	TransactionScope();
+
+public:
+	TransactionScope(Lock& fallBackLock_, int max_retries = 3) 
+		: fallBackLock(fallBackLock_)
+	{
+		#if _M_SSE >= 0x501
+
+		int nretries = 0;
+		
+		while(1)
+		{
+			++nretries;
+
+			unsigned status = _xbegin();
+
+			if(status == _XBEGIN_STARTED)
+			{
+				if(!fallBackLock.isLocked()) return;
+
+				_xabort(0xff); 
+			}
+
+			if((status & _XABORT_EXPLICIT) && _XABORT_CODE(status) == 0xff && !(status & _XABORT_NESTED))
+			{
+				while(fallBackLock.isLocked()) _mm_pause();
+			}
+			else if(!(status & _XABORT_RETRY))
+			{
+				break;
+			}
+
+			if(nretries >= max_retries) 
+			{
+				break;
+			}
+		}
+
+		#endif
+
+		fallBackLock.lock();
+	}
+
+	~TransactionScope()
+	{
+		if(fallBackLock.isLocked())
+		{
+			fallBackLock.unlock();
+		}
+		#if _M_SSE >= 0x501
+		else
+		{
+			_xend();
+		}
+		#endif
+	}
+};
+

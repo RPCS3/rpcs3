@@ -78,6 +78,8 @@ const GSVector4 GSVector4::m_x4f800000(_mm_castsi128_ps(_mm_set1_epi32(0x4f80000
 const GSVector8 GSVector8::m_one(1.0f);
 const GSVector8 GSVector8::m_x7fffffff(_mm256_castsi256_ps(_mm256_set1_epi32(0x7fffffff)));
 const GSVector8 GSVector8::m_x80000000(_mm256_castsi256_ps(_mm256_set1_epi32(0x80000000)));
+const GSVector8 GSVector8::m_x4b000000(_mm256_castsi256_ps(_mm256_set1_epi32(0x4b000000)));
+const GSVector8 GSVector8::m_x4f800000(_mm256_castsi256_ps(_mm256_set1_epi32(0x4f800000)));
 
 #endif
 

@@ -402,6 +402,24 @@ struct aligned_free_second {template<class T> void operator()(T& p) {_aligned_fr
 		return retval;
 	}
 
+	__forceinline long _InterlockedCompareExchange(volatile long* const Destination, const long Exchange, const long Comperand)
+	{
+		long retval = Comperand;
+		
+		__asm__("lock; cmpxchgl %k[Exchange], %[Destination]" : [retval] "+a" (retval) : [Destination] "m" (*Destination), [Exchange] "q" (Exchange): "memory");
+		
+		return retval;
+	}
+
+	__forceinline long _InterlockedExchange(volatile long* const Target, const long Value)
+	{
+		long retval = Value;
+		
+		__asm__("xchgl %[retval], %[Target]" : [retval] "+r" (retval) : [Target] "m" (*Target) : "memory");
+
+		return retval;
+	}
+
 	__forceinline long _InterlockedExchangeAdd(volatile long* const Addend, const long Value)
 	{
 		long retval = Value;
