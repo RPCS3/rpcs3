@@ -138,15 +138,18 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	endif()
 	#
 	set(CMAKE_CXX_FLAGS "-Wall ${GCC_EXTRA_OPTIONS} -pedantic -Wno-long-long ${CMAKE_CXX_FLAGS}")
-	#
-	add_custom_target(debuggable $(MAKE) clean
-		COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Debug ${CMAKE_SOURCE_DIR}
-		COMMENT "Adjusting settings for debug compilation"
-		VERBATIM)
-	add_custom_target(releasable $(MAKE) clean
-		COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Release ${CMAKE_SOURCE_DIR}
-		COMMENT "Adjusting settings for release compilation"
-		VERBATIM)
+
+	### Make specific
+	if(${CMAKE_BUILD_TOOL} STREQUAL make OR ${CMAKE_BUILD_TOOL} STREQUAL gmake)
+		add_custom_target(debuggable $(MAKE) clean
+			COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Debug ${CMAKE_SOURCE_DIR}
+			COMMENT "Adjusting settings for debug compilation"
+			VERBATIM)
+		add_custom_target(releasable $(MAKE) clean
+			COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=Release ${CMAKE_SOURCE_DIR}
+			COMMENT "Adjusting settings for release compilation"
+			VERBATIM)
+	endif()
 endif()
 
 # Microsoft VisualC++ specialities
