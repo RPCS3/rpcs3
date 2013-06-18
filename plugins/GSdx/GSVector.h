@@ -800,12 +800,12 @@ public:
 
 	__forceinline GSVector4i i8to16() const
 	{
-		return zero().upl8().sra16(8);
+		return zero().upl8(*this).sra16(8);
 	}
 
 	__forceinline GSVector4i i16to32() const
 	{
-		return zero().upl16().sra32(16);
+		return zero().upl16(*this).sra32(16);
 	}
 
 	#endif
@@ -4133,6 +4133,81 @@ public:
 
 	// TODO: gather
 
+	template<class T> __forceinline GSVector8i gather32_32(const T* ptr) const
+	{
+		GSVector4i v0;
+		GSVector4i v1;
+
+		GSVector4i a0 = extract<0>();
+		GSVector4i a1 = extract<1>();
+
+
+		v0 = GSVector4i::load((int)ptr[a0.extract32<0>()]);
+		v0 = v0.insert32<1>((int)ptr[a0.extract32<1>()]);
+		v0 = v0.insert32<2>((int)ptr[a0.extract32<2>()]);
+		v0 = v0.insert32<3>((int)ptr[a0.extract32<3>()]);
+
+		v1 = GSVector4i::load((int)ptr[a1.extract32<0>()]);
+		v1 = v1.insert32<1>((int)ptr[a1.extract32<1>()]);
+		v1 = v1.insert32<2>((int)ptr[a1.extract32<2>()]);
+		v1 = v1.insert32<3>((int)ptr[a1.extract32<3>()]);
+
+		return cast(v0).insert<1>(v1);
+	}
+
+	template<> __forceinline GSVector8i gather32_32<uint8>(const uint8* ptr) const
+	{
+		return GSVector8i(_mm256_i32gather_epi32((const int*)ptr, m, 1)) & GSVector8i::x000000ff();
+	}
+
+	template<> __forceinline GSVector8i gather32_32<uint16>(const uint16* ptr) const
+	{
+		return GSVector8i(_mm256_i32gather_epi32((const int*)ptr, m, 2)) & GSVector8i::x0000ffff();
+	}
+
+	template<> __forceinline GSVector8i gather32_32<uint32>(const uint32* ptr) const
+	{
+		return GSVector8i(_mm256_i32gather_epi32((const int*)ptr, m, 4));
+	}
+
+	template<class T1, class T2> __forceinline GSVector8i gather32_32(const T1* ptr1, const T2* ptr2) const
+	{
+		GSVector4i v0;
+		GSVector4i v1;
+
+		GSVector4i a0 = extract<0>();
+		GSVector4i a1 = extract<1>();
+
+		v0 = GSVector4i::load((int)ptr2[ptr1[a0.extract32<0>()]]);
+		v0 = v0.insert32<1>((int)ptr2[ptr1[a0.extract32<1>()]]);
+		v0 = v0.insert32<2>((int)ptr2[ptr1[a0.extract32<2>()]]);
+		v0 = v0.insert32<3>((int)ptr2[ptr1[a0.extract32<3>()]]);
+
+		v1 = GSVector4i::load((int)ptr2[ptr1[a1.extract32<0>()]]);
+		v1 = v1.insert32<1>((int)ptr2[ptr1[a1.extract32<1>()]]);
+		v1 = v1.insert32<2>((int)ptr2[ptr1[a1.extract32<2>()]]);
+		v1 = v1.insert32<3>((int)ptr2[ptr1[a1.extract32<3>()]]);
+
+		return cast(v0).insert<1>(v1);
+	}
+
+	template<> __forceinline GSVector8i gather32_32<uint32, uint8>(const uint32* ptr1, const uint8* ptr2) const
+	{
+		return gather32_32<uint8>(ptr2).gather32_32<uint32>(ptr1);
+	}
+
+	template<> __forceinline GSVector8i gather32_32<uint32, uint32>(const uint32* ptr1, const uint32* ptr2) const
+	{
+		return gather32_32<uint32>(ptr2).gather32_32<uint32>(ptr1);
+	}
+
+	template<class T> __forceinline void gather32_32(const T* RESTRICT ptr, GSVector8i* RESTRICT dst) const
+	{
+		dst[0] = gather32_32<>(ptr);
+	}
+
+	//
+
 	__forceinline static GSVector8i loadnt(const void* p)
 	{
 		return GSVector8i(_mm256_stream_load_si256((__m256i*)p));
@@ -4614,6 +4689,46 @@ public:
 	__forceinline GSVector8i permute32(const GSVector8i& mask) const
 	{
 		return GSVector8i(_mm256_permutevar8x32_epi32(m, mask));
+	}
+
+	__forceinline GSVector8i broadcast8() const
+	{
+		return GSVector8i(_mm256_broadcastb_epi8(_mm256_castsi256_si128(m)));
+	}
+
+	__forceinline GSVector8i broadcast16() const
+	{
+		return GSVector8i(_mm256_broadcastw_epi16(_mm256_castsi256_si128(m)));
+	}
+
+	__forceinline GSVector8i broadcast32() const
+	{
+		return GSVector8i(_mm256_broadcastd_epi32(_mm256_castsi256_si128(m)));
+	}
+
+	__forceinline GSVector8i broadcast64() const
+	{
+		return GSVector8i(_mm256_broadcastq_epi64(_mm256_castsi256_si128(m)));
+	}
+
+	__forceinline static GSVector8i broadcast8(const GSVector4i& v)
+	{
+		return GSVector8i(_mm256_broadcastb_epi8(v.m));
+	}
+
+	__forceinline static GSVector8i broadcast16(const GSVector4i& v)
+	{
+		return GSVector8i(_mm256_broadcastw_epi16(v.m));
+	}
+
+	__forceinline static GSVector8i broadcast32(const GSVector4i& v)
+	{
+		return GSVector8i(_mm256_broadcastd_epi32(v.m));
+	}
+
+	__forceinline static GSVector8i broadcast64(const GSVector4i& v)
+	{
+		return GSVector8i(_mm256_broadcastq_epi64(v.m));
 	}
 
 	__forceinline static GSVector8i zero() {return GSVector8i(_mm256_setzero_si256());}
@@ -5624,6 +5739,18 @@ public:
 	{
 		return GSVector8(_mm256_permutevar8x32_ps(m, mask));
 	}
+
+	__forceinline GSVector8 broadcast32() const
+	{
+		return GSVector8(_mm256_broadcastss_ps(_mm256_castps256_ps128(m)));
+	}
+
+	__forceinline static GSVector8 broadcast32(const GSVector4& v)
+	{
+		return GSVector8(_mm256_broadcastss_ps(v.m));
+	}
+
+	// TODO: v.(x0|y0|z0|w0|x1|y1|z1|w1) // broadcast element
 
 	#endif
 };
