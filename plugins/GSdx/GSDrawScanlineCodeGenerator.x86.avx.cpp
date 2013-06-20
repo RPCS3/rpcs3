@@ -23,7 +23,7 @@
 #include "GSDrawScanlineCodeGenerator.h"
 #include "GSVertexSW.h"
 
-#if _M_SSE >= 0x500 && !(defined(_M_AMD64) || defined(_WIN64))
+#if _M_SSE == 0x500 && !(defined(_M_AMD64) || defined(_WIN64))
 
 static const int _args = 16;
 static const int _top = _args + 4;
@@ -1236,24 +1236,21 @@ return;
 
 			// m_local.gd->t.minmax => m_local.temp.uv_minmax[0/1]
 
-			vmovq(xmm4, ptr[&m_local.gd->t.minmax]); // x x x x maxv maxu minv minu
-			vpunpcklwd(xmm4, xmm4); // maxv maxv maxu maxu minv minv minu minu
-
 			vpxor(xmm1, xmm1);
-			
-			vpunpckldq(xmm6, xmm4, xmm4); // minv minv minv minv minu minu minu minu
-			vpunpcklwd(xmm5, xmm6, xmm1); // 0 minu 0 minu 0 minu 0 minu
+
+			vmovdqa(xmm4, ptr[&m_local.gd->t.min]);
+			vpunpcklwd(xmm5, xmm4, xmm1); // minu
+			vpunpckhwd(xmm6, xmm4, xmm1); // minv
 			vpsrlvd(xmm5, xmm5, xmm0);
-			vpunpckhwd(xmm6, xmm6, xmm1); // 0 minv 0 minv 0 minv 0 minv
 			vpsrlvd(xmm6, xmm6, xmm0);
-			vpackusdw(xmm5, xmm6); // xmm5 = minv minv minv minv minu minu minu minu
-			
-			vpunpckhdq(xmm4, xmm4); // maxv maxv maxv maxv maxu maxu maxu maxu
-			vpunpcklwd(xmm6, xmm4, xmm1); // 0 maxu 0 maxu 0 maxu 0 maxu
+			vpackusdw(xmm5, xmm6);
+
+			vmovdqa(xmm4, ptr[&m_local.gd->t.max]);
+			vpunpcklwd(xmm6, xmm4, xmm1); // maxu
+			vpunpckhwd(xmm4, xmm4, xmm1); // maxv
 			vpsrlvd(xmm6, xmm6, xmm0);
-			vpunpckhwd(xmm4, xmm1); // 0 maxv 0 maxv 0 maxv 0 maxv
 			vpsrlvd(xmm4, xmm4, xmm0);
-			vpackusdw(xmm6, xmm4); // xmm6 = maxv maxv maxv maxv maxu maxu maxu maxu
+			vpackusdw(xmm6, xmm4);
 
 			vmovdqa(ptr[&m_local.temp.uv_minmax[0]], xmm5);
 			vmovdqa(ptr[&m_local.temp.uv_minmax[1]], xmm6);
@@ -2807,7 +2804,7 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, 
 	}
 }
 
-static const int s_offsets[4] = {0, 2, 8, 10};
+static const int s_offsets[] = {0, 2, 8, 10};
 
 void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, uint8 i, int psm)
 {
@@ -2865,7 +2862,7 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 			vmovdqa(ptr[&m_local.temp.test], xmm7);
 		}
 
-		for(int j = 0; j < 4; j++)
+		for(uint8 j = 0; j < 4; j++)
 		{
 			mov(ebx, ptr[&lod_i->u32[j]]);
 			mov(ebx, ptr[ebp + ebx * sizeof(void*) + mip_offset]);
@@ -2895,18 +2892,9 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 		for(int i = 0; i < pixels; i++)
 		{
-			if(m_cpu.has(util::Cpu::tAVX2) && !m_sel.tlu) // vpgatherdd seems to be dead slow for byte aligned offsets, not using it for palette lookups
+			for(uint8 j = 0; j < 4; j++)
 			{
-				Xmm mask = Xmm(t[i]);
-				vpcmpeqd(mask, mask);
-				vpgatherdd(Xmm(r[i * 2 + 1]), ptr[ebx + Xmm(r[i * 2 + 0]) * 4], mask);
-			}
-			else
-			{
-				for(int j = 0; j < 4; j++)
-				{
-					ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
-				}
+				ReadTexel(Xmm(r[i * 2 + 1]), Xmm(r[i * 2 + 0]), j);
 			}
 		}
 	}
@@ -2914,6 +2902,8 @@ void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)
 
 void GSDrawScanlineCodeGenerator::ReadTexel(const Xmm& dst, const Xmm& addr, uint8 i)
 {
+	ASSERT(i < 4);
+
 	const Address& src = m_sel.tlu ? ptr[edx + eax * 4] : ptr[ebx + eax * 4];
 
 	if(i == 0) vmovd(eax, addr);

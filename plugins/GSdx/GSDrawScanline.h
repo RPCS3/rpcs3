@@ -81,8 +81,8 @@ public:
 	bool IsEdge() const {return m_global.sel.aa1;}
 	bool IsRect() const {return m_global.sel.IsSolidRect();}
 
-	bool TestAlpha(GSVector4i& test, GSVector4i& fm, GSVector4i& zm, const GSVector4i& ga);
-	void WritePixel(const GSVector4i& src, int addr, int i, uint32 psm);
+	template<class T> bool TestAlpha(T& test, T& fm, T& zm, const T& ga);
+	template<class T> void WritePixel(const T& src, int addr, int i, uint32 psm);
 
 #endif
 

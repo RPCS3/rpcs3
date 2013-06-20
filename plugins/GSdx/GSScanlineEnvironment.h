@@ -116,7 +116,7 @@ __aligned(struct, 32) GSScanlineGlobalData // per batch variables, this is like 
 	void* vm;
 	const void* tex[7];
 	uint32* clut;
-	GSVector4i* dimx; 
+	GSVector4i* dimx;
 
 	const int* fbr;
 	const int* zbr;
@@ -125,19 +125,63 @@ __aligned(struct, 32) GSScanlineGlobalData // per batch variables, this is like 
 	const GSVector2i* fzbr;
 	const GSVector2i* fzbc;
 
-	GSVector4i fm, zm;
-	struct {GSVector4i min, max, minmax, mask, invmask;} t; // [u] x 4 [v] x 4
 	GSVector4i aref;
 	GSVector4i afix;
+	struct {GSVector4i min, max, minmax, mask, invmask;} t; // [u] x 4 [v] x 4
+
+	#if _M_SSE >= 0x501
+
+	uint32 fm, zm;
+	uint32 frb, fga;
+	GSVector8 mxl;
+	GSVector8 k; // TEX1.K * 0x10000
+	GSVector8 l; // TEX1.L * -0x10000
+	struct {GSVector8i i, f;} lod; // lcm == 1
+
+	#else
+
+	GSVector4i fm, zm;
 	GSVector4i frb, fga;
 	GSVector4 mxl;
 	GSVector4 k; // TEX1.K * 0x10000
 	GSVector4 l; // TEX1.L * -0x10000
 	struct {GSVector4i i, f;} lod; // lcm == 1
+
+	#endif
 };
 
 __aligned(struct, 32) GSScanlineLocalData // per prim variables, each thread has its own
 {
+	#if _M_SSE >= 0x501
+
+	struct skip {GSVector8 z, s, t, q; GSVector8i rb, ga, f, _pad;} d[8];
+	struct step {GSVector8 z, stq; GSVector8i c, f;} d8;
+	struct {GSVector8i rb, ga;} c;
+	struct {uint32 z, f;} p;
+
+	// these should be stored on stack as normal local variables (no free regs to use, esp cannot be saved to anywhere, and we need an aligned stack)
+
+	struct 
+	{
+		GSVector8 z, zo;
+		GSVector8i f;
+		GSVector8 s, t, q;
+		GSVector8i rb, ga;
+		GSVector8i zs, zd;
+		GSVector8i uf, vf;
+		GSVector8i cov;
+
+		// mipmapping
+
+		struct {GSVector8i i, f;} lod;
+		GSVector8i uv[2];
+		GSVector8i uv_minmax[2];
+		GSVector8i trb, tga;
+		GSVector8i test;
+	} temp; 
+
+	#else
+
 	struct skip {GSVector4 z, s, t, q; GSVector4i rb, ga, f, _pad;} d[4];
 	struct step {GSVector4 z, stq; GSVector4i c, f;} d4;
 	struct {GSVector4i rb, ga;} c;
@@ -163,6 +207,8 @@ __aligned(struct, 32) GSScanlineLocalData // per prim variables, each thread has
 		GSVector4i trb, tga;
 		GSVector4i test;
 	} temp; 
+
+	#endif
 
 	//
 

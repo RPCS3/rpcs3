@@ -22,6 +22,38 @@
 #include "stdafx.h"
 #include "GSDrawScanlineCodeGenerator.h"
 
+#if _M_SSE >= 0x501
+
+const GSVector8i GSDrawScanlineCodeGenerator::m_test[16] =
+{
+	GSVector8i::zero(),
+	GSVector8i(0xffffffff, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000),
+	GSVector8i(0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000),
+	GSVector8i(0xffffffff, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000),
+	GSVector8i(0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000, 0x00000000),
+	GSVector8i(0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000, 0x00000000),
+	GSVector8i(0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x00000000, 0x00000000),
+	GSVector8i(0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0x00000000),
+	GSVector8i(0x00000000, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff),
+	GSVector8i(0x00000000, 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff),
+	GSVector8i(0x00000000, 0x00000000, 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff),
+	GSVector8i(0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff),
+	GSVector8i(0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff),
+	GSVector8i(0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xffffffff, 0xffffffff),
+	GSVector8i(0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0xffffffff),
+	GSVector8i::zero(),
+};
+
+const GSVector8 GSDrawScanlineCodeGenerator::m_log2_coef[4] = 
+{
+	GSVector8(0.204446009836232697516f),
+	GSVector8(-1.04913055217340124191f),
+	GSVector8(2.28330284476918490682f),
+	GSVector8(1.0f),
+};
+
+#else
+
 const GSVector4i GSDrawScanlineCodeGenerator::m_test[8] =
 {
 	GSVector4i::zero(),
@@ -42,6 +74,8 @@ const GSVector4 GSDrawScanlineCodeGenerator::m_log2_coef[4] =
 	GSVector4(1.0f),
 };
 
+#endif
+
 GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(void* param, uint64 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)
 	, m_local(*(GSScanlineLocalData*)param)
@@ -50,6 +84,81 @@ GSDrawScanlineCodeGenerator::GSDrawScanlineCodeGenerator(void* param, uint64 key
 
 	Generate();
 }
+
+#if _M_SSE >= 0x501
+
+void GSDrawScanlineCodeGenerator::modulate16(const Ymm& a, const Operand& f, int shift)
+{
+	if(shift == 0)
+	{
+		vpmulhrsw(a, f);
+	}
+	else
+	{
+		vpsllw(a, (uint8)(shift + 1));
+		vpmulhw(a, f);
+	}
+}
+
+void GSDrawScanlineCodeGenerator::lerp16(const Ymm& a, const Ymm& b, const Ymm& f, int shift)
+{
+	vpsubw(a, b);
+	modulate16(a, f, shift);
+	vpaddw(a, b);
+}
+
+void GSDrawScanlineCodeGenerator::lerp16_4(const Ymm& a, const Ymm& b, const Ymm& f)
+{
+	vpsubw(a, b);
+	vpmullw(a, f);
+	vpsraw(a, 4);
+	vpaddw(a, b);
+}
+
+void GSDrawScanlineCodeGenerator::mix16(const Ymm& a, const Ymm& b, const Ymm& temp)
+{
+	vpblendw(a, b, 0xaa);
+}
+
+void GSDrawScanlineCodeGenerator::clamp16(const Ymm& a, const Ymm& temp)
+{
+	vpackuswb(a, a);
+	vpermq(a, a, _MM_SHUFFLE(3, 1, 2, 0)); // this sucks
+	vpmovzxbw(a, a);
+}
+
+void GSDrawScanlineCodeGenerator::alltrue()
+{
+	vpmovmskb(eax, ymm7);
+	cmp(eax, 0xffffffff);
+	je("step", T_NEAR);
+}
+
+void GSDrawScanlineCodeGenerator::blend(const Ymm& a, const Ymm& b, const Ymm& mask)
+{
+	vpand(b, mask);
+	vpandn(mask, a);
+	vpor(a, b, mask);
+}
+
+void GSDrawScanlineCodeGenerator::blendr(const Ymm& b, const Ymm& a, const Ymm& mask)
+{
+	vpand(b, mask);
+	vpandn(mask, a);
+	vpor(b, mask);
+}
+
+void GSDrawScanlineCodeGenerator::blend8(const Ymm& a, const Ymm& b)
+{
+	vpblendvb(a, a, b, xmm0);
+}
+
+void GSDrawScanlineCodeGenerator::blend8r(const Ymm& b, const Ymm& a)
+{
+	vpblendvb(b, a, b, xmm0);
+}
+
+#else
 
 void GSDrawScanlineCodeGenerator::modulate16(const Xmm& a, const Operand& f, int shift)
 {
@@ -244,3 +353,5 @@ void GSDrawScanlineCodeGenerator::blend8r(const Xmm& b, const Xmm& a)
 
 	#endif
 }
+
+#endif

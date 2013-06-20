@@ -4119,6 +4119,15 @@ public:
 
 	// TODO: extract/insert
 
+	template<int i> __forceinline int extract32() const
+	{
+		GSVector4i v = extract<i / 4>();
+
+		if((i & 3) == 0) return GSVector4i::store(v);
+
+		return v.extract32<i>();
+	}
+
 	template<int i> __forceinline GSVector4i extract() const
 	{
 		if(i == 0) return GSVector4i(_mm256_castsi256_si128(m));
@@ -4140,7 +4149,6 @@ public:
 
 		GSVector4i a0 = extract<0>();
 		GSVector4i a1 = extract<1>();
-
 
 		v0 = GSVector4i::load((int)ptr[a0.extract32<0>()]);
 		v0 = v0.insert32<1>((int)ptr[a0.extract32<1>()]);
@@ -4191,14 +4199,14 @@ public:
 		return cast(v0).insert<1>(v1);
 	}
 
-	template<> __forceinline GSVector8i gather32_32<uint32, uint8>(const uint32* ptr1, const uint8* ptr2) const
+	template<> __forceinline GSVector8i gather32_32<uint8, uint32>(const uint8* ptr1, const uint32* ptr2) const
 	{
-		return gather32_32<uint8>(ptr2).gather32_32<uint32>(ptr1);
+		return gather32_32<uint8>(ptr1).gather32_32<uint32>(ptr2);
 	}
 
 	template<> __forceinline GSVector8i gather32_32<uint32, uint32>(const uint32* ptr1, const uint32* ptr2) const
 	{
-		return gather32_32<uint32>(ptr2).gather32_32<uint32>(ptr1);
+		return gather32_32<uint32>(ptr1).gather32_32<uint32>(ptr2);
 	}
 
 	template<class T> __forceinline void gather32_32(const T* RESTRICT ptr, GSVector8i* RESTRICT dst) const
@@ -4731,6 +4739,16 @@ public:
 		return GSVector8i(_mm256_broadcastq_epi64(v.m));
 	}
 
+	__forceinline static GSVector8i broadcast128(const GSVector4i& v)
+	{
+		// this one only has m128 source op, it will be saved to a temp on stack if the compiler is not smart enough and use the address of v directly (<= vs2012u3rc2)
+
+		return GSVector8i(_mm256_broadcastsi128_si256(v)); // fastest
+		//return GSVector8i(v); // almost as fast as broadcast
+		//return cast(v).insert<1>(v); // slow
+		//return cast(v).aa(); // slowest
+	}
+
 	__forceinline static GSVector8i zero() {return GSVector8i(_mm256_setzero_si256());}
 
 	__forceinline static GSVector8i xffffffff() {return zero() == zero();}
@@ -4958,6 +4976,7 @@ public:
 		__m128 m0, m1;
 	};
 
+	static const GSVector8 m_half;
 	static const GSVector8 m_one;
 	static const GSVector8 m_x7fffffff;
 	static const GSVector8 m_x80000000;

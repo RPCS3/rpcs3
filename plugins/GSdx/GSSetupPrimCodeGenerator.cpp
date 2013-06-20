@@ -22,6 +22,23 @@
 #include "stdafx.h"
 #include "GSSetupPrimCodeGenerator.h"
 
+#if _M_SSE >= 0x501
+
+const GSVector8 GSSetupPrimCodeGenerator::m_shift[9] =
+{
+	GSVector8(8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f),
+	GSVector8(0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f),
+	GSVector8(-1.0f, 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f),
+	GSVector8(-2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f),
+	GSVector8(-3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f, 4.0f),
+	GSVector8(-4.0f, -3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f, 3.0f),
+	GSVector8(-5.0f, -4.0f, -3.0f, -2.0f, -1.0f, 0.0f, 1.0f, 2.0f),
+	GSVector8(-6.0f, -5.0f, -4.0f, -3.0f, -2.0f, -1.0f, 0.0f, 1.0f),
+	GSVector8(-7.0f, -6.0f, -5.0f, -4.0f, -3.0f, -2.0f, -1.0f, 0.0f),
+};
+
+#else
+
 const GSVector4 GSSetupPrimCodeGenerator::m_shift[5] =
 {
 	GSVector4(4.0f, 4.0f, 4.0f, 4.0f),
@@ -30,6 +47,8 @@ const GSVector4 GSSetupPrimCodeGenerator::m_shift[5] =
 	GSVector4(-2.0f, -1.0f, 0.0f, 1.0f),
 	GSVector4(-3.0f, -2.0f, -1.0f, 0.0f),
 };
+
+#endif
 
 GSSetupPrimCodeGenerator::GSSetupPrimCodeGenerator(void* param, uint64 key, void* code, size_t maxsize)
 	: GSCodeGenerator(code, maxsize)

@@ -1789,23 +1789,39 @@ public:
 		GSVector8i TA0(TEXA.TA0 << 24);
 		GSVector8i mask = GSVector8i::x00ffffff();
 
-		for(int i = 0; i < 4; i++, dst += dstpitch * 2)
-		{
-			GSVector8i v0 = s[i * 2 + 0];
-			GSVector8i v1 = s[i * 2 + 1];
+		GSVector8i v0, v1, v2, v3;
 
-			GSVector8i::sw128(v0, v1);
-			GSVector8i::sw64(v0, v1);
+		v0 = s[0] & mask;
+		v1 = s[1] & mask;
+		v2 = s[2] & mask;
+		v3 = s[3] & mask;
 
-			v0 &= mask;
-			v1 &= mask;
+		GSVector8i::sw128(v0, v1);
+		GSVector8i::sw64(v0, v1);
+		GSVector8i::sw128(v2, v3);
+		GSVector8i::sw64(v2, v3);
 
-			GSVector8i* d0 = (GSVector8i*)&dst[dstpitch * 0];
-			GSVector8i* d1 = (GSVector8i*)&dst[dstpitch * 1];
+		*(GSVector8i*)&dst[dstpitch * 0] = Expand24to32<AEM>(v0, TA0);
+		*(GSVector8i*)&dst[dstpitch * 1] = Expand24to32<AEM>(v1, TA0);
+		*(GSVector8i*)&dst[dstpitch * 2] = Expand24to32<AEM>(v2, TA0);
+		*(GSVector8i*)&dst[dstpitch * 3] = Expand24to32<AEM>(v3, TA0);
 
-			d0[0] = Expand24to32<AEM>(v0, TA0);
-			d1[0] = Expand24to32<AEM>(v1, TA0);
-		}
+		v0 = s[4] & mask;
+		v1 = s[5] & mask;
+		v2 = s[6] & mask;
+		v3 = s[7] & mask;
+
+		GSVector8i::sw128(v0, v1);
+		GSVector8i::sw64(v0, v1);
+		GSVector8i::sw128(v2, v3);
+		GSVector8i::sw64(v2, v3);
+
+		dst += dstpitch * 4;
+
+		*(GSVector8i*)&dst[dstpitch * 0] = Expand24to32<AEM>(v0, TA0);
+		*(GSVector8i*)&dst[dstpitch * 1] = Expand24to32<AEM>(v1, TA0);
+		*(GSVector8i*)&dst[dstpitch * 2] = Expand24to32<AEM>(v2, TA0);
+		*(GSVector8i*)&dst[dstpitch * 3] = Expand24to32<AEM>(v3, TA0);
 
 		#else
 

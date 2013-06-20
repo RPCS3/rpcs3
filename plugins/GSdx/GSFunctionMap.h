@@ -209,7 +209,7 @@ public:
 
 				iJIT_NotifyEvent(iJVM_EVENT_TYPE_METHOD_LOAD_FINISHED, &ml);
 /*
-				name = format("c:/temp/%s_%016llx.bin", m_name.c_str(), (uint64)key);
+				name = format("c:/temp1/%s_%016llx.bin", m_name.c_str(), (uint64)key);
 
 				if(FILE* fp = fopen(name.c_str(), "wb"))
 				{
@@ -218,7 +218,7 @@ public:
 					fputc(0x64, fp); fputc(0x67, fp); fputc(0x90, fp);
 
 					fwrite(cg->getCode(), cg->getSize(), 1, fp);
-					
+
 					fputc(0xBB, fp); fputc(0xDE, fp); fputc(0x00, fp); fputc(0x00, fp); fputc(0x00, fp);
 					fputc(0x64, fp); fputc(0x67, fp); fputc(0x90, fp);
 					fputc(0x0F, fp); fputc(0x0B, fp);

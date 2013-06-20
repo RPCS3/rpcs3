@@ -336,6 +336,12 @@
     <ClCompile Include="GSRendererCS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSDrawScanlineCodeGenerator.x86.avx2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GSSetupPrimCodeGenerator.x86.avx2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GLLoader.h">

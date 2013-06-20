@@ -35,6 +35,55 @@ class GSDrawScanlineCodeGenerator : public GSCodeGenerator
 
 	void Generate();
 
+	#if _M_SSE >= 0x501
+
+	void Init();
+	void Step();
+	void TestZ(const Ymm& temp1, const Ymm& temp2);
+	void SampleTexture();
+	void Wrap(const Ymm& uv0);
+	void Wrap(const Ymm& uv0, const Ymm& uv1);
+	void SampleTextureLOD();
+	void WrapLOD(const Ymm& uv0);
+	void WrapLOD(const Ymm& uv0, const Ymm& uv1);
+	void AlphaTFX();
+	void ReadMask();
+	void TestAlpha();
+	void ColorTFX();
+	void Fog();
+	void ReadFrame();
+	void TestDestAlpha();
+	void WriteMask();
+	void WriteZBuf();
+	void AlphaBlend();
+	void WriteFrame();
+
+	#if defined(_M_AMD64) || defined(_WIN64)
+	void ReadPixel(const Ymm& dst, const Ymm& temp, const Reg64& addr);
+	void WritePixel(const Ymm& src, const Ymm& temp, const Reg64& addr, const Reg32& mask, bool fast, int psm, int fz);
+	void WritePixel(const Xmm& src, const Reg64& addr, uint8 i, uint8 j, int psm);
+	#else
+	void ReadPixel(const Ymm& dst, const Ymm& temp, const Reg32& addr);
+	void WritePixel(const Ymm& src, const Ymm& temp, const Reg32& addr, const Reg32& mask, bool fast, int psm, int fz);
+	void WritePixel(const Xmm& src, const Reg32& addr, uint8 i, uint8 j, int psm);
+	#endif
+
+	void ReadTexel(int pixels, int mip_offset = 0);
+	void ReadTexel(const Ymm& dst, const Ymm& addr, uint8 i);
+
+	void modulate16(const Ymm& a, const Operand& f, int shift);
+	void lerp16(const Ymm& a, const Ymm& b, const Ymm& f, int shift);
+	void lerp16_4(const Ymm& a, const Ymm& b, const Ymm& f);
+	void mix16(const Ymm& a, const Ymm& b, const Ymm& temp);
+	void clamp16(const Ymm& a, const Ymm& temp);
+	void alltrue();
+	void blend(const Ymm& a, const Ymm& b, const Ymm& mask);
+	void blendr(const Ymm& b, const Ymm& a, const Ymm& mask);
+	void blend8(const Ymm& a, const Ymm& b);
+	void blend8r(const Ymm& b, const Ymm& a);
+
+	#else
+
 	void Init();
 	void Step();
 	void TestZ(const Xmm& temp1, const Xmm& temp2);
@@ -80,9 +129,17 @@ class GSDrawScanlineCodeGenerator : public GSCodeGenerator
 	void blend8(const Xmm& a, const Xmm& b);
 	void blend8r(const Xmm& b, const Xmm& a);
 
+	#endif
+
 public:
 	GSDrawScanlineCodeGenerator(void* param, uint64 key, void* code, size_t maxsize);
 
+	#if _M_SSE >= 0x501
+	static const GSVector8i m_test[16];
+	static const GSVector8 m_log2_coef[4];
+	#else
 	static const GSVector4i m_test[8];
 	static const GSVector4 m_log2_coef[4];
+	#endif
+
 };

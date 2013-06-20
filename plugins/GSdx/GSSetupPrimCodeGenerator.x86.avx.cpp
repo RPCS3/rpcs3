@@ -23,7 +23,7 @@
 #include "GSSetupPrimCodeGenerator.h"
 #include "GSVertexSW.h"
 
-#if _M_SSE >= 0x500 && !(defined(_M_AMD64) || defined(_WIN64))
+#if _M_SSE == 0x500 && !(defined(_M_AMD64) || defined(_WIN64))
 
 using namespace Xbyak;
 

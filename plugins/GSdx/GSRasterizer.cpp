@@ -208,6 +208,10 @@ void GSRasterizer::Draw(GSRasterizerData* data)
 		__assume(0);
 	}
 
+	#if _M_SSE >= 0x501
+	_mm256_zeroupper();
+	#endif
+
 	data->pixels = m_pixels;
 
 	uint64 ticks = __rdtsc() - data->start;
@@ -917,7 +921,7 @@ GSRasterizerList::GSRasterizerList(int threads, GSPerfMon* perfmon)
 	{
 		for(int i = 0; i < threads; i++, row++)
 		{
-			m_scanline[row] = i;
+			m_scanline[row] = (uint8)i;
 		}
 	}
 }

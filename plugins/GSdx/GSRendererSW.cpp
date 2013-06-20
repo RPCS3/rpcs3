@@ -400,7 +400,7 @@ void GSRendererSW::ConvertVertexBuffer(GSVertexSW* RESTRICT dst, const GSVertex*
 
 		dst->t = t;
 
-		#if _M_SSE >= 0x501
+		#if 0 //_M_SSE >= 0x501
 
 		dst->_pad = GSVector4::zero();
 
@@ -1342,8 +1342,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 		{
 			gd.sel.fge = 1;
 
-			gd.frb = GSVector4i((int)env.FOGCOL.u32[0] & 0x00ff00ff);
-			gd.fga = GSVector4i((int)(env.FOGCOL.u32[0] >> 8) & 0x00ff00ff);
+			gd.frb = env.FOGCOL.u32[0] & 0x00ff00ff;
+			gd.fga = (env.FOGCOL.u32[0] >> 8) & 0x00ff00ff;
 		}
 
 		if(context->FRAME.PSM != PSM_PSMCT24)
@@ -1403,6 +1403,34 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 		gd.sel.zoverflow = GSVector4i(m_vt.m_max.p).z == 0x80000000;
 	}
 
+	#if _M_SSE >= 0x501
+
+	gd.fm = fm;
+	gd.zm = zm;
+
+	if(gd.sel.fpsm == 1)
+	{
+		gd.fm |= 0xff000000;
+	}
+	else if(gd.sel.fpsm == 2)
+	{
+		uint32 rb = gd.fm & 0x00f800f8;
+		uint32 ga = gd.fm & 0x8000f800;
+
+		gd.fm = (ga >> 16) | (rb >> 9) | (ga >> 6) | (rb >> 3) | 0xffff0000;
+	}
+
+	if(gd.sel.zpsm == 1)
+	{
+		gd.zm |= 0xff000000;
+	}
+	else if(gd.sel.zpsm == 2)
+	{
+		gd.zm |= 0xffff0000;
+	}
+
+	#else
+
 	gd.fm = GSVector4i(fm);
 	gd.zm = GSVector4i(zm);
 
@@ -1427,6 +1455,8 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 		gd.zm |= GSVector4i::xffff0000();
 	}
 
+	#endif
+
 	if(gd.sel.prim == GS_SPRITE_CLASS && !gd.sel.ftest && !gd.sel.ztest && data->bbox.eq(data->bbox.rintersect(data->scissor))) // TODO: check scissor horizontally only
 	{
 		gd.sel.notest = 1;
@@ -1435,7 +1465,11 @@ bool GSRendererSW::GetScanlineGlobalData(SharedData* data)
 
 		for(int i = 0, j = m_vertex.tail; i < j; i++)
 		{
+			#if _M_SSE >= 0x501
+			if((((m_vertex.buff[i].XYZ.X - ofx) + 15) >> 4) & 7) // aligned to 8
+			#else
 			if((((m_vertex.buff[i].XYZ.X - ofx) + 15) >> 4) & 3) // aligned to 4
+			#endif
 			{
 				gd.sel.notest = 0;
 			
