@@ -1261,7 +1261,7 @@ public:
 
 	#endif
 
-	#if _M_SSE >= 0x401
+	#if _M_SSE >= 0x501
 
 	template<int i> __forceinline GSVector4i blend32(const GSVector4i& v) const
 	{
@@ -3721,6 +3721,68 @@ public:
 	__forceinline GSVector8i u32to64c() const
 	{
 		return GSVector8i(_mm256_cvtepu32_epi64(_mm256_castsi256_si128(m)));
+	}
+
+	//
+
+	static __forceinline GSVector8i i8to16c(const void* p) 
+	{
+		return  GSVector8i(_mm256_cvtepi8_epi16(_mm_load_si128((__m128i*)p)));
+	}
+
+	static __forceinline GSVector8i u8to16c(const void* p) 
+	{
+		return  GSVector8i(_mm256_cvtepu8_epi16(_mm_load_si128((__m128i*)p)));
+	}
+
+	static __forceinline GSVector8i i8to32c(const void* p) 
+	{
+		return  GSVector8i(_mm256_cvtepi8_epi32(_mm_loadl_epi64((__m128i*)p)));
+	}
+
+	static __forceinline GSVector8i u8to32c(const void* p) 
+	{
+		return  GSVector8i(_mm256_cvtepu8_epi32(_mm_loadl_epi64((__m128i*)p)));
+	}
+
+	static __forceinline GSVector8i i8to64c(int i) 
+	{
+		return  GSVector8i(_mm256_cvtepi8_epi64(_mm_cvtsi32_si128(i)));
+	}
+
+	static __forceinline GSVector8i u8to64c(int i) 
+	{
+		return  GSVector8i(_mm256_cvtepu8_epi64(_mm_cvtsi32_si128(i)));
+	}
+
+	static __forceinline GSVector8i i16to32c(const void* p) 
+	{
+		return  GSVector8i(_mm256_cvtepi16_epi32(_mm_load_si128((__m128i*)p)));
+	}
+
+	static __forceinline GSVector8i u16to32c(const void* p) 
+	{
+		return  GSVector8i(_mm256_cvtepu16_epi32(_mm_load_si128((__m128i*)p)));
+	}
+
+	static __forceinline GSVector8i i16to64c(const void* p) 
+	{
+		return  GSVector8i(_mm256_cvtepi16_epi64(_mm_loadl_epi64((__m128i*)p)));
+	}
+
+	static __forceinline GSVector8i u16to64c(const void* p) 
+	{
+		return  GSVector8i(_mm256_cvtepu16_epi64(_mm_loadl_epi64((__m128i*)p)));
+	}
+
+	static __forceinline GSVector8i i32to64c(const void* p) 
+	{
+		return  GSVector8i(_mm256_cvtepi32_epi64(_mm_load_si128((__m128i*)p)));
+	}
+
+	static __forceinline GSVector8i u32to64c(const void* p) 
+	{
+		return  GSVector8i(_mm256_cvtepu32_epi64(_mm_load_si128((__m128i*)p)));
 	}
 
 	//

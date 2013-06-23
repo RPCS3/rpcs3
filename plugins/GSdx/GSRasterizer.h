@@ -86,7 +86,7 @@ public:
 	virtual ~IDrawScanline() {}
 
 	virtual void BeginDraw(const GSRasterizerData* data) = 0;
-	virtual void EndDraw(uint64 frame, uint64 ticks, int pixels) = 0;
+	virtual void EndDraw(uint64 frame, uint64 ticks, int actual, int total) = 0;
 
 #ifdef ENABLE_JIT_RASTERIZER
 
@@ -134,7 +134,7 @@ protected:
 	GSVector4 m_fscissor_x;
 	GSVector4 m_fscissor_y;
 	struct {GSVertexSW* buff; int count;} m_edge;
-	int m_pixels;
+	struct {int sum, actual, total;} m_pixels;
 
 	typedef void (GSRasterizer::*DrawPrimPtr)(const GSVertexSW* v, int count);
 
@@ -150,6 +150,9 @@ protected:
 
 	__forceinline void AddScanline(GSVertexSW* e, int pixels, int left, int top, const GSVertexSW& scan);
 	__forceinline void Flush(const GSVertexSW* vertex, const uint32* index, const GSVertexSW& dscan, bool edge = false);
+
+	__forceinline void DrawScanline(int pixels, int left, int top, const GSVertexSW& scan);
+	__forceinline void DrawEdge(int pixels, int left, int top, const GSVertexSW& scan);
 
 public:
 	GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon);

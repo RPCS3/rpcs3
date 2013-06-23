@@ -96,9 +96,9 @@ void GSDrawScanline::BeginDraw(const GSRasterizerData* data)
 	m_sp = m_sp_map[sel];
 }
 
-void GSDrawScanline::EndDraw(uint64 frame, uint64 ticks, int pixels)
+void GSDrawScanline::EndDraw(uint64 frame, uint64 ticks, int actual, int total)
 {
-	m_ds_map.UpdateStats(frame, ticks, pixels);
+	m_ds_map.UpdateStats(frame, ticks, actual, total);
 }
 
 #ifndef ENABLE_JIT_RASTERIZER
@@ -434,7 +434,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 		skip = left & 7;
 		steps = pixels + skip - 8;
 		left -= skip;
-		test = GSDrawScanlineCodeGenerator::m_test[skip] | GSDrawScanlineCodeGenerator::m_test[15 + (steps & (steps >> 31))];
+		test = GSVector8i::i8to32c(GSDrawScanlineCodeGenerator::m_test[skip]) | GSVector8i::i8to32c(GSDrawScanlineCodeGenerator::m_test[15 + (steps & (steps >> 31))]);
 	}
 	else
 	{
@@ -1524,7 +1524,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 		if(!sel.notest)
 		{
-			test = GSDrawScanlineCodeGenerator::m_test[15 + (steps & (steps >> 31))];
+			test = GSVector8i::i8to32c(GSDrawScanlineCodeGenerator::m_test[15 + (steps & (steps >> 31))]);
 		}
 	}
 

@@ -903,7 +903,7 @@ void vpmovzxdq(const Xmm& xm, const Operand& op) { opAVX_X_XM_IMM(xm, op, MM_0F3
 void vpshufd(const Xmm& xm, const Operand& op, uint8 imm) { opAVX_X_XM_IMM(xm, op, MM_0F | PP_66, 0x70, true, -1, imm); }
 void vpshufhw(const Xmm& xm, const Operand& op, uint8 imm) { opAVX_X_XM_IMM(xm, op, MM_0F | PP_F3, 0x70, true, -1, imm); }
 void vpshuflw(const Xmm& xm, const Operand& op, uint8 imm) { opAVX_X_XM_IMM(xm, op, MM_0F | PP_F2, 0x70, true, -1, imm); }
-void vptest(const Xmm& xm, const Operand& op) { opAVX_X_XM_IMM(xm, op, MM_0F38 | PP_66, 0x17, false, -1); }
+void vptest(const Xmm& xm, const Operand& op) { opAVX_X_XM_IMM(xm, op, MM_0F38 | PP_66, 0x17, true, -1); }
 void vrcpps(const Xmm& xm, const Operand& op) { opAVX_X_XM_IMM(xm, op, MM_0F, 0x53, true, -1); }
 void vrsqrtps(const Xmm& xm, const Operand& op) { opAVX_X_XM_IMM(xm, op, MM_0F, 0x52, true, -1); }
 void vsqrtpd(const Xmm& xm, const Operand& op) { opAVX_X_XM_IMM(xm, op, MM_0F | PP_66, 0x51, true, -1); }

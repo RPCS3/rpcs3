@@ -268,17 +268,16 @@ void GSDrawScanlineCodeGenerator::Init()
 		sub(ebx, edx);
 
 		// GSVector4i test = m_test[skip] | m_test[15 + (steps & (steps >> 31))];
-
-		shl(edx, 5);
-
-		vmovdqa(ymm7, ptr[edx + (size_t)&m_test[0]]);
-
+		
 		mov(eax, ecx);
 		sar(eax, 31);
 		and(eax, ecx);
-		shl(eax, 5);
 
-		vpor(ymm7, ptr[eax + (size_t)&m_test[15]]);
+		vpmovsxbd(ymm7, ptr[edx * 8 + (size_t)&m_test[0]]);
+		vpmovsxbd(ymm0, ptr[eax * 8 + (size_t)&m_test[15]]);
+		vpor(ymm7, ymm0);
+
+		shl(edx, 5);
 	}
 	else
 	{
@@ -592,9 +591,8 @@ void GSDrawScanlineCodeGenerator::Step()
 		mov(edx, ecx);
 		sar(edx, 31);
 		and(edx, ecx);
-		shl(edx, 5);
 
-		vmovdqa(ymm7, ptr[edx + (size_t)&m_test[15]]);
+		vpmovsxbd(ymm7, ptr[edx * 8 + (size_t)&m_test[15]]);
 	}
 }
 
@@ -2843,7 +2841,8 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, 
 		xor(dst, eax);
 		break;
 	case 2:
-		vpextrw(eax, src, j * 2);
+		if(j == 0) vmovd(eax, src);
+		else vpextrw(eax, src, j * 2);
 		mov(dst, ax);
 		break;
 	}

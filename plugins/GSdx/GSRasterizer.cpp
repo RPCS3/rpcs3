@@ -37,8 +37,9 @@ GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* pe
 	, m_id(id)
 	, m_threads(threads)
 	, m_perfmon(perfmon)
-	, m_pixels(0)
 {
+	memset(&m_pixels, 0, sizeof(m_pixels));
+
 	m_edge.buff = (GSVertexSW*)vmalloc(sizeof(GSVertexSW) * 2048, false);
 	m_edge.count = 0;
 
@@ -110,11 +111,11 @@ void GSRasterizer::Queue(shared_ptr<GSRasterizerData> data)
 
 int GSRasterizer::GetPixels(bool reset) 
 {
-	int pixels = m_pixels;
+	int pixels = m_pixels.sum;
 	
 	if(reset)
 	{
-		m_pixels = 0;
+		m_pixels.sum = 0;
 	}
 
 	return pixels;
@@ -125,6 +126,9 @@ void GSRasterizer::Draw(GSRasterizerData* data)
 	GSPerfMonAutoTimer pmat(m_perfmon, GSPerfMon::WorkerDraw0 + m_id);
 
 	if(data->vertex != NULL && data->vertex_count == 0 || data->index != NULL && data->index_count == 0) return;
+
+	m_pixels.actual = 0;
+	m_pixels.total = 0;
 
 	data->start = __rdtsc();
 
@@ -212,11 +216,13 @@ void GSRasterizer::Draw(GSRasterizerData* data)
 	_mm256_zeroupper();
 	#endif
 
-	data->pixels = m_pixels;
+	data->pixels = m_pixels.actual;
 
 	uint64 ticks = __rdtsc() - data->start;
 
-	m_ds->EndDraw(data->frame, ticks, m_pixels);
+	m_pixels.sum += m_pixels.actual;
+
+	m_ds->EndDraw(data->frame, ticks, m_pixels.actual, m_pixels.total);
 }
 
 template<bool scissor_test>
@@ -234,11 +240,9 @@ void GSRasterizer::DrawPoint(const GSVertexSW* vertex, int vertex_count, const u
 			{
 				if(IsOneOfMyScanlines(p.y))
 				{
-					m_pixels++;
-
 					m_ds->SetupPrim(vertex, index, GSVertexSW::zero());
 
-					m_ds->DrawScanline(1, p.x, p.y, v);
+					DrawScanline(1, p.x, p.y, v);
 				}
 			}
 		}
@@ -257,11 +261,9 @@ void GSRasterizer::DrawPoint(const GSVertexSW* vertex, int vertex_count, const u
 			{
 				if(IsOneOfMyScanlines(p.y))
 				{
-					m_pixels++;
-
 					m_ds->SetupPrim(vertex, tmp_index, GSVertexSW::zero());
 
-					m_ds->DrawScanline(1, p.x, p.y, v);
+					DrawScanline(1, p.x, p.y, v);
 				}
 			}
 		}
@@ -321,15 +323,13 @@ void GSRasterizer::DrawLine(const GSVertexSW* vertex, const uint32* index)
 
 				if(pixels > 0)
 				{
-					m_pixels += pixels;
-
 					GSVertexSW dscan = dv / dv.p.xxxx();
 
 					scan += dscan * (l - scan.p).xxxx();
 
 					m_ds->SetupPrim(vertex, index, dscan);
 
-					m_ds->DrawScanline(pixels, left, p.y, scan);
+					DrawScanline(pixels, left, p.y, scan);
 				}
 			}
 		}
@@ -560,8 +560,6 @@ void GSRasterizer::DrawTriangleSection(int top, int bottom, GSVertexSW& edge, co
 			scan.c = scan.c + dscan.c * prestep;
 
 			AddScanline(e++, pixels, left, top, scan);
-
-			//m_pixels += pixels; m_ds->DrawScanline(pixels, left, top, scan);
 		}
 
 		top++;
@@ -605,7 +603,10 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertex, const uint32* index)
 		{
 			m_ds->DrawRect(r, scan);
 
-			m_pixels += r.width() * r.height();
+			int pixels = r.width() * r.height();
+
+			m_pixels.actual += pixels;
+			m_pixels.total += pixels;
 		}
 		else
 		{
@@ -619,7 +620,10 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertex, const uint32* index)
 
 				m_ds->DrawRect(r, scan);
 			
-				m_pixels += r.width() * r.height();
+				int pixels = r.width() * r.height();
+
+				m_pixels.actual += pixels;
+				m_pixels.total += pixels;
 
 				top = r.bottom + ((m_threads - 1) << THREAD_HEIGHT);
 			}
@@ -651,9 +655,7 @@ void GSRasterizer::DrawSprite(const GSVertexSW* vertex, const uint32* index)
 	{
 		if(IsOneOfMyScanlines(r.top))
 		{
-			m_pixels += r.width();
-
-			m_ds->DrawScanline(r.width(), r.left, r.top, scan);
+			DrawScanline(r.width(), r.left, r.top, scan);
 		}
 
 		if(++r.top >= r.bottom) break;
@@ -883,9 +885,7 @@ void GSRasterizer::Flush(const GSVertexSW* vertex, const uint32* index, const GS
 				int left = e->_pad.i32[1];
 				int top = e->_pad.i32[2];
 
-				m_pixels += pixels;
-
-				m_ds->DrawScanline(pixels, left, top, *e++);
+				DrawScanline(pixels, left, top, *e++);
 			}
 			while(e < ee);
 		}
@@ -897,15 +897,40 @@ void GSRasterizer::Flush(const GSVertexSW* vertex, const uint32* index, const GS
 				int left = e->_pad.i32[1];
 				int top = e->_pad.i32[2];
 
-				m_pixels += pixels;
-
-				m_ds->DrawEdge(pixels, left, top, *e++);
+				DrawEdge(pixels, left, top, *e++);
 			}
 			while(e < ee);
 		}
 
 		m_edge.count = 0;
 	}
+}
+
+#if _M_SSE >= 0x501
+#define PIXELS_PER_LOOP 8
+#else
+#define PIXELS_PER_LOOP 4
+#endif
+
+void GSRasterizer::DrawScanline(int pixels, int left, int top, const GSVertexSW& scan)
+{
+	m_pixels.actual += pixels;
+	m_pixels.total += ((left + pixels + (PIXELS_PER_LOOP - 1)) & ~(PIXELS_PER_LOOP - 1)) - (left & (PIXELS_PER_LOOP - 1));
+	//m_pixels.total += ((left + pixels + (PIXELS_PER_LOOP - 1)) & ~(PIXELS_PER_LOOP - 1)) - left;
+
+	ASSERT(m_pixels.actual <= m_pixels.total);
+
+	m_ds->DrawScanline(pixels, left, top, scan);
+}
+
+void GSRasterizer::DrawEdge(int pixels, int left, int top, const GSVertexSW& scan)
+{
+	m_pixels.actual += 1;
+	m_pixels.total += PIXELS_PER_LOOP - 1;
+
+	ASSERT(m_pixels.actual <= m_pixels.total);
+
+	m_ds->DrawEdge(pixels, left, top, scan);
 }
 
 //

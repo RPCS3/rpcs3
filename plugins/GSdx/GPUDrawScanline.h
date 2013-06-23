@@ -61,7 +61,7 @@ public:
 	// IDrawScanline
 
 	void BeginDraw(const GSRasterizerData* data);
-	void EndDraw(uint64 frame, uint64 ticks, int pixels);
+	void EndDraw(uint64 frame, uint64 ticks, int actual, int total);
 
 #ifndef ENABLE_JIT_RASTERIZER
 

@@ -2902,49 +2902,33 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, 
 {
 	Address dst = ptr[addr * 2 + (size_t)m_local.gd->vm + s_offsets[i] * 2];
 
-	#if _M_SSE >= 0x401
-
 	switch(psm)
 	{
 	case 0:
 		if(i == 0) movd(dst, src);
+		#if _M_SSE >= 0x401
 		else pextrd(dst, src, i);
-		break;
-	case 1:
-		if(i == 0) movd(eax, src);
-		else pextrd(eax, src, i);
-		xor(eax, dst);
-		and(eax, 0xffffff);
-		xor(dst, eax);
-		break;
-	case 2:
-		pextrw(eax, src, i * 2);
-		mov(dst, ax);
-		break;
-	}
-
-	#else
-
-	switch(psm)
-	{
-	case 0:
-		if(i == 0) movd(dst, src);
+		#else
 		else {pshufd(xmm0, src, _MM_SHUFFLE(i, i, i, i)); movd(dst, xmm0);}
+		#endif
 		break;
 	case 1:
 		if(i == 0) movd(eax, src);
+		#if _M_SSE >= 0x401
+		else pextrd(eax, src, i);
+		#else
 		else {pshufd(xmm0, src, _MM_SHUFFLE(i, i, i, i)); movd(eax, xmm0);}
+		#endif
 		xor(eax, dst);
 		and(eax, 0xffffff);
 		xor(dst, eax);
 		break;
 	case 2:
-		pextrw(eax, src, i * 2);
+		if(i == 0) movd(eax, src);
+		else pextrw(eax, src, i * 2);
 		mov(dst, ax);
 		break;
 	}
-
-	#endif
 }
 
 void GSDrawScanlineCodeGenerator::ReadTexel(int pixels, int mip_offset)

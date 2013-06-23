@@ -2321,7 +2321,7 @@ void GSState::GrowVertexBuffer()
 template<uint32 prim> 
 __forceinline void GSState::VertexKick(uint32 skip)
 {
-	ASSERT(m_vertex.tail < m_vertex.maxcount);
+	ASSERT(m_vertex.tail < m_vertex.maxcount + 3);
 
 	size_t head = m_vertex.head;
 	size_t tail = m_vertex.tail;
@@ -2340,7 +2340,7 @@ __forceinline void GSState::VertexKick(uint32 skip)
 
 	GSVector4i xy = v1.xxxx().sub16(m_ofxy);
 
-	#if _M_SSE >= 0x401
+	#if _M_SSE >= 0x501
 	GSVector4i::storel(&m_vertex.xy[xy_tail & 3], xy.blend32<2>(xy.sra16(4)));
 	#else
 	GSVector4i::storel(&m_vertex.xy[xy_tail & 3], xy.upl32(xy.sra16(4).yyyy()));
@@ -2421,14 +2421,21 @@ __forceinline void GSState::VertexKick(uint32 skip)
 		case GS_TRIANGLELIST:
 		case GS_TRIANGLESTRIP:
 			// TODO: any way to do a 16-bit integer cross product?
+			// cross product is zero most of the time because either of the vertices are the same
+			/*
 			cross = GSVector4(v2.xyxyl().i16to32().sub32(v0.upl32(v1).i16to32())); // x20, y20, x21, y21
 			cross = cross * cross.wzwz(); // x20 * y21, y20 * x21
 			test |= GSVector4i::cast(cross == cross.yxwz());
+			*/
+			test = (test | v0 == v1) | (v1 == v2 | v0 == v2); 
 			break;
 		case GS_TRIANGLEFAN:
+			/*
 			cross = GSVector4(v2.xyxyl().i16to32().sub32(v3.upl32(v1).i16to32())); // x23, y23, x21, y21
 			cross = cross * cross.wzwz(); // x23 * y21, y23 * x21
 			test |= GSVector4i::cast(cross == cross.yxwz());
+			*/
+			test = (test | v0 == v1) | (v1 == v2 | v0 == v2); 
 			break;
 		}
 		

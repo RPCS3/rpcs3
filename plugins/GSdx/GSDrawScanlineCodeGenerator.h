@@ -135,7 +135,7 @@ public:
 	GSDrawScanlineCodeGenerator(void* param, uint64 key, void* code, size_t maxsize);
 
 	#if _M_SSE >= 0x501
-	static const GSVector8i m_test[16];
+	static __aligned(const uint8, 8) m_test[16][8];
 	static const GSVector8 m_log2_coef[4];
 	#else
 	static const GSVector4i m_test[8];

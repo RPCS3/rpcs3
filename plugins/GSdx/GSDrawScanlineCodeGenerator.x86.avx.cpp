@@ -2824,7 +2824,8 @@ void GSDrawScanlineCodeGenerator::WritePixel(const Xmm& src, const Reg32& addr, 
 		xor(dst, eax);
 		break;
 	case 2:
-		vpextrw(eax, src, i * 2);
+		if(i == 0) vmovd(eax, src);
+		else vpextrw(eax, src, i * 2);
 		mov(dst, ax);
 		break;
 	}
