@@ -2435,7 +2435,7 @@ __forceinline void GSState::VertexKick(uint32 skip)
 			cross = cross * cross.wzwz(); // x23 * y21, y23 * x21
 			test |= GSVector4i::cast(cross == cross.yxwz());
 			*/
-			test = (test | v0 == v1) | (v1 == v2 | v0 == v2); 
+			test = (test | v3 == v1) | (v1 == v2 | v3 == v2); 
 			break;
 		}
 		
