@@ -526,9 +526,9 @@ public:
 
 	#if _M_SSE >= 0x501
 
-	template<int i> __forceinline GSVector4i blend32(const GSVector4i& v) const
+	template<int mask> __forceinline GSVector4i blend32(const GSVector4i& v) const
 	{
-		return GSVector4i(_mm_blend_epi32(m, v.m, i));
+		return GSVector4i(_mm_blend_epi32(m, v.m, mask));
 	}
 
 	#endif
@@ -3264,6 +3264,8 @@ public:
 	VECTOR4_SHUFFLE_1(z, 2)
 	VECTOR4_SHUFFLE_1(w, 3)
 
+	#if _M_SSE >= 0x501
+
 	__forceinline GSVector4 broadcast32() const
 	{
 		return GSVector4(_mm_broadcastss_ps(m));
@@ -3278,6 +3280,8 @@ public:
 	{
 		return GSVector4(_mm_broadcastss_ps(_mm_load_ss((const float*)f)));
 	}
+
+	#endif
 };
 
 #if _M_SSE >= 0x501
