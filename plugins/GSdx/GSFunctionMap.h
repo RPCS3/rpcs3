@@ -162,7 +162,7 @@ class GSCodeGeneratorFunctionMap : public GSFunctionMap<KEY, VALUE>
 	hash_map<uint64, VALUE> m_cgmap;
 	GSCodeBuffer m_cb;
 
-	enum {MAX_SIZE = 4096};
+	enum {MAX_SIZE = 8192};
 
 public:
 	GSCodeGeneratorFunctionMap(const char* name, void* param)

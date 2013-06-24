@@ -62,43 +62,52 @@ void GSSetupPrimCodeGenerator::Depth()
 
 	if(m_sel.prim != GS_SPRITE_CLASS)
 	{
-		// GSVector4 p = dscan.p;
+		// GSVector4 dp8 = dscan.p * GSVector4::broadcast32(&shift[0]);
 
+		vbroadcastf128(ymm0, ptr[edx + offsetof(GSVertexSW, p)]);
+
+		vmulps(ymm1, ymm0, ymm3);
+
+		if(m_en.z)
+		{
+			// m_local.d8.p.z = dp8.extract32<2>();
+
+			vextractps(ptr[&m_local.d8.p.z], xmm1, 2);
+		}
+		
 		if(m_en.f)
 		{
-			// GSVector8 df = GSVector8::broadcast32(dscan.p.wwww());
+			// m_local.d8.p.f = GSVector4i(dp8).extract32<3>();
 
-			vbroadcastss(ymm1, ptr[edx + offsetof(GSVertexSW, p.w)]);
+			vcvtps2dq(ymm2, ymm1);
+			vpextrd(ptr[&m_local.d8.p.f], xmm2, 3);
 		}
 
 		if(m_en.z)
 		{
-			// GSVector8 dz = GSVector8::broadcast32(dscan.p.zzzz());
+			// GSVector8 dz = GSVector8(dscan.p).zzzz();
 
-			vbroadcastss(ymm2, ptr[edx + offsetof(GSVertexSW, p.z)]);
+			vshufps(ymm2, ymm0, ymm0, _MM_SHUFFLE(2, 2, 2, 2));
 		}
 
 		if(m_en.f)
 		{
-			// m_local.d8.f = GSVector8i(df * shift[0]).xxzzlh();
+			// GSVector8 df = GSVector8(dscan.p).wwww();
 
-			vmulps(ymm0, ymm1, ymm3);
-			vcvttps2dq(ymm0, ymm0);
-			vpshuflw(ymm0, ymm0, _MM_SHUFFLE(2, 2, 0, 0));
-			vpshufhw(ymm0, ymm0, _MM_SHUFFLE(2, 2, 0, 0));
-			vmovdqa(ptr[&m_local.d8.f], ymm0);
-		}
-
-		if(m_en.z)
-		{
-			// m_local.d8.z = dz * shift[0];
-
-			vmulps(ymm0, ymm2, ymm3);
-			vmovaps(ptr[&m_local.d8.z], ymm0);
+			vshufps(ymm1, ymm0, ymm0, _MM_SHUFFLE(3, 3, 3, 3));
 		}
 
 		for(int i = 0; i < (m_sel.notest ? 1 : 8); i++)
 		{
+			if(m_en.z)
+			{
+				// m_local.d[i].z = dz * shift[1 + i];
+
+				if(i < 4) vmulps(ymm0, ymm2, Ymm(4 + i));
+				else vmulps(ymm0, ymm2, ptr[&m_shift[i + 1]]);
+				vmovaps(ptr[&m_local.d[i].z], ymm0);
+			}
+
 			if(m_en.f)
 			{
 				// m_local.d[i].f = GSVector8i(df * m_shift[i]).xxzzlh();
@@ -109,15 +118,6 @@ void GSSetupPrimCodeGenerator::Depth()
 				vpshuflw(ymm0, ymm0, _MM_SHUFFLE(2, 2, 0, 0));
 				vpshufhw(ymm0, ymm0, _MM_SHUFFLE(2, 2, 0, 0));
 				vmovdqa(ptr[&m_local.d[i].f], ymm0);
-			}
-
-			if(m_en.z)
-			{
-				// m_local.d[i].z = dz * shift[1 + i];
-
-				if(i < 4) vmulps(ymm0, ymm2, Ymm(4 + i));
-				else vmulps(ymm0, ymm2, ptr[&m_shift[i + 1]]);
-				vmovaps(ptr[&m_local.d[i].z], ymm0);
 			}
 		}
 	}
@@ -170,13 +170,13 @@ void GSSetupPrimCodeGenerator::Texture()
 
 		vcvttps2dq(ymm1, ymm1);
 
-		vmovdqa(ptr[&m_local.d8.stq], ymm1);
+		vmovdqa(ptr[&m_local.d8.stq], xmm1);
 	}
 	else
 	{
 		// m_local.d8.stq = dt8;
 
-		vmovaps(ptr[&m_local.d8.stq], ymm1);
+		vmovaps(ptr[&m_local.d8.stq], xmm1);
 	}
 
 	for(int j = 0, k = m_sel.fst ? 2 : 3; j < k; j++)
@@ -238,7 +238,7 @@ void GSSetupPrimCodeGenerator::Color()
 		vcvttps2dq(ymm1, ymm1);
 		vpshufd(ymm1, ymm1, _MM_SHUFFLE(3, 1, 2, 0));
 		vpackssdw(ymm1, ymm1);
-		vmovdqa(ptr[&m_local.d8.c], ymm1);
+		vmovq(ptr[&m_local.d8.c], xmm1);
 
 		// ymm3 is not needed anymore
 

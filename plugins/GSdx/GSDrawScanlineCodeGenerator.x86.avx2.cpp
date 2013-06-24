@@ -468,22 +468,22 @@ void GSDrawScanlineCodeGenerator::Step()
 
 	if(m_sel.prim != GS_SPRITE_CLASS)
 	{
-		// z += m_local.d8.z;
+		// zo += GSVector8::broadcast32(&m_local.d8.p.z);
 
 		if(m_sel.zb)
 		{
-			vmovaps(ymm0, ptr[&m_local.temp.zo]);
-			vaddps(ymm0, ptr[&m_local.d8.z]);
+			vbroadcastss(ymm0, ptr[&m_local.d8.p.z]);
+			vaddps(ymm0, ptr[&m_local.temp.zo]);
 			vmovaps(ptr[&m_local.temp.zo], ymm0);
 			vaddps(ymm0, ptr[&m_local.temp.z]);
 		}
 
-		// f = f.add16(m_local.d4.f);
+		// f = f.add16(GSVector8i::broadcast16(&m_local.d8.p.f));
 
 		if(m_sel.fwrite && m_sel.fge)
 		{
-			vmovdqa(ymm1, ptr[&m_local.temp.f]);
-			vpaddw(ymm1, ptr[&m_local.d8.f]);
+			vpbroadcastw(ymm1, ptr[&m_local.d8.p.f]);
+			vpaddw(ymm1, ptr[&m_local.temp.f]);
 			vmovdqa(ptr[&m_local.temp.f], ymm1);
 		}
 	}
@@ -501,12 +501,11 @@ void GSDrawScanlineCodeGenerator::Step()
 		{
 			if(m_sel.fst)
 			{
-				// GSVector8i stq = m_local.d8.stq;
+				// GSVector8i stq = GSVector8i::cast(GSVector8(m_local.d8.stq));
 
-				// s += stq.xxxx();
-				// if(!sprite) t += stq.yyyy();
+				vbroadcasti128(ymm4, ptr[&m_local.d8.stq]);
 
-				vmovdqa(ymm4, ptr[&m_local.d8.stq]);
+				// s = GSVector8::cast(GSVector8i::cast(s) + stq.xxxx());
 
 				vpshufd(ymm2, ymm4, _MM_SHUFFLE(0, 0, 0, 0));
 				vpaddd(ymm2, ptr[&m_local.temp.s]);
@@ -514,6 +513,8 @@ void GSDrawScanlineCodeGenerator::Step()
 
 				if(m_sel.prim != GS_SPRITE_CLASS || m_sel.mmin)
 				{
+					// t = GSVector8::cast(GSVector8i::cast(t) + stq.yyyy());
+
 					vpshufd(ymm3, ymm4, _MM_SHUFFLE(1, 1, 1, 1));
 					vpaddd(ymm3, ptr[&m_local.temp.t]);
 					vmovdqa(ptr[&m_local.temp.t], ymm3);
@@ -525,13 +526,13 @@ void GSDrawScanlineCodeGenerator::Step()
 			}
 			else
 			{
-				// GSVector8 stq = m_local.d8.stq;
+				// GSVector8 stq(m_local.d8.stq);
 
 				// s += stq.xxxx();
 				// t += stq.yyyy();
 				// q += stq.zzzz();
 
-				vmovaps(ymm4, ptr[&m_local.d8.stq]);
+				vbroadcastf128(ymm4, ptr[&m_local.d8.stq]);
 
 				vshufps(ymm2, ymm4, ymm4, _MM_SHUFFLE(0, 0, 0, 0));
 				vshufps(ymm3, ymm4, ymm4, _MM_SHUFFLE(1, 1, 1, 1));
@@ -551,12 +552,12 @@ void GSDrawScanlineCodeGenerator::Step()
 		{
 			if(m_sel.iip)
 			{
-				// GSVector8i c = m_local.d8.c;
+				// GSVector8i c = GSVector8i::broadcast64(&m_local.d8.c);
 
-				// rb = rb.add16(c.xxxx());
-				// ga = ga.add16(c.yyyy());
+				vpbroadcastq(ymm7, ptr[&m_local.d8.c]);
 
-				vmovdqa(ymm7, ptr[&m_local.d8.c]);
+				// rb = rb.add16(c.xxxx()).max_i16(GSVector8i::zero());
+				// ga = ga.add16(c.yyyy()).max_i16(GSVector8i::zero());
 
 				vpshufd(ymm5, ymm7, _MM_SHUFFLE(0, 0, 0, 0));
 				vpshufd(ymm6, ymm7, _MM_SHUFFLE(1, 1, 1, 1));

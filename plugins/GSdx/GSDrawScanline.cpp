@@ -120,11 +120,13 @@ void GSDrawScanline::SetupPrim(const GSVertexSW* vertex, const uint32* index, co
 	{
 		if(sel.prim != GS_SPRITE_CLASS)
 		{
+			GSVector4 dp8 = dscan.p * GSVector4::broadcast32(&shift[0]);
+
 			if(has_f)
 			{
-				GSVector8 df = GSVector8::broadcast32(dscan.p.wwww());
+				m_local.d8.p.f = GSVector4i(dp8).extract32<3>();
 
-				m_local.d8.f = GSVector8i(df * shift[0]).xxzzlh();
+				GSVector8 df = GSVector8::broadcast32(&dscan.p.w);
 
 				for(int i = 0; i < 8; i++)
 				{
@@ -134,9 +136,9 @@ void GSDrawScanline::SetupPrim(const GSVertexSW* vertex, const uint32* index, co
 
 			if(has_z)
 			{
-				GSVector8 dz = GSVector8::broadcast32(dscan.p.zzzz());
+				m_local.d8.p.z = dp8.extract32<2>();
 
-				m_local.d8.z = dz * shift[0];
+				GSVector8 dz = GSVector8::broadcast32(&dscan.p.z);
 
 				for(int i = 0; i < 8; i++)
 				{
@@ -160,18 +162,18 @@ void GSDrawScanline::SetupPrim(const GSVertexSW* vertex, const uint32* index, co
 
 	if(has_t)
 	{
-		GSVector8 dt(dscan.t);
-
-		GSVector8 dt8 = dt * shift[0];
+		GSVector4 dt8 = dscan.t * GSVector4::broadcast32(&shift[0]);
 
 		if(sel.fst)
 		{
-			m_local.d8.stq = GSVector8::cast(GSVector8i(dt8));
+			m_local.d8.stq = GSVector4::cast(GSVector4i(dt8));
 		}
 		else
 		{
 			m_local.d8.stq = dt8;
 		}
+
+		GSVector8 dt(dscan.t);
 
 		for(int j = 0, k = sel.fst ? 2 : 3; j < k; j++)
 		{
@@ -213,9 +215,11 @@ void GSDrawScanline::SetupPrim(const GSVertexSW* vertex, const uint32* index, co
 	{
 		if(sel.iip)
 		{
-			GSVector8 dc(dscan.c);
+			GSVector4 dc8 = dscan.c * GSVector4::broadcast32(&shift[0]);
 
-			m_local.d8.c = GSVector8i(dc * shift[0]).xzyw().ps32();
+			GSVector4i::storel(&m_local.d8.c, GSVector4i(dc8).xzyw().ps32());
+
+			GSVector8 dc(dscan.c);
 
 			GSVector8 dr = dc.xxxx();
 			GSVector8 db = dc.zzzz();
@@ -490,9 +494,9 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 			}
 			else
 			{
-				s = GSVector8::broadcast32(scan.t.xxxx()) + m_local.d[skip].s;
-				t = GSVector8::broadcast32(scan.t.yyyy()) + m_local.d[skip].t;
-				q = GSVector8::broadcast32(scan.t.zzzz()) + m_local.d[skip].q;
+				s = GSVector8::broadcast32(&scan.t.x) + m_local.d[skip].s;
+				t = GSVector8::broadcast32(&scan.t.y) + m_local.d[skip].t;
+				q = GSVector8::broadcast32(&scan.t.z) + m_local.d[skip].q;
 			}
 		}
 
@@ -504,8 +508,8 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 				c = c.upl16(c.zwxy());
 
-				rbf = GSVector8i::broadcast32(c.xxxx()).add16(m_local.d[skip].rb);
-				gaf = GSVector8i::broadcast32(c.zzzz()).add16(m_local.d[skip].ga);
+				rbf = GSVector8i::broadcast32(&c.x).add16(m_local.d[skip].rb);
+				gaf = GSVector8i::broadcast32(&c.z).add16(m_local.d[skip].ga);
 			}
 			else
 			{
@@ -532,7 +536,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 				if(sel.prim != GS_SPRITE_CLASS)
 				{
-					GSVector8 z = GSVector8::broadcast32(scan.p.zzzz()) + zo;
+					GSVector8 z = GSVector8::broadcast32(&scan.p.z) + zo;
 
 					if(sel.zoverflow)
 					{
@@ -545,7 +549,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 				}
 				else
 				{
-					zs = GSVector8i::broadcast32(GSVector4i::load(m_local.p.z));
+					zs = GSVector8i::broadcast32(&m_local.p.z);
 				}
 
 				if(sel.ztest)
@@ -1104,7 +1108,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 
 			if(sel.fwrite && sel.fge)
 			{
-				GSVector8i fog = sel.prim != GS_SPRITE_CLASS ? f : GSVector8i::broadcast16(GSVector4i::load(m_local.p.f));
+				GSVector8i fog = sel.prim != GS_SPRITE_CLASS ? f : GSVector8i::broadcast16(&m_local.p.f);
 
 				GSVector8i frb((int)m_global.frb);
 				GSVector8i fga((int)m_global.fga);
@@ -1476,12 +1480,12 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 		{
 			if(sel.zb)
 			{
-				zo += m_local.d8.z;
+				zo += GSVector8::broadcast32(&m_local.d8.p.z);
 			}
 
 			if(sel.fwrite && sel.fge)
 			{
-				f = f.add16(m_local.d8.f);
+				f = f.add16(GSVector8i::broadcast16(&m_local.d8.p.f));
 			}
 		}
 
@@ -1491,7 +1495,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 			{
 				if(sel.fst)
 				{
-					GSVector8i stq = GSVector8i::cast(m_local.d8.stq);
+					GSVector8i stq = GSVector8i::cast(GSVector8(m_local.d8.stq));
 
 					s = GSVector8::cast(GSVector8i::cast(s) + stq.xxxx());
 					
@@ -1502,7 +1506,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 				}
 				else
 				{
-					GSVector8 stq = m_local.d8.stq;
+					GSVector8 stq(m_local.d8.stq);
 
 					s += stq.xxxx();
 					t += stq.yyyy();
@@ -1515,7 +1519,7 @@ void GSDrawScanline::DrawScanline(int pixels, int left, int top, const GSVertexS
 		{
 			if(sel.iip)
 			{
-				GSVector8i c = m_local.d8.c;
+				GSVector8i c = GSVector8i::broadcast64(&m_local.d8.c);
 
 				rbf = rbf.add16(c.xxxx()).max_i16(GSVector8i::zero());
 				gaf = gaf.add16(c.yyyy()).max_i16(GSVector8i::zero());

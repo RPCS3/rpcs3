@@ -2338,12 +2338,12 @@ __forceinline void GSState::VertexKick(uint32 skip)
 	tailptr[0] = v0;
 	tailptr[1] = v1;
 
-	GSVector4i xy = v1.xxxx().sub16(m_ofxy);
+	GSVector4i xy = v1.xxxx().u16to32().sub32(m_ofxy);
 
-	#if _M_SSE >= 0x501
-	GSVector4i::storel(&m_vertex.xy[xy_tail & 3], xy.blend32<2>(xy.sra16(4)));
+	#if _M_SSE >= 0x401
+	GSVector4i::storel(&m_vertex.xy[xy_tail & 3], xy.blend16<0xf0>(xy.sra32(4)).ps32());
 	#else
-	GSVector4i::storel(&m_vertex.xy[xy_tail & 3], xy.upl32(xy.sra16(4).yyyy()));
+	GSVector4i::storel(&m_vertex.xy[xy_tail & 3], xy.upl64(xy.sra32(4).zwzw()).ps32());
 	#endif
 
 	m_vertex.tail = ++tail;

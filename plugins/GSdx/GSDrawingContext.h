@@ -84,10 +84,12 @@ public:
 
 	void UpdateScissor()
 	{
-		scissor.ex.u16[0] = (uint16)(SCISSOR.SCAX0 << 4);
-		scissor.ex.u16[1] = (uint16)(SCISSOR.SCAY0 << 4);
-		scissor.ex.u16[2] = (uint16)(SCISSOR.SCAX1 << 4);
-		scissor.ex.u16[3] = (uint16)(SCISSOR.SCAY1 << 4);
+		ASSERT(XYOFFSET.OFX <= 0xf800 && XYOFFSET.OFY <= 0xf800);
+
+		scissor.ex.u16[0] = (uint16)((SCISSOR.SCAX0 << 4) + XYOFFSET.OFX - 0x8000);
+		scissor.ex.u16[1] = (uint16)((SCISSOR.SCAY0 << 4) + XYOFFSET.OFY - 0x8000);
+		scissor.ex.u16[2] = (uint16)((SCISSOR.SCAX1 << 4) + XYOFFSET.OFX - 0x8000);
+		scissor.ex.u16[3] = (uint16)((SCISSOR.SCAY1 << 4) + XYOFFSET.OFY - 0x8000);
 
 		scissor.ofex = GSVector4(
 			(int)((SCISSOR.SCAX0 << 4) + XYOFFSET.OFX),
@@ -101,11 +103,11 @@ public:
 			(int)SCISSOR.SCAX1 + 1,
 			(int)SCISSOR.SCAY1 + 1);
 
-		uint16 ofx = (uint16)XYOFFSET.OFX;
-		uint16 ofy = (uint16)XYOFFSET.OFY;
-
-		scissor.ofxy.u32[0] = (ofy << 16) | ofx;
-		scissor.ofxy.u32[1] = ((ofy - 15) << 16) | (ofx - 15); // ceil(xy) => (xy - offset + 15) >> 4 => (xy - [offset - 15]) >> 4
+		scissor.ofxy = GSVector4i(
+			0x8000, 
+			0x8000, 
+			(int)XYOFFSET.OFX - 15, 
+			(int)XYOFFSET.OFY - 15);
 	}
 
 	bool DepthRead() const

@@ -524,6 +524,15 @@ public:
 
 	#endif
 
+	#if _M_SSE >= 0x501
+
+	template<int i> __forceinline GSVector4i blend32(const GSVector4i& v) const
+	{
+		return GSVector4i(_mm_blend_epi32(m, v.m, i));
+	}
+
+	#endif
+
 	__forceinline GSVector4i blend(const GSVector4i& a, const GSVector4i& mask) const
 	{
 		return GSVector4i(_mm_or_si128(_mm_andnot_si128(mask, m), _mm_and_si128(mask, a)));
@@ -1257,15 +1266,6 @@ public:
 		return i64[i];
 
 		#endif
-	}
-
-	#endif
-
-	#if _M_SSE >= 0x501
-
-	template<int i> __forceinline GSVector4i blend32(const GSVector4i& v) const
-	{
-		return GSVector4i(_mm_blend_epi32(m, v.m, i));
 	}
 
 	#endif
@@ -3263,6 +3263,21 @@ public:
 	VECTOR4_SHUFFLE_1(y, 1)
 	VECTOR4_SHUFFLE_1(z, 2)
 	VECTOR4_SHUFFLE_1(w, 3)
+
+	__forceinline GSVector4 broadcast32() const
+	{
+		return GSVector4(_mm_broadcastss_ps(m));
+	}
+
+	__forceinline static GSVector4 broadcast32(const GSVector4& v)
+	{
+		return GSVector4(_mm_broadcastss_ps(v.m));
+	}
+
+	__forceinline static GSVector4 broadcast32(const void* f)
+	{
+		return GSVector4(_mm_broadcastss_ps(_mm_load_ss((const float*)f)));
+	}
 };
 
 #if _M_SSE >= 0x501
@@ -4181,17 +4196,39 @@ public:
 
 	// TODO: extract/insert
 
+	template<int i> __forceinline int extract8() const
+	{
+		ASSERT(i < 32);
+
+		GSVector4i v = extract<i / 16>();
+
+		return v.extract8<i & 15>();
+	}
+
+	template<int i> __forceinline int extract16() const
+	{
+		ASSERT(i < 16);
+
+		GSVector4i v = extract<i / 8>();
+
+		return v.extract16<i & 8>();
+	}
+
 	template<int i> __forceinline int extract32() const
 	{
+		ASSERT(i < 8);
+
 		GSVector4i v = extract<i / 4>();
 
 		if((i & 3) == 0) return GSVector4i::store(v);
 
-		return v.extract32<i>();
+		return v.extract32<i & 3>();
 	}
 
 	template<int i> __forceinline GSVector4i extract() const
 	{
+		ASSERT(i < 2);
+
 		if(i == 0) return GSVector4i(_mm256_castsi256_si128(m));
 
 		return GSVector4i(_mm256_extracti128_si256(m, i));
@@ -4199,6 +4236,8 @@ public:
 
 	template<int i> __forceinline GSVector8i insert(__m128i m) const
 	{
+		ASSERT(i < 2);
+
 		return GSVector8i(_mm256_inserti128_si256(this->m, m, i));
 	}
 
@@ -4809,6 +4848,31 @@ public:
 		//return GSVector8i(v); // almost as fast as broadcast
 		//return cast(v).insert<1>(v); // slow
 		//return cast(v).aa(); // slowest
+	}
+
+	__forceinline static GSVector8i broadcast8(const void* p)
+	{
+		return GSVector8i(_mm256_broadcastb_epi8(_mm_cvtsi32_si128(*(const int*)p)));
+	}
+
+	__forceinline static GSVector8i broadcast16(const void* p)
+	{
+		return GSVector8i(_mm256_broadcastw_epi16(_mm_cvtsi32_si128(*(const int*)p)));
+	}
+
+	__forceinline static GSVector8i broadcast32(const void* p)
+	{
+		return GSVector8i(_mm256_broadcastd_epi32(_mm_cvtsi32_si128(*(const int*)p)));
+	}
+
+	__forceinline static GSVector8i broadcast64(const void* p)
+	{
+		return GSVector8i(_mm256_broadcastq_epi64(_mm_loadl_epi64((const __m128i*)p)));
+	}
+
+	__forceinline static GSVector8i broadcast128(const void* p)
+	{
+		return GSVector8i(_mm256_broadcastsi128_si256(*(const __m128i*)p));
 	}
 
 	__forceinline static GSVector8i zero() {return GSVector8i(_mm256_setzero_si256());}
@@ -5495,20 +5559,22 @@ public:
 
 	template<int i> __forceinline int extract32() const
 	{
-		if(i < 4) return extract<0>().extract<i>();
-		else if(i < 8) return extract<1>().extract<i - 4>();
-		else ASSERT(0);
+		ASSERT(i < 8);
 
-		return 0;
+		return extract<i / 4>().extract32<i & 3>();
 	}
 
 	template<int i> __forceinline GSVector8 insert(__m128 m) const
 	{
+		ASSERT(i < 2);
+
 		return GSVector8(_mm256_insertf128_ps(this->m, m, i));
 	}
 
 	template<int i> __forceinline GSVector4 extract() const
 	{
+		ASSERT(i < 2);
+
 		if(i == 0) return GSVector4(_mm256_castps256_ps128(m));
 
 		return GSVector4(_mm256_extractf128_ps(m, i));
@@ -5829,6 +5895,11 @@ public:
 	__forceinline static GSVector8 broadcast32(const GSVector4& v)
 	{
 		return GSVector8(_mm256_broadcastss_ps(v.m));
+	}
+
+	__forceinline static GSVector8 broadcast32(const void* f)
+	{
+		return GSVector8(_mm256_broadcastss_ps(_mm_load_ss((const float*)f)));
 	}
 
 	// TODO: v.(x0|y0|z0|w0|x1|y1|z1|w1) // broadcast element

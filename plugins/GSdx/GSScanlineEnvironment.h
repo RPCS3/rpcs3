@@ -155,7 +155,7 @@ __aligned(struct, 32) GSScanlineLocalData // per prim variables, each thread has
 	#if _M_SSE >= 0x501
 
 	struct skip {GSVector8 z, s, t, q; GSVector8i rb, ga, f, _pad;} d[8];
-	struct step {GSVector8 z, stq; GSVector8i c, f;} d8;
+	struct step {GSVector4 stq; struct {uint32 rb, ga;} c; struct {uint32 z, f;} p;} d8;
 	struct {GSVector8i rb, ga;} c;
 	struct {uint32 z, f;} p;
 
