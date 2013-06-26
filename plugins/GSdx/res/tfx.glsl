@@ -46,7 +46,6 @@
 
 struct vertex
 {
-    //vec4 p;
     vec4 t;
     vec4 tp;
     vec4 c;
@@ -69,17 +68,14 @@ layout(location = 0) out vertex VSout;
 #define VSout_c (VSout.c)
 #else
 #ifdef DISABLE_SSO
-//out vec4 SHADERp;
 out vec4 SHADERt;
 out vec4 SHADERtp;
 out vec4 SHADERc;
 #else
-//layout(location = 0) out vec4 SHADERp;
 layout(location = 0) out vec4 SHADERt;
 layout(location = 1) out vec4 SHADERtp;
 layout(location = 2) out vec4 SHADERc;
 #endif
-//#define VSout_p SHADERp
 #define VSout_t SHADERt
 #define VSout_tp SHADERtp
 #define VSout_c SHADERc
@@ -99,10 +95,12 @@ layout(std140) uniform cb20
 layout(std140, binding = 20) uniform cb20
 #endif
 {
-    vec4 VertexScale;
-    vec4 VertexOffset;
+    vec2 VertexScale;
+    vec2 VertexOffset;
     vec2 TextureScale;
 };
+
+const float exp_min32 = exp2(-32);
 
 void vs_main()
 {
@@ -119,35 +117,25 @@ void vs_main()
     // input granularity is 1/16 pixel, anything smaller than that won't step drawing up/left by one pixel
     // example: 133.0625 (133 + 1/16) should start from line 134, ceil(133.0625 - 0.05) still above 133
 
-    vec4 p = vec4(i_p, z, 0) - vec4(0.05f, 0.05f, 0, 0); 
-    vec4 final_p = p * VertexScale - VertexOffset;
-    // FIXME
-    // FLIP vertically
-    final_p.y *= -1.0f;
+    vec3 p = vec3(i_p, z) - vec3(0.05f, 0.05f, 0.0f);
+    p = p * vec3(VertexScale, exp_min32) - vec3(VertexOffset, 0.0f);
 
     if(VS_LOGZ == 1)
     {
-        final_p.z = log2(1.0f + float(z)) / 32.0f;
+        p.z = log2(1.0f + float(z)) / 32.0f;
     }
 
-    //VSout_p = final_p;
-    gl_Position = final_p; // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
-#if VS_RTCOPY
-    VSout_tp = final_p * vec4(0.5, -0.5, 0, 0) + 0.5;
-#endif
-
+    gl_Position = vec4(p, 1.0f); // NOTE I don't know if it is possible to merge POSITION_OUT and gl_Position
 
     if(VS_TME != 0)
     {
         if(VS_FST != 0)
         {
-            //VSout_t.xy = i_t * TextureScale;
             VSout_t.xy = i_uv * TextureScale;
             VSout_t.w = 1.0f;
         }
         else
         {
-            //VSout_t.xy = i_t;
             VSout_t.xy = i_st;
             VSout_t.w = i_q;
         }
@@ -188,7 +176,7 @@ layout(points, max_vertices = 1) out;
 void gs_main()
 {
     for(int i = 0; i < gl_in.length(); i++) {
-        gl_Position = gl_in[i].gl_Position; // FIXME is it useful
+        gl_Position = gl_in[i].gl_Position;
         GSout = GSin[i];
         EmitVertex();
     }
@@ -202,7 +190,7 @@ layout(line_strip, max_vertices = 2) out;
 void gs_main()
 {
     for(int i = 0; i < gl_in.length(); i++) {
-        gl_Position = gl_in[i].gl_Position; // FIXME is it useful
+        gl_Position = gl_in[i].gl_Position;
         GSout = GSin[i];
 #if GS_IIP == 0
         if (i == 0)
@@ -220,7 +208,7 @@ layout(triangle_strip, max_vertices = 3) out;
 void gs_main()
 {
     for(int i = 0; i < gl_in.length(); i++) {
-        gl_Position = gl_in[i].gl_Position; // FIXME is it useful
+        gl_Position = gl_in[i].gl_Position;
         GSout = GSin[i];
 #if GS_IIP == 0
         if (i == 0 || i == 1)
@@ -299,23 +287,19 @@ void gs_main()
 #ifdef FRAGMENT_SHADER
 #if __VERSION__ > 140 && !(defined(NO_STRUCT))
 layout(location = 0) in vertex PSin;
-//#define PSin_p (PSin.p)
 #define PSin_t (PSin.t)
 #define PSin_tp (PSin.tp)
 #define PSin_c (PSin.c)
 #else
 #ifdef DISABLE_SSO
-in vec4 SHADERp;
 in vec4 SHADERt;
 in vec4 SHADERtp;
 in vec4 SHADERc;
 #else
-//layout(location = 0) in vec4 SHADERp;
 layout(location = 0) in vec4 SHADERt;
 layout(location = 1) in vec4 SHADERtp;
 layout(location = 2) in vec4 SHADERc;
 #endif
-//#define PSin_p SHADERp
 #define PSin_t SHADERt
 #define PSin_tp SHADERtp
 #define PSin_c SHADERc
@@ -365,10 +349,7 @@ vec4 sample_c(vec2 uv)
 		uv = (trunc(uv * WH.zw) + vec2(0.5, 0.5)) / WH.zw;
 	}
 
-    // FIXME I'm not sure it is a good solution to flip texture
     return texture(TextureSampler, uv);
-    //FIXME another way to FLIP vertically
-    //return texture(TextureSampler, vec2(uv.x, 1.0f-uv.y) );
 }
 
 vec4 sample_p(float u)
@@ -698,11 +679,7 @@ vec4 ps_color()
 
 void ps_main()
 {
-    //FIXME
     vec4 c = ps_color();
-
-    // FIXME: I'm not sure about the value of others field
-    // output.c1 = c.a * 2; // used for alpha blending
 
     float alpha = c.a * 2;
 

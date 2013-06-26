@@ -58,6 +58,7 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_vb_sr(NULL)
 {
 	m_msaa = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_MSAA", 0) : 0;
+	m_debug_shader = !!theApp.GetConfig("debug_ogl_shader", 1);
 
 	memset(&m_merge_obj, 0, sizeof(m_merge_obj));
 	memset(&m_interlace, 0, sizeof(m_interlace));
@@ -134,24 +135,22 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete m_vb;
 
 	if (GLLoader::found_GL_ARB_separate_shader_objects) {
-		for (auto it = m_vs.begin(); it != m_vs.end() ; it++) gl_DeleteProgram(it->second);
-		for (auto it = m_gs.begin(); it != m_gs.end() ; it++) gl_DeleteProgram(it->second);
+		for (uint32 key = 0; key < VSSelector::size(); key++) gl_DeleteProgram(m_vs[key]);
+		for (uint32 key = 0; key < GSSelector::size(); key++) gl_DeleteProgram(m_gs[key]);
 		for (auto it = m_ps.begin(); it != m_ps.end() ; it++) gl_DeleteProgram(it->second);
 	} else {
-		for (auto it = m_vs.begin(); it != m_vs.end() ; it++) gl_DeleteShader(it->second);
-		for (auto it = m_gs.begin(); it != m_gs.end() ; it++) gl_DeleteShader(it->second);
+		for (uint32 key = 0; key < VSSelector::size(); key++) gl_DeleteShader(m_vs[key]);
+		for (uint32 key = 0; key < GSSelector::size(); key++) gl_DeleteShader(m_gs[key]);
 		for (auto it = m_ps.begin(); it != m_ps.end() ; it++) gl_DeleteShader(it->second);
 
 		for (auto it = m_single_prog.begin(); it != m_single_prog.end() ; it++) gl_DeleteProgram(it->second);
 		m_single_prog.clear();
 	}
 
-	for (auto it = m_ps_ss.begin(); it != m_ps_ss.end() ; it++) gl_DeleteSamplers(1, &it->second);
-	m_vs.clear();
-	m_gs.clear();
+	gl_DeleteSamplers(PSSamplerSelector::size(), m_ps_ss);
+
+	for (uint32 key = 0; key < OMDepthStencilSelector::size(); key++) delete m_om_dss[key];
 	m_ps.clear();
-	m_ps_ss.clear();
-	m_om_dss.clear();
 	m_om_bs.clear();
 }
 
@@ -248,8 +247,8 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	hr = m_dev->CreateBlendState(&bsd, &m_convert.bs);
 #endif
 
-	CreateSampler(m_convert.ln, true, false, false);
-	CreateSampler(m_convert.pt, false, false, false);
+	m_convert.ln = CreateSampler(true, false, false);
+	m_convert.pt = CreateSampler(false, false, false);
 
 	m_convert.dss = new GSDepthStencilOGL();
 	m_convert.bs  = new GSBlendStateOGL();
@@ -625,8 +624,9 @@ void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 	glEnable(GL_SCISSOR_TEST);
 }
 
-void GSDeviceOGL::CreateSampler(GLuint& sampler, bool bilinear, bool tau, bool tav)
+GLuint GSDeviceOGL::CreateSampler(bool bilinear, bool tau, bool tav)
 {
+	GLuint sampler;
 	gl_GenSamplers(1, &sampler);
 	if (bilinear) {
 		gl_SamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -657,6 +657,8 @@ void GSDeviceOGL::CreateSampler(GLuint& sampler, bool bilinear, bool tau, bool t
 	gl_SamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
 	gl_SamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, GL_NEVER);
 	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
+
+	return sampler;
 }
 
 GSTexture* GSDeviceOGL::CreateRenderTarget(int w, int h, bool msaa, int format)
@@ -1363,7 +1365,7 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	free(header_str);
 	free(sources_array);
 
-	if (theApp.GetConfig("debug_ogl_shader", 1) == 1) {
+	if (m_debug_shader) {
 		GLint log_length = 0;
 		GLint status = false;
 		if (GLLoader::found_GL_ARB_separate_shader_objects) {

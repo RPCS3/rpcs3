@@ -240,14 +240,12 @@ class GSDeviceOGL : public GSDevice
 	public:
 	__aligned(struct, 32) VSConstantBuffer
 	{
-		GSVector4 VertexScale;
-		GSVector4 VertexOffset;
+		GSVector4 Vertex_Scale_Offset;
 		GSVector4 TextureScale;
 
 		VSConstantBuffer()
 		{
-			VertexScale = GSVector4::zero();
-			VertexOffset = GSVector4::zero();
+			Vertex_Scale_Offset = GSVector4::zero();
 			TextureScale = GSVector4::zero();
 		}
 
@@ -258,13 +256,11 @@ class GSDeviceOGL : public GSDevice
 
 			GSVector4i b0 = b[0];
 			GSVector4i b1 = b[1];
-			GSVector4i b2 = b[2];
 
-			if(!((a[0] == b0) & (a[1] == b1) & (a[2] == b2)).alltrue())
+			if(!((a[0] == b0) & (a[1] == b1)).alltrue())
 			{
 				a[0] = b0;
 				a[1] = b1;
-				a[2] = b2;
 
 				return true;
 			}
@@ -283,7 +279,6 @@ class GSDeviceOGL : public GSDevice
 				uint32 tme:1;
 				uint32 fst:1;
 				uint32 logz:1;
-				//uint32 rtcopy:1;
 			};
 
 			uint32 key;
@@ -292,6 +287,9 @@ class GSDeviceOGL : public GSDevice
 		operator uint32() {return key & 0x3f;}
 
 		VSSelector() : key(0) {}
+		VSSelector(uint32 k) : key(k) {}
+
+		static uint32 size() { return 1 << 5; }
 	};
 
 	__aligned(struct, 32) PSConstantBuffer
@@ -327,7 +325,8 @@ class GSDeviceOGL : public GSDevice
 			GSVector4i b4 = b[4];
 			GSVector4i b5 = b[5];
 
-			if(!((a[0] == b0) /*& (a[1] == b1)*/ & (a[2] == b2) & (a[3] == b3) & (a[4] == b4) & (a[5] == b5)).alltrue()) // if WH matches HalfTexel does too
+			// if WH matches both HalfTexel and TC_OffsetHack do too
+			if(!((a[0] == b0) & (a[2] == b2) & (a[3] == b3) & (a[4] == b4) & (a[5] == b5)).alltrue())
 			{
 				a[0] = b0;
 				a[1] = b1;
@@ -359,6 +358,9 @@ class GSDeviceOGL : public GSDevice
 		operator uint32() {return key & 0x7;}
 
 		GSSelector() : key(0) {}
+		GSSelector(uint32 k) : key(k) {}
+
+		static uint32 size() { return 1 << 3; }
 	};
 
 	struct PSSelector
@@ -413,6 +415,9 @@ class GSDeviceOGL : public GSDevice
 		operator uint32() {return key & 0x7;}
 
 		PSSamplerSelector() : key(0) {}
+		PSSamplerSelector(uint32 k) : key(k) {}
+
+		static uint32 size() { return 1 << 3; }
 	};
 
 	struct OMDepthStencilSelector
@@ -434,6 +439,9 @@ class GSDeviceOGL : public GSDevice
 		operator uint32() {return key & 0x3f;}
 
 		OMDepthStencilSelector() : key(0) {}
+		OMDepthStencilSelector(uint32 k) : key(k) {}
+
+		static uint32 size() { return 1 << 6; }
 	};
 
 	struct OMBlendSelector
@@ -489,6 +497,8 @@ class GSDeviceOGL : public GSDevice
 
 	GSVertexBufferStateOGL* m_vb;	  // vb_state for HW renderer
 	GSVertexBufferStateOGL* m_vb_sr; // vb_state for StretchRect
+
+	bool m_debug_shader;
 
 	struct {
 		GLuint ps[2];				 // program object
@@ -552,11 +562,11 @@ class GSDeviceOGL : public GSDevice
  		GLenum	   draw;
 	} m_state;
 
-	hash_map<uint32, GLuint > m_vs;
-	hash_map<uint32, GLuint > m_gs;
+	GLuint m_vs[1<<5];
+	GLuint m_gs[1<<3];
+	GLuint m_ps_ss[1<<3];
+	GSDepthStencilOGL* m_om_dss[1<<6];
 	hash_map<uint32, GLuint > m_ps;
-	hash_map<uint32, GLuint > m_ps_ss;
-	hash_map<uint32, GSDepthStencilOGL* > m_om_dss;
 	hash_map<uint32, GSBlendStateOGL* > m_om_bs;
 
 	GLuint m_palette_ss;
@@ -603,7 +613,6 @@ class GSDeviceOGL : public GSDevice
 	void ClearDepth(GSTexture* t, float c);
 	void ClearStencil(GSTexture* t, uint8 c);
 
-	void CreateSampler(GLuint& sampler, bool bilinear, bool tau, bool tav);
 	GSTexture* CreateRenderTarget(int w, int h, bool msaa, int format = 0);
 	GSTexture* CreateDepthStencil(int w, int h, bool msaa, int format = 0);
 	GSTexture* CreateTexture(int w, int h, int format = 0);
@@ -648,6 +657,15 @@ class GSDeviceOGL : public GSDevice
 
 
 	void CreateTextureFX();
+	GLuint CompileVS(VSSelector sel);
+	GLuint CompileGS(GSSelector sel);
+	GLuint CompilePS(PSSelector sel);
+	GLuint CreateSampler(bool bilinear, bool tau, bool tav);
+	GLuint CreateSampler(PSSamplerSelector sel);
+	GSDepthStencilOGL* CreateDepthStencil(OMDepthStencilSelector dssel);
+	GSBlendStateOGL* CreateBlend(OMBlendSelector bsel, uint8 afix);
+
+
 	void SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim);
 	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
 	void SetupGS(GSSelector sel);

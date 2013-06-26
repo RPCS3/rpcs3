@@ -1424,6 +1424,9 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 		return;
 	}
 
+	vector<float> stats;
+	stats.clear();
+
 	if(FILE* fp = fopen(lpszCmdLine, "rb"))
 	{
 		//Console console("GSdx", true);
@@ -1522,11 +1525,12 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 
 		//while(IsWindowVisible(hWnd))
 		//FIXME map?
-		int finished = 2;
+		int finished = theApp.GetConfig("linux_replay", 1);
+		unsigned long frame_number = 0;
 		while(finished > 0)
 		{
+			frame_number = 0;
 			unsigned long start = timeGetTime();
-			unsigned long frame_number = 0;
 			for(auto i = packets.begin(); i != packets.end(); i++)
 			{
 				Packet* p = *i;
@@ -1571,10 +1575,30 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 			fprintf(stderr, "The %ld frames of the scene was render on %ldms\n", frame_number, end - start);
 			fprintf(stderr, "A means of %fms by frame\n", (float)(end - start)/(float)frame_number);
 
+			stats.push_back((float)(end - start));
+
+
 			sleep(1);
 			finished--;
 		}
 
+		// Print some nice stats
+		float n = (float)theApp.GetConfig("linux_replay", 1);
+		float mean = 0;
+		float sd = 0;
+		for (auto i = stats.begin(); i != stats.end(); i++) {
+			mean += *i;
+		}
+		mean = mean/n;
+		for (auto i = stats.begin(); i != stats.end(); i++) {
+			sd += pow((*i)-mean, 2);
+		}
+		sd = sqrt(sd/n);
+
+		fprintf(stderr, "\n\nMean: %fms\n", mean);
+		fprintf(stderr, "Standard deviation: %fms\n", sd);
+		fprintf(stderr, "Mean by frame: %fms (%ffps)\n", mean/(float)frame_number, 1000.0f*frame_number/mean);
+		fprintf(stderr, "Standard deviatin by frame: %fms\n", sd/(float)frame_number);
 
 		for(auto i = packets.begin(); i != packets.end(); i++)
 		{
@@ -1589,6 +1613,8 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 		GSshutdown();
 
 		fclose(fp);
+	} else {
+		fprintf(stderr, "failed to open %s\n", lpszCmdLine);
 	}
 }
 #endif

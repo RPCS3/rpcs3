@@ -157,21 +157,23 @@ void GSRendererOGL::SetupIA()
 
 	dev->IASetVertexState();
 
-	if(dev->IAMapVertexBuffer(&ptr, sizeof(GSVertex), m_vertex.next))
-	{
-		GSVector4i::storent(ptr, m_vertex.buff, sizeof(GSVertex) * m_vertex.next);
-        
-		if(UserHacks_WildHack && !isPackedUV_HackFlag)
+	if(UserHacks_WildHack && !isPackedUV_HackFlag) {
+		if(dev->IAMapVertexBuffer(&ptr, sizeof(GSVertex), m_vertex.next))
 		{
+			GSVector4i::storent(ptr, m_vertex.buff, sizeof(GSVertex) * m_vertex.next);
+
 			GSVertex* RESTRICT d = (GSVertex*)ptr;
 
 			for(unsigned int i = 0; i < m_vertex.next; i++)
 			{
 				if(PRIM->TME && PRIM->FST) d[i].UV &= 0x3FEF3FEF;
 			}
-		}
 
-		dev->IAUnmapVertexBuffer();
+			dev->IAUnmapVertexBuffer();
+		}
+	} else {
+		// By default use the common path (in case it can be made faster)
+		dev->IASetVertexBuffer(m_vertex.buff, m_vertex.next);
 	}
 
 	dev->IASetIndexBuffer(m_index.buff, m_index.tail);
@@ -202,7 +204,6 @@ void GSRendererOGL::SetupIA()
 	dev->IASetPrimitiveTopology(t);
 }
 
-
 void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex)
 {
 	GSDrawingEnvironment& env = m_env;
@@ -212,8 +213,6 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	const GSVector2& rtscale = rt->GetScale();
 
 	bool DATE = m_context->TEST.DATE && context->FRAME.PSM != PSM_PSMCT24;
-
-	//OGL GSTexture* rtcopy = NULL;
 
 	ASSERT(m_dev != NULL);
 
@@ -232,31 +231,13 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 			GSVertexPT1 vertices[] =
 			{
-#if 0
-				{GSVector4(dst.x, -dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
-				{GSVector4(dst.z, -dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
-				{GSVector4(dst.x, -dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
-				{GSVector4(dst.z, -dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
-#else
 				{GSVector4(dst.x, dst.y, 0.5f, 1.0f), GSVector2(src.x, src.y)},
 				{GSVector4(dst.z, dst.y, 0.5f, 1.0f), GSVector2(src.z, src.y)},
 				{GSVector4(dst.x, dst.w, 0.5f, 1.0f), GSVector2(src.x, src.w)},
 				{GSVector4(dst.z, dst.w, 0.5f, 1.0f), GSVector2(src.z, src.w)},
-#endif
 			};
-			//fprintf(stderr, "DATE A:%fx%f B:%fx%f\n", dst.x, -dst.y, dst.z, -dst.w);
-			//fprintf(stderr, "DATE SR: %f %f %f %f\n", src.x, src.y, src.z, src.w);
-			//fprintf(stderr, "DATE offset: %f\n", o.x);
 
 			dev->SetupDATE(rt, ds, vertices, m_context->TEST.DATM);
-		}
-		else
-		{
-			//OGL rtcopy = dev->CreateRenderTarget(rtsize.x, rtsize.y, false, rt->GetFormat());
-
-			//OGL // I'll use VertexTrace when I consider it more trustworthy
-
-			//OGL dev->CopyRect(rt, rtcopy, GSVector4i(rtsize).zwxy());
 		}
 	}
 
@@ -320,7 +301,6 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	vs_sel.tme = PRIM->TME;
 	vs_sel.fst = PRIM->FST;
 	vs_sel.logz = m_logz ? 1 : 0;
-	//OGL vs_sel.rtcopy = !!rtcopy;
 
 	// The real GS appears to do no masking based on the Z buffer format and writing larger Z values
 	// than the buffer supports seems to be an error condition on the real GS, causing it to crash.
@@ -363,8 +343,8 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	float sy = 2.0f * rtscale.y / (rtsize.y << 4);
 	float ox = (float)(int)context->XYOFFSET.OFX;
 	float oy = (float)(int)context->XYOFFSET.OFY;
-	float ox2 = 2.0f * m_pixelcenter.x / rtsize.x;
-	float oy2 = 2.0f * m_pixelcenter.y / rtsize.y;
+	float ox2 = -1.0f / rtsize.x;
+	float oy2 = -1.0f / rtsize.y;
 
 	//This hack subtracts around half a pixel from OFX and OFY. (Cannot do this directly,
 	//because DX10 and DX9 have a different pixel center.)
@@ -374,16 +354,12 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	if(rt->LikelyOffset)
 	{
-		// DX9 has pixelcenter set to 0.0, so give it some value here
-
-		if(m_pixelcenter.x == 0 && m_pixelcenter.y == 0) { ox2 = -0.0003f; oy2 = -0.0003f; }
-		
 		ox2 *= rt->OffsetHack_modx;
 		oy2 *= rt->OffsetHack_mody;
 	}
 
-	vs_cb.VertexScale  = GSVector4(sx, -sy, ldexpf(1, -32), 0.0f);
-	vs_cb.VertexOffset = GSVector4(ox * sx + ox2 + 1, -(oy * sy + oy2 + 1), 0.0f, -1.0f);
+	// Note: DX does y *= -1.0
+	vs_cb.Vertex_Scale_Offset = GSVector4(sx, sy, ox * sx + ox2 + 1, oy * sy + oy2 + 1);
 	// END of FIXME
 
 	// gs
@@ -519,7 +495,6 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	dev->OMSetRenderTargets(rt, ds, &scissor);
 	dev->PSSetShaderResource(0, tex ? tex->m_texture : NULL);
 	dev->PSSetShaderResource(1, tex ? tex->m_palette : NULL);
-	//OGL dev->PSSetShaderResource(2, rtcopy);
 
 	uint8 afix = context->ALPHA.FIX;
 
@@ -606,8 +581,6 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	}
 
 	dev->EndScene();
-
-	//OGL dev->Recycle(rtcopy);
 
 	if(om_dssel.fba) UpdateFBA(rt);
 }

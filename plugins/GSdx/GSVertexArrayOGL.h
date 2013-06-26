@@ -31,13 +31,13 @@ struct GSInputLayoutOGL {
 };
 
 class GSBufferOGL {
-	size_t m_stride;
+	const size_t m_stride;
 	size_t m_start;
 	size_t m_count;
 	size_t m_limit;
-	GLenum m_target;
+	const GLenum m_target;
 	GLuint m_buffer;
-	size_t m_default_size;
+	const bool m_sub_data_config;
 
 	public: 
 	GSBufferOGL(GLenum target, size_t stride) : 
@@ -46,15 +46,16 @@ class GSBufferOGL {
 		, m_count(0)
 		, m_limit(0)
 		, m_target(target)
+		, m_sub_data_config((bool)theApp.GetConfig("ogl_vertex_subdata", 1))
 	{
 		gl_GenBuffers(1, &m_buffer);
 		// Opengl works best with 1-4MB buffer.
-		m_default_size = 2 * 1024 * 1024 / m_stride;
+		m_limit = 2 * 1024 * 1024 / m_stride;
 	}
 
 	~GSBufferOGL() { gl_DeleteBuffers(1, &m_buffer); }
 
-	void allocate() { allocate(m_default_size); }
+	void allocate() { allocate(m_limit); }
 
 	void allocate(size_t new_limit)
 	{
@@ -68,9 +69,26 @@ class GSBufferOGL {
 		gl_BindBuffer(m_target, m_buffer);
 	}
 
-	void upload(const void* src, uint32 count)
+	void subdata_upload(const void* src, uint32 count)
 	{
-		// Upload the data to the buffer
+		m_count = count;
+
+		// Current GPU buffer is really too small need to allocate a new one
+		if (m_count > m_limit) {
+			allocate(std::max<int>(m_count * 3 / 2, m_limit));
+
+		} else if (m_count > (m_limit - m_start) ) {
+			// Not enough left free room. Just go back at the beginning
+			m_start = 0;
+			// Orphan the buffer to avoid synchronization
+			allocate(m_limit);
+		}
+
+		gl_BufferSubData(m_target,  m_stride * m_start,  m_stride * m_count, src);
+	}
+
+	void map_upload(const void* src, uint32 count)
+	{
 		void* dst;
 		if (Map(&dst, count)) {
 			// FIXME which one to use
@@ -80,14 +98,16 @@ class GSBufferOGL {
 		}
 	}
 
+	void upload(const void* src, uint32 count)
+	{
+		if (m_sub_data_config) {
+			subdata_upload(src, count);
+		} else {
+			map_upload(src, count);
+		}
+	}
+
 	bool Map(void** pointer, uint32 count ) {
-#ifdef ENABLE_OGL_DEBUG
-		GLint b_size = -1;
-		gl_GetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
-
-		if (b_size <= 0) return false;
-#endif
-
 		m_count = count;
 
 		// Note: For an explanation of the map flag
@@ -96,7 +116,7 @@ class GSBufferOGL {
 
 		// Current GPU buffer is really too small need to allocate a new one
 		if (m_count > m_limit) {
-			allocate(std::max<int>(m_count * 3 / 2, m_default_size));
+			allocate(std::max<int>(m_count * 3 / 2, m_limit));
 
 		} else if (m_count > (m_limit - m_start) ) {
 			// Not enough left free room. Just go back at the beginning
@@ -113,13 +133,7 @@ class GSBufferOGL {
 
 		// Upload the data to the buffer
 		*pointer = (uint8*) gl_MapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
-		//fprintf(stderr, "Map %x from %d to %d\n", *pointer, m_start, m_start+m_count);
-#ifdef ENABLE_OGL_DEBUG
-		if (*pointer == NULL) {
-			fprintf(stderr, "CRITICAL ERROR map failed for vb!!!\n");
-			return false;
-		}
-#endif
+
 		return true;
 	}
 

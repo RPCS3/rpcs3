@@ -3,9 +3,11 @@
 use strict;
 use warnings;
 use File::Spec;
+use File::Basename;
+use Cwd 'abs_path';
 
 my @res = qw/convert interlace merge shadeboost tfx/;
-my $path = File::Spec->catdir("plugins", "GSdx", "res");
+my $path = File::Spec->catdir(dirname(abs_path($0)), "..", "plugins", "GSdx", "res");
 
 foreach my $r (@res) {
     glsl2h($path, $r, "glsl");

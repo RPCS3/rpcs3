@@ -33,7 +33,7 @@ void GSDeviceOGL::CreateTextureFX()
 	m_vs_cb = new GSUniformBufferOGL(g_vs_cb_index, sizeof(VSConstantBuffer));
 	m_ps_cb = new GSUniformBufferOGL(g_ps_cb_index, sizeof(PSConstantBuffer));
 
-	CreateSampler(m_palette_ss, false, false, false);
+	m_palette_ss = CreateSampler(false, false, false);
 
 	GSInputLayoutOGL vert_format[] =
 	{
@@ -56,77 +56,158 @@ void GSDeviceOGL::CreateTextureFX()
 
 	// Pre compile all Geometry & Vertex Shader
 	// It might cost a seconds at startup but it would reduce benchmark pollution
-	GSDeviceOGL::GSSelector gs_sel;
-	for (uint32 key = 0; key < (1 << 3); key++) {
-		gs_sel.key = key;
-		SetupGS(gs_sel);
+	for (uint32 key = 0; key < GSSelector::size(); key++)
+		m_gs[key] = CompileGS(GSSelector(key));
+
+	for (uint32 key = 0; key < VSSelector::size(); key++)
+		m_vs[key] = CompileVS(VSSelector(key));
+
+	for (uint32 key = 0; key < PSSamplerSelector::size(); key++)
+		m_ps_ss[key] = CreateSampler(PSSamplerSelector(key));
+
+	for (uint32 key = 0; key < OMDepthStencilSelector::size(); key++)
+		m_om_dss[key] = CreateDepthStencil(OMDepthStencilSelector(key));
+
+}
+
+GLuint GSDeviceOGL::CompileVS(VSSelector sel)
+{
+	GLuint vs;
+	std::string macro = format("#define VS_BPPZ %d\n", sel.bppz)
+		+ format("#define VS_LOGZ %d\n", sel.logz)
+		+ format("#define VS_TME %d\n", sel.tme)
+		+ format("#define VS_FST %d\n", sel.fst);
+
+	CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &vs, tfx_glsl, macro);
+
+	return vs;
+}
+
+GLuint GSDeviceOGL::CompileGS(GSSelector sel)
+{
+	GLuint gs;
+	// Easy case
+	if(! (sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)))
+		return 0;
+
+	std::string macro = format("#define GS_IIP %d\n", sel.iip)
+		+ format("#define GS_PRIM %d\n", sel.prim);
+
+	CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &gs, tfx_glsl, macro);
+
+	return gs;
+}
+
+GLuint GSDeviceOGL::CreateSampler(PSSamplerSelector sel)
+{
+	return CreateSampler(sel.ltf, sel.tau, sel.tav);
+}
+
+GSDepthStencilOGL* GSDeviceOGL::CreateDepthStencil(OMDepthStencilSelector dssel)
+{
+	GSDepthStencilOGL* dss = new GSDepthStencilOGL();
+
+	if (dssel.date)
+	{
+		dss->EnableStencil();
+		dss->SetStencil(GL_EQUAL, dssel.alpha_stencil ? GL_ZERO : GL_KEEP);
 	}
-	GSDeviceOGL::VSSelector vs_sel;
-	for (uint32 key = 0; key < (1 << 5); key++) {
-		vs_sel.key = key;
-		SetupVS(vs_sel, NULL);
+
+	if(dssel.ztst != ZTST_ALWAYS || dssel.zwe)
+	{
+		static const GLenum ztst[] =
+		{
+			GL_NEVER,
+			GL_ALWAYS,
+			GL_GEQUAL,
+			GL_GREATER
+		};
+		dss->EnableDepth();
+		dss->SetDepth(ztst[dssel.ztst], dssel.zwe);
 	}
-	// Use sane reset value
-	GSSetShader(0);
-	VSSetShader(0);
+
+	return dss;
+}
+
+GSBlendStateOGL* GSDeviceOGL::CreateBlend(OMBlendSelector bsel, uint8 afix)
+{
+	GSBlendStateOGL* bs = new GSBlendStateOGL();
+
+	if(bsel.abe)
+	{
+		int i = ((bsel.a * 3 + bsel.b) * 3 + bsel.c) * 3 + bsel.d;
+
+		bs->EnableBlend();
+		bs->SetRGB(m_blendMapD3D9[i].op, m_blendMapD3D9[i].src, m_blendMapD3D9[i].dst);
+
+		if(m_blendMapD3D9[i].bogus == 1)
+		{
+			if (bsel.a == 0)
+				bs->SetRGB(m_blendMapD3D9[i].op, GL_ONE, m_blendMapD3D9[i].dst);
+			else
+				bs->SetRGB(m_blendMapD3D9[i].op, m_blendMapD3D9[i].src, GL_ONE);
+
+			const string afixstr = format("%d >> 7", afix);
+			const char *col[3] = {"Cs", "Cd", "0"};
+			const char *alpha[3] = {"As", "Ad", afixstr.c_str()};
+
+			// FIXME, need to investigate OGL capabilities. Maybe for OGL5 ;)
+			fprintf(stderr, "Impossible blend for D3D: (%s - %s) * %s + %s\n", col[bsel.a], col[bsel.b], alpha[bsel.c], col[bsel.d]);
+		}
+
+		// Not very good but I don't wanna write another 81 row table
+		if(bsel.negative) bs->RevertOp();
+	}
+
+	bs->SetMask(bsel.wr, bsel.wg, bsel.wb, bsel.wa);
+
+	return bs;
+}
+
+GLuint GSDeviceOGL::CompilePS(PSSelector sel)
+{
+	GLuint ps;
+
+	std::string macro = format("#define PS_FST %d\n", sel.fst)
+		+ format("#define PS_WMS %d\n", sel.wms)
+		+ format("#define PS_WMT %d\n", sel.wmt)
+		+ format("#define PS_FMT %d\n", sel.fmt)
+		+ format("#define PS_AEM %d\n", sel.aem)
+		+ format("#define PS_TFX %d\n", sel.tfx)
+		+ format("#define PS_TCC %d\n", sel.tcc)
+		+ format("#define PS_ATST %d\n", sel.atst)
+		+ format("#define PS_FOG %d\n", sel.fog)
+		+ format("#define PS_CLR1 %d\n", sel.clr1)
+		+ format("#define PS_FBA %d\n", sel.fba)
+		+ format("#define PS_AOUT %d\n", sel.aout)
+		+ format("#define PS_LTF %d\n", sel.ltf)
+		+ format("#define PS_COLCLIP %d\n", sel.colclip)
+		+ format("#define PS_DATE %d\n", sel.date)
+		+ format("#define PS_SPRITEHACK %d\n", sel.spritehack)
+		+ format("#define PS_TCOFFSETHACK %d\n", sel.tcoffsethack)
+		+ format("#define PS_POINT_SAMPLER %d\n", sel.point_sampler);
+
+	CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &ps, tfx_glsl, macro);
+
+	return ps;
 }
 
 void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 {
-	// *************************************************************
-	// Static
-	// *************************************************************
-	auto i = m_vs.find(sel);
+	GLuint vs = m_vs[sel];
 
-	if(i == m_vs.end())
-	{
-		std::string macro = format("#define VS_BPPZ %d\n", sel.bppz)
-			+ format("#define VS_LOGZ %d\n", sel.logz)
-			+ format("#define VS_TME %d\n", sel.tme)
-			+ format("#define VS_FST %d\n", sel.fst);
-
-		GLuint vs;
-		CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &vs, tfx_glsl, macro);
-
-		m_vs[sel] = vs;
-		i = m_vs.find(sel);
-	}
-
-	// *************************************************************
-	// Dynamic
-	// *************************************************************
-	if(cb != NULL && m_vs_cb_cache.Update(cb)) {
+	if(m_vs_cb_cache.Update(cb)) {
 		SetUniformBuffer(m_vs_cb);
 		m_vs_cb->upload(cb);
 	}
 
-	VSSetShader(i->second);
+	VSSetShader(vs);
 }
 
 void GSDeviceOGL::SetupGS(GSSelector sel)
 {
-	// *************************************************************
-	// Static
-	// *************************************************************
-	GLuint gs = 0;
-	if(sel.prim > 0 && (sel.iip == 0 || sel.prim == 3))
-	{
-		auto i = m_gs.find(sel);
+	GLuint gs = m_gs[sel];
 
-		if(i == m_gs.end()) {
-			std::string macro = format("#define GS_IIP %d\n", sel.iip)
-				+ format("#define GS_PRIM %d\n", sel.prim);
-
-			CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &gs, tfx_glsl, macro);
-
-			m_gs[sel] = gs;
-		} else {
-			gs = i->second;
-		}
-	}
-	// *************************************************************
-	// Dynamic
-	// *************************************************************
 	GSSetShader(gs);
 }
 
@@ -138,29 +219,8 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 	GLuint ps;
 	auto i = m_ps.find(sel);
 
-	if (i == m_ps.end())
-	{
-		std::string macro = format("#define PS_FST %d\n", sel.fst)
-			+ format("#define PS_WMS %d\n", sel.wms)
-			+ format("#define PS_WMT %d\n", sel.wmt)
-			+ format("#define PS_FMT %d\n", sel.fmt)
-			+ format("#define PS_AEM %d\n", sel.aem)
-			+ format("#define PS_TFX %d\n", sel.tfx)
-			+ format("#define PS_TCC %d\n", sel.tcc)
-			+ format("#define PS_ATST %d\n", sel.atst)
-			+ format("#define PS_FOG %d\n", sel.fog)
-			+ format("#define PS_CLR1 %d\n", sel.clr1)
-			+ format("#define PS_FBA %d\n", sel.fba)
-			+ format("#define PS_AOUT %d\n", sel.aout)
-			+ format("#define PS_LTF %d\n", sel.ltf)
-			+ format("#define PS_COLCLIP %d\n", sel.colclip)
-			+ format("#define PS_DATE %d\n", sel.date)
-			+ format("#define PS_SPRITEHACK %d\n", sel.spritehack)
-			+ format("#define PS_TCOFFSETHACK %d\n", sel.tcoffsethack)
-			+ format("#define PS_POINT_SAMPLER %d\n", sel.point_sampler);
-
-		CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &ps, tfx_glsl, macro);
-
+	if (i == m_ps.end()) {
+		ps = CompilePS(sel);
 		m_ps[sel] = ps;
 	} else {
 		ps = i->second;
@@ -183,21 +243,7 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 			ssel.ltf = 0;
 		}
 
-		auto i = m_ps_ss.find(ssel);
-
-		if(i != m_ps_ss.end())
-		{
-			ss0 = i->second;
-		}
-		else
-		{
-			// *************************************************************
-			// Static
-			// *************************************************************
-			CreateSampler(ss0, ssel.ltf, ssel.tau, ssel.tav);
-
-			m_ps_ss[ssel] = ss0;
-		}
+		ss0 = m_ps_ss[ssel];
 
 		if(sel.fmt >= 3)
 		{
@@ -211,86 +257,26 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 
 void GSDeviceOGL::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)
 {
-	auto i = m_om_dss.find(dssel);
+	GSDepthStencilOGL* dss = m_om_dss[dssel];
 
-	// *************************************************************
-	// Static
-	// *************************************************************
-	if (i == m_om_dss.end())
-	{
-		GSDepthStencilOGL* dss = new GSDepthStencilOGL();
-
-		if (dssel.date)
-		{
-			dss->EnableStencil();
-			dss->SetStencil(GL_EQUAL, dssel.alpha_stencil ? GL_ZERO : GL_KEEP);
-		}
-
-		if(dssel.ztst != ZTST_ALWAYS || dssel.zwe)
-		{
-			static const GLenum ztst[] =
-			{
-				GL_NEVER,
-				GL_ALWAYS,
-				GL_GEQUAL,
-				GL_GREATER
-			};
-			dss->EnableDepth();
-			dss->SetDepth(ztst[dssel.ztst], dssel.zwe);
-		}
-
-		m_om_dss[dssel] = dss;
-		i = m_om_dss.find(dssel);
-	}
-
-	// *************************************************************
-	// Dynamic
-	// *************************************************************
-	OMSetDepthStencilState(i->second, 1);
+	OMSetDepthStencilState(dss, 1);
 
 	// *************************************************************
 	// Static
 	// *************************************************************
 	auto j = m_om_bs.find(bsel);
+	GSBlendStateOGL* bs;
 
 	if(j == m_om_bs.end())
 	{
-		GSBlendStateOGL* bs = new GSBlendStateOGL();
-
-		if(bsel.abe)
-		{
-			int i = ((bsel.a * 3 + bsel.b) * 3 + bsel.c) * 3 + bsel.d;
-
-			bs->EnableBlend();
-			bs->SetRGB(m_blendMapD3D9[i].op, m_blendMapD3D9[i].src, m_blendMapD3D9[i].dst);
-
-			if(m_blendMapD3D9[i].bogus == 1)
-			{
-				if (bsel.a == 0)
-					bs->SetRGB(m_blendMapD3D9[i].op, GL_ONE, m_blendMapD3D9[i].dst);
-				else
-					bs->SetRGB(m_blendMapD3D9[i].op, m_blendMapD3D9[i].src, GL_ONE);
-
-				const string afixstr = format("%d >> 7", afix);
-				const char *col[3] = {"Cs", "Cd", "0"};
-				const char *alpha[3] = {"As", "Ad", afixstr.c_str()};
-
-				// FIXME, need to investigate OGL capabilities. Maybe for OGL5 ;)
-				fprintf(stderr, "Impossible blend for D3D: (%s - %s) * %s + %s\n", col[bsel.a], col[bsel.b], alpha[bsel.c], col[bsel.d]);
-			}
-
-			// Not very good but I don't wanna write another 81 row table
-			if(bsel.negative) bs->RevertOp();
-		}
-
-		bs->SetMask(bsel.wr, bsel.wg, bsel.wb, bsel.wa);
-
+		bs = CreateBlend(bsel, afix);
 		m_om_bs[bsel] = bs;
-		j = m_om_bs.find(bsel);
+	} else {
+		bs = j->second;
 	}
 
 	// *************************************************************
 	// Dynamic
 	// *************************************************************
-	OMSetBlendState(j->second, (float)(int)afix / 0x80);
+	OMSetBlendState(bs, (float)(int)afix / 0x80);
 }
