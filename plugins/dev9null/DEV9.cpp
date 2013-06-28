@@ -31,9 +31,7 @@
 using namespace std;
 
 #include "DEV9.h"
-#ifdef _MSC_VER
-#	include "svnrev.h"
-#endif
+#include "svnrev.h"
 
 const unsigned char version  = PS2E_DEV9_VERSION;
 const unsigned char revision = 0;
@@ -76,12 +74,8 @@ EXPORT_C_(u32) PS2EgetLibType()
 
 EXPORT_C_(char*) PS2EgetLibName()
 {
-#ifdef _MSC_VER
-	sprintf_s( libraryName, "DEV9null Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
+	snprintf( libraryName, 255, "DEV9null Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
 	return libraryName;	
-#else
-	return "DEV9null Driver";
-#endif
 }
 
 EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)

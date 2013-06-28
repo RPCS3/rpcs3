@@ -134,7 +134,7 @@ StereoOut32 V_Core::ReadInput()
 
 	InputPosRead++;
 
-	if (AutoDMACtrl & Index + 1 && (InputPosRead == 0x100 || InputPosRead == 0x200))
+	if (AutoDMACtrl & (Index + 1) && (InputPosRead == 0x100 || InputPosRead == 0x200))
 	{
 #ifdef ENABLE_NEW_IOPDMA_SPU2
 		// WARNING: Assumes this to be in the same thread as the dmas

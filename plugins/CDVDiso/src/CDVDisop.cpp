@@ -322,7 +322,7 @@ EXPORT_C_(s32) CDVDgetTOC(void* toc)
 
 		if (layer1start != -2 && iso->blocks >= 0x300000)
 		{
-			int off = iso->blockofs;
+			//int off = iso->blockofs;
 
 			// dual sided
 			tocBuff[ 0] = 0x24;

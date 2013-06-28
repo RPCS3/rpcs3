@@ -20,10 +20,7 @@
 #include "Dma.h"
 #include "Dialogs.h"
 
-#ifdef _MSC_VER
-#	include "svnrev.h"
-#endif
-
+#include "svnrev.h"
 
 // PCSX2 expects ASNI, not unicode, so this MUST always be char...
 static char libraryName[256];
@@ -87,7 +84,7 @@ static void InitLibraryName()
 	// Use TortoiseSVN's SubWCRev utility's output
 	// to label the specific revision:
 
-	sprintf_s( libraryName, "SPU2-X r%d%s"
+	snprintf( libraryName, 255, "SPU2-X r%d%s"
 	#ifdef DEBUG_FAST
 		"-Debug"
 	#elif defined( PCSX2_DEBUG )
@@ -105,7 +102,7 @@ static void InitLibraryName()
 
 }
 
-static bool cpu_detected = false;
+//static bool cpu_detected = false;
 
 static bool CheckSSE()
 {
@@ -518,8 +515,6 @@ EXPORT_C_(void) SPU2setClockPtr(u32 *ptr)
 {
 	cyclePtr = ptr;
 }
-
-static bool numpad_plus = false, numpad_plus_old = false;
 
 #ifdef DEBUG_KEYS
 static u32 lastTicks;

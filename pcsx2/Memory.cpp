@@ -748,7 +748,7 @@ void eeMemoryReserve::Reset()
 	// Dynarec versions of VUs
 	vu0_micro_mem = vtlb_RegisterHandlerTempl1(vuMicro,0);
 	vu1_micro_mem = vtlb_RegisterHandlerTempl1(vuMicro,1);
-	vu1_data_mem  = (1||THREAD_VU1) ? vtlb_RegisterHandlerTempl1(vuData,1) : NULL;
+	vu1_data_mem  = (1||THREAD_VU1) ? vtlb_RegisterHandlerTempl1(vuData,1) : 0;
 	
 	//////////////////////////////////////////////////////////////////////////////////////////
 	// IOP's "secret" Hardware Register mapping, accessible from the EE (and meant for use

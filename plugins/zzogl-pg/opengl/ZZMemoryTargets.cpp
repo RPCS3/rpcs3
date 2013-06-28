@@ -243,7 +243,7 @@ CMemoryTarget* CMemoryTargetMngr::SearchExistTarget(int start, int end, int clut
 	return NULL;
 }
 
-CMemoryTarget* CMemoryTargetMngr::ClearedTargetsSearch(int fmt, int widthmult, int channels, int height)
+CMemoryTarget* CMemoryTargetMngr::ClearedTargetsSearch(u32 fmt, int widthmult, int channels, int height)
 {
 	CMemoryTarget* targ = NULL;
 

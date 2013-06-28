@@ -832,7 +832,7 @@ inline void AfterRendererAutoresetTargets()
 
 		int total = 0;
 
-		for (int i = 0; i < ArraySize(s_nResolveCounts); ++i) total += s_nResolveCounts[i];
+		for (u32 i = 0; i < ArraySize(s_nResolveCounts); ++i) total += s_nResolveCounts[i];
 
 		if (total / ArraySize(s_nResolveCounts) > 3)
 		{

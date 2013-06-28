@@ -16,9 +16,7 @@
 
 #include <stdio.h>
 #include "CDVD.h"
-#ifdef _MSC_VER
-#	include "svnrev.h"
-#endif
+#include "svnrev.h"
 
 static char libraryName[256];
 
@@ -28,12 +26,8 @@ const unsigned char build = 6;
 
 EXPORT_C_(char*) PS2EgetLibName()
 {
-#ifdef _MSC_VER
-	sprintf_s( libraryName, "CDVDnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
+	snprintf( libraryName, 255, "CDVDnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
 	return libraryName;	
-#else
-	return "CDVDnull Driver";
-#endif
 }
 
 EXPORT_C_(u32) PS2EgetLibType()

@@ -116,89 +116,89 @@ GSLocalMemory::GSLocalMemory()
 		}
 	}
 
-	for(int x = 0; x < countof(rowOffset32); x++)
+	for(uint32 x = 0; x < countof(rowOffset32); x++)
 	{
 		rowOffset32[x] = (int)PixelAddress32(x & 0x7ff, 0, 0, 32) - (int)PixelAddress32(0, 0, 0, 32);
 	}
 
-	for(int x = 0; x < countof(rowOffset32Z); x++)
+	for(uint32 x = 0; x < countof(rowOffset32Z); x++)
 	{
 		rowOffset32Z[x] = (int)PixelAddress32Z(x & 0x7ff, 0, 0, 32) - (int)PixelAddress32Z(0, 0, 0, 32);
 	}
 
-	for(int x = 0; x < countof(rowOffset16); x++)
+	for(uint32 x = 0; x < countof(rowOffset16); x++)
 	{
 		rowOffset16[x] = (int)PixelAddress16(x & 0x7ff, 0, 0, 32) - (int)PixelAddress16(0, 0, 0, 32);
 	}
 
-	for(int x = 0; x < countof(rowOffset16S); x++)
+	for(uint32 x = 0; x < countof(rowOffset16S); x++)
 	{
 		rowOffset16S[x] = (int)PixelAddress16S(x & 0x7ff, 0, 0, 32) - (int)PixelAddress16S(0, 0, 0, 32);
 	}
 
-	for(int x = 0; x < countof(rowOffset16Z); x++)
+	for(uint32 x = 0; x < countof(rowOffset16Z); x++)
 	{
 		rowOffset16Z[x] = (int)PixelAddress16Z(x & 0x7ff, 0, 0, 32) - (int)PixelAddress16Z(0, 0, 0, 32);
 	}
 
-	for(int x = 0; x < countof(rowOffset16SZ); x++)
+	for(uint32 x = 0; x < countof(rowOffset16SZ); x++)
 	{
 		rowOffset16SZ[x] = (int)PixelAddress16SZ(x & 0x7ff, 0, 0, 32) - (int)PixelAddress16SZ(0, 0, 0, 32);
 	}
 
-	for(int x = 0; x < countof(rowOffset8[0]); x++)
+	for(uint32 x = 0; x < countof(rowOffset8[0]); x++)
 	{
 		rowOffset8[0][x] = (int)PixelAddress8(x & 0x7ff, 0, 0, 32) - (int)PixelAddress8(0, 0, 0, 32);
 		rowOffset8[1][x] = (int)PixelAddress8(x & 0x7ff, 2, 0, 32) - (int)PixelAddress8(0, 2, 0, 32);
 	}
 
-	for(int x = 0; x < countof(rowOffset4[0]); x++)
+	for(uint32 x = 0; x < countof(rowOffset4[0]); x++)
 	{
 		rowOffset4[0][x] = (int)PixelAddress4(x & 0x7ff, 0, 0, 32) - (int)PixelAddress4(0, 0, 0, 32);
 		rowOffset4[1][x] = (int)PixelAddress4(x & 0x7ff, 2, 0, 32) - (int)PixelAddress4(0, 2, 0, 32);
 	}
 
-	for(int x = 0; x < countof(blockOffset32); x++)
+	for(uint32 x = 0; x < countof(blockOffset32); x++)
 	{
 		blockOffset32[x] = (short)((int)BlockNumber32(x << 3, 0, 0, 32) - (int)BlockNumber32(0, 0, 0, 32));
 	}
 
-	for(int x = 0; x < countof(blockOffset32Z); x++)
+	for(uint32 x = 0; x < countof(blockOffset32Z); x++)
 	{
 		blockOffset32Z[x] = (short)((int)BlockNumber32Z(x << 3, 0, 0, 32) - (int)BlockNumber32Z(0, 0, 0, 32));
 	}
 
-	for(int x = 0; x < countof(blockOffset16); x++)
+	for(uint32 x = 0; x < countof(blockOffset16); x++)
 	{
 		blockOffset16[x] = (short)((int)BlockNumber16(x << 3, 0, 0, 32) - (int)BlockNumber16(0, 0, 0, 32));
 	}
 
-	for(int x = 0; x < countof(blockOffset16S); x++)
+	for(uint32 x = 0; x < countof(blockOffset16S); x++)
 	{
 		blockOffset16S[x] = (short)((int)BlockNumber16S(x << 3, 0, 0, 32) - (int)BlockNumber16S(0, 0, 0, 32));
 	}
 
-	for(int x = 0; x < countof(blockOffset16Z); x++)
+	for(uint32 x = 0; x < countof(blockOffset16Z); x++)
 	{
 		blockOffset16Z[x] = (short)((int)BlockNumber16Z(x << 3, 0, 0, 32) - (int)BlockNumber16Z(0, 0, 0, 32));
 	}
 
-	for(int x = 0; x < countof(blockOffset16SZ); x++)
+	for(uint32 x = 0; x < countof(blockOffset16SZ); x++)
 	{
 		blockOffset16SZ[x] = (short)((int)BlockNumber16SZ(x << 3, 0, 0, 32) - (int)BlockNumber16SZ(0, 0, 0, 32));
 	}
 
-	for(int x = 0; x < countof(blockOffset8); x++)
+	for(uint32 x = 0; x < countof(blockOffset8); x++)
 	{
 		blockOffset8[x] = (short)((int)BlockNumber8(x << 3, 0, 0, 32) - (int)BlockNumber8(0, 0, 0, 32));
 	}
 
-	for(int x = 0; x < countof(blockOffset4); x++)
+	for(uint32 x = 0; x < countof(blockOffset4); x++)
 	{
 		blockOffset4[x] = (short)((int)BlockNumber4(x << 3, 0, 0, 32) - (int)BlockNumber4(0, 0, 0, 32));
 	}
 
-	for(int i = 0; i < countof(m_psm); i++)
+	for(uint32 i = 0; i < countof(m_psm); i++)
 	{
 		m_psm[i].pa = &GSLocalMemory::PixelAddress32;
 		m_psm[i].bn = &GSLocalMemory::BlockNumber32;
@@ -408,7 +408,7 @@ GSLocalMemory::GSLocalMemory()
 	m_psm[PSM_PSMT8].pal = m_psm[PSM_PSMT8H].pal = 256;
 	m_psm[PSM_PSMT4].pal = m_psm[PSM_PSMT4HL].pal = m_psm[PSM_PSMT4HH].pal = 16;
 
-	for(int i = 0; i < countof(m_psm); i++) m_psm[i].fmt = 3;
+	for(uint32 i = 0; i < countof(m_psm); i++) m_psm[i].fmt = 3;
 	m_psm[PSM_PSMCT32].fmt = m_psm[PSM_PSMZ32].fmt = 0;
 	m_psm[PSM_PSMCT24].fmt = m_psm[PSM_PSMZ24].fmt = 1;
 	m_psm[PSM_PSMCT16].fmt = m_psm[PSM_PSMZ16].fmt = 2;

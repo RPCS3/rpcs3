@@ -16,9 +16,7 @@
 #include <stdlib.h>
 #include <string>
 using namespace std;
-#ifdef _MSC_VER
-#	include "svnrev.h"
-#endif
+#include "svnrev.h"
 #include "USB.h"
 string s_strIniPath="inis";
 string s_strLogPath="logs";
@@ -59,12 +57,8 @@ EXPORT_C_(u32) PS2EgetLibType()
 
 EXPORT_C_(char*) PS2EgetLibName()
 {
-#ifdef _MSC_VER
-	sprintf_s( libraryName, "USBnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
+	snprintf( libraryName, 255, "USBnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
 	return libraryName;	
-#else
-	return "USBnull Driver";
-#endif
 }
 
 EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)

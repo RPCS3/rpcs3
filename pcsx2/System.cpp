@@ -150,9 +150,7 @@ void SysOutOfMemory_EmergencyResponse(uptr blocksize)
 }
 
 
-#if _MSC_VER || defined(LINUX_PRINT_SVN_NUMBER)
-#	include "svnrev.h"
-#endif
+#include "svnrev.h"
 
 const Pcsx2Config EmuConfig;
 

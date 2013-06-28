@@ -426,8 +426,6 @@ static void CvtPacketToInt( StereoOut32* srcdest, uint size )
 
 void SndBuffer::timeStretchWrite()
 {
-	bool progress = false;
-
 	// data prediction helps keep the tempo adjustments more accurate.
 	// The timestretcher returns packets in belated "clump" form.
 	// Meaning that most of the time we'll get nothing back, and then
@@ -448,7 +446,6 @@ void SndBuffer::timeStretchWrite()
 
 		CvtPacketToInt( sndTempBuffer, tempProgress );
 		_WriteSamples( sndTempBuffer, tempProgress );
-		progress = true;
 	}
 
 #ifdef SPU2X_USE_OLD_STRETCHER

@@ -328,7 +328,7 @@ class CMemoryTargetMngr
 
 		CMemoryTarget* GetMemoryTarget(const tex0Info& tex0, int forcevalidate); // pcbp is pointer to start of clut
 		CMemoryTarget* SearchExistTarget(int start, int end, int clutsize, const tex0Info& tex0, int forcevalidate);
-		CMemoryTarget* ClearedTargetsSearch(int fmt, int widthmult, int channels, int height);
+		CMemoryTarget* ClearedTargetsSearch(u32 fmt, int widthmult, int channels, int height);
 		int CompareTarget(list<CMemoryTarget>::iterator& it, const tex0Info& tex0, int clutsize);
 
 		void Destroy(); // destroy all targs

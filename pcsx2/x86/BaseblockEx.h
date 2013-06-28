@@ -164,7 +164,7 @@ protected:
 
 public:
 	BaseBlocks() :
-		recompiler( NULL )
+		recompiler(0)
 	,	blocks(0)
 	{
 		blocks.reserve(0x4000);

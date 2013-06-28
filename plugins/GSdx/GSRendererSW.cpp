@@ -64,7 +64,7 @@ GSRendererSW::~GSRendererSW()
 {
 	delete m_tc;
 
-	for(int i = 0; i < countof(m_texture); i++)
+	for(uint32 i = 0; i < countof(m_texture); i++)
 	{
 		delete m_texture[i];
 	}
@@ -219,7 +219,7 @@ void GSRendererSW::VSync(int field)
 
 void GSRendererSW::ResetDevice()
 {
-	for(int i = 0; i < countof(m_texture); i++)
+	for(uint32 i = 0; i < countof(m_texture); i++)
 	{
 		delete m_texture[i];
 
@@ -445,7 +445,7 @@ void GSRendererSW::Draw()
 	{
 		int n = GSUtil::GetVertexCount(PRIM->PRIM);
 		
-		for(int i = 0, j = 0; i < m_index.tail; i += n, j++)
+		for(uint32 i = 0, j = 0; i < m_index.tail; i += n, j++)
 		{
 			for(int k = 0; k < n; k++)
 			{

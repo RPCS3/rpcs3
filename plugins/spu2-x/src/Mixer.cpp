@@ -561,7 +561,7 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 	{
 		UpdatePitch( coreidx, voiceidx );
 
-		s32 Value;
+		s32 Value = 0;
 
 		if( vc.Noise )
 			Value = GetNoiseValues( thiscore, voiceidx );
@@ -619,8 +619,8 @@ static __forceinline StereoOut32 MixVoice( uint coreidx, uint voiceidx )
 		// Continue processing voice, even if it's "off". Or else we miss interrupts! (Fatal Frame engine died because of this.)
 		if (NEVER_SKIP_VOICES
 			|| (*GetMemPtr(vc.NextA & 0xFFFF8) >> 8 & 3) != 3 || vc.LoopStartA != (vc.NextA & ~7)		// not in a tight loop
-			|| Cores[0].IRQEnable && (Cores[0].IRQA & ~7) == vc.LoopStartA	// or should be interrupting regularly
-			|| Cores[1].IRQEnable && (Cores[1].IRQA & ~7) == vc.LoopStartA
+			|| (Cores[0].IRQEnable && (Cores[0].IRQA & ~7) == vc.LoopStartA)	// or should be interrupting regularly
+			|| (Cores[1].IRQEnable && (Cores[1].IRQA & ~7) == vc.LoopStartA)
 			|| !(thiscore.Regs.ENDX & 1 << voiceidx))						// or isn't currently flagged as having passed the endpoint
 		{
 			UpdatePitch(coreidx, voiceidx);

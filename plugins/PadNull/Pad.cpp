@@ -18,9 +18,7 @@
 #include <errno.h>
 #include <string>
 using namespace std;
-#ifdef _MSC_VER
-#	include "svnrev.h"
-#endif
+#include "svnrev.h"
 #include "Pad.h"
 
 const u8 version  = PS2E_PAD_VERSION;
@@ -43,13 +41,8 @@ EXPORT_C_(u32) PS2EgetLibType()
 
 EXPORT_C_(char*) PS2EgetLibName()
 {
-#ifdef _MSC_VER
-	sprintf_s( libraryName, "Padnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
+	snprintf( libraryName, 255, "Padnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
 	return libraryName;	
-#else
-	return "Padnull Driver";
-#endif
-	
 }
 
 EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)

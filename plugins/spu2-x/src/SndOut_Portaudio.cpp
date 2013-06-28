@@ -178,7 +178,6 @@ public:
 			void* infoPtr = NULL;
 			
 			const PaDeviceInfo * devinfo = Pa_GetDeviceInfo(deviceIndex);
-			const PaHostApiInfo * apiinfo = Pa_GetHostApiInfo(devinfo->hostApi);
 			
 			int speakers;		
 			switch(numSpeakers) // speakers = (numSpeakers + 1) *2; ?

@@ -554,7 +554,6 @@ bool GSRendererHW::OI_GodOfWar2(GSTexture* rt, GSTexture* ds, GSTextureCache::So
 bool GSRendererHW::OI_SimpsonsGame(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 {
 	uint32 FBP = m_context->FRAME.Block();
-	uint32 FBW = m_context->FRAME.FBW;
 	uint32 FPSM = m_context->FRAME.PSM;
 
 	if((FBP == 0x01500 || FBP == 0x01800) && FPSM == PSM_PSMZ24)	//0x1800 pal, 0x1500 ntsc
@@ -636,7 +635,6 @@ bool GSRendererHW::OI_SpidermanWoS(GSTexture* rt, GSTexture* ds, GSTextureCache:
 bool GSRendererHW::OI_TyTasmanianTiger(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* t)
 {
 	uint32 FBP = m_context->FRAME.Block();
-	uint32 FBW = m_context->FRAME.FBW;
 	uint32 FPSM = m_context->FRAME.PSM;
 
 	if((FBP == 0x02800 || FBP == 0x02BC0) && FPSM == PSM_PSMCT24)	//0x2800 pal, 0x2bc0 ntsc

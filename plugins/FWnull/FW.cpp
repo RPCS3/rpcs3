@@ -21,9 +21,7 @@
 using namespace std;
 
 #include "FW.h"
-#ifdef _MSC_VER
-#	include "svnrev.h"
-#endif
+#include "svnrev.h"
 
 const u8 version  = PS2E_FW_VERSION;
 const u8 revision = 0;
@@ -65,12 +63,8 @@ EXPORT_C_(u32) PS2EgetLibType()
 
 EXPORT_C_(char*) PS2EgetLibName()
 {
-#ifdef _MSC_VER
-	sprintf_s( libraryName, "FWnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
+	snprintf( libraryName, 255, "FWnull Driver r%d%s",SVN_REV,	SVN_MODS ? "m" : "");
 	return libraryName;	
-#else
-	return "FWnull Driver";
-#endif
 }
 
 EXPORT_C_(u32) PS2EgetLibVersion2(u32 type)
@@ -131,7 +125,6 @@ void PHYWrite()
 void PHYRead()
 {
 	u8 reg = (PHYACC >> 24) & 0xf;
-	u8 data = (PHYACC >> 16) & 0xff;
 
 	PHYACC &= ~0x80000000;
 

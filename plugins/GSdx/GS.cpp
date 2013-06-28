@@ -69,7 +69,9 @@ static int s_renderer = -1;
 static bool s_framelimit = true;
 static bool s_vsync = false;
 static bool s_exclusive = true;
+#ifdef _WINDOWS
 static bool s_isgsopen2 = false; // boolean to remove some stuff from the config panel in new PCSX2's/
+#endif
 
 EXPORT_C_(uint32) PS2EgetLibType()
 {
@@ -439,7 +441,7 @@ EXPORT_C_(int) GSopen(void** dsp, char* title, int mt)
 	XCloseDisplay(display);
 	*/
 
-	int renderer;
+	int renderer = 0;
 
 	// Legacy GUI expects to acquire vsync from the configuration files.
 
@@ -1455,8 +1457,6 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 		delete [] fd.data;
 
 		fread(regs, 0x2000, 1, fp);
-
-		long start = ftell(fp);
 
 		GSvsync(1);
 

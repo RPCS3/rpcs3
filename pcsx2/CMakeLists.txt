@@ -12,7 +12,6 @@ set(CommonFlags
     # Disable this optimization for the moment
     -fno-omit-frame-pointer 
     # END GCC-4.6
-    -DLINUX_PRINT_SVN_NUMBER
 	-pthread
     -fvisibility=hidden
 	-fno-guess-branch-probability
@@ -101,18 +100,6 @@ endif(XDG_STD)
 if(PACKAGE_MODE)
     set(Output pcsx2)
 endif(PACKAGE_MODE)
-
-# you must have both svn client executable and a source that contains svn metadata
-if(Subversion_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.svn")
-    # execute subversion
-    Subversion_WC_INFO(${CMAKE_SOURCE_DIR} tmpvar)
-
-    # write svnrev.h
-    file(WRITE ${CMAKE_BINARY_DIR}/pcsx2/svnrev.h "#define SVN_REV ${tmpvar_WC_REVISION} \n#define SVN_MODS 0")
-else(Subversion_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.svn")
-    # write svnrev.h
-    file(WRITE ${CMAKE_BINARY_DIR}/pcsx2/svnrev.h "#define SVN_REV 0 \n#define SVN_MODS 0")
-endif(Subversion_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.svn")
 
 # Main pcsx2 source
 set(pcsx2Sources
@@ -649,7 +636,6 @@ endif(MacOSX)
 include_directories(.
 					gui
 					x86
-                    ${CMAKE_BINARY_DIR}/pcsx2
                     ${CMAKE_BINARY_DIR}/pcsx2/gui
                     )
 

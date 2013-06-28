@@ -412,8 +412,8 @@ void joy_changed(GtkComboBox *box, gpointer user_data)
 	// 3 : use new joy with fresh key binding
 
 	// unassign every joystick with this pad
-	for (int i = 0; i < 2; ++i)
-		if (joyid == conf->get_joyid(i)) conf->set_joyid(i, -1);
+	for (u32 i = 0; i < 2; ++i)
+		if (joyid == (int)conf->get_joyid(i)) conf->set_joyid(i, -1);
 
 	conf->set_joyid(current_pad, joyid);
 }

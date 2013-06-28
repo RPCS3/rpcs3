@@ -531,7 +531,7 @@ CRC::Game CRC::Lookup(uint32 crc)
 			printf( "GSdx: CrcHacksExclusions: %s\n", exclusions.c_str() );
 
 		int crcDups = 0;
-		for(int i = 0; i < countof(m_games); i++)
+		for(uint32 i = 0; i < countof(m_games); i++)
 		{
 			if( !IsCrcExcluded( exclusions, m_games[i].crc ) ){
 				if(m_map[m_games[i].crc]){

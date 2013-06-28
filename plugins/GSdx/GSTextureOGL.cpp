@@ -192,8 +192,8 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	EnableUnit(4);
 
 	// pitch is in byte wherease GL_UNPACK_ROW_LENGTH is in pixel
-	GLenum format;
-	GLenum type;
+	GLenum format = GL_RGBA;
+	GLenum type = GL_UNSIGNED_BYTE;
 	switch (m_format) {
 		case GL_RGBA8:
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 4);

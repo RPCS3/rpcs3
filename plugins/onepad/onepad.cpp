@@ -26,12 +26,10 @@
 #include <stdarg.h>
 
 #include "onepad.h"
-
-#ifndef _WIN32
-
-#include <unistd.h>
-#else
 #include "svnrev.h"
+
+#ifdef __LINUX__
+#include <unistd.h>
 #endif
 
 PADconf* conf;
@@ -133,48 +131,27 @@ static int padVibF[2][4];
 
 static void InitLibraryName()
 {
-#ifdef _WIN32
-#	ifdef PUBLIC
+#ifdef PUBLIC
 
 	// Public Release!
 	// Output a simplified string that's just our name:
 
 	strcpy(libraryName, "OnePAD");
 
-#	elif defined( SVN_REV_UNKNOWN )
-
-	// Unknown revision.
-	// Output a name that includes devbuild status but not
-	// subversion revision tags:
-
-	strcpy(libraryName, "OnePAD"
-#		ifdef PCSX2_DEBUG
-	       "-Debug"
-#		endif
-	      );
-#	else
+#else
 
 	// Use TortoiseSVN's SubWCRev utility's output
 	// to label the specific revision:
 
-	sprintf_s(libraryName, "OnePAD r%d%s"
-#		ifdef PCSX2_DEBUG
+	snprintf(libraryName, 255, "OnePAD r%d%s"
+#	ifdef PCSX2_DEBUG
 	          "-Debug"
-#		else
+#	else
 	          "-Dev"
-#		endif
+#	endif
 	          , SVN_REV,
 	          SVN_MODS ? "m" : ""
 	         );
-#	endif
-#else
-// I'll fix up SVN support later. --arcum42
-
-	strcpy(libraryName, "OnePAD"
-#	ifdef PCSX2_DEBUG
-	       "-Debug"
-#	endif
-	      );
 #endif
 }
 

@@ -36,3 +36,17 @@ function(detectOperatingSystem)
         set(Windows TRUE PARENT_SCOPE)
     endif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 endfunction(detectOperatingSystem)
+
+function(write_svnrev_h)
+    # you must have both svn client executable and a source that contains svn metadata
+    if(Subversion_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.svn")
+        # execute subversion
+        Subversion_WC_INFO(${CMAKE_SOURCE_DIR} tmpvar)
+
+        # write svnrev.h
+        file(WRITE ${CMAKE_BINARY_DIR}/common/include/svnrev.h "#define SVN_REV ${tmpvar_WC_REVISION} \n#define SVN_MODS 0")
+    else()
+        # write svnrev.h
+        file(WRITE ${CMAKE_BINARY_DIR}/common/include/svnrev.h "#define SVN_REV 0 \n#define SVN_MODS 0")
+    endif()
+endfunction()

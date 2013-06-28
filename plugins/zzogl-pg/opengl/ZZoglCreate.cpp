@@ -566,7 +566,7 @@ bool ZZCreate(int _width, int _height)
 
     if (!vb_buffer_allocated) {
         glGenBuffers((GLsizei)ArraySize(g_vboBuffers), g_vboBuffers);
-        for (int i = 0; i < ArraySize(g_vboBuffers); ++i)
+        for (u32 i = 0; i < ArraySize(g_vboBuffers); ++i)
         {
             glBindBuffer(GL_ARRAY_BUFFER, g_vboBuffers[i]);
             glBufferData(GL_ARRAY_BUFFER, 0x100*sizeof(VertexGPU), NULL, GL_STREAM_DRAW);
@@ -809,7 +809,7 @@ void ZZDestroy()
 	
 	if (pvs != NULL)
 	{
-		for (int i = 0; i < ArraySize(pvs); ++i)
+		for (u32 i = 0; i < ArraySize(pvs); ++i)
 		{
 			SAFE_RELEASE_PROG(pvs[i]);
 		}
@@ -817,7 +817,7 @@ void ZZDestroy()
 
 	if (ppsRegular != NULL)
 	{
-		for (int i = 0; i < ArraySize(ppsRegular); ++i)
+		for (u32 i = 0; i < ArraySize(ppsRegular); ++i)
 		{
 			SAFE_RELEASE_PROG(ppsRegular[i].prog);
 		}
@@ -825,7 +825,7 @@ void ZZDestroy()
 
 	if (ppsTexture != NULL)
 	{
-		for (int i = 0; i < ArraySize(ppsTexture); ++i)
+		for (u32 i = 0; i < ArraySize(ppsTexture); ++i)
 		{
 			SAFE_RELEASE_PROG(ppsTexture[i].prog);
 		}

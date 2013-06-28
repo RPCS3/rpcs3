@@ -178,7 +178,7 @@ void GSRendererOGL::SetupIA()
 
 	dev->IASetIndexBuffer(m_index.buff, m_index.tail);
 
-	GLenum t;
+	GLenum t = 0;
 
 	switch(m_vt.m_primclass)
 	{

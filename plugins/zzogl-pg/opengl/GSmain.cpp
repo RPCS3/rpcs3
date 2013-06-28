@@ -185,7 +185,7 @@ EXPORT_C_(void) GSsetGameCRC(int crc, int options)
 
 	if (CRCValueChanged && (crc != 0))
 	{
-		for (int i = 0; i < GAME_INFO_INDEX; i++)
+		for (u32 i = 0; i < GAME_INFO_INDEX; i++)
 		{
 			if (crc_game_list[i].crc == crc)
 			{
@@ -680,8 +680,6 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 
 		fread(regs, 0x2000, 1, fp);
 
-		long start = ftell(fp);
-
 		GSvsync(1);
 
 		list<Packet*> packets;
@@ -769,7 +767,7 @@ EXPORT_C_(void) GSReplay(char* lpszCmdLine)
 					switch(p->param)
 					{
 					//case 0: GSgifTransfer1((u32*)&p->buff[0], p->addr); break;
-					case 0: _GSgifTransfer<0>(&p->buff[0], p->real_size); break;
+					case 0: _GSgifTransfer<0>((u32*)&p->buff[0], p->real_size); break;
 					case 1: GSgifTransfer2((u32*)&p->buff[0], p->real_size); break;
 					case 2: GSgifTransfer3((u32*)&p->buff[0], p->real_size); break;
 					case 3: GSgifTransfer((u32*)&p->buff[0], p->real_size); break;

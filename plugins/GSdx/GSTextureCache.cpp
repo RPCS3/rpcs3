@@ -1177,7 +1177,7 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, const GSO
 		}
 	}
 
-	for(int i = 0; i < countof(m_pages); i++)
+	for(uint32 i = 0; i < countof(m_pages); i++)
 	{
 		if(uint32 p = m_pages[i])
 		{
