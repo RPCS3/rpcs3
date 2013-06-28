@@ -35,6 +35,7 @@ public:
     virtual void Lock() = 0;
     virtual bool TryLock() = 0;
     virtual void Unlock() = 0;
+	virtual ~IGSLock() {}
 };
 
 class IGSEvent
@@ -42,6 +43,7 @@ class IGSEvent
 public:
     virtual void Set() = 0;
 	virtual bool Wait(IGSLock* l) = 0;
+	virtual ~IGSEvent() {}
 };
 
 #ifdef _WINDOWS

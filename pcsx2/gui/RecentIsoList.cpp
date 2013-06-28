@@ -30,8 +30,8 @@ extern wxString GetMsg_IsoImageChanged();
 
 RecentIsoManager::RecentIsoManager( wxMenu* menu, int firstIdForMenuItems_or_wxID_ANY )
 	: m_Menu( menu )
-	, m_firstIdForMenuItems_or_wxID_ANY ( firstIdForMenuItems_or_wxID_ANY )
 	, m_MaxLength( g_Conf->RecentIsoCount )
+	, m_firstIdForMenuItems_or_wxID_ANY ( firstIdForMenuItems_or_wxID_ANY )
 {
 	m_cursel	= 0;
 	m_Separator	= NULL;

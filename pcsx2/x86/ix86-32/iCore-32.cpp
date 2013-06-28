@@ -119,7 +119,7 @@ int _getFreeX86reg(int mode)
 
 	int maxreg = (mode&MODE_8BITREG)?4:iREGCNT_GPR;
 
-	for (int i=0; i<iREGCNT_GPR; i++) {
+	for (uint i=0; i<iREGCNT_GPR; i++) {
 		int reg = (g_x86checknext+i)%iREGCNT_GPR;
 		if( reg == 0 || reg == ESP || reg == EBP ) continue;
 		if( reg >= maxreg ) continue;
@@ -235,14 +235,14 @@ void _flushConstRegs()
 
 int _allocX86reg(int x86reg, int type, int reg, int mode)
 {
-	int i;
+	uint i;
 	pxAssertDev( reg >= 0 && reg < 32, "Register index out of bounds." );
 	pxAssertDev( x86reg != ESP && x86reg != EBP, "Allocation of ESP/EBP is not allowed!" );
 
 	// don't alloc EAX and ESP,EBP if MODE_NOFRAME
 	int oldmode = mode;
 	//int noframe = mode & MODE_NOFRAME;
-	int maxreg = (mode & MODE_8BITREG) ? 4 : iREGCNT_GPR;
+	uint maxreg = (mode & MODE_8BITREG) ? 4 : iREGCNT_GPR;
 	mode &= ~(MODE_NOFRAME|MODE_8BITREG);
 	int readfromreg = -1;
 
@@ -353,7 +353,7 @@ int _allocX86reg(int x86reg, int type, int reg, int mode)
 
 int _checkX86reg(int type, int reg, int mode)
 {
-	int i;
+	uint i;
 
 	for (i=0; i<iREGCNT_GPR; i++) {
 		if (x86regs[i].inuse && x86regs[i].reg == reg && x86regs[i].type == type) {
@@ -377,7 +377,7 @@ int _checkX86reg(int type, int reg, int mode)
 
 void _addNeededX86reg(int type, int reg)
 {
-	int i;
+	uint i;
 
 	for (i=0; i<iREGCNT_GPR; i++) {
 		if (!x86regs[i].inuse || x86regs[i].reg != reg || x86regs[i].type != type ) continue;
@@ -388,7 +388,7 @@ void _addNeededX86reg(int type, int reg)
 }
 
 void _clearNeededX86regs() {
-	int i;
+	uint i;
 
 	for (i=0; i<iREGCNT_GPR; i++) {
 		if (x86regs[i].needed ) {
@@ -401,7 +401,7 @@ void _clearNeededX86regs() {
 
 void _deleteX86reg(int type, int reg, int flush)
 {
-	int i;
+	uint i;
 
 	for (i=0; i<iREGCNT_GPR; i++) {
 		if (x86regs[i].inuse && x86regs[i].reg == reg && x86regs[i].type == type) {
@@ -451,7 +451,7 @@ void _freeX86reg(int x86reg)
 
 void _freeX86regs()
 {
-	for (int i=0; i<iREGCNT_GPR; i++)
+	for (uint i=0; i<iREGCNT_GPR; i++)
 		_freeX86reg(i);
 }
 
@@ -484,7 +484,7 @@ __fi void* _MMXGetAddr(int reg)
 
 int  _getFreeMMXreg()
 {
-	int i;
+	uint i;
 	int tempi = -1;
 	u32 bestcount = 0x10000;
 
@@ -546,7 +546,7 @@ int  _getFreeMMXreg()
 
 int _allocMMXreg(int mmxreg, int reg, int mode)
 {
-	int i;
+	uint i;
 
 	if( reg != MMX_TEMP ) {
 		for (i=0; i<iREGCNT_MMX; i++) {
@@ -627,7 +627,7 @@ int _allocMMXreg(int mmxreg, int reg, int mode)
 
 int _checkMMXreg(int reg, int mode)
 {
-	int i;
+	uint i;
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].inuse && mmxregs[i].reg == reg ) {
 
@@ -659,7 +659,7 @@ int _checkMMXreg(int reg, int mode)
 
 void _addNeededMMXreg(int reg)
 {
-	int i;
+	uint i;
 
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].inuse == 0) continue;
@@ -672,7 +672,7 @@ void _addNeededMMXreg(int reg)
 
 void _clearNeededMMXregs()
 {
-	int i;
+	uint i;
 
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if( mmxregs[i].needed ) {
@@ -686,7 +686,7 @@ void _clearNeededMMXregs()
 
 void _deleteMMXreg(int reg, int flush)
 {
-	int i;
+	uint i;
 	for (i=0; i<iREGCNT_MMX; i++) {
 
 		if (mmxregs[i].inuse && mmxregs[i].reg == reg ) {
@@ -721,7 +721,7 @@ void _deleteMMXreg(int reg, int flush)
 
 int _getNumMMXwrite()
 {
-	int num = 0, i;
+	uint num = 0, i;
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if( mmxregs[i].inuse && (mmxregs[i].mode&MODE_WRITE) ) ++num;
 	}
@@ -731,7 +731,7 @@ int _getNumMMXwrite()
 
 u8 _hasFreeMMXreg()
 {
-	int i;
+	uint i;
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if (!mmxregs[i].inuse) return 1;
 	}
@@ -785,7 +785,7 @@ void _freeMMXreg(int mmxreg)
 
 void _moveMMXreg(int mmxreg)
 {
-	int i;
+	uint i;
 	if( !mmxregs[mmxreg].inuse ) return;
 
 	for (i=0; i<iREGCNT_MMX; i++) {
@@ -807,7 +807,7 @@ void _moveMMXreg(int mmxreg)
 // write all active regs
 void _flushMMXregs()
 {
-	int i;
+	uint i;
 
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].inuse == 0) continue;
@@ -832,7 +832,7 @@ void _flushMMXregs()
 
 void _freeMMXregs()
 {
-	int i;
+	uint i;
 	for (i=0; i<iREGCNT_MMX; i++) {
 		if (mmxregs[i].inuse == 0) continue;
 

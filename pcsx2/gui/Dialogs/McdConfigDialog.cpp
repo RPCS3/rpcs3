@@ -56,9 +56,9 @@ Panels::McdConfigPanel_Toggles::McdConfigPanel_Toggles(wxWindow *parent)
 	for( uint i=0; i<2; ++i )
 		*this += m_check_Multitap[i];	
 		
-	//*this += 4;
+	// *this += 4;
 
-	//*this += m_check_SavestateBackup;
+	// *this += m_check_SavestateBackup;
 */
 	*this += 4;
 	*this	+= new wxStaticLine( this )	| StdExpand();

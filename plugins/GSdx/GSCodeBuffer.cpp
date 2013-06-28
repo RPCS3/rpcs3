@@ -23,10 +23,10 @@
 #include "GSCodeBuffer.h"
 
 GSCodeBuffer::GSCodeBuffer(size_t blocksize)
-	: m_ptr(NULL)
-	, m_blocksize(blocksize)
+	: m_blocksize(blocksize)
 	, m_pos(0)
 	, m_reserved(0)
+	, m_ptr(NULL)
 {
 }
 

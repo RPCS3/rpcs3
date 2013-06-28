@@ -117,7 +117,7 @@ static bool pxTrySetFocus( wxWindow& parent, wxWindowID id )
 static bool pxTrySetFocus( wxWindow* parent, wxWindowID id )
 {
 	if( parent == NULL ) return false;
-	pxTrySetFocus( *parent, id );
+	return pxTrySetFocus( *parent, id );
 }
 
 void MsgButtons::SetBestFocus( wxWindow& dialog ) const

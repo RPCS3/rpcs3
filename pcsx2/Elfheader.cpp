@@ -141,12 +141,11 @@ static uint parseCommandLine( const wxString& filename )
 
 // All of ElfObjects functions.
 ElfObject::ElfObject(const wxString& srcfile, IsoFile isofile)
-	: filename( srcfile )
-
-	, data( wxULongLong(isofile.getLength()).GetLo(), L"ELF headers" )
-	, header( *(ELF_HEADER*)data.GetPtr() )
+	: data( wxULongLong(isofile.getLength()).GetLo(), L"ELF headers" )
 	, proghead( NULL )
 	, secthead( NULL )
+	, filename( srcfile )
+	, header( *(ELF_HEADER*)data.GetPtr() )
 {
 	isCdvd = true;
 	checkElfSize(data.GetSizeInBytes());
@@ -155,11 +154,11 @@ ElfObject::ElfObject(const wxString& srcfile, IsoFile isofile)
 }
 
 ElfObject::ElfObject( const wxString& srcfile, uint hdrsize )
-	: filename( srcfile )
-	, data( wxULongLong(hdrsize).GetLo(), L"ELF headers" )
-	, header( *(ELF_HEADER*)data.GetPtr() )
+	: data( wxULongLong(hdrsize).GetLo(), L"ELF headers" )
 	, proghead( NULL )
 	, secthead( NULL )
+	, filename( srcfile )
+	, header( *(ELF_HEADER*)data.GetPtr() )
 {
 	isCdvd = false;
 	checkElfSize(data.GetSizeInBytes());

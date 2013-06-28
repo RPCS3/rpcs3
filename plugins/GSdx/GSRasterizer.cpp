@@ -33,10 +33,10 @@
 int GSRasterizerData::s_counter = 0;
 
 GSRasterizer::GSRasterizer(IDrawScanline* ds, int id, int threads, GSPerfMon* perfmon)
-	: m_ds(ds)
+	: m_perfmon(perfmon)
+	, m_ds(ds)
 	, m_id(id)
 	, m_threads(threads)
-	, m_perfmon(perfmon)
 {
 	memset(&m_pixels, 0, sizeof(m_pixels));
 

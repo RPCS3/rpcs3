@@ -60,8 +60,8 @@ class BaseBlockArray {
 		pxAssert(blocks != NULL);
 	}
 public:
-	BaseBlockArray() : _Size(0),
-		_Reserved(0)
+	BaseBlockArray() : _Reserved(0),
+		_Size(0)
 	{
 	}
 
@@ -72,8 +72,8 @@ public:
 		}
 	}
 
-	BaseBlockArray (s32 size) : _Size(0),
-		_Reserved(0)
+	BaseBlockArray (s32 size) : _Reserved(0),
+		_Size(0)
 	{
 		if(size > 0) {
 			resize(size);

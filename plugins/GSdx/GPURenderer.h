@@ -182,9 +182,9 @@ protected:
 public:
 	GPURendererT(GSDevice* dev)
 		: GPURenderer(dev)
+		, m_vertices(NULL)
 		, m_count(0)
 		, m_maxcount(0)
-		, m_vertices(NULL)
 	{
 	}
 

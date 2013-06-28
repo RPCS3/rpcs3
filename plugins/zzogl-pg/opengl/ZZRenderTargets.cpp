@@ -107,7 +107,7 @@ float4 CRenderTarget::DefaultBitBltTex()
 ////////////////////
 // Render Targets //
 ////////////////////
-CRenderTarget::CRenderTarget() : ptex(0), ptexFeedback(0), psys(NULL)
+CRenderTarget::CRenderTarget() : psys(NULL), ptex(0), ptexFeedback(0)
 {
 	FUNCLOG
 	nUpdateTarg = 0;

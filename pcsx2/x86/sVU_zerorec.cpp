@@ -148,7 +148,7 @@ struct VuFunctionHeader
 		void* pmem; // all the mem
 	};
 
-	VuFunctionHeader() : pprogfunc(NULL), startpc(0xffffffff) {}
+	VuFunctionHeader() : startpc(0xffffffff), pprogfunc(NULL) {}
 	~VuFunctionHeader()
 	{
 		for (vector<RANGE>::iterator it = ranges.begin(); it != ranges.end(); ++it)

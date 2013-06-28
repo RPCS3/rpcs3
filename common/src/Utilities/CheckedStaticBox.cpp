@@ -18,8 +18,8 @@
 
 CheckedStaticBox::CheckedStaticBox( wxWindow* parent, int orientation, const wxString& title )
 	: wxPanelWithHelpers( parent, wxVERTICAL )
-	, ThisToggle( *new wxCheckBox( this, wxID_ANY, title, wxPoint( 8, 0 ) ) )
 	, ThisSizer( *new wxStaticBoxSizer( orientation, this ) )
+	, ThisToggle( *new wxCheckBox( this, wxID_ANY, title, wxPoint( 8, 0 ) ) )
 {
 	this += ThisToggle;
 	this += ThisSizer | pxExpand;

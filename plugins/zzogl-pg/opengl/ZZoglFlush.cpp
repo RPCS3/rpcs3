@@ -175,7 +175,7 @@ void ReloadEffects()
 {
 #ifdef ZEROGS_DEVBUILD
 
-	for (int i = 0; i < ArraySize(ppsTexture); ++i)
+	for (u32 i = 0; i < ArraySize(ppsTexture); ++i)
 	{
 		SAFE_RELEASE_PROG(ppsTexture[i].prog);
 	}

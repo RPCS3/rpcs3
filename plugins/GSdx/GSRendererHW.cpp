@@ -23,12 +23,12 @@
 #include "GSRendererHW.h"
 
 GSRendererHW::GSRendererHW(GSTextureCache* tc)
-	: m_tc(tc)
-	, m_width(1024)
+	: m_width(1024)
 	, m_height(1024)
 	, m_skip(0)
 	, m_reset(false)
 	, m_upscale_multiplier(1)
+	, m_tc(tc)
 {
 	m_upscale_multiplier = theApp.GetConfig("upscale_multiplier", 1);
 	m_userhacks_skipdraw = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_SkipDraw", 0) : 0;

@@ -107,6 +107,8 @@ public:
 		fd = hostfd;
 	}
 
+	virtual ~HostFile() {}
+
 	static __fi int translate_error(int err)
 	{
 		if (err >= 0)

@@ -37,13 +37,13 @@ GSState::GSState()
 	, m_mt(false)
 	, m_irq(NULL)
 	, m_path3hack(0)
+	, m_q(1.0f)
+	, m_texflush(true)
+	, m_vt(this)
 	, m_regs(NULL)
 	, m_crc(0)
 	, m_options(0)
 	, m_frameskip(0)
-	, m_vt(this)
-	, m_q(1.0f)
-	, m_texflush(true)
 {
 	m_nativeres = !!theApp.GetConfig("nativeres", 1);
 

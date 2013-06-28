@@ -26,11 +26,11 @@
 #endif
 
 GSRenderer::GSRenderer()
-	: m_wnd(NULL)
-	, m_dev(NULL)
-	, m_shader(0)
+	: m_shader(0)
 	, m_shift_key(false)
 	, m_control_key(false)
+	, m_wnd(NULL)
+	, m_dev(NULL)
 {
 	m_GStitleInfoBuffer[0] = 0;
 

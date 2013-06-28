@@ -816,9 +816,9 @@ GSTextureCache::Target* GSTextureCache::CreateTarget(const GIFRegTEX0& TEX0, int
 
 GSTextureCache::Surface::Surface(GSRenderer* r, uint8* temp)
 	: m_renderer(r)
-	, m_temp(temp)
 	, m_texture(NULL)
 	, m_age(0)
+	, m_temp(temp)
 {
 	m_TEX0.TBP0 = 0x3fff;
 }
@@ -850,7 +850,7 @@ GSTextureCache::Source::Source(GSRenderer* r, const GIFRegTEX0& TEX0, const GIFR
 
 	m_clut = (uint32*)_aligned_malloc(256 * sizeof(uint32), 32);
 
-	memset(m_clut, 0, sizeof(m_clut));
+	memset(m_clut, 0, 256*sizeof(uint32));
 
 	m_write.rect = (GSVector4i*)_aligned_malloc(3 * sizeof(GSVector4i), 32);
 	m_write.count = 0;

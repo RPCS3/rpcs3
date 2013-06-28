@@ -150,7 +150,7 @@ void MultipartFileReader::BeginRead(void* pBuffer, uint sector, uint count)
 {
 	u8* lBuffer = (u8*)pBuffer;
 
-	for(int i = GetFirstPart(sector); i < m_numparts; i++)
+	for(uint i = GetFirstPart(sector); i < m_numparts; i++)
 	{
 		uint num = min(count, m_parts[i].end - sector);
 
@@ -169,7 +169,7 @@ void MultipartFileReader::BeginRead(void* pBuffer, uint sector, uint count)
 int MultipartFileReader::FinishRead(void)
 {
 	int ret = 0;
-	for(int i=0;i<m_numparts;i++)
+	for(uint i=0;i<m_numparts;i++)
 	{
 		if(m_parts[i].isReading)
 		{
@@ -186,7 +186,7 @@ int MultipartFileReader::FinishRead(void)
 
 void MultipartFileReader::CancelRead(void)
 {
-	for(int i=0;i<m_numparts;i++)
+	for(uint i=0;i<m_numparts;i++)
 	{
 		if(m_parts[i].isReading)
 		{
@@ -198,7 +198,7 @@ void MultipartFileReader::CancelRead(void)
 
 void MultipartFileReader::Close(void)
 {
-	for(int i=0;i<m_numparts;i++)
+	for(uint i=0;i<m_numparts;i++)
 	{
 		if(m_parts[i].reader)
 		{
@@ -216,7 +216,7 @@ uint MultipartFileReader::GetBlockCount(void) const
 void MultipartFileReader::SetBlockSize(uint bytes)
 {
 	uint last_end = 0;
-	for(int i=0;i<m_numparts;i++) 
+	for(uint i=0;i<m_numparts;i++) 
 	{
 		m_parts[i].reader->SetBlockSize(bytes); 
 		uint count = m_parts[i].reader->GetBlockCount();
