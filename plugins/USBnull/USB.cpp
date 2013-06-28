@@ -25,6 +25,9 @@ const unsigned char version  = PS2E_USB_VERSION;
 const unsigned char revision = 0;
 const unsigned char build    = 7;    // increase that with each version
 
+#ifdef _MSC_VER
+#define snprintf sprintf_s
+#endif
 static char libraryName[256];
 
 USBcallback USBirq;

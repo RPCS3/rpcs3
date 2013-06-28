@@ -31,6 +31,9 @@
 #ifdef __LINUX__
 #include <unistd.h>
 #endif
+#ifdef _MSC_VER
+#define snprintf sprintf_s
+#endif
 
 PADconf* conf;
 char libraryName[256];

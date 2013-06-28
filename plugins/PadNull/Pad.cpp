@@ -25,6 +25,9 @@ const u8 version  = PS2E_PAD_VERSION;
 const u8 revision = 0;
 const u8 build    = 1;    // increase that with each version
 
+#ifdef _MSC_VER
+#define snprintf sprintf_s
+#endif
 static char libraryName[256];
 string s_strIniPath="inis";
 string s_strLogPath="logs";

@@ -22,6 +22,9 @@
 
 #include "svnrev.h"
 
+#ifdef _MSC_VER
+#define snprintf sprintf_s
+#endif
 // PCSX2 expects ASNI, not unicode, so this MUST always be char...
 static char libraryName[256];
 

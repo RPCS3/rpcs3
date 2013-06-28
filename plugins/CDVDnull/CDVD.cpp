@@ -18,6 +18,9 @@
 #include "CDVD.h"
 #include "svnrev.h"
 
+#ifdef _MSC_VER
+#define snprintf sprintf_s
+#endif
 static char libraryName[256];
 
 const unsigned char version = PS2E_CDVD_VERSION;
