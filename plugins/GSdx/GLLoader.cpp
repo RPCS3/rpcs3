@@ -193,7 +193,7 @@ namespace GLLoader {
 			found_GL_ARB_separate_shader_objects = !!theApp.GetConfig("override_GL_ARB_separate_shader_objects", -1);
 			fprintf(stderr, "Override GL_ARB_separate_shader_objects detection\n");
 		}
-		if (theApp.GetConfig("ovveride_GL_ARB_copy_image", -1) != -1) {
+		if (theApp.GetConfig("override_GL_ARB_copy_image", -1) != -1) {
 			// Same extension so override both
 			found_GL_ARB_copy_image = !!theApp.GetConfig("override_GL_ARB_copy_image", -1);
 			found_GL_NV_copy_image = !!theApp.GetConfig("override_GL_ARB_copy_image", -1);

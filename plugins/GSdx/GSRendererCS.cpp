@@ -38,7 +38,7 @@ GSRendererCS::GSRendererCS()
 
 GSRendererCS::~GSRendererCS()
 {
-	for(int i = 0; i < countof(m_texture); i++)
+	for(size_t i = 0; i < countof(m_texture); i++)
 	{
 		delete m_texture[i];
 	}
@@ -322,7 +322,7 @@ bool GSRendererCS::CreateDevice(GSDevice* dev_unk)
 
 void GSRendererCS::ResetDevice()
 {
-	for(int i = 0; i < countof(m_texture); i++)
+	for(size_t i = 0; i < countof(m_texture); i++)
 	{
 		delete m_texture[i];
 

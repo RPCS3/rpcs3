@@ -58,7 +58,7 @@ void GSPerfMon::Update()
 {
 	if(m_count > 0)
 	{
-		for(uint32 i = 0; i < countof(m_counters); i++)
+		for(size_t i = 0; i < countof(m_counters); i++)
 		{
 			m_stats[i] = m_counters[i] / m_count;
 		}

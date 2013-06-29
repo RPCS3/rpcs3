@@ -1177,7 +1177,7 @@ void GSTextureCache::SourceMap::Add(Source* s, const GIFRegTEX0& TEX0, const GSO
 		}
 	}
 
-	for(uint32 i = 0; i < countof(m_pages); i++)
+	for(size_t i = 0; i < countof(m_pages); i++)
 	{
 		if(uint32 p = m_pages[i])
 		{
@@ -1203,7 +1203,7 @@ void GSTextureCache::SourceMap::RemoveAll()
 
 	m_surfaces.clear();
 
-	for(uint32 i = 0; i < countof(m_map); i++)
+	for(size_t i = 0; i < countof(m_map); i++)
 	{
 		m_map[i].clear();
 	}
@@ -1213,7 +1213,7 @@ void GSTextureCache::SourceMap::RemoveAt(Source* s)
 {
 	m_surfaces.erase(s);
 
-	for(uint32 start = s->m_TEX0.TBP0 >> 5, end = s->m_target ? start : countof(m_map) - 1; start <= end; start++)
+	for(size_t start = s->m_TEX0.TBP0 >> 5, end = s->m_target ? start : countof(m_map) - 1; start <= end; start++)
 	{
 		list<Source*>& m = m_map[start];
 

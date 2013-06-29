@@ -136,7 +136,7 @@ static D3DFORMAT BestD3dFormat(IDirect3D9* d3d, UINT adapter, D3DDEVTYPE devtype
 
 	if(1 == msaaCount) msaaCount = 0;
 
-	for(int i = 0; i < countof(fmts); i++)
+	for(size_t i = 0; i < countof(fmts); i++)
 	{
 		if(TestDepthFormat(d3d, adapter, devtype, fmts[i]) && (!msaaCount || IsMsaaSupported(d3d, adapter, devtype, fmts[i], msaaCount, msaa_desc)))
 		{
@@ -288,7 +288,7 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	CompileShader(IDR_CONVERT_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
 
-	for(int i = 0; i < countof(m_convert.ps); i++)
+	for(size_t i = 0; i < countof(m_convert.ps); i++)
 	{
 		CompileShader(IDR_CONVERT_FX, format("ps_main%d", i), NULL, &m_convert.ps[i]);
 	}
@@ -315,7 +315,7 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	// merge
 
-	for(int i = 0; i < countof(m_merge.ps); i++)
+	for(size_t i = 0; i < countof(m_merge.ps); i++)
 	{
 		CompileShader(IDR_MERGE_FX, format("ps_main%d", i), NULL, &m_merge.ps[i]);
 	}
@@ -331,7 +331,7 @@ bool GSDevice9::Create(GSWnd* wnd)
 
 	// interlace
 
-	for(int i = 0; i < countof(m_interlace.ps); i++)
+	for(size_t i = 0; i < countof(m_interlace.ps); i++)
 	{
 		CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i), NULL, &m_interlace.ps[i]);
 	}
@@ -863,7 +863,7 @@ void GSDevice9::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, c
 		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(sr.z, sr.w)},
 	};
 
-	for(int i = 0; i < countof(vertices); i++)
+	for(size_t i = 0; i < countof(vertices); i++)
 	{
 		vertices[i].p.x -= 1.0f / ds.x;
 		vertices[i].p.y += 1.0f / ds.y;

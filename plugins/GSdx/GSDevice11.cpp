@@ -170,7 +170,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	CompileShader(IDR_CONVERT_FX, "vs_main", NULL, &m_convert.vs, il_convert, countof(il_convert), &m_convert.il);
 
-	for(int i = 0; i < countof(m_convert.ps); i++)
+	for(size_t i = 0; i < countof(m_convert.ps); i++)
 	{
 		CompileShader(IDR_CONVERT_FX, format("ps_main%d", i).c_str(), NULL, &m_convert.ps[i]);
 	}
@@ -198,7 +198,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	hr = m_dev->CreateBuffer(&bd, NULL, &m_merge.cb);
 
-	for(int i = 0; i < countof(m_merge.ps); i++)
+	for(size_t i = 0; i < countof(m_merge.ps); i++)
 	{
 		CompileShader(IDR_MERGE_FX, format("ps_main%d", i).c_str(), NULL, &m_merge.ps[i]);
 	}
@@ -226,7 +226,7 @@ bool GSDevice11::Create(GSWnd* wnd)
 
 	hr = m_dev->CreateBuffer(&bd, NULL, &m_interlace.cb);
 
-	for(int i = 0; i < countof(m_interlace.ps); i++)
+	for(size_t i = 0; i < countof(m_interlace.ps); i++)
 	{
 		CompileShader(IDR_INTERLACE_FX, format("ps_main%d", i).c_str(), NULL, &m_interlace.ps[i]);
 	}
@@ -1003,7 +1003,7 @@ void GSDevice11::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 	PSSetShaderResource(0, sr0);
 	PSSetShaderResource(1, sr1);
 
-	for(int i = 2; i < countof(m_state.ps_srv); i++)
+	for(size_t i = 2; i < countof(m_state.ps_srv); i++)
 	{
 		PSSetShaderResource(i, NULL);
 	}

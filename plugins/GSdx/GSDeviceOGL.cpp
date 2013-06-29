@@ -225,7 +225,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// convert
 	// ****************************************************************
 	CompileShaderFromSource("convert.glsl", "vs_main", GL_VERTEX_SHADER, &m_convert.vs, convert_glsl);
-	for(uint32 i = 0; i < countof(m_convert.ps); i++)
+	for(size_t i = 0; i < countof(m_convert.ps); i++)
 		CompileShaderFromSource("convert.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_convert.ps[i], convert_glsl);
 
 	// Note the following object are initialized to 0 so disabled.
@@ -258,7 +258,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	m_merge_obj.cb = new GSUniformBufferOGL(g_merge_cb_index, sizeof(MergeConstantBuffer));
 
-	for(uint32 i = 0; i < countof(m_merge_obj.ps); i++)
+	for(size_t i = 0; i < countof(m_merge_obj.ps); i++)
 		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge_obj.ps[i], merge_glsl);
 
 	m_merge_obj.bs = new GSBlendStateOGL();
@@ -270,7 +270,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	m_interlace.cb = new GSUniformBufferOGL(g_interlace_cb_index, sizeof(InterlaceConstantBuffer));
 
-	for(uint32 i = 0; i < countof(m_interlace.ps); i++)
+	for(size_t i = 0; i < countof(m_interlace.ps); i++)
 		CompileShaderFromSource("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_interlace.ps[i], interlace_glsl);
 	// ****************************************************************
 	// Shade boost

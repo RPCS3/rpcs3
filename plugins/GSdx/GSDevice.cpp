@@ -226,7 +226,7 @@ void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVec
 	{
 		GSTexture* tex[2] = {NULL, NULL};
 
-		for(uint32 i = 0; i < countof(tex); i++)
+		for(size_t i = 0; i < countof(tex); i++)
 		{
 			if(st[i] != NULL)
 			{
@@ -236,7 +236,7 @@ void GSDevice::Merge(GSTexture* st[2], GSVector4* sr, GSVector4* dr, const GSVec
 
 		DoMerge(tex, sr, m_merge, dr, slbg, mmod, c);
 
-		for(uint32 i = 0; i < countof(tex); i++)
+		for(size_t i = 0; i < countof(tex); i++)
 		{
 			if(tex[i] != st[i])
 			{

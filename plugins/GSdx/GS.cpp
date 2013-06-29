@@ -1219,7 +1219,7 @@ EXPORT_C GSBenchmark(HWND hwnd, HINSTANCE hinst, LPSTR lpszCmdLine, int nCmdShow
 
 			fprintf(file, "%d x %d\n\n", w, h);
 
-			for(int i = 0; i < countof(s_format); i++)
+			for(size_t i = 0; i < countof(s_format); i++)
 			{
 				const GSLocalMemory::psm_t& psm = GSLocalMemory::m_psm[s_format[i].psm];
 

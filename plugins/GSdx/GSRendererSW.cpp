@@ -64,7 +64,7 @@ GSRendererSW::~GSRendererSW()
 {
 	delete m_tc;
 
-	for(uint32 i = 0; i < countof(m_texture); i++)
+	for(size_t i = 0; i < countof(m_texture); i++)
 	{
 		delete m_texture[i];
 	}
@@ -196,7 +196,7 @@ void GSRendererSW::VSync(int field)
 	/*
 	int draw[8], sum = 0;
 
-	for(int i = 0; i < countof(draw); i++)
+	for(size_t i = 0; i < countof(draw); i++)
 	{
 		draw[i] = m_perfmon.CPU(GSPerfMon::WorkerDraw0 + i);
 		sum += draw[i];
@@ -219,7 +219,7 @@ void GSRendererSW::VSync(int field)
 
 void GSRendererSW::ResetDevice()
 {
-	for(uint32 i = 0; i < countof(m_texture); i++)
+	for(size_t i = 0; i < countof(m_texture); i++)
 	{
 		delete m_texture[i];
 
