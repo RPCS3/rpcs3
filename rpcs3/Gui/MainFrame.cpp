@@ -4,7 +4,6 @@
 
 #include "Emu/System.h"
 #include "Ini.h"
-#include "svnrev.h"
 #include "Emu/GS/sysutil_video.h"
 #include <wx/dynlib.h>
 
@@ -35,7 +34,7 @@ MainFrame::MainFrame()
 	: FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(280, 180))
 	, m_aui_mgr(this)
 {
-	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_ " r%d" SVN_MOD " (" SVN_DATE ")", SVN_REV));
+	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
 	wxMenuBar& menubar(*new wxMenuBar());
 
 	wxMenu& menu_boot(*new wxMenu());

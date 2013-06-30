@@ -70,11 +70,13 @@
     <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>..\libs\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <TargetName>$(ProjectName)-$(PlatformShortName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;..\;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>..\libs\$(Configuration)\;$(LibraryPath)</LibraryPath>
+    <TargetName>$(ProjectName)-$(PlatformShortName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -83,6 +85,7 @@
     <LibraryPath>..\libs\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
     <RunCodeAnalysis>false</RunCodeAnalysis>
+    <TargetName>$(ProjectName)-$(PlatformShortName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -91,6 +94,7 @@
     <LibraryPath>..\libs\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
     <RunCodeAnalysis>false</RunCodeAnalysis>
+    <TargetName>$(ProjectName)-$(PlatformShortName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -105,7 +109,8 @@
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>SubWCRev $(SolutionDir)\rpcs3 $(SolutionDir)\svnrev.tmpl $(SolutionDir)\rpcs3\svnrev.h</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -121,7 +126,8 @@
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>SubWCRev $(SolutionDir)\rpcs3 $(SolutionDir)\svnrev.tmpl $(SolutionDir)\rpcs3\svnrev.h</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -151,7 +157,8 @@
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>SubWCRev $(SolutionDir)\rpcs3 $(SolutionDir)\svnrev.tmpl $(SolutionDir)\rpcs3\svnrev.h</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -181,7 +188,8 @@
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>SubWCRev $(SolutionDir)\rpcs3 $(SolutionDir)\svnrev.tmpl $(SolutionDir)\rpcs3\svnrev.h</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
