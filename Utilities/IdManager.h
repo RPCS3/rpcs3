@@ -128,7 +128,7 @@ public:
 		id.m_used = false;
 		id.m_attr = 0;
 		id.m_name.Clear();
-		if(free_data) free(id.m_data);
+		if(free_data) delete id.m_data;
 		id.m_data = NULL;
 		if(IDToNum(_id) == IDs.GetCount()-1) Cleanup();
 		return true;

@@ -214,9 +214,8 @@ public:
 	}
 };
 
-class GameViewer : public wxPanel
+class GameViewer : public wxListView
 {
-	wxListView* m_game_list;
 	wxString m_path;
 	wxArrayString m_games;
 	ArrayF<GameInfo> m_game_data;

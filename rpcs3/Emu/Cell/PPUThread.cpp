@@ -4,11 +4,20 @@
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/PPUDisAsm.h"
 
-#include "Emu/SysCalls/SysCalls.h"
-
 extern gcmInfo gcm_info;
 
-PPUThread::PPUThread() : PPCThread(PPC_THREAD_PPU)
+PPUThread& GetCurrentPPUThread()
+{
+	PPCThread* thread = GetCurrentPPCThread();
+
+	if(!thread || thread->IsSPU()) throw wxString("GetCurrentPPUThread: bad thread");
+
+	return *(PPUThread*)thread;
+}
+
+PPUThread::PPUThread() 
+	: PPCThread(PPC_THREAD_PPU)
+	, SysCalls(*this)
 {
 	Reset();
 }
@@ -26,62 +35,19 @@ void PPUThread::DoReset()
 	memset(GPR,  0, sizeof(GPR));
 	memset(SPRG, 0, sizeof(SPRG));
 	
-	CR.CR	= 0;
-	LR		= 0;
-	CTR		= 0;
-	USPRG	= 0;
-	TB		= 0;
-	XER.XER	= 0;
+	CR.CR		= 0;
+	LR			= 0;
+	CTR			= 0;
+	USPRG0		= 0;
+	TB			= 0;
+	XER.XER		= 0;
 	FPSCR.FPSCR	= 0;
+	VSCR.VSCR	= 0;
 
 	cycle = 0;
 
 	reserve = false;
 	reserve_addr = 0;
-}
-
-void PPUThread::SetBranch(const u64 pc)
-{
-	u64 fid, waddr;
-	if(Memory.MemFlags.IsFlag(pc, waddr, fid))
-	{
-		GPR[3] = SysCallsManager.DoFunc(fid, *this);
-
-		if((s64)GPR[3] < 0 && fid != 0x72a577ce && fid != 0x8461e528) ConLog.Write("Func[0x%llx] done with code [0x%llx]! #pc: 0x%llx", fid, GPR[3], PC);
-#ifdef HLE_CALL_LOG
-		else ConLog.Warning("Func[0xll%x] done with code [0x%llx]! #pc: 0x%llx", fid, GPR[3], PC);
-#endif
-		//ConLog.Warning("Func waddr: 0x%llx", waddr);
-		const u64 addr = Emu.GetTLSAddr();
-		Memory.Write32(waddr, addr);
-		Memory.Write32(addr, PC + 4);
-		if(fid == 0x744680a2) Memory.Write32(addr+4, GPR[3]);
-		//Memory.Write32(addr+4, Emu.GetTLSMemsz());
-	}
-	else if(pc == Emu.GetRSXCallback())
-	{
-		//ConLog.Warning("gcm: callback(context=0x%llx, count=0x%llx) #pc: 0x%llx", GPR[3], GPR[4], PC);
-
-		CellGcmContextData& ctx = *(CellGcmContextData*)Memory.GetMemFromAddr(GPR[3]);
-		CellGcmControl& ctrl = *(CellGcmControl*)Memory.GetMemFromAddr(gcm_info.control_addr);
-
-		while(ctrl.put != ctrl.get) Sleep(1);
-
-		const u32 reserve = GPR[4];
-
-		ctx.current = re(re(ctx.begin) + reserve);
-
-		Emu.GetGSManager().GetRender().Pause();
-		ctrl.put = ctrl.get = re(reserve);
-		Emu.GetGSManager().GetRender().Resume();
-
-		GPR[3] = 0;
-
-		PPCThread::SetBranch(PC + 4);
-		return;
-	}
-
-	PPCThread::SetBranch(pc);
 }
 
 void PPUThread::AddArgv(const wxString& arg)
@@ -97,6 +63,7 @@ void PPUThread::InitRegs()
 	const u32 entry = Memory.Read32(PC);
 	const u32 rtoc = Memory.Read32(PC + 4);
 
+	ConLog.Write("entry = 0x%x", entry);
 	ConLog.Write("rtoc = 0x%x", rtoc);
 
 	SetPc(entry);
@@ -123,6 +90,7 @@ void PPUThread::InitRegs()
 		return;
 	}
 
+	/*
 	const s32 tls_size = Emu.GetTLSFilesz() * thread_num;
 
 	if(tls_size >= Emu.GetTLSMemsz())
@@ -131,6 +99,7 @@ void PPUThread::InitRegs()
 		Emu.Pause();
 		return;
 	}
+	*/
 
 	stack_point = Memory.AlignAddr(stack_point, 0x200) - 0x200;
 
@@ -154,13 +123,14 @@ void PPUThread::InitRegs()
 	//GPR[10] = 0x131700;
 	GPR[11] = 0x80;
 	GPR[12] = Emu.GetMallocPageSize();
-	GPR[13] = 0x10007060;
+	GPR[13] = Memory.MainMem.Alloc(0x10000) + 0x7060;
 	GPR[28] = GPR[4];
 	GPR[29] = GPR[3];
 	GPR[31] = GPR[5];
 
 	CTR = PC;
 	CR.CR = 0x22000082;
+	VSCR.NJ = 1;
 }
 
 u64 PPUThread::GetFreeStackSize() const
@@ -193,8 +163,11 @@ void PPUThread::DoPause()
 
 void PPUThread::DoStop()
 {
-	delete m_dec;
-	m_dec = 0;
+	if(m_dec)
+	{
+		delete m_dec;
+		m_dec = nullptr;
+	}
 }
 
 bool dump_enable = false;
@@ -220,36 +193,31 @@ void PPUThread::DoCode(const s32 code)
 	m_dec->Decode(code);
 }
 
-bool FPRdouble::IsINF(double d)
+bool FPRdouble::IsINF(PPCdouble d)
 {
 	return wxFinite(d) ? 1 : 0;
 }
 
-bool FPRdouble::IsNaN(double d)
+bool FPRdouble::IsNaN(PPCdouble d)
 {
 	return wxIsNaN(d) ? 1 : 0;
 }
 
-bool FPRdouble::IsQNaN(double d)
+bool FPRdouble::IsQNaN(PPCdouble d)
 {
-	return
-		((*(u64*)&d & DOUBLE_EXP) == DOUBLE_EXP) &&
-		((*(u64*)&d & 0x0007fffffffffffULL) == DOUBLE_ZERO) &&
-		((*(u64*)&d & 0x000800000000000ULL) == 0x000800000000000ULL);
+	return d.GetType() == FPR_QNAN;
 }
 
-bool FPRdouble::IsSNaN(double d)
+bool FPRdouble::IsSNaN(PPCdouble d)
 {
-	return
-		((*(u64*)&d & DOUBLE_EXP) == DOUBLE_EXP) &&
-		((*(u64*)&d & DOUBLE_FRAC) != DOUBLE_ZERO) &&
-		((*(u64*)&d & 0x0008000000000000ULL) == DOUBLE_ZERO);
+	return d.GetType() == FPR_SNAN;
 }
 
-int FPRdouble::Cmp(double a, double b)
+int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 {
 	if(a < b) return CR_LT;
 	if(a > b) return CR_GT;
 	if(a == b) return CR_EQ;
+
 	return CR_SO;
 }

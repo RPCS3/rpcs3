@@ -15,6 +15,9 @@ GSManager::GSManager() : m_render(NULL)
 void GSManager::Init()
 {
 	if(m_render) return;
+
+	m_info.Init();
+
 	switch(Ini.GSRenderMode.GetValue())
 	{
 	default:
@@ -29,9 +32,8 @@ void GSManager::Close()
 	if(m_render)
 	{
 		m_render->Close();
-		//free(m_render);
+		m_render = nullptr;
 	}
-	m_render = NULL;
 }
 
 u8 GSManager::GetState()

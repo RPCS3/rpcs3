@@ -6,12 +6,10 @@
 #include "Emu/Cell/SPUDisAsm.h"
 
 class InterpreterDisAsmFrame
-	: public FrameBase
+	: public wxPanel
 	, public ThreadBase
 {
 	wxListView* m_list;
-	wxPanel& m_main_panel;
-	PPCThread& CPU;
 	DisAsm* disasm;
 	Decoder* decoder;
 	u64 PC;
@@ -22,20 +20,24 @@ class InterpreterDisAsmFrame
 	wxButton* m_btn_step;
 	wxButton* m_btn_run;
 	wxButton* m_btn_pause;
-	volatile bool m_exec;
+	AppConnector m_app_connector;
 
 public:
-	InterpreterDisAsmFrame(const wxString& title, PPCThread* cpu);
+	PPCThread& CPU;
+
+public:
+	InterpreterDisAsmFrame(wxWindow* parent, PPCThread* cpu);
 	~InterpreterDisAsmFrame();
 
 	void Save(const wxString& path);
 	void Load(const wxString& path);
 
-	virtual void OnKeyDown(wxKeyEvent& event);
+	void OnKeyDown(wxKeyEvent& event);
 	void DoUpdate();
 	void ShowAddr(const u64 addr);
 	void WriteRegs();
 
+	void HandleCommand(wxCommandEvent& event);
 	void OnUpdate(wxCommandEvent& event);
 	void Show_Val(wxCommandEvent& event);
 	void Show_PC(wxCommandEvent& event);
@@ -44,7 +46,6 @@ public:
 	void DoStep(wxCommandEvent& event);
 	void DClick(wxListEvent& event);
 
-	void OnResize(wxSizeEvent& event);
 	void MouseWheel(wxMouseEvent& event);
 	bool IsBreakPoint(u64 pc);
 	void AddBreakPoint(u64 pc);

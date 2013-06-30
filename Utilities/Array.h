@@ -23,6 +23,7 @@ public:
 		const u32 to = from + count;
 		if(to > GetCount()) return false;
 		
+		for(u32 i=0; i<count; ++i) m_array[from + i].~T();
 		memmove(m_array + from, m_array + to, (m_count-to) * sizeof(T));
 		m_count -= count;
 		
@@ -44,55 +45,69 @@ public:
 		return true;
 	}
 
-	bool Insert(const u32 pos, T* data)
-	{
-		if(!InsertRoom(pos, 1)) return false;
-		
-		memmove(m_array + pos, data, sizeof(T));
-		
-		return true;
-	}
-
-	bool Insert(const u32 pos, T& data)
-	{
-		return Insert(pos, &data);
-	}
-
-	bool InsertCpy(const u32 pos, const T* data)
+	inline bool Move(const u32 pos, T* data)
 	{
 		if(!InsertRoom(pos, 1)) return false;
 		
 		memcpy(m_array + pos, data, sizeof(T));
-
+		free(data);
+		
 		return true;
 	}
 
-	bool InsertCpy(const u32 pos, const T& data)
-	{
-		return InsertCpy(pos, &data);
-	}
-
-	inline u32 Add(T* data)
-	{
-		_InsertRoomEnd(1);
-
-		memmove(m_array + GetCount() - 1, data, sizeof(T));
-		
-		return m_count - 1;
-	}
-
-	inline u32 Add(T& data)
-	{
-		return Add(&data);
-	}
-
-	inline u32 AddCpy(const T* data)
+	inline u32 Move(T* data)
 	{
 		_InsertRoomEnd(1);
 
 		memcpy(m_array + GetCount() - 1, data, sizeof(T));
+		free(data);
 
 		return m_count - 1;
+	}
+
+	inline bool Add(const u32 pos, T*& data)
+	{
+		if(!InsertRoom(pos, 1)) return false;
+		
+		memcpy(m_array + pos, data, sizeof(T));
+		free(data);
+		data = m_array + pos;
+		
+		return true;
+	}
+
+	inline u32 Add(T*& data)
+	{
+		_InsertRoomEnd(1);
+
+		memcpy(m_array + GetCount() - 1, data, sizeof(T));
+		free(data);
+		data = m_array + GetCount() - 1;
+		
+		return m_count - 1;
+	}
+
+	inline bool AddCpy(const u32 pos, const T* data, u64 count = 1)
+	{
+		if(!InsertRoom(pos, count)) return false;
+		
+		memcpy(m_array + pos, data, sizeof(T) * count);
+
+		return true;
+	}
+
+	inline bool AddCpy(const u32 pos, const T& data)
+	{
+		return AddCpy(pos, &data);
+	}
+
+	inline u32 AddCpy(const T* data, u64 count = 1)
+	{
+		_InsertRoomEnd(count);
+
+		memcpy(m_array + m_count - count, data, sizeof(T)*count);
+
+		return m_count - count;
 	}
 
 	inline u32 AddCpy(const T& data)
@@ -102,7 +117,9 @@ public:
 
 	inline void Clear()
 	{
+		u32 count = m_count;
 		m_count = 0;
+		for(u32 i=0; i<count; ++i) m_array[i].~T();
 		safe_delete(m_array);
 	}
 
@@ -144,8 +161,20 @@ public:
 		AppendFrom(src);
 	}
 
+	inline T* GetPtr() { return m_array; }
+
 	T& operator[](u32 num) const { return m_array[num]; }
 	
+	T* operator + (u32 right) const
+	{
+		return m_array + right;
+	}
+
+	T* operator ->()
+	{
+		return m_array;
+	}
+
 protected:	
 	void _InsertRoomEnd(const u32 size)
 	{
@@ -180,7 +209,6 @@ template<typename T> struct Stack : public Array<T>
 	}
 };
 
-
 template<typename T> class ArrayF
 {
 	u32 m_count;
@@ -193,7 +221,7 @@ public:
 	{
 	}
 
-	~ArrayF()
+	virtual ~ArrayF()
 	{
 		Clear();
 	}
@@ -262,6 +290,53 @@ public:
 		return *m_array[num];
 	}
 
+	T** operator + (u32 right) const
+	{
+		return m_array + right;
+	}
+
+	T* operator ->()
+	{
+		return *m_array;
+	}
+
+	inline T** GetPtr()
+	{
+		return m_array;
+	}
+
 	inline u32 GetCount() const { return m_count; }
 	T& operator[](u32 num) const { return *m_array[num]; }
+};
+
+template<typename T> struct ScopedPtr
+{
+private:
+	T* m_ptr;
+
+public:
+	ScopedPtr() : m_ptr(nullptr)
+	{
+	}
+
+	ScopedPtr(T* ptr) : m_ptr(ptr)
+	{
+	}
+
+	~ScopedPtr()
+	{
+		Swap(nullptr);
+	}
+
+	operator T*() { return m_ptr; }
+	operator const T*() const { return m_ptr; }
+
+	T* operator ->() { return m_ptr; }
+	const T* operator ->() const { return m_ptr; }
+
+	void Swap(T* ptr)
+	{
+		delete m_ptr;
+		m_ptr = ptr;
+	}
 };

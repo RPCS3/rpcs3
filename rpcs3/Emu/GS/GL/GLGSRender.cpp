@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
-#include "ProgramBuffer.h"
 
 #define CMD_DEBUG 0
+#define DUMP_VERTEX_DATA 1
 
 #if	CMD_DEBUG
 	#define CMD_LOG ConLog.Write
@@ -11,19 +11,6 @@
 #endif
 
 gcmBuffer gcmBuffers[2];
-
-static VBO m_vbo;
-static u32 m_vao_id;
-
-static ShaderProgram m_shader_prog;
-static VertexData m_vertex_data[16];
-static Array<u8> m_vdata;
-static VertexProgram m_vertex_progs[16];
-static VertexProgram* m_cur_vertex_prog;
-static Program m_program;
-static int m_fp_buf_num = -1;
-static int m_vp_buf_num = -1;
-static ProgramBuffer m_prog_buffer;
 
 void checkForGlError(const char* situation)
 {
@@ -35,6 +22,10 @@ void checkForGlError(const char* situation)
 	}
 }
 
+#if 0
+	#define checkForGlError(x) /*x*/
+#endif
+
 GLGSFrame::GLGSFrame()
 	: GSFrame(NULL, "GSFrame[OpenGL]")
 	, m_frames(0)
@@ -42,12 +33,7 @@ GLGSFrame::GLGSFrame()
 	canvas = new wxGLCanvas(this, wxID_ANY, NULL);
 	canvas->SetSize(GetClientSize());
 
-	Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(GLGSFrame::OnLeftDclick));
-
-	//Flip();
-
-	//Connect(canvas->GetId(), wxEVT_LEFT_DCLICK, wxMouseEventHandler(GLGSFrame::OnLeftDclick));
-	//Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(GLGSFrame::OnLeftDclick));
+	canvas->Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(GSFrame::OnLeftDclick), (wxObject*)0, this);
 }
 
 void GLGSFrame::Flip()
@@ -75,6 +61,7 @@ void GLGSFrame::OnSize(wxSizeEvent& event)
 
 void GLGSFrame::SetViewport(int x, int y, u32 w, u32 h)
 {
+	/*
 	//ConLog.Warning("SetViewport(x=%d, y=%d, w=%d, h=%d)", x, y, w, h);
 
 	const wxSize client = GetClientSize();
@@ -84,15 +71,17 @@ void GLGSFrame::SetViewport(int x, int y, u32 w, u32 h)
 	const int vy = (client.GetY() - viewport.GetY()) / 2;
 
 	glViewport(vx + x, vy + y, viewport.GetWidth(), viewport.GetHeight());
+	*/
 }
 
 GLGSRender::GLGSRender()
 	: m_frame(NULL)
-	, m_draw(false)
 	, m_rsx_thread(NULL)
+	, m_fp_buf_num(-1)
+	, m_vp_buf_num(-1)
 {
+	m_draw = false;
 	m_frame = new GLGSFrame();
-	m_vao_id = 0;	
 }
 
 GLGSRender::~GLGSRender()
@@ -103,40 +92,25 @@ GLGSRender::~GLGSRender()
 
 void GLGSRender::Enable(bool enable, const u32 cap)
 {
-	if(enable) glEnable(cap);
-	else glDisable(cap);
+	if(enable)
+	{
+		glEnable(cap);
+	}
+	else
+	{
+		glDisable(cap);
+	}
 }
 
 GLRSXThread::GLRSXThread(wxWindow* parent)
-	: wxThread(wxTHREAD_JOINABLE)
+	: ThreadBase(true, "OpenGL Thread")
 	, m_parent(parent)
-	, m_paused(false)
 {
-}
-
-void GLRSXThread::OnExit()
-{
-	call_stack.Clear();
-	m_paused = true;
-}
-
-void GLRSXThread::Start()
-{
-	Create();
-	Run();
 }
 
 extern CellGcmContextData current_context;
 
-enum Method
-{
-	CELL_GCM_METHOD_FLAG_NON_INCREMENT	= 0x40000000,
-	CELL_GCM_METHOD_FLAG_JUMP			= 0x20000000,
-	CELL_GCM_METHOD_FLAG_CALL			= 0x00000002,
-	CELL_GCM_METHOD_FLAG_RETURN			= 0x00020000,
-};
-
-wxThread::ExitCode GLRSXThread::Entry()
+void GLRSXThread::Task()
 {
 	ConLog.Write("GL RSX thread entry");
 
@@ -146,19 +120,50 @@ wxThread::ExitCode GLRSXThread::Entry()
 	InitProcTable();
 
 	glEnable(GL_TEXTURE_2D);
+	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
 
-	m_vbo.Create();
-	if(!m_vao_id) glGenVertexArrays(1, &m_vao_id);
+	bool draw = true;
+	u32 drawed = 0;
+	u32 skipped = 0;
+
+	p.Init();
 
 	while(!TestDestroy() && p.m_frame && !p.m_frame->IsBeingDeleted())
 	{
-		if(m_paused || p.m_ctrl->get == p.m_ctrl->put || !Emu.IsRunned())
+		wxCriticalSectionLocker lock(p.m_cs_main);
+
+		if(p.m_ctrl->get == p.m_ctrl->put || !Emu.IsRunned())
 		{
+			SemaphorePostAndWait(p.m_sem_flush);
+
 			if(p.m_draw)
 			{
 				p.m_draw = false;
-				p.m_frame->Flip();
+
+				if(p.m_skip_frames)
+				{
+					if(!draw)
+					{
+						if(skipped++ >= p.m_skip_frames)
+						{
+							skipped = 0;
+							draw = true;
+						}
+					}
+					else
+					{
+						if(drawed++ >= p.m_draw_frames)
+						{
+							drawed = 0;
+							draw = false;
+						}
+					}
+				}
+				
+				if(draw) p.m_frame->Flip();
+
 				p.m_flip_status = 0;
+				if(SemaphorePostAndWait(p.m_sem_flip)) continue;
 			}
 
 			Sleep(1);
@@ -171,21 +176,24 @@ wxThread::ExitCode GLRSXThread::Entry()
 
 		if(cmd & CELL_GCM_METHOD_FLAG_JUMP)
 		{
-			p.m_ctrl->get = re32(cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT));
-			ConLog.Warning("rsx jump!");
+			u32 addr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);
+			p.m_ctrl->get = re32(addr);
+			ConLog.Warning("rsx jump(0x%x)", addr);
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_CALL)
 		{
 			call_stack.Push(get + 4);
-			p.m_ctrl->get = re32(cmd & ~CELL_GCM_METHOD_FLAG_CALL);
-			ConLog.Warning("rsx call!");
+			u32 addr = cmd & ~CELL_GCM_METHOD_FLAG_CALL;
+			p.m_ctrl->get = re32(addr);
+			ConLog.Warning("rsx call(0x%x)", addr);
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_RETURN)
 		{
-			p.m_ctrl->get = re32(call_stack.Pop());
-			ConLog.Warning("rsx return!");
+			u32 addr = call_stack.Pop();
+			p.m_ctrl->get = re32(addr);
+			ConLog.Warning("rsx return(0x%x)", addr);
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
@@ -200,39 +208,36 @@ wxThread::ExitCode GLRSXThread::Entry()
 			continue;
 		}
 
-		p.DoCmd(cmd, cmd & 0x3ffff, mem32_t(p.m_ioAddress + get + 4), count);
-		p.m_ctrl->get = re32(get + (count + 1) * 4);
-		memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
+		mem32_t args(p.m_ioAddress + get + 4);
+
+		if(!draw)
+		{
+			if((cmd & 0x3ffff) == NV406E_SET_REFERENCE)
+			{
+				p.m_ctrl->ref = re32(args[0]);
+			}
+		}
+		else
+		{
+			p.DoCmd(cmd, cmd & 0x3ffff, args, count);
+		}
+
+		re(p.m_ctrl->get, get + (count + 1) * 4);
+		//memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
 	}
 
 	ConLog.Write("GL RSX thread exit...");
 
 	call_stack.Clear();
-	m_vbo.Delete();
-	m_cur_vertex_prog = 0;
-	m_program.Delete();
-	m_shader_prog.Delete();
-
-	for(u32 i=0; i<16; ++i) m_vertex_progs[i].Delete();
-
-	m_prog_buffer.Clear();
-
-	return (ExitCode)0;
-}
-
-void GLGSRender::Pause()
-{
-	if(m_rsx_thread) m_rsx_thread->m_paused = true;
-}
-
-void GLGSRender::Resume()
-{
-	if(m_rsx_thread) m_rsx_thread->m_paused = false;
+	p.CloseOpenGL();
 }
 
 void GLGSRender::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
 {
 	if(m_frame->IsShown()) return;
+
+	m_draw_frames = 1;
+	m_skip_frames = 0;
 
 	m_frame->Show();
 
@@ -253,13 +258,17 @@ void GLGSRender::Draw()
 
 void GLGSRender::Close()
 {
-	if(m_rsx_thread) m_rsx_thread->Delete();
+	if(m_rsx_thread)
+	{
+		m_rsx_thread->Stop();
+		delete m_rsx_thread;
+	}
 
 	if(m_frame->IsShown()) m_frame->Hide();
 	m_ctrl = NULL;
 }
 
-void EnableVertexData()
+void GLGSRender::EnableVertexData(bool indexed_draw)
 {
 	Array<u32> offset_list;
 	u32 cur_offset = 0;
@@ -276,90 +285,80 @@ void EnableVertexData()
 		memcpy(&m_vdata[pos], &m_vertex_data[i].data[0], m_vertex_data[i].data.GetCount());
 	}
 
-	glBindVertexArray(m_vao_id);
-	checkForGlError("glBindVertexArray");
-	m_vbo.SetData(&m_vdata[0], m_vdata.GetCount());
-	checkForGlError("m_vbo.SetData");
+	m_vao.Create();
+	m_vao.Bind();
+	checkForGlError("initializing vao");
 
-#if	CMD_DEBUG
+	m_vbo.Create(indexed_draw ? 2 : 1);
+	m_vbo.Bind(0);
+	m_vbo.SetData(&m_vdata[0], m_vdata.GetCount());
+
+	if(indexed_draw)
+	{
+		m_vbo.Bind(GL_ELEMENT_ARRAY_BUFFER, 1);
+		m_vbo.SetData(GL_ELEMENT_ARRAY_BUFFER, &m_indexed_array.m_data[0], m_indexed_array.m_data.GetCount());
+	}
+
+	checkForGlError("initializing vbo");
+
+#if	DUMP_VERTEX_DATA
 	wxFile dump("VertexDataArray.dump", wxFile::write);
 #endif
 
 	for(u32 i=0; i<16; ++i)
 	{
 		if(!m_vertex_data[i].IsEnabled()) continue;
-#if	CMD_DEBUG
-		dump.Write(wxString::Format("VertexData[%d]:\n", i));
-#endif
-		u32 gltype;
-		bool normalized = false;
 
+#if	DUMP_VERTEX_DATA
+		dump.Write(wxString::Format("VertexData[%d]:\n", i));
 		switch(m_vertex_data[i].type)
 		{
 		case 1:
-			gltype = GL_SHORT; normalized = true;
-#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=2)
 			{
 				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
 				if(!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-#endif
 		break;
 
 		case 2:
-			gltype = GL_FLOAT;
-#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=4)
 			{
 				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
 				if(!(((j+4) / 4) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-#endif
 		break;
 
 		case 3:
-			gltype = GL_HALF_FLOAT;
-#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=2)
 			{
 				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
 				if(!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-#endif
 		break;
 
 		case 4:
-			gltype = GL_UNSIGNED_BYTE; normalized = true;
-#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); ++j)
 			{
 				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
 				if(!((j+1) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-#endif
 		break;
 
 		case 5:
-			gltype = GL_SHORT;
-#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=2)
 			{
 				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
 				if(!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-#endif
 		break;
 
 		case 7:
-			gltype = GL_UNSIGNED_BYTE;
-#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); ++j)
 			{
 				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
 				if(!((j+1) % m_vertex_data[i].size)) dump.Write("\n");
 			}
-#endif
 		break;
 
 		default:
@@ -367,17 +366,43 @@ void EnableVertexData()
 		return;
 		}
 
-		glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, (void*)offset_list[i]);
-		checkForGlError("glVertexAttribPointer");
-		glEnableVertexAttribArray(i);
-		checkForGlError("glEnableVertexAttribArray");
-#if	CMD_DEBUG
 		dump.Write("\n");
 #endif
+
+		static const u32 gl_types[] =
+		{
+			GL_SHORT,
+			GL_FLOAT,
+			GL_HALF_FLOAT,
+			GL_UNSIGNED_BYTE,
+			GL_SHORT,
+			GL_UNSIGNED_BYTE,
+		};
+
+		static const bool gl_normalized[] =
+		{
+			true,
+			false,
+			false,
+			true,
+			false,
+			false,
+		};
+
+		if(m_vertex_data[i].type >= 1 && m_vertex_data[i].type <= 7)
+		{
+			u32 gltype = gl_types[m_vertex_data[i].type - 1];
+			bool normalized = gl_normalized[m_vertex_data[i].type - 1];
+
+			glEnableVertexAttribArray(i);
+			checkForGlError("glEnableVertexAttribArray");
+			glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, (void*)offset_list[i]);
+			checkForGlError("glVertexAttribPointer");
+		}
 	}
 }
 
-void DisableVertexData()
+void GLGSRender::DisableVertexData()
 {
 	m_vdata.Clear();
 	for(u32 i=0; i<16; ++i)
@@ -388,7 +413,7 @@ void DisableVertexData()
 	}
 }
 
-void LoadVertexData(u32 first, u32 count)
+void GLGSRender::LoadVertexData(u32 first, u32 count)
 {
 	for(u32 i=0; i<16; ++i)
 	{
@@ -398,13 +423,14 @@ void LoadVertexData(u32 first, u32 count)
 	}
 }
 
-void InitVertexData()
+void GLGSRender::InitVertexData()
 {
 	for(u32 i=0; i<m_cur_vertex_prog->constants4.GetCount(); ++i)
 	{
 		const VertexProgram::Constant4& c = m_cur_vertex_prog->constants4[i];
 		const wxString& name = wxString::Format("vc%d", c.id);
-		const int l = glGetUniformLocation(m_program.id, name);
+		//const int l = glGetUniformLocation(m_program.id, name);
+		const int l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
 		//ConLog.Write(name + " x: %.02f y: %.02f z: %.02f w: %.02f", c.x, c.y, c.z, c.w);
@@ -442,10 +468,11 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		ConLog.Write(debug);
 #endif
 
-	static int draw_mode = 0;
+	//static int draw_mode = 0;
+	static u32 semaphore_offset = 0;
 	u32 index = 0;
 
-	static u32 draw_array_count = 0;
+	//static u32 draw_array_count = 0;
 
 	switch(cmd)
 	{
@@ -465,8 +492,8 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		const u8 dimension = (args[1] >> 4) & 0xf;
 		const u8 format = (args[1] >> 8) & 0xff;
 		const u16 mipmap = (args[1] >> 16) & 0xffff;
-		CMD_LOG("offset=0x%x, location=0x%x, cubemap=0x%x, dimension=0x%x, format=0x%x, mipmap=0x%x",
-			offset, location, cubemap, dimension, format, mipmap);
+		CMD_LOG("index = %d, offset=0x%x, location=0x%x, cubemap=0x%x, dimension=0x%x, format=0x%x, mipmap=0x%x",
+			index, offset, location, cubemap, dimension, format, mipmap);
 
 		tex.SetOffset(GetAddress(offset, location));
 		tex.SetFormat(cubemap, dimension, format, mipmap);
@@ -477,6 +504,23 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	{
 		GLTexture& tex = m_frame->GetTexture(index);
 		tex.Enable(args[0] >> 31 ? true : false);
+	}
+	break;
+
+	case_16(NV4097_SET_VERTEX_DATA4UB_M, 4):
+	{
+		u32 v = args[0];
+		u8 v0 = v;
+		u8 v1 = v >> 8;
+		u8 v2 = v >> 16;
+		u8 v3 = v >> 24;
+
+		m_vertex_data[index].type = 7;
+		m_vertex_data[index].data.AddCpy(v0);
+		m_vertex_data[index].data.AddCpy(v1);
+		m_vertex_data[index].data.AddCpy(v2);
+		m_vertex_data[index].data.AddCpy(v3);
+		ConLog.Warning("index = %d, v0 = 0x%x, v1 = 0x%x, v2 = 0x%x, v3 = 0x%x", index, v0, v1, v2, v3);
 	}
 	break;
 
@@ -530,44 +574,62 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	}
 	break;
 
-	case NV4097_SET_COLOR_MASK:
-	{
-		const u32 flags = args[0];
-
-		glColorMask(
-			flags & 0x0010000 ? GL_TRUE : GL_FALSE,
-			flags & 0x0000100 ? GL_TRUE : GL_FALSE,
-			flags & 0x0000001 ? GL_TRUE : GL_FALSE,
-			flags & 0x1000000 ? GL_TRUE : GL_FALSE);
-	}
-	break;
-
 	case NV4097_SET_COLOR_MASK_MRT:
 	{
 	}
 	break;
 
+	case NV4097_SET_COLOR_MASK:
+	{
+		const u32 flags = args[0];
+
+		m_set_color_mask = true;
+		m_color_mask_a = flags & 0x1000000 ? true : false;
+		m_color_mask_r = flags & 0x0010000 ? true : false;
+		m_color_mask_g = flags & 0x0000100 ? true : false;
+		m_color_mask_b = flags & 0x0000001 ? true : false;
+	}
+	break;
+
 	case NV4097_SET_ALPHA_TEST_ENABLE:
-		Enable(args[0] ? true : false, GL_ALPHA_TEST);
+		m_set_alpha_test = args[0] ? true : false;
+		//Enable(args[0] ? true : false, GL_ALPHA_TEST);
 	break;
 
 	case NV4097_SET_BLEND_ENABLE:
-		Enable(args[0] ? true : false, GL_BLEND);
+		m_set_blend = args[0] ? true : false;
+		//Enable(args[0] ? true : false, GL_BLEND);
 	break;
 
 	case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
-		Enable(args[0] ? true : false, GL_DEPTH_CLAMP);
+		m_set_depth_bounds_test = args[0] ? true : false;
+		//Enable(args[0] ? true : false, GL_DEPTH_CLAMP);
+	break;
+
+	case NV4097_SET_VIEWPORT_VERTICAL:
+	{
+		m_set_viewport_vertical = true;
+		m_viewport_y = args[0] & 0xffff;
+		m_viewport_h = args[0] >> 16;
+	}
 	break;
 
 	case NV4097_SET_VIEWPORT_HORIZONTAL:
 	{
-		const u16 x = args[0] & 0xffff;
-		const u16 w = args[0] >> 16;
-		const u16 y = args[1] & 0xffff;
-		const u16 h = args[1] >> 16;
-		CMD_LOG("x=%d, y=%d, w=%d, h=%d", x, y, w, h);
+		m_set_viewport_horizontal = true;
+		m_viewport_x = args[0] & 0xffff;
+		m_viewport_w = args[0] >> 16;
 
-		m_frame->SetViewport(x, y, w, h);
+		if(count == 2)
+		{
+			m_set_viewport_vertical = true;
+			m_viewport_y = args[1] & 0xffff;
+			m_viewport_h = args[1] >> 16;
+		}
+
+		CMD_LOG("x=%d, y=%d, w=%d, h=%d", m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
+
+		//m_frame->SetViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
 		//glViewport(x, y, w, h);
 	}
 	break;
@@ -577,18 +639,25 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		const u32 clip_min = args[0];
 		const u32 clip_max = args[1];
 
-		CMD_LOG("clip_min=%.01f, clip_max=%.01f", *(float*)&clip_min, *(float*)&clip_max);
+		m_set_clip = true;
+		m_clip_min = (float&)clip_min;
+		m_clip_max = (float&)clip_max;
 
-		glDepthRangef(*(float*)&clip_min, *(float*)&clip_max);
+		CMD_LOG("clip_min=%.01f, clip_max=%.01f", m_clip_min, m_clip_max);
+
+		//glDepthRangef(m_clip_min, m_clip_max);
 	}
 	break;
 
 	case NV4097_SET_DEPTH_FUNC:
-		glDepthFunc(args[0]);
+		m_set_depth_func = true;
+		m_depth_func = args[0];
+		//glDepthFunc(m_depth_func);
 	break;
 
 	case NV4097_SET_DEPTH_TEST_ENABLE:
-		Enable(args[0] ? true : false, GL_DEPTH_TEST);
+		m_depth_test_enable = args[0] ? true : false;
+		//Enable(args[0] ? true : false, GL_DEPTH_TEST);
 	break;
 
 	case NV4097_SET_FRONT_POLYGON_MODE:
@@ -656,130 +725,74 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 
 			LoadVertexData(first, _count);
 
-			draw_array_count += _count;
+			m_draw_array_count += _count;
+		}
+	}
+	break;
+
+	case NV4097_SET_INDEX_ARRAY_ADDRESS:
+	{
+		m_indexed_array.m_addr = GetAddress(args[0], args[1] & 0xf);
+		m_indexed_array.m_type = args[1] >> 4;
+	}
+	break;
+
+	case NV4097_DRAW_INDEX_ARRAY:
+	{
+		for(u32 c=0; c<count; ++c)
+		{
+			const u32 first = args[c] & 0xffffff;
+			const u32 _count = (args[c] >> 24) + 1;
+
+			if(first < m_indexed_array.m_first) m_indexed_array.m_first = first;
+
+			for(u32 i=first; i<_count; ++i)
+			{
+				u32 index;
+				switch(m_indexed_array.m_type)
+				{
+					case 0:
+					{
+						int pos = m_indexed_array.m_data.GetCount();
+						m_indexed_array.m_data.InsertRoomEnd(4);
+						index = Memory.Read32(m_indexed_array.m_addr + i * 4);
+						*(u32*)&m_indexed_array.m_data[pos] = index;
+						ConLog.Warning("index 4: %d", *(u32*)&m_indexed_array.m_data[pos]);
+					}
+					break;
+
+					case 1:
+					{
+						int pos = m_indexed_array.m_data.GetCount();
+						m_indexed_array.m_data.InsertRoomEnd(2);
+						index = Memory.Read16(m_indexed_array.m_addr + i * 2);
+						ConLog.Warning("index 2: %d", index);
+						*(u32*)&m_indexed_array.m_data[pos] = index;
+					}
+					break;
+				}
+
+				if(index < m_indexed_array.index_min) m_indexed_array.index_min = index;
+				if(index > m_indexed_array.index_max) m_indexed_array.index_max = index;
+			}
+
+			m_indexed_array.m_count += _count;
 		}
 	}
 	break;
 
 	case NV4097_SET_BEGIN_END:
 	{
-		if(args[0]) //begin
+		if(args[0])
 		{
-			draw_mode = args[0] - 1;
-			break;
+			//begin
+			m_draw_mode = args[0] - 1;
 		}
-
-		//end
-			
-		if(!m_cur_vertex_prog)
+		else
 		{
-			ConLog.Warning("NV4097_SET_BEGIN_END: m_cur_vertex_prog == NULL");
-
-			memset(m_vertex_data, 0, sizeof(VertexData) * 16);
-
-			draw_array_count = 0;
-			m_vbo.UnBind();
-			break;
+			//end
+			ExecCMD();
 		}
-
-		if(!m_program.IsCreated())
-		{
-			//ConLog.Write("Create program");
-			m_vp_buf_num = m_prog_buffer.SearchVp(*m_cur_vertex_prog);
-
-			if(m_vp_buf_num == -1) 
-			{
-				ConLog.Warning("VP not found in buffer!");
-				m_cur_vertex_prog->Decompile();
-			}
-
-			if(m_fp_buf_num == -1)
-			{
-				ConLog.Warning("FP not found in buffer!");
-				m_shader_prog.Wait();
-				m_shader_prog.Compile();
-
-				wxFile f(wxGetCwd() + "/FragmentProgram.txt", wxFile::write);
-				f.Write(m_shader_prog.shader);
-			}
-
-			if(m_vp_buf_num == -1)
-			{
-				m_cur_vertex_prog->Wait();
-				m_cur_vertex_prog->Compile();
-
-				wxFile f(wxGetCwd() + "/VertexProgram.txt", wxFile::write);
-				f.Write(m_cur_vertex_prog->shader);
-			}
-
-			if(m_fp_buf_num != -1 && m_vp_buf_num != -1)
-			{
-				m_program.id = m_prog_buffer.GetProg(m_fp_buf_num, m_vp_buf_num);
-			}
-
-			if(!m_program.id)
-			{
-				m_program.Create(m_cur_vertex_prog->id, m_shader_prog.id);
-				m_prog_buffer.Add(m_program, m_shader_prog, *m_cur_vertex_prog);
-
-				m_program.Use();
-
-				GLint r = GL_FALSE;
-				glGetProgramiv(m_program.id, GL_VALIDATE_STATUS, &r);
-				if(r != GL_TRUE)
-				{
-					glGetProgramiv(m_program.id, GL_INFO_LOG_LENGTH, &r);
-
-					if(r)
-					{
-						char* buf = new char[r+1];
-						GLsizei len;
-						memset(buf, 0, r+1);
-						glGetProgramInfoLog(m_program.id, r, &len, buf);
-						ConLog.Error("Failed to validate program: %s", buf);
-						free(buf);
-					}
-
-					Emu.Pause();
-				}
-			}
-		}
-		else m_program.Use();
-
-		for(u32 i=0; i<16; ++i)
-		{
-			GLTexture& tex = m_frame->GetTexture(i);
-			if(!tex.IsEnabled()) continue;
-
-			glActiveTexture(GL_TEXTURE0_ARB + i);
-			checkForGlError("glActiveTexture");
-			tex.Bind();
-			checkForGlError("tex.Bind");
-			m_program.SetTex(i);
-			checkForGlError("m_program.SetTex");
-			tex.Init();
-			checkForGlError("tex.Init");
-			//tex.Save();
-		}
-
-		if(draw_array_count)
-		{
-			EnableVertexData();
-			InitVertexData();
-			glDrawArrays(draw_mode, 0, draw_array_count);
-			checkForGlError("glDrawArrays");
-
-			DisableVertexData();
-			draw_array_count = 0;
-		}
-
-		m_program.id = 0;
-		m_shader_prog.id = 0;
-		m_cur_vertex_prog->id = 0;
-
-		memset(m_vertex_data, 0, sizeof(VertexData) * 16);
-
-		m_vbo.UnBind();
 	}
 	break;
 
@@ -802,11 +815,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	{
 		m_shader_prog.Delete();
 		m_shader_prog.addr = GetAddress(args[0] & ~0x3, (args[0] & 0x3) - 1);
-		m_program.Delete();
-
-		m_fp_buf_num = m_prog_buffer.SearchFp(m_shader_prog);
-
-		if(m_fp_buf_num == -1) m_shader_prog.Decompile();
+		//m_program.Delete();
 	}
 	break;
 
@@ -829,7 +838,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 
 	case NV4097_SET_TRANSFORM_PROGRAM_LOAD:
 	{
-		m_program.Delete();
+		//m_program.Delete();
 		m_cur_vertex_prog = &m_vertex_progs[args[0]];
 		m_cur_vertex_prog->Delete();
 
@@ -893,10 +902,10 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 
 			VertexProgram::Constant4 c;
 			c.id = id;
-			c.x = *(float*)&x;
-			c.y = *(float*)&y;
-			c.z = *(float*)&z;
-			c.w = *(float*)&w;
+			c.x = (float&)x;
+			c.y = (float&)y;
+			c.z = (float&)z;
+			c.w = (float&)w;
 
 			CMD_LOG("SET_TRANSFORM_CONSTANT_LOAD[%d : %d] = (%f, %f, %f, %f)", i, id, c.x, c.y, c.z, c.w);
 			m_cur_vertex_prog->constants4.AddCpy(c);
@@ -969,16 +978,30 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		glDepthMask(args[0]);
 	break;
 
+	case NV4097_SET_SCISSOR_VERTICAL:
+	{
+		m_set_scissor_vertical = true;
+		m_scissor_y = args[0] & 0xffff;
+		m_scissor_h = args[0] >> 16;
+	}
+	break;
+
 	case NV4097_SET_SCISSOR_HORIZONTAL:
 	{
-		const u16 x = args[0] & 0xffff;
-		const u16 w = args[0] >> 16;
-		const u16 y = args[1] & 0xffff;
-		const u16 h = args[1] >> 16;
-		
-		CMD_LOG("x=%d, y=%d, w=%d, h=%d", x, y, w, h);
+		m_set_scissor_horizontal = true;
+		m_scissor_x = args[0] & 0xffff;
+		m_scissor_w = args[0] >> 16;
 
-		glScissor(x, y, w, h);
+		if(count == 2)
+		{
+			m_set_scissor_vertical = true;
+			m_scissor_y = args[1] & 0xffff;
+			m_scissor_h = args[1] >> 16;
+		}
+		
+		CMD_LOG("x=%d, y=%d, w=%d, h=%d", m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+
+		//glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 	}
 	break;
 
@@ -990,9 +1013,16 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	}
 	break;
 
-	case NV406E_SEMAPHORE_OFFSET:
+	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
 	{
 		//TODO
+	}
+	break;
+
+	case NV4097_SET_SEMAPHORE_OFFSET:
+	case NV406E_SEMAPHORE_OFFSET:
+	{
+		semaphore_offset = args[0];
 	}
 	break;
 
@@ -1002,6 +1032,17 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	}
 	break;
 
+	case NV4097_SET_RESTART_INDEX:
+	{
+		//TODO
+	}
+	break;
+
+	case NV4097_INVALIDATE_L2:
+	{
+		//TODO
+	}
+	break;
 	case NV4097_SET_CONTEXT_DMA_COLOR_A:
 	{
 		//TODO
@@ -1074,10 +1115,21 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	}
 	break;
 
+	case NV4097_SET_ANTI_ALIASING_CONTROL:
+	{
+		//TODO
+	}
+	break;
+
+	case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
+	case NV4097_SET_ZCULL_CONTROL0:
+	case NV4097_SET_ZCULL_CONTROL1:
+	case NV4097_SET_SCULL_CONTROL:
+	break;
 
 	default:
 	{
-		wxString log = getMethodName(cmd);
+		wxString log = GetMethodName(cmd);
 		log += "(";
 		for(u32 i=0; i<count; ++i) log += (i ? ", " : "") + wxString::Format("0x%x", args[i]);
 		log += ")";
@@ -1086,4 +1138,230 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	}
 	break;
 	}
+}
+
+bool GLGSRender::LoadProgram()
+{
+	m_fp_buf_num = m_prog_buffer.SearchFp(m_shader_prog);
+
+	if(m_fp_buf_num == -1) m_shader_prog.Decompile();
+
+	if(!m_cur_vertex_prog)
+	{
+		ConLog.Warning("NV4097_SET_BEGIN_END: m_cur_vertex_prog == NULL");
+
+		return false;
+	}
+
+	if(m_program.IsCreated())
+	{
+		m_program.Use();
+		return true;
+	}
+	//ConLog.Write("Create program");
+	m_vp_buf_num = m_prog_buffer.SearchVp(*m_cur_vertex_prog);
+
+	if(m_vp_buf_num == -1) 
+	{
+		ConLog.Warning("VP not found in buffer!");
+		m_cur_vertex_prog->Decompile();
+	}
+
+	if(m_fp_buf_num == -1)
+	{
+		ConLog.Warning("FP not found in buffer!");
+		m_shader_prog.Wait();
+		m_shader_prog.Compile();
+
+		wxFile f(wxGetCwd() + "/FragmentProgram.txt", wxFile::write);
+		f.Write(m_shader_prog.shader);
+	}
+
+	if(m_vp_buf_num == -1)
+	{
+		m_cur_vertex_prog->Wait();
+		m_cur_vertex_prog->Compile();
+
+		wxFile f(wxGetCwd() + "/VertexProgram.txt", wxFile::write);
+		f.Write(m_cur_vertex_prog->shader);
+	}
+
+	if(m_fp_buf_num != -1 && m_vp_buf_num != -1)
+	{
+		m_program.id = m_prog_buffer.GetProg(m_fp_buf_num, m_vp_buf_num);
+	}
+
+	if(!m_program.id)
+	{
+		m_program.Create(m_cur_vertex_prog->id, m_shader_prog.id);
+		m_prog_buffer.Add(m_program, m_shader_prog, *m_cur_vertex_prog);
+
+		m_program.Use();
+
+		GLint r = GL_FALSE;
+		glGetProgramiv(m_program.id, GL_VALIDATE_STATUS, &r);
+		if(r != GL_TRUE)
+		{
+			glGetProgramiv(m_program.id, GL_INFO_LOG_LENGTH, &r);
+
+			if(r)
+			{
+				char* buf = new char[r+1];
+				GLsizei len;
+				memset(buf, 0, r+1);
+				glGetProgramInfoLog(m_program.id, r, &len, buf);
+				ConLog.Error("Failed to validate program: %s", buf);
+				delete[] buf;
+			}
+
+			Emu.Pause();
+		}
+	}
+
+	return true;
+}
+
+void GLGSRender::ExecCMD()
+{
+	if(LoadProgram())
+	{
+		if(m_set_color_mask)
+		{
+			glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
+		}
+
+		if(m_set_viewport_horizontal && m_set_viewport_vertical)
+		{
+			glViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
+			if(m_frame->GetSize() != wxSize(m_viewport_w, m_viewport_h))
+				m_frame->SetClientSize(m_viewport_w, m_viewport_h);
+			//m_frame->SetViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
+		}
+
+		if(m_set_scissor_horizontal && m_set_scissor_vertical)
+		{
+			glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
+		}
+
+		Enable(m_depth_test_enable, GL_DEPTH_TEST);
+		Enable(m_set_alpha_test, GL_ALPHA_TEST);
+		Enable(m_set_depth_bounds_test, GL_DEPTH_CLAMP);
+		Enable(m_set_blend, GL_BLEND);
+
+		if(m_set_depth_func)
+		{
+			glDepthFunc(m_depth_func);
+		}
+
+		if(m_set_clip)
+		{
+			glDepthRangef(m_clip_min, m_clip_max);
+		}
+
+		for(u32 i=0; i<16; ++i)
+		{
+			GLTexture& tex = m_frame->GetTexture(i);
+			if(!tex.IsEnabled()) continue;
+
+			glActiveTexture(GL_TEXTURE0_ARB + i);
+			checkForGlError("glActiveTexture");
+			tex.Bind();
+			checkForGlError("tex.Bind");
+			m_program.SetTex(i);
+			checkForGlError("m_program.SetTex");
+			tex.Init();
+			checkForGlError("tex.Init");
+			tex.Save();
+		}
+
+		if(m_indexed_array.m_count && m_draw_array_count)
+		{
+			ConLog.Warning("m_indexed_array.m_count && draw_array_count");
+		}
+
+		if(m_indexed_array.m_count)
+		{
+			LoadVertexData(m_indexed_array.index_min, m_indexed_array.index_max - m_indexed_array.index_min + 1);
+			EnableVertexData(true);
+			InitVertexData();
+
+			wxFile log("IndexedDrawLog.txt", wxFile::write);
+			log.Write(wxString::Format("Draw mode: %d\n", m_draw_mode));
+
+			m_vao.Bind();
+			switch(m_indexed_array.m_type)
+			{
+			case 0:
+				glDrawElements(m_draw_mode, m_indexed_array.m_count, GL_UNSIGNED_INT, nullptr);
+				checkForGlError("glDrawElements #4");
+				for(uint i=0; i<m_indexed_array.m_count; i+=4) log.Write(wxString::Format("index 4: %d\n", (u32&)m_indexed_array.m_data[i]));
+			break;
+
+			case 1:
+				glDrawElements(m_draw_mode, m_indexed_array.m_count, GL_UNSIGNED_SHORT, nullptr);
+				checkForGlError("glDrawElements #2");
+				for(uint i=0; i<m_indexed_array.m_count; i+=2) log.Write(wxString::Format("index 2: %d\n", (u16&)m_indexed_array.m_data[i]));
+			break;
+
+			default:
+				ConLog.Error("Bad indexed array type (%d)", m_indexed_array.m_type);
+			break;
+			}
+
+			DisableVertexData();
+			m_indexed_array.Reset();
+			Emu.Pause();
+		}
+
+		if(m_draw_array_count)
+		{
+			EnableVertexData();
+			InitVertexData();
+			m_vao.Bind();
+			glDrawArrays(m_draw_mode, 0, m_draw_array_count);
+			checkForGlError("glDrawArrays");
+			DisableVertexData();
+			m_draw_array_count = 0;
+		}
+	}
+	else
+	{
+		ConLog.Error("LoadProgram failed.");
+		Emu.Pause();
+	}
+
+	Reset();
+}
+
+void GLGSRender::Reset()
+{
+	m_program.Delete();
+	//m_program.id = 0;
+	m_shader_prog.id = 0;
+	if(m_cur_vertex_prog)
+		m_cur_vertex_prog->id = 0;
+
+	memset(m_vertex_data, 0, sizeof(VertexData) * 16);
+
+	if(m_vbo.IsCreated())
+	{
+		m_vbo.UnBind();
+		m_vbo.Delete();
+	}
+
+	m_vao.Delete();
+
+	Init();
+}
+
+void GLGSRender::Init()
+{
+	m_draw_array_count = 0;
+	m_draw_mode = 0;
+	ExecRSXCMDdata::Reset();
+}
+
+void GLGSRender::CloseOpenGL()
+{
+	Reset();
 }

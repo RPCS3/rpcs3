@@ -3,15 +3,16 @@
 #include "Gui/ConLog.h"
 #include <wx/listctrl.h>
 #include "Ini.h"
+#include <fstream>
+#include <vector>
 
 LogWriter ConLog;
 LogFrame* ConLogFrame;
-wxMutex mtx_wait;
+
+wxCriticalSection g_cs_conlog;
 
 static const uint max_item_count = 500;
 static const uint buffer_size = 1024 * 64;
-
-wxSemaphore m_conlog_sem;
 
 struct LogPacket
 {
@@ -24,6 +25,7 @@ struct LogPacket
 		, m_text(text)
 		, m_colour(colour)
 	{
+		
 	}
 
 	LogPacket()
@@ -37,7 +39,7 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 	{
 	}
 
-	void Push(const LogPacket& data)
+	void _push(const LogPacket& data)
 	{
 		const u32 sprefix	= data.m_prefix.Len();
 		const u32 stext		= data.m_text.Len();
@@ -69,7 +71,7 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 		CheckBusy();
 	}
 
-	LogPacket Pop()
+	LogPacket _pop()
 	{
 		LogPacket ret;
 
@@ -107,14 +109,26 @@ LogWriter::LogWriter()
 
 void LogWriter::WriteToLog(wxString prefix, wxString value, wxString colour/*, wxColour bgcolour*/)
 {
+	if(ThreadBase* thr = GetCurrentNamedThread())
+	{
+		prefix = (prefix.IsEmpty() ? "" : prefix + " : ") + thr->GetThreadName();
+	}
+
 	if(m_logfile.IsOpened())
 		m_logfile.Write((prefix.IsEmpty() ? wxEmptyString : "[" + prefix + "]: ") + value + "\n");
 
 	if(!ConLogFrame) return;
 
-	wxMutexLocker locker(mtx_wait);
+	wxCriticalSectionLocker lock(g_cs_conlog);
 
-	while(LogBuffer.IsBusy()) Sleep(1);
+	if(wxThread::IsMain())
+	{
+		while(LogBuffer.IsBusy()) wxYieldIfNeeded();
+	}
+	else
+	{
+		while(LogBuffer.IsBusy()) Sleep(1);
+	}
 
 	//if(LogBuffer.put == LogBuffer.get) LogBuffer.Flush();
 
@@ -179,29 +193,23 @@ void LogWriter::SkipLn()
 	WriteToLog(wxEmptyString, wxEmptyString, "Black");
 }
 
-BEGIN_EVENT_TABLE(LogFrame, FrameBase)
+BEGIN_EVENT_TABLE(LogFrame, wxPanel)
 	EVT_CLOSE(LogFrame::OnQuit)
 END_EVENT_TABLE()
 
-LogFrame::LogFrame()
-	: FrameBase(NULL, wxID_ANY, "Log Console", wxEmptyString, wxSize(600, 450), wxDefaultPosition)
+LogFrame::LogFrame(wxWindow* parent)
+	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(600, 500))
 	, ThreadBase(false, "LogThread")
 	, m_log(*new wxListView(this))
 {
-	wxBoxSizer& s_panel( *new wxBoxSizer(wxHORIZONTAL) );
-
-	s_panel.Add(&m_log, wxSizerFlags().Expand());
-
 	m_log.InsertColumn(0, wxEmptyString);
 	m_log.InsertColumn(1, "Log");
 	m_log.SetBackgroundColour(wxColour("Black"));
 
-	m_log.SetColumnWidth(0, 18);
-
-	SetSizerAndFit( &s_panel );
-
-	Connect( wxEVT_SIZE, wxSizeEventHandler(LogFrame::OnResize) );
-	Connect( m_log.GetId(), wxEVT_COMMAND_LIST_COL_BEGIN_DRAG, wxListEventHandler( LogFrame::OnColBeginDrag ));
+	wxBoxSizer& s_main = *new wxBoxSizer(wxVERTICAL);
+	s_main.Add(&m_log, 1, wxEXPAND);
+	SetSizer(&s_main);
+	Layout();
 
 	Show();
 	ThreadBase::Start();
@@ -215,7 +223,7 @@ bool LogFrame::Close(bool force)
 {
 	Stop();
 	ConLogFrame = NULL;
-	return FrameBase::Close(force);
+	return wxWindowBase::Close(force);
 }
 
 void LogFrame::Task()
@@ -227,12 +235,17 @@ void LogFrame::Task()
 			Sleep(1);
 			continue;
 		}
+		else
+		{
+			wxThread::Yield();
+		}
 
 		const LogPacket item = LogBuffer.Pop();
 
 		while(m_log.GetItemCount() > max_item_count)
 		{
 			m_log.DeleteItem(0);
+			wxThread::Yield();
 		}
 
 		const int cur_item = m_log.GetItemCount();
@@ -240,26 +253,13 @@ void LogFrame::Task()
 		m_log.InsertItem(cur_item, item.m_prefix);
 		m_log.SetItem(cur_item, 1, item.m_text);
 		m_log.SetItemTextColour(cur_item, item.m_colour);
+		m_log.SetColumnWidth(0, -1);
+		m_log.SetColumnWidth(1, -1);
 
 		::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);
 	}
 
 	LogBuffer.Flush();
-}
-
-void LogFrame::OnColBeginDrag(wxListEvent& event)
-{
-	event.Veto();
-}
-
-void LogFrame::OnResize(wxSizeEvent& event)
-{
-	const wxSize size( GetClientSize() );
-
-	m_log.SetSize( size );
-	m_log.SetColumnWidth(1, size.GetWidth() - 4 - m_log.GetColumnWidth(0));
-
-	event.Skip();
 }
 
 void LogFrame::OnQuit(wxCloseEvent& event)

@@ -10,12 +10,27 @@
 		switch(temp)\
 		{
 
+#define START_OPCODES_SUB_GROUP(reg) \
+	default:\
+		temp=##reg##;\
+		switch(temp)\
+		{
+
 #define END_OPCODES_GROUP(group) \
 		default:\
 			m_op.UNK(m_code, opcode, temp);\
 		break;\
 		}\
 	break
+
+#define END_OPCODES_SUB_GROUP() \
+		default:\
+			m_op.UNK(m_code, opcode, temp);\
+		break;\
+		}
+#define END_OPCODES_ND_GROUP(group) \
+	} \
+	break;
 
 #define ADD_OPCODE(name, ...) case(##name##):m_op.##name##(__VA_ARGS__); break
 
@@ -37,6 +52,9 @@ class PPU_Decoder : public Decoder
 	OP_REG SPR()		const { return GetField(11, 20); }
 
 	//
+	OP_REG VS()			const { return GetField(6, 10); }
+
+	//
 	OP_REG VD()			const { return GetField(6, 10); }
 
 	//
@@ -44,6 +62,20 @@ class PPU_Decoder : public Decoder
 
 	//
 	OP_REG VB()			const { return GetField(16, 20); }
+
+	//
+	OP_REG VC()			const { return GetField(21, 25); }
+
+	//
+	OP_uIMM VUIMM()	const { return GetField(11, 15); }
+
+	//
+	OP_sIMM VSIMM()	const {  int i5 = GetField(11, 15);
+										if(i5 & 0x10) return i5 - 0x20;
+										return i5; }
+
+	//
+	OP_uIMM VSH()		const { return GetField(22, 25); }
 
 	//This field is used to specify a GPR to be used as a destination
 	OP_REG RD()			const { return GetField(6, 10); }
@@ -174,8 +206,8 @@ class PPU_Decoder : public Decoder
 	//This field is used to specify an FPR as a source
 	OP_REG FRC()		const { return GetField(21, 25); }
 
-	//
-	OP_REG FXM()		const { return GetField(12, 19); }
+	//This field mask is used to identify the CR fields that are to be updated by the mtcrf instruction.
+	OP_REG CRM()		const { return GetField(12, 19); }
 
 	//
 	const s32 SYS()		const { return GetField(6, 31); }
@@ -211,6 +243,8 @@ class PPU_Decoder : public Decoder
 
 	//Primary opcode field
 	OP_uIMM OPCD() const { return GetField(0, 5); }
+
+	OP_uIMM STRM() const { return GetField(9, 10); }
 	
 	__forceinline u32 GetField(const u32 p) const
 	{
@@ -234,24 +268,178 @@ public:
 
 	virtual void Decode(const u32 code)
 	{
-		if(code == 0)
-		{
-			m_op.NULL_OP();
-			return;
-		}
-
 		m_code = code;
 
-		u32 opcode, temp;
+		using namespace PPU_opcodes;
+		static u32 opcode, temp;
+
 		switch((opcode = OPCD()))
 		{
-		
 		ADD_OPCODE(TDI,		TO(), RA(), simm16());
 		ADD_OPCODE(TWI,		TO(), RA(), simm16());
 
-		START_OPCODES_GROUP(G_04, ((m_code >> 1) & 0x3ff))
-			ADD_OPCODE(VXOR,	VD(), VA(), VB());
-		END_OPCODES_GROUP(G_04);
+		START_OPCODES_GROUP(G_04, m_code & 0x3f)
+			ADD_OPCODE(VMADDFP,		VD(), VA(), VB(), VC());
+			ADD_OPCODE(VMHADDSHS,	VD(), VA(), VB(), VC());
+			ADD_OPCODE(VMHRADDSHS,	VD(), VA(), VB(), VC());
+			ADD_OPCODE(VMLADDUHM,	VD(), VA(), VB(), VC());
+			ADD_OPCODE(VMSUMMBM,	VD(), VA(), VB(), VC());
+			ADD_OPCODE(VMSUMSHM,	VD(), VA(), VB(), VC());
+			ADD_OPCODE(VMSUMSHS,	VD(), VA(), VB(), VC());
+			ADD_OPCODE(VMSUMUBM,	VD(), VA(), VB(), VC());
+			ADD_OPCODE(VMSUMUHM,	VD(), VA(), VB(), VC());
+			ADD_OPCODE(VMSUMUHS,	VD(), VA(), VB(), VC());
+			ADD_OPCODE(VNMSUBFP,	VD(), VA(), VB(), VC());
+			ADD_OPCODE(VPERM,		VD(), VA(), VB(), VC());
+			ADD_OPCODE(VSEL,		VD(), VA(), VB(), VC());
+			ADD_OPCODE(VSLDOI,		VD(), VA(), VB(), VSH());
+
+			START_OPCODES_SUB_GROUP(m_code & 0x7ff);
+				ADD_OPCODE(MFVSCR,		VD());
+				ADD_OPCODE(MTVSCR,		VB());
+				ADD_OPCODE(VADDCUW,		VD(), VA(), VB());
+				ADD_OPCODE(VADDFP,		VD(), VA(), VB());
+				ADD_OPCODE(VADDSBS,		VD(), VA(), VB());
+				ADD_OPCODE(VADDSHS,		VD(), VA(), VB());
+				ADD_OPCODE(VADDSWS,		VD(), VA(), VB());
+				ADD_OPCODE(VADDUBM,		VD(), VA(), VB());
+				ADD_OPCODE(VADDUBS,		VD(), VA(), VB());
+				ADD_OPCODE(VADDUHM,		VD(), VA(), VB());
+				ADD_OPCODE(VADDUHS,		VD(), VA(), VB());
+				ADD_OPCODE(VADDUWM,		VD(), VA(), VB());
+				ADD_OPCODE(VADDUWS,		VD(), VA(), VB());
+				ADD_OPCODE(VAND,		VD(), VA(), VB());
+				ADD_OPCODE(VANDC,		VD(), VA(), VB());
+				ADD_OPCODE(VAVGSB,		VD(), VA(), VB());
+				ADD_OPCODE(VAVGSH,		VD(), VA(), VB());
+				ADD_OPCODE(VAVGSW,		VD(), VA(), VB());
+				ADD_OPCODE(VAVGUB,		VD(), VA(), VB());
+				ADD_OPCODE(VAVGUH,		VD(), VA(), VB());
+				ADD_OPCODE(VAVGUW,		VD(), VA(), VB());
+				ADD_OPCODE(VCFSX,		VD(), VUIMM(), VB());
+				ADD_OPCODE(VCFUX,		VD(), VUIMM(), VB());
+				ADD_OPCODE(VCMPBFP,		VD(), VA(), VB());
+				ADD_OPCODE(VCMPBFP_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPEQFP,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPEQFP_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPEQUB,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPEQUB_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPEQUH,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPEQUH_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPEQUW,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPEQUW_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGEFP,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGEFP_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTFP,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTFP_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTSB,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTSB_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTSH,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTSH_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTSW,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTSW_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTUB,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTUB_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTUH,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTUH_,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTUW,	VD(), VA(), VB());
+				ADD_OPCODE(VCMPGTUW_,	VD(), VA(), VB());
+				ADD_OPCODE(VCTSXS,		VD(), VUIMM(), VB());
+				ADD_OPCODE(VCTUXS,		VD(), VUIMM(), VB());
+				ADD_OPCODE(VEXPTEFP,	VD(), VB());
+				ADD_OPCODE(VLOGEFP,		VD(), VB());
+				ADD_OPCODE(VMAXFP,		VD(), VA(), VB());
+				ADD_OPCODE(VMAXSB,		VD(), VA(), VB());
+				ADD_OPCODE(VMAXSH,		VD(), VA(), VB());
+				ADD_OPCODE(VMAXSW,		VD(), VA(), VB());
+				ADD_OPCODE(VMAXUB,		VD(), VA(), VB());
+				ADD_OPCODE(VMAXUH,		VD(), VA(), VB());
+				ADD_OPCODE(VMAXUW,		VD(), VA(), VB());
+				ADD_OPCODE(VMINFP,		VD(), VA(), VB());
+				ADD_OPCODE(VMINSB,		VD(), VA(), VB());
+				ADD_OPCODE(VMINSH,		VD(), VA(), VB());
+				ADD_OPCODE(VMINSW,		VD(), VA(), VB());
+				ADD_OPCODE(VMINUB,		VD(), VA(), VB());
+				ADD_OPCODE(VMINUH,		VD(), VA(), VB());
+				ADD_OPCODE(VMINUW,		VD(), VA(), VB());
+				ADD_OPCODE(VMRGHB,		VD(), VA(), VB());
+				ADD_OPCODE(VMRGHH,		VD(), VA(), VB());
+				ADD_OPCODE(VMRGHW,		VD(), VA(), VB());
+				ADD_OPCODE(VMRGLB,		VD(), VA(), VB());
+				ADD_OPCODE(VMRGLH,		VD(), VA(), VB());
+				ADD_OPCODE(VMRGLW,		VD(), VA(), VB());
+				ADD_OPCODE(VMULESB,		VD(), VA(), VB());
+				ADD_OPCODE(VMULESH,		VD(), VA(), VB());
+				ADD_OPCODE(VMULEUB,		VD(), VA(), VB());
+				ADD_OPCODE(VMULEUH,		VD(), VA(), VB());
+				ADD_OPCODE(VMULOSB,		VD(), VA(), VB());
+				ADD_OPCODE(VMULOSH,		VD(), VA(), VB());
+				ADD_OPCODE(VMULOUB,		VD(), VA(), VB());
+				ADD_OPCODE(VMULOUH,		VD(), VA(), VB());
+				ADD_OPCODE(VNOR,		VD(), VA(), VB());
+				ADD_OPCODE(VOR,			VD(), VA(), VB());
+				ADD_OPCODE(VPKPX,		VD(), VA(), VB());
+				ADD_OPCODE(VPKSHSS,		VD(), VA(), VB());
+				ADD_OPCODE(VPKSHUS,		VD(), VA(), VB());
+				ADD_OPCODE(VPKSWSS,		VD(), VA(), VB());
+				ADD_OPCODE(VPKSWUS,		VD(), VA(), VB());
+				ADD_OPCODE(VPKUHUM,		VD(), VA(), VB());
+				ADD_OPCODE(VPKUHUS,		VD(), VA(), VB());
+				ADD_OPCODE(VPKUWUM,		VD(), VA(), VB());
+				ADD_OPCODE(VPKUWUS,		VD(), VA(), VB());
+				ADD_OPCODE(VREFP,		VD(), VB());
+				ADD_OPCODE(VRFIM,		VD(), VB());
+				ADD_OPCODE(VRFIN,		VD(), VB());
+				ADD_OPCODE(VRFIP,		VD(), VB());
+				ADD_OPCODE(VRFIZ,		VD(), VB());
+				ADD_OPCODE(VRLB,		VD(), VA(), VB());
+				ADD_OPCODE(VRLH,		VD(), VA(), VB());
+				ADD_OPCODE(VRLW,		VD(), VA(), VB());
+				ADD_OPCODE(VRSQRTEFP,	VD(), VB());
+				ADD_OPCODE(VSL,			VD(), VA(), VB());
+				ADD_OPCODE(VSLB,		VD(), VA(), VB());
+				ADD_OPCODE(VSLH,		VD(), VA(), VB());
+				ADD_OPCODE(VSLO,		VD(), VA(), VB());
+				ADD_OPCODE(VSLW,		VD(), VA(), VB());
+				ADD_OPCODE(VSPLTB,		VD(), VUIMM(), VB());
+				ADD_OPCODE(VSPLTH,		VD(), VUIMM(), VB());
+				ADD_OPCODE(VSPLTISB,	VD(), VSIMM());
+				ADD_OPCODE(VSPLTISH,	VD(), VSIMM());
+				ADD_OPCODE(VSPLTISW,	VD(), VSIMM());
+				ADD_OPCODE(VSPLTW,		VD(), VUIMM(), VB());
+				ADD_OPCODE(VSR,			VD(), VA(), VB());
+				ADD_OPCODE(VSRAB,		VD(), VA(), VB());
+				ADD_OPCODE(VSRAH,		VD(), VA(), VB());
+				ADD_OPCODE(VSRAW,		VD(), VA(), VB());
+				ADD_OPCODE(VSRB,		VD(), VA(), VB());
+				ADD_OPCODE(VSRH,		VD(), VA(), VB());
+				ADD_OPCODE(VSRO,		VD(), VA(), VB());
+				ADD_OPCODE(VSRW,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBCUW,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBFP,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBSBS,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBSHS,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBSWS,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBUBM,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBUBS,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBUHM,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBUHS,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBUWM,		VD(), VA(), VB());
+				ADD_OPCODE(VSUBUWS,		VD(), VA(), VB());
+				ADD_OPCODE(VSUMSWS,		VD(), VA(), VB());
+				ADD_OPCODE(VSUM2SWS,	VD(), VA(), VB());
+				ADD_OPCODE(VSUM4SBS,	VD(), VA(), VB());
+				ADD_OPCODE(VSUM4SHS,	VD(), VA(), VB());
+				ADD_OPCODE(VSUM4UBS,	VD(), VA(), VB());
+				ADD_OPCODE(VUPKHPX,		VD(), VB());
+				ADD_OPCODE(VUPKHSB,		VD(), VB());
+				ADD_OPCODE(VUPKHSH,		VD(), VB());
+				ADD_OPCODE(VUPKLPX,		VD(), VB());
+				ADD_OPCODE(VUPKLSB,		VD(), VB());
+				ADD_OPCODE(VUPKLSH,		VD(), VB());
+				ADD_OPCODE(VXOR,		VD(), VA(), VB());
+			END_OPCODES_SUB_GROUP();
+		END_OPCODES_ND_GROUP(G_04);
 
 		ADD_OPCODE(MULLI,	RD(), RA(), simm16());
 		ADD_OPCODE(SUBFIC,	RD(), RA(), simm16());
@@ -300,12 +488,13 @@ public:
 		START_OPCODES_GROUP(G_1f, GetField(21, 30))
 			/*0x000*/ADD_OPCODE(CMP,	CRFD(), L(), RA(), RB());
 			/*0x004*/ADD_OPCODE(TW,		TO(), RA(), RB());
+			/*0x006*/ADD_OPCODE(LVSL,	VD(), RA(), RB());
 			/*0x007*/ADD_OPCODE(LVEBX,	VD(), RA(), RB());
 			/*0x008*/ADD_OPCODE(SUBFC,	RD(), RA(), RB(), OE(), RC());
 			/*0x009*/ADD_OPCODE(MULHDU,	RD(), RA(), RB(), RC());
 			/*0x00a*/ADD_OPCODE(ADDC,	RD(), RA(), RB(), OE(), RC());
 			/*0x00b*/ADD_OPCODE(MULHWU,	RD(), RA(), RB(), RC());
-			/*0x013*/ADD_OPCODE(MFOCRF,	GetField(11), FXM(), RD());
+			/*0x013*/ADD_OPCODE(MFOCRF,	GetField(11), RD(), CRM());
 			/*0x014*/ADD_OPCODE(LWARX,	RD(), RA(), RB());
 			/*0x015*/ADD_OPCODE(LDX,	RA(), RS(), RB());
 			/*0x017*/ADD_OPCODE(LWZX,	RD(), RA(), RB());
@@ -314,11 +503,13 @@ public:
 			/*0x01b*/ADD_OPCODE(SLD,	RA(), RS(), RB(), RC());
 			/*0x01c*/ADD_OPCODE(AND,	RA(), RS(), RB(), RC());
 			/*0x020*/ADD_OPCODE(CMPL,	CRFD(), L(), RA(), RB());
+			/*0x026*/ADD_OPCODE(LVSR,	VD(), RA(), RB());
 			/*0x027*/ADD_OPCODE(LVEHX,	VD(), RA(), RB());
 			/*0x028*/ADD_OPCODE(SUBF,	RD(), RA(), RB(), OE(), RC());
 			/*0x036*/ADD_OPCODE(DCBST,	RA(), RB());
 			/*0x03a*/ADD_OPCODE(CNTLZD,	RA(), RS(), RC());
 			/*0x03c*/ADD_OPCODE(ANDC,	RA(), RS(), RB(), RC());
+			/*0x047*/ADD_OPCODE(LVEWX,	VD(), RA(), RB());
 			/*0x049*/ADD_OPCODE(MULHD,	RD(), RA(), RB(), RC());
 			/*0x04b*/ADD_OPCODE(MULHW,	RD(), RA(), RB(), RC());
 			/*0x054*/ADD_OPCODE(LDARX,	RD(), RA(), RB());
@@ -328,17 +519,20 @@ public:
 			/*0x068*/ADD_OPCODE(NEG,	RD(), RA(), OE(), RC());
 			/*0x077*/ADD_OPCODE(LBZUX,	RD(), RA(), RB());
 			/*0x07c*/ADD_OPCODE(NOR,	RA(), RS(), RB(), RC());
+			/*0x087*/ADD_OPCODE(STVEBX,	VS(), RA(), RB());
 			/*0x088*/ADD_OPCODE(SUBFE,	RD(), RA(), RB(), OE(), RC());
 			/*0x08a*/ADD_OPCODE(ADDE,	RD(), RA(), RB(), OE(), RC());
-			/*0x090*/ADD_OPCODE(MTOCRF,	FXM(), RS());
+			/*0x090*/ADD_OPCODE(MTOCRF,	CRM(), RS());
 			/*0x095*/ADD_OPCODE(STDX,	RS(), RA(), RB());
 			/*0x096*/ADD_OPCODE(STWCX_,	RS(), RA(), RB());
 			/*0x097*/ADD_OPCODE(STWX,	RS(), RA(), RB());
+			/*0x0a7*/ADD_OPCODE(STVEHX,	VS(), RA(), RB());
 			/*0x0b5*/ADD_OPCODE(STDUX,	RS(), RA(), RB());
+			/*0x0c7*/ADD_OPCODE(STVEWX,	VS(), RA(), RB());
 			/*0x0ca*/ADD_OPCODE(ADDZE,	RD(), RA(), OE(), RC());
 			/*0x0d6*/ADD_OPCODE(STDCX_,	RS(), RA(), RB());
 			/*0x0d7*/ADD_OPCODE(STBX,	RS(), RA(), RB());
-			/*0x0e7*/ADD_OPCODE(STVX,	VD(), RA(), RB());
+			/*0x0e7*/ADD_OPCODE(STVX,	VS(), RA(), RB());
 			/*0x0e9*/ADD_OPCODE(MULLD,	RD(), RA(), RB(), OE(), RC());
 			/*0x0ea*/ADD_OPCODE(ADDME,	RD(), RA(), OE(), RC());
 			/*0x0eb*/ADD_OPCODE(MULLW,	RD(), RA(), RB(), OE(), RC());
@@ -351,9 +545,12 @@ public:
 			/*0x137*/ADD_OPCODE(LHZUX,	RD(), RA(), RB());
 			/*0x13c*/ADD_OPCODE(XOR,	RA(), RS(), RB(), RC());
 			/*0x153*/ADD_OPCODE(MFSPR,	RD(), SPR());
+			/*0x156*/ADD_OPCODE(DST,	RA(), RB(), STRM(), GetField(6));
 			/*0x157*/ADD_OPCODE(LHAX,	RD(), RA(), RB());
+			/*0x167*/ADD_OPCODE(LVXL,	VD(), RA(), RB());
 			/*0x168*/ADD_OPCODE(ABS,	RD(), RA(), OE(), RC());
 			/*0x173*/ADD_OPCODE(MFTB,	RD(), SPR());
+			/*0x176*/ADD_OPCODE(DSTST,	RA(), RB(), STRM(), GetField(6));
 			/*0x177*/ADD_OPCODE(LHAUX,	RD(), RA(), RB());
 			/*0x197*/ADD_OPCODE(STHX,	RS(), RA(), RB());
 			/*0x19c*/ADD_OPCODE(ORC,	RA(), RS(), RB(), RC());
@@ -363,20 +560,30 @@ public:
 			/*0x1cb*/ADD_OPCODE(DIVWU,	RD(), RA(), RB(), OE(), RC());
 			/*0x1d3*/ADD_OPCODE(MTSPR,	SPR(), RS());
 			/*0x1d6*///DCBI
+			/*0x1dc*/ADD_OPCODE(NAND,	RA(), RS(), RB(), RC());
+			/*0x1e7*/ADD_OPCODE(STVXL,	RS(), RA(), RB());
 			/*0x1e9*/ADD_OPCODE(DIVD,	RD(), RA(), RB(), OE(), RC());
 			/*0x1eb*/ADD_OPCODE(DIVW,	RD(), RA(), RB(), OE(), RC());
+			/*0x207*/ADD_OPCODE(LVLX,	VD(), RA(), RB());
 			/*0x216*/ADD_OPCODE(LWBRX,	RD(), RA(), RB());
 			/*0x217*/ADD_OPCODE(LFSX,	FRD(), RA(), RB());
 			/*0x218*/ADD_OPCODE(SRW,	RA(), RS(), RB(), RC());
 			/*0x21b*/ADD_OPCODE(SRD,	RA(), RS(), RB(), RC());
+			/*0x227*/ADD_OPCODE(LVRX,	VD(), RA(), RB());
 			/*0x237*/ADD_OPCODE(LFSUX,	FRD(), RA(), RB());
 			/*0x256*/ADD_OPCODE(SYNC,	GetField(9, 10));
 			/*0x257*/ADD_OPCODE(LFDX,	FRD(), RA(), RB());
 			/*0x277*/ADD_OPCODE(LFDUX,	FRD(), RA(), RB());
+			/*0x287*/ADD_OPCODE(STVLX,	VS(), RA(), RB());
 			/*0x297*/ADD_OPCODE(STFSX,	RS(), RA(), RB());
+			/*0x2a7*/ADD_OPCODE(STVRX,	VS(), RA(), RB());
+			/*0x2d7*/ADD_OPCODE(STFDX,	RS(), RA(), RB());
+			/*0x307*/ADD_OPCODE(LVLXL,	VD(), RA(), RB());
 			/*0x316*/ADD_OPCODE(LHBRX,	RD(), RA(), RB());
 			/*0x318*/ADD_OPCODE(SRAW,	RA(), RS(), RB(), RC());
-			/*0x31A*/ADD_OPCODE(SRAD,	RA(), RS(), RB(), RC());
+			/*0x31a*/ADD_OPCODE(SRAD,	RA(), RS(), RB(), RC());
+			/*0x327*/ADD_OPCODE(LVRXL,	VD(), RA(), RB());
+			/*0x336*/ADD_OPCODE(DSS,	STRM(), GetField(6));
 			/*0x338*/ADD_OPCODE(SRAWI,	RA(), RS(), sh(), RC());
 			/*0x33a*/ADD_OPCODE(SRADI1,	RA(), RS(), sh(), RC());
 			/*0x33b*/ADD_OPCODE(SRADI2,	RA(), RS(), sh(), RC());
@@ -431,12 +638,11 @@ public:
 		END_OPCODES_GROUP(G_3b);
 		
 		START_OPCODES_GROUP(G_3e, GetField(30, 31))
-			ADD_OPCODE(STD,	RS(), RA(), D());
+			ADD_OPCODE(STD,		RS(), RA(), D());
 			ADD_OPCODE(STDU,	RS(), RA(), DS());
 		END_OPCODES_GROUP(G_3e);
 
 		START_OPCODES_GROUP(G_3f, GetField(26, 30))
-			
 			ADD_OPCODE(FDIV,	FRD(), FRA(), FRB(), RC());
 			ADD_OPCODE(FSUB,	FRD(), FRA(), FRB(), RC());
 			ADD_OPCODE(FADD,	FRD(), FRA(), FRB(), RC());
@@ -450,8 +656,7 @@ public:
 			ADD_OPCODE(FNMADD,	FRD(), FRA(), FRC(), FRB(), RC());
 			ADD_OPCODE(FCMPO,	CRFD(), FRA(), FRB());
 
-			default:
-			START_OPCODES_GROUP(0x8, GetField(21, 30))
+			START_OPCODES_SUB_GROUP(GetField(21, 30))
 				ADD_OPCODE(FCMPU,	CRFD(), FRA(), FRB());
 				ADD_OPCODE(FRSP,	FRD(), FRB(), RC());
 				ADD_OPCODE(FCTIW,	FRD(), FRB(), RC());
@@ -470,18 +675,26 @@ public:
 				ADD_OPCODE(MTFSFI,	CRFD(), I(), RC());
 				ADD_OPCODE(MFFS,	FRD(), RC());
 				ADD_OPCODE(MTFSF,	FLM(), FRB(), RC());
-			END_OPCODES_GROUP(0x8);
-			break;
-			}
-			break;
-		//END_OPCODES_GROUP(G_3f);
+			END_OPCODES_SUB_GROUP();
+		END_OPCODES_ND_GROUP(G_3f);
 
-		default: m_op.UNK(m_code, opcode, opcode); break;
+		default:
+			if(!code)
+			{
+				m_op.NULL_OP();
+				break;
+			}
+			
+			m_op.UNK(m_code, opcode, opcode);
+		break;
 		}
 	}
 };
 
 #undef START_OPCODES_GROUP
+#undef START_OPCODES_SUB_GROUP
 #undef ADD_OPCODE
 #undef ADD_NULL_OPCODE
 #undef END_OPCODES_GROUP
+#undef END_OPCODES_ND_GROUP
+#undef END_OPCODES_SUB_GROUP

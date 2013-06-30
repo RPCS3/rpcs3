@@ -23,20 +23,18 @@ public:
 };
 
 class LogFrame 
-	: public FrameBase
+	: public wxPanel
 	, public ThreadBase
 {
 	wxListView& m_log;
 
 public:
-	LogFrame();
+	LogFrame(wxWindow* parent);
 	~LogFrame();
 
 	bool Close(bool force = false);
 
 private:
-	virtual void OnColBeginDrag(wxListEvent& event);
-	virtual void OnResize(wxSizeEvent& event);
 	virtual void Task();
 
 	void OnQuit(wxCloseEvent& event);

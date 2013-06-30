@@ -1,7 +1,7 @@
 #pragma once
 #include "ShaderParam.h"
 
-struct FragmentDecompilerThread : public wxThread
+struct FragmentDecompilerThread : public ThreadBase
 {
 	union OPDEST
 	{
@@ -99,26 +99,30 @@ struct FragmentDecompilerThread : public wxThread
 	ParamArray& m_parr;
 	u32 m_addr;
 	u32& m_size;
+	u32 m_const_index;
 
 	FragmentDecompilerThread(wxString& shader, ParamArray& parr, u32 addr, u32& size)
-		: wxThread(wxTHREAD_JOINABLE)
+		: ThreadBase(false, "Fragment Shader Decompiler Thread")
 		, m_shader(shader)
 		, m_parr(parr)
 		, m_addr(addr)
 		, m_size(size) 
+		, m_const_index(0)
 	{
+		m_size = 0;
 	}
 
 	wxString GetMask();
 
 	void AddCode(wxString code);
 	wxString AddReg(u32 index);
+	wxString AddConst();
 	wxString AddTex();
 
 	template<typename T> wxString GetSRC(T src);
 	wxString BuildCode();
 
-	ExitCode Entry();
+	virtual void Task();
 
 	u32 GetData(const u32 d) const { return d << 16 | d >> 16; }
 };
@@ -138,7 +142,13 @@ struct ShaderProgram
 
 	u32 id;
 	
-	void Wait() { if(m_decompiler_thread && m_decompiler_thread->IsRunning()) m_decompiler_thread->Wait(); }
+	void Wait()
+	{
+		if(m_decompiler_thread && m_decompiler_thread->IsAlive())
+		{
+			m_decompiler_thread->Wait();
+		}
+	}
 	void Decompile();
 	void Compile();
 

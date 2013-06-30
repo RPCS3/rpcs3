@@ -48,53 +48,157 @@ int cellVideoOutGetResolution(u32 resolutionId, u32 resolution_addr)
 	sc_v.Log("cellVideoOutGetResolution(resolutionId=%d, resolution_addr=0x%x)",
 		resolutionId, resolution_addr);
 
-	CellVideoOutResolution res = {0, 0};
-
-	switch(resolutionId)
+	if(!Memory.IsGoodAddr(resolution_addr, sizeof(CellVideoOutResolution)))
 	{
-	case CELL_VIDEO_OUT_RESOLUTION_1080: 
-		res.width = re16(1920);
-		res.height = re16(1080);
-	break;
+		return CELL_EFAULT;
+	}
+	
+	u32 num = ResolutionIdToNum(resolutionId);
 
-	case CELL_VIDEO_OUT_RESOLUTION_720:
-		res.width = re16(1280);
-		res.height = re16(720);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_480:
-		res.width = re16(720);
-		res.height = re16(480);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_576:
-		res.width = re16(720);
-		res.height = re16(576);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_1600x1080:
-		res.width = re16(1600);
-		res.height = re16(1080);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_1440x1080:
-		res.width = re16(1440);
-		res.height = re16(1080);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_1280x1080:
-		res.width = re16(1280);
-		res.height = re16(1080);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_960x1080:
-		res.width = re16(960);
-		res.height = re16(1080);
-	break;
-
-	default: return CELL_EINVAL;
+	if(!num)
+	{
+		return CELL_EINVAL;
 	}
 
+	CellVideoOutResolution res;
+	re(res.width, ResolutionTable[num].width);
+	re(res.height, ResolutionTable[num].height);
+
 	Memory.WriteData(resolution_addr, res);
+
+	return CELL_VIDEO_OUT_SUCCEEDED;
+}
+
+int cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 waitForEvent)
+{
+	sc_v.Warning("cellVideoOutConfigure(videoOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
+		videoOut, config_addr, option_addr, waitForEvent);
+
+	if(!Memory.IsGoodAddr(config_addr, sizeof(CellVideoOutConfiguration)))
+	{
+		return CELL_EFAULT;
+	}
+
+	CellVideoOutConfiguration& config = (CellVideoOutConfiguration&)Memory[config_addr];
+
+	switch(videoOut)
+	{
+	case CELL_VIDEO_OUT_PRIMARY:
+		if(config.resolutionId)
+		{
+			Emu.GetGSManager().GetInfo().mode.resolutionId = config.resolutionId;
+		}
+
+		Emu.GetGSManager().GetInfo().mode.format = config.format;
+
+		if(config.aspect)
+		{
+			Emu.GetGSManager().GetInfo().mode.aspect = config.aspect;
+		}
+
+		if(config.pitch)
+		{
+			Emu.GetGSManager().GetInfo().mode.pitch = re(config.pitch);
+		}
+
+		return CELL_VIDEO_OUT_SUCCEEDED;
+
+	case CELL_VIDEO_OUT_SECONDARY:
+		return CELL_VIDEO_OUT_SUCCEEDED;
+	}
+
+	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+}
+
+int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr)
+{
+	sc_v.Warning("cellVideoOutGetConfiguration(videoOut=%d, config_addr=0x%x, option_addr=0x%x)",
+		videoOut, config_addr, option_addr);
+
+	if(!Memory.IsGoodAddr(config_addr, sizeof(CellVideoOutConfiguration))) return CELL_EFAULT;
+
+	CellVideoOutConfiguration config;
+	memset(&config, 0, sizeof(CellVideoOutConfiguration));
+
+	switch(videoOut)
+	{
+	case CELL_VIDEO_OUT_PRIMARY:
+		config.resolutionId = Emu.GetGSManager().GetInfo().mode.resolutionId;
+		config.format = Emu.GetGSManager().GetInfo().mode.format;
+		config.aspect = Emu.GetGSManager().GetInfo().mode.aspect;
+		config.pitch = re(Emu.GetGSManager().GetInfo().mode.pitch);
+
+		Memory.WriteData(config_addr, config);
+
+		return CELL_VIDEO_OUT_SUCCEEDED;
+
+	case CELL_VIDEO_OUT_SECONDARY:
+		Memory.WriteData(config_addr, config);
+
+		return CELL_VIDEO_OUT_SUCCEEDED;
+	}
+
+	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+}
+
+int cellVideoOutGetNumberOfDevice(u32 videoOut)
+{
+	sc_v.Warning("cellVideoOutGetNumberOfDevice(videoOut=%d)", videoOut);
+
+	switch(videoOut)
+	{
+	case CELL_VIDEO_OUT_PRIMARY: return 1;
+	case CELL_VIDEO_OUT_SECONDARY: return 0;
+	}
+
+	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+}
+
+int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 aspect, u32 option)
+{
+	sc_v.Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, option_addr=0x%x, aspect=0x%x, option=0x%x)",
+		videoOut, resolutionId, aspect, option);
+
+	if(!ResolutionIdToNum(resolutionId))
+	{
+		return CELL_EINVAL;
+	}
+
+	switch(videoOut)
+	{
+	case CELL_VIDEO_OUT_PRIMARY: return 1;
+	case CELL_VIDEO_OUT_SECONDARY: return 0;
+	}
+
+	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+}
+
+SysCallBase sc_sysutil("cellSysutil");
+
+int cellSysutilCheckCallback()
+{
+	//sc_sysutil.Warning("cellSysutilCheckCallback()");
+	Emu.GetCallbackManager().m_exit_callback.Check();
+
+	return CELL_OK;
+}
+
+int cellSysutilRegisterCallback(int slot, u64 func_addr, u64 userdata)
+{
+	sc_sysutil.Warning("cellSysutilRegisterCallback(slot=%d, func_addr=0x%llx, userdata=0x%llx)", slot, func_addr, userdata);
+	Emu.GetCallbackManager().m_exit_callback.Register(slot, func_addr, userdata);
+
+	wxGetApp().m_MainFrame->UpdateUI();
+
+	return CELL_OK;
+}
+
+int cellSysutilUnregisterCallback(int slot)
+{
+	sc_sysutil.Warning("cellSysutilUnregisterCallback(slot=%d)", slot);
+	Emu.GetCallbackManager().m_exit_callback.Unregister(slot);
+
+	wxGetApp().m_MainFrame->UpdateUI();
+
 	return CELL_OK;
 }

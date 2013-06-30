@@ -4,11 +4,26 @@ struct MemBlockInfo
 {
 	u64 addr;
 	u32 size;
+	void* mem;
 
 	MemBlockInfo(u64 _addr, u32 _size)
 		: addr(_addr)
 		, size(_size)
+		, mem(malloc(_size))
 	{
+		if(!mem)
+		{
+			ConLog.Error("Not enought free memory.");
+			assert(0);
+		}
+		
+		memset(mem, 0, size);
+	}
+
+	~MemBlockInfo()
+	{
+		free(mem);
+		mem = nullptr;
 	}
 };
 
@@ -40,7 +55,6 @@ public:
 	u8* GetMemFromAddr(const u64 addr);
 
 	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
-	bool SetNewSize(const u32 size);
 	virtual bool IsMyAddress(const u64 addr);
 
 	__forceinline const u8 FastRead8(const u64 addr) const;
@@ -68,9 +82,10 @@ public:
 	virtual bool Write128(const u64 addr, const u128 value);
 
 	const u64 GetStartAddr() const { return range_start; }
-	const u64 GetEndAddr() const { return range_start + range_size - 1; }
+	const u64 GetEndAddr() const { return GetStartAddr() + GetSize() - 1; }
 	virtual const u32 GetSize() const { return range_size; }
-	void* GetMem() const { return mem; }
+	u8* GetMem() const { return mem; }
+	virtual u8* GetMem(u64 addr) const { return mem + addr; }
 };
 
 class NullMemoryBlock : public MemoryBlock
@@ -94,15 +109,13 @@ class NullMemoryBlock : public MemoryBlock
 class DynamicMemoryBlock : public MemoryBlock
 {
 	Array<MemBlockInfo> m_used_mem;
-	Array<MemBlockInfo> m_free_mem;
-	u64 m_point;
 	u32 m_max_size;
 
 public:
 	DynamicMemoryBlock();
 
 	const u32 GetSize() const { return m_max_size; }
-	const u32 GetUsedSize() const { return range_size; }
+	const u32 GetUsedSize() const;
 
 	bool IsInMyRange(const u64 addr);
 	bool IsInMyRange(const u64 addr, const u32 size);
@@ -112,11 +125,13 @@ public:
 
 	virtual void Delete();
 
-	void UpdateSize(u64 addr, u32 size);
-	void CombineFreeMem();
-
 	bool Alloc(u64 addr, u32 size);
 	u64 Alloc(u32 size);
 	bool Alloc();
 	bool Free(u64 addr);
+
+	virtual u8* GetMem(u64 addr) const;
+
+private:
+	void AppendUsedMem(u64 addr, u32 size);
 };

@@ -23,12 +23,11 @@ struct PsfDefTbl
 
 class PSFLoader
 {
-	wxFile& psf_f;
+	vfsStream& psf_f;
 	bool m_show_log;
 
 public:
-	PSFLoader(wxFile& f);
-	PSFLoader(const wxString& path);
+	PSFLoader(vfsStream& f);
 
 	wxArrayString m_table;
 	GameInfo m_info;

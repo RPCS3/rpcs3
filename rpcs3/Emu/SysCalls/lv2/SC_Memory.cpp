@@ -201,6 +201,62 @@ int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr)
 	return CELL_OK;
 }
 
+int sys_memory_free(u32 start_addr)
+{
+	sc_mem.Log("sys_memory_free(start_addr=0x%x)", start_addr);
+
+	if(!Memory.Free(start_addr)) return CELL_EFAULT;
+
+	return CELL_OK;
+}
+
+struct mmapper_info
+{
+	u32 size;
+	u32 flags;
+
+	mmapper_info(u32 _size, u32 _flags)
+		: size(_size)
+		, flags(_flags)
+	{
+	}
+
+	mmapper_info()
+	{
+	}
+};
+
+int sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr)
+{
+	sc_mem.Warning("sys_mmapper_allocate_address(size=0x%x, flags=0x%llx, alignment=0x%x, alloc_addr=0x%x)", size, flags, alignment, alloc_addr);
+
+	Memory.Write32(alloc_addr, Memory.Alloc(size, 4));
+
+	return CELL_OK;
+}
+
+int sys_mmapper_allocate_memory(u32 size, u64 flags, u32 mem_id_addr)
+{
+	sc_mem.Warning("sys_mmapper_allocate_memory(size=0x%x, flags=0x%llx, mem_id_addr=0x%x)", size, flags, mem_id_addr);
+
+	if(!Memory.IsGoodAddr(mem_id_addr)) return CELL_EFAULT;
+	Memory.Write32(mem_id_addr, sc_mem.GetNewId(new mmapper_info(size, flags)));
+
+	return CELL_OK;
+}
+
+int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags)
+{
+	sc_mem.Warning("sys_mmapper_map_memory(start_addr=0x%x, mem_id=0x%x, flags=0x%llx)", start_addr, mem_id, flags);
+
+	mmapper_info* info;
+	if(!sc_mem.CheckId(mem_id, info)) return CELL_ESRCH;
+
+	//Memory.MemoryBlocks.Add((new MemoryBlock())->SetRange(start_addr, info->size));
+
+	return CELL_OK;
+}
+
 struct sys_memory_info
 {
 	u32 total_user_memory;

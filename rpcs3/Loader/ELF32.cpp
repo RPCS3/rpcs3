@@ -1,14 +1,8 @@
 #include "stdafx.h"
 #include "ELF32.h"
 
-ELF32Loader::ELF32Loader(wxFile& f)
+ELF32Loader::ELF32Loader(vfsStream& f)
 	: elf32_f(f)
-	, LoaderBase()
-{
-}
-
-ELF32Loader::ELF32Loader(const wxString& path)
-	: elf32_f(*new wxFile(path))
 	, LoaderBase()
 {
 }
@@ -24,13 +18,13 @@ bool ELF32Loader::LoadInfo()
 	return true;
 }
 
-bool ELF32Loader::LoadData()
+bool ELF32Loader::LoadData(u64 offset)
 {
 	if(!elf32_f.IsOpened()) return false;
 
-	if(!LoadEhdrData()) return false;
-	if(!LoadPhdrData()) return false;
-	if(!LoadShdrData()) return false;
+	if(!LoadEhdrData(offset)) return false;
+	if(!LoadPhdrData(offset)) return false;
+	if(!LoadShdrData(offset)) return false;
 
 	return true;
 }
@@ -81,9 +75,9 @@ bool ELF32Loader::LoadPhdrInfo()
 	elf32_f.Seek(ehdr.e_phoff);
 	for(uint i=0; i<ehdr.e_phnum; ++i)
 	{
-		Elf32_Phdr phdr;
-		phdr.Load(elf32_f);
-		phdr_arr.AddCpy(phdr);
+		Elf32_Phdr* phdr = new Elf32_Phdr();
+		phdr->Load(elf32_f);
+		phdr_arr.Move(phdr);
 	}
 
 	return true;
@@ -94,9 +88,9 @@ bool ELF32Loader::LoadShdrInfo()
 	elf32_f.Seek(ehdr.e_shoff);
 	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
-		Elf32_Shdr shdr;
-		shdr.Load(elf32_f);
-		shdr_arr.AddCpy(shdr);
+		Elf32_Shdr* shdr = new Elf32_Shdr();
+		shdr->Load(elf32_f);
+		shdr_arr.Move(shdr);
 	}
 
 	if(ehdr.e_shstrndx >= shdr_arr.GetCount())
@@ -123,7 +117,7 @@ bool ELF32Loader::LoadShdrInfo()
 	return true;
 }
 
-bool ELF32Loader::LoadEhdrData()
+bool ELF32Loader::LoadEhdrData(u64 offset)
 {
 #ifdef LOADER_DEBUG
 	ConLog.SkipLn();
@@ -133,7 +127,7 @@ bool ELF32Loader::LoadEhdrData()
 	return true;
 }
 
-bool ELF32Loader::LoadPhdrData()
+bool ELF32Loader::LoadPhdrData(u64 offset)
 {
 	for(u32 i=0; i<phdr_arr.GetCount(); ++i)
 	{
@@ -150,8 +144,9 @@ bool ELF32Loader::LoadPhdrData()
 				);
 			}
 
+			Memory.MainMem.Alloc(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz);
 			elf32_f.Seek(phdr_arr[i].p_offset);
-			elf32_f.Read(Memory.GetMemFromAddr(phdr_arr[i].p_paddr), phdr_arr[i].p_filesz);
+			elf32_f.Read(&Memory[phdr_arr[i].p_vaddr + offset], phdr_arr[i].p_filesz);
 		}
 #ifdef LOADER_DEBUG
 		ConLog.SkipLn();
@@ -161,10 +156,8 @@ bool ELF32Loader::LoadPhdrData()
 	return true;
 }
 
-bool ELF32Loader::LoadShdrData()
+bool ELF32Loader::LoadShdrData(u64 offset)
 {
-	Memory.MemFlags.Clear();
-
 	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		Elf32_Shdr& shdr = shdr_arr[i];
@@ -175,16 +168,16 @@ bool ELF32Loader::LoadShdrData()
 #endif
 		if((shdr.sh_flags & SHF_ALLOC) != SHF_ALLOC) continue;
 
-		const s64 addr = shdr.sh_addr;
-		const s64 size = shdr.sh_size;
-		MemoryBlock* mem = NULL;
+		//const s64 addr = shdr.sh_addr;
+		//const s64 size = shdr.sh_size;
+		//MemoryBlock* mem = nullptr;
 
 		/*
 		switch(shdr.sh_type)
 		{
 		case SHT_NOBITS:
 			if(size == 0) continue;
-			memset(&Memory[addr], 0, size);
+			memset(&Memory[addr + offset], 0, size);
 		case SHT_PROGBITS:
 		break;
 		}

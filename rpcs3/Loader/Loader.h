@@ -1,4 +1,5 @@
 #pragma once
+#include "Emu/FS/vfsFileBase.h"
 
 #ifdef _DEBUG	
 	#define LOADER_DEBUG
@@ -13,7 +14,7 @@ enum Elf_Machine
 
 enum ShdrType
 {
-	SHT_NULL, 
+	SHT_NULL,
 	SHT_PROGBITS,
 	SHT_SYMTAB,
 	SHT_STRTAB,
@@ -35,10 +36,27 @@ enum ShdrFlag
 	SHF_MASKPROC	= 0xf0000000,
 };
 
-u8  Read8 (wxFile& f);
-u16 Read16(wxFile& f);
-u32 Read32(wxFile& f);
-u64 Read64(wxFile& f);
+__forceinline static u8 Read8(vfsStream& f)
+{
+	u8 ret;
+	f.Read(&ret, sizeof(u8));
+	return ret;
+}
+
+__forceinline static u16 Read16(vfsStream& f)
+{
+	return ((u16)Read8(f) << 8) | (u16)Read8(f);
+}
+
+__forceinline static u32 Read32(vfsStream& f)
+{
+	return (Read16(f) << 16) | Read16(f);
+}
+
+__forceinline static u64 Read64(vfsStream& f)
+{
+	return ((u64)Read32(f) << 32) | (u64)Read32(f);
+}
 
 const wxString Ehdr_DataToString(const u8 data);
 const wxString Ehdr_TypeToString(const u16 type);
@@ -111,24 +129,22 @@ protected:
 	}
 
 public:
-	virtual bool LoadInfo(){return false;};
-	virtual bool LoadData(){return false;};
-	virtual bool Close(){return false;};
+	virtual bool LoadInfo() { return false; }
+	virtual bool LoadData(u64 offset = 0) { return false; }
 	Elf_Machine GetMachine() { return machine; }
 	u32 GetEntry() { return entry; }
 };
 
 class Loader : public LoaderBase
 {
-	wxFile* f;
-	wxString m_path;
+	vfsFileBase* m_stream;
 
 public:
 	Loader();
-	Loader(const wxString& path);
+	Loader(vfsFileBase& stream);
+
 	void Open(const wxString& path);
-	void Open(wxFile& f, const wxString& path);
-	~Loader();
+	void Open(vfsFileBase& stream);
 
 	bool Load();
 

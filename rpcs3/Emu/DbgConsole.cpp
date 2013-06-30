@@ -6,7 +6,7 @@ BEGIN_EVENT_TABLE(DbgConsole, FrameBase)
 END_EVENT_TABLE()
 
 DbgConsole::DbgConsole()
-	: FrameBase(NULL, wxID_ANY, "DbgConsole", wxEmptyString, wxDefaultSize, wxDefaultPosition)
+	: FrameBase(NULL, wxID_ANY, "DbgConsole", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxDEFAULT_FRAME_STYLE, true)
 	, ThreadBase(false, "DbgConsole thread")
 {
 	m_console = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition,
@@ -20,7 +20,7 @@ DbgConsole::DbgConsole()
 
 DbgConsole::~DbgConsole()
 {
-	Stop();
+	ThreadBase::Stop();
 	m_dbg_buffer.Flush();
 }
 
@@ -39,7 +39,7 @@ void DbgConsole::Clear()
 
 void DbgConsole::Task()
 {
-	while(m_dbg_buffer.HasNewPacket())
+	while(m_dbg_buffer.HasNewPacket() && !TestDestroy())
 	{
 		DbgPacket packet = m_dbg_buffer.Pop();
 		m_console->SetDefaultStyle(packet.m_ch == 1 ? *m_color_red : *m_color_white);
@@ -52,5 +52,7 @@ void DbgConsole::Task()
 
 void DbgConsole::OnQuit(wxCloseEvent& event)
 {
+	ThreadBase::Stop();
 	Hide();
+	//event.Skip();
 }

@@ -9,33 +9,41 @@ protected:
 	wxString m_name;
 	bool m_detached;
 
+public:
+	wxMutex m_main_mutex;
+
 protected:
-	ThreadBase(bool detached = true, const wxString& name = "Unknown ThreadBase")
-		: m_detached(detached)
-		, m_name(name)
-		, m_executor(nullptr)
-	{
-	}
+	ThreadBase(bool detached = true, const wxString& name = "Unknown ThreadBase");
 
 public:
 	ThreadExec* m_executor;
 
 	virtual void Task()=0;
 
-	void Start();
-	void Stop(bool wait = true);
+	virtual void Start();
+	virtual void Resume();
+	virtual void Pause();
+	virtual void Stop(bool wait = true);
 
-	bool IsAlive();
-	bool TestDestroy();
+	virtual bool Wait() const;
+	virtual bool IsRunning() const;
+	virtual bool IsPaused() const;
+	virtual bool IsAlive() const;
+	virtual bool TestDestroy() const;
+	virtual wxString GetThreadName() const;
+	virtual void SetThreadName(const wxString& name);
 };
+
+ThreadBase* GetCurrentNamedThread();
 
 class ThreadExec : public wxThread
 {
-	ThreadBase* m_parent;
-	wxSemaphore m_wait_for_exit;
+	wxCriticalSection m_wait_for_exit;
 	volatile bool m_alive;
 
 public:
+	ThreadBase* m_parent;
+
 	ThreadExec(bool detached, ThreadBase* parent)
 		: wxThread(detached ? wxTHREAD_DETACHED : wxTHREAD_JOINABLE)
 		, m_parent(parent)
@@ -50,19 +58,25 @@ public:
 		if(!m_alive) return;
 
 		m_parent = nullptr;
-		Delete();
-		if(wait && m_alive) m_wait_for_exit.Wait();
+
+		//if(wait)
+		{
+			Delete();
+			//wxCriticalSectionLocker lock(m_wait_for_exit);
+		}
 	}
 
 	ExitCode Entry()
 	{
+		//wxCriticalSectionLocker lock(m_wait_for_exit);
 		m_parent->Task();
 		m_alive = false;
-		m_wait_for_exit.Post();
 		if(m_parent) m_parent->m_executor = nullptr;
 		return (ExitCode)0;
 	}
 };
+
+//ThreadBase* GetCurrentThread();
 
 template<typename T> class MTPacketBuffer
 {
@@ -71,6 +85,7 @@ protected:
 	volatile u32 m_put, m_get;
 	Array<u8> m_buffer;
 	u32 m_max_buffer_size;
+	mutable wxCriticalSection m_cs_main;
 
 	void CheckBusy()
 	{
@@ -91,17 +106,42 @@ public:
 
 	void Flush()
 	{
+		wxCriticalSectionLocker lock(m_cs_main);
 		m_put = m_get = 0;
 		m_buffer.Clear();
 		m_busy = false;
 	}
 
-	virtual void Push(const T& v) = 0;
-	virtual T Pop() = 0;
+private:
+	virtual void _push(const T& v) = 0;
+	virtual T _pop() = 0;
 
-	bool HasNewPacket() const { return m_put != m_get; }
+public:
+	void Push(const T& v)
+	{
+		wxCriticalSectionLocker lock(m_cs_main);
+		_push(v);
+	}
+
+	T Pop()
+	{
+		wxCriticalSectionLocker lock(m_cs_main);
+		return _pop();
+	}
+
+	bool HasNewPacket() const { wxCriticalSectionLocker lock(m_cs_main); return m_put != m_get; }
 	bool IsBusy() const { return m_busy; }
 };
+
+static __forceinline bool SemaphorePostAndWait(wxSemaphore& sem)
+{
+	if(sem.TryWait() != wxSEMA_BUSY) return false;
+
+	sem.Post();
+	sem.Wait();
+
+	return true;
+}
 
 /*
 class StepThread : public ThreadBase

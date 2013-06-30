@@ -55,7 +55,7 @@ template<typename T> struct IniEntry : public Ini
 		m_Config->SetPath(path);
 	}
 
-	void SetValue(const T value)
+	void SetValue(const T& value)
 	{
 		m_value = value;
 	}
@@ -65,9 +65,14 @@ template<typename T> struct IniEntry : public Ini
 		return m_value;
 	}
 
-	T LoadValue(const T defvalue)
+	T LoadValue(const T& defvalue)
 	{
 		return Ini::Load(m_key, defvalue);
+	}
+
+	void SaveValue(const T& value)
+	{
+		Ini::Save(m_key, value);
 	}
 
 	void Save()
@@ -75,7 +80,7 @@ template<typename T> struct IniEntry : public Ini
 		Ini::Save(m_key, m_value);
 	}
 
-	T Load(const T defvalue)
+	T Load(const T& defvalue)
 	{
 		return (m_value = Ini::Load(m_key, defvalue));
 	}
@@ -89,20 +94,36 @@ private:
 public:
 	IniEntry<u8> CPUDecoderMode;
 	IniEntry<u8> GSRenderMode;
+	IniEntry<int> GSResolution;
+	IniEntry<u8> GSAspectRatio;
+	IniEntry<bool> GSVSyncEnable;
 	IniEntry<u8> PadHandlerMode;
 
 public:
 	Inis() : DefPath("EmuSettings")
 	{
-		CPUDecoderMode.Init("DecoderMode", DefPath + "\\" + "CPU");
-		GSRenderMode.Init("RenderMode", DefPath + "\\" + "GS");
-		PadHandlerMode.Init("HandlerMode", DefPath + "\\" + "Pad");
+		wxString path;
+
+		path = DefPath + "\\" + "CPU";
+		CPUDecoderMode.Init("DecoderMode", path);
+
+		path = DefPath + "\\" + "GS";
+		GSRenderMode.Init("RenderMode", path);
+		GSResolution.Init("Resolution", path);
+		GSAspectRatio.Init("AspectRatio", path);
+		GSVSyncEnable.Init("VSyncEnable", path);
+
+		path = DefPath + "\\" + "Pad";
+		PadHandlerMode.Init("HandlerMode", path);
 	}
 
 	void Load()
 	{
 		CPUDecoderMode.Load(2);
 		GSRenderMode.Load(0);
+		GSResolution.Load(4);
+		GSAspectRatio.Load(1);
+		GSVSyncEnable.Load(false);
 		PadHandlerMode.Load(0);
 	}
 
@@ -110,6 +131,9 @@ public:
 	{
 		CPUDecoderMode.Save();
 		GSRenderMode.Save();
+		GSResolution.Save();
+		GSAspectRatio.Save();
+		GSVSyncEnable.Save();
 		PadHandlerMode.Save();
 	}
 };

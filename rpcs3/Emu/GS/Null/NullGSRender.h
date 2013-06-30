@@ -5,6 +5,7 @@ struct NullGSFrame : public GSFrame
 {
 	NullGSFrame() : GSFrame(NULL, "GSFrame[Null]")
 	{
+		Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(GSFrame::OnLeftDclick));
 	}
 
 	void Draw() { Draw(wxClientDC(this)); }
@@ -23,22 +24,33 @@ private:
 	}
 };
 
+struct NullRSXThread : public wxThread
+{
+	wxWindow* m_parent;
+	Stack<u32> call_stack;
+
+	NullRSXThread(wxWindow* parent);
+
+	virtual void OnExit();
+	void Start();
+	ExitCode Entry();
+};
+
 class NullGSRender
 	: public wxWindow
 	, public GSRender
 {
 private:
-	NullGSFrame* m_frame;
-	wxTimer* m_update_timer;
-	bool m_paused;
+	NullRSXThread* m_rsx_thread;
 
 public:
+	NullGSFrame* m_frame;
+
 	NullGSRender()
-		: m_frame(NULL)
-		, m_paused(false)
+		: m_frame(nullptr)
+		, m_rsx_thread(nullptr)
 	{
-		m_update_timer = new wxTimer(this);
-		Connect(m_update_timer->GetId(), wxEVT_TIMER, wxTimerEventHandler(NullGSRender::OnTimer));
+		m_draw = false;
 		m_frame = new NullGSFrame();
 	}
 
@@ -62,24 +74,10 @@ private:
 		m_localAddress = localAddress;
 		m_ctrl = (CellGcmControl*)Memory.GetMemFromAddr(m_ctrlAddress);
 
-		m_update_timer->Start(1);
+		(m_rsx_thread = new NullRSXThread(this))->Start();
 	}
 
-	void OnTimer(wxTimerEvent&)
-	{
-		while(!m_paused && m_ctrl->get != m_ctrl->put && Emu.IsRunned())
-		{
-			const u32 get = re(m_ctrl->get);
-			const u32 cmd = Memory.Read32(m_ioAddress + get);
-			const u32 count = (cmd >> 18) & 0x7ff;
-			mem32_t data(m_ioAddress + get + 4);
-
-			m_ctrl->get = re32(get + (count + 1) * 4);
-			DoCmd(cmd, cmd & 0x3ffff, data, count);
-			memset(Memory.GetMemFromAddr(m_ioAddress + get), 0, (count + 1) * 4);
-		}
-	}
-
+public:
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count)
 	{
 		switch(cmd)
@@ -87,32 +85,107 @@ private:
 		case NV406E_SET_REFERENCE:
 			m_ctrl->ref = re32(args[0]);
 		break;
-
-		case NV4097_SET_BEGIN_END:
-			if(!args[0]) m_flip_status = 0;
-		break;
 		}
 	}
 
 	virtual void Draw()
 	{
 		//if(m_frame && !m_frame->IsBeingDeleted()) m_frame->Draw();
+		m_draw = true;
 	}
 
 	virtual void Close()
 	{
-		m_update_timer->Stop();
+		if(m_rsx_thread) m_rsx_thread->Delete();
 		if(m_frame->IsShown()) m_frame->Hide();
 		m_ctrl = NULL;
 	}
-
-	void Pause()
-	{
-		m_paused = true;
-	}
-
-	void Resume()
-	{
-		m_paused = false;
-	}
 };
+
+NullRSXThread::NullRSXThread(wxWindow* parent)
+	: wxThread(wxTHREAD_DETACHED)
+	, m_parent(parent)
+{
+}
+
+void NullRSXThread::OnExit()
+{
+	call_stack.Clear();
+}
+
+void NullRSXThread::Start()
+{
+	Create();
+	Run();
+}
+
+wxThread::ExitCode NullRSXThread::Entry()
+{
+	ConLog.Write("Null RSX thread entry");
+
+	NullGSRender& p = *(NullGSRender*)m_parent;
+
+	while(!TestDestroy() && p.m_frame && !p.m_frame->IsBeingDeleted())
+	{
+		wxCriticalSectionLocker lock(p.m_cs_main);
+
+		if(p.m_ctrl->get == p.m_ctrl->put || !Emu.IsRunned())
+		{
+			SemaphorePostAndWait(p.m_sem_flush);
+
+			if(p.m_draw)
+			{
+				p.m_draw = false;
+				p.m_flip_status = 0;
+				if(SemaphorePostAndWait(p.m_sem_flip)) continue;
+			}
+
+			Sleep(1);
+			continue;
+		}
+
+		const u32 get = re(p.m_ctrl->get);
+		const u32 cmd = Memory.Read32(p.m_ioAddress + get);
+		const u32 count = (cmd >> 18) & 0x7ff;
+
+		if(cmd & CELL_GCM_METHOD_FLAG_JUMP)
+		{
+			p.m_ctrl->get = re32(cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT));
+			ConLog.Warning("rsx jump!");
+			continue;
+		}
+		if(cmd & CELL_GCM_METHOD_FLAG_CALL)
+		{
+			call_stack.Push(get + 4);
+			p.m_ctrl->get = re32(cmd & ~CELL_GCM_METHOD_FLAG_CALL);
+			ConLog.Warning("rsx call!");
+			continue;
+		}
+		if(cmd & CELL_GCM_METHOD_FLAG_RETURN)
+		{
+			p.m_ctrl->get = re32(call_stack.Pop());
+			ConLog.Warning("rsx return!");
+			continue;
+		}
+		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
+		{
+			//ConLog.Warning("non increment cmd! 0x%x", cmd);
+		}
+
+		if(cmd == 0)
+		{
+			ConLog.Warning("null cmd: addr=0x%x, put=0x%x, get=0x%x", p.m_ioAddress + get, re(p.m_ctrl->put), get);
+			Emu.Pause();
+			continue;
+		}
+
+		p.DoCmd(cmd, cmd & 0x3ffff, mem32_t(p.m_ioAddress + get + 4), count);
+		re(p.m_ctrl->get, get + (count + 1) * 4);
+	}
+
+	ConLog.Write("Null RSX thread exit...");
+
+	call_stack.Clear();
+
+	return (ExitCode)0;
+}

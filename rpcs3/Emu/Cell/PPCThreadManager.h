@@ -1,7 +1,7 @@
 #pragma once
 #include "PPCThread.h"
 
-class PPCThreadManager : public ThreadBase
+class PPCThreadManager
 {
 	//IdManager m_threads_id;
 	//ArrayF<PPUThread> m_ppu_threads;
@@ -19,8 +19,8 @@ public:
 
 	ArrayF<PPCThread>& GetThreads() { return m_threads; }
 	s32 GetThreadNumById(bool isPPU, u32 id);
+	PPCThread* GetThread(u32 id);
 	//IdManager& GetIDs() {return m_threads_id;}
 
 	void Exec();
-	virtual void Task();
 };

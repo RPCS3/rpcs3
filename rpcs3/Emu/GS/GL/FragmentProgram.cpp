@@ -49,7 +49,12 @@ wxString FragmentDecompilerThread::GetMask()
 wxString FragmentDecompilerThread::AddReg(u32 index)
 {
 	//if(!index) return "gl_FragColor";
-	return m_parr.AddParam(index ? PARAM_NONE : PARAM_OUT, "vec4", wxString::Format("r%d", index));
+	return m_parr.AddParam(index ? PARAM_NONE : PARAM_OUT, "vec4", wxString::Format("r%d", index), index ? -1 : 0);
+}
+
+wxString FragmentDecompilerThread::AddConst()
+{
+	return m_parr.AddParam(PARAM_CONST, "vec4", wxString::Format("fc%d", m_const_index++));
 }
 
 wxString FragmentDecompilerThread::AddTex()
@@ -96,8 +101,10 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 	}
 	break;
 
-	//case 2: //imm
-	//break;
+	case 2: //const
+		ConLog.Write("reg index = %d", src.tmp_reg_index);
+		ret += AddConst();
+	break;
 
 	default:
 		ConLog.Error("Bad src type %d", src.reg_type);
@@ -126,17 +133,11 @@ wxString FragmentDecompilerThread::BuildCode()
 
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
 	{
-		for(u32 n=0; n<m_parr.params[i].names.GetCount(); ++n)
-		{
-			p += m_parr.params[i].type;
-			p += " ";
-			p += m_parr.params[i].names[n];
-			p += ";\n";
-		}
+		p += m_parr.params[i].Format();
 	}
 
 	static const wxString& prot = 
-		"#version 330 core\n"
+		"#version 330\n"
 		"\n"
 		"%s\n"
 		"void main()\n{\n%s}\n";
@@ -144,11 +145,12 @@ wxString FragmentDecompilerThread::BuildCode()
 	return wxString::Format(prot, p, main);
 }
 
-wxThread::ExitCode FragmentDecompilerThread::Entry()
+void FragmentDecompilerThread::Task()
 {
 	mem32_t data(m_addr);
+	m_size = 0;
 
-	for(;;)
+	while(true)
 	{
 		dst.HEX = GetData(data[0]);
 		src0.HEX = GetData(data[1]);
@@ -160,7 +162,67 @@ wxThread::ExitCode FragmentDecompilerThread::Entry()
 		case 0x00: break; //NOP
 		case 0x01: AddCode(GetSRC(src0)); break; //MOV
 		case 0x02: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + ")"); break; //MUL
+		case 0x03: AddCode("(" + GetSRC(src0) + " + " + GetSRC(src1) + ")"); break; //ADD
+		case 0x04: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + " + " + GetSRC(src2) + ")"); break; //MAD
+		case 0x05: AddCode("dot(" + GetSRC(src0) + ".xyz, " + GetSRC(src1) + ".xyz)"); break; // DP3
+		case 0x06: AddCode("dot(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // DP4
+		//case 0x07: break; // DST
+		case 0x08: AddCode("min(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MIN
+		case 0x09: AddCode("max(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MAX
+		//case 0x0a: break; // SLT
+		//case 0x0b: break; // SGE
+		//case 0x0c: break; // SLE
+		//case 0x0d: break; // SGT
+		//case 0x0e: break; // SNE
+		//case 0x0f: break; // SEQ
+
+		//case 0x10: break; // FRC
+		//case 0x11: break; // FLR
+		//case 0x12: break; // KIL
+		//case 0x13: break; // PK4
+		//case 0x14: break; // UP4
+		case 0x15: AddCode("ddx(" + GetSRC(src0) + ")"); break; // DDX
+		case 0x16: AddCode("ddy(" + GetSRC(src0) + ")"); break; // DDY
 		case 0x17: AddCode("texture(" + AddTex() + ", (" + GetSRC(src0) + ").xy)"); break; //TEX
+		//case 0x18: break; // TXP
+		//case 0x19: break; // TXD
+		case 0x1a: AddCode("1 / (" + GetSRC(src0) + ")"); break; // RCP
+		case 0x1b: AddCode("inversesqrt(" + GetSRC(src0) + ")"); break; // RSQ
+		case 0x1c: AddCode("exp2(" + GetSRC(src0) + ")"); break; // EX2
+		case 0x1d: AddCode("log2(" + GetSRC(src0) + ")"); break; // LG2
+		//case 0x1e: break; // LIT
+		//case 0x1f: break; // LRP
+
+		//case 0x20: break; // STR
+		//case 0x21: break; // SFL
+		case 0x22: AddCode("cos(" + GetSRC(src0) + ")"); break; // COS
+		case 0x23: AddCode("sin(" + GetSRC(src0) + ")"); break; // SIN
+		//case 0x24: break; // PK2
+		//case 0x25: break; // UP2
+		//case 0x26: break; // POW
+		//case 0x27: break; // PKB
+		//case 0x28: break; // UPB
+		//case 0x29: break; // PK16
+		//case 0x2a: break; // UP16
+		//case 0x2b: break; // BEM
+		//case 0x2c: break; // PKG
+		//case 0x2d: break; // UPG
+		//case 0x2e: break; // DP2A
+		//case 0x2f: break; // TXL
+
+		//case 0x31: break; // TXB
+		//case 0x33: break; // TEXBEM
+		//case 0x34: break; // TXPBEM
+		//case 0x35: break; // BEMLUM
+		//case 0x36: break; // REFL
+		//case 0x37: break; // TIMESWTEX
+		//case 0x38: break; // DP2
+		//case 0x39: break; // NRM
+		//case 0x3a: break; // DIV
+		//case 0x3b: break; // DIVSQ
+		//case 0x3c: break; // LIF
+		//case 0x3d: break; // FENCT
+		//case 0x3e: break; // FENCB
 
 		default:
 			ConLog.Error("Unknown opcode 0x%x", dst.opcode);
@@ -177,8 +239,6 @@ wxThread::ExitCode FragmentDecompilerThread::Entry()
 
 	m_shader = BuildCode();
 	main.Clear();
-
-	return (ExitCode)0;
 }
 
 ShaderProgram::ShaderProgram() 
@@ -192,8 +252,13 @@ ShaderProgram::~ShaderProgram()
 	if(m_decompiler_thread)
 	{
 		Wait();
-		if(m_decompiler_thread->IsAlive()) m_decompiler_thread->Delete();
-		safe_delete(m_decompiler_thread);
+		if(m_decompiler_thread->IsAlive())
+		{
+			m_decompiler_thread->Stop();
+		}
+		
+		delete m_decompiler_thread;
+		m_decompiler_thread = nullptr;
 	}
 
 	Delete();
@@ -207,13 +272,17 @@ void ShaderProgram::Decompile()
 	if(m_decompiler_thread)
 	{
 		Wait();
-		if(m_decompiler_thread->IsAlive()) m_decompiler_thread->Delete();
-		safe_delete(m_decompiler_thread);
+		if(m_decompiler_thread->IsAlive())
+		{
+			m_decompiler_thread->Stop();
+		}
+		
+		delete m_decompiler_thread;
+		m_decompiler_thread = nullptr;
 	}
 
 	m_decompiler_thread = new FragmentDecompilerThread(shader, parr, addr, size);
-	m_decompiler_thread->Create();
-	m_decompiler_thread->Run();
+	m_decompiler_thread->Start();
 #endif
 }
 
@@ -242,7 +311,7 @@ void ShaderProgram::Compile()
 			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
 			ConLog.Error("Failed to compile shader: %s", buf);
-			free(buf);
+			delete[] buf;
 		}
 
 		ConLog.Write(shader);
@@ -255,9 +324,10 @@ void ShaderProgram::Delete()
 {
 	for(u32 i=0; i<parr.params.GetCount(); ++i)
 	{
-		parr.params[i].names.Clear();
+		parr.params[i].items.Clear();
 		parr.params[i].type.Clear();
 	}
+
 	parr.params.Clear();
 	shader.Clear();
 

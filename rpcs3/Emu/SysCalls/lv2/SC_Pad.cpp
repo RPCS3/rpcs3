@@ -2,7 +2,7 @@
 #include "Emu/Io/Pad.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-SysCallBase sc_pad("cellPad");
+extern Module sys_io;
 
 enum CELL_PAD_ERROR_CODE
 {
@@ -37,7 +37,7 @@ struct CellPadInfo2
 
 int cellPadInit(u32 max_connect)
 {
-	sc_pad.Log("cellPadInit(max_connect=%d)", max_connect);
+	sys_io.Log("cellPadInit(max_connect=%d)", max_connect);
 	if(Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_ALREADY_INITIALIZED;
 	Emu.GetPadManager().Init(max_connect);
 	return CELL_OK;
@@ -45,7 +45,7 @@ int cellPadInit(u32 max_connect)
 
 int cellPadEnd()
 {
-	sc_pad.Log("cellPadEnd()");
+	sys_io.Log("cellPadEnd()");
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	Emu.GetPadManager().Close();
 	return CELL_OK;
@@ -53,7 +53,7 @@ int cellPadEnd()
 
 int cellPadClearBuf(u32 port_no)
 {
-	sc_pad.Log("cellPadClearBuf(port_no=%d)", port_no);
+	sys_io.Log("cellPadClearBuf(port_no=%d)", port_no);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetPadManager().GetPads().GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;
 
@@ -120,7 +120,7 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 
 int cellPadGetDataExtra(u32 port_no, u32 device_type_addr, u32 data_addr)
 {
-	sc_pad.Log("cellPadGetDataExtra(port_no=%d, device_type_addr=0x%x, device_type_addr=0x%x)", port_no, device_type_addr, data_addr);
+	sys_io.Log("cellPadGetDataExtra(port_no=%d, device_type_addr=0x%x, device_type_addr=0x%x)", port_no, device_type_addr, data_addr);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetPadManager().GetPads().GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	return CELL_OK;
@@ -128,7 +128,7 @@ int cellPadGetDataExtra(u32 port_no, u32 device_type_addr, u32 data_addr)
 
 int cellPadSetActDirect(u32 port_no, u32 param_addr)
 {
-	sc_pad.Log("cellPadSetActDirect(port_no=%d, param_addr=0x%x)", port_no, param_addr);
+	sys_io.Log("cellPadSetActDirect(port_no=%d, param_addr=0x%x)", port_no, param_addr);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	if(port_no >= Emu.GetPadManager().GetPads().GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;
 	return CELL_OK;
@@ -136,7 +136,7 @@ int cellPadSetActDirect(u32 port_no, u32 param_addr)
 
 int cellPadGetInfo2(u32 info_addr)
 {
-	sc_pad.Log("cellPadGetInfo2(info_addr=0x%x)", info_addr);
+	sys_io.Log("cellPadGetInfo2(info_addr=0x%x)", info_addr);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 
 	CellPadInfo2 info;
@@ -165,7 +165,7 @@ int cellPadGetInfo2(u32 info_addr)
 
 int cellPadSetPortSetting(u32 port_no, u32 port_setting)
 {
-	sc_pad.Log("cellPadSetPortSetting(port_no=%d, port_setting=0x%x)", port_no, port_setting);
+	sys_io.Log("cellPadSetPortSetting(port_no=%d, port_setting=0x%x)", port_no, port_setting);
 	if(!Emu.GetPadManager().IsInited()) return CELL_PAD_ERROR_UNINITIALIZED;
 	Array<Pad>& pads = Emu.GetPadManager().GetPads();
 	if(port_no >= pads.GetCount()) return CELL_PAD_ERROR_INVALID_PARAMETER;

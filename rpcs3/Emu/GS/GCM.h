@@ -1,10 +1,17 @@
 #pragma once
 
+enum
+{
+	CELL_GCM_DISPLAY_HSYNC				= 1,
+	CELL_GCM_DISPLAY_VSYNC				= 2,
+	CELL_GCM_DISPLAY_HSYNC_WITH_NOISE	= 3,
+};
+
 struct CellGcmControl
 {
-	volatile u32 put;
-	volatile u32 get;
-	volatile u32 ref;
+	u32 put;
+	u32 get;
+	u32 ref;
 };
 
 struct CellGcmConfig
@@ -332,12 +339,12 @@ enum
 	NV3089_IMAGE_IN						= 0x0000C40C,
 };
 
-static const wxString getMethodName(const u32 id)
+static const wxString GetMethodName(const u32 id)
 {
 	struct MethodName
 	{
 		const u32 id;
-		const wxString name;
+		const wxString& name;
 	} static const METHOD_NAME_LIST[] = {
 		{ NV4097_NO_OPERATION , "NoOperation" } ,
 		{ NV4097_NOTIFY , "Notify" } ,

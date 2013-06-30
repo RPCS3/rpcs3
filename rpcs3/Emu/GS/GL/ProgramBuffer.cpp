@@ -70,11 +70,9 @@ u32 ProgramBuffer::GetProg(u32 fp, u32 vp) const
 
 void ProgramBuffer::Add(Program& prog, ShaderProgram& fp, VertexProgram& vp)
 {
-	const u32 pos = m_buf.GetCount();
-	m_buf.Add(new BufferInfo());
-	BufferInfo& new_buf = m_buf[pos];
+	BufferInfo& new_buf = *new BufferInfo();
 
-	ConLog.Write("Add program (%d):", pos);
+	ConLog.Write("Add program (%d):", m_buf.GetCount());
 	ConLog.Write("*** prog id = %d", prog.id);
 	ConLog.Write("*** vp id = %d", vp.id);
 	ConLog.Write("*** fp id = %d", fp.id);
@@ -88,14 +86,13 @@ void ProgramBuffer::Add(Program& prog, ShaderProgram& fp, VertexProgram& vp)
 	new_buf.vp_id = vp.id;
 	new_buf.fp_id = fp.id;
 
-	new_buf.fp_data.SetCount(fp.size);
-	memcpy(&new_buf.fp_data[0], &Memory[fp.addr], fp.size);
-
-	new_buf.vp_data.SetCount(vp.data.GetCount());
-	memcpy(&new_buf.vp_data[0], &vp.data[0], vp.data.GetCount() * 4);
+	new_buf.fp_data.AddCpy(&Memory[fp.addr], fp.size);
+	new_buf.vp_data.CopyFrom(vp.data);
 
 	new_buf.vp_shader = vp.shader;
 	new_buf.fp_shader = fp.shader;
+
+	m_buf.Move(&new_buf);
 }
 
 void ProgramBuffer::Clear()

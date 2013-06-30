@@ -2,8 +2,14 @@
 #include "PPCThread.h"
 #include "Gui/InterpreterDisAsm.h"
 
+PPCThread* GetCurrentPPCThread()
+{
+	return (PPCThread*)GetCurrentNamedThread();
+}
+
 PPCThread::PPCThread(PPCThreadType type)
-	: m_type(type)
+	: ThreadBase(true, "PPCThread")
+	, m_type(type)
 	, DisAsmFrame(NULL)
 	, m_arg(0)
 	, m_dec(NULL)
@@ -79,16 +85,11 @@ void PPCThread::SetId(const u32 id)
 	m_id = id;
 	ID& thread = Emu.GetIdManager().GetIDData(m_id);
 	thread.m_name = GetName();
-
-	if(Ini.CPUDecoderMode.GetValue() != 1) return;
-	DisAsmFrame = new InterpreterDisAsmFrame(GetFName(), this);
-	(*(InterpreterDisAsmFrame*)DisAsmFrame).Show();
 }
 
 void PPCThread::SetName(const wxString& name)
 {
 	m_name = name;
-	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).SetTitle(GetFName());
 }
 
 void PPCThread::NextBranchPc()
@@ -117,6 +118,11 @@ void PPCThread::SetPc(const u64 pc)
 {
 	PC = pc;
 	nPC = PC + 4;
+}
+
+void PPCThread::SetEntry(const u64 pc)
+{
+	entry = pc;
 }
 
 void PPCThread::SetBranch(const u64 pc)
@@ -164,41 +170,95 @@ void PPCThread::Run()
 	
 	m_status = Runned;
 
+	SetPc(entry);
 	InitStack();
 	InitRegs();
 	DoRun();
 	Emu.CheckStatus();
+
+	wxGetApp().SendDbgCommand(DID_START_THREAD, this);
+
 	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).DoUpdate();
 }
 
 void PPCThread::Resume()
 {
 	if(!IsPaused()) return;
+
 	m_status = Runned;
 	DoResume();
 	Emu.CheckStatus();
+
+	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, this);
+
+	ThreadBase::Start();
 }
 
 void PPCThread::Pause()
 {
 	if(!IsRunned()) return;
+
 	m_status = Paused;
 	DoPause();
 	Emu.CheckStatus();
+
+	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
+
+	ThreadBase::Stop(false);
 }
 
 void PPCThread::Stop()
 {
 	if(IsStopped()) return;
+
 	m_status = Stopped;
 	Reset();
 	DoStop();
 	Emu.CheckStatus();
+
+	wxGetApp().SendDbgCommand(DID_STOP_THREAD, this);
+
+	ThreadBase::Stop();
 }
 
 void PPCThread::Exec()
 {
-	if(!IsRunned()) return;
+	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
+	ThreadBase::Start();
+}
+
+void PPCThread::ExecOnce()
+{
 	DoCode(Memory.Read32(m_offset + PC));
 	NextPc();
+}
+
+void PPCThread::Task()
+{
+	ConLog.Write("%s enter", PPCThread::GetFName());
+
+	try
+	{
+		while(!Emu.IsStopped() && !TestDestroy())
+		{
+			if(Emu.IsPaused())
+			{
+				Sleep(1);
+				continue;
+			}
+
+			DoCode(Memory.Read32(m_offset + PC));
+			NextPc();
+		}
+	}
+	catch(const wxString& e)
+	{
+		ConLog.Error("Exception: %s", e);
+	}
+	catch(const char* e)
+	{
+		ConLog.Error("Exception: %s", e);
+	}
+
+	ConLog.Write("%s leave", PPCThread::GetFName());
 }

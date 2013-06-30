@@ -54,7 +54,7 @@ DisAsmFrame::DisAsmFrame(PPCThread& cpu)
 
 	Connect( wxEVT_SIZE, wxSizeEventHandler(DisAsmFrame::OnResize) );
 
-	wxGetApp().Connect(m_disasm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(DisAsmFrame::MouseWheel), (wxObject*)0, this);
+	m_app_connector.Connect(m_disasm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(DisAsmFrame::MouseWheel), (wxObject*)0, this);
 
 	Connect(b_prev.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Prev));
 	Connect(b_next.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Next));
@@ -211,7 +211,7 @@ struct WaitDumperThread : public ThreadBase
 
 	~WaitDumperThread()
 	{
-		free((bool*)done);
+		delete (bool*)done;
 		done = NULL;
 	}
 
@@ -272,11 +272,11 @@ struct WaitDumperThread : public ThreadBase
 			for(uint sh=0; sh<shdr_count; ++sh) arr[c][sh].Empty();
 		}
 
-		free(arr);
+		delete[] arr;
 
 		//safe_delete(shdr_arr);
-		safe_delete(l_elf32);
-		safe_delete(l_elf64);
+		delete l_elf32;
+		delete l_elf64;
 
 		prog_dial2.Close();
 		fd.Close();
@@ -294,11 +294,11 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 	if(ctrl.ShowModal() == wxID_CANCEL) return;
 
-	wxFile& f_elf = *new wxFile(Emu.m_path);
+	vfsStream& f_elf = *new vfsLocalFile(Emu.m_path);
 	ConLog.Write("path: %s", Emu.m_path);
 	Elf_Ehdr ehdr;
 	ehdr.Load(f_elf);
-	f_elf.Close();
+
 	if(!ehdr.CheckMagic())
 	{
 		ConLog.Error("Corrupted ELF!");
@@ -310,7 +310,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	{
 	case CLASS_ELF64:
 		ElfType64 = true;
-		l_elf64 = new ELF64Loader(Emu.m_path);
+		l_elf64 = new ELF64Loader(f_elf);
 		if(!l_elf64->LoadInfo())
 		{
 			delete l_elf64;
@@ -323,7 +323,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 	case CLASS_ELF32:
 		ElfType64 = false;
-		l_elf32 = new ELF32Loader(Emu.m_path);
+		l_elf32 = new ELF32Loader(f_elf);
 		if(!l_elf32->LoadInfo())
 		{
 			delete l_elf32;

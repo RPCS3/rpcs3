@@ -17,17 +17,17 @@
 
 #include <wx/wxprec.h>
 
-#define uint unsigned int
+typedef unsigned int uint;
 
-#define u8  unsigned __int8
-#define u16 unsigned __int16
-#define u32 unsigned __int32
-#define u64 unsigned __int64
+typedef unsigned __int8 u8;
+typedef unsigned __int16 u16;
+typedef unsigned __int32 u32;
+typedef unsigned __int64 u64;
 
-#define s8  signed __int8
-#define s16 signed __int16
-#define s32 signed __int32
-#define s64 signed __int64
+typedef signed __int8 s8;
+typedef signed __int16 s16;
+typedef signed __int32 s32;
+typedef signed __int64 s64;
 
 union u128
 {
@@ -174,13 +174,14 @@ static void safe_realloc(T* ptr, uint new_size)
 	ptr = (T*)((ptr == NULL) ? malloc(new_size * sizeof(T)) : realloc(ptr, new_size * sizeof(T)));
 }
 
-#define safe_delete(x) {free(x);(x)=NULL;}
+#define safe_delete(x) {free(x);(x)=nullptr;}
 
 enum Status
 {
 	Runned,
 	Paused,
 	Stopped,
+	Ready,
 };
 
 #include "Utilities/Thread.h"
@@ -188,11 +189,19 @@ enum Status
 #include "Utilities/Timer.h"
 #include "Utilities/IdManager.h"
 
+#include "AppConnector.h"
+
 #include "Ini.h"
 #include "Gui/FrameBase.h"
 #include "Gui/ConLog.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/Cell/PPUThread.h"
+
+#include "Emu/FS/vfsFileBase.h"
+#include "Emu/FS/vfsLocalFile.h"
+#include "Emu/FS/vfsStream.h"
+#include "Emu/FS/vfsStreamMemory.h"
 #include "rpcs3.h"
 
 #define _PRGNAME_ "RPCS3"

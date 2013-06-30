@@ -1,27 +1,35 @@
 #pragma once
 #include "GameViewer.h"
+#include "wx/aui/aui.h"
 
 class MainFrame : public FrameBase
 {
 	GameViewer* m_game_viewer;
+	wxAuiManager m_aui_mgr;
+	AppConnector m_app_connector;
 
 public:
 	MainFrame();
+	~MainFrame();
+
+	void AddPane(wxWindow* wind, const wxString& caption, int flags);
+	void DoSettings(bool load);
 
 private:
-	virtual void OnQuit(wxCloseEvent& event);
-	virtual void OnResize(wxSizeEvent& event);
+	void OnQuit(wxCloseEvent& event);
 
-	virtual void BootGame(wxCommandEvent& event);
-	virtual void BootElf(wxCommandEvent& event);
-	virtual void BootSelf(wxCommandEvent& event);
-	virtual void Pause(wxCommandEvent& event);
-	virtual void Stop(wxCommandEvent& event);
-	virtual void Config(wxCommandEvent& event);
-	virtual void OnKeyDown(wxKeyEvent& event);
+	void BootGame(wxCommandEvent& event);
+	void BootElf(wxCommandEvent& event);
+	void BootSelf(wxCommandEvent& event);
+	void Pause(wxCommandEvent& event);
+	void Stop(wxCommandEvent& event);
+	void SendExit(wxCommandEvent& event);
+	void Config(wxCommandEvent& event);
+	void UpdateUI(wxCommandEvent& event);
+	void OnKeyDown(wxKeyEvent& event);
 
 public:
-	virtual void UpdateUI();
+	void UpdateUI();
 
 private:
 	DECLARE_EVENT_TABLE()

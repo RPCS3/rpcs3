@@ -5,6 +5,7 @@ class FrameBase : public wxFrame
 protected:
 	IniEntry<WindowInfo> m_ini;
 	WindowInfo m_default_info;
+	bool m_is_skip_resize;
 
 	FrameBase(
 		wxWindow* parent,
@@ -13,9 +14,11 @@ protected:
 		const wxString& ininame = wxEmptyString,
 		wxSize defsize = wxDefaultSize,
 		wxPoint defposition = wxDefaultPosition,
-		long style = wxDEFAULT_FRAME_STYLE)
+		long style = wxDEFAULT_FRAME_STYLE,
+		bool is_skip_resize = false)
 		: wxFrame(parent, id, framename, defposition, defsize, style)
 		, m_default_info(defsize, defposition)
+		, m_is_skip_resize(is_skip_resize)
 	{
 		m_ini.Init(ininame.IsEmpty() ? framename : ininame, "GuiSettings");
 		LoadInfo();
@@ -51,7 +54,7 @@ protected:
 	void OnResize(wxSizeEvent& event)
 	{
 		m_ini.SetValue(WindowInfo(GetSize(), m_ini.GetValue().position));
-		//event.Skip();
+		if(m_is_skip_resize) event.Skip();
 	}
 
 	void OnClose(wxCloseEvent& event)

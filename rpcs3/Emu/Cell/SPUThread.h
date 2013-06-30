@@ -249,3 +249,5 @@ protected:
 private:
 	virtual void DoCode(const s32 code);
 };
+
+SPUThread& GetCurrentSPUThread();

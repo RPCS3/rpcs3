@@ -6,6 +6,22 @@ Program::Program() : id(0)
 {
 }
 
+int Program::GetLocation(const wxString& name)
+{
+	for(u32 i=0; i<m_locations.GetCount(); ++i)
+	{
+		if(!m_locations[i].name.Cmp(name))
+		{
+			return m_locations[i].loc;
+		}
+	}
+	
+	u32 pos = m_locations.Move(new Location());
+	m_locations[pos].name = name;
+
+	return m_locations[pos].loc = glGetUniformLocation(id, name);
+}
+
 bool Program::IsCreated() const
 {
 	return id > 0;
@@ -18,23 +34,6 @@ void Program::Create(const u32 vp, const u32 fp)
 
 	glAttachShader(id, vp);
 	glAttachShader(id, fp);
-
-	glBindFragDataLocation(id, 0, "r0");
-	static const wxString reg_table[] = 
-	{
-		"in_pos", "in_weight", "in_normal",
-		"in_col0", "in_col1",
-		"in_fogc",
-		"in_6", "in_7",
-		"in_tc0", "in_tc1", "in_tc2", "in_tc3",
-		"in_tc4", "in_tc5", "in_tc6", "in_tc7"
-	};
-
-	for(u32 i=0; i<WXSIZEOF(reg_table); ++i)
-	{
-		glBindAttribLocation(id, i, reg_table[i]);
-		checkForGlError("glBindAttribLocation");
-	}
 
 	glLinkProgram(id);
 
@@ -81,7 +80,7 @@ void Program::Use()
 
 void Program::SetTex(u32 index)
 {
-	glUniform1i(glGetUniformLocation(id, wxString::Format("tex_%d", index)), index);
+	glUniform1i(GetLocation(wxString::Format("tex_%d", index)), index);
 	checkForGlError(wxString::Format("SetTex(%d)", index));
 }
 

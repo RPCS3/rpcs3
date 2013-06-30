@@ -27,7 +27,7 @@ struct _DbgBuffer : public MTPacketBuffer<DbgPacket>
 	{
 	}
 
-	void Push(const DbgPacket& data)
+	void _push(const DbgPacket& data)
 	{
 		const u32 stext = data.m_text.Len();
 
@@ -47,7 +47,7 @@ struct _DbgBuffer : public MTPacketBuffer<DbgPacket>
 		CheckBusy();
 	}
 
-	DbgPacket Pop()
+	DbgPacket _pop()
 	{
 		DbgPacket ret;
 

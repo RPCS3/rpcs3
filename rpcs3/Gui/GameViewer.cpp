@@ -3,21 +3,14 @@
 #include "Loader/PSF.h"
 
 static const wxString m_class_name = "GameViewer";
-GameViewer::GameViewer(wxWindow* parent) : wxPanel(parent)
+GameViewer::GameViewer(wxWindow* parent) : wxListView(parent)
 {
-	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );
-
-	m_game_list = new wxListView(this);
-	s_panel.Add(m_game_list);
-
-	SetSizerAndFit( &s_panel );
-
 	LoadSettings();
-	m_columns.Show(m_game_list);
+	m_columns.Show(this);
 
 	m_path = wxGetCwd(); //TODO
 
-	Connect(m_game_list->GetId(), wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(GameViewer::DClick));
+	Connect(GetId(), wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(GameViewer::DClick));
 
 	Refresh();
 }
@@ -25,13 +18,11 @@ GameViewer::GameViewer(wxWindow* parent) : wxPanel(parent)
 GameViewer::~GameViewer()
 {
 	SaveSettings();
-	m_game_list->Destroy();
 }
 
 void GameViewer::DoResize(wxSize size)
 {
 	SetSize(size);
-	m_game_list->SetSize(size);
 }
 
 void GameViewer::LoadGames()
@@ -63,7 +54,8 @@ void GameViewer::LoadPSF()
 	{
 		const wxString& path = m_games[i] + "\\" + "PARAM.SFO";
 		if(!wxFileExists(path)) continue;
-		PSFLoader psf(path);
+		vfsLocalFile f(path);
+		PSFLoader psf(f);
 		if(!psf.Load(false)) continue;
 		psf.m_info.root = m_games[i];
 		m_game_data.Add(new GameInfo(psf.m_info));
@@ -74,7 +66,7 @@ void GameViewer::LoadPSF()
 
 void GameViewer::ShowData()
 {
-	m_columns.ShowData(m_game_list);
+	m_columns.ShowData(this);
 }
 
 void GameViewer::Refresh()
@@ -86,7 +78,7 @@ void GameViewer::Refresh()
 
 void GameViewer::SaveSettings()
 {
-	m_columns.LoadSave(false, m_class_name, m_game_list);
+	m_columns.LoadSave(false, m_class_name, this);
 }
 
 void GameViewer::LoadSettings()
@@ -96,10 +88,10 @@ void GameViewer::LoadSettings()
 
 void GameViewer::DClick(wxListEvent& event)
 {
-	long i = m_game_list->GetFirstSelected();
+	long i = GetFirstSelected();
 	if(i < 0) return;
 
-	const wxString& path = m_game_data[i].root + "\\" + "USRDIR" + "\\" + "BOOT.BIN";
+	const wxString& path = m_path + "\\" + m_game_data[i].root + "\\" + "USRDIR" + "\\" + "BOOT.BIN";
 	if(!wxFileExists(path))
 	{
 		ConLog.Error("Boot error: elf not found! [%s]", path);

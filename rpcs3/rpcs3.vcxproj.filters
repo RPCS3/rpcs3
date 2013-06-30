@@ -38,6 +38,12 @@
     <Filter Include="Utilities">
       <UniqueIdentifier>{9bd88f78-8528-48f3-b9e0-78e06476b04d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\FS">
+      <UniqueIdentifier>{fd7cea02-e77f-41b1-8b61-f78e7d280e04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\SysCalls\Modules">
+      <UniqueIdentifier>{dfd581c4-aed0-4229-bb30-7ee5816049e1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -186,6 +192,60 @@
     </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp">
       <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\SysCalls.cpp">
+      <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Semaphore.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Callback.cpp">
+      <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\VFS.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsFileBase.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsLocalFile.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsStream.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsStreamMemory.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil_MsgDialog.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsDevice.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Condition.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Mutex.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\Debugger.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="AppConnector.cpp">
+      <Filter>rpcs3</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

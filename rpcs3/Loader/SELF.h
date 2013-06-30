@@ -11,7 +11,7 @@ struct SceHeader
 	u64 se_hsize;
 	u64 se_esize;
 
-	void Load(wxFile& f)
+	void Load(vfsStream& f)
 	{
 		se_magic		= Read32(f);
 		se_hver			= Read32(f);
@@ -50,7 +50,7 @@ struct SelfHeader
 	u64 se_controlsize;
 	u64 pad;
 
-	void Load(wxFile& f)
+	void Load(vfsStream& f)
 	{
 		se_htype		= Read64(f);
 		se_appinfooff	= Read64(f);
@@ -80,16 +80,14 @@ struct SelfHeader
 
 class SELFLoader : public LoaderBase
 {
-	wxFile& self_f;
+	vfsStream& self_f;
 
 	SceHeader sce_hdr;
 	SelfHeader self_hdr;
 
 public:
-	SELFLoader(wxFile& f);
-	SELFLoader(const wxString& path);
-	~SELFLoader() {Close();}
+	SELFLoader(vfsStream& f);
 
 	virtual bool LoadInfo();
-	virtual bool LoadData();
+	virtual bool LoadData(u64 offset = 0);
 };

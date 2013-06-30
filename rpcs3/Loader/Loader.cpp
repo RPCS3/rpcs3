@@ -3,37 +3,7 @@
 #include "ELF.h"
 #include "SELF.h"
 #include "PSF.h"
-
-u8 Read8(wxFile& f)
-{
-	u8 ret;
-	f.Read(&ret, sizeof(u8));
-	return ret;
-}
-
-u16 Read16(wxFile& f)
-{
-	const u8 c0 = Read8(f);
-	const u8 c1 = Read8(f);
-
-	return ((u16)c0 << 8) | (u16)c1;
-}
-
-u32 Read32(wxFile& f)
-{
-	const u16 c0 = Read16(f);
-	const u16 c1 = Read16(f);
-
-	return ((u32)c0 << 16) | (u32)c1;
-}
-
-u64 Read64(wxFile& f)
-{
-	const u32 c0 = Read32(f);
-	const u32 c1 = Read32(f);
-
-	return ((u64)c0 << 32) | (u64)c1;
-}
+#include "Emu/FS/vfsLocalFile.h"
 
 const wxString Ehdr_DataToString(const u8 data)
 {
@@ -121,64 +91,61 @@ const wxString Phdr_TypeToString(const u32 type)
 	return wxString::Format("Unknown (%x)", type);
 }
 
-Loader::Loader() : f(NULL)
+Loader::Loader() : m_stream(nullptr)
 {
 }
 
-Loader::Loader(const wxString& path) : f(new wxFile(path))
+Loader::Loader(vfsFileBase& stream) : m_stream(&stream)
 {
 }
 
-void Loader::Open(const wxString& path)
+void Loader::Open(vfsFileBase& stream)
 {
-	m_path = path;
-	f = new wxFile(path);
-}
-
-void Loader::Open(wxFile& _f, const wxString& path)
-{
-	m_path = path;
-	f = &_f;
+	m_stream = &stream;
 }
 
 LoaderBase* Loader::SearchLoader()
 {
-	if(!f) return NULL;
+	if(!m_stream) return nullptr;
 
-	LoaderBase* l = NULL;
+	LoaderBase* l;
 
-	if((l=new ELFLoader(*f))->LoadInfo()) return l;
-	safe_delete(l);
-	if((l=new SELFLoader(*f))->LoadInfo()) return l;
-	safe_delete(l);
-	return NULL;
+	if((l=new ELFLoader(*m_stream))->LoadInfo()) return l;
+	delete l;
+
+	if((l=new SELFLoader(*m_stream))->LoadInfo()) return l;
+	delete l;
+
+	return nullptr;
 }
 
 bool Loader::Load()
 {
-	LoaderBase* l = SearchLoader();
+	static const u64 spu_offset = 0x10000;
+
+	ScopedPtr<LoaderBase> l = SearchLoader();
+
 	if(!l)
 	{
 		ConLog.Error("Unknown file type");
 		return false;
 	}
 
-	if(!l->LoadData())
+	if(!l->LoadData(l->GetMachine() == MACHINE_SPU ? spu_offset : 0))
 	{
 		ConLog.Error("Broken file");
-		safe_delete(l);
 		return false;
 	}
 
 	machine = l->GetMachine();
-	entry = l->GetEntry();
-	safe_delete(l);
+	entry = l->GetMachine() == MACHINE_SPU ? l->GetEntry() + spu_offset : l->GetEntry();
 
-	const wxString& root = wxFileName(wxFileName(m_path).GetPath()).GetPath();
+	const wxString& root = wxFileName(wxFileName(m_stream->GetPath()).GetPath()).GetPath();
 	const wxString& psf_path = root + "\\" + "PARAM.SFO";
 	if(wxFileExists(psf_path))
 	{
-		PSFLoader psf_l(psf_path);
+		vfsLocalFile f(psf_path);
+		PSFLoader psf_l(f);
 		if(psf_l.Load())
 		{
 			CurGameInfo = psf_l.m_info;
@@ -188,13 +155,4 @@ bool Loader::Load()
 	}
 
 	return true;
-}
-
-Loader::~Loader()
-{
-	if(f)
-	{
-		f->Close();
-		f = NULL;
-	}
 }

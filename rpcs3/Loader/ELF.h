@@ -1,6 +1,7 @@
 #pragma once
 #include "ELF64.h"
 #include "ELF32.h"
+#include "Emu/FS/vfsStream.h"
 
 enum ElfClass
 {
@@ -18,7 +19,7 @@ struct Elf_Ehdr
 	{
 	}
 
-	virtual void Load(wxFile& f)
+	virtual void Load(vfsStream& f)
 	{
 		e_magic	= Read32(f);
 		e_class	= Read8(f);
@@ -40,17 +41,16 @@ struct Elf_Ehdr
 
 class ELFLoader : public LoaderBase
 {
-	wxFile& elf_f;
+	vfsStream& elf_f;
 	LoaderBase* loader;
 
 public:
 	Elf_Ehdr ehdr;
 
-	ELFLoader(wxFile& f);
-	ELFLoader(const wxString& path);
+	ELFLoader(vfsStream& f);
 	~ELFLoader() {Close();}
 
 	virtual bool LoadInfo();
-	virtual bool LoadData();
+	virtual bool LoadData(u64 offset = 0);
 	virtual bool Close();
 };

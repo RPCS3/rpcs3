@@ -23,7 +23,7 @@ struct Elf64_Ehdr
 	u16 e_shnum;
 	u16 e_shstrndx;
 
-	void Load(wxFile& f)
+	void Load(vfsStream& f)
 	{
 		e_magic		= Read32(f);
 		e_class		= Read8(f);
@@ -88,7 +88,7 @@ struct Elf64_Shdr
 	u64 sh_addralign;
 	u64 sh_entsize;
 
-	void Load(wxFile& f)
+	void Load(vfsStream& f)
 	{
 		sh_name			= Read32(f);
 		sh_type			= Read32(f);
@@ -130,7 +130,7 @@ struct Elf64_Phdr
 	u64	p_memsz;
 	u64	p_align;
 
-	void Load(wxFile& f)
+	void Load(vfsStream& f)
 	{
 		p_type		= Read32(f);
 		p_flags		= Read32(f);
@@ -159,7 +159,7 @@ struct Elf64_Phdr
 
 class ELF64Loader : public LoaderBase
 {
-	wxFile& elf64_f;
+	vfsStream& elf64_f;
 
 public:
 	Elf64_Ehdr ehdr;
@@ -167,19 +167,21 @@ public:
 	Array<Elf64_Shdr> shdr_arr;
 	Array<Elf64_Phdr> phdr_arr;
 
-	ELF64Loader(wxFile& f);
-	ELF64Loader(const wxString& path);
+	ELF64Loader(vfsStream& f);
 	~ELF64Loader() {Close();}
 
 	virtual bool LoadInfo();
-	virtual bool LoadData();
+	virtual bool LoadData(u64 offset = 0);
 	virtual bool Close();
 
+	bool LoadEhdrInfo(s64 offset=-1);
+	bool LoadPhdrInfo(s64 offset=-1);
+	bool LoadShdrInfo(s64 offset=-1);
+
 private:
-	bool LoadEhdrInfo();
-	bool LoadPhdrInfo();
-	bool LoadShdrInfo();
-	bool LoadEhdrData();
-	bool LoadPhdrData();
-	bool LoadShdrData();
+	bool LoadEhdrData(u64 offset);
+	bool LoadPhdrData(u64 offset);
+	bool LoadShdrData(u64 offset);
+
+	//bool LoadImports();
 };

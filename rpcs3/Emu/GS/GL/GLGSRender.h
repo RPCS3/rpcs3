@@ -1,9 +1,11 @@
 #pragma once
 #include "Emu/GS/GSRender.h"
+#include "Emu/GS/RSXThread.h"
 #include "wx/glcanvas.h"
 #include "GLBuffers.h"
 #include "Program.h"
 #include "OpenGL.h"
+#include "ProgramBuffer.h"
 
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "gl.lib")
@@ -66,9 +68,6 @@ public:
 
 	void Init()
 	{
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-
 		if(!m_id)
 		{
 			glGenTextures(1, &m_id);
@@ -87,9 +86,9 @@ public:
 		//TODO: safe init
 		checkForGlError("GLTexture::Init() -> glBindTexture");
 
-		switch(m_format)
+		switch(m_format & ~(0x20 | 0x40))
 		{
-		case 0xA1:
+		case 0x81:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RED, GL_UNSIGNED_BYTE, Memory.GetMemFromAddr(m_offset));
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
@@ -99,7 +98,7 @@ public:
 			checkForGlError("GLTexture::Init() -> glTexParameteri");
 		break;
 
-		case 0xA5:
+		case 0x85:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, Memory.GetMemFromAddr(m_offset));
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
@@ -114,42 +113,32 @@ public:
 	{
 		if(!m_id || !m_offset) return;
 
+		ConLog.Write("start");
+		u32* alldata = new u32[m_width * m_height];
+
+		glBindTexture(GL_TEXTURE_2D, m_id);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, alldata);
+
 		u8* data = new u8[m_width * m_height * 3];
 		u8* alpha = new u8[m_width * m_height];
-		u8* src = Memory.GetMemFromAddr(m_offset);
-		u8* dst = data;
+
+		u8* src = (u8*)alldata;
+		u8* dst_d = data;
 		u8* dst_a = alpha;
-
-		switch(m_format)
+		for(u32 i=0; i<m_width*m_height;i++)
 		{
-		case 0xA1:
-			for(u32 y=0; y<m_height; ++y) for(u32 x=0; x<m_width; ++x)
-			{
-				*dst++ = *src;
-				*dst++ = *src;
-				*dst++ = *src;
-				*dst_a++ = *src;
-				src++;
-			}
-		break;
-
-		case 0xA5:
-			for(u32 y=0; y<m_height; ++y) for(u32 x=0; x<m_width; ++x)
-			{
-				*dst++ = *src++;
-				*dst++ = *src++;
-				*dst++ = *src++;
-				*dst_a++ = *src++;
-			}
-		break;
-
-		default: ConLog.Error("Save tex error: Bad tex format (0x%x)", m_format); break;
+			*dst_d++ = *src++;
+			*dst_d++ = *src++;
+			*dst_d++ = *src++;
+			*dst_a++ = *src++;
 		}
 
+		ConLog.Write("end");
 		wxImage out;
 		out.Create(m_width, m_height, data, alpha);
 		out.SaveFile(name, wxBITMAP_TYPE_PNG);
 
+		free(alldata);
 		//free(data);
 		//free(alpha);
 	}
@@ -175,6 +164,33 @@ public:
 	bool IsEnabled() const { return m_enabled; }
 };
 
+struct IndexArrayData
+{
+	Array<u8> m_data;
+	int m_type;
+	u32 m_first;
+	u32 m_count;
+	u32 m_addr;
+	u32 index_max;
+	u32 index_min;
+
+	IndexArrayData()
+	{
+		Reset();
+	}
+
+	void Reset()
+	{
+		m_type = 0;
+		m_first = ~0;
+		m_count = 0;
+		m_addr = 0;
+		index_min = ~0;
+		index_max = 0;
+		m_data.Clear();
+	}
+};
+
 struct GLGSFrame : public GSFrame
 {
 	wxGLCanvas* canvas;
@@ -197,42 +213,66 @@ private:
 
 extern gcmBuffer gcmBuffers[2];
 
-struct GLRSXThread : public wxThread
+struct GLRSXThread : public ThreadBase
 {
 	wxWindow* m_parent;
 	Stack<u32> call_stack;
 
-	volatile bool m_paused;
-
 	GLRSXThread(wxWindow* parent);
 
-	virtual void OnExit();
-	void Start();
-	ExitCode Entry();
+	virtual void Task();
 };
 
 class GLGSRender
 	: public wxWindow
 	, public GSRender
+	, public ExecRSXCMDdata
 {
 private:
 	GLRSXThread* m_rsx_thread;
 
+	IndexArrayData m_indexed_array;
+
+	ShaderProgram m_shader_prog;
+	VertexData m_vertex_data[16];
+	Array<u8> m_vdata;
+	VertexProgram m_vertex_progs[16];
+	VertexProgram* m_cur_vertex_prog;
+	Program m_program;
+	int m_fp_buf_num;
+	int m_vp_buf_num;
+	int m_draw_array_count;
+	int m_draw_mode;
+	ProgramBuffer m_prog_buffer;
+
+	GLvao m_vao;
+	GLvbo m_vbo;
+
 public:
 	GLGSFrame* m_frame;
-	volatile bool m_draw;
+	u32 m_draw_frames;
+	u32 m_skip_frames;
 
 	GLGSRender();
 	~GLGSRender();
 
 private:
+	void EnableVertexData(bool indexed_draw=false);
+	void DisableVertexData();
+	void LoadVertexData(u32 first, u32 count);
+	void InitVertexData();
+
 	void Enable(bool enable, const u32 cap);
 	virtual void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
 	virtual void Draw();
 	virtual void Close();
-	virtual void Pause();
-	virtual void Resume();
+	bool LoadProgram();
 
 public:
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count);
+	void CloseOpenGL();
+
+	virtual void ExecCMD();
+	virtual void Reset();
+	void Init();
 };

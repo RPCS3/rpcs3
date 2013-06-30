@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "VertexProgram.h"
 
-wxString VertexDecompilerThread::GetMask()
+wxString VertexDecompilerThread::GetVecMask()
 {
 	wxString ret = wxEmptyString;
 
@@ -13,7 +13,19 @@ wxString VertexDecompilerThread::GetMask()
 	return ret.IsEmpty() || ret == "xyzw" ? wxEmptyString : ("." + ret);
 }
 
-wxString VertexDecompilerThread::GetDST()
+wxString VertexDecompilerThread::GetScaMask()
+{
+	wxString ret = wxEmptyString;
+
+	if(d3.sca_writemask_x) ret += "x";
+	if(d3.sca_writemask_y) ret += "y";
+	if(d3.sca_writemask_z) ret += "z";
+	if(d3.sca_writemask_w) ret += "w";
+
+	return ret.IsEmpty() || ret == "xyzw" ? wxEmptyString : ("." + ret);
+}
+
+wxString VertexDecompilerThread::GetDST(bool isSca)
 {
 	static const wxString reg_table[] = 
 	{
@@ -26,11 +38,12 @@ wxString VertexDecompilerThread::GetDST()
 	};
 
 	wxString ret = wxEmptyString;
+	u32 dst = isSca ? d3.sca_dst : d3.dst;
 
-	switch(d3.dst)
+	switch(dst)
 	{
 	case 0x0: case 0x6:
-		ret += reg_table[d3.dst];
+		ret += reg_table[dst];
 	break;
 
 	case 0x1f:
@@ -38,13 +51,13 @@ wxString VertexDecompilerThread::GetDST()
 	break;
 
 	default:
-		if(d3.dst < WXSIZEOF(reg_table))
+		if(dst < WXSIZEOF(reg_table))
 		{
-			ret += m_parr.AddParam(PARAM_OUT, "vec4", reg_table[d3.dst]);
+			ret += m_parr.AddParam(PARAM_OUT, "vec4", reg_table[dst]);
 		}
 		else
 		{
-			ConLog.Error("Bad dst reg num: %d", d3.dst);
+			ConLog.Error("Bad dst reg num: %d", dst);
 			ret += m_parr.AddParam(PARAM_OUT, "vec4", "unk");
 		}
 	break;
@@ -53,7 +66,7 @@ wxString VertexDecompilerThread::GetDST()
 	return ret;
 }
 
-wxString VertexDecompilerThread::GetSRC(const u32 n)
+wxString VertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 {
 	static const wxString reg_table[] = 
 	{
@@ -75,12 +88,12 @@ wxString VertexDecompilerThread::GetSRC(const u32 n)
 	case 2: //input
 		if(d1.input_src < WXSIZEOF(reg_table))
 		{
-			ret += m_parr.AddParam(PARAM_IN, "vec4", reg_table[d1.input_src]);
+			ret += m_parr.AddParam(PARAM_IN, "vec4", reg_table[d1.input_src], d1.input_src);
 		}
 		else
 		{
 			ConLog.Error("Bad input src num: %d", d1.input_src);
-			ret += m_parr.AddParam(PARAM_IN, "vec4", "in_unk");
+			ret += m_parr.AddParam(PARAM_IN, "vec4", "in_unk", d1.input_src);
 		}
 	break;
 	case 3: //const
@@ -94,15 +107,27 @@ wxString VertexDecompilerThread::GetSRC(const u32 n)
 	}
 
 	static const char f[4] = {'x', 'z', 'w', 'y'};
+	static const char fSca[4] = {'x', 'z', 'y', 'w'};
 
 	wxString swizzle = wxEmptyString;
 
-	swizzle += f[src[n].swz_x];
-	swizzle += f[src[n].swz_y];
-	swizzle += f[src[n].swz_z];
-	swizzle += f[src[n].swz_w];
+	if (isSca)
+	{
+		assert(src[n].swz_x == src[n].swz_y);
+		assert(src[n].swz_z == src[n].swz_w);
+		assert(src[n].swz_x == src[n].swz_z);
 
-	if(swizzle != "xyzw") ret += "." + swizzle;
+		ret += "." + fSca[src[n].swz_x];
+	}
+	else
+	{
+		swizzle += f[src[n].swz_x];
+		swizzle += f[src[n].swz_y];
+		swizzle += f[src[n].swz_z];
+		swizzle += f[src[n].swz_w];
+
+		if(swizzle != "xyzw") ret += "." + swizzle;
+	}
 
 	bool abs;
 	
@@ -119,7 +144,7 @@ wxString VertexDecompilerThread::GetSRC(const u32 n)
 	return ret;
 }
 
-void VertexDecompilerThread::AddCode(wxString code, bool src_mask)
+void VertexDecompilerThread::AddVecCode(wxString code, bool src_mask)
 {
 	if(d0.cond == 0) return;
 	if(d0.cond != 7)
@@ -129,7 +154,22 @@ void VertexDecompilerThread::AddCode(wxString code, bool src_mask)
 		return;
 	}
 
-	code = GetDST() + GetMask() + " = " + (src_mask ? code + GetMask() : code);
+	code = GetDST() + GetVecMask() + " = " + (src_mask ? code + GetVecMask() : code);
+
+	main += "\t" + code + ";\n";
+}
+
+void VertexDecompilerThread::AddScaCode(wxString code, bool src_mask)
+{
+	if(d0.cond == 0) return;
+	if(d0.cond != 7)
+	{
+		ConLog.Error("Bad cond! %d", d0.cond);
+		Emu.Pause();
+		return;
+	}
+
+	code = GetDST(true) + GetScaMask() + " = " + (src_mask ? code + GetScaMask() : code);
 
 	main += "\t" + code + ";\n";
 }
@@ -140,17 +180,11 @@ wxString VertexDecompilerThread::BuildCode()
 
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
 	{
-		for(u32 n=0; n<m_parr.params[i].names.GetCount(); ++n)
-		{
-			p += m_parr.params[i].type;
-			p += " ";
-			p += m_parr.params[i].names[n];
-			p += ";\n";
-		}
+		p += m_parr.params[i].Format();
 	}
 		
 	static const wxString& prot = 
-		"#version 330 core\n"
+		"#version 330\n"
 		"\n"
 		"%s\n"
 		"void main()\n{\n%s}\n";
@@ -158,7 +192,7 @@ wxString VertexDecompilerThread::BuildCode()
 	return wxString::Format(prot, p, main);
 }
 
-wxThread::ExitCode VertexDecompilerThread::Entry()
+void VertexDecompilerThread::Task()
 {
 	for(u32 i=0;;)
 	{
@@ -171,30 +205,62 @@ wxThread::ExitCode VertexDecompilerThread::Entry()
 		src[1].HEX = d2.src1;
 		src[2].HEX = d3.src2l | (d2.src2h << 11);
 
+		switch(d1.sca_opcode)
+		{
+		case 0x00: break; // NOP
+		case 0x01: AddScaCode(GetSRC(2, true)); break; // MOV
+		case 0x02: AddScaCode("1 / (" + GetSRC(2, true) + ")"); break; // RCP
+		case 0x03: AddScaCode("clamp(1 / (" + GetSRC(2, true) + "), 5.42101e-20, 1.884467e19"); break; // RCC
+		case 0x04: AddScaCode("inversesqrt(" + GetSRC(2, true) + ")"); break; // RSQ
+		case 0x05: AddScaCode("exp(" + GetSRC(2, true) + ")"); break; // EXP
+		case 0x06: AddScaCode("log(" + GetSRC(2, true) + ")"); break; // LOG
+		//case 0x07: break; // LIT
+		//case 0x08: break; // BRA
+		//case 0x09: break; // BRI : works differently (BRI o[1].x(TR) L0;)
+		//case 0x0a: break; // CAL : works same as BRI
+		//case 0x0b: break; // CLI : works same as BRI
+		//case 0x0c: break; // RET : works like BRI but shorter (RET o[1].x(TR);)
+		case 0x0d: AddScaCode("log2(" + GetSRC(2, true) + ")"); break; // LG2
+		case 0x0e: AddScaCode("exp2(" + GetSRC(2, true) + ")"); break; // EX2
+		case 0x0f: AddScaCode("sin(" + GetSRC(2, true) + ")"); break; // SIN
+		case 0x10: AddScaCode("cos(" + GetSRC(2, true) + ")"); break; // COS
+		//case 0x11: break; // BRB : works differently (BRB o[1].x !b0, L0;)
+		//case 0x12: break; // CLB : works same as BRB
+		//case 0x13: break; // PSH : works differently (PSH o[1].x A0;)
+		//case 0x14: break; // POP : works differently (POP o[1].x;)
+
+
+		default:
+			ConLog.Error("Unknown vp sca_opcode 0x%x", d1.sca_opcode);
+			Emu.Pause();
+		break;
+		}
+
 		switch(d1.vec_opcode)
 		{
 		case 0x00: break; //NOP
-		case 0x01: AddCode(GetSRC(0)); break; //MOV
-		case 0x02: AddCode("(" + GetSRC(0) + " * " + GetSRC(1) + ")"); break; //MUL
-		case 0x03: AddCode("(" + GetSRC(0) + " + " + GetSRC(1) + ")"); break; //ADD
-		case 0x04: AddCode("(" + GetSRC(0) + " * " + GetSRC(1) + " + " + GetSRC(2) + ")"); break; //MAD
-		case 0x05: AddCode("dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz)", false); break; //DP3
-		//case 0x06: TODO //DPH
-		case 0x07: AddCode("dot(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //DP4
-		case 0x08: AddCode("distance(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //DST
-		case 0x09: AddCode("min(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MAX
-		case 0x0a: AddCode("max(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MAX
-		case 0x0b: AddCode("lessThan(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SLT
-		case 0x0c: AddCode("greaterThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SGE
-		case 0x0e: AddCode("fract(" + GetSRC(0) + ")"); break; //FRC
-		case 0x0f: AddCode("floor(" + GetSRC(0) + ")"); break; //FLR
-		case 0x10: AddCode("equal(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SEQ
-		case 0x11: AddCode("vec4(0.0f, 0.0f, 0.0f, 0.0f)"); break; //SFL
-		case 0x12: AddCode("greaterThan(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SGT
-		case 0x13: AddCode("lessThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SLE
-		case 0x14: AddCode("notEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SNE
-		case 0x15: AddCode("vec4(1.0f, 1.0f, 1.0f, 1.0f)"); break; //STR
-		case 0x16: AddCode("sign(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SSG
+		case 0x01: AddVecCode(GetSRC(0)); break; //MOV
+		case 0x02: AddVecCode("(" + GetSRC(0) + " * " + GetSRC(1) + ")"); break; //MUL
+		case 0x03: AddVecCode("(" + GetSRC(0) + " + " + GetSRC(1) + ")"); break; //ADD
+		case 0x04: AddVecCode("(" + GetSRC(0) + " * " + GetSRC(1) + " + " + GetSRC(2) + ")"); break; //MAD
+		case 0x05: AddVecCode("dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz)", false); break; //DP3
+		case 0x06: AddVecCode("(dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz) + " + GetSRC(1) + ".w)", false); break; //DPH
+		case 0x07: AddVecCode("dot(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //DP4
+		case 0x08: AddVecCode("distance(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //DST
+		case 0x09: AddVecCode("min(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MIN
+		case 0x0a: AddVecCode("max(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MAX
+		case 0x0b: AddVecCode("lessThan(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SLT
+		case 0x0c: AddVecCode("greaterThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SGE
+		case 0x0e: AddVecCode("fract(" + GetSRC(0) + ")"); break; //FRC
+		case 0x0f: AddVecCode("floor(" + GetSRC(0) + ")"); break; //FLR
+		case 0x10: AddVecCode("equal(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SEQ
+		case 0x11: AddVecCode("vec4(0.0f, 0.0f, 0.0f, 0.0f)"); break; //SFL
+		case 0x12: AddVecCode("greaterThan(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SGT
+		case 0x13: AddVecCode("lessThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SLE
+		case 0x14: AddVecCode("notEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SNE
+		case 0x15: AddVecCode("vec4(1.0f, 1.0f, 1.0f, 1.0f)"); break; //STR
+		case 0x16: AddVecCode("sign(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //SSG
+			
 
 		default:
 			ConLog.Error("Unknown vp opcode 0x%x", d1.vec_opcode);
@@ -207,8 +273,6 @@ wxThread::ExitCode VertexDecompilerThread::Entry()
 
 	m_shader = BuildCode();
 	main = wxEmptyString;
-
-	return (ExitCode)0;
 }
 
 VertexProgram::VertexProgram()
@@ -222,8 +286,13 @@ VertexProgram::~VertexProgram()
 	if(m_decompiler_thread)
 	{
 		Wait();
-		if(m_decompiler_thread->IsAlive()) m_decompiler_thread->Delete();
-		safe_delete(m_decompiler_thread);
+		if(m_decompiler_thread->IsAlive())
+		{
+			m_decompiler_thread->Stop();
+		}
+
+		delete m_decompiler_thread;
+		m_decompiler_thread = nullptr;
 	}
 
 	Delete();
@@ -237,13 +306,17 @@ void VertexProgram::Decompile()
 	if(m_decompiler_thread)
 	{
 		Wait();
-		if(m_decompiler_thread->IsAlive()) m_decompiler_thread->Delete();
-		safe_delete(m_decompiler_thread);
+		if(m_decompiler_thread->IsAlive())
+		{
+			m_decompiler_thread->Stop();
+		}
+
+		delete m_decompiler_thread;
+		m_decompiler_thread = nullptr;
 	}
 
 	m_decompiler_thread = new VertexDecompilerThread(data, shader, parr);
-	m_decompiler_thread->Create();
-	m_decompiler_thread->Run();
+	m_decompiler_thread->Start();
 #endif
 }
 
@@ -272,7 +345,7 @@ void VertexProgram::Compile()
 			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
 			ConLog.Error("Failed to compile vertex shader: %s", buf);
-			free(buf);
+			delete[] buf;
 		}
 
 		ConLog.Write(shader);
@@ -287,7 +360,7 @@ void VertexProgram::Delete()
 	data.Clear();
 	for(u32 i=0; i<parr.params.GetCount(); ++i)
 	{
-		parr.params[i].names.Clear();
+		parr.params[i].items.Clear();
 		parr.params[i].type.Clear();
 	}
 	parr.params.Clear();

@@ -8,26 +8,27 @@ int sys_process_getpid()
 	return 1;
 }
 
+int sys_process_exit(int errorcode)
+{
+	ConLog.Warning("sys_process_exit(%d)", errorcode);
+	Emu.Pause();
+	return CELL_OK;
+}
+
 int sys_game_process_exitspawn(	u32 path_addr, u32 argv_addr, u32 envp_addr,
 								u32 data, u32 data_size, int prio, u64 flags )
 {
 	sc_p.Log("sys_game_process_exitspawn: ");
 	sc_p.Log("path: %s", Memory.ReadString(path_addr));
-	sc_p.Log("argv: %x", Memory.Read32(argv_addr));
-	sc_p.Log("envp: %x", Memory.Read32(envp_addr));
-	sc_p.Log("data: %x", data);
-	sc_p.Log("data_size: %x", data_size);
+	sc_p.Log("argv: 0x%x", Memory.Read32(argv_addr));
+	sc_p.Log("envp: 0x%x", Memory.Read32(envp_addr));
+	sc_p.Log("data: 0x%x", data);
+	sc_p.Log("data_size: 0x%x", data_size);
 	sc_p.Log("prio: %d", prio);
 	sc_p.Log("flags: %d", flags);
 	return CELL_OK;
 }
 
-int SysCalls::lv2ProcessGetPid(PPUThread& CPU)
-{
-	ConLog.Warning("lv2ProcessGetPid");
-	Memory.Write32(CPU.GPR[4], CPU.GetId());
-	return CELL_OK;
-}
 int SysCalls::lv2ProcessWaitForChild(PPUThread& CPU)
 {
 	ConLog.Warning("lv2ProcessWaitForChild");
@@ -69,12 +70,14 @@ int SysCalls::lv2ProcessKill(PPUThread& CPU)
 	CPU.Close();
 	return CELL_OK;
 }
+/*
 int SysCalls::lv2ProcessExit(PPUThread& CPU)
 {
 	ConLog.Warning("lv2ProcessExit(%lld)", CPU.GPR[3]);
 	Emu.Pause();
 	return CELL_OK;
 }
+*/
 int SysCalls::lv2ProcessWaitForChild2(PPUThread& CPU)
 {
 	ConLog.Warning("lv2ProcessWaitForChild2[r3: 0x%llx, r4: 0x%llx, r5: 0x%llx, r6: 0x%llx, r7: 0x%llx, r8: 0x%llx]",

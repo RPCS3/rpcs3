@@ -4,6 +4,15 @@
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Cell/SPUDisAsm.h"
 
+SPUThread& GetCurrentSPUThread()
+{
+	PPCThread* thread = GetCurrentPPCThread();
+
+	if(!thread || !thread->IsSPU()) throw wxString("GetCurrentSPUThread: bad thread");
+
+	return *(SPUThread*)thread;
+}
+
 SPUThread::SPUThread() : PPCThread(PPC_THREAD_SPU)
 {
 	Reset();

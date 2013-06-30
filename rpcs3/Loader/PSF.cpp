@@ -1,11 +1,7 @@
 #include "stdafx.h"
 #include "PSF.h"
 
-PSFLoader::PSFLoader(wxFile& f) : psf_f(f)
-{
-}
-
-PSFLoader::PSFLoader(const wxString& path) : psf_f(*new wxFile(path))
+PSFLoader::PSFLoader(vfsStream& f) : psf_f(f)
 {
 }
 
@@ -80,7 +76,7 @@ bool PSFLoader::LoadKeyTable()
 
 struct PsfHelper
 {
-	static wxString ReadString(wxFile& f, const u32 size)
+	static wxString ReadString(vfsStream& f, const u32 size)
 	{
 		wxString ret = wxEmptyString;
 
@@ -92,7 +88,7 @@ struct PsfHelper
 		return ret;
 	}
 
-	static wxString ReadString(wxFile& f)
+	static wxString ReadString(vfsStream& f)
 	{
 		wxString ret = wxEmptyString;
 
@@ -106,14 +102,14 @@ struct PsfHelper
 		return ret;
 	}
 
-	static char ReadChar(wxFile& f)
+	static char ReadChar(vfsStream& f)
 	{
 		char c;
 		f.Read(&c, 1);
 		return c;
 	}
 
-	static char ReadCharNN(wxFile& f)
+	static char ReadCharNN(vfsStream& f)
 	{
 		char c;
 		while(!f.Eof())
@@ -125,7 +121,7 @@ struct PsfHelper
 		return c;
 	}
 
-	static void GoToNN(wxFile& f)
+	static void GoToNN(vfsStream& f)
 	{
 		while(!f.Eof())
 		{

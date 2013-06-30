@@ -8,7 +8,7 @@ enum PPCThreadType
 	PPC_THREAD_SPU,
 };
 
-class PPCThread// : public StepThread
+class PPCThread : public ThreadBase
 {
 protected:
 	u32 m_status;
@@ -19,7 +19,6 @@ protected:
 	PPCThreadType m_type;
 	u64 m_arg;
 	u64 m_prio;
-	wxString m_name;
 	bool m_joinable;
 	bool m_joining;
 	Array<u64> argv_addr;
@@ -70,9 +69,15 @@ public:
 
 	wxString GetTypeString() const { return PPCThreadTypeToString(m_type); }
 
+	virtual wxString GetThreadName() const
+	{
+		return GetFName() + wxString::Format("[0x%08llx]", PC);
+	}
+
 public:
 	bool isBranch;
 
+	u64 entry;
 	u64 PC;
 	u64 nPC;
 	u64 cycle;
@@ -88,6 +93,7 @@ public:
 	void PrevPc();
 	void SetBranch(const u64 pc);
 	void SetPc(const u64 pc);
+	void SetEntry(const u64 entry);
 
 	void SetError(const u32 error);
 
@@ -118,6 +124,7 @@ public:
 	virtual wxString RegsToString() { return wxEmptyString; }
 
 	virtual void Exec();
+	void ExecOnce();
 
 	virtual void AddArgv(const wxString& arg) {}
 	
@@ -127,7 +134,11 @@ protected:
 	virtual void DoPause()=0;
 	virtual void DoResume()=0;
 	virtual void DoStop()=0;
+
+	virtual void Task();
 	
 private:
 	virtual void DoCode(const s32 code)=0;
 };
+
+PPCThread* GetCurrentPPCThread();

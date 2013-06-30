@@ -15,8 +15,16 @@ struct CellRescSrc
 int cellRescSetSrc(const int idx, const u32 src_addr)
 {
 	sc_resc.Warning("cellRescSetSrc(idx=0x%x, src_addr=0x%x)", idx, src_addr);
-	const CellRescSrc& src = *(CellRescSrc*)Memory.GetMemFromAddr(src_addr);
-	sc_resc.Warning(" *** format=%d", src.format);
+	if(!Memory.IsGoodAddr(src_addr, sizeof(CellRescSrc))) return CELL_EFAULT;
+
+	CellRescSrc src = (CellRescSrc&)Memory[src_addr];
+	re(src.format, src.format);
+	re(src.pitch, src.pitch);
+	re(src.width, src.width);
+	re(src.height, src.height);
+	re(src.offset, src.offset);
+
+	sc_resc.Warning(" *** format=0x%x", src.format);
 	sc_resc.Warning(" *** pitch=%d", src.pitch);
 	sc_resc.Warning(" *** width=%d", src.width);
 	sc_resc.Warning(" *** height=%d", src.height);

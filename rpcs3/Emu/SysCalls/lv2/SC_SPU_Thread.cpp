@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Loader/ELF.h"
 
 SysCallBase sc_spu("sys_spu");
 
@@ -10,6 +11,34 @@ struct sys_spu_thread_group_attribute
 	int type;
 	union{u32 ct;} option;
 };
+
+struct sys_spu_image
+{
+	u32 type;
+	u32 entry_point;
+	u32 segs_addr;
+	int nsegs;
+};
+
+u32 LoadImage(vfsStream& stream)
+{
+	ELFLoader l(stream);
+	l.LoadInfo();
+	l.LoadData(Memory.MainMem.Alloc(stream.GetSize()));
+
+	return l.GetEntry();
+}
+
+ int sys_spu_image_open(u32 img_addr, u32 path_addr)
+ {
+	const wxString& path = Memory.ReadString(path_addr);
+	sc_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img_addr, path_addr, path);
+
+	vfsLocalFile stream(path);
+	LoadImage(stream);
+
+	return CELL_OK;
+ }
 
 //170
 int sys_spu_thread_group_create(u64 id_addr, u32 num, int prio, u64 attr_addr)
@@ -45,11 +74,11 @@ int sys_spu_thread_create(u64 thread_id_addr, u64 entry_addr, u64 arg,
 //160
 int sys_raw_spu_create(u32 id_addr, u32 attr_addr)
 {
-	sc_spu.Log("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id_addr, attr_addr);
+	sc_spu.Warning("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id_addr, attr_addr);
 
-	PPCThread& new_thread = Emu.GetCPU().AddThread(false);
-	Emu.GetIdManager().GetNewID("sys_raw_spu", new u32(attr_addr));
-	Memory.Write32(id_addr, Emu.GetCPU().GetThreadNumById(false, new_thread.GetId()));
+	//PPCThread& new_thread = Emu.GetCPU().AddThread(false);
+	//Emu.GetIdManager().GetNewID("sys_raw_spu", new u32(attr_addr));
+	//Memory.Write32(id_addr, Emu.GetCPU().GetThreadNumById(false, new_thread.GetId()));
 
 	return CELL_OK;
 }
@@ -57,7 +86,7 @@ int sys_raw_spu_create(u32 id_addr, u32 attr_addr)
 //169
 int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 {
-	sc_spu.Log("sys_spu_initialize(max_usable_spu=%d, max_raw_spu=%d)", max_usable_spu, max_raw_spu);
+	sc_spu.Warning("sys_spu_initialize(max_usable_spu=%d, max_raw_spu=%d)", max_usable_spu, max_raw_spu);
 
 	if(!Memory.InitSpuRawMem(max_raw_spu))
 	{

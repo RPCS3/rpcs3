@@ -1,14 +1,9 @@
 #include "stdafx.h"
 #include "SELF.h"
+#include "ELF64.h"
 
-SELFLoader::SELFLoader(wxFile& f)
+SELFLoader::SELFLoader(vfsStream& f)
 	: self_f(f)
-	, LoaderBase()
-{
-}
-
-SELFLoader::SELFLoader(const wxString& path)
-	: self_f(*new wxFile(path))
 	, LoaderBase()
 {
 }
@@ -24,12 +19,26 @@ bool SELFLoader::LoadInfo()
 	return true;
 }
 
-bool SELFLoader::LoadData()
+bool SELFLoader::LoadData(u64 offset)
 {
 	if(!self_f.IsOpened()) return false;
 
 	sce_hdr.Show();
 	self_hdr.Show();
+
+	ELF64Loader l(self_f);
+	if( !l.LoadEhdrInfo(self_hdr.se_elfoff) ||
+		!l.LoadPhdrInfo(self_hdr.se_phdroff) ||
+		!l.LoadShdrInfo(self_hdr.se_shdroff) ||
+		!l.LoadData(offset) )
+	{
+		ConLog.Error("Broken SELF file.");
+
+		return false;
+	}
+
+	return true;
+
 	ConLog.Error("Boot SELF not supported yet!");
 	return false;
 }

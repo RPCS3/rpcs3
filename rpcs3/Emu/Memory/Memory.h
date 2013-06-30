@@ -1,44 +1,6 @@
 #pragma once
 #include "MemoryBlock.h"
 
-class MemoryFlags
-{
-	struct Flag
-	{
-		const u64 addr;
-		const u64 waddr;
-		const u64 fid;
-
-		Flag(const u64 _addr, const u64 _waddr, const u64 _fid)
-			: addr(_addr)
-			, waddr(_waddr)
-			, fid(_fid)
-		{
-		}
-	};
-
-	Array<Flag> m_memflags;
-
-public:
-	void Add(const u64 addr, const u64 waddr, const u64 fid) {m_memflags.Add(new Flag(addr, waddr, fid));}
-	void Clear() { m_memflags.Clear(); }
-
-	bool IsFlag(const u64 addr, u64& waddr, u64& fid)
-	{
-		for(u32 i=0; i<GetCount(); i++)
-		{
-			if(m_memflags[i].addr != addr) continue;
-			fid = m_memflags[i].fid;
-			waddr = m_memflags[i].waddr;
-			return true;
-		}
-
-		return false;
-	}
-
-	u64 GetCount() const { return m_memflags.GetCount(); }
-};
-
 class MemoryBase
 {
 	NullMemoryBlock NullMem;
@@ -55,8 +17,6 @@ public:
 	MemoryBlock SpuRawMem;
 	MemoryBlock SpuThrMem;
 
-	MemoryFlags MemFlags;
-
 	bool m_inited;
 
 	MemoryBase()
@@ -69,22 +29,28 @@ public:
 		Close();
 	}
 
-	static u16 Reverse16(const u16 val)
+	static __forceinline u16 Reverse16(const u16 val)
 	{
-		return ((val >> 8) & 0xff) | ((val << 8) & 0xff00);
+		return _byteswap_ushort(val);
+		//return ((val >> 8) & 0xff) | ((val << 8) & 0xff00);
 	}
 
-	static u32 Reverse32(const u32 val)
+	static __forceinline u32 Reverse32(const u32 val)
 	{
+		return _byteswap_ulong(val);
+		/*
 		return
 			((val >> 24) & 0x000000ff) |
 			((val >>  8) & 0x0000ff00) |
 			((val <<  8) & 0x00ff0000) |
 			((val << 24) & 0xff000000);
+		*/
 	}
 
-	static u64 Reverse64(const u64 val)
+	static __forceinline u64 Reverse64(const u64 val)
 	{
+		return _byteswap_uint64(val);
+		/*
 		return
 			((val >> 56) & 0x00000000000000ff) |
 			((val >> 40) & 0x000000000000ff00) |
@@ -94,19 +60,19 @@ public:
 			((val << 24) & 0x0000ff0000000000) |
 			((val << 40) & 0x00ff000000000000) |
 			((val << 56) & 0xff00000000000000);
+		*/
 	}
 
-	template<typename T> static T Reverse(T val)
-	{
-		switch(sizeof(T))
-		{
-		case 2: return Reverse16(val);
-		case 4: return Reverse32(val);
-		case 8: return Reverse64(val);
-		}
+	template<typename T> static __forceinline T Reverse(T val);
+	template<> static __forceinline u8 Reverse(u8 val) { return val; };
+	template<> static __forceinline u16 Reverse(u16 val) { return Reverse16(val); };
+	template<> static __forceinline u32 Reverse(u32 val) { return Reverse32(val); };
+	template<> static __forceinline u64 Reverse(u64 val) { return Reverse64(val); };
 
-		return val;
-	}
+	template<> static __forceinline s8 Reverse(s8 val) { return val; };
+	template<> static __forceinline s16 Reverse(s16 val) { return Reverse16(val); };
+	template<> static __forceinline s32 Reverse(s32 val) { return Reverse32(val); };
+	template<> static __forceinline s64 Reverse(s64 val) { return Reverse64(val); };
 
 	MemoryBlock& GetMemByNum(const u8 num)
 	{
@@ -170,7 +136,7 @@ public:
 		MemoryBlocks.Add(MainMem.SetRange(0x00010000, 0x2FFF0000));
 		MemoryBlocks.Add(PRXMem.SetRange(0x30000000, 0x10000000));
 		MemoryBlocks.Add(RSXCMDMem.SetRange(0x40000000, 0x10000000));
-		//MemoryBlocks.Add(MmaperMem.SetRange(0xB0000000, 0x10000000));
+		MemoryBlocks.Add(MmaperMem.SetRange(0xB0000000, 0x10000000));
 		MemoryBlocks.Add(RSXFBMem.SetRange(0xC0000000, 0x10000000));
 		MemoryBlocks.Add(StackMem.SetRange(0xD0000000, 0x10000000));
 		//MemoryBlocks.Add(SpuRawMem.SetRange(0xE0000000, 0x10000000));
@@ -213,7 +179,6 @@ public:
 		}
 
 		MemoryBlocks.Clear();
-		MemFlags.Clear();
 	}
 
 	void Reset()
@@ -243,6 +208,66 @@ public:
 	u64 Read64(const u64 addr);
 	u128 Read128(const u64 addr);
 
+	void ReadLeft(u8* dst, const u64 addr, const u32 size)
+	{
+		MemoryBlock& mem = GetMemByAddr(addr);
+
+		if(mem.IsNULL())
+		{
+			ConLog.Error("ReadLeft[%d] from null block (0x%llx)", size, addr);
+			return;
+		}
+
+		u32 offs = mem.FixAddr(addr);
+
+		for(u32 i=0; i<size; ++i) dst[size - 1 - i] = mem.FastRead8(offs + i);
+	}
+
+	void WriteLeft(const u64 addr, const u32 size, const u8* src)
+	{
+		MemoryBlock& mem = GetMemByAddr(addr);
+
+		if(mem.IsNULL())
+		{
+			ConLog.Error("WriteLeft[%d] to null block (0x%llx)", size, addr);
+			return;
+		}
+
+		u32 offs = mem.FixAddr(addr);
+
+		for(u32 i=0; i<size; ++i) mem.FastWrite8(offs + i, src[size - 1 - i]);
+	}
+
+	void ReadRight(u8* dst, const u64 addr, const u32 size)
+	{
+		MemoryBlock& mem = GetMemByAddr(addr);
+
+		if(mem.IsNULL())
+		{
+			ConLog.Error("ReadRight[%d] from null block (0x%llx)", size, addr);
+			return;
+		}
+
+		u32 offs = mem.FixAddr(addr);
+
+		for(u32 i=0; i<size; ++i) dst[i] = mem.FastRead8(offs + (size - 1 - i));
+	}
+
+	void WriteRight(const u64 addr, const u32 size, const u8* src)
+	{
+		MemoryBlock& mem = GetMemByAddr(addr);
+
+		if(mem.IsNULL())
+		{
+			ConLog.Error("WriteRight[%d] to null block (0x%llx)", size, addr);
+			return;
+		}
+
+		u32 offs = mem.FixAddr(addr);
+
+		for(u32 i=0; i<size; ++i) mem.FastWrite8(offs + (size - 1 - i), src[i]);
+	}
+
 	template<typename T> void WriteData(const u64 addr, const T* data)
 	{
 		memcpy(GetMemFromAddr(addr), data, sizeof(T));
@@ -264,26 +289,18 @@ public:
 
 	wxString ReadString(const u64 addr)
 	{
-		wxString buf = wxEmptyString;
-
-		for(u32 i=addr; ; i++)
-		{
-			const u8 c = Read8(i);
-			if(c == 0) break;
-			buf += c;
-		}
-
-		return buf;
+		return wxString((const char*)GetMemFromAddr(addr));
 	}
 
 	void WriteString(const u64 addr, const wxString& str)
 	{
-		for(u32 i=0; i<str.Length(); i++)
+		if(!IsGoodAddr(addr, str.Len()))
 		{
-			Write8(addr + i, str[i]);
+			ConLog.Error("Memory::WriteString error: bad address (0x%llx)", addr);
+			return;
 		}
 
-		Write8(addr + str.Length(), 0);
+		strcpy((char*)GetMemFromAddr(addr), str);
 	}
 
 	static u64 AlignAddr(const u64 addr, const u64 align)
@@ -311,7 +328,17 @@ public:
 		return PRXMem.Free(addr);
 	}
 
-	u8& operator[] (const u64 vaddr) { return *GetMemFromAddr(vaddr); }
+	u8* operator + (const u64 vaddr)
+	{
+		u8* ret = GetMemFromAddr(vaddr);
+		if(!ret) throw wxString::Format("GetMemFromAddr(0x%llx)", vaddr);
+		return ret;
+	}
+
+	u8& operator[] (const u64 vaddr)
+	{
+		return *(*this + vaddr);
+	}
 };
 
 extern MemoryBase Memory;
