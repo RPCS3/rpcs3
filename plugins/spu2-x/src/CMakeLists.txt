@@ -110,7 +110,7 @@ add_library(${Output} SHARED
 
 
 # link target with project internal libraries
-target_link_libraries(${Output} Utilities Utilities)
+target_link_libraries(${Output} Utilities)
 
 # link target with ALSA
 target_link_libraries(${Output} ${ALSA_LIBRARIES})

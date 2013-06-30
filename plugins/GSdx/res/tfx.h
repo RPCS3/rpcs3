@@ -128,7 +128,7 @@ static const char* tfx_glsl =
 	"    vec2 TextureScale;\n"
 	"};\n"
 	"\n"
-	"const float exp_min32 = exp2(-32);\n"
+	"const float exp_min32 = exp2(-32.0f);\n"
 	"\n"
 	"void vs_main()\n"
 	"{\n"

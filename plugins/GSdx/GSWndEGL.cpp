@@ -136,6 +136,10 @@ void GSWndEGL::Detach()
 	// Actually the destructor is not called when there is only a GSclose/GSshutdown
 	// The window still need to be closed
 	DetachContext();
+	eglDestroyContext(m_eglDisplay, m_eglContext);
+	m_eglContext = NULL;
+	eglDestroySurface(m_eglDisplay, m_eglSurface);
+	m_eglSurface = NULL;
 	CloseEGLDisplay();
 
 	if (m_NativeDisplay) {

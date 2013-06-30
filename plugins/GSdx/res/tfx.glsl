@@ -100,7 +100,7 @@ layout(std140, binding = 20) uniform cb20
     vec2 TextureScale;
 };
 
-const float exp_min32 = exp2(-32);
+const float exp_min32 = exp2(-32.0f);
 
 void vs_main()
 {

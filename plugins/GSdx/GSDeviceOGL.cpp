@@ -122,6 +122,15 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete m_date.dss;
 	delete m_date.bs;
 
+	// Clean shadeboost
+	delete m_shadeboost.cb;
+	if (GLLoader::found_GL_ARB_separate_shader_objects) {
+		gl_DeleteProgram(m_shadeboost.ps);
+	} else {
+		gl_DeleteShader(m_shadeboost.ps);
+	}
+
+
 	// Clean various opengl allocation
 	if (GLLoader::found_GL_ARB_separate_shader_objects)
 		gl_DeleteProgramPipelines(1, &m_pipeline);
@@ -133,6 +142,7 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete m_ps_cb;
 	gl_DeleteSamplers(1, &m_palette_ss);
 	delete m_vb;
+
 
 	if (GLLoader::found_GL_ARB_separate_shader_objects) {
 		for (uint32 key = 0; key < VSSelector::size(); key++) gl_DeleteProgram(m_vs[key]);
@@ -146,11 +156,13 @@ GSDeviceOGL::~GSDeviceOGL()
 		for (auto it = m_single_prog.begin(); it != m_single_prog.end() ; it++) gl_DeleteProgram(it->second);
 		m_single_prog.clear();
 	}
+	m_ps.clear();
 
 	gl_DeleteSamplers(PSSamplerSelector::size(), m_ps_ss);
 
 	for (uint32 key = 0; key < OMDepthStencilSelector::size(); key++) delete m_om_dss[key];
-	m_ps.clear();
+
+	for (auto it = m_om_bs.begin(); it != m_om_bs.end(); it++) delete it->second;
 	m_om_bs.clear();
 }
 
@@ -1417,6 +1429,8 @@ void GSDeviceOGL::CheckDebugLog()
                     pos += lengths[i];
               }
        }
+
+	   delete[] messageLog;
 }
 
 void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message)

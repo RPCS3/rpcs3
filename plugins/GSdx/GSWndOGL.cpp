@@ -63,6 +63,8 @@ void GSWndOGL::CreateContext(int major, int minor)
 	if (!fbc || fbcount < 1) {
 		throw GSDXRecoverableError();
 	}
+	XFree(fbc);
+	GLXFBConfig fbc_cp = fbc[0];
 
 	PFNGLXCREATECONTEXTATTRIBSARBPROC glX_CreateContextAttribsARB = (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress((const GLubyte*) "glXCreateContextAttribsARB");
 	if (!glX_CreateContextAttribsARB) {
@@ -86,7 +88,7 @@ void GSWndOGL::CreateContext(int major, int minor)
 		None
 	};
 
-	m_context = glX_CreateContextAttribsARB(m_NativeDisplay, fbc[0], 0, true, context_attribs);
+	m_context = glX_CreateContextAttribsARB(m_NativeDisplay, fbc_cp, 0, true, context_attribs);
 
 	// Don't forget to reinstall the older Handler
 	XSetErrorHandler(oldHandler);
