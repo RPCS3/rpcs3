@@ -110,7 +110,7 @@ namespace DOUBLE {
 // PS2 -> DOUBLE
 //------------------------------------------------------------------
 
-#define SINGLE(sign, exp, mant) (((sign)<<31) | ((exp)<<23) | (mant))
+#define SINGLE(sign, exp, mant) (((u32)(sign)<<31) | ((u32)(exp)<<23) | (u32)(mant))
 #define DOUBLE(sign, exp, mant) (((sign ## ULL)<<63) | ((exp ## ULL)<<52) | (mant ## ULL))
 
 struct FPUd_Globals

@@ -213,7 +213,7 @@ __ri void mpeg2_idct_add (const int last, s16 * block, s16 * dest, const int str
     }
     else
     {
-		int DC = (block[0] + 4) >> 3;
+		s16 DC = (block[0] + 4) >> 3;
 		s16 dcf[2] = { DC, DC };
 		block[0] = block[63] = 0;
 

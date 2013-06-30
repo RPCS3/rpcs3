@@ -570,8 +570,8 @@ void LWU()
 	cpuRegs.GPR.r[_Rt_].UD[0] = temp;
 }
 
-static const s32 LWL_MASK[4] = { 0xffffff, 0x0000ffff, 0x000000ff, 0x00000000 };
-static const s32 LWR_MASK[4] = { 0x000000, 0xff000000, 0xffff0000, 0xffffff00 };
+static const u32 LWL_MASK[4] = { 0xffffff, 0x0000ffff, 0x000000ff, 0x00000000 };
+static const u32 LWR_MASK[4] = { 0x000000, 0xff000000, 0xffff0000, 0xffffff00 };
 static const u8 LWL_SHIFT[4] = { 24, 16, 8, 0 };
 static const u8 LWR_SHIFT[4] = { 0, 8, 16, 24 };
 

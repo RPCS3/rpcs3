@@ -1008,8 +1008,8 @@ void SysCorePlugins::Load( const wxString (&folders)[PluginId_Count] )
 
 		{ 0, PCSX2_VersionHi, PCSX2_VersionLo, SVN_REV },
 
-		x86caps.PhysicalCores,
-		x86caps.LogicalCores,
+		(int)x86caps.PhysicalCores,
+		(int)x86caps.LogicalCores,
 		sizeof(wchar_t),
 
 		0,0,0,0,0,0,
