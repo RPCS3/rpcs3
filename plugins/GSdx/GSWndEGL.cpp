@@ -267,6 +267,7 @@ void GSWndEGL::HideFrame()
 
 void GSWndEGL::CloseEGLDisplay()
 {
+	eglReleaseThread();
 	eglTerminate(m_eglDisplay);
 }
 

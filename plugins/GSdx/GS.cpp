@@ -360,22 +360,30 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 		s_gs->SetMultithreaded(true);
 
 #ifdef _LINUX
-		for(uint32 i = 0; i < 2; i++) {
-			try
-			{
-				if (wnd[i] == NULL) continue;
+		if (s_gs->m_wnd) {
+			// A window was already attached to s_gs so we also
+			// need to restore the window state (Attach)
+			s_gs->m_wnd->Attach((void*)((uint32*)(dsp)+1), false);
+		} else {
+			// No window found, try to attach a GLX win and retry 
+			// with EGL win if failed.
+			for(uint32 i = 0; i < 2; i++) {
+				try
+				{
+					if (wnd[i] == NULL) continue;
 
-				wnd[i]->Attach((void*)((uint32*)(dsp)+1), false);
-				s_gs->m_wnd = wnd[i];
+					wnd[i]->Attach((void*)((uint32*)(dsp)+1), false);
+					s_gs->m_wnd = wnd[i];
 
-				if (i == 0) delete wnd[1];
+					if (i == 0) delete wnd[1];
 
-				break;
-			}
-			catch (GSDXRecoverableError)
-			{
-				wnd[i]->Detach();
-				delete wnd[i];
+					break;
+				}
+				catch (GSDXRecoverableError)
+				{
+					wnd[i]->Detach();
+					delete wnd[i];
+				}
 			}
 		}
 		if (s_gs->m_wnd == NULL)
