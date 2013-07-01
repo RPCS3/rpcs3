@@ -1,8 +1,8 @@
 #pragma once
 
-#define OP_REG const u32
-#define OP_sIMM const s32
-#define OP_uIMM const u32
+#define OP_REG u32
+#define OP_sIMM s32
+#define OP_uIMM u32
 #define START_OPCODES_GROUP(x) /*x*/
 #define ADD_OPCODE(name, regs) virtual void(##name##)##regs##=0
 #define ADD_NULL_OPCODE(name) virtual void(##name##)()=0
@@ -622,7 +622,7 @@ public:
 	ADD_OPCODE(ADDI,(OP_REG rd, OP_REG ra, OP_sIMM simm16));
 	ADD_OPCODE(ADDIS,(OP_REG rd, OP_REG ra, OP_sIMM simm16));
 	ADD_OPCODE(BC,(OP_REG bo, OP_REG bi, OP_sIMM bd, OP_REG aa, OP_REG lk));
-	ADD_OPCODE(SC,(const s32 sc_code));
+	ADD_OPCODE(SC,(OP_sIMM sc_code));
 	ADD_OPCODE(B,(OP_sIMM ll, OP_REG aa, OP_REG lk));
 	
 	START_OPCODES_GROUP(G_13)
@@ -744,7 +744,7 @@ public:
 		/*0x21b*/ADD_OPCODE(SRD,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x227*/ADD_OPCODE(LVRX,(OP_REG vd, OP_REG ra, OP_REG rb));
 		/*0x237*/ADD_OPCODE(LFSUX,(OP_REG frd, OP_REG ra, OP_REG rb));
-		/*0x256*/ADD_OPCODE(SYNC,(OP_REG l));
+		/*0x256*/ADD_OPCODE(SYNC,(OP_uIMM l));
 		/*0x257*/ADD_OPCODE(LFDX,(OP_REG frd, OP_REG ra, OP_REG rb));
 		/*0x277*/ADD_OPCODE(LFDUX,(OP_REG frd, OP_REG ra, OP_REG rb));
 		/*0x287*/ADD_OPCODE(STVLX,(OP_REG vs, OP_REG ra, OP_REG rb));
@@ -852,6 +852,8 @@ public:
 
 	ADD_OPCODE(UNK,(const u32 code, const u32 opcode, const u32 gcode));
 };
+
+//instr_caller* g_instrs[0x40];
 
 #undef START_OPCODES_GROUP
 #undef ADD_OPCODE

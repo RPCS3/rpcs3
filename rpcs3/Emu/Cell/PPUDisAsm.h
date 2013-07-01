@@ -840,7 +840,7 @@ private:
 		
 		Write(wxString::Format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi/4, bi%4, bd, aa, lk));
 	}
-	void SC(const s32 sc_code)
+	void SC(OP_sIMM sc_code)
 	{
 		switch(sc_code)
 		{
@@ -1427,7 +1427,7 @@ private:
 		{
 			DisAsm_F1_R2("lfsux", frd, ra, rb);
 		}
-		void SYNC(OP_REG l)
+		void SYNC(OP_uIMM l)
 		{
 			DisAsm_INT1("sync", l);
 		}

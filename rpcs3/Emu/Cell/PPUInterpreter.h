@@ -2054,7 +2054,7 @@ private:
 		CPU.SetBranch(branchTarget((aa ? 0 : CPU.PC), bd));
 		if(lk) CPU.LR = CPU.PC + 4;
 	}
-	void SC(const s32 sc_code)
+	void SC(OP_sIMM sc_code)
 	{
 		switch(sc_code)
 		{
@@ -2889,7 +2889,7 @@ private:
 			CPU.FPR[frd] = (float&)CPU.FPR[frd];
 			CPU.GPR[ra] = addr;
 		}
-		void SYNC(OP_REG l)
+		void SYNC(OP_uIMM l)
 		{
 		}
 		void LFDX(OP_REG frd, OP_REG ra, OP_REG rb)

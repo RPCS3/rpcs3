@@ -1,8 +1,8 @@
 #pragma once
 
-#define OP_REG const u32
-#define OP_sIMM const s32
-#define OP_uIMM const u32
+#define OP_REG u32
+#define OP_sIMM s32
+#define OP_uIMM u32
 #define START_OPCODES_GROUP(x) /*x*/
 #define ADD_OPCODE(name, regs) virtual void(##name##)##regs##=0
 #define ADD_NULL_OPCODE(name) virtual void(##name##)()=0

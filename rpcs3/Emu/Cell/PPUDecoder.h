@@ -40,115 +40,115 @@ class PPU_Decoder : public Decoder
 	PPU_Opcodes& m_op;
 
 	//This field is used in rotate instructions to specify the first 1 bit of a 64-bit mask
-	OP_REG mb()			const { return GetField(21, 25) | (m_code & 0x20); }
+	OP_REG mb()			{ return GetField(21, 25) | (m_code & 0x20); }
 
 	//This field is used in rotate instructions to specify the last 1 bit of a 64-bit mask
-	OP_REG me()			const { return GetField(21, 25) | (m_code & 0x20); }
+	OP_REG me()			{ return GetField(21, 25) | (m_code & 0x20); }
 
 	//This field is used to specify a shift amount
-	OP_REG sh()			const { return GetField(16, 20) | ((m_code & 0x2) << 4); }
+	OP_REG sh()			{ return GetField(16, 20) | ((m_code & 0x2) << 4); }
 
 	//This field is used to specify a special-purpose register for the mtspr and mfspr instructions
-	OP_REG SPR()		const { return GetField(11, 20); }
+	OP_REG SPR()		{ return GetField(11, 20); }
 
 	//
-	OP_REG VS()			const { return GetField(6, 10); }
+	OP_REG VS()			{ return GetField(6, 10); }
 
 	//
-	OP_REG VD()			const { return GetField(6, 10); }
+	OP_REG VD()			{ return GetField(6, 10); }
 
 	//
-	OP_REG VA()			const { return GetField(11, 15); }
+	OP_REG VA()			{ return GetField(11, 15); }
 
 	//
-	OP_REG VB()			const { return GetField(16, 20); }
+	OP_REG VB()			{ return GetField(16, 20); }
 
 	//
-	OP_REG VC()			const { return GetField(21, 25); }
+	OP_REG VC()			{ return GetField(21, 25); }
 
 	//
-	OP_uIMM VUIMM()	const { return GetField(11, 15); }
+	OP_uIMM VUIMM()		{ return GetField(11, 15); }
 
 	//
-	OP_sIMM VSIMM()	const {  int i5 = GetField(11, 15);
-										if(i5 & 0x10) return i5 - 0x20;
-										return i5; }
+	OP_sIMM VSIMM()		{  int i5 = GetField(11, 15);
+							if(i5 & 0x10) return i5 - 0x20;
+							return i5; }
 
 	//
-	OP_uIMM VSH()		const { return GetField(22, 25); }
+	OP_uIMM VSH()		{ return GetField(22, 25); }
 
 	//This field is used to specify a GPR to be used as a destination
-	OP_REG RD()			const { return GetField(6, 10); }
+	OP_REG RD()			{ return GetField(6, 10); }
 
 	//This field is used to specify a GPR to be used as a source
-	OP_REG RS()			const { return GetField(6, 10); }
+	OP_REG RS()			{ return GetField(6, 10); }
 
 	//This field is used to specify a GPR to be used as a source or destination
-	OP_REG RA()			const { return GetField(11, 15); }
+	OP_REG RA()			{ return GetField(11, 15); }
 
 	//This field is used to specify a GPR to be used as a source
-	OP_REG RB()			const { return GetField(16, 20); }
+	OP_REG RB()			{ return GetField(16, 20); }
 
 	//This field is used to specify the number of bytes to move in an immediate string load or store
-	OP_REG NB()			const { return GetField(16, 20); }
+	OP_REG NB()			{ return GetField(16, 20); }
 
 	//This field is used to specify one of the CR fields, or one of the FPSCR fields, as a destination
-	OP_REG CRFD()		const { return GetField(6, 8); }
+	OP_REG CRFD()		{ return GetField(6, 8); }
 
 	//This field is used to specify one of the CR fields, or one of the FPSCR fields, as a source
-	OP_REG CRFS()		const { return GetField(11, 13); }
+	OP_REG CRFS()		{ return GetField(11, 13); }
 
 	//This field is used to specify a bit in the CR to be used as a source
-	OP_REG CRBA()		const { return GetField(11, 15); }
+	OP_REG CRBA()		{ return GetField(11, 15); }
 
 	//This field is used to specify a bit in the CR to be used as a source
-	OP_REG CRBB()		const { return GetField(16, 20); }
+	OP_REG CRBB()		{ return GetField(16, 20); }
 
 	//This field is used to specify a bit in the CR, or in the FPSCR, as the destination of the result of an instruction
-	OP_REG CRBD()		const { return GetField(6, 10); }
+	OP_REG CRBD()		{ return GetField(6, 10); }
 	
 	//
-	OP_REG BT()			const { return GetField(6, 10); }
+	OP_REG BT()			{ return GetField(6, 10); }
 
 	//
-	OP_REG BA()			const { return GetField(11, 15); }
+	OP_REG BA()			{ return GetField(11, 15); }
 
 	//
-	OP_REG BB()			const { return GetField(16, 20); }
+	OP_REG BB()			{ return GetField(16, 20); }
 
 	//
-	OP_REG BF()			const { return GetField(6, 10); }
+	OP_REG BF()			{ return GetField(6, 10); }
 
 	//This field is used to specify options for the branch conditional instructions
-	OP_REG BO()			const { return GetField(6, 10); }
+	OP_REG BO()			{ return GetField(6, 10); }
 
 	//This field is used to specify a bit in the CR to be used as the condition of a branch conditional instruction
-	OP_REG BI()			const { return GetField(11, 15); }
+	OP_REG BI()			{ return GetField(11, 15); }
 
 	//Immediate field specifying a 14-bit signed two's complement branch displacement that is concatenated on the
 	//right with ‘00’ and sign-extended to 64 bits.
-	OP_sIMM BD()		const { return (s32)(s16)GetField(16, 31); }
+	OP_sIMM BD()		{ return (s32)(s16)GetField(16, 31); }
 
 	//
-	OP_REG BH()			const { return GetField(19, 20); }
+	OP_REG BH()			{ return GetField(19, 20); }
 
 	//
-	OP_REG BFA()		const { return GetField(11, 13); }
+	OP_REG BFA()		{ return GetField(11, 13); }
 	
 	//Field used by the optional data stream variant of the dcbt instruction.
-	OP_uIMM TH()		const { return GetField(9, 10); }
+	OP_uIMM TH()		{ return GetField(9, 10); }
 
 	//This field is used to specify the conditions on which to trap
-	OP_uIMM TO()		const { return GetField(6, 10); }
+	OP_uIMM TO()		{ return GetField(6, 10); }
 
 	//
-	OP_REG MB()			const { return GetField(21, 25); }
+	OP_REG MB()			{ return GetField(21, 25); }
 
 	//
-	OP_REG ME()			const { return GetField(26, 30); }
+	OP_REG ME()			{ return GetField(26, 30); }
 
 	//This field is used to specify a shift amount
-	OP_REG SH()			const { return GetField(16, 20); }
+	OP_REG SH()			{ return GetField(16, 20); }
 
 	/*
 	Absolute address bit.
@@ -159,10 +159,10 @@ class PPU_Decoder : public Decoder
 	1		The immediate field represents an absolute address. The effective address (EA) of the branch is the 
 			LI field sign-extended to 64 bits or the BD field sign-extended to 64 bits.
 	*/
-	OP_REG AA()			const { return GetField(30); }
+	OP_REG AA()			{ return GetField(30); }
 
 	//
-	OP_sIMM LL() const
+	OP_sIMM LL()
 	{
 		OP_sIMM ll = m_code & 0x03fffffc;
 		if (ll & 0x02000000) return ll - 0x04000000;
@@ -174,49 +174,51 @@ class PPU_Decoder : public Decoder
 	1		Updates the LR. If the instruction is a branch instruction, the address of the instruction following the 
 			branch instruction is placed into the LR.
 	*/
-	OP_REG LK()			const { return GetField(31); }
+	OP_REG LK()			{ return GetField(31); }
 
 	//This field is used for extended arithmetic to enable setting OV and SO in the XER
-	OP_REG OE()			const { return GetField(21); }
+	OP_REG OE()			{ return GetField(21); }
 
 	//Field used to specify whether an integer compare instruction is to compare 64-bit numbers or 32-bit numbers
-	OP_REG L()			const { return GetField(10); }
+	OP_REG L_10()			{ return GetField(10); }
+	OP_REG L_6()			{ return GetField(6); }
+	OP_REG L_9_10()			{ return GetField(9, 10); }
+	OP_REG L_11()			{ return GetField(11); }
+	//
+	OP_REG I()			{ return GetField(16, 19); }
 
 	//
-	OP_REG I()			const { return GetField(16, 19); }
-
-	//
-	OP_REG DQ()			const { return GetField(16, 27); }
+	OP_REG DQ()			{ return GetField(16, 27); }
 
 	//This field is used to specify an FPR as the destination
-	OP_REG FRD()		const { return GetField(6, 10); }
+	OP_REG FRD()		{ return GetField(6, 10); }
 
 	//This field is used to specify an FPR as a source
-	OP_REG FRS()		const { return GetField(6, 10); }
+	OP_REG FRS()		{ return GetField(6, 10); }
 
 	//
-	OP_REG FLM()		const { return GetField(7, 14); }
+	OP_REG FLM()		{ return GetField(7, 14); }
 
 	//This field is used to specify an FPR as a source
-	OP_REG FRA()		const { return GetField(11, 15); }
+	OP_REG FRA()		{ return GetField(11, 15); }
 
 	//This field is used to specify an FPR as a source
-	OP_REG FRB()		const { return GetField(16, 20); }
+	OP_REG FRB()		{ return GetField(16, 20); }
 
 	//This field is used to specify an FPR as a source
-	OP_REG FRC()		const { return GetField(21, 25); }
+	OP_REG FRC()		{ return GetField(21, 25); }
 
 	//This field mask is used to identify the CR fields that are to be updated by the mtcrf instruction.
-	OP_REG CRM()		const { return GetField(12, 19); }
+	OP_REG CRM()		{ return GetField(12, 19); }
 
 	//
-	const s32 SYS()		const { return GetField(6, 31); }
+	OP_sIMM SYS()		{ return GetField(6, 31); }
 
 	//Immediate field specifying a 16-bit signed two's complement integer that is sign-extended to 64 bits
-	OP_sIMM D()			const { return (s32)(s16)GetField(16, 31); }
+	OP_sIMM D()			{ return (s32)(s16)GetField(16, 31); }
 
 	//
-	OP_sIMM DS() const
+	OP_sIMM DS()
 	{
 		OP_sIMM d = D();
 		if(d < 0) return d - 1;
@@ -224,10 +226,10 @@ class PPU_Decoder : public Decoder
 	}
 
 	//This immediate field is used to specify a 16-bit signed integer
-	OP_sIMM simm16()	const { return (s32)(s16)m_code; }
+	OP_sIMM simm16()	{ return (s32)(s16)m_code; }
 
 	//This immediate field is used to specify a 16-bit unsigned integer
-	OP_uIMM uimm16()	const { return (u32)(u16)m_code; }
+	OP_uIMM uimm16()	{ return (u32)(u16)m_code; }
 	
 	/*
 	Record bit.
@@ -239,455 +241,516 @@ class PPU_Decoder : public Decoder
 			floating-point exception, floating-point enabled exception, floating-point invalid operation exception, 
 			and floating-point overflow exception. 
 	*/
-	const bool RC()	const { return m_code & 0x1; }
+	bool RC()	{ return m_code & 0x1; }
 
 	//Primary opcode field
-	OP_uIMM OPCD() const { return GetField(0, 5); }
+	OP_uIMM OPCD() { return GetField(0, 5); }
 
-	OP_uIMM STRM() const { return GetField(9, 10); }
+	OP_uIMM GD_04()		{ return GetField(26, 31); } //0x3f
+	OP_uIMM GD_04_0()	{ return GetField(21, 31); } //0x7ff
+	OP_uIMM GD_13()		{ return GetField(21, 30); } //0x3ff
+	OP_uIMM GD_1e()		{ return GetField(28, 29); } //0x3
+	OP_uIMM GD_1f()		{ return GetField(21, 30); } //0x3ff
+	OP_uIMM GD_3a()		{ return GetField(30, 31); } //0x3
+	OP_uIMM GD_3b()		{ return GetField(26, 30); } //0x1f
+	OP_uIMM GD_3e()		{ return GetField(30, 31); } //0x3
+	OP_uIMM GD_3f()		{ return GetField(26, 30); } //0x1f
+	OP_uIMM GD_3f_0()	{ return GetField(21, 30); } //0x3ff
+
+	OP_uIMM STRM() { return GetField(9, 10); }
+
+	OP_uIMM GetCode() { return m_code; }
 	
-	__forceinline u32 GetField(const u32 p) const
+	__forceinline u32 GetField(const u32 p)
 	{
 		return (m_code >> (31 - p)) & 0x1;
 	}
 	
-	__forceinline u32 GetField(const u32 from, const u32 to) const
+	__forceinline u32 GetField(const u32 from, const u32 to)
 	{
 		return (m_code >> (31 - to)) & ((1 << ((to - from) + 1)) - 1);
 	}
 	
 public:
+	template<typename TD, typename TO>
+	instr_caller* instr_bind(TD* parent, void (TO::*func)())
+	{
+		return new instr_binder_0<TO>(parent, func);
+	}
+
+	template<typename TO>
+	instr_caller* instr_bind(void (TO::*func)())
+	{
+		return instr_bind(&m_op, func);
+	}
+
+	template<typename TO, typename TD, typename T1>
+	instr_caller* instr_bind(void (TO::*func)(T1), T1 (TD::*arg_func_1)())
+	{
+		return new instr_binder_1<TO, TD, T1>(&m_op, this, func, arg_func_1);
+	}
+
+	template<typename TO, typename TD, typename T1, typename T2>
+	instr_caller* instr_bind(void (TO::*func)(T1, T2), T1 (TD::*arg_func_1)(), T2 (TD::*arg_func_2)())
+	{
+		return new instr_binder_2<TO, TD, T1, T2>(&m_op, this, func, arg_func_1, arg_func_2);
+	}
+
+	template<typename TO, typename TD, typename T1, typename T2, typename T3>
+	instr_caller* instr_bind(void (TO::*func)(T1, T2, T3), T1 (TD::*arg_func_1)(), T2 (TD::*arg_func_2)(), T3 (TD::*arg_func_3)())
+	{
+		return new instr_binder_3<TO, TD, T1, T2, T3>(&m_op, this, func, arg_func_1, arg_func_2, arg_func_3);
+	}
+
+	template<typename TO, typename TD, typename T1, typename T2, typename T3, typename T4>
+	instr_caller* instr_bind(void (TO::*func)(T1, T2, T3, T4), T1 (TD::*arg_func_1)(), T2 (TD::*arg_func_2)(), T3 (TD::*arg_func_3)(), T4 (TD::*arg_func_4)())
+	{
+		return new instr_binder_4<TO, TD, T1, T2, T3, T4>(&m_op, this, func, arg_func_1, arg_func_2, arg_func_3, arg_func_4);
+	}
+
+	template<typename TO, typename TD, typename T1, typename T2, typename T3, typename T4, typename T5>
+	instr_caller* instr_bind(void (TO::*func)(T1, T2, T3, T4, T5), T1 (TD::*arg_func_1)(), T2 (TD::*arg_func_2)(), T3 (TD::*arg_func_3)(), T4 (TD::*arg_func_4)(), T5 (TD::*arg_func_5)())
+	{
+		return new instr_binder_5<TO, TD, T1, T2, T3, T4, T5>(&m_op, this, func, arg_func_1, arg_func_2, arg_func_3, arg_func_4, arg_func_5);
+	}
+
+	template<typename TO, typename TD, typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
+	instr_caller* instr_bind(void (TO::*func)(T1, T2, T3, T4, T5, T6), T1 (TD::*arg_func_1)(), T2 (TD::*arg_func_2)(), T3 (TD::*arg_func_3)(), T4 (TD::*arg_func_4)(), T5 (TD::*arg_func_5)(), T6 (TD::*arg_func_6)())
+	{
+		return new instr_binder_6<TO, TD, T1, T2, T3, T4, T5, T6>(&m_op, this, func, arg_func_1, arg_func_2, arg_func_3, arg_func_4, arg_func_5, arg_func_6);
+	}
+
+	void UNK_MAIN()
+	{
+		if(!m_code)
+		{
+			m_op.NULL_OP();
+		}
+		else
+		{
+			u32 opcd = OPCD();
+			m_op.UNK(m_code, opcd, opcd);
+		}
+	}
+
 	PPU_Decoder(PPU_Opcodes& op) : m_op(op)
 	{
+#define bind_instr(list, instr, ...) list->set_instr(instr, instr_bind(&PPU_Opcodes::##instr, ##__VA_ARGS__))
+
+		using namespace PPU_opcodes;
+		auto main_list = new_list<0x40>(this, &PPU_Decoder::OPCD, instr_bind(this, &PPU_Decoder::UNK_MAIN));
+		auto g04_0_list = new_list<0x800>(this, &PPU_Decoder::GD_04_0, instr_bind(&PPU_Opcodes::UNK, &PPU_Decoder::GetCode, &PPU_Decoder::OPCD, &PPU_Decoder::GD_04_0));
+		auto g04_list = new_list<0x40>(this, &PPU_Decoder::GD_04, g04_0_list);
+		auto g13_list = new_list<0x400>(this, &PPU_Decoder::GD_13, instr_bind(&PPU_Opcodes::UNK, &PPU_Decoder::GetCode, &PPU_Decoder::OPCD, &PPU_Decoder::GD_13));
+		auto g1e_list = new_list<0x4>(this, &PPU_Decoder::GD_1e, instr_bind(&PPU_Opcodes::UNK, &PPU_Decoder::GetCode, &PPU_Decoder::OPCD, &PPU_Decoder::GD_1e));
+		auto g1f_list = new_list<0x400>(this, &PPU_Decoder::GD_1f, instr_bind(&PPU_Opcodes::UNK, &PPU_Decoder::GetCode, &PPU_Decoder::OPCD, &PPU_Decoder::GD_1f));
+		auto g3a_list = new_list<0x4>(this, &PPU_Decoder::GD_3a, instr_bind(&PPU_Opcodes::UNK, &PPU_Decoder::GetCode, &PPU_Decoder::OPCD, &PPU_Decoder::GD_3a));
+		auto g3b_list = new_list<0x20>(this, &PPU_Decoder::GD_3b, instr_bind(&PPU_Opcodes::UNK, &PPU_Decoder::GetCode, &PPU_Decoder::OPCD, &PPU_Decoder::GD_3b));
+		auto g3e_list = new_list<0x4>(this, &PPU_Decoder::GD_3e, instr_bind(&PPU_Opcodes::UNK, &PPU_Decoder::GetCode, &PPU_Decoder::OPCD, &PPU_Decoder::GD_3e));
+		auto g3f_0_list = new_list<0x400>(this, &PPU_Decoder::GD_3f_0, instr_bind(&PPU_Opcodes::UNK, &PPU_Decoder::GetCode, &PPU_Decoder::OPCD, &PPU_Decoder::GD_3f_0));
+		auto g3f_list = new_list<0x20>(this, &PPU_Decoder::GD_3f, g3f_0_list);
+
+		bind_instr(main_list, TDI, &PPU_Decoder::TO, &PPU_Decoder::RA, &PPU_Decoder::simm16);
+		bind_instr(main_list, TWI, &PPU_Decoder::TO, &PPU_Decoder::RA, &PPU_Decoder::simm16);
+		main_list->set_instr(G_04, g04_list);
+		bind_instr(main_list, MULLI, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::simm16);
+		bind_instr(main_list, SUBFIC, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::simm16);
+		bind_instr(main_list, CMPLI, &PPU_Decoder::CRFD, &PPU_Decoder::L_10, &PPU_Decoder::RA, &PPU_Decoder::uimm16);
+		bind_instr(main_list, CMPI, &PPU_Decoder::CRFD, &PPU_Decoder::L_10, &PPU_Decoder::RA, &PPU_Decoder::simm16);
+		bind_instr(main_list, ADDIC, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::simm16);
+		bind_instr(main_list, ADDIC_, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::simm16);
+		bind_instr(main_list, ADDI, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::simm16);
+		bind_instr(main_list, ADDIS, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::simm16);
+		bind_instr(main_list, BC, &PPU_Decoder::BO, &PPU_Decoder::BI, &PPU_Decoder::BD, &PPU_Decoder::AA, &PPU_Decoder::LK);
+		bind_instr(main_list, SC, &PPU_Decoder::SYS);
+		bind_instr(main_list, B, &PPU_Decoder::LL, &PPU_Decoder::AA, &PPU_Decoder::LK);
+		main_list->set_instr(G_13, g13_list);
+		bind_instr(main_list, RLWIMI, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::SH, &PPU_Decoder::MB, &PPU_Decoder::ME, &PPU_Decoder::RC);
+		bind_instr(main_list, RLWINM, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::SH, &PPU_Decoder::MB, &PPU_Decoder::ME, &PPU_Decoder::RC);
+		bind_instr(main_list, RLWNM, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::MB, &PPU_Decoder::ME, &PPU_Decoder::RC);
+		bind_instr(main_list, ORI, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::uimm16);
+		bind_instr(main_list, ORIS, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::uimm16);
+		bind_instr(main_list, XORI, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::uimm16);
+		bind_instr(main_list, XORIS, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::uimm16);
+		bind_instr(main_list, ANDI_, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::uimm16);
+		bind_instr(main_list, ANDIS_, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::uimm16);
+		main_list->set_instr(G_1e, g1e_list);
+		main_list->set_instr(G_1f, g1f_list);
+		bind_instr(main_list, LWZ, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, LWZU, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, LBZ, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, LBZU, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STW, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STWU, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STB, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STBU, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, LHZ, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, LHZU, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STH, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STHU, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, LMW, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STMW, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, LFS, &PPU_Decoder::FRD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, LFSU, &PPU_Decoder::FRD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, LFD, &PPU_Decoder::FRD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, LFDU, &PPU_Decoder::FRD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STFS, &PPU_Decoder::FRS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STFSU, &PPU_Decoder::FRS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STFD, &PPU_Decoder::FRS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(main_list, STFDU, &PPU_Decoder::FRS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		main_list->set_instr(G_3a, g3a_list);
+		main_list->set_instr(G_3b, g3b_list);
+		main_list->set_instr(G_3e, g3e_list);
+		main_list->set_instr(G_3f, g3f_list);
+
+		bind_instr(g04_list, VMADDFP, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VMHADDSHS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VMHRADDSHS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VMLADDUHM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VMSUMMBM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VMSUMSHM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VMSUMSHS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VMSUMUBM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VMSUMUHM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VMSUMUHS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VNMSUBFP, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VPERM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VSEL, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VC);
+		bind_instr(g04_list, VSLDOI, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB, &PPU_Decoder::VSH);
+
+		bind_instr(g04_0_list, MFVSCR, &PPU_Decoder::VD);
+		bind_instr(g04_0_list, MTVSCR, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDCUW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDFP, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDSBS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDSHS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDSWS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDUBM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDUBS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDUHM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDUHS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDUWM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VADDUWS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VAND, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VANDC, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VAVGSB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VAVGSH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VAVGSW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VAVGUB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VAVGUH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VAVGUW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCFSX, &PPU_Decoder::VD, &PPU_Decoder::VUIMM, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCFUX, &PPU_Decoder::VD, &PPU_Decoder::VUIMM, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPBFP, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPBFP_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPEQFP, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPEQFP_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPEQUB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPEQUB_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPEQUH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPEQUH_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPEQUW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPEQUW_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGEFP, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGEFP_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTFP, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTFP_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTSB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTSB_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTSH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTSH_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTSW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTSW_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTUB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTUB_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTUH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTUH_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTUW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCMPGTUW_, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCTSXS, &PPU_Decoder::VD, &PPU_Decoder::VUIMM, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VCTUXS, &PPU_Decoder::VD, &PPU_Decoder::VUIMM, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VEXPTEFP, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VLOGEFP, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMAXFP, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMAXSB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMAXSH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMAXSW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMAXUB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMAXUH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMAXUW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMINFP, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMINSB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMINSH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMINSW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMINUB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMINUH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMINUW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMRGHB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMRGHH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMRGHW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMRGLB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMRGLH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMRGLW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMULESB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMULESH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMULEUB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMULEUH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMULOSB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMULOSH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMULOUB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VMULOUH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VNOR, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VOR, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VPKPX, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VPKSHSS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VPKSHUS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VPKSWSS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VPKSWUS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VPKUHUM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VPKUHUS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VPKUWUM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VPKUWUS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VREFP, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VRFIM, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VRFIN, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VRFIP, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VRFIZ, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VRLB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VRLH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VRLW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VRSQRTEFP, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSL, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSLB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSLH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSLO, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSLW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSPLTB, &PPU_Decoder::VD, &PPU_Decoder::VUIMM, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSPLTH, &PPU_Decoder::VD, &PPU_Decoder::VUIMM, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSPLTISB, &PPU_Decoder::VD, &PPU_Decoder::VSIMM);
+		bind_instr(g04_0_list, VSPLTISH, &PPU_Decoder::VD, &PPU_Decoder::VSIMM);
+		bind_instr(g04_0_list, VSPLTISW, &PPU_Decoder::VD, &PPU_Decoder::VSIMM);
+		bind_instr(g04_0_list, VSPLTW, &PPU_Decoder::VD, &PPU_Decoder::VUIMM, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSR, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSRAB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSRAH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSRAW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSRB, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSRH, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSRO, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSRW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBCUW, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBFP, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBSBS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBSHS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBSWS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBUBM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBUBS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBUHM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBUHS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBUWM, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUBUWS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUMSWS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUM2SWS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUM4SBS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUM4SHS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VSUM4UBS, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VUPKHPX, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VUPKHSB, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VUPKHSH, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VUPKLPX, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VUPKLSB, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VUPKLSH, &PPU_Decoder::VD, &PPU_Decoder::VB);
+		bind_instr(g04_0_list, VXOR, &PPU_Decoder::VD, &PPU_Decoder::VA, &PPU_Decoder::VB);
+
+		bind_instr(g13_list, MCRF, &PPU_Decoder::CRFD, &PPU_Decoder::CRFS);
+		bind_instr(g13_list, BCLR, &PPU_Decoder::BO, &PPU_Decoder::BI, &PPU_Decoder::BH, &PPU_Decoder::LK);
+		bind_instr(g13_list, CRNOR, &PPU_Decoder::CRBD, &PPU_Decoder::CRBA, &PPU_Decoder::CRBB);
+		bind_instr(g13_list, CRANDC, &PPU_Decoder::CRBD, &PPU_Decoder::CRBA, &PPU_Decoder::CRBB);
+		bind_instr(g13_list, ISYNC);
+		bind_instr(g13_list, CRXOR, &PPU_Decoder::CRBD, &PPU_Decoder::CRBA, &PPU_Decoder::CRBB);
+		bind_instr(g13_list, CRNAND, &PPU_Decoder::CRBD, &PPU_Decoder::CRBA, &PPU_Decoder::CRBB);
+		bind_instr(g13_list, CRAND, &PPU_Decoder::CRBD, &PPU_Decoder::CRBA, &PPU_Decoder::CRBB);
+		bind_instr(g13_list, CREQV, &PPU_Decoder::CRBD, &PPU_Decoder::CRBA, &PPU_Decoder::CRBB);
+		bind_instr(g13_list, CRORC, &PPU_Decoder::CRBD, &PPU_Decoder::CRBA, &PPU_Decoder::CRBB);
+		bind_instr(g13_list, CROR, &PPU_Decoder::CRBD, &PPU_Decoder::CRBA, &PPU_Decoder::CRBB);
+		bind_instr(g13_list, BCCTR, &PPU_Decoder::BO, &PPU_Decoder::BI, &PPU_Decoder::BH, &PPU_Decoder::LK);
+
+		bind_instr(g1e_list, RLDICL, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::sh, &PPU_Decoder::mb, &PPU_Decoder::RC);
+		bind_instr(g1e_list, RLDICR, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::sh, &PPU_Decoder::me, &PPU_Decoder::RC);
+		bind_instr(g1e_list, RLDIC, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::sh, &PPU_Decoder::mb, &PPU_Decoder::RC);
+		bind_instr(g1e_list, RLDIMI, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::sh, &PPU_Decoder::mb, &PPU_Decoder::RC);
+
+		/*0x000*/bind_instr(g1f_list, CMP, &PPU_Decoder::CRFD, &PPU_Decoder::L_10, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x004*/bind_instr(g1f_list, TW, &PPU_Decoder::TO, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x006*/bind_instr(g1f_list, LVSL, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x007*/bind_instr(g1f_list, LVEBX, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x008*/bind_instr(g1f_list, SUBFC, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x009*/bind_instr(g1f_list, MULHDU, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x00a*/bind_instr(g1f_list, ADDC, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x00b*/bind_instr(g1f_list, MULHWU, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x013*/bind_instr(g1f_list, MFOCRF, &PPU_Decoder::L_11, &PPU_Decoder::RD, &PPU_Decoder::CRM);
+		/*0x014*/bind_instr(g1f_list, LWARX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x015*/bind_instr(g1f_list, LDX, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB);
+		/*0x017*/bind_instr(g1f_list, LWZX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x018*/bind_instr(g1f_list, SLW, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x01a*/bind_instr(g1f_list, CNTLZW, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RC);
+		/*0x01b*/bind_instr(g1f_list, SLD, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x01c*/bind_instr(g1f_list, AND, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x020*/bind_instr(g1f_list, CMPL, &PPU_Decoder::CRFD, &PPU_Decoder::L_10, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x026*/bind_instr(g1f_list, LVSR, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x027*/bind_instr(g1f_list, LVEHX, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x028*/bind_instr(g1f_list, SUBF, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x036*/bind_instr(g1f_list, DCBST, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x03a*/bind_instr(g1f_list, CNTLZD, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RC);
+		/*0x03c*/bind_instr(g1f_list, ANDC, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x047*/bind_instr(g1f_list, LVEWX, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x049*/bind_instr(g1f_list, MULHD, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x04b*/bind_instr(g1f_list, MULHW, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x054*/bind_instr(g1f_list, LDARX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x056*/bind_instr(g1f_list, DCBF, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x057*/bind_instr(g1f_list, LBZX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x067*/bind_instr(g1f_list, LVX, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x068*/bind_instr(g1f_list, NEG, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x077*/bind_instr(g1f_list, LBZUX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x07c*/bind_instr(g1f_list, NOR, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x087*/bind_instr(g1f_list, STVEBX, &PPU_Decoder::VS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x088*/bind_instr(g1f_list, SUBFE, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x08a*/bind_instr(g1f_list, ADDE, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x090*/bind_instr(g1f_list, MTOCRF, &PPU_Decoder::CRM, &PPU_Decoder::RS);
+		/*0x095*/bind_instr(g1f_list, STDX, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x096*/bind_instr(g1f_list, STWCX_, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x097*/bind_instr(g1f_list, STWX, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x0a7*/bind_instr(g1f_list, STVEHX, &PPU_Decoder::VS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x0b5*/bind_instr(g1f_list, STDUX, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x0c7*/bind_instr(g1f_list, STVEWX, &PPU_Decoder::VS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x0ca*/bind_instr(g1f_list, ADDZE, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x0d6*/bind_instr(g1f_list, STDCX_, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x0d7*/bind_instr(g1f_list, STBX, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x0e7*/bind_instr(g1f_list, STVX, &PPU_Decoder::VS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x0e9*/bind_instr(g1f_list, MULLD, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x0ea*/bind_instr(g1f_list, ADDME, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x0eb*/bind_instr(g1f_list, MULLW, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x0f6*/bind_instr(g1f_list, DCBTST, &PPU_Decoder::TH, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x10a*/bind_instr(g1f_list, ADD, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x116*/bind_instr(g1f_list, DCBT, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::TH);
+		/*0x117*/bind_instr(g1f_list, LHZX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x11c*/bind_instr(g1f_list, EQV, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x136*/bind_instr(g1f_list, ECIWX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x137*/bind_instr(g1f_list, LHZUX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x13c*/bind_instr(g1f_list, XOR, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x153*/bind_instr(g1f_list, MFSPR, &PPU_Decoder::RD, &PPU_Decoder::SPR);
+		/*0x156*/bind_instr(g1f_list, DST, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::STRM, &PPU_Decoder::L_6);
+		/*0x157*/bind_instr(g1f_list, LHAX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x167*/bind_instr(g1f_list, LVXL, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x168*/bind_instr(g1f_list, ABS, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x173*/bind_instr(g1f_list, MFTB, &PPU_Decoder::RD, &PPU_Decoder::SPR);
+		/*0x176*/bind_instr(g1f_list, DSTST, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::STRM, &PPU_Decoder::L_6);
+		/*0x177*/bind_instr(g1f_list, LHAUX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x197*/bind_instr(g1f_list, STHX, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x19c*/bind_instr(g1f_list, ORC, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x1b6*/bind_instr(g1f_list, ECOWX, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x1bc*/bind_instr(g1f_list, OR, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x1c9*/bind_instr(g1f_list, DIVDU, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x1cb*/bind_instr(g1f_list, DIVWU, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x1d3*/bind_instr(g1f_list, MTSPR, &PPU_Decoder::SPR, &PPU_Decoder::RS);
+		/*0x1d6*///DCBI
+		/*0x1dc*/bind_instr(g1f_list, NAND, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x1e7*/bind_instr(g1f_list, STVXL, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x1e9*/bind_instr(g1f_list, DIVD, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x1eb*/bind_instr(g1f_list, DIVW, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB, &PPU_Decoder::OE, &PPU_Decoder::RC);
+		/*0x207*/bind_instr(g1f_list, LVLX, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x216*/bind_instr(g1f_list, LWBRX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x217*/bind_instr(g1f_list, LFSX, &PPU_Decoder::FRD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x218*/bind_instr(g1f_list, SRW, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x21b*/bind_instr(g1f_list, SRD, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x227*/bind_instr(g1f_list, LVRX, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x237*/bind_instr(g1f_list, LFSUX, &PPU_Decoder::FRD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x256*/bind_instr(g1f_list, SYNC, &PPU_Decoder::L_9_10);
+		/*0x257*/bind_instr(g1f_list, LFDX, &PPU_Decoder::FRD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x277*/bind_instr(g1f_list, LFDUX, &PPU_Decoder::FRD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x287*/bind_instr(g1f_list, STVLX, &PPU_Decoder::VS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x297*/bind_instr(g1f_list, STFSX, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x2a7*/bind_instr(g1f_list, STVRX, &PPU_Decoder::VS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x2d7*/bind_instr(g1f_list, STFDX, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x307*/bind_instr(g1f_list, LVLXL, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x316*/bind_instr(g1f_list, LHBRX, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x318*/bind_instr(g1f_list, SRAW, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x31a*/bind_instr(g1f_list, SRAD, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RB, &PPU_Decoder::RC);
+		/*0x327*/bind_instr(g1f_list, LVRXL, &PPU_Decoder::VD, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x336*/bind_instr(g1f_list, DSS, &PPU_Decoder::STRM, &PPU_Decoder::L_6);
+		/*0x338*/bind_instr(g1f_list, SRAWI, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::sh, &PPU_Decoder::RC);
+		/*0x33a*/bind_instr(g1f_list, SRADI1, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::sh, &PPU_Decoder::RC);
+		/*0x33b*/bind_instr(g1f_list, SRADI2, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::sh, &PPU_Decoder::RC);
+		/*0x356*/bind_instr(g1f_list, EIEIO);
+		/*0x39a*/bind_instr(g1f_list, EXTSH, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RC);
+		/*0x3ba*/bind_instr(g1f_list, EXTSB, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RC);
+		/*0x3d7*/bind_instr(g1f_list, STFIWX, &PPU_Decoder::FRS, &PPU_Decoder::RA, &PPU_Decoder::RB);
+		/*0x3da*/bind_instr(g1f_list, EXTSW, &PPU_Decoder::RA, &PPU_Decoder::RS, &PPU_Decoder::RC);
+		/*0x3d6*///ICBI
+		/*0x3f6*/bind_instr(g1f_list, DCBZ, &PPU_Decoder::RA, &PPU_Decoder::RB);
+
+		bind_instr(g3a_list, LD, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(g3a_list, LDU, &PPU_Decoder::RD, &PPU_Decoder::RA, &PPU_Decoder::DS);
+
+		bind_instr(g3b_list, FDIVS, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3b_list, FSUBS, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3b_list, FADDS, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3b_list, FSQRTS, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3b_list, FRES, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3b_list, FMULS, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::RC);
+		bind_instr(g3b_list, FMADDS, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3b_list, FMSUBS, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3b_list, FNMSUBS, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3b_list, FNMADDS, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		
+		bind_instr(g3e_list, STD, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::D);
+		bind_instr(g3e_list, STDU, &PPU_Decoder::RS, &PPU_Decoder::RA, &PPU_Decoder::DS);
+
+		bind_instr(g3f_list, FSEL, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_list, FMUL, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::RC);
+		bind_instr(g3f_list, FMSUB, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_list, FMADD, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_list, FNMSUB, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_list, FNMADD, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRC, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+
+		bind_instr(g3f_0_list, FDIV, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FSUB, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FADD, &PPU_Decoder::FRD, &PPU_Decoder::FRA, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FSQRT, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FRSQRTE, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FCMPU, &PPU_Decoder::CRFD, &PPU_Decoder::FRA, &PPU_Decoder::FRB);
+		bind_instr(g3f_0_list, FRSP, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FCTIW, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FCTIWZ, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FCMPO, &PPU_Decoder::CRFD, &PPU_Decoder::FRA, &PPU_Decoder::FRB);
+		bind_instr(g3f_0_list, FNEG, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FMR, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FNABS, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FABS, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FCFID, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FCTID, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, FCTIDZ, &PPU_Decoder::FRD, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+
+		bind_instr(g3f_0_list, MTFSB1, &PPU_Decoder::BT, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, MCRFS, &PPU_Decoder::BF, &PPU_Decoder::BFA);
+		bind_instr(g3f_0_list, MTFSB0, &PPU_Decoder::BT, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, MTFSFI, &PPU_Decoder::CRFD, &PPU_Decoder::I, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, MFFS, &PPU_Decoder::FRD, &PPU_Decoder::RC);
+		bind_instr(g3f_0_list, MTFSF, &PPU_Decoder::FLM, &PPU_Decoder::FRB, &PPU_Decoder::RC);
+
+		m_instr_decoder = main_list;
 	}
 
 	~PPU_Decoder()
 	{
 		m_op.Exit();
+		delete m_instr_decoder;
 	}
 
 	virtual void Decode(const u32 code)
 	{
 		m_code = code;
-
-		using namespace PPU_opcodes;
-		static u32 opcode, temp;
-
-		switch((opcode = OPCD()))
-		{
-		ADD_OPCODE(TDI,		TO(), RA(), simm16());
-		ADD_OPCODE(TWI,		TO(), RA(), simm16());
-
-		START_OPCODES_GROUP(G_04, m_code & 0x3f)
-			ADD_OPCODE(VMADDFP,		VD(), VA(), VB(), VC());
-			ADD_OPCODE(VMHADDSHS,	VD(), VA(), VB(), VC());
-			ADD_OPCODE(VMHRADDSHS,	VD(), VA(), VB(), VC());
-			ADD_OPCODE(VMLADDUHM,	VD(), VA(), VB(), VC());
-			ADD_OPCODE(VMSUMMBM,	VD(), VA(), VB(), VC());
-			ADD_OPCODE(VMSUMSHM,	VD(), VA(), VB(), VC());
-			ADD_OPCODE(VMSUMSHS,	VD(), VA(), VB(), VC());
-			ADD_OPCODE(VMSUMUBM,	VD(), VA(), VB(), VC());
-			ADD_OPCODE(VMSUMUHM,	VD(), VA(), VB(), VC());
-			ADD_OPCODE(VMSUMUHS,	VD(), VA(), VB(), VC());
-			ADD_OPCODE(VNMSUBFP,	VD(), VA(), VB(), VC());
-			ADD_OPCODE(VPERM,		VD(), VA(), VB(), VC());
-			ADD_OPCODE(VSEL,		VD(), VA(), VB(), VC());
-			ADD_OPCODE(VSLDOI,		VD(), VA(), VB(), VSH());
-
-			START_OPCODES_SUB_GROUP(m_code & 0x7ff);
-				ADD_OPCODE(MFVSCR,		VD());
-				ADD_OPCODE(MTVSCR,		VB());
-				ADD_OPCODE(VADDCUW,		VD(), VA(), VB());
-				ADD_OPCODE(VADDFP,		VD(), VA(), VB());
-				ADD_OPCODE(VADDSBS,		VD(), VA(), VB());
-				ADD_OPCODE(VADDSHS,		VD(), VA(), VB());
-				ADD_OPCODE(VADDSWS,		VD(), VA(), VB());
-				ADD_OPCODE(VADDUBM,		VD(), VA(), VB());
-				ADD_OPCODE(VADDUBS,		VD(), VA(), VB());
-				ADD_OPCODE(VADDUHM,		VD(), VA(), VB());
-				ADD_OPCODE(VADDUHS,		VD(), VA(), VB());
-				ADD_OPCODE(VADDUWM,		VD(), VA(), VB());
-				ADD_OPCODE(VADDUWS,		VD(), VA(), VB());
-				ADD_OPCODE(VAND,		VD(), VA(), VB());
-				ADD_OPCODE(VANDC,		VD(), VA(), VB());
-				ADD_OPCODE(VAVGSB,		VD(), VA(), VB());
-				ADD_OPCODE(VAVGSH,		VD(), VA(), VB());
-				ADD_OPCODE(VAVGSW,		VD(), VA(), VB());
-				ADD_OPCODE(VAVGUB,		VD(), VA(), VB());
-				ADD_OPCODE(VAVGUH,		VD(), VA(), VB());
-				ADD_OPCODE(VAVGUW,		VD(), VA(), VB());
-				ADD_OPCODE(VCFSX,		VD(), VUIMM(), VB());
-				ADD_OPCODE(VCFUX,		VD(), VUIMM(), VB());
-				ADD_OPCODE(VCMPBFP,		VD(), VA(), VB());
-				ADD_OPCODE(VCMPBFP_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPEQFP,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPEQFP_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPEQUB,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPEQUB_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPEQUH,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPEQUH_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPEQUW,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPEQUW_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGEFP,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGEFP_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTFP,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTFP_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTSB,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTSB_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTSH,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTSH_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTSW,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTSW_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTUB,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTUB_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTUH,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTUH_,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTUW,	VD(), VA(), VB());
-				ADD_OPCODE(VCMPGTUW_,	VD(), VA(), VB());
-				ADD_OPCODE(VCTSXS,		VD(), VUIMM(), VB());
-				ADD_OPCODE(VCTUXS,		VD(), VUIMM(), VB());
-				ADD_OPCODE(VEXPTEFP,	VD(), VB());
-				ADD_OPCODE(VLOGEFP,		VD(), VB());
-				ADD_OPCODE(VMAXFP,		VD(), VA(), VB());
-				ADD_OPCODE(VMAXSB,		VD(), VA(), VB());
-				ADD_OPCODE(VMAXSH,		VD(), VA(), VB());
-				ADD_OPCODE(VMAXSW,		VD(), VA(), VB());
-				ADD_OPCODE(VMAXUB,		VD(), VA(), VB());
-				ADD_OPCODE(VMAXUH,		VD(), VA(), VB());
-				ADD_OPCODE(VMAXUW,		VD(), VA(), VB());
-				ADD_OPCODE(VMINFP,		VD(), VA(), VB());
-				ADD_OPCODE(VMINSB,		VD(), VA(), VB());
-				ADD_OPCODE(VMINSH,		VD(), VA(), VB());
-				ADD_OPCODE(VMINSW,		VD(), VA(), VB());
-				ADD_OPCODE(VMINUB,		VD(), VA(), VB());
-				ADD_OPCODE(VMINUH,		VD(), VA(), VB());
-				ADD_OPCODE(VMINUW,		VD(), VA(), VB());
-				ADD_OPCODE(VMRGHB,		VD(), VA(), VB());
-				ADD_OPCODE(VMRGHH,		VD(), VA(), VB());
-				ADD_OPCODE(VMRGHW,		VD(), VA(), VB());
-				ADD_OPCODE(VMRGLB,		VD(), VA(), VB());
-				ADD_OPCODE(VMRGLH,		VD(), VA(), VB());
-				ADD_OPCODE(VMRGLW,		VD(), VA(), VB());
-				ADD_OPCODE(VMULESB,		VD(), VA(), VB());
-				ADD_OPCODE(VMULESH,		VD(), VA(), VB());
-				ADD_OPCODE(VMULEUB,		VD(), VA(), VB());
-				ADD_OPCODE(VMULEUH,		VD(), VA(), VB());
-				ADD_OPCODE(VMULOSB,		VD(), VA(), VB());
-				ADD_OPCODE(VMULOSH,		VD(), VA(), VB());
-				ADD_OPCODE(VMULOUB,		VD(), VA(), VB());
-				ADD_OPCODE(VMULOUH,		VD(), VA(), VB());
-				ADD_OPCODE(VNOR,		VD(), VA(), VB());
-				ADD_OPCODE(VOR,			VD(), VA(), VB());
-				ADD_OPCODE(VPKPX,		VD(), VA(), VB());
-				ADD_OPCODE(VPKSHSS,		VD(), VA(), VB());
-				ADD_OPCODE(VPKSHUS,		VD(), VA(), VB());
-				ADD_OPCODE(VPKSWSS,		VD(), VA(), VB());
-				ADD_OPCODE(VPKSWUS,		VD(), VA(), VB());
-				ADD_OPCODE(VPKUHUM,		VD(), VA(), VB());
-				ADD_OPCODE(VPKUHUS,		VD(), VA(), VB());
-				ADD_OPCODE(VPKUWUM,		VD(), VA(), VB());
-				ADD_OPCODE(VPKUWUS,		VD(), VA(), VB());
-				ADD_OPCODE(VREFP,		VD(), VB());
-				ADD_OPCODE(VRFIM,		VD(), VB());
-				ADD_OPCODE(VRFIN,		VD(), VB());
-				ADD_OPCODE(VRFIP,		VD(), VB());
-				ADD_OPCODE(VRFIZ,		VD(), VB());
-				ADD_OPCODE(VRLB,		VD(), VA(), VB());
-				ADD_OPCODE(VRLH,		VD(), VA(), VB());
-				ADD_OPCODE(VRLW,		VD(), VA(), VB());
-				ADD_OPCODE(VRSQRTEFP,	VD(), VB());
-				ADD_OPCODE(VSL,			VD(), VA(), VB());
-				ADD_OPCODE(VSLB,		VD(), VA(), VB());
-				ADD_OPCODE(VSLH,		VD(), VA(), VB());
-				ADD_OPCODE(VSLO,		VD(), VA(), VB());
-				ADD_OPCODE(VSLW,		VD(), VA(), VB());
-				ADD_OPCODE(VSPLTB,		VD(), VUIMM(), VB());
-				ADD_OPCODE(VSPLTH,		VD(), VUIMM(), VB());
-				ADD_OPCODE(VSPLTISB,	VD(), VSIMM());
-				ADD_OPCODE(VSPLTISH,	VD(), VSIMM());
-				ADD_OPCODE(VSPLTISW,	VD(), VSIMM());
-				ADD_OPCODE(VSPLTW,		VD(), VUIMM(), VB());
-				ADD_OPCODE(VSR,			VD(), VA(), VB());
-				ADD_OPCODE(VSRAB,		VD(), VA(), VB());
-				ADD_OPCODE(VSRAH,		VD(), VA(), VB());
-				ADD_OPCODE(VSRAW,		VD(), VA(), VB());
-				ADD_OPCODE(VSRB,		VD(), VA(), VB());
-				ADD_OPCODE(VSRH,		VD(), VA(), VB());
-				ADD_OPCODE(VSRO,		VD(), VA(), VB());
-				ADD_OPCODE(VSRW,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBCUW,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBFP,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBSBS,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBSHS,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBSWS,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBUBM,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBUBS,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBUHM,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBUHS,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBUWM,		VD(), VA(), VB());
-				ADD_OPCODE(VSUBUWS,		VD(), VA(), VB());
-				ADD_OPCODE(VSUMSWS,		VD(), VA(), VB());
-				ADD_OPCODE(VSUM2SWS,	VD(), VA(), VB());
-				ADD_OPCODE(VSUM4SBS,	VD(), VA(), VB());
-				ADD_OPCODE(VSUM4SHS,	VD(), VA(), VB());
-				ADD_OPCODE(VSUM4UBS,	VD(), VA(), VB());
-				ADD_OPCODE(VUPKHPX,		VD(), VB());
-				ADD_OPCODE(VUPKHSB,		VD(), VB());
-				ADD_OPCODE(VUPKHSH,		VD(), VB());
-				ADD_OPCODE(VUPKLPX,		VD(), VB());
-				ADD_OPCODE(VUPKLSB,		VD(), VB());
-				ADD_OPCODE(VUPKLSH,		VD(), VB());
-				ADD_OPCODE(VXOR,		VD(), VA(), VB());
-			END_OPCODES_SUB_GROUP();
-		END_OPCODES_ND_GROUP(G_04);
-
-		ADD_OPCODE(MULLI,	RD(), RA(), simm16());
-		ADD_OPCODE(SUBFIC,	RD(), RA(), simm16());
-		ADD_OPCODE(CMPLI,	CRFD(), L(), RA(), uimm16());
-		ADD_OPCODE(CMPI,	CRFD(), L(), RA(), simm16());
-		ADD_OPCODE(ADDIC,	RD(), RA(), simm16());
-		ADD_OPCODE(ADDIC_,	RD(), RA(), simm16());
-		ADD_OPCODE(ADDI,	RD(), RA(), simm16());
-		ADD_OPCODE(ADDIS,	RD(), RA(), simm16());			
-		ADD_OPCODE(BC,		BO(), BI(), BD(), AA(), LK());
-		ADD_OPCODE(SC,		SYS());
-		ADD_OPCODE(B,		LL(), AA(), LK());
-	
-		START_OPCODES_GROUP(G_13, GetField(21, 30))
-			ADD_OPCODE(MCRF,	CRFD(), CRFS());
-			ADD_OPCODE(BCLR,	BO(), BI(), BH(), LK());
-			ADD_OPCODE(CRNOR,	CRBD(), CRBA(), CRBB());
-			ADD_OPCODE(CRANDC,	CRBD(), CRBA(), CRBB());
-			ADD_OPCODE(ISYNC);
-			ADD_OPCODE(CRXOR,	CRBD(), CRBA(), CRBB());
-			ADD_OPCODE(CRNAND,	CRBD(), CRBA(), CRBB());
-			ADD_OPCODE(CRAND,	CRBD(), CRBA(), CRBB());
-			ADD_OPCODE(CREQV,	CRBD(), CRBA(), CRBB());
-			ADD_OPCODE(CRORC,	CRBD(), CRBA(), CRBB());
-			ADD_OPCODE(CROR,	CRBD(), CRBA(), CRBB());
-			ADD_OPCODE(BCCTR,	BO(), BI(), BH(), LK());
-		END_OPCODES_GROUP(G_13);
-		
-		ADD_OPCODE(RLWIMI,	RA(), RS(), SH(), MB(), ME(), RC());
-		ADD_OPCODE(RLWINM,	RA(), RS(), SH(), MB(), ME(), RC());
-		ADD_OPCODE(RLWNM,	RA(), RS(), RB(), MB(), ME(), RC());
-		ADD_OPCODE(ORI,		RA(), RS(), uimm16());
-		ADD_OPCODE(ORIS,	RA(), RS(), uimm16());
-		ADD_OPCODE(XORI,	RA(), RS(), uimm16());
-		ADD_OPCODE(XORIS,	RA(), RS(), uimm16());
-		ADD_OPCODE(ANDI_,	RA(), RS(), uimm16());
-		ADD_OPCODE(ANDIS_,	RA(), RS(), uimm16());
-	
-		START_OPCODES_GROUP(G_1e, GetField(28, 29))
-			ADD_OPCODE(RLDICL,	RA(), RS(), sh(), mb(), RC());
-			ADD_OPCODE(RLDICR,	RA(), RS(), sh(), me(), RC());
-			ADD_OPCODE(RLDIC,	RA(), RS(), sh(), mb(), RC());
-			ADD_OPCODE(RLDIMI,	RA(), RS(), sh(), mb(), RC());
-		END_OPCODES_GROUP(G_1e);
-
-		START_OPCODES_GROUP(G_1f, GetField(21, 30))
-			/*0x000*/ADD_OPCODE(CMP,	CRFD(), L(), RA(), RB());
-			/*0x004*/ADD_OPCODE(TW,		TO(), RA(), RB());
-			/*0x006*/ADD_OPCODE(LVSL,	VD(), RA(), RB());
-			/*0x007*/ADD_OPCODE(LVEBX,	VD(), RA(), RB());
-			/*0x008*/ADD_OPCODE(SUBFC,	RD(), RA(), RB(), OE(), RC());
-			/*0x009*/ADD_OPCODE(MULHDU,	RD(), RA(), RB(), RC());
-			/*0x00a*/ADD_OPCODE(ADDC,	RD(), RA(), RB(), OE(), RC());
-			/*0x00b*/ADD_OPCODE(MULHWU,	RD(), RA(), RB(), RC());
-			/*0x013*/ADD_OPCODE(MFOCRF,	GetField(11), RD(), CRM());
-			/*0x014*/ADD_OPCODE(LWARX,	RD(), RA(), RB());
-			/*0x015*/ADD_OPCODE(LDX,	RA(), RS(), RB());
-			/*0x017*/ADD_OPCODE(LWZX,	RD(), RA(), RB());
-			/*0x018*/ADD_OPCODE(SLW,	RA(), RS(), RB(), RC());
-			/*0x01a*/ADD_OPCODE(CNTLZW,	RA(), RS(), RC());
-			/*0x01b*/ADD_OPCODE(SLD,	RA(), RS(), RB(), RC());
-			/*0x01c*/ADD_OPCODE(AND,	RA(), RS(), RB(), RC());
-			/*0x020*/ADD_OPCODE(CMPL,	CRFD(), L(), RA(), RB());
-			/*0x026*/ADD_OPCODE(LVSR,	VD(), RA(), RB());
-			/*0x027*/ADD_OPCODE(LVEHX,	VD(), RA(), RB());
-			/*0x028*/ADD_OPCODE(SUBF,	RD(), RA(), RB(), OE(), RC());
-			/*0x036*/ADD_OPCODE(DCBST,	RA(), RB());
-			/*0x03a*/ADD_OPCODE(CNTLZD,	RA(), RS(), RC());
-			/*0x03c*/ADD_OPCODE(ANDC,	RA(), RS(), RB(), RC());
-			/*0x047*/ADD_OPCODE(LVEWX,	VD(), RA(), RB());
-			/*0x049*/ADD_OPCODE(MULHD,	RD(), RA(), RB(), RC());
-			/*0x04b*/ADD_OPCODE(MULHW,	RD(), RA(), RB(), RC());
-			/*0x054*/ADD_OPCODE(LDARX,	RD(), RA(), RB());
-			/*0x056*/ADD_OPCODE(DCBF,	RA(), RB());
-			/*0x057*/ADD_OPCODE(LBZX,	RD(), RA(), RB());
-			/*0x067*/ADD_OPCODE(LVX,	VD(), RA(), RB());
-			/*0x068*/ADD_OPCODE(NEG,	RD(), RA(), OE(), RC());
-			/*0x077*/ADD_OPCODE(LBZUX,	RD(), RA(), RB());
-			/*0x07c*/ADD_OPCODE(NOR,	RA(), RS(), RB(), RC());
-			/*0x087*/ADD_OPCODE(STVEBX,	VS(), RA(), RB());
-			/*0x088*/ADD_OPCODE(SUBFE,	RD(), RA(), RB(), OE(), RC());
-			/*0x08a*/ADD_OPCODE(ADDE,	RD(), RA(), RB(), OE(), RC());
-			/*0x090*/ADD_OPCODE(MTOCRF,	CRM(), RS());
-			/*0x095*/ADD_OPCODE(STDX,	RS(), RA(), RB());
-			/*0x096*/ADD_OPCODE(STWCX_,	RS(), RA(), RB());
-			/*0x097*/ADD_OPCODE(STWX,	RS(), RA(), RB());
-			/*0x0a7*/ADD_OPCODE(STVEHX,	VS(), RA(), RB());
-			/*0x0b5*/ADD_OPCODE(STDUX,	RS(), RA(), RB());
-			/*0x0c7*/ADD_OPCODE(STVEWX,	VS(), RA(), RB());
-			/*0x0ca*/ADD_OPCODE(ADDZE,	RD(), RA(), OE(), RC());
-			/*0x0d6*/ADD_OPCODE(STDCX_,	RS(), RA(), RB());
-			/*0x0d7*/ADD_OPCODE(STBX,	RS(), RA(), RB());
-			/*0x0e7*/ADD_OPCODE(STVX,	VS(), RA(), RB());
-			/*0x0e9*/ADD_OPCODE(MULLD,	RD(), RA(), RB(), OE(), RC());
-			/*0x0ea*/ADD_OPCODE(ADDME,	RD(), RA(), OE(), RC());
-			/*0x0eb*/ADD_OPCODE(MULLW,	RD(), RA(), RB(), OE(), RC());
-			/*0x0f6*/ADD_OPCODE(DCBTST,	TH(), RA(), RB());
-			/*0x10a*/ADD_OPCODE(ADD,	RD(), RA(), RB(), OE(), RC());
-			/*0x116*/ADD_OPCODE(DCBT,	RA(), RB(), TH());
-			/*0x117*/ADD_OPCODE(LHZX,	RD(), RA(), RB());
-			/*0x11c*/ADD_OPCODE(EQV,	RA(), RS(), RB(), RC());
-			/*0x136*/ADD_OPCODE(ECIWX,	RD(), RA(), RB());
-			/*0x137*/ADD_OPCODE(LHZUX,	RD(), RA(), RB());
-			/*0x13c*/ADD_OPCODE(XOR,	RA(), RS(), RB(), RC());
-			/*0x153*/ADD_OPCODE(MFSPR,	RD(), SPR());
-			/*0x156*/ADD_OPCODE(DST,	RA(), RB(), STRM(), GetField(6));
-			/*0x157*/ADD_OPCODE(LHAX,	RD(), RA(), RB());
-			/*0x167*/ADD_OPCODE(LVXL,	VD(), RA(), RB());
-			/*0x168*/ADD_OPCODE(ABS,	RD(), RA(), OE(), RC());
-			/*0x173*/ADD_OPCODE(MFTB,	RD(), SPR());
-			/*0x176*/ADD_OPCODE(DSTST,	RA(), RB(), STRM(), GetField(6));
-			/*0x177*/ADD_OPCODE(LHAUX,	RD(), RA(), RB());
-			/*0x197*/ADD_OPCODE(STHX,	RS(), RA(), RB());
-			/*0x19c*/ADD_OPCODE(ORC,	RA(), RS(), RB(), RC());
-			/*0x1b6*/ADD_OPCODE(ECOWX,	RS(), RA(), RB());
-			/*0x1bc*/ADD_OPCODE(OR,		RA(), RS(), RB(), RC());
-			/*0x1c9*/ADD_OPCODE(DIVDU,	RD(), RA(), RB(), OE(), RC());
-			/*0x1cb*/ADD_OPCODE(DIVWU,	RD(), RA(), RB(), OE(), RC());
-			/*0x1d3*/ADD_OPCODE(MTSPR,	SPR(), RS());
-			/*0x1d6*///DCBI
-			/*0x1dc*/ADD_OPCODE(NAND,	RA(), RS(), RB(), RC());
-			/*0x1e7*/ADD_OPCODE(STVXL,	RS(), RA(), RB());
-			/*0x1e9*/ADD_OPCODE(DIVD,	RD(), RA(), RB(), OE(), RC());
-			/*0x1eb*/ADD_OPCODE(DIVW,	RD(), RA(), RB(), OE(), RC());
-			/*0x207*/ADD_OPCODE(LVLX,	VD(), RA(), RB());
-			/*0x216*/ADD_OPCODE(LWBRX,	RD(), RA(), RB());
-			/*0x217*/ADD_OPCODE(LFSX,	FRD(), RA(), RB());
-			/*0x218*/ADD_OPCODE(SRW,	RA(), RS(), RB(), RC());
-			/*0x21b*/ADD_OPCODE(SRD,	RA(), RS(), RB(), RC());
-			/*0x227*/ADD_OPCODE(LVRX,	VD(), RA(), RB());
-			/*0x237*/ADD_OPCODE(LFSUX,	FRD(), RA(), RB());
-			/*0x256*/ADD_OPCODE(SYNC,	GetField(9, 10));
-			/*0x257*/ADD_OPCODE(LFDX,	FRD(), RA(), RB());
-			/*0x277*/ADD_OPCODE(LFDUX,	FRD(), RA(), RB());
-			/*0x287*/ADD_OPCODE(STVLX,	VS(), RA(), RB());
-			/*0x297*/ADD_OPCODE(STFSX,	RS(), RA(), RB());
-			/*0x2a7*/ADD_OPCODE(STVRX,	VS(), RA(), RB());
-			/*0x2d7*/ADD_OPCODE(STFDX,	RS(), RA(), RB());
-			/*0x307*/ADD_OPCODE(LVLXL,	VD(), RA(), RB());
-			/*0x316*/ADD_OPCODE(LHBRX,	RD(), RA(), RB());
-			/*0x318*/ADD_OPCODE(SRAW,	RA(), RS(), RB(), RC());
-			/*0x31a*/ADD_OPCODE(SRAD,	RA(), RS(), RB(), RC());
-			/*0x327*/ADD_OPCODE(LVRXL,	VD(), RA(), RB());
-			/*0x336*/ADD_OPCODE(DSS,	STRM(), GetField(6));
-			/*0x338*/ADD_OPCODE(SRAWI,	RA(), RS(), sh(), RC());
-			/*0x33a*/ADD_OPCODE(SRADI1,	RA(), RS(), sh(), RC());
-			/*0x33b*/ADD_OPCODE(SRADI2,	RA(), RS(), sh(), RC());
-			/*0x356*/ADD_OPCODE(EIEIO);
-			/*0x39a*/ADD_OPCODE(EXTSH,	RA(), RS(), RC());
-			/*0x3ba*/ADD_OPCODE(EXTSB,	RA(), RS(), RC());
-			/*0x3d7*/ADD_OPCODE(STFIWX,	FRS(), RA(), RB());
-			/*0x3da*/ADD_OPCODE(EXTSW,	RA(), RS(), RC());
-			/*0x3d6*///ICBI
-			/*0x3f6*/ADD_OPCODE(DCBZ,	RA(), RB());
-		END_OPCODES_GROUP(G_1f);
-		
-		ADD_OPCODE(LWZ,		RD(), RA(), D());
-		ADD_OPCODE(LWZU,	RD(), RA(), D());
-		ADD_OPCODE(LBZ,		RD(), RA(), D());
-		ADD_OPCODE(LBZU,	RD(), RA(), D());
-		ADD_OPCODE(STW,		RS(), RA(), D());
-		ADD_OPCODE(STWU,	RS(), RA(), D());
-		ADD_OPCODE(STB,		RS(), RA(), D());
-		ADD_OPCODE(STBU,	RS(), RA(), D());
-		ADD_OPCODE(LHZ,		RD(), RA(), D());
-		ADD_OPCODE(LHZU,	RD(), RA(), D());
-		ADD_OPCODE(STH,		RS(), RA(), D());
-		ADD_OPCODE(STHU,	RS(), RA(), D());
-		ADD_OPCODE(LMW,		RD(), RA(), D());
-		ADD_OPCODE(STMW,	RS(), RA(), D());
-		ADD_OPCODE(LFS,		FRD(), RA(), D());
-		ADD_OPCODE(LFSU,	FRD(), RA(), D());
-		ADD_OPCODE(LFD,		FRD(), RA(), D());
-		ADD_OPCODE(LFDU,	FRD(), RA(), D());
-		ADD_OPCODE(STFS,	FRS(), RA(), D());
-		ADD_OPCODE(STFSU,	FRS(), RA(), D());
-		ADD_OPCODE(STFD,	FRS(), RA(), D());
-		ADD_OPCODE(STFDU,	FRS(), RA(), D());
-
-		START_OPCODES_GROUP(G_3a, GetField(30, 31))
-			ADD_OPCODE(LD,	RD(), RA(), D());
-			ADD_OPCODE(LDU,	RD(), RA(), DS());
-		END_OPCODES_GROUP(G_3a);
-
-		START_OPCODES_GROUP(G_3b, GetField(26, 30))
-			ADD_OPCODE(FDIVS,	FRD(), FRA(), FRB(), RC());
-			ADD_OPCODE(FSUBS,	FRD(), FRA(), FRB(), RC());
-			ADD_OPCODE(FADDS,	FRD(), FRA(), FRB(), RC());
-			ADD_OPCODE(FSQRTS,	FRD(), FRB(), RC());
-			ADD_OPCODE(FRES,	FRD(), FRB(), RC());
-			ADD_OPCODE(FMULS,	FRD(), FRA(), FRC(), RC());
-			ADD_OPCODE(FMADDS,	FRD(), FRA(), FRC(), FRB(), RC());
-			ADD_OPCODE(FMSUBS,	FRD(), FRA(), FRC(), FRB(), RC());
-			ADD_OPCODE(FNMSUBS,	FRD(), FRA(), FRC(), FRB(), RC());
-			ADD_OPCODE(FNMADDS,	FRD(), FRA(), FRC(), FRB(), RC());
-		END_OPCODES_GROUP(G_3b);
-		
-		START_OPCODES_GROUP(G_3e, GetField(30, 31))
-			ADD_OPCODE(STD,		RS(), RA(), D());
-			ADD_OPCODE(STDU,	RS(), RA(), DS());
-		END_OPCODES_GROUP(G_3e);
-
-		START_OPCODES_GROUP(G_3f, GetField(26, 30))
-			ADD_OPCODE(FDIV,	FRD(), FRA(), FRB(), RC());
-			ADD_OPCODE(FSUB,	FRD(), FRA(), FRB(), RC());
-			ADD_OPCODE(FADD,	FRD(), FRA(), FRB(), RC());
-			ADD_OPCODE(FSQRT,	FRD(), FRB(), RC());
-			ADD_OPCODE(FSEL,	FRD(), FRA(), FRC(), FRB(), RC());
-			ADD_OPCODE(FMUL,	FRD(), FRA(), FRC(), RC());
-			ADD_OPCODE(FRSQRTE,	FRD(), FRB(), RC());
-			ADD_OPCODE(FMSUB,	FRD(), FRA(), FRC(), FRB(), RC());
-			ADD_OPCODE(FMADD,	FRD(), FRA(), FRC(), FRB(), RC());
-			ADD_OPCODE(FNMSUB,	FRD(), FRA(), FRC(), FRB(), RC());
-			ADD_OPCODE(FNMADD,	FRD(), FRA(), FRC(), FRB(), RC());
-			ADD_OPCODE(FCMPO,	CRFD(), FRA(), FRB());
-
-			START_OPCODES_SUB_GROUP(GetField(21, 30))
-				ADD_OPCODE(FCMPU,	CRFD(), FRA(), FRB());
-				ADD_OPCODE(FRSP,	FRD(), FRB(), RC());
-				ADD_OPCODE(FCTIW,	FRD(), FRB(), RC());
-				ADD_OPCODE(FCTIWZ,	FRD(), FRB(), RC());
-				ADD_OPCODE(FNEG,	FRD(), FRB(), RC());
-				ADD_OPCODE(FMR,		FRD(), FRB(), RC());
-				ADD_OPCODE(FNABS,	FRD(), FRB(), RC());
-				ADD_OPCODE(FABS,	FRD(), FRB(), RC());
-				ADD_OPCODE(FCFID,	FRD(), FRB(), RC());
-				ADD_OPCODE(FCTID,	FRD(), FRB(), RC());
-				ADD_OPCODE(FCTIDZ,	FRD(), FRB(), RC());
-
-				ADD_OPCODE(MTFSB1,	BT(), RC());
-				ADD_OPCODE(MCRFS,	BF(), BFA());
-				ADD_OPCODE(MTFSB0,	BT(), RC());
-				ADD_OPCODE(MTFSFI,	CRFD(), I(), RC());
-				ADD_OPCODE(MFFS,	FRD(), RC());
-				ADD_OPCODE(MTFSF,	FLM(), FRB(), RC());
-			END_OPCODES_SUB_GROUP();
-		END_OPCODES_ND_GROUP(G_3f);
-
-		default:
-			if(!code)
-			{
-				m_op.NULL_OP();
-				break;
-			}
-			
-			m_op.UNK(m_code, opcode, opcode);
-		break;
-		}
+		(*m_instr_decoder)();
 	}
 };
 

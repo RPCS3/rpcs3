@@ -281,7 +281,7 @@ public:
 		if(m_count == 0) return;
 
 		m_count = 0;
-		safe_delete(m_array);
+		safe_free(m_array);
 	}
 
 	inline T& Get(const u64 num)

@@ -39,7 +39,8 @@ void PPCThreadManager::RemoveThread(const u32 id)
 
 		wxGetApp().SendDbgCommand(DID_REMOVE_THREAD, &m_threads[i]);
 		m_threads[i].Close();
-		m_threads.RemoveAt(i);
+		delete &m_threads[i];
+		m_threads.RemoveFAt(i);
 
 		break;
 	}

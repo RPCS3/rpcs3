@@ -174,7 +174,8 @@ static void safe_realloc(T* ptr, uint new_size)
 	ptr = (T*)((ptr == NULL) ? malloc(new_size * sizeof(T)) : realloc(ptr, new_size * sizeof(T)));
 }
 
-#define safe_delete(x) {free(x);(x)=nullptr;}
+#define safe_delete(x) do {delete (x);(x)=nullptr;} while(0)
+#define safe_free(x) do {free(x);(x)=nullptr;} while(0)
 
 enum Status
 {
