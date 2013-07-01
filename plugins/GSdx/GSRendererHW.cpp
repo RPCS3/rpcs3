@@ -202,10 +202,16 @@ void GSRendererHW::Draw()
 
 	if(PRIM->TME)
 	{
+		/*
+		
+		// m_tc->LookupSource will mess with the palette, should not, but we do this after, until it is sorted out
+
 		if(GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0)
 		{
 			m_mem.m_clut.Read32(context->TEX0, env.TEXA);
 		}
+
+		*/
 
 		GSVector4i r;
 
@@ -214,6 +220,11 @@ void GSRendererHW::Draw()
 		tex = m_tc->LookupSource(context->TEX0, env.TEXA, r);
 
 		if(!tex) return;
+
+		if(GSLocalMemory::m_psm[context->TEX0.PSM].pal > 0)
+		{
+			m_mem.m_clut.Read32(context->TEX0, env.TEXA);
+		}
 	}
 
 	if(s_dump)

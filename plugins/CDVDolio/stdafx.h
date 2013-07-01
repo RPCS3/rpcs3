@@ -38,7 +38,6 @@
 #include <commctrl.h>
 #include <commdlg.h>
 #include <shellapi.h>
-#include <atlbase.h>
 #include <winioctl.h>
 
 #endif

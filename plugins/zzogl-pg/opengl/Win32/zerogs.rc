@@ -8,7 +8,9 @@
 // Generated from the TEXTINCLUDE 2 resource.
 //
 #include "resource.h"
-#include "afxres.h"
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
@@ -295,7 +297,9 @@ END
 2 TEXTINCLUDE 
 BEGIN
     "#include ""resource.h""\r\n"
-    "#include ""afxres.h""\r\n"
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
     "\0"
 END
 

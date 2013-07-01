@@ -309,30 +309,28 @@ void GSRendererSW::ConvertVertexBuffer(GSVertexSW* RESTRICT dst, const GSVertex*
 		{
 			t = t.insert32<1, 3>(GSVector8::cast(xyzuvf));
 		}
-/*
-		if(tme || primclass == GS_SPRITE_CLASS) 
+
+		GSVector8::storel(&dst[0].p, p);
+
+		if(tme || primclass == GS_SPRITE_CLASS)
 		{
-			GSVector8::store<true>(&dst[0].p, p.ac(t));
+			GSVector8::store<true>(&dst[0].t, t.ac(c));
 		}
-		else 
+		else
 		{
-			GSVector8::storel(&dst[0].p, p);
+			GSVector8::storel(&dst[0].c, c);
 		}
-*/
-		GSVector8::store<true>(&dst[0].p, p.ac(t));
-		GSVector8::store<true>(&dst[0].c, c.a_());
-/*
-		if(tme || primclass == GS_SPRITE_CLASS) 
+
+		GSVector8::storeh(&dst[1].p, p);
+
+		if(tme || primclass == GS_SPRITE_CLASS)
 		{
-			GSVector8::store<true>(&dst[1].p, p.bd(t));
+			GSVector8::store<true>(&dst[1].t, t.bd(c));
 		}
-		else 
+		else
 		{
-			GSVector8::storeh(&dst[1].p, p);
+			GSVector8::storeh(&dst[1].c, c);
 		}
-*/
-		GSVector8::store<true>(&dst[1].p, p.bd(t));
-		GSVector8::store<true>(&dst[1].c, c.b_());
 	}
 
 	#else
@@ -419,7 +417,7 @@ void GSRendererSW::Draw()
 	shared_ptr<GSRasterizerData> data(sd);
 
 	sd->primclass = m_vt.m_primclass;
-	sd->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * ((m_vertex.next + 1) & ~1) + sizeof(uint32) * m_index.tail, 32);
+	sd->buff = (uint8*)_aligned_malloc(sizeof(GSVertexSW) * ((m_vertex.next + 1) & ~1) + sizeof(uint32) * m_index.tail, 64);
 	sd->vertex = (GSVertexSW*)sd->buff;
 	sd->vertex_count = m_vertex.next;
 	sd->index = (uint32*)(sd->buff + sizeof(GSVertexSW) * ((m_vertex.next + 1) & ~1));

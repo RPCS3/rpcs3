@@ -81,7 +81,7 @@
       </HeaderFileName>
     </Midl>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectRootDir)\;$(ProjectRootDir)\ZeroGSShaders\;$(ProjectRootDir)\Win32;$(SvnRootDir)\3rdparty\libjpeg;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(CG_INC_PATH);$(ProjectRootDir)\;$(ProjectRootDir)\ZeroGSShaders\;$(ProjectRootDir)\Win32;$(SvnRootDir)\3rdparty\libjpeg;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;_USRDLL;__i386__;ZEROGS_DEVBUILD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <ResourceCompile>
@@ -91,20 +91,20 @@
     <Link>
       <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;Comctl32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(CG_LIB_PATH);..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\zerogs.def</ModuleDefinitionFile>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectRootDir)\;$(ProjectRootDir)\ZeroGSShaders\;$(ProjectRootDir)\Win32;$(SvnRootDir)\3rdparty\libjpeg;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(CG_INC_PATH);$(ProjectRootDir)\;$(ProjectRootDir)\ZeroGSShaders\;$(ProjectRootDir)\Win32;$(SvnRootDir)\3rdparty\libjpeg;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_USRDLL;ZEROGS_DEVBUILD;_DEBUG;__i386__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;Comctl32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(CG_LIB_PATH);..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ModuleDefinitionFile>.\zerogs.def</ModuleDefinitionFile>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
@@ -120,7 +120,7 @@
       </HeaderFileName>
     </Midl>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(ProjectRootDir)\;$(ProjectRootDir)\ZeroGSShaders\;$(ProjectRootDir)\Win32;$(SvnRootDir)\3rdparty\libjpeg;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(CG_INC_PATH);$(ProjectRootDir)\;$(ProjectRootDir)\ZeroGSShaders\;$(ProjectRootDir)\Win32;$(SvnRootDir)\3rdparty\libjpeg;$(SvnRootDir)\3rdparty\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>NDEBUG;_USRDLL;__i386__;ZEROGS_SSE2;RELEASE_TO_PUBLIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
@@ -132,7 +132,7 @@
     <Link>
       <AdditionalDependencies>winmm.lib;Vfw32.lib;cg.lib;cgGL.lib;opengl32.lib;Comctl32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(CG_LIB_PATH);..\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <ModuleDefinitionFile>.\zerogs.def</ModuleDefinitionFile>
       <ImportLibrary>
       </ImportLibrary>

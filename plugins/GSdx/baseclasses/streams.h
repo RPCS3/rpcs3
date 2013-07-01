@@ -175,7 +175,7 @@ typedef struct {
 #include <tchar.h>
 
 #define NO_SHLWAPI_STRFCNS
-#include <atlbase.h>
+//#include <atlbase.h>
 #include <strsafe.h>
 
 #ifndef NUMELMS

@@ -3387,15 +3387,7 @@ public:
 
 	__forceinline void operator = (__m128i m)
 	{
-		#if 0 // _MSC_VER >= 1700 
-		
-		this->m = _mm256_permute2x128_si256(_mm256_castsi128_si256(m), _mm256_castsi128_si256(m), 0);
-		
-		#else
-		
-		*this = zero().insert<0>(m).aa();
-
-		#endif
+		this->m = _mm256_inserti128_si256(_mm256_castsi128_si256(m), m, 1);
 	}
 
 	__forceinline void operator = (__m256i m)
@@ -5206,15 +5198,7 @@ public:
 
 	__forceinline void operator = (__m128 m)
 	{
-		#if 0 // _MSC_VER >= 1700 
-		
-		this->m = _mm256_permute2f128_ps(_mm256_castps128_ps256(m), _mm256_castps128_ps256(m), 0x20);
-
-		#else
-
-		this->m = zero().insert<0>(m).aa();
-
-		#endif
+		this->m = _mm256_insertf128_ps(_mm256_castps128_ps256(m), m, 1);
 	}
 
 	__forceinline void operator = (__m256 m)
@@ -5803,9 +5787,13 @@ public:
 	// z = v[95:64] / v[223:192]
 	// w = v[127:96] / v[255:224]
 
+
 	#define VECTOR8_SHUFFLE_4(xs, xn, ys, yn, zs, zn, ws, wn) \
-		__forceinline GSVector8 xs##ys##zs##ws() const {return GSVector8(_mm256_permute_ps(m, _MM_SHUFFLE(wn, zn, yn, xn)));} \
+		__forceinline GSVector8 xs##ys##zs##ws() const {return GSVector8(_mm256_shuffle_ps(m, m, _MM_SHUFFLE(wn, zn, yn, xn)));} \
 		__forceinline GSVector8 xs##ys##zs##ws(const GSVector8& v) const {return GSVector8(_mm256_shuffle_ps(m, v.m, _MM_SHUFFLE(wn, zn, yn, xn)));} \
+
+		// vs2012u3 cannot reuse the result of equivalent shuffles when it is done with _mm256_permute_ps (write v.xxxx() twice, and it will do it twice), but with _mm256_shuffle_ps it can.
+		//__forceinline GSVector8 xs##ys##zs##ws() const {return GSVector8(_mm256_permute_ps(m, _MM_SHUFFLE(wn, zn, yn, xn)));} \ 
 
 	#define VECTOR8_SHUFFLE_3(xs, xn, ys, yn, zs, zn) \
 		VECTOR8_SHUFFLE_4(xs, xn, ys, yn, zs, zn, x, 0) \

@@ -3,6 +3,9 @@
 // Used by xpad.rc
 //
 
+#ifndef IDC_STATIC
+#define IDC_STATIC				-1
+#endif
 
 // Next default values for new objects
 //

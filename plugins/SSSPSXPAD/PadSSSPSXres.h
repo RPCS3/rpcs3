@@ -2,6 +2,11 @@
 // Microsoft Visual C++ generated include file.
 // Used by PadSSSPSX.rc
 //
+
+#ifndef IDC_STATIC
+#define IDC_STATIC				-1
+#endif
+
 #define IDD_DIALOG1                     100
 #define IDC_BSELECT                     1000
 #define IDC_BL3                         1001

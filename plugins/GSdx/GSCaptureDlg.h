@@ -32,7 +32,7 @@ class GSCaptureDlg : public GSDialog
 		CComPtr<IMoniker> moniker;
 		CComPtr<IBaseFilter> filter;
 		wstring FriendlyName;
-		CComBSTR DisplayName;
+		_bstr_t DisplayName;
 	};
 
 	list<Codec> m_codecs;

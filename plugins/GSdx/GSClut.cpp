@@ -415,6 +415,23 @@ __forceinline void GSClut::WriteCLUT_T32_I4_CSM1(const uint32* RESTRICT src, uin
 {
 	// 1 block
 
+	#if _M_SSE >= 0x501
+
+	GSVector8i* s = (GSVector8i*)src;
+	GSVector8i* d = (GSVector8i*)clut;
+
+	GSVector8i v0 = s[0].acbd();
+	GSVector8i v1 = s[1].acbd();
+
+	GSVector8i::sw16(v0, v1);
+	GSVector8i::sw16(v0, v1);
+	GSVector8i::sw16(v0, v1);
+
+	d[0] = v0;
+	d[16] = v1;
+
+	#else
+
 	GSVector4i* s = (GSVector4i*)src;
 	GSVector4i* d = (GSVector4i*)clut;
 
@@ -431,6 +448,8 @@ __forceinline void GSClut::WriteCLUT_T32_I4_CSM1(const uint32* RESTRICT src, uin
 	d[1] = v2;
 	d[32] = v1;
 	d[33] = v3;
+
+	#endif
 }
 
 void GSClut::WriteCLUT_T16_I8_CSM1(const uint16* RESTRICT src, uint16* RESTRICT clut)

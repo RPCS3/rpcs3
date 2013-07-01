@@ -489,7 +489,7 @@ public:
 	template<int i> __forceinline static void ReadColumn16(const uint8* RESTRICT src, uint8* RESTRICT dst, int dstpitch)
 	{
 		#if _M_SSE >= 0x501
-		
+
 		const GSVector8i* s = (const GSVector8i*)src;
 		
 		GSVector8i v0 = s[i * 2 + 0].shuffle8(m_r16mask);
@@ -1881,7 +1881,7 @@ public:
 			d1[0] = Expand16to32<AEM>(v1.upl16(v1), TA0, TA1);
 			d1[1] = Expand16to32<AEM>(v1.uph16(v1), TA0, TA1);
 		}
-		
+
 		#elif 0 // not faster
 		
 		const GSVector4i* s = (const GSVector4i*)src;

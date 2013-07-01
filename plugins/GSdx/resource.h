@@ -23,6 +23,10 @@
  *
  */
 
+#ifndef IDC_STATIC
+#define IDC_STATIC				-1
+#endif
+
 #define IDC_NATIVERES                   2001
 #define IDC_PALTEX                      2003
 #define IDC_LOGZ                        2004

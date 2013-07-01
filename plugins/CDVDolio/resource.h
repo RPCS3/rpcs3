@@ -2,6 +2,11 @@
 // Microsoft Visual C++ generated include file.
 // Used by cdvd.rc
 //
+
+#ifndef IDC_STATIC
+#define IDC_STATIC				-1
+#endif
+
 #define IDC_COMBO1                      2000
 #define IDC_RADIO1                      2001
 #define IDC_EDIT1                       2003

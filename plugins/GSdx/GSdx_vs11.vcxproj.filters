@@ -692,6 +692,12 @@
     <ClInclude Include="GSRendererCS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="comptr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\logo10.bmp">

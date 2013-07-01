@@ -46,7 +46,7 @@ class GSBufferOGL {
 		, m_count(0)
 		, m_limit(0)
 		, m_target(target)
-		, m_sub_data_config((bool)theApp.GetConfig("ogl_vertex_subdata", 1))
+		, m_sub_data_config(theApp.GetConfig("ogl_vertex_subdata", 1) != 0)
 	{
 		gl_GenBuffers(1, &m_buffer);
 		// Opengl works best with 1-4MB buffer.

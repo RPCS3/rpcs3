@@ -99,9 +99,9 @@ void GSCaptureDlg::OnInit()
 		if(FAILED(moniker->BindToStorage(0, 0, IID_IPropertyBag, (void**)&pPB)))
 			continue;
 
-		CComVariant var;
+		_variant_t var;
 
-		if(FAILED(pPB->Read(CComBSTR(_T("FriendlyName")), &var, NULL)))
+		if(FAILED(pPB->Read(_bstr_t(_T("FriendlyName")), &var, NULL)))
 			continue;
 
 		c.FriendlyName = prefix + var.bstrVal;
@@ -199,7 +199,7 @@ bool GSCaptureDlg::OnCommand(HWND hWnd, UINT id, UINT code)
 
 		if (ris != 2)
 		{
-			wstring s = wstring(c.DisplayName.m_str);
+			wstring s = wstring(c.DisplayName);
 
 			theApp.SetConfig("CaptureVideoCodecDisplayName", string(s.begin(), s.end()).c_str());
 		}

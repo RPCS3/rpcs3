@@ -2,6 +2,11 @@
 // Microsoft Visual C++ generated include file.
 // Used by GSsoftdx.rc
 //
+
+#ifndef IDC_STATIC
+#define IDC_STATIC				-1
+#endif
+
 #define IDD_CONFIG                      101
 #define IDD_ABOUT                       102
 #define IDD_LOGGING                     106

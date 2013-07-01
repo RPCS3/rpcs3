@@ -1925,6 +1925,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="comptr.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="GLLoader.h" />
     <ClInclude Include="GPU.h" />
@@ -2037,6 +2038,7 @@
     <ClInclude Include="baseclasses\wxdebug.h" />
     <ClInclude Include="baseclasses\wxlist.h" />
     <ClInclude Include="baseclasses\wxutil.h" />
+    <ClInclude Include="targetver.h" />
     <ClInclude Include="xbyak\xbyak.h" />
     <ClInclude Include="xbyak\xbyak_bin2hex.h" />
     <ClInclude Include="xbyak\xbyak_mnemonic.h" />

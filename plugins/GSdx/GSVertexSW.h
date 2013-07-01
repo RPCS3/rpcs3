@@ -25,7 +25,7 @@
 
 __aligned(struct, 32) GSVertexSW
 {
-	GSVector4 p, t, c, _pad;
+	GSVector4 p, _pad, t, c;
 
 	__forceinline GSVertexSW() {}
 	__forceinline GSVertexSW(const GSVertexSW& v) {*this = v;}
@@ -234,3 +234,33 @@ __aligned(struct, 32) GSVertexSW
 		#endif
 	}
 };
+
+#if _M_SSE >= 0x501
+
+__aligned(struct, 32) GSVertexSW2
+{
+	GSVector4 p, _pad;
+	GSVector8 tc;
+
+	__forceinline GSVertexSW2() {}
+	__forceinline GSVertexSW2(const GSVertexSW2& v) {*this = v;}
+
+	__forceinline void operator = (const GSVertexSW2& v) 
+	{
+		p = v.p; 
+		tc = v.tc;
+	}
+
+	__forceinline friend GSVertexSW2 operator - (const GSVertexSW2& a, const GSVertexSW2& b)
+	{
+		GSVertexSW2 v;
+
+		v.p = a.p - b.p;
+		v.tc = a.tc - b.tc;
+
+		return v;
+	}
+};
+
+#endif
+

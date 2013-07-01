@@ -20,8 +20,8 @@
 #define _WIN32_DCOM
 #include "Dialogs.h"
 
-#include <atlbase.h>
 #include <xaudio2.h>
+#include "../../common/include/comptr.h"
 
 namespace Exception
 {

@@ -7,8 +7,9 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#include "afxres.h"
-
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS
 
@@ -34,7 +35,9 @@ END
 
 2 TEXTINCLUDE 
 BEGIN
-    "#include ""afxres.h""\r\n"
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
     "\0"
 END
 
@@ -49,7 +52,6 @@ BEGIN
     "LANGUAGE 9, 1\r\n"
     "#pragma code_page(1252)\r\n"
     "#include ""res\\xpad.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
-    "#include ""afxres.rc""     // Standard components\r\n"
     "#endif\r\n"
     "\0"
 END
@@ -142,7 +144,6 @@ END
 LANGUAGE 9, 1
 #pragma code_page(1252)
 #include "res\xpad.rc2"  // non-Microsoft Visual C++ edited resources
-#include "afxres.rc"     // Standard components
 #endif
 
 /////////////////////////////////////////////////////////////////////////////

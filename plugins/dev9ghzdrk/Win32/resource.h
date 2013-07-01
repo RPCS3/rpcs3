@@ -2,6 +2,11 @@
 // Microsoft Developer Studio generated include file.
 // Used by DEV9linuz.rc
 //
+
+#ifndef IDC_STATIC
+#define IDC_STATIC				-1
+#endif
+
 #define IDD_CONFDLG                     101
 #define IDD_CONFIG                      101
 #define IDD_ABOUT                       103

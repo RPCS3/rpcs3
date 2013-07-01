@@ -2,6 +2,11 @@
 // Microsoft Visual C++ generated include file.
 // Used by cdvd.rc
 //
+
+#ifndef IDC_STATIC
+#define IDC_STATIC				-1
+#endif
+
 #define IDD_CONFIG                      101
 #define IDC_PLUGINS                     1000
 #define IDC_CONFIGURE                   1001

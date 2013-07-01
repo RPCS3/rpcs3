@@ -36,7 +36,6 @@
 #include <commctrl.h>
 #include <commdlg.h>
 #include <shellapi.h>
-#include <atlbase.h>
 #include <xinput.h>
 #include <assert.h>
 

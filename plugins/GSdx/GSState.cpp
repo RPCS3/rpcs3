@@ -1189,6 +1189,7 @@ template<int i> void GSState::GIFRegHandlerFRAME(const GIFReg* RESTRICT r)
 	}
 	
 	m_env.CTXT[i].FRAME = (GSVector4i)r->FRAME;
+
 #ifdef DISABLE_BITMASKING
 	m_env.CTXT[i].FRAME.FBMSK = GSVector4i::store(GSVector4i::load((int)m_env.CTXT[i].FRAME.FBMSK).eq8(GSVector4i::xffffffff()));
 #endif

@@ -144,7 +144,11 @@ protected:
 	void DrawTriangle(const GSVertexSW* vertex, const uint32* index);
 	void DrawSprite(const GSVertexSW* vertex, const uint32* index);
 
+	#if _M_SSE >= 0x501
+	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW2& edge, const GSVertexSW2& dedge, const GSVertexSW2& dscan, const GSVector4& p0);
+	#else
 	__forceinline void DrawTriangleSection(int top, int bottom, GSVertexSW& edge, const GSVertexSW& dedge, const GSVertexSW& dscan, const GSVector4& p0);
+	#endif
 
 	void DrawEdge(const GSVertexSW& v0, const GSVertexSW& v1, const GSVertexSW& dv, int orientation, int side);
 

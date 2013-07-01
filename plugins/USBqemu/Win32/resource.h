@@ -2,6 +2,11 @@
 // Microsoft Visual C++ generated include file.
 // Used by USBqemu.rc
 //
+
+#ifndef IDC_STATIC
+#define IDC_STATIC				-1
+#endif
+
 #define IDD_CONFDLG                     101
 #define IDD_CONFIG                      101
 #define IDD_ABOUT                       103
