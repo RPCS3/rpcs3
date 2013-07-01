@@ -43,7 +43,6 @@ set(spu2xSources
     Debug.cpp
     DplIIdecoder.cpp
     Dma.cpp
-    iconvert.cpp
     Lowpass.cpp
     Mixer.cpp
     PrecompiledHeader.cpp
