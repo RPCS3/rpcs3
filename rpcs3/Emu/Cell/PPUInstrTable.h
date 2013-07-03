@@ -87,7 +87,7 @@ namespace PPU_instr
 	static CodeField<6, 10> BO;
 
 	//This field is used to specify a bit in the CR to be used as the condition of a branch conditional instruction
-	static CodeField<11, 13> BI;
+	static CodeField<11, 15> BI;
 
 	//Immediate field specifying a 14-bit signed two's complement branch displacement that is concatenated on the
 	//right with ‘00’ and sign-extended to 64 bits.

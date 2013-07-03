@@ -106,7 +106,7 @@
     #include <windowsx.h>
 #endif
 
-#if !defined __WXWINCE__ && !defined NEED_PBT_H
+#if !defined __WXWINCE__ && !defined NEED_PBT_H && _MSC_VER < 1600
     #include <pbt.h>
 #endif
 
