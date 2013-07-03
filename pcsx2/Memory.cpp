@@ -105,7 +105,7 @@ static vtlbHandler
 	vu1_micro_mem,
 	vu1_data_mem,
 
-	hw_by_page[0x10] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
+	hw_by_page[0x10] = { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF},
 
 	gs_page_0,
 	gs_page_1,
@@ -665,7 +665,7 @@ __pagealigned u8 eeHw[Ps2MemSize::Hardware];
 
 void memBindConditionalHandlers()
 {
-	if( hw_by_page[0xf] == -1 ) return;
+	if( hw_by_page[0xf] == 0xFFFFFFFF ) return;
 
 	if (EmuConfig.Speedhacks.IntcStat)
 	{

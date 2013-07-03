@@ -408,9 +408,9 @@ struct aligned_free_second {template<class T> void operator()(T& p) {_aligned_fr
 		return retval;
 	}
 	
-	__forceinline long _InterlockedExchangeAdd16(volatile short* const Addend, const short Value)
+	__forceinline short _InterlockedExchangeAdd16(volatile short* const Addend, const short Value)
 	{
-		long retval = Value;
+		short retval = Value;
 		
 		__asm__("lock; xaddw %[retval], %[Addend]" : [retval] "+r" (retval) : [Addend] "m" (*Addend) : "memory");
 		

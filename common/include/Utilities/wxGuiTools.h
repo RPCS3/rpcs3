@@ -272,7 +272,7 @@ void operator+=( wxSizer& target, const pxWindowAndFlags<WinType>& src )
 
 // ----------------------------------------------------------------------------
 // Pointer Versions!  (note that C++ requires one of the two operator params be a
-// "poper" object type (non-pointer), so that's why some of these are missing.
+// "proper" object type (non-pointer), so that's why some of these are missing.
 
 template< typename WinType >
 void operator+=( wxWindow* target, WinType& src )

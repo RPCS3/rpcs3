@@ -37,8 +37,6 @@ static gameHacks tempHacks;
 
 EXPORT_C_(void) GSkeyEvent(keyEvent *ev)
 {
-	static bool bAlt = false;
-
 	switch (ev->evt)
 	{
 		case KEYPRESS:
@@ -61,10 +59,6 @@ EXPORT_C_(void) GSkeyEvent(keyEvent *ev)
 					THR_bCtrl = true;
 					break;
 
-				case XK_Alt_L:
-				case XK_Alt_R:
-					bAlt = true;
-					break;
 			}
 			break;
 
@@ -81,10 +75,6 @@ EXPORT_C_(void) GSkeyEvent(keyEvent *ev)
 					THR_bCtrl = false;
 					break;
 
-				case XK_Alt_L:
-				case XK_Alt_R:
-					bAlt = false;
-					break;
 			}
 	}
 }

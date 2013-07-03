@@ -664,7 +664,7 @@ inline int FlushGetShaderType(VB& curvb, CRenderTarget* ptextarg, GLuint& ptexcl
 
 
 //Set page offsets depends on shader type.
-inline float4 FlushSetPageOffset(FRAGMENTSHADER* pfragment, int shadertype, CRenderTarget* ptextarg)
+inline void FlushSetPageOffset(FRAGMENTSHADER* pfragment, int shadertype, CRenderTarget* ptextarg)
 {
 	SetShaderCaller("FlushSetPageOffset");
 
@@ -692,12 +692,10 @@ inline float4 FlushSetPageOffset(FRAGMENTSHADER* pfragment, int shadertype, CRen
 	if (PSMT_ISZTEX(ptextarg->psm)) vpageoffset.w = -1.0f;
 
 	ZZshSetParameter4fv(pfragment->prog, pfragment->fPageOffset, vpageoffset, "g_fPageOffset");
-
-	return vpageoffset;
 }
 
 //Setting texture offsets depends on shader type.
-inline float4 FlushSetTexOffset(FRAGMENTSHADER* pfragment, int shadertype, VB& curvb, CRenderTarget* ptextarg)
+inline void FlushSetTexOffset(FRAGMENTSHADER* pfragment, int shadertype, VB& curvb, CRenderTarget* ptextarg)
 {
 	SetShaderCaller("FlushSetTexOffset");
 	float4 v;
@@ -720,12 +718,10 @@ inline float4 FlushSetTexOffset(FRAGMENTSHADER* pfragment, int shadertype, VB& c
 		v.w = 8.0f / (float)ptextarg->fbh;
 		ZZshSetParameter4fv(pfragment->prog, pfragment->fTexOffset, v, "g_fTexOffset");
 	}
-
-	return v;
 }
 
 // Set dimension (Real!) of texture. z and w
-inline float4 FlushTextureDims(FRAGMENTSHADER* pfragment, int shadertype, VB& curvb, CRenderTarget* ptextarg)
+inline void FlushTextureDims(FRAGMENTSHADER* pfragment, int shadertype, VB& curvb, CRenderTarget* ptextarg)
 {
 	SetShaderCaller("FlushTextureDims");
 	float4 vTexDims;
@@ -753,8 +749,6 @@ inline float4 FlushTextureDims(FRAGMENTSHADER* pfragment, int shadertype, VB& cu
 		vTexDims.z += 8.0f;
 
 	ZZshSetParameter4fv(pfragment->prog, pfragment->fTexDims, vTexDims, "g_fTexDims");
-
-	return vTexDims;
 }
 
 // Apply TEX1 mmag and mmin -- filter for expanding/reducing texture
@@ -795,11 +789,11 @@ inline FRAGMENTSHADER* FlushUseExistRenderTarget(VB& curvb, CRenderTarget* ptext
 	FRAGMENTSHADER* pfragment = ZZshLoadShadeEffect(shadertype, 0, curvb.curprim.fge,
 								IsAlphaTestExpansion(curvb.tex0), exactcolor, curvb.clamp, context, NULL);
 
-	float4 vpageoffset = FlushSetPageOffset(pfragment, shadertype, ptextarg);
+	FlushSetPageOffset(pfragment, shadertype, ptextarg);
 
-	float4 v = FlushSetTexOffset(pfragment, shadertype, curvb, ptextarg);
+	FlushSetTexOffset(pfragment, shadertype, curvb, ptextarg);
 
-	float4 vTexDims = FlushTextureDims(pfragment, shadertype, curvb, ptextarg);
+	FlushTextureDims(pfragment, shadertype, curvb, ptextarg);
 
 	if (pfragment->sCLUT != NULL && ptexclut != 0)
 		ZZshGLSetTextureParameter(pfragment->prog, pfragment->sCLUT, ptexclut, "CLUT");
@@ -1683,7 +1677,7 @@ void SetContextTarget(int context)
 		}
 	}
 
-	bool bSetTarg = 1;
+	//bool bSetTarg = 1;
 
 	if (curvb.pdepth->status & CRenderTarget::TS_NeedUpdate)
 	{
@@ -1691,7 +1685,7 @@ void SetContextTarget(int context)
 
 		// don't update if virtual
 		curvb.pdepth->Update(context, curvb.prndr);
-		bSetTarg = 0;
+		//bSetTarg = 0;
 	}
 
 	GL_REPORT_ERRORD();
@@ -2112,13 +2106,16 @@ void SetTexVariablesInt(int context, int bilinear, const tex0Info& tex0, bool Ch
 	} \
 }
  
-//if( a.fix <= 0x80 ) { \
-// dwTemp = (a.fix*2)>255?255:(a.fix*2); \
-// dwTemp = dwTemp|(dwTemp<<8)|(dwTemp<<16)|0x80000000; \
-// ZZLog::Debug_Log("bfactor: %8.8x", dwTemp); \
-// glBlendColorEXT(dwTemp); \
-// } \
-// else { \
+#if 0
+if( a.fix <= 0x80 ) { \
+ dwTemp = (a.fix*2)>255?255:(a.fix*2); \
+ dwTemp = dwTemp|(dwTemp<<8)|(dwTemp<<16)|0x80000000; \
+ ZZLog::Debug_Log("bfactor: %8.8x", dwTemp); \
+ glBlendColorEXT(dwTemp); \
+ } \
+ else { \
+
+#endif
 
 //void ResetAlphaVariables() {
 //	FUNCLOG

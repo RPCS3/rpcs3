@@ -46,7 +46,7 @@ protected:
 	wxString	m_filename;
 	AsyncFileReader*	m_reader;
 
-	uint		m_current_lsn;
+	s32 		m_current_lsn;
 	uint		m_current_count;
 
 	isoType		m_type;

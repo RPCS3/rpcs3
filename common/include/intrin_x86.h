@@ -852,10 +852,12 @@ static __inline__ __attribute__((always_inline)) unsigned long long __rdtsc(void
 
 
 /*** Interrupts ***/
+#ifndef __LINUX__
 static __inline__ __attribute__((always_inline)) void __debugbreak(void)
 {
 	__asm__("int $3");
 }
+#endif
 
 static __inline__ __attribute__((always_inline)) void __int2c(void)
 {

@@ -251,7 +251,7 @@ inline void RenderStartHelper()
 // on image y coords. So if we write valpha.z * F + valpha.w + 0.5, it would be switching odd
 // and even strings at each frame.
 // valpha.x and y are used for image blending.
-inline float4 RenderGetForClip(int psm, CRTC_TYPE render_type)
+inline void RenderGetForClip(int psm, CRTC_TYPE render_type)
 {
 	SetShaderCaller("RenderGetForClip");
 	FRAGMENTSHADER* prog = curr_pps(render_type);
@@ -292,8 +292,6 @@ inline float4 RenderGetForClip(int psm, CRTC_TYPE render_type)
 	}
 
 	ZZshSetParameter4fv(prog->prog, prog->sOneColor, valpha, "g_fOneColor");
-
-	return valpha;
 }
 
 // Put interlaced texture in use for shader prog.
@@ -577,7 +575,7 @@ inline void RenderCheckForTargets(tex0Info& texframe, list<CRenderTarget*>& list
 				v = RenderSetTargetBitTrans(ptarg->fbh);
 				v = RenderSetTargetInvTex(texframe.tbw, ptarg->fbh, CRTC_RENDER_TARG); 	// FIXME. This is no use
 
-				float4 valpha = RenderGetForClip(texframe.psm, CRTC_RENDER_TARG);
+				RenderGetForClip(texframe.psm, CRTC_RENDER_TARG);
 				pps = curr_ppsCRTCTarg();
 
 				// inside vb[0]'s target area, so render that region only
@@ -654,7 +652,7 @@ inline void RenderCheckForMemory(tex0Info& texframe, list<CRenderTarget*>& listT
 	v = RenderSetTargetBitPos(1, 1, 0);
 	v = RenderSetTargetBitTrans(texframe.th);
 	v = RenderSetTargetInvTex(texframe.tw, texframe.th, CRTC_RENDER);
-	float4 valpha = RenderGetForClip(texframe.psm, CRTC_RENDER);
+	RenderGetForClip(texframe.psm, CRTC_RENDER);
 
 	ZZshGLSetTextureParameter(curr_ppsCRTC()->prog, curr_ppsCRTC()->sMemory, vb[0].pmemtarg->ptex->tex, "CRTC memory");
 	RenderCreateInterlaceTex(texframe.th, CRTC_RENDER);
