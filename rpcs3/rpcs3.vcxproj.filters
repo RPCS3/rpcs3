@@ -247,6 +247,9 @@
     <ClCompile Include="AppConnector.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
@@ -268,9 +271,6 @@
       <Filter>Include</Filter>
     </ClInclude>
     <ClInclude Include="Emu\System.h">
-      <Filter>Include</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Cell\DisAsm.h">
       <Filter>Include</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\PPCThread.h">
@@ -401,6 +401,21 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\Timer.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPCDecoder.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPCDisAsm.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPCInstrTable.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUInstrTable.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\PPUProgramCompiler.h">
+      <Filter>Include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

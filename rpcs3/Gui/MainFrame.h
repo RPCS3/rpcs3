@@ -28,9 +28,6 @@ private:
 	void UpdateUI(wxCommandEvent& event);
 	void OnKeyDown(wxKeyEvent& event);
 
-public:
-	void UpdateUI();
-
 private:
 	DECLARE_EVENT_TABLE()
 };

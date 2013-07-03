@@ -63,6 +63,9 @@ class Emulator
 	MemoryViewerPanel* m_memory_viewer;
 	//ArrayF<CPUThread> m_cpu_threads;
 
+	Array<u64> m_break_points;
+	Array<u64> m_marked_points;
+
 	PPCThreadManager m_thread_manager;
 	PadManager m_pad_manager;
 	IdManager m_id_manager;
@@ -75,13 +78,11 @@ class Emulator
 
 public:
 	wxString m_path;
-	bool IsSelf;
 
 	Emulator();
 
 	void Init();
-	void SetSelf(const wxString& path);
-	void SetElf(const wxString& path);
+	void SetPath(const wxString& path);
 
 	PPCThreadManager&	GetCPU()				{ return m_thread_manager; }
 	PadManager&			GetPadManager()			{ return m_pad_manager; }
@@ -90,6 +91,8 @@ public:
 	GSManager&			GetGSManager()			{ return m_gs_manager; }
 	CallbackManager&	GetCallbackManager()	{ return m_callback_manager; }
 	VFS&				GetVFS()				{ return m_vfs; }
+	Array<u64>&			GetBreakPoints()		{ return m_break_points; }
+	Array<u64>&			GetMarkedPoints()		{ return m_marked_points; }
 
 	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
 	{
@@ -114,6 +117,9 @@ public:
 	void Pause();
 	void Resume();
 	void Stop();
+
+	void SavePoints(const wxString& path);
+	void LoadPoints(const wxString& path);
 
 	__forceinline bool IsRunned()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Runned; }
 	__forceinline bool IsPaused()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Paused; }

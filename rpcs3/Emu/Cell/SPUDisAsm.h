@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/SPUOpcodes.h"
-#include "Emu/Cell/DisAsm.h"
+#include "Emu/Cell/PPCDisAsm.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Memory/Memory.h"
@@ -11,19 +11,19 @@
 
 class SPU_DisAsm 
 	: public SPU_Opcodes
-	, public DisAsm
+	, public PPC_DisAsm
 {
 public:
 	PPCThread& CPU;
 
 	SPU_DisAsm()
-		: DisAsm(*(PPCThread*)NULL, DumpMode)
+		: PPC_DisAsm(*(PPCThread*)NULL, DumpMode)
 		, CPU(*(PPCThread*)NULL)
 	{
 	}
 
 	SPU_DisAsm(PPCThread& cpu, DisAsmModes mode = NormalMode)
-		: DisAsm(cpu, mode)
+		: PPC_DisAsm(cpu, mode)
 		, CPU(cpu)
 	{
 	}

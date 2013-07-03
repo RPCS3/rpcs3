@@ -99,6 +99,6 @@ void GameViewer::DClick(wxListEvent& event)
 	}
 
 	Emu.Stop();
-	Emu.SetElf(path);
+	Emu.SetPath(path);
 	Emu.Run();
 }

@@ -168,6 +168,8 @@ void PPCThread::Run()
 		return;
 	}
 	
+	wxGetApp().SendDbgCommand(DID_START_THREAD, this);
+
 	m_status = Runned;
 
 	SetPc(entry);
@@ -176,49 +178,52 @@ void PPCThread::Run()
 	DoRun();
 	Emu.CheckStatus();
 
-	wxGetApp().SendDbgCommand(DID_START_THREAD, this);
-
-	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).DoUpdate();
+	wxGetApp().SendDbgCommand(DID_STARTED_THREAD, this);
 }
 
 void PPCThread::Resume()
 {
 	if(!IsPaused()) return;
 
+	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, this);
+
 	m_status = Runned;
 	DoResume();
 	Emu.CheckStatus();
 
-	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, this);
-
 	ThreadBase::Start();
+
+	wxGetApp().SendDbgCommand(DID_RESUMED_THREAD, this);
 }
 
 void PPCThread::Pause()
 {
 	if(!IsRunned()) return;
 
+	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
+
 	m_status = Paused;
 	DoPause();
 	Emu.CheckStatus();
 
-	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
-
 	ThreadBase::Stop(false);
+	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, this);
 }
 
 void PPCThread::Stop()
 {
 	if(IsStopped()) return;
 
+	wxGetApp().SendDbgCommand(DID_STOP_THREAD, this);
+
 	m_status = Stopped;
 	Reset();
 	DoStop();
 	Emu.CheckStatus();
 
-	wxGetApp().SendDbgCommand(DID_STOP_THREAD, this);
-
 	ThreadBase::Stop();
+
+	wxGetApp().SendDbgCommand(DID_STOPED_THREAD, this);
 }
 
 void PPCThread::Exec()
@@ -237,8 +242,19 @@ void PPCThread::Task()
 {
 	ConLog.Write("%s enter", PPCThread::GetFName());
 
+	const Array<u64>& bp = Emu.GetBreakPoints();
+
 	try
 	{
+		for(uint i=0; i<bp.GetCount(); ++i)
+		{
+			if(bp[i] == m_offset + PC)
+			{
+				Emu.Pause();
+				break;
+			}
+		}
+
 		while(!Emu.IsStopped() && !TestDestroy())
 		{
 			if(Emu.IsPaused())
@@ -249,6 +265,15 @@ void PPCThread::Task()
 
 			DoCode(Memory.Read32(m_offset + PC));
 			NextPc();
+
+			for(uint i=0; i<bp.GetCount(); ++i)
+			{
+				if(bp[i] == m_offset + PC)
+				{
+					Emu.Pause();
+					break;
+				}
+			}
 		}
 	}
 	catch(const wxString& e)

@@ -11,7 +11,7 @@ enum DisAsmModes
 	CompilerElfMode,
 };
 
-class DisAsm
+class PPC_DisAsm
 {
 protected:
 	DisAsmFrame* disasm_frame;
@@ -58,7 +58,7 @@ public:
 	uint dump_pc;
 
 protected:
-	DisAsm(PPCThread& cpu, DisAsmModes mode = NormalMode) 
+	PPC_DisAsm(PPCThread& cpu, DisAsmModes mode = NormalMode) 
 		: m_mode(mode)
 		, disasm_frame(NULL)
 	{

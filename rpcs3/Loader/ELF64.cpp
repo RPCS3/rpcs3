@@ -1,7 +1,56 @@
 #include "stdafx.h"
 #include "ELF64.h"
-#include "Gui/CompilerELF.h"
-using namespace PPU_opcodes;
+#include "Emu/Cell/PPUInstrTable.h"
+using namespace PPU_instr;
+
+void WriteEhdr(wxFile& f, Elf64_Ehdr& ehdr)
+{
+	Write32(f, ehdr.e_magic);
+	Write8(f, ehdr.e_class);
+	Write8(f, ehdr.e_data);
+	Write8(f, ehdr.e_curver);
+	Write8(f, ehdr.e_os_abi);
+	Write64(f, ehdr.e_abi_ver);
+	Write16(f, ehdr.e_type);
+	Write16(f, ehdr.e_machine);
+	Write32(f, ehdr.e_version);
+	Write64(f, ehdr.e_entry);
+	Write64(f, ehdr.e_phoff);
+	Write64(f, ehdr.e_shoff);
+	Write32(f, ehdr.e_flags);
+	Write16(f, ehdr.e_ehsize);
+	Write16(f, ehdr.e_phentsize);
+	Write16(f, ehdr.e_phnum);
+	Write16(f, ehdr.e_shentsize);
+	Write16(f, ehdr.e_shnum);
+	Write16(f, ehdr.e_shstrndx);
+}
+
+void WritePhdr(wxFile& f, Elf64_Phdr& phdr)
+{
+	Write32(f, phdr.p_type);
+	Write32(f, phdr.p_flags);
+	Write64(f, phdr.p_offset);
+	Write64(f, phdr.p_vaddr);
+	Write64(f, phdr.p_paddr);
+	Write64(f, phdr.p_filesz);
+	Write64(f, phdr.p_memsz);
+	Write64(f, phdr.p_align);
+}
+
+void WriteShdr(wxFile& f, Elf64_Shdr& shdr)
+{
+	Write32(f, shdr.sh_name);
+	Write32(f, shdr.sh_type);
+	Write64(f, shdr.sh_flags);
+	Write64(f, shdr.sh_addr);
+	Write64(f, shdr.sh_offset);
+	Write64(f, shdr.sh_size);
+	Write32(f, shdr.sh_link);
+	Write32(f, shdr.sh_info);
+	Write64(f, shdr.sh_addralign);
+	Write64(f, shdr.sh_entsize);
+}
 
 ELF64Loader::ELF64Loader(vfsStream& f)
 	: elf64_f(f)
@@ -326,9 +375,9 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 							out_tbl += nid;
 
 							mem32_t out_dst(dst + i*section);
-							out_dst += ToOpcode(G_1f) | SetField(OR, 21, 30) | ToRA(11) | ToRS(2) | ToRB(2) | ToRC(0);
-							out_dst += ToOpcode(SC) | ToSYS(2);
-							out_dst += ToOpcode(G_13) | SetField(BCLR, 21, 30) | ToBO(0x10 | 0x04) | ToBI(0) | ToLK(0);
+							out_dst += OR(11, 2, 2, 0);
+							out_dst += SC(2);
+							out_dst += BCLR(0x10 | 0x04, 0, 0, 0);
 						}
 					}
 #ifdef LOADER_DEBUG

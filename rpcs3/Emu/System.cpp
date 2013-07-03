@@ -6,9 +6,11 @@
 #include "Emu/Cell/PPCThreadManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Gui/CompilerELF.h"
+#include "Emu/Cell/PPUInstrTable.h"
+using namespace PPU_instr;
 
-using namespace PPU_opcodes;
+static const wxString& BreakPointsDBName = "BreakPoints.dat";
+static const u16 bpdb_version = 0x1000;
 
 //SysCalls SysCallsManager;
 
@@ -26,16 +28,9 @@ void Emulator::Init()
 	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
 
-void Emulator::SetSelf(const wxString& path)
+void Emulator::SetPath(const wxString& path)
 {
 	m_path = path;
-	IsSelf = true;
-}
-
-void Emulator::SetElf(const wxString& path)
-{
-	m_path = path;
-	IsSelf = false;
 }
 
 void Emulator::CheckStatus()
@@ -110,6 +105,7 @@ void Emulator::Load()
 		return;
 	}
 
+	LoadPoints(BreakPointsDBName);
 	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64);
 
 	thread.SetEntry(l.GetEntry());
@@ -123,22 +119,22 @@ void Emulator::Load()
 	Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
 
 	mem32_t callback_data(m_rsx_callback);
-	callback_data += ToOpcode(ADDI) | ToRD(11) | ToRA(0) | ToIMM16(0x3ff);
-	callback_data += ToOpcode(SC) | ToSYS(2);
-	callback_data += ToOpcode(G_13) | SetField(BCLR, 21, 30) | ToBO(0x10 | 0x04) | ToBI(0) | ToLK(0);
+	callback_data += ADDI(11, 0, 0x3ff);
+	callback_data += SC(2);
+	callback_data += BCLR(0x10 | 0x04, 0, 0, 0);
 
 	m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 3);
 	
 	mem32_t ppu_thr_exit_data(m_ppu_thr_exit);
-	ppu_thr_exit_data += ToOpcode(ADDI) | ToRD(11) | ToRA(0) | ToIMM16(41);
-	ppu_thr_exit_data += ToOpcode(SC) | ToSYS(2);
-	ppu_thr_exit_data += ToOpcode(G_13) | SetField(BCLR, 21, 30) | ToBO(0x10 | 0x04) | ToBI(0) | ToLK(0);
+	ppu_thr_exit_data += ADDI(11, 0, 41);
+	ppu_thr_exit_data += SC(2);
+	ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
 
 	thread.Run();
 
-	wxGetApp().m_MainFrame->UpdateUI();
 	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Ready;
+	wxGetApp().SendDbgCommand(DID_READY_EMU);
 }
 
 void Emulator::Run()
@@ -156,6 +152,8 @@ void Emulator::Run()
 		return;
 	}
 
+	wxGetApp().SendDbgCommand(DID_START_EMU);
+
 	wxCriticalSectionLocker lock(m_cs_status);
 	//ConLog.Write("run...");
 	m_status = Runned;
@@ -165,7 +163,13 @@ void Emulator::Run()
 	m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
 	m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
 
-	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i) ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path(), m_vfs.m_devices[i].GetLocalPath());
+	ConLog.SkipLn();
+	ConLog.Write("Mount info:");
+	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i)
+	{
+		ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path(), m_vfs.m_devices[i].GetLocalPath());
+	}
+	ConLog.SkipLn();
 
 	//if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
 
@@ -173,54 +177,57 @@ void Emulator::Run()
 	//m_memory_viewer->Show();
 	//m_memory_viewer->ShowPC();
 
-	wxGetApp().SendDbgCommand(DID_START_EMU);
-	wxGetApp().m_MainFrame->UpdateUI();
-
-	if(!m_dbg_console) m_dbg_console = new DbgConsole();
+	if(!m_dbg_console)
+		m_dbg_console = new DbgConsole();
 
 	GetGSManager().Init();
 	GetCallbackManager().Init();
 
 	GetCPU().Exec();
+	wxGetApp().SendDbgCommand(DID_STARTED_EMU);
 }
 
 void Emulator::Pause()
 {
 	if(!IsRunned()) return;
 	//ConLog.Write("pause...");
+	wxGetApp().SendDbgCommand(DID_PAUSE_EMU);
 
 	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Paused;
-	wxGetApp().SendDbgCommand(DID_PAUSE_EMU);
-	wxGetApp().m_MainFrame->UpdateUI();
+	wxGetApp().SendDbgCommand(DID_PAUSED_EMU);
 }
 
 void Emulator::Resume()
 {
 	if(!IsPaused()) return;
 	//ConLog.Write("resume...");
+	wxGetApp().SendDbgCommand(DID_RESUME_EMU);
 
 	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Runned;
-	wxGetApp().SendDbgCommand(DID_RESUME_EMU);
-	wxGetApp().m_MainFrame->UpdateUI();
 
 	CheckStatus();
 	if(IsRunned() && Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
+	wxGetApp().SendDbgCommand(DID_RESUMED_EMU);
 }
 
 void Emulator::Stop()
 {
 	if(IsStopped()) return;
 	//ConLog.Write("shutdown...");
+
+	wxGetApp().SendDbgCommand(DID_STOP_EMU);
 	{
 		wxCriticalSectionLocker lock(m_cs_status);
 		m_status = Stopped;
 	}
 
 	m_rsx_callback = 0;
-	wxGetApp().SendDbgCommand(DID_STOP_EMU);
-	wxGetApp().m_MainFrame->UpdateUI();
+
+	SavePoints(BreakPointsDBName);
+	m_break_points.Clear();
+	m_marked_points.Clear();
 
 	GetGSManager().Close();
 	GetCPU().Close();
@@ -238,7 +245,63 @@ void Emulator::Stop()
 		GetDbgCon().Close();
 		GetDbgCon().Clear();
 	}
+
 	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
+	wxGetApp().SendDbgCommand(DID_STOPED_EMU);
+}
+
+void Emulator::SavePoints(const wxString& path)
+{
+	wxFile f(path, wxFile::write);
+
+	u32 break_count = m_break_points.GetCount();
+	u32 marked_count = m_marked_points.GetCount();
+
+	f.Write(&bpdb_version, sizeof(u16));
+	f.Write(&break_count, sizeof(u32));
+	f.Write(&marked_count, sizeof(u32));
+
+	if(break_count)
+	{
+		f.Write(&m_break_points[0], sizeof(u64) * break_count);
+	}
+
+	if(marked_count)
+	{
+		f.Write(&m_marked_points[0], sizeof(u64) * marked_count);
+	}
+}
+
+void Emulator::LoadPoints(const wxString& path)
+{
+	if(!wxFileExists(path)) return;
+
+	wxFile f(path);
+
+	u32 break_count, marked_count;
+	u16 version;
+	f.Read(&version, sizeof(u16));
+	f.Read(&break_count, sizeof(u32));
+	f.Read(&marked_count, sizeof(u32));
+
+	if(version != bpdb_version ||
+		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != f.Length())
+	{
+		ConLog.Error("'%s' is borken", path);
+		return;
+	}
+
+	if(break_count > 0)
+	{
+		m_break_points.SetCount(break_count);
+		f.Read(&m_break_points[0], sizeof(u64) * break_count);
+	}
+
+	if(marked_count > 0)
+	{
+		m_marked_points.SetCount(marked_count);
+		f.Read(&m_marked_points[0], sizeof(u64) * marked_count);
+	}
 }
 
 Emulator Emu;

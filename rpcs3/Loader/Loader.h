@@ -58,6 +58,30 @@ __forceinline static u64 Read64(vfsStream& f)
 	return ((u64)Read32(f) << 32) | (u64)Read32(f);
 }
 
+__forceinline static void Write8(wxFile& f, const u8 data)
+{
+	f.Write(&data, 1);
+}
+
+__forceinline static void Write16(wxFile& f, const u16 data)
+{
+	Write8(f, data >> 8);
+	Write8(f, data);
+}
+
+__forceinline static void Write32(wxFile& f, const u32 data)
+{
+	Write16(f, data >> 16);
+	Write16(f, data);
+}
+
+__forceinline static void Write64(wxFile& f, const u64 data)
+{
+	Write32(f, data >> 32);
+	Write32(f, data);
+}
+
+
 const wxString Ehdr_DataToString(const u8 data);
 const wxString Ehdr_TypeToString(const u16 type);
 const wxString Ehdr_OS_ABIToString(const u8 os_abi);

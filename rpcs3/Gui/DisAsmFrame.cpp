@@ -113,8 +113,8 @@ bool ElfType64 = false;
 class DumperThread : public ThreadBase
 {
 	volatile uint id;
-	DisAsm* disasm;
-	Decoder* decoder;
+	PPC_DisAsm* disasm;
+	PPC_Decoder* decoder;
 	volatile bool* done;
 	volatile u8 cores;
 	MTProgressDialog* prog_dial;
@@ -338,8 +338,8 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	default: ConLog.Error("Corrupted ELF!"); return;
 	}
 
-	DisAsm* disasm;
-	Decoder* decoder;
+	PPC_DisAsm* disasm;
+	PPC_Decoder* decoder;
 
 	if(Emu.GetCPU().GetThreads()[0].IsSPU())
 	{

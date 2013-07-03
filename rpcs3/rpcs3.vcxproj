@@ -197,6 +197,7 @@
     <ClCompile Include="AppConnector.cpp" />
     <ClCompile Include="Emu\Cell\PPCThread.cpp" />
     <ClCompile Include="Emu\Cell\PPCThreadManager.cpp" />
+    <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\DbgConsole.cpp" />
@@ -275,13 +276,17 @@
     <ClInclude Include="..\Utilities\MTProgressDialog.h" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
-    <ClInclude Include="Emu\Cell\DisAsm.h" />
+    <ClInclude Include="Emu\Cell\PPCDecoder.h" />
+    <ClInclude Include="Emu\Cell\PPCDisAsm.h" />
+    <ClInclude Include="Emu\Cell\PPCInstrTable.h" />
     <ClInclude Include="Emu\Cell\PPCThread.h" />
     <ClInclude Include="Emu\Cell\PPCThreadManager.h" />
     <ClInclude Include="Emu\Cell\PPUDecoder.h" />
     <ClInclude Include="Emu\Cell\PPUDisAsm.h" />
+    <ClInclude Include="Emu\Cell\PPUInstrTable.h" />
     <ClInclude Include="Emu\Cell\PPUInterpreter.h" />
     <ClInclude Include="Emu\Cell\PPUOpcodes.h" />
+    <ClInclude Include="Emu\Cell\PPUProgramCompiler.h" />
     <ClInclude Include="Emu\Cell\PPUThread.h" />
     <ClInclude Include="Emu\Cell\SPUDecoder.h" />
     <ClInclude Include="Emu\Cell\SPUDisAsm.h" />

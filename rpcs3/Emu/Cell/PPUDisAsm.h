@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/PPUOpcodes.h"
-#include "Emu/Cell/DisAsm.h"
+#include "Emu/Cell/PPCDisAsm.h"
 #include "Emu/Cell/PPCThread.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Memory/Memory.h"
@@ -11,19 +11,19 @@
 
 class PPU_DisAsm
 	: public PPU_Opcodes
-	, public DisAsm
+	, public PPC_DisAsm
 {
 public:
 	PPCThread& CPU;
 
 	PPU_DisAsm()
-		: DisAsm(*(PPCThread*)NULL, DumpMode)
+		: PPC_DisAsm(*(PPCThread*)NULL, DumpMode)
 		, CPU(*(PPCThread*)NULL)
 	{
 	}
 
 	PPU_DisAsm(PPCThread& cpu, DisAsmModes mode = NormalMode)
-		: DisAsm(cpu, mode)
+		: PPC_DisAsm(cpu, mode)
 		, CPU(cpu)
 	{
 	}
@@ -936,14 +936,6 @@ private:
 				case 0: DisAsm_INT3("bcctr", bo, bi, bh); break;
 				case 1: DisAsm_INT3("bcctrl", bo, bi, bh); break;
 			}
-		}
-		void BCTR()
-		{
-			Write("bctr");
-		}
-		void BCTRL()
-		{
-			Write("bctrl");
 		}
 	END_OPCODES_GROUP(G_13);
 	

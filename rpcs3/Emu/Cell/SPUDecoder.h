@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/SPUOpcodes.h"
-#include "Emu/Cell/Decoder.h"
+#include "Emu/Cell/PPCDecoder.h"
 
 #define START_OPCODES_GROUP_(group, reg) \
 	case(##group##): \
@@ -21,7 +21,7 @@
 #define ADD_OPCODE(name, regs) case(##name##):m_op.##name####regs##; return
 #define ADD_NULL_OPCODE(name) ADD_OPCODE(##name##, ())
 
-class SPU_Decoder : public Decoder
+class SPU_Decoder : public PPC_Decoder
 {
 	u32 m_code;
 	SPU_Opcodes& m_op;

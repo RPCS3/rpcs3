@@ -188,7 +188,7 @@ int cellSysutilRegisterCallback(int slot, u64 func_addr, u64 userdata)
 	sc_sysutil.Warning("cellSysutilRegisterCallback(slot=%d, func_addr=0x%llx, userdata=0x%llx)", slot, func_addr, userdata);
 	Emu.GetCallbackManager().m_exit_callback.Register(slot, func_addr, userdata);
 
-	wxGetApp().m_MainFrame->UpdateUI();
+	wxGetApp().SendDbgCommand(DID_REGISTRED_CALLBACK);
 
 	return CELL_OK;
 }
@@ -198,7 +198,7 @@ int cellSysutilUnregisterCallback(int slot)
 	sc_sysutil.Warning("cellSysutilUnregisterCallback(slot=%d)", slot);
 	Emu.GetCallbackManager().m_exit_callback.Unregister(slot);
 
-	wxGetApp().m_MainFrame->UpdateUI();
+	wxGetApp().SendDbgCommand(DID_UNREGISTRED_CALLBACK);
 
 	return CELL_OK;
 }

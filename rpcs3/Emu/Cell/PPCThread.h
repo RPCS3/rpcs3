@@ -1,6 +1,6 @@
 #pragma once
 #include "Emu/Memory/MemoryBlock.h"
-#include "Emu/Cell/Decoder.h"
+#include "Emu/Cell/PPCDecoder.h"
 
 enum PPCThreadType
 {
@@ -13,7 +13,7 @@ class PPCThread : public ThreadBase
 protected:
 	u32 m_status;
 	u32 m_error;
-	Decoder* m_dec;
+	PPC_Decoder* m_dec;
 	wxWindow* DisAsmFrame;
 	u32 m_id;
 	PPCThreadType m_type;

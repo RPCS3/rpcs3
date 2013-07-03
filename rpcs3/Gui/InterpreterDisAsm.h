@@ -10,13 +10,11 @@ class InterpreterDisAsmFrame
 	, public ThreadBase
 {
 	wxListView* m_list;
-	DisAsm* disasm;
-	Decoder* decoder;
+	PPC_DisAsm* disasm;
+	PPC_Decoder* decoder;
 	u64 PC;
-	Array<u64> markedPC;
 	Array<u32> remove_markedPC;
 	wxTextCtrl* m_regs;
-	Array<u64> m_break_points;
 	wxButton* m_btn_step;
 	wxButton* m_btn_run;
 	wxButton* m_btn_pause;
@@ -28,9 +26,6 @@ public:
 public:
 	InterpreterDisAsmFrame(wxWindow* parent, PPCThread* cpu);
 	~InterpreterDisAsmFrame();
-
-	void Save(const wxString& path);
-	void Load(const wxString& path);
 
 	void OnKeyDown(wxKeyEvent& event);
 	void DoUpdate();

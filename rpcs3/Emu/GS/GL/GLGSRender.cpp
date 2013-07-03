@@ -1233,7 +1233,7 @@ void GLGSRender::ExecCMD()
 		if(m_set_viewport_horizontal && m_set_viewport_vertical)
 		{
 			glViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
-			if(m_frame->GetSize() != wxSize(m_viewport_w, m_viewport_h))
+			if(m_frame->GetClientSize() != wxSize(m_viewport_w, m_viewport_h))
 				m_frame->SetClientSize(m_viewport_w, m_viewport_h);
 			//m_frame->SetViewport(m_viewport_x, m_viewport_y, m_viewport_w, m_viewport_h);
 		}

@@ -50,10 +50,10 @@ MainFrame::MainFrame()
 	menu_boot.Append(id_boot_elf, "Boot Elf");
 	//menu_boot.Append(id_boot_self, "Boot Self");
 
-	menu_sys.Append(id_sys_pause, "Pause");
-	menu_sys.Append(id_sys_stop, "Stop\tCtrl + S");
+	menu_sys.Append(id_sys_pause, "Pause")->Enable(false);
+	menu_sys.Append(id_sys_stop, "Stop\tCtrl + S")->Enable(false);
 	menu_sys.AppendSeparator();
-	menu_sys.Append(id_sys_send_exit, "Send exit cmd");
+	menu_sys.Append(id_sys_send_exit, "Send exit cmd")->Enable(false);
 
 	menu_conf.Append(id_config_emu, "Settings");
 
@@ -73,8 +73,7 @@ MainFrame::MainFrame()
 
 	Connect( id_config_emu, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
 	m_app_connector.Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(MainFrame::OnKeyDown), (wxObject*)0, this);
-
-	UpdateUI();
+	m_app_connector.Connect(wxEVT_DBG_COMMAND, wxCommandEventHandler(MainFrame::UpdateUI), (wxObject*)0, this);
 }
 
 MainFrame::~MainFrame()
@@ -131,35 +130,35 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 	if(wxFile::Access(elf0, wxFile::read))
 	{
-		Emu.SetElf(elf0);
+		Emu.SetPath(elf0);
 		ConLog.Write("Elf: booting...");
 	}
 	else if(wxFile::Access(elf1, wxFile::read))
 	{
-		Emu.SetElf(elf1);
+		Emu.SetPath(elf1);
 		ConLog.Write("Elf: booting...");
 	}
 	else if(wxFile::Access(elf2, wxFile::read))
 	{
-		Emu.SetElf(elf2);
+		Emu.SetPath(elf2);
 		ConLog.Write("Elf: booting...");
 	}
 	else if(wxFile::Access(self0, wxFile::read))
 	{
 		goto _ELF_NOT_FOUND_;
-		Emu.SetSelf(self0);
+		Emu.SetPath(self0);
 		ConLog.Warning("Self: booting...");
 	}
 	else if(wxFile::Access(self1, wxFile::read))
 	{
 		goto _ELF_NOT_FOUND_;
-		Emu.SetSelf(self1);
+		Emu.SetPath(self1);
 		ConLog.Warning("Self: booting...");
 	}
 	else if(wxFile::Access(self2, wxFile::read))
 	{
 		goto _ELF_NOT_FOUND_;
-		Emu.SetSelf(self2);
+		Emu.SetPath(self2);
 		ConLog.Warning("Self: booting...");
 	}
 	else
@@ -200,7 +199,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 
-	Emu.SetElf(ctrl.GetPath());
+	Emu.SetPath(ctrl.GetPath());
 	Emu.Load();
 
 	ConLog.Write("Elf: boot done.");
@@ -229,7 +228,7 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 
-	Emu.SetSelf(ctrl.GetPath());
+	Emu.SetPath(ctrl.GetPath());
 	Emu.Load();
 
 	ConLog.Write("SELF: boot done.");
@@ -367,9 +366,79 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	if(paused) Emu.Resume();
 }
 
-void MainFrame::UpdateUI(wxCommandEvent& WXUNUSED(event))
+void MainFrame::UpdateUI(wxCommandEvent& event)
 {
-	wxGetApp().m_debugger_frame->UpdateUI();
+	event.Skip();
+
+	bool is_runned, is_stopped, is_ready;
+
+	if(event.GetEventType() == wxEVT_DBG_COMMAND)
+	{
+		switch(event.GetId())
+		{
+			case DID_START_EMU:
+			case DID_STARTED_EMU:
+				is_runned = true;
+				is_stopped = false;
+				is_ready = false;
+			break;
+
+			case DID_STOP_EMU:
+			case DID_STOPED_EMU:
+				is_runned = false;
+				is_stopped = true;
+				is_ready = false;
+			break;
+
+			case DID_PAUSE_EMU:
+			case DID_PAUSED_EMU:
+				is_runned = false;
+				is_stopped = false;
+				is_ready = false;
+			break;
+
+			case DID_RESUME_EMU:
+			case DID_RESUMED_EMU:
+				is_runned = true;
+				is_stopped = false;
+				is_ready = false;
+			break;
+
+			case DID_READY_EMU:
+				is_runned = false;
+				is_stopped = false;
+				is_ready = true;
+			break;
+
+			default:
+				is_runned = Emu.IsRunned();
+				is_stopped = Emu.IsStopped();
+				is_ready = Emu.IsReady();
+			break;
+		}
+	}
+	else
+	{
+		is_runned = Emu.IsRunned();
+		is_stopped = Emu.IsStopped();
+		is_ready = Emu.IsReady();
+	}
+
+	wxMenuBar& menubar( *GetMenuBar() );
+	wxMenuItem& pause = *menubar.FindItem( id_sys_pause );
+	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
+	wxMenuItem& send_exit  = *menubar.FindItem( id_sys_send_exit );
+
+	pause.SetText(is_runned ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + C" : "Resume\tCtrl + C");
+	pause.Enable(!is_stopped);
+	stop.Enable(!is_stopped);
+	//send_exit.Enable(false);
+	send_exit.Enable(!is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount());
+
+	m_aui_mgr.Update();
+
+	//wxCommandEvent refit( wxEVT_COMMAND_MENU_SELECTED, id_update_dbg );
+	//GetEventHandler()->AddPendingEvent( refit );
 }
 
 void MainFrame::OnQuit(wxCloseEvent& event)
@@ -433,23 +502,4 @@ void MainFrame::OnKeyDown(wxKeyEvent& event)
 	}
 
 	event.Skip();
-}
-
-void MainFrame::UpdateUI()
-{
-	wxMenuBar& menubar( *GetMenuBar() );
-	wxMenuItem& pause = *menubar.FindItem( id_sys_pause );
-	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
-	wxMenuItem& send_exit  = *menubar.FindItem( id_sys_send_exit );
-
-	pause.SetText(Emu.IsRunned() ? "Pause\tCtrl + P" : Emu.IsReady() ? "Start\tCtrl + C" : "Resume\tCtrl + C");
-	pause.Enable(!Emu.IsStopped());
-	stop.Enable(!Emu.IsStopped());
-	//send_exit.Enable(false);
-	send_exit.Enable(!Emu.IsStopped() && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount());
-
-	m_aui_mgr.Update();
-
-	wxCommandEvent refit( wxEVT_COMMAND_MENU_SELECTED, id_update_dbg );
-	GetEventHandler()->AddPendingEvent( refit );
 }
