@@ -1526,10 +1526,10 @@ private:
 			else
 			{
 				//undefined
-				CPU.VPR[vd]._u32[0] = ((rand() % 0x100) << 24) | ((rand() % 0x100) << 16) | ((rand() % 0x100) << 8) | (rand() % 0x100);
-				CPU.VPR[vd]._u32[1] = ((rand() % 0x100) << 24) | ((rand() % 0x100) << 16) | ((rand() % 0x100) << 8) | (rand() % 0x100);
-				CPU.VPR[vd]._u32[2] = ((rand() % 0x100) << 24) | ((rand() % 0x100) << 16) | ((rand() % 0x100) << 8) | (rand() % 0x100);
-				CPU.VPR[vd]._u32[3] = ((rand() % 0x100) << 24) | ((rand() % 0x100) << 16) | ((rand() % 0x100) << 8) | (rand() % 0x100);
+				CPU.VPR[vd]._u32[0] = 0xCDCDCDCD;
+				CPU.VPR[vd]._u32[1] = 0xCDCDCDCD;
+				CPU.VPR[vd]._u32[2] = 0xCDCDCDCD;
+				CPU.VPR[vd]._u32[3] = 0xCDCDCDCD;
 			}
 		}
 		void VSLB(OP_REG vd, OP_REG va, OP_REG vb)
@@ -1629,13 +1629,30 @@ private:
 		}
 		void VSR(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			u8 sh = CPU.VPR[vb]._u8[15] & 0x7;
+			u8 sh = CPU.VPR[vb]._u8[0] & 0x7;
+			u32 t = 1;
 
-			CPU.VPR[vd]._u32[0] = CPU.VPR[va]._u32[0] >> sh;
-
-			for (uint w = 1; w < 4; w++)
+			for (uint b = 0; b < 16; b++)
 			{
-				CPU.VPR[vd]._u32[w] = (CPU.VPR[va]._u32[w] >> sh) | (CPU.VPR[va]._u32[w - 1] << (32 - sh));
+				t &= (CPU.VPR[vb]._u8[b] & 0x7) == sh;
+			}
+
+			if(t)
+			{
+				CPU.VPR[vd]._u8[15] = CPU.VPR[va]._u8[15] >> sh;
+
+				for (uint b = 14; b >= 0; b--)
+				{
+					CPU.VPR[vd]._u8[b] = (CPU.VPR[va]._u8[b] >> sh) | (CPU.VPR[va]._u8[b+1] << (8 - sh));
+				}
+			}
+			else
+			{
+				//undefined
+				CPU.VPR[vd]._u32[0] = 0xCDCDCDCD;
+				CPU.VPR[vd]._u32[1] = 0xCDCDCDCD;
+				CPU.VPR[vd]._u32[2] = 0xCDCDCDCD;
+				CPU.VPR[vd]._u32[3] = 0xCDCDCDCD;
 			}
 		}
 		void VSRAB(OP_REG vd, OP_REG va, OP_REG vb)
@@ -1649,14 +1666,14 @@ private:
 		{
 			for (uint h = 0; h < 8; h++)
 			{
-				CPU.VPR[vd]._s16[h] = CPU.VPR[va]._s16[h] >> (CPU.VPR[vb]._u8[h*2 + 1] & 0xf);
+				CPU.VPR[vd]._s16[h] = CPU.VPR[va]._s16[h] >> (CPU.VPR[vb]._u8[h*2] & 0xf);
 			}
 		}
 		void VSRAW(OP_REG vd, OP_REG va, OP_REG vb)
 		{
 			for (uint w = 0; w < 4; w++)
 			{
-				CPU.VPR[vd]._s32[w] = CPU.VPR[va]._s32[w] >> (CPU.VPR[vb]._u8[w*4 + 3] & 0x1f);
+				CPU.VPR[vd]._s32[w] = CPU.VPR[va]._s32[w] >> (CPU.VPR[vb]._u8[w*4] & 0x1f);
 			}
 		}
 		void VSRB(OP_REG vd, OP_REG va, OP_REG vb)
@@ -1670,25 +1687,25 @@ private:
 		{
 			for (uint h = 0; h < 8; h++)
 			{
-				CPU.VPR[vd]._u16[h] = CPU.VPR[va]._u16[h] >> (CPU.VPR[vb]._u8[h*2 + 1] & 0xf);
+				CPU.VPR[vd]._u16[h] = CPU.VPR[va]._u16[h] >> (CPU.VPR[vb]._u8[h*2] & 0xf);
 			}
 		}
 		void VSRO(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			u8 nShift = (CPU.VPR[vb]._u8[15] >> 3) & 0xf;
+			u8 nShift = (CPU.VPR[vb]._u8[0] >> 3) & 0xf;
 
 			CPU.VPR[vd].Clear();
 
-			for (u8 b = nShift; b < 16; b++)
+			for (u8 b = 0; b < 16 - nShift; b++)
 			{
-				CPU.VPR[vd]._u8[b] = CPU.VPR[va]._u8[b - nShift];
+				CPU.VPR[vd]._u8[b] = CPU.VPR[va]._u8[b + nShift];
 			}
 		}
 		void VSRW(OP_REG vd, OP_REG va, OP_REG vb)
 		{
 			for (uint w = 0; w < 4; w++)
 			{
-				CPU.VPR[vd]._u32[w] = CPU.VPR[va]._u32[w] >> (CPU.VPR[vb]._u8[w*4 + 3] & 0x1f);
+				CPU.VPR[vd]._u32[w] = CPU.VPR[va]._u32[w] >> (CPU.VPR[vb]._u8[w*4] & 0x1f);
 			}
 		}
 		void VSUBCUW(OP_REG vd, OP_REG va, OP_REG vb)
@@ -1844,16 +1861,16 @@ private:
 
 			if (sum > INT32_MAX)
 			{
-				CPU.VPR[vd]._s32[3] = (s32)INT32_MAX;
+				CPU.VPR[vd]._s32[0] = (s32)INT32_MAX;
 				CPU.VSCR.SAT = 1;
 			}
 			else if (sum < INT32_MIN)
 			{
-				CPU.VPR[vd]._s32[3] = (s32)INT32_MIN;
+				CPU.VPR[vd]._s32[0] = (s32)INT32_MIN;
 				CPU.VSCR.SAT = 1;
 			}
 			else
-				CPU.VPR[vd]._s32[3] = (s32)sum;
+				CPU.VPR[vd]._s32[0] = (s32)sum;
 		}
 		void VSUM2SWS(OP_REG vd, OP_REG va, OP_REG vb)
 		{
@@ -1861,25 +1878,20 @@ private:
 
 			for (uint n = 0; n < 2; n++)
 			{
-				s64 sum = CPU.VPR[vb]._s32[n*2 + 1];
-
-				for (uint w = 0; w < 2; w++)
-				{
-					sum += CPU.VPR[va]._s32[n*2 + w];
-				}
+				s64 sum = (s64)CPU.VPR[va]._s32[n*2] + CPU.VPR[va]._s32[n*2 + 1] + CPU.VPR[vb]._s32[n*2];
 
 				if (sum > INT32_MAX)
 				{
-					CPU.VPR[vd]._s32[n*2 + 1] = (s32)INT32_MAX;
+					CPU.VPR[vd]._s32[n*2] = (s32)INT32_MAX;
 					CPU.VSCR.SAT = 1;
 				}
 				else if (sum < INT32_MIN)
 				{
-					CPU.VPR[vd]._s32[n*2 + 1] = (s32)INT32_MIN;
+					CPU.VPR[vd]._s32[n*2] = (s32)INT32_MIN;
 					CPU.VSCR.SAT = 1;
 				}
 				else
-					CPU.VPR[vd]._s32[n*2 + 1] = (s32)sum;
+					CPU.VPR[vd]._s32[n*2] = (s32)sum;
 			}
 		}
 		void VSUM4SBS(OP_REG vd, OP_REG va, OP_REG vb)
@@ -1956,10 +1968,10 @@ private:
 		{
 			for (uint w = 0; w < 4; w++)
 			{
-				CPU.VPR[vd]._s8[w*4 + 0] = CPU.VPR[vb]._s8[w*2 + 0] >> 7;  // signed shift sign extends
-				CPU.VPR[vd]._u8[w*4 + 1] = (CPU.VPR[vb]._u8[w*2 + 0] >> 2) & 0x1f;
-				CPU.VPR[vd]._u8[w*4 + 2] = ((CPU.VPR[vb]._u8[w*2 + 0] & 0x3) << 3) | ((CPU.VPR[vb]._u8[w*2 + 1] >> 5) & 0x7);
-				CPU.VPR[vd]._u8[w*4 + 3] = CPU.VPR[vb]._u8[w*2 + 1] & 0x1f;
+				CPU.VPR[vd]._s8[(3 - w)*4 + 3] = CPU.VPR[vb]._s8[w*2 + 0] >> 7;  // signed shift sign extends
+				CPU.VPR[vd]._u8[(3 - w)*4 + 2] = (CPU.VPR[vb]._u8[w*2 + 0] >> 2) & 0x1f;
+				CPU.VPR[vd]._u8[(3 - w)*4 + 1] = ((CPU.VPR[vb]._u8[w*2 + 0] & 0x3) << 3) | ((CPU.VPR[vb]._u8[w*2 + 1] >> 5) & 0x7);
+				CPU.VPR[vd]._u8[(3 - w)*4 + 0] = CPU.VPR[vb]._u8[w*2 + 1] & 0x1f;
 			}
 		}
 		void VUPKHSB(OP_REG vd, OP_REG vb)
@@ -1980,10 +1992,10 @@ private:
 		{
 			for (uint w = 0; w < 4; w++)
 			{
-				CPU.VPR[vd]._s8[w*4 + 0] = CPU.VPR[vb]._s8[8 + w*2 + 0] >> 7;  // signed shift sign extends
-				CPU.VPR[vd]._u8[w*4 + 1] = (CPU.VPR[vb]._u8[8 + w*2 + 0] >> 2) & 0x1f;
-				CPU.VPR[vd]._u8[w*4 + 2] = ((CPU.VPR[vb]._u8[8 + w*2 + 0] & 0x3) << 3) | ((CPU.VPR[vb]._u8[8 + w*2 + 1] >> 5) & 0x7);
-				CPU.VPR[vd]._u8[w*4 + 3] = CPU.VPR[vb]._u8[8 + w*2 + 1] & 0x1f;
+				CPU.VPR[vd]._s8[(3 - w)*4 + 3] = CPU.VPR[vb]._s8[8 + w*2 + 0] >> 7;  // signed shift sign extends
+				CPU.VPR[vd]._u8[(3 - w)*4 + 2] = (CPU.VPR[vb]._u8[8 + w*2 + 0] >> 2) & 0x1f;
+				CPU.VPR[vd]._u8[(3 - w)*4 + 1] = ((CPU.VPR[vb]._u8[8 + w*2 + 0] & 0x3) << 3) | ((CPU.VPR[vb]._u8[8 + w*2 + 1] >> 5) & 0x7);
+				CPU.VPR[vd]._u8[(3 - w)*4 + 0] = CPU.VPR[vb]._u8[8 + w*2 + 1] & 0x1f;
 			}
 		}
 		void VUPKLSB(OP_REG vd, OP_REG vb)
@@ -2224,25 +2236,28 @@ private:
 		{
 			const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-			switch(addr & 0xf)
+			static const u64 lvsl_values[0x10][2] =
 			{
-			case 0x0: CPU.VPR[vd]._u64[1] = 0x0001020304050607; CPU.VPR[vd]._u64[0] = 0x08090A0B0C0D0E0F; break;
-			case 0x1: CPU.VPR[vd]._u64[1] = 0x0102030405060708; CPU.VPR[vd]._u64[0] = 0x090A0B0C0D0E0F10; break;
-			case 0x2: CPU.VPR[vd]._u64[1] = 0x0203040506070809; CPU.VPR[vd]._u64[0] = 0x0A0B0C0D0E0F1011; break;
-			case 0x3: CPU.VPR[vd]._u64[1] = 0x030405060708090A; CPU.VPR[vd]._u64[0] = 0x0B0C0D0E0F101112; break;
-			case 0x4: CPU.VPR[vd]._u64[1] = 0x0405060708090A0B; CPU.VPR[vd]._u64[0] = 0x0C0D0E0F10111213; break;
-			case 0x5: CPU.VPR[vd]._u64[1] = 0x05060708090A0B0C; CPU.VPR[vd]._u64[0] = 0x0D0E0F1011121314; break;
-			case 0x6: CPU.VPR[vd]._u64[1] = 0x060708090A0B0C0D; CPU.VPR[vd]._u64[0] = 0x0E0F101112131415; break;
-			case 0x7: CPU.VPR[vd]._u64[1] = 0x0708090A0B0C0D0E; CPU.VPR[vd]._u64[0] = 0x0F10111213141516; break;
-			case 0x8: CPU.VPR[vd]._u64[1] = 0x08090A0B0C0D0E0F; CPU.VPR[vd]._u64[0] = 0x1011121314151617; break;
-			case 0x9: CPU.VPR[vd]._u64[1] = 0x090A0B0C0D0E0F10; CPU.VPR[vd]._u64[0] = 0x1112131415161718; break;
-			case 0xa: CPU.VPR[vd]._u64[1] = 0x0A0B0C0D0E0F1011; CPU.VPR[vd]._u64[0] = 0x1213141516171819; break;
-			case 0xb: CPU.VPR[vd]._u64[1] = 0x0B0C0D0E0F101112; CPU.VPR[vd]._u64[0] = 0x131415161718191A; break;
-			case 0xc: CPU.VPR[vd]._u64[1] = 0x0C0D0E0F10111213; CPU.VPR[vd]._u64[0] = 0x1415161718191A1B; break;
-			case 0xd: CPU.VPR[vd]._u64[1] = 0x0D0E0F1011121314; CPU.VPR[vd]._u64[0] = 0x15161718191A1B1C; break;
-			case 0xe: CPU.VPR[vd]._u64[1] = 0x0E0F101112131415; CPU.VPR[vd]._u64[0] = 0x161718191A1B1C1D; break;
-			case 0xf: CPU.VPR[vd]._u64[1] = 0x0F10111213141516; CPU.VPR[vd]._u64[0] = 0x1718191A1B1C1D1E; break;
-			}
+				{0x08090A0B0C0D0E0F, 0x0001020304050607},
+				{0x090A0B0C0D0E0F10, 0x0102030405060708},
+				{0x0A0B0C0D0E0F1011, 0x0203040506070809},
+				{0x0B0C0D0E0F101112, 0x030405060708090A},
+				{0x0C0D0E0F10111213, 0x0405060708090A0B},
+				{0x0D0E0F1011121314, 0x05060708090A0B0C},
+				{0x0E0F101112131415, 0x060708090A0B0C0D},
+				{0x0F10111213141516, 0x0708090A0B0C0D0E},
+				{0x1011121314151617, 0x08090A0B0C0D0E0F},
+				{0x1112131415161718, 0x090A0B0C0D0E0F10},
+				{0x1213141516171819, 0x0A0B0C0D0E0F1011},
+				{0x131415161718191A, 0x0B0C0D0E0F101112},
+				{0x1415161718191A1B, 0x0C0D0E0F10111213},
+				{0x15161718191A1B1C, 0x0D0E0F1011121314},
+				{0x161718191A1B1C1D, 0x0E0F101112131415},
+				{0x1718191A1B1C1D1E, 0x0F10111213141516},
+			};
+
+			CPU.VPR[vd]._u64[0] = lvsl_values[addr & 0xf][0];
+			CPU.VPR[vd]._u64[1] = lvsl_values[addr & 0xf][1];
 		}
 		void LVEBX(OP_REG vd, OP_REG ra, OP_REG rb)
 		{
@@ -2381,25 +2396,28 @@ private:
 		{
 			const u64 addr = ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb];
 
-			switch(addr & 0xf)
+			static const u64 lvsr_values[0x10][2] =
 			{
-			case 0x0: CPU.VPR[vd]._u64[1] = 0x1011121314151617; CPU.VPR[vd]._u64[0] = 0x18191A1B1C1D1E1F; break;
-			case 0x1: CPU.VPR[vd]._u64[1] = 0x0F10111213141516; CPU.VPR[vd]._u64[0] = 0x1718191A1B1C1D1E; break;
-			case 0x2: CPU.VPR[vd]._u64[1] = 0x0E0F101112131415; CPU.VPR[vd]._u64[0] = 0x161718191A1B1C1D; break;
-			case 0x3: CPU.VPR[vd]._u64[1] = 0x0D0E0F1011121314; CPU.VPR[vd]._u64[0] = 0x15161718191A1B1C; break;
-			case 0x4: CPU.VPR[vd]._u64[1] = 0x0C0D0E0F10111213; CPU.VPR[vd]._u64[0] = 0x1415161718191A1B; break;
-			case 0x5: CPU.VPR[vd]._u64[1] = 0x0B0C0D0E0F101112; CPU.VPR[vd]._u64[0] = 0x131415161718191A; break;
-			case 0x6: CPU.VPR[vd]._u64[1] = 0x0A0B0C0D0E0F1011; CPU.VPR[vd]._u64[0] = 0x1213141516171819; break;
-			case 0x7: CPU.VPR[vd]._u64[1] = 0x090A0B0C0D0E0F10; CPU.VPR[vd]._u64[0] = 0x1112131415161718; break;
-			case 0x8: CPU.VPR[vd]._u64[1] = 0x08090A0B0C0D0E0F; CPU.VPR[vd]._u64[0] = 0x1011121314151617; break;
-			case 0x9: CPU.VPR[vd]._u64[1] = 0x0708090A0B0C0D0E; CPU.VPR[vd]._u64[0] = 0x0F10111213141516; break;
-			case 0xa: CPU.VPR[vd]._u64[1] = 0x060708090A0B0C0D; CPU.VPR[vd]._u64[0] = 0x0E0F101112131415; break;
-			case 0xb: CPU.VPR[vd]._u64[1] = 0x05060708090A0B0C; CPU.VPR[vd]._u64[0] = 0x0D0E0F1011121314; break;
-			case 0xc: CPU.VPR[vd]._u64[1] = 0x0405060708090A0B; CPU.VPR[vd]._u64[0] = 0x0C0D0E0F10111213; break;
-			case 0xd: CPU.VPR[vd]._u64[1] = 0x030405060708090A; CPU.VPR[vd]._u64[0] = 0x0B0C0D0E0F101112; break;
-			case 0xe: CPU.VPR[vd]._u64[1] = 0x0203040506070809; CPU.VPR[vd]._u64[0] = 0x0A0B0C0D0E0F1011; break;
-			case 0xf: CPU.VPR[vd]._u64[1] = 0x0102030405060708; CPU.VPR[vd]._u64[0] = 0x090A0B0C0D0E0F10; break;
-			}
+				{0x18191A1B1C1D1E1F, 0x1011121314151617},
+				{0x1718191A1B1C1D1E, 0x0F10111213141516},
+				{0x161718191A1B1C1D, 0x0E0F101112131415},
+				{0x15161718191A1B1C, 0x0D0E0F1011121314},
+				{0x1415161718191A1B, 0x0C0D0E0F10111213},
+				{0x131415161718191A, 0x0B0C0D0E0F101112},
+				{0x1213141516171819, 0x0A0B0C0D0E0F1011},
+				{0x1112131415161718, 0x090A0B0C0D0E0F10},
+				{0x1011121314151617, 0x08090A0B0C0D0E0F},
+				{0x0F10111213141516, 0x0708090A0B0C0D0E},
+				{0x0E0F101112131415, 0x060708090A0B0C0D},
+				{0x0D0E0F1011121314, 0x05060708090A0B0C},
+				{0x0C0D0E0F10111213, 0x0405060708090A0B},
+				{0x0B0C0D0E0F101112, 0x030405060708090A},
+				{0x0A0B0C0D0E0F1011, 0x0203040506070809},
+				{0x090A0B0C0D0E0F10, 0x0102030405060708},
+			};
+
+			CPU.VPR[vd]._u64[0] = lvsr_values[addr & 0xf][0];
+			CPU.VPR[vd]._u64[1] = lvsr_values[addr & 0xf][1];
 		}
 		void LVEHX(OP_REG vd, OP_REG ra, OP_REG rb)
 		{
