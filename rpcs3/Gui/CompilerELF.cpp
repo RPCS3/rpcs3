@@ -97,7 +97,7 @@ CompilerELF::CompilerELF(wxWindow* parent)
 		"	addi	r11, r0, sys_tty_write\n"
 		"	sc	2\n"
 		"	cmpi 	cr7, 0, r3, 0\n"
-		"	bc 	0x04, 28, exit_err, 0, 0\n"
+		"	bc 	0x04, 30, exit_err, 0, 0\n"
 		"\n"
 		"exit_ok:\n"
 		"	addi 	r3, r0, 0\n"

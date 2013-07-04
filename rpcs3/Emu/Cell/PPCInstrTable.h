@@ -77,6 +77,8 @@ public:
 	}
 };
 
+static CodeField<0, 31> GetCode;
+
 template<uint from1, uint to1, uint from2, uint to2 = from2, uint offset = 0>
 class DoubleCodeField : public CodeField<from1, to1>
 {
@@ -133,3 +135,68 @@ public:
 		return decode(data);
 	}
 };
+
+template<uint from, uint to = from, uint _offset = 0>
+class CodeFieldOffset : public CodeField<from, to>
+{
+	static const int offset = _offset;
+
+public:
+	CodeFieldOffset(CodeFieldType type = FIELD_IMM) : CodeField(type)
+	{
+	}
+
+	static __forceinline u32 decode(u32 data)
+	{
+		return ((data & mask) >> shift) << offset;
+	}
+
+	static __forceinline void encode(u32& data, u32 value)
+	{
+		data &= ~mask;
+		data |= ((value >> offset) << shift) & mask;
+	}
+
+	virtual u32 operator ()(u32 data) const
+	{
+		return decode(data);
+	}
+
+	virtual void operator ()(u32& data, u32 value) const
+	{
+		return encode(data, value);
+	}
+};
+
+template<uint from, uint to = from, uint _offset = 0, uint size = to - from + 1>
+class CodeFieldSignedOffset : public CodeFieldSigned<from, to, size>
+{
+	static const int offset = _offset;
+
+public:
+	CodeFieldSignedOffset(CodeFieldType type = FIELD_IMM) : CodeFieldSigned(type)
+	{
+	}
+
+	static __forceinline u32 decode(u32 data)
+	{
+		return sign<size>((data & mask) >> shift) << offset;
+	}
+
+	static __forceinline void encode(u32& data, u32 value)
+	{
+		data &= ~mask;
+		data |= ((value >> offset) << shift) & mask;
+	}
+
+	virtual u32 operator ()(u32 data) const
+	{
+		return decode(data);
+	}
+
+	virtual void operator ()(u32& data, u32 value) const
+	{
+		return encode(data, value);
+	}
+};
+

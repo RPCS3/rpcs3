@@ -19,6 +19,7 @@ class InterpreterDisAsmFrame
 	wxButton* m_btn_run;
 	wxButton* m_btn_pause;
 	AppConnector m_app_connector;
+	u32 m_item_count;
 
 public:
 	PPCThread& CPU;
@@ -27,7 +28,10 @@ public:
 	InterpreterDisAsmFrame(wxWindow* parent, PPCThread* cpu);
 	~InterpreterDisAsmFrame();
 
+	u32 CentrePc(const u32 pc) const;
+
 	void OnKeyDown(wxKeyEvent& event);
+	void OnResize(wxSizeEvent& event);
 	void DoUpdate();
 	void ShowAddr(const u64 addr);
 	void WriteRegs();

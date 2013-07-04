@@ -1,11 +1,11 @@
 #include "stdafx.h"
 #include "InterpreterDisAsm.h"
 
-static const int show_lines = 30;
+//static const int show_lines = 30;
 
-u32 FixPc(const u32 pc)
+u32 InterpreterDisAsmFrame::CentrePc(const u32 pc) const
 {
-	return pc - ((show_lines/2)*4);
+	return pc - ((m_item_count / 2) * 4);
 }
 
 InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent, PPCThread* cpu)
@@ -13,6 +13,7 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent, PPCThread* cpu)
 	, ThreadBase(false, "DisAsmFrame Thread")
 	, CPU(*cpu)
 	, PC(0)
+	, m_item_count(30)
 {
 	if(CPU.IsSPU())
 	{
@@ -64,8 +65,7 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent, PPCThread* cpu)
 	Layout();
 
 	m_list->InsertColumn(0, "ASM");
-
-	for(uint i=0; i<show_lines; ++i)
+	for(uint i=0; i<m_item_count; ++i)
 	{
 		m_list->InsertItem(m_list->GetItemCount(), wxEmptyString);
 	}
@@ -77,7 +77,7 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent, PPCThread* cpu)
 	Connect(m_btn_run->GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoRun));
 	Connect(m_btn_pause->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoPause));
 	Connect(m_list->GetId(),		wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(InterpreterDisAsmFrame::DClick));
-	//Connect(wxEVT_SIZE, wxSizeEventHandler(InterpreterDisAsmFrame::OnResize));
+	Connect(wxEVT_SIZE, wxSizeEventHandler(InterpreterDisAsmFrame::OnResize));
 	m_app_connector.Connect(m_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(InterpreterDisAsmFrame::MouseWheel), (wxObject*)0, this);
 	m_app_connector.Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(InterpreterDisAsmFrame::OnKeyDown), (wxObject*)0, this);
 
@@ -110,14 +110,48 @@ void InterpreterDisAsmFrame::OnKeyDown(wxKeyEvent& event)
 	{
 		switch(event.GetKeyCode())
 		{
-		case WXK_PAGEUP:	ShowAddr( PC - (show_lines * 2) * 4 ); return;
+		case WXK_PAGEUP:	ShowAddr( PC - (m_item_count * 2) * 4 ); return;
 		case WXK_PAGEDOWN:	ShowAddr( PC ); return;
-		case WXK_UP:		ShowAddr( PC - (show_lines + 1) * 4 ); return;
-		case WXK_DOWN:		ShowAddr( PC - (show_lines - 1) * 4 ); return;
+		case WXK_UP:		ShowAddr( PC - (m_item_count + 1) * 4 ); return;
+		case WXK_DOWN:		ShowAddr( PC - (m_item_count - 1) * 4 ); return;
 		}
 	}
 
 	event.Skip();
+}
+
+void InterpreterDisAsmFrame::OnResize(wxSizeEvent& event)
+{
+	event.Skip();
+
+	if(0)
+	{
+		if(!m_list->GetItemCount())
+		{
+			m_list->InsertItem(m_list->GetItemCount(), wxEmptyString);
+		}
+
+		int size = 0;
+		m_list->DeleteAllItems();
+		int item = 0;
+		while(size < m_list->GetSize().GetHeight())
+		{
+			item = m_list->GetItemCount();
+			m_list->InsertItem(item, wxEmptyString);
+			wxRect rect;
+			m_list->GetItemRect(item, rect);
+
+			size = rect.GetBottom();
+		}
+
+		if(item)
+		{
+			m_list->DeleteItem(--item);
+		}
+
+		m_item_count = item;
+		ShowAddr(PC);
+	}
 }
 
 void InterpreterDisAsmFrame::DoUpdate()
@@ -130,7 +164,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 {
 	PC = addr;
 	m_list->Freeze();
-	for(uint i=0; i<show_lines; ++i, PC += 4)
+	for(uint i=0; i<m_item_count; ++i, PC += 4)
 	{
 		if(!Memory.IsGoodAddr(PC, 4))
 		{
@@ -285,22 +319,25 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 		u64 pc = CPU.PC;
 		sscanf(p_pc->GetLabel(), "%llx", &pc);
 		remove_markedPC.AddCpy(Emu.GetMarkedPoints().AddCpy(pc));
-		ShowAddr(FixPc(pc));
+		ShowAddr(CentrePc(pc));
 	}
 }
 
 void InterpreterDisAsmFrame::Show_PC(wxCommandEvent& WXUNUSED(event))
 {
-	ShowAddr(FixPc(CPU.PC));
+	ShowAddr(CentrePc(CPU.PC));
 }
 
 extern bool dump_enable;
 void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 {
 	if(CPU.IsPaused()) CPU.Resume();
-	if(Emu.IsPaused()) Emu.Resume();
 
-	CPU.Exec();
+	if(!Emu.IsPaused())
+	{
+		CPU.Exec();
+	}
+
 	//ThreadBase::Start();
 }
 
@@ -319,7 +356,7 @@ void InterpreterDisAsmFrame::DClick(wxListEvent& event)
 	long i = m_list->GetFirstSelected();
 	if(i < 0) return;
 
-	const u64 start_pc = PC - show_lines*4;
+	const u64 start_pc = PC - m_item_count*4;
 	const u64 pc = start_pc + i*4;
 	//ConLog.Write("pc=0x%llx", pc);
 
@@ -341,7 +378,7 @@ void InterpreterDisAsmFrame::MouseWheel(wxMouseEvent& event)
 {
 	const int value = (event.m_wheelRotation / event.m_wheelDelta);
 
-	ShowAddr( PC - (event.ControlDown() ? show_lines * (value + 1) : show_lines + value) * 4);
+	ShowAddr( PC - (event.ControlDown() ? m_item_count * (value + 1) : m_item_count + value) * 4);
 
 	event.Skip();
 }

@@ -240,20 +240,19 @@ namespace PPU_instr
 	static CodeField<26, 30> GD_3f;//0x1f
 	static CodeField<21, 30> GD_3f_0; //0x3ff
 
-	static CodeField<0, 31> GetCode;
 	static CodeField<9, 10> STRM;
 
-	static auto main_list = new_list<0x40>(OPCD, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, OPCD));
-	static auto g04_list = new_list<0x40>(main_list, PPU_opcodes::G_04, GD_04);
-	static auto g04_0_list = new_list<0x800>(g04_list, GD_04_0, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_04_0));
-	static auto g13_list = new_list<0x400>(main_list, PPU_opcodes::G_13, GD_13, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_13));
-	static auto g1e_list = new_list<0x4>(main_list, PPU_opcodes::G_1e, GD_1e, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_1e));
-	static auto g1f_list = new_list<0x400>(main_list, PPU_opcodes::G_1f, GD_1f, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_1f));
-	static auto g3a_list = new_list<0x4>(main_list, PPU_opcodes::G_3a, GD_3a, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_3a));
-	static auto g3b_list = new_list<0x20>(main_list, PPU_opcodes::G_3b, GD_3b, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_3b));
-	static auto g3e_list = new_list<0x4>(main_list, PPU_opcodes::G_3e, GD_3e, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_3e));
-	static auto g3f_list = new_list<0x20>(main_list, PPU_opcodes::G_3f, GD_3f);
-	static auto g3f_0_list = new_list<0x400>(g3f_list, GD_3f_0, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_3f_0));
+	static auto main_list = new_list(OPCD, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, OPCD));
+	static auto g04_list = new_list(main_list, PPU_opcodes::G_04, GD_04);
+	static auto g04_0_list = new_list(g04_list, GD_04_0, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_04_0));
+	static auto g13_list = new_list(main_list, PPU_opcodes::G_13, GD_13, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_13));
+	static auto g1e_list = new_list(main_list, PPU_opcodes::G_1e, GD_1e, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_1e));
+	static auto g1f_list = new_list(main_list, PPU_opcodes::G_1f, GD_1f, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_1f));
+	static auto g3a_list = new_list(main_list, PPU_opcodes::G_3a, GD_3a, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_3a));
+	static auto g3b_list = new_list(main_list, PPU_opcodes::G_3b, GD_3b, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_3b));
+	static auto g3e_list = new_list(main_list, PPU_opcodes::G_3e, GD_3e, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_3e));
+	static auto g3f_list = new_list(main_list, PPU_opcodes::G_3f, GD_3f);
+	static auto g3f_0_list = new_list(g3f_list, GD_3f_0, instr_bind(&PPU_Opcodes::UNK, GetCode, OPCD, GD_3f_0));
 
 	#define bind_instr(list, name, ...) \
 		static const auto& name = make_instr<PPU_opcodes::name>(list, #name, &PPU_Opcodes::name, ##__VA_ARGS__)
@@ -637,4 +636,6 @@ namespace PPU_instr
 	bind_instr(g3f_0_list, MTFSFI, CRFD, I, RC);
 	bind_instr(g3f_0_list, MFFS, FRD, RC);
 	bind_instr(g3f_0_list, MTFSF, FLM, FRB, RC);
+
+	#undef bind_instr
 };
