@@ -3,7 +3,12 @@
 
 extern Module sysPrxForUser;
 
-#define PPU_THREAD_ID_INVALID 0xFFFFFFFFU
+static const u32 PPU_THREAD_ID_INVALID = 0xFFFFFFFFU;
+enum
+{
+	SYS_PPU_THREAD_ONCE_INIT,
+	SYS_PPU_THREAD_DONE_INIT,
+};
 
 int sys_ppu_thread_exit(int errorcode)
 {
@@ -15,9 +20,14 @@ int sys_ppu_thread_exit(int errorcode)
 
 int sys_ppu_thread_yield()
 {
-	sysPrxForUser.Log("sys_ppu_thread_yield()");
-	wxThread::Yield();
+	sysPrxForUser.Log("sys_ppu_thread_yield()");	
+	enable_log = !enable_log;
+	dump_enable = !dump_enable;
 
+	if(!enable_log)
+	{
+		Emu.Pause();
+	}
 	return CELL_OK;
 }
 
@@ -110,7 +120,10 @@ int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u32 arg, int prio, u32 
 	sysPrxForUser.Log("sys_ppu_thread_create(thread_id_addr=0x%x, entry=0x%x, arg=0x%x, prio=%d, stacksize=0x%x, flags=0x%llx, threadname_addr=0x%x('%s'))",
 		thread_id_addr, entry, arg, prio, stacksize, flags, threadname_addr, Memory.ReadString(threadname_addr));
 
-	if(!Memory.IsGoodAddr(entry) || !Memory.IsGoodAddr(thread_id_addr) || !Memory.IsGoodAddr(threadname_addr)) return CELL_EFAULT;
+	if(!Memory.IsGoodAddr(entry) || !Memory.IsGoodAddr(thread_id_addr) || !Memory.IsGoodAddr(threadname_addr))
+	{
+		return CELL_EFAULT;
+	}
 
 	PPCThread& new_thread = Emu.GetCPU().AddThread(true);
 
@@ -127,9 +140,28 @@ int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u32 arg, int prio, u32 
 	return CELL_OK;
 }
 
-int sys_ppu_thread_get_id()
+void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry)
 {
-	sysPrxForUser.Log("sys_ppu_thread_get_id()");
+	sysPrxForUser.Warning("sys_ppu_thread_once(once_ctrl_addr=0x%x, entry=0x%x)", once_ctrl_addr, entry);
 
-	return GetCurrentPPUThread().GetId();
+	if(Memory.IsGoodAddr(once_ctrl_addr, 4) && Memory.Read32(once_ctrl_addr) == SYS_PPU_THREAD_ONCE_INIT)
+	{
+		Memory.Write32(once_ctrl_addr, SYS_PPU_THREAD_DONE_INIT);
+
+		PPCThread& new_thread = Emu.GetCPU().AddThread(true);
+		new_thread.SetEntry(entry);
+		((PPUThread&)new_thread).LR = Emu.GetPPUThreadExit();
+		new_thread.Run();
+		new_thread.Exec();
+
+		GetCurrentPPUThread().Wait(new_thread);
+	}
+}
+
+int sys_ppu_thread_get_id(const u32 id_addr)
+{
+	sysPrxForUser.Log("sys_ppu_thread_get_id(id_addr=0x%x)", id_addr);
+
+	Memory.Write32(id_addr, GetCurrentPPUThread().GetId());
+	return CELL_OK;
 }

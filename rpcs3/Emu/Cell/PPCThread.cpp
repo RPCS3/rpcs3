@@ -17,6 +17,8 @@ PPCThread::PPCThread(PPCThreadType type)
 	, stack_addr(0)
 	, m_prio(0)
 	, m_offset(0)
+	, m_sync_wait(false)
+	, m_wait_thread_id(-1)
 {
 }
 
@@ -38,6 +40,9 @@ void PPCThread::Close()
 void PPCThread::Reset()
 {
 	CloseStack();
+
+	m_sync_wait = 0;
+	m_wait_thread_id = -1;
 
 	SetPc(0);
 	cycle = 0;
@@ -92,6 +97,36 @@ void PPCThread::SetName(const wxString& name)
 	m_name = name;
 }
 
+void PPCThread::Wait(bool wait)
+{
+	wxCriticalSectionLocker lock(m_cs_sync);
+	m_sync_wait = wait;
+}
+
+void PPCThread::Wait(const PPCThread& thr)
+{
+	wxCriticalSectionLocker lock(m_cs_sync);
+	m_wait_thread_id = thr.GetId();
+	m_sync_wait = true;
+}
+
+bool PPCThread::Sync()
+{
+	wxCriticalSectionLocker lock(m_cs_sync);
+
+	return m_sync_wait;
+}
+
+int PPCThread::ThreadStatus()
+{
+	if(Emu.IsStopped()) return PPCThread_Stopped;
+	if(TestDestroy()) return PPCThread_Break;
+	if(Emu.IsPaused() || Sync())
+		return PPCThread_Sleeping;
+
+	return PPCThread_Running;
+}
+
 void PPCThread::NextBranchPc()
 {
 	SetPc(nPC);
@@ -127,9 +162,9 @@ void PPCThread::SetEntry(const u64 pc)
 
 void PPCThread::SetBranch(const u64 pc)
 {
-	if(!Memory.IsGoodAddr(pc))
+	if(!Memory.IsGoodAddr(m_offset + pc))
 	{
-		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName(), pc, PC);
+		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName(), m_offset+ pc, m_offset + PC);
 		Emu.Pause();
 	}
 	nPC = pc;
@@ -255,9 +290,16 @@ void PPCThread::Task()
 			}
 		}
 
-		while(!Emu.IsStopped() && !TestDestroy())
+		while(true)
 		{
-			if(Emu.IsPaused())
+			int status = ThreadStatus();
+
+			if(status == PPCThread_Stopped || status == PPCThread_Break)
+			{
+				break;
+			}
+
+			if(status == PPCThread_Sleeping)
 			{
 				Sleep(1);
 				continue;

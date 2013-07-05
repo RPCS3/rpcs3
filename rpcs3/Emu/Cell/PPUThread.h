@@ -652,6 +652,30 @@ public:
 		SetCR_SO(n, XER.SO);
 	}
 
+	void UpdateCRnU(const u8 l, const u8 n, const u64 a, const u64 b)
+	{
+		if(l)
+		{
+			UpdateCRn<u64>(n, a, b);
+		}
+		else
+		{
+			UpdateCRn<u32>(n, a, b);
+		}
+	}
+
+	void UpdateCRnS(const u8 l, const u8 n, const u64 a, const u64 b)
+	{
+		if(l)
+		{
+			UpdateCRn<s64>(n, a, b);
+		}
+		else
+		{
+			UpdateCRn<s32>(n, a, b);
+		}
+	}
+
 	template<typename T> void UpdateCR0(const T val)
 	{
 		UpdateCRn<T>(0, val, 0);

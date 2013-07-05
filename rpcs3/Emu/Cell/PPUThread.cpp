@@ -60,13 +60,13 @@ void PPUThread::AddArgv(const wxString& arg)
 
 void PPUThread::InitRegs()
 {
-	const u32 entry = Memory.Read32(PC);
-	const u32 rtoc = Memory.Read32(PC + 4);
+	const u32 pc = Memory.Read32(entry);
+	const u32 rtoc = Memory.Read32(entry + 4);
 
 	ConLog.Write("entry = 0x%x", entry);
 	ConLog.Write("rtoc = 0x%x", rtoc);
 
-	SetPc(entry);
+	SetPc(pc);
 	
 	u64 argc = m_arg;
 	u64 argv = 0;
@@ -110,20 +110,18 @@ void PPUThread::InitRegs()
 	{
 		GPR[3] = argc;
 		GPR[4] = argv;
-		GPR[5] = argv ? argv - 0xc - 4 * argc : 0; //unk
+		GPR[5] = argv ? argv + 0xc + 4 * argc : 0; //unk
 	}
 	else
 	{
 		GPR[3] = m_arg;
 	}
 
-	GPR[0] = entry;
-	//GPR[7] = 0x80d90;
+	GPR[0] = pc;
 	GPR[8] = entry;
-	//GPR[10] = 0x131700;
 	GPR[11] = 0x80;
 	GPR[12] = Emu.GetMallocPageSize();
-	GPR[13] = Memory.MainMem.Alloc(0x10000) + 0x7060;
+	GPR[13] = Memory.PRXMem.Alloc(0x10000) + 0x7060 - 8;
 	GPR[28] = GPR[4];
 	GPR[29] = GPR[3];
 	GPR[31] = GPR[5];

@@ -8,6 +8,16 @@ enum PPCThreadType
 	PPC_THREAD_SPU,
 };
 
+enum PPCThreadStatus
+{
+	PPCThread_Ready,
+	PPCThread_Running,
+	PPCThread_Paused,
+	PPCThread_Stopped,
+	PPCThread_Sleeping,
+	PPCThread_Break,
+};
+
 class PPCThread : public ThreadBase
 {
 protected:
@@ -43,6 +53,7 @@ public:
 	void SetName(const wxString& name);
 	void SetPrio(const u64 prio) { m_prio = prio; }
 	void SetOffset(const u64 offset) { m_offset = offset; }
+	u64 GetOffset() { return m_offset; }
 
 	u64 GetPrio() const { return m_prio; }
 	wxString GetName() const { return m_name; }
@@ -87,6 +98,16 @@ protected:
 
 public:
 	~PPCThread();
+
+	u32 m_wait_thread_id;
+
+	wxCriticalSection m_cs_sync;
+	bool m_sync_wait;
+	void Wait(bool wait);
+	void Wait(const PPCThread& thr);
+	bool Sync();
+
+	int ThreadStatus();
 
 	void NextPc();
 	void NextBranchPc();

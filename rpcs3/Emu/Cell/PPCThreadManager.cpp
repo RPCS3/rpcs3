@@ -35,14 +35,19 @@ void PPCThreadManager::RemoveThread(const u32 id)
 {
 	for(u32 i=0; i<m_threads.GetCount(); ++i)
 	{
+		if(m_threads[i].m_wait_thread_id == id)
+		{
+			m_threads[i].Wait(false);
+			m_threads[i].m_wait_thread_id = -1;
+		}
+
 		if(m_threads[i].GetId() != id) continue;
 
 		wxGetApp().SendDbgCommand(DID_REMOVE_THREAD, &m_threads[i]);
 		m_threads[i].Close();
 		delete &m_threads[i];
 		m_threads.RemoveFAt(i);
-
-		break;
+		i--;
 	}
 
 	Emu.GetIdManager().RemoveID(id, false);

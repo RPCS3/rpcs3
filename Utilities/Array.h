@@ -209,6 +209,61 @@ template<typename T> struct Stack : public Array<T>
 	}
 };
 
+template<typename T, size_t size> class SizedStack
+{
+	T m_ptr[size];
+	uint m_count;
+
+public:
+	SizedStack()
+	{
+		Clear();
+	}
+
+	~SizedStack()
+	{
+		Clear();
+	}
+
+	void Clear()
+	{
+		m_count = 0;
+	}
+
+	bool Pop(T& dst)
+	{
+		if(!m_count)
+			return false;
+
+		dst = m_ptr[--m_count];
+		return true;
+	}
+
+	bool Push(const T& src)
+	{
+		if(m_count + 1 > size)
+			return false;
+
+		m_ptr[m_count++] = src;
+		return true;
+	}
+
+	size_t GetFreeCount() const
+	{
+		return size - m_count;
+	}
+
+	size_t GetCount() const
+	{
+		return m_count;
+	}
+
+	size_t GetMaxCount() const
+	{
+		return size;
+	}
+};
+
 template<typename T> class ArrayF
 {
 	u32 m_count;

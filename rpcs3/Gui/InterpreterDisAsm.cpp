@@ -164,16 +164,17 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 {
 	PC = addr;
 	m_list->Freeze();
+	disasm->offset = CPU.GetOffset();
 	for(uint i=0; i<m_item_count; ++i, PC += 4)
 	{
-		if(!Memory.IsGoodAddr(PC, 4))
+		if(!Memory.IsGoodAddr(CPU.GetOffset() + PC, 4))
 		{
 			m_list->SetItem(i, 0, wxString::Format("[%08llx] illegal address", PC));
 			continue;
 		}
 
 		disasm->dump_pc = PC;
-		decoder->Decode(Memory.Read32(PC));
+		decoder->Decode(Memory.Read32(CPU.GetOffset() + PC));
 
 		if(IsBreakPoint(PC))
 		{

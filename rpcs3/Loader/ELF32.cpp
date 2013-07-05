@@ -133,6 +133,16 @@ bool ELF32Loader::LoadPhdrData(u64 offset)
 	{
 		phdr_arr[i].Show();
 
+		if(phdr_arr[i].p_vaddr < min_addr)
+		{
+			min_addr = phdr_arr[i].p_vaddr;
+		}
+
+		if(phdr_arr[i].p_vaddr + phdr_arr[i].p_memsz > max_addr)
+		{
+			max_addr = phdr_arr[i].p_vaddr + phdr_arr[i].p_memsz;
+		}
+
 		if(phdr_arr[i].p_type == 0x00000001) //LOAD
 		{
 			if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
@@ -161,12 +171,23 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		Elf32_Shdr& shdr = shdr_arr[i];
+
 #ifdef LOADER_DEBUG
 		if(i < shdr_name_arr.GetCount()) ConLog.Write("Name: %s", shdr_name_arr[i]);
 		shdr.Show();
 		ConLog.SkipLn();
 #endif
 		if((shdr.sh_flags & SHF_ALLOC) != SHF_ALLOC) continue;
+
+		if(shdr.sh_addr < min_addr)
+		{
+			min_addr = shdr.sh_addr;
+		}
+
+		if(shdr.sh_addr + shdr.sh_size > max_addr)
+		{
+			max_addr = shdr.sh_addr + shdr.sh_size;
+		}
 
 		//const s64 addr = shdr.sh_addr;
 		//const s64 size = shdr.sh_size;

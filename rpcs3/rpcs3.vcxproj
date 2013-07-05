@@ -224,6 +224,7 @@
     <ClCompile Include="Emu\SysCalls\Callback.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Condition.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Event.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Heap.cpp" />
@@ -240,6 +241,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil_MsgDialog.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp" />

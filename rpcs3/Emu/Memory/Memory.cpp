@@ -529,6 +529,8 @@ bool MemoryBase::Write128NN(u64 addr, const u128 data)
 
 u8 MemoryBase::Read8(u64 addr)
 {
+	if(enable_log && addr >= 0xd0010a84)
+		ConLog.Warning("Read8 from block: [%08llx]", addr);
 	MemoryBlock& mem = GetMemByAddr(addr);
 	if(mem.IsNULL())
 	{
@@ -540,6 +542,8 @@ u8 MemoryBase::Read8(u64 addr)
 
 u16 MemoryBase::Read16(u64 addr)
 {
+	if(enable_log && addr >= 0xd0010a84)
+		ConLog.Warning("Read16 from block: [%08llx]", addr);
 	MemoryBlock& mem = GetMemByAddr(addr);
 	if(mem.IsNULL())
 	{
@@ -551,6 +555,8 @@ u16 MemoryBase::Read16(u64 addr)
 
 u32 MemoryBase::Read32(u64 addr)
 {
+	if(enable_log && addr >= 0xd0010a84)
+		ConLog.Warning("Read32 from block: [%08llx]", addr);
 	MemoryBlock& mem = GetMemByAddr(addr);
 	if(mem.IsNULL())
 	{
@@ -562,6 +568,8 @@ u32 MemoryBase::Read32(u64 addr)
 
 u64 MemoryBase::Read64(u64 addr)
 {
+	if(enable_log && addr >= 0xd0010a84)
+		ConLog.Warning("Read64 from block: [%08llx]", addr);
 	MemoryBlock& mem = GetMemByAddr(addr);
 	if(mem.IsNULL())
 	{

@@ -26,8 +26,6 @@ void SPUThread::DoReset()
 {
 	//reset regs
 	for(u32 i=0; i<128; ++i) GPR[i].Reset();
-
-	LSA = 0;
 }
 
 void SPUThread::InitRegs()

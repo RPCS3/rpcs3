@@ -1051,9 +1051,9 @@ private:
 	{
 		DisAsm_R3("lwarx", rd, ra, rb);
 	}
-	void LDX(u32 ra, u32 rs, u32 rb)
+	void LDX(u32 rd, u32 ra, u32 rb)
 	{
-		DisAsm_R3("ldx", ra, rs, rb);
+		DisAsm_R3("ldx", rd, ra, rb);
 	}
 	void LWZX(u32 rd, u32 ra, u32 rb)
 	{

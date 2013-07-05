@@ -207,6 +207,16 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 	{
 		phdr_arr[i].Show();
 
+		if(phdr_arr[i].p_vaddr < min_addr)
+		{
+			min_addr = phdr_arr[i].p_vaddr;
+		}
+
+		if(phdr_arr[i].p_vaddr + phdr_arr[i].p_memsz > max_addr)
+		{
+			max_addr = phdr_arr[i].p_vaddr + phdr_arr[i].p_memsz;
+		}
+
 		if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
 		{
 			ConLog.Warning
@@ -402,6 +412,16 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 	for(uint i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		Elf64_Shdr& shdr = shdr_arr[i];
+
+		if(shdr.sh_addr < min_addr)
+		{
+			min_addr = shdr.sh_addr;
+		}
+
+		if(shdr.sh_addr + shdr.sh_size > max_addr)
+		{
+			max_addr = shdr.sh_addr + shdr.sh_size;
+		}
 
 		if(i < shdr_name_arr.GetCount())
 		{

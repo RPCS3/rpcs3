@@ -24,9 +24,3 @@ public:
 		(*SPU_instr::rrr_list)(m_op, code);
 	}
 };
-
-#undef START_OPCODES_GROUP_
-#undef START_OPCODES_GROUP
-#undef ADD_OPCODE
-#undef ADD_NULL_OPCODE
-#undef END_OPCODES_GROUP

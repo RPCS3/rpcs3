@@ -1,137 +1,7 @@
 #include "stdafx.h"
 #include "SysCalls.h"
+#include "Modules.h"
 #include "SC_FUNC.h"
-#include <vector>
-
-ArrayF<ModuleFunc> g_modules_funcs_list;
-ArrayF<Module> g_modules_list;
-
-bool IsLoadedFunc(u32 id)
-{
-	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
-	{
-		if(g_modules_funcs_list[i].id == id)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool CallFunc(u32 id)
-{
-	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
-	{
-		if(g_modules_funcs_list[i].id == id)
-		{
-			(*g_modules_funcs_list[i].func)();
-
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool UnloadFunc(u32 id)
-{
-	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
-	{
-		if(g_modules_funcs_list[i].id == id)
-		{
-			g_modules_funcs_list.RemoveAt(i);
-
-			return true;
-		}
-	}
-
-	return false;
-}
-
-void UnloadModules()
-{
-	for(u32 i=0; i<g_modules_list.GetCount(); ++i)
-	{
-		g_modules_list[i].SetLoaded(false);
-	}
-
-	g_modules_funcs_list.Clear();
-}
-
-Module* GetModuleByName(const wxString& name)
-{
-	for(u32 i=0; i<g_modules_list.GetCount(); ++i)
-	{
-		if(g_modules_list[i].GetName().Cmp(name) == 0)
-		{
-			return &g_modules_list[i];
-		}
-	}
-
-	return nullptr;
-}
-
-Module* GetModuleById(u16 id)
-{
-	for(u32 i=0; i<g_modules_list.GetCount(); ++i)
-	{
-		if(g_modules_list[i].GetID() == id)
-		{
-			return &g_modules_list[i];
-		}
-	}
-
-	return nullptr;
-}
-
-Module::Module(const char* name, u16 id)
-	: m_is_loaded(false)
-	, m_name(name)
-	, m_id(id)
-{
-	g_modules_list.Add(this);
-}
-
-void Module::Load()
-{
-	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
-	{
-		if(IsLoadedFunc(m_funcs_list[i].id)) continue;
-
-		g_modules_funcs_list.Add(m_funcs_list[i]);
-	}
-}
-
-void Module::UnLoad()
-{
-	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
-	{
-		UnloadFunc(m_funcs_list[i].id);
-	}
-}
-
-bool Module::Load(u32 id)
-{
-	if(IsLoadedFunc(id)) return false;
-
-	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
-	{
-		if(m_funcs_list[i].id == id)
-		{
-			g_modules_funcs_list.Add(m_funcs_list[i]);
-
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool Module::UnLoad(u32 id)
-{
-	return UnloadFunc(id);
-}
 
 static func_caller* sc_table[1024] = 
 {
@@ -160,20 +30,20 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //114
 	null_func, null_func, null_func, null_func, null_func, //119
 	null_func, null_func, null_func, null_func, null_func, //124
-	null_func, null_func, null_func, null_func, null_func, //129
-	null_func, null_func, null_func, null_func, null_func, //134
-	null_func, null_func, null_func, null_func, null_func, //139
+	null_func, null_func, null_func, bind_func(sys_event_queue_create), null_func, //129
+	bind_func(sys_event_queue_receive), null_func, null_func, null_func, bind_func(sys_event_port_create), //134
+	null_func, bind_func(sys_event_port_connect_local), null_func, null_func, null_func, //139
 	null_func, null_func, null_func, null_func, null_func, //144
 	bind_func(sys_time_get_current_time), bind_func(sys_time_get_system_time), bind_func(sys_time_get_timebase_frequency), null_func, null_func, //149
 	null_func, null_func, null_func, null_func, null_func, //154
-	null_func, null_func, null_func, null_func, null_func, //159
+	null_func, bind_func(sys_spu_image_open), null_func, null_func, null_func, //159
 	bind_func(sys_raw_spu_create), null_func, null_func, null_func, null_func, //164
 	null_func, null_func, null_func, null_func, bind_func(sys_spu_initialize), //169
-	bind_func(sys_spu_thread_group_create), null_func, null_func, null_func, null_func, //174
+	bind_func(sys_spu_thread_group_create), null_func, bind_func(sys_spu_thread_initialize), bind_func(sys_spu_thread_group_start), null_func, //174
 	null_func, null_func, null_func, null_func, null_func, //179
-	null_func, null_func, null_func, null_func, null_func, //184
+	null_func, bind_func(sys_spu_thread_write_ls), bind_func(sys_spu_thread_read_ls), null_func, null_func, //184
 	null_func, null_func, null_func, null_func, null_func, //189
-	null_func, null_func, null_func, null_func, null_func, //194
+	bind_func(sys_spu_thread_write_spu_mb), null_func, null_func, null_func, null_func, //194
 	null_func, null_func, null_func, null_func, null_func, //199
 	null_func, null_func, null_func, null_func, null_func, //204
 	null_func, null_func, null_func, null_func, null_func, //209
@@ -185,7 +55,7 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //239
 	null_func, null_func, null_func, null_func, null_func, //244
 	null_func, null_func, null_func, null_func, null_func, //249
-	null_func, null_func, null_func, null_func, null_func, //254
+	null_func, bind_func(sys_spu_thread_group_connect_event_all_threads), null_func, null_func, null_func, //254
 	null_func, null_func, null_func, null_func, null_func, //259
 	null_func, null_func, null_func, null_func, null_func, //264
 	null_func, null_func, null_func, null_func, null_func, //269
@@ -350,55 +220,67 @@ SysCalls::~SysCalls()
 {
 }
 
-s64 SysCalls::DoSyscall(u32 code)
+bool enable_log = false;
+
+void SysCalls::DoSyscall(u32 code)
 {
 	if(code < 0x400)
 	{
 		if(sc_table[code])
 		{
 			(*sc_table[code])();
-			return SC_ARGS_1;
+			return;
 		}
-
 		//TODO: remove this
 		switch(code)
 		{
 			//process
-			case 2: return lv2ProcessWaitForChild(CPU);
-			case 4: return lv2ProcessGetStatus(CPU);
-			case 5: return lv2ProcessDetachChild(CPU);
-			case 12: return lv2ProcessGetNumberOfObject(CPU);
-			case 13: return lv2ProcessGetId(CPU);
-			case 18: return lv2ProcessGetPpid(CPU);
-			case 19: return lv2ProcessKill(CPU);
-			case 23: return lv2ProcessWaitForChild2(CPU);
-			case 25: return lv2ProcessGetSdkVersion(CPU);
+			case 2: RESULT(lv2ProcessWaitForChild(CPU)); return;
+			case 4: RESULT(lv2ProcessGetStatus(CPU)); return;
+			case 5: RESULT(lv2ProcessDetachChild(CPU)); return;
+			case 12: RESULT(lv2ProcessGetNumberOfObject(CPU)); return;
+			case 13: RESULT(lv2ProcessGetId(CPU)); return;
+			case 18: RESULT(lv2ProcessGetPpid(CPU)); return;
+			case 19: RESULT(lv2ProcessKill(CPU)); return;
+			case 23: RESULT(lv2ProcessWaitForChild2(CPU)); return;
+			case 25: RESULT(lv2ProcessGetSdkVersion(CPU)); return;
 			//timer
 			case 141:
 			case 142:
 				Sleep(SC_ARGS_1 / (1000 * 1000));
-			return 0;
+				RESULT(0);
+			return;
 
 			//tty
 			case 988:
 				ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",
 					CPU.GPR[3], CPU.GPR[4], CPU.PC);
-			return 0;
+				RESULT(0);
+			return;
 
 			case 999:
 				dump_enable = !dump_enable;
 				ConLog.Warning("Dump %s", dump_enable ? "enabled" : "disabled");
-			return 0;
+			return;
+
+			case 1000:
+				enable_log = !enable_log;
+				ConLog.Warning("Log %s", enable_log ? "enabled" : "disabled");
+			return;
 		}
+
 		ConLog.Error("Unknown syscall: %d - %08x", code, code);
-		return 0;
+		RESULT(0);
+		return;
 	}
 	
-	if(CallFunc(code)) return SC_ARGS_1;
-
+	if(CallFunc(code))
+	{
+		return;
+	}
 	//ConLog.Error("Unknown function 0x%08x", code);
 	//return 0;
 
 	//TODO: remove this
-	return DoFunc(code);
+	RESULT(DoFunc(code));
 }

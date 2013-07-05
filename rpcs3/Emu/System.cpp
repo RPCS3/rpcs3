@@ -12,7 +12,10 @@ using namespace PPU_instr;
 static const wxString& BreakPointsDBName = "BreakPoints.dat";
 static const u16 bpdb_version = 0x1000;
 
-//SysCalls SysCallsManager;
+ModuleInitializer::ModuleInitializer()
+{
+	Emu.AddModuleInit(this);
+}
 
 Emulator::Emulator()
 	: m_status(Stopped)
@@ -24,6 +27,11 @@ Emulator::Emulator()
 
 void Emulator::Init()
 {
+	while(m_modules_init.GetCount())
+	{
+		m_modules_init[0].Init();
+		m_modules_init.RemoveAt(0);
+	}
 	//if(m_memory_viewer) m_memory_viewer->Close();
 	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
@@ -108,7 +116,19 @@ void Emulator::Load()
 	LoadPoints(BreakPointsDBName);
 	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64);
 
-	thread.SetEntry(l.GetEntry());
+	if(l.GetMachine() == MACHINE_SPU)
+	{
+		ConLog.Write("offset = 0x%llx", Memory.MainMem.GetStartAddr());
+		ConLog.Write("max addr = 0x%x", l.GetMaxAddr());
+		thread.SetOffset(Memory.MainMem.GetStartAddr());
+		Memory.MainMem.Alloc(Memory.MainMem.GetStartAddr() + l.GetMaxAddr(), 0xFFFFED - l.GetMaxAddr());
+		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
+	}
+	else
+	{
+		thread.SetEntry(l.GetEntry());
+	}
+	
 	thread.SetArg(thread.GetId());
 	Memory.StackMem.Alloc(0x1000);
 	thread.InitStack();

@@ -3583,7 +3583,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x2f85c0ef: return sys_lwmutex_create(SC_ARGS_2);//FUNC_LOG_ERROR("TODO: sys_lwmutex_create");
 	case 0x3172759d: FUNC_LOG_ERROR("TODO: sys_game_get_temperature");
 	case 0x318f17e1: FUNC_LOG_ERROR("TODO: _sys_memalign");
-	case 0x350d454e: return sys_ppu_thread_get_id();//FUNC_LOG_ERROR("TODO: sys_ppu_thread_get_id");
+	case 0x350d454e: return sys_ppu_thread_get_id(SC_ARGS_1);//FUNC_LOG_ERROR("TODO: sys_ppu_thread_get_id");
 	case 0x35168520: return sys_heap_malloc(SC_ARGS_2); //FUNC_LOG_ERROR("TODO: _sys_heap_malloc");
 	case 0x3bd53c7b: FUNC_LOG_ERROR("TODO: _sys_memchr");
 	case 0x3dd4a957: FUNC_LOG_ERROR("TODO: sys_ppu_thread_register_atexit");
@@ -3647,7 +3647,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0xa285139d: FUNC_LOG_ERROR("TODO: sys_spinlock_lock");
 	case 0xa2c7ba64: FUNC_LOG_ERROR("TODO: sys_prx_exitspawn_with_level");
 	case 0xa330ad84: FUNC_LOG_ERROR("TODO: sys_prx_load_module_on_memcontainer_by_fd");
-	case 0xa3e3be68: FUNC_LOG_ERROR("TODO: sys_ppu_thread_once");
+	case 0xa3e3be68: sys_ppu_thread_once(SC_ARGS_2); return SC_ARGS_1;//FUNC_LOG_ERROR("TODO: sys_ppu_thread_once");
 	case 0xa5d06bf0: FUNC_LOG_ERROR("TODO: sys_prx_get_module_list");
 	case 0xaa6d9bff: FUNC_LOG_ERROR("TODO: sys_prx_load_module_on_memcontainer");
 	case 0xac6fc404: FUNC_LOG_ERROR("TODO: sys_ppu_thread_unregister_atexit");
