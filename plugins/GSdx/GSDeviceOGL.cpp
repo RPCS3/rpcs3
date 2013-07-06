@@ -1,5 +1,5 @@
 /*
- *	Copyright (C) 2011-2011 Gregory hainaut
+ *	Copyright (C) 2011-2013 Gregory hainaut
  *	Copyright (C) 2007-2009 Gabest
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -56,9 +56,9 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_fbo(0)
 	  , m_fbo_read(0)
 	  , m_vb_sr(NULL)
+	  , m_shader(NULL)
 {
 	m_msaa = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_MSAA", 0) : 0;
-	m_debug_shader = !!theApp.GetConfig("debug_ogl_shader", 1);
 
 	memset(&m_merge_obj, 0, sizeof(m_merge_obj));
 	memset(&m_interlace, 0, sizeof(m_interlace));
@@ -75,36 +75,28 @@ GSDeviceOGL::GSDeviceOGL()
 
 GSDeviceOGL::~GSDeviceOGL()
 {
+	// If the create function wasn't called nothing to do.
+	if (m_shader == NULL)
+		return;
+
 	// Clean vertex buffer state
 	delete (m_vb_sr);
 
 	// Clean m_merge_obj
 	for (uint32 i = 0; i < 2; i++)
-		if (GLLoader::found_GL_ARB_separate_shader_objects)
-			gl_DeleteProgram(m_merge_obj.ps[i]);
-		else
-			gl_DeleteShader(m_merge_obj.ps[i]);
+		m_shader->Delete(m_merge_obj.ps[i]);
 	delete (m_merge_obj.cb);
 	delete (m_merge_obj.bs);
-	
+
 	// Clean m_interlace
 	for (uint32 i = 0; i < 2; i++)
-		if (GLLoader::found_GL_ARB_separate_shader_objects)
-			gl_DeleteProgram(m_interlace.ps[i]);
-		else
-			gl_DeleteShader(m_interlace.ps[i]);
+		m_shader->Delete(m_interlace.ps[i]);
 	delete (m_interlace.cb);
 
 	// Clean m_convert
-	if (GLLoader::found_GL_ARB_separate_shader_objects) {
-		gl_DeleteProgram(m_convert.vs);
-		for (uint32 i = 0; i < 2; i++)
-			gl_DeleteProgram(m_convert.ps[i]);
-	} else {
-		gl_DeleteShader(m_convert.vs);
-		for (uint32 i = 0; i < 2; i++)
-			gl_DeleteShader(m_convert.ps[i]);
-	}
+	m_shader->Delete(m_convert.vs);
+	for (uint32 i = 0; i < 2; i++)
+		m_shader->Delete(m_convert.ps[i]);
 	gl_DeleteSamplers(1, &m_convert.ln);
 	gl_DeleteSamplers(1, &m_convert.pt);
 	delete m_convert.dss;
@@ -112,11 +104,7 @@ GSDeviceOGL::~GSDeviceOGL()
 
 	// Clean m_fxaa
 	delete m_fxaa.cb;
-	if (GLLoader::found_GL_ARB_separate_shader_objects) {
-		gl_DeleteProgram(m_fxaa.ps);
-	} else {
-		gl_DeleteShader(m_fxaa.ps);
-	}
+	m_shader->Delete(m_fxaa.ps);
 
 	// Clean m_date
 	delete m_date.dss;
@@ -124,16 +112,10 @@ GSDeviceOGL::~GSDeviceOGL()
 
 	// Clean shadeboost
 	delete m_shadeboost.cb;
-	if (GLLoader::found_GL_ARB_separate_shader_objects) {
-		gl_DeleteProgram(m_shadeboost.ps);
-	} else {
-		gl_DeleteShader(m_shadeboost.ps);
-	}
+	m_shader->Delete(m_shadeboost.ps);
 
 
 	// Clean various opengl allocation
-	if (GLLoader::found_GL_ARB_separate_shader_objects)
-		gl_DeleteProgramPipelines(1, &m_pipeline);
 	gl_DeleteFramebuffers(1, &m_fbo);
 	gl_DeleteFramebuffers(1, &m_fbo_read);
 
@@ -143,19 +125,10 @@ GSDeviceOGL::~GSDeviceOGL()
 	gl_DeleteSamplers(1, &m_palette_ss);
 	delete m_vb;
 
+	for (uint32 key = 0; key < VSSelector::size(); key++) m_shader->Delete(m_vs[key]);
+	for (uint32 key = 0; key < GSSelector::size(); key++) m_shader->Delete(m_gs[key]);
+	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) m_shader->Delete(it->second);
 
-	if (GLLoader::found_GL_ARB_separate_shader_objects) {
-		for (uint32 key = 0; key < VSSelector::size(); key++) gl_DeleteProgram(m_vs[key]);
-		for (uint32 key = 0; key < GSSelector::size(); key++) gl_DeleteProgram(m_gs[key]);
-		for (auto it = m_ps.begin(); it != m_ps.end() ; it++) gl_DeleteProgram(it->second);
-	} else {
-		for (uint32 key = 0; key < VSSelector::size(); key++) gl_DeleteShader(m_vs[key]);
-		for (uint32 key = 0; key < GSSelector::size(); key++) gl_DeleteShader(m_gs[key]);
-		for (auto it = m_ps.begin(); it != m_ps.end() ; it++) gl_DeleteShader(it->second);
-
-		for (auto it = m_single_prog.begin(); it != m_single_prog.end() ; it++) gl_DeleteProgram(it->second);
-		m_single_prog.clear();
-	}
 	m_ps.clear();
 
 	gl_DeleteSamplers(PSSamplerSelector::size(), m_ps_ss);
@@ -215,10 +188,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// Various object
 	// ****************************************************************
-	if (GLLoader::found_GL_ARB_separate_shader_objects) {
-		gl_GenProgramPipelines(1, &m_pipeline);
-		gl_BindProgramPipeline(m_pipeline);
-	}
+	m_shader = new GSShaderOGL(!!theApp.GetConfig("debug_ogl_shader", 1), GLLoader::found_GL_ARB_separate_shader_objects, GLLoader::found_GL_ARB_shading_language_420pack);
 
 	gl_GenFramebuffers(1, &m_fbo);
 	gl_GenFramebuffers(1, &m_fbo_read);
@@ -236,28 +206,13 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// convert
 	// ****************************************************************
-	CompileShaderFromSource("convert.glsl", "vs_main", GL_VERTEX_SHADER, &m_convert.vs, convert_glsl);
+	m_convert.vs = m_shader->Compile("convert.glsl", "vs_main", GL_VERTEX_SHADER, convert_glsl);
 	for(size_t i = 0; i < countof(m_convert.ps); i++)
-		CompileShaderFromSource("convert.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_convert.ps[i], convert_glsl);
+		m_convert.ps[i] = m_shader->Compile("convert.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, convert_glsl);
 
 	// Note the following object are initialized to 0 so disabled.
 	// Note: maybe enable blend with a factor of 1
 	// m_convert.dss, m_convert.bs
-
-#if 0
-	memset(&dsd, 0, sizeof(dsd));
-
-	dsd.DepthEnable = false;
-	dsd.StencilEnable = false;
-
-	hr = m_dev->CreateDepthStencilState(&dsd, &m_convert.dss);
-
-	memset(&bsd, 0, sizeof(bsd));
-
-	bsd.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-
-	hr = m_dev->CreateBlendState(&bsd, &m_convert.bs);
-#endif
 
 	m_convert.ln = CreateSampler(true, false, false);
 	m_convert.pt = CreateSampler(false, false, false);
@@ -271,7 +226,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	m_merge_obj.cb = new GSUniformBufferOGL(g_merge_cb_index, sizeof(MergeConstantBuffer));
 
 	for(size_t i = 0; i < countof(m_merge_obj.ps); i++)
-		CompileShaderFromSource("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_merge_obj.ps[i], merge_glsl);
+		m_merge_obj.ps[i] = m_shader->Compile("merge.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, merge_glsl);
 
 	m_merge_obj.bs = new GSBlendStateOGL();
 	m_merge_obj.bs->EnableBlend();
@@ -283,7 +238,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	m_interlace.cb = new GSUniformBufferOGL(g_interlace_cb_index, sizeof(InterlaceConstantBuffer));
 
 	for(size_t i = 0; i < countof(m_interlace.ps); i++)
-		CompileShaderFromSource("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, &m_interlace.ps[i], interlace_glsl);
+		m_interlace.ps[i] = m_shader->Compile("interlace.glsl", format("ps_main%d", i), GL_FRAGMENT_SHADER, interlace_glsl);
 	// ****************************************************************
 	// Shade boost
 	// ****************************************************************
@@ -296,7 +251,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		+ format("#define SB_BRIGHTNESS %d\n", ShadeBoost_Brightness)
 		+ format("#define SB_CONTRAST %d\n", ShadeBoost_Contrast);
 
-	CompileShaderFromSource("shadeboost.glsl", "ps_main", GL_FRAGMENT_SHADER, &m_shadeboost.ps, shadeboost_glsl, shade_macro);
+	m_shadeboost.ps = m_shader->Compile("shadeboost.glsl", "ps_main", GL_FRAGMENT_SHADER, shadeboost_glsl, shade_macro);
 
 	// ****************************************************************
 	// rasterization configuration
@@ -321,13 +276,9 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	rd.AntialiasedLineEnable = false;
 #endif
 
-	// TODO Later
 	// ****************************************************************
 	// fxaa (bonus)
 	// ****************************************************************
-	// FIXME need to define FXAA_GLSL_130 for the shader
-	// FIXME need to manually set the index...
-	// FIXME need dofxaa interface too
 	std::string fxaa_macro = "#define FXAA_GLSL_130 1\n";
 	if (GLLoader::found_GL_ARB_gpu_shader5) {
 		// This extension become core on openGL4
@@ -335,7 +286,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 		fxaa_macro += "#define FXAA_GATHER4_ALPHA 1\n";
 	}
 	m_fxaa.cb = new GSUniformBufferOGL(g_fxaa_cb_index, sizeof(FXAAConstantBuffer));
-	CompileShaderFromSource("fxaa.fx", "ps_main", GL_FRAGMENT_SHADER, &m_fxaa.ps, fxaa_fx, fxaa_macro);
+	m_fxaa.ps = m_shader->Compile("fxaa.fx", "ps_main", GL_FRAGMENT_SHADER, fxaa_fx, fxaa_macro);
 
 	// ****************************************************************
 	// DATE
@@ -457,102 +408,10 @@ void GSDeviceOGL::Flip()
 #endif
 }
 
-static void set_uniform_buffer_binding(GLuint prog, GLchar* name, GLuint binding) {
-	GLuint index;
-	index = gl_GetUniformBlockIndex(prog, name);
-	if (index != GL_INVALID_INDEX) {
-		gl_UniformBlockBinding(prog, index, binding);
-	}
-}
-
-static void set_sampler_uniform_binding(GLuint prog, GLchar* name, GLuint binding) {
-	GLint loc = gl_GetUniformLocation(prog, name);
-	if (loc != -1) {
-		if (GLLoader::found_GL_ARB_separate_shader_objects) {
-			gl_ProgramUniform1i(prog, loc, binding);
-		} else {
-			gl_Uniform1i(loc, binding);
-		}
-	}
-}
-
-GLuint GSDeviceOGL::link_prog()
-{
-	GLuint single_prog = gl_CreateProgram();
-	if (m_state.vs) gl_AttachShader(single_prog, m_state.vs);
-	if (m_state.ps) gl_AttachShader(single_prog, m_state.ps);
-	if (m_state.gs) gl_AttachShader(single_prog, m_state.gs);
-
-	gl_LinkProgram(single_prog);
-
-	GLint status;
-	gl_GetProgramiv(single_prog, GL_LINK_STATUS, &status);
-	if (!status) {
-		GLint log_length = 0;
-		gl_GetProgramiv(single_prog, GL_INFO_LOG_LENGTH, &log_length);
-		if (log_length > 0) {
-			char* log = new char[log_length];
-			gl_GetProgramInfoLog(single_prog, log_length, NULL, log);
-			fprintf(stderr, "%s", log);
-			delete[] log;
-		}
-		fprintf(stderr, "\n");
-	}
-
-#if 0
-	if (m_state.vs) gl_DetachShader(single_prog, m_state.vs);
-	if (m_state.ps) gl_DetachShader(single_prog, m_state.ps);
-	if (m_state.gs) gl_DetachShader(single_prog, m_state.gs);
-#endif
-
-	return single_prog;
-}
-
 void GSDeviceOGL::BeforeDraw()
 {
-	hash_map<uint64, GLuint >::iterator single_prog;
-
-
-	if (!GLLoader::found_GL_ARB_separate_shader_objects) {
-		// Note: shader are integer lookup pointer. They start from 1 and incr
-		// every time you create a new shader OR a new program.
-		uint64 sel = (uint64)m_state.vs << 40 | (uint64)m_state.gs << 20 | m_state.ps;
-		single_prog = m_single_prog.find(sel);
-		if (single_prog == m_single_prog.end()) {
-			m_single_prog[sel] = link_prog();
-			single_prog = m_single_prog.find(sel);
-		}
-
-		gl_UseProgram(single_prog->second);
-	}
-
-	if (!GLLoader::found_GL_ARB_shading_language_420pack) {
-		if (GLLoader::found_GL_ARB_separate_shader_objects) {
-			set_uniform_buffer_binding(m_state.vs, "cb20", 20);
-			set_uniform_buffer_binding(m_state.ps, "cb21", 21);
-
-			set_uniform_buffer_binding(m_state.ps, "cb10", 10);
-			set_uniform_buffer_binding(m_state.ps, "cb11", 11);
-			set_uniform_buffer_binding(m_state.ps, "cb12", 12);
-			set_uniform_buffer_binding(m_state.ps, "cb13", 13);
-
-			set_sampler_uniform_binding(m_state.ps, "TextureSampler", 0);
-			set_sampler_uniform_binding(m_state.ps, "PaletteSampler", 1);
-			set_sampler_uniform_binding(m_state.ps, "RTCopySampler", 2);
-		} else {
-			set_uniform_buffer_binding(single_prog->second, "cb20", 20);
-			set_uniform_buffer_binding(single_prog->second, "cb21", 21);
-
-			set_uniform_buffer_binding(single_prog->second, "cb10", 10);
-			set_uniform_buffer_binding(single_prog->second, "cb11", 11);
-			set_uniform_buffer_binding(single_prog->second, "cb12", 12);
-			set_uniform_buffer_binding(single_prog->second, "cb13", 13);
-
-			set_sampler_uniform_binding(single_prog->second, "TextureSampler", 0);
-			set_sampler_uniform_binding(single_prog->second, "PaletteSampler", 1);
-			set_sampler_uniform_binding(single_prog->second, "RTCopySampler", 2);
-		}
-	}
+	m_shader->UseProgram();
+	m_shader->SetupUniform();
 }
 
 void GSDeviceOGL::AfterDraw()
@@ -875,13 +734,13 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// vs
 	// ************************************
 
-	VSSetShader(m_convert.vs);
+	m_shader->VS(m_convert.vs);
 
 	// ************************************
 	// gs
 	// ************************************
 
-	GSSetShader(0);
+	m_shader->GS(0);
 
 	// ************************************
 	// ps
@@ -889,7 +748,7 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 
 	PSSetShaderResources(st, NULL);
 	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt, 0);
-	PSSetShader(ps);
+	m_shader->PS(ps);
 
 	// ************************************
 	// Draw
@@ -1006,11 +865,11 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 	// vs
 
-	VSSetShader(m_convert.vs);
+	m_shader->VS(m_convert.vs);
 
 	// gs
 
-	GSSetShader(0);
+	m_shader->GS(0);
 
 	// ps
 
@@ -1018,7 +877,7 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 	PSSetShaderResources(rt2, NULL);
 	PSSetSamplerState(m_convert.pt, 0);
-	PSSetShader(m_convert.ps[datm ? 2 : 3]);
+	m_shader->PS(m_convert.ps[datm ? 2 : 3]);
 
 	//
 
@@ -1104,26 +963,6 @@ void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)
 	m_state.vb->SetTopology(topology);
 }
 
-void GSDeviceOGL::VSSetShader(GLuint vs)
-{
-	if (m_state.vs != vs)
-	{
-		m_state.vs = vs;
-		if (GLLoader::found_GL_ARB_separate_shader_objects)
-			gl_UseProgramStages(m_pipeline, GL_VERTEX_SHADER_BIT, vs);
-	}
-}
-
-void GSDeviceOGL::GSSetShader(GLuint gs)
-{
-	if (m_state.gs != gs)
-	{
-		m_state.gs = gs;
-		if (GLLoader::found_GL_ARB_separate_shader_objects)
-			gl_UseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, gs);
-	}
-}
-
 void GSDeviceOGL::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
 {
 	PSSetShaderResource(0, sr0);
@@ -1152,16 +991,6 @@ void GSDeviceOGL::PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2)
 	if (m_state.ps_ss[1] != ss1) {
 		m_state.ps_ss[1] = ss1;
 		gl_BindSampler(1, ss1);
-	}
-}
-
-void GSDeviceOGL::PSSetShader(GLuint ps)
-{
-	if (m_state.ps != ps)
-	{
-		m_state.ps = ps;
-		if (GLLoader::found_GL_ARB_separate_shader_objects)
-			gl_UseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, ps);
 	}
 }
 
@@ -1244,161 +1073,6 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 	{
 		m_state.scissor = r;
 		glScissor( r.x, r.y, r.width(), r.height() );
-	}
-}
-
-void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const char* glsl_h_code, const std::string& macro_sel)
-{
-	// Not supported
-	if (type == GL_GEOMETRY_SHADER && !GLLoader::found_geometry_shader) {
-		*program = 0;
-		return;
-	}
-
-	// *****************************************************
-	// Build a header string
-	// *****************************************************
-	// First select the version (must be the first line so we need to generate it
-	std::string version;
-	if (GLLoader::found_only_gl30) {
-		version = "#version 130\n";
-	} else {
-		version = "#version 330\n";
-	}
-	if (GLLoader::found_GL_ARB_shading_language_420pack) {
-		version += "#extension GL_ARB_shading_language_420pack: require\n";
-	} else {
-		version += "#define DISABLE_GL42\n";
-	}
-	if (GLLoader::found_GL_ARB_separate_shader_objects) {
-		version += "#extension GL_ARB_separate_shader_objects : require\n";
-	} else {
-		if (!GLLoader::fglrx_buggy_driver)
-			version += "#define DISABLE_SSO\n";
-	}
-	if (GLLoader::found_only_gl30) {
-		version += "#extension GL_ARB_explicit_attrib_location : require\n";
-		version += "#extension GL_ARB_uniform_buffer_object : require\n";
-	}
-#ifdef ENABLE_OGL_STENCIL_DEBUG
-	version += "#define ENABLE_OGL_STENCIL_DEBUG 1\n";
-#endif
-
-	// Allow to puts several shader in 1 files
-	std::string shader_type;
-	switch (type) {
-		case GL_VERTEX_SHADER:
-			shader_type = "#define VERTEX_SHADER 1\n";
-			break;
-		case GL_GEOMETRY_SHADER:
-			shader_type = "#define GEOMETRY_SHADER 1\n";
-			break;
-		case GL_FRAGMENT_SHADER:
-			shader_type = "#define FRAGMENT_SHADER 1\n";
-			break;
-		default: ASSERT(0);
-	}
-
-	// Select the entry point ie the main function
-	std::string entry_main = format("#define %s main\n", entry.c_str());
-
-	std::string header = version + shader_type + entry_main + macro_sel;
-
-	// *****************************************************
-	// Read the source file
-	// *****************************************************
-	std::string source;
-	std::string line;
-	// Each linux distributions have his rules for path so we give them the possibility to
-	// change it with compilation flags. -- Gregory
-#ifdef GLSL_SHADER_DIR_COMPILATION
-#define xGLSL_SHADER_DIR_str(s) GLSL_SHADER_DIR_str(s)
-#define GLSL_SHADER_DIR_str(s) #s
-	const std::string shader_file = string(xGLSL_SHADER_DIR_str(GLSL_SHADER_DIR_COMPILATION)) + '/' + glsl_file;
-#else
-	const std::string shader_file = string("plugins/") + glsl_file;
-#endif
-	std::ifstream myfile(shader_file.c_str());
-	bool failed_to_open_glsl = true;
-	if (myfile.is_open()) {
-		while ( myfile.good() )
-		{
-			getline (myfile,line);
-			source += line;
-			source += '\n';
-		}
-		myfile.close();
-		failed_to_open_glsl = false;
-	}
-
-
-	// Note it is better to separate header and source file to have the good line number
-	// in the glsl compiler report
-	const char** sources_array = (const char**)malloc(2*sizeof(char*));
-
-	char* header_str = (char*)malloc(header.size() + 1);
-	sources_array[0] = header_str;
-	header.copy(header_str, header.size(), 0);
-	header_str[header.size()] = '\0';
-
-	char* source_str = (char*)malloc(source.size() + 1);
-	if (failed_to_open_glsl) {
-		if (glsl_h_code)
-			sources_array[1] = glsl_h_code;
-		else
-			sources_array[1] = '\0';
-	} else {
-		sources_array[1] = source_str;
-		source.copy(source_str, source.size(), 0);
-		source_str[source.size()] = '\0';
-	}
-
-
-	if (GLLoader::found_GL_ARB_separate_shader_objects) {
-	#if 0
-		// Could be useful one day
-		const GLchar* ShaderSource[1];
-		ShaderSource[0] = header.append(source).c_str();
-		*program = gl_CreateShaderProgramv(type, 1, &ShaderSource[0]);
-	#else
-		*program = gl_CreateShaderProgramv(type, 2, sources_array);
-	#endif
-	} else {
-		*program = gl_CreateShader(type);
-		gl_ShaderSource(*program, 2, sources_array, NULL);
-		gl_CompileShader(*program);
-	}
-
-	free(source_str);
-	free(header_str);
-	free(sources_array);
-
-	if (m_debug_shader) {
-		GLint log_length = 0;
-		GLint status = false;
-		if (GLLoader::found_GL_ARB_separate_shader_objects) {
-			gl_GetProgramiv(*program, GL_INFO_LOG_LENGTH, &log_length);
-			gl_GetProgramiv(*program, GL_LINK_STATUS, &status);
-		} else {
-			gl_GetShaderiv(*program, GL_INFO_LOG_LENGTH, &log_length);
-			gl_GetShaderiv(*program, GL_COMPILE_STATUS, &status);
-		}
-
-		if (log_length > 0 && !status) {
-			// Print a nice debug log
-			fprintf(stderr, "%s (entry %s, prog %d) :", glsl_file.c_str(), entry.c_str(), *program);
-			fprintf(stderr, "\n%s", macro_sel.c_str());
-
-			char* log = new char[log_length];
-			if (GLLoader::found_GL_ARB_separate_shader_objects)
-				gl_GetProgramInfoLog(*program, log_length, NULL, log);
-			else
-				gl_GetShaderInfoLog(*program, log_length, NULL, log);
-
-			fprintf(stderr, "%s", log);
-			fprintf(stderr, "\n");
-			delete[] log;
-		}
 	}
 }
 

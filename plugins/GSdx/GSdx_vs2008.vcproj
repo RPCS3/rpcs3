@@ -1170,6 +1170,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath=".\GSShaderOGL.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GSState.cpp"
 				>
 			</File>
@@ -1601,6 +1605,10 @@
 			</File>
 			<File
 				RelativePath=".\GSSetupPrimCodeGenerator.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GSShaderOGL.h"
 				>
 			</File>
 			<File

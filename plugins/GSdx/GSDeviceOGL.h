@@ -1,5 +1,5 @@
 /*
- *	Copyright (C) 2011-2011 Gregory hainaut
+ *	Copyright (C) 2011-2013 Gregory hainaut
  *	Copyright (C) 2007-2009 Gabest
  *
  *  This Program is free software; you can redistribute it and/or modify
@@ -21,12 +21,12 @@
 
 #pragma once
 
-#include <fstream>
 #include "GSDevice.h"
 #include "GSTextureOGL.h"
 #include "GSdx.h"
 #include "GSVertexArrayOGL.h"
 #include "GSUniformBufferOGL.h"
+#include "GSShaderOGL.h"
 
 class GSBlendStateOGL {
 	// Note: You can also select the index of the draw buffer for which to set the blend setting
@@ -498,8 +498,6 @@ class GSDeviceOGL : public GSDevice
 	GSVertexBufferStateOGL* m_vb;	  // vb_state for HW renderer
 	GSVertexBufferStateOGL* m_vb_sr; // vb_state for StretchRect
 
-	bool m_debug_shader;
-
 	struct {
 		GLuint ps[2];				 // program object
 		GSUniformBufferOGL* cb;		 // uniform buffer object
@@ -561,6 +559,8 @@ class GSDeviceOGL : public GSDevice
 		GLuint	   fbo;
  		GLenum	   draw;
 	} m_state;
+
+	GSShaderOGL* m_shader;
 
 	GLuint m_vs[1<<5];
 	GLuint m_gs[1<<3];
@@ -629,8 +629,6 @@ class GSDeviceOGL : public GSDevice
 
 	GSTexture* Resolve(GSTexture* t);
 
-	void CompileShaderFromSource(const std::string& glsl_file, const std::string& entry, GLenum type, GLuint* program, const char* glsl_h_code, const std::string& macro_sel = "");
-
 	void EndScene();
 
 	void IASetPrimitiveTopology(GLenum topology);
@@ -642,13 +640,9 @@ class GSDeviceOGL : public GSDevice
 
 	void SetUniformBuffer(GSUniformBufferOGL* cb);
 
-	void VSSetShader(GLuint vs);
-	void GSSetShader(GLuint gs);
-
 	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
 	void PSSetShaderResource(int i, GSTexture* sr);
 	void PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2 = 0);
-	void PSSetShader(GLuint ps);
 
 	void OMSetFBO(GLuint fbo, GLenum buffer = GL_COLOR_ATTACHMENT0);
 	void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);
@@ -671,7 +665,4 @@ class GSDeviceOGL : public GSDevice
 	void SetupGS(GSSelector sel);
 	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
-
-	hash_map<uint64, GLuint > m_single_prog;
-	GLuint link_prog();
 };

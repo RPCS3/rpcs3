@@ -48,11 +48,10 @@ void GSDeviceOGL::CreateTextureFX()
 	m_vb = new GSVertexBufferStateOGL(sizeof(GSVertex), vert_format, countof(vert_format));
 
 	// Compile some dummy shaders to allow modification inside Apitrace for debug
-	GLuint dummy;
 	std::string macro = "\n";
-	CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &dummy, tfx_glsl, macro);
-	CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &dummy, tfx_glsl, macro);
-	CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &dummy, tfx_glsl, macro);
+	m_shader->Compile("tfx.glsl", "vs_main", GL_VERTEX_SHADER, tfx_glsl, macro);
+	m_shader->Compile("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, tfx_glsl, macro);
+	m_shader->Compile("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, tfx_glsl, macro);
 
 	// Pre compile all Geometry & Vertex Shader
 	// It might cost a seconds at startup but it would reduce benchmark pollution
@@ -72,20 +71,16 @@ void GSDeviceOGL::CreateTextureFX()
 
 GLuint GSDeviceOGL::CompileVS(VSSelector sel)
 {
-	GLuint vs;
 	std::string macro = format("#define VS_BPPZ %d\n", sel.bppz)
 		+ format("#define VS_LOGZ %d\n", sel.logz)
 		+ format("#define VS_TME %d\n", sel.tme)
 		+ format("#define VS_FST %d\n", sel.fst);
 
-	CompileShaderFromSource("tfx.glsl", "vs_main", GL_VERTEX_SHADER, &vs, tfx_glsl, macro);
-
-	return vs;
+	return m_shader->Compile("tfx.glsl", "vs_main", GL_VERTEX_SHADER, tfx_glsl, macro);
 }
 
 GLuint GSDeviceOGL::CompileGS(GSSelector sel)
 {
-	GLuint gs;
 	// Easy case
 	if(! (sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)))
 		return 0;
@@ -93,9 +88,7 @@ GLuint GSDeviceOGL::CompileGS(GSSelector sel)
 	std::string macro = format("#define GS_IIP %d\n", sel.iip)
 		+ format("#define GS_PRIM %d\n", sel.prim);
 
-	CompileShaderFromSource("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, &gs, tfx_glsl, macro);
-
-	return gs;
+	return m_shader->Compile("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, tfx_glsl, macro);
 }
 
 GLuint GSDeviceOGL::CreateSampler(PSSamplerSelector sel)
@@ -166,8 +159,6 @@ GSBlendStateOGL* GSDeviceOGL::CreateBlend(OMBlendSelector bsel, uint8 afix)
 
 GLuint GSDeviceOGL::CompilePS(PSSelector sel)
 {
-	GLuint ps;
-
 	std::string macro = format("#define PS_FST %d\n", sel.fst)
 		+ format("#define PS_WMS %d\n", sel.wms)
 		+ format("#define PS_WMT %d\n", sel.wmt)
@@ -187,9 +178,7 @@ GLuint GSDeviceOGL::CompilePS(PSSelector sel)
 		+ format("#define PS_TCOFFSETHACK %d\n", sel.tcoffsethack)
 		+ format("#define PS_POINT_SAMPLER %d\n", sel.point_sampler);
 
-	CompileShaderFromSource("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, &ps, tfx_glsl, macro);
-
-	return ps;
+	return m_shader->Compile("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, tfx_glsl, macro);
 }
 
 void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
@@ -201,14 +190,14 @@ void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
 		m_vs_cb->upload(cb);
 	}
 
-	VSSetShader(vs);
+	m_shader->VS(vs);
 }
 
 void GSDeviceOGL::SetupGS(GSSelector sel)
 {
 	GLuint gs = m_gs[sel];
 
-	GSSetShader(gs);
+	m_shader->GS(gs);
 }
 
 void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
@@ -252,7 +241,7 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 	}
 
 	PSSetSamplerState(ss0, ss1, 0);
-	PSSetShader(ps);
+	m_shader->PS(ps);
 }
 
 void GSDeviceOGL::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)

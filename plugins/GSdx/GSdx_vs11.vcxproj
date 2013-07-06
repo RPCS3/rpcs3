@@ -766,6 +766,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release SSE4|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release SSSE3|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="GSShaderOGL.cpp" />
     <ClCompile Include="GSState.cpp" />
     <ClCompile Include="GSTables.cpp" />
     <ClCompile Include="GSTexture.cpp" />
@@ -1980,6 +1981,7 @@
     <ClInclude Include="GSSetting.h" />
     <ClInclude Include="GSSettingsDlg.h" />
     <ClInclude Include="GSSetupPrimCodeGenerator.h" />
+    <ClInclude Include="GSShaderOGL.h" />
     <ClInclude Include="GSState.h" />
     <ClInclude Include="GSTables.h" />
     <ClInclude Include="GSTexture.h" />

@@ -31,7 +31,6 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_BindBufferBase) = GetProcAddress("glBindBufferBase");
 	*(void**)&(gl_BindFragDataLocationIndexed) = GetProcAddress("glBindFragDataLocationIndexed");
 	*(void**)&(gl_BindFramebuffer) = GetProcAddress("glBindFramebuffer");
-	*(void**)&(gl_BindProgramPipeline) = GetProcAddress("glBindProgramPipeline");
 	*(void**)&(gl_BindSampler) = GetProcAddress("glBindSampler");
 	*(void**)&(gl_BindVertexArray) = GetProcAddress("glBindVertexArray");
 	*(void**)&(gl_BlendEquationSeparate) = GetProcAddress("glBlendEquationSeparate");
@@ -49,7 +48,6 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_DeleteBuffers) = GetProcAddress("glDeleteBuffers");
 	*(void**)&(gl_DeleteFramebuffers) = GetProcAddress("glDeleteFramebuffers");
 	*(void**)&(gl_DeleteProgram) = GetProcAddress("glDeleteProgram");
-	*(void**)&(gl_DeleteProgramPipelines) = GetProcAddress("glDeleteProgramPipelines");
 	*(void**)&(gl_DeleteSamplers) = GetProcAddress("glDeleteSamplers");
 	*(void**)&(gl_DeleteShader) = GetProcAddress("glDeleteShader");
 	*(void**)&(gl_DeleteVertexArrays) = GetProcAddress("glDeleteVertexArrays");
@@ -61,7 +59,6 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_FramebufferTexture2D) = GetProcAddress("glFramebufferTexture2D");
 	*(void**)&(gl_GenBuffers) = GetProcAddress("glGenBuffers");
 	*(void**)&(gl_GenFramebuffers) = GetProcAddress("glGenFramebuffers");
-	*(void**)&(gl_GenProgramPipelines) = GetProcAddress("glGenProgramPipelines");
 	*(void**)&(gl_GenSamplers) = GetProcAddress("glGenSamplers");
 	*(void**)&(gl_GenVertexArrays) = GetProcAddress("glGenVertexArrays");
 	*(void**)&(gl_GetBufferParameteriv) = GetProcAddress("glGetBufferParameteriv");
@@ -87,6 +84,13 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_VertexAttribPointer) = GetProcAddress("glVertexAttribPointer");
 	*(void**)&(gl_TexStorage2D) = GetProcAddress("glTexStorage2D");
 	*(void**)&(gl_BufferSubData) = GetProcAddress("glBufferSubData");
+	// GL4.1
+	*(void**)&(gl_BindProgramPipeline) = GetProcAddress("glBindProgramPipeline");
+	*(void**)&(gl_DeleteProgramPipelines) = GetProcAddress("glDeleteProgramPipelines");
+	*(void**)&(gl_GenProgramPipelines) = GetProcAddress("glGenProgramPipelines");
+	*(void**)&(gl_GetProgramPipelineiv) = GetProcAddress("glGetProgramPipelineiv");
+	*(void**)&(gl_GetProgramPipelineInfoLog) = GetProcAddress("glGetProgramPipelineInfoLog");
+	*(void**)&(gl_ValidateProgramPipeline) = GetProcAddress("glValidateProgramPipeline");
 	// NO GL4.1
 	*(void**)&(gl_UseProgram) = GetProcAddress("glUseProgram");
 	*(void**)&(gl_GetShaderInfoLog) = GetProcAddress("glGetShaderInfoLog");

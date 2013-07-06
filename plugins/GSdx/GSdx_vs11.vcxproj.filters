@@ -126,6 +126,9 @@
     <ClCompile Include="GSSetupPrimCodeGenerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GSShaderOGL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GSState.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -459,6 +462,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSSetupPrimCodeGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GSShaderOGL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GSState.h">

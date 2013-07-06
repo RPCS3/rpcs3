@@ -89,6 +89,7 @@ set(GSdxSources
     GSSetupPrimCodeGenerator.x64.avx.cpp
     GSSetupPrimCodeGenerator.x86.cpp
     GSSetupPrimCodeGenerator.x64.cpp
+    GSShaderOGL.cpp
     GSState.cpp
     GSTables.cpp
     GSTexture.cpp
