@@ -50,7 +50,7 @@
 #include "zpipe.h"
 #include <map>
 #include <fcntl.h>			// this for open(). Maybe linux-specific
-#include <sys/mman.h>			// and this for mmap
+#include "ps2hw_gl4.h"
 
 // ----------------- Defines
 
@@ -87,9 +87,6 @@ int 		g_nPixelShaderVer = 0; 		// default
 u8* 		s_lpShaderResources = NULL;
 ZZshShaderLink 	pvs[16] = {sZero}, g_vsprog = sZero, g_psprog = sZero;							// 2 -- ZZ
 ZZshParameter 	g_vparamPosXY[2] = {pZero}, g_fparamFogColor = pZero;
-
-char*		ZZshSource;			// Shader's source data.
-off_t		ZZshSourceSize;
 
 bool g_bCRTCBilinear = true;
 
@@ -175,34 +172,10 @@ bool ZZshStartUsingShaders() {
 
 // open shader file according to build target
 bool ZZshCreateOpenShadersFile() {
-	std::string ShaderFileName("plugins/ps2hw_gl4.glsl");
-	int ShaderFD = open(ShaderFileName.c_str(), O_RDONLY);
-	struct stat sb;
-	if ((ShaderFD == -1) || (fstat(ShaderFD, &sb) == -1)) {
-		// Each linux distributions have his rules for path so we give them the possibility to
-		// change it with compilation flags. -- Gregory
-#ifdef GLSL_SHADER_DIR_COMPILATION
-#define xGLSL_SHADER_DIR_str(s) GLSL_SHADER_DIR_str(s)
-#define GLSL_SHADER_DIR_str(s) #s
-		ShaderFileName = string(xGLSL_SHADER_DIR_str(GLSL_SHADER_DIR_COMPILATION)) + "/ps2hw_gl4.glsl";
-		ShaderFD = open(ShaderFileName.c_str(), O_RDONLY);
-#endif
-		if ((ShaderFD == -1) || (fstat(ShaderFD, &sb) == -1)) {
-			ZZLog::Error_Log("No source for %s: \n", ShaderFileName.c_str());
-			return false;
-		}
-	}
-
-	ZZshSourceSize = sb.st_size;
-	ZZshSource = (char*)mmap(NULL, sb.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, ShaderFD, 0);		// This function directly maped file into memory.
-	ZZshSource[ ZZshSourceSize - 1] = 0;										// Made source null-terminated.
-
-	close(ShaderFD);
 	return true;
 }
 
 void ZZshExitCleaning() {
-	munmap(ZZshSource, ZZshSourceSize);
 	delete constant_buffer;
 	delete common_buffer;
 	delete vertex_buffer;
@@ -299,8 +272,23 @@ static bool ValidateProgram(ZZshProgram Prog) {
 		char* InfoLog = new char[infologlength];
 		glGetProgramInfoLog(Prog, infologlength, &lenght, InfoLog);
 		ZZLog::Error_Log("Validation %d... %d:\t %s", Prog, infologlength, InfoLog);
+		delete[] InfoLog;
 	}
 	return (isValid != 0);
+}
+
+static void ValidatePipeline(GLuint pipeline) {
+	glValidateProgramPipeline(pipeline);
+	GLint isValid;
+	glGetProgramPipelineiv(pipeline, GL_VALIDATE_STATUS, &isValid);
+	if (!isValid) {
+		int lenght, infologlength;
+		glGetProgramPipelineiv(pipeline, GL_INFO_LOG_LENGTH, &infologlength);
+		char* InfoLog = new char[infologlength];
+		glGetProgramPipelineInfoLog(pipeline, infologlength, &lenght, InfoLog);
+		ZZLog::Error_Log("Validation %d... %d:\t %s", pipeline, infologlength, InfoLog);
+		delete[] InfoLog;
+	}
 }
 
 inline bool CompileShaderFromFile(ZZshProgram& program, const std::string& DefineString, std::string main_entry, GLenum ShaderType)
@@ -315,10 +303,18 @@ inline bool CompileShaderFromFile(ZZshProgram& program, const std::string& Defin
 
 	const GLchar* ShaderSource[2];
 
+#if 0
+	// It sucks because it doesn't report the good line for error/warnings!
+	// But at least this stupid AMD drivers doesn't crash...
+	ShaderSource[0] = header.append(ps2hw_gl4_glsl).c_str();
+	program = glCreateShaderProgramv(ShaderType, 1, &ShaderSource[0]);
+
+#else
 	ShaderSource[0] = header.c_str();
-	ShaderSource[1] = (const GLchar*)ZZshSource;
+	ShaderSource[1] = ps2hw_gl4_glsl;
 
 	program = glCreateShaderProgramv(ShaderType, 2, &ShaderSource[0]);
+#endif
 
 	ZZLog::Debug_Log("Creating program %d for %s", program, main_entry.c_str());
 
@@ -343,10 +339,7 @@ void ZZshSetupShader() {
 	// shaders given the current GL state"
 	// It might be a good idea to validate the pipeline also in release mode???
 #if	defined(DEVBUILD) || defined(_DEBUG)
-	glValidateProgramPipeline(s_pipeline);
-	GLint isValid;
-	glGetProgramPipelineiv(s_pipeline, GL_VALIDATE_STATUS, &isValid);
-	if (!isValid) ZZLog::Error_Log("Something weird happened on pipeline validation.");
+	ValidatePipeline(s_pipeline);
 #endif
 
 	PutParametersInProgram(vs, ps);

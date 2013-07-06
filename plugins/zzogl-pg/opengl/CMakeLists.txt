@@ -110,6 +110,7 @@ set(zzoglHeaders
     GS.h
     GSDump.h
     HostMemory.h
+    ps2hw_gl4.h
     Mem.h
     Mem_Swizzle.h
     Mem_Transmit.h
@@ -153,6 +154,9 @@ set(zzoglLinuxHeaders
 include_directories(.
     Linux)
 
+# Generate Glsl header file
+add_custom_command(OUTPUT ps2hw_gl4.h COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/glsl2h.pl)
+
 # add library
 add_library(${Output} SHARED
     ${zzoglSources}
@@ -167,32 +171,24 @@ set_target_properties(${Output} PROPERTIES COMPILE_DEFINITIONS USE_GSOPEN2)
 # link target with project internal libraries
 target_link_libraries(${Output} Utilities)
 
-# link target with Cg
-if(NOT GLSL_API)
-	target_link_libraries(${Output} ${CG_LIBRARIES})
-endif(NOT GLSL_API)
-
-# link target with glew
-target_link_libraries(${Output} ${GLEW_LIBRARY})
-
-# link target with opengl
+# link target with the various opengl flavor
 target_link_libraries(${Output} ${OPENGL_LIBRARIES})
 if(EGL_API AND EGL_FOUND AND EGL_GL_CONTEXT_SUPPORT)
     target_link_libraries(${Output} ${EGL_LIBRARIES})
 endif()
+if(NOT GLSL_API)
+	target_link_libraries(${Output} ${CG_LIBRARIES})
+endif(NOT GLSL_API)
 
-# link target with X11
+target_link_libraries(${Output} ${GLEW_LIBRARY})
+
 target_link_libraries(${Output} ${X11_LIBRARIES})
-
-# link target with jpeg
 target_link_libraries(${Output} ${JPEG_LIBRARIES})
 
 if(Linux)
-	# link target with gtk2
 	target_link_libraries(${Output} ${GTK2_LIBRARIES})
 endif(Linux)
 
-# link target with zlib
 target_link_libraries(${Output} ${ZLIB_LIBRARIES})
 
 # User flags options
@@ -202,25 +198,17 @@ endif(NOT USER_CMAKE_LD_FLAGS STREQUAL "")
 
 if(PACKAGE_MODE)
     install(TARGETS ${Output} DESTINATION ${PLUGIN_DIR})
-    if(GLSL_API)
-        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.glsl DESTINATION ${GLSL_SHADER_DIR})
-        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw_gl4.glsl DESTINATION ${GLSL_SHADER_DIR})
-    else(GLSL_API)
-        if(NOT REBUILD_SHADER)
-            install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${PLUGIN_DIR})
-        endif(NOT REBUILD_SHADER)
-    endif(GLSL_API)
-else(PACKAGE_MODE)
+else()
     install(TARGETS ${Output} DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-    if(GLSL_API)
-        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw_gl4.glsl DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-    else(GLSL_API)
-        if(NOT REBUILD_SHADER)
-            install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
-        endif(NOT REBUILD_SHADER)
-    endif(GLSL_API)
-endif(PACKAGE_MODE)
+endif()
+
+if(NOT GLSL_API AND NOT REBUILD_SHADER)
+    if(PACKAGE_MODE)
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${PLUGIN_DIR})
+    else()
+        install(FILES ${PROJECT_SOURCE_DIR}/plugins/zzogl-pg/opengl/ps2hw.dat DESTINATION ${CMAKE_SOURCE_DIR}/bin/plugins)
+    endif()
+endif()
 
 ################################### Replay Loader
 if(BUILD_REPLAY_LOADERS)

@@ -90,6 +90,8 @@ include(Pcsx2Utils)
 # Detect current OS
 detectOperatingSystem()
 
+check_compiler_version("4.7" "4.5")
+
 #-------------------------------------------------------------------------------
 # Include specific module
 # BuildParameters Must be done before SearchForStuff
@@ -109,6 +111,9 @@ include_directories(${PROJECT_SOURCE_DIR}/common/include
                     ${CMAKE_BINARY_DIR}/common/include
                     # WORKAROUND Some issue with multiarch on Debian/Ubuntu
                     /usr/include/i386-linux-gnu
+                    # WORKAROUND Clang integration issue with multiarch on Debian
+                    #/usr/include/i386-linux-gnu/c++
+                    #/usr/include/i386-linux-gnu/c++/4.8
                     )
 
 # make the translation

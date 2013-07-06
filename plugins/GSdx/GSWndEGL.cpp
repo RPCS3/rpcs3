@@ -35,17 +35,15 @@ void GSWndEGL::CreateContext(int major, int minor)
 	EGLint numConfigs;
 	EGLint contextAttribs[] =
 	{
-		// Not yet supported by Radeon/Gallium
-#if 0
 		EGL_CONTEXT_MAJOR_VERSION_KHR, major,
 		EGL_CONTEXT_MINOR_VERSION_KHR, minor,
 		// Keep compatibility for old cruft
 		//EGL_CONTEXT_OPENGL_PROFILE_MASK_KHR, EGL_CONTEXT_OPENGL_COMPATIBILITY_PROFILE_BIT_KHR,
 		// FIXME : Request a debug context to ease opengl development
 		EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR | EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR,
-#endif
 		EGL_NONE
 	};
+	EGLint NullContextAttribs[] = { EGL_NONE };
 	EGLint attrList[] = {
 		EGL_RED_SIZE, 8,
 		EGL_GREEN_SIZE, 8,
@@ -70,11 +68,18 @@ void GSWndEGL::CreateContext(int major, int minor)
 		throw GSDXRecoverableError();
 	}
 
-	m_eglContext = eglCreateContext(m_eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttribs );
+	m_eglContext = eglCreateContext(m_eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttribs);
+	EGLint status = eglGetError();
+	if (status == EGL_BAD_ATTRIBUTE) {
+		// Radeon/Gallium don't support advance attribute. Fallback to random value
+		fprintf(stderr, "EGL: warning your driver doesn't suport advance openGL context attributes\n");
+		m_eglContext = eglCreateContext(m_eglDisplay, eglConfig, EGL_NO_CONTEXT, NullContextAttribs);
+		status = eglGetError();
+	}
 	if ( m_eglContext == EGL_NO_CONTEXT )
 	{
 		fprintf(stderr,"EGL: Failed to create the context\n");
-		fprintf(stderr,"EGL STATUS: %x\n", eglGetError());
+		fprintf(stderr,"EGL STATUS: %x\n", status);
 		throw GSDXRecoverableError();
 	}
 

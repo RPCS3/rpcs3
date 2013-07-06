@@ -58,8 +58,8 @@
 struct vertex
 {
     vec4 color;
-    TEX_DECL tex;
     vec4 Z;
+    TEX_DECL tex;
     float fog;
 };
 

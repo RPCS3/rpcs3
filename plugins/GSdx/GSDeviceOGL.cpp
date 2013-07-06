@@ -1272,12 +1272,8 @@ void GSDeviceOGL::CompileShaderFromSource(const std::string& glsl_file, const st
 	}
 	if (GLLoader::found_GL_ARB_separate_shader_objects) {
 		version += "#extension GL_ARB_separate_shader_objects : require\n";
-		// REMOVE ME: Emulate open source driver
-		//if (!GLLoader::found_GL_ARB_shading_language_420pack) {
-		//	version += "#define NO_STRUCT 1\n";
-		//}
 	} else {
-		if (GLLoader::found_only_gl30)
+		if (!GLLoader::fglrx_buggy_driver)
 			version += "#define DISABLE_SSO\n";
 	}
 	if (GLLoader::found_only_gl30) {

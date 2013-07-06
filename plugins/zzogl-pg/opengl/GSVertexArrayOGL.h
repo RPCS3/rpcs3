@@ -34,13 +34,12 @@ struct GSInputLayoutOGL {
 };
 
 class GSBufferOGL {
-	size_t m_stride;
+	const size_t m_stride;
 	size_t m_start;
 	size_t m_count;
 	size_t m_limit;
-	GLenum m_target;
+	const GLenum m_target;
 	GLuint m_buffer;
-	size_t m_default_size;
 
 	public: 
 	GSBufferOGL(GLenum target, size_t stride) : 
@@ -52,12 +51,12 @@ class GSBufferOGL {
 	{
 		glGenBuffers(1, &m_buffer);
 		// Opengl works best with 1-4MB buffer.
-		m_default_size = 2 * 1024 * 1024 / m_stride;
+		m_limit = 2 * 1024 * 1024 / m_stride;
 	}
 
 	~GSBufferOGL() { glDeleteBuffers(1, &m_buffer); }
 
-	void allocate() { allocate(m_default_size); }
+	void allocate() { allocate(m_limit); }
 
 	void allocate(size_t new_limit)
 	{
@@ -73,6 +72,7 @@ class GSBufferOGL {
 
 	void upload(const void* src, uint32 count)
 	{
+#if 0
 		// Upload the data to the buffer
 		void* dst;
 		if (Map(&dst, count)) {
@@ -81,15 +81,25 @@ class GSBufferOGL {
 			memcpy(dst, src, m_stride*m_count);
 			Unmap();
 		}
+#else
+		m_count = count;
+
+		// Current GPU buffer is really too small need to allocate a new one
+		if (m_count > m_limit) {
+			allocate(std::max<int>(m_count * 3 / 2, m_limit));
+
+		} else if (m_count > (m_limit - m_start) ) {
+			// Not enough left free room. Just go back at the beginning
+			m_start = 0;
+			// Orphan the buffer to avoid synchronization
+			allocate(m_limit);
+		}
+
+		glBufferSubData(m_target,  m_stride * m_start,  m_stride * m_count, src);
+#endif
 	}
 
 	bool Map(void** pointer, uint32 count ) {
-#ifdef OGL_DEBUG
-		GLint b_size = -1;
-		glGetBufferParameteriv(m_target, GL_BUFFER_SIZE, &b_size);
-
-		if (b_size <= 0) return false;
-#endif
 
 		m_count = count;
 
@@ -99,7 +109,7 @@ class GSBufferOGL {
 
 		// Current GPU buffer is really too small need to allocate a new one
 		if (m_count > m_limit) {
-			allocate(std::max<int>(m_count * 3 / 2, m_default_size));
+			allocate(std::max<int>(m_count * 3 / 2, m_limit));
 
 		} else if (m_count > (m_limit - m_start) ) {
 			// Not enough left free room. Just go back at the beginning
@@ -116,13 +126,7 @@ class GSBufferOGL {
 
 		// Upload the data to the buffer
 		*pointer = (uint8*) glMapBufferRange(m_target, m_stride*m_start, m_stride*m_count, map_flags);
-		//fprintf(stderr, "Map %x from %d to %d\n", *pointer, m_start, m_start+m_count);
-#ifdef OGL_DEBUG
-		if (*pointer == NULL) {
-			fprintf(stderr, "CRITICAL ERROR map failed for vb!!!\n");
-			return false;
-		}
-#endif
+
 		return true;
 	}
 
