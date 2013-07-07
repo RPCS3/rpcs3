@@ -7,33 +7,36 @@ use File::Basename;
 use File::Copy;
 use Cwd 'abs_path';
 
-use Digest::file qw/digest_file_hex/;
-use Digest::MD5 qw(md5_hex);
+# Allow to use the script without the module. I don't want a full PERL as a dependency of PCSX2!
+my $g_disable_md5 = 0;
+eval {
+    require Digest::file;
+    require Digest::MD5;
+    Digest::file->import(qw/digest_file_hex/);
+    Digest::MD5->import(qw/md5_hex/);
+    1;
+} or do {
+    $g_disable_md5 = 1;
+    print "Disable MD5\n";
+};
 
-my @res = qw/convert interlace merge shadeboost tfx/;
-my $path = File::Spec->catdir(dirname(abs_path($0)), "..", "plugins", "GSdx", "res");
+my @gsdx_res = qw/convert.glsl interlace.glsl merge.glsl shadeboost.glsl tfx.glsl fxaa.fx/;
+my $gsdx_path = File::Spec->catdir(dirname(abs_path($0)), "..", "plugins", "GSdx", "res");
+my $gsdx_out = File::Spec->catdir($gsdx_path, "glsl_source.h");
+glsl2h($gsdx_path, $gsdx_out, \@gsdx_res);
 
-foreach my $r (@res) {
-    glsl2h($path, $r, "glsl");
-}
-glsl2h($path, "fxaa", "fx");
-
+my @zz_res  = qw/ps2hw_gl4.glsl/;
 my $zz_path = File::Spec->catdir(dirname(abs_path($0)), "..", "plugins", "zzogl-pg", "opengl");
-glsl2h($zz_path, "ps2hw_gl4", "glsl");
+my $zz_out = File::Spec->catdir($zz_path, "ps2hw_gl4.h");
+glsl2h($zz_path, $zz_out, \@zz_res);
 
 sub glsl2h {
-    my $path = shift;
-    my $glsl = shift;
-    my $ext  = shift;
-
-    my $in = File::Spec->catfile($path, "${glsl}.$ext");
-    my $out = File::Spec->catfile($path, "${glsl}.h");
-    open(my $GLSL, "<$in") or die;
-
-    my $data = "";
+    my $in_dir = shift;
+    my $out_file = shift;
+    my $glsl_files = shift;
 
     my $include = "";
-    if ($in =~ /GSdx/) {
+    if ($in_dir =~ /GSdx/) {
         $include = "#include \"stdafx.h\""
     }
 
@@ -61,28 +64,38 @@ sub glsl2h {
 #pragma once
 
 $include
-
-static const char* ${glsl}_${ext} =
 EOS
 
-    $data = $header;
+    my $data = $header;
 
-    my $line;
-    while(defined($line = <$GLSL>)) {
-        chomp $line;
-        $line =~ s/\\/\\\\/g;
-        $line =~ s/"/\\"/g;
-        $data .= "\t\"$line\\n\"\n";
+    foreach my $file (@{$glsl_files}) {
+        my $name = $file;
+        $name =~ s/\./_/;
+        $data .= "\nstatic const char* $name =\n";
+
+        open(my $GLSL, File::Spec->catfile($in_dir, $file)) or die;
+        my $line;
+        while(defined($line = <$GLSL>)) {
+            chomp $line;
+            $line =~ s/\\/\\\\/g;
+            $line =~ s/"/\\"/g;
+            $data .= "\t\"$line\\n\"\n";
+        }
+        $data .= "\t;\n";
     }
-    $data .= "\t;\n";
 
     # Rewriting the file will trigger a relink (even if the content is the
     # same). So we check first the content with md5 digest
-    my $old_md5 = digest_file_hex($out, "MD5");
-    my $new_md5 = md5_hex($data);
+    if ( -e $out_file and not $g_disable_md5) {
+        my $old_md5 = digest_file_hex($out_file, "MD5");
+        my $new_md5 = md5_hex($data);
 
-    if ($old_md5 ne $new_md5) {
-        open(my $H, ">$out") or die;
+        if ($old_md5 ne $new_md5) {
+            open(my $H, ">$out_file") or die;
+            print $H $data;
+        }
+    } else {
+        open(my $H, ">$out_file") or die;
         print $H $data;
     }
 }

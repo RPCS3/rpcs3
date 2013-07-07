@@ -22,11 +22,7 @@
 #include "stdafx.h"
 #include "GSDeviceOGL.h"
 
-#include "res/convert.h"
-#include "res/interlace.h"
-#include "res/merge.h"
-#include "res/shadeboost.h"
-#include "res/fxaa.h"
+#include "res/glsl_source.h"
 
 // TODO performance cost to investigate
 // Texture attachment/glDrawBuffer. For the moment it set every draw and potentially multiple time (first time in clear, second time in rendering)
@@ -137,6 +133,10 @@ GSDeviceOGL::~GSDeviceOGL()
 
 	for (auto it = m_om_bs.begin(); it != m_om_bs.end(); it++) delete it->second;
 	m_om_bs.clear();
+
+	// Must be done after the destruction of all shader/program objects
+	delete m_shader;
+	m_shader = NULL;
 }
 
 GSTexture* GSDeviceOGL::CreateSurface(int type, int w, int h, bool msaa, int format)
@@ -411,7 +411,6 @@ void GSDeviceOGL::Flip()
 void GSDeviceOGL::BeforeDraw()
 {
 	m_shader->UseProgram();
-	m_shader->SetupUniform();
 }
 
 void GSDeviceOGL::AfterDraw()
@@ -530,6 +529,52 @@ GLuint GSDeviceOGL::CreateSampler(bool bilinear, bool tau, bool tav)
 	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
 
 	return sampler;
+}
+
+GLuint GSDeviceOGL::CompileVS(VSSelector sel)
+{
+	std::string macro = format("#define VS_BPPZ %d\n", sel.bppz)
+		+ format("#define VS_LOGZ %d\n", sel.logz)
+		+ format("#define VS_TME %d\n", sel.tme)
+		+ format("#define VS_FST %d\n", sel.fst);
+
+	return m_shader->Compile("tfx.glsl", "vs_main", GL_VERTEX_SHADER, tfx_glsl, macro);
+}
+
+GLuint GSDeviceOGL::CompileGS(GSSelector sel)
+{
+	// Easy case
+	if(! (sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)))
+		return 0;
+
+	std::string macro = format("#define GS_IIP %d\n", sel.iip)
+		+ format("#define GS_PRIM %d\n", sel.prim);
+
+	return m_shader->Compile("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, tfx_glsl, macro);
+}
+
+GLuint GSDeviceOGL::CompilePS(PSSelector sel)
+{
+	std::string macro = format("#define PS_FST %d\n", sel.fst)
+		+ format("#define PS_WMS %d\n", sel.wms)
+		+ format("#define PS_WMT %d\n", sel.wmt)
+		+ format("#define PS_FMT %d\n", sel.fmt)
+		+ format("#define PS_AEM %d\n", sel.aem)
+		+ format("#define PS_TFX %d\n", sel.tfx)
+		+ format("#define PS_TCC %d\n", sel.tcc)
+		+ format("#define PS_ATST %d\n", sel.atst)
+		+ format("#define PS_FOG %d\n", sel.fog)
+		+ format("#define PS_CLR1 %d\n", sel.clr1)
+		+ format("#define PS_FBA %d\n", sel.fba)
+		+ format("#define PS_AOUT %d\n", sel.aout)
+		+ format("#define PS_LTF %d\n", sel.ltf)
+		+ format("#define PS_COLCLIP %d\n", sel.colclip)
+		+ format("#define PS_DATE %d\n", sel.date)
+		+ format("#define PS_SPRITEHACK %d\n", sel.spritehack)
+		+ format("#define PS_TCOFFSETHACK %d\n", sel.tcoffsethack)
+		+ format("#define PS_POINT_SAMPLER %d\n", sel.point_sampler);
+
+	return m_shader->Compile("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, tfx_glsl, macro);
 }
 
 GSTexture* GSDeviceOGL::CreateRenderTarget(int w, int h, bool msaa, int format)

@@ -5790,10 +5790,10 @@ public:
 
 	#define VECTOR8_SHUFFLE_4(xs, xn, ys, yn, zs, zn, ws, wn) \
 		__forceinline GSVector8 xs##ys##zs##ws() const {return GSVector8(_mm256_shuffle_ps(m, m, _MM_SHUFFLE(wn, zn, yn, xn)));} \
-		__forceinline GSVector8 xs##ys##zs##ws(const GSVector8& v) const {return GSVector8(_mm256_shuffle_ps(m, v.m, _MM_SHUFFLE(wn, zn, yn, xn)));} \
+		__forceinline GSVector8 xs##ys##zs##ws(const GSVector8& v) const {return GSVector8(_mm256_shuffle_ps(m, v.m, _MM_SHUFFLE(wn, zn, yn, xn)));}
 
 		// vs2012u3 cannot reuse the result of equivalent shuffles when it is done with _mm256_permute_ps (write v.xxxx() twice, and it will do it twice), but with _mm256_shuffle_ps it can.
-		//__forceinline GSVector8 xs##ys##zs##ws() const {return GSVector8(_mm256_permute_ps(m, _MM_SHUFFLE(wn, zn, yn, xn)));} \ 
+		//__forceinline GSVector8 xs##ys##zs##ws() const {return GSVector8(_mm256_permute_ps(m, _MM_SHUFFLE(wn, zn, yn, xn)));}
 
 	#define VECTOR8_SHUFFLE_3(xs, xn, ys, yn, zs, zn) \
 		VECTOR8_SHUFFLE_4(xs, xn, ys, yn, zs, zn, x, 0) \

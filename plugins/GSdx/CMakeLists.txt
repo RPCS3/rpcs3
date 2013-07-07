@@ -171,6 +171,7 @@ set(GSdxHeaders
     GSWndOGL.h
     GSWndEGL.h
     GSdx.h
+    res/glsl_source.h
     stdafx.h
     xbyak/xbyak.h
     xbyak/xbyak_bin2hex.h
@@ -178,19 +179,12 @@ set(GSdxHeaders
     xbyak/xbyak_util.h
     )
 
-set(GSdxHeaders
-    res/convert.h
-    res/fxaa.h
-    res/interlace.h
-    res/merge.h
-    res/shaderboost.h
-    res/tfx.h
-    )
-
 include_directories(.)
 
-# Generate Glsl header file
-add_custom_command(OUTPUT res/convert.h res/fxaa.h res/interlace.h res/merge.h res/shaderboost.h res/tfx.h COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/glsl2h.pl)
+# Generate Glsl header file. Protect with REBUILD_SHADER to avoid build-dependency on PERL
+if (REBUILD_SHADER)
+    add_custom_command(OUTPUT res/glsl_source.h COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/glsl2h.pl)
+endif()
 
 add_library(${Output} SHARED ${GSdxSources} ${GSdxHeaders})
 

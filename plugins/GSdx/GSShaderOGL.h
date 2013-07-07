@@ -33,6 +33,7 @@ class GSShaderOGL {
 	const bool m_glsl420;
 
 
+	void SetupUniform();
 	void SetUniformBinding(GLuint prog, GLchar* name, GLuint binding);
 	void SetSamplerBinding(GLuint prog, GLchar* name, GLuint binding);
 
@@ -40,6 +41,7 @@ class GSShaderOGL {
 	bool ValidateProgram(GLuint p);
 	bool ValidatePipeline(GLuint p);
 
+	std::string GenGlslHeader(const std::string& entry, GLenum type, const std::string& macro);
 	GLuint LinkNewProgram();
 
 	public:
@@ -52,8 +54,6 @@ class GSShaderOGL {
 
 	void UseProgram();
 
-	void SetupUniform();
-	
 	GLuint Compile(const std::string& glsl_file, const std::string& entry, GLenum type, const char* glsl_h_code, const std::string& macro_sel = "");
 	void Delete(GLuint s);
 };

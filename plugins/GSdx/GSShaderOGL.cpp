@@ -223,107 +223,109 @@ void GSShaderOGL::UseProgram()
 		if (it == m_single_prog.end()) {
 			m_prog = LinkNewProgram();
 			m_single_prog[sel] = m_prog;
+			SetupUniform();
 		} else {
 			m_prog = it->second;
 		}
 
 		gl_UseProgram(m_prog);
+
+		// TODO: might be possible to do it only when prog is linked
+		// Seem to be OK!
+		//SetupUniform();
 	} else {
 		ValidateProgram(m_pipeline);
+
+		SetupUniform();
 	}
 }
 
-GLuint GSShaderOGL::Compile(const std::string& glsl_file, const std::string& entry, GLenum type, const char* glsl_h_code, const std::string& macro_sel)
+std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, const std::string& macro)
 {
-	// Not supported
-	if (type == GL_GEOMETRY_SHADER && !GLLoader::found_geometry_shader) {
-		return 0;
-	}
-
-	// *****************************************************
-	// Build a header string
-	// *****************************************************
-	// First select the version (must be the first line so we need to generate it
-	std::string version;
+	std::string header;
 	if (GLLoader::found_only_gl30) {
-		version = "#version 130\n";
+		header = "#version 130\n";
 	} else {
-		version = "#version 330\n";
+		header = "#version 330\n";
 	}
 	if (m_glsl420) {
-		version += "#extension GL_ARB_shading_language_420pack: require\n";
+		header += "#extension GL_ARB_shading_language_420pack: require\n";
 	} else {
-		version += "#define DISABLE_GL42\n";
+		header += "#define DISABLE_GL42\n";
 	}
 	if (m_sso) {
-		version += "#extension GL_ARB_separate_shader_objects : require\n";
+		header += "#extension GL_ARB_separate_shader_objects : require\n";
 	} else {
 		if (!GLLoader::fglrx_buggy_driver)
-			version += "#define DISABLE_SSO\n";
+			header += "#define DISABLE_SSO\n";
 	}
 	if (GLLoader::found_only_gl30) {
 		// Need version 330
-		version += "#extension GL_ARB_explicit_attrib_location : require\n";
+		header += "#extension GL_ARB_explicit_attrib_location : require\n";
 		// Need version 140
-		version += "#extension GL_ARB_uniform_buffer_object : require\n";
+		header += "#extension GL_ARB_uniform_buffer_object : require\n";
 	}
 #ifdef ENABLE_OGL_STENCIL_DEBUG
-	version += "#define ENABLE_OGL_STENCIL_DEBUG 1\n";
+	header += "#define ENABLE_OGL_STENCIL_DEBUG 1\n";
 #endif
 
 	// Allow to puts several shader in 1 files
-	std::string shader_type;
 	switch (type) {
 		case GL_VERTEX_SHADER:
-			shader_type = "#define VERTEX_SHADER 1\n";
+			header += "#define VERTEX_SHADER 1\n";
 			break;
 		case GL_GEOMETRY_SHADER:
-			shader_type = "#define GEOMETRY_SHADER 1\n";
+			header += "#define GEOMETRY_SHADER 1\n";
 			break;
 		case GL_FRAGMENT_SHADER:
-			shader_type = "#define FRAGMENT_SHADER 1\n";
+			header += "#define FRAGMENT_SHADER 1\n";
 			break;
 		default: ASSERT(0);
 	}
 
 	// Select the entry point ie the main function
-	std::string entry_main = format("#define %s main\n", entry.c_str());
+	header += format("#define %s main\n", entry.c_str());
 
-	std::string header = version + shader_type + entry_main + macro_sel;
+	header += macro;
+
+	return header;
+}
+
+GLuint GSShaderOGL::Compile(const std::string& glsl_file, const std::string& entry, GLenum type, const char* glsl_h_code, const std::string& macro_sel)
+{
+	GLuint program = 0;
+
+	// Not supported
+	if (type == GL_GEOMETRY_SHADER && !GLLoader::found_geometry_shader) {
+		return program;
+	}
 
 	// Note it is better to separate header and source file to have the good line number
 	// in the glsl compiler report
-	const char** sources_array = (const char**)malloc(2*sizeof(char*));
+	const char* sources[2];
 
-	char* header_str = (char*)malloc(header.size() + 1);
-	sources_array[0] = header_str;
-	header.copy(header_str, header.size(), 0);
-	header_str[header.size()] = '\0';
+	std::string header = GenGlslHeader(entry, type, macro_sel);
+	sources[0] = header.c_str();
 
 	if (glsl_h_code)
-		sources_array[1] = glsl_h_code;
+		sources[1] = glsl_h_code;
 	else
-		sources_array[1] = '\0';
+		sources[1] = '\0';
 
-
-	GLuint program;
 	if (m_sso) {
 	#if 0
 		// Could be useful one day
 		const GLchar* ShaderSource[1];
-		ShaderSource[0] = header.append(source).c_str();
+		ShaderSource[0] = header.append(glsl_h_code).c_str();
 		program = gl_CreateShaderProgramv(type, 1, &ShaderSource[0]);
 	#else
-		program = gl_CreateShaderProgramv(type, 2, sources_array);
+		program = gl_CreateShaderProgramv(type, 2, sources);
 	#endif
 	} else {
 		program = gl_CreateShader(type);
-		gl_ShaderSource(program, 2, sources_array, NULL);
+		gl_ShaderSource(program, 2, sources, NULL);
 		gl_CompileShader(program);
 	}
-
-	free(header_str);
-	free(sources_array);
 
 	bool status;
 	if (m_sso)

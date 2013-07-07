@@ -154,8 +154,10 @@ set(zzoglLinuxHeaders
 include_directories(.
     Linux)
 
-# Generate Glsl header file
-add_custom_command(OUTPUT ps2hw_gl4.h COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/glsl2h.pl)
+# Generate Glsl header file. Protect with REBUILD_SHADER to avoid build-dependency on PERL
+if (REBUILD_SHADER)
+    add_custom_command(OUTPUT ps2hw_gl4.h COMMAND perl ${PROJECT_SOURCE_DIR}/linux_various/glsl2h.pl)
+endif()
 
 # add library
 add_library(${Output} SHARED
