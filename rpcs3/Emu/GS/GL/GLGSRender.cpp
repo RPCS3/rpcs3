@@ -461,7 +461,7 @@ void GLGSRender::InitVertexData()
 void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count)
 {
 #if	CMD_DEBUG
-		wxString debug = getMethodName(cmd);
+		wxString debug = GetMethodName(cmd);
 		debug += "(";
 		for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + wxString::Format("0x%x", args[i]);
 		debug += ")";
@@ -757,7 +757,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 						m_indexed_array.m_data.InsertRoomEnd(4);
 						index = Memory.Read32(m_indexed_array.m_addr + i * 4);
 						*(u32*)&m_indexed_array.m_data[pos] = index;
-						ConLog.Warning("index 4: %d", *(u32*)&m_indexed_array.m_data[pos]);
+						//ConLog.Warning("index 4: %d", *(u32*)&m_indexed_array.m_data[pos]);
 					}
 					break;
 
@@ -766,8 +766,8 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 						int pos = m_indexed_array.m_data.GetCount();
 						m_indexed_array.m_data.InsertRoomEnd(2);
 						index = Memory.Read16(m_indexed_array.m_addr + i * 2);
-						ConLog.Warning("index 2: %d", index);
-						*(u32*)&m_indexed_array.m_data[pos] = index;
+						//ConLog.Warning("index 2: %d", index);
+						*(u16*)&m_indexed_array.m_data[pos] = index;
 					}
 					break;
 				}
@@ -1294,13 +1294,13 @@ void GLGSRender::ExecCMD()
 			case 0:
 				glDrawElements(m_draw_mode, m_indexed_array.m_count, GL_UNSIGNED_INT, nullptr);
 				checkForGlError("glDrawElements #4");
-				for(uint i=0; i<m_indexed_array.m_count; i+=4) log.Write(wxString::Format("index 4: %d\n", (u32&)m_indexed_array.m_data[i]));
+				//for(uint i=0; i<m_indexed_array.m_count; i+=4) log.Write(wxString::Format("index 4: %d\n", (u32&)m_indexed_array.m_data[i]));
 			break;
 
 			case 1:
 				glDrawElements(m_draw_mode, m_indexed_array.m_count, GL_UNSIGNED_SHORT, nullptr);
 				checkForGlError("glDrawElements #2");
-				for(uint i=0; i<m_indexed_array.m_count; i+=2) log.Write(wxString::Format("index 2: %d\n", (u16&)m_indexed_array.m_data[i]));
+				//for(uint i=0; i<m_indexed_array.m_count; i+=2) log.Write(wxString::Format("index 2: %d\n", (u16&)m_indexed_array.m_data[i]));
 			break;
 
 			default:
@@ -1310,7 +1310,7 @@ void GLGSRender::ExecCMD()
 
 			DisableVertexData();
 			m_indexed_array.Reset();
-			Emu.Pause();
+			//Emu.Pause();
 		}
 
 		if(m_draw_array_count)

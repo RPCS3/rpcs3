@@ -39,7 +39,7 @@ static func_caller* sc_table[1024] =
 	null_func, bind_func(sys_spu_image_open), null_func, null_func, null_func, //159
 	bind_func(sys_raw_spu_create), null_func, null_func, null_func, null_func, //164
 	null_func, null_func, null_func, null_func, bind_func(sys_spu_initialize), //169
-	bind_func(sys_spu_thread_group_create), null_func, bind_func(sys_spu_thread_initialize), bind_func(sys_spu_thread_group_start), null_func, //174
+	bind_func(sys_spu_thread_group_create), bind_func(sys_spu_thread_set_argument), bind_func(sys_spu_thread_initialize), bind_func(sys_spu_thread_group_start), null_func, //174
 	null_func, null_func, null_func, null_func, null_func, //179
 	null_func, bind_func(sys_spu_thread_write_ls), bind_func(sys_spu_thread_read_ls), null_func, null_func, //184
 	null_func, null_func, null_func, null_func, null_func, //189
@@ -260,6 +260,7 @@ void SysCalls::DoSyscall(u32 code)
 
 			case 999:
 				dump_enable = !dump_enable;
+				Emu.Pause();
 				ConLog.Warning("Dump %s", dump_enable ? "enabled" : "disabled");
 			return;
 

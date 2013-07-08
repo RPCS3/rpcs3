@@ -11,7 +11,6 @@ PPCThread::PPCThread(PPCThreadType type)
 	: ThreadBase(true, "PPCThread")
 	, m_type(type)
 	, DisAsmFrame(NULL)
-	, m_arg(0)
 	, m_dec(NULL)
 	, stack_size(0)
 	, stack_addr(0)
@@ -43,6 +42,7 @@ void PPCThread::Reset()
 
 	m_sync_wait = 0;
 	m_wait_thread_id = -1;
+	memset(m_args, 0, sizeof(u64) * 4);
 
 	SetPc(0);
 	cycle = 0;
@@ -88,8 +88,6 @@ void PPCThread::CloseStack()
 void PPCThread::SetId(const u32 id)
 {
 	m_id = id;
-	ID& thread = Emu.GetIdManager().GetIDData(m_id);
-	thread.m_name = GetName();
 }
 
 void PPCThread::SetName(const wxString& name)
@@ -119,10 +117,20 @@ bool PPCThread::Sync()
 
 int PPCThread::ThreadStatus()
 {
-	if(Emu.IsStopped()) return PPCThread_Stopped;
-	if(TestDestroy()) return PPCThread_Break;
+	if(Emu.IsStopped())
+	{
+		return PPCThread_Stopped;
+	}
+
+	if(TestDestroy())
+	{
+		return PPCThread_Break;
+	}
+
 	if(Emu.IsPaused() || Sync())
+	{
 		return PPCThread_Sleeping;
+	}
 
 	return PPCThread_Running;
 }
@@ -186,7 +194,7 @@ void PPCThread::SetError(const u32 error)
 wxArrayString PPCThread::ErrorToString(const u32 error)
 {
 	wxArrayString earr;
-	earr.Clear();
+
 	if(error == 0) return earr;
 
 	earr.Add("Unknown error");

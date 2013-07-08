@@ -67,19 +67,6 @@ void PPUThread::InitRegs()
 	ConLog.Write("rtoc = 0x%x", rtoc);
 
 	SetPc(pc);
-	
-	u64 argc = m_arg;
-	u64 argv = 0;
-
-	if(argv_addr.GetCount())
-	{
-		argc = argv_addr.GetCount();
-		stack_point -= 0xc + 4 * argc;
-		argv = stack_point;
-
-		mem64_t argv_list(argv);
-		for(int i=0; i<argc; ++i) argv_list += argv_addr[i];
-	}
 
 	const s32 thread_num = Emu.GetCPU().GetThreadNumById(!IsSPU(), GetId());
 
@@ -106,22 +93,41 @@ void PPUThread::InitRegs()
 	GPR[1] = stack_point;
 	GPR[2] = rtoc;
 
-	if(argc)
+	for(int i=4; i<32; ++i)
 	{
+		if(i != 6)
+			GPR[i] = (i+1) * 0x10000;
+	}
+
+	if(argv_addr.GetCount())
+	{
+		u64 argc = argv_addr.GetCount();
+		stack_point -= 0xc + 4 * argc;
+		u64 argv = stack_point;
+
+		mem64_t argv_list(argv);
+		for(int i=0; i<argc; ++i) argv_list += argv_addr[i];
+
 		GPR[3] = argc;
 		GPR[4] = argv;
 		GPR[5] = argv ? argv + 0xc + 4 * argc : 0; //unk
 	}
 	else
 	{
-		GPR[3] = m_arg;
+		GPR[3] = m_args[0];
+		GPR[4] = m_args[1];
+		GPR[5] = m_args[2];
+		GPR[6] = m_args[3];
 	}
+
+	u32 prx_mem = Memory.PRXMem.Alloc(0x10000);
+	Memory.Write64(prx_mem, 0xDEADBEEFABADCAFE);
 
 	GPR[0] = pc;
 	GPR[8] = entry;
 	GPR[11] = 0x80;
 	GPR[12] = Emu.GetMallocPageSize();
-	GPR[13] = Memory.PRXMem.Alloc(0x10000) + 0x7060 - 8;
+	GPR[13] = prx_mem + 0x7060;
 	GPR[28] = GPR[4];
 	GPR[29] = GPR[3];
 	GPR[31] = GPR[5];
@@ -172,15 +178,30 @@ bool dump_enable = false;
 
 void PPUThread::DoCode(const s32 code)
 {
+	static bool is_last_enabled = false;
+
 	if(dump_enable)
 	{
 		static wxFile f("dump.txt", wxFile::write);
 		static PPU_DisAsm disasm(*this, DumpMode);
 		static PPU_Decoder decoder(disasm);
+		
+		if(!is_last_enabled)
+		{
+			f.Write(RegsToString() + "\n");
+		}
+
 		disasm.dump_pc = PC;
 		decoder.Decode(code);
 		f.Write(disasm.last_opcode);
+
+		is_last_enabled = true;
 	}
+	else
+	{
+		is_last_enabled = false;
+	}
+
 
 	if(++cycle > 220)
 	{
@@ -193,7 +214,7 @@ void PPUThread::DoCode(const s32 code)
 
 bool FPRdouble::IsINF(PPCdouble d)
 {
-	return wxFinite(d) ? 1 : 0;
+	return d.GetType() == FPR_INF;
 }
 
 bool FPRdouble::IsNaN(PPCdouble d)

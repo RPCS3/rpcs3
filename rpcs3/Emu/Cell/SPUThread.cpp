@@ -30,7 +30,11 @@ void SPUThread::DoReset()
 
 void SPUThread::InitRegs()
 {
-	GPR[1]._u64[0] = stack_point;
+	//GPR[1]._u64[0] = stack_point;
+	GPR[3]._u64[1] = m_args[0];
+	GPR[4]._u64[1] = m_args[1];
+	GPR[5]._u64[1] = m_args[2];
+	GPR[6]._u64[1] = m_args[3];
 }
 
 u64 SPUThread::GetFreeStackSize() const

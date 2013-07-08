@@ -125,8 +125,10 @@ namespace PPU_instr
 	*/
 	static CodeField<30> AA;
 
+	static CodeFieldSignedOffset<6, 29, 2> LI(FIELD_BRANCH);
+
 	//
-	static CodeFieldSigned<6, 31> LL(FIELD_BRANCH);
+	static CodeFieldSignedOffset<6, 29, 2> LL(FIELD_BRANCH);
 	/*
 	Link bit.
 	0		Does not update the link register (LR).
@@ -177,36 +179,7 @@ namespace PPU_instr
 	static CodeFieldSigned<16, 31> D;
 
 	//
-	struct : public CodeFieldSigned<16, 31>
-	{
-		static __forceinline u32 decode(u32 data)
-		{
-			int res = sign<size>((data & mask) >> shift);
-			if(res < 0) return res - 1;
-			return res;
-		}
-
-		static __forceinline void encode(u32& data, u32 value)
-		{
-			if((s32)value < 0)
-			{
-				value++;
-			}
-
-			data &= ~mask;
-			data |= (value << shift) & mask;
-		}
-
-		virtual u32 operator ()(u32 data) const
-		{
-			return decode(data);
-		}
-
-		virtual void operator ()(u32& data, u32 value) const
-		{
-			return encode(data, value);
-		}
-	} static DS;
+	static CodeFieldSignedOffset<16, 29, 2> DS;
 
 	//This immediate field is used to specify a 16-bit signed integer
 	static CodeFieldSigned<16, 31> simm16;
@@ -269,7 +242,7 @@ namespace PPU_instr
 	bind_instr(main_list, ADDIS, RD, RA, simm16);
 	bind_instr(main_list, BC, BO, BI, BD, AA, LK);
 	bind_instr(main_list, SC, SYS);
-	bind_instr(main_list, B, LL, AA, LK);
+	bind_instr(main_list, B, LI, AA, LK);
 	bind_instr(main_list, RLWIMI, RA, RS, SH, MB, ME, RC);
 	bind_instr(main_list, RLWINM, RA, RS, SH, MB, ME, RC);
 	bind_instr(main_list, RLWNM, RA, RS, RB, MB, ME, RC);
@@ -302,7 +275,7 @@ namespace PPU_instr
 	bind_instr(main_list, STFD, FRS, RA, D);
 	bind_instr(main_list, STFDU, FRS, RA, D);
 
-	bind_instr(g04_list, VMADDFP, VD, VA, VB, VC);
+	bind_instr(g04_list, VMADDFP, VD, VA, VC, VB);
 	bind_instr(g04_list, VMHADDSHS, VD, VA, VB, VC);
 	bind_instr(g04_list, VMHRADDSHS, VD, VA, VB, VC);
 	bind_instr(g04_list, VMLADDUHM, VD, VA, VB, VC);
@@ -515,7 +488,7 @@ namespace PPU_instr
 	/*0x087*/bind_instr(g1f_list, STVEBX, VS, RA, RB);
 	/*0x088*/bind_instr(g1f_list, SUBFE, RD, RA, RB, OE, RC);
 	/*0x08a*/bind_instr(g1f_list, ADDE, RD, RA, RB, OE, RC);
-	/*0x090*/bind_instr(g1f_list, MTOCRF, CRM, RS);
+	/*0x090*/bind_instr(g1f_list, MTOCRF, L_11, CRM, RS);
 	/*0x095*/bind_instr(g1f_list, STDX, RS, RA, RB);
 	/*0x096*/bind_instr(g1f_list, STWCX_, RS, RA, RB);
 	/*0x097*/bind_instr(g1f_list, STWX, RS, RA, RB);
@@ -541,7 +514,6 @@ namespace PPU_instr
 	/*0x156*/bind_instr(g1f_list, DST, RA, RB, STRM, L_6);
 	/*0x157*/bind_instr(g1f_list, LHAX, RD, RA, RB);
 	/*0x167*/bind_instr(g1f_list, LVXL, VD, RA, RB);
-	/*0x168*/bind_instr(g1f_list, ABS, RD, RA, OE, RC);
 	/*0x173*/bind_instr(g1f_list, MFTB, RD, SPR);
 	/*0x176*/bind_instr(g1f_list, DSTST, RA, RB, STRM, L_6);
 	/*0x177*/bind_instr(g1f_list, LHAUX, RD, RA, RB);
@@ -554,7 +526,7 @@ namespace PPU_instr
 	/*0x1d3*/bind_instr(g1f_list, MTSPR, SPR, RS);
 	/*0x1d6*///DCBI
 	/*0x1dc*/bind_instr(g1f_list, NAND, RA, RS, RB, RC);
-	/*0x1e7*/bind_instr(g1f_list, STVXL, RS, RA, RB);
+	/*0x1e7*/bind_instr(g1f_list, STVXL, VS, RA, RB);
 	/*0x1e9*/bind_instr(g1f_list, DIVD, RD, RA, RB, OE, RC);
 	/*0x1eb*/bind_instr(g1f_list, DIVW, RD, RA, RB, OE, RC);
 	/*0x207*/bind_instr(g1f_list, LVLX, VD, RA, RB);
@@ -568,9 +540,9 @@ namespace PPU_instr
 	/*0x257*/bind_instr(g1f_list, LFDX, FRD, RA, RB);
 	/*0x277*/bind_instr(g1f_list, LFDUX, FRD, RA, RB);
 	/*0x287*/bind_instr(g1f_list, STVLX, VS, RA, RB);
-	/*0x297*/bind_instr(g1f_list, STFSX, RS, RA, RB);
+	/*0x297*/bind_instr(g1f_list, STFSX, FRS, RA, RB);
 	/*0x2a7*/bind_instr(g1f_list, STVRX, VS, RA, RB);
-	/*0x2d7*/bind_instr(g1f_list, STFDX, RS, RA, RB);
+	/*0x2d7*/bind_instr(g1f_list, STFDX, FRS, RA, RB);
 	/*0x307*/bind_instr(g1f_list, LVLXL, VD, RA, RB);
 	/*0x316*/bind_instr(g1f_list, LHBRX, RD, RA, RB);
 	/*0x318*/bind_instr(g1f_list, SRAW, RA, RS, RB, RC);
@@ -588,7 +560,7 @@ namespace PPU_instr
 	/*0x3d6*///ICBI
 	/*0x3f6*/bind_instr(g1f_list, DCBZ, RA, RB);
 
-	bind_instr(g3a_list, LD, RD, RA, D);
+	bind_instr(g3a_list, LD, RD, RA, DS);
 	bind_instr(g3a_list, LDU, RD, RA, DS);
 
 	bind_instr(g3b_list, FDIVS, FRD, FRA, FRB, RC);
@@ -602,7 +574,7 @@ namespace PPU_instr
 	bind_instr(g3b_list, FNMSUBS, FRD, FRA, FRC, FRB, RC);
 	bind_instr(g3b_list, FNMADDS, FRD, FRA, FRC, FRB, RC);
 		
-	bind_instr(g3e_list, STD, RS, RA, D);
+	bind_instr(g3e_list, STD, RS, RA, DS);
 	bind_instr(g3e_list, STDU, RS, RA, DS);
 
 	bind_instr(g3f_list, FSEL, FRD, FRA, FRC, FRB, RC);

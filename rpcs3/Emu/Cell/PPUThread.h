@@ -18,6 +18,18 @@ enum
 	CR_SO = 0x1,
 };
 
+enum
+{
+	PPU_THREAD_STATUS_IDLE		= (1 << 0),
+	PPU_THREAD_STATUS_RUNNABLE	= (1 << 1),
+	PPU_THREAD_STATUS_ONPROC	= (1 << 2),
+	PPU_THREAD_STATUS_SLEEP		= (1 << 3),
+	PPU_THREAD_STATUS_STOP		= (1 << 4),
+	PPU_THREAD_STATUS_ZOMBIE	= (1 << 5),
+	PPU_THREAD_STATUS_DELETED	= (1 << 6),
+	PPU_THREAD_STATUS_UNKNOWN	= (1 << 7),
+};
+
 enum FPSCR_EXP
 {
 	FPSCR_FX		= 0x80000000,
@@ -301,6 +313,9 @@ enum FPRType
 	FPR_PD   = 0x14,
 	FPR_ND   = 0x18,
 };
+
+static const u64 FPR_NAN_I = 0x7FF8000000000000ULL;
+static const double& FPR_NAN = (double&)FPR_NAN_I;
 
 struct PPCdouble
 {
@@ -707,7 +722,7 @@ public:
 	void SetFPSCR_FI(const u32 val)
 	{
 		if(val) SetFPSCRException(FPSCR_XX);
-        FPSCR.FI = val;
+		FPSCR.FI = val;
 	}
 
 	virtual wxString RegsToString()

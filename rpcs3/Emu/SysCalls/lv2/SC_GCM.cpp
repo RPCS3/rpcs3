@@ -7,6 +7,14 @@ extern Module cellGcmSys;
 CellGcmConfig current_config;
 CellGcmContextData current_context;
 gcmInfo gcm_info;
+struct gcm_offset
+{
+	u16 ea;
+	u16 offset;
+};
+
+u32 map_offset_addr = 0;
+u32 map_offset_pos = 0;
 
 int cellGcmMapMainMemory(u32 address, u32 size, u32 offset_addr)
 {
@@ -24,6 +32,8 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	const u32 local_size = 0xf900000; //TODO
 	const u32 local_addr = Memory.RSXFBMem.GetStartAddr();
 
+	map_offset_addr = 0;
+	map_offset_pos = 0;
 	current_config.ioSize = re32(ioSize);
 	current_config.ioAddress = re32(ioAddress);
 	current_config.localSize = re32(local_size);
@@ -90,11 +100,20 @@ int cellGcmAddressToOffset(u32 address, u32 offset_addr)
 {
 	cellGcmSys.Log("cellGcmAddressToOffset(address=0x%x,offset_addr=0x%x)", address, offset_addr);
 	if(!Memory.IsGoodAddr(offset_addr, sizeof(u32))) return CELL_EFAULT;
+	
+	if(!map_offset_addr)
+	{
+		map_offset_addr = Memory.Alloc(4*50, 4);
+	}
 
-	Memory.Write32(offset_addr, 
-		Memory.RSXFBMem.IsInMyRange(address)
-			? address - Memory.RSXFBMem.GetStartAddr() 
-			: address - re(current_context.begin));
+	u32 sa = Memory.RSXFBMem.IsInMyRange(address) ? Memory.RSXFBMem.GetStartAddr() : re(current_context.begin);
+	u16 ea = (sa + address - sa) >> 16;
+	u32 offset = address - sa;
+	//Memory.Write16(map_offset_addr + map_offset_pos + 0, ea);
+	//Memory.Write16(map_offset_addr + map_offset_pos + 2, offset);
+	//map_offset_pos += 4;
+
+	Memory.Write32(offset_addr, offset);
 
 	return CELL_OK;
 }

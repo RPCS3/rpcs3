@@ -27,12 +27,13 @@ protected:
 	wxWindow* DisAsmFrame;
 	u32 m_id;
 	PPCThreadType m_type;
-	u64 m_arg;
+	u64 m_args[4];
 	u64 m_prio;
 	bool m_joinable;
 	bool m_joining;
 	Array<u64> argv_addr;
 	u64 m_offset;
+	u32 m_exit_status;
 
 public:
 	u64 stack_size;
@@ -47,14 +48,17 @@ public:
 	virtual u64 GetStackAddr() const { return stack_addr; }
 	virtual u64 GetStackSize() const { return stack_size; }
 	virtual u64 GetFreeStackSize() const=0;
-	void SetArg(const u64 arg) { m_arg = arg; }
+	void SetArg(const uint pos, const u64 arg) { assert(pos < 4); m_args[pos] = arg; }
 
+	
 	void SetId(const u32 id);
 	void SetName(const wxString& name);
 	void SetPrio(const u64 prio) { m_prio = prio; }
 	void SetOffset(const u64 offset) { m_offset = offset; }
-	u64 GetOffset() { return m_offset; }
+	void SetExitStatus(const u32 status) { m_exit_status = status; }
 
+	u64 GetOffset() const { return m_offset; }
+	u32 GetExitStatus() const { return m_exit_status; }
 	u64 GetPrio() const { return m_prio; }
 	wxString GetName() const { return m_name; }
 	wxString GetFName() const

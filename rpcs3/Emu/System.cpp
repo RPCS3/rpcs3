@@ -85,8 +85,6 @@ void Emulator::Load()
 	Memory.Init();
 	GetInfo().Reset();
 
-	Memory.Write64(Memory.PRXMem.Alloc(8), 0xDEADBEEFABADCAFE);
-
 	bool is_error;
 	vfsLocalFile f(m_path);
 	Loader l(f);
@@ -127,28 +125,26 @@ void Emulator::Load()
 	else
 	{
 		thread.SetEntry(l.GetEntry());
+		Memory.StackMem.Alloc(0x1000);
+		thread.InitStack();
+		thread.AddArgv(m_path);
+		//thread.AddArgv("-emu");
+
+		m_rsx_callback = Memory.MainMem.Alloc(4 * 4) + 4;
+		Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
+
+		mem32_t callback_data(m_rsx_callback);
+		callback_data += ADDI(11, 0, 0x3ff);
+		callback_data += SC(2);
+		callback_data += BCLR(0x10 | 0x04, 0, 0, 0);
+
+		m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 3);
+
+		mem32_t ppu_thr_exit_data(m_ppu_thr_exit);
+		ppu_thr_exit_data += ADDI(11, 0, 41);
+		ppu_thr_exit_data += SC(2);
+		ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
 	}
-	
-	thread.SetArg(thread.GetId());
-	Memory.StackMem.Alloc(0x1000);
-	thread.InitStack();
-	thread.AddArgv(m_path);
-	//thread.AddArgv("-emu");
-
-	m_rsx_callback = Memory.MainMem.Alloc(4 * 4) + 4;
-	Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
-
-	mem32_t callback_data(m_rsx_callback);
-	callback_data += ADDI(11, 0, 0x3ff);
-	callback_data += SC(2);
-	callback_data += BCLR(0x10 | 0x04, 0, 0, 0);
-
-	m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 3);
-	
-	mem32_t ppu_thr_exit_data(m_ppu_thr_exit);
-	ppu_thr_exit_data += ADDI(11, 0, 41);
-	ppu_thr_exit_data += SC(2);
-	ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
 
 	thread.Run();
 

@@ -129,7 +129,7 @@ int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u32 arg, int prio, u32 
 
 	Memory.Write32(thread_id_addr, new_thread.GetId());
 	new_thread.SetEntry(entry);
-	new_thread.SetArg(arg);
+	new_thread.SetArg(0, arg);
 	new_thread.SetPrio(prio);
 	new_thread.stack_size = stacksize;
 	//new_thread.flags = flags;

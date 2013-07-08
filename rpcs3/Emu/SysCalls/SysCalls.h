@@ -251,6 +251,7 @@ extern int sys_heap_malloc(const u32 heap_addr, const u32 size);
 //sys_spu
 extern int sys_spu_image_open(u32 img_addr, u32 path_addr);
 extern int sys_spu_thread_initialize(u32 thread_addr, u32 group, u32 spu_num, u32 img_addr, u32 attr_addr, u32 arg_addr);
+extern int sys_spu_thread_set_argument(u32 id, u32 arg_addr);
 extern int sys_spu_thread_group_start(u32 id);
 extern int sys_spu_thread_group_create(u64 id_addr, u32 num, int prio, u64 attr_addr);
 extern int sys_spu_thread_create(u64 thread_id_addr, u64 entry_addr, u64 arg, int prio, u32 stacksize, u64 flags, u64 threadname_addr);

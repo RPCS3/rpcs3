@@ -274,9 +274,9 @@ private:
 	{
 		DisAsm_V2("vlogefp", vd, vb);
 	}
-	void VMADDFP(u32 vd, u32 va, u32 vb, u32 vc)
+	void VMADDFP(u32 vd, u32 va, u32 vc, u32 vb)
 	{
-		DisAsm_V4("vmaddfp", vd, va, vb, vc);
+		DisAsm_V4("vmaddfp", vd, va, vc, vb);
 	}
 	void VMAXFP(u32 vd, u32 va, u32 vb)
 	{
@@ -1166,9 +1166,16 @@ private:
 	{
 		DisAsm_R3_OE_RC("adde", rd, ra, rb, oe, rc);
 	}
-	void MTOCRF(u32 crm, u32 rs)
+	void MTOCRF(u32 l, u32 crm, u32 rs)
 	{
-		DisAsm_INT1_R1("mtocrf", crm, rs);
+		if(l)
+		{
+			DisAsm_INT1_R1("mtocrf", crm, rs);
+		}
+		else
+		{
+			DisAsm_INT1_R1("mtcrf", crm, rs);
+		}
 	}
 	void STDX(u32 rs, u32 ra, u32 rb)
 	{
@@ -1283,10 +1290,6 @@ private:
 	void LVXL(u32 vd, u32 ra, u32 rb)
 	{
 		DisAsm_V1_R2("lvxl", vd, ra, rb);
-	}
-	void ABS(u32 rd, u32 ra, u32 oe, bool rc)
-	{
-		DisAsm_R2_OE_RC("abs", rd, ra, oe, rc);
 	}
 	void MFTB(u32 rd, u32 spr)
 	{

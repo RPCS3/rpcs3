@@ -36,14 +36,16 @@ struct sys_spu_image
 	int nsegs;
 };
 
+static const u32 g_spu_group_thr_count = 255;
+
 struct SpuGroupInfo
 {
-	PPCThread* threads[10];
+	PPCThread* threads[g_spu_group_thr_count];
 	sys_spu_thread_group_attribute& attr;
 
 	SpuGroupInfo(sys_spu_thread_group_attribute& attr) : attr(attr)
 	{
-		memset(threads, 0, sizeof(PPCThread*) * 10);
+		memset(threads, 0, sizeof(PPCThread*) * g_spu_group_thr_count);
 	}
 };
 
@@ -74,7 +76,7 @@ int sys_spu_image_open(u32 img_addr, u32 path_addr)
 
 	if(!stream || !stream->IsOpened())
 	{
-		sc_spu.Error("'%s' not found!", path);
+		sc_spu.Error("sys_spu_image_open error: '%s' not found!", path);
 		delete stream;
 
 		return CELL_ENOENT;
@@ -83,7 +85,7 @@ int sys_spu_image_open(u32 img_addr, u32 path_addr)
 	u32 entry = LoadSpuImage(*stream);
 	delete stream;
 
-	sys_spu_image& ret = (sys_spu_image&)Memory[img_addr];
+	auto& ret = (sys_spu_image&)Memory[img_addr];
 	re(ret.type, 1);
 	re(ret.entry_point, entry);
 	re(ret.segs_addr, 0x0);
@@ -103,6 +105,8 @@ int sys_spu_thread_initialize(u32 thread_addr, u32 group, u32 spu_num, u32 img_a
 		return CELL_ESRCH;
 	}
 
+	SpuGroupInfo& group_info = *(SpuGroupInfo*)Emu.GetIdManager().GetIDData(group).m_data;
+
 	if(
 		!Memory.IsGoodAddr(img_addr, sizeof(sys_spu_image)) ||
 		!Memory.IsGoodAddr(attr_addr, sizeof(sys_spu_thread_attribute)) ||
@@ -111,15 +115,25 @@ int sys_spu_thread_initialize(u32 thread_addr, u32 group, u32 spu_num, u32 img_a
 		return CELL_EFAULT;
 	}
 
-	sys_spu_image& img = (sys_spu_image&)Memory[img_addr];
-	sys_spu_thread_attribute& attr = (sys_spu_thread_attribute&)Memory[attr_addr];
-	sys_spu_thread_argument& arg = (sys_spu_thread_argument&)Memory[arg_addr];
+	auto& img = (sys_spu_image&)Memory[img_addr];
+	auto& attr = (sys_spu_thread_attribute&)Memory[attr_addr];
+	auto& arg = (sys_spu_thread_argument&)Memory[arg_addr];
 
 	if(!Memory.IsGoodAddr(re(attr.name_addr), re(attr.name_len)))
 	{
 		return CELL_EFAULT;
 	}
+
+	if(spu_num >= g_spu_group_thr_count)
+	{
+		return CELL_EINVAL;
+	}
 	
+	if(group_info.threads[spu_num])
+	{
+		return CELL_EBUSY;
+	}
+
 	u32 entry = re(img.entry_point);
 	wxString name = Memory.ReadString(re(attr.name_addr), re(attr.name_len));
 	u64 a1 = re(arg.arg1);
@@ -140,17 +154,39 @@ int sys_spu_thread_initialize(u32 thread_addr, u32 group, u32 spu_num, u32 img_a
 	new_thread.SetOffset(g_spu_offset);
 	new_thread.SetEntry(entry - g_spu_offset);
 	new_thread.SetName(name);
-	SPU_GPR_hdr* GPR = ((SPUThread&)new_thread).GPR;
 	new_thread.Run();
 	new_thread.Pause();
-	GPR[3]._u64[1] = a1;
-	GPR[4]._u64[1] = a2;
-	GPR[5]._u64[1] = a3;
-	GPR[6]._u64[1] = a4;
+	new_thread.SetArg(0, a1);
+	new_thread.SetArg(1, a2);
+	new_thread.SetArg(2, a3);
+	new_thread.SetArg(3, a4);
 
-	ID& id = Emu.GetIdManager().GetIDData(group);
-	SpuGroupInfo& group_info = *(SpuGroupInfo*)id.m_data;
 	group_info.threads[spu_num] = &new_thread;
+
+	return CELL_OK;
+}
+
+//166
+int sys_spu_thread_set_argument(u32 id, u32 arg_addr)
+{
+	sc_spu.Warning("sys_spu_thread_set_argument(id=0x%x, arg_addr=0x%x)", id, arg_addr);
+	PPCThread* thr = Emu.GetCPU().GetThread(id);
+
+	if(!thr || !thr->IsSPU())
+	{
+		return CELL_ESRCH;
+	}
+
+	if(!Memory.IsGoodAddr(arg_addr, sizeof(sys_spu_thread_argument)))
+	{
+		return CELL_EFAULT;
+	}
+
+	auto& arg = (sys_spu_thread_argument&)Memory[arg_addr];
+	thr->SetArg(0, re(arg.arg1));
+	thr->SetArg(1, re(arg.arg2));
+	thr->SetArg(2, re(arg.arg3));
+	thr->SetArg(3, re(arg.arg4));
 
 	return CELL_OK;
 }
@@ -169,7 +205,7 @@ int sys_spu_thread_group_start(u32 id)
 	SpuGroupInfo& group_info = *(SpuGroupInfo*)id_data.m_data;
 
 	Emu.Pause();
-	for(int i=0; i<10; i++)
+	for(int i=0; i<g_spu_group_thr_count; i++)
 	{
 		if(group_info.threads[i])
 		{
@@ -208,6 +244,21 @@ int sys_spu_thread_group_create(u64 id_addr, u32 num, int prio, u64 attr_addr)
 int sys_spu_thread_create(u64 thread_id_addr, u64 entry_addr, u64 arg,
 	int prio, u32 stacksize, u64 flags, u64 threadname_addr)
 {
+	return CELL_OK;
+}
+
+int sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup)
+{
+	if(!Emu.GetIdManager().CheckID(id))
+	{
+		return CELL_ESRCH;
+	}
+
+	if(spup > 63)
+	{
+		return CELL_EINVAL;
+	}
+
 	return CELL_OK;
 }
 
@@ -329,7 +380,7 @@ int sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq, u64 req, u32 
 	SpuGroupInfo* group = (SpuGroupInfo*)Emu.GetIdManager().GetIDData(id).m_data;
 	EventQueue* equeue = (EventQueue*)Emu.GetIdManager().GetIDData(eq).m_data;
 	
-	for(int i=0; i<10; ++i)
+	for(int i=0; i<g_spu_group_thr_count; ++i)
 	{
 		if(group->threads[i])
 		{
