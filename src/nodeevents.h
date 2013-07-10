@@ -46,7 +46,7 @@ namespace YAML
 		
 	private:
 		detail::shared_memory_holder m_pMemory;
-		detail::node& m_root;
+		detail::node* m_root;
 		
 		typedef std::map<const detail::node_ref *, int> RefCount;
 		RefCount m_refCount;

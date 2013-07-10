@@ -506,6 +506,15 @@ namespace Test
             YAML_ASSERT(node.as<double>() == x);
             return true;
         }
+
+        TEST EmitEmptyNode()
+        {
+            YAML::Node node;
+            YAML::Emitter emitter;
+            emitter << node;
+            YAML_ASSERT(std::string(emitter.c_str()) == "");
+            return true;
+        }
     }
 	
 	void RunNodeTest(TEST (*test)(), const std::string& name, int& passed, int& total) {
@@ -569,6 +578,7 @@ namespace Test
         RunNodeTest(&Node::ResetNode, "reset node", passed, total);
         RunNodeTest(&Node::DereferenceIteratorError, "dereference iterator error", passed, total);
         RunNodeTest(&Node::FloatingPrecision, "floating precision", passed, total);
+        RunNodeTest(&Node::EmitEmptyNode, "emit empty node", passed, total);
 
 		std::cout << "Node tests: " << passed << "/" << total << " passed\n";
 		return passed == total;

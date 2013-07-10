@@ -19,9 +19,10 @@ namespace YAML
 		return it->second;
 	}
 
-	NodeEvents::NodeEvents(const Node& node): m_pMemory(node.m_pMemory), m_root(*node.m_pNode)
+	NodeEvents::NodeEvents(const Node& node): m_pMemory(node.m_pMemory), m_root(node.m_pNode)
 	{
-		Setup(m_root);
+        if(m_root)
+            Setup(*m_root);
 	}
 
 	void NodeEvents::Setup(const detail::node& node)
@@ -47,7 +48,8 @@ namespace YAML
 		AliasManager am;
 		
 		handler.OnDocumentStart(Mark());
-		Emit(m_root, handler, am);
+        if(m_root)
+            Emit(*m_root, handler, am);
 		handler.OnDocumentEnd();
 	}
 
