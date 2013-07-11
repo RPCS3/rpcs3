@@ -70,18 +70,6 @@ namespace PPU_instr
 
 	//This field is used to specify a bit in the CR, or in the FPSCR, as the destination of the result of an instruction
 	static CodeField<6, 10> CRBD(FIELD_R_CR);
-	
-	//
-	static CodeField<6, 10> BT;
-
-	//
-	static CodeField<11, 15> BA;
-
-	//
-	static CodeField<16, 20> BB;
-
-	//
-	static CodeField<6, 10> BF;
 
 	//This field is used to specify options for the branch conditional instructions
 	static CodeField<6, 10> BO;
@@ -158,7 +146,7 @@ namespace PPU_instr
 	static CodeField<6, 10> FRS;
 
 	//
-	static CodeField<7, 14> FLM;
+	static CodeField<7, 14> FM;
 
 	//This field is used to specify an FPR as a source
 	static CodeField<11, 15> FRA(FIELD_R_FPR);
@@ -602,12 +590,12 @@ namespace PPU_instr
 	bind_instr(g3f_0_list, FCTID, FRD, FRB, RC);
 	bind_instr(g3f_0_list, FCTIDZ, FRD, FRB, RC);
 
-	bind_instr(g3f_0_list, MTFSB1, BT, RC);
-	bind_instr(g3f_0_list, MCRFS, BF, BFA);
-	bind_instr(g3f_0_list, MTFSB0, BT, RC);
-	bind_instr(g3f_0_list, MTFSFI, CRFD, I, RC);
+	bind_instr(g3f_0_list, MTFSB1, CRBD, RC);
+	bind_instr(g3f_0_list, MCRFS, CRFD, CRFS);
+	bind_instr(g3f_0_list, MTFSB0, CRBD, RC);
+	bind_instr(g3f_0_list, MTFSFI, CRBD, I, RC);
 	bind_instr(g3f_0_list, MFFS, FRD, RC);
-	bind_instr(g3f_0_list, MTFSF, FLM, FRB, RC);
+	bind_instr(g3f_0_list, MTFSF, FM, FRB, RC);
 
 	#undef bind_instr
 };

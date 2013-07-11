@@ -3286,26 +3286,42 @@ private:
 		Memory.Write64(addr, CPU.GPR[rs]);
 		CPU.GPR[ra] = addr;
 	}
-	void MTFSB1(u32 bt, bool rc)
+	void MTFSB1(u32 crbd, bool rc)
 	{
-		UNIMPLEMENTED();
+		u64 mask = (1ULL << crbd);
+		CPU.FPSCR.FPSCR |= mask;
+		if(rc) UNIMPLEMENTED();
 	}
-	void MCRFS(u32 bf, u32 bfa)
+	void MCRFS(u32 crbd, u32 crbs)
 	{
-		UNIMPLEMENTED();
+		u64 mask = (1ULL << crbd);
+		CPU.CR.CR &= ~mask;
+		CPU.CR.CR |= CPU.FPSCR.FPSCR & mask;
 	}
-	void MTFSB0(u32 bt, bool rc)
+	void MTFSB0(u32 crbd, bool rc)
 	{
-		UNIMPLEMENTED();
+		u64 mask = (1ULL << crbd);
+		CPU.FPSCR.FPSCR &= ~mask;
+		if(rc) UNIMPLEMENTED();
 	}
 	void MTFSFI(u32 crfd, u32 i, bool rc)
 	{
-		UNIMPLEMENTED();
+		u64 mask = (1ULL << crfd);
+
+		if(i)
+		{
+			CPU.FPSCR.FPSCR |= mask;
+		}
+		else
+		{
+			CPU.FPSCR.FPSCR &= ~mask;
+		}
+		if(rc) UNIMPLEMENTED();
 	}
 	void MFFS(u32 frd, bool rc)
 	{
 		(u64&)CPU.FPR[frd] = CPU.FPSCR.FPSCR;
-		if(rc) UNK("mffs.");
+		if(rc) UNIMPLEMENTED();
 	}
 	void MTFSF(u32 flm, u32 frb, bool rc)
 	{
@@ -3493,17 +3509,17 @@ private:
 		CPU.FPR[frd] = CPU.FPR[fra] * CPU.FPR[frc];
 		CPU.FPSCR.FI = 0;
 		CPU.FPSCR.FR = 0;
-		CPU.FPSCR.FPRF = PPCdouble(CPU.FPR[frd]).GetType();
+		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) UNK("fmul.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FRSQRTE(u32 frd, u32 frb, bool rc)
 	{
-		UNIMPLEMENTED();
+		//if(CPU.FPR[frb].
 	}
 	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
 		CPU.FPR[frd] = CPU.FPR[fra] * CPU.FPR[frc] - CPU.FPR[frb];
-		CPU.FPSCR.FPRF = PPCdouble(CPU.FPR[frd]).GetType();
+		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) UNK("fmsub.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMADD(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
