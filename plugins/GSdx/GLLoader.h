@@ -103,13 +103,15 @@ namespace GLLoader {
 	void init_gl_function();
 	bool check_gl_supported_extension();
 
+	extern bool fglrx_buggy_driver;
+	extern bool nvidia_buggy_driver;
+
 	extern bool found_GL_ARB_separate_shader_objects;
 	extern bool found_GL_ARB_shading_language_420pack;
 	extern bool found_GL_ARB_texture_storage;
 	extern bool found_GL_ARB_copy_image;
 	extern bool found_GL_NV_copy_image;
 	extern bool found_geometry_shader;
-	extern bool fglrx_buggy_driver;
 	extern bool found_only_gl30;
 	extern bool found_GL_ARB_gpu_shader5;
 }

@@ -256,8 +256,7 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 	if (m_sso) {
 		header += "#extension GL_ARB_separate_shader_objects : require\n";
 	} else {
-		if (!GLLoader::fglrx_buggy_driver)
-			header += "#define DISABLE_SSO\n";
+		header += "#define DISABLE_SSO\n";
 	}
 	if (GLLoader::found_only_gl30) {
 		// Need version 330

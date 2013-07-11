@@ -6,11 +6,19 @@ struct vertex_basic
     vec2 t;
 };
 
-#if __VERSION__ > 140 && !(defined(NO_STRUCT))
-layout(location = 0) in vertex_basic PSin;
+#if __VERSION__ > 140
+
+in SHADER
+{
+    vec4 p;
+    vec2 t;
+} PSin;
+
 #define PSin_p (PSin.p)
 #define PSin_t (PSin.t)
+
 #else
+
 #ifdef DISABLE_SSO
 in vec4 SHADERp;
 in vec2 SHADERt;
@@ -20,7 +28,9 @@ layout(location = 1) in vec2 SHADERt;
 #endif
 #define PSin_p SHADERp
 #define PSin_t SHADERt
+
 #endif
+
 #ifdef FRAGMENT_SHADER
 
 layout(location = 0) out vec4 SV_Target0;
@@ -44,22 +54,22 @@ layout(binding = 0) uniform sampler2D TextureSampler;
 // TODO ensure that clip (discard) is < 0 and not <= 0 ???
 void ps_main0()
 {
+    if (fract(PSin_t.y * hH) - 0.5 < 0.0)
+        discard;
     // I'm not sure it impact us but be safe to lookup texture before conditional if
     // see: http://www.opengl.org/wiki/GLSL_Sampler#Non-uniform_flow_control
     vec4 c = texture(TextureSampler, PSin_t);
-    if (fract(PSin_t.y * hH) - 0.5 < 0.0)
-        discard;
 
     SV_Target0 = c;
 }
 
 void ps_main1()
 {
+    if (0.5 - fract(PSin_t.y * hH) < 0.0)
+        discard;
     // I'm not sure it impact us but be safe to lookup texture before conditional if
     // see: http://www.opengl.org/wiki/GLSL_Sampler#Non-uniform_flow_control
     vec4 c = texture(TextureSampler, PSin_t);
-    if (0.5 - fract(PSin_t.y * hH) < 0.0)
-        discard;
 
     SV_Target0 = c;
 }

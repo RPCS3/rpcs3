@@ -6,11 +6,19 @@ struct vertex_basic
     vec2 t;
 };
 
-#if __VERSION__ > 140 && !(defined(NO_STRUCT))
-layout(location = 0) in vertex_basic PSin;
+#if __VERSION__ > 140
+
+in SHADER
+{
+    vec4 p;
+    vec2 t;
+} PSin;
+
 #define PSin_p (PSin.p)
 #define PSin_t (PSin.t)
+
 #else
+
 #ifdef DISABLE_SSO
 in vec4 SHADERp;
 in vec2 SHADERt;
@@ -20,7 +28,9 @@ layout(location = 1) in vec2 SHADERt;
 #endif
 #define PSin_p SHADERp
 #define PSin_t SHADERt
+
 #endif
+
 #ifdef FRAGMENT_SHADER
 
 layout(location = 0) out vec4 SV_Target0;

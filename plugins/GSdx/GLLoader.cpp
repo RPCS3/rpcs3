@@ -102,6 +102,8 @@ PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation          = NULL;
 namespace GLLoader {
 
 	bool fglrx_buggy_driver = false;
+	bool nvidia_buggy_driver = false;
+
 	bool found_GL_ARB_separate_shader_objects = false;
 	bool found_GL_ARB_shading_language_420pack = false;
 	bool found_GL_ARB_texture_storage = false;
@@ -122,6 +124,8 @@ namespace GLLoader {
 		// Name change but driver is still bad!
 		if (strstr(vendor, "ATI") || strstr(vendor, "Advanced Micro Devices"))
 			fglrx_buggy_driver = true;
+		if (strstr(vendor, "NVIDIA Corporation"))
+			nvidia_buggy_driver = true;
 
 		GLuint dot = 0;
 		while (s[dot] != '\0' && s[dot] != '.') dot++;
@@ -134,6 +138,12 @@ namespace GLLoader {
 			fprintf(stderr, "Geometry shaders are not supported. Required openGL3.2\n");
 			found_geometry_shader = false;
 		}
+#ifdef _LINUX
+		if (nvidia_buggy_driver) {
+			fprintf(stderr, "Buggy driver detected. Geometry shaders will be disabled\n");
+			found_geometry_shader = false;
+		}
+#endif
 		if (theApp.GetConfig("override_geometry_shader", -1) != -1) {
 			found_geometry_shader = !!theApp.GetConfig("override_geometry_shader", -1);
 			fprintf(stderr, "Override geometry shaders detection\n");

@@ -28,11 +28,19 @@ layout(location = 1) in vec2 TEXCOORD0;
 // smooth, the default, means to do perspective-correct interpolation.
 //
 // The centroid qualifier only matters when multisampling. If this qualifier is not present, then the value is interpolated to the pixel's center, anywhere in the pixel, or to one of the pixel's samples. This sample may lie outside of the actual primitive being rendered, since a primitive can cover only part of a pixel's area. The centroid qualifier is used to prevent this; the interpolation point must fall within both the pixel's area and the primitive's area.
-#if __VERSION__ > 140 && !(defined(NO_STRUCT))
-layout(location = 0) out vertex_basic VSout;
+#if __VERSION__ > 140
+
+out SHADER
+{
+    vec4 p;
+    vec2 t;
+} VSout;
+
 #define VSout_p (VSout.p)
 #define VSout_t (VSout.t)
+
 #else
+
 #ifdef DISABLE_SSO
 out vec4 SHADERp;
 out vec2 SHADERt;
@@ -42,6 +50,7 @@ layout(location = 1) out vec2 SHADERt;
 #endif
 #define VSout_p SHADERp
 #define VSout_t SHADERt
+
 #endif
 
 void vs_main()
@@ -54,13 +63,20 @@ void vs_main()
 #endif
 
 #ifdef FRAGMENT_SHADER
-// NOTE: pixel can be clip with "discard"
 
-#if __VERSION__ > 140 && !(defined(NO_STRUCT))
-layout(location = 0) in vertex_basic PSin;
+#if __VERSION__ > 140
+
+in SHADER
+{
+    vec4 p;
+    vec2 t;
+} PSin;
+
 #define PSin_p (PSin.p)
 #define PSin_t (PSin.t)
+
 #else
+
 #ifdef DISABLE_SSO
 in vec4 SHADERp;
 in vec2 SHADERt;
@@ -70,6 +86,7 @@ layout(location = 1) in vec2 SHADERt;
 #endif
 #define PSin_p SHADERp
 #define PSin_t SHADERt
+
 #endif
 
 layout(location = 0) out vec4 SV_Target0;
@@ -86,17 +103,24 @@ vec4 sample_c()
     return texture(TextureSampler, PSin_t );
 }
 
-uniform vec4 mask[4] = vec4[4]
-(
-		vec4(1, 0, 0, 0),
-		vec4(0, 1, 0, 0),
-		vec4(0, 0, 1, 0),
-		vec4(1, 1, 1, 0)
-);
+//uniform vec4 mask[4] = vec4[4]
+//(
+//		vec4(1, 0, 0, 0),
+//		vec4(0, 1, 0, 0),
+//		vec4(0, 0, 1, 0),
+//		vec4(1, 1, 1, 0)
+//);
 
 
 vec4 ps_crt(uint i)
 {
+    vec4 mask[4] = vec4[4]
+        (
+         vec4(1, 0, 0, 0),
+         vec4(0, 1, 0, 0),
+         vec4(0, 0, 1, 0),
+         vec4(1, 1, 1, 0)
+        );
 	return sample_c() * clamp((mask[i] + 0.5f), 0.0f, 1.0f);
 }
 

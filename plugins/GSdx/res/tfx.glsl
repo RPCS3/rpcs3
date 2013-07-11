@@ -60,13 +60,21 @@ layout(location = 4) in uint  i_z;
 layout(location = 5) in uvec2 i_uv;
 layout(location = 6) in vec4  i_f;
 
-#if __VERSION__ > 140 && !(defined(NO_STRUCT))
-layout(location = 0) out vertex VSout;
-#define VSout_p (VSout.p)
+#if __VERSION__ > 140
+
+out SHADER
+{
+    vec4 t;
+    vec4 tp;
+    vec4 c;
+} VSout;
+
 #define VSout_t (VSout.t)
 #define VSout_tp (VSout.tp)
 #define VSout_c (VSout.c)
+
 #else
+
 #ifdef DISABLE_SSO
 out vec4 SHADERt;
 out vec4 SHADERtp;
@@ -79,6 +87,7 @@ layout(location = 2) out vec4 SHADERc;
 #define VSout_t SHADERt
 #define VSout_tp SHADERtp
 #define VSout_c SHADERc
+
 #endif
 
 #if __VERSION__ > 140
@@ -165,9 +174,35 @@ out gl_PerVertex {
     float gl_ClipDistance[];
 };
 
-layout(location = 0) in vertex GSin[];
+in SHADER
+{
+    vec4 t;
+    vec4 tp;
+    vec4 c;
+} GSin[];
 
-layout(location = 0) out vertex GSout;
+out SHADER
+{
+    vec4 t;
+    vec4 tp;
+    vec4 c;
+} GSout;
+
+void out_vertex(in vertex v)
+{
+    GSout.t = v.t;
+    GSout.tp = v.tp;
+    GSout.c = v.c;
+    EmitVertex();
+}
+
+void out_vertex_elem(in vec4 t, in vec4 tp, in vec4 c)
+{
+    GSout.t = t;
+    GSout.tp = tp;
+    GSout.c = c;
+    EmitVertex();
+}
 
 #if GS_PRIM == 0
 layout(points) in;
@@ -177,8 +212,7 @@ void gs_main()
 {
     for(int i = 0; i < gl_in.length(); i++) {
         gl_Position = gl_in[i].gl_Position;
-        GSout = GSin[i];
-        EmitVertex();
+        out_vertex_elem(GSin[i].t, GSin[i].tp, GSin[i].c);
     }
     EndPrimitive();
 }
@@ -191,12 +225,12 @@ void gs_main()
 {
     for(int i = 0; i < gl_in.length(); i++) {
         gl_Position = gl_in[i].gl_Position;
-        GSout = GSin[i];
 #if GS_IIP == 0
-        if (i == 0)
-            GSout.c = GSin[1].c;
+        // use latest color
+        out_vertex_elem(GSin[i].t, GSin[i].tp, GSin[1].c);
+#else
+        out_vertex_elem(GSin[i].t, GSin[i].tp, GSin[i].c);
 #endif
-        EmitVertex();
     }
     EndPrimitive();
 }
@@ -209,12 +243,12 @@ void gs_main()
 {
     for(int i = 0; i < gl_in.length(); i++) {
         gl_Position = gl_in[i].gl_Position;
-        GSout = GSin[i];
 #if GS_IIP == 0
-        if (i == 0 || i == 1)
-            GSout.c = GSin[2].c;
+        // use latest color
+        out_vertex_elem(GSin[i].t, GSin[i].tp, GSin[2].c);
+#else
+        out_vertex_elem(GSin[i].t, GSin[i].tp, GSin[i].c);
 #endif
-        EmitVertex();
     }
     EndPrimitive();
 }
@@ -227,8 +261,12 @@ void gs_main()
 {
     // left top     => GSin[0];
     // right bottom => GSin[1];
+    vertex rb = vertex(GSin[1].t, GSin[1].tp, GSin[1].c);
+    vertex lt = vertex(GSin[0].t, GSin[0].tp, GSin[0].c);
+#if 0
     vertex rb = GSin[1];
     vertex lt = GSin[0];
+#endif
     vec4 rb_p = gl_in[1].gl_Position;
     vec4 lb_p = gl_in[1].gl_Position;
     vec4 rt_p = gl_in[1].gl_Position;
@@ -250,31 +288,25 @@ void gs_main()
 
     // Triangle 1
     gl_Position = lt_p;
-    GSout = lt;
-    EmitVertex();
+    out_vertex(lt);
 
     gl_Position = lb_p;
-    GSout = lb;
-    EmitVertex();
+    out_vertex(lb);
 
     gl_Position = rt_p;
-    GSout = rt;
-    EmitVertex();
+    out_vertex(rt);
 
     EndPrimitive();
 
     // Triangle 2
     gl_Position = lb_p;
-    GSout = lb;
-    EmitVertex();
+    out_vertex(lb);
 
     gl_Position = rt_p;
-    GSout = rt;
-    EmitVertex();
+    out_vertex(rt);
 
     gl_Position = rb_p;
-    GSout = rb;
-    EmitVertex();
+    out_vertex(rb);
 
     EndPrimitive();
 
@@ -285,12 +317,22 @@ void gs_main()
 #endif
 
 #ifdef FRAGMENT_SHADER
-#if __VERSION__ > 140 && !(defined(NO_STRUCT))
-layout(location = 0) in vertex PSin;
+
+#if __VERSION__ > 140
+
+in SHADER
+{
+    vec4 t;
+    vec4 tp;
+    vec4 c;
+} PSin;
+
 #define PSin_t (PSin.t)
 #define PSin_tp (PSin.tp)
 #define PSin_c (PSin.c)
+
 #else
+
 #ifdef DISABLE_SSO
 in vec4 SHADERt;
 in vec4 SHADERtp;
@@ -303,6 +345,7 @@ layout(location = 2) in vec4 SHADERc;
 #define PSin_t SHADERt
 #define PSin_tp SHADERtp
 #define PSin_c SHADERc
+
 #endif
 
 // Same buffer but 2 colors for dual source blending

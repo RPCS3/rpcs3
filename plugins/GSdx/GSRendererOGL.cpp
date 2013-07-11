@@ -27,7 +27,7 @@
 GSRendererOGL::GSRendererOGL()
 	: GSRendererHW(new GSTextureCacheOGL(this))
 {
-	m_logz = !!theApp.GetConfig("logz", 0);
+	m_logz = !!theApp.GetConfig("logz", 1);
 	m_fba = !!theApp.GetConfig("fba", 1);
 	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0) && !!theApp.GetConfig("UserHacks", 0);
 	UserHacks_AlphaStencil = !!theApp.GetConfig("UserHacks_AlphaStencil", 0) && !!theApp.GetConfig("UserHacks", 0);
