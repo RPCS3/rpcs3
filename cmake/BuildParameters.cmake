@@ -163,19 +163,26 @@ if(PACKAGE_MODE)
 endif(PACKAGE_MODE)
 
 #-------------------------------------------------------------------------------
-# Select nvidia cg shader api by default
+# Select nvidia cg shader api by default (zzogl only)
 #-------------------------------------------------------------------------------
 if(NOT DEFINED GLSL_API)
 	set(GLSL_API FALSE)
 endif(NOT DEFINED GLSL_API)
 
 #-------------------------------------------------------------------------------
-# Select GLX API by default
+# Select GLX API by default (zzogl only)
 #-------------------------------------------------------------------------------
 if(NOT DEFINED EGL_API)
     set(EGL_API FALSE)
 else()
     message(STATUS "EGL is experimental and not expected to work yet!!!")
+endif()
+
+#-------------------------------------------------------------------------------
+# Select opengl api by default (gsdx)
+#-------------------------------------------------------------------------------
+if(NOT DEFINED GLES_API)
+    set(GLES_API FALSE)
 endif()
 
 #-------------------------------------------------------------------------------

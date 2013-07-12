@@ -6,7 +6,7 @@ struct vertex_basic
     vec2 t;
 };
 
-#if __VERSION__ > 140
+#if !GL_ES && __VERSION__ > 140
 
 in SHADER
 {
@@ -80,7 +80,7 @@ void ps_main2()
     vec4 c1 = texture(TextureSampler, PSin_t);
     vec4 c2 = texture(TextureSampler, PSin_t + ZrH);
 
-    SV_Target0 = (c0 + c1 * 2 + c2) / 4;
+    SV_Target0 = (c0 + c1 * 2.0f + c2) / 4.0f;
 }
 
 void ps_main3()

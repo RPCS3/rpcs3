@@ -247,21 +247,25 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	int ShadeBoost_Contrast = theApp.GetConfig("ShadeBoost_Contrast", 50);
 	int ShadeBoost_Brightness = theApp.GetConfig("ShadeBoost_Brightness", 50);
 	int ShadeBoost_Saturation = theApp.GetConfig("ShadeBoost_Saturation", 50);
-	std::string shade_macro = format("#define SB_SATURATION %d\n", ShadeBoost_Saturation)
-		+ format("#define SB_BRIGHTNESS %d\n", ShadeBoost_Brightness)
-		+ format("#define SB_CONTRAST %d\n", ShadeBoost_Contrast);
+	std::string shade_macro = format("#define SB_SATURATION %d.0\n", ShadeBoost_Saturation)
+		+ format("#define SB_BRIGHTNESS %d.0\n", ShadeBoost_Brightness)
+		+ format("#define SB_CONTRAST %d.0\n", ShadeBoost_Contrast);
 
 	m_shadeboost.ps = m_shader->Compile("shadeboost.glsl", "ps_main", GL_FRAGMENT_SHADER, shadeboost_glsl, shade_macro);
 
 	// ****************************************************************
 	// rasterization configuration
 	// ****************************************************************
+#ifndef ENABLE_GLES
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+#endif
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_SCISSOR_TEST);
 	// FIXME enable it when multisample code will be here
 	// DX: rd.MultisampleEnable = true;
+#ifndef ENABLE_GLES
 	glDisable(GL_MULTISAMPLE);
+#endif
 #ifdef ONLY_LINES
 	glLineWidth(5.0);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -1048,9 +1052,11 @@ void GSDeviceOGL::OMSetFBO(GLuint fbo, GLenum buffer)
 		//if (fbo) fprintf(stderr, "FB status %x\n", gl_CheckFramebufferStatus(GL_FRAMEBUFFER));
 	}
 
-	if (m_state.draw != buffer) {
+	// Note if m_fbo is 0, standard GL_BACK will be used instead
+	if (m_fbo && m_state.draw != buffer) {
 		m_state.draw = buffer;
-		glDrawBuffer(buffer);
+		GLenum target[1] = {buffer};
+		gl_DrawBuffers(1, target);
 	}
 
 }
@@ -1080,14 +1086,8 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 {
 	if (rt == NULL || !static_cast<GSTextureOGL*>(rt)->IsBackbuffer()) {
 		if (rt) {
-			// FIXME DEBUG special case for GL_R16UI
-			if (rt->GetFormat() == GL_R16UI) {
-				OMSetFBO(m_fbo, GL_COLOR_ATTACHMENT1);
-				static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT1);
-			} else {
-				OMSetFBO(m_fbo, GL_COLOR_ATTACHMENT0);
-				static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
-			}
+			OMSetFBO(m_fbo);
+			static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
 		} else {
 			// Note: NULL rt is only used in DATE so far. Color writing is disabled
 			// on the blend setup
@@ -1123,6 +1123,7 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 
 void GSDeviceOGL::CheckDebugLog()
 {
+#ifndef ENABLE_GLES
        unsigned int count = 16; // max. num. of messages that will be read from the log
        int bufsize = 2048;
 	   unsigned int sources[16] = {};
@@ -1146,6 +1147,7 @@ void GSDeviceOGL::CheckDebugLog()
        }
 
 	   delete[] messageLog;
+#endif
 }
 
 void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message)

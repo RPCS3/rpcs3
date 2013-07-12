@@ -98,8 +98,21 @@ class GSBufferOGL {
 		}
 	}
 
+#ifdef ENABLE_GLES
+	void upload(const void* src, uint32 count, uint32 basevertex = 0)
+#else
 	void upload(const void* src, uint32 count)
+#endif
 	{
+#ifdef ENABLE_GLES
+		// Emulate gl_DrawElementsBaseVertex... Maybe GLES 4 you know!
+		if (basevertex) {
+			uint32* data = (uint32*) src;
+			for (uint32 i = 0; i < count; i++) {
+				data[i] += basevertex;
+			}
+		}
+#endif
 		if (m_sub_data_config) {
 			subdata_upload(src, count);
 		} else {
@@ -152,12 +165,20 @@ class GSBufferOGL {
 
 	void Draw(GLenum mode, GLint basevertex)
 	{
+#ifdef ENABLE_GLES
+		glDrawElements(mode, m_count, GL_UNSIGNED_INT, (void*)(m_start * m_stride));
+#else
 		gl_DrawElementsBaseVertex(mode, m_count, GL_UNSIGNED_INT, (void*)(m_start * m_stride), basevertex);
+#endif
 	}
 
 	void Draw(GLenum mode, GLint basevertex, int offset, int count)
 	{
+#ifdef ENABLE_GLES
+		glDrawElements(mode, count, GL_UNSIGNED_INT, (void*)((m_start + offset) * m_stride));
+#else
 		gl_DrawElementsBaseVertex(mode, count, GL_UNSIGNED_INT, (void*)((m_start + offset) * m_stride), basevertex);
+#endif
 	}
 
 	size_t GetStart() { return m_start; }
@@ -233,7 +254,13 @@ public:
 
 	void UploadVB(const void* vertices, size_t count) { m_vb->upload(vertices, count); }
 
-	void UploadIB(const void* index, size_t count) { m_ib->upload(index, count); }
+	void UploadIB(const void* index, size_t count) {
+#ifdef ENABLE_GLES
+		m_ib->upload(index, count, m_vb->GetStart());
+#else
+		m_ib->upload(index, count);
+#endif
+	}
 
 	bool MapVB(void **pointer, size_t count) { return m_vb->Map(pointer, count); }
 

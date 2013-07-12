@@ -9,7 +9,7 @@ struct vertex_basic
 
 #ifdef VERTEX_SHADER
 
-#if __VERSION__ > 140
+#if !GL_ES && __VERSION__ > 140
 out gl_PerVertex {
     vec4 gl_Position;
     float gl_PointSize;
@@ -28,7 +28,7 @@ layout(location = 1) in vec2 TEXCOORD0;
 // smooth, the default, means to do perspective-correct interpolation.
 //
 // The centroid qualifier only matters when multisampling. If this qualifier is not present, then the value is interpolated to the pixel's center, anywhere in the pixel, or to one of the pixel's samples. This sample may lie outside of the actual primitive being rendered, since a primitive can cover only part of a pixel's area. The centroid qualifier is used to prevent this; the interpolation point must fall within both the pixel's area and the primitive's area.
-#if __VERSION__ > 140
+#if !GL_ES && __VERSION__ > 140
 
 out SHADER
 {
@@ -64,7 +64,7 @@ void vs_main()
 
 #ifdef FRAGMENT_SHADER
 
-#if __VERSION__ > 140
+#if !GL_ES && __VERSION__ > 140
 
 in SHADER
 {
@@ -89,8 +89,12 @@ layout(location = 1) in vec2 SHADERt;
 
 #endif
 
+// Give a different name so I remember there is a special case!
+#ifdef ps_main1
+layout(location = 0) out uint SV_Target1;
+#else
 layout(location = 0) out vec4 SV_Target0;
-layout(location = 1) out uint SV_Target1;
+#endif
 
 #ifdef DISABLE_GL42
 uniform sampler2D TextureSampler;
@@ -124,11 +128,14 @@ vec4 ps_crt(uint i)
 	return sample_c() * clamp((mask[i] + 0.5f), 0.0f, 1.0f);
 }
 
+#ifdef ps_main0
 void ps_main0()
 {
     SV_Target0 = sample_c();
 }
+#endif
 
+#ifdef ps_main1
 void ps_main1()
 {
     vec4 c = sample_c();
@@ -139,7 +146,9 @@ void ps_main1()
 
     SV_Target1 = (i.x & uint(0x001f)) | (i.y & uint(0x03e0)) | (i.z & uint(0x7c00)) | (i.w & uint(0x8000));
 }
+#endif
 
+#ifdef ps_main7
 void ps_main7()
 {
     vec4 c = sample_c();
@@ -148,7 +157,9 @@ void ps_main7()
 
     SV_Target0 = c;
 }
+#endif
 
+#ifdef ps_main5
 void ps_main5() // triangular
 {
 	highp uvec4 p = uvec4(PSin_p);
@@ -157,7 +168,9 @@ void ps_main5() // triangular
 
     SV_Target0 = c;
 }
+#endif
 
+#ifdef ps_main6
 void ps_main6() // diagonal
 {
 	uvec4 p = uvec4(PSin_p);
@@ -166,36 +179,43 @@ void ps_main6() // diagonal
 
     SV_Target0 = c;
 }
+#endif
 
 // Used for DATE (stencil)
+#ifdef ps_main2
 void ps_main2()
 {
-    if((sample_c().a - 127.5f / 255) < 0) // >= 0x80 pass
+    if((sample_c().a - 127.5f / 255.0f) < 0.0f) // >= 0x80 pass
         discard;
 
 #ifdef ENABLE_OGL_STENCIL_DEBUG
     SV_Target0 = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 #endif
 }
+#endif
 
 // Used for DATE (stencil)
+#ifdef ps_main3
 void ps_main3()
 {
-    if((127.5f / 255 - sample_c().a) < 0) // < 0x80 pass (== 0x80 should not pass)
+    if((127.5f / 255.0f - sample_c().a) < 0.0f) // < 0x80 pass (== 0x80 should not pass)
         discard;
 
 #ifdef ENABLE_OGL_STENCIL_DEBUG
     SV_Target0 = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 #endif
 }
+#endif
 
+#ifdef ps_main4
 void ps_main4()
 {
     // FIXME mod and fmod are different when value are negative
     // 	output.c = fmod(sample_c(input.t) * 255 + 0.5f, 256) / 255;
-    vec4 c = mod(sample_c() * 255 + 0.5f, 256) / 255;
+    vec4 c = mod(sample_c() * 255.0f + 0.5f, 256.0f) / 255.0f;
 
     SV_Target0 = c;
 }
+#endif
 
 #endif

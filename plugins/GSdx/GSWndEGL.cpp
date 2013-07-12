@@ -34,6 +34,12 @@ void GSWndEGL::CreateContext(int major, int minor)
 	EGLConfig eglConfig;
 	EGLint numConfigs;
 	EGLint contextAttribs[] =
+#ifdef ENABLE_GLES
+	{
+		 EGL_CONTEXT_CLIENT_VERSION, 2,
+		 EGL_NONE
+	};
+#else
 	{
 		EGL_CONTEXT_MAJOR_VERSION_KHR, major,
 		EGL_CONTEXT_MINOR_VERSION_KHR, minor,
@@ -43,6 +49,7 @@ void GSWndEGL::CreateContext(int major, int minor)
 		EGL_CONTEXT_FLAGS_KHR, EGL_CONTEXT_OPENGL_DEBUG_BIT_KHR | EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE_BIT_KHR,
 		EGL_NONE
 	};
+#endif
 	EGLint NullContextAttribs[] = { EGL_NONE };
 	EGLint attrList[] = {
 		EGL_RED_SIZE, 8,
@@ -53,7 +60,9 @@ void GSWndEGL::CreateContext(int major, int minor)
 		EGL_NONE
 	};
 
+#ifndef ENABLE_GLES
 	eglBindAPI(EGL_OPENGL_API);
+#endif
 
 	if ( !eglChooseConfig(m_eglDisplay, attrList, &eglConfig, 1, &numConfigs) )
 	{
@@ -94,7 +103,9 @@ void GSWndEGL::AttachContext()
 	if (!IsContextAttached()) {
 		// The setting of the API is local to a thread. This function 
 		// can be called from 2 threads.
+#ifndef ENABLE_GLES
 		eglBindAPI(EGL_OPENGL_API);
+#endif
 
 		//fprintf(stderr, "Attach the context\n");
 		eglMakeCurrent(m_eglDisplay, m_eglSurface, m_eglSurface, m_eglContext);

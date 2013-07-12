@@ -44,6 +44,10 @@ if(XDG_STD)
     add_definitions(-DXDG_STD)
 endif(XDG_STD)
 
+if(GLES_API)
+    add_definitions(-DENABLE_GLES)
+endif()
+
 set(GSdxSources
     GLLoader.cpp
     GPU.cpp
@@ -189,7 +193,14 @@ endif()
 add_library(${Output} SHARED ${GSdxSources} ${GSdxHeaders})
 
 target_link_libraries(${Output} ${X11_LIBRARIES})
-target_link_libraries(${Output} ${OPENGL_LIBRARIES})
+message(INFO "DEBUG ${OPENGL_LIBRARIES}")
+
+if (GLES)
+    target_link_libraries(${Output} /usr/lib/i386-linux-gnu/libGLU.so;/usr/lib/i386-linux-gnu/libGLESv2.so;/usr/lib/i386-linux-gnu/libSM.so;/usr/lib/i386-linux-gnu/libICE.so;/usr/lib/i386-linux-gnu/libX11.so;/usr/lib/i386-linux-gnu/libXext.so)
+else()
+    target_link_libraries(${Output} ${OPENGL_LIBRARIES})
+endif()
+
 target_link_libraries(${Output} ${EGL_LIBRARIES})
 
 if(Linux)

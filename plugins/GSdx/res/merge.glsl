@@ -6,7 +6,7 @@ struct vertex_basic
     vec2 t;
 };
 
-#if __VERSION__ > 140
+#if !GL_ES && __VERSION__ > 140
 
 in SHADER
 {
@@ -53,7 +53,7 @@ layout(binding = 0) uniform sampler2D TextureSampler;
 void ps_main0()
 {
     vec4 c = texture(TextureSampler, PSin_t);
-	c.a = min(c.a * 2, 1.0);
+	c.a = min(c.a * 2.0, 1.0);
     SV_Target0 = c;
 }
 

@@ -60,7 +60,7 @@ layout(location = 4) in uint  i_z;
 layout(location = 5) in uvec2 i_uv;
 layout(location = 6) in vec4  i_f;
 
-#if __VERSION__ > 140
+#if !GL_ES && __VERSION__ > 140
 
 out SHADER
 {
@@ -90,7 +90,7 @@ layout(location = 2) out vec4 SHADERc;
 
 #endif
 
-#if __VERSION__ > 140
+#if !GL_ES && __VERSION__ > 140
 out gl_PerVertex {
     invariant vec4 gl_Position;
     float gl_PointSize;
@@ -140,7 +140,7 @@ void vs_main()
     {
         if(VS_FST != 0)
         {
-            VSout_t.xy = i_uv * TextureScale;
+            VSout_t.xy = vec2(i_uv) * TextureScale;
             VSout_t.w = 1.0f;
         }
         else
@@ -318,7 +318,7 @@ void gs_main()
 
 #ifdef FRAGMENT_SHADER
 
-#if __VERSION__ > 140
+#if !GL_ES && __VERSION__ > 140
 
 in SHADER
 {
@@ -419,7 +419,7 @@ vec4 wrapuv(vec4 uv)
         }
         else if(PS_WMS == 3)
         {
-            uv_out = vec4(((ivec4(uv * WH.xyxy) & ivec4(MskFix.xyxy)) | ivec4(MskFix.zwzw)) / WH.xyxy);
+            uv_out = vec4((ivec4(uv * WH.xyxy) & ivec4(MskFix.xyxy)) | ivec4(MskFix.zwzw)) / WH.xyxy;
         }
     }
     else
@@ -430,7 +430,7 @@ vec4 wrapuv(vec4 uv)
         }
         else if(PS_WMS == 3)
         {
-            uv_out.xz = vec2(((ivec2(uv.xz * WH.xx) & ivec2(MskFix.xx)) | ivec2(MskFix.zz)) / WH.xx);
+            uv_out.xz = vec2((ivec2(uv.xz * WH.xx) & ivec2(MskFix.xx)) | ivec2(MskFix.zz)) / WH.xx;
         }
         if(PS_WMT == 2)
         {
@@ -438,7 +438,7 @@ vec4 wrapuv(vec4 uv)
         }
         else if(PS_WMT == 3)
         {
-            uv_out.yw = vec2(((ivec2(uv.yw * WH.yy) & ivec2(MskFix.yy)) | ivec2(MskFix.ww)) / WH.yy);
+            uv_out.yw = vec2((ivec2(uv.yw * WH.yy) & ivec2(MskFix.yy)) | ivec2(MskFix.ww)) / WH.yy;
         }
     }
 
@@ -488,7 +488,7 @@ vec4 sample_4a(vec4 uv)
     c.z = sample_c(uv.xw).r;
     c.w = sample_c(uv.zw).r;
 
-	return c * 255./256 + 0.5/256;
+	return c * 255.0/256.0 + 0.5/256.0;
 }
 
 mat4 sample_4p(vec4 u)
@@ -579,11 +579,11 @@ vec4 tfx(vec4 t, vec4 c)
     {
         if(PS_TCC != 0) 
         {
-            c_out = c * t * 255.0f / 128;
+            c_out = c * t * 255.0f / 128.0f;
         }
         else
         {
-            c_out.rgb = c.rgb * t.rgb * 255.0f / 128;
+            c_out.rgb = c.rgb * t.rgb * 255.0f / 128.0f;
         }
     }
     else if(PS_TFX == 1)
@@ -599,7 +599,7 @@ vec4 tfx(vec4 t, vec4 c)
     }
     else if(PS_TFX == 2)
     {
-        c_out.rgb = c.rgb * t.rgb * 255.0f / 128 + c.a;
+        c_out.rgb = c.rgb * t.rgb * 255.0f / 128.0f + c.a;
 
         if(PS_TCC != 0) 
         {
@@ -608,7 +608,7 @@ vec4 tfx(vec4 t, vec4 c)
     }
     else if(PS_TFX == 3)
     {
-        c_out.rgb = c.rgb * t.rgb * 255.0f / 128 + c.a;
+        c_out.rgb = c.rgb * t.rgb * 255.0f / 128.0f + c.a;
 
         if(PS_TCC != 0) 
         {
@@ -623,7 +623,7 @@ void datst()
 {
 #if PS_DATE > 0
     float alpha = sample_rt(PSin_tp.xy).a;
-    float alpha0x80 = 128. / 255;
+    float alpha0x80 = 128.0 / 255;
 
     if (PS_DATE == 1 && alpha >= alpha0x80)
         discard;
@@ -634,7 +634,7 @@ void datst()
 
 void atst(vec4 c)
 {
-    float a = trunc(c.a * 255 + 0.01);
+    float a = trunc(c.a * 255.0 + 0.01);
 
     if(PS_ATST == 0) // never
     {
@@ -724,11 +724,11 @@ void ps_main()
 {
     vec4 c = ps_color();
 
-    float alpha = c.a * 2;
+    float alpha = c.a * 2.0;
 
     if(PS_AOUT != 0) // 16 bit output
     {
-        float a = 128.0f / 255; // alpha output will be 0x80
+        float a = 128.0f / 255.0; // alpha output will be 0x80
 
         c.a = (PS_FBA != 0) ? a : step(0.5, c.a) * a;
     }

@@ -134,6 +134,7 @@ namespace GLLoader {
 		GLuint major_gl = s[dot-1]-'0';
 		GLuint minor_gl = s[dot+1]-'0';
 
+#ifndef ENABLE_GLES
 		if ( (major_gl < 3) || ( major_gl == 3 && minor_gl < 2 ) ) {
 			fprintf(stderr, "Geometry shaders are not supported. Required openGL3.2\n");
 			found_geometry_shader = false;
@@ -152,12 +153,13 @@ namespace GLLoader {
 			// Opensource driver spotted
 			found_only_gl30 = true;
 		}
-
+#else
+		found_geometry_shader = false;
+#endif
 		if ( (major_gl < major) || ( major_gl == major && minor_gl < minor ) ) {
 			fprintf(stderr, "OPENGL %d.%d is not supported\n", major, minor);
 			return false;
 		}
-
 
         return true;
     }
@@ -165,8 +167,6 @@ namespace GLLoader {
 	bool check_gl_supported_extension() {
 		int max_ext = 0;
 		glGetIntegerv(GL_NUM_EXTENSIONS, &max_ext);
-
-		fprintf(stderr, "DEBUG: check_gl_supported_extension\n");
 
 		if (gl_GetStringi && max_ext) {
 			for (GLint i = 0; i < max_ext; i++) {
@@ -181,9 +181,13 @@ namespace GLLoader {
 				// Replace previous extensions (when driver will be updated)
 				if (ext.compare("GL_ARB_copy_image") == 0) found_GL_ARB_copy_image = true;
 				if (ext.compare("GL_ARB_gpu_shader5") == 0) found_GL_ARB_gpu_shader5 = true;
+#ifdef ENABLE_GLES
+				fprintf(stderr, "DEBUG ext: %s\n", ext.c_str());
+#endif
 			}
 		}
 
+#ifndef ENABLE_GLES
 		if (!found_GL_ARB_separate_shader_objects) {
 			fprintf(stderr, "INFO: GL_ARB_separate_shader_objects is not supported\n");
 		}
@@ -214,6 +218,7 @@ namespace GLLoader {
 			fprintf(stderr, "Override GL_ARB_copy_image detection\n");
 			fprintf(stderr, "Override GL_NV_copy_image detection\n");
 		}
+#endif
 
 		return true;
 	}

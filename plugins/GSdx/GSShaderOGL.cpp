@@ -223,18 +223,19 @@ void GSShaderOGL::UseProgram()
 		if (it == m_single_prog.end()) {
 			m_prog = LinkNewProgram();
 			m_single_prog[sel] = m_prog;
+
+			ValidateProgram(m_prog);
+
+			gl_UseProgram(m_prog);
+			// warning it must be done after the "setup" of the program
 			SetupUniform();
 		} else {
 			m_prog = it->second;
+			gl_UseProgram(m_prog);
 		}
 
-		gl_UseProgram(m_prog);
-
-		// TODO: might be possible to do it only when prog is linked
-		// Seem to be OK!
-		//SetupUniform();
 	} else {
-		ValidateProgram(m_pipeline);
+		ValidatePipeline(m_pipeline);
 
 		SetupUniform();
 	}
@@ -243,6 +244,8 @@ void GSShaderOGL::UseProgram()
 std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, const std::string& macro)
 {
 	std::string header;
+#ifndef ENABLE_GLES
+
 	if (GLLoader::found_only_gl30) {
 		header = "#version 130\n";
 	} else {
@@ -266,6 +269,12 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 	}
 #ifdef ENABLE_OGL_STENCIL_DEBUG
 	header += "#define ENABLE_OGL_STENCIL_DEBUG 1\n";
+#endif
+
+#else
+	header = "#version 300 es\n";
+	header += "#define DISABLE_SSO\n";
+	header += "#define DISABLE_GL42\n";
 #endif
 
 	// Allow to puts several shader in 1 files

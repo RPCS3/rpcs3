@@ -87,7 +87,7 @@ uniform sampler2D TextureSampler;
 layout(binding = 0) uniform sampler2D TextureSampler;
 #endif
 
-#if __VERSION__ > 140
+#if !GL_ES && __VERSION__ > 140
 
 in SHADER
 {
