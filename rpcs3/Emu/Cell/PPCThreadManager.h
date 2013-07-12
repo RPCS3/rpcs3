@@ -14,11 +14,11 @@ public:
 
 	void Close();
 
-	PPCThread& AddThread(bool isPPU);
+	PPCThread& AddThread(PPCThreadType type);
 	void RemoveThread(const u32 id);
 
 	ArrayF<PPCThread>& GetThreads() { return m_threads; }
-	s32 GetThreadNumById(bool isPPU, u32 id);
+	s32 GetThreadNumById(PPCThreadType type, u32 id);
 	PPCThread* GetThread(u32 id);
 	//IdManager& GetIDs() {return m_threads_id;}
 

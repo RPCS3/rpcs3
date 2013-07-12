@@ -108,7 +108,7 @@ void InterpreterDisAsmFrame::OnSelectUnit(wxCommandEvent& event)
 
 	if(CPU)
 	{
-		if(CPU->IsSPU())
+		if(CPU->GetType() != PPC_THREAD_PPU)
 		{
 			SPU_DisAsm& dis_asm = *new SPU_DisAsm(*CPU, InterpreterMode);
 			decoder = new SPU_Decoder(dis_asm);

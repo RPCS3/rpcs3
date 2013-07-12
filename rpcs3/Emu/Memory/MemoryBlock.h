@@ -46,6 +46,7 @@ public:
 	virtual void Delete();
 
 	virtual bool IsNULL() { return false; }
+	virtual bool IsMirror() { return false; }
 
 	u64 FixAddr(const u64 addr) const;
 
@@ -86,6 +87,31 @@ public:
 	virtual const u32 GetSize() const { return range_size; }
 	u8* GetMem() const { return mem; }
 	virtual u8* GetMem(u64 addr) const { return mem + addr; }
+};
+
+class MemoryMirror : public MemoryBlock
+{
+public:
+	virtual bool IsMirror() { return true; }
+
+	virtual MemoryBlock* SetRange(const u64 start, const u32 size)
+	{
+		range_start = start;
+		range_size = size;
+
+		return this;
+	}
+
+	void SetMemory(u8* memory)
+	{
+		mem = memory;
+	}
+
+	MemoryBlock* SetRange(u8* memory, const u64 start, const u32 size)
+	{
+		SetMemory(memory);
+		return SetRange(start, size);
+	}
 };
 
 class NullMemoryBlock : public MemoryBlock

@@ -1,5 +1,9 @@
 #pragma once
 #include "Array.h"
+#include <functional>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 class ThreadExec;
 

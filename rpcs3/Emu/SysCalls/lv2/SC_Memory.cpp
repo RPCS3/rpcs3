@@ -162,15 +162,51 @@ enum
 	SYS_MEMORY_PAGE_SIZE_64K = 0x200,
 };
 
+struct MemoryContainerInfo
+{
+	u64 addr;
+	u32 size;
+
+	MemoryContainerInfo(u64 addr, u32 size)
+		: addr(addr)
+		, size(size)
+	{
+	}
+};
+
 int sys_memory_container_create(u32 cid_addr, u32 yield_size)
 {
-	sc_mem.Warning("TODO: sys_memory_container_create(cid_addr=0x%x,yield_size=0x%x)", cid_addr, yield_size);
+	sc_mem.Warning("sys_memory_container_create(cid_addr=0x%x,yield_size=0x%x)", cid_addr, yield_size);
+
+	if(!Memory.IsGoodAddr(cid_addr, 4))
+	{
+		return CELL_EFAULT;
+	}
+
+	u64 addr = Memory.Alloc(yield_size, 1);
+
+	if(!addr)
+	{
+		return CELL_ENOMEM;
+	}
+
+	Memory.Write32(cid_addr, sc_mem.GetNewId(new MemoryContainerInfo(addr, yield_size)));
 	return CELL_OK;
 }
 
 int sys_memory_container_destroy(u32 cid)
 {
-	sc_mem.Warning("TODO: sys_memory_container_destroy(cid=0x%x)", cid);
+	sc_mem.Warning("sys_memory_container_destroy(cid=0x%x)", cid);
+
+	MemoryContainerInfo* ct;
+
+	if(!sc_mem.CheckId(cid, ct))
+	{
+		return CELL_ESRCH;
+	}
+
+	Memory.Free(ct->addr);
+	Emu.GetIdManager().RemoveID(cid);
 	return CELL_OK;
 }
 
@@ -230,7 +266,7 @@ int sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_a
 {
 	sc_mem.Warning("sys_mmapper_allocate_address(size=0x%x, flags=0x%llx, alignment=0x%x, alloc_addr=0x%x)", size, flags, alignment, alloc_addr);
 
-	Memory.Write32(alloc_addr, Memory.Alloc(size, 4));
+	Memory.Write32(alloc_addr, Memory.Alloc(size, alignment));
 
 	return CELL_OK;
 }

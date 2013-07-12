@@ -21,20 +21,17 @@ int sys_ppu_thread_exit(int errorcode)
 int sys_ppu_thread_yield()
 {
 	sysPrxForUser.Log("sys_ppu_thread_yield()");	
-	enable_log = !enable_log;
-	dump_enable = !dump_enable;
-
-	if(!enable_log)
-	{
-		Emu.Pause();
-	}
 	return CELL_OK;
 }
 
 int sys_ppu_thread_join(u32 thread_id, u32 vptr_addr)
 {
-	sysPrxForUser.Error("sys_ppu_thread_join(thread_id=%d, vptr_addr=0x%x)", thread_id, vptr_addr);
+	sysPrxForUser.Warning("sys_ppu_thread_join(thread_id=%d, vptr_addr=0x%x)", thread_id, vptr_addr);
 
+	PPCThread* thr = Emu.GetCPU().GetThread(thread_id);
+	if(!thr) return CELL_ESRCH;
+
+	GetCurrentPPUThread().Wait(*thr);
 	return CELL_OK;
 }
 
@@ -125,7 +122,7 @@ int sys_ppu_thread_create(u32 thread_id_addr, u32 entry, u32 arg, int prio, u32 
 		return CELL_EFAULT;
 	}
 
-	PPCThread& new_thread = Emu.GetCPU().AddThread(true);
+	PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_PPU);
 
 	Memory.Write32(thread_id_addr, new_thread.GetId());
 	new_thread.SetEntry(entry);
@@ -148,7 +145,7 @@ void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry)
 	{
 		Memory.Write32(once_ctrl_addr, SYS_PPU_THREAD_DONE_INIT);
 
-		PPCThread& new_thread = Emu.GetCPU().AddThread(true);
+		PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_PPU);
 		new_thread.SetEntry(entry);
 		((PPUThread&)new_thread).LR = Emu.GetPPUThreadExit();
 		new_thread.Run();

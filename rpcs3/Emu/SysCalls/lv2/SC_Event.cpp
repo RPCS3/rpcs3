@@ -44,14 +44,13 @@ int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout)
 		return CELL_ESRCH;
 	}
 
-	PPCThread* thr = GetCurrentPPCThread();
-
-	while(true)
+	int result;
+	auto queue_receive = [&](int status) -> bool
 	{
-		int status = thr->ThreadStatus();
 		if(status == PPCThread_Stopped)
 		{
-			return CELL_ECANCELED;
+			result = CELL_ECANCELED;
+			return false;
 		}
 
 		EventQueue* equeue = (EventQueue*)Emu.GetIdManager().GetIDData(equeue_id).m_data;
@@ -60,11 +59,11 @@ int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout)
 			if(!equeue->ports[i]->has_data && equeue->ports[i]->thread)
 			{
 				SPUThread* thr = (SPUThread*)equeue->ports[i]->thread;
-				if(thr->OutIntrMbox.GetCount())
+				if(thr->SPU_OutIntr_Mbox.GetCount())
 				{
 					u32 val;
-					thr->OutIntrMbox.Pop(val);
-					if(!thr->OutMbox.Pop(val)) val = 0;
+					thr->SPU_OutIntr_Mbox.Pop(val);
+					if(!thr->SPU_Out_MBox.Pop(val)) val = 0;
 					equeue->ports[i]->data1 = val;
 					equeue->ports[i]->data2 = 0;
 					equeue->ports[i]->data3 = 0;
@@ -73,29 +72,28 @@ int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout)
 			}
 		}
 
-		bool has_data = false;
 		for(int i=0; i<equeue->pos; i++)
 		{
 			if(equeue->ports[i]->has_data)
 			{
-				has_data = true;
-				auto res = (sys_event_data&)Memory[event_addr];
+				auto dst = (sys_event_data&)Memory[event_addr];
 
-				re(res.source, equeue->ports[i]->name);
-				re(res.data1, equeue->ports[i]->data1);
-				re(res.data2, equeue->ports[i]->data2);
-				re(res.data3, equeue->ports[i]->data3);
+				re(dst.source, equeue->ports[i]->name);
+				re(dst.data1, equeue->ports[i]->data1);
+				re(dst.data2, equeue->ports[i]->data2);
+				re(dst.data3, equeue->ports[i]->data3);
 
 				equeue->ports[i]->has_data = false;
-				break;
+
+				result = CELL_OK;
+				return false;
 			}
 		}
 
-		if(has_data)
-			break;
+		return true;
+	};
 
-		Sleep(1);
-	}
+	GetCurrentPPUThread().WaitFor(queue_receive);
 
 	return CELL_OK;
 }

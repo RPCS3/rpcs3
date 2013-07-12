@@ -6,6 +6,7 @@ enum PPCThreadType
 {
 	PPC_THREAD_PPU,
 	PPC_THREAD_SPU,
+	PPC_THREAD_RAW_SPU,
 };
 
 enum PPCThreadStatus
@@ -77,6 +78,7 @@ public:
 		{
 		case PPC_THREAD_PPU: return "PPU";
 		case PPC_THREAD_SPU: return "SPU";
+		case PPC_THREAD_RAW_SPU: return "RawSPU";
 		}
 
 		return "Unknown";
@@ -111,6 +113,15 @@ public:
 	void Wait(const PPCThread& thr);
 	bool Sync();
 
+	template<typename T>
+	void WaitFor(T func)
+	{
+		while(func(ThreadStatus()))
+		{
+			Sleep(1);
+		}
+	}
+
 	int ThreadStatus();
 
 	void NextPc();
@@ -125,7 +136,6 @@ public:
 	static wxArrayString ErrorToString(const u32 error);
 	wxArrayString ErrorToString() { return ErrorToString(m_error); }
 
-	bool IsSPU()	const { return m_type == PPC_THREAD_SPU; }
 	bool IsOk()		const { return m_error == 0; }
 	bool IsRunned()		const { return m_status == Runned; }
 	bool IsPaused()		const { return m_status == Paused; }
@@ -138,6 +148,7 @@ public:
 
 	u32 GetError() const { return m_error; }
 	u32 GetId() const { return m_id; }
+	PPCThreadType GetType()	const { return m_type; }
 
 	void Reset();
 	void Close();
@@ -160,6 +171,7 @@ protected:
 	virtual void DoResume()=0;
 	virtual void DoStop()=0;
 
+public:
 	virtual void Task();
 	
 private:

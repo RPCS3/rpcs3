@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
-
-#define CMD_DEBUG 0
+#include "Emu/Cell/PPCInstrTable.h"
+#define CMD_DEBUG 1
 #define DUMP_VERTEX_DATA 1
 
 #if	CMD_DEBUG
@@ -132,7 +132,9 @@ void GLRSXThread::Task()
 	{
 		wxCriticalSectionLocker lock(p.m_cs_main);
 
-		if(p.m_ctrl->get == p.m_ctrl->put || !Emu.IsRunned())
+		const u32 get = re(p.m_ctrl->get);
+		const u32 put = re(p.m_ctrl->put);
+		if(put <= get || !Emu.IsRunned())
 		{
 			SemaphorePostAndWait(p.m_sem_flush);
 
@@ -170,23 +172,25 @@ void GLRSXThread::Task()
 			continue;
 		}
 
-		const u32 get = re(p.m_ctrl->get);
+		ConLog.Write("addr = 0x%x", p.m_ioAddress + get);
 		const u32 cmd = Memory.Read32(p.m_ioAddress + get);
 		const u32 count = (cmd >> 18) & 0x7ff;
-
+		//if(cmd == 0) continue;
 		if(cmd & CELL_GCM_METHOD_FLAG_JUMP)
 		{
 			u32 addr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);
-			p.m_ctrl->get = re32(addr);
-			ConLog.Warning("rsx jump(0x%x)", addr);
+			addr &= ~0x1000;
+			//0x30101000 + 0x80bf000 = 0x80be000
+			ConLog.Warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", addr, p.m_ioAddress + get, cmd, get, put);
+			re(p.m_ctrl->get, addr);
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_CALL)
 		{
 			call_stack.Push(get + 4);
 			u32 addr = cmd & ~CELL_GCM_METHOD_FLAG_CALL;
+			ConLog.Warning("rsx call(0x%x) #0x%x - 0x%x", addr, cmd, get);
 			p.m_ctrl->get = re32(addr);
-			ConLog.Warning("rsx call(0x%x)", addr);
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_RETURN)
@@ -604,6 +608,14 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
 		m_set_depth_bounds_test = args[0] ? true : false;
 		//Enable(args[0] ? true : false, GL_DEPTH_CLAMP);
+	break;
+
+	case NV4097_SET_ALPHA_FUNC:
+		glAlphaFunc(args[0], args[1]);
+	break;
+
+	case NV4097_SET_CULL_FACE:
+		glCullFace(args[0]);
 	break;
 
 	case NV4097_SET_VIEWPORT_VERTICAL:
@@ -1134,7 +1146,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		for(u32 i=0; i<count; ++i) log += (i ? ", " : "") + wxString::Format("0x%x", args[i]);
 		log += ")";
 		ConLog.Error("TODO: " + log);
-		Emu.Pause();
+		//Emu.Pause();
 	}
 	break;
 	}

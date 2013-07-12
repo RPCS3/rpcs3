@@ -201,6 +201,7 @@
     <ClCompile Include="Emu\Cell\PPCThreadManager.cpp" />
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
+    <ClCompile Include="Emu\Cell\RawSPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\DbgConsole.cpp" />
     <ClCompile Include="Emu\FS\VFS.cpp" />
@@ -243,6 +244,7 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp" />
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp" />
     <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp" />

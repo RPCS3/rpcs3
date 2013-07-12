@@ -3,7 +3,7 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 
 void sys_fs_init();
-Module sys_fs("sys_fs", 0x000e, sys_fs_init);
+Module sys_fs(0x000e, sys_fs_init);
 
 void sys_fs_init()
 {

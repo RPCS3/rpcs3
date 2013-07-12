@@ -3,14 +3,14 @@
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/PPUDisAsm.h"
-
+#include <thread>
 extern gcmInfo gcm_info;
 
 PPUThread& GetCurrentPPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();
 
-	if(!thread || thread->IsSPU()) throw wxString("GetCurrentPPUThread: bad thread");
+	if(!thread || thread->GetType() != PPC_THREAD_PPU) throw wxString("GetCurrentPPUThread: bad thread");
 
 	return *(PPUThread*)thread;
 }
@@ -68,7 +68,7 @@ void PPUThread::InitRegs()
 
 	SetPc(pc);
 
-	const s32 thread_num = Emu.GetCPU().GetThreadNumById(!IsSPU(), GetId());
+	const s32 thread_num = Emu.GetCPU().GetThreadNumById(GetType(), GetId());
 
 	if(thread_num < 0)
 	{

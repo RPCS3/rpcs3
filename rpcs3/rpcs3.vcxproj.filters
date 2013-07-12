@@ -256,6 +256,12 @@
     <ClCompile Include="Emu\SysCalls\Modules.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\RawSPUThread.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

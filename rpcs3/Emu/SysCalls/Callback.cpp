@@ -25,24 +25,22 @@ void Callback::Branch()
 {
 	m_has_data = false;
 
-	PPCThread& new_thread = Emu.GetCPU().AddThread(true);
+	PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_PPU);
 
 	new_thread.SetPc(m_addr);
-	new_thread.SetPrio(0x1001);
+	new_thread.SetPrio(1001);
 	new_thread.stack_size = 0x10000;
 	new_thread.SetName("Callback");
+
+	new_thread.SetArg(0, a1);
+	new_thread.SetArg(1, a2);
+	new_thread.SetArg(2, a3);
+	((PPUThread&)new_thread).LR = Emu.GetPPUThreadExit();
 	new_thread.Run();
 
-	((PPUThread&)new_thread).LR = Emu.GetPPUThreadExit();
-	((PPUThread&)new_thread).GPR[3] = a1;
-	((PPUThread&)new_thread).GPR[4] = a2;
-	((PPUThread&)new_thread).GPR[5] = a3;
 	new_thread.Exec();
 
-	while(new_thread.IsAlive()) Sleep(1);
-	Emu.GetCPU().RemoveThread(new_thread.GetId());
-
-	ConLog.Write("Callback EXIT!");
+	GetCurrentPPCThread()->Wait(new_thread);
 }
 
 Callback2::Callback2(u32 slot, u64 addr, u64 userdata) : Callback(slot, addr)

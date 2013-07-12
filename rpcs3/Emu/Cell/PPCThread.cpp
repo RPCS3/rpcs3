@@ -273,6 +273,7 @@ void PPCThread::Exec()
 {
 	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
 	ThreadBase::Start();
+	//std::thread thr(std::bind(std::mem_fn(&PPCThread::Task), this));
 }
 
 void PPCThread::ExecOnce()

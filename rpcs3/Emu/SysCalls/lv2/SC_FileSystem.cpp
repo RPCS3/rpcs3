@@ -199,9 +199,14 @@ int cellFsWrite(u32 fd, u32 buf_addr, u64 nbytes, u32 nwrite_addr)
 	ID id;
 	if(!sys_fs.CheckId(fd, id)) return CELL_ESRCH;
 	vfsStream& file = *(vfsStream*)id.m_data;
+	if(Memory.IsGoodAddr(buf_addr) && !Memory.IsGoodAddr(buf_addr, nbytes))
+	{
+		MemoryBlock& block = Memory.GetMemByAddr(buf_addr);
+		nbytes = block.GetSize() - (buf_addr - block.GetStartAddr());
+	}
 
-	Memory.Write64NN(nwrite_addr, file.Write(Memory.GetMemFromAddr(buf_addr), nbytes));
-
+	int count = nbytes ? file.Write(Memory.GetMemFromAddr(buf_addr), nbytes) : 0;
+	Memory.Write64NN(nwrite_addr, count);
 	return CELL_OK;
 }
 

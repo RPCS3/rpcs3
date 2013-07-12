@@ -8,12 +8,12 @@ SPUThread& GetCurrentSPUThread()
 {
 	PPCThread* thread = GetCurrentPPCThread();
 
-	if(!thread || !thread->IsSPU()) throw wxString("GetCurrentSPUThread: bad thread");
+	if(!thread || thread->GetType() == PPC_THREAD_PPU) throw wxString("GetCurrentSPUThread: bad thread");
 
 	return *(SPUThread*)thread;
 }
 
-SPUThread::SPUThread() : PPCThread(PPC_THREAD_SPU)
+SPUThread::SPUThread(PPCThreadType type) : PPCThread(type)
 {
 	Reset();
 }

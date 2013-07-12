@@ -112,7 +112,7 @@ void Emulator::Load()
 	}
 
 	LoadPoints(BreakPointsDBName);
-	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64);
+	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64 ? PPC_THREAD_PPU : PPC_THREAD_SPU);
 
 	if(l.GetMachine() == MACHINE_SPU)
 	{

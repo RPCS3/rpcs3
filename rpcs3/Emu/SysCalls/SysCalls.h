@@ -222,7 +222,7 @@ extern int cellGcmCallback(u32 context_addr, u32 count);
 extern int cellGcmGetConfiguration(u32 config_addr);
 extern int cellGcmAddressToOffset(u32 address, u32 offset_addr);
 extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
-extern u32 cellGcmGetLabelAddress(u32 index);
+extern u32 cellGcmGetLabelAddress(u8 index);
 extern u32 cellGcmGetControlRegister();
 extern int cellGcmFlush(u32 ctx, u32 id);
 extern void cellGcmSetTile(u32 index, u32 location, u32 offset, u32 size, u32 pitch, u32 comp, u32 base, u32 bank);

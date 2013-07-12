@@ -37,7 +37,6 @@ int SysCalls::lv2ProcessWaitForChild(PPUThread& CPU)
 int SysCalls::lv2ProcessGetStatus(PPUThread& CPU)
 {
 	ConLog.Warning("lv2ProcessGetStatus");
-	if(CPU.IsSPU()) return CELL_UNKNOWN_ERROR;
 	//Memory.Write32(CPU.GPR[4], GetPPUThreadStatus(CPU));
 	return CELL_OK;
 }

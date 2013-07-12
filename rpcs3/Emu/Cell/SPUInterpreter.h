@@ -27,7 +27,11 @@ private:
 	//0 - 10
 	void STOP(u32 code)
 	{
-		CPU.Pause();
+		if(code & 0x2000)
+		{
+			CPU.SetExitStatus(code & 0xfff);
+			CPU.Stop();
+		}
 	}
 	void LNOP()
 	{

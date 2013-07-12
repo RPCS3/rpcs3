@@ -133,9 +133,9 @@ int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 	return CELL_OK;
 }
 
-u32 cellGcmGetLabelAddress(u32 index)
+u32 cellGcmGetLabelAddress(u8 index)
 {
-	cellGcmSys.Log("cellGcmGetLabelAddress(index=%d)", index);
+	cellGcmSys.Error("cellGcmGetLabelAddress(index=%d)", index);
 	return Memory.RSXCMDMem.GetStartAddr() + 0x10 * index;
 }
 

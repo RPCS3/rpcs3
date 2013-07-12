@@ -3,7 +3,7 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 
 void sysPrxForUser_init();
-Module sysPrxForUser("sysPrxForUser", -1, sysPrxForUser_init);
+Module sysPrxForUser("sysPrxForUser", sysPrxForUser_init);
 
 void sys_initialize_tls()
 {

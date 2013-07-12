@@ -75,6 +75,40 @@ struct Elf32_Ehdr
 	u32 GetEntry() const { return e_entry; }
 };
 
+struct Elf32_Desc
+{
+	u32 revision;
+	u32 ls_size;
+	u32 stack_size;
+	u32 flags;
+
+	void Load(vfsStream& f)
+	{
+		revision = Read32(f);
+		ls_size = Read32(f);
+		stack_size = Read32(f);
+		flags = Read32(f);
+	}
+};
+
+struct Elf32_Note
+{
+	u32 namesz;
+	u32 descsz;
+	u32 type;
+	u8 name[8];
+	Elf32_Desc desc;
+
+	void Load(vfsStream& f)
+	{
+		namesz = Read32(f);
+		descsz = Read32(f);
+		type = Read32(f);
+		f.Read(name, 8);
+		desc.Load(f);
+	}
+};
+
 struct Elf32_Shdr
 {
 	u32 sh_name; 

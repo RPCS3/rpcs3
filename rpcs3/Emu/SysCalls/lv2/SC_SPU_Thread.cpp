@@ -150,7 +150,7 @@ int sys_spu_thread_initialize(u32 thread_addr, u32 group, u32 spu_num, u32 img_a
 	ConLog.Write("a4 = 0x%x", a4);
 	ConLog.SkipLn();
 
-	PPCThread& new_thread = Emu.GetCPU().AddThread(false);
+	PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_SPU);
 	new_thread.SetOffset(g_spu_offset);
 	new_thread.SetEntry(entry - g_spu_offset);
 	new_thread.SetName(name);
@@ -172,7 +172,7 @@ int sys_spu_thread_set_argument(u32 id, u32 arg_addr)
 	sc_spu.Warning("sys_spu_thread_set_argument(id=0x%x, arg_addr=0x%x)", id, arg_addr);
 	PPCThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || !thr->IsSPU())
+	if(!thr || thr->GetType() == PPC_THREAD_PPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -268,9 +268,11 @@ int sys_raw_spu_create(u32 id_addr, u32 attr_addr)
 	sc_spu.Warning("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id_addr, attr_addr);
 
 	//Emu.GetIdManager().GetNewID("sys_raw_spu", new u32(attr_addr));
-	PPCThread& new_thread = Emu.GetCPU().AddThread(false);
-	Memory.Write32(id_addr, Emu.GetCPU().GetThreadNumById(false, new_thread.GetId()));
-	Memory.Write32(0xe0043014, 0);
+	PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_RAW_SPU);
+	Memory.Write32(id_addr, Emu.GetCPU().GetThreadNumById(PPC_THREAD_RAW_SPU, new_thread.GetId()));
+	new_thread.Run();
+	new_thread.Exec();
+
 	return CELL_OK;
 }
 
@@ -286,10 +288,7 @@ int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 
 	if(!Memory.InitSpuRawMem(max_raw_spu))
 	{
-		//30010780;
-		//e0043004 - offset
-		//e004300c - entry
-		return CELL_UNKNOWN_ERROR;
+		return CELL_ENOMEM;
 	}
 
 	//enable_log = true;
@@ -306,7 +305,7 @@ int sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type)
 
 	PPCThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || !thr->IsSPU())
+	if(!thr || thr->GetType() == PPC_THREAD_PPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -324,7 +323,7 @@ int sys_spu_thread_read_ls(u32 id, u32 address, u32 value_addr, u32 type)
 
 	PPCThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || !thr->IsSPU())
+	if(!thr || thr->GetType() == PPC_THREAD_PPU)
 	{
 		return CELL_ESRCH;
 	}
@@ -346,12 +345,12 @@ int sys_spu_thread_write_spu_mb(u32 id, u32 value)
 
 	PPCThread* thr = Emu.GetCPU().GetThread(id);
 
-	if(!thr || !thr->IsSPU())
+	if(!thr || !thr->GetType() == PPC_THREAD_PPU)
 	{
 		return CELL_ESRCH;
 	}
 
-	if(!(*(SPUThread*)thr).InMbox.Push(value))
+	if(!(*(SPUThread*)thr).SPU_In_MBox.Push(value))
 	{
 		ConLog.Warning("sys_spu_thread_write_spu_mb(id=0x%x, value=0x%x): used all mbox items.");
 		return CELL_EBUSY; //?

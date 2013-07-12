@@ -413,16 +413,6 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 	{
 		Elf64_Shdr& shdr = shdr_arr[i];
 
-		if(shdr.sh_addr < min_addr)
-		{
-			min_addr = shdr.sh_addr;
-		}
-
-		if(shdr.sh_addr + shdr.sh_size > max_addr)
-		{
-			max_addr = shdr.sh_addr + shdr.sh_size;
-		}
-
 		if(i < shdr_name_arr.GetCount())
 		{
 			const wxString& name = shdr_name_arr[i];
@@ -445,6 +435,22 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 
 		if(size == 0 || !Memory.IsGoodAddr(offset + addr, size)) continue;
 
+		if(shdr.sh_addr < min_addr)
+		{
+			min_addr = shdr.sh_addr;
+		}
+
+		if(shdr.sh_addr + shdr.sh_size > max_addr)
+		{
+			max_addr = shdr.sh_addr + shdr.sh_size;
+		}
+
+		if((shdr.sh_type == SHT_RELA) || (shdr.sh_type == SHT_REL))
+		{
+			ConLog.Error("ELF64 ERROR: Relocation");
+			continue;
+		}
+
 		switch(shdr.sh_type)
 		{
 		case SHT_NOBITS:
@@ -456,6 +462,10 @@ bool ELF64Loader::LoadShdrData(u64 offset)
 			elf64_f.Seek(shdr.sh_offset);
 			elf64_f.Read(&Memory[addr], shdr.sh_size);
 			*/
+		break;
+
+		case SHT_RELA:
+			ConLog.Warning("ELF64: RELA");
 		break;
 		}
 	}

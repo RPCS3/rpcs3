@@ -3,7 +3,7 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 
 void sys_io_init();
-Module sys_io("sys_io", 0x0017, sys_io_init);
+Module sys_io(0x0017, sys_io_init);
 
 void sys_io_init()
 {

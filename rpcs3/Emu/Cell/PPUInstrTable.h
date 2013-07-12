@@ -593,7 +593,7 @@ namespace PPU_instr
 	bind_instr(g3f_0_list, MTFSB1, CRBD, RC);
 	bind_instr(g3f_0_list, MCRFS, CRFD, CRFS);
 	bind_instr(g3f_0_list, MTFSB0, CRBD, RC);
-	bind_instr(g3f_0_list, MTFSFI, CRBD, I, RC);
+	bind_instr(g3f_0_list, MTFSFI, CRFD, I, RC);
 	bind_instr(g3f_0_list, MFFS, FRD, RC);
 	bind_instr(g3f_0_list, MTFSF, FM, FRB, RC);
 

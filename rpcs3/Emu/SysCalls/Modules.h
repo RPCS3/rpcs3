@@ -25,14 +25,16 @@ struct ModuleFunc
 
 class Module
 {
-	const char* m_name;
+	wxString m_name;
 	const u16 m_id;
 	bool m_is_loaded;
 
 public:
 	Array<ModuleFunc> m_funcs_list;
 
-	Module(const char* name, u16 id, void (*init)());
+	Module(u16 id, const char* name);
+	Module(const char* name, void (*init)());
+	Module(u16 id, void (*init)());
 
 	void Load();
 	void UnLoad();
@@ -44,6 +46,7 @@ public:
 
 	u16 GetID() const;
 	wxString GetName() const;
+	void SetName(const wxString& name);
 
 public:
 	void Log(const u32 id, wxString fmt, ...);

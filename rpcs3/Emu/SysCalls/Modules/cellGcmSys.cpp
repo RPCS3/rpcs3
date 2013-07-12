@@ -3,7 +3,7 @@
 #include "Emu/SysCalls/SC_FUNC.h"
 
 void cellGcmSys_init();
-Module cellGcmSys("cellGcmSys", 0x0010, cellGcmSys_init);
+Module cellGcmSys(0x0010, cellGcmSys_init);
 
 s64 cellGcmFunc15()
 {

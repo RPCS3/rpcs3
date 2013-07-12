@@ -81,6 +81,22 @@ enum MFCchannels
 	MFC_RdAtomicStat	= 27,	//Read completion status of last completed immediate MFC atomic update command
 };
 
+enum
+{
+	SPU_RUNCNTL_STOP		= 0,
+	SPU_RUNCNTL_RUNNABLE	= 1,
+};
+
+enum
+{
+	SPU_STATUS_STOPPED				= 0x0,
+	SPU_STATUS_RUNNING				= 0x1,
+	SPU_STATUS_STOPPED_BY_STOP		= 0x2,
+	SPU_STATUS_STOPPED_BY_HALT		= 0x4,
+	SPU_STATUS_WAITING_FOR_CHANNEL	= 0x8,
+	SPU_STATUS_SINGLE_STEP			= 0x10,
+};
+
 union SPU_GPR_hdr
 {
 	u128 _u128;
@@ -111,10 +127,91 @@ class SPUThread : public PPCThread
 {
 public:
 	SPU_GPR_hdr GPR[128]; //General-Purpose Register
-	SizedStack<u32, 1> OutMbox;
-	SizedStack<u32, 1> OutIntrMbox;
-	SizedStack<u32, 4> InMbox;
 
+	template<size_t _max_count>
+	class SPUReg
+	{
+		u64 m_addr;
+		u32 m_pos;
+
+	public:
+		static const size_t max_count = _max_count;
+		static const size_t size = max_count * 4;
+
+		SPUReg()
+		{
+			Init();
+		}
+
+		void Init()
+		{
+			m_pos = 0;
+		}
+
+		void SetAddr(u64 addr)
+		{
+			m_addr = addr;
+		}
+
+		u64 GetAddr() const
+		{
+			return m_addr;
+		}
+
+		__forceinline bool Pop(u32& res)
+		{
+			if(!m_pos) return false;
+			res = Memory.Read32(m_addr + m_pos--);
+			return true;
+		}
+
+		__forceinline bool Push(u32 value)
+		{
+			if(m_pos >= max_count) return false;
+			Memory.Write32(m_addr + m_pos++, value);
+			return true;
+		}
+
+		u32 GetCount() const
+		{
+			return m_pos;
+		}
+
+		u32 GetFreeCount() const
+		{
+			return max_count - m_pos;
+		}
+
+		void SetValue(u32 value)
+		{
+			Memory.Write32(m_addr, value);
+		}
+
+		u32 GetValue() const
+		{
+			return Memory.Read32(m_addr);
+		}
+	};
+
+	SPUReg<1> MFC_LSA;
+	SPUReg<1> MFC_EAH;
+	SPUReg<1> MFC_EAL;
+	SPUReg<1> MFC_Size_Tag;
+	SPUReg<1> MFC_CMDStatus;
+	SPUReg<1> MFC_QStatus;
+	SPUReg<1> Prxy_QueryType;
+	SPUReg<1> Prxy_QueryMask;
+	SPUReg<1> Prxy_TagStatus;
+	SPUReg<1> SPU_Out_MBox;
+	SPUReg<4> SPU_In_MBox;
+	SPUReg<1> SPU_MBox_Status;
+	SPUReg<1> SPU_RunCntl;
+	SPUReg<1> SPU_Status;
+	SPUReg<1> SPU_NPC;
+	SPUReg<1> SPU_RdSigNotify1;
+	SPUReg<1> SPU_RdSigNotify2;
+
+	SizedStack<u32, 1> SPU_OutIntr_Mbox;
 	u32 LSA;
 
 	union
@@ -128,13 +225,13 @@ public:
 		switch(ch)
 		{
 		case SPU_WrOutMbox:
-			return OutMbox.GetFreeCount();
+			return SPU_Out_MBox.GetFreeCount();
 
 		case SPU_RdInMbox:
-			return InMbox.GetCount();
+			return SPU_In_MBox.GetCount();
 
 		case SPU_WrOutIntrMbox:
-			return 0;//return OutIntrMbox.GetFreeCount();
+			return 0;//return SPU_OutIntr_Mbox.GetFreeCount();
 
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d).", __FUNCTION__, ch);
@@ -152,7 +249,7 @@ public:
 		{
 		case SPU_WrOutIntrMbox:
 			ConLog.Warning("SPU_WrOutIntrMbox = 0x%x", v);
-			if(!OutIntrMbox.Push(v))
+			if(!SPU_OutIntr_Mbox.Push(v))
 			{
 				ConLog.Warning("Not enought free rooms.");
 			}
@@ -160,10 +257,11 @@ public:
 
 		case SPU_WrOutMbox:
 			ConLog.Warning("SPU_WrOutMbox = 0x%x", v);
-			if(!OutMbox.Push(v))
+			if(!SPU_Out_MBox.Push(v))
 			{
 				ConLog.Warning("Not enought free rooms.");
 			}
+			SPU_Status.SetValue((SPU_Status.GetValue() & ~0xff) | 1);
 		break;
 
 		default:
@@ -180,7 +278,8 @@ public:
 		switch(ch)
 		{
 		case SPU_RdInMbox:
-			if(!InMbox.Pop(v)) v = 0;
+			if(!SPU_In_MBox.Pop(v)) v = 0;
+			SPU_Status.SetValue((SPU_Status.GetValue() & ~0xff00) | (SPU_In_MBox.GetCount() << 8));
 		break;
 
 		default:
@@ -203,7 +302,7 @@ public:
 	void WriteLS128(const u32 lsa, const u128& data) const { Memory.Write128(lsa + m_offset, data); }
 
 public:
-	SPUThread();
+	SPUThread(PPCThreadType type = PPC_THREAD_SPU);
 	~SPUThread();
 
 	virtual wxString RegsToString()
@@ -224,7 +323,7 @@ protected:
 	virtual void DoResume();
 	virtual void DoStop();
 
-private:
+protected:
 	virtual void DoCode(const s32 code);
 };
 

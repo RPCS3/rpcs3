@@ -247,7 +247,7 @@ void SysCalls::DoSyscall(u32 code)
 			//timer
 			case 141:
 			case 142:
-				Sleep(SC_ARGS_1 / (1000 * 1000));
+				std::this_thread::sleep_for(std::chrono::nanoseconds(SC_ARGS_1));
 				RESULT(0);
 			return;
 
