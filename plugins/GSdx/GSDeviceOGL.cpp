@@ -554,7 +554,11 @@ GLuint GSDeviceOGL::CompileGS(GSSelector sel)
 	std::string macro = format("#define GS_IIP %d\n", sel.iip)
 		+ format("#define GS_PRIM %d\n", sel.prim);
 
+#ifdef ENABLE_GLES
+	return 0;
+#else
 	return m_shader->Compile("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, tfx_glsl, macro);
+#endif
 }
 
 GLuint GSDeviceOGL::CompilePS(PSSelector sel)
@@ -667,11 +671,13 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 	//     uint32 dstName, enum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
 	//     sizei width, sizei height, sizei depth);
 	if (GLLoader::found_GL_NV_copy_image) {
+#ifndef ENABLE_GLES
 		gl_CopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), static_cast<GSTextureOGL*>(st)->GetTarget(),
 				0, r.x, r.y, 0,
 				static_cast<GSTextureOGL*>(dt)->GetID(), static_cast<GSTextureOGL*>(dt)->GetTarget(),
 				0, r.x, r.y, 0,
 				r.width(), r.height(), 1);
+#endif
 	} else if (GLLoader::found_GL_ARB_copy_image) {
 		// Would need an update of GL definition. For the moment it isn't supported by driver anyway.
 #if 0
@@ -1152,6 +1158,7 @@ void GSDeviceOGL::CheckDebugLog()
 
 void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsigned int id, unsigned int severity, const char* message)
 {
+#ifndef ENABLE_GLES
 	char debType[20], debSev[5];
 	static int sev_counter = 0;
 
@@ -1190,6 +1197,7 @@ void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsi
 		fclose(f);
 	}
 	//if (sev_counter > 2) assert(0);
+#endif
 }
 
 // (A - B) * C + D
@@ -1219,8 +1227,13 @@ void GSDeviceOGL::DebugOutputToFile(unsigned int source, unsigned int type, unsi
 #define D3DBLEND_BLENDFACTOR	GL_CONSTANT_COLOR
 #define D3DBLEND_INVBLENDFACTOR GL_ONE_MINUS_CONSTANT_COLOR
 
+#ifdef ENABLE_GLES
+#define D3DBLEND_SRCALPHA		GL_SRC_ALPHA
+#define D3DBLEND_INVSRCALPHA	GL_ONE_MINUS_SRC_ALPHA
+#else
 #define D3DBLEND_SRCALPHA		GL_SRC1_ALPHA
 #define D3DBLEND_INVSRCALPHA	GL_ONE_MINUS_SRC1_ALPHA
+#endif
                         
 const GSDeviceOGL::D3D9Blend GSDeviceOGL::m_blendMapD3D9[3*3*3*3] =
 {

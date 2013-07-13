@@ -288,7 +288,11 @@ static int _GSopen(void** dsp, char* title, int renderer, int threads = -1)
 			else
 				s_gs->m_wnd = new GSWndDX();
 #else
+#ifdef ENABLE_GLES
+			wnd[0] = NULL;
+#else
 			wnd[0] = new GSWndOGL();
+#endif
 			wnd[1] = new GSWndEGL();
 #endif
 		}

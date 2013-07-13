@@ -21,7 +21,7 @@
 
 #include "GSWnd.h"
 
-#ifdef _LINUX
+#if defined(_LINUX) && !defined(ENABLE_GLES)
 #include <X11/Xlib.h>
 #include <GL/glx.h>
 

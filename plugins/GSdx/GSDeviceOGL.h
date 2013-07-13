@@ -123,12 +123,14 @@ public:
 			case GL_FUNC_REVERSE_SUBTRACT: return "REV SUB";
 			case GL_ONE: return "ONE";
 			case GL_ZERO: return "ZERO";
+#ifndef ENABLE_GLES
 			case GL_SRC1_ALPHA: return "SRC1 ALPHA";
+			case GL_ONE_MINUS_SRC1_ALPHA: return "1 - SRC1 ALPHA";
+#endif
 			case GL_SRC_ALPHA: return "SRC ALPHA";
 			case GL_ONE_MINUS_DST_ALPHA: return "1 - DST ALPHA";
 			case GL_DST_ALPHA: return "DST ALPHA";
 			case GL_DST_COLOR:	return "DST COLOR";
-			case GL_ONE_MINUS_SRC1_ALPHA: return "1 - SRC1 ALPHA";
 			case GL_ONE_MINUS_SRC_ALPHA: return "1 - SRC ALPHA";
 			case GL_CONSTANT_COLOR: return "CST";
 			case GL_ONE_MINUS_CONSTANT_COLOR: return "1 - CST";

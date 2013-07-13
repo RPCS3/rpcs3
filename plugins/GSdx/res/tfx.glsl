@@ -349,8 +349,12 @@ layout(location = 2) in vec4 SHADERc;
 #endif
 
 // Same buffer but 2 colors for dual source blending
+#if GL_ES
+layout(location = 0) out vec4 SV_Target0;
+#else
 layout(location = 0, index = 0) out vec4 SV_Target0;
 layout(location = 0, index = 1) out vec4 SV_Target1;
+#endif
 
 #ifdef DISABLE_GL42
 uniform sampler2D TextureSampler;
@@ -724,6 +728,13 @@ void ps_main()
 {
     vec4 c = ps_color();
 
+#if GL_ES
+
+    c.a *= 2.0;
+    SV_Target0 = c;
+
+#else
+
     float alpha = c.a * 2.0;
 
     if(PS_AOUT != 0) // 16 bit output
@@ -739,5 +750,8 @@ void ps_main()
 
     SV_Target0 = c;
     SV_Target1 = vec4(alpha, alpha, alpha, alpha);
+
+#endif
+
 }
 #endif

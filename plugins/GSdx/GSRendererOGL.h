@@ -52,7 +52,7 @@ class GSRendererOGL : public GSRendererHW
 
 		bool CreateDevice(GSDevice* dev);
 
-		void UpdateFBA(GSTexture* rt) {}
+		void UpdateFBA(GSTexture* rt);
 
 		void DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Source* tex);
 };

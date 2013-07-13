@@ -24,6 +24,7 @@
 
 void GSWndGL::PopulateGlFunction()
 {
+#ifndef ENABLE_GLES
 	*(void**)&(gl_ActiveTexture) = GetProcAddress("glActiveTexture");
 	*(void**)&(gl_BlendColor) = GetProcAddress("glBlendColor");
 	*(void**)&(gl_AttachShader) = GetProcAddress("glAttachShader");
@@ -99,4 +100,5 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_GetUniformBlockIndex) = GetProcAddress("glGetUniformBlockIndex");
 	*(void**)&(gl_UniformBlockBinding) = GetProcAddress("glUniformBlockBinding");
 	*(void**)&(gl_GetUniformLocation) = GetProcAddress("glGetUniformLocation");
+#endif
 }

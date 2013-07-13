@@ -43,6 +43,10 @@ bool GSRendererOGL::CreateDevice(GSDevice* dev)
 	if(!GSRenderer::CreateDevice(dev))
 		return false;
 
+#ifdef ENABLE_GLES
+	fprintf(stderr, "FIXME Creation of FBA dss/bs state is not yet implemented\n");
+#endif
+
 	return true;
 }
 
@@ -417,14 +421,14 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	// to only draw pixels which would cause the destination alpha test to fail in the future once.
 	// Unfortunately this also means only drawing those pixels at all, which is why this is a hack.
 	// The interaction with FBA in D3D9 is probably less than ideal.
-	if (UserHacks_AlphaStencil && DATE && dev->HasStencil() && om_bsel.wa && (!context->TEST.ATE || context->TEST.ATST == 1))
+	if (UserHacks_AlphaStencil && DATE && dev->HasStencil() && om_bsel.wa && (!context->TEST.ATE || context->TEST.ATST == ATST_ALWAYS))
 	{
 		if (!context->FBA.FBA)
 		{
 			if (context->TEST.DATM == 0)
-				ps_sel.atst = 5; // >=
+				ps_sel.atst = ATST_GEQUAL; // >=
 			else
-				ps_sel.atst = 2; // <
+				ps_sel.atst = ATST_LESS; // <
 			ps_cb.FogColor_AREF.a = (float)0x80;
 		}
 		if (!(context->FBA.FBA && context->TEST.DATM == 1))
@@ -545,10 +549,10 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 		switch(context->TEST.AFAIL)
 		{
-		case 0: z = r = g = b = a = false; break; // none
-		case 1: z = false; break; // rgba
-		case 2: r = g = b = a = false; break; // z
-		case 3: z = a = false; break; // rgb
+		case AFAIL_KEEP: z = r = g = b = a = false; break; // none
+		case AFAIL_FB_ONLY: z = false; break; // rgba
+		case AFAIL_ZB_ONLY: r = g = b = a = false; break; // z
+		case AFAIL_RGB_ONLY: z = a = false; break; // rgb
 		default: __assume(0);
 		}
 
@@ -583,4 +587,13 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	dev->EndScene();
 
 	if(om_dssel.fba) UpdateFBA(rt);
+}
+
+void GSRendererOGL::UpdateFBA(GSTexture* rt)
+{
+#ifdef ENABLE_GLES
+#ifdef _DEBUG
+	fprintf(stderr, "FIXME UpdateFBA not yet implemented\n");
+#endif
+#endif
 }

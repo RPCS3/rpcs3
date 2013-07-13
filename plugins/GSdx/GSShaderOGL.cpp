@@ -32,16 +32,20 @@ GSShaderOGL::GSShaderOGL(bool debug, bool sso, bool glsl420) :
 	m_glsl420(glsl420)
 {
 	m_single_prog.clear();
+#ifndef ENABLE_GLES
 	if (sso) {
 		gl_GenProgramPipelines(1, &m_pipeline);
 		gl_BindProgramPipeline(m_pipeline);
 	}
+#endif
 }
 
 GSShaderOGL::~GSShaderOGL()
 {
+#ifndef ENABLE_GLES
 	if (m_sso)
 		gl_DeleteProgramPipelines(1, &m_pipeline);
+#endif
 
 	for (auto it = m_single_prog.begin(); it != m_single_prog.end() ; it++) gl_DeleteProgram(it->second);
 	m_single_prog.clear();
@@ -52,8 +56,10 @@ void GSShaderOGL::VS(GLuint s)
 	if (m_vs != s)
 	{
 		m_vs = s;
+#ifndef ENABLE_GLES
 		if (m_sso)
 			gl_UseProgramStages(m_pipeline, GL_VERTEX_SHADER_BIT, s);
+#endif
 	}
 }
 
@@ -62,8 +68,10 @@ void GSShaderOGL::PS(GLuint s)
 	if (m_ps != s)
 	{
 		m_ps = s;
+#ifndef ENABLE_GLES
 		if (m_sso)
 			gl_UseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, s);
+#endif
 	}
 }
 
@@ -72,8 +80,10 @@ void GSShaderOGL::GS(GLuint s)
 	if (m_gs != s)
 	{
 		m_gs = s;
+#ifndef ENABLE_GLES
 		if (m_sso)
 			gl_UseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, s);
+#endif
 	}
 }
 
@@ -91,7 +101,9 @@ void GSShaderOGL::SetSamplerBinding(GLuint prog, GLchar* name, GLuint binding)
 	GLint loc = gl_GetUniformLocation(prog, name);
 	if (loc != -1) {
 		if (m_sso) {
+#ifndef ENABLE_GLES
 			gl_ProgramUniform1i(prog, loc, binding);
+#endif
 		} else {
 			gl_Uniform1i(loc, binding);
 		}
@@ -173,6 +185,7 @@ bool GSShaderOGL::ValidateProgram(GLuint p)
 
 bool GSShaderOGL::ValidatePipeline(GLuint p)
 {
+#ifndef ENABLE_GLES
 	if (!m_debug_shader) return true;
 
 	// FIXME: might be mandatory to validate the pipeline
@@ -191,6 +204,8 @@ bool GSShaderOGL::ValidatePipeline(GLuint p)
 		delete[] log;
 	}
 	fprintf(stderr, "\n");
+
+#endif
 
 	return false;
 }
@@ -282,9 +297,11 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 		case GL_VERTEX_SHADER:
 			header += "#define VERTEX_SHADER 1\n";
 			break;
+#ifndef ENABLE_GLES
 		case GL_GEOMETRY_SHADER:
 			header += "#define GEOMETRY_SHADER 1\n";
 			break;
+#endif
 		case GL_FRAGMENT_SHADER:
 			header += "#define FRAGMENT_SHADER 1\n";
 			break;
@@ -303,10 +320,11 @@ GLuint GSShaderOGL::Compile(const std::string& glsl_file, const std::string& ent
 {
 	GLuint program = 0;
 
-	// Not supported
+#ifndef ENABLE_GLES
 	if (type == GL_GEOMETRY_SHADER && !GLLoader::found_geometry_shader) {
 		return program;
 	}
+#endif
 
 	// Note it is better to separate header and source file to have the good line number
 	// in the glsl compiler report
@@ -321,14 +339,15 @@ GLuint GSShaderOGL::Compile(const std::string& glsl_file, const std::string& ent
 		sources[1] = '\0';
 
 	if (m_sso) {
+#ifndef ENABLE_GLES
 	#if 0
-		// Could be useful one day
 		const GLchar* ShaderSource[1];
 		ShaderSource[0] = header.append(glsl_h_code).c_str();
 		program = gl_CreateShaderProgramv(type, 1, &ShaderSource[0]);
 	#else
 		program = gl_CreateShaderProgramv(type, 2, sources);
 	#endif
+#endif
 	} else {
 		program = gl_CreateShader(type);
 		gl_ShaderSource(program, 2, sources, NULL);

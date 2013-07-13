@@ -186,8 +186,13 @@ using namespace std;
 	//#include <ext/hash_map>
 	//#include <ext/hash_set>
 
+#ifdef ENABLE_GLES
+	#include <GLES3/gl3.h>
+	#include <GLES3/gl3ext.h>
+#else
 	#include <GL/gl.h>
 	#include <GL/glext.h>
+#endif
 	#include "GLLoader.h"
 
 	//using namespace __gnu_cxx;

@@ -23,6 +23,7 @@
 #include "GLLoader.h"
 #include "GSdx.h"
 
+#ifndef ENABLE_GLES
 PFNGLACTIVETEXTUREPROC                 gl_ActiveTexture               = NULL;
 PFNGLBLENDCOLORPROC                    gl_BlendColor                  = NULL;
 PFNGLATTACHSHADERPROC                  gl_AttachShader                = NULL;
@@ -98,6 +99,7 @@ PFNGLPROGRAMUNIFORM1IPROC              gl_ProgramUniform1i            = NULL;
 PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex        = NULL;
 PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding         = NULL;
 PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation          = NULL;
+#endif
 
 namespace GLLoader {
 

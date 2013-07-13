@@ -21,6 +21,7 @@
 
 #pragma once
 
+#ifndef ENABLE_GLES
 extern   PFNGLACTIVETEXTUREPROC                 gl_ActiveTexture;
 extern   PFNGLBLENDCOLORPROC                    gl_BlendColor;
 extern   PFNGLATTACHSHADERPROC                  gl_AttachShader;
@@ -96,6 +97,83 @@ extern   PFNGLPROGRAMUNIFORM1IPROC              gl_ProgramUniform1i;
 extern   PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex;
 extern   PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding;
 extern   PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation;
+#else
+#define gl_ActiveTexture glActiveTexture
+#define gl_BlendColor glBlendColor
+#define gl_AttachShader glAttachShader
+#define gl_BindBuffer glBindBuffer
+#define gl_BindBufferBase glBindBufferBase
+#define gl_BindFragDataLocationIndexed glBindFragDataLocationIndexed
+#define gl_BindFramebuffer glBindFramebuffer
+#define gl_BindSampler glBindSampler
+#define gl_BindVertexArray glBindVertexArray
+#define gl_BlendEquationSeparate glBlendEquationSeparate
+#define gl_BlendFuncSeparate glBlendFuncSeparate
+#define gl_BlitFramebuffer glBlitFramebuffer
+#define gl_BufferData glBufferData
+#define gl_CheckFramebufferStatus glCheckFramebufferStatus
+#define gl_ClearBufferfv glClearBufferfv
+#define gl_ClearBufferiv glClearBufferiv
+#define gl_CompileShader glCompileShader
+#define gl_CopyImageSubDataNV glCopyImageSubDataNV
+#define gl_CreateProgram glCreateProgram
+#define gl_CreateShader glCreateShader
+#define gl_CreateShaderProgramv glCreateShaderProgramv
+#define gl_DeleteBuffers glDeleteBuffers
+#define gl_DeleteFramebuffers glDeleteFramebuffers
+#define gl_DeleteProgram glDeleteProgram
+#define gl_DeleteSamplers glDeleteSamplers
+#define gl_DeleteShader glDeleteShader
+#define gl_DeleteVertexArrays glDeleteVertexArrays
+#define gl_DetachShader glDetachShader
+#define gl_DrawBuffers glDrawBuffers
+#define gl_DrawElementsBaseVertex glDrawElementsBaseVertex
+#define gl_EnableVertexAttribArray glEnableVertexAttribArray
+#define gl_FramebufferRenderbuffer glFramebufferRenderbuffer
+#define gl_FramebufferTexture2D glFramebufferTexture2D
+#define gl_GenBuffers glGenBuffers
+#define gl_GenFramebuffers glGenFramebuffers
+#define gl_GenSamplers glGenSamplers
+#define gl_GenVertexArrays glGenVertexArrays
+#define gl_GetBufferParameteriv glGetBufferParameteriv
+#define gl_GetDebugMessageLogARB glGetDebugMessageLogARB
+#define gl_GetFragDataIndex glGetFragDataIndex
+#define gl_GetFragDataLocation glGetFragDataLocation
+#define gl_GetProgramInfoLog glGetProgramInfoLog
+#define gl_GetProgramiv glGetProgramiv
+#define gl_GetShaderiv glGetShaderiv
+#define gl_GetStringi glGetStringi
+#define gl_IsFramebuffer glIsFramebuffer
+#define gl_LinkProgram glLinkProgram
+#define gl_MapBuffer glMapBuffer
+#define gl_MapBufferRange glMapBufferRange
+#define gl_ProgramParameteri glProgramParameteri
+#define gl_SamplerParameterf glSamplerParameterf
+#define gl_SamplerParameteri glSamplerParameteri
+#define gl_ShaderSource glShaderSource
+#define gl_Uniform1i glUniform1i
+#define gl_UnmapBuffer glUnmapBuffer
+#define gl_UseProgramStages glUseProgramStages
+#define gl_VertexAttribIPointer glVertexAttribIPointer
+#define gl_VertexAttribPointer glVertexAttribPointer
+#define gl_TexStorage2D glTexStorage2D
+#define gl_BufferSubData glBufferSubData
+
+#define gl_BindProgramPipeline glBindProgramPipeline
+#define gl_DeleteProgramPipelines glDeleteProgramPipelines
+#define gl_GenProgramPipelines glGenProgramPipelines
+#define gl_GetProgramPipelineiv glGetProgramPipelineiv
+#define gl_ValidateProgramPipeline glValidateProgramPipeline
+#define gl_GetProgramPipelineInfoLog glGetProgramPipelineInfoLog
+
+#define gl_UseProgram glUseProgram
+#define gl_GetShaderInfoLog glGetShaderInfoLog
+#define gl_ProgramUniform1i glProgramUniform1i
+
+#define gl_GetUniformBlockIndex glGetUniformBlockIndex
+#define gl_UniformBlockBinding glUniformBlockBinding
+#define gl_GetUniformLocation glGetUniformLocation
+#endif
 
 
 namespace GLLoader {
