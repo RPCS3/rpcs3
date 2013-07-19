@@ -19,6 +19,69 @@
 // Games are highly unlikely to need timed IRQ's for PAD and MemoryCard handling anyway (rama).
 #define SIO_INLINE_IRQS
 
+struct _mcd
+{
+	u8 term; // terminator value;
+
+	bool goodSector; // xor sector check
+	u32 sectorAddr;  // read/write sector address
+	u32 transferAddr; // Transfer address
+
+	u8 FLAG;  // for PSX;
+	
+	u8 port; // port 
+	u8 slot; // and slot for this memcard
+
+	// Auto Eject
+	u32 ForceEjection_Timeout; // in SIO checks
+	wxDateTime ForceEjection_Timestamp;
+
+
+	void GetSizeInfo(PS2E_McdSizeInfo &info)
+	{
+		SysPlugins.McdGetSizeInfo(port, slot, info);
+	}
+
+	bool IsPSX()
+	{
+		return SysPlugins.McdIsPSX(port, slot);
+	}
+
+	void EraseBlock()
+	{
+		SysPlugins.McdEraseBlock(port, slot, transferAddr);
+	}
+
+	// Read from memorycard to dest
+	void Read(u8 *dest, int size) 
+	{
+		SysPlugins.McdRead(port, slot, dest, transferAddr, size);
+	}
+
+	// Write to memorycard from src
+	void Write(u8 *src, int size) 
+	{
+		SysPlugins.McdSave(port, slot, src,transferAddr, size);
+	}
+
+	bool IsPresent()
+	{
+		return SysPlugins.McdIsPresent(port, slot);
+	}
+
+	u8 DoXor(const u8 *buf, uint length)
+	{
+		u8 i, x;
+		for (x=0, i=0; i<length; i++) x ^= buf[i];
+		return x;
+	}
+
+	u64 GetChecksum()
+	{
+		return SysPlugins.McdGetCRC(port, slot);
+	}
+};
+
 struct _sio
 {
 	u16 StatReg;
@@ -26,40 +89,25 @@ struct _sio
 	u16 CtrlReg;
 	u16 BaudReg;
 
-	u8  buf[256];
-	u32 bufcount;
-	u32 parp;
-	u32 mcdst,rdwr;
-	u8  adrH,adrL;
-	u32 padst;
-	u32 mtapst;
-	u32 packetsize;
+	u32 count;     // old_sio remnant
+	u32 packetsize;// old_sio remnant
 
-	u8  terminator;
-	u8  mode;
-	u8  mc_command;
-	u32 lastsector;
-	u32 sector;
-	u32 k;
-	u32 count;
+	u8 buf[256];
+	u8 ret; // default return value;
+	
+	u16 bufCount; // current buffer counter
+	u16 bufSize;  // supposed buffer size
 
-	// Active pad slot for each port.  Not sure if these automatically reset after each read or not.
-	u8 activePadSlot[2];
-	// Active memcard slot for each port.  Not sure if these automatically reset after each read or not.
-	u8 activeMemcardSlot[2];
+	u8 port;    // current port
+	u8 slot[2]; // current slot
 
-	int GetMemcardIndex() const
-	{
-		return (CtrlReg&0x2000) >> 13;
-	}
-
-	int GetMultitapPort() const
-	{
-		return (CtrlReg&0x2000) >> 13;
-	}
+	u8 GetPort() { return port; }
+	u8 GetSlot() { return slot[port]; }
 };
 
 extern _sio sio;
+extern _mcd mcds[2][4];
+extern _mcd *mcd;
 
 extern void sioInit();
 extern u8 sioRead8();

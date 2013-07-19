@@ -19,9 +19,22 @@
 #include "Sio.h"
 #include "sio_internal.h"
 
-_sio sio;
+#ifdef _KELOGS
+KELOGS kelogs[4096];
+u32 kelogs_count = 0;
+bool doKelogs = false;
+#endif 
 
-static const u8 cardh[4] = { 0xFF, 0xFF, 0x5a, 0x5d };
+_sio sio;
+_mcd mcds[2][4];
+_mcd *mcd;
+
+SIO_MODE siomode = SIO_START;
+static void sioWrite8inl(u8 data);
+#define SIO_WRITE void inline
+
+// Magic psx values from nocash info
+static const u8 memcard_psx[] = {0x5A, 0x5D, 0x5C, 0x5D, 0x04, 0x00, 0x00, 0x80};
 
 // Memory Card Specs for standard Sony 8mb carts:
 //    Flags (magic sio '+' thingie!), Sector size, eraseBlockSize (in pages), card size (in pages), xor checksum (superblock?), terminator (unused?).
@@ -38,30 +51,20 @@ static const int   FORCED_MCD_EJECTION_MIN_TRIES =2;
 static const int   FORCED_MCD_EJECTION_MAX_TRIES =128;
 static const float FORCED_MCD_EJECTION_MAX_MS_AFTER_MIN_TRIES =2800; 
 
-static const int FORCED_MCD_EJECTION_NUM_SLOTS =2;
-static int			m_ForceEjectionTimeout[FORCED_MCD_EJECTION_NUM_SLOTS];
-static wxDateTime	m_ForceEjection_minTriesTimestamp[FORCED_MCD_EJECTION_NUM_SLOTS];
-
 wxString GetTimeMsStr(){
 	wxDateTime unow=wxDateTime::UNow();
 	wxString res;
 	res.Printf(L"%s.%03d", unow.Format(L"%H:%M:%S").c_str(), (int)unow.GetMillisecond() );
 	return res;
 }
-void _SetForceMcdEjectTimeoutNow(int port, int slot, int mcdEjectTimeoutInSioAccesses)
-{
-	m_ForceEjectionTimeout[port]=mcdEjectTimeoutInSioAccesses;
-}
 
 //allow timeout also for the mcd manager panel
 void SetForceMcdEjectTimeoutNow()
 {
-	const int slot=0;
-	int port=0;
-	for (port=0; port<2; port++)
-		_SetForceMcdEjectTimeoutNow(port, slot, FORCED_MCD_EJECTION_MAX_TRIES);
+	for( u8 port=0; port<2; ++port ) 
+			for( u8 slot=0; slot<4; ++slot )
+				mcds[port][slot].ForceEjection_Timeout = FORCED_MCD_EJECTION_MAX_TRIES;
 }
-
 
 // SIO Inline'd IRQs : Calls the SIO interrupt handlers directly instead of
 // feeding them through the IOP's branch test. (see SIO.H for details)
@@ -87,691 +90,698 @@ static bool IsMtapPresent( uint port )
 	//return (0 != PADqueryMtap(port+1));
 }
 
-static void _ReadMcd(u8 *data, u32 adr, int size)
-{
-	SysPlugins.McdRead(
-		sio.GetMemcardIndex(), sio.activeMemcardSlot[sio.GetMemcardIndex()],
-		data, adr, size
-	);
-}
-
-static void _SaveMcd(const u8 *data, u32 adr, int size)
-{
-	SysPlugins.McdSave(
-		sio.GetMemcardIndex(), sio.activeMemcardSlot[sio.GetMemcardIndex()],
-		data, adr, size
-	);
-}
-
-static void _EraseMCDBlock(u32 adr)
-{
-	SysPlugins.McdEraseBlock( sio.GetMemcardIndex(), sio.activeMemcardSlot[sio.GetMemcardIndex()], adr );
-}
-
-static u8 sio_xor( const u8 *buf, uint length )
-{
-	u8 i, x;
-	for (x=0, i=0; i<length; i++) x ^= buf[i];
-	return x;
-}
-
-template< typename T >
-static void apply_xor( u8& dest, const T& src )
-{
-	u8* buf = (u8*)&src;
-	for (uint x=0; x<sizeof(src); x++) dest ^= buf[x];
-}
-
 void sioInit()
 {
 	memzero(sio);
-	memzero(m_ForceEjectionTimeout);
+
+	sio.bufSize = 4;
+	siomode = SIO_START;
+	
+	for(int i = 0; i < 2; i++)
+	{
+		for(int j = 0; j < 4; j++)
+		{
+			mcds[i][j].term = 0x55;
+			mcds[i][j].port = i;
+			mcds[i][j].slot = j;
+			mcds[i][j].FLAG = 0x08;
+			mcds[i][j].ForceEjection_Timeout = 0;
+		}
+
+		sio.slot[i] = 0;
+	}
+
+	sio.port = 0;
+	mcd = &mcds[0][0];
 
 	// Transfer(?) Ready and the Buffer is Empty
 	sio.StatReg = TX_RDY | TX_EMPTY;
 	sio.packetsize = 0;
-	sio.terminator = 0x55; // Command terminator 'U'
 }
 
-u8 sioRead8() {
-	u8 ret = 0xFF;
+void SIO_FORCEINLINE sioInterrupt()
+{
+	PAD_LOG("Sio Interrupt");
+	sio.StatReg|= IRQ;
+	psxHu32(0x1070)|=0x80;
+}
 
-	if (sio.StatReg & RX_RDY) {
-		ret = sio.buf[sio.parp];
-		if (sio.parp == sio.bufcount) {
-			sio.StatReg &= ~RX_RDY;		// Receive is not Ready now?
-			sio.StatReg |= TX_EMPTY;	// Buffer is Empty
+SIO_WRITE sioWriteStart(u8 data)
+{
+	//sio2.packet.recvVal1 = 0x01100; // Pad is present
+	//sio2.packet.recvVal1 = 0x1D100; // Pad not present
 
-			if (sio.padst == 2) sio.padst = 0;
-			/*if (sio.mcdst == 1) {
-				sio.mcdst = 99;
-				sio.StatReg&= ~TX_EMPTY;
-				sio.StatReg|= RX_RDY;
-			}*/
+	switch(data)
+	{
+	case 0x01: siomode = SIO_CONTROLLER; break;
+	case 0x21: siomode = SIO_MULTITAP; break;
+	case 0x61: siomode = SIO_INFRARED; break;
+	case 0x81: siomode = SIO_MEMCARD; break;
+
+	default:
+		printf("%s cmd: %02X??\n", __FUNCTION__, data);
+		DEVICE_UNPLUGGED();
+		siomode = SIO_DUMMY;
+		break;
+	}
+
+	sioWrite8inl(data);
+}
+
+SIO_WRITE sioWriteController(u8 data)
+{
+	//sio.packetsize++;
+
+	switch(sio.bufCount)
+	{
+	case 0:
+		SIO_STAT_READY();
+		DEVICE_PLUGGED();
+		sio.buf[0] = PADstartPoll(sio.port + 1);
+		break;
+
+	default: 
+		sio.buf[sio.bufCount] = PADpoll(data);
+		break;
+	}
+
+	SIO_INT();
+}
+
+SIO_WRITE sioWriteMultitap(u8 data)
+{
+	static u8 siocmd = 0;
+	//sio.packetsize++;
+
+	switch(sio.bufCount)
+	{
+	case 0:
+		if(IsMtapPresent(sio.port))
+		{
+			SIO_STAT_READY();
+			DEVICE_PLUGGED();
+			sio.buf[0] = 0xFF;
+			sio.buf[1] = 0x80;
+			sio.buf[2] = 0x5A;
+		}
+		else
+		{
+			DEVICE_UNPLUGGED();
+			sio.buf[0] = 0x00;
+			siomode = SIO_DUMMY;
+		}
+		break;
+
+	case 1:
+		siocmd = data;
+		switch(data)
+		{
+		case 0x12: // Pads supported      /// slots supported, port 0,1
+		case 0x13: // Memcards supported //// slots supported, port 2,3
+			sio.buf[3] = 0x04;
+			sio.buf[4] = 0x00;
+			sio.buf[5] = 0x5A; // 0x66 here, disables the thing.
+			//sio.bufSize = 5;
+			break;
+
+		case 0x21: // Select pad
+		case 0x22: // Select memcard
+			sio.buf[3] = 0x00;
+			sio.buf[4] = 0x00;
+			sio.buf[5] = 0x00;
+			sio.buf[6] = 0x5A;
+			//sio.bufSize = 6;
+			break;
+
+		default:
+			printf("%s cmd: %02X??\n", __FUNCTION__, data);
+			sio.buf[3] = 0x00;
+			sio.buf[4] = 0x00;
+			sio.buf[5] = 0x00;
+			sio.buf[6] = 0x00;
+			break;
+
+		}
+		break;
+
+	case 2: // Respond to 0x21/0x22 with requested port
+		switch(siocmd)
+		{
+		case 0x21:
+			{
+				sio.slot[sio.port] = data;
+
+				u32 ret = PADsetSlot(sio.port+1, data+1);
+				sio.buf[5] = ret? data : 0xFF;
+				sio.buf[6] = ret? 0x5A : 0x66;
+			}
+			break;
+
+		case 0x22:
+			{
+				sio.slot[sio.port] = data;
+				sio.buf[5] = data;
+			}
+			break;
+		}
+		break;
+
+	case 3: break;
+	case 5: break;
+	case 6: break;
+
+	//default: sio.buf[sio.bufCount] = 0x00; break;
+	}
+
+	SIO_INT();
+}
+
+SIO_WRITE MemcardResponse()
+{
+	sio.buf[sio.bufSize - 1] = 0x2B;
+	sio.buf[sio.bufSize - 0] = mcd->term;
+}
+
+SIO_WRITE memcardAuth(u8 data)
+{
+	static bool doXorCheck = false;
+	static u8 xorResult = 0;
+
+	if(sio.bufCount == 2)
+	{
+		switch(data)
+		{
+		case 0x01: case 0x02: case 0x04: 
+		case 0x0F: case 0x11: case 0x13:
+			doXorCheck = true;
+			xorResult = 0;
+			sio.buf[3] = 0x2B;
+			sio.buf[sio.bufSize] = mcd->term;
+			break;
+
+		default:
+			doXorCheck = false;
+			MemcardResponse();
+			break;
 		}
 	}
-		//PAD_LOG("sio read8 ;ret = %x", ret);
-	return ret;
+	else if(doXorCheck)
+	{
+		switch(sio.bufCount)
+		{
+		case 3: break;
+		case 12: sio.buf[12] = xorResult; break;
+		default: xorResult ^= data; break;
+		};
+	}
 }
 
-void SIO_CommandWrite(u8 value,int way) {
-	PAD_LOG("sio write8 %x", value);
+SIO_WRITE memcardTransfer(u8 data)
+{
+	static MEMCARD_TRANSFER mode;
+	static u8 subCmd = 0;
+	static u8 checksum_pos = 0;
+	static u8 transfer_size = 0;
 
-	// PAD COMMANDS
-	switch (sio.padst) {
-		case 1: SIO_INT();
-			if ((value&0x40) == 0x40) {
-				sio.padst = 2; sio.parp = 1;
-				switch (sio.CtrlReg&0x2002) {
-					case 0x0002:
-						sio.packetsize ++;	// Total packet size sent
-						sio.buf[sio.parp] = PADpoll(value);
-						break;
-					case 0x2002:
-						sio.packetsize ++;	// Total packet size sent
-						sio.buf[sio.parp] = PADpoll(value);
-						break;
-				}
-				if (!(sio.buf[sio.parp] & 0x0f)) {
-					sio.bufcount = 2 + 32;
-				} else {
-					sio.bufcount = 2 + (sio.buf[sio.parp] & 0x0f) * 2;
-				}
+	switch(sio.bufCount)
+	{
+	case 0: break;
+	case 1: 
+		{
+			u8 header[] = {0xFF, 0xFF, 0xFF, 0x2B, mcd->term};
+			switch(data)
+			{
+			case 0x42: // Write
+				memcpy_fast(sio.buf, header, 4);
+				mode = MEM_WRITE;
+				break;
+
+			case 0x43: // Read
+				memcpy_fast(sio.buf, header, 4);
+				mode = MEM_READ;
+				break;
+
+			case 0x81: // Commit
+				siomode = SIO_DUMMY; // Nothing more to do here.
+				mode = MEM_COMMIT;
+				memcpy_fast(sio.buf, &header[1], 4);
+				sio.bufSize = 3;
+
+				if(subCmd == 0x42) sio2.packet.recvVal1 = 0x1600; // Writing
+				if(subCmd == 0x43) sio2.packet.recvVal1 = 0x1700; // Reading
+
+				sio2.packet.recvVal3 = 0x8C;
+				break;
+
+			case 0x82: // Erase
+				siomode = SIO_DUMMY; // Nothing more to do here.
+				mode = MEM_ERASE;
+				memcpy_fast(sio.buf, &header[1], 4);
+				sio.bufSize = 3;
+				mcd->EraseBlock();
+				break;
+
+			default:
+				printf("%s cmd: %02X??\n", __FUNCTION__, data);
+				mode = MEM_INVALID;
+				memcpy_fast(sio.buf, &header[1], 4);
+				sio.bufSize = 3;
+				break;
 			}
-			else sio.padst = 0;
-			return;
-		case 2:
-			sio.parp++;
-			switch (sio.CtrlReg&0x2002) {
-				case 0x0002: sio.packetsize ++; sio.buf[sio.parp] = PADpoll(value); break;
-				case 0x2002: sio.packetsize ++; sio.buf[sio.parp] = PADpoll(value); break;
+
+			subCmd = data;
+		}
+		SIO_INT();
+		break;
+
+	case 2:
+		transfer_size = data;
+
+		switch(mode)
+		{
+		case MEM_WRITE:
+			sio.buf[data + 5] = mcd->term;
+			sio.bufSize = data + 5;
+			checksum_pos = data + 4;
+			break;
+
+		case MEM_READ:
+			mcd->Read(&sio.buf[4], transfer_size);
+			mcd->transferAddr += transfer_size;
+
+			sio.buf[transfer_size + 4] = mcd->DoXor(&sio.buf[4], transfer_size);
+			sio.buf[transfer_size + 5] = mcd->term;
+			sio.bufSize = transfer_size + 5;
+			break;
+		}
+		break;
+
+	default:
+		switch(mode)
+		{
+		case MEM_WRITE:
+			if(sio.bufCount < checksum_pos)
+			{
+				sio.buf[sio.bufCount+1] = data;
 			}
-			if (sio.parp == sio.bufcount) { sio.padst = 0; return; }
-			SIO_INT();
-			return;
-		case 3:
-			// No pad connected.
-			sio.parp++;
-			if (sio.parp == sio.bufcount) { sio.padst = 0; return; }
-			SIO_INT();
-			return;
+			else if(sio.bufCount == checksum_pos)
+			{
+				u8 xor_check = mcd->DoXor(&sio.buf[4], checksum_pos - 4);
+				
+				if(xor_check != sio.buf[sio.bufCount])
+					printf("MemWrite: Checksum invalid! XOR: %02X, IN: %02X\n", xor_check, sio.buf[sio.bufCount]);
+
+				sio.buf[sio.bufCount] = xor_check;
+				mcd->Write(&sio.buf[4], transfer_size);
+				mcd->transferAddr += transfer_size;
+			}
+			break;
+		}
+
+		if(sio.bufCount > sio.bufSize)
+		{
+			if(data == 0x81)
+			{
+				SIO_STAT_READY();
+				sio.bufCount = 0x00;
+			}
+		}
+		break;
+	}
+}
+
+SIO_WRITE memcardSector(u8 data)
+{
+	static u8 xor_check = 0;
+	static bool sectorDone = false;
+
+	if(!sectorDone)
+	{
+		switch(sio.bufCount)
+		{
+		case 2: mcd->sectorAddr  = data <<  0; xor_check  = data; break;
+		case 3: mcd->sectorAddr |= data <<  8; xor_check ^= data; break;
+		case 4: mcd->sectorAddr |= data << 16; xor_check ^= data; break;
+		case 5: mcd->sectorAddr |= data << 24; xor_check ^= data; break;
+		case 6: mcd->goodSector = data == xor_check; break;
+		case 8: mcd->transferAddr = (512+16) * mcd->sectorAddr; break;
+		case 9: memset8<0xFF>(sio.buf); sectorDone = true;
+		}
+	}
+	else
+	{
+		if(data == 0x81) // SET_SECTOR End
+		{
+			SIO_STAT_READY();
+			sectorDone = false;
+			sio.bufCount = 0;
+			siomode = SIO_MEMCARD_TRANSFER;
+		};
+	}
+}
+
+SIO_WRITE memcardInit()
+{
+	mcd = &mcds[sio.GetPort()][sio.GetSlot()];
+
+	// forced ejection logic.  Technically belongs in the McdIsPresent handler for
+	// the plugin, once the memorycard plugin system is completed.
+
+	bool forceEject = false;
+
+	if(mcd->ForceEjection_Timeout)
+	{
+		if(mcd->ForceEjection_Timeout == FORCED_MCD_EJECTION_MAX_TRIES && mcd->IsPresent())
+			Console.WriteLn( Color_Green,  L"[%s] Auto-ejecting memcard [port:%d, slot:%d]", GetTimeMsStr().c_str(), sio.GetPort(), sio.GetSlot());
+
+		mcd->ForceEjection_Timeout--;
+		forceEject = true;
+
+		u32 numTimesAccessed = FORCED_MCD_EJECTION_MAX_TRIES - mcd->ForceEjection_Timeout;
+		
+		//minimum tries reached. start counting millisec timeout.
+		if(numTimesAccessed == FORCED_MCD_EJECTION_MIN_TRIES)
+			mcd->ForceEjection_Timestamp = wxDateTime::UNow();
+
+		if(numTimesAccessed > FORCED_MCD_EJECTION_MIN_TRIES)
+		{
+			wxTimeSpan delta = wxDateTime::UNow().Subtract(mcd->ForceEjection_Timestamp);
+			if(delta.GetMilliseconds() >= FORCED_MCD_EJECTION_MAX_MS_AFTER_MIN_TRIES)
+			{
+				DevCon.Warning( L"[%s] Auto-eject: Timeout reached after mcd was accessed %d times [port:%d, slot:%d]", GetTimeMsStr().c_str(), numTimesAccessed, sio.GetPort(), sio.GetSlot());
+				mcd->ForceEjection_Timeout = 0;	//Done. on next sio access the card will be seen as inserted.
+			}
+		}
+
+		if(mcd->ForceEjection_Timeout == 0 && mcd->IsPresent())
+			Console.WriteLn( Color_Green,  L"[%s] Re-inserting auto-ejected memcard [port:%d, slot:%d]", GetTimeMsStr().c_str(), sio.GetPort(), sio.GetSlot());
+	}
+			
+	if(!forceEject && mcd->IsPresent())
+	{
+		DEVICE_PLUGGED();
+		siomode = mcd->IsPSX() ? SIO_MEMCARD_PSX : SIO_MEMCARD;
+	}
+	else
+	{
+		DEVICE_UNPLUGGED();
+		siomode = SIO_DUMMY;
 	}
 
-	// MEMORY CARD COMMANDS
-	switch (sio.mcdst) {
-		case 1:
+	
+}
+
+SIO_WRITE sioWriteMemcard(u8 data)
+{
+	static u8 siocmd = 0;
+
+	switch(sio.bufCount)
+	{
+	case 0:
+		SIO_STAT_READY();
+		memcardInit();
+		SIO_INT();
+		break;
+
+	case 1:
+		//printf("Memcard cmd: %02X\n", data);
+		siocmd = data; 
+		switch(data)
 		{
-			sio.packetsize++;
-			SIO_INT();
-			if (sio.rdwr) { sio.parp++; return; }
-			sio.parp = 1;
+		case 0x21: // SET_SECTOR_ERASE
+		case 0x22: // SET_SECTOR_WRITE
+		case 0x23: // SET_SECTOR_READ
+			sio2.packet.recvVal3 = 0x8C;
+			MemcardResponse();
+			siomode = SIO_MEMCARD_SECTOR;
+			break;
 
-			const char* log_cmdname = "";
-
-			switch (value) {
-			case 0x11: // RESET
-				log_cmdname = "Reset1";
-
-				sio.bufcount =  8;
-				memset8<0xff>(sio.buf);
-				sio.buf[3] = sio.terminator;
-				sio.buf[2] = '+';
-				sio.mcdst = 99;
-				sio2.packet.recvVal3 = 0x8c;
-				break;
-
-			// FIXME : Why are there two identical cases for resetting the
-			// memorycard(s)?  there doesn't appear to be anything dealing with
-			// card slots here.  --air
-			case 0x12: // RESET
-				log_cmdname = "Reset2";
-				sio.bufcount =  8;
-				memset8<0xff>(sio.buf);
-				sio.buf[3] = sio.terminator;
-				sio.buf[2] = '+';
-				sio.mcdst = 99;
-				sio2.packet.recvVal3 = 0x8c;
-				break;
-
-			case 0x81: // COMMIT
-				log_cmdname = "Commit";
-				sio.bufcount =  8;
-				memset8<0xff>(sio.buf);
-				sio.mcdst = 99;
-				sio.buf[3] = sio.terminator;
-				sio.buf[2] = '+';
-				sio2.packet.recvVal3 = 0x8c;
-				if(value == 0x81) {
-					if(sio.mc_command==0x42)
-						sio2.packet.recvVal1 = 0x1600; // Writing
-					else if(sio.mc_command==0x43) sio2.packet.recvVal1 = 0x1700; // Reading
-				}
-				break;
-			case 0x21:
-			case 0x22:
-			case 0x23: // SECTOR SET
-				log_cmdname = "SetSector";
-                sio.bufcount =  8; sio.mcdst = 99; sio.sector=0; sio.k=0;
-				memset8<0xff>(sio.buf);
-				sio2.packet.recvVal3 = 0x8c;
-				sio.buf[8]=sio.terminator;
-				sio.buf[7]='+';
-				break;
-
-			case 0x24: break;
-			case 0x25: break;
-
-			case 0x26:
+		case 0x26: // GET_SPECS ?
 			{
-				log_cmdname = "GetInfo";
+				sio2.packet.recvVal3 = 0x83;
 
-				const uint port = sio.GetMemcardIndex();
-				const uint slot = sio.activeMemcardSlot[port];
-
-				mc_command_0x26_tag cmd = mc_sizeinfo_8mb;
+				mc_command_0x26_tag cmd;
 				PS2E_McdSizeInfo info;
-				
-				info.SectorSize			= cmd.sectorSize;
-				info.EraseBlockSizeInSectors			= cmd.eraseBlocks;
-				info.McdSizeInSectors	= cmd.mcdSizeInSectors;
-				
-				SysPlugins.McdGetSizeInfo( port, slot, info );
-				pxAssertDev( cmd.mcdSizeInSectors >= mc_sizeinfo_8mb.mcdSizeInSectors,
-					"Mcd plugin returned an invalid memorycard size: Cards smaller than 8MB are not supported." );
-				
+
+				mcd->GetSizeInfo(info);
+
+				cmd.field_151			= 0x2B;
 				cmd.sectorSize			= info.SectorSize;
 				cmd.eraseBlocks			= info.EraseBlockSizeInSectors;
 				cmd.mcdSizeInSectors	= info.McdSizeInSectors;
-				
-				// Recalculate the xor summation
-				// This uses a trick of removing the known xor values for a default 8mb memorycard (for which the XOR
-				// was calculated), and replacing it with our new values.
-				
-				apply_xor( cmd.mc_xor, mc_sizeinfo_8mb.sectorSize );
-				apply_xor( cmd.mc_xor, mc_sizeinfo_8mb.eraseBlocks );
-				apply_xor( cmd.mc_xor, mc_sizeinfo_8mb.mcdSizeInSectors );
+				cmd.mc_xor				= info.Xor;
+				cmd.Z					= mcd->term;
 
-				apply_xor( cmd.mc_xor, cmd.sectorSize );
-				apply_xor( cmd.mc_xor, cmd.eraseBlocks );
-				apply_xor( cmd.mc_xor, cmd.mcdSizeInSectors );
-				
-				sio.bufcount = 12; sio.mcdst = 99; sio2.packet.recvVal3 = 0x83;
-				memset8<0xff>(sio.buf);
-				memcpy_fast(&sio.buf[2], &cmd, sizeof(cmd));
-				sio.buf[12]=sio.terminator;
+				memcpy_fast(&sio.buf[2], &cmd, sizeof(mc_command_0x26_tag));
 			}
 			break;
 
-			case 0x27:
-			case 0x28:
-			case 0xBF:
-				log_cmdname = "NotSure";	// FIXME !!
-				sio.bufcount =  4; sio.mcdst = 99; sio2.packet.recvVal3 = 0x8b;
-				memset8<0xff>(sio.buf);
-				sio.buf[4]=sio.terminator;
-				sio.buf[3]='+';
-				break;
-
-			// FIXME ?
-			// sio.lastsector and sio.mode are unused.
-
-			case 0x42: // WRITE
-				log_cmdname = "Write";
-				//sio.mode = 0;
-			goto __doReadWrite;
-
-			case 0x43: // READ
-				log_cmdname = "Read";
-				//sio.lastsector = sio.sector; // Reading
-			goto __doReadWrite;
-
-			case 0x82:
-				log_cmdname = "Read(?)"; // FIXME !!
-				//if(sio.lastsector==sio.sector) sio.mode = 2;
-
-			__doReadWrite:
-				sio.bufcount =133; sio.mcdst = 99;
-				memset8<0xff>(sio.buf);
-				sio.buf[133]=sio.terminator;
-				sio.buf[132]='+';
+		case 0x27: // SET_TERMINATOR
+			sio2.packet.recvVal3 = 0x8B;
 			break;
-			
 
-			case 0xf0:
-			case 0xf1:
-			case 0xf2:
-				log_cmdname = "NoClue"; // FIXME !!
-				sio.mcdst = 99;
-				break;
+		case 0x28: // GET_TERMINATOR
+			sio2.packet.recvVal3 = 0x8B;
+			sio.buf[2] = 0x2B;
+			sio.buf[3] = mcd->term;
+			sio.buf[4] = 0x55; // 0x55 or 0xFF ?
+			break;
 
-			case 0xf3:
-			case 0xf7:
-				log_cmdname = "NoClueHereEither"; // FIXME !!
-				sio.bufcount = 4; sio.mcdst = 99;
-				memset8<0xff>(sio.buf);
-				sio.buf[4]=sio.terminator;
-				sio.buf[3]='+';
-				break;
+		// If the PS2 commands fail, it falls back into PSX mode
+		case 0x52: // PSX 'R'ead
+		case 0x53: // PSX 'S'tate
+		case 0x57: // PSX 'W'rite
+			siomode = SIO_DUMMY;
+			break;
 
-			case 0x52:
-				log_cmdname = "FixMe"; // FIXME !!
-				sio.rdwr = 1; memset8<0xff>(sio.buf);
-				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
-				break;
-			case 0x57:
-				log_cmdname = "FixMe"; // FIXME !!
-				sio.rdwr = 2; memset8<0xff>(sio.buf);
-				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
-				break;
-			default:
-				log_cmdname = "Unknown";
-				sio.mcdst = 0;
-				memset8<0xff>(sio.buf);
-				sio.buf[sio.bufcount]=sio.terminator; sio.buf[sio.bufcount-1]='+';
-			}
-			MEMCARDS_LOG("MC(%d) command 0x%02X [%s]", sio.GetMemcardIndex()+1, value, log_cmdname);
-			sio.mc_command = value;
+		case 0xF0: // Auth stuff
+			siomode = SIO_MEMCARD_AUTH;
+			break;
+
+		case 0x11: // On Boot/Probe
+		case 0x12: // On Write/Delete/Recheck?
+			sio2.packet.recvVal3 = 0x8C;
+
+		case 0x81: // Checked right after copy/delete
+		case 0xBF: // Wtf?? On game booting?
+		case 0xF3: // Reset?
+		case 0xF7: // No idea
+			MemcardResponse();
+			siomode = SIO_DUMMY;
+			break;
+
+		default:
+			printf("%s cmd: %02X??\n", __FUNCTION__, data);
+			siomode = SIO_DUMMY;
+			break;
 		}
-		return;		// END CASE 1.
+		SIO_INT();
+		break;
 
-		// FURTHER PROCESSING OF THE MEMORY CARD COMMANDS
-		case 99:
+	case 2:
+		switch(siocmd)
 		{
-			sio.packetsize++;
-			sio.parp++;
-			switch(sio.mc_command)
-			{
-			// SET_ERASE_PAGE; the next erase commands will *clear* data starting with the page set here
-			case 0x21:
-			// SET_WRITE_PAGE; the next write commands will commit data starting with the page set here
-			case 0x22:
-			// SET_READ_PAGE; the next read commands will return data starting with the page set here
-			case 0x23:
-                if (sio.parp==2)sio.sector|=(value & 0xFF)<< 0;
-				if (sio.parp==3)sio.sector|=(value & 0xFF)<< 8;
-				if (sio.parp==4)sio.sector|=(value & 0xFF)<<16;
-				if (sio.parp==5)sio.sector|=(value & 0xFF)<<24;
-				if (sio.parp==6)
-				{
-					if (sio_xor((u8 *)&sio.sector, 4) == value)
-						MEMCARDS_LOG("MC(%d) SET PAGE sio.sector, sector=0x%04X", sio.GetMemcardIndex()+1, sio.sector);
-					else
-						MEMCARDS_LOG("MC(%d) SET PAGE XOR value ERROR 0x%02X != ^0x%02X",
-							sio.GetMemcardIndex()+1, value, sio_xor((u8 *)&sio.sector, 4));
-				}
-				break;
-
-			// SET_TERMINATOR; reads the new terminator code
-			case 0x27:
-				if(sio.parp==2)	{
-					sio.terminator = value;
-					sio.buf[4] = value;
-					MEMCARDS_LOG("MC(%d) SET TERMINATOR command, value=0x%02X", sio.GetMemcardIndex()+1, value);
-
-				}
-				break;
-
-			// GET_TERMINATOR; puts in position 3 the current terminator code and in 4 the default one
-			//                                                                  depending on the param
-			case 0x28:
-				if(sio.parp == 2) {
-					sio.buf[2] = '+';
-					sio.buf[3] = sio.terminator;
-
-					//if(value == 0) sio.buf[4] = 0xFF;
-					sio.buf[4] = 0x55;
-					MEMCARDS_LOG("MC(%d) GET TERMINATOR command, value=0x%02X", sio.GetMemcardIndex()+1, value);
-				}
-				break;
-			// WRITE DATA
-			case 0x42:
-				if (sio.parp==2) {
-					sio.bufcount=5+value;
-					memset8<0xff>(sio.buf);
-					sio.buf[sio.bufcount-1]='+';
-					sio.buf[sio.bufcount]=sio.terminator;
-					MEMCARDS_LOG("MC(%d) WRITE command, size=0x%02X", sio.GetMemcardIndex()+1, value);
-				}
-				else
-				if ((sio.parp>2) && (sio.parp<sio.bufcount-2)) {
-					sio.buf[sio.parp]=value;
-					//MEMCARDS_LOG("MC(%d) WRITING 0x%02X", sio.GetMemcardIndex()+1, value);
-				} else
-				if (sio.parp==sio.bufcount-2) {
-					if (sio_xor(&sio.buf[3], sio.bufcount-5)==value) {
-                        _SaveMcd(&sio.buf[3], (512+16)*sio.sector+sio.k, sio.bufcount-5);
-						sio.buf[sio.bufcount-1]=value;
-						sio.k+=sio.bufcount-5;
-					} else {
-						MEMCARDS_LOG("MC(%d) write XOR value error 0x%02X != ^0x%02X",
-							sio.GetMemcardIndex()+1, value, sio_xor(&sio.buf[3], sio.bufcount-5));
-					}
-				}
-				break;
-			// READ DATA
-			case 0x43:
-				if (sio.parp==2)
-				{
-					//int i;
-					sio.bufcount=value+5;
-					sio.buf[3]='+';
-					MEMCARDS_LOG("MC(%d) READ command, size=0x%02X", sio.GetMemcardIndex()+1, value);
-					_ReadMcd(&sio.buf[4], (512+16)*sio.sector+sio.k, value);
-
-					/*if(sio.mode==2)
-					{
-						int j;
-						for(j=0; j < value; j++)
-							sio.buf[4+j] = ~sio.buf[4+j];
-					}*/
-
-					sio.k+=value;
-					sio.buf[sio.bufcount-1]=sio_xor(&sio.buf[4], value);
-					sio.buf[sio.bufcount]=sio.terminator;
-				}
-				break;
-			// INTERNAL ERASE
-			case 0x82:
-				if(sio.parp==2)
-				{
-					sio.buf[2]='+';
-					sio.buf[3]=sio.terminator;
-					//if (sio.k != 0 || (sio.sector & 0xf) != 0)
-					//	Console.Warning("saving : odd position for erase.");
-
-					_EraseMCDBlock((512+16)*(sio.sector&~0xf));
-
-				/*	memset(sio.buf, -1, 256);
-					_SaveMcd(sio.buf, (512+16)*sio.sector, 256);
-					_SaveMcd(sio.buf, (512+16)*sio.sector+256, 256);
-					_SaveMcd(sio.buf, (512+16)*sio.sector+512, 16);
-					sio.buf[2]='+';
-					sio.buf[3]=sio.terminator;*/
-					//sio.buf[sio.bufcount] = sio.terminator;
-					MEMCARDS_LOG("MC(%d) INTERNAL ERASE command 0x%02X", sio.GetMemcardIndex()+1, value);
-				}
-				break;
-			// CARD AUTHENTICATION CHECKS
-			case 0xF0:
-				if (sio.parp==2)
-				{
-					MEMCARDS_LOG("MC(%d) CARD AUTH :0x%02X", sio.GetMemcardIndex()+1, value);
-					switch(value){
-					case  1:
-					case  2:
-					case  4:
-					case 15:
-					case 17:
-					case 19:
-						sio.bufcount=13;
-						memset8<0xff>(sio.buf);
-						sio.buf[12] = 0; // Xor value of data from index 4 to 11
-						sio.buf[3]='+';
-						sio.buf[13] = sio.terminator;
-						break;
-					case  6:
-					case  7:
-					case 11:
-						sio.bufcount=13;
-						memset8<0xff>(sio.buf);
-						sio.buf[12]='+';
-						sio.buf[13] = sio.terminator;
-						break;
-					default:
-						sio.bufcount=4;
-						memset8<0xff>(sio.buf);
-						sio.buf[3]='+';
-						sio.buf[4] = sio.terminator;
-					}
-				}
-				break;
-			}
-			if (sio.bufcount<=sio.parp)	sio.mcdst = 0;
+		case 0x27: // SET_TERMINATOR
+			mcd->term = data;
+			MemcardResponse();
+			break;
 		}
-		return;		// END CASE 99.
+		break;
 	}
-
-	switch (sio.mtapst)
-	{
-		case 0x1:
-			sio.packetsize++;
-			sio.parp = 1;
-			SIO_INT();
-			switch(value) {
-			case 0x12:
-				// Query number of pads supported.
-				sio.buf[3] = 4;
-				sio.mtapst = 2;
-				sio.bufcount = 5;
-				break;
-			case 0x13:
-				// Query number of memcards supported.
-				sio.buf[3] = 4;
-				sio.mtapst = 2;
-				sio.bufcount = 5;
-				break;
-			case 0x21:
-				// Set pad slot.
-				sio.mtapst = value;
-				sio.bufcount = 6; // No idea why this is 6, saved from old code.
-				break;
-			case 0x22:
-				// Set memcard slot.
-				sio.mtapst = value;
-				sio.bufcount = 6; // No idea why this is 6, saved from old code.
-				break;
-			}
-			// Commented out values are from original code.  They break multitap in bios.
-			sio.buf[sio.bufcount-1]=0;//'+';
-			sio.buf[sio.bufcount]=0;//'Z';
-			return;
-		case 0x2:
-			sio.packetsize++;
-			sio.parp++;
-            if (sio.bufcount<=sio.parp)	sio.mcdst = 0;
-			SIO_INT();
-			return;
-		case 0x21:
-			// Set pad slot.
-			sio.packetsize++;
-			sio.parp++;
-			sio.mtapst = 2;
-			if (sio.CtrlReg & 2)
-			{
-				int port = sio.GetMultitapPort();
-				if (IsMtapPresent(port))
-					sio.activePadSlot[port] = value;
-			}
-			SIO_INT();
-			return;
-		case 0x22:
-			// Set memcard slot.
-			sio.packetsize++;
-			sio.parp++;
-			sio.mtapst = 2;
-			if (sio.CtrlReg & 2)
-			{
-				int port = sio.GetMultitapPort();
-				if (IsMtapPresent(port))
-					sio.activeMemcardSlot[port] = value;
-			}
-			SIO_INT();
-			return;
-	}
-
-	if(sio.count == 1 || way == 0) InitializeSIO(value);
 }
 
-void InitializeSIO(u8 value)
+SIO_WRITE sioWriteMemcardPSX(u8 data)
 {
-	switch (value) {
-		case 0x01: // start pad
-			sio.StatReg &= ~TX_EMPTY;	// Now the Buffer is not empty
-			sio.StatReg |= RX_RDY;		// Transfer is Ready
+	static u8 siocmd = 0;
 
-			sio.bufcount = 4; // Default size, when no pad connected.
-			sio.parp = 0;
-			sio.padst = 1;
-			sio.packetsize = 1;
-			sio.count = 0;
-			sio2.packet.recvVal1 = 0x1100; // Pad is present
+	switch(sio.bufCount)
+	{
+	case 0: // Same init stuff...
+		SIO_STAT_READY();
+		memcardInit();
+		SIO_INT();
+		break;
 
-			if( (sio.CtrlReg & 2) == 2 )
-			{
-				int padslot = (sio.CtrlReg>>12) & 2;	// move 0x2000 bitmask into leftmost bits
-				if( padslot != 1 )
-				{
-					padslot >>= 1;	// transform 0/2 to be 0/1 values
-
-					if (!PADsetSlot(padslot+1, 1+sio.activePadSlot[padslot]) && sio.activePadSlot[padslot])
-					{
-						// Pad is not present.  Don't send poll, just return a bunch of 0's.
-						sio2.packet.recvVal1 = 0x1D100;
-						sio.padst = 3;
-					}
-					else {
-						sio.buf[0] = PADstartPoll(padslot+1);
-					}
-				}
-			}
-
-			SIO_INT();
-			return;
-
-		case 0x21: // start mtap
-			sio.StatReg &= ~TX_EMPTY;	// Now the Buffer is not empty
-			sio.StatReg |= RX_RDY;		// Transfer is Ready
-			sio.parp = 0;
-			sio.packetsize = 1;
-			sio.mtapst = 1;
-			sio.count = 0;
-			sio2.packet.recvVal1 = 0x1D100; // Mtap is not connected :(
-			if (sio.CtrlReg & 2) // No idea if this test is needed.  Pads use it, memcards don't.
-			{
-				int port = sio.GetMultitapPort();
-				if (!IsMtapPresent(port))
-				{
-					// If "unplug" multitap mid game, set active slots to 0.
-					sio.activePadSlot[port] = 0;
-					sio.activeMemcardSlot[port] = 0;
-				}
-				else
-				{
-					sio.bufcount = 3;
-					sio.buf[0] = 0xFF;
-					sio.buf[1] = 0x80; // Have no idea if this is correct.  From PSX mtap.
-					sio.buf[2] = 0x5A;
-					sio2.packet.recvVal1 = 0x1100; // Mtap is connected :)
-				}
-			}
-			SIO_INT();
-			return;
-
-		case 0x61: // start remote control sensor
-			sio.StatReg &= ~TX_EMPTY;	// Now the Buffer is not empty
-			sio.StatReg |= RX_RDY;		// Transfer is Ready
-			sio.parp = 0;
-			sio.packetsize = 1;
-			sio.count = 0;
-			sio2.packet.recvVal1 = 0x1100; // Pad is present
-			SIO_INT();
-			return;
-
-		case 0x81: // start memcard
+	case 1:
+		siocmd = data; 
+		switch(data) 
 		{
-			sio.StatReg &= ~TX_EMPTY;
-			sio.StatReg |= RX_RDY;
-			memcpy(sio.buf, cardh, 4);
-			sio.parp = 0;
-			sio.bufcount = 8;
-			sio.mcdst = 1;
-			sio.packetsize = 1;
-			sio.rdwr = 0;
-			sio.count = 0;
+		case 0x53: // PSX 'S'tate // haven't seen it happen yet
+			sio.buf[1] = mcd->FLAG;
+			memcpy_fast(&sio.buf[2], memcard_psx, 8);
+			siomode = SIO_DUMMY;
+			break;
 
-			// Memcard presence reporting!
-			// Note:
-			//	0x01100 means Memcard is present
-			//  0x1D100 means Memcard is missing.
+		case 0x52: // PSX 'R'ead / Probe
+		case 0x57: // PSX 'W'rite
+			sio.buf[1] = 0x00; //mcd->FLAG;
+			sio.buf[2] = 0x5A; // probe end, success "0x5A"
+			sio.buf[3] = 0x5D;
+			sio.buf[4] = 0x00;
+			break;
 
-			const uint port = sio.GetMemcardIndex();
-			const uint slot = sio.activeMemcardSlot[port];
+		case 0x58: // POCKETSTATION!! Grrrr // Lots of love to the PS2DEV/ps2sdk 
+			DEVICE_UNPLUGGED(); // Check is for 0x01000 on stat
+			siomode = SIO_DUMMY;
+			break;
 
-			// forced ejection logic.  Technically belongs in the McdIsPresent handler for
-			// the plugin, once the memorycard plugin system is completed.
-			//  (ejection is only supported for the default non-multitap cards at this time)
+		default:
+			//printf("%s cmd: %02X??\n", __FUNCTION__, data);
+			siomode = SIO_DUMMY;
+			break;
+		}
+		SIO_INT();
+		break;
 
-			bool forceEject = false;
-			if( slot == 0 && m_ForceEjectionTimeout[port]>0 )
+	case 2: break;
+	case 3: break;
+
+	case 4:
+		sio.buf[5] = data;
+		mcd->sectorAddr = data << 8;
+		break;
+
+	case 5:
+		sio.buf[6] = data;
+		mcd->sectorAddr |= data;
+		mcd->goodSector = !(mcd->sectorAddr > 0x3FF);
+		mcd->transferAddr = 128 * mcd->sectorAddr; 
+		break;
+
+	case 6:
+		if(siocmd == 0x52)
+		{
+			// READ
+
+			if(!mcd->goodSector)
 			{
-				if( m_ForceEjectionTimeout[port] == FORCED_MCD_EJECTION_MAX_TRIES && SysPlugins.McdIsPresent( port, slot ) )
-					Console.WriteLn( Color_Green,  L"[%s] Auto-ejecting memcard [port:%d, slot:%d]", GetTimeMsStr().c_str(), port, slot );
-
-				--m_ForceEjectionTimeout[port];
-				forceEject = true;
-
-				int numTimesAccessed = FORCED_MCD_EJECTION_MAX_TRIES - m_ForceEjectionTimeout[port];
-				if ( numTimesAccessed == FORCED_MCD_EJECTION_MIN_TRIES )
-				{//minimum tries reached. start counting millisec timeout.
-					m_ForceEjection_minTriesTimestamp[port] = wxDateTime::UNow();
-				}
-
-				if ( numTimesAccessed > FORCED_MCD_EJECTION_MIN_TRIES )
-				{
-					wxTimeSpan delta = wxDateTime::UNow().Subtract( m_ForceEjection_minTriesTimestamp[port] );
-					if ( delta.GetMilliseconds() >= FORCED_MCD_EJECTION_MAX_MS_AFTER_MIN_TRIES )
-					{
-						DevCon.Warning( L"[%s] Auto-eject: Timeout reached after mcd was accessed %d times [port:%d, slot:%d]", GetTimeMsStr().c_str(), numTimesAccessed, port, slot);
-						m_ForceEjectionTimeout[port] = 0;	//Done. on next sio access the card will be seen as inserted.
-					}
-				}
-
-				if( m_ForceEjectionTimeout[port] == 0 && SysPlugins.McdIsPresent( port, slot ))
-					Console.WriteLn( Color_Green,  L"[%s] Re-inserting auto-ejected memcard [port:%d, slot:%d]", GetTimeMsStr().c_str(), port, slot);
-			}
-			
-			if( !forceEject && SysPlugins.McdIsPresent( port, slot ) )
-			{
-				sio2.packet.recvVal1 = 0x1100;
-				PAD_LOG("START MEMCARD [port:%d, slot:%d] - Present", port, slot );
+				memset8<0xFF>(sio.buf);
+				siomode = SIO_DUMMY;
 			}
 			else
 			{
-				sio2.packet.recvVal1 = 0x1D100;
-				PAD_LOG("START MEMCARD [port:%d, slot:%d] - Missing", port, slot );
-			}
+				sio.buf[8] = sio.buf[5];
+				sio.buf[9] = sio.buf[6];
+				sio.buf[6] = 0x5C;
+				sio.buf[7] = 0x5D;
 
-			SIO_INT();
+				mcd->Read(&sio.buf[10], 0x80);
+
+				sio.buf[138] = mcd->DoXor(&sio.buf[8], 0x80 + 2);
+				sio.buf[139] = 0x47;
+				siomode = SIO_DUMMY;
+			}
 		}
-		return;
+		else
+		{
+			sio.buf[sio.bufCount+1] = data;
+		}
+		break;
+
+	default:
+		// WRITE
+
+		sio.buf[sio.bufCount+1] = data;
+
+		if(sio.bufCount == 134)
+		{
+			u8 xorcheck = mcd->DoXor(&sio.buf[5], 0x80+2);
+
+			sio.buf[135] = 0x5C;
+			sio.buf[136] = 0x5D;
+
+			// (47h=Good, 4Eh=BadChecksum, FFh=BadSector)
+			sio.buf[137] = data == xorcheck ? 0x47 : 0x4E; 
+			if(!mcd->goodSector) sio.buf[137] = 0xFF;
+			else mcd->Write(&sio.buf[7], 0x80);
+			siomode = SIO_DUMMY;
+		}
+		break;
 	}
+}
+
+SIO_WRITE sioWriteInfraRed(u8 data)
+{
+	SIO_STAT_READY();
+	DEVICE_PLUGGED();
+	siomode = SIO_DUMMY;
+	SIO_INT();
+}
+
+static void sioWrite8inl(u8 data)
+{
+	switch(siomode)
+	{
+	case SIO_START: sioWriteStart(data); break;
+	case SIO_CONTROLLER: sioWriteController(data); break;
+	case SIO_MULTITAP: sioWriteMultitap(data); break;
+	case SIO_INFRARED: sioWriteInfraRed(data); break;
+	case SIO_MEMCARD: sioWriteMemcard(data); break;
+	case SIO_MEMCARD_AUTH: memcardAuth(data); break;
+	case SIO_MEMCARD_TRANSFER: memcardTransfer(data); break;
+	case SIO_MEMCARD_SECTOR: memcardSector(data); break;
+	case SIO_MEMCARD_PSX: sioWriteMemcardPSX(data); break;
+	case SIO_DUMMY: break;
+	};
+}
+
+void sioWriteCtrl16(u16 value) 
+{
+	static u8 tcount[2];
+
+	tcount[sio.port] = sio.bufCount;
+	sio.port = (value >> 13) & 1;
+
+	//printf("RegCtrl: %04X, %d\n", value, sio.bufCount);
+
+	sio.CtrlReg = value & ~RESET_ERR;
+	if (value & RESET_ERR) sio.StatReg &= ~IRQ;
+
+	if ((sio.CtrlReg & SIO_RESET) || (!sio.CtrlReg))
+	{
+		siomode = SIO_START;
+
+		tcount[0] = 0;
+		tcount[1] = 0;
+
+		KELOGS_PRINT();
+		
+		sio.StatReg = TX_RDY | TX_EMPTY;
+		psxRegs.interrupt &= ~(1<<IopEvt_SIO);
+	}
+
+	sio.bufCount = tcount[sio.port];
+}
+
+u8 sioRead8() 
+{
+	u8 ret;
+
+	if(sio.StatReg & RX_RDY) 
+	{
+		ret = sio.buf[sio.bufCount];
+		if(sio.bufCount == sio.bufSize) SIO_STAT_EMPTY();
+		sio.bufCount++;
+	}
+	else
+	{
+		ret = sio.ret;
+	}
+
+	KELOGS_READ(ret);
+	return ret;
 }
 
 void sioWrite8(u8 value)
 {
-	SIO_CommandWrite(value,0);
+	KELOGS_WRITE(value);
+	sioWrite8inl(value);
 }
 
 void SIODMAWrite(u8 value)
 {
-	SIO_CommandWrite(value,1);
-}
-
-void sioWriteCtrl16(u16 value) {
-	sio.CtrlReg = value & ~RESET_ERR;
-	if (value & RESET_ERR) sio.StatReg &= ~IRQ;
-	if ((sio.CtrlReg & SIO_RESET) || (!sio.CtrlReg))
-	{
-		sio.mtapst = 0; sio.padst = 0; sio.mcdst = 0; sio.parp = 0;
-		sio.StatReg = TX_RDY | TX_EMPTY;
-		psxRegs.interrupt &= ~(1<<IopEvt_SIO);
-	}
-}
-
-void SIO_FORCEINLINE sioInterrupt() {
-	PAD_LOG("Sio Interrupt");
-	sio.StatReg|= IRQ;
-	psxHu32(0x1070)|=0x80;
+	KELOGS_WRITE(value);
+	sioWrite8inl(value);
 }
 
 void SaveStateBase::sioFreeze()
@@ -780,24 +790,17 @@ void SaveStateBase::sioFreeze()
 	u64 m_mcdCRCs[2][8];
 
 	FreezeTag( "sio" );
-    Freeze( sio );
+	Freeze( sio );
 
 	// TODO : This stuff should all be moved to the memorycard plugin eventually,
 	// but that requires adding memorycard plugin to the savestate, and I'm not in
 	// the mood to do that (let's plan it for 0.9.8) --air
 
-	// Note: The Ejection system only works for the default non-multitap MemoryCards
-	// only.  This is because it could become very (very!) slow to do a full CRC check
-	// on multiple 32 or 64 meg carts.  I have chosen to save 
-
 	if( IsSaving() )
 	{
 		for( uint port=0; port<2; ++port )
-		//for( uint slot=0; slot<4; ++slot )
-		{
-			const uint slot = 0;		// see above comment about multitap slowness
-			m_mcdCRCs[port][slot] = SysPlugins.McdGetCRC( port, slot );
-		}
+			for( uint slot=0; slot<4; ++slot )
+				m_mcdCRCs[port][slot] = mcds[port][slot].GetChecksum();
 	}
 
 	Freeze( m_mcdCRCs );
@@ -817,18 +820,13 @@ void SaveStateBase::sioFreeze()
 		//    it has a "rule" that the memcard should never be ejected during a song.  So by
 		//    ejecting it, the game freezes (which is actually good emulation, but annoying!)
 
-		for( uint port=0; port<2; ++port )
-		//for( int slot=0; slot<4; ++slot )
+		for( u8 port=0; port<2; ++port ) 
+			for( u8 slot=0; slot<4; ++slot )
 		{
-			const uint slot = 0;		// see above comment about multitap slowness
-			u64 newCRC = SysPlugins.McdGetCRC( port, slot );
-			if( newCRC != m_mcdCRCs[port][slot] )
-			{
-				//m_mcdCRCs[port][slot] = newCRC;
-				//m_ForceEjectionTimeout[port] = 128;
-				_SetForceMcdEjectTimeoutNow(port, slot, FORCED_MCD_EJECTION_MAX_TRIES); 
-			}
+			u64 checksum = mcds[port][slot].GetChecksum();
+
+			if( checksum != m_mcdCRCs[port][slot] )
+				mcds[port][slot].ForceEjection_Timeout = FORCED_MCD_EJECTION_MAX_TRIES;
 		}
 	}
 }
-

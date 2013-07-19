@@ -1022,6 +1022,7 @@ struct PS2E_McdSizeInfo
 	u16	SectorSize;					// Size of each sector, in bytes.  (only 512 and 1024 are valid)
 	u16 EraseBlockSizeInSectors;	// Size of the erase block, in sectors (max is 16)
 	u32	McdSizeInSectors;			// Total size of the card, in sectors (no upper limit)
+	u8	Xor;						// Checksum of previous data
 };
 
 // --------------------------------------------------------------------------------------

@@ -49,6 +49,9 @@ protected:
 	wxFFile			m_file[8];
 	u8				m_effeffs[528*16];
 	SafeArray<u8>	m_currentdata;
+	u64				m_chksum[8];
+	bool			m_ispsx[8];
+	u32				m_chkaddr;
 
 public:
 	FileMemoryCard();
@@ -199,13 +202,27 @@ void FileMemoryCard::Open()
 				GetDisabledMessage( slot )
 			);
 		}
+		else // Load checksum
+		{
+			m_ispsx[slot] = m_file[slot].Length() == 0x20000;
+			m_chkaddr = 0x210;
+
+			if(!m_ispsx[slot] && !!m_file[slot].Seek( m_chkaddr ))
+				m_file[slot].Read( &m_chksum[slot], 8 );
+		}
 	}
 }
 
 void FileMemoryCard::Close()
 {
 	for( int slot=0; slot<8; ++slot )
+	{
+		// Store checksum
+		if(!m_ispsx[slot] && !!m_file[slot].Seek(  m_chkaddr ))
+			m_file[slot].Write( &m_chksum[slot], 8 );
+
 		m_file[slot].Close();
+	}
 }
 
 // Returns FALSE if the seek failed (is outside the bounds of the file).
@@ -256,18 +273,22 @@ s32 FileMemoryCard::IsPresent( uint slot )
 
 void FileMemoryCard::GetSizeInfo( uint slot, PS2E_McdSizeInfo& outways )
 {
-	outways.SectorSize			= 512;
-	outways.EraseBlockSizeInSectors			= 16;
+	outways.SectorSize				= 512; // 0x0200
+	outways.EraseBlockSizeInSectors	= 16;  // 0x0010
+	outways.Xor						= 18;  // 0x12, XOR 02 00 00 10
 
 	if( pxAssert( m_file[slot].IsOpened() ) )
 		outways.McdSizeInSectors	= m_file[slot].Length() / (outways.SectorSize + outways.EraseBlockSizeInSectors);
 	else
 		outways.McdSizeInSectors	= 0x4000;
+
+	u8 *pdata = (u8*)&outways.McdSizeInSectors;
+	outways.Xor ^= pdata[0] ^ pdata[1] ^ pdata[2] ^ pdata[3];
 }
 
 bool FileMemoryCard::IsPSX( uint slot )
 {
-	return m_file[slot].Length() == 0x20000;
+	return m_ispsx[slot];
 }
 
 s32 FileMemoryCard::Read( uint slot, u8 *dest, u32 adr, int size )
@@ -293,15 +314,36 @@ s32 FileMemoryCard::Save( uint slot, const u8 *src, u32 adr, int size )
 		return 1;
 	}
 
-	if( !Seek(mcfp, adr) ) return 0;
-	m_currentdata.MakeRoomFor( size );
-	mcfp.Read( m_currentdata.GetPtr(), size);
-
-	for (int i=0; i<size; i++)
+	if(m_ispsx[slot])
 	{
-		if ((m_currentdata[i] & src[i]) != src[i])
-			Console.Warning("(FileMcd) Warning: writing to uncleared data.");
-		m_currentdata[i] &= src[i];
+		m_currentdata.MakeRoomFor( size );
+		for (int i=0; i<size; i++) m_currentdata[i] = src[i];
+	}
+	else
+	{
+		if( !Seek(mcfp, adr) ) return 0;
+		m_currentdata.MakeRoomFor( size );
+		mcfp.Read( m_currentdata.GetPtr(), size);
+		
+
+		for (int i=0; i<size; i++)
+		{
+			if ((m_currentdata[i] & src[i]) != src[i])
+				Console.Warning("(FileMcd) Warning: writing to uncleared data. (%d) [%08X]", slot, adr);
+			m_currentdata[i] &= src[i];
+		}
+
+		// Checksumness
+		{
+			if(adr == m_chkaddr) 
+				Console.Warning("(FileMcd) Warning: checksum sector overwritten. (%d)", slot);
+
+			u64 *pdata = (u64*)&m_currentdata[0];
+			u32 loops = size / 8;
+
+			for(u32 i = 0; i < loops; i++)
+				m_chksum[slot] ^= pdata[i];
+		}
 	}
 
 	if( !Seek(mcfp, adr) ) return 0;
@@ -327,18 +369,27 @@ u64 FileMemoryCard::GetCRC( uint slot )
 	wxFFile& mcfp( m_file[slot] );
 	if( !mcfp.IsOpened() ) return 0;
 
-	if( !Seek( mcfp, 0 ) ) return 0;
-
-	// Process the file in 4k chunks.  Speeds things up significantly.
 	u64 retval = 0;
-	u64 buffer[528*8];		// use 528 (sector size), ensures even divisibility
-	
-	const uint filesize = mcfp.Length() / sizeof(buffer);
-	for( uint i=filesize; i; --i )
+
+	if(m_ispsx[slot])
 	{
-		mcfp.Read( &buffer, sizeof(buffer) );
-		for( uint t=0; t<ArraySize(buffer); ++t )
-			retval ^= buffer[t];
+		if( !Seek( mcfp, 0 ) ) return 0;
+
+		// Process the file in 4k chunks.  Speeds things up significantly.
+	
+		u64 buffer[528*8];		// use 528 (sector size), ensures even divisibility
+	
+		const uint filesize = mcfp.Length() / sizeof(buffer);
+		for( uint i=filesize; i; --i )
+		{
+			mcfp.Read( &buffer, sizeof(buffer) );
+			for( uint t=0; t<ArraySize(buffer); ++t )
+				retval ^= buffer[t];
+		}
+	}
+	else
+	{
+		retval = m_chksum[slot];
 	}
 
 	return retval;

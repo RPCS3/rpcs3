@@ -41,6 +41,126 @@ static const int
 	RTS =			0x0020,
 	SIO_RESET =		0x0040;
 
+//#define _KELOGS // Krossx's Enhanced LOGS, it has nothing to do with Kellogg's
+
+#ifdef _KELOGS
+	struct KELOGS
+	{
+		u8 number;
+		u8 write;
+		u8 read;
+	};
+
+	extern KELOGS kelogs[];
+	extern u32 kelogs_count;
+	extern bool doKelogs;
+
+	void inline KelogsPrint()
+	{
+		if(doKelogs)
+		{
+			printf("    [##|");
+
+			for(u32 i = 0; i < kelogs_count; i++)
+				printf("%02X|", kelogs[i].number);
+
+			printf("\nSIO [W8|");
+
+			for(u32 i = 0; i < kelogs_count; i++)
+				printf("%02X|", kelogs[i].write);
+
+			printf("\n    [R8|");
+
+			for(u32 i = 0; i < kelogs_count; i++)
+				printf("%02X|", kelogs[i].read);
+
+			printf("\n\n");
+			doKelogs = false;
+		}
+
+		kelogs_count = 0;
+	}
+
+	void inline KelogsWrite(u8 value)
+	{
+		kelogs[kelogs_count].number = sio.bufCount;
+		kelogs[kelogs_count].write = value;
+	}
+
+	void inline KelogsRead(u8 value)
+	{
+		kelogs[kelogs_count++].read = value;
+	}
+
+	void inline KelogsEnable()
+	{
+		doKelogs = true;
+	}
+
+	#define KELOGS_PRINT() KelogsPrint()
+	#define KELOGS_WRITE(x) KelogsWrite(x)
+	#define KELOGS_READ(x) KelogsRead(x)
+	#define KELOGS_ENABLE() KelogsEnable()
+#else
+	#define KELOGS_PRINT()
+	#define KELOGS_WRITE(x)
+	#define KELOGS_READ(x)
+	#define KELOGS_ENABLE()
+#endif
+
+
+void inline SIO_STAT_READY()
+{
+	sio.StatReg &= ~TX_EMPTY;	// Now the Buffer is not empty
+	sio.StatReg |= RX_RDY;		// Transfer is Ready
+}
+
+void inline SIO_STAT_EMPTY()
+{
+	sio.StatReg &= ~RX_RDY;		// Receive is not Ready now?
+	sio.StatReg |= TX_EMPTY;	// Buffer is Empty
+}
+
+void inline DEVICE_PLUGGED()
+{
+	sio.ret = 0xFF;
+	sio2.packet.recvVal1 = 0x01100;
+	sio.bufSize = sio2.cmdlength;
+	memset8<0xFF>(sio.buf);
+}
+
+void inline DEVICE_UNPLUGGED()
+{
+	sio.ret = 0x00;
+	sio2.packet.recvVal1 = 0x1D100;
+	sio.bufSize = sio2.cmdlength;
+	memset8<0x00>(sio.buf);
+}
+
+enum MEMCARD_TRANSFER
+{
+	MEM_INVALID = 0,
+	MEM_WRITE,
+	MEM_READ,
+	MEM_ERASE,
+	MEM_COMMIT
+};
+
+enum SIO_MODE
+{
+	SIO_START = 0,
+	SIO_CONTROLLER,
+	SIO_MULTITAP,
+	SIO_INFRARED,
+	SIO_MEMCARD,
+	SIO_MEMCARD_AUTH,
+	SIO_MEMCARD_TRANSFER,
+	SIO_MEMCARD_SECTOR,
+	SIO_MEMCARD_PSX,
+	SIO_DUMMY
+};
+
+
 #ifdef _MSC_VER
 #pragma pack(1)
 #endif
@@ -57,3 +177,4 @@ struct mc_command_0x26_tag{
 #else
 } __attribute__((packed));
 #endif
+
