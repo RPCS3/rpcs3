@@ -318,6 +318,8 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 
 GLuint GSShaderOGL::Compile(const std::string& glsl_file, const std::string& entry, GLenum type, const char* glsl_h_code, const std::string& macro_sel)
 {
+	ASSERT(glsl_h_code != NULL);
+
 	GLuint program = 0;
 
 #ifndef ENABLE_GLES
@@ -331,26 +333,22 @@ GLuint GSShaderOGL::Compile(const std::string& glsl_file, const std::string& ent
 	const char* sources[2];
 
 	std::string header = GenGlslHeader(entry, type, macro_sel);
+	int shader_nb = 1;
+#if 0
 	sources[0] = header.c_str();
-
-	if (glsl_h_code)
-		sources[1] = glsl_h_code;
-	else
-		sources[1] = '\0';
+	sources[1] = glsl_h_code;
+	shader_nb++;
+#else
+	sources[0] = header.append(glsl_h_code).c_str();
+#endif
 
 	if (m_sso) {
 #ifndef ENABLE_GLES
-	#if 0
-		const GLchar* ShaderSource[1];
-		ShaderSource[0] = header.append(glsl_h_code).c_str();
-		program = gl_CreateShaderProgramv(type, 1, &ShaderSource[0]);
-	#else
-		program = gl_CreateShaderProgramv(type, 2, sources);
-	#endif
+		program = gl_CreateShaderProgramv(type, shader_nb, sources);
 #endif
 	} else {
 		program = gl_CreateShader(type);
-		gl_ShaderSource(program, 2, sources, NULL);
+		gl_ShaderSource(program, shader_nb, sources, NULL);
 		gl_CompileShader(program);
 	}
 

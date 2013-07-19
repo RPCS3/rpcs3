@@ -25,12 +25,10 @@ class GSUniformBufferOGL {
 	GLuint buffer;		// data object
 	GLuint index;		// GLSL slot
 	uint32   size;	    // size of the data
-	const GLenum target;
 
 public:
 	GSUniformBufferOGL(GLuint index, uint32 size) : index(index)
 												  , size(size)
-												  ,target(GL_UNIFORM_BUFFER)
 	{
 		gl_GenBuffers(1, &buffer);
 		bind();
@@ -40,17 +38,17 @@ public:
 
 	void bind()
 	{
-		gl_BindBuffer(target, buffer);
+		gl_BindBuffer(GL_UNIFORM_BUFFER, buffer);
 	}
 
 	void allocate()
 	{
-		gl_BufferData(target, size, NULL, GL_STREAM_DRAW);
+		gl_BufferData(GL_UNIFORM_BUFFER, size, NULL, GL_STREAM_DRAW);
 	}
 
 	void attach()
 	{
-		gl_BindBufferBase(target, index, buffer);
+		gl_BindBufferBase(GL_UNIFORM_BUFFER, index, buffer);
 	}
 
 	void upload(const void* src)
@@ -58,7 +56,7 @@ public:
 		// glMapBufferRange allow to set various parameter but the call is
 		// synchronous whereas glBufferSubData could be asynchronous.
 		// TODO: investigate the extension ARB_invalidate_subdata
-		gl_BufferSubData(target, 0, size, src);
+		gl_BufferSubData(GL_UNIFORM_BUFFER, 0, size, src);
 	}
 
 	~GSUniformBufferOGL() {

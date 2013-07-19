@@ -429,9 +429,17 @@ EXPORT_C_(int) GSopen2(void** dsp, uint32 flags)
 			case 0: renderer = 1; break; // DX9:  HW to SW
 			case 4: renderer = 3; break; // DX11: SW to HW
 			case 3: renderer = 4; break; // DX11: HW to SW
+			case 13: renderer = 12; break; // OGL: SW to HW
+			case 12: renderer = 13; break; // OGL: HW to SW
 			default: renderer = best_sw_renderer; // If wasn't using DX (e.g. SDL), use best SW renderer.
 		}
 
+#endif
+#ifdef _LINUX
+		switch(renderer) {
+			case 13: renderer = 12; break; // OGL: SW to HW
+			case 12: renderer = 13; break; // OGL: HW to SW
+		}
 #endif
 	}
 
@@ -1594,23 +1602,27 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 			finished--;
 		}
 
-		// Print some nice stats
-		float n = (float)theApp.GetConfig("linux_replay", 1);
-		float mean = 0;
-		float sd = 0;
-		for (auto i = stats.begin(); i != stats.end(); i++) {
-			mean += *i;
-		}
-		mean = mean/n;
-		for (auto i = stats.begin(); i != stats.end(); i++) {
-			sd += pow((*i)-mean, 2);
-		}
-		sd = sqrt(sd/n);
+		if (theApp.GetConfig("linux_replay", 1) > 1) {
+			// Print some nice stats
+			// Skip first frame (shader compilation populate the result)
+			// it divides by 10 the standard deviation...
+			float n = (float)theApp.GetConfig("linux_replay", 1) - 1.0f;
+			float mean = 0;
+			float sd = 0;
+			for (auto i = stats.begin()+1; i != stats.end(); i++) {
+				mean += *i;
+			}
+			mean = mean/n;
+			for (auto i = stats.begin()+1; i != stats.end(); i++) {
+				sd += pow((*i)-mean, 2);
+			}
+			sd = sqrt(sd/n);
 
-		fprintf(stderr, "\n\nMean: %fms\n", mean);
-		fprintf(stderr, "Standard deviation: %fms\n", sd);
-		fprintf(stderr, "Mean by frame: %fms (%ffps)\n", mean/(float)frame_number, 1000.0f*frame_number/mean);
-		fprintf(stderr, "Standard deviatin by frame: %fms\n", sd/(float)frame_number);
+			fprintf(stderr, "\n\nMean: %fms\n", mean);
+			fprintf(stderr, "Standard deviation: %fms\n", sd);
+			fprintf(stderr, "Mean by frame: %fms (%ffps)\n", mean/(float)frame_number, 1000.0f*frame_number/mean);
+			fprintf(stderr, "Standard deviatin by frame: %fms\n", sd/(float)frame_number);
+		}
 
 		for(auto i = packets.begin(); i != packets.end(); i++)
 		{

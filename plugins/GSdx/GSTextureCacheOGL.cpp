@@ -32,7 +32,7 @@ void GSTextureCacheOGL::Read(Target* t, const GSVector4i& r)
 {
 	if(t->m_type != RenderTarget)
 	{
-		assert(0);
+		ASSERT(0);
 
 		return;
 	}
@@ -96,6 +96,7 @@ void GSTextureCacheOGL::Read(Target* t, const GSVector4i& r)
 			offscreen->Unmap();
 		}
 
+		// FIXME invalidate data
 		m_renderer->m_dev->Recycle(offscreen);
 	}
 }

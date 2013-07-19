@@ -486,6 +486,11 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		ps_ssel.tau = (context->CLAMP.WMS + 3) >> 1;
 		ps_ssel.tav = (context->CLAMP.WMT + 3) >> 1;
 		ps_ssel.ltf = bilinear && simple_sample;
+
+		dev->SetupSampler(ps_sel, ps_ssel);
+		dev->PSSetShaderResource(0, tex->m_texture);
+		if (tex->m_palette)
+			dev->PSSetShaderResource(1, tex->m_palette);
 	}
 	else
 	{
@@ -497,8 +502,6 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	GSVector4i scissor = GSVector4i(GSVector4(rtscale).xyxy() * context->scissor.in).rintersect(GSVector4i(rtsize).zwxy());
 
 	dev->OMSetRenderTargets(rt, ds, &scissor);
-	dev->PSSetShaderResource(0, tex ? tex->m_texture : NULL);
-	dev->PSSetShaderResource(1, tex ? tex->m_palette : NULL);
 
 	uint8 afix = context->ALPHA.FIX;
 
@@ -507,7 +510,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	dev->SetupOM(om_dssel, om_bsel, afix);
 	dev->SetupVS(vs_sel, &vs_cb);
 	dev->SetupGS(gs_sel);
-	dev->SetupPS(ps_sel, &ps_cb, ps_ssel);
+	dev->SetupPS(ps_sel, &ps_cb);
 
 	// draw
 
@@ -524,7 +527,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 			ps_selneg.colclip = 2;
 
 			dev->SetupOM(om_dssel, om_bselneg, afix);
-			dev->SetupPS(ps_selneg, &ps_cb, ps_ssel);
+			dev->SetupPS(ps_selneg, &ps_cb);
 
 			dev->DrawIndexedPrimitive();
 			dev->SetupOM(om_dssel, om_bsel, afix);
@@ -539,7 +542,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 		ps_sel.atst = iatst[ps_sel.atst];
 
-		dev->SetupPS(ps_sel, &ps_cb, ps_ssel);
+		dev->SetupPS(ps_sel, &ps_cb);
 
 		bool z = om_dssel.zwe;
 		bool r = om_bsel.wr;
@@ -577,7 +580,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 				ps_selneg.colclip = 2;
 
 				dev->SetupOM(om_dssel, om_bselneg, afix);
-				dev->SetupPS(ps_selneg, &ps_cb, ps_ssel);
+				dev->SetupPS(ps_selneg, &ps_cb);
 
 				dev->DrawIndexedPrimitive();
 			}

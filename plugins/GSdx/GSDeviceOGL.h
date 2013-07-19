@@ -43,7 +43,6 @@ class GSBlendStateOGL {
 	bool   m_g_msk;
 	bool   m_a_msk;
 	bool   constant_factor;
-	float  debug_factor;
 
 public:
 
@@ -104,7 +103,6 @@ public:
 		if (m_enable) {
 			glEnable(GL_BLEND);
 			if (HasConstantFactor()) {
-				debug_factor = factor;
 				gl_BlendColor(factor, factor, factor, 0);
 			}
 
@@ -113,38 +111,6 @@ public:
 		} else {
 			glDisable(GL_BLEND);
 		}
-	}
-
-	char* NameOfParam(GLenum p)
-	{
-		switch (p) {
-			case GL_FUNC_ADD: return "ADD";
-			case GL_FUNC_SUBTRACT: return "SUB";
-			case GL_FUNC_REVERSE_SUBTRACT: return "REV SUB";
-			case GL_ONE: return "ONE";
-			case GL_ZERO: return "ZERO";
-#ifndef ENABLE_GLES
-			case GL_SRC1_ALPHA: return "SRC1 ALPHA";
-			case GL_ONE_MINUS_SRC1_ALPHA: return "1 - SRC1 ALPHA";
-#endif
-			case GL_SRC_ALPHA: return "SRC ALPHA";
-			case GL_ONE_MINUS_DST_ALPHA: return "1 - DST ALPHA";
-			case GL_DST_ALPHA: return "DST ALPHA";
-			case GL_DST_COLOR:	return "DST COLOR";
-			case GL_ONE_MINUS_SRC_ALPHA: return "1 - SRC ALPHA";
-			case GL_CONSTANT_COLOR: return "CST";
-			case GL_ONE_MINUS_CONSTANT_COLOR: return "1 - CST";
-			default: return "UKN";
-		}
-		return "UKN";
-	}
-
-	void debug()
-	{
-		if (!m_enable) return;
-		fprintf(stderr,"Blend op: %s; src:%s; dst:%s\n", NameOfParam(m_equation_RGB), NameOfParam(m_func_sRGB), NameOfParam(m_func_dRGB));
-		if (HasConstantFactor()) fprintf(stderr, "Blend constant: %f\n", debug_factor);
-		fprintf(stderr,"Mask. R:%d B:%d G:%d A:%d\n", m_r_msk, m_b_msk, m_g_msk, m_a_msk);
 	}
 };
 
@@ -161,21 +127,6 @@ class GSDepthStencilOGL {
 	const GLuint m_stencil_spass_dfail_op;
 	GLuint m_stencil_spass_dpass_op;
 
-	char* NameOfParam(GLenum p)
-	{
-		switch(p) {
-			case GL_NEVER: return "NEVER";
-			case GL_ALWAYS: return "ALWAYS";
-			case GL_GEQUAL: return "GEQUAL";
-			case GL_GREATER: return "GREATER";
-			case GL_KEEP: return "KEEP";
-			case GL_EQUAL: return "EQUAL";
-			case GL_REPLACE: return "REPLACE";
-			default: return "UKN";
-		}
-		return "UKN";
-	}
-
 public:
 
 	GSDepthStencilOGL() : m_depth_enable(false)
@@ -188,7 +139,11 @@ public:
 		, m_stencil_sfail_op(GL_KEEP)
 		, m_stencil_spass_dfail_op(GL_KEEP)
 		, m_stencil_spass_dpass_op(GL_KEEP)
-	{}
+	{
+		// Only needed once since m_stencil_mask is constant
+		// Control which stencil bitplane are written
+		glStencilMask(m_stencil_mask);
+	}
 
 	void EnableDepth() { m_depth_enable = true; }
 	void EnableStencil() { m_stencil_enable = true; }
@@ -213,25 +168,8 @@ public:
 			// Note: here the mask control which bitplane is considered by the operation
 			glStencilFunc(m_stencil_func, m_stencil_ref, m_stencil_mask);
 			glStencilOp(m_stencil_sfail_op, m_stencil_spass_dfail_op, m_stencil_spass_dpass_op);
-			// FIXME only needed once since m_stencil_mask is constant
-			// Control which stencil bitplane are written
-			glStencilMask(m_stencil_mask);
 		} else
 			glDisable(GL_STENCIL_TEST);
-	}
-
-	void debug() { debug_depth(); debug_stencil(); }
-
-	void debug_depth()
-	{
-		if (!m_depth_enable) return;
-		fprintf(stderr, "Depth %s. Mask %x\n", NameOfParam(m_depth_func), m_depth_mask);
-	}
-
-	void debug_stencil()
-	{
-		if (!m_stencil_enable) return;
-		fprintf(stderr, "Stencil %s. Both pass op %s\n", NameOfParam(m_stencil_func), NameOfParam(m_stencil_spass_dpass_op));
 	}
 
 	bool IsMaskEnable() { return m_depth_mask != GL_FALSE; }
@@ -540,26 +478,17 @@ class GSDeviceOGL : public GSDevice
 
 	struct {
 		GSVertexBufferStateOGL* vb;
-		GLuint vs; // program
-		GSUniformBufferOGL* cb; // uniform current buffer
-		GLuint gs; // program
-		// FIXME texture binding. Maybe not equivalent for the state but the best I could find.
-		GSTextureOGL* ps_srv[3];
-		// ID3D11ShaderResourceView* ps_srv[3];
-		GLuint ps; // program
+		GSUniformBufferOGL* cb;
 		GLuint ps_ss[3]; // sampler
 		GSVector2i viewport;
 		GSVector4i scissor;
 		GSDepthStencilOGL* dss;
 		GSBlendStateOGL* bs;
-		float bf;
-		// FIXME texture attachment in the FBO
-		// ID3D11RenderTargetView* rtv;
-		// ID3D11DepthStencilView* dsv;
-		GSTextureOGL* rtv;
-		GSTextureOGL* dsv;
+		float bf; // blend factor
 		GLuint	   fbo;
  		GLenum	   draw;
+		GSTexture* rt; // render target
+		GSTexture* ds; // Depth-Stencil
 	} m_state;
 
 	GSShaderOGL* m_shader;
@@ -580,7 +509,6 @@ class GSDeviceOGL : public GSDevice
 	VSConstantBuffer m_vs_cb_cache;
 	PSConstantBuffer m_ps_cb_cache;
 
-	protected:
 	GSTexture* CreateSurface(int type, int w, int h, bool msaa, int format);
 	GSTexture* FetchSurface(int type, int w, int h, bool msaa, int format);
 
@@ -588,6 +516,11 @@ class GSDeviceOGL : public GSDevice
 	void DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool linear, float yoffset = 0);
 	void DoFXAA(GSTexture* st, GSTexture* dt);
 	void DoShadeBoost(GSTexture* st, GSTexture* dt);
+
+	void OMAttachRt(GSTexture* rt);
+	void OMAttachDs(GSTexture* ds);
+	void OMSetFBO(GLuint fbo);
+	void OMSetWriteBuffer(GLenum buffer = GL_COLOR_ATTACHMENT0);
 
 	public:
 	GSDeviceOGL();
@@ -629,8 +562,6 @@ class GSDeviceOGL : public GSDevice
 
 	void SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* vertices, bool datm);
 
-	GSTexture* Resolve(GSTexture* t);
-
 	void EndScene();
 
 	void IASetPrimitiveTopology(GLenum topology);
@@ -642,11 +573,9 @@ class GSDeviceOGL : public GSDevice
 
 	void SetUniformBuffer(GSUniformBufferOGL* cb);
 
-	void PSSetShaderResources(GSTexture* sr0, GSTexture* sr1);
-	void PSSetShaderResource(int i, GSTexture* sr);
-	void PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2 = 0);
+	void PSSetShaderResource(const int i, GSTexture* sr);
+	void PSSetSamplerState(const int i, GLuint ss);
 
-	void OMSetFBO(GLuint fbo, GLenum buffer = GL_COLOR_ATTACHMENT0);
 	void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);
 	void OMSetBlendState(GSBlendStateOGL* bs, float bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
@@ -665,6 +594,8 @@ class GSDeviceOGL : public GSDevice
 	void SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim);
 	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
 	void SetupGS(GSSelector sel);
-	void SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel);
+	void SetupPS(PSSelector sel, const PSConstantBuffer* cb);
+	void SetupSampler(PSSelector sel, PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
+
 };

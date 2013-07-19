@@ -24,10 +24,6 @@
 
 #include "res/glsl_source.h"
 
-// TODO performance cost to investigate
-// Texture attachment/glDrawBuffer. For the moment it set every draw and potentially multiple time (first time in clear, second time in rendering)
-//  Attachment 1 is only used with the GL_16UI format
-
 //#define LOUD_DEBUGGING
 //#define PRINT_FRAME_NUMBER
 //#define ONLY_LINES
@@ -54,8 +50,6 @@ GSDeviceOGL::GSDeviceOGL()
 	  , m_vb_sr(NULL)
 	  , m_shader(NULL)
 {
-	m_msaa = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_MSAA", 0) : 0;
-
 	memset(&m_merge_obj, 0, sizeof(m_merge_obj));
 	memset(&m_interlace, 0, sizeof(m_interlace));
 	memset(&m_convert, 0, sizeof(m_convert));
@@ -143,7 +137,7 @@ GSTexture* GSDeviceOGL::CreateSurface(int type, int w, int h, bool msaa, int for
 {
 	// A wrapper to call GSTextureOGL, with the different kind of parameter
 	GSTextureOGL* t = NULL;
-	t = new GSTextureOGL(type, w, h, msaa, format, m_fbo_read);
+	t = new GSTextureOGL(type, w, h, format, m_fbo_read);
 
 	switch(type)
 	{
@@ -152,7 +146,7 @@ GSTexture* GSDeviceOGL::CreateSurface(int type, int w, int h, bool msaa, int for
 			break;
 		case GSTexture::DepthStencil:
 			ClearDepth(t, 0);
-			//FIXME might be need to clear the stencil too
+			// No need to clear the stencil now.
 			break;
 	}
 	return t;
@@ -160,16 +154,7 @@ GSTexture* GSDeviceOGL::CreateSurface(int type, int w, int h, bool msaa, int for
 
 GSTexture* GSDeviceOGL::FetchSurface(int type, int w, int h, bool msaa, int format)
 {
-	// FIXME: keep DX code. Do not know how work msaa but not important for the moment
-	// Current config give only 0 or 1
-#if 0
-	if(m_msaa < 2) {
-		msaa = false;
-	}
-#endif
-	msaa = false;
-
-	return GSDevice::FetchSurface(type, w, h, msaa, format);
+	return GSDevice::FetchSurface(type, w, h, false, format);
 }
 
 bool GSDeviceOGL::Create(GSWnd* wnd)
@@ -179,9 +164,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 
 		if (!GLLoader::check_gl_supported_extension()) return false;
 	}
-
-	// FIXME disable it when code is ready
-	// glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 
 	m_window = wnd;
 
@@ -281,7 +263,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 #endif
 
 	// ****************************************************************
-	// fxaa (bonus)
+	// fxaa
 	// ****************************************************************
 	std::string fxaa_macro = "#define FXAA_GLSL_130 1\n";
 	if (GLLoader::found_GL_ARB_gpu_shader5) {
@@ -320,59 +302,6 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	GSVector4i rect = wnd->GetClientRect();
 	Reset(rect.z, rect.w);
 
-#if 0
-	HRESULT hr = E_FAIL;
-
-	DXGI_SWAP_CHAIN_DESC scd;
-	D3D11_BUFFER_DESC bd;
-	D3D11_SAMPLER_DESC sd;
-	D3D11_DEPTH_STENCIL_DESC dsd;
-	D3D11_RASTERIZER_DESC rd;
-	D3D11_BLEND_DESC bsd;
-
-	memset(&scd, 0, sizeof(scd));
-
-	scd.BufferCount = 2;
-	scd.BufferDesc.Width = 1;
-	scd.BufferDesc.Height = 1;
-	scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	//scd.BufferDesc.RefreshRate.Numerator = 60;
-	//scd.BufferDesc.RefreshRate.Denominator = 1;
-	scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	scd.OutputWindow = (HWND)m_wnd->GetHandle();
-	scd.SampleDesc.Count = 1;
-	scd.SampleDesc.Quality = 0;
-
-	// Always start in Windowed mode.  According to MS, DXGI just "prefers" this, and it's more or less
-	// required if we want to add support for dual displays later on.  The fullscreen/exclusive flip
-	// will be issued after all other initializations are complete.
-
-	scd.Windowed = TRUE;
-
-	// NOTE : D3D11_CREATE_DEVICE_SINGLETHREADED
-	//   This flag is safe as long as the DXGI's internal message pump is disabled or is on the
-	//   same thread as the GS window (which the emulator makes sure of, if it utilizes a
-	//   multithreaded GS).  Setting the flag is a nice and easy 5% speedup on GS-intensive scenes.
-
-	uint32 flags = D3D11_CREATE_DEVICE_SINGLETHREADED;
-
-#ifdef DEBUG
-	flags |= D3D11_CREATE_DEVICE_DEBUG;
-#endif
-
-	D3D_FEATURE_LEVEL level;
-
-	const D3D_FEATURE_LEVEL levels[] =
-	{
-		D3D_FEATURE_LEVEL_11_0,
-		D3D_FEATURE_LEVEL_10_1,
-		D3D_FEATURE_LEVEL_10_0,
-	};
-
-	hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, levels, countof(levels), D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
-	// hr = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_REFERENCE, NULL, flags, NULL, 0, D3D11_SDK_VERSION, &scd, &m_swapchain, &m_dev, &level, &m_ctx);
-#endif
-
 	return true;
 }
 
@@ -385,7 +314,7 @@ bool GSDeviceOGL::Reset(int w, int h)
 	// Opengl allocate the backbuffer with the window. The render is done in the backbuffer when
 	// there isn't any FBO. Only a dummy texture is created to easily detect when the rendering is done
 	// in the backbuffer
-	m_backbuffer = new GSTextureOGL(GSTextureOGL::Backbuffer, w, h, false, 0, m_fbo_read);
+	m_backbuffer = new GSTextureOGL(GSTextureOGL::Backbuffer, w, h, 0, m_fbo_read);
 
 	return true;
 }
@@ -458,7 +387,9 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 		gl_ClearBufferfv(GL_COLOR, 0, c.v);
 	} else {
 		OMSetFBO(m_fbo);
-		static_cast<GSTextureOGL*>(t)->Attach(GL_COLOR_ATTACHMENT0);
+		// FIXME useful
+		OMSetWriteBuffer();
+		OMAttachRt(t);
 
 		gl_ClearBufferfv(GL_COLOR, 0, c.v);
 	}
@@ -474,7 +405,9 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
 void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 {
 	OMSetFBO(m_fbo);
-	static_cast<GSTextureOGL*>(t)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
+	// FIXME useful
+	OMSetWriteBuffer();
+	OMAttachDs(t);
 
 	glDisable(GL_SCISSOR_TEST);
 	if (m_state.dss != NULL && m_state.dss->IsMaskEnable()) {
@@ -490,7 +423,9 @@ void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 {
 	OMSetFBO(m_fbo);
-	static_cast<GSTextureOGL*>(t)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
+	// FIXME useful
+	OMSetWriteBuffer();
+	OMAttachDs(t);
 	GLint color = c;
 
 	glDisable(GL_SCISSOR_TEST);
@@ -608,48 +543,19 @@ GSTexture* GSDeviceOGL::CreateOffscreen(int w, int h, int format)
 // blit a texture into an offscreen buffer
 GSTexture* GSDeviceOGL::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format)
 {
-	GSTexture* dst = NULL;
+	ASSERT(src);
+	ASSERT(format == GL_RGBA8 || format == GL_R16UI);
 
 	if(format == 0) format = GL_RGBA8;
 
-	if(format != GL_RGBA8 && format != GL_R16UI)
-	{
-		ASSERT(0);
+	if(format != GL_RGBA8 && format != GL_R16UI) return NULL;
 
-		return NULL;
-	}
+	GSTexture* dst = CreateOffscreen(w, h, format);
+	GSVector4 dr(0, 0, w, h);
 
-	// FIXME: It is possible to bypass completely offscreen-buffer on opengl but it needs some re-thinking of the code.
-	// For the moment mimic dx11 
-	GSTexture* rt = CreateRenderTarget(w, h, false, format);
-	if(rt)
-	{
-		GSVector4 dr(0, 0, w, h);
-
-		if(GSTexture* src2 = src->IsMSAA() ? Resolve(src) : src)
-		{
-			StretchRect(src2, sr, rt, dr, m_convert.ps[format == GL_R16UI ? 1 : 0]);
-
-			if(src2 != src) Recycle(src2);
-		}
-
-
-		GSVector4i dor(0, 0, w, h);
-		dst = CreateOffscreen(w, h, format);
-
-		if (dst) CopyRect(rt, dst, dor);
-#if 0
-		if(dst)
-		{
-			m_ctx->CopyResource(*(GSTexture11*)dst, *(GSTexture11*)rt);
-		}
-#endif
-
-		Recycle(rt);
-	}
+	StretchRect(src, sr, dst, dr, m_convert.ps[format == GL_R16UI ? 1 : 0]);
 
 	return dst;
-	//return rt;
 }
 
 // Copy a sub part of a texture into another
@@ -658,32 +564,23 @@ GSTexture* GSDeviceOGL::CopyOffscreen(GSTexture* src, const GSVector4& sr, int w
 // From a sub-part to a full texture
 void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 {
-	if(!st || !dt)
-	{
-		ASSERT(0);
-		return;
-	}
+	ASSERT(st && dt);
 
 	// FIXME: the extension was integrated in opengl 4.3 (now we need driver that support OGL4.3)
-	// FIXME check those function work as expected
-	// void CopyImageSubDataNV(
-    //         uint32 srcName, enum srcTarget, int srcLevel, int srcX, int srcY, int srcZ,
-	//     uint32 dstName, enum dstTarget, int dstLevel, int dstX, int dstY, int dstZ,
-	//     sizei width, sizei height, sizei depth);
 	if (GLLoader::found_GL_NV_copy_image) {
 #ifndef ENABLE_GLES
-		gl_CopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), static_cast<GSTextureOGL*>(st)->GetTarget(),
+		gl_CopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), GL_TEXTURE_2D,
 				0, r.x, r.y, 0,
-				static_cast<GSTextureOGL*>(dt)->GetID(), static_cast<GSTextureOGL*>(dt)->GetTarget(),
+				static_cast<GSTextureOGL*>(dt)->GetID(), GL_TEXTURE_2D,
 				0, r.x, r.y, 0,
 				r.width(), r.height(), 1);
 #endif
 	} else if (GLLoader::found_GL_ARB_copy_image) {
 		// Would need an update of GL definition. For the moment it isn't supported by driver anyway.
 #if 0
-		gl_CopyImageSubData( static_cast<GSTextureOGL*>(st)->GetID(), static_cast<GSTextureOGL*>(st)->GetTarget(),
+		gl_CopyImageSubData( static_cast<GSTextureOGL*>(st)->GetID(), GL_TEXTURE_2D,
 				0, r.x, r.y, 0,
-				static_cast<GSTextureOGL*>(dt)->GetID(), static_cast<GSTextureOGL*>(dt)->GetTarget(),
+				static_cast<GSTextureOGL*>(dt)->GetID(), GL_TEXTURE_2D,
 				0, r.x, r.y, 0,
 				r.width(), r.height(), 1);
 #endif
@@ -694,17 +591,14 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 
-		st_ogl->AttachRead(GL_COLOR_ATTACHMENT0);
+		gl_FramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GSTextureOGL*>(st_ogl)->GetID(), 0);
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+
 		dt_ogl->EnableUnit(6);
-		glCopyTexSubImage2D(dt_ogl->GetTarget(), 0, r.x, r.y, r.x, r.y, r.width(), r.height());
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.x, r.y, r.width(), r.height());
 
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 	}
-
-#if 0
-	D3D11_BOX box = {r.left, r.top, 0, r.right, r.bottom, 1};
-	m_ctx->CopySubresourceRegion(*(GSTexture11*)dt, 0, 0, 0, 0, *(GSTexture11*)st, 0, &box);
-#endif
 }
 
 void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt, const GSVector4& dr, int shader, bool linear)
@@ -801,8 +695,8 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// ps
 	// ************************************
 
-	PSSetShaderResources(st, NULL);
-	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt, 0);
+	PSSetShaderResource(0, st);
+	PSSetSamplerState(0, linear ? m_convert.ln : m_convert.pt);
 	m_shader->PS(ps);
 
 	// ************************************
@@ -815,8 +709,6 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// ************************************
 
 	EndScene();
-
-	PSSetShaderResources(NULL, NULL);
 }
 
 void GSDeviceOGL::DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVector4* dr, bool slbg, bool mmod, const GSVector4& c)
@@ -896,7 +788,7 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 {
 #ifdef ENABLE_OGL_STENCIL_DEBUG
 	const GSVector2i& size = rt->GetSize();
-	GSTexture* t = CreateRenderTarget(size.x, size.y, rt->IsMSAA());
+	GSTexture* t = CreateRenderTarget(size.x, size.y, false);
 #else
 	GSTexture* t = NULL;
 #endif
@@ -928,10 +820,8 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 	// ps
 
-	GSTexture* rt2 = rt->IsMSAA() ? Resolve(rt) : rt;
-
-	PSSetShaderResources(rt2, NULL);
-	PSSetSamplerState(m_convert.pt, 0);
+	PSSetShaderResource(0, rt);
+	PSSetSamplerState(0, m_convert.pt);
 	m_shader->PS(m_convert.ps[datm ? 2 : 3]);
 
 	//
@@ -943,31 +833,9 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 	EndScene();
 
 #ifdef ENABLE_OGL_STENCIL_DEBUG
+	// FIXME invalidate data
 	Recycle(t);
 #endif
-
-	if(rt2 != rt) Recycle(rt2);
-}
-
-// copy a multisample texture to a non-texture multisample. On opengl you need 2 FBO with different level of
-// sample and then do a blit. Headach expected to for the moment just drop MSAA...
-GSTexture* GSDeviceOGL::Resolve(GSTexture* t)
-{
-	ASSERT(t != NULL && t->IsMSAA());
-#if 0
-
-	if(GSTexture* dst = CreateRenderTarget(t->GetWidth(), t->GetHeight(), false, t->GetFormat()))
-	{
-		dst->SetScale(t->GetScale());
-
-		m_ctx->ResolveSubresource(*(GSTexture11*)dst, 0, *(GSTexture11*)t, 0, (DXGI_FORMAT)t->GetFormat());
-
-		return dst;
-	}
-
-	return NULL;
-#endif
-	return NULL;
 }
 
 void GSDeviceOGL::EndScene()
@@ -1018,53 +886,54 @@ void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)
 	m_state.vb->SetTopology(topology);
 }
 
-void GSDeviceOGL::PSSetShaderResources(GSTexture* sr0, GSTexture* sr1)
+void GSDeviceOGL::PSSetShaderResource(const int i, GSTexture* sr)
 {
-	PSSetShaderResource(0, sr0);
-	PSSetShaderResource(1, sr1);
-	//PSSetShaderResource(2, NULL);
+	ASSERT(sr);
+
+	static_cast<GSTextureOGL*>(sr)->EnableUnit(i);
 }
 
-void GSDeviceOGL::PSSetShaderResource(int i, GSTexture* sr)
+void GSDeviceOGL::PSSetSamplerState(const int i, GLuint ss)
 {
-	GSTextureOGL* srv = static_cast<GSTextureOGL*>(sr);
-
-	if (m_state.ps_srv[i] != srv)
-	{
-		m_state.ps_srv[i] = srv;
-		if (srv != NULL)
-			m_state.ps_srv[i]->EnableUnit(i);
+	if (m_state.ps_ss[i] != ss) {
+		m_state.ps_ss[i] = ss;
+		gl_BindSampler(i, ss);
 	}
 }
 
-void GSDeviceOGL::PSSetSamplerState(GLuint ss0, GLuint ss1, GLuint ss2)
+void GSDeviceOGL::OMAttachRt(GSTexture* rt)
 {
-	if (m_state.ps_ss[0] != ss0) {
-		m_state.ps_ss[0] = ss0;
-		gl_BindSampler(0, ss0);
-	}
-	if (m_state.ps_ss[1] != ss1) {
-		m_state.ps_ss[1] = ss1;
-		gl_BindSampler(1, ss1);
+	if (m_state.rt != rt) {
+		m_state.rt = rt;
+		gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GSTextureOGL*>(rt)->GetID(), 0);
 	}
 }
 
-void GSDeviceOGL::OMSetFBO(GLuint fbo, GLenum buffer)
+void GSDeviceOGL::OMAttachDs(GSTexture* ds)
+{
+	if (m_state.ds != ds) {
+		m_state.ds = ds;
+		gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, static_cast<GSTextureOGL*>(ds)->GetID(), 0);
+	}
+}
+
+void GSDeviceOGL::OMSetFBO(GLuint fbo)
 {
 	if (m_state.fbo != fbo) {
 		m_state.fbo = fbo;
 		gl_BindFramebuffer(GL_FRAMEBUFFER, fbo);
-		// FIXME DEBUG
-		//if (fbo) fprintf(stderr, "FB status %x\n", gl_CheckFramebufferStatus(GL_FRAMEBUFFER));
 	}
+}
 
-	// Note if m_fbo is 0, standard GL_BACK will be used instead
-	if (m_fbo && m_state.draw != buffer) {
+void GSDeviceOGL::OMSetWriteBuffer(GLenum buffer)
+{
+	// Note if fbo is 0, standard GL_BACK will be used instead
+	if (m_state.fbo && m_state.draw != buffer) {
 		m_state.draw = buffer;
+
 		GLenum target[1] = {buffer};
 		gl_DrawBuffers(1, target);
 	}
-
 }
 
 void GSDeviceOGL::OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref)
@@ -1093,16 +962,18 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 	if (rt == NULL || !static_cast<GSTextureOGL*>(rt)->IsBackbuffer()) {
 		if (rt) {
 			OMSetFBO(m_fbo);
-			static_cast<GSTextureOGL*>(rt)->Attach(GL_COLOR_ATTACHMENT0);
+			OMSetWriteBuffer();
+			OMAttachRt(rt);
 		} else {
 			// Note: NULL rt is only used in DATE so far. Color writing is disabled
 			// on the blend setup
-			OMSetFBO(m_fbo, GL_NONE);
+			OMSetFBO(m_fbo);
+			OMSetWriteBuffer(GL_NONE);
 		}
 
 		// Note: it must be done after OMSetFBO
 		if (ds)
-			static_cast<GSTextureOGL*>(ds)->Attach(GL_DEPTH_STENCIL_ATTACHMENT);
+			OMAttachDs(ds);
 
 	} else {
 		// Render in the backbuffer

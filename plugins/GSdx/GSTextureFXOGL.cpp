@@ -151,7 +151,7 @@ void GSDeviceOGL::SetupGS(GSSelector sel)
 	m_shader->GS(gs);
 }
 
-void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerSelector ssel)
+void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb)
 {
 	// *************************************************************
 	// Static
@@ -174,25 +174,18 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb, PSSamplerS
 		m_ps_cb->upload(cb);
 	}
 
-	GLuint ss0, ss1;
-	ss0 = ss1 = 0;
-	if(sel.tfx != 4)
+	m_shader->PS(ps);
+}
+
+void GSDeviceOGL::SetupSampler(PSSelector sel, PSSamplerSelector ssel)
+{
+	if(!(sel.fmt < 3 && sel.wms < 3 && sel.wmt < 3))
 	{
-		if(!(sel.fmt < 3 && sel.wms < 3 && sel.wmt < 3))
-		{
-			ssel.ltf = 0;
-		}
-
-		ss0 = m_ps_ss[ssel];
-
-		if(sel.fmt >= 3)
-		{
-			ss1 = m_palette_ss;
-		}
+		ssel.ltf = 0;
 	}
 
-	PSSetSamplerState(ss0, ss1, 0);
-	m_shader->PS(ps);
+	PSSetSamplerState(0, m_ps_ss[ssel]);
+	PSSetSamplerState(1, m_palette_ss);
 }
 
 void GSDeviceOGL::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)

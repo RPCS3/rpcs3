@@ -26,14 +26,13 @@
 class GSTextureOGL : public GSTexture
 {
 	private:
-		GLenum m_texture_target; // texture target: 2D, rectangle etc...
 		GLuint m_texture_id;	 // the texture id
 		uint32 m_pbo_id;
 		int m_pbo_size;
 		GLuint m_fbo_read;
 
 	public:
-		explicit GSTextureOGL(int type, int w, int h, bool msaa, int format, GLuint fbo_read);
+		explicit GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read);
 		virtual ~GSTextureOGL();
 
 		bool Update(const GSVector4i& r, const void* data, int pitch);
@@ -42,13 +41,10 @@ class GSTextureOGL : public GSTexture
 		bool Save(const string& fn, bool dds = false);
 		void Save(const string& fn, const void* image, uint32 pitch);
 
-		void EnableUnit(uint32 unit);
-		void Attach(GLenum attachment);
-		void AttachRead(GLenum attachment);
+		void EnableUnit(const uint32 unit);
 
 		bool IsBackbuffer() { return (m_type == GSTexture::Backbuffer); }
 		bool IsDss() { return (m_type == GSTexture::DepthStencil); }
 
 		GLuint GetID() { return m_texture_id; }
-		GLenum GetTarget() { return m_texture_target; }
 };
