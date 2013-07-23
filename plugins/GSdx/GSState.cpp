@@ -3353,6 +3353,19 @@ bool GSC_ResidentEvil4(const GSFrameInfo& fi, int& skip)
 	return true;
 }
 
+bool GSC_SacredBlaze(const GSFrameInfo& fi, int& skip)
+{
+	//Fix Sacred Blaze rendering glitches
+	if(skip == 0)
+	{
+		if(fi.TME && (fi.FBP==0x0000 || fi.FBP==0x0e00) && (fi.TBP0==0x2880 || fi.TBP0==0x2a80 ) && fi.FPSM==fi.TPSM && fi.TPSM == PSM_PSMCT32 && fi.TPSM ==0 && fi.FBMSK == 0x0)
+		{
+			skip = 1;
+		}
+	}
+	return true;
+}
+
 bool GSC_Spartan(const GSFrameInfo& fi, int& skip)
 {
 	if(skip == 0)
@@ -5400,6 +5413,7 @@ bool GSState::IsBadFrame(int& skip, int UserHacks_SkipDraw)
 		map[CRC::Simple2000Vol114] = GSC_Simple2000Vol114;
 		map[CRC::UrbanReign] = GSC_UrbanReign;
 		map[CRC::SteambotChronicles] = GSC_SteambotChronicles;
+		map[CRC::SacredBlaze] = GSC_SacredBlaze;
 	}
 
 	// TODO: just set gsc in SetGameCRC once

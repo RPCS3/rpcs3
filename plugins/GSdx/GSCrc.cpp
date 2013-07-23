@@ -140,8 +140,10 @@ CRC::Game CRC::m_games[] =
 	{0x6810C3BC, GT3, CH, 0}, //GRAN TURISMO Concept 2002 Tokyo-Geneva
 	{0x85AE91B3, GT3, US, 0},
 	{0xC220951A, GT3, NoRegion, 0},
+	{0x9DE5CF65, GT3, JP, 0}, //Gran Turismo 3: A-spec
 	{0x60013EBD, GTConcept, EU, 0},
 	{0xB590CE04, GTConcept, NoRegion, 0},
+	{0x0EEF32A3, GTConcept, KO, 0}, //Gran Turismo Concept 2002 Tokyo-Seoul
 	{0xC164550A, WildArms5, JPUNDUB, 0},
 	{0xC1640D2C, WildArms5, US, 0},
 	{0x0FCF8FE4, WildArms5, EU, 0},
@@ -501,6 +503,7 @@ CRC::Game CRC::m_games[] =
 	{0xBDD9BAAD, UrbanReign, US, 0}, // cutie comment
 	{0xAE4BEBD3, UrbanReign, EU, 0},
 	{0x9F391882, SteambotChronicles, US, 0},
+	{0x06A7506A, SacredBlaze, JP, 0},
 };
 
 hash_map<uint32, CRC::Game*> CRC::m_map;

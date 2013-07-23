@@ -174,6 +174,7 @@ public:
 		SeintoSeiya,
 		UrbanReign,
 		SteambotChronicles,
+		SacredBlaze,
 		TitleCount,
 	};
 
