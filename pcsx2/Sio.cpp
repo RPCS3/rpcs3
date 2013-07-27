@@ -19,12 +19,6 @@
 #include "Sio.h"
 #include "sio_internal.h"
 
-#ifdef _KELOGS
-KELOGS kelogs[4096];
-u32 kelogs_count = 0;
-bool doKelogs = false;
-#endif 
-
 _sio sio;
 _mcd mcds[2][4];
 _mcd *mcd;
@@ -128,8 +122,20 @@ void SIO_FORCEINLINE sioInterrupt()
 
 SIO_WRITE sioWriteStart(u8 data)
 {
-	//sio2.packet.recvVal1 = 0x01100; // Pad is present
-	//sio2.packet.recvVal1 = 0x1D100; // Pad not present
+	u32 sioreg = sio2.packet.sendArray3[sio2.cmdport ? (sio2.cmdport - 1) : 0];
+
+	//u16 size1 = (sioreg >>  8) & 0x1FF;
+	u16 size2 = (sioreg >> 18) & 0x1FF;
+
+	//if(size1 != size2)
+	//	DevCon.Warning("SIO: Bad command length [%02X] (%02X|%02X)", data, size1, size2);
+	
+	// On mismatch, sio2.cmdlength (size1) is smaller than what it should (Persona 3)
+	// while size2 is the proper length. -KrossX
+	sio.bufSize = size2; //max(size1, size2);
+
+	if(sio.bufSize)
+		sio.bufSize--;
 
 	switch(data)
 	{
@@ -150,8 +156,6 @@ SIO_WRITE sioWriteStart(u8 data)
 
 SIO_WRITE sioWriteController(u8 data)
 {
-	//sio.packetsize++;
-
 	switch(sio.bufCount)
 	{
 	case 0:
@@ -258,8 +262,11 @@ SIO_WRITE sioWriteMultitap(u8 data)
 
 SIO_WRITE MemcardResponse()
 {
-	sio.buf[sio.bufSize - 1] = 0x2B;
-	sio.buf[sio.bufSize - 0] = mcd->term;
+	if(sio.bufSize > 1)
+	{
+		sio.buf[sio.bufSize - 1] = 0x2B;
+		sio.buf[sio.bufSize - 0] = mcd->term;
+	}
 }
 
 SIO_WRITE memcardAuth(u8 data)
@@ -504,8 +511,7 @@ SIO_WRITE sioWriteMemcard(u8 data)
 		break;
 
 	case 1:
-		//printf("Memcard cmd: %02X\n", data);
-		siocmd = data; 
+		siocmd = data;
 		switch(data)
 		{
 		case 0x21: // SET_SECTOR_ERASE
@@ -744,8 +750,6 @@ void sioWriteCtrl16(u16 value)
 		tcount[0] = 0;
 		tcount[1] = 0;
 
-		KELOGS_PRINT();
-		
 		sio.StatReg = TX_RDY | TX_EMPTY;
 		psxRegs.interrupt &= ~(1<<IopEvt_SIO);
 	}
@@ -768,19 +772,16 @@ u8 sioRead8()
 		ret = sio.ret;
 	}
 
-	KELOGS_READ(ret);
 	return ret;
 }
 
 void sioWrite8(u8 value)
 {
-	KELOGS_WRITE(value);
 	sioWrite8inl(value);
 }
 
 void SIODMAWrite(u8 value)
 {
-	KELOGS_WRITE(value);
 	sioWrite8inl(value);
 }
 
