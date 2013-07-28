@@ -42,4 +42,4 @@
 #endif
 
 // Output stencil to a color buffer
-#define ENABLE_OGL_STENCIL_DEBUG
+//#define ENABLE_OGL_STENCIL_DEBUG
