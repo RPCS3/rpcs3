@@ -417,8 +417,6 @@ void GSDeviceOGL::ClearRenderTarget_ui(GSTexture* t, uint32 c)
 	gl_ClearBufferuiv(GL_COLOR, 0, col);
 
 	glEnable(GL_SCISSOR_TEST);
-
-	static_cast<GSTextureOGL*>(t)->Save(format("/tmp/date_init_%04ld.csv", g_draw_count));
 }
 
 void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
