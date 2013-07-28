@@ -31,6 +31,7 @@ GSRendererOGL::GSRendererOGL()
 	m_fba = !!theApp.GetConfig("fba", 1);
 	UserHacks_AlphaHack = !!theApp.GetConfig("UserHacks_AlphaHack", 0) && !!theApp.GetConfig("UserHacks", 0);
 	UserHacks_AlphaStencil = !!theApp.GetConfig("UserHacks_AlphaStencil", 0) && !!theApp.GetConfig("UserHacks", 0);
+	UserHacks_DateGL4 = !!theApp.GetConfig("UserHacks_DateGL4", 0);
 	m_pixelcenter = GSVector2(-0.5f, -0.5f);
 
 	UserHacks_TCOffset = !!theApp.GetConfig("UserHacks", 0) ? theApp.GetConfig("UserHacks_TCOffset", 0) : 0;
@@ -217,6 +218,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	const GSVector2& rtscale = rt->GetScale();
 
 	bool DATE = m_context->TEST.DATE && context->FRAME.PSM != PSM_PSMCT24;
+	bool advance_DATE = false;
 
 	ASSERT(m_dev != NULL);
 
@@ -243,6 +245,8 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 			dev->SetupDATE(rt, ds, vertices, m_context->TEST.DATM);
 		}
+		// Create an r32ui image that will containt primitive ID
+		dev->InitPrimDateTexture(rtsize.x, rtsize.y);
 	}
 
 	//
@@ -297,6 +301,13 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	}
 
 	om_bsel.wrgba = ~GSVector4i::load((int)context->FRAME.FBMSK).eq8(GSVector4i::xffffffff()).mask();
+
+	// TODO
+	//if (UserHacks_DateGL4 && DATE && om_bsel.wa && (!context->TEST.ATE || context->TEST.ATST == ATST_ALWAYS)) {
+	if (UserHacks_DateGL4 && DATE) {
+		//if (!(context->FBA.FBA && context->TEST.DATM == 1))
+		advance_DATE = true;
+	}
 
 	// vs
 
@@ -381,14 +392,9 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 	if(DATE)
 	{
-		if(dev->HasStencil())
-		{
-			om_dssel.date = 1;
-		}
-		else
-		{
+		om_dssel.date = 1;
+		if (advance_DATE)
 			ps_sel.date = 1 + context->TEST.DATM;
-		}
 	}
 
 	if(env.COLCLAMP.CLAMP == 0 && /* hack */ !tex && PRIM->PRIM != GS_POINTLIST)
@@ -512,7 +518,25 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	dev->SetupGS(gs_sel);
 	dev->SetupPS(ps_sel, &ps_cb);
 
-	// draw
+	if (advance_DATE) {
+		// Create an r32ui image that will containt primitive ID
+		// Note: do it at the beginning because the clean will dirty the state
+		//dev->InitPrimDateTexture(rtsize.x, rtsize.y);
+
+		// Don't write anything on the color buffer
+		dev->OMSetWriteBuffer(GL_NONE);
+		// Compute primitiveID max that pass the date test
+		dev->DrawIndexedPrimitive();
+
+		// Ask PS to discard shader above the primitiveID max
+		dev->OMSetWriteBuffer();
+
+		ps_sel.date = 3;
+		dev->SetupPS(ps_sel, &ps_cb);
+
+		// Be sure that first pass is finished !
+		gl_MemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	}
 
 	if(context->TEST.DoFirstPass())
 	{
@@ -586,6 +610,8 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 			}
 		}
 	}
+	if (advance_DATE)
+		dev->RecycleDateTexture();
 
 	dev->EndScene();
 

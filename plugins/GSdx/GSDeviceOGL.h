@@ -466,6 +466,7 @@ class GSDeviceOGL : public GSDevice
 	struct {
 		GSDepthStencilOGL* dss;
 		GSBlendStateOGL* bs;
+		GSTexture* t;
 	} m_date;
 
 	struct 
@@ -520,7 +521,6 @@ class GSDeviceOGL : public GSDevice
 	void OMAttachRt(GSTexture* rt);
 	void OMAttachDs(GSTexture* ds);
 	void OMSetFBO(GLuint fbo);
-	void OMSetWriteBuffer(GLenum buffer = GL_COLOR_ATTACHMENT0);
 
 	public:
 	GSDeviceOGL();
@@ -545,6 +545,7 @@ class GSDeviceOGL : public GSDevice
 
 	void ClearRenderTarget(GSTexture* t, const GSVector4& c);
 	void ClearRenderTarget(GSTexture* t, uint32 c);
+	void ClearRenderTarget_ui(GSTexture* t, uint32 c);
 	void ClearDepth(GSTexture* t, float c);
 	void ClearStencil(GSTexture* t, uint8 c);
 
@@ -552,6 +553,8 @@ class GSDeviceOGL : public GSDevice
 	GSTexture* CreateDepthStencil(int w, int h, bool msaa, int format = 0);
 	GSTexture* CreateTexture(int w, int h, int format = 0);
 	GSTexture* CreateOffscreen(int w, int h, int format = 0);
+	void InitPrimDateTexture(int w, int h);
+	void RecycleDateTexture();
 
 	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
 
@@ -579,7 +582,7 @@ class GSDeviceOGL : public GSDevice
 	void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);
 	void OMSetBlendState(GSBlendStateOGL* bs, float bf);
 	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i* scissor = NULL);
-
+	void OMSetWriteBuffer(GLenum buffer = GL_COLOR_ATTACHMENT0);
 
 	void CreateTextureFX();
 	GLuint CompileVS(VSSelector sel);

@@ -183,6 +183,9 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 	m_NativeWindow = XCreateSimpleWindow(m_NativeDisplay, DefaultRootWindow(m_NativeDisplay), 0, 0, w, h, 0, 0, 0);
 	XMapWindow (m_NativeDisplay, m_NativeWindow);
 
+	if (m_NativeWindow == 0)
+		throw GSDXRecoverableError();
+
 	CreateContext(3, 3);
 
 	AttachContext();
@@ -190,9 +193,6 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 	CheckContext();
 
 	PopulateGlFunction();
-
-	if (m_NativeWindow == 0)
-		throw GSDXRecoverableError();
 
 	return true;
 }

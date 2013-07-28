@@ -40,3 +40,6 @@
 #ifdef _DEBUG
 #define ENABLE_OGL_DEBUG   // Create a debug context and check opengl command status. Allow also to dump various textures/states.
 #endif
+
+// Output stencil to a color buffer
+#define ENABLE_OGL_STENCIL_DEBUG

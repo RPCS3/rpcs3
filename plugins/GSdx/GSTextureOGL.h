@@ -40,6 +40,7 @@ class GSTextureOGL : public GSTexture
 		void Unmap();
 		bool Save(const string& fn, bool dds = false);
 		void Save(const string& fn, const void* image, uint32 pitch);
+		void SaveRaw(const string& fn, const void* image, uint32 pitch);
 
 		void EnableUnit(const uint32 unit);
 

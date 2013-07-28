@@ -163,16 +163,18 @@ void vs_main()
 
 #ifdef GEOMETRY_SHADER
 in gl_PerVertex {
-    vec4 gl_Position;
+    invariant vec4 gl_Position;
     float gl_PointSize;
     float gl_ClipDistance[];
 } gl_in[];
+//in int gl_PrimitiveIDIn;
 
 out gl_PerVertex {
     vec4 gl_Position;
     float gl_PointSize;
     float gl_ClipDistance[];
 };
+out int gl_PrimitiveID;
 
 in SHADER
 {
@@ -193,6 +195,7 @@ void out_vertex(in vertex v)
     GSout.t = v.t;
     GSout.tp = v.tp;
     GSout.c = v.c;
+    gl_PrimitiveID = gl_PrimitiveIDIn;
     EmitVertex();
 }
 
@@ -201,6 +204,7 @@ void out_vertex_elem(in vec4 t, in vec4 tp, in vec4 c)
     GSout.t = t;
     GSout.tp = tp;
     GSout.c = c;
+    gl_PrimitiveID = gl_PrimitiveIDIn;
     EmitVertex();
 }
 
@@ -364,6 +368,23 @@ uniform sampler2D RTCopySampler;
 layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
 layout(binding = 2) uniform sampler2D RTCopySampler;
+#endif
+
+#ifndef DISABLE_GL42_image
+#if PS_DATE > 0
+// FIXME how to declare memory access
+layout(r32ui, binding = 0) coherent uniform uimage2D img_prim_min;
+#endif
+#else
+// use basic stencil
+#endif
+
+#ifndef DISABLE_GL42_image
+#if PS_DATE > 0
+// origin_upper_left
+layout(pixel_center_integer) in vec4 gl_FragCoord;
+//in int gl_PrimitiveID;
+#endif
 #endif
 
 #ifdef DISABLE_GL42
@@ -694,7 +715,7 @@ vec4 fog(vec4 c, float f)
 
 vec4 ps_color()
 {
-    datst();
+    //datst();
 
     vec4 t = sample_color(PSin_t.xy, PSin_t.w);
 
@@ -748,10 +769,48 @@ void ps_main()
         if(c.a < 0.5) c.a += 0.5;
     }
 
-    SV_Target0 = c;
-    SV_Target1 = vec4(alpha, alpha, alpha, alpha);
+#ifndef DISABLE_GL42_image
+
+    // Get first primitive that will write a failling alpha value
+#if PS_DATE == 1
+    // DATM == 0
+    // Pixel with alpha equal to 1 will failed
+    if (c.a > 127.5f / 255.0f) {
+        imageAtomicMin(img_prim_min, ivec2(gl_FragCoord.xy), gl_PrimitiveID);
+    }
+    //memoryBarrier();
+#elif PS_DATE == 2
+    // DATM == 1
+    // Pixel with alpha equal to 0 will failed
+    if (c.a < 127.5f / 255.0f) {
+        imageAtomicMin(img_prim_min, ivec2(gl_FragCoord.xy), gl_PrimitiveID);
+    }
+#endif
+
+    // TODO
+    // warning non uniform flow ???
+#if PS_DATE == 3
+    uint stencil_ceil = imageLoad(img_prim_min, ivec2(gl_FragCoord.xy));
+    // Note gl_PrimitiveID == stencil_ceil will be the primitive that will update
+    // the bad alpha value so we must keep it.
+    if (gl_PrimitiveID > stencil_ceil)
+        discard;
+#endif
 
 #endif
 
+
+#if (PS_DATE == 2 || PS_DATE == 1) && !defined(DISABLE_GL42_image)
+    // Don't write anything on the framebuffer
+    // Note: you can't use discard because it will also drop
+    // image operation
+    // Note2: output will be disabled too in opengl
+#else
+    SV_Target0 = c;
+    SV_Target1 = vec4(alpha, alpha, alpha, alpha);
+#endif
+
+#endif
 }
+
 #endif

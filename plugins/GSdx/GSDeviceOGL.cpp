@@ -27,11 +27,6 @@
 //#define LOUD_DEBUGGING
 //#define PRINT_FRAME_NUMBER
 //#define ONLY_LINES
-#if 0
-#ifdef _DEBUG
-#define ENABLE_OGL_STENCIL_DEBUG
-#endif
-#endif
 
 static uint32 g_draw_count = 0;
 static uint32 g_frame_count = 1;		
@@ -344,10 +339,18 @@ void GSDeviceOGL::Flip()
 void GSDeviceOGL::BeforeDraw()
 {
 	m_shader->UseProgram();
+//#ifdef ENABLE_OGL_STENCIL_DEBUG
+//	if (m_date.t)
+//		static_cast<GSTextureOGL*>(m_date.t)->Save(format("/tmp/date_before_%04ld.csv", g_draw_count));
+//#endif
 }
 
 void GSDeviceOGL::AfterDraw()
 {
+//#ifdef ENABLE_OGL_STENCIL_DEBUG
+//	if (m_date.t)
+//		static_cast<GSTextureOGL*>(m_date.t)->Save(format("/tmp/date_after_%04ld.csv", g_draw_count));
+//#endif
 #if defined(ENABLE_OGL_DEBUG) || defined(PRINT_FRAME_NUMBER)
 	g_draw_count++;
 #endif
@@ -387,7 +390,6 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 		gl_ClearBufferfv(GL_COLOR, 0, c.v);
 	} else {
 		OMSetFBO(m_fbo);
-		// FIXME useful
 		OMSetWriteBuffer();
 		OMAttachRt(t);
 
@@ -402,10 +404,26 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
 	ClearRenderTarget(t, color);
 }
 
+void GSDeviceOGL::ClearRenderTarget_ui(GSTexture* t, uint32 c)
+{
+	uint32 col[4] = {c, c, c, c};
+
+	glDisable(GL_SCISSOR_TEST);
+
+	OMSetFBO(m_fbo);
+	OMSetWriteBuffer();
+	OMAttachRt(t);
+
+	gl_ClearBufferuiv(GL_COLOR, 0, col);
+
+	glEnable(GL_SCISSOR_TEST);
+
+	static_cast<GSTextureOGL*>(t)->Save(format("/tmp/date_init_%04ld.csv", g_draw_count));
+}
+
 void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 {
 	OMSetFBO(m_fbo);
-	// FIXME useful
 	OMSetWriteBuffer();
 	OMAttachDs(t);
 
@@ -423,7 +441,6 @@ void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 {
 	OMSetFBO(m_fbo);
-	// FIXME useful
 	OMSetWriteBuffer();
 	OMAttachDs(t);
 	GLint color = c;
@@ -468,6 +485,34 @@ GLuint GSDeviceOGL::CreateSampler(bool bilinear, bool tau, bool tav)
 	// FIXME: need ogl extension sd.MaxAnisotropy = 16;
 
 	return sampler;
+}
+
+void GSDeviceOGL::InitPrimDateTexture(int w, int h)
+{
+	// Create a texture to avoid the useless clean@0
+	if (m_date.t == NULL)
+		m_date.t = CreateTexture(w, h, GL_R32UI);
+
+	ClearRenderTarget_ui(m_date.t, 0xFFFFFFFF);
+
+#ifdef ENABLE_OGL_STENCIL_DEBUG
+	static_cast<GSTextureOGL*>(m_date.t)->EnableUnit(6);
+#endif
+
+	gl_BindImageTexture(0, static_cast<GSTextureOGL*>(m_date.t)->GetID(), 0, false, 0, GL_READ_WRITE, GL_R32UI);
+}
+
+void GSDeviceOGL::RecycleDateTexture()
+{
+	if (m_date.t) {
+#ifdef ENABLE_OGL_STENCIL_DEBUG
+		//static_cast<GSTextureOGL*>(m_date.t)->Save(format("/tmp/date_adv_%04ld.csv", g_draw_count));
+#endif
+
+		// FIXME invalidate data
+		Recycle(m_date.t);
+		m_date.t = NULL;
+	}
 }
 
 GLuint GSDeviceOGL::CompileVS(VSSelector sel)

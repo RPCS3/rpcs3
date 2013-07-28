@@ -264,14 +264,16 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 	if (GLLoader::found_only_gl30) {
 		header = "#version 130\n";
 	} else {
-		header = "#version 330\n";
+		header = "#version 330 core\n";
 	}
 	if (m_glsl420) {
+		// Need GL version 420
 		header += "#extension GL_ARB_shading_language_420pack: require\n";
 	} else {
 		header += "#define DISABLE_GL42\n";
 	}
 	if (m_sso) {
+		// Need GL version 410
 		header += "#extension GL_ARB_separate_shader_objects : require\n";
 	} else {
 		header += "#define DISABLE_SSO\n";
@@ -285,11 +287,18 @@ std::string GSShaderOGL::GenGlslHeader(const std::string& entry, GLenum type, co
 #ifdef ENABLE_OGL_STENCIL_DEBUG
 	header += "#define ENABLE_OGL_STENCIL_DEBUG 1\n";
 #endif
+	if (GLLoader::found_GL_ARB_shader_image_load_store)
+		// Need GL version 420
+		header += "#extension GL_ARB_shader_image_load_store: require\n";
+	else
+		header += "#define DISABLE_GL42_image\n";
 
 #else
 	header = "#version 300 es\n";
+	// Disable full GL features
 	header += "#define DISABLE_SSO\n";
 	header += "#define DISABLE_GL42\n";
+	header += "#define DISABLE_GL42_image\n";
 #endif
 
 	// Allow to puts several shader in 1 files

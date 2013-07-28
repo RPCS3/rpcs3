@@ -41,6 +41,7 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_CheckFramebufferStatus) = GetProcAddress("glCheckFramebufferStatus");
 	*(void**)&(gl_ClearBufferfv) = GetProcAddress("glClearBufferfv");
 	*(void**)&(gl_ClearBufferiv) = GetProcAddress("glClearBufferiv");
+	*(void**)&(gl_ClearBufferuiv) = GetProcAddress("glClearBufferuiv");
 	*(void**)&(gl_CompileShader) = GetProcAddress("glCompileShader");
 	*(void**)&(gl_CopyImageSubDataNV) = GetProcAddress("glCopyImageSubDataNV");
 	*(void**)&(gl_CreateProgram) = GetProcAddress("glCreateProgram");
@@ -100,5 +101,8 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_GetUniformBlockIndex) = GetProcAddress("glGetUniformBlockIndex");
 	*(void**)&(gl_UniformBlockBinding) = GetProcAddress("glUniformBlockBinding");
 	*(void**)&(gl_GetUniformLocation) = GetProcAddress("glGetUniformLocation");
+	// GL4.2
+	*(void**)&(gl_BindImageTexture) = GetProcAddress("glBindImageTexture");
+	*(void**)&(gl_MemoryBarrier) = GetProcAddress("glMemoryBarrier");
 #endif
 }

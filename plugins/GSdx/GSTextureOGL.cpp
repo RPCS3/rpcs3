@@ -144,7 +144,7 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 		case GL_R16UI:
 			glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch>>1);
-			format = GL_RED;
+			format = GL_RED_INTEGER;
 			type = GL_UNSIGNED_SHORT;
 			break;
 		case GL_R8:
@@ -159,7 +159,7 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	}
 
 #ifdef _LINUX
-	if (GLLoader::fglrx_buggy_driver) {
+	if (GLLoader::fglrx_buggy_driver && !GLLoader::in_replayer) {
 		// FIXME : it crash on colin mcrae rally 3 (others game too) when the texture is small
 		//if ((pitch >> 2) == 32 || r.width() < 32 || r.height() < 32) {
 		if ((r.width() < 32) || (pitch == 128 && r.width() == 32)) {
@@ -388,6 +388,30 @@ void GSTextureOGL::Save(const string& fn, const void* image, uint32 pitch)
 	fclose(fp);
 }
 
+void GSTextureOGL::SaveRaw(const string& fn, const void* image, uint32 pitch)
+{
+	// Build a raw CSV file
+	FILE* fp = fopen(fn.c_str(), "w");
+
+	uint32* data = (uint32*)image;
+
+	for(int h = m_size.y; h > 0; h--) {
+		for (int w = m_size.x; w > 0; w--, data += 1) {
+			if (*data == 0xffffffff)
+				fprintf(fp, "");
+			else {
+				fprintf(fp, "%x", *data);
+			}
+			if ( w > 1)
+				fprintf(fp, ",");
+		}
+		fprintf(fp, "\n");
+	}
+
+	fclose(fp);
+}
+
+
 bool GSTextureOGL::Save(const string& fn, bool dds)
 {
 	// Collect the texture data
@@ -408,10 +432,24 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 		glReadPixels(0, 0, m_size.x, m_size.y, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, image);
 
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	} else if(m_format == GL_R32UI) {
+		//EnableUnit(6);
+		gl_ActiveTexture(GL_TEXTURE0 + 6);
+		glBindTexture(GL_TEXTURE_2D, m_texture_id);
+
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, image);
+		SaveRaw(fn, image, pitch);
+
+		// Not supported in Save function
+		status = false;
+
 	} else {
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo_read);
 
-		EnableUnit(6);
+		//EnableUnit(6);
+		gl_ActiveTexture(GL_TEXTURE0 + 6);
+		glBindTexture(GL_TEXTURE_2D, m_texture_id);
+
 		gl_FramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texture_id, 0);
 
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -435,6 +473,10 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 
 	if (status) Save(fn, image, pitch);
 	free(image);
+
+	// Restore state
+	gl_ActiveTexture(GL_TEXTURE0 + g_state_texture_unit);
+	glBindTexture(GL_TEXTURE_2D, g_state_texture_id[g_state_texture_unit]);
 
 	return status;
 }

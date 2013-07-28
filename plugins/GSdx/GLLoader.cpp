@@ -40,6 +40,7 @@ PFNGLBUFFERDATAPROC                    gl_BufferData                  = NULL;
 PFNGLCHECKFRAMEBUFFERSTATUSPROC        gl_CheckFramebufferStatus      = NULL;
 PFNGLCLEARBUFFERFVPROC                 gl_ClearBufferfv               = NULL;
 PFNGLCLEARBUFFERIVPROC                 gl_ClearBufferiv               = NULL;
+PFNGLCLEARBUFFERUIVPROC                gl_ClearBufferuiv              = NULL;
 PFNGLCOMPILESHADERPROC                 gl_CompileShader               = NULL;
 PFNGLCOPYIMAGESUBDATANVPROC            gl_CopyImageSubDataNV          = NULL;
 PFNGLCREATEPROGRAMPROC                 gl_CreateProgram               = NULL;
@@ -99,12 +100,16 @@ PFNGLPROGRAMUNIFORM1IPROC              gl_ProgramUniform1i            = NULL;
 PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex        = NULL;
 PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding         = NULL;
 PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation          = NULL;
+// GL4.2
+PFNGLBINDIMAGETEXTUREPROC              gl_BindImageTexture            = NULL;
+PFNGLMEMORYBARRIERPROC                 gl_MemoryBarrier               = NULL;
 #endif
 
 namespace GLLoader {
 
 	bool fglrx_buggy_driver = false;
 	bool nvidia_buggy_driver = false;
+	bool in_replayer = false;
 
 	bool found_GL_ARB_separate_shader_objects = false;
 	bool found_GL_ARB_shading_language_420pack = false;
@@ -114,11 +119,15 @@ namespace GLLoader {
 	bool found_GL_ARB_copy_image = false;
 	bool found_only_gl30	= false;
 	bool found_GL_ARB_gpu_shader5 = false;
+	bool found_GL_ARB_shader_image_load_store = false;
 
     bool check_gl_version(uint32 major, uint32 minor) {
 
 		const GLubyte* s = glGetString(GL_VERSION);
-		if (s == NULL) return false;
+		if (s == NULL) {
+			fprintf(stderr, "Error: GLLoader failed to get GL version\n");
+			return false;
+		}
 
 		const char* vendor = (const char*)glGetString(GL_VENDOR);
 		fprintf(stderr, "Supported Opengl version: %s on GPU: %s. Vendor: %s\n", s, glGetString(GL_RENDERER), vendor);
@@ -183,6 +192,7 @@ namespace GLLoader {
 				// Replace previous extensions (when driver will be updated)
 				if (ext.compare("GL_ARB_copy_image") == 0) found_GL_ARB_copy_image = true;
 				if (ext.compare("GL_ARB_gpu_shader5") == 0) found_GL_ARB_gpu_shader5 = true;
+				if (ext.compare("GL_ARB_shader_image_load_store") == 0) found_GL_ARB_shader_image_load_store = true;
 #ifdef ENABLE_GLES
 				fprintf(stderr, "DEBUG ext: %s\n", ext.c_str());
 #endif
@@ -203,6 +213,8 @@ namespace GLLoader {
 		if (!found_GL_ARB_gpu_shader5) {
 			fprintf(stderr, "INFO: GL_ARB_gpu_shader5 is not supported\n");
 		}
+		if (!found_GL_ARB_shader_image_load_store)
+			fprintf(stderr, "INFO: GL_ARB_shader_image_load_store is not supported\n");
 
 
 		if (theApp.GetConfig("override_GL_ARB_shading_language_420pack", -1) != -1) {
@@ -212,6 +224,10 @@ namespace GLLoader {
 		if (theApp.GetConfig("override_GL_ARB_separate_shader_objects", -1) != -1) {
 			found_GL_ARB_separate_shader_objects = !!theApp.GetConfig("override_GL_ARB_separate_shader_objects", -1);
 			fprintf(stderr, "Override GL_ARB_separate_shader_objects detection\n");
+		}
+		if (theApp.GetConfig("override_GL_ARB_shader_image_load_store", -1) != -1) {
+			found_GL_ARB_shader_image_load_store = !!theApp.GetConfig("override_GL_ARB_shader_image_load_store", -1);
+			fprintf(stderr, "Override GL_ARB_shader_image_load_store detection\n");
 		}
 		if (theApp.GetConfig("override_GL_ARB_copy_image", -1) != -1) {
 			// Same extension so override both

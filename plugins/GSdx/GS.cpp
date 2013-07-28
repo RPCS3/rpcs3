@@ -1417,7 +1417,7 @@ inline unsigned long timeGetTime()
 // Note
 EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 {
-
+	GLLoader::in_replayer = true;
 
 // lpszCmdLine:
 //   First parameter is the renderer.
@@ -1462,7 +1462,11 @@ EXPORT_C GSReplay(char* lpszCmdLine, int renderer)
 
 		void* hWnd = NULL;
 
-		_GSopen((void**)&hWnd, "", renderer);
+		int err = _GSopen((void**)&hWnd, "", renderer);
+		if (err != 0) {
+			fprintf(stderr, "Error failed to GSopen\n");
+			return;
+		}
 		if (s_gs->m_wnd == NULL) return;
 
 		uint32 crc;

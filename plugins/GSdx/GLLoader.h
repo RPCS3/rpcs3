@@ -38,6 +38,7 @@ extern   PFNGLBUFFERDATAPROC                    gl_BufferData;
 extern   PFNGLCHECKFRAMEBUFFERSTATUSPROC        gl_CheckFramebufferStatus;
 extern   PFNGLCLEARBUFFERFVPROC                 gl_ClearBufferfv;
 extern   PFNGLCLEARBUFFERIVPROC                 gl_ClearBufferiv;
+extern   PFNGLCLEARBUFFERUIVPROC                gl_ClearBufferuiv;
 extern   PFNGLCOMPILESHADERPROC                 gl_CompileShader;
 extern   PFNGLCOPYIMAGESUBDATANVPROC            gl_CopyImageSubDataNV;
 extern   PFNGLCREATEPROGRAMPROC                 gl_CreateProgram;
@@ -97,6 +98,9 @@ extern   PFNGLPROGRAMUNIFORM1IPROC              gl_ProgramUniform1i;
 extern   PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex;
 extern   PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding;
 extern   PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation;
+// GL4.2
+extern   PFNGLBINDIMAGETEXTUREPROC              gl_BindImageTexture;
+extern   PFNGLMEMORYBARRIERPROC                 gl_MemoryBarrier;
 #else
 #define gl_ActiveTexture glActiveTexture
 #define gl_BlendColor glBlendColor
@@ -183,6 +187,7 @@ namespace GLLoader {
 
 	extern bool fglrx_buggy_driver;
 	extern bool nvidia_buggy_driver;
+	extern bool in_replayer;
 
 	extern bool found_GL_ARB_separate_shader_objects;
 	extern bool found_GL_ARB_shading_language_420pack;
@@ -192,4 +197,5 @@ namespace GLLoader {
 	extern bool found_geometry_shader;
 	extern bool found_only_gl30;
 	extern bool found_GL_ARB_gpu_shader5;
+	extern bool found_GL_ARB_shader_image_load_store;
 }
