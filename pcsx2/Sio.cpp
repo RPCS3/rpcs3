@@ -145,7 +145,7 @@ SIO_WRITE sioWriteStart(u8 data)
 	case 0x81: siomode = SIO_MEMCARD; break;
 
 	default:
-		printf("%s cmd: %02X??\n", __FUNCTION__, data);
+		DevCon.Warning("%s cmd: %02X??\n", __FUNCTION__, data);
 		DEVICE_UNPLUGGED();
 		siomode = SIO_DUMMY;
 		break;
@@ -218,7 +218,7 @@ SIO_WRITE sioWriteMultitap(u8 data)
 			break;
 
 		default:
-			printf("%s cmd: %02X??\n", __FUNCTION__, data);
+			DevCon.Warning("%s cmd: %02X??\n", __FUNCTION__, data);
 			sio.buf[3] = 0x00;
 			sio.buf[4] = 0x00;
 			sio.buf[5] = 0x00;
@@ -349,10 +349,10 @@ SIO_WRITE memcardTransfer(u8 data)
 				break;
 
 			default:
-				printf("%s cmd: %02X??\n", __FUNCTION__, data);
+				DevCon.Warning("%s cmd: %02X??\n", __FUNCTION__, data);
 				mode = MEM_INVALID;
-				memcpy_fast(sio.buf, &header[1], 4);
 				sio.bufSize = 3;
+				sio.bufCount = 4;
 				break;
 			}
 
@@ -396,7 +396,7 @@ SIO_WRITE memcardTransfer(u8 data)
 				u8 xor_check = mcd->DoXor(&sio.buf[4], checksum_pos - 4);
 				
 				if(xor_check != sio.buf[sio.bufCount])
-					printf("MemWrite: Checksum invalid! XOR: %02X, IN: %02X\n", xor_check, sio.buf[sio.bufCount]);
+					Console.Warning("MemWrite: Checksum invalid! XOR: %02X, IN: %02X\n", xor_check, sio.buf[sio.bufCount]);
 
 				sio.buf[sio.bufCount] = xor_check;
 				mcd->Write(&sio.buf[4], transfer_size);
@@ -577,7 +577,7 @@ SIO_WRITE sioWriteMemcard(u8 data)
 			break;
 
 		default:
-			printf("%s cmd: %02X??\n", __FUNCTION__, data);
+			DevCon.Warning("%s cmd: %02X??\n", __FUNCTION__, data);
 			siomode = SIO_DUMMY;
 			break;
 		}
