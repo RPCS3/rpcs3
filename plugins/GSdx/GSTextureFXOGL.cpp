@@ -32,6 +32,7 @@ void GSDeviceOGL::CreateTextureFX()
 	m_ps_cb = new GSUniformBufferOGL(g_ps_cb_index, sizeof(PSConstantBuffer));
 
 	m_palette_ss = CreateSampler(false, false, false);
+	gl_BindSampler(1, m_palette_ss);
 
 	GSInputLayoutOGL vert_format[] =
 	{
@@ -184,8 +185,7 @@ void GSDeviceOGL::SetupSampler(PSSelector sel, PSSamplerSelector ssel)
 		ssel.ltf = 0;
 	}
 
-	PSSetSamplerState(0, m_ps_ss[ssel]);
-	PSSetSamplerState(1, m_palette_ss);
+	PSSetSamplerState(m_ps_ss[ssel]);
 }
 
 void GSDeviceOGL::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)

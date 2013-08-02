@@ -103,6 +103,11 @@ PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation          = NULL;
 // GL4.2
 PFNGLBINDIMAGETEXTUREPROC              gl_BindImageTexture            = NULL;
 PFNGLMEMORYBARRIERPROC                 gl_MemoryBarrier               = NULL;
+// GL4.4
+#ifdef GL44
+PFNGLCLEARTEXIMAGEPROC                 gl ClearTexImage               = NULL;
+PFNGLBINDTEXTURESPROC                  gl BindTextures                = NULL;
+#endif
 #endif
 
 namespace GLLoader {
@@ -120,6 +125,8 @@ namespace GLLoader {
 	bool found_only_gl30	= false;
 	bool found_GL_ARB_gpu_shader5 = false;
 	bool found_GL_ARB_shader_image_load_store = false;
+	bool found_GL_ARB_clear_texture = false;
+	bool found_GL_ARB_multi_bind = false;
 
     bool check_gl_version(uint32 major, uint32 minor) {
 
@@ -193,6 +200,11 @@ namespace GLLoader {
 				if (ext.compare("GL_ARB_copy_image") == 0) found_GL_ARB_copy_image = true;
 				if (ext.compare("GL_ARB_gpu_shader5") == 0) found_GL_ARB_gpu_shader5 = true;
 				if (ext.compare("GL_ARB_shader_image_load_store") == 0) found_GL_ARB_shader_image_load_store = true;
+#ifdef GL44
+				if (ext.compare("GL_ARB_clear_texture") == 0) found_GL_ARB_clear_texture = true;
+				if (ext.compare("GL_ARB_multi_bind") == 0) found_GL_ARB_multi_bind = true;
+#endif
+
 #ifdef ENABLE_GLES
 				fprintf(stderr, "DEBUG ext: %s\n", ext.c_str());
 #endif
@@ -200,21 +212,17 @@ namespace GLLoader {
 		}
 
 #ifndef ENABLE_GLES
-		if (!found_GL_ARB_separate_shader_objects) {
-			fprintf(stderr, "INFO: GL_ARB_separate_shader_objects is not supported\n");
-		}
-		if (!found_GL_ARB_shading_language_420pack) {
-			fprintf(stderr, "INFO: GL_ARB_shading_language_420pack is not supported\n");
-		}
+		if (!found_GL_ARB_separate_shader_objects) fprintf(stderr, "INFO: GL_ARB_separate_shader_objects is not supported\n");
+		if (!found_GL_ARB_shading_language_420pack) fprintf(stderr, "INFO: GL_ARB_shading_language_420pack is not supported\n");
+		if (!found_GL_ARB_gpu_shader5) fprintf(stderr, "INFO: GL_ARB_gpu_shader5 is not supported\n");
+		if (!found_GL_ARB_shader_image_load_store) fprintf(stderr, "INFO: GL_ARB_shader_image_load_store is not supported\n");
+		if (!found_GL_ARB_clear_texture) fprintf(stderr, "INFO: GL_ARB_clear_texture is not supported\n");
+		if (!found_GL_ARB_multi_bind) fprintf(stderr, "INFO: GL_ARB_multi_bind is not supported\n");
+
 		if (!found_GL_ARB_texture_storage) {
 			fprintf(stderr, "FATAL: GL_ARB_texture_storage is not supported\n");
 			return false;
 		}
-		if (!found_GL_ARB_gpu_shader5) {
-			fprintf(stderr, "INFO: GL_ARB_gpu_shader5 is not supported\n");
-		}
-		if (!found_GL_ARB_shader_image_load_store)
-			fprintf(stderr, "INFO: GL_ARB_shader_image_load_store is not supported\n");
 
 
 		if (theApp.GetConfig("override_GL_ARB_shading_language_420pack", -1) != -1) {

@@ -480,7 +480,7 @@ class GSDeviceOGL : public GSDevice
 	struct {
 		GSVertexBufferStateOGL* vb;
 		GSUniformBufferOGL* cb;
-		GLuint ps_ss[3]; // sampler
+		GLuint ps_ss; // sampler
 		GSVector2i viewport;
 		GSVector4i scissor;
 		GSDepthStencilOGL* dss;
@@ -490,6 +490,7 @@ class GSDeviceOGL : public GSDevice
  		GLenum	   draw;
 		GSTexture* rt; // render target
 		GSTexture* ds; // Depth-Stencil
+		GSTexture* tex_unit[2];
 	} m_state;
 
 	GSShaderOGL* m_shader;
@@ -555,6 +556,7 @@ class GSDeviceOGL : public GSDevice
 	GSTexture* CreateOffscreen(int w, int h, int format = 0);
 	void InitPrimDateTexture(int w, int h);
 	void RecycleDateTexture();
+	void BindDateTexture();
 
 	GSTexture* CopyOffscreen(GSTexture* src, const GSVector4& sr, int w, int h, int format = 0);
 
@@ -577,7 +579,9 @@ class GSDeviceOGL : public GSDevice
 	void SetUniformBuffer(GSUniformBufferOGL* cb);
 
 	void PSSetShaderResource(const int i, GSTexture* sr);
-	void PSSetSamplerState(const int i, GLuint ss);
+	void PSSetShaderResources(GSTexture* tex[2]);
+	void PSSetSamplerState(GLuint ss);
+	void PSSetSamplerStates(const int count, const GLuint* samplers);
 
 	void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);
 	void OMSetBlendState(GSBlendStateOGL* bs, float bf);
@@ -601,4 +605,5 @@ class GSDeviceOGL : public GSDevice
 	void SetupSampler(PSSelector sel, PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 
+	void Barrier(GLbitfield b);
 };

@@ -181,6 +181,14 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	m_vb_sr = new GSVertexBufferStateOGL(sizeof(GSVertexPT1), il_convert, countof(il_convert));
 
 	// ****************************************************************
+	// Texture unit state
+	// ****************************************************************
+	// By default use unit 3 for texture modification
+	// unit 0-2 will allocated to shader input
+	gl_ActiveTexture(GL_TEXTURE0 + 3);
+
+
+	// ****************************************************************
 	// convert
 	// ****************************************************************
 	m_convert.vs = m_shader->Compile("convert.glsl", "vs_main", GL_VERTEX_SHADER, convert_glsl);
@@ -339,6 +347,7 @@ void GSDeviceOGL::Flip()
 void GSDeviceOGL::BeforeDraw()
 {
 	m_shader->UseProgram();
+
 //#ifdef ENABLE_OGL_STENCIL_DEBUG
 //	if (m_date.t)
 //		static_cast<GSTextureOGL*>(m_date.t)->Save(format("/tmp/date_before_%04ld.csv", g_draw_count));
@@ -351,7 +360,7 @@ void GSDeviceOGL::AfterDraw()
 //	if (m_date.t)
 //		static_cast<GSTextureOGL*>(m_date.t)->Save(format("/tmp/date_after_%04ld.csv", g_draw_count));
 //#endif
-#if defined(ENABLE_OGL_DEBUG) || defined(PRINT_FRAME_NUMBER)
+#if defined(ENABLE_OGL_DEBUG) || defined(PRINT_FRAME_NUMBER) || defined(ENABLE_OGL_STENCIL_DEBUG)
 	g_draw_count++;
 #endif
 }
@@ -381,21 +390,25 @@ void GSDeviceOGL::DrawIndexedPrimitive(int offset, int count)
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 {
-	glDisable(GL_SCISSOR_TEST);
-	if (static_cast<GSTextureOGL*>(t)->IsBackbuffer()) {
-		OMSetFBO(0);
-
-		// glDrawBuffer(GL_BACK); // this is the default when there is no FB
-		// 0 will select the first drawbuffer ie GL_BACK
-		gl_ClearBufferfv(GL_COLOR, 0, c.v);
+	if (GLLoader::found_GL_ARB_clear_texture) {
+		static_cast<GSTextureOGL*>(t)->Clear((const void*)&c);
 	} else {
-		OMSetFBO(m_fbo);
-		OMSetWriteBuffer();
-		OMAttachRt(t);
+		glDisable(GL_SCISSOR_TEST);
+		if (static_cast<GSTextureOGL*>(t)->IsBackbuffer()) {
+			OMSetFBO(0);
 
-		gl_ClearBufferfv(GL_COLOR, 0, c.v);
+			// glDrawBuffer(GL_BACK); // this is the default when there is no FB
+			// 0 will select the first drawbuffer ie GL_BACK
+			gl_ClearBufferfv(GL_COLOR, 0, c.v);
+		} else {
+			OMSetFBO(m_fbo);
+			OMSetWriteBuffer();
+			OMAttachRt(t);
+
+			gl_ClearBufferfv(GL_COLOR, 0, c.v);
+		}
+		glEnable(GL_SCISSOR_TEST);
 	}
-	glEnable(GL_SCISSOR_TEST);
 }
 
 void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
@@ -406,46 +419,66 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, uint32 c)
 
 void GSDeviceOGL::ClearRenderTarget_ui(GSTexture* t, uint32 c)
 {
-	uint32 col[4] = {c, c, c, c};
+	if (GLLoader::found_GL_ARB_clear_texture) {
+		static_cast<GSTextureOGL*>(t)->Clear((const void*)&c);
+	} else {
+		uint32 col[4] = {c, c, c, c};
 
-	glDisable(GL_SCISSOR_TEST);
+		glDisable(GL_SCISSOR_TEST);
 
-	OMSetFBO(m_fbo);
-	OMSetWriteBuffer();
-	OMAttachRt(t);
+		OMSetFBO(m_fbo);
+		OMSetWriteBuffer();
+		OMAttachRt(t);
 
-	gl_ClearBufferuiv(GL_COLOR, 0, col);
+		gl_ClearBufferuiv(GL_COLOR, 0, col);
 
-	glEnable(GL_SCISSOR_TEST);
+		glEnable(GL_SCISSOR_TEST);
+	}
 }
 
 void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 {
-	OMSetFBO(m_fbo);
-	OMSetWriteBuffer();
-	OMAttachDs(t);
-
-	glDisable(GL_SCISSOR_TEST);
-	if (m_state.dss != NULL && m_state.dss->IsMaskEnable()) {
-		gl_ClearBufferfv(GL_DEPTH, 0, &c);
+	// TODO is it possible with GL44 ClearTexture?
+	// It is seriously not clear if we can clear only the depth
+	if (GLLoader::found_GL_ARB_clear_texture) {
+#ifdef GL44
+		gl_ClearTexImage(static_cast<GSTextureOGL*>(t)->GetID(), 0, GL_DEPTH_STENCIL, GL_FLOAT, &c);
+#endif
 	} else {
-		glDepthMask(true);
-		gl_ClearBufferfv(GL_DEPTH, 0, &c);
-		glDepthMask(false);
+		OMSetFBO(m_fbo);
+		OMSetWriteBuffer();
+		OMAttachDs(t);
+
+		glDisable(GL_SCISSOR_TEST);
+		if (m_state.dss != NULL && m_state.dss->IsMaskEnable()) {
+			gl_ClearBufferfv(GL_DEPTH, 0, &c);
+		} else {
+			glDepthMask(true);
+			gl_ClearBufferfv(GL_DEPTH, 0, &c);
+			glDepthMask(false);
+		}
+		glEnable(GL_SCISSOR_TEST);
 	}
-	glEnable(GL_SCISSOR_TEST);
 }
 
 void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 {
-	OMSetFBO(m_fbo);
-	OMSetWriteBuffer();
-	OMAttachDs(t);
-	GLint color = c;
+	// TODO is it possible with GL44 ClearTexture?
+	// It is seriously not clear if we can clear only the stencil
+	if (GLLoader::found_GL_ARB_clear_texture) {
+#ifdef GL44
+		gl_ClearTexImage(static_cast<GSTextureOGL*>(t)->GetID(), 0, GL_DEPTH_STENCIL, GL_BYTE, &c);
+#endif
+	} else {
+		OMSetFBO(m_fbo);
+		OMSetWriteBuffer();
+		OMAttachDs(t);
+		GLint color = c;
 
-	glDisable(GL_SCISSOR_TEST);
-	gl_ClearBufferiv(GL_STENCIL, 0, &color);
-	glEnable(GL_SCISSOR_TEST);
+		glDisable(GL_SCISSOR_TEST);
+		gl_ClearBufferiv(GL_STENCIL, 0, &color);
+		glEnable(GL_SCISSOR_TEST);
+	}
 }
 
 GLuint GSDeviceOGL::CreateSampler(bool bilinear, bool tau, bool tav)
@@ -494,8 +527,21 @@ void GSDeviceOGL::InitPrimDateTexture(int w, int h)
 	ClearRenderTarget_ui(m_date.t, 0xFFFFFFFF);
 
 #ifdef ENABLE_OGL_STENCIL_DEBUG
-	static_cast<GSTextureOGL*>(m_date.t)->EnableUnit(6);
+	gl_ActiveTexture(GL_TEXTURE0 + 5);
+	glBindTexture(GL_TEXTURE_2D, static_cast<GSTextureOGL*>(m_date.t)->GetID());
+	// Get back to the expected active texture unit
+	gl_ActiveTexture(GL_TEXTURE0 + 3);
 #endif
+
+	BindDateTexture();
+}
+
+void GSDeviceOGL::BindDateTexture()
+{
+	// TODO: multibind?
+	// GLuint textures[1] = {static_cast<GSTextureOGL*>(m_date.t)->GetID()};
+	// gl_BindImageTextures(0, 1, textures);
+	//gl_BindImageTexture(0, 0, 0, true, 0, GL_READ_WRITE, GL_R32UI);
 
 	gl_BindImageTexture(0, static_cast<GSTextureOGL*>(m_date.t)->GetID(), 0, false, 0, GL_READ_WRITE, GL_R32UI);
 }
@@ -511,6 +557,15 @@ void GSDeviceOGL::RecycleDateTexture()
 		Recycle(m_date.t);
 		m_date.t = NULL;
 	}
+}
+
+void GSDeviceOGL::Barrier(GLbitfield b)
+{
+	gl_MemoryBarrier(b);
+//#ifdef ENABLE_OGL_STENCIL_DEBUG
+//	if (m_date.t)
+//		static_cast<GSTextureOGL*>(m_date.t)->Save(format("/tmp/barrier_%04ld.csv", g_draw_count));
+//#endif
 }
 
 GLuint GSDeviceOGL::CompileVS(VSSelector sel)
@@ -637,7 +692,7 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 		gl_FramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GSTextureOGL*>(st_ogl)->GetID(), 0);
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
 
-		dt_ogl->EnableUnit(6);
+		dt_ogl->EnableUnit();
 		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.x, r.y, r.width(), r.height());
 
 		gl_BindFramebuffer(GL_READ_FRAMEBUFFER, 0);
@@ -739,7 +794,7 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// ************************************
 
 	PSSetShaderResource(0, st);
-	PSSetSamplerState(0, linear ? m_convert.ln : m_convert.pt);
+	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt);
 	m_shader->PS(ps);
 
 	// ************************************
@@ -864,7 +919,7 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 	// ps
 
 	PSSetShaderResource(0, rt);
-	PSSetSamplerState(0, m_convert.pt);
+	PSSetSamplerState(m_convert.pt);
 	m_shader->PS(m_convert.ps[datm ? 2 : 3]);
 
 	//
@@ -933,14 +988,52 @@ void GSDeviceOGL::PSSetShaderResource(const int i, GSTexture* sr)
 {
 	ASSERT(sr);
 
-	static_cast<GSTextureOGL*>(sr)->EnableUnit(i);
+	if (m_state.tex_unit[i] != sr) {
+		m_state.tex_unit[i] = sr;
+
+		if (GLLoader::found_GL_ARB_multi_bind) {
+#ifdef GL44
+			gl_BindTextures(i, 1, textures);
+#endif
+		} else {
+			gl_ActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_2D, static_cast<GSTextureOGL*>(sr)->GetID());
+
+			// Get back to the expected active texture unit
+			gl_ActiveTexture(GL_TEXTURE0 + 3);
+		}
+	}
 }
 
-void GSDeviceOGL::PSSetSamplerState(const int i, GLuint ss)
+void GSDeviceOGL::PSSetShaderResources(GSTexture* tex[2])
 {
-	if (m_state.ps_ss[i] != ss) {
-		m_state.ps_ss[i] = ss;
-		gl_BindSampler(i, ss);
+	// FIXME how to check the state
+#ifdef GL44
+	if (m_state.tex_unit[0] != tex[0] || m_state.tex_unit[1] != tex[1]) {
+		GLuint textures[2] = {static_cast<GSTextureOGL*>(tex[0])->GetID(), static_cast<GSTextureOGL*>(tex[1])->GetID()};
+		gl_BindTextures(0, 2, textures);
+	}
+#endif
+
+	// FIXME without multibind
+#if 0
+	for (int i = 0; i < count; i++) {
+		if (m_state.tex_unit[i] != id) {
+			m_state.tex_unit[i] = id;
+			gl_ActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_2D, id);
+		}
+	}
+	// Get back to the expected active texture unit
+	gl_ActiveTexture(GL_TEXTURE0 + 3);
+#endif
+}
+
+void GSDeviceOGL::PSSetSamplerState(GLuint ss)
+{
+	if (m_state.ps_ss != ss) {
+		m_state.ps_ss = ss;
+		gl_BindSampler(0, ss);
 	}
 }
 

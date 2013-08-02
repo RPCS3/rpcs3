@@ -31,6 +31,12 @@ class GSTextureOGL : public GSTexture
 		int m_pbo_size;
 		GLuint m_fbo_read;
 
+		// internal opengl format/type/alignment
+		GLenum m_int_format;
+		GLenum m_int_type;
+		uint32 m_int_alignment;
+		uint32 m_int_shift;
+
 	public:
 		explicit GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read);
 		virtual ~GSTextureOGL();
@@ -42,7 +48,9 @@ class GSTextureOGL : public GSTexture
 		void Save(const string& fn, const void* image, uint32 pitch);
 		void SaveRaw(const string& fn, const void* image, uint32 pitch);
 
-		void EnableUnit(const uint32 unit);
+		void Clear(const void *data);
+
+		void EnableUnit();
 
 		bool IsBackbuffer() { return (m_type == GSTexture::Backbuffer); }
 		bool IsDss() { return (m_type == GSTexture::DepthStencil); }

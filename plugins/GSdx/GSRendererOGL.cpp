@@ -494,9 +494,17 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		ps_ssel.ltf = bilinear && simple_sample;
 
 		dev->SetupSampler(ps_sel, ps_ssel);
-		dev->PSSetShaderResource(0, tex->m_texture);
-		if (tex->m_palette)
-			dev->PSSetShaderResource(1, tex->m_palette);
+		if (tex->m_palette) {
+			if (GLLoader::found_GL_ARB_multi_bind) {
+				GSTexture* textures[2] = {tex->m_texture, tex->m_palette};
+				dev->PSSetShaderResources(textures);
+			} else {
+				dev->PSSetShaderResource(1, tex->m_palette);
+				dev->PSSetShaderResource(0, tex->m_texture);
+			}
+		} else {
+			dev->PSSetShaderResource(0, tex->m_texture);
+		}
 	}
 	else
 	{
@@ -519,7 +527,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	dev->SetupPS(ps_sel, &ps_cb);
 
 	if (advance_DATE) {
-		// Create an r32ui image that will containt primitive ID
+		// Create an r32ui image that will contain primitive ID
 		// Note: do it at the beginning because the clean will dirty the state
 		//dev->InitPrimDateTexture(rtsize.x, rtsize.y);
 
@@ -535,7 +543,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		dev->SetupPS(ps_sel, &ps_cb);
 
 		// Be sure that first pass is finished !
-		gl_MemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+		dev->Barrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	}
 
 	if(context->TEST.DoFirstPass())

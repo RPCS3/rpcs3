@@ -174,7 +174,7 @@ out gl_PerVertex {
     float gl_PointSize;
     float gl_ClipDistance[];
 };
-out int gl_PrimitiveID;
+//out int gl_PrimitiveID;
 
 in SHADER
 {
@@ -313,7 +313,6 @@ void gs_main()
     out_vertex(rb);
 
     EndPrimitive();
-
 }
 
 #endif
@@ -745,16 +744,19 @@ vec4 ps_color()
     return c;
 }
 
+#if GL_ES
 void ps_main()
 {
     vec4 c = ps_color();
-
-#if GL_ES
-
     c.a *= 2.0;
     SV_Target0 = c;
+}
+#endif
 
-#else
+#if !GL_ES
+void ps_main()
+{
+    vec4 c = ps_color();
 
     float alpha = c.a * 2.0;
 
@@ -769,17 +771,15 @@ void ps_main()
         if(c.a < 0.5) c.a += 0.5;
     }
 
-#ifndef DISABLE_GL42_image
-
     // Get first primitive that will write a failling alpha value
-#if PS_DATE == 1
+#if PS_DATE == 1 && !defined(DISABLE_GL42_image)
     // DATM == 0
     // Pixel with alpha equal to 1 will failed
     if (c.a > 127.5f / 255.0f) {
         imageAtomicMin(img_prim_min, ivec2(gl_FragCoord.xy), gl_PrimitiveID);
     }
     //memoryBarrier();
-#elif PS_DATE == 2
+#elif PS_DATE == 2 && !defined(DISABLE_GL42_image)
     // DATM == 1
     // Pixel with alpha equal to 0 will failed
     if (c.a < 127.5f / 255.0f) {
@@ -789,12 +789,21 @@ void ps_main()
 
     // TODO
     // warning non uniform flow ???
-#if PS_DATE == 3
+#if PS_DATE == 3 && !defined(DISABLE_GL42_image)
     uint stencil_ceil = imageLoad(img_prim_min, ivec2(gl_FragCoord.xy));
     // Note gl_PrimitiveID == stencil_ceil will be the primitive that will update
     // the bad alpha value so we must keep it.
-    if (gl_PrimitiveID > stencil_ceil)
-        discard;
+#if 0
+	if (stencil_ceil > 0)
+		c = vec4(1.0, 0.0, 0.0, 1.0);
+	else
+		c = vec4(0.0, 1.0, 0.0, 1.0);
+#endif
+
+#if 1
+	if (gl_PrimitiveID > stencil_ceil) {
+		discard;
+	}
 #endif
 
 #endif
@@ -810,7 +819,7 @@ void ps_main()
     SV_Target1 = vec4(alpha, alpha, alpha, alpha);
 #endif
 
-#endif
 }
+#endif // !GL_ES
 
 #endif

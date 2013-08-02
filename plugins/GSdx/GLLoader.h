@@ -101,6 +101,12 @@ extern   PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation;
 // GL4.2
 extern   PFNGLBINDIMAGETEXTUREPROC              gl_BindImageTexture;
 extern   PFNGLMEMORYBARRIERPROC                 gl_MemoryBarrier;
+// GL4.4
+#ifdef GL44
+extern   PFNGLCLEARTEXIMAGEPROC                 gl_ClearTexImage;
+extern   PFNGLBINDTEXTURESPROC                  gl_BindTextures;
+#endif
+
 #else
 #define gl_ActiveTexture glActiveTexture
 #define gl_BlendColor glBlendColor
@@ -198,4 +204,6 @@ namespace GLLoader {
 	extern bool found_only_gl30;
 	extern bool found_GL_ARB_gpu_shader5;
 	extern bool found_GL_ARB_shader_image_load_store;
+	extern bool found_GL_ARB_clear_texture;
+	extern bool found_GL_ARB_multi_bind;
 }

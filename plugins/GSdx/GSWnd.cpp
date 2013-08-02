@@ -104,5 +104,11 @@ void GSWndGL::PopulateGlFunction()
 	// GL4.2
 	*(void**)&(gl_BindImageTexture) = GetProcAddress("glBindImageTexture");
 	*(void**)&(gl_MemoryBarrier) = GetProcAddress("glMemoryBarrier");
+#ifdef GL44
+	*(void**)&(gl_ClearTexImage) = GetProcAddress("glCLearTexImage");
+	*(void**)&(gl_BindTextures) = GetProcAddress("glBindTextures");
+	*(void**)&(gl_BindSamplers) = GetProcAddress("glBindSamplers");
+#endif
+
 #endif
 }
