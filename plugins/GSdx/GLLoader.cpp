@@ -29,7 +29,6 @@ PFNGLBLENDCOLORPROC                    gl_BlendColor                  = NULL;
 PFNGLATTACHSHADERPROC                  gl_AttachShader                = NULL;
 PFNGLBINDBUFFERPROC                    gl_BindBuffer                  = NULL;
 PFNGLBINDBUFFERBASEPROC                gl_BindBufferBase              = NULL;
-PFNGLBINDFRAGDATALOCATIONINDEXEDPROC   gl_BindFragDataLocationIndexed = NULL;
 PFNGLBINDFRAMEBUFFERPROC               gl_BindFramebuffer             = NULL;
 PFNGLBINDSAMPLERPROC                   gl_BindSampler                 = NULL;
 PFNGLBINDVERTEXARRAYPROC               gl_BindVertexArray             = NULL;
@@ -42,7 +41,6 @@ PFNGLCLEARBUFFERFVPROC                 gl_ClearBufferfv               = NULL;
 PFNGLCLEARBUFFERIVPROC                 gl_ClearBufferiv               = NULL;
 PFNGLCLEARBUFFERUIVPROC                gl_ClearBufferuiv              = NULL;
 PFNGLCOMPILESHADERPROC                 gl_CompileShader               = NULL;
-PFNGLCOPYIMAGESUBDATANVPROC            gl_CopyImageSubDataNV          = NULL;
 PFNGLCREATEPROGRAMPROC                 gl_CreateProgram               = NULL;
 PFNGLCREATESHADERPROC                  gl_CreateShader                = NULL;
 PFNGLCREATESHADERPROGRAMVPROC          gl_CreateShaderProgramv        = NULL;
@@ -64,8 +62,6 @@ PFNGLGENSAMPLERSPROC                   gl_GenSamplers                 = NULL;
 PFNGLGENVERTEXARRAYSPROC               gl_GenVertexArrays             = NULL;
 PFNGLGETBUFFERPARAMETERIVPROC          gl_GetBufferParameteriv        = NULL;
 PFNGLGETDEBUGMESSAGELOGARBPROC         gl_GetDebugMessageLogARB       = NULL;
-PFNGLGETFRAGDATAINDEXPROC              gl_GetFragDataIndex            = NULL;
-PFNGLGETFRAGDATALOCATIONPROC           gl_GetFragDataLocation         = NULL;
 PFNGLGETPROGRAMINFOLOGPROC             gl_GetProgramInfoLog           = NULL;
 PFNGLGETPROGRAMIVPROC                  gl_GetProgramiv                = NULL;
 PFNGLGETSHADERIVPROC                   gl_GetShaderiv                 = NULL;
@@ -83,7 +79,6 @@ PFNGLUNMAPBUFFERPROC                   gl_UnmapBuffer                 = NULL;
 PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages            = NULL;
 PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer        = NULL;
 PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer         = NULL;
-PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D                = NULL;
 PFNGLBUFFERSUBDATAPROC                 gl_BufferSubData               = NULL;
 // GL 4.1
 PFNGLBINDPROGRAMPIPELINEPROC           gl_BindProgramPipeline         = NULL;
@@ -100,14 +95,17 @@ PFNGLPROGRAMUNIFORM1IPROC              gl_ProgramUniform1i            = NULL;
 PFNGLGETUNIFORMBLOCKINDEXPROC          gl_GetUniformBlockIndex        = NULL;
 PFNGLUNIFORMBLOCKBINDINGPROC           gl_UniformBlockBinding         = NULL;
 PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation          = NULL;
+// GL4.3
+PFNGLCOPYIMAGESUBDATAPROC              gl_CopyImageSubData            = NULL;
 // GL4.2
 PFNGLBINDIMAGETEXTUREPROC              gl_BindImageTexture            = NULL;
 PFNGLMEMORYBARRIERPROC                 gl_MemoryBarrier               = NULL;
+PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D                = NULL;
 // GL4.4
-#ifdef GL44
-PFNGLCLEARTEXIMAGEPROC                 gl ClearTexImage               = NULL;
-PFNGLBINDTEXTURESPROC                  gl BindTextures                = NULL;
-#endif
+PFNGLCLEARTEXIMAGEPROC                 gl_ClearTexImage               = NULL;
+PFNGLBINDTEXTURESPROC                  gl_BindTextures                = NULL;
+PFNGLBUFFERSTORAGEPROC                 gl_BufferStorage               = NULL;
+
 #endif
 
 namespace GLLoader {
@@ -116,17 +114,41 @@ namespace GLLoader {
 	bool nvidia_buggy_driver = false;
 	bool in_replayer = false;
 
+	// Optional
 	bool found_GL_ARB_separate_shader_objects = false;
-	bool found_GL_ARB_shading_language_420pack = false;
-	bool found_GL_ARB_texture_storage = false;
 	bool found_geometry_shader = true;
-	bool found_GL_NV_copy_image = false;
+	bool found_only_gl30	= false; // Drop it when mesa support GLSL330
+	bool found_GL_ARB_clear_texture = false; // Don't know if GL3 hardawe can support it
+	bool found_GL_ARB_buffer_storage = false;
+	// GL4 hardware
 	bool found_GL_ARB_copy_image = false;
-	bool found_only_gl30	= false;
 	bool found_GL_ARB_gpu_shader5 = false;
 	bool found_GL_ARB_shader_image_load_store = false;
-	bool found_GL_ARB_clear_texture = false;
-	bool found_GL_ARB_multi_bind = false;
+
+	// Mandatory for FULL GL (but optional for GLES)
+	bool found_GL_ARB_multi_bind = false; // Not yet. Wait Mesa & AMD drivers
+	bool found_GL_ARB_shading_language_420pack = false; // Not yet. Wait Mesa & AMD drivers
+
+	// Mandatory
+	bool found_GL_ARB_texture_storage = false;
+
+	static bool status_and_override(bool& found, const std::string& name, bool mandatory = false)
+	{
+		if (!found) {
+			fprintf(stderr, "INFO: %s is not supported\n", name.c_str());
+			if(mandatory) return false;
+		}
+
+		std::string opt("override_");
+		opt += name;
+
+		if (theApp.GetConfig(opt.c_str(), -1) != -1) {
+			found = !!theApp.GetConfig(opt.c_str(), -1);
+			fprintf(stderr, "Override %s detection (%s)\n", name.c_str(), found ? "Enabled" : "Disabled");
+		}
+
+		return true;
+	}
 
     bool check_gl_version(uint32 major, uint32 minor) {
 
@@ -195,14 +217,13 @@ namespace GLLoader {
 				}
 				if (ext.compare("GL_ARB_shading_language_420pack") == 0) found_GL_ARB_shading_language_420pack = true;
 				if (ext.compare("GL_ARB_texture_storage") == 0) found_GL_ARB_texture_storage = true;
-				if (ext.compare("GL_NV_copy_image") == 0) found_GL_NV_copy_image = true;
-				// Replace previous extensions (when driver will be updated)
 				if (ext.compare("GL_ARB_copy_image") == 0) found_GL_ARB_copy_image = true;
 				if (ext.compare("GL_ARB_gpu_shader5") == 0) found_GL_ARB_gpu_shader5 = true;
 				if (ext.compare("GL_ARB_shader_image_load_store") == 0) found_GL_ARB_shader_image_load_store = true;
-#ifdef GL44
+#ifdef GL44 // Need to debug the code first
 				if (ext.compare("GL_ARB_clear_texture") == 0) found_GL_ARB_clear_texture = true;
 				if (ext.compare("GL_ARB_multi_bind") == 0) found_GL_ARB_multi_bind = true;
+				if (ext.compare("GL_ARB_buffer_storage") == 0) found_GL_ARB_buffer_storage = true;
 #endif
 
 #ifdef ENABLE_GLES
@@ -211,41 +232,23 @@ namespace GLLoader {
 			}
 		}
 
+		bool status = true;
 #ifndef ENABLE_GLES
-		if (!found_GL_ARB_separate_shader_objects) fprintf(stderr, "INFO: GL_ARB_separate_shader_objects is not supported\n");
-		if (!found_GL_ARB_shading_language_420pack) fprintf(stderr, "INFO: GL_ARB_shading_language_420pack is not supported\n");
-		if (!found_GL_ARB_gpu_shader5) fprintf(stderr, "INFO: GL_ARB_gpu_shader5 is not supported\n");
-		if (!found_GL_ARB_shader_image_load_store) fprintf(stderr, "INFO: GL_ARB_shader_image_load_store is not supported\n");
-		if (!found_GL_ARB_clear_texture) fprintf(stderr, "INFO: GL_ARB_clear_texture is not supported\n");
-		if (!found_GL_ARB_multi_bind) fprintf(stderr, "INFO: GL_ARB_multi_bind is not supported\n");
+		fprintf(stderr, "\n");
 
-		if (!found_GL_ARB_texture_storage) {
-			fprintf(stderr, "FATAL: GL_ARB_texture_storage is not supported\n");
-			return false;
-		}
+		status &= status_and_override(found_GL_ARB_separate_shader_objects,"GL_ARB_separate_shader_objects");
+		status &= status_and_override(found_GL_ARB_gpu_shader5,"GL_ARB_gpu_shader5");
+		status &= status_and_override(found_GL_ARB_shader_image_load_store,"GL_ARB_shader_image_load_store");
+		status &= status_and_override(found_GL_ARB_clear_texture,"GL_ARB_clear_texture");
+		status &= status_and_override(found_GL_ARB_buffer_storage,"GL_ARB_buffer_storage");
 
+		status &= status_and_override(found_GL_ARB_texture_storage, "GL_ARB_texture_storage", true);
+		status &= status_and_override(found_GL_ARB_shading_language_420pack,"GL_ARB_shading_language_420pack");
+		status &= status_and_override(found_GL_ARB_multi_bind,"GL_ARB_multi_bind");
 
-		if (theApp.GetConfig("override_GL_ARB_shading_language_420pack", -1) != -1) {
-			found_GL_ARB_shading_language_420pack = !!theApp.GetConfig("override_GL_ARB_shading_language_420pack", -1);
-			fprintf(stderr, "Override GL_ARB_shading_language_420pack detection\n");
-		}
-		if (theApp.GetConfig("override_GL_ARB_separate_shader_objects", -1) != -1) {
-			found_GL_ARB_separate_shader_objects = !!theApp.GetConfig("override_GL_ARB_separate_shader_objects", -1);
-			fprintf(stderr, "Override GL_ARB_separate_shader_objects detection\n");
-		}
-		if (theApp.GetConfig("override_GL_ARB_shader_image_load_store", -1) != -1) {
-			found_GL_ARB_shader_image_load_store = !!theApp.GetConfig("override_GL_ARB_shader_image_load_store", -1);
-			fprintf(stderr, "Override GL_ARB_shader_image_load_store detection\n");
-		}
-		if (theApp.GetConfig("override_GL_ARB_copy_image", -1) != -1) {
-			// Same extension so override both
-			found_GL_ARB_copy_image = !!theApp.GetConfig("override_GL_ARB_copy_image", -1);
-			found_GL_NV_copy_image = !!theApp.GetConfig("override_GL_ARB_copy_image", -1);
-			fprintf(stderr, "Override GL_ARB_copy_image detection\n");
-			fprintf(stderr, "Override GL_NV_copy_image detection\n");
-		}
+		fprintf(stderr, "\n");
 #endif
 
-		return true;
+		return status;
 	}
 }

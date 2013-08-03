@@ -78,7 +78,7 @@ public:
 
 	virtual void AttachContext() = 0;
 	virtual void DetachContext() = 0;
-	virtual void* GetProcAddress(const char* name) = 0;
+	virtual void* GetProcAddress(const char* name, bool opt = false) = 0;
 
 	virtual void Show() = 0;
 	virtual void Hide() = 0;

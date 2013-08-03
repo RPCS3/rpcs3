@@ -123,6 +123,8 @@ GSDeviceOGL::~GSDeviceOGL()
 	for (auto it = m_om_bs.begin(); it != m_om_bs.end(); it++) delete it->second;
 	m_om_bs.clear();
 
+	PboPool::Destroy();
+
 	// Must be done after the destruction of all shader/program objects
 	delete m_shader;
 	m_shader = NULL;
@@ -297,6 +299,11 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	CreateTextureFX();
 
 	// ****************************************************************
+	// Pbo Pool allocation
+	// ****************************************************************
+	PboPool::Init();
+
+	// ****************************************************************
 	// Finish window setup and backbuffer
 	// ****************************************************************
 	if(!GSDevice::Create(wnd))
@@ -441,9 +448,7 @@ void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 	// TODO is it possible with GL44 ClearTexture?
 	// It is seriously not clear if we can clear only the depth
 	if (GLLoader::found_GL_ARB_clear_texture) {
-#ifdef GL44
 		gl_ClearTexImage(static_cast<GSTextureOGL*>(t)->GetID(), 0, GL_DEPTH_STENCIL, GL_FLOAT, &c);
-#endif
 	} else {
 		OMSetFBO(m_fbo);
 		OMSetWriteBuffer();
@@ -466,9 +471,7 @@ void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 	// TODO is it possible with GL44 ClearTexture?
 	// It is seriously not clear if we can clear only the stencil
 	if (GLLoader::found_GL_ARB_clear_texture) {
-#ifdef GL44
 		gl_ClearTexImage(static_cast<GSTextureOGL*>(t)->GetID(), 0, GL_DEPTH_STENCIL, GL_BYTE, &c);
-#endif
 	} else {
 		OMSetFBO(m_fbo);
 		OMSetWriteBuffer();
@@ -664,18 +667,8 @@ void GSDeviceOGL::CopyRect(GSTexture* st, GSTexture* dt, const GSVector4i& r)
 {
 	ASSERT(st && dt);
 
-	// FIXME: the extension was integrated in opengl 4.3 (now we need driver that support OGL4.3)
-	if (GLLoader::found_GL_NV_copy_image) {
+	if (GLLoader::found_GL_ARB_copy_image) {
 #ifndef ENABLE_GLES
-		gl_CopyImageSubDataNV( static_cast<GSTextureOGL*>(st)->GetID(), GL_TEXTURE_2D,
-				0, r.x, r.y, 0,
-				static_cast<GSTextureOGL*>(dt)->GetID(), GL_TEXTURE_2D,
-				0, r.x, r.y, 0,
-				r.width(), r.height(), 1);
-#endif
-	} else if (GLLoader::found_GL_ARB_copy_image) {
-		// Would need an update of GL definition. For the moment it isn't supported by driver anyway.
-#if 0
 		gl_CopyImageSubData( static_cast<GSTextureOGL*>(st)->GetID(), GL_TEXTURE_2D,
 				0, r.x, r.y, 0,
 				static_cast<GSTextureOGL*>(dt)->GetID(), GL_TEXTURE_2D,
@@ -992,9 +985,8 @@ void GSDeviceOGL::PSSetShaderResource(const int i, GSTexture* sr)
 		m_state.tex_unit[i] = sr;
 
 		if (GLLoader::found_GL_ARB_multi_bind) {
-#ifdef GL44
+			GLuint textures[1] = {static_cast<GSTextureOGL*>(sr)->GetID()};
 			gl_BindTextures(i, 1, textures);
-#endif
 		} else {
 			gl_ActiveTexture(GL_TEXTURE0 + i);
 			glBindTexture(GL_TEXTURE_2D, static_cast<GSTextureOGL*>(sr)->GetID());
@@ -1007,15 +999,12 @@ void GSDeviceOGL::PSSetShaderResource(const int i, GSTexture* sr)
 
 void GSDeviceOGL::PSSetShaderResources(GSTexture* tex[2])
 {
-	// FIXME how to check the state
-#ifdef GL44
 	if (m_state.tex_unit[0] != tex[0] || m_state.tex_unit[1] != tex[1]) {
 		GLuint textures[2] = {static_cast<GSTextureOGL*>(tex[0])->GetID(), static_cast<GSTextureOGL*>(tex[1])->GetID()};
 		gl_BindTextures(0, 2, textures);
 	}
-#endif
 
-	// FIXME without multibind
+	// FIXME without multibind?
 #if 0
 	for (int i = 0; i < count; i++) {
 		if (m_state.tex_unit[i] != id) {

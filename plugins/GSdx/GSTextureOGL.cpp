@@ -22,6 +22,38 @@
 #include "stdafx.h"
 #include <limits.h>
 #include "GSTextureOGL.h"
+
+namespace PboPool {
+	
+	GLuint pool[8];
+	uint32 current_pbo = 0;
+
+	void Init() {
+		gl_GenBuffers(countof(pool), pool);
+
+		GLuint size = (640*480*16) << 2;
+
+		for (size_t i = 0; i < countof(pool); i++) {
+			BindPbo();
+			gl_BufferData(GL_PIXEL_UNPACK_BUFFER, size, NULL, GL_STREAM_DRAW);
+		}
+		UnbindPbo();
+	}
+
+	void Destroy() {
+		gl_DeleteBuffers(countof(pool), pool);
+	}
+
+	void BindPbo() {
+		gl_BindBuffer(GL_PIXEL_UNPACK_BUFFER, pool[current_pbo]);
+		current_pbo = (current_pbo + 1) & (countof(pool)-1);
+	}
+
+	void UnbindPbo() {
+		gl_BindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+	}
+}
+
 static GLuint g_tex3_state = 0;
 
 // FIXME: check if it possible to always use those setup by default
@@ -87,6 +119,18 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read)
 			m_int_alignment = 1;
 			m_int_shift     = 0;
 			break;
+		case 0:
+		case GL_DEPTH32F_STENCIL8:
+			// Backbuffer & dss aren't important 
+			m_int_format    = 0;
+			m_int_type      = 0;
+			m_int_alignment = 0;
+			m_int_shift     = 0;
+			break;
+			m_int_format    = 0;
+			m_int_type      = 0;
+			m_int_alignment = 0;
+			m_int_shift     = 0;
 		default:
 			ASSERT(0);
 	}
@@ -149,19 +193,36 @@ GSTextureOGL::~GSTextureOGL()
 
 void GSTextureOGL::Clear(const void *data)
 {
-#ifdef GL44
-	gl_ClearTexImage(m_texture_id, 0,  m_format, m_int_type,  const void * data);
-#endif
+	gl_ClearTexImage(m_texture_id, 0,  m_format, m_int_type, data);
 }
 
 bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 {
 	ASSERT(m_type != GSTexture::DepthStencil && m_type != GSTexture::Offscreen);
 
-	// FIXME warning order of the y axis
-	// FIXME I'm not confident with GL_UNSIGNED_BYTE type
-
 	EnableUnit();
+
+#if 1
+	PboPool::BindPbo();
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, m_int_alignment);
+
+	char* map = (char*)gl_MapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, (pitch * r.height()) << m_int_shift, GL_MAP_WRITE_BIT);
+	char* src = (char*)data;
+	uint32 line_size = r.width() << m_int_shift;
+	for (uint32 h = r.height(); h > 0; h--) {
+		memcpy(map, src, line_size);
+		src += pitch;
+		map += line_size;
+	}
+	gl_UnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+
+	glTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.width(), r.height(), m_int_format, m_int_type, (const void*)0);
+
+	PboPool::UnbindPbo();
+
+	return true;
+#else
 
 	// pitch is in byte wherease GL_UNPACK_ROW_LENGTH is in pixel
 	glPixelStorei(GL_UNPACK_ALIGNMENT, m_int_alignment);
@@ -201,6 +262,7 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	}
 
 	return false;
+#endif
 #endif
 }
 

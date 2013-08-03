@@ -52,7 +52,7 @@ public:
 
 	void AttachContext();
 	void DetachContext();
-	void* GetProcAddress(const char* name);
+	void* GetProcAddress(const char* name, bool opt);
 
 	void Show();
 	void Hide();

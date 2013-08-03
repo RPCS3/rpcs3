@@ -197,12 +197,13 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 	return true;
 }
 
-void* GSWndOGL::GetProcAddress(const char* name)
+void* GSWndOGL::GetProcAddress(const char* name, bool opt)
 {
 	void* ptr = (void*)glXGetProcAddress((const GLubyte*)name);
 	if (ptr == NULL) {
 		fprintf(stderr, "Failed to find %s\n", name);
-		throw GSDXRecoverableError();
+		if (!opt)
+			throw GSDXRecoverableError();
 	}
 	return ptr;
 }

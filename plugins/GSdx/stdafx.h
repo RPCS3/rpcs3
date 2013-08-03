@@ -102,6 +102,7 @@ using namespace std;
 
 #ifdef _WINDOWS
 
+	// Note use GL/glcorearb.h on the future
 	#include <GL/gl.h>
 	#include <GL/glext.h>
 	#include <GL/wglext.h>
@@ -190,6 +191,7 @@ using namespace std;
 	#include <GLES3/gl3.h>
 	#include <GLES3/gl3ext.h>
 #else
+	// Note use GL/glcorearb.h on the future
 	#include <GL/gl.h>
 	#include <GL/glext.h>
 #endif

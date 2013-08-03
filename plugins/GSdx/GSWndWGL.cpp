@@ -265,7 +265,7 @@ GSVector4i GSWndWGL::GetClientRect()
 	return r;
 }
 
-void* GSWndWGL::GetProcAddress(const char* name)
+void* GSWndWGL::GetProcAddress(const char* name, bool opt)
 {
 	void* ptr = (void*)wglGetProcAddress(name);
 	if (ptr == NULL) {

@@ -23,6 +23,17 @@
 
 #include "GSTexture.h"
 
+namespace PboPool {
+	extern GLuint pool[8];
+	extern uint32 current_pbo;
+
+	void BindPbo();
+	void UnbindPbo();
+
+	void Init();
+	void Destroy();
+}
+
 class GSTextureOGL : public GSTexture
 {
 	private:

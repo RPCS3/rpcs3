@@ -75,7 +75,7 @@ public:
 
 	void AttachContext();
 	void DetachContext();
-	void* GetProcAddress(const char* name);
+	void* GetProcAddress(const char* name, bool opt = false);
 
 	void Show();
 	void Hide();

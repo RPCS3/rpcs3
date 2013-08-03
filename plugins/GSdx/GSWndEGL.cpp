@@ -197,12 +197,13 @@ bool GSWndEGL::Create(const string& title, int w, int h)
 	return true;
 }
 
-void* GSWndEGL::GetProcAddress(const char* name)
+void* GSWndEGL::GetProcAddress(const char* name, bool opt)
 {
 	void* ptr = (void*)eglGetProcAddress(name);
 	if (ptr == NULL) {
 		fprintf(stderr, "Failed to find %s\n", name);
-		throw GSDXRecoverableError();
+		if (!opt)
+			throw GSDXRecoverableError();
 	}
 	return ptr;
 }

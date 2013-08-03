@@ -22,12 +22,66 @@
 #pragma once
 
 #ifndef ENABLE_GLES
+// Allow compilation with older mesa
+
+#ifndef GL_ARB_copy_image
+#define GL_ARB_copy_image 1
+#ifdef GL_GLEXT_PROTOTYPES
+GLAPI void APIENTRY glCopyImageSubData (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
+#endif /* GL_GLEXT_PROTOTYPES */
+typedef void (APIENTRYP PFNGLCOPYIMAGESUBDATAPROC) (GLuint srcName, GLenum srcTarget, GLint srcLevel, GLint srcX, GLint srcY, GLint srcZ, GLuint dstName, GLenum dstTarget, GLint dstLevel, GLint dstX, GLint dstY, GLint dstZ, GLsizei srcWidth, GLsizei srcHeight, GLsizei srcDepth);
+#endif
+
+#ifndef GL_VERSION_4_4
+#define GL_VERSION_4_4 1
+#define GL_MAX_VERTEX_ATTRIB_STRIDE       0x82E5
+#define GL_MAP_PERSISTENT_BIT             0x0040
+#define GL_MAP_COHERENT_BIT               0x0080
+#define GL_DYNAMIC_STORAGE_BIT            0x0100
+#define GL_CLIENT_STORAGE_BIT             0x0200
+#define GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT 0x00004000
+#define GL_BUFFER_IMMUTABLE_STORAGE       0x821F
+#define GL_BUFFER_STORAGE_FLAGS           0x8220
+#define GL_CLEAR_TEXTURE                  0x9365
+#define GL_LOCATION_COMPONENT             0x934A
+#define GL_TRANSFORM_FEEDBACK_BUFFER_INDEX 0x934B
+#define GL_TRANSFORM_FEEDBACK_BUFFER_STRIDE 0x934C
+#define GL_QUERY_BUFFER                   0x9192
+#define GL_QUERY_BUFFER_BARRIER_BIT       0x00008000
+#define GL_QUERY_BUFFER_BINDING           0x9193
+#define GL_QUERY_RESULT_NO_WAIT           0x9194
+#define GL_MIRROR_CLAMP_TO_EDGE           0x8743
+typedef void (APIENTRYP PFNGLBUFFERSTORAGEPROC) (GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
+typedef void (APIENTRYP PFNGLCLEARTEXIMAGEPROC) (GLuint texture, GLint level, GLenum format, GLenum type, const void *data);
+typedef void (APIENTRYP PFNGLCLEARTEXSUBIMAGEPROC) (GLuint texture, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *data);
+typedef void (APIENTRYP PFNGLBINDBUFFERSBASEPROC) (GLenum target, GLuint first, GLsizei count, const GLuint *buffers);
+typedef void (APIENTRYP PFNGLBINDBUFFERSRANGEPROC) (GLenum target, GLuint first, GLsizei count, const GLuint *buffers, const GLintptr *offsets, const GLsizeiptr *sizes);
+typedef void (APIENTRYP PFNGLBINDTEXTURESPROC) (GLuint first, GLsizei count, const GLuint *textures);
+typedef void (APIENTRYP PFNGLBINDSAMPLERSPROC) (GLuint first, GLsizei count, const GLuint *samplers);
+typedef void (APIENTRYP PFNGLBINDIMAGETEXTURESPROC) (GLuint first, GLsizei count, const GLuint *textures);
+typedef void (APIENTRYP PFNGLBINDVERTEXBUFFERSPROC) (GLuint first, GLsizei count, const GLuint *buffers, const GLintptr *offsets, const GLsizei *strides);
+#ifdef GL_GLEXT_PROTOTYPES
+GLAPI void APIENTRY glBufferStorage (GLenum target, GLsizeiptr size, const void *data, GLbitfield flags);
+GLAPI void APIENTRY glClearTexImage (GLuint texture, GLint level, GLenum format, GLenum type, const void *data);
+GLAPI void APIENTRY glClearTexSubImage (GLuint texture, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const void *data);
+GLAPI void APIENTRY glBindBuffersBase (GLenum target, GLuint first, GLsizei count, const GLuint *buffers);
+GLAPI void APIENTRY glBindBuffersRange (GLenum target, GLuint first, GLsizei count, const GLuint *buffers, const GLintptr *offsets, const GLsizeiptr *sizes);
+GLAPI void APIENTRY glBindTextures (GLuint first, GLsizei count, const GLuint *textures);
+GLAPI void APIENTRY glBindSamplers (GLuint first, GLsizei count, const GLuint *samplers);
+GLAPI void APIENTRY glBindImageTextures (GLuint first, GLsizei count, const GLuint *textures);
+GLAPI void APIENTRY glBindVertexBuffers (GLuint first, GLsizei count, const GLuint *buffers, const GLintptr *offsets, const GLsizei *strides);
+#endif
+#endif /* GL_VERSION_4_4 */
+
+
+#endif
+
+#ifndef ENABLE_GLES
 extern   PFNGLACTIVETEXTUREPROC                 gl_ActiveTexture;
 extern   PFNGLBLENDCOLORPROC                    gl_BlendColor;
 extern   PFNGLATTACHSHADERPROC                  gl_AttachShader;
 extern   PFNGLBINDBUFFERPROC                    gl_BindBuffer;
 extern   PFNGLBINDBUFFERBASEPROC                gl_BindBufferBase;
-extern   PFNGLBINDFRAGDATALOCATIONINDEXEDPROC   gl_BindFragDataLocationIndexed;
 extern   PFNGLBINDFRAMEBUFFERPROC               gl_BindFramebuffer;
 extern   PFNGLBINDSAMPLERPROC                   gl_BindSampler;
 extern   PFNGLBINDVERTEXARRAYPROC               gl_BindVertexArray;
@@ -40,7 +94,6 @@ extern   PFNGLCLEARBUFFERFVPROC                 gl_ClearBufferfv;
 extern   PFNGLCLEARBUFFERIVPROC                 gl_ClearBufferiv;
 extern   PFNGLCLEARBUFFERUIVPROC                gl_ClearBufferuiv;
 extern   PFNGLCOMPILESHADERPROC                 gl_CompileShader;
-extern   PFNGLCOPYIMAGESUBDATANVPROC            gl_CopyImageSubDataNV;
 extern   PFNGLCREATEPROGRAMPROC                 gl_CreateProgram;
 extern   PFNGLCREATESHADERPROC                  gl_CreateShader;
 extern   PFNGLCREATESHADERPROGRAMVPROC          gl_CreateShaderProgramv;
@@ -62,8 +115,6 @@ extern   PFNGLGENSAMPLERSPROC                   gl_GenSamplers;
 extern   PFNGLGENVERTEXARRAYSPROC               gl_GenVertexArrays;
 extern   PFNGLGETBUFFERPARAMETERIVPROC          gl_GetBufferParameteriv;
 extern   PFNGLGETDEBUGMESSAGELOGARBPROC         gl_GetDebugMessageLogARB;
-extern   PFNGLGETFRAGDATAINDEXPROC              gl_GetFragDataIndex;
-extern   PFNGLGETFRAGDATALOCATIONPROC           gl_GetFragDataLocation;
 extern   PFNGLGETPROGRAMINFOLOGPROC             gl_GetProgramInfoLog;
 extern   PFNGLGETPROGRAMIVPROC                  gl_GetProgramiv;
 extern   PFNGLGETSHADERIVPROC                   gl_GetShaderiv;
@@ -81,7 +132,6 @@ extern   PFNGLUNMAPBUFFERPROC                   gl_UnmapBuffer;
 extern   PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages;
 extern   PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer;
 extern   PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer;
-extern   PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D;
 extern   PFNGLBUFFERSUBDATAPROC                 gl_BufferSubData;
 // GL4.1
 extern   PFNGLBINDPROGRAMPIPELINEPROC           gl_BindProgramPipeline;
@@ -101,11 +151,13 @@ extern   PFNGLGETUNIFORMLOCATIONPROC            gl_GetUniformLocation;
 // GL4.2
 extern   PFNGLBINDIMAGETEXTUREPROC              gl_BindImageTexture;
 extern   PFNGLMEMORYBARRIERPROC                 gl_MemoryBarrier;
+extern   PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D;
+// GL4.3
+extern   PFNGLCOPYIMAGESUBDATAPROC              gl_CopyImageSubData;
 // GL4.4
-#ifdef GL44
 extern   PFNGLCLEARTEXIMAGEPROC                 gl_ClearTexImage;
 extern   PFNGLBINDTEXTURESPROC                  gl_BindTextures;
-#endif
+extern   PFNGLBUFFERSTORAGEPROC                 gl_BufferStorage;
 
 #else
 #define gl_ActiveTexture glActiveTexture
@@ -113,7 +165,6 @@ extern   PFNGLBINDTEXTURESPROC                  gl_BindTextures;
 #define gl_AttachShader glAttachShader
 #define gl_BindBuffer glBindBuffer
 #define gl_BindBufferBase glBindBufferBase
-#define gl_BindFragDataLocationIndexed glBindFragDataLocationIndexed
 #define gl_BindFramebuffer glBindFramebuffer
 #define gl_BindSampler glBindSampler
 #define gl_BindVertexArray glBindVertexArray
@@ -125,7 +176,6 @@ extern   PFNGLBINDTEXTURESPROC                  gl_BindTextures;
 #define gl_ClearBufferfv glClearBufferfv
 #define gl_ClearBufferiv glClearBufferiv
 #define gl_CompileShader glCompileShader
-#define gl_CopyImageSubDataNV glCopyImageSubDataNV
 #define gl_CreateProgram glCreateProgram
 #define gl_CreateShader glCreateShader
 #define gl_CreateShaderProgramv glCreateShaderProgramv
@@ -147,8 +197,6 @@ extern   PFNGLBINDTEXTURESPROC                  gl_BindTextures;
 #define gl_GenVertexArrays glGenVertexArrays
 #define gl_GetBufferParameteriv glGetBufferParameteriv
 #define gl_GetDebugMessageLogARB glGetDebugMessageLogARB
-#define gl_GetFragDataIndex glGetFragDataIndex
-#define gl_GetFragDataLocation glGetFragDataLocation
 #define gl_GetProgramInfoLog glGetProgramInfoLog
 #define gl_GetProgramiv glGetProgramiv
 #define gl_GetShaderiv glGetShaderiv
@@ -197,13 +245,12 @@ namespace GLLoader {
 
 	extern bool found_GL_ARB_separate_shader_objects;
 	extern bool found_GL_ARB_shading_language_420pack;
-	extern bool found_GL_ARB_texture_storage;
 	extern bool found_GL_ARB_copy_image;
-	extern bool found_GL_NV_copy_image;
 	extern bool found_geometry_shader;
 	extern bool found_only_gl30;
 	extern bool found_GL_ARB_gpu_shader5;
 	extern bool found_GL_ARB_shader_image_load_store;
 	extern bool found_GL_ARB_clear_texture;
 	extern bool found_GL_ARB_multi_bind;
+	extern bool found_GL_ARB_buffer_storage;
 }
