@@ -1166,7 +1166,7 @@ private:
 				(~CPU.GPR[rc]._u32[i] & CPU.GPR[ra]._u32[i]);
 		}
 	}
-	void SHUFB(u32 rc, u32 ra, u32 rb, u32 rt)
+	void SHUFB(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		ConLog.Warning("SHUFB");
 	}
@@ -1175,7 +1175,7 @@ private:
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._i32[w] = CPU.GPR[ra]._i16[w*2 + 1] * CPU.GPR[rb]._i16[w*2 + 1] + CPU.GPR[rc]._i32[w];
 	}
-	void FNMS(u32 rc, u32 ra, u32 rb, u32 rt)
+	void FNMS(u32 rt, u32 ra, u32 rb, u32 rc)
 	{
 		UNIMPLEMENTED();
 	}

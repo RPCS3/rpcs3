@@ -235,6 +235,9 @@ extern int cellGcmSetFlipMode(u32 mode);
 extern u32 cellGcmGetDefaultCommandWordSize();
 extern u32 cellGcmGetDefaultSegmentWordSize();
 extern int cellGcmSetDefaultFifoSize(u32 bufferSize, u32 segmentSize);
+extern int cellGcmMapEaIoAddress(const u32 ea, const u32 io, const u32 size);
+extern int cellGcmUnbindTile(u8 index);
+extern int cellGcmUnbindZcull(u8 index);
 
 //sys_tty
 extern int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);

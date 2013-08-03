@@ -25,6 +25,8 @@ private:
 	void Stop(wxCommandEvent& event);
 	void SendExit(wxCommandEvent& event);
 	void Config(wxCommandEvent& event);
+	void ConfigVFS(wxCommandEvent& event);
+	void ConfigVHDD(wxCommandEvent& event);
 	void UpdateUI(wxCommandEvent& event);
 	void OnKeyDown(wxKeyEvent& event);
 

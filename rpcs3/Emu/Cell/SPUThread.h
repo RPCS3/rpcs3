@@ -1,6 +1,7 @@
 #pragma once
 #include "PPCThread.h"
 #include "Emu/event.h"
+#include "MFC.h"
 
 static const wxString spu_reg_name[128] =
 {
@@ -127,72 +128,7 @@ class SPUThread : public PPCThread
 {
 public:
 	SPU_GPR_hdr GPR[128]; //General-Purpose Register
-
-	template<size_t _max_count>
-	class SPUReg
-	{
-		u64 m_addr;
-		u32 m_pos;
-
-	public:
-		static const size_t max_count = _max_count;
-		static const size_t size = max_count * 4;
-
-		SPUReg()
-		{
-			Init();
-		}
-
-		void Init()
-		{
-			m_pos = 0;
-		}
-
-		void SetAddr(u64 addr)
-		{
-			m_addr = addr;
-		}
-
-		u64 GetAddr() const
-		{
-			return m_addr;
-		}
-
-		__forceinline bool Pop(u32& res)
-		{
-			if(!m_pos) return false;
-			res = Memory.Read32(m_addr + m_pos--);
-			return true;
-		}
-
-		__forceinline bool Push(u32 value)
-		{
-			if(m_pos >= max_count) return false;
-			Memory.Write32(m_addr + m_pos++, value);
-			return true;
-		}
-
-		u32 GetCount() const
-		{
-			return m_pos;
-		}
-
-		u32 GetFreeCount() const
-		{
-			return max_count - m_pos;
-		}
-
-		void SetValue(u32 value)
-		{
-			Memory.Write32(m_addr, value);
-		}
-
-		u32 GetValue() const
-		{
-			return Memory.Read32(m_addr);
-		}
-	};
-
+	/*
 	SPUReg<1> MFC_LSA;
 	SPUReg<1> MFC_EAH;
 	SPUReg<1> MFC_EAL;
@@ -210,9 +146,10 @@ public:
 	SPUReg<1> SPU_NPC;
 	SPUReg<1> SPU_RdSigNotify1;
 	SPUReg<1> SPU_RdSigNotify2;
-
+	*/
 	SizedStack<u32, 1> SPU_OutIntr_Mbox;
 	u32 LSA;
+	MFC mfc;
 
 	union
 	{
@@ -225,10 +162,10 @@ public:
 		switch(ch)
 		{
 		case SPU_WrOutMbox:
-			return SPU_Out_MBox.GetFreeCount();
+			return mfc.SPU_Out_MBox.GetFreeCount();
 
 		case SPU_RdInMbox:
-			return SPU_In_MBox.GetCount();
+			return mfc.SPU_In_MBox.GetCount();
 
 		case SPU_WrOutIntrMbox:
 			return 0;//return SPU_OutIntr_Mbox.GetFreeCount();
@@ -257,11 +194,11 @@ public:
 
 		case SPU_WrOutMbox:
 			ConLog.Warning("SPU_WrOutMbox = 0x%x", v);
-			if(!SPU_Out_MBox.Push(v))
+			if(!mfc.SPU_Out_MBox.Push(v))
 			{
 				ConLog.Warning("Not enought free rooms.");
 			}
-			SPU_Status.SetValue((SPU_Status.GetValue() & ~0xff) | 1);
+			mfc.SPU_Status.SetValue((mfc.SPU_Status.GetValue() & ~0xff) | 1);
 		break;
 
 		default:
@@ -278,8 +215,8 @@ public:
 		switch(ch)
 		{
 		case SPU_RdInMbox:
-			if(!SPU_In_MBox.Pop(v)) v = 0;
-			SPU_Status.SetValue((SPU_Status.GetValue() & ~0xff00) | (SPU_In_MBox.GetCount() << 8));
+			if(!mfc.SPU_In_MBox.Pop(v)) v = 0;
+			mfc.SPU_Status.SetValue((mfc.SPU_Status.GetValue() & ~0xff00) | (mfc.SPU_In_MBox.GetCount() << 8));
 		break;
 
 		default:
@@ -288,18 +225,18 @@ public:
 		}
 	}
 
-	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa); }
-	u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + (m_offset & 0x3fffc)); }
-	u16  ReadLS16 (const u32 lsa) const { return Memory.Read16 (lsa + m_offset); }
-	u32  ReadLS32 (const u32 lsa) const { return Memory.Read32 (lsa + m_offset); }
-	u64  ReadLS64 (const u32 lsa) const { return Memory.Read64 (lsa + m_offset); }
-	u128 ReadLS128(const u32 lsa) const { return Memory.Read128(lsa + m_offset); }
+	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset); }
+	virtual u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + (m_offset & 0x3fffc)); }
+	virtual u16  ReadLS16 (const u32 lsa) const { return Memory.Read16 (lsa + m_offset); }
+	virtual u32  ReadLS32 (const u32 lsa) const { return Memory.Read32 (lsa + m_offset); }
+	virtual u64  ReadLS64 (const u32 lsa) const { return Memory.Read64 (lsa + m_offset); }
+	virtual u128 ReadLS128(const u32 lsa) const { return Memory.Read128(lsa + m_offset); }
 
-	void WriteLS8  (const u32 lsa, const u8&   data) const { Memory.Write8  (lsa + m_offset, data); }
-	void WriteLS16 (const u32 lsa, const u16&  data) const { Memory.Write16 (lsa + m_offset, data); }
-	void WriteLS32 (const u32 lsa, const u32&  data) const { Memory.Write32 (lsa + m_offset, data); }
-	void WriteLS64 (const u32 lsa, const u64&  data) const { Memory.Write64 (lsa + m_offset, data); }
-	void WriteLS128(const u32 lsa, const u128& data) const { Memory.Write128(lsa + m_offset, data); }
+	virtual void WriteLS8  (const u32 lsa, const u8&   data) const { Memory.Write8  (lsa + m_offset, data); }
+	virtual void WriteLS16 (const u32 lsa, const u16&  data) const { Memory.Write16 (lsa + m_offset, data); }
+	virtual void WriteLS32 (const u32 lsa, const u32&  data) const { Memory.Write32 (lsa + m_offset, data); }
+	virtual void WriteLS64 (const u32 lsa, const u64&  data) const { Memory.Write64 (lsa + m_offset, data); }
+	virtual void WriteLS128(const u32 lsa, const u128& data) const { Memory.Write128(lsa + m_offset, data); }
 
 public:
 	SPUThread(PPCThreadType type = PPC_THREAD_SPU);

@@ -57,7 +57,7 @@ public:
 	MainFrame* m_MainFrame;
 	DebuggerPanel* m_debugger_frame;
 
-    virtual bool OnInit();
+	virtual bool OnInit();
 	virtual void Exit();
 
 	void SendDbgCommand(DbgCommand id, PPCThread* thr=nullptr);

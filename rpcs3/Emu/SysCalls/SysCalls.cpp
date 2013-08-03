@@ -14,7 +14,7 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //34
 	null_func, null_func, null_func, null_func, null_func, //39
 	null_func, bind_func(sys_ppu_thread_exit), null_func, bind_func(sys_ppu_thread_yield), bind_func(sys_ppu_thread_join), //44
-	bind_func(sys_ppu_thread_detach), bind_func(sys_ppu_thread_detach), bind_func(sys_ppu_thread_get_join_state), bind_func(sys_ppu_thread_set_priority), bind_func(sys_ppu_thread_get_priority), //49
+	bind_func(sys_ppu_thread_detach), bind_func(sys_ppu_thread_get_join_state), bind_func(sys_ppu_thread_set_priority), bind_func(sys_ppu_thread_get_priority), bind_func(sys_ppu_thread_get_stack_information), //49
 	bind_func(sys_ppu_thread_stop), bind_func(sys_ppu_thread_restart), bind_func(sys_ppu_thread_create), null_func, null_func, //54
 	null_func, null_func, null_func, null_func, null_func, //59
 	null_func, null_func, null_func, null_func, null_func, //64

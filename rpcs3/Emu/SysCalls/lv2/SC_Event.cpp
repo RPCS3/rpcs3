@@ -63,7 +63,7 @@ int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout)
 				{
 					u32 val;
 					thr->SPU_OutIntr_Mbox.Pop(val);
-					if(!thr->SPU_Out_MBox.Pop(val)) val = 0;
+					if(!thr->mfc.SPU_Out_MBox.Pop(val)) val = 0;
 					equeue->ports[i]->data1 = val;
 					equeue->ports[i]->data2 = 0;
 					equeue->ports[i]->data3 = 0;

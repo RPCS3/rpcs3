@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VFS.h"
+#include "Emu\HDD\HDD.h"
 
 int sort_devices(const void* _a, const void* _b)
 {
@@ -31,10 +32,20 @@ void VFS::UnMount(const wxString& ps3_path)
 	{
 		if(!m_devices[i].GetPs3Path().Cmp(ps3_path))
 		{
-			m_devices.RemoveAt(i);
+			delete &m_devices[i];
+			m_devices.RemoveFAt(i);
 
 			return;
 		}
+	}
+}
+
+void VFS::UnMountAll()
+{
+	for(u32 i=0; i<m_devices.GetCount(); ++i)
+	{
+		delete &m_devices[i];
+		m_devices.RemoveFAt(i);
 	}
 }
 
@@ -88,4 +99,107 @@ vfsDevice* VFS::GetDevice(const wxString& ps3_path, wxString& path)
 
 	path = vfsDevice::GetWinPath(m_devices[max_i].GetLocalPath(), ps3_path(max_eq, ps3_path.Len() - max_eq));
 	return &m_devices[max_i];
+}
+
+void VFS::Init(const wxString& path)
+{
+	Array<VFSManagerEntry> entries;
+	SaveLoadDevices(entries, true);
+
+	for(uint i=0; i<entries.GetCount(); ++i)
+	{
+		vfsDevice* dev;
+
+		switch(entries[i].device)
+		{
+		case vfsDevice_LocalFile:
+			dev = new vfsLocalFile();
+		break;
+
+		case vfsDevice_HDD:
+			dev = new vfsHDD(entries[i].device_path.GetPtr());
+		break;
+
+		default:
+			continue;
+		}
+		
+		wxString mpath = entries[i].path.GetPtr();
+		mpath.Replace("$(EmulatorDir)", wxGetCwd());
+		mpath.Replace("$(GameDir)", vfsDevice::GetRoot(path));
+		Mount(entries[i].mount.GetPtr(), mpath, dev);
+	}
+}
+
+void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
+{
+	IniEntry<int> entries_count;
+	entries_count.Init("count", "VFSManager");
+
+	int count;
+	if(is_load)
+	{
+		count = entries_count.LoadValue(count);
+
+		if(!count)
+		{
+			int idx;
+			idx = res.Move(new VFSManagerEntry());
+			res[idx].path = "$(EmulatorDir)\\dev_hdd0\\";
+			res[idx].mount = "/dev_hdd0/";
+			res[idx].device = vfsDevice_LocalFile;
+		
+			idx = res.Move(new VFSManagerEntry());
+			res[idx].path = "$(GameDir)";
+			res[idx].mount = "";
+			res[idx].device = vfsDevice_LocalFile;
+
+			idx = res.Move(new VFSManagerEntry());
+			res[idx].path = "$(GameDir)";
+			res[idx].mount = "/";
+			res[idx].device = vfsDevice_LocalFile;
+
+			idx = res.Move(new VFSManagerEntry());
+			res[idx].path = "$(GameDir)";
+			res[idx].mount = "/app_home/";
+			res[idx].device = vfsDevice_LocalFile;
+			return;
+		}
+
+		res.SetCount(count);
+	}
+	else
+	{
+		count = res.GetCount();
+		entries_count.SaveValue(res.GetCount());
+	}
+
+	for(int i=0; i<count; ++i)
+	{
+		IniEntry<wxString> entry_path;
+		IniEntry<wxString> entry_device_path;
+		IniEntry<wxString> entry_mount;
+		IniEntry<int> entry_device;
+
+		entry_path.Init(wxString::Format("path[%d]", i), "VFSManager");
+		entry_device_path.Init(wxString::Format("device_path[%d]", i), "VFSManager");
+		entry_mount.Init(wxString::Format("mount[%d]", i), "VFSManager");
+		entry_device.Init(wxString::Format("device[%d]", i), "VFSManager");
+		
+		if(is_load)
+		{
+			new (res + i) VFSManagerEntry();
+			res[i].path = entry_path.LoadValue(wxEmptyString);
+			res[i].device_path = entry_device_path.LoadValue(wxEmptyString);
+			res[i].mount = entry_mount.LoadValue(wxEmptyString);
+			res[i].device = (vfsDeviceType)entry_device.LoadValue(vfsDevice_LocalFile);
+		}
+		else
+		{
+			entry_path.SaveValue(res[i].path.GetPtr());
+			entry_device_path.SaveValue(res[i].device_path.GetPtr());
+			entry_mount.SaveValue(res[i].mount.GetPtr());
+			entry_device.SaveValue(res[i].device);
+		}
+	}
 }

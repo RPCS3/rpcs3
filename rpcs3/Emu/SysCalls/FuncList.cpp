@@ -318,7 +318,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x5f909b17: FUNC_LOG_ERROR("TODO: _cellGcmFunc1");
 	case 0x626e8518: FUNC_LOG_ERROR("TODO: cellGcmMapEaIoAddressWithFlags");
 	case 0x63387071: FUNC_LOG_ERROR("TODO: cellGcmGetLastFlipTime");
-	case 0x63441cb4: FUNC_LOG_ERROR("TODO: cellGcmMapEaIoAddress");
+	case 0x63441cb4: return cellGcmMapEaIoAddress(SC_ARGS_3); //FUNC_LOG_ERROR("TODO: cellGcmMapEaIoAddress");
 	case 0x657571f7: FUNC_LOG_ERROR("TODO: cellGcmGetTileInfo");
 	case 0x661fe266: FUNC_LOG_ERROR("TODO: _cellGcmFunc12");
 	case 0x688b8ac9: FUNC_LOG_ERROR("TODO: _cellGcmFunc38");

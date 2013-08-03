@@ -97,7 +97,11 @@ struct Elf32_Note
 	u32 descsz;
 	u32 type;
 	u8 name[8];
-	Elf32_Desc desc;
+	union
+	{
+		Elf32_Desc desc;
+		char desc_text[32];
+	};
 
 	void Load(vfsStream& f)
 	{
@@ -105,7 +109,15 @@ struct Elf32_Note
 		descsz = Read32(f);
 		type = Read32(f);
 		f.Read(name, 8);
-		desc.Load(f);
+
+		if(descsz == 32)
+		{
+			f.Read(desc_text, descsz);
+		}
+		else
+		{
+			desc.Load(f);
+		}
 	}
 };
 

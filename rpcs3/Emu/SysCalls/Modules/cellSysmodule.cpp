@@ -86,10 +86,10 @@ int cellSysmoduleIsLoaded(u16 id)
 
 void cellSysmodule_init()
 {
-	cellSysmodule.AddFunc(0x63ff6ff9, bind_func(cellSysmoduleInitialize));
-	cellSysmodule.AddFunc(0x96c07adf, bind_func(cellSysmoduleFinalize));
-	cellSysmodule.AddFunc(0xa193143c, bind_func(cellSysmoduleSetMemcontainer));
-	cellSysmodule.AddFunc(0x32267a31, bind_func(cellSysmoduleLoadModule));
-	cellSysmodule.AddFunc(0x112a5ee9, bind_func(cellSysmoduleUnloadModule));
-	cellSysmodule.AddFunc(0x5a59e258, bind_func(cellSysmoduleIsLoaded));
+	cellSysmodule.AddFunc(0x63ff6ff9, cellSysmoduleInitialize);
+	cellSysmodule.AddFunc(0x96c07adf, cellSysmoduleFinalize);
+	cellSysmodule.AddFunc(0xa193143c, cellSysmoduleSetMemcontainer);
+	cellSysmodule.AddFunc(0x32267a31, cellSysmoduleLoadModule);
+	cellSysmodule.AddFunc(0x112a5ee9, cellSysmoduleUnloadModule);
+	cellSysmodule.AddFunc(0x5a59e258, cellSysmoduleIsLoaded);
 }

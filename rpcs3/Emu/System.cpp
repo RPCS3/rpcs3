@@ -174,10 +174,11 @@ void Emulator::Run()
 	//ConLog.Write("run...");
 	m_status = Runned;
 
-	m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
-	m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	m_vfs.Init(m_path);
+	//m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	//m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
+	//m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	//m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
 
 	ConLog.SkipLn();
 	ConLog.Write("Mount info:");
@@ -244,6 +245,8 @@ void Emulator::Stop()
 	SavePoints(BreakPointsDBName);
 	m_break_points.Clear();
 	m_marked_points.Clear();
+
+	m_vfs.UnMountAll();
 
 	GetGSManager().Close();
 	GetCPU().Close();

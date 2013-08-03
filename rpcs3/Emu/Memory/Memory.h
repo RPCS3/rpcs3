@@ -336,6 +336,7 @@ public:
 		}
 
 		MemoryBlocks.Add((new MemoryMirror())->SetRange(GetMemFromAddr(src_addr), dst_addr, size));
+		ConLog.Warning("memory mapped 0x%llx to 0x%llx size=0x%x", src_addr, dst_addr, size);
 		return true;
 	}
 

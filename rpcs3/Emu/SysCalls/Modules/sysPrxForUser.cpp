@@ -49,34 +49,34 @@ s64 sys_strlen(u32 addr)
 
 void sysPrxForUser_init()
 {
-	sysPrxForUser.AddFunc(0x744680a2, bind_func(sys_initialize_tls));
+	sysPrxForUser.AddFunc(0x744680a2, sys_initialize_tls);
 	
-	sysPrxForUser.AddFunc(0x2f85c0ef, bind_func(sys_lwmutex_create));
-	sysPrxForUser.AddFunc(0xc3476d0c, bind_func(sys_lwmutex_destroy));
-	sysPrxForUser.AddFunc(0x1573dc3f, bind_func(sys_lwmutex_lock));
-	sysPrxForUser.AddFunc(0xaeb78725, bind_func(sys_lwmutex_trylock));
-	sysPrxForUser.AddFunc(0x1bc200f4, bind_func(sys_lwmutex_unlock));
+	sysPrxForUser.AddFunc(0x2f85c0ef, sys_lwmutex_create);
+	sysPrxForUser.AddFunc(0xc3476d0c, sys_lwmutex_destroy);
+	sysPrxForUser.AddFunc(0x1573dc3f, sys_lwmutex_lock);
+	sysPrxForUser.AddFunc(0xaeb78725, sys_lwmutex_trylock);
+	sysPrxForUser.AddFunc(0x1bc200f4, sys_lwmutex_unlock);
 
-	sysPrxForUser.AddFunc(0x8461e528, bind_func(sys_time_get_system_time));
+	sysPrxForUser.AddFunc(0x8461e528, sys_time_get_system_time);
 
-	sysPrxForUser.AddFunc(0xe6f2c1e7, bind_func(sys_process_exit));
-	sysPrxForUser.AddFunc(0x2c847572, bind_func(sys_process_atexitspawn));
-	sysPrxForUser.AddFunc(0x96328741, bind_func(sys_process_at_Exitspawn));
+	sysPrxForUser.AddFunc(0xe6f2c1e7, sys_process_exit);
+	sysPrxForUser.AddFunc(0x2c847572, sys_process_atexitspawn);
+	sysPrxForUser.AddFunc(0x96328741, sys_process_at_Exitspawn);
 
-	sysPrxForUser.AddFunc(0x24a1ea07, bind_func(sys_ppu_thread_create));
-	sysPrxForUser.AddFunc(0x350d454e, bind_func(sys_ppu_thread_get_id));
-	sysPrxForUser.AddFunc(0xaff080a4, bind_func(sys_ppu_thread_exit));
-	sysPrxForUser.AddFunc(0xa3e3be68, bind_func(sys_ppu_thread_once));
+	sysPrxForUser.AddFunc(0x24a1ea07, sys_ppu_thread_create);
+	sysPrxForUser.AddFunc(0x350d454e, sys_ppu_thread_get_id);
+	sysPrxForUser.AddFunc(0xaff080a4, sys_ppu_thread_exit);
+	sysPrxForUser.AddFunc(0xa3e3be68, sys_ppu_thread_once);
 
-	sysPrxForUser.AddFunc(0x45fe2fce, bind_func(sys_spu_printf_initialize));
+	sysPrxForUser.AddFunc(0x45fe2fce, sys_spu_printf_initialize);
 
-	sysPrxForUser.AddFunc(0x42b23552, bind_func(sys_prx_register_library));
-	sysPrxForUser.AddFunc(0xa2c7ba64, bind_func(sys_prx_exitspawn_with_level));
+	sysPrxForUser.AddFunc(0x42b23552, sys_prx_register_library);
+	sysPrxForUser.AddFunc(0xa2c7ba64, sys_prx_exitspawn_with_level);
 
-	sysPrxForUser.AddFunc(0x2d36462b, bind_func(sys_strlen));
+	sysPrxForUser.AddFunc(0x2d36462b, sys_strlen);
 
-	sysPrxForUser.AddFunc(0x35168520, bind_func(sys_heap_malloc));
-	//sysPrxForUser.AddFunc(0xaede4b03, bind_func(sys_heap_free));
-	//sysPrxForUser.AddFunc(0x8a561d92, bind_func(sys_heap_delete_heap));
-	sysPrxForUser.AddFunc(0xb2fcf2c8, bind_func(sys_heap_create_heap));
+	sysPrxForUser.AddFunc(0x35168520, sys_heap_malloc);
+	//sysPrxForUser.AddFunc(0xaede4b03, sys_heap_free);
+	//sysPrxForUser.AddFunc(0x8a561d92, sys_heap_delete_heap);
+	sysPrxForUser.AddFunc(0xb2fcf2c8, sys_heap_create_heap);
 }

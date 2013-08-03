@@ -339,7 +339,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						Module* module = GetModuleByName(module_name);
 						if(module)
 						{
-							module->SetLoaded();
+							//module->SetLoaded();
 						}
 						else
 						{

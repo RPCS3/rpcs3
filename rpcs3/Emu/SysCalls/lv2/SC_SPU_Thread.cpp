@@ -350,7 +350,7 @@ int sys_spu_thread_write_spu_mb(u32 id, u32 value)
 		return CELL_ESRCH;
 	}
 
-	if(!(*(SPUThread*)thr).SPU_In_MBox.Push(value))
+	if(!(*(SPUThread*)thr).mfc.SPU_In_MBox.Push(value))
 	{
 		ConLog.Warning("sys_spu_thread_write_spu_mb(id=0x%x, value=0x%x): used all mbox items.");
 		return CELL_EBUSY; //?

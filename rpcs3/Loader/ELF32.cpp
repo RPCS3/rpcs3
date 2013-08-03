@@ -176,7 +176,7 @@ bool ELF32Loader::LoadPhdrData(u64 offset)
 				break;
 			}
 
-			if(note.descsz < sizeof(note.desc))
+			if(note.descsz != sizeof(note.desc) && note.descsz != 32)
 			{
 				ConLog.Error("ELF32: Bad NOTE descsz (%d)", note.descsz);
 				break;
@@ -188,9 +188,16 @@ bool ELF32Loader::LoadPhdrData(u64 offset)
 			//	break;
 			//}
 
-			ConLog.Warning("name = %s", note.name);
-			ConLog.Warning("ls_size = %d", note.desc.ls_size);
-			ConLog.Warning("stack_size = %d", note.desc.stack_size);
+			if(note.descsz == sizeof(note.desc))
+			{
+				ConLog.Warning("name = %s", note.name);
+				ConLog.Warning("ls_size = %d", note.desc.ls_size);
+				ConLog.Warning("stack_size = %d", note.desc.stack_size);
+			}
+			else
+			{
+				ConLog.Warning("desc = '%s'", note.desc_text);
+			}
 		}
 #ifdef LOADER_DEBUG
 		ConLog.SkipLn();

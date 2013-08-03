@@ -36,7 +36,7 @@ protected:
 
 public:
 	MemoryBlock();
-	~MemoryBlock();
+	virtual ~MemoryBlock();
 
 private:
 	void Init();

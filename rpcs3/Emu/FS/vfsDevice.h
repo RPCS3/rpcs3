@@ -1,19 +1,23 @@
 #pragma once
 #include "vfsStream.h"
+#include <mutex>
 
 enum vfsOpenMode
 {
-	vfsRead,
-	vfsWrite,
-	vfsReadWrite,
-	vfsWriteExcl,
-	vfsWriteAppend,
+	vfsRead = 0x1,
+	vfsWrite = 0x2,
+	vfsExcl = 0x4,
+	vfsAppend = 0x8,
+	vfsReadWrite = vfsRead | vfsWrite,
+	vfsWriteExcl = vfsWrite | vfsExcl,
+	vfsWriteAppend = vfsWrite | vfsAppend,
 };
 
 class vfsDevice : public vfsStream
 {
 	wxString m_ps3_path;
 	wxString m_local_path;
+	mutable std::mutex m_mtx_lock;
 
 public:
 	vfsDevice(const wxString& ps3_path, const wxString& local_path);
@@ -36,4 +40,24 @@ public:
 	static wxString GetWinPath(const wxString& l, const wxString& r);
 	static wxString GetPs3Path(const wxString& p, bool is_dir = true);
 	static wxString GetPs3Path(const wxString& l, const wxString& r);
+
+	void Lock() const;
+	void Unlock() const;
+	bool TryLock() const;
+};
+
+class vfsDeviceLocker
+{
+	vfsDevice& m_device;
+
+public:
+	vfsDeviceLocker(vfsDevice& device) : m_device(device)
+	{
+		m_device.Lock();
+	}
+
+	~vfsDeviceLocker()
+	{
+		m_device.Unlock();
+	}
 };

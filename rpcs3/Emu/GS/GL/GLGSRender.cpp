@@ -1375,5 +1375,5 @@ void GLGSRender::Init()
 
 void GLGSRender::CloseOpenGL()
 {
-	Reset();
+	//Reset();
 }

@@ -5,6 +5,8 @@
 #include "Emu/System.h"
 #include "Ini.h"
 #include "Emu/GS/sysutil_video.h"
+#include "Gui/VHDDManager.h"
+#include "Gui/VFSManager.h"
 #include <wx/dynlib.h>
 
 BEGIN_EVENT_TABLE(MainFrame, FrameBase)
@@ -20,6 +22,8 @@ enum IDs
 	id_sys_stop,
 	id_sys_send_exit,
 	id_config_emu,
+	id_config_vfs_manager,
+	id_config_vhdd_manager,
 	id_update_dbg,
 };
 
@@ -31,7 +35,7 @@ wxString GetPaneName()
 }
 
 MainFrame::MainFrame()
-	: FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(280, 180))
+	: FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(800, 600))
 	, m_aui_mgr(this)
 {
 	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
@@ -56,22 +60,29 @@ MainFrame::MainFrame()
 	menu_sys.Append(id_sys_send_exit, "Send exit cmd")->Enable(false);
 
 	menu_conf.Append(id_config_emu, "Settings");
+	menu_conf.AppendSeparator();
+	menu_conf.Append(id_config_vfs_manager, "Virtual File System Manager");
+	menu_conf.Append(id_config_vhdd_manager, "Virtual HDD Manager");
 
 	SetMenuBar(&menubar);
 
 	m_game_viewer = new GameViewer(this);
 	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_BOTTOM);
 	
-	Connect( id_boot_game,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
-	Connect( id_boot_elf,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
-	Connect( id_boot_self,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootSelf) );
+	Connect( id_boot_game,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
+	Connect( id_boot_elf,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
+	Connect( id_boot_self,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootSelf) );
 
-	Connect( id_sys_pause,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
-	Connect( id_sys_stop,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
-	Connect( id_sys_send_exit,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendExit) );
-	Connect( id_update_dbg, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::UpdateUI) );
+	Connect( id_sys_pause,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
+	Connect( id_sys_stop,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
+	Connect( id_sys_send_exit,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendExit) );
 
-	Connect( id_config_emu, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
+	Connect( id_config_emu,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
+	Connect( id_config_vfs_manager,	wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVFS) );
+	Connect( id_config_vhdd_manager,wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::ConfigVHDD) );
+
+	Connect( id_update_dbg,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::UpdateUI) );
+
 	m_app_connector.Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(MainFrame::OnKeyDown), (wxObject*)0, this);
 	m_app_connector.Connect(wxEVT_DBG_COMMAND, wxCommandEventHandler(MainFrame::UpdateUI), (wxObject*)0, this);
 }
@@ -83,6 +94,7 @@ MainFrame::~MainFrame()
 
 void MainFrame::AddPane(wxWindow* wind, const wxString& caption, int flags)
 {
+	wind->SetSize(-1, 300);
 	m_aui_mgr.AddPane(wind, wxAuiPaneInfo().Name(GetPaneName()).Caption(caption).Direction(flags).CloseButton(false).MaximizeButton());
 }
 
@@ -364,6 +376,16 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	}
 
 	if(paused) Emu.Resume();
+}
+
+void MainFrame::ConfigVFS(wxCommandEvent& WXUNUSED(event))
+{
+	VFSManagerDialog(this).ShowModal();
+}
+
+void MainFrame::ConfigVHDD(wxCommandEvent& WXUNUSED(event))
+{
+	VHDDManagerDialog(this).ShowModal();
 }
 
 void MainFrame::UpdateUI(wxCommandEvent& event)

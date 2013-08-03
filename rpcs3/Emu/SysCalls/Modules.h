@@ -65,9 +65,11 @@ public:
 	template<typename T> bool CheckId(u32 id, T*& data);
 
 	u32 GetNewId(void* data = nullptr, u8 flags = 0);
-	__forceinline void Module::AddFunc(u32 id, func_caller* func)
+
+	template<typename T>
+	__forceinline void AddFunc(u32 id, T func)
 	{
-		m_funcs_list.Move(new ModuleFunc(id, func));
+		m_funcs_list.Move(new ModuleFunc(id, bind_func(func)));
 	}
 };
 

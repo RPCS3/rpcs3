@@ -135,7 +135,7 @@ int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 
 u32 cellGcmGetLabelAddress(u8 index)
 {
-	cellGcmSys.Error("cellGcmGetLabelAddress(index=%d)", index);
+	cellGcmSys.Log("cellGcmGetLabelAddress(index=%d)", index);
 	return Memory.RSXCMDMem.GetStartAddr() + 0x10 * index;
 }
 
@@ -232,5 +232,30 @@ u32 cellGcmGetDefaultSegmentWordSize()
 int cellGcmSetDefaultFifoSize(u32 bufferSize, u32 segmentSize)
 {
 	cellGcmSys.Warning("cellGcmSetDefaultFifoSize(bufferSize=0x%x, segmentSize=0x%x)", bufferSize, segmentSize);
+	return CELL_OK;
+}
+
+int cellGcmMapEaIoAddress(const u32 ea, const u32 io, const u32 size)
+{
+	cellGcmSys.Warning("cellGcmMapEaIoAddress(ea=0x%x, io=0x%x, size=0x%x)", ea, io, size);
+	Memory.Map(io, ea, size);
+	return CELL_OK;
+}
+
+int cellGcmUnbindTile(u8 index)
+{
+	cellGcmSys.Warning("cellGcmUnbindTile(index=%d)", index);
+	if(index >= 15)
+		return CELL_EINVAL;
+
+	return CELL_OK;
+}
+
+int cellGcmUnbindZcull(u8 index)
+{
+	cellGcmSys.Warning("cellGcmUnbindZcull(index=%d)", index);
+	if(index >= 8)
+		return CELL_EINVAL;
+
 	return CELL_OK;
 }

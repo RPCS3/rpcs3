@@ -19,7 +19,7 @@ enum ArgType
 
 struct Arg
 {
-	wxString string;
+	ArrayString string;
 	u32 value;
 	ArgType type;
 
@@ -34,7 +34,7 @@ struct Arg
 struct SectionInfo
 {
 	Elf64_Shdr shdr;
-	wxString name;
+	ArrayString name;
 	Array<u8> code;
 	u32 section_num;
 
@@ -62,7 +62,7 @@ class CompilePPUProgram
 {
 	struct Branch
 	{
-		wxString m_name;
+		ArrayString m_name;
 		s32 m_pos;
 		s32 m_id;
 		s32 m_addr;
@@ -101,7 +101,7 @@ class CompilePPUProgram
 
 	struct SpData
 	{
-		wxString m_data;
+		ArrayString m_data;
 		u32 m_addr;
 
 		SpData(const wxString& data, u32 addr)
