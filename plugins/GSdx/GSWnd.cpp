@@ -33,14 +33,15 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_BindFramebuffer) = GetProcAddress("glBindFramebuffer");
 	*(void**)&(gl_BindSampler) = GetProcAddress("glBindSampler");
 	*(void**)&(gl_BindVertexArray) = GetProcAddress("glBindVertexArray");
-	*(void**)&(gl_BlendEquationSeparate) = GetProcAddress("glBlendEquationSeparate");
-	*(void**)&(gl_BlendFuncSeparate) = GetProcAddress("glBlendFuncSeparate");
+	*(void**)&(gl_BlendEquationSeparateiARB) = GetProcAddress("glBlendEquationSeparateiARB");
+	*(void**)&(gl_BlendFuncSeparateiARB) = GetProcAddress("glBlendFuncSeparateiARB");
 	*(void**)&(gl_BlitFramebuffer) = GetProcAddress("glBlitFramebuffer");
 	*(void**)&(gl_BufferData) = GetProcAddress("glBufferData");
 	*(void**)&(gl_CheckFramebufferStatus) = GetProcAddress("glCheckFramebufferStatus");
 	*(void**)&(gl_ClearBufferfv) = GetProcAddress("glClearBufferfv");
 	*(void**)&(gl_ClearBufferiv) = GetProcAddress("glClearBufferiv");
 	*(void**)&(gl_ClearBufferuiv) = GetProcAddress("glClearBufferuiv");
+	*(void**)&(gl_ColorMaski) = GetProcAddress("glColorMaski");
 	*(void**)&(gl_CompileShader) = GetProcAddress("glCompileShader");
 	*(void**)&(gl_CreateProgram) = GetProcAddress("glCreateProgram");
 	*(void**)&(gl_CreateShader) = GetProcAddress("glCreateShader");

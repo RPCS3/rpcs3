@@ -276,6 +276,9 @@
     <ClCompile Include="GLLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GLState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="GPU.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -348,6 +351,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GLLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GLState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GS.h">

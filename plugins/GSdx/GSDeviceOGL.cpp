@@ -21,6 +21,7 @@
 
 #include "stdafx.h"
 #include "GSDeviceOGL.h"
+#include "GLState.h"
 
 #include "res/glsl_source.h"
 
@@ -39,7 +40,6 @@ static const uint32 g_fxaa_cb_index       = 13;
 GSDeviceOGL::GSDeviceOGL()
 	: m_free_window(false)
 	  , m_window(NULL)
-	  , m_pipeline(0)
 	  , m_fbo(0)
 	  , m_fbo_read(0)
 	  , m_vb_sr(NULL)
@@ -50,6 +50,7 @@ GSDeviceOGL::GSDeviceOGL()
 	memset(&m_convert, 0, sizeof(m_convert));
 	memset(&m_date, 0, sizeof(m_date));
 	memset(&m_state, 0, sizeof(m_state));
+	GLState::Clear();
 
 	// Reset the debug file
 	#ifdef ENABLE_OGL_DEBUG
@@ -410,7 +411,7 @@ void GSDeviceOGL::ClearRenderTarget(GSTexture* t, const GSVector4& c)
 		} else {
 			OMSetFBO(m_fbo);
 			OMSetWriteBuffer();
-			OMAttachRt(t);
+			OMAttachRt(static_cast<GSTextureOGL*>(t)->GetID());
 
 			gl_ClearBufferfv(GL_COLOR, 0, c.v);
 		}
@@ -435,7 +436,7 @@ void GSDeviceOGL::ClearRenderTarget_ui(GSTexture* t, uint32 c)
 
 		OMSetFBO(m_fbo);
 		OMSetWriteBuffer();
-		OMAttachRt(t);
+		OMAttachRt(static_cast<GSTextureOGL*>(t)->GetID());
 
 		gl_ClearBufferuiv(GL_COLOR, 0, col);
 
@@ -452,10 +453,10 @@ void GSDeviceOGL::ClearDepth(GSTexture* t, float c)
 	} else {
 		OMSetFBO(m_fbo);
 		OMSetWriteBuffer();
-		OMAttachDs(t);
+		OMAttachDs(static_cast<GSTextureOGL*>(t)->GetID());
 
 		glDisable(GL_SCISSOR_TEST);
-		if (m_state.dss != NULL && m_state.dss->IsMaskEnable()) {
+		if (GLState::depth_mask) {
 			gl_ClearBufferfv(GL_DEPTH, 0, &c);
 		} else {
 			glDepthMask(true);
@@ -475,7 +476,7 @@ void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 	} else {
 		OMSetFBO(m_fbo);
 		OMSetWriteBuffer();
-		OMAttachDs(t);
+		OMAttachDs(static_cast<GSTextureOGL*>(t)->GetID());
 		GLint color = c;
 
 		glDisable(GL_SCISSOR_TEST);
@@ -786,7 +787,7 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// ps
 	// ************************************
 
-	PSSetShaderResource(0, st);
+	PSSetShaderResource(0, static_cast<GSTextureOGL*>(st)->GetID());
 	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt);
 	m_shader->PS(ps);
 
@@ -813,7 +814,6 @@ void GSDeviceOGL::DoMerge(GSTexture* st[2], GSVector4* sr, GSTexture* dt, GSVect
 
 	if(st[0])
 	{
-		SetUniformBuffer(m_merge_obj.cb);
 		m_merge_obj.cb->upload(&c.v);
 
 		StretchRect(st[0], sr[0], dt, dr[0], m_merge_obj.ps[mmod ? 1 : 0], m_merge_obj.bs);
@@ -832,7 +832,6 @@ void GSDeviceOGL::DoInterlace(GSTexture* st, GSTexture* dt, int shader, bool lin
 	cb.ZrH = GSVector2(0, 1.0f / s.y);
 	cb.hH = s.y / 2;
 
-	SetUniformBuffer(m_interlace.cb);
 	m_interlace.cb->upload(&cb);
 
 	StretchRect(st, sr, dt, dr, m_interlace.ps[shader], linear);
@@ -851,7 +850,6 @@ void GSDeviceOGL::DoFXAA(GSTexture* st, GSTexture* dt)
 	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
 	cb.rcpFrameOpt = GSVector4::zero();
 
-	SetUniformBuffer(m_fxaa.cb);
 	m_fxaa.cb->upload(&cb);
 
 	StretchRect(st, sr, dt, dr, m_fxaa.ps, true);
@@ -869,7 +867,6 @@ void GSDeviceOGL::DoShadeBoost(GSTexture* st, GSTexture* dt)
 	cb.rcpFrame = GSVector4(1.0f / s.x, 1.0f / s.y, 0.0f, 0.0f);
 	cb.rcpFrameOpt = GSVector4::zero();
 
-	SetUniformBuffer(m_shadeboost.cb);
 	m_shadeboost.cb->upload(&cb);
 
 	StretchRect(st, sr, dt, dr, m_shadeboost.ps, true);
@@ -911,7 +908,7 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 	// ps
 
-	PSSetShaderResource(0, rt);
+	PSSetShaderResource(0, static_cast<GSTextureOGL*>(rt)->GetID());
 	PSSetSamplerState(m_convert.pt);
 	m_shader->PS(m_convert.ps[datm ? 2 : 3]);
 
@@ -932,14 +929,6 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 void GSDeviceOGL::EndScene()
 {
 	m_state.vb->EndScene();
-}
-
-void GSDeviceOGL::SetUniformBuffer(GSUniformBufferOGL* cb)
-{
-	if (m_state.cb != cb) {
-		 m_state.cb = cb;
-		 cb->bind();
-	}
 }
 
 void GSDeviceOGL::IASetVertexState(GSVertexBufferStateOGL* vb)
@@ -977,19 +966,17 @@ void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)
 	m_state.vb->SetTopology(topology);
 }
 
-void GSDeviceOGL::PSSetShaderResource(const int i, GSTexture* sr)
+void GSDeviceOGL::PSSetShaderResource(const int i, GLuint sr)
 {
-	ASSERT(sr);
-
-	if (m_state.tex_unit[i] != sr) {
-		m_state.tex_unit[i] = sr;
+	if (GLState::tex_unit[i] != sr) {
+		GLState::tex_unit[i] = sr;
 
 		if (GLLoader::found_GL_ARB_multi_bind) {
-			GLuint textures[1] = {static_cast<GSTextureOGL*>(sr)->GetID()};
+			GLuint textures[1] = {sr};
 			gl_BindTextures(i, 1, textures);
 		} else {
 			gl_ActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, static_cast<GSTextureOGL*>(sr)->GetID());
+			glBindTexture(GL_TEXTURE_2D, sr);
 
 			// Get back to the expected active texture unit
 			gl_ActiveTexture(GL_TEXTURE0 + 3);
@@ -997,55 +984,42 @@ void GSDeviceOGL::PSSetShaderResource(const int i, GSTexture* sr)
 	}
 }
 
-void GSDeviceOGL::PSSetShaderResources(GSTexture* tex[2])
+void GSDeviceOGL::PSSetShaderResources(GLuint tex[2])
 {
-	if (m_state.tex_unit[0] != tex[0] || m_state.tex_unit[1] != tex[1]) {
-		GLuint textures[2] = {static_cast<GSTextureOGL*>(tex[0])->GetID(), static_cast<GSTextureOGL*>(tex[1])->GetID()};
+	if (GLState::tex_unit[0] != tex[0] || GLState::tex_unit[1] != tex[1]) {
+		GLuint textures[2] = {tex[0], tex[1]};
 		gl_BindTextures(0, 2, textures);
 	}
-
-	// FIXME without multibind?
-#if 0
-	for (int i = 0; i < count; i++) {
-		if (m_state.tex_unit[i] != id) {
-			m_state.tex_unit[i] = id;
-			gl_ActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, id);
-		}
-	}
-	// Get back to the expected active texture unit
-	gl_ActiveTexture(GL_TEXTURE0 + 3);
-#endif
 }
 
 void GSDeviceOGL::PSSetSamplerState(GLuint ss)
 {
-	if (m_state.ps_ss != ss) {
-		m_state.ps_ss = ss;
+	if (GLState::ps_ss != ss) {
+		GLState::ps_ss = ss;
 		gl_BindSampler(0, ss);
 	}
 }
 
-void GSDeviceOGL::OMAttachRt(GSTexture* rt)
+void GSDeviceOGL::OMAttachRt(GLuint rt)
 {
-	if (m_state.rt != rt) {
-		m_state.rt = rt;
-		gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, static_cast<GSTextureOGL*>(rt)->GetID(), 0);
+	if (GLState::rt != rt) {
+		GLState::rt = rt;
+		gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rt, 0);
 	}
 }
 
-void GSDeviceOGL::OMAttachDs(GSTexture* ds)
+void GSDeviceOGL::OMAttachDs(GLuint ds)
 {
-	if (m_state.ds != ds) {
-		m_state.ds = ds;
-		gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, static_cast<GSTextureOGL*>(ds)->GetID(), 0);
+	if (GLState::ds != ds) {
+		GLState::ds = ds;
+		gl_FramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, ds, 0);
 	}
 }
 
 void GSDeviceOGL::OMSetFBO(GLuint fbo)
 {
-	if (m_state.fbo != fbo) {
-		m_state.fbo = fbo;
+	if (GLState::fbo != fbo) {
+		GLState::fbo = fbo;
 		gl_BindFramebuffer(GL_FRAMEBUFFER, fbo);
 	}
 }
@@ -1053,8 +1027,8 @@ void GSDeviceOGL::OMSetFBO(GLuint fbo)
 void GSDeviceOGL::OMSetWriteBuffer(GLenum buffer)
 {
 	// Note if fbo is 0, standard GL_BACK will be used instead
-	if (m_state.fbo && m_state.draw != buffer) {
-		m_state.draw = buffer;
+	if (GLState::fbo && GLState::draw != buffer) {
+		GLState::draw = buffer;
 
 		GLenum target[1] = {buffer};
 		gl_DrawBuffers(1, target);
@@ -1063,6 +1037,7 @@ void GSDeviceOGL::OMSetWriteBuffer(GLenum buffer)
 
 void GSDeviceOGL::OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref)
 {
+	// State is checkd inside the object but worst case is 11 comparaisons !
 	if (m_state.dss != dss) {
 		m_state.dss = dss;
 
@@ -1073,6 +1048,7 @@ void GSDeviceOGL::OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref)
 
 void GSDeviceOGL::OMSetBlendState(GSBlendStateOGL* bs, float bf)
 {
+	// State is checkd inside the object but worst case is 15 comparaisons !
 	if ( m_state.bs != bs || (m_state.bf != bf && bs->HasConstantFactor()) )
 	{
 		m_state.bs = bs;
@@ -1088,7 +1064,7 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 		if (rt) {
 			OMSetFBO(m_fbo);
 			OMSetWriteBuffer();
-			OMAttachRt(rt);
+			OMAttachRt(static_cast<GSTextureOGL*>(rt)->GetID());
 		} else {
 			// Note: NULL rt is only used in DATE so far. Color writing is disabled
 			// on the blend setup
@@ -1098,7 +1074,7 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 
 		// Note: it must be done after OMSetFBO
 		if (ds)
-			OMAttachDs(ds);
+			OMAttachDs(static_cast<GSTextureOGL*>(ds)->GetID());
 
 	} else {
 		// Render in the backbuffer
@@ -1108,17 +1084,17 @@ void GSDeviceOGL::OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVecto
 
 
 	GSVector2i size = rt ? rt->GetSize() : ds->GetSize();
-	if(m_state.viewport != size)
+	if(GLState::viewport != size)
 	{
-		m_state.viewport = size;
+		GLState::viewport = size;
 		glViewport(0, 0, size.x, size.y);
 	}
 
 	GSVector4i r = scissor ? *scissor : GSVector4i(size).zwxy();
 
-	if(!m_state.scissor.eq(r))
+	if(!GLState::scissor.eq(r))
 	{
-		m_state.scissor = r;
+		GLState::scissor = r;
 		glScissor( r.x, r.y, r.width(), r.height() );
 	}
 }

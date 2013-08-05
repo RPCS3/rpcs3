@@ -27,17 +27,18 @@
 #include "GSVertexArrayOGL.h"
 #include "GSUniformBufferOGL.h"
 #include "GSShaderOGL.h"
+#include "GLState.h"
 
 class GSBlendStateOGL {
 	// Note: You can also select the index of the draw buffer for which to set the blend setting
 	// We will keep basic the first try
 	bool   m_enable;
 	GLenum m_equation_RGB;
-	GLenum m_equation_ALPHA;
+	GLenum m_equation_A;
 	GLenum m_func_sRGB;
 	GLenum m_func_dRGB;
-	GLenum m_func_sALPHA;
-	GLenum m_func_dALPHA;
+	GLenum m_func_sA;
+	GLenum m_func_dA;
 	bool   m_r_msk;
 	bool   m_b_msk;
 	bool   m_g_msk;
@@ -48,11 +49,11 @@ public:
 
 	GSBlendStateOGL() : m_enable(false)
 		, m_equation_RGB(0)
-		, m_equation_ALPHA(GL_FUNC_ADD)
+		, m_equation_A(GL_FUNC_ADD)
 		, m_func_sRGB(0)
 		, m_func_dRGB(0)
-		, m_func_sALPHA(GL_ONE)
-		, m_func_dALPHA(GL_ZERO)
+		, m_func_sA(GL_ONE)
+		, m_func_dA(GL_ZERO)
 		, m_r_msk(GL_TRUE)
 		, m_b_msk(GL_TRUE)
 		, m_g_msk(GL_TRUE)
@@ -70,9 +71,9 @@ public:
 
 	void SetALPHA(GLenum op, GLenum src, GLenum dst)
 	{
-		m_equation_ALPHA = op;
-		m_func_sALPHA = src;
-		m_func_dALPHA = dst;
+		m_equation_A = op;
+		m_func_sA = src;
+		m_func_dA = dst;
 	}
 
 	void SetMask(bool r, bool g, bool b, bool a) { m_r_msk = r; m_g_msk = g; m_b_msk = b; m_a_msk = a; }
@@ -93,23 +94,50 @@ public:
 
 	void SetupColorMask()
 	{
-		glColorMask(m_r_msk, m_g_msk, m_b_msk, m_a_msk);
+		// FIXME align then SSE
+		if (GLState::r_msk != m_r_msk || GLState::g_msk != m_g_msk || GLState::b_msk != m_b_msk || GLState::a_msk != m_a_msk) {
+			GLState::r_msk = m_r_msk;
+			GLState::g_msk = m_g_msk;
+			GLState::b_msk = m_b_msk;
+			GLState::a_msk = m_a_msk;
+
+			gl_ColorMaski(0, m_r_msk, m_g_msk, m_b_msk, m_a_msk);
+		}
 	}
 
 	void SetupBlend(float factor)
 	{
 		SetupColorMask();
 
+		if (GLState::blend != m_enable) {
+			GLState::blend = m_enable;
+			if (m_enable)
+				glEnable(GL_BLEND);
+			else
+				glDisable(GL_BLEND);
+		}
+
 		if (m_enable) {
-			glEnable(GL_BLEND);
 			if (HasConstantFactor()) {
-				gl_BlendColor(factor, factor, factor, 0);
+				if (GLState::bf != factor) {
+					GLState::bf = factor;
+					gl_BlendColor(factor, factor, factor, 0);
+				}
 			}
 
-			gl_BlendEquationSeparate(m_equation_RGB, m_equation_ALPHA);
-			gl_BlendFuncSeparate(m_func_sRGB, m_func_dRGB, m_func_sALPHA, m_func_dALPHA);
-		} else {
-			glDisable(GL_BLEND);
+			if (GLState::eq_RGB != m_equation_RGB || GLState::eq_A != m_equation_A) {
+				GLState::eq_RGB = m_equation_RGB;
+				GLState::eq_A   = m_equation_A;
+				gl_BlendEquationSeparateiARB(0, m_equation_RGB, m_equation_A);
+			}
+			// FIXME align then SSE
+			if (GLState::f_sRGB != m_func_sRGB || GLState::f_dRGB != m_func_dRGB || GLState::f_sA != m_func_sA || GLState::f_dA != m_func_dA) {
+				GLState::f_sRGB = m_func_sRGB;
+				GLState::f_dRGB = m_func_dRGB;
+				GLState::f_sA = m_func_sA;
+				GLState::f_dA = m_func_dA;
+				gl_BlendFuncSeparateiARB(0, m_func_sRGB, m_func_dRGB, m_func_sA, m_func_dA);
+			}
 		}
 	}
 };
@@ -120,12 +148,8 @@ class GSDepthStencilOGL {
 	GLboolean m_depth_mask;
 	// Note front face and back might be split but it seems they have same parameter configuration
 	bool m_stencil_enable;
-	const GLuint m_stencil_mask;
-	GLuint m_stencil_func;
-	const GLuint m_stencil_ref;
-	const GLuint m_stencil_sfail_op;
-	const GLuint m_stencil_spass_dfail_op;
-	GLuint m_stencil_spass_dpass_op;
+	GLenum m_stencil_func;
+	GLenum m_stencil_spass_dpass_op;
 
 public:
 
@@ -133,43 +157,63 @@ public:
 		, m_depth_func(0)
 		, m_depth_mask(0)
 		, m_stencil_enable(false)
-		, m_stencil_mask(1)
 		, m_stencil_func(0)
-		, m_stencil_ref(1)
-		, m_stencil_sfail_op(GL_KEEP)
-		, m_stencil_spass_dfail_op(GL_KEEP)
 		, m_stencil_spass_dpass_op(GL_KEEP)
 	{
 		// Only needed once since m_stencil_mask is constant
 		// Control which stencil bitplane are written
-		glStencilMask(m_stencil_mask);
+		glStencilMask(1);
 	}
 
 	void EnableDepth() { m_depth_enable = true; }
 	void EnableStencil() { m_stencil_enable = true; }
 
 	void SetDepth(GLenum func, GLboolean mask) { m_depth_func = func; m_depth_mask = mask; }
-	void SetStencil(GLuint func, GLuint pass) { m_stencil_func = func; m_stencil_spass_dpass_op = pass; }
+	void SetStencil(GLenum func, GLenum pass) { m_stencil_func = func; m_stencil_spass_dpass_op = pass; }
 
 	void SetupDepth()
 	{
+		if (GLState::depth != m_depth_enable) {
+			GLState::depth = m_depth_enable;
+			if (m_depth_enable)
+				glEnable(GL_DEPTH_TEST);
+			else
+				glDisable(GL_DEPTH_TEST);
+		}
+
 		if (m_depth_enable) {
-			glEnable(GL_DEPTH_TEST);
-			glDepthFunc(m_depth_func);
-			glDepthMask(m_depth_mask);
-		} else
-			glDisable(GL_DEPTH_TEST);
+			if (GLState::depth_func != m_depth_func) {
+				GLState::depth_func = m_depth_func;
+				glDepthFunc(m_depth_func);
+			}
+			if (GLState::depth_mask != m_depth_mask) {
+				GLState::depth_mask = m_depth_mask;
+				glDepthMask(m_depth_mask);
+			}
+		}
 	}
 
 	void SetupStencil()
 	{
+		if (GLState::stencil != m_stencil_enable) {
+			GLState::stencil = m_stencil_enable;
+			if (m_stencil_enable)
+				glEnable(GL_STENCIL_TEST);
+			else
+				glDisable(GL_STENCIL_TEST);
+		}
+
 		if (m_stencil_enable) {
-			glEnable(GL_STENCIL_TEST);
 			// Note: here the mask control which bitplane is considered by the operation
-			glStencilFunc(m_stencil_func, m_stencil_ref, m_stencil_mask);
-			glStencilOp(m_stencil_sfail_op, m_stencil_spass_dfail_op, m_stencil_spass_dpass_op);
-		} else
-			glDisable(GL_STENCIL_TEST);
+			if (GLState::stencil_func != m_stencil_func) {
+				GLState::stencil_func = m_stencil_func;
+				glStencilFunc(m_stencil_func, 1, 1);
+			}
+			if (GLState::stencil_pass != m_stencil_spass_dpass_op) {
+				GLState::stencil_pass = m_stencil_spass_dpass_op;
+				glStencilOp(GL_KEEP, GL_KEEP, m_stencil_spass_dpass_op);
+			}
+		}
 	}
 
 	bool IsMaskEnable() { return m_depth_mask != GL_FALSE; }
@@ -431,7 +475,6 @@ class GSDeviceOGL : public GSDevice
 	bool m_free_window;			
 	GSWnd* m_window;
 
-	GLuint m_pipeline;			// pipeline to attach program shader
 	GLuint m_fbo;				// frame buffer container
 	GLuint m_fbo_read;			// frame buffer container only for reading
 
@@ -469,28 +512,16 @@ class GSDeviceOGL : public GSDevice
 		GSTexture* t;
 	} m_date;
 
-	struct 
-	{
+	struct {
 		GLuint ps;
 		GSUniformBufferOGL *cb;
 	} m_shadeboost;
 
-
-
 	struct {
 		GSVertexBufferStateOGL* vb;
-		GSUniformBufferOGL* cb;
-		GLuint ps_ss; // sampler
-		GSVector2i viewport;
-		GSVector4i scissor;
 		GSDepthStencilOGL* dss;
 		GSBlendStateOGL* bs;
 		float bf; // blend factor
-		GLuint	   fbo;
- 		GLenum	   draw;
-		GSTexture* rt; // render target
-		GSTexture* ds; // Depth-Stencil
-		GSTexture* tex_unit[2];
 	} m_state;
 
 	GSShaderOGL* m_shader;
@@ -519,8 +550,8 @@ class GSDeviceOGL : public GSDevice
 	void DoFXAA(GSTexture* st, GSTexture* dt);
 	void DoShadeBoost(GSTexture* st, GSTexture* dt);
 
-	void OMAttachRt(GSTexture* rt);
-	void OMAttachDs(GSTexture* ds);
+	void OMAttachRt(GLuint rt);
+	void OMAttachDs(GLuint ds);
 	void OMSetFBO(GLuint fbo);
 
 	public:
@@ -576,10 +607,8 @@ class GSDeviceOGL : public GSDevice
 	void IASetIndexBuffer(const void* index, size_t count);
 	void IASetVertexState(GSVertexBufferStateOGL* vb = NULL);
 
-	void SetUniformBuffer(GSUniformBufferOGL* cb);
-
-	void PSSetShaderResource(const int i, GSTexture* sr);
-	void PSSetShaderResources(GSTexture* tex[2]);
+	void PSSetShaderResource(const int i, GLuint sr);
+	void PSSetShaderResources(GLuint tex[2]);
 	void PSSetSamplerState(GLuint ss);
 	void PSSetSamplerStates(const int count, const GLuint* samplers);
 

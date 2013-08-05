@@ -22,6 +22,7 @@
 #include "stdafx.h"
 #include <limits.h>
 #include "GSTextureOGL.h"
+#include "GLState.h"
 
 namespace PboPool {
 	
@@ -53,8 +54,6 @@ namespace PboPool {
 		gl_BindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 	}
 }
-
-static GLuint g_tex3_state = 0;
 
 // FIXME: check if it possible to always use those setup by default
 // glPixelStorei(GL_PACK_ALIGNMENT, 1);
@@ -156,12 +155,13 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read)
 		default:
 			break;
 	}
-	// Extra buffer to handle various pixel transfer
-	gl_GenBuffers(1, &m_pbo_id);
 
 	// Allocate the buffer
 	switch (m_type) {
 		case GSTexture::Offscreen:
+			// Extra buffer to handle various pixel transfer
+			gl_GenBuffers(1, &m_pbo_id);
+
 			// Allocate a pbo with the texture
 			m_pbo_size = (m_size.x * m_size.y) << m_int_shift;
 
@@ -183,9 +183,17 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read)
 GSTextureOGL::~GSTextureOGL()
 {
 	/* Unbind the texture from our local state */
-	for (uint32 i = 0; i < 5; i++)
-		if (g_tex3_state == m_texture_id)
-			g_tex3_state = 0;
+	
+	if (m_texture_id == GLState::rt)
+		GLState::rt = 0;
+	if (m_texture_id == GLState::ds)
+		GLState::ds = 0;
+	if (m_texture_id == GLState::tex)
+		GLState::tex = 0;
+	if (m_texture_id == GLState::tex_unit[0])
+		GLState::tex_unit[0] = 0;
+	if (m_texture_id == GLState::tex_unit[1])
+		GLState::tex_unit[1] = 0;
 
 	gl_DeleteBuffers(1, &m_pbo_id);
 	glDeleteTextures(1, &m_texture_id);
@@ -271,8 +279,8 @@ void GSTextureOGL::EnableUnit()
 	/* Not a real texture */
 	ASSERT(!IsBackbuffer());
 
-	if (g_tex3_state != m_texture_id) {
-		g_tex3_state = m_texture_id;
+	if (GLState::tex != m_texture_id) {
+		GLState::tex = m_texture_id;
 		glBindTexture(GL_TEXTURE_2D, m_texture_id);
 	}
 }
@@ -529,7 +537,7 @@ bool GSTextureOGL::Save(const string& fn, bool dds)
 
 	// Restore state
 	gl_ActiveTexture(GL_TEXTURE0 + 3);
-	glBindTexture(GL_TEXTURE_2D, g_tex3_state);
+	glBindTexture(GL_TEXTURE_2D, GLState::tex);
 
 	return status;
 }

@@ -778,6 +778,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\GLState.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\GPU.cpp"
 				>
 			</File>
@@ -1397,6 +1401,10 @@
 			>
 			<File
 				RelativePath=".\GLLoader.h"
+				>
+			</File>
+			<File
+				RelativePath=".\GLState.h"
 				>
 			</File>
 			<File

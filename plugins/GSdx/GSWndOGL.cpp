@@ -79,10 +79,10 @@ void GSWndOGL::CreateContext(int major, int minor)
 	{
 		GLX_CONTEXT_MAJOR_VERSION_ARB, major,
 		GLX_CONTEXT_MINOR_VERSION_ARB, minor,
-		// FIXME : Request a debug context to ease opengl development
-		// Note: don't support deprecated feature (pre openg 3.1)
-		//GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB | GLX_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+#ifdef ENABLE_OGL_DEBUG
 		GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
+#endif
+		GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
 		None
 	};
 

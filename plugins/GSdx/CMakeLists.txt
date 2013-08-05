@@ -50,6 +50,7 @@ endif()
 
 set(GSdxSources
     GLLoader.cpp
+    GLState.cpp
     GPU.cpp
     GPUDrawScanline.cpp
     GPUDrawScanlineCodeGenerator.cpp

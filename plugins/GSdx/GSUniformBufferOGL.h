@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "GLState.h"
+
 class GSUniformBufferOGL {
 	GLuint buffer;		// data object
 	GLuint index;		// GLSL slot
@@ -38,7 +40,10 @@ public:
 
 	void bind()
 	{
-		gl_BindBuffer(GL_UNIFORM_BUFFER, buffer);
+		if (GLState::ubo != buffer) {
+			GLState::ubo = buffer;
+			gl_BindBuffer(GL_UNIFORM_BUFFER, buffer);
+		}
 	}
 
 	void allocate()
@@ -53,6 +58,7 @@ public:
 
 	void upload(const void* src)
 	{
+		bind();
 		// glMapBufferRange allow to set various parameter but the call is
 		// synchronous whereas glBufferSubData could be asynchronous.
 		// TODO: investigate the extension ARB_invalidate_subdata

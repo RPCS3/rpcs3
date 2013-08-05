@@ -21,12 +21,9 @@
 
 #include "stdafx.h"
 #include "GSShaderOGL.h"
+#include "GLState.h"
 
 GSShaderOGL::GSShaderOGL(bool debug, bool sso, bool glsl420) :
-	m_vs(0),
-	m_ps(0),
-	m_gs(0),
-	m_prog(0),
 	m_debug_shader(debug),
 	m_sso(sso),
 	m_glsl420(glsl420)
@@ -53,9 +50,9 @@ GSShaderOGL::~GSShaderOGL()
 
 void GSShaderOGL::VS(GLuint s)
 {
-	if (m_vs != s)
+	if (GLState::vs != s)
 	{
-		m_vs = s;
+		GLState::vs = s;
 #ifndef ENABLE_GLES
 		if (m_sso)
 			gl_UseProgramStages(m_pipeline, GL_VERTEX_SHADER_BIT, s);
@@ -65,9 +62,9 @@ void GSShaderOGL::VS(GLuint s)
 
 void GSShaderOGL::PS(GLuint s)
 {
-	if (m_ps != s)
+	if (GLState::ps != s)
 	{
-		m_ps = s;
+		GLState::ps = s;
 #ifndef ENABLE_GLES
 		if (m_sso)
 			gl_UseProgramStages(m_pipeline, GL_FRAGMENT_SHADER_BIT, s);
@@ -77,9 +74,9 @@ void GSShaderOGL::PS(GLuint s)
 
 void GSShaderOGL::GS(GLuint s)
 {
-	if (m_gs != s)
+	if (GLState::gs != s)
 	{
-		m_gs = s;
+		GLState::gs = s;
 #ifndef ENABLE_GLES
 		if (m_sso)
 			gl_UseProgramStages(m_pipeline, GL_GEOMETRY_SHADER_BIT, s);
@@ -115,29 +112,29 @@ void GSShaderOGL::SetupUniform()
 	if (m_glsl420) return;
 
 	if (m_sso) {
-		SetUniformBinding(m_vs, "cb20", 20);
-		SetUniformBinding(m_ps, "cb21", 21);
+		SetUniformBinding(GLState::vs, "cb20", 20);
+		SetUniformBinding(GLState::ps, "cb21", 21);
 
-		SetUniformBinding(m_ps, "cb10", 10);
-		SetUniformBinding(m_ps, "cb11", 11);
-		SetUniformBinding(m_ps, "cb12", 12);
-		SetUniformBinding(m_ps, "cb13", 13);
+		SetUniformBinding(GLState::ps, "cb10", 10);
+		SetUniformBinding(GLState::ps, "cb11", 11);
+		SetUniformBinding(GLState::ps, "cb12", 12);
+		SetUniformBinding(GLState::ps, "cb13", 13);
 
-		SetSamplerBinding(m_ps, "TextureSampler", 0);
-		SetSamplerBinding(m_ps, "PaletteSampler", 1);
-		SetSamplerBinding(m_ps, "RTCopySampler", 2);
+		SetSamplerBinding(GLState::ps, "TextureSampler", 0);
+		SetSamplerBinding(GLState::ps, "PaletteSampler", 1);
+		SetSamplerBinding(GLState::ps, "RTCopySampler", 2);
 	} else {
-		SetUniformBinding(m_prog, "cb20", 20);
-		SetUniformBinding(m_prog, "cb21", 21);
+		SetUniformBinding(GLState::program, "cb20", 20);
+		SetUniformBinding(GLState::program, "cb21", 21);
 
-		SetUniformBinding(m_prog, "cb10", 10);
-		SetUniformBinding(m_prog, "cb11", 11);
-		SetUniformBinding(m_prog, "cb12", 12);
-		SetUniformBinding(m_prog, "cb13", 13);
+		SetUniformBinding(GLState::program, "cb10", 10);
+		SetUniformBinding(GLState::program, "cb11", 11);
+		SetUniformBinding(GLState::program, "cb12", 12);
+		SetUniformBinding(GLState::program, "cb13", 13);
 
-		SetSamplerBinding(m_prog, "TextureSampler", 0);
-		SetSamplerBinding(m_prog, "PaletteSampler", 1);
-		SetSamplerBinding(m_prog, "RTCopySampler", 2);
+		SetSamplerBinding(GLState::program, "TextureSampler", 0);
+		SetSamplerBinding(GLState::program, "PaletteSampler", 1);
+		SetSamplerBinding(GLState::program, "RTCopySampler", 2);
 	}
 }
 
@@ -213,9 +210,9 @@ bool GSShaderOGL::ValidatePipeline(GLuint p)
 GLuint GSShaderOGL::LinkNewProgram()
 {
 	GLuint p = gl_CreateProgram();
-	if (m_vs) gl_AttachShader(p, m_vs);
-	if (m_ps) gl_AttachShader(p, m_ps);
-	if (m_gs) gl_AttachShader(p, m_gs);
+	if (GLState::vs) gl_AttachShader(p, GLState::vs);
+	if (GLState::ps) gl_AttachShader(p, GLState::ps);
+	if (GLState::gs) gl_AttachShader(p, GLState::gs);
 
 	gl_LinkProgram(p);
 
@@ -233,20 +230,23 @@ void GSShaderOGL::UseProgram()
 		// Note2: vs & gs are precompiled at startup. FGLRX and radeon got value < 128.
 		// We migth be able to pack the value in a 32bits int
 		// I would need to check the behavior on Nvidia (pause/resume).
-		uint64 sel = (uint64)m_vs << 40 | (uint64)m_gs << 20 | m_ps;
+		uint64 sel = (uint64)GLState::vs << 40 | (uint64)GLState::gs << 20 | GLState::ps;
 		it = m_single_prog.find(sel);
 		if (it == m_single_prog.end()) {
-			m_prog = LinkNewProgram();
-			m_single_prog[sel] = m_prog;
+			GLState::program = LinkNewProgram();
+			m_single_prog[sel] = GLState::program;
 
-			ValidateProgram(m_prog);
+			ValidateProgram(GLState::program);
 
-			gl_UseProgram(m_prog);
+			gl_UseProgram(GLState::program);
 			// warning it must be done after the "setup" of the program
 			SetupUniform();
 		} else {
-			m_prog = it->second;
-			gl_UseProgram(m_prog);
+			GLuint prog = it->second;
+			if (prog != GLState::program) {
+				GLState::program = prog;
+				gl_UseProgram(GLState::program);
+			}
 		}
 
 	} else {

@@ -567,6 +567,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="GLLoader.cpp" />
+    <ClCompile Include="GLState.cpp" />
     <ClCompile Include="GPU.cpp" />
     <ClCompile Include="GPUDrawScanline.cpp" />
     <ClCompile Include="GPUDrawScanlineCodeGenerator.cpp" />
@@ -1929,6 +1930,7 @@
     <ClInclude Include="comptr.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="GLLoader.h" />
+    <ClInclude Include="GLState.h" />
     <ClInclude Include="GPU.h" />
     <ClInclude Include="GPUDrawingEnvironment.h" />
     <ClInclude Include="GPUDrawScanline.h" />

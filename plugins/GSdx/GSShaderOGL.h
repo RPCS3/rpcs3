@@ -23,10 +23,6 @@
 
 class GSShaderOGL {
 	GLuint m_pipeline;
-	GLuint m_vs;
-	GLuint m_ps;
-	GLuint m_gs;
-	GLuint m_prog;
 	hash_map<uint64, GLuint > m_single_prog;
 	const bool m_debug_shader;
 	const bool m_sso;
