@@ -455,7 +455,6 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		ps_sel.tfx = context->TEX0.TFX;
 		ps_sel.tcc = context->TEX0.TCC;
 		ps_sel.ltf = bilinear && !simple_sample;
-		ps_sel.rt = tex->m_target;
 		ps_sel.spritehack = tex->m_spritehack_t;
 		ps_sel.point_sampler = !(bilinear && simple_sample);
 

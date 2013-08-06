@@ -365,7 +365,6 @@ class GSDeviceOGL : public GSDevice
 				uint32 clr1:1;
 				uint32 fba:1;
 				uint32 aout:1;
-				uint32 rt:1;
 				uint32 ltf:1;
 				uint32 colclip:2;
 				uint32 date:2;
