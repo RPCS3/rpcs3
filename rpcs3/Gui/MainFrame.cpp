@@ -2,6 +2,7 @@
 #include "MainFrame.h"
 #include "CompilerELF.h"
 
+#include "git-version.h"
 #include "Emu/System.h"
 #include "Ini.h"
 #include "Emu/GS/sysutil_video.h"
@@ -34,7 +35,13 @@ MainFrame::MainFrame()
 	: FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(280, 180))
 	, m_aui_mgr(this)
 {
+
+#ifdef _DEBUG
+	SetLabel(wxString::Format(_PRGNAME_ " git-" RPCS3_GIT_VERSION));
+#else
 	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
+#endif
+
 	wxMenuBar& menubar(*new wxMenuBar());
 
 	wxMenu& menu_boot(*new wxMenu());
