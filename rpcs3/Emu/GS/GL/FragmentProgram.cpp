@@ -3,10 +3,38 @@
 
 void FragmentDecompilerThread::AddCode(wxString code)
 {
-	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_le) return;
-	if(!src0.exec_if_eq || !src0.exec_if_gr || !src0.exec_if_le)
+	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
+
+	wxString cond;
+
+	if(src0.exec_if_gr)
 	{
-		ConLog.Error("Bad cond! eq: %d  gr: %d  le: %d", src0.exec_if_eq, src0.exec_if_gr, src0.exec_if_le);
+		cond = ">";
+	}
+	else if(src0.exec_if_lt)
+	{
+		cond = "<";
+	}
+	else if(src0.exec_if_eq)
+	{
+		cond = "=";
+	}
+
+	if(src0.exec_if_eq)
+	{
+		cond += "=";
+	}
+	else
+	{
+		if(src0.exec_if_gr && src0.exec_if_lt)
+		{
+			cond = "!=";
+		}
+	}
+
+	if(cond)
+	{
+		ConLog.Error("cond! [eq: %d  gr: %d  lt: %d] (%s)", src0.exec_if_eq, src0.exec_if_gr, src0.exec_if_lt, cond);
 		Emu.Pause();
 		return;
 	}
@@ -29,7 +57,7 @@ void FragmentDecompilerThread::AddCode(wxString code)
 		}
 	}
 
-	code = AddReg(dst.dest_reg) + GetMask() + " = " + code + GetMask();
+	code = AddReg(dst.dest_reg, dst.fp16) + GetMask() + " = " + code + GetMask();
 
 	main += "\t" + code + ";\n";
 }
@@ -46,20 +74,29 @@ wxString FragmentDecompilerThread::GetMask()
 	return ret.IsEmpty() || ret == "xyzw" ? wxEmptyString : ("." + ret);
 }
 
-wxString FragmentDecompilerThread::AddReg(u32 index)
+wxString FragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
 	//if(!index) return "gl_FragColor";
-	return m_parr.AddParam(index ? PARAM_NONE : PARAM_OUT, "vec4", wxString::Format("r%d", index), index ? -1 : 0);
+	return m_parr.AddParam(index ? PARAM_NONE : PARAM_OUT, "vec4",
+		wxString::Format((fp16 ? "h%d" : "r%d"), index), (index || fp16) ? -1 : 0);
 }
 
 wxString FragmentDecompilerThread::AddConst()
 {
-	return m_parr.AddParam(PARAM_CONST, "vec4", wxString::Format("fc%d", m_const_index++));
+	mem32_t data(m_addr + m_size + m_offset);
+
+	m_offset += 4 * 4;
+	u32 x = GetData(data[0]);
+	u32 y = GetData(data[1]);
+	u32 z = GetData(data[2]);
+	u32 w = GetData(data[3]);
+	return m_parr.AddParam("vec4", wxString::Format("fc%d", m_const_index++),
+		wxString::Format("vec4(%f, %f, %f, %f)", (float&)x, (float&)y, (float&)z, (float&)w));
 }
 
 wxString FragmentDecompilerThread::AddTex()
 {
-	return m_parr.AddParam(PARAM_CONST, "sampler2D", wxString::Format("tex_%d", dst.tex_num));
+	return m_parr.AddParam(PARAM_UNIFORM, "sampler2D", wxString::Format("tex%d", dst.tex_num));
 }
 
 template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
@@ -69,7 +106,7 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 	switch(src.reg_type)
 	{
 	case 0: //tmp
-		ret += AddReg(src.tmp_reg_index);
+		ret += AddReg(src.tmp_reg_index, src.fp16);
 	break;
 
 	case 1: //input
@@ -102,7 +139,6 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 	break;
 
 	case 2: //const
-		ConLog.Write("reg index = %d", src.tmp_reg_index);
 		ret += AddConst();
 	break;
 
@@ -157,6 +193,8 @@ void FragmentDecompilerThread::Task()
 		src1.HEX = GetData(data[2]);
 		src2.HEX = GetData(data[3]);
 
+		m_offset = 4 * 4;
+
 		switch(dst.opcode)
 		{
 		case 0x00: break; //NOP
@@ -166,24 +204,24 @@ void FragmentDecompilerThread::Task()
 		case 0x04: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + " + " + GetSRC(src2) + ")"); break; //MAD
 		case 0x05: AddCode("dot(" + GetSRC(src0) + ".xyz, " + GetSRC(src1) + ".xyz)"); break; // DP3
 		case 0x06: AddCode("dot(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // DP4
-		//case 0x07: break; // DST
+		case 0x07: AddCode("distance(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // DST
 		case 0x08: AddCode("min(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MIN
 		case 0x09: AddCode("max(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MAX
-		//case 0x0a: break; // SLT
-		//case 0x0b: break; // SGE
-		//case 0x0c: break; // SLE
-		//case 0x0d: break; // SGT
-		//case 0x0e: break; // SNE
-		//case 0x0f: break; // SEQ
+		case 0x0a: AddCode("vec4(lessThan(" + GetSRC(src0) + ", " + GetSRC(src1) + "))"); break; // SLT
+		case 0x0b: AddCode("vec4(greaterThanEqual(" + GetSRC(src0) + ", " + GetSRC(src1) + "))"); break; // SGE
+		case 0x0c: AddCode("vec4(lessThanEqual(" + GetSRC(src0) + ", " + GetSRC(src1) + "))"); break; // SLE
+		case 0x0d: AddCode("vec4(greaterThan(" + GetSRC(src0) + ", " + GetSRC(src1) + "))"); break; // SGT
+		case 0x0e: AddCode("vec4(notEqual(" + GetSRC(src0) + ", " + GetSRC(src1) + "))"); break; // SNE
+		case 0x0f: AddCode("vec4(equal(" + GetSRC(src0) + ", " + GetSRC(src1) + "))"); break; // SEQ
 
-		//case 0x10: break; // FRC
-		//case 0x11: break; // FLR
+		case 0x10: AddCode("fract(" + GetSRC(src0) + ")"); break; // FRC
+		case 0x11: AddCode("floor(" + GetSRC(src0) + ")"); break; // FLR
 		//case 0x12: break; // KIL
 		//case 0x13: break; // PK4
 		//case 0x14: break; // UP4
 		case 0x15: AddCode("ddx(" + GetSRC(src0) + ")"); break; // DDX
 		case 0x16: AddCode("ddy(" + GetSRC(src0) + ")"); break; // DDY
-		case 0x17: AddCode("texture(" + AddTex() + ", (" + GetSRC(src0) + ").xy)"); break; //TEX
+		case 0x17: AddCode("texture(" + AddTex() + ", " + GetSRC(src0) + ".xy)"); break; //TEX
 		//case 0x18: break; // TXP
 		//case 0x19: break; // TXD
 		case 0x1a: AddCode("1 / (" + GetSRC(src0) + ")"); break; // RCP
@@ -199,7 +237,7 @@ void FragmentDecompilerThread::Task()
 		case 0x23: AddCode("sin(" + GetSRC(src0) + ")"); break; // SIN
 		//case 0x24: break; // PK2
 		//case 0x25: break; // UP2
-		//case 0x26: break; // POW
+		case 0x26: AddCode("pow(" + GetSRC(src0) + ", " + GetSRC(src1) +")"); break; // POW
 		//case 0x27: break; // PKB
 		//case 0x28: break; // UPB
 		//case 0x29: break; // PK16
@@ -218,23 +256,23 @@ void FragmentDecompilerThread::Task()
 		//case 0x37: break; // TIMESWTEX
 		//case 0x38: break; // DP2
 		//case 0x39: break; // NRM
-		//case 0x3a: break; // DIV
-		//case 0x3b: break; // DIVSQ
+		case 0x3a: AddCode("(" + GetSRC(src0) + " / " + GetSRC(src1) + ")"); break; // DIV
+		case 0x3b: AddCode("(" + GetSRC(src0) + " / " + GetSRC(src1) + ")"); break; // DIVSQ
 		//case 0x3c: break; // LIF
-		//case 0x3d: break; // FENCT
-		//case 0x3e: break; // FENCB
+		case 0x3d: break; // FENCT
+		case 0x3e: break; // FENCB
 
 		default:
-			ConLog.Error("Unknown opcode 0x%x", dst.opcode);
+			ConLog.Error("Unknown opcode 0x%x (inst %d)", dst.opcode, m_size / (4 * 4));
 			Emu.Pause();
 		break;
 		}
 
-		m_size += 4 * 4;
+		m_size += m_offset;
 
 		if(dst.end) break;
 
-		data.SetOffset(4 * 4);
+		data.SetOffset(m_offset);
 	}
 
 	m_shader = BuildCode();

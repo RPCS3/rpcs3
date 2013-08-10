@@ -100,6 +100,7 @@ struct FragmentDecompilerThread : public ThreadBase
 	u32 m_addr;
 	u32& m_size;
 	u32 m_const_index;
+	u32 m_offset;
 
 	FragmentDecompilerThread(wxString& shader, ParamArray& parr, u32 addr, u32& size)
 		: ThreadBase(false, "Fragment Shader Decompiler Thread")
@@ -115,7 +116,7 @@ struct FragmentDecompilerThread : public ThreadBase
 	wxString GetMask();
 
 	void AddCode(wxString code);
-	wxString AddReg(u32 index);
+	wxString AddReg(u32 index, int fp16);
 	wxString AddConst();
 	wxString AddTex();
 

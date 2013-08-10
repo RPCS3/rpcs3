@@ -141,7 +141,7 @@ public:
 	virtual void SetCount(const u32 count, bool memzero = true)
 	{
 		if(m_count >= count) return;
-		
+
 		_InsertRoomEnd(count - m_count);
 
 		if(memzero) memset(m_array + m_count - count, 0, sizeof(T) * (m_count - count));

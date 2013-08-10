@@ -19,7 +19,9 @@ int Program::GetLocation(const wxString& name)
 	u32 pos = m_locations.Move(new Location());
 	m_locations[pos].name = name;
 
-	return m_locations[pos].loc = glGetUniformLocation(id, name);
+	m_locations[pos].loc = glGetUniformLocation(id, name);
+	checkForGlError(wxString::Format("glGetUniformLocation(0x%x, %s)", id, name));
+	return m_locations[pos].loc;
 }
 
 bool Program::IsCreated() const
@@ -72,6 +74,11 @@ void Program::Create(const u32 vp, const u32 fp)
 	}
 }
 
+void Program::UnUse()
+{
+	id = 0;
+}
+
 void Program::Use()
 {
 	glUseProgram(id);
@@ -80,8 +87,10 @@ void Program::Use()
 
 void Program::SetTex(u32 index)
 {
-	glUniform1i(GetLocation(wxString::Format("tex_%d", index)), index);
-	checkForGlError(wxString::Format("SetTex(%d)", index));
+	int loc = GetLocation(wxString::Format("tex%d", index));
+	checkForGlError(wxString::Format("GetLocation(tex%d)", index));
+	glUniform1i(loc, index);
+	checkForGlError(wxString::Format("SetTex(%d - %d)", index, loc));
 }
 
 void Program::Delete()

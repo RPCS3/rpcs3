@@ -381,7 +381,11 @@ public:
 		, m_parent(nullptr)
 		, m_opcode(-1)
 	{
-		memset(m_instrs, 0, sizeof(InstrCaller<TO>*) * count);
+		for(int i=0; i<count; ++i)
+		{
+			m_instrs[i] = error_func;
+		}
+
 		memset(m_instrs_info, 0, sizeof(InstrBase<TO>*) * count);
 	}
 
@@ -413,6 +417,14 @@ public:
 
 	void set_error_func(InstrCaller<TO>* error_func)
 	{
+		for(int i=0; i<count; ++i)
+		{
+			if(m_instrs[i] == m_error_func || !m_instrs[i])
+			{
+				m_instrs[i] = error_func;
+			}
+		}
+
 		m_error_func = error_func;
 	}
 
@@ -442,16 +454,7 @@ public:
 
 	void decode(TO* op, u32 entry, u32 code) const
 	{
-		InstrCaller<TO>* instr = m_instrs[entry];
-
-		if(instr)
-		{
-			(*instr)(op, code);
-		}
-		else if(m_error_func)
-		{
-			(*m_error_func)(op, code);
-		}
+		(*m_instrs[entry])(op, code);
 	}
 
 	virtual void operator ()(TO* op, u32 code) const

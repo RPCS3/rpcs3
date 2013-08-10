@@ -3564,7 +3564,7 @@ private:
 	}
 	void FNEG(u32 frd, u32 frb, bool rc)
 	{
-		CPU.FPR[frd] = -CPU.FPR[frb];
+		CPU.FPR[frd] = ((u64&)CPU.FPR[frb]) ^ (1ULL << 63);
 		if(rc) UNK("fneg.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMR(u32 frd, u32 frb, bool rc)

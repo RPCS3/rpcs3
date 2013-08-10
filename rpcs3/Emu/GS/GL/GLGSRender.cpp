@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/Cell/PPCInstrTable.h"
-#define CMD_DEBUG 1
-#define DUMP_VERTEX_DATA 1
+#define CMD_DEBUG 0
+#define DUMP_VERTEX_DATA 0
 
 #if	CMD_DEBUG
 	#define CMD_LOG ConLog.Write
@@ -75,8 +75,8 @@ void GLGSFrame::SetViewport(int x, int y, u32 w, u32 h)
 }
 
 GLGSRender::GLGSRender()
-	: m_frame(NULL)
-	, m_rsx_thread(NULL)
+	: m_frame(nullptr)
+	, m_rsx_thread(nullptr)
 	, m_fp_buf_num(-1)
 	, m_vp_buf_num(-1)
 {
@@ -121,6 +121,12 @@ void GLRSXThread::Task()
 
 	glEnable(GL_TEXTURE_2D);
 	glSwapInterval(Ini.GSVSyncEnable.GetValue() ? 1 : 0);
+
+	for(u32 i=0; i<p.m_textures_count; ++i)
+	{
+		GLTexture& tex = p.m_frame->GetTexture(i);
+		tex.Create();
+	}
 
 	bool draw = true;
 	u32 drawed = 0;
@@ -172,7 +178,7 @@ void GLRSXThread::Task()
 			continue;
 		}
 
-		ConLog.Write("addr = 0x%x", p.m_ioAddress + get);
+		//ConLog.Write("addr = 0x%x", p.m_ioAddress + get);
 		const u32 cmd = Memory.Read32(p.m_ioAddress + get);
 		const u32 count = (cmd >> 18) & 0x7ff;
 		//if(cmd == 0) continue;
@@ -251,6 +257,10 @@ void GLGSRender::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddre
 	m_localAddress = localAddress;
 	m_ctrl = (CellGcmControl*)Memory.GetMemFromAddr(m_ctrlAddress);
 
+	m_cur_vertex_prog = nullptr;
+	m_cur_shader_prog = nullptr;
+	m_cur_shader_prog_num = 0;
+
 	(m_rsx_thread = new GLRSXThread(this))->Start();
 }
 
@@ -309,7 +319,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 	wxFile dump("VertexDataArray.dump", wxFile::write);
 #endif
 
-	for(u32 i=0; i<16; ++i)
+	for(u32 i=0; i<m_vertex_count; ++i)
 	{
 		if(!m_vertex_data[i].IsEnabled()) continue;
 
@@ -409,7 +419,7 @@ void GLGSRender::EnableVertexData(bool indexed_draw)
 void GLGSRender::DisableVertexData()
 {
 	m_vdata.Clear();
-	for(u32 i=0; i<16; ++i)
+	for(u32 i=0; i<m_vertex_count; ++i)
 	{
 		if(!m_vertex_data[i].IsEnabled()) continue;
 		m_vertex_data[i].data.Clear();
@@ -419,7 +429,7 @@ void GLGSRender::DisableVertexData()
 
 void GLGSRender::LoadVertexData(u32 first, u32 count)
 {
-	for(u32 i=0; i<16; ++i)
+	for(u32 i=0; i<m_vertex_count; ++i)
 	{
 		if(!m_vertex_data[i].IsEnabled()) continue;
 
@@ -429,11 +439,10 @@ void GLGSRender::LoadVertexData(u32 first, u32 count)
 
 void GLGSRender::InitVertexData()
 {
-	for(u32 i=0; i<m_cur_vertex_prog->constants4.GetCount(); ++i)
+	for(u32 i=0; i<m_transform_constants.GetCount(); ++i)
 	{
-		const VertexProgram::Constant4& c = m_cur_vertex_prog->constants4[i];
+		const TransformConstant& c = m_transform_constants[i];
 		const wxString& name = wxString::Format("vc%d", c.id);
-		//const int l = glGetUniformLocation(m_program.id, name);
 		const int l = m_program.GetLocation(name);
 		checkForGlError("glGetUniformLocation " + name);
 
@@ -499,7 +508,9 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		CMD_LOG("index = %d, offset=0x%x, location=0x%x, cubemap=0x%x, dimension=0x%x, format=0x%x, mipmap=0x%x",
 			index, offset, location, cubemap, dimension, format, mipmap);
 
-		tex.SetOffset(GetAddress(offset, location));
+		u32 tex_addr = GetAddress(offset, location);
+		ConLog.Warning("texture addr = 0x%x", tex_addr);
+		tex.SetOffset(tex_addr);
 		tex.SetFormat(cubemap, dimension, format, mipmap);
 	}
 	break;
@@ -810,10 +821,11 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 
 	case NV4097_SET_COLOR_CLEAR_VALUE:
 	{
-		const u8 a = (args[0] >> 24) & 0xff;
-		const u8 r = (args[0] >> 16) & 0xff;
-		const u8 g = (args[0] >> 8) & 0xff;
-		const u8 b = args[0] & 0xff;
+		const u32 color = args[0];
+		const u8 a = (color >> 24) & 0xff;
+		const u8 r = (color >> 16) & 0xff;
+		const u8 g = (color >> 8) & 0xff;
+		const u8 b = color & 0xff;
 		CMD_LOG("a=%d, r=%d, g=%d, b=%d", a, r, g, b);
 		glClearColor(
 			(float)r / 255.0f,
@@ -825,9 +837,9 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 
 	case NV4097_SET_SHADER_PROGRAM:
 	{
-		m_shader_prog.Delete();
-		m_shader_prog.addr = GetAddress(args[0] & ~0x3, (args[0] & 0x3) - 1);
-		//m_program.Delete();
+		m_cur_shader_prog = &m_shader_progs[m_cur_shader_prog_num++];
+		m_cur_shader_prog->Delete();
+		m_cur_shader_prog->addr = GetAddress(args[0] & ~0x3, (args[0] & 0x3) - 1);
 	}
 	break;
 
@@ -850,13 +862,14 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 
 	case NV4097_SET_TRANSFORM_PROGRAM_LOAD:
 	{
-		//m_program.Delete();
 		m_cur_vertex_prog = &m_vertex_progs[args[0]];
 		m_cur_vertex_prog->Delete();
 
 		if(count == 2)
 		{
 			const u32 start = args[1];
+			if(start)
+				ConLog.Warning("NV4097_SET_TRANSFORM_PROGRAM_LOAD: start = %d", start);
 		}
 	}
 	break;
@@ -899,12 +912,6 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 			break;
 		}
 
-		if(!m_cur_vertex_prog)
-		{
-			ConLog.Warning("NV4097_SET_TRANSFORM_CONSTANT_LOAD: m_cur_vertex_prog == NULL");
-			break;
-		}
-
 		for(u32 id = args[0], i = 1; i<count; ++id)
 		{
 			const u32 x = args[i++];
@@ -912,15 +919,10 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 			const u32 z = args[i++];
 			const u32 w = args[i++];
 
-			VertexProgram::Constant4 c;
-			c.id = id;
-			c.x = (float&)x;
-			c.y = (float&)y;
-			c.z = (float&)z;
-			c.w = (float&)w;
+			TransformConstant c(id, (float&)x, (float&)y, (float&)z, (float&)w);
 
 			CMD_LOG("SET_TRANSFORM_CONSTANT_LOAD[%d : %d] = (%f, %f, %f, %f)", i, id, c.x, c.y, c.z, c.w);
-			m_cur_vertex_prog->constants4.AddCpy(c);
+			m_transform_constants.AddCpy(c);
 		}
 	}
 	break;
@@ -1154,13 +1156,20 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 
 bool GLGSRender::LoadProgram()
 {
-	m_fp_buf_num = m_prog_buffer.SearchFp(m_shader_prog);
+	if(!m_cur_shader_prog)
+	{
+		ConLog.Warning("LoadProgram: m_cur_shader_prog == NULL");
 
-	if(m_fp_buf_num == -1) m_shader_prog.Decompile();
+		return false;
+	}
+
+	m_fp_buf_num = m_prog_buffer.SearchFp(*m_cur_shader_prog);
+
+	if(m_fp_buf_num == -1) m_cur_shader_prog->Decompile();
 
 	if(!m_cur_vertex_prog)
 	{
-		ConLog.Warning("NV4097_SET_BEGIN_END: m_cur_vertex_prog == NULL");
+		ConLog.Warning("LoadProgram: m_cur_vertex_prog == NULL");
 
 		return false;
 	}
@@ -1182,11 +1191,11 @@ bool GLGSRender::LoadProgram()
 	if(m_fp_buf_num == -1)
 	{
 		ConLog.Warning("FP not found in buffer!");
-		m_shader_prog.Wait();
-		m_shader_prog.Compile();
+		m_cur_shader_prog->Wait();
+		m_cur_shader_prog->Compile();
 
 		wxFile f(wxGetCwd() + "/FragmentProgram.txt", wxFile::write);
-		f.Write(m_shader_prog.shader);
+		f.Write(m_cur_shader_prog->shader);
 	}
 
 	if(m_vp_buf_num == -1)
@@ -1203,10 +1212,14 @@ bool GLGSRender::LoadProgram()
 		m_program.id = m_prog_buffer.GetProg(m_fp_buf_num, m_vp_buf_num);
 	}
 
-	if(!m_program.id)
+	if(m_program.id)
 	{
-		m_program.Create(m_cur_vertex_prog->id, m_shader_prog.id);
-		m_prog_buffer.Add(m_program, m_shader_prog, *m_cur_vertex_prog);
+		m_program.Use();
+	}
+	else
+	{
+		m_program.Create(m_cur_vertex_prog->id, m_cur_shader_prog->id);
+		m_prog_buffer.Add(m_program, *m_cur_shader_prog, *m_cur_vertex_prog);
 
 		m_program.Use();
 
@@ -1270,7 +1283,12 @@ void GLGSRender::ExecCMD()
 			glDepthRangef(m_clip_min, m_clip_max);
 		}
 
-		for(u32 i=0; i<16; ++i)
+		if(m_indexed_array.m_count && m_draw_array_count)
+		{
+			ConLog.Warning("m_indexed_array.m_count && draw_array_count");
+		}
+
+		for(u32 i=0; i<m_textures_count; ++i)
 		{
 			GLTexture& tex = m_frame->GetTexture(i);
 			if(!tex.IsEnabled()) continue;
@@ -1280,15 +1298,9 @@ void GLGSRender::ExecCMD()
 			tex.Bind();
 			checkForGlError("tex.Bind");
 			m_program.SetTex(i);
-			checkForGlError("m_program.SetTex");
 			tex.Init();
 			checkForGlError("tex.Init");
 			tex.Save();
-		}
-
-		if(m_indexed_array.m_count && m_draw_array_count)
-		{
-			ConLog.Warning("m_indexed_array.m_count && draw_array_count");
 		}
 
 		if(m_indexed_array.m_count)
@@ -1347,13 +1359,20 @@ void GLGSRender::ExecCMD()
 
 void GLGSRender::Reset()
 {
-	m_program.Delete();
-	//m_program.id = 0;
-	m_shader_prog.id = 0;
+	m_program.UnUse();
+
+	if(m_cur_shader_prog)
+		m_cur_shader_prog->id = 0;
+
 	if(m_cur_vertex_prog)
 		m_cur_vertex_prog->id = 0;
 
-	memset(m_vertex_data, 0, sizeof(VertexData) * 16);
+	m_cur_shader_prog_num = 0;
+	m_transform_constants.Clear();
+	for(uint i=0; i<m_vertex_count; ++i)
+	{
+		m_vertex_data[i].Reset();
+	}
 
 	if(m_vbo.IsCreated())
 	{

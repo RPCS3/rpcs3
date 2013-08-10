@@ -38,6 +38,20 @@ public:
 	{
 	}
 
+	void Create()
+	{
+		if(!m_id)
+		{
+			glGenTextures(1, &m_id);
+			checkForGlError("GLTexture::Init() -> glGenTextures");
+			Bind();
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		}
+	}
+
 	void SetRect(const u32 width, const u32 height)
 	{
 		m_width = width;
@@ -68,21 +82,8 @@ public:
 
 	void Init()
 	{
-		if(!m_id)
-		{
-			glGenTextures(1, &m_id);
-			checkForGlError("GLTexture::Init() -> glGenTextures");
-			glBindTexture(GL_TEXTURE_2D, m_id);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		}
-		else
-		{
-			glBindTexture(GL_TEXTURE_2D, m_id);
-		}
-
+		Bind();
+		ConLog.Warning("texture addr = 0x%x, width = %d, height = %d", m_offset, m_width, m_height);
 		//TODO: safe init
 		checkForGlError("GLTexture::Init() -> glBindTexture");
 
@@ -106,18 +107,17 @@ public:
 		default: ConLog.Error("Init tex error: Bad tex format (0x%x)", m_format); break;
 		}
 
-		//glBindTexture(GL_TEXTURE_2D, 0);
+		//Unbind();
 	}
 
 	void Save(const wxString& name)
 	{
 		if(!m_id || !m_offset) return;
 
-		ConLog.Write("start");
 		u32* alldata = new u32[m_width * m_height];
 
-		glBindTexture(GL_TEXTURE_2D, m_id);
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, alldata);
+		Bind();
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, alldata);
 
 		u8* data = new u8[m_width * m_height * 3];
 		u8* alpha = new u8[m_width * m_height];
@@ -133,7 +133,6 @@ public:
 			*dst_a++ = *src++;
 		}
 
-		ConLog.Write("end");
 		wxImage out;
 		out.Create(m_width, m_height, data, alpha);
 		out.SaveFile(name, wxBITMAP_TYPE_PNG);
@@ -160,8 +159,32 @@ public:
 		glBindTexture(GL_TEXTURE_2D, m_id);
 	}
 
+	void Unbind()
+	{
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
 	void Enable(bool enable) { m_enabled = enable; }
 	bool IsEnabled() const { return m_enabled; }
+};
+
+struct TransformConstant
+{
+	u32 id;
+	float x, y, z, w;
+
+	TransformConstant()
+	{
+	}
+
+	TransformConstant(u32 id, float x, float y, float z, float w)
+		: id(id)
+		, x(x)
+		, y(y)
+		, z(z)
+		, w(w)
+	{
+	}
 };
 
 struct IndexArrayData
@@ -228,16 +251,25 @@ class GLGSRender
 	, public GSRender
 	, public ExecRSXCMDdata
 {
+public:
+	static const uint m_vertex_count = 16;
+	static const uint m_fragment_count = 16;
+	static const uint m_textures_count = 16;
+
 private:
 	GLRSXThread* m_rsx_thread;
 
 	IndexArrayData m_indexed_array;
 
-	ShaderProgram m_shader_prog;
-	VertexData m_vertex_data[16];
+	ShaderProgram m_shader_progs[m_fragment_count];
+	ShaderProgram* m_cur_shader_prog;
+	int m_cur_shader_prog_num;
+	VertexData m_vertex_data[m_vertex_count];
 	Array<u8> m_vdata;
-	VertexProgram m_vertex_progs[16];
+	VertexProgram m_vertex_progs[m_vertex_count];
 	VertexProgram* m_cur_vertex_prog;
+	Array<TransformConstant> m_transform_constants;
+
 	Program m_program;
 	int m_fp_buf_num;
 	int m_vp_buf_num;

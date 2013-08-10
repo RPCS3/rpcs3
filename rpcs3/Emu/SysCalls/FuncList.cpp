@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "SysCalls.h"
 
-#define FUNC_LOG_ERROR(x) ConLog.Error(x); return SC_ARGS_1
+#define FUNC_LOG_ERROR(x) ConLog.Error(x); return 0
 s64 SysCalls::DoFunc(const u32 id) 
 {
 	switch(id)
