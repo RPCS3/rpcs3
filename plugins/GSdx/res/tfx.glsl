@@ -656,6 +656,77 @@ void datst()
 #endif
 }
 
+// Note layout stuff might require gl4.3
+#ifdef SUBROUTINE_GL40
+// Function pointer type
+subroutine void AlphaTestType(vec4 c);
+
+// a function pointer variable
+layout(location = 0) subroutine uniform AlphaTestType atst;
+
+// The function attached to AlphaTestType
+layout(index = 0) subroutine(AlphaTestType)
+void atest_never(vec4 c)
+{
+    discard;
+}
+
+layout(index = 1) subroutine(AlphaTestType)
+void atest_always(vec4 c)
+{
+    // Nothing to do
+}
+
+layout(index = 2) subroutine(AlphaTestType)
+void atest_l(vec4 c)
+{
+    float a = trunc(c.a * 255.0 + 0.01);
+    if (PS_SPRITEHACK == 0)
+        if ((AREF - a - 0.5f) < 0.0f)
+            discard;
+}
+
+layout(index = 3) subroutine(AlphaTestType)
+void atest_le(vec4 c)
+{
+    float a = trunc(c.a * 255.0 + 0.01);
+    if ((AREF - a + 0.5f) < 0.0f)
+        discard;
+}
+
+layout(index = 4) subroutine(AlphaTestType)
+void atest_e(vec4 c)
+{
+    float a = trunc(c.a * 255.0 + 0.01);
+    if ((0.5f - abs(a - AREF)) < 0.0f)
+        discard;
+}
+
+layout(index = 5) subroutine(AlphaTestType)
+void atest_ge(vec4 c)
+{
+    float a = trunc(c.a * 255.0 + 0.01);
+    if ((a-AREF + 0.5f) < 0.0f)
+        discard;
+}
+
+layout(index = 6) subroutine(AlphaTestType)
+void atest_g(vec4 c)
+{
+    float a = trunc(c.a * 255.0 + 0.01);
+    if ((a-AREF - 0.5f) < 0.0f)
+        discard;
+}
+
+layout(index = 7) subroutine(AlphaTestType)
+void atest_ne(vec4 c)
+{
+    float a = trunc(c.a * 255.0 + 0.01);
+    if ((abs(a - AREF) - 0.5f) < 0.0f)
+        discard;
+}
+
+#else
 void atst(vec4 c)
 {
     float a = trunc(c.a * 255.0 + 0.01);
@@ -700,16 +771,64 @@ void atst(vec4 c)
             discard;
     }
 }
+#endif
 
-vec4 fog(vec4 c, float f)
+// Note layout stuff might require gl4.3
+#ifdef SUBROUTINE_GL40
+// Function pointer type
+subroutine void ColClipType(inout vec4 c);
+
+// a function pointer variable
+layout(location = 1) subroutine uniform ColClipType colclip;
+
+layout(index = 8) subroutine(ColClipType)
+void colclip_0(inout vec4 c)
 {
-    vec4 c_out = c;
+	// nothing to do
+}
+
+layout(index = 9) subroutine(ColClipType)
+void colclip_1(inout vec4 c)
+{
+	// FIXME !!!!
+	//c.rgb *= c.rgb < 128./255;
+	bvec3 factor = bvec3(128.0f/255.0f, 128.0f/255.0f, 128.0f/255.0f);
+	c.rgb *= vec3(factor);
+}
+
+layout(index = 10) subroutine(ColClipType)
+void colclip_2(inout vec4 c)
+{
+	c.rgb = 256.0f/255.0f - c.rgb;
+	// FIXME !!!!
+	//c.rgb *= c.rgb < 128./255;
+	bvec3 factor = bvec3(128.0f/255.0f, 128.0f/255.0f, 128.0f/255.0f);
+	c.rgb *= vec3(factor);
+}
+
+#else
+void colclip(inout vec4 c)
+{
+    if (PS_COLCLIP == 2)
+    {
+        c.rgb = 256.0f/255.0f - c.rgb;
+    }
+    if (PS_COLCLIP > 0)
+    {
+        // FIXME !!!!
+        //c.rgb *= c.rgb < 128./255;
+        bvec3 factor = bvec3(128.0f/255.0f, 128.0f/255.0f, 128.0f/255.0f);
+        c.rgb *= vec3(factor);
+    }
+}
+#endif
+
+void fog(vec4 c, float f)
+{
     if(PS_FOG != 0)
     {
-        c_out.rgb = mix(FogColor, c.rgb, f);
+        c.rgb = mix(FogColor, c.rgb, f);
     }
-
-    return c_out;
 }
 
 vec4 ps_color()
@@ -722,19 +841,9 @@ vec4 ps_color()
 
     atst(c);
 
-    c = fog(c, PSin_t.z);
+    fog(c, PSin_t.z);
 
-    if (PS_COLCLIP == 2)
-    {
-        c.rgb = 256.0f/255.0f - c.rgb;
-    }
-    if (PS_COLCLIP > 0)
-    {
-        // FIXME !!!!
-        //c.rgb *= c.rgb < 128./255;
-        bvec3 factor = bvec3(128.0f/255.0f, 128.0f/255.0f, 128.0f/255.0f);
-        c.rgb *= vec3(factor);
-    }
+	colclip(c);
 
     if(PS_CLR1 != 0) // needed for Cd * (As/Ad/F + 1) blending modes
     {

@@ -606,10 +606,9 @@ class GSDeviceOGL : public GSDevice
 	void IASetIndexBuffer(const void* index, size_t count);
 	void IASetVertexState(GSVertexBufferStateOGL* vb = NULL);
 
-	void PSSetShaderResource(const int i, GLuint sr);
+	void PSSetShaderResource(GLuint sr);
 	void PSSetShaderResources(GLuint tex[2]);
 	void PSSetSamplerState(GLuint ss);
-	void PSSetSamplerStates(const int count, const GLuint* samplers);
 
 	void OMSetDepthStencilState(GSDepthStencilOGL* dss, uint8 sref);
 	void OMSetBlendState(GSBlendStateOGL* bs, float bf);
@@ -627,9 +626,10 @@ class GSDeviceOGL : public GSDevice
 
 
 	void SetupIA(const void* vertex, int vertex_count, const uint32* index, int index_count, int prim);
-	void SetupVS(VSSelector sel, const VSConstantBuffer* cb);
+	void SetupVS(VSSelector sel);
 	void SetupGS(GSSelector sel);
-	void SetupPS(PSSelector sel, const PSConstantBuffer* cb);
+	void SetupPS(PSSelector sel);
+	void SetupCB(const VSConstantBuffer* vs_cb, const PSConstantBuffer* ps_cb);
 	void SetupSampler(PSSelector sel, PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
 

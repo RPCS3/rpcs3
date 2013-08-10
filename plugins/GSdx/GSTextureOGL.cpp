@@ -177,7 +177,6 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read)
 			break;
 		default: break;
 	}
-
 }
 
 GSTextureOGL::~GSTextureOGL()
@@ -210,7 +209,6 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 
 	EnableUnit();
 
-#if 1
 	PboPool::BindPbo();
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, m_int_alignment);
@@ -230,28 +228,12 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	PboPool::UnbindPbo();
 
 	return true;
-#else
+
+#if 0
 
 	// pitch is in byte wherease GL_UNPACK_ROW_LENGTH is in pixel
 	glPixelStorei(GL_UNPACK_ALIGNMENT, m_int_alignment);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch >> m_int_shift);
-
-#ifdef _LINUX
-	if (GLLoader::fglrx_buggy_driver && !GLLoader::in_replayer) {
-		// FIXME : it crash on colin mcrae rally 3 (others game too) when the texture is small
-		//if ((pitch >> 2) == 32 || r.width() < 32 || r.height() < 32) {
-		if ((r.width() < 32) || (pitch == 128 && r.width() == 32)) {
-#ifdef ENABLE_OGL_DEBUG
-			fprintf(stderr, "Skip Texture %dx%d with a pitch of %d pixel. Type %x\n", m_size.x, m_size.y, pitch >>2, m_format);
-			fprintf(stderr, "Box (%d,%d)x(%d,%d)\n", r.x, r.y, r.width(), r.height());
-#endif
-
-			// FIXME useful?
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Restore default behavior
-			return false;
-		}
-	}
-#endif
 
 	glTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.width(), r.height(), m_int_format, m_int_type, data);
 
@@ -259,18 +241,6 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); // Restore default behavior
 
 	return true;
-#if 0
-	if(m_dev && m_texture)
-	{
-		D3D11_BOX box = {r.left, r.top, 0, r.right, r.bottom, 1};
-
-		m_ctx->UpdateSubresource(m_texture, 0, &box, data, pitch, 0);
-
-		return true;
-	}
-
-	return false;
-#endif
 #endif
 }
 

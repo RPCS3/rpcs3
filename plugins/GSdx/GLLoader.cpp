@@ -81,7 +81,9 @@ PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages            = NULL;
 PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer        = NULL;
 PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer         = NULL;
 PFNGLBUFFERSUBDATAPROC                 gl_BufferSubData               = NULL;
-// GL 4.1
+// GL4.0
+PFNGLUNIFORMSUBROUTINESUIVPROC         gl_UniformSubroutinesuiv       = NULL;
+// GL4.1
 PFNGLBINDPROGRAMPIPELINEPROC           gl_BindProgramPipeline         = NULL;
 PFNGLGENPROGRAMPIPELINESPROC           gl_GenProgramPipelines         = NULL;
 PFNGLDELETEPROGRAMPIPELINESPROC        gl_DeleteProgramPipelines      = NULL;
@@ -122,9 +124,10 @@ namespace GLLoader {
 	bool found_GL_ARB_clear_texture = false; // Don't know if GL3 hardawe can support it
 	bool found_GL_ARB_buffer_storage = false;
 	// GL4 hardware
-	bool found_GL_ARB_copy_image = false;
+	bool found_GL_ARB_copy_image = false; // Not sure actually
 	bool found_GL_ARB_gpu_shader5 = false;
 	bool found_GL_ARB_shader_image_load_store = false;
+	bool found_GL_ARB_shader_subroutine = false;
 
 	// Mandatory for FULL GL (but optional for GLES)
 	bool found_GL_ARB_multi_bind = false; // Not yet. Wait Mesa & AMD drivers
@@ -221,6 +224,17 @@ namespace GLLoader {
 				if (ext.compare("GL_ARB_copy_image") == 0) found_GL_ARB_copy_image = true;
 				if (ext.compare("GL_ARB_gpu_shader5") == 0) found_GL_ARB_gpu_shader5 = true;
 				if (ext.compare("GL_ARB_shader_image_load_store") == 0) found_GL_ARB_shader_image_load_store = true;
+#if 0
+				// Strangely it doesn't provide the speed boost as expected.
+				// Note: only atst/colclip was replaced with subroutine for the moment. It replace 2000 program switch on
+				// colin mcrae 3 by 2100 uniform, but code is slower!
+				//
+				// Current hypothesis: the validation of useprogram is done in the "driver thread" whereas the extra function calls
+				// are done on the overloaded main threads.
+				// Apitrace profiling shows faster GPU draw times
+
+				if (ext.compare("GL_ARB_shader_subroutine") == 0) found_GL_ARB_shader_subroutine = true;
+#endif
 #ifdef GL44 // Need to debug the code first
 				if (ext.compare("GL_ARB_clear_texture") == 0) found_GL_ARB_clear_texture = true;
 				if (ext.compare("GL_ARB_multi_bind") == 0) found_GL_ARB_multi_bind = true;
@@ -242,6 +256,7 @@ namespace GLLoader {
 		status &= status_and_override(found_GL_ARB_shader_image_load_store,"GL_ARB_shader_image_load_store");
 		status &= status_and_override(found_GL_ARB_clear_texture,"GL_ARB_clear_texture");
 		status &= status_and_override(found_GL_ARB_buffer_storage,"GL_ARB_buffer_storage");
+		status &= status_and_override(found_GL_ARB_shader_subroutine,"GL_ARB_shader_subroutine");
 
 		status &= status_and_override(found_GL_ARB_texture_storage, "GL_ARB_texture_storage", true);
 		status &= status_and_override(found_GL_ARB_shading_language_420pack,"GL_ARB_shading_language_420pack");

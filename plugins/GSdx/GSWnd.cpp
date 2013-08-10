@@ -82,6 +82,8 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_VertexAttribIPointer) = GetProcAddress("glVertexAttribIPointer");
 	*(void**)&(gl_VertexAttribPointer) = GetProcAddress("glVertexAttribPointer");
 	*(void**)&(gl_BufferSubData) = GetProcAddress("glBufferSubData");
+	// GL4.0
+	*(void**)&(gl_UniformSubroutinesuiv) = GetProcAddress("glUniformSubroutinesuiv");
 	// GL4.1
 	*(void**)&(gl_BindProgramPipeline) = GetProcAddress("glBindProgramPipeline");
 	*(void**)&(gl_DeleteProgramPipelines) = GetProcAddress("glDeleteProgramPipelines");

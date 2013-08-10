@@ -25,10 +25,11 @@ class GSShaderOGL {
 	GLuint m_pipeline;
 	hash_map<uint64, GLuint > m_single_prog;
 	const bool m_debug_shader;
-	const bool m_sso;
-	const bool m_glsl420;
+	GLuint m_sub_count;
 
+	GLuint m_ps_sub[2];
 
+	void SetSubroutineUniform();
 	void SetupUniform();
 	void SetUniformBinding(GLuint prog, GLchar* name, GLuint binding);
 	void SetSamplerBinding(GLuint prog, GLchar* name, GLuint binding);
@@ -41,11 +42,12 @@ class GSShaderOGL {
 	GLuint LinkNewProgram();
 
 	public:
-	GSShaderOGL(bool debug, bool sso, bool glsl420);
+	GSShaderOGL(bool debug);
 	~GSShaderOGL();
 
 	void GS(GLuint s);
-	void PS(GLuint s);
+	void PS(GLuint s, GLuint sub_count = 0);
+	void PS_subroutine(GLuint *sub);
 	void VS(GLuint s);
 
 	void UseProgram();

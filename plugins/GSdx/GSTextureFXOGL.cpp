@@ -133,13 +133,21 @@ GSBlendStateOGL* GSDeviceOGL::CreateBlend(OMBlendSelector bsel, uint8 afix)
 	return bs;
 }
 
-void GSDeviceOGL::SetupVS(VSSelector sel, const VSConstantBuffer* cb)
+void GSDeviceOGL::SetupCB(const VSConstantBuffer* vs_cb, const PSConstantBuffer* ps_cb)
+{
+	if(m_vs_cb_cache.Update(vs_cb)) {
+		m_vs_cb->upload(vs_cb);
+	}
+
+	if(m_ps_cb_cache.Update(ps_cb)) {
+		m_ps_cb->upload(ps_cb);
+	}
+
+}
+
+void GSDeviceOGL::SetupVS(VSSelector sel)
 {
 	GLuint vs = m_vs[sel];
-
-	if(m_vs_cb_cache.Update(cb)) {
-		m_vs_cb->upload(cb);
-	}
 
 	m_shader->VS(vs);
 }
@@ -151,8 +159,16 @@ void GSDeviceOGL::SetupGS(GSSelector sel)
 	m_shader->GS(gs);
 }
 
-void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb)
+void GSDeviceOGL::SetupPS(PSSelector sel)
 {
+	if (GLLoader::found_GL_ARB_shader_subroutine) {
+		GLuint sub[2] = {sel.atst, (uint32)sel.colclip + 8};
+		m_shader->PS_subroutine(sub);
+		// Handle by subroutine useless now
+		sel.atst = 0;
+		sel.colclip = 0;
+	}
+
 	// *************************************************************
 	// Static
 	// *************************************************************
@@ -169,11 +185,7 @@ void GSDeviceOGL::SetupPS(PSSelector sel, const PSConstantBuffer* cb)
 	// *************************************************************
 	// Dynamic
 	// *************************************************************
-	if(m_ps_cb_cache.Update(cb)) {
-		m_ps_cb->upload(cb);
-	}
-
-	m_shader->PS(ps);
+	m_shader->PS(ps, 2);
 }
 
 void GSDeviceOGL::SetupSampler(PSSelector sel, PSSamplerSelector ssel)

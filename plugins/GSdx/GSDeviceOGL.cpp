@@ -168,7 +168,7 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// ****************************************************************
 	// Various object
 	// ****************************************************************
-	m_shader = new GSShaderOGL(!!theApp.GetConfig("debug_ogl_shader", 1), GLLoader::found_GL_ARB_separate_shader_objects, GLLoader::found_GL_ARB_shading_language_420pack);
+	m_shader = new GSShaderOGL(!!theApp.GetConfig("debug_ogl_shader", 1));
 
 	gl_GenFramebuffers(1, &m_fbo);
 	gl_GenFramebuffers(1, &m_fbo_read);
@@ -572,6 +572,7 @@ void GSDeviceOGL::Barrier(GLbitfield b)
 //#endif
 }
 
+/* Note: must be here because tfx_glsl is static */
 GLuint GSDeviceOGL::CompileVS(VSSelector sel)
 {
 	std::string macro = format("#define VS_BPPZ %d\n", sel.bppz)
@@ -582,6 +583,7 @@ GLuint GSDeviceOGL::CompileVS(VSSelector sel)
 	return m_shader->Compile("tfx.glsl", "vs_main", GL_VERTEX_SHADER, tfx_glsl, macro);
 }
 
+/* Note: must be here because tfx_glsl is static */
 GLuint GSDeviceOGL::CompileGS(GSSelector sel)
 {
 	// Easy case
@@ -598,6 +600,7 @@ GLuint GSDeviceOGL::CompileGS(GSSelector sel)
 #endif
 }
 
+/* Note: must be here because tfx_glsl is static */
 GLuint GSDeviceOGL::CompilePS(PSSelector sel)
 {
 	std::string macro = format("#define PS_FST %d\n", sel.fst)
@@ -720,6 +723,14 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 
 	GSVector2i ds = dt->GetSize();
 
+	// WARNING: setup of the program must be done first. So you can setup
+	// 1/ subroutine uniform
+	// 2/ bindless texture uniform
+	// 3/ others uniform?
+	m_shader->VS(m_convert.vs);
+	m_shader->GS(0);
+	m_shader->PS(ps);
+
 	// ************************************
 	// om
 	// ************************************
@@ -764,32 +775,17 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 		{GSVector4(left, bottom, 0.5f, 1.0f), GSVector2(flip_sr.x, flip_sr.w)},
 		{GSVector4(right, bottom, 0.5f, 1.0f), GSVector2(flip_sr.z, flip_sr.w)},
 	};
-	//fprintf(stderr, "A:%fx%f B:%fx%f\n", left, top, bottom, right);
-	//fprintf(stderr, "SR: %f %f %f %f\n", sr.x, sr.y, sr.z, sr.w);
 
 	IASetVertexState(m_vb_sr);
 	IASetVertexBuffer(vertices, 4);
 	IASetPrimitiveTopology(GL_TRIANGLE_STRIP);
 
 	// ************************************
-	// vs
+	// Texture
 	// ************************************
 
-	m_shader->VS(m_convert.vs);
-
-	// ************************************
-	// gs
-	// ************************************
-
-	m_shader->GS(0);
-
-	// ************************************
-	// ps
-	// ************************************
-
-	PSSetShaderResource(0, static_cast<GSTextureOGL*>(st)->GetID());
+	PSSetShaderResource(static_cast<GSTextureOGL*>(st)->GetID());
 	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt);
-	m_shader->PS(ps);
 
 	// ************************************
 	// Draw
@@ -886,6 +882,14 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 	ClearStencil(ds, 0);
 
+	// WARNING: setup of the program must be done first. So you can setup
+	// 1/ subroutine uniform
+	// 2/ bindless texture uniform
+	// 3/ others uniform?
+	m_shader->VS(m_convert.vs);
+	m_shader->GS(0);
+	m_shader->PS(m_convert.ps[datm ? 2 : 3]);
+
 	// om
 
 	OMSetDepthStencilState(m_date.dss, 1);
@@ -898,19 +902,11 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 	IASetVertexBuffer(vertices, 4);
 	IASetPrimitiveTopology(GL_TRIANGLE_STRIP);
 
-	// vs
 
-	m_shader->VS(m_convert.vs);
+	// Texture
 
-	// gs
-
-	m_shader->GS(0);
-
-	// ps
-
-	PSSetShaderResource(0, static_cast<GSTextureOGL*>(rt)->GetID());
+	PSSetShaderResource(static_cast<GSTextureOGL*>(rt)->GetID());
 	PSSetSamplerState(m_convert.pt);
-	m_shader->PS(m_convert.ps[datm ? 2 : 3]);
 
 	//
 
@@ -966,16 +962,16 @@ void GSDeviceOGL::IASetPrimitiveTopology(GLenum topology)
 	m_state.vb->SetTopology(topology);
 }
 
-void GSDeviceOGL::PSSetShaderResource(const int i, GLuint sr)
+void GSDeviceOGL::PSSetShaderResource(GLuint sr)
 {
-	if (GLState::tex_unit[i] != sr) {
-		GLState::tex_unit[i] = sr;
+	if (GLState::tex_unit[0] != sr) {
+		GLState::tex_unit[0] = sr;
 
 		if (GLLoader::found_GL_ARB_multi_bind) {
 			GLuint textures[1] = {sr};
-			gl_BindTextures(i, 1, textures);
+			gl_BindTextures(0, 1, textures);
 		} else {
-			gl_ActiveTexture(GL_TEXTURE0 + i);
+			gl_ActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, sr);
 
 			// Get back to the expected active texture unit
@@ -987,8 +983,21 @@ void GSDeviceOGL::PSSetShaderResource(const int i, GLuint sr)
 void GSDeviceOGL::PSSetShaderResources(GLuint tex[2])
 {
 	if (GLState::tex_unit[0] != tex[0] || GLState::tex_unit[1] != tex[1]) {
-		GLuint textures[2] = {tex[0], tex[1]};
-		gl_BindTextures(0, 2, textures);
+		GLState::tex_unit[0] = tex[0];
+		GLState::tex_unit[1] = tex[1];
+
+		if (GLLoader::found_GL_ARB_multi_bind) {
+			gl_BindTextures(0, 2, tex);
+		} else {
+			gl_ActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, tex[0]);
+
+			gl_ActiveTexture(GL_TEXTURE0 + 1);
+			glBindTexture(GL_TEXTURE_2D, tex[1]);
+
+			// Get back to the expected active texture unit
+			gl_ActiveTexture(GL_TEXTURE0 + 3);
+		}
 	}
 }
 

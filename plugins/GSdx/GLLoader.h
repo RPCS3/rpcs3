@@ -134,6 +134,8 @@ extern   PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages;
 extern   PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer;
 extern   PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer;
 extern   PFNGLBUFFERSUBDATAPROC                 gl_BufferSubData;
+// GL4.0
+extern   PFNGLUNIFORMSUBROUTINESUIVPROC         gl_UniformSubroutinesuiv;
 // GL4.1
 extern   PFNGLBINDPROGRAMPIPELINEPROC           gl_BindProgramPipeline;
 extern   PFNGLDELETEPROGRAMPIPELINESPROC        gl_DeleteProgramPipelines;
@@ -254,4 +256,5 @@ namespace GLLoader {
 	extern bool found_GL_ARB_clear_texture;
 	extern bool found_GL_ARB_multi_bind;
 	extern bool found_GL_ARB_buffer_storage;
+	extern bool found_GL_ARB_shader_subroutine;
 }

@@ -62,6 +62,8 @@ namespace GLState {
 	GLuint gs = 0;
 	GLuint vs = 0;
 	GLuint program = 0;
+	bool dirty_prog = false;
+	bool dirty_subroutine_ps = false;
 #if 0
 	struct {
 		GSVertexBufferStateOGL* vb;
@@ -112,5 +114,7 @@ namespace GLState {
 		gs = 0;
 		vs = 0;
 		program = 0;
+		dirty_prog = false;
+		dirty_subroutine_ps = false;
 	}
 }

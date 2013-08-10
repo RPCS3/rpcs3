@@ -163,6 +163,7 @@ void GSRendererOGL::SetupIA()
 	dev->IASetVertexState();
 
 	if(UserHacks_WildHack && !isPackedUV_HackFlag) {
+		// FIXME: why not put it on the Vertex shader
 		if(dev->IAMapVertexBuffer(&ptr, sizeof(GSVertex), m_vertex.next))
 		{
 			GSVector4i::storent(ptr, m_vertex.buff, sizeof(GSVertex) * m_vertex.next);
@@ -441,6 +442,9 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 			om_dssel.alpha_stencil = 1;
 	}
 
+	// By default don't use texture
+	ps_sel.tfx = 4;
+
 	if(tex)
 	{
 		const GSLocalMemory::psm_t &psm = GSLocalMemory::m_psm[context->TEX0.PSM];
@@ -456,6 +460,8 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		ps_sel.tcc = context->TEX0.TCC;
 		ps_sel.ltf = bilinear && !simple_sample;
 		ps_sel.spritehack = tex->m_spritehack_t;
+		// FIXME the ati is currently disabled on the shader. I need to find a .gs to test that we got same
+		// bug on opengl
 		ps_sel.point_sampler = !(bilinear && simple_sample);
 
 		int w = tex->m_texture->GetWidth();
@@ -491,23 +497,30 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		ps_ssel.tau = (context->CLAMP.WMS + 3) >> 1;
 		ps_ssel.tav = (context->CLAMP.WMT + 3) >> 1;
 		ps_ssel.ltf = bilinear && simple_sample;
-
-		dev->SetupSampler(ps_sel, ps_ssel);
-		if (tex->m_palette) {
-			if (GLLoader::found_GL_ARB_multi_bind) {
-				GLuint textures[2] = {static_cast<GSTextureOGL*>(tex->m_texture)->GetID(), static_cast<GSTextureOGL*>(tex->m_palette)->GetID()};
-				dev->PSSetShaderResources(textures);
-			} else {
-				dev->PSSetShaderResource(1, static_cast<GSTextureOGL*>(tex->m_palette)->GetID());
-				dev->PSSetShaderResource(0, static_cast<GSTextureOGL*>(tex->m_texture)->GetID());
-			}
-		} else {
-			dev->PSSetShaderResource(0, static_cast<GSTextureOGL*>(tex->m_texture)->GetID());
-		}
 	}
-	else
-	{
-		ps_sel.tfx = 4;
+
+	// WARNING: setup of the program must be done first. So you can setup
+	// 1/ subroutine uniform
+	// 2/ bindless texture uniform
+	// 3/ others uniform?
+	dev->SetupVS(vs_sel);
+	dev->SetupGS(gs_sel);
+	dev->SetupPS(ps_sel);
+
+	// Note: bindless texture will use uniform so it must be done after the program setup
+	if(tex) {
+		if (tex->m_palette) {
+			// 2 textures (main + palette)
+			dev->SetupSampler(ps_sel, ps_ssel);
+
+			GLuint textures[2] = {static_cast<GSTextureOGL*>(tex->m_texture)->GetID(), static_cast<GSTextureOGL*>(tex->m_palette)->GetID()};
+			dev->PSSetShaderResources(textures);
+		} else if (tex->m_texture) {
+			// Only main texture
+			dev->SetupSampler(ps_sel, ps_ssel);
+
+			dev->PSSetShaderResource(static_cast<GSTextureOGL*>(tex->m_texture)->GetID());
+		}
 	}
 
 	// rs
@@ -521,9 +534,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	SetupIA();
 
 	dev->SetupOM(om_dssel, om_bsel, afix);
-	dev->SetupVS(vs_sel, &vs_cb);
-	dev->SetupGS(gs_sel);
-	dev->SetupPS(ps_sel, &ps_cb);
+	dev->SetupCB(&vs_cb, &ps_cb);
 
 	if (advance_DATE) {
 		// Create an r32ui image that will contain primitive ID
@@ -539,7 +550,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		dev->OMSetWriteBuffer();
 
 		ps_sel.date = 3;
-		dev->SetupPS(ps_sel, &ps_cb);
+		dev->SetupPS(ps_sel);
 
 		// Be sure that first pass is finished !
 		dev->Barrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -558,7 +569,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 			ps_selneg.colclip = 2;
 
 			dev->SetupOM(om_dssel, om_bselneg, afix);
-			dev->SetupPS(ps_selneg, &ps_cb);
+			dev->SetupPS(ps_selneg);
 
 			dev->DrawIndexedPrimitive();
 			dev->SetupOM(om_dssel, om_bsel, afix);
@@ -573,7 +584,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 		ps_sel.atst = iatst[ps_sel.atst];
 
-		dev->SetupPS(ps_sel, &ps_cb);
+		dev->SetupPS(ps_sel);
 
 		bool z = om_dssel.zwe;
 		bool r = om_bsel.wr;
@@ -583,11 +594,11 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 
 		switch(context->TEST.AFAIL)
 		{
-		case AFAIL_KEEP: z = r = g = b = a = false; break; // none
-		case AFAIL_FB_ONLY: z = false; break; // rgba
-		case AFAIL_ZB_ONLY: r = g = b = a = false; break; // z
-		case AFAIL_RGB_ONLY: z = a = false; break; // rgb
-		default: __assume(0);
+			case AFAIL_KEEP: z = r = g = b = a = false; break; // none
+			case AFAIL_FB_ONLY: z = false; break; // rgba
+			case AFAIL_ZB_ONLY: r = g = b = a = false; break; // z
+			case AFAIL_RGB_ONLY: z = a = false; break; // rgb
+			default: __assume(0);
 		}
 
 		if(z || r || g || b || a)
@@ -611,7 +622,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 				ps_selneg.colclip = 2;
 
 				dev->SetupOM(om_dssel, om_bselneg, afix);
-				dev->SetupPS(ps_selneg, &ps_cb);
+				dev->SetupPS(ps_selneg);
 
 				dev->DrawIndexedPrimitive();
 			}
