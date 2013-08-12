@@ -112,7 +112,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 {
 	bool stoped = false;
 
-	if(Emu.IsRunned())
+	if(Emu.IsRunning())
 	{
 		Emu.Pause();
 		stoped = true;
@@ -187,7 +187,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 {
 	bool stoped = false;
 
-	if(Emu.IsRunned())
+	if(Emu.IsRunning())
 	{
 		Emu.Pause();
 		stoped = true;
@@ -216,7 +216,7 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 {
 	bool stoped = false;
 
-	if(Emu.IsRunned())
+	if(Emu.IsRunning())
 	{
 		Emu.Pause();
 		stoped = true;
@@ -251,7 +251,7 @@ void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
 	{
 		Emu.Resume();
 	}
-	else if(Emu.IsRunned())
+	else if(Emu.IsRunning())
 	{
 		Emu.Pause();
 	}
@@ -273,7 +273,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	bool paused = false;
 
-	if(Emu.IsRunned())
+	if(Emu.IsRunning())
 	{
 		Emu.Pause();
 		paused = true;
@@ -377,7 +377,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 {
 	event.Skip();
 
-	bool is_runned, is_stopped, is_ready;
+	bool is_running, is_stopped, is_ready;
 
 	if(event.GetEventType() == wxEVT_DBG_COMMAND)
 	{
@@ -385,40 +385,40 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 		{
 			case DID_START_EMU:
 			case DID_STARTED_EMU:
-				is_runned = true;
+				is_running = true;
 				is_stopped = false;
 				is_ready = false;
 			break;
 
 			case DID_STOP_EMU:
 			case DID_STOPED_EMU:
-				is_runned = false;
+				is_running = false;
 				is_stopped = true;
 				is_ready = false;
 			break;
 
 			case DID_PAUSE_EMU:
 			case DID_PAUSED_EMU:
-				is_runned = false;
+				is_running = false;
 				is_stopped = false;
 				is_ready = false;
 			break;
 
 			case DID_RESUME_EMU:
 			case DID_RESUMED_EMU:
-				is_runned = true;
+				is_running = true;
 				is_stopped = false;
 				is_ready = false;
 			break;
 
 			case DID_READY_EMU:
-				is_runned = false;
+				is_running = false;
 				is_stopped = false;
 				is_ready = true;
 			break;
 
 			default:
-				is_runned = Emu.IsRunned();
+				is_running = Emu.IsRunning();
 				is_stopped = Emu.IsStopped();
 				is_ready = Emu.IsReady();
 			break;
@@ -426,7 +426,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	}
 	else
 	{
-		is_runned = Emu.IsRunned();
+		is_running = Emu.IsRunning();
 		is_stopped = Emu.IsStopped();
 		is_ready = Emu.IsReady();
 	}
@@ -436,7 +436,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
 	wxMenuItem& send_exit  = *menubar.FindItem( id_sys_send_exit );
 
-	pause.SetText(is_runned ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + C" : "Resume\tCtrl + C");
+	pause.SetText(is_running ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + C" : "Resume\tCtrl + C");
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
 	//send_exit.Enable(false);
@@ -502,7 +502,7 @@ void MainFrame::OnKeyDown(wxKeyEvent& event)
 		switch(event.GetKeyCode())
 		{
 		case 'C': case 'c': if(Emu.IsPaused()) Emu.Resume(); else if(Emu.IsReady()) Emu.Run(); return;
-		case 'P': case 'p': if(Emu.IsRunned()) Emu.Pause(); return;
+		case 'P': case 'p': if(Emu.IsRunning()) Emu.Pause(); return;
 		case 'S': case 's': if(!Emu.IsStopped()) Emu.Stop(); return;
 		case 'R': case 'r': if(!Emu.m_path.IsEmpty()) {Emu.Stop(); Emu.Run();} return;
 		}

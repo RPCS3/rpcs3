@@ -186,7 +186,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 
 		wxColour colour;
 
-		if((!CPU.IsRunned() || !Emu.IsRunned()) && PC == CPU.PC)
+		if((!CPU.IsRunning() || !Emu.IsRunning()) && PC == CPU.PC)
 		{
 			colour = wxColour("Green");
 		}
@@ -429,7 +429,7 @@ void InterpreterDisAsmFrame::Task()
 		{
 			CPU.ExecOnce();
 		}
-		while(CPU.IsRunned() && Emu.IsRunned() && !TestDestroy() && !IsBreakPoint(CPU.PC) && dump_status == dump_enable);
+		while(CPU.IsRunning() && Emu.IsRunning() && !TestDestroy() && !IsBreakPoint(CPU.PC) && dump_status == dump_enable);
 	}
 	catch(const wxString& e)
 	{

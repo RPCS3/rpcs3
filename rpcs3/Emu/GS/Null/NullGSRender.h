@@ -129,7 +129,7 @@ wxThread::ExitCode NullRSXThread::Entry()
 	{
 		wxCriticalSectionLocker lock(p.m_cs_main);
 
-		if(p.m_ctrl->get == p.m_ctrl->put || !Emu.IsRunned())
+		if(p.m_ctrl->get == p.m_ctrl->put || !Emu.IsRunning())
 		{
 			SemaphorePostAndWait(p.m_sem_flush);
 

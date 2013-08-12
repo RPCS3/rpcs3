@@ -78,14 +78,14 @@ void DisAsmFrame::AddLine(const wxString line)
 {
 	static bool finished = false;
 
-	if(finished && Emu.IsRunned())
+	if(finished && Emu.IsRunning())
 	{
 		count = 0;
 		finished = false;
 	}
-	else if(count >= LINES_OPCODES || !Emu.IsRunned())
+	else if(count >= LINES_OPCODES || !Emu.IsRunning())
 	{
-		if(Emu.IsRunned()) Emu.Pause();
+		if(Emu.IsRunning()) Emu.Pause();
 		finished = true;
 		CPU.PrevPc();
 		return;
