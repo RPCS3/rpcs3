@@ -1,0 +1,3 @@
+gametitle=S.L.A.I. - Steel Lancer Arena International SLUS_209.69
+comment=Widescreen Hack
+patch=1,EE,00267978,word,3c033f40

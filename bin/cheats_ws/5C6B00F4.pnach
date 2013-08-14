@@ -1,0 +1,4 @@
+gametitle=Barbarian SLUS_201.36
+comment=Widescreen Hack
+patch=1,EE,0012c8cc,word,3c013f40
+patch=1,EE,20534908,word,3f800000

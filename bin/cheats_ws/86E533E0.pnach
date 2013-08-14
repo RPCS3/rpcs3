@@ -1,0 +1,10 @@
+gametitle=Maximo vs. Army of Zin SLES_517.59
+comment=Widescreen Hack
+patch=1,EE,0019ddc8,word,3c023fef //render fix
+patch=1,EE,20345450,extended,3f400000 //hud 
+//60hz
+patch=1,EE,0018a9d0,word,3c033fe5
+patch=1,EE,0018a9d8,word,34637d41
+//50hz
+//patch=1,EE,0018aa58,word,3c033fee
+//patch=1,EE,0018aa5c,word,3464dfa4

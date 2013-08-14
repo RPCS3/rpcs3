@@ -1,0 +1,6 @@
+gametitle=Def Jam: Fight For NY SLES_525.07
+comment=Widescreen Hack
+patch=1,EE,2056efb0,word,3f400000
+patch=1,EE,2056efe8,word,3fab0000
+patch=1,EE,2056efec,word,3fab0000
+patch=1,EE,2056f170,word,3f400000

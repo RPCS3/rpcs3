@@ -1,0 +1,29 @@
+gametitle=Star Wars: Battlefront (NTSC-U)
+
+patch=1,EE,004c4804,word,46010034
+patch=1,EE,004c4808,word,45020005
+patch=1,EE,004c480c,word,8cc20000
+patch=1,EE,004c4810,word,8ca20000
+patch=1,EE,004c4814,word,24420002
+patch=1,EE,004c4818,word,03e00008
+patch=1,EE,004c481c,word,aca20000
+patch=1,EE,004c4820,word,24420002
+patch=1,EE,004c4824,word,03e00008
+patch=1,EE,004c4828,word,acc20000
+patch=1,EE,004c482c,word,27bdff00
+patch=1,EE,004c4830,word,3c013f38 //partial rfix
+patch=1,EE,004c4834,word,44810000
+patch=1,EE,004c4838,word,7fb000f0
+patch=1,EE,004c483c,word,46006307
+patch=1,EE,004c4840,word,7fb100e0
+patch=1,EE,004c4844,word,46006b42
+patch=1,EE,004c4848,word,7fb200d0
+patch=1,EE,004c484c,word,00000000//46000002
+patch=1,EE,004c4850,word,46007382
+
+patch=1,EE,0049993c,word,3c013f40 //hor fov
+patch=1,EE,00499940,word,44810000
+patch=1,EE,00499948,word,46000003
+
+patch=1,EE,004c4b3c,word,0c13120b
+patch=1,EE,004c4b6c,word,0c13120b

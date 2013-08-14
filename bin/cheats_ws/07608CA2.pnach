@@ -1,0 +1,9 @@
+gametitle=Zombie Hunters 2 (PAL-E) (SLES-54569)
+comment=Widescreen Hack (16:9)
+// Original patch and value by No.47
+// Updated to ELf adresses by ElHecht
+
+// 16:9
+patch=1,EE,00243d64,word,3c093f40 // 00000000 hor fov
+patch=1,EE,00243d70,word,3c0a004a // 00000000
+patch=1,EE,00243d74,word,ad49eb84 // 00000000

@@ -1,0 +1,6 @@
+gametitle=Eureka Seven Vol 2  SLUS_215.38
+comment=Widescreen Hack
+patch=1,EE,00110b24,word,3c034455
+patch=1,EE,0011129c,word,3c0343f0
+patch=1,EE,203BC638,word,43f00000
+patch=1,EE,203BCC48,word,43f00000

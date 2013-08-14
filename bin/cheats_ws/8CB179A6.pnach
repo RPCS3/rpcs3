@@ -1,0 +1,4 @@
+gametitle=Zone of the Enders SLUS_201.48
+comment=Widescreen Hack
+//16:9
+patch=1,EE,20450e80,extended,3c013f40

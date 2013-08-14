@@ -1,0 +1,5 @@
+gametitle=Shin Megami Tensei: Devil Summoner - Raidou Kuzunoha vs the Soulless Army PAL (SLES_546.29)
+comment=Widescreen pnach by El_Patas (Only works for 3D characters, not for prerendered backgrounds)
+
+patch=1,EE,003AE764,word,3FC6D3A0 //3F951EB8 hor fov
+patch=1,EE,003AEB14,word,3FC6D3A0 //3F951EB8 unknown

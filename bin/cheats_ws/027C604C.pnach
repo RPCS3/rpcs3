@@ -1,0 +1,4 @@
+gametitle=Soulcalibur III (SLUS-21216)
+comment=Widescreen correction by nemesis2000 (pnach by nemesis2000 )
+patch=1,EE,0012a118,word,3c013f40
+patch=1,EE,0012a11c,word,34210000

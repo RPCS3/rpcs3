@@ -1,0 +1,11 @@
+gametitle=Tales of Symphonia (NTSC-J)
+comment=Widescreen fix by flameofrecca
+patch=1,EE,20481148,word,420e0000 //zoom value for towns and maps
+patch=1,EE,001dea60,word,3c023fab //vertical fov for everything
+patch=1,EE,001188dc,word,3c013fab //zoom value for battles
+
+//FMV fix
+patch=1,EE,2032aba4,word,be3851ec          //top left corner        
+patch=1,EE,2032abac,word,be3851ec          //top right corner
+patch=1,EE,2032abb4,word,3f970a3d          //bottom left corner     
+patch=1,EE,2032abbc,word,3f970a3d          //bottom right corner

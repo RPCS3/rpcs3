@@ -1,0 +1,11 @@
+gametitle=Metal saga SLUS_212.93
+comment=Widescreen hack 
+patch=1,EE,002c2bac,word,3c014455
+patch=1,EE,00293364,word,3c014455
+patch=1,EE,00100480,word,3c014455
+patch=1,EE,001012f8,word,3c014455
+patch=1,EE,00103948,word,3c014455
+patch=1,EE,001ebd94,word,3c014455
+patch=1,EE,00293388,word,3c013fa0
+patch=1,EE,0029338c,word,342162f6
+patch=1,EE,00310018,word,3c013faa

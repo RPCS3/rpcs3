@@ -1,0 +1,8 @@
+gametitle=Initial D (SLPM_652.68) (NTSC-J)
+comment=16:9 widescreen hack
+//16:9 widescreen hack by 99skull
+patch=1,EE,001484EC,word,0C03FFC0
+patch=1,EE,000FFF00,word,3C013F40
+patch=1,EE,000FFF04,word,44819800
+patch=1,EE,000FFF08,word,460398C3
+patch=1,EE,000FFF0C,word,03E00008

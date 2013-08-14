@@ -1,0 +1,16 @@
+gametitle=Resident Evil: Outbreak: File #2 (SLUS-20984)
+
+//gameplay by Hyakki
+patch=1,EE,003A9448,word,3fe38e38
+
+//FMV's fix by nemesis2000
+patch=1,EE,00395f2c,word,24060015
+
+patch=1,EE,003960d0,word,01262818
+patch=1,EE,003960d4,word,24061c00
+patch=1,EE,003960d8,word,00c55822
+patch=1,EE,00396104,word,000b5843
+patch=1,EE,00396108,word,14620003
+patch=1,EE,0039610c,word,00ab2820
+
+patch=1,EE,001473a4,word,00000000

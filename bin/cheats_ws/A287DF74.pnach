@@ -1,0 +1,14 @@
+gametitle=Kingdom Hearts: Re:Chain of Memories (SLUS-21799)
+
+//gameplay by asmodean
+patch=1,EE,203328BC,extended,3F19999A // 3F4CCCCD (hor axis)
+//patch=1,EE,203328C0,extended,3F8CCCCD // 3F4CCCCD (vert axis)
+
+//FMV's fix by nemesis2000
+
+//only vertical stretch
+patch=1,EE,0019D054,word,24070204 //vert
+
+//alternate values
+//patch=1,EE,0019D03C,word,240601C8 //hor
+//patch=1,EE,0019D054,word,240701C0 //vert

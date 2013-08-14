@@ -1,0 +1,10 @@
+comment=Suikoden Tactics (SLUS-21245)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,0037e94c,word,3c013f40 //hor value
+patch=1,EE,0037e950,word,44810000
+patch=1,EE,0037e958,word,4600c602
+
+//FMV's fix
+patch=1,EE,003bb58c,word,24101E00 //width
+patch=1,EE,003bb740,word,24110190 //x-pos

@@ -1,0 +1,9 @@
+gametitle=Phantasy Star Universe - Ambition of the Illuminus (PAL-M3) (SLES-54892)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,008E1BF0,word,43400000 // 43800000 hor fov
+patch=1,EE,0067142c,word,3c093c02
+patch=1,EE,00671430,word,35293fa0 // renderfix
+patch=1,EE,00671478,word,3c0a0028
+patch=1,EE,0067147c,word,ad4992f8

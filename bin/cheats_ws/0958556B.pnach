@@ -1,0 +1,4 @@
+gametitle=Maximo - Ghosts to Glory (SLUS_20017)
+comment=Widescreen hack by No.47
+patch=1,EE,201D7314,word,3FEEEEEE
+patch=1,EE,2025BAE0,word,43870000

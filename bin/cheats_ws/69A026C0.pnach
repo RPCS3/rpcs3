@@ -1,0 +1,41 @@
+gametitle=Fallout: Brotherhood of Steel (SLES-51526)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+
+patch=1,EE,001b1618,word,3c013f36
+patch=1,EE,001b161c,word,34210b5f
+patch=1,EE,001b1628,word,3c014440
+
+patch=1,EE,001b1888,word,3c013f36
+patch=1,EE,001b188c,word,34210b5f
+patch=1,EE,001b1894,word,3c014440
+
+patch=1,EE,001b1a00,word,3c013f36
+patch=1,EE,001b1a04,word,34210b5f
+patch=1,EE,001b1a0c,word,3c014440
+
+patch=1,EE,00147a18,word,3c013f36
+patch=1,EE,00147a1c,word,34210b5f
+patch=1,EE,00147a28,word,3c014440
+
+patch=1,EE,00147c00,word,3c013f36
+patch=1,EE,00147c04,word,34210b5f
+patch=1,EE,00147c0c,word,3c014440
+
+patch=1,EE,00147df0,word,3c013f36
+patch=1,EE,00147df4,word,34210b5f
+patch=1,EE,00147dfc,word,3c014440
+
+patch=1,EE,00180424,word,3c013f36
+patch=1,EE,00180428,word,34210b5f
+patch=1,EE,00180434,word,3c014440
+
+patch=1,EE,0018cedc,word,3c013f36
+patch=1,EE,0018cee0,word,34210b5f
+patch=1,EE,0018ceec,word,3c014440
+
+//render fix value
+patch=1,EE,001aacd8,word,3c013fe3
+patch=1,EE,001aacdc,word,3421d70a
+
+patch=1,EE,001ac798,word,3c013fe3
+patch=1,EE,001ac79c,word,3421d70a

@@ -1,0 +1,4 @@
+gametitle=Ratchet - Deadlocked (SCUS_97465)
+comment=Widescreen hack by No.47
+patch=1,EE,20171DE8,word,01000101
+patch=1,EE,2023FEF0,word,3F53A063

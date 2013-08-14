@@ -1,0 +1,34 @@
+gametitle=Jak 3 (PAL-M7) (SCES-52460)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,2030afc8,extended,3c033f1f // 3c033f00 zoom
+patch=1,EE,207d6158,extended,0014877D // 00146171 force native 16:9 mode
+
+// menu fix
+patch=1,EE,20C15870,extended,43A90000 // 436E33F5
+patch=1,EE,20C17AB0,extended,43420000 // 43082F0F
+
+patch=1,EE,20AC3D50,extended,42860000 // 429E0000
+patch=1,EE,20AC3D90,extended,42860000 // 429E0000
+patch=1,EE,20AC3DD0,extended,42860000 // 429E0000
+patch=1,EE,20AC3E10,extended,42860000 // 429E0000
+patch=1,EE,20AC3E50,extended,42860000 // 429E0000
+patch=1,EE,20AC3E90,extended,42860000 // 429E0000
+patch=1,EE,20AC3ED0,extended,42860000 // 429E0000
+patch=1,EE,20AC3F10,extended,42860000 // 429E0000
+patch=1,EE,20AC3F50,extended,42860000 // 429E0000
+patch=1,EE,20AC3F90,extended,42860000 // 429E0000
+patch=1,EE,20AC3FD0,extended,42860000 // 429E0000
+
+patch=1,EE,20AC3D58,extended,43DF8000 // 43D90000
+patch=1,EE,20AC3D98,extended,43DF8000 // 43D90000
+patch=1,EE,20AC3DD8,extended,43DF8000 // 43D90000
+patch=1,EE,20AC3E18,extended,43DF8000 // 43D90000
+patch=1,EE,20AC3E58,extended,43DF8000 // 43D90000
+patch=1,EE,20AC3E98,extended,43DF8000 // 43D90000
+patch=1,EE,20AC3ED8,extended,43DF8000 // 43D90000
+patch=1,EE,20AC3F18,extended,43DF8000 // 43D90000
+patch=1,EE,20AC3F58,extended,43DF8000 // 43D90000
+patch=1,EE,20AC3F98,extended,43DF8000 // 43D90000
+patch=1,EE,20AC3FD8,extended,43DF8000 // 43D90000

@@ -1,0 +1,12 @@
+gametitle=Klonoa 2: Lunatea's Veil PAL (SCES-50354)
+comment=Widescreen Hack by synce (pnach 50hz by paul_met) (pnach 60hz by El_Patas)
+
+//50hz mode
+//patch=1,EE,003066e4,word,3c013f40
+//patch=1,EE,003066e8,word,44810000
+//patch=1,EE,003066f0,word,4600c602
+
+//60hz mode
+patch=1,EE,00306094,word,3C013F40 //00000000
+patch=1,EE,00306098,word,44810000 //00000000
+patch=1,EE,003060A0,word,4600C602 //00000000

@@ -1,0 +1,33 @@
+gametitle=Bloodrayne SLUS_204.61
+comment=Widescreen hack by pelvicthrustman
+
+//Enable bult-in widescreen
+patch=1,EE,001ef324,word,3c040001 //10800020
+
+//FMV Fix
+patch=1,EE,002DA118,word,24091400
+patch=1,EE,002DA11C,word,24037600
+
+//Left HUD----------------
+//Face
+patch=1,EE,0020b950,word,3c0141d0 //3c014270 X scalar
+patch=1,EE,0020baf8,word,3c0142a8 //3c0142a0 Y correction
+patch=1,EE,0020bb00,word,3c013f48 //0020bb00 X correction
+//Pain overlay
+patch=1,EE,0020bc78,word,3c013f40 //3c013f00 X correction
+patch=1,EE,0020bc8c,word,3c0142a8 //3c0142a0 Y correction
+//Health BG
+patch=1,EE,0020bfd0,word,3c0141a8 //3c0141c8 X scalar
+patch=1,EE,0020bfe4,word,3c013f48 //3c013f00 X correction
+patch=1,EE,0020bff4,word,3c0142a6 //3c0142a0 Y correction
+//Health bar
+patch=1,EE,0020c0ac,word,3c014178 //3c0141b8 X scalar
+patch=1,EE,0020c0d0,word,3c0142a6 //3c0142a0 Y correction
+patch=1,EE,0020bfdc,word,3c0f3f86 //00000000 X correction
+patch=1,EE,0020c084,word,448ff800 //00000000
+patch=1,EE,0020c0f4,word,461f20c2 //461f20c2
+//Frame
+patch=1,EE,0020c1d4,word,3c0142f8 //3c014321 X scalar
+patch=1,EE,0020c1f0,word,3c01432b //3c01432b Y correction
+patch=1,EE,0020c21c,word,46011042 //46011842 Offset correction
+//------------------------

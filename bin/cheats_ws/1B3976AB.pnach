@@ -1,0 +1,7 @@
+gametitle=Jak and Daxter - The Precursor Legacy (NTSC-U)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,202AF750,extended,3f1f3b64 // 3f000000 zoom
+patch=1,EE,202AF6FC,extended,bf1f3b64 // bf000000 hud fix for zoom
+patch=1,EE,2079F478,extended,0015120C // 0014E4C4 force native 16:9 mode

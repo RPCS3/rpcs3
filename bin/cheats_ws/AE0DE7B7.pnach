@@ -1,0 +1,44 @@
+gametitle=Shin Megami Tensei - Lucifer's Call (SLES-53363) (CRC-AE0DE7B7)
+comment=Widescreen Hack (16:9)
+//
+// 16:9 (50Hz)
+//patch=1,EE,002fd2b4,word,3fe38e38 // 3f951eb8 hor fov
+//patch=1,EE,002fd654,word,3fe38e38 // 3f951eb8 unknown
+// 16:9 (60Hz)
+patch=1,EE,002fd2b4,word,3fc30000 // 3f951eb8 hor fov
+patch=1,EE,002fd654,word,3fc30000 // 3f951eb8 unknown
+
+//Optional shadow alpha hack
+//comment=Shadow Override (Krisan Thyme)
+//patch=1,EE,20303680,extended,00000000
+//patch=1,EE,20303684,extended,00000000
+//patch=1,EE,20303688,extended,00000000
+//patch=1,EE,2030368C,extended,00000000
+//patch=1,EE,20303690,extended,00000000
+//patch=1,EE,20303694,extended,00000000
+//patch=1,EE,20303698,extended,00000000
+//patch=1,EE,2030369C,extended,00000000
+//patch=1,EE,203036A0,extended,00000000
+//patch=1,EE,203036A4,extended,00000000
+//patch=1,EE,203036A8,extended,00000000
+//patch=1,EE,203036AC,extended,00000000
+//patch=1,EE,203036B0,extended,00000000
+//patch=1,EE,203036B4,extended,00000000
+//patch=1,EE,203036B8,extended,00000000
+//patch=1,EE,203036BC,extended,00000000
+//patch=1,EE,203036C0,extended,00000000
+//patch=1,EE,203036C4,extended,00000000
+//patch=1,EE,203036C8,extended,00000000
+//patch=1,EE,203036CC,extended,00000000
+//patch=1,EE,203036D0,extended,00000000
+//patch=1,EE,203036D4,extended,00000000
+//patch=1,EE,203036D8,extended,00000000
+//patch=1,EE,203036DC,extended,00000000
+//patch=1,EE,203036E0,extended,00000000
+//patch=1,EE,203036E4,extended,00000000
+//patch=1,EE,203036E8,extended,00000000
+//patch=1,EE,203036EC,extended,00000000
+//patch=1,EE,203036F0,extended,00000000
+//patch=1,EE,203036F4,extended,00000000
+//patch=1,EE,203036F8,extended,00000000
+//patch=1,EE,203036FC,extended,00000000

@@ -1,0 +1,4 @@
+gametitle=Wangan Midnight SLPS_201.85
+comment=Widescreen Hack
+patch=1,EE,0017be24,word,3c073f40
+patch=1,EE,001e2aac,word,3c033f40

@@ -1,0 +1,4 @@
+gametitle=Warriors Orochi 2 [SLES 55382] (E)
+comment=Wide screen (16:9)
+//Wide screen patch by bositman using Widescreen helper
+patch=1,EE,2050FC68,extended,3F2AAAAB // 3F4CCCCD

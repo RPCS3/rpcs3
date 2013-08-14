@@ -1,0 +1,4 @@
+gametitle=Devil May Cry 3 NTSC-J JAPAN,ENGLISH & KOREAN (SLPM_65880)
+comment=NTSC-J Widescreen 16:9 Hack by Acem
+
+patch=1,EE,21CAFC90,extended,3F400000

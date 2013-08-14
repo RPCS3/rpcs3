@@ -1,0 +1,5 @@
+gametitle=Corvette Evolution GT (SLUS-21499)
+comment=Widescreen patch by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,001B0980,word,3C023F10 //gameplay
+patch=1,EE,00145FE0,word,3C023F22 //select menu

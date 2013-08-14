@@ -1,0 +1,5 @@
+gametitle=Sly 2 - Band of Thieves SCES_525.29
+comment=Widescreen Hack
+patch=1,EE,0014dc20,word,3c0143ab
+patch=1,EE,0014de84,word,3c0143ab
+patch=1,EE,0014db9c,word,3c013f22

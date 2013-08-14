@@ -1,0 +1,13 @@
+gametitle=Fighting For One Piece (NTSC-J) (SLPS-25545)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,0019ec30,word,3c013f40 // 00000000 hor fov
+patch=1,EE,0019ec34,word,4481f000 // 00000000
+patch=1,EE,0019ec60,word,461e0842 // 00000000
+
+// 16:10
+//patch=1,EE,0019ec30,word,3c013f55 // 00000000 hor fov
+//patch=1,EE,0019ec34,word,34215555 // 00000000 hor fov
+//patch=1,EE,0019ec5c,word,4481f000 // 00000000
+//patch=1,EE,0019ec60,word,461e0842 // 00000000

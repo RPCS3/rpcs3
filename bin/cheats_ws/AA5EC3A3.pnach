@@ -1,0 +1,10 @@
+gametitle=Tales Of The Abyss (NTSC-J) (SLPS_25586)
+comment=Tales Of The Abyss (NTSC-J) (SLPS_25586) 16:9 Widescreen Hack & Progressive Scan
+// 16:9
+patch=1,EE,0011afb8,word,3c023fe3
+patch=1,EE,0011ab18,word,34428e38
+patch=1,EE,001a267c,word,3c013f40
+// Progressive Scan
+patch=1,EE,001003bc,word,3c050000
+patch=1,EE,001003c4,word,3c060050
+patch=1,EE,001003cc,word,3c070001

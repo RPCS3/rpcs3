@@ -1,0 +1,4 @@
+gametitle=TimeSplitters (SLUS-20090)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+patch=1,EE,0027b3f4,word,3c014328
+patch=1,EE,0027b3f8,word,44810000

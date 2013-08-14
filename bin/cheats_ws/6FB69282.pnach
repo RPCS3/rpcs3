@@ -1,0 +1,4 @@
+gametitle=God Hand (SLUS-21503)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+patch=1,EE,0030b8f0,word,3c013f9f
+patch=1,EE,0030b8f4,word,342149f1

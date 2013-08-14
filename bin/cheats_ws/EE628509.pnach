@@ -1,0 +1,5 @@
+gametitle=TMNT2 Battle Nexus SLUS_209.81
+comment=Widescreen Hack
+patch=1,EE,00234ca4,extended,3c023f1e
+patch=1,EE,00234cb8,extended,3c023fe3
+patch=1,EE,00234cc0,extended,34428e38

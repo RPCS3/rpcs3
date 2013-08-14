@@ -1,0 +1,4 @@
+gametitle=Resident Evil - Dead Aim SLUS_206.69
+comment=Widescreen Hack
+patch=1,EE,204b260c,extended,43f00000
+patch=1,EE,204b234c,extended,43f00000

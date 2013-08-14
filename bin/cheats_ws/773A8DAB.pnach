@@ -1,0 +1,19 @@
+gametitle=Baldur's Gate: Dark Alliance (SLUS-20035)
+
+//vert fov-
+patch=1,EE,00320fd0,word,3f1f49f4
+patch=1,EE,0032102c,word,3f1f49f4
+patch=1,EE,00322950,word,3f1f49f4
+patch=1,EE,00320efc,word,3f1f49f4
+patch=1,EE,00320f44,word,3f1f49f4
+
+//both fov+
+patch=1,EE,0014ca8c,word,3c014440
+patch=1,EE,00152998,word,3c014440
+patch=1,EE,00200bf8,word,3c014440
+patch=1,EE,0013d048,word,3c014440
+patch=1,EE,00144f60,word,3c014440
+
+//render fix value by No.47
+patch=1,EE,00320fa8,word,3fe3d70a
+patch=1,EE,00320fcc,word,3fe3d70a

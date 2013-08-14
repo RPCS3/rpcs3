@@ -1,0 +1,22 @@
+gametitle=Fatal Frame II: Crimson Butterfly (SLUS-20766)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,0033760c,word,3f400000 //aspect
+
+//FMV's fix
+patch=1,EE,001e598c,word,3c013f40 // width (1.0f = 640)
+patch=1,EE,001e5990,word,0c0795e0
+patch=1,EE,001e5994,word,44811800
+patch=1,EE,001e5998,word,8f84be5c
+patch=1,EE,001e599c,word,0c079efe
+patch=1,EE,001e59a0,word,0040802d
+patch=1,EE,001e59a4,word,0200102d
+patch=1,EE,001e59a8,word,dfbf0008
+patch=1,EE,001e59ac,word,27bd0010
+patch=1,EE,001e59b0,word,03e00008
+patch=1,EE,001e59b4,word,dfb00000
+
+patch=1,EE,001e5834,word,01c02820
+patch=1,EE,001e5838,word,e4830030
+
+patch=1,EE,0033b228,word,0000006a //x-pos = (640-640*width)/(2*width) Hex

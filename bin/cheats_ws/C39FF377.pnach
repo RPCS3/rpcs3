@@ -1,0 +1,20 @@
+gametitle=Kingdom Hearts II SLES_542.32 (France)
+comment=Widescreen Hack
+
+patch=1,EE,003785a8,word,3F19999A //cutscenes hor value / gameplay vert value
+patch=1,EE,00378570,word,43c00000 //gameplay zoom
+//patch=1,EE,00378575,word,43f90000 // optional zoom for custcenes
+
+//font fix
+patch=1,EE,0037b2c4,word,3F400000 //unknown
+patch=1,EE,0037b2c8,word,3F400000
+patch=1,EE,0037b2cc,word,3F400000
+
+//black border fix
+patch=1,EE,0014AAC8,word,24050000
+patch=1,EE,0014AAF0,word,24050000
+patch=1,EE,0014AB18,word,24050000
+patch=1,EE,0014AB48,word,24050000
+
+//subtitles off
+patch=1,EE,00227774,word,11e00019

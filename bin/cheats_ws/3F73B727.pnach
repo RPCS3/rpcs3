@@ -1,0 +1,7 @@
+gametitle=Zombie Zone - Other Side (PAL-E) (SLES-54461)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,001e5a94,word,3c093f40 // 00000000 hor fov
+patch=1,EE,001e5aa0,word,3c0a003a // 00000000
+patch=1,EE,001e5aa4,word,ad49d354 // 00000000

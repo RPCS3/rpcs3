@@ -1,0 +1,14 @@
+gametitle=ICO (SCES-50760)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//widescreen
+patch=1,EE,00114dd0,word,3c013f40
+patch=1,EE,00114dd4,word,4481c000
+patch=1,EE,00114de0,word,46181082
+
+//render fix
+patch=1,EE,001146F4,word,240302ab
+patch=1,EE,0054E478,word,44fa0000
+
+//black borders fix
+patch=1,EE,00113450,word,3c010000

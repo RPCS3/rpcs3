@@ -1,0 +1,6 @@
+gametitle=Musashi - Samurai Legend (PAL-M5) (SLES-53521)
+comment=Widescreen Hack (16:9)
+// values by sergx12
+// ported to PAL, updated to ELF addresses by ElHecht
+patch=1,EE,00119344,word,3c013f19 // 3c013f4c
+patch=1,EE,00119348,word,3421999a // 3421cccd

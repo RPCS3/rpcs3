@@ -1,0 +1,5 @@
+comment=Okami (PAL-M3) (SLES-54439) Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,001974d4,word,3c014455
+patch=1,EE,00344864,word,3c014455

@@ -1,0 +1,5 @@
+gametitle=Sly 2 - Band of Thieves NTSC-U
+comment=Widescreen Hack
+patch=1,EE,0014dbf8,word,3c0143ab
+patch=1,EE,0014de5c,word,3c0143ab
+patch=1,EE,0014db74,word,3c013f22

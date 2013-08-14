@@ -1,0 +1,7 @@
+comment=Naruto - Uzumaki Chronicles (PAL-M5) (SLES-54727) Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,002da2a0,word,3c023f13
+patch=1,EE,002da2a4,word,3448d70a
+patch=1,EE,002daa50,word,3c023f13
+patch=1,EE,002daa54,word,3446d70a

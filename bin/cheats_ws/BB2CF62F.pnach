@@ -1,0 +1,8 @@
+gametitle=Dynasty Warriors 4 - Xtreme Legends (PAL-G) (SLES-52173)
+comment=Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,00139a00,word,3c0243b4 // 3c0243a0 hor fov value1
+patch=1,EE,00139ab0,word,3c0243f0 // 3c0243a0 hor fov value2
+patch=1,EE,002742a4,word,3c023f40 // 3c023f80 hor fov real-time intro
+patch=1,EE,0018e520,word,3c023f15 // 3c023f00 render fix

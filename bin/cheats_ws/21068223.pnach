@@ -1,0 +1,8 @@
+gametitle=Okami (SLUS-21115)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+patch=1,EE,0015c33c,word,3c0143a8
+patch=1,EE,0033ec38,word,3c013f9f
+patch=1,EE,0033ec3c,word,4481a800
+patch=1,EE,0015c360,word,3c013f9f
+patch=1,EE,0015c364,word,44817000
+patch=1,EE,0015c3ac,word,00000000

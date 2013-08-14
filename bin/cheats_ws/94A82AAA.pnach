@@ -1,0 +1,53 @@
+gametitle=Shin Megami Tensei: Persona 3 FES (SLUS-21621)
+
+//16:9 by CeruleansBlue
+patch=1,EE,007cad1c,word,3fe38e38
+
+//partial HUD fix
+patch=1,EE,00106e30,word,3c043f40
+patch=1,EE,00106e38,word,00701821
+patch=1,EE,00106e3c,word,24632bac
+patch=1,EE,00106e44,word,00000000
+patch=1,EE,00106e48,word,24630004
+patch=1,EE,00106e4c,word,3c043f80
+
+//FMV's fix by nemesis2000
+patch=1,EE,0010afd0,word,1462000a
+patch=1,EE,0010afd8,word,3c02c294
+patch=1,EE,0010afdc,word,10000008
+patch=1,EE,0010afec,word,00000000
+patch=1,EE,0010affc,word,3c02c1a8
+patch=1,EE,0010b010,word,00000000
+
+//Font fix by nemesis2000 (causes spacing errors)
+patch=1,EE,003b14a4,word,00118903
+patch=1,EE,003b14a8,word,02338818
+patch=1,EE,003b14b0,word,8E93001c
+patch=1,EE,003b1558,word,82970003
+patch=1,EE,003b16a4,word,24130015
+
+patch=1,EE,003b392c,word,2415000c
+patch=1,EE,003b3944,word,3c0241a8
+patch=1,EE,003b3970,word,01154018
+patch=1,EE,003b3974,word,00084103
+patch=1,EE,003b3978,word,0100a82d
+
+//480p by asmodean
+patch=1,EE,0019d320,word,3c040010
+patch=1,EE,0019d324,word,348426dc
+patch=1,EE,0019d328,word,8c820000
+patch=1,EE,0019d32c,word,38420001
+patch=1,EE,0019d330,word,ac820000
+patch=1,EE,0019d334,word,000217fc
+patch=1,EE,0019d338,word,000217ff
+patch=1,EE,0019d33c,word,0000000f
+patch=1,EE,0019d340,word,42000038
+patch=1,EE,0019d344,word,03e00008
+patch=1,EE,0019d348,word,00000000
+patch=1,EE,0019d34c,word,00000001
+
+patch=1,EE,004f8edc,word,24110000
+patch=1,EE,004f8ee0,word,24120050
+patch=1,EE,004f8ee4,word,24020001
+patch=1,EE,004f8ee8,word,10820031
+patch=1,EE,004f8eec,word,24130001

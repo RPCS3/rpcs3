@@ -1,0 +1,6 @@
+gametitle=Kuon (PAL-M3) (SLES-53411)
+comment=Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,001382c4,word,3c023f19  // 3c023f4c hor fov
+patch=1,EE,001382c8,word,3443999a  // 3443999a hor fov

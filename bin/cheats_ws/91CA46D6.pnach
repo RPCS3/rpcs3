@@ -1,0 +1,4 @@
+gametitle=shin sangokumusou 4 xtreme legends
+comment=widescreen hack
+patch=1,EE,001472ac,word,3c0243d6
+patch=1,EE,0019824c,word,3c023f2b

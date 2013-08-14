@@ -1,0 +1,173 @@
+// ==========
+// pgert@130626
+// http://forums.pcsx2.net/Thread-PCSX2-Widescreen-Game-Patches?pid=240786#pid240786
+// ==========
+
+; ==========
+ gametitle=Tomb Raider - Anniversary * SLES-54674 * PAL/Europe * A629A376
+ comment=Tomb Raider - Anniversary * SLES-54674 * PAL/Europe * A629A376
+ comment=- Widescreen enforcement hacks by pgert.
+ patch=1,EE,20398590,extended,3F800000 // 00000000
+ patch=1,EE,203BED10,extended,00000001 // 00000000
+ patch=1,EE,20992524,extended,00000001 // 00000000
+; ==========
+ patch=1,EE,00109CB4,word,3C013F47 // 3C013F00 - 16:9 - Y-axis of the Calcutta-cinematic Subtitles & SubtitlesBackground.
+ patch=1,EE,80109CB4,word,3C013F47 // 3C013F00 - a clone from 00109CB4.
+ patch=1,EE,A0109CB4,word,3C013F47 // 3C013F00 - a clone from 00109CB4.
+ //
+ patch=1,EE,001515B4,word,3C013F83 // 3C013F80 - 16:9 - Y-axis placement of the Calcutta-cinematic Subtitles, but not the SubtitlesBackground.
+ patch=1,EE,801515B4,word,3C013F83 // 3C013F80 - a clone from 001515B4.
+ patch=1,EE,A01515B4,word,3C013F83 // 3C013F80 - a clone from 001515B4.
+; ==========
+// patch=1,EE,00109CB4,word,3C013F43 // 3C013F00 - 16:10 - Y-axis of the Calcutta-cinematic Subtitles & SubtitlesBackground.
+// patch=1,EE,80109CB4,word,3C013F43 // 3C013F00 - a clone from 00109CB4.
+// patch=1,EE,A0109CB4,word,3C013F43 // 3C013F00 - a clone from 00109CB4.
+// //
+// patch=1,EE,001515B4,word,3C013F82 // 3C013F80 - 16:10 - Y-axis placement of the Calcutta-cinematic Subtitles, but not the SubtitlesBackground.
+// patch=1,EE,801515B4,word,3C013F82 // 3C013F80 - a clone from 001515B4.
+// patch=1,EE,A01515B4,word,3C013F82 // 3C013F80 - a clone from 001515B4.
+; ==========
+ patch=1,EE,0016F374,word,3C01BF55 // 3C01BF40 - upper blackbar of Cinematics.
+ patch=1,EE,8016F374,word,3C01BF55 // 3C01BF40 - a clone from 0016F374.
+ patch=1,EE,A016F374,word,3C01BF55 // 3C01BF40 - a clone from 0016F374.
+ //
+ patch=1,EE,0016F380,word,3C013F55 // 3C013F40 - lower blackbar of Cinematics.
+ patch=1,EE,8016F380,word,3C013F55 // 3C013F40 - a clone from 0016F380.
+ patch=1,EE,A016F380,word,3C013F55 // 3C013F40 - a clone from 0016F380.
+; ==========
+// comment=- 16:10 support by pgert.
+// //
+// patch=1,EE,00150C20,word,3C013F8E // 3C013F80 - fontsize of most text.
+// patch=1,EE,80150C20,word,3C013F8E // 3C013F80 - a clone from 00150C20.
+// patch=1,EE,A0150C20,word,3C013F8E // 3C013F80 - a clone from 00150C20.
+// patch=1,EE,204AD58C,extended,3F8E38E4 // 3F800000 - HOW set from 00150C20.
+// patch=1,EE,204AD58C,extended,3F8E38E4 // 3F800000 - HOW set from 00150C20.
+// patch=1,EE,204AD58C,extended,3F8E38E4 // 3F800000 - HOW set from 00150C20.
+// //
+// patch=1,EE,0018271C,word,3C013F86 // 3C013F80 - size of Lara on GameMenu.
+// patch=1,EE,8018271C,word,3C013F86 // 3C013F80 - a clone from 0018271C.
+// patch=1,EE,A018271C,word,3C013F86 // 3C013F80 - a clone from 0018271C.
+// //
+// patch=1,EE,0018FBEC,word,3C013F53 // 3C013F49 - Y-axis placement of Subtitles & SubtitlesBackground.
+// patch=1,EE,8018FBEC,word,3C013F53 // 3C013F49 - a clone from 0018FBEC.
+// patch=1,EE,A018FBEC,word,3C013F53 // 3C013F49 - a clone from 0018FBEC.
+// //
+// patch=1,EE,0018FC28,word,3C013800 // 3C013ED9 - HOW - removes the SubtitlesBackground in Cinematics & GamePlay
+// patch=1,EE,0018FC2C,word,34210000 // 3421999A - LOW -  (incorrect but better).
+// patch=1,EE,8018FC28,word,3C013800 // 3C013ED9 - a clone from 0018FC28.
+// patch=1,EE,A018FC28,word,3C013800 // 3C013ED9 - a clone from 0018FC28.
+// patch=1,EE,8018FC2C,word,34210000 // 3421999A - a clone from 0018FC2C.
+// patch=1,EE,A018FC2C,word,34210000 // 3421999A - a clone from 0018FC2C.
+// //
+// patch=1,EE,001B8414,word,3C013F68 // 3C013F80 - GameMenu & GamePlay Zoom.
+// patch=1,EE,801B8414,word,3C013F68 // 3C013F80 - a clone from 001B8414.
+// patch=1,EE,A01B8414,word,3C013F68 // 3C013F80 - a clone from 001B8414.
+// patch=1,EE,204AD3DC,extended,3F680000 // 3F800000 - HOW set from 001B8414.
+// patch=1,EE,204AD49C,extended,3F680000 // 3F800000 - HOW set from 001B8414.
+// patch=1,EE,204AD4DC,extended,3F680000 // 3F800000 - HOW set from 001B8414.
+// // patch=1,EE,30170244,extended,3F680000 // A3C8090E - HOW set from 001B8414 - ?
+// // - 001B8414 & Co shrinks the items in GearMenu.
+// //
+// patch=1,EE,001B875C,word,3C013F66 // 3C013F80 - Y-axis of GameMenu & GamePlay.
+// patch=1,EE,801B875C,word,3C013F66 // 3C013F80 - a clone from 001B875C.
+// patch=1,EE,A01B875C,word,3C013F66 // 3C013F80 - a clone from 001B875C.
+// patch=1,EE,204AD584,extended,3F666666 // 3F800000 - HOW set from 001B875C.
+// //
+// patch=1,EE,0022CE94,word,3C013F72 // 3C013F80 - fontsize or pagesize of some "Checking Memory Card" text.
+// patch=1,EE,8022CE94,word,3C013F72 // 3C013F80 - a clone from 0022CE94.
+// patch=1,EE,A022CE94,word,3C013F72 // 3C013F80 - a clone from 0022CE94.
+; ==========
+
+; ==========
+// Notes (by pgert) - do not use.
+// Additional Widescreen enforcement patches, unconstant, and assumably superfluous:
+// // patch=1,EE,20A91704,extended,- // 00000000 - TLB Miss
+// patch=1,EE,20A91720,extended,- // 00000000
+// patch=1,EE,20A9173C,extended,- // 00000000
+// patch=1,EE,20A91758,extended,- // 00000000
+// patch=1,EE,20A91774,extended,- // 00000000
+// patch=1,EE,20A91790,extended,- // 00000000
+// patch=1,EE,20A917AC,extended,- // 00000000
+// patch=1,EE,20A917C8,extended,- // 00000000
+// patch=1,EE,20A917E4,extended,- // 00000000
+// patch=1,EE,20A91800,extended,- // 00000000
+// patch=1,EE,20A9181C,extended,- // 00000000
+// patch=1,EE,20A91854,extended,- // 00000000
+// patch=1,EE,20A91870,extended,- // 00000000
+// // patch=1,EE,20A919E0,extended,- // 00000000 - TLB Miss
+// patch=1,EE,20A91A1C,extended,- // 00000000
+// patch=1,EE,21FE6098,extended,- // 00000000
+// patch=1,EE,21FE61C8,extended,- // 00000000
+// patch=1,EE,21FE6334,extended,- // 00000000
+// patch=1,EE,21FE63D4,extended,- // 00000000
+// patch=1,EE,21FE6464,extended,- // 00000000
+// patch=1,EE,21FE64F4,extended,- // 00000000
+// patch=1,EE,21FE6580,extended,- // 00000000
+// patch=1,EE,21FE660C,extended,- // 00000000
+; ==========
+// Notes (by pgert) - do not use.
+// 16:10 support without Y-axis hack:
+// patch=1,EE,001B8754,word,3C013F55 // 3C013F40 - GamePlay X-axis.
+// patch=1,EE,204AD580,extended,3F555555 // 3F800000\3F400000 - HOW set from 001B8754.
+// patch=1,EE,204AD588,extended,3F555555 // 3F800000\3F400000 - HOW set from 001B8754.
+// patch=1,EE,00140E1C,word,3C013F55 // 3C013F40
+// patch=1,EE,001513C4,word,3C013F55 // 3C013F40 - width of letters
+// patch=1,EE,00151680,word,3C013F55 // 3C013F40
+// patch=1,EE,001517B4,word,3C013F55 // 3C013F40 - width of TextScreen
+// patch=1,EE,0016F380,word,3C013F55 // 3C013F40
+// patch=1,EE,00192EBC,word,3C013F55 // 3C013F40
+// patch=1,EE,00212708,word,3C013F55 // 3C013F40
+// patch=1,EE,002147AC,word,3C013F55 // 3C013F40
+// patch=1,EE,00241D38,word,3C013F55 // 3C013F40
+// patch=1,EE,002A6724,word,3C013F55 // 3C013F40
+// patch=1,EE,002C3D1C,word,3C013F55 // 3C013F40
+// patch=1,EE,002DBA08,word,3C013F55 // 3C013F40
+// patch=1,EE,002F1C98,word,3C013F55 // 3C013F40
+// patch=1,EE,002F7864,word,3C013F55 // 3C013F40
+; ==========
+// Notes (by pgert) - do not use.
+// Possible 16:10 improvements:
+// patch=1,EE,00109CAC,word,3C013F80 // 3C013FA0 - LetterWidth of the Calcutta-cinematic Subtitles.
+// patch=1,EE,00109D40,word,3C0143A0 // 3C014380 - LetterThickness of the Calcutta-cinematic Subtitles.
+// patch=1,EE,00109D48,word,3C0144F0 // 3C014500 - pos of the Calcutta-cinematic Subtitles.
+// patch=1,EE,00109D54,word,3C014370 // 3C014360 - heigt of the Calcutta-cinematic Subtitles.
+// patch=1,EE,0018FBF0,word,3C019437 // 3421BA5E - LOW of 0018FBEC.
+// - Modifying this value sets Subtitles & SubtitlesBackground close to the top of the screen.
+// patch=1,EE,0018FC00,word,3C013F53 // 3C013D49 - HOW - distance between SubtitleLines.
+// patch=1,EE,0018FC04,word,3C01249F // 34212493 - LOW
+// patch=1,EE,0018FC14,word,3C013F53 // 3C013F59 - HOW - wierd thing with Calcutta-cinematics Subtitles.
+// patch=1,EE,0018FC18,word,3421249F // 3421999A - LOW
+// patch=1,EE,0018FCF8,word,3C013F40 // 3C013F80 - HOW - max length of first SubtitleLine in Calcutta-cinematics.
+// patch=1,EE,001B875C,word,3C013F7B // 3C013F80
+// - Adjusts some GameMenu textdisplay, but also wracks the Y-axis adjustment (and consequently the Zoom).
+// - The 001B875C patch has to be placed After the Y-axis patches (if it's to be used).
+// patch=1,EE,00227D80,word,3C013F96 // 3C013F80 - width of Loadingbar and Healthbar (or initial health), but not the HealthbarBackground.
+// patch=1,EE,002282C8,word,3C013F55 // 3C013F80 - pos of Loadingbar and Healthbar, but not the HealthbarBackground.
+// patch=1,EE,0022A528,word,3C013FA8 // 3C013F00 - X-axis placement of "Tomb Raider Anniversary" logo in GameMenu, and some objects in the GearMenu.
+// patch=1,EE,0022A580,word,3C013FA8 // 3C013F00 - same as 0022A528, but reversed.
+// patch=1,EE,0022A5B0,word,3C013EE6 // 3C013F00 - Y-axis placement of the "Tomb Raider Anniversary" logo in GameMenu - 3EE66666.
+// patch=1,EE,0022A5E4,word,3C013F66 // 3C013F80 - pos of "Tomb Raider Anniversary" logo in GameMenu.
+// patch=1,EE,0022AAC0,word,3C013F55 // 3C013F80 - size of MenuBackground and width of the HealthbarBackground.
+// patch=1,EE,0022ACA8,word,3C013FA8 // 3C013F00 - pos of "Checkpoint", Hintinfo and Menu Background.
+// patch=1,EE,0022AD10,word,3C013FA8 // 3C013F00 - X-axis placement of "Checkpoint", Hintinfo and Menu Background.
+// patch=1,EE,0022AD40,word,3C013FA8 // 3C013F00 - Y-axis placement of "Checkpoint", Healthbar and Menu Background.
+// patch=1,EE,0022AD74,word,3C013F55 // 3C013F80 - pos of all Backgrounds.
+// patch=1,EE,0022CBB4,word,3C013F8E // 3C013F80 - pagesize of most text.
+// patch=1,EE,0022D2F4,word,3C013F8E // 3C013F80 - fontsize of the CalibrationValues & the HintinfoText.
+// patch=1,EE,0022D9AC,word,3C013F8E // 3C013F80 - size of Hintinfo, but not the HintinfoBackground.
+// patch=1,EE,002362E4,word,3C013FA8 // 3C013F00 - pos of HintinfoText and linedistance of MenuText.
+// patch=1,EE,00236564,word,3C013FA8 // 3C013F00 - X-axis placement of HintinfoText and some MenuText.
+// patch=1,EE,00236588,word,3C014400 // 3C014400 - X-axis of TextScreen.
+// patch=1,EE,00236590,word,3C0143CA // 3C0143E0 - Y-axis of TextScreen - 43C9999A.
+// patch=1,EE,0036A700,word,3C013F55 // 3C013F80 - general size of Lara.
+; ==========
+// Notes (by pgert) - do not use.
+// 16:10 Zoom difficulties:
+// patch=1,EE,001AC5EC,word,3C0143E6 // 3C014400 - GamePlay Zoom - has the reverse effect in Croft Manor.
+// patch=1,EE,204AD578,extended,43E66666 // 44000000 - HOW set from 001AC5EC.
+// patch=1,EE,001AC5EC,word,3C01440E // 3C014400 - GamePlay Zoom - has the double effect outside Croft Manor.
+// patch=1,EE,204AD578,extended,440E38E4 // 44000000 - HOW set from 001AC5EC
+// patch=1,EE,001B8408,word,3C01BF8C // 3C01BF80 - GameMenu & GamePlay Zoom.
+// patch=1,EE,204AD404,extended,BF8C0000 // BF800000 - HOW set from 001B8408.
+// - 001B8408 & Jr makes the items in the GearMenu "undisplayed".
+; ==========

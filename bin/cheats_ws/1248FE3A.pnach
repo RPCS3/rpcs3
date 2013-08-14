@@ -1,0 +1,17 @@
+gametitle=Broken Sword: The Sleeping Dragon (SLES-51557)
+comment=Widescreen patch by nemesis2000 (pnach by nemesis2000 )
+patch=1,EE,001ad9cc,word,3c01bec0
+patch=1,EE,001ad9d0,word,0c06b250
+patch=1,EE,001ad9d4,word,44813000
+
+patch=1,EE,001ac93c,word,00000000
+patch=1,EE,001ac940,word,27bdffd0
+patch=1,EE,001ac944,word,3c01bf00
+patch=1,EE,001ac948,word,44813800
+patch=1,EE,001ac94c,word,7fb00020
+patch=1,EE,001ac950,word,ffbf0010
+patch=1,EE,001ac954,word,0080802d
+patch=1,EE,001ac958,word,26060020
+patch=1,EE,001ac95c,word,c6000070
+patch=1,EE,001ac960,word,8e020004
+patch=1,EE,001ac964,word,46060202

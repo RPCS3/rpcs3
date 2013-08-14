@@ -1,0 +1,6 @@
+gametitle=Seven Samurai 20XX (PAL-M5) (SLES-52348)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,001bce24,word,3c094455 // 00000000 hor fov
+patch=1,EE,001bce5c,word,35235555 // 3c034420 hor fov

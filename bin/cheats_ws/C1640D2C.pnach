@@ -1,0 +1,5 @@
+gametitle=Wild Arms 5 NTSC-U
+comment=Widescreen Hack
+patch=1,EE,00153994,word,3C024500
+patch=1,EE,00153a30,word,3C023F40
+patch=1,EE,2015391C,word,3C02442B

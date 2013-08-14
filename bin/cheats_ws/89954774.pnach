@@ -1,0 +1,4 @@
+gametitle=Blood Will Tell: Tezuka Osamu's Dororo SLUS_207.82
+comment=Widescreen Hack
+patch=1,EE,001b8cbc,word,3c023f06
+patch=1,EE,001b8cc4,word,34426666

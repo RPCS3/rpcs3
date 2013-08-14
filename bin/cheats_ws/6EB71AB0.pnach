@@ -1,0 +1,11 @@
+comment=Bleach Blade Battlers 2 - Widescreen patch by Miseru99 (16:9) (NTSC-J)
+//improved ones:
+//height
+//patch=1,EE,20353FF4,extended,4036FF75
+//width
+patch=1,EE,20353FE0,extended,3F9E859F
+//old ones left for potential learning purposes only;P
+//height
+//patch=1,EE,20353FB4,extended,43950000
+//width is bad here;c
+//patch=1,EE,20353FA0,extended,43700000

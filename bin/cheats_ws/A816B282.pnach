@@ -1,0 +1,5 @@
+comment=Naruto - Ultimate Ninja 2 (PAL-M5) (SLES-54878) Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,20A70200,extended,3F400000 // 3F800000 X-Axis
+//patch=1,EE,20A70204,extended,3F800000 // 3F800000 Y-Axis

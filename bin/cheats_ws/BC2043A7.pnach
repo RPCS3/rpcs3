@@ -1,0 +1,13 @@
+gametitle=The Punisher (NTSC-U)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,0042d2d0,word,3fdba5e3 // 3fa4bc6a ver fov
+patch=1,EE,00192404,word,3c023f20 // 3c023f00 zoom
+patch=1,EE,0019240c,word,34426666 // 00000000 zoom
+
+// force progressive scan
+patch=1,EE,001a0204,word,3c050000
+patch=1,EE,001a0208,word,3c060050
+patch=1,EE,001a020c,word,3c070001
+patch=1,EE,001a0210,word,3c090010

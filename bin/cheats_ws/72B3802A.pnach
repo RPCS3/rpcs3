@@ -1,0 +1,5 @@
+gametitle=Street Fighter EX 3 (SLUS-201301)
+comment=Widescreen hack by nemesis2000 (pnach by paul_met)
+patch=1,EE,002e34d4,word,3c013f40
+patch=1,EE,002e34d8,word,44810000
+patch=1,EE,002e34e0,word,4600c602

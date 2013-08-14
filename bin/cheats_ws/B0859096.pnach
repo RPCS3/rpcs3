@@ -1,0 +1,26 @@
+gametitle=Baldur's Gate: Dark Alliance II (SLUS-20675)
+
+patch=1,EE,001ed388,word,3c013f1f
+patch=1,EE,001ed38c,word,342149f1
+patch=1,EE,001ed39c,word,3c014440
+
+patch=1,EE,0023fc24,word,3c013f1f
+patch=1,EE,0023fc28,word,342149f1
+patch=1,EE,0023fc34,word,3c014440
+
+patch=1,EE,0027f854,word,3c013f1f
+patch=1,EE,0027f858,word,342149f1
+patch=1,EE,0027f864,word,3c014440
+
+patch=1,EE,002c8698,word,3c013f1f
+patch=1,EE,002c869c,word,342149f1
+patch=1,EE,002c86a8,word,3c014440
+
+//render fix value by No.47
+//patch=1,EE,002c456c,word,3c014288 //alternate render fix value
+patch=1,EE,002c4574,word,3c013fe3
+patch=1,EE,002c4578,word,3421d70a
+
+//patch=1,EE,002c82d4,word,3c014288 //alternate render fix value
+patch=1,EE,002c82dc,word,3c013fe3
+patch=1,EE,002c82e0,word,3421d70a

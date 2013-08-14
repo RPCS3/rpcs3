@@ -1,0 +1,10 @@
+gametitle=Tekken4 (SCPS_560.06) (NTSC-K)
+comment=16:9 widescreen hack
+
+//16:9 widescreen hack by nemesis2000, porting by 99skull
+patch=1,EE,00216C60,word,3C013F40 //gameplay
+patch=1,EE,001F69C0,word,3C013F40 //partial hud fix
+patch=1,EE,0018D408,word,3C0143D5 //rfix 1
+patch=1,EE,00200B44,word,3C013F40 //rfix 2
+patch=1,EE,00200B48,word,44810000 //rfix 2
+patch=1,EE,00200B54,word,46006303 //rfix 2

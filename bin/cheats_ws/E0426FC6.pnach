@@ -1,0 +1,3 @@
+gametitle=Okage Shadow King SCUS_971.29
+comment=Widescreen Hack
+patch=1,EE,201FE2E4,extended,3F400000 // 3F800000

@@ -1,0 +1,6 @@
+gametitle=Final Fantasy X-2 NTSC-J International + Last Mission
+comment=Widescreen hack
+patch=1,EE,001aabb8,word,3c013f19
+patch=1,EE,001aabbc,word,3421999a
+patch=1,EE,0011be04,word,3c014440
+patch=1,EE,0017c22c,word,3c01442b

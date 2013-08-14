@@ -1,0 +1,28 @@
+gametitle=One Piece - Pirates' Carnival (NTSC-U) (SLUS-21364)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,00189d64,word,080d198a // 46070202
+patch=1,EE,00189d68,word,00000000 // 24430050
+patch=1,EE,00346628,word,3c013f40 // 00000000 hor fov
+patch=1,EE,0034662c,word,34210000 // 00000000 hor fov
+patch=1,EE,00346630,word,4481f000 // 00000000
+patch=1,EE,00346634,word,46070202 // 00000000
+patch=1,EE,00346638,word,461e4202 // 00000000
+patch=1,EE,0034663c,word,24430050 // 00000000
+patch=1,EE,00346640,word,0806275a // 00000000
+patch=1,EE,00189914,word,3c013e80 // 3c013f80 renderfix right
+patch=1,EE,00189b7c,word,3c013e80 // 3c013f80 renderfix left
+
+// 16:10
+//patch=1,EE,00189d64,word,080d198a // 46070202
+//patch=1,EE,00189d68,word,00000000 // 24430050
+//patch=1,EE,00346628,word,3c013f55 // 00000000 hor fov
+//patch=1,EE,0034662c,word,34215555 // 00000000 hor fov
+//patch=1,EE,00346630,word,4481f000 // 00000000
+//patch=1,EE,00346634,word,46070202 // 00000000
+//patch=1,EE,00346638,word,461e4202 // 00000000
+//patch=1,EE,0034663c,word,24430050 // 00000000
+//patch=1,EE,00346640,word,0806275a // 00000000
+//patch=1,EE,00189914,word,3c013e80 // 3c013f80 renderfix right
+//patch=1,EE,00189b7c,word,3c013e80 // 3c013f80 renderfix left

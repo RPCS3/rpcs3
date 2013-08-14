@@ -1,0 +1,7 @@
+gametitle=Silent Hill 4 - The Room SLUS_208.73
+comment=Widescreen Hack
+patch=1,EE,2045a1b4,extended,3F400000
+patch=1,EE,2045a1b8,extended,3F160000
+//FMV Fix
+patch=1,EE,202f7954,extended,3c020380
+patch=1,EE,202f7998,extended,34021880

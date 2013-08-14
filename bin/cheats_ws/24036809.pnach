@@ -1,0 +1,20 @@
+gametitle=Resident Evil: Code: Veronica X (SLUS-20184)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//gameplay
+patch=1,EE,00132298,word,3c023f61 //hor value
+patch=1,EE,0013229c,word,34436893
+
+//render fix
+patch=1,EE,00339c90,word,43f00000 //partial render fix 1
+patch=1,EE,00339c94,word,43e00000 //partial render fix 2
+
+patch=1,EE,002e29e8,word,3c014466 //partial render fix 3
+patch=1,EE,002e29ec,word,44810800
+
+patch=1,EE,002cfeec,word,3c013f97 //partial render fix 4
+patch=1,EE,002cfef0,word,44811800
+
+//FMV's fix
+patch=1,EE,21E218C0,extended,01AA0280
+patch=1,EE,21E218C4,extended,000C0000

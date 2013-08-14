@@ -1,0 +1,3 @@
+comment=Silent Hill 2 (PAL-M6) (SLES-50382) Widescreen Hack (16:9) by ElHecht
+patch=1,EE,210E4C14,extended,43A8F5C3 // 43E147AE X-RES
+//patch=1,EE,210E4C18,extended,43E00000 // 43E00000 Y-RES

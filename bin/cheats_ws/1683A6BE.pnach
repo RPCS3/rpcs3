@@ -1,0 +1,40 @@
+gametitle=Shin Megami Tensei - Digital Devil Saga (SLES-53458) (CRC-1683A6BE)
+comment=Widescreen Hack (16:9)
+// 16:9
+patch=1,EE,00328864,word,3fc6d3a0 // 3f951eb8 hor fov
+patch=1,EE,00328c04,word,3fc6d3a0 // 3f951eb8 unknown
+
+//Optional shadow alpha hack
+//comment=Shadow Override (Krisan Thyme)
+//patch=1,EE,20330B00,extended,00000000
+//patch=1,EE,20330B04,extended,00000000
+//patch=1,EE,20330B08,extended,00000000
+//patch=1,EE,20330B0C,extended,00000000
+//patch=1,EE,20330B10,extended,00000000
+//patch=1,EE,20330B14,extended,00000000
+//patch=1,EE,20330B18,extended,00000000
+//patch=1,EE,20330B1C,extended,00000000
+//patch=1,EE,20330B20,extended,00000000
+//patch=1,EE,20330B24,extended,00000000
+//patch=1,EE,20330B28,extended,00000000
+//patch=1,EE,20330B2C,extended,00000000
+//patch=1,EE,20330B30,extended,00000000
+//patch=1,EE,20330B34,extended,00000000
+//patch=1,EE,20330B38,extended,00000000
+//patch=1,EE,20330B3C,extended,00000000
+//patch=1,EE,20330B40,extended,00000000
+//patch=1,EE,20330B44,extended,00000000
+//patch=1,EE,20330B48,extended,00000000
+//patch=1,EE,20330B4C,extended,00000000
+//patch=1,EE,20330B50,extended,00000000
+//patch=1,EE,20330B54,extended,00000000
+//patch=1,EE,20330B58,extended,00000000
+//patch=1,EE,20330B5C,extended,00000000
+//patch=1,EE,20330B60,extended,00000000
+//patch=1,EE,20330B64,extended,00000000
+//patch=1,EE,20330B68,extended,00000000
+//patch=1,EE,20330B6C,extended,00000000
+//patch=1,EE,20330B70,extended,00000000
+//patch=1,EE,20330B74,extended,00000000
+//patch=1,EE,20330B78,extended,00000000
+//patch=1,EE,20330B7C,extended,00000000

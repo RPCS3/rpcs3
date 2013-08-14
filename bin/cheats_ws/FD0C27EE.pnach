@@ -1,0 +1,5 @@
+gametitle=Marvel Ultimate Alliance 2 SLUS_218.79
+comment=Widescreen Hack
+patch=1,EE,208314e4,extended,3fe6db6e
+patch=1,EE,208314e8,extended,3FE38E32
+patch=1,EE,20831518,extended,3F299999 //fonts

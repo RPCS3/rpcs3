@@ -1,0 +1,9 @@
+comment=Shadow Hearts 3 - From The New World (PAL-E) (SLES-54711) Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,00378d1c,word,3c013f40
+patch=1,EE,00378d20,word,44810000
+patch=1,EE,00378d28,word,4600c602
+//
+// Render-Fix
+patch=1,EE,00208b4c,word,3c033fc0

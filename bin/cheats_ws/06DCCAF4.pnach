@@ -1,0 +1,12 @@
+gametitle=Blood Omen 2: The Legacy of Kain Series (SLES-50771)
+
+//gameplay (based on pavachan elf hack)
+patch=1,EE,00310ba0,word,3c013fe3
+patch=1,EE,00310ba4,word,34218e38
+
+//black border fix by nemesis2000
+patch=1,EE,002d24cc,word,00000000
+
+//FMV's fix by nemesis2000
+patch=1,EE,002e9380,word,240575e0
+patch=1,EE,002e9398,word,240a1440

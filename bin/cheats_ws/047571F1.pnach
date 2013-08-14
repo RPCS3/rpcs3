@@ -1,0 +1,7 @@
+gametitle=Dynasty Warriors 6 (NTSC-U) (SLUS-21774)
+comment=Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,00147178,word,3c0243b4 // 3c0243a0 hor fov value1
+patch=1,EE,00147238,word,3c0243f0 // 3c0243a0 hor fov value2
+patch=1,EE,001556a4,word,3c023f15 // 3c023f00 render fix

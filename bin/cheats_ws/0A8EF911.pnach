@@ -1,0 +1,11 @@
+gametitle=Arc - Twilight of the Spirits (PAL-M5) (SCES-51910)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,001269fc,word,3c013f40 // 00000000 hor fov
+patch=1,EE,00126a00,word,4481f000 // 00000000
+patch=1,EE,00126a0c,word,4600a746 // 00000000
+patch=1,EE,00126a10,word,461ea502 // 00000000
+patch=1,EE,00126a68,word,e7bd0014 // e7b40014
+patch=1,EE,00126b20,word,461e1f83 // 00000000
+patch=1,EE,00126b6c,word,e47e0014 // 00000000

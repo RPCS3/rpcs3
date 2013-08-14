@@ -1,0 +1,2 @@
+comment=.Hack//G.U Vol. II Reminisce Undub - Widescreen Hack (16:9) (NTSC-U) (cloudalmasai)
+patch=1,EE,20A0CD94,word,3F400000

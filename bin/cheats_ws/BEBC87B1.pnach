@@ -1,0 +1,15 @@
+gametitle=Grandia II (PAL-E) (SLES-50498)
+comment=Widescreen Hack (16:9) by ElHecht
+//
+// jump to code-inject
+patch=1,EE,0025ca80,word,0c101c0d // 3c013f80
+patch=1,EE,0025ca84,word,00000000 // 44815800 
+//
+// code-inject
+patch=1,EE,00407034,word,3c013f40 // 00000000 hor fov
+patch=1,EE,0040703c,word,44815800 // 00000000 
+patch=1,EE,00407040,word,460b2942 // 00000000 
+patch=1,EE,00407044,word,460b2102 // 00000000 
+patch=1,EE,00407048,word,3c013f80 // 00000000 
+patch=1,EE,0040704c,word,44815800 // 00000000 
+patch=1,EE,00407050,word,03e00008 // 00000000 

@@ -1,0 +1,44 @@
+gametitle=Shin Megami Tensei: Persona 4 (SLUS-21782B)
+
+//16:9 by pavachan
+patch=1,EE,0076111c,word,3fe38e38
+
+//less 16:9 by Luna (hides some moonwalkers)
+//patch=1,EE,0076111c,word,3fc38e38
+
+//even less 16:9 by Luna (hides most moonwalkers)
+//patch=1,EE,0076111c,word,3fb38e38
+
+//partial HUD fix by nemesis2000
+patch=1,EE,00104680,word,3c043f40
+patch=1,EE,00104688,word,00731821
+patch=1,EE,0010468c,word,24636728
+patch=1,EE,00104694,word,00000000
+patch=1,EE,00104698,word,24630004
+patch=1,EE,0010469c,word,3c043f80
+
+//FMV's fix by nemesis2000
+patch=1,EE,0046957c,word,1460000a
+patch=1,EE,00469584,word,3c03c294
+patch=1,EE,00469588,word,10000008
+patch=1,EE,0046958c,word,00000000
+patch=1,EE,004695a8,word,3c03c1a8
+patch=1,EE,004695bc,word,00000000
+
+//Font fix by nemesis2000 (causes spacing errors)
+patch=1,EE,002732b4,word,00118903
+patch=1,EE,002732b8,word,02338818
+patch=1,EE,002732c0,word,8E93001c
+patch=1,EE,00273368,word,82970003
+patch=1,EE,0027343c,word,24130015
+
+patch=1,EE,00275dbc,word,2415000c
+patch=1,EE,00275dd4,word,3c0241a8
+patch=1,EE,00275e00,word,01154018
+patch=1,EE,00275e04,word,00084103
+patch=1,EE,00275e08,word,0100a82d
+
+//Progressive Scan & 60fps
+patch=1,EE,0041751c,word,3c050000
+patch=1,EE,00417524,word,3c060050
+patch=1,EE,0041752c,word,3c070001

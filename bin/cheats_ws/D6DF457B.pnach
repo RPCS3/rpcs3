@@ -1,0 +1,5 @@
+gametitle=Altered Beast SLES_530.24
+comment=Widescreen Hack
+patch=1,EE,003e499c,extended,3c033fe3
+patch=1,EE,003e49a4,extended,34648e38 
+patch=1,EE,005d4250,extended,3c033f20

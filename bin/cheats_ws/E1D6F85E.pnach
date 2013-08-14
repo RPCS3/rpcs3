@@ -1,0 +1,6 @@
+gametitle=Death by Degrees SLUS_209.34
+comment=Widescreen Hack
+patch=1,EE,00188250,word,3c023fe3
+patch=1,EE,00188258,word,3443bbd6
+patch=1,EE,0018606c,word,3c023fe3
+patch=1,EE,00186070,word,3443bbd6

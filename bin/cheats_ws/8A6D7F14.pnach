@@ -1,0 +1,6 @@
+gametitle=Final Fantasy X-2 NTSC-J
+comment=Widescreen hack
+patch=1,EE,001a9104,word,3c013f19
+patch=1,EE,001a9108,word,3421999a
+patch=1,EE,0011bdec,word,3c014440
+patch=1,EE,0017a7c4,word,3c01442b

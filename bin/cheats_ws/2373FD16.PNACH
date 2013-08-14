@@ -1,0 +1,12 @@
+gametitle=Psychonauts SLUS_211.20
+comment=Widescreen hack by pelvicthrustman
+
+//Widescreen
+patch=1,EE,001e9fe4,word,3c013f40 //00000000 (horizontal fov)
+patch=1,EE,001e9fe8,word,4481f800 //00000000
+patch=1,EE,001e9fec,word,461f3183 //46061983
+patch=1,EE,001ea004,word,46061983 //00000000
+
+//Render Fix
+patch=1,EE,001e873c,word,340f02ab //962f0038
+patch=1,EE,001292b8,word,240e02ab //240e0200

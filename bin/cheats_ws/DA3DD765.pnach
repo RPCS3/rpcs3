@@ -1,0 +1,5 @@
+gametitle=Sly Raccoon SCES_509.17
+comment=Widescreen Hack
+patch=1,EE,00143864,word,3c013f22
+patch=1,EE,001438e8,word,3c0143ab
+patch=1,EE,00144a0c,word,3c0143ab

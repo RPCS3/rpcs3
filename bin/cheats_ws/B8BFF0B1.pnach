@@ -1,0 +1,5 @@
+gametitle=Armored Core - Silent Line SLUS_206.44
+comment=Widescreen Hack
+patch=1,EE,001241e8,word,3c013f22
+patch=1,EE,0027693c,word,3c013f40
+patch=1,EE,2034B36C,word,43F00000

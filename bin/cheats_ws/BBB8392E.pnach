@@ -1,0 +1,25 @@
+// ==========
+// pgert@130701
+// http://forums.pcsx2.net/Thread-PCSX2-Widescreen-Game-Patches?pid=240786#pid240786
+// ==========
+
+; ==========
+ gametitle=Gauntlet - Seven Sorrows * SLES-53667 * PAL-M5 * BBB8392E
+ comment=Gauntlet - Seven Sorrows * SLES-53667 * PAL-M5 * BBB8392E
+ comment=- Widescreen hack by nemesis2000.
+ patch=1,EE,00446620,word,24020002 // 8C4206EC
+ patch=1,EE,80446620,word,24020002 // 8C4206EC - a clone from 00446620 - pgert.
+ patch=1,EE,A0446620,word,24020002 // 8C4206EC - a clone from 00446620 - pgert.
+; ==========
+
+; ==========
+// Alternative (and original) hack - less fps (do not use):
+// comment=- Widescreen hack by pelvicthrustman, ported by pgert.
+//  patch=1,EE,003B1510,word,3C013F40 // 00000000 (horizontal fov)
+//  patch=1,EE,003B151C,word,4481F800 // 00000000
+//  patch=1,EE,003B153C,word,AFA300F8 // 460C1043
+//  patch=1,EE,003B1540,word,461F6303 // AFA300F8
+//  patch=1,EE,003B1544,word,460C1043 // 3C063F00
+//  patch=1,EE,003B1688,word,3C063F00 // 44860800
+//  patch=1,EE,003B168C,word,44860800 // 00000000
+; ==========

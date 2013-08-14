@@ -1,0 +1,6 @@
+gametitle=Final Fantasy X-2 (SLUS-20672)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+patch=1,EE,001b4f74,word,3c013f19
+patch=1,EE,001b4f78,word,3421999a
+patch=1,EE,0012369c,word,3c014440
+patch=1,EE,0018645c,word,3c01442b

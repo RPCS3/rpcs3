@@ -1,0 +1,12 @@
+gametitle=The Bard's Tale (SLUS-20803)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+
+//hor fov+
+patch=1,EE,0011c594,word,3c023f40
+patch=1,EE,0012ed8c,word,3c033f40
+patch=1,EE,001447a8,word,3c053f40
+patch=1,EE,00144824,word,3c033f40
+patch=1,EE,00144874,word,3c023f40
+
+//render fix
+patch=1,EE,0013e080,word,3c023f2b

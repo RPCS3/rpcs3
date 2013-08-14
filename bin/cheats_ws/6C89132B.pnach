@@ -1,0 +1,4 @@
+gametitle=Dynasty Warriors 4 (SLUS-20653)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+patch=1,EE,00136f30,word,3c0243d6
+patch=1,EE,00183dc0,word,3c023f2b

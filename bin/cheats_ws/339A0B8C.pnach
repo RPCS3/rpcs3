@@ -1,0 +1,12 @@
+comment=Fatal Frame (SLUS-20388)
+
+// patch=1,EE,20252870,extended,3F400000
+// Original 16:9 Widescreen hack by pavachan.
+
+//gameplay
+patch=1,EE,001885c4,word,3c013f40
+
+//FMV's fix
+patch=1,EE,00180b80,word,24027100
+patch=1,EE,00180b90,word,24027100
+patch=1,EE,00180b98,word,24091e00

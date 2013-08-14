@@ -1,0 +1,5 @@
+gametitle=Armored Core - Nexus SLUS_209.86  SLUS_210.79
+comment=Widescreen Hack
+patch=1,EE,001211c8,word,3c023f22
+patch=1,EE,01e16348,word,3c023f40
+patch=1,EE,202B757C,word,43C00000

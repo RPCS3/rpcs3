@@ -1,0 +1,4 @@
+gametitle= Rule of Rose SLUS 214.48
+comment=Widescreen Hack
+patch=1,EE,0013bd54,extended,3c013f12
+patch=1,EE,0013bd7c,extended,3c013f10

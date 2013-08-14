@@ -1,0 +1,4 @@
+gametitle=Final Fantasy XII
+comment=NTSC-J Widescreen Hack by synce
+patch=1,EE,204dfb50,extended,3fe28f5c
+patch=1,EE,204dfbb0,extended,3fe28f5c

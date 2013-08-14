@@ -1,0 +1,4 @@
+gametitle=SpyHunter 2 SLUS_205.90
+comment=Widescreen Hack
+patch=1,EE,002badc4,word,3c013fe3
+patch=1,EE,002badc8,word,34217fa5

@@ -1,0 +1,3 @@
+gametitle=Pro Evolution Soccer 2007 (SLUS_21464)
+comment=Widescreen hack by No.47
+patch=1,EE,2039BAA4,word,3F400000

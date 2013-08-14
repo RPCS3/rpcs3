@@ -1,0 +1,5 @@
+gametitle=Legend of Kay (SLUS_21248)
+comment=Widescreen hack by No.47
+patch=1,EE,2063D9C0,word,3FAE8BA3
+patch=1,EE,2063D9C4,word,401B26CA
+patch=1,EE,206E6814,word,3FBBBBBB

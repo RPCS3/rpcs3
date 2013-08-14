@@ -1,0 +1,4 @@
+gametitle=Silent Hill 4 The Room
+comment=NTSC-J Widescreen Hack by synce
+patch=1,EE,2045a2b4,extended,3f400000
+patch=1,EE,2045a2b8,extended,3f15fd8b

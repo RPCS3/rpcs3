@@ -1,0 +1,8 @@
+gametitle=Forbidden Siren (SCES_519.20)
+
+//gameplay by sergx12
+patch=1,EE,002018a8,word,3c023f40
+
+//FMV's fix by nemesis2000
+patch=1,EE,001fba78,word,3c027560 // 3c027800
+patch=1,EE,001fbac4,word,34028aa0 // 34028800

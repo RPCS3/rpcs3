@@ -1,0 +1,7 @@
+comment=Final Fantasy XII (SLES-54354)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//widescreen fix
+patch=1,EE,001803c8,word,3C013f80
+patch=1,EE,001803cc,word,34210000
+patch=1,EE,0033E71C,word,3c020000

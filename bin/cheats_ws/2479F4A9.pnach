@@ -1,0 +1,10 @@
+gametitle=Jak II - Renegade (PAL-M7) (SCES-51608)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,00367be8,word,3c033f1f // 3c033f00 zoom
+patch=1,EE,20826F10,extended,0014A709 // 001479C1 force native 16:9 mode
+
+// menu fix
+patch=1,EE,20B63FE0,extended,43A80000 // 436DE43C
+patch=1,EE,20B665B0,extended,43440000 // 4309CAD8

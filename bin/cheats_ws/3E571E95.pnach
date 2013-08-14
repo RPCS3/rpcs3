@@ -1,0 +1,14 @@
+gametitle=Tom Clancy's Ghost Recon (SLUS-20613)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//sp
+patch=1,EE,003a7ef4,word,3c023f40
+patch=1,EE,003a7f14,word,3c0243d6
+
+//mp
+patch=1,EE,003a8014,word,3c023f40
+patch=1,EE,003a8034,word,3c0243d6
+
+//menu
+patch=1,EE,0053b144,word,3c043f40
+patch=1,EE,0053b150,word,3c0243d6

@@ -1,0 +1,12 @@
+gametitle=Prince of Persia: The Two Thrones (SLUS-21287)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+
+//gameplay
+patch=1,EE,005b8794,word,3C023f40
+patch=1,EE,005b87b0,word,4600b046
+patch=1,EE,005b87b8,word,4600a306
+patch=1,EE,005b87bc,word,4600ab46
+
+//rfix
+patch=1,EE,005a1cac,word,3c014455
+patch=1,EE,005a1ce8,word,44810000

@@ -1,0 +1,7 @@
+gametitle=Chaos Legion (SLUS-20695)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+patch=1,EE,00242f4c,word,3c013f40
+patch=1,EE,00242f5c,word,4481d800
+patch=1,EE,00242f60,word,460fdec2
+patch=1,EE,00243064,word,3c0243ab
+patch=1,EE,00228064,word,3c023fab

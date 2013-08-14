@@ -1,0 +1,38 @@
+gametitle=Shin Megami Tensei: Persona 4 PAL(SLES-55474)
+comment=Shin Megami Tensei: Persona 4 PAL (SLES-55474) - 16:9 Widescreen, 60fps, & Progressive Scan
+//16:9
+patch=1,EE,0076461c,word,3fe38e38
+
+//FMV's fix by nemesis2000
+patch=1,EE,0046a8ec,word,1460000a
+patch=1,EE,0046a8f4,word,3c03c2aa
+patch=1,EE,0046a8f8,word,10000008
+patch=1,EE,0046a8fc,word,00000000
+patch=1,EE,0046a918,word,3c03c1c0
+patch=1,EE,0046a92c,word,00000000
+
+//partial HUD fix
+patch=1,EE,00104690,word,3c043f40
+patch=1,EE,00104698,word,00731821
+patch=1,EE,0010469c,word,24639ca8
+patch=1,EE,001046a4,word,00000000
+patch=1,EE,001046a8,word,24630004
+patch=1,EE,001046ac,word,3c043f80
+
+//Font fix by nemesis2000 (causes spacing errors)
+patch=1,EE,002739a4,word,00118903
+patch=1,EE,002739a8,word,02338818
+patch=1,EE,002739b0,word,8E93001c
+patch=1,EE,00273a58,word,82970003
+patch=1,EE,00273b2c,word,24130015
+
+patch=1,EE,002764ac,word,2415000c
+patch=1,EE,002764c4,word,3c0241a8
+patch=1,EE,002764f0,word,01154018
+patch=1,EE,002764f4,word,00084103
+patch=1,EE,002764f8,word,0100982d
+
+//Progressive Scan & 60fps
+patch=1,EE,0041814c,word,3c050000
+patch=1,EE,00418154,word,3c060050
+patch=1,EE,0041815c,word,3c070001

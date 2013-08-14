@@ -1,0 +1,19 @@
+gametitle=Ar tonelico: Melody of Elemia (SLUS-21445)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//3D scenes
+patch=1,EE,003440bc,word,3c013f40 //hor value
+patch=1,EE,003440c0,word,44810000
+patch=1,EE,003440c8,word,4600c602
+
+//battle's fix
+patch=1,EE,00a8edd4,word,44400000 //right side fix
+patch=1,EE,00a8eddc,word,c4400000 //left side fix
+
+//2D scenes
+patch=1,EE,001a363c,word,3c014440 //hor value
+patch=1,EE,001a3640,word,44810800
+patch=1,EE,001a3644,word,46010042
+patch=1,EE,001a3648,word,e6810090
+patch=1,EE,001a364c,word,3c014480 //vert value
+patch=1,EE,001a3650,word,44810800

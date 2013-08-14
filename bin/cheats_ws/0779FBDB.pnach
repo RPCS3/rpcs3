@@ -1,0 +1,7 @@
+comment=Final Fantasy XII (SLUS-20963)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//widescreen fix
+patch=1,EE,00180388,word,3C013f80
+patch=1,EE,0018038c,word,34210000
+patch=1,EE,0033d55c,word,3c020000

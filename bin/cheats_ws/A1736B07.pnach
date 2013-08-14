@@ -1,0 +1,2 @@
+comment=Leisure Suit Larry - Magna Cum Laude - Uncut (NTSC-U) Widescreen Hack (16:9)
+patch=1,EE,20CB6964,extended,3F400000 // 3F800000 X-Axis

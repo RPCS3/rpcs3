@@ -1,0 +1,5 @@
+gametitle=Crash Bandicoot Wrath Of Cortex (SLES 503.86) (PAL)
+comment=Crash Bandicoot Wrath Of Cortex
+
+// 16:9 hack
+patch=1,EE,21D43044,extended,3F100000 // 3F400000

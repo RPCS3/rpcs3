@@ -1,0 +1,3 @@
+gametitle=Demolition Girl SLES_534.03
+comment=Widescreen Hack
+patch=1,EE,001f34e4,word,3c013f40

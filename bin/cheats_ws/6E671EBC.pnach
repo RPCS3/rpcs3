@@ -1,0 +1,5 @@
+gametitle=Shin Sangoku Musou 4(=Dynasty warriors 5) (SLKA_252.89)
+comment=widescreen 16:9 (NTSC-K) hack by 99skull
+//credit goes to nemesis2000
+patch=1,EE,00146C88,word,3C0243D6 //3C0243A0 wide(320)->(428)
+patch=1,EE,00181F4C,word,3C023F2B //3C023F00 renderfix(0.5)->(0.667969)

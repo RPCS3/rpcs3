@@ -1,0 +1,5 @@
+gametitle=Area 51 (NTSC-U)
+
+patch=1,EE,003922B0,word,3C013F20
+patch=1,EE,003922D8,word,3C013F00
+patch=1,EE,003922DC,word,4481B000

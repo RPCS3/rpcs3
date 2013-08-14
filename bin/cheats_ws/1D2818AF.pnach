@@ -1,0 +1,13 @@
+gametitle=Need for Speed - Hot Pursuit 2 (PAL-M6) (SLES-50731)
+comment=Widescreen Hack by nemesis2000/pnach by ElHecht
+// Added 16:10 support (ElHecht)
+
+// 16:9
+patch=1,EE,0032f6fc,word,3f400000 // 3f800000 hor fov
+patch=1,EE,0032f850,word,3f2aaaab // 3f000000 increase hor fov
+patch=1,EE,0010e840,word,3c013f2b // 3c013f00 renderfix
+
+// 16:10
+//patch=1,EE,0032f6fc,word,3f555555 // 3f800000 hor fov
+//patch=1,EE,0032f850,word,3f19999a // 3f000000 increase hor fov
+//patch=1,EE,0010e840,word,3c013f1a // 3c013f00 renderfix

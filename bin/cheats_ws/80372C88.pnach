@@ -1,0 +1,8 @@
+gametitle=Soldier of Fortune: Gold Edition (SLES-50739)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,00514178,word,00000356
+patch=1,EE,00128674,word,24040280
+patch=1,EE,001286ac,word,24040280
+patch=1,EE,001703cc,word,3c0142de
+patch=1,EE,002d677c,word,3c0142de

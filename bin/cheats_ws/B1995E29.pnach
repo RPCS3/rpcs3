@@ -1,0 +1,7 @@
+gametitle=Shadow of Rome SLES_529.50
+comment=Widescreen Hack
+patch=1,EE,00146c08,word,3c023f1f
+patch=1,EE,00146c10,word,344249f9
+patch=1,EE,00146e24,word,3c023f1f
+patch=1,EE,00146e2c,word,344249f9
+patch=1,EE,001e757c,word,3c044328

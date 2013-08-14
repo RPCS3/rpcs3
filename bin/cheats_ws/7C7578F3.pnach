@@ -1,0 +1,12 @@
+gametitle=Demon Stone (SLES-52669)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,001a50d0,word,3c013f40
+patch=1,EE,001a50d4,word,44810000
+patch=1,EE,001a50dc,word,46006b43
+
+patch=1,EE,0015632c,word,3c023fe3
+patch=1,EE,00156330,word,34438e38
+
+//black border fix
+patch=1,EE,001d8460,word,24040001

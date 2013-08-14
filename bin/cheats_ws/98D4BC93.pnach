@@ -1,0 +1,3 @@
+gametitle=Metal Gear 3 Snake Eater * SLES-82013 * PAL-E
+comment=PAL-ESP Panoramico por Esppiral ;)
+patch=1,EE,20203FAC,extended,3F400000 // 3F800000

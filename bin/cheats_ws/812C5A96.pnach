@@ -1,0 +1,22 @@
+gametitle=Onimusha: Dawn of Dreams (Disc 1) (SLES-82038) / Onimusha: Dawn of Dreams (Disc 2) (SLES-82039)
+comment=Widescreen correction by nemesis2000 (pnach by nemesis2000 )
+
+//gameplay
+
+//val1
+patch=1,EE,0012f974,word,3c023f19
+patch=1,EE,0012f978,word,34439999
+
+//val2
+patch=1,EE,0012fb64,word,3c033f19
+patch=1,EE,0012fb6c,word,334639999
+
+//val3
+patch=1,EE,0012f960,word,3c023f19
+patch=1,EE,0012f968,word,34439999
+
+//rfix1
+patch=1,EE,0012fbe4,word,3c02c3d6
+
+//rfix2
+patch=1,EE,0012facc,word,3c024527

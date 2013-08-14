@@ -1,0 +1,4 @@
+gametitle=Marvel Ultimate Alliance SLUS_213.74
+comment=Widescreen Hack
+patch=1,EE,20979ac8,extended,3fe6db6e
+patch=1,EE,20979acc,extended,3FE38E32

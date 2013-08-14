@@ -1,0 +1,4 @@
+﻿gametitle=Tom Clancy's Rainbow Six 3 (SLUS-20883)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,0030f100,word,3c023f40

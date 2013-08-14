@@ -1,0 +1,37 @@
+gametitle=Vampire Night (PAL-M5) (SCES-50411)
+comment=Widescreen Hack by ElHecht
+
+// 16:9 
+patch=1,EE,002147e0,word,3c013f40 // 00000000 hor fov
+
+// 16:10 
+//patch=1,EE,002147e0,word,3c013f55 // 00000000 hor fov
+//patch=1,EE,00214800,word,34215555 // 00000000 hor fov
+
+// cut-scenes black bar removal
+patch=1,EE,002027a8,word,3c030000 // 3c034420 remove black bars in cut-scenes
+
+// 16:9 and 16:10 main modifications
+// no need to change anything here! all modifications are calculated
+// based on the hor fov value in the upper 16:9/16:10 section
+patch=1,EE,00214810,word,4481f000 // 00000000 register preparation
+patch=1,EE,00214828,word,46001003 // 00000000 register preparation
+patch=1,EE,0021482c,word,461e0742 // 46001003 register preparation
+patch=1,EE,00214840,word,461e0703 // 44820000 register preparation
+patch=1,EE,00214844,word,44820000 // 00000000 register preparation
+patch=1,EE,00214798,word,3c023fb6 // 00000000 hor fov1
+patch=1,EE,002147a0,word,3442db6e // 3c023fb6 hor fov1
+patch=1,EE,002147a4,word,44826000 // 3442db6e hor fov1
+patch=1,EE,002147ac,word,461e6303 // 44826000 hor fov1
+patch=1,EE,002148f8,word,3c023fb6 // 00000000 hor fov2
+patch=1,EE,00214900,word,3442db6e // 3c023fb6 hor fov2
+patch=1,EE,00214904,word,44826000 // 3442db6e hor fov2
+patch=1,EE,0021490c,word,461e6303 // 44826000 hor fov2
+patch=1,EE,0021506c,word,461e0843 // 00000000 renderfix
+patch=1,EE,00203434,word,4601e042 // 46012842 crosshair/aiming fix main menu
+patch=1,EE,0020fb8c,word,461d0803 // 46000803 crosshair/aiming fix gameplay
+patch=1,EE,001afa48,word,3c083f80 // 00000000 crosshair/aiming fix unit vector
+patch=1,EE,001afa4c,word,44882000 // 3c083f80 crosshair/aiming fix unit vector
+patch=1,EE,001afa50,word,46002103 // 44882000 crosshair/aiming fix unit vector
+patch=1,EE,001afa54,word,461e26c3 // 46002103 crosshair/aiming fix unit vector
+patch=1,EE,001afa58,word,461b0842 // 46040842 crosshair/aiming fix unit vector

@@ -1,0 +1,7 @@
+comment=Naruto - Uzumaki Chronicles 2 (NTSC-U) (SLUS-21594) Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,00203cc8,word,3c023f28
+patch=1,EE,00203ccc,word,3442f5c3
+patch=1,EE,00204580,word,3c023f28
+patch=1,EE,00204584,word,3442f5c3

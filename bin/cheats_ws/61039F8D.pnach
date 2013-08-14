@@ -1,0 +1,3 @@
+gametitle=Shinobi
+comment=NTSC-J Widescreen Hack by synce
+patch=1,EE,21BCCA48,extended,3F400000

@@ -1,0 +1,5 @@
+gametitle=Dead or Alive 2 (SLPS_25002)
+comment=Widescreen hack by No.47
+patch=1,EE,203B0400,word,3F400000
+patch=1,EE,203B0C20,word,3F400000
+patch=1,EE,203B1440,word,3F400000

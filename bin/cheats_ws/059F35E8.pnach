@@ -1,0 +1,5 @@
+gametitle=Mortal Kombat: Deadly Alliance (SLUS-20423)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+patch=1,EE,001809f8,word,3c023fe3
+patch=1,EE,001809fc,word,34428e38
+patch=1,EE,001a8114,word,3c023f40

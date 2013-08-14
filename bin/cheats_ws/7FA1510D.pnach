@@ -1,0 +1,6 @@
+gametitle=Tenchu - Wrath of Heaven PAL (Spain)
+comment=Widescreen Hack
+patch=1,EE,00154998,word,3C033F40 //3C033F80 (fov)
+patch=1,EE,001549E0,word,3C033F40 //3C033F80 (fov)
+patch=1,EE,00155168,word,3C024455 //3C024422 (render fix)
+patch=1,EE,001553D0,word,3C024455 //3C024422 (render fix)

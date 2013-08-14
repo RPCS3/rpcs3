@@ -1,0 +1,7 @@
+gametitle=Dual Hearts (NTSC-U) SLUS 204.75
+comment=Widescreen fix by flameofrecca
+patch=1,EE,206EF4E0,word,41400000  //horizontal fov
+
+//Partial HUD fix
+patch=1,EE,206C9EB0,word,42C00000  //map size width
+patch=1,EE,206C9EF0,word,41400000  //arrow size width

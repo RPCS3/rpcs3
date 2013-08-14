@@ -1,0 +1,12 @@
+gametitle=Prince of Persia: The Sands of Time (SLUS-20743)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+
+//gameplay
+patch=1,EE,004b5114,word,3c033f40
+patch=1,EE,004b5144,word,4600a886
+patch=1,EE,004b514c,word,46000346
+patch=1,EE,004b5150,word,4600a306
+
+//rfix
+patch=1,EE,004a4e70,word,3c014455
+patch=1,EE,004a4eac,word,44810000

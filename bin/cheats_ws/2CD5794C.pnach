@@ -1,0 +1,9 @@
+gametitle=Haunting Ground (SLES-52877)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+patch=1,EE,0010e31c,word,3c013f40
+patch=1,EE,0010e320,word,44810000
+patch=1,EE,0010e328,word,4600c602
+
+//cutscenes fix
+patch=1,EE,0028aecc,word,34a98c00
+patch=1,EE,0028aeb4,word,34a67400

@@ -1,0 +1,5 @@
+﻿gametitle=Xenosaga Episode II: Jenseits von Gut und Böse (Disc 1) (SLUS-20892) / Xenosaga Episode II: Jenseits von Gut und Böse (Disc 2) (SLUS-21133)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//gameplay
+patch=1,EE,2069B784,extended,4182e8ba // original value 41445d17

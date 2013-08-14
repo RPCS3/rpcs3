@@ -1,0 +1,6 @@
+gametitle=Mega Man X: Command Mission (SLES-52832)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,0010f0a4,word,3c013f40 //hor value
+patch=1,EE,0010f0a8,word,44810000
+patch=1,EE,0010f0b0,word,4600c602

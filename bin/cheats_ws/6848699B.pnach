@@ -1,0 +1,4 @@
+gametitle=James Bond 007: Everything or Nothing (SLUS-20751)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+patch=1,EE,0043376c,word,3faaaaaa
+//patch=1,EE,20831508,word,3faaaaaa

@@ -1,0 +1,5 @@
+comment=XIII (PAL-M5) (SLES-51244) Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,206ED728,extended,3F400000 // 3F800000 X-Axis
+//patch=1,EE,206ED72C,extended,3F800000 // 3F800000 Y-Axis

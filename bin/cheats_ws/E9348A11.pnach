@@ -1,0 +1,26 @@
+gametitle=Medal of Honor: Frontline  (SLUS-20368)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,001455b8,word,0c052def
+patch=1,EE,001455d8,word,0c052def
+patch=1,EE,001455f8,word,0c052def
+
+patch=1,EE,0014b7bc,word,3c013f50
+patch=1,EE,0014b7c0,word,44810800
+patch=1,EE,0014b7c4,word,46016303
+patch=1,EE,0014b7c8,word,c481043c
+patch=1,EE,0014b7cc,word,460c0832
+patch=1,EE,0014b7d0,word,45010008
+patch=1,EE,0014b7d4,word,00000000
+patch=1,EE,0014b7d8,word,46016034
+patch=1,EE,0014b7dc,word,45000004
+patch=1,EE,0014b7e0,word,e48c0444
+patch=1,EE,0014b7e4,word,46006807
+patch=1,EE,0014b7e8,word,03e00008
+patch=1,EE,0014b7ec,word,e4800448
+patch=1,EE,0014b7f0,word,e48d0448
+patch=1,EE,0014b7f4,word,03e00008
+patch=1,EE,0014b7f8,word,3c030024
+patch=1,EE,0014b7fc,word,27bdff60
+
+patch=1,EE,00325c90,word,3f1c0000

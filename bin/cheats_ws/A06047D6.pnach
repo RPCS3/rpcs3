@@ -1,0 +1,18 @@
+gametitle=Obscure (SLUS-20777)
+
+//gameplay by ElHecht
+patch=1,EE,00249790,word,3c023f19
+patch=1,EE,00249794,word,34428000
+patch=1,EE,00249798,word,44820000
+
+//alternate gameplay value by nemesis2000
+//patch=1,EE,003a418c,word,46060202
+//patch=1,EE,003a53f4,word,3c01bec0
+//patch=1,EE,003a53fc,word,44813000
+
+//rfix by ElHecht
+patch=1,EE,001c0794,word,3c033f2b
+
+//FMV's fix by nemesis2000
+patch=1,EE,0030fe74,word,24067100
+patch=1,EE,0030fecc,word,24058f00

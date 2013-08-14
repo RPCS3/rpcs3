@@ -1,0 +1,5 @@
+gametitle=Cy Girls(Disc 2) (Aska) SLUS_208.54
+comment=Widescreen Hack
+patch=1,EE,2048e2f0,word,43ab0000
+patch=1,EE,2048e2f8,word,3f400000
+patch=1,EE,2048e304,word,442b0000

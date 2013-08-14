@@ -1,0 +1,3 @@
+comment=Metal Gear Solid 3 - Subsistence (PAL-UK/FR) (SLES-82046) Widescreen Hack (16:9) by ElHecht
+patch=1,EE,20205D4C,extended,3F400000 // 3F800000 X-RES
+//patch=1,EE,20205D90,extended,3FAAA993 // 3F800000 Y-RES

@@ -1,0 +1,44 @@
+gametitle=Virtua Fighter 4 Evolution (SLKA_250.43)
+comment=widescreen 16:9 (NTSC-K) hack by 99skull
+
+//widescreen 16:9, credit goes to nemesis2000
+patch=1,EE,003AA864,word,3C034455 // 3C034420
+
+//progressive Common Code(27 line)
+patch=1,EE,20100234,extended,24110000
+patch=1,EE,20100244,extended,24130001
+patch=1,EE,201004EC,extended,24160002
+patch=1,EE,201004F4,extended,000793C3
+patch=1,EE,201007D8,extended,24840032
+patch=1,EE,20100784,extended,00000000
+patch=1,EE,203A3C78,extended,0C0E91D4
+patch=1,EE,203A3CD4,extended,00101540
+patch=1,EE,203A4300,extended,0C0E76A0
+patch=1,EE,203A4304,extended,3C056071
+patch=1,EE,203A4308,extended,34A52435
+patch=1,EE,203A430C,extended,00052C38
+patch=1,EE,203A4310,extended,34A57160
+patch=1,EE,203A4314,extended,00052C38
+patch=1,EE,203A4318,extended,34A53524
+patch=1,EE,203A431C,extended,0C0E76A0
+patch=1,EE,203A4320,extended,24040044
+patch=1,EE,203A4324,extended,24050001
+patch=1,EE,203A4328,extended,0C0E76A0
+patch=1,EE,203A432C,extended,24040045
+patch=1,EE,203A4330,extended,080E924D
+patch=1,EE,203A4334,extended,0000202D
+patch=1,EE,203A47D0,extended,3C020200
+patch=1,EE,203A47D8,extended,00621025
+patch=1,EE,203A4904,extended,24050000
+patch=1,EE,203A4928,extended,0C0E90C0
+patch=1,EE,203A4970,extended,00111D40
+//progressive 480P
+patch=1,EE,20100238,extended,24120050
+patch=1,EE,203A8010,extended,248401B8
+
+//dural selectable
+patch=1,EE,201A4D30,word,24020001
+patch=1,EE,2023D994,word,00000000
+patch=1,EE,2023D9A8,word,00000000
+//dural random map
+patch=1,EE,0022CA5C,word,00000000

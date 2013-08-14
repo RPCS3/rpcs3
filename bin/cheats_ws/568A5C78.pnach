@@ -1,0 +1,5 @@
+gametitle=Digimon Rumble Arena 2 SLUS_210.67
+comment=Widescreen Hack
+patch=1,EE,0029cbd0,word,3c013f22
+patch=1,EE,002210a4,word,3c013f22
+patch=1,EE,205560b0,word,44550000

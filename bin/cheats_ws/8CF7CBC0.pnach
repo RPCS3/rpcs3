@@ -1,0 +1,4 @@
+gametitle=Maximo vs Army of Zin (SLUS_20722)
+comment=Widescreen hack by No.47
+patch=1,EE,202C43D0,word,3FE58BF0
+patch=1,EE,202CFB54,word,3FEEEEEE

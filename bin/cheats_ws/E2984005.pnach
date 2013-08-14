@@ -1,0 +1,11 @@
+comment=Suikoden IV (SLUS-20979)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,0048845c,word,3c013f40 //hor value
+patch=1,EE,00488460,word,44810000
+patch=1,EE,00488468,word,4600c602
+patch=1,EE,004b6b44,word,3c0143f0 //vert value
+
+//FMV's fix
+patch=1,EE,004C4BE4,word,24101E00 //width
+patch=1,EE,004C4D98,word,24110190 //x-pos

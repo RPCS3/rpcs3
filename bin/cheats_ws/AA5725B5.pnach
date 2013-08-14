@@ -1,0 +1,10 @@
+gametitle=Crimson Tears (PAL-M3) (SLES-52534)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,001bcb78,word,3c02bfe3 // 3c02bfaa hor fov
+patch=1,EE,001bcb80,word,34438e39 // 3443aaab hor fov
+
+// 16:10
+//patch=1,EE,001bcb78,word,3c02bfcc // 3c02bfaa hor fov
+//patch=1,EE,001bcb80,word,3443cccd // 3443aaab hor fov

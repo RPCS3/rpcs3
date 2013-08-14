@@ -1,0 +1,18 @@
+gametitle=Legacy of Kain: Soul Reaver 2 (SLES-50196)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//built in widescreen
+patch=1,EE,00114a70,word,3c0143c0
+patch=1,EE,20240C20,word,00000001
+
+//cutscenes black border fix
+patch=1,EE,0013e264,word,3c01bf80 //top value
+patch=1,EE,0013e26c,word,3c013f80 //bottom value
+
+//render fix
+patch=1,EE,00170c8c,word,3c013f80
+patch=1,EE,00170c90,word,00000000
+
+//FMV's fix
+patch=1,EE,001d4610,word,24097560
+patch=1,EE,001d4618,word,240b1550

@@ -1,0 +1,12 @@
+gametitle=Prince of Persia: Warrior Within (SLUS-21022)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+
+//gameplay
+patch=1,EE,00544dd4,word,3C023f40
+patch=1,EE,00544df0,word,4600b046
+patch=1,EE,00544df8,word,4600a306
+patch=1,EE,00544dfc,word,4600ab46
+
+//rfix
+patch=1,EE,0052faec,word,3c014455
+patch=1,EE,0052fb28,word,44810000

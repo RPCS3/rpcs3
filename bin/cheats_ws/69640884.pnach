@@ -1,0 +1,5 @@
+comment=Naruto - Ultimate Ninja 4 (PAL-M3) (SLES-55482) Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,20AD4F94,extended,3F400000 // 3F800000 X-Axis
+//patch=1,EE,20AD4F98,extended,3F800000 // 3F800000 Y-Axis

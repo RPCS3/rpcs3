@@ -1,0 +1,4 @@
+gametitle=Extermination SCUS 971.12
+comment=Widescreen Hack
+patch=1,EE,001d2978,extended,3c023f19
+patch=1,EE,001d297c,extended,3442999a

@@ -1,0 +1,6 @@
+gametitle=Avatar - The Legend of Aang - The Burning Earth (PAL-M4) (SLES-54840)
+comment=Widescreen Hack (16:9) by ElHecht
+
+//16:9
+patch=1,EE,00142f70,word,3c033fe3 // 3c033faa
+patch=1,EE,00142f84,word,34638e39 // 3463aaab

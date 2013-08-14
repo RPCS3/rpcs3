@@ -1,0 +1,5 @@
+gametitle=Gadget Racers PAL (SLES_519.11)
+comment=Widescreen Hack & pnach by El_Patas
+
+//Gameplay
+patch=1,EE,206A43B4,extended,3F19999A // 3F4CCCCD (increases hor. axis)

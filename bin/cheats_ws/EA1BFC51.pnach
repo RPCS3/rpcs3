@@ -1,0 +1,4 @@
+gametitle=Medal of Honor: Vanguard  (	SLUS-21597) / Medal of Honor: Vanguard  (SLES-54683)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,001308b4,word,00000000

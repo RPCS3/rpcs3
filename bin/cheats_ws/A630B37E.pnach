@@ -1,0 +1,4 @@
+comment=Metal Gear Solid 2 - Sons Of Liberty (PAL-M3) (SLES-50383) Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,0011f230,word,3c013f40

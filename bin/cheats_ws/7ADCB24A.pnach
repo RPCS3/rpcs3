@@ -1,0 +1,2 @@
+comment=Devil May Cry 3 (PAL-M5) (SLES-53038) Widescreen Hack (16:9) by ElHecht
+patch=1,EE,21CB2A90,extended,3F400000 // 3F800000 X-RES

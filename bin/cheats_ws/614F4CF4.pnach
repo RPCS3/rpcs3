@@ -1,0 +1,5 @@
+gametitle=LotR: Third Age SLES_528.01
+comment=Widescreen Hack
+patch=1,EE,20c36980,word,3f400000
+patch=1,EE,20c36990,word,3fb00000
+patch=1,EE,20c36998,word,3fb00000

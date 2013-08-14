@@ -1,0 +1,10 @@
+gametitle=Final Fantasy X (PAL-E) (SCES-50490)
+comment=Final Fantasy X (PAL-E) [SCES-50490] 16:9 Widescreen Hack, Render Fix & Progressive Scan
+// 16:9
+patch=1,EE,001A5974,word,3C013F19
+patch=1,EE,001A5978,word,3421999A
+// Render-Fix
+patch=1,EE,0011973C,word,3C014440
+patch=1,EE,00176144,word,3C01442B
+// Progressive Scan
+patch=1,EE,002D98B4,word,3C050000

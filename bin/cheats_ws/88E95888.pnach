@@ -1,0 +1,10 @@
+gametitle=The Sword of Etheria (SLES-53768)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+patch=1,EE,006d4bec,word,3c013f40
+patch=1,EE,006d4c20,word,46000003
+patch=1,EE,006d4c24,word,46020003
+patch=1,EE,006d4c28,word,e6010070
+patch=1,EE,006d4c2c,word,10800003
+patch=1,EE,006d4c30,word,e6000074
+patch=1,EE,006d4c34,word,0c1b5aa0
+patch=1,EE,0051ab64,word,3c023faa // HUD correction

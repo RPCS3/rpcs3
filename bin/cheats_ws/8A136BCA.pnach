@@ -1,0 +1,3 @@
+gametitle=E.O.E - Eve of Extinction  SLUS_202.70
+comment=Widescreen Hack
+patch=1,EE,00151e44,word,3c023ec0

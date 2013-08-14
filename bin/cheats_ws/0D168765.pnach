@@ -1,0 +1,6 @@
+gametitle=Armored Core 2 SLUS_200.14
+comment=Widescreen Hack
+patch=1,EE,202B5880,extended,43f00000
+patch=1,EE,001b4508,extended,3c013f40
+patch=1,EE,001c54e4,extended,3c013f40
+patch=1,EE,001c5614,extended,3c013f40

@@ -1,0 +1,3 @@
+gametitle=Tamamayu Monogatari 2
+comment=NTSC-J Widescreen Hack by synce
+patch=1,EE,21E2BB8C,extended,3F400000

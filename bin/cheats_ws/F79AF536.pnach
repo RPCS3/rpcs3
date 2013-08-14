@@ -1,0 +1,8 @@
+comment=Resident Evil - Dead Aim (PAL-M5) (SLES-51448) Widescreen Hack (16:9) by ElHecht
+// 16:9
+patch=1,EE,204B610C,extended,43F00000 // 44000000 X-Axis
+//patch=1,EE,204B6110,extended,44200000 // 44200000 Y-Axis
+//
+// Ammo Cheat
+//patch=1,EE,20252B68,extended,0000000F // 0000000F Ammo#1
+//patch=1,EE,202DEADC,extended,0000000F // 0000000F Ammo#2

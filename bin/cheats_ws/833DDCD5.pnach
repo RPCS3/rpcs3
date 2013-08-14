@@ -1,0 +1,11 @@
+gametitle=The King of Fighters: Maximum Impact (SLUS-20923)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+//gameplay
+patch=1,EE,00384384,word,3c043f24
+patch=1,EE,003843bc,word,46010003
+
+//HUD fix
+patch=1,EE,0038cd88,word,3c023f24
+patch=1,EE,0038cdc0,word,46010842
+patch=1,EE,0038cdc8,word,46010903

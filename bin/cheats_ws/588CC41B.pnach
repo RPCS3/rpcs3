@@ -1,0 +1,4 @@
+﻿gametitle=Breath of Fire: Dragon Quarter (SLUS-20499)
+comment=Widescreen patch by nemesis2000 (pnach by nemesis2000)
+patch=1,EE,0012dd1c,word,3c024307 //hor val
+patch=1,EE,0012de68,word,3c034074 //render fix

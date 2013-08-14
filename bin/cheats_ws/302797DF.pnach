@@ -1,0 +1,5 @@
+gametitle=Cy Girls (Disc 1) (Ice) SLUS_206.97
+comment=Widescreen Hack
+patch=1,EE,203ab2f8,word,3f400000
+patch=1,EE,203ab304,word,442b0000
+patch=1,EE,203ab2f0,word,43ab0000

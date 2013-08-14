@@ -1,0 +1,5 @@
+gametitle=Phantasy Star Universe - Ambition of the Illuminus (NTSC-U)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,008CBAF0,word,43400000 // 43800000 hor fov

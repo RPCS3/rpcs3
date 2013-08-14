@@ -1,0 +1,34 @@
+// ==========
+// pgert@130503
+// http://forums.pcsx2.net/Thread-PCSX2-Widescreen-Game-Patches?pid=240786#pid240786
+// ==========
+
+; ==========
+ gametitle=Legacy of Kain - Defiance * SLES-52150 * PAL/Europe * BCAD1E8A
+ comment=Legacy of Kain - Defiance * SLES-52150 * PAL/Europe * BCAD1E8A
+ comment=- Widescreen hack by nemesis2000 (pnach by nemesis2000)
+ // Built in widescreen
+  patch=1,EE,0011a644,word,00000000
+  patch=1,EE,0028E8C0,word,00000001
+ // Sub black background off
+  patch=1,EE,0013d458,word,3c013b30
+ // Cutscenes black border fix
+  patch=1,EE,001522e0,word,3c01bf80 // top value
+  patch=1,EE,001522ec,word,3c013f80 // bottom value
+ // Cutscenes render fix
+  patch=1,EE,00119a34,word,3c01c340 // top value
+  patch=1,EE,00119a50,word,3c014340 // bottom value
+ // Partial font size fix
+  patch=1,EE,0013bcac,word,3c013f40 // hor value
+  patch=1,EE,0013bcd0,word,e4200d7c
+  patch=1,EE,0013bcf8,word,46000003
+  patch=1,EE,0013bcfc,word,e4200d6c
+ // HUD fix (not fully tested)
+  patch=1,EE,0023d668,word,3c013b40 // hor value
+ // FMV's fix
+  patch=1,EE,00213588,word,24070156 // vertical aspect (int)
+; ==========
+// Alternative hacks by pgert.
+//  patch=1,EE,2033EC90,extended,3F400000 // 3F800000 - X-axis
+//  patch=1,EE,2033EC94,extended,3F666666 // 3F800000 - Y-axis - 16:10
+; ==========

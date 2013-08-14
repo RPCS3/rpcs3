@@ -1,0 +1,27 @@
+gametitle=Maken Shao
+commentNTSC-J Widescreen Hack and GSdx Glitch Fix by synce
+patch=1,EE,20334524,extended,3f533334
+patch=1,EE,20DEE11C,extended,00000000
+patch=1,EE,20DEE12C,extended,00000000
+patch=1,EE,20DEE130,extended,00000000
+patch=1,EE,20DEE134,extended,00000000
+patch=1,EE,20DEE25C,extended,00000000
+patch=1,EE,20DEE26C,extended,00000000
+patch=1,EE,20DEE270,extended,00000000
+patch=1,EE,20DEE274,extended,00000000
+patch=1,EE,20DEE39C,extended,00000000
+patch=1,EE,20DEE3AC,extended,00000000
+patch=1,EE,20DEE3B0,extended,00000000
+patch=1,EE,20DEE3B4,extended,00000000
+patch=1,EE,20DEE4DC,extended,00000000
+patch=1,EE,20DEE4EC,extended,00000000
+patch=1,EE,20DEE4F0,extended,00000000
+patch=1,EE,20DEE4F4,extended,00000000
+patch=1,EE,20DEE61C,extended,00000000
+patch=1,EE,20DEE62C,extended,00000000
+patch=1,EE,20DEE630,extended,00000000
+patch=1,EE,20DEE634,extended,00000000
+patch=1,EE,20DEE75C,extended,00000000
+patch=1,EE,20DEE76C,extended,00000000
+patch=1,EE,20DEE770,extended,00000000
+patch=1,EE,20DEE774,extended,00000000

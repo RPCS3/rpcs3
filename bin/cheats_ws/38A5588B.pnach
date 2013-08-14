@@ -1,0 +1,12 @@
+gametitle=Phantasy Star Universe (PAL-M3) (SLES-54308)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,0085CB30,word,43400000 // 43800000 hor fov
+patch=1,EE,0068f7a4,word,3c093c02
+patch=1,EE,0068f7a8,word,35293fa0 // renderfix
+patch=1,EE,0068f7f0,word,3c0a0028
+patch=1,EE,0068f7f4,word,ad493d78
+
+//optional cut-scenes black bar removal
+//patch=1,EE,00767F94,word,40000000

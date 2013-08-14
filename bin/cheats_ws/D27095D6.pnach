@@ -1,0 +1,5 @@
+gametitle=Shin Sangoku Mosou 3 Empires(=Dynasty warriors 4 Empires) (SLKA_251.87)
+comment=widescreen 16:9 (NTSC-K) hack by 99skull
+//credit goes to nemesis2000
+patch=1,EE,0013A2A4,word,3C0243D6 //3C0243A0 wide
+patch=1,EE,001899C0,word,3C023F2B //3C023F00 renderfix

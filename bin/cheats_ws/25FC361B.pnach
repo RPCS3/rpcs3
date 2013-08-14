@@ -1,0 +1,7 @@
+gametitle=Devil May Cry 3 - Special Edition (SLUS_21361)
+comment=Widescreen hack by No.47
+patch=1,EE,21D0DEA0,word,3F400000
+
+//FMV's fix
+patch=1,EE,0023279c,word,240301aa //intro / demo
+patch=1,EE,002e52ec,word,240801aa //cutscenes

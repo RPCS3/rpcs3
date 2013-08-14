@@ -1,0 +1,18 @@
+// ==========
+// pgert@130503
+// http://forums.pcsx2.net/Thread-PCSX2-Widescreen-Game-Patches?pid=240786#pid240786
+// ==========
+
+; ==========
+ gametitle=Splinter Cell 3 - Chaos Theory * SLES-53007 * PAL-M5 * 4C4D7072
+ comment=Splinter Cell 3 - Chaos Theory * SLES-53007 * PAL-M5 * 4C4D7072
+ comment=- Widescreen hack by pgert.
+ patch=1,EE,20F0843C,extended,3F400000 // 3F800000 - X-axis
+; ==========
+
+; ==========
+// Notes (by pgert) - do not use.
+// comment=- 16:10 support by pgert.
+// patch=1,EE,20F0843C,extended,3F555555 // 3F800000 - X-axis - 16:10 without Y-axis hack
+// // patch=1,EE,20F08440,extended,3FAB130D // 3FBE1528 - Y-axis - TLB Miss
+; ==========

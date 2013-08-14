@@ -1,0 +1,24 @@
+gametitle=Kingdom Hearts 2 Final Mix + (NTSC-J) (SLPM 666 75)
+comment=Kingdom Hearts 2 Final Mix + (NTSC-J)
+
+// widescreen
+patch=1,EE,203A7BBC,word,3F19999A // 3F4CCCCC (hor axis)
+patch=1,EE,2036A0B8,word,43C00000 // 44000000 (zoom)
+patch=1,EE,2037153C,word,3F19999A // 3F4CCCCC (character menu proportions)
+patch=1,EE,2036A0F0,word,3F19999A // 3F4CCCCC (continue screen proportions)
+patch=1,EE,203761BC,word,3F19999A // 3F4CCCCC (world map cutscene proportions)
+patch=1,EE,2036a0bc,word,43e00000 // 43d00000 (optional zoom for cutscenes, 43f90000 = pan and scan) 
+
+//font fix
+patch=1,EE,2036CE94,word,3F400000 // 3F800000
+patch=1,EE,2036CE98,word,3F400000 // 3F800000
+patch=1,EE,2036CE9C,word,3F400000 // 3F800000
+
+//black border fix
+patch=1,EE,0014AD80,word,24050000
+patch=1,EE,0014ADA8,word,24050000
+patch=1,EE,0014ADD0,word,24050000
+patch=1,EE,0014AE00,word,24050000
+
+//subtitles off
+//patch=1,EE,0022d8d4,word,11e00019

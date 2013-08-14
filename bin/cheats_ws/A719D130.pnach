@@ -1,0 +1,4 @@
+gametitle=Dynasty Warriors 5: Xtreme Legends (SLUS-21299)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+patch=1,EE,00146d7c,word,3c0243d6
+patch=1,EE,0019814c,word,3c023f2b

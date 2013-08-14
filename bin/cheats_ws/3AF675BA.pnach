@@ -1,0 +1,15 @@
+gametitle=Fate/Unlimited Codes (SLPM-55108)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+patch=1,EE,0019b5e0,word,3c023fc5
+patch=1,EE,001e749c,word,3c023f49
+patch=1,EE,001e74a8,word,3443999a
+
+//FMV's fix
+patch=1,EE,0021dafc,word,34467100
+patch=1,EE,0021db54,word,34468f00
+
+//480p (progressive scan)
+patch=1,EE,00300340,word,24060050
+patch=1,EE,00300f98,word,24060050
+patch=1,EE,00300344,word,24050000
+patch=1,EE,00300f94,word,24050000

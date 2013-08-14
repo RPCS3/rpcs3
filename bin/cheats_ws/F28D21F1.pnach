@@ -1,0 +1,13 @@
+comment=Dragon Ball Z: Sparking! Meteor WS patch
+//Widescreen Y(decreases height a bit)
+patch=1,EE,21948794,extended,4410553E
+patch=1,EE,21948EB4,extended,4410553E
+patch=1,EE,21949144,extended,4410553E
+patch=1,EE,21949434,extended,4410553E
+patch=1,EE,219487D4,extended,3E90674C
+patch=1,EE,21948EF4,extended,3E90674C
+patch=1,EE,21949184,extended,3E90674C
+patch=1,EE,21949474,extended,3E90674C
+//zoom fix
+patch=1,EE,202FD054,extended,404CCCCD
+patch=1,EE,202FD058,extended,3A831CD5

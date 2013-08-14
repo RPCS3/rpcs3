@@ -1,0 +1,6 @@
+comment=Rumble Roses (NTSC-J) (SLPM_658.85) Widescreen Hack (16:9) by ElHecht Mod Pnach crc by Acem 
+//
+// 16:9
+patch=1,EE,00104084,word,3c013f40
+patch=1,EE,00104088,word,44810000
+patch=1,EE,00104090,word,4600c602

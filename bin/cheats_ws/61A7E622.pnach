@@ -1,0 +1,16 @@
+gametitle=Silent Hill: Shattered Memories (SLUS-21899)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,002c4524,word,3c013faa
+patch=1,EE,002c4528,word,3421aaaa
+patch=1,EE,002c4534,word,46036302
+patch=1,EE,002c4538,word,460318c2
+patch=1,EE,002c453c,word,e7ac0000
+patch=1,EE,002c4540,word,1480000f
+patch=1,EE,002c4544,word,afa00004
+patch=1,EE,002c4548,word,3c013faa
+patch=1,EE,002c454c,word,3421aaa8
+patch=1,EE,002c4550,word,44810800
+patch=1,EE,002c4554,word,3c013eaa
+patch=1,EE,002c4558,word,3421aaab
+patch=1,EE,002c455c,word,44810000

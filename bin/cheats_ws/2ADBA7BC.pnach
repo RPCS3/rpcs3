@@ -1,0 +1,11 @@
+gametitle=Fatal Frame III: The Tormented (SLUS-21244)
+
+// patch=1,EE,203E8ADC,extended,3F400000
+// Original 16:9 Widescreen hack by Hyakki.
+
+//gameplay
+patch=1,EE,0032652c,word,3f400000
+
+//FMW's fix
+patch=1,EE,0036EA30,word,43f00000
+patch=1,EE,0036EA38,word,42d40000

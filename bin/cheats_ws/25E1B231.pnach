@@ -1,0 +1,3 @@
+gametitle=Chulip SLUS_207.42
+comment=Widescreen Hack
+patch=1,EE,201EDC40,extended,43C00000

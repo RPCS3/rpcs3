@@ -1,0 +1,2 @@
+comment=Valkyrie Profile 2: Silmeria (16:9) (NTSC-U)
+patch=1,EE,00150948,word,3f11eb85 //3eaaaaab

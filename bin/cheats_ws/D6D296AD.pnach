@@ -1,0 +1,5 @@
+gametitle=Crimson Sea 2 SLUS_208.77
+comment=Widescreen Hack
+patch=1,EE,00443D18,word,3c024328 // 43600000
+patch=1,EE,00443D28,word,3c023f1f // 3eeeeeef
+patch=1,EE,00443D2C,word,344349f9

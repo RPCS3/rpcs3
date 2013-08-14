@@ -1,0 +1,136 @@
+// ==========
+// pgert@130708
+// http://forums.pcsx2.net/Thread-PCSX2-Widescreen-Game-Patches?pid=240786#pid240786
+// ==========
+
+; ==========
+ gametitle=Project Zero 2 - Crimson Butterfly * SLES-52384 * PAL-M5 * 9D87F3AF
+ comment=Project Zero 2 - Crimson Butterfly * SLES-52384 * PAL-M5 * 9D87F3AF
+ comment=- This game has some problems with the FMV-Cinematics in 60Hz mode,
+ comment=-  regardless of resolution or patches; this pnach is not causing the bug.
+ comment=- Widescreen hacks by pgert.
+ //
+ patch=1,EE,0017ACD0,word,3C0144C0 // 3C014500 - rendering\clarity of Cutscenes.
+ patch=1,EE,8017ACD0,word,3C0144C0 // 3C014500 - a clone from 0017ACD0.
+ patch=1,EE,A017ACD0,word,3C0144C0 // 3C014500 - a clone from 0017ACD0.
+ patch=1,EE,001F9FF8,word,3C014450 // 3C0143A0 - X-axis placement of photos (affected by 0017ACD0 & Co).
+ patch=1,EE,801F9FF8,word,3C014450 // 3C0143A0 - a clone from 001F9FF8.
+ patch=1,EE,A01F9FF8,word,3C014450 // 3C0143A0 - a clone from 001F9FF8.
+ patch=1,EE,001FA000,word,3C014438 // 3c014360 - Y-axis placement of photos (affected by 0017ACD0 & Co).
+ patch=1,EE,801FA000,word,3C014438 // 3c014360 - a clone from 001FA000.
+ patch=1,EE,A01FA000,word,3C014438 // 3c014360 - a clone from 001FA000.
+ //
+ patch=1,EE,0018F090,word,3C013F40 // 3C013F80 - X-axis of GamePlay.
+ patch=1,EE,8018F090,word,3C013F40 // 3C013F80 - a clone from 0018F090.
+ patch=1,EE,A018F090,word,3C013F40 // 3C013F80 - a clone from 0018F090.
+ //
+ patch=1,EE,00340DDC,word,3F400000 // 3F800000 - initial Aspect value, changes when switching TV-mode - nemesis2000.
+ patch=1,EE,80340DDC,word,3F400000 // 3F800000 - a clone from 00340DDC.
+ patch=1,EE,A0340DDC,word,3F400000 // 3F800000 - a clone from 00340DDC.
+; ==========
+
+; ==========
+// comment=- 16:10 support by pgert.
+// //
+// patch=1,EE,0018C95C,word,3C013EEB // 3C013F00 - GamePlay Zoom.
+// patch=1,EE,8018C95C,word,3C013EEB // 3C013F00 - a clone from 0018C95C.
+// patch=1,EE,A018C95C,word,3C013EEB // 3C013F00 - a clone from 0018C95C.
+// //
+// patch=1,EE,0018F09C,word,3C013F4A // 3C013F60 - Y-axis of GamePlay - 3F49999A.
+// patch=1,EE,8018F09C,word,3C013F4A // 3C013F60 - a clone from 0018F09C.
+// patch=1,EE,A018F09C,word,3C013F4A // 3C013F60 - a clone from 0018F09C.
+; ==========
+
+; ==========
+ comment=- FMV-Cinematics hacks by nemesis2000.
+ // Clone patches by pgert.
+ //
+ patch=1,EE,001E9308,word,E49E0030 // 0200202D
+ patch=1,EE,801E9308,word,E49E0030 // 0200202D - a clone from 001E9308.
+ patch=1,EE,A01E9308,word,E49E0030 // 0200202D - a clone from 001E9308.
+ patch=1,EE,001E930C,word,0200202D // FFA20068
+ patch=1,EE,801E930C,word,0200202D // FFA20068 - a clone from 001E930C.
+ patch=1,EE,A01E930C,word,0200202D // FFA20068 - a clone from 001E930C.
+ patch=1,EE,001E9310,word,FFA20068 // FFA30070
+ patch=1,EE,801E9310,word,FFA20068 // FFA30070 - a clone from 001E9310.
+ patch=1,EE,A01E9310,word,FFA20068 // FFA30070 - a clone from 001E9310.
+ patch=1,EE,001E9314,word,FFA30070 // 0C05E542
+ patch=1,EE,801E9314,word,FFA30070 // 0C05E542 - a clone from 001E9314.
+ patch=1,EE,A01E9314,word,FFA30070 // 0C05E542 - a clone from 001E9314.
+ patch=1,EE,001E9318,word,0C05E542 // FFA50090
+ patch=1,EE,801E9318,word,0C05E542 // FFA50090 - a clone from 001E9318.
+ patch=1,EE,A01E9318,word,0C05E542 // FFA50090 - a clone from 001E9318.
+ patch=1,EE,001E931C,word,FFA50090 // 0220102D
+ patch=1,EE,801E931C,word,FFA50090 // 0220102D - a clone from 001E931C.
+ patch=1,EE,A01E931C,word,FFA50090 // 0220102D - a clone from 001E931C.
+ patch=1,EE,001E9320,word,0220102D // DFB000B0
+ patch=1,EE,801E9320,word,0220102D // DFB000B0 - a clone from 001E9320.
+ patch=1,EE,A01E9320,word,0220102D // DFB000B0 - a clone from 001E9320.
+ patch=1,EE,001E9324,word,DFB000B0 // DFB100B8
+ patch=1,EE,801E9324,word,DFB000B0 // DFB100B8 - a clone from 001E9324.
+ patch=1,EE,A01E9324,word,DFB000B0 // DFB100B8 - a clone from 001E9324.
+ patch=1,EE,001E9328,word,DFB100B8 // DFBF00C0
+ patch=1,EE,801E9328,word,DFB100B8 // DFBF00C0 - a clone from 001E9328.
+ patch=1,EE,A01E9328,word,DFB100B8 // DFBF00C0 - a clone from 001E9328.
+ patch=1,EE,001E932C,word,DFBF00C0 // 03E00008
+ patch=1,EE,801E932C,word,DFBF00C0 // 03E00008 - a clone from 001E932C.
+ patch=1,EE,A01E932C,word,DFBF00C0 // 03E00008 - a clone from 001E932C.
+ patch=1,EE,001E9330,word,03E00008 // 27BD00D0
+ patch=1,EE,801E9330,word,03E00008 // 27BD00D0 - a clone from 001E9330.
+ patch=1,EE,A01E9330,word,03E00008 // 27BD00D0 - a clone from 001E9330.
+ patch=1,EE,001E9334,word,27BD00D0 // 00000000
+ patch=1,EE,801E9334,word,27BD00D0 // 00000000 - a clone from 001E9334.
+ patch=1,EE,A01E9334,word,27BD00D0 // 00000000 - a clone from 001E9334.
+ //
+ patch=1,EE,001E947C,word,10400003 // 10400004
+ patch=1,EE,801E947C,word,10400003 // 10400004 - a clone from 001E947C.
+ patch=1,EE,A01E947C,word,10400003 // 10400004 - a clone from 001E947C.
+ //
+ patch=1,EE,001E9484,word,10000002 // 10000003
+ patch=1,EE,801E9484,word,10000002 // 10000003 - a clone from 001E9484.
+ patch=1,EE,A01E9484,word,10000002 // 10000003 - a clone from 001E9484.
+ //
+ patch=1,EE,001E948C,word,8F84C00C // 00000000
+ patch=1,EE,801E948C,word,8F84C00C // 00000000 - a clone from 001E948C.
+ patch=1,EE,A01E948C,word,8F84C00C // 00000000 - a clone from 001E948C.
+ //
+ patch=1,EE,001E9498,word,4481F000 // 00000000
+ patch=1,EE,801E9498,word,4481F000 // 00000000 - a clone from 001E9498.
+ patch=1,EE,A01E9498,word,4481F000 // 00000000 - a clone from 001E9498.
+; ==========
+ // 16:9 FMV-values (by nemesis2000).
+ patch=1,EE,001E9490,word,3C013F40 // 8F84C00C - width (1.0f = 640)
+ patch=1,EE,801E9490,word,3C013F40 // 8F84C00C - a clone from 001E9490.
+ patch=1,EE,A01E9490,word,3C013F40 // 8F84C00C - a clone from 001E9490.
+ //
+ patch=1,EE,00344BD8,word,0000006A // 00000000 - x-pos = (640-640*width)/(2*width) int
+ patch=1,EE,80344BD8,word,0000006A // 00000000 - a clone from 00344BD8.
+ patch=1,EE,A0344BD8,word,0000006A // 00000000 - a clone from 00344BD8.
+; ==========
+// // 16:10 FMV-values (converted by pgert).
+// patch=1,EE,001E9490,word,3C013F55 // 8F84C00C - width (1.0f = 640)
+// patch=1,EE,801E9490,word,3C013F55 // 8F84C00C - a clone from 001E9490.
+// patch=1,EE,A01E9490,word,3C013F55 // 8F84C00C - a clone from 001E9490.
+// //
+// patch=1,EE,00344BD8,word,00000040 // 00000000 - x-pos = (640-640*width)/(2*width) int
+// patch=1,EE,80344BD8,word,00000040 // 00000000 - a clone from 00344BD8.
+// patch=1,EE,A0344BD8,word,00000040 // 00000000 - a clone from 00344BD8.
+; ==========
+
+; ==========
+// Notes (by pgert) - do not use.
+// patch=1,EE,0017C0B0,word,3C013F68 // 3C013F80 - GamePlay Zoom - alternative to 0018C95C.
+// patch=1,EE,8017C0B0,word,3C013F68 // 3C013F80 - a clone from 0017C0B0.
+// patch=1,EE,A017C0B0,word,3C013F68 // 3C013F80 - a clone from 0017C0B0.
+// - 0017C0B0 & Co corrupts GamePlay & Cutscenes display.
+// patch=1,EE,00179480,word,3C013F55 // 3C013F80 - size of non-GamePlay - 3F555555.
+// patch=1,EE,001796AC,word,3C013F66 // 3C013F80 - height of non-GamePlay - 3F666666.
+// patch=1,EE,0017A2D4,word,3C013F66 // 3C013F80 - required support for 001796AC - 3F666666.
+// patch=1,EE,001795E8,word,3C014390 // 3C014360 - non-GamePlay Y-axis placement - 43280000.
+// patch=1,EE,001795F4,word,3C014385 // 3C0143A0 - non-GamePlay X-axis placement - 43855555.
+// patch=1,EE,001798E0,word,3C014504 // 3C014500 - pos of non-GamePlay.
+// patch=1,EE,00179CBC,word,3C013F68 // 3C013F80 - possibly related to 001798E0.
+// patch=1,EE,0017A588,word,3C0144F8 // 3C014500 - possibly related to 001798E0.
+// patch=1,EE,2040A48C,extended,3F400000 // 3F800000 - X-axis of GamePlay - original hack, by ElHecht.
+// patch=1,EE,2040A490,extended,3F666666 // 3F800000 - Y-axis of GamePlay - original hack, by pgert.
+; ==========

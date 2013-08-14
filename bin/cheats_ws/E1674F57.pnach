@@ -1,0 +1,8 @@
+gametitle=One Piece - Grand Battle (PAL-E) (SLES-53579)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,00429590,word,3f366666 // 3f733333 hor fov
+
+// 16:10
+//patch=1,EE,00429590,word,3f4aaaab // 3f733333 hor fov

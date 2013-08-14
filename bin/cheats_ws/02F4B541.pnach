@@ -1,0 +1,7 @@
+gametitle=Star Wars: Battlefront 2 (NTSC-U)
+
+patch=1,EE,005AE6B4,word,3c013f2b //partial render fix
+
+patch=1,EE,00580784,word,3c013f40 //hor fov
+patch=1,EE,00580788,word,44810000
+patch=1,EE,00580790,word,46000003

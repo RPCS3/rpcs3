@@ -1,0 +1,5 @@
+gametitle=Raw Danger SLUS_215.01
+comment=Widescreen Hack
+patch=1,EE,003a83e0,word,43e00000
+patch=1,EE,003a8400,word,43e00000
+patch=1,EE,0048bfa8,word,3F400000

@@ -1,0 +1,6 @@
+gametitle=Hitman 2 - Silent Assassin (SLUS_20374)
+comment=Widescreen hack by No.47
+patch=1,EE,215606B8,word,3FBAAAAA
+patch=1,EE,215607E0,word,3F400000
+patch=1,EE,21560D88,word,3FBAAAAA
+patch=1,EE,21560EB0,word,3F400000

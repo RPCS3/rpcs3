@@ -1,0 +1,8 @@
+gametitle=Dynasty Warriors 3 (PAL-M3) (SLES-50641)
+comment=Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,002f42c8,word,3fa00000 // 3f800000 camera zoom
+patch=1,EE,002f42d4,word,3faaaaab // 3f800000 ver fov
+patch=1,EE,00261e84,word,3c023f40 // 3c023f80 hor fov real-time intro
+patch=1,EE,001778d0,word,3c023f20 // 3c023f00 renderfix

@@ -1,0 +1,6 @@
+gametitle=Armored Core 2 Another Age SLUS_202.49
+comment=Widescreen Hack
+patch=1,EE,001c7ce8,word,3c013f40
+patch=1,EE,001dcb4c,word,3c013f40
+patch=1,EE,001dcc6c,word,3c013f40
+patch=1,EE,202FBF80,word,43f00000

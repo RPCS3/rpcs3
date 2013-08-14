@@ -1,0 +1,6 @@
+gametitle=Xenosaga Episode III
+comment=NTSC-J Widescreen Hack ver.2 by synce
+patch=1,EE,208babf0,extended,3F400000
+patch=1,EE,208bac00,extended,442B0000
+patch=1,EE,208bac08,extended,44008000
+patch=1,EE,208bac28,extended,442B0000

@@ -1,0 +1,9 @@
+gametitle=Contra - Shattered Soldier (PAL-M5) (SLES-51284)
+comment=Widescreen Hack (16:9) by ElHecht
+
+// 16:9
+patch=1,EE,005dd10c,word,3c013f40 // 00000000 hor fov
+patch=1,EE,005dd110,word,44810000 // 00000000 
+patch=1,EE,005dd118,word,4600c602 // 00000000 
+patch=1,EE,00678f00,word,44d8aaab // 44a28000 increase enemy spawn point right
+patch=1,EE,00678f04,word,c4d8aaab // c4a28000 increase enemy spawn point left

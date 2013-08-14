@@ -1,0 +1,3 @@
+gametitle=Time Crisis - Crisis Zone SLUS_209.27
+comment=Widescreen Hack
+patch=1,EE,00100658,word,3c033f40

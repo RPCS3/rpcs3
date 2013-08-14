@@ -1,0 +1,4 @@
+gametitle=Crimson Tears SLUS_209.48
+comment=Widescreen Hack
+patch=1,EE,2035f490,extended,BF400000 // BF800000
+patch=1,EE,205a4c90,extended,43700000 // 43a00000

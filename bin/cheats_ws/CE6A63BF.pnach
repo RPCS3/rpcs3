@@ -1,0 +1,5 @@
+gametitle=X-Men Legends SLUS_206.56
+comment=Widescreen Hack
+patch=1,EE,005cc888,word,3c023f34
+patch=1,EE,20720920,word,3Fe38e38
+patch=1,EE,2072094c,word,3f1ccccd  //fonts

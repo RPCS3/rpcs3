@@ -1,0 +1,14 @@
+gametitle=Battle Stadium D.O.N. (NTSC-J) SLPS_256.75
+comment=Widescreen fix by flameofrecca
+patch=1,EE,00165924,word,3c023f20  //zoom value
+patch=1,EE,00165974,word,3c023f66  //vertical fov
+patch=1,EE,001b1210,word,3c023fa0 // logos and intro size fix
+
+//Partial HUD fixes (Doesn't work on PCSX2, buts works on physical ps2)
+//patch=1,EE,2176dfdc,word,42400000
+//patch=1,EE,2176df94,word,41c00000
+//patch=1,EE,2176debc,word,41400000
+//patch=1,EE,2176DEE0,word,41400000 
+//patch=1,EE,2176DF04,word,41400000
+//patch=1,EE,2176DF28,word,41400000
+//patch=1,EE,2176df4c,word,41400000

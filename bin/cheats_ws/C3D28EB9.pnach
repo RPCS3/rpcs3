@@ -1,0 +1,26 @@
+gametitle=Shadow Hearts - From the New World  SLUS_213.26
+comment=Widescreen Hack
+patch=1,EE,002e835c,word,3c023f19 //cutscenes
+patch=1,EE,002e8364,word,3443999a
+patch=1,EE,00414F3C,word,3c023f19 //field
+patch=1,EE,00414F40,word,3442999a
+patch=1,EE,00489fc8,word,3c023f19 //battle
+patch=1,EE,00489fcc,word,3442999a
+
+//reduced fov field gameplay fix
+//patch=1,EE,002e835c,word,3c023f19 //cutscenes
+//patch=1,EE,002e8364,word,3443999a
+//patch=1,EE,00414F3C,word,3c023f19 //field
+//patch=1,EE,00414F40,word,3442999a
+//patch=1,EE,00489fc8,word,3c023f19 //battle
+//patch=1,EE,00489fcc,word,3442999a
+//patch=1,EE,00414f34,word,3c0343b8
+
+//vert-
+//patch=1,EE,002e835c,word,3c023f19 //cutscenes
+//patch=1,EE,002e8364,word,3443999a
+//patch=1,EE,00414F3C,word,3c023f19 //field
+//patch=1,EE,00414F40,word,3442999a
+//patch=1,EE,00489fc8,word,3c023f19 //battle
+//patch=1,EE,00489fcc,word,3442999a
+//patch=1,EE,00414f34,word,3c0343d5

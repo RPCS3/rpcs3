@@ -1,0 +1,9 @@
+gametitle=Tekken 4 (PAL-M5) (SCES-50878)
+comment=Widescreen Hack (16:9) by Nemesis2000/pnach by ElHecht
+//
+// 16:9
+patch=1,EE,002177e0,word,3c013f40  // 3c013f80 hor fov
+patch=1,EE,002015d4,word,3c013f40  // 00000000 renderfix1
+patch=1,EE,002015d8,word,44810000  // 00000000
+patch=1,EE,002015e4,word,46006303  // 00000000
+patch=1,EE,0018d408,word,3c0143d6  // 3c0143a0 renderfix2

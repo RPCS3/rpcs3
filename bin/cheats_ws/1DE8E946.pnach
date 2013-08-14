@@ -1,0 +1,8 @@
+comment=Devil Kings (PAL-M5) (SLES-53870) Widescreen Hack (16:9) by ElHecht
+//
+// 16:9
+patch=1,EE,00130d5c,word,3c013f19
+patch=1,EE,00130d60,word,3421999a
+patch=1,EE,001bb2c0,word,3c013f19
+patch=1,EE,001bb2c4,word,3421999a
+//patch=1,EE,2057A954,extended,44250000 // 43A50000 view more enemies

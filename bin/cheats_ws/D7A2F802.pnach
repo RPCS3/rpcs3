@@ -1,0 +1,19 @@
+comment=InuYasha - Secret of the Cursed Mask(SLUS-20913) WS patch
+//3D field models
+patch=1,EE,2020F680,extended,3F400000
+patch=1,EE,2020F688,extended,3F400000
+//patch=1,EE,2020F684,extended,3FAAAAA8 //height - leaving in case anyone preffer taller/bigger characters
+//3D menu models
+patch=1,EE,202353E0,extended,3F400000
+patch=1,EE,202353E8,extended,3F400000
+//patch=1,EE,202353E4,extended,3FAAAAA8 //height - same as above
+//fights
+patch=1,EE,2025808C,extended,44555555
+//"after fight" screen
+patch=1,EE,D0250222,extended,00000023 //if "after fight screen" do:
+patch=1,EE,2024F074,extended,3F54924A
+//"if not" doesn't work, hence another 4 lines of code for wrongly affected stuff;p
+patch=1,EE,D0250222,extended,00000020
+patch=1,EE,2024F074,extended,3F8DB6DC
+patch=1,EE,D0250222,extended,00000021
+patch=1,EE,2024F074,extended,3F8DB6DC

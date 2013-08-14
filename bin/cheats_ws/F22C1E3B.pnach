@@ -1,0 +1,21 @@
+gametitle=Medal of Honor: Rising Sun  (SLUS-20753) / Medal of Honor: Rising Sun  (SLES-51873)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,003a3910,word,3f100000
+
+patch=1,EE,001b9110,word,3c013f50
+patch=1,EE,001b9114,word,44810800
+patch=1,EE,001b9118,word,46016303
+patch=1,EE,001b911c,word,c4810e30
+patch=1,EE,001b9120,word,460c0832
+patch=1,EE,001b9124,word,45010008
+patch=1,EE,001b9128,word,00000000
+patch=1,EE,001b912c,word,46016034
+patch=1,EE,001b9130,word,45000004
+patch=1,EE,001b9134,word,e48c0e38
+patch=1,EE,001b9138,word,46006807
+patch=1,EE,001b913c,word,03e00008
+patch=1,EE,001b9140,word,e4800e3c
+patch=1,EE,001b9144,word,e48d0e3c
+patch=1,EE,001b9148,word,03e00008
+patch=1,EE,001b914c,word,00000000

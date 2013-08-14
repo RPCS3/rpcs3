@@ -1,0 +1,3 @@
+GameTitle=Global Defense Force (PAL)
+Comment=May work with japanese one just change the cheat name to the game crc code you get at boot. You will need to enable the cheat after boot because it make the menu currupt so make a save state then enable cheats then load the save state.
+patch=1,EE,20993FC0,extended,3F400000

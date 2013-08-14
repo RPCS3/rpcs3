@@ -1,0 +1,32 @@
+gametitle=Champions - Return to Arms (PAl-M4) (SLES-53039)
+comment=Widescreen Hack by ElHecht
+
+// 16:9
+patch=1,EE,0016595c,word,3c013f40 // 460c7382 hor fov
+patch=1,EE,00165974,word,34210000 // e48e0000 hor fov
+patch=1,EE,00165978,word,4481f000 // 00000000
+patch=1,EE,0016597c,word,461e6302 // 00000000
+patch=1,EE,001659a0,word,460c7382 // 00000000
+patch=1,EE,001659a4,word,e48e0000 // 00000000
+patch=1,EE,0018ac2c,word,00000000 // 4600d306
+patch=1,EE,0018ac80,word,00000000 // 4600d306
+patch=1,EE,001869d0,word,3c193f40 // 00000000 renderfix
+patch=1,EE,001869d4,word,4499f000 // 00000000 renderfix
+patch=1,EE,001869ec,word,4600b047 // 3c01bf80
+patch=1,EE,001869f0,word,461ece43 // 44810800
+
+// 16:10
+//patch=1,EE,0016595c,word,3c013f55 // 460c7382 hor fov
+//patch=1,EE,00165974,word,34215555 // e48e0000 hor fov
+//patch=1,EE,00165978,word,4481f000 // 00000000
+//patch=1,EE,0016597c,word,461e6302 // 00000000
+//patch=1,EE,001659a0,word,460c7382 // 00000000
+//patch=1,EE,001659a4,word,e48e0000 // 00000000
+//patch=1,EE,0018ac2c,word,00000000 // 4600d306
+//patch=1,EE,0018ac80,word,00000000 // 4600d306
+//patch=1,EE,0018698c,word,4617bd80 // 3c013f80 
+//patch=1,EE,00186990,word,3c193f55 // 4481b000 renderfix
+//patch=1,EE,001869d0,word,37395555 // 00000000 renderfix
+//patch=1,EE,001869d4,word,4499f000 // 00000000
+//patch=1,EE,001869ec,word,4600b047 // 3c01bf80
+//patch=1,EE,001869f0,word,461ece43 // 44810800

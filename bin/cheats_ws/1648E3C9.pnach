@@ -1,0 +1,4 @@
+gametitle=Drakengard 2 SLUS_213.73
+comment=Widescreen Hack
+patch=1,EE,204cf458,extended,3FE38E32 // 3Faaaaaa
+patch=1,EE,20560f94,extended,44550000 // 44200000

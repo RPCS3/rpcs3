@@ -1,0 +1,31 @@
+gametitle=Shadow Hearts Covenant SLUS_210.41
+comment=Widescreen Hack
+patch=1,EE,003ca27c,word,3c023f19
+patch=1,EE,003ca280,word,3445999a
+patch=1,EE,003ca62c,word,3c033f19
+patch=1,EE,003ca634,word,3463999a
+patch=1,EE,00506B60,word,3c033f19 // field hor
+patch=1,EE,00506B64,word,3463999a
+patch=1,EE,005aa260,word,3c023f19 // battle
+patch=1,EE,005aa264,word,3442999a
+
+//reduced fov (field gameplay fix)
+//patch=1,EE,003ca27c,word,3c023f19
+//patch=1,EE,003ca280,word,3445999a
+//patch=1,EE,003ca62c,word,3c033f19
+//patch=1,EE,003ca634,word,3463999a
+//patch=1,EE,00506b58,word,3c0243b8
+//patch=1,EE,00506B60,word,3c033f19 // field hor
+//patch=1,EE,00506B64,word,3463999a
+//patch=1,EE,005aa260,word,3c023f19 // battle
+//patch=1,EE,005aa264,word,3442999a
+
+//vert-
+//patch=1,EE,003ca27c,word,3c023f19
+//patch=1,EE,003ca280,word,3445999a
+//patch=1,EE,003ca62c,word,3c033f19
+//patch=1,EE,003ca634,word,3463999a
+//patch=1,EE,00506B6C,word,3c023f9f // field vert
+//patch=1,EE,00506B70,word,34423fbf
+//patch=1,EE,005aa260,word,3c023f19 // battle
+//patch=1,EE,005aa264,word,3442999a

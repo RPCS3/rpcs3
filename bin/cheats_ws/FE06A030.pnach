@@ -1,0 +1,9 @@
+comment=Silent Hill 2: Greatest Hits - Widescreen Hack (16:9) (NTSC-U) // Hyakki
+patch=1,EE,002d6b30,word,3F28F5C3 // hor asp
+patch=1,EE,00189d98,word,3c034455 // partial render fix
+
+//FMV and black borders fix
+patch=1,EE,202806d8,word,24100004 //hor black border 
+patch=1,EE,202806dc,word,24030004 //hor black border 
+patch=1,EE,202806bc,word,34068fc0 //bottom
+patch=1,EE,2028068c,word,3c027040 //top

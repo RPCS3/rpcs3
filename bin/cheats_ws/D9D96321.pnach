@@ -1,0 +1,18 @@
+gametitle=Without Warning (SLES-53716)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,001486ac,word,3c013f40
+patch=1,EE,001486b0,word,44810800
+patch=1,EE,001486b4,word,27bdffe0
+patch=1,EE,001486b8,word,3c04004b
+patch=1,EE,001486bc,word,8c848218
+patch=1,EE,001486c0,word,03a0282d
+patch=1,EE,001486c4,word,46016002
+patch=1,EE,001486c8,word,46016303
+
+patch=1,EE,00148318,word,0c0521ab
+patch=1,EE,00197d6c,word,0c0521ab
+patch=1,EE,00197d88,word,0c0521ab
+
+//black borders fix
+patch=1,EE,0017f6ec,word,3c013f80

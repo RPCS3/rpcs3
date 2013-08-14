@@ -1,0 +1,4 @@
+gametitle=Sega Ages 2500 Series Vol. 13 - OutRun SLPM_624.47
+comment=Widescreen Hack
+patch=1,EE,00123dd0,word,3c083fab
+patch=1,EE,0012c298,word,3c043f40

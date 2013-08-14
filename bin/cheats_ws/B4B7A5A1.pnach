@@ -1,0 +1,4 @@
+gametitle=Maximo - Ghosts to Glory SLES_507.03
+comment=Widescreen Hack
+patch=1,EE,001e25f4,word,3feeeeee
+patch=1,EE,001478cc,word,3c023f40

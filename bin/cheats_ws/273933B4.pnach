@@ -1,0 +1,3 @@
+gametitle=dot Hack - FRAGMENT SLPS_255.27
+comment=Widescreen Hack
+patch=1,EE,20A36A80,extended,3F400000 // 3F800000

@@ -1,0 +1,21 @@
+﻿gametitle=Persona 4 NTSC-J (SLPM-669.78)
+comment=Widescreen hack
+
+//16:9
+patch=1,EE,0076f61c,word,3fe38e38
+
+//partial HUD fix
+patch=1,EE,00104da0,word,3c043f40 
+patch=1,EE,00104da8,word,00731821
+patch=1,EE,00104dac,word,24635028
+patch=1,EE,00104db4,word,00000000 
+patch=1,EE,00104db8,word,24630004
+patch=1,EE,00104dbc,word,3c043f80
+
+//FMV's fix by nemesis2000
+patch=1,EE,004766ac,word,1460000a
+patch=1,EE,004766b4,word,3c03c294
+patch=1,EE,004766b8,word,10000008
+patch=1,EE,004766bc,word,00000000
+patch=1,EE,004766d8,word,3c03c1a8
+patch=1,EE,004766ec,word,00000000

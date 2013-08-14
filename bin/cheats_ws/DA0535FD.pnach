@@ -1,0 +1,24 @@
+gametitle=Kingdom Hearts II NTSC-U
+comment=KH2 - NTSC-U
+
+// 16:9 hack by - cassidy1991
+patch=1,EE,203B223C,word,3F19999A // 3F4CCCCC (hor axis)
+patch=1,EE,20378100,word,43C00000 // 44000000 (zoom)
+patch=1,EE,2037F484,word,3F19999A // 3F4CCCCC (character menu proportions)
+patch=1,EE,203B233C,word,3F19999A // 3F4CCCCC (continue screen proportions)
+patch=1,EE,203840D0,word,3F19999A // 3F4CCCCC (world map cutscene proportions)
+patch=1,EE,20378104,word,43e00000 // 43d00000 (optional zoom for cutscenes, 43f90000 = pan and scan) 
+
+//font fix
+patch=1,EE,2037ae44,word,3F400000 // 3F800000
+patch=1,EE,2037ae48,word,3F400000 // 3F800000
+patch=1,EE,2037ae4c,word,3F400000 // 3F800000
+
+//black bar fix
+patch=1,EE,0014aaf0,word,24050000
+patch=1,EE,0014ab18,word,24050000
+patch=1,EE,0014ab40,word,24050000
+patch=1,EE,0014ab70,word,24050000
+
+//subtitles off
+//patch=1,EE,002274cc,word,11e00019

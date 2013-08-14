@@ -1,0 +1,10 @@
+gametitle=Gauntlet: Seven Sorrows (SLUS-21077)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,00446200,word,24020002 //built in widescreen
+
+//480p
+patch=1,EE,00107244,word,3c050000
+patch=1,EE,0010724c,word,3c060050
+patch=1,EE,00107254,word,3c070001
+patch=1,EE,00107514,word,3c090010

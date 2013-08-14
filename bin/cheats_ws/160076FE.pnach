@@ -1,0 +1,207 @@
+comment=Grandia II (NTSC-U) (SLUS-20194) Widescreen Hack (16:9)
+patch=1,EE,0025c6d4,word,3c013f40 //vert fov-
+patch=1,EE,0025c7a4,word,3c01bf41 //both fov+
+patch=1,EE,0025c6d8,word,4481f000
+patch=1,EE,0025c7e0,word,461e6343
+
+//FMV fix (by flameofrecca)
+patch=1,EE,20401874,word,42a00000 //00000000       fmv x-position
+patch=1,EE,2040187c,word,43f00000 //44200000       fmv right side stretch  
+
+
+//Battle Screen HUD fix (by flameofrecca)
+
+patch=1,EE,201694f8,word,42700000  //         "ACTION" font
+patch=1,EE,20167f70,word,42340000  //         "WAIT" font 
+patch=1,EE,20167f50,word,423a0000  //         "ACT" font 
+patch=1,EE,20167f30,word,42460000  //         "COM" font 
+patch=1,EE,20168a58,word,42580000  //         "Combo" font 
+patch=1,EE,2016afb8,word,42900000  //         "Ryudo" name 
+patch=1,EE,2016aff8,word,42900000  //         "Millenia" name
+patch=1,EE,2016afd8,word,42900000  //         "Elena" name
+patch=1,EE,2016b058,word,42900000  //         "Mareg" name        
+patch=1,EE,2016b038,word,42900000  //         "Tio" name        
+patch=1,EE,2016b078,word,42900000  //         "Roan" name
+patch=1,EE,20168ab8,word,42b88000  //         "Moves/Magic" font 
+patch=1,EE,20168ad8,word,42640000  //         "Defend" font
+patch=1,EE,20168b18,word,41a80000  //         "AI" font
+patch=1,EE,20168b38,word,42460000  //         "Escape" font
+patch=1,EE,20168a98,word,422b0000  //         "Items" font
+patch=1,EE,20168a78,word,424f0000  //         "Critical" font
+patch=1,EE,20168af8,word,423a0000  //         "Evade" font
+patch=1,EE,20168090,word,41b40000  //         "HP"
+patch=1,EE,201680b0,word,41cc0000  //         "MP"
+patch=1,EE,201680d0,word,41a80000  //         "SP"
+patch=1,EE,20168e80,word,41900000  //         star rating icon fix
+patch=1,EE,20168f20,word,42580000  //         "One Foe/Enemy Line/All enemies" icon
+patch=1,EE,20169140,word,41900000  //         sword icon
+patch=1,EE,201695d8,word,41900000  //         Ryudo icon (turn order)
+patch=1,EE,201695f8,word,41900000  //         Elena icon (turn order)
+patch=1,EE,20169618,word,41900000  //         Millenia icon (turn order)
+patch=1,EE,20169658,word,41900000  //         Tio icon    (turn order)   
+patch=1,EE,20169678,word,41900000  //         Mareg icon    (turn order) 
+patch=1,EE,20169698,word,41900000  //         Roan icon width   (turn order)  
+patch=1,EE,201696f8,word,41900000  //         monster icon  (turn order) 
+patch=1,EE,20169e58,word,41900000  //         monster icon  (turn order) 
+patch=1,EE,20169758,word,41900000  //         monster icon  (turn order)        
+patch=1,EE,20169718,word,41900000  //         monster icon  (turn order)       
+patch=1,EE,20169798,word,41900000  //         monster icon  (turn order)       
+      
+   //Status Effect Icons 
+patch=1,EE,20169518,word,41900000  //                attack up/down    
+patch=1,EE,20169538,word,41900000  //                defend up/down          
+patch=1,EE,20169558,word,41900000  //                act up/down                   
+patch=1,EE,20169578,word,41900000  //                movement up/down            
+patch=1,EE,20168130,word,41900000  //                poisoned                  
+patch=1,EE,20168190,word,41900000  //                paralyzed                  
+patch=1,EE,201681b0,word,41900000  //                confused                  
+patch=1,EE,201681d0,word,41900000  //                block magic               
+patch=1,EE,201681f0,word,41900000  //                block moves                
+
+   //Damage HUD effects 
+patch=1,EE,20168660,word,42100000  //        "Damage" font    
+patch=1,EE,201684c0,word,41c00000  //        "Hits" font         
+
+patch=1,EE,20168380,word,41900000  //        yellow number 0
+patch=1,EE,201683a0,word,41900000  //        yellow number 1
+patch=1,EE,201683c0,word,41900000  //        yellow number 2    
+patch=1,EE,201683e0,word,41900000  //        yellow number 3
+patch=1,EE,20168400,word,41900000  //        yellow number 4
+patch=1,EE,20168420,word,41900000  //        yellow number 5
+patch=1,EE,20168440,word,41900000  //        yellow number 6
+patch=1,EE,20168460,word,41900000  //        yellow number 7
+patch=1,EE,20168480,word,41900000  //        yellow number 8
+patch=1,EE,201684a0,word,41900000  //        yellow number 9
+
+patch=1,EE,201684e0,word,414c0000  //        number 0 font
+patch=1,EE,20168500,word,414c0000  //        number 1 font
+patch=1,EE,20168520,word,414c0000  //        number 2 font       
+patch=1,EE,20168540,word,414c0000  //        number 3 font        
+patch=1,EE,20168560,word,414c0000  //        number 4 font
+patch=1,EE,20168580,word,414c0000  //        number 5 font
+patch=1,EE,201685a0,word,414c0000  //        number 6 font
+patch=1,EE,201685c0,word,414c0000  //        number 7 font
+patch=1,EE,201685e0,word,414c0000  //        number 8 font
+patch=1,EE,20168600,word,414c0000  //        number 9 font
+
+
+   //Ending battle screen rewards
+patch=1,EE,20168560,word,414c0000  //            yellow "Level" number       
+patch=1,EE,2016ae18,word,41900000  //            "SC" icon width        
+patch=1,EE,2016ae38,word,41900000  //            "MC" icon width     
+patch=1,EE,2016ae58,word,41900000  //            "G" icon width       
+patch=1,EE,2016ae78,word,42700000  //            "EXP" icon width    
+patch=1,EE,2016ae98,word,42900000  //            "Coins" font width   
+patch=1,EE,2016aeb8,word,42900000  //            "Items" font width  
+patch=1,EE,2016aed8,word,42900000  //            "After" font width   
+patch=1,EE,2016aef8,word,42400000  //            "level" font width    
+patch=1,EE,2016af58,word,41900000  //            gold icon width       
+patch=1,EE,2016af98,word,42900000  //            character portraits width     
+
+patch=1,EE,2016ac18,word,41280000  //            number 0 font
+patch=1,EE,2016ac38,word,41280000  //            number 1 font
+patch=1,EE,2016ac58,word,41280000  //            number 2 font
+patch=1,EE,2016ac78,word,41280000  //            number 3 font
+patch=1,EE,2016ac98,word,41280000  //            number 4 font
+patch=1,EE,2016acb8,word,41280000  //            number 5 font
+patch=1,EE,2016acd8,word,41280000  //            number 6 font
+patch=1,EE,2016acf8,word,41280000  //            number 7 font
+patch=1,EE,2016ad18,word,41280000  //            number 8 font
+patch=1,EE,2016ad38,word,41280000  //            number 9 font
+
+patch=1,EE,2016ac20,word,411c0000  //            number 0 spacing
+patch=1,EE,2016ac40,word,411c0000  //            number 1 spacing
+patch=1,EE,2016ac60,word,411c0000  //            number 2 spacing
+patch=1,EE,2016ac80,word,411c0000  //            number 3 spacing
+patch=1,EE,2016aca0,word,411c0000  //            number 4 spacing
+patch=1,EE,2016acc0,word,411c0000  //            number 5 spacing
+patch=1,EE,2016ace0,word,411c0000  //            number 6 spacing
+patch=1,EE,2016ad00,word,411c0000  //            number 7 spacing
+patch=1,EE,2016ad20,word,411c0000  //            number 8 spacing
+patch=1,EE,2016ad40,word,411c0000  //            number 9 spacing
+
+
+
+   //Icons font fix
+patch=1,EE,20169100,word,41900000  //           apocalypse icon 
+patch=1,EE,20169000,word,41900000  //           fire icon 
+patch=1,EE,20169040,word,41900000  //           tremor icon 
+patch=1,EE,201690c0,word,41900000  //           fire icon 
+patch=1,EE,20169020,word,41900000  //           wind icon width
+patch=1,EE,20169060,word,41900000  //           elec icon width
+patch=1,EE,20169080,word,41900000  //           ice icon width
+patch=1,EE,20169160,word,41900000  //           wand icon width
+patch=1,EE,20169120,word,41900000  //           millenia dark moves icon
+patch=1,EE,20169180,word,41900000  //           bow icon width
+patch=1,EE,20169200,word,41900000  //           heels icon width
+patch=1,EE,201690a0,word,41900000  //           healing tear icon width
+patch=1,EE,201690e0,word,41900000  //           tree icon width
+patch=1,EE,20169598,word,41900000  //           bell icon width
+patch=1,EE,20168e00,word,41c00000  //           L1, R1 button icon 
+patch=1,EE,2016b5f8,word,41900000  //           item "herbs" icon
+patch=1,EE,2016b678,word,41900000  //           item "wound salve" icon
+patch=1,EE,2016b538,word,41900000  //           charm icon
+patch=1,EE,2016b638,word,41900000  //           scroll icon
+patch=1,EE,2016b658,word,41900000  //           diamond icon
+patch=1,EE,2016b718,word,41900000  //           egg icon
+patch=1,EE,2016b698,word,41900000  //           bomb icon
+patch=1,EE,2016b298,word,41900000  //           wand icon
+patch=1,EE,2016b3d8,word,41580000  //           dress icon
+patch=1,EE,2016b458,word,41580000  //           "holy crown" icon
+patch=1,EE,2016b498,word,41580000  //           "royal boots" icon
+patch=1,EE,2016b518,word,41580000  //           "demon necklace"
+patch=1,EE,2016b6b8,word,41900000  //           feather icon
+patch=1,EE,2016b738,word,41900000  //           bag icon "sandman whiskers"
+patch=1,EE,2016b4d8,word,41580000  //           ring icon
+patch=1,EE,2016b558,word,41900000  //           belt icon
+patch=1,EE,2016b5f8,word,41900000  //           "lumir flower" icon
+patch=1,EE,2016b5d8,word,41900000  //           fruit icon
+patch=1,EE,2016b598,word,41900000  //           mushroom icon
+patch=1,EE,2016b578,word,41900000  //           cape icon
+patch=1,EE,2016b6d8,word,41900000  //           harp icon
+patch=1,EE,2016b618,word,41900000  //           nut icon
+patch=1,EE,2016b0d8,word,41900000  //           statue icon
+patch=1,EE,2016b2b8,word,41900000  //           bow icon
+patch=1,EE,201691e0,word,41900000  //           lotus flower icon      
+patch=1,EE,201691c0,word,41900000  //           axe icon             
+patch=1,EE,201691a0,word,41900000  //           sword icon 
+
+   //number font size fix for character HUD
+patch=1,EE,2016a2d8,word,41280000  //                number 0
+patch=1,EE,2016a2f8,word,41280000  //                number 1
+patch=1,EE,2016a318,word,41280000  //                number 2
+patch=1,EE,2016a338,word,41280000  //                number 3
+patch=1,EE,2016a358,word,41280000  //                number 4
+patch=1,EE,2016a378,word,41280000  //                number 5
+patch=1,EE,2016a398,word,41280000  //                number 6
+patch=1,EE,2016a3b8,word,41280000  //                number 7
+patch=1,EE,2016a3d8,word,41280000  //                number 8
+patch=1,EE,2016a3f8,word,41280000  //                number 9
+patch=1,EE,2016a418,word,41280000  //                question mark
+  
+   //number font spacing fix for character HUD
+patch=1,EE,2016a2e0,word,411c0000  //                number 0
+patch=1,EE,2016a300,word,41040000  //                number 1
+patch=1,EE,2016a320,word,41100000  //                number 2
+patch=1,EE,2016a340,word,411c0000  //                number 3
+patch=1,EE,2016a360,word,411c0000  //                number 4
+patch=1,EE,2016a380,word,41100000  //                number 5
+patch=1,EE,2016a3a0,word,411c0000  //                number 6
+patch=1,EE,2016a3c0,word,41040000  //                number 7
+patch=1,EE,2016a3e0,word,411c0000  //                number 8
+patch=1,EE,2016a400,word,411c0000  //                number 9
+patch=1,EE,2016a420,word,41100000  //                question mark
+   
+      // number font size fixes for Magic/Attack Menu
+patch=1,EE,2016a0d8,word,41100000  //                number 0
+patch=1,EE,2016a0f8,word,41100000  //                number 1
+patch=1,EE,2016a118,word,41100000  //                number 2
+patch=1,EE,2016a138,word,41100000  //                number 3
+patch=1,EE,2016a158,word,41100000  //                number 4
+patch=1,EE,2016a178,word,41100000  //                number 5
+patch=1,EE,2016a198,word,41100000  //                number 6
+patch=1,EE,2016a1b8,word,41100000  //                number 7
+patch=1,EE,2016a1d8,word,41100000  //                number 8
+patch=1,EE,2016a1f8,word,41100000  //                number 9
+patch=1,EE,2016a258,word,41100000  //                "times" font
+patch=1,EE,2016a2b8,word,41100000  //                "minus" font

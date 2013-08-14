@@ -1,0 +1,24 @@
+comment=Yu-Gi-Oh! The Duelist of the Roses NTSC-U patches
+//Widescreen 16:9
+//X 21FE0528 3F400000 - need render fix
+//Y -- works fine?
+patch=1,EE,21FE052C,extended,3FA06D3A
+//different Y 20326194 3FAAAAAA - works fine as well?
+//Zoom Correction for Y
+//doesn't work for cards when they fight, soo they fill up the screen(looks ok actually), but works for everything else
+patch=1,EE,21FE0524,extended,44160000
+
+
+//Game fixes(workarounds):
+
+//fix for the zoom graphic glitch(you can additionally also change EE/IOP rounding to negative and clamping to extra+preserve sign, but I didn't really saw much if any improvement of doing it;p)
+patch=1,EE,D1FE04F0,extended,00000000
+patch=1,EE,21FE04F0,extended,3727C5AC
+
+//Duel Master(use only one code) in custom duel:
+//T
+//patch=1,EE,203173AC,extended,00000003
+//S
+//patch=1,EE,203173AC,extended,00000002
+//I
+//patch=1,EE,203173AC,extended,00000004

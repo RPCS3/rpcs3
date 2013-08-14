@@ -1,0 +1,4 @@
+gametitle=Second Sight (SLUS_21033)
+comment=Widescreen hack by No.47
+patch=1,EE,20500C14,word,3FC71C71
+patch=1,EE,20500C94,word,3FC71C71

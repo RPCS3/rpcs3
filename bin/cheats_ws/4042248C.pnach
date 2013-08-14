@@ -1,0 +1,4 @@
+gametitle=Def Jam - Vendetta SLUS_206.39
+comment=Widescreen Hack
+patch=1,EE,001a17b4,extended,3c013f10
+patch=1,EE,00197bbc,extended,3c013f22

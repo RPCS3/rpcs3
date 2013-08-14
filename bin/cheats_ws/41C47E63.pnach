@@ -1,0 +1,5 @@
+gametitle=Prince Of Persia : The Sands Of Time (SLKA_251.20)
+comment=widescreen 16:9 (NTSC-K) hack by 99skull
+//credit goes to nemesis2000
+patch=1,EE,004B536C,word,3C023F10 //3C023F40
+patch=1,EE,004B53C4,word,3C02402B //3C024000

@@ -1,0 +1,3 @@
+gametitle=Smugglers Run 2 - Hostile Territory (SLUS_20204)
+comment=Widescreen hack by No.47
+patch=1,EE,2036EDB8,word,3FAAAAAA

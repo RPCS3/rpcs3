@@ -1,0 +1,5 @@
+gametitle=Wild Arms 4
+comment=Widescreen Hack
+patch=1,EE,001596d0,extended,3c0645ff
+patch=1,EE,0015976c,extended,3c023f40
+patch=1,EE,00159574,extended,3c05442b

@@ -1,0 +1,3 @@
+gametitle=Metal Gear Solid 2 - Sons of Liberty
+comment=Widescreen Hack
+patch=1,EE,0011ea28,word,3c013f40

@@ -1,0 +1,18 @@
+gametitle=007: From Russia with Love (SLUS-21282)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,0040560c,word,46140002
+patch=1,EE,00405610,word,27a50030
+patch=1,EE,00405614,word,46010003
+patch=1,EE,00405618,word,3c013f40 //hor val
+patch=1,EE,0040561c,word,44810800
+patch=1,EE,00405620,word,4601a503
+patch=1,EE,00405624,word,e7b40030
+patch=1,EE,00405628,word,46020002
+patch=1,EE,0040562c,word,0c0c87e6
+patch=1,EE,00405630,word,e7a00034
+patch=1,EE,00405634,word,7bb00050
+patch=1,EE,00405638,word,dfbf0040
+patch=1,EE,0040563c,word,c7b40060
+patch=1,EE,00405640,word,03e00008
+patch=1,EE,00405644,word,27bd0070

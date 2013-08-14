@@ -1,0 +1,10 @@
+gametitle=BLACK (SLUS_21376)
+comment=Widescreen hack by No.47
+patch=1,EE,203BE83C,word,00000001
+patch=1,EE,204BC150,word,00000001
+patch=1,EE,204BD18C,word,00000001
+patch=1,EE,204CA554,word,3FE38E39
+patch=1,EE,204CA5F0,word,3FAAAAAB
+patch=1,EE,204CA5F4,word,3FE38E39
+patch=1,EE,204CA694,word,3FE38E39
+patch=1,EE,205BC390,word,3F400000

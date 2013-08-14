@@ -1,0 +1,58 @@
+comment=Devil May Cry 3: Dante's Awakening: Special Edition (SLES-54186)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000 )
+
+//gameplay
+patch=1,EE,001ac7a4,word,3c013f40 //hor val 1
+patch=1,EE,001ac7a8,word,4481a000
+patch=1,EE,001ac7ac,word,3c0101d1
+patch=1,EE,001ac7b0,word,e43407a0
+patch=1,EE,001ac7b4,word,46000d03
+
+patch=1,EE,001ac814,word,3c013f40 //hor val 2
+patch=1,EE,001ac818,word,4481a000
+patch=1,EE,001ac81c,word,3c0101d1
+patch=1,EE,001ac820,word,e43407a0
+patch=1,EE,001ac824,word,46000d03
+
+//FMV's fix
+patch=1,EE,00231cb8,word,24040180 //dolby logo
+patch=1,EE,00232dcc,word,240301aa //intro / demo
+patch=1,EE,002e5a8c,word,240801aa //cutscenes
+patch=1,EE,00307d4c,word,24050040 //gallery 1
+patch=1,EE,00307d54,word,24070180 //gallery 2
+
+//rfix 1
+patch=1,EE,001ac844,word,3c0345bf //val 1
+patch=1,EE,001ac96c,word,3c0345bf //val 2
+
+//rfix 2
+patch=1,EE,001acf0c,word,3c013f40 //hor val 2
+
+patch=1,EE,001acf24,word,44812000
+patch=1,EE,001acf28,word,460418c2
+patch=1,EE,001acf2c,word,460018c3
+patch=1,EE,001acf30,word,46001083
+patch=1,EE,001acf34,word,46000803
+patch=1,EE,001acf38,word,e7a30030
+patch=1,EE,001acf3c,word,e7a20034
+
+patch=1,EE,001acfa0,word,460418c2
+patch=1,EE,001acfa4,word,460018c3
+patch=1,EE,001acfa8,word,46001083
+patch=1,EE,001acfac,word,46000803
+patch=1,EE,001acfb0,word,e7a30030
+patch=1,EE,001acfb4,word,e7a20034
+
+patch=1,EE,001ad020,word,460418c2
+patch=1,EE,001ad024,word,460018c3
+patch=1,EE,001ad028,word,46001083
+patch=1,EE,001ad02c,word,46000803
+patch=1,EE,001ad030,word,e7a30030
+patch=1,EE,001ad034,word,e7a20034
+
+patch=1,EE,001ad0a0,word,460418c2
+patch=1,EE,001ad0a4,word,460018c3
+patch=1,EE,001ad0a8,word,46001083
+patch=1,EE,001ad0ac,word,46000803
+patch=1,EE,001ad0b0,word,e7a30030
+patch=1,EE,001ad0b4,word,e7a20034

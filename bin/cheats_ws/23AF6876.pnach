@@ -1,0 +1,4 @@
+gametitle=DOA2: Hardcore (SLUS-20071)
+comment=Widescreen hack by nemesis2000 (pnach by nemesis2000)
+
+patch=1,EE,0021b63c,word,3c014534

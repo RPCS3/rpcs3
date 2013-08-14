@@ -1,0 +1,8 @@
+gametitle=Front Mission 4 (SLUS_208.88)
+comment=widescreen
+//widescreen 16:9 hack by 99skull
+patch=1,EE,00159438,word,3C024380 // 4340(192)->4380(256)
+patch=1,EE,001594D4,word,3C023EE6 // 3C023F19, render fix
+patch=1,EE,001594DC,word,34426666 // 3442999A, render fix
+patch=1,EE,002184F8,word,3C023EE6 // 3C023F19, wide
+patch=1,EE,00218500,word,34426666 // 3442999A, wide

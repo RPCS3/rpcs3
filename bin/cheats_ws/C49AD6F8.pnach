@@ -1,0 +1,8 @@
+gametitle= Pro Evolution Soccer 2012 PAL Spain (SLES_556.58)
+comment= Widescreen pnach by El_Patas
+
+//Gameplay
+patch=1,EE,003CEC90,word,3FAAAAAB //3F800000 (increases hor. axis)
+
+//Render fix
+patch=1,EE,00125F2C,word,3C053FAB //3C053F80 (increases hor. render area)

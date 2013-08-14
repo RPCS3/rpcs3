@@ -1,0 +1,11 @@
+gametitle=Sega Rally Championship (SLPM_62703)
+comment=Widescreen hack by No.47
+patch=1,EE,2030F990,word,43610000
+patch=1,EE,2030F9E0,word,42E10000
+patch=1,EE,2030FA94,word,43A8C000
+patch=1,EE,20310340,word,43960000
+patch=1,EE,203105D8,word,43960000
+patch=1,EE,20310718,word,43960000
+patch=1,EE,20310878,word,43834000
+patch=1,EE,203114EC,word,3FAAAAAB
+patch=1,EE,20311650,word,00000000 // restores the original "behind the car" camera from the arcade version (which strangely was changed for the PS2 port)
