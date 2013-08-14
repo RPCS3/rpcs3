@@ -53,101 +53,65 @@ bool GSRendererOGL::CreateDevice(GSDevice* dev)
 
 void GSRendererOGL::EmulateGS()
 {
-	switch(m_vt.m_primclass)
+	if (m_vt.m_primclass != GS_SPRITE_CLASS) return;
+
+	// each sprite converted to quad needs twice the space
+
+	while(m_vertex.tail * 2 > m_vertex.maxcount)
 	{
-	case GS_LINE_CLASS:
+		GrowVertexBuffer();
+	}
 
-		if(PRIM->IIP == 0)
+	// assume vertices are tightly packed and sequentially indexed (it should be the case)
+
+	if(m_vertex.next >= 2)
+	{
+		size_t count = m_vertex.next;
+
+		int i = (int)count * 2 - 4;
+		GSVertex* s = &m_vertex.buff[count - 2];
+		GSVertex* q = &m_vertex.buff[count * 2 - 4];
+		uint32* RESTRICT index = &m_index.buff[count * 3 - 6];
+
+		for(; i >= 0; i -= 4, s -= 2, q -= 4, index -= 6)
 		{
-			for(size_t i = 0, j = m_index.tail; i < j; i += 2)
-			{
-				uint32 tmp = m_index.buff[i + 0];
-				m_index.buff[i + 0] = m_index.buff[i + 1];
-				m_index.buff[i + 1] = tmp;
-			}
+			GSVertex v0 = s[0];
+			GSVertex v1 = s[1];
+
+			v0.RGBAQ = v1.RGBAQ;
+			v0.XYZ.Z = v1.XYZ.Z;
+			v0.FOG = v1.FOG;
+
+			q[0] = v0;
+			q[3] = v1;
+
+			// swap x, s, u
+
+			uint16 x = v0.XYZ.X;
+			v0.XYZ.X = v1.XYZ.X;
+			v1.XYZ.X = x;
+
+			float s = v0.ST.S;
+			v0.ST.S = v1.ST.S;
+			v1.ST.S = s;
+
+			uint16 u = v0.U;
+			v0.U = v1.U;
+			v1.U = u;
+
+			q[1] = v0;
+			q[2] = v1;
+
+			index[0] = i + 0;
+			index[1] = i + 1;
+			index[2] = i + 2;
+			index[3] = i + 1;
+			index[4] = i + 2;
+			index[5] = i + 3;
 		}
 
-		break;
-
-	case GS_TRIANGLE_CLASS:
-
-		if(PRIM->IIP == 0)
-		{
-			for(size_t i = 0, j = m_index.tail; i < j; i += 3)
-			{
-				uint32 tmp = m_index.buff[i + 0];
-				m_index.buff[i + 0] = m_index.buff[i + 2];
-				m_index.buff[i + 2] = tmp;
-			}
-		}
-
-		break;
-
-	case GS_SPRITE_CLASS:
-
-		// each sprite converted to quad needs twice the space
-
-		while(m_vertex.tail * 2 > m_vertex.maxcount)
-		{
-			GrowVertexBuffer();
-		}
-
-		// assume vertices are tightly packed and sequentially indexed (it should be the case)
-
-		if(m_vertex.next >= 2)
-		{
-			size_t count = m_vertex.next;
-
-			int i = (int)count * 2 - 4;
-			GSVertex* s = &m_vertex.buff[count - 2];
-			GSVertex* q = &m_vertex.buff[count * 2 - 4];
-			uint32* RESTRICT index = &m_index.buff[count * 3 - 6];
-
-			for(; i >= 0; i -= 4, s -= 2, q -= 4, index -= 6)
-			{
-				GSVertex v0 = s[0];
-				GSVertex v1 = s[1];
-
-				v0.RGBAQ = v1.RGBAQ;
-				v0.XYZ.Z = v1.XYZ.Z;
-				v0.FOG = v1.FOG;
-
-				q[0] = v0;
-				q[3] = v1;
-
-				// swap x, s, u
-
-				uint16 x = v0.XYZ.X;
-				v0.XYZ.X = v1.XYZ.X;
-				v1.XYZ.X = x;
-
-				float s = v0.ST.S;
-				v0.ST.S = v1.ST.S;
-				v1.ST.S = s;
-
-				uint16 u = v0.U;
-				v0.U = v1.U;
-				v1.U = u;
-
-				q[1] = v0;
-				q[2] = v1;
-
-				index[0] = i + 0;
-				index[1] = i + 1;
-				index[2] = i + 2;
-				index[3] = i + 1;
-				index[4] = i + 2;
-				index[5] = i + 3;
-			}
-
-			m_vertex.head = m_vertex.tail = m_vertex.next = count * 2;
-			m_index.tail = count * 3;
-		}
-
-		break;
-
-	default:
-		__assume(0);
+		m_vertex.head = m_vertex.tail = m_vertex.next = count * 2;
+		m_index.tail = count * 3;
 	}
 }
 
@@ -378,18 +342,14 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	vs_cb.Vertex_Scale_Offset = GSVector4(sx, sy, ox * sx + ox2 + 1, oy * sy + oy2 + 1);
 	// END of FIXME
 
-	// gs
-
-	GSDeviceOGL::GSSelector gs_sel;
-
-	gs_sel.iip = PRIM->IIP;
-	gs_sel.prim = m_vt.m_primclass;
-
 	// ps
 
 	GSDeviceOGL::PSSelector ps_sel;
 	GSDeviceOGL::PSSamplerSelector ps_ssel;
 	GSDeviceOGL::PSConstantBuffer ps_cb;
+
+	// GS_SPRITE_CLASS are already flat (either by CPU or the GS)
+	ps_sel.iip = (m_vt.m_primclass == GS_SPRITE_CLASS) ? 1 : PRIM->IIP;
 
 	if(DATE)
 	{
@@ -504,7 +464,7 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	// 2/ bindless texture uniform
 	// 3/ others uniform?
 	dev->SetupVS(vs_sel);
-	dev->SetupGS(gs_sel);
+	dev->SetupGS(m_vt.m_primclass == GS_SPRITE_CLASS);
 	dev->SetupPS(ps_sel);
 
 	// Note: bindless texture will use uniform so it must be done after the program setup

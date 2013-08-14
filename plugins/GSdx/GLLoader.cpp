@@ -180,7 +180,7 @@ namespace GLLoader {
 
 #ifndef ENABLE_GLES
 		if ( (major_gl < 3) || ( major_gl == 3 && minor_gl < 2 ) ) {
-			fprintf(stderr, "Geometry shaders are not supported. Required openGL3.2\n");
+			fprintf(stderr, "Geometry shaders are not supported. Required openGL 3.2\n");
 			found_geometry_shader = false;
 		}
 #ifdef _LINUX

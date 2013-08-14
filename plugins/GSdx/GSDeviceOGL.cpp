@@ -112,7 +112,7 @@ GSDeviceOGL::~GSDeviceOGL()
 	delete m_vb;
 
 	for (uint32 key = 0; key < VSSelector::size(); key++) m_shader->Delete(m_vs[key]);
-	for (uint32 key = 0; key < GSSelector::size(); key++) m_shader->Delete(m_gs[key]);
+	m_shader->Delete(m_gs);
 	for (auto it = m_ps.begin(); it != m_ps.end() ; it++) m_shader->Delete(it->second);
 
 	m_ps.clear();
@@ -578,25 +578,19 @@ GLuint GSDeviceOGL::CompileVS(VSSelector sel)
 	std::string macro = format("#define VS_BPPZ %d\n", sel.bppz)
 		+ format("#define VS_LOGZ %d\n", sel.logz)
 		+ format("#define VS_TME %d\n", sel.tme)
-		+ format("#define VS_FST %d\n", sel.fst);
+		+ format("#define VS_FST %d\n", sel.fst)
+		;
 
 	return m_shader->Compile("tfx.glsl", "vs_main", GL_VERTEX_SHADER, tfx_glsl, macro);
 }
 
 /* Note: must be here because tfx_glsl is static */
-GLuint GSDeviceOGL::CompileGS(GSSelector sel)
+GLuint GSDeviceOGL::CompileGS()
 {
-	// Easy case
-	if(! (sel.prim > 0 && (sel.iip == 0 || sel.prim == 3)))
-		return 0;
-
-	std::string macro = format("#define GS_IIP %d\n", sel.iip)
-		+ format("#define GS_PRIM %d\n", sel.prim);
-
 #ifdef ENABLE_GLES
 	return 0;
 #else
-	return m_shader->Compile("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, tfx_glsl, macro);
+	return m_shader->Compile("tfx.glsl", "gs_main", GL_GEOMETRY_SHADER, tfx_glsl, "");
 #endif
 }
 
@@ -620,7 +614,9 @@ GLuint GSDeviceOGL::CompilePS(PSSelector sel)
 		+ format("#define PS_DATE %d\n", sel.date)
 		+ format("#define PS_SPRITEHACK %d\n", sel.spritehack)
 		+ format("#define PS_TCOFFSETHACK %d\n", sel.tcoffsethack)
-		+ format("#define PS_POINT_SAMPLER %d\n", sel.point_sampler);
+		+ format("#define PS_POINT_SAMPLER %d\n", sel.point_sampler)
+		+ format("#define PS_IIP %d\n", sel.iip)
+		;
 
 	return m_shader->Compile("tfx.glsl", "ps_main", GL_FRAGMENT_SHADER, tfx_glsl, macro);
 }
@@ -968,8 +964,7 @@ void GSDeviceOGL::PSSetShaderResource(GLuint sr)
 		GLState::tex_unit[0] = sr;
 
 		if (GLLoader::found_GL_ARB_multi_bind) {
-			GLuint textures[1] = {sr};
-			gl_BindTextures(0, 1, textures);
+			gl_BindTextures(0, 1, &sr);
 		} else {
 			gl_ActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, sr);

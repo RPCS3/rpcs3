@@ -46,15 +46,9 @@ void GSDeviceOGL::CreateTextureFX()
 	};
 	m_vb = new GSVertexBufferStateOGL(sizeof(GSVertex), vert_format, countof(vert_format));
 
-	// Compile some dummy shaders to allow modification inside Apitrace for debug
-	CompileVS(VSSelector());
-	CompileGS(GSSelector());
-	CompilePS(PSSelector());
-
 	// Pre compile all Geometry & Vertex Shader
 	// It might cost a seconds at startup but it would reduce benchmark pollution
-	for (uint32 key = 0; key < GSSelector::size(); key++)
-		m_gs[key] = CompileGS(GSSelector(key));
+	m_gs = CompileGS();
 
 	for (uint32 key = 0; key < VSSelector::size(); key++)
 		m_vs[key] = CompileVS(VSSelector(key));
@@ -64,7 +58,6 @@ void GSDeviceOGL::CreateTextureFX()
 
 	for (uint32 key = 0; key < OMDepthStencilSelector::size(); key++)
 		m_om_dss[key] = CreateDepthStencil(OMDepthStencilSelector(key));
-
 }
 
 GLuint GSDeviceOGL::CreateSampler(PSSamplerSelector sel)
@@ -152,11 +145,12 @@ void GSDeviceOGL::SetupVS(VSSelector sel)
 	m_shader->VS(vs);
 }
 
-void GSDeviceOGL::SetupGS(GSSelector sel)
+void GSDeviceOGL::SetupGS(bool enable)
 {
-	GLuint gs = m_gs[sel];
-
-	m_shader->GS(gs);
+	if (enable)
+		m_shader->GS(m_gs);
+	else
+		m_shader->GS(0);
 }
 
 void GSDeviceOGL::SetupPS(PSSelector sel)

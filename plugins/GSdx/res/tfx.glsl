@@ -18,11 +18,6 @@
 #define VS_LOGZ 0
 #endif
 
-#ifndef GS_IIP
-#define GS_IIP 0
-#define GS_PRIM 3
-#endif
-
 #ifndef PS_FST
 #define PS_FST 0
 #define PS_WMS 0
@@ -42,13 +37,14 @@
 #define PS_SPRITEHACK 0
 #define PS_POINT_SAMPLER 0
 #define PS_TCOFFSETHACK 0
+#define PS_IIP 1
 #endif
 
 struct vertex
 {
     vec4 t;
-    vec4 tp;
     vec4 c;
+	vec4 fc;
 };
 
 #ifdef VERTEX_SHADER
@@ -65,28 +61,28 @@ layout(location = 6) in vec4  i_f;
 out SHADER
 {
     vec4 t;
-    vec4 tp;
     vec4 c;
+	flat vec4 fc;
 } VSout;
 
 #define VSout_t (VSout.t)
-#define VSout_tp (VSout.tp)
 #define VSout_c (VSout.c)
+#define VSout_fc (VSout.fc)
 
 #else
 
 #ifdef DISABLE_SSO
 out vec4 SHADERt;
-out vec4 SHADERtp;
 out vec4 SHADERc;
+flat out vec4 SHADERfc;
 #else
 layout(location = 0) out vec4 SHADERt;
-layout(location = 1) out vec4 SHADERtp;
-layout(location = 2) out vec4 SHADERc;
+layout(location = 1) out vec4 SHADERc;
+flat layout(location = 2) out vec4 SHADERfc;
 #endif
 #define VSout_t SHADERt
-#define VSout_tp SHADERtp
 #define VSout_c SHADERc
+#define VSout_fc SHADERfc
 
 #endif
 
@@ -156,6 +152,7 @@ void vs_main()
     }
 
     VSout_c = i_c;
+	VSout_fc = i_c;
     VSout_t.z = i_f.r;
 }
 
@@ -179,85 +176,26 @@ out gl_PerVertex {
 in SHADER
 {
     vec4 t;
-    vec4 tp;
     vec4 c;
+    flat vec4 fc;
 } GSin[];
 
 out SHADER
 {
     vec4 t;
-    vec4 tp;
     vec4 c;
+    flat vec4 fc;
 } GSout;
 
 void out_vertex(in vertex v)
 {
     GSout.t = v.t;
-    GSout.tp = v.tp;
     GSout.c = v.c;
+    GSout.fc = v.fc;
     gl_PrimitiveID = gl_PrimitiveIDIn;
     EmitVertex();
 }
 
-void out_vertex_elem(in vec4 t, in vec4 tp, in vec4 c)
-{
-    GSout.t = t;
-    GSout.tp = tp;
-    GSout.c = c;
-    gl_PrimitiveID = gl_PrimitiveIDIn;
-    EmitVertex();
-}
-
-#if GS_PRIM == 0
-layout(points) in;
-layout(points, max_vertices = 1) out;
-
-void gs_main()
-{
-    for(int i = 0; i < gl_in.length(); i++) {
-        gl_Position = gl_in[i].gl_Position;
-        out_vertex_elem(GSin[i].t, GSin[i].tp, GSin[i].c);
-    }
-    EndPrimitive();
-}
-
-#elif GS_PRIM == 1
-layout(lines) in;
-layout(line_strip, max_vertices = 2) out;
-
-void gs_main()
-{
-    for(int i = 0; i < gl_in.length(); i++) {
-        gl_Position = gl_in[i].gl_Position;
-#if GS_IIP == 0
-        // use latest color
-        out_vertex_elem(GSin[i].t, GSin[i].tp, GSin[1].c);
-#else
-        out_vertex_elem(GSin[i].t, GSin[i].tp, GSin[i].c);
-#endif
-    }
-    EndPrimitive();
-}
-
-#elif GS_PRIM == 2
-layout(triangles) in;
-layout(triangle_strip, max_vertices = 3) out;
-
-void gs_main()
-{
-    for(int i = 0; i < gl_in.length(); i++) {
-        gl_Position = gl_in[i].gl_Position;
-#if GS_IIP == 0
-        // use latest color
-        out_vertex_elem(GSin[i].t, GSin[i].tp, GSin[2].c);
-#else
-        out_vertex_elem(GSin[i].t, GSin[i].tp, GSin[i].c);
-#endif
-    }
-    EndPrimitive();
-}
-
-#elif GS_PRIM == 3
 layout(lines) in;
 layout(triangle_strip, max_vertices = 6) out;
 
@@ -265,23 +203,22 @@ void gs_main()
 {
     // left top     => GSin[0];
     // right bottom => GSin[1];
-    vertex rb = vertex(GSin[1].t, GSin[1].tp, GSin[1].c);
-    vertex lt = vertex(GSin[0].t, GSin[0].tp, GSin[0].c);
-#if 0
-    vertex rb = GSin[1];
-    vertex lt = GSin[0];
-#endif
+    vertex rb = vertex(GSin[1].t, GSin[1].c, GSin[1].fc);
+    vertex lt = vertex(GSin[0].t, GSin[0].c, GSin[0].fc);
+
     vec4 rb_p = gl_in[1].gl_Position;
     vec4 lb_p = gl_in[1].gl_Position;
     vec4 rt_p = gl_in[1].gl_Position;
     vec4 lt_p = gl_in[0].gl_Position;
 
+    // flat depth
     lt_p.z = rb_p.z;
+    // flat fog and texture perspective
     lt.t.zw = rb.t.zw;
-#if GS_IIP == 0
+    // flat color
     lt.c = rb.c;
-#endif
 
+	// Swap texture and position coordinate
     vertex lb = rb;
     lb_p.x = lt_p.x;
     lb.t.x = lt.t.x;
@@ -317,8 +254,6 @@ void gs_main()
 
 #endif
 
-#endif
-
 #ifdef FRAGMENT_SHADER
 
 #if !GL_ES && __VERSION__ > 140
@@ -326,28 +261,28 @@ void gs_main()
 in SHADER
 {
     vec4 t;
-    vec4 tp;
     vec4 c;
+    flat vec4 fc;
 } PSin;
 
 #define PSin_t (PSin.t)
-#define PSin_tp (PSin.tp)
 #define PSin_c (PSin.c)
+#define PSin_fc (PSin.fc)
 
 #else
 
 #ifdef DISABLE_SSO
 in vec4 SHADERt;
-in vec4 SHADERtp;
 in vec4 SHADERc;
+flat in vec4 SHADERfc;
 #else
 layout(location = 0) in vec4 SHADERt;
-layout(location = 1) in vec4 SHADERtp;
-layout(location = 2) in vec4 SHADERc;
+layout(location = 1) in vec4 SHADERc;
+flat layout(location = 2) in vec4 SHADERfc;
 #endif
 #define PSin_t SHADERt
-#define PSin_tp SHADERtp
 #define PSin_c SHADERc
+#define PSin_fc SHADERfc
 
 #endif
 
@@ -643,6 +578,7 @@ vec4 tfx(vec4 t, vec4 c)
     return clamp(c_out, vec4(0.0f, 0.0f, 0.0f, 0.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
+#if 0
 void datst()
 {
 #if PS_DATE > 0
@@ -655,6 +591,7 @@ void datst()
         discard;
 #endif
 }
+#endif
 
 // Note layout stuff might require gl4.3
 #ifdef SUBROUTINE_GL40
@@ -833,11 +770,13 @@ void fog(vec4 c, float f)
 
 vec4 ps_color()
 {
-    //datst();
-
     vec4 t = sample_color(PSin_t.xy, PSin_t.w);
 
+#if PS_IIP == 1
     vec4 c = tfx(t, PSin_c);
+#else
+    vec4 c = tfx(t, PSin_fc);
+#endif
 
     atst(c);
 
