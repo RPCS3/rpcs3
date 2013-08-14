@@ -211,6 +211,7 @@ void MainEmuFrame::ConnectMenus()
 	ConnectMenu( MenuId_EnableBackupStates, Menu_EnableBackupStates_Click );
 	ConnectMenu( MenuId_EnablePatches,		Menu_EnablePatches_Click );
 	ConnectMenu( MenuId_EnableCheats,		Menu_EnableCheats_Click );
+	ConnectMenu( MenuId_EnableWideScreenPatches,	Menu_EnableWideScreenPatches_Click );
 	ConnectMenu( MenuId_EnableHostFs,		Menu_EnableHostFs_Click );
 	ConnectMenu( MenuId_Exit,				Menu_Exit_Click );
 
@@ -421,6 +422,9 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 		_("Automatically applies needed Gamefixes to known problematic games"), wxITEM_CHECK);
 
 	m_menuSys.Append(MenuId_EnableCheats,	_("Enable Cheats"),
+		wxEmptyString, wxITEM_CHECK);
+
+	m_menuSys.Append(MenuId_EnableWideScreenPatches,	_("Enable WideScreen Patches"),
 		wxEmptyString, wxITEM_CHECK);
 
 	m_menuSys.Append(MenuId_EnableHostFs,	_("Enable Host Filesystem"),
@@ -668,6 +672,7 @@ void MainEmuFrame::ApplyConfigToGui(AppConfig& configToApply, int flags)
 	{//these should not be affected by presets
 		menubar.Check( MenuId_EnableBackupStates, configToApply.EmuOptions.BackupSavestate );
 		menubar.Check( MenuId_EnableCheats,  configToApply.EmuOptions.EnableCheats );
+		menubar.Check( MenuId_EnableWideScreenPatches,  configToApply.EmuOptions.EnableWideScreenPatches );
 		menubar.Check( MenuId_EnableHostFs,  configToApply.EmuOptions.HostFs );
 #ifdef __LINUX__
 		menubar.Check( MenuId_Console_Stdio, configToApply.EmuOptions.ConsoleToStdio );

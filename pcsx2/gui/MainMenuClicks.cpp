@@ -436,6 +436,12 @@ void MainEmuFrame::Menu_EnableCheats_Click( wxCommandEvent& )
     AppSaveSettings();
 }
 
+void MainEmuFrame::Menu_EnableWideScreenPatches_Click( wxCommandEvent& )
+{
+	g_Conf->EmuOptions.EnableWideScreenPatches  = GetMenuBar()->IsChecked( MenuId_EnableWideScreenPatches );
+	AppSaveSettings();
+}
+
 void MainEmuFrame::Menu_EnableHostFs_Click( wxCommandEvent& )
 {
 	g_Conf->EmuOptions.HostFs = GetMenuBar()->IsChecked( MenuId_EnableHostFs );

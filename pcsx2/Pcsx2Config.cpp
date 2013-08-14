@@ -387,6 +387,7 @@ void Pcsx2Config::LoadSave( IniInterface& ini )
 	IniBitBool( CdvdDumpBlocks );
 	IniBitBool( EnablePatches );
 	IniBitBool( EnableCheats );
+	IniBitBool( EnableWideScreenPatches );
 	IniBitBool( ConsoleToStdio );
 	IniBitBool( HostFs );
 

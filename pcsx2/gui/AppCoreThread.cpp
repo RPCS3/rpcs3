@@ -305,10 +305,13 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 	wxString gamePatch;
 	wxString gameFixes;
 	wxString gameCheats;
-  wxString gameWsHacks;
+	wxString gameWsHacks;
 
 	wxString gameName;
 	wxString gameCompat;
+
+	int numberLoadedCheats;
+	int numberLoadedWideScreenPatches;
 
 	if (ElfCRC) gameCRC.Printf( L"%8.8x", ElfCRC );
 	if (!DiscSerial.IsEmpty()) gameSerial = L" [" + DiscSerial  + L"]";
@@ -352,17 +355,17 @@ void AppCoreThread::ApplySettings( const Pcsx2Config& src )
 
   ResetCheatsCount();
 	if (EmuConfig.EnableCheats) {
-    if (int cheats = LoadCheats(gameCRC, PathDefs::GetCheats(), L"Cheats")) {
-			gameCheats.Printf(L" [%d Cheats]", cheats);
+    if (numberLoadedCheats = LoadCheats(gameCRC, PathDefs::GetCheats(), L"Cheats")) {
+			gameCheats.Printf(L" [%d Cheats]", numberLoadedCheats);
 		}
 	}
 
-  // FIXME: we should have a widescreen hacks config
-  if (EmuConfig.EnableCheats) {
-    if (int cheats = LoadCheats(gameCRC, PathDefs::GetCheatsWS(), L"Widescreen hacks")) {
-      gameWsHacks.Printf(L" [%d WS hacks]", cheats);
-    }
-  }
+	// FIXME: we should have a widescreen hacks config
+	if (EmuConfig.EnableWideScreenPatches) {
+		if (numberLoadedWideScreenPatches = LoadCheats(gameCRC, PathDefs::GetCheatsWS(), L"Widescreen hacks")) {
+			gameWsHacks.Printf(L" [%d WS hacks]", numberLoadedWideScreenPatches);
+		}
+	}
 
 	Console.SetTitle(gameName+gameSerial+gameCompat+gameFixes+gamePatch+gameCheats+gameWsHacks);
 

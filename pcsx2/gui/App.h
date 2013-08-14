@@ -102,6 +102,7 @@ enum MenuIdentifiers
 	MenuId_EnableBackupStates,	// Checkbox to enable/disables savestates backup
 	MenuId_EnablePatches,
 	MenuId_EnableCheats,
+	MenuId_EnableWideScreenPatches,
 	MenuId_EnableHostFs,
 
 	MenuId_State_Load,

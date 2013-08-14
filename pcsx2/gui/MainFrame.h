@@ -178,6 +178,7 @@ protected:
 	void Menu_EnableBackupStates_Click(wxCommandEvent &event);
 	void Menu_EnablePatches_Click(wxCommandEvent &event);
 	void Menu_EnableCheats_Click(wxCommandEvent &event);
+	void Menu_EnableWideScreenPatches_Click(wxCommandEvent &event);
 	void Menu_EnableHostFs_Click(wxCommandEvent &event);
 
 	void Menu_BootCdvd_Click(wxCommandEvent &event);

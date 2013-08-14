@@ -219,6 +219,7 @@ void SysCoreThread::VsyncInThread()
 {
 	if (EmuConfig.EnablePatches) ApplyPatch();
 	if (EmuConfig.EnableCheats)  ApplyCheat();
+	if (EmuConfig.EnableWideScreenPatches)  ApplyCheat();
 }
 
 void SysCoreThread::GameStartingInThread()

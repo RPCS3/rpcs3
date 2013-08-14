@@ -410,7 +410,7 @@ struct Pcsx2Config
 			CdvdDumpBlocks		:1,		// enables cdvd block dumping
 			EnablePatches		:1,		// enables patch detection and application
 			EnableCheats		:1,		// enables cheat detection and application
-
+			EnableWideScreenPatches		:1,
 		// when enabled uses BOOT2 injection, skipping sony bios splashes
 			UseBOOT2Injection	:1,
 			BackupSavestate		:1,
