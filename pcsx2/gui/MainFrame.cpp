@@ -424,7 +424,7 @@ MainEmuFrame::MainEmuFrame(wxWindow* parent, const wxString& title)
 	m_menuSys.Append(MenuId_EnableCheats,	_("Enable Cheats"),
 		wxEmptyString, wxITEM_CHECK);
 
-	m_menuSys.Append(MenuId_EnableWideScreenPatches,	_("Enable WideScreen Patches"),
+	m_menuSys.Append(MenuId_EnableWideScreenPatches,	_("Enable Widescreen Patches"),
 		wxEmptyString, wxITEM_CHECK);
 
 	m_menuSys.Append(MenuId_EnableHostFs,	_("Enable Host Filesystem"),
