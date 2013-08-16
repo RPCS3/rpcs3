@@ -43,6 +43,7 @@ public:
 
 	void Create();
 	void Bind() const;
+	static void Unbind();
 	void Delete();
 	bool IsCreated() const;
 };

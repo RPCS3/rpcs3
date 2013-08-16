@@ -1,5 +1,6 @@
 #pragma once
 #include "Emu/GS/GCM.h"
+#include "Emu/SysCalls/Callback.h"
 
 enum Method
 {
@@ -48,6 +49,7 @@ struct GSRender
 	int m_flip_status;
 	int m_flip_mode;
 	volatile bool m_draw;
+	Callback m_flip_handler;
 
 	GSRender();
 

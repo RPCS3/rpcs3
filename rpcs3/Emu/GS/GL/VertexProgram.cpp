@@ -181,7 +181,14 @@ void VertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask)
 		cond = wxString::Format("if(tmp%d.x %s 0) ", d0.dst_tmp, cond);
 	}
 
-	code = cond + GetDST(is_sca) + GetMask(is_sca) + " = " + (src_mask ? code + GetMask(is_sca) : code);
+	wxString value = src_mask ? code + GetMask(is_sca) : code;
+
+	if(d0.staturate)
+	{
+		value = "clamp(" + value + ", 0.0, 1.0)";
+	}
+
+	code = cond + GetDST(is_sca) + GetMask(is_sca) + " = " + value;
 
 	main += "\t" + code + ";\n";
 }
@@ -209,7 +216,7 @@ wxString VertexDecompilerThread::BuildCode()
 		"#version 330\n"
 		"\n"
 		"%s\n"
-		"void main()\n{\n%s}\n";
+		"void main()\n{\n\tgl_Position = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n%s}\n";
 
 	return wxString::Format(prot, p, main);
 }
@@ -294,6 +301,7 @@ void VertexDecompilerThread::Task()
 	}
 
 	m_shader = BuildCode();
+
 	main = wxEmptyString;
 }
 

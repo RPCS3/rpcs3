@@ -70,7 +70,7 @@ int cellMsgDialogOpen2(u32 type, u32 msgString_addr, u32 callback_addr, u32 user
 
 	Callback2 callback(0, callback_addr, userData);
 	callback.Handle(status);
-	callback.Branch();
+	callback.Branch(true);
 
 	return CELL_OK;
 }

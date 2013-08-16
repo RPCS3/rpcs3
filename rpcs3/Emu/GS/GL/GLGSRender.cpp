@@ -1,8 +1,9 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/Cell/PPCInstrTable.h"
+
 #define CMD_DEBUG 0
-#define DUMP_VERTEX_DATA 0
+#define DUMP_VERTEX_DATA 1
 
 #if	CMD_DEBUG
 	#define CMD_LOG ConLog.Write
@@ -12,14 +13,18 @@
 
 gcmBuffer gcmBuffers[2];
 
-void checkForGlError(const char* situation)
+void printGlError(GLenum err, const char* situation)
 {
-	GLenum err = glGetError();
 	if(err != GL_NO_ERROR)
 	{
 		ConLog.Error("%s: opengl error 0x%04x", situation, err);
 		Emu.Pause();
 	}
+}
+
+void checkForGlError(const char* situation)
+{
+	printGlError(glGetError(), situation);
 }
 
 #if 0
@@ -168,7 +173,15 @@ void GLRSXThread::Task()
 					}
 				}
 				
-				if(draw) p.m_frame->Flip();
+				if(draw)
+				{
+					p.m_frame->Flip();
+					if(p.m_flip_handler)
+					{
+						p.m_flip_handler.Handle(1, 0, 0);
+						p.m_flip_handler.Branch(false);
+					}
+				}
 
 				p.m_flip_status = 0;
 				if(SemaphorePostAndWait(p.m_sem_flip)) continue;
@@ -279,7 +292,7 @@ void GLGSRender::Close()
 	}
 
 	if(m_frame->IsShown()) m_frame->Hide();
-	m_ctrl = NULL;
+	m_ctrl = nullptr;
 }
 
 void GLGSRender::EnableVertexData(bool indexed_draw)
@@ -425,6 +438,7 @@ void GLGSRender::DisableVertexData()
 		m_vertex_data[i].data.Clear();
 		glDisableVertexAttribArray(i);
 	}
+	m_vao.Unbind();
 }
 
 void GLGSRender::LoadVertexData(u32 first, u32 count)
@@ -509,7 +523,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 			index, offset, location, cubemap, dimension, format, mipmap);
 
 		u32 tex_addr = GetAddress(offset, location);
-		ConLog.Warning("texture addr = 0x%x", tex_addr);
+		//ConLog.Warning("texture addr = 0x%x", tex_addr);
 		tex.SetOffset(tex_addr);
 		tex.SetFormat(cubemap, dimension, format, mipmap);
 	}
@@ -1141,6 +1155,28 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	case NV4097_SET_SCULL_CONTROL:
 	break;
 
+	case NV4097_GET_REPORT:
+	{
+		u32 a0 = args[0];
+		u8 type = a0 >> 24;
+		u32 offset = a0 & 0xffffff;
+
+		u64 data;
+		switch(type)
+		{
+		case 1:
+			data = std::chrono::steady_clock::now().time_since_epoch().count();
+		break;
+
+		default:
+			ConLog.Error("NV4097_GET_REPORT: bad type %d", type);
+		break;
+		}
+
+		Memory.Write64(m_localAddress + offset, data);
+	}
+	break;
+
 	default:
 	{
 		wxString log = GetMethodName(cmd);
@@ -1293,8 +1329,9 @@ void GLGSRender::ExecCMD()
 			GLTexture& tex = m_frame->GetTexture(i);
 			if(!tex.IsEnabled()) continue;
 
-			glActiveTexture(GL_TEXTURE0_ARB + i);
+			glActiveTexture(GL_TEXTURE0 + i);
 			checkForGlError("glActiveTexture");
+			tex.Create();
 			tex.Bind();
 			checkForGlError("tex.Bind");
 			m_program.SetTex(i);
@@ -1342,6 +1379,7 @@ void GLGSRender::ExecCMD()
 			EnableVertexData();
 			InitVertexData();
 			m_vao.Bind();
+
 			glDrawArrays(m_draw_mode, 0, m_draw_array_count);
 			checkForGlError("glDrawArrays");
 			DisableVertexData();

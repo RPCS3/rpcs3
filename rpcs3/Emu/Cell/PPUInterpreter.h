@@ -3236,11 +3236,58 @@ private:
 	}
 	void FRES(u32 frd, u32 frb, bool rc)
 	{
-		if(CPU.FPR[frb] == 0.0) CPU.SetFPSCRException(FPSCR_ZX);
-		CPU.FPR[frd] = static_cast<float>(1.0f/CPU.FPR[frb]);
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
-		CPU.FPSCR.FI = 0;
-		CPU.FPSCR.FR = 0;
+		double res;
+
+		if(_fpclass(CPU.FPR[frb]) >= _FPCLASS_NZ)
+		{
+			res = static_cast<float>(1.0 / CPU.FPR[frb]);
+			if(FPRdouble::IsINF(res) && CPU.FPR[frb] != 0.0)
+			{
+				if(res > 0.0)
+				{
+					(u64&)res = 0x47EFFFFFE0000000ULL;
+				}
+				else
+				{
+					(u64&)res = 0xC7EFFFFFE0000000ULL;
+				}
+			}
+		}
+		else
+		{
+			u64 v = CPU.FPR[frb];
+
+			if(v == 0ULL)
+			{
+				v = 0x7FF0000000000000ULL;
+			}
+			else if(v == 0x8000000000000000ULL)
+			{
+				v = 0xFFF0000000000000ULL;
+			}
+			else if(FPRdouble::IsNaN(CPU.FPR[frb]))
+			{
+				v = 0x7FF8000000000000ULL;
+			}
+			else if(CPU.FPR[frb] < 0.0)
+			{
+				v = 0x8000000000000000ULL;
+			}
+			else
+			{
+				v = 0ULL;
+			}
+
+			res = (double&)v;
+		}
+
+		if(CPU.FPR[frb] == 0.0)
+		{
+			CPU.SetFPSCRException(FPSCR_ZX);
+		}
+
+		CPU.FPR[frd] = res;
+
 		if(rc) UNK("fres.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMULS(u32 frd, u32 fra, u32 frc, bool rc)
@@ -3339,7 +3386,9 @@ private:
 	}
 	void FCMPU(u32 crfd, u32 fra, u32 frb)
 	{
-		if((CPU.FPSCR.FPRF = FPRdouble::Cmp(CPU.FPR[fra], CPU.FPR[frb])) == 1)
+		int cmp_res = FPRdouble::Cmp(CPU.FPR[fra], CPU.FPR[frb]);
+
+		if(cmp_res == CR_SO)
 		{
 			if(FPRdouble::IsSNaN(CPU.FPR[fra]) || FPRdouble::IsSNaN(CPU.FPR[frb]))
 			{
@@ -3347,7 +3396,8 @@ private:
 			}
 		}
 
-		CPU.SetCR(crfd, CPU.FPSCR.FPRF);
+		CPU.FPSCR.FPRF = cmp_res;
+		CPU.SetCR(crfd, cmp_res);
 	}
 	void FRSP(u32 frd, u32 frb, bool rc)
 	{
@@ -3467,20 +3517,44 @@ private:
 	}
 	void FDIV(u32 frd, u32 fra, u32 frb, bool rc)
 	{
-		if(FPRdouble::IsINF(CPU.FPR[fra]) == 0.0 && CPU.FPR[frb] == 0.0)
+		double res;
+
+		if(FPRdouble::IsNaN(CPU.FPR[fra]))
 		{
-			CPU.FPSCR.VXZDZ = 1;
+			res = CPU.FPR[fra];
 		}
-		else if(FPRdouble::IsINF(CPU.FPR[fra]) && FPRdouble::IsINF(CPU.FPR[frb]))
+		else if(FPRdouble::IsNaN(CPU.FPR[frb]))
 		{
-			CPU.FPSCR.VXIDI = 1;
+			res = CPU.FPR[frb];
 		}
-		else if(CPU.FPR[fra] != 0.0 && CPU.FPR[frb] == 0.0)
+		else
 		{
-			CPU.SetFPSCRException(FPSCR_ZX);
+			if(CPU.FPR[frb] == 0.0)
+			{
+				if(CPU.FPR[fra] == 0.0)
+				{
+					CPU.FPSCR.VXZDZ = 1;
+					res = FPR_NAN;
+				}
+				else
+				{
+					res = CPU.FPR[fra] / CPU.FPR[frb];
+				}
+
+				CPU.SetFPSCRException(FPSCR_ZX);
+			}
+			else if(FPRdouble::IsINF(CPU.FPR[fra]) && FPRdouble::IsINF(CPU.FPR[frb]))
+			{
+				CPU.FPSCR.VXIDI = 1;
+				res = FPR_NAN;
+			}
+			else
+			{
+				res = CPU.FPR[fra] / CPU.FPR[frb];
+			}
 		}
 
-		CPU.FPR[frd] = CPU.FPR[fra] / CPU.FPR[frb];
+		CPU.FPR[frd] = res;
 		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) UNK("fdiv.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
@@ -3509,15 +3583,31 @@ private:
 	}
 	void FMUL(u32 frd, u32 fra, u32 frc, bool rc)
 	{
-		CPU.FPR[frd] = CPU.FPR[fra] * CPU.FPR[frc];
-		CPU.FPSCR.FI = 0;
-		CPU.FPSCR.FR = 0;
-		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
+		if((FPRdouble::IsINF(CPU.FPR[fra]) && CPU.FPR[frc] == 0.0) || (FPRdouble::IsINF(CPU.FPR[frc]) && CPU.FPR[fra] == 0.0))
+		{
+			CPU.SetFPSCRException(FPSCR_VXIMZ);
+			CPU.FPR[frd] = FPR_NAN;
+			CPU.FPSCR.FI = 0;
+			CPU.FPSCR.FR = 0;
+			CPU.FPSCR.FPRF = FPR_QNAN;
+		}
+		else
+		{
+			if(FPRdouble::IsSNaN(CPU.FPR[fra]) || FPRdouble::IsSNaN(CPU.FPR[frc]))
+			{
+				CPU.SetFPSCRException(FPSCR_VXSNAN);
+			}
+
+			CPU.FPR[frd] = CPU.FPR[fra] * CPU.FPR[frc];
+			CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
+		}
+
 		if(rc) UNK("fmul.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FRSQRTE(u32 frd, u32 frb, bool rc)
 	{
-		//if(CPU.FPR[frb].
+		UNIMPLEMENTED();
+		//CPU.FPR[frd] = 1.0f / (float)sqrt(CPU.FPR[frb]);
 	}
 	void FMSUB(u32 frd, u32 fra, u32 frc, u32 frb, bool rc)
 	{
@@ -3545,14 +3635,16 @@ private:
 	}
 	void FCMPO(u32 crfd, u32 fra, u32 frb)
 	{
-		if((CPU.FPSCR.FPRF = FPRdouble::Cmp(CPU.FPR[fra], CPU.FPR[frb])) == 1)
+		int cmp_res = FPRdouble::Cmp(CPU.FPR[fra], CPU.FPR[frb]);
+
+		if(cmp_res == CR_SO)
 		{
 			if(FPRdouble::IsSNaN(CPU.FPR[fra]) || FPRdouble::IsSNaN(CPU.FPR[frb]))
 			{
 				CPU.SetFPSCRException(FPSCR_VXSNAN);
 				if(!CPU.FPSCR.VE) CPU.SetFPSCRException(FPSCR_VXVC);
 			}
-			else if(FPRdouble::IsQNaN(CPU.FPR[fra]) || FPRdouble::IsQNaN(CPU.FPR[frb]))
+			else
 			{
 				CPU.SetFPSCRException(FPSCR_VXVC);
 			}
@@ -3560,11 +3652,12 @@ private:
 			CPU.FPSCR.FX = 1;
 		}
 
-		CPU.SetCR(crfd, CPU.FPSCR.FPRF);
+		CPU.FPSCR.FPRF = cmp_res;
+		CPU.SetCR(crfd, cmp_res);
 	}
 	void FNEG(u32 frd, u32 frb, bool rc)
 	{
-		CPU.FPR[frd] = ((u64&)CPU.FPR[frb]) ^ (1ULL << 63);
+		CPU.FPR[frd] = -CPU.FPR[frb];
 		if(rc) UNK("fneg.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FMR(u32 frd, u32 frb, bool rc)
@@ -3574,7 +3667,7 @@ private:
 	}
 	void FNABS(u32 frd, u32 frb, bool rc)
 	{
-		(u64&)CPU.FPR[frd] = (u64&)CPU.FPR[frb] | 0x8000000000000000ULL;
+		CPU.FPR[frd] = -fabs(CPU.FPR[frb]);
 		if(rc) UNK("fnabs.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 	void FABS(u32 frd, u32 frb, bool rc)
@@ -3685,7 +3778,24 @@ private:
 	}
 	void FCFID(u32 frd, u32 frb, bool rc)
 	{
-		CPU.FPR[frd] = (double)(u64&)CPU.FPR[frb];
+		s64 bi = (s64&)CPU.FPR[frb];
+		double bf = (double)bi;
+		s64 bfi = (s64)bf;
+
+		if(bi == bfi)
+		{
+			CPU.SetFPSCR_FI(0);
+			CPU.FPSCR.FR = 0;
+		}
+		else
+		{
+			CPU.SetFPSCR_FI(1);
+			CPU.FPSCR.FR = abs(bfi) > abs(bi);
+		}
+
+		CPU.FPR[frd] = bf;
+
+		CPU.FPSCR.FPRF = CPU.FPR[frd].GetType();
 		if(rc) UNK("fcfid.");//CPU.UpdateCR1(CPU.FPR[frd]);
 	}
 

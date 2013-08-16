@@ -259,3 +259,21 @@ int cellGcmUnbindZcull(u8 index)
 
 	return CELL_OK;
 }
+
+u64 cellGcmGetTimeStamp(u32 index)
+{
+	cellGcmSys.Log("cellGcmGetTimeStamp(index=%d)", index);
+	return Memory.Read64(Memory.RSXFBMem.GetStartAddr() + index * 0x10);
+}
+
+int cellGcmSetFlipHandler(u32 handler_addr)
+{
+	cellGcmSys.Warning("cellGcmSetFlipHandler(handler_addr=%d)", handler_addr);
+	if(!Memory.IsGoodAddr(handler_addr) && handler_addr != 0)
+	{
+		return CELL_EFAULT;
+	}
+
+	Emu.GetGSManager().GetRender().m_flip_handler.SetAddr(handler_addr);
+	return 0;
+}

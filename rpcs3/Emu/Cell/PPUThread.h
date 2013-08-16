@@ -298,11 +298,11 @@ union VSCRhdr
 
 enum FPRType
 {
-	FPR_NORM,
-	FPR_ZERO,
-	FPR_SNAN,
+	//FPR_NORM,
+	//FPR_ZERO,
+	//FPR_SNAN,
 	//FPR_QNAN,
-	FPR_INF,
+	//FPR_INF,
 	FPR_PZ   = 0x2,
 	FPR_PN   = 0x4,
 	FPR_PINF = 0x5,
@@ -357,7 +357,7 @@ struct PPCdouble
 
 		switch(fpc)
 		{
-		case _FPCLASS_SNAN:		return FPR_SNAN;
+		case _FPCLASS_SNAN://		return FPR_SNAN;
 		case _FPCLASS_QNAN:		return FPR_QNAN;
 		case _FPCLASS_NINF:		return FPR_NINF;
 		case _FPCLASS_NN:		return FPR_NN;

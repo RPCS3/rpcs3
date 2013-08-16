@@ -214,7 +214,7 @@ void PPUThread::DoCode(const s32 code)
 
 bool FPRdouble::IsINF(PPCdouble d)
 {
-	return d.GetType() == FPR_INF;
+	return ((u64&)d & 0x7FFFFFFFFFFFFFFFULL) == 0x7FF0000000000000ULL;
 }
 
 bool FPRdouble::IsNaN(PPCdouble d)
@@ -224,12 +224,18 @@ bool FPRdouble::IsNaN(PPCdouble d)
 
 bool FPRdouble::IsQNaN(PPCdouble d)
 {
-	return d.GetType() == FPR_QNAN;
+	return 
+		((u64&)d & 0x7FF0000000000000ULL) == 0x7FF0000000000000ULL &&
+		((u64&)d & 0x0007FFFFFFFFFFFULL) == 0ULL &&
+		((u64&)d & 0x000800000000000ULL) != 0ULL;
 }
 
 bool FPRdouble::IsSNaN(PPCdouble d)
 {
-	return d.GetType() == FPR_SNAN;
+	return
+		((u64&)d & 0x7FF0000000000000ULL) == 0x7FF0000000000000ULL &&
+		((u64&)d & 0x000FFFFFFFFFFFFFULL) != 0ULL &&
+		((u64&)d & 0x0008000000000000ULL) == 0ULL;
 }
 
 int FPRdouble::Cmp(PPCdouble a, PPCdouble b)

@@ -238,6 +238,8 @@ extern int cellGcmSetDefaultFifoSize(u32 bufferSize, u32 segmentSize);
 extern int cellGcmMapEaIoAddress(const u32 ea, const u32 io, const u32 size);
 extern int cellGcmUnbindTile(u8 index);
 extern int cellGcmUnbindZcull(u8 index);
+extern u64 cellGcmGetTimeStamp(u32 index);
+extern int cellGcmSetFlipHandler(u32 handler_addr);
 
 //sys_tty
 extern int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);

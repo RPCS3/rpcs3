@@ -136,7 +136,7 @@ void VFS::SaveLoadDevices(Array<VFSManagerEntry>& res, bool is_load)
 	IniEntry<int> entries_count;
 	entries_count.Init("count", "VFSManager");
 
-	int count;
+	int count = 0;
 	if(is_load)
 	{
 		count = entries_count.LoadValue(count);

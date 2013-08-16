@@ -36,6 +36,7 @@ void GLBufferObject::Delete()
 
 void GLBufferObject::Bind(u32 type, u32 num)
 {
+	assert(num < m_id.GetCount());
 	glBindBuffer(type, m_id[num]);
 }
 
@@ -105,10 +106,16 @@ void GLvao::Bind() const
 	glBindVertexArray(m_id);
 }
 
+void GLvao::Unbind()
+{
+	glBindVertexArray(0);
+}
+
 void GLvao::Delete()
 {
 	if(!IsCreated()) return;
 
+	Unbind();
 	glDeleteVertexArrays(1, &m_id);
 	m_id = 0;
 }

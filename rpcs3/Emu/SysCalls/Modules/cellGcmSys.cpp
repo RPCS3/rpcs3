@@ -35,7 +35,8 @@ void cellGcmSys_init()
 	cellGcmSys.AddFunc(0xd8f88e1a, cellGcmSetFlipCommandWithWaitLabel);
 	cellGcmSys.AddFunc(0xe315a0b2, cellGcmGetConfiguration);
 	cellGcmSys.AddFunc(0x9dc04436, cellGcmBindZcull);
-
+	cellGcmSys.AddFunc(0x5a41c10f, cellGcmGetTimeStamp);
 	cellGcmSys.AddFunc(0xd9b7653e, cellGcmUnbindTile);
 	cellGcmSys.AddFunc(0xa75640e8, cellGcmUnbindZcull);
+	cellGcmSys.AddFunc(0xa41ef7e8, cellGcmSetFlipHandler);
 }

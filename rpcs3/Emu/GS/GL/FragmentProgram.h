@@ -41,7 +41,7 @@ struct FragmentDecompilerThread : public ThreadBase
 			u32 swizzle_z		: 2;
 			u32 swizzle_w		: 2;
 			u32 neg				: 1;
-			u32 exec_if_le		: 1;
+			u32 exec_if_lt		: 1;
 			u32 exec_if_eq		: 1;
 			u32 exec_if_gr		: 1;
 			u32 cond_swizzle_x	: 2;

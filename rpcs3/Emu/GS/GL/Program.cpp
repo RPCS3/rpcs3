@@ -89,8 +89,12 @@ void Program::SetTex(u32 index)
 {
 	int loc = GetLocation(wxString::Format("tex%d", index));
 	checkForGlError(wxString::Format("GetLocation(tex%d)", index));
-	glUniform1i(loc, index);
-	checkForGlError(wxString::Format("SetTex(%d - %d)", index, loc));
+	glProgramUniform1i(id, loc, index);
+	GLenum err = glGetError();
+	if(err != 0x502)
+	{
+		printGlError(err, wxString::Format("SetTex(%d - %d - %d)", id, index, loc));
+	}
 }
 
 void Program::Delete()

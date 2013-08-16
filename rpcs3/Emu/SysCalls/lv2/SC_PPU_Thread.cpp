@@ -12,7 +12,15 @@ enum
 
 int sys_ppu_thread_exit(int errorcode)
 {
-	sysPrxForUser.Log("sys_ppu_thread_exit(errorcode=%d)", errorcode);
+	if(errorcode == 0)
+	{
+		sysPrxForUser.Log("sys_ppu_thread_exit(errorcode=%d)", errorcode);
+	}
+	else
+	{
+		sysPrxForUser.Warning("sys_ppu_thread_exit(errorcode=%d)", errorcode);
+	}
+
 	Emu.GetCPU().RemoveThread(GetCurrentPPUThread().GetId());
 
 	return CELL_OK;

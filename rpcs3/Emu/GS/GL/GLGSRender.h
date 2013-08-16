@@ -10,6 +10,7 @@
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "gl.lib")
 
+void printGlError(GLenum err, const char* situation);
 void checkForGlError(const char* situation);
 
 class GLTexture
@@ -40,6 +41,11 @@ public:
 
 	void Create()
 	{
+		if(m_id)
+		{
+			Delete();
+		}
+
 		if(!m_id)
 		{
 			glGenTextures(1, &m_id);
@@ -83,24 +89,27 @@ public:
 	void Init()
 	{
 		Bind();
-		ConLog.Warning("texture addr = 0x%x, width = %d, height = %d", m_offset, m_width, m_height);
+		//ConLog.Warning("texture addr = 0x%x, width = %d, height = %d", m_offset, m_width, m_height);
 		//TODO: safe init
 		checkForGlError("GLTexture::Init() -> glBindTexture");
 
 		switch(m_format & ~(0x20 | 0x40))
 		{
 		case 0x81:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RED, GL_UNSIGNED_BYTE, Memory.GetMemFromAddr(m_offset));
+			
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_BLUE, GL_UNSIGNED_BYTE, Memory.GetMemFromAddr(m_offset));
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
+			
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_BLUE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
+			
 			checkForGlError("GLTexture::Init() -> glTexParameteri");
 		break;
 
 		case 0x85:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, Memory.GetMemFromAddr(m_offset));
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, Memory.GetMemFromAddr(m_offset));
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
@@ -112,13 +121,31 @@ public:
 
 	void Save(const wxString& name)
 	{
-		if(!m_id || !m_offset) return;
+		if(!m_id || !m_offset || !m_width || !m_height) return;
 
 		u32* alldata = new u32[m_width * m_height];
 
 		Bind();
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, alldata);
 
+		switch(m_format & ~(0x20 | 0x40))
+		{
+		case 0x81:
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, alldata);
+		break;
+
+		case 0x85:
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, alldata);
+		break;
+
+		default:
+			delete[] alldata;
+		return;
+		}
+
+		{
+			wxFile f(name + ".raw", wxFile::write);
+			f.Write(alldata, m_width * m_height * 4);
+		}
 		u8* data = new u8[m_width * m_height * 3];
 		u8* alpha = new u8[m_width * m_height];
 
@@ -164,6 +191,14 @@ public:
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
+	void Delete()
+	{
+		if(m_id)
+		{
+			glDeleteTextures(1, &m_id);
+			m_id = 0;
+		}
+	}
 	void Enable(bool enable) { m_enabled = enable; }
 	bool IsEnabled() const { return m_enabled; }
 };

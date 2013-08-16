@@ -13,6 +13,31 @@ Callback::Callback(u32 slot, u64 addr)
 {
 }
 
+u32 Callback::GetSlot() const
+{
+	return m_slot;
+}
+
+u64 Callback::GetAddr() const
+{
+	return m_addr;
+}
+
+void Callback::SetSlot(u32 slot)
+{
+	m_slot = slot;
+}
+
+void Callback::SetAddr(u64 addr)
+{
+	m_addr = addr;
+}
+
+bool Callback::HasData() const
+{
+	return m_has_data;
+}
+
 void Callback::Handle(u64 _a1, u64 _a2, u64 _a3)
 {
 	a1 = _a1;
@@ -21,13 +46,13 @@ void Callback::Handle(u64 _a1, u64 _a2, u64 _a3)
 	m_has_data = true;
 }
 
-void Callback::Branch()
+void Callback::Branch(bool wait)
 {
 	m_has_data = false;
 
 	PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_PPU);
 
-	new_thread.SetPc(m_addr);
+	new_thread.SetEntry(m_addr);
 	new_thread.SetPrio(1001);
 	new_thread.stack_size = 0x10000;
 	new_thread.SetName("Callback");
@@ -40,7 +65,13 @@ void Callback::Branch()
 
 	new_thread.Exec();
 
-	GetCurrentPPCThread()->Wait(new_thread);
+	if(wait)
+		GetCurrentPPCThread()->Wait(new_thread);
+}
+
+Callback::operator bool() const
+{
+	return GetAddr() != 0;
 }
 
 Callback2::Callback2(u32 slot, u64 addr, u64 userdata) : Callback(slot, addr)

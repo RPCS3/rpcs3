@@ -1,19 +1,29 @@
 #pragma once
 
-struct Callback
+class Callback
 {
+protected:
 	u64 m_addr;
 	u32 m_slot;
 
+	bool m_has_data;
+
+public:
 	u64 a1;
 	u64 a2;
 	u64 a3;
 
-	bool m_has_data;
+	u32 GetSlot() const;
+	u64 GetAddr() const;
+	void SetSlot(u32 slot);
+	void SetAddr(u64 addr);
+	bool HasData() const;
 
-	Callback(u32 slot, u64 addr);
-	void Handle(u64 a1, u64 a2, u64 a3);
-	void Branch();
+	Callback(u32 slot = 0, u64 addr = 0);
+	void Handle(u64 a1 = 0, u64 a2 = 0, u64 a3 = 0);
+	void Branch(bool wait);
+
+	operator bool() const;
 };
 
 struct Callback2 : public Callback
@@ -46,7 +56,7 @@ struct Callbacks
 	{
 		for(u32 i=0; i<m_callbacks.GetCount(); ++i)
 		{
-			if(m_callbacks[i].m_slot == slot)
+			if(m_callbacks[i].GetSlot() == slot)
 			{
 				m_callbacks.RemoveAt(i);
 				break;
@@ -62,10 +72,10 @@ struct Callbacks
 
 		for(u32 i=0; i<m_callbacks.GetCount(); ++i)
 		{
-			if(m_callbacks[i].m_has_data)
+			if(m_callbacks[i].HasData())
 			{
 				handled = true;
-				m_callbacks[i].Branch();
+				m_callbacks[i].Branch(true);
 			}
 		}
 

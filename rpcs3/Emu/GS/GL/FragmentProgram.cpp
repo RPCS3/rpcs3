@@ -5,34 +5,37 @@ void FragmentDecompilerThread::AddCode(wxString code)
 {
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
-	wxString cond;
+	wxString cond = wxEmptyString;
 
-	if(src0.exec_if_gr)
+	if(!src0.exec_if_gr || !src0.exec_if_lt || !src0.exec_if_eq)
 	{
-		cond = ">";
-	}
-	else if(src0.exec_if_lt)
-	{
-		cond = "<";
-	}
-	else if(src0.exec_if_eq)
-	{
-		cond = "=";
-	}
-
-	if(src0.exec_if_eq)
-	{
-		cond += "=";
-	}
-	else
-	{
-		if(src0.exec_if_gr && src0.exec_if_lt)
+		if(src0.exec_if_gr)
 		{
-			cond = "!=";
+			cond = ">";
+		}
+		else if(src0.exec_if_lt)
+		{
+			cond = "<";
+		}
+		else if(src0.exec_if_eq)
+		{
+			cond = "=";
+		}
+
+		if(src0.exec_if_eq)
+		{
+			cond += "=";
+		}
+		else
+		{
+			if(src0.exec_if_gr && src0.exec_if_lt)
+			{
+				cond = "!=";
+			}
 		}
 	}
 
-	if(cond)
+	if(cond.Len())
 	{
 		ConLog.Error("cond! [eq: %d  gr: %d  lt: %d] (%s)", src0.exec_if_eq, src0.exec_if_gr, src0.exec_if_lt, cond);
 		Emu.Pause();
@@ -43,18 +46,24 @@ void FragmentDecompilerThread::AddCode(wxString code)
 	{
 		switch(src1.scale)
 		{
-		case 1: code = "(" + code + ") * 2"; break;
-		case 2: code = "(" + code + ") * 4"; break;
-		case 3: code = "(" + code + ") * 8"; break;
-		case 5: code = "(" + code + ") / 2"; break;
-		case 6: code = "(" + code + ") / 4"; break;
-		case 7: code = "(" + code + ") / 8"; break;
+		case 1: code = "(" + code + " * 2)"; break;
+		case 2: code = "(" + code + " * 4)"; break;
+		case 3: code = "(" + code + " * 8)"; break;
+		case 5: code = "(" + code + " / 2)"; break;
+		case 6: code = "(" + code + " / 4)"; break;
+		case 7: code = "(" + code + " / 8)"; break;
 
 		default:
 			ConLog.Error("Bad scale: %d", src1.scale);
 			Emu.Pause();
 		break;
 		}
+	}
+
+	if(dst.fp16)
+	{
+		//HACK! TODO: fp16 -> fp32
+		code = "/*" + code + "*/ vec4(1.0, 1.0, 1.0, 1.0)";
 	}
 
 	code = AddReg(dst.dest_reg, dst.fp16) + GetMask() + " = " + code + GetMask();
@@ -66,18 +75,24 @@ wxString FragmentDecompilerThread::GetMask()
 {
 	wxString ret = wxEmptyString;
 
-	if(dst.mask_x) ret += 'x';
-	if(dst.mask_y) ret += 'y';
-	if(dst.mask_z) ret += 'z';
-	if(dst.mask_w) ret += 'w';
+	static const char dst_mask[2][4] =
+	{
+		{'x', 'y', 'z', 'w'},
+		{'r', 'g', 'b', 'a'}
+	};
 
-	return ret.IsEmpty() || ret == "xyzw" ? wxEmptyString : ("." + ret);
+	if(dst.mask_x) ret += dst_mask[dst.dest_reg == 0][0];
+	if(dst.mask_y) ret += dst_mask[dst.dest_reg == 0][1];
+	if(dst.mask_z) ret += dst_mask[dst.dest_reg == 0][2];
+	if(dst.mask_w) ret += dst_mask[dst.dest_reg == 0][3];
+
+	return ret.IsEmpty() || strncmp(ret, dst_mask[dst.dest_reg == 0], 4) == 0 ? wxEmptyString : ("." + ret);
 }
 
 wxString FragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
 	//if(!index) return "gl_FragColor";
-	return m_parr.AddParam(index ? PARAM_NONE : PARAM_OUT, "vec4",
+	return m_parr.AddParam((index || fp16) ? PARAM_NONE : PARAM_OUT, "vec4",
 		wxString::Format((fp16 ? "h%d" : "r%d"), index), (index || fp16) ? -1 : 0);
 }
 
@@ -102,6 +117,8 @@ wxString FragmentDecompilerThread::AddTex()
 template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 {
 	wxString ret = wxEmptyString;
+
+	bool is_color = src.reg_type == 0 || (src.reg_type == 1 && dst.src_attr_reg_num >= 1 && dst.src_attr_reg_num <= 3);
 
 	switch(src.reg_type)
 	{
@@ -148,14 +165,17 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 	break;
 	}
 
-	static const char f[4] = {'x', 'y', 'z', 'w'};
+	static const char f_pos[4] = {'x', 'y', 'z', 'w'};
+	static const char f_col[4] = {'r', 'g', 'b', 'a'};
+	const char *f = is_color ? f_col : f_pos;
+
 	wxString swizzle = wxEmptyString;
 	swizzle += f[src.swizzle_x];
 	swizzle += f[src.swizzle_y];
 	swizzle += f[src.swizzle_z];
 	swizzle += f[src.swizzle_w];
 
-	if(swizzle != "xyzw") ret += "." + swizzle;
+	if(strncmp(swizzle, f, 4) != 0) ret += "." + swizzle;
 
 	if(src.abs) ret = "abs(" + ret + ")";
 	if(src.neg) ret = "-" + ret;
@@ -280,7 +300,7 @@ void FragmentDecompilerThread::Task()
 }
 
 ShaderProgram::ShaderProgram() 
-	: m_decompiler_thread(NULL)
+	: m_decompiler_thread(nullptr)
 	, id(0)
 {
 }
