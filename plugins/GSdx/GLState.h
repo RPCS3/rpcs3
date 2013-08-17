@@ -59,6 +59,7 @@ namespace GLState {
 	extern GLuint ds; // Depth-Stencil
 	extern GLuint tex_unit[2]; // shader input texture
 	extern GLuint tex; // Generic texture (for tex operation)
+	extern GLuint64 tex_handle[2]; // shader input texture
 
 	extern GLuint ps;
 	extern GLuint gs;
@@ -66,6 +67,7 @@ namespace GLState {
 	extern GLuint program; // monolith program (when sso isn't supported)
 	extern bool dirty_prog;
 	extern bool dirty_subroutine_ps;
+	extern bool dirty_ressources;
 
 	extern void Clear();
 }

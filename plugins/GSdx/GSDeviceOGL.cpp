@@ -83,8 +83,6 @@ GSDeviceOGL::~GSDeviceOGL()
 	m_shader->Delete(m_convert.vs);
 	for (uint32 i = 0; i < 2; i++)
 		m_shader->Delete(m_convert.ps[i]);
-	gl_DeleteSamplers(1, &m_convert.ln);
-	gl_DeleteSamplers(1, &m_convert.pt);
 	delete m_convert.dss;
 	delete m_convert.bs;
 
@@ -190,6 +188,11 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// unit 0-2 will allocated to shader input
 	gl_ActiveTexture(GL_TEXTURE0 + 3);
 
+	// ****************************************************************
+	// Pre Generate the different sampler object
+	// ****************************************************************
+	for (uint32 key = 0; key < PSSamplerSelector::size(); key++)
+		m_ps_ss[key] = CreateSampler(PSSamplerSelector(key));
 
 	// ****************************************************************
 	// convert
@@ -202,8 +205,12 @@ bool GSDeviceOGL::Create(GSWnd* wnd)
 	// Note: maybe enable blend with a factor of 1
 	// m_convert.dss, m_convert.bs
 
-	m_convert.ln = CreateSampler(true, false, false);
-	m_convert.pt = CreateSampler(false, false, false);
+	PSSamplerSelector point;
+	m_convert.pt = GetSamplerID(point);
+
+	PSSamplerSelector bilinear;
+	bilinear.ltf = true;
+	m_convert.ln = GetSamplerID(bilinear);
 
 	m_convert.dss = new GSDepthStencilOGL();
 	m_convert.bs  = new GSBlendStateOGL();
@@ -483,6 +490,11 @@ void GSDeviceOGL::ClearStencil(GSTexture* t, uint8 c)
 		gl_ClearBufferiv(GL_STENCIL, 0, &color);
 		glEnable(GL_SCISSOR_TEST);
 	}
+}
+
+GLuint GSDeviceOGL::CreateSampler(PSSamplerSelector sel)
+{
+	return CreateSampler(sel.ltf, sel.tau, sel.tav);
 }
 
 GLuint GSDeviceOGL::CreateSampler(bool bilinear, bool tau, bool tav)
@@ -780,8 +792,13 @@ void GSDeviceOGL::StretchRect(GSTexture* st, const GSVector4& sr, GSTexture* dt,
 	// Texture
 	// ************************************
 
-	PSSetShaderResource(static_cast<GSTextureOGL*>(st)->GetID());
-	PSSetSamplerState(linear ? m_convert.ln : m_convert.pt);
+	if (GLLoader::found_GL_ARB_bindless_texture) {
+		GLuint64 handle[2] = {static_cast<GSTextureOGL*>(st)->GetHandle(linear ? m_convert.ln : m_convert.pt) , 0};
+		m_shader->PS_ressources(handle);
+	} else {
+		PSSetShaderResource(static_cast<GSTextureOGL*>(st)->GetID());
+		PSSetSamplerState(linear ? m_convert.ln : m_convert.pt);
+	}
 
 	// ************************************
 	// Draw
@@ -901,8 +918,13 @@ void GSDeviceOGL::SetupDATE(GSTexture* rt, GSTexture* ds, const GSVertexPT1* ver
 
 	// Texture
 
-	PSSetShaderResource(static_cast<GSTextureOGL*>(rt)->GetID());
-	PSSetSamplerState(m_convert.pt);
+	if (GLLoader::found_GL_ARB_bindless_texture) {
+		GLuint64 handle[2] = {static_cast<GSTextureOGL*>(rt)->GetHandle(m_convert.pt) , 0};
+		m_shader->PS_ressources(handle);
+	} else {
+		PSSetShaderResource(static_cast<GSTextureOGL*>(rt)->GetID());
+		PSSetSamplerState(m_convert.pt);
+	}
 
 	//
 

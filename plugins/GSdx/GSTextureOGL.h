@@ -48,6 +48,8 @@ class GSTextureOGL : public GSTexture
 		uint32 m_int_alignment;
 		uint32 m_int_shift;
 
+		GLuint64 m_handles[12];
+
 	public:
 		explicit GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read);
 		virtual ~GSTextureOGL();
@@ -67,4 +69,5 @@ class GSTextureOGL : public GSTexture
 		bool IsDss() { return (m_type == GSTexture::DepthStencil); }
 
 		GLuint GetID() { return m_texture_id; }
+		GLuint64 GetHandle(GLuint sampler_id);
 };

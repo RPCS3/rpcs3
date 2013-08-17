@@ -29,8 +29,10 @@ class GSShaderOGL {
 
 	GLuint m_ps_sub[2];
 
-	void SetSubroutineUniform();
+	void SetupSubroutineUniform();
 	void SetupUniform();
+	void SetupRessources();
+
 	void SetUniformBinding(GLuint prog, GLchar* name, GLuint binding);
 	void SetSamplerBinding(GLuint prog, GLchar* name, GLuint binding);
 
@@ -48,6 +50,7 @@ class GSShaderOGL {
 	void GS(GLuint s);
 	void PS(GLuint s, GLuint sub_count = 0);
 	void PS_subroutine(GLuint *sub);
+	void PS_ressources(GLuint64 handle[2]);
 	void VS(GLuint s);
 
 	void UseProgram();

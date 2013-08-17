@@ -31,6 +31,7 @@ void GSDeviceOGL::CreateTextureFX()
 	m_vs_cb = new GSUniformBufferOGL(g_vs_cb_index, sizeof(VSConstantBuffer));
 	m_ps_cb = new GSUniformBufferOGL(g_ps_cb_index, sizeof(PSConstantBuffer));
 
+	// warning 1 sampler by image unit. So you cannot reuse m_ps_ss...
 	m_palette_ss = CreateSampler(false, false, false);
 	gl_BindSampler(1, m_palette_ss);
 
@@ -53,16 +54,8 @@ void GSDeviceOGL::CreateTextureFX()
 	for (uint32 key = 0; key < VSSelector::size(); key++)
 		m_vs[key] = CompileVS(VSSelector(key));
 
-	for (uint32 key = 0; key < PSSamplerSelector::size(); key++)
-		m_ps_ss[key] = CreateSampler(PSSamplerSelector(key));
-
 	for (uint32 key = 0; key < OMDepthStencilSelector::size(); key++)
 		m_om_dss[key] = CreateDepthStencil(OMDepthStencilSelector(key));
-}
-
-GLuint GSDeviceOGL::CreateSampler(PSSamplerSelector sel)
-{
-	return CreateSampler(sel.ltf, sel.tau, sel.tav);
 }
 
 GSDepthStencilOGL* GSDeviceOGL::CreateDepthStencil(OMDepthStencilSelector dssel)
@@ -182,14 +175,19 @@ void GSDeviceOGL::SetupPS(PSSelector sel)
 	m_shader->PS(ps, 2);
 }
 
-void GSDeviceOGL::SetupSampler(PSSelector sel, PSSamplerSelector ssel)
+void GSDeviceOGL::SetupSampler(PSSamplerSelector ssel)
 {
-	if(!(sel.fmt < 3 && sel.wms < 3 && sel.wmt < 3))
-	{
-		ssel.ltf = 0;
-	}
-
 	PSSetSamplerState(m_ps_ss[ssel]);
+}
+
+GLuint GSDeviceOGL::GetSamplerID(PSSamplerSelector ssel)
+{
+	return m_ps_ss[ssel];
+}
+
+GLuint GSDeviceOGL::GetPaletteSamplerID()
+{
+	return m_palette_ss;
 }
 
 void GSDeviceOGL::SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix)

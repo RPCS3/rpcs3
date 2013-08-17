@@ -108,7 +108,12 @@ PFNGLTEXSTORAGE2DPROC                  gl_TexStorage2D                = NULL;
 PFNGLCLEARTEXIMAGEPROC                 gl_ClearTexImage               = NULL;
 PFNGLBINDTEXTURESPROC                  gl_BindTextures                = NULL;
 PFNGLBUFFERSTORAGEPROC                 gl_BufferStorage               = NULL;
-
+// GL_ARB_bindless_texture (GL5?)
+PFNGLGETTEXTURESAMPLERHANDLEARBPROC    gl_GetTextureSamplerHandleARB  = NULL;
+PFNGLMAKETEXTUREHANDLERESIDENTARBPROC  gl_MakeTextureHandleResidentARB = NULL;
+PFNGLMAKETEXTUREHANDLENONRESIDENTARBPROC gl_MakeTextureHandleNonResidentARB = NULL;
+PFNGLUNIFORMHANDLEUI64VARBPROC         gl_UniformHandleui64vARB        = NULL;
+PFNGLPROGRAMUNIFORMHANDLEUI64VARBPROC  gl_ProgramUniformHandleui64vARB = NULL;
 #endif
 
 namespace GLLoader {
@@ -121,16 +126,17 @@ namespace GLLoader {
 	bool found_GL_ARB_separate_shader_objects = false;
 	bool found_geometry_shader = true;
 	bool found_only_gl30	= false; // Drop it when mesa support GLSL330
-	bool found_GL_ARB_clear_texture = false; // Don't know if GL3 hardawe can support it
+	bool found_GL_ARB_clear_texture = false; // Don't know if GL3 GPU can support it
 	bool found_GL_ARB_buffer_storage = false;
 	// GL4 hardware
-	bool found_GL_ARB_copy_image = false; // Not sure actually
+	bool found_GL_ARB_copy_image = false; // Not sure actually maybe GL3 GPU can do it
 	bool found_GL_ARB_gpu_shader5 = false;
 	bool found_GL_ARB_shader_image_load_store = false;
 	bool found_GL_ARB_shader_subroutine = false;
+	bool found_GL_ARB_bindless_texture = false; // GL5 GPU?
 
 	// Mandatory for FULL GL (but optional for GLES)
-	bool found_GL_ARB_multi_bind = false; // Not yet. Wait Mesa & AMD drivers
+	bool found_GL_ARB_multi_bind = false; // Not yet. Wait Mesa & AMD drivers. Note might be deprecated by bindless_texture
 	bool found_GL_ARB_shading_language_420pack = false; // Not yet. Wait Mesa & AMD drivers
 
 	// Mandatory
@@ -240,6 +246,9 @@ namespace GLLoader {
 				if (ext.compare("GL_ARB_multi_bind") == 0) found_GL_ARB_multi_bind = true;
 				if (ext.compare("GL_ARB_buffer_storage") == 0) found_GL_ARB_buffer_storage = true;
 #endif
+#ifdef GLBINDLESS // Need to debug the code first
+				if (ext.compare("GL_ARB_bindless_texture") == 0) found_GL_ARB_bindless_texture = true;
+#endif
 
 #ifdef ENABLE_GLES
 				fprintf(stderr, "DEBUG ext: %s\n", ext.c_str());
@@ -261,6 +270,7 @@ namespace GLLoader {
 		status &= status_and_override(found_GL_ARB_texture_storage, "GL_ARB_texture_storage", true);
 		status &= status_and_override(found_GL_ARB_shading_language_420pack,"GL_ARB_shading_language_420pack");
 		status &= status_and_override(found_GL_ARB_multi_bind,"GL_ARB_multi_bind");
+		status &= status_and_override(found_GL_ARB_bindless_texture,"GL_ARB_bindless_texture");
 
 		fprintf(stderr, "\n");
 #endif

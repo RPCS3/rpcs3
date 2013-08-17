@@ -503,8 +503,6 @@ class GSDeviceOGL : public GSDevice
 		float bf; // blend factor
 	} m_state;
 
-	GSShaderOGL* m_shader;
-
 	GLuint m_vs[1<<5];
 	GLuint m_gs;
 	GLuint m_ps_ss[1<<3];
@@ -534,6 +532,8 @@ class GSDeviceOGL : public GSDevice
 	void OMSetFBO(GLuint fbo);
 
 	public:
+	GSShaderOGL* m_shader;
+
 	GSDeviceOGL();
 	virtual ~GSDeviceOGL();
 
@@ -610,8 +610,10 @@ class GSDeviceOGL : public GSDevice
 	void SetupGS(bool enable);
 	void SetupPS(PSSelector sel);
 	void SetupCB(const VSConstantBuffer* vs_cb, const PSConstantBuffer* ps_cb);
-	void SetupSampler(PSSelector sel, PSSamplerSelector ssel);
+	void SetupSampler(PSSamplerSelector ssel);
 	void SetupOM(OMDepthStencilSelector dssel, OMBlendSelector bsel, uint8 afix);
+	GLuint GetSamplerID(PSSamplerSelector ssel);
+	GLuint GetPaletteSamplerID();
 
 	void Barrier(GLbitfield b);
 };

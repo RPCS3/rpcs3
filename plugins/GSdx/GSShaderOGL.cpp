@@ -28,7 +28,7 @@ GSShaderOGL::GSShaderOGL(bool debug) :
 	m_sub_count(0)
 {
 
-	memset(&m_ps_sub, 0, countof(m_ps_sub)*sizeof(GLuint));
+	memset(&m_ps_sub, 0, countof(m_ps_sub)*sizeof(m_ps_sub[0]));
 
 	m_single_prog.clear();
 #ifndef ENABLE_GLES
@@ -69,6 +69,15 @@ void GSShaderOGL::PS_subroutine(GLuint *sub)
 		m_ps_sub[0] = sub[0];
 		m_ps_sub[1] = sub[1];
 		GLState::dirty_subroutine_ps = true;
+	}
+}
+
+void GSShaderOGL::PS_ressources(GLuint64 handle[2])
+{
+	if (handle[0] != GLState::tex_handle[0] || handle[1] != GLState::tex_handle[1]) {
+		GLState::tex_handle[0] = handle[0];
+		GLState::tex_handle[1] = handle[1];
+		GLState::dirty_ressources = true;
 	}
 }
 
@@ -124,6 +133,23 @@ void GSShaderOGL::SetSamplerBinding(GLuint prog, GLchar* name, GLuint binding)
 	}
 }
 
+void GSShaderOGL::SetupRessources()
+{
+	if (!GLLoader::found_GL_ARB_bindless_texture) return;
+
+	if (GLState::dirty_ressources) {
+		GLState::dirty_ressources = false;
+		// FIXME count !
+		// FIXME location !
+		GLuint count = (GLState::tex_handle[1]) ? 2 : 1;
+		if (GLLoader::found_GL_ARB_separate_shader_objects) {
+			gl_ProgramUniformHandleui64vARB(GLState::ps, 0, count, GLState::tex_handle);
+		} else {
+			gl_UniformHandleui64vARB(0, count, GLState::tex_handle);
+		}
+	}
+}
+
 void GSShaderOGL::SetupUniform()
 {
 	if (GLLoader::found_GL_ARB_shading_language_420pack) return;
@@ -139,7 +165,7 @@ void GSShaderOGL::SetupUniform()
 
 		SetSamplerBinding(GLState::ps, "TextureSampler", 0);
 		SetSamplerBinding(GLState::ps, "PaletteSampler", 1);
-		SetSamplerBinding(GLState::ps, "RTCopySampler", 2);
+		//SetSamplerBinding(GLState::ps, "RTCopySampler", 2);
 	} else {
 		SetUniformBinding(GLState::program, "cb20", 20);
 		SetUniformBinding(GLState::program, "cb21", 21);
@@ -151,19 +177,19 @@ void GSShaderOGL::SetupUniform()
 
 		SetSamplerBinding(GLState::program, "TextureSampler", 0);
 		SetSamplerBinding(GLState::program, "PaletteSampler", 1);
-		SetSamplerBinding(GLState::program, "RTCopySampler", 2);
+		//SetSamplerBinding(GLState::program, "RTCopySampler", 2);
 	}
 }
 
-void GSShaderOGL::SetSubroutineUniform()
+void GSShaderOGL::SetupSubroutineUniform()
 {
 	if (!GLLoader::found_GL_ARB_shader_subroutine) return;
 	if (m_sub_count == 0) return;
 
-	if (GLState::dirty_subroutine_ps || GLState::dirty_prog)
+	if (GLState::dirty_subroutine_ps) {
 		gl_UniformSubroutinesuiv(GL_FRAGMENT_SHADER, m_sub_count,  m_ps_sub);
-
-	GLState::dirty_subroutine_ps = false;
+		GLState::dirty_subroutine_ps = false;
+	}
 }
 
 bool GSShaderOGL::ValidateShader(GLuint s)
@@ -252,6 +278,9 @@ GLuint GSShaderOGL::LinkNewProgram()
 void GSShaderOGL::UseProgram()
 {
 	if (GLState::dirty_prog) {
+		GLState::dirty_subroutine_ps = true;
+		GLState::dirty_ressources = true;
+
 		if (!GLLoader::found_GL_ARB_separate_shader_objects) {
 			hash_map<uint64, GLuint >::iterator it;
 			// Note: shader are integer lookup pointer. They start from 1 and incr
@@ -286,7 +315,9 @@ void GSShaderOGL::UseProgram()
 		}
 	}
 
-	SetSubroutineUniform();
+	SetupRessources();
+
+	SetupSubroutineUniform();
 
 	GLState::dirty_prog = false;
 }

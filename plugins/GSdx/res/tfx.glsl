@@ -297,11 +297,11 @@ layout(location = 0, index = 1) out vec4 SV_Target1;
 #ifdef DISABLE_GL42
 uniform sampler2D TextureSampler;
 uniform sampler2D PaletteSampler;
-uniform sampler2D RTCopySampler;
+//uniform sampler2D RTCopySampler;
 #else
 layout(binding = 0) uniform sampler2D TextureSampler;
 layout(binding = 1) uniform sampler2D PaletteSampler;
-layout(binding = 2) uniform sampler2D RTCopySampler;
+//layout(binding = 2) uniform sampler2D RTCopySampler;
 #endif
 
 #ifndef DISABLE_GL42_image
@@ -361,10 +361,12 @@ vec4 sample_p(float u)
     return texture(PaletteSampler, vec2(u, 0.0f));
 }
 
+#if 0
 vec4 sample_rt(vec2 uv)
 {
     return texture(RTCopySampler, uv);
 }
+#endif
 
 vec4 wrapuv(vec4 uv)
 {

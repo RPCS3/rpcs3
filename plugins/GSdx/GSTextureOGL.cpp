@@ -91,6 +91,7 @@ GSTextureOGL::GSTextureOGL(int type, int w, int h, int format, GLuint fbo_read)
 	m_type   = type;
 	m_fbo_read = fbo_read;
 	m_texture_id = 0;
+	memset(&m_handles, 0, countof(m_handles) * sizeof(m_handles[0]) );
 
 	// Bunch of constant parameter
 	switch (m_format) {
@@ -242,6 +243,17 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 
 	return true;
 #endif
+}
+
+GLuint64 GSTextureOGL::GetHandle(GLuint sampler_id)
+{
+	ASSERT(sampler_id < 12);
+	if (!m_handles[sampler_id]) {
+		m_handles[sampler_id] = gl_GetTextureSamplerHandleARB(m_texture_id, sampler_id);
+		gl_MakeTextureHandleResidentARB(m_handles[sampler_id]);
+	}
+
+	return m_handles[sampler_id];
 }
 
 void GSTextureOGL::EnableUnit()

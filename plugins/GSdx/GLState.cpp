@@ -57,6 +57,8 @@ namespace GLState {
 	GLuint ds = 0;
 	GLuint tex_unit[2] = {0, 0};
 	GLuint tex = 0;
+	GLuint64 tex_handle[2] = { 0, 0};
+	bool dirty_ressources = false;
 
 	GLuint ps = 0;
 	GLuint gs = 0;
@@ -109,6 +111,8 @@ namespace GLState {
 		tex_unit[0] = 0;
 		tex_unit[1] = 0;
 		tex = 0;
+		tex_handle[0] = 0;
+		tex_handle[1] = 0;
 
 		ps = 0;
 		gs = 0;
@@ -116,5 +120,6 @@ namespace GLState {
 		program = 0;
 		dirty_prog = false;
 		dirty_subroutine_ps = false;
+		dirty_ressources = false;
 	}
 }

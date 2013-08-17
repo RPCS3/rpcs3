@@ -457,6 +457,25 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 		ps_ssel.tau = (context->CLAMP.WMS + 3) >> 1;
 		ps_ssel.tav = (context->CLAMP.WMT + 3) >> 1;
 		ps_ssel.ltf = bilinear && simple_sample;
+
+		// Setup Texture ressources
+		if (GLLoader::found_GL_ARB_bindless_texture) {
+			GLuint64 handle[2];
+			handle[0] = tex->m_texture ? static_cast<GSTextureOGL*>(tex->m_texture)->GetHandle(dev->GetSamplerID(ps_ssel)): 0;
+			handle[1] = tex->m_palette ? static_cast<GSTextureOGL*>(tex->m_palette)->GetHandle(dev->GetPaletteSamplerID()): 0;
+
+			dev->m_shader->PS_ressources(handle);
+		} else {
+			dev->SetupSampler(ps_ssel);
+
+			if (tex->m_palette) {
+				GLuint textures[2] = {static_cast<GSTextureOGL*>(tex->m_texture)->GetID(), static_cast<GSTextureOGL*>(tex->m_palette)->GetID()};
+				dev->PSSetShaderResources(textures);
+			} else if (tex->m_texture) {
+				// Only main texture
+				dev->PSSetShaderResource(static_cast<GSTextureOGL*>(tex->m_texture)->GetID());
+			}
+		}
 	}
 
 	// WARNING: setup of the program must be done first. So you can setup
@@ -466,22 +485,6 @@ void GSRendererOGL::DrawPrims(GSTexture* rt, GSTexture* ds, GSTextureCache::Sour
 	dev->SetupVS(vs_sel);
 	dev->SetupGS(m_vt.m_primclass == GS_SPRITE_CLASS);
 	dev->SetupPS(ps_sel);
-
-	// Note: bindless texture will use uniform so it must be done after the program setup
-	if(tex) {
-		if (tex->m_palette) {
-			// 2 textures (main + palette)
-			dev->SetupSampler(ps_sel, ps_ssel);
-
-			GLuint textures[2] = {static_cast<GSTextureOGL*>(tex->m_texture)->GetID(), static_cast<GSTextureOGL*>(tex->m_palette)->GetID()};
-			dev->PSSetShaderResources(textures);
-		} else if (tex->m_texture) {
-			// Only main texture
-			dev->SetupSampler(ps_sel, ps_ssel);
-
-			dev->PSSetShaderResource(static_cast<GSTextureOGL*>(tex->m_texture)->GetID());
-		}
-	}
 
 	// rs
 
