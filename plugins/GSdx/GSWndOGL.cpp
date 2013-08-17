@@ -144,8 +144,7 @@ bool GSWndOGL::Attach(void* handle, bool managed)
 
 	CheckContext();
 
-	m_swapinterval = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte*) "glXSwapIntervalMESA");
-	//PFNGLXSWAPINTERVALMESAPROC m_swapinterval = (PFNGLXSWAPINTERVALMESAPROC)glXGetProcAddress((const GLubyte*) "glXSwapInterval");
+	m_swapinterval = (PFNGLXSWAPINTERVALEXTPROC)glXGetProcAddress((const GLubyte*) "glXSwapIntervalEXT");
 
 	PopulateGlFunction();
 
@@ -191,6 +190,8 @@ bool GSWndOGL::Create(const string& title, int w, int h)
 	AttachContext();
 
 	CheckContext();
+
+	m_swapinterval = (PFNGLXSWAPINTERVALEXTPROC)glXGetProcAddress((const GLubyte*) "glXSwapIntervalEXT");
 
 	PopulateGlFunction();
 
@@ -258,7 +259,7 @@ void GSWndOGL::SetVSync(bool enable)
 	// m_swapinterval uses an integer as parameter
 	// 0 -> disable vsync
 	// n -> wait n frame
-	if (m_swapinterval) m_swapinterval((int)enable);
+	if (m_swapinterval) m_swapinterval(m_NativeDisplay, m_NativeWindow, (int)enable);
 }
 
 void GSWndOGL::Flip()

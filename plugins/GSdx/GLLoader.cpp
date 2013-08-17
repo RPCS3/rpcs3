@@ -81,6 +81,10 @@ PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages            = NULL;
 PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer        = NULL;
 PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer         = NULL;
 PFNGLBUFFERSUBDATAPROC                 gl_BufferSubData               = NULL;
+PFNGLFENCESYNCPROC                     gl_FenceSync                   = NULL;
+PFNGLDELETESYNCPROC                    gl_DeleteSync                  = NULL;
+PFNGLCLIENTWAITSYNCPROC                gl_ClientWaitSync              = NULL;
+PFNGLFLUSHMAPPEDBUFFERRANGEPROC        gl_FlushMappedBufferRange      = NULL;
 // GL4.0
 PFNGLUNIFORMSUBROUTINESUIVPROC         gl_UniformSubroutinesuiv       = NULL;
 // GL4.1

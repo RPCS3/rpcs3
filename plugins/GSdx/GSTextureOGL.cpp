@@ -24,34 +24,143 @@
 #include "GSTextureOGL.h"
 #include "GLState.h"
 
+// Flush need bind/unbind
+// Barrier might sync much more
+#define BARRIER_INSTEAD_FLUSH
+
 namespace PboPool {
 	
-	GLuint pool[8];
-	uint32 current_pbo = 0;
+	GLuint m_pool[PBO_POOL_SIZE];
+	uint32 m_offset[PBO_POOL_SIZE];
+	char*  m_map[PBO_POOL_SIZE];
+	uint32 m_current_pbo = 0;
+	uint32 m_size;
+	const uint32 m_pbo_size = (640*480*16) << 2;
 
 	void Init() {
-		gl_GenBuffers(countof(pool), pool);
+		gl_GenBuffers(countof(m_pool), m_pool);
 
-		GLuint size = (640*480*16) << 2;
-
-		for (size_t i = 0; i < countof(pool); i++) {
+		for (size_t i = 0; i < countof(m_pool); i++) {
 			BindPbo();
-			gl_BufferData(GL_PIXEL_UNPACK_BUFFER, size, NULL, GL_STREAM_DRAW);
+
+			if (GLLoader::found_GL_ARB_buffer_storage) {
+				gl_BufferStorage(GL_PIXEL_UNPACK_BUFFER, m_pbo_size, NULL, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_DYNAMIC_STORAGE_BIT | GL_CLIENT_STORAGE_BIT);
+			} else {
+				gl_BufferData(GL_PIXEL_UNPACK_BUFFER, m_pbo_size, NULL, GL_STREAM_DRAW);
+				m_offset[m_current_pbo] = 0;
+				m_map[m_current_pbo] = NULL;
+			}
+
+			NextPbo();
 		}
 		UnbindPbo();
 	}
 
+	void MapAll() {
+		if (m_map[m_current_pbo] != NULL) return;
+
+		// FIXME I'm not sure it is allowed to map another buffer after we get a pointer
+#ifdef BARRIER_INSTEAD_FLUSH
+		GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_PERSISTENT_BIT;
+#else
+		GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_INVALIDATE_BUFFER_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT;
+#endif
+		for (size_t i = 0; i < countof(m_pool); i++) {
+			BindPbo();
+			m_map[m_current_pbo] = (char*)gl_MapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, m_pbo_size, flags);
+			NextPbo();
+		}
+		UnbindPbo();
+	}
+
+	char* Map(uint32 size) {
+		m_size = size;
+
+		if (m_size >= m_pbo_size) {
+			fprintf(stderr, "BUG: PBO too small %d but need %d\n", m_pbo_size, m_size);
+		}
+
+		if (!GLLoader::found_GL_ARB_buffer_storage) {
+			GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT | GL_MAP_INVALIDATE_RANGE_BIT;
+
+			if (m_offset[m_current_pbo] + m_size >= m_pbo_size) {
+				NextPbo();
+
+				// Mark current pbo free
+				m_offset[m_current_pbo] = 0;
+
+				flags &= ~GL_MAP_INVALIDATE_RANGE_BIT;
+				flags |= GL_MAP_INVALIDATE_BUFFER_BIT;
+			}
+
+			// Pbo ready let's get a pointer
+			BindPbo();
+
+			return (char*)gl_MapBufferRange(GL_PIXEL_UNPACK_BUFFER, m_offset[m_current_pbo], m_size, flags);
+		} else {
+			MapAll();
+
+			if (m_offset[m_current_pbo] + m_size >= m_pbo_size) {
+				NextPbo();
+
+				// Mark current pbo free
+				m_offset[m_current_pbo] = 0;
+			}
+
+			return m_map[m_current_pbo] + m_offset[m_current_pbo];
+		}
+	}
+
+	void UnmapAll() {
+		if (m_map[m_current_pbo] == NULL) return;
+
+		for (size_t i = 0; i < countof(m_pool); i++) {
+			BindPbo();
+			gl_UnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+			m_map[m_current_pbo] == NULL;
+			NextPbo();
+		}
+		UnbindPbo();
+	}
+
+	void Unmap() {
+		if (GLLoader::found_GL_ARB_buffer_storage) {
+			// GL4.4 do a glMemoryBarrier? or glFlushMappedBufferRange?
+#ifdef BARRIER_INSTEAD_FLUSH
+			gl_MemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
+#else
+			BindPbo();
+			gl_FlushMappedBufferRange(GL_PIXEL_UNPACK_BUFFER, m_offset[m_current_pbo], m_size);
+			UnbindPbo();
+#endif
+		} else {
+			gl_UnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+		}
+	}
+
+	uint32 Offset() {
+		return m_offset[m_current_pbo];
+	}
+
 	void Destroy() {
-		gl_DeleteBuffers(countof(pool), pool);
+		gl_DeleteBuffers(countof(m_pool), m_pool);
 	}
 
 	void BindPbo() {
-		gl_BindBuffer(GL_PIXEL_UNPACK_BUFFER, pool[current_pbo]);
-		current_pbo = (current_pbo + 1) & (countof(pool)-1);
+		gl_BindBuffer(GL_PIXEL_UNPACK_BUFFER, m_pool[m_current_pbo]);
+	}
+
+	void NextPbo() {
+		m_current_pbo = (m_current_pbo + 1) & (countof(m_pool)-1);
 	}
 
 	void UnbindPbo() {
 		gl_BindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+	}
+
+	void EndTransfer() {
+		// Note: keep offset aligned for SSE/AVX
+		m_offset[m_current_pbo] += (m_size + 64) & ~0x3F;
 	}
 }
 
@@ -210,27 +319,35 @@ bool GSTextureOGL::Update(const GSVector4i& r, const void* data, int pitch)
 
 	EnableUnit();
 
-	PboPool::BindPbo();
-
+	// Note: FGLRX crashes with the default path. It is happy with PBO. However not sure PBO are big enough for
+	// big upscale
+	// Note: with latest improvement, Pbo could be faster
+#if 1
 	glPixelStorei(GL_UNPACK_ALIGNMENT, m_int_alignment);
 
-	char* map = (char*)gl_MapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, (pitch * r.height()) << m_int_shift, GL_MAP_WRITE_BIT);
-	char* src = (char*)data;
 	uint32 line_size = r.width() << m_int_shift;
+	char* src = (char*)data;
+	char* map = PboPool::Map(r.height() * line_size);
+
 	for (uint32 h = r.height(); h > 0; h--) {
-		memcpy(map, src, line_size);
+		GSVector4i::storent(map, src, line_size);
+		//memcpy(map, src, line_size);
 		src += pitch;
 		map += line_size;
 	}
-	gl_UnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
 
-	glTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.width(), r.height(), m_int_format, m_int_type, (const void*)0);
+	PboPool::Unmap();
 
-	PboPool::UnbindPbo();
+	glTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.width(), r.height(), m_int_format, m_int_type, (const void*)PboPool::Offset());
+
+	if (!GLLoader::found_GL_ARB_buffer_storage)
+		PboPool::UnbindPbo();
+
+	PboPool::EndTransfer();
 
 	return true;
 
-#if 0
+#else
 
 	// pitch is in byte wherease GL_UNPACK_ROW_LENGTH is in pixel
 	glPixelStorei(GL_UNPACK_ALIGNMENT, m_int_alignment);

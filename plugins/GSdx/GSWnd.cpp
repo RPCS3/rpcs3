@@ -82,6 +82,10 @@ void GSWndGL::PopulateGlFunction()
 	*(void**)&(gl_VertexAttribIPointer) = GetProcAddress("glVertexAttribIPointer");
 	*(void**)&(gl_VertexAttribPointer) = GetProcAddress("glVertexAttribPointer");
 	*(void**)&(gl_BufferSubData) = GetProcAddress("glBufferSubData");
+	*(void**)&(gl_FenceSync) = GetProcAddress("glFenceSync");
+	*(void**)&(gl_DeleteSync) = GetProcAddress("glDeleteSync");
+	*(void**)&(gl_ClientWaitSync) = GetProcAddress("glClientWaitSync");
+	*(void**)&(gl_FlushMappedBufferRange) = GetProcAddress("glFlushMappedBufferRange");
 	// GL4.0
 	*(void**)&(gl_UniformSubroutinesuiv) = GetProcAddress("glUniformSubroutinesuiv");
 	// GL4.1

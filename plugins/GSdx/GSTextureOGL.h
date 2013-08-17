@@ -23,12 +23,20 @@
 
 #include "GSTexture.h"
 
-namespace PboPool {
-	extern GLuint pool[8];
-	extern uint32 current_pbo;
+// FIXME find the optimal number of PBO
+#define PBO_POOL_SIZE 4
 
+namespace PboPool {
 	void BindPbo();
 	void UnbindPbo();
+	void NextPbo();
+
+	char* Map(uint32 size);
+	void MapAll();
+	void Unmap();
+	void UnmapAll();
+	uint32 Offset();
+	void EndTransfer();
 
 	void Init();
 	void Destroy();

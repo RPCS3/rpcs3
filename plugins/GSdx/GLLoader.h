@@ -145,6 +145,10 @@ extern   PFNGLUSEPROGRAMSTAGESPROC              gl_UseProgramStages;
 extern   PFNGLVERTEXATTRIBIPOINTERPROC          gl_VertexAttribIPointer;
 extern   PFNGLVERTEXATTRIBPOINTERPROC           gl_VertexAttribPointer;
 extern   PFNGLBUFFERSUBDATAPROC                 gl_BufferSubData;
+extern   PFNGLFENCESYNCPROC                     gl_FenceSync;
+extern   PFNGLDELETESYNCPROC                    gl_DeleteSync;
+extern   PFNGLCLIENTWAITSYNCPROC                gl_ClientWaitSync;
+extern   PFNGLFLUSHMAPPEDBUFFERRANGEPROC        gl_FlushMappedBufferRange;
 // GL4.0
 extern   PFNGLUNIFORMSUBROUTINESUIVPROC         gl_UniformSubroutinesuiv;
 // GL4.1

@@ -50,7 +50,9 @@ class GSBufferOGL {
 	{
 		gl_GenBuffers(1, &m_buffer);
 		// Opengl works best with 1-4MB buffer.
+		// Warning m_limit is the number of object (not the size in Bytes)
 		m_limit = 2 * 1024 * 1024 / m_stride;
+		//m_limit = 512 * 1024 * m_stride;
 	}
 
 	~GSBufferOGL() { gl_DeleteBuffers(1, &m_buffer); }
@@ -75,9 +77,12 @@ class GSBufferOGL {
 
 		// Current GPU buffer is really too small need to allocate a new one
 		if (m_count > m_limit) {
+			//fprintf(stderr, "Allocate a new buffer\n %d", m_stride);
 			allocate(std::max<int>(m_count * 3 / 2, m_limit));
 
 		} else if (m_count > (m_limit - m_start) ) {
+			//fprintf(stderr, "Orphan the buffer %d\n", m_stride);
+
 			// Not enough left free room. Just go back at the beginning
 			m_start = 0;
 			// Orphan the buffer to avoid synchronization
@@ -91,8 +96,9 @@ class GSBufferOGL {
 	{
 		void* dst;
 		if (Map(&dst, count)) {
-			// FIXME which one to use
-			// GSVector4i::storent(dst, src, m_count * m_stride);
+			// FIXME which one to use. Note dst doesn't have any aligment guarantee
+			// because it depends of the offset
+			//GSVector4i::storent(dst, src, m_count * m_stride);
 			memcpy(dst, src, m_stride*m_count);
 			Unmap();
 		}
