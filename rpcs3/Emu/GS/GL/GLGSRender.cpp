@@ -3,7 +3,7 @@
 #include "Emu/Cell/PPCInstrTable.h"
 
 #define CMD_DEBUG 0
-#define DUMP_VERTEX_DATA 1
+#define DUMP_VERTEX_DATA 0
 
 #if	CMD_DEBUG
 	#define CMD_LOG ConLog.Write
@@ -199,7 +199,6 @@ void GLRSXThread::Task()
 		{
 			u32 addr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);
 			addr &= ~0x1000;
-			//0x30101000 + 0x80bf000 = 0x80be000
 			ConLog.Warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", addr, p.m_ioAddress + get, cmd, get, put);
 			re(p.m_ctrl->get, addr);
 			continue;
@@ -1337,7 +1336,7 @@ void GLGSRender::ExecCMD()
 			m_program.SetTex(i);
 			tex.Init();
 			checkForGlError("tex.Init");
-			tex.Save();
+			//tex.Save();
 		}
 
 		if(m_indexed_array.m_count)

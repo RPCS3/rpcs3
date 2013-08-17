@@ -74,6 +74,8 @@ public:
 
 	void HandleCommand(wxCommandEvent& event)
 	{
+		event.Skip();
+
 		switch(event.GetId())
 		{
 		case DID_STOP_EMU:
@@ -88,10 +90,13 @@ public:
 		case DID_RESUME_EMU:
 			m_btn_run->SetLabel("Pause");
 		break;
+
+		case DID_EXIT_THR_SYSCALL:
+			Emu.GetCPU().RemoveThread(((PPCThread*)event.GetClientData())->GetId());
+		break;
 		}
 
 		UpdateUI();
-		event.Skip();
 	}
 };
 

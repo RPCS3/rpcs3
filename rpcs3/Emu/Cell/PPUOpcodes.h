@@ -739,7 +739,7 @@ public:
 	virtual void SRADI1(u32 ra, u32 rs, u32 sh, bool rc) = 0;
 	virtual void SRADI2(u32 ra, u32 rs, u32 sh, bool rc) = 0;
 	virtual void EIEIO() = 0;
-	virtual void STVLXL(u32 sd, u32 ra, u32 rb) = 0;
+	virtual void STVLXL(u32 vs, u32 ra, u32 rb) = 0;
 	virtual void EXTSH(u32 ra, u32 rs, bool rc) = 0;
 	virtual void STVRXL(u32 sd, u32 ra, u32 rb) = 0;
 	virtual void EXTSB(u32 ra, u32 rs, bool rc) = 0;

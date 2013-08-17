@@ -3,6 +3,9 @@
 #include "Modules.h"
 #include "SC_FUNC.h"
 
+void default_syscall();
+static func_caller *null_func = bind_func(default_syscall);
+
 static func_caller* sc_table[1024] = 
 {
 	null_func, bind_func(sys_process_getpid), null_func, bind_func(sys_process_exit), null_func, //4
@@ -212,6 +215,58 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, bind_func(cellGcmCallback),    //1024
 };
 
+bool enable_log = false;
+
+void default_syscall()
+{
+	declCPU();
+	u32 code = CPU.GPR[11];
+	//TODO: remove this
+	switch(code)
+	{
+		/*
+		//process
+		case 2: RESULT(lv2ProcessWaitForChild(CPU)); return;
+		case 4: RESULT(lv2ProcessGetStatus(CPU)); return;
+		case 5: RESULT(lv2ProcessDetachChild(CPU)); return;
+		case 12: RESULT(lv2ProcessGetNumberOfObject(CPU)); return;
+		case 13: RESULT(lv2ProcessGetId(CPU)); return;
+		case 18: RESULT(lv2ProcessGetPpid(CPU)); return;
+		case 19: RESULT(lv2ProcessKill(CPU)); return;
+		case 23: RESULT(lv2ProcessWaitForChild2(CPU)); return;
+		case 25: RESULT(lv2ProcessGetSdkVersion(CPU)); return;
+		*/
+		//timer
+		case 141:
+		case 142:
+			std::this_thread::sleep_for(std::chrono::nanoseconds(SC_ARGS_1));
+			RESULT(0);
+		return;
+
+		//tty
+		case 988:
+			ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",
+				CPU.GPR[3], CPU.GPR[4], CPU.PC);
+			RESULT(0);
+		return;
+
+		case 999:
+			dump_enable = !dump_enable;
+			Emu.Pause();
+			ConLog.Warning("Dump %s", dump_enable ? "enabled" : "disabled");
+		return;
+
+		case 1000:
+			enable_log = !enable_log;
+			ConLog.Warning("Log %s", enable_log ? "enabled" : "disabled");
+		return;
+	}
+
+	ConLog.Error("Unknown syscall: %d - %08x", code, code);
+	RESULT(0);
+	return;
+}
+
 SysCalls::SysCalls(PPUThread& cpu) : CPU(cpu)
 {
 }
@@ -220,58 +275,11 @@ SysCalls::~SysCalls()
 {
 }
 
-bool enable_log = false;
-
 void SysCalls::DoSyscall(u32 code)
 {
-	if(code < 0x400)
+	if(code < 1024)
 	{
-		if(sc_table[code])
-		{
-			(*sc_table[code])();
-			return;
-		}
-		//TODO: remove this
-		switch(code)
-		{
-			//process
-			case 2: RESULT(lv2ProcessWaitForChild(CPU)); return;
-			case 4: RESULT(lv2ProcessGetStatus(CPU)); return;
-			case 5: RESULT(lv2ProcessDetachChild(CPU)); return;
-			case 12: RESULT(lv2ProcessGetNumberOfObject(CPU)); return;
-			case 13: RESULT(lv2ProcessGetId(CPU)); return;
-			case 18: RESULT(lv2ProcessGetPpid(CPU)); return;
-			case 19: RESULT(lv2ProcessKill(CPU)); return;
-			case 23: RESULT(lv2ProcessWaitForChild2(CPU)); return;
-			case 25: RESULT(lv2ProcessGetSdkVersion(CPU)); return;
-			//timer
-			case 141:
-			case 142:
-				std::this_thread::sleep_for(std::chrono::nanoseconds(SC_ARGS_1));
-				RESULT(0);
-			return;
-
-			//tty
-			case 988:
-				ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%llx",
-					CPU.GPR[3], CPU.GPR[4], CPU.PC);
-				RESULT(0);
-			return;
-
-			case 999:
-				dump_enable = !dump_enable;
-				Emu.Pause();
-				ConLog.Warning("Dump %s", dump_enable ? "enabled" : "disabled");
-			return;
-
-			case 1000:
-				enable_log = !enable_log;
-				ConLog.Warning("Log %s", enable_log ? "enabled" : "disabled");
-			return;
-		}
-
-		ConLog.Error("Unknown syscall: %d - %08x", code, code);
-		RESULT(0);
+		(*sc_table[code])();
 		return;
 	}
 	

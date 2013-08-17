@@ -278,9 +278,17 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 
 void InterpreterDisAsmFrame::WriteRegs()
 {
+	if(!CPU)
+	{
+		m_regs->Clear();
+		return;
+	}
+
+	const wxString data = CPU->RegsToString();
+
 	m_regs->Freeze();
 	m_regs->Clear();
-	if(CPU) m_regs->WriteText(CPU->RegsToString());
+	m_regs->WriteText(data);
 	m_regs->Thaw();
 }
 
@@ -293,9 +301,9 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 	{
 		switch(event.GetId())
 		{
-		case DID_STOP_EMU:
-		case DID_PAUSE_EMU:
-			DoUpdate();
+		case DID_STOPED_EMU:
+		case DID_PAUSED_EMU:
+			//DoUpdate();
 		break;
 		}
 	}
@@ -304,12 +312,16 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 		switch(event.GetId())
 		{
 		case DID_PAUSE_THREAD:
+			m_btn_run->Disable();
+			m_btn_step->Disable();
+			m_btn_pause->Disable();
+		break;
+
+		case DID_PAUSED_THREAD:
 			m_btn_run->Enable();
 			m_btn_step->Enable();
 			m_btn_pause->Disable();
-
-		case DID_CREATE_THREAD:
-			DoUpdate();
+			//DoUpdate();
 		break;
 
 		case DID_START_THREAD:
@@ -318,11 +330,6 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 			m_btn_run->Disable();
 			m_btn_step->Disable();
 			m_btn_pause->Enable();
-
-			if(event.GetId() == DID_START_THREAD)
-			{
-				DoUpdate();
-			}
 		break;
 
 		case DID_REMOVE_THREAD:
@@ -333,15 +340,14 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 
 			if(event.GetId() == DID_REMOVE_THREAD)
 			{
-				m_choice_units->SetSelection(-1);
-				wxCommandEvent event;
-				event.SetInt(-1);
+				//m_choice_units->SetSelection(-1);
+				//wxCommandEvent event;
+				//event.SetInt(-1);
 				//event.SetClientData(nullptr);
-				OnSelectUnit(event);
+				//OnSelectUnit(event);
 				UpdateUnitList();
+				//DoUpdate();
 			}
-
-			DoUpdate();
 		break;
 		}
 	}
@@ -353,13 +359,16 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 			UpdateUnitList();
 			if(m_choice_units->GetSelection() == -1)
 			{
-				m_choice_units->SetSelection(0);
-				wxCommandEvent event;
-				event.SetInt(0);
-				event.SetClientData(&Emu.GetCPU().GetThreads()[0]);
-				OnSelectUnit(event);
-				DoUpdate();
+				//m_choice_units->SetSelection(0);
+				//wxCommandEvent event;
+				//event.SetInt(0);
+				//event.SetClientData(&Emu.GetCPU().GetThreads()[0]);
+				//OnSelectUnit(event);
 			}
+		break;
+
+		case DID_REMOVED_THREAD:
+			UpdateUnitList();
 		break;
 		}
 	}
@@ -421,6 +430,7 @@ void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::DoPause(wxCommandEvent& WXUNUSED(event))
 {
+	//DoUpdate();
 	if(CPU) CPU->Pause();
 }
 

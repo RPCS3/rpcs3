@@ -20,8 +20,10 @@ int sys_ppu_thread_exit(int errorcode)
 	{
 		sysPrxForUser.Warning("sys_ppu_thread_exit(errorcode=%d)", errorcode);
 	}
-
-	Emu.GetCPU().RemoveThread(GetCurrentPPUThread().GetId());
+	
+	PPUThread& thr = GetCurrentPPUThread();
+	thr.SetExitStatus(errorcode);
+	wxGetApp().SendDbgCommand(DID_EXIT_THR_SYSCALL, &thr);
 
 	return CELL_OK;
 }

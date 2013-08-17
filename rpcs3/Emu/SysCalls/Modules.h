@@ -8,8 +8,6 @@ public:
 	virtual void operator()() = 0;
 };
 
-static func_caller *null_func = nullptr;
-
 //TODO
 struct ModuleFunc
 {
@@ -74,8 +72,9 @@ public:
 };
 
 bool IsLoadedFunc(u32 id);
-bool CallFunc(u32 id);
+bool CallFunc(u32 num);
 bool UnloadFunc(u32 id);
 void UnloadModules();
+u32 GetFuncNumById(u32 id);
 Module* GetModuleByName(const wxString& name);
 Module* GetModuleById(u16 id);

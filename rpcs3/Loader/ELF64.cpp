@@ -382,7 +382,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 							mem32_t out_tbl(tbl + i*8);
 							out_tbl += dst + i*section;
-							out_tbl += nid;
+							out_tbl += GetFuncNumById(nid);
 
 							mem32_t out_dst(dst + i*section);
 							out_dst += OR(11, 2, 2, 0);

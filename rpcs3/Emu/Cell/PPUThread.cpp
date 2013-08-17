@@ -178,6 +178,7 @@ bool dump_enable = false;
 
 void PPUThread::DoCode(const s32 code)
 {
+#ifdef _DEBUG
 	static bool is_last_enabled = false;
 
 	if(dump_enable)
@@ -208,6 +209,7 @@ void PPUThread::DoCode(const s32 code)
 		cycle = 0;
 		TB++;
 	}
+#endif
 
 	m_dec->Decode(code);
 }

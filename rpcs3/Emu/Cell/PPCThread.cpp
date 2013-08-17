@@ -10,8 +10,8 @@ PPCThread* GetCurrentPPCThread()
 PPCThread::PPCThread(PPCThreadType type)
 	: ThreadBase(true, "PPCThread")
 	, m_type(type)
-	, DisAsmFrame(NULL)
-	, m_dec(NULL)
+	, DisAsmFrame(nullptr)
+	, m_dec(nullptr)
 	, stack_size(0)
 	, stack_addr(0)
 	, m_prio(0)
@@ -28,12 +28,13 @@ PPCThread::~PPCThread()
 
 void PPCThread::Close()
 {
-	Stop();
 	if(DisAsmFrame)
 	{
 		DisAsmFrame->Close();
 		DisAsmFrame = nullptr;
 	}
+
+	Stop();
 }
 
 void PPCThread::Reset()
@@ -260,11 +261,10 @@ void PPCThread::Stop()
 	wxGetApp().SendDbgCommand(DID_STOP_THREAD, this);
 
 	m_status = Stopped;
+	ThreadBase::Stop();
 	Reset();
 	DoStop();
 	Emu.CheckStatus();
-
-	ThreadBase::Stop();
 
 	wxGetApp().SendDbgCommand(DID_STOPED_THREAD, this);
 }
