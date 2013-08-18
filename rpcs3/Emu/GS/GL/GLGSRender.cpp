@@ -11,7 +11,7 @@
 	#define CMD_LOG(...)
 #endif
 
-gcmBuffer gcmBuffers[2];
+gcmBuffer gcmBuffers[8];
 
 void printGlError(GLenum err, const char* situation)
 {
@@ -176,14 +176,16 @@ void GLRSXThread::Task()
 				if(draw)
 				{
 					p.m_frame->Flip();
-					if(p.m_flip_handler)
-					{
-						p.m_flip_handler.Handle(1, 0, 0);
-						p.m_flip_handler.Branch(false);
-					}
 				}
 
+				p.m_gcm_current_buffer = ++p.m_gcm_current_buffer % p.m_gcm_buffers_count;
 				p.m_flip_status = 0;
+				if(p.m_flip_handler)
+				{
+					p.m_flip_handler.Handle(1, 0, 0);
+					p.m_flip_handler.Branch(false);
+				}
+
 				if(SemaphorePostAndWait(p.m_sem_flip)) continue;
 			}
 
@@ -198,7 +200,7 @@ void GLRSXThread::Task()
 		if(cmd & CELL_GCM_METHOD_FLAG_JUMP)
 		{
 			u32 addr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);
-			addr &= ~0x1000;
+			addr -= 0x1000;
 			ConLog.Warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", addr, p.m_ioAddress + get, cmd, get, put);
 			re(p.m_ctrl->get, addr);
 			continue;
@@ -621,17 +623,14 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 
 	case NV4097_SET_ALPHA_TEST_ENABLE:
 		m_set_alpha_test = args[0] ? true : false;
-		//Enable(args[0] ? true : false, GL_ALPHA_TEST);
 	break;
 
 	case NV4097_SET_BLEND_ENABLE:
 		m_set_blend = args[0] ? true : false;
-		//Enable(args[0] ? true : false, GL_BLEND);
 	break;
 
 	case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
 		m_set_depth_bounds_test = args[0] ? true : false;
-		//Enable(args[0] ? true : false, GL_DEPTH_CLAMP);
 	break;
 
 	case NV4097_SET_ALPHA_FUNC:
@@ -680,47 +679,51 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		m_clip_max = (float&)clip_max;
 
 		CMD_LOG("clip_min=%.01f, clip_max=%.01f", m_clip_min, m_clip_max);
-
-		//glDepthRangef(m_clip_min, m_clip_max);
 	}
 	break;
 
 	case NV4097_SET_DEPTH_FUNC:
 		m_set_depth_func = true;
 		m_depth_func = args[0];
-		//glDepthFunc(m_depth_func);
 	break;
 
 	case NV4097_SET_DEPTH_TEST_ENABLE:
 		m_depth_test_enable = args[0] ? true : false;
-		//Enable(args[0] ? true : false, GL_DEPTH_TEST);
 	break;
 
 	case NV4097_SET_FRONT_POLYGON_MODE:
-		glPolygonMode(GL_FRONT, args[0]);
+		m_set_front_polygon_mode = true;
+		m_front_polygon_mode = args[0];
+		//glPolygonMode(GL_FRONT, args[0]);
 	break;
 
 	case NV4097_CLEAR_SURFACE:
 	{
-		const u32 mask = args[0];
-		GLbitfield f = 0;
-		if (mask & 0x1) f |= GL_DEPTH_BUFFER_BIT;
-		if (mask & 0x2) f |= GL_STENCIL_BUFFER_BIT;
-		if (mask & 0x10) f |= GL_COLOR_BUFFER_BIT;
-		glClear(f);
+		m_set_clear_surface = true;
+		m_clear_surface_mask = args[0];
 	}
 	break;
 
 	case NV4097_SET_BLEND_FUNC_SFACTOR:
 	{
-		const u16 src_rgb = args[0] & 0xffff;
-		const u16 dst_rgb = args[0] >> 16;
-		const u16 src_alpha = args[1] & 0xffff;
-		const u16 dst_alpha = args[1] >> 16;
-		CMD_LOG("src_rgb=0x%x, dst_rgb=0x%x, src_alpha=0x%x, dst_alpha=0x%x",
-			src_rgb, dst_rgb, src_alpha, dst_alpha);
+		m_set_blend_sfactor = true;
+		m_blend_sfactor_rgb = args[0] & 0xffff;
+		m_blend_sfactor_alpha = args[0] >> 16;
 
-		glBlendFuncSeparate(src_rgb, dst_rgb, src_alpha, dst_alpha);
+		if(count >= 2)
+		{
+			m_set_blend_dfactor = true;
+			m_blend_dfactor_rgb = args[1] & 0xffff;
+			m_blend_dfactor_alpha = args[1] >> 16;
+		}
+	}
+	break;
+
+	case NV4097_SET_BLEND_FUNC_DFACTOR:
+	{
+		m_set_blend_dfactor = true;
+		m_blend_dfactor_rgb = args[0] & 0xffff;
+		m_blend_dfactor_alpha = args[0] >> 16;
 	}
 	break;
 
@@ -822,12 +825,20 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		if(args[0])
 		{
 			//begin
+			if(Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount())
+			{
+				//Emu.GetCallbackManager().m_exit_callback.Handle(0x0121, 0);
+			}
 			m_draw_mode = args[0] - 1;
 		}
 		else
 		{
 			//end
 			ExecCMD();
+			if(Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount())
+			{
+				//Emu.GetCallbackManager().m_exit_callback.Handle(0x0122, 0);
+			}
 		}
 	}
 	break;
@@ -941,19 +952,66 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	break;
 
 	case NV4097_SET_LOGIC_OP_ENABLE:
-		Enable(args[0] ? true : false, GL_LOGIC_OP);
+		m_set_logic_op = args[0] ? true : false;
 	break;
 
 	case NV4097_SET_CULL_FACE_ENABLE:
-		Enable(args[0] ? true : false, GL_CULL_FACE);
+		m_set_cull_face = args[0] ? true : false;
 	break;
 
 	case NV4097_SET_DITHER_ENABLE:
-		Enable(args[0] ? true : false, GL_DITHER);
+		m_set_dither = args[0] ? true : false;
 	break;
 
 	case NV4097_SET_STENCIL_TEST_ENABLE:
-		Enable(args[0] ? true : false, GL_STENCIL_TEST);
+		m_set_stencil_test = args[0] ? true : false;
+	break;
+
+	case NV4097_SET_STENCIL_MASK:
+		m_set_stencil_mask = true;
+		m_stencil_mask = args[0];
+	break;
+
+	case NV4097_SET_STENCIL_FUNC:
+		m_set_stencil_func = true;
+		m_stencil_func = args[0];
+		if(count >= 2)
+		{
+			m_set_stencil_func_ref = true;
+			m_stencil_func_ref = args[1];
+
+			if(count >= 3)
+			{
+				m_set_stencil_func_mask = true;
+				m_stencil_func_mask = args[2];
+			}
+		}
+	break;
+
+	case NV4097_SET_STENCIL_FUNC_REF:
+		m_set_stencil_func_ref = true;
+		m_stencil_func_ref = args[0];
+	break;
+
+	case NV4097_SET_STENCIL_FUNC_MASK:
+		m_set_stencil_func_mask = true;
+		m_stencil_func_mask = args[0];
+	break;
+
+	case NV4097_SET_STENCIL_OP_FAIL:
+		m_set_stencil_fail = true;
+		m_stencil_fail = args[0];
+		if(count >= 2)
+		{
+			m_set_stencil_zfail = true;
+			m_stencil_zfail = args[1];
+
+			if(count >= 3)
+			{
+				m_set_stencil_zpass = true;
+				m_stencil_zpass = args[2];
+			}
+		}
 	break;
 
 	case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
@@ -984,8 +1042,11 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	break;
 
 	case NV4097_SET_BLEND_COLOR:
-		glBlendColor(args[0] & 0xff, (args[0] >> 8) & 0xff, 
-			(args[0] >> 16) & 0xff, (args[0] >> 24) & 0xff);
+		m_set_blend_color = true;
+		m_blend_color_r = args[0] & 0xff;
+		m_blend_color_g = (args[0] >> 8) & 0xff;
+		m_blend_color_b = (args[0] >> 16) & 0xff;
+		m_blend_color_a = (args[0] >> 24) & 0xff;
 	break;
 
 	case NV4097_SET_BLEND_COLOR2:
@@ -993,8 +1054,9 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	break;
 
 	case NV4097_SET_BLEND_EQUATION:
-		glBlendEquationSeparate(args[0] & 0xffff, args[0] >> 16);
-		//glBlendEquation
+		m_set_blend_equation = true;
+		m_blend_equation_rgb = args[0] & 0xffff;
+		m_blend_equation_alpha = args[0] >> 16;
 	break;
 
 	case NV4097_SET_REDUCE_DST_COLOR:
@@ -1002,7 +1064,8 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	break;
 
 	case NV4097_SET_DEPTH_MASK:
-		glDepthMask(args[0]);
+		m_set_depth_mask = true;
+		m_depth_mask = args[0];
 	break;
 
 	case NV4097_SET_SCISSOR_VERTICAL:
@@ -1025,10 +1088,6 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 			m_scissor_y = args[1] & 0xffff;
 			m_scissor_h = args[1] >> 16;
 		}
-		
-		CMD_LOG("x=%d, y=%d, w=%d, h=%d", m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
-
-		//glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 	}
 	break;
 
@@ -1148,6 +1207,20 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	}
 	break;
 
+	case NV4097_SET_LINE_SMOOTH_ENABLE:
+		m_set_line_smooth = args[0] ? true : false;
+	break;
+
+	case NV4097_SET_LINE_WIDTH:
+		m_set_line_width = true;
+		m_line_width = args[0];
+	break;
+
+	case NV4097_SET_SHADE_MODE:
+		m_set_shade_mode = true;
+		m_shade_mode = args[0];
+	break;
+
 	case NV4097_SET_ZSTENCIL_CLEAR_VALUE:
 	case NV4097_SET_ZCULL_CONTROL0:
 	case NV4097_SET_ZCULL_CONTROL1:
@@ -1165,6 +1238,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		{
 		case 1:
 			data = std::chrono::steady_clock::now().time_since_epoch().count();
+			data *= 1000000;
 		break;
 
 		default:
@@ -1285,6 +1359,15 @@ void GLGSRender::ExecCMD()
 {
 	if(LoadProgram())
 	{
+		if(m_set_clear_surface)
+		{
+			GLbitfield f = 0;
+			if (m_clear_surface_mask & 0x1) f |= GL_DEPTH_BUFFER_BIT;
+			if (m_clear_surface_mask & 0x2) f |= GL_STENCIL_BUFFER_BIT;
+			if (m_clear_surface_mask & 0x10) f |= GL_COLOR_BUFFER_BIT;
+			glClear(f);
+		}
+
 		if(m_set_color_mask)
 		{
 			glColorMask(m_color_mask_r, m_color_mask_g, m_color_mask_b, m_color_mask_a);
@@ -1303,10 +1386,45 @@ void GLGSRender::ExecCMD()
 			glScissor(m_scissor_x, m_scissor_y, m_scissor_w, m_scissor_h);
 		}
 
+		if(m_set_front_polygon_mode)
+		{
+			glPolygonMode(GL_FRONT, m_front_polygon_mode);
+		}
+
 		Enable(m_depth_test_enable, GL_DEPTH_TEST);
 		Enable(m_set_alpha_test, GL_ALPHA_TEST);
 		Enable(m_set_depth_bounds_test, GL_DEPTH_CLAMP);
 		Enable(m_set_blend, GL_BLEND);
+		Enable(m_set_logic_op, GL_LOGIC_OP);
+		Enable(m_set_cull_face, GL_CULL_FACE);
+		Enable(m_set_dither, GL_DITHER);
+		Enable(m_set_stencil_test, GL_STENCIL_TEST);
+		Enable(m_set_line_smooth, GL_LINE_SMOOTH);
+
+		if(m_set_stencil_mask)
+		{
+			glStencilMask(m_stencil_mask);
+		}
+
+		if(m_set_stencil_func && m_set_stencil_func_ref && m_set_stencil_func_mask)
+		{
+			glStencilFunc(m_stencil_func, m_stencil_func_ref, m_stencil_func_mask);
+		}
+
+		if(m_set_stencil_fail && m_set_stencil_zfail && m_set_stencil_zpass)
+		{
+			glStencilOp(m_stencil_fail, m_stencil_zfail, m_stencil_zpass);
+		}
+
+		if(m_set_shade_mode)
+		{
+			glShadeModel(m_shade_mode);
+		}
+
+		if(m_set_depth_mask)
+		{
+			glDepthMask(m_depth_mask);
+		}
 
 		if(m_set_depth_func)
 		{
@@ -1316,6 +1434,26 @@ void GLGSRender::ExecCMD()
 		if(m_set_clip)
 		{
 			glDepthRangef(m_clip_min, m_clip_max);
+		}
+
+		if(m_set_line_width)
+		{
+			glLineWidth(m_line_width / 255.f);
+		}
+
+		if(m_set_blend_equation)
+		{
+			glBlendEquationSeparate(m_blend_equation_rgb, m_blend_equation_alpha);
+		}
+
+		if(m_set_blend_sfactor && m_set_blend_dfactor)
+		{
+			glBlendFuncSeparate(m_blend_sfactor_rgb, m_blend_dfactor_rgb, m_blend_sfactor_alpha, m_blend_dfactor_alpha);
+		}
+
+		if(m_set_blend_color)
+		{
+			glBlendColor(m_blend_color_r, m_blend_color_g, m_blend_color_b, m_blend_color_a);
 		}
 
 		if(m_indexed_array.m_count && m_draw_array_count)

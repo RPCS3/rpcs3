@@ -302,6 +302,9 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 		switch(event.GetId())
 		{
 		case DID_STOPED_EMU:
+			UpdateUnitList();
+		break;
+
 		case DID_PAUSED_EMU:
 			//DoUpdate();
 		break;

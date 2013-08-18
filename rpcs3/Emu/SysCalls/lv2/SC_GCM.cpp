@@ -62,6 +62,10 @@ int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress)
 	ctrl.get = 0;
 	ctrl.ref = -1;
 
+	Emu.GetGSManager().GetRender().m_gcm_buffers_addr = Memory.Alloc(sizeof(gcmBuffer) * 8, sizeof(gcmBuffer));
+	Emu.GetGSManager().GetRender().m_gcm_buffers_count = 0;
+	Emu.GetGSManager().GetRender().m_gcm_current_buffer = 0;
+
 	Emu.GetGSManager().GetRender().Init(ctx_begin, ctx_size, gcm_info.control_addr, local_addr);
 
 	return CELL_OK;
@@ -122,13 +126,19 @@ int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height
 {
 	cellGcmSys.Warning("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
 		id, offset, width ? pitch/width : pitch, width, height);
-	if(id > 1) return CELL_EINVAL;
+	if(id > 7) return CELL_EINVAL;
 
-	gcmBuffers[id].offset = offset;
-	gcmBuffers[id].pitch = pitch;
-	gcmBuffers[id].width = width;
-	gcmBuffers[id].height = height;
-	gcmBuffers[id].update = true;
+	gcmBuffer* buffers = (gcmBuffer*)Memory.GetMemFromAddr(Emu.GetGSManager().GetRender().m_gcm_buffers_addr);
+
+	buffers[id].offset = re(offset);
+	buffers[id].pitch = re(pitch);
+	buffers[id].width = re(width);
+	buffers[id].height = re(height);
+
+	if(id + 1 > Emu.GetGSManager().GetRender().m_gcm_buffers_count)
+	{
+		Emu.GetGSManager().GetRender().m_gcm_buffers_count = id + 1;
+	}
 
 	return CELL_OK;
 }

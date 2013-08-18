@@ -60,7 +60,6 @@ void Callback::Branch(bool wait)
 	new_thread.SetArg(0, a1);
 	new_thread.SetArg(1, a2);
 	new_thread.SetArg(2, a3);
-	((PPUThread&)new_thread).LR = Emu.GetPPUThreadExit();
 	new_thread.Run();
 
 	new_thread.Exec();

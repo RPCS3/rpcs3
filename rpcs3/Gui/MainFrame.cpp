@@ -20,6 +20,7 @@ enum IDs
 	id_boot_game,
 	id_sys_pause,
 	id_sys_stop,
+	id_sys_send_open_menu,
 	id_sys_send_exit,
 	id_config_emu,
 	id_config_vfs_manager,
@@ -35,8 +36,9 @@ wxString GetPaneName()
 }
 
 MainFrame::MainFrame()
-	: FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(800, 600))
+	: FrameBase(nullptr, wxID_ANY, "", "MainFrame", wxSize(800, 600))
 	, m_aui_mgr(this)
+	, m_sys_menu_opened(false)
 {
 	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_));
 	wxMenuBar& menubar(*new wxMenuBar());
@@ -57,6 +59,7 @@ MainFrame::MainFrame()
 	menu_sys.Append(id_sys_pause, "Pause")->Enable(false);
 	menu_sys.Append(id_sys_stop, "Stop\tCtrl + S")->Enable(false);
 	menu_sys.AppendSeparator();
+	menu_sys.Append(id_sys_send_open_menu, "Send open system menu cmd")->Enable(false);
 	menu_sys.Append(id_sys_send_exit, "Send exit cmd")->Enable(false);
 
 	menu_conf.Append(id_config_emu, "Settings");
@@ -75,6 +78,7 @@ MainFrame::MainFrame()
 
 	Connect( id_sys_pause,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
 	Connect( id_sys_stop,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
+	Connect( id_sys_send_open_menu,	wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendOpenCloseSysMenu) );
 	Connect( id_sys_send_exit,		wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendExit) );
 
 	Connect( id_config_emu,			wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
@@ -272,6 +276,13 @@ void MainFrame::SendExit(wxCommandEvent& event)
 	Emu.GetCallbackManager().m_exit_callback.Handle(0x0101, 0);
 }
 
+void MainFrame::SendOpenCloseSysMenu(wxCommandEvent& event)
+{
+	Emu.GetCallbackManager().m_exit_callback.Handle(m_sys_menu_opened ? 0x0132 : 0x0131, 0);
+	m_sys_menu_opened = !m_sys_menu_opened;
+	UpdateUI(wxCommandEvent());
+}
+
 void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 {
 	//TODO
@@ -410,6 +421,7 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 				is_runned = false;
 				is_stopped = true;
 				is_ready = false;
+				m_sys_menu_opened = false;
 			break;
 
 			case DID_PAUSE_EMU:
@@ -432,11 +444,14 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 				is_ready = true;
 			break;
 
-			default:
+			case DID_REGISTRED_CALLBACK:
 				is_runned = Emu.IsRunned();
 				is_stopped = Emu.IsStopped();
 				is_ready = Emu.IsReady();
 			break;
+
+			default:
+				return;
 		}
 	}
 	else
@@ -449,15 +464,19 @@ void MainFrame::UpdateUI(wxCommandEvent& event)
 	wxMenuBar& menubar( *GetMenuBar() );
 	wxMenuItem& pause = *menubar.FindItem( id_sys_pause );
 	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
-	wxMenuItem& send_exit  = *menubar.FindItem( id_sys_send_exit );
-
+	wxMenuItem& send_exit = *menubar.FindItem( id_sys_send_exit );
+	wxMenuItem& send_open_menu = *menubar.FindItem( id_sys_send_open_menu );
 	pause.SetText(is_runned ? "Pause\tCtrl + P" : is_ready ? "Start\tCtrl + C" : "Resume\tCtrl + C");
 	pause.Enable(!is_stopped);
 	stop.Enable(!is_stopped);
 	//send_exit.Enable(false);
-	send_exit.Enable(!is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount());
+	bool enable_commands = !is_stopped && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount();
 
-	m_aui_mgr.Update();
+	send_open_menu.SetText(wxString::Format("Send %s system menu cmd", m_sys_menu_opened ? "close" : "open"));
+	send_open_menu.Enable(enable_commands);
+	send_exit.Enable(enable_commands);
+
+	//m_aui_mgr.Update();
 
 	//wxCommandEvent refit( wxEVT_COMMAND_MENU_SELECTED, id_update_dbg );
 	//GetEventHandler()->AddPendingEvent( refit );

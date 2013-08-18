@@ -37,9 +37,17 @@ void FragmentDecompilerThread::AddCode(wxString code)
 
 	if(cond.Len())
 	{
-		ConLog.Error("cond! [eq: %d  gr: %d  lt: %d] (%s)", src0.exec_if_eq, src0.exec_if_gr, src0.exec_if_lt, cond);
-		Emu.Pause();
-		return;
+
+		static const char f[4] = {'x', 'y', 'z', 'w'};
+		wxString swizzle = wxEmptyString;
+		swizzle += f[src0.cond_swizzle_x];
+		swizzle += f[src0.cond_swizzle_y];
+		swizzle += f[src0.cond_swizzle_z];
+		swizzle += f[src0.cond_swizzle_w];
+		cond = wxString::Format("if(rc.%s %s 0.0) ", swizzle, cond);
+		//ConLog.Error("cond! [eq: %d  gr: %d  lt: %d] (%s)", src0.exec_if_eq, src0.exec_if_gr, src0.exec_if_lt, cond);
+		//Emu.Pause();
+		//return;
 	}
 
 	if(src1.scale)
@@ -60,13 +68,12 @@ void FragmentDecompilerThread::AddCode(wxString code)
 		}
 	}
 
-	if(dst.fp16)
+	if(dst.saturate)
 	{
-		//HACK! TODO: fp16 -> fp32
-		code = "/*" + code + "*/ vec4(1.0, 1.0, 1.0, 1.0)";
+		code = "clamp(" + code + ", 0.0, 1.0)";
 	}
 
-	code = AddReg(dst.dest_reg, dst.fp16) + GetMask() + " = " + code + GetMask();
+	code = cond + (dst.set_cond ? AddCond(dst.fp16) : AddReg(dst.dest_reg, dst.fp16)) + GetMask() + " = " + code + GetMask();
 
 	main += "\t" + code + ";\n";
 }
@@ -94,6 +101,11 @@ wxString FragmentDecompilerThread::AddReg(u32 index, int fp16)
 	//if(!index) return "gl_FragColor";
 	return m_parr.AddParam((index || fp16) ? PARAM_NONE : PARAM_OUT, "vec4",
 		wxString::Format((fp16 ? "h%d" : "r%d"), index), (index || fp16) ? -1 : 0);
+}
+
+wxString FragmentDecompilerThread::AddCond(int fp16)
+{
+	return m_parr.AddParam(PARAM_NONE , "vec4", (fp16 ? "hc" : "rc"), -1);
 }
 
 wxString FragmentDecompilerThread::AddConst()

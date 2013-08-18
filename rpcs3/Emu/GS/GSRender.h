@@ -51,6 +51,10 @@ struct GSRender
 	volatile bool m_draw;
 	Callback m_flip_handler;
 
+	u32 m_gcm_buffers_addr;
+	u32 m_gcm_buffers_count;
+	u32 m_gcm_current_buffer;
+
 	GSRender();
 
 	virtual void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)=0;

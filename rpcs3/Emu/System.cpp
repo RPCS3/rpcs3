@@ -138,9 +138,10 @@ void Emulator::Load()
 		callback_data += SC(2);
 		callback_data += BCLR(0x10 | 0x04, 0, 0, 0);
 
-		m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 3);
+		m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 4);
 
 		mem32_t ppu_thr_exit_data(m_ppu_thr_exit);
+		ppu_thr_exit_data += ADDI(3, 0, 0);
 		ppu_thr_exit_data += ADDI(11, 0, 41);
 		ppu_thr_exit_data += SC(2);
 		ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);

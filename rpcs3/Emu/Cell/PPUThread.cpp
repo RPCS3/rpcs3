@@ -63,8 +63,8 @@ void PPUThread::InitRegs()
 	const u32 pc = Memory.Read32(entry);
 	const u32 rtoc = Memory.Read32(entry + 4);
 
-	ConLog.Write("entry = 0x%x", entry);
-	ConLog.Write("rtoc = 0x%x", rtoc);
+	//ConLog.Write("entry = 0x%x", entry);
+	//ConLog.Write("rtoc = 0x%x", rtoc);
 
 	SetPc(pc);
 
@@ -132,9 +132,11 @@ void PPUThread::InitRegs()
 	GPR[29] = GPR[3];
 	GPR[31] = GPR[5];
 
+	LR = Emu.GetPPUThreadExit();
 	CTR = PC;
 	CR.CR = 0x22000082;
 	VSCR.NJ = 1;
+	TB = 0;
 }
 
 u64 PPUThread::GetFreeStackSize() const
@@ -202,14 +204,13 @@ void PPUThread::DoCode(const s32 code)
 	{
 		is_last_enabled = false;
 	}
-
+#endif
 
 	if(++cycle > 220)
 	{
 		cycle = 0;
 		TB++;
 	}
-#endif
 
 	m_dec->Decode(code);
 }

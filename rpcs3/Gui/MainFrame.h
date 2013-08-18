@@ -7,6 +7,7 @@ class MainFrame : public FrameBase
 	GameViewer* m_game_viewer;
 	wxAuiManager m_aui_mgr;
 	AppConnector m_app_connector;
+	bool m_sys_menu_opened;
 
 public:
 	MainFrame();
@@ -24,6 +25,7 @@ private:
 	void Pause(wxCommandEvent& event);
 	void Stop(wxCommandEvent& event);
 	void SendExit(wxCommandEvent& event);
+	void SendOpenCloseSysMenu(wxCommandEvent& event);
 	void Config(wxCommandEvent& event);
 	void ConfigVFS(wxCommandEvent& event);
 	void ConfigVHDD(wxCommandEvent& event);

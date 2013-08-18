@@ -117,6 +117,7 @@ struct FragmentDecompilerThread : public ThreadBase
 
 	void AddCode(wxString code);
 	wxString AddReg(u32 index, int fp16);
+	wxString AddCond(int fp16);
 	wxString AddConst();
 	wxString AddTex();
 

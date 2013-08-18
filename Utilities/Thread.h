@@ -63,7 +63,7 @@ public:
 
 		m_parent = nullptr;
 
-		//if(wait)
+		if(wait)
 		{
 			Delete();
 			//wxCriticalSectionLocker lock(m_wait_for_exit);

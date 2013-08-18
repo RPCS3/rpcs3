@@ -23,7 +23,7 @@ int sys_ppu_thread_exit(int errorcode)
 	
 	PPUThread& thr = GetCurrentPPUThread();
 	thr.SetExitStatus(errorcode);
-	wxGetApp().SendDbgCommand(DID_EXIT_THR_SYSCALL, &thr);
+	Emu.GetCPU().RemoveThread(thr.GetId());
 
 	return CELL_OK;
 }
@@ -157,7 +157,6 @@ void sys_ppu_thread_once(u32 once_ctrl_addr, u32 entry)
 
 		PPCThread& new_thread = Emu.GetCPU().AddThread(PPC_THREAD_PPU);
 		new_thread.SetEntry(entry);
-		((PPUThread&)new_thread).LR = Emu.GetPPUThreadExit();
 		new_thread.Run();
 		new_thread.Exec();
 

@@ -18,6 +18,7 @@ PPCThread::PPCThread(PPCThreadType type)
 	, m_offset(0)
 	, m_sync_wait(false)
 	, m_wait_thread_id(-1)
+	, m_free_data(false)
 {
 }
 
@@ -28,6 +29,11 @@ PPCThread::~PPCThread()
 
 void PPCThread::Close()
 {
+	if(IsAlive())
+	{
+		m_free_data = true;
+	}
+
 	if(DisAsmFrame)
 	{
 		DisAsmFrame->Close();
@@ -261,7 +267,7 @@ void PPCThread::Stop()
 	wxGetApp().SendDbgCommand(DID_STOP_THREAD, this);
 
 	m_status = Stopped;
-	ThreadBase::Stop();
+	ThreadBase::Stop(false);
 	Reset();
 	DoStop();
 	Emu.CheckStatus();
@@ -284,7 +290,7 @@ void PPCThread::ExecOnce()
 
 void PPCThread::Task()
 {
-	ConLog.Write("%s enter", PPCThread::GetFName());
+	//ConLog.Write("%s enter", PPCThread::GetFName());
 
 	const Array<u64>& bp = Emu.GetBreakPoints();
 
@@ -336,5 +342,8 @@ void PPCThread::Task()
 		ConLog.Error("Exception: %s", e);
 	}
 
-	ConLog.Write("%s leave", PPCThread::GetFName());
+	//ConLog.Write("%s leave", PPCThread::GetFName());
+
+	if(m_free_data)
+		free(this);
 }

@@ -35,6 +35,7 @@ protected:
 	Array<u64> argv_addr;
 	u64 m_offset;
 	u32 m_exit_status;
+	bool m_free_data;
 
 public:
 	u64 stack_size;

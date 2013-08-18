@@ -271,6 +271,8 @@ extern int sys_time_get_current_time(u32 sec_addr, u32 nsec_addr);
 extern s64 sys_time_get_system_time();
 extern u64 sys_time_get_timebase_frequency();
 
+#define UNIMPLEMENTED_FUNC(module) module.Error("Unimplemented function: "__FUNCTION__)
+
 #define SC_ARGS_1			CPU.GPR[3]
 #define SC_ARGS_2 SC_ARGS_1,CPU.GPR[4]
 #define SC_ARGS_3 SC_ARGS_2,CPU.GPR[5]

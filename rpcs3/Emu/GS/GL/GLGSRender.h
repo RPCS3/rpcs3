@@ -113,9 +113,17 @@ public:
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
+		case 0x94://FIXME
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R16, m_width, m_height, 0, GL_RED, GL_SHORT, Memory.GetMemFromAddr(m_offset)); 
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+		break;
+
 		default: ConLog.Error("Init tex error: Bad tex format (0x%x)", m_format); break;
 		}
 
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		//Unbind();
 	}
 
@@ -268,8 +276,6 @@ struct GLGSFrame : public GSFrame
 private:
 	virtual void OnSize(wxSizeEvent& event);
 };
-
-extern gcmBuffer gcmBuffers[2];
 
 struct GLRSXThread : public ThreadBase
 {

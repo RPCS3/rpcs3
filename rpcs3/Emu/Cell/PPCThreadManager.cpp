@@ -20,6 +20,8 @@ void PPCThreadManager::Close()
 
 PPCThread& PPCThreadManager::AddThread(PPCThreadType type)
 {
+	std::lock_guard<std::mutex> lock(m_mtx_thread);
+
 	PPCThread* new_thread;
 	char* name;
 	switch(type)
@@ -40,6 +42,8 @@ PPCThread& PPCThreadManager::AddThread(PPCThreadType type)
 
 void PPCThreadManager::RemoveThread(const u32 id)
 {
+	std::lock_guard<std::mutex> lock(m_mtx_thread);
+
 	for(u32 i=0; i<m_threads.GetCount(); ++i)
 	{
 		if(m_threads[i].m_wait_thread_id == id)
@@ -51,10 +55,19 @@ void PPCThreadManager::RemoveThread(const u32 id)
 		if(m_threads[i].GetId() != id) continue;
 
 		PPCThread* thr = &m_threads[i];
-		m_threads.RemoveFAt(i);
 		wxGetApp().SendDbgCommand(DID_REMOVE_THREAD, thr);
-		thr->Close();
-		delete thr;
+		if(thr->IsAlive())
+		{
+			thr->Close();
+		}
+		else
+		{
+			thr->Close();
+			delete thr;
+		}
+
+
+		m_threads.RemoveFAt(i);
 		i--;
 	}
 

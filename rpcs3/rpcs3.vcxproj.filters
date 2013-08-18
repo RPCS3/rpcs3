@@ -280,6 +280,9 @@
     <ClCompile Include="Gui\TextInputDialog.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
