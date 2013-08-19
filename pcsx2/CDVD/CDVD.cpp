@@ -118,6 +118,18 @@ static void cdvdGetMechaVer(u8* ver)
 	fclose(fd);
 }
 
+NVMLayout* getNvmLayout()
+{
+	NVMLayout* nvmLayout = NULL;
+	
+	if(nvmlayouts[1].biosVer <= BiosVersion)
+		nvmLayout = &nvmlayouts[1];
+	else
+		nvmLayout = &nvmlayouts[0];
+	
+	return nvmLayout;
+}
+
 // Throws Exception::CannotCreateStream if the file cannot be opened for reading, or cannot
 // be created for some reason.
 FILE* _cdvdOpenNVM()
@@ -136,6 +148,14 @@ FILE* _cdvdOpenNVM()
 			throw Exception::CannotCreateStream(fname);
 
 		for (int i=0; i<1024; i++) fputc(0, fd);
+		
+		//Write NVM ILink area with dummy data (Age of Empires 2)
+
+		NVMLayout* nvmLayout = getNvmLayout();
+		u8 ILinkID_Data[8] = { 0x00, 0xAC, 0xFF, 0xFF, 0xFF, 0xFF, 0xB9, 0x86 };
+		
+		fseek(fd, *(s32*)(((u8*)nvmLayout)+offsetof(NVMLayout, ilinkId)), SEEK_SET);
+		fwrite(ILinkID_Data, 1, 8, fd);
 	}
 	return fd;
 }
@@ -158,19 +178,6 @@ static void cdvdWriteNVM(const u8 *src, int offset, int bytes) {
 	fseek(fd, offset, SEEK_SET);
 	fwrite(src, 1, bytes, fd);
 	fclose(fd);
-}
-
-NVMLayout* getNvmLayout()
-{
-	NVMLayout* nvmLayout = NULL;
-	s32 nvmIdx;
-
-	for(nvmIdx=0; nvmIdx<NVM_FORMAT_MAX; nvmIdx++)
-	{
-		if(nvmlayouts[nvmIdx].biosVer <= BiosVersion)
-			nvmLayout = &nvmlayouts[nvmIdx];
-	}
-	return nvmLayout;
 }
 
 void getNvmData(u8* buffer, s32 offset, s32 size, s32 fmtOffset)
