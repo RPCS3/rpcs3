@@ -117,7 +117,7 @@ namespace PboPool {
 		for (size_t i = 0; i < countof(m_pool); i++) {
 			BindPbo();
 			gl_UnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
-			m_map[m_current_pbo] == NULL;
+			m_map[m_current_pbo] = NULL;
 			NextPbo();
 		}
 		UnbindPbo();
