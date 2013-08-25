@@ -382,77 +382,33 @@ u8  _PADpoll(u8 value)
 				else
 					cmdLen = 4;
 
+				// Square
+				stdpar[curPad][15] = !test_bit(stdpar[curPad][3], 7) ? key_status->get(curPad, PAD_SQUARE) : 0;
+				// X
+				stdpar[curPad][14] = !test_bit(stdpar[curPad][3], 6) ? key_status->get(curPad, PAD_CROSS) : 0;
+				// Circle
+				stdpar[curPad][13] = !test_bit(stdpar[curPad][3], 5) ? key_status->get(curPad, PAD_CIRCLE) : 0;
+				// Triangle
+				stdpar[curPad][12] = !test_bit(stdpar[curPad][3], 4) ? key_status->get(curPad, PAD_TRIANGLE) : 0;
+				// R1
+				stdpar[curPad][17] = !test_bit(stdpar[curPad][3], 3) ? key_status->get(curPad, PAD_R1) : 0;
+				// L1
+				stdpar[curPad][16] = !test_bit(stdpar[curPad][3], 2) ? key_status->get(curPad, PAD_L1) : 0;
+				// R2
+				stdpar[curPad][19] = !test_bit(stdpar[curPad][3], 1) ? key_status->get(curPad, PAD_R2) : 0;
+				// L2
+				stdpar[curPad][18] = !test_bit(stdpar[curPad][3], 0) ? key_status->get(curPad, PAD_L2) : 0;
+
 				button_check = stdpar[curPad][2] >> 4;
-				switch (stdpar[curPad][3])
-				{
-					case 0xBF: // X
-						stdpar[curPad][14] = key_status->get(curPad, PAD_CROSS);
-						break;
+				// LEFT
+				stdpar[curPad][9] = !test_bit(button_check, 3) ? key_status->get(curPad, PAD_LEFT) : 0;
+				// DOWN
+				stdpar[curPad][11] = !test_bit(button_check, 2) ? key_status->get(curPad, PAD_DOWN) : 0;
+				// RIGHT
+				stdpar[curPad][8] = !test_bit(button_check, 1) ? key_status->get(curPad, PAD_RIGHT) : 0;
+				// UP
+				stdpar[curPad][10] = !test_bit(button_check, 0) ? key_status->get(curPad, PAD_UP) : 0;
 
-					case 0xDF: // Circle
-						stdpar[curPad][13] = key_status->get(curPad, PAD_CIRCLE);
-						break;
-
-					case 0xEF: // Triangle
-						stdpar[curPad][12] = key_status->get(curPad, PAD_TRIANGLE);
-						break;
-
-					case 0x7F: // Square
-						stdpar[curPad][15] = key_status->get(curPad, PAD_SQUARE);
-						break;
-
-					case 0xFB: // L1
-						stdpar[curPad][16] = key_status->get(curPad, PAD_L1);
-						break;
-
-					case 0xF7: // R1
-						stdpar[curPad][17] = key_status->get(curPad, PAD_R1);
-						break;
-
-					case 0xFE: // L2
-						stdpar[curPad][18] = key_status->get(curPad, PAD_L2);
-						break;
-
-					case 0xFD: // R2
-						stdpar[curPad][19] = key_status->get(curPad, PAD_R2);
-						break;
-
-					default:
-						stdpar[curPad][14] = 0x00; // Not pressed
-						stdpar[curPad][13] = 0x00; // Not pressed
-						stdpar[curPad][12] = 0x00; // Not pressed
-						stdpar[curPad][15] = 0x00; // Not pressed
-						stdpar[curPad][16] = 0x00; // Not pressed
-						stdpar[curPad][17] = 0x00; // Not pressed
-						stdpar[curPad][18] = 0x00; // Not pressed
-						stdpar[curPad][19] = 0x00; // Not pressed
-						break;
-				}
-				switch (button_check)
-				{
-					case 0xE: // UP
-						stdpar[curPad][10] = key_status->get(curPad, PAD_UP);
-						break;
-
-					case 0xB: // DOWN
-						stdpar[curPad][11] =key_status->get(curPad, PAD_DOWN);
-						break;
-
-					case 0x7: // LEFT
-						stdpar[curPad][9] = key_status->get(curPad, PAD_LEFT);
-						break;
-
-					case 0xD: // RIGHT
-						stdpar[curPad][8] = key_status->get(curPad, PAD_RIGHT);
-						break;
-
-					default:
-						stdpar[curPad][8] = 0x00; // Not pressed
-						stdpar[curPad][9] = 0x00; // Not pressed
-						stdpar[curPad][10] = 0x00; // Not pressed
-						stdpar[curPad][11] = 0x00; // Not pressed
-						break;
-				}
 				buf = stdpar[curPad];
 
 				// FIXME FEEDBACK. Set effect here

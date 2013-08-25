@@ -259,7 +259,7 @@ bool SaveJPEG(const char* filename, int image_width, int image_height, const voi
 	/* This is an important step since it will release a good deal of memory. */
 	jpeg_destroy_compress(&cinfo);
 
-	delete image_buffer;
+	delete []image_buffer;
 
 	/* And we're done! */
 	return true;
