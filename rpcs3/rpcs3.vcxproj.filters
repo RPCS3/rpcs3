@@ -44,6 +44,9 @@
     <Filter Include="Emu\SysCalls\Modules">
       <UniqueIdentifier>{dfd581c4-aed0-4229-bb30-7ee5816049e1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\HDD">
+      <UniqueIdentifier>{718bc358-b7ef-4988-8547-2148d14bb08b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -249,6 +252,39 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPUProgramCompiler.cpp">
       <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Event.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules.cpp">
+      <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysmodule.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\RawSPUThread.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\MFC.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\HDD\HDD.cpp">
+      <Filter>Emu\HDD</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\VHDDManager.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\VFSManager.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\TextInputDialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellSysutil.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellResc.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

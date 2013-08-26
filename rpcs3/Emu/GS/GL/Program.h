@@ -22,6 +22,7 @@ public:
 	bool IsCreated() const;
 	void Create(const u32 vp, const u32 fp);
 	void Use();
+	void UnUse();
 	void SetTex(u32 index);
 	void Delete();
 };

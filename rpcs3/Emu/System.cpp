@@ -12,7 +12,10 @@ using namespace PPU_instr;
 static const wxString& BreakPointsDBName = "BreakPoints.dat";
 static const u16 bpdb_version = 0x1000;
 
-//SysCalls SysCallsManager;
+ModuleInitializer::ModuleInitializer()
+{
+	Emu.AddModuleInit(this);
+}
 
 Emulator::Emulator()
 	: m_status(Stopped)
@@ -24,6 +27,11 @@ Emulator::Emulator()
 
 void Emulator::Init()
 {
+	while(m_modules_init.GetCount())
+	{
+		m_modules_init[0].Init();
+		m_modules_init.RemoveAt(0);
+	}
 	//if(m_memory_viewer) m_memory_viewer->Close();
 	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
@@ -77,8 +85,6 @@ void Emulator::Load()
 	Memory.Init();
 	GetInfo().Reset();
 
-	Memory.Write64(Memory.PRXMem.Alloc(8), 0xDEADBEEFABADCAFE);
-
 	bool is_error;
 	vfsLocalFile f(m_path);
 	Loader l(f);
@@ -106,29 +112,40 @@ void Emulator::Load()
 	}
 
 	LoadPoints(BreakPointsDBName);
-	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64);
+	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64 ? PPC_THREAD_PPU : PPC_THREAD_SPU);
 
-	thread.SetEntry(l.GetEntry());
-	thread.SetArg(thread.GetId());
-	Memory.StackMem.Alloc(0x1000);
-	thread.InitStack();
-	thread.AddArgv(m_path);
-	//thread.AddArgv("-emu");
+	if(l.GetMachine() == MACHINE_SPU)
+	{
+		ConLog.Write("offset = 0x%llx", Memory.MainMem.GetStartAddr());
+		ConLog.Write("max addr = 0x%x", l.GetMaxAddr());
+		thread.SetOffset(Memory.MainMem.GetStartAddr());
+		Memory.MainMem.Alloc(Memory.MainMem.GetStartAddr() + l.GetMaxAddr(), 0xFFFFED - l.GetMaxAddr());
+		thread.SetEntry(l.GetEntry() - Memory.MainMem.GetStartAddr());
+	}
+	else
+	{
+		thread.SetEntry(l.GetEntry());
+		Memory.StackMem.Alloc(0x1000);
+		thread.InitStack();
+		thread.AddArgv(m_path);
+		//thread.AddArgv("-emu");
 
-	m_rsx_callback = Memory.MainMem.Alloc(4 * 4) + 4;
-	Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
+		m_rsx_callback = Memory.MainMem.Alloc(4 * 4) + 4;
+		Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
 
-	mem32_t callback_data(m_rsx_callback);
-	callback_data += ADDI(11, 0, 0x3ff);
-	callback_data += SC(2);
-	callback_data += BCLR(0x10 | 0x04, 0, 0, 0);
+		mem32_t callback_data(m_rsx_callback);
+		callback_data += ADDI(11, 0, 0x3ff);
+		callback_data += SC(2);
+		callback_data += BCLR(0x10 | 0x04, 0, 0, 0);
 
-	m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 3);
-	
-	mem32_t ppu_thr_exit_data(m_ppu_thr_exit);
-	ppu_thr_exit_data += ADDI(11, 0, 41);
-	ppu_thr_exit_data += SC(2);
-	ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
+		m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 4);
+
+		mem32_t ppu_thr_exit_data(m_ppu_thr_exit);
+		ppu_thr_exit_data += ADDI(3, 0, 0);
+		ppu_thr_exit_data += ADDI(11, 0, 41);
+		ppu_thr_exit_data += SC(2);
+		ppu_thr_exit_data += BCLR(0x10 | 0x04, 0, 0, 0);
+	}
 
 	thread.Run();
 
@@ -158,10 +175,11 @@ void Emulator::Run()
 	//ConLog.Write("run...");
 	m_status = Runned;
 
-	m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
-	m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	m_vfs.Init(m_path);
+	//m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	//m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
+	//m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	//m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
 
 	ConLog.SkipLn();
 	ConLog.Write("Mount info:");
@@ -178,7 +196,14 @@ void Emulator::Run()
 	//m_memory_viewer->ShowPC();
 
 	if(!m_dbg_console)
+	{
 		m_dbg_console = new DbgConsole();
+	}
+	else
+	{
+		GetDbgCon().Close();
+		GetDbgCon().Clear();
+	}
 
 	GetGSManager().Init();
 	GetCallbackManager().Init();
@@ -229,6 +254,8 @@ void Emulator::Stop()
 	m_break_points.Clear();
 	m_marked_points.Clear();
 
+	m_vfs.UnMountAll();
+
 	GetGSManager().Close();
 	GetCPU().Close();
 	//SysCallsManager.Close();
@@ -239,12 +266,6 @@ void Emulator::Stop()
 
 	CurGameInfo.Reset();
 	Memory.Close();
-
-	if(m_dbg_console)
-	{
-		GetDbgCon().Close();
-		GetDbgCon().Clear();
-	}
 
 	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
 	wxGetApp().SendDbgCommand(DID_STOPED_EMU);

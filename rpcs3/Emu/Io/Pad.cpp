@@ -4,7 +4,7 @@
 #include "Windows/WindowsPadHandler.h"
 
 PadManager::PadManager()
-	: m_pad_handler(NULL)
+	: m_pad_handler(nullptr)
 	, m_inited(false)
 {
 }
@@ -32,7 +32,7 @@ void PadManager::Init(const u32 max_connect)
 void PadManager::Close()
 {
 	if(m_pad_handler) m_pad_handler->Close();
-	m_pad_handler = NULL;
+	m_pad_handler = nullptr;
 
 	m_inited = false;
 }

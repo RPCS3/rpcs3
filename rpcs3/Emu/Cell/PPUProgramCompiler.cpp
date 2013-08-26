@@ -72,7 +72,7 @@ SectionInfo::SectionInfo(const wxString& _name) : name(_name)
 	shdr.sh_offset = section_offs;
 	shdr.sh_name = section_name_offs;
 
-	section_name_offs += name.Len() + 1;
+	section_name_offs += name.GetCount() + 1;
 }
 
 void SectionInfo::SetDataSize(u32 size, u32 align)
@@ -107,11 +107,11 @@ SectionInfo::~SectionInfo()
 	for(u32 i=section_num + 1; i<sections_list.GetCount(); ++i)
 	{
 		sections_list[i].shdr.sh_offset -= code.GetCount();
-		sections_list[i].shdr.sh_name -= name.Len();
+		sections_list[i].shdr.sh_name -= name.GetCount();
 	}
 
 	section_offs -= code.GetCount();
-	section_name_offs -= name.Len();
+	section_name_offs -= name.GetCount();
 }
 
 CompilePPUProgram::CompilePPUProgram(
@@ -302,7 +302,7 @@ int CompilePPUProgram::GetArg(wxString& result, bool func)
 					case 'r': result = result(0, pos) + '\r' + result(pos+2, result.Len()-(pos+2)); break;
 					case 't': result = result(0, pos) + '\t' + result(pos+2, result.Len()-(pos+2)); break;
 					}
-						
+
 					pos++;
 				}
 			}
@@ -354,7 +354,7 @@ bool CompilePPUProgram::CheckEnd(bool show_err)
 
 void CompilePPUProgram::DetectArgInfo(Arg& arg)
 {
-	const wxString str = arg.string;
+	const wxString str = arg.string.GetPtr();
 
 	if(str.Len() <= 0)
 	{
@@ -372,7 +372,7 @@ void CompilePPUProgram::DetectArgInfo(Arg& arg)
 	{
 		for(u32 i=0; i<m_branches.GetCount(); ++i)
 		{
-			if(m_branches[i].m_name.Cmp(str) != 0) continue;
+			if(str.Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
 
 			arg.type = ARG_BRANCH;
 			arg.value = GetBranchValue(str);
@@ -532,7 +532,7 @@ u32 CompilePPUProgram::GetBranchValue(const wxString& branch)
 {
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(m_branches[i].m_name.Cmp(branch) != 0) continue;
+		if(branch.Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
 		if(m_branches[i].m_pos >= 0) return m_text_addr + m_branches[i].m_pos * 4;
 
 		return m_branches[i].m_addr;
@@ -664,7 +664,7 @@ CompilePPUProgram::Branch& CompilePPUProgram::GetBranch(const wxString& name)
 {
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(m_branches[i].m_name.Cmp(name) != 0) continue;
+		if(name.Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
 
 		return m_branches[i];
 	}
@@ -684,7 +684,7 @@ void CompilePPUProgram::SetSp(const wxString& name, u32 addr, bool create)
 
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(m_branches[i].m_name.Cmp(name) != 0) continue;
+		if(name.Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
 		m_branches[i].m_addr = addr;
 	}
 }
@@ -803,7 +803,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 
 			for(u32 i=0; i<m_sp_string.GetCount(); ++i)
 			{
-				if(m_sp_string[i].m_data.Cmp(src1) != 0) continue;
+				if(src1.Cmp(m_sp_string[i].m_data.GetPtr()) != 0) continue;
 				*dst_branch = Branch(dst, -1, m_sp_string[i].m_addr);
 				founded = true;
 			}
@@ -827,7 +827,7 @@ void CompilePPUProgram::LoadSp(const wxString& op, Elf64_Shdr& s_opd)
 					{
 						if(m_sp_string[i].m_addr == a_src1.value)
 						{
-							*dst_branch = Branch(dst, -1, m_sp_string[i].m_data.Len());
+							*dst_branch = Branch(dst, -1, m_sp_string[i].m_data.GetCount());
 							break;
 						}
 					}
@@ -1335,7 +1335,7 @@ void CompilePPUProgram::Compile()
 
 			for(u32 i=0; i<m_branches.GetCount(); ++i)
 			{
-				if(name.Cmp(m_branches[i].m_name) != 0) continue;
+				if(name.Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
 				WriteError(wxString::Format("'%s' already declared", name));
 				m_error = true;
 				break;
@@ -1365,7 +1365,7 @@ void CompilePPUProgram::Compile()
 	bool has_entry = false;
 	for(u32 i=0; i<m_branches.GetCount(); ++i)
 	{
-		if(m_branches[i].m_name.Cmp("entry") != 0) continue;
+		if(wxString("entry").Cmp(m_branches[i].m_name.GetPtr()) != 0) continue;
 
 		has_entry = true;
 		break;
@@ -1510,7 +1510,7 @@ void CompilePPUProgram::Compile()
 		u32 entry_point = s_text.sh_addr;
 		for(u32 i=0; i<m_branches.GetCount(); ++i)
 		{
-			if(m_branches[i].m_name.Cmp("entry") == 0)
+			if(wxString("entry").Cmp(m_branches[i].m_name.GetPtr()) == 0)
 			{
 				entry_point += m_branches[i].m_pos * 4;
 				break;
@@ -1561,7 +1561,7 @@ void CompilePPUProgram::Compile()
 		for(u32 i=0; i<m_sp_string.GetCount(); ++i)
 		{
 			f.Seek(s_opd.sh_offset + (m_sp_string[i].m_addr - s_opd.sh_addr));
-			f.Write(&m_sp_string[i].m_data[0], m_sp_string[i].m_data.Len() + 1);
+			f.Write(&m_sp_string[i].m_data[0], m_sp_string[i].m_data.GetCount() + 1);
 		}
 
 		f.Seek(s_sceStub_text.sh_offset);
@@ -1576,16 +1576,6 @@ void CompilePPUProgram::Compile()
 			Write32(f, LWZ(2, 12, 4));
 			Write32(f, MTSPR(0x009, 0));
 			Write32(f, BCCTR(20, 0, 0, 0));
-			/*
-			Write32(f, ToOpcode(ADDI) | ToRD(12)); //li r12,0
-			Write32(f, ToOpcode(ORIS) | ToRD(12) | ToRA(12) | ToIMM16(addr >> 16)); //oris r12,r12,addr>>16
-			Write32(f, ToOpcode(LWZ)  | ToRD(12) | ToRA(12) | ToIMM16(addr)); //lwz r12,addr&0xffff(r12)
-			Write32(f, 0xf8410028); //std r2,40(r1)
-			Write32(f, ToOpcode(LWZ)  | ToRD(0) | ToRA(12) | ToIMM16(0)); //lwz r0,0(r12)
-			Write32(f, ToOpcode(LWZ)  | ToRD(2) | ToRA(12) | ToIMM16(4)); //lwz r2,4(r12)
-			Write32(f, 0x7c0903a6); //mtctr r0
-			Write32(f, 0x4e800420); //bctr
-			*/
 		}
 
 		f.Seek(s_lib_stub_top.sh_offset);

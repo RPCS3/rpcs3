@@ -22,15 +22,7 @@ bool Rpcs3App::OnInit()
 	SetTopWindow(m_MainFrame);
 	Emu.Init();
 
-	try
-	{
-		(new CompilerELF(m_MainFrame))->Show();
-	}
-	catch(...)
-	{
-		ConLog.Warning("CompilerELF is broken.");
-	}
-
+	(new CompilerELF(m_MainFrame))->Show();
 	m_debugger_frame = new DebuggerPanel(m_MainFrame);
 	ConLogFrame = new LogFrame(m_MainFrame);
 

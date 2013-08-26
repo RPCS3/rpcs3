@@ -11,7 +11,11 @@ int sys_process_getpid()
 int sys_process_exit(int errorcode)
 {
 	ConLog.Warning("sys_process_exit(%d)", errorcode);
+#ifdef _DEBUG
 	Emu.Pause();
+#else
+	Emu.Stop();
+#endif
 	return CELL_OK;
 }
 
@@ -37,7 +41,6 @@ int SysCalls::lv2ProcessWaitForChild(PPUThread& CPU)
 int SysCalls::lv2ProcessGetStatus(PPUThread& CPU)
 {
 	ConLog.Warning("lv2ProcessGetStatus");
-	if(CPU.IsSPU()) return CELL_UNKNOWN_ERROR;
 	//Memory.Write32(CPU.GPR[4], GetPPUThreadStatus(CPU));
 	return CELL_OK;
 }

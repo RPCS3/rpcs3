@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "SysCalls.h"
 
-#define FUNC_LOG_ERROR(x) ConLog.Error(x); return SC_ARGS_1
+#define FUNC_LOG_ERROR(x) ConLog.Error(x); return 0
 s64 SysCalls::DoFunc(const u32 id) 
 {
 	switch(id)
@@ -286,19 +286,19 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x72cc6cf7: FUNC_LOG_ERROR("TODO: cellGameGetHomeDataImportPath");
 	case 0x94e9f81d: FUNC_LOG_ERROR("TODO: cellGameGetHomeLaunchOptionPath");
 	case 0xf6acd0bc: FUNC_LOG_ERROR("TODO: cellGameGetBootGameInfo");
-	case 0x055bd74d: return cellGcmGetTiledPitchSize(SC_ARGS_1); //FUNC_LOG_ERROR("TODO: cellGcmGetTiledPitchSize");
+	case 0x055bd74d: FUNC_LOG_ERROR("TODO: cellGcmGetTiledPitchSize");
 	case 0x06edea9e: FUNC_LOG_ERROR("TODO: cellGcmSetUserHandler");
 	case 0x0a862772: FUNC_LOG_ERROR("TODO: cellGcmSetQueueHandler");
 	case 0x0b4b62d5: FUNC_LOG_ERROR("TODO: cellGcmSetPrepareFlip");
 	case 0x0e6b0dae: FUNC_LOG_ERROR("TODO: cellGcmGetDisplayInfo");
 	case 0x107bf3a1: FUNC_LOG_ERROR("TODO: cellGcmInitCursor");
-	case 0x15bae46b: return cellGcmInit(SC_ARGS_4);//FUNC_LOG_ERROR("TODO: _cellGcmInitBody");
+	case 0x15bae46b: FUNC_LOG_ERROR("TODO: _cellGcmInitBody");
 	case 0x172c3197: FUNC_LOG_ERROR("TODO: cellGcmSetDefaultCommandBufferAndSegmentWordSize");
 	case 0x1a0de550: FUNC_LOG_ERROR("TODO: cellGcmSetCursorPosition");
 	case 0x1bd633f8: FUNC_LOG_ERROR("TODO: _cellGcmFunc3");
 	case 0x1f61b3ff: FUNC_LOG_ERROR("TODO: cellGcmDumpGraphicsError");
-	case 0x21397818: return cellGcmFlush(SC_ARGS_2); //FUNC_LOG_ERROR("TODO: _cellGcmSetFlipCommand");
-	case 0x21ac3697: return cellGcmAddressToOffset(SC_ARGS_2); //FUNC_LOG_ERROR("TODO: cellGcmAddressToOffset");
+	case 0x21397818: FUNC_LOG_ERROR("TODO: _cellGcmSetFlipCommand");
+	case 0x21ac3697: FUNC_LOG_ERROR("TODO: cellGcmAddressToOffset");
 	case 0x21cee035: FUNC_LOG_ERROR("TODO: cellGcmGetNotifyDataAddress");
 	case 0x23ae55a3: FUNC_LOG_ERROR("TODO: cellGcmGetLastSecondVTime");
 	case 0x25b40ab4: FUNC_LOG_ERROR("TODO: cellGcmSortRemapEaIoAddress");
@@ -309,7 +309,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x3a33c1fd: FUNC_LOG_ERROR("TODO: _cellGcmFunc15");
 	case 0x3b9bd5bd: FUNC_LOG_ERROR("TODO: cellGcmUnreserveIoMapSize");
 	case 0x4524cccd: FUNC_LOG_ERROR("TODO: cellGcmBindTile");
-	case 0x4ae8d215: return cellGcmSetFlipMode(SC_ARGS_1); //FUNC_LOG_ERROR("TODO: cellGcmSetFlipMode");
+	case 0x4ae8d215: FUNC_LOG_ERROR("TODO: cellGcmSetFlipMode");
 	case 0x4d7ce993: FUNC_LOG_ERROR("TODO: cellGcmSetSecondVFrequency");
 	case 0x51c9d62b: FUNC_LOG_ERROR("TODO: cellGcmSetDebugOutputLevel");
 	case 0x527c6439: FUNC_LOG_ERROR("TODO: cellGcmTerminate");
@@ -324,7 +324,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x688b8ac9: FUNC_LOG_ERROR("TODO: _cellGcmFunc38");
 	case 0x69c6cc82: FUNC_LOG_ERROR("TODO: cellGcmSetCursorDisable");
 	case 0x723bbc7e: FUNC_LOG_ERROR("TODO: cellGcmGetVBlankCount");
-	case 0x72a577ce: return cellGcmGetFlipStatus(); //FUNC_LOG_ERROR("TODO: cellGcmGetFlipStatus");
+	case 0x72a577ce: FUNC_LOG_ERROR("TODO: cellGcmGetFlipStatus");
 	case 0x7fc034bc: FUNC_LOG_ERROR("TODO: _cellGcmFunc4");
 	case 0x8572bce2: FUNC_LOG_ERROR("TODO: cellGcmGetReportDataAddressLocation");
 	case 0x8bde5ebf: FUNC_LOG_ERROR("TODO: cellGcmSetUserCommand");
@@ -336,17 +336,17 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x9a0159af: FUNC_LOG_ERROR("TODO: cellGcmGetReportDataAddress");
 	case 0x9ba451e4: FUNC_LOG_ERROR("TODO: cellGcmSetDefaultFifoSize");
 	case 0x9dc04436: FUNC_LOG_ERROR("TODO: cellGcmBindZcull");
-	case 0xa114ec67: return cellGcmMapMainMemory(SC_ARGS_3); //FUNC_LOG_ERROR("TODO: cellGcmMapMainMemory");
+	case 0xa114ec67: FUNC_LOG_ERROR("TODO: cellGcmMapMainMemory");
 	case 0xa41ef7e8: FUNC_LOG_ERROR("TODO: cellGcmSetFlipHandler");
 	case 0xa47c09ff: FUNC_LOG_ERROR("TODO: cellGcmSetFlipStatus");
-	case 0xa53d12ae: return cellGcmSetDisplayBuffer(SC_ARGS_5); //FUNC_LOG_ERROR("TODO: cellGcmSetDisplayBuffer");
-	case 0xa547adde: return cellGcmGetControlRegister();//FUNC_LOG_ERROR("TODO: cellGcmGetControlRegister");
+	case 0xa53d12ae: FUNC_LOG_ERROR("TODO: cellGcmSetDisplayBuffer");
+	case 0xa547adde: FUNC_LOG_ERROR("TODO: cellGcmGetControlRegister");
 	case 0xa6b180ac: FUNC_LOG_ERROR("TODO: cellGcmGetReportDataLocation");
 	case 0xa75640e8: FUNC_LOG_ERROR("TODO: cellGcmUnbindZcull");
 	case 0xa7ede268: FUNC_LOG_ERROR("TODO: cellGcmReserveIoMapSize");
 	case 0xa91b0402: FUNC_LOG_ERROR("TODO: cellGcmSetVBlankHandler");
 	case 0xacee8542: FUNC_LOG_ERROR("TODO: cellGcmSetFlipImmediate");
-	case 0xb2e761d4: return cellGcmResetFlipStatus(); //FUNC_LOG_ERROR("TODO: cellGcmResetFlipStatus");
+	case 0xb2e761d4: FUNC_LOG_ERROR("TODO: cellGcmResetFlipStatus");
 	case 0xbb42a9dd: FUNC_LOG_ERROR("TODO: _cellGcmFunc13");
 	case 0xbc982946: FUNC_LOG_ERROR("TODO: cellGcmSetDefaultCommandBuffer");
 	case 0xbd100dbc: FUNC_LOG_ERROR("TODO: cellGcmSetTileInfo");
@@ -356,7 +356,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0xc8f3bd09: FUNC_LOG_ERROR("TODO: cellGcmGetCurrentField");
 	case 0xcaabd992: FUNC_LOG_ERROR("TODO: cellGcmInitDefaultFifoMode");
 	case 0xd01b570d: FUNC_LOG_ERROR("TODO: cellGcmSetGraphicsHandler");
-	case 0xd0b1d189: cellGcmSetTile(SC_ARGS_8); return SC_ARGS_1;//FUNC_LOG_ERROR("TODO: cellGcmSetTile");
+	case 0xd0b1d189: ConLog.Error("TODO: cellGcmSetTile"); return SC_ARGS_1;
 	case 0xd34a420d: ConLog.Error("TODO: cellGcmSetZcull"); return SC_ARGS_1;
 	case 0xd8f88e1a: FUNC_LOG_ERROR("TODO: _cellGcmSetFlipCommandWithWaitLabel");
 	case 0xd9a0a879: FUNC_LOG_ERROR("TODO: cellGcmGetZcullInfo");
@@ -366,10 +366,10 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0xdc09357e: FUNC_LOG_ERROR("TODO: cellGcmSetFlip");
 	case 0xdc494430: FUNC_LOG_ERROR("TODO: cellGcmSetSecondVHandler");
 	case 0xdf6476bd: FUNC_LOG_ERROR("TODO: cellGcmSetWaitFlipUnsafe");
-	case 0xe315a0b2: return cellGcmGetConfiguration(SC_ARGS_1); //FUNC_LOG_ERROR("TODO: cellGcmGetConfiguration");
+	case 0xe315a0b2: FUNC_LOG_ERROR("TODO: cellGcmGetConfiguration");
 	case 0xe44874f3: FUNC_LOG_ERROR("TODO: cellGcmSysGetLastVBlankTime");
 	case 0xefd00f54: FUNC_LOG_ERROR("TODO: cellGcmUnmapEaIoAddress");
-	case 0xf80196c1: return cellGcmGetLabelAddress(SC_ARGS_1); //FUNC_LOG_ERROR("TODO: cellGcmGetLabelAddress");
+	case 0xf80196c1: FUNC_LOG_ERROR("TODO: cellGcmGetLabelAddress");
 	case 0xf9bfdc72: FUNC_LOG_ERROR("TODO: cellGcmSetCursorImageOffset");
 	case 0xfb81c03e: FUNC_LOG_ERROR("TODO: cellGcmGetMaxIoMapSize");
 	case 0xfce9e764: FUNC_LOG_ERROR("TODO: cellGcmInitSystemMode");
@@ -3583,7 +3583,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x2f85c0ef: return sys_lwmutex_create(SC_ARGS_2);//FUNC_LOG_ERROR("TODO: sys_lwmutex_create");
 	case 0x3172759d: FUNC_LOG_ERROR("TODO: sys_game_get_temperature");
 	case 0x318f17e1: FUNC_LOG_ERROR("TODO: _sys_memalign");
-	case 0x350d454e: return sys_ppu_thread_get_id();//FUNC_LOG_ERROR("TODO: sys_ppu_thread_get_id");
+	case 0x350d454e: return sys_ppu_thread_get_id(SC_ARGS_1);//FUNC_LOG_ERROR("TODO: sys_ppu_thread_get_id");
 	case 0x35168520: return sys_heap_malloc(SC_ARGS_2); //FUNC_LOG_ERROR("TODO: _sys_heap_malloc");
 	case 0x3bd53c7b: FUNC_LOG_ERROR("TODO: _sys_memchr");
 	case 0x3dd4a957: FUNC_LOG_ERROR("TODO: sys_ppu_thread_register_atexit");
@@ -3647,7 +3647,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0xa285139d: FUNC_LOG_ERROR("TODO: sys_spinlock_lock");
 	case 0xa2c7ba64: FUNC_LOG_ERROR("TODO: sys_prx_exitspawn_with_level");
 	case 0xa330ad84: FUNC_LOG_ERROR("TODO: sys_prx_load_module_on_memcontainer_by_fd");
-	case 0xa3e3be68: FUNC_LOG_ERROR("TODO: sys_ppu_thread_once");
+	case 0xa3e3be68: sys_ppu_thread_once(SC_ARGS_2); return SC_ARGS_1;//FUNC_LOG_ERROR("TODO: sys_ppu_thread_once");
 	case 0xa5d06bf0: FUNC_LOG_ERROR("TODO: sys_prx_get_module_list");
 	case 0xaa6d9bff: FUNC_LOG_ERROR("TODO: sys_prx_load_module_on_memcontainer");
 	case 0xac6fc404: FUNC_LOG_ERROR("TODO: sys_ppu_thread_unregister_atexit");

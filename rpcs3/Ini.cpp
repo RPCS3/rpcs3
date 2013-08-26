@@ -7,7 +7,12 @@ Inis Ini;
 
 static bool StringToBool(const wxString str)
 {
-	if(!str.CmpNoCase("enable") || !str.CmpNoCase("e") || !str.CmpNoCase("1"))
+	if(
+		!str.CmpNoCase("enable") ||
+		!str.CmpNoCase("e") ||
+		!str.CmpNoCase("1") ||
+		!str.CmpNoCase("true") ||
+		!str.CmpNoCase("t") )
 	{
 		return true;
 	}

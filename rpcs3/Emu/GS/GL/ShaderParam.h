@@ -5,18 +5,21 @@ enum ParamFlag
 {
 	PARAM_IN,
 	PARAM_OUT,
+	PARAM_UNIFORM,
 	PARAM_CONST,
 	PARAM_NONE,
 };
 
 struct ParamItem
 {
-	wxString name;
-	wxString location;
+	ArrayString name;
+	ArrayString location;
+	ArrayString value;
 
-	ParamItem(const wxString& _name, int _location)
+	ParamItem(const wxString& _name, int _location, const wxString& _value = wxEmptyString)
 		: name(_name)
 		, location(_location > -1 ? wxString::Format("layout (location = %d) ", _location) : "")
+		, value(_value)
 	{
 	}
 };
@@ -24,7 +27,7 @@ struct ParamItem
 struct ParamType
 {
 	const ParamFlag flag;
-	wxString type;
+	ArrayString type;
 	Array<ParamItem> items;
 
 	ParamType(const ParamFlag _flag, const wxString& _type)
@@ -37,7 +40,7 @@ struct ParamType
 	{
 		for(u32 i=0; i<items.GetCount(); ++i)
 		{
-			if(items[i].name.Cmp(name) == 0) return true;
+			if(name.Cmp(items[i].name.GetPtr()) == 0) return true;
 		}
 
 		return false;
@@ -49,10 +52,15 @@ struct ParamType
 
 		for(u32 n=0; n<items.GetCount(); ++n)
 		{
-			ret += items[n].location;
-			ret += type;
+			ret += items[n].location.GetPtr();
+			ret += type.GetPtr();
 			ret += " ";
-			ret += items[n].name;
+			ret += items[n].name.GetPtr();
+			if(items[n].value.GetCount())
+			{
+				ret += " = ";
+				ret += items[n].value.GetPtr();
+			}
 			ret += ";\n";
 		}
 
@@ -68,10 +76,10 @@ struct ParamArray
 	{
 		for(u32 i=0; i<params.GetCount(); ++i)
 		{
-			if(params[i].type.Cmp(type) == 0) return &params[i];
+			if(type.Cmp(params[i].type.GetPtr()) == 0) return &params[i];
 		}
 
-		return NULL;
+		return nullptr;
 	}
 
 	wxString GetParamFlag(const ParamFlag flag)
@@ -80,10 +88,37 @@ struct ParamArray
 		{
 		case PARAM_OUT:		return "out ";
 		case PARAM_IN:		return "in ";
-		case PARAM_CONST:	return "uniform ";
+		case PARAM_UNIFORM:	return "uniform ";
+		case PARAM_CONST:	return "const ";
 		}
 
 		return wxEmptyString;
+	}
+
+	bool HasParam(const ParamFlag flag, wxString type, const wxString& name)
+	{
+		type = GetParamFlag(flag) + type;
+		ParamType* t = SearchParam(type);
+		return t && t->SearchName(name);
+	}
+
+	wxString AddParam(const ParamFlag flag, wxString type, const wxString& name, const wxString& value)
+	{
+		type = GetParamFlag(flag) + type;
+		ParamType* t = SearchParam(type);
+
+		if(t)
+		{
+			if(!t->SearchName(name)) t->items.Move(new ParamItem(name, -1, value));
+		}
+		else
+		{
+			const u32 num = params.GetCount();
+			params.Move(new ParamType(flag, type));
+			params[num].items.Move(new ParamItem(name, -1, value));
+		}
+
+		return name;
 	}
 
 	wxString AddParam(const ParamFlag flag, wxString type, const wxString& name, int location = -1)

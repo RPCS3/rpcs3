@@ -199,3 +199,18 @@ wxString vfsDevice::GetPs3Path(const wxString& l, const wxString& r)
 
 	return GetPs3Path(l + '/' + r, false);
 }
+
+void vfsDevice::Lock() const
+{
+	m_mtx_lock.lock();
+}
+
+void vfsDevice::Unlock() const
+{
+	m_mtx_lock.unlock();
+}
+
+bool vfsDevice::TryLock() const
+{
+	return m_mtx_lock.try_lock();
+}

@@ -1,29 +1,31 @@
 #pragma once
 #include "PPCThread.h"
+#include "Emu/event.h"
+#include "MFC.h"
 
 static const wxString spu_reg_name[128] =
 {
-	"$LR",  "$SP",  "$3",   "$4",   "$5",   "$6",   "$7",   "$8",
-	"$9",   "$10",  "$11",  "$12",  "$13",  "$14",  "$15",  "$16",
-	"$17",  "$18",  "$19",  "$20",  "$21",  "$22",  "$23",  "$24",
-	"$25",  "$26",  "$27",  "$28",  "$29",  "$30",  "$31",  "$32",
-	"$33",  "$34",  "$35",  "$36",  "$37",  "$38",  "$39",  "$40",
-	"$41",  "$42",  "$43",  "$44",  "$45",  "$46",  "$47",  "$48",
-	"$49",  "$50",  "$51",  "$52",  "$53",  "$54",  "$55",  "$56",
-	"$57",  "$58",  "$59",  "$60",  "$61",  "$62",  "$63",  "$64",
-	"$65",  "$66",  "$67",  "$68",  "$69",  "$70",  "$71",  "$72",
-	"$73",  "$74",  "$75",  "$76",  "$77",  "$78",  "$79",  "$80",
-	"$81",  "$82",  "$83",  "$84",  "$85",  "$86",  "$87",  "$88",
-	"$89",  "$90",  "$91",  "$92",  "$93",  "$94",  "$95",  "$96",
-	"$97",  "$98",  "$99",  "$100", "$101", "$102", "$103", "$104",
-	"$105", "$106", "$107", "$108", "$109", "$110", "$111", "$112",
-	"$113", "$114", "$115", "$116", "$117", "$118", "$119", "$120",
-	"$121", "$122", "$123", "$124", "$125", "$126", "$127",
+	"$LR",  "$SP",  "$2",   "$3",   "$4",   "$5",   "$6",   "$7",
+	"$8",   "$9",   "$10",  "$11",  "$12",  "$13",  "$14",  "$15",
+	"$16",  "$17",  "$18",  "$19",  "$20",  "$21",  "$22",  "$23",
+	"$24",  "$25",  "$26",  "$27",  "$28",  "$29",  "$30",  "$31",
+	"$32",  "$33",  "$34",  "$35",  "$36",  "$37",  "$38",  "$39",
+	"$40",  "$41",  "$42",  "$43",  "$44",  "$45",  "$46",  "$47",
+	"$48",  "$49",  "$50",  "$51",  "$52",  "$53",  "$54",  "$55",
+	"$56",  "$57",  "$58",  "$59",  "$60",  "$61",  "$62",  "$63",
+	"$64",  "$65",  "$66",  "$67",  "$68",  "$69",  "$70",  "$71",
+	"$72",  "$73",  "$74",  "$75",  "$76",  "$77",  "$78",  "$79",
+	"$80",  "$81",  "$82",  "$83",  "$84",  "$85",  "$86",  "$87",
+	"$88",  "$89",  "$90",  "$91",  "$92",  "$93",  "$94",  "$95",
+	"$96",  "$97",  "$98",  "$99",  "$100", "$101", "$102", "$103",
+	"$104", "$105", "$106", "$107", "$108", "$109", "$110", "$111",
+	"$112", "$113", "$114", "$115", "$116", "$117", "$118", "$119",
+	"$120", "$121", "$122", "$123", "$124", "$125", "$126", "$127",
 };
 
 static const wxString spu_ch_name[128] =
 {
-	"$SPU_RdEventStat", "$SPU_WrEventMask", "$SPU_RdSigNotify1",
+	"$SPU_RdEventStat", "$SPU_WrEventMask", "$SPU_WrEventAck", "$SPU_RdSigNotify1",
 	"$SPU_RdSigNotify2", "$ch5",  "$ch6",  "$SPU_WrDec", "$SPU_RdDec",
 	"$MFC_WrMSSyncReq",   "$ch10",  "$SPU_RdEventMask",  "$MFC_RdTagMask",  "$SPU_RdMachStat",
 	"$SPU_WrSRR0",  "$SPU_RdSRR0",  "$MFC_LSA", "$MFC_EAH",  "$MFC_EAL",  "$MFC_Size",
@@ -80,10 +82,24 @@ enum MFCchannels
 	MFC_RdAtomicStat	= 27,	//Read completion status of last completed immediate MFC atomic update command
 };
 
+enum
+{
+	SPU_RUNCNTL_STOP		= 0,
+	SPU_RUNCNTL_RUNNABLE	= 1,
+};
+
+enum
+{
+	SPU_STATUS_STOPPED				= 0x0,
+	SPU_STATUS_RUNNING				= 0x1,
+	SPU_STATUS_STOPPED_BY_STOP		= 0x2,
+	SPU_STATUS_STOPPED_BY_HALT		= 0x4,
+	SPU_STATUS_WAITING_FOR_CHANNEL	= 0x8,
+	SPU_STATUS_SINGLE_STEP			= 0x10,
+};
+
 union SPU_GPR_hdr
 {
-	//__m128i _m128i;
-
 	u128 _u128;
 	s128 _i128;
 	u64 _u64[2];
@@ -96,19 +112,6 @@ union SPU_GPR_hdr
 	s8  _i8[16];
 
 	SPU_GPR_hdr() {}
-	/*
-	SPU_GPR_hdr(const __m128i val){_u128._u64[0] = val.m128i_u64[0]; _u128._u64[1] = val.m128i_u64[1];}
-	SPU_GPR_hdr(const u128 val) {			_u128	= val; }
-	SPU_GPR_hdr(const u64  val) { Reset(); _u64[0]	= val; }
-	SPU_GPR_hdr(const u32  val) { Reset(); _u32[0]	= val; }
-	SPU_GPR_hdr(const u16  val) { Reset(); _u16[0]	= val; }
-	SPU_GPR_hdr(const u8   val) { Reset(); _u8[0]	= val; }
-	SPU_GPR_hdr(const s128 val) {			_i128	= val; }
-	SPU_GPR_hdr(const s64  val) { Reset(); _i64[0]	= val; }
-	SPU_GPR_hdr(const s32  val) { Reset(); _i32[0]	= val; }
-	SPU_GPR_hdr(const s16  val) { Reset(); _i16[0]	= val; }
-	SPU_GPR_hdr(const s8   val) { Reset(); _i8[0]	= val; }
-	*/
 
 	wxString ToString() const
 	{
@@ -119,41 +122,34 @@ union SPU_GPR_hdr
 	{
 		memset(this, 0, sizeof(*this));
 	}
-
-	//operator __m128i() { __m128i ret; ret.m128i_u64[0]=_u128._u64[0]; ret.m128i_u64[1]=_u128._u64[1]; return ret; }
-	/*
-	SPU_GPR_hdr operator ^ (__m128i right)	{ return _mm_xor_si128(*this, right); }
-	SPU_GPR_hdr operator | (__m128i right)	{ return _mm_or_si128 (*this, right); }
-	SPU_GPR_hdr operator & (__m128i right)	{ return _mm_and_si128(*this, right); }
-	SPU_GPR_hdr operator << (int right)		{ return _mm_slli_epi32(*this, right); }
-	SPU_GPR_hdr operator << (__m128i right) { return _mm_sll_epi32(*this, right); }
-	SPU_GPR_hdr operator >> (int right)		{ return _mm_srai_epi32(*this, right); }
-	SPU_GPR_hdr operator >> (__m128i right) { return _mm_sra_epi32(*this, right); }
-
-	SPU_GPR_hdr operator | (__m128i right)	{ return _mm_or_si128 (*this, right); }
-	SPU_GPR_hdr operator & (__m128i right)	{ return _mm_and_si128(*this, right); }
-	SPU_GPR_hdr operator << (int right)		{ return _mm_slli_epi32(*this, right); }
-	SPU_GPR_hdr operator << (__m128i right) { return _mm_sll_epi32(*this, right); }
-	SPU_GPR_hdr operator >> (int right)		{ return _mm_srai_epi32(*this, right); }
-	SPU_GPR_hdr operator >> (__m128i right) { return _mm_sra_epi32(*this, right); }
-
-	SPU_GPR_hdr operator ^= (__m128i right) { return *this = *this ^ right; }
-	SPU_GPR_hdr operator |= (__m128i right) { return *this = *this | right; }
-	SPU_GPR_hdr operator &= (__m128i right) { return *this = *this & right; }
-	SPU_GPR_hdr operator <<= (int right)	{ return *this = *this << right; }
-	SPU_GPR_hdr operator <<= (__m128i right){ return *this = *this << right; }
-	SPU_GPR_hdr operator >>= (int right)	{ return *this = *this >> right; }
-	SPU_GPR_hdr operator >>= (__m128i right){ return *this = *this >> right; }
-	*/
 };
 
 class SPUThread : public PPCThread
 {
 public:
 	SPU_GPR_hdr GPR[128]; //General-Purpose Register
-	Stack<u32> Mbox;
-
-	u32 LSA; //local storage address
+	/*
+	SPUReg<1> MFC_LSA;
+	SPUReg<1> MFC_EAH;
+	SPUReg<1> MFC_EAL;
+	SPUReg<1> MFC_Size_Tag;
+	SPUReg<1> MFC_CMDStatus;
+	SPUReg<1> MFC_QStatus;
+	SPUReg<1> Prxy_QueryType;
+	SPUReg<1> Prxy_QueryMask;
+	SPUReg<1> Prxy_TagStatus;
+	SPUReg<1> SPU_Out_MBox;
+	SPUReg<4> SPU_In_MBox;
+	SPUReg<1> SPU_MBox_Status;
+	SPUReg<1> SPU_RunCntl;
+	SPUReg<1> SPU_Status;
+	SPUReg<1> SPU_NPC;
+	SPUReg<1> SPU_RdSigNotify1;
+	SPUReg<1> SPU_RdSigNotify2;
+	*/
+	SizedStack<u32, 1> SPU_OutIntr_Mbox;
+	u32 LSA;
+	MFC mfc;
 
 	union
 	{
@@ -165,11 +161,14 @@ public:
 	{
 		switch(ch)
 		{
+		case SPU_WrOutMbox:
+			return mfc.SPU_Out_MBox.GetFreeCount();
+
 		case SPU_RdInMbox:
-		return 1;
+			return mfc.SPU_In_MBox.GetCount();
 
 		case SPU_WrOutIntrMbox:
-		return 0;
+			return 0;//return SPU_OutIntr_Mbox.GetFreeCount();
 
 		default:
 			ConLog.Error("%s error: unknown/illegal channel (%d).", __FUNCTION__, ch);
@@ -181,12 +180,25 @@ public:
 
 	void WriteChannel(u32 ch, const SPU_GPR_hdr& r)
 	{
-		const u32 v = r._u32[0];
+		const u32 v = r._u32[3];
 
 		switch(ch)
 		{
 		case SPU_WrOutIntrMbox:
-			Mbox.Push(v);
+			ConLog.Warning("SPU_WrOutIntrMbox = 0x%x", v);
+			if(!SPU_OutIntr_Mbox.Push(v))
+			{
+				ConLog.Warning("Not enought free rooms.");
+			}
+		break;
+
+		case SPU_WrOutMbox:
+			ConLog.Warning("SPU_WrOutMbox = 0x%x", v);
+			if(!mfc.SPU_Out_MBox.Push(v))
+			{
+				ConLog.Warning("Not enought free rooms.");
+			}
+			mfc.SPU_Status.SetValue((mfc.SPU_Status.GetValue() & ~0xff) | 1);
 		break;
 
 		default:
@@ -198,12 +210,13 @@ public:
 	void ReadChannel(SPU_GPR_hdr& r, u32 ch)
 	{
 		r.Reset();
-		u32& v = r._u32[0];
+		u32& v = r._u32[3];
 
 		switch(ch)
 		{
 		case SPU_RdInMbox:
-			v = Mbox.Pop();
+			if(!mfc.SPU_In_MBox.Pop(v)) v = 0;
+			mfc.SPU_Status.SetValue((mfc.SPU_Status.GetValue() & ~0xff00) | (mfc.SPU_In_MBox.GetCount() << 8));
 		break;
 
 		default:
@@ -212,20 +225,21 @@ public:
 		}
 	}
 
-	u8   ReadLSA8  ()	{ return Memory.Read8  (LSA + m_offset); }
-	u16  ReadLSA16 ()	{ return Memory.Read16 (LSA + m_offset); }
-	u32  ReadLSA32 ()	{ return Memory.Read32 (LSA + m_offset); }
-	u64  ReadLSA64 ()	{ return Memory.Read64 (LSA + m_offset); }
-	u128 ReadLSA128()	{ return Memory.Read128(LSA + m_offset); }
+	bool IsGoodLSA(const u32 lsa) const { return Memory.IsGoodAddr(lsa + m_offset); }
+	virtual u8   ReadLS8  (const u32 lsa) const { return Memory.Read8  (lsa + (m_offset & 0x3fffc)); }
+	virtual u16  ReadLS16 (const u32 lsa) const { return Memory.Read16 (lsa + m_offset); }
+	virtual u32  ReadLS32 (const u32 lsa) const { return Memory.Read32 (lsa + m_offset); }
+	virtual u64  ReadLS64 (const u32 lsa) const { return Memory.Read64 (lsa + m_offset); }
+	virtual u128 ReadLS128(const u32 lsa) const { return Memory.Read128(lsa + m_offset); }
 
-	void WriteLSA8  (const u8&   data)	{ Memory.Write8  (LSA + m_offset, data); }
-	void WriteLSA16 (const u16&  data)	{ Memory.Write16 (LSA + m_offset, data); }
-	void WriteLSA32 (const u32&  data)	{ Memory.Write32 (LSA + m_offset, data); }
-	void WriteLSA64 (const u64&  data)	{ Memory.Write64 (LSA + m_offset, data); }
-	void WriteLSA128(const u128& data)	{ Memory.Write128(LSA + m_offset, data); }
+	virtual void WriteLS8  (const u32 lsa, const u8&   data) const { Memory.Write8  (lsa + m_offset, data); }
+	virtual void WriteLS16 (const u32 lsa, const u16&  data) const { Memory.Write16 (lsa + m_offset, data); }
+	virtual void WriteLS32 (const u32 lsa, const u32&  data) const { Memory.Write32 (lsa + m_offset, data); }
+	virtual void WriteLS64 (const u32 lsa, const u64&  data) const { Memory.Write64 (lsa + m_offset, data); }
+	virtual void WriteLS128(const u32 lsa, const u128& data) const { Memory.Write128(lsa + m_offset, data); }
 
 public:
-	SPUThread();
+	SPUThread(PPCThreadType type = PPC_THREAD_SPU);
 	~SPUThread();
 
 	virtual wxString RegsToString()
@@ -246,7 +260,7 @@ protected:
 	virtual void DoResume();
 	virtual void DoStop();
 
-private:
+protected:
 	virtual void DoCode(const s32 code);
 };
 

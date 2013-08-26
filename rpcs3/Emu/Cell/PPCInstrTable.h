@@ -1,10 +1,12 @@
 #pragma once
 
-template<int size, typename T> __forceinline static T sign(const T value)
+template<uint size, typename T> __forceinline static T sign(const T value)
 {
-	if(value & (1 << (size - 1)))
+	static_assert(size > 0 && size < sizeof(T) * 8, "Bad size");
+	static const T sub_value = T(1) << size;
+	if(value & (T(1) << (size - 1)))
 	{
-		return value - (1 << size);
+		return value - sub_value;
 	}
 
 	return value;
@@ -52,6 +54,7 @@ public:
 	{
 	}
 
+	static const u32 size = to - from + 1;
 	static const u32 shift = 31 - to;
 	static const u32 mask = ((1ULL << ((to - from) + 1)) - 1) << shift;
 	

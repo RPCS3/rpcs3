@@ -20,16 +20,19 @@ class InterpreterDisAsmFrame
 	wxButton* m_btn_pause;
 	AppConnector m_app_connector;
 	u32 m_item_count;
+	wxChoice* m_choice_units;
 
 public:
-	PPCThread& CPU;
+	PPCThread* CPU;
 
 public:
-	InterpreterDisAsmFrame(wxWindow* parent, PPCThread* cpu);
+	InterpreterDisAsmFrame(wxWindow* parent);
 	~InterpreterDisAsmFrame();
 
-	u32 CentrePc(const u32 pc) const;
+	void UpdateUnitList();
 
+	u64 CentrePc(const u64 pc) const;
+	void OnSelectUnit(wxCommandEvent& event);
 	void OnKeyDown(wxKeyEvent& event);
 	void OnResize(wxSizeEvent& event);
 	void DoUpdate();

@@ -23,7 +23,7 @@ protected:
 		{
 			case DumpMode:
 			{
-				wxString mem = wxString::Format("\t%x:\t", dump_pc);
+				wxString mem = wxString::Format("\t%08llx:\t", dump_pc);
 				for(u8 i=0; i < 4; ++i)
 				{
 					mem += wxString::Format("%02x", Memory.Read8(dump_pc + i));
@@ -36,14 +36,11 @@ protected:
 
 			case InterpreterMode:
 			{
-				wxString mem = wxString::Format("[%x]  ", dump_pc);
-				for(u8 i=0; i < 4; ++i)
-				{
-					mem += wxString::Format("%02x", Memory.Read8(dump_pc + i));
-					if(i < 3) mem += " ";
-				}
-
-				last_opcode = mem + ": " + value;
+				last_opcode = wxString::Format("[%08llx]  %02x %02x %02x %02x: %s", dump_pc,
+					Memory.Read8(offset + dump_pc),
+					Memory.Read8(offset + dump_pc + 1),
+					Memory.Read8(offset + dump_pc + 2),
+					Memory.Read8(offset + dump_pc + 3), value);
 			}
 			break;
 
@@ -55,12 +52,14 @@ protected:
 
 public:
 	wxString last_opcode;
-	uint dump_pc;
+	u64 dump_pc;
+	u64 offset;
 
 protected:
 	PPC_DisAsm(PPCThread& cpu, DisAsmModes mode = NormalMode) 
 		: m_mode(mode)
 		, disasm_frame(NULL)
+		, offset(0)
 	{
 		if(m_mode != NormalMode) return;
 

@@ -10,6 +10,7 @@
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "gl.lib")
 
+void printGlError(GLenum err, const char* situation);
 void checkForGlError(const char* situation);
 
 class GLTexture
@@ -23,19 +24,60 @@ class GLTexture
 	u8 m_dimension;
 	u32 m_format;
 	u16 m_mipmap;
+
+	u32 m_pitch;
+	u16 m_depth;
+
+	u16 m_minlod;
+	u16 m_maxlod;
+	u8 m_maxaniso;
+
+	u8 m_wraps;
+	u8 m_wrapt;
+	u8 m_wrapr;
+	u8 m_unsigned_remap;
+	u8 m_zfunc;
+	u8 m_gamma;
+	u8 m_aniso_bias;
+	u8 m_signed_remap;
+
+	u32 m_remap;
 	
 public:
 	GLTexture()
-		: m_width(0), m_height(0),
-		m_id(0),
-		m_offset(0),
-		m_enabled(false),
+		: m_width(0), m_height(0)
+		, m_id(0)
+		, m_offset(0)
+		, m_enabled(false)
 
-		m_cubemap(false),
-		m_dimension(0),
-		m_format(0),
-		m_mipmap(0)
+		, m_cubemap(false)
+		, m_dimension(0)
+		, m_format(0)
+		, m_mipmap(0)
+		, m_minlod(0)
+		, m_maxlod(1000)
+		, m_maxaniso(0)
 	{
+	}
+
+	void Create()
+	{
+		if(m_id)
+		{
+			Delete();
+		}
+
+		if(!m_id)
+		{
+			glGenTextures(1, &m_id);
+			checkForGlError("GLTexture::Init() -> glGenTextures");
+			Bind();
+
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+			//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+		}
 	}
 
 	void SetRect(const u32 width, const u32 height)
@@ -54,6 +96,37 @@ public:
 		m_mipmap = mipmap;
 	}
 
+	void SetAddress(u8 wraps, u8 wrapt, u8 wrapr, u8 unsigned_remap, u8 zfunc, u8 gamma, u8 aniso_bias, u8 signed_remap)
+	{
+		m_wraps = wraps;
+		m_wrapt = wrapt;
+		m_wrapr = wrapr;
+		m_unsigned_remap = unsigned_remap;
+		m_zfunc = zfunc;
+		m_gamma = gamma;
+		m_aniso_bias = aniso_bias;
+		m_signed_remap = signed_remap;
+	}
+
+	void SetControl0(const bool enable, const u16 minlod, const u16 maxlod, const u8 maxaniso)
+	{
+		m_enabled = enable;
+		m_minlod = minlod;
+		m_maxlod = maxlod;
+		m_maxaniso = maxaniso;
+	}
+
+	void SetControl1(u32 remap)
+	{
+		m_remap = remap;
+	}
+
+	void SetControl3(u16 depth, u32 pitch)
+	{
+		m_depth = depth;
+		m_pitch = pitch;
+	}
+
 	u32 GetFormat() const { return m_format; }
 
 	void SetOffset(const u32 offset)
@@ -66,59 +139,193 @@ public:
 		return wxSize(m_width, m_height);
 	}
 
-	void Init()
+	int GetGlWrap(int wrap)
 	{
-		if(!m_id)
+		switch(wrap)
 		{
-			glGenTextures(1, &m_id);
-			checkForGlError("GLTexture::Init() -> glGenTextures");
-			glBindTexture(GL_TEXTURE_2D, m_id);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		}
-		else
-		{
-			glBindTexture(GL_TEXTURE_2D, m_id);
+		case 1: return GL_REPEAT;
+		case 2: return GL_MIRRORED_REPEAT;
+		case 3: return GL_CLAMP_TO_EDGE;
+		case 4: return GL_TEXTURE_BORDER;
+		case 5: return GL_CLAMP_TO_EDGE;//GL_CLAMP;
+		//case 6: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
 		}
 
+		ConLog.Error("Texture wrap error: bad wrap (%d).", wrap);
+		return GL_REPEAT;
+	}
+
+	void Init()
+	{
+		Bind();
+		if(!Memory.IsGoodAddr(m_offset))
+		{
+			ConLog.Error("Bad texture address=0x%x", m_offset);
+			return;
+		}
+		//ConLog.Warning("texture addr = 0x%x, width = %d, height = %d, max_aniso=%d, mipmap=%d, remap=0x%x, zfunc=0x%x, wraps=0x%x, wrapt=0x%x, wrapr=0x%x, minlod=0x%x, maxlod=0x%x", 
+		//	m_offset, m_width, m_height, m_maxaniso, m_mipmap, m_remap, m_zfunc, m_wraps, m_wrapt, m_wrapr, m_minlod, m_maxlod);
 		//TODO: safe init
 		checkForGlError("GLTexture::Init() -> glBindTexture");
 
-		switch(m_format & ~(0x20 | 0x40))
+		glPixelStorei(GL_PACK_ROW_LENGTH, m_pitch);
+
+		int format = m_format & ~(0x20 | 0x40);
+		bool is_swizzled = (m_format & 0x20) == 0;
+
+		char* pixels = (char*)Memory.GetMemFromAddr(m_offset);
+
+		switch(format)
 		{
 		case 0x81:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RED, GL_UNSIGNED_BYTE, Memory.GetMemFromAddr(m_offset));
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_BLUE, GL_UNSIGNED_BYTE, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
+			
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_BLUE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_BLUE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_BLUE);
+
 			checkForGlError("GLTexture::Init() -> glTexParameteri");
 		break;
 
 		case 0x85:
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, Memory.GetMemFromAddr(m_offset));
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
-		default: ConLog.Error("Init tex error: Bad tex format (0x%x)", m_format); break;
+		case 0x86:
+		{
+			u32 size = ((m_width + 3) / 4) * ((m_height + 3) / 4) * 8;
+
+			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, m_width, m_height, 0, size, pixels);
+			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
+		}
+		break;
+
+		case 0x87:
+		{
+			u32 size = ((m_width + 3) / 4) * ((m_height + 3) / 4) * 16;
+
+			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, m_width, m_height, 0, size, pixels);
+			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
+		}
+		break;
+
+		case 0x88:
+		{
+			u32 size = ((m_width + 3) / 4) * ((m_height + 3) / 4) * 16;
+
+			glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, m_width, m_height, 0, size, pixels);
+			checkForGlError("GLTexture::Init() -> glCompressedTexImage2D");
+		}
+		break;
+		
+		case 0x94:
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RED, GL_SHORT, pixels);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_ONE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_ONE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_ONE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+		break;
+
+		case 0x9a:
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_BGRA, GL_HALF_FLOAT, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+		break;
+
+		case 0x9e:
+		{
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, pixels);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
+		}
+		break;
+
+		default: ConLog.Error("Init tex error: Bad tex format (0x%x | 0x%x | 0x%x)", format, m_format & 0x20, m_format & 0x40); break;
 		}
 
-		//glBindTexture(GL_TEXTURE_2D, 0);
+		if(m_mipmap > 1)
+		{
+			glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+		}
+
+		if(format != 0x81 && format != 0x94)
+		{
+			u8 remap_a = m_remap & 0x3;
+			u8 remap_r = (m_remap >> 2) & 0x3;
+			u8 remap_g = (m_remap >> 4) & 0x3;
+			u8 remap_b = (m_remap >> 6) & 0x3;
+
+			static const int gl_remap[] =
+			{
+				GL_ALPHA,
+				GL_RED,
+				GL_GREEN,
+				GL_BLUE,
+			};
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, gl_remap[remap_a]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, gl_remap[remap_r]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, gl_remap[remap_g]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, gl_remap[remap_b]);
+		}
+
+		static const int gl_tex_zfunc[] =
+		{
+			GL_NEVER,
+			GL_LESS,
+			GL_EQUAL,
+			GL_LEQUAL,
+			GL_GREATER,
+			GL_NOTEQUAL,
+			GL_GEQUAL,
+			GL_ALWAYS,
+		};
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GetGlWrap(m_wraps));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GetGlWrap(m_wrapt));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GetGlWrap(m_wrapr));
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, gl_tex_zfunc[m_zfunc]);
+
+		glTexEnvf(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, m_aniso_bias);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, m_minlod);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, m_maxlod);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, m_maxaniso);
+
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		//Unbind();
 	}
 
 	void Save(const wxString& name)
 	{
-		if(!m_id || !m_offset) return;
+		if(!m_id || !m_offset || !m_width || !m_height) return;
 
-		ConLog.Write("start");
 		u32* alldata = new u32[m_width * m_height];
 
-		glBindTexture(GL_TEXTURE_2D, m_id);
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, alldata);
+		Bind();
 
+		switch(m_format & ~(0x20 | 0x40))
+		{
+		case 0x81:
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, alldata);
+		break;
+
+		case 0x85:
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, alldata);
+		break;
+
+		default:
+			delete[] alldata;
+		return;
+		}
+
+		{
+			wxFile f(name + ".raw", wxFile::write);
+			f.Write(alldata, m_width * m_height * 4);
+		}
 		u8* data = new u8[m_width * m_height * 3];
 		u8* alpha = new u8[m_width * m_height];
 
@@ -133,7 +340,6 @@ public:
 			*dst_a++ = *src++;
 		}
 
-		ConLog.Write("end");
 		wxImage out;
 		out.Create(m_width, m_height, data, alpha);
 		out.SaveFile(name, wxBITMAP_TYPE_PNG);
@@ -160,8 +366,44 @@ public:
 		glBindTexture(GL_TEXTURE_2D, m_id);
 	}
 
-	void Enable(bool enable) { m_enabled = enable; }
+	void Unbind()
+	{
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	void Delete()
+	{
+		if(m_id)
+		{
+			glDeleteTextures(1, &m_id);
+			m_id = 0;
+		}
+	}
+
 	bool IsEnabled() const { return m_enabled; }
+};
+
+struct TransformConstant
+{
+	u32 id;
+	float x, y, z, w;
+
+	TransformConstant()
+		: x(0.0f)
+		, y(0.0f)
+		, z(0.0f)
+		, w(0.0f)
+	{
+	}
+
+	TransformConstant(u32 id, float x, float y, float z, float w)
+		: id(id)
+		, x(x)
+		, y(y)
+		, z(z)
+		, w(w)
+	{
+	}
 };
 
 struct IndexArrayData
@@ -211,8 +453,6 @@ private:
 	virtual void OnSize(wxSizeEvent& event);
 };
 
-extern gcmBuffer gcmBuffers[2];
-
 struct GLRSXThread : public ThreadBase
 {
 	wxWindow* m_parent;
@@ -228,16 +468,26 @@ class GLGSRender
 	, public GSRender
 	, public ExecRSXCMDdata
 {
+public:
+	static const uint m_vertex_count = 16;
+	static const uint m_fragment_count = 16;
+	static const uint m_textures_count = 16;
+
 private:
 	GLRSXThread* m_rsx_thread;
 
 	IndexArrayData m_indexed_array;
 
-	ShaderProgram m_shader_prog;
-	VertexData m_vertex_data[16];
+	ShaderProgram m_shader_progs[m_fragment_count];
+	ShaderProgram* m_cur_shader_prog;
+	int m_cur_shader_prog_num;
+	VertexData m_vertex_data[m_vertex_count];
 	Array<u8> m_vdata;
-	VertexProgram m_vertex_progs[16];
+	VertexProgram m_vertex_progs[m_vertex_count];
 	VertexProgram* m_cur_vertex_prog;
+	Array<TransformConstant> m_transform_constants;
+	Array<TransformConstant> m_fragment_constants;
+
 	Program m_program;
 	int m_fp_buf_num;
 	int m_vp_buf_num;
@@ -245,8 +495,13 @@ private:
 	int m_draw_mode;
 	ProgramBuffer m_prog_buffer;
 
+	u32 m_width;
+	u32 m_height;
+
 	GLvao m_vao;
 	GLvbo m_vbo;
+	GLrbo m_rbo;
+	GLfbo m_fbo;
 
 public:
 	GLGSFrame* m_frame;
@@ -261,6 +516,7 @@ private:
 	void DisableVertexData();
 	void LoadVertexData(u32 first, u32 count);
 	void InitVertexData();
+	void InitFragmentData();
 
 	void Enable(bool enable, const u32 cap);
 	virtual void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
