@@ -33,22 +33,24 @@ struct FragmentDecompilerThread : public ThreadBase
 
 		struct
 		{
-			u32 reg_type		: 2;
-			u32 tmp_reg_index	: 6;
-			u32 fp16			: 1;
-			u32 swizzle_x		: 2;
-			u32 swizzle_y		: 2;
-			u32 swizzle_z		: 2;
-			u32 swizzle_w		: 2;
-			u32 neg				: 1;
-			u32 exec_if_lt		: 1;
-			u32 exec_if_eq		: 1;
-			u32 exec_if_gr		: 1;
-			u32 cond_swizzle_x	: 2;
-			u32 cond_swizzle_y	: 2;
-			u32 cond_swizzle_z	: 2;
-			u32 cond_swizzle_w	: 2;
-			u32 abs				: 1;
+			u32 reg_type			: 2;
+			u32 tmp_reg_index		: 6;
+			u32 fp16				: 1;
+			u32 swizzle_x			: 2;
+			u32 swizzle_y			: 2;
+			u32 swizzle_z			: 2;
+			u32 swizzle_w			: 2;
+			u32 neg					: 1;
+			u32 exec_if_lt			: 1;
+			u32 exec_if_eq			: 1;
+			u32 exec_if_gr			: 1;
+			u32 cond_swizzle_x		: 2;
+			u32 cond_swizzle_y		: 2;
+			u32 cond_swizzle_z		: 2;
+			u32 cond_swizzle_w		: 2;
+			u32 abs					: 1;
+			u32 cond_mod_reg_index	: 1;
+			u32 cond_reg_index		: 1;
 		};
 	} src0;
 
@@ -67,8 +69,8 @@ struct FragmentDecompilerThread : public ThreadBase
 			u32 swizzle_w			: 2;
 			u32 neg					: 1;
 			u32 abs					: 1;
-			u32 input_prec			: 2;
-			u32						: 7;
+			u32 input_mod_src0		: 3;
+			u32						: 6;
 			u32 scale				: 3;
 			u32 opcode_is_branch	: 1;
 		};
@@ -91,6 +93,7 @@ struct FragmentDecompilerThread : public ThreadBase
 			u32 abs				: 1;
 			u32 addr_reg		: 11;
 			u32 use_index_reg	: 1;
+			u32 perspective_corr: 1;
 		};
 	} src2;
 
@@ -115,8 +118,9 @@ struct FragmentDecompilerThread : public ThreadBase
 
 	wxString GetMask();
 
-	void AddCode(wxString code);
+	void AddCode(wxString code, bool append_mask = true);
 	wxString AddReg(u32 index, int fp16);
+	bool HasReg(u32 index, int fp16);
 	wxString AddCond(int fp16);
 	wxString AddConst();
 	wxString AddTex();
@@ -140,6 +144,7 @@ struct ShaderProgram
 
 	u32 size;
 	u32 addr;
+	u32 offset;
 	wxString shader;
 
 	u32 id;

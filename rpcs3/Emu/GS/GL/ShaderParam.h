@@ -95,9 +95,16 @@ struct ParamArray
 		return wxEmptyString;
 	}
 
-	wxString AddParam(wxString type, const wxString& name, const wxString& value)
+	bool HasParam(const ParamFlag flag, wxString type, const wxString& name)
 	{
-		type = GetParamFlag(PARAM_CONST) + type;
+		type = GetParamFlag(flag) + type;
+		ParamType* t = SearchParam(type);
+		return t && t->SearchName(name);
+	}
+
+	wxString AddParam(const ParamFlag flag, wxString type, const wxString& name, const wxString& value)
+	{
+		type = GetParamFlag(flag) + type;
 		ParamType* t = SearchParam(type);
 
 		if(t)
@@ -107,7 +114,7 @@ struct ParamArray
 		else
 		{
 			const u32 num = params.GetCount();
-			params.Move(new ParamType(PARAM_CONST, type));
+			params.Move(new ParamType(flag, type));
 			params[num].items.Move(new ParamItem(name, -1, value));
 		}
 

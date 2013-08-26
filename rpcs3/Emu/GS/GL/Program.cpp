@@ -77,6 +77,7 @@ void Program::Create(const u32 vp, const u32 fp)
 void Program::UnUse()
 {
 	id = 0;
+	m_locations.Clear();
 }
 
 void Program::Use()
@@ -87,14 +88,10 @@ void Program::Use()
 
 void Program::SetTex(u32 index)
 {
-	int loc = GetLocation(wxString::Format("tex%d", index));
-	checkForGlError(wxString::Format("GetLocation(tex%d)", index));
+	int loc = GetLocation(wxString::Format("tex%u", index));
+	checkForGlError(wxString::Format("GetLocation(tex%u)", index));
 	glProgramUniform1i(id, loc, index);
-	GLenum err = glGetError();
-	if(err != 0x502)
-	{
-		printGlError(err, wxString::Format("SetTex(%d - %d - %d)", id, index, loc));
-	}
+	checkForGlError(wxString::Format("SetTex(%u - %d - %d)", id, index, loc));
 }
 
 void Program::Delete()
@@ -102,4 +99,5 @@ void Program::Delete()
 	if(!IsCreated()) return;
 	glDeleteProgram(id);
 	id = 0;
+	m_locations.Clear();
 }

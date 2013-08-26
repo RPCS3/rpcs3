@@ -95,7 +95,7 @@ int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout)
 
 	GetCurrentPPUThread().WaitFor(queue_receive);
 
-	return CELL_OK;
+	return result;
 }
 
 int sys_event_port_create(u32 eport_id_addr, int port_type, u64 name)
@@ -110,6 +110,7 @@ int sys_event_port_create(u32 eport_id_addr, int port_type, u64 name)
 
 	EventPort* eport = new EventPort();
 	u32 id = sys_event.GetNewId(eport);
+	eport->pos = 0;
 	eport->has_data = false;
 	eport->name = name ? name : id;
 	Memory.Write32(eport_id_addr, id);
@@ -130,6 +131,37 @@ int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id)
 	EventPort* eport = (EventPort*)Emu.GetIdManager().GetIDData(event_port_id).m_data;
 	EventQueue* equeue = (EventQueue*)Emu.GetIdManager().GetIDData(event_queue_id).m_data;
 	equeue->ports[equeue->pos++] = eport;
+	eport->queue[eport->pos++] = equeue;
+
+	return CELL_OK;
+}
+
+int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3)
+{
+	sys_event.Warning("sys_event_port_send(event_port_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)",
+		event_port_id, data1, data2, data3);
+
+	if(!sys_event.CheckId(event_port_id))
+	{
+		return CELL_ESRCH;
+	}
+
+	EventPort* eport = (EventPort*)Emu.GetIdManager().GetIDData(event_port_id).m_data;
+	
+	if(!eport->pos)
+	{
+		return CELL_ENOTCONN;
+	}
+
+	if(eport->has_data)
+	{
+		return CELL_EBUSY;
+	}
+	
+	eport->has_data = true;
+	eport->data1 = data1;
+	eport->data2 = data2;
+	eport->data3 = data3;
 
 	return CELL_OK;
 }

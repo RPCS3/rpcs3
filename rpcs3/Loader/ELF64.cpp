@@ -155,8 +155,8 @@ bool ELF64Loader::LoadShdrInfo(s64 offset)
 	shdr_name_arr.Clear();
 	if(ehdr.e_shoff == 0 && ehdr.e_shnum)
 	{
-		ConLog.Error("LoadShdr64 error: Section header offset is null!");
-		return false;
+		ConLog.Warning("LoadShdr64 error: Section header offset is null!");
+		return true;
 	}
 
 	elf64_f.Seek(offset < 0 ? ehdr.e_shoff : offset);

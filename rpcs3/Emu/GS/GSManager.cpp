@@ -8,7 +8,7 @@ BEGIN_EVENT_TABLE(GSFrame, wxFrame)
 	EVT_SIZE(GSFrame::OnSize)
 END_EVENT_TABLE()
 
-GSManager::GSManager() : m_render(NULL)
+GSManager::GSManager() : m_render(nullptr)
 {
 }
 

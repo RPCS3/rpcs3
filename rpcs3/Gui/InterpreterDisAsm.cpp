@@ -324,7 +324,7 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 			m_btn_run->Enable();
 			m_btn_step->Enable();
 			m_btn_pause->Disable();
-			//DoUpdate();
+			DoUpdate();
 		break;
 
 		case DID_START_THREAD:
@@ -510,7 +510,7 @@ void InterpreterDisAsmFrame::Task()
 {
 	if(!CPU) return;
 	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, CPU);
-
+	wxGetApp().SendDbgCommand(DID_RESUMED_THREAD, CPU);
 	bool dump_status = dump_enable;
 
 	//CPU.InitTls();
@@ -535,4 +535,5 @@ void InterpreterDisAsmFrame::Task()
 	//CPU.FreeTls();
 
 	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, CPU);
+	wxGetApp().SendDbgCommand(DID_PAUSED_THREAD, CPU);
 }

@@ -40,8 +40,8 @@ wxString VertexDecompilerThread::GetDST(bool isSca)
 		"gl_Position",
 		"col0", "col1",
 		"bfc0", "bfc1",
-		"fogc",
-		"gl_Pointsize",
+		"gl_ClipDistance[%d]",
+		"gl_ClipDistance[%d]",
 		"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7"
 	};
 
@@ -49,12 +49,12 @@ wxString VertexDecompilerThread::GetDST(bool isSca)
 
 	switch(isSca ? 0x1f : d3.dst)
 	{
-	case 0x0: case 0x6:
+	case 0x0: case 0x5: case 0x6:
 		ret += reg_table[d3.dst];
 	break;
 
 	case 0x1f:
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", wxString::Format("tmp%d", isSca ? d3.sca_dst_tmp : d0.dst_tmp));
+		ret += m_parr.AddParam(PARAM_NONE, "vec4", wxString::Format("tmp%u", isSca ? d3.sca_dst_tmp : d0.dst_tmp));
 	break;
 
 	default:
@@ -90,7 +90,7 @@ wxString VertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 	switch(src[n].reg_type)
 	{
 	case 1: //temp
-		ret += m_parr.AddParam(PARAM_NONE, "vec4", wxString::Format("tmp%d", src[n].tmp_src));
+		ret += m_parr.AddParam(PARAM_NONE, "vec4", wxString::Format("tmp%u", src[n].tmp_src));
 	break;
 	case 2: //input
 		if(d1.input_src < WXSIZEOF(reg_table))
@@ -104,18 +104,16 @@ wxString VertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 		}
 	break;
 	case 3: //const
-		ret += m_parr.AddParam(PARAM_UNIFORM, "vec4", wxString::Format("vc%d", d1.const_src));
+		ret += m_parr.AddParam(PARAM_UNIFORM, "vec4", wxString::Format("vc%u", d1.const_src));
 	break;
 
 	default:
-		ConLog.Error("Bad src%d reg type: %d", n, src[n].reg_type);
+		ConLog.Error("Bad src%u reg type: %d", n, src[n].reg_type);
 		Emu.Pause();
 	break;
 	}
 
-	static const char f[4] = {'x', 'y', 'z', 'w'};
-
-	wxString swizzle = wxEmptyString;
+	static const wxString f = "xyzw";
 
 	if (isSca)
 	{
@@ -123,16 +121,19 @@ wxString VertexDecompilerThread::GetSRC(const u32 n, bool isSca)
 		assert(src[n].swz_z == src[n].swz_w);
 		assert(src[n].swz_x == src[n].swz_z);
 
-		ret += "." + f[src[n].swz_x];
+		ret += '.';
+		ret += f[src[n].swz_x];
 	}
 	else
 	{
+		wxString swizzle = wxEmptyString;
+
 		swizzle += f[src[n].swz_x];
 		swizzle += f[src[n].swz_y];
 		swizzle += f[src[n].swz_z];
 		swizzle += f[src[n].swz_w];
 
-		if(swizzle != "xyzw") ret += "." + swizzle;
+		if(swizzle != f) ret += '.' + swizzle;
 	}
 
 	bool abs;
@@ -164,7 +165,7 @@ void VertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask)
 
 	if(d0.cond != (lt | gt | eq))
 	{
-		if(d0.cond & (lt | gt))
+		if((d0.cond & (lt | gt)) == (lt | gt))
 		{
 			cond = "!=";
 		}
@@ -177,7 +178,7 @@ void VertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask)
 			if(d0.cond & eq) cond += "=";
 		}
 
-		ConLog.Error("cond! %d (%d %s %d %d)", d0.cond, d0.dst_tmp, cond, d1.input_src, d1.const_src);
+		//ConLog.Error("cond! %d (%d %s %d %d)", d0.cond, d0.dst_tmp, cond, d1.input_src, d1.const_src);
 		cond = wxString::Format("if(tmp%d.x %s 0) ", d0.dst_tmp, cond);
 	}
 
@@ -188,7 +189,28 @@ void VertexDecompilerThread::AddCode(bool is_sca, wxString code, bool src_mask)
 		value = "clamp(" + value + ", 0.0, 1.0)";
 	}
 
-	code = cond + GetDST(is_sca) + GetMask(is_sca) + " = " + value;
+	wxString dest;
+	if(d3.dst == 5 || d3.dst == 6)
+	{
+		int num = d3.dst == 5 ? 0 : 3;
+
+		if(d3.vec_writemask_x)
+		{
+			ConLog.Error("Bad clip mask.");
+		}
+
+		//if(d3.vec_writemask_y) num += 0;
+		if(d3.vec_writemask_z) num += 1;
+		else if(d3.vec_writemask_w) num += 2;
+
+		dest = wxString::Format(GetDST(is_sca), num);
+	}
+	else
+	{
+		dest = GetDST(is_sca) + GetMask(is_sca);
+	}
+
+	code = cond + dest + " = " + value;
 
 	main += "\t" + code + ";\n";
 }
@@ -198,9 +220,9 @@ void VertexDecompilerThread::AddVecCode(const wxString& code, bool src_mask)
 	AddCode(false, code, src_mask);
 }
 
-void VertexDecompilerThread::AddScaCode(const wxString& code, bool src_mask)
+void VertexDecompilerThread::AddScaCode(const wxString& code)
 {
-	AddCode(true, code, src_mask);
+	AddCode(true, code, false);
 }
 
 wxString VertexDecompilerThread::BuildCode()
@@ -273,10 +295,10 @@ void VertexDecompilerThread::Task()
 		case 0x02: AddVecCode("(" + GetSRC(0) + " * " + GetSRC(1) + ")"); break; //MUL
 		case 0x03: AddVecCode("(" + GetSRC(0) + " + " + GetSRC(2) + ")"); break; //ADD
 		case 0x04: AddVecCode("(" + GetSRC(0) + " * " + GetSRC(1) + " + " + GetSRC(2) + ")"); break; //MAD
-		case 0x05: AddVecCode("dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz)", false); break; //DP3
-		case 0x06: AddVecCode("(dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz) + " + GetSRC(1) + ".w)", false); break; //DPH
-		case 0x07: AddVecCode("dot(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //DP4
-		case 0x08: AddVecCode("distance(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //DST
+		case 0x05: AddVecCode("vec4(dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz)).xxxx"); break; //DP3
+		case 0x06: AddVecCode("vec4(dot(vec4(" + GetSRC(0) + ".xyz, 1), " + GetSRC(1) + ")).xxxx"); break; //DPH
+		case 0x07: AddVecCode("vec4(dot(" + GetSRC(0) + ", " + GetSRC(1) + ")).xxxx"); break; //DP4
+		case 0x08: AddVecCode("vec4(distance(" + GetSRC(0) + ", " + GetSRC(1) + ")).xxxx"); break; //DST
 		case 0x09: AddVecCode("min(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MIN
 		case 0x0a: AddVecCode("max(" + GetSRC(0) + ", " + GetSRC(1) + ")"); break; //MAX
 		case 0x0b: AddVecCode("vec4(lessThan(" + GetSRC(0) + ", " + GetSRC(1) + "))"); break; //SLT
@@ -399,8 +421,7 @@ void VertexProgram::Delete()
 }
 
 VertexData::VertexData()
-	: index(0)
-	, frequency(0)
+	: frequency(0)
 	, stride(0)
 	, size(0)
 	, type(0)
@@ -411,7 +432,6 @@ VertexData::VertexData()
 
 void VertexData::Reset()
 {
-	index = 0;
 	frequency = 0;
 	stride = 0;
 	size = 0;
@@ -422,7 +442,10 @@ void VertexData::Reset()
 
 void VertexData::Load(u32 start, u32 count)
 {
+	if(!addr) return;
+
 	const u32 tsize = GetTypeSize();
+
 	data.SetCount((start + count) * tsize * size);
 
 	for(u32 i=start; i<start + count; ++i)

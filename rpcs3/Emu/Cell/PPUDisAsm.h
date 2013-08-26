@@ -426,9 +426,9 @@ private:
 	{
 		DisAsm_V3("vmulouh", vd, va, vb);
 	}
-	void VNMSUBFP(u32 vd, u32 va, u32 vb, u32 vc)
+	void VNMSUBFP(u32 vd, u32 va, u32 vc, u32 vb)
 	{
-		DisAsm_V4("vnmsubfp", vd, va, vb, vc);
+		DisAsm_V4("vnmsubfp", vd, va, vc, vb);
 	}
 	void VNOR(u32 vd, u32 va, u32 vb)
 	{

@@ -88,11 +88,14 @@ public:
 		return m_count - 1;
 	}
 
-	inline bool AddCpy(const u32 pos, const T* data, u64 count = 1)
+	inline bool AddCpy(const u32 pos, const T* data, u32 count = 1)
 	{
 		if(!InsertRoom(pos, count)) return false;
 		
-		memcpy(m_array + pos, data, sizeof(T) * count);
+		for(u32 i=0; i<count; ++i)
+		{
+			new (m_array + pos + i) T(data[i]);
+		}
 
 		return true;
 	}
@@ -102,11 +105,14 @@ public:
 		return AddCpy(pos, &data);
 	}
 
-	inline u32 AddCpy(const T* data, u64 count = 1)
+	inline u32 AddCpy(const T* data, u32 count = 1)
 	{
 		_InsertRoomEnd(count);
 
-		memcpy(m_array + m_count - count, data, sizeof(T)*count);
+		for(u32 i=0; i<count; ++i)
+		{
+			new (m_array + m_count - count + i) T(data[i]);
+		}
 
 		return m_count - count;
 	}

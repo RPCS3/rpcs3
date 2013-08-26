@@ -35,7 +35,7 @@ static func_caller* sc_table[1024] =
 	null_func, null_func, null_func, null_func, null_func, //124
 	null_func, null_func, null_func, bind_func(sys_event_queue_create), null_func, //129
 	bind_func(sys_event_queue_receive), null_func, null_func, null_func, bind_func(sys_event_port_create), //134
-	null_func, bind_func(sys_event_port_connect_local), null_func, null_func, null_func, //139
+	null_func, bind_func(sys_event_port_connect_local), null_func, bind_func(sys_event_port_send), null_func, //139
 	null_func, null_func, null_func, null_func, null_func, //144
 	bind_func(sys_time_get_current_time), bind_func(sys_time_get_system_time), bind_func(sys_time_get_timebase_frequency), null_func, null_func, //149
 	null_func, null_func, null_func, null_func, null_func, //154

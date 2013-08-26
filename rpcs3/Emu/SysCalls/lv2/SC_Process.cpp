@@ -11,7 +11,11 @@ int sys_process_getpid()
 int sys_process_exit(int errorcode)
 {
 	ConLog.Warning("sys_process_exit(%d)", errorcode);
+#ifdef _DEBUG
 	Emu.Pause();
+#else
+	Emu.Stop();
+#endif
 	return CELL_OK;
 }
 

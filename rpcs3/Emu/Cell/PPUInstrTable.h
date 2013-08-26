@@ -273,7 +273,7 @@ namespace PPU_instr
 	bind_instr(g04_list, VMSUMUBM, VD, VA, VB, VC);
 	bind_instr(g04_list, VMSUMUHM, VD, VA, VB, VC);
 	bind_instr(g04_list, VMSUMUHS, VD, VA, VB, VC);
-	bind_instr(g04_list, VNMSUBFP, VD, VA, VB, VC);
+	bind_instr(g04_list, VNMSUBFP, VD, VA, VC, VB);
 	bind_instr(g04_list, VPERM, VD, VA, VB, VC);
 	bind_instr(g04_list, VSEL, VD, VA, VB, VC);
 	bind_instr(g04_list, VSLDOI, VD, VA, VB, VSH);

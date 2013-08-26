@@ -196,7 +196,14 @@ void Emulator::Run()
 	//m_memory_viewer->ShowPC();
 
 	if(!m_dbg_console)
+	{
 		m_dbg_console = new DbgConsole();
+	}
+	else
+	{
+		GetDbgCon().Close();
+		GetDbgCon().Clear();
+	}
 
 	GetGSManager().Init();
 	GetCallbackManager().Init();
@@ -259,12 +266,6 @@ void Emulator::Stop()
 
 	CurGameInfo.Reset();
 	Memory.Close();
-
-	if(m_dbg_console)
-	{
-		GetDbgCon().Close();
-		GetDbgCon().Clear();
-	}
 
 	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
 	wxGetApp().SendDbgCommand(DID_STOPED_EMU);

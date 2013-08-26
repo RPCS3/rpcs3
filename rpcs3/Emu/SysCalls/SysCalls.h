@@ -118,6 +118,7 @@ extern int sys_event_queue_create(u32 equeue_id_addr, u32 attr_addr, u64 event_q
 extern int sys_event_queue_receive(u32 equeue_id, u32 event_addr, u32 timeout);
 extern int sys_event_port_create(u32 eport_id_addr, int port_type, u64 name);
 extern int sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
+extern int sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);
 
 //sys_semaphore
 extern int sys_semaphore_create(u32 sem_addr, u32 attr_addr, int initial_val, int max_val);
@@ -216,30 +217,7 @@ extern int cellPadGetInfo2(u32 info_addr);
 extern int cellPadSetPortSetting(u32 port_no, u32 port_setting);
 
 //cellGcm
-extern int cellGcmInit(u32 context_addr, u32 cmdSize, u32 ioSize, u32 ioAddress);
-extern int cellGcmMapMainMemory(u32 address, u32 size, u32 offset_addr);
 extern int cellGcmCallback(u32 context_addr, u32 count);
-extern int cellGcmGetConfiguration(u32 config_addr);
-extern int cellGcmAddressToOffset(u32 address, u32 offset_addr);
-extern int cellGcmSetDisplayBuffer(u32 id, u32 offset, u32 pitch, u32 width, u32 height);
-extern u32 cellGcmGetLabelAddress(u8 index);
-extern u32 cellGcmGetControlRegister();
-extern int cellGcmFlush(u32 ctx, u32 id);
-extern void cellGcmSetTile(u32 index, u32 location, u32 offset, u32 size, u32 pitch, u32 comp, u32 base, u32 bank);
-extern int cellGcmBindTile(u32 index);
-extern int cellGcmBindZcull(u32 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask);
-extern int cellGcmGetFlipStatus();
-extern int cellGcmResetFlipStatus();
-extern u32 cellGcmGetTiledPitchSize(u32 size);
-extern int cellGcmSetFlipMode(u32 mode);
-extern u32 cellGcmGetDefaultCommandWordSize();
-extern u32 cellGcmGetDefaultSegmentWordSize();
-extern int cellGcmSetDefaultFifoSize(u32 bufferSize, u32 segmentSize);
-extern int cellGcmMapEaIoAddress(const u32 ea, const u32 io, const u32 size);
-extern int cellGcmUnbindTile(u8 index);
-extern int cellGcmUnbindZcull(u8 index);
-extern u64 cellGcmGetTimeStamp(u32 index);
-extern int cellGcmSetFlipHandler(u32 handler_addr);
 
 //sys_tty
 extern int sys_tty_read(u32 ch, u64 buf_addr, u32 len, u64 preadlen_addr);

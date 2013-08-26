@@ -1,14 +1,27 @@
 #pragma once
 
-struct MemBlockInfo
+struct MemInfo
 {
 	u64 addr;
 	u32 size;
+
+	MemInfo(u64 _addr, u32 _size)
+		: addr(_addr)
+		, size(_size)
+	{
+	}
+
+	MemInfo()
+	{
+	}
+};
+
+struct MemBlockInfo : public MemInfo
+{
 	void* mem;
 
 	MemBlockInfo(u64 _addr, u32 _size)
-		: addr(_addr)
-		, size(_size)
+		: MemInfo(_addr, _size)
 		, mem(malloc(_size))
 	{
 		if(!mem)

@@ -247,7 +247,13 @@ int cellFsStat(const u32 path_addr, const u32 sb_addr)
 	const wxString& path = Memory.ReadString(path_addr);
 	sys_fs.Log("cellFsFstat(path: %s, sb_addr: 0x%x)", path, sb_addr);
 
-	if(!wxFileExists(path)) return CELL_ENOENT;
+	vfsStream* f = Emu.GetVFS().Open(path, vfsRead);
+	if(!f || !f->IsOpened())
+	{
+		sys_fs.Warning("cellFsFstat: '%s' not found.", path);
+		Emu.GetVFS().Close(f);
+		return CELL_ENOENT;
+	}
 
 	Lv2FsStat stat;
 	stat.st_mode = 
@@ -261,7 +267,7 @@ int cellFsStat(const u32 path_addr, const u32 sb_addr)
 	stat.st_atime = 0; //TODO
 	stat.st_mtime = 0; //TODO
 	stat.st_ctime = 0; //TODO
-	stat.st_size = wxFile(path).Length();
+	stat.st_size = f->GetSize();
 	stat.st_blksize = 4096;
 
 	mem_class_t stat_c(sb_addr);
@@ -273,6 +279,8 @@ int cellFsStat(const u32 path_addr, const u32 sb_addr)
 	stat_c += stat.st_ctime;
 	stat_c += stat.st_size;
 	stat_c += stat.st_blksize;
+
+	Emu.GetVFS().Close(f);
 
 	return CELL_OK;
 }

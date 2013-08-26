@@ -236,7 +236,7 @@ struct MFC
 			break;
 
 			default:
-				ConLog.Error("Unknown MFC cmd.");
+				ConLog.Error("Unknown MFC cmd. (opcode=0x%x, cmd=0x%x)", op, cmd);
 			break;
 			}
 		}

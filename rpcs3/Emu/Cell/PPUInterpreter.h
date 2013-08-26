@@ -949,50 +949,56 @@ private:
 	}
 	void VMRGHB(u32 vd, u32 va, u32 vb)
 	{
+		VPR_reg VA = CPU.VPR[va];
+		VPR_reg VB = CPU.VPR[vb];
 		for (uint h = 0; h < 8; h++)
 		{
-			CPU.VPR[vd]._u8[h*2] = CPU.VPR[va]._u8[h];
-			CPU.VPR[vd]._u8[h*2 + 1] = CPU.VPR[vb]._u8[h];
+			CPU.VPR[vd]._u8[15 - h*2] = VA._u8[15 - h];
+			CPU.VPR[vd]._u8[15 - h*2 - 1] = VB._u8[15 - h];
 		}
 	}
 	void VMRGHH(u32 vd, u32 va, u32 vb)
 	{
+		VPR_reg VA = CPU.VPR[va];
+		VPR_reg VB = CPU.VPR[vb];
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._u16[w*2] = CPU.VPR[va]._u16[w];
-			CPU.VPR[vd]._u16[w*2 + 1] = CPU.VPR[vb]._u16[w];
+			CPU.VPR[vd]._u16[7 - w*2] = VA._u16[7 - w];
+			CPU.VPR[vd]._u16[7 - w*2 - 1] = VB._u16[7 - w];
 		}
 	}
 	void VMRGHW(u32 vd, u32 va, u32 vb)
 	{
+		VPR_reg VA = CPU.VPR[va];
+		VPR_reg VB = CPU.VPR[vb];
 		for (uint d = 0; d < 2; d++)
 		{
-			CPU.VPR[vd]._u32[d*2] = CPU.VPR[va]._u32[d];
-			CPU.VPR[vd]._u32[d*2 + 1] = CPU.VPR[vb]._u32[d];
+			CPU.VPR[vd]._u32[3 - d*2] = VA._u32[3 - d];
+			CPU.VPR[vd]._u32[3 - d*2 - 1] = VB._u32[3 - d];
 		}
 	}
 	void VMRGLB(u32 vd, u32 va, u32 vb)
 	{
 		for (uint h = 0; h < 8; h++)
 		{
-			CPU.VPR[vd]._u8[h*2] = CPU.VPR[va]._u8[h + 8];
-			CPU.VPR[vd]._u8[h*2 + 1] = CPU.VPR[vb]._u8[h + 8];
+			CPU.VPR[vd]._u8[15 - h*2] = CPU.VPR[va]._u8[7 - h];
+			CPU.VPR[vd]._u8[15 - h*2 - 1] = CPU.VPR[vb]._u8[7 - h];
 		}
 	}
 	void VMRGLH(u32 vd, u32 va, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._u16[w*2] = CPU.VPR[va]._u16[w + 4];
-			CPU.VPR[vd]._u16[w*2 + 1] = CPU.VPR[vb]._u16[w + 4];
+			CPU.VPR[vd]._u16[7 - w*2] = CPU.VPR[va]._u16[3 - w];
+			CPU.VPR[vd]._u16[7 - w*2 - 1] = CPU.VPR[vb]._u16[3 - w];
 		}
 	}
 	void VMRGLW(u32 vd, u32 va, u32 vb)
 	{
 		for (uint d = 0; d < 2; d++)
 		{
-			CPU.VPR[vd]._u32[d*2] = CPU.VPR[va]._u32[d + 2];
-			CPU.VPR[vd]._u32[d*2 + 1] = CPU.VPR[vb]._u32[d + 2];
+			CPU.VPR[vd]._u32[3 - d*2] = CPU.VPR[va]._u32[1 - d];
+			CPU.VPR[vd]._u32[3 - d*2 - 1] = CPU.VPR[vb]._u32[1 - d];
 		}
 	}
 	void VMSUMMBM(u32 vd, u32 va, u32 vb, u32 vc)
@@ -1166,11 +1172,11 @@ private:
 			CPU.VPR[vd]._u32[w] = (u32)CPU.VPR[va]._u16[w*2] * (u32)CPU.VPR[vb]._u16[w*2];
 		}
 	}
-	void VNMSUBFP(u32 vd, u32 va, u32 vb, u32 vc)
+	void VNMSUBFP(u32 vd, u32 va, u32 vc, u32 vb)
 	{
 		for (uint w = 0; w < 4; w++)
 		{
-			CPU.VPR[vd]._f[w] = (double)CPU.VPR[vb]._f[w] - (double)CPU.VPR[va]._f[w] * (double)CPU.VPR[vc]._f[w];
+			CPU.VPR[vd]._f[w] = -(CPU.VPR[va]._f[w] * CPU.VPR[vc]._f[w] - CPU.VPR[vb]._f[w]);
 		}
 	}
 	void VNOR(u32 vd, u32 va, u32 vb)
@@ -1611,7 +1617,7 @@ private:
 	{
 		assert(uimm5 < 4);
 
-		u32 word = CPU.VPR[vb]._u32[uimm5];
+		u32 word = CPU.VPR[vb]._u32[3 - uimm5];
 			
 		for (uint w = 0; w < 4; w++)
 		{

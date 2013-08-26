@@ -15,6 +15,8 @@ struct sys_event_data
 	u64 data3;
 };
 
+struct EventQueue;
+
 struct EventPort
 {
 	u64 name;
@@ -23,6 +25,8 @@ struct EventPort
 	u64 data3;
 	bool has_data;
 	PPCThread* thread;
+	EventQueue* queue[127];
+	int pos;
 };
 
 struct EventQueue

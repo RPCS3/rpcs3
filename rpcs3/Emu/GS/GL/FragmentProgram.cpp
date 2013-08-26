@@ -1,50 +1,49 @@
 #include "stdafx.h"
 #include "FragmentProgram.h"
 
-void FragmentDecompilerThread::AddCode(wxString code)
+void FragmentDecompilerThread::AddCode(wxString code, bool append_mask)
 {
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
+	const wxString mask = GetMask();
 	wxString cond = wxEmptyString;
 
 	if(!src0.exec_if_gr || !src0.exec_if_lt || !src0.exec_if_eq)
 	{
-		if(src0.exec_if_gr)
-		{
-			cond = ">";
-		}
-		else if(src0.exec_if_lt)
-		{
-			cond = "<";
-		}
-		else if(src0.exec_if_eq)
-		{
-			cond = "=";
-		}
-
-		if(src0.exec_if_eq)
-		{
-			cond += "=";
-		}
-		else
-		{
-			if(src0.exec_if_gr && src0.exec_if_lt)
-			{
-				cond = "!=";
-			}
-		}
-	}
-
-	if(cond.Len())
-	{
-
 		static const char f[4] = {'x', 'y', 'z', 'w'};
+
 		wxString swizzle = wxEmptyString;
 		swizzle += f[src0.cond_swizzle_x];
 		swizzle += f[src0.cond_swizzle_y];
 		swizzle += f[src0.cond_swizzle_z];
 		swizzle += f[src0.cond_swizzle_w];
-		cond = wxString::Format("if(rc.%s %s 0.0) ", swizzle, cond);
+
+		if(src0.exec_if_gr && src0.exec_if_eq)
+		{
+			cond = "greaterThanEqual";
+		}
+		else if(src0.exec_if_lt && src0.exec_if_eq)
+		{
+			cond = "lessThanEqual";
+		}
+		else if(src0.exec_if_gr && src0.exec_if_lt)
+		{
+			cond = "notEqual";
+		}
+		else if(src0.exec_if_gr)
+		{
+			cond = "greaterThan";
+		}
+		else if(src0.exec_if_lt)
+		{
+			cond = "lessThan";
+		}
+		else //if(src0.exec_if_eq)
+		{
+			cond = "equal";
+		}
+
+		cond = wxString::Format("if(all(%s(%s.%s, vec4(0, 0, 0, 0)))) ", cond, AddCond(dst.no_dest), swizzle);
 		//ConLog.Error("cond! [eq: %d  gr: %d  lt: %d] (%s)", src0.exec_if_eq, src0.exec_if_gr, src0.exec_if_lt, cond);
 		//Emu.Pause();
 		//return;
@@ -73,7 +72,8 @@ void FragmentDecompilerThread::AddCode(wxString code)
 		code = "clamp(" + code + ", 0.0, 1.0)";
 	}
 
-	code = cond + (dst.set_cond ? AddCond(dst.fp16) : AddReg(dst.dest_reg, dst.fp16)) + GetMask() + " = " + code + GetMask();
+	code = cond + (dst.set_cond ? AddCond(dst.fp16) : AddReg(dst.dest_reg, dst.fp16)) + mask
+		+ " = " + code + (append_mask ? mask : wxEmptyString);
 
 	main += "\t" + code + ";\n";
 }
@@ -82,25 +82,30 @@ wxString FragmentDecompilerThread::GetMask()
 {
 	wxString ret = wxEmptyString;
 
-	static const char dst_mask[2][4] =
+	static const char dst_mask[4] =
 	{
-		{'x', 'y', 'z', 'w'},
-		{'r', 'g', 'b', 'a'}
+		'x', 'y', 'z', 'w',
 	};
 
-	if(dst.mask_x) ret += dst_mask[dst.dest_reg == 0][0];
-	if(dst.mask_y) ret += dst_mask[dst.dest_reg == 0][1];
-	if(dst.mask_z) ret += dst_mask[dst.dest_reg == 0][2];
-	if(dst.mask_w) ret += dst_mask[dst.dest_reg == 0][3];
+	if(dst.mask_x) ret += dst_mask[0];
+	if(dst.mask_y) ret += dst_mask[1];
+	if(dst.mask_z) ret += dst_mask[2];
+	if(dst.mask_w) ret += dst_mask[3];
 
-	return ret.IsEmpty() || strncmp(ret, dst_mask[dst.dest_reg == 0], 4) == 0 ? wxEmptyString : ("." + ret);
+	return ret.IsEmpty() || strncmp(ret, dst_mask, 4) == 0 ? wxEmptyString : ("." + ret);
 }
 
 wxString FragmentDecompilerThread::AddReg(u32 index, int fp16)
 {
-	//if(!index) return "gl_FragColor";
+	//if(!index && !fp16) return "gl_FragColor";
 	return m_parr.AddParam((index || fp16) ? PARAM_NONE : PARAM_OUT, "vec4",
-		wxString::Format((fp16 ? "h%d" : "r%d"), index), (index || fp16) ? -1 : 0);
+		wxString::Format((fp16 ? "h%u" : "r%u"), index), (index || fp16) ? -1 : 0);
+}
+
+bool FragmentDecompilerThread::HasReg(u32 index, int fp16)
+{
+	return m_parr.HasParam((index || fp16) ? PARAM_NONE : PARAM_OUT, "vec4",
+		wxString::Format((fp16 ? "h%u" : "r%u"), index));
 }
 
 wxString FragmentDecompilerThread::AddCond(int fp16)
@@ -117,7 +122,7 @@ wxString FragmentDecompilerThread::AddConst()
 	u32 y = GetData(data[1]);
 	u32 z = GetData(data[2]);
 	u32 w = GetData(data[3]);
-	return m_parr.AddParam("vec4", wxString::Format("fc%d", m_const_index++),
+	return m_parr.AddParam(PARAM_UNIFORM, "vec4", wxString::Format("fc%u", m_size + 4 * 4),
 		wxString::Format("vec4(%f, %f, %f, %f)", (float&)x, (float&)y, (float&)z, (float&)w));
 }
 
@@ -129,8 +134,6 @@ wxString FragmentDecompilerThread::AddTex()
 template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 {
 	wxString ret = wxEmptyString;
-
-	bool is_color = src.reg_type == 0 || (src.reg_type == 1 && dst.src_attr_reg_num >= 1 && dst.src_attr_reg_num <= 3);
 
 	switch(src.reg_type)
 	{
@@ -177,9 +180,7 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 	break;
 	}
 
-	static const char f_pos[4] = {'x', 'y', 'z', 'w'};
-	static const char f_col[4] = {'r', 'g', 'b', 'a'};
-	const char *f = is_color ? f_col : f_pos;
+	static const char f[4] = {'x', 'y', 'z', 'w'};
 
 	wxString swizzle = wxEmptyString;
 	swizzle += f[src.swizzle_x];
@@ -198,6 +199,11 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 wxString FragmentDecompilerThread::BuildCode()
 {
 	wxString p = wxEmptyString;
+
+	if(!m_parr.HasParam(PARAM_OUT, "vec4", "r0") && m_parr.HasParam(PARAM_NONE, "vec4", "h0"))
+	{
+		main += "\t" + m_parr.AddParam(PARAM_OUT, "vec4", "r0", 0) + " = " + "h0;\n";
+	}
 
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
 	{
@@ -227,16 +233,16 @@ void FragmentDecompilerThread::Task()
 
 		m_offset = 4 * 4;
 
-		switch(dst.opcode)
+		switch(dst.opcode | (src1.opcode_is_branch << 6))
 		{
 		case 0x00: break; //NOP
 		case 0x01: AddCode(GetSRC(src0)); break; //MOV
 		case 0x02: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + ")"); break; //MUL
 		case 0x03: AddCode("(" + GetSRC(src0) + " + " + GetSRC(src1) + ")"); break; //ADD
 		case 0x04: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + " + " + GetSRC(src2) + ")"); break; //MAD
-		case 0x05: AddCode("dot(" + GetSRC(src0) + ".xyz, " + GetSRC(src1) + ".xyz)"); break; // DP3
-		case 0x06: AddCode("dot(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // DP4
-		case 0x07: AddCode("distance(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // DST
+		case 0x05: AddCode("vec4(dot(" + GetSRC(src0) + ".xyz, " + GetSRC(src1) + ".xyz)).xxxx"); break; // DP3
+		case 0x06: AddCode("vec4(dot(" + GetSRC(src0) + ", " + GetSRC(src1) + ")).xxxx"); break; // DP4
+		case 0x07: AddCode("vec4(distance(" + GetSRC(src0) + ", " + GetSRC(src1) + ")).xxxx"); break; // DST
 		case 0x08: AddCode("min(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MIN
 		case 0x09: AddCode("max(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MAX
 		case 0x0a: AddCode("vec4(lessThan(" + GetSRC(src0) + ", " + GetSRC(src1) + "))"); break; // SLT
@@ -286,10 +292,10 @@ void FragmentDecompilerThread::Task()
 		//case 0x35: break; // BEMLUM
 		//case 0x36: break; // REFL
 		//case 0x37: break; // TIMESWTEX
-		//case 0x38: break; // DP2
-		//case 0x39: break; // NRM
+		case 0x38: AddCode("vec4(dot(" + GetSRC(src0) + ".xy, " + GetSRC(src1) + ".xy)).xxxx"); break; // DP2
+		case 0x39: AddCode("normalize(" + GetSRC(src0) + ".xyz)"); break; // NRM
 		case 0x3a: AddCode("(" + GetSRC(src0) + " / " + GetSRC(src1) + ")"); break; // DIV
-		case 0x3b: AddCode("(" + GetSRC(src0) + " / " + GetSRC(src1) + ")"); break; // DIVSQ
+		case 0x3b: AddCode("(" + GetSRC(src0) + " / sqrt(" + GetSRC(src1) + "))"); break; // DIVSQ
 		//case 0x3c: break; // LIF
 		case 0x3d: break; // FENCT
 		case 0x3e: break; // FENCB

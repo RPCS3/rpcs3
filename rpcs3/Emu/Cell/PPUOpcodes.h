@@ -535,7 +535,7 @@ public:
 	virtual void VMULOSH(u32 vd, u32 va, u32 vb) = 0;
 	virtual void VMULOUB(u32 vd, u32 va, u32 vb) = 0;
 	virtual void VMULOUH(u32 vd, u32 va, u32 vb) = 0;
-	virtual void VNMSUBFP(u32 vd, u32 va, u32 vb, u32 vc) = 0;
+	virtual void VNMSUBFP(u32 vd, u32 va, u32 vc, u32 vb) = 0;
 	virtual void VNOR(u32 vd, u32 va, u32 vb) = 0;
 	virtual void VOR(u32 vd, u32 va, u32 vb) = 0;
 	virtual void VPERM(u32 vd, u32 va, u32 vb, u32 vc) = 0;

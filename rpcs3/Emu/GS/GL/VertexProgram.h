@@ -146,7 +146,7 @@ struct VertexDecompilerThread : public ThreadBase
 	wxString GetSRC(const u32 n, bool is_sca = false);
 	void AddCode(bool is_sca, wxString code, bool src_mask = true);
 	void AddVecCode(const wxString& code, bool src_mask = true);
-	void AddScaCode(const wxString& code, bool src_mask = true);
+	void AddScaCode(const wxString& code);
 	wxString BuildCode();
 
 	virtual void Task();
@@ -178,12 +178,12 @@ struct VertexProgram
 
 struct VertexData
 {
-	u32 index;
 	u32 frequency;
 	u32 stride;
 	u32 size;
 	u32 type;
 	u32 addr;
+	u32 constant_count;
 
 	Array<u8> data;
 
